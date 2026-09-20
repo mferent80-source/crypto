@@ -59,3 +59,43 @@ Turns Crypto Radar into a complete installable PWA with icons, standalone mode, 
 
 ## v32 · RESILIENCE HOTFIX
 Fixes the raw HTTP 502 failure path. Binance direct-data is the stable default for the main engine; Pionex remains explicit and the Top 100 scanner stays Pionex-only. Pionex proxy failures now expose diagnostic detail without crashing the main analysis.
+
+
+## v33 · PIONEX RATE SAFE
+Adds client/server Pionex throttling, edge response caching and automatic 429 cooldown. The scanner stays Pionex-only but intentionally trades speed for reliability under Pionex's IP-based request limit.
+
+## v34 · OPPORTUNITY SUITE
+Adds Opportunity Top 10 ranking, Daily Trading Desk, capital-aware paper account, empirical signal calibration, microstructure validation, server-side Pionex read-only account access and PWA PushSubscription infrastructure.
+
+## v35 · MULTI-MARKET ENGINE
+Adds a CRYPTO / US STOCKS market switch, Twelve Data server-side stock provider, Nasdaq-100 research scanner, QQQ/SPY/IWM context, U.S. session/gap/RVOL/relative-strength analytics, optional earnings risk, and source-isolated stock integration across the existing quant, Opportunity, Backtest, Validation and Paper Trading modules.
+
+US Stocks require the Cloudflare secret `TWELVE_DATA_API_KEY`. Crypto remains usable without it.
+
+## v36 · ROBUSTNESS & PORTFOLIO
+Adds embargoed parameter perturbation, hierarchical reliability, strategy promotion/retirement gates, block-bootstrap Monte Carlo, cost-aware scenarios, portfolio correlation/VaR/CVaR, adaptive paper sizing and daily/weekly/drawdown circuit breakers. All controls remain research/paper-only.
+
+## v37 · CLOUD MONITOR & PROFILE
+Adds an optional D1 historical research database, a separately deployable 15-minute Cloudflare scheduled monitor, real Web Push encryption/VAPID sender, server-lite opportunity history, manual monitor proxy, advanced OHLCV Market Profile/TPO proxies, repeated-liquidity clusters, Fibonacci confluence and a Pionex recent trade-by-price footprint.
+
+The scheduled monitor is intentionally a separate Worker and is not activated merely by deploying the Pages app.
+
+## v39 · INTELLIGENCE LAYER
+Adds server-side cross-asset/crypto-global context, BTC mempool/hashrate/difficulty pulse, GDELT/Twelve Data event radar, a public Binance futures liquidation tape, and a chronological logistic-regression shadow model with OOS AUC/Brier/Brier-skill diagnostics, Wilson intervals and an advisory research probability lens.
+
+All context and ML layers remain non-executing and do not automatically rewrite the base signal engine.
+
+## v40 · MODEL GOVERNANCE
+Adds a governed research ensemble, regime-specific shadow models, monotonic PAV confidence calibration, ECE/MCE/Brier diagnostics, PSI feature drift monitoring, performance drift checks and a transparent current-decision waterfall.
+
+v40 introduces no new API dependency and keeps the validated base engine frozen.
+
+## v41 · EXECUTION REALISM
+Fixes the PWA `/api/*` caching path, introduces backup schema v41, and replaces instant paper entry assumptions with a stateful execution simulator: pending/partial/filled entries, deterministic liquidity-aware partial fills, entry expiry, adverse market slippage, gap-through-stop execution, intrabar ambiguity policy, reserved pending exposure and a full execution-event ledger.
+
+No new API dependency is introduced.
+
+## v42 · PORTFOLIO INTELLIGENCE
+Adds aligned multi-asset portfolio returns, covariance-based Marginal/Component VaR, correlation clusters, hedge-pair detection, paper risk budgets by market/regime/cluster, candidate incremental VaR/CVaR before a new Paper position, portfolio-aware adaptive sizing and feature-similarity Strategy Families.
+
+v42 introduces no new API dependency and retains the v41 realistic execution simulator.

@@ -1,4 +1,4 @@
-const CACHE="crypto-radar-v32";
+const CACHE="crypto-radar-v42";
 const APP_SHELL=["/","/index.html","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png"];
 
 self.addEventListener("install",event=>{
@@ -20,6 +20,12 @@ self.addEventListener("fetch",event=>{
   const req=event.request;
   if(req.method!=="GET")return;
   const url=new URL(req.url);
+
+  // v41: API responses are always network-only. Never serve stale market/account/history failures from Cache Storage.
+  if(url.origin===self.location.origin && url.pathname.startsWith("/api/")){
+    event.respondWith(fetch(req));
+    return;
+  }
 
   if(req.mode==="navigate"){
     event.respondWith(
@@ -45,4 +51,27 @@ self.addEventListener("fetch",event=>{
       })
     )
   }
+});
+
+
+self.addEventListener("push",event=>{
+  let data={};try{data=event.data?event.data.json():{}}catch{data={body:event.data?event.data.text():""}}
+  const title=data.title||"Crypto Radar";
+  const options={
+    body:data.body||"Ai o actualizare nouă.",
+    icon:"/icon-192.png",
+    badge:"/icon-192.png",
+    tag:data.tag||"crypto-radar-alert",
+    renotify:!!data.renotify,
+    data:{url:data.url||"/?panel=alerts"}
+  };
+  event.waitUntil(self.registration.showNotification(title,options));
+});
+self.addEventListener("notificationclick",event=>{
+  event.notification.close();
+  const url=event.notification?.data?.url||"/?panel=alerts";
+  event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(list=>{
+    for(const c of list){if("focus" in c){c.navigate(url).catch(()=>{});return c.focus()}}
+    return clients.openWindow?clients.openWindow(url):null
+  }));
 });

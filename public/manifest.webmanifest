@@ -1,7 +1,7 @@
 {
-  "name": "Crypto Radar Pro",
-  "short_name": "Crypto Radar",
-  "description": "Crypto market analysis terminal with Pionex-native scanning, signals, validation and research tools.",
+  "name": "Crypto Radar Pro · Multi-Market",
+  "short_name": "Market Radar",
+  "description": "Multi-market research terminal with portfolio intelligence, marginal/component VaR, risk budgets, correlation clusters, strategy families, realistic paper execution and model governance.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

@@ -1,1 +1,1 @@
-{"name":"crypto-radar-webapp","private":true,"scripts":{"dev":"wrangler pages dev public","deploy":"wrangler pages deploy public"}}
+{"name":"crypto-radar-webapp","private":true,"scripts":{"dev":"wrangler pages dev public","deploy":"wrangler pages deploy public","monitor:deploy":"wrangler deploy --config wrangler.monitor.toml","vapid:generate":"node scripts/generate-vapid.mjs"}}
