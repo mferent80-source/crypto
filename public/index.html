@@ -11,7 +11,7 @@ canvas{width:100%;height:210px;display:block}.coin{display:grid;grid-template-co
 <h1>📡 Crypto Radar Pro Lite</h1><div class="muted">Mobile · live market data · technical research dashboard</div>
 <div class="controls"><input id="symbol" value="BTC" list="coins" placeholder="BTC, ETH, SOL..."><select id="tf"><option>15m</option><option>1h</option><option selected>4h</option><option>1d</option></select></div>
 <datalist id="coins"><option>BTC</option><option>ETH</option><option>SOL</option><option>BNB</option><option>XRP</option><option>DOGE</option><option>ADA</option><option>LINK</option><option>AVAX</option><option>SUI</option><option>DOT</option><option>LTC</option><option>TRX</option><option>PEPE</option></datalist>
-<div class="actions"><button onclick="analyze(true)">Analizează</button><button onclick="toggleFav()">★</button></div><div id="favorites" class="scroll"></div><div id="recent" class="scroll"></div><div id="status" class="status">Pregătit</div>
+<div class="actions"><button id="analyzeBtn" type="button" onclick="analyze(true)">Analizează</button><button type="button" onclick="toggleFav()">★</button></div><div id="favorites" class="scroll"></div><div id="recent" class="scroll"></div><div id="status" class="status">Pregătit</div>
 <div class="tabs"><button class="tab" onclick="show('dash')">Dashboard</button><button class="tab" onclick="show('mtf');multiTF()">Multi-TF</button><button class="tab" onclick="show('scan');scan()">Scanner</button><button class="tab" onclick="show('deriv');derivatives()">Futures</button><button class="tab" onclick="show('watch')">Watch</button></div>
 
 <section id="dash" class="panel on"><div class="grid">
@@ -43,7 +43,17 @@ function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}functi
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}return o}
 async function klines(s,t,l=300){return getJSON(`/api/market?type=klines&symbol=${encodeURIComponent(s)}&interval=${encodeURIComponent(t)}&limit=${l}`)}
-async function ticker(s){return getJSON(`/api/market?type=ticker&symbol=${encodeURIComponent(s)}`)}ticker/24hr?symbol=${s}`);if(!r.ok)throw Error("Ticker indisponibil");return r.json()}
+async function getJSON(url){
+  const r=await fetch(url,{headers:{"accept":"application/json"}});
+  let data;
+  try { data=await r.json(); }
+  catch { throw Error("Răspuns invalid de la server (HTTP "+r.status+")"); }
+  if(!r.ok) throw Error((data && data.error) || ("HTTP "+r.status));
+  return data;
+}
+async function ticker(s){
+  return getJSON(`/api/market?type=ticker&symbol=${encodeURIComponent(s)}`);
+}
 function calc(j){let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>+x[5]),e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,i)=>x-m26[i]),sig=ema(m,9),hist=m.map((x,i)=>x-sig[i]),i=c.length-1,vm=v.slice(-20).reduce((a,b)=>a+b,0)/20,vr=v[i]/vm,ret=c[i]/c[i-20]-1,s=50;
 s+=c[i]>e20[i]?7:-7;s+=e20[i]>e50[i]?7:-7;s+=c[i]>e200[i]?8:-8;s+=e50[i]>e200[i]?8:-8;s+=rr[i]>=55?8:rr[i]<=45?-8:0;s+=hist[i]>0?9:-9;s+=ret>0?4:-4;if(vr>=1.5)s+=c[i]>=c[i-1]?7:-7;else if(vr>=1.1)s+=c[i]>=c[i-1]?3:-3;if(rr[i]>75)s-=5;if(rr[i]<25)s+=5;s=Math.max(0,Math.min(100,s));let ver=s>=62?"BULLISH":s<=38?"BEARISH":"NEUTRAL",prevHi=Math.max(...hi.slice(-21,-1)),prevLo=Math.min(...lo.slice(-21,-1)),bo=c[i]>prevHi?"UP":c[i]<prevLo?"DOWN":"NONE";return{price:c[i],score:s,rsi:rr[i],vr,ema:e20[i]>e50[i],macd:hist[i]>0,sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,closes:c.slice(-100),e20:e20.slice(-100),e50:e50.slice(-100)}}
 function remember(s){let c=coin(s),a=JSON.parse(localStorage.getItem("recent")||"[]");a=[c,...a.filter(x=>x!==c)].slice(0,8);localStorage.setItem("recent",JSON.stringify(a));localStorage.setItem("last",c);renderLists()}
