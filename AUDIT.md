@@ -1,20 +1,23 @@
-# Crypto Radar v13 · AUDITED · DIRECT-DATA
+# v17 · SIGNAL LAB · TESTED
 
-## Root cause confirmed
-The Cloudflare Pages Function itself was working. The 403 came from Binance upstream calls made from Cloudflare infrastructure. Binance documents HTTP 403 as a WAF rejection. Cycling Binance hostnames does not solve an IP/WAF rejection when all calls originate from the same Cloudflare execution environment.
+## Added
+- Separate LONG and SHORT confidence scores.
+- WAIT gate requiring minimum signal strength plus minimum separation between LONG and SHORT.
+- Entry zone, stop, TP1, TP2 and TP3.
+- R:R map: 1.0R / 1.8R / 2.8R.
+- ATR + structure based stop/target construction.
+- Local signal journal stored in browser storage.
+- Duplicate-signal guard.
+- Historical signal evaluation using OHLC candles after each signal timestamp.
+- Ambiguous-candle handling when stop and target are touched in the same candle.
+- Signal performance dashboard: resolved count, win rate, average R and R-based profit factor.
+- CSV journal export.
 
-## Repair
-- Core spot market data no longer passes through Cloudflare Functions.
-- Hosted browser calls Binance public market-data endpoints directly over HTTPS/CORS, first `data-api.binance.vision`, then documented API fallbacks.
-- Cloudflare Function is retained only for optional Futures data and `/api/market?type=health`.
-- A Futures failure cannot break Dashboard, Multi-TF, Scanner, historical analog model, chart, RSI, EMA, MACD, support/resistance, or ticker.
-- Ticker has a 24×1h candle fallback.
-- RSI brace fix retained.
-- Visible build badge: `v13 · AUDITED · DIRECT-DATA`.
-- Successful analysis shows `LIVE` in status.
+## Validation
+- Frontend JavaScript syntax: PASS.
+- Backend JavaScript syntax: PASS.
+- New DOM IDs: PASS.
+- Signal-engine runtime smoke test: PASS.
+- Runtime sample: `{"long":75.4,"short":27.6,"dir":"LONG","entry":141.2118,"stop":138.9021,"tp3":147.6787}`.
 
-## Verification performed
-- Full frontend JavaScript: `node --check` PASS.
-- Cloudflare Function JavaScript: `node --check` PASS.
-- Structural assertions: no spot klines call uses `/api/market`; direct public Binance endpoint exists; version badge exists.
-- Network reachability from the user's browser cannot be executed from this offline build environment; runtime errors are surfaced explicitly rather than hidden.
+The journal is for technical research / paper tracking. Results exclude fees, slippage and actual execution quality.

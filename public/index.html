@@ -1,45 +1,455 @@
 <!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Crypto Radar Pro Lite</title>
+
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080c13;color:#edf2ff;font:14px system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:820px;margin:auto;padding:11px}
-h1{font-size:20px;margin:3px 0}.muted{color:#8c99ad;font-size:11px}.controls{display:grid;grid-template-columns:1fr 90px;gap:7px;margin-top:10px}input,select,button{background:#111827;color:#fff;border:1px solid #263247;border-radius:11px;padding:11px;font-size:15px}button{font-weight:750}.actions{display:grid;grid-template-columns:1fr 54px;gap:7px;margin-top:7px}
-.scroll{display:flex;gap:6px;overflow:auto;padding:7px 0}.pill{width:auto;padding:5px 9px;white-space:nowrap}.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:8px 0}.tab{font-size:11px;padding:9px 2px}.panel{display:none}.panel.on{display:block}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.card{background:#111827;border:1px solid #202b3d;border-radius:13px;padding:11px}.full{grid-column:1/-1}.label{font-size:10px;color:#8c99ad;text-transform:uppercase}.value{font-size:19px;font-weight:800;margin-top:3px}.hero{text-align:center}.hero .value{font-size:29px}.good{color:#57dfa0}.bad{color:#ff7373}.neutral{color:#ffd166}.bar{height:7px;background:#263247;border-radius:8px;overflow:hidden;margin-top:8px}.fill{height:100%;background:#e7eaf0}.row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #202b3d}.row:last-child{border:0}
-canvas{width:100%;height:210px;display:block}.coin{display:grid;grid-template-columns:1.15fr .6fr .75fr .65fr;gap:4px;align-items:center;padding:10px 0;border-bottom:1px solid #202b3d;cursor:pointer}.coin>*:not(:first-child){text-align:right}.miniGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mini{background:#0d1420;border-radius:9px;padding:7px;text-align:center}.mini b{display:block;margin-top:3px;font-size:12px}
-.badge{border:1px solid #344158;border-radius:20px;padding:3px 7px}.status{margin:6px 1px;color:#8c99ad;font-size:11px}.note{color:#8c99ad;font-size:10px;line-height:1.45;margin-top:10px}
-</style></head><body><main>
-<h1>📡 Crypto Radar Pro Lite <span class="badge">v13 · AUDITED · DIRECT-DATA</span></h1><div class="muted">Mobile · live market data · technical research dashboard</div>
-<div class="controls"><input id="symbol" value="BTC" list="coins" placeholder="BTC, ETH, SOL..."><select id="tf"><option>15m</option><option>1h</option><option selected>4h</option><option>1d</option></select></div>
+:root{
+  color-scheme:dark;
+  --bg:#071018;
+  --panel:#0d1722;
+  --panel-2:#111d2a;
+  --panel-3:#152233;
+  --line:#213247;
+  --line-soft:#172536;
+  --text:#f5f7fb;
+  --muted:#90a0b6;
+  --accent:#4fd1c5;
+  --accent-2:#69a7ff;
+  --good:#55d89b;
+  --bad:#ff6b78;
+  --warn:#f5c451;
+  --shadow:0 18px 55px rgba(0,0,0,.32);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 15% -10%,rgba(79,209,197,.12),transparent 28%),
+    radial-gradient(circle at 90% 0%,rgba(105,167,255,.10),transparent 30%),
+    linear-gradient(180deg,#071018 0%,#09111a 42%,#071018 100%);
+}
+body:before{
+  content:"";
+  position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:32px 32px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.6),transparent 75%);
+}
+main{max-width:1120px;margin:auto;padding:18px 16px 34px}
+.appbar{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  margin-bottom:14px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:42px;height:42px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(135deg,rgba(79,209,197,.2),rgba(105,167,255,.18));
+  border:1px solid rgba(105,167,255,.28);
+  box-shadow:inset 0 0 18px rgba(79,209,197,.06),0 10px 30px rgba(0,0,0,.2);
+  font-size:21px;
+}
+h1{font-size:22px;line-height:1.2;margin:0;letter-spacing:-.03em}
+.subhead{margin-top:4px;color:var(--muted);font-size:12px}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid rgba(79,209,197,.28);
+  background:rgba(79,209,197,.08);
+  color:#c7fff9;border-radius:999px;padding:5px 9px;
+  font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  white-space:nowrap;
+}
+.badge:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 10px var(--good)}
+.headerMeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.metaChip{
+  border:1px solid var(--line);
+  background:rgba(17,29,42,.75);
+  border-radius:999px;padding:6px 9px;color:var(--muted);font-size:10px;
+}
+.toolbar{
+  background:linear-gradient(180deg,rgba(17,29,42,.92),rgba(11,20,30,.92));
+  border:1px solid var(--line);
+  border-radius:20px;padding:12px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(14px);
+}
+.controls{display:grid;grid-template-columns:minmax(0,1fr) 100px 120px;gap:8px}
+.actions{display:grid;grid-template-columns:1fr 54px;gap:8px;margin-top:8px}
+input,select,button{
+  width:100%;
+  appearance:none;
+  background:#0b1520;color:#fff;
+  border:1px solid #27394f;border-radius:13px;
+  padding:12px 13px;font-size:14px;
+  outline:none;transition:.18s ease;
+}
+input:focus,select:focus{border-color:#4e8fd7;box-shadow:0 0 0 3px rgba(78,143,215,.12)}
+button{cursor:pointer;font-weight:750}
+button:hover{border-color:#3c536f;background:#101d2b;transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+#analyzeBtn{
+  border:0;
+  background:linear-gradient(135deg,#3bb7ad,#4f82dd);
+  color:white;
+  box-shadow:0 10px 28px rgba(67,132,201,.22);
+}
+#analyzeBtn:hover{filter:brightness(1.06)}
+.scroll{display:flex;gap:6px;overflow:auto;padding:9px 0 0;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.pill{
+  width:auto;padding:6px 10px;white-space:nowrap;border-radius:999px;
+  background:#0d1824;border-color:#22344a;color:#c8d3e1;font-size:11px;
+}
+.status{
+  display:flex;align-items:center;gap:8px;margin:9px 2px 0;color:var(--muted);font-size:11px;
+}
+.status:before{content:"";width:7px;height:7px;border-radius:50%;background:#6d7d91;box-shadow:0 0 0 3px rgba(109,125,145,.10)}
+.tabs{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:7px;
+  margin:12px 0;
+  position:sticky;top:8px;z-index:10;
+  padding:6px;border:1px solid rgba(33,50,71,.9);
+  border-radius:16px;background:rgba(7,16,24,.82);backdrop-filter:blur(15px);
+}
+.tab{
+  font-size:11px;padding:10px 4px;border-radius:11px;
+  background:transparent;border-color:transparent;color:#9cacbf;
+}
+.tab:hover{background:#101d2a;color:white}.tab.active{background:linear-gradient(135deg,rgba(79,209,197,.14),rgba(105,167,255,.14));border-color:#2b4962;color:#fff}
+.panel{display:none}.panel.on{display:block}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+.card{
+  grid-column:span 6;
+  background:linear-gradient(180deg,rgba(17,29,42,.93),rgba(11,20,30,.93));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:15px;
+  box-shadow:0 8px 28px rgba(0,0,0,.18);
+  position:relative;overflow:hidden;
+}
+.card:after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.022),transparent 38%);
+}
+.full{grid-column:1/-1}
+.hero{
+  text-align:left;
+  padding:18px;
+}
+.hero .label{display:flex;justify-content:space-between;align-items:center}
+.hero .value{font-size:34px;letter-spacing:-.04em;margin-top:5px}
+.label{
+  font-size:10px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.11em;font-weight:750;
+}
+.value{font-size:22px;font-weight:820;margin-top:5px;letter-spacing:-.025em}
+.good{color:var(--good)!important}.bad{color:var(--bad)!important}.neutral{color:var(--warn)!important}
+.bar{
+  height:7px;background:#162434;border-radius:999px;overflow:hidden;margin-top:11px;
+  border:1px solid rgba(255,255,255,.025);
+}
+.fill{height:100%;background:linear-gradient(90deg,#45c6b6,#6fa7ff);border-radius:999px}
+.muted{color:var(--muted);font-size:11px}
+.kpi{min-height:110px}
+.kpi:before{
+  content:"";position:absolute;width:88px;height:88px;border-radius:50%;
+  right:-30px;top:-32px;background:radial-gradient(circle,rgba(79,209,197,.10),transparent 70%);
+}
+.row{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:10px 0;border-bottom:1px solid var(--line-soft);
+}
+.row:last-child{border:0}
+.row span:first-child{color:#b4c0cf}
+canvas{
+  width:100%;height:260px;display:block;border-radius:14px;
+  background:linear-gradient(180deg,#0b1520,#09121b);
+  border:1px solid #182638;
+}
+.chartHeader{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:10px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.coin{
+  display:grid;grid-template-columns:1.15fr .6fr .75fr .65fr;gap:6px;
+  align-items:center;padding:11px 6px;border-bottom:1px solid var(--line-soft);
+  cursor:pointer;border-radius:10px;
+}
+.coin:hover{background:#0e1a27}
+.coin>*:not(:first-child){text-align:right}
+.miniGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.mini{
+  background:#0b1520;border:1px solid #1c2d40;border-radius:12px;padding:10px;text-align:center;
+}
+.mini b{display:block;margin-top:4px;font-size:13px}
+.note{
+  color:#718198;font-size:10px;line-height:1.55;margin:14px 2px 0;
+  border-top:1px solid var(--line-soft);padding-top:12px;
+}
+.sectionTitle{font-size:12px;font-weight:800;color:#dfe7f1;margin-bottom:8px}
+#watchout button{max-width:90px}
+@media(max-width:760px){
+  main{padding:12px 10px 26px}
+  .appbar{align-items:center}
+  .headerMeta .metaChip{display:none}
+  h1{font-size:19px}
+  .badge{font-size:9px;padding:4px 7px}
+  .controls{grid-template-columns:minmax(0,1fr) 82px 102px}
+  .tabs{top:5px;gap:3px;padding:5px}
+  .tab{font-size:10px;padding:9px 2px}
+  .grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .card{grid-column:span 1;padding:12px;border-radius:15px}
+  .full{grid-column:1/-1}
+  .hero{grid-column:1/-1}
+  .hero .value{font-size:28px}
+  .value{font-size:19px}
+  canvas{height:225px}
+  .miniGrid{grid-template-columns:repeat(2,1fr);gap:6px}
+}
+@media(max-width:430px){
+  .appbar{gap:8px}
+  .logo{width:38px;height:38px;border-radius:12px}
+  .headerMeta{display:none}
+  .toolbar{padding:10px}
+  .tabs{overflow:auto;display:flex;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{min-width:74px}
+  .card{min-width:0}
+  .coin{grid-template-columns:1fr .55fr .85fr .55fr}
+}
+</style>
+
+<style id="v16-extra">
+.metricGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.metricBox{background:#0b1520;border:1px solid #1c2d40;border-radius:12px;padding:10px}
+.metricBox .n{font-size:18px;font-weight:800;margin-top:3px}
+.gaugeWrap{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
+.gauge{--p:50;--gc:#f5c451;width:140px;height:140px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--gc) calc(var(--p)*1%),#172536 0);position:relative}
+.gauge:before{content:"";position:absolute;inset:12px;border-radius:50%;background:#0d1722;border:1px solid #213247}
+.gaugeInner{position:relative;z-index:1;text-align:center}.gaugeInner b{display:block;font-size:30px}.gaugeInner span{font-size:10px;color:var(--muted);text-transform:uppercase}
+.heatmap{display:grid;grid-template-columns:90px repeat(4,1fr);gap:5px;align-items:center}
+.hmHead,.hmLabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.hmCell{padding:9px 5px;border-radius:9px;text-align:center;font-weight:800;border:1px solid #213247;background:#0b1520}
+.hmBull{background:rgba(85,216,155,.10);color:var(--good);border-color:rgba(85,216,155,.22)}
+.hmBear{background:rgba(255,107,120,.10);color:var(--bad);border-color:rgba(255,107,120,.22)}
+.hmNeu{background:rgba(245,196,81,.08);color:var(--warn);border-color:rgba(245,196,81,.18)}
+.scanFilters{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0}
+.scanTableHead,.coin{grid-template-columns:1.05fr .52fr .72fr .62fr .72fr .55fr}
+.scanTableHead{display:grid;gap:6px;padding:7px 6px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.07em}
+.sentimentBand{height:10px;border-radius:999px;background:linear-gradient(90deg,#ff6b78,#f5c451,#55d89b);position:relative;margin:10px 0}
+.sentimentNeedle{position:absolute;top:-4px;width:3px;height:18px;background:white;border-radius:2px;box-shadow:0 0 8px rgba(255,255,255,.5)}
+.dataDot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--good);box-shadow:0 0 10px rgba(85,216,155,.65)}
+.chartToolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chartToolbar button{width:auto;padding:6px 10px;font-size:10px;border-radius:999px}
+.small{font-size:10px;color:var(--muted)}
+@media(max-width:760px){
+ .metricGrid{grid-template-columns:repeat(2,1fr)}
+ .gaugeWrap{grid-template-columns:1fr;text-align:center}.gauge{margin:auto}
+ .heatmap{grid-template-columns:70px repeat(4,1fr)}
+ .scanFilters{grid-template-columns:repeat(2,1fr)}
+ .scanTableHead,.coin{grid-template-columns:1fr .5fr .7fr .55fr .55fr}
+ .scanTableHead>*:nth-child(5),.coin>*:nth-child(5){display:none}
+ .scanTableHead>*:nth-child(6),.coin>*:nth-child(6){display:none}
+}
+</style>
+
+<style id="v17-extra">
+.signalGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.signalCard{background:linear-gradient(180deg,#0e1a27,#0a141e);border:1px solid #213247;border-radius:16px;padding:14px}
+.signalCard .big{font-size:28px;font-weight:850;letter-spacing:-.04em}
+.levelGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:10px}
+.levelBox{background:#0a141e;border:1px solid #1d2c3d;border-radius:11px;padding:9px;text-align:center}
+.levelBox b{display:block;margin-top:4px;font-size:12px}
+.signalActions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px}
+.journalHead,.journalRow{display:grid;grid-template-columns:1.1fr .7fr .7fr .8fr .8fr .8fr;gap:6px;align-items:center}
+.journalHead{padding:6px 4px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.07em}
+.journalRow{padding:10px 4px;border-top:1px solid var(--line-soft);font-size:11px}
+.tag{display:inline-flex;width:auto;border-radius:999px;padding:3px 7px;border:1px solid #2b3b50;font-size:9px;font-weight:800}
+.tagLong{color:var(--good);background:rgba(85,216,155,.08);border-color:rgba(85,216,155,.25)}
+.tagShort{color:var(--bad);background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.25)}
+.scoreBar{height:9px;border-radius:999px;background:#172536;overflow:hidden;margin-top:8px}
+.scoreBar>i{display:block;height:100%;border-radius:inherit}
+.longFill{background:linear-gradient(90deg,#2dbf8c,#67e1b3)}
+.shortFill{background:linear-gradient(90deg,#e95868,#ff8b95)}
+.perfGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.perfBox{background:#0b1520;border:1px solid #1c2d40;border-radius:12px;padding:10px}
+.perfBox strong{display:block;font-size:18px;margin-top:3px}
+@media(max-width:760px){
+ .signalGrid{grid-template-columns:1fr}
+ .levelGrid{grid-template-columns:repeat(2,1fr)}
+ .levelBox:last-child{grid-column:1/-1}
+ .signalActions{grid-template-columns:1fr}
+ .journalHead,.journalRow{grid-template-columns:1fr .65fr .75fr .8fr}
+ .journalHead>*:nth-child(5),.journalHead>*:nth-child(6),.journalRow>*:nth-child(5),.journalRow>*:nth-child(6){display:none}
+ .perfGrid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head><body><main>
+<div class="appbar">
+  <div class="brand">
+    <div class="logo">◈</div>
+    <div><h1>Crypto Radar Pro</h1><div class="subhead">Market intelligence · multi-timeframe · live technical analysis</div></div>
+  </div>
+  <div class="headerMeta"><span class="badge">v17 · SIGNAL LAB · TESTED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+</div>
+<div class="toolbar">
+<div class="controls">
+<input id="symbol" value="BTC" list="coins" placeholder="BTC, ETH, SOL...">
+<select id="tf"><option>15m</option><option>1h</option><option selected>4h</option><option>1d</option></select>
+<select id="mode" title="Profil algoritmic"><option value="auto" selected>Auto</option><option value="scalp">Scalping</option><option value="intraday">Intraday</option><option value="swing">Swing</option></select>
+</div>
 <datalist id="coins"><option>BTC</option><option>ETH</option><option>SOL</option><option>BNB</option><option>XRP</option><option>DOGE</option><option>ADA</option><option>LINK</option><option>AVAX</option><option>SUI</option><option>DOT</option><option>LTC</option><option>TRX</option><option>PEPE</option></datalist>
-<div class="actions"><button id="analyzeBtn" type="button" onclick="analyze(true)">Analizează</button><button type="button" onclick="toggleFav()">★</button></div><div id="favorites" class="scroll"></div><div id="recent" class="scroll"></div><div id="status" class="status">Pregătit</div>
-<div class="tabs"><button class="tab" onclick="show('dash')">Dashboard</button><button class="tab" onclick="show('mtf');multiTF()">Multi-TF</button><button class="tab" onclick="show('scan');scan()">Scanner</button><button class="tab" onclick="show('deriv');derivatives()">Futures</button><button class="tab" onclick="show('watch')">Watch</button></div>
+<div class="actions"><button id="analyzeBtn" type="button" onclick="analyze(true)">Analizează piața</button><button type="button" onclick="toggleFav()" title="Adaugă la favorite">★</button></div>
+<div id="favorites" class="scroll"></div><div id="recent" class="scroll"></div><div id="status" class="status">Pregătit</div>
+</div>
+<div class="tabs">
+<button class="tab" onclick="show('dash')">Dashboard</button>
+<button class="tab" onclick="show('engine')">Engine</button>
+<button class="tab" onclick="show('mtf');multiTF()">Multi-TF</button>
+<button class="tab" onclick="show('scan');scan()">Scanner</button>
+<button class="tab" onclick="show('backtest');backtestCurrent()">Backtest</button>
+<button class="tab" onclick="show('signals');renderSignals()">Signals</button>
+<button class="tab" onclick="show('deriv');derivatives()">Futures</button>
+<button class="tab" onclick="show('watch')">Watch</button>
+</div>
 
 <section id="dash" class="panel on"><div class="grid">
-<div class="card full hero"><div class="label">Verdict compozit</div><div id="verdict" class="value">—</div><div class="bar"><div id="fill" class="fill"></div></div><div id="conf" class="muted" style="margin-top:5px">—</div></div><div class="card full hero"><div class="label">Verdict probabilistic · modele istorice similare</div><div id="pverdict" class="value">—</div><div class="bar"><div id="pfill" class="fill"></div></div><div id="pstats" class="muted" style="margin-top:5px">Calibrare locală pe istoricul disponibil…</div></div>
-<div class="card"><div class="label">Preț</div><div id="price" class="value">—</div></div><div class="card"><div class="label">24H</div><div id="change" class="value">—</div></div>
-<div class="card"><div class="label">Volum 24H USDT</div><div id="volume24" class="value">—</div></div><div class="card"><div class="label">Scor TF</div><div id="score" class="value">—</div></div>
-<div class="card full"><div style="overflow:hidden"><canvas id="chart" width="700" height="220"></canvas></div></div>
-<div class="card full"><div class="row"><span>RSI 14</span><b id="rsi">—</b></div><div class="row"><span>EMA 20 / 50</span><b id="ema">—</b></div><div class="row"><span>MACD</span><b id="macd">—</b></div><div class="row"><span>Volum / MA20</span><b id="vr">—</b></div><div class="row"><span>Support / Resistance</span><b id="sr">—</b></div><div class="row"><span>Breakout detector</span><b id="breakout">—</b></div></div>
-<div class="card full"><div class="label">Plan tehnic orientativ</div><p id="setup">—</p><div class="miniGrid"><div class="mini"><span class="label">Invalidare</span><b id="invalid">—</b></div><div class="mini"><span class="label">Țintă</span><b id="target">—</b></div><div class="mini"><span class="label">Risk</span><b id="risk">—</b></div></div></div>
+<div class="card full hero"><div class="label">Verdict compozit</div><div id="verdict" class="value">—</div><div class="bar"><div id="fill" class="fill"></div></div><div id="conf" class="muted" style="margin-top:5px">—</div></div><div class="card full hero"><div class="label">Verdict probabilistic · modele istorice similare</div><div id="pverdict" class="value">—</div><div class="bar"><div id="pfill" class="fill"></div></div><div id="pstats" class="muted" style="margin-top:5px">Calibrare locală pe istoricul disponibil…</div></div><div class="card full"><div class="gaugeWrap">
+<div id="probGauge" class="gauge" style="--p:50;--gc:#f5c451"><div class="gaugeInner"><b id="gaugeVal">50%</b><span>Bias UP</span></div></div>
+<div><div class="label">Probability & market context</div><div id="gaugeLabel" class="value neutral">NEUTRAL</div>
+<div class="row"><span>Fear & Greed</span><b id="fearGreed">—</b></div>
+<div class="sentimentBand"><span id="sentimentNeedle" class="sentimentNeedle" style="left:50%"></span></div>
+<div class="small" id="sentimentText">Sentiment extern opțional; engine-ul tehnic nu depinde de el.</div></div>
+</div></div>
+<div class="card kpi"><div class="label">Preț</div><div id="price" class="value">—</div></div><div class="card kpi"><div class="label">24H</div><div id="change" class="value">—</div></div>
+<div class="card kpi"><div class="label">Volum 24H USDT</div><div id="volume24" class="value">—</div></div><div class="card kpi"><div class="label">Scor TF</div><div id="score" class="value">—</div></div>
+<div class="card full"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
+<div class="chartToolbar"><button type="button" onclick="setChartBars(50)">50 bars</button><button type="button" onclick="setChartBars(100)">100 bars</button><button type="button" onclick="setChartBars(160)">160 bars</button></div>
+<div style="overflow:hidden"><canvas id="chart" width="1000" height="360"></canvas></div></div>
+<div class="card full"><div class="sectionTitle">Advanced context</div><div class="metricGrid">
+<div class="metricBox"><div class="label">MFI</div><div id="mfi" class="n">—</div></div>
+<div class="metricBox"><div class="label">OBV trend</div><div id="obv" class="n">—</div></div>
+<div class="metricBox"><div class="label">Ichimoku</div><div id="ichi" class="n">—</div></div>
+<div class="metricBox"><div class="label">RSI divergence</div><div id="divergence" class="n">—</div></div>
+</div></div>
+<div class="card full"><div class="sectionTitle">Indicator matrix</div>
+<div class="row"><span>RSI 14</span><b id="rsi">—</b></div>
+<div class="row"><span>EMA 20 / 50 / 200</span><b id="ema">—</b></div>
+<div class="row"><span>MACD histogram</span><b id="macd">—</b></div>
+<div class="row"><span>ADX / DMI</span><b id="adx">—</b></div>
+<div class="row"><span>Supertrend</span><b id="supertrend">—</b></div>
+<div class="row"><span>Stoch RSI</span><b id="stoch">—</b></div>
+<div class="row"><span>Bollinger position</span><b id="bb">—</b></div>
+<div class="row"><span>Rolling VWAP</span><b id="vwap">—</b></div>
+<div class="row"><span>ATR / Volatilitate</span><b id="atrp">—</b></div>
+<div class="row"><span>Volum / MA20</span><b id="vr">—</b></div>
+<div class="row"><span>Support / Resistance</span><b id="sr">—</b></div>
+<div class="row"><span>Breakout / Donchian</span><b id="breakout">—</b></div>
+</div>
+<div class="card full"><div class="label">Plan tehnic orientativ · ATR + structură</div><p id="setup">—</p><div class="miniGrid">
+<div class="mini"><span class="label">Invalidare</span><b id="invalid">—</b></div>
+<div class="mini"><span class="label">Țintă 1</span><b id="target">—</b></div>
+<div class="mini"><span class="label">Trailing</span><b id="trail">—</b></div>
+<div class="mini"><span class="label">Risk</span><b id="risk">—</b></div>
+</div></div>
 </div></section>
 
-<section id="mtf" class="panel"><div class="card"><div id="mtfout">Se încarcă…</div></div></section>
-<section id="scan" class="panel"><div class="card"><div class="label">Top setup-uri · sortate după forța semnalului</div><div id="scanout">Se încarcă…</div></div><button style="width:100%;margin-top:7px" onclick="scan()">↻ Rescanează</button></section>
+<section id="engine" class="panel"><div class="grid">
+<div class="card full hero"><div class="label">Adaptive signal engine</div><div id="signal" class="value">—</div><div class="bar"><div id="enginefill" class="fill"></div></div><div id="quality" class="muted" style="margin-top:6px">Confluență —</div></div>
+<div class="card kpi"><div class="label">Market regime</div><div id="regime" class="value">—</div></div>
+<div class="card kpi"><div class="label">Trend module</div><div id="trendScore" class="value">—</div></div>
+<div class="card kpi"><div class="label">Momentum module</div><div id="momScore" class="value">—</div></div>
+<div class="card kpi"><div class="label">Structure / SMC</div><div id="smcScore" class="value">—</div></div>
+<div class="card full">
+<div class="row"><span>BOS / CHoCH</span><b id="bos">—</b></div>
+<div class="row"><span>Liquidity sweep / trap</span><b id="sweep">—</b></div>
+<div class="row"><span>Fair Value Gap</span><b id="fvg">—</b></div>
+<div class="row"><span>Volume confirmation</span><b id="volumeSignal">—</b></div>
+<div class="row"><span>kNN analogs · 1 / 4 / 12 candles</span><b id="knnset">—</b></div>
+</div>
+<div class="card full"><div class="label">Engine notes</div><p id="engineNotes">Rule-based confluence + historical nearest-neighbour analogs. Profilul Auto adaptează parametrii la regimul de piață.</p></div>
+</div></section>
+
+<section id="backtest" class="panel"><div class="card full">
+<div class="label">Walk-forward heuristic backtest</div>
+<div id="backtestout" style="margin-top:8px">Apasă tab-ul Backtest pentru evaluarea istoricului încărcat.</div>
+</div></section>
+<section id="mtf" class="panel"><div class="card full"><div class="label">Multi-timeframe heatmap</div><div id="mtfheat" class="heatmap" style="margin-top:10px"></div></div><div class="card full"><div id="mtfout">Se încarcă…</div></div></section>
+<section id="scan" class="panel"><div class="card full"><div class="label">Scanner avansat</div>
+<div class="scanFilters">
+<select id="scanDir" onchange="renderScan()"><option value="ALL">Toate</option><option value="BULLISH">Bullish</option><option value="BEARISH">Bearish</option><option value="NEUTRAL">Neutral</option></select>
+<select id="scanRegime" onchange="renderScan()"><option value="ALL">Orice regim</option><option value="TREND">Trend</option><option value="RANGE">Range</option></select>
+<select id="scanAdx" onchange="renderScan()"><option value="0">ADX orice</option><option value="20">ADX ≥ 20</option><option value="25">ADX ≥ 25</option><option value="30">ADX ≥ 30</option></select>
+<select id="scanScore" onchange="renderScan()"><option value="0">Scor orice</option><option value="55">Forță ≥ 55</option><option value="65">Forță ≥ 65</option><option value="75">Forță ≥ 75</option></select>
+</div>
+<div class="scanTableHead"><b>Coin</b><b>Score</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b></div>
+<div id="scanout">Se încarcă…</div></div><button style="width:100%;margin-top:7px" onclick="scan()">↻ Rescanează</button></section>
+<section id="signals" class="panel">
+<div class="signalGrid">
+  <div class="signalCard">
+    <div class="label">LONG confidence</div><div id="longConf" class="big good">—</div>
+    <div class="scoreBar"><i id="longBar" class="longFill" style="width:0%"></i></div>
+    <div id="longWhy" class="small" style="margin-top:8px">—</div>
+  </div>
+  <div class="signalCard">
+    <div class="label">SHORT confidence</div><div id="shortConf" class="big bad">—</div>
+    <div class="scoreBar"><i id="shortBar" class="shortFill" style="width:0%"></i></div>
+    <div id="shortWhy" class="small" style="margin-top:8px">—</div>
+  </div>
+</div>
+<div class="card full" style="margin-top:10px">
+  <div class="label">Trade map · technical research</div>
+  <div id="tradeDecision" class="value neutral">WAIT</div>
+  <div class="levelGrid">
+    <div class="levelBox"><span class="label">Entry low</span><b id="entryLow">—</b></div>
+    <div class="levelBox"><span class="label">Entry high</span><b id="entryHigh">—</b></div>
+    <div class="levelBox"><span class="label">Stop</span><b id="signalStop">—</b></div>
+    <div class="levelBox"><span class="label">TP1</span><b id="tp1">—</b></div>
+    <div class="levelBox"><span class="label">TP2 / TP3</span><b id="tp23">—</b></div>
+  </div>
+  <div class="row"><span>Risk / Reward TP1</span><b id="rr1">—</b></div>
+  <div class="row"><span>Risk / Reward TP2</span><b id="rr2">—</b></div>
+  <div class="row"><span>Risk / Reward TP3</span><b id="rr3">—</b></div>
+  <div class="signalActions">
+    <button type="button" onclick="saveSignal()">Salvează semnalul</button>
+    <button type="button" onclick="evaluateJournal()">Evaluează istoricul</button>
+    <button type="button" onclick="exportJournal()">Export CSV</button>
+  </div>
+</div>
+<div class="card full" style="margin-top:10px">
+  <div class="label">Signal performance</div>
+  <div class="perfGrid" style="margin-top:9px">
+    <div class="perfBox"><span class="label">Resolved</span><strong id="perfResolved">0</strong></div>
+    <div class="perfBox"><span class="label">Win rate</span><strong id="perfWin">—</strong></div>
+    <div class="perfBox"><span class="label">Avg R</span><strong id="perfR">—</strong></div>
+    <div class="perfBox"><span class="label">Profit factor R</span><strong id="perfPF">—</strong></div>
+  </div>
+</div>
+<div class="card full" style="margin-top:10px">
+  <div class="label">Signal journal · local on device</div>
+  <div class="journalHead"><b>Coin</b><b>Dir</b><b>Entry</b><b>Status</b><b>Conf.</b><b>Date</b></div>
+  <div id="journalOut"></div>
+  <button type="button" style="margin-top:9px" onclick="clearJournal()">Șterge jurnalul</button>
+</div>
+</section>
 <section id="deriv" class="panel"><div class="grid">
 <div class="card"><div class="label">Funding rate</div><div id="funding" class="value">—</div></div>
 <div class="card"><div class="label">Open Interest</div><div id="oi" class="value">—</div></div>
 <div class="card"><div class="label">Long / Short</div><div id="lsratio" class="value">—</div></div>
 <div class="card"><div class="label">Futures context</div><div id="fcontext" class="value">—</div></div>
 <div class="card full"><div class="label">Interpretare</div><p id="ftext">Datele futures vor fi încărcate pentru perechile disponibile pe Binance USDⓈ-M Futures.</p></div>
+<div class="card full"><div class="label">Derivatives composite</div><div class="row"><span>Funding bias</span><b id="fundingBias">—</b></div><div class="row"><span>Crowding risk</span><b id="crowdingRisk">—</b></div><div class="row"><span>OI context</span><b id="oiContext">—</b></div></div>
 </div></section>
 <section id="watch" class="panel"><div class="card"><div class="label">Favorite memorate pe telefon</div><div id="watchout"></div></div></section>
-<p class="note">Verdictul probabilistic folosește analogi istorici locali (cele mai similare configurații tehnice din datele încărcate). Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice sunt euristici, nu probabilități de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile, iar modelul nu include știri, slippage, comisioane ori lichiditate reală.</p>
+<p class="note">Engine-ul combină EMA20/50/200, RSI, MACD, ADX/DMI, Supertrend, Stoch RSI, Bollinger, rolling VWAP, ATR, MFI, OBV, Ichimoku, divergență RSI, volum, Donchian breakout, BOS/CHoCH, liquidity sweep/FVG și analogi istorici kNN. Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice și confidence LONG/SHORT sunt euristici de confluență, nu probabilități garantate de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile, iar modelul nu include știri, slippage, comisioane ori lichiditate reală.</p>
 </main><script>
 
 const universe=["BTC","ETH","SOL","BNB","XRP","DOGE","ADA","LINK","AVAX","SUI","DOT","LTC","TRX","PEPE","NEAR","APT","ARB","OP","ATOM","UNI"];
 const $=id=>document.getElementById(id);function norm(s){s=(s||"BTC").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");return s.endsWith("USDT")?s:s+"USDT"}function coin(s){return s.replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
-function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on")}
+function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active")}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 const MARKET_BASES=[
@@ -79,14 +489,116 @@ async function ticker(s){
     return {priceChangePercent:first?String((last/first-1)*100):"0",quoteVolume:String(quoteVolume)};
   }
 }
-function calc(j){let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>+x[5]),e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,i)=>x-m26[i]),sig=ema(m,9),hist=m.map((x,i)=>x-sig[i]),i=c.length-1,vm=v.slice(-20).reduce((a,b)=>a+b,0)/20,vr=v[i]/vm,ret=c[i]/c[i-20]-1,s=50;
-s+=c[i]>e20[i]?7:-7;s+=e20[i]>e50[i]?7:-7;s+=c[i]>e200[i]?8:-8;s+=e50[i]>e200[i]?8:-8;s+=rr[i]>=55?8:rr[i]<=45?-8:0;s+=hist[i]>0?9:-9;s+=ret>0?4:-4;if(vr>=1.5)s+=c[i]>=c[i-1]?7:-7;else if(vr>=1.1)s+=c[i]>=c[i-1]?3:-3;if(rr[i]>75)s-=5;if(rr[i]<25)s+=5;s=Math.max(0,Math.min(100,s));let ver=s>=62?"BULLISH":s<=38?"BEARISH":"NEUTRAL",prevHi=Math.max(...hi.slice(-21,-1)),prevLo=Math.min(...lo.slice(-21,-1)),bo=c[i]>prevHi?"UP":c[i]<prevLo?"DOWN":"NONE";return{price:c[i],score:s,rsi:rr[i],vr,ema:e20[i]>e50[i],macd:hist[i]>0,sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,closes:c.slice(-100),e20:e20.slice(-100),e50:e50.slice(-100)}}
+
+function sma(a,n){let o=Array(a.length).fill(NaN),sum=0;for(let i=0;i<a.length;i++){sum+=a[i];if(i>=n)sum-=a[i-n];if(i>=n-1)o[i]=sum/n}return o}
+function stddev(a,n){let o=Array(a.length).fill(NaN);for(let i=n-1;i<a.length;i++){let m=0;for(let z=i-n+1;z<=i;z++)m+=a[z];m/=n;let v=0;for(let z=i-n+1;z<=i;z++)v+=(a[z]-m)**2;o[i]=Math.sqrt(v/n)}return o}
+function ATR(h,l,c,n=14){let tr=Array(c.length).fill(0),o=Array(c.length).fill(0);tr[0]=h[0]-l[0];for(let i=1;i<c.length;i++)tr[i]=Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1]));let seed=0;for(let i=0;i<c.length;i++){if(i<n){seed+=tr[i];o[i]=seed/(i+1)}else{o[i]=(o[i-1]*(n-1)+tr[i])/n}}return o}
+function DMI(h,l,c,n=14){
+ let len=c.length,tr=Array(len).fill(0),pd=Array(len).fill(0),md=Array(len).fill(0);
+ for(let i=1;i<len;i++){let up=h[i]-h[i-1],dn=l[i-1]-l[i];pd[i]=up>dn&&up>0?up:0;md[i]=dn>up&&dn>0?dn:0;tr[i]=Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1]))}
+ let atr=Array(len).fill(0),ps=Array(len).fill(0),ms=Array(len).fill(0),pdi=Array(len).fill(0),mdi=Array(len).fill(0),dx=Array(len).fill(0),adx=Array(len).fill(0);
+ for(let i=1;i<len;i++){if(i===1){atr[i]=tr[i];ps[i]=pd[i];ms[i]=md[i]}else{atr[i]=atr[i-1]-(atr[i-1]/n)+tr[i];ps[i]=ps[i-1]-(ps[i-1]/n)+pd[i];ms[i]=ms[i-1]-(ms[i-1]/n)+md[i]}pdi[i]=atr[i]?100*ps[i]/atr[i]:0;mdi[i]=atr[i]?100*ms[i]/atr[i]:0;dx[i]=(pdi[i]+mdi[i])?100*Math.abs(pdi[i]-mdi[i])/(pdi[i]+mdi[i]):0;adx[i]=i===1?dx[i]:(adx[i-1]*(n-1)+dx[i])/n}
+ return {pdi,mdi,adx}
+}
+function stochRSI(r,n=14){let o=Array(r.length).fill(50);for(let i=n-1;i<r.length;i++){let w=r.slice(i-n+1,i+1),mn=Math.min(...w),mx=Math.max(...w);o[i]=mx===mn?50:100*(r[i]-mn)/(mx-mn)}return o}
+function rollingVWAP(h,l,c,v,n=50){let o=Array(c.length).fill(NaN);for(let i=0;i<c.length;i++){let a=Math.max(0,i-n+1),pv=0,vs=0;for(let z=a;z<=i;z++){let tp=(h[z]+l[z]+c[z])/3;pv+=tp*v[z];vs+=v[z]}o[i]=vs?pv/vs:c[i]}return o}
+function superTrend(h,l,c,atr,n=14,mult=2.8){
+ let len=c.length,up=Array(len).fill(0),dn=Array(len).fill(0),trend=Array(len).fill(1),line=Array(len).fill(0);
+ for(let i=0;i<len;i++){let mid=(h[i]+l[i])/2,bu=mid+mult*atr[i],bd=mid-mult*atr[i];if(i===0){up[i]=bu;dn[i]=bd;line[i]=bd;continue}up[i]=(bu<up[i-1]||c[i-1]>up[i-1])?bu:up[i-1];dn[i]=(bd>dn[i-1]||c[i-1]<dn[i-1])?bd:dn[i-1];if(c[i]>up[i-1])trend[i]=1;else if(c[i]<dn[i-1])trend[i]=-1;else trend[i]=trend[i-1];line[i]=trend[i]===1?dn[i]:up[i]}
+ return {trend,line}
+}
+function smcState(h,l,c,v){
+ let i=c.length-1,start=Math.max(5,i-20),ph=Math.max(...h.slice(start,i)),pl=Math.min(...l.slice(start,i));
+ let bosUp=c[i]>ph,bosDown=c[i]<pl,sweepHigh=h[i]>ph&&c[i]<ph,sweepLow=l[i]<pl&&c[i]>pl;
+ let fvg="NONE";for(let z=Math.max(2,i-12);z<=i;z++){if(l[z]>h[z-2])fvg="BULL";else if(h[z]<l[z-2])fvg="BEAR"}
+ let volBase=v.slice(Math.max(0,i-20),i).reduce((a,b)=>a+b,0)/Math.max(1,Math.min(20,i));
+ let trap=(bosUp&&v[i]<volBase*.9)||(bosDown&&v[i]<volBase*.9)||sweepHigh||sweepLow;
+ let score=50;if(bosUp)score+=24;if(bosDown)score-=24;if(sweepLow)score+=16;if(sweepHigh)score-=16;if(fvg==="BULL")score+=8;if(fvg==="BEAR")score-=8;if(trap&&bosUp)score-=10;if(trap&&bosDown)score+=10;
+ return {bos:bosUp?"BOS UP":bosDown?"BOS DOWN":"NONE",sweep:sweepLow?"SWEEP LOW":sweepHigh?"SWEEP HIGH":trap?"LOW-VOL BREAK":"NONE",fvg,trap,score:Math.max(0,Math.min(100,score)),prevHigh:ph,prevLow:pl}
+}
+function profileParams(mode,atrPct,adx){
+ if(mode==="scalp")return {st:2.0,breakout:12,signal:66};
+ if(mode==="swing")return {st:3.2,breakout:30,signal:64};
+ if(mode==="intraday")return {st:2.6,breakout:20,signal:65};
+ if(adx>=27)return {st:2.8,breakout:22,signal:64};
+ if(atrPct>=3)return {st:3.0,breakout:18,signal:67};
+ return {st:2.4,breakout:18,signal:66};
+}
+
+function MFI(h,l,c,v,n=14){
+ let tp=c.map((x,i)=>(h[i]+l[i]+x)/3),pos=Array(c.length).fill(0),neg=Array(c.length).fill(0),o=Array(c.length).fill(50);
+ for(let i=1;i<c.length;i++){let mf=tp[i]*v[i];if(tp[i]>=tp[i-1])pos[i]=mf;else neg[i]=mf}
+ for(let i=n;i<c.length;i++){let ps=0,ns=0;for(let z=i-n+1;z<=i;z++){ps+=pos[z];ns+=neg[z]}o[i]=ns===0?100:100-100/(1+ps/ns)}
+ return o
+}
+function OBV(c,v){
+ let o=Array(c.length).fill(0);for(let i=1;i<c.length;i++)o[i]=o[i-1]+(c[i]>c[i-1]?v[i]:c[i]<c[i-1]?-v[i]:0);return o
+}
+function ichimoku(h,l,c){
+ let mid=(n,i)=>{let a=Math.max(0,i-n+1);return (Math.max(...h.slice(a,i+1))+Math.min(...l.slice(a,i+1)))/2};
+ let i=c.length-1,tenkan=mid(9,i),kijun=mid(26,i),spanA=(tenkan+kijun)/2,spanB=mid(52,i);
+ let state=c[i]>Math.max(spanA,spanB)?"BULL":c[i]<Math.min(spanA,spanB)?"BEAR":"CLOUD";
+ return {tenkan,kijun,spanA,spanB,state}
+}
+function rsiDivergence(c,r){
+ let i=c.length-1,w=24,mid=i-10;if(mid<10)return "NONE";
+ let p1=c.slice(i-w,mid),p2=c.slice(mid,i+1),r1=r.slice(i-w,mid),r2=r.slice(mid,i+1);
+ let low1=Math.min(...p1),low2=Math.min(...p2),hi1=Math.max(...p1),hi2=Math.max(...p2);
+ let rl1=r1[p1.indexOf(low1)],rl2=r2[p2.indexOf(low2)],rh1=r1[p1.indexOf(hi1)],rh2=r2[p2.indexOf(hi2)];
+ if(low2<low1&&rl2>rl1+3)return "BULL DIV";
+ if(hi2>hi1&&rh2<rh1-3)return "BEAR DIV";
+ return "NONE"
+}
+function calc(j,mode="auto"){
+ let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>+x[5]),i=c.length-1;
+ let e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,z)=>x-m26[z]),sig=ema(m,9),hist=m.map((x,z)=>x-sig[z]);
+ let atr=ATR(hi,lo,c,14),dm=DMI(hi,lo,c,14),stoch=stochRSI(rr,14),ma20=sma(c,20),sd20=stddev(c,20),vwap=rollingVWAP(hi,lo,c,v,50),mfiArr=MFI(hi,lo,c,v,14),obvArr=OBV(c,v),ichi=ichimoku(hi,lo,c),divergence=rsiDivergence(c,rr);
+ let atrPct=atr[i]/c[i]*100,p=profileParams(mode,atrPct,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v);
+ let vm=v.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,v.length),vr=v[i]/(vm||1),roc10=(c[i]/c[Math.max(0,i-10)]-1)*100;
+ let upper=ma20[i]+2*sd20[i],lower=ma20[i]-2*sd20[i],bbpos=(c[i]-lower)/Math.max(upper-lower,1e-12)*100;
+ let dstart=Math.max(1,i-p.breakout),prevHi=Math.max(...hi.slice(dstart,i)),prevLo=Math.min(...lo.slice(dstart,i)),bo=c[i]>prevHi?"UP":c[i]<prevLo?"DOWN":"NONE";
+ let trendScore=50;
+ trendScore+=c[i]>e20[i]?9:-9;trendScore+=e20[i]>e50[i]?11:-11;trendScore+=e50[i]>e200[i]?13:-13;trendScore+=st.trend[i]>0?12:-12;trendScore+=dm.pdi[i]>dm.mdi[i]?5:-5;
+ trendScore=Math.max(0,Math.min(100,trendScore));
+ let momScore=50;momScore+=rr[i]>=55?10:rr[i]<=45?-10:0;momScore+=hist[i]>0?13:-13;momScore+=roc10>0?10:-10;momScore+=stoch[i]>55?7:stoch[i]<45?-7:0;momScore=Math.max(0,Math.min(100,momScore));
+ let volScore=50;if(vr>=1.5)volScore+=c[i]>=c[i-1]?24:-24;else if(vr>=1.1)volScore+=c[i]>=c[i-1]?12:-12;if(c[i]>vwap[i])volScore+=8;else volScore-=8;volScore=Math.max(0,Math.min(100,volScore));
+ let structureScore=smc.score;if(bo==="UP")structureScore=Math.min(100,structureScore+12);if(bo==="DOWN")structureScore=Math.max(0,structureScore-12);
+ let regime=dm.adx[i]>=25?(trendScore>=55?"TREND BULL":"TREND BEAR"):(atrPct>=3?"VOLATILE RANGE":"RANGE");
+ let w=mode==="scalp"?[.25,.32,.18,.25]:mode==="swing"?[.42,.20,.12,.26]:[.34,.27,.15,.24];
+ if(mode==="auto"&&regime==="RANGE")w=[.22,.28,.20,.30];
+ let score=trendScore*w[0]+momScore*w[1]+volScore*w[2]+structureScore*w[3];
+ if(rr[i]>78)score-=5;if(rr[i]<22)score+=5;if(smc.trap&&bo==="UP")score-=7;if(smc.trap&&bo==="DOWN")score+=7;
+ score=Math.max(0,Math.min(100,score));
+ let threshold=p.signal,ver=score>=threshold?"BULLISH":score<=100-threshold?"BEARISH":"NEUTRAL",signal=score>=threshold+2?"LONG":score<=98-threshold?"SHORT":"WAIT";
+ let confluence=Math.min(100,Math.abs(score-50)*2),quality=confluence>=78?"A":confluence>=62?"B":confluence>=46?"C":"D";
+ return{
+  price:c[i],score,signal,quality,confluence,regime,trendScore,momScore,volScore,structureScore,
+  rsi:rr[i],stoch:stoch[i],mfi:mfiArr[i],obvSlope:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr,ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
+  adx:dm.adx[i],pdi:dm.pdi[i],mdi:dm.mdi[i],supertrend:st.trend[i]>0?"BULL":"BEAR",bbpos,vwapAbove:c[i]>=vwap[i],
+  atr:atr[i],atrPct,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,smc,
+  candles:j.slice(-160),closes:c.slice(-160),e20:e20.slice(-160),e50:e50.slice(-160)
+ }
+}
 function remember(s){let c=coin(s),a=JSON.parse(localStorage.getItem("recent")||"[]");a=[c,...a.filter(x=>x!==c)].slice(0,8);localStorage.setItem("recent",JSON.stringify(a));localStorage.setItem("last",c);renderLists()}
 function favs(){return JSON.parse(localStorage.getItem("favs")||'["BTC","ETH","SOL"]')}function toggleFav(){let c=coin(norm($("symbol").value)),a=favs();a=a.includes(c)?a.filter(x=>x!==c):[c,...a].slice(0,15);localStorage.setItem("favs",JSON.stringify(a));renderLists()}
 function pick(c){$("symbol").value=c;show("dash");analyze(true)}
 function renderLists(){let f=favs(),r=JSON.parse(localStorage.getItem("recent")||'["BTC","ETH","SOL"]');$("favorites").innerHTML=f.map(x=>`<button class="pill" onclick="pick('${x}')">★ ${x}</button>`).join("");$("recent").innerHTML=r.map(x=>`<button class="pill" onclick="pick('${x}')">${x}</button>`).join("");$("watchout").innerHTML=f.map(x=>`<div class="row"><b>${x}</b><button class="pill" onclick="pick('${x}')">Analiză</button></div>`).join("")}
-function draw(q){let cv=$("chart"),ctx=cv.getContext("2d"),w=cv.width,h=cv.height,pad=18,all=[...q.closes,...q.e20,...q.e50],mn=Math.min(...all),mx=Math.max(...all),X=i=>pad+i*(w-2*pad)/(q.closes.length-1),Y=v=>h-pad-(v-mn)*(h-2*pad)/(mx-mn||1);ctx.clearRect(0,0,w,h);ctx.strokeStyle="#263247";ctx.lineWidth=1;for(let k=1;k<4;k++){let y=k*h/4;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}function line(a,color,width){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();a.forEach((v,i)=>i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));ctx.stroke()}line(q.e50,"#8c99ad",1);line(q.e20,"#ffd166",1);line(q.closes,"#e7eaf0",2)}
 
+let chartBars=100;
+function setChartBars(n){chartBars=n;if(window.__radarState&&window.__radarState.q)draw(window.__radarState.q)}
+function draw(q){
+ let cv=$("chart"),ctx=cv.getContext("2d"),w=cv.width,h=cv.height,padL=48,padR=12,padT=12,volH=70,priceH=h-volH-28;
+ let candles=q.candles.slice(-chartBars),cl=q.closes.slice(-chartBars),e20=q.e20.slice(-chartBars),e50=q.e50.slice(-chartBars);
+ let highs=candles.map(x=>+x[2]),lows=candles.map(x=>+x[3]),vols=candles.map(x=>+x[5]),mn=Math.min(...lows),mx=Math.max(...highs),vrange=mx-mn||1,maxV=Math.max(...vols)||1;
+ let x=i=>padL+(i+.5)*(w-padL-padR)/candles.length,y=v=>padT+(mx-v)/vrange*(priceH-padT),vw=Math.max(2,(w-padL-padR)/candles.length*.58);
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#09121b";ctx.fillRect(0,0,w,h);
+ ctx.strokeStyle="#172638";ctx.lineWidth=1;ctx.fillStyle="#718198";ctx.font="10px system-ui";
+ for(let k=0;k<5;k++){let yy=padT+k*(priceH-padT)/4,val=mx-k*vrange/4;ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(w-padR,yy);ctx.stroke();ctx.fillText(num(val),4,yy+3)}
+ candles.forEach((c,i)=>{let o=+c[1],hi=+c[2],lo=+c[3],cc=+c[4],bull=cc>=o,col=bull?"#55d89b":"#ff6b78";ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x(i),y(hi));ctx.lineTo(x(i),y(lo));ctx.stroke();let top=Math.min(y(o),y(cc)),bh=Math.max(1,Math.abs(y(o)-y(cc)));ctx.fillRect(x(i)-vw/2,top,vw,bh);let vh=(+c[5])/maxV*(volH-12);ctx.globalAlpha=.35;ctx.fillRect(x(i)-vw/2,h-8-vh,vw,vh);ctx.globalAlpha=1});
+ function line(a,col,width){ctx.strokeStyle=col;ctx.lineWidth=width;ctx.beginPath();a.forEach((v,i)=>{let xx=x(i),yy=y(v);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy)});ctx.stroke()}
+ line(e50,"#7f8da3",1);line(e20,"#4fd1c5",1.35);
+ ctx.setLineDash([4,4]);ctx.strokeStyle="#385067";ctx.beginPath();ctx.moveTo(padL,y(q.sup));ctx.lineTo(w-padR,y(q.sup));ctx.stroke();ctx.beginPath();ctx.moveTo(padL,y(q.res));ctx.lineTo(w-padR,y(q.res));ctx.stroke();ctx.setLineDash([]);
+}
 function historicalProbability(j,horizon=4){
   const c=j.map(x=>+x[4]), v=j.map(x=>+x[5]), n=c.length;
   if(n<260)return null;
@@ -111,14 +623,236 @@ function historicalProbability(j,horizon=4){
   let up=upw/ws*100, down=100-up, avg=av/ws, strength=Math.abs(up-50)*2;
   return {up,down,avg,k,strength,ver:up>=58?"BULLISH":up<=42?"BEARISH":"NEUTRAL"};
 }
-async function mtfData(s){let out=[];for(const t of ["15m","1h","4h","1d"]){try{out.push({tf:t,...calc(await klines(s,t))})}catch{}}return out}
-async function analyze(save){let s=norm($("symbol").value),t=$("tf").value;$("symbol").value=coin(s);$("status").textContent="Actualizare…";try{let [j,tick,m]=await Promise.all([klines(s,t,750),ticker(s),mtfData(s)]),q=calc(j);let hp=historicalProbability(j,4);if(save)remember(s);let avg=m.reduce((a,x)=>a+x.score,0)/(m.length||1),bull=m.filter(x=>x.ver==="BULLISH").length,bear=m.filter(x=>x.ver==="BEARISH").length,comp=bull>=3?"BULLISH":bear>=3?"BEARISH":avg>=58?"BULLISH":avg<=42?"BEARISH":"NEUTRAL",confidence=Math.round(Math.max(bull,bear,m.length-bull-bear)/(m.length||1)*100);
-$("verdict").textContent=comp;$("verdict").className="value "+cls(comp);$("fill").style.width=avg+"%";$("conf").textContent=`Multi-TF score ${avg.toFixed(0)}/100 · acord ${confidence}%`;
-if(hp){$("pverdict").textContent=hp.ver;$("pverdict").className="value "+cls(hp.ver);$("pfill").style.width=hp.up+"%";$("pstats").textContent=`Modele similare: ${hp.k} · creștere ${hp.up.toFixed(1)}% · scădere ${hp.down.toFixed(1)}% · randament mediu după 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · putere ${hp.strength.toFixed(0)}/100`;}else{$("pverdict").textContent="DATE INSUFICIENTE";$("pverdict").className="value neutral";$("pstats").textContent="Nu există suficient istoric pentru calibrare."}
-$("price").textContent=num(q.price);let ch=+tick.priceChangePercent;$("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch>=0?"good":"bad");$("volume24").textContent=compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";$("rsi").textContent=q.rsi.toFixed(1);$("ema").textContent=q.ema?"Pozitiv":"Negativ";$("ema").className=q.ema?"good":"bad";$("macd").textContent=q.macd?"Pozitiv":"Negativ";$("macd").className=q.macd?"good":"bad";$("vr").textContent=q.vr.toFixed(2)+"x";$("sr").textContent=num(q.sup)+" / "+num(q.res);let bo=$("breakout");bo.textContent=q.breakout==="UP"?"▲ Breakout bullish":q.breakout==="DOWN"?"▼ Breakdown bearish":"Fără breakout";bo.className=q.breakout==="UP"?"good":q.breakout==="DOWN"?"bad":"neutral";
-let range=Math.max(q.res-q.sup,q.price*.002),inv,tar,txt,risk;if(comp==="BULLISH"){inv=q.sup;tar=q.price+Math.max(q.price-q.sup,range*.4)*1.5;txt="Structura multi-timeframe este orientată bullish. Urmărește menținerea peste invalidare și confirmarea prin volum.";risk=q.rsi>70?"Ridicat":confidence<50?"Ridicat":"Mediu"}else if(comp==="BEARISH"){inv=q.res;tar=Math.max(0,q.price-Math.max(q.res-q.price,range*.4)*1.5);txt="Structura multi-timeframe este orientată bearish. Invalidarea apare dacă prețul recucerește rezistența relevantă.";risk=q.rsi<30?"Ridicat":confidence<50?"Ridicat":"Mediu"}else{inv=q.sup;tar=q.res;txt="Nu există consens suficient între timeframe-uri. Support/resistance sunt mai relevante decât forțarea unei direcții.";risk="Ridicat"}$("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("risk").textContent=risk;draw(q);$("status").textContent=`${coin(s)}/USDT · ${t} · LIVE · ${new Date().toLocaleTimeString()}`;}catch(e){$("status").textContent="Eroare: "+e.message}}
-async function multiTF(){let s=norm($("symbol").value);$("mtfout").innerHTML="Se încarcă…";let m=await mtfData(s),avg=m.reduce((a,x)=>a+x.score,0)/(m.length||1);$("mtfout").innerHTML=`<div class="row"><span>Scor mediu</span><b>${avg.toFixed(0)}/100</b></div>`+m.map(x=>`<div class="row"><b>${x.tf}</b><span>RSI ${x.rsi.toFixed(0)} · ${Math.round(x.score)}/100</span><b class="${cls(x.ver)}">${x.ver}</b></div>`).join("")}
-async function derivatives(){let s=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";try{let d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(s)}`),fr=d.funding,oi=d.openInterest,ls=d.longShort;$("funding").textContent=fr==null?"N/A":(fr*100).toFixed(4)+"%";$("oi").textContent=oi==null?"N/A":compact(oi);$("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2);let crowd=0;if(fr!=null){if(fr>.0003)crowd--;else if(fr<-.0003)crowd++}if(ls!=null){if(ls>1.5)crowd--;else if(ls<.67)crowd++}let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";$("fcontext").textContent=context;$("fcontext").className="value "+(context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");$("ftext").textContent="Funding, Open Interest și raportul global long/short sunt preluate server-side. Extremele de poziționare sunt context, nu semnal suficient singure."}catch(e){$("ftext").textContent="Futures indisponibil: "+e.message}} 
-async function scan(){let box=$("scanout");box.innerHTML="Scanez "+universe.length+" monede…";let out=[];for(const c of universe){try{let s=c+"USDT",m=await mtfData(s),avg=m.reduce((a,x)=>a+x.score,0)/(m.length||1),bull=m.filter(x=>x.ver==="BULLISH").length,bear=m.filter(x=>x.ver==="BEARISH").length,dir=bull>=3?"BULLISH":bear>=3?"BEARISH":"NEUTRAL",strength=dir==="BULLISH"?avg:dir==="BEARISH"?100-avg:50-Math.abs(50-avg);out.push({c,avg,dir,strength,bull,bear})}catch{}}out.sort((a,b)=>b.strength-a.strength);box.innerHTML=out.map(x=>`<div class="coin" onclick="pick('${x.c}')"><b>${x.c}</b><span>${x.avg.toFixed(0)}</span><b class="${cls(x.dir)}">${x.dir}</b><span>${Math.max(x.bull,x.bear)}/4</span></div>`).join("")}
-$("symbol").value=localStorage.getItem("last")||"BTC";renderLists();$("status").textContent="Apasă Analizează pentru date live.";
+function historicalSet(j){return {h1:historicalProbability(j,1),h4:historicalProbability(j,4),h12:historicalProbability(j,12)}}
+
+async function loadFearGreed(){
+ try{
+  const r=await fetch("https://api.alternative.me/fng/?limit=1&format=json",{cache:"no-store"});
+  const j=await r.json(),d=j&&j.data&&j.data[0];if(!d)return;
+  const v=Math.max(0,Math.min(100,+d.value||50));$("fearGreed").textContent=`${v} · ${d.value_classification||""}`;$("sentimentNeedle").style.left=`calc(${v}% - 1px)`;$("sentimentText").textContent=`Fear & Greed extern: ${d.value_classification||"N/A"} · nu modifică direct scorul tehnic.`;
+ }catch{$("fearGreed").textContent="N/A";$("sentimentText").textContent="Sentiment extern indisponibil; engine-ul tehnic continuă normal."}
+}
+async function mtfData(s){
+ const mode=$("mode")?$("mode").value:"auto";
+ const tfs=["15m","1h","4h","1d"];
+ const jobs=await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(await klines(s,tf),mode)}}catch{return null}}));
+ return jobs.filter(Boolean)
+}
+function mtfComposite(m){
+ const weights={"15m":.15,"1h":.25,"4h":.35,"1d":.25};let sum=0,ws=0;
+ for(const x of m){let w=weights[x.tf]||.25;sum+=x.score*w;ws+=w}
+ let avg=ws?sum/ws:50,bull=m.filter(x=>x.ver==="BULLISH").length,bear=m.filter(x=>x.ver==="BEARISH").length;
+ let comp=bull>=3?"BULLISH":bear>=3?"BEARISH":avg>=61?"BULLISH":avg<=39?"BEARISH":"NEUTRAL";
+ let confidence=Math.round(Math.max(bull,bear,m.length-bull-bear)/(m.length||1)*100);
+ return {avg,bull,bear,comp,confidence}
+}
+
+function signalModel(q,hs,mc){
+  const hp=hs&&hs.h4?hs.h4:null;
+  const histUp=hp?hp.up:50,histDown=hp?hp.down:50;
+  let long=0.42*q.score+0.22*histUp+0.20*mc.avg+0.10*q.structureScore+0.06*q.volScore;
+  let short=0.42*(100-q.score)+0.22*histDown+0.20*(100-mc.avg)+0.10*(100-q.structureScore)+0.06*(100-q.volScore);
+  if(q.divergence==="BULL DIV")long+=4;
+  if(q.divergence==="BEAR DIV")short+=4;
+  if(q.ichimoku==="BULL")long+=3;
+  if(q.ichimoku==="BEAR")short+=3;
+  if(q.smc.trap&&q.breakout==="UP")long-=5;
+  if(q.smc.trap&&q.breakout==="DOWN")short-=5;
+  long=Math.max(0,Math.min(100,long));short=Math.max(0,Math.min(100,short));
+  const edge=Math.abs(long-short),best=Math.max(long,short);
+  let direction=best>=64&&edge>=8?(long>short?"LONG":"SHORT"):"WAIT";
+  return {long,short,edge,direction}
+}
+function buildTradeMap(q,sm){
+  let dir=sm.direction,entryLow=q.price,entryHigh=q.price,stop=q.price,tp1=q.price,tp2=q.price,tp3=q.price,risk=0;
+  if(dir==="LONG"){
+    entryLow=Math.max(q.sup,q.price-q.atr*.35);entryHigh=q.price+q.atr*.10;
+    stop=Math.min(entryLow-q.atr*.20,q.price-q.atr*1.6);risk=Math.max(.00000001,((entryLow+entryHigh)/2)-stop);
+    let e=(entryLow+entryHigh)/2;tp1=e+risk;tp2=e+risk*1.8;tp3=e+risk*2.8;
+  }else if(dir==="SHORT"){
+    entryLow=q.price-q.atr*.10;entryHigh=Math.min(q.res,q.price+q.atr*.35);
+    stop=Math.max(entryHigh+q.atr*.20,q.price+q.atr*1.6);risk=Math.max(.00000001,stop-((entryLow+entryHigh)/2));
+    let e=(entryLow+entryHigh)/2;tp1=e-risk;tp2=e-risk*1.8;tp3=e-risk*2.8;
+  }
+  return {direction:dir,entryLow,entryHigh,stop,tp1,tp2,tp3,risk,rr1:dir==="WAIT"?0:1,rr2:dir==="WAIT"?0:1.8,rr3:dir==="WAIT"?0:2.8}
+}
+function updateSignalUI(q,hs,mc){
+  const sm=signalModel(q,hs,mc),tm=buildTradeMap(q,sm);
+  window.__signalState={sm,tm,q,hs,mc};
+  $("longConf").textContent=sm.long.toFixed(0)+"/100";$("shortConf").textContent=sm.short.toFixed(0)+"/100";
+  $("longBar").style.width=sm.long+"%";$("shortBar").style.width=sm.short+"%";
+  $("longWhy").textContent=`Trend ${q.trendScore.toFixed(0)} · hist ↑ ${(hs.h4?hs.h4.up:50).toFixed(0)} · MTF ${mc.avg.toFixed(0)} · SMC ${q.structureScore.toFixed(0)}`;
+  $("shortWhy").textContent=`Trend ${(100-q.trendScore).toFixed(0)} · hist ↓ ${(hs.h4?hs.h4.down:50).toFixed(0)} · MTF ${(100-mc.avg).toFixed(0)} · SMC ${(100-q.structureScore).toFixed(0)}`;
+  $("tradeDecision").textContent=tm.direction;$("tradeDecision").className="value "+(tm.direction==="LONG"?"good":tm.direction==="SHORT"?"bad":"neutral");
+  for(const [id,val] of [["entryLow",tm.entryLow],["entryHigh",tm.entryHigh],["signalStop",tm.stop],["tp1",tm.tp1]])$(id).textContent=tm.direction==="WAIT"?"—":num(val);
+  $("tp23").textContent=tm.direction==="WAIT"?"—":`${num(tm.tp2)} / ${num(tm.tp3)}`;
+  $("rr1").textContent=tm.direction==="WAIT"?"—":"1 : 1.0";$("rr2").textContent=tm.direction==="WAIT"?"—":"1 : 1.8";$("rr3").textContent=tm.direction==="WAIT"?"—":"1 : 2.8";
+  return {sm,tm}
+}
+function journal(){try{return JSON.parse(localStorage.getItem("signalJournal")||"[]")}catch{return []}}
+function setJournal(a){localStorage.setItem("signalJournal",JSON.stringify(a.slice(0,250)))}
+function saveSignal(){
+  const st=window.__radarState,ss=window.__signalState;if(!st||!ss){alert("Rulează mai întâi Analizează.");return}
+  if(ss.tm.direction==="WAIT"){alert("Semnalul curent este WAIT; nu există setup direcțional de salvat.");return}
+  const e=(ss.tm.entryLow+ss.tm.entryHigh)/2;
+  let a=journal(),last=a[0];
+  if(last&&last.symbol===st.symbol&&last.tf===st.tf&&last.direction===ss.tm.direction&&Date.now()-last.ts<15*60*1000){alert("Există deja un semnal recent identic.");return}
+  a.unshift({
+    id:String(Date.now())+"-"+Math.random().toString(36).slice(2,7),ts:Date.now(),symbol:st.symbol,tf:st.tf,mode:st.mode,
+    direction:ss.tm.direction,entry:e,entryLow:ss.tm.entryLow,entryHigh:ss.tm.entryHigh,stop:ss.tm.stop,tp1:ss.tm.tp1,tp2:ss.tm.tp2,tp3:ss.tm.tp3,
+    longConf:ss.sm.long,shortConf:ss.sm.short,regime:ss.q.regime,status:"OPEN",bestTarget:0,rResult:null
+  });
+  setJournal(a);renderSignals()
+}
+function signalStatusClass(st){return st==="STOP"||st==="AMBIGUOUS"?"bad":st.startsWith("TP")||st.includes("TP")?"good":"neutral"}
+function renderSignals(){
+  const a=journal(),box=$("journalOut");if(!box)return;
+  box.innerHTML=a.length?a.slice(0,80).map(x=>`<div class="journalRow"><b>${coin(x.symbol)}</b><span class="tag ${x.direction==="LONG"?"tagLong":"tagShort"}">${x.direction}</span><span>${num(x.entry)}</span><b class="${signalStatusClass(x.status)}">${x.status}</b><span>${Math.max(x.longConf,x.shortConf).toFixed(0)}</span><span>${new Date(x.ts).toLocaleDateString()}</span></div>`).join(""):`<div class="row"><span>Nu ai semnale salvate.</span></div>`;
+  renderPerformance()
+}
+function renderPerformance(){
+  const a=journal(),r=a.filter(x=>Number.isFinite(x.rResult)),n=r.length,w=r.filter(x=>x.rResult>0).length,sum=r.reduce((z,x)=>z+x.rResult,0),gp=r.filter(x=>x.rResult>0).reduce((z,x)=>z+x.rResult,0),gl=-r.filter(x=>x.rResult<0).reduce((z,x)=>z+x.rResult,0);
+  $("perfResolved").textContent=n;$("perfWin").textContent=n?(w/n*100).toFixed(1)+"%":"—";$("perfR").textContent=n?(sum/n).toFixed(2)+" R":"—";$("perfPF").textContent=n?(gl?(gp/gl).toFixed(2):gp?"∞":"0"):"—";
+}
+async function evaluateOneSignal(sig){
+  let bars;try{bars=await klines(sig.symbol,sig.tf,750)}catch{return sig}
+  const after=bars.filter(x=>+x[0]>=sig.ts);if(!after.length)return sig;
+  let best=Number(sig.bestTarget||0);
+  for(const b of after){
+    const hi=+b[2],lo=+b[3];
+    const stopHit=sig.direction==="LONG"?lo<=sig.stop:hi>=sig.stop;
+    const t3=sig.direction==="LONG"?hi>=sig.tp3:lo<=sig.tp3;
+    const t2=sig.direction==="LONG"?hi>=sig.tp2:lo<=sig.tp2;
+    const t1=sig.direction==="LONG"?hi>=sig.tp1:lo<=sig.tp1;
+    const anyTarget=t1||t2||t3;
+    if(stopHit&&anyTarget){sig.status="AMBIGUOUS";sig.rResult=null;return sig}
+    if(t3){best=3;sig.status="TP3";sig.rResult=2.8;sig.bestTarget=3;return sig}
+    if(t2)best=Math.max(best,2);
+    if(t1)best=Math.max(best,1);
+    if(stopHit){
+      sig.bestTarget=best;
+      if(best>=2){sig.status="TP2";sig.rResult=1.8}
+      else if(best>=1){sig.status="TP1";sig.rResult=1.0}
+      else{sig.status="STOP";sig.rResult=-1}
+      return sig
+    }
+  }
+  sig.bestTarget=best;sig.status=best>=2?"OPEN · TP2":best>=1?"OPEN · TP1":"OPEN";sig.rResult=null;return sig
+}
+async function evaluateJournal(){
+  let a=journal();if(!a.length){renderSignals();return}
+  $("journalOut").innerHTML='<div class="row"><span>Evaluez semnalele…</span></div>';
+  for(let i=0;i<a.length;i++){if(a[i].status==="TP3"||a[i].status==="STOP"||a[i].status==="AMBIGUOUS")continue;a[i]=await evaluateOneSignal(a[i])}
+  setJournal(a);renderSignals()
+}
+function exportJournal(){
+  const a=journal();if(!a.length){alert("Jurnalul este gol.");return}
+  const cols=["date","symbol","tf","mode","direction","entry","stop","tp1","tp2","tp3","longConf","shortConf","status","rResult"];
+  const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.symbol,x.tf,x.mode,x.direction,x.entry,x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.rResult??""].join(",")));
+  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
+function clearJournal(){if(confirm("Ștergi tot jurnalul de semnale?")){localStorage.removeItem("signalJournal");renderSignals()}}
+async function analyze(save){
+ let sym=norm($("symbol").value),t=$("tf").value,mode=$("mode").value;$("symbol").value=coin(sym);$("status").textContent="Actualizare engine…";
+ try{
+  let [j,tick,m]=await Promise.all([klines(sym,t,750),ticker(sym),mtfData(sym)]),q=calc(j,mode),hs=historicalSet(j),mc=mtfComposite(m);
+  window.__radarState={symbol:sym,tf:t,mode,j,q,m,tick,hs};
+  if(save){remember(sym);localStorage.setItem("mode",mode)}
+  let hp=hs.h4,avg=mc.avg,comp=mc.comp,confidence=mc.confidence;
+  updateSignalUI(q,hs,mc);
+  $("verdict").textContent=comp;$("verdict").className="value "+cls(comp);$("fill").style.width=avg+"%";$("conf").textContent=`Weighted Multi-TF ${avg.toFixed(0)}/100 · acord ${confidence}% · ${q.regime}`;
+  if(hp){$("pverdict").textContent=hp.ver;$("pverdict").className="value "+cls(hp.ver);$("pfill").style.width=hp.up+"%";$("pstats").textContent=`kNN: ${hp.k} analogi · ↑ ${hp.up.toFixed(1)}% · ↓ ${hp.down.toFixed(1)}% · medie 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · putere ${hp.strength.toFixed(0)}/100`}if(hp){let gv=Math.round(hp.up);$("probGauge").style.setProperty("--p",gv);$("probGauge").style.setProperty("--gc",gv>=58?"#55d89b":gv<=42?"#ff6b78":"#f5c451");$("gaugeVal").textContent=gv+"%";$("gaugeLabel").textContent=hp.ver;$("gaugeLabel").className="value "+cls(hp.ver)}
+
+  $("price").textContent=num(q.price);let ch=+tick.priceChangePercent;$("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch>=0?"good":"bad");$("volume24").textContent=compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";
+  $("rsi").textContent=q.rsi.toFixed(1);$("ema").textContent=q.ema? "Bull stack":"Mixed / bear";$("ema").className=q.ema?"good":"bad";
+  $("macd").textContent=q.macd?"Pozitiv":"Negativ";$("macd").className=q.macd?"good":"bad";
+  $("adx").textContent=`${q.adx.toFixed(1)} · +DI ${q.pdi.toFixed(0)} / -DI ${q.mdi.toFixed(0)}`;$("adx").className=q.adx>=25?(q.pdi>q.mdi?"good":"bad"):"neutral";
+  $("supertrend").textContent=q.supertrend;$("supertrend").className=q.supertrend==="BULL"?"good":"bad";
+  $("stoch").textContent=q.stoch.toFixed(1);$("stoch").className=q.stoch>=55?"good":q.stoch<=45?"bad":"neutral";
+  $("bb").textContent=q.bbpos.toFixed(0)+"%";$("bb").className=q.bbpos>55?"good":q.bbpos<45?"bad":"neutral";
+  $("vwap").textContent=q.vwapAbove?"Peste VWAP":"Sub VWAP";$("vwap").className=q.vwapAbove?"good":"bad";
+  $("atrp").textContent=`${q.atrPct.toFixed(2)}% · ATR ${num(q.atr)}`;$("vr").textContent=q.vr.toFixed(2)+"x";$("sr").textContent=num(q.sup)+" / "+num(q.res);$("mfi").textContent=q.mfi.toFixed(1);$("mfi").className="n "+(q.mfi>=55?"good":q.mfi<=45?"bad":"neutral");$("obv").textContent=q.obvSlope>0?"UP":"DOWN";$("obv").className="n "+(q.obvSlope>0?"good":"bad");$("ichi").textContent=q.ichimoku;$("ichi").className="n "+(q.ichimoku==="BULL"?"good":q.ichimoku==="BEAR"?"bad":"neutral");$("divergence").textContent=q.divergence;$("divergence").className="n "+(q.divergence==="BULL DIV"?"good":q.divergence==="BEAR DIV"?"bad":"neutral");
+  let bo=$("breakout");bo.textContent=q.breakout==="UP"?"▲ Breakout":q.breakout==="DOWN"?"▼ Breakdown":"În canal";bo.className=q.breakout==="UP"?"good":q.breakout==="DOWN"?"bad":"neutral";
+
+  $("signal").textContent=q.signal;$("signal").className="value "+(q.signal==="LONG"?"good":q.signal==="SHORT"?"bad":"neutral");$("enginefill").style.width=q.score+"%";$("quality").textContent=`Confluență ${q.confluence.toFixed(0)}/100 · calitate ${q.quality} · scor ${q.score.toFixed(0)}/100`;
+  $("regime").textContent=q.regime;$("trendScore").textContent=q.trendScore.toFixed(0)+"/100";$("momScore").textContent=q.momScore.toFixed(0)+"/100";$("smcScore").textContent=q.structureScore.toFixed(0)+"/100";
+  $("bos").textContent=q.smc.bos;$("sweep").textContent=q.smc.sweep;$("fvg").textContent=q.smc.fvg;$("volumeSignal").textContent=q.vr>=1.5?"PUTERNIC":q.vr>=1.1?"CONFIRMĂ":"SLAB";
+  let htxt=[];for(const [lab,h] of [["1",hs.h1],["4",hs.h4],["12",hs.h12]])if(h)htxt.push(`${lab}c ${h.up.toFixed(0)}%↑`);$("knnset").textContent=htxt.join(" · ")||"N/A";
+  $("engineNotes").textContent=`Profil ${mode.toUpperCase()} · ${q.regime}. Trend ${q.trendScore.toFixed(0)}, momentum ${q.momScore.toFixed(0)}, volum ${q.volScore.toFixed(0)}, structură ${q.structureScore.toFixed(0)}. Filtrul de liquidity trap este ${q.smc.trap?"ACTIV":"inactiv"}. Confidence LONG/SHORT este calculat separat în tab-ul Signals.`;
+
+  let dir=mc.comp==="BULLISH"?1:mc.comp==="BEARISH"?-1:0,baseStop=Math.max(q.atr*1.8,q.price*.004),inv,tar,trail,txt,risk;
+  if(dir>0){inv=Math.max(q.sup,q.price-baseStop);let r=q.price-inv;tar=q.price+r*2.0;trail=q.price-q.atr*1.5;txt="Confluență bullish: trend, momentum, structură și MTF sunt combinate. Confirmarea ideală este volum peste medie și lipsa unui liquidity trap."}
+  else if(dir<0){inv=Math.min(q.res,q.price+baseStop);let r=inv-q.price;tar=Math.max(0,q.price-r*2.0);trail=q.price+q.atr*1.5;txt="Confluență bearish: motorul optimizează separat direcția short și penalizează breakout-urile fără volum sau sweep-urile adverse."}
+  else{inv=q.sup;tar=q.res;trail=q.price;txt="Engine-ul nu are suficientă confluență direcțională. Zona support/resistance este mai relevantă decât forțarea unei intrări."}
+  risk=q.atrPct>=4||q.confluence<45?"Ridicat":q.atrPct>=2.2||q.confluence<62?"Mediu":"Controlat";
+  $("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("trail").textContent=num(trail);$("risk").textContent=risk;
+  draw(q);loadFearGreed();$("status").textContent=`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · LIVE · ${new Date().toLocaleTimeString()}`;
+ }catch(e){$("status").textContent="Eroare: "+e.message}
+}
+async function multiTF(){
+ let sym=norm($("symbol").value);$("mtfout").innerHTML="Se încarcă…";$("mtfheat").innerHTML="";let m=await mtfData(sym),mc=mtfComposite(m);
+ $("mtfout").innerHTML=`<div class="row"><span>Scor ponderat</span><b>${mc.avg.toFixed(0)}/100 · ${mc.comp}</b></div>`+
+ m.map(x=>`<div class="row"><b>${x.tf}</b><span>${x.regime} · ADX ${x.adx.toFixed(0)} · RSI ${x.rsi.toFixed(0)}</span><b class="${cls(x.ver)}">${x.score.toFixed(0)}</b></div>`).join("");
+ const cols=["15m","1h","4h","1d"],by=Object.fromEntries(m.map(x=>[x.tf,x]));
+ const cell=(v,txt)=>`<div class="hmCell ${v>55?"hmBull":v<45?"hmBear":"hmNeu"}">${txt}</div>`;
+ let h=`<div></div>${cols.map(x=>`<div class="hmHead">${x}</div>`).join("")}`;
+ h+=`<div class="hmLabel">Score</div>${cols.map(tf=>by[tf]?cell(by[tf].score,by[tf].score.toFixed(0)):'<div class="hmCell">—</div>').join("")}`;
+ h+=`<div class="hmLabel">RSI</div>${cols.map(tf=>by[tf]?cell(by[tf].rsi,by[tf].rsi.toFixed(0)):'<div class="hmCell">—</div>').join("")}`;
+ h+=`<div class="hmLabel">Trend</div>${cols.map(tf=>by[tf]?cell(by[tf].trendScore,by[tf].trendScore.toFixed(0)):'<div class="hmCell">—</div>').join("")}`;
+ h+=`<div class="hmLabel">SMC</div>${cols.map(tf=>by[tf]?cell(by[tf].structureScore,by[tf].structureScore.toFixed(0)):'<div class="hmCell">—</div>').join("")}`;
+ $("mtfheat").innerHTML=h;
+}
+async function backtestCurrent(){
+ const box=$("backtestout"),sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value;box.textContent="Rulez walk-forward…";
+ try{
+  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750);
+  let horizon=mode==="scalp"?3:mode==="swing"?8:4,trades=[],curve=0,peak=0,maxDD=0;
+  for(let i=240;i<j.length-horizon-1;i+=4){
+    let q=calc(j.slice(0,i+1),mode),dir=q.score>=66?1:q.score<=34?-1:0;if(!dir)continue;
+    let entry=+j[i][4],exit=+j[i+horizon][4],ret=(exit/entry-1)*100*dir;trades.push(ret);curve+=ret;peak=Math.max(peak,curve);maxDD=Math.min(maxDD,curve-peak)
+  }
+  if(!trades.length){box.textContent="Nu sunt suficiente semnale pentru acest profil.";return}
+  let wins=trades.filter(x=>x>0).length,avg=trades.reduce((a,b)=>a+b,0)/trades.length,gp=trades.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=-trades.filter(x=>x<0).reduce((a,b)=>a+b,0),pf=gl?gp/gl:gp?99:0;
+  box.innerHTML=`<div class="row"><span>Semnale testate</span><b>${trades.length}</b></div><div class="row"><span>Hit rate direcțional</span><b>${(wins/trades.length*100).toFixed(1)}%</b></div><div class="row"><span>Randament mediu / semnal</span><b>${avg>=0?"+":""}${avg.toFixed(2)}%</b></div><div class="row"><span>Profit factor brut</span><b>${pf.toFixed(2)}</b></div><div class="row"><span>Sumă randamente</span><b>${curve>=0?"+":""}${curve.toFixed(1)}%</b></div><div class="row"><span>Max drawdown secvențial</span><b>${maxDD.toFixed(1)}%</b></div><p class="note">Backtest euristic walk-forward pe istoricul încărcat, fără comisioane, slippage sau execuție reală. Nu este o estimare garantată a performanței viitoare.</p>`;
+ }catch(e){box.textContent="Backtest indisponibil: "+e.message}
+}
+async function derivatives(){
+ let sym=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";
+ let d=null;
+ try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`)}catch{}
+ if(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null)){
+   try{
+    let [fr,oi,ls]=await Promise.all([
+      getJSON(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
+      getJSON(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
+      getJSON(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${encodeURIComponent(sym)}&period=1h&limit=1`).catch(()=>null)
+    ]);
+    d={funding:fr?Number(fr.lastFundingRate):null,openInterest:oi?Number(oi.openInterest):null,longShort:ls&&ls.length?Number(ls[0].longShortRatio):null}
+   }catch{}
+ }
+ if(!d)d={funding:null,openInterest:null,longShort:null};
+ let fr=d.funding,oi=d.openInterest,ls=d.longShort;$("funding").textContent=fr==null?"N/A":(fr*100).toFixed(4)+"%";$("oi").textContent=oi==null?"N/A":compact(oi);$("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2);
+ let crowd=0;if(fr!=null){if(fr>.0003)crowd--;else if(fr<-.0003)crowd++}if(ls!=null){if(ls>1.5)crowd--;else if(ls<.67)crowd++}
+ let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";$("fcontext").textContent=context;$("fcontext").className="value "+(context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");
+ $("fundingBias").textContent=fr==null?"N/A":fr>.0003?"Long crowded":fr<-.0003?"Short crowded":"Balanced";
+ $("crowdingRisk").textContent=ls==null?"N/A":ls>1.5||ls<.67?"Ridicat":"Normal";
+ $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi);
+ $("ftext").textContent=(fr==null&&oi==null&&ls==null)?"Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională.":"Funding, OI și long/short sunt context de poziționare, nu semnal suficient singure.";
+}
+let scannerRows=[];
+function renderScan(){
+ let dir=$("scanDir")?.value||"ALL",reg=$("scanRegime")?.value||"ALL",minAdx=+($("scanAdx")?.value||0),minStrength=+($("scanScore")?.value||0);
+ let rows=scannerRows.filter(x=>(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&Math.abs(x.avg-50)*2>=minStrength);
+ $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" onclick="pick('${x.c}')"><b>${x.c}</b><span>${x.avg.toFixed(0)}</span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span></div>`).join(""):`<div class="row"><span>Niciun rezultat pentru filtrele selectate.</span></div>`;
+}
+async function scan(){
+ let box=$("scanout");box.innerHTML="Scanez "+universe.length+" monede cu engine-ul avansat…";let out=[];
+ for(let b=0;b<universe.length;b+=4){
+  let batch=universe.slice(b,b+4);
+  let rows=await Promise.all(batch.map(async c=>{try{let sym=c+"USDT",m=await mtfData(sym),mc=mtfComposite(m),anchor=m.find(x=>x.tf==="4h")||m[0];return {c,avg:mc.avg,dir:mc.comp,conf:anchor?anchor.confluence:0,adx:anchor?anchor.adx:0,regime:anchor?anchor.regime:"—"}}catch{return null}}));
+  out.push(...rows.filter(Boolean));box.innerHTML=`Scanare ${Math.min(b+4,universe.length)}/${universe.length}…`;
+ }
+ out.sort((a,b)=>Math.abs(b.avg-50)-Math.abs(a.avg-50));scannerRows=out;renderScan()
+}
+$("symbol").value=localStorage.getItem("last")||"BTC";$("mode").value=localStorage.getItem("mode")||"auto";renderLists();renderSignals();show("dash");$("status").textContent="Apasă Analizează pentru date live.";
 </script></body></html>
