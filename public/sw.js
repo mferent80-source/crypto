@@ -1,4 +1,4 @@
-const CACHE="crypto-radar-v44";
+const CACHE="crypto-radar-v45";
 const APP_SHELL=["/","/index.html","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png"];
 
 self.addEventListener("install",event=>{

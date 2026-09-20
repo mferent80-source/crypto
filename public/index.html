@@ -892,6 +892,11 @@ main{max-width:1160px;padding-top:14px}
  .piControls{grid-template-columns:1fr 1fr}
 }
 </style>
+
+<style id="v45-scanner-recovery">
+.scanRecovery{margin-top:8px;padding:8px 10px;border:1px solid #29445b;border-radius:10px;background:#0b1520;font-size:10px}
+.scanRecovery b{font-weight:900}.scanLive{color:#6ee7ad}.scanSaved{color:#9ec6ff}.scanSnapshot{color:#ffd978}
+</style>
 </head><body>
 <div class="appShell">
 <aside class="sideNav">
@@ -936,7 +941,7 @@ main{max-width:1160px;padding-top:14px}
     <button class="sideBtn" data-nav="health" onclick="navTo('health')"><span class="sideIcon">●</span>Health</button>
   </div>
   <div class="sideFooter">
-    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v44 · BINANCE FALLBACK</div>
+    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v45 · SCANNER RECOVERY</div>
     <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
     <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
   </div>
@@ -944,7 +949,7 @@ main{max-width:1160px;padding-top:14px}
 <div class="mainArea">
 <header class="topStatus">
   <div class="topLeft"><div id="topCoin" class="topCoin">BTC/USDT</div><span id="topTf" class="statusChip">4h</span><span id="topMode" class="statusChip">AUTO</span><span id="topSource" class="statusChip">PIONEX</span></div>
-  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v44 · AUDITED</span></div>
+  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v45 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -952,7 +957,7 @@ main{max-width:1160px;padding-top:14px}
     <div class="logo">◈</div>
     <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
   </div>
-  <div class="headerMeta"><span class="badge">v44 · BINANCE FALLBACK · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+  <div class="headerMeta"><span class="badge">v45 · SCANNER RECOVERY · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -1590,7 +1595,7 @@ main{max-width:1160px;padding-top:14px}
       <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
       <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
       <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-      <div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v44</b></div>
+      <div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v45</b></div>
       <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
       <div class="cacheBox"><span class="label">Liquidation WS</span><b id="healthLiquidation">—</b></div>
       <div class="cacheBox"><span class="label">D1 history</span><b id="healthHistory">—</b></div>
@@ -2292,7 +2297,9 @@ main{max-width:1160px;padding-top:14px}
   <button id="scanCancelBtn" class="actionGhost" onclick="cancelScan()" disabled>Stop scan</button>
 </div>
 <div class="scanTableHead"><b id="scanAssetHead">Coin</b><b>Score</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b><b id="scanTurnoverHead">24h Turnover</b></div>
-<div id="scanout">Apasă Rescanează pentru Top 100 live din Pionex.</div></div><button id="scanActionBtn" style="width:100%;margin-top:7px" onclick="scan()">↻ Rescanează Pionex Top 100</button></section>
+<div id="scanout">Apasă Rescanează pentru universul Pionex.</div>
+<div class="scanRecovery">Universe source: <b id="scanUniverseSource">—</b> · <span id="scanUniverseNote">Pionex live when available; saved/snapshot fallback otherwise.</span></div>
+</div><button id="scanActionBtn" style="width:100%;margin-top:7px" onclick="scan()">↻ Scanează coinurile Pionex</button></section>
 <section id="signals" class="panel"><div class="sectionHead"><h3>Signal Lab</h3><span class="small">Paper tracking · R-multiple analytics</span></div>
 <div class="signalGrid">
   <div class="signalCard">
@@ -2753,7 +2760,7 @@ function backupJsonKey(key,fallback=null){
 }
 function exportBackup(){
  const data={
-   version:"v44",schemaVersion:44,ts:Date.now(),
+   version:"v45",schemaVersion:45,ts:Date.now(),
    settings:appSettings(),journal:journal(),paper:paperTrades(),paperSettings:paperSettings(),paperEquity:paperHistory(),alerts:appAlerts(),
    forwardValidationStart:forwardStart(),
    workspace:{
@@ -2772,7 +2779,7 @@ function exportBackup(){
    strategyFamilies:{threshold:+$("familyThreshold")?.value||.82},
    ui:{pwaInstallDismissed:localStorage.getItem("pwaInstallDismissed")||null}
  };
- const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="crypto-radar-v44-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="crypto-radar-v45-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 async function importBackup(file){
  if(!file)return;
@@ -2924,7 +2931,7 @@ function loadScanPrefs(){
  if($("pionexScanMode")&&$("scanDepth"))$("pionexScanMode").textContent=$("scanDepth").value==="DEEP"?"Mode DEEP MTF":"Mode FAST 4H"
 }
 
-const APP_VERSION="v44";
+const APP_VERSION="v45";
 let deferredInstallPrompt=null,pwaWaitingWorker=null;
 function isStandalonePwa(){return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true}
 function showPwaInstall(){
@@ -3430,7 +3437,7 @@ function setAssetClass(v){
     if($("symbol"))$("symbol").placeholder="BTC, ETH, SOL...";
   }
   stopProviderLive();stopLiquidationTape();window.__radarState=null;window.__signalState=null;window.__stockEarnings=null;window.__portfolioRisk=null;window.__structureV38=null;marketCache={ts:0,rows:[],source:null};scannerRows=[];
-  updateSourceLineage(analysisSource());updateScannerUi();syncTop(norm($("symbol").value),$("tf").value,$("mode").value);renderLists();renderOpportunity();renderDailyDesk();
+  updateSourceLineage(analysisSource());updateScannerUi();setScanUniverseStatus("PIONEX_SNAPSHOT","Fallback ready · live Pionex will replace it when available.");syncTop(norm($("symbol").value),$("tf").value,$("mode").value);renderLists();renderOpportunity();renderDailyDesk();
   if($("volume24Label"))$("volume24Label").textContent=market==="STOCKS"?"Daily $ volume":"Volum 24H USDT";
   if($("fearGreed"))$("fearGreed").textContent=market==="STOCKS"?"N/A":"—";
   if($("sentimentText"))$("sentimentText").textContent=market==="STOCKS"?"Crypto Fear & Greed is not used in US stock scoring.":"Sentiment extern opțional; engine-ul tehnic nu depinde de el.";
@@ -4214,16 +4221,41 @@ const PIONEX_BASE="https://api.pionex.com";
 const PIONEX_STABLE_BASES=new Set(["USDT","USDC","FDUSD","TUSD","USDP","DAI","USDE","PYUSD"]);
 let pionexUniverse=[];
 let pionexUniverseUpdated=0;
-const PIONEX_UNIVERSE_CACHE_KEY="pionexUniverseV44";
+const PIONEX_UNIVERSE_CACHE_KEY="pionexUniverseV45";
+const PIONEX_FALLBACK_SNAPSHOT_DATE="2026-09-20";
+const PIONEX_VERIFIED_USDT_CORE=[
+"BTC","ETH","DOGE","SOL","BICO","ADA","DEXE","XRP","BNB","ZEC","DODO","TRX","ACE","CTSI","RIF","BOME","ALICE","BCH","BB","SUI","AXS","DASH","ALGO","PAXG","LDO","ALT","APT","BDX","BONK","EDU","BEL","OKB","CVX","BNT","C98","DYM","ARB","IOTX","TAO","PHA","CHZ"
+];
+function staticPionexUniverse(){
+  return PIONEX_VERIFIED_USDT_CORE.map((base,i)=>({
+    symbol:`${base}_USDT`,base,turnover:0,close:0,change:0,
+    universeSource:"PIONEX_SNAPSHOT",rank:i+1
+  }))
+}
+function setScanUniverseStatus(kind,note=""){
+  if(!$("scanUniverseSource"))return;
+  const map={
+    PIONEX_LIVE:["PIONEX LIVE","scanLive"],
+    PIONEX_SAVED:["PIONEX SAVED","scanSaved"],
+    PIONEX_SNAPSHOT:[`PIONEX SNAPSHOT ${PIONEX_FALLBACK_SNAPSHOT_DATE}`,"scanSnapshot"]
+  },x=map[kind]||[kind||"—",""];
+  $("scanUniverseSource").textContent=x[0];$("scanUniverseSource").className=x[1];
+  if($("scanUniverseNote"))$("scanUniverseNote").textContent=note||"Pionex coin universe · Binance technical data."
+}
 function savePionexUniverseCache(rows){
   try{localStorage.setItem(PIONEX_UNIVERSE_CACHE_KEY,JSON.stringify({ts:Date.now(),rows:(rows||[]).slice(0,100)}))}catch{}
 }
 function loadPionexUniverseCache(){
-  try{
-    const x=JSON.parse(localStorage.getItem(PIONEX_UNIVERSE_CACHE_KEY)||"null");
-    if(!x||!Array.isArray(x.rows)||!x.rows.length)return null;
-    return {ts:+x.ts||0,rows:x.rows.slice(0,100)}
-  }catch{return null}
+  for(const key of [PIONEX_UNIVERSE_CACHE_KEY,"pionexUniverseV44"]){
+    try{
+      const x=JSON.parse(localStorage.getItem(key)||"null");
+      if(x&&Array.isArray(x.rows)&&x.rows.length){
+        if(key!==PIONEX_UNIVERSE_CACHE_KEY)try{localStorage.setItem(PIONEX_UNIVERSE_CACHE_KEY,JSON.stringify(x))}catch{}
+        return {ts:+x.ts||0,rows:x.rows.slice(0,100)}
+      }
+    }catch{}
+  }
+  return null
 }
 
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
@@ -4356,10 +4388,33 @@ function pionexLeveragedBase(base){
 async function pionexTop100(){
   if(pionexUniverse.length&&Date.now()-pionexUniverseUpdated<120000){
     perfStats.pionexCacheHits++;
-    if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}/100`;
-    if($("pionexUniverseTime"))$("pionexUniverseTime").textContent="Cached <120s";
+    if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}`;
+    if($("pionexUniverseTime"))$("pionexUniverseTime").textContent="Memory cache <120s";
     return pionexUniverse
   }
+
+  const useSavedOrSnapshot=(reason="Pionex unavailable")=>{
+    const cached=loadPionexUniverseCache();
+    if(cached?.rows?.length){
+      pionexUniverse=cached.rows.map(x=>({...x,universeSource:"PIONEX_SAVED"}));
+      pionexUniverseUpdated=Date.now();
+      const ageH=Math.max(0,(Date.now()-cached.ts)/3600000);
+      setScanUniverseStatus("PIONEX_SAVED",`${reason} · saved Pionex universe ${ageH<1?Math.round(ageH*60)+"m":ageH.toFixed(1)+"h"} old · Binance candles`);
+      if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}`;
+      if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Saved Pionex · ${ageH<1?Math.round(ageH*60)+"m":ageH.toFixed(1)+"h"} old`;
+      return pionexUniverse
+    }
+    pionexUniverse=staticPionexUniverse();pionexUniverseUpdated=Date.now();
+    setScanUniverseStatus("PIONEX_SNAPSHOT",`${reason} · embedded verified Pionex/USDT core · Binance candles`);
+    if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}`;
+    if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Fallback snapshot ${PIONEX_FALLBACK_SNAPSHOT_DATE}`;
+    return pionexUniverse
+  };
+
+  if(pionexCooldownRemaining()>0){
+    return useSavedOrSnapshot(`Pionex cooldown ${Math.ceil(pionexCooldownRemaining()/1000)}s`)
+  }
+
   try{
     const si=await memoRequest(cacheKey("pionex-meta","symbols"),1800000,()=>pionexRequest("/api/v1/common/symbols?type=SPOT","pionex_symbols"));
     const ti=await memoRequest(cacheKey("pionex-meta","tickers"),30000,()=>pionexRequest("/api/v1/market/tickers?type=SPOT","pionex_tickers"));
@@ -4369,23 +4424,16 @@ async function pionexTop100(){
       return x.type==="SPOT"&&quote==="USDT"&&x.enable!==false&&!PIONEX_STABLE_BASES.has(base)&&!pionexLeveragedBase(base)&&tm.has(x.symbol)
     }).map(x=>{
       const t=tm.get(x.symbol)||{},turnover=Number(t.amount||0),close=Number(t.close||0),open=Number(t.open||0);
-      return {symbol:x.symbol,base:x.baseCurrency.toUpperCase(),turnover,close,change:open?((close/open)-1)*100:0,universeSource:"PIONEX"}
+      return {symbol:x.symbol,base:x.baseCurrency.toUpperCase(),turnover,close,change:open?((close/open)-1)*100:0,universeSource:"PIONEX_LIVE"}
     }).filter(x=>x.turnover>0&&x.close>0).sort((a,b)=>b.turnover-a.turnover).slice(0,100);
-    if(!rows.length)throw Error("Pionex returned an empty eligible universe");
+    if(!rows.length)throw Error("Pionex returned empty universe");
     pionexUniverse=rows;pionexUniverseUpdated=Date.now();savePionexUniverseCache(rows);
-    if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${rows.length}/100`;
+    setScanUniverseStatus("PIONEX_LIVE","Live Pionex SPOT/USDT universe · Binance candles");
+    if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${rows.length}`;
     if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Pionex live · ${new Date().toLocaleTimeString()}`;
     return rows
   }catch(e){
-    const cached=loadPionexUniverseCache();
-    if(cached?.rows?.length){
-      pionexUniverse=cached.rows.map(x=>({...x,universeSource:"PIONEX"}));pionexUniverseUpdated=Date.now();
-      const ageH=Math.max(0,(Date.now()-cached.ts)/3600000);
-      if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}/100`;
-      if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Pionex cached · ${ageH<1?Math.round(ageH*60)+"m":ageH.toFixed(1)+"h"} old`;
-      return pionexUniverse
-    }
-    throw Error("Pionex universe unavailable and no saved Pionex universe exists yet")
+    return useSavedOrSnapshot((e.message||"Pionex unavailable").replace(/^(Pionex indisponibil · proxy: )+/,""))
   }
 }
 async function pionexKlines(pionexSymbol,tf,limit=300){
@@ -4403,16 +4451,24 @@ async function pionexUniverseBinanceKlines(item,tf,limit=300){
   const symbol=`${String(item.base||"").toUpperCase()}USDT`;
   return klines(symbol,tf,limit)
 }
+function scannerStatsFrom4h(rows,item){
+  const a=(rows||[]).slice(-6),first=a[0],last=a.at(-1);
+  let turnover=0;for(const x of a)turnover+=Number(x[7]||0);
+  const p0=Number(first?.[1]||0),p1=Number(last?.[4]||0),change=p0?((p1/p0)-1)*100:(+item.change||0);
+  return {turnover:turnover||(+item.turnover||0),change}
+}
 async function pionexScanFast(item){
-  const mode=$("mode")?$("mode").value:"auto",j=await pionexUniverseBinanceKlines(item,"4h",320),q=calc(j,mode);
-  return {c:item.base,pionexSymbol:item.symbol,avg:q.score,dir:q.ver,conf:q.confluence,adx:q.adx,regime:q.regime,turnover:item.turnover,change:item.change,source:"BINANCE",universeSource:"PIONEX",trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile}
+  const mode=$("mode")?$("mode").value:"auto",j=await pionexUniverseBinanceKlines(item,"4h",320);
+  if(!j||j.length<80)throw Error("Insufficient Binance history");
+  const q=calc(j,mode),ms=scannerStatsFrom4h(j,item);
+  return {c:item.base,pionexSymbol:item.symbol,avg:q.score,dir:q.ver,conf:q.confluence,adx:q.adx,regime:q.regime,turnover:ms.turnover,change:ms.change,source:"BINANCE",universeSource:item.universeSource||"PIONEX",trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile}
 }
 async function pionexScanDeep(item){
-  const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"];
-  const m=(await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(await pionexUniverseBinanceKlines(item,tf,300),mode)}}catch{return null}}))).filter(Boolean);
+  const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"],raw={};
+  const m=(await Promise.all(tfs.map(async tf=>{try{const rows=await pionexUniverseBinanceKlines(item,tf,300);raw[tf]=rows;return {tf,...calc(rows,mode)}}catch{return null}}))).filter(Boolean);
   if(!m.length)throw Error("No Binance candles for this Pionex coin");
-  const mc=mtfComposite(m),anchor=m.find(x=>x.tf==="4h")||m[0];
-  return {c:item.base,pionexSymbol:item.symbol,avg:mc.avg,dir:mc.comp,conf:anchor.confluence,adx:anchor.adx,regime:anchor.regime,turnover:item.turnover,change:item.change,source:"BINANCE",universeSource:"PIONEX",trend:anchor.trendScore,mom:anchor.momScore,structure:anchor.structureScore,volume:anchor.volScore,chop:anchor.chop,efficiency:anchor.efficiency,hurst:anchor.hurst,rvPercentile:anchor.rvPercentile}
+  const mc=mtfComposite(m),anchor=m.find(x=>x.tf==="4h")||m[0],ms=scannerStatsFrom4h(raw["4h"]||[],item);
+  return {c:item.base,pionexSymbol:item.symbol,avg:mc.avg,dir:mc.comp,conf:anchor.confluence,adx:anchor.adx,regime:anchor.regime,turnover:ms.turnover,change:ms.change,source:"BINANCE",universeSource:item.universeSource||"PIONEX",trend:anchor.trendScore,mom:anchor.momScore,structure:anchor.structureScore,volume:anchor.volScore,chop:anchor.chop,efficiency:anchor.efficiency,hurst:anchor.hurst,rvPercentile:anchor.rvPercentile}
 }
 function selectPionexScan(c){
   setAssetClass("CRYPTO");setAnalysisSource("BINANCE");$("symbol").value=c;localStorage.setItem("lastCrypto",c);localStorage.setItem("last",c);
@@ -5003,7 +5059,7 @@ function exportJournal(){
   const a=journal();if(!a.length){alert("Jurnalul este gol.");return}
   const cols=["date","market","symbol","source","tf","mode","direction","entry","entryActivated","activationTs","stop","tp1","tp2","tp3","longConf","shortConf","status","grossR","costR","netR","feeBps","slippageBps","executionPolicy","trendScore","momScore","volScore","structureScore","adx","atrPct","histUp","mtf","session","sweepScore","sweepType","nearestFvgStatus","nearestFvgType","premiumDiscount","frictionBps","contextScore","newsRisk","newsHigh","liqLong5","liqShort5"];
   const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.market||((x.source||"BINANCE")==="TWELVEDATA"?"STOCKS":"CRYPTO"),x.symbol,x.source||"BINANCE",x.tf,x.mode,x.direction,x.entry,x.entryActivated||false,x.activationTs?new Date(x.activationTs).toISOString():"",x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.grossR??"",x.costR??"",x.netR??"",x.feeBps??"",x.slippageBps??"",x.executionPolicy??"",x.trendScore??"",x.momScore??"",x.volScore??"",x.structureScore??"",x.adx??"",x.atrPct??"",x.histUp??"",x.mtf??"",x.session??"",x.sweepScore??"",x.sweepType??"",x.nearestFvgStatus??"",x.nearestFvgType??"",x.premiumDiscount??"",x.frictionBps??"",x.contextScore??"",x.newsRisk??"",x.newsHigh??"",x.liqLong5??"",x.liqShort5??""].join(",")));
-  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v44-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v45-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function clearJournal(){if(confirm("Ștergi tot jurnalul de semnale?")){localStorage.removeItem("signalJournal");renderSignals();toast("Jurnal șters","warn")}}
 function drawValidationCurve(vals){
@@ -5253,7 +5309,7 @@ async function scan(){
    scannerRows=run.results;renderScan();renderOpportunity();renderDailyDesk();perfStats.lastScanner=`OK ${run.results.length}/${top.length} · PIONEX UNIVERSE / BINANCE DATA`;persistScannerHistory("CRYPTO","BINANCE",top.length,run.results,`PIONEX_${depth}`).catch(()=>{});
    toast(`Pionex universe / Binance engine: ${run.results.length}/${top.length} analizate`,"good")
  }catch(e){
-   if(!token.cancelled){box.innerHTML=`<div class="row"><span>Universul Pionex nu este disponibil și nu există cache Pionex local.</span><b>${e.message}</b></div>`;perfStats.lastScanner="PIONEX UNIVERSE ERROR · "+e.message;toast("Nu folosesc un univers Binance: scannerul rămâne strict pe coinuri Pionex.","warn")}
+   if(!token.cancelled){box.innerHTML=`<div class="row"><span>Scanner error.</span><b>${e.message}</b></div>`;perfStats.lastScanner="SCANNER ERROR · "+e.message;toast("Scanner error: "+e.message,"bad")}
  }finally{
    pionexScannerActive=false;
    if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}

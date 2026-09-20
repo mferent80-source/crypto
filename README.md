@@ -105,3 +105,6 @@ Hotfix for Pionex HTTP 429 pressure: weighted pacing, escalating backoff, backen
 
 ## v44 · BINANCE FALLBACK
 Automatic Pionex-to-Binance fallback for primary crypto analysis. The scanner remains a strict Pionex SPOT/USDT coin universe while all per-coin scanner candles use the known-good direct Binance path. The last successful Pionex universe is cached locally for temporary Pionex outages.
+
+## v45 · SCANNER RECOVERY
+Fixes the remaining v44 scanner dependency on a live or previously cached Pionex universe. During Pionex cooldown, the scanner now immediately uses a saved Pionex universe or an embedded Pionex USDT crypto-core snapshot, while all technical candle analysis stays on Binance. Scanner state explicitly reports LIVE / SAVED / SNAPSHOT universe provenance.
