@@ -1,7 +1,7 @@
 {
   "name": "Crypto Radar Pro · Multi-Market",
   "short_name": "Market Radar",
-  "description": "Crypto Radar Pro v43 with hardened Pionex rate-limit resilience, auto-resuming scanner, portfolio intelligence, realistic paper execution and model governance.",
+  "description": "Crypto Radar Pro v44: Binance is the stable primary crypto engine, with automatic fallback from Pionex and a scanner restricted to the Pionex coin universe while using Binance candles.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

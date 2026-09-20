@@ -102,3 +102,6 @@ v42 introduces no new API dependency and retains the v41 realistic execution sim
 
 ## v43 · PIONEX RESILIENCE
 Hotfix for Pionex HTTP 429 pressure: weighted pacing, escalating backoff, backend isolate cooldown, longer success caches, scanner pause/resume with partial-result preservation, and suppression of background Pionex REST polling while a scanner run is active.
+
+## v44 · BINANCE FALLBACK
+Automatic Pionex-to-Binance fallback for primary crypto analysis. The scanner remains a strict Pionex SPOT/USDT coin universe while all per-coin scanner candles use the known-good direct Binance path. The last successful Pionex universe is cached locally for temporary Pionex outages.

@@ -53,7 +53,7 @@ async function pionexCached(url,ttl=30){
 }
 export async function onRequestGet({request}){
   const u=new URL(request.url),type=u.searchParams.get("type");
-  if(type==="health")return ok({ok:true,service:"crypto-radar",version:"v43"});
+  if(type==="health")return ok({ok:true,service:"crypto-radar",version:"v44"});
   if(type==="pionex_symbols"){
     try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=SPOT`,3600))}catch(e){return softFail("Pionex symbols unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
