@@ -41,7 +41,7 @@ const $=id=>document.getElementById(id);function norm(s){s=(s||"BTC").trim().toU
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
 function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on")}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
-function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}return o}
+function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 async function klines(s,t,l=300){return getJSON(`/api/market?type=klines&symbol=${encodeURIComponent(s)}&interval=${encodeURIComponent(t)}&limit=${l}`)}
 async function getJSON(url){
   const r=await fetch(url,{headers:{"accept":"application/json"}});
