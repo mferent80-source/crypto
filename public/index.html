@@ -8,7 +8,7 @@ h1{font-size:20px;margin:3px 0}.muted{color:#8c99ad;font-size:11px}.controls{dis
 canvas{width:100%;height:210px;display:block}.coin{display:grid;grid-template-columns:1.15fr .6fr .75fr .65fr;gap:4px;align-items:center;padding:10px 0;border-bottom:1px solid #202b3d;cursor:pointer}.coin>*:not(:first-child){text-align:right}.miniGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mini{background:#0d1420;border-radius:9px;padding:7px;text-align:center}.mini b{display:block;margin-top:3px;font-size:12px}
 .badge{border:1px solid #344158;border-radius:20px;padding:3px 7px}.status{margin:6px 1px;color:#8c99ad;font-size:11px}.note{color:#8c99ad;font-size:10px;line-height:1.45;margin-top:10px}
 </style></head><body><main>
-<h1>📡 Crypto Radar Pro Lite <span class="badge">v12 · FIXED · TESTED</span></h1><div class="muted">Mobile · live market data · technical research dashboard</div>
+<h1>📡 Crypto Radar Pro Lite <span class="badge">v13 · AUDITED · DIRECT-DATA</span></h1><div class="muted">Mobile · live market data · technical research dashboard</div>
 <div class="controls"><input id="symbol" value="BTC" list="coins" placeholder="BTC, ETH, SOL..."><select id="tf"><option>15m</option><option>1h</option><option selected>4h</option><option>1d</option></select></div>
 <datalist id="coins"><option>BTC</option><option>ETH</option><option>SOL</option><option>BNB</option><option>XRP</option><option>DOGE</option><option>ADA</option><option>LINK</option><option>AVAX</option><option>SUI</option><option>DOT</option><option>LTC</option><option>TRX</option><option>PEPE</option></datalist>
 <div class="actions"><button id="analyzeBtn" type="button" onclick="analyze(true)">Analizează</button><button type="button" onclick="toggleFav()">★</button></div><div id="favorites" class="scroll"></div><div id="recent" class="scroll"></div><div id="status" class="status">Pregătit</div>
@@ -42,24 +42,42 @@ function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits
 function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on")}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
-async function klines(s,t,l=300){return getJSON(`/api/market?type=klines&symbol=${encodeURIComponent(s)}&interval=${encodeURIComponent(t)}&limit=${l}`)}
+const MARKET_BASES=[
+  "https://data-api.binance.vision/api/v3",
+  "https://api.binance.com/api/v3",
+  "https://api-gcp.binance.com/api/v3",
+  "https://api1.binance.com/api/v3",
+  "https://api2.binance.com/api/v3",
+  "https://api3.binance.com/api/v3",
+  "https://api4.binance.com/api/v3"
+];
 async function getJSON(url){
-  const r=await fetch(url,{headers:{"accept":"application/json"}});
-  const ct=(r.headers.get("content-type")||"").toLowerCase();
+  const r=await fetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
   const raw=await r.text();
   let data;
-  try { data=JSON.parse(raw); }
-  catch {
-    const looksHtml=ct.includes("text/html") || raw.trim().startsWith("<!doctype") || raw.trim().startsWith("<html");
-    throw Error(looksHtml
-      ? "API NEACTIV: Cloudflare servește pagina HTML pe /api/market. Verifică deploy-ul Functions."
-      : "Răspuns API invalid (HTTP "+r.status+").");
-  }
-  if(!r.ok) throw Error((data && data.error) || ("HTTP "+r.status));
+  try{data=JSON.parse(raw)}catch{throw Error("Sursa de date a răspuns invalid (HTTP "+r.status+")")}
+  if(!r.ok)throw Error((data&&data.msg)||("HTTP "+r.status));
   return data;
 }
+async function market(path){
+  const errors=[];
+  for(const base of MARKET_BASES){
+    try{return await getJSON(base+path)}
+    catch(e){errors.push(base.replace(/^https?:\/\//,"")+": "+e.message)}
+  }
+  throw Error("Date spot indisponibile · "+errors.join(" | "));
+}
+async function klines(s,t,l=300){
+  return market(`/klines?symbol=${encodeURIComponent(s)}&interval=${encodeURIComponent(t)}&limit=${l}`);
+}
 async function ticker(s){
-  return getJSON(`/api/market?type=ticker&symbol=${encodeURIComponent(s)}`);
+  try{return await market(`/ticker/24hr?symbol=${encodeURIComponent(s)}`)}
+  catch{
+    const k=await market(`/klines?symbol=${encodeURIComponent(s)}&interval=1h&limit=24`);
+    const last=+k[k.length-1][4],first=+k[0][1];
+    let quoteVolume=0; for(const x of k)quoteVolume+=+(x[7]||0);
+    return {priceChangePercent:first?String((last/first-1)*100):"0",quoteVolume:String(quoteVolume)};
+  }
 }
 function calc(j){let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>+x[5]),e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,i)=>x-m26[i]),sig=ema(m,9),hist=m.map((x,i)=>x-sig[i]),i=c.length-1,vm=v.slice(-20).reduce((a,b)=>a+b,0)/20,vr=v[i]/vm,ret=c[i]/c[i-20]-1,s=50;
 s+=c[i]>e20[i]?7:-7;s+=e20[i]>e50[i]?7:-7;s+=c[i]>e200[i]?8:-8;s+=e50[i]>e200[i]?8:-8;s+=rr[i]>=55?8:rr[i]<=45?-8:0;s+=hist[i]>0?9:-9;s+=ret>0?4:-4;if(vr>=1.5)s+=c[i]>=c[i-1]?7:-7;else if(vr>=1.1)s+=c[i]>=c[i-1]?3:-3;if(rr[i]>75)s-=5;if(rr[i]<25)s+=5;s=Math.max(0,Math.min(100,s));let ver=s>=62?"BULLISH":s<=38?"BEARISH":"NEUTRAL",prevHi=Math.max(...hi.slice(-21,-1)),prevLo=Math.min(...lo.slice(-21,-1)),bo=c[i]>prevHi?"UP":c[i]<prevLo?"DOWN":"NONE";return{price:c[i],score:s,rsi:rr[i],vr,ema:e20[i]>e50[i],macd:hist[i]>0,sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,closes:c.slice(-100),e20:e20.slice(-100),e50:e50.slice(-100)}}
@@ -98,7 +116,7 @@ async function analyze(save){let s=norm($("symbol").value),t=$("tf").value;$("sy
 $("verdict").textContent=comp;$("verdict").className="value "+cls(comp);$("fill").style.width=avg+"%";$("conf").textContent=`Multi-TF score ${avg.toFixed(0)}/100 · acord ${confidence}%`;
 if(hp){$("pverdict").textContent=hp.ver;$("pverdict").className="value "+cls(hp.ver);$("pfill").style.width=hp.up+"%";$("pstats").textContent=`Modele similare: ${hp.k} · creștere ${hp.up.toFixed(1)}% · scădere ${hp.down.toFixed(1)}% · randament mediu după 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · putere ${hp.strength.toFixed(0)}/100`;}else{$("pverdict").textContent="DATE INSUFICIENTE";$("pverdict").className="value neutral";$("pstats").textContent="Nu există suficient istoric pentru calibrare."}
 $("price").textContent=num(q.price);let ch=+tick.priceChangePercent;$("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch>=0?"good":"bad");$("volume24").textContent=compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";$("rsi").textContent=q.rsi.toFixed(1);$("ema").textContent=q.ema?"Pozitiv":"Negativ";$("ema").className=q.ema?"good":"bad";$("macd").textContent=q.macd?"Pozitiv":"Negativ";$("macd").className=q.macd?"good":"bad";$("vr").textContent=q.vr.toFixed(2)+"x";$("sr").textContent=num(q.sup)+" / "+num(q.res);let bo=$("breakout");bo.textContent=q.breakout==="UP"?"▲ Breakout bullish":q.breakout==="DOWN"?"▼ Breakdown bearish":"Fără breakout";bo.className=q.breakout==="UP"?"good":q.breakout==="DOWN"?"bad":"neutral";
-let range=Math.max(q.res-q.sup,q.price*.002),inv,tar,txt,risk;if(comp==="BULLISH"){inv=q.sup;tar=q.price+Math.max(q.price-q.sup,range*.4)*1.5;txt="Structura multi-timeframe este orientată bullish. Urmărește menținerea peste invalidare și confirmarea prin volum.";risk=q.rsi>70?"Ridicat":confidence<50?"Ridicat":"Mediu"}else if(comp==="BEARISH"){inv=q.res;tar=Math.max(0,q.price-Math.max(q.res-q.price,range*.4)*1.5);txt="Structura multi-timeframe este orientată bearish. Invalidarea apare dacă prețul recucerește rezistența relevantă.";risk=q.rsi<30?"Ridicat":confidence<50?"Ridicat":"Mediu"}else{inv=q.sup;tar=q.res;txt="Nu există consens suficient între timeframe-uri. Support/resistance sunt mai relevante decât forțarea unei direcții.";risk="Ridicat"}$("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("risk").textContent=risk;draw(q);$("status").textContent=`${coin(s)}/USDT · ${t} · ${new Date().toLocaleTimeString()}`;}catch(e){$("status").textContent="Eroare: "+e.message}}
+let range=Math.max(q.res-q.sup,q.price*.002),inv,tar,txt,risk;if(comp==="BULLISH"){inv=q.sup;tar=q.price+Math.max(q.price-q.sup,range*.4)*1.5;txt="Structura multi-timeframe este orientată bullish. Urmărește menținerea peste invalidare și confirmarea prin volum.";risk=q.rsi>70?"Ridicat":confidence<50?"Ridicat":"Mediu"}else if(comp==="BEARISH"){inv=q.res;tar=Math.max(0,q.price-Math.max(q.res-q.price,range*.4)*1.5);txt="Structura multi-timeframe este orientată bearish. Invalidarea apare dacă prețul recucerește rezistența relevantă.";risk=q.rsi<30?"Ridicat":confidence<50?"Ridicat":"Mediu"}else{inv=q.sup;tar=q.res;txt="Nu există consens suficient între timeframe-uri. Support/resistance sunt mai relevante decât forțarea unei direcții.";risk="Ridicat"}$("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("risk").textContent=risk;draw(q);$("status").textContent=`${coin(s)}/USDT · ${t} · LIVE · ${new Date().toLocaleTimeString()}`;}catch(e){$("status").textContent="Eroare: "+e.message}}
 async function multiTF(){let s=norm($("symbol").value);$("mtfout").innerHTML="Se încarcă…";let m=await mtfData(s),avg=m.reduce((a,x)=>a+x.score,0)/(m.length||1);$("mtfout").innerHTML=`<div class="row"><span>Scor mediu</span><b>${avg.toFixed(0)}/100</b></div>`+m.map(x=>`<div class="row"><b>${x.tf}</b><span>RSI ${x.rsi.toFixed(0)} · ${Math.round(x.score)}/100</span><b class="${cls(x.ver)}">${x.ver}</b></div>`).join("")}
 async function derivatives(){let s=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";try{let d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(s)}`),fr=d.funding,oi=d.openInterest,ls=d.longShort;$("funding").textContent=fr==null?"N/A":(fr*100).toFixed(4)+"%";$("oi").textContent=oi==null?"N/A":compact(oi);$("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2);let crowd=0;if(fr!=null){if(fr>.0003)crowd--;else if(fr<-.0003)crowd++}if(ls!=null){if(ls>1.5)crowd--;else if(ls<.67)crowd++}let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";$("fcontext").textContent=context;$("fcontext").className="value "+(context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");$("ftext").textContent="Funding, Open Interest și raportul global long/short sunt preluate server-side. Extremele de poziționare sunt context, nu semnal suficient singure."}catch(e){$("ftext").textContent="Futures indisponibil: "+e.message}} 
 async function scan(){let box=$("scanout");box.innerHTML="Scanez "+universe.length+" monede…";let out=[];for(const c of universe){try{let s=c+"USDT",m=await mtfData(s),avg=m.reduce((a,x)=>a+x.score,0)/(m.length||1),bull=m.filter(x=>x.ver==="BULLISH").length,bear=m.filter(x=>x.ver==="BEARISH").length,dir=bull>=3?"BULLISH":bear>=3?"BEARISH":"NEUTRAL",strength=dir==="BULLISH"?avg:dir==="BEARISH"?100-avg:50-Math.abs(50-avg);out.push({c,avg,dir,strength,bull,bear})}catch{}}out.sort((a,b)=>b.strength-a.strength);box.innerHTML=out.map(x=>`<div class="coin" onclick="pick('${x.c}')"><b>${x.c}</b><span>${x.avg.toFixed(0)}</span><b class="${cls(x.dir)}">${x.dir}</b><span>${Math.max(x.bull,x.bear)}/4</span></div>`).join("")}
