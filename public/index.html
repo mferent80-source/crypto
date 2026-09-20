@@ -738,7 +738,7 @@ main{max-width:1160px;padding-top:14px}
     <button class="sideBtn" data-nav="health" onclick="navTo('health')"><span class="sideIcon">●</span>Health</button>
   </div>
   <div class="sideFooter">
-    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v31 · FULL PWA</div>
+    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v32 · RESILIENCE HOTFIX</div>
     <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
     <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
   </div>
@@ -746,7 +746,7 @@ main{max-width:1160px;padding-top:14px}
 <div class="mainArea">
 <header class="topStatus">
   <div class="topLeft"><div id="topCoin" class="topCoin">BTC/USDT</div><span id="topTf" class="statusChip">4h</span><span id="topMode" class="statusChip">AUTO</span><span id="topSource" class="statusChip">PIONEX</span></div>
-  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v31 · AUDITED</span></div>
+  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v32 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -754,7 +754,7 @@ main{max-width:1160px;padding-top:14px}
     <div class="logo">◈</div>
     <div><h1>Crypto Radar Pro</h1><div class="subhead">Market intelligence · multi-timeframe · live technical analysis</div></div>
   </div>
-  <div class="headerMeta"><span class="badge">v31 · FULL PWA · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+  <div class="headerMeta"><span class="badge">v32 · RESILIENCE HOTFIX · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -762,8 +762,8 @@ main{max-width:1160px;padding-top:14px}
 <select id="tf"><option>15m</option><option>1h</option><option selected>4h</option><option>1d</option></select>
 <select id="mode" title="Profil algoritmic"><option value="auto" selected>Auto</option><option value="scalp">Scalping</option><option value="intraday">Intraday</option><option value="swing">Swing</option></select>
 <select id="analysisSource" class="sourceSelect" title="Sursa principală pentru analiza spot" onchange="setAnalysisSource(this.value)">
-  <option value="PIONEX">Pionex</option>
-  <option value="BINANCE">Binance</option>
+  <option value="BINANCE">Binance · stable</option>
+  <option value="PIONEX">Pionex · native</option>
 </select>
 </div>
 <datalist id="coins"><option>BTC</option><option>ETH</option><option>SOL</option><option>BNB</option><option>XRP</option><option>DOGE</option><option>ADA</option><option>LINK</option><option>AVAX</option><option>SUI</option><option>DOT</option><option>LTC</option><option>TRX</option><option>PEPE</option></datalist>
@@ -1030,8 +1030,8 @@ main{max-width:1160px;padding-top:14px}
     </div>
 <div class="settingsCard">
       <h4>Primary Spot Provider</h4>
-      <div class="settingRow"><span>Analysis source</span><select id="setSpotProvider" style="width:160px"><option value="PIONEX">Pionex native</option><option value="BINANCE">Binance direct</option></select></div>
-      <p class="small" style="margin-top:8px">The selected provider is used consistently for main candles, ticker, MTF, correlation, backtest and OOS. Pionex scanner remains Pionex-only.</p>
+      <div class="settingRow"><span>Analysis source</span><select id="setSpotProvider" style="width:180px"><option value="BINANCE">Binance direct · stable</option><option value="PIONEX">Pionex native</option></select></div>
+      <p class="small" style="margin-top:8px">The selected provider is used consistently for main analysis. Binance is the stable default; Pionex remains explicit, while the scanner stays Pionex-only.</p>
       <button style="margin-top:9px" onclick="saveSettings()">Save source</button>
     </div>
 <div class="settingsCard">
@@ -1089,7 +1089,8 @@ main{max-width:1160px;padding-top:14px}
       <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
       <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
       <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-      <div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v31</b></div>
+      <div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v32</b></div>
+      <div class="cacheBox"><span class="label">Pionex API</span><b id="healthPionex">—</b></div>
     </div>
   </div>
 </section>
@@ -1624,7 +1625,15 @@ async function loadDepth(){
  const spread=asks.length&&bids.length?(+asks[0][0]-+bids[0][0])/(+bids[0][0])*100:null,imb=(bt+at)?(bt-at)/(bt+at)*100:0;$("depthSpread").textContent=spread==null?"N/A":spread.toFixed(4)+"%";$("depthImbalance").textContent=(imb>=0?"+":"")+imb.toFixed(1)+"%";$("depthImbalance").className=imb>5?"good":imb<-5?"bad":"neutral"}catch(e){b.innerHTML=a.innerHTML=`<div class="emptyState">Depth unavailable: ${e.message}</div>`}
 }
 async function loadMarketContext(){try{const src=analysisSource(),[btc,eth]=await Promise.all([analysisTicker("BTCUSDT",src),analysisTicker("ETHUSDT",src)]),rows=marketCache.rows||[],bc=+btc.priceChangePercent/100,ec=+eth.priceChangePercent/100,ethBtcRel=((1+ec)/(1+bc)-1)*100;$("ctxBtc").textContent=(bc>=0?"+":"")+(bc*100).toFixed(2)+"%";$("ctxEthBtc").textContent=(ethBtcRel>=0?"+":"")+ethBtcRel.toFixed(2)+"%";let bull=rows.filter(x=>x.ver==="BULLISH").length,bear=rows.filter(x=>x.ver==="BEARISH").length;$("ctxBreadth").textContent=rows.length?`${bull}B / ${bear}S`:"N/A";$("ctxRegime").textContent=window.__radarState?.q?.regime||"—"}catch{$("ctxBtc").textContent=$("ctxEthBtc").textContent="N/A"}}
-async function runHealthCheck(){$("healthSpot").textContent="Checking…";try{await analysisTicker("BTCUSDT",analysisSource());$("healthSpot").textContent=analysisSource()+" OK"}catch{$("healthSpot").textContent=analysisSource()+" FAIL"}$("healthWs").textContent=lastWsTick&&Date.now()-lastWsTick<60000?"LIVE":"OFF";$("healthFut").textContent=window.__derivativesState&&Object.values(window.__derivativesState).some(x=>x!=null)?"OK":"OPTIONAL";$("healthSent").textContent=$("fearGreed")&&$("fearGreed").textContent!=="N/A"?"OK":"OPTIONAL";$("healthJournal").textContent=journal().length+" signals";$("healthPwa").textContent=("serviceWorker" in navigator)?"READY":"UNSUPPORTED";
+async function checkPionexHealth(){
+  if(!$("healthPionex"))return;
+  $("healthPionex").textContent="Checking…";
+  try{
+    const d=await pionexRequest("/api/v1/market/tickers?symbol=BTC_USDT","pionex_tickers","&symbol=BTC_USDT");
+    $("healthPionex").textContent=d&&d.result!==false?"OK":"ERROR"
+  }catch(e){$("healthPionex").textContent="FAIL · "+e.message}
+}
+async function runHealthCheck(){checkPionexHealth().catch(()=>{});$("healthSpot").textContent="Checking…";try{await analysisTicker("BTCUSDT",analysisSource());$("healthSpot").textContent=analysisSource()+" OK"}catch{$("healthSpot").textContent=analysisSource()+" FAIL"}$("healthWs").textContent=lastWsTick&&Date.now()-lastWsTick<60000?"LIVE":"OFF";$("healthFut").textContent=window.__derivativesState&&Object.values(window.__derivativesState).some(x=>x!=null)?"OK":"OPTIONAL";$("healthSent").textContent=$("fearGreed")&&$("fearGreed").textContent!=="N/A"?"OK":"OPTIONAL";$("healthJournal").textContent=journal().length+" signals";$("healthPwa").textContent=("serviceWorker" in navigator)?"READY":"UNSUPPORTED";
  if($("healthCache"))$("healthCache").textContent=`${requestCache.size} items · ${perfStats.cacheHits} hits`;
  if($("healthInflight"))$("healthInflight").textContent=`${requestInflight.size} active · ${perfStats.inflightHits} deduped`;
  if($("healthScanner"))$("healthScanner").textContent=perfStats.lastScanner;
@@ -1844,7 +1853,7 @@ function loadScanPrefs(){
  if($("pionexScanMode")&&$("scanDepth"))$("pionexScanMode").textContent=$("scanDepth").value==="DEEP"?"Mode DEEP MTF":"Mode FAST 4H"
 }
 
-const APP_VERSION="v31";
+const APP_VERSION="v32";
 let deferredInstallPrompt=null,pwaWaitingWorker=null;
 function isStandalonePwa(){return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true}
 function showPwaInstall(){
@@ -1882,7 +1891,7 @@ function renderPwaHealth(){
  if($("healthPwaMode"))$("healthPwaMode").textContent=isStandalonePwa()?"INSTALLED":"BROWSER";
  if($("healthAppVersion"))$("healthAppVersion").textContent=APP_VERSION
 }
-const DEFAULT_SETTINGS={signalMin:64,nearPct:.5,feeBps:10,slippageBps:3,executionPolicy:"staged",entryExpiryBars:12,spotProvider:"PIONEX",alerts:{sr:true,ls:true,funding:true,oi:true,signal:true}};
+const DEFAULT_SETTINGS={signalMin:64,nearPct:.5,feeBps:10,slippageBps:3,executionPolicy:"staged",entryExpiryBars:12,spotProvider:"BINANCE",alerts:{sr:true,ls:true,funding:true,oi:true,signal:true}};
 function appSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStorage.getItem("radarSettings")||"{}"),alerts:{...DEFAULT_SETTINGS.alerts,...(JSON.parse(localStorage.getItem("radarSettings")||"{}").alerts||{})}}}catch{return JSON.parse(JSON.stringify(DEFAULT_SETTINGS))}}
 function putSettings(x){localStorage.setItem("radarSettings",JSON.stringify(x))}
 function toggleSetting(k){
@@ -2046,8 +2055,11 @@ async function getJSON(url){
   const r=await fetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
   const raw=await r.text();
   let data;
-  try{data=JSON.parse(raw)}catch{throw Error("Sursa de date a răspuns invalid (HTTP "+r.status+")")}
-  if(!r.ok)throw Error((data&&data.msg)||("HTTP "+r.status));
+  try{data=JSON.parse(raw)}catch{throw Error("Răspuns invalid · HTTP "+r.status)}
+  if(!r.ok){
+    const parts=[data&&data.error,data&&data.detail,data&&data.msg].filter(Boolean);
+    throw Error(parts.length?parts.join(" · "):("HTTP "+r.status))
+  }
   return data;
 }
 async function market(path){
@@ -2076,15 +2088,22 @@ async function ticker(s){
 }
 
 
+let pionexLastError="";
 async function pionexRequest(path,proxyType,proxyArgs=""){
+  const errs=[];
   try{
     const d=await getJSON(PIONEX_BASE+path);
-    if(d&&d.result!==false)return d
-  }catch{}
-  const q=`/api/market?type=${encodeURIComponent(proxyType)}${proxyArgs}`;
-  const d=await getJSON(q);
-  if(d&&d.result!==false)return d;
-  throw Error("Pionex public data unavailable")
+    if(d&&d.result!==false){pionexLastError="";return d}
+    if(d&&d.error)errs.push("direct: "+d.error+(d.detail?" · "+d.detail:""))
+  }catch(e){errs.push("direct: "+e.message)}
+  try{
+    const q=`/api/market?type=${encodeURIComponent(proxyType)}${proxyArgs}`;
+    const d=await getJSON(q);
+    if(d&&d.result!==false){pionexLastError="";return d}
+    if(d)errs.push("proxy: "+(d.error||"unavailable")+(d.detail?" · "+d.detail:""))
+  }catch(e){errs.push("proxy: "+e.message)}
+  pionexLastError=errs.join(" | ");
+  throw Error("Pionex indisponibil · "+pionexLastError)
 }
 function pionexTf(tf){
   return ({"15m":"15M","1h":"60M","4h":"4H","1d":"1D"})[tf]||"4H"
@@ -2135,9 +2154,8 @@ async function pionexScanDeep(item){
 }
 function selectPionexScan(c){
   $("symbol").value=c;localStorage.setItem("last",c);
-  if($("analysisSource"))$("analysisSource").value="PIONEX";
-  setAnalysisSource("PIONEX");
-  show("dash");analyze(true)
+  const src=analysisSource();
+  show("dash");toast(`${c} selectat din scannerul Pionex · analiza principală: ${src}`,"good");analyze(true)
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
@@ -2832,7 +2850,13 @@ async function analyze(save){
   risk=q.atrPct>=4||q.confluence<45?"Ridicat":q.atrPct>=2.2||q.confluence<62?"Mediu":"Controlat";
   $("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("trail").textContent=num(trail);$("risk").textContent=risk;
   $("topLive").className="statusChip live";$("topLive").textContent=src+" LIVE";draw(q);renderVolumeProfile();loadFearGreed();loadMarketContext();derivatives().catch(()=>{});loadPionexMicrostructure().catch(()=>{});$("status").textContent=`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · ${src} · ${new Date().toLocaleTimeString()}`;setBusy(false);toast(`${coin(sym)} analizat · ${window.__signalState.sm.direction}`,"good");
- }catch(e){setBusy(false,"Eroare: "+e.message);$("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";toast("Eroare: "+e.message,"bad")}
+ }catch(e){
+   const src=analysisSource();
+   setBusy(false,"Eroare "+src+": "+e.message);
+   $("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";
+   if(src==="PIONEX")toast("Pionex nu răspunde. Comută sursa principală pe Binance · stable.","bad");
+   else toast("Eroare: "+e.message,"bad")
+ }
 }
 async function multiTF(){
  let sym=norm($("symbol").value),src=analysisSource();$("mtfout").innerHTML=`Se încarcă ${src}…`;$("mtfheat").innerHTML="";let m=await mtfData(sym,src),mc=mtfComposite(m);
@@ -2928,13 +2952,13 @@ async function scan(){
    scannerRows=run.results;renderScan();perfStats.lastScanner=`OK ${run.results.length}/${top.length}`;
    toast(`Pionex scanner: ${run.results.length}/${top.length} analizate`,"good")
  }catch(e){
-   if(!token.cancelled){scannerRows=[];box.innerHTML=`<div class="row"><span>Eroare Pionex scanner: ${e.message}</span></div>`;perfStats.lastScanner="ERROR";toast("Pionex scanner indisponibil","bad")}
+   if(!token.cancelled){scannerRows=[];box.innerHTML=`<div class="row"><span>Pionex scanner indisponibil.</span><b>${e.message}</b></div>`;perfStats.lastScanner="ERROR · "+e.message;toast("Pionex API nu răspunde; analiza Binance rămâne disponibilă.","bad")}
  }finally{
    if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}
    $("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"
  }
 }
-$("symbol").value=localStorage.getItem("last")||"BTC";$("mode").value=localStorage.getItem("mode")||"auto";const _src=localStorage.getItem("analysisProvider")||appSettings().spotProvider||"PIONEX";if($("analysisSource"))$("analysisSource").value=_src;localStorage.setItem("analysisProvider",_src);loadScanPrefs();renderLists();renderSignals();show("dash");syncTop(norm($("symbol").value),$("tf").value,$("mode").value);updateSourceLineage(_src);$("status").textContent="Apasă Analizează pentru date live.";
+$("symbol").value=localStorage.getItem("last")||"BTC";$("mode").value=localStorage.getItem("mode")||"auto";const _src=localStorage.getItem("analysisProvider")||appSettings().spotProvider||"BINANCE";if($("analysisSource"))$("analysisSource").value=_src;localStorage.setItem("analysisProvider",_src);loadScanPrefs();renderLists();renderSignals();show("dash");syncTop(norm($("symbol").value),$("tf").value,$("mode").value);updateSourceLineage(_src);$("status").textContent="Apasă Analizează pentru date live.";
 $("symbol").addEventListener("keydown",e=>{if(e.key==="Enter")analyze(true)});
 $("tf").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));
 $("mode").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));

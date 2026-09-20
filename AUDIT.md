@@ -1,39 +1,34 @@
-# v31 · FULL PWA · SEVERE AUDIT
+# v32 · RESILIENCE HOTFIX · SEVERE AUDIT
 
-## Added
-- Full installable PWA packaging.
-- 192×192, 512×512 and maskable 512×512 app icons.
-- Standalone manifest with app shortcuts for Scanner and Signals.
-- Android/Chromium install prompt handling via `beforeinstallprompt`.
-- Fallback install guidance for browsers where the prompt is not directly exposed.
-- Apple mobile-web-app metadata and home-screen icon.
-- Offline application shell and dedicated offline fallback page.
-- Network-first navigation so deployments prefer the newest app shell.
-- Cache-first static assets with background refresh.
-- Service-worker cache versioning and automatic old-cache cleanup.
-- Update detection with an in-app “new version available” banner.
-- `SKIP_WAITING` update flow and automatic reload after the new service worker takes control.
-- Deep-link support for `?panel=scan` and `?panel=signals`.
-- PWA install/browser state exposed in Health.
-- All v30 Pionex-native engine, scanner, validation and microstructure functionality retained.
+## Fix for HTTP 502
+- Main spot analysis defaults back to the known-stable direct Binance browser architecture.
+- Pionex remains available as an explicit native source.
+- Pionex Top 100 scanner remains Pionex-only.
+- Selecting a coin in the Pionex scanner no longer silently forces the main engine to Pionex.
+- Pionex direct + Cloudflare fallback failures are now reported with their real diagnostic detail.
+- Cloudflare Pionex fallback no longer returns a raw HTTP 502 to the frontend; it returns a structured application-level failure.
+- Pionex upstream proxy requests send richer request headers.
+- Health now includes a dedicated Pionex API connectivity diagnostic.
+- If Pionex is unavailable, Binance analysis remains usable instead of the whole main analysis failing.
+- Full v31 PWA install/update/offline functionality is retained.
 
 ## Severe audit
 - frontend-check.js: syntax PASS
 - backend-check.mjs: syntax PASS
 - sw-check.js: syntax PASS
-- UI parity v30→v31: PASS · lost IDs 0 · total IDs 452
-- Function parity v30→v31: PASS · lost functions 0 · total functions 230
+- UI parity v31→v32: PASS · lost IDs 0 · total IDs 453
+- Function parity v31→v32: PASS · lost functions 0 · total functions 231
 - onclick handlers resolved: PASS (48 refs)
-- PWA install/update DOM: PASS
-- Manifest + icon assets: PASS
-- PWA icon dimensions: PASS
-- Service worker install/activate/update/offline flow: PASS
-- v30 provider-consistent engine retained: PASS
-- PWA_RUNTIME_PASS
-- Full bootstrap with DOM/PWA/provider stubs: PASS
+- v32 resilience DOM: PASS
+- Stable-default provider configuration: PASS
+- Pionex 502 soft-failure path: PASS
+- Pionex-only scanner isolation: PASS
+- Scanner selection no forced Pionex analysis: PASS
+- HTTP_DIAGNOSTIC_PASS
+- Pionex upstream request headers: PASS
+- PWA package retained: PASS
+- Full bootstrap with PWA/provider stubs: PASS
 - Package structure: PASS
 
-## Limitations
-- Live market analysis still requires internet access; offline mode preserves the app shell, not live exchange data.
-- Browser install UX varies by platform; Android/Chromium supports the richest install prompt.
-- Closed-app push alerts still require server-side push infrastructure and are not implied by PWA installation alone.
+## Root-cause note
+Pionex's current official API documentation still lists symbols, tickers, klines, trades and depth as public endpoints. Therefore a raw 502 from the app is treated as a network/proxy/upstream-reachability failure rather than an intentional endpoint removal. Live deployment is still required to see the exact upstream detail for the user's network/Cloudflare POP.

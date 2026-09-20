@@ -55,3 +55,7 @@ Adds a provider-consistent main engine. Pionex is now the default primary spot s
 
 ## v31 · FULL PWA
 Turns Crypto Radar into a complete installable PWA with icons, standalone mode, install prompt, offline shell, update flow, deep links and PWA health diagnostics.
+
+
+## v32 · RESILIENCE HOTFIX
+Fixes the raw HTTP 502 failure path. Binance direct-data is the stable default for the main engine; Pionex remains explicit and the Top 100 scanner stays Pionex-only. Pionex proxy failures now expose diagnostic detail without crashing the main analysis.
