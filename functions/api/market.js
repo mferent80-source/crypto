@@ -1,12 +1,14 @@
 const FUT="https://fapi.binance.com";
 const PIONEX="https://api.pionex.com";
-let pionexGate=Promise.resolve(),pionexNextAt=0;
+let pionexGate=Promise.resolve(),pionexNextAt=0,pionexBlockedUntil=0;
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-async function pionexRateGate(fn){
+async function pionexRateGate(weight,fn){
   const run=pionexGate.then(async()=>{
+    const blocked=Math.max(0,pionexBlockedUntil-Date.now());
+    if(blocked){const e=Error("upstream cooldown "+Math.ceil(blocked/1000)+"s");e.status=429;e.retryAfter=Math.ceil(blocked/1000);throw e}
     const delay=Math.max(0,pionexNextAt-Date.now());
     if(delay)await wait(delay);
-    pionexNextAt=Date.now()+220;
+    pionexNextAt=Date.now()+Math.max(500,Math.max(1,weight)*250);
     return fn()
   });
   pionexGate=run.catch(()=>{});
@@ -21,7 +23,7 @@ async function j(url){
     "accept":"application/json,text/plain,*/*",
     "accept-language":"en-US,en;q=0.9",
     "cache-control":"no-cache",
-    "user-agent":"Mozilla/5.0 CryptoRadar/33"
+    "user-agent":"Mozilla/5.0 CryptoRadar/43"
   }});
   const text=await r.text();let data=null;try{data=JSON.parse(text)}catch{}
   if(!r.ok){
@@ -40,7 +42,9 @@ async function pionexCached(url,ttl=30){
     const hit=await cache.match(key);
     if(hit){try{return await hit.json()}catch{}}
   }
-  const data=await pionexRateGate(()=>j(url));
+  let data;
+  try{data=await pionexRateGate(url.includes("/common/symbols")?5:1,()=>j(url))}
+  catch(e){if(e.status===429){pionexBlockedUntil=Math.max(pionexBlockedUntil,Date.now()+Math.max(75000,(e.retryAfter||60)*1000))}throw e}
   if(cache){
     const res=new Response(JSON.stringify(data),{headers:{"content-type":"application/json","cache-control":`public, max-age=${ttl}`}});
     await cache.put(key,res).catch(()=>{})
@@ -49,27 +53,27 @@ async function pionexCached(url,ttl=30){
 }
 export async function onRequestGet({request}){
   const u=new URL(request.url),type=u.searchParams.get("type");
-  if(type==="health")return ok({ok:true,service:"crypto-radar",version:"v42"});
+  if(type==="health")return ok({ok:true,service:"crypto-radar",version:"v43"});
   if(type==="pionex_symbols"){
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=SPOT`,300))}catch(e){return softFail("Pionex symbols unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=SPOT`,3600))}catch(e){return softFail("Pionex symbols unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_tickers"){
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/tickers?type=SPOT`,10))}catch(e){return softFail("Pionex tickers unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/tickers?type=SPOT`,30))}catch(e){return softFail("Pionex tickers unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_klines"){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,"");
     const pi=(u.searchParams.get("interval")||"4H").toUpperCase();
     const allowed=new Set(["1M","5M","15M","30M","60M","4H","8H","12H","1D"]);
     const interval=allowed.has(pi)?pi:"4H",limit=Math.min(500,Math.max(1,Number(u.searchParams.get("limit")||300)));
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}`,interval==="15M"?15:interval==="60M"?30:interval==="4H"?90:180))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}`,interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_trades"){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=Math.min(500,Math.max(10,Number(u.searchParams.get("limit")||500)));
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/trades?symbol=${encodeURIComponent(ps)}&limit=${limit}`,2))}catch(e){return softFail("Pionex trades unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/trades?symbol=${encodeURIComponent(ps)}&limit=${limit}`,5))}catch(e){return softFail("Pionex trades unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_depth"){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=Math.min(1000,Math.max(1,Number(u.searchParams.get("limit")||100)));
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/depth?symbol=${encodeURIComponent(ps)}&limit=${limit}`,2))}catch(e){return softFail("Pionex depth unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/depth?symbol=${encodeURIComponent(ps)}&limit=${limit}`,5))}catch(e){return softFail("Pionex depth unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
   const symbol=(u.searchParams.get("symbol")||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");

@@ -1,7 +1,7 @@
 {
   "name": "Crypto Radar Pro · Multi-Market",
   "short_name": "Market Radar",
-  "description": "Multi-market research terminal with portfolio intelligence, marginal/component VaR, risk budgets, correlation clusters, strategy families, realistic paper execution and model governance.",
+  "description": "Crypto Radar Pro v43 with hardened Pionex rate-limit resilience, auto-resuming scanner, portfolio intelligence, realistic paper execution and model governance.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

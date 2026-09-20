@@ -99,3 +99,6 @@ No new API dependency is introduced.
 Adds aligned multi-asset portfolio returns, covariance-based Marginal/Component VaR, correlation clusters, hedge-pair detection, paper risk budgets by market/regime/cluster, candidate incremental VaR/CVaR before a new Paper position, portfolio-aware adaptive sizing and feature-similarity Strategy Families.
 
 v42 introduces no new API dependency and retains the v41 realistic execution simulator.
+
+## v43 · PIONEX RESILIENCE
+Hotfix for Pionex HTTP 429 pressure: weighted pacing, escalating backoff, backend isolate cooldown, longer success caches, scanner pause/resume with partial-result preservation, and suppression of background Pionex REST polling while a scanner run is active.

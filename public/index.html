@@ -936,7 +936,7 @@ main{max-width:1160px;padding-top:14px}
     <button class="sideBtn" data-nav="health" onclick="navTo('health')"><span class="sideIcon">●</span>Health</button>
   </div>
   <div class="sideFooter">
-    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v42 · PORTFOLIO INTELLIGENCE</div>
+    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v43 · PIONEX RESILIENCE</div>
     <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
     <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
   </div>
@@ -944,7 +944,7 @@ main{max-width:1160px;padding-top:14px}
 <div class="mainArea">
 <header class="topStatus">
   <div class="topLeft"><div id="topCoin" class="topCoin">BTC/USDT</div><span id="topTf" class="statusChip">4h</span><span id="topMode" class="statusChip">AUTO</span><span id="topSource" class="statusChip">PIONEX</span></div>
-  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v42 · AUDITED</span></div>
+  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v43 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -952,7 +952,7 @@ main{max-width:1160px;padding-top:14px}
     <div class="logo">◈</div>
     <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
   </div>
-  <div class="headerMeta"><span class="badge">v42 · PORTFOLIO INTELLIGENCE · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+  <div class="headerMeta"><span class="badge">v43 · PIONEX RESILIENCE · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -1590,7 +1590,7 @@ main{max-width:1160px;padding-top:14px}
       <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
       <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
       <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-      <div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v42</b></div>
+      <div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v43</b></div>
       <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
       <div class="cacheBox"><span class="label">Liquidation WS</span><b id="healthLiquidation">—</b></div>
       <div class="cacheBox"><span class="label">D1 history</span><b id="healthHistory">—</b></div>
@@ -1598,6 +1598,8 @@ main{max-width:1160px;padding-top:14px}
       <div class="cacheBox"><span class="label">US Stocks API</span><b id="healthStocks">—</b></div>
       <div class="cacheBox"><span class="label">Pionex API</span><b id="healthPionex">—</b></div>
       <div class="cacheBox"><span class="label">Pionex cooldown</span><b id="healthPionexCooldown">READY</b></div>
+      <div class="cacheBox"><span class="label">Pionex pacing</span><b id="healthPionexPacing">SAFE · 0.70s</b></div>
+      <div class="cacheBox"><span class="label">Pionex 429 strikes</span><b id="healthPionexStrikes">0</b></div>
     </div>
   </div>
 </section>
@@ -2474,7 +2476,7 @@ async function loadMarketContext(){try{
 async function checkPionexHealth(){
   if(!$("healthPionex"))return;
   const cool=pionexCooldownRemaining();
-  if($("healthPionexCooldown"))$("healthPionexCooldown").textContent=cool?`${Math.ceil(cool/1000)}s`:"READY";
+  if($("healthPionexCooldown"))$("healthPionexCooldown").textContent=cool?`${Math.ceil(cool/1000)}s`:"READY";if($("healthPionexStrikes"))$("healthPionexStrikes").textContent=String(pionexRateStrikes);if($("healthPionexPacing"))$("healthPionexPacing").textContent=`SAFE · ${(PIONEX_MIN_INTERVAL_MS/1000).toFixed(2)}s`;
   if(cool){$("healthPionex").textContent="RATE LIMITED";return}
   $("healthPionex").textContent="Checking…";
   try{
@@ -2751,7 +2753,7 @@ function backupJsonKey(key,fallback=null){
 }
 function exportBackup(){
  const data={
-   version:"v42",schemaVersion:42,ts:Date.now(),
+   version:"v43",schemaVersion:43,ts:Date.now(),
    settings:appSettings(),journal:journal(),paper:paperTrades(),paperSettings:paperSettings(),paperEquity:paperHistory(),alerts:appAlerts(),
    forwardValidationStart:forwardStart(),
    workspace:{
@@ -2770,7 +2772,7 @@ function exportBackup(){
    strategyFamilies:{threshold:+$("familyThreshold")?.value||.82},
    ui:{pwaInstallDismissed:localStorage.getItem("pwaInstallDismissed")||null}
  };
- const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="crypto-radar-v42-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="crypto-radar-v43-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 async function importBackup(file){
  if(!file)return;
@@ -2922,7 +2924,7 @@ function loadScanPrefs(){
  if($("pionexScanMode")&&$("scanDepth"))$("pionexScanMode").textContent=$("scanDepth").value==="DEEP"?"Mode DEEP MTF":"Mode FAST 4H"
 }
 
-const APP_VERSION="v42";
+const APP_VERSION="v43";
 let deferredInstallPrompt=null,pwaWaitingWorker=null;
 function isStandalonePwa(){return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true}
 function showPwaInstall(){
@@ -4259,28 +4261,52 @@ async function ticker(s){
 }
 
 
-let pionexLastError="",pionexCooldownUntil=0,pionexQueue=Promise.resolve(),pionexLastStart=0;
-const PIONEX_MIN_INTERVAL_MS=320;
+let pionexLastError="",pionexCooldownUntil=0,pionexQueue=Promise.resolve(),pionexNextAllowed=0,pionexRateStrikes=0,pionexScannerActive=false;
+const PIONEX_MIN_INTERVAL_MS=700;
+const PIONEX_WEIGHT_UNIT_MS=220;
+function pionexWeight(proxyType){return proxyType==="pionex_symbols"?5:1}
 function pionexCooldownRemaining(){return Math.max(0,pionexCooldownUntil-Date.now())}
-function setPionexCooldown(ms=65000,reason="HTTP 429"){
-  pionexCooldownUntil=Math.max(pionexCooldownUntil,Date.now()+ms);
-  pionexLastError=reason;
-  if(activeScanToken)activeScanToken.cancelled=true;
-  if($("pionexRateState"))$("pionexRateState").textContent=`Cooldown ${Math.ceil(ms/1000)}s`;
-  if($("healthPionexCooldown"))$("healthPionexCooldown").textContent=`${Math.ceil(ms/1000)}s`;
+function pionexBackoffMs(serverMs=0){
+  const strikeBackoff=pionexRateStrikes<=1?75000:pionexRateStrikes===2?120000:300000;
+  return Math.max(serverMs||0,strikeBackoff)
 }
-function parseRetryMs(message){
+function setPionexCooldown(ms=65000,reason="HTTP 429"){
+  pionexRateStrikes=Math.min(6,pionexRateStrikes+1);
+  const finalMs=pionexBackoffMs(ms);
+  pionexCooldownUntil=Math.max(pionexCooldownUntil,Date.now()+finalMs);
+  pionexLastError=reason;
+  if($("pionexRateState"))$("pionexRateState").textContent=`Cooldown ${Math.ceil(finalMs/1000)}s · strike ${pionexRateStrikes}`;
+  if($("healthPionexCooldown"))$("healthPionexCooldown").textContent=`${Math.ceil(finalMs/1000)}s`;
+  if($("healthPionexStrikes"))$("healthPionexStrikes").textContent=String(pionexRateStrikes);
+}
+function markPionexSuccess(){
+  if(!pionexCooldownRemaining()&&pionexRateStrikes>0)pionexRateStrikes=Math.max(0,pionexRateStrikes-1);
+  if($("healthPionexStrikes"))$("healthPionexStrikes").textContent=String(pionexRateStrikes)
+}
+function parseRetryMs(message,retryAfter=null){
+  if(Number.isFinite(+retryAfter)&&+retryAfter>0)return Math.max(65000,+retryAfter*1000);
   const m=String(message||"").match(/retry(?:-after)?[^0-9]*(\d+)/i);
   return m?Math.max(65000,Number(m[1])*1000):65000
 }
-function pionexRateTask(fn){
+async function awaitPionexReady(label="Pionex"){
+  while(pionexCooldownRemaining()>0){
+    const sec=Math.ceil(pionexCooldownRemaining()/1000);
+    if($("pionexRateState"))$("pionexRateState").textContent=`${label} paused · ${sec}s`;
+    if($("healthPionexCooldown"))$("healthPionexCooldown").textContent=`${sec}s`;
+    await sleep(Math.min(1000,pionexCooldownRemaining()+50))
+  }
+  if($("healthPionexCooldown"))$("healthPionexCooldown").textContent="READY"
+}
+function pionexRateTask(fn,weight=1){
   const task=pionexQueue.then(async()=>{
     const cool=pionexCooldownRemaining();
     if(cool>0)throw Error(`Pionex rate-limit cooldown · ${Math.ceil(cool/1000)}s`);
-    const wait=Math.max(0,pionexLastStart+PIONEX_MIN_INTERVAL_MS-Date.now());
+    const wait=Math.max(0,pionexNextAllowed-Date.now());
     if(wait)await sleep(wait);
-    pionexLastStart=Date.now();
-    if($("pionexRateState"))$("pionexRateState").textContent="Rate-safe queue";
+    const spacing=Math.max(PIONEX_MIN_INTERVAL_MS,Math.max(1,weight)*PIONEX_WEIGHT_UNIT_MS);
+    pionexNextAllowed=Date.now()+spacing;
+    if($("pionexRateState"))$("pionexRateState").textContent=`Rate-safe · ${spacing}ms · weight ${weight}`;
+    if($("healthPionexPacing"))$("healthPionexPacing").textContent=`SAFE · ${(spacing/1000).toFixed(2)}s`;
     return fn()
   });
   pionexQueue=task.catch(()=>{});
@@ -4291,17 +4317,18 @@ async function pionexRequest(path,proxyType,proxyArgs=""){
     const q=`/api/market?type=${encodeURIComponent(proxyType)}${proxyArgs}`;
     try{
       const d=await getJSON(q);
-      if(d&&d.result!==false){pionexLastError="";return d}
+      if(d&&d.result!==false){pionexLastError="";markPionexSuccess();return d}
       const msg=(d?.error||"Pionex unavailable")+(d?.detail?" · "+d.detail:"");
-      if(/429|rate.?limit/i.test(msg)){setPionexCooldown(parseRetryMs(msg),msg);throw Error(msg)}
+      if(/429|rate.?limit/i.test(msg)){setPionexCooldown(parseRetryMs(msg,d?.retryAfter),msg);throw Error(`Pionex rate-limit cooldown · ${Math.ceil(pionexCooldownRemaining()/1000)}s`)}
       pionexLastError="proxy: "+msg;throw Error("Pionex indisponibil · "+pionexLastError)
     }catch(e){
       const msg=e.message||String(e);
-      if(/429|rate.?limit/i.test(msg)){setPionexCooldown(parseRetryMs(msg),msg)}
+      if(/429|rate.?limit/i.test(msg)&&!/^Pionex rate-limit cooldown/.test(msg)){setPionexCooldown(parseRetryMs(msg),msg)}
       pionexLastError="proxy: "+msg;
+      if(pionexCooldownRemaining())throw Error(`Pionex rate-limit cooldown · ${Math.ceil(pionexCooldownRemaining()/1000)}s`);
       throw Error("Pionex indisponibil · "+pionexLastError)
     }
-  })
+  },pionexWeight(proxyType))
 }
 function pionexTf(tf){
   return ({"15m":"15M","1h":"60M","4h":"4H","1d":"1D"})[tf]||"4H"
@@ -4310,11 +4337,9 @@ function pionexLeveragedBase(base){
   return /(3L|3S|5L|5S|BULL|BEAR)$/i.test(base||"")
 }
 async function pionexTop100(){
-  if(pionexUniverse.length&&Date.now()-pionexUniverseUpdated<60000){perfStats.pionexCacheHits++;if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}/100`;if($("pionexUniverseTime"))$("pionexUniverseTime").textContent="Cached <60s";return pionexUniverse}
-  const [si,ti]=await Promise.all([
-    memoRequest(cacheKey("pionex-meta","symbols"),60000,()=>pionexRequest("/api/v1/common/symbols?type=SPOT","pionex_symbols")),
-    memoRequest(cacheKey("pionex-meta","tickers"),15000,()=>pionexRequest("/api/v1/market/tickers?type=SPOT","pionex_tickers"))
-  ]);
+  if(pionexUniverse.length&&Date.now()-pionexUniverseUpdated<120000){perfStats.pionexCacheHits++;if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}/100`;if($("pionexUniverseTime"))$("pionexUniverseTime").textContent="Cached <120s";return pionexUniverse}
+  const si=await memoRequest(cacheKey("pionex-meta","symbols"),1800000,()=>pionexRequest("/api/v1/common/symbols?type=SPOT","pionex_symbols"));
+  const ti=await memoRequest(cacheKey("pionex-meta","tickers"),30000,()=>pionexRequest("/api/v1/market/tickers?type=SPOT","pionex_tickers"));
   const symbols=si?.data?.symbols||[],tickers=ti?.data?.tickers||[],tm=new Map(tickers.map(x=>[x.symbol,x]));
   const rows=symbols.filter(x=>{
     const base=(x.baseCurrency||"").toUpperCase(),quote=(x.quoteCurrency||"").toUpperCase();
@@ -4329,7 +4354,7 @@ async function pionexTop100(){
   return rows
 }
 async function pionexKlines(pionexSymbol,tf,limit=300){
-  const interval=pionexTf(tf),safe=encodeURIComponent(pionexSymbol),lim=Math.min(500,Math.max(60,limit)),key=cacheKey("pionex-klines",`${pionexSymbol}|${interval}|${lim}`),ttl=tf==="15m"?12000:tf==="1h"?18000:tf==="4h"?30000:45000;
+  const interval=pionexTf(tf),safe=encodeURIComponent(pionexSymbol),lim=Math.min(500,Math.max(60,limit)),key=cacheKey("pionex-klines",`${pionexSymbol}|${interval}|${lim}`),ttl=tf==="15m"?30000:tf==="1h"?60000:tf==="4h"?120000:300000;
   const beforeHits=perfStats.cacheHits;
   const d=await memoRequest(key,ttl,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/klines?symbol=${safe}&interval=${interval}&limit=${lim}`,"pionex_klines",`&symbol=${safe}&interval=${encodeURIComponent(interval)}&limit=${lim}`),12000,"Pionex"),1,220));
   if(perfStats.cacheHits>beforeHits)perfStats.pionexCacheHits++;
@@ -4362,11 +4387,11 @@ function pionexSpotSymbolFromInput(){
 }
 async function pionexTrades(symbol,limit=500){
   const lim=Math.max(10,Math.min(500,limit)),safe=encodeURIComponent(symbol),key=cacheKey("pionex-trades",`${symbol}|${lim}`);
-  return memoRequest(key,1500,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/trades?symbol=${safe}&limit=${lim}`,"pionex_trades",`&symbol=${safe}&limit=${lim}`),9000,"Pionex trades"),1,180))
+  return memoRequest(key,5000,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/trades?symbol=${safe}&limit=${lim}`,"pionex_trades",`&symbol=${safe}&limit=${lim}`),9000,"Pionex trades"),1,180))
 }
 async function pionexDepthSnapshot(symbol,limit=100){
   const lim=Math.max(1,Math.min(1000,limit)),safe=encodeURIComponent(symbol),key=cacheKey("pionex-depth",`${symbol}|${lim}`);
-  return memoRequest(key,1500,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/depth?symbol=${safe}&limit=${lim}`,"pionex_depth",`&symbol=${safe}&limit=${lim}`),9000,"Pionex depth"),1,180))
+  return memoRequest(key,5000,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/depth?symbol=${safe}&limit=${lim}`,"pionex_depth",`&symbol=${safe}&limit=${lim}`),9000,"Pionex depth"),1,180))
 }
 function quantile(arr,q){
   if(!arr.length)return 0;const a=[...arr].sort((x,y)=>x-y),i=(a.length-1)*q,l=Math.floor(i),h=Math.ceil(i);
@@ -4439,11 +4464,11 @@ let microAuto=false,microTimer=null,microLoading=false;
 function toggleMicroAuto(){
   microAuto=!microAuto;$("microAutoBtn").textContent=microAuto?"Auto ON":"Auto OFF";
   if(microTimer){clearInterval(microTimer);microTimer=null}
-  if(microAuto){loadPionexMicrostructure(true);microTimer=setInterval(()=>{if($("micro").classList.contains("on")&&!pionexCooldownRemaining())loadPionexMicrostructure(true)},15000)}
+  if(microAuto){if(!pionexScannerActive)loadPionexMicrostructure(true);microTimer=setInterval(()=>{if($("micro").classList.contains("on")&&!pionexScannerActive&&!pionexCooldownRemaining())loadPionexMicrostructure(true)},30000)}
 }
 async function loadPionexMicrostructure(force=false){
   if(assetClass()==="STOCKS"){if($("microBias"))$("microBias").textContent="N/A · STOCK MODE";return}
-  if(microLoading)return;microLoading=true;
+  if(microLoading)return;if(pionexScannerActive&&!force){if($("microReason"))$("microReason").textContent="Paused while Pionex scanner is active.";return}microLoading=true;
   const ps=pionexSpotSymbolFromInput();$("microSymbol").textContent=ps;$("microReason").textContent="Loading Pionex trades + depth…";
   try{
     if(force){requestCache.delete(cacheKey("pionex-trades",`${ps}|500`));requestCache.delete(cacheKey("pionex-depth",`${ps}|100`))}
@@ -4537,7 +4562,7 @@ function startPionexLive(sym){
       if($("wsDot"))$("wsDot").classList.remove("live")
     }
   }
-  if(!pionexCooldownRemaining())poll();pionexLiveTimer=setInterval(()=>{if(!pionexCooldownRemaining())poll()},10000)
+  if(!pionexScannerActive&&!pionexCooldownRemaining())poll();pionexLiveTimer=setInterval(()=>{if(!pionexScannerActive&&!pionexCooldownRemaining())poll()},30000)
 }
 function stopStockLive(){stockLiveSeq++;if(stockLiveTimer){clearInterval(stockLiveTimer);stockLiveTimer=null}}
 function startStockLive(sym){
@@ -4939,7 +4964,7 @@ function exportJournal(){
   const a=journal();if(!a.length){alert("Jurnalul este gol.");return}
   const cols=["date","market","symbol","source","tf","mode","direction","entry","entryActivated","activationTs","stop","tp1","tp2","tp3","longConf","shortConf","status","grossR","costR","netR","feeBps","slippageBps","executionPolicy","trendScore","momScore","volScore","structureScore","adx","atrPct","histUp","mtf","session","sweepScore","sweepType","nearestFvgStatus","nearestFvgType","premiumDiscount","frictionBps","contextScore","newsRisk","newsHigh","liqLong5","liqShort5"];
   const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.market||((x.source||"BINANCE")==="TWELVEDATA"?"STOCKS":"CRYPTO"),x.symbol,x.source||"BINANCE",x.tf,x.mode,x.direction,x.entry,x.entryActivated||false,x.activationTs?new Date(x.activationTs).toISOString():"",x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.grossR??"",x.costR??"",x.netR??"",x.feeBps??"",x.slippageBps??"",x.executionPolicy??"",x.trendScore??"",x.momScore??"",x.volScore??"",x.structureScore??"",x.adx??"",x.atrPct??"",x.histUp??"",x.mtf??"",x.session??"",x.sweepScore??"",x.sweepType??"",x.nearestFvgStatus??"",x.nearestFvgType??"",x.premiumDiscount??"",x.frictionBps??"",x.contextScore??"",x.newsRisk??"",x.newsHigh??"",x.liqLong5??"",x.liqShort5??""].join(",")));
-  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v42-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v43-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function clearJournal(){if(confirm("Ștergi tot jurnalul de semnale?")){localStorage.removeItem("signalJournal");renderSignals();toast("Jurnal șters","warn")}}
 function drawValidationCurve(vals){
@@ -5075,7 +5100,7 @@ async function analyze(save){
   risk=q.atrPct>=4||q.confluence<45?"Ridicat":q.atrPct>=2.2||q.confluence<62?"Mediu":"Controlat";
   $("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("trail").textContent=num(trail);$("risk").textContent=risk;
   $("topLive").className="statusChip live";$("topLive").textContent=src+" DATA";draw(q);renderVolumeProfile();if(assetClass()==="CRYPTO")loadFearGreed();else{$("fearGreed").textContent="N/A";$("sentimentText").textContent="Crypto Fear & Greed is not used in US stock scoring."}loadMarketContext();
-  if(assetClass()==="CRYPTO"){derivatives().catch(()=>{});loadPionexMicrostructure().catch(()=>{})}
+  if(assetClass()==="CRYPTO"){derivatives().catch(()=>{});if(!pionexScannerActive)loadPionexMicrostructure().catch(()=>{})}
   $("status").textContent=assetClass()==="STOCKS"?`${stockSymbol(sym)} · USD · ${t} · ${mode.toUpperCase()} · ${src} · ${new Date().toLocaleTimeString()}`:`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · ${src} · ${new Date().toLocaleTimeString()}`;setBusy(false);toast(`${coin(sym)} analizat · ${window.__signalState.sm.direction}`,"good");
  }catch(e){
    const src=analysisSource();
@@ -5160,7 +5185,7 @@ async function scan(){
  if(assetClass()==="STOCKS")return scanStocks();
  let box=$("scanout"),depth=$("scanDepth")?.value||"FAST";
  if(activeScanToken)activeScanToken.cancelled=true;
- const token={cancelled:false,id:Date.now()},started=performance.now();activeScanToken=token;scannerRows=[];perfStats.lastScanner="RUNNING";
+ const token={cancelled:false,id:Date.now()},started=performance.now();activeScanToken=token;pionexScannerActive=true;scannerRows=[];perfStats.lastScanner="RUNNING";
  $("scanCancelBtn").disabled=false;$("scanProgressBar").style.width="0%";$("scanProcessed").textContent="0/0";$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent=perfStats.pionexCacheHits;$("scanElapsed").textContent="0s";
  box.innerHTML="Încarc Top 100 live din Pionex…";
  try{
@@ -5170,7 +5195,19 @@ async function scan(){
    $("pionexScanMode").textContent=depth==="DEEP"?"Mode DEEP MTF · rate-safe":"Mode FAST 4H · rate-safe";
    $("scanProcessed").textContent=`0/${top.length}`;
    const concurrency=1;
-   const worker=async item=>retryTask(()=>depth==="DEEP"?pionexScanDeep(item):pionexScanFast(item),1,260);
+   const worker=async item=>{
+     await awaitPionexReady("Scanner");
+     try{return await (depth==="DEEP"?pionexScanDeep(item):pionexScanFast(item))}
+     catch(e){
+       if(pionexCooldownRemaining()&&!token.cancelled){
+         perfStats.lastScanner=`PAUSED · ${Math.ceil(pionexCooldownRemaining()/1000)}s`;
+         await awaitPionexReady("Scanner auto-resume");
+         if(token.cancelled)throw Error("Scan cancelled");
+         return depth==="DEEP"?pionexScanDeep(item):pionexScanFast(item)
+       }
+       throw e
+     }
+   };
    const progress=(done,total,out,errors)=>{
      if(token.cancelled)return;
      const good=out.filter(Boolean);scannerRows=good;
@@ -5182,8 +5219,9 @@ async function scan(){
    scannerRows=run.results;renderScan();renderOpportunity();renderDailyDesk();perfStats.lastScanner=`OK ${run.results.length}/${top.length}`;persistScannerHistory("CRYPTO","PIONEX",top.length,run.results,depth).catch(()=>{});
    toast(`Pionex scanner: ${run.results.length}/${top.length} analizate`,"good")
  }catch(e){
-   if(!token.cancelled){scannerRows=[];const cool=pionexCooldownRemaining();box.innerHTML=`<div class="row"><span>${cool?"Pionex rate limit activ":"Pionex scanner indisponibil"}.</span><b>${e.message}</b></div>`;perfStats.lastScanner=(cool?"RATE LIMITED · ":"ERROR · ")+e.message;toast(cool?"Pionex a limitat IP-ul. Aplicația a oprit automat cererile ~65 secunde.":"Pionex API nu răspunde; analiza Binance rămâne disponibilă.","bad")}
+   if(!token.cancelled){const cool=pionexCooldownRemaining();box.innerHTML=`<div class="row"><span>${cool?"Pionex rate limit activ · rezultate parțiale păstrate":"Pionex scanner indisponibil"}.</span><b>${e.message}</b></div>`;perfStats.lastScanner=(cool?"RATE LIMITED · ":"ERROR · ")+e.message;toast(cool?"Pionex rate-limit: scannerul păstrează rezultatele și reia după cooldown.":"Pionex API nu răspunde; analiza Binance rămâne disponibilă.","bad")}
  }finally{
+   pionexScannerActive=false;
    if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}
    $("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"
  }
