@@ -399,6 +399,72 @@ main{max-width:1160px;padding-top:14px}
  .zoneBox{grid-template-columns:1fr}
 }
 </style>
+
+<style id="v20-extra">
+/* v20 · product-suite additions */
+.srHeat{display:grid;grid-template-columns:92px repeat(7,1fr);gap:5px;margin-top:10px}
+.srHeat .hh{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.srHeat .hc{padding:9px 5px;border-radius:9px;text-align:center;border:1px solid #213247;background:#0b1520;font-size:10px;font-weight:800}
+.srHeat .sup{background:rgba(85,216,155,.09);color:#7ee5b6;border-color:rgba(85,216,155,.22)}
+.srHeat .res{background:rgba(255,107,120,.09);color:#ff8e99;border-color:rgba(255,107,120,.22)}
+.srHeat .pivot{background:rgba(105,167,255,.09);color:#9ac2ff;border-color:rgba(105,167,255,.24)}
+.srHeat .near{box-shadow:0 0 0 2px rgba(245,196,81,.45) inset;color:#ffd978}
+.orderFlow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.flowSide{border:1px solid #213247;border-radius:14px;background:#0b1520;padding:12px}
+.flowSide .flowBig{font-size:24px;font-weight:900;margin-top:4px}
+.flowMeter{height:11px;border-radius:999px;background:#172536;overflow:hidden;display:flex;margin-top:8px}
+.flowMeter .buy{background:linear-gradient(90deg,#2fbf8b,#6de3b5)}
+.flowMeter .sell{background:linear-gradient(90deg,#df5262,#ff8a95)}
+.ofRow{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #182637}
+.ofRow:last-child{border-bottom:0}
+.marketOverview{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.marketTile{background:linear-gradient(180deg,#0d1824,#0a141e);border:1px solid #203148;border-radius:14px;padding:11px;cursor:pointer;transition:.15s ease}
+.marketTile:hover{transform:translateY(-1px);border-color:#35506d}
+.marketTile .coinName{font-size:13px;font-weight:850}
+.marketTile .marketPrice{font-size:16px;font-weight:850;margin-top:3px}
+.marketTile .marketMeta{display:flex;justify-content:space-between;gap:6px;margin-top:7px;font-size:9px;color:var(--muted)}
+.alertList{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.alertItem{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:start;padding:10px;border:1px solid #213247;border-radius:12px;background:#0b1520}
+.alertIcon{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;background:#132235}
+.alertItem strong{font-size:11px}.alertItem p{margin:2px 0 0;color:var(--muted);font-size:10px}
+.alertTime{font-size:9px;color:var(--muted)}
+.settingsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.settingsCard{background:#0b1520;border:1px solid #213247;border-radius:14px;padding:12px}
+.settingsCard h4{margin:0 0 9px;font-size:12px}
+.settingRow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #172536}
+.settingRow:last-child{border-bottom:0}
+.toggle{width:42px;height:24px;border-radius:999px;background:#26384b;border:1px solid #30445a;position:relative;cursor:pointer;flex:0 0 auto}
+.toggle:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#93a5ba;transition:.18s}
+.toggle.on{background:rgba(85,216,155,.16);border-color:rgba(85,216,155,.35)}
+.toggle.on:after{left:21px;background:#65dfa9}
+.presetBar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.presetBtn{width:auto;padding:6px 10px;border-radius:999px;font-size:10px}
+.calibrationGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.calBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.calBox b{display:block;font-size:16px;margin-top:4px}
+.chartZoneLegend{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;font-size:9px;color:var(--muted)}
+.chartZoneLegend span:before{content:"";display:inline-block;width:10px;height:6px;border-radius:2px;margin-right:4px;vertical-align:1px}
+.chartZoneLegend .lz:before{background:rgba(85,216,155,.35)}
+.chartZoneLegend .rz:before{background:rgba(255,107,120,.35)}
+.chartZoneLegend .pz:before{background:rgba(105,167,255,.35)}
+.modalShade{position:fixed;inset:0;background:rgba(0,0,0,.56);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+.modalShade.on{display:flex}
+.modalCard{width:min(760px,100%);max-height:90vh;overflow:auto;background:#0b1520;border:1px solid #2b4057;border-radius:18px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.modalHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.modalHead h3{margin:0}.closeBtn{width:auto;padding:6px 10px}
+.badgeNum{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#ff6b78;color:white;font-size:9px;font-weight:800}
+@media(max-width:980px){
+  .marketOverview{grid-template-columns:repeat(2,1fr)}
+  .settingsGrid{grid-template-columns:1fr}
+  .srHeat{grid-template-columns:70px repeat(4,1fr);overflow:auto}
+  .srHeat>*:nth-child(6),.srHeat>*:nth-child(7),.srHeat>*:nth-child(8){display:none}
+}
+@media(max-width:560px){
+  .orderFlow{grid-template-columns:1fr}
+  .marketOverview{grid-template-columns:repeat(2,1fr)}
+  .calibrationGrid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
 </head><body>
 <div class="appShell">
 <aside class="sideNav">
@@ -408,13 +474,16 @@ main{max-width:1160px;padding-top:14px}
     <button class="sideBtn" data-nav="engine" onclick="navTo('engine')"><span class="sideIcon">⚙</span>Quant Engine</button>
     <button class="sideBtn" data-nav="mtf" onclick="navTo('mtf',true)"><span class="sideIcon">▦</span>Multi-TF</button>
     <button class="sideBtn" data-nav="scan" onclick="navTo('scan',true)"><span class="sideIcon">⌕</span>Scanner</button>
+    <button class="sideBtn" data-nav="market" onclick="navTo('market',true)"><span class="sideIcon">◉</span>Market Overview</button>
     <button class="sideBtn" data-nav="signals" onclick="navTo('signals',true)"><span class="sideIcon">↗</span>Signals</button>
     <button class="sideBtn" data-nav="backtest" onclick="navTo('backtest',true)"><span class="sideIcon">◫</span>Backtest</button>
     <button class="sideBtn" data-nav="deriv" onclick="navTo('deriv',true)"><span class="sideIcon">≋</span>Futures</button>
     <button class="sideBtn" data-nav="watch" onclick="navTo('watch')"><span class="sideIcon">★</span>Watchlist</button>
+    <button class="sideBtn" data-nav="alerts" onclick="navTo('alerts')"><span class="sideIcon">!</span>Alerts <span id="sideAlertCount" class="badgeNum" style="display:none">0</span></button>
+    <button class="sideBtn" data-nav="settings" onclick="navTo('settings')"><span class="sideIcon">⚙</span>Settings</button>
   </div>
   <div class="sideFooter">
-    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v19 · LEVELS & FLOW</div>
+    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v20 · PRODUCT SUITE</div>
     <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
     <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
   </div>
@@ -422,7 +491,7 @@ main{max-width:1160px;padding-top:14px}
 <div class="mainArea">
 <header class="topStatus">
   <div class="topLeft"><div id="topCoin" class="topCoin">BTC/USDT</div><span id="topTf" class="statusChip">4h</span><span id="topMode" class="statusChip">AUTO</span></div>
-  <div class="topRight"><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v19 · TESTED</span></div>
+  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v20 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -430,7 +499,7 @@ main{max-width:1160px;padding-top:14px}
     <div class="logo">◈</div>
     <div><h1>Crypto Radar Pro</h1><div class="subhead">Market intelligence · multi-timeframe · live technical analysis</div></div>
   </div>
-  <div class="headerMeta"><span class="badge">v19 · LEVELS & FLOW · TESTED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+  <div class="headerMeta"><span class="badge">v20 · PRODUCT SUITE · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -479,7 +548,7 @@ main{max-width:1160px;padding-top:14px}
 <div class="card kpi"><div class="label">Preț</div><div id="price" class="value">—</div></div><div class="card kpi"><div class="label">24H</div><div id="change" class="value">—</div></div>
 <div class="card kpi"><div class="label">Volum 24H USDT</div><div id="volume24" class="value">—</div></div><div class="card kpi"><div class="label">Scor TF</div><div id="score" class="value">—</div></div>
 <div class="card full"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
-<div class="chartToolbar"><button type="button" onclick="setChartBars(50)">50 bars</button><button type="button" onclick="setChartBars(100)">100 bars</button><button type="button" onclick="setChartBars(160)">160 bars</button></div>
+<div class="chartToolbar"><button type="button" onclick="setChartBars(50)">50 bars</button><button type="button" onclick="setChartBars(100)">100 bars</button><button type="button" onclick="setChartBars(160)">160 bars</button></div><div class="chartZoneLegend"><span class="lz">Support zone</span><span class="rz">Resistance zone</span><span class="pz">Pivot zone</span></div>
 <div style="overflow:hidden"><canvas id="chart" width="1000" height="360"></canvas></div></div>
 <div class="card full"><div class="sectionTitle">Advanced context</div><div class="metricGrid">
 <div class="metricBox"><div class="label">MFI</div><div id="mfi" class="n">—</div></div>
@@ -504,6 +573,29 @@ main{max-width:1160px;padding-top:14px}
     <div class="zoneChip"><span class="label">Breakout above</span><b id="breakAbove">—</b></div>
     <div class="zoneChip"><span class="label">Breakdown below</span><b id="breakBelow">—</b></div>
     <div class="zoneChip"><span class="label">Nearest zone</span><b id="nearestZone">—</b></div>
+  </div>
+</div>
+<div class="card full">
+  <div class="sectionHead"><h3>S/R Heatmap</h3><span class="small">Distance & pressure around active levels</span></div>
+  <div id="srHeat" class="srHeat"></div>
+</div>
+<div class="card full">
+  <div class="sectionHead"><h3>Order-Flow Style Window</h3><span class="small">Volume pressure · proxy, not exchange tape</span></div>
+  <div class="orderFlow">
+    <div class="flowSide">
+      <div class="label">Buy pressure</div><div id="buyPressure" class="flowBig good">—</div>
+      <div class="flowMeter"><span id="buyMeter" class="buy" style="width:50%"></span><span id="sellMeter" class="sell" style="width:50%"></span></div>
+      <div class="ofRow"><span>Volume impulse</span><b id="volumeImpulse">—</b></div>
+      <div class="ofRow"><span>Close location</span><b id="closeLocation">—</b></div>
+      <div class="ofRow"><span>Money-flow delta</span><b id="moneyDelta">—</b></div>
+    </div>
+    <div class="flowSide">
+      <div class="label">Derivatives pressure</div><div id="derivPressure" class="flowBig">—</div>
+      <div class="ofRow"><span>Long accounts</span><b id="ofLongs">—</b></div>
+      <div class="ofRow"><span>Short accounts</span><b id="ofShorts">—</b></div>
+      <div class="ofRow"><span>Open Interest</span><b id="ofOi">—</b></div>
+      <div class="ofRow"><span>Funding</span><b id="ofFunding">—</b></div>
+    </div>
   </div>
 </div>
 <div class="card full">
@@ -561,6 +653,77 @@ main{max-width:1160px;padding-top:14px}
 <div class="label">Walk-forward heuristic backtest</div>
 <div id="backtestout" style="margin-top:8px">Apasă tab-ul Backtest pentru evaluarea istoricului încărcat.</div>
 </div></section>
+<section id="market" class="panel">
+  <div class="sectionHead"><h3>Market Overview</h3><div><button class="actionGhost" onclick="loadMarketOverview(true)">Refresh</button></div></div>
+  <div class="card full">
+    <div class="label">Multi-coin radar</div>
+    <div id="marketOverview" class="marketOverview"></div>
+  </div>
+  <div class="card full" style="margin-top:10px">
+    <div class="label">Breadth summary</div>
+    <div class="calibrationGrid">
+      <div class="calBox"><span class="label">Bullish</span><b id="breadthBull">—</b></div>
+      <div class="calBox"><span class="label">Bearish</span><b id="breadthBear">—</b></div>
+      <div class="calBox"><span class="label">Neutral</span><b id="breadthNeutral">—</b></div>
+      <div class="calBox"><span class="label">Avg 24h</span><b id="breadth24">—</b></div>
+    </div>
+  </div>
+</section>
+
+<section id="alerts" class="panel">
+  <div class="sectionHead"><h3>Alert Center</h3><div><button class="actionGhost" onclick="clearAlerts()">Clear</button></div></div>
+  <div class="card full">
+    <div class="label">Active rule set</div>
+    <div class="row"><span>Near S1 / R1</span><b id="alertSrRule">ON</b></div>
+    <div class="row"><span>Extreme long/short ratio</span><b id="alertLsRule">ON</b></div>
+    <div class="row"><span>Funding extreme</span><b id="alertFundingRule">ON</b></div>
+    <div class="row"><span>OI expansion</span><b id="alertOiRule">ON</b></div>
+    <div class="row"><span>Strong signal confidence</span><b id="alertSignalRule">ON</b></div>
+  </div>
+  <div class="card full" style="margin-top:10px">
+    <div class="label">Recent alerts</div>
+    <div id="alertList" class="alertList"></div>
+  </div>
+</section>
+
+<section id="settings" class="panel">
+  <div class="sectionHead"><h3>Settings & Presets</h3><span class="small">Local browser profile</span></div>
+  <div class="settingsGrid">
+    <div class="settingsCard">
+      <h4>Trading preset</h4>
+      <div class="presetBar">
+        <button class="presetBtn" onclick="applyPreset('conservative')">Conservative</button>
+        <button class="presetBtn" onclick="applyPreset('balanced')">Balanced</button>
+        <button class="presetBtn" onclick="applyPreset('aggressive')">Aggressive</button>
+      </div>
+      <div class="settingRow"><span>Signal min confidence</span><select id="setSignalMin" style="width:120px"><option>60</option><option selected>64</option><option>68</option><option>72</option></select></div>
+      <div class="settingRow"><span>Near-level threshold</span><select id="setNearPct" style="width:120px"><option value="0.25">0.25%</option><option value="0.5" selected>0.50%</option><option value="0.75">0.75%</option><option value="1">1.00%</option></select></div>
+      <button style="margin-top:10px" onclick="saveSettings()">Save settings</button>
+    </div>
+    <div class="settingsCard">
+      <h4>Alerts</h4>
+      <div class="settingRow"><span>S/R proximity</span><div id="toggleSr" class="toggle on" onclick="toggleSetting('sr')"></div></div>
+      <div class="settingRow"><span>Long/Short extremes</span><div id="toggleLs" class="toggle on" onclick="toggleSetting('ls')"></div></div>
+      <div class="settingRow"><span>Funding extremes</span><div id="toggleFunding" class="toggle on" onclick="toggleSetting('funding')"></div></div>
+      <div class="settingRow"><span>OI expansion</span><div id="toggleOi" class="toggle on" onclick="toggleSetting('oi')"></div></div>
+      <div class="settingRow"><span>Strong signal</span><div id="toggleSignal" class="toggle on" onclick="toggleSetting('signal')"></div></div>
+    </div>
+    <div class="settingsCard">
+      <h4>Browser notifications</h4>
+      <div class="settingRow"><span>Permission</span><b id="notifStatus">—</b></div>
+      <button onclick="requestNotifications()">Enable notifications</button>
+      <p class="small" style="margin-top:8px">Notifications work only while the app is open in the browser. The in-app Alert Center always works.</p>
+    </div>
+    <div class="settingsCard">
+      <h4>Auto-calibration</h4>
+      <div class="row"><span>Resolved signals</span><b id="calResolved">0</b></div>
+      <div class="row"><span>Best mode</span><b id="calBestMode">—</b></div>
+      <div class="row"><span>Best regime</span><b id="calBestRegime">—</b></div>
+      <div class="row"><span>Suggested threshold</span><b id="calThreshold">—</b></div>
+      <button style="margin-top:10px" onclick="recalibrate()">Recalculate</button>
+    </div>
+  </div>
+</section>
 <section id="mtf" class="panel"><div class="card full"><div class="label">Multi-timeframe heatmap</div><div id="mtfheat" class="heatmap" style="margin-top:10px"></div></div><div class="card full"><div id="mtfout">Se încarcă…</div></div></section>
 <section id="scan" class="panel"><div class="card full"><div class="label">Scanner avansat</div>
 <div class="scanFilters">
@@ -611,6 +774,8 @@ main{max-width:1160px;padding-top:14px}
     <div class="perfBox"><span class="label">Avg R</span><strong id="perfR">—</strong></div>
     <div class="perfBox"><span class="label">Profit factor R</span><strong id="perfPF">—</strong></div>
   </div>
+  <div class="label" style="margin-top:12px">Performance by strategy</div>
+  <div id="strategyPerformance" class="calibrationGrid"></div>
 </div>
 <div class="card full" style="margin-top:10px">
   <div class="label">Signal journal · local on device</div>
@@ -629,9 +794,103 @@ main{max-width:1160px;padding-top:14px}
 </div></section>
 <section id="watch" class="panel"><div class="card"><div class="label">Favorite memorate pe telefon</div><div id="watchout"></div></div></section>
 <p class="note">Engine-ul combină EMA20/50/200, RSI, MACD, ADX/DMI, Supertrend, Stoch RSI, Bollinger, rolling VWAP, ATR, MFI, CMF, OBV, Ichimoku, divergență RSI, volum, Donchian breakout, BOS/CHoCH, liquidity sweep/FVG, plus context futures (OI, long/short, funding) și analogi istorici kNN. Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice și confidence LONG/SHORT sunt euristici de confluență, nu probabilități garantate de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile, iar modelul nu include știri, slippage, comisioane ori lichiditate reală.</p>
-</main></div></div><div id="toastHost" class="toastHost"></div><nav class="mobileBottom"><button class="mobileNavBtn active" data-nav="dash" onclick="navTo('dash')"><b>⌂</b>Home</button><button class="mobileNavBtn" data-nav="scan" onclick="navTo('scan',true)"><b>⌕</b>Scan</button><button class="mobileNavBtn" data-nav="signals" onclick="navTo('signals',true)"><b>↗</b>Signals</button><button class="mobileNavBtn" data-nav="mtf" onclick="navTo('mtf',true)"><b>▦</b>Multi-TF</button><button class="mobileNavBtn" data-nav="watch" onclick="navTo('watch')"><b>★</b>Watch</button></nav><script>
+</main></div></div><div id="toastHost" class="toastHost"></div><nav class="mobileBottom"><button class="mobileNavBtn active" data-nav="dash" onclick="navTo('dash')"><b>⌂</b>Home</button><button class="mobileNavBtn" data-nav="scan" onclick="navTo('scan',true)"><b>⌕</b>Scan</button><button class="mobileNavBtn" data-nav="signals" onclick="navTo('signals',true)"><b>↗</b>Signals</button><button class="mobileNavBtn" data-nav="market" onclick="navTo('market',true)"><b>◉</b>Market</button><button class="mobileNavBtn" data-nav="alerts" onclick="navTo('alerts')"><b>!</b>Alerts</button></nav><script>
 
 
+
+const DEFAULT_SETTINGS={signalMin:64,nearPct:.5,alerts:{sr:true,ls:true,funding:true,oi:true,signal:true}};
+function appSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStorage.getItem("radarSettings")||"{}"),alerts:{...DEFAULT_SETTINGS.alerts,...(JSON.parse(localStorage.getItem("radarSettings")||"{}").alerts||{})}}}catch{return JSON.parse(JSON.stringify(DEFAULT_SETTINGS))}}
+function putSettings(x){localStorage.setItem("radarSettings",JSON.stringify(x))}
+function toggleSetting(k){
+ let x=appSettings();x.alerts[k]=!x.alerts[k];putSettings(x);renderSettings()
+}
+function saveSettings(){
+ let x=appSettings();x.signalMin=+$("setSignalMin").value;x.nearPct=+$("setNearPct").value;putSettings(x);renderSettings();toast("Settings saved","good")
+}
+function applyPreset(name){
+ let x=appSettings();
+ if(name==="conservative"){x.signalMin=72;x.nearPct=.35;$("mode").value="swing"}
+ else if(name==="aggressive"){x.signalMin=60;x.nearPct=.75;$("mode").value="scalp"}
+ else{x.signalMin=64;x.nearPct=.5;$("mode").value="auto"}
+ putSettings(x);localStorage.setItem("mode",$("mode").value);renderSettings();toast("Preset "+name+" applied","good")
+}
+function renderSettings(){
+ const x=appSettings();
+ if($("setSignalMin"))$("setSignalMin").value=String(x.signalMin);
+ if($("setNearPct"))$("setNearPct").value=String(x.nearPct);
+ for(const k of ["sr","ls","funding","oi","signal"]){const el=$("toggle"+k.charAt(0).toUpperCase()+k.slice(1));if(el)el.classList.toggle("on",!!x.alerts[k])}
+ if($("notifStatus"))$("notifStatus").textContent=typeof Notification==="undefined"?"Unsupported":Notification.permission;
+ const r=journal().filter(x=>Number.isFinite(x.rResult));
+ if($("calResolved"))$("calResolved").textContent=r.length;
+ let byMode={},byReg={};
+ r.forEach(x=>{(byMode[x.mode]??=[]).push(x.rResult);(byReg[x.regime]??=[]).push(x.rResult)});
+ const best=obj=>Object.entries(obj).sort((a,b)=>(b[1].reduce((x,y)=>x+y,0)/b[1].length)-(a[1].reduce((x,y)=>x+y,0)/a[1].length))[0]?.[0]||"—";
+ if($("calBestMode"))$("calBestMode").textContent=best(byMode);
+ if($("calBestRegime"))$("calBestRegime").textContent=best(byReg);
+ if($("calThreshold"))$("calThreshold").textContent=r.length<15?"Need ≥15 signals":String(x.signalMin);
+}
+function recalibrate(){
+ let r=journal().filter(x=>Number.isFinite(x.rResult));if(r.length<15){toast("Need at least 15 resolved signals for calibration","warn");renderSettings();return}
+ let wins=r.filter(x=>x.rResult>0),losses=r.filter(x=>x.rResult<0),x=appSettings(),wr=wins.length/r.length;
+ if(wr<.45)x.signalMin=Math.min(76,x.signalMin+2);else if(wr>.62)x.signalMin=Math.max(60,x.signalMin-1);
+ putSettings(x);renderSettings();toast("Threshold recalibrated from journal","good")
+}
+async function requestNotifications(){
+ if(typeof Notification==="undefined"){toast("Browser notifications unsupported","warn");return}
+ const p=await Notification.requestPermission();renderSettings();toast("Notification permission: "+p,p==="granted"?"good":"warn")
+}
+function appAlerts(){try{return JSON.parse(localStorage.getItem("radarAlerts")||"[]")}catch{return []}}
+function putAlerts(a){localStorage.setItem("radarAlerts",JSON.stringify(a.slice(0,100)));updateAlertBadges()}
+function addAlert(kind,title,msg,severity="warn"){
+ let a=appAlerts(),key=kind+"|"+title+"|"+msg,last=a[0];
+ if(last&&last.key===key&&Date.now()-last.ts<10*60*1000)return;
+ a.unshift({key,kind,title,msg,severity,ts:Date.now(),read:false});putAlerts(a);renderAlerts();
+ toast(title,severity==="high"?"bad":severity==="good"?"good":"warn");
+ if(typeof Notification!=="undefined"&&Notification.permission==="granted"){try{new Notification("Crypto Radar · "+title,{body:msg})}catch{}}
+}
+function renderAlerts(){
+ const a=appAlerts(),box=$("alertList");if(box)box.innerHTML=a.length?a.map(x=>`<div class="alertItem"><div class="alertIcon">${x.severity==="high"?"!":x.severity==="good"?"↗":"•"}</div><div><strong>${x.title}</strong><p>${x.msg}</p></div><span class="alertTime">${new Date(x.ts).toLocaleTimeString()}</span></div>`).join(""):`<div class="emptyState">No alerts yet.</div>`;
+ updateAlertBadges()
+}
+function updateAlertBadges(){
+ const n=appAlerts().filter(x=>!x.read).length;for(const id of ["sideAlertCount","topAlertCount"]){const e=$(id);if(e){e.textContent=n;e.style.display=n?"inline-grid":"none"}}
+}
+function clearAlerts(){localStorage.removeItem("radarAlerts");renderAlerts();toast("Alerts cleared","warn")}
+function markAlertsRead(){let a=appAlerts();a.forEach(x=>x.read=true);putAlerts(a)}
+function checkAlerts(q,sm,deriv){
+ const st=appSettings(),p=q.price,near=st.nearPct/100;
+ if(st.alerts.sr){
+   for(const [n,v] of [["S1",q.levels.s1],["R1",q.levels.r1],["Pivot",q.levels.pivot]])if(Math.abs(p/v-1)<=near)addAlert("sr","Price near "+n,`${coin(norm($("symbol").value))} is within ${st.nearPct}% of ${n} (${num(v)})`,"warn")
+ }
+ if(st.alerts.signal&&sm&&Math.max(sm.long,sm.short)>=st.signalMin&&sm.direction!=="WAIT")addAlert("signal","Strong "+sm.direction+ " setup",`${coin(norm($("symbol").value))} confidence ${Math.max(sm.long,sm.short).toFixed(0)}/100`,"good");
+ if(deriv){
+   if(st.alerts.ls&&deriv.ls!=null&&(deriv.ls>1.5||deriv.ls<.67))addAlert("ls","Extreme Long/Short",`Ratio ${deriv.ls.toFixed(2)} · ${deriv.ls>1.5?"longs crowded":"shorts crowded"}`,"high");
+   if(st.alerts.funding&&deriv.funding!=null&&Math.abs(deriv.funding)>.0005)addAlert("funding","Funding extreme",`${(deriv.funding*100).toFixed(4)}% funding`,"high");
+   if(st.alerts.oi&&deriv.oiTrend&&deriv.oiTrend!=="N/A"&&Math.abs(parseFloat(deriv.oiTrend))>=3)addAlert("oi","OI expansion",`${deriv.oiTrend} over recent samples`,"warn")
+ }
+}
+let marketCache={ts:0,rows:[]};
+async function loadMarketOverview(force=false){
+ const box=$("marketOverview");if(!box)return;
+ if(!force&&marketCache.rows.length&&Date.now()-marketCache.ts<60000){renderMarketOverview();return}
+ box.innerHTML='<div class="emptyState">Loading market overview…</div>';
+ const coins=["BTC","ETH","SOL","BNB","XRP","DOGE","ADA","LINK","AVAX","SUI","LTC","TRX"],rows=[];
+ for(let i=0;i<coins.length;i+=4){
+   const b=coins.slice(i,i+4);
+   const r=await Promise.all(b.map(async c=>{try{
+     const sym=c+"USDT",[tk,k]=await Promise.all([ticker(sym),klines(sym,"4h",260)]),q=calc(k,$("mode").value);
+     return {c,price:+tk.lastPrice||q.price,ch:+tk.priceChangePercent,score:q.score,regime:q.regime,ver:q.ver,adx:q.adx}
+   }catch{return null}}));
+   rows.push(...r.filter(Boolean))
+ }
+ marketCache={ts:Date.now(),rows};renderMarketOverview()
+}
+function renderMarketOverview(){
+ const rows=marketCache.rows,box=$("marketOverview");if(!box)return;
+ box.innerHTML=rows.length?rows.map(x=>`<div class="marketTile" onclick="pick('${x.c}')"><div class="coinName">${x.c}/USDT</div><div class="marketPrice">${num(x.price)}</div><div class="${x.ch>=0?"good":"bad"}">${x.ch>=0?"+":""}${x.ch.toFixed(2)}%</div><div class="marketMeta"><span>${x.regime}</span><span>Score ${x.score.toFixed(0)}</span><span>ADX ${x.adx.toFixed(0)}</span></div></div>`).join(""):'<div class="emptyState">Market data unavailable.</div>';
+ let bull=rows.filter(x=>x.ver==="BULLISH").length,bear=rows.filter(x=>x.ver==="BEARISH").length,neu=rows.length-bull-bear,avg=rows.length?rows.reduce((a,x)=>a+x.ch,0)/rows.length:0;
+ $("breadthBull").textContent=bull;$("breadthBear").textContent=bear;$("breadthNeutral").textContent=neu;$("breadth24").textContent=(avg>=0?"+":"")+avg.toFixed(2)+"%"
+}
 function toast(msg,type=""){
  const host=$("toastHost");if(!host)return;const d=document.createElement("div");d.className="toast "+type;d.textContent=msg;host.appendChild(d);setTimeout(()=>d.remove(),3200)
 }
@@ -641,9 +900,13 @@ function navTo(id,load=false){
  if(load){
    if(id==="mtf")multiTF();
    else if(id==="scan")scan();
+   else if(id==="market")loadMarketOverview();
    else if(id==="signals")renderSignals();
    else if(id==="backtest")backtestCurrent();
    else if(id==="deriv")derivatives();
+ } else {
+   if(id==="alerts")renderAlerts();
+   if(id==="settings")renderSettings();
  }
  window.scrollTo({top:0,behavior:"smooth"})
 }
@@ -818,6 +1081,12 @@ function draw(q){
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#09121b";ctx.fillRect(0,0,w,h);
  ctx.strokeStyle="#172638";ctx.lineWidth=1;ctx.fillStyle="#718198";ctx.font="10px system-ui";
  for(let k=0;k<5;k++){let yy=padT+k*(priceH-padT)/4,val=mx-k*vrange/4;ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(w-padR,yy);ctx.stroke();ctx.fillText(num(val),4,yy+3)}
+ if(q.levels){
+   const zone=(a,b,color)=>{let ya=y(Math.max(a,b)),yb=y(Math.min(a,b));ctx.fillStyle=color;ctx.fillRect(padL,ya,w-padL-padR,Math.max(2,yb-ya))};
+   zone(q.levels.s2,q.levels.s1,"rgba(85,216,155,.08)");
+   zone(q.levels.r1,q.levels.r2,"rgba(255,107,120,.08)");
+   zone(q.levels.pivot-q.levels.range*.035,q.levels.pivot+q.levels.range*.035,"rgba(105,167,255,.07)");
+ }
  candles.forEach((c,i)=>{let o=+c[1],hi=+c[2],lo=+c[3],cc=+c[4],bull=cc>=o,col=bull?"#55d89b":"#ff6b78";ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x(i),y(hi));ctx.lineTo(x(i),y(lo));ctx.stroke();let top=Math.min(y(o),y(cc)),bh=Math.max(1,Math.abs(y(o)-y(cc)));ctx.fillRect(x(i)-vw/2,top,vw,bh);let vh=(+c[5])/maxV*(volH-12);ctx.globalAlpha=.35;ctx.fillRect(x(i)-vw/2,h-8-vh,vw,vh);ctx.globalAlpha=1});
  function line(a,col,width){ctx.strokeStyle=col;ctx.lineWidth=width;ctx.beginPath();a.forEach((v,i)=>{let xx=x(i),yy=y(v);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy)});ctx.stroke()}
  line(e50,"#7f8da3",1);line(e20,"#4fd1c5",1.35);
@@ -884,7 +1153,7 @@ function signalModel(q,hs,mc){
   if(q.smc.trap&&q.breakout==="DOWN")short-=5;
   long=Math.max(0,Math.min(100,long));short=Math.max(0,Math.min(100,short));
   const edge=Math.abs(long-short),best=Math.max(long,short);
-  let direction=best>=64&&edge>=8?(long>short?"LONG":"SHORT"):"WAIT";
+  let minConf=(typeof appSettings==="function"?appSettings().signalMin:64);let direction=best>=minConf&&edge>=8?(long>short?"LONG":"SHORT"):"WAIT";
   return {long,short,edge,direction}
 }
 function buildTradeMap(q,sm){
@@ -937,6 +1206,7 @@ function renderSignals(){
 function renderPerformance(){
   const a=journal(),r=a.filter(x=>Number.isFinite(x.rResult)),n=r.length,w=r.filter(x=>x.rResult>0).length,sum=r.reduce((z,x)=>z+x.rResult,0),gp=r.filter(x=>x.rResult>0).reduce((z,x)=>z+x.rResult,0),gl=-r.filter(x=>x.rResult<0).reduce((z,x)=>z+x.rResult,0);
   $("perfResolved").textContent=n;$("perfWin").textContent=n?(w/n*100).toFixed(1)+"%":"—";$("perfR").textContent=n?(sum/n).toFixed(2)+" R":"—";$("perfPF").textContent=n?(gl?(gp/gl).toFixed(2):gp?"∞":"0"):"—";
+ const modes=["auto","scalp","intraday","swing"],box=$("strategyPerformance");if(box){box.innerHTML=modes.map(m=>{let z=r.filter(x=>x.mode===m),avg=z.length?z.reduce((a,x)=>a+x.rResult,0)/z.length:0,wr=z.length?z.filter(x=>x.rResult>0).length/z.length*100:0;return `<div class="calBox"><span class="label">${m}</span><b>${z.length?avg.toFixed(2)+"R":"—"}</b><span class="small">${z.length?wr.toFixed(0)+"% win · "+z.length+" n":"No data"}</span></div>`}).join("")}
 }
 async function evaluateOneSignal(sig){
   let bars;try{bars=await klines(sig.symbol,sig.tf,750)}catch{return sig}
@@ -976,6 +1246,33 @@ function exportJournal(){
   const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function clearJournal(){if(confirm("Ștergi tot jurnalul de semnale?")){localStorage.removeItem("signalJournal");renderSignals();toast("Jurnal șters","warn")}}
+
+function renderSrHeat(q){
+ const box=$("srHeat");if(!box)return;
+ const lv=[["S3",q.levels.s3,"sup"],["S2",q.levels.s2,"sup"],["S1",q.levels.s1,"sup"],["Pivot",q.levels.pivot,"pivot"],["R1",q.levels.r1,"res"],["R2",q.levels.r2,"res"],["R3",q.levels.r3,"res"]];
+ const cells=lv.map(([n,v,c])=>{let d=(q.price/v-1)*100,near=Math.abs(d)<=appSettings().nearPct;return `<div class="hc ${c} ${near?"near":""}">${n}<br>${num(v)}<br><span class="small">${d>=0?"+":""}${d.toFixed(2)}%</span></div>`}).join("");
+ box.innerHTML=`<div class="hh">Level</div>${lv.map(x=>`<div class="hh">${x[0]}</div>`).join("")}<div class="hh">Price distance</div>${cells}`
+}
+function updateOrderFlow(q,deriv){
+ const last=q.candles[q.candles.length-1],o=+last[1],h=+last[2],l=+last[3],c=+last[4],range=Math.max(h-l,1e-12),closeLoc=(c-l)/range;
+ let buy=50+(closeLoc-.5)*42+(q.cmf*28)+(q.mfi-50)*.18+(q.vwapAbove?5:-5);buy=Math.max(5,Math.min(95,buy));let sell=100-buy;
+ $("buyPressure").textContent=buy.toFixed(0)+"%";$("buyMeter").style.width=buy+"%";$("sellMeter").style.width=sell+"%";
+ $("volumeImpulse").textContent=q.vr.toFixed(2)+"x";$("closeLocation").textContent=(closeLoc*100).toFixed(0)+"%";$("moneyDelta").textContent=(buy-sell>=0?"+":"")+(buy-sell).toFixed(0);
+ $("derivPressure").textContent=deriv&&deriv.ls!=null?(deriv.ls>1.15?"LONG HEAVY":deriv.ls<.87?"SHORT HEAVY":"BALANCED"):"N/A";
+ $("derivPressure").className="flowBig "+(deriv&&deriv.ls!=null?(deriv.ls>1.15?"good":deriv.ls<.87?"bad":"neutral"):"neutral");
+ $("ofLongs").textContent=deriv&&deriv.longPct!=null?deriv.longPct.toFixed(1)+"%":"N/A";$("ofShorts").textContent=deriv&&deriv.shortPct!=null?deriv.shortPct.toFixed(1)+"%":"N/A";
+ $("ofOi").textContent=deriv&&deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+deriv.oiTrend:""):"N/A";$("ofFunding").textContent=deriv&&deriv.funding!=null?(deriv.funding*100).toFixed(4)+"%":"N/A";
+}
+function updateFlowWindow(q){
+ const deriv=window.__derivativesState||{},flowScore=(q.mfi>=55?1:q.mfi<=45?-1:0)+(q.cmf>0?1:-1)+(q.obvSlope>0?1:-1)+(q.vwapAbove?1:-1),flowBias=flowScore>=2?"ACCUMULATION":flowScore<=-2?"DISTRIBUTION":"BALANCED";
+ $("flowBias").textContent=flowBias;$("flowBias").className=flowBias==="ACCUMULATION"?"good":flowBias==="DISTRIBUTION"?"bad":"neutral";
+ $("flowMfi").textContent=q.mfi.toFixed(1);$("flowCmf").textContent=q.cmf.toFixed(3);$("flowObv").textContent=q.obvSlope>0?"UP":"DOWN";
+ $("flowOi").textContent=deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+deriv.oiTrend:""):"N/A";
+ $("flowLs").textContent=deriv.longPct!=null?`${deriv.longPct.toFixed(0)} / ${deriv.shortPct.toFixed(0)}`:"N/A";
+ $("flowFunding").textContent=deriv.funding!=null?`${(deriv.funding*100).toFixed(4)}% · ${deriv.context||"BALANCED"}`:"N/A";
+ $("flowSummary").textContent=`${flowBias} · ${q.cmf>0?"capital inflow":"capital outflow"} · ${q.vr>=1.2?"volume confirms":"volume weak"}`;
+ updateOrderFlow(q,deriv);checkAlerts(q,window.__signalState?.sm,deriv)
+}
 async function analyze(save){
  let sym=norm($("symbol").value),t=$("tf").value,mode=$("mode").value;$("symbol").value=coin(sym);syncTop(sym,t,mode);setBusy(true,"Actualizare engine…");
  try{
@@ -1007,14 +1304,7 @@ async function analyze(save){
   $("pivot").textContent=num(q.levels.pivot);$("s1").textContent=num(q.levels.s1);$("s2").textContent=num(q.levels.s2);$("s3").textContent=num(q.levels.s3);$("r1").textContent=num(q.levels.r1);$("r2").textContent=num(q.levels.r2);$("r3").textContent=num(q.levels.r3);$("range50").textContent=num(q.levels.range);
   $("pivotBias").textContent=q.levels.bias;$("pivotBias").className=(q.levels.bias.includes("BULL")?"good":q.levels.bias.includes("BEAR")?"bad":"neutral");
   $("breakAbove").textContent=num(q.levels.breakAbove);$("breakBelow").textContent=num(q.levels.breakBelow);$("nearestZone").textContent=q.levels.nearest;
-  const deriv=window.__derivativesState||{}, flowScore=(q.mfi>=55?1:q.mfi<=45?-1:0)+(q.cmf>0?1:-1)+(q.obvSlope>0?1:-1)+(q.vwapAbove?1:-1);
-  const flowBias=flowScore>=2?"ACCUMULATION":flowScore<=-2?"DISTRIBUTION":"BALANCED";
-  $("flowBias").textContent=flowBias;$("flowBias").className=flowBias==="ACCUMULATION"?"good":flowBias==="DISTRIBUTION"?"bad":"neutral";
-  $("flowMfi").textContent=q.mfi.toFixed(1);$("flowCmf").textContent=q.cmf.toFixed(3);$("flowObv").textContent=q.obvSlope>0?"UP":"DOWN";
-  $("flowOi").textContent=deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+deriv.oiTrend:""):"N/A";
-  $("flowLs").textContent=deriv.longPct!=null?`${deriv.longPct.toFixed(0)} / ${deriv.shortPct.toFixed(0)}`:"N/A";
-  $("flowFunding").textContent=deriv.funding!=null?`${(deriv.funding*100).toFixed(4)}% · ${deriv.context||"BALANCED"}`:"N/A";
-  $("flowSummary").textContent=`${flowBias} · ${q.cmf>0?"capital inflow":"capital outflow"} · ${q.vr>=1.2?"volume confirms":"volume weak"}`;
+  renderSrHeat(q);updateFlowWindow(q);
 
   let bo=$("breakout");bo.textContent=q.breakout==="UP"?"▲ Breakout":q.breakout==="DOWN"?"▼ Breakdown":"În canal";bo.className=q.breakout==="UP"?"good":q.breakout==="DOWN"?"bad":"neutral";
 
@@ -1093,6 +1383,7 @@ async function derivatives(){
  $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend:"");
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
  window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend};
+ if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q)}
  $("ftext").textContent=(fr==null&&oi==null&&ls==null)?"Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională.":"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
 }
 let scannerRows=[];
@@ -1114,4 +1405,5 @@ $("symbol").value=localStorage.getItem("last")||"BTC";$("mode").value=localStora
 $("symbol").addEventListener("keydown",e=>{if(e.key==="Enter")analyze(true)});
 $("tf").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));
 $("mode").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));
+renderSettings();renderAlerts();
 </script></body></html>
