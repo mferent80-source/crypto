@@ -1,8 +1,7 @@
-# v11 · FIXED · TESTED
-- Reparată sintaxa RSI din versiunea anterioară.
-- Badge vizibil în aplicație: v11 · FIXED · TESTED.
-- Ruta Cloudflare Pages Functions este explicită pentru /api/*.
-- getJSON detectează separat cazul în care Cloudflare întoarce HTML în loc de JSON.
-- JavaScript verificat integral cu `node --check`.
-- Structură verificată: public/ + functions/api/market.js.
-IMPORTANT: Cloudflare Pages trebuie să construiască proiectul din rădăcina repo-ului, cu Build output directory = public. Directorul functions trebuie să fie la rădăcină, NU în public.
+# v12 · FIXED · TESTED
+- Badge actualizat la v12.
+- Backend-ul încearcă mai întâi `data-api.binance.vision`, endpoint Binance dedicat datelor publice de piață.
+- Păstrează fallback către endpoint-urile Binance API anterioare.
+- Ticker 24h are fallback calculat din ultimele 24 lumânări de 1h dacă endpoint-ul ticker este blocat.
+- Frontend și backend validate sintactic cu Node.
+- Futures rămâne best-effort; dacă Binance Futures blochează infrastructura Cloudflare, câmpurile pot apărea N/A fără să blocheze analiza spot.
