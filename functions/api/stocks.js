@@ -1,3 +1,4 @@
+import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 const TD="https://api.twelvedata.com";
 const H={"content-type":"application/json","cache-control":"no-store"};
 const NDX_SNAPSHOT_DATE="2026-09-18";
@@ -19,18 +20,22 @@ async function tdRateGate(fn){
 const safeSymbol=s=>(s||"AAPL").toUpperCase().replace(/[^A-Z0-9.\-]/g,"").slice(0,15)||"AAPL";
 const tfMap=tf=>({"15m":"15min","1h":"1h","4h":"4h","1d":"1day"})[tf]||"1day";
 
+function nthSunday(year,month,n){const first=new Date(Date.UTC(year,month-1,1)),dow=first.getUTCDay(),day=1+((7-dow)%7)+(n-1)*7;return day}
+function nyCloseUtcMs(dateOnly){
+  const [y,m,d]=String(dateOnly).split("-").map(Number);if(!y||!m||!d)return 0;const key=y*10000+m*100+d,mar= y*10000+3*100+nthSunday(y,3,2),nov=y*10000+11*100+nthSunday(y,11,1),dst=key>=mar&&key<nov;return Date.UTC(y,m-1,d,dst?20:21,0,0)
+}
 function dateMs(v,tf){
   if(!v)return 0;
-  if(/^\d{4}-\d{2}-\d{2}$/.test(v))return Date.parse(v+"T20:00:00Z");
-  const z=v.includes("T")?v:v.replace(" ","T");
-  return Date.parse(z.endsWith("Z")?z:z+"Z")||0;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v))return nyCloseUtcMs(v);
+  const z=v.includes("T")?v:v.replace(" ","T");return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(z)?z:z+"Z")||0
+}
+function splitLikeDiscontinuity(rows,tf){
+  if(tf==="1d"||!rows?.length)return {rows,guarded:false,breaks:[]};const breaks=[];
+  for(let i=1;i<rows.length;i++){const pc=+rows[i-1][4],o=+rows[i][1],c=+rows[i][4];if(!(pc>0&&o>0&&c>0))continue;const gap=Math.abs(o/pc-1),inside=Math.abs(c/o-1);if(gap>=.28&&inside<=.18)breaks.push({index:i,ts:rows[i][0],previousClose:pc,open:o,gapPct:(o/pc-1)*100})}
+  if(!breaks.length)return {rows,guarded:false,breaks:[]};const last=breaks.at(-1),trimmed=rows.slice(last.index);return {rows:trimmed,guarded:true,breaks,warning:`Potential split/corporate-action discontinuity detected; history truncated after ${new Date(last.ts).toISOString()}`}
 }
 function normalizeRows(node,tf){
-  const values=node?.values||[];
-  return [...values].map(x=>{
-    const ts=dateMs(x.datetime,tf),o=Number(x.open),h=Number(x.high),l=Number(x.low),c=Number(x.close),v=Number(x.volume||0);
-    return [ts,String(o),String(h),String(l),String(c),String(v),ts+1,String(v*c),x.datetime||""]
-  }).filter(x=>Number.isFinite(+x[1])&&Number.isFinite(+x[4])).sort((a,b)=>a[0]-b[0])
+  const values=node?.values||[],rows=[...values].map(x=>{const ts=dateMs(x.datetime,tf),o=Number(x.open),h=Number(x.high),l=Number(x.low),c=Number(x.close),v=Number(x.volume||0);return [ts,String(o),String(h),String(l),String(c),String(v),ts+1,String(v*c),x.datetime||""]}).filter(x=>Number.isFinite(+x[1])&&Number.isFinite(+x[4])&&x[0]>0).sort((a,b)=>a[0]-b[0]);return splitLikeDiscontinuity(rows,tf)
 }
 function tdError(data,status=502){
   if(data?.status==="error"||data?.code>=400){
@@ -82,8 +87,9 @@ function batchNodes(data,symbols){
 export async function onRequestGet({request,env}){
   const u=new URL(request.url),action=u.searchParams.get("action")||"config";
   if(action==="config"){
-    return json({configured:!!env.TWELVE_DATA_API_KEY,provider:"TWELVE_DATA",serverSideKey:true,ndxSnapshotDate:NDX_SNAPSHOT_DATE,ndxCount:NDX_COUNT});
+    return json({configured:!!env.TWELVE_DATA_API_KEY,provider:"TWELVE_DATA",serverSideKey:true,ndxSnapshotDate:NDX_SNAPSHOT_DATE,ndxCount:NDX_COUNT,authRequired:true});
   }
+  const auth=await requireApiAuth(request,env,"stocks",60);if(!auth.ok)return authErrorResponse(auth,H);
   if(!env.TWELVE_DATA_API_KEY)return json({error:"TWELVE_DATA_API_KEY is not configured in Cloudflare"},503);
 
   try{
@@ -95,20 +101,19 @@ export async function onRequestGet({request,env}){
 
     if(action==="series"){
       const symbol=safeSymbol(u.searchParams.get("symbol")),tf=(u.searchParams.get("tf")||"1d").toLowerCase(),interval=tfMap(tf),limit=Math.min(1000,Math.max(100,Number(u.searchParams.get("limit")||300)));
-      const d=await cachedTd(env,"/time_series",{symbol,interval,outputsize:String(limit),order:"asc",timezone:"UTC",prepost:"false"},tf==="15m"?20:tf==="1h"?40:tf==="4h"?90:180);
-      const rows=normalizeRows(d,tf);
-      return json({provider:"TWELVE_DATA",symbol,tf,meta:d.meta||null,rows});
+      const params={symbol,interval,outputsize:String(limit),order:"asc",timezone:"UTC",prepost:"false"};if(tf==="1d")params.adjust="splits";
+      const d=await cachedTd(env,"/time_series",params,tf==="15m"?20:tf==="1h"?40:tf==="4h"?90:180),norm=normalizeRows(d,tf);
+      return json({provider:"TWELVE_DATA",symbol,tf,meta:d.meta||null,rows:norm.rows,corporateActionGuard:{guarded:norm.guarded,breaks:norm.breaks,warning:norm.warning||null,method:tf==="1d"?"provider split-adjusted daily":"intraday discontinuity guard"}});
     }
 
     if(action==="batch_series"){
       const symbols=(u.searchParams.get("symbols")||"").split(",").map(safeSymbol).filter(Boolean).slice(0,20),tf=(u.searchParams.get("tf")||"1d").toLowerCase(),interval=tfMap(tf),limit=Math.min(500,Math.max(60,Number(u.searchParams.get("limit")||260)));
       if(!symbols.length)return json({error:"No stock symbols supplied"},400);
-      const d=await cachedTd(env,"/time_series",{symbol:symbols.join(","),interval,outputsize:String(limit),order:"asc",timezone:"UTC",prepost:"false"},180);
-      const nodes=batchNodes(d,symbols),data={};
+      const params={symbol:symbols.join(","),interval,outputsize:String(limit),order:"asc",timezone:"UTC",prepost:"false"};if(tf==="1d")params.adjust="splits";
+      const d=await cachedTd(env,"/time_series",params,180),nodes=batchNodes(d,symbols),data={};
       for(const symbol of symbols){
-        const n=nodes[symbol];
-        if(n?.status==="error"||n?.code>=400){data[symbol]={error:n.message||"Provider error",rows:[]};continue}
-        data[symbol]={meta:n?.meta||null,rows:normalizeRows(n,tf)}
+        const n=nodes[symbol];if(n?.status==="error"||n?.code>=400){data[symbol]={error:n.message||"Provider error",rows:[]};continue}
+        const norm=normalizeRows(n,tf);data[symbol]={meta:n?.meta||null,rows:norm.rows,corporateActionGuard:{guarded:norm.guarded,breaks:norm.breaks,warning:norm.warning||null,method:tf==="1d"?"provider split-adjusted daily":"intraday discontinuity guard"}}
       }
       return json({provider:"TWELVE_DATA",tf,data});
     }

@@ -1,1 +1,23 @@
-{"name":"crypto-radar-webapp","private":true,"scripts":{"dev":"wrangler pages dev public","deploy":"wrangler pages deploy public","monitor:deploy":"wrangler deploy --config wrangler.monitor.toml","vapid:generate":"node scripts/generate-vapid.mjs"}}
+{
+  "name": "crypto-radar-webapp",
+  "version": "54.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "npm@10.9.2",
+  "scripts": {
+    "dev": "npx --yes wrangler@4 pages dev public",
+    "deploy": "npm run predeploy && npx --yes wrangler@4 pages deploy public",
+    "monitor:config": "node scripts/configure-monitor.mjs",
+    "monitor:deploy": "npm run test && node scripts/configure-monitor.mjs && npx --yes wrangler@4 deploy --config wrangler.monitor.generated.toml",
+    "vapid:generate": "node scripts/generate-vapid.mjs",
+    "test:syntax": "node scripts/syntax-v54.mjs",
+    "test:security": "node scripts/security-v54.mjs",
+    "test:runtime": "node scripts/test-v54.mjs",
+    "audit": "node scripts/audit-v54.mjs && node scripts/findings-v54.mjs",
+    "test": "npm run test:syntax && npm run test:security && npm run test:runtime && npm run audit",
+    "predeploy": "npm test"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "version": "v54",
+  "badge": "v54 · FULL HARDENING · AUDITED",
+  "engineContract": "54.1",
+  "audit": {
+    "total": 62,
+    "fixed": 51,
+    "mitigated": 11,
+    "open": 0,
+    "originalSeverity": {
+      "HIGH": 20,
+      "MEDIUM": 32,
+      "LOW": 10
+    }
+  },
+  "verification": {
+    "audit_scope": "static + syntax + deterministic runtime + mocked security/provider gates; live production/provider access not claimed",
+    "syntax": "V54_SYNTAX_PASS 21 executable JS/MJS surfaces + JSON manifests",
+    "security": "V54_SECURITY_RUNTIME_PASS 19 auth/origin/quota-gate checks",
+    "runtime": "V54_RUNTIME_PASS worker_logistic=14 stumps=12 cvd=130 mc_deterministic=1 mtf_one=25% same_candle=-1",
+    "static": "V54_STATIC_AUDIT_PASS 37 hardening invariants",
+    "matrix": "V54_FINDINGS_MATRIX_PASS total=62 fixed=51 mitigated=11 open=0",
+    "engine_contract": "54.1"
+  },
+  "productionValidated": false,
+  "notes": "Static + deterministic runtime + mocked security/provider audit. Live provider and Cloudflare production validation remains post-deploy.",
+  "generatedAtUtc": "2026-09-20T17:13:40.153903+00:00",
+  "payloadFileCountBeforeManifest": 63,
+  "ui": {
+    "domIds": 1102,
+    "uniqueDomIds": 1102,
+    "appNamedFunctions": 712,
+    "indexBytes": 169494,
+    "appJsBytes": 520971,
+    "appCssBytes": 67693,
+    "researchWorkerBytes": 7372
+  }
+}

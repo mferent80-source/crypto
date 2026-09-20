@@ -1,3 +1,4 @@
+import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 const PIONEX="https://api.pionex.com";
 const H={"content-type":"application/json","cache-control":"no-store"};
 
@@ -30,6 +31,7 @@ async function privateGet(env,path,params={}){
 }
 
 export async function onRequestGet({request,env}){
+  const auth=await requireApiAuth(request,env,"pionex-account",30);if(!auth.ok)return authErrorResponse(auth,H);
   const u=new URL(request.url),action=u.searchParams.get("action")||"status";
   const configured=!!(env.PIONEX_API_KEY&&env.PIONEX_API_SECRET);
   if(action==="status")return json({configured,readOnly:true,tradingExposed:false});

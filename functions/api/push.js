@@ -1,3 +1,4 @@
+import {requireApiAuth,authErrorResponse,sameOrigin as strictSameOrigin} from "../_shared/auth.js";
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:H});
 const enc=new TextEncoder();
@@ -19,8 +20,9 @@ export async function onRequestGet({request,env}){
   return json({error:"Unsupported push action"},400);
 }
 export async function onRequestPost({request,env}){
-  const u=new URL(request.url),action=u.searchParams.get("action")||"subscribe",origin=request.headers.get("origin");
-  if(origin&&origin!==u.origin)return json({saved:false,error:"Origin rejected"},403);
+  const auth=await requireApiAuth(request,env,"push-write",20);if(!auth.ok)return authErrorResponse(auth,H);
+  const u=new URL(request.url),action=u.searchParams.get("action")||"subscribe";
+  if(!strictSameOrigin(request))return json({saved:false,error:"Origin rejected"},403);
   if(!env.PUSH_SUBSCRIPTIONS)return json({saved:false,error:"Missing PUSH_SUBSCRIPTIONS KV binding"},503);
   try{
     const body=await request.json();

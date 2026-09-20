@@ -2,6 +2,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS monitor_runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant TEXT NOT NULL DEFAULT 'monitor',
   ts INTEGER NOT NULL,
   market TEXT NOT NULL,
   provider TEXT NOT NULL,
@@ -42,6 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_monitor_items_symbol ON monitor_items(market, sym
 
 CREATE TABLE IF NOT EXISTS research_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant TEXT NOT NULL DEFAULT 'legacy',
   ts INTEGER NOT NULL,
   market TEXT NOT NULL,
   symbol TEXT NOT NULL,
@@ -61,6 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_research_symbol_ts ON research_snapshots(market, 
 
 CREATE TABLE IF NOT EXISTS signal_snapshots (
   id TEXT PRIMARY KEY,
+  tenant TEXT NOT NULL DEFAULT 'legacy',
   ts INTEGER NOT NULL,
   updated_ts INTEGER NOT NULL,
   market TEXT NOT NULL,
@@ -80,6 +83,7 @@ CREATE INDEX IF NOT EXISTS idx_signal_symbol ON signal_snapshots(market, symbol,
 
 CREATE TABLE IF NOT EXISTS app_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant TEXT NOT NULL DEFAULT 'monitor',
   ts INTEGER NOT NULL,
   type TEXT NOT NULL,
   market TEXT,
@@ -98,3 +102,11 @@ CREATE TABLE IF NOT EXISTS monitor_state (
   value TEXT,
   updated_ts INTEGER NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_monitor_runs_tenant_ts ON monitor_runs(tenant, ts DESC);
+
+CREATE INDEX IF NOT EXISTS idx_research_tenant_ts ON research_snapshots(tenant, ts DESC);
+
+CREATE INDEX IF NOT EXISTS idx_signal_tenant_ts ON signal_snapshots(tenant, updated_ts DESC);
+
+CREATE INDEX IF NOT EXISTS idx_events_tenant_ts ON app_events(tenant, ts DESC);

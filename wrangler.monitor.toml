@@ -5,18 +5,11 @@ compatibility_date = "2026-09-20"
 [triggers]
 crons = ["*/15 * * * *"]
 
-[[d1_databases]]
-binding = "DB"
-database_name = "crypto-radar-history"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
-
-[[kv_namespaces]]
-binding = "PUSH_SUBSCRIPTIONS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-
 [vars]
 MONITOR_CRYPTO = "1"
 MONITOR_STOCKS = "0"
 PIONEX_SCAN_LIMIT = "20"
 PUSH_SCORE_MIN = "78"
+RETENTION_DAYS = "90"
+MAX_PUSH_RECIPIENTS = "1000"
 STOCK_WATCHLIST = "AAPL,MSFT,NVDA,AMZN,META,TSLA,AMD,AVGO,GOOGL,PLTR"

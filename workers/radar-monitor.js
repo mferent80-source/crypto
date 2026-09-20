@@ -1,3 +1,4 @@
+const ENGINE_CONTRACT_VERSION="54.1";
 const PIONEX="https://api.pionex.com";
 const TD="https://api.twelvedata.com";
 const ENC=new TextEncoder();
@@ -61,25 +62,23 @@ async function sendWebPush(subscription,payload,env){
 function pushConfigured(env){return !!(env.PUSH_SUBSCRIPTIONS&&env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT)}
 async function broadcastPush(env,payload){
   if(!pushConfigured(env))return {configured:false,sent:0,failed:0};
-  let cursor=undefined,sent=0,failed=0,stale=[];
+  let cursor=undefined,sent=0,failed=0,stale=[],processed=0;const cap=Math.max(1,Math.min(5000,Number(env.MAX_PUSH_RECIPIENTS)||1000)),concurrency=20;
   do{
-    const page=await env.PUSH_SUBSCRIPTIONS.list({limit:500,cursor}),keys=page.keys||[];cursor=page.list_complete?undefined:page.cursor;
-    const vals=await Promise.all(keys.map(async k=>({key:k.name,val:await env.PUSH_SUBSCRIPTIONS.get(k.name,"json")})));
-    for(const x of vals){
-      const sub=x.val?.subscription;if(!sub?.endpoint)continue;
-      try{const r=await sendWebPush(sub,payload,env);if(r.ok)sent++;else{failed++;if(r.status===404||r.status===410)stale.push(x.key)}}catch{failed++}
-    }
+    const page=await env.PUSH_SUBSCRIPTIONS.list({limit:Math.min(500,cap-processed),cursor}),keys=page.keys||[];cursor=page.list_complete?undefined:page.cursor;
+    const vals=await Promise.all(keys.map(async k=>({key:k.name,val:await env.PUSH_SUBSCRIPTIONS.get(k.name,"json")})));processed+=vals.length;
+    for(let i=0;i<vals.length;i+=concurrency){const batch=vals.slice(i,i+concurrency),out=await Promise.all(batch.map(async x=>{const sub=x.val?.subscription;if(!sub?.endpoint)return {skip:true};try{const r=await sendWebPush(sub,payload,env);return {ok:r.ok,status:r.status,key:x.key}}catch{return {ok:false,status:0,key:x.key}}}));for(const r of out){if(r.skip)continue;if(r.ok)sent++;else{failed++;if(r.status===404||r.status===410)stale.push(r.key)}}}
+    if(processed>=cap)cursor=undefined;
   }while(cursor);
-  for(const k of stale)await env.PUSH_SUBSCRIPTIONS.delete(k).catch(()=>{});
-  return {configured:true,sent,failed,stale:stale.length}
+  for(let i=0;i<stale.length;i+=50)await Promise.all(stale.slice(i,i+50).map(k=>env.PUSH_SUBSCRIPTIONS.delete(k).catch(()=>{})));
+  return {configured:true,sent,failed,stale:stale.length,processed,capped:processed>=cap}
 }
 
 async function ensureTables(db){
   await db.exec(`
-CREATE TABLE IF NOT EXISTS monitor_runs (id INTEGER PRIMARY KEY AUTOINCREMENT,ts INTEGER NOT NULL,market TEXT NOT NULL,provider TEXT NOT NULL,mode TEXT,universe_n INTEGER DEFAULT 0,processed_n INTEGER DEFAULT 0,status TEXT NOT NULL,top_symbol TEXT,top_score REAL,note TEXT);
+CREATE TABLE IF NOT EXISTS monitor_runs (id INTEGER PRIMARY KEY AUTOINCREMENT,tenant TEXT NOT NULL DEFAULT 'monitor',ts INTEGER NOT NULL,market TEXT NOT NULL,provider TEXT NOT NULL,mode TEXT,universe_n INTEGER DEFAULT 0,processed_n INTEGER DEFAULT 0,status TEXT NOT NULL,top_symbol TEXT,top_score REAL,note TEXT);
 CREATE TABLE IF NOT EXISTS monitor_items (id INTEGER PRIMARY KEY AUTOINCREMENT,run_id INTEGER NOT NULL,rank INTEGER NOT NULL,market TEXT NOT NULL,symbol TEXT NOT NULL,source TEXT,bias TEXT,score REAL,confidence REAL,adx REAL,rsi REAL,regime TEXT,price REAL,change_pct REAL,turnover REAL,payload_json TEXT);
 CREATE TABLE IF NOT EXISTS monitor_state (key TEXT PRIMARY KEY,value TEXT,updated_ts INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS app_events (id INTEGER PRIMARY KEY AUTOINCREMENT,ts INTEGER NOT NULL,type TEXT NOT NULL,market TEXT,symbol TEXT,source TEXT,severity TEXT,title TEXT,message TEXT,payload_json TEXT);
+CREATE TABLE IF NOT EXISTS app_events (id INTEGER PRIMARY KEY AUTOINCREMENT,tenant TEXT NOT NULL DEFAULT 'monitor',ts INTEGER NOT NULL,type TEXT NOT NULL,market TEXT,symbol TEXT,source TEXT,severity TEXT,title TEXT,message TEXT,payload_json TEXT);
 CREATE INDEX IF NOT EXISTS idx_monitor_runs_market_ts ON monitor_runs(market,ts DESC);
 CREATE INDEX IF NOT EXISTS idx_monitor_items_run_rank ON monitor_items(run_id,rank);
 `)
@@ -104,6 +103,13 @@ async function recordEvent(env,type,market,title,message,payload){
   try{await env.DB.prepare(`INSERT INTO app_events(ts,type,market,source,severity,title,message,payload_json) VALUES(?,?,?,?,?,?,?,?)`).bind(Date.now(),type,market,"CLOUD_MONITOR","INFO",title,message,JSON.stringify(payload||{})).run()}catch{}
 }
 
+async function applyRetention(env){
+  if(!env.DB)return;const days=Math.max(7,Math.min(365,Number(env.RETENTION_DAYS)||90)),cut=Date.now()-days*86400000;
+  try{await env.DB.batch([env.DB.prepare("DELETE FROM monitor_items WHERE run_id IN (SELECT id FROM monitor_runs WHERE ts < ?)").bind(cut),env.DB.prepare("DELETE FROM monitor_runs WHERE ts < ?").bind(cut),env.DB.prepare("DELETE FROM app_events WHERE ts < ?").bind(cut)]);for(const table of ["research_snapshots","signal_snapshots"]){try{await env.DB.prepare(`DELETE FROM ${table} WHERE ts < ?`).bind(cut).run()}catch{}}await statePut(env.DB,"last_retention",JSON.stringify({ts:Date.now(),days,cut}))}catch{}
+}
+async function pionexGlobalGate(env){
+  if(!env.DB){await sleep(1300);return}const key="pionex_global_next_at",prior=await stateGet(env.DB,key),now=Date.now(),next=Number(prior?.value||0);if(next>now)await sleep(Math.min(5000,next-now));await statePut(env.DB,key,String(Date.now()+1300))
+}
 async function fetchJson(url,opt={}){
   const r=await fetch(url,{...opt,headers:{"accept":"application/json",...(opt.headers||{})}}),raw=await r.text();let d;try{d=JSON.parse(raw)}catch{throw Error(`Invalid JSON · HTTP ${r.status}`)}
   if(!r.ok){const e=Error(d?.message||d?.msg||`HTTP ${r.status}`);e.status=r.status;e.retryAfter=Number(r.headers.get("retry-after")||0);throw e}
@@ -135,20 +141,20 @@ function scoreRows(rows,turnover=0,changePct=0,symbol=""){
 function excludedBase(base){
   return ["USDT","USDC","FDUSD","TUSD","USDP","DAI","USDE","PYUSD"].includes(base)||/(3L|3S|5L|5S|BULL|BEAR)$/.test(base)
 }
-async function pionexUniverse(limit=20){
-  const d=await fetchJson(`${PIONEX}/api/v1/market/tickers?type=SPOT`),rows=d?.data?.tickers||[];
+async function pionexUniverse(env,limit=20){
+  await pionexGlobalGate(env);const d=await fetchJson(`${PIONEX}/api/v1/market/tickers?type=SPOT`),rows=d?.data?.tickers||[];
   return rows.map(x=>{const symbol=String(x.symbol||""),m=symbol.match(/^(.+)_USDT$/);return m?{symbol,base:m[1],turnover:+x.amount||0,changePct:(+x.open)?((+x.close/+x.open)-1)*100:0}:null})
     .filter(x=>x&&!excludedBase(x.base)&&x.turnover>0).sort((a,b)=>b.turnover-a.turnover).slice(0,limit)
 }
-async function pionexKlines(symbol){
-  const d=await fetchJson(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(symbol)}&interval=4H&limit=140`),rows=d?.data?.klines||[];
+async function pionexKlines(env,symbol){
+  await pionexGlobalGate(env);const d=await fetchJson(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(symbol)}&interval=4H&limit=140`),rows=d?.data?.klines||[];
   return rows.map(x=>[+x.time,String(x.open),String(x.high),String(x.low),String(x.close),String(x.volume)]).sort((a,b)=>a[0]-b[0])
 }
 async function runCryptoMonitor(env){
-  const limit=Math.max(5,Math.min(40,Number(env.PIONEX_SCAN_LIMIT)||20)),uni=await pionexUniverse(limit),items=[];
+  const limit=Math.max(5,Math.min(40,Number(env.PIONEX_SCAN_LIMIT)||20)),uni=await pionexUniverse(env,limit),items=[];
   for(const x of uni){
-    try{const rows=await pionexKlines(x.symbol),z=scoreRows(rows,x.turnover,x.changePct,x.base);if(z)items.push(z)}catch(e){if(e.status===429)throw e}
-    await sleep(360)
+    try{const rows=await pionexKlines(env,x.symbol),z=scoreRows(rows,x.turnover,x.changePct,x.base);if(z)items.push(z)}catch(e){if(e.status===429)throw e}
+    await sleep(250)
   }
   items.sort((a,b)=>b.score-a.score||b.turnover-a.turnover);
   return {market:"CRYPTO",provider:"PIONEX",universeN:uni.length,items}
@@ -182,7 +188,7 @@ async function executeMonitor(env,trigger="scheduled"){
     try{const r=await runStockMonitor(env),w=await writeRun(env,r.market,r.provider,r.universeN,r.items,"OK",trigger),a=await maybeAlert(env,r,w.runId);results.push({...w,...r,alert:a})}
     catch(e){const w=await writeRun(env,"STOCKS","TWELVE_DATA",0,[],"ERROR",e.message);results.push({market:"STOCKS",status:"ERROR",error:e.message,runId:w.runId})}
   }
-  await statePut(env.DB,"last_monitor",JSON.stringify({ts:Date.now(),trigger,results:results.map(x=>({market:x.market,runId:x.runId,status:x.status||"OK",top:x.top?.symbol||x.items?.[0]?.symbol||null}))}));
+  await statePut(env.DB,"last_monitor",JSON.stringify({ts:Date.now(),trigger,results:results.map(x=>({market:x.market,runId:x.runId,status:x.status||"OK",top:x.top?.symbol||x.items?.[0]?.symbol||null}))}));await applyRetention(env);
   return results
 }
 
@@ -190,8 +196,8 @@ export default {
   async scheduled(event,env,ctx){ctx.waitUntil(executeMonitor(env,"scheduled"))},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return json({ok:true,service:"crypto-radar-monitor",pushConfigured:pushConfigured(env),db:!!env.DB,crypto:env.MONITOR_CRYPTO!=="0",stocks:env.MONITOR_STOCKS==="1"});
     const token=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"");
+    if(u.pathname==="/health"){if(env.MONITOR_TOKEN&&token===env.MONITOR_TOKEN)return json({ok:true,service:"crypto-radar-monitor",pushConfigured:pushConfigured(env),db:!!env.DB,crypto:env.MONITOR_CRYPTO!=="0",stocks:env.MONITOR_STOCKS==="1"});return json({ok:true})}
     if(!env.MONITOR_TOKEN||token!==env.MONITOR_TOKEN)return json({error:"Unauthorized"},401);
     if(request.method==="POST"&&u.pathname==="/run"){try{return json({ok:true,results:await executeMonitor(env,"manual")})}catch(e){return json({error:e.message},500)}}
     return json({error:"Not found"},404)

@@ -1,21 +1,38 @@
-# Crypto Radar Web App
+# Crypto Radar Pro · Multi-Market
 
-Aplicație mobilă cu frontend static și proxy server-side pentru datele Binance.
+**Current release: v54 · FULL HARDENING · AUDITED**
 
-## Deploy Cloudflare Pages
-1. Pune acest folder într-un repository GitHub.
-2. În Cloudflare: Workers & Pages → Create → Pages → Import existing Git repository.
-3. Build command: `exit 0`
-4. Build output directory: `public`
-5. Deploy.
+Crypto Radar is a research/paper-trading PWA for crypto and U.S. stocks. The stable crypto technical path keeps direct browser-side Binance spot data; Pionex is used for its spot universe/native optional paths, while paid or account-backed integrations stay behind authenticated Cloudflare Pages Functions.
 
-Folderul `functions/` trebuie să rămână în rădăcina repository-ului. Endpoint-ul `/api/market` rulează server-side, deci telefonul nu mai apelează direct Binance.
+The application does **not** place real-money orders. Master Verdict, ML, volatility, portfolio and scanner outputs are research signals and risk diagnostics, not guaranteed probabilities of profit.
 
-## Local
-`npx wrangler pages dev public`
+## Deploy v54
 
-Nu este un sistem de predicție garantată. Procentele istorice sunt frecvențe ale configurațiilor similare din eșantionul analizat.
+Use **`DEPLOY_V54.md`** as the authoritative deployment guide. Older deployment documents are retained under `docs/legacy/` only for historical reference.
 
+Cloudflare Pages baseline:
+
+- Framework preset: None
+- Build command: blank / no build
+- Output directory: `public`
+- Repository root: blank
+- Keep `functions/` at repository root
+
+For protected API routes, configure the Cloudflare secret `APP_API_TOKEN` and enter the same value in **Settings → Protected API session** after opening the app. The browser keeps it in `sessionStorage`, not in persistent app backup data.
+
+## Local verification
+
+```bash
+npm test
+```
+
+The v54 test gate covers syntax, API security/origin/rate-limit behavior, deterministic runtime fixtures, static hardening invariants and the 62-finding remediation matrix.
+
+## Local development
+
+```bash
+npm run dev
+```
 
 ## v21 · ULTIMATE TERMINAL
 Adds WebSocket live ticker, Volume Profile, Anchored VWAP, Risk Manager, order-book depth, market context, signal explanation/lifecycle, PWA support and health diagnostics.
@@ -108,3 +125,94 @@ Automatic Pionex-to-Binance fallback for primary crypto analysis. The scanner re
 
 ## v45 · SCANNER RECOVERY
 Fixes the remaining v44 scanner dependency on a live or previously cached Pionex universe. During Pionex cooldown, the scanner now immediately uses a saved Pionex universe or an embedded Pionex USDT crypto-core snapshot, while all technical candle analysis stays on Binance. Scanner state explicitly reports LIVE / SAVED / SNAPSHOT universe provenance.
+
+## v46 · RESEARCH GOVERNANCE PRO
+Adds purged expanding-window walk-forward ML, configurable embargo, moving-block bootstrap confidence intervals, coefficient stability diagnostics, a structural leakage audit and a persistent Experiment Registry with duplicate-history/parameter detection.
+
+No new external API is required and no research result automatically rewrites the validated base engine.
+
+## v47 · DECISION CORE
+Adds a main-dashboard Master Verdict that consolidates the major engine, model, structure, flow, liquidation, context, risk and data-quality results. Also adds Regime Engine v2, TRADE/SKIP meta-labeling, context-aware Calibration v2, local model versioning, Binance aggregate-trade CVD history, observed liquidation heatmap persistence and a Ctrl/Cmd+K command palette.
+
+The Master Verdict is a research composite and does not automatically place trades.
+
+## v48 · LOCAL DATA & AUTO REPORTING
+
+v48 adds an IndexedDB-based historical research archive while preserving the existing localStorage working sets. Signals, Paper trades, scanner runs, snapshots, experiments, research models, Decision Core snapshots, observed liquidations and aggregate-trade flow can now accumulate beyond the small runtime windows.
+
+It also adds automatic Daily / Weekly / Monthly research reports, best/worst observed setup contexts, HTML/JSON report export, versioned research-bundle export with integrity checksum, archive retention controls and storage-health diagnostics.
+
+No new provider or API key is required.
+
+## v49 · STRESS & PORTFOLIO V3
+
+Adds rolling 20D/60D/120D portfolio VaR/CVaR, historical Expected Shortfall 97.5%, dynamic-correlation and diversification-decay diagnostics, correlation-cluster transition monitoring, inverse-volatility sizing, rolling Component VaR contribution history, internal common-factor beta/high-vol sensitivity and an eight-scenario stress suite.
+
+Stress and Portfolio v3 state are incorporated into Master Verdict and Paper-only adaptive risk sizing. v49 uses the existing data paths and adds no new API dependency.
+
+## v50 · ML ENSEMBLE V2
+
+v50 upgrades meta-labeling with three local model forms: L2/ridge-style logistic, Elastic-Net logistic and lightweight boosted stumps.
+
+The equal-weight ensemble receives a usable state only when every component and the ensemble itself pass chronological OOS gates. Current probability is shrunk toward 50% when the component models disagree, and disagreement above the configured ceiling forces SKIP.
+
+The model is versioned locally with a dataset fingerprint. A changed research dataset marks the saved ensemble `STALE DATASET` until it is deliberately retrained.
+
+v50 also fixes the pre-existing `modelEval()` Brier-baseline label bug used by several research-model paths.
+
+No new provider or API key is required.
+
+
+## v51 · EXTERNAL INTELLIGENCE
+
+Implements the first five remaining external-data intelligence modules:
+
+1. Trading Economics economic calendar with a high-impact event blackout gate.
+2. Coin Metrics Community network metrics plus optional Whale Alert attributed exchange/whale flows.
+3. CoinGlass provider-model predictive liquidation heatmap.
+4. Deribit public options intelligence: OI PCR, ATM IV term structure, wing-skew proxy, max-pain proxy and strike concentration.
+5. CoinGlass historical Spot taker buy/sell CVD with 1d/7d/30d coverage validation.
+
+The five modules are integrated into the main Master Verdict and archived in IndexedDB / Research Bundle v51.
+
+New optional server secrets:
+- `TRADING_ECONOMICS_API_KEY`
+- `WHALE_ALERT_API_KEY`
+- `COINGLASS_API_KEY`
+
+Coin Metrics Community and Deribit public market data require no new key in this implementation.
+
+Paid provider failures are isolated from the base engine and scanner.
+
+
+## v52 · VERDICT CENTER PRO
+
+The Dashboard Master Verdict now includes a full Verdict Center with 51 decision-relevant module rows.
+
+Every current module is exposed as Bullish, Bearish, Neutral or Blocker/Warning. The UI calculates directional agreement with the base signal, module coverage, weighted module consensus, weighted conviction and family-level summaries for Technical, Models, Flow, Context and Risk/Execution.
+
+The center also provides a full module table with current value and interpretation. Module-count agreement is explicitly descriptive and is not presented as a probability of profit because many modules share underlying market data.
+
+Verdict Center summaries are archived in IndexedDB and included in v52 research reporting/bundles.
+
+No new provider or API key is required by v52 itself.
+
+
+## v53 · VOLATILITY INTELLIGENCE PRO
+
+Adds a dedicated volatility dashboard with annualized realized volatility, a 10/20/60/120-bar volatility cone, ATR and Bollinger-width percentiles, Parkinson/Garman-Klass estimators, volatility-of-volatility, downside/upside semivolatility, volatility clustering, empirical 2σ/3σ shock counts, expected-move ranges, multi-timeframe volatility regimes and compression/expansion breakout alerts.
+
+For supported crypto options, the existing Deribit public data is reused for ATM implied volatility, IV/RV ratio, IV term slope and realized-vs-implied expected moves.
+
+Volatility remains direction-neutral. v53 uses it mainly for risk context and Paper-only adaptive sizing.
+
+No new API key is required.
+
+## v54 · FULL HARDENING
+
+v54 is the remediation release for the severe v53 audit. It fixes or closes the implementation path for all 62 findings: **51 FIXED, 11 MITIGATED, 0 OPEN**.
+
+Major changes include API authentication/rate limiting, tenant-isolated D1 history, symbol/source/market state isolation, MTF coverage gating, chronological historical CVD, seven-day liquidation retention, stock split guards, exact outcome purging for research ML, archive-backed datasets, conservative same-candle backtests, maturity-matched IV/RV, opt-in experimental volatility sizing, full IndexedDB backup with SHA-256, CSP/security headers, a split frontend (`index.html` + `app.js` + `app.css`), research Web Worker offload, privacy session mode, reference-data aging, Engine Contract 54.1 and a reproducible npm audit/test harness.
+
+The remaining 11 mitigated items are explicitly bounded methodological or architectural risks rather than open defects; see `AUDIT.md` and `AUDIT_V54_FINDINGS.json`.
+

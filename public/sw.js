@@ -1,8 +1,11 @@
-const CACHE="crypto-radar-v45";
-const APP_SHELL=["/","/index.html","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png"];
+const CACHE="crypto-radar-v54";
+const APP_SHELL=["/","/index.html","/app.css","/app.js","/research-worker.js","/engine-contract.json","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png"];
 
 self.addEventListener("install",event=>{
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP_SHELL)));
+  event.waitUntil(caches.open(CACHE).then(async cache=>{
+    const results=await Promise.allSettled(APP_SHELL.map(async url=>{const r=await fetch(url,{cache:"reload"});if(!r.ok)throw Error(`${url} ${r.status}`);await cache.put(url,r)}));
+    const ok=results.filter(x=>x.status==="fulfilled").length;if(!ok)throw Error("PWA shell cache unavailable");return results
+  }));
 });
 
 self.addEventListener("activate",event=>{

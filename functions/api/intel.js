@@ -1,3 +1,4 @@
+import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 const H={"content-type":"application/json","cache-control":"no-store"};
 const TD="https://api.twelvedata.com";
 const CG="https://api.coingecko.com/api/v3";
@@ -80,7 +81,8 @@ async function stockNews(env,symbol){
 export async function onRequestGet({request,env}){
   const u=new URL(request.url),action=u.searchParams.get("action")||"config";
   try{
-    if(action==="config")return json({coingeckoKey:!!env.COINGECKO_API_KEY,twelveData:!!env.TWELVE_DATA_API_KEY,btcNetwork:true,news:true});
+    if(action==="config")return json({coingeckoKey:!!env.COINGECKO_API_KEY,twelveData:!!env.TWELVE_DATA_API_KEY,btcNetwork:true,news:true,authRequired:true});
+    const auth=await requireApiAuth(request,env,"intel",60);if(!auth.ok)return authErrorResponse(auth,H);
     if(action==="crypto_global")return json(await cryptoGlobal(env));
     if(action==="btc_network")return json(await btcNetwork());
     if(action==="macro")return json(await macroContext(env));

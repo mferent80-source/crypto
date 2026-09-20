@@ -1,7 +1,7 @@
 {
   "name": "Crypto Radar Pro · Multi-Market",
   "short_name": "Market Radar",
-  "description": "Crypto Radar Pro v45: scanner recovery with Pionex-only universe fallbacks and Binance technical candles, plus automatic Binance main-analysis fallback.",
+  "description": "Crypto Radar Pro v54 Full Hardening: secured API gates, tenant-isolated history, state isolation, corrected MTF/CVD/liquidation/backtest paths, research-worker offload, Verdict Center Pro, Volatility Intelligence Pro and full local research backup.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
