@@ -1,10 +1,68 @@
 {
   "name": "Crypto Radar Pro",
   "short_name": "Crypto Radar",
-  "start_url": "/",
+  "description": "Crypto market analysis terminal with Pionex-native scanning, signals, validation and research tools.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#071018",
-  "theme_color": "#071018",
-  "description": "Crypto market intelligence terminal",
-  "icons": []
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#06101a",
+  "theme_color": "#08131d",
+  "orientation": "portrait-primary",
+  "lang": "ro",
+  "categories": [
+    "finance",
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scanner Pionex",
+      "short_name": "Scanner",
+      "url": "/?panel=scan",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Semnale",
+      "short_name": "Signals",
+      "url": "/?panel=signals",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
 }

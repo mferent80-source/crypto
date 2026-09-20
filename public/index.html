@@ -596,6 +596,116 @@ main{max-width:1160px;padding-top:14px}
  .qualityGrid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
+
+<style id="v26-extra">
+.scanSourceBar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.pionexBadge{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;border:1px solid rgba(79,209,197,.28);background:rgba(79,209,197,.08);color:#8be9de;font-size:9px;font-weight:850;letter-spacing:.04em}
+.pionexBadge:before{content:"";width:6px;height:6px;border-radius:50%;background:#4fd1c5;box-shadow:0 0 9px rgba(79,209,197,.7)}
+.scanMeta{display:flex;gap:6px;flex-wrap:wrap}
+.scanMeta span{padding:5px 7px;border:1px solid #213247;border-radius:999px;background:#0b1520;font-size:9px;color:var(--muted)}
+.scanTableHead,.coin{grid-template-columns:1fr .50fr .68fr .55fr .70fr .54fr .72fr}
+@media(max-width:760px){
+ .scanTableHead,.coin{grid-template-columns:1fr .5fr .7fr .55fr .65fr}
+ .scanTableHead>*:nth-child(5),.coin>*:nth-child(5){display:block}
+ .scanTableHead>*:nth-child(6),.coin>*:nth-child(6){display:none}
+ .scanTableHead>*:nth-child(7),.coin>*:nth-child(7){display:none}
+}
+</style>
+
+<style id="v27-extra">
+.scanProgress{height:7px;background:#142233;border-radius:999px;overflow:hidden;margin:9px 0 6px}
+.scanProgress>div{height:100%;width:0;background:linear-gradient(90deg,#4fd1c5,#69a7ff);transition:width .2s ease}
+.scanStats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:7px 0}
+.scanStat{background:#0b1520;border:1px solid #213247;border-radius:10px;padding:7px}
+.scanStat span{display:block;font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.scanStat b{display:block;font-size:12px;margin-top:2px}
+.scannerToolbar{display:grid;grid-template-columns:1.1fr .9fr auto;gap:7px;margin-top:8px}
+.scannerToolbar input,.scannerToolbar select{min-width:0}
+.moreDrawer{position:fixed;inset:0;z-index:160;display:none;background:rgba(1,7,12,.74);backdrop-filter:blur(5px)}
+.moreDrawer.on{display:flex;align-items:flex-end}
+.moreSheet{width:100%;max-height:78vh;overflow:auto;background:#09131d;border:1px solid #26394f;border-radius:20px 20px 0 0;padding:14px 12px 20px}
+.moreHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.moreGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.moreBtn{padding:12px 7px;border-radius:12px;background:#0d1a27;border:1px solid #26394f;color:#b7c4d5;font-size:10px}
+.moreBtn b{display:block;font-size:17px;margin-bottom:4px;color:#fff}
+.cacheGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.cacheBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.cacheBox b{display:block;font-size:14px;margin-top:3px}
+.wsStale{color:#ffd978!important;border-color:rgba(245,196,81,.3)!important}
+@media(max-width:760px){
+ .scannerToolbar{grid-template-columns:1fr 1fr}
+ .scannerToolbar button{grid-column:1/-1}
+ .scanStats{grid-template-columns:repeat(3,1fr)}
+ .cacheGrid{grid-template-columns:repeat(2,1fr)}
+ .moreGrid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+
+<style id="v28-extra">
+.flowHero{display:grid;grid-template-columns:1.1fr .9fr;gap:10px}
+.flowGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.flowBox,.bandBox,.oiBox,.liqBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.flowBox b,.bandBox b,.oiBox b,.liqBox b{display:block;font-size:15px;margin-top:4px}
+.bandGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.regimeHero{padding:14px;border-radius:15px;border:1px solid #29445b;background:linear-gradient(135deg,rgba(105,167,255,.10),rgba(79,209,197,.07))}
+.regimeBig{font-size:25px;font-weight:900;letter-spacing:-.035em;margin-top:4px}
+.oiMatrix,.liqGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.proxyNotice{padding:9px 10px;border:1px solid rgba(245,196,81,.25);background:rgba(245,196,81,.06);border-radius:11px;color:#dfcf9a;font-size:10px;margin-top:9px}
+@media(max-width:800px){.flowHero{grid-template-columns:1fr}.flowGrid,.oiMatrix,.liqGrid{grid-template-columns:repeat(2,1fr)}.bandGrid{grid-template-columns:1fr}}
+</style>
+
+<style id="v29-extra">
+.microHero{display:grid;grid-template-columns:1.05fr .95fr;gap:10px}
+.microBiasCard{padding:15px;border-radius:16px;border:1px solid #29445b;background:linear-gradient(135deg,rgba(79,209,197,.10),rgba(105,167,255,.07))}
+.microBias{font-size:27px;font-weight:900;letter-spacing:-.04em;margin-top:4px}
+.microGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.microBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.microBox b{display:block;font-size:15px;margin-top:4px}
+.tapeWrap{max-height:330px;overflow:auto;border:1px solid #1d2d41;border-radius:13px;background:#08131d}
+.tapeRow{display:grid;grid-template-columns:72px 1fr 1fr 1fr;gap:7px;padding:7px 9px;border-bottom:1px solid #142233;font-size:10px}
+.tapeRow:last-child{border-bottom:0}
+.tapeHead{position:sticky;top:0;z-index:2;background:#0c1824;font-weight:850}
+.microChart{height:175px;border:1px solid #1d2d41;border-radius:13px;background:#08131d;padding:6px}
+.microChart canvas{width:100%;height:100%;display:block}
+.depthMeter{height:9px;border-radius:999px;background:#172536;overflow:hidden;display:flex}
+.depthMeter .bid{background:#55d89b}.depthMeter .ask{background:#ff6b78}
+.slipGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slipBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.slipBox b{display:block;font-size:14px;margin-top:4px}
+.microActions{display:flex;gap:7px;flex-wrap:wrap}
+.microActions button{width:auto}
+.sourcePill{display:inline-flex;padding:5px 8px;border-radius:999px;border:1px solid rgba(79,209,197,.28);background:rgba(79,209,197,.08);color:#8be9de;font-size:9px;font-weight:850}
+@media(max-width:800px){
+ .microHero{grid-template-columns:1fr}
+ .microGrid{grid-template-columns:repeat(2,1fr)}
+ .slipGrid{grid-template-columns:1fr}
+ .tapeRow{grid-template-columns:62px 1fr 1fr}
+ .tapeRow>*:nth-child(4){display:none}
+}
+</style>
+
+<style id="v30-extra">
+.sourceSelect{min-width:118px;font-weight:850}
+.sourceCard{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.sourceBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.sourceBox b{display:block;font-size:13px;margin-top:4px}
+.sourceNative{color:var(--good)}.sourceExternal{color:#ffd978}
+.sourceLock{display:inline-flex;gap:6px;align-items:center;padding:6px 9px;border-radius:999px;border:1px solid rgba(79,209,197,.28);background:rgba(79,209,197,.08);font-size:9px;font-weight:850;color:#8be9de}
+.providerNote{padding:9px 10px;border:1px solid #213247;border-radius:11px;background:#0b1520;color:var(--muted);font-size:10px;margin-top:8px}
+@media(max-width:800px){.sourceCard{grid-template-columns:repeat(2,1fr)}.sourceSelect{min-width:100px}}
+</style>
+
+<style id="v31-pwa">
+.pwaInstall{position:fixed;right:14px;bottom:78px;z-index:145;display:none;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;border:1px solid rgba(79,209,197,.34);background:#0b1824;color:#fff;box-shadow:0 12px 35px rgba(0,0,0,.28);font-size:10px;font-weight:800}
+.pwaInstall.on{display:flex}
+.pwaInstall button{width:auto;padding:6px 9px}
+.pwaBanner{display:none;position:fixed;left:12px;right:12px;bottom:78px;z-index:146;padding:11px;border-radius:14px;border:1px solid #29445b;background:#0b1824;box-shadow:0 12px 35px rgba(0,0,0,.3)}
+.pwaBanner.on{display:block}
+.pwaBanner .row2{display:flex;gap:7px;justify-content:flex-end;margin-top:8px}
+.pwaBanner button{width:auto}
+.pwaState{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;border:1px solid #29445b;background:#0b1520;font-size:9px}
+@media(min-width:900px){.pwaInstall{bottom:18px}.pwaBanner{max-width:520px;left:auto;bottom:18px}}
+</style>
 </head><body>
 <div class="appShell">
 <aside class="sideNav">
@@ -607,6 +717,8 @@ main{max-width:1160px;padding-top:14px}
     <button class="sideBtn" data-nav="scan" onclick="navTo('scan',true)"><span class="sideIcon">⌕</span>Scanner</button>
     <button class="sideBtn" data-nav="market" onclick="navTo('market',true)"><span class="sideIcon">◉</span>Market Overview</button>
     <button class="sideBtn" data-nav="profile" onclick="navTo('profile',true)"><span class="sideIcon">▤</span>Volume Profile</button>
+    <button class="sideBtn" data-nav="quantflow" onclick="navTo('quantflow')"><span class="sideIcon">∆</span>Flow & Regime</button>
+    <button class="sideBtn" data-nav="micro" onclick="navTo('micro',true)"><span class="sideIcon">≋</span>Microstructure</button>
     <button class="sideBtn" data-nav="riskmgr" onclick="navTo('riskmgr')"><span class="sideIcon">%</span>Risk Manager</button>
     <button class="sideBtn" data-nav="decision" onclick="navTo('decision')"><span class="sideIcon">✓</span>Decision Center</button>
     <button class="sideBtn" data-nav="correlation" onclick="navTo('correlation',true)"><span class="sideIcon">∿</span>Correlation</button>
@@ -626,15 +738,15 @@ main{max-width:1160px;padding-top:14px}
     <button class="sideBtn" data-nav="health" onclick="navTo('health')"><span class="sideIcon">●</span>Health</button>
   </div>
   <div class="sideFooter">
-    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v25 · FORWARD EDGE</div>
+    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v31 · FULL PWA</div>
     <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
     <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
   </div>
 </aside>
 <div class="mainArea">
 <header class="topStatus">
-  <div class="topLeft"><div id="topCoin" class="topCoin">BTC/USDT</div><span id="topTf" class="statusChip">4h</span><span id="topMode" class="statusChip">AUTO</span></div>
-  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v25 · AUDITED</span></div>
+  <div class="topLeft"><div id="topCoin" class="topCoin">BTC/USDT</div><span id="topTf" class="statusChip">4h</span><span id="topMode" class="statusChip">AUTO</span><span id="topSource" class="statusChip">PIONEX</span></div>
+  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v31 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -642,13 +754,17 @@ main{max-width:1160px;padding-top:14px}
     <div class="logo">◈</div>
     <div><h1>Crypto Radar Pro</h1><div class="subhead">Market intelligence · multi-timeframe · live technical analysis</div></div>
   </div>
-  <div class="headerMeta"><span class="badge">v25 · FORWARD EDGE · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+  <div class="headerMeta"><span class="badge">v31 · FULL PWA · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
 <input id="symbol" value="BTC" list="coins" placeholder="BTC, ETH, SOL...">
 <select id="tf"><option>15m</option><option>1h</option><option selected>4h</option><option>1d</option></select>
 <select id="mode" title="Profil algoritmic"><option value="auto" selected>Auto</option><option value="scalp">Scalping</option><option value="intraday">Intraday</option><option value="swing">Swing</option></select>
+<select id="analysisSource" class="sourceSelect" title="Sursa principală pentru analiza spot" onchange="setAnalysisSource(this.value)">
+  <option value="PIONEX">Pionex</option>
+  <option value="BINANCE">Binance</option>
+</select>
 </div>
 <datalist id="coins"><option>BTC</option><option>ETH</option><option>SOL</option><option>BNB</option><option>XRP</option><option>DOGE</option><option>ADA</option><option>LINK</option><option>AVAX</option><option>SUI</option><option>DOT</option><option>LTC</option><option>TRX</option><option>PEPE</option></datalist>
 <div class="actions"><button id="analyzeBtn" type="button" onclick="analyze(true)">Analizează piața</button><button type="button" onclick="toggleFav()" title="Adaugă la favorite">★</button></div>
@@ -680,7 +796,18 @@ main{max-width:1160px;padding-top:14px}
 <button class="tab" onclick="show('watch')">Watch</button>
 </div>
 
-<section id="dash" class="panel on"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="statusChip">Multi-source</span></div></div><div class="grid">
+<section id="dash" class="panel on"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span id="dashSourceLock" class="sourceLock">PIONEX LOCK</span></div></div><div class="grid">
+<div class="card full">
+  <div class="sectionHead"><h3>Data Lineage</h3><span class="small">No silent spot-source mixing</span></div>
+  <div class="sourceCard">
+    <div class="sourceBox"><span class="label">Primary spot</span><b id="sourceSpot" class="sourceNative">PIONEX</b></div>
+    <div class="sourceBox"><span class="label">Multi-TF</span><b id="sourceMtf" class="sourceNative">PIONEX</b></div>
+    <div class="sourceBox"><span class="label">Live price</span><b id="sourceLive" class="sourceNative">PIONEX REST</b></div>
+    <div class="sourceBox"><span class="label">Microstructure</span><b id="sourceMicro" class="sourceNative">PIONEX</b></div>
+    <div class="sourceBox"><span class="label">Derivatives</span><b id="sourceDeriv" class="sourceExternal">BINANCE FUTURES</b></div>
+  </div>
+  <div id="sourceNote" class="providerNote">Spot indicators, historical analogs, chart, MTF and backtests follow the selected primary source. Futures remains optional external context.</div>
+</div>
 <div class="card full hero"><div class="label">Verdict compozit</div><div id="verdict" class="value">—</div><div class="bar"><div id="fill" class="fill"></div></div><div id="conf" class="muted" style="margin-top:5px">—</div></div><div class="card full hero"><div class="label">Verdict probabilistic · modele istorice similare</div><div id="pverdict" class="value">—</div><div class="bar"><div id="pfill" class="fill"></div></div><div id="pstats" class="muted" style="margin-top:5px">Calibrare locală pe istoricul disponibil…</div></div><div class="card full"><div class="gaugeWrap">
 <div id="probGauge" class="gauge" style="--p:50;--gc:#f5c451"><div class="gaugeInner"><b id="gaugeVal">50%</b><span>Bias UP</span></div></div>
 <div><div class="label">Probability & market context</div><div id="gaugeLabel" class="value neutral">NEUTRAL</div>
@@ -896,10 +1023,16 @@ main{max-width:1160px;padding-top:14px}
       <h4>Data freshness</h4>
       <div class="freshGrid">
         <div class="freshBox"><span class="label">REST</span><b id="freshRest">—</b></div>
-        <div class="freshBox"><span class="label">WebSocket</span><b id="freshWs">—</b></div>
+        <div class="freshBox"><span class="label">Live feed</span><b id="freshWs">—</b></div>
         <div class="freshBox"><span class="label">Futures</span><b id="freshFut">—</b></div>
         <div class="freshBox"><span class="label">Sentiment</span><b id="freshSent">—</b></div>
       </div>
+    </div>
+<div class="settingsCard">
+      <h4>Primary Spot Provider</h4>
+      <div class="settingRow"><span>Analysis source</span><select id="setSpotProvider" style="width:160px"><option value="PIONEX">Pionex native</option><option value="BINANCE">Binance direct</option></select></div>
+      <p class="small" style="margin-top:8px">The selected provider is used consistently for main candles, ticker, MTF, correlation, backtest and OOS. Pionex scanner remains Pionex-only.</p>
+      <button style="margin-top:9px" onclick="saveSettings()">Save source</button>
     </div>
 <div class="settingsCard">
       <h4>Execution Model</h4>
@@ -949,7 +1082,16 @@ main{max-width:1160px;padding-top:14px}
 
 <section id="health" class="panel">
   <div class="sectionHead"><h3>Data & System Health</h3><span class="small">Source visibility</span></div>
-  <div class="card full"><div class="healthGrid"><div class="healthBox"><span class="label">Spot REST</span><b id="healthSpot">—</b></div><div class="healthBox"><span class="label">WebSocket</span><b id="healthWs">—</b></div><div class="healthBox"><span class="label">Futures</span><b id="healthFut">—</b></div><div class="healthBox"><span class="label">Sentiment</span><b id="healthSent">—</b></div><div class="healthBox"><span class="label">Journal</span><b id="healthJournal">—</b></div><div class="healthBox"><span class="label">PWA</span><b id="healthPwa">—</b></div></div><button style="margin-top:10px" onclick="runHealthCheck()">Run health check</button></div>
+  <div class="card full"><div class="healthGrid"><div class="healthBox"><span class="label">Spot REST</span><b id="healthSpot">—</b></div><div class="healthBox"><span class="label">Live feed</span><b id="healthWs">—</b></div><div class="healthBox"><span class="label">Futures</span><b id="healthFut">—</b></div><div class="healthBox"><span class="label">Sentiment</span><b id="healthSent">—</b></div><div class="healthBox"><span class="label">Journal</span><b id="healthJournal">—</b></div><div class="healthBox"><span class="label">PWA</span><b id="healthPwa">—</b></div></div><button style="margin-top:10px" onclick="runHealthCheck()">Run health check</button>
+    <div class="cacheGrid">
+      <div class="cacheBox"><span class="label">Request cache</span><b id="healthCache">—</b></div>
+      <div class="cacheBox"><span class="label">In-flight de-dupe</span><b id="healthInflight">—</b></div>
+      <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
+      <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
+      <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
+      <div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v31</b></div>
+    </div>
+  </div>
 </section>
 <section id="decision" class="panel">
   <div class="sectionHead"><h3>Decision Center</h3><span class="small">Single-page synthesis</span></div>
@@ -1145,16 +1287,186 @@ main{max-width:1160px;padding-top:14px}
     </div>
   </div>
 </section>
+<section id="quantflow" class="panel">
+  <div class="sectionHead"><h3>Order Flow & Regime Lab</h3><span class="validationBadge">CVD PROXY · TTM · CHOP · HURST · OI DELTA</span></div>
+
+  <div class="flowHero">
+    <div class="card full">
+      <div class="sectionHead"><h3>Volume Delta / CVD Proxy</h3><span class="small">OHLCV-derived pressure estimate</span></div>
+      <div class="flowGrid">
+        <div class="flowBox"><span class="label">Candle delta</span><b id="flowDelta">—</b></div>
+        <div class="flowBox"><span class="label">Delta %</span><b id="flowDeltaPct">—</b></div>
+        <div class="flowBox"><span class="label">CVD proxy slope</span><b id="flowCvdSlope">—</b></div>
+        <div class="flowBox"><span class="label">Price/CVD divergence</span><b id="flowCvdDiv">—</b></div>
+      </div>
+      <div class="proxyNotice">Proxy only: candle close-location × volume. This is not true aggressor-side trade delta or exchange tape CVD.</div>
+    </div>
+    <div class="regimeHero">
+      <div class="label">Regime Fusion</div>
+      <div id="fusionRegime" class="regimeBig neutral">—</div>
+      <div id="fusionReason" class="small" style="margin-top:7px">Run analysis first.</div>
+      <div class="row"><span>Trend quality</span><b id="fusionQuality">—</b></div>
+      <div class="row"><span>Base regime</span><b id="fusionBase">—</b></div>
+    </div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Regime Indicators</h3><span class="small">Independent market-state filters</span></div>
+    <div class="flowGrid">
+      <div class="flowBox"><span class="label">TTM Squeeze</span><b id="ttmState">—</b></div>
+      <div class="flowBox"><span class="label">Squeeze momentum</span><b id="ttmMomentum">—</b></div>
+      <div class="flowBox"><span class="label">Choppiness 14</span><b id="chopValue">—</b></div>
+      <div class="flowBox"><span class="label">Efficiency Ratio 20</span><b id="erValue">—</b></div>
+      <div class="flowBox"><span class="label">Hurst estimate</span><b id="hurstValue">—</b></div>
+      <div class="flowBox"><span class="label">RV20 percentile</span><b id="rvPercentile">—</b></div>
+      <div class="flowBox"><span class="label">Parkinson vol</span><b id="parkinsonVol">—</b></div>
+      <div class="flowBox"><span class="label">Garman-Klass vol</span><b id="gkVol">—</b></div>
+    </div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>VWAP Structure</h3><span class="small">Calendar anchors + weighted deviation bands</span></div>
+    <div class="bandGrid">
+      <div class="bandBox"><span class="label">Daily / Weekly / Monthly</span><b id="vwapCalendar">—</b></div>
+      <div class="bandBox"><span class="label">VWAP ±1σ</span><b id="vwapBand1">—</b></div>
+      <div class="bandBox"><span class="label">VWAP ±2σ</span><b id="vwapBand2">—</b></div>
+    </div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Liquidity & FVG Lifecycle</h3><span class="small">Structure map from candle data</span></div>
+    <div class="liqGrid">
+      <div class="liqBox"><span class="label">Previous day H/L</span><b id="liqPrevDay">—</b></div>
+      <div class="liqBox"><span class="label">Previous week H/L</span><b id="liqPrevWeek">—</b></div>
+      <div class="liqBox"><span class="label">Equal highs</span><b id="liqEqHigh">—</b></div>
+      <div class="liqBox"><span class="label">Equal lows</span><b id="liqEqLow">—</b></div>
+      <div class="liqBox"><span class="label">Premium / Discount</span><b id="liqPremium">—</b></div>
+      <div class="liqBox"><span class="label">Latest FVG</span><b id="fvgType">—</b></div>
+      <div class="liqBox"><span class="label">FVG status</span><b id="fvgStatus">—</b></div>
+      <div class="liqBox"><span class="label">FVG zone</span><b id="fvgZone">—</b></div>
+    </div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Open Interest & Funding Matrix</h3><span class="small">Binance Futures context · optional</span></div>
+    <div class="oiMatrix">
+      <div class="oiBox"><span class="label">OI Δ 15m</span><b id="oi15m">—</b></div>
+      <div class="oiBox"><span class="label">OI Δ 1h</span><b id="oi1h">—</b></div>
+      <div class="oiBox"><span class="label">OI Δ 4h</span><b id="oi4h">—</b></div>
+      <div class="oiBox"><span class="label">OI Δ 24h</span><b id="oi24h">—</b></div>
+      <div class="oiBox"><span class="label">Price + OI context</span><b id="oiMatrixContext">—</b></div>
+      <div class="oiBox"><span class="label">Funding avg 24h</span><b id="funding24h">—</b></div>
+      <div class="oiBox"><span class="label">Funding avg 3d</span><b id="funding3d">—</b></div>
+      <div class="oiBox"><span class="label">Funding percentile</span><b id="fundingPctile">—</b></div>
+    </div>
+  </div>
+</section>
+<section id="micro" class="panel">
+  <div class="sectionHead">
+    <h3>Pionex Microstructure</h3>
+    <div class="microActions">
+      <span class="sourcePill">PIONEX SPOT</span>
+      <button class="actionGhost" onclick="loadPionexMicrostructure(true)">Refresh</button>
+      <button id="microAutoBtn" class="actionGhost" onclick="toggleMicroAuto()">Auto OFF</button>
+    </div>
+  </div>
+
+  <div class="microHero">
+    <div class="microBiasCard">
+      <div class="label">Microstructure pressure</div>
+      <div id="microBias" class="microBias neutral">—</div>
+      <div id="microReason" class="small" style="margin-top:7px">Load recent Pionex trades and order book.</div>
+      <div class="row"><span>Composite micro score</span><b id="microScore">—</b></div>
+      <div class="row"><span>Symbol</span><b id="microSymbol">—</b></div>
+      <div class="row"><span>Last update</span><b id="microUpdated">—</b></div>
+    </div>
+    <div class="card">
+      <div class="row"><span>Trade-side delta</span><b id="trueDelta">—</b></div>
+      <div class="row"><span>Trade delta %</span><b id="trueDeltaPct">—</b></div>
+      <div class="row"><span>Micro-CVD net</span><b id="trueCvd">—</b></div>
+      <div class="row"><span>Buy/Sell notional</span><b id="buySellNotional">—</b></div>
+      <div class="row"><span>Trade pace</span><b id="tradePace">—</b></div>
+      <div class="row"><span>Large-trade bias</span><b id="largeTradeBias">—</b></div>
+    </div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Reported-side Trade Flow</h3><span class="small">Recent public trades · up to 500</span></div>
+    <div class="microGrid">
+      <div class="microBox"><span class="label">Buy trades</span><b id="buyTradeCount">—</b></div>
+      <div class="microBox"><span class="label">Sell trades</span><b id="sellTradeCount">—</b></div>
+      <div class="microBox"><span class="label">Avg buy notional</span><b id="avgBuyTrade">—</b></div>
+      <div class="microBox"><span class="label">Avg sell notional</span><b id="avgSellTrade">—</b></div>
+      <div class="microBox"><span class="label">Large buy notional</span><b id="largeBuyNotional">—</b></div>
+      <div class="microBox"><span class="label">Large sell notional</span><b id="largeSellNotional">—</b></div>
+      <div class="microBox"><span class="label">Price change in sample</span><b id="microPriceChange">—</b></div>
+      <div class="microBox"><span class="label">Flow divergence</span><b id="microDivergence">—</b></div>
+    </div>
+    <div class="microChart" style="margin-top:10px"><canvas id="microCvdChart" width="1000" height="175"></canvas></div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Pionex Order Book</h3><span class="small">Top 100 levels</span></div>
+    <div class="microGrid">
+      <div class="microBox"><span class="label">Spread</span><b id="pionexSpread">—</b></div>
+      <div class="microBox"><span class="label">Top-10 imbalance</span><b id="pionexImb10">—</b></div>
+      <div class="microBox"><span class="label">Top-50 imbalance</span><b id="pionexImb50">—</b></div>
+      <div class="microBox"><span class="label">Microprice edge</span><b id="micropriceEdge">—</b></div>
+      <div class="microBox"><span class="label">Largest bid wall</span><b id="bidWall">—</b></div>
+      <div class="microBox"><span class="label">Largest ask wall</span><b id="askWall">—</b></div>
+      <div class="microBox"><span class="label">Wall pressure</span><b id="wallPressure">—</b></div>
+      <div class="microBox"><span class="label">Absorption heuristic</span><b id="absorptionState">—</b></div>
+    </div>
+    <div class="depthMeter" style="margin-top:10px"><div id="pionexBidMeter" class="bid" style="width:50%"></div><div id="pionexAskMeter" class="ask" style="width:50%"></div></div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Estimated Market-Order Slippage</h3><span class="small">Snapshot estimate from visible depth</span></div>
+    <div class="slipGrid">
+      <div class="slipBox"><span class="label">100 USDT</span><b id="slip100">—</b></div>
+      <div class="slipBox"><span class="label">500 USDT</span><b id="slip500">—</b></div>
+      <div class="slipBox"><span class="label">1,000 USDT</span><b id="slip1000">—</b></div>
+    </div>
+    <p class="note">Shows estimated BUY / SELL slippage from the current Pionex book snapshot. Real execution may differ because the book changes before and during an order.</p>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Recent Trade Tape</h3><span class="small">Latest 30 from the fetched sample</span></div>
+    <div class="tapeWrap">
+      <div class="tapeRow tapeHead"><span>Side</span><span>Price</span><span>Size</span><span>Notional</span></div>
+      <div id="tradeTape"></div>
+    </div>
+  </div>
+</section>
 <section id="mtf" class="panel"><div class="card full"><div class="label">Multi-timeframe heatmap</div><div id="mtfheat" class="heatmap" style="margin-top:10px"></div></div><div class="card full"><div id="mtfout">Se încarcă…</div></div></section>
-<section id="scan" class="panel"><div class="card full"><div class="label">Scanner avansat</div>
-<div class="scanFilters">
-<select id="scanDir" onchange="renderScan()"><option value="ALL">Toate</option><option value="BULLISH">Bullish</option><option value="BEARISH">Bearish</option><option value="NEUTRAL">Neutral</option></select>
-<select id="scanRegime" onchange="renderScan()"><option value="ALL">Orice regim</option><option value="TREND">Trend</option><option value="RANGE">Range</option></select>
-<select id="scanAdx" onchange="renderScan()"><option value="0">ADX orice</option><option value="20">ADX ≥ 20</option><option value="25">ADX ≥ 25</option><option value="30">ADX ≥ 30</option></select>
-<select id="scanScore" onchange="renderScan()"><option value="0">Scor orice</option><option value="55">Forță ≥ 55</option><option value="65">Forță ≥ 65</option><option value="75">Forță ≥ 75</option></select>
+<section id="scan" class="panel"><div class="card full">
+<div class="scanSourceBar">
+  <div><div class="label">Pionex Top 100 Scanner</div><div class="small">Top USDT spot markets by Pionex 24h turnover</div></div>
+  <span class="pionexBadge">PIONEX ONLY</span>
 </div>
-<div class="scanTableHead"><b>Coin</b><b>Score</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b></div>
-<div id="scanout">Se încarcă…</div></div><button style="width:100%;margin-top:7px" onclick="scan()">↻ Rescanează</button></section>
+<div class="scanMeta"><span id="pionexUniverseCount">Universe —</span><span id="pionexUniverseTime">Updated —</span><span id="pionexScanMode">Mode FAST 4H</span></div>
+<div class="scanProgress"><div id="scanProgressBar"></div></div>
+<div class="scanStats">
+  <div class="scanStat"><span>Processed</span><b id="scanProcessed">0/0</b></div>
+  <div class="scanStat"><span>Results</span><b id="scanResults">0</b></div>
+  <div class="scanStat"><span>Errors</span><b id="scanErrors">0</b></div>
+  <div class="scanStat"><span>Cache hits</span><b id="scanCacheHits">0</b></div>
+  <div class="scanStat"><span>Elapsed</span><b id="scanElapsed">—</b></div>
+</div>
+<div class="scanFilters" style="margin-top:8px">
+<select id="scanDir" onchange="saveScanPrefs();renderScan()"><option value="ALL">Toate</option><option value="BULLISH">Bullish</option><option value="BEARISH">Bearish</option><option value="NEUTRAL">Neutral</option></select>
+<select id="scanRegime" onchange="saveScanPrefs();renderScan()"><option value="ALL">Orice regim</option><option value="TREND">Trend</option><option value="RANGE">Range</option></select>
+<select id="scanAdx" onchange="saveScanPrefs();renderScan()"><option value="0">ADX orice</option><option value="20">ADX ≥ 20</option><option value="25">ADX ≥ 25</option><option value="30">ADX ≥ 30</option></select>
+<select id="scanScore" onchange="saveScanPrefs();renderScan()"><option value="0">Scor orice</option><option value="55">Forță ≥ 55</option><option value="65">Forță ≥ 65</option><option value="75">Forță ≥ 75</option></select>
+<select id="scanDepth" onchange="saveScanPrefs();document.getElementById('pionexScanMode').textContent=this.value==='DEEP'?'Mode DEEP MTF':'Mode FAST 4H'"><option value="FAST" selected>FAST · 4H · 100 coins</option><option value="DEEP">DEEP · MTF · 100 coins</option></select>
+</div>
+<div class="scannerToolbar">
+  <input id="scanSearch" placeholder="Caută coin..." oninput="saveScanPrefs();renderScan()">
+  <select id="scanSort" onchange="saveScanPrefs();renderScan()"><option value="strength">Sort: Strength</option><option value="turnover">Sort: Turnover</option><option value="adx">Sort: ADX</option><option value="change">Sort: 24h %</option></select>
+  <button id="scanCancelBtn" class="actionGhost" onclick="cancelScan()" disabled>Stop scan</button>
+</div>
+<div class="scanTableHead"><b>Coin</b><b>Score</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b><b>24h Turnover</b></div>
+<div id="scanout">Apasă Rescanează pentru Top 100 live din Pionex.</div></div><button style="width:100%;margin-top:7px" onclick="scan()">↻ Rescanează Pionex Top 100</button></section>
 <section id="signals" class="panel"><div class="sectionHead"><h3>Signal Lab</h3><span class="small">Paper tracking · R-multiple analytics</span></div>
 <div class="signalGrid">
   <div class="signalCard">
@@ -1215,23 +1527,68 @@ main{max-width:1160px;padding-top:14px}
 </div></section>
 <section id="watch" class="panel"><div class="card"><div class="label">Favorite memorate pe telefon</div><div id="watchout"></div></div></section>
 <p class="note">Engine-ul combină EMA20/50/200, RSI, MACD, ADX/DMI, Supertrend, Stoch RSI, Bollinger, VWAP/Anchored VWAP, ATR, MFI, CMF, OBV, Ichimoku, divergență RSI, Volume Profile, Donchian breakout, swing structure, BOS/CHoCH, liquidity sweep/FVG, order-book depth, futures context (OI, long/short, funding) și analogi istorici kNN. Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice și confidence LONG/SHORT sunt euristici de confluență, nu probabilități garantate de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile. v24 modelează comisioane și slippage configurabile pentru jurnal/backtest, dar nu reproduce lichiditatea reală, ordinea intrabar exactă sau execuția unui exchange.</p>
-</main></div></div><div id="toastHost" class="toastHost"></div><nav class="mobileBottom"><button class="mobileNavBtn active" data-nav="dash" onclick="navTo('dash')"><b>⌂</b>Home</button><button class="mobileNavBtn" data-nav="scan" onclick="navTo('scan',true)"><b>⌕</b>Scan</button><button class="mobileNavBtn" data-nav="signals" onclick="navTo('signals',true)"><b>↗</b>Signals</button><button class="mobileNavBtn" data-nav="market" onclick="navTo('market',true)"><b>◉</b>Market</button><button class="mobileNavBtn" data-nav="alerts" onclick="navTo('alerts')"><b>!</b>Alerts</button></nav><script>
+</main></div></div><div id="toastHost" class="toastHost"></div>
+<nav class="mobileBottom"><button class="mobileNavBtn active" data-nav="dash" onclick="navTo('dash')"><b>⌂</b>Home</button><button class="mobileNavBtn" data-nav="scan" onclick="navTo('scan',true)"><b>⌕</b>Scan</button><button class="mobileNavBtn" data-nav="signals" onclick="navTo('signals',true)"><b>↗</b>Signals</button><button class="mobileNavBtn" data-nav="market" onclick="navTo('market',true)"><b>◉</b>Market</button><button class="mobileNavBtn" onclick="openMoreDrawer()"><b>⋯</b>More</button></nav>
+<div id="pwaInstallCard" class="pwaInstall"><span>Instalează Crypto Radar</span><button onclick="installPwa()">Instalează</button><button class="actionGhost" onclick="dismissPwaInstall()">×</button></div>
+<div id="pwaUpdateBanner" class="pwaBanner"><b>Este disponibilă o versiune nouă</b><div class="small" style="margin-top:4px">Actualizează aplicația instalată pentru a încărca cea mai nouă versiune.</div><div class="row2"><button onclick="applyPwaUpdate()">Actualizează</button><button class="actionGhost" onclick="dismissPwaUpdate()">Mai târziu</button></div></div>
+<div id="moreDrawer" class="moreDrawer" onclick="if(event.target===this)closeMoreDrawer()"><div class="moreSheet">
+ <div class="moreHead"><b>Crypto Radar</b><button class="actionGhost" onclick="closeMoreDrawer()">Close</button></div>
+ <div class="moreGrid">
+  <button class="moreBtn" onclick="moreNav('engine')"><b>⚙</b>Engine</button>
+  <button class="moreBtn" onclick="moreNav('mtf',true)"><b>▦</b>Multi-TF</button>
+  <button class="moreBtn" onclick="moreNav('profile',true)"><b>▤</b>Profile</button>
+  <button class="moreBtn" onclick="moreNav('quantflow')"><b>∆</b>Flow & Regime</button>
+  <button class="moreBtn" onclick="moreNav('micro',true)"><b>≋</b>Microstructure</button>
+  <button class="moreBtn" onclick="moreNav('riskmgr')"><b>%</b>Risk</button>
+  <button class="moreBtn" onclick="moreNav('decision')"><b>✓</b>Decision</button>
+  <button class="moreBtn" onclick="moreNav('correlation',true)"><b>∿</b>Correlation</button>
+  <button class="moreBtn" onclick="moreNav('paper')"><b>◇</b>Paper</button>
+  <button class="moreBtn" onclick="moreNav('analytics')"><b>Σ</b>Analytics</button>
+  <button class="moreBtn" onclick="moreNav('validation')"><b>✓</b>Validation</button>
+  <button class="moreBtn" onclick="moreNav('forward')"><b>→</b>Forward</button>
+  <button class="moreBtn" onclick="moreNav('montecarlo')"><b>∴</b>Monte Carlo</button>
+  <button class="moreBtn" onclick="moreNav('scenario')"><b>±</b>Scenario</button>
+  <button class="moreBtn" onclick="moreNav('depth',true)"><b>≡</b>Order Book</button>
+  <button class="moreBtn" onclick="moreNav('backtest',true)"><b>◫</b>Backtest</button>
+  <button class="moreBtn" onclick="moreNav('deriv',true)"><b>≋</b>Futures</button>
+  <button class="moreBtn" onclick="moreNav('watch')"><b>★</b>Watch</button>
+  <button class="moreBtn" onclick="moreNav('alerts')"><b>!</b>Alerts</button>
+  <button class="moreBtn" onclick="moreNav('settings')"><b>⚙</b>Settings</button>
+  <button class="moreBtn" onclick="moreNav('health')"><b>●</b>Health</button>
+ </div>
+</div></div><script>
 
 
 
 
-let liveSocket=null,liveSymbol=null,lastWsTick=0;
+let liveSocket=null,liveSymbol=null,lastWsTick=0,liveSocketSeq=0,wsReconnectTimer=null,wsReconnectAttempt=0;
 function startLiveSocket(sym){
- try{if(liveSocket){liveSocket.close();liveSocket=null}}catch{}
- liveSymbol=sym.toLowerCase();
- try{
-   liveSocket=new WebSocket(`wss://stream.binance.com:9443/ws/${liveSymbol}@ticker`);
-   liveSocket.onopen=()=>{lastWsTick=Date.now();$("wsDot").classList.add("live");$("wsStatus").textContent="WS LIVE"};
-   liveSocket.onmessage=e=>{lastWsTick=Date.now();markFresh("ws");try{const d=JSON.parse(e.data);if(window.__radarState&&window.__radarState.symbol===sym){$("heroPrice").textContent=num(+d.c);$("price").textContent=num(+d.c);$("hero24").textContent=(+d.P>=0?"+":"")+(+d.P).toFixed(2)+"%"}}catch{}};
-   liveSocket.onerror=()=>{$("wsDot").classList.remove("live");$("wsStatus").textContent="WS ERROR"};
-   liveSocket.onclose=()=>{$("wsDot").classList.remove("live");$("wsStatus").textContent="WS OFF"};
- }catch{$("wsStatus").textContent="WS N/A"}
+ const seq=++liveSocketSeq;liveSymbol=sym.toLowerCase();wsReconnectAttempt=0;
+ if(wsReconnectTimer){clearTimeout(wsReconnectTimer);wsReconnectTimer=null}
+ try{if(liveSocket){liveSocket.onclose=null;liveSocket.close();liveSocket=null}}catch{}
+ function connect(){
+   if(seq!==liveSocketSeq)return;
+   try{
+     liveSocket=new WebSocket(`wss://stream.binance.com:9443/ws/${liveSymbol}@ticker`);
+     liveSocket.onopen=()=>{if(seq!==liveSocketSeq)return;lastWsTick=Date.now();wsReconnectAttempt=0;$("wsDot").classList.add("live");$("wsStatus").classList.remove("wsStale");$("wsStatus").textContent="WS LIVE"};
+     liveSocket.onmessage=e=>{if(seq!==liveSocketSeq)return;lastWsTick=Date.now();markFresh("ws");try{const d=JSON.parse(e.data);if(window.__radarState&&window.__radarState.symbol===sym){$("heroPrice").textContent=num(+d.c);$("price").textContent=num(+d.c);$("hero24").textContent=(+d.P>=0?"+":"")+(+d.P).toFixed(2)+"%"}}catch{}};
+     liveSocket.onerror=()=>{if(seq===liveSocketSeq){$("wsDot").classList.remove("live");$("wsStatus").textContent="WS ERROR"}};
+     liveSocket.onclose=()=>{
+       if(seq!==liveSocketSeq)return;
+       $("wsDot").classList.remove("live");$("wsStatus").textContent="WS RETRY";$("wsStatus").classList.add("wsStale");
+       wsReconnectAttempt++;perfStats.wsReconnects++;
+       const delay=Math.min(30000,1000*Math.pow(2,Math.min(wsReconnectAttempt,5)));
+       wsReconnectTimer=setTimeout(connect,delay)
+     };
+   }catch{
+     if(seq===liveSocketSeq){$("wsStatus").textContent="WS N/A";$("wsStatus").classList.add("wsStale")}
+   }
+ }
+ connect()
 }
+setInterval(()=>{
+ if(lastWsTick&&Date.now()-lastWsTick>45000&&$("wsStatus")){$("wsStatus").textContent="WS STALE";$("wsStatus").classList.add("wsStale");$("wsDot").classList.remove("live")}
+},15000);
 function toggleChartFullscreen(){const c=$("chartCard");c.classList.toggle("fullscreenChart");setTimeout(()=>window.__radarState&&draw(window.__radarState.q),50)}
 function volumeProfile(j,bins=24){
  const rows=j.slice(-240),hi=Math.max(...rows.map(x=>+x[2])),lo=Math.min(...rows.map(x=>+x[3])),step=(hi-lo)/bins||1,vol=Array(bins).fill(0);
@@ -1266,8 +1623,12 @@ async function loadDepth(){
  a.innerHTML=asks.slice(0,10).map((x,i)=>`<div class="depthRow"><span>${num(+x[0])}</span><span>${(+x[1]).toFixed(4)}</span></div><div class="depthBar depthAsk" style="width:${100*av[i]/mx}%"></div>`).join("");
  const spread=asks.length&&bids.length?(+asks[0][0]-+bids[0][0])/(+bids[0][0])*100:null,imb=(bt+at)?(bt-at)/(bt+at)*100:0;$("depthSpread").textContent=spread==null?"N/A":spread.toFixed(4)+"%";$("depthImbalance").textContent=(imb>=0?"+":"")+imb.toFixed(1)+"%";$("depthImbalance").className=imb>5?"good":imb<-5?"bad":"neutral"}catch(e){b.innerHTML=a.innerHTML=`<div class="emptyState">Depth unavailable: ${e.message}</div>`}
 }
-async function loadMarketContext(){try{const [btc,ethbtc]=await Promise.all([ticker("BTCUSDT"),ticker("ETHBTC")]),rows=marketCache.rows||[];$("ctxBtc").textContent=(+btc.priceChangePercent>=0?"+":"")+(+btc.priceChangePercent).toFixed(2)+"%";$("ctxEthBtc").textContent=(+ethbtc.priceChangePercent>=0?"+":"")+(+ethbtc.priceChangePercent).toFixed(2)+"%";let bull=rows.filter(x=>x.ver==="BULLISH").length,bear=rows.filter(x=>x.ver==="BEARISH").length;$("ctxBreadth").textContent=rows.length?`${bull}B / ${bear}S`:"N/A";$("ctxRegime").textContent=window.__radarState?.q?.regime||"—"}catch{$("ctxBtc").textContent=$("ctxEthBtc").textContent="N/A"}}
-async function runHealthCheck(){$("healthSpot").textContent="Checking…";try{await ticker("BTCUSDT");$("healthSpot").textContent="OK"}catch{$("healthSpot").textContent="FAIL"}$("healthWs").textContent=lastWsTick&&Date.now()-lastWsTick<60000?"LIVE":"OFF";$("healthFut").textContent=window.__derivativesState&&Object.values(window.__derivativesState).some(x=>x!=null)?"OK":"OPTIONAL";$("healthSent").textContent=$("fearGreed")&&$("fearGreed").textContent!=="N/A"?"OK":"OPTIONAL";$("healthJournal").textContent=journal().length+" signals";$("healthPwa").textContent=("serviceWorker" in navigator)?"READY":"UNSUPPORTED"}
+async function loadMarketContext(){try{const src=analysisSource(),[btc,eth]=await Promise.all([analysisTicker("BTCUSDT",src),analysisTicker("ETHUSDT",src)]),rows=marketCache.rows||[],bc=+btc.priceChangePercent/100,ec=+eth.priceChangePercent/100,ethBtcRel=((1+ec)/(1+bc)-1)*100;$("ctxBtc").textContent=(bc>=0?"+":"")+(bc*100).toFixed(2)+"%";$("ctxEthBtc").textContent=(ethBtcRel>=0?"+":"")+ethBtcRel.toFixed(2)+"%";let bull=rows.filter(x=>x.ver==="BULLISH").length,bear=rows.filter(x=>x.ver==="BEARISH").length;$("ctxBreadth").textContent=rows.length?`${bull}B / ${bear}S`:"N/A";$("ctxRegime").textContent=window.__radarState?.q?.regime||"—"}catch{$("ctxBtc").textContent=$("ctxEthBtc").textContent="N/A"}}
+async function runHealthCheck(){$("healthSpot").textContent="Checking…";try{await analysisTicker("BTCUSDT",analysisSource());$("healthSpot").textContent=analysisSource()+" OK"}catch{$("healthSpot").textContent=analysisSource()+" FAIL"}$("healthWs").textContent=lastWsTick&&Date.now()-lastWsTick<60000?"LIVE":"OFF";$("healthFut").textContent=window.__derivativesState&&Object.values(window.__derivativesState).some(x=>x!=null)?"OK":"OPTIONAL";$("healthSent").textContent=$("fearGreed")&&$("fearGreed").textContent!=="N/A"?"OK":"OPTIONAL";$("healthJournal").textContent=journal().length+" signals";$("healthPwa").textContent=("serviceWorker" in navigator)?"READY":"UNSUPPORTED";
+ if($("healthCache"))$("healthCache").textContent=`${requestCache.size} items · ${perfStats.cacheHits} hits`;
+ if($("healthInflight"))$("healthInflight").textContent=`${requestInflight.size} active · ${perfStats.inflightHits} deduped`;
+ if($("healthScanner"))$("healthScanner").textContent=perfStats.lastScanner;
+ if($("healthReconnects"))$("healthReconnects").textContent=perfStats.wsReconnects;renderPwaHealth()}
 
 function pctRank(arr,v){if(!arr.length)return 50;let n=arr.filter(x=>x<=v).length;return 100*n/arr.length}
 function volatilityState(j,q){
@@ -1302,8 +1663,8 @@ function returnsFromKlines(k,n=100){let c=k.map(x=>+x[4]).slice(-(n+1)),r=[];for
 function corr(a,b){let n=Math.min(a.length,b.length);if(n<5)return NaN;a=a.slice(-n);b=b.slice(-n);let ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n,num=0,da=0,db=0;for(let i=0;i<n;i++){let x=a[i]-ma,y=b[i]-mb;num+=x*y;da+=x*x;db+=y*y}return da&&db?num/Math.sqrt(da*db):NaN}
 function beta(a,b){let n=Math.min(a.length,b.length);a=a.slice(-n);b=b.slice(-n);let ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n,cov=0,v=0;for(let i=0;i<n;i++){cov+=(a[i]-ma)*(b[i]-mb);v+=(b[i]-mb)**2}return v?cov/v:NaN}
 async function loadCorrelation(){
- const sym=norm($("symbol").value),refs=["BTCUSDT","ETHUSDT","SOLUSDT"];try{
-   const [sel,...ks]=await Promise.all([klines(sym,"4h",220),...refs.map(x=>klines(x,"4h",220))]),sr=returnsFromKlines(sel),names=[coin(sym),"BTC","ETH","SOL"],rs=[sr,...ks.map(returnsFromKlines)];
+ const sym=norm($("symbol").value),refs=["BTCUSDT","ETHUSDT","SOLUSDT"],src=analysisSource();try{
+   const [sel,...ks]=await Promise.all([analysisKlines(sym,"4h",220,src),...refs.map(x=>analysisKlines(x,"4h",220,src))]),sr=returnsFromKlines(sel),names=[coin(sym),"BTC","ETH","SOL"],rs=[sr,...ks.map(returnsFromKlines)];
    let html=`<div></div>${names.slice(1).map(x=>`<div class="hmHead">${x}</div>`).join("")}`;
    html+=`<div class="hmLabel">${names[0]}</div>${rs.slice(1).map(r=>{let c=corr(sr,r);return `<div class="corrCell ${c>=0?"corrPos":"corrNeg"}">${Number.isFinite(c)?c.toFixed(2):"—"}</div>`}).join("")}`;
    $("corrGrid").innerHTML=html;let b=beta(sr,rs[1]),selPerf=sr.reduce((a,x)=>a+x,0),btcPerf=rs[1].reduce((a,x)=>a+x,0),ethPerf=rs[2].reduce((a,x)=>a+x,0);
@@ -1332,10 +1693,10 @@ let dataFresh={rest:0,ws:0,futures:0,sentiment:0};
 function markFresh(k){dataFresh[k]=Date.now();renderFreshness()}
 function ageText(ts){if(!ts)return "—";let q=Math.max(0,Math.floor((Date.now()-ts)/1000));if(q<60)return q+"s";let m=Math.floor(q/60);if(m<60)return m+"m";return Math.floor(m/60)+"h"}
 function renderFreshness(){if($("freshRest"))$("freshRest").textContent=ageText(dataFresh.rest);if($("freshWs"))$("freshWs").textContent=ageText(dataFresh.ws);if($("freshFut"))$("freshFut").textContent=ageText(dataFresh.futures);if($("freshSent"))$("freshSent").textContent=ageText(dataFresh.sentiment)}
-function resolvedR(){return journal().map(x=>({...x,r:metricR(x)})).filter(x=>Number.isFinite(x.r))}
+function resolvedR(src=null){return journal().filter(x=>!src||(x.source||"BINANCE")===src).map(x=>({...x,r:metricR(x)})).filter(x=>Number.isFinite(x.r))}
 function maxDrawdownR(vals){let eq=0,peak=0,dd=0;for(const x of vals){eq+=x;peak=Math.max(peak,eq);dd=Math.min(dd,eq-peak)}return dd}
 function renderAnalytics(){
- const r=resolvedR(),wins=r.filter(x=>x.r>0),losses=r.filter(x=>x.r<0),avg=r.length?r.reduce((a,x)=>a+x.r,0)/r.length:0,aw=wins.length?wins.reduce((a,x)=>a+x.r,0)/wins.length:0,al=losses.length?-losses.reduce((a,x)=>a+x.r,0)/losses.length:0,pay=al?aw/al:aw?99:0;
+ const r=resolvedR(analysisSource()),wins=r.filter(x=>x.r>0),losses=r.filter(x=>x.r<0),avg=r.length?r.reduce((a,x)=>a+x.r,0)/r.length:0,aw=wins.length?wins.reduce((a,x)=>a+x.r,0)/wins.length:0,al=losses.length?-losses.reduce((a,x)=>a+x.r,0)/losses.length:0,pay=al?aw/al:aw?99:0;
  $("anExpectancy").textContent=r.length?avg.toFixed(2)+" R":"—";$("anPayoff").textContent=r.length?pay.toFixed(2):"—";$("anMaxDd").textContent=r.length?maxDrawdownR(r.map(x=>x.r)).toFixed(2)+" R":"—";
  let byReg={};r.forEach(x=>(byReg[x.regime]??=[]).push(x.r));let bestReg=Object.entries(byReg).sort((a,b)=>(b[1].reduce((x,y)=>x+y,0)/b[1].length)-(a[1].reduce((x,y)=>x+y,0)/a[1].length))[0]?.[0]||"—";$("anBestRegime").textContent=bestReg;
  const matrix=group=>{let groups={};r.forEach(x=>{let k=group(x);(groups[k]??=[]).push(x.r)});return `<div class="mxRow"><div class="mxCell">Group</div><div class="mxCell">N</div><div class="mxCell">Win%</div><div class="mxCell">Avg R</div><div class="mxCell">Sum R</div></div>`+Object.entries(groups).sort((a,b)=>b[1].length-a[1].length).slice(0,12).map(([k,v])=>{let wr=v.filter(x=>x>0).length/v.length*100,av=v.reduce((a,b)=>a+b,0)/v.length,sum=v.reduce((a,b)=>a+b,0);return `<div class="mxRow"><div class="mxCell">${k}</div><div class="mxCell">${v.length}</div><div class="mxCell ${wr>=50?"mxGood":"mxBad"}">${wr.toFixed(0)}%</div><div class="mxCell ${av>=0?"mxGood":"mxBad"}">${av.toFixed(2)}</div><div class="mxCell ${sum>=0?"mxGood":"mxBad"}">${sum.toFixed(1)}</div></div>`}).join("")};
@@ -1345,7 +1706,7 @@ function renderAnalytics(){
 function percentile(a,p){if(!a.length)return NaN;let x=[...a].sort((m,n)=>m-n),i=(x.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?x[l]:x[l]+(x[h]-x[l])*(i-l)}
 function runMonteCarlo(){
  let source=$("mcSource").value,runs=Math.max(100,Math.min(10000,+$("mcRuns").value||1000)),trades=Math.max(20,Math.min(1000,+$("mcTrades").value||100)),vals;
- if(source==="journal")vals=resolvedR().map(x=>x.r);else vals=paperTrades().filter(x=>Number.isFinite(x.realized)).map(x=>x.realized/Math.max(1,Math.abs(x.realized||1)));
+ if(source==="journal")vals=resolvedR(analysisSource()).map(x=>x.r);else vals=paperTrades().filter(x=>Number.isFinite(x.realized)).map(x=>x.realized/Math.max(1,Math.abs(x.realized||1)));
  if(vals.length<5){toast("Need at least 5 resolved outcomes","warn");return}
  let ends=[],dds=[],loss=0;
  for(let q=0;q<runs;q++){let eq=0,peak=0,dd=0;for(let i=0;i<trades;i++){let v=vals[Math.floor(Math.random()*vals.length)];eq+=v;peak=Math.max(peak,eq);dd=Math.min(dd,eq-peak)}ends.push(eq);dds.push(dd);if(eq<0)loss++}
@@ -1387,21 +1748,21 @@ function calibrationGap(rows){
  return total?weighted/total:NaN
 }
 function segmentReliability(symbol,tf,mode,regime){
- const rows=journal().filter(x=>x.symbol===symbol&&x.tf===tf&&x.mode===mode&&x.regime===regime&&Number.isFinite(metricR(x))),n=rows.length,w=rows.filter(x=>metricR(x)>0).length,avg=n?rows.reduce((a,x)=>a+metricR(x),0)/n:0;
+ const src=analysisSource(),rows=journal().filter(x=>(x.source||"BINANCE")===src&&x.symbol===symbol&&x.tf===tf&&x.mode===mode&&x.regime===regime&&Number.isFinite(metricR(x))),n=rows.length,w=rows.filter(x=>metricR(x)>0).length,avg=n?rows.reduce((a,x)=>a+metricR(x),0)/n:0;
  const priorN=12,shrunkHit=(w+priorN*.5)/(n+priorN),shrunkExp=(n/(n+priorN))*avg;
  let adj=n>=12?Math.max(-8,Math.min(8,(shrunkHit-.5)*20+shrunkExp*4)):0;
  const base=appSettings().signalMin,suggested=Math.max(60,Math.min(76,Math.round(base-adj*.45)));
  return {n,shrunkHit,shrunkExp,adj,suggested}
 }
 function riskGuard(){
- const vals=resolvedR().slice(0,20).map(x=>x.r),st=statPack(vals);let state="NORMAL",mult=1,reason="No material deterioration detected in recent cost-aware outcomes.";
+ const vals=resolvedR(analysisSource()).slice(0,20).map(x=>x.r),st=statPack(vals);let state="NORMAL",mult=1,reason="No material deterioration detected in recent cost-aware outcomes.";
  if(vals.length<10){state="LEARNING";mult=.5;reason="Fewer than 10 recent resolved outcomes; keep validation size small."}
  else if(st.dd<=-10||st.avg<=-.25){state="PAUSE";mult=0;reason="Recent drawdown/expectancy breached the research pause threshold."}
  else if(st.dd<=-6||st.avg<0){state="CAUTION";mult=.5;reason="Recent evidence is weaker; reduce research risk and gather more samples."}
  return {state,mult,reason,stats:st}
 }
 function renderForwardLab(){
- const start=forwardStart(),all=journal(),fwd=start?all.filter(x=>x.ts>=start):[],resolved=fwd.filter(x=>Number.isFinite(metricR(x))),vals=resolved.map(x=>metricR(x)),st=statPack(vals);
+ const src=analysisSource(),start=forwardStart(),all=journal().filter(x=>(x.source||"BINANCE")===src),fwd=start?all.filter(x=>x.ts>=start):[],resolved=fwd.filter(x=>Number.isFinite(metricR(x))),vals=resolved.map(x=>metricR(x)),st=statPack(vals);
  $("forwardStarted").textContent=start?new Date(start).toLocaleString():"—";$("forwardResolved").textContent=st.n;$("forwardExpectancy").textContent=st.n?st.avg.toFixed(2)+" R":"—";$("forwardPf").textContent=st.n?st.pf.toFixed(2):"—";$("forwardDd").textContent=st.n?st.dd.toFixed(2)+" R":"—";$("forwardWin").textContent=st.n?(st.win*100).toFixed(1)+"%":"—";
  let state="NOT STARTED",why="Start a forward cohort to separate future evidence from historical tuning.",cl="neutral";
  if(start){state=st.n<20?"COLLECTING":st.avg>0&&st.pf>=1.2?"FORWARD POSITIVE":st.avg<=0||st.pf<1?"FORWARD DEGRADED":"FORWARD MIXED";why=st.n<20?"Collect at least 20 resolved forward outcomes before interpreting the cohort.":state==="FORWARD POSITIVE"?"Forward-only cost-aware evidence is positive; keep collecting before scaling.":state==="FORWARD DEGRADED"?"Forward-only evidence is currently weak after costs.":"Forward-only evidence is mixed and needs more observations.";cl=state==="FORWARD POSITIVE"?"good":state==="FORWARD DEGRADED"?"bad":"neutral"}
@@ -1412,7 +1773,7 @@ function renderForwardLab(){
  $("qualityAttrib").textContent=resolvedAll.length?(attrib/resolvedAll.length*100).toFixed(0)+"%":"—";$("qualityAmb").textContent=all.length?(amb/all.length*100).toFixed(1)+"%":"—";$("qualityOor").textContent=all.length?(oor/all.length*100).toFixed(1)+"%":"—";$("qualityCal").textContent=Number.isFinite(gap)?gap.toFixed(1)+" pp":"—"
 }
 async function rollingPoints(){
- const sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
+ const sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,src=analysisSource(),j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf&&window.__radarState.source===src)?window.__radarState.j:await analysisKlines(sym,tf,750,src),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
  for(let i=240;i<j.length-horizon-1;i+=4){let q=calc(j.slice(0,i+1),mode);points.push({score:q.score,atr:q.atr,entry:+j[i+1][1],future:j.slice(i+1,i+1+horizon)})}
  return points
 }
@@ -1428,7 +1789,100 @@ async function runRollingOos(){
   const all=folds.flatMap(x=>x.vals),st=statsR(all);$("foldN").textContent=st.n;$("foldExp").textContent=st.n?st.avg.toFixed(2)+" R":"—";$("foldPf").textContent=st.n?st.pf.toFixed(2):"—";$("foldDd").textContent=st.n?st.dd.toFixed(2)+" R":"—"
  }catch(e){box.innerHTML=`<div class="emptyState">Rolling OOS unavailable: ${e.message}</div>`}
 }
-const DEFAULT_SETTINGS={signalMin:64,nearPct:.5,feeBps:10,slippageBps:3,executionPolicy:"staged",entryExpiryBars:12,alerts:{sr:true,ls:true,funding:true,oi:true,signal:true}};
+
+const requestCache=new Map();
+const requestInflight=new Map();
+const perfStats={cacheHits:0,cacheMisses:0,inflightHits:0,pionexCacheHits:0,wsReconnects:0,lastScanner:"IDLE"};
+function cacheKey(prefix,key){return prefix+"|"+key}
+function cacheGet(k,ttl){
+ const x=requestCache.get(k);if(!x)return null;
+ if(Date.now()-x.ts>ttl){requestCache.delete(k);return null}
+ perfStats.cacheHits++;return x.value
+}
+function cachePut(k,value){requestCache.set(k,{ts:Date.now(),value});return value}
+async function memoRequest(k,ttl,fn){
+ const hit=cacheGet(k,ttl);if(hit!==null)return hit;
+ perfStats.cacheMisses++;
+ if(requestInflight.has(k)){perfStats.inflightHits++;return requestInflight.get(k)}
+ const p=(async()=>{try{return cachePut(k,await fn())}finally{requestInflight.delete(k)}})();
+ requestInflight.set(k,p);return p
+}
+function clearExpiredRequestCache(maxAge=300000){
+ const now=Date.now();for(const [k,v] of requestCache)if(now-v.ts>maxAge)requestCache.delete(k)
+}
+setInterval(()=>clearExpiredRequestCache(),120000);
+function openMoreDrawer(){$("moreDrawer").classList.add("on")}
+function closeMoreDrawer(){$("moreDrawer").classList.remove("on")}
+function moreNav(id,load=false){closeMoreDrawer();navTo(id,load)}
+function withTimeout(p,ms,label="request"){
+ return new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(Error(label+" timeout")),ms);Promise.resolve(p).then(v=>{clearTimeout(t);resolve(v)},e=>{clearTimeout(t);reject(e)})})
+}
+async function retryTask(fn,retries=1,baseDelay=180){
+ let last;for(let i=0;i<=retries;i++){try{return await fn(i)}catch(e){last=e;if(i<retries)await sleep(baseDelay*(i+1))}}throw last
+}
+async function runPool(items,worker,concurrency,onProgress,token){
+ let next=0,done=0,out=new Array(items.length),errors=0;
+ async function runner(){
+   while(true){
+     if(token.cancelled)return;
+     const i=next++;if(i>=items.length)return;
+     try{out[i]=await worker(items[i],i)}catch(e){out[i]=null;errors++}
+     done++;if(onProgress)onProgress(done,items.length,out,errors)
+   }
+ }
+ await Promise.all(Array.from({length:Math.max(1,concurrency)},runner));
+ return {results:out.filter(Boolean),errors,cancelled:token.cancelled}
+}
+const SCAN_PREF_KEY="pionexScanPrefs";
+function saveScanPrefs(){
+ const ids=["scanDir","scanRegime","scanAdx","scanScore","scanDepth","scanSearch","scanSort"],o={};
+ for(const id of ids)if($(id))o[id]=$(id).value;
+ localStorage.setItem(SCAN_PREF_KEY,JSON.stringify(o))
+}
+function loadScanPrefs(){
+ try{const o=JSON.parse(localStorage.getItem(SCAN_PREF_KEY)||"{}");for(const [id,v] of Object.entries(o))if($(id))$(id).value=v}catch{}
+ if($("pionexScanMode")&&$("scanDepth"))$("pionexScanMode").textContent=$("scanDepth").value==="DEEP"?"Mode DEEP MTF":"Mode FAST 4H"
+}
+
+const APP_VERSION="v31";
+let deferredInstallPrompt=null,pwaWaitingWorker=null;
+function isStandalonePwa(){return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true}
+function showPwaInstall(){
+ if(isStandalonePwa()||localStorage.getItem("pwaInstallDismissed")==="1")return;
+ if($("pwaInstallCard"))$("pwaInstallCard").classList.add("on")
+}
+function dismissPwaInstall(){localStorage.setItem("pwaInstallDismissed","1");if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on")}
+async function installPwa(){
+ if(deferredInstallPrompt){
+   deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice}catch{}
+   deferredInstallPrompt=null;if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on");return
+ }
+ if(/iphone|ipad|ipod/i.test(navigator.userAgent||""))toast("Pe iPhone/iPad: Share → Add to Home Screen","good");
+ else toast("Folosește meniul browserului → Install app / Add to Home screen","good")
+}
+function dismissPwaUpdate(){if($("pwaUpdateBanner"))$("pwaUpdateBanner").classList.remove("on")}
+function applyPwaUpdate(){if(pwaWaitingWorker){pwaWaitingWorker.postMessage({type:"SKIP_WAITING"})}else location.reload()}
+function pwaHandleRegistration(reg){
+ if(reg.waiting){pwaWaitingWorker=reg.waiting;if($("pwaUpdateBanner"))$("pwaUpdateBanner").classList.add("on")}
+ reg.addEventListener("updatefound",()=>{
+   const nw=reg.installing;if(!nw)return;
+   nw.addEventListener("statechange",()=>{
+     if(nw.state==="installed"&&navigator.serviceWorker.controller){pwaWaitingWorker=nw;if($("pwaUpdateBanner"))$("pwaUpdateBanner").classList.add("on")}
+   })
+ })
+}
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstallPrompt=e;showPwaInstall()});
+window.addEventListener("appinstalled",()=>{deferredInstallPrompt=null;localStorage.removeItem("pwaInstallDismissed");if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on");toast("Crypto Radar instalat","good")});
+navigator.serviceWorker?.addEventListener("controllerchange",()=>location.reload());
+function pwaInitDeepLink(){
+ const q=new URLSearchParams(location.search),panel=q.get("panel");
+ if(panel&&document.getElementById(panel))setTimeout(()=>navTo(panel,true),120)
+}
+function renderPwaHealth(){
+ if($("healthPwaMode"))$("healthPwaMode").textContent=isStandalonePwa()?"INSTALLED":"BROWSER";
+ if($("healthAppVersion"))$("healthAppVersion").textContent=APP_VERSION
+}
+const DEFAULT_SETTINGS={signalMin:64,nearPct:.5,feeBps:10,slippageBps:3,executionPolicy:"staged",entryExpiryBars:12,spotProvider:"PIONEX",alerts:{sr:true,ls:true,funding:true,oi:true,signal:true}};
 function appSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStorage.getItem("radarSettings")||"{}"),alerts:{...DEFAULT_SETTINGS.alerts,...(JSON.parse(localStorage.getItem("radarSettings")||"{}").alerts||{})}}}catch{return JSON.parse(JSON.stringify(DEFAULT_SETTINGS))}}
 function putSettings(x){localStorage.setItem("radarSettings",JSON.stringify(x))}
 function toggleSetting(k){
@@ -1436,8 +1890,8 @@ function toggleSetting(k){
 }
 function saveSettings(){
  let x=appSettings();x.signalMin=+$("setSignalMin").value;x.nearPct=+$("setNearPct").value;
- if($("setFeeBps"))x.feeBps=+$("setFeeBps").value;if($("setSlipBps"))x.slippageBps=+$("setSlipBps").value;if($("setExecPolicy"))x.executionPolicy=$("setExecPolicy").value;if($("setEntryExpiry"))x.entryExpiryBars=+$("setEntryExpiry").value;
- putSettings(x);renderSettings();renderValidation();renderForwardLab();toast("Settings saved","good")
+ if($("setFeeBps"))x.feeBps=+$("setFeeBps").value;if($("setSlipBps"))x.slippageBps=+$("setSlipBps").value;if($("setExecPolicy"))x.executionPolicy=$("setExecPolicy").value;if($("setEntryExpiry"))x.entryExpiryBars=+$("setEntryExpiry").value;if($("setSpotProvider"))x.spotProvider=$("setSpotProvider").value;if($("analysisSource"))$("analysisSource").value=x.spotProvider||"PIONEX";localStorage.setItem("analysisProvider",x.spotProvider||"PIONEX");
+ putSettings(x);stopProviderLive();updateSourceLineage(x.spotProvider||analysisSource());renderSettings();renderValidation();renderForwardLab();toast("Settings saved","good")
 }
 function applyPreset(name){
  let x=appSettings();
@@ -1454,6 +1908,7 @@ function renderSettings(){
  if($("setSlipBps"))$("setSlipBps").value=String(x.slippageBps??3);
  if($("setExecPolicy"))$("setExecPolicy").value=x.executionPolicy||"staged";
  if($("setEntryExpiry"))$("setEntryExpiry").value=String(x.entryExpiryBars??12);
+ if($("setSpotProvider"))$("setSpotProvider").value=x.spotProvider||"PIONEX";
  for(const k of ["sr","ls","funding","oi","signal"]){const el=$("toggle"+k.charAt(0).toUpperCase()+k.slice(1));if(el)el.classList.toggle("on",!!x.alerts[k])}
  if($("notifStatus"))$("notifStatus").textContent=typeof Notification==="undefined"?"Unsupported":Notification.permission;
  const r=journal().filter(x=>Number.isFinite(x.rResult));
@@ -1466,7 +1921,7 @@ function renderSettings(){
  if($("calThreshold"))$("calThreshold").textContent=r.length<15?"Need ≥15 signals":String(x.signalMin);
 }
 function recalibrate(){
- let r=resolvedR();if(r.length<30){toast("Need at least 30 cost-aware resolved signals","warn");renderSettings();return}
+ let r=resolvedR(analysisSource());if(r.length<30){toast("Need at least 30 cost-aware resolved signals for this source","warn");renderSettings();return}
  let recent=r.slice(0,40),wr=recent.filter(x=>x.r>0).length/recent.length,avg=recent.reduce((a,x)=>a+x.r,0)/recent.length,x=appSettings();
  if(wr<.45||avg<0)x.signalMin=Math.min(76,x.signalMin+2);else if(wr>.60&&avg>.15)x.signalMin=Math.max(60,x.signalMin-1);
  putSettings(x);renderSettings();renderForwardLab();toast("Threshold recalibrated conservatively","good")
@@ -1505,21 +1960,21 @@ function checkAlerts(q,sm,deriv){
    if(st.alerts.oi&&deriv.oiTrend&&deriv.oiTrend!=="N/A"&&Math.abs(parseFloat(deriv.oiTrend))>=3)addAlert("oi","OI expansion",`${deriv.oiTrend} over recent samples`,"warn")
  }
 }
-let marketCache={ts:0,rows:[]};
+let marketCache={ts:0,rows:[],source:null};
 async function loadMarketOverview(force=false){
  const box=$("marketOverview");if(!box)return;
- if(!force&&marketCache.rows.length&&Date.now()-marketCache.ts<60000){renderMarketOverview();return}
+ const src=analysisSource();if(!force&&marketCache.rows.length&&marketCache.source===src&&Date.now()-marketCache.ts<60000){renderMarketOverview();return}
  box.innerHTML='<div class="emptyState">Loading market overview…</div>';
  const coins=["BTC","ETH","SOL","BNB","XRP","DOGE","ADA","LINK","AVAX","SUI","LTC","TRX"],rows=[];
  for(let i=0;i<coins.length;i+=4){
    const b=coins.slice(i,i+4);
    const r=await Promise.all(b.map(async c=>{try{
-     const sym=c+"USDT",[tk,k]=await Promise.all([ticker(sym),klines(sym,"4h",260)]),q=calc(k,$("mode").value);
+     const sym=c+"USDT",[tk,k]=await Promise.all([analysisTicker(sym,src),analysisKlines(sym,"4h",260,src)]),q=calc(k,$("mode").value);
      return {c,price:+tk.lastPrice||q.price,ch:+tk.priceChangePercent,score:q.score,regime:q.regime,ver:q.ver,adx:q.adx}
    }catch{return null}}));
    rows.push(...r.filter(Boolean))
  }
- marketCache={ts:Date.now(),rows};renderMarketOverview()
+ marketCache={ts:Date.now(),rows,source:src};renderMarketOverview()
 }
 function renderMarketOverview(){
  const rows=marketCache.rows,box=$("marketOverview");if(!box)return;
@@ -1538,6 +1993,8 @@ function navTo(id,load=false){
    else if(id==="scan")scan();
    else if(id==="market")loadMarketOverview();
    else if(id==="profile")renderVolumeProfile();
+   else if(id==="quantflow"&&window.__radarState)renderQuantFlow(window.__radarState.q,window.__derivativesState||{});
+   else if(id==="micro")loadPionexMicrostructure();
    else if(id==="correlation")loadCorrelation();
    else if(id==="depth")loadDepth();
    else if(id==="signals")renderSignals();
@@ -1566,7 +2023,11 @@ function setBusy(b,msg="Actualizare…"){
 function syncTop(sym,tf,mode){
  const c=coin(sym);$("topCoin").textContent=c+"/USDT";$("topTf").textContent=tf;$("topMode").textContent=mode.toUpperCase();$("heroCoin").textContent=c+" / USDT";
 }
-const universe=["BTC","ETH","SOL","BNB","XRP","DOGE","ADA","LINK","AVAX","SUI","DOT","LTC","TRX","PEPE","NEAR","APT","ARB","OP","ATOM","UNI"];
+const PIONEX_BASE="https://api.pionex.com";
+const PIONEX_STABLE_BASES=new Set(["USDT","USDC","FDUSD","TUSD","USDP","DAI","USDE","PYUSD"]);
+let pionexUniverse=[];
+let pionexUniverseUpdated=0;
+
 const $=id=>document.getElementById(id);function norm(s){s=(s||"BTC").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");return s.endsWith("USDT")?s:s+"USDT"}function coin(s){return s.replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
 function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
@@ -1598,18 +2059,273 @@ async function market(path){
   throw Error("Date spot indisponibile · "+errors.join(" | "));
 }
 async function klines(s,t,l=300){
-  return market(`/klines?symbol=${encodeURIComponent(s)}&interval=${encodeURIComponent(t)}&limit=${l}`);
+  const key=cacheKey("binance-klines",`${s}|${t}|${l}`),ttl=t==="15m"?8000:t==="1h"?12000:t==="4h"?20000:30000;
+  return memoRequest(key,ttl,()=>market(`/klines?symbol=${encodeURIComponent(s)}&interval=${encodeURIComponent(t)}&limit=${l}`));
 }
 async function ticker(s){
-  try{return await market(`/ticker/24hr?symbol=${encodeURIComponent(s)}`)}
-  catch{
-    const k=await market(`/klines?symbol=${encodeURIComponent(s)}&interval=1h&limit=24`);
-    const last=+k[k.length-1][4],first=+k[0][1];
-    let quoteVolume=0; for(const x of k)quoteVolume+=+(x[7]||0);
-    return {priceChangePercent:first?String((last/first-1)*100):"0",quoteVolume:String(quoteVolume)};
-  }
+  const key=cacheKey("binance-ticker",s);
+  return memoRequest(key,5000,async()=>{
+    try{return await market(`/ticker/24hr?symbol=${encodeURIComponent(s)}`)}
+    catch{
+      const k=await market(`/klines?symbol=${encodeURIComponent(s)}&interval=1h&limit=24`);
+      const last=+k[k.length-1][4],first=+k[0][1];
+      let quoteVolume=0; for(const x of k)quoteVolume+=+(x[7]||0);
+      return {priceChangePercent:first?String((last/first-1)*100):"0",quoteVolume:String(quoteVolume)};
+    }
+  })
 }
 
+
+async function pionexRequest(path,proxyType,proxyArgs=""){
+  try{
+    const d=await getJSON(PIONEX_BASE+path);
+    if(d&&d.result!==false)return d
+  }catch{}
+  const q=`/api/market?type=${encodeURIComponent(proxyType)}${proxyArgs}`;
+  const d=await getJSON(q);
+  if(d&&d.result!==false)return d;
+  throw Error("Pionex public data unavailable")
+}
+function pionexTf(tf){
+  return ({"15m":"15M","1h":"60M","4h":"4H","1d":"1D"})[tf]||"4H"
+}
+function pionexLeveragedBase(base){
+  return /(3L|3S|5L|5S|BULL|BEAR)$/i.test(base||"")
+}
+async function pionexTop100(){
+  if(pionexUniverse.length&&Date.now()-pionexUniverseUpdated<60000){perfStats.pionexCacheHits++;if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}/100`;if($("pionexUniverseTime"))$("pionexUniverseTime").textContent="Cached <60s";return pionexUniverse}
+  const [si,ti]=await Promise.all([
+    memoRequest(cacheKey("pionex-meta","symbols"),60000,()=>pionexRequest("/api/v1/common/symbols?type=SPOT","pionex_symbols")),
+    memoRequest(cacheKey("pionex-meta","tickers"),15000,()=>pionexRequest("/api/v1/market/tickers?type=SPOT","pionex_tickers"))
+  ]);
+  const symbols=si?.data?.symbols||[],tickers=ti?.data?.tickers||[],tm=new Map(tickers.map(x=>[x.symbol,x]));
+  const rows=symbols.filter(x=>{
+    const base=(x.baseCurrency||"").toUpperCase(),quote=(x.quoteCurrency||"").toUpperCase();
+    return x.type==="SPOT"&&quote==="USDT"&&x.enable!==false&&!PIONEX_STABLE_BASES.has(base)&&!pionexLeveragedBase(base)&&tm.has(x.symbol)
+  }).map(x=>{
+    const t=tm.get(x.symbol)||{},turnover=Number(t.amount||0),close=Number(t.close||0),open=Number(t.open||0);
+    return {symbol:x.symbol,base:x.baseCurrency.toUpperCase(),turnover,close,change:open?((close/open)-1)*100:0}
+  }).filter(x=>x.turnover>0&&x.close>0).sort((a,b)=>b.turnover-a.turnover).slice(0,100);
+  pionexUniverse=rows;pionexUniverseUpdated=Date.now();
+  if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${rows.length}/100`;
+  if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Updated ${new Date().toLocaleTimeString()}`;
+  return rows
+}
+async function pionexKlines(pionexSymbol,tf,limit=300){
+  const interval=pionexTf(tf),safe=encodeURIComponent(pionexSymbol),lim=Math.min(500,Math.max(60,limit)),key=cacheKey("pionex-klines",`${pionexSymbol}|${interval}|${lim}`),ttl=tf==="15m"?12000:tf==="1h"?18000:tf==="4h"?30000:45000;
+  const beforeHits=perfStats.cacheHits;
+  const d=await memoRequest(key,ttl,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/klines?symbol=${safe}&interval=${interval}&limit=${lim}`,"pionex_klines",`&symbol=${safe}&interval=${encodeURIComponent(interval)}&limit=${lim}`),12000,"Pionex"),1,220));
+  if(perfStats.cacheHits>beforeHits)perfStats.pionexCacheHits++;
+  const rows=d?.data?.klines||[];
+  return rows.map(x=>{
+    const ts=Number(x.time),o=Number(x.open),h=Number(x.high),l=Number(x.low),c=Number(x.close),v=Number(x.volume);
+    return [ts,String(o),String(h),String(l),String(c),String(v),ts+1,String(v*c)]
+  }).sort((a,b)=>a[0]-b[0])
+}
+async function pionexScanFast(item){
+  const mode=$("mode")?$("mode").value:"auto",j=await pionexKlines(item.symbol,"4h",320),q=calc(j,mode);
+  return {c:item.base,pionexSymbol:item.symbol,avg:q.score,dir:q.ver,conf:q.confluence,adx:q.adx,regime:q.regime,turnover:item.turnover,change:item.change,source:"PIONEX"}
+}
+async function pionexScanDeep(item){
+  const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"];
+  const m=(await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(await pionexKlines(item.symbol,tf,300),mode)}}catch{return null}}))).filter(Boolean);
+  if(!m.length)throw Error("No Pionex klines");
+  const mc=mtfComposite(m),anchor=m.find(x=>x.tf==="4h")||m[0];
+  return {c:item.base,pionexSymbol:item.symbol,avg:mc.avg,dir:mc.comp,conf:anchor.confluence,adx:anchor.adx,regime:anchor.regime,turnover:item.turnover,change:item.change,source:"PIONEX"}
+}
+function selectPionexScan(c){
+  $("symbol").value=c;localStorage.setItem("last",c);
+  if($("analysisSource"))$("analysisSource").value="PIONEX";
+  setAnalysisSource("PIONEX");
+  show("dash");analyze(true)
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+function pionexSpotSymbolFromInput(){
+  const base=coin(norm($("symbol").value));
+  return `${base}_USDT`
+}
+async function pionexTrades(symbol,limit=500){
+  const lim=Math.max(10,Math.min(500,limit)),safe=encodeURIComponent(symbol),key=cacheKey("pionex-trades",`${symbol}|${lim}`);
+  return memoRequest(key,1500,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/trades?symbol=${safe}&limit=${lim}`,"pionex_trades",`&symbol=${safe}&limit=${lim}`),9000,"Pionex trades"),1,180))
+}
+async function pionexDepthSnapshot(symbol,limit=100){
+  const lim=Math.max(1,Math.min(1000,limit)),safe=encodeURIComponent(symbol),key=cacheKey("pionex-depth",`${symbol}|${lim}`);
+  return memoRequest(key,1500,()=>retryTask(()=>withTimeout(pionexRequest(`/api/v1/market/depth?symbol=${safe}&limit=${lim}`,"pionex_depth",`&symbol=${safe}&limit=${lim}`),9000,"Pionex depth"),1,180))
+}
+function quantile(arr,q){
+  if(!arr.length)return 0;const a=[...arr].sort((x,y)=>x-y),i=(a.length-1)*q,l=Math.floor(i),h=Math.ceil(i);
+  return l===h?a[l]:a[l]+(a[h]-a[l])*(i-l)
+}
+function parsePionexTrades(payload){
+  const raw=payload?.data?.trades||[];
+  return raw.map(x=>({symbol:x.symbol||"",id:x.tradeId||"",price:Number(x.price),size:Number(x.size),side:String(x.side||"").toUpperCase(),timestamp:Number(x.timestamp)}))
+    .filter(x=>Number.isFinite(x.price)&&x.price>0&&Number.isFinite(x.size)&&x.size>0&&(x.side==="BUY"||x.side==="SELL"))
+    .sort((a,b)=>a.timestamp-b.timestamp)
+}
+function tradeFlowStats(trades){
+  if(!trades.length)return null;
+  let buyNotional=0,sellNotional=0,buyCount=0,sellCount=0,cvd=0,series=[],notionals=[];
+  for(const t of trades){
+    const n=t.price*t.size,sgn=t.side==="BUY"?1:-1;
+    notionals.push(n);cvd+=sgn*n;series.push(cvd);
+    if(t.side==="BUY"){buyNotional+=n;buyCount++}else{sellNotional+=n;sellCount++}
+  }
+  const total=buyNotional+sellNotional,delta=buyNotional-sellNotional,deltaPct=total?delta/total*100:0,largeThreshold=quantile(notionals,.90);
+  let largeBuy=0,largeSell=0;
+  for(const t of trades){let n=t.price*t.size;if(n>=largeThreshold){if(t.side==="BUY")largeBuy+=n;else largeSell+=n}}
+  const first=trades[0],last=trades[trades.length-1],priceChange=first.price?(last.price/first.price-1)*100:0,spanSec=Math.max(1,(last.timestamp-first.timestamp)/1000),pace=trades.length/spanSec,largeTotal=largeBuy+largeSell,largeDeltaPct=largeTotal?(largeBuy-largeSell)/largeTotal*100:0;
+  let divergence="NONE";if(priceChange>0&&deltaPct<0)divergence="BEAR FLOW DIV";else if(priceChange<0&&deltaPct>0)divergence="BULL FLOW DIV";
+  return {buyNotional,sellNotional,buyCount,sellCount,total,delta,deltaPct,cvd,series,largeThreshold,largeBuy,largeSell,largeDeltaPct,priceChange,spanSec,pace,divergence,firstPrice:first.price,lastPrice:last.price}
+}
+function parsePionexDepth(payload){
+  const d=payload?.data||{},normSide=a=>(a||[]).map(x=>[Number(x[0]),Number(x[1])]).filter(x=>Number.isFinite(x[0])&&x[0]>0&&Number.isFinite(x[1])&&x[1]>0);
+  const bids=normSide(d.bids).sort((a,b)=>b[0]-a[0]),asks=normSide(d.asks).sort((a,b)=>a[0]-b[0]);
+  return {bids,asks,updateTime:Number(d.updateTime||payload?.timestamp||0)}
+}
+function depthNotional(levels,n){return levels.slice(0,n).reduce((z,x)=>z+x[0]*x[1],0)}
+function depthStats(book){
+  const {bids,asks}=book;if(!bids.length||!asks.length)return null;
+  const bid=bids[0][0],ask=asks[0][0],mid=(bid+ask)/2,spreadBps=mid?(ask-bid)/mid*10000:0;
+  const b10=depthNotional(bids,10),a10=depthNotional(asks,10),b50=depthNotional(bids,50),a50=depthNotional(asks,50);
+  const imb=(b,a)=>(b+a)?(b-a)/(b+a)*100:0,imb10=imb(b10,a10),imb50=imb(b50,a50);
+  const bq=bids[0][1],aq=asks[0][1],micro=(bq+aq)?(ask*bq+bid*aq)/(bq+aq):mid,microEdgeBps=mid?(micro-mid)/mid*10000:0;
+  const bw=[...bids.slice(0,50)].sort((x,y)=>y[0]*y[1]-x[0]*x[1])[0],aw=[...asks.slice(0,50)].sort((x,y)=>y[0]*y[1]-x[0]*x[1])[0];
+  return {bid,ask,mid,spreadBps,b10,a10,b50,a50,imb10,imb50,micro,microEdgeBps,bidWall:bw,askWall:aw}
+}
+function estimateSlippage(levels,notional,side){
+  let remain=notional,qty=0,cost=0,best=levels[0]?.[0]||0;
+  for(const [p,size] of levels){
+    const lvlNotional=p*size,take=Math.min(remain,lvlNotional),q=take/p;qty+=q;cost+=take;remain-=take;if(remain<=1e-9)break
+  }
+  if(remain>1e-6||qty<=0||best<=0)return null;
+  const avg=cost/qty,slipBps=side==="BUY"?(avg/best-1)*10000:(1-avg/best)*10000;
+  return {avg,slipBps}
+}
+function microstructureComposite(flow,depth){
+  if(!flow||!depth)return {score:0,bias:"BALANCED",reason:"Insufficient microstructure data"};
+  const d=Math.max(-100,Math.min(100,flow.deltaPct)),l=Math.max(-100,Math.min(100,flow.largeDeltaPct)),b=Math.max(-100,Math.min(100,depth.imb10)),m=Math.max(-100,Math.min(100,depth.microEdgeBps*20));
+  const score=.40*d+.20*l+.30*b+.10*m,bias=score>=18?"BUY PRESSURE":score<=-18?"SELL PRESSURE":"BALANCED";
+  return {score,bias,reason:`Trade Δ ${d.toFixed(0)}% · Book ${b.toFixed(0)}% · Large trades ${l.toFixed(0)}%`}
+}
+function absorptionHeuristic(flow,depth){
+  if(!flow||!depth)return "N/A";
+  if(flow.deltaPct<=-20&&flow.priceChange>=-.08&&depth.imb10>=15)return "BID ABSORPTION";
+  if(flow.deltaPct>=20&&flow.priceChange<=.08&&depth.imb10<=-15)return "ASK ABSORPTION";
+  return "NONE"
+}
+function drawMicroCvd(series){
+  const cv=$("microCvdChart");if(!cv)return;const ctx=cv.getContext("2d"),w=cv.width,h=cv.height,pad=18;ctx.clearRect(0,0,w,h);
+  if(!series||series.length<2)return;const mn=Math.min(...series,0),mx=Math.max(...series,0),rg=mx-mn||1,x=i=>pad+i/(series.length-1)*(w-2*pad),y=v=>h-pad-(v-mn)/rg*(h-2*pad);
+  ctx.strokeStyle="#203148";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,y(0));ctx.lineTo(w-pad,y(0));ctx.stroke();
+  ctx.strokeStyle="#69a7ff";ctx.lineWidth=2;ctx.beginPath();series.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.stroke()
+}
+let microAuto=false,microTimer=null,microLoading=false;
+function toggleMicroAuto(){
+  microAuto=!microAuto;$("microAutoBtn").textContent=microAuto?"Auto ON":"Auto OFF";
+  if(microTimer){clearInterval(microTimer);microTimer=null}
+  if(microAuto){loadPionexMicrostructure(true);microTimer=setInterval(()=>{if($("micro").classList.contains("on"))loadPionexMicrostructure(true)},8000)}
+}
+async function loadPionexMicrostructure(force=false){
+  if(microLoading)return;microLoading=true;
+  const ps=pionexSpotSymbolFromInput();$("microSymbol").textContent=ps;$("microReason").textContent="Loading Pionex trades + depth…";
+  try{
+    if(force){requestCache.delete(cacheKey("pionex-trades",`${ps}|500`));requestCache.delete(cacheKey("pionex-depth",`${ps}|100`))}
+    const [trPayload,dpPayload]=await Promise.all([pionexTrades(ps,500),pionexDepthSnapshot(ps,100)]);
+    const trades=parsePionexTrades(trPayload),flow=tradeFlowStats(trades),book=parsePionexDepth(dpPayload),depth=depthStats(book);
+    if(!flow||!depth)throw Error("Pionex returned insufficient trades/depth");
+    const comp=microstructureComposite(flow,depth),abs=absorptionHeuristic(flow,depth);
+    window.__microState={symbol:ps,trades,flow,book,depth,composite:comp,absorption:abs,updated:Date.now()};
+    $("microBias").textContent=comp.bias;$("microBias").className="microBias "+(comp.bias==="BUY PRESSURE"?"good":comp.bias==="SELL PRESSURE"?"bad":"neutral");$("microScore").textContent=(comp.score>=0?"+":"")+comp.score.toFixed(1);$("microReason").textContent=comp.reason;$("microUpdated").textContent=new Date().toLocaleTimeString();
+    $("trueDelta").textContent=(flow.delta>=0?"+":"")+compact(Math.abs(flow.delta))+" USDT";$("trueDelta").className=flow.delta>=0?"good":"bad";$("trueDeltaPct").textContent=(flow.deltaPct>=0?"+":"")+flow.deltaPct.toFixed(1)+"%";$("trueDeltaPct").className=flow.deltaPct>=0?"good":"bad";$("trueCvd").textContent=(flow.cvd>=0?"+":"")+compact(Math.abs(flow.cvd))+" USDT";$("buySellNotional").textContent=`${compact(flow.buyNotional)} / ${compact(flow.sellNotional)}`;$("tradePace").textContent=flow.pace.toFixed(2)+" trades/s";$("largeTradeBias").textContent=(flow.largeDeltaPct>=0?"+":"")+flow.largeDeltaPct.toFixed(1)+"%";
+    $("buyTradeCount").textContent=flow.buyCount;$("sellTradeCount").textContent=flow.sellCount;$("avgBuyTrade").textContent=flow.buyCount?compact(flow.buyNotional/flow.buyCount)+" USDT":"—";$("avgSellTrade").textContent=flow.sellCount?compact(flow.sellNotional/flow.sellCount)+" USDT":"—";$("largeBuyNotional").textContent=compact(flow.largeBuy)+" USDT";$("largeSellNotional").textContent=compact(flow.largeSell)+" USDT";$("microPriceChange").textContent=(flow.priceChange>=0?"+":"")+flow.priceChange.toFixed(3)+"%";$("microDivergence").textContent=flow.divergence;$("microDivergence").className=flow.divergence==="BULL FLOW DIV"?"good":flow.divergence==="BEAR FLOW DIV"?"bad":"neutral";drawMicroCvd(flow.series);
+    $("pionexSpread").textContent=depth.spreadBps.toFixed(2)+" bps";$("pionexImb10").textContent=(depth.imb10>=0?"+":"")+depth.imb10.toFixed(1)+"%";$("pionexImb10").className=depth.imb10>=10?"good":depth.imb10<=-10?"bad":"neutral";$("pionexImb50").textContent=(depth.imb50>=0?"+":"")+depth.imb50.toFixed(1)+"%";$("micropriceEdge").textContent=(depth.microEdgeBps>=0?"+":"")+depth.microEdgeBps.toFixed(2)+" bps";$("bidWall").textContent=`${num(depth.bidWall[0])} · ${compact(depth.bidWall[0]*depth.bidWall[1])}`;$("askWall").textContent=`${num(depth.askWall[0])} · ${compact(depth.askWall[0]*depth.askWall[1])}`;
+    const wallBid=depth.bidWall[0]*depth.bidWall[1],wallAsk=depth.askWall[0]*depth.askWall[1],wallPct=(wallBid+wallAsk)?(wallBid-wallAsk)/(wallBid+wallAsk)*100:0;$("wallPressure").textContent=(wallPct>=0?"+":"")+wallPct.toFixed(1)+"%";$("wallPressure").className=wallPct>=10?"good":wallPct<=-10?"bad":"neutral";$("absorptionState").textContent=abs;$("absorptionState").className=abs==="BID ABSORPTION"?"good":abs==="ASK ABSORPTION"?"bad":"neutral";
+    const totalDepth=depth.b10+depth.a10,bidPct=totalDepth?100*depth.b10/totalDepth:50;$("pionexBidMeter").style.width=bidPct+"%";$("pionexAskMeter").style.width=(100-bidPct)+"%";
+    for(const n of [100,500,1000]){let buy=estimateSlippage(book.asks,n,"BUY"),sell=estimateSlippage(book.bids,n,"SELL"),el=$("slip"+n);el.textContent=buy&&sell?`BUY ${buy.slipBps.toFixed(2)} · SELL ${sell.slipBps.toFixed(2)} bps`:"Insufficient visible depth"}
+    $("tradeTape").innerHTML=trades.slice(-30).reverse().map(t=>`<div class="tapeRow"><b class="${t.side==="BUY"?"good":"bad"}">${t.side}</b><span>${num(t.price)}</span><span>${t.size.toFixed(6)}</span><span>${compact(t.price*t.size)}</span></div>`).join("");
+  }catch(e){
+    $("microBias").textContent="UNAVAILABLE";$("microBias").className="microBias neutral";$("microReason").textContent="Pionex microstructure unavailable: "+e.message;$("microUpdated").textContent=new Date().toLocaleTimeString()
+  }finally{microLoading=false}
+}
+
+function analysisSource(){
+  const ui=$("analysisSource")?.value,stored=localStorage.getItem("analysisProvider"),cfg=typeof appSettings==="function"?appSettings().spotProvider:null;
+  return ui||stored||cfg||"PIONEX"
+}
+function setAnalysisSource(src){
+  const v=src==="BINANCE"?"BINANCE":"PIONEX";
+  localStorage.setItem("analysisProvider",v);
+  if($("analysisSource"))$("analysisSource").value=v;
+  let cfg=appSettings();cfg.spotProvider=v;putSettings(cfg);
+  stopProviderLive();updateSourceLineage(v);
+  if(window.__radarState)window.__radarState=null;
+  toast(`Primary spot source: ${v}`,"good")
+}
+function updateSourceLineage(src=analysisSource()){
+  const p=src==="BINANCE"?"BINANCE":"PIONEX";
+  if($("topSource"))$("topSource").textContent=p;
+  if($("dashSourceLock"))$("dashSourceLock").textContent=p+" LOCK";
+  if($("sourceSpot"))$("sourceSpot").textContent=p;
+  if($("sourceMtf"))$("sourceMtf").textContent=p;
+  if($("sourceLive"))$("sourceLive").textContent=p==="PIONEX"?"PIONEX REST":"BINANCE WS";
+  if($("sourceMicro"))$("sourceMicro").textContent="PIONEX";
+  if($("sourceDeriv"))$("sourceDeriv").textContent="BINANCE FUTURES";
+  if($("sourceNote"))$("sourceNote").textContent=p==="PIONEX"?
+    "Main candles, ticker, historical analogs, chart, MTF, correlation, backtest and OOS are Pionex-native. Binance Futures is shown only as clearly labeled external derivatives context.":
+    "Main candles, ticker, historical analogs, chart, MTF, correlation, backtest and OOS use Binance spot. Pionex scanner/microstructure remain separately labeled Pionex data."
+}
+async function pionexTickerSymbol(pionexSymbol){
+  const key=cacheKey("pionex-ticker",pionexSymbol);
+  return memoRequest(key,5000,async()=>{
+    const d=await pionexRequest("/api/v1/market/tickers?type=SPOT","pionex_tickers"),rows=d?.data?.tickers||[],t=rows.find(x=>x.symbol===pionexSymbol);
+    if(!t)throw Error(`Pionex symbol unavailable: ${pionexSymbol}`);
+    const close=Number(t.close),open=Number(t.open),amount=Number(t.amount||0);
+    return {symbol:pionexSymbol,lastPrice:String(close),priceChangePercent:String(open?((close/open)-1)*100:0),quoteVolume:String(amount),highPrice:String(t.high||""),lowPrice:String(t.low||"")}
+  })
+}
+async function analysisKlines(sym,tf,limit=300,src=analysisSource()){
+  return src==="PIONEX"?pionexKlines(`${coin(sym)}_USDT`,tf,Math.min(500,limit)):klines(sym,tf,limit)
+}
+async function analysisTicker(sym,src=analysisSource()){
+  return src==="PIONEX"?pionexTickerSymbol(`${coin(sym)}_USDT`):ticker(sym)
+}
+async function analysisMtfData(sym,src=analysisSource()){
+  const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"];
+  const jobs=await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(await analysisKlines(sym,tf,300,src),mode)}}catch{return null}}));
+  return jobs.filter(Boolean)
+}
+let pionexLiveTimer=null,pionexLiveSeq=0;
+function stopPionexLive(){
+  pionexLiveSeq++;if(pionexLiveTimer){clearInterval(pionexLiveTimer);pionexLiveTimer=null}
+}
+function stopBinanceLive(){
+  try{liveSocketSeq++;if(wsReconnectTimer){clearTimeout(wsReconnectTimer);wsReconnectTimer=null}if(liveSocket){liveSocket.onclose=null;liveSocket.close();liveSocket=null}}catch{}
+  if($("wsDot"))$("wsDot").classList.remove("live")
+}
+function stopProviderLive(){stopPionexLive();stopBinanceLive()}
+function startPionexLive(sym){
+  stopProviderLive();const seq=++pionexLiveSeq;
+  async function poll(){
+    if(seq!==pionexLiveSeq)return;
+    try{
+      const d=await analysisTicker(sym,"PIONEX");if(seq!==pionexLiveSeq)return;
+      const px=Number(d.lastPrice),ch=Number(d.priceChangePercent);lastWsTick=Date.now();markFresh("ws");
+      if($("wsStatus")){$("wsStatus").textContent="PIONEX LIVE";$("wsStatus").classList.remove("wsStale")}
+      if($("wsDot"))$("wsDot").classList.add("live");
+      if(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.source==="PIONEX"){
+        $("heroPrice").textContent=num(px);$("price").textContent=num(px);$("hero24").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%"
+      }
+    }catch{
+      if($("wsStatus")){$("wsStatus").textContent="PIONEX RETRY";$("wsStatus").classList.add("wsStale")}
+      if($("wsDot"))$("wsDot").classList.remove("live")
+    }
+  }
+  poll();pionexLiveTimer=setInterval(poll,5000)
+}
+function startProviderLive(sym,src=analysisSource()){
+  if(src==="PIONEX")startPionexLive(sym);else{stopPionexLive();startLiveSocket(sym)}
+}
 function sma(a,n){let o=Array(a.length).fill(NaN),sum=0;for(let i=0;i<a.length;i++){sum+=a[i];if(i>=n)sum-=a[i-n];if(i>=n-1)o[i]=sum/n}return o}
 function stddev(a,n){let o=Array(a.length).fill(NaN);for(let i=n-1;i<a.length;i++){let m=0;for(let z=i-n+1;z<=i;z++)m+=a[z];m/=n;let v=0;for(let z=i-n+1;z<=i;z++)v+=(a[z]-m)**2;o[i]=Math.sqrt(v/n)}return o}
 function ATR(h,l,c,n=14){let tr=Array(c.length).fill(0),o=Array(c.length).fill(0);tr[0]=h[0]-l[0];for(let i=1;i<c.length;i++)tr[i]=Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1]));let seed=0;for(let i=0;i<c.length;i++){if(i<n){seed+=tr[i];o[i]=seed/(i+1)}else{o[i]=(o[i-1]*(n-1)+tr[i])/n}}return o}
@@ -1693,11 +2409,55 @@ function swingStructure(h,l,c,look=3){
  if(sh.length>=2&&sl.length>=2){let bull=sh[sh.length-1].v>sh[sh.length-2].v&&sl[sl.length-1].v>sl[sl.length-2].v,bear=sh[sh.length-1].v<sh[sh.length-2].v&&sl[sl.length-1].v<sl[sl.length-2].v;if(bull&&bos==="BOS DOWN")choch="CHOCH DOWN";if(bear&&bos==="BOS UP")choch="CHOCH UP"}
  return {highs:sh,lows:sl,bos,choch}
 }
+
+function candleDeltaProxy(j){
+ const d=[],cvd=[];let acc=0;
+ for(const x of j){let h=+x[2],l=+x[3],c=+x[4],v=+x[5],range=h-l,clv=range?Math.max(-1,Math.min(1,(2*c-h-l)/range)):0,delta=v*clv;d.push(delta);acc+=delta;cvd.push(acc)}
+ let i=j.length-1,look=Math.min(20,i),pchg=+j[i][4]-+j[i-look][4],cchg=cvd[i]-cvd[i-look],div="NONE";
+ if(pchg>0&&cchg<0)div="BEAR DIV";else if(pchg<0&&cchg>0)div="BULL DIV";
+ let vol=+j[i][5]||1;return {delta:d[i],deltaPct:d[i]/vol*100,cvd:cvd[i],slope20:cchg/Math.max(1,look),divergence:div,series:cvd.slice(-160)}
+}
+function keltnerState(h,l,c,n=20,mult=1.5){const mid=ema(c,n),atr=ATR(h,l,c,n),i=c.length-1;return {mid:mid[i],upper:mid[i]+mult*atr[i],lower:mid[i]-mult*atr[i],atr:atr[i]}}
+function ttmSqueeze(h,l,c,n=20){
+ const ma=sma(c,n),sd=stddev(c,n),kc=keltnerState(h,l,c,n,1.5),i=c.length-1,bbU=ma[i]+2*sd[i],bbL=ma[i]-2*sd[i],on=bbU<kc.upper&&bbL>kc.lower;
+ const hh=Math.max(...h.slice(-n)),ll=Math.min(...l.slice(-n)),basis=((hh+ll)/2+ma[i])/2;
+ return {state:on?"SQUEEZE ON":"SQUEEZE OFF",momentum:c[i]-basis,bbUpper:bbU,bbLower:bbL,kcUpper:kc.upper,kcLower:kc.lower}
+}
+function choppinessIndex(h,l,c,n=14){
+ const i=c.length-1;if(i<n)return 50;let sum=0;
+ for(let z=i-n+1;z<=i;z++){let tr=z===0?h[z]-l[z]:Math.max(h[z]-l[z],Math.abs(h[z]-c[z-1]),Math.abs(l[z]-c[z-1]));sum+=tr}
+ let hh=Math.max(...h.slice(i-n+1,i+1)),ll=Math.min(...l.slice(i-n+1,i+1)),range=hh-ll;
+ return range>0?100*Math.log10(sum/range)/Math.log10(n):50
+}
+function efficiencyRatio(c,n=20){let i=c.length-1;if(i<n)return 0;let change=Math.abs(c[i]-c[i-n]),noise=0;for(let z=i-n+1;z<=i;z++)noise+=Math.abs(c[z]-c[z-1]);return noise?change/noise:0}
+function rsValue(arr){if(arr.length<5)return NaN;let mean=arr.reduce((a,b)=>a+b,0)/arr.length,cum=0,mn=Infinity,mx=-Infinity;for(const v of arr){cum+=v-mean;mn=Math.min(mn,cum);mx=Math.max(mx,cum)}let variance=arr.reduce((a,v)=>a+(v-mean)**2,0)/arr.length,sd=Math.sqrt(variance);return sd?((mx-mn)/sd):NaN}
+function hurstExponent(c,maxN=80){
+ let r=[];for(let i=1;i<c.length;i++)r.push(Math.log(c[i]/c[i-1]));const sizes=[10,20,40,80].filter(n=>n<=Math.min(maxN,r.length)),xs=[],ys=[];
+ for(const n of sizes){let vals=[];for(let end=r.length;end>=n&&vals.length<5;end-=n){let v=rsValue(r.slice(end-n,end));if(Number.isFinite(v)&&v>0)vals.push(v)}if(vals.length){xs.push(Math.log(n));ys.push(Math.log(vals.reduce((a,b)=>a+b,0)/vals.length))}}
+ if(xs.length<2)return .5;let mx=xs.reduce((a,b)=>a+b,0)/xs.length,my=ys.reduce((a,b)=>a+b,0)/ys.length,num=0,den=0;for(let i=0;i<xs.length;i++){num+=(xs[i]-mx)*(ys[i]-my);den+=(xs[i]-mx)**2}return den?Math.max(0,Math.min(1,num/den)):.5
+}
+function realizedVolatility(c,n=20){let r=[];for(let i=1;i<c.length;i++)r.push(Math.log(c[i]/c[i-1]));if(r.length<n)return 0;let a=r.slice(-n),m=a.reduce((x,y)=>x+y,0)/a.length,v=a.reduce((x,y)=>x+(y-m)**2,0)/a.length;return Math.sqrt(v*n)*100}
+function rollingRvPercentile(c,n=20,look=160){let vals=[];for(let end=Math.max(n+1,c.length-look);end<=c.length;end++){let v=realizedVolatility(c.slice(0,end),n);if(Number.isFinite(v))vals.push(v)}let cur=vals[vals.length-1]||0;return {value:cur,percentile:pctRank(vals,cur)}}
+function parkinsonVol(h,l,n=20){let a=[];for(let i=Math.max(0,h.length-n);i<h.length;i++){if(l[i]>0&&h[i]>0)a.push(Math.log(h[i]/l[i])**2)}return a.length?Math.sqrt(a.reduce((x,y)=>x+y,0)/(4*Math.log(2)*a.length)*n)*100:0}
+function garmanKlassVol(j,n=20){let a=[];for(const x of j.slice(-n)){let o=+x[1],h=+x[2],l=+x[3],c=+x[4];if(o>0&&h>0&&l>0&&c>0)a.push(.5*Math.log(h/l)**2-(2*Math.log(2)-1)*Math.log(c/o)**2)}let v=a.length?a.reduce((x,y)=>x+y,0)/a.length:0;return Math.sqrt(Math.max(0,v)*n)*100}
+function weightedVwapBand(j,n=50){const a=j.slice(-n);let sw=0,sp=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];sw+=w;sp+=p*w}let mid=sw?sp/sw:+a[a.length-1][4],varw=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];varw+=w*(p-mid)**2}let sd=sw?Math.sqrt(varw/sw):0;return {mid,sd,u1:mid+sd,l1:mid-sd,u2:mid+2*sd,l2:mid-2*sd}}
+function periodStart(ts,type){const d=new Date(ts),y=d.getUTCFullYear(),m=d.getUTCMonth(),day=d.getUTCDate();if(type==="day")return Date.UTC(y,m,day);if(type==="month")return Date.UTC(y,m,1);let dow=(d.getUTCDay()+6)%7;return Date.UTC(y,m,day-dow)}
+function calendarVwap(j,type){const start=periodStart(+j[j.length-1][0],type),a=j.filter(x=>+x[0]>=start);if(!a.length)return NaN;let sw=0,sp=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];sw+=w;sp+=p*w}return sw?sp/sw:NaN}
+function previousPeriodHL(j,type){const last=+j[j.length-1][0],cur=periodStart(last,type),prev=type==="day"?cur-86400000:cur-7*86400000,a=j.filter(x=>+x[0]>=prev&&+x[0]<cur);if(!a.length)return null;return {high:Math.max(...a.map(x=>+x[2])),low:Math.min(...a.map(x=>+x[3]))}}
+function equalLiquidity(h,l,atrNow,look=60){const start=Math.max(0,h.length-look),tol=Math.max(atrNow*.15,1e-12);let eh=null,el=null;for(let i=h.length-1;i>=start;i--){for(let k=i-2;k>=start;k--){if(eh==null&&Math.abs(h[i]-h[k])<=tol)eh=(h[i]+h[k])/2;if(el==null&&Math.abs(l[i]-l[k])<=tol)el=(l[i]+l[k])/2;if(eh!=null&&el!=null)return {equalHigh:eh,equalLow:el}}}return {equalHigh:eh,equalLow:el}}
+function fvgLifecycle(j,look=80){
+ const start=Math.max(2,j.length-look),gaps=[];for(let i=start;i<j.length;i++){let h2=+j[i-2][2],l2=+j[i-2][3],h=+j[i][2],l=+j[i][3];if(l>h2)gaps.push({type:"BULL",low:h2,high:l,index:i,status:"ACTIVE"});else if(h<l2)gaps.push({type:"BEAR",low:h,high:l2,index:i,status:"ACTIVE"})}
+ for(const g of gaps){let partial=false,mit=false;for(let z=g.index+1;z<j.length;z++){let hi=+j[z][2],lo=+j[z][3];if(g.type==="BULL"){if(lo<=g.low){mit=true;break}if(lo<g.high)partial=true}else{if(hi>=g.high){mit=true;break}if(hi>g.low)partial=true}}g.status=mit?"MITIGATED":partial?"PARTIAL":"ACTIVE"}
+ return [...gaps].reverse().find(x=>x.status!=="MITIGATED")||gaps[gaps.length-1]||null
+}
+function liquidityMap(j,atrNow){const h=j.map(x=>+x[2]),l=j.map(x=>+x[3]),c=+j[j.length-1][4],pd=previousPeriodHL(j,"day"),pw=previousPeriodHL(j,"week"),eq=equalLiquidity(h,l,atrNow),hi=Math.max(...h.slice(-50)),lo=Math.min(...l.slice(-50)),mid=(hi+lo)/2;return {prevDay:pd,prevWeek:pw,equalHigh:eq.equalHigh,equalLow:eq.equalLow,premium:c>=mid?"PREMIUM":"DISCOUNT",mid,fvg:fvgLifecycle(j)}}
+function regimeFusion(q){let trend=0,range=0,reasons=[];if(q.chop<38){trend+=2;reasons.push("low CHOP")}else if(q.chop>61){range+=2;reasons.push("high CHOP")}if(q.efficiency>=.45){trend+=2;reasons.push("efficient move")}else if(q.efficiency<.25){range+=1;reasons.push("low efficiency")}if(q.hurst>=.55){trend+=1;reasons.push("persistent Hurst")}else if(q.hurst<=.45){range+=1;reasons.push("mean-reverting Hurst")}if(q.adx>=25)trend+=1;else range+=1;let state=trend>=4?"TRENDING":range>=4?(q.hurst<=.45?"MEAN-REVERTING":"CHOPPY"):"TRANSITION",quality=Math.max(0,Math.min(100,50+(trend-range)*10));return {state,quality,reason:reasons.join(" · ")||"mixed regime evidence"}}
 function calc(j,mode="auto"){
  let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>+x[5]),i=c.length-1;
  let e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,z)=>x-m26[z]),sig=ema(m,9),hist=m.map((x,z)=>x-sig[z]);
  let atr=ATR(hi,lo,c,14),dm=DMI(hi,lo,c,14),stoch=stochRSI(rr,14),ma20=sma(c,20),sd20=stddev(c,20),vwap=rollingVWAP(hi,lo,c,v,50),mfiArr=MFI(hi,lo,c,v,14),cmfArr=CMF(hi,lo,c,v,20),obvArr=OBV(c,v),ichi=ichimoku(hi,lo,c),divergence=rsiDivergence(c,rr),levels=levelLadder(hi,lo,c,50);
  let atrPct=atr[i]/c[i]*100,p=profileParams(mode,atrPct,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v),structure2=swingStructure(hi,lo,c,3);
+ let deltaFlow=candleDeltaProxy(j),ttm=ttmSqueeze(hi,lo,c,20),chop=choppinessIndex(hi,lo,c,14),efficiency=efficiencyRatio(c,20),hurst=hurstExponent(c,80),rv=rollingRvPercentile(c,20,160),parkVol=parkinsonVol(hi,lo,20),gkVol=garmanKlassVol(j,20),vwapBands=weightedVwapBand(j,50),calendarVwaps={day:calendarVwap(j,"day"),week:calendarVwap(j,"week"),month:calendarVwap(j,"month")};
  let vm=v.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,v.length),vr=v[i]/(vm||1),roc10=(c[i]/c[Math.max(0,i-10)]-1)*100;
  let upper=ma20[i]+2*sd20[i],lower=ma20[i]-2*sd20[i],bbpos=(c[i]-lower)/Math.max(upper-lower,1e-12)*100;
  let dstart=Math.max(1,i-p.breakout),prevHi=Math.max(...hi.slice(dstart,i)),prevLo=Math.min(...lo.slice(dstart,i)),bo=c[i]>prevHi?"UP":c[i]<prevLo?"DOWN":"NONE";
@@ -1707,7 +2467,7 @@ function calc(j,mode="auto"){
  let momScore=50;momScore+=rr[i]>=55?10:rr[i]<=45?-10:0;momScore+=hist[i]>0?13:-13;momScore+=roc10>0?10:-10;momScore+=stoch[i]>55?7:stoch[i]<45?-7:0;momScore=Math.max(0,Math.min(100,momScore));
  let volScore=50;if(vr>=1.5)volScore+=c[i]>=c[i-1]?24:-24;else if(vr>=1.1)volScore+=c[i]>=c[i-1]?12:-12;if(c[i]>vwap[i])volScore+=8;else volScore-=8;volScore=Math.max(0,Math.min(100,volScore));
  let structureScore=smc.score;if(bo==="UP")structureScore=Math.min(100,structureScore+12);if(bo==="DOWN")structureScore=Math.max(0,structureScore-12);
- let regime=dm.adx[i]>=25?(trendScore>=55?"TREND BULL":"TREND BEAR"):(atrPct>=3?"VOLATILE RANGE":"RANGE");
+ let regime=dm.adx[i]>=25?(trendScore>=55?"TREND BULL":"TREND BEAR"):(atrPct>=3?"VOLATILE RANGE":"RANGE"),liquidity=liquidityMap(j,atr[i]);
  let w=mode==="scalp"?[.25,.32,.18,.25]:mode==="swing"?[.42,.20,.12,.26]:[.34,.27,.15,.24];
  if(mode==="auto"&&regime==="RANGE")w=[.22,.28,.20,.30];
  let score=trendScore*w[0]+momScore*w[1]+volScore*w[2]+structureScore*w[3];
@@ -1720,6 +2480,7 @@ function calc(j,mode="auto"){
   rsi:rr[i],stoch:stoch[i],mfi:mfiArr[i],cmf:cmfArr[i],obvSlope:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr,ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
   adx:dm.adx[i],pdi:dm.pdi[i],mdi:dm.mdi[i],supertrend:st.trend[i]>0?"BULL":"BEAR",bbpos,vwapAbove:c[i]>=vwap[i],levels,
   atr:atr[i],atrPct,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,smc,
+  deltaFlow,ttm,chop,efficiency,hurst,rv20:rv.value,rvPercentile:rv.percentile,parkVol,gkVol,vwapBands,calendarVwaps,liquidity,
   candles:j.slice(-160),closes:c.slice(-160),e20:e20.slice(-160),e50:e50.slice(-160)
  }
 }
@@ -1782,11 +2543,8 @@ async function loadFearGreed(){
   const v=Math.max(0,Math.min(100,+d.value||50));markFresh("sentiment");$("fearGreed").textContent=`${v} · ${d.value_classification||""}`;$("sentimentNeedle").style.left=`calc(${v}% - 1px)`;$("sentimentText").textContent=`Fear & Greed extern: ${d.value_classification||"N/A"} · nu modifică direct scorul tehnic.`;
  }catch{$("fearGreed").textContent="N/A";$("sentimentText").textContent="Sentiment extern indisponibil; engine-ul tehnic continuă normal."}
 }
-async function mtfData(s){
- const mode=$("mode")?$("mode").value:"auto";
- const tfs=["15m","1h","4h","1d"];
- const jobs=await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(await klines(s,tf),mode)}}catch{return null}}));
- return jobs.filter(Boolean)
+async function mtfData(s,src=analysisSource()){
+ return analysisMtfData(s,src)
 }
 function mtfComposite(m){
  const weights={"15m":.15,"1h":.25,"4h":.35,"1d":.25};let sum=0,ws=0;
@@ -1846,9 +2604,9 @@ function saveSignal(){
   if(ss.tm.direction==="WAIT"){alert("Semnalul curent este WAIT; nu există setup direcțional de salvat.");return}
   const e=(ss.tm.entryLow+ss.tm.entryHigh)/2;
   let a=journal(),last=a[0];
-  if(last&&last.symbol===st.symbol&&last.tf===st.tf&&last.direction===ss.tm.direction&&Date.now()-last.ts<15*60*1000){alert("Există deja un semnal recent identic.");return}
+  if(last&&last.symbol===st.symbol&&last.tf===st.tf&&last.direction===ss.tm.direction&&(last.source||"BINANCE")===(st.source||analysisSource())&&Date.now()-last.ts<15*60*1000){alert("Există deja un semnal recent identic pentru aceeași sursă.");return}
   a.unshift({
-    id:String(Date.now())+"-"+Math.random().toString(36).slice(2,7),ts:Date.now(),symbol:st.symbol,tf:st.tf,mode:st.mode,
+    id:String(Date.now())+"-"+Math.random().toString(36).slice(2,7),ts:Date.now(),symbol:st.symbol,tf:st.tf,mode:st.mode,source:st.source||analysisSource(),
     direction:ss.tm.direction,entry:e,entryLow:ss.tm.entryLow,entryHigh:ss.tm.entryHigh,stop:ss.tm.stop,tp1:ss.tm.tp1,tp2:ss.tm.tp2,tp3:ss.tm.tp3,
     longConf:ss.sm.long,shortConf:ss.sm.short,regime:ss.q.regime,status:"NEW",lifecycle:"NEW",bestTarget:0,rResult:null,grossR:null,netR:null,entryActivated:false,
     feeBps:appSettings().feeBps,slippageBps:appSettings().slippageBps,executionPolicy:appSettings().executionPolicy,entryExpiryBars:appSettings().entryExpiryBars,forwardCohortStart:Number(localStorage.getItem("forwardValidationStart")||0),
@@ -1862,11 +2620,11 @@ function signalStatusClass(st){return st==="STOP"||st==="AMBIGUOUS"||st==="OUT_O
 function metricR(x){return Number.isFinite(x.netR)?x.netR:Number.isFinite(x.rResult)?x.rResult:null}
 function renderSignals(){
   const a=journal(),box=$("journalOut");if(!box)return;
-  box.innerHTML=a.length?a.slice(0,80).map(x=>`<div class="journalRow"><b>${coin(x.symbol)}</b><span class="tag ${x.direction==="LONG"?"tagLong":"tagShort"}">${x.direction}</span><span>${num(x.entry)}</span><b class="${signalStatusClass(x.status)}">${x.status}</b><span>${Math.max(x.longConf,x.shortConf).toFixed(0)}</span><span>${new Date(x.ts).toLocaleDateString()}</span></div>`).join(""):`<div class="row"><span>Nu ai semnale salvate.</span></div>`;
+  box.innerHTML=a.length?a.slice(0,80).map(x=>`<div class="journalRow"><b>${coin(x.symbol)} <small>${x.source||"BINANCE"}</small></b><span class="tag ${x.direction==="LONG"?"tagLong":"tagShort"}">${x.direction}</span><span>${num(x.entry)}</span><b class="${signalStatusClass(x.status)}">${x.status}</b><span>${Math.max(x.longConf,x.shortConf).toFixed(0)}</span><span>${new Date(x.ts).toLocaleDateString()}</span></div>`).join(""):`<div class="row"><span>Nu ai semnale salvate.</span></div>`;
   renderPerformance();renderValidation()
 }
 function renderPerformance(){
-  const a=journal(),r=a.map(x=>({...x,_r:metricR(x)})).filter(x=>Number.isFinite(x._r)),n=r.length,w=r.filter(x=>x._r>0).length,sum=r.reduce((z,x)=>z+x._r,0),gp=r.filter(x=>x._r>0).reduce((z,x)=>z+x._r,0),gl=-r.filter(x=>x._r<0).reduce((z,x)=>z+x._r,0);
+  const a=journal(),src=analysisSource(),r=a.filter(x=>(x.source||"BINANCE")===src).map(x=>({...x,_r:metricR(x)})).filter(x=>Number.isFinite(x._r)),n=r.length,w=r.filter(x=>x._r>0).length,sum=r.reduce((z,x)=>z+x._r,0),gp=r.filter(x=>x._r>0).reduce((z,x)=>z+x._r,0),gl=-r.filter(x=>x._r<0).reduce((z,x)=>z+x._r,0);
   $("perfResolved").textContent=n;$("perfWin").textContent=n?(w/n*100).toFixed(1)+"%":"—";$("perfR").textContent=n?(sum/n).toFixed(2)+" R":"—";$("perfPF").textContent=n?(gl?(gp/gl).toFixed(2):gp?"∞":"0"):"—";
  const modes=["auto","scalp","intraday","swing"],box=$("strategyPerformance");if(box){box.innerHTML=modes.map(m=>{let z=r.filter(x=>x.mode===m),avg=z.length?z.reduce((a,x)=>a+x._r,0)/z.length:0,wr=z.length?z.filter(x=>x._r>0).length/z.length*100:0;return `<div class="calBox"><span class="label">${m}</span><b>${z.length?avg.toFixed(2)+"R":"—"}</b><span class="small">${z.length?wr.toFixed(0)+"% win · "+z.length+" n":"No data"}</span></div>`}).join("")}
 }
@@ -1923,7 +2681,8 @@ function evaluateSignalBars(signal,bars){
  sig.bestTarget=best;sig.status=!active?"WAITING_ENTRY":best>=2?"OPEN · TP2":best>=1?"OPEN · TP1":"ENTRY";sig.lifecycle=!active?"WAITING_ENTRY":best>=2?"TP2":best>=1?"TP1":"ENTRY";return sig
 }
 async function evaluateOneSignal(sig){
-  let bars;try{bars=await klines(sig.symbol,sig.tf,750)}catch{return sig}
+  const src=sig.source||"BINANCE";
+  let bars;try{bars=await analysisKlines(sig.symbol,sig.tf,750,src)}catch{return sig}
   return evaluateSignalBars(sig,bars)
 }
 async function evaluateJournal(){
@@ -1938,8 +2697,8 @@ async function evaluateJournal(){
 }
 function exportJournal(){
   const a=journal();if(!a.length){alert("Jurnalul este gol.");return}
-  const cols=["date","symbol","tf","mode","direction","entry","entryActivated","activationTs","stop","tp1","tp2","tp3","longConf","shortConf","status","grossR","costR","netR","feeBps","slippageBps","executionPolicy","trendScore","momScore","volScore","structureScore","adx","atrPct","histUp","mtf"];
-  const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.symbol,x.tf,x.mode,x.direction,x.entry,x.entryActivated||false,x.activationTs?new Date(x.activationTs).toISOString():"",x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.grossR??"",x.costR??"",x.netR??"",x.feeBps??"",x.slippageBps??"",x.executionPolicy??"",x.trendScore??"",x.momScore??"",x.volScore??"",x.structureScore??"",x.adx??"",x.atrPct??"",x.histUp??"",x.mtf??""].join(",")));
+  const cols=["date","symbol","source","tf","mode","direction","entry","entryActivated","activationTs","stop","tp1","tp2","tp3","longConf","shortConf","status","grossR","costR","netR","feeBps","slippageBps","executionPolicy","trendScore","momScore","volScore","structureScore","adx","atrPct","histUp","mtf"];
+  const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.symbol,x.source||"BINANCE",x.tf,x.mode,x.direction,x.entry,x.entryActivated||false,x.activationTs?new Date(x.activationTs).toISOString():"",x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.grossR??"",x.costR??"",x.netR??"",x.feeBps??"",x.slippageBps??"",x.executionPolicy??"",x.trendScore??"",x.momScore??"",x.volScore??"",x.structureScore??"",x.adx??"",x.atrPct??"",x.histUp??"",x.mtf??""].join(",")));
   const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v24-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function clearJournal(){if(confirm("Ștergi tot jurnalul de semnale?")){localStorage.removeItem("signalJournal");renderSignals();toast("Jurnal șters","warn")}}
@@ -1952,7 +2711,7 @@ function drawValidationCurve(vals){
  ctx.strokeStyle="#4fd1c5";ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(pad,y(0));ctx.lineTo(w-pad,y(0));ctx.stroke();ctx.setLineDash([])
 }
 function renderValidation(){
- const a=journal(),net=a.filter(x=>Number.isFinite(x.netR)),eligible=a.filter(x=>x.status!=="OUT_OF_RANGE"),activated=eligible.filter(x=>x.entryActivated),amb=a.filter(x=>x.status==="AMBIGUOUS").length,expired=a.filter(x=>x.status==="EXPIRED_ENTRY").length,waiting=a.filter(x=>x.status==="WAITING_ENTRY"||x.status==="NEW").length,legacy=a.filter(x=>Number.isFinite(x.rResult)&&!Number.isFinite(x.netR)).length;
+ const src=analysisSource(),a=journal().filter(x=>(x.source||"BINANCE")===src),net=a.filter(x=>Number.isFinite(x.netR)),eligible=a.filter(x=>x.status!=="OUT_OF_RANGE"),activated=eligible.filter(x=>x.entryActivated),amb=a.filter(x=>x.status==="AMBIGUOUS").length,expired=a.filter(x=>x.status==="EXPIRED_ENTRY").length,waiting=a.filter(x=>x.status==="WAITING_ENTRY"||x.status==="NEW").length,legacy=a.filter(x=>Number.isFinite(x.rResult)&&!Number.isFinite(x.netR)).length;
  const vals=net.map(x=>x.netR),n=vals.length,w=vals.filter(x=>x>0).length,sum=vals.reduce((q,x)=>q+x,0),gp=vals.filter(x=>x>0).reduce((q,x)=>q+x,0),gl=-vals.filter(x=>x<0).reduce((q,x)=>q+x,0),pf=gl?gp/gl:gp?99:0,avg=n?sum/n:0,dd=n?maxDrawdownR(vals):0,cost=n?net.reduce((q,x)=>q+(x.costR||0),0)/n:0,fill=eligible.length?activated.length/eligible.length*100:0,cfg=appSettings();
  $("validationPolicy").textContent=cfg.executionPolicy==="staged"?"40/35/25 staged":"100% at TP1";$("validationCosts").textContent=`${cfg.feeBps}+${cfg.slippageBps} bps / side`;$("validationLegacy").textContent=legacy;$("validationSample").textContent=n;
  $("valFillRate").textContent=eligible.length?fill.toFixed(1)+"%":"—";$("valExpectancy").textContent=n?avg.toFixed(2)+" R":"—";$("valPf").textContent=n?pf.toFixed(2):"—";$("valDd").textContent=n?dd.toFixed(2)+" R":"—";$("valWin").textContent=n?(w/n*100).toFixed(1)+"%":"—";$("valCost").textContent=n?cost.toFixed(2)+" R":"—";$("valAmbiguous").textContent=amb;$("valWaiting").textContent=waiting+(expired?` · ${expired} expired`:"");
@@ -1968,9 +2727,9 @@ function wfTrade(points,threshold,cfg,start,end){
 }
 function statsR(vals){let n=vals.length,sum=vals.reduce((a,b)=>a+b,0),gp=vals.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=-vals.filter(x=>x<0).reduce((a,b)=>a+b,0);return {n,avg:n?sum/n:0,pf:gl?gp/gl:gp?99:0,dd:n?maxDrawdownR(vals):0}}
 async function runOosValidation(){
- const sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,cfg=appSettings();$("oosNote").textContent="Running expanding-window validation…";
+ const sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,cfg=appSettings(),src=analysisSource();$("oosNote").textContent=`Running expanding-window validation · ${src}…`;
  try{
-  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
+  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf&&window.__radarState.source===src)?window.__radarState.j:await analysisKlines(sym,tf,750,src),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
   for(let i=240;i<j.length-horizon-1;i+=4){let q=calc(j.slice(0,i+1),mode);points.push({score:q.score,atr:q.atr,entry:+j[i+1][1],future:j.slice(i+1,i+1+horizon)})}
   let split=Math.floor(points.length*.60),thresholds=[60,64,68,72],best=64,bestAvg=-Infinity;
   for(const th of thresholds){let st=statsR(wfTrade(points,th,cfg,0,split));if(st.n>=5&&st.avg>bestAvg){bestAvg=st.avg;best=th}}
@@ -2005,14 +2764,34 @@ function updateFlowWindow(q){
  $("flowSummary").textContent=`${flowBias} · ${q.cmf>0?"capital inflow":"capital outflow"} · ${q.vr>=1.2?"volume confirms":"volume weak"}`;
  updateOrderFlow(q,deriv);checkAlerts(q,window.__signalState?.sm,deriv)
 }
+
+function pctText(v){return Number.isFinite(v)?(v>=0?"+":"")+v.toFixed(2)+"%":"—"}
+function oiChangeAt(hist,barsBack){if(!hist||hist.length<2)return null;let last=hist[hist.length-1],idx=Math.max(0,hist.length-1-barsBack),old=hist[idx],lv=Number(last.sumOpenInterest||last.sumOpenInterestValue||0),ov=Number(old.sumOpenInterest||old.sumOpenInterestValue||0);return ov>0?(lv/ov-1)*100:null}
+function fundingSummary(hist){if(!hist||!hist.length)return {avg24:null,avg3d:null,pct:null};const a=hist.map(x=>Number(x.fundingRate)).filter(Number.isFinite),avg=n=>{let z=a.slice(-n);return z.length?z.reduce((x,y)=>x+y,0)/z.length:null},cur=a[a.length-1];return {avg24:avg(3),avg3d:avg(9),pct:Number.isFinite(cur)?pctRank(a,cur):null}}
+function renderOiFundingMatrix(q,deriv){
+ const d=deriv.oiDeltas||{},fs=deriv.fundingStats||{};$("oi15m").textContent=pctText(d.m15);$("oi1h").textContent=pctText(d.h1);$("oi4h").textContent=pctText(d.h4);$("oi24h").textContent=pctText(d.h24);
+ let pchg=window.__radarState&&window.__radarState.tick?Number(window.__radarState.tick.priceChangePercent):null,oi=d.h24,ctx="N/A";if(Number.isFinite(pchg)&&Number.isFinite(oi))ctx=pchg>=0&&oi>=0?"LONG BUILDUP":pchg<0&&oi>=0?"SHORT BUILDUP":pchg>=0&&oi<0?"SHORT COVERING":"LONG UNWINDING";
+ $("oiMatrixContext").textContent=ctx;$("oiMatrixContext").className=ctx==="LONG BUILDUP"||ctx==="SHORT COVERING"?"good":ctx==="SHORT BUILDUP"||ctx==="LONG UNWINDING"?"bad":"neutral";$("funding24h").textContent=Number.isFinite(fs.avg24)?(fs.avg24*100).toFixed(4)+"%":"—";$("funding3d").textContent=Number.isFinite(fs.avg3d)?(fs.avg3d*100).toFixed(4)+"%":"—";$("fundingPctile").textContent=Number.isFinite(fs.pct)?fs.pct.toFixed(0)+"%":"—"
+}
+function renderQuantFlow(q,deriv=window.__derivativesState||{}){
+ if(!q)return;
+ $("flowDelta").textContent=compact(Math.abs(q.deltaFlow.delta))+(q.deltaFlow.delta>=0?" buy":" sell");$("flowDelta").className=q.deltaFlow.delta>=0?"good":"bad";$("flowDeltaPct").textContent=pctText(q.deltaFlow.deltaPct);$("flowDeltaPct").className=q.deltaFlow.deltaPct>=0?"good":"bad";$("flowCvdSlope").textContent=(q.deltaFlow.slope20>=0?"+":"")+compact(Math.abs(q.deltaFlow.slope20));$("flowCvdSlope").className=q.deltaFlow.slope20>=0?"good":"bad";$("flowCvdDiv").textContent=q.deltaFlow.divergence;$("flowCvdDiv").className=q.deltaFlow.divergence==="BULL DIV"?"good":q.deltaFlow.divergence==="BEAR DIV"?"bad":"neutral";
+ const f=regimeFusion(q);$("fusionRegime").textContent=f.state;$("fusionRegime").className="regimeBig "+(f.state==="TRENDING"?"good":f.state==="MEAN-REVERTING"||f.state==="CHOPPY"?"neutral":"");$("fusionReason").textContent=f.reason;$("fusionQuality").textContent=f.quality.toFixed(0)+"/100";$("fusionBase").textContent=q.regime;
+ $("ttmState").textContent=q.ttm.state;$("ttmMomentum").textContent=(q.ttm.momentum>=0?"+":"")+num(q.ttm.momentum);$("ttmMomentum").className=q.ttm.momentum>=0?"good":"bad";$("chopValue").textContent=q.chop.toFixed(1);$("erValue").textContent=q.efficiency.toFixed(3);$("hurstValue").textContent=q.hurst.toFixed(3);$("rvPercentile").textContent=q.rvPercentile.toFixed(0)+"%";$("parkinsonVol").textContent=q.parkVol.toFixed(2)+"%";$("gkVol").textContent=q.gkVol.toFixed(2)+"%";
+ const cv=q.calendarVwaps;$("vwapCalendar").textContent=`D ${num(cv.day)} · W ${num(cv.week)} · M ${num(cv.month)}`;$("vwapBand1").textContent=`${num(q.vwapBands.l1)} ↔ ${num(q.vwapBands.u1)}`;$("vwapBand2").textContent=`${num(q.vwapBands.l2)} ↔ ${num(q.vwapBands.u2)}`;
+ const L=q.liquidity;$("liqPrevDay").textContent=L.prevDay?`${num(L.prevDay.low)} / ${num(L.prevDay.high)}`:"N/A";$("liqPrevWeek").textContent=L.prevWeek?`${num(L.prevWeek.low)} / ${num(L.prevWeek.high)}`:"N/A";$("liqEqHigh").textContent=L.equalHigh?num(L.equalHigh):"None";$("liqEqLow").textContent=L.equalLow?num(L.equalLow):"None";$("liqPremium").textContent=L.premium;
+ if(L.fvg){$("fvgType").textContent=L.fvg.type;$("fvgStatus").textContent=L.fvg.status;$("fvgZone").textContent=`${num(L.fvg.low)} ↔ ${num(L.fvg.high)}`}else{$("fvgType").textContent=$("fvgStatus").textContent=$("fvgZone").textContent="None"}
+ renderOiFundingMatrix(q,deriv)
+}
 async function analyze(save){
- let sym=norm($("symbol").value),t=$("tf").value,mode=$("mode").value;$("symbol").value=coin(sym);syncTop(sym,t,mode);setBusy(true,"Actualizare engine…");
+ let sym=norm($("symbol").value),t=$("tf").value,mode=$("mode").value,src=analysisSource();$("symbol").value=coin(sym);syncTop(sym,t,mode);updateSourceLineage(src);setBusy(true,`Actualizare engine · ${src}…`);
  try{
-  let [j,tick,m]=await Promise.all([klines(sym,t,750),ticker(sym),mtfData(sym)]),q=calc(j,mode),hs=historicalSet(j),mc=mtfComposite(m);
-  window.__radarState={symbol:sym,tf:t,mode,j,q,m,tick,hs};
+  let [j,tick,m]=await Promise.all([analysisKlines(sym,t,750,src),analysisTicker(sym,src),mtfData(sym,src)]),q=calc(j,mode),hs=historicalSet(j),mc=mtfComposite(m);
+  if(!j||j.length<100)throw Error(`${src} returned insufficient candle history`);
+  window.__radarState={symbol:sym,tf:t,mode,j,q,m,tick,hs,source:src};
   if(save){remember(sym);localStorage.setItem("mode",mode)}
   let hp=hs.h4,avg=mc.avg,comp=mc.comp,confidence=mc.confidence;
-  updateSignalUI(q,hs,mc);signalExplanation(q,hs,mc);renderLifecycle();startLiveSocket(sym);renderVolatility(q,j);renderLiquidationProxy(q,window.__derivativesState||{});buildDecision(q,hs,mc,window.__signalState.sm);
+  updateSignalUI(q,hs,mc);signalExplanation(q,hs,mc);renderLifecycle();startProviderLive(sym,src);renderVolatility(q,j);renderLiquidationProxy(q,window.__derivativesState||{});buildDecision(q,hs,mc,window.__signalState.sm);renderQuantFlow(q,window.__derivativesState||{});
   const ss=window.__signalState;
   $("heroPrice").textContent=num(q.price);
   $("heroSignal").textContent=ss.sm.direction;$("heroSignal").className="heroSignal "+(ss.sm.direction==="LONG"?"good":ss.sm.direction==="SHORT"?"bad":"neutral");
@@ -2052,11 +2831,11 @@ async function analyze(save){
   else{inv=q.sup;tar=q.res;trail=q.price;txt="Engine-ul nu are suficientă confluență direcțională. Zona support/resistance este mai relevantă decât forțarea unei intrări."}
   risk=q.atrPct>=4||q.confluence<45?"Ridicat":q.atrPct>=2.2||q.confluence<62?"Mediu":"Controlat";
   $("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("trail").textContent=num(trail);$("risk").textContent=risk;
-  $("topLive").className="statusChip live";$("topLive").textContent="LIVE DATA";draw(q);renderVolumeProfile();loadFearGreed();loadMarketContext();derivatives().catch(()=>{});$("status").textContent=`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · LIVE · ${new Date().toLocaleTimeString()}`;setBusy(false);toast(`${coin(sym)} analizat · ${window.__signalState.sm.direction}`,"good");
+  $("topLive").className="statusChip live";$("topLive").textContent=src+" LIVE";draw(q);renderVolumeProfile();loadFearGreed();loadMarketContext();derivatives().catch(()=>{});loadPionexMicrostructure().catch(()=>{});$("status").textContent=`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · ${src} · ${new Date().toLocaleTimeString()}`;setBusy(false);toast(`${coin(sym)} analizat · ${window.__signalState.sm.direction}`,"good");
  }catch(e){setBusy(false,"Eroare: "+e.message);$("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";toast("Eroare: "+e.message,"bad")}
 }
 async function multiTF(){
- let sym=norm($("symbol").value);$("mtfout").innerHTML="Se încarcă…";$("mtfheat").innerHTML="";let m=await mtfData(sym),mc=mtfComposite(m);
+ let sym=norm($("symbol").value),src=analysisSource();$("mtfout").innerHTML=`Se încarcă ${src}…`;$("mtfheat").innerHTML="";let m=await mtfData(sym,src),mc=mtfComposite(m);
  $("mtfout").innerHTML=`<div class="row"><span>Scor ponderat</span><b>${mc.avg.toFixed(0)}/100 · ${mc.comp}</b></div>`+
  m.map(x=>`<div class="row"><b>${x.tf}</b><span>${x.regime} · ADX ${x.adx.toFixed(0)} · RSI ${x.rsi.toFixed(0)}</span><b class="${cls(x.ver)}">${x.score.toFixed(0)}</b></div>`).join("");
  const cols=["15m","1h","4h","1d"],by=Object.fromEntries(m.map(x=>[x.tf,x]));
@@ -2069,9 +2848,9 @@ async function multiTF(){
  $("mtfheat").innerHTML=h;
 }
 async function backtestCurrent(){
- const box=$("backtestout"),sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,cfg=appSettings();box.textContent="Rulez cost-aware walk-forward…";
+ const box=$("backtestout"),sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,cfg=appSettings(),src=analysisSource();box.textContent=`Rulez cost-aware walk-forward · ${src}…`;
  try{
-  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
+  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf&&window.__radarState.source===src)?window.__radarState.j:await analysisKlines(sym,tf,750,src),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
   for(let i=240;i<j.length-horizon-1;i+=4){let q=calc(j.slice(0,i+1),mode);points.push({score:q.score,atr:q.atr,entry:+j[i+1][1],future:j.slice(i+1,i+1+horizon)})}
   let split=Math.floor(points.length*.60),thresholds=[60,64,68,72],best=64,bestTrain=null;
   for(const th of thresholds){let st=statsR(wfTrade(points,th,cfg,0,split));if(st.n>=5&&(!bestTrain||st.avg>bestTrain.avg)){best=th;bestTrain=st}}
@@ -2082,26 +2861,23 @@ async function backtestCurrent(){
 }
 async function derivatives(){
  let sym=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";
- let d=null,histOI=null;
- try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`)}catch{}
+ let d=null,histOI=null,fundingHist=null;
+ try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}catch{}
  if(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null)){
    try{
-    let [fr,oi,ls,oih]=await Promise.all([
+    let [fr,oi,ls,oih,fh]=await Promise.all([
       getJSON(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
       getJSON(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
       getJSON(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${encodeURIComponent(sym)}&period=1h&limit=1`).catch(()=>null),
-      getJSON(`https://fapi.binance.com/futures/data/openInterestHist?symbol=${encodeURIComponent(sym)}&period=5m&limit=24`).catch(()=>null)
+      getJSON(`https://fapi.binance.com/futures/data/openInterestHist?symbol=${encodeURIComponent(sym)}&period=5m&limit=289`).catch(()=>null),
+      getJSON(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${encodeURIComponent(sym)}&limit=30`).catch(()=>null)
     ]);
     d={funding:fr?Number(fr.lastFundingRate):null,openInterest:oi?Number(oi.openInterest):null,longShort:ls&&ls.length?Number(ls[0].longShortRatio):null};
-    histOI=oih;
+    histOI=oih;fundingHist=fh;
    }catch{}
  }
  let fr=d&&d.funding!=null?Number(d.funding):null,oi=d&&d.openInterest!=null?Number(d.openInterest):null,ls=d&&d.longShort!=null?Number(d.longShort):null;
- let oiTrend="N/A";
- if(histOI&&histOI.length>=2){
-   let first=Number(histOI[0].sumOpenInterest||histOI[0].sumOpenInterestValue||0), last=Number(histOI[histOI.length-1].sumOpenInterest||histOI[histOI.length-1].sumOpenInterestValue||0);
-   if(first>0){let ch=(last/first-1)*100;oiTrend=(ch>=0?"+":"")+ch.toFixed(1)+"%";}
- }
+ let oiDeltas={m15:oiChangeAt(histOI,3),h1:oiChangeAt(histOI,12),h4:oiChangeAt(histOI,48),h24:oiChangeAt(histOI,288)},oiTrend=Number.isFinite(oiDeltas.h1)?pctText(oiDeltas.h1):"N/A",fundingStats=fundingSummary(fundingHist);
  $("funding").textContent=fr==null?"N/A":(fr*100).toFixed(4)+"%";
  $("oi").textContent=oi==null?"N/A":compact(oi);
  $("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2);
@@ -2112,29 +2888,64 @@ async function derivatives(){
  $("crowdingRisk").textContent=ls==null?"N/A":ls>1.5||ls<.67?"Ridicat":"Normal";
  $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend:"");
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
- window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend};markFresh("futures");
- if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q);renderLiquidationProxy(window.__radarState.q,window.__derivativesState)}
+ window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats};markFresh("futures");
+ if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q);renderLiquidationProxy(window.__radarState.q,window.__derivativesState);renderQuantFlow(window.__radarState.q,window.__derivativesState)}
  $("ftext").textContent=(fr==null&&oi==null&&ls==null)?"Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională.":"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
 }
 let scannerRows=[];
 function renderScan(){
- let dir=$("scanDir")?.value||"ALL",reg=$("scanRegime")?.value||"ALL",minAdx=+($("scanAdx")?.value||0),minStrength=+($("scanScore")?.value||0);
- let rows=scannerRows.filter(x=>(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&Math.abs(x.avg-50)*2>=minStrength);
- $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" onclick="pick('${x.c}')"><b>${x.c}</b><span>${x.avg.toFixed(0)}</span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span></div>`).join(""):`<div class="row"><span>Niciun rezultat pentru filtrele selectate.</span></div>`;
+ let dir=$("scanDir")?.value||"ALL",reg=$("scanRegime")?.value||"ALL",minAdx=+($("scanAdx")?.value||0),minStrength=+($("scanScore")?.value||0),q=($("scanSearch")?.value||"").trim().toUpperCase(),sort=$("scanSort")?.value||"strength";
+ let rows=scannerRows.filter(x=>(!q||x.c.includes(q))&&(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&Math.abs(x.avg-50)*2>=minStrength);
+ rows=[...rows].sort((a,b)=>sort==="turnover"?b.turnover-a.turnover:sort==="adx"?b.adx-a.adx:sort==="change"?Math.abs(b.change)-Math.abs(a.change):Math.abs(b.avg-50)-Math.abs(a.avg-50)||b.turnover-a.turnover);
+ $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" onclick="selectPionexScan('${x.c}')"><b>${x.c}</b><span>${x.avg.toFixed(0)}</span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span><span>${compact(x.turnover)}</span></div>`).join(""):`<div class="row"><span>Niciun rezultat Pionex pentru filtrele selectate.</span></div>`;
+}
+let activeScanToken=null;
+function cancelScan(){
+ if(activeScanToken){activeScanToken.cancelled=true;perfStats.lastScanner="CANCELLED";$("scanCancelBtn").disabled=true;toast("Scan oprit","warn")}
 }
 async function scan(){
- let box=$("scanout");box.innerHTML="Scanez "+universe.length+" monede cu engine-ul avansat…";let out=[];
- for(let b=0;b<universe.length;b+=4){
-  let batch=universe.slice(b,b+4);
-  let rows=await Promise.all(batch.map(async c=>{try{let sym=c+"USDT",m=await mtfData(sym),mc=mtfComposite(m),anchor=m.find(x=>x.tf==="4h")||m[0];return {c,avg:mc.avg,dir:mc.comp,conf:anchor?anchor.confluence:0,adx:anchor?anchor.adx:0,regime:anchor?anchor.regime:"—"}}catch{return null}}));
-  out.push(...rows.filter(Boolean));box.innerHTML=`Scanare ${Math.min(b+4,universe.length)}/${universe.length}…`;
+ let box=$("scanout"),depth=$("scanDepth")?.value||"FAST";
+ if(activeScanToken)activeScanToken.cancelled=true;
+ const token={cancelled:false,id:Date.now()},started=performance.now();activeScanToken=token;scannerRows=[];perfStats.lastScanner="RUNNING";
+ $("scanCancelBtn").disabled=false;$("scanProgressBar").style.width="0%";$("scanProcessed").textContent="0/0";$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent=perfStats.pionexCacheHits;$("scanElapsed").textContent="0s";
+ box.innerHTML="Încarc Top 100 live din Pionex…";
+ try{
+   const top=await pionexTop100();
+   if(token.cancelled)return;
+   if(!top.length)throw Error("Pionex nu a returnat piețe SPOT/USDT eligibile");
+   $("pionexScanMode").textContent=depth==="DEEP"?"Mode DEEP MTF":"Mode FAST 4H";
+   $("scanProcessed").textContent=`0/${top.length}`;
+   const concurrency=depth==="DEEP"?2:5;
+   const worker=async item=>retryTask(()=>depth==="DEEP"?pionexScanDeep(item):pionexScanFast(item),1,260);
+   const progress=(done,total,out,errors)=>{
+     if(token.cancelled)return;
+     const good=out.filter(Boolean);scannerRows=good;
+     $("scanProgressBar").style.width=(100*done/total).toFixed(1)+"%";$("scanProcessed").textContent=`${done}/${total}`;$("scanResults").textContent=good.length;$("scanErrors").textContent=errors;$("scanCacheHits").textContent=perfStats.pionexCacheHits;$("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s";
+     if(done%10===0||done===total)renderScan()
+   };
+   const run=await runPool(top,worker,concurrency,progress,token);
+   if(token.cancelled){box.innerHTML='<div class="row"><span>Scan oprit de utilizator.</span></div>';return}
+   scannerRows=run.results;renderScan();perfStats.lastScanner=`OK ${run.results.length}/${top.length}`;
+   toast(`Pionex scanner: ${run.results.length}/${top.length} analizate`,"good")
+ }catch(e){
+   if(!token.cancelled){scannerRows=[];box.innerHTML=`<div class="row"><span>Eroare Pionex scanner: ${e.message}</span></div>`;perfStats.lastScanner="ERROR";toast("Pionex scanner indisponibil","bad")}
+ }finally{
+   if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}
+   $("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"
  }
- out.sort((a,b)=>Math.abs(b.avg-50)-Math.abs(a.avg-50));scannerRows=out;renderScan()
 }
-$("symbol").value=localStorage.getItem("last")||"BTC";$("mode").value=localStorage.getItem("mode")||"auto";renderLists();renderSignals();show("dash");syncTop(norm($("symbol").value),$("tf").value,$("mode").value);$("status").textContent="Apasă Analizează pentru date live.";
+$("symbol").value=localStorage.getItem("last")||"BTC";$("mode").value=localStorage.getItem("mode")||"auto";const _src=localStorage.getItem("analysisProvider")||appSettings().spotProvider||"PIONEX";if($("analysisSource"))$("analysisSource").value=_src;localStorage.setItem("analysisProvider",_src);loadScanPrefs();renderLists();renderSignals();show("dash");syncTop(norm($("symbol").value),$("tf").value,$("mode").value);updateSourceLineage(_src);$("status").textContent="Apasă Analizează pentru date live.";
 $("symbol").addEventListener("keydown",e=>{if(e.key==="Enter")analyze(true)});
 $("tf").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));
 $("mode").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));
 renderSettings();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();
-if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
+document.addEventListener("keydown",e=>{
+ if(e.target&&["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
+ if(e.key==="/"){e.preventDefault();$("symbol").focus()}
+ else if(e.key.toLowerCase()==="a")analyze(true);
+ else if(e.key.toLowerCase()==="s")navTo("scan",true);
+ else if(e.key==="Escape")closeMoreDrawer()
+});
+if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(pwaHandleRegistration).catch(()=>{})}
+setTimeout(()=>{if(!isStandalonePwa())showPwaInstall();renderPwaHealth();pwaInitDeepLink()},900)
 </script></body></html>
