@@ -1,23 +1,19 @@
-# v17 · SIGNAL LAB · TESTED
+# v19 · LEVELS & FLOW · TESTED
 
-## Added
-- Separate LONG and SHORT confidence scores.
-- WAIT gate requiring minimum signal strength plus minimum separation between LONG and SHORT.
-- Entry zone, stop, TP1, TP2 and TP3.
-- R:R map: 1.0R / 1.8R / 2.8R.
-- ATR + structure based stop/target construction.
-- Local signal journal stored in browser storage.
-- Duplicate-signal guard.
-- Historical signal evaluation using OHLC candles after each signal timestamp.
-- Ambiguous-candle handling when stop and target are touched in the same candle.
-- Signal performance dashboard: resolved count, win rate, average R and R-based profit factor.
-- CSV journal export.
+## Added in this build
+- Support / Resistance Ladder window with Pivot, S1/S2/S3, R1/R2/R3.
+- Breakout-above and breakdown-below trigger thresholds.
+- Nearest active zone and level bias summary.
+- Money Flow Window with MFI, CMF, OBV direction, OI, longs vs shorts and funding/crowding context.
+- Futures context is auto-refreshed after each successful analysis and reused inside the dashboard flow window.
+- CMF indicator added to the quant engine.
+- Level ladder calculation added on a rolling 50-candle structure range.
 
-## Validation
+## Verification
 - Frontend JavaScript syntax: PASS.
 - Backend JavaScript syntax: PASS.
 - New DOM IDs: PASS.
-- Signal-engine runtime smoke test: PASS.
-- Runtime sample: `{"long":75.4,"short":27.6,"dir":"LONG","entry":141.2118,"stop":138.9021,"tp3":147.6787}`.
+- Runtime smoke test: PASS.
+- Runtime sample: `{"score":63.2,"cmf":0.036,"pivot":150.163,"r1":152.35,"signal":"WAIT","tp1":152.674}`.
 
-The journal is for technical research / paper tracking. Results exclude fees, slippage and actual execution quality.
+Futures sources can still be unavailable depending on provider/network restrictions. Core spot analysis remains isolated and functional.
