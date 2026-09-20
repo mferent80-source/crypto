@@ -15,3 +15,19 @@ Folderul `functions/` trebuie să rămână în rădăcina repository-ului. Endp
 `npx wrangler pages dev public`
 
 Nu este un sistem de predicție garantată. Procentele istorice sunt frecvențe ale configurațiilor similare din eșantionul analizat.
+
+
+## v21 · ULTIMATE TERMINAL
+Adds WebSocket live ticker, Volume Profile, Anchored VWAP, Risk Manager, order-book depth, market context, signal explanation/lifecycle, PWA support and health diagnostics.
+
+
+## v22 · PRO DESK
+Adds Decision Center, correlation/relative-strength analytics, volatility/squeeze engine, liquidation-risk proxy and paper portfolio.
+
+
+## v23 · RESEARCH LAB
+Adds strategy analytics, confidence calibration, Monte Carlo, scenario analysis, backup/restore and data freshness.
+
+
+## v25 · FORWARD EDGE
+Adds forward-only cohorts, risk guard, shrunk segment reliability, rolling 3-fold OOS, evidence-quality checks and configurable entry expiry.

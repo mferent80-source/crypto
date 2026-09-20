@@ -1,0 +1,10 @@
+{
+  "name": "Crypto Radar Pro",
+  "short_name": "Crypto Radar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071018",
+  "theme_color": "#071018",
+  "description": "Crypto market intelligence terminal",
+  "icons": []
+}

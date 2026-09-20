@@ -1,4 +1,4 @@
-<!doctype html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!doctype html><html lang="ro"><head><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#071018"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Crypto Radar Pro Lite</title>
 
 <style>
@@ -465,6 +465,137 @@ main{max-width:1160px;padding-top:14px}
   .calibrationGrid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
+
+<style id="v21-extra">
+.vpWrap{display:grid;grid-template-columns:1.15fr .85fr;gap:10px}
+.vpBars{display:flex;flex-direction:column-reverse;gap:2px;height:250px;justify-content:stretch}
+.vpRow{display:grid;grid-template-columns:70px 1fr 50px;gap:6px;align-items:center;min-height:9px;font-size:9px}
+.vpTrack{height:7px;background:#172536;border-radius:999px;overflow:hidden}
+.vpFill{height:100%;background:linear-gradient(90deg,#4fd1c5,#69a7ff)}
+.ctxGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ctxBox{background:#0b1520;border:1px solid #1d2d41;border-radius:12px;padding:10px}
+.ctxBox b{display:block;font-size:16px;margin-top:3px}
+.riskForm{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.riskForm input,.riskForm select{padding:10px}
+.explainList{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.explainRow{display:grid;grid-template-columns:1fr 64px 70px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #172536}
+.explainRow:last-child{border-bottom:0}.contrib{font-weight:850;text-align:right}
+.lifeTrack{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.lifeStep{padding:7px 9px;border-radius:999px;background:#0b1520;border:1px solid #24364b;color:#7f90a4;font-size:9px;font-weight:800}
+.lifeStep.on{color:#fff;border-color:#4a6b8d;background:#102031}
+.depthGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.depthSide{background:#0b1520;border:1px solid #213247;border-radius:14px;padding:10px}
+.depthRow{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px 0;font-size:10px}
+.depthBar{height:6px;border-radius:999px;margin-top:2px}.depthBid{background:linear-gradient(90deg,#2fbf8b,#6de3b5)}.depthAsk{background:linear-gradient(90deg,#ff8a95,#df5262)}
+.wsDot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:#6d7d91}
+.wsDot.live{background:var(--good);box-shadow:0 0 9px rgba(85,216,155,.7)}
+.healthGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.healthBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.fullscreenChart{position:fixed!important;inset:8px!important;z-index:120!important;background:#071018!important;padding:14px!important;border-radius:18px!important;overflow:auto!important}
+@media(max-width:800px){.vpWrap{grid-template-columns:1fr}.ctxGrid{grid-template-columns:repeat(2,1fr)}.riskForm{grid-template-columns:repeat(2,1fr)}.depthGrid{grid-template-columns:1fr}.healthGrid{grid-template-columns:1fr}}
+</style>
+
+<style id="v22-extra">
+.decisionGrid{display:grid;grid-template-columns:1.15fr .85fr;gap:10px}
+.decisionHero{background:linear-gradient(135deg,rgba(79,209,197,.12),rgba(105,167,255,.08));border:1px solid #2a455d;border-radius:16px;padding:15px}
+.decisionBig{font-size:30px;font-weight:900;letter-spacing:-.04em;margin-top:4px}
+.reasonList{display:flex;flex-direction:column;gap:7px;margin-top:9px}
+.reason{display:grid;grid-template-columns:20px 1fr auto;gap:8px;align-items:center;padding:8px;border:1px solid #1d2d41;background:#0b1520;border-radius:10px}
+.corrGrid{display:grid;grid-template-columns:110px repeat(3,1fr);gap:5px;align-items:center}
+.corrCell{padding:9px 5px;text-align:center;border-radius:9px;background:#0b1520;border:1px solid #213247;font-size:10px;font-weight:800}
+.corrPos{color:var(--good);background:rgba(85,216,155,.07)}.corrNeg{color:var(--bad);background:rgba(255,107,120,.07)}
+.volGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.volBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.volBox b{display:block;font-size:16px;margin-top:4px}
+.proxyMap{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+.proxyLvl{padding:10px 5px;border-radius:10px;text-align:center;border:1px solid #23354b;background:#0b1520;font-size:10px}
+.proxyLvl.hot{background:rgba(255,107,120,.11);border-color:rgba(255,107,120,.28);color:#ff9aa3}
+.proxyLvl.mid{background:rgba(245,196,81,.08);border-color:rgba(245,196,81,.22);color:#ffd978}
+.proxyLvl.cool{background:rgba(85,216,155,.07);border-color:rgba(85,216,155,.2);color:#87e8bd}
+.paperGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.paperBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.paperBox b{display:block;font-size:16px;margin-top:4px}
+.paperRow{display:grid;grid-template-columns:1fr .65fr .8fr .8fr .8fr .65fr;gap:6px;padding:9px 4px;border-top:1px solid #172536;align-items:center;font-size:10px}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;padding:0 6px;border-radius:6px;border:1px solid #34485f;background:#0c1722;color:#aebcce;font-size:9px}
+@media(max-width:800px){
+ .decisionGrid{grid-template-columns:1fr}
+ .corrGrid{grid-template-columns:90px repeat(3,1fr)}
+ .volGrid{grid-template-columns:repeat(2,1fr)}
+ .proxyMap{grid-template-columns:repeat(4,1fr)}
+ .paperGrid{grid-template-columns:repeat(2,1fr)}
+ .paperRow{grid-template-columns:1fr .7fr .8fr .8fr}
+ .paperRow>*:nth-child(5),.paperRow>*:nth-child(6){display:none}
+}
+</style>
+
+<style id="v23-extra">
+.analyticsGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.analyticsBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.analyticsBox b{display:block;font-size:17px;margin-top:4px}
+.matrix{display:grid;gap:5px;margin-top:10px;overflow:auto}
+.mxRow{display:grid;grid-template-columns:110px repeat(4,1fr);gap:5px;min-width:520px}
+.mxCell{padding:8px 5px;border-radius:9px;background:#0b1520;border:1px solid #213247;text-align:center;font-size:10px}
+.mxGood{color:var(--good);background:rgba(85,216,155,.07)}.mxBad{color:var(--bad);background:rgba(255,107,120,.07)}
+.mcGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.mcBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.mcBox b{display:block;font-size:16px;margin-top:4px}
+.scenarioGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+.scenarioBox{padding:10px 5px;border-radius:10px;background:#0b1520;border:1px solid #213247;text-align:center;font-size:10px}
+.scenarioBox b{display:block;margin-top:3px;font-size:12px}
+.backupActions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.freshGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.freshBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.freshBox b{display:block;font-size:13px;margin-top:4px}
+.calibrationLine{display:grid;grid-template-columns:80px 1fr 70px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #172536}
+.calibrationTrack{height:8px;border-radius:999px;background:#172536;overflow:hidden}
+.calibrationFill{height:100%;background:linear-gradient(90deg,#4fd1c5,#69a7ff)}
+@media(max-width:800px){.analyticsGrid{grid-template-columns:repeat(2,1fr)}.mcGrid{grid-template-columns:repeat(2,1fr)}.scenarioGrid{grid-template-columns:repeat(2,1fr)}.freshGrid{grid-template-columns:repeat(2,1fr)}.backupActions{grid-template-columns:1fr}}
+</style>
+
+<style id="v24-extra">
+.validationHero{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.edgeCard{background:linear-gradient(135deg,rgba(79,209,197,.10),rgba(105,167,255,.07));border:1px solid #29445b;border-radius:16px;padding:15px}
+.edgeState{font-size:26px;font-weight:900;letter-spacing:-.03em;margin-top:5px}
+.validGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.validBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.validBox b{display:block;font-size:16px;margin-top:4px}
+.curveWrap{height:220px;border:1px solid #1d2d41;border-radius:14px;background:#08131d;padding:7px;margin-top:10px}
+.curveWrap canvas{width:100%;height:100%;display:block}
+.oosGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.oosBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.oosBox b{display:block;font-size:15px;margin-top:4px}
+.execPolicy{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.execHint{padding:9px;border:1px solid #1e3044;border-radius:10px;background:#0b1520;font-size:10px;color:var(--muted)}
+.validationBadge{display:inline-flex;padding:6px 9px;border-radius:999px;border:1px solid #2a4058;background:#0b1520;font-size:9px;font-weight:850}
+@media(max-width:800px){.validationHero{grid-template-columns:1fr}.validGrid{grid-template-columns:repeat(2,1fr)}.oosGrid{grid-template-columns:repeat(2,1fr)}.execPolicy{grid-template-columns:1fr}}
+</style>
+
+<style id="v25-extra">
+.forwardHero{display:grid;grid-template-columns:1.1fr .9fr;gap:10px}
+.forwardCard{background:linear-gradient(135deg,rgba(79,209,197,.11),rgba(105,167,255,.08));border:1px solid #29445b;border-radius:16px;padding:15px}
+.forwardState{font-size:27px;font-weight:900;letter-spacing:-.04em;margin-top:5px}
+.guardGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.guardBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.guardBox b{display:block;font-size:16px;margin-top:4px}
+.segmentGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.segmentBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.segmentBox b{display:block;font-size:15px;margin-top:4px}
+.foldTable{display:grid;gap:5px;margin-top:10px;overflow:auto}
+.foldRow{display:grid;grid-template-columns:70px repeat(5,1fr);gap:5px;min-width:620px}
+.foldCell{padding:8px 5px;border:1px solid #213247;border-radius:9px;background:#0b1520;text-align:center;font-size:10px}
+.qualityGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.qualityBox{background:#0b1520;border:1px solid #213247;border-radius:12px;padding:10px}
+.qualityBox b{display:block;font-size:15px;margin-top:4px}
+.guardNormal{color:var(--good)}.guardCaution{color:#ffd978}.guardPause{color:var(--bad)}
+.forwardActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.forwardActions button{width:auto}
+@media(max-width:800px){
+ .forwardHero{grid-template-columns:1fr}
+ .guardGrid{grid-template-columns:repeat(2,1fr)}
+ .segmentGrid{grid-template-columns:repeat(2,1fr)}
+ .qualityGrid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
 </head><body>
 <div class="appShell">
 <aside class="sideNav">
@@ -475,15 +606,27 @@ main{max-width:1160px;padding-top:14px}
     <button class="sideBtn" data-nav="mtf" onclick="navTo('mtf',true)"><span class="sideIcon">▦</span>Multi-TF</button>
     <button class="sideBtn" data-nav="scan" onclick="navTo('scan',true)"><span class="sideIcon">⌕</span>Scanner</button>
     <button class="sideBtn" data-nav="market" onclick="navTo('market',true)"><span class="sideIcon">◉</span>Market Overview</button>
+    <button class="sideBtn" data-nav="profile" onclick="navTo('profile',true)"><span class="sideIcon">▤</span>Volume Profile</button>
+    <button class="sideBtn" data-nav="riskmgr" onclick="navTo('riskmgr')"><span class="sideIcon">%</span>Risk Manager</button>
+    <button class="sideBtn" data-nav="decision" onclick="navTo('decision')"><span class="sideIcon">✓</span>Decision Center</button>
+    <button class="sideBtn" data-nav="correlation" onclick="navTo('correlation',true)"><span class="sideIcon">∿</span>Correlation</button>
+    <button class="sideBtn" data-nav="paper" onclick="navTo('paper')"><span class="sideIcon">◇</span>Paper Portfolio</button>
+    <button class="sideBtn" data-nav="analytics" onclick="navTo('analytics')"><span class="sideIcon">Σ</span>Strategy Analytics</button>
+    <button class="sideBtn" data-nav="validation" onclick="navTo('validation')"><span class="sideIcon">✓</span>Validation Lab</button>
+    <button class="sideBtn" data-nav="forward" onclick="navTo('forward')"><span class="sideIcon">→</span>Forward Lab</button>
+    <button class="sideBtn" data-nav="montecarlo" onclick="navTo('montecarlo')"><span class="sideIcon">∴</span>Monte Carlo</button>
+    <button class="sideBtn" data-nav="scenario" onclick="navTo('scenario')"><span class="sideIcon">±</span>Scenario Lab</button>
+    <button class="sideBtn" data-nav="depth" onclick="navTo('depth',true)"><span class="sideIcon">≡</span>Order Book</button>
     <button class="sideBtn" data-nav="signals" onclick="navTo('signals',true)"><span class="sideIcon">↗</span>Signals</button>
     <button class="sideBtn" data-nav="backtest" onclick="navTo('backtest',true)"><span class="sideIcon">◫</span>Backtest</button>
     <button class="sideBtn" data-nav="deriv" onclick="navTo('deriv',true)"><span class="sideIcon">≋</span>Futures</button>
     <button class="sideBtn" data-nav="watch" onclick="navTo('watch')"><span class="sideIcon">★</span>Watchlist</button>
     <button class="sideBtn" data-nav="alerts" onclick="navTo('alerts')"><span class="sideIcon">!</span>Alerts <span id="sideAlertCount" class="badgeNum" style="display:none">0</span></button>
     <button class="sideBtn" data-nav="settings" onclick="navTo('settings')"><span class="sideIcon">⚙</span>Settings</button>
+    <button class="sideBtn" data-nav="health" onclick="navTo('health')"><span class="sideIcon">●</span>Health</button>
   </div>
   <div class="sideFooter">
-    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v20 · PRODUCT SUITE</div>
+    <div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v25 · FORWARD EDGE</div>
     <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
     <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
   </div>
@@ -491,7 +634,7 @@ main{max-width:1160px;padding-top:14px}
 <div class="mainArea">
 <header class="topStatus">
   <div class="topLeft"><div id="topCoin" class="topCoin">BTC/USDT</div><span id="topTf" class="statusChip">4h</span><span id="topMode" class="statusChip">AUTO</span></div>
-  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v20 · AUDITED</span></div>
+  <div class="topRight"><button type="button" class="statusChip" style="width:auto" onclick="navTo('alerts')">Alerts <span id="topAlertCount" class="badgeNum" style="display:none">0</span></button><span id="wsStatus" class="statusChip"><span id="wsDot" class="wsDot"></span>WS</span><span id="topLive" class="statusChip live">LIVE DATA</span><span class="statusChip">v25 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -499,7 +642,7 @@ main{max-width:1160px;padding-top:14px}
     <div class="logo">◈</div>
     <div><h1>Crypto Radar Pro</h1><div class="subhead">Market intelligence · multi-timeframe · live technical analysis</div></div>
   </div>
-  <div class="headerMeta"><span class="badge">v20 · PRODUCT SUITE · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+  <div class="headerMeta"><span class="badge">v25 · FORWARD EDGE · AUDITED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -547,9 +690,34 @@ main{max-width:1160px;padding-top:14px}
 </div></div>
 <div class="card kpi"><div class="label">Preț</div><div id="price" class="value">—</div></div><div class="card kpi"><div class="label">24H</div><div id="change" class="value">—</div></div>
 <div class="card kpi"><div class="label">Volum 24H USDT</div><div id="volume24" class="value">—</div></div><div class="card kpi"><div class="label">Scor TF</div><div id="score" class="value">—</div></div>
-<div class="card full"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
-<div class="chartToolbar"><button type="button" onclick="setChartBars(50)">50 bars</button><button type="button" onclick="setChartBars(100)">100 bars</button><button type="button" onclick="setChartBars(160)">160 bars</button></div><div class="chartZoneLegend"><span class="lz">Support zone</span><span class="rz">Resistance zone</span><span class="pz">Pivot zone</span></div>
+<div id="chartCard" class="card full"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
+<div class="chartToolbar"><button type="button" onclick="setChartBars(50)">50 bars</button><button type="button" onclick="setChartBars(100)">100 bars</button><button type="button" onclick="setChartBars(160)">160 bars</button><button type="button" onclick="toggleChartFullscreen()">Fullscreen</button></div><div class="chartZoneLegend"><span class="lz">Support zone</span><span class="rz">Resistance zone</span><span class="pz">Pivot zone</span></div>
 <div style="overflow:hidden"><canvas id="chart" width="1000" height="360"></canvas></div></div>
+<div class="card full">
+  <div class="sectionHead"><h3>Market Context</h3><span class="small">Cross-market crypto context</span></div>
+  <div class="ctxGrid">
+    <div class="ctxBox"><span class="label">BTC 24H</span><b id="ctxBtc">—</b></div>
+    <div class="ctxBox"><span class="label">ETH/BTC</span><b id="ctxEthBtc">—</b></div>
+    <div class="ctxBox"><span class="label">Breadth</span><b id="ctxBreadth">—</b></div>
+    <div class="ctxBox"><span class="label">Market regime</span><b id="ctxRegime">—</b></div>
+  </div>
+</div>
+<div class="card full"><div class="sectionHead"><h3>Signal Explanation</h3><span class="small">Module contribution</span></div><div id="explainList" class="explainList"></div></div>
+<div class="card full"><div class="sectionHead"><h3>Signal Lifecycle</h3><span class="small">NEW → CONFIRMED → ENTRY → TP / STOP</span></div><div id="lifecycle" class="lifeTrack"></div></div>
+<div class="card full">
+  <div class="sectionHead"><h3>Volatility & Squeeze Engine</h3><span class="small">Compression · expansion · percentile</span></div>
+  <div class="volGrid">
+    <div class="volBox"><span class="label">ATR percentile</span><b id="volAtrPct">—</b></div>
+    <div class="volBox"><span class="label">BB width pct</span><b id="volBbPct">—</b></div>
+    <div class="volBox"><span class="label">Squeeze</span><b id="volSqueeze">—</b></div>
+    <div class="volBox"><span class="label">Expansion risk</span><b id="volExpansion">—</b></div>
+  </div>
+</div>
+<div class="card full">
+  <div class="sectionHead"><h3>Liquidation-Risk Proxy</h3><span class="small">Estimated leverage pressure · not exchange liquidation data</span></div>
+  <div id="proxyMap" class="proxyMap"></div>
+  <div class="row"><span>Proxy bias</span><b id="proxyBias">—</b></div>
+</div>
 <div class="card full"><div class="sectionTitle">Advanced context</div><div class="metricGrid">
 <div class="metricBox"><div class="label">MFI</div><div id="mfi" class="n">—</div></div>
 <div class="metricBox"><div class="label">OBV trend</div><div id="obv" class="n">—</div></div>
@@ -715,12 +883,265 @@ main{max-width:1160px;padding-top:14px}
       <p class="small" style="margin-top:8px">Notifications work only while the app is open in the browser. The in-app Alert Center always works.</p>
     </div>
     <div class="settingsCard">
+      <h4>Backup & Restore</h4>
+      <div class="backupActions">
+        <button onclick="exportBackup()">Export backup</button>
+        <button onclick="document.getElementById('backupFile').click()">Import backup</button>
+        <button onclick="resetWorkspace()">Reset workspace</button>
+      </div>
+      <input id="backupFile" type="file" accept="application/json" style="display:none" onchange="importBackup(this.files[0])">
+      <p class="small" style="margin-top:8px">Backup includes settings, journal, paper trades, alerts, favorites and recents.</p>
+    </div>
+    <div class="settingsCard">
+      <h4>Data freshness</h4>
+      <div class="freshGrid">
+        <div class="freshBox"><span class="label">REST</span><b id="freshRest">—</b></div>
+        <div class="freshBox"><span class="label">WebSocket</span><b id="freshWs">—</b></div>
+        <div class="freshBox"><span class="label">Futures</span><b id="freshFut">—</b></div>
+        <div class="freshBox"><span class="label">Sentiment</span><b id="freshSent">—</b></div>
+      </div>
+    </div>
+<div class="settingsCard">
+      <h4>Execution Model</h4>
+      <div class="settingRow"><span>Fee / side</span><select id="setFeeBps" style="width:128px"><option value="2">2 bps</option><option value="5">5 bps</option><option value="10" selected>10 bps</option><option value="15">15 bps</option></select></div>
+      <div class="settingRow"><span>Slippage / side</span><select id="setSlipBps" style="width:128px"><option value="1">1 bp</option><option value="3" selected>3 bps</option><option value="5">5 bps</option><option value="10">10 bps</option></select></div>
+      <div class="settingRow"><span>Exit policy</span><select id="setExecPolicy" style="width:170px"><option value="staged" selected>40/35/25 staged</option><option value="tp1full">100% at TP1</option></select></div>
+      <div class="settingRow"><span>Entry expiry</span><select id="setEntryExpiry" style="width:170px"><option value="6">6 candles</option><option value="12" selected>12 candles</option><option value="24">24 candles</option><option value="48">48 candles</option></select></div>
+      <div class="execPolicy">
+        <div class="execHint"><b>Staged</b><br>40% TP1 · 35% TP2 · 25% TP3. After TP1 stop → breakeven; after TP2 stop → TP1.</div>
+        <div class="execHint"><b>TP1 full</b><br>Entire paper position exits at TP1 or original stop. Simpler execution model.</div>
+      </div>
+      <button style="margin-top:10px" onclick="saveSettings()">Save execution model</button>
+    </div>
+<div class="settingsCard">
       <h4>Auto-calibration</h4>
       <div class="row"><span>Resolved signals</span><b id="calResolved">0</b></div>
       <div class="row"><span>Best mode</span><b id="calBestMode">—</b></div>
       <div class="row"><span>Best regime</span><b id="calBestRegime">—</b></div>
       <div class="row"><span>Suggested threshold</span><b id="calThreshold">—</b></div>
       <button style="margin-top:10px" onclick="recalibrate()">Recalculate</button>
+    </div>
+  </div>
+</section>
+<section id="profile" class="panel">
+  <div class="sectionHead"><h3>Volume Profile & Anchored VWAP</h3><span class="small">POC · VAH · VAL · anchors</span></div>
+  <div class="card full"><div class="vpWrap"><div><div class="label">Volume Profile</div><div id="vpBars" class="vpBars"></div></div><div>
+    <div class="row"><span>POC</span><b id="vpPoc">—</b></div><div class="row"><span>Value Area High</span><b id="vpVah">—</b></div><div class="row"><span>Value Area Low</span><b id="vpVal">—</b></div><div class="row"><span>High-volume node</span><b id="vpHvn">—</b></div>
+    <div class="row"><span>Anchored VWAP · swing low</span><b id="avwapLow">—</b></div><div class="row"><span>Anchored VWAP · swing high</span><b id="avwapHigh">—</b></div><div class="row"><span>Session VWAP</span><b id="sessionVwap">—</b></div>
+  </div></div></div>
+</section>
+
+<section id="riskmgr" class="panel">
+  <div class="sectionHead"><h3>Risk Manager</h3><span class="small">Position sizing · exposure · leverage</span></div>
+  <div class="card full">
+    <div class="riskForm"><input id="riskCapital" type="number" value="1000" min="1" placeholder="Capital USDT"><input id="riskPct" type="number" value="1" min=".1" max="10" step=".1" placeholder="Risk %"><input id="riskLeverage" type="number" value="1" min="1" max="100" step="1" placeholder="Leverage"><select id="riskFee"><option value=".1">Fees 0.10%</option><option value=".08">Fees 0.08%</option><option value=".05">Fees 0.05%</option></select></div>
+    <button style="margin-top:9px" onclick="calculateRisk()">Calculate position</button>
+    <div class="calibrationGrid" style="margin-top:10px"><div class="calBox"><span class="label">Risk amount</span><b id="riskAmount">—</b></div><div class="calBox"><span class="label">Position size</span><b id="positionSize">—</b></div><div class="calBox"><span class="label">Notional</span><b id="notional">—</b></div><div class="calBox"><span class="label">Margin</span><b id="marginReq">—</b></div></div>
+    <div class="row"><span>Stop distance</span><b id="riskStopDist">—</b></div><div class="row"><span>Estimated fees</span><b id="riskFees">—</b></div><div class="row"><span>Exposure warning</span><b id="riskWarning">—</b></div>
+  </div>
+</section>
+
+<section id="depth" class="panel">
+  <div class="sectionHead"><h3>Order Book Depth</h3><span class="small">Public Binance depth snapshot</span></div>
+  <div class="card full"><div class="depthGrid"><div class="depthSide"><div class="label">Bids</div><div id="depthBids"></div></div><div class="depthSide"><div class="label">Asks</div><div id="depthAsks"></div></div></div>
+  <div class="row"><span>Spread</span><b id="depthSpread">—</b></div><div class="row"><span>Top-10 imbalance</span><b id="depthImbalance">—</b></div></div>
+</section>
+
+<section id="health" class="panel">
+  <div class="sectionHead"><h3>Data & System Health</h3><span class="small">Source visibility</span></div>
+  <div class="card full"><div class="healthGrid"><div class="healthBox"><span class="label">Spot REST</span><b id="healthSpot">—</b></div><div class="healthBox"><span class="label">WebSocket</span><b id="healthWs">—</b></div><div class="healthBox"><span class="label">Futures</span><b id="healthFut">—</b></div><div class="healthBox"><span class="label">Sentiment</span><b id="healthSent">—</b></div><div class="healthBox"><span class="label">Journal</span><b id="healthJournal">—</b></div><div class="healthBox"><span class="label">PWA</span><b id="healthPwa">—</b></div></div><button style="margin-top:10px" onclick="runHealthCheck()">Run health check</button></div>
+</section>
+<section id="decision" class="panel">
+  <div class="sectionHead"><h3>Decision Center</h3><span class="small">Single-page synthesis</span></div>
+  <div class="decisionGrid">
+    <div class="decisionHero">
+      <div class="label">Current action</div><div id="decisionAction" class="decisionBig neutral">WAIT</div>
+      <div id="decisionSub" class="small">Run analysis first.</div>
+      <div id="decisionReasons" class="reasonList"></div>
+    </div>
+    <div class="card">
+      <div class="row"><span>LONG confidence</span><b id="decisionLong">—</b></div>
+      <div class="row"><span>SHORT confidence</span><b id="decisionShort">—</b></div>
+      <div class="row"><span>Market regime</span><b id="decisionRegime">—</b></div>
+      <div class="row"><span>Historical edge</span><b id="decisionHist">—</b></div>
+      <div class="row"><span>Primary blocker</span><b id="decisionBlocker">—</b></div>
+    </div>
+  </div>
+</section>
+
+<section id="correlation" class="panel">
+  <div class="sectionHead"><h3>Correlation & Relative Strength</h3><span class="small">Selected coin vs BTC / ETH / SOL</span></div>
+  <div class="card full">
+    <div id="corrGrid" class="corrGrid"></div>
+    <div class="calibrationGrid" style="margin-top:10px">
+      <div class="calBox"><span class="label">Beta vs BTC</span><b id="betaBtc">—</b></div>
+      <div class="calBox"><span class="label">RS vs BTC</span><b id="rsBtc">—</b></div>
+      <div class="calBox"><span class="label">RS vs ETH</span><b id="rsEth">—</b></div>
+      <div class="calBox"><span class="label">Correlation regime</span><b id="corrRegime">—</b></div>
+    </div>
+  </div>
+</section>
+
+<section id="paper" class="panel">
+  <div class="sectionHead"><h3>Paper Portfolio</h3><div><button class="actionGhost" onclick="addPaperTrade()">Add current setup</button></div></div>
+  <div class="card full">
+    <div class="paperGrid">
+      <div class="paperBox"><span class="label">Open trades</span><b id="paperOpen">0</b></div>
+      <div class="paperBox"><span class="label">Unrealized</span><b id="paperUnreal">—</b></div>
+      <div class="paperBox"><span class="label">Realized</span><b id="paperReal">—</b></div>
+      <div class="paperBox"><span class="label">Win rate</span><b id="paperWin">—</b></div>
+      <div class="paperBox"><span class="label">Exposure</span><b id="paperExposure">—</b></div>
+    </div>
+    <div style="margin-top:10px"><div class="paperRow"><b>Coin</b><b>Dir</b><b>Entry</b><b>PnL</b><b>Status</b><b>Close</b></div><div id="paperRows"></div></div>
+  </div>
+</section>
+<section id="analytics" class="panel">
+  <div class="sectionHead"><h3>Strategy Analytics</h3><span class="small">Journal attribution · coin / TF / regime</span></div>
+  <div class="card full">
+    <div class="analyticsGrid">
+      <div class="analyticsBox"><span class="label">Expectancy</span><b id="anExpectancy">—</b></div>
+      <div class="analyticsBox"><span class="label">Payoff ratio</span><b id="anPayoff">—</b></div>
+      <div class="analyticsBox"><span class="label">Max DD</span><b id="anMaxDd">—</b></div>
+      <div class="analyticsBox"><span class="label">Best regime</span><b id="anBestRegime">—</b></div>
+    </div>
+    <div class="label" style="margin-top:14px">By timeframe</div><div id="tfMatrix" class="matrix"></div>
+    <div class="label" style="margin-top:14px">By coin</div><div id="coinMatrix" class="matrix"></div>
+    <div class="label" style="margin-top:14px">Confidence calibration</div><div id="confidenceCalibration"></div>
+  </div>
+</section>
+
+<section id="montecarlo" class="panel">
+  <div class="sectionHead"><h3>Monte Carlo Stress Test</h3><span class="small">Bootstrap from resolved R-multiples</span></div>
+  <div class="card full">
+    <div class="riskForm">
+      <input id="mcRuns" type="number" value="1000" min="100" max="10000" step="100">
+      <input id="mcTrades" type="number" value="100" min="20" max="1000" step="10">
+      <select id="mcSource"><option value="journal">Signal Journal</option><option value="paper">Paper Portfolio</option></select>
+      <button onclick="runMonteCarlo()">Run simulation</button>
+    </div>
+    <div class="mcGrid" style="margin-top:10px">
+      <div class="mcBox"><span class="label">Median ending R</span><b id="mcMedian">—</b></div>
+      <div class="mcBox"><span class="label">5th percentile</span><b id="mcP5">—</b></div>
+      <div class="mcBox"><span class="label">95th percentile</span><b id="mcP95">—</b></div>
+      <div class="mcBox"><span class="label">Median max DD</span><b id="mcDd">—</b></div>
+      <div class="mcBox"><span class="label">Loss probability</span><b id="mcLossProb">—</b></div>
+    </div>
+    <p class="note">Bootstrap simulation reorders historical outcomes. It does not model changing regimes, slippage or future edge decay.</p>
+  </div>
+</section>
+
+<section id="scenario" class="panel">
+  <div class="sectionHead"><h3>Scenario Lab</h3><span class="small">±ATR price shocks on current setup</span></div>
+  <div class="card full">
+    <div class="label">Current trade-map stress</div><div id="scenarioGrid" class="scenarioGrid"></div>
+    <div class="row"><span>Breakeven price</span><b id="scenarioBe">—</b></div>
+    <div class="row"><span>Worst tested move</span><b id="scenarioWorst">—</b></div>
+    <div class="row"><span>Best tested move</span><b id="scenarioBest">—</b></div>
+  </div>
+</section>
+<section id="validation" class="panel">
+  <div class="sectionHead"><h3>Validation Lab</h3><span class="validationBadge">COST-AWARE · ENTRY-ACTIVATED · OOS</span></div>
+  <div class="validationHero">
+    <div class="edgeCard">
+      <div class="label">Research status</div><div id="validationState" class="edgeState neutral">NOT ENOUGH DATA</div>
+      <div id="validationWhy" class="small" style="margin-top:7px">Evaluate journal signals with the v24 execution model.</div>
+    </div>
+    <div class="card">
+      <div class="row"><span>Execution policy</span><b id="validationPolicy">—</b></div>
+      <div class="row"><span>Fees + slippage</span><b id="validationCosts">—</b></div>
+      <div class="row"><span>Legacy unresolved</span><b id="validationLegacy">—</b></div>
+      <div class="row"><span>Cost-aware sample</span><b id="validationSample">—</b></div>
+    </div>
+  </div>
+  <div class="validGrid">
+    <div class="validBox"><span class="label">Fill rate</span><b id="valFillRate">—</b></div>
+    <div class="validBox"><span class="label">Net expectancy</span><b id="valExpectancy">—</b></div>
+    <div class="validBox"><span class="label">Net profit factor</span><b id="valPf">—</b></div>
+    <div class="validBox"><span class="label">Max drawdown</span><b id="valDd">—</b></div>
+    <div class="validBox"><span class="label">Net win rate</span><b id="valWin">—</b></div>
+    <div class="validBox"><span class="label">Average cost</span><b id="valCost">—</b></div>
+    <div class="validBox"><span class="label">Ambiguous</span><b id="valAmbiguous">—</b></div>
+    <div class="validBox"><span class="label">Waiting entry</span><b id="valWaiting">—</b></div>
+  </div>
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Net-R Equity Curve</h3><span class="small">Resolved cost-aware journal only</span></div>
+    <div class="curveWrap"><canvas id="validationCurve" width="1000" height="220"></canvas></div>
+  </div>
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Walk-Forward Out-of-Sample</h3><button class="actionGhost" onclick="runOosValidation()">Run OOS</button></div>
+    <div class="oosGrid">
+      <div class="oosBox"><span class="label">Selected threshold</span><b id="oosThreshold">—</b></div>
+      <div class="oosBox"><span class="label">OOS trades</span><b id="oosTrades">—</b></div>
+      <div class="oosBox"><span class="label">OOS expectancy</span><b id="oosExpectancy">—</b></div>
+      <div class="oosBox"><span class="label">OOS PF</span><b id="oosPf">—</b></div>
+      <div class="oosBox"><span class="label">OOS max DD</span><b id="oosDd">—</b></div>
+    </div>
+    <div id="oosNote" class="note">Training segment selects one score threshold; the final 40% is evaluated without retuning.</div>
+  </div>
+</section>
+<section id="forward" class="panel">
+  <div class="sectionHead"><h3>Forward Validation Lab</h3><span class="validationBadge">FORWARD-ONLY · SHRUNK RELIABILITY · RISK GUARD</span></div>
+  <div class="forwardHero">
+    <div class="forwardCard">
+      <div class="label">Forward cohort status</div>
+      <div id="forwardState" class="forwardState neutral">NOT STARTED</div>
+      <div id="forwardWhy" class="small" style="margin-top:7px">Start a forward cohort to separate future evidence from historical tuning.</div>
+      <div class="forwardActions">
+        <button onclick="startForwardValidation()">Start forward validation now</button>
+        <button class="actionGhost" onclick="resetForwardValidation()">Reset cohort</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row"><span>Started</span><b id="forwardStarted">—</b></div>
+      <div class="row"><span>Resolved forward</span><b id="forwardResolved">0</b></div>
+      <div class="row"><span>Forward expectancy</span><b id="forwardExpectancy">—</b></div>
+      <div class="row"><span>Forward profit factor</span><b id="forwardPf">—</b></div>
+      <div class="row"><span>Forward max DD</span><b id="forwardDd">—</b></div>
+      <div class="row"><span>Forward win rate</span><b id="forwardWin">—</b></div>
+    </div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Risk Guard</h3><span class="small">Recent cost-aware results · advisory only</span></div>
+    <div class="guardGrid">
+      <div class="guardBox"><span class="label">Guard state</span><b id="guardState">—</b></div>
+      <div class="guardBox"><span class="label">Recent 20 expectancy</span><b id="guardExpectancy">—</b></div>
+      <div class="guardBox"><span class="label">Recent drawdown</span><b id="guardDd">—</b></div>
+      <div class="guardBox"><span class="label">Risk multiplier</span><b id="guardRisk">—</b></div>
+    </div>
+    <div id="guardReason" class="note">No forward evidence yet.</div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Segment Reliability Overlay</h3><span class="small">Coin + timeframe + mode + regime · Bayesian-style shrinkage</span></div>
+    <div class="segmentGrid">
+      <div class="segmentBox"><span class="label">Matching sample</span><b id="segN">0</b></div>
+      <div class="segmentBox"><span class="label">Shrunk hit rate</span><b id="segHit">—</b></div>
+      <div class="segmentBox"><span class="label">Shrunk expectancy</span><b id="segExp">—</b></div>
+      <div class="segmentBox"><span class="label">Reliability overlay</span><b id="segAdj">—</b></div>
+      <div class="segmentBox"><span class="label">Suggested threshold</span><b id="segThreshold">—</b></div>
+    </div>
+    <p class="note">The overlay is advisory and does not rewrite the base signal engine. Small samples are shrunk strongly toward neutral.</p>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Rolling 3-Fold OOS</h3><button class="actionGhost" onclick="runRollingOos()">Run 3-fold OOS</button></div>
+    <div id="foldTable" class="foldTable"></div>
+    <div class="guardGrid" style="margin-top:10px">
+      <div class="guardBox"><span class="label">Aggregate OOS N</span><b id="foldN">—</b></div>
+      <div class="guardBox"><span class="label">Aggregate OOS exp.</span><b id="foldExp">—</b></div>
+      <div class="guardBox"><span class="label">Aggregate OOS PF</span><b id="foldPf">—</b></div>
+      <div class="guardBox"><span class="label">Aggregate OOS DD</span><b id="foldDd">—</b></div>
+    </div>
+  </div>
+
+  <div class="card full" style="margin-top:10px">
+    <div class="sectionHead"><h3>Evidence Quality Gate</h3><span class="small">Checks whether the sample is usable</span></div>
+    <div class="qualityGrid">
+      <div class="qualityBox"><span class="label">Attribution coverage</span><b id="qualityAttrib">—</b></div>
+      <div class="qualityBox"><span class="label">Ambiguous rate</span><b id="qualityAmb">—</b></div>
+      <div class="qualityBox"><span class="label">Out-of-range rate</span><b id="qualityOor">—</b></div>
+      <div class="qualityBox"><span class="label">Calibration gap</span><b id="qualityCal">—</b></div>
     </div>
   </div>
 </section>
@@ -793,19 +1214,230 @@ main{max-width:1160px;padding-top:14px}
 <div class="card full"><div class="label">Derivatives composite</div><div class="row"><span>Funding bias</span><b id="fundingBias">—</b></div><div class="row"><span>Crowding risk</span><b id="crowdingRisk">—</b></div><div class="row"><span>OI context</span><b id="oiContext">—</b></div></div>
 </div></section>
 <section id="watch" class="panel"><div class="card"><div class="label">Favorite memorate pe telefon</div><div id="watchout"></div></div></section>
-<p class="note">Engine-ul combină EMA20/50/200, RSI, MACD, ADX/DMI, Supertrend, Stoch RSI, Bollinger, rolling VWAP, ATR, MFI, CMF, OBV, Ichimoku, divergență RSI, volum, Donchian breakout, BOS/CHoCH, liquidity sweep/FVG, plus context futures (OI, long/short, funding) și analogi istorici kNN. Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice și confidence LONG/SHORT sunt euristici de confluență, nu probabilități garantate de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile, iar modelul nu include știri, slippage, comisioane ori lichiditate reală.</p>
+<p class="note">Engine-ul combină EMA20/50/200, RSI, MACD, ADX/DMI, Supertrend, Stoch RSI, Bollinger, VWAP/Anchored VWAP, ATR, MFI, CMF, OBV, Ichimoku, divergență RSI, Volume Profile, Donchian breakout, swing structure, BOS/CHoCH, liquidity sweep/FVG, order-book depth, futures context (OI, long/short, funding) și analogi istorici kNN. Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice și confidence LONG/SHORT sunt euristici de confluență, nu probabilități garantate de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile. v24 modelează comisioane și slippage configurabile pentru jurnal/backtest, dar nu reproduce lichiditatea reală, ordinea intrabar exactă sau execuția unui exchange.</p>
 </main></div></div><div id="toastHost" class="toastHost"></div><nav class="mobileBottom"><button class="mobileNavBtn active" data-nav="dash" onclick="navTo('dash')"><b>⌂</b>Home</button><button class="mobileNavBtn" data-nav="scan" onclick="navTo('scan',true)"><b>⌕</b>Scan</button><button class="mobileNavBtn" data-nav="signals" onclick="navTo('signals',true)"><b>↗</b>Signals</button><button class="mobileNavBtn" data-nav="market" onclick="navTo('market',true)"><b>◉</b>Market</button><button class="mobileNavBtn" data-nav="alerts" onclick="navTo('alerts')"><b>!</b>Alerts</button></nav><script>
 
 
 
-const DEFAULT_SETTINGS={signalMin:64,nearPct:.5,alerts:{sr:true,ls:true,funding:true,oi:true,signal:true}};
+
+let liveSocket=null,liveSymbol=null,lastWsTick=0;
+function startLiveSocket(sym){
+ try{if(liveSocket){liveSocket.close();liveSocket=null}}catch{}
+ liveSymbol=sym.toLowerCase();
+ try{
+   liveSocket=new WebSocket(`wss://stream.binance.com:9443/ws/${liveSymbol}@ticker`);
+   liveSocket.onopen=()=>{lastWsTick=Date.now();$("wsDot").classList.add("live");$("wsStatus").textContent="WS LIVE"};
+   liveSocket.onmessage=e=>{lastWsTick=Date.now();markFresh("ws");try{const d=JSON.parse(e.data);if(window.__radarState&&window.__radarState.symbol===sym){$("heroPrice").textContent=num(+d.c);$("price").textContent=num(+d.c);$("hero24").textContent=(+d.P>=0?"+":"")+(+d.P).toFixed(2)+"%"}}catch{}};
+   liveSocket.onerror=()=>{$("wsDot").classList.remove("live");$("wsStatus").textContent="WS ERROR"};
+   liveSocket.onclose=()=>{$("wsDot").classList.remove("live");$("wsStatus").textContent="WS OFF"};
+ }catch{$("wsStatus").textContent="WS N/A"}
+}
+function toggleChartFullscreen(){const c=$("chartCard");c.classList.toggle("fullscreenChart");setTimeout(()=>window.__radarState&&draw(window.__radarState.q),50)}
+function volumeProfile(j,bins=24){
+ const rows=j.slice(-240),hi=Math.max(...rows.map(x=>+x[2])),lo=Math.min(...rows.map(x=>+x[3])),step=(hi-lo)/bins||1,vol=Array(bins).fill(0);
+ rows.forEach(x=>{const tp=(+x[2]+ +x[3]+ +x[4])/3,idx=Math.max(0,Math.min(bins-1,Math.floor((tp-lo)/step)));vol[idx]+=+x[5]});
+ const total=vol.reduce((a,b)=>a+b,0),pocIdx=vol.indexOf(Math.max(...vol)),pairs=vol.map((v,i)=>({i,v})).sort((a,b)=>b.v-a.v);let acc=0,sel=[];
+ for(const q of pairs){sel.push(q.i);acc+=q.v;if(acc>=total*.7)break}
+ const mid=i=>lo+(i+.5)*step;return {hi,lo,step,vol,poc:mid(pocIdx),val:mid(Math.min(...sel)),vah:mid(Math.max(...sel)),hvn:mid(pocIdx),total}
+}
+function anchoredVWAP(j,startIdx){let pv=0,v=0;for(let i=Math.max(0,startIdx);i<j.length;i++){const x=j[i],tp=(+x[2]+ +x[3]+ +x[4])/3,vol=+x[5];pv+=tp*vol;v+=vol}return v?pv/v:+j[j.length-1][4]}
+function renderVolumeProfile(){
+ const st=window.__radarState;if(!st)return;const j=st.j,vp=volumeProfile(j),box=$("vpBars"),mx=Math.max(...vp.vol);
+ box.innerHTML=vp.vol.map((v,i)=>`<div class="vpRow"><span>${num(vp.lo+(i+.5)*vp.step)}</span><div class="vpTrack"><div class="vpFill" style="width:${mx?100*v/mx:0}%"></div></div><span>${(100*v/vp.total).toFixed(1)}%</span></div>`).join("");
+ $("vpPoc").textContent=num(vp.poc);$("vpVah").textContent=num(vp.vah);$("vpVal").textContent=num(vp.val);$("vpHvn").textContent=num(vp.hvn);
+ const closes=j.map(x=>+x[4]),last=j.length-1,look=80,sub=closes.slice(Math.max(0,last-look)),loRel=sub.indexOf(Math.min(...sub)),hiRel=sub.indexOf(Math.max(...sub)),base=Math.max(0,last-look);
+ $("avwapLow").textContent=num(anchoredVWAP(j,base+loRel));$("avwapHigh").textContent=num(anchoredVWAP(j,base+hiRel));$("sessionVwap").textContent=num(anchoredVWAP(j,Math.max(0,j.length-24)))
+}
+function calculateRisk(){
+ const ss=window.__signalState;if(!ss||ss.tm.direction==="WAIT"){toast("Need an active LONG/SHORT setup","warn");return}
+ const capital=Math.max(1,+$("riskCapital").value||0),pct=Math.max(.01,+$("riskPct").value||1),lev=Math.max(1,+$("riskLeverage").value||1),fee=(+$("riskFee").value||.1)/100,entry=(ss.tm.entryLow+ss.tm.entryHigh)/2,dist=Math.abs(entry-ss.tm.stop),riskAmt=capital*pct/100,qty=dist?riskAmt/dist:0,notional=qty*entry,margin=notional/lev,fees=notional*fee*2;
+ $("riskAmount").textContent=riskAmt.toFixed(2)+" USDT";$("positionSize").textContent=qty.toFixed(6);$("notional").textContent=notional.toFixed(2)+" USDT";$("marginReq").textContent=margin.toFixed(2)+" USDT";$("riskStopDist").textContent=(dist/entry*100).toFixed(2)+"%";$("riskFees").textContent=fees.toFixed(2)+" USDT";
+ let warn=margin>capital?"Margin exceeds capital":notional>capital*5?"High exposure":fees>riskAmt*.15?"Fees material":"OK";$("riskWarning").textContent=warn;$("riskWarning").className=warn==="OK"?"good":"bad"
+}
+function signalExplanation(q,hs,mc){
+ const hist=hs.h4?hs.h4.up:50,arr=[["Trend",q.trendScore,(q.trendScore-50)*.34],["Momentum",q.momScore,(q.momScore-50)*.27],["Volume",q.volScore,(q.volScore-50)*.15],["Structure",q.structureScore,(q.structureScore-50)*.24],["MTF",mc.avg,(mc.avg-50)*.20],["Historical",hist,(hist-50)*.22],["ADX",q.adx,q.adx>=25?4:0],["CMF",q.cmf,q.cmf*20]];
+ $("explainList").innerHTML=arr.map(([n,v,c])=>`<div class="explainRow"><span>${n}</span><b>${typeof v==="number"?v.toFixed(1):v}</b><b class="contrib ${c>0?"good":c<0?"bad":"neutral"}">${c>=0?"+":""}${c.toFixed(1)}</b></div>`).join("")
+}
+function renderLifecycle(){const ss=window.__signalState,steps=["NEW","CONFIRMED","ENTRY","TP1","TP2","TP3","STOP","INVALIDATED"],dir=ss?.sm.direction||"WAIT";let status="NEW";if(dir!=="WAIT")status=ss.sm.edge>=12?"CONFIRMED":"NEW";$("lifecycle").innerHTML=steps.map(x=>`<span class="lifeStep ${x===status?"on":""}">${x}</span>`).join("")}
+async function loadDepth(){
+ const sym=norm($("symbol").value),b=$("depthBids"),a=$("depthAsks");b.innerHTML=a.innerHTML="Loading…";
+ try{const d=await market(`/depth?symbol=${encodeURIComponent(sym)}&limit=20`),bids=d.bids||[],asks=d.asks||[],bv=bids.slice(0,10).map(x=>(+x[0])*(+x[1])),av=asks.slice(0,10).map(x=>(+x[0])*(+x[1])),bt=bv.reduce((x,y)=>x+y,0),at=av.reduce((x,y)=>x+y,0),mx=Math.max(...bv,...av,1);
+ b.innerHTML=bids.slice(0,10).map((x,i)=>`<div class="depthRow"><span>${num(+x[0])}</span><span>${(+x[1]).toFixed(4)}</span></div><div class="depthBar depthBid" style="width:${100*bv[i]/mx}%"></div>`).join("");
+ a.innerHTML=asks.slice(0,10).map((x,i)=>`<div class="depthRow"><span>${num(+x[0])}</span><span>${(+x[1]).toFixed(4)}</span></div><div class="depthBar depthAsk" style="width:${100*av[i]/mx}%"></div>`).join("");
+ const spread=asks.length&&bids.length?(+asks[0][0]-+bids[0][0])/(+bids[0][0])*100:null,imb=(bt+at)?(bt-at)/(bt+at)*100:0;$("depthSpread").textContent=spread==null?"N/A":spread.toFixed(4)+"%";$("depthImbalance").textContent=(imb>=0?"+":"")+imb.toFixed(1)+"%";$("depthImbalance").className=imb>5?"good":imb<-5?"bad":"neutral"}catch(e){b.innerHTML=a.innerHTML=`<div class="emptyState">Depth unavailable: ${e.message}</div>`}
+}
+async function loadMarketContext(){try{const [btc,ethbtc]=await Promise.all([ticker("BTCUSDT"),ticker("ETHBTC")]),rows=marketCache.rows||[];$("ctxBtc").textContent=(+btc.priceChangePercent>=0?"+":"")+(+btc.priceChangePercent).toFixed(2)+"%";$("ctxEthBtc").textContent=(+ethbtc.priceChangePercent>=0?"+":"")+(+ethbtc.priceChangePercent).toFixed(2)+"%";let bull=rows.filter(x=>x.ver==="BULLISH").length,bear=rows.filter(x=>x.ver==="BEARISH").length;$("ctxBreadth").textContent=rows.length?`${bull}B / ${bear}S`:"N/A";$("ctxRegime").textContent=window.__radarState?.q?.regime||"—"}catch{$("ctxBtc").textContent=$("ctxEthBtc").textContent="N/A"}}
+async function runHealthCheck(){$("healthSpot").textContent="Checking…";try{await ticker("BTCUSDT");$("healthSpot").textContent="OK"}catch{$("healthSpot").textContent="FAIL"}$("healthWs").textContent=lastWsTick&&Date.now()-lastWsTick<60000?"LIVE":"OFF";$("healthFut").textContent=window.__derivativesState&&Object.values(window.__derivativesState).some(x=>x!=null)?"OK":"OPTIONAL";$("healthSent").textContent=$("fearGreed")&&$("fearGreed").textContent!=="N/A"?"OK":"OPTIONAL";$("healthJournal").textContent=journal().length+" signals";$("healthPwa").textContent=("serviceWorker" in navigator)?"READY":"UNSUPPORTED"}
+
+function pctRank(arr,v){if(!arr.length)return 50;let n=arr.filter(x=>x<=v).length;return 100*n/arr.length}
+function volatilityState(j,q){
+ const c=j.map(x=>+x[4]),h=j.map(x=>+x[2]),l=j.map(x=>+x[3]),atr=ATR(h,l,c,14),atrPct=atr.map((x,i)=>x/c[i]*100),ma=sma(c,20),sd=stddev(c,20),bbw=c.map((x,i)=>Number.isFinite(ma[i])&&ma[i]?4*sd[i]/ma[i]*100:NaN).filter(Number.isFinite);
+ const a=atrPct.slice(-120),b=bbw.slice(-120),ap=pctRank(a,a[a.length-1]),bp=pctRank(b,b[b.length-1]),sq=ap<30&&bp<30,exp=ap>70||bp>70;
+ return {atrPercentile:ap,bbPercentile:bp,squeeze:sq?"ACTIVE":ap<45&&bp<45?"BUILDING":"NO",expansion:exp?"HIGH":ap>55||bp>55?"MEDIUM":"LOW"}
+}
+function renderVolatility(q,j){
+ const v=volatilityState(j,q);$("volAtrPct").textContent=v.atrPercentile.toFixed(0)+"%";$("volBbPct").textContent=v.bbPercentile.toFixed(0)+"%";$("volSqueeze").textContent=v.squeeze;$("volSqueeze").className=v.squeeze==="ACTIVE"?"good":v.squeeze==="BUILDING"?"neutral":"";
+ $("volExpansion").textContent=v.expansion;$("volExpansion").className=v.expansion==="HIGH"?"bad":v.expansion==="MEDIUM"?"neutral":"good";return v
+}
+function renderLiquidationProxy(q,deriv){
+ const px=q.price,a=q.atr,levels=[-3,-2,-1,0,1,2,3],fund=deriv?.funding||0,ls=deriv?.ls||1,oiCh=parseFloat(deriv?.oiTrend)||0;
+ let hotSide=(fund>.0003||ls>1.35)?"DOWN":(fund<-.0003||ls<.75)?"UP":"BALANCED";
+ $("proxyMap").innerHTML=levels.map(n=>{let price=px+n*a*1.25,cls="cool";if((hotSide==="DOWN"&&n<0)||(hotSide==="UP"&&n>0))cls=Math.abs(n)<=2?"hot":"mid";else if(n===0)cls="mid";return `<div class="proxyLvl ${cls}">${n===0?"SPOT":(n>0?"+":"")+n+" ATR"}<br><b>${num(price)}</b></div>`}).join("");
+ let bias=hotSide==="DOWN"?"LONG LIQUIDATION RISK":hotSide==="UP"?"SHORT SQUEEZE RISK":"BALANCED";if(Math.abs(oiCh)>=3)bias+=" · OI EXPANSION";$("proxyBias").textContent=bias;$("proxyBias").className=hotSide==="DOWN"?"bad":hotSide==="UP"?"good":"neutral"
+}
+function buildDecision(q,hs,mc,sm){
+ const reasons=[],push=(name,good,txt)=>reasons.push({name,good,txt});
+ push("Trend",q.trendScore>=55,q.trendScore.toFixed(0)+"/100");
+ push("Momentum",q.momScore>=55,q.momScore.toFixed(0)+"/100");
+ push("Structure",q.structureScore>=55,q.structureScore.toFixed(0)+"/100");
+ push("Volume",q.volScore>=55,q.volScore.toFixed(0)+"/100");
+ push("MTF",mc.avg>=55,mc.avg.toFixed(0)+"/100");
+ const hp=hs.h4; if(hp)push("Historical",hp.up>=55,`${hp.up.toFixed(0)}% up`);
+ let blocker="None";if(sm.direction==="WAIT"){if(sm.edge<8)blocker="LONG/SHORT too close";else if(Math.max(sm.long,sm.short)<appSettings().signalMin)blocker="Confidence below threshold";else if(q.smc.trap)blocker="Liquidity trap";else blocker="Insufficient confluence"}
+ $("decisionAction").textContent=sm.direction;$("decisionAction").className="decisionBig "+(sm.direction==="LONG"?"good":sm.direction==="SHORT"?"bad":"neutral");
+ $("decisionSub").textContent=`Edge ${sm.edge.toFixed(0)} · Score ${q.score.toFixed(0)} · MTF ${mc.avg.toFixed(0)}`;$("decisionLong").textContent=sm.long.toFixed(0);$("decisionShort").textContent=sm.short.toFixed(0);$("decisionRegime").textContent=q.regime;$("decisionHist").textContent=hp?`${hp.up.toFixed(0)}%↑ / ${hp.down.toFixed(0)}%↓`:"N/A";$("decisionBlocker").textContent=blocker;
+ $("decisionReasons").innerHTML=reasons.map(r=>`<div class="reason"><span>${r.good?"✓":"×"}</span><span>${r.name}</span><b class="${r.good?"good":"bad"}">${r.txt}</b></div>`).join("")
+}
+function returnsFromKlines(k,n=100){let c=k.map(x=>+x[4]).slice(-(n+1)),r=[];for(let i=1;i<c.length;i++)r.push(c[i]/c[i-1]-1);return r}
+function corr(a,b){let n=Math.min(a.length,b.length);if(n<5)return NaN;a=a.slice(-n);b=b.slice(-n);let ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n,num=0,da=0,db=0;for(let i=0;i<n;i++){let x=a[i]-ma,y=b[i]-mb;num+=x*y;da+=x*x;db+=y*y}return da&&db?num/Math.sqrt(da*db):NaN}
+function beta(a,b){let n=Math.min(a.length,b.length);a=a.slice(-n);b=b.slice(-n);let ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n,cov=0,v=0;for(let i=0;i<n;i++){cov+=(a[i]-ma)*(b[i]-mb);v+=(b[i]-mb)**2}return v?cov/v:NaN}
+async function loadCorrelation(){
+ const sym=norm($("symbol").value),refs=["BTCUSDT","ETHUSDT","SOLUSDT"];try{
+   const [sel,...ks]=await Promise.all([klines(sym,"4h",220),...refs.map(x=>klines(x,"4h",220))]),sr=returnsFromKlines(sel),names=[coin(sym),"BTC","ETH","SOL"],rs=[sr,...ks.map(returnsFromKlines)];
+   let html=`<div></div>${names.slice(1).map(x=>`<div class="hmHead">${x}</div>`).join("")}`;
+   html+=`<div class="hmLabel">${names[0]}</div>${rs.slice(1).map(r=>{let c=corr(sr,r);return `<div class="corrCell ${c>=0?"corrPos":"corrNeg"}">${Number.isFinite(c)?c.toFixed(2):"—"}</div>`}).join("")}`;
+   $("corrGrid").innerHTML=html;let b=beta(sr,rs[1]),selPerf=sr.reduce((a,x)=>a+x,0),btcPerf=rs[1].reduce((a,x)=>a+x,0),ethPerf=rs[2].reduce((a,x)=>a+x,0);
+   $("betaBtc").textContent=Number.isFinite(b)?b.toFixed(2):"N/A";$("rsBtc").textContent=((selPerf-btcPerf)*100).toFixed(2)+"%";$("rsEth").textContent=((selPerf-ethPerf)*100).toFixed(2)+"%";
+   let cb=corr(sr,rs[1]);$("corrRegime").textContent=!Number.isFinite(cb)?"N/A":cb>.75?"HIGH":cb>.4?"MEDIUM":"LOW"
+ }catch(e){$("corrGrid").innerHTML=`<div class="emptyState">Correlation unavailable: ${e.message}</div>`}
+}
+function paperTrades(){try{return JSON.parse(localStorage.getItem("paperTrades")||"[]")}catch{return []}}
+function setPaperTrades(a){localStorage.setItem("paperTrades",JSON.stringify(a.slice(0,100)));renderPaper()}
+function addPaperTrade(){
+ const st=window.__radarState,ss=window.__signalState;if(!st||!ss||ss.tm.direction==="WAIT"){toast("Need active LONG/SHORT setup","warn");return}
+ const e=(ss.tm.entryLow+ss.tm.entryHigh)/2,a=paperTrades();a.unshift({id:Date.now(),symbol:st.symbol,tf:st.tf,direction:ss.tm.direction,entry:e,stop:ss.tm.stop,tp1:ss.tm.tp1,tp2:ss.tm.tp2,tp3:ss.tm.tp3,opened:Date.now(),status:"OPEN",last:e,pnl:0,realized:null});setPaperTrades(a);toast("Paper trade added","good")
+}
+async function refreshPaper(){
+ let a=paperTrades();for(const t of a.filter(x=>x.status==="OPEN")){try{let tk=await ticker(t.symbol),p=+(tk.lastPrice||0);if(!p)continue;t.last=p;t.pnl=(t.direction==="LONG"?p/t.entry-1:t.entry/p-1)*100;if((t.direction==="LONG"&&p<=t.stop)||(t.direction==="SHORT"&&p>=t.stop)){t.status="STOP";t.realized=t.pnl}else if((t.direction==="LONG"&&p>=t.tp3)||(t.direction==="SHORT"&&p<=t.tp3)){t.status="TP3";t.realized=t.pnl}}catch{}}
+ setPaperTrades(a)
+}
+function closePaper(id){let a=paperTrades(),t=a.find(x=>x.id===id);if(t&&t.status==="OPEN"){t.status="CLOSED";t.realized=t.pnl}setPaperTrades(a)}
+function renderPaper(){
+ const a=paperTrades(),open=a.filter(x=>x.status==="OPEN"),closed=a.filter(x=>x.status!=="OPEN"),un=open.reduce((z,x)=>z+(x.pnl||0),0),real=closed.reduce((z,x)=>z+(x.realized||0),0),wins=closed.filter(x=>(x.realized||0)>0).length,exp=open.reduce((z,x)=>z+x.entry,0);
+ $("paperOpen").textContent=open.length;$("paperUnreal").textContent=(un>=0?"+":"")+un.toFixed(2)+"%";$("paperReal").textContent=(real>=0?"+":"")+real.toFixed(2)+"%";$("paperWin").textContent=closed.length?(wins/closed.length*100).toFixed(0)+"%":"—";$("paperExposure").textContent=exp?compact(exp):"—";
+ $("paperRows").innerHTML=a.length?a.map(x=>`<div class="paperRow"><b>${coin(x.symbol)}</b><span class="${x.direction==="LONG"?"good":"bad"}">${x.direction}</span><span>${num(x.entry)}</span><span class="${(x.pnl||0)>=0?"good":"bad"}">${(x.pnl||0)>=0?"+":""}${(x.pnl||0).toFixed(2)}%</span><span>${x.status}</span><button class="pill" onclick="closePaper(${x.id})">Close</button></div>`).join(""):`<div class="emptyState">No paper trades.</div>`
+}
+
+let dataFresh={rest:0,ws:0,futures:0,sentiment:0};
+function markFresh(k){dataFresh[k]=Date.now();renderFreshness()}
+function ageText(ts){if(!ts)return "—";let q=Math.max(0,Math.floor((Date.now()-ts)/1000));if(q<60)return q+"s";let m=Math.floor(q/60);if(m<60)return m+"m";return Math.floor(m/60)+"h"}
+function renderFreshness(){if($("freshRest"))$("freshRest").textContent=ageText(dataFresh.rest);if($("freshWs"))$("freshWs").textContent=ageText(dataFresh.ws);if($("freshFut"))$("freshFut").textContent=ageText(dataFresh.futures);if($("freshSent"))$("freshSent").textContent=ageText(dataFresh.sentiment)}
+function resolvedR(){return journal().map(x=>({...x,r:metricR(x)})).filter(x=>Number.isFinite(x.r))}
+function maxDrawdownR(vals){let eq=0,peak=0,dd=0;for(const x of vals){eq+=x;peak=Math.max(peak,eq);dd=Math.min(dd,eq-peak)}return dd}
+function renderAnalytics(){
+ const r=resolvedR(),wins=r.filter(x=>x.r>0),losses=r.filter(x=>x.r<0),avg=r.length?r.reduce((a,x)=>a+x.r,0)/r.length:0,aw=wins.length?wins.reduce((a,x)=>a+x.r,0)/wins.length:0,al=losses.length?-losses.reduce((a,x)=>a+x.r,0)/losses.length:0,pay=al?aw/al:aw?99:0;
+ $("anExpectancy").textContent=r.length?avg.toFixed(2)+" R":"—";$("anPayoff").textContent=r.length?pay.toFixed(2):"—";$("anMaxDd").textContent=r.length?maxDrawdownR(r.map(x=>x.r)).toFixed(2)+" R":"—";
+ let byReg={};r.forEach(x=>(byReg[x.regime]??=[]).push(x.r));let bestReg=Object.entries(byReg).sort((a,b)=>(b[1].reduce((x,y)=>x+y,0)/b[1].length)-(a[1].reduce((x,y)=>x+y,0)/a[1].length))[0]?.[0]||"—";$("anBestRegime").textContent=bestReg;
+ const matrix=group=>{let groups={};r.forEach(x=>{let k=group(x);(groups[k]??=[]).push(x.r)});return `<div class="mxRow"><div class="mxCell">Group</div><div class="mxCell">N</div><div class="mxCell">Win%</div><div class="mxCell">Avg R</div><div class="mxCell">Sum R</div></div>`+Object.entries(groups).sort((a,b)=>b[1].length-a[1].length).slice(0,12).map(([k,v])=>{let wr=v.filter(x=>x>0).length/v.length*100,av=v.reduce((a,b)=>a+b,0)/v.length,sum=v.reduce((a,b)=>a+b,0);return `<div class="mxRow"><div class="mxCell">${k}</div><div class="mxCell">${v.length}</div><div class="mxCell ${wr>=50?"mxGood":"mxBad"}">${wr.toFixed(0)}%</div><div class="mxCell ${av>=0?"mxGood":"mxBad"}">${av.toFixed(2)}</div><div class="mxCell ${sum>=0?"mxGood":"mxBad"}">${sum.toFixed(1)}</div></div>`}).join("")};
+ $("tfMatrix").innerHTML=matrix(x=>x.tf);$("coinMatrix").innerHTML=matrix(x=>coin(x.symbol));
+ const buckets=[[60,64],[65,69],[70,74],[75,79],[80,100]],cal=$("confidenceCalibration");cal.innerHTML=buckets.map(([a,b])=>{let z=r.filter(x=>Math.max(x.longConf||0,x.shortConf||0)>=a&&Math.max(x.longConf||0,x.shortConf||0)<=b),wr=z.length?z.filter(x=>x.r>0).length/z.length*100:0;return `<div class="calibrationLine"><span>${a}-${b}</span><div class="calibrationTrack"><div class="calibrationFill" style="width:${wr}%"></div></div><b>${z.length?wr.toFixed(0)+"%":"—"}</b></div>`}).join("")
+}
+function percentile(a,p){if(!a.length)return NaN;let x=[...a].sort((m,n)=>m-n),i=(x.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?x[l]:x[l]+(x[h]-x[l])*(i-l)}
+function runMonteCarlo(){
+ let source=$("mcSource").value,runs=Math.max(100,Math.min(10000,+$("mcRuns").value||1000)),trades=Math.max(20,Math.min(1000,+$("mcTrades").value||100)),vals;
+ if(source==="journal")vals=resolvedR().map(x=>x.r);else vals=paperTrades().filter(x=>Number.isFinite(x.realized)).map(x=>x.realized/Math.max(1,Math.abs(x.realized||1)));
+ if(vals.length<5){toast("Need at least 5 resolved outcomes","warn");return}
+ let ends=[],dds=[],loss=0;
+ for(let q=0;q<runs;q++){let eq=0,peak=0,dd=0;for(let i=0;i<trades;i++){let v=vals[Math.floor(Math.random()*vals.length)];eq+=v;peak=Math.max(peak,eq);dd=Math.min(dd,eq-peak)}ends.push(eq);dds.push(dd);if(eq<0)loss++}
+ $("mcMedian").textContent=percentile(ends,.5).toFixed(1)+" R";$("mcP5").textContent=percentile(ends,.05).toFixed(1)+" R";$("mcP95").textContent=percentile(ends,.95).toFixed(1)+" R";$("mcDd").textContent=percentile(dds,.5).toFixed(1)+" R";$("mcLossProb").textContent=(100*loss/runs).toFixed(1)+"%"
+}
+function renderScenario(){
+ const st=window.__radarState,ss=window.__signalState;if(!st||!ss){$("scenarioGrid").innerHTML='<div class="emptyState">Run analysis first.</div>';return}
+ const q=st.q,tm=ss.tm,entry=(tm.entryLow+tm.entryHigh)/2,levels=[-3,-2,-1,0,1,2,3],dir=tm.direction;
+ $("scenarioGrid").innerHTML=levels.map(n=>{let p=q.price+n*q.atr,pnl=dir==="LONG"?(p/entry-1)*100:dir==="SHORT"?(entry/p-1)*100:0;return `<div class="scenarioBox"><span>${n>=0?"+":""}${n} ATR</span><b>${num(p)}</b><span class="${pnl>=0?"good":"bad"}">${pnl>=0?"+":""}${pnl.toFixed(2)}%</span></div>`}).join("");
+ $("scenarioBe").textContent=dir==="WAIT"?"—":num(entry);let arr=levels.map(n=>{let p=q.price+n*q.atr;return dir==="LONG"?(p/entry-1)*100:dir==="SHORT"?(entry/p-1)*100:0});$("scenarioWorst").textContent=Math.min(...arr).toFixed(2)+"%";$("scenarioBest").textContent=Math.max(...arr).toFixed(2)+"%"
+}
+function exportBackup(){
+ const data={version:"v23",ts:Date.now(),settings:appSettings(),journal:journal(),paper:paperTrades(),alerts:appAlerts(),favorites:favs(),recent:JSON.parse(localStorage.getItem("recent")||"[]"),mode:localStorage.getItem("mode")||"auto"};
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="crypto-radar-v23-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
+async function importBackup(file){
+ if(!file)return;try{const txt=await file.text(),d=JSON.parse(txt);if(!d||typeof d!=="object")throw Error("invalid");
+ if(d.settings)putSettings(d.settings);if(Array.isArray(d.journal))setJournal(d.journal);if(Array.isArray(d.paper))setPaperTrades(d.paper);if(Array.isArray(d.alerts))putAlerts(d.alerts);if(Array.isArray(d.favorites))localStorage.setItem("favorites",JSON.stringify(d.favorites));if(Array.isArray(d.recent))localStorage.setItem("recent",JSON.stringify(d.recent));if(d.mode)localStorage.setItem("mode",d.mode);
+ renderLists();renderSignals();renderPaper();renderSettings();renderAlerts();toast("Backup imported","good")}catch{toast("Invalid backup file","bad")}
+}
+function resetWorkspace(){if(!confirm("Reset local settings, journal, paper trades, alerts and watchlist?"))return;for(const k of ["radarSettings","signalJournal","paperTrades","radarAlerts","favorites","recent","mode"])localStorage.removeItem(k);location.reload()}
+
+function forwardStart(){return Number(localStorage.getItem("forwardValidationStart")||0)}
+function startForwardValidation(){
+ if(forwardStart()&&!confirm("A forward cohort already exists. Restart it now?"))return;
+ localStorage.setItem("forwardValidationStart",String(Date.now()));renderForwardLab();toast("Forward cohort started","good")
+}
+function resetForwardValidation(){
+ if(!confirm("Reset the forward cohort start date? Existing journal records remain unchanged."))return;
+ localStorage.removeItem("forwardValidationStart");renderForwardLab();toast("Forward cohort reset","warn")
+}
+function statPack(vals){
+ let n=vals.length,sum=vals.reduce((a,b)=>a+b,0),gp=vals.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=-vals.filter(x=>x<0).reduce((a,b)=>a+b,0);
+ return {n,avg:n?sum/n:0,pf:gl?gp/gl:gp?99:0,dd:n?maxDrawdownR(vals):0,win:n?vals.filter(x=>x>0).length/n:0}
+}
+function calibrationGap(rows){
+ const buckets=[[60,64],[65,69],[70,74],[75,79],[80,100]];let total=0,weighted=0;
+ for(const [a,b] of buckets){let z=rows.filter(x=>{let c=Math.max(+x.longConf||0,+x.shortConf||0);return c>=a&&c<=b&&Number.isFinite(metricR(x))});if(!z.length)continue;let observed=z.filter(x=>metricR(x)>0).length/z.length*100,pred=z.reduce((q,x)=>q+Math.max(+x.longConf||0,+x.shortConf||0),0)/z.length;weighted+=Math.abs(pred-observed)*z.length;total+=z.length}
+ return total?weighted/total:NaN
+}
+function segmentReliability(symbol,tf,mode,regime){
+ const rows=journal().filter(x=>x.symbol===symbol&&x.tf===tf&&x.mode===mode&&x.regime===regime&&Number.isFinite(metricR(x))),n=rows.length,w=rows.filter(x=>metricR(x)>0).length,avg=n?rows.reduce((a,x)=>a+metricR(x),0)/n:0;
+ const priorN=12,shrunkHit=(w+priorN*.5)/(n+priorN),shrunkExp=(n/(n+priorN))*avg;
+ let adj=n>=12?Math.max(-8,Math.min(8,(shrunkHit-.5)*20+shrunkExp*4)):0;
+ const base=appSettings().signalMin,suggested=Math.max(60,Math.min(76,Math.round(base-adj*.45)));
+ return {n,shrunkHit,shrunkExp,adj,suggested}
+}
+function riskGuard(){
+ const vals=resolvedR().slice(0,20).map(x=>x.r),st=statPack(vals);let state="NORMAL",mult=1,reason="No material deterioration detected in recent cost-aware outcomes.";
+ if(vals.length<10){state="LEARNING";mult=.5;reason="Fewer than 10 recent resolved outcomes; keep validation size small."}
+ else if(st.dd<=-10||st.avg<=-.25){state="PAUSE";mult=0;reason="Recent drawdown/expectancy breached the research pause threshold."}
+ else if(st.dd<=-6||st.avg<0){state="CAUTION";mult=.5;reason="Recent evidence is weaker; reduce research risk and gather more samples."}
+ return {state,mult,reason,stats:st}
+}
+function renderForwardLab(){
+ const start=forwardStart(),all=journal(),fwd=start?all.filter(x=>x.ts>=start):[],resolved=fwd.filter(x=>Number.isFinite(metricR(x))),vals=resolved.map(x=>metricR(x)),st=statPack(vals);
+ $("forwardStarted").textContent=start?new Date(start).toLocaleString():"—";$("forwardResolved").textContent=st.n;$("forwardExpectancy").textContent=st.n?st.avg.toFixed(2)+" R":"—";$("forwardPf").textContent=st.n?st.pf.toFixed(2):"—";$("forwardDd").textContent=st.n?st.dd.toFixed(2)+" R":"—";$("forwardWin").textContent=st.n?(st.win*100).toFixed(1)+"%":"—";
+ let state="NOT STARTED",why="Start a forward cohort to separate future evidence from historical tuning.",cl="neutral";
+ if(start){state=st.n<20?"COLLECTING":st.avg>0&&st.pf>=1.2?"FORWARD POSITIVE":st.avg<=0||st.pf<1?"FORWARD DEGRADED":"FORWARD MIXED";why=st.n<20?"Collect at least 20 resolved forward outcomes before interpreting the cohort.":state==="FORWARD POSITIVE"?"Forward-only cost-aware evidence is positive; keep collecting before scaling.":state==="FORWARD DEGRADED"?"Forward-only evidence is currently weak after costs.":"Forward-only evidence is mixed and needs more observations.";cl=state==="FORWARD POSITIVE"?"good":state==="FORWARD DEGRADED"?"bad":"neutral"}
+ $("forwardState").textContent=state;$("forwardState").className="forwardState "+cl;$("forwardWhy").textContent=why;
+ const g=riskGuard();$("guardState").textContent=g.state;$("guardState").className=g.state==="NORMAL"?"guardNormal":g.state==="PAUSE"?"guardPause":"guardCaution";$("guardExpectancy").textContent=g.stats.n?g.stats.avg.toFixed(2)+" R":"—";$("guardDd").textContent=g.stats.n?g.stats.dd.toFixed(2)+" R":"—";$("guardRisk").textContent=g.mult.toFixed(2)+"×";$("guardReason").textContent=g.reason;
+ const stt=window.__radarState;if(stt){let r=segmentReliability(stt.symbol,stt.tf,stt.mode,stt.q.regime);$("segN").textContent=r.n;$("segHit").textContent=(r.shrunkHit*100).toFixed(1)+"%";$("segExp").textContent=r.shrunkExp.toFixed(2)+" R";$("segAdj").textContent=(r.adj>=0?"+":"")+r.adj.toFixed(1)+" pts";$("segThreshold").textContent=r.suggested}else{$("segN").textContent=0;$("segHit").textContent=$("segExp").textContent=$("segAdj").textContent=$("segThreshold").textContent="—"}
+ const resolvedAll=all.filter(x=>Number.isFinite(metricR(x))),attrib=resolvedAll.filter(x=>Number.isFinite(x.trendScore)&&Number.isFinite(x.mtf)).length,amb=all.filter(x=>x.status==="AMBIGUOUS").length,oor=all.filter(x=>x.status==="OUT_OF_RANGE").length,gap=calibrationGap(all);
+ $("qualityAttrib").textContent=resolvedAll.length?(attrib/resolvedAll.length*100).toFixed(0)+"%":"—";$("qualityAmb").textContent=all.length?(amb/all.length*100).toFixed(1)+"%":"—";$("qualityOor").textContent=all.length?(oor/all.length*100).toFixed(1)+"%":"—";$("qualityCal").textContent=Number.isFinite(gap)?gap.toFixed(1)+" pp":"—"
+}
+async function rollingPoints(){
+ const sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
+ for(let i=240;i<j.length-horizon-1;i+=4){let q=calc(j.slice(0,i+1),mode);points.push({score:q.score,atr:q.atr,entry:+j[i+1][1],future:j.slice(i+1,i+1+horizon)})}
+ return points
+}
+async function runRollingOos(){
+ const box=$("foldTable"),cfg=appSettings();box.innerHTML='<div class="emptyState">Running rolling OOS…</div>';
+ try{
+  const points=await rollingPoints(),thresholds=[60,64,68,72],folds=[],cuts=[.45,.60,.75];
+  for(let f=0;f<3;f++){let trainEnd=Math.floor(points.length*cuts[f]),testEnd=f<2?Math.floor(points.length*cuts[f+1]):points.length,best=64,bestAvg=-Infinity;
+   for(const th of thresholds){let tr=statsR(wfTrade(points,th,cfg,0,trainEnd));if(tr.n>=5&&tr.avg>bestAvg){best=th;bestAvg=tr.avg}}
+   let vals=wfTrade(points,best,cfg,trainEnd,testEnd),st=statsR(vals);folds.push({fold:f+1,best,...st,vals})
+  }
+  box.innerHTML=`<div class="foldRow"><div class="foldCell">Fold</div><div class="foldCell">Threshold</div><div class="foldCell">N</div><div class="foldCell">Exp.</div><div class="foldCell">PF</div><div class="foldCell">DD</div></div>`+folds.map(x=>`<div class="foldRow"><div class="foldCell">${x.fold}</div><div class="foldCell">${x.best}</div><div class="foldCell">${x.n}</div><div class="foldCell ${x.avg>=0?"mxGood":"mxBad"}">${x.n?x.avg.toFixed(2):"—"}</div><div class="foldCell">${x.n?x.pf.toFixed(2):"—"}</div><div class="foldCell">${x.n?x.dd.toFixed(2):"—"}</div></div>`).join("");
+  const all=folds.flatMap(x=>x.vals),st=statsR(all);$("foldN").textContent=st.n;$("foldExp").textContent=st.n?st.avg.toFixed(2)+" R":"—";$("foldPf").textContent=st.n?st.pf.toFixed(2):"—";$("foldDd").textContent=st.n?st.dd.toFixed(2)+" R":"—"
+ }catch(e){box.innerHTML=`<div class="emptyState">Rolling OOS unavailable: ${e.message}</div>`}
+}
+const DEFAULT_SETTINGS={signalMin:64,nearPct:.5,feeBps:10,slippageBps:3,executionPolicy:"staged",entryExpiryBars:12,alerts:{sr:true,ls:true,funding:true,oi:true,signal:true}};
 function appSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStorage.getItem("radarSettings")||"{}"),alerts:{...DEFAULT_SETTINGS.alerts,...(JSON.parse(localStorage.getItem("radarSettings")||"{}").alerts||{})}}}catch{return JSON.parse(JSON.stringify(DEFAULT_SETTINGS))}}
 function putSettings(x){localStorage.setItem("radarSettings",JSON.stringify(x))}
 function toggleSetting(k){
  let x=appSettings();x.alerts[k]=!x.alerts[k];putSettings(x);renderSettings()
 }
 function saveSettings(){
- let x=appSettings();x.signalMin=+$("setSignalMin").value;x.nearPct=+$("setNearPct").value;putSettings(x);renderSettings();toast("Settings saved","good")
+ let x=appSettings();x.signalMin=+$("setSignalMin").value;x.nearPct=+$("setNearPct").value;
+ if($("setFeeBps"))x.feeBps=+$("setFeeBps").value;if($("setSlipBps"))x.slippageBps=+$("setSlipBps").value;if($("setExecPolicy"))x.executionPolicy=$("setExecPolicy").value;if($("setEntryExpiry"))x.entryExpiryBars=+$("setEntryExpiry").value;
+ putSettings(x);renderSettings();renderValidation();renderForwardLab();toast("Settings saved","good")
 }
 function applyPreset(name){
  let x=appSettings();
@@ -818,6 +1450,10 @@ function renderSettings(){
  const x=appSettings();
  if($("setSignalMin"))$("setSignalMin").value=String(x.signalMin);
  if($("setNearPct"))$("setNearPct").value=String(x.nearPct);
+ if($("setFeeBps"))$("setFeeBps").value=String(x.feeBps??10);
+ if($("setSlipBps"))$("setSlipBps").value=String(x.slippageBps??3);
+ if($("setExecPolicy"))$("setExecPolicy").value=x.executionPolicy||"staged";
+ if($("setEntryExpiry"))$("setEntryExpiry").value=String(x.entryExpiryBars??12);
  for(const k of ["sr","ls","funding","oi","signal"]){const el=$("toggle"+k.charAt(0).toUpperCase()+k.slice(1));if(el)el.classList.toggle("on",!!x.alerts[k])}
  if($("notifStatus"))$("notifStatus").textContent=typeof Notification==="undefined"?"Unsupported":Notification.permission;
  const r=journal().filter(x=>Number.isFinite(x.rResult));
@@ -830,10 +1466,10 @@ function renderSettings(){
  if($("calThreshold"))$("calThreshold").textContent=r.length<15?"Need ≥15 signals":String(x.signalMin);
 }
 function recalibrate(){
- let r=journal().filter(x=>Number.isFinite(x.rResult));if(r.length<15){toast("Need at least 15 resolved signals for calibration","warn");renderSettings();return}
- let wins=r.filter(x=>x.rResult>0),losses=r.filter(x=>x.rResult<0),x=appSettings(),wr=wins.length/r.length;
- if(wr<.45)x.signalMin=Math.min(76,x.signalMin+2);else if(wr>.62)x.signalMin=Math.max(60,x.signalMin-1);
- putSettings(x);renderSettings();toast("Threshold recalibrated from journal","good")
+ let r=resolvedR();if(r.length<30){toast("Need at least 30 cost-aware resolved signals","warn");renderSettings();return}
+ let recent=r.slice(0,40),wr=recent.filter(x=>x.r>0).length/recent.length,avg=recent.reduce((a,x)=>a+x.r,0)/recent.length,x=appSettings();
+ if(wr<.45||avg<0)x.signalMin=Math.min(76,x.signalMin+2);else if(wr>.60&&avg>.15)x.signalMin=Math.max(60,x.signalMin-1);
+ putSettings(x);renderSettings();renderForwardLab();toast("Threshold recalibrated conservatively","good")
 }
 async function requestNotifications(){
  if(typeof Notification==="undefined"){toast("Browser notifications unsupported","warn");return}
@@ -901,12 +1537,25 @@ function navTo(id,load=false){
    if(id==="mtf")multiTF();
    else if(id==="scan")scan();
    else if(id==="market")loadMarketOverview();
+   else if(id==="profile")renderVolumeProfile();
+   else if(id==="correlation")loadCorrelation();
+   else if(id==="depth")loadDepth();
    else if(id==="signals")renderSignals();
    else if(id==="backtest")backtestCurrent();
    else if(id==="deriv")derivatives();
+   else if(id==="health")runHealthCheck();
  } else {
    if(id==="alerts")renderAlerts();
    if(id==="settings")renderSettings();
+   if(id==="riskmgr")calculateRisk();
+   if(id==="decision"&&window.__radarState)buildDecision(window.__radarState.q,window.__radarState.hs||historicalSet(window.__radarState.j),mtfComposite(window.__radarState.m||[]),window.__signalState?.sm||{direction:"WAIT",long:50,short:50,edge:0});
+   if(id==="paper"){renderPaper();refreshPaper()}
+   if(id==="analytics")renderAnalytics();
+   if(id==="validation")renderValidation();
+   if(id==="forward")renderForwardLab();
+   if(id==="montecarlo")runMonteCarlo();
+   if(id==="scenario")renderScenario();
+   if(id==="health")runHealthCheck();
  }
  window.scrollTo({top:0,behavior:"smooth"})
 }
@@ -1036,11 +1685,19 @@ function levelLadder(h,l,c,look=50){
  let bias=last>r1?"EXPANSION BULL":last<pivot&&last>s1?"SOFT BEAR":last<pivot?"BEAR PRESSURE":last>pivot&&last<r1?"SOFT BULL":"NEUTRAL";
  return {pivot,s1,s2,s3,r1,r2,r3,range:rng,breakAbove:r1*(1.0025),breakBelow:s1*(0.9975),nearest,bias}
 }
+
+function swingStructure(h,l,c,look=3){
+ let highs=[],lows=[];for(let i=look;i<c.length-look;i++){let wh=h.slice(i-look,i+look+1),wl=l.slice(i-look,i+look+1);if(h[i]===Math.max(...wh))highs.push({i,v:h[i]});if(l[i]===Math.min(...wl))lows.push({i,v:l[i]})}
+ let sh=highs.slice(-3),sl=lows.slice(-3),bos="NONE",choch="NONE";
+ if(sh.length>=2&&c[c.length-1]>sh[sh.length-1].v)bos="BOS UP";if(sl.length>=2&&c[c.length-1]<sl[sl.length-1].v)bos="BOS DOWN";
+ if(sh.length>=2&&sl.length>=2){let bull=sh[sh.length-1].v>sh[sh.length-2].v&&sl[sl.length-1].v>sl[sl.length-2].v,bear=sh[sh.length-1].v<sh[sh.length-2].v&&sl[sl.length-1].v<sl[sl.length-2].v;if(bull&&bos==="BOS DOWN")choch="CHOCH DOWN";if(bear&&bos==="BOS UP")choch="CHOCH UP"}
+ return {highs:sh,lows:sl,bos,choch}
+}
 function calc(j,mode="auto"){
  let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>+x[5]),i=c.length-1;
  let e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,z)=>x-m26[z]),sig=ema(m,9),hist=m.map((x,z)=>x-sig[z]);
  let atr=ATR(hi,lo,c,14),dm=DMI(hi,lo,c,14),stoch=stochRSI(rr,14),ma20=sma(c,20),sd20=stddev(c,20),vwap=rollingVWAP(hi,lo,c,v,50),mfiArr=MFI(hi,lo,c,v,14),cmfArr=CMF(hi,lo,c,v,20),obvArr=OBV(c,v),ichi=ichimoku(hi,lo,c),divergence=rsiDivergence(c,rr),levels=levelLadder(hi,lo,c,50);
- let atrPct=atr[i]/c[i]*100,p=profileParams(mode,atrPct,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v);
+ let atrPct=atr[i]/c[i]*100,p=profileParams(mode,atrPct,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v),structure2=swingStructure(hi,lo,c,3);
  let vm=v.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,v.length),vr=v[i]/(vm||1),roc10=(c[i]/c[Math.max(0,i-10)]-1)*100;
  let upper=ma20[i]+2*sd20[i],lower=ma20[i]-2*sd20[i],bbpos=(c[i]-lower)/Math.max(upper-lower,1e-12)*100;
  let dstart=Math.max(1,i-p.breakout),prevHi=Math.max(...hi.slice(dstart,i)),prevLo=Math.min(...lo.slice(dstart,i)),bo=c[i]>prevHi?"UP":c[i]<prevLo?"DOWN":"NONE";
@@ -1059,7 +1716,7 @@ function calc(j,mode="auto"){
  let threshold=p.signal,ver=score>=threshold?"BULLISH":score<=100-threshold?"BEARISH":"NEUTRAL",signal=score>=threshold+2?"LONG":score<=98-threshold?"SHORT":"WAIT";
  let confluence=Math.min(100,Math.abs(score-50)*2),quality=confluence>=78?"A":confluence>=62?"B":confluence>=46?"C":"D";
  return{
-  price:c[i],score,signal,quality,confluence,regime,trendScore,momScore,volScore,structureScore,
+  price:c[i],score,signal,quality,confluence,regime,trendScore,momScore,volScore,structureScore,structure2,
   rsi:rr[i],stoch:stoch[i],mfi:mfiArr[i],cmf:cmfArr[i],obvSlope:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr,ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
   adx:dm.adx[i],pdi:dm.pdi[i],mdi:dm.mdi[i],supertrend:st.trend[i]>0?"BULL":"BEAR",bbpos,vwapAbove:c[i]>=vwap[i],levels,
   atr:atr[i],atrPct,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,smc,
@@ -1122,7 +1779,7 @@ async function loadFearGreed(){
  try{
   const r=await fetch("https://api.alternative.me/fng/?limit=1&format=json",{cache:"no-store"});
   const j=await r.json(),d=j&&j.data&&j.data[0];if(!d)return;
-  const v=Math.max(0,Math.min(100,+d.value||50));$("fearGreed").textContent=`${v} · ${d.value_classification||""}`;$("sentimentNeedle").style.left=`calc(${v}% - 1px)`;$("sentimentText").textContent=`Fear & Greed extern: ${d.value_classification||"N/A"} · nu modifică direct scorul tehnic.`;
+  const v=Math.max(0,Math.min(100,+d.value||50));markFresh("sentiment");$("fearGreed").textContent=`${v} · ${d.value_classification||""}`;$("sentimentNeedle").style.left=`calc(${v}% - 1px)`;$("sentimentText").textContent=`Fear & Greed extern: ${d.value_classification||"N/A"} · nu modifică direct scorul tehnic.`;
  }catch{$("fearGreed").textContent="N/A";$("sentimentText").textContent="Sentiment extern indisponibil; engine-ul tehnic continuă normal."}
 }
 async function mtfData(s){
@@ -1193,60 +1850,135 @@ function saveSignal(){
   a.unshift({
     id:String(Date.now())+"-"+Math.random().toString(36).slice(2,7),ts:Date.now(),symbol:st.symbol,tf:st.tf,mode:st.mode,
     direction:ss.tm.direction,entry:e,entryLow:ss.tm.entryLow,entryHigh:ss.tm.entryHigh,stop:ss.tm.stop,tp1:ss.tm.tp1,tp2:ss.tm.tp2,tp3:ss.tm.tp3,
-    longConf:ss.sm.long,shortConf:ss.sm.short,regime:ss.q.regime,status:"OPEN",bestTarget:0,rResult:null
+    longConf:ss.sm.long,shortConf:ss.sm.short,regime:ss.q.regime,status:"NEW",lifecycle:"NEW",bestTarget:0,rResult:null,grossR:null,netR:null,entryActivated:false,
+    feeBps:appSettings().feeBps,slippageBps:appSettings().slippageBps,executionPolicy:appSettings().executionPolicy,entryExpiryBars:appSettings().entryExpiryBars,forwardCohortStart:Number(localStorage.getItem("forwardValidationStart")||0),
+    trendScore:ss.q.trendScore,momScore:ss.q.momScore,volScore:ss.q.volScore,structureScore:ss.q.structureScore,adx:ss.q.adx,atrPct:ss.q.atrPct,mfi:ss.q.mfi,cmf:ss.q.cmf,
+    histUp:ss.hs.h4?ss.hs.h4.up:null,mtf:ss.mc.avg
   });
   setJournal(a);renderSignals();toast("Semnal salvat în jurnal","good")
 }
-function signalStatusClass(st){return st==="STOP"||st==="AMBIGUOUS"?"bad":st.startsWith("TP")||st.includes("TP")?"good":"neutral"}
+
+function signalStatusClass(st){return st==="STOP"||st==="AMBIGUOUS"||st==="OUT_OF_RANGE"?"bad":st&&st.includes("TP")?"good":"neutral"}
+function metricR(x){return Number.isFinite(x.netR)?x.netR:Number.isFinite(x.rResult)?x.rResult:null}
 function renderSignals(){
   const a=journal(),box=$("journalOut");if(!box)return;
   box.innerHTML=a.length?a.slice(0,80).map(x=>`<div class="journalRow"><b>${coin(x.symbol)}</b><span class="tag ${x.direction==="LONG"?"tagLong":"tagShort"}">${x.direction}</span><span>${num(x.entry)}</span><b class="${signalStatusClass(x.status)}">${x.status}</b><span>${Math.max(x.longConf,x.shortConf).toFixed(0)}</span><span>${new Date(x.ts).toLocaleDateString()}</span></div>`).join(""):`<div class="row"><span>Nu ai semnale salvate.</span></div>`;
-  renderPerformance()
+  renderPerformance();renderValidation()
 }
 function renderPerformance(){
-  const a=journal(),r=a.filter(x=>Number.isFinite(x.rResult)),n=r.length,w=r.filter(x=>x.rResult>0).length,sum=r.reduce((z,x)=>z+x.rResult,0),gp=r.filter(x=>x.rResult>0).reduce((z,x)=>z+x.rResult,0),gl=-r.filter(x=>x.rResult<0).reduce((z,x)=>z+x.rResult,0);
+  const a=journal(),r=a.map(x=>({...x,_r:metricR(x)})).filter(x=>Number.isFinite(x._r)),n=r.length,w=r.filter(x=>x._r>0).length,sum=r.reduce((z,x)=>z+x._r,0),gp=r.filter(x=>x._r>0).reduce((z,x)=>z+x._r,0),gl=-r.filter(x=>x._r<0).reduce((z,x)=>z+x._r,0);
   $("perfResolved").textContent=n;$("perfWin").textContent=n?(w/n*100).toFixed(1)+"%":"—";$("perfR").textContent=n?(sum/n).toFixed(2)+" R":"—";$("perfPF").textContent=n?(gl?(gp/gl).toFixed(2):gp?"∞":"0"):"—";
- const modes=["auto","scalp","intraday","swing"],box=$("strategyPerformance");if(box){box.innerHTML=modes.map(m=>{let z=r.filter(x=>x.mode===m),avg=z.length?z.reduce((a,x)=>a+x.rResult,0)/z.length:0,wr=z.length?z.filter(x=>x.rResult>0).length/z.length*100:0;return `<div class="calBox"><span class="label">${m}</span><b>${z.length?avg.toFixed(2)+"R":"—"}</b><span class="small">${z.length?wr.toFixed(0)+"% win · "+z.length+" n":"No data"}</span></div>`}).join("")}
+ const modes=["auto","scalp","intraday","swing"],box=$("strategyPerformance");if(box){box.innerHTML=modes.map(m=>{let z=r.filter(x=>x.mode===m),avg=z.length?z.reduce((a,x)=>a+x._r,0)/z.length:0,wr=z.length?z.filter(x=>x._r>0).length/z.length*100:0;return `<div class="calBox"><span class="label">${m}</span><b>${z.length?avg.toFixed(2)+"R":"—"}</b><span class="small">${z.length?wr.toFixed(0)+"% win · "+z.length+" n":"No data"}</span></div>`}).join("")}
+}
+function executionConfig(sig){
+ const x=appSettings();return {feeBps:Number.isFinite(+sig.feeBps)?+sig.feeBps:+x.feeBps||10,slippageBps:Number.isFinite(+sig.slippageBps)?+sig.slippageBps:+x.slippageBps||3,policy:sig.executionPolicy||x.executionPolicy||"staged",expiryBars:Number.isFinite(+sig.entryExpiryBars)?+sig.entryExpiryBars:+x.entryExpiryBars||12}
+}
+function costInR(sig,cfg){
+ const entry=+sig.entry||((+sig.entryLow + +sig.entryHigh)/2),risk=Math.abs(entry-(+sig.stop)),riskFrac=entry?risk/entry:0,roundTrip=2*(cfg.feeBps+cfg.slippageBps)/10000;
+ return riskFrac>0?roundTrip/riskFrac:0
+}
+function finalizeSignal(sig,gross,status,lifecycle,cfg){
+ sig.grossR=gross;sig.costR=costInR(sig,cfg);sig.netR=gross-sig.costR;sig.rResult=sig.netR;sig.status=status;sig.lifecycle=lifecycle;sig.resolved=true;return sig
+}
+function evaluateSignalBars(signal,bars){
+ let sig={...signal},cfg=executionConfig(sig);if(!bars||!bars.length)return sig;
+ const firstOpen=+bars[0][0];if(firstOpen>sig.ts){sig.status="OUT_OF_RANGE";sig.lifecycle="INVALIDATED";sig.historyUnavailable=true;return sig}
+ const after=bars.filter(x=>+x[0]>sig.ts);if(!after.length){sig.status=sig.entryActivated?"ENTRY":"WAITING_ENTRY";sig.lifecycle=sig.status;return sig}
+ let active=!!sig.entryActivated,best=Number(sig.bestTarget||0);
+ const loEntry=Math.min(+sig.entryLow,+sig.entryHigh),hiEntry=Math.max(+sig.entryLow,+sig.entryHigh),entry=+sig.entry||((loEntry+hiEntry)/2);
+ for(let bi=0;bi<after.length;bi++){
+   const b=after[bi],hi=+b[2],lo=+b[3],open=+b[1];
+   const touchesEntry=hi>=loEntry&&lo<=hiEntry;
+   const stop0=sig.direction==="LONG"?lo<=+sig.stop:hi>=+sig.stop;
+   const t1=sig.direction==="LONG"?hi>=+sig.tp1:lo<=+sig.tp1;
+   const t2=sig.direction==="LONG"?hi>=+sig.tp2:lo<=+sig.tp2;
+   const t3=sig.direction==="LONG"?hi>=+sig.tp3:lo<=+sig.tp3;
+   if(!active){
+     if(!touchesEntry){
+       if(bi>=cfg.expiryBars-1){sig.status="EXPIRED_ENTRY";sig.lifecycle="INVALIDATED";sig.expiredAfterBars=cfg.expiryBars;return sig}
+       continue
+     }
+     active=true;sig.entryActivated=true;sig.activationTs=+b[0];sig.fillPrice=Math.max(loEntry,Math.min(hiEntry,open));
+     if(stop0||t1||t2||t3){sig.status="AMBIGUOUS";sig.lifecycle="INVALIDATED";sig.ambiguousReason="entry_and_exit_same_candle";return sig}
+     sig.status="ENTRY";sig.lifecycle="ENTRY";continue
+   }
+   if(cfg.policy==="tp1full"){
+     if(stop0&&t1){sig.status="AMBIGUOUS";sig.lifecycle="INVALIDATED";sig.ambiguousReason="stop_and_target_same_candle";return sig}
+     if(t1)return finalizeSignal(sig,1,"TP1 · CLOSED","TP1",cfg);
+     if(stop0)return finalizeSignal(sig,-1,"STOP","STOP",cfg);
+     continue
+   }
+   const dynamicStop=best>=2?+sig.tp1:best>=1?entry:+sig.stop;
+   const stopHit=sig.direction==="LONG"?lo<=dynamicStop:hi>=dynamicStop;
+   const newBest=t3?3:t2?Math.max(best,2):t1?Math.max(best,1):best;
+   if(stopHit&&newBest>best){sig.status="AMBIGUOUS";sig.lifecycle="INVALIDATED";sig.ambiguousReason="managed_stop_and_target_same_candle";return sig}
+   best=newBest;sig.bestTarget=best;
+   if(best>=3)return finalizeSignal(sig,1.73,"TP3 · STAGED CLOSED","TP3",cfg);
+   if(stopHit){
+     if(best>=2)return finalizeSignal(sig,1.28,"TP2 + TP1 STOP · CLOSED","TP2",cfg);
+     if(best>=1)return finalizeSignal(sig,.40,"TP1 + BE · CLOSED","TP1",cfg);
+     return finalizeSignal(sig,-1,"STOP","STOP",cfg)
+   }
+ }
+ sig.bestTarget=best;sig.status=!active?"WAITING_ENTRY":best>=2?"OPEN · TP2":best>=1?"OPEN · TP1":"ENTRY";sig.lifecycle=!active?"WAITING_ENTRY":best>=2?"TP2":best>=1?"TP1":"ENTRY";return sig
 }
 async function evaluateOneSignal(sig){
   let bars;try{bars=await klines(sig.symbol,sig.tf,750)}catch{return sig}
-  const after=bars.filter(x=>+x[0]>=sig.ts);if(!after.length)return sig;
-  let best=Number(sig.bestTarget||0);
-  for(const b of after){
-    const hi=+b[2],lo=+b[3];
-    const stopHit=sig.direction==="LONG"?lo<=sig.stop:hi>=sig.stop;
-    const t3=sig.direction==="LONG"?hi>=sig.tp3:lo<=sig.tp3;
-    const t2=sig.direction==="LONG"?hi>=sig.tp2:lo<=sig.tp2;
-    const t1=sig.direction==="LONG"?hi>=sig.tp1:lo<=sig.tp1;
-    const anyTarget=t1||t2||t3;
-    if(stopHit&&anyTarget){sig.status="AMBIGUOUS";sig.rResult=null;return sig}
-    if(t3){best=3;sig.status="TP3";sig.rResult=2.8;sig.bestTarget=3;return sig}
-    if(t2)best=Math.max(best,2);
-    if(t1)best=Math.max(best,1);
-    if(stopHit){
-      sig.bestTarget=best;
-      if(best>=2){sig.status="TP2";sig.rResult=1.8}
-      else if(best>=1){sig.status="TP1";sig.rResult=1.0}
-      else{sig.status="STOP";sig.rResult=-1}
-      return sig
-    }
-  }
-  sig.bestTarget=best;sig.status=best>=2?"OPEN · TP2":best>=1?"OPEN · TP1":"OPEN";sig.rResult=null;return sig
+  return evaluateSignalBars(sig,bars)
 }
 async function evaluateJournal(){
   let a=journal();if(!a.length){renderSignals();return}
-  $("journalOut").innerHTML='<div class="row"><span>Evaluez semnalele…</span></div>';
-  for(let i=0;i<a.length;i++){if(a[i].status==="TP3"||a[i].status==="STOP"||a[i].status==="AMBIGUOUS")continue;a[i]=await evaluateOneSignal(a[i])}
-  setJournal(a);renderSignals()
+  $("journalOut").innerHTML='<div class="row"><span>Evaluez entry activation + cost model…</span></div>';
+  for(let i=0;i<a.length;i++){
+    if(a[i].status==="OUT_OF_RANGE"||a[i].status==="AMBIGUOUS")continue;
+    if(Number.isFinite(a[i].netR))continue;
+    a[i]=await evaluateOneSignal(a[i])
+  }
+  setJournal(a);renderSignals();toast("Journal evaluated with v24 execution model","good")
 }
 function exportJournal(){
   const a=journal();if(!a.length){alert("Jurnalul este gol.");return}
-  const cols=["date","symbol","tf","mode","direction","entry","stop","tp1","tp2","tp3","longConf","shortConf","status","rResult"];
-  const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.symbol,x.tf,x.mode,x.direction,x.entry,x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.rResult??""].join(",")));
-  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+  const cols=["date","symbol","tf","mode","direction","entry","entryActivated","activationTs","stop","tp1","tp2","tp3","longConf","shortConf","status","grossR","costR","netR","feeBps","slippageBps","executionPolicy","trendScore","momScore","volScore","structureScore","adx","atrPct","histUp","mtf"];
+  const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.symbol,x.tf,x.mode,x.direction,x.entry,x.entryActivated||false,x.activationTs?new Date(x.activationTs).toISOString():"",x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.grossR??"",x.costR??"",x.netR??"",x.feeBps??"",x.slippageBps??"",x.executionPolicy??"",x.trendScore??"",x.momScore??"",x.volScore??"",x.structureScore??"",x.adx??"",x.atrPct??"",x.histUp??"",x.mtf??""].join(",")));
+  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v24-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function clearJournal(){if(confirm("Ștergi tot jurnalul de semnale?")){localStorage.removeItem("signalJournal");renderSignals();toast("Jurnal șters","warn")}}
-
+function drawValidationCurve(vals){
+ const cv=$("validationCurve");if(!cv)return;const ctx=cv.getContext("2d"),w=cv.width,h=cv.height,pad=24;ctx.clearRect(0,0,w,h);ctx.strokeStyle="#203148";ctx.lineWidth=1;
+ for(let k=0;k<5;k++){let y=pad+k*(h-2*pad)/4;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke()}
+ let curve=[0],eq=0;for(const v of vals){eq+=v;curve.push(eq)};let mn=Math.min(...curve,0),mx=Math.max(...curve,0),rg=mx-mn||1;
+ const y=v=>h-pad-(v-mn)/rg*(h-2*pad),x=i=>pad+i/Math.max(1,curve.length-1)*(w-2*pad);
+ ctx.strokeStyle="#69a7ff";ctx.lineWidth=2;ctx.beginPath();curve.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.stroke();
+ ctx.strokeStyle="#4fd1c5";ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(pad,y(0));ctx.lineTo(w-pad,y(0));ctx.stroke();ctx.setLineDash([])
+}
+function renderValidation(){
+ const a=journal(),net=a.filter(x=>Number.isFinite(x.netR)),eligible=a.filter(x=>x.status!=="OUT_OF_RANGE"),activated=eligible.filter(x=>x.entryActivated),amb=a.filter(x=>x.status==="AMBIGUOUS").length,expired=a.filter(x=>x.status==="EXPIRED_ENTRY").length,waiting=a.filter(x=>x.status==="WAITING_ENTRY"||x.status==="NEW").length,legacy=a.filter(x=>Number.isFinite(x.rResult)&&!Number.isFinite(x.netR)).length;
+ const vals=net.map(x=>x.netR),n=vals.length,w=vals.filter(x=>x>0).length,sum=vals.reduce((q,x)=>q+x,0),gp=vals.filter(x=>x>0).reduce((q,x)=>q+x,0),gl=-vals.filter(x=>x<0).reduce((q,x)=>q+x,0),pf=gl?gp/gl:gp?99:0,avg=n?sum/n:0,dd=n?maxDrawdownR(vals):0,cost=n?net.reduce((q,x)=>q+(x.costR||0),0)/n:0,fill=eligible.length?activated.length/eligible.length*100:0,cfg=appSettings();
+ $("validationPolicy").textContent=cfg.executionPolicy==="staged"?"40/35/25 staged":"100% at TP1";$("validationCosts").textContent=`${cfg.feeBps}+${cfg.slippageBps} bps / side`;$("validationLegacy").textContent=legacy;$("validationSample").textContent=n;
+ $("valFillRate").textContent=eligible.length?fill.toFixed(1)+"%":"—";$("valExpectancy").textContent=n?avg.toFixed(2)+" R":"—";$("valPf").textContent=n?pf.toFixed(2):"—";$("valDd").textContent=n?dd.toFixed(2)+" R":"—";$("valWin").textContent=n?(w/n*100).toFixed(1)+"%":"—";$("valCost").textContent=n?cost.toFixed(2)+" R":"—";$("valAmbiguous").textContent=amb;$("valWaiting").textContent=waiting+(expired?` · ${expired} expired`:"");
+ let state="NOT ENOUGH DATA",why="Need at least 30 cost-aware resolved signals across varied conditions.",cl="neutral";
+ if(n>=30){if(avg>0&&pf>=1.2){state="POSITIVE SAMPLE";why="Cost-aware sample is positive. Continue forward validation before scaling capital.";cl="good"}else if(avg<=0||pf<1){state="EDGE DEGRADED";why="Net results do not currently show a positive research edge after modeled costs.";cl="bad"}else{state="MIXED SAMPLE";why="Results are near the validation threshold; more forward samples are needed.";cl="neutral"}}
+ $("validationState").textContent=state;$("validationState").className="edgeState "+cl;$("validationWhy").textContent=why;drawValidationCurve(vals);renderForwardLab()
+}
+function wfTrade(points,threshold,cfg,start,end){
+ let vals=[];for(let z=start;z<end;z++){const p=points[z],dir=p.score>=threshold?1:p.score<=100-threshold?-1:0;if(!dir)continue;let risk=Math.max(p.atr*1.5,p.entry*.0035),stop=p.entry-dir*risk,target=p.entry+dir*risk*2,bars=p.future,hit=null;
+   for(const b of bars){let hi=+b[2],lo=+b[3],sh=dir>0?lo<=stop:hi>=stop,th=dir>0?hi>=target:lo<=target;if(sh&&th){hit=null;break}if(th){hit=2;break}if(sh){hit=-1;break}}
+   if(hit==null)continue;let riskFrac=risk/p.entry,costR=riskFrac?2*(cfg.feeBps+cfg.slippageBps)/10000/riskFrac:0;vals.push(hit-costR)}
+ return vals
+}
+function statsR(vals){let n=vals.length,sum=vals.reduce((a,b)=>a+b,0),gp=vals.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=-vals.filter(x=>x<0).reduce((a,b)=>a+b,0);return {n,avg:n?sum/n:0,pf:gl?gp/gl:gp?99:0,dd:n?maxDrawdownR(vals):0}}
+async function runOosValidation(){
+ const sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,cfg=appSettings();$("oosNote").textContent="Running expanding-window validation…";
+ try{
+  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
+  for(let i=240;i<j.length-horizon-1;i+=4){let q=calc(j.slice(0,i+1),mode);points.push({score:q.score,atr:q.atr,entry:+j[i+1][1],future:j.slice(i+1,i+1+horizon)})}
+  let split=Math.floor(points.length*.60),thresholds=[60,64,68,72],best=64,bestAvg=-Infinity;
+  for(const th of thresholds){let st=statsR(wfTrade(points,th,cfg,0,split));if(st.n>=5&&st.avg>bestAvg){bestAvg=st.avg;best=th}}
+  let oos=statsR(wfTrade(points,best,cfg,split,points.length));
+  $("oosThreshold").textContent=best;$("oosTrades").textContent=oos.n;$("oosExpectancy").textContent=oos.n?oos.avg.toFixed(2)+" R":"—";$("oosPf").textContent=oos.n?oos.pf.toFixed(2):"—";$("oosDd").textContent=oos.n?oos.dd.toFixed(2)+" R":"—";
+  $("oosNote").textContent=oos.n<8?"OOS sample too small for a useful conclusion.":oos.avg>0&&oos.pf>=1.2?"OOS sample is positive after modeled costs; continue forward testing.":"OOS does not currently confirm a robust positive sample."
+ }catch(e){$("oosNote").textContent="OOS validation unavailable: "+e.message}
+}
 function renderSrHeat(q){
  const box=$("srHeat");if(!box)return;
  const lv=[["S3",q.levels.s3,"sup"],["S2",q.levels.s2,"sup"],["S1",q.levels.s1,"sup"],["Pivot",q.levels.pivot,"pivot"],["R1",q.levels.r1,"res"],["R2",q.levels.r2,"res"],["R3",q.levels.r3,"res"]];
@@ -1280,7 +2012,7 @@ async function analyze(save){
   window.__radarState={symbol:sym,tf:t,mode,j,q,m,tick,hs};
   if(save){remember(sym);localStorage.setItem("mode",mode)}
   let hp=hs.h4,avg=mc.avg,comp=mc.comp,confidence=mc.confidence;
-  updateSignalUI(q,hs,mc);
+  updateSignalUI(q,hs,mc);signalExplanation(q,hs,mc);renderLifecycle();startLiveSocket(sym);renderVolatility(q,j);renderLiquidationProxy(q,window.__derivativesState||{});buildDecision(q,hs,mc,window.__signalState.sm);
   const ss=window.__signalState;
   $("heroPrice").textContent=num(q.price);
   $("heroSignal").textContent=ss.sm.direction;$("heroSignal").className="heroSignal "+(ss.sm.direction==="LONG"?"good":ss.sm.direction==="SHORT"?"bad":"neutral");
@@ -1320,7 +2052,7 @@ async function analyze(save){
   else{inv=q.sup;tar=q.res;trail=q.price;txt="Engine-ul nu are suficientă confluență direcțională. Zona support/resistance este mai relevantă decât forțarea unei intrări."}
   risk=q.atrPct>=4||q.confluence<45?"Ridicat":q.atrPct>=2.2||q.confluence<62?"Mediu":"Controlat";
   $("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("trail").textContent=num(trail);$("risk").textContent=risk;
-  $("topLive").className="statusChip live";$("topLive").textContent="LIVE DATA";draw(q);loadFearGreed();derivatives().catch(()=>{});$("status").textContent=`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · LIVE · ${new Date().toLocaleTimeString()}`;setBusy(false);toast(`${coin(sym)} analizat · ${window.__signalState.sm.direction}`,"good");
+  $("topLive").className="statusChip live";$("topLive").textContent="LIVE DATA";draw(q);renderVolumeProfile();loadFearGreed();loadMarketContext();derivatives().catch(()=>{});$("status").textContent=`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · LIVE · ${new Date().toLocaleTimeString()}`;setBusy(false);toast(`${coin(sym)} analizat · ${window.__signalState.sm.direction}`,"good");
  }catch(e){setBusy(false,"Eroare: "+e.message);$("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";toast("Eroare: "+e.message,"bad")}
 }
 async function multiTF(){
@@ -1337,17 +2069,15 @@ async function multiTF(){
  $("mtfheat").innerHTML=h;
 }
 async function backtestCurrent(){
- const box=$("backtestout"),sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value;box.textContent="Rulez walk-forward…";
+ const box=$("backtestout"),sym=norm($("symbol").value),tf=$("tf").value,mode=$("mode").value,cfg=appSettings();box.textContent="Rulez cost-aware walk-forward…";
  try{
-  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750);
-  let horizon=mode==="scalp"?3:mode==="swing"?8:4,trades=[],curve=0,peak=0,maxDD=0;
-  for(let i=240;i<j.length-horizon-1;i+=4){
-    let q=calc(j.slice(0,i+1),mode),dir=q.score>=66?1:q.score<=34?-1:0;if(!dir)continue;
-    let entry=+j[i][4],exit=+j[i+horizon][4],ret=(exit/entry-1)*100*dir;trades.push(ret);curve+=ret;peak=Math.max(peak,curve);maxDD=Math.min(maxDD,curve-peak)
-  }
-  if(!trades.length){box.textContent="Nu sunt suficiente semnale pentru acest profil.";return}
-  let wins=trades.filter(x=>x>0).length,avg=trades.reduce((a,b)=>a+b,0)/trades.length,gp=trades.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=-trades.filter(x=>x<0).reduce((a,b)=>a+b,0),pf=gl?gp/gl:gp?99:0;
-  box.innerHTML=`<div class="row"><span>Semnale testate</span><b>${trades.length}</b></div><div class="row"><span>Hit rate direcțional</span><b>${(wins/trades.length*100).toFixed(1)}%</b></div><div class="row"><span>Randament mediu / semnal</span><b>${avg>=0?"+":""}${avg.toFixed(2)}%</b></div><div class="row"><span>Profit factor brut</span><b>${pf.toFixed(2)}</b></div><div class="row"><span>Sumă randamente</span><b>${curve>=0?"+":""}${curve.toFixed(1)}%</b></div><div class="row"><span>Max drawdown secvențial</span><b>${maxDD.toFixed(1)}%</b></div><p class="note">Backtest euristic walk-forward pe istoricul încărcat, fără comisioane, slippage sau execuție reală. Nu este o estimare garantată a performanței viitoare.</p>`;
+  let j=(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.tf===tf)?window.__radarState.j:await klines(sym,tf,750),horizon=mode==="scalp"?4:mode==="swing"?12:6,points=[];
+  for(let i=240;i<j.length-horizon-1;i+=4){let q=calc(j.slice(0,i+1),mode);points.push({score:q.score,atr:q.atr,entry:+j[i+1][1],future:j.slice(i+1,i+1+horizon)})}
+  let split=Math.floor(points.length*.60),thresholds=[60,64,68,72],best=64,bestTrain=null;
+  for(const th of thresholds){let st=statsR(wfTrade(points,th,cfg,0,split));if(st.n>=5&&(!bestTrain||st.avg>bestTrain.avg)){best=th;bestTrain=st}}
+  let oos=statsR(wfTrade(points,best,cfg,split,points.length)),all=statsR(wfTrade(points,best,cfg,0,points.length));
+  if(!all.n){box.textContent="Nu sunt suficiente tranzacții pentru acest profil.";return}
+  box.innerHTML=`<div class="row"><span>Selected threshold · train only</span><b>${best}</b></div><div class="row"><span>Total cost-aware trades</span><b>${all.n}</b></div><div class="row"><span>Net expectancy</span><b>${all.avg.toFixed(2)} R</b></div><div class="row"><span>Net profit factor</span><b>${all.pf.toFixed(2)}</b></div><div class="row"><span>Max drawdown</span><b>${all.dd.toFixed(2)} R</b></div><div class="row"><span>OOS trades · last 40%</span><b>${oos.n}</b></div><div class="row"><span>OOS net expectancy</span><b>${oos.n?oos.avg.toFixed(2)+" R":"—"}</b></div><div class="row"><span>OOS profit factor</span><b>${oos.n?oos.pf.toFixed(2):"—"}</b></div><p class="note">Expanding-window heuristic. Threshold is selected only on the first 60%; the final 40% is evaluated without retuning. Includes configured fees/slippage. Intrabar stop/target conflicts are excluded rather than assumed favorable.</p>`;
  }catch(e){box.textContent="Backtest indisponibil: "+e.message}
 }
 async function derivatives(){
@@ -1382,8 +2112,8 @@ async function derivatives(){
  $("crowdingRisk").textContent=ls==null?"N/A":ls>1.5||ls<.67?"Ridicat":"Normal";
  $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend:"");
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
- window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend};
- if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q)}
+ window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend};markFresh("futures");
+ if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q);renderLiquidationProxy(window.__radarState.q,window.__derivativesState)}
  $("ftext").textContent=(fr==null&&oi==null&&ls==null)?"Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională.":"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
 }
 let scannerRows=[];
@@ -1405,5 +2135,6 @@ $("symbol").value=localStorage.getItem("last")||"BTC";$("mode").value=localStora
 $("symbol").addEventListener("keydown",e=>{if(e.key==="Enter")analyze(true)});
 $("tf").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));
 $("mode").addEventListener("change",()=>syncTop(norm($("symbol").value),$("tf").value,$("mode").value));
-renderSettings();renderAlerts();
+renderSettings();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
 </script></body></html>
