@@ -1,0 +1,28 @@
+Crypto Radar v70 · Final Test Results
+Date: 2026-09-21
+
+RESULT: PASS
+
+Inherited v69 regression suites passed:
+- syntax: 224 executable JS/MJS surfaces + JSON manifests
+- security: 19 auth/origin/quota-gate checks
+- runtime, verdict, readiness, replay, paper, UI parity
+- edge, governance, universe, providers, live execution
+- breadth, Decision OS, calibration, operations
+- live gateway and capital scaling
+
+New v70 suites passed:
+- V70_PIONEX_JOURNAL_PASS fills=3 trades=2 fees=0.40 net=-0.40 recon=CLEAN
+- V70_STATIC_AUDIT_PASS 10 read-only journal + reconciliation invariants
+- V69_FINDINGS_MATRIX_PASS total=62 fixed=51 mitigated=11 open=0
+
+Scope verified:
+- Pionex order/fill history is read-only.
+- fillId and orderId deduplication is deterministic.
+- FIFO BUY/SELL reconciliation produces closed trades.
+- returned fees are included in net P&L; spot funding is zero.
+- order origin is labeled RADAR only when matched to the app ledger, otherwise MANUAL.
+- unmatched fills remain explicit reconciliation exceptions.
+- journal export and local persistence are present.
+
+Limitation: mocked runtime tests validate application logic and safety invariants; they do not prove live Pionex credentials, provider availability, or future profitability.

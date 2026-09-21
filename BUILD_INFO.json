@@ -1,42 +1,23 @@
 {
-  "version": "v57",
-  "badge": "v57 · PROFIT READINESS GATE · AUDITED",
+  "version": "v70",
+  "badge": "v70 \u00b7 PIONEX AUTO JOURNAL & RECONCILIATION PRO \u00b7 AUDITED",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v56 · VERDICT EXPLAINER · AUDITED",
-  "audit": {
-    "inheritedTotal": 62,
-    "fixed": 51,
-    "mitigated": 11,
-    "open": 0,
-    "v57StaticInvariants": 39
+  "baseRelease": "v65 \u00b7 DECISION INTELLIGENCE OS PRO \u00b7 AUDITED",
+  "releaseType": "real-time outcome validation + calibration + module attribution + setup DNA + sufficiency governance",
+  "features": {
+    "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
+    "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
+    "executionCalibration": "Shadow modeled slippage vs next-bar-open proxy with gap MAE/P90",
+    "liveReadiness": "weighted score plus hard gates for strict evidence, provider health, Shadow evidence, execution calibration, drift/governor and valid cost inputs",
+    "inherited": "v62 historical-universe reconstruction and provider/data-integrity center retained",
+    "marketBreadth": "Nasdaq/crypto breadth score from participation, EMA breadth, momentum, advancing volume, highs/lows and divergence; fast/full coverage modes",
+    "decisionIntelligenceOS": "12 integrated engines: regime, liquidity/structure, cross-asset, conflict, adaptive entry, dynamic exit, portfolio allocation, failure memory, event risk, decision replay, performance control and kill switch",
+    "edgeValidationV66": "13 validation engines: outcome tracking, confidence calibration, module contribution, proxy ablation, verdict-quality scoring, Setup DNA, edge-decay alarm, regime policy diagnostics, rolling calibration windows, decision attribution, research white/black lists, layer comparison and data sufficiency",
+    "controlledLiveExecution": "Pionex Spot only; disabled by default; manual confirmation; D1 idempotency/daily notional cap; pre-trade hard gates",
+    "liveCapitalScaling": "0/10/25/50/100% of configured live allowance; automatic reductions, explicit confirmation for increases; actual Pionex order fields used for closed live R where available"
   },
-  "verification": {
-    "audit_scope": "syntax + deterministic runtime + mocked security/provider gates + Verdict Explainer fixture + Profit Readiness state-machine fixture + inherited v54 remediation matrix + retained v55/v56 UI/decision invariants; live production/provider validation not claimed",
-    "security": "V57_SECURITY_RUNTIME_PASS 19 auth/origin/quota-gate checks",
-    "runtime": "V57_RUNTIME_PASS worker_logistic=14 stumps=12 cvd=130 mc_deterministic=1 mtf_one=25% same_candle=-1",
-    "verdict": "V57_VERDICT_EXPLAINER_PASS base=SHORT risk=BLOCAT_·_1 agreement=67% support=2 opposition=1",
-    "readiness": "V57_PROFIT_READINESS_PASS live=SMALL_LIVE_READY paper=PAPER_READY not=NOT_READY live_gates=18 paper_gates=6",
-    "matrix": "V57_FINDINGS_MATRIX_PASS total=62 fixed=51 mitigated=11 open=0",
-    "engine_contract": "54.1",
-    "syntax": "V57_SYNTAX_PASS 39 executable JS/MJS surfaces + JSON manifests",
-    "static": "V57_STATIC_AUDIT_PASS 39 hardening + wide-ui + verdict + readiness invariants"
-  },
-  "productionValidated": false,
-  "notes": "v57 adds a strict evidence/readiness layer. SMALL LIVE READY means the configured evidence checklist passed; it is not a prediction of profit, not a trade recommendation, and does not bypass Master Verdict or risk controls. Engine Contract 54.1 and data schema 54 are preserved.",
-  "generatedAtUtc": "2026-09-20T18:31:21.477884+00:00",
-  "ui": {
-    "domIds": 1160,
-    "uniqueDomIds": 1160,
-    "appNamedFunctions": 735,
-    "indexBytes": 177863,
-    "appJsBytes": 545553,
-    "appCssBytes": 80192,
-    "profitReadinessNewIds": 42,
-    "paperReadyGates": 6,
-    "smallLiveReadyGates": 18,
-    "desktopGridColumns": 24,
-    "ultrawideGridColumns": 30,
-    "mobileBreakPointPx": 980
-  }
+  "notes": "Market breadth is a context/confirmation layer. It does not independently create BUY/SELL orders and does not add live order placement.",
+  "base": "v68 Controlled Live Execution Pro",
+  "focus": "LIVE outcome reconciliation, cross-layer performance comparison and evidence-gated capital ramp with automatic reductions and manual increases."
 }

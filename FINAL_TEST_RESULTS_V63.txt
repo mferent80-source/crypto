@@ -1,0 +1,75 @@
+
+> crypto-radar-webapp@63.0.0 test
+> npm run test:syntax && npm run test:security && npm run test:runtime && npm run test:verdict && npm run test:readiness && npm run test:replay && npm run test:paper && npm run test:ui && npm run test:edge && npm run test:governance && npm run test:universe && npm run test:providers && npm run test:liveexec && npm run audit
+
+
+> crypto-radar-webapp@63.0.0 test:syntax
+> node scripts/syntax-v63.mjs
+
+V63_SYNTAX_PASS 110 executable JS/MJS surfaces + JSON manifests
+
+> crypto-radar-webapp@63.0.0 test:security
+> node scripts/security-v63.mjs
+
+V63_SECURITY_RUNTIME_PASS 19 auth/origin/quota-gate checks
+
+> crypto-radar-webapp@63.0.0 test:runtime
+> node scripts/test-v63.mjs
+
+V63_RUNTIME_PASS worker_logistic=14 stumps=12 cvd=130 mc_deterministic=1 mtf_one=25% same_candle=-1
+
+> crypto-radar-webapp@63.0.0 test:verdict
+> node scripts/verdict-v63.mjs
+
+V63_VERDICT_EXPLAINER_PASS base=SHORT risk=BLOCAT_·_1 agreement=67% support=2 opposition=1
+
+> crypto-radar-webapp@63.0.0 test:readiness
+> node scripts/readiness-v63.mjs
+
+V63_PROFIT_READINESS_PASS live=SMALL_LIVE_READY paper=PAPER_READY not=NOT_READY live_gates=18 paper_gates=6
+
+> crypto-radar-webapp@63.0.0 test:replay
+> node scripts/replay-v63.mjs
+
+V63_REPLAY_RUNTIME_PASS prefix=240 score=88.2 hist=77.6 future_isolated=1 outcome_changed=1
+
+> crypto-radar-webapp@63.0.0 test:paper
+> node scripts/paper-v63.mjs
+
+V63_PAPER_RUNTIME_PASS layers=3 partial=3.23 conservative=STOP scale=6.50 trail=105.00 time=TIME STOP
+
+> crypto-radar-webapp@63.0.0 test:ui
+> node scripts/ui-v63.mjs
+
+V63_UI_PARITY_PASS ids=1314 base_ids=1291 functions=852 base_functions=837 lost_ids=0 lost_functions=0 dom_refs=1136
+
+> crypto-radar-webapp@63.0.0 test:edge
+> node scripts/edge-v63.mjs
+
+V63_EDGE_INHERITED_PASS ci=0.23..0.91 stability=100 book_vwap=100.43 shadow=STOP review=A
+
+> crypto-radar-webapp@63.0.0 test:governance
+> node scripts/governance-v63.mjs
+
+V63_GOVERNANCE_RUNTIME_PASS stable=1 drift=.25 severe=0 quality=.50 policy=T68 · S1.75 · R2.5 · C1.0×
+
+> crypto-radar-webapp@63.0.0 test:universe
+> node scripts/universe-v63.mjs
+
+V63_UNIVERSE_RUNTIME_PASS current=101 may17=101 jun21=101 jan06=102 reversed=5
+
+> crypto-radar-webapp@63.0.0 test:providers
+> node scripts/provider-health-v63.mjs
+
+V63_PROVIDER_HEALTH_PASS probes=11 score=100 state=OK auth=1 secrets=0
+
+> crypto-radar-webapp@63.0.0 test:liveexec
+> node scripts/live-execution-v63.mjs
+
+V63_LIVE_EXECUTION_PASS funding24=0.0300% borrow24=0.100% carryR=0.006 eligible=93 blocked=NEAR_·_NOT_ELIGIBLE
+
+> crypto-radar-webapp@63.0.0 audit
+> node scripts/audit-v63.mjs && node scripts/findings-v63.mjs
+
+V63_STATIC_AUDIT_PASS 32 inherited hardening + live-cost + execution-calibration + readiness invariants
+V63_FINDINGS_MATRIX_PASS total=62 fixed=51 mitigated=11 open=0

@@ -1,0 +1,105 @@
+
+> crypto-radar-webapp@69.0.0 test
+> npm run test:syntax && npm run test:security && npm run test:runtime && npm run test:verdict && npm run test:readiness && npm run test:replay && npm run test:paper && npm run test:ui && npm run test:edge && npm run test:governance && npm run test:universe && npm run test:providers && npm run test:liveexec && npm run test:breadth && npm run test:decisionos && npm run test:calibration && npm run test:operations && npm run test:livegateway && npm run test:capitalscaling && npm run audit
+
+
+> crypto-radar-webapp@69.0.0 test:syntax
+> node scripts/syntax-v69.mjs
+
+V69_SYNTAX_PASS 222 executable JS/MJS surfaces + JSON manifests
+
+> crypto-radar-webapp@69.0.0 test:security
+> node scripts/security-v69.mjs
+
+V69_SECURITY_RUNTIME_PASS 19 auth/origin/quota-gate checks
+
+> crypto-radar-webapp@69.0.0 test:runtime
+> node scripts/test-v69.mjs
+
+V69_RUNTIME_PASS worker_logistic=14 stumps=12 cvd=130 mc_deterministic=1 mtf_one=25% same_candle=-1
+
+> crypto-radar-webapp@69.0.0 test:verdict
+> node scripts/verdict-v69.mjs
+
+V69_VERDICT_EXPLAINER_PASS base=SHORT risk=BLOCAT_·_1 agreement=67% support=2 opposition=1
+
+> crypto-radar-webapp@69.0.0 test:readiness
+> node scripts/readiness-v69.mjs
+
+V69_PROFIT_READINESS_PASS live=SMALL_LIVE_READY paper=PAPER_READY not=NOT_READY live_gates=18 paper_gates=6
+
+> crypto-radar-webapp@69.0.0 test:replay
+> node scripts/replay-v69.mjs
+
+V69_REPLAY_RUNTIME_PASS prefix=240 score=88.2 hist=77.6 future_isolated=1 outcome_changed=1
+
+> crypto-radar-webapp@69.0.0 test:paper
+> node scripts/paper-v69.mjs
+
+V69_PAPER_RUNTIME_PASS layers=3 partial=3.23 conservative=STOP scale=6.50 trail=105.00 time=TIME STOP
+
+> crypto-radar-webapp@69.0.0 test:ui
+> node scripts/ui-v69.mjs
+
+V69_UI_PARITY_PASS ids=1449 base_ids=1431 functions=982 base_functions=965 lost_ids=0 lost_functions=0 dom_refs=1180
+
+> crypto-radar-webapp@69.0.0 test:edge
+> node scripts/edge-v69.mjs
+
+V69_EDGE_INHERITED_PASS ci=0.23..0.91 stability=100 book_vwap=100.43 shadow=STOP review=A
+
+> crypto-radar-webapp@69.0.0 test:governance
+> node scripts/governance-v69.mjs
+
+V69_GOVERNANCE_RUNTIME_PASS stable=1 drift=.25 severe=0 quality=.50 policy=T68 · S1.75 · R2.5 · C1.0×
+
+> crypto-radar-webapp@69.0.0 test:universe
+> node scripts/universe-v69.mjs
+
+V69_UNIVERSE_RUNTIME_PASS current=101 may17=101 jun21=101 jan06=102 reversed=5
+
+> crypto-radar-webapp@69.0.0 test:providers
+> node scripts/provider-health-v69.mjs
+
+V69_PROVIDER_HEALTH_PASS probes=11 score=100 state=OK auth=1 secrets=0
+
+> crypto-radar-webapp@69.0.0 test:liveexec
+> node scripts/live-execution-v69.mjs
+
+V69_LIVE_EXECUTION_PASS funding24=0.0300% borrow24=0.100% carryR=0.006 eligible=93 blocked=NEAR_·_NOT_ELIGIBLE
+
+> crypto-radar-webapp@69.0.0 test:breadth
+> node scripts/breadth-v69.mjs
+
+V69_BREADTH_RUNTIME_PASS state=BULLISH score=76.4 participation=80 proxy=59.5 longAlign=0.50 forwardN=4
+
+> crypto-radar-webapp@69.0.0 test:decisionos
+> node scripts/decision-os-v69.mjs
+
+V69_DECISION_OS_PASS regime=TREND UP conflict=CLEAR entry=BREAKOUT_ENTRY kill_normal=NORMAL kill_bad=NO_NEW_TRADES
+
+> crypto-radar-webapp@69.0.0 test:calibration
+> node scripts/calibration-v69.mjs
+
+V69_CALIBRATION_RUNTIME_PASS n=80 ece=33.5 corr=1.00 factors=12 decay=SEVERE
+
+> crypto-radar-webapp@69.0.0 test:operations
+> node scripts/operations-v69.mjs
+
+V69_OPERATIONS_RUNTIME_PASS fp=1 cooldown=COOLDOWN_DUPLICATE active=ACTIVE_DUPLICATE reconcile=2 normal=100 degraded=80 hard=SAFE_MODE
+
+> crypto-radar-webapp@69.0.0 test:livegateway
+> node scripts/live-gateway-v69.mjs
+
+V69_LIVE_GATEWAY_PASS healthy=1 provider_block=1 short_block=1 server_caps=1 idempotency=1 manual_confirm=1
+
+> crypto-radar-webapp@69.0.0 test:capitalscaling
+> node scripts/capital-scaling-v69.mjs
+
+V69_CAPITAL_SCALING_PASS n4=0 n25=25% n60=50% n120=100% unhealthy=0 controlled_close=1
+
+> crypto-radar-webapp@69.0.0 audit
+> node scripts/audit-v69.mjs && node scripts/findings-v69.mjs
+
+V69_STATIC_AUDIT_PASS 18 live-performance + capital-scaling + inherited controlled-live invariants
+V69_FINDINGS_MATRIX_PASS total=62 fixed=51 mitigated=11 open=0
