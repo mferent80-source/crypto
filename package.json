@@ -1,0 +1,25 @@
+{
+  "name": "crypto-radar-webapp",
+  "version": "57.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "npm@10.9.2",
+  "scripts": {
+    "dev": "npx --yes wrangler@4 pages dev public",
+    "deploy": "npm run predeploy && npx --yes wrangler@4 pages deploy public",
+    "monitor:config": "node scripts/configure-monitor.mjs",
+    "monitor:deploy": "npm run test && node scripts/configure-monitor.mjs && npx --yes wrangler@4 deploy --config wrangler.monitor.generated.toml",
+    "vapid:generate": "node scripts/generate-vapid.mjs",
+    "test:syntax": "node scripts/syntax-v57.mjs",
+    "test:security": "node scripts/security-v57.mjs",
+    "test:runtime": "node scripts/test-v57.mjs",
+    "audit": "node scripts/audit-v57.mjs && node scripts/findings-v57.mjs",
+    "test": "npm run test:syntax && npm run test:security && npm run test:runtime && npm run test:verdict && npm run test:readiness && npm run audit",
+    "predeploy": "npm test",
+    "test:verdict": "node scripts/verdict-v57.mjs",
+    "test:readiness": "node scripts/readiness-v57.mjs"
+  }
+}

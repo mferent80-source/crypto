@@ -29,6 +29,7 @@
 <button class="sideBtn" data-action-click="navTo('calibration')" data-nav="calibration"><span class="sideIcon">≈</span>Calibration Lab</button>
 <button class="sideBtn" data-action-click="navTo('validation')" data-nav="validation"><span class="sideIcon">✓</span>Validation Lab</button>
 <button class="sideBtn" data-action-click="navTo('forward')" data-nav="forward"><span class="sideIcon">→</span>Forward Lab</button>
+<button class="sideBtn" data-action-click="navTo('profitready')" data-nav="profitready"><span class="sideIcon">₿</span>Profit Readiness</button>
 <button class="sideBtn" data-action-click="navTo('montecarlo')" data-nav="montecarlo"><span class="sideIcon">∴</span>Monte Carlo</button>
 <button class="sideBtn" data-action-click="navTo('scenario')" data-nav="scenario"><span class="sideIcon">±</span>Scenario Lab</button>
 <button class="sideBtn" data-action-click="navTo('depth',true)" data-nav="depth"><span class="sideIcon">≡</span>Order Book</button>
@@ -49,7 +50,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v54 · FULL HARDENING</div>
+<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v57 · PROFIT READINESS GATE</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -57,7 +58,7 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v54 · AUDITED</span></div>
+<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v57 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -65,7 +66,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge">v54 · FULL HARDENING · AUDITED</span><span class="metaChip">AUDIT: STATIC+RUNTIME · LIVE UNVERIFIED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge">v57 · PROFIT READINESS GATE · AUDITED</span><span class="metaChip">AUDIT: STATIC+RUNTIME · LIVE UNVERIFIED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -111,8 +112,8 @@
 <button class="tab" data-action-click="show('deriv');derivatives()">Futures</button>
 <button class="tab" data-action-click="show('watch')">Watch</button>
 </div>
-<section class="panel on" id="dash"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid">
-<div class="card full">
+<section class="panel on" id="dash"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid dashWideGrid">
+<div class="card full dashLineage">
 <div class="sectionHead"><h3>Data Lineage</h3><span class="small">No silent spot-source mixing</span></div>
 <div class="sourceCard">
 <div class="sourceBox"><span class="label">Primary market data</span><b class="sourceNative" id="sourceSpot">PIONEX</b></div>
@@ -123,8 +124,30 @@
 </div>
 <div class="providerNote" id="sourceNote">Spot indicators, historical analogs, chart, MTF and backtests follow the selected primary source. Futures remains optional external context.</div>
 </div>
-<div class="card full masterVerdict">
-<div class="sectionHead"><h3>Master Verdict · All Results</h3><span class="validationBadge">RESEARCH DECISION CORE · NO GUARANTEE</span></div>
+<div class="card full masterVerdict dashMaster">
+<div class="sectionHead"><h3>Master Verdict · Ce fac acum?</h3><span class="validationBadge">EXPLAINED DECISION · RESEARCH / PAPER · NO GUARANTEE</span></div>
+<div class="decisionBrief" id="decisionBrief">
+  <div class="decisionPrimary">
+    <div class="decisionPrimaryHead"><span class="label">Verdict executabil</span><span class="decisionRisk neutral" id="decisionRiskState">AȘTEAPTĂ DATE</span></div>
+    <div class="decisionCall neutral" id="decisionCall">WAIT</div>
+    <div class="decisionHeadline" id="decisionHeadline">Rulează analiza pentru un verdict explicat.</div>
+    <div class="decisionActionLine" id="decisionActionLine">Nu există încă o decizie calculată.</div>
+  </div>
+  <div class="decisionKpis">
+    <div class="decisionKpi"><span class="label">Bias de bază</span><b id="decisionBaseBias">—</b></div>
+    <div class="decisionKpi"><span class="label">Acord direcțional</span><b id="decisionAgreement">—</b></div>
+    <div class="decisionKpi"><span class="label">Prob. calibrată</span><b id="decisionCalibrated">—</b></div>
+    <div class="decisionKpi"><span class="label">Consens ponderat</span><b id="decisionConsensus">—</b></div>
+    <div class="decisionKpi"><span class="label">Coverage module</span><b id="decisionCoverage">—</b></div>
+    <div class="decisionKpi"><span class="label">Data quality</span><b id="decisionQuality">—</b></div>
+  </div>
+  <div class="decisionExplainGrid">
+    <div class="decisionExplain support"><b>De ce susține direcția</b><div id="decisionWhyList" class="decisionList"><span>—</span></div></div>
+    <div class="decisionExplain oppose"><b>Ce se opune</b><div id="decisionAgainstList" class="decisionList"><span>—</span></div></div>
+    <div class="decisionExplain unlock"><b>Ce trebuie să se schimbe</b><div id="decisionUnlockList" class="decisionList"><span>—</span></div></div>
+  </div>
+  <div class="decisionTrade"><span class="label">Plan de tranzacție</span><b id="decisionTradePlan">—</b><span class="small" id="decisionTradeNote">Planul devine activ doar când verdictul final nu este WAIT.</span></div>
+</div>
 <div class="masterTop">
 <div class="masterHero"><span class="label">Final research verdict</span><div class="big neutral" id="masterVerdict">WAIT</div><div class="small" id="masterAction">Run analysis to combine all engines.</div></div>
 <div class="masterMetric"><span class="label">Consensus index · heuristic</span><b id="masterScore">—</b></div>
@@ -185,7 +208,22 @@
 </div>
 <div class="masterReasonBox" style="margin-top:8px"><b>Trade map</b><div class="small" id="masterTradeMap">—</div></div>
 </div>
-<div class="card full hero"><div class="label">Verdict compozit</div><div class="value" id="verdict">—</div><div class="bar"><div class="fill" id="fill"></div></div><div class="muted" id="conf" style="margin-top:5px">—</div></div><div class="card full hero"><div class="label">Verdict probabilistic · modele istorice similare</div><div class="value" id="pverdict">—</div><div class="bar"><div class="fill" id="pfill"></div></div><div class="muted" id="pstats" style="margin-top:5px">Calibrare locală pe istoricul disponibil…</div></div><div class="card full"><div class="gaugeWrap">
+<div class="card full prGateDash dashReadiness">
+  <div class="sectionHead"><h3>Profit Readiness Gate</h3><div><span class="validationBadge">EVIDENCE GATE · NOT A PROFIT GUARANTEE</span> <button class="actionGhost" data-action-click="navTo('profitready')">Open full gate</button></div></div>
+  <div class="prDashHero">
+    <div><span class="label">Current market readiness</span><div id="prDashState" class="prState prNotReady">NOT READY</div><div id="prDashReason" class="small">Collect cost-aware forward and Paper evidence before considering live capital.</div></div>
+    <div class="prDashMeter"><span class="label">Gate coverage</span><b id="prDashCoverage">0%</b><div class="prTrack"><i id="prDashBar" style="width:0%"></i></div></div>
+  </div>
+  <div class="prDashKpis">
+    <div class="prMini"><span class="label">Resolved</span><b id="prDashN">0</b></div>
+    <div class="prMini"><span class="label">Expectancy</span><b id="prDashExp">—</b></div>
+    <div class="prMini"><span class="label">Profit factor</span><b id="prDashPf">—</b></div>
+    <div class="prMini"><span class="label">Forward</span><b id="prDashForward">0</b></div>
+    <div class="prMini"><span class="label">Paper completed</span><b id="prDashPaper">0</b></div>
+    <div class="prMini"><span class="label">Next milestone</span><b id="prDashNext">—</b></div>
+  </div>
+</div>
+<div class="card full hero dashComposite"><div class="label">Verdict compozit</div><div class="value" id="verdict">—</div><div class="bar"><div class="fill" id="fill"></div></div><div class="muted" id="conf" style="margin-top:5px">—</div></div><div class="card full hero dashProbabilistic"><div class="label">Verdict probabilistic · modele istorice similare</div><div class="value" id="pverdict">—</div><div class="bar"><div class="fill" id="pfill"></div></div><div class="muted" id="pstats" style="margin-top:5px">Calibrare locală pe istoricul disponibil…</div></div><div class="card full dashSentiment"><div class="gaugeWrap">
 <div class="gauge" id="probGauge" style="--p:50;--gc:#f5c451"><div class="gaugeInner"><b id="gaugeVal">50%</b><span>Bias UP</span></div></div>
 <div><div class="label">Probability &amp; market context</div><div class="value neutral" id="gaugeLabel">NEUTRAL</div>
 <div class="row"><span>Fear &amp; Greed</span><b id="fearGreed">—</b></div>
@@ -194,10 +232,10 @@
 </div></div>
 <div class="card kpi"><div class="label">Preț</div><div class="value" id="price">—</div></div><div class="card kpi"><div class="label">24H</div><div class="value" id="change">—</div></div>
 <div class="card kpi"><div class="label" id="volume24Label">Volum 24H USDT</div><div class="value" id="volume24">—</div></div><div class="card kpi"><div class="label">Scor TF</div><div class="value" id="score">—</div></div>
-<div class="card full" id="chartCard"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
+<div class="card full dashChart" id="chartCard"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
 <div class="chartToolbar"><button data-action-click="setChartBars(50)" type="button">50 bars</button><button data-action-click="setChartBars(100)" type="button">100 bars</button><button data-action-click="setChartBars(160)" type="button">160 bars</button><button data-action-click="toggleChartFullscreen()" type="button">Fullscreen</button></div><div class="chartZoneLegend"><span class="lz">Support zone</span><span class="rz">Resistance zone</span><span class="pz">Pivot zone</span></div>
 <div style="overflow:hidden"><canvas aria-label="Chart" height="360" id="chart" role="img" width="1000"></canvas></div></div>
-<div class="card full">
+<div class="card full dashMarketContext">
 <div class="sectionHead"><h3>Market Context</h3><span class="small" id="marketContextSubtitle">Cross-market crypto context</span></div>
 <div class="ctxGrid">
 <div class="ctxBox"><span class="label">Benchmark</span><b id="ctxBtc">—</b></div>
@@ -206,9 +244,9 @@
 <div class="ctxBox"><span class="label">Market regime</span><b id="ctxRegime">—</b></div>
 </div>
 </div>
-<div class="card full"><div class="sectionHead"><h3>Signal Explanation</h3><span class="small">Module contribution</span></div><div class="explainList" id="explainList"></div></div>
-<div class="card full"><div class="sectionHead"><h3>Signal Lifecycle</h3><span class="small">NEW → CONFIRMED → ENTRY → TP / STOP</span></div><div class="lifeTrack" id="lifecycle"></div></div>
-<div class="card full">
+<div class="card full dashSignalExplain"><div class="sectionHead"><h3>Signal Explanation</h3><span class="small">Module contribution</span></div><div class="explainList" id="explainList"></div></div>
+<div class="card full dashLifecycle"><div class="sectionHead"><h3>Signal Lifecycle</h3><span class="small">NEW → CONFIRMED → ENTRY → TP / STOP</span></div><div class="lifeTrack" id="lifecycle"></div></div>
+<div class="card full dashVolSqueeze">
 <div class="sectionHead"><h3>Volatility &amp; Squeeze Engine</h3><span class="small">Compression · expansion · percentile</span></div>
 <div class="volGrid">
 <div class="volBox"><span class="label">ATR percentile</span><b id="volAtrPct">—</b></div>
@@ -217,18 +255,18 @@
 <div class="volBox"><span class="label">Expansion risk</span><b id="volExpansion">—</b></div>
 </div>
 </div>
-<div class="card full">
+<div class="card full dashLiqProxy">
 <div class="sectionHead"><h3>Liquidation-Risk Proxy</h3><span class="small">Estimated leverage pressure · not exchange liquidation data</span></div>
 <div class="proxyMap" id="proxyMap"></div>
 <div class="row"><span>Proxy bias</span><b id="proxyBias">—</b></div>
 </div>
-<div class="card full"><div class="sectionTitle">Advanced context</div><div class="metricGrid">
+<div class="card full dashAdvanced"><div class="sectionTitle">Advanced context</div><div class="metricGrid">
 <div class="metricBox"><div class="label">MFI</div><div class="n" id="mfi">—</div></div>
 <div class="metricBox"><div class="label">OBV trend</div><div class="n" id="obv">—</div></div>
 <div class="metricBox"><div class="label">Ichimoku</div><div class="n" id="ichi">—</div></div>
 <div class="metricBox"><div class="label">RSI divergence</div><div class="n" id="divergence">—</div></div>
 </div></div>
-<div class="card full">
+<div class="card full dashSrLadder">
 <div class="sectionHead"><h3>Support / Resistance Ladder</h3><span class="small">Pivot · multi-threshold levels</span></div>
 <div class="row"><span>Pivot / bias</span><b id="pivotBias">—</b></div>
 <div class="levelsGrid">
@@ -247,11 +285,11 @@
 <div class="zoneChip"><span class="label">Nearest zone</span><b id="nearestZone">—</b></div>
 </div>
 </div>
-<div class="card full">
+<div class="card full dashSrHeat">
 <div class="sectionHead"><h3>S/R Heatmap</h3><span class="small">Distance &amp; pressure around active levels</span></div>
 <div class="srHeat" id="srHeat"></div>
 </div>
-<div class="card full">
+<div class="card full dashOrderFlow">
 <div class="sectionHead"><h3>Order-Flow Style Window</h3><span class="small">Volume pressure · proxy, not exchange tape</span></div>
 <div class="orderFlow">
 <div class="flowSide">
@@ -270,7 +308,7 @@
 </div>
 </div>
 </div>
-<div class="card full">
+<div class="card full dashMoneyFlow">
 <div class="sectionHead"><h3>Money Flow Window</h3><span class="small">Flow + derivatives context</span></div>
 <div class="row"><span>Flow bias</span><b id="flowBias">—</b></div>
 <div class="flowGrid">
@@ -283,7 +321,7 @@
 <div class="row"><span>Funding / crowding</span><b id="flowFunding">—</b></div>
 <div class="row"><span>Money pressure summary</span><b id="flowSummary">—</b></div>
 </div>
-<div class="card full"><div class="sectionTitle">Indicator matrix</div>
+<div class="card full dashIndicatorMatrix"><div class="sectionTitle">Indicator matrix</div>
 <div class="row"><span>RSI 14</span><b id="rsi">—</b></div>
 <div class="row"><span>EMA 20 / 50 / 200</span><b id="ema">—</b></div>
 <div class="row"><span>MACD histogram</span><b id="macd">—</b></div>
@@ -297,7 +335,7 @@
 <div class="row"><span>Support / Resistance</span><b id="sr">—</b></div>
 <div class="row"><span>Breakout / Donchian</span><b id="breakout">—</b></div>
 </div>
-<div class="card full"><div class="label">Plan tehnic orientativ · ATR + structură</div><p id="setup">—</p><div class="miniGrid">
+<div class="card full dashTechPlan"><div class="label">Plan tehnic orientativ · ATR + structură</div><p id="setup">—</p><div class="miniGrid">
 <div class="mini"><span class="label">Invalidare</span><b id="invalid">—</b></div>
 <div class="mini"><span class="label">Țintă 1</span><b id="target">—</b></div>
 <div class="mini"><span class="label">Trailing</span><b id="trail">—</b></div>
@@ -881,6 +919,7 @@
 <div class="ldBox"><span class="label">Experiments</span><b id="localExperiments">—</b></div>
 <div class="ldBox"><span class="label">Decision snapshots</span><b id="localDecisions">—</b></div>
 <div class="ldBox"><span class="label">Verdict Center snapshots</span><b id="localVerdictCenter">—</b></div>
+<div class="ldBox"><span class="label">Profit readiness snapshots</span><b id="localProfitReadiness">—</b></div>
 <div class="ldBox"><span class="label">Volatility snapshots</span><b id="localVolatilityIntel">—</b></div>
 <div class="ldBox"><span class="label">External intel snapshots</span><b id="localExternalIntel">—</b></div>
 <div class="ldBox"><span class="label">Portfolio risk snapshots</span><b id="localPortfolioRisk">—</b></div>
@@ -991,7 +1030,7 @@
 <button data-action-click="resetWorkspace()">Reset workspace</button>
 </div>
 <input accept="application/json" aria-label="Backup File" data-action-change="importBackup(this.files[0])" id="backupFile" style="display:none" type="file"/>
-<p class="small" style="margin-top:8px">Backup v54 exports the current workspace plus the IndexedDB research archive and SHA-256 integrity checksum. It does not contain APP_API_TOKEN or provider secrets.</p>
+<p class="small" style="margin-top:8px">Backup v57 exports the current workspace plus the IndexedDB research archive and SHA-256 integrity checksum. It does not contain APP_API_TOKEN or provider secrets.</p>
 </div>
 <div class="settingsCard">
 <h4>Data freshness</h4>
@@ -1067,7 +1106,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v54</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v57</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -1223,7 +1262,7 @@
 <div class="card full" style="margin-top:10px">
 <div class="sectionHead"><h3>Volatility Cone</h3><span class="small">annualized realized volatility from current timeframe</span></div>
 <div class="volTable" id="vol53ConeTable"><div class="emptyState">Run analysis to build the cone.</div></div>
-<p class="note">Cone percentiles are descriptive and use overlapping rolling windows; v54 also reports a non-overlapping sensitivity percentile.</p>
+<p class="note">Cone percentiles are descriptive and use overlapping rolling windows; v57 also reports a non-overlapping sensitivity percentile.</p>
 </div>
 <div class="card full" style="margin-top:10px">
 <div class="sectionHead"><h3>Realized vs Implied Volatility</h3><span class="small">Deribit IV when available · no new API key</span></div>
@@ -1544,6 +1583,48 @@
 </div>
 </div>
 </section>
+<section class="panel" id="profitready">
+  <div class="sectionHead"><h3>Profit Readiness Gate</h3><div><span class="validationBadge">CURRENT MARKET · FORWARD · PAPER · OOS · MODEL · DATA</span> <button class="actionGhost" data-action-click="renderProfitReadiness(true)">Recalculate</button></div></div>
+  <div class="prHero">
+    <div class="prPrimary">
+      <span class="label">Readiness state · selected market/source</span>
+      <div id="prState" class="prState prNotReady">NOT READY</div>
+      <div id="prHeadline" class="prHeadline">Insufficient validated evidence for live capital.</div>
+      <div id="prAction" class="small">Continue paper/forward validation and clear the failed gates below.</div>
+      <div class="prTrack"><i id="prBar" style="width:0%"></i></div>
+    </div>
+    <div class="prCurrent">
+      <div class="row"><span>Market / source</span><b id="prMarket">—</b></div>
+      <div class="row"><span>Current Master Verdict</span><b id="prCurrentVerdict">—</b></div>
+      <div class="row"><span>Readiness gate coverage</span><b id="prCoverage">—</b></div>
+      <div class="row"><span>Live provider check</span><b id="prProviderState">NOT CONFIRMED</b></div>
+      <label class="prVerify"><input aria-label="Live provider validation confirmed" id="prLiveVerified" type="checkbox" data-action-change="setProfitProviderVerified(this.checked)"/> I manually confirmed live provider/data behavior after deployment.</label>
+    </div>
+  </div>
+  <div class="prKpis">
+    <div class="prBox"><span class="label">Resolved cost-aware</span><b id="prN">—</b></div>
+    <div class="prBox"><span class="label">Expectancy</span><b id="prExp">—</b></div>
+    <div class="prBox"><span class="label">Profit factor</span><b id="prPf">—</b></div>
+    <div class="prBox"><span class="label">Max drawdown</span><b id="prDd">—</b></div>
+    <div class="prBox"><span class="label">Evidence span</span><b id="prSpan">—</b></div>
+    <div class="prBox"><span class="label">Recent 20 exp.</span><b id="prRecent">—</b></div>
+    <div class="prBox"><span class="label">Forward N / exp.</span><b id="prForward">—</b></div>
+    <div class="prBox"><span class="label">Forward PF</span><b id="prForwardPf">—</b></div>
+    <div class="prBox"><span class="label">Paper N / exp.</span><b id="prPaper">—</b></div>
+    <div class="prBox"><span class="label">Paper PF / DD</span><b id="prPaperPf">—</b></div>
+    <div class="prBox"><span class="label">Regime diversity</span><b id="prRegimes">—</b></div>
+    <div class="prBox"><span class="label">OOS current setup</span><b id="prOos">—</b></div>
+    <div class="prBox"><span class="label">Model / drift</span><b id="prModel">—</b></div>
+    <div class="prBox"><span class="label">Current data quality</span><b id="prQuality">—</b></div>
+  </div>
+  <div class="prColumns">
+    <div class="card full"><div class="sectionHead"><h3>Paper Ready gate</h3><span class="small">Minimum evidence to continue disciplined Paper/Forward validation</span></div><div id="prPaperGates" class="prGateList"></div></div>
+    <div class="card full"><div class="sectionHead"><h3>Small Live Ready gate</h3><span class="small">Strict research eligibility only · not a recommendation or profit guarantee</span></div><div id="prLiveGates" class="prGateList"></div></div>
+  </div>
+  <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Crypto vs Nasdaq / US Stocks evidence</h3><span class="small">Archived cost-aware outcomes · market evidence only</span></div><div class="prMarketCompare"><div class="prMarketCard"><span class="label">CRYPTO · all recorded sources</span><b id="prCryptoEvidence">—</b><div id="prCryptoDetail" class="small">—</div></div><div class="prMarketCard"><span class="label">NASDAQ / US STOCKS · Twelve Data</span><b id="prStockEvidence">—</b><div id="prStockDetail" class="small">—</div></div></div></div>
+  <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Interpretation</h3><span class="small">Readiness ≠ expected profit</span></div><div id="prInterpretation" class="note">NOT READY means the evidence gate is incomplete or degraded. PAPER READY means continue simulated/forward validation. SMALL LIVE READY means the strict evidence checklist passed; it still does not predict profit and does not make a trade decision for you.</div></div>
+</section>
+
 <section class="panel" id="quantflow">
 <div class="sectionHead"><h3>Order Flow &amp; Regime Lab</h3><span class="validationBadge">CVD PROXY · TTM · CHOP · HURST · OI DELTA</span></div>
 <div class="flowHero">
@@ -1939,6 +2020,7 @@
 <button class="moreBtn" data-action-click="moreNav('calibration')"><b>≈</b>Calibration</button>
 <button class="moreBtn" data-action-click="moreNav('validation')"><b>✓</b>Validation</button>
 <button class="moreBtn" data-action-click="moreNav('forward')"><b>→</b>Forward</button>
+<button class="moreBtn" data-action-click="moreNav('profitready')"><b>₿</b>Readiness</button>
 <button class="moreBtn" data-action-click="moreNav('montecarlo')"><b>∴</b>Monte Carlo</button>
 <button class="moreBtn" data-action-click="moreNav('scenario')"><b>±</b>Scenario</button>
 <button class="moreBtn" data-action-click="moreNav('depth',true)"><b>≡</b>Order Book</button>

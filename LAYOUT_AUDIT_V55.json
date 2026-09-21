@@ -1,0 +1,43 @@
+{
+  "release": "v55 · WIDE TERMINAL UI · AUDITED",
+  "base": "v54 · FULL HARDENING · AUDITED",
+  "engineContract": "54.1",
+  "dataSchema": 54,
+  "generatedAtUtc": "2026-09-20T18:06:14.886833+00:00",
+  "parity": {
+    "v54DomIds": 1102,
+    "v55DomIds": 1102,
+    "lostDomIds": [],
+    "newDomIds": [],
+    "duplicateDomIds": [],
+    "v54NamedFunctions": 712,
+    "v55NamedFunctions": 712,
+    "lostNamedFunctions": [],
+    "newNamedFunctions": []
+  },
+  "wideUi": {
+    "desktopMinPx": 981,
+    "mobileMaxPx": 980,
+    "desktopGridColumns": 24,
+    "ultrawideMinPx": 2200,
+    "ultrawideGridColumns": 30,
+    "desktopSidebarPx": 205,
+    "largeSidebarPx": 195,
+    "ultrawideSidebarPx": 188,
+    "chartHeightsPx": [
+      430,
+      470,
+      510
+    ],
+    "mainMaxWidthRemoved": true,
+    "accidentalBody900CapRemoved": true,
+    "mobileNavPreserved": true
+  },
+  "tests": {
+    "syntax": "PASS",
+    "security": "PASS",
+    "runtime": "PASS",
+    "staticAudit": "PASS",
+    "findingsMatrix": "PASS"
+  }
+}

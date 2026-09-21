@@ -1,0 +1,35 @@
+
+> crypto-radar-webapp@57.0.0 test
+> npm run test:syntax && npm run test:security && npm run test:runtime && npm run test:verdict && npm run test:readiness && npm run audit
+
+
+> crypto-radar-webapp@57.0.0 test:syntax
+> node scripts/syntax-v57.mjs
+
+V57_SYNTAX_PASS 39 executable JS/MJS surfaces + JSON manifests
+
+> crypto-radar-webapp@57.0.0 test:security
+> node scripts/security-v57.mjs
+
+V57_SECURITY_RUNTIME_PASS 19 auth/origin/quota-gate checks
+
+> crypto-radar-webapp@57.0.0 test:runtime
+> node scripts/test-v57.mjs
+
+V57_RUNTIME_PASS worker_logistic=14 stumps=12 cvd=130 mc_deterministic=1 mtf_one=25% same_candle=-1
+
+> crypto-radar-webapp@57.0.0 test:verdict
+> node scripts/verdict-v57.mjs
+
+V57_VERDICT_EXPLAINER_PASS base=SHORT risk=BLOCAT_·_1 agreement=67% support=2 opposition=1
+
+> crypto-radar-webapp@57.0.0 test:readiness
+> node scripts/readiness-v57.mjs
+
+V57_PROFIT_READINESS_PASS live=SMALL_LIVE_READY paper=PAPER_READY not=NOT_READY live_gates=18 paper_gates=6
+
+> crypto-radar-webapp@57.0.0 audit
+> node scripts/audit-v57.mjs && node scripts/findings-v57.mjs
+
+V57_STATIC_AUDIT_PASS 39 hardening + wide-ui + verdict + readiness invariants
+V57_FINDINGS_MATRIX_PASS total=62 fixed=51 mitigated=11 open=0

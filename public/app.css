@@ -977,7 +977,7 @@ main{max-width:1160px;padding-top:14px}
 @media(max-width:650px){.volGrid{grid-template-columns:repeat(2,1fr)}.volMap{grid-template-columns:repeat(2,1fr)}}
 
 
-body{font-family:system-ui;background:#0b1118;color:#e7eef7;max-width:900px;margin:auto;padding:30px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #334;padding:8px;text-align:left}.good{color:#7ee7ae}.bad{color:#ff9ca6}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid #334;padding:8px;text-align:left}
 
 :focus-visible{outline:2px solid #69a7ff;outline-offset:2px}
 [aria-disabled="true"]{opacity:.6;pointer-events:none}
@@ -986,3 +986,144 @@ body{font-family:system-ui;background:#0b1118;color:#e7eef7;max-width:900px;marg
 
 /* v54 progressive disclosure */
 .vcDetails{margin-top:10px;border:1px solid #213247;border-radius:12px;padding:8px 10px;background:#08131d}.vcDetails>summary{cursor:pointer;font-weight:800;color:#d9e6f2;outline:none;padding:5px}.vcDetails>summary:focus-visible{box-shadow:0 0 0 2px #4fd1c5;border-radius:8px}.vcDetails[open]>summary{margin-bottom:8px}.refStale{color:#ff9ca6}.refAging{color:#ffd978}.refFresh{color:#6ee7ad}
+
+/* ============================================================
+   v55 · WIDE TERMINAL UI
+   Desktop-only terminal layout. Mobile/tablet behavior below
+   980px intentionally keeps the proven v54 navigation model.
+   ============================================================ */
+
+/* v54 contained a report-style body rule at the tail of the stylesheet.
+   Neutralize it for the actual application shell. */
+html,body{width:100%;max-width:none!important;margin:0!important;padding:0!important}
+body{min-height:100vh;overflow-x:hidden}
+
+@media(min-width:981px){
+  :root{--sidebar:205px;--topbar:56px}
+  .sideNav{padding:12px 9px;gap:9px}
+  .sideBrand{padding:2px 5px 8px}
+  .sideLogo{width:32px;height:32px;border-radius:10px}
+  .sideTitle{font-size:13px}.sideSub{font-size:8px}
+  .sideMenu{gap:2px;overflow-y:auto;overflow-x:hidden;padding-right:2px;scrollbar-width:thin;scrollbar-color:#29445b transparent}
+  .sideBtn{padding:7px 8px;gap:7px;border-radius:9px;font-size:10px;min-height:31px}
+  .sideIcon{width:18px;font-size:12px}
+  .sideFooter{padding:8px;border-radius:10px}
+
+  .mainArea{width:calc(100vw - var(--sidebar));max-width:none;min-width:0}
+  .topStatus{height:var(--topbar);padding:8px 14px}
+  .topCoin{font-size:15px}.statusChip{padding:5px 8px;font-size:9px}
+
+  main{width:100%;max-width:none!important;margin:0!important;padding:12px 14px 28px!important}
+
+  .toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px);column-gap:10px;align-items:start;padding:10px;border-radius:14px}
+  .controls{grid-column:1;grid-row:1;grid-template-columns:150px minmax(220px,1fr) 88px 120px 180px;gap:7px}
+  .actions{grid-column:2;grid-row:1;grid-template-columns:minmax(160px,1fr) 44px;gap:7px;margin-top:0}
+  .toolbar>.scroll{grid-column:1/-1;padding-top:6px}
+  .toolbar>.status{grid-column:1/-1;margin-top:5px}
+  input,select,button{padding:9px 10px;font-size:12px;border-radius:10px}
+
+  .heroStrip{grid-template-columns:minmax(300px,.85fr) minmax(520px,1.45fr);gap:9px;margin:9px 0}
+  .heroSummary{padding:12px;border-radius:13px}
+  .heroCoin{font-size:24px}.heroSignal{font-size:24px}.heroPrice{font-size:18px}
+  .quickGrid{grid-template-columns:repeat(4,1fr);gap:7px}
+  .quickCard{min-height:72px;padding:10px}
+
+  .tabs{grid-template-columns:repeat(8,minmax(90px,1fr));position:relative;top:auto;margin:9px 0;padding:4px;border-radius:12px;gap:4px}
+  .tab{padding:8px 5px;font-size:9px}
+
+  .dashWideGrid{grid-template-columns:repeat(24,minmax(0,1fr));gap:9px;align-items:start}
+  .dashWideGrid>.card{min-width:0;padding:12px;border-radius:13px}
+  .dashWideGrid>.dashLineage,.dashWideGrid>.dashMaster{grid-column:1/-1}
+  .dashWideGrid>.dashComposite{grid-column:span 6}
+  .dashWideGrid>.dashProbabilistic{grid-column:span 6}
+  .dashWideGrid>.dashSentiment{grid-column:span 12}
+  .dashWideGrid>.card.kpi{grid-column:span 6;min-height:88px}
+  .dashWideGrid>.dashChart{grid-column:span 16}
+  .dashWideGrid>.dashMarketContext{grid-column:span 8}
+  .dashWideGrid>.dashSignalExplain,.dashWideGrid>.dashLifecycle{grid-column:span 12}
+  .dashWideGrid>.dashVolSqueeze,.dashWideGrid>.dashLiqProxy,.dashWideGrid>.dashAdvanced{grid-column:span 8}
+  .dashWideGrid>.dashSrLadder,.dashWideGrid>.dashSrHeat{grid-column:span 12}
+  .dashWideGrid>.dashOrderFlow,.dashWideGrid>.dashMoneyFlow{grid-column:span 12}
+  .dashWideGrid>.dashIndicatorMatrix,.dashWideGrid>.dashTechPlan{grid-column:span 12}
+
+  .sourceCard{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+  .masterTop{grid-template-columns:minmax(220px,1.45fr) repeat(7,minmax(105px,1fr));gap:7px}
+  .masterHero{padding:12px}.masterHero .big{font-size:27px}
+  .masterMetric{padding:8px}.masterMetric b{font-size:12px}
+  .masterReasons{grid-template-columns:1fr 1fr;gap:7px}
+  .vcTop{grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+  .vcKpi{padding:8px}.vcKpi b{font-size:13px}
+  .vcFamilies{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .vcGroups{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+  #chart{width:100%!important;height:430px!important;display:block}
+  .chartHeader{align-items:center}
+  .ctxGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .volGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .metricGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .levelsGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .orderFlow{grid-template-columns:1fr 1fr;gap:8px}
+  .flowGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+
+  /* Non-dashboard labs should also use the available monitor width. */
+  .panel:not(#dash)>.card.full,.panel:not(#dash) .card.full{max-width:none}
+  .rgGrid,.ldGrid,.pv3Grid,.ensGrid,.extGrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .volHero{grid-template-columns:1.25fr .75fr}
+  .volMap{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+@media(min-width:1500px){
+  :root{--sidebar:195px}
+  main{padding-left:12px!important;padding-right:12px!important}
+  .dashWideGrid{gap:8px}
+  .masterTop{grid-template-columns:minmax(240px,1.5fr) repeat(7,minmax(115px,1fr))}
+  #chart{height:470px!important}
+}
+
+@media(min-width:2200px){
+  :root{--sidebar:188px}
+  .sideBtn{font-size:9px;padding:6px 7px;min-height:29px}
+  main{padding:10px 11px 26px!important}
+  .dashWideGrid{grid-template-columns:repeat(30,minmax(0,1fr));gap:8px}
+  .dashWideGrid>.dashLineage,.dashWideGrid>.dashMaster{grid-column:1/-1}
+  .dashWideGrid>.dashComposite{grid-column:span 6}
+  .dashWideGrid>.dashProbabilistic{grid-column:span 6}
+  .dashWideGrid>.dashSentiment{grid-column:span 18}
+  .dashWideGrid>.card.kpi{grid-column:span 6}
+  .dashWideGrid>.dashChart{grid-column:span 20}
+  .dashWideGrid>.dashMarketContext{grid-column:span 10}
+  .dashWideGrid>.dashSignalExplain,.dashWideGrid>.dashLifecycle{grid-column:span 15}
+  .dashWideGrid>.dashVolSqueeze,.dashWideGrid>.dashLiqProxy,.dashWideGrid>.dashAdvanced{grid-column:span 10}
+  .dashWideGrid>.dashSrLadder,.dashWideGrid>.dashSrHeat,.dashWideGrid>.dashOrderFlow,.dashWideGrid>.dashMoneyFlow,.dashWideGrid>.dashIndicatorMatrix,.dashWideGrid>.dashTechPlan{grid-column:span 15}
+  #chart{height:510px!important}
+}
+
+/* ============================================================
+   v56 · VERDICT EXPLAINER
+   Makes Master Verdict actionable and explicit without changing
+   the hardened v54.1 research engine contract.
+   ============================================================ */
+.decisionBrief{display:grid;grid-template-columns:minmax(300px,.85fr) minmax(520px,1.15fr);gap:9px;margin-bottom:10px}
+.decisionPrimary{padding:16px;border:1px solid #385874;border-radius:15px;background:linear-gradient(145deg,#08131d,#0b1b29);min-height:178px}
+.decisionPrimaryHead{display:flex;justify-content:space-between;align-items:center;gap:8px}.decisionCall{font-size:42px;font-weight:950;letter-spacing:-.045em;line-height:1;margin:10px 0 7px}.decisionHeadline{font-size:14px;font-weight:800;line-height:1.4;color:#dce8f4}.decisionActionLine{margin-top:11px;padding:10px 11px;border-radius:11px;background:#0e2030;border:1px solid #29445b;font-size:12px;font-weight:800;line-height:1.45}
+.decisionRisk{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:999px;border:1px solid #40566b;font-size:9px;font-weight:900;letter-spacing:.04em}.decisionRisk.good{color:#70e2ad;border-color:#237052;background:rgba(35,112,82,.12)}.decisionRisk.bad{color:#ff9ba5;border-color:#7c3741;background:rgba(124,55,65,.12)}.decisionRisk.warn{color:#ffd477;border-color:#805a29;background:rgba(128,90,41,.12)}.decisionRisk.neutral{color:#b8c7d6}
+.decisionKpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.decisionKpi{padding:11px;border:1px solid #263d53;border-radius:12px;background:#09151f;min-width:0}.decisionKpi b{display:block;margin-top:4px;font-size:15px;white-space:normal;overflow-wrap:anywhere}
+.decisionExplainGrid{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.decisionExplain{padding:11px;border:1px solid #263d53;border-radius:12px;background:#09141e;min-height:104px}.decisionExplain>b{display:block;margin-bottom:7px;font-size:11px}.decisionExplain.support>b{color:#72e2ad}.decisionExplain.oppose>b{color:#ff9da7}.decisionExplain.unlock>b{color:#ffd478}.decisionList{display:grid;gap:5px}.decisionListItem{display:flex;gap:7px;align-items:flex-start;padding:5px 7px;border-radius:8px;background:#0c1924;border:1px solid #1f3346;font-size:10px;line-height:1.35}.decisionListItem i{font-style:normal;font-weight:950;min-width:12px}.decisionListItem.support i{color:#70dfa9}.decisionListItem.oppose i{color:#ff98a3}.decisionListItem.unlock i{color:#ffd071}.decisionListItem.neutral i{color:#9fb0bf}
+.decisionTrade{grid-column:1/-1;display:grid;grid-template-columns:140px 1fr;column-gap:10px;row-gap:3px;align-items:center;padding:11px 12px;border:1px solid #2f4a63;border-radius:12px;background:#0a1722}.decisionTrade>b{font-size:12px}.decisionTrade>.small{grid-column:2}
+@media(min-width:1500px){.decisionBrief{grid-template-columns:minmax(340px,.72fr) minmax(720px,1.28fr)}.decisionPrimary{min-height:168px}.decisionKpis{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:1100px){.decisionBrief{grid-template-columns:1fr}.decisionKpis{grid-template-columns:repeat(3,minmax(0,1fr))}.decisionExplainGrid{grid-template-columns:1fr 1fr}.decisionExplain.unlock{grid-column:1/-1}}
+@media(max-width:700px){.decisionKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.decisionExplainGrid{grid-template-columns:1fr}.decisionExplain.unlock{grid-column:auto}.decisionTrade{grid-template-columns:1fr}.decisionTrade>.small{grid-column:1}.decisionCall{font-size:35px}.decisionPrimary{min-height:0}}
+
+
+/* v57 · Profit Readiness Gate */
+.dashReadiness{grid-column:1/-1!important}
+.prGateDash,.prPrimary,.prCurrent,.prBox,.prMarketCard{border:1px solid #294158;background:#0a1621;border-radius:13px}
+.prGateDash{padding:12px}.prDashHero{display:grid;grid-template-columns:minmax(360px,1.35fr) minmax(260px,.65fr);gap:10px;align-items:stretch}.prDashHero>div{padding:12px;border:1px solid #24384d;border-radius:12px;background:#0b1722}
+.prState{font-size:28px;font-weight:950;letter-spacing:-.035em;margin-top:5px}.prNotReady{color:#ff9ca6}.prPaperReady{color:#ffd978}.prLiveReady{color:#6ee7ad}.prDashMeter{display:flex;flex-direction:column;justify-content:center}
+.prTrack{height:9px;background:#172536;border-radius:999px;overflow:hidden;margin-top:8px}.prTrack i{display:block;height:100%;background:linear-gradient(90deg,#5c789a,#8fb3dc);transition:width .25s ease}
+.prDashKpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:9px}.prMini,.prBox{padding:9px 10px}.prMini{border:1px solid #24384d;border-radius:11px;background:#0b1722}.prMini b,.prBox b{display:block;margin-top:4px;font-size:14px}
+.prHero{display:grid;grid-template-columns:minmax(440px,1.3fr) minmax(340px,.7fr);gap:10px}.prPrimary,.prCurrent{padding:15px}.prHeadline{font-size:16px;font-weight:800;margin:6px 0}.prVerify{display:flex;align-items:flex-start;gap:8px;font-size:10px;color:var(--muted);margin-top:10px;line-height:1.4}.prVerify input{width:auto;min-width:auto;margin-top:1px}
+.prKpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:10px}.prColumns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.prGateList{display:grid;gap:6px}.prCriterion{display:grid;grid-template-columns:26px 1.2fr .75fr 1.3fr;gap:7px;align-items:center;border:1px solid #22364b;border-radius:10px;padding:8px;background:#0b1722;font-size:10px}.prCriterion .prIcon{font-size:16px;text-align:center;font-weight:900}.prCriterion.pass .prIcon{color:#6ee7ad}.prCriterion.fail .prIcon{color:#ff9ca6}.prCriterion.warn .prIcon{color:#ffd978}.prCriterion b{font-size:10px}.prCriterion .small{text-align:right}.prMarketCompare{display:grid;grid-template-columns:1fr 1fr;gap:10px}.prMarketCard{padding:14px}.prMarketCard>b{display:block;font-size:20px;margin:5px 0}
+@media(min-width:1800px){.prKpis{grid-template-columns:repeat(14,minmax(0,1fr))}}
+@media(max-width:1200px){.prKpis{grid-template-columns:repeat(4,minmax(0,1fr))}.prDashKpis{grid-template-columns:repeat(3,minmax(0,1fr))}.prCriterion{grid-template-columns:24px 1fr .8fr 1fr}}
+@media(max-width:980px){.prDashHero,.prHero,.prColumns,.prMarketCompare{grid-template-columns:1fr}.prKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.prDashKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.prCriterion{grid-template-columns:22px 1fr}.prCriterion .prCurrentVal,.prCriterion .small{text-align:left;padding-left:29px;grid-column:1/-1}.prState{font-size:24px}}

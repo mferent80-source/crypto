@@ -1,7 +1,7 @@
 {
   "name": "Crypto Radar Pro · Multi-Market",
   "short_name": "Market Radar",
-  "description": "Crypto Radar Pro v54 Full Hardening: secured API gates, tenant-isolated history, state isolation, corrected MTF/CVD/liquidation/backtest paths, research-worker offload, Verdict Center Pro, Volatility Intelligence Pro and full local research backup.",
+  "description": "Crypto Radar Pro v57 Profit Readiness Gate: evidence-based NOT READY / PAPER READY / SMALL LIVE READY classification using cost-aware history, forward validation, Paper execution, OOS evidence, model/drift state, current data quality and explicit live-provider confirmation, on hardened Engine Contract 54.1.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

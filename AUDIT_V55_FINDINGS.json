@@ -1,0 +1,582 @@
+{
+  "artifact": "Crypto Radar Pro v55 · WIDE TERMINAL UI · AUDITED",
+  "audit_scope": "static + synthetic/runtime mocked; not live provider/deployment validation",
+  "source_audit": "v53 severe audit (62 findings)",
+  "counts": {
+    "total": 62,
+    "fixed": 51,
+    "mitigated": 11,
+    "open": 0
+  },
+  "findings": [
+    {
+      "id": "BT-01",
+      "severity_v53": "HIGH",
+      "category": "Backtest correctness",
+      "title": "Same-candle stop+target ambiguity is silently dropped in walk-forward backtest",
+      "status_v54": "FIXED",
+      "resolution": "wfTrade() and paramWfTrade() resolve same-candle stop+target conflicts stop-first; runtime fixture asserts -1R and ambiguity counting.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "COR-02",
+      "severity_v53": "HIGH",
+      "category": "Correctness / MTF",
+      "title": "Multi-timeframe engine can report 100% confidence with only one surviving timeframe",
+      "status_v54": "FIXED",
+      "resolution": "mtfComposite() requires >=3/4 coverage, shrinks score by coverage² and caps confidence by coverage; runtime 1-TF fixture returns NEUTRAL/25%.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "COR-03",
+      "severity_v53": "HIGH",
+      "category": "Correctness / historical CVD",
+      "title": "Historical CVD is accumulated before rows are sorted chronologically",
+      "status_v54": "FIXED",
+      "resolution": "Historical CVD normalizes, sorts and deduplicates provider rows before cumulative delta; runtime descending fixture returns chronological rows and final CVD 130.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "COR-04",
+      "severity_v53": "HIGH",
+      "category": "Correctness / liquidation history",
+      "title": "Observed 7-day liquidation heatmap is effectively pruned to 30 minutes",
+      "status_v54": "FIXED",
+      "resolution": "Observed liquidation memory/heatmap retains and queries 7 days; DB hydration uses 7-day cutoff.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-01",
+      "severity_v53": "HIGH",
+      "category": "Correctness / state isolation",
+      "title": "Stale crypto/external state can contaminate another symbol or US-stock verdict",
+      "status_v54": "FIXED",
+      "resolution": "Decision state is identity-stamped by market/source/symbol/TF and invalidated on symbol/market changes; async responses are rejected when identity changed.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-04",
+      "severity_v53": "HIGH",
+      "category": "Decision gating",
+      "title": "Data Quality can remain high with missing MTF/context or stale mismatched states",
+      "status_v54": "FIXED",
+      "resolution": "masterDataQuality() now includes MTF coverage, identity/source freshness, flow/CVD coverage, external context freshness, model staleness and stock corporate-action guard with hard caps.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-03",
+      "severity_v53": "HIGH",
+      "category": "Decision methodology",
+      "title": "Master Verdict double-counts correlated evidence and presents a probability-like 0–100 composite",
+      "status_v54": "MITIGATED",
+      "resolution": "Master Verdict is explicitly HEURISTIC_FAMILY_CAPPED with TECH/MODEL/FLOW/CONTEXT family caps; calibrated probability remains separate. Correlated evidence cannot be made statistically independent, so this is mitigated rather than labeled a probability.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "OPS-01",
+      "severity_v53": "HIGH",
+      "category": "Deployment / cloud",
+      "title": "Monitor Worker config ships with placeholder D1/KV IDs",
+      "status_v54": "FIXED",
+      "resolution": "wrangler.monitor.toml contains no placeholder IDs; configure-monitor.mjs generates deployment config from required environment IDs.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "SEC-06",
+      "severity_v53": "HIGH",
+      "category": "Frontend security",
+      "title": "Multiple unescaped innerHTML sinks plus no CSP/security headers",
+      "status_v54": "FIXED",
+      "resolution": "Frontend JS/CSS split enables CSP; _headers sets CSP/frame/object/referrer/permissions protections; provider/error HTML sinks are escaped and audit checks known dynamic sinks.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-01",
+      "severity_v53": "HIGH",
+      "category": "ML data architecture",
+      "title": "ML/calibration uses only the latest 250 localStorage journal rows, not the larger IndexedDB archive",
+      "status_v54": "FIXED",
+      "resolution": "researchJournalArchive + researchJournalRows merge IndexedDB history with working set; ML/resolved analyses use the merged archive instead of only 250 localStorage rows.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "PERF-01",
+      "severity_v53": "HIGH",
+      "category": "Performance / maintainability",
+      "title": "Frontend is a 717KB single HTML monolith with heavy main-thread research loops",
+      "status_v54": "MITIGATED",
+      "resolution": "717KB HTML monolith split into index.html/app.js/app.css and heavy ML/bootstrap/Monte Carlo moved to research-worker.js. app.js remains large, so maintainability risk is reduced but not eliminated.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-05",
+      "severity_v53": "HIGH",
+      "category": "Provider completeness",
+      "title": "Whale Alert transaction pagination is not followed",
+      "status_v54": "FIXED",
+      "resolution": "Whale Alert follows provider next/next_url pagination with deduplication, page cap and completeness flag.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-02",
+      "severity_v53": "HIGH",
+      "category": "Research methodology",
+      "title": "Training cohort depends on manually saved signals",
+      "status_v54": "FIXED",
+      "resolution": "Every analysis seeds an AUTO_RESEARCH prospective cohort; user save marks/merges rather than defining the training cohort.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "SEC-03",
+      "severity_v53": "HIGH",
+      "category": "Security / abuse",
+      "title": "Push subscription endpoint accepts unauthenticated arbitrary endpoints when Origin is absent",
+      "status_v54": "FIXED",
+      "resolution": "Push write routes require APP_API_TOKEN plus strict same-origin Origin; missing-Origin runtime test returns 403.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "SEC-05",
+      "severity_v53": "HIGH",
+      "category": "Security / cost control",
+      "title": "Paid-provider proxy endpoints are public and can burn API quota",
+      "status_v54": "FIXED",
+      "resolution": "Paid/provider proxy routes require APP_API_TOKEN and rate limits; public config/health remains non-secret only.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "SEC-02",
+      "severity_v53": "HIGH",
+      "category": "Security / operations",
+      "title": "Monitor trigger can be invoked without Origin and receives the server monitor token",
+      "status_v54": "FIXED",
+      "resolution": "Monitor trigger requires APP_API_TOKEN and strict Origin for POST; missing-Origin runtime test returns 403.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "SEC-01",
+      "severity_v53": "HIGH",
+      "category": "Security / privacy",
+      "title": "Pionex private account data endpoint has no application authentication",
+      "status_v54": "FIXED",
+      "resolution": "Pionex private account endpoint requires APP_API_TOKEN and rate limiting; runtime no/wrong token tests return 401.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "SEC-04",
+      "severity_v53": "HIGH",
+      "category": "Security / privacy",
+      "title": "D1 history GET is public and not partitioned by user",
+      "status_v54": "FIXED",
+      "resolution": "History API requires APP_API_TOKEN; D1 browser history is tenant-keyed from HISTORY_TENANT or token digest, and queries/writes filter tenant. Monitor rows remain separately tagged monitor.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-10",
+      "severity_v53": "HIGH",
+      "category": "US stocks / corporate actions",
+      "title": "Twelve Data intraday series are unadjusted for splits but engine treats them as continuous prices",
+      "status_v54": "FIXED",
+      "resolution": "Twelve Data daily path uses split-adjusted series; intraday path detects split-like discontinuities and truncates/guards contaminated history.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-01",
+      "severity_v53": "HIGH",
+      "category": "Volatility methodology",
+      "title": "IV/RV ratio compares unmatched horizons",
+      "status_v54": "FIXED",
+      "resolution": "IV/RV comparison now matches RV horizon to nearest option expiry and uses maturity-specific realized volatility.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "A11Y-01",
+      "severity_v53": "MEDIUM",
+      "category": "Accessibility",
+      "title": "22 form controls are potentially unlabeled and 4 canvases lack accessible alternatives",
+      "status_v54": "FIXED",
+      "resolution": "Form/button/canvas audit found no unlabeled controls; canvas alternatives/ARIA labels were added and static A11Y checks pass.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "PERF-02",
+      "severity_v53": "MEDIUM",
+      "category": "Architecture drift",
+      "title": "Similar provider/scoring logic exists in browser, Pages Functions and monitor Worker",
+      "status_v54": "MITIGATED",
+      "resolution": "ENGINE_CONTRACT_VERSION 54.1 is pinned across browser, research worker, Pages market/external functions and monitor worker with a shared contract JSON + audit invariant. Logic is still distributed, so drift risk is mitigated, not eliminated.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "BT-02",
+      "severity_v53": "MEDIUM",
+      "category": "Backtest dependence",
+      "title": "Rolling examples can have overlapping future outcome windows",
+      "status_v54": "FIXED",
+      "resolution": "rollingPoints() advances by the full outcome horizon and stores eventStartTs/eventEndTs, avoiding overlapping outcome windows.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "STO-02",
+      "severity_v53": "MEDIUM",
+      "category": "Backup / durability",
+      "title": "Standard Backup does not contain the full IndexedDB archive",
+      "status_v54": "FIXED",
+      "resolution": "Full backup exports IndexedDB records/reports/meta in addition to working sets and wraps payload in mandatory SHA-256 integrity metadata.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "OPS-05",
+      "severity_v53": "MEDIUM",
+      "category": "Build reproducibility",
+      "title": "No pinned runtime/dependencies, lockfile, lint/typecheck or shipped automated test suite",
+      "status_v54": "FIXED",
+      "resolution": "Node 22.x/npm 10.9.2 are pinned; package-lock and automated syntax/security/runtime/static audit scripts ship in the artifact and run via npm test/predeploy.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-05",
+      "severity_v53": "MEDIUM",
+      "category": "Calibration leakage",
+      "title": "Governed ensemble gives 25% weight to a PAV calibrator fit/evaluated on the full resolved sample",
+      "status_v54": "FIXED",
+      "resolution": "PAV governance now uses out-of-fold diagnostics and is usable only with sufficient OOF sample and positive skill.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "OPS-02",
+      "severity_v53": "MEDIUM",
+      "category": "Data lifecycle",
+      "title": "D1 schema/worker has no retention pruning",
+      "status_v54": "FIXED",
+      "resolution": "Cloud monitor applies configurable D1 retention pruning to monitor/history tables and records last-retention state.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "GOV-01",
+      "severity_v53": "MEDIUM",
+      "category": "Governance / claims",
+      "title": "Visible “AUDITED” badge can imply live/security validation that has not occurred",
+      "status_v54": "FIXED",
+      "resolution": "The release keeps the visible AUDITED badge but pairs it with an explicit `AUDIT: STATIC+RUNTIME · LIVE UNVERIFIED` scope chip and Health disclosure; DEPLOY_V54.md separately requires post-deploy live validation.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-08",
+      "severity_v53": "MEDIUM",
+      "category": "Historical CVD coverage",
+      "title": "CVD coverage uses row count, not timestamp continuity/uniqueness",
+      "status_v54": "FIXED",
+      "resolution": "Historical CVD coverage uses unique timestamps, interval continuity, start/end coverage and missing-interval counts, not row count alone.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "STO-03",
+      "severity_v53": "MEDIUM",
+      "category": "Long-run paper analytics",
+      "title": "Paper working set is capped at 200 localStorage trades",
+      "status_v54": "FIXED",
+      "resolution": "Paper analytics merge the IndexedDB archive with the local working set instead of being limited to 200 localStorage trades.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-06",
+      "severity_v53": "MEDIUM",
+      "category": "Model evaluation",
+      "title": "Brier-skill baseline in modelEval uses test-set prevalence",
+      "status_v54": "FIXED",
+      "resolution": "Brier-skill baseline uses training/base-rate metadata per model/fold rather than test-set prevalence; worker pooled metrics use each prediction base.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-10",
+      "severity_v53": "MEDIUM",
+      "category": "Multiple testing",
+      "title": "Experiment Registry has duplicate detection but no statistical correction for repeated parameter search",
+      "status_v54": "FIXED",
+      "resolution": "Experiment Registry adds locked holdout, bootstrap candidate-vs-baseline difference test, Bonferroni adjustment and family trial cap.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-09",
+      "severity_v53": "MEDIUM",
+      "category": "Objective mismatch",
+      "title": "ML label is binary netR>0 and ignores payoff magnitude",
+      "status_v54": "FIXED",
+      "resolution": "ML target is utility-aware (>=0.10R) and samples are weighted by capped absolute R utility, rather than binary netR>0 only.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-03",
+      "severity_v53": "MEDIUM",
+      "category": "Options semantics",
+      "title": "Displayed ATM IV is an ATM-band proxy, not formal forward/delta ATM",
+      "status_v54": "FIXED",
+      "resolution": "Options/volatility UI now labels ATM values explicitly as ATM-band IV proxy; no formal delta/forward ATM claim.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-07",
+      "severity_v53": "MEDIUM",
+      "category": "Provider completeness",
+      "title": "Coin Metrics request is limited to page_size=100 without pagination",
+      "status_v54": "FIXED",
+      "resolution": "Coin Metrics follows pagination instead of relying on a single page_size=100 response.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-09",
+      "severity_v53": "MEDIUM",
+      "category": "Provider plan handling",
+      "title": "Historical CVD fallback skips the 30m level available to Startup plans",
+      "status_v54": "FIXED",
+      "resolution": "Historical CVD fallback ladder is requested interval -> 30m -> 4h with attempts exposed.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-06",
+      "severity_v53": "MEDIUM",
+      "category": "Provider semantics",
+      "title": "Whale exchange-flow classification/value are heuristic at transaction level",
+      "status_v54": "MITIGATED",
+      "resolution": "Whale flow uses per-leg provider attribution and USD values, reports input/output exchange USD and ambiguity; ownership still depends on provider labels, so semantics remain explicitly heuristic.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-08",
+      "severity_v53": "MEDIUM",
+      "category": "Purging methodology",
+      "title": "Purged walk-forward uses a fixed observation gap, not exact label-interval overlap",
+      "status_v54": "FIXED",
+      "resolution": "Purged walk-forward stores exact outcome intervals and removes train labels whose outcome interval overlaps the test start; fixed gap remains only an additional buffer.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "OPS-03",
+      "severity_v53": "MEDIUM",
+      "category": "Push scalability",
+      "title": "Worker broadcasts pushes by listing all KV subscriptions and sending sequentially",
+      "status_v54": "FIXED",
+      "resolution": "Push broadcast is batched with bounded concurrency instead of fully sequential per-subscription delivery.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-06",
+      "severity_v53": "MEDIUM",
+      "category": "Range volatility",
+      "title": "Garman-Klass can underrepresent overnight jump risk in stocks",
+      "status_v54": "FIXED",
+      "resolution": "Stock volatility includes separate overnight-gap/intraday diagnostics so Garman-Klass is not presented as complete jump risk.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "OPS-04",
+      "severity_v53": "MEDIUM",
+      "category": "Rate limiting",
+      "title": "Pionex rate coordination is not global across Cloudflare isolates",
+      "status_v54": "MITIGATED",
+      "resolution": "Pionex proxy reserves pacing through shared D1 monitor_state when DB is bound, with local-isolate fallback. Global coordination therefore depends on the D1 binding.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "GOV-02",
+      "severity_v53": "MEDIUM",
+      "category": "Reference data governance",
+      "title": "Nasdaq universe is a static snapshot dated 2026-09-18",
+      "status_v54": "MITIGATED",
+      "resolution": "Nasdaq static snapshot now exposes age/FRESH-AGING-STALE governance and requires confirmation/warning when stale. Membership is still a snapshot until a live universe provider is configured.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "ML-07",
+      "severity_v53": "MEDIUM",
+      "category": "Research overfitting",
+      "title": "Repeated model/version experiments reuse the same chronological OOS segment",
+      "status_v54": "FIXED",
+      "resolution": "Experiment development OOS excludes a locked final 15%, repeated family trials are counted/penalized, and the locked holdout is not reused for candidate selection.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-04",
+      "severity_v53": "MEDIUM",
+      "category": "Risk policy validation",
+      "title": "v53 volatility risk multipliers are heuristic and not OOS-validated",
+      "status_v54": "MITIGATED",
+      "resolution": "Experimental volatility sizing is disabled by default and must be explicitly opted in; heuristic multipliers are no longer silently applied. They remain research heuristics until separately OOS-validated.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "SEC-07",
+      "severity_v53": "MEDIUM",
+      "category": "Security / write controls",
+      "title": "History POST sameOrigin check also allows missing Origin",
+      "status_v54": "FIXED",
+      "resolution": "History POST requires strict same-origin with Origin present; missing Origin returns 403 in runtime security test.",
+      "verification": "RUNTIME+STATIC"
+    },
+    {
+      "id": "BT-03",
+      "severity_v53": "MEDIUM",
+      "category": "Small samples",
+      "title": "Several research gates allow very small trade counts",
+      "status_v54": "FIXED",
+      "resolution": "Research thresholds raised: OOS threshold selection and forward retirement require N>=20; calibration uses N>=30 calibrated / N>=20 watch; empirical setup estimates require N>=20.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "STO-01",
+      "severity_v53": "MEDIUM",
+      "category": "Storage / privacy",
+      "title": "Research/account-related local data are unencrypted at rest in browser storage",
+      "status_v54": "MITIGATED",
+      "resolution": "Optional session-only privacy mode keeps new research/model/flow/Paper state in memory and erases persistent IndexedDB/journal/Paper data. Persistent mode is intentionally still browser storage, not encrypted-at-rest.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-12",
+      "severity_v53": "MEDIUM",
+      "category": "Trade-flow methodology",
+      "title": "True trade-flow CVD uses a count-limited history, not fixed elapsed-time windows",
+      "status_v54": "FIXED",
+      "resolution": "True trade-flow CVD fetches an elapsed 15-minute window over multiple aggTrades pages and records start/end coverage instead of a single count-limited page.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "COR-11",
+      "severity_v53": "MEDIUM",
+      "category": "US stocks / timestamps",
+      "title": "Date-only stock bars are hard-coded to 20:00 UTC",
+      "status_v54": "FIXED",
+      "resolution": "US-stock date-only timestamps are normalized using exchange/DST-aware session handling rather than hard-coded 20:00 UTC.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "UX-01",
+      "severity_v53": "MEDIUM",
+      "category": "UX / cognitive load",
+      "title": "Dashboard and Verdict Center expose 53 modules with limited progressive disclosure",
+      "status_v54": "FIXED",
+      "resolution": "Verdict Center details/family/module matrix are behind progressive disclosure (<details>) with concise top-level KPIs retained.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-02",
+      "severity_v53": "MEDIUM",
+      "category": "Volatility methodology",
+      "title": "1d/7d implied expected moves reuse nearest-expiry IV without term interpolation",
+      "status_v54": "FIXED",
+      "resolution": "Expected moves interpolate/match IV across term structure for 1d/7d horizons instead of reusing nearest expiry IV blindly.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-05",
+      "severity_v53": "MEDIUM",
+      "category": "Volatility normalization",
+      "title": "US-stock intraday annualization uses approximate fixed bars/year",
+      "status_v54": "FIXED",
+      "resolution": "US-stock annualization derives observed bars/year from loaded intraday cadence/session data instead of only fixed approximations.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "A11Y-02",
+      "severity_v53": "LOW",
+      "category": "Accessibility / dialogs",
+      "title": "Command palette and More drawer lack robust dialog semantics/focus management",
+      "status_v54": "FIXED",
+      "resolution": "Command palette and More drawer now use dialog semantics, aria-modal/labels, tabindex and focus helpers/return-focus behavior.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "SEC-08",
+      "severity_v53": "LOW",
+      "category": "Information exposure",
+      "title": "Monitor worker /health is public",
+      "status_v54": "FIXED",
+      "resolution": "Unauthenticated monitor /health now returns only {ok:true}; detailed service/config state requires MONITOR_TOKEN.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "STO-05",
+      "severity_v53": "LOW",
+      "category": "Integrity metadata",
+      "title": "Research checksum falls back to FNV-1a when WebCrypto is unavailable",
+      "status_v54": "FIXED",
+      "resolution": "Research/backup integrity requires WebCrypto SHA-256; weak FNV fallback was removed.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "STO-04",
+      "severity_v53": "LOW",
+      "category": "Migration bookkeeping",
+      "title": "Local DB migration marker remains migration-v48 while schema is v53",
+      "status_v54": "FIXED",
+      "resolution": "Migration bookkeeping uses migration-v54 and schema-migrations records covering 48..54.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "PWA-01",
+      "severity_v53": "LOW",
+      "category": "PWA / offline",
+      "title": "Offline mode is shell-only for most research features",
+      "status_v54": "MITIGATED",
+      "resolution": "Offline state is explicit read-only local research mode and network-dependent actions are disabled with aria-disabled. Full online analysis is intentionally not simulated offline.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "PWA-02",
+      "severity_v53": "LOW",
+      "category": "PWA robustness",
+      "title": "Service-worker install uses cache.addAll for shell assets",
+      "status_v54": "FIXED",
+      "resolution": "Service-worker shell install uses per-asset Promise.allSettled/cache.put so one optional asset failure does not abort all cached shell assets.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "GOV-03",
+      "severity_v53": "LOW",
+      "category": "Reference data governance",
+      "title": "Embedded Pionex fallback coin snapshot will age",
+      "status_v54": "MITIGATED",
+      "resolution": "Embedded Pionex fallback snapshot exposes age/state and stale warnings; stale membership is not presented as current. Snapshot itself necessarily ages between live refreshes.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "UX-02",
+      "severity_v53": "LOW",
+      "category": "UX consistency",
+      "title": "Mixed Romanian/English terminology is pervasive",
+      "status_v54": "MITIGATED",
+      "resolution": "A Romanian/English research glossary was added and primary explanatory text is Romanian; standard market acronyms remain English by design.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-07",
+      "severity_v53": "LOW",
+      "category": "Volatility interpretation",
+      "title": "2σ/3σ shock counts use sample sigma and are not Gaussian tail probabilities",
+      "status_v54": "FIXED",
+      "resolution": "UI now calls these empirical >2×SD/>3×SD exceedances and no longer implies Gaussian tail probabilities.",
+      "verification": "STATIC+SYNTHETIC"
+    },
+    {
+      "id": "VOL-08",
+      "severity_v53": "LOW",
+      "category": "Volatility statistics",
+      "title": "Volatility-cone windows are heavily overlapping",
+      "status_v54": "FIXED",
+      "resolution": "Volatility cone reports both overlapping and non-overlapping samples/percentiles, exposing sample dependence rather than hiding it.",
+      "verification": "STATIC+SYNTHETIC"
+    }
+  ],
+  "final_verification": {
+    "audit_scope": "static + syntax + deterministic runtime + mocked security/provider gates; live production/provider access not claimed",
+    "syntax": "V54_SYNTAX_PASS 21 executable JS/MJS surfaces + JSON manifests",
+    "security": "V54_SECURITY_RUNTIME_PASS 19 auth/origin/quota-gate checks",
+    "runtime": "V54_RUNTIME_PASS worker_logistic=14 stumps=12 cvd=130 mc_deterministic=1 mtf_one=25% same_candle=-1",
+    "static": "V54_STATIC_AUDIT_PASS 37 hardening invariants",
+    "matrix": "V54_FINDINGS_MATRIX_PASS total=62 fixed=51 mitigated=11 open=0",
+    "engine_contract": "54.1"
+  },
+  "inherited_from": "v54 · FULL HARDENING · AUDITED",
+  "release_note": "v55 changes desktop layout/release packaging only; the v54 remediation matrix remains inherited and re-tested."
+}
