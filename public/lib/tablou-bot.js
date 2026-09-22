@@ -298,6 +298,17 @@ var TabloBot = (function () {
     return { mod: "GRID", presupus: true };
   }
 
-  return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte };
+  var ZI = 24 * 3600000, MAXIM = 1440;
+  function istoricAdauga(istoric, intrare, acum) {
+    var out = (istoric || []).slice();
+    var ultim = out.length ? out[out.length - 1] : null;
+    if (ultim && acum - nr(ultim.t) < 60000) out[out.length - 1] = intrare;
+    else out.push(intrare);
+    out = out.filter(function (x) { return acum - nr(x.t) <= ZI; });
+    if (out.length > MAXIM) out = out.slice(out.length - MAXIM);
+    return out;
+  }
+
+  return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte, istoricAdauga: istoricAdauga };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloBot = TabloBot;

@@ -698,5 +698,26 @@ await test("masoara: trend cu spatii in jur tot da directia, nu 0", () => {
   assert.equal(T.masoara({ ...INTRARI, bot: botShort }).directieBot, -1);
 });
 
+await test("nu tine mai mult de o intrare pe minut", () => {
+  let ist = [];
+  const t0 = Date.now();
+  for (let i = 0; i < 10; i++) ist = T.istoricAdauga(ist, { t: t0 + i * 5000, perechi: i }, t0 + i * 5000);
+  assert.ok(ist.length <= 2, `a tinut ${ist.length} intrari in 45 de secunde`);
+});
+
+await test("taie ce e mai vechi de 24 de ore", () => {
+  const acum = Date.now();
+  const vechi = [{ t: acum - 25 * 3600000, perechi: 0 }, { t: acum - 60000, perechi: 5 }];
+  const ist = T.istoricAdauga(vechi, { t: acum, perechi: 6 }, acum);
+  assert.ok(ist.every((x) => acum - x.t <= 24 * 3600000), "a ramas o intrare mai veche de 24h");
+});
+
+await test("nu trece niciodata de 1440 de intrari", () => {
+  const acum = Date.now();
+  let ist = Array.from({ length: 1500 }, (_, i) => ({ t: acum - (1500 - i) * 60000, perechi: i }));
+  ist = T.istoricAdauga(ist, { t: acum, perechi: 1500 }, acum);
+  assert.ok(ist.length <= 1440, `au ramas ${ist.length}`);
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
