@@ -1,10 +1,10 @@
 {
-  "version": "v72",
-  "badge": "v72 · BOTI DE GRID PIONEX",
+  "version": "v72.1",
+  "badge": "v72.1 · BOTI DE GRID PIONEX",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v71.3 · PROVIDER HEALTH + ESECURI VIZIBILE",
-  "releaseType": "functie noua: citirea botilor de grid Pionex, pe care jurnalul spot nu-i putea vedea deloc",
+  "baseRelease": "v72 · BOTI DE GRID PIONEX",
+  "releaseType": "panoul nu mai cere un drept deja bifat; indemnul apare doar la 403",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",

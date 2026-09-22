@@ -198,5 +198,22 @@ await test("nicio ruta care SCRIE nu s-a strecurat", async () => {
   assert.deepEqual(exporturi, ["onRequestGet"], `exporturi neasteptate: ${exporturi.join(", ")}`);
 });
 
+await test("indemnul de a bifa 'Bot reading' apare DOAR cand lipseste dreptul", async () => {
+  const fs = await import("node:fs");
+  const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+  // In pagina NU are ce cauta permanent: cine si-a bifat deja dreptul e certat degeaba.
+  const panou = html.slice(html.indexOf("botiStare"), html.indexOf("botiRanduri"));
+  assert.ok(!/Bot reading/i.test(panou),
+    "panoul cere permanent 'Bot reading', chiar si dupa ce dreptul e bifat");
+  // Dar la 403 trebuie sa spuna limpede ce sa bifeze.
+  fetchStub((u) => u.includes("/bot/orders")
+    ? { status: 200, corp: { result: false, code: "PERMISSION_DENIED", message: "have no right" } }
+    : RASPUNS_BUN(u));
+  const r = await cheama("", ENV, proaspat());
+  assert.equal(r.status, 403);
+  assert.match(String(r.corp.error), /Bot reading/,
+    `mesajul de la 403 nu mai spune ce sa bifeze: ${r.corp.error}`);
+});
+
 console.log(`\nV72_BOT_ORDERS ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
