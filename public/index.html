@@ -7,6 +7,7 @@
 <aside class="sideNav">
 <div class="sideBrand"><div class="sideLogo">◈</div><div><div class="sideTitle">Crypto Radar Pro</div><div class="sideSub">Market Intelligence</div></div></div>
 <div class="sideMenu">
+<button class="sideBtn" data-action-click="navTo('tabloubot',true)" data-nav="tabloubot"><span class="sideIcon">◉</span>Tabloul botului</button>
 <button class="sideBtn active" data-action-click="navTo('dash')" data-nav="dash"><span class="sideIcon">⌂</span>Dashboard</button>
 <button class="sideBtn" data-action-click="navTo('desk')" data-nav="desk"><span class="sideIcon">◆</span>Trading Desk</button>
 <button class="sideBtn" data-action-click="navTo('engine')" data-nav="engine"><span class="sideIcon">⚙</span>Quant Engine</button>
@@ -114,6 +115,23 @@
 <button class="tab" data-action-click="show('deriv');derivatives()">Futures</button>
 <button class="tab" data-action-click="show('watch')">Watch</button>
 </div>
+<section class="panel" id="tabloubot">
+<div class="sectionHead"><h3>Tabloul botului</h3><span class="stockBadge" id="tbSimbol">—</span><span class="stockBadge" id="tbMod">—</span><button class="actionGhost" data-action-click="tbSchimbaModul()">Schimbă modul</button></div>
+<div class="card full" id="tbVerdictCard">
+<div id="tbNivel" class="neutral">—</div>
+<h3 id="tbTitlu">Aștept date</h3>
+<p id="tbCeFac" class="fine">—</p>
+<p id="tbDeCe" class="fine">—</p>
+</div>
+<div class="card full">
+<div class="sectionHead"><h3>Preț și interval</h3><span class="stockBadge" id="tbPret">—</span></div>
+<div id="tbRigla" class="accountRows"></div>
+</div>
+<div class="card full">
+<div class="sectionHead"><h3>Cele șapte măsuri</h3></div>
+<div class="accountRows" id="tbMasuri"><div class="emptyState">—</div></div>
+</div>
+</section>
 <section class="panel on" id="dash"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid dashWideGrid">
 <div class="card full dashLineage">
 <div class="sectionHead"><h3>Data Lineage</h3><span class="small">No silent spot-source mixing</span></div>
@@ -2274,5 +2292,5 @@
 <button class="moreBtn" data-action-click="moreNav('settings')"><b>⚙</b>Settings</button>
 <button class="moreBtn" data-action-click="moreNav('health')"><b>●</b>Health</button>
 </div>
-</div></div><script defer="" src="/app.js"></script>
+</div></div><script src="/lib/tablou-bot.js"></script><script defer="" src="/app.js"></script>
 </body></html>

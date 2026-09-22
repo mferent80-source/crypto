@@ -120,6 +120,11 @@ function normalizeaza(bot,preturi){
     opritorPierdere:nr(x.lossStop),opritorPierdereActiv,
 
     avertismente,
+
+    // Forma bruta de la Pionex, neatinsa - modulul pur TabloBot are nevoie
+    // de buOrderData, createTime si strategyId asa cum le trimite exchange-ul,
+    // nu de campurile renumite/rotunjite de mai sus.
+    brut:bot,
   };
 }
 
