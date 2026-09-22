@@ -1,10 +1,10 @@
 {
-  "version": "v70",
-  "badge": "v70 \u00b7 PIONEX AUTO JOURNAL & RECONCILIATION PRO \u00b7 AUDITED",
+  "version": "v71",
+  "badge": "v71 \u00b7 PIONEX JOURNAL CORRECTNESS & SECURITY HOTFIX \u00b7 AUDITED",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v65 \u00b7 DECISION INTELLIGENCE OS PRO \u00b7 AUDITED",
-  "releaseType": "real-time outcome validation + calibration + module attribution + setup DNA + sufficiency governance",
+  "baseRelease": "v70 \u00b7 PIONEX AUTO JOURNAL & RECONCILIATION PRO \u00b7 AUDITED",
+  "releaseType": "strict read-only security and journal-correctness hotfix",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
@@ -14,10 +14,10 @@
     "marketBreadth": "Nasdaq/crypto breadth score from participation, EMA breadth, momentum, advancing volume, highs/lows and divergence; fast/full coverage modes",
     "decisionIntelligenceOS": "12 integrated engines: regime, liquidity/structure, cross-asset, conflict, adaptive entry, dynamic exit, portfolio allocation, failure memory, event risk, decision replay, performance control and kill switch",
     "edgeValidationV66": "13 validation engines: outcome tracking, confidence calibration, module contribution, proxy ablation, verdict-quality scoring, Setup DNA, edge-decay alarm, regime policy diagnostics, rolling calibration windows, decision attribution, research white/black lists, layer comparison and data sufficiency",
-    "controlledLiveExecution": "Pionex Spot only; disabled by default; manual confirmation; D1 idempotency/daily notional cap; pre-trade hard gates",
-    "liveCapitalScaling": "0/10/25/50/100% of configured live allowance; automatic reductions, explicit confirmation for increases; actual Pionex order fields used for closed live R where available"
+    "pionexJournalV71": "strict read-only; per-symbol FIFO; base/quote fee conversion; bounded 365-day recursive backfill; incomplete history is never labeled reconciled",
+    "liveExecutionRemoved": "all Pionex submit, close and cancel routes and controls removed from this build"
   },
   "notes": "Market breadth is a context/confirmation layer. It does not independently create BUY/SELL orders and does not add live order placement.",
-  "base": "v68 Controlled Live Execution Pro",
-  "focus": "LIVE outcome reconciliation, cross-layer performance comparison and evidence-gated capital ramp with automatic reductions and manual increases."
+  "base": "v70 Pionex Auto Journal & Reconciliation Pro",
+  "focus": "correct Pionex journal accounting, strict read-only safety, transparent history completeness and adversarial regression coverage."
 }
