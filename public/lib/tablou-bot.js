@@ -300,10 +300,21 @@ var TabloBot = (function () {
 
   var ZI = 24 * 3600000, MAXIM = 1440;
   function istoricAdauga(istoric, intrare, acum) {
+    var t = nr(intrare.t);
+    if (!t) return istoric || [];
     var out = (istoric || []).slice();
-    var ultim = out.length ? out[out.length - 1] : null;
-    if (ultim && acum - nr(ultim.t) < 60000) out[out.length - 1] = intrare;
-    else out.push(intrare);
+    if (out.length === 0) {
+      out.push(intrare);
+      return out;
+    }
+    var ultim = out[out.length - 1];
+    var ultimMinut = Math.floor(nr(ultim.t) / 60000);
+    var acumMinut = Math.floor(t / 60000);
+    if (ultimMinut === acumMinut) {
+      out[out.length - 1] = intrare;
+    } else if (acumMinut > ultimMinut) {
+      out.push(intrare);
+    }
     out = out.filter(function (x) { return acum - nr(x.t) <= ZI; });
     if (out.length > MAXIM) out = out.slice(out.length - MAXIM);
     return out;

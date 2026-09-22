@@ -698,25 +698,49 @@ await test("masoara: trend cu spatii in jur tot da directia, nu 0", () => {
   assert.equal(T.masoara({ ...INTRARI, bot: botShort }).directieBot, -1);
 });
 
-await test("nu tine mai mult de o intrare pe minut", () => {
+await test("decimare la 20 de secunde pe 66 de minute da ~66 intrari, nu 1", () => {
   let ist = [];
   const t0 = Date.now();
-  for (let i = 0; i < 10; i++) ist = T.istoricAdauga(ist, { t: t0 + i * 5000, perechi: i }, t0 + i * 5000);
-  assert.ok(ist.length <= 2, `a tinut ${ist.length} intrari in 45 de secunde`);
+  for (let i = 0; i < 200; i++) {
+    ist = T.istoricAdauga(ist, { t: t0 + i * 20000, perechi: i }, t0 + i * 20000);
+  }
+  assert.ok(ist.length > 50 && ist.length < 200, `lungime ${ist.length}, asteptat ~66`);
 });
 
-await test("taie ce e mai vechi de 24 de ore", () => {
-  const acum = Date.now();
-  const vechi = [{ t: acum - 25 * 3600000, perechi: 0 }, { t: acum - 60000, perechi: 5 }];
-  const ist = T.istoricAdauga(vechi, { t: acum, perechi: 6 }, acum);
-  assert.ok(ist.every((x) => acum - x.t <= 24 * 3600000), "a ramas o intrare mai veche de 24h");
-});
-
-await test("nu trece niciodata de 1440 de intrari", () => {
+await test("plafon 1440: verifica ca se pastreaza cele NOI si se arunca cele VECHI", () => {
   const acum = Date.now();
   let ist = Array.from({ length: 1500 }, (_, i) => ({ t: acum - (1500 - i) * 60000, perechi: i }));
   ist = T.istoricAdauga(ist, { t: acum, perechi: 1500 }, acum);
   assert.ok(ist.length <= 1440, `au ramas ${ist.length}`);
+  const prima = ist[0].perechi;
+  const ultima = ist[ist.length - 1].perechi;
+  assert.ok(prima > 60, `prima intrare ar trebui sa fie de la sfarsit (>60), nu ${prima}`);
+  assert.equal(ultima, 1500, `ultima intrare ar trebui sa fie cea mai noua`);
+});
+
+await test("taie ce e mai vechi de 24 de ore, verifica granita la exact 24h", () => {
+  const acum = Date.now();
+  const exact24h = [
+    { t: acum - 24 * 3600000, perechi: 1 },
+    { t: acum - 24 * 3600000 - 1, perechi: 0 },
+    { t: acum - 60000, perechi: 2 }
+  ];
+  const ist = T.istoricAdauga(exact24h, { t: acum, perechi: 3 }, acum);
+  const perechiSet = new Set(ist.map((x) => x.perechi));
+  assert.ok(perechiSet.has(1), "exact 24h ar trebui sa fie inclus");
+  assert.ok(!perechiSet.has(0), "24h+1s ar trebui sa fie exclus");
+  assert.ok(perechiSet.has(2), "60s ar trebui sa fie inclus");
+  assert.ok(perechiSet.has(3), "acum ar trebui sa fie inclus");
+});
+
+await test("ceas dat inapoi (t mai vechi decat ultima) se respinge", () => {
+  const acum = Date.now();
+  let ist = [{ t: acum - 60000, perechi: 1 }, { t: acum - 30000, perechi: 2 }];
+  const lungimeOrig = ist.length;
+  const perechiOrig = ist.map((x) => x.perechi);
+  ist = T.istoricAdauga(ist, { t: acum - 65000, perechi: 99 }, acum);
+  assert.equal(ist.length, lungimeOrig, "intrarea cu t mai vechi se respinge");
+  assert.deepEqual(ist.map((x) => x.perechi), perechiOrig, "lista ramane neatinsa la ceas mai vechi");
 });
 
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
