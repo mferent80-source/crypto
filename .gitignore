@@ -1,0 +1,16 @@
+# Secrete locale — NU se comit NICIODATA. Repo-ul asta e PUBLIC.
+.dev.vars
+.dev.vars.*
+!.dev.vars.exemplu
+.env
+.env.*
+
+# Stare locala wrangler / miniflare
+.wrangler/
+
+# Dependinte
+node_modules/
+
+# Gunoi de sistem
+Thumbs.db
+desktop.ini

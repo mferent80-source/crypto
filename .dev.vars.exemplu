@@ -1,0 +1,9 @@
+# Copiaza fisierul asta ca ".dev.vars" si pune valorile tale.
+# Lansatorul PORNESTE-CRYPTO-RADAR.bat il scrie singur, prima data cand il pornesti.
+#
+# ATENTIE: ".dev.vars" NU se comite niciodata — repo-ul e PUBLIC.
+# E deja pus in .gitignore.
+
+APP_API_TOKEN=token-ul-tau-de-aplicatie
+PIONEX_API_KEY=cheia-ta-pionex-doar-citire
+PIONEX_API_SECRET=secretul-tau-pionex
