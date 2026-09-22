@@ -199,5 +199,36 @@ await test("fara sase ore de istoric, ritmul spune ca n-are baza", () => {
   assert.equal(m.ritmPerechi.stare, "nu-se-poate");
 });
 
+await test("contor resetat (bot inchis si deschis) e raportat ca nu-se-poate, nu rau", () => {
+  var out = [], t0 = Date.now() - 7 * 3600000;
+  // Primele 6.5 ore: perechi crescatoare 0->200
+  for (var min = 0; min < 6.5 * 60; min++) {
+    var perechi = Math.floor(200 * min / (6.5 * 60));
+    out.push({ t: t0 + min * 60000, perechi: perechi, pretPerp: 0.0155, pretSpot: 0.0155 });
+  }
+  // Ultima 0.5 ore: contor resetat (bot inchis, deschis), perechi de la 0->5
+  for (var min = Math.floor(6.5 * 60); min <= 7 * 60; min++) {
+    var perechi = Math.floor(5 * (min - 6.5 * 60) / (0.5 * 60));
+    out.push({ t: t0 + min * 60000, perechi: perechi, pretPerp: 0.0155, pretSpot: 0.0155 });
+  }
+  const m = T.masoara({ ...INTRARI, istoric: out, acum: out[out.length - 1].t });
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate", `daca contor resetat, ultima e negativa, nu raportam`);
+});
+
+await test("zero perechi in ultimele sase ore dar una-doua in ultima ora e raportata bine", () => {
+  var out = [], t0 = Date.now() - 7 * 3600000, perechi = 60;
+  // Primele 6 ore: perechi stabile, nu cresc
+  for (var min = 0; min < 6 * 60; min++) {
+    out.push({ t: t0 + min * 60000, perechi: perechi, pretPerp: 0.0155, pretSpot: 0.0155 });
+  }
+  // Ultima ora: incepe sa creasca, 1-2 perechi
+  for (var min = 6 * 60; min <= 7 * 60; min++) {
+    if (min === 6 * 60 + 30) perechi++;
+    out.push({ t: t0 + min * 60000, perechi: perechi, pretPerp: 0.0155, pretSpot: 0.0155 });
+  }
+  const m = T.masoara({ ...INTRARI, istoric: out, acum: out[out.length - 1].t });
+  assert.equal(m.ritmPerechi.stare, "bine", `baza este 0, cand nu-i baza nu e rau`);
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

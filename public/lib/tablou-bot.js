@@ -124,8 +124,14 @@ var TabloBot = (function () {
     if (acum0 && acum1 && acum7) {
       var ultima = nr(acum0.perechi) - nr(acum1.perechi);
       var baza = (nr(acum1.perechi) - nr(acum7.perechi)) / 6;
-      m.ritmPerechi = { valoare: ultima, baza: baza, prag: 0.40,
-        stare: baza > 0 && ultima / baza < 0.40 ? "rau" : "bine" };
+      // Contor resetat: daca ultima sau baza-ul sunt negative, schimbul de bot s-a intamplat.
+      // Nu avem baza de comparatie, asa ca nu raportam ca "rau".
+      if (ultima < 0 || baza < 0) {
+        // Contor resetat, nu suprascriem ritmPerechi - ramane NECUNOSCUT
+      } else {
+        m.ritmPerechi = { valoare: ultima, baza: baza, prag: 0.40,
+          stare: baza > 0 && ultima / baza < 0.40 ? "rau" : "bine" };
+      }
     }
     return m;
   }
