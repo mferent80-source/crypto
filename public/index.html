@@ -52,7 +52,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v70 · PIONEX AUTO JOURNAL PRO</div>
+<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v71 · JOURNAL CORRECTNESS HOTFIX</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -60,7 +60,7 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v70 · AUDITED</span></div>
+<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v71 · READ ONLY</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -68,7 +68,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge">v70 · PIONEX AUTO JOURNAL &amp; RECONCILIATION PRO · AUDITED</span><span class="metaChip">READ-ONLY SYNC · STATIC+RUNTIME</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge">v71 · PIONEX JOURNAL CORRECTNESS &amp; SECURITY HOTFIX · AUDITED</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -178,7 +178,7 @@
 <div class="masterMetric"><span class="label">Edge validation v66</span><b id="masterEdgeV66">—</b></div>
 <div class="masterMetric"><span class="label">Setup DNA v66</span><b id="masterDnaV66">—</b></div>
 <div class="masterMetric"><span class="label">Evidence sufficiency</span><b id="masterSuffV66">—</b></div>
-<div class="masterMetric"><span class="label">Operations v67</span><b id="masterOpsV67">—</b></div><div class="masterMetric"><span class="label">Live Gateway v68</span><b id="masterLiveV68">MANUAL ONLY</b></div>
+<div class="masterMetric"><span class="label">Operations v67</span><b id="masterOpsV67">—</b></div><div class="masterMetric"><span class="label">Pionex access</span><b id="masterPionexMode">READ ONLY</b></div>
 <div class="masterMetric"><span class="label">Data quality</span><b id="masterData">—</b></div>
 </div>
 <div class="vcSummary">
@@ -292,19 +292,6 @@
 <p class="note">v67 is an operations/control layer. It can block new Paper/Shadow entries when runtime state is unsafe, but it never sends a real-money order.</p>
 </div>
 
-<div class="card full dashOperations opsV67Card">
-<div class="sectionHead"><h3>Controlled Live Execution Pro</h3><div><span class="validationBadge">PIONEX SPOT · MANUAL CONFIRM · HARD CAPS · IDEMPOTENT</span> <button class="actionGhost" data-action-click="v68PrepareLiveOrder()">Prepare proposal</button> <button class="actionGhost" data-action-click="renderV68LiveExecution(true)">Check gateway</button></div></div>
-<div class="decisionOsHero"><div><span class="label">Live gateway</span><div class="decisionOsState neutral" id="v68DashState">DISARMED</div><div class="small" id="v68DashSummary">No live proposal prepared.</div></div><div class="decisionOsKpi"><span class="label">Server</span><b id="v68DashServer">—</b></div><div class="decisionOsKpi"><span class="label">Daily notional</span><b id="v68DashDaily">—</b></div><div class="decisionOsKpi"><span class="label">Proposal</span><b id="v68DashProposal">—</b></div><div class="decisionOsKpi"><span class="label">Open orders</span><b id="v68DashOrders">0</b></div></div>
-<div class="decisionToolGrid" id="v68DashGrid"><div class="emptyState">Prepare a proposal to evaluate pre-trade gates.</div></div>
-<p class="note">Live execution is disabled by default and supports Pionex Spot only. v68 permits new live entry proposals only for LONG; every submitted order requires the server switch, D1 idempotency/daily caps, Live Readiness hard-gates and the explicit phrase EXECUTE LIVE.</p>
-</div>
-
-<div class="card full dashEdgeCalibration edgeCalCard">
-<div class="sectionHead"><h3>Live Performance &amp; Capital Scaling</h3><div><span class="validationBadge">LIVE EVIDENCE · AUTO-REDUCE · MANUAL SCALE-UP</span> <button class="actionGhost" data-action-click="v69SyncLivePerformance()">Sync LIVE</button> <button class="actionGhost" data-action-click="v69AcceptRecommendedStage()">Accept recommended ramp</button></div></div>
-<div class="decisionOsHero"><div><span class="label">LIVE performance state</span><div class="decisionOsState neutral" id="v69DashState">COLLECT LIVE</div><div class="small" id="v69DashSummary">Closed live outcomes are required before capital can scale.</div></div><div class="decisionOsKpi"><span class="label">Quality</span><b id="v69DashScore">—</b></div><div class="decisionOsKpi"><span class="label">LIVE N</span><b id="v69DashLiveN">0</b></div><div class="decisionOsKpi"><span class="label">Expectancy</span><b id="v69DashExp">—</b></div><div class="decisionOsKpi"><span class="label">PF</span><b id="v69DashPf">—</b></div><div class="decisionOsKpi"><span class="label">Capital ramp</span><b id="v69DashRamp">0% · OBSERVE</b></div></div>
-<div class="edgeCalTable" id="v69DashLayers"><div class="emptyState">No live comparison yet.</div></div>
-<p class="note">Capital can be reduced automatically by evidence deterioration. Increasing the user stage always requires explicit confirmation. 100% means 100% of the configured live-risk allowance, still bounded by v68 server hard caps.</p>
-</div>
 <div class="card full dashSignalExplain"><div class="sectionHead"><h3>Signal Explanation</h3><span class="small">Module contribution</span></div><div class="explainList" id="explainList"></div></div>
 <div class="card full dashLifecycle"><div class="sectionHead"><h3>Signal Lifecycle</h3><span class="small">NEW → CONFIRMED → ENTRY → TP / STOP</span></div><div class="lifeTrack" id="lifecycle"></div></div>
 <div class="card full dashVolSqueeze">
@@ -995,7 +982,7 @@
 <div class="ldBox"><span class="label">Market breadth v64</span><b id="localBreadthV64">—</b></div>
 <div class="ldBox"><span class="label">Decision OS v65</span><b id="localDecisionV65">—</b></div>
 <div class="ldBox"><span class="label">Edge validation v66</span><b id="localEdgeV66">—</b></div>
-<div class="ldBox"><span class="label">Operations v67</span><b id="localOpsV67">—</b></div><div class="ldBox"><span class="label">Live execution v68</span><b id="localLiveV68">—</b></div><div class="ldBox"><span class="label">Live performance v69</span><b id="localLiveV69">—</b></div>
+<div class="ldBox"><span class="label">Operations v67</span><b id="localOpsV67">—</b></div><div class="ldBox"><span class="label">Pionex journal v71</span><b id="localPionexV71">PER SYMBOL</b></div><div class="ldBox"><span class="label">Exchange permission</span><b id="localPionexPermission">READ ONLY</b></div>
 <div class="ldBox"><span class="label">Reports</span><b id="localReports">—</b></div>
 <div class="ldBox"><span class="label">Model versions</span><b id="localModels">—</b></div>
 <div class="ldBox"><span class="label">Last archive write</span><b id="localLastWrite">—</b></div>
@@ -1253,19 +1240,6 @@
 <div class="decisionOsFooter"><b>Priority:</b> Emergency/manual pause → watchdog hard failures → v65 Kill Switch → evidence/risk gates. Recovery reconciles stored simulation state; it does not recreate exchange fills.</div>
 </div>
 
-<div class="card full opsV67Card">
-<div class="sectionHead"><h3>Controlled Live Execution · Full Verdict View</h3><div><span class="validationBadge">PROPOSE → GATE → MANUAL CONFIRM → SUBMIT → RECONCILE</span> <button class="actionGhost" data-action-click="v68PrepareLiveOrder()">Prepare proposal</button> <button class="actionGhost" data-action-click="v68RefreshLiveOrders()">Refresh live orders</button></div></div>
-<div class="decisionOsHero"><div><span class="label">Execution state</span><div class="decisionOsState neutral" id="v68DecisionState">DISARMED</div><div class="small" id="v68DecisionSummary">No live proposal prepared.</div></div><div class="decisionOsKpi"><span class="label">Server</span><b id="v68DecisionServer">—</b></div><div class="decisionOsKpi"><span class="label">Daily notional</span><b id="v68DecisionDaily">—</b></div><div class="decisionOsKpi"><span class="label">Proposal</span><b id="v68DecisionProposal">—</b></div><div class="decisionOsKpi"><span class="label">Open orders</span><b id="v68DecisionOrders">0</b></div></div>
-<div class="decisionToolGrid" id="v68DecisionGrid"><div class="emptyState">Prepare a proposal to evaluate live safety gates.</div></div>
-<div class="edgeCalTables"><div><div class="label">Local live controls</div><div class="edgeCalTable"><div class="row"><span>Arm locally</span><input id="v68Arm" type="checkbox" data-action-change="v68SaveLiveSettings()"></div><div class="row"><span>Order type</span><select id="v68OrderType" data-action-change="v68SaveLiveSettings()"><option>LIMIT</option><option>MARKET</option></select></div><div class="row"><span>Max notional / order (USDT)</span><input id="v68MaxNotional" type="number" min="1" step="1" value="25" data-action-change="v68SaveLiveSettings()"></div><div class="row"><span>Max live daily loss (R)</span><input id="v68MaxDailyLossR" type="number" min="0.25" step="0.25" value="2" data-action-change="v68SaveLiveSettings()"></div><div class="row"><span>Max modeled slippage</span><input id="v68MaxSlippage" type="number" min="1" step="1" value="15" data-action-change="v68SaveLiveSettings()"></div></div></div><div><div class="label">Manual confirmation</div><div class="edgeCalTable"><div class="row"><span>Type exactly</span><input id="v68ConfirmPhrase" placeholder="EXECUTE LIVE" autocomplete="off"></div><div class="decisionOsFooter"><button class="actionGhost" data-action-click="v68SubmitApproved()">SUBMIT APPROVED LIVE ORDER</button></div><p class="note">Closing/reloading disarms the local gateway. Server-side LIVE_TRADING_ENABLED and hard caps remain authoritative.</p></div></div><div><div class="label">Pionex open orders</div><div class="edgeCalTable" id="v68OrdersTable"><div class="emptyState">No live open orders loaded.</div></div></div></div>
-</div>
-
-<div class="card full edgeCalVerdictCard">
-<div class="sectionHead"><h3>LIVE Performance · Capital Ramp</h3><div><span class="validationBadge">BACKTEST → PAPER → SHADOW → FORWARD → LIVE</span> <button class="actionGhost" data-action-click="v69SyncLivePerformance()">Sync LIVE performance</button></div></div>
-<div class="decisionOsHero"><div><span class="label">LIVE evidence</span><div class="decisionOsState neutral" id="v69DecisionState">COLLECT LIVE</div><div class="small" id="v69DecisionSummary">No closed LIVE outcomes yet.</div></div><div class="decisionOsKpi"><span class="label">Score</span><b id="v69DecisionScore">—</b></div><div class="decisionOsKpi"><span class="label">LIVE N</span><b id="v69DecisionLiveN">0</b></div><div class="decisionOsKpi"><span class="label">Expectancy</span><b id="v69DecisionExp">—</b></div><div class="decisionOsKpi"><span class="label">PF</span><b id="v69DecisionPf">—</b></div><div class="decisionOsKpi"><span class="label">Effective ramp</span><b id="v69DecisionRamp">0% · OBSERVE</b></div></div>
-<div class="edgeCalTable" id="v69DecisionLayers"><div class="emptyState">No layer comparison yet.</div></div>
-<div class="edgeCalTables"><div><div class="label">Capital controls</div><div class="edgeCalTable"><div class="decisionOsFooter"><button class="actionGhost" data-action-click="v69AcceptRecommendedStage()">Accept recommended increase</button><button class="actionGhost" data-action-click="v69ReduceStage()">Reduce one stage</button></div></div></div><div><div class="label">Controlled live close</div><div class="edgeCalTable"><div class="row"><span>Type exactly</span><input id="v69ClosePhrase" placeholder="CLOSE LIVE" autocomplete="off"></div><div class="decisionOsFooter"><button class="actionGhost" data-action-click="v69CloseLatestLive()">Close latest app-created LIVE BUY</button></div><p class="note">This close can only reference an entry order created by the app. It cannot create a naked short.</p></div></div></div>
-</div>
 </section>
 <section class="panel" id="correlation">
 <div class="sectionHead"><h3>Correlation &amp; Relative Strength</h3><span class="small">Selected coin vs BTC / ETH / SOL</span></div>
@@ -2058,16 +2032,16 @@
 <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Balances</h3></div><div class="accountRows" id="acctBalanceRows"><div class="emptyState">Not loaded.</div></div></div>
 <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Open Orders</h3></div><div class="accountRows" id="acctOrderRows"><div class="emptyState">Not loaded.</div></div></div>
 <div class="card full" style="margin-top:10px">
-<div class="sectionHead"><h3>v70 · Pionex Auto Journal &amp; Reconciliation</h3><span class="readOnlyBadge">READ ONLY SYNC</span></div>
+<div class="sectionHead"><h3>v71 · Pionex Journal Correctness &amp; Reconciliation</h3><span class="readOnlyBadge">STRICT READ ONLY</span></div>
 <div class="accountGrid">
-<div class="acctBox"><span class="label">Imported fills</span><b id="v70FillCount">—</b></div>
-<div class="acctBox"><span class="label">Closed trades</span><b id="v70TradeCount">—</b></div>
-<div class="acctBox"><span class="label">Net P&amp;L</span><b id="v70NetPnl">—</b></div>
-<div class="acctBox"><span class="label">Reconciliation</span><b id="v70ReconState">NOT SYNCED</b></div>
+<div class="acctBox"><span class="label">Imported fills</span><b id="v71FillCount">—</b></div>
+<div class="acctBox"><span class="label">Closed trades</span><b id="v71TradeCount">—</b></div>
+<div class="acctBox"><span class="label">Net P&amp;L</span><b id="v71NetPnl">—</b></div>
+<div class="acctBox"><span class="label">Reconciliation</span><b id="v71ReconState">NOT SYNCED</b></div>
 </div>
-<div class="pushState"><button data-action-click="v70SyncPionexJournal(true)">Sync current coin</button><button class="actionGhost" data-action-click="v70ExportJournal()">Export journal</button></div>
-<p class="note" id="v70SyncNote">Imports completed Pionex orders and fills, deduplicates order/fill IDs, calculates fees and realized P&amp;L, and labels each trade MANUAL or RADAR when it can match an app live order. Nothing is placed, changed or cancelled.</p>
-<div class="accountRows" id="v70JournalRows"><div class="emptyState">No Pionex fills synchronized yet.</div></div>
+<div class="pushState"><button data-action-click="v71SyncPionexJournal(true)">Sync current coin · 365d</button><button class="actionGhost" data-action-click="v71ExportJournal()">Export journal</button></div>
+<p class="note" id="v71SyncNote">Imports read-only Pionex history in bounded time windows, keeps a separate FIFO ledger for each symbol, converts base/quote fees to USDT and marks unknown fee currencies for review. This build contains no order-placement, closing or cancellation route.</p>
+<div class="accountRows" id="v71JournalRows"><div class="emptyState">No Pionex fills synchronized yet.</div></div>
 </div>
 </section>
 <section class="panel stockOnly" id="stocks">
