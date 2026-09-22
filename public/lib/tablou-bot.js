@@ -146,8 +146,11 @@ var TabloBot = (function () {
     var x = (bot && bot.buOrderData) || {};
     for (var i = 0; i < CAMPURI_MISCATOR.length; i++) {
       var v = x[CAMPURI_MISCATOR[i]];
-      if (v !== undefined && v !== null && v !== "" && v !== "0") {
-        return { mod: "DIRECTIONAL", presupus: true };
+      if (v !== undefined && v !== null) {
+        var s = String(v).trim();
+        if (s !== "" && s !== "0") {
+          return { mod: "DIRECTIONAL", presupus: true };
+        }
       }
     }
     return { mod: "GRID", presupus: true };

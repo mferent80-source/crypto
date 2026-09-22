@@ -253,6 +253,42 @@ await test("alegerea omului bate deducerea", () => {
 await test("fara bot, modul e GRID si nu crapa", () => {
   const r = T.modBot(null, {});
   assert.equal(r.mod, "GRID");
+  assert.equal(r.presupus, true);
+});
+
+await test("moving* text \"0\" se considera nesetat, intoarce GRID", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, movingTop: "0" } };
+  const r = T.modBot(bot, {});
+  assert.equal(r.mod, "GRID");
+  assert.equal(r.presupus, true);
+});
+
+await test("moving* numar 0 se considera nesetat, intoarce GRID", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, movingTop: 0 } };
+  const r = T.modBot(bot, {});
+  assert.equal(r.mod, "GRID");
+  assert.equal(r.presupus, true);
+});
+
+await test("moving* sir gol se considera nesetat, intoarce GRID", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, movingTop: "" } };
+  const r = T.modBot(bot, {});
+  assert.equal(r.mod, "GRID");
+  assert.equal(r.presupus, true);
+});
+
+await test("moving* null se considera nesetat, intoarce GRID", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, movingTop: null } };
+  const r = T.modBot(bot, {});
+  assert.equal(r.mod, "GRID");
+  assert.equal(r.presupus, true);
+});
+
+await test("moving* cu valoare chiar pusă (numar nenul) intoarce DIRECTIONAL", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, movingIndicatorType: 2 } };
+  const r = T.modBot(bot, {});
+  assert.equal(r.mod, "DIRECTIONAL");
+  assert.equal(r.presupus, true);
 });
 
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
