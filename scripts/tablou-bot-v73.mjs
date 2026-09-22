@@ -519,5 +519,101 @@ await test("lichidarea sub 15% dar peste 8% da PAZESTE (nu doar declansatorul - 
   assert.equal(v.declansator.prag, 15);
 });
 
+// --- Task 5: oglindirea pentru modul directional ---
+
+await test("aceleasi cifre dau verdicte DIFERITE in cele doua moduri", () => {
+  const m = masuriBune();
+  m.directieBot = 1;
+  m.eficienta = { valoare: 0.8, semn: 1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 92, stare: "margine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "PAZESTE", "in GRID, trendul la margine e pericol");
+  assert.notEqual(T.verdict(m, "DIRECTIONAL").nivel, "PAZESTE", "in DIRECTIONAL, trendul in favoare nu e pericol");
+});
+
+await test("in DIRECTIONAL, zigzagul e cel care da REGLEAZA", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.eficienta = { valoare: 0.15, semn: 1, stare: "zigzag", prag: { trend: 0.60, zigzag: 0.30 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "eficienta");
+});
+
+await test("in DIRECTIONAL, iesirea IN FAVOARE e OPORTUNITATE", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.pozitieInterval = { valoare: 108, stare: "afara", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "OPORTUNITATE");
+});
+
+await test("in DIRECTIONAL, iesirea IMPOTRIVA e PAZESTE", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.pozitieInterval = { valoare: -5, stare: "afara", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "PAZESTE");
+});
+
+await test("in DIRECTIONAL, ritmul cazut NU mai declanseaza nimic", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  // masuriBune() are eficienta impicit "zigzag", care singura da REGLEAZA in
+  // DIRECTIONAL (treapta de mai jos) - fixtura originala din brief ar fi
+  // coliziona cu ea. Punem eficienta pe "bine" ca sa izolam ritmPerechi.
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.ritmPerechi = { valoare: 2, baza: 10, stare: "rau", prag: 0.40 };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE");
+  assert.equal(T.verdict(m, "GRID").nivel, "REGLEAZA");
+});
+
+await test("lichidarea nu se oglindeste: sub 8% e OPRESTE in ambele moduri", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.lichidare = { valoare: 5, stare: "rau", prag: { grav: 8, atentie: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "OPRESTE");
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "OPRESTE");
+});
+
+await test("masoara scoate directia botului din `trend`", () => {
+  const lung = T.masoara(INTRARI);
+  assert.equal(lung.directieBot, 1, "trend: long => +1");
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "short" } };
+  assert.equal(T.masoara({ ...INTRARI, bot }).directieBot, -1);
+});
+
+// --- Probe de omorat mutanti: ramura DIRECTIONAL cu directieBot setat era
+// complet neexercitata inainte de Task 5. Astea aserteaza NIVELUL, nu doar
+// declansatorul, ca sa prinda o treapta care cade pe LINISTE din greseala.
+
+await test("[mutant] trend-contra in DIRECTIONAL da PAZESTE, nu LINISTE", () => {
+  const m = masuriBune(); m.directieBot = 1; // bot long
+  m.eficienta = { valoare: 0.8, semn: -1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } }; // trend in jos, impotriva
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "PAZESTE", "trendul hotarat impotriva pozitiei trebuie sa alarmeze");
+  assert.equal(v.declansator.masura, "eficienta");
+});
+
+await test("[mutant] iesirea IN FAVOARE (long, rupt in sus) da OPORTUNITATE, nu PAZESTE", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.pozitieInterval = { valoare: 108, stare: "afara", prag: { margine: 15 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "OPORTUNITATE", "long rupt in sus = castiga, nu 'sens invers'");
+});
+
+await test("[mutant] iesirea IMPOTRIVA (long, rupt in jos) da PAZESTE, nu OPORTUNITATE", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.pozitieInterval = { valoare: -5, stare: "afara", prag: { margine: 15 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "PAZESTE", "long rupt in jos = impotriva lui, trebuie alarma");
+});
+
+await test("[mutant] oglinda: short rupt in JOS (in favoarea lui) da tot OPORTUNITATE", () => {
+  const m = masuriBune(); m.directieBot = -1; // bot short
+  m.pozitieInterval = { valoare: -8, stare: "afara", prag: { margine: 15 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "OPORTUNITATE", "short rupt in jos = castiga, oglinda lui long rupt in sus");
+});
+
+await test("[mutant] oglinda: short rupt in SUS (impotriva lui) da PAZESTE", () => {
+  const m = masuriBune(); m.directieBot = -1; // bot short
+  m.pozitieInterval = { valoare: 106, stare: "afara", prag: { margine: 15 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "PAZESTE", "short rupt in sus = impotriva lui, trebuie alarma");
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

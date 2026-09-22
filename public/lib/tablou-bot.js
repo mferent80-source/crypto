@@ -54,7 +54,7 @@ var TabloBot = (function () {
                    stare: ef.valoare === null ? "nu-se-poate" : ef.valoare > 0.60 ? "trend" : ef.valoare < 0.30 ? "zigzag" : "bine" },
       pozitieInterval: NECUNOSCUT, ritmPerechi: NECUNOSCUT, amplitudine: NECUNOSCUT,
       lichidare: NECUNOSCUT, comision: NECUNOSCUT,
-      basis: NECUNOSCUT,
+      basis: NECUNOSCUT, directieBot: 0,
     };
 
     if (pretPerp !== null && pretSpot) {
@@ -72,6 +72,9 @@ var TabloBot = (function () {
         stare: sarit ? "rau" : "bine" };
     }
     if (!x) return m;
+
+    var tr = String(x.trend || "").toLowerCase();
+    m.directieBot = tr === "long" ? 1 : tr === "short" ? -1 : 0;
 
     var jos = nr(x.bottom), sus = nr(x.top);
     if (jos !== null && sus !== null && sus > jos && pretPerp !== null) {
