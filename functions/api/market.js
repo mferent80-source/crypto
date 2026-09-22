@@ -84,10 +84,17 @@ export async function onRequestGet({request,env}){
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
   const symbol=(u.searchParams.get("symbol")||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");
   let funding=null,openInterest=null,longShort=null,oiHist5m=null,fundingHist=null;
-  try{const x=await j(`${FUT}/fapi/v1/premiumIndex?symbol=${symbol}`);funding=Number(x.lastFundingRate)}catch{}
-  try{const x=await j(`${FUT}/fapi/v1/openInterest?symbol=${symbol}`);openInterest=Number(x.openInterest)}catch{}
-  try{const x=await j(`${FUT}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=1`);if(x?.length)longShort=Number(x[0].longShortRatio)}catch{}
-  try{oiHist5m=await j(`${FUT}/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=289`)}catch{}
-  try{fundingHist=await j(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)}catch{}
-  return ok({funding,openInterest,longShort,oiHist5m,fundingHist});
+  // Binance refuza cererile venite de pe Cloudflare (403 masurat 22.09). Pana acum
+  // fiecare apel avea catch GOL, deci valorile se intorceau null in tacere si pe
+  // ecran apareau casute goale. Acum motivul calatoreste cu raspunsul.
+  const probleme={};
+  const incearca=async(nume,fn)=>{try{await fn()}catch(e){probleme[nume]=String(e&&e.message||e).slice(0,140)}};
+  await incearca("funding",async()=>{const x=await j(`${FUT}/fapi/v1/premiumIndex?symbol=${symbol}`);funding=Number(x.lastFundingRate)});
+  await incearca("openInterest",async()=>{const x=await j(`${FUT}/fapi/v1/openInterest?symbol=${symbol}`);openInterest=Number(x.openInterest)});
+  await incearca("longShort",async()=>{const x=await j(`${FUT}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=1`);if(x?.length)longShort=Number(x[0].longShortRatio)});
+  await incearca("oiHist5m",async()=>{oiHist5m=await j(`${FUT}/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=289`)});
+  await incearca("fundingHist",async()=>{fundingHist=await j(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)});
+  const raspuns={funding,openInterest,longShort,oiHist5m,fundingHist};
+  if(Object.keys(probleme).length)raspuns.probleme=probleme;
+  return ok(raspuns);
 }

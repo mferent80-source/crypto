@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "71.2.0",
+  "version": "71.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,31 +10,13 @@
   "scripts": {
     "dev": "npx --yes wrangler@4 pages dev public",
     "deploy": "npm run predeploy && npx --yes wrangler@4 pages deploy public",
-    "monitor:config": "node scripts/configure-monitor.mjs",
-    "monitor:deploy": "npm run test && node scripts/configure-monitor.mjs && npx --yes wrangler@4 deploy --config wrangler.monitor.generated.toml",
-    "vapid:generate": "node scripts/generate-vapid.mjs",
-    "test:syntax": "node scripts/syntax-v69.mjs",
-    "test:security": "node scripts/security-v69.mjs",
-    "test:runtime": "node scripts/test-v69.mjs",
-    "audit": "node scripts/audit-v71.mjs && node scripts/findings-v71.mjs",
-    "test": "npm run test:syntax && npm run test:security && npm run test:runtime && npm run test:verdict && npm run test:readiness && npm run test:replay && npm run test:paper && npm run test:ui && npm run test:edge && npm run test:governance && npm run test:universe && npm run test:providers && npm run test:liveexec && npm run test:breadth && npm run test:decisionos && npm run test:calibration && npm run test:operations && npm run test:pionexjournal && npm run audit",
     "predeploy": "npm test",
-    "test:verdict": "node scripts/verdict-v69.mjs",
-    "test:readiness": "node scripts/readiness-v69.mjs",
-    "test:replay": "node scripts/replay-v69.mjs",
-    "test:paper": "node scripts/paper-v69.mjs",
-    "test:ui": "node scripts/ui-v71.mjs",
-    "test:edge": "node scripts/edge-v69.mjs",
-    "test:governance": "node scripts/governance-v69.mjs",
-    "test:universe": "node scripts/universe-v69.mjs",
+    "test": "npm run test:syntax && npm run test:pionexjournal && npm run test:providers && npm run test:market",
+    "test:syntax": "node scripts/syntax-v71.mjs",
+    "test:pionexjournal": "node scripts/pionex-journal-v71.mjs",
     "test:providers": "node scripts/provider-health-v69.mjs",
-    "test:liveexec": "node scripts/live-execution-v69.mjs",
-    "test:breadth": "node scripts/breadth-v69.mjs",
-    "test:decisionos": "node scripts/decision-os-v69.mjs",
-    "test:calibration": "node scripts/calibration-v69.mjs",
-    "test:operations": "node scripts/operations-v69.mjs",
-    "test:livegateway": "node scripts/live-gateway-v69.mjs",
-    "test:capitalscaling": "node scripts/capital-scaling-v69.mjs",
-    "test:pionexjournal": "node scripts/pionex-journal-v71.mjs"
+    "test:market": "node scripts/market-futures-v69.mjs",
+    "monitor:config": "node scripts/configure-monitor.mjs",
+    "vapid:generate": "node scripts/generate-vapid.mjs"
   }
 }

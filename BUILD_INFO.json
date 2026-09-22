@@ -1,10 +1,10 @@
 {
-  "version": "v71.2",
-  "badge": "v71.2 · PIONEX RITM + RELUARE LA 429",
+  "version": "v71.3",
+  "badge": "v71.3 · PROVIDER HEALTH + ESECURI VIZIBILE",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v71.1 · PIONEX FILLS+ORDERS REPARAT",
-  "releaseType": "bugfix: cererile catre Pionex se distanteaza la 250 ms si un 429 nu mai omoara toata sincronizarea - se asteapta si se reia",
+  "baseRelease": "v71.2 · PIONEX RITM + RELUARE LA 429",
+  "releaseType": "ruta /api/provider-health scrisa de la zero (lipsea cu totul) + cele cinci apeluri de futures nu mai tac cand Binance refuza",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
@@ -19,5 +19,6 @@
   },
   "notes": "Market breadth is a context/confirmation layer. It does not independently create BUY/SELL orders and does not add live order placement.",
   "base": "v70 Pionex Auto Journal & Reconciliation Pro",
-  "focus": "correct Pionex journal accounting, strict read-only safety, transparent history completeness and adversarial regression coverage."
+  "focus": "correct Pionex journal accounting, strict read-only safety, transparent history completeness and adversarial regression coverage.",
+  "gate": "npm test ruleaza 50 de verificari in 4 suite; inainte chema 21 de scripturi inexistente"
 }
