@@ -4,6 +4,12 @@ import fs from "node:fs";
 const SRC = fs.readFileSync(new URL("../public/lib/tablou-bot.js", import.meta.url), "utf8");
 const T = new Function(`${SRC}; return TabloBot;`)();
 
+// Ceas fix, aliniat pe o granita de minut, pentru probele care ating
+// istoricAdauga (decimare pe galeti de minut). Fara Date.now() aici - altfel
+// proba trece sau pica dupa secunda in care ruleaza, in functie de faza
+// ceasului real fata de granita de minut.
+const ACUM = 1790000000000 - (1790000000000 % 60000);
+
 let teste = 0, picate = 0;
 function test(nume, fn) {
   teste++;
@@ -700,7 +706,7 @@ await test("masoara: trend cu spatii in jur tot da directia, nu 0", () => {
 
 await test("decimare la 20 de secunde pe 66 de minute da ~66 intrari, nu 1", () => {
   let ist = [];
-  const t0 = Date.now();
+  const t0 = ACUM;
   for (let i = 0; i < 200; i++) {
     ist = T.istoricAdauga(ist, { t: t0 + i * 20000, perechi: i }, t0 + i * 20000);
   }
@@ -708,7 +714,7 @@ await test("decimare la 20 de secunde pe 66 de minute da ~66 intrari, nu 1", () 
 });
 
 await test("plafon 1440: verifica ca se pastreaza cele NOI si se arunca cele VECHI", () => {
-  const acum = Date.now();
+  const acum = ACUM;
   let ist = Array.from({ length: 1500 }, (_, i) => ({ t: acum - (1500 - i) * 60000, perechi: i }));
   ist = T.istoricAdauga(ist, { t: acum, perechi: 1500 }, acum);
   assert.ok(ist.length <= 1440, `au ramas ${ist.length}`);
@@ -719,7 +725,7 @@ await test("plafon 1440: verifica ca se pastreaza cele NOI si se arunca cele VEC
 });
 
 await test("taie ce e mai vechi de 24 de ore, verifica granita la exact 24h", () => {
-  const acum = Date.now();
+  const acum = ACUM;
   const exact24h = [
     { t: acum - 24 * 3600000, perechi: 1 },
     { t: acum - 24 * 3600000 - 1, perechi: 0 },
@@ -734,7 +740,7 @@ await test("taie ce e mai vechi de 24 de ore, verifica granita la exact 24h", ()
 });
 
 await test("ceas dat inapoi (t mai vechi decat ultima) se respinge", () => {
-  const acum = Date.now();
+  const acum = ACUM;
   let ist = [{ t: acum - 60000, perechi: 1 }, { t: acum - 30000, perechi: 2 }];
   const lungimeOrig = ist.length;
   const perechiOrig = ist.map((x) => x.perechi);
