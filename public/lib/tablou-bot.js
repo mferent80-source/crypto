@@ -136,6 +136,23 @@ var TabloBot = (function () {
     return m;
   }
 
-  return { simboluri: simboluri, masoara: masoara };
+  var CAMPURI_MISCATOR = ["movingBottom", "movingTop", "movingIndicatorType",
+    "movingTrailingUpParam", "movingTrailingDownParam"];
+
+  function modBot(bot, alegeri) {
+    var id = bot && bot.strategyId != null ? String(bot.strategyId) : null;
+    var ales = id && alegeri && alegeri[id];
+    if (ales === "GRID" || ales === "DIRECTIONAL") return { mod: ales, presupus: false };
+    var x = (bot && bot.buOrderData) || {};
+    for (var i = 0; i < CAMPURI_MISCATOR.length; i++) {
+      var v = x[CAMPURI_MISCATOR[i]];
+      if (v !== undefined && v !== null && v !== "" && v !== "0") {
+        return { mod: "DIRECTIONAL", presupus: true };
+      }
+    }
+    return { mod: "GRID", presupus: true };
+  }
+
+  return { simboluri: simboluri, masoara: masoara, modBot: modBot };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloBot = TabloBot;

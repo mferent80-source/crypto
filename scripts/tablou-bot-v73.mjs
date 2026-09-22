@@ -230,5 +230,30 @@ await test("zero perechi in ultimele sase ore dar una-doua in ultima ora e rapor
   assert.equal(m.ritmPerechi.stare, "bine", `baza este 0, cand nu-i baza nu e rau`);
 });
 
+await test("fara nimic pus, botul e presupus GRID", () => {
+  const r = T.modBot(BOT, {});
+  assert.equal(r.mod, "GRID");
+  assert.equal(r.presupus, true);
+});
+
+await test("un camp moving* il face DIRECTIONAL, tot presupus", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, movingTop: "0.017" } };
+  const r = T.modBot(bot, {});
+  assert.equal(r.mod, "DIRECTIONAL");
+  assert.equal(r.presupus, true);
+});
+
+await test("alegerea omului bate deducerea", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, movingTop: "0.017" } };
+  const r = T.modBot(bot, { 2377: "GRID" });
+  assert.equal(r.mod, "GRID");
+  assert.equal(r.presupus, false, "cand omul a ales, nu mai e presupunere");
+});
+
+await test("fara bot, modul e GRID si nu crapa", () => {
+  const r = T.modBot(null, {});
+  assert.equal(r.mod, "GRID");
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
