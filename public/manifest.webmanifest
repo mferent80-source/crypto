@@ -1,7 +1,7 @@
 {
-  "name": "Crypto Radar Pro · Multi-Market",
+  "name": "Crypto Radar Pro \u00b7 Multi-Market",
   "short_name": "Market Radar",
-  "description": "Crypto Radar Pro v57 Profit Readiness Gate: evidence-based NOT READY / PAPER READY / SMALL LIVE READY classification using cost-aware history, forward validation, Paper execution, OOS evidence, model/drift state, current data quality and explicit live-provider confirmation, on hardened Engine Contract 54.1.",
+  "description": "Crypto Radar Pro v70: read-only Pionex fill synchronization, deduplicated auto journal, fee-aware realized P&L and order reconciliation over v69.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
@@ -56,6 +56,18 @@
       "name": "Semnale",
       "short_name": "Signals",
       "url": "/?panel=signals",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Replay & Historical Scanner",
+      "short_name": "Replay",
+      "url": "/?panel=replaylab",
       "icons": [
         {
           "src": "/icon-192.png",

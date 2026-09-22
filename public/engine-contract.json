@@ -6,5 +6,7 @@
   "sameCandle": "stop-first",
   "mtfMinimumCoverage": "3/4",
   "historicalCvd": "sort-dedupe-accumulate",
-  "researchOnly": true
+  "researchOnly": false,
+  "liveExecution": "manual-confirmed-opt-in",
+  "liveExecutionDefault": "disabled"
 }

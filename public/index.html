@@ -22,14 +22,16 @@
 <button class="sideBtn" data-action-click="navTo('riskmgr')" data-nav="riskmgr"><span class="sideIcon">%</span>Risk Manager</button>
 <button class="sideBtn" data-action-click="navTo('decision')" data-nav="decision"><span class="sideIcon">✓</span>Decision Center</button>
 <button class="sideBtn" data-action-click="navTo('correlation',true)" data-nav="correlation"><span class="sideIcon">∿</span>Correlation</button>
-<button class="sideBtn" data-action-click="navTo('paper')" data-nav="paper"><span class="sideIcon">◇</span>Paper Portfolio</button>
+<button class="sideBtn" data-action-click="navTo('paper')" data-nav="paper"><span class="sideIcon">◇</span>Paper Trading v3</button>
 <button class="sideBtn" data-action-click="navTo('analytics')" data-nav="analytics"><span class="sideIcon">Σ</span>Strategy Analytics</button>
 <button class="sideBtn" data-action-click="navTo('robustness')" data-nav="robustness"><span class="sideIcon">R</span>Robustness Lab</button>
 <button class="sideBtn" data-action-click="navTo('portfolio',true)" data-nav="portfolio"><span class="sideIcon">P</span>Portfolio Intelligence</button>
 <button class="sideBtn" data-action-click="navTo('calibration')" data-nav="calibration"><span class="sideIcon">≈</span>Calibration Lab</button>
 <button class="sideBtn" data-action-click="navTo('validation')" data-nav="validation"><span class="sideIcon">✓</span>Validation Lab</button>
 <button class="sideBtn" data-action-click="navTo('forward')" data-nav="forward"><span class="sideIcon">→</span>Forward Lab</button>
+<button class="sideBtn" data-action-click="navTo('edgepro')" data-nav="edgepro"><span class="sideIcon">E</span>Edge Validation Pro</button>
 <button class="sideBtn" data-action-click="navTo('profitready')" data-nav="profitready"><span class="sideIcon">₿</span>Profit Readiness</button>
+<button class="sideBtn" data-action-click="navTo('replaylab')" data-nav="replaylab"><span class="sideIcon">⏮</span>Replay &amp; Historical Scanner</button>
 <button class="sideBtn" data-action-click="navTo('montecarlo')" data-nav="montecarlo"><span class="sideIcon">∴</span>Monte Carlo</button>
 <button class="sideBtn" data-action-click="navTo('scenario')" data-nav="scenario"><span class="sideIcon">±</span>Scenario Lab</button>
 <button class="sideBtn" data-action-click="navTo('depth',true)" data-nav="depth"><span class="sideIcon">≡</span>Order Book</button>
@@ -50,7 +52,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v57 · PROFIT READINESS GATE</div>
+<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v65 · DECISION INTELLIGENCE OS PRO</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -58,7 +60,7 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v57 · AUDITED</span></div>
+<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v70 · AUDITED</span></div>
 </header>
 <main>
 <div class="appbar">
@@ -66,7 +68,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge">v57 · PROFIT READINESS GATE · AUDITED</span><span class="metaChip">AUDIT: STATIC+RUNTIME · LIVE UNVERIFIED</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge">v70 · PIONEX AUTO JOURNAL &amp; RECONCILIATION PRO · AUDITED</span><span class="metaChip">READ-ONLY SYNC · STATIC+RUNTIME</span><span class="metaChip">SPOT · LIVE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -170,6 +172,13 @@
 <div class="masterMetric"><span class="label">Predictive liquidation map</span><b id="masterPredLiq">—</b></div>
 <div class="masterMetric"><span class="label">Options</span><b id="masterOptions">—</b></div>
 <div class="masterMetric"><span class="label">Historical CVD</span><b id="masterHistCvd">—</b></div>
+<div class="masterMetric"><span class="label">Market breadth</span><b id="masterBreadth">—</b></div>
+<div class="masterMetric"><span class="label">Decision OS v65</span><b id="masterDecisionOS">—</b></div>
+<div class="masterMetric"><span class="label">Capital preservation</span><b id="masterKillSwitch">—</b></div>
+<div class="masterMetric"><span class="label">Edge validation v66</span><b id="masterEdgeV66">—</b></div>
+<div class="masterMetric"><span class="label">Setup DNA v66</span><b id="masterDnaV66">—</b></div>
+<div class="masterMetric"><span class="label">Evidence sufficiency</span><b id="masterSuffV66">—</b></div>
+<div class="masterMetric"><span class="label">Operations v67</span><b id="masterOpsV67">—</b></div><div class="masterMetric"><span class="label">Live Gateway v68</span><b id="masterLiveV68">MANUAL ONLY</b></div>
 <div class="masterMetric"><span class="label">Data quality</span><b id="masterData">—</b></div>
 </div>
 <div class="vcSummary">
@@ -185,7 +194,7 @@
 <div class="vcKpi"><span class="label">Weighted conviction</span><b id="vcConviction">—</b></div>
 </div>
 <div class="note" id="vcNarrative" style="margin-top:8px">Consensus is descriptive: modules can share underlying data and should not be treated as independent probabilities.</div>
-<details class="vcDetails" id="vcDetails"><summary>Arată detaliile celor 53 de module și familiile de semnale</summary>
+<details class="vcDetails" id="vcDetails"><summary>Arată detaliile modulelor și familiile de semnale</summary>
 <div class="vcFamilies">
 <div class="vcFamily"><span class="label">Technical</span><b id="vcFamilyTechnical">—</b></div>
 <div class="vcFamily"><span class="label">Models</span><b id="vcFamilyModels">—</b></div>
@@ -243,6 +252,58 @@
 <div class="ctxBox"><span class="label">Breadth</span><b id="ctxBreadth">—</b></div>
 <div class="ctxBox"><span class="label">Market regime</span><b id="ctxRegime">—</b></div>
 </div>
+</div>
+<div class="card full dashBreadth marketBreadthCard">
+<div class="sectionHead"><h3>Market Breadth Pro</h3><div><span class="validationBadge">PARTICIPATION · TREND · VOLUME · MOMENTUM</span> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Refresh</button> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,true)">Full universe</button></div></div>
+<div class="breadthHero">
+  <div><span class="label">Breadth state</span><div class="breadthState neutral" id="breadthState">NOT LOADED</div><div class="small" id="breadthSummary">Run analysis or refresh breadth.</div></div>
+  <div class="breadthScoreWrap"><span class="label">Breadth score</span><b id="breadthScore">—</b><div class="breadthTrack"><i id="breadthBar" style="width:0%"></i></div></div>
+</div>
+<div class="breadthGrid">
+  <div class="breadthBox"><span>Advancing participation</span><b id="breadthParticipation">—</b></div>
+  <div class="breadthBox"><span>Above EMA20 / 50 / 200</span><b id="breadthTrend">—</b></div>
+  <div class="breadthBox"><span>Volume breadth</span><b id="breadthVolume">—</b></div>
+  <div class="breadthBox"><span>Momentum · RSI &gt; 50</span><b id="breadthMomentum">—</b></div>
+  <div class="breadthBox"><span>New highs / lows</span><b id="breadthHighLow">—</b></div>
+  <div class="breadthBox"><span>Divergence</span><b id="breadthDivergence">—</b></div>
+  <div class="breadthBox"><span>Universe coverage</span><b id="breadthCoverage">—</b></div>
+  <div class="breadthBox"><span id="breadthAltLabel">Alt / broad participation</span><b id="breadthAltParticipation">—</b></div>
+</div>
+<p class="note" id="breadthNote">Breadth is a confirmation/context layer, not an independent BUY/SELL signal. Fast mode uses a representative basket; Full universe is explicit because it can require materially more provider requests.</p>
+</div>
+<div class="card full dashDecisionOS decisionOsCard">
+<div class="sectionHead"><h3>Decision Intelligence OS Pro</h3><div><span class="validationBadge">12 DECISION ENGINES · CAPITAL PRESERVATION FIRST</span> <button class="actionGhost" data-action-click="refreshV65DecisionOS(true)">Refresh</button> <button class="actionGhost" data-action-click="navTo('decision')">Open Verdict page</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Decision OS state</span><div class="decisionOsState neutral" id="v65DashState">WAIT DATA</div><div class="small" id="v65DashSummary">Run analysis to synthesize all decision instruments.</div></div><div class="decisionOsKpi"><span class="label">Decision quality</span><b id="v65DashScore">—</b></div><div class="decisionOsKpi"><span class="label">Kill switch</span><b id="v65DashKill">—</b></div><div class="decisionOsKpi"><span class="label">Recommended entry</span><b id="v65DashEntry">—</b></div><div class="decisionOsKpi"><span class="label">Position action</span><b id="v65DashExit">—</b></div></div>
+<div class="decisionToolGrid" id="v65DashGrid"><div class="emptyState">Run analysis first.</div></div>
+<p class="note">The 12 engines are a decision/control layer. They can confirm, delay, reduce or block Paper decisions; none is a standalone profit guarantee or a live-order instruction.</p>
+</div>
+<div class="card full dashEdgeCalibration edgeCalCard">
+<div class="sectionHead"><h3>Real-Time Edge Validation &amp; Calibration Pro</h3><div><span class="validationBadge">13 VALIDATION ENGINES · OBSERVATIONAL / FORWARD-AWARE</span> <button class="actionGhost" data-action-click="refreshV66EdgeValidation(true)">Refresh evidence</button> <button class="actionGhost" data-action-click="navTo('decision')">Open Verdict page</button></div></div>
+<div class="edgeCalHero"><div><span class="label">Edge validation state</span><div class="edgeCalState neutral" id="v66DashState">WAIT DATA</div><div class="small" id="v66DashSummary">Collect resolved outcomes to validate calibration and module contribution.</div></div><div class="edgeCalKpi"><span class="label">Verdict quality</span><b id="v66DashQuality">—</b></div><div class="edgeCalKpi"><span class="label">Calibration ECE</span><b id="v66DashEce">—</b></div><div class="edgeCalKpi"><span class="label">Edge decay</span><b id="v66DashDecay">—</b></div><div class="edgeCalKpi"><span class="label">Data sufficiency</span><b id="v66DashSuff">—</b></div></div>
+<div class="decisionToolGrid edgeCalTools" id="v66DashGrid"><div class="emptyState">No resolved validation evidence yet.</div></div>
+<div class="edgeCalTables"><div><div class="label">Confidence calibration</div><div class="edgeCalTable" id="v66DashCalibration"><div class="emptyState">No calibration sample.</div></div></div><div><div class="label">Module contribution / ablation</div><div class="edgeCalTable" id="v66DashContrib"><div class="emptyState">No contribution sample.</div></div></div><div><div class="label">Backtest / Paper / Shadow / Forward</div><div class="edgeCalTable" id="v66DashLayers"><div class="emptyState">No comparable layers yet.</div></div></div></div>
+<p class="note">Contribution and ablation are observational diagnostics, not causal proof. v66 can block a new research/Paper setup only on mature severe edge decay or a statistically mature blacklisted Setup DNA; small samples never create a hard block.</p>
+</div>
+<div class="card full dashOperations opsV67Card">
+<div class="sectionHead"><h3>Production Trading Operations Pro</h3><div><span class="validationBadge">WATCHDOG · RECOVERY · RECONCILIATION · INCIDENT CONTROL</span> <button class="actionGhost" data-action-click="refreshV67Operations(true)">Run checks</button> <button class="actionGhost" data-action-click="v67RunReconcile(true)">Reconcile</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Operations state</span><div class="decisionOsState neutral" id="v67DashState">BOOTING</div><div class="small" id="v67DashSummary">Operational watchdog is initializing.</div></div><div class="decisionOsKpi"><span class="label">Ops score</span><b id="v67DashScore">—</b></div><div class="decisionOsKpi"><span class="label">Heartbeat</span><b id="v67DashHeartbeat">—</b></div><div class="decisionOsKpi"><span class="label">Recovery</span><b id="v67DashRecovery">—</b></div><div class="decisionOsKpi"><span class="label">Incidents</span><b id="v67DashIncidents">0</b></div></div>
+<div class="decisionToolGrid" id="v67DashGrid"><div class="emptyState">Operational checks are initializing.</div></div>
+<div class="decisionOsFooter"><b>Controls:</b> <button class="actionGhost" data-action-click="v67EmergencyPause('MANUAL PAUSE')">Pause new entries</button> <button class="actionGhost" data-action-click="v67ResumeOperations()">Resume</button> <button class="actionGhost" data-action-click="v67FlattenAndPause()">Flatten Paper + pause</button></div>
+<p class="note">v67 is an operations/control layer. It can block new Paper/Shadow entries when runtime state is unsafe, but it never sends a real-money order.</p>
+</div>
+
+<div class="card full dashOperations opsV67Card">
+<div class="sectionHead"><h3>Controlled Live Execution Pro</h3><div><span class="validationBadge">PIONEX SPOT · MANUAL CONFIRM · HARD CAPS · IDEMPOTENT</span> <button class="actionGhost" data-action-click="v68PrepareLiveOrder()">Prepare proposal</button> <button class="actionGhost" data-action-click="renderV68LiveExecution(true)">Check gateway</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Live gateway</span><div class="decisionOsState neutral" id="v68DashState">DISARMED</div><div class="small" id="v68DashSummary">No live proposal prepared.</div></div><div class="decisionOsKpi"><span class="label">Server</span><b id="v68DashServer">—</b></div><div class="decisionOsKpi"><span class="label">Daily notional</span><b id="v68DashDaily">—</b></div><div class="decisionOsKpi"><span class="label">Proposal</span><b id="v68DashProposal">—</b></div><div class="decisionOsKpi"><span class="label">Open orders</span><b id="v68DashOrders">0</b></div></div>
+<div class="decisionToolGrid" id="v68DashGrid"><div class="emptyState">Prepare a proposal to evaluate pre-trade gates.</div></div>
+<p class="note">Live execution is disabled by default and supports Pionex Spot only. v68 permits new live entry proposals only for LONG; every submitted order requires the server switch, D1 idempotency/daily caps, Live Readiness hard-gates and the explicit phrase EXECUTE LIVE.</p>
+</div>
+
+<div class="card full dashEdgeCalibration edgeCalCard">
+<div class="sectionHead"><h3>Live Performance &amp; Capital Scaling</h3><div><span class="validationBadge">LIVE EVIDENCE · AUTO-REDUCE · MANUAL SCALE-UP</span> <button class="actionGhost" data-action-click="v69SyncLivePerformance()">Sync LIVE</button> <button class="actionGhost" data-action-click="v69AcceptRecommendedStage()">Accept recommended ramp</button></div></div>
+<div class="decisionOsHero"><div><span class="label">LIVE performance state</span><div class="decisionOsState neutral" id="v69DashState">COLLECT LIVE</div><div class="small" id="v69DashSummary">Closed live outcomes are required before capital can scale.</div></div><div class="decisionOsKpi"><span class="label">Quality</span><b id="v69DashScore">—</b></div><div class="decisionOsKpi"><span class="label">LIVE N</span><b id="v69DashLiveN">0</b></div><div class="decisionOsKpi"><span class="label">Expectancy</span><b id="v69DashExp">—</b></div><div class="decisionOsKpi"><span class="label">PF</span><b id="v69DashPf">—</b></div><div class="decisionOsKpi"><span class="label">Capital ramp</span><b id="v69DashRamp">0% · OBSERVE</b></div></div>
+<div class="edgeCalTable" id="v69DashLayers"><div class="emptyState">No live comparison yet.</div></div>
+<p class="note">Capital can be reduced automatically by evidence deterioration. Increasing the user stage always requires explicit confirmation. 100% means 100% of the configured live-risk allowance, still bounded by v68 server hard caps.</p>
 </div>
 <div class="card full dashSignalExplain"><div class="sectionHead"><h3>Signal Explanation</h3><span class="small">Module contribution</span></div><div class="explainList" id="explainList"></div></div>
 <div class="card full dashLifecycle"><div class="sectionHead"><h3>Signal Lifecycle</h3><span class="small">NEW → CONFIRMED → ENTRY → TP / STOP</span></div><div class="lifeTrack" id="lifecycle"></div></div>
@@ -914,16 +975,27 @@
 <div class="ldGrid">
 <div class="ldBox"><span class="label">Signals archived</span><b id="localSignals">—</b></div>
 <div class="ldBox"><span class="label">Paper trades</span><b id="localPaper">—</b></div>
+<div class="ldBox"><span class="label">Paper v3 snapshots</span><b id="localPaperV3">—</b></div>
 <div class="ldBox"><span class="label">Scanner runs</span><b id="localScans">—</b></div>
 <div class="ldBox"><span class="label">Research snapshots</span><b id="localSnapshots">—</b></div>
 <div class="ldBox"><span class="label">Experiments</span><b id="localExperiments">—</b></div>
 <div class="ldBox"><span class="label">Decision snapshots</span><b id="localDecisions">—</b></div>
 <div class="ldBox"><span class="label">Verdict Center snapshots</span><b id="localVerdictCenter">—</b></div>
 <div class="ldBox"><span class="label">Profit readiness snapshots</span><b id="localProfitReadiness">—</b></div>
+<div class="ldBox"><span class="label">Replay frames</span><b id="localHistoricalReplay">—</b></div>
+<div class="ldBox"><span class="label">Historical scans</span><b id="localHistoricalScans">—</b></div>
 <div class="ldBox"><span class="label">Volatility snapshots</span><b id="localVolatilityIntel">—</b></div>
 <div class="ldBox"><span class="label">External intel snapshots</span><b id="localExternalIntel">—</b></div>
 <div class="ldBox"><span class="label">Portfolio risk snapshots</span><b id="localPortfolioRisk">—</b></div>
 <div class="ldBox"><span class="label">Stress tests</span><b id="localStressTests">—</b></div>
+<div class="ldBox"><span class="label">Edge drift v61</span><b id="localEdgeDriftV61">—</b></div>
+<div class="ldBox"><span class="label">Champion/Challenger v61</span><b id="localChampionChallengerV61">—</b></div>
+<div class="ldBox"><span class="label">Provider health v62</span><b id="localProviderHealthV62">—</b></div>
+<div class="ldBox"><span class="label">Live readiness v63</span><b id="localLiveReadinessV63">—</b></div>
+<div class="ldBox"><span class="label">Market breadth v64</span><b id="localBreadthV64">—</b></div>
+<div class="ldBox"><span class="label">Decision OS v65</span><b id="localDecisionV65">—</b></div>
+<div class="ldBox"><span class="label">Edge validation v66</span><b id="localEdgeV66">—</b></div>
+<div class="ldBox"><span class="label">Operations v67</span><b id="localOpsV67">—</b></div><div class="ldBox"><span class="label">Live execution v68</span><b id="localLiveV68">—</b></div><div class="ldBox"><span class="label">Live performance v69</span><b id="localLiveV69">—</b></div>
 <div class="ldBox"><span class="label">Reports</span><b id="localReports">—</b></div>
 <div class="ldBox"><span class="label">Model versions</span><b id="localModels">—</b></div>
 <div class="ldBox"><span class="label">Last archive write</span><b id="localLastWrite">—</b></div>
@@ -1106,7 +1178,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v57</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v66</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -1118,6 +1190,29 @@
 <div class="cacheBox"><span class="label">Pionex cooldown</span><b id="healthPionexCooldown">READY</b></div>
 <div class="cacheBox"><span class="label">Pionex pacing</span><b id="healthPionexPacing">SAFE · 0.70s</b></div>
 <div class="cacheBox"><span class="label">Pionex 429 strikes</span><b id="healthPionexStrikes">0</b></div>
+</div>
+<div class="providerHealthPanel opsV67Health">
+  <div class="sectionHead"><h3>Operations Watchdog · Recovery Center</h3><div><span class="small" id="v67HealthStatus">Not evaluated.</span> <button class="actionGhost" data-action-click="refreshV67Operations(true)">Run watchdog</button><button class="actionGhost" data-action-click="v67RunReconcile(true)">Reconcile state</button></div></div>
+  <div class="replayKpis">
+    <div class="replayKpi"><span>Ops score</span><b id="v67HealthScore">—</b></div>
+    <div class="replayKpi"><span>Watchdog</span><b id="v67HealthWatchdog">—</b></div>
+    <div class="replayKpi"><span>Last heartbeat</span><b id="v67HealthHeartbeat">—</b></div>
+    <div class="replayKpi"><span>Recovery</span><b id="v67HealthRecovery">—</b></div>
+  </div>
+  <div class="providerHealthTable" id="v67HealthTable"><div class="emptyState">Run watchdog to inspect runtime continuity.</div></div>
+  <div class="providerHealthTable" id="v67IncidentTable" style="margin-top:10px"><div class="emptyState">No operations incidents.</div></div>
+  <p class="note">Watchdog state is local/browser operational evidence plus existing provider/risk health. It is not broker/exchange infrastructure monitoring and it never sends live orders.</p>
+</div>
+<div class="providerHealthPanel">
+  <div class="sectionHead"><h3>Live Provider Health · Data Integrity Center</h3><div><span class="small" id="providerHealthStatus">Not checked.</span> <button class="actionGhost" data-action-click="runProviderHealthV62(true)">Run provider health</button><button class="actionGhost" data-action-click="exportProviderHealthV62()">Export JSON</button></div></div>
+  <div class="replayKpis">
+    <div class="replayKpi"><span>Integrity score</span><b id="providerHealthScore">—</b></div>
+    <div class="replayKpi"><span>Overall</span><b id="providerHealthOverall">—</b></div>
+    <div class="replayKpi"><span>Local data checks</span><b id="providerHealthLocal">—</b></div>
+    <div class="replayKpi"><span>Required providers</span><b id="providerHealthRequired">—</b></div>
+  </div>
+  <div class="providerHealthTable" id="providerHealthTable"><div class="emptyState">Run provider health to measure reachability, latency, configuration, freshness, identity alignment and MTF/data quality.</div></div>
+  <p class="note">Paid providers are never exposed from the browser. The server reports configuration safely; deep checks are limited to low-cost/public endpoints unless a provider has a known safe health path. This center diagnoses data integrity and does not create a trading signal.</p>
 </div>
 </div>
 </section>
@@ -1137,6 +1232,40 @@
 <div class="row"><span>Primary blocker</span><b id="decisionBlocker">—</b></div>
 </div>
 </div>
+<div class="card full decisionOsVerdictCard">
+<div class="sectionHead"><h3>Decision Instruments · Full Verdict View</h3><div><span class="validationBadge">REGIME → STRUCTURE → CONTEXT → ENTRY/EXIT → CAPITAL</span> <button class="actionGhost" data-action-click="refreshV65DecisionOS(true)">Refresh instruments</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Integrated state</span><div class="decisionOsState neutral" id="v65DecisionState">WAIT DATA</div><div class="small" id="v65DecisionSummary">Run analysis first.</div></div><div class="decisionOsKpi"><span class="label">Quality</span><b id="v65DecisionScore">—</b></div><div class="decisionOsKpi"><span class="label">Kill switch</span><b id="v65DecisionKill">—</b></div><div class="decisionOsKpi"><span class="label">Entry engine</span><b id="v65DecisionEntry">—</b></div><div class="decisionOsKpi"><span class="label">Exit engine</span><b id="v65DecisionExit">—</b></div></div>
+<div class="decisionToolGrid decisionToolGridVerdict" id="v65DecisionGrid"><div class="emptyState">No decision instruments calculated.</div></div>
+<div class="decisionOsFooter"><b>Priority:</b> Kill Switch → Event Risk → Data/Execution health → Conflict Resolver → Entry/Exit. Directional engines never override capital-preservation blockers.</div>
+</div>
+<div class="card full edgeCalVerdictCard">
+<div class="sectionHead"><h3>Edge Validation · Full Verdict Evidence</h3><div><span class="validationBadge">CALIBRATION → ATTRIBUTION → DNA → DECAY → SUFFICIENCY</span> <button class="actionGhost" data-action-click="refreshV66EdgeValidation(true)">Refresh validation</button></div></div>
+<div class="edgeCalHero"><div><span class="label">Validation state</span><div class="edgeCalState neutral" id="v66DecisionState">WAIT DATA</div><div class="small" id="v66DecisionSummary">Resolved evidence is required.</div></div><div class="edgeCalKpi"><span class="label">Verdict quality</span><b id="v66DecisionQuality">—</b></div><div class="edgeCalKpi"><span class="label">Calibration ECE</span><b id="v66DecisionEce">—</b></div><div class="edgeCalKpi"><span class="label">Edge decay</span><b id="v66DecisionDecay">—</b></div><div class="edgeCalKpi"><span class="label">Data sufficiency</span><b id="v66DecisionSuff">—</b></div></div>
+<div class="decisionToolGrid edgeCalTools" id="v66DecisionGrid"><div class="emptyState">No validation evidence calculated.</div></div>
+<div class="edgeCalTables"><div><div class="label">Confidence calibration</div><div class="edgeCalTable" id="v66DecisionCalibration"></div></div><div><div class="label">Module contribution / ablation</div><div class="edgeCalTable" id="v66DecisionContrib"></div></div><div><div class="label">Backtest / Paper / Shadow / Forward</div><div class="edgeCalTable" id="v66DecisionLayers"></div></div></div>
+<div class="decisionOsFooter"><b>Governance:</b> validation evidence may reduce confidence or block new Paper research only when sample thresholds are mature. It never creates a live order and never promotes a strategy from a handful of trades.</div>
+</div>
+<div class="card full opsV67Card">
+<div class="sectionHead"><h3>Operations Control Plane · Full Verdict View</h3><div><span class="validationBadge">RUNTIME HEALTH → DUPLICATE GUARD → RECOVERY → SAFE MODE</span> <button class="actionGhost" data-action-click="refreshV67Operations(true)">Refresh operations</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Operations state</span><div class="decisionOsState neutral" id="v67DecisionState">BOOTING</div><div class="small" id="v67DecisionSummary">Operational state not evaluated yet.</div></div><div class="decisionOsKpi"><span class="label">Ops score</span><b id="v67DecisionScore">—</b></div><div class="decisionOsKpi"><span class="label">Heartbeat</span><b id="v67DecisionHeartbeat">—</b></div><div class="decisionOsKpi"><span class="label">Recovery</span><b id="v67DecisionRecovery">—</b></div><div class="decisionOsKpi"><span class="label">Incidents</span><b id="v67DecisionIncidents">0</b></div></div>
+<div class="decisionToolGrid" id="v67DecisionGrid"><div class="emptyState">Operations checks not loaded.</div></div>
+<div class="edgeCalTables"><div><div class="label">Recent incidents</div><div class="edgeCalTable" id="v67DecisionIncidentsTable"><div class="emptyState">No incidents.</div></div></div><div><div class="label">State reconciliation</div><div class="edgeCalTable" id="v67DecisionReconcile"><div class="emptyState">Not run.</div></div></div><div><div class="label">Emergency controls</div><div class="edgeCalTable"><div class="decisionOsFooter"><button class="actionGhost" data-action-click="v67EmergencyPause('MANUAL PAUSE')">Pause new entries</button> <button class="actionGhost" data-action-click="v67ResumeOperations()">Resume</button> <button class="actionGhost" data-action-click="v67FlattenAndPause()">Flatten Paper + pause</button></div></div></div></div>
+<div class="decisionOsFooter"><b>Priority:</b> Emergency/manual pause → watchdog hard failures → v65 Kill Switch → evidence/risk gates. Recovery reconciles stored simulation state; it does not recreate exchange fills.</div>
+</div>
+
+<div class="card full opsV67Card">
+<div class="sectionHead"><h3>Controlled Live Execution · Full Verdict View</h3><div><span class="validationBadge">PROPOSE → GATE → MANUAL CONFIRM → SUBMIT → RECONCILE</span> <button class="actionGhost" data-action-click="v68PrepareLiveOrder()">Prepare proposal</button> <button class="actionGhost" data-action-click="v68RefreshLiveOrders()">Refresh live orders</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Execution state</span><div class="decisionOsState neutral" id="v68DecisionState">DISARMED</div><div class="small" id="v68DecisionSummary">No live proposal prepared.</div></div><div class="decisionOsKpi"><span class="label">Server</span><b id="v68DecisionServer">—</b></div><div class="decisionOsKpi"><span class="label">Daily notional</span><b id="v68DecisionDaily">—</b></div><div class="decisionOsKpi"><span class="label">Proposal</span><b id="v68DecisionProposal">—</b></div><div class="decisionOsKpi"><span class="label">Open orders</span><b id="v68DecisionOrders">0</b></div></div>
+<div class="decisionToolGrid" id="v68DecisionGrid"><div class="emptyState">Prepare a proposal to evaluate live safety gates.</div></div>
+<div class="edgeCalTables"><div><div class="label">Local live controls</div><div class="edgeCalTable"><div class="row"><span>Arm locally</span><input id="v68Arm" type="checkbox" data-action-change="v68SaveLiveSettings()"></div><div class="row"><span>Order type</span><select id="v68OrderType" data-action-change="v68SaveLiveSettings()"><option>LIMIT</option><option>MARKET</option></select></div><div class="row"><span>Max notional / order (USDT)</span><input id="v68MaxNotional" type="number" min="1" step="1" value="25" data-action-change="v68SaveLiveSettings()"></div><div class="row"><span>Max live daily loss (R)</span><input id="v68MaxDailyLossR" type="number" min="0.25" step="0.25" value="2" data-action-change="v68SaveLiveSettings()"></div><div class="row"><span>Max modeled slippage</span><input id="v68MaxSlippage" type="number" min="1" step="1" value="15" data-action-change="v68SaveLiveSettings()"></div></div></div><div><div class="label">Manual confirmation</div><div class="edgeCalTable"><div class="row"><span>Type exactly</span><input id="v68ConfirmPhrase" placeholder="EXECUTE LIVE" autocomplete="off"></div><div class="decisionOsFooter"><button class="actionGhost" data-action-click="v68SubmitApproved()">SUBMIT APPROVED LIVE ORDER</button></div><p class="note">Closing/reloading disarms the local gateway. Server-side LIVE_TRADING_ENABLED and hard caps remain authoritative.</p></div></div><div><div class="label">Pionex open orders</div><div class="edgeCalTable" id="v68OrdersTable"><div class="emptyState">No live open orders loaded.</div></div></div></div>
+</div>
+
+<div class="card full edgeCalVerdictCard">
+<div class="sectionHead"><h3>LIVE Performance · Capital Ramp</h3><div><span class="validationBadge">BACKTEST → PAPER → SHADOW → FORWARD → LIVE</span> <button class="actionGhost" data-action-click="v69SyncLivePerformance()">Sync LIVE performance</button></div></div>
+<div class="decisionOsHero"><div><span class="label">LIVE evidence</span><div class="decisionOsState neutral" id="v69DecisionState">COLLECT LIVE</div><div class="small" id="v69DecisionSummary">No closed LIVE outcomes yet.</div></div><div class="decisionOsKpi"><span class="label">Score</span><b id="v69DecisionScore">—</b></div><div class="decisionOsKpi"><span class="label">LIVE N</span><b id="v69DecisionLiveN">0</b></div><div class="decisionOsKpi"><span class="label">Expectancy</span><b id="v69DecisionExp">—</b></div><div class="decisionOsKpi"><span class="label">PF</span><b id="v69DecisionPf">—</b></div><div class="decisionOsKpi"><span class="label">Effective ramp</span><b id="v69DecisionRamp">0% · OBSERVE</b></div></div>
+<div class="edgeCalTable" id="v69DecisionLayers"><div class="emptyState">No layer comparison yet.</div></div>
+<div class="edgeCalTables"><div><div class="label">Capital controls</div><div class="edgeCalTable"><div class="decisionOsFooter"><button class="actionGhost" data-action-click="v69AcceptRecommendedStage()">Accept recommended increase</button><button class="actionGhost" data-action-click="v69ReduceStage()">Reduce one stage</button></div></div></div><div><div class="label">Controlled live close</div><div class="edgeCalTable"><div class="row"><span>Type exactly</span><input id="v69ClosePhrase" placeholder="CLOSE LIVE" autocomplete="off"></div><div class="decisionOsFooter"><button class="actionGhost" data-action-click="v69CloseLatestLive()">Close latest app-created LIVE BUY</button></div><p class="note">This close can only reference an entry order created by the app. It cannot create a naked short.</p></div></div></div>
+</div>
 </section>
 <section class="panel" id="correlation">
 <div class="sectionHead"><h3>Correlation &amp; Relative Strength</h3><span class="small">Selected coin vs BTC / ETH / SOL</span></div>
@@ -1151,8 +1280,9 @@
 </div>
 </section>
 <section class="panel" id="paper">
-<div class="sectionHead"><h3>Capital-Aware Paper Account</h3><div><button class="actionGhost" data-action-click="addPaperTrade()">Add current setup</button><button class="actionGhost" data-action-click="refreshPaper()">Refresh</button></div></div>
+<div class="sectionHead"><h3>Paper Trading v3 · Execution Realism Pro</h3><div><span class="validationBadge">LADDER · OCO · TRAIL · SCALE · TIME/VOL STOP</span> <button class="actionGhost" data-action-click="addPaperTrade()">Add current setup</button><button class="actionGhost" data-action-click="refreshPaper()">Refresh</button><button class="actionGhost" data-action-click="paperFlattenAll()">Flatten all</button></div></div>
 <div class="card full">
+<p class="note">Paper-only execution simulator. Entry ladders, partial fills, OCO-style exits, configurable scale-outs, break-even, ATR trailing, volatility stop, time stop, fees, slippage and gap-through logic are simulated from OHLCV. Same-candle sequencing remains model-dependent and is resolved conservatively by default.</p>
 <div class="paperAccountGrid">
 <div class="paperBox"><span class="label">Equity</span><b id="paperEquity">—</b></div>
 <div class="paperBox"><span class="label">Realized PnL</span><b id="paperRealUsd">—</b></div>
@@ -1161,38 +1291,52 @@
 <div class="paperBox"><span class="label">Max drawdown</span><b id="paperDd">—</b></div>
 <div class="paperBox"><span class="label">Margin used</span><b id="paperMargin">—</b></div>
 </div>
-<div class="paperSettings">
+<div class="paperSettings paperSettingsV3">
 <label>Starting capital<input aria-label="Starting capital" id="paperStartCapital" min="100" step="100" type="number" value="10000"/></label>
-<label>Risk / trade<select aria-label="Risk / trade 0.25% 0.50% 1.00% 2.00%" id="paperRiskPct"><option value="0.25">0.25%</option><option selected="" value="0.5">0.50%</option><option value="1">1.00%</option><option value="2">2.00%</option></select></label>
-<label>Max daily loss<select aria-label="Max daily loss 1% 2% 3% 5%" id="paperMaxDaily"><option value="1">1%</option><option selected="" value="2">2%</option><option value="3">3%</option><option value="5">5%</option></select></label>
-<label>Max weekly loss<select aria-label="Max weekly loss 2% 4% 6% 8%" id="paperMaxWeekly"><option value="2">2%</option><option selected="" value="4">4%</option><option value="6">6%</option><option value="8">8%</option></select></label>
-<label>Max equity DD<select aria-label="Max equity DD 5% 8% 10% 15%" id="paperMaxDd"><option value="5">5%</option><option selected="" value="8">8%</option><option value="10">10%</option><option value="15">15%</option></select></label>
-<label>Max exposure<select aria-label="Max exposure 50% 100% 150% 200%" id="paperMaxExposure"><option value="50">50%</option><option selected="" value="100">100%</option><option value="150">150%</option><option value="200">200%</option></select></label>
-<label>Leverage<select aria-label="Leverage 1× 2× 3× 5×" id="paperLeverage"><option selected="" value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="5">5×</option></select></label>
-<label>Entry order<select aria-label="Entry order Limit · entry zone Market · immediate" id="paperEntryType"><option selected="" value="LIMIT">Limit · entry zone</option><option value="MARKET">Market · immediate</option></select></label>
-<label>Fill model<select aria-label="Fill model Conservative Balanced" id="paperFillModel"><option selected="" value="CONSERVATIVE">Conservative</option><option value="BALANCED">Balanced</option></select></label>
-<label>Entry expiry<select aria-label="Entry expiry 4 bars 8 bars 12 bars 20 bars" id="paperMaxWaitBars"><option value="4">4 bars</option><option selected="" value="8">8 bars</option><option value="12">12 bars</option><option value="20">20 bars</option></select></label>
+<label>Risk / trade<select aria-label="Risk per trade" id="paperRiskPct"><option value="0.25">0.25%</option><option selected value="0.5">0.50%</option><option value="1">1.00%</option><option value="2">2.00%</option></select></label>
+<label>Max daily loss<select aria-label="Max daily loss" id="paperMaxDaily"><option value="1">1%</option><option selected value="2">2%</option><option value="3">3%</option><option value="5">5%</option></select></label>
+<label>Max weekly loss<select aria-label="Max weekly loss" id="paperMaxWeekly"><option value="2">2%</option><option selected value="4">4%</option><option value="6">6%</option><option value="8">8%</option></select></label>
+<label>Max equity DD<select aria-label="Max equity drawdown" id="paperMaxDd"><option value="5">5%</option><option selected value="8">8%</option><option value="10">10%</option><option value="15">15%</option></select></label>
+<label>Max exposure<select aria-label="Max exposure" id="paperMaxExposure"><option value="50">50%</option><option selected value="100">100%</option><option value="150">150%</option><option value="200">200%</option></select></label>
+<label>Leverage<select aria-label="Leverage" id="paperLeverage"><option selected value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="5">5×</option></select></label>
+<label>Max positions/orders<select aria-label="Max paper positions and orders" id="paperMaxPositions"><option value="3">3</option><option selected value="6">6</option><option value="10">10</option><option value="15">15</option></select></label>
+<label>Entry order<select aria-label="Entry order" id="paperEntryType"><option selected value="LIMIT">Limit ladder</option><option value="MARKET">Market immediate</option></select></label>
+<label>Entry layers<select aria-label="Entry ladder layers" id="paperEntryLayers"><option value="1">1 layer</option><option value="2">2 layers</option><option selected value="3">3 layers</option></select></label>
+<label>Fill model<select aria-label="Fill model" id="paperFillModel"><option selected value="CONSERVATIVE">Conservative</option><option value="BALANCED">Balanced</option></select></label>
+<label>Entry expiry<select aria-label="Entry expiry" id="paperMaxWaitBars"><option value="4">4 bars</option><option selected value="8">8 bars</option><option value="12">12 bars</option><option value="20">20 bars</option></select></label>
+<label>TP1 / TP2 scale-out<select aria-label="Target scale out plan" id="paperTpPlan"><option value="25/25">25% / 25%</option><option selected value="35/30">35% / 30%</option><option value="40/35">40% / 35%</option><option value="50/25">50% / 25%</option></select></label>
+<label>Break-even trigger<select aria-label="Break even trigger R" id="paperBreakEvenR"><option value="0.75">0.75R</option><option selected value="1">1.00R</option><option value="1.25">1.25R</option><option value="1.5">1.50R</option></select></label>
+<label>Trailing stop<select aria-label="Trailing stop mode" id="paperTrailMode"><option value="OFF">Off</option><option selected value="ATR">ATR trail</option></select></label>
+<label>Trail starts<select aria-label="Trailing stop starts at R" id="paperTrailStartR"><option value="1">1.0R</option><option selected value="1.5">1.5R</option><option value="2">2.0R</option><option value="2.5">2.5R</option></select></label>
+<label>Trail ATR<select aria-label="Trailing stop ATR multiple" id="paperTrailAtr"><option value="1">1.0×</option><option selected value="1.5">1.5×</option><option value="2">2.0×</option><option value="2.5">2.5×</option></select></label>
+<label>Volatility stop<select aria-label="Volatility stop ATR multiple" id="paperVolStopAtr"><option value="1.5">1.5× ATR</option><option value="2">2.0× ATR</option><option selected value="2.25">2.25× ATR</option><option value="3">3.0× ATR</option></select></label>
+<label>Time stop<select aria-label="Maximum position bars" id="paperMaxPositionBars"><option value="12">12 bars</option><option value="24">24 bars</option><option selected value="48">48 bars</option><option value="96">96 bars</option></select></label>
 </div>
-<button class="actionGhost" data-action-click="savePaperSettings()">Save paper risk settings</button>
+<button class="actionGhost" data-action-click="savePaperSettings()">Save Paper v3 execution settings</button>
 <div class="paperGrid" style="margin-top:10px">
-<div class="paperBox"><span class="label">Open trades</span><b id="paperOpen">0</b></div>
+<div class="paperBox"><span class="label">Open positions</span><b id="paperOpen">0</b></div>
 <div class="paperBox"><span class="label">Unrealized % legacy</span><b id="paperUnreal">—</b></div>
 <div class="paperBox"><span class="label">Realized % legacy</span><b id="paperReal">—</b></div>
 <div class="paperBox"><span class="label">Win rate</span><b id="paperWin">—</b></div>
 <div class="paperBox"><span class="label">Exposure</span><b id="paperExposure">—</b></div>
 </div>
 <div class="execGrid" style="margin-top:8px">
-<div class="execBox"><span class="label">Pending orders</span><b id="paperPending">0</b></div>
+<div class="execBox"><span class="label">Pending ladders</span><b id="paperPending">0</b></div>
 <div class="execBox"><span class="label">Partial fills</span><b id="paperPartial">0</b></div>
 <div class="execBox"><span class="label">Avg entry slippage</span><b id="paperAvgSlip">—</b></div>
 <div class="execBox"><span class="label">Fill ratio</span><b id="paperFillRatio">—</b></div>
 <div class="execBox"><span class="label">Expired entries</span><b id="paperExpired">0</b></div>
 <div class="execBox"><span class="label">Gap-stop exits</span><b id="paperGapStops">0</b></div>
+<div class="execBox"><span class="label">Active OCO groups</span><b id="paperOcoActive">0</b></div>
+<div class="execBox"><span class="label">Time-stop exits</span><b id="paperTimeStops">0</b></div>
+<div class="execBox"><span class="label">Trailing-stop exits</span><b id="paperTrailStops">0</b></div>
+<div class="execBox"><span class="label">Execution costs</span><b id="paperCosts">—</b></div>
+<div class="execBox"><span class="label">Avg MFE / MAE</span><b id="paperMfeMae">—</b></div>
 </div>
-<div class="curveWrap" style="margin-top:10px"><canvas aria-label="Paperequitycurve" height="180" id="paperEquityCurve" role="img" width="1000"></canvas></div>
-<div style="margin-top:10px"><div class="paperRow"><b>Coin</b><b>Dir</b><b>Entry</b><b>PnL</b><b>Status</b><b>Close</b></div><div id="paperRows"></div></div>
+<div class="curveWrap" style="margin-top:10px"><canvas aria-label="Paper equity curve" height="180" id="paperEquityCurve" role="img" width="1400"></canvas></div>
+<div class="paperBlotterWrap" style="margin-top:10px"><div class="paperRowV3 paperRowV3Head"><b>Symbol</b><b>Dir</b><b>Avg entry</b><b>Entry ladder</b><b>Managed stop</b><b>Targets</b><b>PnL</b><b>MFE / MAE</b><b>Status / age</b><b>Actions</b></div><div id="paperRows"></div></div>
 <div class="card full" style="margin-top:10px;background:#08111b">
-<div class="sectionHead"><h3>Execution Simulator Events</h3><span class="small">fills · expiry · targets · gap stops</span></div>
+<div class="sectionHead"><h3>Execution Simulator Events</h3><span class="small">fills · ladder · OCO · scale-out · BE · trail · volatility/time stop · gap stop</span></div>
 <div class="execEventRows" id="paperExecEvents"><div class="emptyState">No simulated execution events.</div></div>
 </div>
 </div>
@@ -1574,6 +1718,15 @@
 </div>
 </div>
 <div class="card full" style="margin-top:10px">
+<div class="sectionHead"><h3>Forward Performance by Breadth Regime</h3><span class="small">Uses breadth snapshot stored at signal creation · no retroactive relabeling</span></div>
+<div class="qualityGrid">
+<div class="qualityBox"><span class="label">Breadth-tagged N</span><b id="forwardBreadthN">—</b></div>
+<div class="qualityBox"><span class="label">Bullish breadth exp.</span><b id="forwardBreadthBull">—</b></div>
+<div class="qualityBox"><span class="label">Neutral breadth exp.</span><b id="forwardBreadthNeutral">—</b></div>
+<div class="qualityBox"><span class="label">Bearish breadth exp.</span><b id="forwardBreadthBear">—</b></div>
+</div>
+</div>
+<div class="card full" style="margin-top:10px">
 <div class="sectionHead"><h3>Evidence Quality Gate</h3><span class="small">Checks whether the sample is usable</span></div>
 <div class="qualityGrid">
 <div class="qualityBox"><span class="label">Attribution coverage</span><b id="qualityAttrib">—</b></div>
@@ -1623,6 +1776,58 @@
   </div>
   <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Crypto vs Nasdaq / US Stocks evidence</h3><span class="small">Archived cost-aware outcomes · market evidence only</span></div><div class="prMarketCompare"><div class="prMarketCard"><span class="label">CRYPTO · all recorded sources</span><b id="prCryptoEvidence">—</b><div id="prCryptoDetail" class="small">—</div></div><div class="prMarketCard"><span class="label">NASDAQ / US STOCKS · Twelve Data</span><b id="prStockEvidence">—</b><div id="prStockDetail" class="small">—</div></div></div></div>
   <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Interpretation</h3><span class="small">Readiness ≠ expected profit</span></div><div id="prInterpretation" class="note">NOT READY means the evidence gate is incomplete or degraded. PAPER READY means continue simulated/forward validation. SMALL LIVE READY means the strict evidence checklist passed; it still does not predict profit and does not make a trade decision for you.</div></div>
+</section>
+
+<section class="panel" id="replaylab">
+<div class="sectionHead"><h3>Replay &amp; Historical Scanner Pro</h3><div><span class="validationBadge">STRICT PREFIX · NO LOOKAHEAD</span> <span class="small">Engine Contract 54.1</span></div></div>
+<div class="replayHero">
+  <div class="card replayControls">
+    <div class="sectionHead"><h3>Candle-by-candle Replay</h3><span class="small" id="replayStatus">Load history to start.</span></div>
+    <div class="replayControlGrid">
+      <label class="small">Symbol<input aria-label="Replay symbol" id="replaySymbol" placeholder="BTC / AAPL"/></label>
+      <label class="small">Timeframe<select aria-label="Replay timeframe" id="replayTf"><option value="15m">15m</option><option value="1h">1h</option><option value="4h" selected>4h</option><option value="1d">1d</option></select></label>
+      <label class="small">Mode<select aria-label="Replay mode" id="replayMode"><option value="auto">Auto</option><option value="scalp">Scalping</option><option value="intraday">Intraday</option><option value="swing">Swing</option></select></label>
+      <label class="small">Outcome horizon<select aria-label="Replay outcome horizon" id="replayHorizon" data-action-change="renderReplayFrame()"><option value="4">4 bars</option><option value="12" selected>12 bars</option><option value="24">24 bars</option></select></label>
+      <label class="small">History<select aria-label="Replay history bars" id="replayBars"><option value="500">500 bars</option><option value="750">750 bars</option><option value="1000" selected>1000 bars</option></select></label>
+      <button data-action-click="loadReplayHistory()">Load replay</button>
+    </div>
+    <div class="replayStepper">
+      <button class="actionGhost" data-action-click="stepReplay(-5)">−5</button><button class="actionGhost" data-action-click="stepReplay(-1)">−1</button><button id="replayPlayBtn" data-action-click="toggleReplayPlay()">▶ Play</button><button class="actionGhost" data-action-click="stepReplay(1)">+1</button><button class="actionGhost" data-action-click="stepReplay(5)">+5</button>
+      <input aria-label="Replay timeline" data-action-input="setReplayIndex(this.value)" id="replaySlider" min="0" max="100" step="1" type="range" value="0"/>
+    </div>
+    <div class="replayKpis">
+      <div class="replayKpi"><span>Simulated time</span><b id="replayTime">—</b></div><div class="replayKpi"><span>Visible bars</span><b id="replayVisible">—</b></div><div class="replayKpi"><span>Replay verdict</span><b id="replayVerdict">—</b></div><div class="replayKpi"><span>Score</span><b id="replayScore">—</b></div><div class="replayKpi"><span>Forward outcome</span><b id="replayOutcome">—</b></div><div class="replayKpi"><span>No-lookahead</span><b class="good" id="replayNoLookahead">ENFORCED</b></div>
+    </div>
+    <canvas aria-label="Historical replay price chart" height="340" id="replayChart" role="img" width="1200"></canvas>
+    <p class="note">Replay scoring receives only candles with timestamp ≤ simulated time. Future candles are isolated and used only after scoring for outcome measurement. Current external context, current journal reliability and current provider state are not injected into the historical score.</p>
+  </div>
+  <div class="card replayEvidence">
+    <div class="sectionHead"><h3>Evidence at replay time</h3><span class="small">Technical replay + archived evidence when available</span></div>
+    <div id="replayComponents" class="replayComponentGrid"></div>
+    <div class="row"><span>Archived Master Verdict</span><b id="replayArchivedMaster">N/A</b></div>
+    <div class="row"><span>Archived Profit Readiness</span><b id="replayArchivedReadiness">N/A</b></div>
+    <div class="row"><span>Archived Market Breadth</span><b id="replayArchivedBreadth">N/A</b></div>
+    <div class="row"><span>Archived evidence match</span><b id="replayArchiveMatch">NONE</b></div>
+    <p class="note">The live Master Verdict contains modules that may not have historical archives. v66 never substitutes today's context for missing historical evidence; those modules remain N/A.</p>
+    <div class="sectionHead" style="margin-top:12px"><h3>Replay session log</h3><div><button class="actionGhost" data-action-click="exportReplaySession('csv')">CSV</button><button class="actionGhost" data-action-click="exportReplaySession('json')">JSON</button></div></div>
+    <div class="replayLog" id="replayLog"><div class="emptyState">No replay frames recorded yet.</div></div>
+  </div>
+</div>
+<div class="card full" style="margin-top:10px">
+  <div class="sectionHead"><h3>Historical Scanner</h3><div><span class="validationBadge">TOP-10 AT HISTORICAL TIME</span> <button data-action-click="runHistoricalScanner()">Run historical scan</button><button class="actionGhost" data-action-click="cancelHistoricalScanner()">Cancel</button></div></div>
+  <div class="histScanControls">
+    <label class="small">Bars ago<input aria-label="Historical scanner bars ago" id="histScanBarsAgo" max="200" min="5" step="1" type="number" value="60"/></label>
+    <label class="small">Outcome horizon<select aria-label="Historical scanner outcome horizon" id="histScanHorizon"><option value="4">4 bars</option><option value="12" selected>12 bars</option><option value="24">24 bars</option></select></label>
+    <label class="small">Universe<select aria-label="Historical scanner universe" id="histScanDepth"><option value="FAST">FAST</option><option value="FULL">FULL</option></select></label>
+    <div class="replayKpi"><span>Anchor</span><b id="histScanAnchor">—</b></div><div class="replayKpi"><span>Processed</span><b id="histScanProcessed">0/0</b></div><div class="replayKpi"><span>Top-10 hit rate</span><b id="histScanTopHit">—</b></div><div class="replayKpi"><span>Top-10 net move</span><b id="histScanAvg">—</b></div>
+    <div class="replayKpi"><span>Membership mode</span><b id="histUniverseMode">—</b></div><div class="replayKpi"><span>Universe date</span><b id="histUniverseDate">—</b></div><div class="replayKpi"><span>Events reversed</span><b id="histUniverseEvents">0</b></div><div class="replayKpi"><span>Membership bias</span><b id="histUniverseBias">—</b></div>
+    <div class="replayKpi"><span>Historical breadth</span><b id="histBreadthState">—</b></div><div class="replayKpi"><span>Breadth score</span><b id="histBreadthScore">—</b></div><div class="replayKpi"><span>Participation</span><b id="histBreadthParticipation">—</b></div><div class="replayKpi"><span>Breadth coverage</span><b id="histBreadthCoverage">—</b></div>
+  </div>
+  <div class="histProgress"><span id="histScanStatus">Ready.</span><div><i id="histScanProgress"></i></div></div>
+  <div class="histScanTable" id="histScanTable"><div class="emptyState">Run a historical scan. Crypto still uses current Pionex membership; Nasdaq reconstructs membership by anchor date from the current official reference plus dated additions/removals. Coverage and residual membership bias are displayed explicitly.</div></div>
+  <div class="row2" style="margin-top:10px"><button class="actionGhost" data-action-click="exportHistoricalScan('csv')">Export CSV</button><button class="actionGhost" data-action-click="exportHistoricalScan('json')">Export JSON</button></div>
+  <p class="note">Historical rank is computed from prefix-only technical features. It deliberately excludes today's journal reliability, today's microstructure and today's external context. Outcome is evaluated only after ranking. Nasdaq membership is reconstructed for anchors within the v65 inherited coverage window (from 22 Dec 2025). Corporate-action reconciliations are tagged and residual membership/provider bias is never hidden; crypto still uses current Pionex membership.</p>
+</div>
 </section>
 
 <section class="panel" id="quantflow">
@@ -1852,6 +2057,18 @@
 </div>
 <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Balances</h3></div><div class="accountRows" id="acctBalanceRows"><div class="emptyState">Not loaded.</div></div></div>
 <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Open Orders</h3></div><div class="accountRows" id="acctOrderRows"><div class="emptyState">Not loaded.</div></div></div>
+<div class="card full" style="margin-top:10px">
+<div class="sectionHead"><h3>v70 · Pionex Auto Journal &amp; Reconciliation</h3><span class="readOnlyBadge">READ ONLY SYNC</span></div>
+<div class="accountGrid">
+<div class="acctBox"><span class="label">Imported fills</span><b id="v70FillCount">—</b></div>
+<div class="acctBox"><span class="label">Closed trades</span><b id="v70TradeCount">—</b></div>
+<div class="acctBox"><span class="label">Net P&amp;L</span><b id="v70NetPnl">—</b></div>
+<div class="acctBox"><span class="label">Reconciliation</span><b id="v70ReconState">NOT SYNCED</b></div>
+</div>
+<div class="pushState"><button data-action-click="v70SyncPionexJournal(true)">Sync current coin</button><button class="actionGhost" data-action-click="v70ExportJournal()">Export journal</button></div>
+<p class="note" id="v70SyncNote">Imports completed Pionex orders and fills, deduplicates order/fill IDs, calculates fees and realized P&amp;L, and labels each trade MANUAL or RADAR when it can match an app live order. Nothing is placed, changed or cancelled.</p>
+<div class="accountRows" id="v70JournalRows"><div class="emptyState">No Pionex fills synchronized yet.</div></div>
+</div>
 </section>
 <section class="panel stockOnly" id="stocks">
 <div class="sectionHead"><h3>Nasdaq &amp; US Stocks Desk</h3><span class="stockBadge">TWELVE DATA · SERVER-SIDE KEY</span></div>
@@ -1912,6 +2129,7 @@
 </div>
 <div class="scanMeta"><span id="pionexUniverseCount">Universe —</span><span id="pionexUniverseTime">Updated —</span><span id="pionexScanMode">Mode FAST 4H</span><span id="pionexRateState">Rate-safe queue</span></div>
 <div class="scanProgress"><div id="scanProgressBar"></div></div>
+<div class="scanBreadthStrip"><span>Market Breadth</span><b id="scanBreadthState">—</b><span id="scanBreadthScore">—</span><span id="scanBreadthCoverage">—</span><button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Refresh breadth</button></div>
 <div class="scanStats">
 <div class="scanStat"><span>Processed</span><b id="scanProcessed">0/0</b></div>
 <div class="scanStat"><span>Results</span><b id="scanResults">0</b></div>
@@ -1993,6 +2211,34 @@
 <div class="card full"><div class="label">Interpretare</div><p id="ftext">Datele futures vor fi încărcate pentru perechile disponibile pe Binance USDⓈ-M Futures.</p></div>
 <div class="card full"><div class="label">Derivatives composite</div><div class="row"><span>Funding bias</span><b id="fundingBias">—</b></div><div class="row"><span>Crowding risk</span><b id="crowdingRisk">—</b></div><div class="row"><span>OI context</span><b id="oiContext">—</b></div></div>
 </div></section>
+<section class="panel" id="edgepro">
+<div class="sectionHead"><h3>Adaptive Governance &amp; Edge Validation Pro</h3><div><span class="validationBadge">DRIFT · RISK GOVERNOR · CHAMPION/CHALLENGER · FORWARD · SHADOW · EXECUTION</span> <button class="actionGhost" data-action-click="renderEdgePro()">Refresh lab</button></div></div>
+<div class="edgeProGrid">
+<div class="card"><div class="label">Forward evidence</div><div class="edgeProKpis"><div><span>N</span><b id="epForwardN">0</b></div><div><span>Expectancy</span><b id="epForwardExp">—</b></div><div><span>95% CI</span><b id="epForwardCI">—</b></div><div><span>Stability</span><b id="epForwardStability">—</b></div><div><span>Current segment</span><b id="epSegment">—</b></div></div><p class="note" id="epForwardNote">Forward-only evidence is separated from historical tuning.</p></div>
+<div class="card"><div class="label">Alert Engine Pro</div><div class="edgeProControls"><label class="small">Enable<input id="epAlertEnable" type="checkbox" data-action-change="saveAlertProSettings()"/></label><label class="small">Min verdict score<input id="epAlertScore" type="number" min="50" max="100" step="1" value="68" data-action-change="saveAlertProSettings()"/></label><label class="small">Min data quality<input id="epAlertQuality" type="number" min="0" max="100" step="1" value="75" data-action-change="saveAlertProSettings()"/></label><label class="small">Require Paper Ready<input id="epAlertReady" type="checkbox" data-action-change="saveAlertProSettings()"/></label></div><div class="row"><span>Current alert gate</span><b id="epAlertState">—</b></div><p class="note">Fires only when the current setup clears configured verdict, data-quality and risk gates. It never places an order.</p></div>
+</div>
+<div class="edgeGovGrid" style="margin-top:10px">
+<div class="card"><div class="sectionHead"><h3>Model / Edge Drift Monitor</h3><button class="actionGhost" data-action-click="renderV61Governance()">Recompute</button></div><div class="edgeProKpis"><div><span>State</span><b id="v61EdgeState">—</b></div><div><span>Edge health</span><b id="v61EdgeHealth">—</b></div><div><span>Baseline exp.</span><b id="v61EdgeBase">—</b></div><div><span>Recent exp.</span><b id="v61EdgeRecent">—</b></div><div><span>Δ expectancy</span><b id="v61EdgeDelta">—</b></div><div><span>Feature drift</span><b id="v61EdgeFeature">—</b></div></div><p class="note" id="v61EdgeWhy">Combines recent-vs-baseline performance, rolling stability, model PSI, forward evidence and Shadow outcomes.</p></div>
+<div class="card"><div class="sectionHead"><h3>Automatic Risk Governor</h3><label class="small">Enabled <input id="v61GovEnable" type="checkbox" checked data-action-change="saveV61GovSettings()"/></label></div><div class="edgeProKpis"><div><span>Governor</span><b id="v61GovState">—</b></div><div><span>Paper multiplier</span><b id="v61GovMult">—</b></div><div><span>Readiness</span><b id="v61GovReady">—</b></div><div><span>Data quality</span><b id="v61GovQuality">—</b></div></div><p class="note" id="v61GovWhy">The governor can cap Paper risk at 1.00× / 0.75× / 0.50× / 0.25× / 0.00×. It never changes LONG/SHORT direction and never sends live orders.</p></div>
+</div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Champion vs Challenger</h3><div><button data-action-click="runChampionChallenger()">Run locked comparison</button><button id="v61PromoteBtn" class="actionGhost" disabled data-action-click="promoteChallengerV61()">Promote eligible challenger</button></div></div><div class="edgeProKpis six"><div><span>Champion</span><b id="v61Champion">—</b></div><div><span>Challenger</span><b id="v61Challenger">—</b></div><div><span>State</span><b id="v61CcState">NOT TESTED</b></div><div><span>Holdout exp. C→X</span><b id="v61CcHold">—</b></div><div><span>Forward exp. C→X</span><b id="v61CcForward">—</b></div><div><span>Bootstrap p</span><b id="v61CcP">—</b></div></div><p class="note" id="v61CcNote">A challenger can become the research champion only after it leads on the locked holdout and on enough post-start forward points. Promotion does not alter the base directional engine.</p></div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Performance Breakdown</h3><div><select aria-label="Performance dimension" id="epPerfDim" data-action-change="renderEdgePro()"><option value="symbol">Symbol</option><option value="tf">Timeframe</option><option value="regime">Regime</option><option value="direction">LONG / SHORT</option><option value="session">Session</option><option value="mode">Mode</option><option value="volatility">Volatility bucket</option><option value="setup">Setup family</option></select></div></div><div class="edgeProTable" id="epPerfTable"><div class="emptyState">Need resolved outcomes.</div></div></div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Walk-Forward Optimizer Pro</h3><button data-action-click="runWalkForwardOptimizer()">Run multi-fold optimizer</button></div><div class="edgeProControls"><label class="small">Folds<select id="epWfFolds"><option value="3">3 folds</option><option value="5" selected>5 folds</option></select></label><div class="edgeProMetric"><span>Median threshold</span><b id="epWfThreshold">—</b></div><div class="edgeProMetric"><span>OOS N</span><b id="epWfOosN">—</b></div><div class="edgeProMetric"><span>OOS expectancy</span><b id="epWfOosExp">—</b></div><div class="edgeProMetric"><span>OOS PF</span><b id="epWfPf">—</b></div><div class="edgeProMetric"><span>OOS DD</span><b id="epWfDd">—</b></div><div class="edgeProMetric"><span>Parameter stability</span><b id="epWfStability">—</b></div></div><div class="edgeProTable" id="epWfTable"><div class="emptyState">Run optimizer to generate anchored train → OOS folds.</div></div><p class="note" id="epWfStatus">Threshold selection occurs only inside each training window; the following fold remains untouched OOS.</p></div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Monte Carlo &amp; Risk-of-Ruin Pro</h3><button data-action-click="runRiskOfRuinPro()">Run risk simulation</button></div><div class="edgeProControls"><label class="small">Runs<input id="epMcRuns" type="number" min="500" max="20000" step="500" value="3000"/></label><label class="small">Trades/run<input id="epMcTrades" type="number" min="20" max="1000" step="10" value="150"/></label><label class="small">Risk/trade %<input id="epRiskPct" type="number" min="0.1" max="5" step="0.1" value="1"/></label><label class="small">Ruin floor %<input id="epRuinFloor" type="number" min="20" max="95" step="5" value="70"/></label></div><div class="edgeProKpis six"><div><span>Risk of ruin</span><b id="epMcRuin">—</b></div><div><span>P(DD ≥10%)</span><b id="epMcDd10">—</b></div><div><span>P(DD ≥20%)</span><b id="epMcDd20">—</b></div><div><span>95% max DD</span><b id="epMcWorstDd">—</b></div><div><span>95% loss streak</span><b id="epMcLossStreak">—</b></div><div><span>P(end &lt; start)</span><b id="epMcLossEnd">—</b></div></div><p class="note" id="epMcNote">Block-bootstrap simulation of R outcomes. This is a stress model, not a forecast.</p></div>
+<div class="edgeProGrid" style="margin-top:10px">
+<div class="card"><div class="sectionHead"><h3>Execution Model Pro</h3><button class="actionGhost" data-action-click="refreshExecutionPro()">Refresh book/tape</button></div><div class="edgeProControls"><label class="small">Test notional<input id="epExecNotional" type="number" min="50" max="1000000" step="50" value="1000"/></label></div><div class="row"><span>State</span><b id="epExecStatus">—</b></div><div class="row"><span>Spread</span><b id="epExecSpread">—</b></div><div class="row"><span>10-level imbalance</span><b id="epExecImb">—</b></div><div class="row"><span>BUY book slippage</span><b id="epExecBuySlip">—</b></div><div class="row"><span>SELL book slippage</span><b id="epExecSellSlip">—</b></div><div class="row"><span>15m tape delta</span><b id="epExecTapeDelta">—</b></div><div class="row"><span>Visible liquidity</span><b id="epExecLiquidity">—</b></div><p class="note">Uses visible depth and public aggTrades where available. Queue priority, hidden liquidity and exact tick ordering remain unknowable from snapshots.</p></div>
+<div class="card"><div class="sectionHead"><h3>Shadow Live Execution</h3><div><button data-action-click="addShadowSetup()">Shadow current setup</button><button class="actionGhost" data-action-click="refreshShadowLive(true)">Refresh outcomes</button></div></div><div class="edgeProKpis"><div><span>Active</span><b id="epShadowActive">0</b></div><div><span>Closed</span><b id="epShadowClosed">0</b></div><div><span>Expectancy</span><b id="epShadowExp">—</b></div><div><span>Avg entry slip</span><b id="epShadowSlippage">—</b></div><div><span>Avg fetch latency</span><b id="epShadowLatency">—</b></div></div><p class="note">Research-only shadow orders. No exchange order endpoint is called.</p></div>
+</div>
+
+<div class="edgeProGrid" style="margin-top:10px">
+<div class="card"><div class="sectionHead"><h3>Live Cost &amp; Market Friction v63</h3><button class="actionGhost" data-action-click="saveV63CostSettings()">Apply model</button></div><div class="edgeProControls"><label class="small">Instrument<select id="v63Instrument" data-action-change="saveV63CostSettings()"><option value="AUTO">AUTO</option><option value="SPOT">CRYPTO SPOT</option><option value="PERP">CRYPTO PERP</option><option value="STOCK">STOCK</option></select></label><label class="small">Funding interval h<input id="v63FundingHours" type="number" min="1" max="24" step="1" value="8" data-action-change="saveV63CostSettings()"/></label><label class="small">Holding horizon h<input id="v63HoldHours" type="number" min="0.25" max="720" step="0.25" value="24" data-action-change="saveV63CostSettings()"/></label><label class="small">Short borrow %/yr<input id="v63BorrowPct" type="number" min="0" max="500" step="0.1" value="8" data-action-change="saveV63CostSettings()"/></label><label class="small">Locate<select id="v63Locate" data-action-change="saveV63CostSettings()"><option value="UNKNOWN">UNKNOWN</option><option value="AVAILABLE">AVAILABLE</option><option value="UNAVAILABLE">UNAVAILABLE</option></select></label></div><div class="edgeProKpis"><div><span>Cost model</span><b id="v63CostState">—</b></div><div><span>Live funding</span><b id="v63Funding">—</b></div><div><span>Modeled carry</span><b id="v63CarryR">—</b></div><div><span>Interruption guard</span><b id="v63Interrupt">—</b></div></div><p class="note">PERP funding uses the current public funding rate captured at setup time. Stock borrow/locate is explicit user/provider input; the app does not invent borrow availability. Interruption detection is a data-gap guard, not an official LULD/halt feed.</p></div>
+<div class="card"><div class="sectionHead"><h3>Shadow vs Execution Model</h3><button class="actionGhost" data-action-click="refreshShadowLive(true)">Refresh proxy</button></div><div class="edgeProKpis"><div><span>Proxy samples</span><b id="v63GapN">0</b></div><div><span>Signed gap</span><b id="v63GapAvg">—</b></div><div><span>MAE</span><b id="v63GapMae">—</b></div><div><span>P90 abs gap</span><b id="v63GapP90">—</b></div><div><span>State</span><b id="v63GapState">LEARNING</b></div></div><p class="note">Compares modeled entry slippage with the next observed bar-open proxy. This measures model/latency mismatch; it is not a broker/exchange fill receipt.</p></div>
+</div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Live Readiness Score v63</h3><button data-action-click="renderV63LiveExecution()">Recompute</button></div><div class="edgeProKpis six"><div><span>Score</span><b id="v63LiveScore">—</b></div><div><span>State</span><b id="v63LiveState">—</b></div><div><span>Evidence</span><b id="v63LiveEvidence">—</b></div><div><span>Execution</span><b id="v63LiveExecution">—</b></div><div><span>Data</span><b id="v63LiveData">—</b></div><div><span>Stability</span><b id="v63LiveStability">—</b></div></div><div class="row"><span>Cost realism</span><b id="v63LiveCost">—</b></div><p class="note" id="v63LiveWhy">Eligibility combines strict Profit Readiness, Shadow evidence, execution-gap evidence, Provider/Data Health, drift/governor state and a valid cost model. It is not a profit prediction or trade instruction.</p></div>
+
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Shadow Blotter</h3><button class="actionGhost" data-action-click="clearClosedShadow()">Clear closed</button></div><div class="edgeProTable" id="epShadowTable"><div class="emptyState">No shadow setups yet.</div></div></div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Auto Trade Review</h3><button data-action-click="generateTradeReviews()">Review resolved journal</button></div><div class="edgeProTable" id="epReviewTable"><div class="emptyState">Resolved trades will receive structured post-trade reviews.</div></div><p class="note">The review is deterministic attribution from stored evidence, not an external generative-model opinion.</p></div>
+</section>
 <section class="panel" id="watch"><div class="card"><div class="label">Favorite memorate pe telefon</div><div id="watchout"></div></div></section>
 <p class="note">Engine-ul combină EMA20/50/200, RSI, MACD, ADX/DMI, Supertrend, Stoch RSI, Bollinger, VWAP/Anchored VWAP, ATR, MFI, CMF, OBV, Ichimoku, divergență RSI, Volume Profile, Donchian breakout, swing structure, BOS/CHoCH, liquidity sweep/FVG, order-book depth, futures context (OI, long/short, funding) și analogi istorici kNN. Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice și confidence LONG/SHORT sunt euristici de confluență, nu probabilități garantate de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile. Backtest-ul rămâne un model istoric simplificat; v41 adaugă separat un simulator Paper cu ordine pending, fill-uri parțiale, expirare, slippage dinamic, ambiguitate intrabar conservatoare și gap-through-stop. Nici acesta nu reproduce perfect matching engine-ul unui exchange.</p>
 </main></div></div><div class="toastHost" id="toastHost"></div>
@@ -2013,14 +2259,16 @@
 <button class="moreBtn" data-action-click="moreNav('riskmgr')"><b>%</b>Risk</button>
 <button class="moreBtn" data-action-click="moreNav('decision')"><b>✓</b>Decision</button>
 <button class="moreBtn" data-action-click="moreNav('correlation',true)"><b>∿</b>Correlation</button>
-<button class="moreBtn" data-action-click="moreNav('paper')"><b>◇</b>Paper</button>
+<button class="moreBtn" data-action-click="moreNav('paper')"><b>◇</b>Paper v3</button>
 <button class="moreBtn" data-action-click="moreNav('analytics')"><b>Σ</b>Analytics</button>
 <button class="moreBtn" data-action-click="moreNav('robustness')"><b>R</b>Robustness</button>
 <button class="moreBtn" data-action-click="moreNav('portfolio',true)"><b>P</b>Portfolio Intel</button>
 <button class="moreBtn" data-action-click="moreNav('calibration')"><b>≈</b>Calibration</button>
 <button class="moreBtn" data-action-click="moreNav('validation')"><b>✓</b>Validation</button>
 <button class="moreBtn" data-action-click="moreNav('forward')"><b>→</b>Forward</button>
+<button class="moreBtn" data-action-click="moreNav('edgepro')"><b>E</b>Edge Pro</button>
 <button class="moreBtn" data-action-click="moreNav('profitready')"><b>₿</b>Readiness</button>
+<button class="moreBtn" data-action-click="moreNav('replaylab')"><b>⏮</b>Replay</button>
 <button class="moreBtn" data-action-click="moreNav('montecarlo')"><b>∴</b>Monte Carlo</button>
 <button class="moreBtn" data-action-click="moreNav('scenario')"><b>±</b>Scenario</button>
 <button class="moreBtn" data-action-click="moreNav('depth',true)"><b>≡</b>Order Book</button>
