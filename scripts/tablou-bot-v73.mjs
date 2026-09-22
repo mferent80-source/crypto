@@ -453,6 +453,14 @@ await test("lichidarea negativa (deja trecuta) nu scrie minus in fata cifrei", (
   assert.match(v.ceFac, /10/, "trebuie sa mentioneze cat a trecut deja de prag");
 });
 
+await test("comisionul care manaca gridul da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
+  const m = masuriBune();
+  m.comision = { valoare: 0.7, stare: "rau", prag: 0.50 };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "comision");
+});
+
 await test("ritmul cazut da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
   const m = masuriBune();
   m.ritmPerechi = { valoare: 3, baza: 10, stare: "rau", prag: 0.40 };
@@ -467,6 +475,15 @@ await test("pozitia lipita de margine da REGLEAZA (nu doar declansatorul - si ni
   const v = T.verdict(m, "GRID");
   assert.equal(v.nivel, "REGLEAZA");
   assert.equal(v.declansator.masura, "pozitieInterval");
+  assert.equal(v.declansator.prag, 85, "la marginea de sus, pragul rupt e 85, nu unul fix");
+});
+
+await test("pozitia lipita de marginea de JOS raporteaza pragul 15, nu 85", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: 10, stare: "margine", prag: { margine: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.prag, 15, "10% e sub pragul de JOS (15), nu peste cel de sus (85)");
 });
 
 await test("basis sarit da OPORTUNITATE (nu doar declansatorul - si nivelul)", () => {

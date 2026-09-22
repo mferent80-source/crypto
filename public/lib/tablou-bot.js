@@ -254,9 +254,10 @@ var TabloBot = (function () {
         declansator: d("ritmPerechi", m.ritmPerechi.valoare, m.ritmPerechi.baza * 0.40) };
     }
     if (mod !== "DIRECTIONAL" && m.pozitieInterval.stare === "margine") {
+      var pragMargine = m.pozitieInterval.valoare < 15 ? 15 : 85;
       return { nivel: "REGLEAZA", titlu: "Stai lipit de o margine",
         ceFac: "Cântărește mutarea intervalului.",
-        declansator: d("pozitieInterval", m.pozitieInterval.valoare, 85) };
+        declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragMargine) };
     }
     if (m.basis.stare === "rau") {
       return { nivel: "OPORTUNITATE", titlu: "Perpetua s-a rupt de spot",
