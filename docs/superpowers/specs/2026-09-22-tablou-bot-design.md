@@ -28,6 +28,8 @@ dacă grid-ul trăiește sau moare.
    se pun peste, cu semafor de dovadă.
 6. **Fără bot, ecranul nu moare**: trece pe simbolul ales manual și o spune.
 7. **Intrare nouă în meniu, sus.** Nu înlocuiește Dashboard-ul acum.
+8. **Un grid poate fi lăsat DIRECȚIONAL, dinadins.** Ecranul nu are voie să certe
+   omul pentru o alegere făcută de el. Vezi „Modul botului".
 
 ## Arhitectura
 
@@ -81,6 +83,23 @@ doar că măsurile care cer trecut raportează „fără bază".
 Numărul de linii al grilei vine din `buOrderData.row`. Dacă lipsește, măsura 4
 raportează „nu se poate socoti" — nu se ghicește.
 
+## Modul botului
+
+Un grid poate fi ținut în două feluri, și amândouă sunt alegeri legitime:
+
+- **`GRID`** — interval fix, trăiește din oscilație. Trendul îl omoară.
+- **`DIRECTIONAL`** — lăsat dinadins să meargă pe direcție. Zigzagul îl costă.
+
+**Cum se află modul, în ordine:**
+
+1. **Alegerea omului** bate tot. Comutator pe fiecare bot, ținut în `localStorage`
+   sub `tabloBotMod_v1` ca `{ [strategyId]: "GRID" | "DIRECTIONAL" }`.
+2. **Dedus din date**, dacă omul n-a ales: oricare din `movingBottom`, `movingTop`,
+   `movingIndicatorType`, `movingTrailingUpParam`, `movingTrailingDownParam` are
+   valoare ⇒ grid mișcător ⇒ `DIRECTIONAL`. Altfel `GRID`.
+3. Modul dedus se **arată pe ecran cu mențiunea că e presupus**, lângă comutator.
+   Nu se ascunde o presupunere sub un verdict.
+
 ## Verdictul
 
 O scară. Se coboară și se oprește la prima treaptă aprinsă. Aceleași cifre dau
@@ -97,6 +116,25 @@ mereu același verdict.
 
 `NEDOVEDIT` e **prima** dinadins. Un ecran care spune verde fără să aibă cu ce
 compara minte politicos.
+
+### Oglindirea pentru modul `DIRECTIONAL`
+
+Scara nu se dublează — trei măsuri își schimbă înțelesul, restul rămân:
+
+| măsură | în `GRID` | în `DIRECTIONAL` |
+|---|---|---|
+| **oscilație sau trend** (3) | trend >0,60 = pericol | **zigzag <0,30 = pericol** (plătești comisioane într-o piață care nu merge nicăieri); trendul e ce vrei |
+| **poziția în interval** (1) | afară = pericol, oricum | **contează încotro**: afară **în direcția** botului (`trend`) ⇒ `OPORTUNITATE` („ia profitul"); afară **împotrivă** ⇒ `PAZESTE` |
+| **ritmul perechilor** (2) | scăzut = pericol | **scăzut e normal în trend** — nu declanșează nimic |
+
+`PAZESTE` în `DIRECTIONAL` se aprinde la **întoarcerea trendului împotriva ta**:
+eficiența rămâne >0,60, dar semnul mișcării nete `c[n]−c[0]` s-a schimbat față de
+direcția botului. Aia omoară o poziție direcțională, nu zigzagul.
+
+**Lichidarea (5) și marginea nu se oglindesc.** Pragurile rămân aceleași în ambele
+moduri: <8% `OPRESTE`, <15% `PAZESTE`. Alea nu iartă pe nimeni.
+
+Măsurile 4, 6 și 7 rămân neschimbate în ambele moduri.
 
 Fiecare verdict cară `declansator`: numele măsurii, valoarea ei și pragul.
 
@@ -130,6 +168,13 @@ Fără culoare ca singur purtător de înțeles: fiecare stare are și cuvânt.
 - traducerea simbolului: `COTI.PERP`+`USDT` → `COTI_USDT_PERP` și `COTIUSDT`
 - inelul de istoric: nu trece de 1440, taie ce e mai vechi de 24 h
 - măsura 4 raportează „nu se poate socoti" când lipsește `row`, nu ghicește
+- **modul**: dedus `DIRECTIONAL` când e pus orice câmp `moving*`, `GRID` altfel
+- **alegerea omului bate deducerea**, chiar și când datele spun altceva
+- **oglindirea**: aceleași cifre dau verdicte **diferite** în cele două moduri —
+  trend puternic ⇒ `PAZESTE` în `GRID`, dar **nu** declanșează nimic în `DIRECTIONAL`
+- în `DIRECTIONAL`, prețul ieșit **în direcția** botului ⇒ `OPORTUNITATE`, iar
+  ieșit **împotrivă** ⇒ `PAZESTE`
+- lichidarea sub 8% dă `OPRESTE` în **amândouă** modurile
 
 **Probă de ecran**, în Chrome real: pagina se deschide, verdictul apare, rigla se
 mișcă unde trebuie, nu crapă nimic fără bot, zero excepții.
