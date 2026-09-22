@@ -21,6 +21,33 @@ if not exist "public\index.html" (
   exit /b 1
 )
 
+rem ---- aduc ultima versiune, dar nu blochez pornirea daca nu merge ----
+if not exist ".git" goto :versiune
+where git >nul 2>&1
+if errorlevel 1 (
+  echo   [ ] git nu e instalat - pornesc cu ce e pe disc.
+  goto :versiune
+)
+echo   Caut o versiune mai noua...
+git pull --ff-only
+if errorlevel 1 (
+  echo.
+  echo   [!] Nu am putut aduce versiunea noua - continui cu ce e pe disc.
+  echo       Daca se repeta, deschide un terminal aici si ruleaza: git pull
+  echo.
+) else (
+  echo   [OK] La zi.
+  echo.
+)
+
+:versiune
+set "VERS="
+for /f "tokens=2 delims=:," %%v in ('findstr /c:"\"version\"" BUILD_INFO.json') do set "VERS=%%~v"
+if defined VERS set "VERS=%VERS:"=%"
+if defined VERS set "VERS=%VERS: =%"
+if defined VERS echo   Versiune pe disc: %VERS%
+echo.
+
 if exist ".dev.vars" goto :pornire
 
 echo   ----------------------------------------------------------
