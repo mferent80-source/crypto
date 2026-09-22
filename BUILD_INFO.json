@@ -1,10 +1,10 @@
 {
-  "version": "v71.1",
-  "badge": "v71.1 · PIONEX FILLS+ORDERS REPARAT",
+  "version": "v71.2",
+  "badge": "v71.2 · PIONEX RITM + RELUARE LA 429",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v71 · PIONEX JOURNAL CORRECTNESS & SECURITY HOTFIX",
-  "releaseType": "bugfix: actiunile fills si orders lipseau de pe server, jurnalul nu putea sincroniza niciodata",
+  "baseRelease": "v71.1 · PIONEX FILLS+ORDERS REPARAT",
+  "releaseType": "bugfix: cererile catre Pionex se distanteaza la 250 ms si un 429 nu mai omoara toata sincronizarea - se asteapta si se reia",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
