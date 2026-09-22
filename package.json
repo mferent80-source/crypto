@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "71.3.0",
+  "version": "72.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,12 +11,13 @@
     "dev": "npx --yes wrangler@4 pages dev public",
     "deploy": "npm run predeploy && npx --yes wrangler@4 pages deploy public",
     "predeploy": "npm test",
-    "test": "npm run test:syntax && npm run test:pionexjournal && npm run test:providers && npm run test:market",
+    "test": "npm run test:syntax && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots",
     "test:syntax": "node scripts/syntax-v71.mjs",
     "test:pionexjournal": "node scripts/pionex-journal-v71.mjs",
     "test:providers": "node scripts/provider-health-v69.mjs",
     "test:market": "node scripts/market-futures-v69.mjs",
     "monitor:config": "node scripts/configure-monitor.mjs",
-    "vapid:generate": "node scripts/generate-vapid.mjs"
+    "vapid:generate": "node scripts/generate-vapid.mjs",
+    "test:bots": "node scripts/bot-orders-v72.mjs"
   }
 }

@@ -1,10 +1,10 @@
 {
-  "version": "v71.3",
-  "badge": "v71.3 · PROVIDER HEALTH + ESECURI VIZIBILE",
+  "version": "v72",
+  "badge": "v72 · BOTI DE GRID PIONEX",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v71.2 · PIONEX RITM + RELUARE LA 429",
-  "releaseType": "ruta /api/provider-health scrisa de la zero (lipsea cu totul) + cele cinci apeluri de futures nu mai tac cand Binance refuza",
+  "baseRelease": "v71.3 · PROVIDER HEALTH + ESECURI VIZIBILE",
+  "releaseType": "functie noua: citirea botilor de grid Pionex, pe care jurnalul spot nu-i putea vedea deloc",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
@@ -15,7 +15,8 @@
     "decisionIntelligenceOS": "12 integrated engines: regime, liquidity/structure, cross-asset, conflict, adaptive entry, dynamic exit, portfolio allocation, failure memory, event risk, decision replay, performance control and kill switch",
     "edgeValidationV66": "13 validation engines: outcome tracking, confidence calibration, module contribution, proxy ablation, verdict-quality scoring, Setup DNA, edge-decay alarm, regime policy diagnostics, rolling calibration windows, decision attribution, research white/black lists, layer comparison and data sufficiency",
     "pionexJournalV71": "strict read-only; per-symbol FIFO; base/quote fee conversion; bounded 365-day recursive backfill; incomplete history is never labeled reconciled",
-    "liveExecutionRemoved": "all Pionex submit, close and cancel routes and controls removed from this build"
+    "liveExecutionRemoved": "all Pionex submit, close and cancel routes and controls removed from this build",
+    "botiGridV72": "strict read-only pe GET /api/v1/bot/orders; raporteaza profitul NET (totalRealizedProfit), nu cifra bruta de grid; avertizeaza cand opritoarele sunt setate dar stinse, cand pretul iese din intervalul grid si cand lichidarea e sub 15%; PERMISSION_DENIED nu mai trece drept 'zero boti'"
   },
   "notes": "Market breadth is a context/confirmation layer. It does not independently create BUY/SELL orders and does not add live order placement.",
   "base": "v70 Pionex Auto Journal & Reconciliation Pro",

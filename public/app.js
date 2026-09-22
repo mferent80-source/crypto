@@ -4353,6 +4353,57 @@ async function v71CereCuRabdare(url,incercari=4){
 async function v71HistoryWindow(action,symbol,startTime,endTime,depth=0,budget={requests:0,truncated:false}){if(budget.requests>=64){budget.truncated=true;return []}budget.requests++;const q=new URLSearchParams({action,symbol,limit:"100",startTime:String(Math.max(0,Math.floor(startTime))),endTime:String(Math.max(0,Math.floor(endTime)))}),payload=await v71CereCuRabdare(`/api/pionex-account?${q}`),rows=v71Rows(payload,action==="fills"?["data.fills","data.trades","data","fills"]:["data.orders","data","orders"]);if(rows.length<100||depth>=12||endTime-startTime<=3600000){if(rows.length>=100)budget.truncated=true;return rows}const mid=Math.floor((startTime+endTime)/2),left=await v71HistoryWindow(action,symbol,startTime,mid,depth+1,budget),right=await v71HistoryWindow(action,symbol,mid+1,endTime,depth+1,budget);return [...left,...right]}
 async function v71FetchHistory(action,symbol){const end=Date.now(),start=end-365*86400000,budget={requests:0,truncated:false},rows=[],windowMs=30*86400000;for(let from=start;from<end&&budget.requests<64;from+=windowMs){const to=Math.min(end,from+windowMs-1);rows.push(...await v71HistoryWindow(action,symbol,from,to,0,budget))}if(budget.requests>=64)budget.truncated=true;return {rows,requests:budget.requests,truncated:budget.truncated,start,end}}
 function v71RenderJournal(){const symbol=v71CurrentSymbol(),j=v71StoredJournal(symbol),s=v71JournalStats(j);if($("v71FillCount"))$("v71FillCount").textContent=s.fills;if($("v71TradeCount"))$("v71TradeCount").textContent=s.trades;if($("v71NetPnl")){$("v71NetPnl").textContent=s.resolved?(s.net>=0?"+":"")+s.net.toFixed(4)+" USDT":"—";$("v71NetPnl").className=s.net>0?"good":s.net<0?"bad":"neutral"}const issues=s.unmatched+s.feeReview+(j.missingOrders||[]).length+(j.complete?0:1);if($("v71ReconState")){$("v71ReconState").textContent=issues?`REVIEW ${issues}`:"RECONCILED";$("v71ReconState").className=issues?"neutral":"good"}if($("v71SyncNote"))$("v71SyncNote").textContent=j.updated?`${symbol} · last sync ${new Date(j.updated).toLocaleString()} · fees ${s.fees.toFixed(4)} USDT · ${s.radar} RADAR / ${s.manual} MANUAL · open lots ${s.openLots} · ${j.complete?"365d complete":"history truncated"}.`:`${symbol||"Current symbol"} has not been synchronized.`;if($("v71JournalRows"))$("v71JournalRows").innerHTML=s.trades?`<div class="accountRow"><div class="accountCell">Closed / Origin</div><div class="accountCell">Entry → Exit</div><div class="accountCell">Qty / Fees</div><div class="accountCell">Net P&amp;L</div></div>`+[...j.trades].sort((a,b)=>b.closedAt-a.closedAt).slice(0,40).map(x=>`<div class="accountRow"><div class="accountCell">${new Date(x.closedAt).toLocaleString()}<br>${escapeHtml(x.origin)}</div><div class="accountCell">${num(x.entry)} → ${num(x.exit)}</div><div class="accountCell">${(+x.qty).toFixed(8)}<br>${x.fees!=null&&Number.isFinite(+x.fees)?`fee ${(+x.fees).toFixed(4)} USDT`:"fee REVIEW"}</div><div class="accountCell ${x.netPnl!=null&&Number.isFinite(+x.netPnl)?x.netPnl>=0?"good":"bad":"neutral"}">${x.netPnl!=null&&Number.isFinite(+x.netPnl)?`${x.netPnl>=0?"+":""}${(+x.netPnl).toFixed(4)} USDT`:"REVIEW FEE"}</div></div>`).join(""):'<div class="emptyState">No closed Pionex trades synchronized for this symbol.</div>';window.__pionexJournalV71={journal:j,stats:s};return s}
+// --- Boti de grid Pionex -------------------------------------------------
+// Jurnalul v71 citeste doar spot. Banii pot sta intr-un bot de grid pe
+// perpetue, invizibil peste tot altundeva. Aici ii aratam - si aratam
+// profitul NET, nu cifra bruta de grid care induce in eroare.
+function botiBan(v,zecimale=4,cuSemn=true){
+  return Number.isFinite(+v)?`${cuSemn&&+v>=0?'+':''}${(+v).toFixed(zecimale)} USDT`:'\u2014'
+}
+function botiClasa(v){return !Number.isFinite(+v)?'neutral':+v>0?'good':+v<0?'bad':'neutral'}
+async function incarcaBoti(cuToast=false){
+  const stare=$('botiStare'),randuri=$('botiRanduri');
+  if(stare)stare.textContent='CITESC\u2026';
+  if(randuri)randuri.innerHTML='<div class="emptyState">Intreb Pionex\u2026</div>';
+  let d=null;
+  try{d=await getJSON('/api/bot-orders')}
+  catch(e){
+    if(stare){stare.textContent='EROARE';stare.className='stockBadge bad'}
+    if(randuri)randuri.innerHTML=`<div class="emptyState">${escapeHtml(e.message)}</div>`;
+    if(cuToast)toast(`Bo\u021bi: ${e.message}`,'bad');
+    window.__botiPionex={eroare:e.message};return null
+  }
+  window.__botiPionex=d;
+  const s=d.sumar||{},bots=d.bots||[];
+  if($('botiNumar'))$('botiNumar').textContent=`${s.active||0} / ${s.numar||0}`;
+  if($('botiInvestit'))$('botiInvestit').textContent=botiBan(s.investitTotal,2,false);
+  if($('botiProfitNet')){const n=$('botiProfitNet');n.textContent=botiBan(s.profitNetTotal);n.className=botiClasa(s.profitNetTotal)}
+  if($('botiProfitBrut'))$('botiProfitBrut').textContent=botiBan(s.gridProfitBrutTotal);
+  if($('botiComisioane'))$('botiComisioane').textContent=botiBan(s.comisioaneTotal);
+  const toateAvert=bots.flatMap(b=>b.avertismente.map(a=>`${b.simbol}: ${a}`));
+  if($('botiAvertismente'))$('botiAvertismente').innerHTML=toateAvert.length
+    ?toateAvert.map(a=>`<div class="noticeBad">\u26a0 ${escapeHtml(a)}</div>`).join('')
+    :'';
+  if(stare){
+    stare.textContent=bots.length?`${s.active||0} ACTIVI \u00b7 ${toateAvert.length} AVERTISMENTE`:'NICIUN BOT';
+    stare.className='stockBadge '+(toateAvert.length?'neutral':'good')
+  }
+  if(randuri)randuri.innerHTML=bots.length?(
+    `<div class="accountRow"><div class="accountCell">Bot / pornit</div>
+     <div class="accountCell">Investit / levier</div>
+     <div class="accountCell">Pre\u021b / interval</div>
+     <div class="accountCell">Profit NET</div></div>`+
+    bots.map(b=>`<div class="accountRow">
+      <div class="accountCell"><b>${escapeHtml(b.simbol)}</b><br>${b.pornitLa?new Date(b.pornitLa).toLocaleString():'\u2014'}<br>${escapeHtml(b.stareInterna||b.stare||'')}</div>
+      <div class="accountCell">${num(b.investit)} USDT<br>${b.levier?b.levier+'\u00d7 '+escapeHtml(b.directie||''):'\u2014'}<br>${b.ordinePerechi??0} perechi din ${b.ordinePlasate??0}</div>
+      <div class="accountCell">${b.pretCurent??'\u2014'}<br>${b.gridJos??'\u2014'} \u2026 ${b.gridSus??'\u2014'}<br>${Number.isFinite(+b.distantaLichidarePct)?'lichidare la \u2212'+(+b.distantaLichidarePct).toFixed(1)+'%':'\u2014'}</div>
+      <div class="accountCell ${botiClasa(b.profitNet)}">${botiBan(b.profitNet)}<br><span class="fine">grid brut ${botiBan(b.gridProfitBrut)}</span><br><span class="fine">comision ${botiBan(b.comisioane)}</span></div>
+    </div>`).join('')
+  ):'<div class="emptyState">Niciun bot \u00een contul Pionex.</div>';
+  if(d.probleme&&cuToast)toast('Bo\u021bi: '+Object.values(d.probleme).join(' \u00b7 '),'warn');
+  if(cuToast)toast(`Bo\u021bi: ${bots.length} \u00b7 net ${botiBan(s.profitNetTotal)}`,(s.profitNetTotal||0)>=0?'good':'warn');
+  return d
+}
 async function v71SyncPionexJournal(showToast=false){if(assetClass()!=="CRYPTO")return null;const symbol=v71CurrentSymbol();if(!symbol)return null;if($("v71ReconState"))$("v71ReconState").textContent="SYNCING";try{const fillHistory=await v71FetchHistory("fills",symbol),orderHistory=await v71FetchHistory("orders",symbol),radar=await v71RadarOrderIds(),prior=v71StoredJournal(symbol),fresh=fillHistory.rows.map(x=>v71NormalizeFill(x,symbol)).filter(x=>x.symbol===symbol),fills=v71Dedupe([...(prior.fills||[]).filter(x=>x.symbol===symbol),...fresh]),built=v71BuildTrades(fills,radar),orders=orderHistory.rows.filter(x=>v71SafeSymbol(x.symbol||symbol)===symbol),orderIds=new Set(orders.map(x=>v71Id(x,"order"))),fillOrderIds=new Set(fills.map(x=>String(x.orderId))),historyComplete=!fillHistory.truncated&&!orderHistory.truncated,missingOrders=historyComplete?[...fillOrderIds].filter(x=>x&&x!=="?"&&!orderIds.has(x)):[];const journal={schema:71,symbol,fills,trades:built.trades,openLots:built.openLots,unmatched:built.unmatched,missingOrders,ordersSeen:orderIds.size,updated:Date.now(),readOnly:true,complete:historyComplete,history:{start:fillHistory.start,end:fillHistory.end,fillRequests:fillHistory.requests,orderRequests:orderHistory.requests,truncated:!historyComplete}};v60StoreSet(V71_JOURNAL_PREFIX+symbol,journal);v60StoreSet(V71_CURRENT_SYMBOL_KEY,symbol);v60StoreSet(V71_SYNC_KEY,{symbol,ts:journal.updated,fillCount:fills.length,tradeCount:built.trades.length,complete:historyComplete});if(localDbSupported()&&!appSettings().privacySessionOnly)await localDbPutRecord("pionex_journal_v71",symbol,journal,journal.updated).catch(()=>{});const s=v71RenderJournal();renderAnalytics();renderProfitReadiness(false);if(showToast)toast(`Pionex journal ${symbol} · ${s.fills} fills · ${s.trades} trades · ${historyComplete?"complete":"review truncation"}`,historyComplete&&!s.unmatched&&!s.feeReview?"good":"warn");return journal}catch(e){if($("v71ReconState"))$("v71ReconState").textContent="SYNC ERROR";if($("v71SyncNote"))$("v71SyncNote").textContent=`Sync failed: ${e.message}`;if(showToast)toast(`Pionex journal: ${e.message}`,"bad");return null}}
 function v71ExportJournal(){const j=v71StoredJournal(),checksumInput=JSON.stringify(j);downloadTextFile(`crypto-radar-v71-pionex-journal-${j.symbol||"none"}-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({schemaVersion:71,exportedAt:Date.now(),readOnly:true,journal:j},null,2),"application/json");sha256Text(checksumInput).then(x=>toast(`Journal exported · SHA-256 ${x.slice(0,12)}…`,"good"))}
 function initV71PionexJournal(){v71RenderJournal()}

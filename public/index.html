@@ -52,7 +52,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v71.3 · PROVIDER HEALTH + ESECURI VIZIBILE</div>
+<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v72 · BOTI DE GRID PIONEX</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -2042,6 +2042,19 @@
 <div class="pushState"><button data-action-click="v71SyncPionexJournal(true)">Sync current coin · 365d</button><button class="actionGhost" data-action-click="v71ExportJournal()">Export journal</button></div>
 <p class="note" id="v71SyncNote">Imports read-only Pionex history in bounded time windows, keeps a separate FIFO ledger for each symbol, converts base/quote fees to USDT and marks unknown fee currencies for review. This build contains no order-placement, closing or cancellation route.</p>
 <div class="accountRows" id="v71JournalRows"><div class="emptyState">No Pionex fills synchronized yet.</div></div>
+</div>
+<div class="card full">
+<div class="sectionHead"><h3>Boți de grid · Pionex</h3><span class="stockBadge" id="botiStare">NECĂUTAT</span><button class="actionGhost" data-action-click="incarcaBoti(true)">Citește boții</button></div>
+<p class="fine">Jurnalul de mai sus citește doar tranzacții <b>spot</b>. Banii ținuți într-un bot de grid nu apar nici acolo, nici în soldul obișnuit — Pionex îi ține în bot. Panoul ăsta îi arată. Cere dreptul <b>Bot reading</b> pe cheia API (e doar citire).</p>
+<div class="accountGrid">
+<div class="accountCell"><span class="accountLabel">Boți activi</span><b id="botiNumar">—</b></div>
+<div class="accountCell"><span class="accountLabel">Investit</span><b id="botiInvestit">—</b></div>
+<div class="accountCell"><span class="accountLabel">Profit NET</span><b id="botiProfitNet">—</b></div>
+<div class="accountCell"><span class="accountLabel">Profit grid (brut)</span><b id="botiProfitBrut">—</b></div>
+<div class="accountCell"><span class="accountLabel">Comisioane</span><b id="botiComisioane">—</b></div>
+</div>
+<div id="botiAvertismente"></div>
+<div class="accountRows" id="botiRanduri"><div class="emptyState">Apăsați „Citește boții”.</div></div>
 </div>
 </section>
 <section class="panel stockOnly" id="stocks">
