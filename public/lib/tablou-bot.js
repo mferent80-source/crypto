@@ -142,90 +142,131 @@ var TabloBot = (function () {
     };
     if (o.faraBot) return { nivel: "FARA_BOT",
       titlu: "Niciun bot pornit",
-      ceFac: "Urmaresc simbolul ales de tine. Cifrele care tin de grid nu se pot socoti.",
+      ceFac: "Urmăresc simbolul ales de tine. Cifrele care țin de grid nu se pot socoti.",
       declansator: null };
 
-    if (m.varstaBotMin < 120 || m.lumanari < 48 || m.istoricMin < 30) {
+    // Fiecare motiv al lui NEDOVEDIT isi spune singur cauza - nu toate pe varsta.
+    if (m.varstaBotMin < 120) {
       return { nivel: "NEDOVEDIT",
-        titlu: "Nu stiu inca",
-        ceFac: "Botul are " + Math.round(m.varstaBotMin) + " de minute. Ritmul are nevoie de vreo 2 ore ca sa insemne ceva.",
+        titlu: "Nu știu încă",
+        ceFac: "Botul are " + Math.round(m.varstaBotMin) + " de minute. Ritmul are nevoie de vreo 2 ore ca să însemne ceva.",
         declansator: d("varstaBot", Math.round(m.varstaBotMin), 120) };
+    }
+    if (m.lumanari < 48) {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Am doar " + m.lumanari + " lumânări. Îmi trebuie cel puțin 48 ca să măsor eficiența.",
+        declansator: d("lumanari", m.lumanari, 48) };
+    }
+    if (m.istoricMin < 30) {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Am doar " + Math.round(m.istoricMin) + " minute de istoric. Îmi trebuie cel puțin 30 ca să văd un ritm.",
+        declansator: d("istoric", Math.round(m.istoricMin), 30) };
+    }
+    // Pionex poate trimite un raspuns partial - fara aceste doua masuri nu
+    // stiu nimic despre risc, deci nu am voie sa cad tacut pe LINISTE.
+    if (m.lichidare.stare === "nu-se-poate") {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Nu pot socoti distanța până la lichidare - lipsește prețul de lichidare estimat.",
+        declansator: d("lichidare", null, null) };
+    }
+    if (m.pozitieInterval.stare === "nu-se-poate") {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Nu pot socoti unde e prețul în interval - lipsesc datele grid-ului.",
+        declansator: d("pozitieInterval", null, null) };
     }
 
     if (m.lichidare.valoare !== null && m.lichidare.valoare < 8) {
-      return { nivel: "OPRESTE", titlu: "Iesi",
-        ceFac: "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% pana la lichidare.",
+      var txtLichidare = m.lichidare.valoare < 0
+        ? "Prețul a trecut deja de pragul de lichidare cu " + Math.abs(m.lichidare.valoare).toFixed(1) + "%."
+        : "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% până la lichidare.";
+      return { nivel: "OPRESTE", titlu: "Ieși",
+        ceFac: txtLichidare,
         declansator: d("lichidare", m.lichidare.valoare, 8) };
     }
 
     var directie = m.eficienta.semn;
     if (mod === "DIRECTIONAL") {
       if (m.eficienta.stare === "trend" && m.directieBot && directie && directie !== m.directieBot) {
-        return { nivel: "PAZESTE", titlu: "Trendul s-a intors impotriva ta",
-          ceFac: "Miscarea e hotarata, dar in sens invers pozitiei tale.",
+        return { nivel: "PAZESTE", titlu: "Trendul s-a întors împotriva ta",
+          ceFac: "Mișcarea e hotărâtă, dar în sens invers poziției tale.",
           declansator: d("eficienta", m.eficienta.valoare, 0.60) };
       }
       if (m.pozitieInterval.stare === "afara") {
-        var inFavoare = (m.pozitieInterval.valoare > 100 && m.directieBot === 1)
-          || (m.pozitieInterval.valoare < 0 && m.directieBot === -1);
-        if (inFavoare) return { nivel: "OPORTUNITATE", titlu: "A trecut de interval in favoarea ta",
-          ceFac: "Cantareste daca iei profitul sau muti grid-ul dupa el.",
-          declansator: d("pozitieInterval", m.pozitieInterval.valoare, 100) };
-        return { nivel: "PAZESTE", titlu: "A iesit din interval impotriva ta",
-          ceFac: "Pozitia merge in sens invers.",
-          declansator: d("pozitieInterval", m.pozitieInterval.valoare, 0) };
+        var pragIesit = m.pozitieInterval.valoare > 100 ? 100 : 0;
+        // Fara directieBot (Task 5) nu stiu daca iesirea e in favoarea sau
+        // impotriva pozitiei - nu am voie sa presupun "impotriva" din tacere.
+        if (m.directieBot) {
+          var inFavoare = (m.pozitieInterval.valoare > 100 && m.directieBot === 1)
+            || (m.pozitieInterval.valoare < 0 && m.directieBot === -1);
+          if (inFavoare) return { nivel: "OPORTUNITATE", titlu: "A trecut de interval în favoarea ta",
+            ceFac: "Cântărește dacă iei profitul sau muți grid-ul după el.",
+            declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesit) };
+          return { nivel: "PAZESTE", titlu: "A ieșit din interval împotriva ta",
+            ceFac: "Poziția merge în sens invers.",
+            declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesit) };
+        }
+        return { nivel: "PAZESTE", titlu: "Prețul a ieșit din interval",
+          ceFac: "Nu mai câștigi din oscilație, ții doar o poziție pe direcție.",
+          declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesit) };
       }
     } else {
       if (m.pozitieInterval.stare === "afara") {
-        return { nivel: "PAZESTE", titlu: "Pretul a iesit din interval",
-          ceFac: "Nu mai castigi din oscilatie, tii doar o pozitie pe directie.",
-          declansator: d("pozitieInterval", m.pozitieInterval.valoare, 100) };
+        var pragIesitGrid = m.pozitieInterval.valoare > 100 ? 100 : 0;
+        return { nivel: "PAZESTE", titlu: "Prețul a ieșit din interval",
+          ceFac: "Nu mai câștigi din oscilație, ții doar o poziție pe direcție.",
+          declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesitGrid) };
       }
       if (m.eficienta.stare === "trend" && m.pozitieInterval.stare === "margine") {
-        return { nivel: "PAZESTE", titlu: "Trend, cu pretul la margine",
-          ceFac: "Grid-ul e pe cale sa ramana in urma.",
+        return { nivel: "PAZESTE", titlu: "Trend, cu prețul la margine",
+          ceFac: "Grid-ul e pe cale să rămână în urmă.",
           declansator: d("eficienta", m.eficienta.valoare, 0.60) };
       }
     }
 
     if (m.lichidare.valoare !== null && m.lichidare.valoare < 15) {
       return { nivel: "PAZESTE", titlu: "Lichidarea e aproape",
-        ceFac: "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% pana acolo.",
+        ceFac: "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% până acolo.",
         declansator: d("lichidare", m.lichidare.valoare, 15) };
     }
 
     if (mod === "DIRECTIONAL" && m.eficienta.stare === "zigzag") {
-      return { nivel: "REGLEAZA", titlu: "Piata nu merge nicaieri",
-        ceFac: "Platesti comisioane intr-un interval, desi pariezi pe directie.",
+      return { nivel: "REGLEAZA", titlu: "Piața nu merge nicăieri",
+        ceFac: "Plătești comisioane într-un interval, deși pariezi pe direcție.",
         declansator: d("eficienta", m.eficienta.valoare, 0.30) };
     }
     if (m.amplitudine.stare === "rau") {
-      return { nivel: "REGLEAZA", titlu: "Oscilatia a scazut sub o treapta",
+      return { nivel: "REGLEAZA", titlu: "Oscilația a scăzut sub o treaptă",
         ceFac: "Botul nu mai prinde perechi, dar comisioanele curg.",
         declansator: d("amplitudine", m.amplitudine.valoare, 1.0) };
     }
     if (m.comision.stare === "rau") {
-      return { nivel: "REGLEAZA", titlu: "Comisioanele mananca gridul",
-        ceFac: "Peste jumatate din castigul brut se duce pe taxe.",
+      return { nivel: "REGLEAZA", titlu: "Comisioanele mănâncă gridul",
+        ceFac: "Peste jumătate din câștigul brut se duce pe taxe.",
         declansator: d("comision", m.comision.valoare, 0.50) };
     }
     if (mod !== "DIRECTIONAL" && m.ritmPerechi.stare === "rau") {
-      return { nivel: "REGLEAZA", titlu: "Ritmul a cazut",
-        ceFac: m.ritmPerechi.valoare + " perechi in ultima ora, fata de " + Math.round(m.ritmPerechi.baza) + " obisnuit.",
+      return { nivel: "REGLEAZA", titlu: "Ritmul a căzut",
+        ceFac: m.ritmPerechi.valoare + " perechi în ultima oră, față de " + Math.round(m.ritmPerechi.baza) + " obișnuit.",
         declansator: d("ritmPerechi", m.ritmPerechi.valoare, m.ritmPerechi.baza * 0.40) };
     }
     if (mod !== "DIRECTIONAL" && m.pozitieInterval.stare === "margine") {
       return { nivel: "REGLEAZA", titlu: "Stai lipit de o margine",
-        ceFac: "Cantareste mutarea intervalului.",
+        ceFac: "Cântărește mutarea intervalului.",
         declansator: d("pozitieInterval", m.pozitieInterval.valoare, 85) };
     }
     if (m.basis.stare === "rau") {
       return { nivel: "OPORTUNITATE", titlu: "Perpetua s-a rupt de spot",
-        ceFac: "Diferenta e " + m.basis.valoare.toFixed(2) + "%.",
+        ceFac: "Diferența e " + m.basis.valoare.toFixed(2) + "%.",
         declansator: d("basis", m.basis.valoare, m.basis.prag) };
     }
     return { nivel: "LINISTE", titlu: "Merge",
-      ceFac: "Esti la " + Math.round(m.pozitieInterval.valoare) + "% din interval.",
+      ceFac: m.pozitieInterval.valoare !== null
+        ? "Ești la " + Math.round(m.pozitieInterval.valoare) + "% din interval."
+        : "Toate măsurile sunt în regulă.",
       declansator: null };
   }
 

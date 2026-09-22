@@ -349,7 +349,9 @@ await test("ORDINEA scarii: cea mai grava bate, nu prima gasita", () => {
 await test("exact pe prag NU aprinde, un pas peste aprinde", () => {
   const m = masuriBune();
   m.lichidare = { valoare: 8, stare: "margine", prag: { grav: 8, atentie: 15 } };
-  assert.notEqual(T.verdict(m, "GRID").nivel, "OPRESTE", "8% fix nu trebuie sa declanseze OPRESTE");
+  // assert pe nivelul EXACT asteptat, nu doar "diferit de OPRESTE" - altfel
+  // o cadere accidentala pe LINISTE ar trece la fel de bine.
+  assert.equal(T.verdict(m, "GRID").nivel, "PAZESTE", "8% fix e sub 15%, deci PAZESTE, nu OPRESTE");
   m.lichidare = { valoare: 7.99, stare: "rau", prag: { grav: 8, atentie: 15 } };
   assert.equal(T.verdict(m, "GRID").nivel, "OPRESTE");
 });
@@ -369,6 +371,135 @@ await test("fiecare verdict poarta cifra si pragul care l-au dat", () => {
   assert.ok(v.declansator, "lipseste declansatorul");
   assert.equal(v.declansator.masura, "comision");
   assert.equal(v.declansator.prag, 0.50);
+});
+
+// --- reparatiile din revizia Task 4: fals LINISTE, NEDOVEDIT pe o singura cauza,
+// garda DIRECTIONAL neterminata, si probele care nu apara treptele mijlocii ---
+
+await test("lichidarea necunoscuta pentru un bot pornit da NEDOVEDIT, nu LINISTE", () => {
+  const m = masuriBune();
+  m.lichidare = { valoare: null, stare: "nu-se-poate", prag: null };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT", "lichidare nesocotita nu are voie sa cada pe LINISTE");
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+await test("pozitia in interval necunoscuta pentru un bot pornit da NEDOVEDIT, nu LINISTE", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: null, stare: "nu-se-poate", prag: null };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT", "pozitia nesocotita nu are voie sa cada pe LINISTE");
+  assert.equal(v.declansator.masura, "pozitieInterval");
+});
+
+await test("LINISTE nu inventeaza un procent cand pozitia in interval e null", () => {
+  // scenariu artificial (stare "bine" cu valoare null nu apare din masoara),
+  // dar apara direct linia de text care altfel ar scrie "Esti la 0% din interval"
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: null, stare: "bine", prag: { margine: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "LINISTE");
+  assert.doesNotMatch(v.ceFac, /\d/, "nu are voie sa scrie o cifra pe care n-o are");
+});
+
+await test("NEDOVEDIT din lipsa de lumanari nu da vina pe varsta", () => {
+  const m = masuriBune(); m.lumanari = 20;
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT");
+  assert.equal(v.declansator.masura, "lumanari");
+  assert.equal(v.declansator.valoare, 20);
+  assert.doesNotMatch(v.ceFac, /minute/, "cauza e lumanarile, nu varsta in minute");
+});
+
+await test("NEDOVEDIT din istoric scurt nu da vina pe varsta", () => {
+  const m = masuriBune(); m.istoricMin = 10;
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT");
+  assert.equal(v.declansator.masura, "istoric");
+  assert.equal(v.declansator.valoare, 10);
+});
+
+await test("date insuficiente SI lichidare sub 8 cer tot NEDOVEDIT, nu OPRESTE", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 47;
+  m.lichidare = { valoare: 6, stare: "rau", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT", "NEDOVEDIT trebuie sa ramana prima treapta, inaintea lui OPRESTE");
+});
+
+await test("DIRECTIONAL fara directieBot cunoscuta: iesirea din interval nu presupune impotriva", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: 104, stare: "afara", prag: { margine: 15 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "PAZESTE");
+  assert.equal(v.titlu, "Prețul a ieșit din interval",
+    "fara directieBot, formularea trebuie sa fie neutra, nu 'impotriva ta'");
+});
+
+await test("declansatorul de pozitie raporteaza pragul chiar rupt, nu unul fix", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: -6, stare: "afara", prag: { margine: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "PAZESTE");
+  assert.equal(v.declansator.prag, 0, "pretul a rupt pragul de JOS (0), nu cel de sus (100)");
+});
+
+await test("lichidarea negativa (deja trecuta) nu scrie minus in fata cifrei", () => {
+  const m = masuriBune();
+  m.lichidare = { valoare: -10, stare: "rau", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE");
+  assert.doesNotMatch(v.ceFac, /-10/, "nu trebuie sa scrie minus in fata cifrei");
+  assert.match(v.ceFac, /10/, "trebuie sa mentioneze cat a trecut deja de prag");
+});
+
+await test("ritmul cazut da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
+  const m = masuriBune();
+  m.ritmPerechi = { valoare: 3, baza: 10, stare: "rau", prag: 0.40 };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "ritmPerechi");
+});
+
+await test("pozitia lipita de margine da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "pozitieInterval");
+});
+
+await test("basis sarit da OPORTUNITATE (nu doar declansatorul - si nivelul)", () => {
+  const m = masuriBune();
+  m.basis = { valoare: 2.5, stare: "rau", prag: 1.0 };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPORTUNITATE");
+  assert.equal(v.declansator.masura, "basis");
+});
+
+await test("trend cu pretul la margine da PAZESTE in GRID (nu doar declansatorul - si nivelul)", () => {
+  const m = masuriBune();
+  m.eficienta = { valoare: 0.7, semn: 1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "PAZESTE");
+  assert.equal(v.declansator.masura, "eficienta");
+});
+
+await test("zigzag in DIRECTIONAL da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
+  const m = masuriBune();
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "eficienta");
+});
+
+await test("lichidarea sub 15% dar peste 8% da PAZESTE (nu doar declansatorul - si nivelul)", () => {
+  const m = masuriBune();
+  m.lichidare = { valoare: 10, stare: "margine", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "PAZESTE");
+  assert.equal(v.declansator.masura, "lichidare");
+  assert.equal(v.declansator.prag, 15);
 });
 
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
