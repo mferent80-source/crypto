@@ -110,6 +110,23 @@ var TabloBot = (function () {
       var r = Math.abs(taxe) / brut;
       m.comision = { valoare: r, prag: 0.50, stare: r > 0.50 ? "rau" : "bine" };
     }
+
+    // Ritmul: perechi in ultima ora fata de media pe ora din ultimele 6.
+    // `exchangeOrderPairedCount` e cumulativ, deci se scade intre capete.
+    var ORA = 3600000;
+    var inUrma = function (ms) {
+      var tinta = acum - ms, cel = null;
+      for (var i = 0; i < istoric.length; i++) if (nr(istoric[i].t) <= tinta) cel = istoric[i];
+      return cel;
+    };
+    var acum0 = istoric.length ? istoric[istoric.length - 1] : null;
+    var acum1 = inUrma(ORA), acum7 = inUrma(7 * ORA);
+    if (acum0 && acum1 && acum7) {
+      var ultima = nr(acum0.perechi) - nr(acum1.perechi);
+      var baza = (nr(acum1.perechi) - nr(acum7.perechi)) / 6;
+      m.ritmPerechi = { valoare: ultima, baza: baza, prag: 0.40,
+        stare: baza > 0 && ultima / baza < 0.40 ? "rau" : "bine" };
+    }
     return m;
   }
 

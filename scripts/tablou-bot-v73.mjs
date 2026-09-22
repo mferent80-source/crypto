@@ -168,5 +168,36 @@ await test("fara bot, masurile care cer bot spun asta si nu crapa", () => {
   assert.ok(Number.isFinite(m.eficienta.valoare), "eficienta se poate socoti si fara bot");
 });
 
+// istoric de 7 ore: 10 perechi pe ora in primele 6, apoi 3 in ultima
+function istoricCuRitm(peOra, ultimaOra) {
+  var out = [], t0 = Date.now() - 7 * 3600000, perechi = 0;
+  for (var min = 0; min <= 7 * 60; min++) {
+    var rata = min < 6 * 60 ? peOra : ultimaOra;
+    if (min % Math.round(60 / rata) === 0) perechi++;
+    out.push({ t: t0 + min * 60000, perechi: perechi, pretPerp: 0.0155, pretSpot: 0.0155 });
+  }
+  return out;
+}
+
+await test("ritmul compara ultima ora cu media ultimelor sase", () => {
+  const ist = istoricCuRitm(10, 10);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ist[ist.length - 1].t });
+  assert.ok(Math.abs(m.ritmPerechi.valoare / m.ritmPerechi.baza - 1) < 0.35,
+    `ritm ${m.ritmPerechi.valoare} fata de baza ${m.ritmPerechi.baza}`);
+  assert.equal(m.ritmPerechi.stare, "bine");
+});
+
+await test("ritmul cazut sub 40% din baza e raportat rau", () => {
+  const ist = istoricCuRitm(12, 3);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ist[ist.length - 1].t });
+  assert.equal(m.ritmPerechi.stare, "rau", `raport: ${m.ritmPerechi.valoare / m.ritmPerechi.baza}`);
+});
+
+await test("fara sase ore de istoric, ritmul spune ca n-are baza", () => {
+  const scurt = istoricCuRitm(10, 10).slice(-60);
+  const m = T.masoara({ ...INTRARI, istoric: scurt, acum: scurt[scurt.length - 1].t });
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate");
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
