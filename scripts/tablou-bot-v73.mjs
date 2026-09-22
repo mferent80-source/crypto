@@ -291,5 +291,85 @@ await test("moving* cu valoare chiar pusă (numar nenul) intoarce DIRECTIONAL", 
   assert.equal(r.presupus, true);
 });
 
+// masuri fabricate: pornim de la "totul bine" si stricam cate una
+function masuriBune() {
+  return {
+    varstaBotMin: 300, lumanari: 60, istoricMin: 400,
+    pretPerp: 0.01555, pretSpot: 0.01555,
+    pozitieInterval: { valoare: 50, stare: "bine", prag: { margine: 15 } },
+    ritmPerechi: { valoare: 10, baza: 10, stare: "bine", prag: 0.40 },
+    eficienta: { valoare: 0.2, semn: 1, stare: "zigzag", prag: { trend: 0.60, zigzag: 0.30 } },
+    amplitudine: { valoare: 2.0, stare: "bine", prag: 1.0 },
+    lichidare: { valoare: 20, stare: "bine", prag: { grav: 8, atentie: 15 } },
+    basis: { valoare: 0.1, stare: "bine", prag: 1.0 },
+    comision: { valoare: 0.2, stare: "bine", prag: 0.50 },
+  };
+}
+
+await test("cand totul e bine, verdictul e LINISTE", () => {
+  assert.equal(T.verdict(masuriBune(), "GRID").nivel, "LINISTE");
+});
+
+await test("botul prea tanar da NEDOVEDIT, nu verde", () => {
+  const m = masuriBune(); m.varstaBotMin = 47;
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT");
+  assert.match(v.titlu + v.ceFac, /47/, "trebuie sa spuna cate minute are");
+});
+
+await test("lichidarea sub 8% da OPRESTE", () => {
+  const m = masuriBune(); m.lichidare = { valoare: 6.2, stare: "rau", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE");
+  assert.equal(v.declansator.masura, "lichidare");
+  assert.equal(v.declansator.valoare, 6.2);
+  assert.equal(v.declansator.prag, 8);
+});
+
+await test("pretul iesit din interval da PAZESTE in GRID", () => {
+  const m = masuriBune(); m.pozitieInterval = { valoare: 104, stare: "afara", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "PAZESTE");
+});
+
+await test("amplitudinea moarta da REGLEAZA", () => {
+  const m = masuriBune(); m.amplitudine = { valoare: 0.7, stare: "rau", prag: 1.0 };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "amplitudine");
+});
+
+await test("ORDINEA scarii: cea mai grava bate, nu prima gasita", () => {
+  const m = masuriBune();
+  m.amplitudine = { valoare: 0.7, stare: "rau", prag: 1.0 };            // REGLEAZA
+  m.pozitieInterval = { valoare: 104, stare: "afara", prag: { margine: 15 } }; // PAZESTE
+  m.lichidare = { valoare: 6, stare: "rau", prag: { grav: 8, atentie: 15 } };  // OPRESTE
+  assert.equal(T.verdict(m, "GRID").nivel, "OPRESTE");
+});
+
+await test("exact pe prag NU aprinde, un pas peste aprinde", () => {
+  const m = masuriBune();
+  m.lichidare = { valoare: 8, stare: "margine", prag: { grav: 8, atentie: 15 } };
+  assert.notEqual(T.verdict(m, "GRID").nivel, "OPRESTE", "8% fix nu trebuie sa declanseze OPRESTE");
+  m.lichidare = { valoare: 7.99, stare: "rau", prag: { grav: 8, atentie: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "OPRESTE");
+});
+
+await test("fara bot, verdictul e FARA_BOT si nu inventeaza cifre", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: null, stare: "nu-se-poate", prag: null };
+  m.lichidare = { valoare: null, stare: "nu-se-poate", prag: null };
+  const v = T.verdict(m, "GRID", { faraBot: true });
+  assert.equal(v.nivel, "FARA_BOT");
+  assert.equal(v.declansator, null);
+});
+
+await test("fiecare verdict poarta cifra si pragul care l-au dat", () => {
+  const m = masuriBune(); m.comision = { valoare: 0.7, stare: "rau", prag: 0.50 };
+  const v = T.verdict(m, "GRID");
+  assert.ok(v.declansator, "lipseste declansatorul");
+  assert.equal(v.declansator.masura, "comision");
+  assert.equal(v.declansator.prag, 0.50);
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
