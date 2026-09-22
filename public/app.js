@@ -2970,6 +2970,8 @@ function toast(msg,type=""){
  const host=$("toastHost");if(!host)return;const d=document.createElement("div");d.className="toast "+type;d.textContent=msg;host.appendChild(d);setTimeout(()=>d.remove(),3200)
 }
 function navTo(id,load=false){
+ var tbActiv=document.querySelector(".panel.on");
+ if(tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot")opresteTabloBot();
  show(id);
  document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id));
  if(load){
@@ -4405,105 +4407,211 @@ async function incarcaBoti(cuToast=false){
   if(cuToast)toast(`Bo\u021bi: ${bots.length} \u00b7 net ${botiBan(s.profitNetTotal)}`,(s.profitNetTotal||0)>=0?'good':'warn');
   return d
 }
-var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1",tbStare={bot:null,botBrut:null,klinePerp:[],pretSpot:null,ws:null,wsSimbol:null,ceas:null,routeOk:null,eroare:null,istoric:[]};
+var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1";
+var tbStare={bot:null,botBrut:null,boti:[],klinePerp:[],klineStare:"ok",
+  pretSpot:null,pretSpotLa:0,ws:null,wsSimbol:null,wsIncercari:0,wsTimeout:null,
+  ceas:null,routeOk:null,eroare:null,probleme:null,stocareStricata:false,istoric:[]};
 function tbCiteste(cheie){try{return JSON.parse(localStorage.getItem(cheie)||"null")||null}catch(e){return null}}
-function tbScrie(cheie,val){try{localStorage.setItem(cheie,JSON.stringify(val))}catch(e){}}
+function tbScrie(cheie,val){try{localStorage.setItem(cheie,JSON.stringify(val));return true}catch(e){return false}}
+function tbPretSpotProaspat(){return tbStare.pretSpot!=null&&(Date.now()-tbStare.pretSpotLa)<=60000}
+// Minus tipografic (U+2212) doar cand cifra chiar e negativa - un minus pus
+// mereu in fata ar minti exact ca bug-ul reparat la lichidare (vezi mai jos).
+function tbFormateazaSemn(v,zecimale){
+  var z=zecimale==null?1:zecimale;
+  return v<0?"\u2212"+Math.abs(v).toFixed(z):v.toFixed(z);
+}
 function tbSchimbaModul(){
-  var b=tbStare.bot;if(!b)return toast("Niciun bot de comutat","warn");
-  var alegeri=tbCiteste(TB_MOD)||{},id=String(b.id),acum=TabloBot.modBot(tbStare.botBrut,alegeri).mod;
-  alegeri[id]=acum==="GRID"?"DIRECTIONAL":"GRID";tbScrie(TB_MOD,alegeri);
-  toast("Mod: "+alegeri[id],"good");renderTabloBot();
+  var b=tbStare.bot,brut=tbStare.botBrut;
+  if(!b||!brut)return toast("Niciun bot de comutat","warn");
+  // `modBot` din modulul pur citeste bot.strategyId, NU id-ul normalizat (care
+  // poate cadea pe buOrderId) - cheia de aici TREBUIE sa fie exact aceeasi,
+  // altfel alegerea se scrie sub o cheie pe care modBot n-o citeste niciodata.
+  var sid=brut.strategyId!=null?String(brut.strategyId):null;
+  if(!sid)return toast("Acest bot nu are strategyId - comutatorul de mod e dezactivat pentru el.","warn");
+  var alegeri=tbCiteste(TB_MOD)||{},acum=TabloBot.modBot(brut,alegeri).mod;
+  alegeri[sid]=acum==="GRID"?"DIRECTIONAL":"GRID";tbScrie(TB_MOD,alegeri);
+  toast("Mod: "+alegeri[sid],"good");renderTabloBot();
 }
 async function tbAduDate(){
   tbStare.eroare=null;
   try{
     var d=await getJSON("/api/bot-orders");
-    tbStare.bot=(d.bots||[])[0]||null;tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
+    if(!d||!Array.isArray(d.bots))throw new Error("Raspuns nevalid de la /api/bot-orders - lipseste lista de boti.");
+    tbStare.probleme=d.probleme||null;
+    tbStare.boti=d.bots;
+    // Prefera un bot ACTIV - ruta intoarce si boti inchisi, iar ordinea nu e garantata.
+    var activi=d.bots.filter(function(x){return x&&x.activ});
+    tbStare.bot=activi[0]||d.bots[0]||null;
+    tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
     tbStare.routeOk=true;
   }catch(e){
-    // Ruta a picat - nu stim daca exista bot sau nu, NU e "fara bot", e "nu stiu".
+    // Ruta a picat - nu stim daca exista bot sau nu. Golim botul curent ca sa
+    // nu mai ceara lumanari si sa nu mai scrie in istoric cu date vechi -
+    // altfel o pana de retea ar minti verdictul (masurat mai jos, in raport).
     tbStare.eroare=e.message;tbStare.routeOk=false;
+    tbStare.bot=null;tbStare.botBrut=null;tbStare.boti=[];
   }
-  if(tbStare.bot&&tbStare.bot.id){
+  if(tbStare.bot){
     var s=TabloBot.simboluri(tbStare.bot.baza,tbStare.bot.quote);
     try{
       var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s.pionex)+"&interval=5M&limit=100");
       tbStare.klinePerp=((k.data&&k.data.klines)||[]).slice().reverse();
-    }catch(e){}
+      tbStare.klineStare="ok";
+    }catch(e){
+      // Pastram lumanarile vechi (mai bine decat nimic), dar le marcam invechite.
+      tbStare.klineStare="invechit";
+    }
     tbPorneWs(s.binance);
-    // Istoricul se tine PE BOT (cheie cu strategyId), nu intr-o cheie comuna -
-    // contorul de perechi e cumulativ per bot, un istoric amestecat ar minti pe ritm.
-    var cheie=TB_ISTORIC_PREFIX+String(tbStare.bot.id);
-    var ist=tbCiteste(cheie)||[];
-    ist=TabloBot.istoricAdauga(ist,{t:Date.now(),perechi:tbStare.bot.ordinePerechi||0,
-      pretPerp:tbStare.bot.pretCurent,pretSpot:tbStare.pretSpot},Date.now());
-    tbScrie(cheie,ist);
-    tbStare.istoric=ist;
+    if(tbStare.bot.id){
+      // Istoricul se tine PE BOT (cheie cu id-ul normalizat), nu intr-o cheie
+      // comuna - contorul de perechi e cumulativ per bot, un istoric amestecat
+      // ar minti pe ritm.
+      var cheie=TB_ISTORIC_PREFIX+String(tbStare.bot.id);
+      var ist=tbCiteste(cheie)||[];
+      ist=TabloBot.istoricAdauga(ist,{t:Date.now(),perechi:tbStare.bot.ordinePerechi||0,
+        pretPerp:tbStare.bot.pretCurent,pretSpot:tbStare.pretSpot},Date.now());
+      tbStare.stocareStricata=!tbScrie(cheie,ist);
+      tbStare.istoric=ist;
+    }else{
+      // Lipsa lui `id` opreste DOAR istoricul (n-avem pe ce cheie sa-l tinem) -
+      // lumanarile si WebSocket-ul de mai sus tot au voie sa mearga.
+      tbStare.istoric=[];
+    }
   }else{
-    tbStare.klinePerp=[];tbStare.istoric=[];
-    // Fara bot nu scriem istoric - nimic de tinut minte pe o cheie fara bot.
+    tbStare.klinePerp=[];tbStare.klineStare="ok";tbStare.istoric=[];
   }
   renderTabloBot();
 }
-function tbPorneWs(simbol){
-  if(tbStare.ws&&tbStare.wsSimbol===simbol)return;
-  try{if(tbStare.ws)tbStare.ws.close()}catch(e){}
-  tbStare.wsSimbol=simbol;
+function tbInchideWs(){
+  if(tbStare.wsTimeout){clearTimeout(tbStare.wsTimeout);tbStare.wsTimeout=null}
+  if(tbStare.ws){
+    try{
+      tbStare.ws.onopen=null;tbStare.ws.onmessage=null;
+      tbStare.ws.onerror=null;tbStare.ws.onclose=null;
+      tbStare.ws.close();
+    }catch(e){}
+  }
+  tbStare.ws=null;
+}
+function tbDeschideWs(simbol){
   try{
-    tbStare.ws=new WebSocket("wss://stream.binance.com/ws/"+simbol.toLowerCase()+"@trade");
-    tbStare.ws.onmessage=function(ev){
-      try{var d=JSON.parse(ev.data);tbStare.pretSpot=Number(d.p);
-        if($("tbPret"))$("tbPret").textContent="spot "+d.p}catch(e){}
+    var soc=new WebSocket("wss://stream.binance.com/ws/"+simbol.toLowerCase()+"@trade");
+    tbStare.ws=soc;
+    soc.onopen=function(){tbStare.wsIncercari=0};
+    soc.onmessage=function(ev){
+      try{
+        var d=JSON.parse(ev.data);tbStare.pretSpot=Number(d.p);tbStare.pretSpotLa=Date.now();
+        if($("tbPret")&&tbStare.wsSimbol===simbol)$("tbPret").textContent="spot "+d.p;
+      }catch(e){}
     };
-  }catch(e){}
+    soc.onerror=function(){try{soc.close()}catch(e){}};
+    // Binance inchide singur stream-urile la 24h - fara reconectare aici,
+    // pretul spot ar inghieta pe veci si ecranul l-ar arata tot ca "viu".
+    soc.onclose=function(){
+      if(tbStare.ws!==soc)return;
+      tbStare.ws=null;
+      if(tbStare.wsSimbol!==simbol)return;
+      tbStare.wsIncercari=Math.min(tbStare.wsIncercari+1,6);
+      var pauza=Math.min(30000,1000*Math.pow(2,tbStare.wsIncercari));
+      tbStare.wsTimeout=setTimeout(function(){tbStare.wsTimeout=null;tbDeschideWs(simbol)},pauza);
+    };
+  }catch(e){
+    tbStare.wsTimeout=setTimeout(function(){tbStare.wsTimeout=null;tbDeschideWs(simbol)},5000);
+  }
+}
+function tbPorneWs(simbol){
+  if(tbStare.wsSimbol===simbol&&(tbStare.wsTimeout||(tbStare.ws&&tbStare.ws.readyState<=1)))return;
+  tbInchideWs();
+  if(tbStare.wsSimbol!==simbol){
+    // Schimbare de simbol (bot nou) - pretul vechi nu mai e valabil pentru
+    // simbolul nou, altfel basis-ul s-ar socoti perp-nou vs spot-vechi.
+    tbStare.pretSpot=null;tbStare.pretSpotLa=0;
+  }
+  tbStare.wsSimbol=simbol;tbStare.wsIncercari=0;
+  tbDeschideWs(simbol);
+}
+function opresteTabloBot(){
+  if(tbStare.ceas){clearInterval(tbStare.ceas);tbStare.ceas=null}
+  tbInchideWs();
 }
 function tbNivelClasa(nivel){
   if(nivel==="OPRESTE"||nivel==="PAZESTE"||nivel==="EROARE")return "bad";
   if(nivel==="OPORTUNITATE"||nivel==="LINISTE")return "good";
-  return "neutral";
+  if(nivel==="REGLEAZA")return "warn";
+  return "mutedInfo";
 }
 function renderTabloBot(){
-  var b=tbStare.bot;
-  var cheie=b&&b.id?TB_ISTORIC_PREFIX+String(b.id):null;
-  var ist=cheie?(tbCiteste(cheie)||[]):[];
+  var eroareActiva=tbStare.routeOk===false;
+  var b=eroareActiva?null:tbStare.bot;
+  var brut=eroareActiva?null:tbStare.botBrut;
+  var ist=eroareActiva?[]:(tbStare.istoric||[]);
+  var klinePentruMasura=eroareActiva?[]:tbStare.klinePerp;
+  var pretSpotPentruMasura=(!eroareActiva&&tbPretSpotProaspat())?tbStare.pretSpot:null;
   var alegeri=tbCiteste(TB_MOD)||{};
   // faraBot e adevarat DOAR cand ruta a raspuns bine SI lista de boti e goala.
   // Daca ruta a picat (eroare), nu inseamna "fara bot" - trebuie aratat ca eroare.
   var faraBot=tbStare.routeOk===true&&!b;
-  var m=TabloBot.masoara({bot:tbStare.botBrut,klinePerp:tbStare.klinePerp,
-    pretSpot:tbStare.pretSpot,istoric:ist,acum:Date.now()});
-  var mod=TabloBot.modBot(tbStare.botBrut,alegeri);
+  var m=TabloBot.masoara({bot:brut,klinePerp:klinePentruMasura,
+    pretSpot:pretSpotPentruMasura,istoric:ist,acum:Date.now()});
+  var mod=TabloBot.modBot(brut,alegeri);
   var v;
-  if(tbStare.routeOk===false){
+  if(eroareActiva){
     v={nivel:"EROARE",titlu:"Nu am putut citi boții",
       ceFac:tbStare.eroare||"Eroare necunoscută.",declansator:null};
+  }else if(b&&tbStare.stocareStricata){
+    v={nivel:"EROARE",titlu:"Stocarea locală nu funcționează",
+      ceFac:"Acest browser blochează localStorage, deci nu pot ține istoricul botului - ritmul și verdictele care depind de el rămân nedovedite pe veci, nu doar 30 de minute.",
+      declansator:null};
   }else{
     v=TabloBot.verdict(m,mod.mod,{faraBot:faraBot});
   }
-  if($("tbSimbol"))$("tbSimbol").textContent=b?b.simbol:"fără bot";
-  if($("tbMod")){
-    var directieNecunoscuta=mod.mod==="DIRECTIONAL"&&m.directieBot===0;
-    $("tbMod").textContent=mod.mod+(mod.presupus?" (presupus)":"")+
-      (directieNecunoscuta?" · direcție necunoscută":"");
+  var note=[];
+  if(!eroareActiva&&tbStare.probleme&&tbStare.probleme.preturi)
+    note.push("Pionex: tickere PERP indisponibile ("+tbStare.probleme.preturi+")");
+  if(!eroareActiva&&b&&tbStare.klineStare==="invechit")
+    note.push("lumânările sunt învechite - ultima citire a picat");
+  if($("tbSimbol")){
+    if(eroareActiva)$("tbSimbol").textContent="—";
+    else if(!b)$("tbSimbol").textContent="fără bot";
+    else{
+      var total=tbStare.boti.length;
+      $("tbSimbol").textContent=b.simbol+(total>1?" · activ, din "+total+" boți":"");
+    }
   }
+  if($("tbMod")){
+    if(eroareActiva||!b)$("tbMod").textContent="—";
+    else{
+      var directieNecunoscuta=mod.mod==="DIRECTIONAL"&&m.directieBot===0;
+      $("tbMod").textContent=mod.mod+(mod.presupus?" (presupus)":"")+
+        (directieNecunoscuta?" · direcție necunoscută":"");
+    }
+  }
+  if($("tbSchimbaModulBtn"))
+    $("tbSchimbaModulBtn").disabled=!!(eroareActiva||!b||!brut||brut.strategyId==null);
   if($("tbNivel")){$("tbNivel").textContent=v.nivel;$("tbNivel").className=tbNivelClasa(v.nivel)}
   if($("tbTitlu"))$("tbTitlu").textContent=v.titlu;
-  if($("tbCeFac"))$("tbCeFac").textContent=v.ceFac;
+  if($("tbCeFac"))$("tbCeFac").textContent=v.ceFac+(note.length?" · "+note.join(" · "):"");
   if($("tbDeCe"))$("tbDeCe").textContent=v.declansator
     ? v.declansator.masura+" = "+(v.declansator.valoare==null?"—":v.declansator.valoare)+" (prag "+(v.declansator.prag==null?"—":v.declansator.prag)+")" : "";
+  if($("tbPret")){
+    if(tbStare.pretSpot==null)$("tbPret").textContent="—";
+    else $("tbPret").textContent="spot "+tbStare.pretSpot+(tbPretSpotProaspat()?"":" (învechit)");
+  }
   // Rigla: unde esti intre jos si sus, cu semnul tau pe ea si lichidarea marcata.
   if($("tbRigla")){
     var p=m.pozitieInterval.valoare;
-    if(p==null||!b)$("tbRigla").innerHTML='<div class="emptyState">Fără bot, n-am interval de arătat.</div>';
-    else{
+    if(p==null){
+      var motiv=!b?"Fără bot, n-am interval de arătat.":"Nu am încă lumânări pentru interval.";
+      $("tbRigla").innerHTML='<div class="emptyState">'+escapeHtml(motiv)+'</div>';
+    }else{
       var loc=Math.max(0,Math.min(100,p)),trepte=20,poz=Math.round(loc/100*trepte);
       var bara="";for(var i=0;i<=trepte;i++)bara+=i===poz?"●":"─";
+      var clsLich=m.lichidare.stare==="rau"?"bad":m.lichidare.stare==="margine"?"warn":"mutedInfo";
       $("tbRigla").innerHTML='<div class="accountRow"><div class="accountCell">'+
         (b.gridJos!=null?b.gridJos:"—")+'</div><div class="accountCell"><b>'+bara+'</b><br>'+
         Math.round(p)+'% din interval</div><div class="accountCell">'+
-        (b.gridSus!=null?b.gridSus:"—")+'</div><div class="accountCell '+
-        (m.lichidare.stare==="rau"?"bad":"neutral")+'">'+
-        (m.lichidare.valoare!=null?"lichidare la "+m.lichidare.valoare.toFixed(1)+"%":"—")+
+        (b.gridSus!=null?b.gridSus:"—")+'</div><div class="accountCell '+clsLich+'">'+
+        (m.lichidare.valoare!=null?"lichidare la "+tbFormateazaSemn(m.lichidare.valoare,1)+"%":"—")+
         '</div></div>';
     }
   }
@@ -4511,16 +4619,17 @@ function renderTabloBot(){
     ["oscilație sau trend",m.eficienta],["amplitudine vs treaptă",m.amplitudine],
     ["până la lichidare",m.lichidare],["basis perp vs spot",m.basis],["comision vs grid",m.comision]];
   if($("tbMasuri"))$("tbMasuri").innerHTML=randuri.map(function(r){
-    var val=r[1]&&r[1].valoare!=null?(+r[1].valoare).toFixed(2):"—";
-    var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara")?"bad":r[1]&&r[1].stare==="bine"?"good":"neutral";
+    var val=r[1]&&r[1].valoare!=null?tbFormateazaSemn(+r[1].valoare,2):"—";
+    var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara")?"bad":
+      r[1]&&r[1].stare==="margine"?"warn":r[1]&&r[1].stare==="bine"?"good":"mutedInfo";
     return '<div class="accountRow"><div class="accountCell">'+escapeHtml(r[0])+
       '</div><div class="accountCell '+cls+'">'+val+'</div><div class="accountCell">'+
       escapeHtml(String((r[1]&&r[1].stare)||"—"))+"</div></div>";
   }).join("");
 }
 function porneTabloBot(){
-  if(tbStare.ceas)return;
   tbAduDate();
+  if(tbStare.ceas)return;
   tbStare.ceas=setInterval(function(){if($("tabloubot")&&$("tabloubot").classList.contains("on"))tbAduDate()},8000);
 }
 async function v71SyncPionexJournal(showToast=false){if(assetClass()!=="CRYPTO")return null;const symbol=v71CurrentSymbol();if(!symbol)return null;if($("v71ReconState"))$("v71ReconState").textContent="SYNCING";try{const fillHistory=await v71FetchHistory("fills",symbol),orderHistory=await v71FetchHistory("orders",symbol),radar=await v71RadarOrderIds(),prior=v71StoredJournal(symbol),fresh=fillHistory.rows.map(x=>v71NormalizeFill(x,symbol)).filter(x=>x.symbol===symbol),fills=v71Dedupe([...(prior.fills||[]).filter(x=>x.symbol===symbol),...fresh]),built=v71BuildTrades(fills,radar),orders=orderHistory.rows.filter(x=>v71SafeSymbol(x.symbol||symbol)===symbol),orderIds=new Set(orders.map(x=>v71Id(x,"order"))),fillOrderIds=new Set(fills.map(x=>String(x.orderId))),historyComplete=!fillHistory.truncated&&!orderHistory.truncated,missingOrders=historyComplete?[...fillOrderIds].filter(x=>x&&x!=="?"&&!orderIds.has(x)):[];const journal={schema:71,symbol,fills,trades:built.trades,openLots:built.openLots,unmatched:built.unmatched,missingOrders,ordersSeen:orderIds.size,updated:Date.now(),readOnly:true,complete:historyComplete,history:{start:fillHistory.start,end:fillHistory.end,fillRequests:fillHistory.requests,orderRequests:orderHistory.requests,truncated:!historyComplete}};v60StoreSet(V71_JOURNAL_PREFIX+symbol,journal);v60StoreSet(V71_CURRENT_SYMBOL_KEY,symbol);v60StoreSet(V71_SYNC_KEY,{symbol,ts:journal.updated,fillCount:fills.length,tradeCount:built.trades.length,complete:historyComplete});if(localDbSupported()&&!appSettings().privacySessionOnly)await localDbPutRecord("pionex_journal_v71",symbol,journal,journal.updated).catch(()=>{});const s=v71RenderJournal();renderAnalytics();renderProfitReadiness(false);if(showToast)toast(`Pionex journal ${symbol} · ${s.fills} fills · ${s.trades} trades · ${historyComplete?"complete":"review truncation"}`,historyComplete&&!s.unmatched&&!s.feeReview?"good":"warn");return journal}catch(e){if($("v71ReconState"))$("v71ReconState").textContent="SYNC ERROR";if($("v71SyncNote"))$("v71SyncNote").textContent=`Sync failed: ${e.message}`;if(showToast)toast(`Pionex journal: ${e.message}`,"bad");return null}}
