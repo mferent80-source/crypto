@@ -73,7 +73,7 @@ var TabloBot = (function () {
     }
     if (!x) return m;
 
-    var tr = String(x.trend || "").toLowerCase();
+    var tr = String(x.trend || "").trim().toLowerCase();
     m.directieBot = tr === "long" ? 1 : tr === "short" ? -1 : 0;
 
     var jos = nr(x.bottom), sus = nr(x.top);
@@ -191,6 +191,16 @@ var TabloBot = (function () {
         declansator: d("lichidare", m.lichidare.valoare, 8) };
     }
 
+    // Lichidarea (ca si OPRESTE de mai sus) nu se oglindeste: pragurile sunt
+    // aceleasi in ambele moduri si trebuie sa bata orice decizie care tine de
+    // mod - altfel o iesire "in favoare" in DIRECTIONAL ar inghiti tacut
+    // avertismentul de lichidare de la 8-15%.
+    if (m.lichidare.valoare !== null && m.lichidare.valoare < 15) {
+      return { nivel: "PAZESTE", titlu: "Lichidarea e aproape",
+        ceFac: "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% până acolo.",
+        declansator: d("lichidare", m.lichidare.valoare, 15) };
+    }
+
     var directie = m.eficienta.semn;
     if (mod === "DIRECTIONAL") {
       if (m.eficienta.stare === "trend" && m.directieBot && directie && directie !== m.directieBot) {
@@ -228,12 +238,6 @@ var TabloBot = (function () {
           ceFac: "Grid-ul e pe cale să rămână în urmă.",
           declansator: d("eficienta", m.eficienta.valoare, 0.60) };
       }
-    }
-
-    if (m.lichidare.valoare !== null && m.lichidare.valoare < 15) {
-      return { nivel: "PAZESTE", titlu: "Lichidarea e aproape",
-        ceFac: "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% până acolo.",
-        declansator: d("lichidare", m.lichidare.valoare, 15) };
     }
 
     if (mod === "DIRECTIONAL" && m.eficienta.stare === "zigzag") {

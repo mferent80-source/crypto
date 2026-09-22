@@ -303,6 +303,7 @@ function masuriBune() {
     lichidare: { valoare: 20, stare: "bine", prag: { grav: 8, atentie: 15 } },
     basis: { valoare: 0.1, stare: "bine", prag: 1.0 },
     comision: { valoare: 0.2, stare: "bine", prag: 0.50 },
+    directieBot: 0,
   };
 }
 
@@ -527,7 +528,10 @@ await test("aceleasi cifre dau verdicte DIFERITE in cele doua moduri", () => {
   m.eficienta = { valoare: 0.8, semn: 1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } };
   m.pozitieInterval = { valoare: 92, stare: "margine", prag: { margine: 15 } };
   assert.equal(T.verdict(m, "GRID").nivel, "PAZESTE", "in GRID, trendul la margine e pericol");
-  assert.notEqual(T.verdict(m, "DIRECTIONAL").nivel, "PAZESTE", "in DIRECTIONAL, trendul in favoare nu e pericol");
+  // assert EXACT, nu doar notEqual("PAZESTE") - notEqual trece si pentru
+  // OPRESTE, REGLEAZA, OPORTUNITATE, NEDOVEDIT - adica pentru 5 din 6 trepte,
+  // ceea ce lasa in viata mutantul care sterge garda de pe margine (punctul 3).
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE", "in DIRECTIONAL, trendul in favoare nu e pericol");
 });
 
 await test("in DIRECTIONAL, zigzagul e cel care da REGLEAZA", () => {
@@ -552,7 +556,7 @@ await test("in DIRECTIONAL, iesirea IMPOTRIVA e PAZESTE", () => {
 
 await test("in DIRECTIONAL, ritmul cazut NU mai declanseaza nimic", () => {
   const m = masuriBune(); m.directieBot = 1;
-  // masuriBune() are eficienta impicit "zigzag", care singura da REGLEAZA in
+  // masuriBune() are eficienta implicit "zigzag", care singura da REGLEAZA in
   // DIRECTIONAL (treapta de mai jos) - fixtura originala din brief ar fi
   // coliziona cu ea. Punem eficienta pe "bine" ca sa izolam ritmPerechi.
   m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
@@ -613,6 +617,85 @@ await test("[mutant] oglinda: short rupt in SUS (impotriva lui) da PAZESTE", () 
   m.pozitieInterval = { valoare: 106, stare: "afara", prag: { margine: 15 } };
   const v = T.verdict(m, "DIRECTIONAL");
   assert.equal(v.nivel, "PAZESTE", "short rupt in sus = impotriva lui, trebuie alarma");
+});
+
+// --- Revizie: iesirea "in favoare" inghitea avertismentul de lichidare -----
+// Lichidarea, ca si OPRESTE, NU se oglindeste - pragurile 8%/15% raman
+// aceleasi in ambele moduri si trebuie sa bata orice ramura care tine de mod.
+
+await test("[mutant] iesirea IN FAVOARE nu inghite lichidarea la 10% (long)", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.pozitieInterval = { valoare: 108, stare: "afara", prag: { margine: 15 } };
+  m.lichidare = { valoare: 10, stare: "margine", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "PAZESTE", "lichidarea la 10% trebuie sa bata iesirea 'in favoare'");
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+await test("[mutant] oglinda: iesirea IN FAVOARE nu inghite lichidarea la 10% (short)", () => {
+  const m = masuriBune(); m.directieBot = -1;
+  m.pozitieInterval = { valoare: -8, stare: "afara", prag: { margine: 15 } };
+  m.lichidare = { valoare: 10, stare: "margine", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "DIRECTIONAL");
+  assert.equal(v.nivel, "PAZESTE", "lichidarea la 10% trebuie sa bata iesirea 'in favoare', si pentru short");
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+// --- Revizie: garda `m.directieBot &&` de pe trend-contra era neprobata ---
+// Sora ei de pe ramura de iesire e probata (testele DIRECTIONAL fara
+// directieBot cunoscuta, mai sus); asta acopera si trend-contra.
+
+await test("[mutant] fara directieBot cunoscuta, trendul NU inventeaza alarma", () => {
+  const m = masuriBune(); m.directieBot = 0;
+  m.eficienta = { valoare: 0.8, semn: 1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE",
+    "directieBot necunoscuta, trend in sus: fara alarma inventata");
+  m.eficienta = { valoare: 0.8, semn: -1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE",
+    "directieBot necunoscuta, trend in jos: tot fara alarma inventata");
+});
+
+// --- Revizie: garda `mod !== "DIRECTIONAL"` de pe treapta de margine era
+// neprobata - marginea, spre deosebire de lichidare, CHIAR se oglindeste:
+// un bot directional lasat dinadins pe directie nu are voie sa primeasca
+// "cantareste mutarea intervalului" cand sta la marginea unde castiga.
+
+await test("[mutant] garda margine in DIRECTIONAL: long la 92% da LINISTE, nu REGLEAZA", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 92, stare: "margine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE");
+});
+
+await test("[mutant] garda margine in DIRECTIONAL: long la 8% da LINISTE, nu REGLEAZA", () => {
+  const m = masuriBune(); m.directieBot = 1;
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 8, stare: "margine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE");
+});
+
+await test("[mutant] oglinda: garda margine in DIRECTIONAL: short la 92% da LINISTE", () => {
+  const m = masuriBune(); m.directieBot = -1;
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 92, stare: "margine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE");
+});
+
+await test("[mutant] oglinda: garda margine in DIRECTIONAL: short la 8% da LINISTE", () => {
+  const m = masuriBune(); m.directieBot = -1;
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 8, stare: "margine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "LINISTE");
+});
+
+// --- Revizie: `.trim()` lipsea pe trend, ca la modBot ---
+
+await test("masoara: trend cu spatii in jur tot da directia, nu 0", () => {
+  const botLong = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "  long  " } };
+  assert.equal(T.masoara({ ...INTRARI, bot: botLong }).directieBot, 1,
+    "spatii in jurul lui long nu au voie sa stinga oglindirea");
+  const botShort = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "  SHORT  " } };
+  assert.equal(T.masoara({ ...INTRARI, bot: botShort }).directieBot, -1);
 });
 
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
