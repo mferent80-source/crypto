@@ -1,10 +1,10 @@
 {
-  "version": "v71",
-  "badge": "v71 \u00b7 PIONEX JOURNAL CORRECTNESS & SECURITY HOTFIX \u00b7 AUDITED",
+  "version": "v71.1",
+  "badge": "v71.1 · PIONEX FILLS+ORDERS REPARAT",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v70 \u00b7 PIONEX AUTO JOURNAL & RECONCILIATION PRO \u00b7 AUDITED",
-  "releaseType": "strict read-only security and journal-correctness hotfix",
+  "baseRelease": "v71 · PIONEX JOURNAL CORRECTNESS & SECURITY HOTFIX",
+  "releaseType": "bugfix: actiunile fills si orders lipseau de pe server, jurnalul nu putea sincroniza niciodata",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
