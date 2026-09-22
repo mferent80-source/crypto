@@ -88,9 +88,19 @@ var TabloBot = (function () {
       }
     }
 
-    var lich = nr(x.estimateLiquidationPriceDown);
-    if (pretPerp !== null && lich && lich > 0 && pretPerp > lich) {
-      var d = 100 * (pretPerp - lich) / pretPerp;
+    // Long: lichidarea e JOS (estimateLiquidationPriceDown). Short: lichidarea
+    // e SUS (estimateLiquidationPriceUp) - Task 5 aduce directia short, iar
+    // fara ramura asta masura ar da tacut un numar gresit pentru acei boti.
+    // Distanta poate iesi zero sau negativa cand pretul a trecut deja de prag
+    // - si asta e cazul cel mai periculos, nu are voie sa tacem la el.
+    var lichJos = nr(x.estimateLiquidationPriceDown);
+    var lichSus = nr(x.estimateLiquidationPriceUp);
+    if (pretPerp !== null && pretPerp > 0 && lichJos !== null && lichJos > 0) {
+      var d = 100 * (pretPerp - lichJos) / pretPerp;
+      m.lichidare = { valoare: d, prag: { grav: 8, atentie: 15 },
+        stare: d < 8 ? "rau" : d < 15 ? "margine" : "bine" };
+    } else if (pretPerp !== null && pretPerp > 0 && lichSus !== null && lichSus > 0) {
+      var d = 100 * (lichSus - pretPerp) / pretPerp;
       m.lichidare = { valoare: d, prag: { grav: 8, atentie: 15 },
         stare: d < 8 ? "rau" : d < 15 ? "margine" : "bine" };
     }
