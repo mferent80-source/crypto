@@ -479,9 +479,18 @@ var TabloBot = (function () {
   //     deci intrarile lipsa nu intra in numitor si se raporteaza ACOPERIREA.
   function nuStare() { return { valoare: null, stare: "nu-se-poate", prag: null, acoperire: null }; }
 
+  // nr(null) da 0 (Number(null)===0), nu null - un camp explicit LIPSA (null,
+  // undefined, sir gol) trebuie prins INAINTE de nr(), altfel o garda scrisa
+  // ca sa prinda lipsa nu se declanseaza NICIODATA pe o lipsa reala. Masurat:
+  // profitNet=null pe ultima intrare dadea netPeZi=0 "dovedit" in loc de
+  // nu-se-poate; perechi="" pe prima intrare fabrica o rata din nimic.
+  function lipsa(v) { return v === null || v === undefined || v === ""; }
+
   function rataCumulativa(lista, camp, peZi) {
     if (lista.length < 2) return { valoare: null, stare: "nu-se-poate", prag: 1 };
-    var p = nr(lista[0][camp]), u = nr(lista[lista.length - 1][camp]);
+    var pBrut = lista[0][camp], uBrut = lista[lista.length - 1][camp];
+    if (lipsa(pBrut) || lipsa(uBrut)) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var p = nr(pBrut), u = nr(uBrut);
     var t0 = nr(lista[0].t), t1 = nr(lista[lista.length - 1].t);
     if (p === null || u === null || t0 === null || t1 === null) return { valoare: null, stare: "nu-se-poate", prag: 1 };
     // Un contor care SCADE inseamna bot repornit sau schimbat - nu o rata negativa.
@@ -492,13 +501,21 @@ var TabloBot = (function () {
     return { valoare: pePas, stare: ore >= 2 ? "dovedit" : "putin", prag: peZi ? 2 : 2 };
   }
 
-  function frecventaStare(lista, potrivit, acum) {
-    var n = lista.length;
+  // `valid` decide ce intrari INTRA in numitor - o intrare fara pret nu e o
+  // masuratoare "afara din interval", e o masuratoare care LIPSESTE. Daca ar
+  // intra in numitor, jumatate de istoric fara pret ar injumatati tacut
+  // procentul, in loc sa scada doar acoperirea (unde chiar trebuie sa se vada).
+  function frecventaStare(lista, valid, potrivit, acum) {
+    var observate = [];
+    for (var i = 0; i < lista.length; i++) if (valid(lista[i])) observate.push(lista[i]);
+    var n = observate.length;
     if (n < 30) return nuStare();
     var cate = 0;
-    for (var i = 0; i < n; i++) if (potrivit(lista[i])) cate++;
-    // Acoperirea: cate masuratori avem fata de cate minute acopera istoricul.
-    var t0 = nr(lista[0].t);
+    for (var j = 0; j < n; j++) if (potrivit(observate[j])) cate++;
+    // Acoperirea: cate masuratori VALIDE avem fata de cate minute acopera
+    // istoricul intreg (nu doar felia valida) - intrarile fara pret nu intra
+    // in numitorul procentului, dar lipsa lor tot scade acoperirea.
+    var t0 = nr(lista[0] && lista[0].t);
     var minute = t0 === null ? 0 : Math.max(1, Math.round((acum - t0) / 60000));
     var acoperire = Math.min(100, Math.round(100 * n / minute));
     return { valoare: 100 * cate / n, stare: n >= 60 ? "dovedit" : "putin",
@@ -514,17 +531,19 @@ var TabloBot = (function () {
     var jos = nr(x.bottom), sus = nr(x.top);
     var areGrid = jos !== null && sus !== null && sus > jos;
     var pozitia = function (h) {
+      if (lipsa(h.pretPerp) || !areGrid) return null;
       var pp = nr(h.pretPerp);
-      if (pp === null || !areGrid) return null;
+      if (pp === null) return null;
       return 100 * (pp - jos) / (sus - jos);
     };
+    var arePret = function (h) { return pozitia(h) !== null; };
     return {
       perechiPeOra: rataCumulativa(lista, "perechi", false),
       netPeZi: rataCumulativa(lista, "profitNet", true),
-      timpInInterval: areGrid ? frecventaStare(lista, function (h) {
+      timpInInterval: areGrid ? frecventaStare(lista, arePret, function (h) {
         var p = pozitia(h); return p !== null && p >= 0 && p <= 100;
       }, acum) : nuStare(),
-      desLaMargine: areGrid ? frecventaStare(lista, function (h) {
+      desLaMargine: areGrid ? frecventaStare(lista, arePret, function (h) {
         var p = pozitia(h); return p !== null && p >= 0 && p <= 100 && (p < 15 || p > 85);
       }, acum) : nuStare()
     };

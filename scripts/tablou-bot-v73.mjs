@@ -1263,5 +1263,40 @@ await test("T1: istoric gol sau nevalid nu arunca si nu da zerouri", () => {
   }
 });
 
+/* ── T1 reparatie: nr(null)===0 anuleaza garda anti-lipsa ────────────────── */
+await test("[reparatie] T1: profitNet lipsa (null) pe o intrare cheie da nu-se-poate, nu cifra fabricata", () => {
+  const ist = istoricFrecvente(180, { netStart: 0, netPeMinut: 0.01 });
+  ist[ist.length - 1].profitNet = null; // camp lipsa explicit, nu 0
+  const f = T.frecvente(ist, BOT, ACUM).netPeZi;
+  assert.equal(f.stare, "nu-se-poate", "profitNet lipsa nu are voie sa produca o rata (nr(null)===0 e o capcana)");
+  assert.equal(f.valoare, null);
+});
+
+await test("[reparatie] T1: perechi lipsa (sir gol) pe o intrare cheie da nu-se-poate, nu cifra fabricata", () => {
+  const ist = istoricFrecvente(180, { perechiStart: 0, perechiPeMinut: 0.1 });
+  ist[0].perechi = ""; // camp lipsa explicit
+  const f = T.frecvente(ist, BOT, ACUM).perechiPeOra;
+  assert.equal(f.stare, "nu-se-poate", "perechi lipsa nu are voie sa produca o rata (nr('')===0 e o capcana)");
+  assert.equal(f.valoare, null);
+});
+
+/* ── T1 reparatie: numitorul frecventelor de stare exclude intrarile fara pret ── */
+await test("[reparatie] T1: intrarile fara pret nu intra in numitorul frecventelor de stare, si scad acoperirea", () => {
+  const ist = istoricFrecvente(99, { pret: 0.0155 }); // 100 intrari, toate in interval
+  for (let i = 0; i < 50; i++) ist[i].pretPerp = null; // jumatate fara masuratoare
+  const f = T.frecvente(ist, BOT, ACUM).timpInInterval;
+  assert.ok(Math.abs(f.valoare - 100) < 1.5,
+    `intrarile fara pret nu au voie sa scada procentul (numitor gresit): asteptat ~100, a dat ${f.valoare}`);
+  assert.ok(Math.abs(f.acoperire - 50) < 5,
+    `jumatate din intrari fara pret trebuie sa injumatateasca acoperirea, a dat ${f.acoperire}`);
+});
+
+/* ── T1 reparatie: starea "putin" pe frecventele de stare, nepazita ─────── */
+await test("[reparatie] T1: intre 30 si 59 de intrari observate, frecventele de stare sunt putin", () => {
+  const f = T.frecvente(istoricFrecvente(44, { pret: 0.0155 }), BOT, ACUM); // 45 de intrari
+  assert.equal(f.timpInInterval.stare, "putin", `45 de intrari observate ar trebui sa dea putin, a dat ${f.timpInInterval.stare}`);
+  assert.equal(f.desLaMargine.stare, "putin", `45 de intrari observate ar trebui sa dea putin, a dat ${f.desLaMargine.stare}`);
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
