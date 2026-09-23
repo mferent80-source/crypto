@@ -517,20 +517,20 @@ async function main() {
     });
 
     /* --- 3. iesirea prin bara de tab-uri (.tabs, show() direct) lasa WS/ceas pornite --- */
-    await test("10. iesirea prin .tabs (show() direct, nu navTo) opreste tot ceasul si WebSocket-ul", async () => {
+    await test("10. iesirea prin .tabs (show() direct, nu navTo) inchide WS-ul si scade cadenta colectorului la 60 s", async () => {
       await incarcaBotSanatos({ strategyId: "8103", baza: "ADA.PERP" });
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(300);
-      const ceasInainte = await b.ev(`tbStare.ceas !== null`);
+      const cadentaInainte = await b.ev(`tbCadentaMs()`);
       const wsInainte = await b.ev(`tbStare.ws !== null`);
-      assert.ok(ceasInainte, "precheck: ceasul ar trebui pornit dupa navTo('tabloubot', true)");
+      assert.equal(cadentaInainte, 8000, "precheck: cadenta colectorului ar trebui 8000 cat esti pe tablou");
       assert.ok(wsInainte, "precheck: WebSocket-ul ar trebui deschis dupa navTo('tabloubot', true)");
       // butonul din .tabs cheama show('dash') DIRECT, nu navTo() - exact drumul care scurgea inainte
       await b.ev(`document.querySelector('.tabs .tab')?.click()`);
       await asteapta(200);
-      const ceasDupa = await b.ev(`tbStare.ceas === null`);
+      const cadentaDupa = await b.ev(`tbCadentaMs()`);
       const wsDupa = await b.ev(`tbStare.ws === null`);
-      assert.ok(ceasDupa, "ceasul trebuie oprit si la iesirea prin bara de tab-uri, nu doar prin navTo");
+      assert.equal(cadentaDupa, 60000, "cadenta colectorului trebuie sa scada la 60 s si la iesirea prin bara de tab-uri, nu doar prin navTo");
       assert.ok(wsDupa, "WebSocket-ul trebuie inchis si la iesirea prin bara de tab-uri, nu doar prin navTo");
     });
 

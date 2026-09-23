@@ -3077,7 +3077,7 @@ function loadPionexUniverseCache(){
 
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
-function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){var tbActiv=document.querySelector(".panel.on");if(tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot")opresteTabloBot();document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
+function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 const MARKET_BASES=[
@@ -4584,30 +4584,49 @@ function tbPorneWs(simbol){
   tbDeschideWs(simbol);
 }
 function opresteTabloBot(){
-  if(tbStare.ceas){clearInterval(tbStare.ceas);tbStare.ceas=null}
   tbInchideWs();
+  tbColectorRecadenteaza();
 }
 // Colectorul aduna istoric cat timp APLICATIA e deschisa, pe orice ecran -
 // altfel ecranul pe care Marius il vrea central e orb cat sta pe alt ecran.
 // Cadenta: 8 s cand panoul se vede, 60 s cand nu. Fara WebSocket in fundal:
 // pretul spot ramane null in istoric, iar consumatorii sar peste null.
-var tbColector=null;
+// E singurul loc care mai cheama tbAduDate() cu regularitate - ceasul vechi
+// din porneTabloBot() a fost scos, ca sa nu bata Pionex de doua ori cat esti
+// pe panou (limita de ritm a bursei e a omului, nu a codului).
+var tbColector=null,tbColectorPas=0;
 function tbPanouVizibil(){return !!($("tabloubot")&&$("tabloubot").classList.contains("on"))}
+// Cadenta REALA cu care ruleaza colectorul acum (nu o recalculare pe hartie) -
+// masurabila din proba, ca sa nu ramana o garda oarba pe un camp sters.
+function tbCadentaMs(){return tbColectorPas}
 function tbColectorTick(){
   // tbAduDate NU scrie in istoric daca ruta a picat - purtarea aia ramane.
   return tbAduDate().then(function(){if(tbPanouVizibil())renderTabloBot()});
 }
-function tbColectorPornit(){
-  if(tbColector)return;
-  var pas=tbPanouVizibil()?8000:60000;
+function tbColectorPornitCuPas(pas){
+  if(tbColector)clearInterval(tbColector);
+  tbColectorPas=pas;
   tbColector=setInterval(function(){
     if(document.hidden)return;                       // tab in fundal: nu batem ruta degeaba
     var cerut=tbPanouVizibil()?8000:60000;
-    if(cerut!==pas){pas=cerut;tbColectorOprit();tbColectorPornit();return}
+    if(cerut!==tbColectorPas){tbColectorPornitCuPas(cerut);return}
     tbColectorTick();
   },pas);
 }
-function tbColectorOprit(){if(tbColector){clearInterval(tbColector);tbColector=null}}
+function tbColectorPornit(){
+  if(tbColector)return;
+  tbColectorPornitCuPas(tbPanouVizibil()?8000:60000);
+}
+function tbColectorOprit(){if(tbColector){clearInterval(tbColector);tbColector=null;tbColectorPas=0}}
+// Recalculeaza IMEDIAT cadenta ceruta de vizibilitatea panoului - fara sa
+// astepte urmatorul tic (care ar putea intarzia pana la 60 s la intrare).
+// Chemata din porneTabloBot()/opresteTabloBot(), ca intrarea/iesirea de pe
+// panou sa se vada pe loc in ritmul colectorului, nu doar la urmatorul tic.
+function tbColectorRecadenteaza(){
+  if(!tbColector)return;
+  var cerut=tbPanouVizibil()?8000:60000;
+  if(cerut!==tbColectorPas)tbColectorPornitCuPas(cerut);
+}
 document.addEventListener("visibilitychange",function(){
   if(document.hidden)tbColectorOprit();else tbColectorPornit();
 });
@@ -4719,8 +4738,7 @@ function renderTabloBot(){
 }
 function porneTabloBot(){
   tbAduDate();
-  if(tbStare.ceas)return;
-  tbStare.ceas=setInterval(function(){if($("tabloubot")&&$("tabloubot").classList.contains("on"))tbAduDate()},8000);
+  tbColectorRecadenteaza();
 }
 async function v71SyncPionexJournal(showToast=false){if(assetClass()!=="CRYPTO")return null;const symbol=v71CurrentSymbol();if(!symbol)return null;if($("v71ReconState"))$("v71ReconState").textContent="SYNCING";try{const fillHistory=await v71FetchHistory("fills",symbol),orderHistory=await v71FetchHistory("orders",symbol),radar=await v71RadarOrderIds(),prior=v71StoredJournal(symbol),fresh=fillHistory.rows.map(x=>v71NormalizeFill(x,symbol)).filter(x=>x.symbol===symbol),fills=v71Dedupe([...(prior.fills||[]).filter(x=>x.symbol===symbol),...fresh]),built=v71BuildTrades(fills,radar),orders=orderHistory.rows.filter(x=>v71SafeSymbol(x.symbol||symbol)===symbol),orderIds=new Set(orders.map(x=>v71Id(x,"order"))),fillOrderIds=new Set(fills.map(x=>String(x.orderId))),historyComplete=!fillHistory.truncated&&!orderHistory.truncated,missingOrders=historyComplete?[...fillOrderIds].filter(x=>x&&x!=="?"&&!orderIds.has(x)):[];const journal={schema:71,symbol,fills,trades:built.trades,openLots:built.openLots,unmatched:built.unmatched,missingOrders,ordersSeen:orderIds.size,updated:Date.now(),readOnly:true,complete:historyComplete,history:{start:fillHistory.start,end:fillHistory.end,fillRequests:fillHistory.requests,orderRequests:orderHistory.requests,truncated:!historyComplete}};v60StoreSet(V71_JOURNAL_PREFIX+symbol,journal);v60StoreSet(V71_CURRENT_SYMBOL_KEY,symbol);v60StoreSet(V71_SYNC_KEY,{symbol,ts:journal.updated,fillCount:fills.length,tradeCount:built.trades.length,complete:historyComplete});if(localDbSupported()&&!appSettings().privacySessionOnly)await localDbPutRecord("pionex_journal_v71",symbol,journal,journal.updated).catch(()=>{});const s=v71RenderJournal();renderAnalytics();renderProfitReadiness(false);if(showToast)toast(`Pionex journal ${symbol} · ${s.fills} fills · ${s.trades} trades · ${historyComplete?"complete":"review truncation"}`,historyComplete&&!s.unmatched&&!s.feeReview?"good":"warn");return journal}catch(e){if($("v71ReconState"))$("v71ReconState").textContent="SYNC ERROR";if($("v71SyncNote"))$("v71SyncNote").textContent=`Sync failed: ${e.message}`;if(showToast)toast(`Pionex journal: ${e.message}`,"bad");return null}}
 function v71ExportJournal(){const j=v71StoredJournal(),checksumInput=JSON.stringify(j);downloadTextFile(`crypto-radar-v71-pionex-journal-${j.symbol||"none"}-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({schemaVersion:71,exportedAt:Date.now(),readOnly:true,journal:j},null,2),"application/json");sha256Text(checksumInput).then(x=>toast(`Journal exported · SHA-256 ${x.slice(0,12)}…`,"good"))}
