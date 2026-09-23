@@ -472,6 +472,64 @@ var TabloBot = (function () {
       motiv: cheie ? "preferat-disparut" : (activ ? "auto-activ" : "auto-primul") };
   }
 
+  // Cifrele sunt de DOUA feluri si gaurile din istoric le ating diferit.
+  // (a) ratele din contoare CUMULATIVE (perechi, profitNet) raman valide peste o
+  //     gaura: totalul de la Pionex include si ce s-a intamplat cat n-am privit.
+  // (b) frecventele de STARE nu: acolo gaura inseamna ca nu stim unde era pretul,
+  //     deci intrarile lipsa nu intra in numitor si se raporteaza ACOPERIREA.
+  function nuStare() { return { valoare: null, stare: "nu-se-poate", prag: null, acoperire: null }; }
+
+  function rataCumulativa(lista, camp, peZi) {
+    if (lista.length < 2) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var p = nr(lista[0][camp]), u = nr(lista[lista.length - 1][camp]);
+    var t0 = nr(lista[0].t), t1 = nr(lista[lista.length - 1].t);
+    if (p === null || u === null || t0 === null || t1 === null) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    // Un contor care SCADE inseamna bot repornit sau schimbat - nu o rata negativa.
+    if (u < p) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var ore = (t1 - t0) / 3600000;
+    if (ore < 1) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var pePas = (u - p) / ore * (peZi ? 24 : 1);
+    return { valoare: pePas, stare: ore >= 2 ? "dovedit" : "putin", prag: peZi ? 2 : 2 };
+  }
+
+  function frecventaStare(lista, potrivit, acum) {
+    var n = lista.length;
+    if (n < 30) return nuStare();
+    var cate = 0;
+    for (var i = 0; i < n; i++) if (potrivit(lista[i])) cate++;
+    // Acoperirea: cate masuratori avem fata de cate minute acopera istoricul.
+    var t0 = nr(lista[0].t);
+    var minute = t0 === null ? 0 : Math.max(1, Math.round((acum - t0) / 60000));
+    var acoperire = Math.min(100, Math.round(100 * n / minute));
+    return { valoare: 100 * cate / n, stare: n >= 60 ? "dovedit" : "putin",
+      prag: 60, acoperire: acoperire };
+  }
+
+  function frecvente(istoric, bot, acum) {
+    var lista = [];
+    if (Array.isArray(istoric)) {
+      for (var k = 0; k < istoric.length; k++) if (istoric[k] && nr(istoric[k].t) !== null) lista.push(istoric[k]);
+    }
+    var x = (bot && bot.buOrderData) || {};
+    var jos = nr(x.bottom), sus = nr(x.top);
+    var areGrid = jos !== null && sus !== null && sus > jos;
+    var pozitia = function (h) {
+      var pp = nr(h.pretPerp);
+      if (pp === null || !areGrid) return null;
+      return 100 * (pp - jos) / (sus - jos);
+    };
+    return {
+      perechiPeOra: rataCumulativa(lista, "perechi", false),
+      netPeZi: rataCumulativa(lista, "profitNet", true),
+      timpInInterval: areGrid ? frecventaStare(lista, function (h) {
+        var p = pozitia(h); return p !== null && p >= 0 && p <= 100;
+      }, acum) : nuStare(),
+      desLaMargine: areGrid ? frecventaStare(lista, function (h) {
+        var p = pozitia(h); return p !== null && p >= 0 && p <= 100 && (p < 15 || p > 85);
+      }, acum) : nuStare()
+    };
+  }
+
   var ZI = 24 * 3600000, MAXIM = 1440;
   function istoricAdauga(istoric, intrare, acum) {
     var t = nr(intrare.t);
@@ -495,6 +553,7 @@ var TabloBot = (function () {
   }
 
   return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte,
-    istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea };
+    istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea,
+    frecvente: frecvente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloBot = TabloBot;

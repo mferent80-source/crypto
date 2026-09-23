@@ -1154,5 +1154,114 @@ await test("eroare: 4xx necunoscut NU se confunda cu 5xx", () => {
   assert.match(e.ceFac, /BAD_REQUEST/, "mesajul brut ramane la vedere");
 });
 
+/* ── T1: frecventele dovedite ─────────────────────────────────────────── */
+function istoricFrecvente(minute, optiuni) {
+  const o = optiuni || {};
+  const pas = o.pasMinute || 1;
+  const out = [];
+  for (let i = minute; i >= 0; i -= pas) {
+    out.push({
+      t: ACUM - i * 60000,
+      perechi: (o.perechiStart != null ? o.perechiStart : 0) + (minute - i) * (o.perechiPeMinut || 0),
+      pretPerp: o.pret != null ? o.pret : 0.0155,
+      pretSpot: 0.0155,
+      profitNet: (o.netStart != null ? o.netStart : 0) + (minute - i) * (o.netPeMinut || 0),
+      comisioane: 0, gridProfitBrut: 0, investit: 100
+    });
+  }
+  return out;
+}
+
+await test("T1: perechi pe ora se socoteste din contorul cumulativ, peste gauri", () => {
+  // 3 ore, 0.1 perechi/minut = 6 pe ora. Scoatem ora din mijloc: rata NU se schimba,
+  // fiindca `perechi` e un TOTAL de la Pionex - include si ce s-a intamplat cat n-am privit.
+  const plin = istoricFrecvente(180, { perechiStart: 0, perechiPeMinut: 0.1 });
+  const cuGaura = plin.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 60 && m < 120); });
+  const a = T.frecvente(plin, BOT, ACUM).perechiPeOra;
+  const b = T.frecvente(cuGaura, BOT, ACUM).perechiPeOra;
+  assert.equal(a.stare, "dovedit");
+  assert.ok(Math.abs(a.valoare - 6) < 0.2, `asteptat ~6 perechi/ora, a dat ${a.valoare}`);
+  assert.ok(Math.abs(b.valoare - a.valoare) < 0.2,
+    `o gaura NU are voie sa schimbe rata unui contor cumulativ: ${b.valoare} vs ${a.valoare}`);
+});
+
+await test("T1: contor cumulativ care SCADE inseamna bot repornit, nu rata negativa", () => {
+  const ist = istoricFrecvente(180, { perechiStart: 500, perechiPeMinut: 0.1 });
+  ist[ist.length - 1].perechi = 3; // botul a fost repornit: contorul a luat-o de la capat
+  const f = T.frecvente(ist, BOT, ACUM).perechiPeOra;
+  assert.equal(f.stare, "nu-se-poate", "un contor care scade nu se traduce in rata negativa");
+  assert.equal(f.valoare, null);
+});
+
+await test("T1: net pe zi din profitNet cumulativ", () => {
+  // 0.01 pe minut = 14.4 pe zi
+  const ist = istoricFrecvente(180, { netStart: 0, netPeMinut: 0.01 });
+  const f = T.frecvente(ist, BOT, ACUM).netPeZi;
+  assert.equal(f.stare, "dovedit");
+  assert.ok(Math.abs(f.valoare - 14.4) < 0.5, `asteptat ~14.4/zi, a dat ${f.valoare}`);
+});
+
+await test("T1: sub o ora de intindere, ratele sunt nu-se-poate; intre 1 si 2 ore, putin", () => {
+  const scurt = T.frecvente(istoricFrecvente(45, { perechiPeMinut: 0.1 }), BOT, ACUM);
+  assert.equal(scurt.perechiPeOra.stare, "nu-se-poate", "45 de minute nu dovedesc o rata pe ora");
+  assert.equal(scurt.perechiPeOra.valoare, null);
+  const mediu = T.frecvente(istoricFrecvente(90, { perechiPeMinut: 0.1 }), BOT, ACUM);
+  assert.equal(mediu.perechiPeOra.stare, "putin", "90 de minute se pot arata, cu rezerva");
+  assert.ok(mediu.perechiPeOra.valoare > 0);
+});
+
+await test("T1: timp in interval numara DOAR intrarile observate, si spune acoperirea", () => {
+  // 100 de intrari, din care 25 cu pretul iesit din interval (BOT: 0.0153..0.0158)
+  const ist = istoricFrecvente(99, { pret: 0.0155 });
+  for (let i = 0; i < 25; i++) ist[i].pretPerp = 0.0170;
+  const f = T.frecvente(ist, BOT, ACUM).timpInInterval;
+  assert.equal(f.stare, "dovedit");
+  assert.ok(Math.abs(f.valoare - 75) < 1.5, `asteptat ~75%, a dat ${f.valoare}`);
+  assert.ok(f.acoperire > 90, `100 de masuratori pe 100 de minute inseamna acoperire mare, a dat ${f.acoperire}`);
+});
+
+await test("T1: acoperirea CADE cand istoricul are gauri, desi procentul ramane", () => {
+  const plin = istoricFrecvente(179, { pret: 0.0155 });
+  const rar = istoricFrecvente(179, { pret: 0.0155, pasMinute: 3 });
+  const a = T.frecvente(plin, BOT, ACUM).timpInInterval;
+  const b = T.frecvente(rar, BOT, ACUM).timpInInterval;
+  assert.ok(Math.abs(a.valoare - b.valoare) < 1, "procentul in sine nu se schimba");
+  assert.ok(b.acoperire < a.acoperire - 40,
+    `cu o masuratoare la 3 minute, acoperirea trebuie sa fie mult mai mica: ${b.acoperire} vs ${a.acoperire}`);
+});
+
+await test("T1: sub 30 de intrari, frecventele de stare sunt nu-se-poate", () => {
+  const f = T.frecvente(istoricFrecvente(20, { pret: 0.0155 }), BOT, ACUM);
+  assert.equal(f.timpInInterval.stare, "nu-se-poate");
+  assert.equal(f.timpInInterval.valoare, null);
+  assert.equal(f.timpInInterval.acoperire, null, "fara date nu se inventeaza nici acoperirea");
+});
+
+await test("T1: cat de des la margine foloseste aceleasi praguri ca pozitia (15/85)", () => {
+  const ist = istoricFrecvente(99, { pret: 0.0155 });      // mijloc
+  for (let i = 0; i < 20; i++) ist[i].pretPerp = 0.01577;  // ~94% din interval
+  const f = T.frecvente(ist, BOT, ACUM).desLaMargine;
+  assert.equal(f.stare, "dovedit");
+  assert.ok(Math.abs(f.valoare - 20) < 1.5, `asteptat ~20%, a dat ${f.valoare}`);
+});
+
+await test("T1: fara grid (jos/sus lipsa) frecventele de stare nu se pot socoti", () => {
+  const botFaraGrid = { ...BOT, gridJos: null, gridSus: null,
+    buOrderData: { ...BOT.buOrderData, bottom: null, top: null } };
+  const f = T.frecvente(istoricFrecvente(99, { pret: 0.0155 }), botFaraGrid, ACUM);
+  assert.equal(f.timpInInterval.stare, "nu-se-poate");
+  assert.equal(f.desLaMargine.stare, "nu-se-poate");
+});
+
+await test("T1: istoric gol sau nevalid nu arunca si nu da zerouri", () => {
+  for (const intrare of [[], null, undefined, "nu-e-lista"]) {
+    const f = T.frecvente(intrare, BOT, ACUM);
+    for (const cheie of ["perechiPeOra", "netPeZi", "timpInInterval", "desLaMargine"]) {
+      assert.equal(f[cheie].stare, "nu-se-poate", `${cheie} pe ${JSON.stringify(intrare)}`);
+      assert.equal(f[cheie].valoare, null, `${cheie} nu are voie sa fie 0 cand lipsesc datele`);
+    }
+  }
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
