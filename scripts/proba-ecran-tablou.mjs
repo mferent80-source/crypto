@@ -315,7 +315,7 @@ async function main() {
       await b.ev(`tbAduDate()`);
     }
 
-    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v73", async () => {
+    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74", async () => {
       await incarcaBotSanatos();
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(600);
@@ -556,7 +556,7 @@ async function main() {
       await b.ev(`tbStare.pretSpotLa = Date.now() - 61000;`);
       await b.ev(`tbAduDate()`); // scrie un rand nou in istoric
       const ultimulPretSpot = await b.ev(`tbStare.istoric[tbStare.istoric.length-1]?.pretSpot`);
-      assert.equal(ultimulPretSpot, null, `pretul spot inghetat nu are voie sa intre in istoric ca fiind viu: ${ultimulPretSpot}`);
+      assert.strictEqual(ultimulPretSpot, null, `pretul spot inghetat nu are voie sa intre in istoric ca fiind viu: ${ultimulPretSpot}`);
     });
 
     /* --- 7. .slice().reverse() presupunea ordinea lumanarilor --- */

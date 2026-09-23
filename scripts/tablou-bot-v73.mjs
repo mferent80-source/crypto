@@ -496,6 +496,10 @@ await test("[revizie] marginStatus rau bate lichidarea calculata (Pionex e mai a
   m.marginStatus = { valoare: "LIQUIDATING", stare: "rau", prag: "NORMAL" };
   const v = T.verdict(m, "GRID");
   assert.equal(v.nivel, "OPRESTE", "starea de cont de la Pionex trebuie sa bata o lichidare calculata linistitoare");
+  // Nivelul singur NU masoara ordinea: si calea lichidarii duce tot la OPRESTE.
+  // Ce deosebeste e DECLANSATORUL - el ii spune omului DE CE se opreste.
+  assert.equal(v.declansator && v.declansator.masura, "marginStatus",
+    "declansatorul trebuie sa arate starea de cont, nu lichidarea calculata");
 });
 
 await test("[revizie] marginStatus/riskStatus NECUNOSCUT (camp lipsa) NU declanseaza OPRESTE", () => {
@@ -977,6 +981,27 @@ await test("ceas dat inapoi (t mai vechi decat ultima) se respinge", () => {
   ist = T.istoricAdauga(ist, { t: acum - 65000, perechi: 99 }, acum);
   assert.equal(ist.length, lungimeOrig, "intrarea cu t mai vechi se respinge");
   assert.deepEqual(ist.map((x) => x.perechi), perechiOrig, "lista ramane neatinsa la ceas mai vechi");
+});
+
+await test("pretPerpViu falsy (null/0/\"\"/false) cade pe ultima inchidere, nu pe 0", () => {
+  const ultimaInchidere = ZIGZAG[ZIGZAG.length - 1].close;
+  const bazaFaraViu = T.masoara({ ...INTRARI, acum: ACUM });
+  assert.equal(bazaFaraViu.pretPerp, ultimaInchidere, "fara pretPerpViu se ia ultima inchidere");
+
+  // app.js trimite EXPLICIT null la bot de grid SPOT sau la pana de tickere.
+  // Number(null) === 0, iar un pretPerp de 0 fabrica basis -100% si pozitie -700%,
+  // amandoua marcate "bine". Verdictul devine o cifra inventata din date lipsa.
+  for (const falsy of [null, undefined, 0, "", false]) {
+    const m = T.masoara({ ...INTRARI, pretPerpViu: falsy, acum: ACUM });
+    assert.equal(m.pretPerp, ultimaInchidere,
+      "pretPerpViu=" + JSON.stringify(falsy) + " ar trebui sa cada pe ultima inchidere, nu pe " + m.pretPerp);
+    assert.ok(m.basis.valoare === null || Math.abs(m.basis.valoare) < 50,
+      "pretPerpViu=" + JSON.stringify(falsy) + " nu are voie sa fabrice basis " + m.basis.valoare);
+  }
+
+  // un pret viu ADEVARAT trebuie sa bata lumanarea cache-uita 300 s
+  const viu = T.masoara({ ...INTRARI, pretPerpViu: 0.0161, acum: ACUM });
+  assert.equal(viu.pretPerp, 0.0161, "un pret viu pozitiv bate lumanarea");
 });
 
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);

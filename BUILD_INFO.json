@@ -23,5 +23,5 @@
   "notes": "Market breadth is a context/confirmation layer. It does not independently create BUY/SELL orders and does not add live order placement.",
   "base": "v70 Pionex Auto Journal & Reconciliation Pro",
   "focus": "correct Pionex journal accounting, strict read-only safety, transparent history completeness and adversarial regression coverage.",
-  "gate": "npm test ruleaza 50 de verificari in 4 suite; inainte chema 21 de scripturi inexistente"
+  "gate": "npm test ruleaza 178 de verificari in 6 suite; separat, npm run test:ecran ruleaza 18 scenarii in Chrome real prin CDP (cere Chrome + server pe :8788)"
 }

@@ -79,7 +79,12 @@ var TabloBot = (function () {
     // ultimei lumanari de 5m (cache 300s pe ruta - pana la ~10 minute vechi).
     // Lumanarile raman pentru eficienta si amplitudine - alea au nevoie de
     // serie, nu de un singur punct.
-    var pretPerpViu = nr(intrari.pretPerpViu);
+    // nr() intoarce 0 pentru null/""/false (Number(null) === 0), iar app.js trimite
+    // EXPLICIT null la un bot de grid SPOT sau la o pana de tickere. Un pretPerp de 0
+    // fabrica basis -100% si pozitie -700%, amandoua marcate "bine". Doar un pret
+    // STRICT POZITIV are voie sa bata lumanarea.
+    var pvBrut = nr(intrari.pretPerpViu);
+    var pretPerpViu = (pvBrut !== null && pvBrut > 0) ? pvBrut : null;
     var pretPerp = pretPerpViu !== null ? pretPerpViu : (inchideri.length ? inchideri[inchideri.length - 1] : null);
     var pretSpot = nr(intrari.pretSpot);
     var istoric = intrari.istoric || [];
