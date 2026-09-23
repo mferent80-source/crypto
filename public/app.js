@@ -4508,7 +4508,10 @@ async function tbAduDate(){
       // Pastram lumanarile vechi (mai bine decat nimic), dar le marcam invechite.
       tbStare.klineStare="invechit";
     }
-    tbPorneWs(s.binance);
+    // Colectorul de fundal (alt ecran) cheama tot tbAduDate() - dar n-are
+    // voie sa deschida WebSocket cand nu esti pe panou: "fara WebSocket in
+    // fundal" cere pretul spot ramas null in istoric (vezi tbColectorTick).
+    if(tbPanouVizibil())tbPorneWs(s.binance);
     if(tbStare.bot.id){
       // Istoricul se tine PE BOT (cheie cu id-ul normalizat), nu intr-o cheie
       // comuna - contorul de perechi e cumulativ per bot, un istoric amestecat
@@ -4584,6 +4587,30 @@ function opresteTabloBot(){
   if(tbStare.ceas){clearInterval(tbStare.ceas);tbStare.ceas=null}
   tbInchideWs();
 }
+// Colectorul aduna istoric cat timp APLICATIA e deschisa, pe orice ecran -
+// altfel ecranul pe care Marius il vrea central e orb cat sta pe alt ecran.
+// Cadenta: 8 s cand panoul se vede, 60 s cand nu. Fara WebSocket in fundal:
+// pretul spot ramane null in istoric, iar consumatorii sar peste null.
+var tbColector=null;
+function tbPanouVizibil(){return !!($("tabloubot")&&$("tabloubot").classList.contains("on"))}
+function tbColectorTick(){
+  // tbAduDate NU scrie in istoric daca ruta a picat - purtarea aia ramane.
+  return tbAduDate().then(function(){if(tbPanouVizibil())renderTabloBot()});
+}
+function tbColectorPornit(){
+  if(tbColector)return;
+  var pas=tbPanouVizibil()?8000:60000;
+  tbColector=setInterval(function(){
+    if(document.hidden)return;                       // tab in fundal: nu batem ruta degeaba
+    var cerut=tbPanouVizibil()?8000:60000;
+    if(cerut!==pas){pas=cerut;tbColectorOprit();tbColectorPornit();return}
+    tbColectorTick();
+  },pas);
+}
+function tbColectorOprit(){if(tbColector){clearInterval(tbColector);tbColector=null}}
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden)tbColectorOprit();else tbColectorPornit();
+});
 function tbNivelClasa(nivel){
   if(nivel==="OPRESTE"||nivel==="PAZESTE"||nivel==="EROARE")return "bad";
   if(nivel==="OPORTUNITATE"||nivel==="LINISTE")return "good";
@@ -4829,4 +4856,4 @@ function refreshV67Operations(persist=true){const prev=v67LastState,x=renderV67O
 function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;window.__v67BootId=`${v67Now()}-${Math.random().toString(36).slice(2,8)}`;v67RecoverAfterRestart();refreshV67Operations(true);const cfg=v67OpsSettings();v67OpsTimer=setInterval(()=>refreshV67Operations(true),Math.max(10000,+cfg.watchdogMs||30000));if(typeof window!=="undefined"){window.addEventListener("online",()=>refreshV67Operations(true));window.addEventListener("offline",()=>{v67Incident("HARD","NETWORK_OFFLINE","Browser reported offline");refreshV67Operations(true)});window.addEventListener("pagehide",()=>{v67RecoverySnapshot();const hb=v60StoreGet("opsHeartbeatV67",{});hb.cleanPagehideTs=v67Now();v60StoreSet("opsHeartbeatV67",hb)});document?.addEventListener?.("visibilitychange",()=>{if(document.visibilityState==="visible")refreshV67Operations(true)})}}
 
 // Boot only after every versioned module and its lexical state are initialized.
-applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
+applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});

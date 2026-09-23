@@ -686,6 +686,37 @@ async function main() {
         `textul inca promite ca se sterge la inchiderea sesiunii: "${String(zona).slice(0, 220)}"`);
     });
 
+    await test("22. colectorul scrie in istoric si de pe ALT ecran", async () => {
+      const id = "9401";
+      await b.ev(`Object.keys(localStorage).filter(k=>k.startsWith('tabloBotIstoric_v1_')).forEach(k=>localStorage.removeItem(k))`);
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: id, baza: "ADA.PERP" }))] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`navTo('dash', true)`);                 // plecam de pe tablou
+      await b.ev(`window.__proba.setItemLog = []`);
+      await b.ev(`tbColectorTick()`);                     // un tic, fara sa asteptam 60 s
+      await asteapta(800);
+      const scris = await b.ev(`window.__proba.setItemLog.some(k=>k==='tabloBotIstoric_v1_${id}')`);
+      assert.ok(scris, "colectorul trebuie sa adune istoric si cand esti pe alt ecran");
+    });
+
+    await test("23. colectorul NU scrie in timpul unei pene de ruta", async () => {
+      await b.ev(`window.__proba.setItemLog = []`);
+      await seteazaMock(b, "botOrders", { reteaPicata: true });
+      await b.ev(`tbColectorTick()`);
+      await asteapta(800);
+      const scrieri = await b.ev(`window.__proba.setItemLog.filter(k=>k.startsWith('tabloBotIstoric_v1_')).length`);
+      assert.equal(scrieri, 0, "o pana de retea nu are voie sa devina dovada in istoric");
+    });
+
+    await test("24. in fundal NU se deschide WebSocket - doar cand esti pe tablou", async () => {
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: "9402", baza: "ADA.PERP" }))] }, stare: 200 });
+      await b.ev(`navTo('dash', true)`);
+      await b.ev(`tbColectorTick()`);
+      await asteapta(800);
+      const wsInFundal = await b.ev(`!!(tbStare.ws && tbStare.ws.readyState !== 3)`);
+      assert.equal(wsInFundal, false, "un WebSocket deschis pe toate ecranele e risipa si tine socketul ocupat");
+    });
+
   } finally {
     b.inchide();
     // Windows tine profilul incuiat cateva secunde dupa ce Chrome primeste
