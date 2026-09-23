@@ -4405,10 +4405,11 @@ async function incarcaBoti(cuToast=false){
   if(cuToast)toast(`Bo\u021bi: ${bots.length} \u00b7 net ${botiBan(s.profitNetTotal)}`,(s.profitNetTotal||0)>=0?'good':'warn');
   return d
 }
-var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1";
+var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1",TB_BOT_ALES="tabloBotAles_v1";
 var tbStare={bot:null,botBrut:null,boti:[],klinePerp:[],klineStare:"ok",
   pretSpot:null,pretSpotLa:0,ws:null,wsSimbol:null,wsIncercari:0,wsTimeout:null,
-  ceas:null,routeOk:null,eroare:null,probleme:null,stocareStricata:false,istoric:[]};
+  ceas:null,routeOk:null,eroare:null,eroareStatus:null,probleme:null,
+  motivAlegere:null,stocareStricata:false,istoric:[]};
 function tbCiteste(cheie){try{return JSON.parse(localStorage.getItem(cheie)||"null")||null}catch(e){return null}}
 function tbScrie(cheie,val){try{localStorage.setItem(cheie,JSON.stringify(val));return true}catch(e){return false}}
 function tbPretSpotProaspat(){return tbStare.pretSpot!=null&&(Date.now()-tbStare.pretSpotLa)<=60000}
@@ -4417,6 +4418,33 @@ function tbPretSpotProaspat(){return tbStare.pretSpot!=null&&(Date.now()-tbStare
 function tbFormateazaSemn(v,zecimale){
   var z=zecimale==null?1:zecimale;
   return v<0?"\u2212"+Math.abs(v).toFixed(z):v.toFixed(z);
+}
+function tbAlegeBot(id){
+  // Alegerea omului se tine pe disc, ca sa supravietuiasca unui refresh. Daca
+  // botul dispare intre timp, alegeBot cade inapoi pe automat SI spune asta.
+  tbScrie(TB_BOT_ALES,String(id||""));
+  var alegere=TabloBot.alegeBot(tbStare.boti,String(id||""));
+  tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
+  tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
+  // Simbol nou => lumanari noi, WebSocket nou, istoricul altui bot.
+  tbStare.klinePerp=[];tbStare.pretSpot=null;tbStare.pretSpotLa=0;tbStare.istoric=[];
+  renderTabloBot();
+  tbAduDate().then(renderTabloBot);
+}
+function tbDeseneazaSelectorul(){
+  var sel=$("tbBotAles");if(!sel)return;
+  var boti=tbStare.boti||[];
+  // Sub doi boti nu e nimic de ales - butonul ar fi zgomot.
+  if(boti.length<2){sel.hidden=true;sel.innerHTML="";return}
+  sel.hidden=false;
+  var curent=tbStare.bot?String(tbStare.bot.id):"";
+  var html="";
+  for(var i=0;i<boti.length;i++){
+    var b=boti[i],id=String(b.id);
+    html+='<option value="'+escapeHtml(id)+'"'+(id===curent?" selected":"")+">"+
+      escapeHtml(b.simbol+(b.activ?"":" (oprit)"))+"</option>";
+  }
+  sel.innerHTML=html;
 }
 function tbSchimbaModul(){
   var b=tbStare.bot,brut=tbStare.botBrut;
@@ -4444,17 +4472,20 @@ async function tbAduDate(){
     if(!d||!Array.isArray(d.bots))throw new Error("Raspuns nevalid de la /api/bot-orders - lipseste lista de boti.");
     tbStare.probleme=d.probleme||null;
     tbStare.boti=d.bots;
-    // Prefera un bot ACTIV - ruta intoarce si boti inchisi, iar ordinea nu e garantata.
-    var activi=d.bots.filter(function(x){return x&&x.activ});
-    tbStare.bot=activi[0]||d.bots[0]||null;
+    // Alegerea sta in modulul pur (probata acolo): preferinta omului bate, apoi
+    // un bot ACTIV, apoi primul. Ruta intoarce si boti inchisi, iar ordinea nu e
+    // garantata. Motivul se pastreaza fiindca omul trebuie sa poata afla daca se
+    // uita la botul LUI sau la unul ales de ecran.
+    var alegere=TabloBot.alegeBot(d.bots,tbCiteste(TB_BOT_ALES));
+    tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
     tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
     tbStare.routeOk=true;
   }catch(e){
     // Ruta a picat - nu stim daca exista bot sau nu. Golim botul curent ca sa
     // nu mai ceara lumanari si sa nu mai scrie in istoric cu date vechi -
     // altfel o pana de retea ar minti verdictul (masurat mai jos, in raport).
-    tbStare.eroare=e.message;tbStare.routeOk=false;
-    tbStare.bot=null;tbStare.botBrut=null;tbStare.boti=[];
+    tbStare.eroare=e.message;tbStare.eroareStatus=e.status||null;tbStare.routeOk=false;
+    tbStare.bot=null;tbStare.botBrut=null;tbStare.boti=[];tbStare.motivAlegere=null;
   }
   if(tbStare.bot){
     var s=TabloBot.simboluri(tbStare.bot.baza,tbStare.bot.quote);
@@ -4569,8 +4600,11 @@ function renderTabloBot(){
   var mod=TabloBot.modBot(brut,alegeri);
   var v;
   if(eroareActiva){
-    v={nivel:"EROARE",titlu:"Nu am putut citi boții",
-      ceFac:tbStare.eroare||"Eroare necunoscută.",declansator:null};
+    // "AUTH_REQUIRED" e corect tehnic si inutil pentru om: nu-i spune nici unde
+    // e, nici ce are de facut. explicaEroarea traduce in ce trebuie sa faca.
+    var ex=TabloBot.explicaEroarea(tbStare.eroare,tbStare.eroareStatus,
+      (typeof location!=="undefined"&&location.hostname)||"");
+    v={nivel:"EROARE",titlu:ex.titlu,ceFac:ex.ceFac,declansator:null};
   }else if(b&&tbStare.stocareStricata){
     v={nivel:"EROARE",titlu:"Stocarea locală nu funcționează",
       ceFac:"Acest browser blochează localStorage, deci nu pot ține istoricul botului - ritmul și verdictele care depind de el rămân nedovedite pe veci, nu doar 30 de minute.",
@@ -4579,6 +4613,7 @@ function renderTabloBot(){
     v=TabloBot.verdict(m,mod.mod,{faraBot:faraBot});
   }
   var note=[];
+  tbDeseneazaSelectorul();
   if(!eroareActiva&&tbStare.probleme&&tbStare.probleme.preturi)
     note.push("Pionex: tickere PERP indisponibile ("+tbStare.probleme.preturi+")");
   if(!eroareActiva&&b&&tbStare.klineStare==="invechit")
@@ -4593,6 +4628,10 @@ function renderTabloBot(){
       // nu sa citeasca o eticheta care minte exact ca cea reparata la I4/I5.
       var eticheta=b.activ?(total>1?"activ, din "+total+" boți":""):("oprit"+(total>1?", din "+total+" boți":""));
       $("tbSimbol").textContent=b.simbol+(eticheta?" · "+eticheta:"");
+      // Daca botul ales de om a disparut, ecranul NU are voie sa arate tacut
+      // altul: omul ar crede ca se uita la al lui.
+      if(tbStare.motivAlegere==="preferat-disparut")
+        note.push("botul ales de tine nu mai e în listă - se arată "+b.simbol);
     }
   }
   if($("tbMod")){

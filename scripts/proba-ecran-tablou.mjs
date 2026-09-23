@@ -315,7 +315,7 @@ async function main() {
       await b.ev(`tbAduDate()`);
     }
 
-    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74", async () => {
+    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74.2", async () => {
       await incarcaBotSanatos();
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(600);
@@ -335,8 +335,8 @@ async function main() {
       // textContent, nu innerText: badge-ul de build sta in sidebar-ul care e
       // ascuns la 390px (latimea de telefon folosita de proba) - innerText
       // sare peste text ascuns, textContent nu.
-      const areBadge = await b.ev(`document.body.textContent.includes('v74 · TABLOUL BOTULUI')`);
-      assert.ok(areBadge, "badge-ul v74 · TABLOUL BOTULUI nu apare pe pagina");
+      const areBadge = await b.ev(`document.body.textContent.includes('v74.2 · TABLOUL BOTULUI')`);
+      assert.ok(areBadge, "badge-ul v74.2 · TABLOUL BOTULUI nu apare pe pagina");
     });
 
     await test("fara bot in cont: FARA_BOT, tot 7 masuri, rigla spune asta", async () => {
@@ -560,6 +560,66 @@ async function main() {
     });
 
     /* --- 7. .slice().reverse() presupunea ordinea lumanarilor --- */
+    /* ═══ v74.2: selectorul de boti (I9) si eroarea care spune CE SA FACI ═══ */
+
+    await test("14. cu un singur bot, selectorul NU apare - n-ar fi nimic de ales", async () => {
+      await incarcaBotSanatos({ strategyId: "9101", baza: "ADA.PERP" });
+      const ascuns = await b.ev(`document.getElementById('tbBotAles').hidden`);
+      assert.equal(ascuns, true, "cu un singur bot selectorul ar trebui ascuns");
+    });
+
+    await test("15. cu doi boti, selectorul apare si APASAREA lui schimba botul judecat", async () => {
+      const unu = botBrut({ strategyId: "9201", baza: "ADA.PERP" });
+      const doi = botBrut({ strategyId: "9202", baza: "SOL.PERP" });
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(unu), botNormalizat(doi)] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`localStorage.removeItem('tabloBotAles_v1')`);
+      await b.ev(`tbAduDate()`);
+      await b.ev(`renderTabloBot()`);
+
+      const vizibil = await b.ev(`document.getElementById('tbBotAles').hidden === false`);
+      assert.ok(vizibil, "cu doi boti selectorul trebuie sa fie la vedere");
+      const optiuni = await b.ev(`document.getElementById('tbBotAles').options.length`);
+      assert.equal(optiuni, 2, `ar trebui doua optiuni, sunt ${optiuni}`);
+
+      const inainte = await textEl(b, "tbSimbol");
+      // Apasam CHIAR pe el, cu evenimentul real - nu chemam functia pe scurtatura.
+      await b.ev(`(() => { const s = document.getElementById('tbBotAles');
+        s.value = '9202'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+      await asteapta(600);
+      const dupa = await textEl(b, "tbSimbol");
+      assert.notEqual(String(dupa), String(inainte), "alegerea din selector trebuie sa schimbe botul judecat");
+      assert.match(String(dupa), /SOL/, `dupa alegere ar trebui SOL, arata: ${dupa}`);
+      const pastrat = await b.ev(`JSON.parse(localStorage.getItem('tabloBotAles_v1')||'null')`);
+      assert.equal(String(pastrat), "9202", "alegerea trebuie tinuta pe disc, ca sa treaca de un refresh");
+    });
+
+    await test("16. botul ales de om care DISPARE nu se inlocuieste tacut", async () => {
+      await b.ev(`localStorage.setItem('tabloBotAles_v1', JSON.stringify('fantoma'))`);
+      const unu = botBrut({ strategyId: "9301", baza: "ADA.PERP" });
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(unu)] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      await b.ev(`renderTabloBot()`);
+      const text = await b.ev(`document.getElementById('tabloubot').textContent`);
+      assert.match(String(text), /nu mai e în listă/,
+        "cand botul ales a disparut, ecranul trebuie sa SPUNA - altfel omul crede ca se uita la al lui");
+      await b.ev(`localStorage.removeItem('tabloBotAles_v1')`);
+    });
+
+    await test("17. eroarea de autentificare spune CE SA FACA, nu codul AUTH_REQUIRED", async () => {
+      await seteazaMock(b, "botOrders", { corp: { error: "AUTH_REQUIRED", authenticated: false }, stare: 401 });
+      await b.ev(`tbAduDate()`);
+      await b.ev(`renderTabloBot()`);
+      // ceFac se scrie in #tbCeFac; #tbDeCe tine DECLANSATORUL, care la eroare e gol.
+      const titlu = await textEl(b, "tbTitlu");
+      const ceFac = await textEl(b, "tbCeFac");
+      assert.ok(!/AUTH_REQUIRED/.test(String(titlu) + String(ceFac)),
+        `omul nu are ce face cu "AUTH_REQUIRED": titlu="${titlu}" ceFac="${ceFac}"`);
+      assert.match(String(ceFac), /PORNESTE-CRYPTO-RADAR/,
+        `trebuie sa-i spuna cu ce sa porneasca: "${ceFac}"`);
+    });
+
     await test("13. lumanarile se sorteaza dupa timp, nu se presupune ordinea de la ruta", async () => {
       await incarcaBotSanatos({ strategyId: "8113", baza: "ADA.PERP" });
       const mock = lumanariCorpMock(60);

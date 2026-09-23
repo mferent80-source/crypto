@@ -58,15 +58,22 @@ var TabloBot = (function () {
   // numarat inapoi din `acum` pe istoricul retinut. Se opreste la prima
   // intrare care nu mai e la margine (fie "bine", fie "afara" de tot) - o
   // iesire scurta din banda taie sirul, nu se aduna peste ea.
+  // O gaura in istoric (ecranul inchis, o pana de retea) NU e dovada ca pretul
+  // a stat la margine cat a lipsit. Doua masuratori rare, la 200 de minute una
+  // de alta, raportau 200 de minute "continue" si aprindeau REGLEAZA pe o
+  // dovada care nu exista. Lantul se rupe la gaura, nu se numara peste ea.
+  var GAURA_MAX_MS = 5 * 60000;
   function minuteContinuuLaMargine(istoric, jos, sus, acum) {
     if (!istoric || !istoric.length || !(sus > jos)) return 0;
-    var min = 0;
+    var min = 0, urmator = acum;
     for (var i = istoric.length - 1; i >= 0; i--) {
       var pp = nr(istoric[i].pretPerp), t = nr(istoric[i].t);
       if (pp === null || t === null) break;
+      if (urmator - t > GAURA_MAX_MS) break;
       var poz = 100 * (pp - jos) / (sus - jos);
       if (!(poz >= 0 && poz <= 100 && (poz < 15 || poz > 85))) break;
       min = (acum - t) / 60000;
+      urmator = t;
     }
     return min;
   }
@@ -388,6 +395,67 @@ var TabloBot = (function () {
     return { mod: "GRID", presupus: true };
   }
 
+  // O eroare care arata codul si atat ("AUTH_REQUIRED") e tot un ecran care
+  // tace cand ar trebui sa vorbeasca: omul afla ca ceva a esuat, nu ce sa faca.
+  // 23.09.2026: Marius a deschis versiunea publicata si a primit exact asta.
+  function explicaEroarea(mesaj, status, gazda) {
+    var g = String(gazda == null ? "" : gazda).toLowerCase();
+    var local = g === "localhost" || g === "127.0.0.1" || g === "[::1]" || g === "";
+    var brut = (mesaj == null || mesaj === "") ? "Eroare necunoscută." : String(mesaj);
+    var st = nr(status);
+    var eAuth = st === 401 || st === 403 || /AUTH/i.test(brut);
+    var eRitm = st === 429 || /RATE|429/i.test(brut);
+
+    if (eAuth && !local) {
+      return { local: local, titlu: "Boții se văd doar de pe calculatorul tău",
+        ceFac: "Ești pe versiunea publicată, care nu are cheile tale - și nici nu " +
+          "i-ar folosi: Pionex refuză cererile venite de la Cloudflare. Ca să-ți " +
+          "vezi boții, pornește aplicația acasă cu PORNESTE-CRYPTO-RADAR.bat și " +
+          "deschide adresa pe care ți-o scrie el." };
+    }
+    if (eAuth && local) {
+      return { local: local, titlu: "Cheile Pionex nu sunt puse",
+        ceFac: "Aplicația rulează, dar nu are cu ce să se legitimeze la Pionex. " +
+          "Închide fereastra neagră și pornește din nou cu PORNESTE-CRYPTO-RADAR.bat - " +
+          "îți cere cele trei chei o dată, la pornire." };
+    }
+    if (eRitm && !local) {
+      return { local: local, titlu: "Pionex refuză cererile de aici",
+        ceFac: "Nu e vina ta și nu trece cu așteptarea: măsurat, refuzul vine cu " +
+          "găleata de jetoane PLINĂ, deci e refuz de adresă, nu limitare de ritm. " +
+          "De acasă, prin PORNESTE-CRYPTO-RADAR.bat, merge." };
+    }
+    if (eRitm && local) {
+      return { local: local, titlu: "Prea multe cereri către Pionex",
+        ceFac: "S-au cerut date prea des. Lasă ecranul deschis un minut fără să " +
+          "dai refresh - se reia singur." };
+    }
+    return { local: local, titlu: "Nu am putut citi boții", ceFac: brut };
+  }
+
+  // Care bot se judeca. Ecranul alegea singur primul activ si nu-i dadea omului
+  // cum sa aleaga altul (I9). Alegerea sta aici, nu in ecran, ca sa fie probata.
+  // Intoarce si MOTIVUL, fiindca omul trebuie sa poata afla daca se uita la
+  // botul LUI sau la unul ales de ecran - mai ales cand preferatul a disparut.
+  function alegeBot(boti, idPreferat) {
+    var lista = [];
+    if (Array.isArray(boti)) {
+      for (var k = 0; k < boti.length; k++) if (boti[k]) lista.push(boti[k]);
+    }
+    if (!lista.length) return { bot: null, motiv: "fara-boti" };
+    // Ruta poate da id numeric, localStorage intoarce mereu un sir.
+    var cheie = (idPreferat === undefined || idPreferat === null) ? "" : String(idPreferat);
+    if (cheie) {
+      for (var i = 0; i < lista.length; i++) {
+        if (String(lista[i].id) === cheie) return { bot: lista[i], motiv: "ales-de-om" };
+      }
+    }
+    var activ = null;
+    for (var j = 0; j < lista.length; j++) { if (lista[j].activ) { activ = lista[j]; break; } }
+    return { bot: activ || lista[0],
+      motiv: cheie ? "preferat-disparut" : (activ ? "auto-activ" : "auto-primul") };
+  }
+
   var ZI = 24 * 3600000, MAXIM = 1440;
   function istoricAdauga(istoric, intrare, acum) {
     var t = nr(intrare.t);
@@ -410,6 +478,7 @@ var TabloBot = (function () {
     return out;
   }
 
-  return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte, istoricAdauga: istoricAdauga };
+  return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte,
+    istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloBot = TabloBot;

@@ -73,13 +73,17 @@ verificate++;
 const swCale = path.join(RADACINA, "public/sw.js");
 if (!fs.existsSync(swCale)) probleme.push("public/sw.js lipseste");
 else {
-  const major = String(pkg.version).split(".")[0];
+  const [major, minor] = String(pkg.version).split(".");
   const sw = fs.readFileSync(swCale, "utf8");
   const numeCache = (sw.match(/const\s+CACHE\s*=\s*["'`]([^"'`]+)["'`]/) || [])[1];
+  // Doar majorul NU ajunge: o livrare 74.0 -> 74.2 trecea cu cache-ul neschimbat,
+  // adica exact defectul pe care garda asta il pazeste. Conventia depozitului:
+  // 74.0.0 -> "crypto-radar-v74", 74.2.0 -> "crypto-radar-v74-2".
+  const asteptat = Number(minor) ? `v${major}-${minor}` : `v${major}`;
   if (!numeCache) probleme.push("public/sw.js: nu gasesc `const CACHE=...`");
-  else if (!new RegExp("v" + major + "($|[^0-9])").test(numeCache)) {
-    probleme.push("public/sw.js: cache \"" + numeCache + "\" nu poarta v" + major +
-      " din package.json (" + pkg.version + ")");
+  else if (!new RegExp(asteptat.replace("-", "[-.]") + "($|[^0-9])").test(numeCache)) {
+    probleme.push(`public/sw.js: cache "${numeCache}" nu poarta ${asteptat} ` +
+      `din package.json (${pkg.version}) - browserul ar servi codul VECHI`);
   }
 }
 

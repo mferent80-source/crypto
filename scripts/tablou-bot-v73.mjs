@@ -1004,5 +1004,129 @@ await test("pretPerpViu falsy (null/0/\"\"/false) cade pe ultima inchidere, nu p
   assert.equal(viu.pretPerp, 0.0161, "un pret viu pozitiv bate lumanarea");
 });
 
+/* ── I9: alegerea botului ─────────────────────────────────────────────────
+   Pana acum ecranul judeca botul ales de el insusi (primul activ), fara sa-i
+   dea omului cum sa aleaga altul. Logica de alegere sta in modulul PUR ca sa
+   poata fi probata; ecranul doar o cheama si deseneaza lista. */
+
+const B_ACTIV = { id: "a1", simbol: "COTI_USDT_PERP", activ: true };
+const B_ACTIV2 = { id: "a2", simbol: "BTC_USDT_PERP", activ: true };
+const B_OPRIT = { id: "o1", simbol: "ETH_USDT_PERP", activ: false };
+
+await test("I9: fara preferinta, alege primul ACTIV, nu primul din lista", () => {
+  const r = T.alegeBot([B_OPRIT, B_ACTIV], null);
+  assert.equal(r.bot.id, "a1", "un bot activ bate unul oprit, oricare e ordinea rutei");
+  assert.equal(r.motiv, "auto-activ");
+});
+
+await test("I9: fara niciun bot activ, alege primul si SPUNE ca e alegerea lui", () => {
+  const r = T.alegeBot([B_OPRIT], null);
+  assert.equal(r.bot.id, "o1");
+  assert.equal(r.motiv, "auto-primul", "omul trebuie sa poata afla ca ecranul a ales singur");
+});
+
+await test("I9: preferinta omului bate alegerea automata, chiar daca botul e OPRIT", () => {
+  const r = T.alegeBot([B_ACTIV, B_OPRIT], "o1");
+  assert.equal(r.bot.id, "o1", "daca omul a ales anume botul oprit, aia se arata");
+  assert.equal(r.motiv, "ales-de-om");
+});
+
+await test("I9: preferinta pentru un bot care a DISPARUT nu lasa ecranul gol si nu minte", () => {
+  // Cazul real: omul alege un bot, botul se inchide, ruta nu-l mai intoarce.
+  const r = T.alegeBot([B_ACTIV, B_ACTIV2], "fantoma");
+  assert.equal(r.bot.id, "a1", "cade inapoi pe alegerea automata, nu pe null");
+  assert.equal(r.motiv, "preferat-disparut",
+    "motivul trebuie sa spuna ca preferatul a disparut - altfel omul crede ca se uita la botul lui");
+});
+
+await test("I9: lista goala sau nevalida da bot null, fara sa arunce", () => {
+  for (const intrare of [[], null, undefined, "nu-e-lista"]) {
+    const r = T.alegeBot(intrare, "a1");
+    assert.equal(r.bot, null, `${JSON.stringify(intrare)} ar trebui sa dea bot null`);
+    assert.equal(r.motiv, "fara-boti");
+  }
+});
+
+await test("I9: id-ul se compara ca TEXT (ruta poate da numar, localStorage da mereu sir)", () => {
+  const cuNumar = [{ id: 77, simbol: "X_USDT_PERP", activ: false }, B_ACTIV];
+  const r = T.alegeBot(cuNumar, "77");
+  assert.equal(r.bot.id, 77, "'77' din localStorage trebuie sa gaseasca id-ul numeric 77");
+  assert.equal(r.motiv, "ales-de-om");
+});
+
+/* ── gaura din durata la margine ──────────────────────────────────────────
+   minuteContinuuLaMargine numara intre PRIMA si ULTIMA intrare la margine,
+   fara sa se uite daca intre ele istoricul are GAURI. Doua masuratori rare,
+   la 200 de minute distanta, raportau 200 de minute "continue" - si aprindeau
+   REGLEAZA pe o dovada care nu exista. */
+
+await test("durata la margine NU numara peste o gaura din istoric", () => {
+  const acum = ACUM;
+  // Doua intrari la margine, la 200 min distanta, si NIMIC intre ele.
+  const rar = [
+    { t: acum - 200 * 60000, pretPerp: PRET_MARGINE, pretSpot: PRET_MARGINE, perechi: 1 },
+    { t: acum, pretPerp: PRET_MARGINE, pretSpot: PRET_MARGINE, perechi: 2 }
+  ];
+  const m = T.masoara({ bot: BOT, klinePerp: KLINE_MARGINE, pretSpot: PRET_MARGINE, istoric: rar, acum });
+  const durata = m.pozitieInterval.minuteLaMargine;
+  assert.ok(typeof durata === "number" && durata < 60,
+    `doua masuratori la 200 min distanta nu dovedesc 200 min continue la margine (a zis ${durata})`);
+
+  // Si controlul: cu istoric DES, aceleasi 200 de minute chiar se numara.
+  const des = [];
+  for (let i = 200; i >= 0; i--) des.push({ t: acum - i * 60000, pretPerp: PRET_MARGINE, pretSpot: PRET_MARGINE, perechi: 1 });
+  const m2 = T.masoara({ bot: BOT, klinePerp: KLINE_MARGINE, pretSpot: PRET_MARGINE, istoric: des, acum });
+  assert.ok(m2.pozitieInterval.minuteLaMargine >= 199,
+    `cu masuratori din minut in minut, 200 de minute la margine TREBUIE numarate (a zis ${m2.pozitieInterval.minuteLaMargine})`);
+});
+
+/* ── eroarea trebuie sa spuna CE SA FACA, nu doar ca a esuat ──────────────
+   23.09: Marius a deschis versiunea publicata si a vazut "Nu am putut citi
+   botii · AUTH_REQUIRED". Corect tehnic, inutil pentru el: nu-i spune nici
+   unde e, nici ce are de facut. O eroare fara motiv e tot un ecran care tace
+   cand ar trebui sa vorbeasca. */
+
+await test("eroare: AUTH pe versiunea PUBLICATA spune unde sa se duca, nu codul", () => {
+  const e = T.explicaEroarea("AUTH_REQUIRED", 401, "crypto-wuy.pages.dev");
+  assert.ok(!/AUTH_REQUIRED|401/.test(e.titlu), `titlul nu are voie sa fie jargon: "${e.titlu}"`);
+  assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR/,
+    "trebuie sa-i spuna EXACT cu ce sa porneasca acasa");
+  assert.match(e.ceFac, /Pionex/, "trebuie sa spuna de ce nu merge aici");
+  assert.equal(e.local, false);
+});
+
+await test("eroare: AUTH pe LOCAL e alta poveste - acolo lipsesc cheile", () => {
+  for (const gazda of ["localhost", "127.0.0.1"]) {
+    const e = T.explicaEroarea("AUTH_REQUIRED", 401, gazda);
+    assert.equal(e.local, true, gazda + " trebuie recunoscut ca local");
+    assert.match(e.ceFac, /chei/i, `pe local, vina e la chei, nu la Cloudflare: "${e.ceFac}"`);
+    assert.ok(!/pages\.dev/.test(e.ceFac),
+      "pe local nu are rost sa-i vorbeasca despre versiunea publicata");
+  }
+});
+
+await test("eroare: 429 pe PUBLICAT e refuzul Pionex fata de IP, nu vina omului", () => {
+  const e = T.explicaEroarea("RATE_LIMIT", 429, "crypto-wuy.pages.dev");
+  assert.match(e.ceFac, /refuz/i, "429 cu galeata plina e REFUZ, nu limitare - asta s-a masurat");
+});
+
+await test("eroare: 429 pe LOCAL chiar e prea multe cereri - alt sfat", () => {
+  const e = T.explicaEroarea("RATE_LIMIT", 429, "127.0.0.1");
+  assert.ok(!/Cloudflare/i.test(e.ceFac),
+    `de acasa 429 chiar inseamna prea des, nu refuz de IP: "${e.ceFac}"`);
+});
+
+await test("eroare: una necunoscuta se arata ca atare, nu se inventeaza sfat", () => {
+  const e = T.explicaEroarea("Ceva ce nu stiu", 500, "127.0.0.1");
+  assert.match(e.ceFac, /Ceva ce nu stiu/,
+    "mesajul brut trebuie pastrat - altfel ascund o eroare pe care n-o inteleg");
+});
+
+await test("eroare: fara mesaj si fara status nu arunca si nu minte", () => {
+  const e = T.explicaEroarea(null, null, null);
+  assert.ok(e && typeof e.titlu === "string" && e.titlu.length > 0);
+  assert.ok(typeof e.ceFac === "string" && e.ceFac.length > 0);
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
