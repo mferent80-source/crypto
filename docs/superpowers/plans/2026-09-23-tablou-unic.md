@@ -295,7 +295,9 @@ git commit -m "T1: frecvente() - rate cumulative si frecvente de stare, cu acope
 - Probe: `scripts/tablou-bot-v73.mjs`
 
 **Interfețe:**
-- Consumă: istoricul (T1), `bot.buOrderData.{bottom,top}`, `bot.lichidareJos`
+- Consumă: istoricul (T1), `bot.buOrderData.{bottom,top}`, `bot.buOrderData.estimateLiquidationPriceDown`
+  (numele brut de la Pionex; ruta îl normalizează drept `lichidareJos`, dar aici
+  primim botul BRUT, deci se citește câmpul original)
 - Produce: `TabloBot.geometrieGrafic(istoric, bot, acum)` →
   ```
   { destul: bool, segmente: [[{x,y}, ...], ...],
@@ -359,8 +361,8 @@ await test("T2: punctele sunt normalizate intre 0 si 1, iar cel mai NOU e la dre
 
 await test("T2: linia de lichidare apare doar daca intra in scara", () => {
   const ist = istoricFrecvente(59, { pret: 0.0155 });
-  const aproape = { ...BOT, buOrderData: { ...BOT.buOrderData, liquidationPrice: "0.0150" } };
-  const departe = { ...BOT, buOrderData: { ...BOT.buOrderData, liquidationPrice: "0.0001" } };
+  const aproape = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: "0.0150" } };
+  const departe = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: "0.0001" } };
   const a = T.geometrieGrafic(ist, aproape, ACUM);
   const d = T.geometrieGrafic(ist, departe, ACUM);
   assert.ok(a.lichidare !== null && a.lichidare >= 0 && a.lichidare <= 1, "lichidarea apropiata se arata");
@@ -416,7 +418,7 @@ Așteptat: 8 probe `PICA` cu `T.geometrieGrafic is not a function`.
     var x = (bot && bot.buOrderData) || {};
     var jos = nr(x.bottom), sus = nr(x.top);
     var areGrid = jos !== null && sus !== null && sus > jos && jos > 0;
-    var lich = nr(x.liquidationPrice);
+    var lich = nr(x.estimateLiquidationPriceDown);
 
     var minP = puncte[0].p, maxP = puncte[0].p;
     for (var j = 1; j < puncte.length; j++) {
