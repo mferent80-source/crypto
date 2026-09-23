@@ -1353,6 +1353,18 @@ await test("T2: linia de lichidare apare doar daca intra in scara", () => {
   assert.equal(d.lichidare, null, "o lichidare in afara scarii nu se deseneaza la marginea de jos");
 });
 
+await test("T2: lichidarea la EXACT o latime de banda sub grid intra in scara; ceva mai departe, nu", () => {
+  const ist = istoricFrecvente(59, { pret: 0.0155 });
+  const jos = Number(BOT.buOrderData.bottom), sus = Number(BOT.buOrderData.top);
+  const latime = sus - jos;
+  const laLimita = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: String(jos - latime) } };
+  const dincoloDeLimita = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: String(jos - latime * 1.2) } };
+  const a = T.geometrieGrafic(ist, laLimita, ACUM);
+  const d = T.geometrieGrafic(ist, dincoloDeLimita, ACUM);
+  assert.ok(a.lichidare !== null, `lichidarea la exact o latime de banda sub grid trebuie sa intre in scara, a dat ${a.lichidare}`);
+  assert.equal(d.lichidare, null, "o lichidare la mai mult de o latime de banda sub grid nu are voie sa intre in scara");
+});
+
 await test("T2: fara grid se deseneaza tot pretul, dar fara banda", () => {
   const fara = { ...BOT, buOrderData: { ...BOT.buOrderData, bottom: null, top: null } };
   const g = T.geometrieGrafic(istoricFrecvente(59, { pret: 0.0155 }), fara, ACUM);

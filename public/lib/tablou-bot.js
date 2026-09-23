@@ -581,11 +581,16 @@ var TabloBot = (function () {
     // Scara cuprinde MEREU banda gridului: altfel un pret fugit departe ar turti
     // banda intr-o dunga si ar parea ca pretul e lipit de ea.
     if (areGrid) { if (jos < minP) minP = jos; if (sus > maxP) maxP = sus; }
-    // Marja e 2% din NIVELUL pretului (maxP), nu din latimea benzii - o banda de
-    // grid ingusta (cateva procente din pret) ar da o marja microscopica in cifre
-    // absolute, si o lichidare aflata chiar sub grid n-ar mai intra niciodata in
-    // scara, desi e "aproape" in orice sens util pentru om.
-    var marja = maxP * 0.02 || 1;
+    // Linia de lichidare e cel mai periculos lucru de pe grafic. Cand e aproape,
+    // scara se intinde ca s-o cuprinda - a o ascunde tocmai cand conteaza ar fi
+    // exact boala pe care ecranul asta o vaneaza. Cand e departe, nu se deseneaza:
+    // distanta pana la lichidare se vede oricum ca cifra, in masuri.
+    if (areGrid && lich !== null && lich > 0) {
+      var latimeBanda = sus - jos;
+      if (lich >= jos - latimeBanda && lich < minP) minP = lich;
+      if (lich <= sus + latimeBanda && lich > maxP) maxP = lich;
+    }
+    var marja = (maxP - minP) * 0.02 || maxP * 0.01 || 1;
     minP -= marja; maxP += marja;
 
     var deLa = puncte[0].t, panaLa = puncte[puncte.length - 1].t;
