@@ -315,7 +315,7 @@ async function main() {
       await b.ev(`tbAduDate()`);
     }
 
-    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74.3", async () => {
+    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74.4", async () => {
       await incarcaBotSanatos();
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(600);
@@ -335,8 +335,8 @@ async function main() {
       // textContent, nu innerText: badge-ul de build sta in sidebar-ul care e
       // ascuns la 390px (latimea de telefon folosita de proba) - innerText
       // sare peste text ascuns, textContent nu.
-      const areBadge = await b.ev(`document.body.textContent.includes('v74.3 · TABLOUL BOTULUI')`);
-      assert.ok(areBadge, "badge-ul v74.3 · TABLOUL BOTULUI nu apare pe pagina");
+      const areBadge = await b.ev(`document.body.textContent.includes('v74.4 · TABLOUL BOTULUI')`);
+      assert.ok(areBadge, "badge-ul v74.4 · TABLOUL BOTULUI nu apare pe pagina");
     });
 
     await test("fara bot in cont: FARA_BOT, tot 7 masuri, rigla spune asta", async () => {
@@ -633,6 +633,57 @@ async function main() {
         return true;
       })()`);
       assert.ok(ordonatCrescator, "klinePerp trebuie sa fie crescator dupa timp indiferent de ordinea primita de la ruta");
+    });
+
+    /* ═══ v74.4: parola nu se mai cere la fiecare repornire ═══════════════
+       Pana acum statea in sessionStorage: se stergea la inchiderea tabului, deci
+       pe telefon o cerea de fiecare data. Probele astea REINCARCA pagina - adica
+       fac exact ce face el cand redeschide - si sunt ultimele, ca sa nu strice
+       starea celorlalte scenarii. */
+
+    await test("18. parola pusa o data se tine si intr-un TAB NOU (nu doar la reload)", async () => {
+      const parola = "parola-de-proba-" + Date.now();
+      await b.ev(`(() => { document.getElementById('apiSessionToken').value = ${JSON.stringify(parola)};
+        saveApiSessionToken(); })()`);
+
+      // ATENTIE: o simpla reincarcare NU masoara nimic - sessionStorage
+      // supravietuieste unui reload, se pierde abia cand se inchide TABUL.
+      // Golirea lui e exact ce vede pagina intr-un tab nou.
+      await b.ev(`try{sessionStorage.clear()}catch(e){}`);
+      await b.navigheaza(URL_T);
+      if (!(await asteaptaAplicatia(b))) throw new Error("aplicatia nu s-a reincarcat");
+
+      const dupa = await b.ev(`apiSessionToken()`);
+      assert.equal(dupa, parola, "intr-un tab nou parola trebuie sa fie tot acolo - asta e ce pateste el");
+      const stare = await textEl(b, "apiAuthStatus");
+      assert.ok(!/^NO /i.test(String(stare)), `starea zice ca n-are parola: "${stare}"`);
+    });
+
+    await test("19. campul ARATA ca parola e tinuta minte, nu pare gol", async () => {
+      // Un camp gol peste o parola salvata l-ar face sa creada ca trebuie s-o puna
+      // din nou - adica exact ce ne-am propus sa nu mai faca.
+      const inCamp = await b.ev(`document.getElementById('apiSessionToken').value`);
+      assert.ok(String(inCamp).length > 0, "campul nu are voie sa para gol cand parola e salvata");
+    });
+
+    await test("20. butonul Clear chiar UITA, si intr-un tab nou", async () => {
+      await b.ev(`clearApiSessionToken()`);
+      await b.ev(`try{sessionStorage.clear()}catch(e){}`);
+      await b.navigheaza(URL_T);
+      if (!(await asteaptaAplicatia(b))) throw new Error("aplicatia nu s-a reincarcat");
+      const dupa = await b.ev(`apiSessionToken()`);
+      assert.equal(dupa, "", "dupa Clear parola nu are voie sa reapara intr-un tab nou");
+    });
+
+    await test("21. textele din Settings nu mai mint despre cat tine parola", async () => {
+      const zona = await b.ev(`(() => {
+        const el = document.getElementById('apiSessionToken');
+        const card = el && el.closest('.settingsCard');
+        return card ? card.textContent + ' || ' + (el.getAttribute('placeholder') || '') : '';
+      })()`);
+      assert.ok(String(zona).length > 0, "n-am gasit cardul de parola");
+      assert.ok(!/sessionStorage|browser session ends|this session|session only/i.test(String(zona)),
+        `textul inca promite ca se sterge la inchiderea sesiunii: "${String(zona).slice(0, 220)}"`);
     });
 
   } finally {

@@ -53,7 +53,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v74.3 · TABLOUL BOTULUI</div>
+<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v74.4 · TABLOUL BOTULUI</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -1050,11 +1050,11 @@
 <div class="settingsGrid">
 <div class="settingsCard">
 <h4>API Security Session</h4>
-<label class="small" for="apiSessionToken">APP_API_TOKEN (session only)</label>
-<input aria-describedby="apiAuthHelp" aria-label="APP_API_TOKEN (session only)" autocomplete="off" id="apiSessionToken" placeholder="Enter the Cloudflare APP_API_TOKEN for this session" type="password"/>
-<div class="settingRow"><span>Protected API status</span><b id="apiAuthStatus">NO SESSION TOKEN</b></div>
-<div class="pushState"><button data-action-click="saveApiSessionToken()">Use token</button><button class="actionGhost" data-action-click="clearApiSessionToken()">Clear</button></div>
-<p class="small" id="apiAuthHelp" style="margin-top:8px">The token is stored only in sessionStorage and is sent as a Bearer token to protected same-origin /api routes. Set the same APP_API_TOKEN as a Cloudflare secret. It is cleared when the browser session ends.</p>
+<label class="small" for="apiSessionToken">APP_API_TOKEN (ținută minte pe acest dispozitiv)</label>
+<input aria-describedby="apiAuthHelp" aria-label="APP_API_TOKEN (session only)" autocomplete="off" id="apiSessionToken" placeholder="Parola aplicației - o pui o dată pe fiecare dispozitiv" type="password"/>
+<div class="settingRow"><span>Parola aplicației</span><b id="apiAuthStatus">NEPUSĂ</b></div>
+<div class="pushState"><button data-action-click="saveApiSessionToken()">Ține minte parola</button><button class="actionGhost" data-action-click="clearApiSessionToken()">Uit-o de pe dispozitivul ăsta</button></div>
+<p class="small" id="apiAuthHelp" style="margin-top:8px">Se pune o dată pe fiecare dispozitiv și rămâne acolo, ca să nu-ți fie cerută la fiecare pornire. Trebuie să fie exact textul pus ca APP_API_TOKEN la pornirea aplicației. Atenție: cât timp e ținută minte, cine ia dispozitivul ăsta în mână îți vede datele - pe un telefon pe care îl mai folosește cineva, apasă „Uit-o de pe dispozitivul ăsta" când termini.</p>
 </div>
 <div class="settingsCard">
 <h4>Local Data Privacy</h4>

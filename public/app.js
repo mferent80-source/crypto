@@ -3090,10 +3090,17 @@ const MARKET_BASES=[
   "https://api4.binance.com/api/v3"
 ];
 const APP_API_TOKEN_SESSION_KEY="cryptoRadarApiTokenV54";
-function apiSessionToken(){try{return sessionStorage.getItem(APP_API_TOKEN_SESSION_KEY)||""}catch{return ""}}
-function saveApiSessionToken(){const v=$("apiSessionToken")?.value?.trim()||"";try{if(v)sessionStorage.setItem(APP_API_TOKEN_SESSION_KEY,v);else sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}catch{}renderApiAuthStatus();toast(v?"Protected API token active for this session":"API token cleared",v?"good":"warn")}
-function clearApiSessionToken(){try{sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}catch{}if($("apiSessionToken"))$("apiSessionToken").value="";renderApiAuthStatus();toast("Protected API token cleared","good")}
-function renderApiAuthStatus(){if($("apiAuthStatus"))$("apiAuthStatus").textContent=apiSessionToken()?"SESSION TOKEN ACTIVE":"NO SESSION TOKEN"}
+// Parola se tine acum pe DISPOZITIV (localStorage), nu pe sesiune: inainte se
+// stergea la inchiderea tabului, deci pe telefon o cerea de fiecare data.
+// sessionStorage ramane citit ca sa nu cada sesiunea deschisa in momentul livrarii.
+function apiSessionToken(){try{return localStorage.getItem(APP_API_TOKEN_SESSION_KEY)||sessionStorage.getItem(APP_API_TOKEN_SESSION_KEY)||""}catch{return ""}}
+function saveApiSessionToken(){const v=$("apiSessionToken")?.value?.trim()||"";try{if(v){localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}else{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}}catch{}renderApiAuthStatus();toast(v?"Parola e ținută minte pe acest dispozitiv":"Parola a fost ștearsă",v?"good":"warn")}
+function clearApiSessionToken(){try{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}catch{}if($("apiSessionToken"))$("apiSessionToken").value="";renderApiAuthStatus();toast("Parola a fost uitată de pe acest dispozitiv","good")}
+// Un camp GOL peste o parola salvata l-ar face sa creada ca trebuie s-o puna
+// din nou - adica exact ce ne-am propus sa nu mai faca. Se precompleteaza.
+function renderApiAuthStatus(){const t=apiSessionToken();
+  if($("apiAuthStatus"))$("apiAuthStatus").textContent=t?"ȚINUTĂ MINTE PE ACEST DISPOZITIV":"NEPUSĂ";
+  const c=$("apiSessionToken");if(c&&!c.value&&t)c.value=t}
 function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});if(same){const token=apiSessionToken();if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials})}
 async function getJSON(url){
   const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
