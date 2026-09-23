@@ -4521,8 +4521,16 @@ async function tbAduDate(){
       // pretSpot INGHETAT (o pana de WebSocket) nu are voie sa intre in istoric
       // ca fiind viu - aceeasi familie de bug ca pana de ruta de mai jos: daca
       // scriem tacut pretul mort, mediana basis-ului se otraveste in tacere.
+      // Botul ales - banii vin de aici, nu din stocare separata. Nu folosim
+      // Number(x)||0: un 0 ar minti acolo unde bursa nu trimite deloc campul;
+      // pastram null ca sa se vada lipsa, nu un profit fals de zero.
+      var b=tbStare.bot;
       ist=TabloBot.istoricAdauga(ist,{t:Date.now(),perechi:tbStare.bot.ordinePerechi||0,
-        pretPerp:tbStare.bot.pretCurent,pretSpot:tbPretSpotProaspat()?tbStare.pretSpot:null},Date.now());
+        pretPerp:tbStare.bot.pretCurent,pretSpot:tbPretSpotProaspat()?tbStare.pretSpot:null,
+        profitNet:b.profitNet!=null?Number(b.profitNet):null,
+        comisioane:b.comisioane!=null?Number(b.comisioane):null,
+        gridProfitBrut:b.gridProfitBrut!=null?Number(b.gridProfitBrut):null,
+        investit:b.investit!=null?Number(b.investit):null},Date.now());
       tbStare.stocareStricata=!tbScrie(cheie,ist);
       tbStare.istoric=ist;
     }else{

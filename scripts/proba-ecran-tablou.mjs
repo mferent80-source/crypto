@@ -717,6 +717,40 @@ async function main() {
       assert.equal(wsInFundal, false, "un WebSocket deschis pe toate ecranele e risipa si tine socketul ocupat");
     });
 
+    await test("25. istoricul retine si banii, nu doar perechile", async () => {
+      const id = "9501";
+      await b.ev(`Object.keys(localStorage).filter(k=>k.startsWith('tabloBotIstoric_v1_')).forEach(k=>localStorage.removeItem(k))`);
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: id, baza: "ADA.PERP" }))] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      await asteapta(500);
+      const ultima = await b.ev(`(() => {
+        const l = JSON.parse(localStorage.getItem('tabloBotIstoric_v1_${id}') || '[]');
+        return l.length ? l[l.length - 1] : null;
+      })()`);
+      assert.ok(ultima, "ar trebui sa existe o intrare de istoric");
+      for (const camp of ["profitNet", "comisioane", "gridProfitBrut", "investit"]) {
+        assert.ok(camp in ultima, `istoricul trebuie sa retina ${camp} - fara el nu se pot socoti banii in timp`);
+      }
+
+      // Un camp lipsa la SURSA (nu trimis deloc de Pionex) nu are voie sa minta
+      // cu 0 in istoric - Number(x)||0 ar fi trecut si aceasta proba cu 0 in loc
+      // de null, adica din motivul gresit (proba ar fi verificat doar cheia).
+      const idFaraProfit = "9502";
+      const botFaraProfit = botNormalizat(botBrut({ strategyId: idFaraProfit, baza: "ADA.PERP" }));
+      delete botFaraProfit.profitNet;
+      await seteazaMock(b, "botOrders", { corp: { bots: [botFaraProfit] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      await asteapta(500);
+      const ultimaFaraProfit = await b.ev(`(() => {
+        const l = JSON.parse(localStorage.getItem('tabloBotIstoric_v1_${idFaraProfit}') || '[]');
+        return l.length ? l[l.length - 1] : null;
+      })()`);
+      assert.ok(ultimaFaraProfit, "ar trebui sa existe o intrare de istoric si pentru botul fara profitNet");
+      assert.equal(ultimaFaraProfit.profitNet, null, "profitNet lipsa la sursa trebuie sa ramana null, nu 0 (Number(x)||0 ar minti aici)");
+    });
+
   } finally {
     b.inchide();
     // Windows tine profilul incuiat cateva secunde dupa ce Chrome primeste
