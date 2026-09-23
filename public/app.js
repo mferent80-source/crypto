@@ -4429,7 +4429,14 @@ function tbSchimbaModul(){
   var sid=brut.strategyId!=null?String(brut.strategyId):null;
   if(!sid)return toast("Acest bot nu are strategyId - comutatorul de mod e dezactivat pentru el.","warn");
   var alegeri=tbCiteste(TB_MOD)||{},acum=TabloBot.modBot(brut,alegeri).mod;
-  alegeri[sid]=acum==="GRID"?"DIRECTIONAL":"GRID";tbScrie(TB_MOD,alegeri);
+  alegeri[sid]=acum==="GRID"?"DIRECTIONAL":"GRID";
+  // Acelasi reziduu ca la I6, pe cealalta cale de scriere: daca localStorage
+  // e blocat, scrierea esueaza tacut - badge-ul ar ramane pe vechea valoare
+  // in timp ce toastul minte "succes". Verificam valoarea de intoarcere.
+  if(!tbScrie(TB_MOD,alegeri)){
+    toast("N-am putut retine modul - stocarea locala e blocata in acest browser.","bad");
+    return;
+  }
   toast("Mod: "+alegeri[sid],"good");renderTabloBot();
 }
 async function tbAduDate(){
@@ -4537,7 +4544,7 @@ function opresteTabloBot(){
 function tbNivelClasa(nivel){
   if(nivel==="OPRESTE"||nivel==="PAZESTE"||nivel==="EROARE")return "bad";
   if(nivel==="OPORTUNITATE"||nivel==="LINISTE")return "good";
-  if(nivel==="REGLEAZA")return "warn";
+  if(nivel==="REGLEAZA")return "tbWarn";
   return "mutedInfo";
 }
 function renderTabloBot(){
@@ -4575,7 +4582,11 @@ function renderTabloBot(){
     else if(!b)$("tbSimbol").textContent="fără bot";
     else{
       var total=tbStare.boti.length;
-      $("tbSimbol").textContent=b.simbol+(total>1?" · activ, din "+total+" boți":"");
+      // "activ" DOAR cand chiar e activ - altfel botul ales (singurul disponibil,
+      // caci n-a fost niciunul pornit) e OPRIT, si omul trebuie sa afle asta,
+      // nu sa citeasca o eticheta care minte exact ca cea reparata la I4/I5.
+      var eticheta=b.activ?(total>1?"activ, din "+total+" boți":""):("oprit"+(total>1?", din "+total+" boți":""));
+      $("tbSimbol").textContent=b.simbol+(eticheta?" · "+eticheta:"");
     }
   }
   if($("tbMod")){
@@ -4606,7 +4617,7 @@ function renderTabloBot(){
     }else{
       var loc=Math.max(0,Math.min(100,p)),trepte=20,poz=Math.round(loc/100*trepte);
       var bara="";for(var i=0;i<=trepte;i++)bara+=i===poz?"●":"─";
-      var clsLich=m.lichidare.stare==="rau"?"bad":m.lichidare.stare==="margine"?"warn":"mutedInfo";
+      var clsLich=m.lichidare.stare==="rau"?"bad":m.lichidare.stare==="margine"?"tbWarn":"mutedInfo";
       $("tbRigla").innerHTML='<div class="accountRow"><div class="accountCell">'+
         (b.gridJos!=null?b.gridJos:"—")+'</div><div class="accountCell"><b>'+bara+'</b><br>'+
         Math.round(p)+'% din interval</div><div class="accountCell">'+
@@ -4621,7 +4632,7 @@ function renderTabloBot(){
   if($("tbMasuri"))$("tbMasuri").innerHTML=randuri.map(function(r){
     var val=r[1]&&r[1].valoare!=null?tbFormateazaSemn(+r[1].valoare,2):"—";
     var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara")?"bad":
-      r[1]&&r[1].stare==="margine"?"warn":r[1]&&r[1].stare==="bine"?"good":"mutedInfo";
+      r[1]&&r[1].stare==="margine"?"tbWarn":r[1]&&r[1].stare==="bine"?"good":"mutedInfo";
     return '<div class="accountRow"><div class="accountCell">'+escapeHtml(r[0])+
       '</div><div class="accountCell '+cls+'">'+val+'</div><div class="accountCell">'+
       escapeHtml(String((r[1]&&r[1].stare)||"—"))+"</div></div>";
