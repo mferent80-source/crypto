@@ -733,22 +733,26 @@ async function main() {
         assert.ok(camp in ultima, `istoricul trebuie sa retina ${camp} - fara el nu se pot socoti banii in timp`);
       }
 
-      // Un camp lipsa la SURSA (nu trimis deloc de Pionex) nu are voie sa minta
-      // cu 0 in istoric - Number(x)||0 ar fi trecut si aceasta proba cu 0 in loc
-      // de null, adica din motivul gresit (proba ar fi verificat doar cheia).
-      const idFaraProfit = "9502";
-      const botFaraProfit = botNormalizat(botBrut({ strategyId: idFaraProfit, baza: "ADA.PERP" }));
-      delete botFaraProfit.profitNet;
-      await seteazaMock(b, "botOrders", { corp: { bots: [botFaraProfit] }, stare: 200 });
-      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
-      await b.ev(`tbAduDate()`);
-      await asteapta(500);
-      const ultimaFaraProfit = await b.ev(`(() => {
-        const l = JSON.parse(localStorage.getItem('tabloBotIstoric_v1_${idFaraProfit}') || '[]');
-        return l.length ? l[l.length - 1] : null;
-      })()`);
-      assert.ok(ultimaFaraProfit, "ar trebui sa existe o intrare de istoric si pentru botul fara profitNet");
-      assert.equal(ultimaFaraProfit.profitNet, null, "profitNet lipsa la sursa trebuie sa ramana null, nu 0 (Number(x)||0 ar minti aici)");
+      // Fiecare camp de bani, PE RAND: lipsa la SURSA (Pionex nu-l trimite) nu
+      // are voie sa minta cu 0 in istoric - Number(x)||0 ar fi trecut cu 0 in loc
+      // de null. Verificam toate patru campurile, nu doar profitNet - un singur
+      // camp pazit lasa celelalte trei libere sa minta (asa a picat revizia).
+      let idBaniProba = 9502;
+      for (const camp of ["profitNet", "comisioane", "gridProfitBrut", "investit"]) {
+        const idCamp = String(idBaniProba++);
+        const botFaraCamp = botNormalizat(botBrut({ strategyId: idCamp, baza: "ADA.PERP" }));
+        delete botFaraCamp[camp];
+        await seteazaMock(b, "botOrders", { corp: { bots: [botFaraCamp] }, stare: 200 });
+        await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+        await b.ev(`tbAduDate()`);
+        await asteapta(500);
+        const ultimaFaraCamp = await b.ev(`(() => {
+          const l = JSON.parse(localStorage.getItem('tabloBotIstoric_v1_${idCamp}') || '[]');
+          return l.length ? l[l.length - 1] : null;
+        })()`);
+        assert.ok(ultimaFaraCamp, `ar trebui sa existe o intrare de istoric pentru botul fara ${camp}`);
+        assert.equal(ultimaFaraCamp[camp], null, `${camp} lipsa la sursa trebuie sa ramana null, nu 0 (Number(x)||0 ar minti aici)`);
+      }
     });
 
   } finally {

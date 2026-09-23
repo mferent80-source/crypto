@@ -104,6 +104,37 @@ await test("cifrele de bani si de risc ajung intregi", async () => {
   assert.ok(b.pornitLa > 0, "lipseste momentul pornirii");
 });
 
+// Un BOT cu buOrderData suprascris punctual - pentru probele de mai jos, care
+// vor sa controleze STRICT usdtInvestment/initUsdtInvestment, fara sa repete
+// tot obiectul BOT de mai sus.
+function botCuBani(over) {
+  return { ...BOT, buOrderData: { ...BOT.buOrderData, ...over } };
+}
+
+await test("investit cade pe initUsdtInvestment cand usdtInvestment lipseste (null)", async () => {
+  const bot = botCuBani({ usdtInvestment: null, initUsdtInvestment: "200" });
+  fetchStub((u) => u.includes("/bot/orders")
+    ? { corp: { result: true, data: { results: [bot] } } } : RASPUNS_BUN(u));
+  const b = (await cheama("", ENV, proaspat())).corp.bots[0];
+  assert.equal(b.investit, 200, `rezerva initUsdtInvestment nu s-a folosit: ${b.investit}`);
+});
+
+await test("investit ramane null cand ambele lipsesc, nu 0", async () => {
+  const bot = botCuBani({ usdtInvestment: null, initUsdtInvestment: null });
+  fetchStub((u) => u.includes("/bot/orders")
+    ? { corp: { result: true, data: { results: [bot] } } } : RASPUNS_BUN(u));
+  const b = (await cheama("", ENV, proaspat())).corp.bots[0];
+  assert.equal(b.investit, null, `investit lipsa la sursa trebuie sa ramana null, nu 0 (Number(null)===0 minte aici): ${b.investit}`);
+});
+
+await test("investit 0 legitim ramane 0, nu se pierde in rezerva", async () => {
+  const bot = botCuBani({ usdtInvestment: 0 });
+  fetchStub((u) => u.includes("/bot/orders")
+    ? { corp: { result: true, data: { results: [bot] } } } : RASPUNS_BUN(u));
+  const b = (await cheama("", ENV, proaspat())).corp.bots[0];
+  assert.equal(b.investit, 0, `un 0 legitim nu are voie sa devina altceva: ${b.investit}`);
+});
+
 await test("spune CAT MAI E pana la lichidare, in procente", async () => {
   fetchStub(RASPUNS_BUN);
   const b = (await cheama("", ENV, proaspat())).corp.bots[0];

@@ -19,6 +19,11 @@ async function hmacHex(secret,mesaj){
 }
 const sortedQuery=p=>Object.keys(p).sort().map(k=>`${k}=${p[k]}`).join("&");
 const nr=v=>{const x=Number(v);return Number.isFinite(x)?x:null};
+// nr(null)===0 (Number(null) e finit) - deci nr(a)??nr(b) nu cade NICIODATA pe
+// rezerva b, chiar si cand a lipseste. primulNumar alege prima valoare care
+// CHIAR e un numar, nu prima care nu e null - asa nu se pierde rezerva si un
+// camp lipsa la sursa ramane null, nu un 0 fabricat.
+const primulNumar=(...v)=>{for(const x of v){const n=Number(x);if(x!=null&&x!==""&&Number.isFinite(n))return n}return null};
 
 async function citesteBoti(env,params={}){
   const all={...params,timestamp:Date.now()},query=sortedQuery(all);
@@ -95,7 +100,7 @@ function normalizeaza(bot,preturi){
 
     // BANI. profitNet e cel REAL (dupa comisioane); gridProfitBrut e cifra de
     // titlu pe care o arata Pionex si care induce in eroare singura.
-    investit:nr(x.usdtInvestment)??nr(x.initUsdtInvestment),
+    investit:primulNumar(x.usdtInvestment,x.initUsdtInvestment),
     margine:nr(x.marginBalance),
     profitNet:net,
     gridProfitBrut:brut,
