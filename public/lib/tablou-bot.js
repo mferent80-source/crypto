@@ -137,8 +137,9 @@ var TabloBot = (function () {
     m.marginStatus = estareCont(x.marginStatus, "NORMAL");
     m.riskStatus = estareCont(x.riskStatus, "TRADING");
 
-    var jos = nr(x.bottom), sus = nr(x.top);
-    if (jos !== null && sus !== null && sus > jos && pretPerp !== null) {
+    var grid = citesteGrid(bot);
+    var jos = grid.jos, sus = grid.sus;
+    if (grid.bun && pretPerp !== null) {
       var p = 100 * (pretPerp - jos) / (sus - jos);
       m.pozitieInterval = {
         valoare: p, prag: { margine: 15, afara: 0 },
@@ -486,6 +487,17 @@ var TabloBot = (function () {
   // nu-se-poate; perechi="" pe prima intrare fabrica o rata din nimic.
   function lipsa(v) { return v === null || v === undefined || v === ""; }
 
+  // Un singur loc care citeste gridul. Cand era copiat in trei locuri, variantele
+  // s-au desincronizat: doua din ele n-aveau `jos > 0`, iar `nr(null)` da 0, deci
+  // un `bottom` lipsa fabrica gridul [0, top] si o frecventa de 100% "dovedita".
+  function citesteGrid(bot) {
+    var x = (bot && bot.buOrderData) || {};
+    var jos = nr(x.bottom), sus = nr(x.top);
+    var bun = !lipsa(x.bottom) && !lipsa(x.top) &&
+      jos !== null && sus !== null && jos > 0 && sus > jos;
+    return { jos: jos, sus: sus, bun: bun };
+  }
+
   function rataCumulativa(lista, camp, peZi) {
     if (lista.length < 2) return { valoare: null, stare: "nu-se-poate", prag: 1 };
     var pBrut = lista[0][camp], uBrut = lista[lista.length - 1][camp];
@@ -527,9 +539,8 @@ var TabloBot = (function () {
     if (Array.isArray(istoric)) {
       for (var k = 0; k < istoric.length; k++) if (istoric[k] && nr(istoric[k].t) !== null) lista.push(istoric[k]);
     }
-    var x = (bot && bot.buOrderData) || {};
-    var jos = nr(x.bottom), sus = nr(x.top);
-    var areGrid = jos !== null && sus !== null && sus > jos;
+    var grid = citesteGrid(bot);
+    var jos = grid.jos, sus = grid.sus, areGrid = grid.bun;
     var pozitia = function (h) {
       if (lipsa(h.pretPerp) || !areGrid) return null;
       var pp = nr(h.pretPerp);
@@ -569,8 +580,8 @@ var TabloBot = (function () {
     puncte.sort(function (a, b) { return a.t - b.t; });
 
     var x = (bot && bot.buOrderData) || {};
-    var jos = nr(x.bottom), sus = nr(x.top);
-    var areGrid = jos !== null && sus !== null && sus > jos && jos > 0;
+    var grid = citesteGrid(bot);
+    var jos = grid.jos, sus = grid.sus, areGrid = grid.bun;
     var lich = nr(x.estimateLiquidationPriceDown);
 
     var minP = puncte[0].p, maxP = puncte[0].p;

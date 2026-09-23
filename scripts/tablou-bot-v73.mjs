@@ -1381,5 +1381,20 @@ await test("T2: intrarile fara pretPerp se sar, nu se deseneaza ca zero", () => 
   assert.equal(toate.length, ist.length - 5, "cele 5 intrari fara pret nu produc puncte");
 });
 
+/* ── citesteGrid: un singur adevar despre grid, in frecvente() SI geometrieGrafic() ── */
+await test("[reparatie] citesteGrid: bottom lipsa (null/gol/zero) cu top valid nu fabrica gridul [0, top]", () => {
+  const ist = istoricFrecvente(99, { pret: 0.0155 });
+  for (const bottomBrut of [null, "", 0]) {
+    const botFaraJos = { ...BOT, buOrderData: { ...BOT.buOrderData, bottom: bottomBrut } };
+    const f = T.frecvente(ist, botFaraJos, ACUM).timpInInterval;
+    assert.equal(f.stare, "nu-se-poate",
+      `frecvente(): bottom=${JSON.stringify(bottomBrut)} cu top valid nu are voie sa dea un grid [0, top] (stare="${f.stare}")`);
+    assert.equal(f.valoare, null, `frecvente(): bottom=${JSON.stringify(bottomBrut)} nu are voie sa produca un procent`);
+    const g = T.geometrieGrafic(ist, botFaraJos, ACUM);
+    assert.equal(g.banda, null,
+      `geometrieGrafic(): bottom=${JSON.stringify(bottomBrut)} cu top valid nu are voie sa inventeze o banda (banda=${JSON.stringify(g.banda)})`);
+  }
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
