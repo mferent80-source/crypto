@@ -59,34 +59,55 @@ if defined VERS set "VERS=%VERS: =%"
 if defined VERS echo   Versiune pe disc: %VERS%
 echo.
 
-if exist ".dev.vars" goto :cloudflared
+rem Un .dev.vars care EXISTA nu inseamna ca e bun: gol sau cu o cheie lipsa
+rem ar porni aplicatia care apoi da AUTH_REQUIRED, fara sa spuna de ce.
+set "CHEIOK="
+if exist ".dev.vars" (
+  powershell -NoProfile -Command "$t = Get-Content -LiteralPath '.dev.vars' -Raw -ErrorAction SilentlyContinue; $ok = $true; foreach ($k in 'APP_API_TOKEN','PIONEX_API_KEY','PIONEX_API_SECRET') { if ($t -notmatch ('(?m)^' + $k + '=\S')) { $ok = $false } }; if ($ok) { exit 0 } else { exit 1 }"
+  if not errorlevel 1 set "CHEIOK=1"
+)
+if defined CHEIOK (
+  echo   [OK] Folosesc cheile salvate din .dev.vars - nu ti le mai cer.
+  echo.
+  goto :DUPACHEI
+)
+if exist ".dev.vars" (
+  echo   [!] .dev.vars exista dar e incomplet - ti le cer din nou.
+  echo.
+)
 
 echo   ----------------------------------------------------------
 echo   Prima pornire: am nevoie de trei valori.
 echo   Le scriu in .dev.vars, care NU se comite in git.
 echo   ----------------------------------------------------------
 echo.
-set "APPTOK="
-set "PXKEY="
-set "PXSEC="
-set /p "APPTOK=APP_API_TOKEN     : "
-set /p "PXKEY=PIONEX_API_KEY    : "
-set /p "PXSEC=PIONEX_API_SECRET : "
-if "%APPTOK%"=="" (
+rem Valorile NU mai trec prin variabile de batch: o parola cu %% sau & spargea
+rem parsarea si bat-ul murea FARA sa scrie fisierul - deci cerea la nesfarsit.
+rem PowerShell le citeste si le scrie literal, si verifica imediat ce-a scris.
+powershell -NoProfile -Command "$t = Read-Host 'APP_API_TOKEN    '; $k = Read-Host 'PIONEX_API_KEY   '; $s = Read-Host 'PIONEX_API_SECRET'; if ([string]::IsNullOrWhiteSpace($t)) { Write-Host ''; Write-Host '  APP_API_TOKEN nu poate fi gol - el incuie adresa.'; exit 2 }; $nl = [string][char]10; $body = 'APP_API_TOKEN=' + $t + $nl + 'PIONEX_API_KEY=' + $k + $nl + 'PIONEX_API_SECRET=' + $s + $nl; try { [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path '.dev.vars'), $body, (New-Object System.Text.UTF8Encoding $false)) } catch { exit 3 }; $t2 = Get-Content -LiteralPath '.dev.vars' -Raw; if ($t2 -match '(?m)^APP_API_TOKEN=\S' -and $t2 -match '(?m)^PIONEX_API_KEY=' -and $t2 -match '(?m)^PIONEX_API_SECRET=') { exit 0 } else { exit 3 }"
+set "RC=%ERRORLEVEL%"
+if "%RC%"=="2" (
   echo.
-  echo   APP_API_TOKEN nu poate fi gol - el incuie adresa publica.
   echo   Reporneste si incearca din nou.
   echo.
   pause
   exit /b 1
 )
->".dev.vars" echo APP_API_TOKEN=%APPTOK%
->>".dev.vars" echo PIONEX_API_KEY=%PXKEY%
->>".dev.vars" echo PIONEX_API_SECRET=%PXSEC%
+if not "%RC%"=="0" (
+  echo.
+  echo   EROARE: nu am putut scrie .dev.vars in %CD%
+  echo   Fara el ti le-as cere la FIECARE pornire. Verifica daca dosarul
+  echo   e read-only sau daca un antivirus blocheaza scrierea.
+  echo.
+  pause
+  exit /b 1
+)
+
 echo.
-echo   Scris in .dev.vars. Data viitoare nu te mai intreb.
+echo   Scris in .dev.vars. De acum nu te mai intreb.
 echo.
 
+:DUPACHEI
 :cloudflared
 if exist "%CF%" goto :pornire
 echo   Prima data: aduc unealta de tunel (cloudflared, ~53 MB).

@@ -315,7 +315,7 @@ async function main() {
       await b.ev(`tbAduDate()`);
     }
 
-    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74.4", async () => {
+    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74.5", async () => {
       await incarcaBotSanatos();
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(600);
@@ -335,8 +335,8 @@ async function main() {
       // textContent, nu innerText: badge-ul de build sta in sidebar-ul care e
       // ascuns la 390px (latimea de telefon folosita de proba) - innerText
       // sare peste text ascuns, textContent nu.
-      const areBadge = await b.ev(`document.body.textContent.includes('v74.4 · TABLOUL BOTULUI')`);
-      assert.ok(areBadge, "badge-ul v74.4 · TABLOUL BOTULUI nu apare pe pagina");
+      const areBadge = await b.ev(`document.body.textContent.includes('v74.5 · TABLOUL BOTULUI')`);
+      assert.ok(areBadge, "badge-ul v74.5 · TABLOUL BOTULUI nu apare pe pagina");
     });
 
     await test("fara bot in cont: FARA_BOT, tot 7 masuri, rigla spune asta", async () => {
