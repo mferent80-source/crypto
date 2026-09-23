@@ -230,10 +230,30 @@ function botNormalizat(brut, over = {}) {
 // grid-ului de mai sus.
 function lumanariCorpMock(n = 60) {
   const chron = [];
-  for (let i = 0; i < n; i++) chron.push({ close: (0.30 + i * 0.00035).toFixed(6) });
-  // clientul face .reverse() dupa ce citeste - trimitem "cel mai nou primul",
-  // cum vine de la o bursa reala.
+  const t0 = Date.now() - n * 300000; // lumanari de 5 minute
+  for (let i = 0; i < n; i++) {
+    const c = 0.30 + i * 0.00035;
+    chron.push({
+      time: t0 + i * 300000,
+      open: (c - 0.00005).toFixed(6), high: (c + 0.00005).toFixed(6), low: (c - 0.00005).toFixed(6),
+      close: c.toFixed(6), volume: "100",
+    });
+  }
+  // clientul sorteaza dupa `time` (Task 7 al revizei finale) - trimitem "cel
+  // mai nou primul", cum vine de la o bursa reala, ca sa exercitam sortarea.
   return { data: { klines: chron.slice().reverse() } };
+}
+
+// Injecteaza istoric "copt" (>=30 minute) direct in localStorage, cu cheia pe
+// care tbAduDate() o citeste - unele verdicte (OPRESTE/PAZESTE/REGLEAZA) cer
+// istoricMin>=30 si nu se poate astepta timp real intr-o proba determinista.
+async function seedIstoricCopt(b, id, minute, pretPerp) {
+  const cheie = "tabloBotIstoric_v1_" + String(id);
+  await b.ev(`(() => {
+    const acum = Date.now(), arr = [];
+    for (let m = ${minute}; m >= 1; m--) arr.push({ t: acum - m * 60000, perechi: 0, pretPerp: ${pretPerp}, pretSpot: ${pretPerp} });
+    localStorage.setItem(${JSON.stringify(cheie)}, JSON.stringify(arr));
+  })()`);
 }
 
 async function seteazaMock(b, cheie, valoare) {
@@ -315,8 +335,8 @@ async function main() {
       // textContent, nu innerText: badge-ul de build sta in sidebar-ul care e
       // ascuns la 390px (latimea de telefon folosita de proba) - innerText
       // sare peste text ascuns, textContent nu.
-      const areBadge = await b.ev(`document.body.textContent.includes('v73 · TABLOUL BOTULUI')`);
-      assert.ok(areBadge, "badge-ul v73 · TABLOUL BOTULUI nu apare pe pagina");
+      const areBadge = await b.ev(`document.body.textContent.includes('v74 · TABLOUL BOTULUI')`);
+      assert.ok(areBadge, "badge-ul v74 · TABLOUL BOTULUI nu apare pe pagina");
     });
 
     await test("fara bot in cont: FARA_BOT, tot 7 masuri, rigla spune asta", async () => {
@@ -453,6 +473,106 @@ async function main() {
       await b.ev(`tbAduDate()`);
       const simbol = await textEl(b, "tbSimbol");
       assert.match(String(simbol), /· activ, din 2 boți$/, `botul activ din mai multi ar trebui sa spuna "activ, din 2 boți": ${simbol}`);
+    });
+
+    /* ═══ Revizia finala 2026-09-22: 9 defecte, masurate mai jos ═══════════ */
+
+    /* --- 1. marginStatus/riskStatus nu erau citite deloc --- */
+    await test("8. marginStatus anormal (MARGIN_CALL) da OPRESTE pe ecran, nu LINISTE", async () => {
+      const id = "8801";
+      await seedIstoricCopt(b, id, 35, 0.32); // istoricMin>=30 cerut de NEDOVEDIT (treapta 1, inaintea lui OPRESTE)
+      const brut = botBrut({ strategyId: id, baza: "ADA.PERP", buOrderData: { marginStatus: "MARGIN_CALL" } });
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut)] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const nivel = await textEl(b, "tbNivel");
+      const deCe = await textEl(b, "tbDeCe");
+      assert.equal(nivel, "OPRESTE", `marginStatus MARGIN_CALL ar trebui OPRESTE, a dat ${nivel}`);
+      assert.match(String(deCe), /marginStatus/, `declansatorul ar trebui sa mentioneze marginStatus: ${deCe}`);
+    });
+
+    await test("8b. riskStatus anormal (LIQUIDATION) da OPRESTE pe ecran, nu LINISTE", async () => {
+      const id = "8802";
+      await seedIstoricCopt(b, id, 35, 0.32);
+      const brut = botBrut({ strategyId: id, baza: "ADA.PERP", buOrderData: { riskStatus: "LIQUIDATION" } });
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut)] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const nivel = await textEl(b, "tbNivel");
+      assert.equal(nivel, "OPRESTE", `riskStatus LIQUIDATION ar trebui OPRESTE, a dat ${nivel}`);
+    });
+
+    /* --- 2. ecranul nu se putea deschide de pe telefon (390px) --- */
+    await test("9. pe telefon (390px), Tabloul botului e accesibil din sertarul More", async () => {
+      const ascunsSideNav = await b.ev(`getComputedStyle(document.querySelector('.sideNav')).display`);
+      assert.equal(ascunsSideNav, "none", "precheck: sideNav trebuie ascuns sub 980px (proba ruleaza la 390px)");
+      await b.ev(`openMoreDrawer()`);
+      const gasit = await b.ev(`[...document.querySelectorAll('.moreBtn')].some(x=>/Tablou bot/i.test(x.textContent))`);
+      assert.ok(gasit, "butonul Tablou bot nu apare in sertarul More");
+      await b.ev(`[...document.querySelectorAll('.moreBtn')].find(x=>/Tablou bot/i.test(x.textContent)).click()`);
+      await asteapta(400);
+      const activ = await b.ev(`document.getElementById('tabloubot')?.classList.contains('on')`);
+      assert.ok(activ, "click pe Tablou bot in sertarul More ar trebui sa deschida panoul");
+      await b.ev(`opresteTabloBot()`);
+    });
+
+    /* --- 3. iesirea prin bara de tab-uri (.tabs, show() direct) lasa WS/ceas pornite --- */
+    await test("10. iesirea prin .tabs (show() direct, nu navTo) opreste tot ceasul si WebSocket-ul", async () => {
+      await incarcaBotSanatos({ strategyId: "8103", baza: "ADA.PERP" });
+      await b.ev(`navTo('tabloubot', true)`);
+      await asteapta(300);
+      const ceasInainte = await b.ev(`tbStare.ceas !== null`);
+      const wsInainte = await b.ev(`tbStare.ws !== null`);
+      assert.ok(ceasInainte, "precheck: ceasul ar trebui pornit dupa navTo('tabloubot', true)");
+      assert.ok(wsInainte, "precheck: WebSocket-ul ar trebui deschis dupa navTo('tabloubot', true)");
+      // butonul din .tabs cheama show('dash') DIRECT, nu navTo() - exact drumul care scurgea inainte
+      await b.ev(`document.querySelector('.tabs .tab')?.click()`);
+      await asteapta(200);
+      const ceasDupa = await b.ev(`tbStare.ceas === null`);
+      const wsDupa = await b.ev(`tbStare.ws === null`);
+      assert.ok(ceasDupa, "ceasul trebuie oprit si la iesirea prin bara de tab-uri, nu doar prin navTo");
+      assert.ok(wsDupa, "WebSocket-ul trebuie inchis si la iesirea prin bara de tab-uri, nu doar prin navTo");
+    });
+
+    /* --- 5. pretul folosit de verdict era vechi de pana la ~10 minute --- */
+    await test("11. verdictul foloseste pretul VIU (pretCurent), nu inchiderea vechii lumanari de 5m", async () => {
+      const brut = botBrut({ strategyId: "8111", baza: "ADA.PERP", buOrderData: { bottom: "0.30", top: "0.40" } });
+      // pretCurent (live, din tickere) diferit de ultima inchidere de lumanare (~0.30..0.32)
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut, { pretCurent: 0.38 })] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const poz = await celula(b, 0); // "poziția în interval"
+      const val = parseFloat(poz?.valoare);
+      // (0.38-0.30)/(0.40-0.30)*100 = 80% cu pretul viu; cu inchiderea lumanarii (~0.32) ar fi ~20%
+      assert.ok(val > 70 && val < 90, `pozitia ar trebui ~80% (pret viu 0.38), nu bazata pe inchiderea lumanarii: ${poz?.valoare}`);
+    });
+
+    /* --- 6. istoricul inghitea pretul spot inghetat in timpul unei pene de WS --- */
+    await test("12. pretul spot inghetat NU intra in istoric - se scrie null, nu pretul mort", async () => {
+      await incarcaBotSanatos({ strategyId: "8112", baza: "ADA.PERP" });
+      await b.ev(`window.__probaTrimiteTick("0.321")`);
+      await b.ev(`renderTabloBot()`);
+      // simulam pana de WS: pretul devine "invechit" (>60s) FARA tick nou, ca la proba 1
+      await b.ev(`tbStare.pretSpotLa = Date.now() - 61000;`);
+      await b.ev(`tbAduDate()`); // scrie un rand nou in istoric
+      const ultimulPretSpot = await b.ev(`tbStare.istoric[tbStare.istoric.length-1]?.pretSpot`);
+      assert.equal(ultimulPretSpot, null, `pretul spot inghetat nu are voie sa intre in istoric ca fiind viu: ${ultimulPretSpot}`);
+    });
+
+    /* --- 7. .slice().reverse() presupunea ordinea lumanarilor --- */
+    await test("13. lumanarile se sorteaza dupa timp, nu se presupune ordinea de la ruta", async () => {
+      await incarcaBotSanatos({ strategyId: "8113", baza: "ADA.PERP" });
+      const mock = lumanariCorpMock(60);
+      mock.data.klines = mock.data.klines.slice().reverse(); // acum crescator - opusul a ce trimite Pionex normal
+      await seteazaMock(b, "market", { corp: mock, stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const ordonatCrescator = await b.ev(`(() => {
+        const k = tbStare.klinePerp;
+        if (!k || k.length < 2) return false;
+        for (let i = 1; i < k.length; i++) if (Number(k[i].time) < Number(k[i-1].time)) return false;
+        return true;
+      })()`);
+      assert.ok(ordonatCrescator, "klinePerp trebuie sa fie crescator dupa timp indiferent de ordinea primita de la ruta");
     });
 
   } finally {

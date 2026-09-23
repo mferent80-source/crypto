@@ -44,14 +44,38 @@ const BOT = {
     riskStatus: "TRADING", marginStatus: "NORMAL",
   },
 };
-// 48 de lumanari care oscileaza: zigzag curat, eficienta aproape de zero
-const ZIGZAG = Array.from({ length: 48 }, (_, i) => ({ close: i % 2 ? 0.0156 : 0.0154 }));
+// 48 de lumanari care oscileaza: zigzag curat, eficienta aproape de zero.
+// Cu mustati (high/low in jurul lui close) - Task 4 al revizei finale:
+// amplitudinea trebuie sa foloseasca ATR adevarat, nu doar |delta close|.
+const ZIGZAG = Array.from({ length: 48 }, (_, i) => {
+  var c = i % 2 ? 0.0156 : 0.0154;
+  return { close: c, high: c + 0.00003, low: c - 0.00003 };
+});
 // 48 de lumanari care urca drept: eficienta 1
 const TREND = Array.from({ length: 48 }, (_, i) => ({ close: 0.0150 + i * 0.00002 }));
 const ISTORIC = Array.from({ length: 400 }, (_, i) => ({
   t: Date.now() - (400 - i) * 60000, perechi: i, pretPerp: 0.0155, pretSpot: 0.0155,
 }));
 const INTRARI = { bot: BOT, klinePerp: ZIGZAG, pretSpot: 0.0155, istoric: ISTORIC, acum: Date.now() };
+
+// --- Task 5 al revizei finale: pretul de verdict era vechi de pana la ~10
+// minute (inchiderea ultimei lumanari de 5m, cache 300s pe ruta). Ruta are
+// deja pretul viu din tickere - masoara() trebuie sa-l prefere cand exista.
+
+await test("[revizie] pretPerpViu (tickerul live) bate inchiderea lumanarii", () => {
+  const m = T.masoara({ ...INTRARI, pretPerpViu: 0.01700 });
+  assert.equal(m.pretPerp, 0.01700, "pretPerp trebuie sa fie pretul viu, nu ultima inchidere de lumanare");
+});
+
+await test("[revizie] fara pretPerpViu, ramane inchiderea ultimei lumanari (compatibil)", () => {
+  const m = T.masoara(INTRARI);
+  assert.equal(m.pretPerp, 0.0156, "fara pret viu, cade inapoi pe ultima inchidere din klinePerp");
+});
+
+await test("[revizie] pretPerpViu nenumeric cade inapoi pe lumanari, nu crapa", () => {
+  const m = T.masoara({ ...INTRARI, pretPerpViu: "nu-e-numar" });
+  assert.equal(m.pretPerp, 0.0156);
+});
 
 await test("pozitia in interval se socoteste in procente", () => {
   const m = T.masoara({ ...INTRARI, klinePerp: ZIGZAG.concat({ close: 0.01555 }) });
@@ -79,13 +103,76 @@ await test("zigzagul da eficienta mica, trendul o da mare", () => {
   assert.equal(t.eficienta.semn, 1, "trendul urca, semnul trebuie sa fie +1");
 });
 
-await test("amplitudinea se raporteaza la treapta grilei", () => {
+await test("amplitudinea se raporteaza la treapta grilei (ATR adevarat, cu mustati)", () => {
   const m = T.masoara(INTRARI);
   // treapta = (0.0158 - 0.0153) / 25 = 0.00002
-  // ZIGZAG alterneaza strict 0.0154/0.0156 => fiecare pas = 0.0002 =>
-  // amplitudine medie = 0.0002 => raportul la treapta = 0.0002 / 0.00002 = 10
-  assert.ok(Math.abs(m.amplitudine.valoare - 10) < 0.01,
-    `amplitudine gresita: ${m.amplitudine.valoare}, asteptat ~10`);
+  // ZIGZAG alterneaza 0.0154/0.0156 (delta close 0.0002) cu mustati de 0.00003
+  // in fiecare parte => true range pe fiecare pas = 0.0002 + 0.00003 = 0.00023
+  // => amplitudine medie ATR = 0.00023 => raport = 0.00023 / 0.00002 = 11.5
+  assert.ok(Math.abs(m.amplitudine.valoare - 11.5) < 0.01,
+    `amplitudine gresita: ${m.amplitudine.valoare}, asteptat ~11.5`);
+});
+
+await test("[revizie] amplitudinea foloseste high/low, nu doar |delta close|", () => {
+  // 20 de lumanari cu close PLAT (delta 0) dar mustati mari: formula veche
+  // (doar |delta close|) ar fi dat amplitudine 0 => "rau". ATR adevarat vede
+  // oscilatia din mustati si da "bine" - exact bug-ul masurat in revizie:
+  // media |delta close| 0.004 (rau) vs ATR adevarat 0.011 (bine).
+  const plate = Array.from({ length: 20 }, () => ({ close: 0.0155, high: 0.01553, low: 0.01547 }));
+  const m = T.masoara({ ...INTRARI, klinePerp: plate });
+  // treapta = 0.00002; ATR = max(h-l, |h-prevClose|, |l-prevClose|) = 0.00006 => raport 3.0
+  assert.ok(Math.abs(m.amplitudine.valoare - 3.0) < 0.01,
+    `amplitudine gresita: ${m.amplitudine.valoare}, asteptat ~3.0 (nu 0)`);
+  assert.equal(m.amplitudine.stare, "bine", "vechea formula ar fi dat rau (amplitudine 0)");
+});
+
+await test("[revizie] amplitudinea sare o lumanare fara high/low, nu ghiceste si nu crapa", () => {
+  const cuGaura = ZIGZAG.slice(0, -1).concat({ close: 0.0157 }); // ultima, fara high/low
+  const m = T.masoara({ ...INTRARI, klinePerp: cuGaura });
+  assert.ok(Number.isFinite(m.amplitudine.valoare), `nu trebuie sa crape sau sa dea null: ${m.amplitudine.valoare}`);
+});
+
+// --- Task 9 al revizei finale: minuteLaMargine, socotit din istoric ---
+const PRET_MARGINE = 0.01577; // ~94% din interval (0.0153..0.0158) - "margine" de sus
+const KLINE_MARGINE = ZIGZAG.concat({ close: PRET_MARGINE, high: PRET_MARGINE, low: PRET_MARGINE });
+function istoricLaMargine(minuteLaMargine, pretInainte) {
+  var out = [], t0 = Date.now() - (minuteLaMargine + 60) * 60000, mi = 0;
+  for (; mi < 60; mi++) out.push({ t: t0 + mi * 60000, perechi: mi, pretPerp: pretInainte, pretSpot: pretInainte });
+  for (var j = 0; j <= minuteLaMargine; j++, mi++) out.push({ t: t0 + mi * 60000, perechi: mi, pretPerp: PRET_MARGINE, pretSpot: PRET_MARGINE });
+  return out;
+}
+
+await test("masoara: minuteLaMargine numara timpul CONTINUU petrecut la margine", () => {
+  const ist = istoricLaMargine(20, 0.0155);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ist[ist.length - 1].t, klinePerp: KLINE_MARGINE, pretSpot: PRET_MARGINE });
+  assert.ok(Math.abs(m.pozitieInterval.minuteLaMargine - 20) < 1.5,
+    `minuteLaMargine: ${m.pozitieInterval.minuteLaMargine}, asteptat ~20`);
+});
+
+await test("masoara: minuteLaMargine se rupe daca pretul a iesit din banda intre timp", () => {
+  // 60 minute la margine, apoi 3 minute in mijlocul intervalului, apoi 26 la margine
+  var t0 = Date.now() - 88 * 60000, out = [], mi = 0;
+  for (; mi < 60; mi++) out.push({ t: t0 + mi * 60000, perechi: mi, pretPerp: PRET_MARGINE, pretSpot: PRET_MARGINE });
+  for (var j = 0; j < 3; j++, mi++) out.push({ t: t0 + mi * 60000, perechi: mi, pretPerp: 0.0155, pretSpot: 0.0155 });
+  for (; mi <= 88; mi++) out.push({ t: t0 + mi * 60000, perechi: mi, pretPerp: PRET_MARGINE, pretSpot: PRET_MARGINE });
+  const m = T.masoara({ ...INTRARI, istoric: out, acum: out[out.length - 1].t, klinePerp: KLINE_MARGINE, pretSpot: PRET_MARGINE });
+  assert.ok(m.pozitieInterval.minuteLaMargine < 30,
+    `ar trebui sa numere doar de la ultima intrerupere (~25 min), nu 88; a dat ${m.pozitieInterval.minuteLaMargine}`);
+});
+
+await test("[revizie] end-to-end: REGLEAZA pe margine NU se aprinde sub 30 de minute", () => {
+  const ist = istoricLaMargine(20, 0.0155);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ist[ist.length - 1].t, klinePerp: KLINE_MARGINE, pretSpot: PRET_MARGINE });
+  const v = T.verdict(m, "GRID");
+  assert.notEqual(v.nivel, "REGLEAZA", `sub 30 minute nu are voie sa dea REGLEAZA (a dat ${v.nivel})`);
+});
+
+await test("[revizie] end-to-end: REGLEAZA pe margine se aprinde dupa 30 de minute continue", () => {
+  const ist = istoricLaMargine(35, 0.0155);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ist[ist.length - 1].t, klinePerp: KLINE_MARGINE, pretSpot: PRET_MARGINE });
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "pozitieInterval");
 });
 
 await test("fara `row` amplitudinea spune ca nu se poate, nu ghiceste", () => {
@@ -164,6 +251,37 @@ await test("comisionul care mananca peste jumatate din grid e rau", () => {
   const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, totalFee: "-1.50" } };
   const m = T.masoara({ ...INTRARI, bot });
   assert.equal(m.comision.stare, "rau");
+});
+
+// --- Task 8 al revizei finale: comision nemasurabil exact cand e cel mai rau -
+// taxe care curg fara profit brut (zero sau negativ) trebuie sa dea "rau",
+// nu "nu-se-poate" (care cadea tacut pe LINISTE).
+
+await test("[revizie] taxe care curg cu gridProfit ZERO dau rau, nu nu-se-poate", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, gridProfit: "0", totalFee: "-40" } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.comision.stare, "rau", "gridProfit=0 cu taxe curgand nu are voie sa tacoa");
+});
+
+await test("[revizie] taxe care curg cu gridProfit NEGATIV dau rau, nu nu-se-poate", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, gridProfit: "-5", totalFee: "-120" } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.comision.stare, "rau", "gridProfit negativ cu taxe curgand nu are voie sa tacoa");
+});
+
+await test("[revizie] fara profit SI fara taxe, comisionul ramane nu-se-poate (n-a curs nimic)", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, gridProfit: "0", totalFee: "0" } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.comision.stare, "nu-se-poate", "zero si zero nu e semnal de rau - e lipsa de activitate");
+});
+
+await test("[revizie] end-to-end: comision rau fara profit brut da REGLEAZA, nu LINISTE", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, gridProfit: "0", totalFee: "-40" } };
+  const m = T.masoara({ ...INTRARI, bot });
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA");
+  assert.equal(v.declansator.masura, "comision");
+  assert.doesNotMatch(v.ceFac, /jumătate/, "fara brut, mesajul 'peste jumatate' ar minti (jumatate din nimic)");
 });
 
 await test("fara bot, masurile care cer bot spun asta si nu crapa", () => {
@@ -310,6 +428,8 @@ function masuriBune() {
     basis: { valoare: 0.1, stare: "bine", prag: 1.0 },
     comision: { valoare: 0.2, stare: "bine", prag: 0.50 },
     directieBot: 0,
+    marginStatus: { valoare: "NORMAL", stare: "bine", prag: "NORMAL" },
+    riskStatus: { valoare: "TRADING", stare: "bine", prag: "TRADING" },
   };
 }
 
@@ -331,6 +451,93 @@ await test("lichidarea sub 8% da OPRESTE", () => {
   assert.equal(v.declansator.masura, "lichidare");
   assert.equal(v.declansator.valoare, 6.2);
   assert.equal(v.declansator.prag, 8);
+});
+
+// --- Task 1 al revizei finale: marginStatus/riskStatus nu erau citite deloc -
+// un bot altfel sanatos (lichidare 16,88%) trecea LINISTE cu MARGIN_CALL,
+// LIQUIDATING sau REDUCE_ONLY/LIQUIDATION. Masurate exact aceste patru valori.
+
+await test("[revizie] marginStatus=MARGIN_CALL da OPRESTE, nu LINISTE", () => {
+  const m = masuriBune();
+  m.marginStatus = { valoare: "MARGIN_CALL", stare: "rau", prag: "NORMAL" };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE");
+  assert.equal(v.declansator.masura, "marginStatus");
+  assert.equal(v.declansator.valoare, "MARGIN_CALL");
+});
+
+await test("[revizie] marginStatus=LIQUIDATING da OPRESTE, nu LINISTE", () => {
+  const m = masuriBune();
+  m.marginStatus = { valoare: "LIQUIDATING", stare: "rau", prag: "NORMAL" };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE");
+  assert.equal(v.declansator.masura, "marginStatus");
+});
+
+await test("[revizie] riskStatus=REDUCE_ONLY da OPRESTE, nu LINISTE", () => {
+  const m = masuriBune();
+  m.riskStatus = { valoare: "REDUCE_ONLY", stare: "rau", prag: "TRADING" };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE");
+  assert.equal(v.declansator.masura, "riskStatus");
+});
+
+await test("[revizie] riskStatus=LIQUIDATION da OPRESTE, nu LINISTE", () => {
+  const m = masuriBune();
+  m.riskStatus = { valoare: "LIQUIDATION", stare: "rau", prag: "TRADING" };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE");
+  assert.equal(v.declansator.masura, "riskStatus");
+});
+
+await test("[revizie] marginStatus rau bate lichidarea calculata (Pionex e mai autoritar)", () => {
+  const m = masuriBune();
+  m.lichidare = { valoare: 40, stare: "bine", prag: { grav: 8, atentie: 15 } }; // distanta calculata arata bine
+  m.marginStatus = { valoare: "LIQUIDATING", stare: "rau", prag: "NORMAL" };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", "starea de cont de la Pionex trebuie sa bata o lichidare calculata linistitoare");
+});
+
+await test("[revizie] marginStatus/riskStatus NECUNOSCUT (camp lipsa) NU declanseaza OPRESTE", () => {
+  const m = masuriBune();
+  m.marginStatus = { valoare: null, stare: "nu-se-poate", prag: null };
+  m.riskStatus = { valoare: null, stare: "nu-se-poate", prag: null };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "LINISTE", "camp lipsa nu are de unde sa stie - nu se declanseaza, dar nici nu se trateaza ca NORMAL cu zgomot");
+});
+
+await test("[revizie] masoara: citeste marginStatus/riskStatus din buOrderData", () => {
+  const botRau = { ...BOT, buOrderData: { ...BOT.buOrderData, marginStatus: "MARGIN_CALL", riskStatus: "REDUCE_ONLY" } };
+  const m = T.masoara({ ...INTRARI, bot: botRau });
+  assert.equal(m.marginStatus.valoare, "MARGIN_CALL");
+  assert.equal(m.marginStatus.stare, "rau");
+  assert.equal(m.riskStatus.valoare, "REDUCE_ONLY");
+  assert.equal(m.riskStatus.stare, "rau");
+});
+
+await test("[revizie] masoara: marginStatus/riskStatus normale dau stare bine", () => {
+  const m = T.masoara(INTRARI); // BOT are riskStatus:TRADING, marginStatus:NORMAL
+  assert.equal(m.marginStatus.stare, "bine");
+  assert.equal(m.riskStatus.stare, "bine");
+});
+
+await test("[revizie] masoara: camp lipsa (undefined) da nu-se-poate, nu NORMAL/TRADING tacut", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, marginStatus: undefined, riskStatus: undefined } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.marginStatus.stare, "nu-se-poate");
+  assert.equal(m.marginStatus.valoare, null);
+  assert.equal(m.riskStatus.stare, "nu-se-poate");
+  assert.equal(m.riskStatus.valoare, null);
+});
+
+await test("[revizie] end-to-end: bot cu lichidare 16,88% (sanatoasa) dar marginStatus MARGIN_CALL da OPRESTE", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, marginStatus: "MARGIN_CALL",
+    estimateLiquidationPriceDown: "0.013", estimateLiquidationPriceUp: "0" } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.ok(m.lichidare.valoare > 15, `precheck: lichidarea trebuie sa fie linistitoare, e ${m.lichidare.valoare}`);
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", "marginStatus anormal trebuie sa opreasca chiar cu lichidare departe");
+  assert.equal(v.declansator.masura, "marginStatus");
 });
 
 await test("pretul iesit din interval da PAZESTE in GRID", () => {
@@ -476,9 +683,9 @@ await test("ritmul cazut da REGLEAZA (nu doar declansatorul - si nivelul)", () =
   assert.equal(v.declansator.masura, "ritmPerechi");
 });
 
-await test("pozitia lipita de margine da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
+await test("pozitia lipita de margine da REGLEAZA dupa 30 de minute (nu doar declansatorul - si nivelul)", () => {
   const m = masuriBune();
-  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 } };
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 }, minuteLaMargine: 30 };
   const v = T.verdict(m, "GRID");
   assert.equal(v.nivel, "REGLEAZA");
   assert.equal(v.declansator.masura, "pozitieInterval");
@@ -487,10 +694,33 @@ await test("pozitia lipita de margine da REGLEAZA (nu doar declansatorul - si ni
 
 await test("pozitia lipita de marginea de JOS raporteaza pragul 15, nu 85", () => {
   const m = masuriBune();
-  m.pozitieInterval = { valoare: 10, stare: "margine", prag: { margine: 15 } };
+  m.pozitieInterval = { valoare: 10, stare: "margine", prag: { margine: 15 }, minuteLaMargine: 45 };
   const v = T.verdict(m, "GRID");
   assert.equal(v.nivel, "REGLEAZA");
   assert.equal(v.declansator.prag, 15, "10% e sub pragul de JOS (15), nu peste cel de sus (85)");
+});
+
+// --- Revizie: REGLEAZA pe margine se aprindea instant - specul cere >=30 min ---
+
+await test("[revizie] margine sub 30 de minute NU da REGLEAZA", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 }, minuteLaMargine: 29 };
+  const v = T.verdict(m, "GRID");
+  assert.notEqual(v.nivel, "REGLEAZA", `29 minute nu ajunge la 30, dar a dat ${v.nivel}`);
+});
+
+await test("[revizie] margine fara minuteLaMargine (fixtura veche) NU da REGLEAZA - nu se presupune instant", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.notEqual(v.nivel, "REGLEAZA", `fara minuteLaMargine nu are voie sa se aprinda instant, a dat ${v.nivel}`);
+});
+
+await test("[revizie] margine la exact 30 de minute da REGLEAZA (granita)", () => {
+  const m = masuriBune();
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 }, minuteLaMargine: 30 };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "REGLEAZA", "30 de minute fix trebuie sa aprinda (>=30)");
 });
 
 await test("basis sarit da OPORTUNITATE (nu doar declansatorul - si nivelul)", () => {

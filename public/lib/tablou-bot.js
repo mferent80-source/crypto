@@ -14,6 +14,16 @@ var TabloBot = (function () {
   function nr(v) { var x = Number(v); return isFinite(x) ? x : null; }
   var NECUNOSCUT = { valoare: null, stare: "nu-se-poate", prag: null };
 
+  // Stare de cont raportata direct de Pionex (marginStatus / riskStatus).
+  // Camp lipsa sau gol -> NECUNOSCUT (nu declansam, n-avem de unde sti, dar
+  // nici nu-l tratam tacut ca fiind valoarea buna - vezi trepte()).
+  function estareCont(bruta, asteptat) {
+    if (bruta === undefined || bruta === null) return NECUNOSCUT;
+    var v = String(bruta).trim().toUpperCase();
+    if (!v) return NECUNOSCUT;
+    return { valoare: v, stare: v === asteptat ? "bine" : "rau", prag: asteptat };
+  }
+
   // Kaufman: cat din miscarea totala a fost intr-o singura directie.
   // 0 = zigzag curat, 1 = trend curat.
   function eficienta(inchideri) {
@@ -24,20 +34,53 @@ var TabloBot = (function () {
     return { valoare: Math.abs(net) / drum, semn: net > 0 ? 1 : net < 0 ? -1 : 0 };
   }
 
-  function amplitudineMedie(lumanari, n) {
+  // ATR(n) adevarat, cu high/low - nu doar |delta close|. |delta close| ignora
+  // mustatile: o lumanare care sare sus si coboara inapoi la acelasi close
+  // arata "amplitudine zero" in formula veche, desi tocmai a miscat pretul cu
+  // toata mustatea aia. Lumanarile Pionex au high/low - le folosim.
+  // O lumanare cu high/low lipsa se sare (nu se ghiceste), dar tine loc pentru
+  // prevClose la urmatoarea.
+  function atr(lumanari, n) {
     if (!lumanari || lumanari.length < 2) return null;
-    var felie = lumanari.slice(-n - 1), s = 0, c = 0;
-    for (var i = 1; i < felie.length; i++) {
-      s += Math.abs(nr(felie[i].close) - nr(felie[i - 1].close)); c++;
+    var felie = lumanari.slice(-n - 1), tr = [], prevClose = null;
+    for (var i = 0; i < felie.length; i++) {
+      var h = nr(felie[i].high), l = nr(felie[i].low), c = nr(felie[i].close);
+      if (h === null || l === null || prevClose === null) { prevClose = c; continue; }
+      tr.push(Math.max(h - l, Math.abs(h - prevClose), Math.abs(l - prevClose)));
+      prevClose = c;
     }
-    return c ? s / c : null;
+    if (!tr.length) return null;
+    var s = 0; for (var j = 0; j < tr.length; j++) s += tr[j];
+    return s / tr.length;
+  }
+
+  // De cate minute e pretul CONTINUU in banda de margine (<15% sau >85%),
+  // numarat inapoi din `acum` pe istoricul retinut. Se opreste la prima
+  // intrare care nu mai e la margine (fie "bine", fie "afara" de tot) - o
+  // iesire scurta din banda taie sirul, nu se aduna peste ea.
+  function minuteContinuuLaMargine(istoric, jos, sus, acum) {
+    if (!istoric || !istoric.length || !(sus > jos)) return 0;
+    var min = 0;
+    for (var i = istoric.length - 1; i >= 0; i--) {
+      var pp = nr(istoric[i].pretPerp), t = nr(istoric[i].t);
+      if (pp === null || t === null) break;
+      var poz = 100 * (pp - jos) / (sus - jos);
+      if (!(poz >= 0 && poz <= 100 && (poz < 15 || poz > 85))) break;
+      min = (acum - t) / 60000;
+    }
+    return min;
   }
 
   function masoara(intrari) {
     var bot = intrari.bot, x = (bot && bot.buOrderData) || null;
     var lumanari = intrari.klinePerp || [];
     var inchideri = lumanari.map(function (k) { return nr(k.close); }).filter(function (v) { return v !== null; });
-    var pretPerp = inchideri.length ? inchideri[inchideri.length - 1] : null;
+    // Pretul VIU (din tickere, la fiecare 8s, fara cache) bate inchiderea
+    // ultimei lumanari de 5m (cache 300s pe ruta - pana la ~10 minute vechi).
+    // Lumanarile raman pentru eficienta si amplitudine - alea au nevoie de
+    // serie, nu de un singur punct.
+    var pretPerpViu = nr(intrari.pretPerpViu);
+    var pretPerp = pretPerpViu !== null ? pretPerpViu : (inchideri.length ? inchideri[inchideri.length - 1] : null);
     var pretSpot = nr(intrari.pretSpot);
     var istoric = intrari.istoric || [];
     var acum = intrari.acum || Date.now();
@@ -55,6 +98,7 @@ var TabloBot = (function () {
       pozitieInterval: NECUNOSCUT, ritmPerechi: NECUNOSCUT, amplitudine: NECUNOSCUT,
       lichidare: NECUNOSCUT, comision: NECUNOSCUT,
       basis: NECUNOSCUT, directieBot: 0,
+      marginStatus: NECUNOSCUT, riskStatus: NECUNOSCUT,
     };
 
     if (pretPerp !== null && pretSpot) {
@@ -76,16 +120,22 @@ var TabloBot = (function () {
     var tr = String(x.trend || "").trim().toLowerCase();
     m.directieBot = tr === "long" ? 1 : tr === "short" ? -1 : 0;
 
+    // Stare raportata direct de Pionex - bate orice calcul local (Task 1 al
+    // revizei finale: marginStatus/riskStatus nu erau citite niciodata).
+    m.marginStatus = estareCont(x.marginStatus, "NORMAL");
+    m.riskStatus = estareCont(x.riskStatus, "TRADING");
+
     var jos = nr(x.bottom), sus = nr(x.top);
     if (jos !== null && sus !== null && sus > jos && pretPerp !== null) {
       var p = 100 * (pretPerp - jos) / (sus - jos);
       m.pozitieInterval = {
         valoare: p, prag: { margine: 15, afara: 0 },
         stare: p < 0 || p > 100 ? "afara" : (p < 15 || p > 85) ? "margine" : "bine",
+        minuteLaMargine: minuteContinuuLaMargine(istoric, jos, sus, acum),
       };
       var linii = nr(x.row);
       if (linii && linii > 0) {
-        var treapta = (sus - jos) / linii, amp = amplitudineMedie(lumanari, 14);
+        var treapta = (sus - jos) / linii, amp = atr(lumanari, 14);
         if (amp !== null) m.amplitudine = { valoare: amp / treapta, prag: 1.0,
           stare: amp / treapta < 1.0 ? "rau" : "bine" };
       }
@@ -109,9 +159,18 @@ var TabloBot = (function () {
     }
 
     var brut = nr(x.gridProfit), taxe = nr(x.totalFee);
-    if (brut !== null && taxe !== null && brut > 0) {
-      var r = Math.abs(taxe) / brut;
-      m.comision = { valoare: r, prag: 0.50, stare: r > 0.50 ? "rau" : "bine" };
+    if (brut !== null && taxe !== null) {
+      if (brut > 0) {
+        var r = Math.abs(taxe) / brut;
+        m.comision = { valoare: r, prag: 0.50, stare: r > 0.50 ? "rau" : "bine" };
+      } else if (Math.abs(taxe) > 0) {
+        // Taxe care curg fara profit brut (zero sau negativ) e cazul cel mai
+        // rau, nu unul nemasurabil - la un ban profit ratul striga, la zero
+        // tacea. Nu exista un raport sanatos de aratat (impartire la zero sau
+        // negativ), dar starea nu are voie sa taca pe "nu-se-poate".
+        m.comision = { valoare: null, prag: 0.50, stare: "rau" };
+      }
+      // brut <= 0 si taxe === 0: ramane NECUNOSCUT - n-a curs nimic inca.
     }
 
     // Ritmul: perechi in ultima ora fata de media pe ora din ultimele 6.
@@ -180,6 +239,21 @@ var TabloBot = (function () {
         titlu: "Nu știu încă",
         ceFac: "Nu pot socoti unde e prețul în interval - lipsesc datele grid-ului.",
         declansator: d("pozitieInterval", null, null) };
+    }
+
+    // Starea de cont de la Pionex bate orice calcul local - daca bursa insasi
+    // spune ca margine sau riscul nu sunt normale, iesim, indiferent cat de
+    // departe pare lichidarea calculata de noi. Camp lipsa (NECUNOSCUT) nu
+    // declanseaza nimic - vezi estareCont() mai sus.
+    if (m.marginStatus && m.marginStatus.valoare !== null && m.marginStatus.stare === "rau") {
+      return { nivel: "OPRESTE", titlu: "Ieși",
+        ceFac: "Pionex raportează marginea contului ca " + m.marginStatus.valoare + ", nu NORMAL.",
+        declansator: d("marginStatus", m.marginStatus.valoare, "NORMAL") };
+    }
+    if (m.riskStatus && m.riskStatus.valoare !== null && m.riskStatus.stare === "rau") {
+      return { nivel: "OPRESTE", titlu: "Ieși",
+        ceFac: "Pionex raportează starea de risc ca " + m.riskStatus.valoare + ", nu TRADING.",
+        declansator: d("riskStatus", m.riskStatus.valoare, "TRADING") };
     }
 
     if (m.lichidare.valoare !== null && m.lichidare.valoare < 8) {
@@ -251,8 +325,13 @@ var TabloBot = (function () {
         declansator: d("amplitudine", m.amplitudine.valoare, 1.0) };
     }
     if (m.comision.stare === "rau") {
+      // Cazul fara raport (brut <= 0): mesajul "peste jumatate" ar minti -
+      // nu exista jumatate din nimic. Spunem direct ce se vede.
+      var texComision = m.comision.valoare === null
+        ? "Taxele curg, dar botul n-are niciun câștig brut din grid."
+        : "Peste jumătate din câștigul brut se duce pe taxe.";
       return { nivel: "REGLEAZA", titlu: "Comisioanele mănâncă gridul",
-        ceFac: "Peste jumătate din câștigul brut se duce pe taxe.",
+        ceFac: texComision,
         declansator: d("comision", m.comision.valoare, 0.50) };
     }
     if (mod !== "DIRECTIONAL" && m.ritmPerechi.stare === "rau") {
@@ -260,10 +339,16 @@ var TabloBot = (function () {
         ceFac: m.ritmPerechi.valoare + " perechi în ultima oră, față de " + Math.round(m.ritmPerechi.baza) + " obișnuit.",
         declansator: d("ritmPerechi", m.ritmPerechi.valoare, m.ritmPerechi.baza * 0.40) };
     }
-    if (mod !== "DIRECTIONAL" && m.pozitieInterval.stare === "margine") {
+    // O atingere trecatoare a marginii nu cere mutarea intervalului - doar o
+    // sedere de macar 30 de minute o cere. `minuteLaMargine` vine din istoric
+    // (masoara) si lipseste (0) pe fixturile vechi care nu-l seteaza - acelea
+    // trebuie sa-l puna explicit daca vor sa exercite treapta asta.
+    if (mod !== "DIRECTIONAL" && m.pozitieInterval.stare === "margine"
+        && (m.pozitieInterval.minuteLaMargine || 0) >= 30) {
       var pragMargine = m.pozitieInterval.valoare < 15 ? 15 : 85;
+      var minuteMargine = Math.round(m.pozitieInterval.minuteLaMargine);
       return { nivel: "REGLEAZA", titlu: "Stai lipit de o margine",
-        ceFac: "Cântărește mutarea intervalului.",
+        ceFac: "Cântărește mutarea intervalului - stai acolo de " + minuteMargine + " minute.",
         declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragMargine) };
     }
     if (m.basis.stare === "rau") {

@@ -1,10 +1,10 @@
 {
-  "version": "v73",
-  "badge": "v73 · TABLOUL BOTULUI",
+  "version": "v74",
+  "badge": "v74 · TABLOUL BOTULUI",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v72 · BOTI DE GRID PIONEX",
-  "releaseType": "proba de ecran in Chrome real pentru Tabloul botului, pazind cele 7 purtari reparate la revizii",
+  "baseRelease": "v73 · PROBA DE ECRAN TABLOUL BOTULUI",
+  "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
@@ -17,7 +17,8 @@
     "pionexJournalV71": "strict read-only; per-symbol FIFO; base/quote fee conversion; bounded 365-day recursive backfill; incomplete history is never labeled reconciled",
     "liveExecutionRemoved": "all Pionex submit, close and cancel routes and controls removed from this build",
     "botiGridV72": "strict read-only pe GET /api/v1/bot/orders; raporteaza profitul NET (totalRealizedProfit), nu cifra bruta de grid; avertizeaza cand opritoarele sunt setate dar stinse, cand pretul iese din intervalul grid si cand lichidarea e sub 15%; PERMISSION_DENIED nu mai trece drept 'zero boti'",
-    "tablouBotV73": "ecran de citit botul de grid pe intelesul omului: pret invechit marcat, basis golit la schimbarea simbolului, zero scrieri in istoric in pana de retea, badge-uri neutre la eroare, buton de mod dezactivat fara strategyId, verdict EROARE (nu FARA_BOT) pe raspuns nevalid, eticheta activ/oprit corecta; pazit de scripts/proba-ecran-tablou.mjs (Chrome real prin CDP, test:ecran)"
+    "tablouBotV73": "ecran de citit botul de grid pe intelesul omului: pret invechit marcat, basis golit la schimbarea simbolului, zero scrieri in istoric in pana de retea, badge-uri neutre la eroare, buton de mod dezactivat fara strategyId, verdict EROARE (nu FARA_BOT) pe raspuns nevalid, eticheta activ/oprit corecta; pazit de scripts/proba-ecran-tablou.mjs (Chrome real prin CDP, test:ecran)",
+    "tablouBotV74": "valul de reparatii cerut de revizia finala pe ansamblu, inainte de imbinare: OPRESTE citeste acum marginStatus/riskStatus de la Pionex (nu doar lichidarea calculata), intrare in meniu accesibila si pe telefon (sertarul More), iesirea prin bara de tab-uri opreste WebSocket-ul si ceasul la fel ca navTo(), amplitudinea foloseste ATR adevarat cu high/low (nu doar |delta close|), verdictul foloseste pretul VIU din tickere (nu inchiderea unei lumanari cache-uite 300s), istoricul nu mai inghite pretul spot inghetat in pana de WebSocket, lumanarile se sorteaza dupa timp (nu .reverse() orb), comisionul care curge fara profit brut e cazul cel mai rau (nu nemasurabil), REGLEAZA pe margine cere macar 30 de minute continue"
   },
   "notes": "Market breadth is a context/confirmation layer. It does not independently create BUY/SELL orders and does not add live order placement.",
   "base": "v70 Pionex Auto Journal & Reconciliation Pro",
