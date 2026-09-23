@@ -1128,5 +1128,31 @@ await test("eroare: fara mesaj si fara status nu arunca si nu minte", () => {
   assert.ok(typeof e.ceFac === "string" && e.ceFac.length > 0);
 });
 
+/* ── 5xx prin tunel: Cloudflare inghite motivul ───────────────────────────
+   MASURAT 23.09 pe un tunel trycloudflare: 200 si 401 trec ca JSON, dar orice
+   5xx de la serverul de acasa e INLOCUIT cu pagina de eroare a Cloudflare.
+   getJSON nu mai poate parsa si arunca "Raspuns invalid · HTTP 502" - fara
+   niciun motiv. Omul trebuie sa afle UNDE scrie motivul adevarat. */
+
+await test("eroare: 5xx spune ca motivul e in fereastra neagra, nu doar codul", () => {
+  const e = T.explicaEroarea("Răspuns invalid · HTTP 502", null, "athens-potato.trycloudflare.com");
+  assert.ok(!/^Răspuns invalid/.test(e.ceFac),
+    `un cod gol nu-i spune omului nimic: "${e.ceFac}"`);
+  assert.match(e.ceFac, /fereastra neagr|calculator/i,
+    "trebuie sa-i spuna unde se vede motivul adevarat");
+});
+
+await test("eroare: 5xx cu status pe eroare (nu in text) merge la fel", () => {
+  const e = T.explicaEroarea("UPSTREAM", 503, "127.0.0.1");
+  assert.match(e.ceFac, /fereastra neagr|calculator/i);
+});
+
+await test("eroare: 4xx necunoscut NU se confunda cu 5xx", () => {
+  const e = T.explicaEroarea("BAD_REQUEST", 400, "127.0.0.1");
+  assert.ok(!/fereastra neagr/i.test(e.ceFac),
+    `400 nu e o cadere a serverului: "${e.ceFac}"`);
+  assert.match(e.ceFac, /BAD_REQUEST/, "mesajul brut ramane la vedere");
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

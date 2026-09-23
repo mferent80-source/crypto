@@ -402,7 +402,9 @@ var TabloBot = (function () {
     var g = String(gazda == null ? "" : gazda).toLowerCase();
     var local = g === "localhost" || g === "127.0.0.1" || g === "[::1]" || g === "";
     var brut = (mesaj == null || mesaj === "") ? "Eroare necunoscută." : String(mesaj);
-    var st = nr(status);
+    // nr(null) intoarce 0 (Number(null) === 0), nu null - aceeasi capcana care a
+    // fabricat basis -100% la pretPerpViu. Un status e valid doar daca e POZITIV.
+    var stBrut = nr(status), st = (stBrut !== null && stBrut > 0) ? stBrut : null;
     var eAuth = st === 401 || st === 403 || /AUTH/i.test(brut);
     var eRitm = st === 429 || /RATE|429/i.test(brut);
 
@@ -429,6 +431,20 @@ var TabloBot = (function () {
       return { local: local, titlu: "Prea multe cereri către Pionex",
         ceFac: "S-au cerut date prea des. Lasă ecranul deschis un minut fără să " +
           "dai refresh - se reia singur." };
+    }
+    // MASURAT 23.09 pe un tunel trycloudflare: 200 si 401 trec ca JSON, dar orice
+    // 5xx de la serverul de acasa e INLOCUIT cu pagina de eroare a Cloudflare.
+    // getJSON nu mai poate parsa si arunca "Raspuns invalid · HTTP 502", fara motiv.
+    // Motivul adevarat exista - dar in fereastra neagra de pe calculator.
+    var codText = brut.match(/HTTP\s+(\d{3})/);
+    var cod = st !== null ? st : (codText ? Number(codText[1]) : null);
+    if (cod !== null && cod >= 500 && cod < 600) {
+      return { local: local, titlu: "Serverul nu a putut lua datele de la Pionex",
+        ceFac: "Cererea a ajuns la aplicație, dar pasul către Pionex a picat (" + cod + "). " +
+          "Motivul exact îl scrie fereastra neagră de pe calculator - dacă ai deschis " +
+          "de pe telefon, Cloudflare înlocuiește motivul cu o pagină a lui. " +
+          "Cel mai des înseamnă că Pionex nu răspunde sau că o cheie nu mai e bună. " +
+          "Mesajul primit: " + brut };
     }
     return { local: local, titlu: "Nu am putut citi boții", ceFac: brut };
   }

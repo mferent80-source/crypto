@@ -87,6 +87,21 @@ else {
   }
 }
 
+// --- fisierele .bat: CRLF si numai ASCII ---
+// cmd.exe TOACA inceputurile de linie dintr-un .bat salvat cu LF - se strica
+// PROGRESIV si codul de iesire poate ramane 0, deci nu se vede. Iar un caracter
+// cu diacritice intr-un .bat ajunge mojibake in consola. Ce scriem noi pe disc
+// iese implicit cu LF, deci garda asta e pusa exact pe ce gresim des.
+for (const f of fs.readdirSync(RADACINA).filter((x) => x.toLowerCase().endsWith(".bat"))) {
+  verificate++;
+  const octeti = fs.readFileSync(path.join(RADACINA, f));
+  const nCrlf = octeti.filter((_, i) => octeti[i] === 13 && octeti[i + 1] === 10).length;
+  const nLf = octeti.filter((c) => c === 10).length;
+  if (nLf !== nCrlf) probleme.push(`${f}: ${nLf - nCrlf} randuri cu LF simplu - cmd.exe le toaca (trebuie CRLF)`);
+  const neAscii = [...octeti].some((c) => c > 127);
+  if (neAscii) probleme.push(`${f}: are caractere ne-ASCII - in consola ies mojibake`);
+}
+
 console.log("\nV71 · sintaxa · proba");
 for (const p of probleme) console.log(`  PICA ${p}`);
 console.log(`\nV71_SYNTAX ${probleme.length ? "FAIL" : "PASS"} · ${verificate - probleme.length}/${verificate}\n`);

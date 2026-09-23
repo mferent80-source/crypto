@@ -1,4 +1,4 @@
-const CACHE="crypto-radar-v74-2";
+const CACHE="crypto-radar-v74-3";
 const APP_SHELL=["/","/index.html","/app.css","/app.js","/research-worker.js","/engine-contract.json","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png","/lib/tablou-bot.js"];
 
 self.addEventListener("install",event=>{
