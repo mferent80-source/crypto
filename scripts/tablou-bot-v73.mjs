@@ -1298,5 +1298,76 @@ await test("[reparatie] T1: intre 30 si 59 de intrari observate, frecventele de 
   assert.equal(f.desLaMargine.stare, "putin", `45 de intrari observate ar trebui sa dea putin, a dat ${f.desLaMargine.stare}`);
 });
 
+/* ── T2: geometria graficului ─────────────────────────────────────────── */
+await test("T2: sub 10 puncte nu se deseneaza nimic", () => {
+  const g = T.geometrieGrafic(istoricFrecvente(8, { pret: 0.0155 }), BOT, ACUM);
+  assert.equal(g.destul, false, "cu 9 puncte nu se deseneaza un grafic");
+  assert.deepEqual(g.segmente, [], "fara puncte destule nu se intorc segmente");
+});
+
+await test("T2: o gaura mai mare de 5 minute RUPE linia, nu o uneste", () => {
+  const plin = istoricFrecvente(119, { pret: 0.0155 });
+  const cuGaura = plin.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 40 && m < 70); });
+  const g = T.geometrieGrafic(cuGaura, BOT, ACUM);
+  assert.equal(g.destul, true);
+  assert.equal(g.segmente.length, 2, `o gaura de 30 min trebuie sa dea 2 segmente, a dat ${g.segmente.length}`);
+  const gPlin = T.geometrieGrafic(plin, BOT, ACUM);
+  assert.equal(gPlin.segmente.length, 1, "fara gauri, un singur segment");
+});
+
+await test("T2: o pauza de exact 5 minute NU rupe linia; 6 minute o rup", () => {
+  const baza = istoricFrecvente(59, { pret: 0.0155 });
+  const de5 = baza.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 30 && m < 35); });
+  const de6 = baza.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 30 && m < 36); });
+  assert.equal(T.geometrieGrafic(de5, BOT, ACUM).segmente.length, 1, "exact 5 minute e inca o linie");
+  assert.equal(T.geometrieGrafic(de6, BOT, ACUM).segmente.length, 2, "6 minute rup linia");
+});
+
+await test("T2: scara cuprinde banda gridului chiar daca pretul a fugit departe", () => {
+  // BOT are gridul 0.0153..0.0158; punem pretul mult peste
+  const ist = istoricFrecvente(59, { pret: 0.0300 });
+  const g = T.geometrieGrafic(ist, BOT, ACUM);
+  assert.ok(g.minPret <= 0.0153, `scara trebuie sa cuprinda josul gridului, min=${g.minPret}`);
+  assert.ok(g.maxPret >= 0.0300, `scara trebuie sa cuprinda si pretul, max=${g.maxPret}`);
+  assert.ok(g.banda && g.banda.jos >= 0 && g.banda.sus <= 1, "banda trebuie sa cada in scara");
+  assert.ok(g.banda.sus > g.banda.jos, "banda are inaltime");
+});
+
+await test("T2: punctele sunt normalizate intre 0 si 1, iar cel mai NOU e la dreapta", () => {
+  const g = T.geometrieGrafic(istoricFrecvente(59, { pret: 0.0155 }), BOT, ACUM);
+  const toate = g.segmente.flat();
+  for (const p of toate) {
+    assert.ok(p.x >= 0 && p.x <= 1, `x in afara scarii: ${p.x}`);
+    assert.ok(p.y >= 0 && p.y <= 1, `y in afara scarii: ${p.y}`);
+  }
+  assert.ok(toate[toate.length - 1].x > toate[0].x, "cel mai nou punct sta la dreapta");
+});
+
+await test("T2: linia de lichidare apare doar daca intra in scara", () => {
+  const ist = istoricFrecvente(59, { pret: 0.0155 });
+  const aproape = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: "0.0150" } };
+  const departe = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: "0.0001" } };
+  const a = T.geometrieGrafic(ist, aproape, ACUM);
+  const d = T.geometrieGrafic(ist, departe, ACUM);
+  assert.ok(a.lichidare !== null && a.lichidare >= 0 && a.lichidare <= 1, "lichidarea apropiata se arata");
+  assert.equal(d.lichidare, null, "o lichidare in afara scarii nu se deseneaza la marginea de jos");
+});
+
+await test("T2: fara grid se deseneaza tot pretul, dar fara banda", () => {
+  const fara = { ...BOT, buOrderData: { ...BOT.buOrderData, bottom: null, top: null } };
+  const g = T.geometrieGrafic(istoricFrecvente(59, { pret: 0.0155 }), fara, ACUM);
+  assert.equal(g.destul, true, "lipsa gridului nu ascunde pretul");
+  assert.equal(g.banda, null, "fara grid nu se inventeaza o banda");
+});
+
+await test("T2: intrarile fara pretPerp se sar, nu se deseneaza ca zero", () => {
+  const ist = istoricFrecvente(59, { pret: 0.0155 });
+  for (let i = 10; i < 15; i++) ist[i].pretPerp = null;
+  const g = T.geometrieGrafic(ist, BOT, ACUM);
+  const toate = g.segmente.flat();
+  assert.ok(g.minPret > 0.010, `un pretPerp null nu are voie sa traga scara la zero: min=${g.minPret}`);
+  assert.equal(toate.length, ist.length - 5, "cele 5 intrari fara pret nu produc puncte");
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

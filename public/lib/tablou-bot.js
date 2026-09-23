@@ -549,6 +549,66 @@ var TabloBot = (function () {
     };
   }
 
+  // Graficul se construieste aici (pur), ca sa poata fi probat fara browser.
+  // Regulile care-l impiedica sa minta sunt in spec; fiecare are proba ei.
+  var GAURA_GRAFIC_MS = 5 * 60000;
+  function geometrieGrafic(istoric, bot, acum) {
+    var gol = { destul: false, segmente: [], banda: null, lichidare: null,
+      minPret: null, maxPret: null, deLa: null, panaLa: null };
+    var puncte = [];
+    if (Array.isArray(istoric)) {
+      for (var i = 0; i < istoric.length; i++) {
+        var h = istoric[i]; if (!h) continue;
+        var t = nr(h.t), p = nr(h.pretPerp);
+        // Un pretPerp lipsa e null, si nr(null) da 0 - un 0 ar trage scara la zero.
+        if (t === null || p === null || !(p > 0)) continue;
+        puncte.push({ t: t, p: p });
+      }
+    }
+    if (puncte.length < 10) return gol;
+    puncte.sort(function (a, b) { return a.t - b.t; });
+
+    var x = (bot && bot.buOrderData) || {};
+    var jos = nr(x.bottom), sus = nr(x.top);
+    var areGrid = jos !== null && sus !== null && sus > jos && jos > 0;
+    var lich = nr(x.estimateLiquidationPriceDown);
+
+    var minP = puncte[0].p, maxP = puncte[0].p;
+    for (var j = 1; j < puncte.length; j++) {
+      if (puncte[j].p < minP) minP = puncte[j].p;
+      if (puncte[j].p > maxP) maxP = puncte[j].p;
+    }
+    // Scara cuprinde MEREU banda gridului: altfel un pret fugit departe ar turti
+    // banda intr-o dunga si ar parea ca pretul e lipit de ea.
+    if (areGrid) { if (jos < minP) minP = jos; if (sus > maxP) maxP = sus; }
+    // Marja e 2% din NIVELUL pretului (maxP), nu din latimea benzii - o banda de
+    // grid ingusta (cateva procente din pret) ar da o marja microscopica in cifre
+    // absolute, si o lichidare aflata chiar sub grid n-ar mai intra niciodata in
+    // scara, desi e "aproape" in orice sens util pentru om.
+    var marja = maxP * 0.02 || 1;
+    minP -= marja; maxP += marja;
+
+    var deLa = puncte[0].t, panaLa = puncte[puncte.length - 1].t;
+    var lat = panaLa - deLa || 1, inalt = maxP - minP || 1;
+    var nx = function (t) { return (t - deLa) / lat; };
+    var ny = function (p) { return (p - minP) / inalt; };
+
+    var segmente = [], curent = [];
+    for (var k = 0; k < puncte.length; k++) {
+      if (k > 0 && puncte[k].t - puncte[k - 1].t > GAURA_GRAFIC_MS) {
+        if (curent.length) segmente.push(curent);
+        curent = [];
+      }
+      curent.push({ x: nx(puncte[k].t), y: ny(puncte[k].p) });
+    }
+    if (curent.length) segmente.push(curent);
+
+    return { destul: true, segmente: segmente,
+      banda: areGrid ? { jos: ny(jos), sus: ny(sus) } : null,
+      lichidare: (lich !== null && lich > minP && lich < maxP) ? ny(lich) : null,
+      minPret: minP, maxPret: maxP, deLa: deLa, panaLa: panaLa };
+  }
+
   var ZI = 24 * 3600000, MAXIM = 1440;
   function istoricAdauga(istoric, intrare, acum) {
     var t = nr(intrare.t);
@@ -573,6 +633,6 @@ var TabloBot = (function () {
 
   return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte,
     istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea,
-    frecvente: frecvente };
+    frecvente: frecvente, geometrieGrafic: geometrieGrafic };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloBot = TabloBot;
