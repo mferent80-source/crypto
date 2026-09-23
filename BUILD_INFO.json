@@ -1,10 +1,10 @@
 {
-  "version": "v72.1",
-  "badge": "v72.1 · BOTI DE GRID PIONEX",
+  "version": "v73",
+  "badge": "v73 · TABLOUL BOTULUI",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v72 · BOTI DE GRID PIONEX",
-  "releaseType": "panoul nu mai cere un drept deja bifat; indemnul apare doar la 403",
+  "releaseType": "proba de ecran in Chrome real pentru Tabloul botului, pazind cele 7 purtari reparate la revizii",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
@@ -16,7 +16,8 @@
     "edgeValidationV66": "13 validation engines: outcome tracking, confidence calibration, module contribution, proxy ablation, verdict-quality scoring, Setup DNA, edge-decay alarm, regime policy diagnostics, rolling calibration windows, decision attribution, research white/black lists, layer comparison and data sufficiency",
     "pionexJournalV71": "strict read-only; per-symbol FIFO; base/quote fee conversion; bounded 365-day recursive backfill; incomplete history is never labeled reconciled",
     "liveExecutionRemoved": "all Pionex submit, close and cancel routes and controls removed from this build",
-    "botiGridV72": "strict read-only pe GET /api/v1/bot/orders; raporteaza profitul NET (totalRealizedProfit), nu cifra bruta de grid; avertizeaza cand opritoarele sunt setate dar stinse, cand pretul iese din intervalul grid si cand lichidarea e sub 15%; PERMISSION_DENIED nu mai trece drept 'zero boti'"
+    "botiGridV72": "strict read-only pe GET /api/v1/bot/orders; raporteaza profitul NET (totalRealizedProfit), nu cifra bruta de grid; avertizeaza cand opritoarele sunt setate dar stinse, cand pretul iese din intervalul grid si cand lichidarea e sub 15%; PERMISSION_DENIED nu mai trece drept 'zero boti'",
+    "tablouBotV73": "ecran de citit botul de grid pe intelesul omului: pret invechit marcat, basis golit la schimbarea simbolului, zero scrieri in istoric in pana de retea, badge-uri neutre la eroare, buton de mod dezactivat fara strategyId, verdict EROARE (nu FARA_BOT) pe raspuns nevalid, eticheta activ/oprit corecta; pazit de scripts/proba-ecran-tablou.mjs (Chrome real prin CDP, test:ecran)"
   },
   "notes": "Market breadth is a context/confirmation layer. It does not independently create BUY/SELL orders and does not add live order placement.",
   "base": "v70 Pionex Auto Journal & Reconciliation Pro",
