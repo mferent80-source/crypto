@@ -215,5 +215,16 @@ await test("indemnul de a bifa 'Bot reading' apare DOAR cand lipseste dreptul", 
     `mesajul de la 403 nu mai spune ce sa bifeze: ${r.corp.error}`);
 });
 
+await test("fiecare bot poarta si forma bruta de la Pionex", async () => {
+  fetchStub(RASPUNS_BUN);
+  const b = (await cheama("", ENV, proaspat())).corp.bots[0];
+  // Toate trei campurile, nu doar unul - `brut` redus la {buOrderData,strategyId}
+  // tot ar trece o proba care verifica doar astea doua, dar `masoara` ar primi
+  // createTime lipsa, varstaBotMin ar iesi 0 si verdictul ar ramane NEDOVEDIT pe veci.
+  assert.ok(b.brut && b.brut.buOrderData, "lipseste `brut.buOrderData` - modulul pur n-are din ce masura");
+  assert.equal(b.brut.strategyId, "2377", "lipseste sau e gresit `brut.strategyId`");
+  assert.equal(b.brut.createTime, 1790086864000, "lipseste sau e gresit `brut.createTime` - varstaBotMin ar iesi mereu 0");
+});
+
 console.log(`\nV72_BOT_ORDERS ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

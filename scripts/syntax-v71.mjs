@@ -65,6 +65,24 @@ const cerute = [...new Set(JSON.stringify(pkg.scripts).match(/scripts\/[a-z0-9-]
 const lipsa = cerute.filter((f) => !fs.existsSync(path.join(RADACINA, f)));
 if (lipsa.length) probleme.push(`package.json cheama ${lipsa.length} scripturi inexistente: ${lipsa.join(", ")}`);
 
+// --- numele cache-ului din sw.js poarta versiunea majora din package.json? ---
+// Daca ramane in urma, browserul NU reinstaleaza APP_SHELL (app.js, lib/*) fiindca
+// fetch-ul e cache-first, dar index.html e network-first => omul vede badge-ul NOU
+// peste cod VECHI. Badge-ul minte, si nicio reparatie nu e in pagina.
+verificate++;
+const swCale = path.join(RADACINA, "public/sw.js");
+if (!fs.existsSync(swCale)) probleme.push("public/sw.js lipseste");
+else {
+  const major = String(pkg.version).split(".")[0];
+  const sw = fs.readFileSync(swCale, "utf8");
+  const numeCache = (sw.match(/const\s+CACHE\s*=\s*["'`]([^"'`]+)["'`]/) || [])[1];
+  if (!numeCache) probleme.push("public/sw.js: nu gasesc `const CACHE=...`");
+  else if (!new RegExp("v" + major + "($|[^0-9])").test(numeCache)) {
+    probleme.push("public/sw.js: cache \"" + numeCache + "\" nu poarta v" + major +
+      " din package.json (" + pkg.version + ")");
+  }
+}
+
 console.log("\nV71 · sintaxa · proba");
 for (const p of probleme) console.log(`  PICA ${p}`);
 console.log(`\nV71_SYNTAX ${probleme.length ? "FAIL" : "PASS"} · ${verificate - probleme.length}/${verificate}\n`);

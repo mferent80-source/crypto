@@ -144,6 +144,13 @@ button:active{transform:translateY(0)}
 }
 .value{font-size:22px;font-weight:820;margin-top:5px;letter-spacing:-.025em}
 .good{color:var(--good)!important}.bad{color:var(--bad)!important}.neutral{color:var(--warn)!important}
+.mutedInfo{color:var(--muted)!important}
+/* Numele clasei e prefixat cu tb- dinadins: ".warn" (fara prefix) exista deja
+   in 6 selectoare compuse in acest fisier (.toast.warn, .statusChip.warn,
+   .decisionRisk.warn, .prCriterion.warn, .decisionTool.warn, .edgeCalRow.warn)
+   - o regula globala ".warn{...}!important" le-ar fi batut pe toate, repictand
+   avertismente din tot softul ca sa coloreze un singur badge. */
+.tbWarn{color:var(--warn)}
 .bar{
   height:7px;background:#162434;border-radius:999px;overflow:hidden;margin-top:11px;
   border:1px solid rgba(255,255,255,.025);
