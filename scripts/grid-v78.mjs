@@ -232,10 +232,14 @@ await test("fisa: directia aleasa de el inlocuieste trendul si se spune ca e man
 });
 
 await test("fisa: suma prea mica pentru minimul pe ordin -> verdict nu + suma necesara", () => {
-  const f = GP.fisa({ simbol: "T", pret: b30[b30.length - 1].c, b15: b30, b4h: b4, b1d: b1, suma: 2, H: 2, dir: null, levier: null, minNotional: 5 });
+  // suma 2 la 5x = 10 USDT; cu minim 6 pe ordin nici 2 grile nu incap -> suma necesara
+  const f = GP.fisa({ simbol: "T", pret: b30[b30.length - 1].c, b15: b30, b4h: b4, b1d: b1, suma: 2, H: 2, dir: null, levier: 5, minNotional: 6 });
   assert.equal(f.verdict.nivel, "nu");
   assert.ok(f.sumaMinima > 2, `sumaMinima ${f.sumaMinima}`);
   assert.match(f.verdict.motive[0], /suma/i);
+  // cu minim 5 incap exact 2 grile -> se reduc grilele, nu se cere suma (spec 6.4)
+  const g = GP.fisa({ simbol: "T", pret: b30[b30.length - 1].c, b15: b30, b4h: b4, b1d: b1, suma: 2, H: 2, dir: null, levier: 5, minNotional: 5 });
+  assert.equal(g.sumaMinima, null); assert.equal(g.setare.grile, 2); assert.ok(g.setare.redus);
 });
 
 await test("fisa: fara pret sau fara lumanari -> eroare cu text, nu zero", () => {
@@ -251,6 +255,46 @@ await test("fisa: moneda cu 12 zile -> merge, dar verdictul maxim e asteapta si 
   assert.ok(f.verdict.motive.some((m) => /12 zile/.test(m)), f.verdict.motive.join(" | "));
 });
 
+
+// --- reparatiile dupa revizia finala (24.09) ---
+await test("revizie 1: lichidari pe zilele nevazute -> verdict nu, cu motiv", () => {
+  const v = GC.verdict({ regim: { r4h: 0.8, r24h: 0.9, miscare: false }, stat: { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.002, lichidari: 3 } }, zile: 30, pozitie: 0.5 });
+  assert.equal(v.nivel, "nu");
+  assert.ok(v.motive.some((m) => /nevăzute.*lichidat/.test(m)), v.motive.join(" | "));
+});
+
+await test("revizie 8: nici 1x nu e sigur -> motivul spune ca intervalul e prea larg, nu 'levierul ales'", () => {
+  const st = GC.construieste({ pret: 1, lat: 1.5, pas: 0.01, dir: "short", suma: 100 });
+  assert.equal(st.sigur, false);
+  const v = GC.verdict({ regim: { r4h: 0.8, r24h: 0.9, miscare: false }, stat: { antren: { mediana: 0.01, lichidari: 0 }, test: null }, zile: 30, pozitie: 0.5, pesteSigur: st.pesteSigur, nesigur: !st.sigur });
+  assert.equal(v.nivel, "nu");
+  assert.ok(v.motive.some((m) => /nici la 1×/.test(m)), v.motive.join(" | "));
+  assert.ok(!v.motive.some((m) => /levierul ales/.test(m)));
+});
+
+await test("revizie 4: moneda cu 4 zile de istoric, orizont 1z -> eroare 'cel putin 7 zile', nu fisa", () => {
+  const b4z = b30.slice(-4 * 96);
+  const f = GP.fisa({ simbol: "T", pret: b4z[b4z.length - 1].c, b15: b4z, b4h: b4, b1d: b1, suma: 100, H: 1, dir: null, levier: null, minNotional: 1 });
+  assert.ok(f.eroare && /7 zile/.test(f.eroare), JSON.stringify(f.eroare));
+});
+
+await test("revizie 2+5: cantitatea minima pe ordin (0,0001 BTC) reduce grilele ca sa incapa; daca nici 2 nu incap -> suma necesara", () => {
+  const pret = 83671, bb = bareDin(aleator(30 * 96 + 1, 13, 0.003).map((x) => x * pret));
+  // suma 5 la 5x = 25 USDT pe ~5 grile = 5 USDT pe ordin < 0,0001 BTC (~8,5 USDT) -> 2 grile
+  const f = GP.fisa({ simbol: "BTC_USDT_PERP", pret, b15: bb, b4h: b4, b1d: b1, suma: 5, H: 2, dir: "long", levier: 5, minNotional: 1, minSize: 0.0001 });
+  assert.ok(!f.eroare, f.eroare);
+  assert.ok(f.setare.perOrdin >= 0.0001 * f.setare.sus - 1e-9, `pe ordin ${f.setare.perOrdin} < ${0.0001 * f.setare.sus}`);
+  assert.ok(f.setare.redus && f.setare.redus.de > f.setare.grile, JSON.stringify(f.setare.redus));
+  assert.notEqual(f.verdict.motive[0] && /suma/.test(f.verdict.motive[0]), true);
+  const g = GP.fisa({ simbol: "BTC_USDT_PERP", pret, b15: bb, b4h: b4, b1d: b1, suma: 2, H: 2, dir: "long", levier: 5, minNotional: 1, minSize: 0.0001 });
+  assert.equal(g.verdict.nivel, "nu");
+  assert.ok(g.sumaMinima > 2 && /suma/i.test(g.verdict.motive[0]), `${g.sumaMinima} ${g.verdict.motive[0]}`);
+});
+
+await test("revizie 11: statisticile poarta iesirile medii din interval (pentru tabel)", () => {
+  const p = GP.proba(b30, 2);
+  assert.ok(typeof p.pe.neutru.antren.iesiriMedii === "number");
+});
 
 // --- app.js: ajutatoarele pure ale ferestrei (Review Focus 1 si 2) ---
 const APP = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");

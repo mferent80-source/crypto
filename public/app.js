@@ -4832,7 +4832,7 @@ async function grAduLumanari(simbol){
   for(var p=0;p<6;p++){
     var k=await getJSON(baza+"&interval=15M&limit=500"+(end?"&endTime="+end:""));
     var r=grRanduri(k);
-    if(!r){if(p===0)throw Error((k&&(k.error||k.detail))||"Pionex nu a dat lumânări");break}
+    if(!r){if(p===0)throw Error((k&&(k.error||k.detail||k.message||k.code))||"Pionex nu a dat lumânări");break}
     r15=r15.concat(r);
     var t=r.map(function(x){return Number(x&&x.time)}).filter(Number.isFinite);
     if(r.length<500||!t.length)break;
@@ -4852,6 +4852,7 @@ async function gridCalculeaza(fortat){
   var simbol=grSimbol($("grMoneda")&&$("grMoneda").value),suma=grNumar($("grSuma")&&$("grSuma").value),lev=grNumar($("grLevier")&&$("grLevier").value);
   if(!simbol){grStare.fisa=null;grStare.eroare="Scrie o monedă, de exemplu MET.";renderGrid();return}
   if(!suma){grStare.fisa=null;grStare.eroare="Scrie suma în USDT, de exemplu 100.";renderGrid();return}
+  if(grStare.monede&&!grStare.monede[simbol]){grStare.fisa=null;grStare.eroare=simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.";renderGrid();return}
   if(grStare.inLucru)return;
   var proaspat=grStare.date&&grStare.simbol===simbol&&Date.now()-grStare.la<GR_REIMPROSPATARE_MS-5000&&!fortat;
   grStare.inLucru=true;grStare.eroare=null;renderGrid();
@@ -4860,7 +4861,7 @@ async function gridCalculeaza(fortat){
     var d=grStare.date,info=grStare.monede&&grStare.monede[simbol];
     if(grStare.monede&&!info)throw Error(simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.");
     var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),
-      suma:suma,H:grStare.H,dir:grStare.dir,levier:lev?Math.round(lev):null,minNotional:info?Number(info.minNotional):null});
+      suma:suma,H:grStare.H,dir:grStare.dir,levier:lev?Math.round(lev):null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     if(f.eroare){grStare.fisa=null;grStare.eroare=f.eroare}else{f.info=info||null;grStare.fisa=f}
   }catch(e){grStare.fisa=null;grStare.eroare=grTextEroare(e)}
   finally{grStare.inLucru=false}
@@ -4891,12 +4892,12 @@ function renderGrid(){
   var st=f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive;
   var h='<div class="grVerdict '+niv[1]+'"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>';
   h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
-    +(f.contra?'<p class="tbWarn">Trendul zice '+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div>';
+    +(f.contra?'<p class="tbWarn">'+(f.manual?"Ai ales ":"Trendul zice ")+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div>';
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Setările de pus în Pionex</h4><span class="tbSub">Futures Grid · '+escapeHtml(f.simbol.replace(/_USDT_PERP$/,""))+'/USDT</span></div>'
     +grRand("Direcție",GR_DIR_PIONEX[f.dir],GR_DIR_PIONEX[f.dir])
     +grRand("Preț de jos",grPret(st.jos,i),grPret(st.jos,i))
     +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
-    +grRand("Număr de grile",st.grile+" (geometric)",String(st.grile))
+    +grRand("Număr de grile",st.grile+" (geometric)"+(st.redus?" · redus de la "+st.redus.de+", ca să încapă minimul pe ordin":""),String(st.grile))
     +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
@@ -4905,20 +4906,20 @@ function renderGrid(){
   var lj=st.lichidare.jos,ls=st.lichidare.sus;
   h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Ce înseamnă în bani</h4></div>'
     +grRand("Pasul grilei",P(st.pas))+grRand("Profit pe grilă, după comision",P(st.profitGrila)+" ≈ "+(st.perOrdin*st.profitGrila).toFixed(3)+" USDT")
-    +grRand("Pe fiecare ordin",st.perOrdin.toFixed(2)+" USDT"+(i&&i.minNotional?" (minim Pionex "+i.minNotional+")":""))
+    +grRand("Pe fiecare ordin",st.perOrdin.toFixed(2)+" USDT"+(st.redus?" (minim Pionex "+st.redus.minOrdin.toFixed(2)+")":i&&i.minNotional?" (minim Pionex "+i.minNotional+" USDT"+(Number(i.minSizeLimit)>0?" sau "+i.minSizeLimit+" "+escapeHtml(i.baseCurrency||""):"")+")":""))
     +grRand("Lichidare jos",lj!=null?grPret(lj,i)+" · "+P((st.jos-lj)/st.jos)+" sub grid":"nu se lichidează jos")
     +grRand("Lichidare sus",ls!=null?grPret(ls,i)+" · "+P((ls-st.sus)/st.sus)+" peste grid":"nu se lichidează sus")
     +'</div>';
-  var pr=f.proba,cel=function(x,k){if(!x||x[k]==null)return "—";return k==="lichidari"?String(x[k]):k==="opriri"?x[k]+"/"+x.n:P(x[k])};
+  var pr=f.proba,cel=function(x,k){if(!x||x[k]==null)return "—";return k==="lichidari"?String(x[k]):k==="opriri"?x[k]+"/"+x.n:k==="iesiriMedii"?x[k].toFixed(1).replace(".",","):P(x[k])};
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Proba pe ultimele '+Math.floor(pr.zile)+' zile</h4><span class="tbSub">'+pr.ferestre.antren+'+'+pr.ferestre.test+' ferestre de '+pr.H+'z, ~'+pr.ferestre.independente+' independente</span></div><div class="grTabelWrap"><table class="grTabel"><thead><tr><th></th>'
     +["long","neutru","short"].map(function(d){return '<th'+(d===f.dir?' class="grAles"':"")+'>'+GR_DIR[d]+(d===pr.recomandata?" ⭐":"")+'</th>'}).join("")+'</tr></thead><tbody>'
-    +[["Mediana (zilele de alegere)","antren","mediana"],["Cea mai proastă fereastră","antren","ceaMaiProasta"],["De câte ori a lovit stopul","antren","opriri"],["Lichidări","antren","lichidari"],["Mediana pe zilele nevăzute","test","mediana"]].map(function(r){return '<tr><th>'+r[0]+'</th>'+["long","neutru","short"].map(function(d){return '<td>'+cel(pr.pe[d][r[1]],r[2])+'</td>'}).join("")+'</tr>'}).join("")
+    +[["Mediana (zilele de alegere)","antren","mediana"],["Cea mai proastă fereastră","antren","ceaMaiProasta"],["De câte ori a lovit stopul","antren","opriri"],["Ieșiri din interval, pe fereastră","antren","iesiriMedii"],["Lichidări","antren","lichidari"],["Mediana pe zilele nevăzute","test","mediana"],["Lichidări pe zilele nevăzute","test","lichidari"]].map(function(r){return '<tr><th>'+r[0]+'</th>'+["long","neutru","short"].map(function(d){return '<td>'+cel(pr.pe[d][r[1]],r[2])+'</td>'}).join("")+'</tr>'}).join("")
     +'</tbody></table></div><p class="grNota">⭐ = cea mai bună pe istoric (platou, nu vârf). Aleasă pe primele 2/3 din zile, verificată pe ultima 1/3.</p></div></div>';
   var rg=f.regim;
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Când îl oprești</h4></div><ul class="grLista">'
     +'<li>Stop-urile de mai sus sunt la două grile dincolo de marginile gridului, înaintea lichidării.</li>'
     +'<li>Când alertele Radarului anunță «gata liniștea», oprește-l: după mișcare gridul iese cel mai rău.</li>'
-    +(rg?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")
+    +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")
     +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Gridul a ieșit în medie pe minus când l-am măsurat pe 30 de monede; ce s-a dovedit e să nu-l pornești după mișcare.</p></div>';
   box.innerHTML=h;
 }

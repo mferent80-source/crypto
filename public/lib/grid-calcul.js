@@ -141,8 +141,10 @@ var GridCalcul = (function () {
   // (care sta la o latime intreaga, iar latimea are cel putin doua grile).
   function stopuri(jos, sus, pas) { return { jos: jos * (1 - 2 * pas), sus: sus * (1 + 2 * pas) }; }
 
+  // o.grile (optional) forteaza numarul de grile - folosit cand minimul pe ordin
+  // cere mai putine grile decat da pasul (spec 6.4).
   function construieste(o) {
-    var loc = plaseaza(o.pret, o.lat, o.dir), N = nrGrile(loc.jos, loc.sus, o.pas);
+    var loc = plaseaza(o.pret, o.lat, o.dir), N = o.grile > 0 ? Math.max(C.GRILE_MIN, Math.min(C.GRILE_MAX, Math.floor(o.grile))) : nrGrile(loc.jos, loc.sus, o.pas);
     var g = Math.pow(loc.sus / loc.jos, 1 / N) - 1;
     var sig = levierSigur(loc.jos, loc.sus, o.pret, o.dir, N);
     var L = o.levier > 0 ? o.levier : sig.levier;
@@ -150,7 +152,7 @@ var GridCalcul = (function () {
     var suma = o.suma > 0 ? o.suma : 1;
     return {
       dir: o.dir, pret: o.pret, jos: loc.jos, sus: loc.sus, grile: N, pas: g,
-      levier: L, levierSigur: sig.levier, pesteSigur: L > sig.levier || !sig.sigur,
+      levier: L, levierSigur: sig.levier, sigur: sig.sigur, pesteSigur: L > sig.levier || !sig.sigur,
       lichidare: lq, stop: stopuri(loc.jos, loc.sus, g),
       profitGrila: g - 2 * C.COMISION, perOrdin: suma * L / N, suma: suma
     };
@@ -223,8 +225,10 @@ var GridCalcul = (function () {
       rosu.push("prețul abia a făcut o mișcare de " + r.toFixed(1).replace(".", ",") + "× față de obișnuit — după mișcare gridul iese cel mai rău");
     }
     if (a.lichidari > 0) rosu.push("pe istoric, setarea asta a fost lichidată de " + a.lichidari + " ori");
+    if (o.stat.test && o.stat.test.lichidari > 0) rosu.push("pe zilele nevăzute, setarea asta a fost lichidată de " + o.stat.test.lichidari + " ori");
     if (a.mediana < 0) rosu.push("pe istoric, setarea asta a ieșit pe minus (mediana " + procent(a.mediana) + ")");
-    if (o.pesteSigur) rosu.push("levierul ales pune lichidarea prea aproape de grid");
+    if (o.nesigur) rosu.push("nici la 1× lichidarea nu stă destul de departe: intervalul e prea larg pentru marja izolată");
+    else if (o.pesteSigur) rosu.push("levierul ales pune lichidarea prea aproape de grid");
     if (a.mediana >= 0 && a.mediana < C.MEDIANA_VERDE) galben.push("pe istoric iese la limită (mediana " + procent(a.mediana) + ")");
     if (!o.stat.test) galben.push("n-am avut zile nevăzute pe care s-o verific");
     else if (o.stat.test.mediana < 0) galben.push("pe ultimele zile, nevăzute la alegere, a ieșit pe minus (" + procent(o.stat.test.mediana) + ")");

@@ -152,18 +152,36 @@ var GridProba = (function () {
     return { fisa: dir, proba: pr.recomandata };
   }
 
+  // Minimul pe ordin la Pionex e cel mai mare dintre minNotional (USDT) si
+  // cantitatea minima (minSizeLimit) x pret - la BTC 0,0001 BTC bate 1 USDT de 8 ori.
+  function minOrdin(o, sus) {
+    var m = o.minNotional > 0 ? o.minNotional : 0;
+    if (o.minSize > 0 && sus > 0) m = Math.max(m, o.minSize * sus);
+    return m > 0 ? m : null;
+  }
+
   function fisa(o) {
     if (!(o.pret > 0)) return { eroare: "N-am prețul de acum al monedei." };
+    if (!o.b15 || o.b15.length < 7 * C.BARE_ZI) return { eroare: "Prea puține lumânări ca să probez: moneda are " + (o.b15 ? (o.b15.length / C.BARE_ZI).toFixed(1) : "0") + " zile de istoric pe 15 minute, iar proba cere cel puțin 7 zile." };
     var pr = proba(o.b15, o.H);
     if (!pr) return { eroare: "Prea puține lumânări ca să probez: trebuie cel puțin " + (2 * o.H + 1) + " zile de istoric pe 15 minute." };
     var dT = G.directie(o.b4h, o.b1d), dir = o.dir || dT.dir, ales = pr.pe[dir];
     var lat = G.percentila(G.latimi(o.b15, o.H), C.PERCENTILE[ales.wi]), pas = G.pasi(o.b15)[ales.pi];
     var st = G.construieste({ pret: o.pret, lat: lat, pas: pas, dir: dir, suma: o.suma, levier: o.levier });
+    // Minimul pe ordin: intai mai putine grile (spec 6.4); suma necesara doar daca nici 2 nu incap.
+    var mo = minOrdin(o, st.sus), sumaMinima = null;
+    if (mo !== null && st.perOrdin < mo) {
+      var N2 = Math.floor(st.suma * st.levier / mo);
+      if (N2 >= C.GRILE_MIN) {
+        var de = st.grile;
+        st = G.construieste({ pret: o.pret, lat: lat, pas: pas, dir: dir, suma: o.suma, levier: o.levier, grile: N2 });
+        st.redus = { de: de, la: st.grile, minOrdin: mo };
+      } else sumaMinima = mo * C.GRILE_MIN / st.levier;
+    }
     var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret);
-    var v = G.verdict({ regim: rg, stat: ales, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur });
-    var sumaMinima = o.minNotional > 0 && st.perOrdin < o.minNotional ? o.minNotional * st.grile / st.levier : null;
+    var v = G.verdict({ regim: rg, stat: ales, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur });
     if (sumaMinima !== null) {
-      v = { nivel: "nu", motive: ["suma e prea mică pentru " + st.grile + " grile: Pionex cere cel puțin " + o.minNotional + " USDT pe ordin, deci îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
+      v = { nivel: "nu", motive: ["suma e prea mică: Pionex cere cel puțin " + mo.toFixed(2) + " USDT pe ordin, deci pentru 2 grile la " + st.levier + "× îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
     }
     return { simbol: o.simbol, pret: o.pret, H: o.H, directie: dT, dir: dir, manual: !!o.dir, setare: st, proba: pr, verdict: v,
       regim: rg, pozitie: poz, sumaMinima: sumaMinima,

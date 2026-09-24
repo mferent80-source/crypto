@@ -130,6 +130,7 @@ async function scenariu(lat, inal, nume) {
       assert.match(t, /PORNEȘTE|AȘTEAPTĂ|NU PORNI|FĂRĂ DATE/);
       assert.match(t, /LONG|NEUTRU|SHORT/);
       assert.equal(await b.ev(`document.querySelectorAll("#grFisa .grTabel thead th").length`), 4);
+      assert.equal(await b.ev(`document.querySelectorAll("#grFisa .grTabel tbody tr").length`), 7);
       assert.ok((await b.ev(`document.querySelectorAll("#grFisa .grCopy").length`)) >= 7, "butoane de copiat");
       assert.match(t, /Preț de jos/); assert.match(t, /Număr de grile/); assert.match(t, /De câte ori a lovit stopul/);
       FARA_GUNOI(t);
@@ -156,8 +157,8 @@ async function scenariu(lat, inal, nume) {
 
     await test(`${nume} · moneda inexistenta -> "nu există ca PERP"; suma goala -> "Scrie suma"`, async () => {
       await b.ev(`document.getElementById("grMoneda").value="NUEXISTA";gridCalculeaza('fortat')`);
-      await panaCand(b, `/nu există ca PERP|nu a dat lumânări|Pionex/.test(document.getElementById("grFisa").innerText)&&!grStare.inLucru`, 30000, "moneda inexistenta");
-      const t = await b.ev(FISA_TEXT); assert.match(t, /nu există ca PERP|nu a dat/);
+      await panaCand(b, `/nu există ca PERP/.test(document.getElementById("grFisa").innerText)&&!grStare.inLucru`, 30000, "moneda inexistenta");
+      const t = await b.ev(FISA_TEXT); assert.match(t, /NUEXISTA nu există ca PERP/);
       await b.ev(`document.getElementById("grMoneda").value="MET";document.getElementById("grSuma").value="";gridCalculeaza('fortat')`);
       assert.match(await b.ev(FISA_TEXT), /Scrie suma/);
     });
