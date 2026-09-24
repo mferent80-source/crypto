@@ -1,6 +1,6 @@
 # Plan — reparațiile auditului sever din 24.09 (v74.5 → v74.6)
 
-Cererea lui Marius: „REPARĂ TOT" — toate constatările auditului sever din 24.09
+Cererea: „REPARĂ TOT" — toate constatările auditului sever din 24.09
 pe Crypto Radar v74.5. Nu e spec separat: **auditul E specul** (constatările de mai
 jos, cu dovezile lor). Pionex rămâne STRICT READ-ONLY — nicio rută nouă care scrie.
 
