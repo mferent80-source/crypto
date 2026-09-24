@@ -300,7 +300,7 @@ function gardaPackage() {
   if (!/pages deploy public\b/.test(s.deploy || "") || !/--project-name crypto\b/.test(s.deploy || "")) pica(G, `deploy trebuie sa fie "wrangler pages deploy public --project-name crypto" (e "${s.deploy}")`);
   if ((pkg.engines || {}).node !== ">=22") pica(G, `engines.node trebuie ">=22" (e ${JSON.stringify((pkg.engines || {}).node)})`);
   const test = String(s.test || "");
-  for (const n of ["test:syntax", "test:garzi", "test:security"]) {
+  for (const n of ["test:syntax", "test:garzi", "test:security", "test:server", "test:bots", "test:tablou"]) {
     if (!new RegExp(`npm run ${n}(\\s|$)`).test(test)) pica(G, `npm test nu cheama ${n}`);
     if (!s[n]) pica(G, `lipseste scriptul ${n}`);
   }
