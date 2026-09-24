@@ -622,25 +622,31 @@ await test("v79.1 F3 judeca foloseste si directia pe 1z (agregata din 4h) - moti
 // --- v79.3: "linistea de acum, cat mai tine?" - frecventa din perioadele de liniste ale monedei ---
 // serie sintetica: blocuri linistite de L bare (zgomot mic) despartite de o bara cu salt de 12%;
 // la coada, o liniste de 150 de bare (starea de acum).
+// Blocurile linistite sunt DETERMINISTE (deriva constanta de 0,01%/bara => miscarea pe 24 h e
+// mereu ~0,96%, adica exact 1x obisnuitul): pe un mers aleator miscarea pe 24 h trece de 1,5x
+// in ~8% din bare, in grupuri, si ar rupe perioadele la intamplare - testul ar masura norocul,
+// nu logica. Saltul de 12% e singura "miscare".
 function serieLiniste(L, blocuri, coada) {
-  const out = []; let p = 1, s = 17;
-  const pas = () => { s = (s * 16807) % 2147483647; return ((s / 2147483647) - 0.5) * 0.002; };
-  for (let b = 0; b < blocuri; b++) { for (let i = 0; i < L; i++) { p *= 1 + pas(); out.push(p); } p *= 1.12; out.push(p); }
-  for (let i = 0; i < coada; i++) { p *= 1 + pas(); out.push(p); }
+  const out = []; let p = 1;
+  for (let b = 0; b < blocuri; b++) { for (let i = 0; i < L; i++) { p *= 1.0001; out.push(p); } p *= 1.12; out.push(p); }
+  for (let i = 0; i < coada; i++) { p *= 1.0001; out.push(p); }
   return bareDin(out, 0.0005);
 }
-await test("v79.3 linisteTine: perioade lungi (500 bare) -> linistea de 150 de bare a mai tinut 2 zile in ~toate cazurile; perioade scurte (280) -> in niciunul; prea putine perioade -> nesuficient", () => {
-  const lung = GC.linisteTine(serieLiniste(500, 6, 150), 2);
+// Atentie la date: dupa un salt, miscarea pe 24 h ramane mare 96 de bare; daca barele "dupa salt"
+// trec de 25% din serie, percentila 75 devine chiar nivelul saltului si nimic nu mai e "miscare"
+// (definitia e "fata de obisnuitul monedei"). De aceea blocurile sunt lungi si coada de 300.
+await test("v79.3 linisteTine: perioade lungi (600 bare) -> linistea de acum (300-96 bare) a mai tinut 2 zile in aproape toate cazurile; perioade de 400 -> in niciunul; prea putine perioade -> nesuficient", () => {
+  const lung = GC.linisteTine(serieLiniste(600, 5, 300), 2);
   assert.ok(lung && lung.n >= 4, JSON.stringify(lung));
-  assert.ok(lung.p >= 0.8, "p " + lung.p + " (zgomotul poate rupe o perioada)");
+  assert.equal(lung.p, 1, "toate perioadele de 600 au tinut: " + JSON.stringify(lung));
   assert.ok(lung.ic[0] <= lung.p && lung.ic[1] >= lung.p && lung.ic[0] >= 0 && lung.ic[1] <= 1);
-  aprox(lung.zileLiniste, 150 / 96, 0.2, "linistea de acum ~1,56 zile");
-  const scurt = GC.linisteTine(serieLiniste(280, 8, 150), 2);
+  aprox(lung.zileLiniste, (300 - 96) / 96, 0.15, "linistea de acum: 300 de bare de la salt, minus cele 96 in care miscarea pe 24 h e inca mare");
+  const scurt = GC.linisteTine(serieLiniste(400, 7, 300), 2);
   assert.ok(scurt && scurt.n >= 4, JSON.stringify(scurt));
   assert.equal(scurt.k, 0); assert.equal(scurt.p, 0);
-  const putine = GC.linisteTine(serieLiniste(500, 2, 150), 2);
+  const putine = GC.linisteTine(serieLiniste(600, 2, 300), 2);
   assert.equal(putine.suficient, false);
-  assert.equal(GC.linisteTine(serieLiniste(500, 6, 150).slice(0, 100), 2), null, "sub 2 zile de istoric -> null");
+  assert.equal(GC.linisteTine(serieLiniste(600, 5, 300).slice(0, 100), 2), null, "sub 2 zile de istoric -> null");
 });
 await test("v79.3 linisteTine: daca ACUM e miscare, nu e nimic de intrebat (linisteAcum=false)", () => {
   const b = serieLiniste(500, 4, 5);   // saltul e cu 5 bare in urma -> r4h inca mare
@@ -648,7 +654,7 @@ await test("v79.3 linisteTine: daca ACUM e miscare, nu e nimic de intrebat (lini
   assert.equal(r.linisteAcum, false);
 });
 await test("v79.3 fisa poarta 'liniste' (n, k, p, ic, zileLiniste) pentru orizontul ales", () => {
-  const b = serieLiniste(500, 6, 150);
+  const b = serieLiniste(600, 5, 300);
   const f = GP.fisa({ simbol: "T", pret: b[b.length - 1].c, b15: b, b4h: b4, b1d: b1, suma: 100, H: 2, dir: null, levier: null, minNotional: 1 });
   assert.ok(f.liniste && typeof f.liniste.p === "number" && f.liniste.n >= 4, JSON.stringify(f.liniste));
 });
