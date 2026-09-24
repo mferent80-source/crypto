@@ -637,12 +637,150 @@ await test("NEDOVEDIT din istoric scurt nu da vina pe varsta", () => {
   assert.equal(v.declansator.valoare, 10);
 });
 
-await test("date insuficiente SI lichidare sub 8 cer tot NEDOVEDIT, nu OPRESTE", () => {
+// --- Audit sever 24.09: rosul nu se ascunde NICIODATA in spatele lui "Nu stiu inca".
+// Regula veche ("NEDOVEDIT e prima dinadins") ascundea "Iesi" la un bot tanar cu
+// lichidarea la 4,6% sau cu LIQUIDATING raportat de Pionex. NEDOVEDIT opreste
+// doar verdictele verzi si pe cele de ritm.
+
+await test("[audit] date insuficiente SI lichidare sub 8 dau OPRESTE, nu NEDOVEDIT", () => {
   const m = masuriBune();
   m.varstaBotMin = 47;
   m.lichidare = { valoare: 6, stare: "rau", prag: { grav: 8, atentie: 15 } };
   const v = T.verdict(m, "GRID");
-  assert.equal(v.nivel, "NEDOVEDIT", "NEDOVEDIT trebuie sa ramana prima treapta, inaintea lui OPRESTE");
+  assert.equal(v.nivel, "OPRESTE", "rosul nu are voie sa se ascunda in spatele lui 'Nu stiu inca'");
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+// Bot long real ca forma: lichidarea JOS, partea de SUS vine "0" (nu exista).
+const PRET_A = 0.0156; // ultima inchidere din ZIGZAG
+function botAudit(peste) {
+  const x = { ...BOT.buOrderData, ...(peste && peste.buOrderData) };
+  return { ...BOT, status: "open", createTime: ACUM - 5 * 3600000, ...(peste || {}), buOrderData: x };
+}
+const LICH_46 = String(PRET_A * (1 - 0.046)); // lichidarea la 4,6% sub pret
+const ISTORIC_COPT = Array.from({ length: 400 }, (_, i) => ({
+  t: ACUM - (400 - i) * 60000, perechi: i, pretPerp: PRET_A, pretSpot: PRET_A,
+}));
+function intrariAudit(bot, peste) {
+  return { bot, klinePerp: ZIGZAG, pretSpot: PRET_A, istoric: ISTORIC_COPT, acum: ACUM, ...(peste || {}) };
+}
+
+await test("[audit] bot de 60 de minute cu lichidarea la 4,6% da OPRESTE, nu NEDOVEDIT", () => {
+  const bot = botAudit({ createTime: ACUM - 60 * 60000, buOrderData: { estimateLiquidationPriceDown: LICH_46 } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.ok(Math.abs(m.lichidare.valoare - 4.6) < 1e-6, `precheck lichidare: ${m.lichidare.valoare}`);
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.titlu, "Ieși");
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+await test("[audit] istoric de 1 minut + marginStatus LIQUIDATING da OPRESTE", () => {
+  const bot = botAudit({ buOrderData: { marginStatus: "LIQUIDATING" } });
+  const m = T.masoara(intrariAudit(bot, { istoric: [{ t: ACUM - 60000, perechi: 5, pretPerp: PRET_A, pretSpot: PRET_A }] }));
+  assert.ok(m.istoricMin < 30, `precheck istoric scurt: ${m.istoricMin}`);
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.declansator.masura, "marginStatus");
+});
+
+await test("[audit] 30 de lumanari + lichidarea la 4,6% da OPRESTE", () => {
+  const bot = botAudit({ buOrderData: { estimateLiquidationPriceDown: LICH_46 } });
+  const m = T.masoara(intrariAudit(bot, { klinePerp: ZIGZAG.slice(-30) }));
+  assert.equal(m.lumanari, 30, "precheck");
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+});
+
+await test("[audit] lichidare lipsa (ambele '0') + marginStatus LIQUIDATING da OPRESTE", () => {
+  const bot = botAudit({ buOrderData: { marginStatus: "LIQUIDATING",
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "0" } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.equal(m.lichidare.stare, "nu-se-poate", "precheck");
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.declansator.masura, "marginStatus");
+});
+
+await test("[audit] lichidarea 8-15% la un bot tanar da PAZESTE, nu NEDOVEDIT", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30;
+  m.lichidare = { valoare: 10, stare: "margine", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "PAZESTE", `a dat ${v.nivel}`);
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+await test("[audit] pretul iesit din interval la un bot tanar da PAZESTE, nu NEDOVEDIT", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30;
+  m.pozitieInterval = { valoare: 104, stare: "afara", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "PAZESTE");
+  m.directieBot = 1; m.pozitieInterval = { valoare: -5, stare: "afara", prag: { margine: 15 } };
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "PAZESTE", "impotriva pozitiei, in DIRECTIONAL");
+});
+
+await test("[audit] NEDOVEDIT opreste tot verdictele VERZI (iesire in favoare la un bot tanar)", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30; m.directieBot = 1;
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 108, stare: "afara", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "NEDOVEDIT", "OPORTUNITATE e verde - asteapta dovada");
+  m.varstaBotMin = 300;
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "OPORTUNITATE", "controlul: cu dovada, OPORTUNITATE");
+});
+
+await test("[audit] trendul pe mai putin de 48 de lumanari nu e dovedit - NEDOVEDIT, nu PAZESTE", () => {
+  const m = masuriBune();
+  m.lumanari = 30;
+  m.eficienta = { valoare: 0.8, semn: 1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "NEDOVEDIT", "GRID: trend + margine pe 30 de lumanari");
+  m.directieBot = -1; m.pozitieInterval = { valoare: 50, stare: "bine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "NEDOVEDIT", "DIRECTIONAL: trend contra pe 30 de lumanari");
+  m.lumanari = 60;
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "PAZESTE", "controlul: cu 60 de lumanari, trendul contra alarmeaza");
+});
+
+await test("[audit] NEDOVEDIT opreste tot ritmul (REGLEAZA) la un bot tanar", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30;
+  m.ritmPerechi = { valoare: 3, baza: 10, stare: "rau", prag: 0.40 };
+  assert.equal(T.verdict(m, "GRID").nivel, "NEDOVEDIT");
+});
+
+await test("[audit] bot INCHIS (status closed) da OPRIT 'Botul e oprit', nu Merge", () => {
+  const bot = botAudit({ status: "closed", buOrderData: { status: "closed" } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.equal(m.stareBot && m.stareBot.stare, "oprit", `stareBot: ${JSON.stringify(m.stareBot)}`);
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRIT", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.titlu, "Botul e oprit");
+});
+
+await test("[audit] bot CLOSED doar la nivelul de sus (buOrderData fara status) da tot OPRIT", () => {
+  const bot = botAudit({ status: "CLOSED", buOrderData: { status: undefined } });
+  assert.equal(T.verdict(T.masoara(intrariAudit(bot)), "GRID").nivel, "OPRIT");
+});
+
+await test("[audit] bot care merge (open/running) NU e OPRIT", () => {
+  const m = T.masoara(intrariAudit(botAudit()));
+  assert.equal(m.stareBot && m.stareBot.stare, "bine");
+  assert.notEqual(T.verdict(m, "GRID").nivel, "OPRIT");
+});
+
+await test("[audit] bot pe PAUZA cu lichidarea la 4,6% da OPRESTE (pozitia tot exista)", () => {
+  const bot = botAudit({ buOrderData: { status: "paused", estimateLiquidationPriceDown: LICH_46 } });
+  const v = T.verdict(T.masoara(intrariAudit(bot)), "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel}`);
+});
+
+await test("[audit] bot pe PAUZA, altfel sanatos, da OPRIT si spune starea, nu Merge", () => {
+  const bot = botAudit({ buOrderData: { status: "paused" } });
+  const v = T.verdict(T.masoara(intrariAudit(bot)), "GRID");
+  assert.equal(v.nivel, "OPRIT", `a dat ${v.nivel} (${v.titlu})`);
+  assert.match(v.ceFac, /paused/i, "trebuie sa spuna ce stare raporteaza Pionex");
 });
 
 await test("DIRECTIONAL fara directieBot cunoscuta: iesirea din interval nu presupune impotriva", () => {

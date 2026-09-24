@@ -24,6 +24,24 @@ var TabloBot = (function () {
     return { valoare: v, stare: v === asteptat ? "bine" : "rau", prag: asteptat };
   }
 
+  // Starea botului insusi. "oprit" = inchis de tot (nu mai are pozitie de
+  // pazit); "altceva" = nici running, nici inchis (ex. paused) - pozitia poate
+  // exista inca, deci riscul se judeca inaintea lui. Lipsa -> nu-se-poate.
+  var STARI_INCHIS = ["closed", "canceled", "cancelled", "finished", "stopped",
+    "liquidated", "expired", "terminated"];
+  function stareBotului(bot) {
+    var x = (bot && bot.buOrderData) || {};
+    var sus = bot && bot.status != null ? String(bot.status).trim().toLowerCase() : "";
+    var jos = x.status != null ? String(x.status).trim().toLowerCase() : "";
+    var valoare = jos || sus || null;
+    if (!valoare) return { valoare: null, stare: "nu-se-poate", prag: "running" };
+    if (STARI_INCHIS.indexOf(sus) >= 0 || STARI_INCHIS.indexOf(jos) >= 0)
+      return { valoare: STARI_INCHIS.indexOf(jos) >= 0 ? jos : sus, stare: "oprit", prag: "running" };
+    if (jos === "running" || (!jos && sus === "open"))
+      return { valoare: valoare, stare: "bine", prag: "running" };
+    return { valoare: valoare, stare: "altceva", prag: "running" };
+  }
+
   // Kaufman: cat din miscarea totala a fost intr-o singura directie.
   // 0 = zigzag curat, 1 = trend curat.
   function eficienta(inchideri) {
@@ -111,6 +129,7 @@ var TabloBot = (function () {
       lichidare: NECUNOSCUT, comision: NECUNOSCUT,
       basis: NECUNOSCUT, directieBot: 0,
       marginStatus: NECUNOSCUT, riskStatus: NECUNOSCUT,
+      stareBot: bot ? stareBotului(bot) : NECUNOSCUT,
     };
 
     if (pretPerp !== null && pretSpot) {
@@ -219,39 +238,17 @@ var TabloBot = (function () {
       ceFac: "Urmăresc simbolul ales de tine. Cifrele care țin de grid nu se pot socoti.",
       declansator: null };
 
-    // Fiecare motiv al lui NEDOVEDIT isi spune singur cauza - nu toate pe varsta.
-    if (m.varstaBotMin < 120) {
-      return { nivel: "NEDOVEDIT",
-        titlu: "Nu știu încă",
-        ceFac: "Botul are " + Math.round(m.varstaBotMin) + " de minute. Ritmul are nevoie de vreo 2 ore ca să însemne ceva.",
-        declansator: d("varstaBot", Math.round(m.varstaBotMin), 120) };
+    // Botul inchis de tot nu mai are pozitie de pazit - "Merge" ar minti.
+    if (m.stareBot && m.stareBot.stare === "oprit") {
+      return { nivel: "OPRIT", titlu: "Botul e oprit",
+        ceFac: "Pionex raportează botul ca " + m.stareBot.valoare + ". Nu mai tranzacționează - verdictele de grid nu se mai aplică.",
+        declansator: d("stareBot", m.stareBot.valoare, "running") };
     }
-    if (m.lumanari < 48) {
-      return { nivel: "NEDOVEDIT",
-        titlu: "Nu știu încă",
-        ceFac: "Am doar " + m.lumanari + " lumânări. Îmi trebuie cel puțin 48 ca să măsor eficiența.",
-        declansator: d("lumanari", m.lumanari, 48) };
-    }
-    if (m.istoricMin < 30) {
-      return { nivel: "NEDOVEDIT",
-        titlu: "Nu știu încă",
-        ceFac: "Am doar " + Math.round(m.istoricMin) + " minute de istoric. Îmi trebuie cel puțin 30 ca să văd un ritm.",
-        declansator: d("istoric", Math.round(m.istoricMin), 30) };
-    }
-    // Pionex poate trimite un raspuns partial - fara aceste doua masuri nu
-    // stiu nimic despre risc, deci nu am voie sa cad tacut pe LINISTE.
-    if (m.lichidare.stare === "nu-se-poate") {
-      return { nivel: "NEDOVEDIT",
-        titlu: "Nu știu încă",
-        ceFac: "Nu pot socoti distanța până la lichidare - lipsește prețul de lichidare estimat.",
-        declansator: d("lichidare", null, null) };
-    }
-    if (m.pozitieInterval.stare === "nu-se-poate") {
-      return { nivel: "NEDOVEDIT",
-        titlu: "Nu știu încă",
-        ceFac: "Nu pot socoti unde e prețul în interval - lipsesc datele grid-ului.",
-        declansator: d("pozitieInterval", null, null) };
-    }
+
+    // REGULA 24.09: rosul NU se ascunde niciodata in spatele lui "Nu stiu inca".
+    // Tot ce urmeaza pana la treptele NEDOVEDIT se socoteste din cifre care nu
+    // cer varsta botului sau istoric (starea de cont, lichidarea, capetele
+    // intervalului). NEDOVEDIT opreste doar verdictele verzi si pe cele de ritm.
 
     // Starea de cont de la Pionex bate orice calcul local - daca bursa insasi
     // spune ca margine sau riscul nu sunt normale, iesim, indiferent cat de
@@ -287,9 +284,13 @@ var TabloBot = (function () {
         declansator: d("lichidare", m.lichidare.valoare, 15) };
     }
 
-    var directie = m.eficienta.semn;
+    // PAZESTE din pozitie/trend. Eficienta cere 48 de lumanari (aceeasi garda
+    // ca treapta NEDOVEDIT de mai jos) - fara ele trendul nu e dovedit. Iesirea
+    // din interval cere doar pretul si capetele. Iesirea IN FAVOARE e verde
+    // (OPORTUNITATE) - asteapta dupa NEDOVEDIT.
+    var directie = m.eficienta.semn, eficientaDovedita = m.lumanari >= 48, oportunitate = null;
     if (mod === "DIRECTIONAL") {
-      if (m.eficienta.stare === "trend" && m.directieBot && directie && directie !== m.directieBot) {
+      if (eficientaDovedita && m.eficienta.stare === "trend" && m.directieBot && directie && directie !== m.directieBot) {
         return { nivel: "PAZESTE", titlu: "Trendul s-a întors împotriva ta",
           ceFac: "Mișcarea e hotărâtă, dar în sens invers poziției tale.",
           declansator: d("eficienta", m.eficienta.valoare, 0.60) };
@@ -301,16 +302,17 @@ var TabloBot = (function () {
         if (m.directieBot) {
           var inFavoare = (m.pozitieInterval.valoare > 100 && m.directieBot === 1)
             || (m.pozitieInterval.valoare < 0 && m.directieBot === -1);
-          if (inFavoare) return { nivel: "OPORTUNITATE", titlu: "A trecut de interval în favoarea ta",
+          if (inFavoare) oportunitate = { nivel: "OPORTUNITATE", titlu: "A trecut de interval în favoarea ta",
             ceFac: "Cântărește dacă iei profitul sau muți grid-ul după el.",
             declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesit) };
-          return { nivel: "PAZESTE", titlu: "A ieșit din interval împotriva ta",
+          else return { nivel: "PAZESTE", titlu: "A ieșit din interval împotriva ta",
             ceFac: "Poziția merge în sens invers.",
             declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesit) };
+        } else {
+          return { nivel: "PAZESTE", titlu: "Prețul a ieșit din interval",
+            ceFac: "Nu mai câștigi din oscilație, ții doar o poziție pe direcție.",
+            declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesit) };
         }
-        return { nivel: "PAZESTE", titlu: "Prețul a ieșit din interval",
-          ceFac: "Nu mai câștigi din oscilație, ții doar o poziție pe direcție.",
-          declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesit) };
       }
     } else {
       if (m.pozitieInterval.stare === "afara") {
@@ -319,12 +321,56 @@ var TabloBot = (function () {
           ceFac: "Nu mai câștigi din oscilație, ții doar o poziție pe direcție.",
           declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragIesitGrid) };
       }
-      if (m.eficienta.stare === "trend" && m.pozitieInterval.stare === "margine") {
+      if (eficientaDovedita && m.eficienta.stare === "trend" && m.pozitieInterval.stare === "margine") {
         return { nivel: "PAZESTE", titlu: "Trend, cu prețul la margine",
           ceFac: "Grid-ul e pe cale să rămână în urmă.",
           declansator: d("eficienta", m.eficienta.valoare, 0.60) };
       }
     }
+
+    // Botul nici nu merge, nici nu e inchis (ex. paused): riscul de mai sus s-a
+    // judecat deja; aici doar nu-l lasam sa para "Merge".
+    if (m.stareBot && m.stareBot.stare === "altceva") {
+      return { nivel: "OPRIT", titlu: "Botul e oprit",
+        ceFac: "Pionex raportează botul ca " + m.stareBot.valoare + ", nu running - nu tranzacționează acum.",
+        declansator: d("stareBot", m.stareBot.valoare, "running") };
+    }
+
+    // Fiecare motiv al lui NEDOVEDIT isi spune singur cauza - nu toate pe varsta.
+    if (m.varstaBotMin < 120) {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Botul are " + Math.round(m.varstaBotMin) + " de minute. Ritmul are nevoie de vreo 2 ore ca să însemne ceva.",
+        declansator: d("varstaBot", Math.round(m.varstaBotMin), 120) };
+    }
+    if (m.lumanari < 48) {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Am doar " + m.lumanari + " lumânări. Îmi trebuie cel puțin 48 ca să măsor eficiența.",
+        declansator: d("lumanari", m.lumanari, 48) };
+    }
+    if (m.istoricMin < 30) {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Am doar " + Math.round(m.istoricMin) + " minute de istoric. Îmi trebuie cel puțin 30 ca să văd un ritm.",
+        declansator: d("istoric", Math.round(m.istoricMin), 30) };
+    }
+    // Pionex poate trimite un raspuns partial - fara aceste doua masuri nu
+    // stiu nimic despre risc, deci nu am voie sa cad tacut pe LINISTE.
+    if (m.lichidare.stare === "nu-se-poate") {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Nu pot socoti distanța până la lichidare - lipsește prețul de lichidare estimat.",
+        declansator: d("lichidare", null, null) };
+    }
+    if (m.pozitieInterval.stare === "nu-se-poate") {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Nu pot socoti unde e prețul în interval - lipsesc datele grid-ului.",
+        declansator: d("pozitieInterval", null, null) };
+    }
+
+    if (oportunitate) return oportunitate;
 
     if (mod === "DIRECTIONAL" && m.eficienta.stare === "zigzag") {
       return { nivel: "REGLEAZA", titlu: "Piața nu merge nicăieri",
