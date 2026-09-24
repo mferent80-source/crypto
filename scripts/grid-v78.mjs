@@ -519,5 +519,34 @@ await test("F5 imparte: neutru - o vanzare inchide intai celulele long tinute, r
   aprox(r.grile, 2.5 * (99.499 - 94.630), 1e-6); aprox(r.pozitie.cant, -2.5, 1e-9); aprox(r.nerealizat, 2.5 * (99.499 - 99), 1e-6);
 });
 
+// --- F3: clasamentul "pe care monede pornesc grid acum?" ---
+const CL_SRC = fs.existsSync(new URL("../public/lib/grid-clasament.js", import.meta.url)) ? fs.readFileSync(new URL("../public/lib/grid-clasament.js", import.meta.url), "utf8") : "";
+const GCL = CL_SRC ? new Function(`${SRC}; ${CL_SRC}; return GridClasament;`)() : null;
+await test("F3 modulul GridClasament exista", () => assert.ok(GCL, "grid-clasament.js lipseste"));
+await test("F3 judeca: pe bare de 4h - regim, latimea p75 pe 2 zile, directia, pasul, verdictul EVITA/CANDIDAT/FARA-DATE", () => {
+  const lin = aleator(500, 31, 0.012); for (let i = lin.length - 8; i < lin.length; i++) lin[i] = lin[i - 1] * (1 + 0.0005 * (i % 2 ? 1 : -1));
+  const b = bareDin(lin, 0.004);
+  const j = GCL.judeca("MET_USDT_PERP", b, 1234567);
+  assert.equal(j.simbol, "MET_USDT_PERP"); assert.equal(j.volum, 1234567);
+  assert.ok(j.regim && j.regim.miscare === false, JSON.stringify(j.regim));
+  assert.ok(j.latime > 0 && j.latime < 1, "latimea " + j.latime);
+  assert.ok(["long", "neutru", "short"].includes(j.dir));
+  assert.ok(j.grile >= 2 && j.pas >= 0.0035, JSON.stringify({ g: j.grile, p: j.pas }));
+  assert.equal(j.stare, "candidat");
+  const salt = lin.slice(); salt[salt.length - 1] = salt[salt.length - 2] * 1.15;
+  assert.equal(GCL.judeca("X", bareDin(salt, 0.004), 1).stare, "evita");
+  const f = GCL.judeca("Y", b.slice(0, 30), 1);
+  assert.equal(f.stare, "fara-date"); assert.equal(f.latime, null);
+});
+await test("F3 ordoneaza: de EVITAT primele (dupa miscare), apoi candidatii dupa profit pe grila x umpleri/zi estimate, fara-date la coada", () => {
+  const c = (simbol, stare, scor, r) => ({ simbol, stare, scor, regim: r ? { r4h: r, r24h: 1 } : null });
+  const l = GCL.ordoneaza([c("A", "candidat", 0.5), c("B", "evita", 0, 3.1), c("C", "fara-date", null), c("D", "candidat", 0.9), c("E", "evita", 0, 1.7)]);
+  assert.deepEqual(l.map((x) => x.simbol), ["B", "E", "D", "A", "C"]);
+});
+await test("F3 rezumat: cate de evitat / candidati / fara date + ora socotirii", () => {
+  const r = GCL.rezumat({ la: 1_790_000_000_000, monede: [{ stare: "evita" }, { stare: "candidat" }, { stare: "candidat" }, { stare: "fara-date" }] });
+  assert.equal(r.evita, 1); assert.equal(r.candidati, 2); assert.equal(r.faraDate, 1); assert.equal(r.la, 1_790_000_000_000);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

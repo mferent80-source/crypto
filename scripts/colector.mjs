@@ -73,6 +73,7 @@ const Alerte = incarca("alerte.js", "Alerte");
 const Directie = incarca("directie.js", "Directie");
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
+const GridClasament = incarca("grid-clasament.js", "GridClasament");
 
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 async function cere(cale, opt = {}) {
@@ -174,11 +175,44 @@ async function tura() {
   try { await trimite("/api/istoric-bot?action=config", { ntfyTopic: NTFY.topic, colectorLa: acum }); } catch (e) { jurnal("config", e.message); }
 }
 
+// v79 F3: o data pe ora, "pe care monede pornesc grid acum?" pe top 100 PERP dupa volum,
+// cu lumanari de 4h (o cerere pe moneda, cu pauza - serverul are si el poarta de ritm).
+// Rezultatul merge in KV (istoric-bot?action=clasament); fereastra Grid il arata.
+const CLASAMENT_MS = Number(process.env.COLECTOR_CLASAMENT_MS) || 3600000, CLASAMENT_TOP = 100;
+let clasamentLa = 0, clasamentInLucru = false;
+async function turaClasament() {
+  if (clasamentInLucru || Date.now() - clasamentLa < CLASAMENT_MS) return;
+  clasamentInLucru = true;
+  const t0 = Date.now();
+  try {
+    const tk = await cere("/api/market?type=pionex_tickers&market=PERP");
+    const lista = (tk && tk.data && Array.isArray(tk.data.tickers) ? tk.data.tickers : [])
+      .filter((x) => x && /_USDT_PERP$/.test(String(x.symbol)))
+      .map((x) => ({ simbol: String(x.symbol), volum: Number(x.amount) }))
+      .filter((x) => Number.isFinite(x.volum)).sort((a, b) => b.volum - a.volum).slice(0, CLASAMENT_TOP);
+    const monede = [];
+    let esecuri = 0;
+    for (const m of lista) {
+      try {
+        const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(m.simbol) + "&interval=4H&limit=500");
+        monede.push(GridClasament.judeca(m.simbol, GridCalcul.bare(k && k.data && k.data.klines), m.volum));
+      } catch (e) { esecuri++; monede.push(GridClasament.judeca(m.simbol, null, m.volum)); if (esecuri >= 15) { jurnal("clasament: prea multe esecuri, ma opresc la", monede.length); break; } }
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    const r = await trimite("/api/istoric-bot?action=clasament", { la: Date.now(), monede });
+    clasamentLa = Date.now();
+    const rz = GridClasament.rezumat({ la: clasamentLa, monede });
+    jurnal("clasament:", monede.length, "monede in", Math.round((Date.now() - t0) / 1000) + " s;", rz.evita, "de evitat,", rz.candidati, "candidati,", rz.faraDate, "fara date;", (r && r.ok) ? "urcat" : "NEURCAT");
+  } catch (e) { jurnal("clasament ESEC", e.message); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; }   // reincearca in 10 min
+  clasamentInLucru = false;
+}
+
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal ntfy " + NTFY.topic + (NTFY.nou ? " (NOU)" : ""));
 if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului, gata liniștea (oprește gridul)." });
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
+  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().catch((e) => jurnal("clasament", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
 }

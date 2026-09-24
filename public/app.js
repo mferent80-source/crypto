@@ -4820,7 +4820,7 @@ async function grAduMonede(){
   }catch(e){grStare.monede=null}
 }
 function porneGrid(){
-  grAduMonede();grSoldInPagina();gridJurnalActualizeaza(false);
+  grAduMonede();grSoldInPagina();gridJurnalActualizeaza(false);gridClasamentAdu(false);
   if(!grStare.timer)grStare.timer=setInterval(function(){if(grPanouVizibil()&&grStare.simbol)gridCalculeaza()},GR_REIMPROSPATARE_MS);
   renderGrid();
 }
@@ -4971,6 +4971,32 @@ function renderGridJurnal(){
       +'<td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(e.id)+'" data-action-click="gridJurnalSterge(this.value)" aria-label="Șterge">✕</button></td></tr>';
   });
   box.innerHTML=h+'</tbody></table></div><p class="grNota">Rezultatul real e profitul total al botului din Pionex (grile + poziție − comisioane), în % din investiție. Legarea se face pe monedă și pe ora pornirii (±). După 10–20 de boți, rezumatul de sus spune dacă verdictele au adus bani.</p>';
+}
+// ===== F3: clasamentul (scris acasa de colector; aici doar se citeste si se arata) =====
+var grClasament={date:null,la:0,eroare:null,inLucru:false};
+async function gridClasamentAdu(fortat){
+  if(grClasament.inLucru||(!fortat&&Date.now()-grClasament.la<5*60000))return;
+  grClasament.inLucru=true;
+  try{var d=await getJSON("/api/istoric-bot?action=clasament");grClasament.date=d&&d.clasament||null;grClasament.eroare=null}
+  catch(e){grClasament.eroare=e&&e.status===503?"doar pe Radarul de acasă (colectorul îl socotește o dată pe oră)":textEroare(e)}
+  finally{grClasament.inLucru=false;grClasament.la=Date.now()}
+  renderGridClasament();
+}
+function gridClasamentAlege(simbol){if($("grMoneda"))$("grMoneda").value=String(simbol||"").replace(/_USDT_PERP$/,"");gridCalculeaza('fortat');if($("grFisa"))$("grFisa").scrollIntoView({behavior:"smooth",block:"start"})}
+function renderGridClasament(){
+  var box=$("grClasament"),sub=$("grClasamentSub");if(!box)return;
+  var c=grClasament.date,P=GridCalcul.procent;
+  if(grClasament.eroare){box.innerHTML='<p class="tbSub">'+escapeHtml(grClasament.eroare)+'</p>';return}
+  if(!c||!Array.isArray(c.monede)||!c.monede.length){box.innerHTML='<p class="tbSub">Încă nu e socotit: colectorul de acasă îl face la prima oră după pornire (PORNESTE-CRYPTO-RADAR.bat).</p>';return}
+  var l=GridClasament.ordoneaza(c.monede),rz=GridClasament.rezumat(c),vechi=Date.now()-c.la>2*3600000;
+  if(sub)sub.textContent="socotit acasă la "+new Date(c.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+(vechi?" (VECHI)":"")+" · "+rz.evita+" de evitat · "+rz.candidati+" candidați · "+rz.faraDate+" fără date";
+  var h='<p class="grNota">Nu e fișa: e o sită pe lumânări de 4h. Cele de EVITAT sunt în mișcare (după mișcare gridul iese cel mai rău). Candidații sunt ordonați după cât ar putea aduce gridul pe zi (profit pe grilă × traversări estimate). Apasă pe monedă ⇒ fișa întreagă, cu proba.</p><div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Moneda</th><th>Stare</th><th>Mișcare 4h / 24h</th><th>Direcție</th><th>Lățime 2z</th><th>Grile · pas</th><th>Grid/zi est.</th><th>Volum 24h</th></tr></thead><tbody>';
+  l.slice(0,60).forEach(function(m){
+    var st=m.stare==="evita"?["🔴 EVITĂ","bad"]:m.stare==="candidat"?["🟢 candidat","good"]:["⚪ fără date","mutedInfo"];
+    var rg=m.regim&&m.regim.r4h!=null?m.regim.r4h.toFixed(1).replace(".",",")+"× / "+(m.regim.r24h!=null?m.regim.r24h.toFixed(1).replace(".",","):"—")+"×":"—";
+    h+='<tr><td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(m.simbol)+'" data-action-click="gridClasamentAlege(this.value)">'+escapeHtml(String(m.simbol).replace(/_USDT_PERP$/,""))+'</button></td><td class="'+st[1]+'">'+st[0]+'</td><td>'+escapeHtml(rg)+'</td><td>'+escapeHtml(m.dir?(GR_DIR[m.dir]||m.dir)+(m.tarie?" ("+m.tarie+")":""):"—")+'</td><td>'+(m.latime!=null?P(m.latime):"—")+'</td><td>'+(m.grile!=null?m.grile+" · "+P(m.pas):"—")+'</td><td>'+(m.scor!=null?P(m.scor):"—")+'</td><td>'+(m.volum!=null?Math.round(m.volum/1000).toLocaleString("ro-RO")+" k":"—")+'</td></tr>';
+  });
+  box.innerHTML=h+'</tbody></table></div>';
 }
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;

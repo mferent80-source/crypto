@@ -280,6 +280,11 @@ await test("11b · klines cu endTime numeric -> trimis la Pionex; endTime=abc ->
   await cheama("market", "type=pionex_klines&symbol=MET_USDT_PERP&interval=15M&endTime=abc", { APP_API_TOKEN: TOKEN });
   assert.ok(!/endTime/.test(cereri[0].url), cereri[0].url);
 });
+await test("11d · pionex_tickers&market=PERP -> type=PERP", async () => {
+  fetchStub(() => ({ corp: { result: true, data: { tickers: [] } } }));
+  await cheama("market", "type=pionex_tickers&market=PERP", { APP_API_TOKEN: TOKEN });
+  assert.ok(cereri[0].url.includes("type=PERP"), cereri[0].url);
+});
 await test("11c · pionex_symbols&market=PERP -> type=PERP; fara market -> SPOT", async () => {
   fetchStub(() => ({ corp: { result: true, data: { symbols: [] } } }));
   await cheama("market", "type=pionex_symbols&market=PERP", { APP_API_TOKEN: TOKEN });

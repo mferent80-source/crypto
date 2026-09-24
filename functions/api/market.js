@@ -67,7 +67,8 @@ export async function onRequestGet({request,env}){
     try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=${mk}`,3600,env))}catch(e){return softFail("Pionex symbols unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_tickers"){
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/tickers?type=SPOT`,30,env))}catch(e){return softFail("Pionex tickers unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    const mk=String(u.searchParams.get("market")||"").toUpperCase()==="PERP"?"PERP":"SPOT";
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/tickers?type=${mk}`,30,env))}catch(e){return softFail("Pionex tickers unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_klines"){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,"");

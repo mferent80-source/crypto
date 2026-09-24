@@ -163,6 +163,23 @@ async function scenariu(lat, inal, nume) {
       assert.match(await b.ev(FISA_TEXT), /Scrie suma/);
     });
 
+    await test(`${nume} · v79: "cat investesc?" din sold; jurnalul primeste intrarea la apasare; cutia de clasament exista`, async () => {
+      await b.ev(`document.getElementById("grMoneda").value="MET";document.getElementById("grSuma").value="100";document.getElementById("grSold").value="486";gridSold();gridCalculeaza('fortat')`);
+      await panaCand(b, `!!document.querySelector("#grFisa .grVerdict")&&!grStare.inLucru`, 90000, "fisa dupa sold");
+      const t = await b.ev(FISA_TEXT);
+      assert.match(t, /Cât investesc\?[\s\S]{0,40}cel mult \d+ USDT/, "randul 'cat investesc' cu suma maxima");
+      assert.match(t, /Am pornit botul cu setarea asta/);
+      const n0 = await b.ev(`(JSON.parse(localStorage.getItem("grJurnal")||"[]")).length`);
+      await b.ev(`gridJurnalAdauga()`);
+      await asteapta(1500);
+      const n1 = await b.ev(`(JSON.parse(localStorage.getItem("grJurnal")||"[]")).length`);
+      assert.equal(n1, n0 + 1, "jurnalul nu a primit intrarea");
+      assert.match(await b.ev(`document.getElementById("grJurnal").innerText`), /MET/);
+      assert.ok(await b.ev(`!!document.getElementById("grClasament")`), "cutia de clasament lipseste");
+      FARA_GUNOI(await b.ev(`document.getElementById("grJurnal").innerText`));
+      await b.ev(`localStorage.removeItem("grJurnal")`);
+    });
+
     await test(`${nume} · consola curata, fara scroll orizontal`, async () => {
       assert.deepEqual(b.exceptii, []); assert.deepEqual(b.consola, []);
       const w = await b.ev(`document.documentElement.scrollWidth`);

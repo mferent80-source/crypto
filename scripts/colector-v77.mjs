@@ -142,6 +142,22 @@ await test("istoric: o intrare pe minut, lipsa ramane null (nu 0), se citeste in
   assert.strictEqual(r.d.intrari[1].investit, null);
 });
 
+await test("istoric: clasamentul (v79 F3) se scrie curatat si se citeste inapoi; lipsa ramane null; corp stricat -> 400", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, la = Date.now();
+  const r0 = await cheama("GET", "action=clasament", env);
+  assert.equal(r0.status, 200); assert.strictEqual(r0.d.clasament, null);
+  const w = await cheama("POST", "action=clasament", env, { corp: { la, monede: [
+    { simbol: "MET_USDT_PERP", stare: "candidat", dir: "long", tarie: "tare", regim: { r4h: 0.9, r24h: 1.1, miscare: false }, volum: "123.4", pret: 0.33, latime: 0.14, pas: 0.02, grile: 8, profitGrila: 0.019, traversariZi: 3, scor: 0.057 },
+    { simbol: "bad<script>", stare: "ceva", dir: "x", regim: null, volum: null, scor: "" },
+    "gunoi", null ] } });
+  assert.equal(w.status, 200); assert.equal(w.d.monede, 2);
+  const r = await cheama("GET", "action=clasament", env);
+  assert.equal(r.d.clasament.la, la); assert.equal(r.d.clasament.monede.length, 2);
+  assert.equal(r.d.clasament.monede[0].volum, 123.4); assert.equal(r.d.clasament.monede[0].regim.miscare, false);
+  assert.equal(r.d.clasament.monede[1].simbol, "BADSCRIPT"); assert.equal(r.d.clasament.monede[1].stare, "fara-date"); assert.strictEqual(r.d.clasament.monede[1].scor, null); assert.strictEqual(r.d.clasament.monede[1].dir, null);
+  assert.equal((await cheama("POST", "action=clasament", env, { corp: { monede: [] } })).status, 400);
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });
