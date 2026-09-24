@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v75.0" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v76.0" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar Pro Lite</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -53,7 +53,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v75.0 · TABLOUL BOTULUI</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v76.0 · TABLOUL BOTULUI</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -61,7 +61,7 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip botStrip" id="botStrip" type="button" hidden data-action-click="navTo('tabloubot',true)" title="Deschide Tabloul botului">—</button><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v75.0 · READ ONLY</span></div>
+<div class="topRight"><button class="statusChip botStrip" id="botStrip" type="button" hidden data-action-click="navTo('tabloubot',true)" title="Deschide Tabloul botului">—</button><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v76.0 · READ ONLY</span></div>
 </header>
 <main>
 <div class="noticeBad parolaLipsa" id="parolaLipsa" hidden=""><b>Parola aplicației nu e pusă pe acest dispozitiv.</b> Fără ea, boții și contul Pionex nu se văd. Se pune o singură dată, în <b>Setări → API Security Session</b> (textul APP_API_TOKEN de la pornire). <button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări</button></div>
@@ -70,7 +70,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v75.0 · CRYPTO RADAR · PIONEX DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v76.0 · CRYPTO RADAR · PIONEX DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -116,29 +116,7 @@
 <button class="tab" data-action-click="show('deriv');derivatives()">Futures</button>
 <button class="tab" data-action-click="show('watch')">Watch</button>
 </div>
-<section class="panel" id="tabloubot">
-<div class="sectionHead"><h3>Tabloul botului</h3><span class="stockBadge" id="tbSimbol">—</span><span class="stockBadge" id="tbMod">—</span><select id="tbBotAles" class="actionGhost" hidden="" data-action-change="tbAlegeBot(this.value)" title="Care bot se judecă"></select><button class="actionGhost" id="tbSchimbaModulBtn" data-action-click="tbSchimbaModul()">Schimbă modul</button></div>
-<div class="card full" id="tbVerdictCard">
-<div id="tbNivel" class="neutral">—</div>
-<h3 id="tbTitlu">Aștept date</h3>
-<p id="tbCeFac" class="fine">—</p>
-<p id="tbDeCe" class="fine">—</p>
-<button class="actionGhost" id="tbSpreSetari" hidden="" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>
-</div>
-<div class="card full" id="tbDirectieCard"><div class="sectionHead"><h3>Direcția pieței față de bot</h3><span class="stockBadge" id="tbDirectieBot">—</span></div><div id="tbDirectieRezumat" class="tbRezumat mutedInfo">Aștept lumânările…</div><div class="accountRows" id="tbDirectie"></div><p class="fine">Direcția de ACUM e măsurată pe bare închise. Cifra de schimbare e o frecvență din trecutul monedei, după o stare ca cea de acum, cu numărul de cazuri lângă ea - nu e o predicție. Direcția viitoare nu s-a lăsat prezisă când am măsurat-o.</p></div><div class="card full" id="tbBaniCard">
-<div class="sectionHead"><h3>Banii botului</h3><span class="stockBadge">USDT</span></div>
-<div class="accountGrid" id="tbBani"><div class="emptyState">—</div></div>
-<div id="tbAvertismente"></div>
-</div>
-<div class="card full" id="tbGraficCard"><div class="sectionHead"><h3>Prețul în ultimele 24 de ore</h3><span class="stockBadge" id="tbGraficPret">—</span></div><div class="tbGrafic" id="tbGrafic"><div class="emptyState">Aștept prețurile…</div></div><p class="fine" id="tbGraficTip">Mută mouse-ul sau degetul peste grafic ca să vezi prețul la o oră anume.</p></div><div class="card full">
-<div class="sectionHead"><h3>Preț și interval</h3><span class="stockBadge" id="tbPret">—</span></div>
-<div id="tbRigla" class="accountRows"></div>
-</div>
-<div class="card full" id="tbDovadaCard"><div class="sectionHead"><h3>Dovada: ce s-a întâmplat cât am privit</h3><span class="stockBadge" id="tbDovadaAcoperire">—</span></div><div class="accountRows" id="tbDovada"><div class="emptyState">—</div></div><p class="fine">Din istoricul strâns de aplicație pe acest dispozitiv. „dovedit” = destule observații; „puțin” = se poate arăta, dar pe puține date; „—” = n-am datele.</p></div><div class="card full">
-<div class="sectionHead"><h3>Cele șapte măsuri</h3></div>
-<div class="accountRows" id="tbMasuri"><div class="emptyState">—</div></div>
-</div>
-</section>
+<section class="panel" id="tabloubot"><div class="sectionHead tbAntet"><div class="tbIdent"><h3>Tabloul botului</h3><span class="stockBadge" id="tbSimbol">—</span><span class="stockBadge" id="tbMod">—</span></div><div class="tbActiuni"><select id="tbBotAles" class="actionGhost" hidden="" data-action-change="tbAlegeBot(this.value)" title="Care bot se judecă"></select><button class="actionGhost" id="tbSchimbaModulBtn" data-action-click="tbSchimbaModul()">Schimbă modul</button></div></div><div class="tbVerdict" id="tbVerdictCard"><div class="tbVerdictStanga"><span id="tbNivel" class="neutral">—</span><h3 id="tbTitlu">Aștept date</h3></div><div class="tbVerdictDreapta"><p id="tbCeFac">—</p><p id="tbDeCe" class="tbSub">—</p><button class="actionGhost" id="tbSpreSetari" hidden="" data-action-click="mergiLaParola()">Deschide Setări (parola)</button></div></div><div class="tbKpi" id="tbKpi"><div class="tbKpiCel"><span class="tbEt2">Rezultat total, USDT</span><b id="tbKpiTotal" class="tbKpiVal">—</b><span id="tbKpiTotalSub" class="tbSub">—</span></div><div class="tbKpiCel"><span class="tbEt2">Până la lichidare</span><b id="tbKpiLich" class="tbKpiVal">—</b><div class="tbGauge" aria-hidden="true"><i class="tbGaugePrag tbPrag8"></i><i class="tbGaugePrag tbPrag15"></i><i id="tbKpiLichBara" class="tbGaugeUmplut"></i></div><span id="tbKpiLichSub" class="tbSub">—</span></div><div class="tbKpiCel"><span class="tbEt2">Prețul în grid</span><b id="tbKpiPret" class="tbKpiVal">—</b><div class="tbGauge tbGaugeGrid" aria-hidden="true"><i id="tbKpiGridPunct" class="tbGaugePunct"></i></div><span id="tbKpiPretSub" class="tbSub">—</span></div><div class="tbKpiCel"><span class="tbEt2">Piața față de bot</span><b id="tbKpiPiata" class="tbKpiVal">—</b><span id="tbKpiPiataSub" class="tbSub">—</span></div></div><div class="tbRand tbRandGrafic"><div class="tbBloc" id="tbGraficCard"><div class="tbBlocCap"><h4>Prețul, ultimele 24 de ore</h4><span class="tbSub" id="tbGraficPret">—</span></div><div class="tbGrafic" id="tbGrafic"><div class="emptyState">Aștept prețurile…</div></div></div><div class="tbBloc" id="tbDirectieCard"><div class="tbBlocCap"><h4>Direcția pieței</h4><span class="tbSub" id="tbDirectieBot">—</span></div><div id="tbDirectieRezumat" class="tbRezumat mutedInfo">Aștept lumânările…</div><div id="tbDirectie"></div></div></div><div class="tbRand"><div class="tbBloc" id="tbBaniCard"><div class="tbBlocCap"><h4>Banii botului</h4><span class="tbSub">USDT</span></div><div id="tbBani"><div class="emptyState">—</div></div></div><div class="tbBloc" id="tbAvertCard"><div class="tbBlocCap"><h4>Avertismente</h4></div><div id="tbAvertismente"><p class="tbSub">Niciun avertisment de la server.</p></div></div></div><details class="tbBloc tbDetalii" id="tbDetalii"><summary><h4>Măsurile, dovada și cum se citesc</h4><span class="tbSub">deschide</span></summary><div class="tbRand"><div><div class="tbBlocCap"><h4>Prețul și intervalul</h4><span class="tbSub" id="tbPret">—</span></div><div id="tbRigla" class="accountRows"></div></div><div id="tbDovadaCard"><div class="tbBlocCap"><h4>Dovada: ce s-a întâmplat cât am privit</h4><span class="tbSub" id="tbDovadaAcoperire">—</span></div><div class="accountRows" id="tbDovada"><div class="emptyState">—</div></div></div></div><div class="tbBlocCap"><h4>Cele șapte măsuri</h4></div><div class="accountRows" id="tbMasuri"><div class="emptyState">—</div></div><div class="tbNote"><p>Direcția de acum se măsoară pe bare închise. Cifra de schimbare arată cât de des s-a schimbat direcția în trecutul monedei, după o stare ca cea de acum, cu numărul de cazuri lângă ea. Nu e o predicție: direcția viitoare nu s-a lăsat prezisă când am măsurat-o.</p><p>Dovada vine din istoricul strâns de aplicație pe acest dispozitiv. „dovedit” înseamnă destule observații, „puțin” înseamnă că se poate arăta pe date puține, iar semnul „—” înseamnă că datele lipsesc.</p></div></details></section>
 <section class="panel on" id="dash"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid dashWideGrid">
 <div class="card full dashLineage">
 <div class="sectionHead"><h3>Data Lineage</h3><span class="small">No silent spot-source mixing</span></div>
@@ -1190,7 +1168,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v75.0</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v76.0</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>

@@ -829,14 +829,19 @@ async function main() {
       await b.ev(`tbAduDate()`);
       const bani = await textEl(b, "tbBani");
       assert.ok(bani, "lipseste #tbBani pe Tablou");
-      for (const re of [/Investit\s*150\.00 USDT/, /Realizat NET\s*\+4\.9000 USDT/, /Nerealizat \(poziție\)\s*\+7\.5000 USDT/, /Total\s*\+12\.4000 USDT/, /0[.,]8/, /față de ultimul preț/])
+      for (const re of [/Investit\s*150\.00 USDT/, /Realizat, după comisioane\s*\+4\.9000 USDT/, /Poziția deschisă nerealizat\s*\+7\.5000 USDT/, /Total\s*\+12\.4000 USDT/])
         assert.match(String(bani), re, `Tabloul nu arata ${re}: ${bani}`);
+      const kpi = await textEl(b, "tbKpi");
+      for (const re of [/Rezultat total, USDT\s*\+12\.40/, /0[.,]80000/, /trebuie să scadă până la/])
+        assert.match(String(kpi), re, `banda de sus nu arata ${re}: ${kpi}`);
       const av = await textEl(b, "tbAvertismente");
       assert.match(String(av), /STINS/, `avertismentul serverului lipseste de pe Tablou: ${av}`);
       await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut, { profitNet: null, pnlNerealizat: null, profitTotal: null })] }, stare: 200 });
       await b.ev(`tbAduDate()`);
       const gol = await textEl(b, "tbBani");
       assert.ok(!/0\.0000 USDT/.test(String(gol)), `pe Tablou lipsa a devenit 0: ${gol}`);
+      const totGol = await textEl(b, "tbKpiTotal");
+      assert.equal(String(totGol).trim(), "—", `in banda de sus un total necunoscut a devenit "${totGol}"`);
     });
 
     await test("A3. tabelul de masuri afiseaza unitatea venita din modul (comisionul deja in %)", async () => {
@@ -1375,10 +1380,10 @@ async function main() {
       try {
         await b.ev(`window.__lichProba = { valoare: 37.5, partea: "jos", depasita: false, pretLichidare: 0.8, stare: "bine", unitate: "%" }`);
         await incarcaBotSanatos({ strategyId: "7801" });
-        const rigla = await textEl(b, "tbRigla"), masura = (await celula(b, 4))?.valoare, bani = await textEl(b, "tbBani");
+        const rigla = await textEl(b, "tbRigla"), masura = (await celula(b, 4))?.valoare, bani = await textEl(b, "tbKpi");
         assert.match(String(rigla), /lichidare jos la −37\.5%/, `rigla: ${rigla}`);
         assert.match(String(masura), /jos −37\.50%/, `masura: ${masura}`);
-        assert.match(String(bani), /lichidare jos la −38\.5%/, `cardul: ${bani}`);
+        assert.match(String(bani), /Până la lichidare\s*38\.5%\s*prețul trebuie să scadă până la/, `banda de sus: ${bani}`);
         await b.ev(`window.__lichProba = { valoare: -2.1, partea: "sus", depasita: true, pretLichidare: 1.26, stare: "rau", unitate: "%" }`);
         await b.ev(`renderTabloBot()`);
         const rigla2 = await b.ev(`[...document.querySelectorAll('#tbRigla .bad')].map(x => x.textContent).join(' ')`);
