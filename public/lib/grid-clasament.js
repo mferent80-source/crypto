@@ -39,7 +39,9 @@ var GridClasament = (function () {
     var m4 = [];
     for (var k = 1; k < b4h.length; k++) m4.push(Math.abs(b4h[k].c - b4h[k - 1].c) / b4h[k - 1].c);
     out.traversariZi = (G.mediana(m4) || 0) / g * 6;
-    out.scor = out.profitGrila * out.traversariZi;   // fractie din suma pe zi, estimativ
+    // pe INVESTITIE: profitul unei grile e pe ordinul ei (suma / grile), nu pe toata suma.
+    // Ramane o estimare grosiera (traversari din inchidere in inchidere pe 4h = subestimate).
+    out.scor = out.profitGrila * out.traversariZi / out.grile;
     out.stare = out.regim.miscare ? "evita" : "candidat";
     return out;
   }
@@ -57,12 +59,21 @@ var GridClasament = (function () {
     });
   }
 
+  // tickere Pionex -> top n PERP dupa volumul in USDT (amount); volum lipsa = afara, nu 0
+  function topDupaVolum(tickers, n) {
+    return (Array.isArray(tickers) ? tickers : [])
+      .filter(function (x) { return x && /_USDT_PERP$/.test(String(x.symbol)); })
+      .map(function (x) { var v = x.amount == null || x.amount === "" ? NaN : Number(x.amount); return { simbol: String(x.symbol), volum: v }; })
+      .filter(function (x) { return isFinite(x.volum) && x.volum > 0; })
+      .sort(function (a, b) { return b.volum - a.volum; }).slice(0, n || 100);
+  }
+
   function rezumat(cl) {
     var m = cl && Array.isArray(cl.monede) ? cl.monede : [], r = { la: cl && cl.la || null, evita: 0, candidati: 0, faraDate: 0, total: m.length };
     m.forEach(function (x) { if (x.stare === "evita") r.evita++; else if (x.stare === "candidat") r.candidati++; else r.faraDate++; });
     return r;
   }
 
-  return { judeca: judeca, ordoneaza: ordoneaza, rezumat: rezumat };
+  return { judeca: judeca, ordoneaza: ordoneaza, rezumat: rezumat, topDupaVolum: topDupaVolum };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridClasament = GridClasament;

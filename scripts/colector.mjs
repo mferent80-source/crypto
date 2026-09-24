@@ -186,22 +186,24 @@ async function turaClasament() {
   const t0 = Date.now();
   try {
     const tk = await cere("/api/market?type=pionex_tickers&market=PERP");
-    const lista = (tk && tk.data && Array.isArray(tk.data.tickers) ? tk.data.tickers : [])
-      .filter((x) => x && /_USDT_PERP$/.test(String(x.symbol)))
-      .map((x) => ({ simbol: String(x.symbol), volum: Number(x.amount) }))
-      .filter((x) => Number.isFinite(x.volum)).sort((a, b) => b.volum - a.volum).slice(0, CLASAMENT_TOP);
+    const lista = GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, CLASAMENT_TOP);
     const monede = [];
     let esecuri = 0;
+    // Ruta publica are 45 de cereri/minut pe IP, impartite cu browserul: aici cel mult ~35/min.
     for (const m of lista) {
       try {
         const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(m.simbol) + "&interval=4H&limit=500");
-        monede.push(GridClasament.judeca(m.simbol, GridCalcul.bare(k && k.data && k.data.klines), m.volum));
+        const bare = GridCalcul.bare(k && k.data && k.data.klines);
+        if (!bare.length) throw new Error((k && (k.error || k.message || k.code)) || "fara lumanari");   // 200 cu result:false e tot esec
+        monede.push(GridClasament.judeca(m.simbol, bare, m.volum));
       } catch (e) { esecuri++; monede.push(GridClasament.judeca(m.simbol, null, m.volum)); if (esecuri >= 15) { jurnal("clasament: prea multe esecuri, ma opresc la", monede.length); break; } }
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 1600));
     }
+    const rz = GridClasament.rezumat({ la: Date.now(), monede });
+    // o lista cu multe goluri nu inlocuieste una buna
+    if (!monede.length || rz.faraDate > monede.length * 0.2) { jurnal("clasament NEURCAT:", rz.faraDate, "fara date din", monede.length); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; clasamentInLucru = false; return; }
     const r = await trimite("/api/istoric-bot?action=clasament", { la: Date.now(), monede });
     clasamentLa = Date.now();
-    const rz = GridClasament.rezumat({ la: clasamentLa, monede });
     jurnal("clasament:", monede.length, "monede in", Math.round((Date.now() - t0) / 1000) + " s;", rz.evita, "de evitat,", rz.candidati, "candidati,", rz.faraDate, "fara date;", (r && r.ok) ? "urcat" : "NEURCAT");
   } catch (e) { jurnal("clasament ESEC", e.message); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; }   // reincearca in 10 min
   clasamentInLucru = false;

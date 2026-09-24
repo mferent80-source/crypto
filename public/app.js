@@ -4853,7 +4853,7 @@ async function gridCalculeaza(fortat){
   if(!simbol){grStare.fisa=null;grStare.eroare="Scrie o monedă, de exemplu MET.";renderGrid();return}
   if(!suma){grStare.fisa=null;grStare.eroare="Scrie suma în USDT, de exemplu 100.";renderGrid();return}
   if(grStare.monede&&!grStare.monede[simbol]){grStare.fisa=null;grStare.eroare=simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.";renderGrid();return}
-  if(grStare.inLucru)return;
+  if(grStare.inLucru){grStare.reface=true;return}
   var proaspat=grStare.date&&grStare.simbol===simbol&&Date.now()-grStare.la<GR_REIMPROSPATARE_MS-5000&&!fortat;
   grStare.inLucru=true;grStare.eroare=null;renderGrid();
   try{
@@ -4866,6 +4866,8 @@ async function gridCalculeaza(fortat){
   }catch(e){grStare.fisa=null;grStare.eroare=grTextEroare(e)}
   finally{grStare.inLucru=false}
   renderGrid();
+  // a apasat pe alta moneda / alta directie cat se calcula: refacem pe ce e ACUM in inputuri
+  if(grStare.reface){grStare.reface=false;gridCalculeaza('fortat')}
 }
 // F4: soldul si pierderea acceptata se tin minte pe dispozitiv (nu pleaca nicaieri)
 function grSoldCitit(){try{var v=JSON.parse(localStorage.getItem("grSold")||"null");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
@@ -4913,9 +4915,11 @@ var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tb
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
 function grRandSumaMaxima(f){
-  var v=grSoldCitit(),sold=grNumar($("grSold")&&$("grSold").value)||v.sold,pierdere=grNumar($("grPierdere")&&$("grPierdere").value)||v.pierdere||5;
-  var st=f.proba.pe[f.dir]&&f.proba.pe[f.dir].antren,rea=st?st.ceaMaiProasta:null;
+  var v=grSoldCitit(),sold=grNumar($("grSold")&&$("grSold").value)||v.sold,pierdere=grNumar($("grPierdere")&&$("grPierdere").value);
+  var pe=f.proba.pe[f.dir]||{},a=pe.antren&&pe.antren.ceaMaiProasta,t=pe.test&&pe.test.ceaMaiProasta;
+  var rea=a==null?(t==null?null:t):(t==null?a:Math.min(a,t));   // cea mai proasta din TOATE ferestrele
   if(!(sold>0))return grRand("Cât investesc?","scrie soldul contului mai sus și îți spun");
+  if(!(pierdere>0))return grRand("Cât investesc?","scrie ce pierdere accepți, în % din cont (mai mare ca 0)");
   var max=GridProba.sumaMaxima(sold,pierdere,rea);
   if(max==null)return grRand("Cât investesc?",rea==null?"n-am cea mai proastă fereastră":"pe istoric nicio fereastră n-a ieșit pe minus: nu pot socoti un maxim");
   var P=GridCalcul.procent,text="cel mult "+Math.floor(max)+" USDT · ca cea mai proastă fereastră ("+P(rea)+") să nu treacă de "+pierdere+"% din "+sold+" USDT";
@@ -5013,7 +5017,7 @@ function renderGrid(){
     +grRand("Direcție",GR_DIR_PIONEX[f.dir],GR_DIR_PIONEX[f.dir])
     +grRand("Preț de jos",grPret(st.jos,i),grPret(st.jos,i))
     +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
-    +grRand("Număr de grile",st.grile+" (geometric)"+(st.redus?" · redus de la "+st.redus.de+", ca să încapă minimul pe ordin":""),String(st.grile))
+    +grRand("Număr de grile",st.grile+" · alege „Geometric” în Pionex (implicit e aritmetic)"+(st.redus?" · redus de la "+st.redus.de+", ca să încapă minimul pe ordin":""),String(st.grile))
     +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
@@ -5097,8 +5101,11 @@ function tbCuUnitate(text,unitate){
 // Se aduc rar (10 min): fiecare pagina e o cerere privata la Pionex, iar 429 racoreste toata ruta.
 var tbUmpleri={botId:null,la:0,inLucru:false,eroare:null,randuri:null,trunchiat:false};
 var TB_UMPLERI_MS=10*60000,TB_UMPLERI_PAGINI=12;
+function tbUmpleriPosibile(b){return !!(b&&b.id&&b.pornitLa>0&&!/PERP$/i.test(String(b.baza||"")))}
 async function tbAduUmpleri(b){
-  if(!b||!b.id||!(b.pornitLa>0))return;
+  // VERIFICAT 24.09 pe contul lui: /api/v1/trade/fills refuza simbolurile PERP ("symbol error") -
+  // umplerile botilor futures nu se pot citi prin API-ul de citire. Se incearca doar la boti spot.
+  if(!tbUmpleriPosibile(b))return;
   if(tbUmpleri.inLucru)return;
   if(tbUmpleri.botId===b.id&&Date.now()-tbUmpleri.la<(tbUmpleri.eroare?60000:TB_UMPLERI_MS))return;
   tbUmpleri.inLucru=true;
@@ -5122,17 +5129,19 @@ async function tbAduUmpleri(b){
 }
 function tbRandUmpleri(b){
   var u=tbUmpleri,rand=function(et,val,cls,nota){return '<div class="tbLinie"><span>'+escapeHtml(et)+(nota?' <span class="tbSub">'+escapeHtml(nota)+'</span>':'')+'</span><b class="'+(cls||"")+'">'+escapeHtml(val)+'</b></div>'};
-  if(!b||u.botId!==b.id)return rand("Din grile / din direcție",u.inLucru?"citesc umplerile…":"—","tbSubVal","din umplerile reale");
+  if(!tbUmpleriPosibile(b))return rand("Din grile / din direcție","Pionex nu dă umplerile boților futures prin API-ul de citire","tbSubVal","verificat 24.09: trade/fills refuză PERP");
+  if(u.botId!==b.id)return rand("Din grile / din direcție",u.inLucru?"citesc umplerile…":"—","tbSubVal","din umplerile reale");
   if(u.eroare)return rand("Din grile / din direcție","nu pot citi umplerile: "+u.eroare,"tbSubVal");
-  var g={jos:Number(b.gridJos),sus:Number(b.gridSus),grile:Number(b.grile||b.nrGrile||b.randuri||0),dir:String(b.directie||"neutru").toLowerCase(),pornitLa:b.pornitLa};
-  if(!(g.grile>=2)){g.grile=Number(b.brut&&b.brut.buOrderData&&b.brut.buOrderData.row)||0}
-  if(!(g.jos>0&&g.sus>g.jos&&g.grile>=2))return rand("Din grile / din direcție","botul n-are interval/grile citite","tbSubVal");
-  var r=GridUmpleri.imparte(GridUmpleri.citeste(u.randuri),g,Number(b.pretCurent));
+  var bu=b.brut&&b.brut.buOrderData||{},tip=String(bu.gridType||"").toLowerCase();
+  var g={jos:Number(b.gridJos),sus:Number(b.gridSus),grile:Number(bu.row)||0,dir:String(b.directie||"neutru").toLowerCase(),pornitLa:b.pornitLa,mod:tip==="arithmetic"?"aritmetic":tip==="geometric"?"geometric":"auto",trunchiat:u.trunchiat};
+  var pret=Number.isFinite(Number(b.pretCurent))&&b.pretCurent!=null&&b.pretCurent!==""?Number(b.pretCurent):null;
+  var r=GridUmpleri.imparte(GridUmpleri.citeste(u.randuri),g,pret);
+  if(r.motiv)return rand("Din grile / din direcție",r.motiv,"tbSubVal");
   if(!r.umpleri)return rand("Din grile / din direcție","nicio umplere de la pornire","tbSubVal");
-  var dirTot=r.directieRealizat+r.nerealizat;
-  return rand("Din grile",botiBan(r.grile),botiClasa(r.grile),r.laNivel+" umpleri la nivel")
+  var dirTot=r.nerealizat==null?null:r.directieRealizat+r.nerealizat;
+  return rand("Din grile",botiBan(r.grile),botiClasa(r.grile),r.laNivel+" umpleri la nivel · grid "+r.mod)
     +rand("Din direcție",botiBan(dirTot),botiClasa(dirTot),"pornire "+botiBan(r.directieRealizat)+" + deschis "+botiBan(r.nerealizat))
-    +rand("Comisioane pe umpleri",botiBan(-r.comisioane),"tbSubVal",r.umpleri+" umpleri"+(u.trunchiat?" (doar ultimele "+(TB_UMPLERI_PAGINI*100)+")":""));
+    +rand("Comisioane pe umpleri",botiBan(-r.comisioane),"tbSubVal",r.umpleri+" umpleri");
 }
 // Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.
 function tbDeseneazaBanii(b){

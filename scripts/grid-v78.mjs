@@ -382,15 +382,23 @@ await test("F1 regimPeBare: pe bare de 4h (k4=1, k24=6) - liniste -> fals; salt 
 
 const ALERTE = fs.readFileSync(new URL("../public/lib/alerte.js", import.meta.url), "utf8");
 const AL = new Function(`${ALERTE}; return Alerte;`)();
-await test("F1 Alerte: ctx.regim cu miscare -> 'gata linistea' (atentie) o data; ramane pana sub 1,3x; apoi 'liniste din nou' dupa 10 min", () => {
+await test("F1 Alerte: miscare mare (>2x) -> atentie o data, text despre INTRARE (nu porunca de oprire); ramane pana sub 1,5x; se repeta cel mult o data pe zi; 'liniste din nou' dupa 10 min", () => {
   const bot = { id: "b1", baza: "MET.PERP", quote: "USDT", directie: "long", activ: true };
   const T0 = 1_780_000_000_000;
+  // 1,8x nu e destul (pe 4h zgomotul trece de 1,5x in ~8% din bare)
+  let r0 = AL.evalueaza(bot, { regim: { r4h: 1.8, r24h: 1.1, miscare: true } }, {}, T0);
+  assert.equal(r0.mesaje.filter((m) => m.cheie === "miscare").length, 0);
   let r = AL.evalueaza(bot, { regim: { r4h: 2.2, r24h: 1.1, miscare: true } }, {}, T0);
   assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1);
-  assert.match(r.mesaje.find((m) => m.cheie === "miscare").titlu, /gata liniștea/);
-  // 1,4x: intre praguri -> ramane in alerta, fara mesaj nou
-  r = AL.evalueaza(bot, { regim: { r4h: 1.4, r24h: 1.0, miscare: false } }, r.stare, T0 + 60000);
+  const m0 = r.mesaje.find((m) => m.cheie === "miscare");
+  assert.match(m0.titlu, /mișcare mare/); assert.match(m0.mesaj, /NU porni grid nou/); assert.ok(!/oprește gridul/.test(m0.titlu));
+  // 1,7x: intre praguri -> ramane in alerta, fara mesaj nou; la 3h tot nimic (se repeta doar la 24h)
+  r = AL.evalueaza(bot, { regim: { r4h: 1.7, r24h: 1.0, miscare: false } }, r.stare, T0 + 60000);
   assert.equal(r.mesaje.length, 0); assert.equal(r.stare.miscare.nivel, "atentie");
+  r = AL.evalueaza(bot, { regim: { r4h: 2.5, r24h: 1.0, miscare: true } }, r.stare, T0 + 4 * 3600000);
+  assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 0, "la 4 h nu se repeta");
+  r = AL.evalueaza(bot, { regim: { r4h: 2.5, r24h: 1.0, miscare: true } }, r.stare, T0 + 25 * 3600000);
+  assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1, "la 25 h se repeta o data");
   // 1,2x: iese; "a trecut" doar dupa 10 minute stabile
   r = AL.evalueaza(bot, { regim: { r4h: 1.2, r24h: 1.0, miscare: false } }, r.stare, T0 + 120000);
   assert.equal(r.mesaje.length, 0);
@@ -512,6 +520,28 @@ await test("F5 imparte: short e oglinda (vinde la pornire, cumpara inapoi la niv
   const g = GU.imparte([], grid, 100);
   assert.equal(g.umpleri, 0); assert.equal(g.grile, 0); assert.equal(g.nerealizat, 0);
 });
+await test("F5 citeste: aceeasi umplere in doua pagini se tine o data", () => {
+  const r = GU.citeste([ump(1, "BUY", 100, 2, 0), ump(1, "BUY", 100, 2, 0), ump(2, "SELL", 101, 2, 0)]);
+  assert.equal(r.length, 2);
+});
+await test("F5 imparte: grid ARITMETIC (ca botul lui real: 0,30-0,40, 93 grile) - umplerile cad pe niveluri si se impart; modul se recunoaste si pe 'auto'", () => {
+  const grid = { jos: 0.30, sus: 0.40, grile: 10, dir: "long", pornitLa: U0, mod: "aritmetic" };   // pas 0,01
+  const f = [ump(1, "BUY", 0.355, 5, 0), ump(10, "BUY", 0.34, 1, 0), ump(20, "SELL", 0.35, 1, 0), ump(30, "BUY", 0.33, 1, 0), ump(40, "SELL", 0.34, 1, 0), ump(50, "SELL", 0.36, 1, 0)];
+  const r = GU.imparte(GU.citeste(f), grid, 0.35);
+  assert.equal(r.motiv, null, r.motiv); assert.equal(r.mod, "aritmetic");
+  aprox(r.grile, 0.02, 1e-9, "doua perechi de grid a 0,01"); aprox(r.directieRealizat, 0.005, 1e-9, "o celula de la pornire vanduta la 0,36");
+  const auto = GU.imparte(GU.citeste(f), Object.assign({}, grid, { mod: "auto" }), 0.35);
+  assert.equal(auto.mod, "aritmetic"); aprox(auto.grile, 0.02, 1e-9);
+});
+await test("F5 imparte: refuza cinstit - istoric trunchiat; long fara intrarea de la pornire; umpleri care nu cad pe niveluri; pret lipsa -> nerealizat null, nu 0", () => {
+  const grid = { jos: 90, sus: 110, grile: 4, dir: "long", pornitLa: U0, mod: "geometric" };
+  assert.match(GU.imparte(GU.citeste([ump(1, "BUY", 100, 5, 0)]), Object.assign({}, grid, { trunchiat: true }), 100).motiv, /trunchiat/);
+  assert.match(GU.imparte(GU.citeste([ump(10, "SELL", 99.499, 2.5, 0), ump(20, "SELL", 104.618, 2.5, 0)]), grid, 100).motiv, /intrarea de la pornire/);
+  const stramb = GU.imparte(GU.citeste([ump(1, "BUY", 100, 5, 0), ump(10, "BUY", 97, 1, 0), ump(20, "SELL", 101, 1, 0), ump(30, "BUY", 96, 1, 0), ump(40, "SELL", 102.7, 1, 0)]), grid, 100);
+  assert.match(stramb.motiv, /nu cad pe nivelurile/);
+  const r = GU.imparte(GU.citeste([ump(1, "BUY", 100, 5, 0)]), grid, null);
+  assert.strictEqual(r.nerealizat, null); assert.strictEqual(r.total, null); assert.equal(r.motiv, null);
+});
 await test("F5 imparte: neutru - o vanzare inchide intai celulele long tinute, restul deschide short", () => {
   const grid = { jos: 90, sus: 110, grile: 4, dir: "neutru", pornitLa: U0 };
   const f = [ump(10, "BUY", 94.630, 2.5, 0), ump(20, "SELL", 99.499, 5, 0)];   // 2,5 inchid long-ul, 2,5 deschid short (dupa primele 2 min = nu e pozitie de pornire)
@@ -533,6 +563,8 @@ await test("F3 judeca: pe bare de 4h - regim, latimea p75 pe 2 zile, directia, p
   assert.ok(["long", "neutru", "short"].includes(j.dir));
   assert.ok(j.grile >= 2 && j.pas >= 0.0035, JSON.stringify({ g: j.grile, p: j.pas }));
   assert.equal(j.stare, "candidat");
+  aprox(j.scor, j.profitGrila * j.traversariZi / j.grile, 1e-12, "scorul e pe investitie (impartit la grile)");
+  assert.ok(j.scor < 0.02, "un grid nu aduce peste 2%/zi pe investitie in liniste: " + j.scor);
   const salt = lin.slice(); salt[salt.length - 1] = salt[salt.length - 2] * 1.15;
   assert.equal(GCL.judeca("X", bareDin(salt, 0.004), 1).stare, "evita");
   const f = GCL.judeca("Y", b.slice(0, 30), 1);
@@ -542,6 +574,12 @@ await test("F3 ordoneaza: de EVITAT primele (dupa miscare), apoi candidatii dupa
   const c = (simbol, stare, scor, r) => ({ simbol, stare, scor, regim: r ? { r4h: r, r24h: 1 } : null });
   const l = GCL.ordoneaza([c("A", "candidat", 0.5), c("B", "evita", 0, 3.1), c("C", "fara-date", null), c("D", "candidat", 0.9), c("E", "evita", 0, 1.7)]);
   assert.deepEqual(l.map((x) => x.simbol), ["B", "E", "D", "A", "C"]);
+});
+await test("F3 topDupaVolum: doar _USDT_PERP, dupa amount descrescator, volum lipsa/0 = afara (nu 0), taiat la n", () => {
+  const t = [{ symbol: "A_USDT_PERP", amount: "10" }, { symbol: "B_USDT", amount: "99" }, { symbol: "C_USDT_PERP", amount: "30" }, { symbol: "D_USDT_PERP" }, { symbol: "E_USDT_PERP", amount: "0" }, null, { symbol: "F_USDT_PERP", amount: "20" }];
+  assert.deepEqual(GCL.topDupaVolum(t, 2).map((x) => x.simbol), ["C_USDT_PERP", "F_USDT_PERP"]);
+  assert.equal(GCL.topDupaVolum(t, 10).length, 3);
+  assert.deepEqual(GCL.topDupaVolum(null, 5), []);
 });
 await test("F3 rezumat: cate de evitat / candidati / fara date + ora socotirii", () => {
   const r = GCL.rezumat({ la: 1_790_000_000_000, monede: [{ stare: "evita" }, { stare: "candidat" }, { stare: "candidat" }, { stare: "fara-date" }] });

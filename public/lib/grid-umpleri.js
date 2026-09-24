@@ -33,8 +33,11 @@ var GridUmpleri = (function () {
       if (feeCoin && baza && feeCoin === baza) fee = fee * pret;   // comisionul in moneda de baza -> in USDT
       out.push({ t: t, side: side, pret: pret, cant: cant, fee: Math.abs(fee), id: r.id != null ? String(r.id) : null });
     }
-    out.sort(function (a, b) { return a.t - b.t; });
-    return out;
+    // aceeasi umplere venita in doua pagini (granita pe endTime) se tine o data
+    var vazut = {}, unice = [];
+    for (var u = 0; u < out.length; u++) { var k = out[u].id || (out[u].t + "|" + out[u].side + "|" + out[u].pret + "|" + out[u].cant); if (!vazut[k]) { vazut[k] = 1; unice.push(out[u]); } }
+    unice.sort(function (a, b) { return a.t - b.t; });
+    return unice;
   }
 
   function laNivel(pret, niv, pas) {
@@ -43,12 +46,23 @@ var GridUmpleri = (function () {
     return false;
   }
 
-  // grid = {jos, sus, grile, dir, pornitLa}; pretAcum pentru nerealizat
+  function niveluriAritmetice(jos, sus, N) { var v = [], p = (sus - jos) / N; for (var k = 0; k <= N; k++) v.push(jos + p * k); v[N] = sus; return v; }
+  function cateLaNivel(umpleri, niv, pas, de, PORNIRE_MS) { var n = 0; for (var i = 0; i < umpleri.length; i++) if (umpleri[i].t - de > PORNIRE_MS && laNivel(umpleri[i].pret, niv, pas)) n++; return n; }
+
+  // grid = {jos, sus, grile, dir, pornitLa, mod: "geometric"|"aritmetic"|"auto", trunchiat};
+  // pretAcum pentru nerealizat (lipsa -> nerealizat null, nu 0).
+  // out.motiv != null => impartirea NU se poate face cinstit; cifrele nu se arata.
   function imparte(umpleri, grid, pretAcum) {
-    var out = { grile: 0, directieRealizat: 0, nerealizat: 0, comisioane: 0, umpleri: 0, total: 0, pozitie: { cant: 0, medie: null }, laNivel: 0, inAfara: 0 };
-    if (!grid || !(grid.jos > 0) || !(grid.sus > grid.jos) || !(grid.grile >= 2)) return out;
-    var niv = G.niveluri(grid.jos, grid.sus, grid.grile), pas = Math.pow(grid.sus / grid.jos, 1 / grid.grile) - 1;
+    var out = { grile: 0, directieRealizat: 0, nerealizat: 0, comisioane: 0, umpleri: 0, total: 0, pozitie: { cant: 0, medie: null }, laNivel: 0, inAfara: 0, mod: null, motiv: null };
+    if (!grid || !(grid.jos > 0) || !(grid.sus > grid.jos) || !(grid.grile >= 2)) { out.motiv = "botul n-are interval/grile citite"; return out; }
     var de = nr(grid.pornitLa) || 0, PORNIRE_MS = 2 * 60000;
+    if (grid.trunchiat) { out.motiv = "istoricul de umpleri e trunchiat: fara inceput, perechile nu se pot reface"; return out; }
+    var nivG = G.niveluri(grid.jos, grid.sus, grid.grile), pasG = Math.pow(grid.sus / grid.jos, 1 / grid.grile) - 1;
+    var nivA = niveluriAritmetice(grid.jos, grid.sus, grid.grile), pasA = (grid.sus - grid.jos) / grid.grile / grid.jos;
+    var mod = grid.mod === "aritmetic" || grid.mod === "geometric" ? grid.mod : null;
+    if (!mod) { var lg = cateLaNivel(umpleri, nivG, pasG, de, PORNIRE_MS), la = cateLaNivel(umpleri, nivA, pasA, de, PORNIRE_MS); mod = la > lg ? "aritmetic" : "geometric"; }
+    var niv = mod === "aritmetic" ? nivA : nivG, pas = mod === "aritmetic" ? pasA : pasG;
+    out.mod = mod;
     var longi = [], shorti = [];   // loturi deschise: {cant, pret, grila}
     function indiceNivel(pret) {
       var tol = pret * pas / 4;
@@ -98,8 +112,13 @@ var GridUmpleri = (function () {
     var cant = 0, cost = 0, p = nr(pretAcum);
     longi.forEach(function (l) { cant += l.cant; cost += l.cant * l.pret; if (p !== null) out.nerealizat += (p - l.pret) * l.cant; });
     shorti.forEach(function (l) { cant -= l.cant; cost += l.cant * l.pret; if (p !== null) out.nerealizat += (l.pret - p) * l.cant; });
+    if (p === null) out.nerealizat = null;
     out.pozitie = { cant: cant, medie: Math.abs(cant) > 1e-12 ? cost / Math.abs(cant) : null };
-    out.total = out.grile + out.directieRealizat + out.nerealizat - out.comisioane;
+    // long/short fara intrarea de la pornire = fereastra incepe dupa pornire: perechile ar iesi strambe
+    if ((grid.dir === "long" || grid.dir === "short") && out.umpleri > 0 && !umpleri.some(function (u) { return u.t >= de && u.t - de <= PORNIRE_MS; })) { out.motiv = "nu vad intrarea de la pornire in umpleri: nu pot imparti cinstit"; return out; }
+    // sub 70% din umplerile de grid la nivel = nivelurile nu-s cele ale botului (alt mod, alt interval)
+    if (out.laNivel + out.inAfara > 3 && out.laNivel < 0.7 * (out.laNivel + out.inAfara)) { out.motiv = "umplerile nu cad pe nivelurile gridului (" + out.laNivel + " din " + (out.laNivel + out.inAfara) + "): nu pot imparti"; return out; }
+    out.total = out.nerealizat === null ? null : out.grile + out.directieRealizat + out.nerealizat - out.comisioane;
     return out;
   }
 

@@ -10,6 +10,7 @@ var Alerte = (function () {
   "use strict";
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
+  var REPETA_CHEIE_MS = { miscare: 24 * 3600000 };   // miscarea se repeta cel mult o data pe zi
   // Histerezis: o alerta INTRA la un prag si IESE abia la unul mai larg, altfel
   // un bot care sta langa prag ar trimite un mesaj la fiecare minut (masurat:
   // 59/ora intre 14,9% si 15,1%). "A trecut" se spune doar dupa 10 minute stabile.
@@ -59,14 +60,17 @@ var Alerte = (function () {
         : { nivel: "ok", titlu: nume + ": piața pe 4 ore nu mai merge împotriva botului", mesaj: "" };
     }
 
-    // v79 F1: "gata linistea" - regula dovedita (Busola 20.09): dupa miscare gridul iese
-    // cel mai rau. Intra la 1,5x obisnuitul (percentila 75), iese abia sub 1,3x.
+    // v79 F1: "miscare mare" - regula dovedita (Busola 20.09) e despre INTRARE: nu porni grid
+    // dupa miscare. Despre oprirea unui bot care ruleaza nu s-a dovedit nimic: oprit, isi
+    // fixeaza pierderea din directie. Deci alerta informeaza, nu porunceste. Pe bare de 4h,
+    // 1,5x percentila 75 e depasit de zgomot pur in ~8% din bare (masurat de audit: ~2
+    // mesaje/zi pe bot); de aceea pragul e 2x, iese sub 1,5x si se repeta cel mult o data pe zi.
     if (ctx && ctx.regim && ctx.regim.r4h != null && ctx.regim.r24h != null) {
       var rg = ctx.regim, rmax = Math.max(rg.r4h, rg.r24h), inAlerta = fost("miscare") !== "ok";
-      var misc = inAlerta ? rmax >= 1.3 : rmax > 1.5;
+      var misc = inAlerta ? rmax >= 1.5 : rmax > 2.0;
       var x = function (v) { return v.toFixed(1).replace(".", ","); };
       out.miscare = misc
-        ? { nivel: "atentie", titlu: nume + ": gata liniștea — oprește gridul", mesaj: "Mișcarea pe 4 ore e " + x(rg.r4h) + "× cea obișnuită a monedei, pe 24 de ore " + x(rg.r24h) + "×. Măsurat: după mișcare gridul iese cel mai rău. Ia în calcul să-l oprești." }
+        ? { nivel: "atentie", titlu: nume + ": mișcare mare — regimul în care gridul iese cel mai rău", mesaj: "Mișcarea pe 4 ore e " + x(rg.r4h) + "× cea obișnuită a monedei, pe 24 de ore " + x(rg.r24h) + "×. Dovedit: NU porni grid nou după mișcare. Dacă îl oprești pe ăsta, îți fixezi pierderea din direcție — hotărăști tu, uită-te la Tablou." }
         : { nivel: "ok", titlu: nume + ": liniște din nou", mesaj: "Mișcarea a coborât la " + x(rmax) + "× obișnuitul." };
     }
 
@@ -98,7 +102,7 @@ var Alerte = (function () {
       }
       var trimite = false;
       if (RANG[a.nivel] > RANG[v.nivel]) trimite = true;                       // s-a agravat
-      else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= REPETA_MS[a.nivel]) trimite = true; // persista
+      else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= (REPETA_CHEIE_MS[cheie] || REPETA_MS[a.nivel])) trimite = true; // persista
       if (trimite) mesaje.push({ cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
       // coborarea critic -> atentie NU reseteaza ceasul: o revenire rapida in critic nu e o agravare noua
       nou[cheie] = { nivel: a.nivel, la: trimite ? acum : (RANG[a.nivel] <= RANG[v.nivel] ? v.la : acum) };
