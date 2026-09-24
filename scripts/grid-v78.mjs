@@ -58,6 +58,17 @@ await test("nrGrile: jos 90, sus 110, pas 1% -> 20; strunit la 2..150", () => {
   assert.equal(GC.nrGrile(10, 1000, 0.0035), 150);
 });
 
+await test("pasi: culoarul pasului porneste de la 0,35% si urca pana la 3 x miscarea tipica pe 15M; pe bare linistite ramane 0,35%", () => {
+  const vii = bareDin(aleator(500, 9, 0.02), 0.004);         // bare de ~0,8%+ -> pas maxim > minim
+  const p = GC.pasi(vii);
+  aprox(p[0], 0.0035, 1e-12, "minimul");
+  assert.ok(p[2] > 0.0035 && p[1] > p[0] && p[1] < p[2], JSON.stringify(p));
+  aprox(p[1], Math.sqrt(p[0] * p[2]), 1e-12, "mijlocul geometric");
+  const moarte = bareDin(Array(300).fill(1), 0.0001);          // bare de 0,02% -> nimic sub 0,35%
+  assert.deepEqual(GC.pasi(moarte), [0.0035, 0.0035, 0.0035]);
+  assert.equal(GC.pasi([]), null);
+});
+
 await test("plaseaza: neutru centrat, long 60% deasupra, short 40% deasupra", () => {
   const n = GC.plaseaza(100, 0.1, "neutru"), l = GC.plaseaza(100, 0.1, "long"), s = GC.plaseaza(100, 0.1, "short");
   aprox(n.jos, 95, 1e-9); aprox(n.sus, 105, 1e-9);
