@@ -706,7 +706,13 @@ function loadScanPrefs(){
  if($("pionexScanMode")&&$("scanDepth"))$("pionexScanMode").textContent=$("scanDepth").value==="DEEP"?"Mode DEEP MTF":"Mode FAST 4H"
 }
 
-const APP_VERSION="v71";
+// v74.6: versiunea are O SINGURA sursa - <meta name="app-version"> din
+// index.html (o urca livrarea). Inainte era scrisa aici de mana si ramasese
+// "v71" in antet si in Health la v74.5.
+const APP_VERSION=(typeof document!=="undefined"&&document.querySelector('meta[name="app-version"]')?.content)||"v?";
+// document.getElementById, nu $: aici $ (const, mai jos in fisier) e inca in zona moarta.
+function aplicaVersiunea(){for(const id of ["antetVersiune","topVersiune","sideVersiune","healthAppVersion"]){const el=document.getElementById(id);if(el)el.textContent=/^v[\d.?]+/.test(el.textContent)?el.textContent.replace(/^v[\d.?]+/,APP_VERSION):APP_VERSION}}
+if(typeof document!=="undefined")aplicaVersiunea();
 let researchWorkerInstance=null,researchWorkerSeq=0;const researchWorkerPending=new Map();
 function researchWorkerSupported(){return typeof Worker!=="undefined"}
 function ensureResearchWorker(){
@@ -3497,7 +3503,7 @@ function startPionexLive(sym){
 function stopStockLive(){stockLiveSeq++;if(stockLiveTimer){clearInterval(stockLiveTimer);stockLiveTimer=null}}
 function startStockLive(sym){
   stopPionexLive();stopBinanceLive();stopStockLive();const seq=++stockLiveSeq;
-  async function poll(){if(seq!==stockLiveSeq)return;try{const d=await stockTicker(sym);if(seq!==stockLiveSeq)return;const px=Number(d.lastPrice),ch=Number(d.priceChangePercent);lastWsTick=Date.now();markFresh("ws");if($("wsStatus")){$("wsStatus").textContent="US STOCKS";$("wsStatus").classList.remove("wsStale")}if($("wsDot"))$("wsDot").classList.add("live");if(window.__radarState?.symbol===sym&&window.__radarState?.source==="TWELVEDATA"){$("heroPrice").textContent=num(px);$("price").textContent=num(px);$("hero24").textContent=pctText(ch);$("change").textContent=pctText(ch)}}catch{if($("wsStatus"))$("wsStatus").textContent="STOCK DATA RETRY"}}
+  async function poll(){if(seq!==stockLiveSeq)return;try{const d=await stockTicker(sym);if(seq!==stockLiveSeq)return;const px=botiNr(d.lastPrice),ch=botiNr(d.priceChangePercent);lastWsTick=Date.now();markFresh("ws");if($("wsStatus")){$("wsStatus").textContent="US STOCKS";$("wsStatus").classList.remove("wsStale")}if($("wsDot"))$("wsDot").classList.add("live");if(window.__radarState?.symbol===sym&&window.__radarState?.source==="TWELVEDATA"){$("heroPrice").textContent=px===null?"—":num(px);$("price").textContent=px===null?"—":num(px);$("hero24").textContent=ch===null?"—":pctText(ch);$("change").textContent=ch===null?"—":pctText(ch)}}catch{if($("wsStatus"))$("wsStatus").textContent="STOCK DATA RETRY"}}
   poll();stockLiveTimer=setInterval(poll,30000)
 }
 function startProviderLive(sym,src=analysisSource()){
@@ -4094,8 +4100,9 @@ async function backtestCurrent(){
 async function derivatives(){
  if(assetClass()==="STOCKS"){$("ftext").textContent="Crypto futures context is not mixed into US stock signals.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";window.__derivativesState={};return}
  let sym=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";
- let d=null,histOI=null,fundingHist=null;
- try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}catch{}
+ let d=null,histOI=null,fundingHist=null,motivFutures="";
+ try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}
+ catch(e){motivFutures=eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
  if(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null)){
    try{
     let [fr,oi,ls,oih,fh]=await Promise.all([
@@ -4123,7 +4130,7 @@ async function derivatives(){
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
  window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats};markFresh("futures");
  if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q);renderLiquidationProxy(window.__radarState.q,window.__derivativesState);renderQuantFlow(window.__radarState.q,window.__derivativesState)}
- $("ftext").textContent=(fr==null&&oi==null&&ls==null)?"Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională.":"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
+ $("ftext").textContent=(fr==null&&oi==null&&ls==null)?("Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională."+(motivFutures?" "+motivFutures:"")):"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
 }
 let scannerRows=[];
 function renderScan(){

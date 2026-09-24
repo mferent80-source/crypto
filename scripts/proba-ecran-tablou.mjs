@@ -347,6 +347,54 @@ function test(nume, fn) {
   );
 }
 
+/* ── B7: service worker-ul, rulat in node cu un mediu fals ─────────────────
+   Defect pazit: app.js si lib/* erau cache-first, iar index.html network-first
+   => HTML NOU peste JS VECHI (badge nou, reparatii lipsa). Acum codul e
+   network-first cu rezerva din cache; /api/ ramane numai retea. */
+async function probaServiceWorker() {
+  const { readFileSync } = await import("node:fs");
+  const sursa = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+  function mediu(reteaMerge) {
+    const ascultatori = {}, cache = new Map(), cerute = [];
+    const self = { addEventListener: (t, f) => { ascultatori[t] = f; }, location: { origin: "http://proba.local" },
+      skipWaiting() {}, clients: { claim: async () => {} }, registration: {} };
+    const caches = {
+      async open() { return { put: async (k, r) => { cache.set(typeof k === "string" ? k : new URL(k.url).pathname, r); } }; },
+      async match(k) { const c = cache.get(typeof k === "string" ? k : new URL(k.url).pathname); return c ? c.clone() : undefined; },
+      async keys() { return []; }, async delete() { return true; },
+    };
+    const fetchFals = async (req) => {
+      const url = typeof req === "string" ? req : req.url; cerute.push(url);
+      if (!reteaMerge) throw new TypeError("Failed to fetch");
+      return new Response("NOU " + new URL(url, "http://proba.local").pathname, { status: 200 });
+    };
+    new Function("self", "caches", "fetch", "clients", sursa)(self, caches, fetchFals, self.clients);
+    return { ascultatori, cache, cerute };
+  }
+  async function cere(m, cale) {
+    let raspuns = null;
+    const ev = { request: { method: "GET", url: "http://proba.local" + cale, mode: "cors" },
+      respondWith(p) { raspuns = p; }, waitUntil() {} };
+    m.ascultatori.fetch(ev);
+    if (!raspuns) return null;
+    const r = await raspuns; return r ? await r.text() : null;
+  }
+  const rezultate = [];
+  for (const cale of ["/app.js", "/lib/tablou-bot.js", "/app.css"]) {
+    const m = mediu(true); m.cache.set(cale, new Response("VECHI " + cale));
+    rezultate.push([`${cale} cu retea: codul NOU, nu cel din cache`, await cere(m, cale), "NOU " + cale]);
+    const m2 = mediu(false); m2.cache.set(cale, new Response("VECHI " + cale));
+    rezultate.push([`${cale} fara retea: rezerva din cache`, await cere(m2, cale), "VECHI " + cale]);
+  }
+  const m3 = mediu(true); m3.cache.set("/api/bot-orders", new Response("VECHI api"));
+  rezultate.push(["/api/* ramane numai retea", await cere(m3, "/api/bot-orders"), "NOU /api/bot-orders"]);
+  const m4 = mediu(false); m4.cache.set("/api/bot-orders", new Response("VECHI api"));
+  let apiFaraRetea = null; try { apiFaraRetea = await cere(m4, "/api/bot-orders"); } catch { apiFaraRetea = "EROARE"; }
+  rezultate.push(["/api/* fara retea NU se serveste din cache", apiFaraRetea, "EROARE"]);
+  const cacheNume = (sursa.match(/const\s+CACHE\s*=\s*"([^"]+)"/) || [])[1];
+  return { rezultate, cacheNume };
+}
+
 async function main() {
   if (!BROWSER) {
     console.error("Nu gasesc Chrome sau Edge instalat - proba nu poate porni.");
@@ -364,6 +412,11 @@ async function main() {
 
   try {
     console.log(`\nPROBA DE ECRAN - Tabloul botului · ${URL_T}\n`);
+    await test("B7. sw.js: app.js / lib / app.css network-first cu rezerva din cache; /api/ numai retea", async () => {
+      const { rezultate } = await probaServiceWorker();
+      for (const [nume, primit, asteptat] of rezultate) assert.equal(primit, asteptat, `${nume}: a dat "${primit}"`);
+    });
+
     await b.navigheaza(URL_T);
     if (!(await asteaptaAplicatia(b))) throw new Error("aplicatia nu s-a incarcat in timp util");
     if (TOKEN) await b.ev(`try{sessionStorage.setItem("cryptoRadarApiTokenV54",${JSON.stringify(TOKEN)})}catch(e){}`);
@@ -375,7 +428,7 @@ async function main() {
       await b.ev(`tbAduDate()`);
     }
 
-    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge v74.5", async () => {
+    await test("incarcarea initiala: zero exceptii, sapte masuri, verdict nevid, badge-ul poarta versiunea din meta", async () => {
       await incarcaBotSanatos();
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(600);
@@ -395,8 +448,10 @@ async function main() {
       // textContent, nu innerText: badge-ul de build sta in sidebar-ul care e
       // ascuns la 390px (latimea de telefon folosita de proba) - innerText
       // sare peste text ascuns, textContent nu.
-      const areBadge = await b.ev(`document.body.textContent.includes('v74.5 · TABLOUL BOTULUI')`);
-      assert.ok(areBadge, "badge-ul v74.5 · TABLOUL BOTULUI nu apare pe pagina");
+      // v74.6: versiunea se citeste din <meta name="app-version"> (o urca livrarea),
+      // nu se scrie aici de mana - altfel proba ar pica la fiecare versiune noua.
+      const areBadge = await b.ev(`document.body.textContent.includes((document.querySelector('meta[name="app-version"]')?.content || '?') + ' · TABLOUL BOTULUI')`);
+      assert.ok(areBadge, "badge-ul <versiune> · TABLOUL BOTULUI nu apare pe pagina");
     });
 
     await test("fara bot in cont: FARA_BOT, tot 7 masuri, rigla spune asta", async () => {
@@ -858,6 +913,55 @@ async function main() {
       await b.ev(`tbAduDate()`);
       const perechi = await b.ev(`tbStare.istoric[tbStare.istoric.length-1].perechi`);
       assert.strictEqual(perechi, null, `lipsa perechilor s-a scris ca ${perechi}`);
+    });
+
+    /* ═══ v74.6 · B: versiunea dintr-o singura sursa ═══════════════════════ */
+    await test("B6. versiunea vine din <meta name=app-version>: APP_VERSION, antetul, sertarul, Health; fara 'AUDITED'", async () => {
+      const r = await b.ev(`(() => {
+        const meta = document.querySelector('meta[name="app-version"]')?.content || null;
+        renderPwaHealth();
+        return { meta, app: typeof APP_VERSION !== 'undefined' ? APP_VERSION : null,
+          badge: document.querySelector('.headerMeta .badge')?.textContent || '',
+          chip: document.getElementById('topVersiune')?.textContent || '',
+          sertar: document.getElementById('sideVersiune')?.textContent || '',
+          health: document.getElementById('healthAppVersion')?.textContent || '' };
+      })()`);
+      assert.match(String(r.meta), /^v\d+(\.\d+)*$/, `lipseste <meta name="app-version">: ${r.meta}`);
+      assert.equal(r.app, r.meta, `APP_VERSION (${r.app}) nu e cel din meta (${r.meta})`);
+      for (const [nume, t] of [["badge", r.badge], ["chip", r.chip], ["sertar", r.sertar], ["health", r.health]]) {
+        assert.ok(t.startsWith(r.meta), `${nume} nu arata versiunea reala ${r.meta}: "${t}"`);
+      }
+      assert.ok(!/AUDITED/.test(r.badge), `badge-ul inca pretinde "AUDITED": ${r.badge}`);
+      const manifest = await b.ev(`fetch('/manifest.webmanifest').then(x => x.json()).then(m => m.description)`);
+      const vers = String(manifest).match(/\bv\d+(\.\d+)?\b/g) || [];
+      assert.ok(vers.every((v) => v === r.meta), `descrierea din manifest poarta alta versiune: ${manifest}`);
+    });
+
+    /* ═══ v74.6 · dupa Task 1 (serverul): futures cere parola, actiunile pot da null ═══ */
+    await test("T1a. futures cu 401: ecranul spune ca lipseste parola, nu tace", async () => {
+      await b.ev(`(() => { if (window.__fetchInainteFapi) return; window.__fetchInainteFapi = window.fetch;
+        window.fetch = (u, o) => /fapi\\.binance\\.com/.test(String(u && u.url || u)) ? Promise.reject(new TypeError("proba: Binance futures blocat")) : window.__fetchInainteFapi(u, o); })()`);
+      try {
+        await seteazaMock(b, "market", { corp: { error: "AUTH_REQUIRED", authenticated: false }, stare: 401 });
+        await b.ev(`derivatives()`);
+        const t = await textEl(b, "ftext");
+        assert.match(String(t), /parol/i, `la 401 casetele futures raman goale fara motiv: ${t}`);
+      } finally {
+        await b.ev(`if (window.__fetchInainteFapi) { window.fetch = window.__fetchInainteFapi; delete window.__fetchInainteFapi; }`);
+        await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      }
+    });
+
+    await test("T1b. actiuni: lastPrice / priceChangePercent null se arata —, nu 0 si nici +0.00%", async () => {
+      const r = await b.ev(`(async () => {
+        const vechi = window.stockTicker; window.stockTicker = async () => ({ lastPrice: null, priceChangePercent: null });
+        const stareVeche = window.__radarState; window.__radarState = { symbol: "PROBA", source: "TWELVEDATA" };
+        try { startStockLive("PROBA"); await new Promise(r => setTimeout(r, 300));
+          return { pret: document.getElementById('heroPrice').textContent, ch: document.getElementById('hero24').textContent };
+        } finally { stopStockLive(); window.stockTicker = vechi; window.__radarState = stareVeche; }
+      })()`);
+      assert.equal(r.pret, "—", `pretul lipsa a devenit: ${r.pret}`);
+      assert.equal(r.ch, "—", `variatia lipsa a devenit: ${r.ch}`);
     });
 
     /* ═══ v74.4: parola nu se mai cere la fiecare repornire ═══════════════

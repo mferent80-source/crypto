@@ -43,6 +43,19 @@ self.addEventListener("fetch",event=>{
     return;
   }
 
+  // v74.6: codul (app.js, lib/*, app.css, worker-ul, contractul) e network-first,
+  // ca index.html. Cache-first servea JS VECHI sub HTML NOU (badge nou, reparatii
+  // lipsa) pana la a doua reincarcare. Cache-ul ramane doar rezerva fara retea.
+  if(url.origin===self.location.origin&&(url.pathname.startsWith("/lib/")||/\.(js|css|json)$/.test(url.pathname))){
+    event.respondWith(
+      fetch(req).then(res=>{
+        if(res&&res.ok){const copy=res.clone();caches.open(CACHE).then(cache=>cache.put(req,copy)).catch(()=>{})}
+        return res
+      }).catch(async()=>(await caches.match(req))||Response.error())
+    );
+    return;
+  }
+
   if(url.origin===self.location.origin){
     event.respondWith(
       caches.match(req).then(cached=>{
