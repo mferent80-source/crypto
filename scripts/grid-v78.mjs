@@ -144,7 +144,104 @@ await test("verdict: miscare -> nu; liniste + proba buna -> porneste; proba la l
   assert.equal(GC.verdict({ regim: null, stat: bun, zile: 30, pozitie: 0.5 }).nivel, "fara-date");
 });
 
-// --- Task 3 adauga aici probele simulatorului si ale fisei ---
+await test("modulul GridProba exista", () => assert.ok(GP, "GridProba lipseste"));
+
+await test("simuleaza: canal neutru socotit de mana - doua cicluri pe celula 1 -> +2,521%", () => {
+  // 90-110, 4 grile, levier 1: niveluri 90 / 94,630 / 99,499 / 104,618 / 110 (verificate in Python)
+  // neutru la 100: celulele 0 si 1 cumpara la 90 si 94,630; celula 2 contine pretul (inactiva); celula 3 vinde la 110
+  // fiecare bara (verde, drum O->L->H->C): 100 -> 94 (cumpara la 94,630) -> 100 (vinde la 99,499)
+  // q1 = 1/4/94,630 = 0,00264186; castig = q1 * 4,8687 = 0,0128618; comision = q1*0,0005*(94,630+99,499) = 0,00025643
+  // net pe ciclu 0,0126054; doua bare = 0,0252108
+  const b = [0, 1].map((i) => ({ t: i * Q, o: 100, h: 100, l: 94, c: 100 }));
+  const st = { dir: "neutru", jos: 90, sus: 110, grile: 4, levier: 1 };
+  const r = GP.simuleaza(b, 0, 2, st);
+  aprox(r.net, 0.0252108, 0.00002, "net");
+  assert.equal(r.umpleri, 4);
+  assert.equal(r.lichidat, false);
+});
+
+await test("simuleaza: trend care iese din interval -> stop, iesire numarata, net = pierderea pana la stop", () => {
+  const inch = Array.from({ length: 60 }, (_, i) => 100 * (1 - 0.004 * i));   // -24%
+  const b = bareDin(inch, 0.0005);
+  const st = GC.construieste({ pret: b[0].o, lat: 0.08, pas: 0.005, dir: "long", suma: 1 });
+  const r = GP.simuleaza(b, 0, b.length, st);
+  assert.equal(r.oprit, true);
+  assert.ok(r.iesiri >= 1);
+  assert.ok(r.net < 0 && r.net > -1, `net ${r.net}`);
+  assert.equal(r.lichidat, false);
+});
+
+await test("simuleaza: prabusire la levier mare fara stop -> lichidat, net = -100%", () => {
+  const inch = Array.from({ length: 40 }, (_, i) => 100 * (1 - 0.012 * i));   // -47%
+  const b = bareDin(inch, 0.0005);
+  const st = GC.construieste({ pret: 100, lat: 0.06, pas: 0.005, dir: "long", suma: 1, levier: 10 });
+  delete st.stop;
+  const r = GP.simuleaza(b, 0, b.length, st);
+  assert.equal(r.lichidat, true);
+  assert.equal(r.net, -1);
+});
+
+await test("alegePlatou: alege platoul, nu varful izolat; sare peste ce a fost lichidat", () => {
+  const c = (mediana, lichidari = 0) => ({ mediana, lichidari });
+  const mat = [
+    [c(-0.02), c(0.05), c(-0.02)],    // varf izolat 5%
+    [c(0.01), c(0.012), c(0.011)],     // platou ~1%
+    [c(0.01), c(0.011), c(0.3, 1)],    // 30% dar lichidat
+  ];
+  const a = GP.alegePlatou(mat);
+  assert.deepEqual([a.wi, a.pi], [1, 1]);
+  assert.equal(GP.alegePlatou([[c(0.1, 1)]]), null);
+});
+
+const b30 = bareDin(aleator(30 * 96 + 1, 11, 0.004));
+await test("proba: 30 de zile -> 3 directii, ferestre antrenament + nevazute, sub 3 s", () => {
+  const t0 = Date.now(), p = GP.proba(b30, 2);
+  assert.ok(Date.now() - t0 < 3000, `a durat ${Date.now() - t0} ms`);
+  for (const d of ["long", "neutru", "short"]) assert.ok(p.pe[d] && p.pe[d].antren, d);
+  assert.ok(p.ferestre.antren > 20 && p.ferestre.test > 10, JSON.stringify(p.ferestre));
+  assert.equal(p.ferestre.independente, 15);
+  assert.ok(["long", "neutru", "short"].includes(p.recomandata));
+});
+
+await test("proba: sub 2 orizonturi + o zi de istoric -> null (nu cifre inventate)", () => {
+  assert.equal(GP.proba(b30.slice(0, 4 * 96), 2), null);
+});
+
+const b4 = bareDin(aleator(300, 5, 0.01)), b1 = bareDin(aleator(200, 6, 0.02));
+await test("fisa: completa, cu directie mereu data si setari de copiat", () => {
+  const f = GP.fisa({ simbol: "TEST_USDT_PERP", pret: b30[b30.length - 1].c, b15: b30, b4h: b4, b1d: b1, suma: 100, H: 2, dir: null, levier: null, minNotional: 1 });
+  assert.ok(!f.eroare, f.eroare);
+  assert.ok(["long", "neutru", "short"].includes(f.dir));
+  assert.ok(f.setare.jos < f.pret && f.setare.sus > f.pret, `jos ${f.setare.jos} pret ${f.pret} sus ${f.setare.sus}`);
+  assert.ok(["porneste", "asteapta", "nu"].includes(f.verdict.nivel));
+  assert.ok(f.setare.grile >= 2 && f.setare.levier >= 1);
+});
+
+await test("fisa: directia aleasa de el inlocuieste trendul si se spune ca e manuala", () => {
+  const f = GP.fisa({ simbol: "T", pret: b30[b30.length - 1].c, b15: b30, b4h: b4, b1d: b1, suma: 100, H: 2, dir: "short", levier: null, minNotional: 1 });
+  assert.equal(f.dir, "short"); assert.equal(f.manual, true); assert.equal(f.setare.dir, "short");
+});
+
+await test("fisa: suma prea mica pentru minimul pe ordin -> verdict nu + suma necesara", () => {
+  const f = GP.fisa({ simbol: "T", pret: b30[b30.length - 1].c, b15: b30, b4h: b4, b1d: b1, suma: 2, H: 2, dir: null, levier: null, minNotional: 5 });
+  assert.equal(f.verdict.nivel, "nu");
+  assert.ok(f.sumaMinima > 2, `sumaMinima ${f.sumaMinima}`);
+  assert.match(f.verdict.motive[0], /suma/i);
+});
+
+await test("fisa: fara pret sau fara lumanari -> eroare cu text, nu zero", () => {
+  assert.ok(GP.fisa({ simbol: "T", pret: null, b15: b30, b4h: b4, b1d: b1, suma: 100, H: 2 }).eroare);
+  assert.ok(GP.fisa({ simbol: "T", pret: 1, b15: [], b4h: b4, b1d: b1, suma: 100, H: 2 }).eroare);
+});
+
+await test("fisa: moneda cu 12 zile -> merge, dar verdictul maxim e asteapta si spune cate zile", () => {
+  const b12 = b30.slice(-12 * 96);
+  const f = GP.fisa({ simbol: "T", pret: b12[b12.length - 1].c, b15: b12, b4h: b4, b1d: b1, suma: 100, H: 2, dir: null, levier: null, minNotional: 1 });
+  assert.ok(!f.eroare, f.eroare);
+  assert.notEqual(f.verdict.nivel, "porneste");
+  assert.ok(f.verdict.motive.some((m) => /12 zile/.test(m)), f.verdict.motive.join(" | "));
+});
+
 
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);
