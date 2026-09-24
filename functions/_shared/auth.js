@@ -25,18 +25,32 @@ export async function rateLimit(request,env,scope='api',limit=90,windowSec=60){
 // Incercarile GRESITE (token prezentat, dar gresit) se numara pe IP: peste 10 pe minut,
 // IP-ul primeste 429 INAINTE ca tokenul sa mai fie verificat, deci ghicitul se opreste.
 // Cererile fara token nu se numara: nu ghicesc nimic, si aplicatia fara token nu se incuie.
+//
+// Runda 1: numaratoarea se citea inainte de verificare si crestea dupa un `await`, asa ca
+// cererile SIMULTANE treceau toate. Acum, in memoria izolatului, citirea contorului,
+// verificarea tokenului si cresterea contorului se fac in ACELASI pas sincron, inainte de
+// primul `await` - nicio alta cerere nu se poate strecura intre ele. Verificarea e
+// sincrona (comparatie in timp constant pe octeti), deci tokenul BUN nu ocupa loc in
+// contor nici macar o clipa: 20 de cereri bune simultane trec toate.
+// Pe KV (intre izolate) get+put NU e atomic: acolo limita e doar aproximativa - cereri
+// simultane pe izolate diferite pot citi aceeasi valoare. Contorul din memorie ramane
+// garda exacta in interiorul fiecarui izolat.
 const AUTH_FAIL_MAX=10,AUTH_FAIL_FEREASTRA=60;
-async function authFail(request,env,adauga){
-  const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/AUTH_FAIL_FEREASTRA),key=`auth-fail:${ipOf(request)}:${bucket}`,retryAfter=(bucket+1)*AUTH_FAIL_FEREASTRA-now;
-  const kv=env.API_RATE_LIMIT?.get&&env.API_RATE_LIMIT?.put?env.API_RATE_LIMIT:null;
-  let n=kv?Number(await kv.get(key)||0):(localBuckets.get(key)||0);
-  if(adauga){n++;if(kv)await kv.put(key,String(n),{expirationTtl:AUTH_FAIL_FEREASTRA+15});else localBuckets.set(key,n)}
-  return {n,retryAfter};
-}
+function tokenDin(request){const h=request.headers.get('authorization')||'';return h.startsWith('Bearer ')?h.slice(7).trim():request.headers.get('x-app-token')||''}
+function egalInTimpConstant(a,b){const x=enc.encode(String(a)),y=enc.encode(String(b)),n=Math.max(x.length,y.length);let d=x.length^y.length;for(let i=0;i<n;i++)d|=(x[i]??0)^(y[i]??0);return d===0}
 export async function requireApiAuth(request,env,scope='api',limit=90){
-  const blocat=await authFail(request,env,false);if(blocat.n>=AUTH_FAIL_MAX)return {ok:false,status:429,error:'AUTH_RATE_LIMITED',retryAfter:blocat.retryAfter};
-  const auth=await tokenValid(request,env);
-  if(!auth.ok){if(auth.reason==='AUTH_INVALID')await authFail(request,env,true);return {ok:false,status:auth.reason==='APP_API_TOKEN_NOT_CONFIGURED'?503:401,error:auth.reason}}
+  const expected=String(env.APP_API_TOKEN||'');if(!expected)return {ok:false,status:503,error:'APP_API_TOKEN_NOT_CONFIGURED'};
+  const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/AUTH_FAIL_FEREASTRA),key=`auth-fail:${ipOf(request)}:${bucket}`,retryAfter=(bucket+1)*AUTH_FAIL_FEREASTRA-now;
+  const blocat={ok:false,status:429,error:'AUTH_RATE_LIMITED',retryAfter};
+  // --- pas sincron: nimic de aici pana la primul await nu cedeaza controlul ---
+  const n=localBuckets.get(key)||0;if(n>=AUTH_FAIL_MAX)return blocat;
+  const token=tokenDin(request),bun=!!token&&egalInTimpConstant(token,expected);
+  if(token&&!bun)localBuckets.set(key,n+1);
+  // --- sfarsitul pasului sincron ---
+  const kv=env.API_RATE_LIMIT?.get&&env.API_RATE_LIMIT?.put?env.API_RATE_LIMIT:null;
+  if(kv){const m=Number(await kv.get(key)||0);if(m>=AUTH_FAIL_MAX)return blocat;if(token&&!bun)await kv.put(key,String(m+1),{expirationTtl:AUTH_FAIL_FEREASTRA+15})}
+  if(!token)return {ok:false,status:401,error:'AUTH_REQUIRED'};
+  if(!bun)return {ok:false,status:401,error:'AUTH_INVALID'};
   const rl=await rateLimit(request,env,scope,limit,60);if(!rl.ok)return {ok:false,status:429,error:'RATE_LIMITED',retryAfter:rl.retryAfter};return {ok:true}
 }
 export function authErrorResponse(result,headers={'content-type':'application/json','cache-control':'no-store'}){const h={...headers};if(result.retryAfter)h['retry-after']=String(result.retryAfter);return new Response(JSON.stringify({error:result.error,authenticated:false}),{status:result.status||401,headers:h})}

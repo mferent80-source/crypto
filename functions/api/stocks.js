@@ -67,11 +67,11 @@ async function cachedTd(env,endpoint,params={},ttl=30){
 function normalizeQuote(d,symbol){
   // Pretul LIPSA ramane null: "0" ar arata ca un pret real (si ar da o variatie de -100%).
   const nr=v=>v===null||v===undefined||String(v).trim()===""||!Number.isFinite(Number(v))?null:Number(v);
-  const close=nr(d.close)??nr(d.price),prev=nr(d.previous_close)??nr(d.previousClose),pct=nr(d.percent_change)??nr(d.change_percent)??(close!==null&&prev?((close/prev)-1)*100:null),volume=Number(d.volume||0);
+  const close=nr(d.close)??nr(d.price),prev=nr(d.previous_close)??nr(d.previousClose),pct=nr(d.percent_change)??nr(d.change_percent)??(close!==null&&prev?((close/prev)-1)*100:null),volume=nr(d.volume);
   const rawTs=Number(d.timestamp||0),timestamp=rawTs>1e12?rawTs:rawTs>1e9?rawTs*1000:dateMs(d.datetime||"", "1d");
   return {
     symbol:safeSymbol(d.symbol||symbol),lastPrice:close===null?null:String(close),priceChangePercent:pct===null?null:String(pct),
-    quoteVolume:close===null?null:String(close*volume),volume:String(volume),open:String(d.open??""),highPrice:String(d.high??""),lowPrice:String(d.low??""),
+    quoteVolume:close===null||volume===null?null:String(close*volume),volume:volume===null?null:String(volume),open:String(d.open??""),highPrice:String(d.high??""),lowPrice:String(d.low??""),
     previousClose:String(d.previous_close??""),exchange:d.exchange||d.mic_code||"",currency:d.currency||"USD",
     isMarketOpen:typeof d.is_market_open==="boolean"?d.is_market_open:null,datetime:d.datetime||"",timestamp
   }

@@ -186,6 +186,23 @@ await test("8 · limita merge si cu KV (API_RATE_LIMIT)", async () => {
   assert.ok([...kv.keys()].some((k) => k.includes("auth-fail:10.99.1.8")), `cheia KV: ${[...kv.keys()]}`);
 });
 
+// Runda 1: numaratoarea se citea inainte de verificare si crestea dupa `await`, deci
+// cererile SIMULTANE treceau toate de limita (200 concurente -> 200 de 401, niciun 429).
+await test("8 · 50 de tokenuri gresite SIMULTANE, acelasi IP -> cel mult 10 de 401, restul 429", async () => {
+  const ipFix = "10.99.3.8", m = proaspat("pionex-account");
+  const r = await Promise.all(Array.from({ length: 50 }, (_, i) =>
+    cheama("pionex-account", "action=status", PIONEX_ENV, { token: `simultan-${i}-xxxxxxxx`, ipFix, modul: m })));
+  const n401 = r.filter((x) => x.status === 401).length, n429 = r.filter((x) => x.status === 429).length;
+  assert.ok(n401 <= 10, `au trecut la verificare ${n401} ghiciri simultane (maxim 10)`);
+  assert.equal(n401 + n429, 50, `alte statusuri: ${r.map((x) => x.status)}`);
+});
+
+await test("8 · 20 de cereri SIMULTANE cu tokenul BUN, acelasi IP -> toate trec (limita nu loveste omul)", async () => {
+  const ipFix = "10.99.4.8", m = proaspat("pionex-account");
+  const r = await Promise.all(Array.from({ length: 20 }, () => cheama("pionex-account", "action=status", PIONEX_ENV, { ipFix, modul: m })));
+  assert.deepEqual(r.map((x) => x.status), Array(20).fill(200), `tokenul bun, simultan: ${r.map((x) => x.status)}`);
+});
+
 await test("8 · cererile FARA token nu se numara ca ghicit (aplicatia fara token nu se incuie)", async () => {
   const ipFix = "10.99.2.8", st = [];
   for (let i = 0; i < 12; i++) st.push((await cheama("pionex-account", "action=status", PIONEX_ENV, { token: null, ipFix })).status);
@@ -266,6 +283,14 @@ await test("13 · stocks quote fara close/price -> lastPrice null, nu \"0\"", as
   assert.equal(r.status, 200);
   assert.equal(r.corp.quote.lastPrice, null, `lastPrice: ${JSON.stringify(r.corp.quote.lastPrice)}`);
   assert.equal(r.corp.quote.quoteVolume, null, `quoteVolume: ${JSON.stringify(r.corp.quote.quoteVolume)}`);
+});
+
+await test("13 · stocks quote fara volume -> volume si quoteVolume null, nu 0 (runda 1, M4)", async () => {
+  fetchStub(() => ({ corp: { symbol: "AAPL", close: "12.5", previous_close: "10" } }));
+  const r = await cheama("stocks", "action=quote&symbol=AAPL", { APP_API_TOKEN: TOKEN, TWELVE_DATA_API_KEY: "td" });
+  assert.equal(r.corp.quote.volume, null, `volume: ${JSON.stringify(r.corp.quote.volume)}`);
+  assert.equal(r.corp.quote.quoteVolume, null, `quoteVolume: ${JSON.stringify(r.corp.quote.quoteVolume)}`);
+  assert.equal(r.corp.quote.lastPrice, "12.5");
 });
 
 await test("13 · stocks quote cu close -> pretul real", async () => {

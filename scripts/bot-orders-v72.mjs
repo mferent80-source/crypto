@@ -225,6 +225,28 @@ await test("fara pret: pnlNerealizat, echitate, profitTotal sunt null (nu 0)", a
   assert.equal(b.pnlNerealizat, null); assert.equal(b.echitate, null); assert.equal(b.profitTotal, null);
 });
 
+// ---- runda 1 ----
+await test("pretul \"0\" de la ticker e LIPSA peste tot (nu pierdere inventata)", async () => {
+  const b = await unBot([BOT], "0");
+  assert.equal(b.pretCurent, null, `pretCurent: ${b.pretCurent}`);
+  assert.equal(b.pnlNerealizat, null, `pnlNerealizat din pret 0: ${b.pnlNerealizat}`);
+  assert.equal(b.echitate, null); assert.equal(b.profitTotal, null);
+  assert.equal(b.motivFaraDistanta, "fara-pret");
+});
+
+await test("tickere PERP cu forma gresita: motivul ajunge in probleme.preturi", async () => {
+  fetchStub((u) => u.includes("/bot/orders") ? RASPUNS_BUN(u) : { corp: { result: true, data: {} } });
+  const r = await cheama("", ENV, proaspat());
+  assert.equal(r.status, 200);
+  assert.match(String(r.corp.probleme?.preturi || ""), /forma|tickers/i, `probleme: ${JSON.stringify(r.corp.probleme)}`);
+});
+
+await test("pnlNerealizatSigur: la long fara pret e null, nu false (false = doar neutru)", async () => {
+  fetchStub((u) => u.includes("/bot/orders") ? RASPUNS_BUN(u) : { status: 503, corp: "gata" });
+  const b = (await cheama("", ENV, proaspat())).corp.bots[0];
+  assert.equal(b.pnlNerealizatSigur, null, `pnlNerealizatSigur: ${b.pnlNerealizatSigur}`);
+});
+
 await test("fara positionOpenPrice: pnlNerealizat null", async () => {
   const b = await unBot([cuDate({ positionOpenPrice: "" })]);
   assert.equal(b.pnlNerealizat, null, `pnlNerealizat: ${b.pnlNerealizat}`);

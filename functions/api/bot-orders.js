@@ -52,7 +52,10 @@ async function preturiPerp(){
   if(!r.ok)throw Error(`tickere PERP: HTTP ${r.status}`);
   const d=await r.json();
   const harta={};
-  for(const t of d?.data?.tickers||[])harta[t.symbol]=nr(t.close);
+  // Forma necunoscuta nu e "fara preturi" in tacere: motivul ajunge in probleme.preturi.
+  if(!Array.isArray(d?.data?.tickers))throw Error("tickere PERP: forma necunoscuta (data.tickers nu e o lista)");
+  // Pretul <=0 e LIPSA peste tot (pnl, echitate, lichidare), nu un pret real de 0.
+  for(const t of d.data.tickers){const p=nr(t.close);harta[t.symbol]=p!==null&&p>0?p:null}
   return harta;
 }
 
@@ -146,7 +149,8 @@ function normalizeaza(bot,preturi){
     comisioane,
     finantare,
     pnlNerealizat,
-    pnlNerealizatSigur:pnlNerealizat!==null&&(esteLong||esteShort),
+    // false DOAR la neutru (semnul pozitiei e luat asa cum vine); fara pnl nu se spune nimic.
+    pnlNerealizatSigur:esteLong||esteShort?(pnlNerealizat!==null?true:null):false,
     echitate,
     profitTotal,
     volum:nr(x.totalVolume),
