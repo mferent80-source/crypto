@@ -238,7 +238,8 @@ await test("tickere PERP cu forma gresita: motivul ajunge in probleme.preturi", 
   fetchStub((u) => u.includes("/bot/orders") ? RASPUNS_BUN(u) : { corp: { result: true, data: {} } });
   const r = await cheama("", ENV, proaspat());
   assert.equal(r.status, 200);
-  assert.match(String(r.corp.probleme?.preturi || ""), /forma|tickers/i, `probleme: ${JSON.stringify(r.corp.probleme)}`);
+  // Mesajul EXACT: fara garda, for...of pe {} arunca singur un text cu "tickers" si ar pacali o potrivire larga.
+  assert.match(String(r.corp.probleme?.preturi || ""), /tickere PERP: forma necunoscuta/, `probleme: ${JSON.stringify(r.corp.probleme)}`);
 });
 
 await test("pnlNerealizatSigur: la long fara pret e null, nu false (false = doar neutru)", async () => {

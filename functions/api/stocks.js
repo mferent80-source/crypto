@@ -35,7 +35,7 @@ function splitLikeDiscontinuity(rows,tf){
   if(!breaks.length)return {rows,guarded:false,breaks:[]};const last=breaks.at(-1),trimmed=rows.slice(last.index);return {rows:trimmed,guarded:true,breaks,warning:`Potential split/corporate-action discontinuity detected; history truncated after ${new Date(last.ts).toISOString()}`}
 }
 function normalizeRows(node,tf){
-  const values=node?.values||[],rows=[...values].map(x=>{const ts=dateMs(x.datetime,tf),o=Number(x.open),h=Number(x.high),l=Number(x.low),c=Number(x.close),v=Number(x.volume||0);return [ts,String(o),String(h),String(l),String(c),String(v),ts+1,String(v*c),x.datetime||""]}).filter(x=>Number.isFinite(+x[1])&&Number.isFinite(+x[4])&&x[0]>0).sort((a,b)=>a[0]-b[0]);return splitLikeDiscontinuity(rows,tf)
+  const values=node?.values||[],rows=[...values].map(x=>{const ts=dateMs(x.datetime,tf),o=Number(x.open),h=Number(x.high),l=Number(x.low),c=Number(x.close),v=x.volume===null||x.volume===undefined||String(x.volume).trim()===""||!Number.isFinite(Number(x.volume))?null:Number(x.volume);return [ts,String(o),String(h),String(l),String(c),v===null?null:String(v),ts+1,v===null?null:String(v*c),x.datetime||""]}).filter(x=>Number.isFinite(+x[1])&&Number.isFinite(+x[4])&&x[0]>0).sort((a,b)=>a[0]-b[0]);return splitLikeDiscontinuity(rows,tf)
 }
 function tdError(data,status=502){
   if(data?.status==="error"||data?.code>=400){

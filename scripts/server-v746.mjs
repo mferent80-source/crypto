@@ -203,6 +203,34 @@ await test("8 · 20 de cereri SIMULTANE cu tokenul BUN, acelasi IP -> toate trec
   assert.deepEqual(r.map((x) => x.status), Array(20).fill(200), `tokenul bun, simultan: ${r.map((x) => x.status)}`);
 });
 
+// Runda 2: comparatia sincrona trebuie sa refuze tot ce nu e EXACT tokenul.
+await test("8 · prefix / prefix+1 caracter / lungime diferita / sir gol -> 401", async () => {
+  const cazuri = { prefix: TOKEN.slice(0, -1), "prefix scurt": TOKEN.slice(0, 4), "token+1 caracter": TOKEN + "x",
+    "alt caracter la final": TOKEN.slice(0, -1) + "#", "lungime diferita": "x", "doar spatii": "   " };
+  for (const [ce, t] of Object.entries(cazuri)) {
+    const r = await cheama("pionex-account", "action=status", PIONEX_ENV, { token: t });
+    assert.equal(r.status, 401, `${ce}: ${r.status}`);
+  }
+  const { onRequestGet } = await import(proaspat("pionex-account"));
+  for (const h of [{ authorization: "Bearer " }, { authorization: "Bearer" }, { "x-app-token": "" }, { "x-app-token": TOKEN.slice(0, -1) }]) {
+    const res = await onRequestGet({ request: new Request("https://exemplu.test/api/pionex-account?action=status", { headers: { ...h, "cf-connecting-ip": ipNou() } }), env: PIONEX_ENV });
+    assert.equal(res.status, 401, `${JSON.stringify(h)}: ${res.status}`);
+  }
+  // si, pozitiv, x-app-token cu tokenul exact trece
+  const res = await onRequestGet({ request: new Request("https://exemplu.test/api/pionex-account?action=status", { headers: { "x-app-token": TOKEN, "cf-connecting-ip": ipNou() } }), env: PIONEX_ENV });
+  assert.equal(res.status, 200, `x-app-token exact: ${res.status}`);
+});
+
+await test("8 · APP_API_TOKEN gol / lipsa / undefined -> 503 (cu si fara token in cerere), nu fail-open", async () => {
+  const envuri = { gol: { ...PIONEX_ENV, APP_API_TOKEN: "" }, lipsa: { PIONEX_API_KEY: "k", PIONEX_API_SECRET: "s" }, undefined: { ...PIONEX_ENV, APP_API_TOKEN: undefined } };
+  for (const [ce, env] of Object.entries(envuri)) {
+    for (const token of [TOKEN, "", null]) {
+      const r = await cheama("pionex-account", "action=status", env, { token });
+      assert.equal(r.status, 503, `APP_API_TOKEN ${ce}, token ${JSON.stringify(token)}: ${r.status}`);
+    }
+  }
+});
+
 await test("8 · cererile FARA token nu se numara ca ghicit (aplicatia fara token nu se incuie)", async () => {
   const ipFix = "10.99.2.8", st = [];
   for (let i = 0; i < 12; i++) st.push((await cheama("pionex-account", "action=status", PIONEX_ENV, { token: null, ipFix })).status);
@@ -291,6 +319,17 @@ await test("13 · stocks quote fara volume -> volume si quoteVolume null, nu 0 (
   assert.equal(r.corp.quote.volume, null, `volume: ${JSON.stringify(r.corp.quote.volume)}`);
   assert.equal(r.corp.quote.quoteVolume, null, `quoteVolume: ${JSON.stringify(r.corp.quote.quoteVolume)}`);
   assert.equal(r.corp.quote.lastPrice, "12.5");
+});
+
+await test("13 · stocks series: lumanare fara volume -> volum null, nu 0 (runda 2)", async () => {
+  fetchStub(() => ({ corp: { meta: {}, values: [{ datetime: "2026-09-01", open: "1", high: "2", low: "0.5", close: "1.5" },
+    { datetime: "2026-09-02", open: "1.5", high: "2", low: "1", close: "1.8", volume: "300" }] } }));
+  const r = await cheama("stocks", "action=series&symbol=AAPL&tf=1d", { APP_API_TOKEN: TOKEN, TWELVE_DATA_API_KEY: "td" });
+  assert.equal(r.status, 200, JSON.stringify(r.corp));
+  const [fara, cu] = r.corp.rows;
+  assert.equal(fara[5], null, `volum lipsa: ${JSON.stringify(fara[5])}`);
+  assert.equal(fara[7], null, `valoare tranzactionata cu volum lipsa: ${JSON.stringify(fara[7])}`);
+  assert.equal(cu[5], "300"); assert.equal(cu[7], "540");
 });
 
 await test("13 · stocks quote cu close -> pretul real", async () => {
