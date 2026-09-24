@@ -424,9 +424,9 @@ function gardaPackage() {
     if (!new RegExp(`npm run ${n}(\\s|$)`).test(test)) pica(G, `npm test nu cheama ${n}`);
     if (!s[n]) pica(G, `lipseste scriptul ${n}`);
   }
-  // Regula generala: ORICE test:* din scripts (in afara de test:ecran, care cere Chrome
+  // Regula generala: ORICE test:* din scripts (in afara de test:ecran*, care cer Chrome
   // + server) e in lantul npm test. O proba noua nelegata nu ruleaza niciodata la livrare.
-  for (const n of Object.keys(s).filter((k) => /^test:/.test(k) && k !== "test:ecran")) {
+  for (const n of Object.keys(s).filter((k) => /^test:/.test(k) && !/^test:ecran(-|$)/.test(k))) {
     if (!new RegExp(`npm run ${n}(\\s|$)`).test(test)) pica(G, `scriptul ${n} exista dar npm test nu il cheama - proba nu ruleaza la livrare`);
   }
   if (!/security-v57\.mjs/.test(s["test:security"] || "")) pica(G, "test:security nu mai cheama scripts/security-v57.mjs (proba tokenului gresit)");
@@ -459,7 +459,7 @@ function gardaGate() {
   const lista = gate.match(/\(([^()]*,[^()]*,[^()]*)\)/);
   if (lista) pica(G, `BUILD_INFO.gate enumera de mana "(${lista[1].slice(0, 80)})" - lista se ia din package.json scripts.test, nu se copiaza`);
   const lant = new Set((String(JSON.parse(citeste("package.json")).scripts.test || "").match(/test:[\w-]+/g) || []));
-  const numite = new Set((gate.match(/test:[\w-]+/g) || []).filter((x) => x !== "test:ecran"));
+  const numite = new Set((gate.match(/test:[\w-]+/g) || []).filter((x) => !/^test:ecran(-|$)/.test(x)));
   if (numite.size) {
     const lipsa = [...lant].filter((x) => !numite.has(x)), inPlus = [...numite].filter((x) => !lant.has(x));
     if (lipsa.length || inPlus.length) pica(G, `BUILD_INFO.gate numeste alte suite decat npm test: lipsesc ${lipsa.join(", ") || "-"}, in plus ${inPlus.join(", ") || "-"}`);
