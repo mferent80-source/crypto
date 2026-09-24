@@ -189,7 +189,9 @@ export async function onRequestGet({request,env}){
   const u=new URL(request.url);
   const stare=u.searchParams.get("status");
   const params={limit:Math.min(100,Math.max(1,Number(u.searchParams.get("limit"))||100))};
-  if(stare&&/^[A-Z_]{3,20}$/.test(stare))params.status=stare;
+  // Pionex vrea starea cu litere MICI pentru istoric (verificat 24.09: status=finished da botii inchisi;
+  // CLOSED/FINISHED cu majuscule sunt ignorate tacut si vine doar botul care ruleaza).
+  if(stare&&/^[A-Za-z_]{3,20}$/.test(stare))params.status=stare.toLowerCase();
 
   const probleme={};
   let brute;

@@ -196,6 +196,18 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`navTo('gridset',true)`);
     });
 
+    await test(`${nume} · v81 Jurnalul de trade: botii inchisi reali, greselile ordonate, notita se salveaza`, async () => {
+      await b.ev(`navTo('jurnaltrade',true)`);
+      await panaCand(b, `/COTI/.test(document.getElementById("jtLista").innerText)`, 60000, "lista de trade-uri");
+      const t = await b.ev(`document.getElementById("jurnaltrade").innerText`);
+      assert.match(t, /Rezultat total/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Poziția a mâncat grilele/);
+      FARA_GUNOI(t);
+      await b.ev(`(function(){var e=document.querySelector(".jtNota");e.value="proba";e.dispatchEvent(new Event("change",{bubbles:true}))})()`);
+      assert.match(await b.ev(`localStorage.getItem("jtNote")||""`), /proba/);
+      await b.poza(path.join(DOSAR_POZE, `jurnal-${nume}.png`));
+      await b.ev(`localStorage.removeItem("jtNote");navTo('gridset',true)`);
+    });
+
     await test(`${nume} · consola curata, fara scroll orizontal`, async () => {
       assert.deepEqual(b.exceptii, []); assert.deepEqual(b.consola, []);
       const w = await b.ev(`document.documentElement.scrollWidth`);

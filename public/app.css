@@ -1415,3 +1415,25 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbSemnale{margin:8px 0 0;padding-left:18px;color:var(--warn)}
 #tabloubot .tbFac{margin:6px 0 0;padding:6px 8px;border-left:3px solid var(--accent);background:rgba(79,209,197,.08);border-radius:4px}
 #tabloubot .tbFac b{display:inline}
+#jurnaltrade{--tb-r:12px;--tb-linie:rgba(144,160,182,.16);--tb-fond:#0c1621;--tb-fond2:#0f1b28;font-variant-numeric:tabular-nums}
+#jurnaltrade .tbBloc{background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r);padding:12px 14px;margin-bottom:12px}
+#jurnaltrade .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+#jurnaltrade .tbBlocCap h4{margin:0}
+#jurnaltrade .tbSub{color:var(--muted);font-size:12px}
+#jurnaltrade .tbEt2{color:var(--muted);font-size:12px}
+#jurnaltrade .jtKpi{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--tb-linie);border-radius:var(--tb-r);background:var(--tb-fond);margin-bottom:12px}
+#jurnaltrade .tbKpiCel{padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+#jurnaltrade .tbKpiCel+.tbKpiCel{border-left:1px solid var(--tb-linie)}
+#jurnaltrade .tbKpiVal{font-size:22px;font-weight:900}
+#jurnaltrade .grTabelWrap{overflow-x:auto}
+#jurnaltrade .grTabel{width:100%;border-collapse:collapse;font-size:13px}
+#jurnaltrade .grTabel th,#jurnaltrade .grTabel td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--tb-linie);vertical-align:top}
+#jurnaltrade .jtSfat{color:var(--text)}
+#jurnaltrade .tbFac{margin:10px 0 0;padding:8px 10px;border-left:3px solid var(--accent);background:rgba(79,209,197,.08);border-radius:4px}
+#jurnaltrade .jtTrade{padding:10px 0;border-bottom:1px solid var(--tb-linie)}
+#jurnaltrade .jtCap{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+#jurnaltrade .jtRez{margin-left:auto}
+#jurnaltrade .jtGreseli{margin:6px 0;padding-left:18px;color:var(--warn)}
+#jurnaltrade .jtGreseli b{color:var(--text)}
+#jurnaltrade .jtNota{width:100%;margin-top:6px;background:var(--tb-fond2);color:var(--text);border:1px solid var(--tb-linie);border-radius:8px;padding:6px 8px;font:inherit;resize:vertical;box-sizing:border-box}
+@media (max-width:700px){#jurnaltrade .jtKpi{grid-template-columns:1fr 1fr}#jurnaltrade .tbKpiCel:nth-child(3){border-left:0}}

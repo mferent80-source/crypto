@@ -3011,6 +3011,7 @@ function navTo(id,load=false){
    if(id==="mtf")multiTF();
    else if(id==="tabloubot")porneTabloBot();
    else if(id==="gridset")porneGrid();
+   else if(id==="jurnaltrade")jtPorneste();
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
    else if(id==="stocks"){loadStockContext();checkStocksHealth()}
    else if(id==="scan")scan();
@@ -4845,6 +4846,11 @@ async function grAduLumanari(simbol){
 }
 function grTextEroare(e){
   var local=/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  // limita serverului (45 cereri Pionex/minut) sau racirea Pionex: spus pe romaneste, cu reincercare
+  if(local&&e&&(e.status===429||/RATE_LIMITED|429/i.test(String(e.message)))){
+    if(!grStare.reincercare){grStare.reincercare=setTimeout(function(){grStare.reincercare=null;if(grPanouVizibil())gridCalculeaza('fortat')},70000)}
+    return "Prea multe cereri la Pionex într-un minut (limita e 45). Reîncerc singur în ~1 minut.";
+  }
   if(!local&&e&&(e.status===429||e.status===403||/429|unavailable/i.test(String(e.message))))return "Pionex nu răspunde de aici: pe versiunea publicată refuză cererile. Deschide Radarul de acasă (PORNESTE-CRYPTO-RADAR.bat).";
   return textEroare(e);
 }
@@ -4948,7 +4954,7 @@ async function gridJurnalActualizeaza(fortat){
     var d=await getJSON("/api/bot-orders");
     var boti=d&&Array.isArray(d.bots)?d.bots:null;
     var cu=null;
-    try{cu=await getJSON("/api/bot-orders?status=CLOSED");}catch(e){cu=null}
+    try{cu=await getJSON("/api/bot-orders?status=finished");}catch(e){cu=null}
     if(boti&&cu&&Array.isArray(cu.bots)){var ids={};boti.forEach(function(b){if(b&&b.id)ids[b.id]=1});cu.bots.forEach(function(b){if(b&&b.id&&!ids[b.id])boti.push(b)})}
     grJurnalStare.boti=boti;grJurnalStare.la=Date.now();grJurnalStare.eroare=boti?null:"Pionex nu a dat lista de boți";
     if(boti)grJurnalScrie(GridJurnal.actualizeaza(l,boti,Date.now()));
@@ -5043,6 +5049,43 @@ function grLinisteTine(f){
   if(!l.linisteAcum)return '<li>Pe 24 h moneda e în <b>mișcare</b> acum: nu e o liniște de măsurat.</li>';
   if(!l.suficient)return '<li>Liniște de <b>'+z(l.zileLiniste)+' zile</b> (pe 24 h). În ultimele 30 de zile doar '+l.n+' perioade au ajuns la lungimea asta: prea puține ca să spun cât mai ține.</li>';
   return '<li>Liniște de <b>'+z(l.zileLiniste)+' zile</b> (pe 24 h). Din <b>'+l.n+'</b> perioade de liniște ale monedei care au ajuns aici, <b>'+l.k+'</b> au mai ținut încă '+l.H+' zile: <b>'+P(l.p)+'</b> (IC '+P(l.ic[0])+' – '+P(l.ic[1])+'). E o frecvență din trecut, nu o promisiune.</li>';
+}
+// ===== v81: Jurnalul de trade - botii de grid inchisi (logica pura in lib/jurnal-trade.js) =====
+var jtStare={boti:null,la:0,inLucru:false,eroare:null};
+function jtNote(){try{var v=JSON.parse(localStorage.getItem("jtNote")||"{}");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
+function jtNotaSalveaza(id,text){var n=jtNote();if(String(text||"").trim())n[id]=String(text).slice(0,1000);else delete n[id];try{localStorage.setItem("jtNote",JSON.stringify(n))}catch(e){}}
+function jtNota(el){if(!el)return;jtNotaSalveaza(el.getAttribute("data-id"),el.value);toast("Notița e salvată","good")}
+// dispecerul data-action-* nu primeste elementul (doar this.value) - notita are nevoie si de id
+document.addEventListener("change",function(e){var t=e.target;if(t&&t.classList&&t.classList.contains("jtNota"))jtNota(t)});
+async function jtPorneste(forta){
+  if(jtStare.inLucru)return;
+  if(!forta&&jtStare.boti&&Date.now()-jtStare.la<5*60000){jtRender();return}
+  jtStare.inLucru=true;if($("jtStare"))$("jtStare").textContent="aduc boții închiși din Pionex…";
+  try{
+    var d=await getJSON("/api/bot-orders?status=finished&limit=100");
+    // ruta intoarce botii normalizati, cu forma bruta a Pionex in .brut
+    jtStare.boti=d&&Array.isArray(d.bots)?d.bots.map(function(b){return b.brut||b}):null;jtStare.eroare=jtStare.boti?null:"Pionex nu a dat lista";
+  }catch(e){jtStare.eroare=grTextEroare(e)}
+  jtStare.inLucru=false;jtStare.la=Date.now();jtRender();
+}
+function jtRender(){
+  var box=$("jtRezumat"),gr=$("jtGreseli"),li=$("jtLista"),st=$("jtStare");if(!box)return;
+  if(jtStare.eroare){box.innerHTML='<div class="tbBloc"><p class="bad">'+escapeHtml(jtStare.eroare)+'</p></div>';return}
+  var l=JurnalTrade.din(jtStare.boti||[]),r=JurnalTrade.rezumat(l),P=GridCalcul.procent;
+  var U=function(v){return v==null?"—":(v>=0?"+":"−")+Math.abs(v).toFixed(2)+" USDT"},cls=function(v){return v==null?"":v>=0?"good":"bad"};
+  if(st)st.textContent=l.length+" boți închiși · citit la "+new Date(jtStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"});
+  if(!l.length){box.innerHTML='<div class="emptyState">Niciun bot închis în Pionex.</div>';gr.innerHTML=li.innerHTML="";return}
+  var cel=function(et,v,c,sub){return '<div class="tbKpiCel"><span class="tbEt2">'+escapeHtml(et)+'</span><b class="tbKpiVal '+(c||"")+'">'+escapeHtml(v)+'</b>'+(sub?'<span class="tbSub">'+escapeHtml(sub)+'</span>':"")+'</div>'};
+  box.innerHTML='<div class="tbKpi jtKpi">'+cel("Rezultat total",U(r.total),cls(r.total),r.n+" boți, "+r.pePlus+" pe plus ("+P(r.pePlus/r.n)+")")+cel("Din grile",U(r.grile),cls(r.grile),"ce a făcut gridul")+cel("Din poziție",U(r.pozitie),cls(r.pozitie),"direcția prețului")+cel("Comisioane + funding",U(r.comisioane+r.funding),"bad","investit mediu "+(r.investitMediu!=null?r.investitMediu.toFixed(0):"—")+" USDT")+'</div>';
+  gr.innerHTML=r.greseli.length?'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Greșeala</th><th>De câte ori</th><th>Rezultatul boților cu ea</th><th>Ce aș face data viitoare</th></tr></thead><tbody>'+r.greseli.map(function(g){return '<tr><td><b>'+escapeHtml(g.titlu)+'</b></td><td>'+g.n+'</td><td class="'+cls(g.cost)+'">'+U(g.cost)+'</td><td class="jtSfat">'+escapeHtml(g.dataViitoare)+'</td></tr>'}).join("")+'</tbody></table></div>'+(r.greseli[0]&&r.greseli[0].cost<0?'<p class="tbFac">👉 <b>Ce aș face eu:</b> încep cu „'+escapeHtml(r.greseli[0].titlu)+'” — a costat '+U(r.greseli[0].cost)+' pe '+r.greseli[0].n+' boți.</p>':''):'<p class="good">Nicio greșeală găsită automat.</p>';
+  var note=jtNote(),data=function(t){return new Date(t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})};
+  li.innerHTML=l.map(function(t){
+    var dur=t.durataOre<1?Math.round(t.durataOre*60)+" min":t.durataOre.toFixed(1).replace(".",",")+" h";
+    return '<div class="jtTrade"><div class="jtCap"><b>'+escapeHtml(t.moneda)+'</b> <span class="tbSub">'+escapeHtml(t.dir+" "+(t.levier||"?")+"× · "+(t.investit!=null?t.investit.toFixed(0):"?")+" USDT · "+data(t.pornit)+" → "+data(t.inchis)+" ("+dur+")")+'</span><b class="jtRez '+cls(t.rezultat)+'">'+U(t.rezultat)+(t.pct!=null?' <span class="tbSub">'+P(t.pct)+'</span>':'')+'</b></div>'
+      +'<div class="tbSub">grile '+U(t.grile)+' · poziție '+U(t.pozitie)+' · comisioane '+U(t.comisioane)+' · funding '+U(t.funding)+' · interval '+escapeHtml(t.jos+" – "+t.sus+", "+t.grileN+" grile "+t.mod)+(t.pasNet!=null?", "+P(t.pasNet)+" net/grilă":"")+'</div>'
+      +(t.greseli.length?'<ul class="jtGreseli">'+t.greseli.map(function(g){return '<li><b>'+escapeHtml(g.titlu)+':</b> '+escapeHtml(g.text)+'</li>'}).join("")+'</ul>':'<p class="tbSub good">fără greșeli găsite automat</p>')
+      +'<textarea class="jtNota" data-id="'+escapeHtml(t.id)+'" rows="2" placeholder="De ce am intrat, ce am simțit, ce aș face altfel…">'+escapeHtml(note[t.id]||"")+'</textarea></div>';
+  }).join("");
 }
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
