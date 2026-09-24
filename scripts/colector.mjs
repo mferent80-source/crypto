@@ -72,6 +72,7 @@ function incarca(fisier, nume) {
 const Alerte = incarca("alerte.js", "Alerte");
 const Directie = incarca("directie.js", "Directie");
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
+const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
 
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 async function cere(cale, opt = {}) {
@@ -105,8 +106,10 @@ async function directiaBotului(b) {
   try {
     const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=4H&limit=500");
     const a = Directie.analizeaza(k && k.data && k.data.klines, 6, b.directie);
-    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir };
-  } catch (e) { jurnal("direcție", b.id, e.message); directii[b.id] = { la: Date.now(), fata4h: null, dir4h: null }; }
+    // v79 F1: regimul "miscare" pe aceleasi lumanari de 4h (1 bara = 4h, 6 bare = 24h)
+    const regim = GridCalcul.regimPeBare(GridCalcul.bare(k && k.data && k.data.klines), 1, 6);
+    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim };
+  } catch (e) { jurnal("direcție", b.id, e.message); directii[b.id] = { la: Date.now(), fata4h: null, dir4h: null, regim: null }; }
   return directii[b.id];
 }
 
@@ -172,7 +175,7 @@ async function tura() {
 }
 
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal ntfy " + NTFY.topic + (NTFY.nou ? " (NOU)" : ""));
-if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului." });
+if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului, gata liniștea (oprește gridul)." });
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }

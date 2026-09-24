@@ -364,5 +364,43 @@ await test("v78.2 grPret: precizia null/\"\" -> zecimale dupa marime, nu 0", () 
   assert.equal(f(0.3348, { quotePrecision: 0 }), "0", "0 explicit ramane 0 zecimale");
 });
 
+// --- F1: regimul pe orice TF + alerta "gata linistea" ---
+await test("F1 regimPeBare: pe bare de 4h (k4=1, k24=6) - liniste -> fals; salt -> adevarat; sub 50 bare -> null", () => {
+  const lin = aleator(500, 21, 0.01);
+  for (let i = lin.length - 8; i < lin.length; i++) lin[i] = lin[i - 1] * (1 + 0.0005 * (i % 2 ? 1 : -1));   // ultimele 24h+: aproape plat
+  const b = bareDin(lin);
+  const r = GC.regimPeBare(b, 1, 6);
+  assert.ok(r && typeof r.r4h === "number" && typeof r.r24h === "number", JSON.stringify(r));
+  assert.equal(r.miscare, false, JSON.stringify(r));
+  const inch = lin.slice(); inch[inch.length - 1] = inch[inch.length - 2] * 1.12;   // +12% in ultima bara de 4h
+  assert.equal(GC.regimPeBare(bareDin(inch), 1, 6).miscare, true);
+  assert.equal(GC.regimPeBare(b.slice(0, 40), 1, 6), null);
+  // regim() pe 15M = regimPeBare(b, 16, 96)
+  const b15 = bareDin(aleator(30 * 96, 3, 0.004));
+  assert.deepEqual(GC.regim(b15), GC.regimPeBare(b15, 16, 96));
+});
+
+const ALERTE = fs.readFileSync(new URL("../public/lib/alerte.js", import.meta.url), "utf8");
+const AL = new Function(`${ALERTE}; return Alerte;`)();
+await test("F1 Alerte: ctx.regim cu miscare -> 'gata linistea' (atentie) o data; ramane pana sub 1,3x; apoi 'liniste din nou' dupa 10 min", () => {
+  const bot = { id: "b1", baza: "MET.PERP", quote: "USDT", directie: "long", activ: true };
+  const T0 = 1_780_000_000_000;
+  let r = AL.evalueaza(bot, { regim: { r4h: 2.2, r24h: 1.1, miscare: true } }, {}, T0);
+  assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1);
+  assert.match(r.mesaje.find((m) => m.cheie === "miscare").titlu, /gata liniștea/);
+  // 1,4x: intre praguri -> ramane in alerta, fara mesaj nou
+  r = AL.evalueaza(bot, { regim: { r4h: 1.4, r24h: 1.0, miscare: false } }, r.stare, T0 + 60000);
+  assert.equal(r.mesaje.length, 0); assert.equal(r.stare.miscare.nivel, "atentie");
+  // 1,2x: iese; "a trecut" doar dupa 10 minute stabile
+  r = AL.evalueaza(bot, { regim: { r4h: 1.2, r24h: 1.0, miscare: false } }, r.stare, T0 + 120000);
+  assert.equal(r.mesaje.length, 0);
+  r = AL.evalueaza(bot, { regim: { r4h: 1.2, r24h: 1.0, miscare: false } }, r.stare, T0 + 13 * 60000);
+  assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1);
+  assert.equal(r.stare.miscare.nivel, "ok");
+  // fara regim (lumanari picate): starea ramane, nimic nou
+  const r2 = AL.evalueaza(bot, { regim: null }, r.stare, T0 + 14 * 60000);
+  assert.equal(r2.mesaje.length, 0);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

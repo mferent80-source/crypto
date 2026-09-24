@@ -199,17 +199,20 @@ var GridCalcul = (function () {
   // Miscarea de acum fata de cea obisnuita a monedei. "Obisnuit" = percentila 75
   // a miscarilor pe tot istoricul dat: fata de mediana, zgomotul pur ar trece de
   // 1,5x in ~31% din cazuri; fata de percentila 75, in ~8%.
-  function regim(b) {
-    if (!b || b.length < 2 * C.BARE_ZI + 1) return null;
+  // Pe orice interval de bare: k4 = cate bare fac 4h, k24 = cate fac 24h
+  // (15M: 16/96; 4H: 1/6). Sub 50 de bare nu se judeca (null, nu fals).
+  function regimPeBare(b, k4, k24) {
+    if (!b || b.length < Math.max(50, 2 * k24 + 1)) return null;
     function raport(k) {
       var m = [];
       for (var i = k; i < b.length; i++) m.push(Math.abs(b[i].c - b[i - k].c) / b[i - k].c);
       var ob = percentila(m, 0.75);
       return ob > 0 ? m[m.length - 1] / ob : null;
     }
-    var r4 = raport(16), r24 = raport(C.BARE_ZI);
+    var r4 = raport(k4), r24 = raport(k24);
     return { r4h: r4, r24h: r24, miscare: (r4 !== null && r4 > C.PRAG_MISCARE) || (r24 !== null && r24 > C.PRAG_MISCARE) };
   }
+  function regim(b) { return regimPeBare(b, 16, C.BARE_ZI); }
   function pozitie7z(b4h, pret) {
     if (!b4h || b4h.length < 42 || !(pret > 0)) return null;
     var mx = -Infinity, mn = Infinity;
@@ -240,6 +243,6 @@ var GridCalcul = (function () {
   return { C: C, bare: bare, pretCurent: pretCurent, mediana: mediana, percentila: percentila, procent: procent,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
-    regim: regim, pozitie7z: pozitie7z, verdict: verdict };
+    regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridCalcul = GridCalcul;

@@ -1,0 +1,13 @@
+# Pachetul „grid” 5 idei (v78.3 … v79) — plan scurt
+
+Cerut 24.09 seara („fă toate”), după ce GRID-FISA v1.1 a mers în TV. Spec-mamă: `../specs/2026-09-24-grid-ce-setez-design.md`.
+
+| # | Ce | Unde | Probă |
+|---|---|---|---|
+| F1 | ntfy **„X: gata liniștea, oprește gridul”** când moneda unui bot activ intră în MIȘCARE (1,5× p75, iese sub 1,3×) | `lib/grid-calcul.js` `regimPeBare(b,k4,k24)` · `lib/alerte.js` regula `miscare` · `scripts/colector.mjs` (4H, 500 bare, deja aduse pentru direcție) | `grid-v78.mjs`: regimPeBare pe 4H; Alerte.reguli cu ctx.miscare intră/iese cu histerezis |
+| F4 | **„Cât investesc?”**: sold + pierdere acceptată % + cea mai proastă fereastră ⇒ suma maximă | `lib/grid-proba.js` `sumaMaxima(sold, pierderePct, ceaMaiProasta)` · fișă: 2 inputuri + rând în „Ce înseamnă în bani” | pur + ecran |
+| F2 | **Jurnalul gridurilor**: „Am pornit botul cu setarea asta” ⇒ intrare (fișă + verdict); se leagă de botul Pionex cu același simbol; rezultatul real din bot/istoric; rezumat pe verdict | `lib/grid-jurnal.js` (pur: adauga, leaga, actualizeaza, rezumat) · localStorage `grJurnal` · secțiune în fereastra Grid | pur + ecran |
+| F5 | **grile / direcție din umplerile reale** ale botului (Pionex `fills`), FIFO pe perechi; umplere la nivel de grilă = grile, altfel direcție; nerealizat pe ce a rămas | `lib/grid-umpleri.js` `imparte(fills, setareGrid)` · Tabloul botului, blocul „Banii botului” · app.js: paginare `fills` cu `endTime`, cache 10 min | pur (umpleri sintetice) + ecran |
+| F3 | **„Pe care monede pornesc grid ACUM?”**: clasament pe top 100 PERP (4H: regim, lățime p75 pe 2z, direcție, pas estimat, ⚠ fără probă), socotit acasă la fiecare oră de colector, pus în KV; fereastra Grid îl arată sus; clic ⇒ fișa | `scripts/colector.mjs` tură orară · `functions/api/istoric-bot.js` action `clasament` · `lib/grid-clasament.js` (pur: scor + sortare, de evitat primele) · app.js | pur + server + ecran |
+
+Reguli: fiecare F cu test scris înainte; `npm test` verde la fiecare commit; versiunea crește o dată la final (v79.0) + `sw.js`; proba de ecran + audit Opus pe tot la sfârșit; push.

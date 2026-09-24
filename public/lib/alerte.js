@@ -59,6 +59,17 @@ var Alerte = (function () {
         : { nivel: "ok", titlu: nume + ": piața pe 4 ore nu mai merge împotriva botului", mesaj: "" };
     }
 
+    // v79 F1: "gata linistea" - regula dovedita (Busola 20.09): dupa miscare gridul iese
+    // cel mai rau. Intra la 1,5x obisnuitul (percentila 75), iese abia sub 1,3x.
+    if (ctx && ctx.regim && ctx.regim.r4h != null && ctx.regim.r24h != null) {
+      var rg = ctx.regim, rmax = Math.max(rg.r4h, rg.r24h), inAlerta = fost("miscare") !== "ok";
+      var misc = inAlerta ? rmax >= 1.3 : rmax > 1.5;
+      var x = function (v) { return v.toFixed(1).replace(".", ","); };
+      out.miscare = misc
+        ? { nivel: "atentie", titlu: nume + ": gata liniștea — oprește gridul", mesaj: "Mișcarea pe 4 ore e " + x(rg.r4h) + "× cea obișnuită a monedei, pe 24 de ore " + x(rg.r24h) + "×. Măsurat: după mișcare gridul iese cel mai rău. Ia în calcul să-l oprești." }
+        : { nivel: "ok", titlu: nume + ": liniște din nou", mesaj: "Mișcarea a coborât la " + x(rmax) + "× obișnuitul." };
+    }
+
     var opritorStins = b.opritorPierdere != null && b.opritorPierdereActiv === false;
     out.opritor = (opritorStins && dist !== null && Math.abs(dist) < 20)
       ? { nivel: "atentie", titlu: nume + ": opritorul pe pierdere e STINS", mesaj: "E setat la " + pret(nr(b.opritorPierdere)) + ", dar nu e pornit, iar lichidarea e la " + Math.abs(dist).toFixed(1) + "%." }
