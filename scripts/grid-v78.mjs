@@ -739,7 +739,7 @@ const TX_SRC = fs.existsSync(new URL("../public/lib/tablou-extra.js", import.met
 const TX = TX_SRC ? new Function(`${SRC}; ${TX_SRC}; return TabloExtra;`)() : null;
 const ORA_ = 3600000, P0 = 1790185122575;
 const botMET = { id: "2382", baza: "MET.PERP", quote: "USDT", activ: true, directie: "long", levier: 5, investit: 88.98, profitNet: -4.8309, profitTotal: -5.4292, pnlNerealizat: -0.5984, comisioane: -0.7086, finantare: -0.0563, gridProfitBrut: 4.0787, pozitie: 702, pretDeschidere: 0.34115, pretCurent: 0.3403, gridJos: 0.3, gridSus: 0.4, pornitLa: P0,
-  brut: { buOrderData: { row: 93, gridType: "arithmetic", gridProfit24h: "3.99005464", trx24h: 320, fundingFeePayment: "-0.05626315455384" } } };
+  brut: { buOrderData: { row: 93, gridType: "arithmetic", gridProfit24h: "3.99005464", trx24h: 320, fundingFeePayment: "-0.05626315455384", initPrice: "0.3556" } } };
 await test("v80 modulul TabloExtra exista", () => assert.ok(TX, "tablou-extra.js lipseste"));
 await test("v80 geometrieBot: MET aritmetic 0,30-0,40 / 93 grile la 0,3403 -> pas 0,001075 = 0,316% brut, ~0,216% net; sub pragul fisei (0,25%) -> 'prea dese'", () => {
   const g = TX.geometrieBot(botMET);
@@ -780,6 +780,60 @@ await test("v80 legaturaJurnal: intrarea din jurnal legata de botul acesta (sau 
   const l = [{ id: "a", botId: "999" }, { id: "b", botId: "2382", verdict: "porneste", mediana: 0.1, t: 1 }];
   assert.equal(TX.legaturaJurnal(l, botMET).id, "b");
   assert.equal(TX.legaturaJurnal([], botMET), null);
+});
+
+// --- v81: Tabloul - saptamana, marja, planul, vs pozitie, evenimente ---
+await test("v81 peZile: istoricul minut cu minut -> pe fiecare zi (ora Romaniei) cat au adus grilele si totalul la sfarsit; prima zi porneste de la prima inregistrare", () => {
+  const Z = Date.parse("2026-09-20T00:00:00+03:00"), M = 60000;
+  const ist = [];
+  for (let z = 0; z < 3; z++) for (let m = 0; m < 1440; m += 60) ist.push({ t: Z + z * 86400000 + m * M, gridProfitBrut: 10 * z + m / 144, profitTotal: -1 * z + m / 1440 });
+  const r = TX.peZile(ist, "Europe/Bucharest");
+  assert.equal(r.length, 3);
+  assert.equal(r[0].zi, "2026-09-20");
+  aprox(r[0].grile, 1380 / 144, 1e-9, "prima zi: ultima - prima");
+  aprox(r[1].grile, (10 + 1380 / 144) - (0 + 1380 / 144), 1e-9, "a doua: ultima de azi - ultima de ieri");
+  aprox(r[2].total, -2 + 1380 / 1440, 1e-9);
+  assert.deepEqual(TX.peZile([], "Europe/Bucharest"), []);
+  assert.equal(TX.peZile([{ t: Z, gridProfitBrut: null, profitTotal: null }], "Europe/Bucharest")[0].grile, null, "lipsa ramane lipsa");
+});
+await test("v81 marjaNoua: MET long, lichidare 0,26475, 702 MET, +20 USDT -> 0,26475 - 20/702; short -> in sus; fara pozitie -> null", () => {
+  const b = Object.assign({}, botMET, { pretLichidare: 0.26475 });
+  const r = TX.marjaNoua(b, 20);
+  aprox(r.lichidare, 0.26475 - 20 / 702, 1e-9); aprox(r.distantaPct, (0.3403 - r.lichidare) / 0.3403, 1e-9);
+  const s2 = TX.marjaNoua(Object.assign({}, b, { directie: "short", pretLichidare: 0.4 }), 20);
+  aprox(s2.lichidare, 0.4 + 20 / 702, 1e-9);
+  assert.equal(TX.marjaNoua(Object.assign({}, b, { pozitie: 0 }), 20), null);
+  assert.equal(TX.marjaNoua(b, 0), null);
+});
+await test("v81 vsPozitie: botul (-5,43) vs un long simplu 5x cu 88,98 de la 0,3556 la 0,3403 -> -19,14; gridul a salvat ~13,7", () => {
+  const r = TX.vsPozitie(botMET);
+  aprox(r.pozitieSimpla, 88.98 * 5 * (0.3403 - 0.3556) / 0.3556, 1e-3);
+  aprox(r.diferenta, -5.4292 - r.pozitieSimpla, 1e-3);
+  const n = TX.vsPozitie(Object.assign({}, botMET, { directie: "neutru" }));
+  assert.equal(n.pozitieSimpla, 0, "la neutru comparatia e cu a nu face nimic");
+});
+await test("v81 planStare: iesire pe plus / pe minus / afara din grid N ore -> distante si ce s-a atins", () => {
+  const plan = { plus: 5, minus: 10, afaraOre: 12 };
+  const r = TX.planStare(Object.assign({}, botMET, { profitTotal: -5.43 }), plan, { afaraDe: null }, Date.now());
+  aprox(r.plus.lipsa, 5 + 5.43, 1e-9); aprox(r.minus.lipsa, 10 - 5.43, 1e-9); assert.equal(r.atins.length, 0);
+  const t = TX.planStare(Object.assign({}, botMET, { profitTotal: -11 }), plan, { afaraDe: Date.now() - 13 * 3600000 }, Date.now());
+  assert.deepEqual(t.atins.sort(), ["afara", "minus"]);
+  assert.equal(TX.planStare(botMET, null, null, Date.now()), null);
+});
+await test("v81 evenimente: iesirile din grid din istoric + alertele, in fereastra graficului", () => {
+  const T = 1_790_000_000_000;
+  const ist = [0.35, 0.36, 0.41, 0.42, 0.39, 0.29, 0.31].map((p, i) => ({ t: T + i * 60000, pretPerp: p }));
+  const al = [{ t: T + 2 * 60000, nivel: "atentie", titlu: "MET: a iesit" }, { t: T - 999999, nivel: "info", titlu: "vechi" }];
+  const e = TX.evenimente(ist, al, 0.3, 0.4, T, T + 6 * 60000);
+  assert.deepEqual(e.map((x) => x.fel), ["iesire-sus", "alerta", "revenire", "iesire-jos", "revenire"]);
+  assert.ok(e.every((x) => x.t >= T && x.t <= T + 6 * 60000));
+});
+await test("v81 Alerte plan: pragul de pe plus atins -> info 'planul tau: ies'; minus -> critic; o singura data", () => {
+  const bot = { id: "b1", baza: "MET.PERP", quote: "USDT", directie: "long", activ: true };
+  let r = AL.evalueaza(bot, { plan: { atins: ["minus"], plus: null, minus: { prag: 10 } } }, {}, T0);
+  const m = r.mesaje.find((x) => x.cheie === "plan"); assert.ok(m); assert.equal(m.nivel, "critic"); assert.match(m.titlu, /planul tău/);
+  r = AL.evalueaza(bot, { plan: { atins: ["minus"], minus: { prag: 10 } } }, r.stare, T0 + 60000);
+  assert.equal(r.mesaje.filter((x) => x.cheie === "plan").length, 0);
 });
 
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);

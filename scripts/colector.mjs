@@ -85,6 +85,7 @@ const Directie = incarca("directie.js", "Directie");
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
 const GridClasament = incarca("grid-clasament.js", "GridClasament");
+const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "tablou-extra.js"), "utf8") + "; return TabloExtra;")(GridCalcul);
 const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
 const GridLaborator = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba);
 
@@ -208,7 +209,15 @@ async function tura() {
         profitTotal: b.profitTotal, distantaLichidarePct: b.distantaLichidarePct } });
     } catch (e) { jurnal("istoric", b.id, e.status || "", e.message); }
     if (b.activ === false && !(stareAlerte[b.id] && stareAlerte[b.id].activ && stareAlerte[b.id].activ.nivel === "ok")) continue;
-    const ctx = await directiaBotului(b);
+    const ctx = Object.assign({}, await directiaBotului(b));
+    // v81: planul lui pentru bot (tinut pe server) + de cand e pretul in afara gridului
+    try {
+      const pl = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id));
+      const st = stareAlerte[b.id] || (stareAlerte[b.id] = {});
+      const p = Number(b.pretCurent), afara = Number.isFinite(p) && b.gridJos != null && b.gridSus != null && (p < Number(b.gridJos) || p > Number(b.gridSus));
+      st._afaraDe = afara ? (st._afaraDe || acum) : null;
+      if (pl && pl.plan) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe }, acum);
+    } catch (e) { jurnal("plan", b.id, e.message); }
     const inainte = stareAlerte[b.id] || {};
     const r = Alerte.evalueaza(b, ctx, inainte, acum);
     stareAlerte[b.id] = r.stare;

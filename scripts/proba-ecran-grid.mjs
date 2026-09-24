@@ -192,7 +192,17 @@ async function scenariu(lat, inal, nume) {
       await panaCand(b, `/Ce aș face eu/.test(document.getElementById("tbSfaturi").innerText)`, 30000, "sfaturile cu 'ce as face eu'");
       const t3 = await b.ev(`document.getElementById("tbSfaturi").innerText`);
       assert.ok(!/[Oo]pritorul|USDT liberi/.test(t3), "au ramas sfaturile scoase: " + t3.slice(0, 200)); FARA_GUNOI(t3);
+      // v81: saptamana, planul (salvat pe server si citit inapoi), marja, vs pozitie
+      await panaCand(b, `/Bara = cât au adus grilele|n-a strâns încă/.test(document.getElementById("tbSapt").innerText)`, 30000, "saptamana");
+      assert.match(await b.ev(`document.getElementById("tbAcum").innerText`), /simplu, aceeași sumă și levier/);
+      await b.ev(`document.getElementById("tbPlanPlus").value="5";document.getElementById("tbPlanMinus").value="10";tbPlanSalveaza()`);
+      await panaCand(b, `/Țintă pe plus/.test(document.getElementById("tbPlanStare").innerText)`, 20000, "planul salvat");
+      await b.ev(`tbMarjaCalc("20")`);
+      assert.match(await b.ev(`document.getElementById("tbMarjaRez").innerText`), /Cu \+20 USDT marjă/);
+      FARA_GUNOI(await b.ev(`document.getElementById("tbPlanCard").innerText + document.getElementById("tbSaptCard").innerText`));
       await b.poza(path.join(DOSAR_POZE, `tablou-${nume}.png`));
+      // curata planul de proba de pe server
+      await b.ev(`apiFetch("/api/istoric-bot?action=plan",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bot:tbStare.bot.id,plan:null})})`);
       await b.ev(`navTo('gridset',true)`);
     });
 

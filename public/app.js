@@ -5247,6 +5247,53 @@ async function tbAduFisaBot(b){
   }catch(e){tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:null,eroare:grTextEroare(e)}}
   if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaExtra(tbStare.bot);if(typeof renderTabloSfaturi==="function")renderTabloSfaturi()}
 }
+// ===== v81: saptamana, planul, marja, vs pozitie, evenimente =====
+var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botId:null,plan:null,la:0};
+async function tbAduSaptamana(b){
+  if(!b||!b.id||tbSapt.inLucru||(tbSapt.botId===b.id&&Date.now()-tbSapt.la<10*60000))return;
+  tbSapt.inLucru=true;
+  try{var d=await getJSON("/api/istoric-bot?action=citeste&ore=168&bot="+encodeURIComponent(b.id));tbSapt={botId:b.id,la:Date.now(),intrari:Array.isArray(d.intrari)?d.intrari:[],eroare:null,inLucru:false}}
+  catch(e){tbSapt={botId:b.id,la:Date.now(),intrari:null,eroare:e&&e.status===503?"doar pe Radarul de acasă":textEroare(e),inLucru:false}}
+  try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(b.id));tbPlan={botId:b.id,plan:p&&p.plan||null,la:Date.now()};tbPlanInForm()}catch(e){}
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaSaptPlan(tbStare.bot);
+}
+function tbPlanInForm(){var p=tbPlan.plan||{};[["tbPlanPlus","plus"],["tbPlanMinus","minus"],["tbPlanAfara","afaraOre"]].forEach(function(x){var e=$(x[0]);if(e&&!e.value&&p[x[1]]!=null)e.value=String(p[x[1]])})}
+async function tbPlanSalveaza(){
+  var b=tbStare.bot;if(!b)return;
+  var plan={plus:grNumar($("tbPlanPlus")&&$("tbPlanPlus").value),minus:grNumar($("tbPlanMinus")&&$("tbPlanMinus").value),afaraOre:grNumar($("tbPlanAfara")&&$("tbPlanAfara").value)};
+  try{var r=await apiFetch("/api/istoric-bot?action=plan",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bot:b.id,plan:plan})});var d=await r.json();
+    if(!r.ok)throw Object.assign(new Error(d&&d.error||("HTTP "+r.status)),{status:r.status});
+    tbPlan={botId:b.id,plan:d.plan,la:Date.now()};toast("Planul e salvat; colectorul te anunță când atingi un prag","good")}
+  catch(e){toast("Nu am putut salva planul: "+(e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)),"bad")}
+  tbDeseneazaSaptPlan(b);
+}
+function tbMarjaCalc(v){
+  var b=tbStare.bot,el=$("tbMarjaRez");if(!el)return;var P=GridCalcul.procent;
+  var r=b?TabloExtra.marjaNoua(b,grNumar(v)):null;
+  if(!r){el.innerHTML='<p class="tbSub">'+(b&&b.directie!=="long"&&b.directie!=="short"?"La grid neutru lichidarea are două părți; nu socotesc.":"Scrie o sumă mai mare ca 0.")+'</p>';return}
+  el.innerHTML='<div class="tbLinie"><span>Lichidarea acum</span><b>'+escapeHtml(grPret(r.inainte,null))+'</b></div><div class="tbLinie"><span>Cu +'+escapeHtml(String(grNumar(v)))+' USDT marjă</span><b class="good">'+escapeHtml(grPret(r.lichidare,null))+(r.distantaPct!=null?' <span class="tbSub">('+P(r.distantaPct)+' de preț)</span>':'')+'</b></div><p class="tbSub">Aproximare: marja izolată în plus împinge lichidarea cu suma / poziție. Pionex poate rotunji puțin altfel.</p>';
+}
+function tbDeseneazaSaptPlan(b){
+  var el=$("tbSapt"),ps=$("tbPlanStare"),P=GridCalcul.procent;if(!el||!ps)return;
+  if(!b){el.innerHTML=ps.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
+  // (1) saptamana
+  if(tbSapt.botId!==b.id)el.innerHTML='<p class="tbSub">aduc istoricul de 7 zile…</p>';
+  else if(tbSapt.eroare)el.innerHTML='<p class="tbSub">'+escapeHtml(tbSapt.eroare)+'</p>';
+  else{
+    var z=TabloExtra.peZile(tbSapt.intrari||[],"Europe/Bucharest");
+    if(!z.length)el.innerHTML='<p class="tbSub">Colectorul n-a strâns încă istoric pentru botul ăsta.</p>';
+    else{var mx=Math.max.apply(null,z.map(function(x){return Math.abs(x.grile||0)}).concat([0.01]));
+      el.innerHTML='<div class="tbZile">'+z.map(function(x){var h=x.grile==null?0:Math.round(Math.abs(x.grile)/mx*100);return '<div class="tbZi" title="'+escapeHtml(x.zi)+'"><span class="tbSub">'+(x.grile==null?"—":(x.grile>=0?"+":"−")+Math.abs(x.grile).toFixed(2))+'</span><i class="'+(x.grile!=null&&x.grile<0?"neg":"poz")+'" style="height:'+h+'%"></i><span class="tbEt2">'+escapeHtml(x.zi.slice(8,10)+"."+x.zi.slice(5,7))+'</span><span class="tbSub '+(x.total==null?"":x.total>=0?"good":"bad")+'">'+(x.total==null?"—":(x.total>=0?"+":"−")+Math.abs(x.total).toFixed(1))+'</span></div>'}).join("")+'</div><p class="tbSub">Bara = cât au adus grilele în ziua aceea; dedesubt, totalul botului seara. Din istoricul strâns de colectorul de acasă (7 zile).</p>';}
+  }
+  // (3) planul
+  var st=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:null},Date.now());
+  if(!st||(!st.plus&&!st.minus&&!st.afara)){ps.innerHTML='<p class="tbSub">Niciun plan încă. Scrie-l acum, la rece: e mai ușor decât să hotărăști când prețul fuge.</p>';return}
+  var U=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(2)+" USDT"},h="";
+  if(st.plus)h+='<div class="tbLinie"><span>Țintă pe plus: '+U(st.plus.prag)+'</span><b class="'+(st.plus.lipsa<=0?"good":"")+'">'+(st.plus.lipsa<=0?"ATINSĂ — ieși":"mai sunt "+st.plus.lipsa.toFixed(2)+" USDT")+'</b></div>';
+  if(st.minus)h+='<div class="tbLinie"><span>Ies dacă pierd '+st.minus.prag.toFixed(2)+' USDT</span><b class="'+(st.minus.lipsa<=0?"bad":st.minus.lipsa<st.minus.prag*0.25?"tbWarn":"")+'">'+(st.minus.lipsa<=0?"ATINS — ieși":"mai sunt "+st.minus.lipsa.toFixed(2)+" USDT")+'</b></div>';
+  if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+st.afara.prag+' ore</span><b>colectorul numără orele</b></div>';
+  ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> exact ce ți-ai propus — ieși acum, fără să renegociezi.</p>':'');
+}
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
   if(!b){el.innerHTML=el2.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
@@ -5274,6 +5321,8 @@ function tbDeseneazaExtra(b){
   if(f&&f.liniste){var L=f.liniste;h+=linie("Liniștea (fișa)",!L.linisteAcum?"acum e mișcare":!L.suficient?"prea puține perioade":L.k+" din "+L.n+" au mai ținut 2 zile ("+P(L.p)+")",!L.linisteAcum?"tbWarn":"","frecvență, nu promisiune")}
   var lab=grLaborator&&grLaborator.date,qm=lab&&Array.isArray(lab.intrebari)?lab.intrebari.find(function(x){return x.id==="miscare"}):null;
   if(qm)h+=linie("Laboratorul: după mișcare vs liniște",P(qm.A&&qm.A.pePlus)+" vs "+P(qm.B&&qm.B.pePlus)+" pe plus",qm.verdict==="dovedit"?"good":"tbSubVal",qm.verdict==="dovedit"?"DOVEDIT":"n-am aflat încă");
+  var vp=TabloExtra.vsPozitie(b);
+  if(vp&&vp.pozitieSimpla!=null)h+=linie(b.directie==="long"||b.directie==="short"?"Un "+b.directie+" simplu, aceeași sumă și levier":"Fără bot (neutru)",botiBan(vp.pozitieSimpla),botiClasa(vp.pozitieSimpla),vp.diferenta!=null?"gridul "+(vp.diferenta>=0?"a adus ":"a pierdut ")+Math.abs(vp.diferenta).toFixed(2)+" față de el":"");
   var j=TabloExtra.legaturaJurnal(grJurnalCitit(),b);
   h+=j?linie("Din jurnal","pornit la "+((GR_NIVEL[j.verdict]||["?"])[0])+", proba zicea mediana "+P(j.mediana),"","acum "+(botiNr(b.profitTotal)!=null&&botiNr(b.investit)?P(botiNr(b.profitTotal)/botiNr(b.investit)):"—")):linie("Din jurnal","nelegat","tbSubVal","n-ai notat fișa la pornire");
   el2.innerHTML=h;
@@ -5293,7 +5342,7 @@ function tbDeseneazaBanii(b){
     rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
     tbRandUmpleri(b);
   tbAduUmpleri(b);
-  tbDeseneazaExtra(b);tbAduFisaBot(b);if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
+  tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
 }
@@ -5521,6 +5570,9 @@ function renderTabloGrafic(){
   if(gj!==null&&gs!==null&&gr>=1){var pas=(gs-gj)/gr,sare=Math.max(1,Math.ceil(gr/30));
     for(var ni=0;ni<=gr;ni+=sare){var L=gj+ni*pas;if(L>geo.minPret&&L<geo.maxPret)svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(L))+'" y2="'+Y(pret(L))+'" class="tbNivelGrid"/>'}}
   geo.segmente.forEach(function(seg){svg+='<polyline class="tbLiniePret" points="'+seg.map(function(p){return X(p.x)+","+Y(p.y)}).join(" ")+'"/>'});
+  // v81: evenimentele - iesiri/reveniri din grid si alertele colectorului
+  var ev=TabloExtra.evenimente(ist,tbStare.alerteServer||[],botiNr(b.gridJos),botiNr(b.gridSus),geo.deLa,geo.panaLa);
+  ev.forEach(function(e){var fx=(e.t-geo.deLa)/((geo.panaLa-geo.deLa)||1);svg+='<line class="tbEv tbEv-'+e.fel+'" x1="'+X(fx)+'" x2="'+X(fx)+'" y1="0" y2="'+H+'"><title>'+escapeHtml(e.text)+'</title></line>'});
   svg+='<line class="tbCruce" x1="0" x2="0" y1="0" y2="'+H+'" style="display:none"/></svg>';
   var ultim=ist.filter(function(h){return Number(h.pretPerp)>0}).sort(function(a,c){return a.t-c.t});
   var pAcum=ultim.length?Number(ultim[ultim.length-1].pretPerp):null;
@@ -5530,7 +5582,8 @@ function renderTabloGrafic(){
   var etHtml=etich.filter(function(e){var sus=(1-e.f)*100;if(ult>=0&&sus-ult<9)return false;ult=sus;return true})
     .map(function(e){return '<span class="tbEt '+e.c+'" style="top:calc('+((1-e.f)*100).toFixed(1)+'% - 9px)">'+escapeHtml(e.t)+'</span>'}).join("");
   var ora=function(t){var d=new Date(t),h=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");return (tbStare.graficInterval||"24h")==="24h"?h:(d.getDate()+"."+String(d.getMonth()+1).padStart(2,"0")+" "+h)};
-  el.innerHTML='<div class="tbGraficZona">'+svg+etHtml+'<div class="tbTip" hidden></div></div>'+
+  var evTxt=ev.length?'<div class="tbEvLeg">'+ev.slice(-6).map(function(e){return '<span class="tbEvL tbEv-'+e.fel+'">'+escapeHtml(ora(e.t)+" "+e.text)+'</span>'}).join("")+'</div>':"";
+  el.innerHTML='<div class="tbGraficZona">'+svg+etHtml+'<div class="tbTip" hidden></div></div>'+evTxt+
     '<div class="tbAxa"><span>'+ora(geo.deLa)+'</span><span>'+ora(geo.deLa+(geo.panaLa-geo.deLa)/2)+'</span><span>'+ora(geo.panaLa)+'</span></div>';
   var zona=el.querySelector(".tbGraficZona"),cruce=el.querySelector(".tbCruce"),tip=el.querySelector(".tbTip");
   var puncte=ultim;

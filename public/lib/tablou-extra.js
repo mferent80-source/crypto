@@ -81,6 +81,76 @@ var TabloExtra = (function () {
     return null;
   }
 
-  return { geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal };
+  // v81 (1) Ziua botului: din istoricul minut-cu-minut (colectorul, 7 zile) -> pe fiecare zi
+  // (ora Romaniei) cat au adus grilele (ultima minus ultima de ieri) si totalul la sfarsit.
+  function peZile(ist, tz) {
+    if (!Array.isArray(ist) || !ist.length) return [];
+    var f;
+    try { f = new Intl.DateTimeFormat("en-CA", { timeZone: tz || "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }); } catch (e) { f = null; }
+    var zi = function (t) { return f ? f.format(new Date(t)) : new Date(t).toISOString().slice(0, 10); };
+    var l = ist.filter(function (x) { return x && nr(x.t) !== null; }).slice().sort(function (a, b) { return a.t - b.t; });
+    var zile = [], cur = null;
+    l.forEach(function (x) {
+      var z = zi(x.t);
+      if (!cur || cur.zi !== z) { cur = { zi: z, prim: x, ultim: x }; zile.push(cur); } else cur.ultim = x;
+    });
+    return zile.map(function (d, i) {
+      var sf = nr(d.ultim.gridProfitBrut), dinainte = i > 0 ? nr(zile[i - 1].ultim.gridProfitBrut) : nr(d.prim.gridProfitBrut);
+      return { zi: d.zi, grile: sf !== null && dinainte !== null ? sf - dinainte : null, total: nr(d.ultim.profitTotal) };
+    });
+  }
+
+  // v81 (2) Daca adaug marja M: marja izolata in plus muta lichidarea cu M / pozitie
+  // (long in jos, short in sus). Aproximare: Pionex poate rotunji altfel.
+  function marjaNoua(b, M) {
+    var q = nr(b && b.pozitie), L = nr(b && b.pretLichidare), p = nr(b && b.pretCurent), dir = String(b && b.directie || "").toLowerCase();
+    M = nr(M);
+    if (!(M > 0) || !(Math.abs(q) > 0) || L === null || !(L > 0) || (dir !== "long" && dir !== "short")) return null;
+    var nou = dir === "long" ? L - M / Math.abs(q) : L + M / Math.abs(q);
+    if (dir === "long" && nou < 0) nou = 0;
+    return { lichidare: nou, distantaPct: p > 0 ? Math.abs(p - nou) / p : null, inainte: L };
+  }
+
+  // v81 (4) Botul vs "sa fi tinut doar pozitia": un long/short simplu cu aceeasi suma si
+  // acelasi levier, deschis la pretul de pornire al botului. La neutru: vs a nu face nimic.
+  function vsPozitie(b) {
+    var d = bu(b), inv = nr(b && b.investit), lev = nr(b && b.levier), init = nr(d.initPrice), p = nr(b && b.pretCurent), tot = nr(b && b.profitTotal);
+    var dir = String(b && b.directie || "").toLowerCase();
+    if (inv === null || tot === null) return null;
+    var poz = dir === "long" || dir === "short" ? (init > 0 && p > 0 && lev > 0 ? (dir === "long" ? 1 : -1) * inv * lev * (p - init) / init : null) : 0;
+    return { pozitieSimpla: poz, bot: tot, diferenta: poz === null ? null : tot - poz, pretPornire: init };
+  }
+
+  // v81 (3) Planul lui: {plus: USDT, minus: USDT, afaraOre: ore}. stare.afaraDe = de cand e
+  // pretul in afara gridului (il tine colectorul/tabloul). Intoarce distantele si ce s-a atins.
+  function planStare(b, plan, stare, acum) {
+    if (!plan || !b) return null;
+    var tot = nr(b.profitTotal), out = { plus: null, minus: null, afara: null, atins: [] };
+    if (nr(plan.plus) > 0 && tot !== null) { out.plus = { prag: nr(plan.plus), lipsa: nr(plan.plus) - tot }; if (tot >= nr(plan.plus)) out.atins.push("plus"); }
+    if (nr(plan.minus) > 0 && tot !== null) { out.minus = { prag: nr(plan.minus), lipsa: nr(plan.minus) + tot }; if (tot <= -nr(plan.minus)) out.atins.push("minus"); }
+    if (nr(plan.afaraOre) > 0) {
+      var de = stare && nr(stare.afaraDe), ore = de ? ((acum || Date.now()) - de) / 3600000 : 0;
+      out.afara = { prag: nr(plan.afaraOre), ore: ore, afara: !!de };
+      if (de && ore >= nr(plan.afaraOre)) out.atins.push("afara");
+    }
+    return out;
+  }
+
+  // v81 (5) Evenimentele pe grafic: iesirile/revenirile din grid (din istoricul de preturi)
+  // si alertele colectorului, doar cele din fereastra [deLa, panaLa].
+  function evenimente(ist, alerte, jos, sus, deLa, panaLa) {
+    var out = [], inauntru = null;
+    (Array.isArray(ist) ? ist.slice().sort(function (a, b) { return a.t - b.t; }) : []).forEach(function (x) {
+      var p = nr(x.pretPerp), t = nr(x.t); if (p === null || t === null || !(jos > 0) || !(sus > jos)) return;
+      var acum = p >= jos && p <= sus;
+      if (inauntru !== null && acum !== inauntru && t >= deLa && t <= panaLa) out.push({ t: t, fel: acum ? "revenire" : p > sus ? "iesire-sus" : "iesire-jos", text: acum ? "revine în grid" : "iese din grid " + (p > sus ? "pe sus" : "pe jos") });
+      inauntru = acum;
+    });
+    (Array.isArray(alerte) ? alerte : []).forEach(function (a) { var t = nr(a && a.t); if (t !== null && t >= deLa && t <= panaLa) out.push({ t: t, fel: "alerta", text: String(a.titlu || "alertă"), nivel: a.nivel }); });
+    return out.sort(function (a, b) { return a.t - b.t; });
+  }
+
+  return { geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
+    peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

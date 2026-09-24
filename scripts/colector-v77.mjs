@@ -221,6 +221,18 @@ await test("istoric: laboratorul (v79.5) se scrie curatat (verdict necunoscut ->
   assert.equal((await cheama("POST", "action=laborator", env, { corp: { intrebari: [] } })).status, 400);
 });
 
+await test("istoric: planul (v81) pe bot - se scrie curatat (doar numere pozitive), se citeste, null il sterge", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  assert.strictEqual((await cheama("GET", "action=plan&bot=2382", env)).d.plan, null);
+  const w = await cheama("POST", "action=plan", env, { corp: { bot: "2382", plan: { plus: "5", minus: 10, afaraOre: -3 } } });
+  assert.equal(w.status, 200);
+  const r = (await cheama("GET", "action=plan&bot=2382", env)).d.plan;
+  assert.equal(r.plus, 5); assert.equal(r.minus, 10); assert.strictEqual(r.afaraOre, null);
+  await cheama("POST", "action=plan", env, { corp: { bot: "2382", plan: null } });
+  assert.strictEqual((await cheama("GET", "action=plan&bot=2382", env)).d.plan, null);
+  assert.equal((await cheama("POST", "action=plan", env, { corp: { plan: { plus: 1 } } })).status, 400);
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });

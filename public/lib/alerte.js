@@ -74,6 +74,15 @@ var Alerte = (function () {
         : { nivel: "ok", titlu: nume + ": liniște din nou", mesaj: "Mișcarea a coborât la " + x(rmax) + "× obișnuitul." };
     }
 
+    // v81: planul LUI (prag pe plus / pe minus / afara din grid N ore), judecat de TabloExtra.planStare
+    if (ctx && ctx.plan && Array.isArray(ctx.plan.atins)) {
+      var at = ctx.plan.atins;
+      if (at.indexOf("minus") >= 0) out.plan = { nivel: "critic", titlu: nume + ": planul tău — ieși (pierderea a atins " + (ctx.plan.minus ? ctx.plan.minus.prag : "pragul") + " USDT)", mesaj: "Ai hotărât dinainte să ieși aici. Aș face-o acum, în Pionex, fără să renegociez cu mine." };
+      else if (at.indexOf("plus") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — ieși pe plus (" + (ctx.plan.plus ? "+" + ctx.plan.plus.prag : "pragul") + " USDT atins)", mesaj: "Ai atins ținta pe care ți-ai pus-o. Aș încasa acum." };
+      else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — prețul e în afara gridului de peste " + (ctx.plan.afara ? ctx.plan.afara.prag : "?") + " ore", mesaj: "Ai hotărât să nu-l lași afară atât. Aș opri botul și aș face unul nou din fișă, pe unde e prețul." };
+      else out.plan = { nivel: "ok", titlu: "", mesaj: "" };
+    }
+
     var opritorStins = b.opritorPierdere != null && b.opritorPierdereActiv === false;
     out.opritor = (opritorStins && dist !== null && Math.abs(dist) < 20)
       ? { nivel: "atentie", titlu: nume + ": opritorul pe pierdere e STINS", mesaj: "E setat la " + pret(nr(b.opritorPierdere)) + ", dar nu e pornit, iar lichidarea e la " + Math.abs(dist).toFixed(1) + "%." }

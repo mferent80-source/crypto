@@ -33,6 +33,7 @@ export async function onRequestGet({request,env}){
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
   if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
+  if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
   if(action!=="citeste")return json({error:"Unsupported action"},400);
@@ -71,6 +72,15 @@ export async function onRequestPost({request,env}){
     // expira dupa 6 ore: un clasament de ieri nu trebuie sa arate ca unul de azi
     await env.ISTORIC.put("clasament",JSON.stringify({la,monede:curate}),{expirationTtl:6*3600});
     return json({ok:true,monede:curate.length});
+  }
+  if(action==="plan"){
+    const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);
+    const p=corp&&corp.plan;
+    if(p===null){await env.ISTORIC.put("plan:"+bot,"null");return json({ok:true,plan:null})}
+    const poz=v=>{const x=nr(v);return x!==null&&x>0&&x<1e7?x:null};
+    const plan={plus:poz(p&&p.plus),minus:poz(p&&p.minus),afaraOre:poz(p&&p.afaraOre),la:Date.now()};
+    await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
+    return json({ok:true,plan});
   }
   if(action==="laborator"){
     const la=nr(corp&&corp.la),q=corp&&Array.isArray(corp.intrebari)?corp.intrebari:null;

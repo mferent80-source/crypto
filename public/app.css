@@ -1437,3 +1437,21 @@ body.peTablou main>.note{display:none}
 #jurnaltrade .jtGreseli b{color:var(--text)}
 #jurnaltrade .jtNota{width:100%;margin-top:6px;background:var(--tb-fond2);color:var(--text);border:1px solid var(--tb-linie);border-radius:8px;padding:6px 8px;font:inherit;resize:vertical;box-sizing:border-box}
 @media (max-width:700px){#jurnaltrade .jtKpi{grid-template-columns:1fr 1fr}#jurnaltrade .tbKpiCel:nth-child(3){border-left:0}}
+#tabloubot .tbZile{display:flex;gap:6px;align-items:flex-end;height:150px;padding-top:6px}
+#tabloubot .tbZi{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px;min-width:0}
+#tabloubot .tbZi i{display:block;width:70%;min-height:2px;border-radius:4px 4px 0 0;background:#00aa5a}
+#tabloubot .tbZi i.neg{background:#dc283c}
+#tabloubot .tbPlanForm{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:8px}
+#tabloubot .tbPlanForm label{display:flex;flex-direction:column;gap:4px}
+#tabloubot .tbPlanForm input{width:120px}
+#tabloubot .tbMarjaCap{margin-top:12px}
+#tabloubot .tbFac{margin:6px 0 0;padding:6px 8px;border-left:3px solid var(--accent);background:rgba(79,209,197,.08);border-radius:4px}
+#tabloubot .tbEv{stroke-width:2;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+#tabloubot .tbEv-alerta{stroke:#ff8c00}
+#tabloubot .tbEv-iesire-sus,#tabloubot .tbEv-iesire-jos{stroke:#dc283c}
+#tabloubot .tbEv-revenire{stroke:#00aa5a}
+#tabloubot .tbEvLeg{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px;font-size:12px}
+#tabloubot .tbEvL{border-left:3px solid currentColor;padding-left:5px;color:var(--muted)}
+#tabloubot .tbEvL.tbEv-alerta{border-color:#ff8c00}
+#tabloubot .tbEvL.tbEv-iesire-sus,#tabloubot .tbEvL.tbEv-iesire-jos{border-color:#dc283c}
+#tabloubot .tbEvL.tbEv-revenire{border-color:#00aa5a}
