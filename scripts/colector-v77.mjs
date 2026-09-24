@@ -253,6 +253,15 @@ await test("istoric: contrafactualul (v83) - harta id -> ce ar fi zis, nivel nec
   assert.equal((await cheama("POST", "action=contrafactual", env, { corp: {} })).status, 400);
 });
 
+await test("istoric: raportul de duminica (v84) se scrie curatat si se citeste inapoi; fara linii -> 400", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  assert.strictEqual((await cheama("GET", "action=raport", env)).d.raport, null);
+  await cheama("POST", "action=raport", env, { corp: { la: 1, linii: ["a", 5, "b"], saptamana: "2026-09-27" } });
+  const r = (await cheama("GET", "action=raport", env)).d.raport;
+  assert.deepEqual(r.linii, ["a", "b"]); assert.equal(r.saptamana, "2026-09-27");
+  assert.equal((await cheama("POST", "action=raport", env, { corp: { la: 1 } })).status, 400);
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });

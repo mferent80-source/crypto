@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "83.0.0",
+  "version": "84.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,7 +11,7 @@
     "dev": "npx --yes wrangler@4.137.0 pages dev public --ip 127.0.0.1",
     "deploy": "npx --yes wrangler@4.137.0 pages deploy public --project-name crypto",
     "predeploy": "npm test",
-    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo && npm run test:directie && npm run test:colector && npm run test:scenarii && npm run test:grid && npm run test:jurnaltrade && npm run test:semnale",
+    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo && npm run test:directie && npm run test:colector && npm run test:scenarii && npm run test:grid && npm run test:jurnaltrade && npm run test:semnale && npm run test:obiceiuri",
     "test:syntax": "node scripts/syntax-v71.mjs",
     "test:garzi": "node scripts/garzi-v746.mjs",
     "test:security": "node scripts/security-v57.mjs",
@@ -31,6 +31,7 @@
     "test:grid": "node scripts/grid-v78.mjs",
     "test:jurnaltrade": "node scripts/jurnal-trade-v81.mjs",
     "test:semnale": "node scripts/semnale-v82.mjs",
+    "test:obiceiuri": "node scripts/obiceiuri-v84.mjs",
     "test:ecran-grid": "node scripts/proba-ecran-grid.mjs"
   }
 }

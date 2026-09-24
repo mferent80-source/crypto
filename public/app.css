@@ -1477,3 +1477,13 @@ body.peTablou main>.note{display:none}
 #jurnaltrade .jtCirGrid b{font-size:20px;font-weight:900}
 #jurnaltrade .jtCf{margin:6px 0 0}
 @media (max-width:700px){#jurnaltrade .jtCirGrid{grid-template-columns:1fr 1fr}}
+#gridset .grPoarta{margin:10px 0;padding:10px 12px;border:1px solid var(--tb-linie);border-radius:10px;background:var(--tb-fond)}
+#gridset .grPoartaForm{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:8px}
+#gridset .grPoartaForm label{display:flex;flex-direction:column;gap:4px}
+#gridset .grPoartaForm input{width:110px}
+#gridset .grPoartaReguli{list-style:none;padding:0;margin:10px 0 6px}
+#gridset .grPoartaReguli li{padding:3px 0}
+#gridset .grHartieRand{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--tb-linie)}
+#gridset .tbFac,#jurnaltrade .tbFac{margin:6px 0;padding:6px 8px;border-left:3px solid var(--accent);background:rgba(79,209,197,.08);border-radius:4px}
+#tabloubot #tbPortCard{margin-bottom:12px}
+@media (max-width:600px){#gridset .grHartieRand{grid-template-columns:1fr auto}}

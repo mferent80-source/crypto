@@ -87,6 +87,7 @@ const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
 const GridClasament = incarca("grid-clasament.js", "GridClasament");
 const JurnalTrade = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "jurnal-trade.js"), "utf8") + "; return JurnalTrade;")(GridCalcul);
+const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade);
 const Contrafactual = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "contrafactual.js"), "utf8") + "; return Contrafactual;")();
 const SemnaleBot = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "semnale-bot.js"), "utf8") + "; return SemnaleBot;")(GridCalcul);
 const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "tablou-extra.js"), "utf8") + "; return TabloExtra;")(GridCalcul);
@@ -263,6 +264,7 @@ async function tura() {
       if (inainte[msg.cheie]) stareAlerte[b.id][msg.cheie] = inainte[msg.cheie]; else delete stareAlerte[b.id][msg.cheie];
     }
   }
+  try { await turaRaport(acum); } catch (e) { jurnal("raport", e.message); }
   try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
   try { await trimite("/api/istoric-bot?action=config", Object.assign({ colectorLa: acum, canal: CANAL === "ntfy" ? "ntfy" : CANAL === "discord" ? "discord" : "radar" }, NTFY.topic ? { ntfyTopic: NTFY.topic } : {})); } catch (e) { jurnal("config", e.message); }
 }
@@ -314,6 +316,31 @@ async function turaCf() {
     if (rez.length) await trimite("/api/istoric-bot?action=contrafactual", { boti: rez });
   } catch (e) { jurnal("contrafactual ESEC", e.message); }
   cfLa = Date.now(); cfInLucru = false;
+}
+
+// v84: raportul de duminica - o data pe saptamana, duminica dupa ora 20 (ora Romaniei)
+function saptamanaRo(t) {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t));
+  const g = (k) => (p.find((x) => x.type === k) || {}).value;
+  return { zi: g("weekday"), ora: Number(g("hour")), data: g("year") + "-" + g("month") + "-" + g("day") };
+}
+async function turaRaport(acum) {
+  const r = saptamanaRo(acum);
+  if (r.zi !== "Sun" || r.ora < 20) return;
+  const m = meta();
+  if (m.raportTrimis === r.data) return;
+  try {
+    const d = await cere("/api/bot-orders?status=finished&limit=100");
+    const trades = JurnalTrade.din((d && Array.isArray(d.bots) ? d.bots : []).map((x) => x.brut || x));
+    let soc = {};
+    for (const id of Object.keys(m.cunoscuti || {})) {
+      try { const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const s = SemnaleBot.socoteala((v && v.semnale && v.semnale.log) || []); for (const k of Object.keys(s)) { const x = soc[k] || (soc[k] = { judecate: 0, corecte: 0 }); x.judecate += s[k].judecate; x.corecte += s[k].corecte; } } catch (e) {}
+    }
+    let lab = null; try { const v = await cere("/api/istoric-bot?action=laborator"); lab = v && v.laborator; } catch (e) {}
+    const rap = Obiceiuri.raportDuminica({ trades, acum, socoteala: soc, laborator: lab });
+    await trimite("/api/istoric-bot?action=raport", { la: acum, linii: rap.linii, saptamana: r.data });
+    if (await trimiteAlerta({ nivel: "info", titlu: "Raportul de duminică (" + r.data + ")", mesaj: rap.linii.join("\n") }, null, "raport")) m.raportTrimis = r.data;
+  } catch (e) { jurnal("raport ESEC", e.message); }
 }
 
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal alerte: " + CANAL + (NTFY.topic ? " (" + NTFY.topic + (NTFY.nou ? ", NOU" : "") + ")" : ""));

@@ -169,7 +169,7 @@ async function scenariu(lat, inal, nume) {
       await panaCand(b, `!!document.querySelector("#grFisa .grVerdict")&&!grStare.inLucru`, 90000, "fisa dupa sold");
       const t = await b.ev(FISA_TEXT);
       assert.match(t, /Cât investesc\?[\s\S]{0,40}cel mult \d+ USDT/, "randul 'cat investesc' cu suma maxima");
-      assert.match(t, /Am pornit botul cu setarea asta/);
+      assert.match(t, /Poarta de pornire/, "v84: butonul simplu a devenit poarta (notarea vine dupa verificare)");
       const n0 = await b.ev(`(JSON.parse(localStorage.getItem("grJurnal")||"[]")).length`);
       await b.ev(`gridJurnalAdauga()`);
       await asteapta(1500);
@@ -179,6 +179,18 @@ async function scenariu(lat, inal, nume) {
       assert.ok(await b.ev(`!!document.getElementById("grClasament")`), "cutia de clasament lipseste");
       FARA_GUNOI(await b.ev(`document.getElementById("grJurnal").innerText`));
       await b.ev(`localStorage.removeItem("grJurnal")`);
+    });
+
+    await test(`${nume} · v84 poarta de pornire (regulile cu costul lor) + botul de hartie`, async () => {
+      await panaCand(b, `!!document.querySelector("#grFisa .grPoarta")`, 30000, "poarta in fisa");
+      await b.ev(`document.getElementById("grPlanPlus").value="5";document.getElementById("grPlanMinus").value="10";gridPoarta()`);
+      await panaCand(b, `!!document.querySelector("#grFisa .grPoartaReguli")`, 60000, "regulile portii");
+      const t = await b.ev(`document.querySelector("#grFisa .grPoarta").innerText`);
+      assert.match(t, /Fișa zice/); assert.match(t, /Ai planul de ieșire/); assert.match(t, /Ce aș face eu/); FARA_GUNOI(t);
+      await b.ev(`gridHartiePorneste()`);
+      await panaCand(b, `/MET/.test(document.getElementById("grHartie").innerText)`, 30000, "botul de hartie");
+      FARA_GUNOI(await b.ev(`document.getElementById("grHartie").innerText`));
+      await b.ev(`localStorage.removeItem("grHartie")`);
     });
 
     await test(`${nume} · v80 Tabloul botului: "botul vs fisa" cu tabel + "pe zi / la inchidere" cu cifre, fara gunoi`, async () => {
@@ -216,6 +228,7 @@ async function scenariu(lat, inal, nume) {
       const t = await b.ev(`document.getElementById("jurnaltrade").innerText`);
       assert.match(t, /Rezultat total/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Poziția a mâncat grilele/);
       assert.match(t, /Dacă ascultai de Radar/); assert.match(t, /Radarul ar fi zis/);
+      assert.match(t, /Raportul de duminică/); assert.match(t, /mai trebuie 20/);
       FARA_GUNOI(t);
       await b.ev(`(function(){var e=document.querySelector(".jtNota");e.value="proba";e.dispatchEvent(new Event("change",{bubbles:true}))})()`);
       assert.match(await b.ev(`localStorage.getItem("jtNote")||""`), /proba/);
