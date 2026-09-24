@@ -1154,6 +1154,16 @@ async function main() {
       assert.equal(r.aruncat, null, `cu stocarea blocata bannerul arunca: ${r.aruncat}`);
     });
 
+    await test("D12e. telefon: Tabloul (cu selectorul de boti) nu face pagina sa curga lateral", async () => {
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: "7611" })), botNormalizat(botBrut({ strategyId: "7612", baza: "SOL.PERP" }))] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`navTo('tabloubot')`);
+      await b.ev(`tbAduDate()`);
+      const r = await b.ev(`({ pagina: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        antet: (() => { const h = document.querySelector('#tabloubot .sectionHead'); return h.scrollWidth - h.clientWidth })() })`);
+      assert.ok(r.pagina <= 1 && r.antet <= 1, `pe telefon Tabloul curge lateral: pagina ${r.pagina}px, antetul ${r.antet}px`);
+    });
+
     await test("D14. Health inainte de orice analiza: verificarile locale sunt NEINCERCAT, nu FAIL; watchdog-ul nu intra in SAFE MODE pentru asta", async () => {
       const r = await b.ev(`(async () => {
         // "inainte de orice analiza": fara stare, fara mostra REST, fara tick WS

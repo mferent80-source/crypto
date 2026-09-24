@@ -119,9 +119,10 @@ await test("feeCoin lipsa: acoperirea taxei e UNRESOLVED, nu 'USDT exact'", asyn
 
 await test("sincronizarea: cel putin ~1,1 s intre doua cereri catre Pionex", async () => {
   const momente = [];
-  const P = incarca(["v71Pauza", "v71CereCuRabdare"], ["v71UltimaCerere", "V71_PAUZA_MS"],
+  // v71HistoryWindow e drumul real al sincronizarii: fiecare fereastra = o cerere
+  const P = incarca(["v71Pauza", "v71CereCuRabdare", "v71Rows", "v71HistoryWindow"], ["v71UltimaCerere", "V71_PAUZA_MS"],
     { getJSON: async () => { momente.push(Date.now()); return { data: [] }; } });
-  for (let i = 0; i < 3; i++) await P.v71CereCuRabdare("/api/pionex-account?proba=" + i);
+  for (let i = 0; i < 3; i++) await P.v71HistoryWindow("fills", "BTC_USDT", T0, T0 + 1000);
   const pauze = momente.slice(1).map((t, i) => t - momente[i]);
   assert.ok(pauze.every((p) => p >= 1050), `pauze prea scurte intre cereri: ${pauze.join(", ")} ms`);
 });

@@ -1211,5 +1211,6 @@ body{min-height:100vh;overflow-x:hidden}
   #tbMasuri .accountRow{grid-template-columns:1.3fr 1fr 1fr;min-width:0}
   .topStatus{flex-wrap:wrap;row-gap:6px}
   .topLeft,.topRight{flex-wrap:wrap;row-gap:6px}
+  #tabloubot .sectionHead{flex-wrap:wrap}
 }
 
