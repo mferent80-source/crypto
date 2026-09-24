@@ -1609,5 +1609,247 @@ await test("[finala] NO_ROUTE -> spune ca serverul e mai vechi decat pagina, nu 
   assert.match(e.ceFac, /versiune mai veche/, `"${e.ceFac}"`);
 });
 
+/* ── T1: frecventele dovedite ─────────────────────────────────────────── */
+function istoricFrecvente(minute, optiuni) {
+  const o = optiuni || {};
+  const pas = o.pasMinute || 1;
+  const out = [];
+  for (let i = minute; i >= 0; i -= pas) {
+    out.push({
+      t: ACUM - i * 60000,
+      perechi: (o.perechiStart != null ? o.perechiStart : 0) + (minute - i) * (o.perechiPeMinut || 0),
+      pretPerp: o.pret != null ? o.pret : 0.0155,
+      pretSpot: 0.0155,
+      profitNet: (o.netStart != null ? o.netStart : 0) + (minute - i) * (o.netPeMinut || 0),
+      comisioane: 0, gridProfitBrut: 0, investit: 100
+    });
+  }
+  return out;
+}
+
+await test("T1: perechi pe ora se socoteste din contorul cumulativ, peste gauri", () => {
+  // 3 ore, 0.1 perechi/minut = 6 pe ora. Scoatem ora din mijloc: rata NU se schimba,
+  // fiindca `perechi` e un TOTAL de la Pionex - include si ce s-a intamplat cat n-am privit.
+  const plin = istoricFrecvente(180, { perechiStart: 0, perechiPeMinut: 0.1 });
+  const cuGaura = plin.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 60 && m < 120); });
+  const a = T.frecvente(plin, BOT, ACUM).perechiPeOra;
+  const b = T.frecvente(cuGaura, BOT, ACUM).perechiPeOra;
+  assert.equal(a.stare, "dovedit");
+  assert.ok(Math.abs(a.valoare - 6) < 0.2, `asteptat ~6 perechi/ora, a dat ${a.valoare}`);
+  assert.ok(Math.abs(b.valoare - a.valoare) < 0.2,
+    `o gaura NU are voie sa schimbe rata unui contor cumulativ: ${b.valoare} vs ${a.valoare}`);
+});
+
+await test("T1: contor cumulativ care SCADE inseamna bot repornit, nu rata negativa", () => {
+  const ist = istoricFrecvente(180, { perechiStart: 500, perechiPeMinut: 0.1 });
+  ist[ist.length - 1].perechi = 3; // botul a fost repornit: contorul a luat-o de la capat
+  const f = T.frecvente(ist, BOT, ACUM).perechiPeOra;
+  assert.equal(f.stare, "nu-se-poate", "un contor care scade nu se traduce in rata negativa");
+  assert.equal(f.valoare, null);
+});
+
+await test("T1: net pe zi din profitNet cumulativ", () => {
+  // 0.01 pe minut = 14.4 pe zi
+  const ist = istoricFrecvente(180, { netStart: 0, netPeMinut: 0.01 });
+  const f = T.frecvente(ist, BOT, ACUM).netPeZi;
+  assert.equal(f.stare, "dovedit");
+  assert.ok(Math.abs(f.valoare - 14.4) < 0.5, `asteptat ~14.4/zi, a dat ${f.valoare}`);
+});
+
+await test("T1: sub o ora de intindere, ratele sunt nu-se-poate; intre 1 si 2 ore, putin", () => {
+  const scurt = T.frecvente(istoricFrecvente(45, { perechiPeMinut: 0.1 }), BOT, ACUM);
+  assert.equal(scurt.perechiPeOra.stare, "nu-se-poate", "45 de minute nu dovedesc o rata pe ora");
+  assert.equal(scurt.perechiPeOra.valoare, null);
+  const mediu = T.frecvente(istoricFrecvente(90, { perechiPeMinut: 0.1 }), BOT, ACUM);
+  assert.equal(mediu.perechiPeOra.stare, "putin", "90 de minute se pot arata, cu rezerva");
+  assert.ok(mediu.perechiPeOra.valoare > 0);
+});
+
+await test("T1: timp in interval numara DOAR intrarile observate, si spune acoperirea", () => {
+  // 100 de intrari, din care 25 cu pretul iesit din interval (BOT: 0.0153..0.0158)
+  const ist = istoricFrecvente(99, { pret: 0.0155 });
+  for (let i = 0; i < 25; i++) ist[i].pretPerp = 0.0170;
+  const f = T.frecvente(ist, BOT, ACUM).timpInInterval;
+  assert.equal(f.stare, "dovedit");
+  assert.ok(Math.abs(f.valoare - 75) < 1.5, `asteptat ~75%, a dat ${f.valoare}`);
+  assert.ok(f.acoperire > 90, `100 de masuratori pe 100 de minute inseamna acoperire mare, a dat ${f.acoperire}`);
+});
+
+await test("T1: acoperirea CADE cand istoricul are gauri, desi procentul ramane", () => {
+  const plin = istoricFrecvente(179, { pret: 0.0155 });
+  const rar = istoricFrecvente(179, { pret: 0.0155, pasMinute: 3 });
+  const a = T.frecvente(plin, BOT, ACUM).timpInInterval;
+  const b = T.frecvente(rar, BOT, ACUM).timpInInterval;
+  assert.ok(Math.abs(a.valoare - b.valoare) < 1, "procentul in sine nu se schimba");
+  assert.ok(b.acoperire < a.acoperire - 40,
+    `cu o masuratoare la 3 minute, acoperirea trebuie sa fie mult mai mica: ${b.acoperire} vs ${a.acoperire}`);
+});
+
+await test("T1: sub 30 de intrari, frecventele de stare sunt nu-se-poate", () => {
+  const f = T.frecvente(istoricFrecvente(20, { pret: 0.0155 }), BOT, ACUM);
+  assert.equal(f.timpInInterval.stare, "nu-se-poate");
+  assert.equal(f.timpInInterval.valoare, null);
+  assert.equal(f.timpInInterval.acoperire, null, "fara date nu se inventeaza nici acoperirea");
+});
+
+await test("T1: cat de des la margine foloseste aceleasi praguri ca pozitia (15/85)", () => {
+  const ist = istoricFrecvente(99, { pret: 0.0155 });      // mijloc
+  for (let i = 0; i < 20; i++) ist[i].pretPerp = 0.01577;  // ~94% din interval
+  const f = T.frecvente(ist, BOT, ACUM).desLaMargine;
+  assert.equal(f.stare, "dovedit");
+  assert.ok(Math.abs(f.valoare - 20) < 1.5, `asteptat ~20%, a dat ${f.valoare}`);
+});
+
+await test("T1: fara grid (jos/sus lipsa) frecventele de stare nu se pot socoti", () => {
+  const botFaraGrid = { ...BOT, gridJos: null, gridSus: null,
+    buOrderData: { ...BOT.buOrderData, bottom: null, top: null } };
+  const f = T.frecvente(istoricFrecvente(99, { pret: 0.0155 }), botFaraGrid, ACUM);
+  assert.equal(f.timpInInterval.stare, "nu-se-poate");
+  assert.equal(f.desLaMargine.stare, "nu-se-poate");
+});
+
+await test("T1: istoric gol sau nevalid nu arunca si nu da zerouri", () => {
+  for (const intrare of [[], null, undefined, "nu-e-lista"]) {
+    const f = T.frecvente(intrare, BOT, ACUM);
+    for (const cheie of ["perechiPeOra", "netPeZi", "timpInInterval", "desLaMargine"]) {
+      assert.equal(f[cheie].stare, "nu-se-poate", `${cheie} pe ${JSON.stringify(intrare)}`);
+      assert.equal(f[cheie].valoare, null, `${cheie} nu are voie sa fie 0 cand lipsesc datele`);
+    }
+  }
+});
+
+/* ── T1 reparatie: nr(null)===0 anuleaza garda anti-lipsa ────────────────── */
+await test("[reparatie] T1: profitNet lipsa (null) pe o intrare cheie da nu-se-poate, nu cifra fabricata", () => {
+  const ist = istoricFrecvente(180, { netStart: 0, netPeMinut: 0.01 });
+  ist[ist.length - 1].profitNet = null; // camp lipsa explicit, nu 0
+  const f = T.frecvente(ist, BOT, ACUM).netPeZi;
+  assert.equal(f.stare, "nu-se-poate", "profitNet lipsa nu are voie sa produca o rata (nr(null)===0 e o capcana)");
+  assert.equal(f.valoare, null);
+});
+
+await test("[reparatie] T1: perechi lipsa (sir gol) pe o intrare cheie da nu-se-poate, nu cifra fabricata", () => {
+  const ist = istoricFrecvente(180, { perechiStart: 0, perechiPeMinut: 0.1 });
+  ist[0].perechi = ""; // camp lipsa explicit
+  const f = T.frecvente(ist, BOT, ACUM).perechiPeOra;
+  assert.equal(f.stare, "nu-se-poate", "perechi lipsa nu are voie sa produca o rata (nr('')===0 e o capcana)");
+  assert.equal(f.valoare, null);
+});
+
+/* ── T1 reparatie: numitorul frecventelor de stare exclude intrarile fara pret ── */
+await test("[reparatie] T1: intrarile fara pret nu intra in numitorul frecventelor de stare, si scad acoperirea", () => {
+  const ist = istoricFrecvente(99, { pret: 0.0155 }); // 100 intrari, toate in interval
+  for (let i = 0; i < 50; i++) ist[i].pretPerp = null; // jumatate fara masuratoare
+  const f = T.frecvente(ist, BOT, ACUM).timpInInterval;
+  assert.ok(Math.abs(f.valoare - 100) < 1.5,
+    `intrarile fara pret nu au voie sa scada procentul (numitor gresit): asteptat ~100, a dat ${f.valoare}`);
+  assert.ok(Math.abs(f.acoperire - 50) < 5,
+    `jumatate din intrari fara pret trebuie sa injumatateasca acoperirea, a dat ${f.acoperire}`);
+});
+
+/* ── T1 reparatie: starea "putin" pe frecventele de stare, nepazita ─────── */
+await test("[reparatie] T1: intre 30 si 59 de intrari observate, frecventele de stare sunt putin", () => {
+  const f = T.frecvente(istoricFrecvente(44, { pret: 0.0155 }), BOT, ACUM); // 45 de intrari
+  assert.equal(f.timpInInterval.stare, "putin", `45 de intrari observate ar trebui sa dea putin, a dat ${f.timpInInterval.stare}`);
+  assert.equal(f.desLaMargine.stare, "putin", `45 de intrari observate ar trebui sa dea putin, a dat ${f.desLaMargine.stare}`);
+});
+
+/* ── T2: geometria graficului ─────────────────────────────────────────── */
+await test("T2: sub 10 puncte nu se deseneaza nimic", () => {
+  const g = T.geometrieGrafic(istoricFrecvente(8, { pret: 0.0155 }), BOT, ACUM);
+  assert.equal(g.destul, false, "cu 9 puncte nu se deseneaza un grafic");
+  assert.deepEqual(g.segmente, [], "fara puncte destule nu se intorc segmente");
+});
+
+await test("T2: o gaura mai mare de 5 minute RUPE linia, nu o uneste", () => {
+  const plin = istoricFrecvente(119, { pret: 0.0155 });
+  const cuGaura = plin.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 40 && m < 70); });
+  const g = T.geometrieGrafic(cuGaura, BOT, ACUM);
+  assert.equal(g.destul, true);
+  assert.equal(g.segmente.length, 2, `o gaura de 30 min trebuie sa dea 2 segmente, a dat ${g.segmente.length}`);
+  const gPlin = T.geometrieGrafic(plin, BOT, ACUM);
+  assert.equal(gPlin.segmente.length, 1, "fara gauri, un singur segment");
+});
+
+await test("T2: o pauza de exact 5 minute NU rupe linia; 6 minute o rup", () => {
+  const baza = istoricFrecvente(59, { pret: 0.0155 });
+  const de5 = baza.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 30 && m < 35); });
+  const de6 = baza.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 30 && m < 36); });
+  assert.equal(T.geometrieGrafic(de5, BOT, ACUM).segmente.length, 1, "exact 5 minute e inca o linie");
+  assert.equal(T.geometrieGrafic(de6, BOT, ACUM).segmente.length, 2, "6 minute rup linia");
+});
+
+await test("T2: scara cuprinde banda gridului chiar daca pretul a fugit departe", () => {
+  // BOT are gridul 0.0153..0.0158; punem pretul mult peste
+  const ist = istoricFrecvente(59, { pret: 0.0300 });
+  const g = T.geometrieGrafic(ist, BOT, ACUM);
+  assert.ok(g.minPret <= 0.0153, `scara trebuie sa cuprinda josul gridului, min=${g.minPret}`);
+  assert.ok(g.maxPret >= 0.0300, `scara trebuie sa cuprinda si pretul, max=${g.maxPret}`);
+  assert.ok(g.banda && g.banda.jos >= 0 && g.banda.sus <= 1, "banda trebuie sa cada in scara");
+  assert.ok(g.banda.sus > g.banda.jos, "banda are inaltime");
+});
+
+await test("T2: punctele sunt normalizate intre 0 si 1, iar cel mai NOU e la dreapta", () => {
+  const g = T.geometrieGrafic(istoricFrecvente(59, { pret: 0.0155 }), BOT, ACUM);
+  const toate = g.segmente.flat();
+  for (const p of toate) {
+    assert.ok(p.x >= 0 && p.x <= 1, `x in afara scarii: ${p.x}`);
+    assert.ok(p.y >= 0 && p.y <= 1, `y in afara scarii: ${p.y}`);
+  }
+  assert.ok(toate[toate.length - 1].x > toate[0].x, "cel mai nou punct sta la dreapta");
+});
+
+await test("T2: linia de lichidare apare doar daca intra in scara", () => {
+  const ist = istoricFrecvente(59, { pret: 0.0155 });
+  const aproape = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: "0.0150" } };
+  const departe = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: "0.0001" } };
+  const a = T.geometrieGrafic(ist, aproape, ACUM);
+  const d = T.geometrieGrafic(ist, departe, ACUM);
+  assert.ok(a.lichidare !== null && a.lichidare >= 0 && a.lichidare <= 1, "lichidarea apropiata se arata");
+  assert.equal(d.lichidare, null, "o lichidare in afara scarii nu se deseneaza la marginea de jos");
+});
+
+await test("T2: lichidarea la EXACT o latime de banda sub grid intra in scara; ceva mai departe, nu", () => {
+  const ist = istoricFrecvente(59, { pret: 0.0155 });
+  const jos = Number(BOT.buOrderData.bottom), sus = Number(BOT.buOrderData.top);
+  const latime = sus - jos;
+  const laLimita = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: String(jos - latime) } };
+  const dincoloDeLimita = { ...BOT, buOrderData: { ...BOT.buOrderData, estimateLiquidationPriceDown: String(jos - latime * 1.2) } };
+  const a = T.geometrieGrafic(ist, laLimita, ACUM);
+  const d = T.geometrieGrafic(ist, dincoloDeLimita, ACUM);
+  assert.ok(a.lichidare !== null, `lichidarea la exact o latime de banda sub grid trebuie sa intre in scara, a dat ${a.lichidare}`);
+  assert.equal(d.lichidare, null, "o lichidare la mai mult de o latime de banda sub grid nu are voie sa intre in scara");
+});
+
+await test("T2: fara grid se deseneaza tot pretul, dar fara banda", () => {
+  const fara = { ...BOT, buOrderData: { ...BOT.buOrderData, bottom: null, top: null } };
+  const g = T.geometrieGrafic(istoricFrecvente(59, { pret: 0.0155 }), fara, ACUM);
+  assert.equal(g.destul, true, "lipsa gridului nu ascunde pretul");
+  assert.equal(g.banda, null, "fara grid nu se inventeaza o banda");
+});
+
+await test("T2: intrarile fara pretPerp se sar, nu se deseneaza ca zero", () => {
+  const ist = istoricFrecvente(59, { pret: 0.0155 });
+  for (let i = 10; i < 15; i++) ist[i].pretPerp = null;
+  const g = T.geometrieGrafic(ist, BOT, ACUM);
+  const toate = g.segmente.flat();
+  assert.ok(g.minPret > 0.010, `un pretPerp null nu are voie sa traga scara la zero: min=${g.minPret}`);
+  assert.equal(toate.length, ist.length - 5, "cele 5 intrari fara pret nu produc puncte");
+});
+
+/* ── citesteGrid: un singur adevar despre grid, in frecvente() SI geometrieGrafic() ── */
+await test("[reparatie] citesteGrid: bottom lipsa (null/gol/zero) cu top valid nu fabrica gridul [0, top]", () => {
+  const ist = istoricFrecvente(99, { pret: 0.0155 });
+  for (const bottomBrut of [null, "", 0]) {
+    const botFaraJos = { ...BOT, buOrderData: { ...BOT.buOrderData, bottom: bottomBrut } };
+    const f = T.frecvente(ist, botFaraJos, ACUM).timpInInterval;
+    assert.equal(f.stare, "nu-se-poate",
+      `frecvente(): bottom=${JSON.stringify(bottomBrut)} cu top valid nu are voie sa dea un grid [0, top] (stare="${f.stare}")`);
+    assert.equal(f.valoare, null, `frecvente(): bottom=${JSON.stringify(bottomBrut)} nu are voie sa produca un procent`);
+    const g = T.geometrieGrafic(ist, botFaraJos, ACUM);
+    assert.equal(g.banda, null,
+      `geometrieGrafic(): bottom=${JSON.stringify(bottomBrut)} cu top valid nu are voie sa inventeze o banda (banda=${JSON.stringify(g.banda)})`);
+  }
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

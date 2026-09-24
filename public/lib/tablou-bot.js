@@ -189,8 +189,9 @@ var TabloBot = (function () {
     m.marginStatus = estareCont(x.marginStatus, "NORMAL");
     m.riskStatus = estareCont(x.riskStatus, "TRADING");
 
-    var jos = nr(x.bottom), sus = nr(x.top);
-    if (jos !== null && sus !== null && sus > jos && pretPerp !== null) {
+    var grid = citesteGrid(bot);
+    var jos = grid.jos, sus = grid.sus;
+    if (grid.bun && pretPerp !== null) {
       var p = 100 * (pretPerp - jos) / (sus - jos);
       m.pozitieInterval = {
         valoare: p, prag: { margine: 15, afara: 0 },
@@ -632,6 +633,158 @@ var TabloBot = (function () {
       motiv: cheie ? "preferat-disparut" : (activ ? "auto-activ" : "auto-primul") };
   }
 
+  // Cifrele sunt de DOUA feluri si gaurile din istoric le ating diferit.
+  // (a) ratele din contoare CUMULATIVE (perechi, profitNet) raman valide peste o
+  //     gaura: totalul de la Pionex include si ce s-a intamplat cat n-am privit.
+  // (b) frecventele de STARE nu: acolo gaura inseamna ca nu stim unde era pretul,
+  //     deci intrarile lipsa nu intra in numitor si se raporteaza ACOPERIREA.
+  function nuStare() { return { valoare: null, stare: "nu-se-poate", prag: null, acoperire: null }; }
+
+  // nr(null) da 0 (Number(null)===0), nu null - un camp explicit LIPSA (null,
+  // undefined, sir gol) trebuie prins INAINTE de nr(), altfel o garda scrisa
+  // ca sa prinda lipsa nu se declanseaza NICIODATA pe o lipsa reala. Masurat:
+  // profitNet=null pe ultima intrare dadea netPeZi=0 "dovedit" in loc de
+  // nu-se-poate; perechi="" pe prima intrare fabrica o rata din nimic.
+  function lipsa(v) { return v === null || v === undefined || v === ""; }
+
+  // Un singur loc care citeste gridul. Cand era copiat in trei locuri, variantele
+  // s-au desincronizat: doua din ele n-aveau `jos > 0`, iar `nr(null)` da 0, deci
+  // un `bottom` lipsa fabrica gridul [0, top] si o frecventa de 100% "dovedita".
+  function citesteGrid(bot) {
+    var x = (bot && bot.buOrderData) || {};
+    var jos = nr(x.bottom), sus = nr(x.top);
+    var bun = !lipsa(x.bottom) && !lipsa(x.top) &&
+      jos !== null && sus !== null && jos > 0 && sus > jos;
+    return { jos: jos, sus: sus, bun: bun };
+  }
+
+  function rataCumulativa(lista, camp, peZi) {
+    if (lista.length < 2) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var pBrut = lista[0][camp], uBrut = lista[lista.length - 1][camp];
+    if (lipsa(pBrut) || lipsa(uBrut)) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var p = nr(pBrut), u = nr(uBrut);
+    var t0 = nr(lista[0].t), t1 = nr(lista[lista.length - 1].t);
+    if (p === null || u === null || t0 === null || t1 === null) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    // Un contor care SCADE inseamna bot repornit sau schimbat - nu o rata negativa.
+    if (u < p) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var ore = (t1 - t0) / 3600000;
+    if (ore < 1) return { valoare: null, stare: "nu-se-poate", prag: 1 };
+    var pePas = (u - p) / ore * (peZi ? 24 : 1);
+    return { valoare: pePas, stare: ore >= 2 ? "dovedit" : "putin", prag: peZi ? 2 : 2 };
+  }
+
+  // `valid` decide ce intrari INTRA in numitor - o intrare fara pret nu e o
+  // masuratoare "afara din interval", e o masuratoare care LIPSESTE. Daca ar
+  // intra in numitor, jumatate de istoric fara pret ar injumatati tacut
+  // procentul, in loc sa scada doar acoperirea (unde chiar trebuie sa se vada).
+  function frecventaStare(lista, valid, potrivit, acum) {
+    var observate = [];
+    for (var i = 0; i < lista.length; i++) if (valid(lista[i])) observate.push(lista[i]);
+    var n = observate.length;
+    if (n < 30) return nuStare();
+    var cate = 0;
+    for (var j = 0; j < n; j++) if (potrivit(observate[j])) cate++;
+    // Acoperirea: cate masuratori VALIDE avem fata de cate minute acopera
+    // istoricul intreg (nu doar felia valida) - intrarile fara pret nu intra
+    // in numitorul procentului, dar lipsa lor tot scade acoperirea.
+    var t0 = nr(lista[0] && lista[0].t);
+    var minute = t0 === null ? 0 : Math.max(1, Math.round((acum - t0) / 60000));
+    var acoperire = Math.min(100, Math.round(100 * n / minute));
+    return { valoare: 100 * cate / n, stare: n >= 60 ? "dovedit" : "putin",
+      prag: 60, acoperire: acoperire };
+  }
+
+  function frecvente(istoric, bot, acum) {
+    var lista = [];
+    if (Array.isArray(istoric)) {
+      for (var k = 0; k < istoric.length; k++) if (istoric[k] && nr(istoric[k].t) !== null) lista.push(istoric[k]);
+    }
+    var grid = citesteGrid(bot);
+    var jos = grid.jos, sus = grid.sus, areGrid = grid.bun;
+    var pozitia = function (h) {
+      if (lipsa(h.pretPerp) || !areGrid) return null;
+      var pp = nr(h.pretPerp);
+      if (pp === null) return null;
+      return 100 * (pp - jos) / (sus - jos);
+    };
+    var arePret = function (h) { return pozitia(h) !== null; };
+    return {
+      perechiPeOra: rataCumulativa(lista, "perechi", false),
+      netPeZi: rataCumulativa(lista, "profitNet", true),
+      timpInInterval: areGrid ? frecventaStare(lista, arePret, function (h) {
+        var p = pozitia(h); return p !== null && p >= 0 && p <= 100;
+      }, acum) : nuStare(),
+      desLaMargine: areGrid ? frecventaStare(lista, arePret, function (h) {
+        var p = pozitia(h); return p !== null && p >= 0 && p <= 100 && (p < 15 || p > 85);
+      }, acum) : nuStare()
+    };
+  }
+
+  // Graficul se construieste aici (pur), ca sa poata fi probat fara browser.
+  // Regulile care-l impiedica sa minta sunt in spec; fiecare are proba ei.
+  var GAURA_GRAFIC_MS = 5 * 60000;
+  function geometrieGrafic(istoric, bot, acum) {
+    var gol = { destul: false, segmente: [], banda: null, lichidare: null,
+      minPret: null, maxPret: null, deLa: null, panaLa: null };
+    var puncte = [];
+    if (Array.isArray(istoric)) {
+      for (var i = 0; i < istoric.length; i++) {
+        var h = istoric[i]; if (!h) continue;
+        var t = nr(h.t), p = nr(h.pretPerp);
+        // Un pretPerp lipsa e null, si nr(null) da 0 - un 0 ar trage scara la zero.
+        if (t === null || p === null || !(p > 0)) continue;
+        puncte.push({ t: t, p: p });
+      }
+    }
+    if (puncte.length < 10) return gol;
+    puncte.sort(function (a, b) { return a.t - b.t; });
+
+    var x = (bot && bot.buOrderData) || {};
+    var grid = citesteGrid(bot);
+    var jos = grid.jos, sus = grid.sus, areGrid = grid.bun;
+    var lich = nr(x.estimateLiquidationPriceDown);
+
+    var minP = puncte[0].p, maxP = puncte[0].p;
+    for (var j = 1; j < puncte.length; j++) {
+      if (puncte[j].p < minP) minP = puncte[j].p;
+      if (puncte[j].p > maxP) maxP = puncte[j].p;
+    }
+    // Scara cuprinde MEREU banda gridului: altfel un pret fugit departe ar turti
+    // banda intr-o dunga si ar parea ca pretul e lipit de ea.
+    if (areGrid) { if (jos < minP) minP = jos; if (sus > maxP) maxP = sus; }
+    // Linia de lichidare e cel mai periculos lucru de pe grafic. Cand e aproape,
+    // scara se intinde ca s-o cuprinda - a o ascunde tocmai cand conteaza ar fi
+    // exact boala pe care ecranul asta o vaneaza. Cand e departe, nu se deseneaza:
+    // distanta pana la lichidare se vede oricum ca cifra, in masuri.
+    if (areGrid && lich !== null && lich > 0) {
+      var latimeBanda = sus - jos;
+      if (lich >= jos - latimeBanda && lich < minP) minP = lich;
+      if (lich <= sus + latimeBanda && lich > maxP) maxP = lich;
+    }
+    var marja = (maxP - minP) * 0.02 || maxP * 0.01 || 1;
+    minP -= marja; maxP += marja;
+
+    var deLa = puncte[0].t, panaLa = puncte[puncte.length - 1].t;
+    var lat = panaLa - deLa || 1, inalt = maxP - minP || 1;
+    var nx = function (t) { return (t - deLa) / lat; };
+    var ny = function (p) { return (p - minP) / inalt; };
+
+    var segmente = [], curent = [];
+    for (var k = 0; k < puncte.length; k++) {
+      if (k > 0 && puncte[k].t - puncte[k - 1].t > GAURA_GRAFIC_MS) {
+        if (curent.length) segmente.push(curent);
+        curent = [];
+      }
+      curent.push({ x: nx(puncte[k].t), y: ny(puncte[k].p) });
+    }
+    if (curent.length) segmente.push(curent);
+
+    return { destul: true, segmente: segmente,
+      banda: areGrid ? { jos: ny(jos), sus: ny(sus) } : null,
+      lichidare: (lich !== null && lich > minP && lich < maxP) ? ny(lich) : null,
+      minPret: minP, maxPret: maxP, deLa: deLa, panaLa: panaLa };
+  }
+
   var ZI = 24 * 3600000, MAXIM = 1440;
   function istoricAdauga(istoric, intrare, acum) {
     var t = nr(intrare.t);
@@ -655,6 +808,7 @@ var TabloBot = (function () {
   }
 
   return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte,
-    istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea };
+    istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea,
+    frecvente: frecvente, geometrieGrafic: geometrieGrafic };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloBot = TabloBot;

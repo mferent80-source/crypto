@@ -634,20 +634,20 @@ async function main() {
     });
 
     /* --- 3. iesirea prin bara de tab-uri (.tabs, show() direct) lasa WS/ceas pornite --- */
-    await test("10. iesirea prin .tabs (show() direct, nu navTo) opreste tot ceasul si WebSocket-ul", async () => {
+    await test("10. iesirea prin .tabs (show() direct, nu navTo) inchide WS-ul si scade cadenta colectorului la 60 s", async () => {
       await incarcaBotSanatos({ strategyId: "8103", baza: "ADA.PERP" });
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(300);
-      const ceasInainte = await b.ev(`tbStare.ceas !== null`);
+      const cadentaInainte = await b.ev(`tbCadentaMs()`);
       const wsInainte = await b.ev(`tbStare.ws !== null`);
-      assert.ok(ceasInainte, "precheck: ceasul ar trebui pornit dupa navTo('tabloubot', true)");
+      assert.equal(cadentaInainte, 8000, "precheck: cadenta colectorului ar trebui 8000 cat esti pe tablou");
       assert.ok(wsInainte, "precheck: WebSocket-ul ar trebui deschis dupa navTo('tabloubot', true)");
       // butonul din .tabs cheama show('dash') DIRECT, nu navTo() - exact drumul care scurgea inainte
       await b.ev(`document.querySelector('.tabs .tab')?.click()`);
       await asteapta(200);
-      const ceasDupa = await b.ev(`tbStare.ceas === null`);
+      const cadentaDupa = await b.ev(`tbCadentaMs()`);
       const wsDupa = await b.ev(`tbStare.ws === null`);
-      assert.ok(ceasDupa, "ceasul trebuie oprit si la iesirea prin bara de tab-uri, nu doar prin navTo");
+      assert.equal(cadentaDupa, 60000, "cadenta colectorului trebuie sa scada la 60 s si la iesirea prin bara de tab-uri, nu doar prin navTo");
       assert.ok(wsDupa, "WebSocket-ul trebuie inchis si la iesirea prin bara de tab-uri, nu doar prin navTo");
     });
 
@@ -1475,6 +1475,75 @@ async function main() {
       assert.ok(String(zona).length > 0, "n-am gasit cardul de parola");
       assert.ok(!/sessionStorage|browser session ends|this session|session only/i.test(String(zona)),
         `textul inca promite ca se sterge la inchiderea sesiunii: "${String(zona).slice(0, 220)}"`);
+    });
+
+    await test("22. colectorul scrie in istoric si de pe ALT ecran", async () => {
+      const id = "9401";
+      await b.ev(`Object.keys(localStorage).filter(k=>k.startsWith('tabloBotIstoric_v1_')).forEach(k=>localStorage.removeItem(k))`);
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: id, baza: "ADA.PERP" }))] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`navTo('dash', true)`);                 // plecam de pe tablou
+      await b.ev(`window.__proba.setItemLog = []`);
+      await b.ev(`tbColectorTick()`);                     // un tic, fara sa asteptam 60 s
+      await asteapta(800);
+      const scris = await b.ev(`window.__proba.setItemLog.some(k=>k==='tabloBotIstoric_v1_${id}')`);
+      assert.ok(scris, "colectorul trebuie sa adune istoric si cand esti pe alt ecran");
+    });
+
+    await test("23. colectorul NU scrie in timpul unei pene de ruta", async () => {
+      await b.ev(`window.__proba.setItemLog = []`);
+      await seteazaMock(b, "botOrders", { reteaPicata: true });
+      await b.ev(`tbColectorTick()`);
+      await asteapta(800);
+      const scrieri = await b.ev(`window.__proba.setItemLog.filter(k=>k.startsWith('tabloBotIstoric_v1_')).length`);
+      assert.equal(scrieri, 0, "o pana de retea nu are voie sa devina dovada in istoric");
+    });
+
+    await test("24. in fundal NU se deschide WebSocket - doar cand esti pe tablou", async () => {
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: "9402", baza: "ADA.PERP" }))] }, stare: 200 });
+      await b.ev(`navTo('dash', true)`);
+      await b.ev(`tbColectorTick()`);
+      await asteapta(800);
+      const wsInFundal = await b.ev(`!!(tbStare.ws && tbStare.ws.readyState !== 3)`);
+      assert.equal(wsInFundal, false, "un WebSocket deschis pe toate ecranele e risipa si tine socketul ocupat");
+    });
+
+    await test("25. istoricul retine si banii, nu doar perechile", async () => {
+      const id = "9501";
+      await b.ev(`Object.keys(localStorage).filter(k=>k.startsWith('tabloBotIstoric_v1_')).forEach(k=>localStorage.removeItem(k))`);
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: id, baza: "ADA.PERP" }))] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      await asteapta(500);
+      const ultima = await b.ev(`(() => {
+        const l = JSON.parse(localStorage.getItem('tabloBotIstoric_v1_${id}') || '[]');
+        return l.length ? l[l.length - 1] : null;
+      })()`);
+      assert.ok(ultima, "ar trebui sa existe o intrare de istoric");
+      for (const camp of ["profitNet", "comisioane", "gridProfitBrut", "investit"]) {
+        assert.ok(camp in ultima, `istoricul trebuie sa retina ${camp} - fara el nu se pot socoti banii in timp`);
+      }
+
+      // Fiecare camp de bani, PE RAND: lipsa la SURSA (Pionex nu-l trimite) nu
+      // are voie sa minta cu 0 in istoric - Number(x)||0 ar fi trecut cu 0 in loc
+      // de null. Verificam toate patru campurile, nu doar profitNet - un singur
+      // camp pazit lasa celelalte trei libere sa minta (asa a picat revizia).
+      let idBaniProba = 9502;
+      for (const camp of ["profitNet", "comisioane", "gridProfitBrut", "investit"]) {
+        const idCamp = String(idBaniProba++);
+        const botFaraCamp = botNormalizat(botBrut({ strategyId: idCamp, baza: "ADA.PERP" }));
+        delete botFaraCamp[camp];
+        await seteazaMock(b, "botOrders", { corp: { bots: [botFaraCamp] }, stare: 200 });
+        await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+        await b.ev(`tbAduDate()`);
+        await asteapta(500);
+        const ultimaFaraCamp = await b.ev(`(() => {
+          const l = JSON.parse(localStorage.getItem('tabloBotIstoric_v1_${idCamp}') || '[]');
+          return l.length ? l[l.length - 1] : null;
+        })()`);
+        assert.ok(ultimaFaraCamp, `ar trebui sa existe o intrare de istoric pentru botul fara ${camp}`);
+        assert.equal(ultimaFaraCamp[camp], null, `${camp} lipsa la sursa trebuie sa ramana null, nu 0 (Number(x)||0 ar minti aici)`);
+      }
     });
 
   } finally {
