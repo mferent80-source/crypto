@@ -34,7 +34,8 @@ import { rmSync, existsSync } from "node:fs";
 import assert from "node:assert/strict";
 
 const URL_T = (process.argv[2] || "http://127.0.0.1:8788/").replace(/\/+$/, "") + "/";
-const TOKEN = process.argv[3] || "";
+// un --doar=... pus pe locul 3 NU e token (se lua drept parola si strica probele de autentificare)
+const TOKEN = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : "";
 const DOSAR_CERUT = process.argv[4] && !process.argv[4].startsWith("--") ? process.argv[4] : null;
 const DOAR = (process.argv.find((x) => x.startsWith("--doar=")) || "").slice(7).toLowerCase();
 
@@ -1046,6 +1047,40 @@ async function main() {
       assert.equal(r.cu010.pass, true, `seria curata ar trebui sa treaca: ${r.cu010.current}`);
       assert.equal(r.cu0.pass, true);
       assert.match(r.zg010.current, /IC95/, `nu se vede intervalul: ${r.zg010.current}`);
+    });
+
+    /* ═══ v74.6 · dupa Task 1: 10 parole gresite/minut => 429 AUTH_RATE_LIMITED ═══ */
+    await test("R1. un token respins (AUTH_INVALID) nu se mai trimite automat pana nu-l schimbi", async () => {
+      const r = await b.ev(`(async () => {
+        try { localStorage.setItem("cryptoRadarApiTokenV54", "parola-gresita-r1"); } catch (e) {}
+        window.__proba.botOrders = { corp: { error: "AUTH_INVALID", authenticated: false }, stare: 401 };
+        const n0 = window.__proba.calls.botOrders;
+        for (let i = 0; i < 3; i++) { try { await getJSON("/api/bot-orders"); } catch (e) {} await new Promise(r => setTimeout(r, 50)); }
+        const dupaTrei = window.__proba.calls.botOrders - n0;
+        // aceeasi parola, salvata din nou (ex. serverul a fost repornit cu ea): omul cere explicit o noua incercare
+        document.getElementById("apiSessionToken").value = "parola-gresita-r1"; saveApiSessionToken();
+        try { await getJSON("/api/bot-orders"); } catch (e) {}
+        const dupaResalvare = window.__proba.calls.botOrders - n0;
+        document.getElementById("apiSessionToken").value = "parola-noua-r1"; saveApiSessionToken();
+        try { await getJSON("/api/bot-orders"); } catch (e) {}
+        const dupaSchimbare = window.__proba.calls.botOrders - n0;
+        clearApiSessionToken();
+        return { dupaTrei, dupaResalvare, dupaSchimbare };
+      })()`);
+      assert.equal(r.dupaTrei, 1, `tokenul respins a mai plecat spre server de ${r.dupaTrei} ori (10 greseli/minut blocheaza IP-ul)`);
+      assert.equal(r.dupaResalvare, 2, "apasarea pe 'Tine minte parola' (chiar aceeasi) trebuie sa permita o noua incercare");
+      assert.equal(r.dupaSchimbare, 3, "dupa ce omul pune alta parola, cererea trebuie sa plece din nou");
+    });
+
+    await test("R2. 429 AUTH_RATE_LIMITED: spune 'prea multe parole gresite', cu drumul spre Setari", async () => {
+      await seteazaMock(b, "botOrders", { corp: { error: "AUTH_RATE_LIMITED", authenticated: false, retryAfter: 60 }, stare: 429 });
+      await b.ev(`tbAduDate()`);
+      const titlu = await textEl(b, "tbTitlu"), ceFac = await textEl(b, "tbCeFac");
+      assert.match(`${titlu} ${ceFac}`, /parole gre[șs]ite/i, `mesajul nu deosebeste blocarea pe parole gresite: ${titlu} | ${ceFac}`);
+      assert.match(String(ceFac), /minut/, ceFac);
+      assert.equal(await b.ev(`document.getElementById('tbSpreSetari').hidden`), false, "lipseste butonul spre Setari");
+      await b.ev(`incarcaBoti(false)`);
+      assert.match(await b.ev(`document.getElementById('botiRanduri').textContent`), /parole gre[șs]ite/i);
     });
 
     /* ═══ v74.4: parola nu se mai cere la fiecare repornire ═══════════════

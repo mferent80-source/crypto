@@ -3106,8 +3106,8 @@ const APP_API_TOKEN_SESSION_KEY="cryptoRadarApiTokenV54";
 // stergea la inchiderea tabului, deci pe telefon o cerea de fiecare data.
 // sessionStorage ramane citit ca sa nu cada sesiunea deschisa in momentul livrarii.
 function apiSessionToken(){try{return localStorage.getItem(APP_API_TOKEN_SESSION_KEY)||sessionStorage.getItem(APP_API_TOKEN_SESSION_KEY)||""}catch{return ""}}
-function saveApiSessionToken(){const v=$("apiSessionToken")?.value?.trim()||"";try{if(v){localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}else{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}}catch{}renderApiAuthStatus();toast(v?"Parola e ținută minte pe acest dispozitiv":"Parola a fost ștearsă",v?"good":"warn")}
-function clearApiSessionToken(){try{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}catch{}if($("apiSessionToken"))$("apiSessionToken").value="";renderApiAuthStatus();toast("Parola a fost uitată de pe acest dispozitiv","good")}
+function saveApiSessionToken(){apiTokenRespins=null;const v=$("apiSessionToken")?.value?.trim()||"";try{if(v){localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}else{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}}catch{}renderApiAuthStatus();toast(v?"Parola e ținută minte pe acest dispozitiv":"Parola a fost ștearsă",v?"good":"warn")}
+function clearApiSessionToken(){apiTokenRespins=null;try{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}catch{}if($("apiSessionToken"))$("apiSessionToken").value="";renderApiAuthStatus();toast("Parola a fost uitată de pe acest dispozitiv","good")}
 // Un camp GOL peste o parola salvata l-ar face sa creada ca trebuie s-o puna
 // din nou - adica exact ce ne-am propus sa nu mai faca. Se precompleteaza.
 function renderApiAuthStatus(){const t=apiSessionToken();
@@ -3115,7 +3115,12 @@ function renderApiAuthStatus(){const t=apiSessionToken();
   const c=$("apiSessionToken");if(c&&!c.value&&t)c.value=t;
   // Prima deschidere fara parola: aplicatia spune UNDE se pune, nu doar "401".
   if($("parolaLipsa"))$("parolaLipsa").hidden=!!t}
-function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});if(same){const token=apiSessionToken();if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials})}
+// v74.6: serverul blocheaza IP-ul un minut (429 AUTH_RATE_LIMITED) dupa 10
+// parole gresite pe minut - iar Tabloul intreaba la 8 s. Un token pe care
+// serverul l-a respins (AUTH_INVALID) nu mai pleaca AUTOMAT pana cand omul
+// nu pune alta parola (sau o salveaza din nou) in Setari.
+let apiTokenRespins=null;
+function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials}).then(r=>{if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID")apiTokenRespins=token;return r},()=>r);return r})}
 async function getJSON(url){
   const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
   const raw=await r.text();
@@ -4455,7 +4460,15 @@ function mergiLaParola(){
 // fetch() cazut arunca TypeError; fara nume, "reteaua a picat" nu se mai
 // deosebeste de o eroare oarecare in tablou-bot.js (explicaEroarea).
 function textEroare(e){const m=String(e&&e.message!=null?e.message:e);return e&&e.name==="TypeError"&&!/^TypeError/.test(m)?"TypeError: "+m:m}
-function eroareDeParola(mesaj,status){return status===401||/AUTH_(REQUIRED|INVALID)/.test(String(mesaj||''))}
+function eroareDeParola(mesaj,status){return status===401||/AUTH_(REQUIRED|INVALID|RATE_LIMITED)/.test(String(mesaj||''))}
+// Traducerea erorilor pentru om: cea de la tablou-bot.js (Task 2), plus
+// blocarea pe parole gresite, care vine de la server si nu e o eroare Pionex.
+function explicaEroareaAplicatiei(mesaj,status){
+  if(/AUTH_RATE_LIMITED/.test(String(mesaj||'')))return {titlu:"Prea multe parole greșite",
+    ceFac:"Serverul a oprit pentru un minut cererile de pe acest dispozitiv, după prea multe parole greșite. Așteaptă un minut și verifică parola din Setări (trebuie să fie exact textul APP_API_TOKEN de la pornire)."};
+  if(typeof TabloBot!=='undefined'&&TabloBot.explicaEroarea)return TabloBot.explicaEroarea(mesaj,status,(typeof location!=='undefined'&&location.hostname)||'');
+  return {titlu:"Nu am putut citi boții",ceFac:String(mesaj||"")}
+}
 async function incarcaBoti(cuToast=false){
   const stare=$('botiStare'),randuri=$('botiRanduri');
   if(stare)stare.textContent='CITESC…';
@@ -4464,7 +4477,7 @@ async function incarcaBoti(cuToast=false){
   try{d=await getJSON('/api/bot-orders');if(!d||!Array.isArray(d.bots))throw new Error('Raspuns nevalid de la /api/bot-orders - lipseste lista de boti.')}
   catch(e){
     // Acelasi traducator ca pe Tablou (tablou-bot.js): omul afla CE sa faca, nu codul.
-    const ex=typeof TabloBot!=='undefined'&&TabloBot.explicaEroarea?TabloBot.explicaEroarea(textEroare(e),e.status,(typeof location!=='undefined'&&location.hostname)||''):{titlu:'Nu am putut citi boții',ceFac:e.message};
+    const ex=explicaEroareaAplicatiei(textEroare(e),e.status);
     const buton=eroareDeParola(e.message,e.status)?'<br><button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>':'';
     if(stare){stare.textContent='EROARE';stare.className='stockBadge bad'}
     if(randuri)randuri.innerHTML=`<div class="emptyState"><b>${escapeHtml(ex.titlu)}</b><br>${escapeHtml(ex.ceFac)}${buton}</div>`;
@@ -4727,8 +4740,7 @@ function renderTabloBot(){
   if(eroareActiva){
     // "AUTH_REQUIRED" e corect tehnic si inutil pentru om: nu-i spune nici unde
     // e, nici ce are de facut. explicaEroarea traduce in ce trebuie sa faca.
-    var ex=TabloBot.explicaEroarea(tbStare.eroare,tbStare.eroareStatus,
-      (typeof location!=="undefined"&&location.hostname)||"");
+    var ex=explicaEroareaAplicatiei(tbStare.eroare,tbStare.eroareStatus);
     v={nivel:"EROARE",titlu:ex.titlu,ceFac:ex.ceFac,declansator:null};
   }else if(b&&tbStare.stocareStricata){
     v={nivel:"EROARE",titlu:"Stocarea locală nu funcționează",
