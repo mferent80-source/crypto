@@ -24,3 +24,4 @@ desktop.ini
 
 # Colectorul de acasa: istoricul, starea alertelor, canalul ntfy (secret), jurnalul
 data/
+.superpowers/

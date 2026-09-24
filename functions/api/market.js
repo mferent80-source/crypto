@@ -63,7 +63,8 @@ export async function onRequestGet({request,env}){
   if(type==="health")return ok({ok:true,service:"crypto-radar",version:"v56"});
   if(String(type||"").startsWith("pionex_")){const auth=await requireApiAuth(request,env,"pionex-public-proxy",45);if(!auth.ok)return authErrorResponse(auth,H)}
   if(type==="pionex_symbols"){
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=SPOT`,3600,env))}catch(e){return softFail("Pionex symbols unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    const mk=String(u.searchParams.get("market")||"").toUpperCase()==="PERP"?"PERP":"SPOT";
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=${mk}`,3600,env))}catch(e){return softFail("Pionex symbols unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_tickers"){
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/tickers?type=SPOT`,30,env))}catch(e){return softFail("Pionex tickers unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
@@ -73,7 +74,10 @@ export async function onRequestGet({request,env}){
     const pi=(u.searchParams.get("interval")||"4H").toUpperCase();
     const allowed=new Set(["1M","5M","15M","30M","60M","4H","8H","12H","1D"]);
     const interval=allowed.has(pi)?pi:"4H",limit=limita(u,300,1,500);
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}`,interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300,env))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    // v78: endTime (ms) pentru paginarea in urma a lumanarilor; trimis doar cand e numar pozitiv.
+    const etRaw=u.searchParams.get("endTime"),et=Math.floor(Number(etRaw));
+    const endQ=etRaw&&Number.isFinite(et)&&et>0?`&endTime=${et}`:"";
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}${endQ}`,interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300,env))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_trades"){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=limita(u,500,10,500);

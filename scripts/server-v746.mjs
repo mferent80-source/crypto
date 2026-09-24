@@ -271,6 +271,24 @@ await test("11 · limit=abc pe klines/trades/depth -> valoarea implicita", async
   }
 });
 
+// ---- (11b) v78: endTime la lumanari + simboluri PERP ----
+await test("11b · klines cu endTime numeric -> trimis la Pionex; endTime=abc -> nu", async () => {
+  fetchStub(() => ({ corp: { result: true, data: { klines: [] } } }));
+  await cheama("market", "type=pionex_klines&symbol=MET_USDT_PERP&interval=15M&limit=500&endTime=1789388100000", { APP_API_TOKEN: TOKEN });
+  assert.ok(cereri[0].url.includes("endTime=1789388100000"), cereri[0].url);
+  fetchStub(() => ({ corp: { result: true, data: { klines: [] } } }));
+  await cheama("market", "type=pionex_klines&symbol=MET_USDT_PERP&interval=15M&endTime=abc", { APP_API_TOKEN: TOKEN });
+  assert.ok(!/endTime/.test(cereri[0].url), cereri[0].url);
+});
+await test("11c · pionex_symbols&market=PERP -> type=PERP; fara market -> SPOT", async () => {
+  fetchStub(() => ({ corp: { result: true, data: { symbols: [] } } }));
+  await cheama("market", "type=pionex_symbols&market=PERP", { APP_API_TOKEN: TOKEN });
+  assert.ok(cereri[0].url.includes("type=PERP"), cereri[0].url);
+  fetchStub(() => ({ corp: { result: true, data: { symbols: [] } } }));
+  await cheama("market", "type=pionex_symbols", { APP_API_TOKEN: TOKEN });
+  assert.ok(cereri[0].url.includes("type=SPOT"), cereri[0].url);
+});
+
 // ---- (12) paginarea `next` doar pe gazda asteptata ----
 await test("12 · Whale Alert / Coin Metrics: `next` pe alta gazda NU e urmat (cheia nu pleaca)", async () => {
   fetchStub((u) => {
