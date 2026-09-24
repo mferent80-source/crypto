@@ -4194,7 +4194,7 @@ async function derivatives(){
  let sym=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";
  let d=null,histOI=null,fundingHist=null,motivFutures="";
  try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}
- catch(e){motivFutures=eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
+ catch(e){motivFutures=/AUTH_RATE_LIMITED/.test(String(e.message||""))||e.status===429&&/AUTH_/.test(String(e.message||""))?"Prea multe parole greșite de pe acest calculator - așteaptă un minut și verifică parola din Setări (⚙).":eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
  if(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null)){
    try{
     let [fr,oi,ls,oih,fh]=await Promise.all([
@@ -4512,7 +4512,7 @@ function tbLichidareDinMasura(ml){return botiLichidareText({lichidarePartea:ml&&
 function tbLichidareScurt(ml){
   const d=ml&&ml.valoare,parte=ml&&(ml.partea==="sus"||ml.partea==="jos")?ml.partea:null;
   if(d==null)return "—";
-  if(ml.depasita||d<0)return "DEPĂȘITĂ"+(parte?" ("+parte+")":"")+" "+tbFormateazaSemn(+d,2)+"%";
+  if(ml.depasita||d<0)return "DEPĂȘITĂ"+(parte?" ("+parte+")":"")+" cu "+Math.abs(+d).toFixed(2)+"%";
   return parte?parte+" "+(parte==="sus"?"+":"\u2212")+Math.abs(+d).toFixed(2)+"%":tbFormateazaSemn(+d,2)+"%";
 }
 function botiLichidareHtml(b){const l=botiLichidareText(b);return `<span class="${l.cls}">${escapeHtml(l.text)}</span><br><span class="fine">față de ultimul preț</span>`}

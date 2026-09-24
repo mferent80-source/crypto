@@ -1597,5 +1597,17 @@ await test("eroare: 4xx necunoscut NU se confunda cu 5xx", () => {
   assert.match(e.ceFac, /BAD_REQUEST/, "mesajul brut ramane la vedere");
 });
 
+await test("[finala] limita NOASTRA (RATE_LIMITED) pe pagina publicata nu e pusa in seama lui Pionex", () => {
+  const e = T.explicaEroarea("RATE_LIMITED", 429, "crypto-wuy.pages.dev");
+  assert.doesNotMatch(e.titlu, /Pionex/, `"${e.titlu}"`);
+  const p = T.explicaEroarea("Pionex rate limit: retry in 5s", 429, "crypto-wuy.pages.dev");
+  assert.match(p.titlu, /Pionex refuz/, "refuzul real al lui Pionex ramane explicat ca atare");
+});
+
+await test("[finala] NO_ROUTE -> spune ca serverul e mai vechi decat pagina, nu codul brut", () => {
+  const e = T.explicaEroarea("NO_ROUTE", 404, "127.0.0.1");
+  assert.match(e.ceFac, /versiune mai veche/, `"${e.ceFac}"`);
+});
+
 console.log(`\nV73_TABLOU ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

@@ -575,11 +575,17 @@ var TabloBot = (function () {
         ceFac: "Bifează «Bot reading» la cheia Pionex (Pionex › API Management - e doar " +
           "citire) sau fă o cheie nouă cu el." };
     }
-    if (eRitm && publicat) {
+    // Limita NOASTRA (RATE_LIMITED, 30/min) nu e refuzul de adresa al lui Pionex.
+    if (eRitm && publicat && !/\bRATE_LIMITED\b/.test(brut)) {
       return { local: local, titlu: "Pionex refuză cererile de aici",
         ceFac: "Nu e vina ta și nu trece cu așteptarea: măsurat, refuzul vine cu " +
           "găleata de jetoane PLINĂ, deci e refuz de adresă, nu limitare de ritm. " +
           "De acasă, prin PORNESTE-CRYPTO-RADAR.bat, merge." };
+    }
+    if (/NO_ROUTE/.test(brut)) {
+      return { local: local, titlu: "Serverul nu cunoaște cererea asta",
+        ceFac: "Serverul de acasă rulează o versiune mai veche decât pagina - închide " +
+          "fereastra Radarului și pornește din nou PORNESTE-CRYPTO-RADAR.bat." };
     }
     if (eRitm) {
       return { local: local, titlu: "Prea multe cereri",
