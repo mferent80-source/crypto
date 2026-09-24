@@ -1366,3 +1366,5 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #tabloubot .tbNivelGrid{stroke:rgba(144,160,182,.13);stroke-width:1;vector-effect:non-scaling-stroke}
 @media(max-width:560px){#tabloubot #tbSfaturi{grid-template-columns:1fr}#tabloubot .tbScenCap,#tabloubot .tbScenRand{grid-template-columns:1.4fr .6fr 1fr;font-size:14px}}
+
+.pePublicat{margin:0 0 10px;font-size:16px;line-height:1.5}.pePublicat a{margin-left:8px;display:inline-block;padding:6px 14px;border:1px solid var(--accent);border-radius:8px;color:var(--text);text-decoration:none;font-weight:800}.pePublicat a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.pePublicat[hidden]{display:none!important}

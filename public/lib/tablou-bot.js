@@ -581,7 +581,7 @@ var TabloBot = (function () {
       return { local: local, titlu: "Pionex refuză cererile de aici",
         ceFac: "Nu e vina ta și nu trece cu așteptarea: măsurat, refuzul vine cu " +
           "găleata de jetoane PLINĂ, deci e refuz de adresă, nu limitare de ritm. " +
-          "De acasă, prin PORNESTE-CRYPTO-RADAR.bat, merge." };
+          "De acasă merge: deschide „Crypto Radar (local)” de pe Desktop (http://127.0.0.1:8788)." };
     }
     if (/NO_ROUTE/.test(brut)) {
       return { local: local, titlu: "Serverul nu cunoaște cererea asta",

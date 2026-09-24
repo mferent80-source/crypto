@@ -3137,7 +3137,10 @@ function renderApiAuthStatus(){const t=apiSessionToken();
   if($("apiAuthStatus"))$("apiAuthStatus").textContent=t?"ȚINUTĂ MINTE PE ACEST DISPOZITIV":"NEPUSĂ";
   const c=$("apiSessionToken");if(c&&!c.value&&t)c.value=t;
   // Prima deschidere fara parola: aplicatia spune UNDE se pune, nu doar "401".
-  if($("parolaLipsa"))$("parolaLipsa").hidden=!!t}
+  if($("parolaLipsa"))$("parolaLipsa").hidden=!!t;
+  // v77.3: pe versiunea publicata (Cloudflare) botii nu se pot vedea niciodata -
+  // se spune sus, pe orice ecran, cu drumul spre Radarul de acasa.
+  if($("pePublicat"))$("pePublicat").hidden=!/\.pages\.dev$|\.workers\.dev$/.test(String(location.hostname||"").toLowerCase())}
 // v74.6: serverul blocheaza IP-ul un minut (429 AUTH_RATE_LIMITED) dupa 10
 // parole gresite pe minut - iar Tabloul intreaba la 8 s. Un token pe care
 // serverul l-a respins (AUTH_INVALID) nu mai pleaca AUTOMAT pana cand omul
