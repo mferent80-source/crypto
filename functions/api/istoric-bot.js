@@ -86,7 +86,7 @@ export async function onRequestPost({request,env}){
   }
   if(action==="config"){
     const vechi=(await citesteConfig(env))||{},nou={...vechi};
-    if(corp&&corp.canal!=null){const c=String(corp.canal);if(!["radar","ntfy","telegram"].includes(c))return json({error:"canal invalid"},400);nou.canal=c}
+    if(corp&&corp.canal!=null){const c=String(corp.canal);if(!["radar","ntfy","telegram","discord"].includes(c))return json({error:"canal invalid"},400);nou.canal=c}
     if(corp&&corp.ntfyTopic!=null){if(!/^[A-Za-z0-9_-]{8,64}$/.test(String(corp.ntfyTopic)))return json({error:"ntfyTopic invalid"},400);nou.ntfyTopic=String(corp.ntfyTopic)}
     const la=nr(corp&&corp.colectorLa);if(la!==null)nou.colectorLa=la;
     await env.ISTORIC.put("config",JSON.stringify(nou));

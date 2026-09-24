@@ -189,6 +189,24 @@ await test("tura de clasament (v79.1, modul testabil): top dupa volum, o cerere 
   assert.equal(r.urcat, false); assert.equal(urcari.length, 0); assert.ok(jurnal.some((l) => /NEURCAT/.test(l)));
 });
 
+await test("canalul Discord (v79.2): webhook validat, embed colorat pe nivel, text simplu pentru notificare, 2xx = trimis, 4xx/retea = netrimis", async () => {
+  const { esteWebhookDiscord, mesajDiscord, trimiteDiscord } = await import("./lib/canal-discord.mjs");
+  assert.equal(esteWebhookDiscord("https://discord.com/api/webhooks/123456/abc_DEF-ghi"), true);
+  assert.equal(esteWebhookDiscord("https://discord.com/api/webhooks/123456/abc?x=1"), false);
+  assert.equal(esteWebhookDiscord(""), false); assert.equal(esteWebhookDiscord(null), false);
+  const m = mesajDiscord({ nivel: "critic", titlu: "MET: lichidarea la 7,5%", mesaj: "Mai sunt 7,5%.", t: 1_790_000_000_000 });
+  assert.equal(m.content, "🔴 MET: lichidarea la 7,5%"); assert.equal(m.embeds[0].color, 0xdc283c); assert.equal(m.embeds[0].description, "Mai sunt 7,5%.");
+  assert.equal(mesajDiscord({ nivel: "gresit", titlu: "x" }).embeds[0].color, 0x00aa5a, "nivel necunoscut -> info");
+  const jur = [], cereri = [];
+  const fetchFals = (stare) => async (url, opt) => { cereri.push({ url, corp: JSON.parse(opt.body) }); return { ok: stare < 300, status: stare, text: async () => "corp" }; };
+  assert.equal(await trimiteDiscord({ nivel: "atentie", titlu: "T" }, { fetch: fetchFals(204), webhook: "https://discord.com/api/webhooks/1/a", jurnal: (...a) => jur.push(a.join(" ")) }), true);
+  assert.ok(cereri[0].url.startsWith("https://discord.com/api/webhooks/1/a")); assert.equal(cereri[0].corp.username, "Crypto Radar");
+  assert.equal(await trimiteDiscord({ nivel: "atentie", titlu: "T" }, { fetch: fetchFals(429), webhook: "https://discord.com/api/webhooks/1/a", jurnal: (...a) => jur.push(a.join(" ")) }), false);
+  assert.equal(await trimiteDiscord({ nivel: "atentie", titlu: "T" }, { fetch: async () => { throw new Error("retea"); }, webhook: "https://discord.com/api/webhooks/1/a", jurnal: (...a) => jur.push(a.join(" ")) }), false);
+  assert.equal(await trimiteDiscord({ nivel: "atentie", titlu: "T" }, { fetch: fetchFals(204), webhook: "", jurnal: (...a) => jur.push(a.join(" ")) }), false, "fara webhook -> netrimis, cu motiv in jurnal");
+  assert.ok(jur.some((l) => /DISCORD_WEBHOOK/.test(l)));
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });

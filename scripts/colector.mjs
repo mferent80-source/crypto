@@ -11,6 +11,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
+import { trimiteDiscord } from "./lib/canal-discord.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -59,7 +60,11 @@ if (!TOKEN) { jurnal("lipsește APP_API_TOKEN în .dev.vars - ies"); process.exi
 // v79.1: canalul extern e OPRIT implicit (omul nu lucreaza cu ntfy). Alertele merg mereu
 // in KV-ul de acasa (istoric-bot?action=alerte) si se vad in Radar; ALERTE_CANAL=ntfy le
 // trimite si pe ntfy. Alt canal (telegram etc.) se leaga in trimiteAlerta(), o singura data.
-const CANAL = (process.env.ALERTE_CANAL || "radar").toLowerCase();
+// ALERTE_CANAL si DISCORD_WEBHOOK se citesc din .dev.vars (sau din mediu).
+const VARS = citesteVarsSigur();
+const CANAL = (process.env.ALERTE_CANAL || VARS.ALERTE_CANAL || (VARS.DISCORD_WEBHOOK ? "discord" : "radar")).toLowerCase();
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || VARS.DISCORD_WEBHOOK || "";
+function citesteVarsSigur() { try { return citesteVars(); } catch { return {}; } }
 // Canalul ntfy: nume secret, generat o data si pastrat in data/ntfy.json (doar cand e cerut).
 const NTFY_FIS = path.join(DATA, "ntfy.json");
 function canalNtfy() {
@@ -96,6 +101,7 @@ async function trimiteAlerta(m, bot, cheie) {
   try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null } }); inKv = !!(r && r.ok); }
   catch (e) { jurnal("alerta in KV EȘEC", e.message); }
   if (CANAL === "ntfy") { const ok = await ntfy(m); return inKv || ok; }
+  if (CANAL === "discord") { const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal }); return inKv || ok; }
   if (!inKv) jurnal("alerta NETRIMISA", m.nivel, m.titlu);
   else jurnal("alerta", m.nivel, m.titlu);
   return inKv;
@@ -210,7 +216,7 @@ async function tura() {
     }
   }
   try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
-  try { await trimite("/api/istoric-bot?action=config", Object.assign({ colectorLa: acum, canal: CANAL === "ntfy" ? "ntfy" : "radar" }, NTFY.topic ? { ntfyTopic: NTFY.topic } : {})); } catch (e) { jurnal("config", e.message); }
+  try { await trimite("/api/istoric-bot?action=config", Object.assign({ colectorLa: acum, canal: CANAL === "ntfy" ? "ntfy" : CANAL === "discord" ? "discord" : "radar" }, NTFY.topic ? { ntfyTopic: NTFY.topic } : {})); } catch (e) { jurnal("config", e.message); }
 }
 
 // v79 F3: o data pe ora, "pe care monede pornesc grid acum?" pe top 100 PERP dupa volum,
@@ -228,6 +234,7 @@ async function turaClasament() {
   clasamentInLucru = false;
 }
 
+if (CANAL === "discord" && !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(DISCORD_WEBHOOK)) jurnal("ATENTIE: ALERTE_CANAL=discord dar DISCORD_WEBHOOK lipseste/gresit in .dev.vars - alertele raman doar in Radar");
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal alerte: " + CANAL + (NTFY.topic ? " (" + NTFY.topic + (NTFY.nou ? ", NOU" : "") + ")" : ""));
 if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului, gata liniștea (oprește gridul)." });
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.

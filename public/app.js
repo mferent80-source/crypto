@@ -5230,7 +5230,7 @@ function renderTabloAlerte(){
   if(!c||!c.colectorLa){el.innerHTML='<p class="tbSub">Colectorul de acasă n-a pornit încă. Pornește din nou PORNESTE-CRYPTO-RADAR.bat.</p>';return}
   var min=c.colectorLa?Math.round((Date.now()-c.colectorLa)/60000):null;
   var viu=min!==null&&min<=3;
-  var canal=c.canal==="ntfy"&&c.ntfyTopic?"ntfy · canal "+c.ntfyTopic:c.canal==="telegram"?"Telegram":"doar aici, în Radar (niciun canal extern legat încă)";
+  var canal=c.canal==="ntfy"&&c.ntfyTopic?"ntfy · canal "+c.ntfyTopic:c.canal==="telegram"?"Telegram":c.canal==="discord"?"Discord (webhook) + aici":"doar aici, în Radar (niciun canal extern legat încă)";
   var lista=Array.isArray(tbStare.alerteServer)?tbStare.alerteServer.slice(0,12):null;
   var NIV={critic:["🔴","bad"],atentie:["🟠","tbWarn"],info:["🟢","good"]};
   var h='<div class="tbLinie"><span>Colectorul de acasă</span><b class="'+(viu?"good":"bad")+'">'+(min===null?"—":viu?"merge (acum "+Math.max(0,min)+" min)":"oprit de "+min+" min")+'</b></div>'+
