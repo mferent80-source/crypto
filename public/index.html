@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v74.6" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v75.0" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar Pro Lite</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -53,7 +53,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v74.6 · TABLOUL BOTULUI</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v75.0 · TABLOUL BOTULUI</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -61,7 +61,7 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v74.6 · READ ONLY</span></div>
+<div class="topRight"><button class="statusChip botStrip" id="botStrip" type="button" hidden data-action-click="navTo('tabloubot',true)" title="Deschide Tabloul botului">—</button><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v75.0 · READ ONLY</span></div>
 </header>
 <main>
 <div class="noticeBad parolaLipsa" id="parolaLipsa" hidden=""><b>Parola aplicației nu e pusă pe acest dispozitiv.</b> Fără ea, boții și contul Pionex nu se văd. Se pune o singură dată, în <b>Setări → API Security Session</b> (textul APP_API_TOKEN de la pornire). <button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări</button></div>
@@ -70,7 +70,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v74.6 · CRYPTO RADAR · PIONEX DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v75.0 · CRYPTO RADAR · PIONEX DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -125,16 +125,16 @@
 <p id="tbDeCe" class="fine">—</p>
 <button class="actionGhost" id="tbSpreSetari" hidden="" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>
 </div>
-<div class="card full" id="tbBaniCard">
+<div class="card full" id="tbDirectieCard"><div class="sectionHead"><h3>Direcția pieței față de bot</h3><span class="stockBadge" id="tbDirectieBot">—</span></div><div id="tbDirectieRezumat" class="tbRezumat mutedInfo">Aștept lumânările…</div><div class="accountRows" id="tbDirectie"></div><p class="fine">Direcția de ACUM e măsurată pe bare închise. Cifra de schimbare e o frecvență din trecutul monedei, după o stare ca cea de acum, cu numărul de cazuri lângă ea - nu e o predicție. Direcția viitoare nu s-a lăsat prezisă când am măsurat-o.</p></div><div class="card full" id="tbBaniCard">
 <div class="sectionHead"><h3>Banii botului</h3><span class="stockBadge">USDT</span></div>
 <div class="accountGrid" id="tbBani"><div class="emptyState">—</div></div>
 <div id="tbAvertismente"></div>
 </div>
-<div class="card full">
+<div class="card full" id="tbGraficCard"><div class="sectionHead"><h3>Prețul în ultimele 24 de ore</h3><span class="stockBadge" id="tbGraficPret">—</span></div><div class="tbGrafic" id="tbGrafic"><div class="emptyState">Aștept prețurile…</div></div><p class="fine" id="tbGraficTip">Mută mouse-ul sau degetul peste grafic ca să vezi prețul la o oră anume.</p></div><div class="card full">
 <div class="sectionHead"><h3>Preț și interval</h3><span class="stockBadge" id="tbPret">—</span></div>
 <div id="tbRigla" class="accountRows"></div>
 </div>
-<div class="card full">
+<div class="card full" id="tbDovadaCard"><div class="sectionHead"><h3>Dovada: ce s-a întâmplat cât am privit</h3><span class="stockBadge" id="tbDovadaAcoperire">—</span></div><div class="accountRows" id="tbDovada"><div class="emptyState">—</div></div><p class="fine">Din istoricul strâns de aplicație pe acest dispozitiv. „dovedit” = destule observații; „puțin” = se poate arăta, dar pe puține date; „—” = n-am datele.</p></div><div class="card full">
 <div class="sectionHead"><h3>Cele șapte măsuri</h3></div>
 <div class="accountRows" id="tbMasuri"><div class="emptyState">—</div></div>
 </div>
@@ -1190,7 +1190,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v74.6</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v75.0</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -2302,5 +2302,5 @@
 <button class="moreBtn" data-action-click="moreNav('settings')"><b>⚙</b>Settings</button>
 <button class="moreBtn" data-action-click="moreNav('health')"><b>●</b>Health</button>
 </div>
-</div></div><script src="/lib/tablou-bot.js"></script><script defer="" src="/app.js"></script>
+</div></div><script src="/lib/tablou-bot.js"></script><script src="/lib/directie.js"></script><script defer="" src="/app.js"></script>
 </body></html>

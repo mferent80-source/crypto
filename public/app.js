@@ -3112,7 +3112,7 @@ function loadPionexUniverseCache(){
 
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
-function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
+function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 const MARKET_BASES=[
@@ -4814,6 +4814,9 @@ function tbColectorPornitCuPas(pas){
 function tbColectorPornit(){
   if(tbColector)return;
   tbColectorPornitCuPas(tbPanouVizibil()?8000:60000);
+  // v75: o citire IMEDIATA - altfel banda de sus si piata botului asteptau un
+  // minut intreg dupa deschiderea aplicatiei.
+  if(!document.hidden)tbColectorTick();
 }
 function tbColectorOprit(){if(tbColector){clearInterval(tbColector);tbColector=null;tbColectorPas=0}}
 // Recalculeaza IMEDIAT cadenta ceruta de vizibilitatea panoului - fara sa
@@ -4847,13 +4850,187 @@ function tbDeseneazaBanii(b){
   if(!b){el.innerHTML='<div class="emptyState">\u2014</div>';if($("tbAvertismente"))$("tbAvertismente").innerHTML="";return}
   var lich=botiLichidareText(b);
   var celula=function(eticheta,valoare,cls){return '<div class="accountCell"><span class="accountLabel">'+escapeHtml(eticheta)+'</span><b class="'+(cls||"")+'">'+escapeHtml(valoare)+'</b></div>'};
-  el.innerHTML=celula("Investit",botiBan(b.investit,2,false))+
+  var tot=botiNr(b.profitTotal),inv=botiNr(b.investit);
+  var erou='<div class="tbErou"><span class="accountLabel">Cât ai câștigat sau pierdut, cu tot cu poziția deschisă</span>'+
+    '<b class="tbErouCifra '+botiClasa(b.profitTotal)+'">'+escapeHtml(botiBan(b.profitTotal,2))+'</b>'+
+    '<span class="tbErouProc '+botiClasa(b.profitTotal)+'">'+(tot!==null&&inv!==null&&inv>0?escapeHtml(tbFormateazaSemn(100*tot/inv,2)+'% din '+inv.toFixed(2)+' investit'):'—')+'</span></div>';
+  el.innerHTML=erou+celula("Investit",botiBan(b.investit,2,false))+
     celula("Realizat NET",botiBan(b.profitNet),botiClasa(b.profitNet))+
     celula("Nerealizat (poziție)",botiBan(b.pnlNerealizat)+(b.pnlNerealizatSigur===false?" (semn nesigur)":""),botiClasa(b.pnlNerealizat))+
     celula("Total",botiBan(b.profitTotal),botiClasa(b.profitTotal))+
     '<div class="accountCell"><span class="accountLabel">Lichidare</span><b class="'+lich.cls+'">'+escapeHtml(lich.text)+'</b><br><span class="fine">față de ultimul preț</span></div>';
   var av=Array.isArray(b.avertismente)?b.avertismente:[];
   if($("tbAvertismente"))$("tbAvertismente").innerHTML=av.map(function(a){return '<div class="noticeBad">\u26a0 '+escapeHtml(a)+'</div>'}).join("");
+}
+// v75: Tabloul unic - directia pietei fata de bot, graficul pe 24h, dovada.
+// Toate cifrele de aici trec prin modulele pure (Directie, TabloBot), probate
+// fara browser; aici doar se aduc datele si se deseneaza. Lipsa ramane "—".
+var TB_DIR_TF=[
+  {tf:"15M",eticheta:"15 min",orizont:16,limit:500,orizontText:"4 ore"},
+  {tf:"60M",eticheta:"1 oră",orizont:24,limit:500,orizontText:"o zi"},
+  {tf:"4H",eticheta:"4 ore",orizont:6,limit:500,orizontText:"o zi"},
+  {tf:"1D",eticheta:"1 zi",orizont:7,limit:400,orizontText:"o săptămână"}];
+var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
+async function tbAduDirectie(){
+  var b=tbStare.bot;if(!b||typeof Directie==="undefined")return;
+  var s=TabloBot.simboluri(b.baza,b.quote).pionex;
+  var d=tbStare.directie||(tbStare.directie={la:0,simbol:null,rez:null,inLucru:false});
+  if(d.inLucru||(d.simbol===s&&Date.now()-d.la<TB_DIR_MS))return;
+  d.inLucru=true;
+  try{
+    var rez=[];
+    // Pe rand, nu deodata: Pionex numara cererile, iar serverul le distanteaza oricum.
+    for(var i=0;i<TB_DIR_TF.length;i++){
+      var x=TB_DIR_TF[i];
+      try{
+        var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+x.tf+"&limit="+x.limit);
+        var randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;
+        if(!randuri)throw new Error((k&&k.error)||"Pionex nu a dat lumânări");
+        rez.push(Object.assign({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText},Directie.analizeaza(randuri,x.orizont,b.directie)));
+      }catch(e){rez.push({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText,dir:null,stare:"eroare",motiv:textEroare(e)})}
+    }
+    d.rez=rez;d.simbol=s;d.la=Date.now();
+  }finally{d.inLucru=false}
+  renderTabloDirectia();
+}
+async function tbAduGraficul(){
+  var b=tbStare.bot;if(!b)return;
+  var s=TabloBot.simboluri(b.baza,b.quote).pionex;
+  var g=tbStare.grafic||(tbStare.grafic={la:0,simbol:null,randuri:null,inLucru:false});
+  if(g.inLucru||(g.simbol===s&&Date.now()-g.la<TB_GRAFIC_MS))return;
+  g.inLucru=true;
+  try{
+    var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval=5M&limit=288");
+    g.randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;g.eroare=g.randuri?null:"Pionex nu a dat prețuri";
+    g.simbol=s;g.la=Date.now();
+  }catch(e){g.eroare=textEroare(e)}finally{g.inLucru=false}
+  renderTabloGrafic();
+}
+function tbTon(ton){return ton==="rau"?"bad":ton==="bine"?"good":ton==="atentie"?"tbWarn":"mutedInfo"}
+function renderTabloDirectia(){
+  var el=$("tbDirectie"),rz=$("tbDirectieRezumat");if(!el||!rz)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot,d=tbStare.directie;
+  if($("tbDirectieBot"))$("tbDirectieBot").textContent=b?("botul: "+(b.directie||"?")+(b.levier!=null?" "+b.levier+"×":"")):"—";
+  if(!b){rz.className="tbRezumat mutedInfo";rz.textContent="Fără bot, n-am față de ce să judec direcția.";el.innerHTML="";return}
+  if(!d||!d.rez){rz.className="tbRezumat mutedInfo";rz.textContent="Aștept lumânările…";el.innerHTML="";return}
+  var z=Directie.rezumat(d.rez,b.directie);
+  rz.className="tbRezumat "+tbTon(z.ton);rz.textContent=z.text;
+  var nume={urca:"↑ urcă",coboara:"↓ coboară",lateral:"↔ laterală"};
+  el.innerHTML='<div class="tbDirRand tbCap"><div>Interval</div><div>Acum</div><div>Față de bot</div><div>De câte ori s-a schimbat</div></div>'+
+  d.rez.map(function(r){
+    if(!r.dir)return '<div class="tbDirRand"><div class="tbDirTf">'+escapeHtml(r.eticheta)+'</div><div class="mutedInfo">—</div><div class="mutedInfo tbDirFata">—</div><div class="mutedInfo tbDirSch">'+escapeHtml(r.motiv||"n-am destule bare")+'</div></div>';
+    var s=r.schimbare||{},sch;
+    if(s.valoare==null)sch='<span class="mutedInfo">— ('+escapeHtml(s.motiv||"prea puține cazuri")+')</span>';
+    else sch='<b>'+Math.round(s.valoare)+'%</b> în următoarea '+escapeHtml(r.orizontText)+
+      '<br><span class="fine">din '+s.cazuri+' cazuri'+(s.ic?' · interval '+Math.round(s.ic.jos)+'–'+Math.round(s.ic.sus)+'%':'')+
+      (s.spreOpus!=null?' · spre direcția opusă: '+Math.round(s.spreOpus)+'%':'')+' · '+(s.stare==="dovedit"?"dovedit":"puține cazuri")+'</span>';
+    return '<div class="tbDirRand"><div class="tbDirTf">'+escapeHtml(r.eticheta)+'</div>'+
+      '<div><b class="'+(r.dir==="urca"?"good":r.dir==="coboara"?"bad":"neutral")+'">'+nume[r.dir]+'</b>'+
+      (r.vechime?'<br><span class="fine">de '+r.vechime+' bare închise</span>':'')+
+      (r.formare&&isFinite(r.formare.pct)?'<br><span class="fine">în bara de acum: <b class="'+(r.formare.pct>0?"good":r.formare.pct<0?"bad":"")+'">'+tbFormateazaSemn(r.formare.pct,2)+'%</b></span>':'')+'</div>'+
+      '<div class="tbDirFata '+tbTon(r.fata.ton)+'">'+escapeHtml(r.fata.eticheta)+'</div>'+
+      '<div class="tbDirSch">'+sch+'</div></div>';
+  }).join("");
+}
+function tbPretScurt(v){if(v==null||!isFinite(v))return "—";var a=Math.abs(v);return v.toFixed(a>=100?2:a>=1?4:a>=0.01?5:8)}
+function renderTabloGrafic(){
+  var el=$("tbGrafic");if(!el)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot,g=tbStare.grafic,brut=tbStare.botBrut;
+  if(!b){el.innerHTML='<div class="emptyState">—</div>';return}
+  if(!g||!g.randuri){el.innerHTML='<div class="emptyState">'+escapeHtml(g&&g.eroare?"Nu am prețurile: "+g.eroare:"Aștept prețurile…")+'</div>';return}
+  var ist=g.randuri.map(function(r){return {t:Number(Array.isArray(r)?r[0]:r.time),pretPerp:Array.isArray(r)?r[4]:r.close}});
+  var geo=TabloBot.geometrieGrafic(ist,brut,Date.now());
+  if(!geo.destul){el.innerHTML='<div class="emptyState">Prea puține prețuri pentru grafic.</div>';return}
+  var W=1000,H=240,Y=function(f){return (H*(1-f)).toFixed(1)},X=function(f){return (W*f).toFixed(1)};
+  var pret=function(p){return (p-geo.minPret)/(geo.maxPret-geo.minPret)};
+  var etich=[],svg='<svg class="tbGraficSvg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Prețul '+escapeHtml(b.simbol||"")+' în ultimele 24 de ore">';
+  if(geo.banda){
+    svg+='<rect x="0" y="'+Y(geo.banda.sus)+'" width="'+W+'" height="'+(H*(geo.banda.sus-geo.banda.jos)).toFixed(1)+'" class="tbBanda"/>';
+    etich.push({f:geo.banda.sus,t:"grid sus "+tbPretScurt(b.gridSus),c:"tbEtBanda"},{f:geo.banda.jos,t:"grid jos "+tbPretScurt(b.gridJos),c:"tbEtBanda"});
+  }
+  var intrare=b.pretDeschidere!=null?Number(b.pretDeschidere):null;
+  if(intrare!=null&&intrare>geo.minPret&&intrare<geo.maxPret){
+    svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(intrare))+'" y2="'+Y(pret(intrare))+'" class="tbLinieIntrare"/>';
+    etich.push({f:pret(intrare),t:"intrarea medie "+tbPretScurt(intrare),c:"tbEtIntrare"});
+  }
+  var lich=b.pretLichidare!=null?Number(b.pretLichidare):null;
+  if(lich!=null&&lich>geo.minPret&&lich<geo.maxPret){
+    svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(lich))+'" y2="'+Y(pret(lich))+'" class="tbLinieLich"/>';
+    etich.push({f:pret(lich),t:"lichidare "+tbPretScurt(lich),c:"tbEtLich"});
+  }
+  geo.segmente.forEach(function(seg){svg+='<polyline class="tbLiniePret" points="'+seg.map(function(p){return X(p.x)+","+Y(p.y)}).join(" ")+'"/>'});
+  svg+='<line class="tbCruce" x1="0" x2="0" y1="0" y2="'+H+'" style="display:none"/></svg>';
+  var ultim=ist.filter(function(h){return Number(h.pretPerp)>0}).sort(function(a,c){return a.t-c.t});
+  var pAcum=ultim.length?Number(ultim[ultim.length-1].pretPerp):null;
+  if($("tbGraficPret"))$("tbGraficPret").textContent=pAcum!=null?"acum "+tbPretScurt(pAcum):"—";
+  // Etichetele stau in HTML (nu in SVG), ca sa nu se deformeze cu latimea; cele prea apropiate se rarefiaza.
+  etich.sort(function(a,c){return c.f-a.f});var ult=-1;
+  var etHtml=etich.filter(function(e){var sus=(1-e.f)*100;if(ult>=0&&sus-ult<9)return false;ult=sus;return true})
+    .map(function(e){return '<span class="tbEt '+e.c+'" style="top:calc('+((1-e.f)*100).toFixed(1)+'% - 9px)">'+escapeHtml(e.t)+'</span>'}).join("");
+  var ora=function(t){var d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+  el.innerHTML='<div class="tbGraficZona">'+svg+etHtml+'<div class="tbTip" hidden></div></div>'+
+    '<div class="tbAxa"><span>'+ora(geo.deLa)+'</span><span>'+ora(geo.deLa+(geo.panaLa-geo.deLa)/2)+'</span><span>'+ora(geo.panaLa)+'</span></div>';
+  var zona=el.querySelector(".tbGraficZona"),cruce=el.querySelector(".tbCruce"),tip=el.querySelector(".tbTip");
+  var puncte=ultim;
+  var arata=function(ev){
+    var r=zona.getBoundingClientRect();var fx=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width));
+    var t=geo.deLa+fx*(geo.panaLa-geo.deLa),best=null;
+    for(var i=0;i<puncte.length;i++)if(!best||Math.abs(puncte[i].t-t)<Math.abs(best.t-t))best=puncte[i];
+    if(!best)return;
+    var x=(best.t-geo.deLa)/(geo.panaLa-geo.deLa||1);
+    cruce.setAttribute("x1",X(x));cruce.setAttribute("x2",X(x));cruce.style.display="";
+    tip.hidden=false;tip.textContent=ora(best.t)+" · "+tbPretScurt(Number(best.pretPerp));
+    tip.style.left=Math.min(r.width-140,Math.max(0,fx*r.width-60))+"px";
+  };
+  zona.addEventListener("pointermove",arata);zona.addEventListener("pointerdown",arata);
+  zona.addEventListener("pointerleave",function(){cruce.style.display="none";tip.hidden=true});
+}
+function renderTabloDovada(){
+  var el=$("tbDovada");if(!el)return;
+  var b=tbStare.routeOk===false?null:tbStare.botBrut,ist=tbStare.routeOk===false?[]:(tbStare.istoric||[]);
+  if(!b){el.innerHTML='<div class="emptyState">—</div>';if($("tbDovadaAcoperire"))$("tbDovadaAcoperire").textContent="—";return}
+  var f=TabloBot.frecvente(ist,b,Date.now());
+  var min=ist.length?Math.round((Date.now()-Number(ist[0].t))/60000):0;
+  if($("tbDovadaAcoperire"))$("tbDovadaAcoperire").textContent=ist.length?("istoric: "+(min>=120?Math.round(min/60)+" ore":min+" min")):"fără istoric încă";
+  var stare=function(x){return !x||x.valoare==null?"—":x.stare==="dovedit"?"dovedit":"puțin"};
+  var rand=function(nume,x,txt){return '<div class="accountRow"><div class="accountCell">'+escapeHtml(nume)+'</div><div class="accountCell '+(x&&x.valoare!=null?"":"mutedInfo")+'">'+(x&&x.valoare!=null?txt(x):"—")+'</div><div class="accountCell">'+stare(x)+(x&&x.acoperire!=null?' · observat '+x.acoperire+'% din timp':'')+'</div></div>'};
+  el.innerHTML=
+    rand("Perechi închise pe oră",f.perechiPeOra,function(x){return x.valoare.toFixed(1)})+
+    rand("Profit net pe zi (observat)",f.netPeZi,function(x){return botiBan(x.valoare,2)})+
+    rand("Timp cu prețul în interval",f.timpInInterval,function(x){return Math.round(x.valoare)+"%"})+
+    rand("Timp lângă o margine a gridului",f.desLaMargine,function(x){return Math.round(x.valoare)+"%"});
+}
+function tbDeseneazaTabloulUnic(){renderTabloDirectia();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbPiataPeBot()}
+// Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
+// vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
+function tbActualizeazaBanda(){
+  var el=$("botStrip");if(!el)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot;
+  if(!b){el.hidden=true;return}
+  var parti=[(b.baza||"").replace(/\.PERP$/,"")+" "+(b.directie||"")+(b.levier!=null?" "+b.levier+"\u00d7":"")];
+  var tot=botiNr(b.profitTotal);
+  parti.push(tot===null?"total \u2014":"total "+(tot>0?"+":"")+tot.toFixed(2));
+  var dist=botiNr(b.distantaLichidarePct);
+  if(dist!==null)parti.push(b.lichidareDepasita?"LICHIDARE DEPĂȘITĂ":"lichidare "+Math.abs(dist).toFixed(1)+"%");
+  var d=tbStare.directie,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
+  if(z&&z.ton!=="nu-se-poate")parti.push(z.ton==="rau"?"piața: împotrivă":z.ton==="bine"?"piața: cu botul":"piața: amestecat");
+  el.textContent=parti.join(" \u00b7 ");
+  el.hidden=false;
+  var rau=(dist!==null&&(b.lichidareDepasita||Math.abs(dist)<15))||(z&&z.ton==="rau");
+  el.className="statusChip botStrip "+(rau?"bad":tot!==null&&tot<0?"tbWarn":"good");
+}
+// Indicatorii generali (Dashboard, Engine, Multi-TF...) pornesc pe moneda
+// botului, nu pe BTC - o singura data, si doar daca omul n-a ales el alta.
+var tbPiataSetata=false;
+function tbPiataPeBot(){
+  if(tbPiataSetata)return;var b=tbStare.bot,inp=$("symbol");if(!b||!inp)return;
+  tbPiataSetata=true;
+  var ales=null;try{ales=localStorage.getItem("crPiataAleasaDeOm")}catch{}
+  if(ales||String(inp.value||"").toUpperCase()!=="BTC")return;
+  var baza=String(b.baza||"").replace(/\.PERP$/,"").toUpperCase();
+  if(!/^[A-Z0-9]{2,15}$/.test(baza))return;
+  inp.value=baza;
+  if($("heroCoin"))$("heroCoin").textContent=baza+" / USDT";
 }
 function renderTabloBot(){
   var eroareActiva=tbStare.routeOk===false;
@@ -4960,6 +5137,7 @@ function renderTabloBot(){
       '</div><div class="accountCell '+cls+'">'+val+'</div><div class="accountCell">'+
       escapeHtml(String((r[1]&&r[1].stare)||"—")+(r[1]&&typeof r[1].eticheta==="string"&&r[1].eticheta?" · "+r[1].eticheta:""))+"</div></div>";
   }).join("");
+  tbDeseneazaTabloulUnic();
 }
 function porneTabloBot(){
   tbAduDate();
@@ -4970,6 +5148,7 @@ function v71ExportJournal(){const j=v71StoredJournal(),checksumInput=JSON.string
 function initV71PionexJournal(){v71RenderJournal()}
 
 
+document.addEventListener("change",function(e){if(e.target&&e.target.id==="symbol"){try{localStorage.setItem("crPiataAleasaDeOm",String(e.target.value||""))}catch{}}});
 document.addEventListener("keydown",e=>{if(e.key!=="Tab")return;const p=["commandPalette","moreDrawer"].map($).find(x=>x?.classList.contains("on"));if(!p)return;const f=[...p.querySelectorAll("button,input,select,textarea,[tabindex]:not([tabindex=\"-1\"])")].filter(x=>!x.disabled&&x.offsetParent!==null);if(!f.length){e.preventDefault();p.focus();return}const first=f[0],last=f.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
 document.addEventListener("keydown",e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();toggleCommandPalette();return}

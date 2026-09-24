@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "74.6.0",
+  "version": "75.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,7 +11,7 @@
     "dev": "npx --yes wrangler@4.137.0 pages dev public --ip 127.0.0.1",
     "deploy": "npx --yes wrangler@4.137.0 pages deploy public --project-name crypto",
     "predeploy": "npm test",
-    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo",
+    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo && npm run test:directie",
     "test:syntax": "node scripts/syntax-v71.mjs",
     "test:garzi": "node scripts/garzi-v746.mjs",
     "test:security": "node scripts/security-v57.mjs",
@@ -24,6 +24,7 @@
     "test:bots": "node scripts/bot-orders-v72.mjs",
     "test:tablou": "node scripts/tablou-bot-v73.mjs",
     "test:fifo": "node scripts/jurnal-fifo-v746.mjs",
-    "test:ecran": "node scripts/proba-ecran-tablou.mjs"
+    "test:ecran": "node scripts/proba-ecran-tablou.mjs",
+    "test:directie": "node scripts/directie-v75.mjs"
   }
 }

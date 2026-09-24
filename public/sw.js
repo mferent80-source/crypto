@@ -1,5 +1,5 @@
-const CACHE="crypto-radar-v74-6";
-const APP_SHELL=["/","/index.html","/app.css","/app.js","/research-worker.js","/engine-contract.json","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png","/lib/tablou-bot.js"];
+const CACHE="crypto-radar-v75-0";
+const APP_SHELL=["/","/index.html","/app.css","/app.js","/research-worker.js","/engine-contract.json","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png","/lib/tablou-bot.js","/lib/directie.js"];
 
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(async cache=>{
