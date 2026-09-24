@@ -21,6 +21,25 @@ var TabloBot = (function () {
   }
   var NECUNOSCUT = { valoare: null, stare: "nu-se-poate", prag: null };
 
+  // Audit 24.09: fiecare masura poarta unitatea, iar valoarea e DEJA in ea
+  // (comisionul in procente, nu fractie). Ecranul doar o lipeste langa cifra.
+  // eficienta e un indice 0-1 si starile de cont/bot sunt text: unitate "".
+  var UNITATI = { pozitieInterval: "%", ritmPerechi: "perechi/oră", eficienta: "",
+    amplitudine: "×", lichidare: "%", comision: "%", basis: "%",
+    marginStatus: "", riskStatus: "", stareBot: "",
+    varstaBot: "min", lumanari: "lumânări", istoric: "min" };
+  // Copie pe fiecare masura - NECUNOSCUT e comun si nu are voie sa fie atins.
+  function cuUnitati(m) {
+    for (var k in UNITATI) {
+      if (!(k in m) || typeof m[k] !== "object") continue;
+      var o = m[k] || NECUNOSCUT, c = {};
+      for (var j in o) c[j] = o[j];
+      c.unitate = UNITATI[k];
+      m[k] = c;
+    }
+    return m;
+  }
+
   // Stare de cont raportata direct de Pionex (marginStatus / riskStatus).
   // Camp lipsa sau gol -> NECUNOSCUT (nu declansam, n-avem de unde sti, dar
   // nici nu-l tratam tacut ca fiind valoarea buna - vezi trepte()).
@@ -153,7 +172,7 @@ var TabloBot = (function () {
       m.basis = { valoare: b, mediana: mediana, prag: 1.0,
         stare: sarit ? "rau" : "bine" };
     }
-    if (!x) return m;
+    if (!x) return cuUnitati(m);
 
     var tr = String(x.trend || "").trim().toLowerCase();
     m.directieBot = tr === "long" ? 1 : tr === "short" ? -1 : 0;
@@ -202,14 +221,14 @@ var TabloBot = (function () {
     var brut = nr(x.gridProfit), taxe = nr(x.totalFee);
     if (brut !== null && taxe !== null) {
       if (brut > 0) {
-        var r = Math.abs(taxe) / brut;
-        m.comision = { valoare: r, prag: 0.50, stare: r > 0.50 ? "rau" : "bine" };
+        var r = 100 * Math.abs(taxe) / brut;
+        m.comision = { valoare: r, prag: 50, stare: r > 50 ? "rau" : "bine" };
       } else if (Math.abs(taxe) > 0) {
         // Taxe care curg fara profit brut (zero sau negativ) e cazul cel mai
         // rau, nu unul nemasurabil - la un ban profit ratul striga, la zero
         // tacea. Nu exista un raport sanatos de aratat (impartire la zero sau
         // negativ), dar starea nu are voie sa taca pe "nu-se-poate".
-        m.comision = { valoare: null, prag: 0.50, stare: "rau" };
+        m.comision = { valoare: null, prag: 50, stare: "rau" };
       }
       // brut <= 0 si taxe === 0: ramane NECUNOSCUT - n-a curs nimic inca.
     }
@@ -262,12 +281,13 @@ var TabloBot = (function () {
           sursa: "pionex-24h", eticheta: "din Pionex 24h", total24h: trx };
       }
     }
-    return m;
+    return cuUnitati(m);
   }
 
   function trepte(m, mod, optiuni) {
     var o = optiuni || {}, d = function (masura, valoare, prag) {
-      return { masura: masura, valoare: valoare, prag: prag };
+      return { masura: masura, valoare: valoare, prag: prag,
+        unitate: UNITATI.hasOwnProperty(masura) ? UNITATI[masura] : "" };
     };
     if (o.faraBot) return { nivel: "FARA_BOT",
       titlu: "Niciun bot pornit",
@@ -426,7 +446,7 @@ var TabloBot = (function () {
         : "Peste jumătate din câștigul brut se duce pe taxe.";
       return { nivel: "REGLEAZA", titlu: "Comisioanele mănâncă gridul",
         ceFac: texComision,
-        declansator: d("comision", m.comision.valoare, 0.50) };
+        declansator: d("comision", m.comision.valoare, 50) };
     }
     if (mod !== "DIRECTIONAL" && m.ritmPerechi.stare === "rau") {
       return { nivel: "REGLEAZA", titlu: "Ritmul a căzut",

@@ -292,7 +292,10 @@ await test("basis-ul care SARE peste dublul medianei e raportat rau", () => {
 
 await test("comisionul se raporteaza la profitul brut din grid", () => {
   const m = T.masoara(INTRARI);
-  assert.ok(Math.abs(m.comision.valoare - 0.45 / 2.30) < 1e-6, `comision: ${m.comision.valoare}`);
+  // Audit 24.09: comisionul vine deja in PROCENTE (unitatea afisata), nu fractie.
+  assert.ok(Math.abs(m.comision.valoare - 100 * 0.45 / 2.30) < 1e-6, `comision: ${m.comision.valoare}`);
+  assert.equal(m.comision.unitate, "%");
+  assert.equal(m.comision.prag, 50);
   assert.equal(m.comision.stare, "bine");
 });
 
@@ -552,7 +555,7 @@ function masuriBune() {
     amplitudine: { valoare: 2.0, stare: "bine", prag: 1.0 },
     lichidare: { valoare: 20, stare: "bine", prag: { grav: 8, atentie: 15 } },
     basis: { valoare: 0.1, stare: "bine", prag: 1.0 },
-    comision: { valoare: 0.2, stare: "bine", prag: 0.50 },
+    comision: { valoare: 20, stare: "bine", prag: 50 },
     directieBot: 0,
     marginStatus: { valoare: "NORMAL", stare: "bine", prag: "NORMAL" },
     riskStatus: { valoare: "TRADING", stare: "bine", prag: "TRADING" },
@@ -710,11 +713,41 @@ await test("fara bot, verdictul e FARA_BOT si nu inventeaza cifre", () => {
 });
 
 await test("fiecare verdict poarta cifra si pragul care l-au dat", () => {
-  const m = masuriBune(); m.comision = { valoare: 0.7, stare: "rau", prag: 0.50 };
+  const m = masuriBune(); m.comision = { valoare: 70, stare: "rau", prag: 50 };
   const v = T.verdict(m, "GRID");
   assert.ok(v.declansator, "lipseste declansatorul");
   assert.equal(v.declansator.masura, "comision");
-  assert.equal(v.declansator.prag, 0.50);
+  assert.equal(v.declansator.prag, 50, "pragul in aceeasi unitate ca valoarea (procente)");
+  assert.equal(v.declansator.valoare, 70);
+  assert.equal(v.declansator.unitate, "%", "declansatorul poarta si unitatea");
+});
+
+// --- Audit 24.09: fiecare masura poarta `unitate`, iar valoarea e deja in
+// unitatea afisata. Ecranul (Task 3) doar o lipeste langa cifra.
+const UNITATI = { pozitieInterval: "%", ritmPerechi: "perechi/oră", eficienta: "",
+  amplitudine: "×", lichidare: "%", comision: "%", basis: "%",
+  marginStatus: "", riskStatus: "", stareBot: "" };
+
+await test("[audit] fiecare masura intoarsa poarta unitatea ei (bot sanatos)", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: 24 } };
+  const m = T.masoara({ ...INTRARI, bot });
+  for (const [camp, u] of Object.entries(UNITATI)) {
+    assert.ok(m[camp], `lipseste masura ${camp}`);
+    assert.equal(m[camp].unitate, u, `${camp}.unitate = ${JSON.stringify(m[camp].unitate)}, asteptat ${JSON.stringify(u)}`);
+  }
+});
+
+await test("[audit] unitatea exista si pe masurile care nu se pot socoti (fara bot)", () => {
+  const m = T.masoara({ ...INTRARI, bot: null });
+  for (const [camp, u] of Object.entries(UNITATI)) {
+    assert.equal(m[camp].unitate, u, `${camp} (nu-se-poate).unitate = ${JSON.stringify(m[camp].unitate)}`);
+  }
+  assert.notEqual(m.lichidare, m.comision, "masurile lipsa nu au voie sa impartaseasca acelasi obiect");
+});
+
+await test("[audit] declansatorul lichidarii poarta %", () => {
+  const m = masuriBune(); m.lichidare = { valoare: 5, stare: "rau", prag: { grav: 8, atentie: 15 }, unitate: "%" };
+  assert.equal(T.verdict(m, "GRID").declansator.unitate, "%");
 });
 
 // --- reparatiile din revizia Task 4: fals LINISTE, NEDOVEDIT pe o singura cauza,
@@ -937,7 +970,7 @@ await test("lichidarea negativa (deja trecuta) nu scrie minus in fata cifrei", (
 
 await test("comisionul care manaca gridul da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
   const m = masuriBune();
-  m.comision = { valoare: 0.7, stare: "rau", prag: 0.50 };
+  m.comision = { valoare: 70, stare: "rau", prag: 50 };
   const v = T.verdict(m, "GRID");
   assert.equal(v.nivel, "REGLEAZA");
   assert.equal(v.declansator.masura, "comision");
