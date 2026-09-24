@@ -86,7 +86,8 @@ const BOOTSTRAP = `(() => {
       window.__proba.calls[nume === "bot-orders" ? "botOrders" : "market"]++;
       const cfg = window.__proba[nume === "bot-orders" ? "botOrders" : "market"];
       if (!cfg) break;
-      if (cfg.reteaPicata) return Promise.reject(new TypeError("proba: reteaua a picat"));
+      // exact ce arunca Chrome la retea cazuta - Task 2 recunoaste reteaua dupa acest text
+      if (cfg.reteaPicata) return Promise.reject(new TypeError("Failed to fetch"));
       return Promise.resolve(new Response(JSON.stringify(cfg.corp), {
         status: cfg.stare || 200, headers: { "content-type": "application/json" },
       }));
@@ -998,20 +999,20 @@ async function main() {
     await test("C9. analiza foloseste doar bare inchise (si in MTF); pretul viu ramane pe ecran; variatia lipsa = —", async () => {
       const r = await b.ev(`(async () => {
         const j = ${MERS_ALEATOR};
-        const ora = 3600000, baza = Math.floor(Date.now() / ora) * ora;
+        const ora = 3600000, baza = Date.now() - 30000; // deschisa acum 30 s: in formare pe ORICE interval (15m, 1h, 4h, 1d)
         j.forEach((x, i) => { x[0] = baza - (j.length - i) * ora; });
         const ultimaInchisa = +j[j.length - 1][4], viu = ultimaInchisa * 10;
         j.push([baza, String(ultimaInchisa), String(viu), String(ultimaInchisa), String(viu), "100"]); // bara IN FORMARE
         const salvat = { k: window.analysisKlines, t: window.analysisTicker, tf: document.getElementById('tf').value };
         window.analysisKlines = async () => j.map(x => x.slice());
-        window.analysisTicker = async () => ({ lastPrice: String(viu), priceChangePercent: null, quoteVolume: "1000" });
+        window.analysisTicker = async () => ({ lastPrice: String(viu), priceChangePercent: null, quoteVolume: null });
         document.getElementById('tf').value = "1h";
         try {
           await analyze(false);
           const st = window.__radarState;
           return { ok: !!st, pretSemnal: st && st.q.price, ultimaInchisa, viu,
             mtf: st && (st.m || []).map(x => x.price), pretEcran: document.getElementById('heroPrice').textContent,
-            ch: document.getElementById('hero24').textContent, viuFormatat: num(viu), inchisFormatat: num(ultimaInchisa), semnalPret: window.__signalState && window.__signalState.q.price };
+            ch: document.getElementById('hero24').textContent, vol: [document.getElementById('heroVol24').textContent, document.getElementById('volume24').textContent], viuFormatat: num(viu), inchisFormatat: num(ultimaInchisa), semnalPret: window.__signalState && window.__signalState.q.price };
         } finally { window.analysisKlines = salvat.k; window.analysisTicker = salvat.t; document.getElementById('tf').value = salvat.tf; stopProviderLive(); }
       })()`);
       assert.ok(r.ok, "analiza nu a produs stare");
@@ -1020,6 +1021,7 @@ async function main() {
       assert.ok(r.mtf.length > 0 && r.mtf.every((p) => Math.abs(p - r.ultimaInchisa) < 1e-9), `MTF a folosit bara in formare: ${JSON.stringify(r.mtf)}`);
       assert.equal(r.pretEcran, r.viuFormatat, `pe ecran trebuie pretul VIU (${r.viuFormatat}), nu cel inchis (${r.inchisFormatat})`);
       assert.equal(r.ch, "—", `variatia 24h lipsa a devenit: ${r.ch}`);
+      assert.deepEqual(r.vol, ["—", "—"], `volumul 24h lipsa a devenit: ${r.vol}`);
     });
 
     /* ═══ v74.6 · C10: portile SMALL LIVE READY pe limita de jos a IC 95% ═══ */
@@ -1083,6 +1085,152 @@ async function main() {
       assert.match(await b.ev(`document.getElementById('botiRanduri').textContent`), /parole gre[șs]ite/i);
     });
 
+    /* ═══ v74.6 · D: restul ecranului (telefon, health, scanner) ═══════════ */
+    await test("D12a. telefon 390px: coloana de bani a botilor se vede fara scroll lateral", async () => {
+      await b.ev(`navTo('account')`); // panoul "Pionex Account", unde sta lista botilor
+      await incarcaLista([botNormalizat(botBrut({ strategyId: "7601" })), botNormalizat(botBrut({ strategyId: "7602", baza: "SOL.PERP" }))]);
+      const r = await b.ev(`(() => { const lat = document.documentElement.clientWidth;
+        const bani = [...document.querySelectorAll('#botiRanduri .botiBani')].map(x => { const q = x.getBoundingClientRect(); return { st: q.left, dr: q.right, w: q.width }; });
+        const c = document.getElementById('botiRanduri');
+        return { lat, bani, derulare: c.scrollWidth - c.clientWidth }; })()`);
+      assert.ok(r.bani.length === 2, "nu gasesc celulele de bani");
+      for (const x of r.bani) assert.ok(x.w > 0 && x.st >= 0 && x.dr <= r.lat + 1, `celula de bani iese din ecran: ${JSON.stringify(x)} (latime ${r.lat})`);
+      assert.ok(r.derulare <= 1, `randurile botilor cer scroll lateral: ${r.derulare}px`);
+    });
+
+    await test("D12b. telefon: tabelul de module (980px) are scroll PROPRIU, pagina nu curge lateral", async () => {
+      const r = await b.ev(`(() => {
+        navTo('dash');
+        const t = document.getElementById('vcModuleTable');
+        const det = t.closest('details'); if (det) det.open = true;
+        const rand = '<div class="vcRow">' + Array.from({ length: 7 }, (_, i) => '<div class="vcCell">celula ' + i + '</div>').join('') + '</div>';
+        t.innerHTML = rand + rand + rand;
+        const pagina = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+        const tabel = t.scrollWidth - t.clientWidth;
+        return { pagina, tabel };
+      })()`);
+      assert.ok(r.pagina <= 1, `pagina curge lateral cu ${r.pagina}px pe telefon`);
+      assert.ok(r.tabel > 0, "tabelul lat trebuie sa se deruleze in el insusi");
+    });
+
+    await test("D12c. telefon: cipurile din antet nu se suprapun", async () => {
+      const r = await b.ev(`(() => {
+        const el = [...document.querySelectorAll('.topStatus .topCoin, .topStatus .statusChip')].filter(x => x.offsetParent !== null && x.getBoundingClientRect().width > 0);
+        const q = el.map(x => ({ t: x.textContent.trim().slice(0, 18), r: x.getBoundingClientRect() }));
+        const lat = document.documentElement.clientWidth, sup = [];
+        for (let i = 0; i < q.length; i++) {
+          if (q[i].r.right > lat + 1) sup.push(q[i].t + " iese din ecran");
+          for (let j = i + 1; j < q.length; j++) { const a = q[i].r, c = q[j].r;
+            if (a.left < c.right - 1 && c.left < a.right - 1 && a.top < c.bottom - 1 && c.top < a.bottom - 1) sup.push(q[i].t + " / " + q[j].t); }
+        }
+        return sup;
+      })()`);
+      assert.deepEqual(r, [], `cipuri suprapuse sau taiate: ${r.join(" | ")}`);
+    });
+
+    await test("D12d. bannerul 'Instaleaza' se inchide, tine minte, si nu crapa cand stocarea e blocata", async () => {
+      const r = await b.ev(`(() => {
+        try { localStorage.removeItem('pwaInstallDismissed'); } catch (e) {}
+        showPwaInstall();
+        const card = document.getElementById('pwaInstallCard');
+        const vizibilInainte = card.classList.contains('on');
+        const inchide = [...card.querySelectorAll('button')].find(x => /dismissPwaInstall/.test(x.getAttribute('data-action-click') || ''));
+        const r = inchide.getBoundingClientRect(), lat = document.documentElement.clientWidth;
+        inchide.click();
+        const ascuns = !card.classList.contains('on');
+        showPwaInstall();
+        const ramaneAscuns = !card.classList.contains('on');
+        // stocare blocata: nici afisarea, nici inchiderea nu au voie sa arunce
+        const g = Storage.prototype.getItem, s = Storage.prototype.setItem; let aruncat = null;
+        Storage.prototype.getItem = () => { throw new Error('blocat'); }; Storage.prototype.setItem = () => { throw new Error('blocat'); };
+        try { showPwaInstall(); dismissPwaInstall(); } catch (e) { aruncat = e.message; }
+        finally { Storage.prototype.getItem = g; Storage.prototype.setItem = s; }
+        return { vizibilInainte, butonInEcran: r.right <= lat + 1 && r.left >= 0, ascuns, ramaneAscuns, aruncat };
+      })()`);
+      assert.ok(r.vizibilInainte, "precheck: bannerul ar trebui sa apara");
+      assert.ok(r.butonInEcran, "butonul de inchidere nu e pe ecran la 390px");
+      assert.ok(r.ascuns, "click pe × nu inchide bannerul");
+      assert.ok(r.ramaneAscuns, "dupa inchidere bannerul revine");
+      assert.equal(r.aruncat, null, `cu stocarea blocata bannerul arunca: ${r.aruncat}`);
+    });
+
+    await test("D14. Health inainte de orice analiza: verificarile locale sunt NEINCERCAT, nu FAIL; watchdog-ul nu intra in SAFE MODE pentru asta", async () => {
+      const r = await b.ev(`(async () => {
+        // "inainte de orice analiza": fara stare, fara mostra REST, fara tick WS
+        const stare = window.__radarState, rest = dataFresh.rest, ws = lastWsTick;
+        window.__radarState = null; dataFresh.rest = 0; lastWsTick = 0;
+        window.__proba.rute["provider-health"] = { corp: { providers: [
+          { name: "A", state: "OK", required: true }, { name: "B", state: "OK", required: true },
+          { name: "C", state: "OK", required: true }, { name: "D", state: "FAIL", required: true } ] }, stare: 200 };
+        try {
+          const snap = await runProviderHealthV62(false);
+          const ops = v67OperationsSnapshot(false);
+          const prov = (ops.checks || []).find(x => x.code === "PROVIDER") || null;
+          return { stare: snap.state, local: snap.local.rows.map(x => x.state), ops: ops.state, prov: prov && { ok: prov.ok, sev: prov.severity },
+            ecran: document.getElementById('providerHealthOverall')?.textContent };
+        } finally { window.__radarState = stare; dataFresh.rest = rest; lastWsTick = ws; delete window.__proba.rute["provider-health"]; }
+      })()`);
+      assert.ok(r.local.every((x) => x === "NEÎNCERCAT"), `verificari locale fara analiza: ${r.local.join(", ")}`);
+      assert.equal(r.stare, "NEÎNCERCAT", `Overall fara analiza: ${r.stare}`);
+      assert.equal(r.ecran, "NEÎNCERCAT");
+      assert.ok(!/SAFE MODE|EMERGENCY/.test(String(r.ops)), `watchdog-ul intra in ${r.ops} doar fiindca nu s-a analizat nimic`);
+      assert.ok(!r.prov || r.prov.ok || r.prov.sev !== "HARD", `verificarea PROVIDER e HARD: ${JSON.stringify(r.prov)}`);
+    });
+
+    await test("D15a. scanner: vechimea rezervei decide eticheta (4 zile = STALE, nu FRESH)", async () => {
+      const r = await b.ev(`(() => { const zi = 86400000, d = (n) => new Date(Date.now() - n * zi).toISOString().slice(0, 10);
+        return { patru: pionexSnapshotState(d(4)).label, azi: pionexSnapshotState(d(0)).label }; })()`);
+      assert.match(r.patru, /^STALE/, `rezerva de 4 zile: ${r.patru}`);
+      assert.match(r.azi, /^FRESH/, `rezerva de azi: ${r.azi}`);
+    });
+
+    await test("D15b. scanner: monedele care nu sunt pe Binance se sar; 'Stop scan' dispare la final", async () => {
+      const r = await b.ev(`(async () => {
+        const s = { top: window.pionexTop100, bin: window.binanceSimboluriSpot, fast: window.pionexScanFast, deep: document.getElementById('scanDepth').value };
+        const cerute = [];
+        window.pionexTop100 = async () => [{ base: "AAA", symbol: "AAA_USDT" }, { base: "BBB", symbol: "BBB_USDT" }, { base: "NUEPE", symbol: "NUEPE_USDT" }];
+        window.binanceSimboluriSpot = async () => new Set(["AAAUSDT", "BBBUSDT"]);
+        window.pionexScanFast = async (it) => { cerute.push(it.base); await new Promise(r => setTimeout(r, 150)); return { c: it.base, avg: 60, dir: "BULLISH", conf: 50, adx: 20, regime: "TREND", turnover: 1, change: 0 }; };
+        document.getElementById('scanDepth').value = "FAST";
+        try {
+          const p = scan(); await new Promise(r => setTimeout(r, 30));
+          const inTimp = document.getElementById('scanCancelBtn').hidden;
+          await p;
+          return { cerute, inTimp, laFinal: document.getElementById('scanCancelBtn').hidden, text: document.getElementById('scan').textContent };
+        } finally { window.pionexTop100 = s.top; window.binanceSimboluriSpot = s.bin; window.pionexScanFast = s.fast; document.getElementById('scanDepth').value = s.deep; }
+      })()`);
+      assert.deepEqual(r.cerute, ["AAA", "BBB"], `s-au cerut lumanari si pentru monede care nu sunt pe Binance: ${r.cerute}`);
+      assert.equal(r.inTimp, false, "cat ruleaza, 'Stop scan' trebuie sa se vada");
+      assert.equal(r.laFinal, true, "la 100/100 'Stop scan' trebuie sa dispara");
+      assert.match(r.text, /1 .*s[ăa]rit/i, "ecranul trebuie sa spuna cate monede au fost sarite");
+    });
+
+    await test("D15c. scanner: 'Strength' sorteaza dupa forta |scor-50| si forta se vede pe rand", async () => {
+      const r = await b.ev(`(() => { const vechi = scannerRows; document.getElementById('scanSort').value = "strength";
+        ['scanDir','scanRegime','scanAdx','scanScore'].forEach(id => { const e = document.getElementById(id); if (e) e.value = e.options[0].value; });
+        document.getElementById('scanSearch').value = "";
+        const rand = (c, avg) => ({ c, avg, dir: "NEUTRAL", conf: 50, adx: 30, regime: "TREND", turnover: 1, change: 0 });
+        scannerRows = [rand("A", 20), rand("B", 91), rand("C", 60), rand("D", NaN), rand("E", 45)];
+        try { renderScan(); return [...document.querySelectorAll('#scanout .coin')].map(x => x.textContent); }
+        finally { scannerRows = vechi; } })()`);
+      assert.deepEqual(r.map((t) => t.match(/^[A-E]/)[0]), ["B", "A", "C", "E", "D"], `ordinea: ${r.join(" | ")}`);
+      assert.match(r[0], /for[țt][ăa]\s*82/i, `forta nu se vede pe rand: ${r[0]}`);
+    });
+
+    await test("T1c. actiuni: volumul null din lumanari da rulaj '—' in scanner, nu 0", async () => {
+      const r = await b.ev(`(() => {
+        const j = ${MERS_ALEATOR}.slice(-120); j[j.length - 1][5] = null;
+        const rand = stockRowFromSeries("PROBA", j);
+        const vechi = scannerRows; scannerRows = [rand];
+        ['scanDir','scanRegime','scanAdx','scanScore'].forEach(id => { const e = document.getElementById(id); if (e) e.value = e.options[0].value; });
+        document.getElementById('scanSearch').value = ""; document.getElementById('scanSort').value = "turnover";
+        try { renderScan(); return { turnover: rand.turnover, ultima: [...document.querySelectorAll('#scanout .coin span')].at(-1)?.textContent }; }
+        finally { scannerRows = vechi; document.getElementById('scanSort').value = "strength"; }
+      })()`);
+      assert.strictEqual(r.turnover, null, `rulajul cu volum lipsa: ${r.turnover}`);
+      assert.equal(r.ultima, "—", `coloana de rulaj arata: ${r.ultima}`);
+    });
+
     /* ═══ v74.4: parola nu se mai cere la fiecare repornire ═══════════════
        Pana acum statea in sessionStorage: se stergea la inchiderea tabului, deci
        pe telefon o cerea de fiecare data. Probele astea REINCARCA pagina - adica
@@ -1135,6 +1283,14 @@ async function main() {
       const ascuns = await b.ev(`document.getElementById('parolaLipsa').hidden`);
       assert.equal(ascuns, true, "dupa ce parola e pusa, indicatia nu mai are ce cauta pe ecran");
       await b.ev(`clearApiSessionToken()`);
+    });
+
+    await test("D13. la pornire /api/push?action=config se cere O SINGURA data (erau 4)", async () => {
+      await b.navigheaza(URL_T);
+      if (!(await asteaptaAplicatia(b))) throw new Error("aplicatia nu s-a reincarcat");
+      await asteapta(7000); // pornirea cheama sanatatea, monitorul, notificarile - dam timp tuturor
+      const apeluri = await b.ev(`window.__proba.apeluri.filter(x => /^push\\?action=config/.test(x)).length`);
+      assert.ok(apeluri <= 1, `push config cerut de ${apeluri} ori la pornire`);
     });
 
     await test("21. textele din Settings nu mai mint despre cat tine parola", async () => {

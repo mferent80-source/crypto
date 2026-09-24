@@ -2160,10 +2160,10 @@
 </div>
 <div class="scannerToolbar">
 <input aria-label="Scan Search" data-action-input="saveScanPrefs();renderScan()" id="scanSearch" placeholder="Caută coin..."/>
-<select aria-label="Scan Sort" data-action-change="saveScanPrefs();renderScan()" id="scanSort"><option value="strength">Sort: Strength</option><option value="turnover">Sort: Turnover</option><option value="adx">Sort: ADX</option><option value="change">Sort: 24h %</option></select>
-<button class="actionGhost" data-action-click="cancelScan()" disabled="" id="scanCancelBtn">Stop scan</button>
+<select aria-label="Scan Sort" data-action-change="saveScanPrefs();renderScan()" id="scanSort"><option value="strength">Sort: Strength (forță)</option><option value="turnover">Sort: Turnover</option><option value="adx">Sort: ADX</option><option value="change">Sort: 24h %</option></select>
+<button class="actionGhost" data-action-click="cancelScan()" disabled="" hidden="" id="scanCancelBtn">Stop scan</button>
 </div>
-<div class="scanTableHead"><b id="scanAssetHead">Coin</b><b>Score</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b><b id="scanTurnoverHead">24h Turnover</b></div>
+<div class="scanTableHead"><b id="scanAssetHead">Coin</b><b>Score · forță</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b><b id="scanTurnoverHead">24h Turnover</b></div>
 <div id="scanout">Apasă Rescanează pentru universul Pionex.</div>
 <div class="scanRecovery">Universe source: <b id="scanUniverseSource">—</b> · <span id="scanUniverseNote">Pionex live when available; saved/snapshot fallback otherwise.</span></div>
 </div><button data-action-click="scan()" id="scanActionBtn" style="width:100%;margin-top:7px">↻ Scanează coinurile Pionex</button></section>

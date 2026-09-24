@@ -130,14 +130,21 @@ function v62LocalIntegritySnapshot(){
     {name:'MTF coverage',state:mtf>=.75?'OK':mtf>=.5?'STALE':'FAIL',detail:`${Math.round(mtf*100)}%`},
     {name:'Master data quality',state:quality>=80?'OK':quality>=65?'STALE':'FAIL',detail:`${quality.toFixed(0)}/100`}
   ];
-  const score=rows.reduce((a,x)=>a+(x.state==='OK'?100:x.state==='STALE'?55:10),0)/rows.length;return {ts:Date.now(),market,symbol:st?.symbol||null,source:st?.source||analysisSource(),score,quality,rows}
+  // v74.6: inainte de ORICE analiza, verificarile locale nu au ce masura. Asta
+  // e "neincercat", nu "picat" - altfel Health scria FAIL 46/100 la pornire si
+  // watchdog-ul intra in SAFE MODE HARD fara nicio problema reala.
+  // Identitatea, MTF si calitatea tin de o ANALIZA; REST/WS doar de mostra lor.
+  if(!st)for(const x of rows.slice(2)){x.state='NEÎNCERCAT';x.detail='nicio analiză rulată încă'}
+  if(rest.age===Infinity){rows[0].state='NEÎNCERCAT'}if(live.age===Infinity){rows[1].state='NEÎNCERCAT'}
+  const masurate=rows.filter(x=>x.state!=='NEÎNCERCAT');
+  const score=masurate.length?masurate.reduce((a,x)=>a+(x.state==='OK'?100:x.state==='STALE'?55:10),0)/masurate.length:null;return {ts:Date.now(),market,symbol:st?.symbol||null,source:st?.source||analysisSource(),score,quality,rows,neincercat:!masurate.length}
 }
-function v62ProviderStateClass(state){return state==='OK'?'good':state==='DEGRADED'||state==='CONFIGURED'||state==='STALE'?'neutral':'bad'}
+function v62ProviderStateClass(state){return state==='OK'?'good':state==='DEGRADED'||state==='CONFIGURED'||state==='STALE'||state==='NEÎNCERCAT'?'neutral':'bad'}
 async function runProviderHealthV62(deep=true){
   const status=$('providerHealthStatus'),table=$('providerHealthTable');if(status)status.textContent='Checking providers…';if(table)table.innerHTML='<div class="emptyState">Running server + local integrity probes…</div>';
   let server=null,error=null;try{server=await getJSON(`/api/provider-health?deep=${deep?1:0}`)}catch(e){error=e.message}
-  const local=v62LocalIntegritySnapshot(),providers=server?.providers||[],required=providers.filter(x=>x.required!==false),ok=required.filter(x=>x.state==='OK'||x.state==='CONFIGURED').length,providerScore=required.length?100*ok/required.length:0,combined=Math.round(.55*providerScore+.45*local.score),state=error?'DEGRADED':combined>=85?'OK':combined>=65?'DEGRADED':'FAIL',snapshot={ts:Date.now(),state,score:combined,providerScore,server,local,error};window.__providerHealthV62=snapshot;
-  if($('providerHealthScore'))$('providerHealthScore').textContent=`${combined}/100`;if($('providerHealthOverall')){$('providerHealthOverall').textContent=state;$('providerHealthOverall').className=v62ProviderStateClass(state)}if($('providerHealthLocal'))$('providerHealthLocal').textContent=`${local.score.toFixed(0)}/100`;if($('providerHealthRequired'))$('providerHealthRequired').textContent=`${ok}/${required.length}`;
+  const local=v62LocalIntegritySnapshot(),providers=server?.providers||[],required=providers.filter(x=>x.required!==false),ok=required.filter(x=>x.state==='OK'||x.state==='CONFIGURED').length,providerScore=required.length?100*ok/required.length:0,combined=Math.round(local.score===null?providerScore:.55*providerScore+.45*local.score),state=local.neincercat?'NEÎNCERCAT':error?'DEGRADED':combined>=85?'OK':combined>=65?'DEGRADED':'FAIL',snapshot={ts:Date.now(),state,score:combined,providerScore,server,local,error};window.__providerHealthV62=snapshot;
+  if($('providerHealthScore'))$('providerHealthScore').textContent=`${combined}/100`;if($('providerHealthOverall')){$('providerHealthOverall').textContent=state;$('providerHealthOverall').className=v62ProviderStateClass(state)}if($('providerHealthLocal'))$('providerHealthLocal').textContent=local.score===null?'NEÎNCERCAT':`${local.score.toFixed(0)}/100`;if($('providerHealthRequired'))$('providerHealthRequired').textContent=`${ok}/${required.length}`;
   if(table){const all=[...providers,...local.rows.map(x=>({name:'LOCAL · '+x.name,state:x.state,latencyMs:null,detail:x.detail,configured:true}))];table.innerHTML=all.length?`<div class="providerHealthRow providerHealthHead"><div>Provider / check</div><div>State</div><div>Latency</div><div>Detail</div></div>`+all.map(x=>`<div class="providerHealthRow"><div><b>${escapeHtml(x.name||'—')}</b></div><div class="${v62ProviderStateClass(x.state)}">${escapeHtml(x.state||'—')}</div><div>${Number.isFinite(+x.latencyMs)?Math.round(+x.latencyMs)+' ms':'—'}</div><div>${escapeHtml(x.detail||x.error||'—')}</div></div>`).join(''):'<div class="emptyState">No provider checks returned.</div>'}
   if(status)status.textContent=`${state} · ${combined}/100 · ${new Date().toLocaleTimeString()}`;await localDbPutRecord('provider_health_v62',String(Math.floor(Date.now()/300000)),snapshot,Date.now());return snapshot
 }
@@ -738,10 +745,11 @@ async function runAutoTrainingLocked(kind,fn){if(mlAutoTrainingLocks[kind])retur
 let deferredInstallPrompt=null,pwaWaitingWorker=null;
 function isStandalonePwa(){return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true}
 function showPwaInstall(){
- if(isStandalonePwa()||localStorage.getItem("pwaInstallDismissed")==="1")return;
+ let inchisDeOm=false;try{inchisDeOm=localStorage.getItem("pwaInstallDismissed")==="1"}catch{}
+ if(isStandalonePwa()||inchisDeOm)return;
  if($("pwaInstallCard"))$("pwaInstallCard").classList.add("on")
 }
-function dismissPwaInstall(){localStorage.setItem("pwaInstallDismissed","1");if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on")}
+function dismissPwaInstall(){try{localStorage.setItem("pwaInstallDismissed","1")}catch{}if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on")}
 async function installPwa(){
  if(deferredInstallPrompt){
    deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice}catch{}
@@ -1277,13 +1285,20 @@ function paperExit(t,price,qty,label){
 function drawPaperEquity(){
  const cv=$("paperEquityCurve");if(!cv)return;const ctx=cv.getContext("2d"),st=paperAccountStats(),a=[...paperHistory(),{ts:Date.now(),equity:st.equity}],w=cv.width,h=cv.height,pad=18;ctx.clearRect(0,0,w,h);if(a.length<2)return;const vals=a.map(x=>x.equity),mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1,x=i=>pad+i/(a.length-1)*(w-2*pad),y=v=>h-pad-(v-mn)/rg*(h-2*pad);ctx.strokeStyle="#69a7ff";ctx.lineWidth=2;ctx.beginPath();a.forEach((v,i)=>i?ctx.lineTo(x(i),y(v.equity)):ctx.moveTo(x(i),y(v.equity)));ctx.stroke()
 }
-async function pushServerConfig(){
+// v74.6: la pornire o cereau 3-4 functii deodata (4 cereri identice). Acum
+// prima cerere e tinuta minte; doar activarea notificarilor (actiunea omului) o reia.
+let pushConfigPromis=null;
+function pushServerConfig(reia=false){
+ if(!reia&&pushConfigPromis)return pushConfigPromis;
+ return pushConfigPromis=pushServerConfigCitire();
+}
+async function pushServerConfigCitire(){
  try{const r=await getJSON("/api/push?action=config");window.__pushServerConfig=r;if($("pushServerStatus"))$("pushServerStatus").textContent=!r.configured?"NEEDS CONFIG":r.deliverySenderConfigured?"READY":"SUBSCRIBE READY · SENDER NEEDED";return r}catch(e){if($("pushServerStatus"))$("pushServerStatus").textContent="UNAVAILABLE";return {configured:false}}
 }
 function b64ToU8(s){const pad="=".repeat((4-s.length%4)%4),b=(s+pad).replace(/-/g,"+").replace(/_/g,"/"),raw=atob(b);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function enablePushAlerts(){
  if(!("serviceWorker" in navigator)||!("PushManager" in window)){toast("Push API unsupported","warn");return}
- const cfg=await pushServerConfig();if(!cfg.configured||!cfg.publicKey){toast("Push server needs VAPID_PUBLIC_KEY + PUSH_SUBSCRIPTIONS KV","warn");return}
+ const cfg=await pushServerConfig(true);if(!cfg.configured||!cfg.publicKey){toast("Push server needs VAPID_PUBLIC_KEY + PUSH_SUBSCRIPTIONS KV","warn");return}
  const perm=await Notification.requestPermission();if(perm!=="granted"){renderPushStatus();return}
  const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(cfg.publicKey)});
  const r=await apiFetch("/api/push?action=subscribe",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(sub)});const d=await r.json();window.__pushState=d.saved?(cfg.deliverySenderConfigured?"SUBSCRIBED":"SUBSCRIBED · SENDER NEEDED"):"ERROR";renderPushStatus();renderDailyDesk();toast(d.saved?(cfg.deliverySenderConfigured?"Push subscription active":"Subscription saved; closed-app sender/monitor still needs Cloudflare configuration."):"Push subscription not saved",d.saved?"good":"warn")
@@ -1314,7 +1329,10 @@ const NDX_SNAPSHOT_DATE="2026-09-18";
 const NDX_HISTORY_COVERAGE_START="2025-12-22";
 function referenceSnapshotAge(date){const t=Date.parse(String(date||"")+"T00:00:00Z");return Number.isFinite(t)?Math.max(0,(Date.now()-t)/86400000):Infinity}
 function referenceSnapshotState(date,warnDays=30,staleDays=90){const age=referenceSnapshotAge(date),state=age>=staleDays?"STALE":age>=warnDays?"AGING":"FRESH";return {date,age,state,warnDays,staleDays,label:`${state} · ${Number.isFinite(age)?age.toFixed(0):"?"}d old`}}
-function referenceDataGovernance(){return {nasdaq:referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90),pionex:referenceSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE,30,90),ts:Date.now()}}
+// v74.6: lista de monede Pionex se schimba zilnic - o rezerva de 4 zile nu e
+// "FRESH". Pragurile: 1 zi = AGING, 3 zile = STALE (NDX ramane pe 30/90).
+function pionexSnapshotState(date){return referenceSnapshotState(date,1,3)}
+function referenceDataGovernance(){return {nasdaq:referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90),pionex:pionexSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE),ts:Date.now()}}
 const NDX_UNIVERSE=["ADBE","AMD","ABNB","ALNY","GOOGL","GOOG","AMZN","AEP","AMGN","ADI","AAPL","AMAT","APP","ARM","ASML","ADSK","ADP","AXON","BKR","BKNG","AVGO","CDNS","CTAS","CSCO","CCEP","CMCSA","CEG","CPRT","COST","CRWD","CSX","DASH","DDOG","DXCM","FANG","EXC","FAST","FER","FTNT","GEHC","GILD","HON","HONA","IDXX","INTC","INTU","ISRG","KDP","KLAC","LITE","LRCX","LIN","MAR","MRVL","MELI","META","MCHP","MU","MSFT","MSTR","MDLZ","MPWR","MNST","NFLX","NVDA","NXPI","ORLY","ODFL","PCAR","PLTR","PANW","PAYX","PYPL","PDD","PEP","QCOM","REGN","ROP","ROST","SNDK","STX","SHOP","SBUX","SNPS","TMUS","TTWO","TSLA","TXN","TRI","VRTX","WMT","WBD","WDC","WDAY","XEL","ALAB","CRWV","NBIS","RKLB","TER","SPCX"];
 const NDX_CORE30=["AAPL","MSFT","NVDA","AMZN","GOOGL","GOOG","META","AVGO","TSLA","AMD","COST","NFLX","PLTR","MU","AMAT","QCOM","LRCX","INTC","ARM","ASML","APP","CRWD","PANW","SHOP","SPCX","CRWV","RKLB","ALAB","TER","MSTR"];
 const NDX_MEMBERSHIP_EVENTS=[{"date":"2025-12-22","added":["ALNY","FER","INSM","MPWR","STX","WDC"],"removed":["BIIB","CDW","GFS","LULU","ON","TTD"],"kind":"ANNUAL_RECONSTITUTION","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-01-05","added":["VSNT"],"removed":[],"kind":"SPINOFF","confidence":"RECONCILED","source":"CORPORATE_ACTION"},{"date":"2026-01-09","added":[],"removed":["VSNT"],"kind":"OFF_CYCLE_DELETION","confidence":"RECONCILED","source":"INDEX_HISTORY"},{"date":"2026-01-20","added":["WMT"],"removed":["AZN"],"kind":"OFF_CYCLE_REPLACEMENT","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-04-20","added":["SNDK"],"removed":["TEAM"],"kind":"OFF_CYCLE_REPLACEMENT","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-05-18","added":["LITE"],"removed":["CSGP"],"kind":"OFF_CYCLE_REPLACEMENT","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-06-22","added":["ALAB","CRWV","NBIS","RKLB","TER"],"removed":["CHTR","CTSH","INSM","VRSK","ZS"],"kind":"QUARTERLY_RECONSTITUTION","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-06-29","added":["HONA"],"removed":[],"kind":"SPINOFF","confidence":"RECONCILED","source":"CORPORATE_ACTION"},{"date":"2026-07-07","added":["SPCX"],"removed":[],"kind":"FAST_ENTRY","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-08-05","added":[],"removed":["EA"],"kind":"TAKE_PRIVATE","confidence":"RECONCILED","source":"CORPORATE_ACTION"},{"date":"2026-09-14","added":[],"removed":["KHC"],"kind":"EXCHANGE_TRANSFER","confidence":"RECONCILED","source":"CORPORATE_ACTION"}];
@@ -1448,7 +1466,7 @@ async function checkStocksHealth(){
 function updateScannerUi(){
   const stocks=assetClass()==="STOCKS";
   if($("scanTitle"))$("scanTitle").textContent=stocks?"Nasdaq-100 Scanner":"Pionex Universe · Binance Engine";
-  if($("scanSubtitle")){const ref=referenceDataGovernance();$("scanSubtitle").textContent=stocks?`NDX research universe · snapshot ${NDX_SNAPSHOT_DATE} · ${ref.nasdaq.label} · Twelve Data`:`Univers Pionex SPOT/USDT · analiza tehnică folosește Binance direct · fallback ${ref.pionex.label}`;}
+  if($("scanSubtitle")){const ref=referenceDataGovernance();$("scanSubtitle").textContent=stocks?`NDX research universe · snapshot ${NDX_SNAPSHOT_DATE} · ${ref.nasdaq.label} · Twelve Data`:`Univers Pionex SPOT/USDT · analiza tehnică folosește Binance direct · rezerva (snapshot) ${ref.pionex.label}`;}
   if($("scanSourceBadge")){$("scanSourceBadge").textContent=stocks?"NASDAQ / US STOCKS":"PIONEX COINS · BINANCE DATA";$("scanSourceBadge").className=stocks?"stockBadge":"pionexBadge"}
   if($("scanAssetHead"))$("scanAssetHead").textContent=stocks?"Ticker":"Coin";if($("scanTurnoverHead"))$("scanTurnoverHead").textContent=stocks?"Daily $ volume":"24h Turnover";
   if($("scanActionBtn"))$("scanActionBtn").textContent=stocks?"↻ Scan Nasdaq universe":"↻ Rescanează Pionex Top 100";
@@ -1461,7 +1479,7 @@ function updateScannerUi(){
   if($("oppScanBtn"))$("oppScanBtn").textContent=stocks?"Scan Nasdaq":"Scan Pionex";
 }
 function stockRowFromSeries(symbol,rows){
-  if(!rows||rows.length<60)return null;const q=calc(rows,$("mode")?.value||"auto"),last=rows[rows.length-1],prev=rows[rows.length-2],price=+last[4],change=prev&&+prev[4]?((price/+prev[4])-1)*100:0,turnover=price*(+last[5]||0);
+  if(!rows||rows.length<60)return null;const q=calc(rows,$("mode")?.value||"auto"),last=rows[rows.length-1],prev=rows[rows.length-2],price=+last[4],change=prev&&+prev[4]?((price/+prev[4])-1)*100:0,turnover=botiNr(last[5])===null?null:price*+last[5];
   return {c:symbol,stockSymbol:symbol,avg:q.score,dir:q.ver,conf:q.confluence,adx:q.adx,regime:q.regime,turnover,change,source:"TWELVEDATA",trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile}
 }
 async function runNasdaqScan(depth="FAST"){
@@ -1470,7 +1488,7 @@ async function runNasdaqScan(depth="FAST"){
 async function scanStocks(){
   let box=$("scanout"),depth=$("scanDepth")?.value||"FAST",universe=depth==="DEEP"?NDX_UNIVERSE:NDX_CORE30;
   if(activeScanToken)activeScanToken.cancelled=true;const token={cancelled:false,id:Date.now()},started=performance.now();activeScanToken=token;scannerRows=[];perfStats.lastScanner="STOCKS RUNNING";
-  const ndxRef=referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90);if(depth==="DEEP"&&ndxRef.state==="STALE"&&!confirm(`Nasdaq reference universe is ${ndxRef.label}. Continue a full-universe research scan with stale membership?`))return;$("scanCancelBtn").disabled=false;$("scanProgressBar").style.width="0%";$("scanProcessed").textContent=`0/${universe.length}`;$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent="—";$("scanElapsed").textContent="0s";$("pionexUniverseCount").textContent=`Universe ${universe.length}/${NDX_UNIVERSE.length}`;$("pionexUniverseTime").textContent=`Snapshot ${NDX_SNAPSHOT_DATE} · ${ndxRef.label}`;updateScannerUi();
+  const ndxRef=referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90);if(depth==="DEEP"&&ndxRef.state==="STALE"&&!confirm(`Nasdaq reference universe is ${ndxRef.label}. Continue a full-universe research scan with stale membership?`))return;scanButonStop(true);$("scanProgressBar").style.width="0%";$("scanProcessed").textContent=`0/${universe.length}`;$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent="—";$("scanElapsed").textContent="0s";$("pionexUniverseCount").textContent=`Universe ${universe.length}/${NDX_UNIVERSE.length}`;$("pionexUniverseTime").textContent=`Snapshot ${NDX_SNAPSHOT_DATE} · ${ndxRef.label}`;updateScannerUi();
   box.innerHTML="Loading Nasdaq daily history via Twelve Data…";
   try{
     const cfg=await stockConfig(true);if(!cfg.configured)throw Error("TWELVE_DATA_API_KEY is not configured in Cloudflare");
@@ -1486,7 +1504,7 @@ async function scanStocks(){
     if(token.cancelled){box.innerHTML='<div class="row"><span>Stock scan stopped.</span></div>';return}
     scannerRows=out;renderScan();const scanBreadth=v64BreadthFromAnalysisRows(scannerRows,{market:assetClass(),source:analysisSource(),total:scannerRows.length,depth:"SCANNER",universe:"CURRENT SCANNER RESULTS"});if(!window.__marketBreadthV64||Date.now()-(+window.__marketBreadthV64.ts||0)>10*60000)renderMarketBreadthV64(scanBreadth);renderOpportunity();renderDailyDesk();perfStats.lastScanner=`STOCKS OK ${out.length}/${universe.length}`;persistScannerHistory("STOCKS","TWELVEDATA",universe.length,out,depth).catch(()=>{});toast(`Nasdaq scanner: ${out.length}/${universe.length} analyzed`,"good")
   }catch(e){scannerRows=[];box.innerHTML=`<div class="row"><span>US Stocks scanner unavailable.</span><b>${escapeHtml(e.message)}</b></div>`;perfStats.lastScanner="STOCKS ERROR · "+e.message;toast("US stock data unavailable: "+e.message,"bad")}
-  finally{if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}$("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"}
+  finally{if(activeScanToken===token){activeScanToken=null;scanButonStop(false)}$("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"}
 }
 function selectStockScan(c){setAssetClass("STOCKS");$("symbol").value=c;localStorage.setItem("lastStock",c);show("dash");analyze(true)}
 
@@ -3257,7 +3275,7 @@ async function pionexTop100(){
       return pionexUniverse
     }
     pionexUniverse=staticPionexUniverse();pionexUniverseUpdated=Date.now();
-    const snapRef=referenceSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE,30,90);setScanUniverseStatus("PIONEX_SNAPSHOT",`${reason} · embedded Pionex/USDT core · ${snapRef.label} · Binance candles${snapRef.state==="STALE"?" · refresh live/saved universe before relying on membership":""}`);
+    const snapRef=pionexSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE);setScanUniverseStatus("PIONEX_SNAPSHOT",`${reason} · embedded Pionex/USDT core · ${snapRef.label} · Binance candles${snapRef.state==="STALE"?" · refresh live/saved universe before relying on membership":""}`);
     if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}`;
     if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Fallback snapshot ${PIONEX_FALLBACK_SNAPSHOT_DATE}`;
     return pionexUniverse
@@ -3299,6 +3317,16 @@ async function pionexKlines(pionexSymbol,tf,limit=300){
     return [ts,String(o),String(h),String(l),String(c),String(v),ts+1,String(v*c)]
   }).sort((a,b)=>a[0]-b[0])
 }
+// v74.6: lista perechilor SPOT de pe Binance, o data pe ora. O moneda Pionex
+// care nu e pe Binance producea cate 8 erori CORS (cate o gazda) la fiecare scan.
+function binanceSimboluriSpot(){
+  return memoRequest(cacheKey("binance-simboluri","spot"),3600000,async()=>{
+    const d=await market("/ticker/price");
+    if(!Array.isArray(d)||d.length<50)throw Error("lista Binance incompleta");
+    return new Set(d.map(x=>String(x.symbol||"").toUpperCase()))
+  })
+}
+function scanButonStop(activ){const x=$("scanCancelBtn");if(x){x.disabled=!activ;x.hidden=!activ}}
 async function pionexUniverseBinanceKlines(item,tf,limit=300){
   const symbol=`${String(item.base||"").toUpperCase()}USDT`;
   return klines(symbol,tf,limit)
@@ -4057,12 +4085,12 @@ async function analyze(save,fallbackTried=false){
   $("heroConfidence").textContent=`LONG ${ss.sm.long.toFixed(0)} · SHORT ${ss.sm.short.toFixed(0)}`;
   $("heroRegime").textContent=q.regime;$("heroAdx").textContent=`ADX ${q.adx.toFixed(0)}`;$("heroProb").textContent=knnEticheta(hs.h4).text;
   let heroCh=botiNr(tick.priceChangePercent);$("hero24").textContent=heroCh===null?"—":(heroCh>=0?"+":"")+heroCh.toFixed(2)+"%";$("hero24").className="qv "+(heroCh===null?"neutral":heroCh>=0?"good":"bad");
-  $("heroMtf").textContent=mc.avg.toFixed(0)+"/100";$("heroVol").textContent=q.atrPct.toFixed(2)+"%";$("heroVol24").textContent=compact(+tick.quoteVolume);
+  $("heroMtf").textContent=mc.avg.toFixed(0)+"/100";$("heroVol").textContent=q.atrPct.toFixed(2)+"%";$("heroVol24").textContent=botiNr(tick.quoteVolume)===null?"—":compact(+tick.quoteVolume);
 
   $("verdict").textContent=comp;$("verdict").className="value "+cls(comp);$("fill").style.width=avg+"%";$("conf").textContent=`Weighted Multi-TF ${avg.toFixed(0)}/100 · acord ${confidence}% · ${q.regime}`;
   if(hp){const ke=knnEticheta(hp);$("pverdict").textContent=hp.ver+" · nedovedit";$("pverdict").className="value "+ke.cls;$("pfill").style.width=hp.up+"%";$("pstats").textContent=`kNN: ${hp.k} analogi · ↑ ${hp.up.toFixed(1)}% ±${hp.banda.toFixed(1)} (banda de zgomot) · ↓ ${hp.down.toFixed(1)}% · medie 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · NEDOVEDIT: pe mers aleator ghicește direcția în 48,8% din cazuri, deci nu intră în scor`}if(hp){let gv=Math.round(hp.up);$("probGauge").style.setProperty("--p",gv);$("probGauge").style.setProperty("--gc",hp.inBanda?"#8a98ab":gv>=58?"#55d89b":gv<=42?"#ff6b78":"#f5c451");$("gaugeVal").textContent=gv+"% ±"+hp.banda.toFixed(0);$("gaugeLabel").textContent=hp.ver+" · nedovedit";$("gaugeLabel").className="value "+knnEticheta(hp).cls}
 
-  $("price").textContent=num(pretViu);let ch=botiNr(tick.priceChangePercent);$("change").textContent=ch===null?"—":(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch===null?"neutral":ch>=0?"good":"bad");$("volume24").textContent=compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";
+  $("price").textContent=num(pretViu);let ch=botiNr(tick.priceChangePercent);$("change").textContent=ch===null?"—":(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch===null?"neutral":ch>=0?"good":"bad");$("volume24").textContent=botiNr(tick.quoteVolume)===null?"—":compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";
   $("rsi").textContent=q.rsi.toFixed(1);$("ema").textContent=q.ema? "Bull stack":"Mixed / bear";$("ema").className=q.ema?"good":"bad";
   $("macd").textContent=q.macd?"Pozitiv":"Negativ";$("macd").className=q.macd?"good":"bad";
   $("adx").textContent=`${q.adx.toFixed(1)} · +DI ${q.pdi.toFixed(0)} / -DI ${q.mdi.toFixed(0)}`;$("adx").className=q.adx>=25?(q.pdi>q.mdi?"good":"bad"):"neutral";
@@ -4171,27 +4199,35 @@ async function derivatives(){
 let scannerRows=[];
 function renderScan(){
  let dir=$("scanDir")?.value||"ALL",reg=$("scanRegime")?.value||"ALL",minAdx=+($("scanAdx")?.value||0),minStrength=+($("scanScore")?.value||0),q=($("scanSearch")?.value||"").trim().toUpperCase(),sort=$("scanSort")?.value||"strength";
- let rows=scannerRows.filter(x=>(!q||x.c.includes(q))&&(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&Math.abs(x.avg-50)*2>=minStrength);
- rows=[...rows].sort((a,b)=>sort==="turnover"?b.turnover-a.turnover:sort==="adx"?b.adx-a.adx:sort==="change"?Math.abs(b.change)-Math.abs(a.change):Math.abs(b.avg-50)-Math.abs(a.avg-50)||b.turnover-a.turnover);
+ let rows=scannerRows.filter(x=>(!q||x.c.includes(q))&&(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&(!minStrength||Math.abs(x.avg-50)*2>=minStrength));
+ // Forta = |scor-50|*2, ca filtrul "Forta >= X". Un scor lipsa (NaN) facea
+ // comparatorul inconsistent - acum sta la coada.
+ const forta=x=>Number.isFinite(+x.avg)?Math.abs(+x.avg-50)*2:-1;
+ rows=[...rows].sort((a,b)=>sort==="turnover"?(b.turnover??-1)-(a.turnover??-1):sort==="adx"?b.adx-a.adx:sort==="change"?Math.abs(b.change)-Math.abs(a.change):(forta(b)-forta(a))||(b.turnover-a.turnover));
  const stockMode=assetClass()==="STOCKS";
- $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" data-action-click="${stockMode?"selectStockScan":"selectPionexScan"}('${x.c}')"><b>${escapeHtml(x.c)}</b><span>${x.avg.toFixed(0)}</span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span><span>${compact(x.turnover)}</span></div>`).join(""):`<div class="row"><span>${stockMode?"No US stock results for current filters.":"Niciun rezultat Pionex pentru filtrele selectate."}</span></div>`;
+ $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" data-action-click="${stockMode?"selectStockScan":"selectPionexScan"}('${x.c}')"><b>${escapeHtml(x.c)}</b><span>${Number.isFinite(+x.avg)?(+x.avg).toFixed(0):"—"} <small class="muted">forță ${forta(x)>=0?forta(x).toFixed(0):"—"}</small></span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span><span>${x.turnover==null?"—":compact(x.turnover)}</span></div>`).join(""):`<div class="row"><span>${stockMode?"No US stock results for current filters.":"Niciun rezultat Pionex pentru filtrele selectate."}</span></div>`;
 }
 let activeScanToken=null;
 function cancelScan(){
- if(activeScanToken){activeScanToken.cancelled=true;perfStats.lastScanner="CANCELLED";$("scanCancelBtn").disabled=true;toast("Scan oprit","warn")}
+ if(activeScanToken){activeScanToken.cancelled=true;perfStats.lastScanner="CANCELLED";scanButonStop(false);toast("Scan oprit","warn")}
 }
 async function scan(){
  if(assetClass()==="STOCKS")return scanStocks();
  let box=$("scanout"),depth=$("scanDepth")?.value||"FAST";
  if(activeScanToken)activeScanToken.cancelled=true;
  const token={cancelled:false,id:Date.now()},started=performance.now();activeScanToken=token;pionexScannerActive=true;scannerRows=[];perfStats.lastScanner="RUNNING";
- $("scanCancelBtn").disabled=false;$("scanProgressBar").style.width="0%";$("scanProcessed").textContent="0/0";$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent=perfStats.pionexCacheHits;$("scanElapsed").textContent="0s";
+ scanButonStop(true);$("scanProgressBar").style.width="0%";$("scanProcessed").textContent="0/0";$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent=perfStats.pionexCacheHits;$("scanElapsed").textContent="0s";
  box.innerHTML="Încarc universul Pionex · analiza tehnică va folosi Binance…";
  try{
-   const top=await pionexTop100();
+   const universPionex=await pionexTop100();
    if(token.cancelled)return;
-   if(!top.length)throw Error("Pionex nu a returnat piețe SPOT/USDT eligibile");
-   $("pionexScanMode").textContent=depth==="DEEP"?"Mode DEEP MTF · Binance candles":"Mode FAST 4H · Binance candles";
+   if(!universPionex.length)throw Error("Pionex nu a returnat piețe SPOT/USDT eligibile");
+   // Fara lista Binance (a picat), nu ghicim: se incearca toate, ca inainte.
+   const peBinance=await binanceSimboluriSpot().catch(()=>null);
+   const top=peBinance?universPionex.filter(x=>peBinance.has(`${String(x.base||"").toUpperCase()}USDT`)):universPionex;
+   const sarite=universPionex.length-top.length;
+   if(!top.length)throw Error("Niciuna dintre monedele Pionex nu e pe Binance");
+   $("pionexScanMode").textContent=(depth==="DEEP"?"Mode DEEP MTF · Binance candles":"Mode FAST 4H · Binance candles")+(sarite?` · ${sarite} sărite (nu sunt pe Binance)`:"");
    $("scanProcessed").textContent=`0/${top.length}`;
    const concurrency=4;
    const worker=async item=>depth==="DEEP"?pionexScanDeep(item):pionexScanFast(item);
@@ -4209,7 +4245,7 @@ async function scan(){
    if(!token.cancelled){box.innerHTML=`<div class="row"><span>Scanner error.</span><b>${escapeHtml(e.message)}</b></div>`;perfStats.lastScanner="SCANNER ERROR · "+e.message;toast("Scanner error: "+e.message,"bad")}
  }finally{
    pionexScannerActive=false;
-   if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}
+   if(activeScanToken===token){activeScanToken=null;scanButonStop(false)}
    $("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"
  }
 }

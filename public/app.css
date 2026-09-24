@@ -1201,4 +1201,15 @@ body{min-height:100vh;overflow-x:hidden}
 #tbSpreSetari{margin-top:8px}
 #tbNivel.tbOprit{color:#8fb4ff}
 .parolaLipsa{margin:0 0 10px}.parolaLipsa button{margin-left:6px}
+/* v74.6 telefon: randul botului se rupe pe doua linii (banii la vedere), tabelul
+   de module se deruleaza deja in el insusi (overflow:auto) - pagina curgea din
+   cauza antetului, ale carui cipuri trec acum pe randul doi */
+#scanCancelBtn[hidden]{display:none}
+.pwaInstall{max-width:calc(100vw - 28px)}
+@media(max-width:600px){
+  #botiRanduri .accountRow,#tbRigla .accountRow{grid-template-columns:1fr 1fr;min-width:0}
+  #tbMasuri .accountRow{grid-template-columns:1.3fr 1fr 1fr;min-width:0}
+  .topStatus{flex-wrap:wrap;row-gap:6px}
+  .topLeft,.topRight{flex-wrap:wrap;row-gap:6px}
+}
 
