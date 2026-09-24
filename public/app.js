@@ -3141,9 +3141,11 @@ function renderApiAuthStatus(){const t=apiSessionToken();
 // v74.6: serverul blocheaza IP-ul un minut (429 AUTH_RATE_LIMITED) dupa 10
 // parole gresite pe minut - iar Tabloul intreaba la 8 s. Un token pe care
 // serverul l-a respins (AUTH_INVALID) nu mai pleaca AUTOMAT pana cand omul
-// nu pune alta parola (sau o salveaza din nou) in Setari.
-let apiTokenRespins=null;
-function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials}).then(r=>{if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID")apiTokenRespins=token;return r},()=>r);return r})}
+// nu pune alta parola (sau o salveaza din nou) in Setari - dar cel mult un
+// minut (cat tine blocarea serverului): apoi mai incearca o data, ca o
+// retea cazuta sau un server repornit sa nu para "parola gresita" la nesfarsit.
+let apiTokenRespins=null,apiTokenRespinsLa=0;const API_TOKEN_RESPINS_MS=60000;
+function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins&&Date.now()-apiTokenRespinsLa<API_TOKEN_RESPINS_MS)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials}).then(r=>{if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID"){apiTokenRespins=token;apiTokenRespinsLa=Date.now()}return r},()=>r);return r})}
 async function getJSON(url){
   const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
   const raw=await r.text();

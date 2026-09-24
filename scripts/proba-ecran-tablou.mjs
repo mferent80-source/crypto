@@ -319,7 +319,7 @@ async function seedIstoricCopt(b, id, minute, pretPerp) {
 }
 
 async function seteazaMock(b, cheie, valoare) {
-  await b.ev(`window.__proba.${cheie} = ${JSON.stringify(valoare)};`);
+  await b.ev(`window.__proba.${cheie} = ${JSON.stringify(valoare)}; apiTokenRespins = null;`);
 }
 
 async function celula(b, i) {
@@ -886,6 +886,20 @@ async function main() {
       const buton2 = await b.ev(`!!document.querySelector('#botiRanduri [data-action-click="mergiLaParola()"]')`);
       assert.equal(buton2, false, "la retea cazuta parola nu e vinovata - fara buton spre Setari");
       if (await textT2Nou()) assert.match(await b.ev(`document.getElementById('botiRanduri').textContent`), /PORNESTE-CRYPTO-RADAR/);
+    });
+
+    await test("A4c. parola respinsa se blocheaza doar un minut, apoi se incearca din nou", async () => {
+      await seteazaMock(b, "botOrders", { corp: { error: "AUTH_INVALID", authenticated: false }, stare: 401 });
+      await b.ev(`incarcaBoti(false)`);
+      const blocat = await b.ev(`!!apiTokenRespins`);
+      if (!blocat) return; // fara parola in pagina nu are ce bloca
+      await b.ev(`window.__proba.botOrders = { reteaPicata: true }`);
+      await b.ev(`incarcaBoti(false)`);
+      assert.match(await b.ev(`document.getElementById("botiRanduri").textContent`), /parola|Parola/, "in minutul de blocare trebuie sa spuna tot parola");
+      await b.ev(`apiTokenRespinsLa = Date.now() - 61000`);
+      await b.ev(`incarcaBoti(false)`);
+      const buton = await b.ev(`!!document.querySelector('#botiRanduri [data-action-click="mergiLaParola()"]')`);
+      assert.equal(buton, false, "dupa un minut blocarea trebuia sa expire si reteaua cazuta sa se vada ca retea, nu ca parola");
     });
 
     await test("A5. starea NU spune '0 AVERTISMENTE' linistit cand serverul raporteaza probleme (429 pe preturi)", async () => {
