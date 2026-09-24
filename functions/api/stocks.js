@@ -51,7 +51,7 @@ async function cachedTd(env,endpoint,params={},ttl=30){
     const hit=await cache.match(ck);
     if(hit){try{return await hit.json()}catch{}}
   }
-  const r=await tdRateGate(()=>fetch(publicUrl,{headers:{"accept":"application/json","Authorization":`apikey ${key}`}}));
+  const r=await tdRateGate(()=>fetch(publicUrl,{headers:{"accept":"application/json","Authorization":`apikey ${key}`},signal:AbortSignal.timeout(8000)}));
   const raw=await r.text();let data=null;try{data=JSON.parse(raw)}catch{}
   if(!r.ok){
     const e=Object.assign(new Error(data?.message||`Twelve Data HTTP ${r.status}`),{status:r.status});throw e
@@ -65,11 +65,13 @@ async function cachedTd(env,endpoint,params={},ttl=30){
   return data
 }
 function normalizeQuote(d,symbol){
-  const close=Number(d.close??d.price??0),prev=Number(d.previous_close??d.previousClose??0),pct=Number(d.percent_change??d.change_percent??(prev?((close/prev)-1)*100:0)),volume=Number(d.volume||0);
+  // Pretul LIPSA ramane null: "0" ar arata ca un pret real (si ar da o variatie de -100%).
+  const nr=v=>v===null||v===undefined||String(v).trim()===""||!Number.isFinite(Number(v))?null:Number(v);
+  const close=nr(d.close)??nr(d.price),prev=nr(d.previous_close)??nr(d.previousClose),pct=nr(d.percent_change)??nr(d.change_percent)??(close!==null&&prev?((close/prev)-1)*100:null),volume=Number(d.volume||0);
   const rawTs=Number(d.timestamp||0),timestamp=rawTs>1e12?rawTs:rawTs>1e9?rawTs*1000:dateMs(d.datetime||"", "1d");
   return {
-    symbol:safeSymbol(d.symbol||symbol),lastPrice:String(close),priceChangePercent:String(Number.isFinite(pct)?pct:0),
-    quoteVolume:String(close*volume),volume:String(volume),open:String(d.open??""),highPrice:String(d.high??""),lowPrice:String(d.low??""),
+    symbol:safeSymbol(d.symbol||symbol),lastPrice:close===null?null:String(close),priceChangePercent:pct===null?null:String(pct),
+    quoteVolume:close===null?null:String(close*volume),volume:String(volume),open:String(d.open??""),highPrice:String(d.high??""),lowPrice:String(d.low??""),
     previousClose:String(d.previous_close??""),exchange:d.exchange||d.mic_code||"",currency:d.currency||"USD",
     isMarketOpen:typeof d.is_market_open==="boolean"?d.is_market_open:null,datetime:d.datetime||"",timestamp
   }

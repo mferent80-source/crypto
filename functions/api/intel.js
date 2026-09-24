@@ -14,7 +14,7 @@ async function getJson(url,opts={},ttl=60){
   if(cache){
     const hit=await cache.match(ck);if(hit){try{return await hit.json()}catch{}}
   }
-  const r=await fetch(url,{...opts,headers:{"accept":"application/json",...(opts.headers||{})}});
+  const r=await fetch(url,{...opts,headers:{"accept":"application/json",...(opts.headers||{})},signal:AbortSignal.timeout(8000)});
   const raw=await r.text();let d=null;try{d=JSON.parse(raw)}catch{}
   if(!r.ok||!d)throw Object.assign(Error(d?.message||d?.error||`HTTP ${r.status}`),{status:r.status});
   if(d.status==="error"||d.result===false)throw Object.assign(Error(d.message||d.error||"Provider error"),{status:Number(d.code)||502});
@@ -41,7 +41,8 @@ async function macroContext(env){
   return {configured:true,provider:"TWELVE_DATA",metrics,riskOnScore,updatedAt:Date.now()}
 }
 async function cryptoGlobal(env){
-  const headers={};if(env.COINGECKO_API_KEY)headers["x-cg-demo-api-key"]=env.COINGECKO_API_KEY;
+  // CoinGecko raspunde 403 "add a descriptive User-Agent" cererilor fara el.
+  const headers={"user-agent":"CryptoRadar/74 (+read-only)"};if(env.COINGECKO_API_KEY)headers["x-cg-demo-api-key"]=env.COINGECKO_API_KEY;
   const d=await getJson(`${CG}/global`,{headers},90),g=d.data||{};
   return {provider:"COINGECKO",activeCryptocurrencies:g.active_cryptocurrencies??null,markets:g.markets??null,totalMarketCapUsd:g.total_market_cap?.usd??null,totalVolumeUsd:g.total_volume?.usd??null,btcDominance:g.market_cap_percentage?.btc??null,ethDominance:g.market_cap_percentage?.eth??null,marketCapChange24h:g.market_cap_change_percentage_24h_usd??null,volumeChange24h:g.volume_change_percentage_24h_usd??null,updatedAt:(g.updated_at||0)*1000||Date.now()}
 }
@@ -66,16 +67,19 @@ async function gdeltNews(query){
   return arts.slice(0,12).map(x=>({title:cleanText(x.title,220),url:String(x.url||"").slice(0,1000),datetime:x.seendate||x.datetime||null,domain:x.domain||"",sourceCountry:x.sourcecountry||"",source:"GDELT"}))
 }
 async function stockNews(env,symbol){
+  // Cand Twelve Data nu da comunicate, cadem pe GDELT - dar spunem DE CE, nu in tacere.
+  let motivFallback=env.TWELVE_DATA_API_KEY?null:"TWELVE_DATA_API_KEY nu e pus";
   if(env.TWELVE_DATA_API_KEY){
     try{
       const q=new URLSearchParams({symbol:safeSymbol(symbol),outputsize:"10",page:"1",language:"en"});
       const d=await getJson(`${TD}/press_releases?${q}`,{headers:{"Authorization":`apikey ${env.TWELVE_DATA_API_KEY}`}},180);
       const rows=(d.press_releases||[]).slice(0,10).map(x=>({title:cleanText(x.title,220),url:"",datetime:x.datetime||null,domain:"Official release",source:"TWELVE_DATA_PRESS_RELEASES"}));
       if(rows.length)return {source:"TWELVE_DATA_PRESS_RELEASES",items:rows}
-    }catch{}
+      motivFallback="Twelve Data nu a intors comunicate";
+    }catch(e){motivFallback=`Twelve Data: ${String(e?.message||e).slice(0,140)}`}
   }
   const items=await gdeltNews(`"${safeSymbol(symbol)}" stock`);
-  return {source:"GDELT",items}
+  return {source:"GDELT",items,motivFallback}
 }
 
 export async function onRequestGet({request,env}){

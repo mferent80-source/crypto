@@ -18,7 +18,7 @@ const isoDate=t=>new Date(t).toISOString().slice(0,10);
 async function getJson(url,opts={},ttl=60){
   const {cacheKey,...fetchOpts}=opts,cache=globalThis.caches?.default||null,headers={"accept":"application/json",...(fetchOpts.headers||{})},ck=new Request(cacheKey||url);
   if(cache){const hit=await cache.match(ck);if(hit){try{return await hit.json()}catch{}}}
-  const r=await fetch(url,{...fetchOpts,headers});
+  const r=await fetch(url,{...fetchOpts,headers,signal:AbortSignal.timeout(8000)});
   const raw=await r.text();let d=null;try{d=JSON.parse(raw)}catch{}
   if(!r.ok||d==null){
     const msg=d?.msg||d?.message||d?.error||raw.slice(0,180)||`HTTP ${r.status}`;
@@ -26,6 +26,13 @@ async function getJson(url,opts={},ttl=60){
   }
   if(cache&&r.ok){const res=new Response(JSON.stringify(d),{headers:{"content-type":"application/json","cache-control":`public,max-age=${ttl}`}});await cache.put(ck,res).catch(()=>{})}
   return d
+}
+
+// Paginarea: `next` vine de la furnizor. Se urmeaza DOAR pe gazda lui (cale relativa sau
+// aceeasi origine). Altfel cheia (Whale Alert o pune in query) ar pleca la oricine.
+function paginaUrmatoare(next,origine){
+  if(!next||typeof next!=="string")return null;
+  try{const u=new URL(next,origine);return u.origin===origine?u:null}catch{return null}
 }
 
 function teUtcMs(v){const s=String(v||"");if(!s)return NaN;return Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(s)?s:s+"Z")}
@@ -62,7 +69,7 @@ async function coinMetricsSeries(symbol,days=35){
         const d=await getJson(url,{},300);pages++;for(const x of d.data||[]){const key=`${x.asset||asset}|${x.time||""}`;if(!seen.has(key)){seen.add(key);all.push(x)}}
         let next=d.next_page_url||d.nextPageUrl||d.next||null;
         if(!next){const token=d.next_page_token||d.nextPageToken||null;if(token){const u=new URL(base);u.searchParams.set("next_page_token",token);next=u.toString()}}
-        if(next&&typeof next==="string"){if(next.startsWith("/"))next=`https://community-api.coinmetrics.io${next}`;url=next}else url="";
+        const nu=paginaUrmatoare(next,"https://community-api.coinmetrics.io");if(nu)url=nu.toString();else{if(next)complete=false;url=""}
       }
       if(url)complete=false;
       const rows=all.map(x=>{const o={asset:x.asset,time:x.time};for(const m of metrics){const v=Number(x[m]);o[m]=Number.isFinite(v)?v:null}return o}).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
@@ -102,7 +109,7 @@ async function whaleFlows(env,u){
     while(url&&pages<8){
       const cacheKey=url.replace(/([?&])api_key=[^&]*/,'$1api_key=REDACTED'),d=await getJson(url,{cacheKey},60);pages++;const batch=Array.isArray(d)?d:(d.transactions||d.data||[]);
       for(const tx of batch){const k=String(tx.hash||`${tx.height}|${tx.timestamp}|${raw.length}`);if(!seen.has(k)){seen.add(k);raw.push(tx)}}
-      let next=!Array.isArray(d)?(d.next||d.next_url||d.nextUrl||null):null;if(next&&typeof next==="string"){if(next.startsWith("/"))next=`https://leviathan.whale-alert.io${next}`;const nu=new URL(next);if(!nu.searchParams.has("api_key"))nu.searchParams.set("api_key",key);url=nu.toString()}else url="";
+      let next=!Array.isArray(d)?(d.next||d.next_url||d.nextUrl||null):null;const nu=paginaUrmatoare(next,"https://leviathan.whale-alert.io");if(nu){if(!nu.searchParams.has("api_key"))nu.searchParams.set("api_key",key);url=nu.toString()}else{if(next)complete=false;url=""}
     }
     if(url)complete=false;
     const items=raw.map(tx=>{const m=waTxMetrics(tx);return {hash:clean(tx.hash,100),height:+tx.height||null,ts:(+tx.timestamp||0)*1000,...m,text:clean(tx.text||"",220),transactionType:clean(tx.transaction_type||"",30)}}).filter(x=>x.ts>=fromSec*1000&&x.valueUsd>=minUsd).sort((a,b)=>b.ts-a.ts);
