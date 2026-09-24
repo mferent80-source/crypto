@@ -483,6 +483,48 @@ await test("[audit] mostra cu perechi lipsa (null) nu se socoteste ca 0", () => 
   assert.equal(m.ritmPerechi.sursa === "istoric" ? "gresit" : "ok", "ok");
 });
 
+// --- Audit 24.09, punctul 5: lipsa nu devine 0 nicaieri in masoara().
+
+await test("[audit] totalFee lipsa (null) nu da comision 0% 'bine'", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, totalFee: null } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.comision.valoare, null, `comision: ${m.comision.valoare}`);
+  assert.equal(m.comision.stare, "nu-se-poate");
+});
+
+await test("[audit] bottom lipsa (null) nu face intervalul sa inceapa de la 0", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, bottom: null } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.pozitieInterval.valoare, null, `pozitie: ${m.pozitieInterval.valoare}`);
+  assert.equal(m.pozitieInterval.stare, "nu-se-poate");
+});
+
+await test("[audit] pretSpot lipsa ramane null, nu 0", () => {
+  assert.equal(T.masoara({ ...INTRARI, pretSpot: null }).pretSpot, null);
+  assert.equal(T.masoara({ ...INTRARI, pretSpot: "" }).pretSpot, null);
+});
+
+await test("[audit] ora pornirii lipsa: varsta e null si verdictul nu scrie '0 minute'", () => {
+  const bot = { ...BOT, createTime: undefined };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.varstaBotMin, null, `varsta: ${m.varstaBotMin}`);
+  const v = T.verdict({ ...masuriBune(), varstaBotMin: null }, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT");
+  assert.equal(v.declansator.masura, "varstaBot");
+  assert.equal(v.declansator.valoare, null, "lipsa nu se scrie ca 0");
+  assert.doesNotMatch(v.ceFac, /\b0 de minute/, v.ceFac);
+});
+
+await test("[audit] istoric cu prima mostra fara timp: istoricMin null si NEDOVEDIT, nu LINISTE", () => {
+  const ist = ISTORIC.map((h, i) => (i === 0 ? { ...h, t: null } : h));
+  const m = T.masoara({ ...INTRARI, istoric: ist });
+  assert.equal(m.istoricMin, null, `istoricMin: ${m.istoricMin}`);
+  const v = T.verdict({ ...masuriBune(), istoricMin: null }, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT");
+  assert.equal(v.declansator.masura, "istoric");
+  assert.equal(v.declansator.valoare, null);
+});
+
 await test("fara nimic pus, botul e presupus GRID", () => {
   const r = T.modBot(BOT, {});
   assert.equal(r.mod, "GRID");

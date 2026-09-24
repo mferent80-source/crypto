@@ -142,11 +142,16 @@ var TabloBot = (function () {
     var acum = intrari.acum || Date.now();
 
     var ef = eficienta(inchideri.slice(-48));
+    // Lipsa ramane null (nu 0): o ora de pornire lipsa scria "Botul are 0 de
+    // minute", iar o prima mostra fara timp dadea istoric de ~30 de milioane de
+    // minute - adica trecea tacut de treapta NEDOVEDIT.
+    var tPornire = bot ? nr(bot.createTime) : null;
+    var tPrimaMostra = istoric.length ? nr(istoric[0].t) : null;
 
     var m = {
-      varstaBotMin: bot && bot.createTime ? (acum - nr(bot.createTime)) / 60000 : 0,
+      varstaBotMin: tPornire !== null && tPornire > 0 ? (acum - tPornire) / 60000 : null,
       lumanari: inchideri.length,
-      istoricMin: istoric.length ? (acum - nr(istoric[0].t)) / 60000 : 0,
+      istoricMin: !istoric.length ? 0 : (tPrimaMostra !== null && tPrimaMostra > 0 ? (acum - tPrimaMostra) / 60000 : null),
       pretPerp: pretPerp,
       pretSpot: pretSpot,
       eficienta: { valoare: ef.valoare, semn: ef.semn, prag: { trend: 0.60, zigzag: 0.30 },
@@ -393,6 +398,12 @@ var TabloBot = (function () {
     }
 
     // Fiecare motiv al lui NEDOVEDIT isi spune singur cauza - nu toate pe varsta.
+    if (m.varstaBotMin == null) {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Nu știu de când e pornit botul - lipsește ora pornirii. Ritmul are nevoie de vreo 2 ore ca să însemne ceva.",
+        declansator: d("varstaBot", null, 120) };
+    }
     if (m.varstaBotMin < 120) {
       return { nivel: "NEDOVEDIT",
         titlu: "Nu știu încă",
@@ -404,6 +415,12 @@ var TabloBot = (function () {
         titlu: "Nu știu încă",
         ceFac: "Am doar " + m.lumanari + " lumânări. Îmi trebuie cel puțin 48 ca să măsor eficiența.",
         declansator: d("lumanari", m.lumanari, 48) };
+    }
+    if (m.istoricMin == null) {
+      return { nivel: "NEDOVEDIT",
+        titlu: "Nu știu încă",
+        ceFac: "Nu știu cât istoric am - prima măsurătoare nu are oră. Îmi trebuie cel puțin 30 de minute ca să văd un ritm.",
+        declansator: d("istoric", null, 30) };
     }
     if (m.istoricMin < 30) {
       return { nivel: "NEDOVEDIT",
