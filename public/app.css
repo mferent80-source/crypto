@@ -1391,3 +1391,6 @@ body.peTablou main>.note{display:none}
 #gridset .grAles{outline:2px solid rgba(120,180,255,.5);outline-offset:-2px}
 #gridset .grNota{color:var(--muted);font-size:12px;margin:8px 0 0}
 @media (max-width:600px){#gridset .grVerdict{flex-direction:column}#gridset .grRand{grid-template-columns:1fr auto}#gridset .grRand .grCopy{grid-column:2}}
+#gridset .grPornit{margin:8px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#gridset .grRezumat{margin:0 0 8px;font-weight:700}
+#gridset .grTabel td{white-space:nowrap}

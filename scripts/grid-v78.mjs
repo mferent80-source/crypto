@@ -412,5 +412,71 @@ await test("F4 sumaMaxima: sold 1000, pierdere acceptata 5%, cea mai proasta fer
   assert.equal(GP.sumaMaxima(1000, 5, 0.02), null, "nicio fereastra pe minus -> nu se poate socoti (nu infinit)");
 });
 
+// --- F2: jurnalul gridurilor ---
+const JUR_SRC = fs.existsSync(new URL("../public/lib/grid-jurnal.js", import.meta.url)) ? fs.readFileSync(new URL("../public/lib/grid-jurnal.js", import.meta.url), "utf8") : "";
+const GJ = JUR_SRC ? new Function(`${JUR_SRC}; return GridJurnal;`)() : null;
+await test("F2 modulul GridJurnal exista", () => assert.ok(GJ, "grid-jurnal.js lipseste"));
+const T0 = 1_790_000_000_000, ORA = 3600000;
+function fisaFalsa(over) {
+  return Object.assign({ simbol: "MET_USDT_PERP", dir: "long", H: 2, pret: 0.3348,
+    setare: { jos: 0.3116, sus: 0.3697, grile: 8, levier: 4, suma: 100 },
+    verdict: { nivel: "porneste", motive: [] },
+    proba: { pe: { long: { antren: { mediana: 0.102, ceaMaiProasta: -0.40, lichidari: 0 }, test: { mediana: 0.156 } } }, recomandata: "long" } }, over || {});
+}
+await test("F2 adauga: intrarea poarta fisa (setare, verdict, mediana, cea mai proasta), fara bot legat", () => {
+  const l = GJ.adauga([], fisaFalsa(), T0);
+  assert.equal(l.length, 1);
+  const e = l[0];
+  assert.equal(e.simbol, "MET_USDT_PERP"); assert.equal(e.verdict, "porneste"); assert.equal(e.suma, 100);
+  aprox(e.mediana, 0.102, 1e-9); aprox(e.ceaMaiProasta, -0.40, 1e-9);
+  assert.equal(e.botId, null); assert.equal(e.rezultat, null); assert.ok(e.id && e.t === T0);
+  // a doua adaugare pe aceeasi moneda in 10 minute o inlocuieste pe prima (a apasat de doua ori)
+  const l2 = GJ.adauga(l, fisaFalsa({ setare: { jos: 0.31, sus: 0.37, grile: 9, levier: 4, suma: 120 } }), T0 + 5 * 60000);
+  assert.equal(l2.length, 1); assert.equal(l2[0].suma, 120);
+});
+await test("F2 leaga: botul cu aceeasi moneda, pornit intre t-6h si t+12h, se leaga o singura data; altul nu", () => {
+  const l = GJ.adauga([], fisaFalsa(), T0);
+  const boti = [
+    { id: "77", baza: "COTI.PERP", quote: "USDT", activ: true, pornitLa: T0 + ORA, investit: 100, profitTotal: 3 },
+    { id: "88", baza: "MET.PERP", quote: "USDT", activ: true, pornitLa: T0 + 2 * ORA, investit: 100, profitTotal: 1.5 },
+  ];
+  const l2 = GJ.actualizeaza(l, boti, T0 + 3 * ORA);
+  assert.equal(l2[0].botId, "88");
+  assert.equal(l2[0].rezultat, 1.5); assert.equal(l2[0].investit, 100); assert.equal(l2[0].activ, true); assert.equal(l2[0].inchisLa, null);
+  // bot pornit cu 2 zile inainte de fisa -> nu e al fisei
+  const l3 = GJ.actualizeaza(GJ.adauga([], fisaFalsa(), T0), [{ id: "99", baza: "MET.PERP", activ: true, pornitLa: T0 - 48 * ORA }], T0 + ORA);
+  assert.equal(l3[0].botId, null);
+  // un bot deja legat de alta intrare nu se leaga a doua oara
+  const l4 = GJ.actualizeaza(GJ.adauga(l2, fisaFalsa({ simbol: "MET_USDT_PERP" }), T0 + 4 * ORA), boti, T0 + 5 * ORA);
+  assert.equal(l4.filter((e) => e.botId === "88").length, 1);
+});
+await test("F2 actualizeaza: botul legat dispare din lista -> inchisLa se pune, rezultatul ramane ultimul; botul inactiv din lista -> activ false", () => {
+  let l = GJ.actualizeaza(GJ.adauga([], fisaFalsa(), T0), [{ id: "88", baza: "MET.PERP", activ: true, pornitLa: T0 + ORA, investit: 100, profitTotal: 2.2 }], T0 + 2 * ORA);
+  l = GJ.actualizeaza(l, [], T0 + 10 * ORA);
+  assert.equal(l[0].inchisLa, T0 + 10 * ORA); assert.equal(l[0].rezultat, 2.2); assert.equal(l[0].activ, false);
+  l = GJ.actualizeaza(GJ.adauga([], fisaFalsa(), T0), [{ id: "88", baza: "MET.PERP", activ: false, inchisLa: T0 + 9 * ORA, pornitLa: T0 + ORA, investit: 100, profitTotal: -4 }], T0 + 10 * ORA);
+  assert.equal(l[0].activ, false); assert.equal(l[0].inchisLa, T0 + 9 * ORA); assert.equal(l[0].rezultat, -4);
+  // lista de boti null (citire picata) -> nimic nu se schimba, nimic nu se inchide
+  const l5 = GJ.actualizeaza(l, null, T0 + 11 * ORA);
+  assert.deepEqual(l5, l);
+});
+await test("F2 rezumat: pe verdict - cate, cate legate, media rezultatului in % din investit, cate pe plus; intrarile nelegate nu intra in medie", () => {
+  let l = GJ.adauga([], fisaFalsa(), T0);
+  l = GJ.adauga(l, fisaFalsa({ simbol: "BTC_USDT_PERP", verdict: { nivel: "asteapta" } }), T0 + ORA);
+  l = GJ.adauga(l, fisaFalsa({ simbol: "SOL_USDT_PERP" }), T0 + 2 * ORA);
+  l = GJ.actualizeaza(l, [
+    { id: "1", baza: "MET.PERP", activ: false, pornitLa: T0 + ORA, investit: 100, profitTotal: 10 },
+    { id: "2", baza: "SOL.PERP", activ: true, pornitLa: T0 + 3 * ORA, investit: 200, profitTotal: -10 },
+  ], T0 + 4 * ORA);
+  const r = GJ.rezumat(l);
+  assert.equal(r.porneste.n, 2); assert.equal(r.porneste.legate, 2); aprox(r.porneste.mediaPct, (0.10 - 0.05) / 2, 1e-9); assert.equal(r.porneste.pePlus, 1);
+  assert.equal(r.asteapta.n, 1); assert.equal(r.asteapta.legate, 0); assert.equal(r.asteapta.mediaPct, null);
+  assert.equal(r.total, 3);
+});
+await test("F2 citeste: JSON stricat sau ne-lista -> lista goala, nu crapa", () => {
+  assert.deepEqual(GJ.citeste("{nu e json"), []); assert.deepEqual(GJ.citeste(JSON.stringify({ a: 1 })), []); assert.deepEqual(GJ.citeste(null), []);
+  assert.equal(GJ.citeste(JSON.stringify([{ id: "x", t: T0, simbol: "A" }, null, "gunoi"])).length, 1);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);
