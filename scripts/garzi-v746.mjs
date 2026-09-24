@@ -267,7 +267,7 @@ function gardaVersiune() {
   surse["sw.js CACHE"] = c[1] ? normalizeaza([c[1], c[2], c[3]].filter(Boolean).join(".")) : null;
   const meta = [...html.matchAll(/<meta\b[^>]*>/g)].map((m) => m[0]).find((t) => /\bname="app-version"/.test(t));
   surse['index.html <meta name="app-version">'] = meta ? normalizeaza((meta.match(/\bcontent="([^"]*)"/) || [])[1]) : null;
-  surse['index.html badge din antet (class="badge")'] = normalizeaza((html.match(/<span class="badge">\s*(v[\d.]+)/) || [])[1]);
+  surse['index.html badge din antet (class="badge")'] = normalizeaza((html.match(/<span\b[^>]*\bclass="badge"[^>]*>\s*(v[\d.]+)/) || [])[1]);
   surse["index.html casuta Build"] = normalizeaza((html.match(/<div class="label">Build<\/div>\s*<div[^>]*>\s*(v[\d.]+)/) || [])[1]);
   surse['index.html #healthAppVersion'] = normalizeaza((html.match(/id="healthAppVersion"[^>]*>\s*(v[\d.]+)/) || [])[1]);
   const man = JSON.parse(citeste("public/manifest.webmanifest"));
