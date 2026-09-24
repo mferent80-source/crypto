@@ -188,6 +188,10 @@ async function scenariu(lat, inal, nume) {
       assert.match(t1, /Pas net pe grilă/); assert.match(t1, /Verdictul de azi/);
       assert.match(t2, /Grile, ultimele 24 h/); assert.match(t2, /Dacă îl închizi acum, iei[\s\S]{0,10}\d/); assert.match(t2, /Prețul la care botul e pe zero/);
       FARA_GUNOI(t1); FARA_GUNOI(t2);
+      // v80.1: sfaturile au "Ce as face eu" si nu mai vorbesc de opritor / USDT liberi
+      await panaCand(b, `/Ce aș face eu/.test(document.getElementById("tbSfaturi").innerText)`, 30000, "sfaturile cu 'ce as face eu'");
+      const t3 = await b.ev(`document.getElementById("tbSfaturi").innerText`);
+      assert.ok(!/[Oo]pritorul|USDT liberi/.test(t3), "au ramas sfaturile scoase: " + t3.slice(0, 200)); FARA_GUNOI(t3);
       await b.poza(path.join(DOSAR_POZE, `tablou-${nume}.png`));
       await b.ev(`navTo('gridset',true)`);
     });

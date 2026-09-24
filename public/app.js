@@ -5202,7 +5202,7 @@ async function tbAduFisaBot(b){
       suma:botiNr(b.investit)||100,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null};
   }catch(e){tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:null,eroare:grTextEroare(e)}}
-  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaExtra(tbStare.bot);
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaExtra(tbStare.bot);if(typeof renderTabloSfaturi==="function")renderTabloSfaturi()}
 }
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
@@ -5312,9 +5312,13 @@ function renderTabloSfaturi(){
   var scen=Scenariu.scenarii(tbStare.botBrut,b,[{eticheta:"jos",pret:botiNr(b.gridJos)}]);
   var k4=d&&d.randuri4h,p=botiNr(b.pretCurent),jos=botiNr(b.gridJos);
   var sanse=k4&&p!==null&&jos!==null?{josZi:Scenariu.sansaAtingere(k4,p,jos,6),josSapt:Scenariu.sansaAtingere(k4,p,jos,42)}:{};
+  // v80.1: ritmul botului (24 h vs media pe zi de la pornire) + fisa/costuri/zero/setare din tablou-extra
+  var bu=b.brut&&b.brut.buOrderData||{},zile=botiNr(b.pornitLa)?(Date.now()-botiNr(b.pornitLa))/86400000:null;
+  var ritm={grile24h:botiNr(bu.gridProfit24h),medieZi:zile&&botiNr(b.gridProfitBrut)!=null?botiNr(b.gridProfitBrut)/zile:null,tranz24h:botiNr(bu.trx24h),tranzMedieZi:zile&&botiNr(bu.closedExchangeOrderCount)!=null?botiNr(bu.closedExchangeOrderCount)/zile:null,zile:zile};
   var lista=Sfaturi.sfaturi({bot:b,scen:scen,sanse:sanse,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,
-    futures:e.futures?{disponibil:e.futures.disponibil}:null,funding:e.funding,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir});
-  el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.deCe?'<p class="tbSub">'+escapeHtml(s.deCe)+'</p>':'')+'</div>'}).join("");
+    funding:e.funding,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,
+    fisa:tbFisa.botId===b.id?tbFisa.fisa:null,costuri:TabloExtra.grileVsCosturi(b,Date.now()),zero:TabloExtra.dacaInchizi(b),geom:TabloExtra.geometrieBot(b),ritm:ritm});
+  el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(s.faCe)+'</p>':'')+(s.deCe?'<p class="tbSub">'+escapeHtml(s.deCe)+'</p>':'')+'</div>'}).join("");
 }
 function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
