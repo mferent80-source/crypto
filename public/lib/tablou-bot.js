@@ -63,7 +63,9 @@ var TabloBot = (function () {
     if (!valoare) return { valoare: null, stare: "nu-se-poate", prag: "running" };
     if (STARI_INCHIS.indexOf(sus) >= 0 || STARI_INCHIS.indexOf(jos) >= 0)
       return { valoare: STARI_INCHIS.indexOf(jos) >= 0 ? jos : sus, stare: "oprit", prag: "running" };
-    if (jos === "running" || (!jos && sus === "open"))
+    // Fara status jos, "running" sus e tot un bot care merge (bot-orders.js il
+    // socoteste activ la fel) - altfel iesea OPRIT fals.
+    if (jos === "running" || (!jos && (sus === "open" || sus === "running")))
       return { valoare: valoare, stare: "bine", prag: "running" };
     return { valoare: valoare, stare: "altceva", prag: "running" };
   }
@@ -530,7 +532,9 @@ var TabloBot = (function () {
     // fabricat basis -100% la pretPerpViu. Un status e valid doar daca e POZITIV.
     var stBrut = nr(status), st = (stBrut !== null && stBrut > 0) ? stBrut : null;
     // Fetch-ul n-a ajuns deloc la server: fara status, cu mesajul browserului.
-    var eRetea = st === null && /Failed to fetch|NetworkError|Load failed|TypeError/i.test(brut);
+    // Doar mesajele de RETEA - numele TypeError singur prindea si un bug din
+    // cod ("TypeError: x is undefined") si il trimitea sa reporneasca serverul.
+    var eRetea = st === null && /Failed to fetch|NetworkError|Load failed|\bnetwork\b/i.test(brut);
     // Cheile Pionex (sau parola) lipsesc din configurarea SERVERULUI - 503.
     var eNeconfigurat = /NOT_CONFIGURED|nu sunt configurate/i.test(brut);
     var eParola = st === 401 || /AUTH_REQUIRED|AUTH_INVALID/.test(brut);
@@ -543,6 +547,12 @@ var TabloBot = (function () {
         ceFac: publicat
           ? "Nu am legătură cu serverul - verifică internetul. (" + brut + ")"
           : "Serverul de acasă e oprit — pornește PORNESTE-CRYPTO-RADAR.bat. (" + brut + ")" };
+    }
+    if (/APP_API_TOKEN_NOT_CONFIGURED/.test(brut)) {
+      return { local: local, titlu: "Parola aplicației nu e pusă pe server — pornește din nou .bat",
+        ceFac: "Serverul rulează, dar nu are parola aplicației (APP_API_TOKEN). " +
+          "Închide fereastra neagră și pornește din nou cu PORNESTE-CRYPTO-RADAR.bat - " +
+          "îți cere parola și cele două chei Pionex o dată, la pornire." };
     }
     if (eNeconfigurat) {
       return { local: local, titlu: "Cheile Pionex nu sunt puse",

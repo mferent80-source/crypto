@@ -483,6 +483,24 @@ await test("[audit] mostra cu perechi lipsa (null) nu se socoteste ca 0", () => 
   assert.equal(m.ritmPerechi.sursa === "istoric" ? "gresit" : "ok", "ok");
 });
 
+// Fix runda 1: proba de mai sus trece si FARA garda p0/p1/p7 (diferenta negativa
+// cade pe garda de contor resetat). Aici null pe CAPETE: la -7h, null->0 face
+// baza = tot contorul / 6h => "Ritmul a cazut" fals.
+await test("[runda1] perechi null pe capatul de acum 7h si/sau 1h nu fabrica ritm", () => {
+  const baza = istoricRegulat(1, 0.1, ACUM, 7).map((h) => ({ ...h, perechi: 1000 + h.perechi }));
+  const IDX7 = 0, IDX1 = 360; // mostrele de la -420 si -60 de minute
+  assert.equal(baza[IDX7].t, ACUM - 420 * 60000, "precheck capat 7h");
+  assert.equal(baza[IDX1].t, ACUM - 60 * 60000, "precheck capat 1h");
+  const cazuri = { "7h": [IDX7], "1h": [IDX1], "7h+1h": [IDX7, IDX1] };
+  for (const [nume, idx] of Object.entries(cazuri)) {
+    const ist = baza.map((h, i) => (idx.includes(i) ? { ...h, perechi: null } : h));
+    const r = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM }).ritmPerechi;
+    assert.notEqual(r.stare, "rau", `${nume}: ${JSON.stringify(r)}`);
+    assert.notEqual(r.sursa, "istoric", `${nume}: capat lipsa, ritmul nu se socoteste din istoric`);
+    assert.equal(r.valoare, null, `${nume}: fara trx24h nu are ce arata`);
+  }
+});
+
 // --- Audit 24.09, punctul 5: lipsa nu devine 0 nicaieri in masoara().
 
 await test("[audit] totalFee lipsa (null) nu da comision 0% 'bine'", () => {
@@ -968,6 +986,14 @@ await test("[audit] bot CLOSED doar la nivelul de sus (buOrderData fara status) 
 await test("[audit] bot care merge (open/running) NU e OPRIT", () => {
   const m = T.masoara(intrariAudit(botAudit()));
   assert.equal(m.stareBot && m.stareBot.stare, "bine");
+  assert.notEqual(T.verdict(m, "GRID").nivel, "OPRIT");
+});
+
+await test("[runda1] buOrderData.status lipsa + sus 'running' = merge, nu OPRIT fals", () => {
+  // bot-orders.js il socoteste activ: String(x.status||bot.status).toLowerCase()==="running"
+  const bot = botAudit({ status: "running", buOrderData: { status: undefined } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.equal(m.stareBot.stare, "bine", JSON.stringify(m.stareBot));
   assert.notEqual(T.verdict(m, "GRID").nivel, "OPRIT");
 });
 
@@ -1490,6 +1516,24 @@ await test("[audit] eroare: cheile lipsa pe server (503 / NOT_CONFIGURED) -> mes
     assert.match(e.ceFac, /chei/i, `${mesaj}: trebuie sa spuna ca e vorba de chei`);
     assert.doesNotMatch(e.ceFac, /fereastra neagră de pe calculator/, "nu e o cadere la Pionex, e configurare");
   }
+});
+
+await test("[runda1] un bug TypeError din cod NU e 'serverul de acasa e oprit'", () => {
+  for (const mesaj of ["TypeError: x is undefined", "TypeError: Cannot read properties of null (reading 'bots')"]) {
+    const e = T.explicaEroarea(mesaj, null, "127.0.0.1");
+    assert.doesNotMatch(e.ceFac, /Serverul de acasă e oprit/, `${mesaj}: "${e.ceFac}"`);
+    assert.match(e.ceFac, /TypeError/, "mesajul brut ramane la vedere");
+  }
+  const r = T.explicaEroarea("TypeError: network error", null, "127.0.0.1");
+  assert.match(r.ceFac, /Serverul de acasă e oprit/, "controlul: un TypeError de RETEA ramane retea");
+});
+
+await test("[runda1] APP_API_TOKEN_NOT_CONFIGURED are titlu propriu (parola pe server), nu 'cheile Pionex'", () => {
+  const e = T.explicaEroarea("APP_API_TOKEN_NOT_CONFIGURED", 503, "127.0.0.1");
+  assert.equal(e.titlu, "Parola aplicației nu e pusă pe server — pornește din nou .bat");
+  assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR\.bat/);
+  const k = T.explicaEroarea("Cheile PIONEX_API_KEY / PIONEX_API_SECRET nu sunt configurate.", 503, "127.0.0.1");
+  assert.equal(k.titlu, "Cheile Pionex nu sunt puse", "controlul: cheile Pionex lipsa raman cu titlul lor");
 });
 
 await test("[audit] eroare: un cuvant care CONTINE 'rate' nu e limitare de ritm", () => {
