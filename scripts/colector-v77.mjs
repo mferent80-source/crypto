@@ -202,5 +202,19 @@ await test("lansatoare: versiunea de dinainte se citeste explicit (nu HEAD@{1} -
   }
 });
 
+await test("lansatorul inchide sesiunea veche DOAR a acestui folder (ferestre, server, colector dupa pid) - nimic strain", () => {
+  const t = fs.readFileSync(new URL("../PORNESTE-CRYPTO-RADAR.bat", import.meta.url), "utf8");
+  assert.match(t, /if "%RC%"=="3" goto :INCHIDVECHI/, "cu serverul acestui folder pornit, lansatorul trebuie sa inchida sesiunea veche");
+  const i = t.indexOf("rem [ps:inchide]");
+  assert.ok(i > 0, "lipseste blocul [ps:inchide]");
+  const ps = t.slice(i).split(/\r?\n/)[1];
+  assert.match(ps, /\$_\.ProcessId -ne \$eu/, "nu are voie sa-si inchida propria fereastra");
+  assert.match(ps, /ToLower\(\)\.Contains\(\$dir\)/, "ferestrele se inchid doar daca sunt din ACEST folder");
+  assert.match(ps, /\$txt\.Contains\('wrangler'\) -and \$txt\.Contains\(\$dir\)/, "serverul de pe port se inchide doar daca e wrangler-ul acestui folder");
+  assert.match(ps, /data\\colector\.pid/, "colectorul se inchide dupa pid-ul acestui folder");
+  assert.ok(!/Where-Object \{[^}]*colector\\\.mjs[^}]*\} \| ForEach-Object \{ taskkill/.test(ps), "nu inchide ORICE colector de pe PC");
+  assert.ok(!ps.slice(ps.indexOf('"') + 1, ps.lastIndexOf('"')).includes('"'), "ghilimele duble in comanda PowerShell rup linia din cmd");
+});
+
 console.log(`\nV77_COLECTOR ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

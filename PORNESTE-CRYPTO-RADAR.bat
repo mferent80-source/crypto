@@ -89,12 +89,26 @@ if "%RC%"=="4" (
   pause
   exit /b 1
 )
-if "%RC%"=="3" goto :DEJAPORNIT
+if "%RC%"=="3" goto :INCHIDVECHI
 if not "%RC%"=="0" (
   echo   [!] Nu am putut verifica portul 8788 - incerc oricum.
   echo.
 )
 
+goto :DUPAPORT
+
+:INCHIDVECHI
+rem Merge deja o sesiune a acestui folder (alta fereastra a Radarului, serverul
+rem ei, colectorul). O inchid si pornesc una curata. Inchid DOAR ce e al acestui
+rem folder: ferestrele PORNESTE-*.bat din el, serverul de pe 8788 daca e pornit
+rem din el, si colectorul dupa data\colector.pid. Nimic strain.
+echo   Gasesc o sesiune veche a Radarului deschisa. O inchid si pornesc una noua...
+rem [ps:inchide]
+powershell -NoProfile -Command "$port = 8788; $dir = (Get-Location).Path.TrimEnd('\').ToLower() + '\'; $eu = [int](Get-CimInstance Win32_Process -Filter ('ProcessId=' + $PID)).ParentProcessId; $inchise = 0; $vechi = Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'cmd.exe' -and $_.ProcessId -ne $eu -and ([string]$_.CommandLine).ToLower().Contains($dir) -and ([string]$_.CommandLine) -match 'PORNESTE-(CRYPTO-RADAR|SI-PE-TELEFON)\.bat' }; foreach ($p in $vechi) { taskkill /PID $p.ProcessId /T /F *> $null; $inchise++ }; $c = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($c) { $x = [int]$c.OwningProcess; $lant = @(); for ($i = 0; $i -lt 8 -and $x -gt 0; $i++) { $p = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $x) -ErrorAction SilentlyContinue; if (-not $p) { break }; $lant += $p; $x = [int]$p.ParentProcessId }; $txt = (($lant | ForEach-Object { [string]$_.CommandLine }) -join ' ').ToLower(); if ($txt.Contains('wrangler') -and $txt.Contains($dir)) { $sus = $lant | Where-Object { ([string]$_.CommandLine).ToLower() -match 'wrangler|workerd|npx' } | Select-Object -Last 1; if ($sus) { taskkill /PID $sus.ProcessId /T /F *> $null; $inchise++ } } }; $pf = Join-Path (Get-Location).Path 'data\colector.pid'; if (Test-Path -LiteralPath $pf) { $cp = [int](((Get-Content -LiteralPath $pf -Raw) -split '\s+')[0]); $cpp = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $cp) -ErrorAction SilentlyContinue; if ($cpp -and ([string]$cpp.CommandLine) -match 'colector\.mjs') { taskkill /PID $cp /T /F *> $null; $inchise++ } }; for ($i = 0; $i -lt 30; $i++) { if (-not (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)) { Write-Host ('  [OK] Am inchis sesiunea veche (' + $inchise + ' procese). Pornesc una noua.'); exit 0 }; Start-Sleep -Milliseconds 500 }; Write-Host '  [ATENTIE] Portul 8788 e tot ocupat dupa inchidere - nu pornesc a doua sesiune.'; exit 1"
+if errorlevel 1 goto :DEJAPORNIT
+echo.
+
+:DUPAPORT
 rem Un .dev.vars care EXISTA nu inseamna ca e bun: gol sau cu o cheie lipsa
 rem ar porni aplicatia care apoi da AUTH_REQUIRED, fara sa spuna de ce.
 set "CHEIOK="
