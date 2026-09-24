@@ -142,6 +142,16 @@ var GridProba = (function () {
       latimi: latV, pasi: pasV, pe: pe, recomandata: recomandata };
   }
 
+  // Trendul si proba nu sunt de acord? Se spune doar cand directia recomandata
+  // de proba n-a pierdut nici pe zilele nevazute (altfel validarea a respins-o
+  // si "pe istoric a iesit mai bine X" ar fi fals). Vazut pe BTC/SOL, 24.09.
+  function contrazice(pr, dir) {
+    if (!pr || !pr.recomandata || pr.recomandata === dir) return null;
+    var t = pr.pe[pr.recomandata] && pr.pe[pr.recomandata].test;
+    if (t && t.mediana !== null && t.mediana < 0) return null;
+    return { fisa: dir, proba: pr.recomandata };
+  }
+
   function fisa(o) {
     if (!(o.pret > 0)) return { eroare: "N-am prețul de acum al monedei." };
     var pr = proba(o.b15, o.H);
@@ -157,9 +167,9 @@ var GridProba = (function () {
     }
     return { simbol: o.simbol, pret: o.pret, H: o.H, directie: dT, dir: dir, manual: !!o.dir, setare: st, proba: pr, verdict: v,
       regim: rg, pozitie: poz, sumaMinima: sumaMinima,
-      contra: pr.recomandata && pr.recomandata !== dir ? { fisa: dir, proba: pr.recomandata } : null };
+      contra: contrazice(pr, dir) };
   }
 
-  return { simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, fisa: fisa };
+  return { simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, fisa: fisa };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

@@ -208,6 +208,15 @@ await test("proba: sub 2 orizonturi + o zi de istoric -> null (nu cifre inventat
 });
 
 const b4 = bareDin(aleator(300, 5, 0.01)), b1 = bareDin(aleator(200, 6, 0.02));
+await test("contrazice: se spune doar cand recomandata difera SI n-a pierdut pe zilele nevazute", () => {
+  const pr = (rec, testMed) => ({ recomandata: rec, pe: { long: {}, neutru: {}, short: { test: testMed === undefined ? null : { mediana: testMed } } } });
+  assert.deepEqual(GP.contrazice(pr("short", 0.02), "long"), { fisa: "long", proba: "short" });
+  assert.equal(GP.contrazice(pr("short", -0.11), "long"), null, "shortul a pierdut pe nevazute -> nu contrazice");
+  assert.deepEqual(GP.contrazice(pr("short"), "long"), { fisa: "long", proba: "short" }, "fara zile nevazute -> se spune");
+  assert.equal(GP.contrazice(pr("long", 0.05), "long"), null);
+  assert.equal(GP.contrazice({ recomandata: null, pe: {} }, "long"), null);
+});
+
 await test("fisa: completa, cu directie mereu data si setari de copiat", () => {
   const f = GP.fisa({ simbol: "TEST_USDT_PERP", pret: b30[b30.length - 1].c, b15: b30, b4h: b4, b1d: b1, suma: 100, H: 2, dir: null, levier: null, minNotional: 1 });
   assert.ok(!f.eroare, f.eroare);
