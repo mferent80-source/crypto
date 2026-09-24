@@ -102,7 +102,8 @@ async function stergeProfilul(profil) {
 async function panaCand(b, expr, ms, ce) {
   const t0 = Date.now();
   while (Date.now() - t0 < ms) { let ok = false; try { ok = await b.ev(expr); } catch {} if (ok) return; await asteapta(400); }
-  throw new Error(`am asteptat ${ms} ms degeaba: ${ce}`);
+  let vede = ""; try { vede = await b.ev(`(document.getElementById("grFisa")||{innerText:""}).innerText.slice(0,300)+" | stare: "+(document.getElementById("grStare")||{textContent:""}).textContent`); } catch {}
+  throw new Error(`am asteptat ${ms} ms degeaba: ${ce} · pe ecran: ${vede}`);
 }
 
 let teste = 0, picate = 0;
@@ -180,6 +181,17 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`localStorage.removeItem("grJurnal")`);
     });
 
+    await test(`${nume} · v80 Tabloul botului: "botul vs fisa" cu tabel + "pe zi / la inchidere" cu cifre, fara gunoi`, async () => {
+      await b.ev(`navTo('tabloubot',true)`);
+      await panaCand(b, `!!document.querySelector("#tbFisaBot .tbCmp")`, 120000, "tabelul bot vs fisa");
+      const t1 = await b.ev(`document.getElementById("tbFisaBot").innerText`), t2 = await b.ev(`document.getElementById("tbAcum").innerText`);
+      assert.match(t1, /Pas net pe grilă/); assert.match(t1, /Verdictul de azi/);
+      assert.match(t2, /Grile, ultimele 24 h/); assert.match(t2, /Dacă îl închizi acum, iei[\s\S]{0,10}\d/); assert.match(t2, /Prețul la care botul e pe zero/);
+      FARA_GUNOI(t1); FARA_GUNOI(t2);
+      await b.poza(path.join(DOSAR_POZE, `tablou-${nume}.png`));
+      await b.ev(`navTo('gridset',true)`);
+    });
+
     await test(`${nume} · consola curata, fara scroll orizontal`, async () => {
       assert.deepEqual(b.exceptii, []); assert.deepEqual(b.consola, []);
       const w = await b.ev(`document.documentElement.scrollWidth`);
@@ -192,7 +204,12 @@ async function scenariu(lat, inal, nume) {
 
 console.log(`\nV78 · Grid: ce setez acum? · proba de ecran pe ${URL_T} (date reale Pionex)\n`);
 if (!BROWSER) { console.log("  nu gasesc Chrome/Edge"); process.exit(2); }
-await scenariu(1440, 900, "pc");
+if (!process.env.DOAR_TELEFON) {
+  await scenariu(1440, 900, "pc");
+  // un om nu deschide doua ferestre in acelasi minut: serverul are 45 de cereri Pionex/minut pe IP,
+  // iar scenariul de PC singur face ~20. Fara pauza, telefonul ar masura limita, nu ecranul.
+  await asteapta(65000);
+}
 await scenariu(390, 844, "telefon");
 console.log(`\npoze in ${DOSAR_POZE}\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

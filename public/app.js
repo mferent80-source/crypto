@@ -5186,6 +5186,55 @@ function tbRandUmpleri(b){
     +rand("Din direcție",botiBan(dirTot),botiClasa(dirTot),"pornire "+botiBan(r.directieRealizat)+" + deschis "+botiBan(r.nerealizat))
     +rand("Comisioane pe umpleri",botiBan(-r.comisioane),"tbSubVal",r.umpleri+" umpleri");
 }
+// ===== v80: cinci randuri noi in Tablou (logica pura in lib/tablou-extra.js) =====
+var tbFisa={botId:null,la:0,inLucru:false,fisa:null,eroare:null};
+async function tbAduFisaBot(b){
+  if(!b||!b.id||tbFisa.inLucru)return;
+  if(tbFisa.botId===b.id&&Date.now()-tbFisa.la<(tbFisa.eroare?2*60000:10*60000))return;
+  tbFisa.inLucru=true;
+  try{
+    var simbol=TabloBot.simboluri(b.baza,b.quote).pionex;
+    await grAduMonede();
+    // refoloseste lumanarile aduse de fereastra Grid pentru aceeasi moneda (sub 10 min): 8 cereri Pionex mai putin
+    var d=grStare.date&&grStare.simbol===simbol&&Date.now()-grStare.la<10*60000?grStare.date:await grAduLumanari(simbol),info=grStare.monede&&grStare.monede[simbol];
+    if(!(grStare.date&&grStare.simbol===simbol)){grStare.date=d;grStare.simbol=simbol;grStare.la=Date.now()}
+    var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),
+      suma:botiNr(b.investit)||100,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
+    tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null};
+  }catch(e){tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:null,eroare:grTextEroare(e)}}
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaExtra(tbStare.bot);
+}
+function tbDeseneazaExtra(b){
+  var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
+  if(!b){el.innerHTML=el2.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
+  var linie=function(et,val,cls,nota){return '<div class="tbLinie"><span>'+escapeHtml(et)+(nota?' <span class="tbSub">'+escapeHtml(nota)+'</span>':'')+'</span><b class="'+(cls||"")+'">'+escapeHtml(val)+'</b></div>'};
+  // 1) botul vs fisa
+  var f=tbFisa.botId===b.id?tbFisa.fisa:null;
+  if(tbFisa.botId===b.id&&tbFisa.eroare)el.innerHTML='<p class="tbSub">Nu pot calcula fișa pentru moneda botului: '+escapeHtml(tbFisa.eroare)+'</p>';
+  else if(!f){var g0=TabloExtra.geometrieBot(b);el.innerHTML=(g0?linie("Pas net pe grilă (botul)",P(g0.netPct),g0.preaDese?"bad":"",g0.grile+" grile "+g0.mod):"")+'<p class="tbSub">calculez fișa de azi pentru moneda botului…</p>'}
+  else{
+    var c=TabloExtra.comparaCuFisa(b,f);
+    el.innerHTML='<table class="tbCmp"><thead><tr><th></th><th>botul tău</th><th>fișa de azi</th></tr></thead><tbody>'+c.randuri.map(function(r){return '<tr><th>'+escapeHtml(r.et)+'</th><td>'+escapeHtml(r.bot)+'</td><td>'+escapeHtml(r.et==="Verdictul de azi"?((GR_NIVEL[r.fisa]||[r.fisa])[0]):r.fisa)+'</td></tr>'}).join("")+'</tbody></table>'
+      +(c.semnale.length?'<ul class="tbSemnale">'+c.semnale.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>':'<p class="tbSub">Setările botului se potrivesc cu fișa de azi.</p>')
+      +'<p class="tbSub">Nu schimba botul doar pentru că diferă: fișa e pentru un bot NOU pornit acum. Deschide fereastra Grid pentru toată proba.</p>';
+    if($("tbFisaBotSub"))$("tbFisaBotSub").textContent="fișa calculată la "+new Date(tbFisa.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · suma botului";
+  }
+  // 2) pe zi  3) la inchidere  4) liniste + laborator  5) jurnal
+  var z=TabloExtra.grileVsCosturi(b,Date.now()),q=TabloExtra.dacaInchizi(b),h="";
+  h+=linie("Grile, ultimele 24 h",z.grile24h==null?"—":botiBan(z.grile24h),botiClasa(z.grile24h),z.umpleri24h!=null?z.umpleri24h+" tranzacții":"");
+  h+=linie("Comisioane pe zi",z.comisionZi==null?"—":botiBan(z.comisionZi),"tbSubVal","medie de la pornire");
+  h+=linie("Funding pe zi",z.fundingZi==null?"—":botiBan(z.fundingZi),z.fundingMananca?"bad":"tbSubVal",z.fundingMananca?"mănâncă tot câștigul din grile":"medie de la pornire");
+  h+=linie("Grile − costuri, pe zi",z.netZi==null?"—":botiBan(z.netZi),botiClasa(z.netZi));
+  h+='<div class="tbLinie tbLinieTotal"><span>Dacă îl închizi acum, iei</span><b class="'+botiClasa(q.iei!=null&&botiNr(b.investit)!=null?q.iei-botiNr(b.investit):null)+'">'+escapeHtml(q.iei==null?"—":q.iei.toFixed(2)+" USDT")+'</b></div>';
+  h+=linie("Comisionul de închidere",q.comisionInchidere==null?"—":botiBan(-q.comisionInchidere),"tbSubVal");
+  h+=linie("Prețul la care botul e pe zero",q.pretZero==null?"—":grPret(q.pretZero,null),"",q.distantaZeroPct==null?"":(q.distantaZeroPct>=0?"+":"")+P(q.distantaZeroPct)+" de aici");
+  if(f&&f.liniste){var L=f.liniste;h+=linie("Liniștea (fișa)",!L.linisteAcum?"acum e mișcare":!L.suficient?"prea puține perioade":L.k+" din "+L.n+" au mai ținut 2 zile ("+P(L.p)+")",!L.linisteAcum?"tbWarn":"","frecvență, nu promisiune")}
+  var lab=grLaborator&&grLaborator.date,qm=lab&&Array.isArray(lab.intrebari)?lab.intrebari.find(function(x){return x.id==="miscare"}):null;
+  if(qm)h+=linie("Laboratorul: după mișcare vs liniște",P(qm.A&&qm.A.pePlus)+" vs "+P(qm.B&&qm.B.pePlus)+" pe plus",qm.verdict==="dovedit"?"good":"tbSubVal",qm.verdict==="dovedit"?"DOVEDIT":"n-am aflat încă");
+  var j=TabloExtra.legaturaJurnal(grJurnalCitit(),b);
+  h+=j?linie("Din jurnal","pornit la "+((GR_NIVEL[j.verdict]||["?"])[0])+", proba zicea mediana "+P(j.mediana),"","acum "+(botiNr(b.profitTotal)!=null&&botiNr(b.investit)?P(botiNr(b.profitTotal)/botiNr(b.investit)):"—")):linie("Din jurnal","nelegat","tbSubVal","n-ai notat fișa la pornire");
+  el2.innerHTML=h;
+}
 // Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.
 function tbDeseneazaBanii(b){
   var el=$("tbBani"),av=$("tbAvertismente");if(!el)return;
@@ -5201,6 +5250,7 @@ function tbDeseneazaBanii(b){
     rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
     tbRandUmpleri(b);
   tbAduUmpleri(b);
+  tbDeseneazaExtra(b);tbAduFisaBot(b);if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
 }

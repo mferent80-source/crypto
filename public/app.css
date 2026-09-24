@@ -1409,3 +1409,7 @@ body.peTablou main>.note{display:none}
 #gridset .grCalibrare h5{margin:0 0 6px;font-size:14px}
 #gridset .grLab{padding:8px 0;border-bottom:1px solid var(--tb-linie)}
 #gridset .grLab>div{margin-top:3px}
+#tabloubot .tbCmp{width:100%;border-collapse:collapse;font-size:13px}
+#tabloubot .tbCmp th,#tabloubot .tbCmp td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--tb-linie)}
+#tabloubot .tbCmp tbody th{text-align:left;color:var(--muted);font-weight:600}
+#tabloubot .tbSemnale{margin:8px 0 0;padding-left:18px;color:var(--warn)}

@@ -734,5 +734,53 @@ await test("v79.5 intrebari: 3 intrebari cu titlu, grupe A/B si verdict; pe mers
   assert.ok(q.every((x) => x.verdict !== "dovedit"), q.map((x) => x.id + ":" + x.verdict).join(" "));
 });
 
+// --- v80: Tabloul botului - 5 randuri noi (pe cifrele botului REAL MET din 24.09) ---
+const TX_SRC = fs.existsSync(new URL("../public/lib/tablou-extra.js", import.meta.url)) ? fs.readFileSync(new URL("../public/lib/tablou-extra.js", import.meta.url), "utf8") : "";
+const TX = TX_SRC ? new Function(`${SRC}; ${TX_SRC}; return TabloExtra;`)() : null;
+const ORA_ = 3600000, P0 = 1790185122575;
+const botMET = { id: "2382", baza: "MET.PERP", quote: "USDT", activ: true, directie: "long", levier: 5, investit: 88.98, profitNet: -4.8309, profitTotal: -5.4292, pnlNerealizat: -0.5984, comisioane: -0.7086, finantare: -0.0563, gridProfitBrut: 4.0787, pozitie: 702, pretDeschidere: 0.34115, pretCurent: 0.3403, gridJos: 0.3, gridSus: 0.4, pornitLa: P0,
+  brut: { buOrderData: { row: 93, gridType: "arithmetic", gridProfit24h: "3.99005464", trx24h: 320, fundingFeePayment: "-0.05626315455384" } } };
+await test("v80 modulul TabloExtra exista", () => assert.ok(TX, "tablou-extra.js lipseste"));
+await test("v80 geometrieBot: MET aritmetic 0,30-0,40 / 93 grile la 0,3403 -> pas 0,001075 = 0,316% brut, ~0,216% net; sub pragul fisei (0,25%) -> 'prea dese'", () => {
+  const g = TX.geometrieBot(botMET);
+  aprox(g.pasPret, 0.1 / 93, 1e-9); aprox(g.pasPct, (0.1 / 93) / 0.3403, 1e-6); aprox(g.netPct, (0.1 / 93) / 0.3403 - 0.001, 1e-6);
+  assert.equal(g.mod, "aritmetic"); assert.equal(g.grile, 93); assert.equal(g.preaDese, true);
+  assert.equal(TX.geometrieBot({ gridJos: 0.3, gridSus: 0.4, brut: { buOrderData: {} } }), null, "fara numar de grile -> null");
+});
+await test("v80 comparaCuFisa: randuri bot vs fisa (interval, grile, pas net, levier, directie, verdict) + semnale concrete", () => {
+  const fisa = { dir: "long", verdict: { nivel: "porneste" }, setare: { jos: 0.315, sus: 0.389, grile: 10, levier: 3, levierSigur: 3, pas: 0.0213, profitGrila: 0.0203 } };
+  const c = TX.comparaCuFisa(botMET, fisa);
+  assert.ok(c.randuri.length >= 6);
+  assert.ok(c.semnale.some((x) => /prea dese/.test(x)), c.semnale.join(" | "));
+  assert.ok(c.semnale.some((x) => /levier/.test(x)), "5x vs 3x sigur");
+  assert.equal(TX.comparaCuFisa(botMET, null).randuri.length, 0);
+});
+await test("v80 grileVsCosturi: grile 24h +3,99 vs comisioane/zi si funding/zi (din totalul de la pornire / zile)", () => {
+  const acum = P0 + 24 * ORA_;
+  const r = TX.grileVsCosturi(botMET, acum);
+  aprox(r.grile24h, 3.99005464, 1e-6); assert.equal(r.umpleri24h, 320);
+  aprox(r.zile, 1, 1e-6); aprox(r.fundingZi, -0.05626, 1e-4); aprox(r.comisionZi, -0.7086, 1e-4);
+  aprox(r.netZi, 3.99005464 - 0.7086 - 0.05626, 1e-3);
+  assert.equal(r.fundingMananca, false);
+  const b2 = JSON.parse(JSON.stringify(botMET)); b2.brut.buOrderData.gridProfit24h = null;
+  assert.strictEqual(TX.grileVsCosturi(b2, acum).grile24h, null, "lipsa ramane lipsa");
+});
+await test("v80 dacaInchizi: iei investit + total - comisionul de inchidere; pretul de zero la long = deschidere - profitNet/pozitie (+comision)", () => {
+  const r = TX.dacaInchizi(botMET, 0.0005);
+  aprox(r.comisionInchidere, 702 * 0.3403 * 0.0005, 1e-6);
+  aprox(r.iei, 88.98 - 5.4292 - 702 * 0.3403 * 0.0005, 1e-4);
+  assert.ok(r.pretZero > 0.3478 && r.pretZero < 0.3485, "pret zero " + r.pretZero);
+  aprox(r.distantaZeroPct, (r.pretZero - 0.3403) / 0.3403, 1e-9);
+  const n = TX.dacaInchizi(Object.assign({}, botMET, { directie: "neutru", pnlNerealizatSigur: false }), 0.0005);
+  assert.strictEqual(n.pretZero, null, "la neutru semnul pozitiei e nesigur -> fara pret de zero");
+  const sh = TX.dacaInchizi(Object.assign({}, botMET, { directie: "short" }), 0.0005);
+  assert.ok(sh.pretZero < 0.34115, "la short pretul de zero e SUB deschidere cand esti pe minus");
+});
+await test("v80 legaturaJurnal: intrarea din jurnal legata de botul acesta (sau null)", () => {
+  const l = [{ id: "a", botId: "999" }, { id: "b", botId: "2382", verdict: "porneste", mediana: 0.1, t: 1 }];
+  assert.equal(TX.legaturaJurnal(l, botMET).id, "b");
+  assert.equal(TX.legaturaJurnal([], botMET), null);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);
