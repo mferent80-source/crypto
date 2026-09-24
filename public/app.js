@@ -5555,7 +5555,8 @@ function tbDeseneazaKpi(){
   var p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus);
   pune("tbKpiPret",p===null?"—":tbPretScurt(p),"");
   var poz=(p!==null&&jos!==null&&sus!==null&&sus>jos)?(p-jos)/(sus-jos):null;
-  pune("tbKpiPretSub",poz===null?"fără grid citit":(poz<0?"sub grid":poz>1?"peste grid":Math.round(poz*100)+"% din interval")+" · "+tbPretScurt(jos)+" - "+tbPretScurt(sus),poz!==null&&(poz<0||poz>1)?"bad":"");
+  var dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(b):null;
+  pune("tbKpiPretSub",poz===null?"fără grid citit":(dg?dg.text:(poz<0?"sub grid":poz>1?"peste grid":Math.round(poz*100)+"% din interval"))+" · "+tbPretScurt(jos)+" - "+tbPretScurt(sus),poz!==null&&(poz<0||poz>1)?"bad":"");
   var punct=$("tbKpiGridPunct");
   if(punct){punct.hidden=poz===null;if(poz!==null){punct.style.left=(Math.min(1,Math.max(0,poz))*100).toFixed(1)+"%";punct.className="tbGaugePunct"+(poz<0||poz>1?" bad":"")}}
   var d=tbStare.directie,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
@@ -5733,6 +5734,7 @@ function tbActualizeazaBanda(){
   parti.push(tot===null?"total \u2014":"total "+(tot>0?"+":"")+tot.toFixed(2)+" USDT");
   var dist=botiNr(b.distantaLichidarePct);
   parti.push(b.lichidareDepasita?"LICHIDARE DEPĂȘITĂ":dist===null?"lichidare \u2014":"lichidare "+Math.abs(dist).toFixed(1)+"%");
+  var dg2=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(b):null;if(dg2)parti.push(dg2.inGrid?"grid ↓"+(dg2.josPct*100).toFixed(1)+"% ↑"+(dg2.susPct*100).toFixed(1)+"%":dg2.text);
   var d=tbStare.directie,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
   if(z&&z.ton!=="nu-se-poate")parti.push(z.ton==="rau"?"piața: împotrivă":z.ton==="bine"?"piața: cu botul":"piața: amestecat");
   el.textContent=parti.join(" \u00b7 ");

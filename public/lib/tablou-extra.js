@@ -150,7 +150,16 @@ var TabloExtra = (function () {
     return out.sort(function (a, b) { return a.t - b.t; });
   }
 
-  return { geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
+  // v84.1: cat mai e pana la marginile gridului, in % din pretul de acum (el: "nu mai e distanta pana la grid?")
+  function distanteGrid(b) {
+    var p = nr(b && b.pretCurent), jos = nr(b && b.gridJos), sus = nr(b && b.gridSus);
+    if (p === null || !(p > 0) || jos === null || sus === null || !(sus > jos)) return null;
+    var f = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; };
+    var j = (p - jos) / p, s = (sus - p) / p, inGrid = p >= jos && p <= sus;
+    return { josPct: j, susPct: s, inGrid: inGrid, text: inGrid ? "↓ " + f(j) + " până jos · ↑ " + f(s) + " până sus" : p < jos ? "sub grid cu " + f(-j) : "peste grid cu " + f(-s) };
+  }
+
+  return { distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

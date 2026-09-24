@@ -36,16 +36,19 @@ function jurnal(...a) {
 // Deci: alt colector conteaza ca viu doar daca procesul exista SI a batut recent.
 const PID = path.join(DATA, "colector.pid");
 const BATAIE_MS = 3 * PAS_MS;
-try {
+// In modul de proba (COLECTOR_DOAR_INCARCA) nu se atinge pornirea unica: nici nu iese pentru
+// ca ruleaza deja unul, nici nu scrie / sterge colector.pid-ul colectorului adevarat.
+const DOAR_INCARCA = !!process.env.COLECTOR_DOAR_INCARCA;
+if (!DOAR_INCARCA) try {
   const [vechi, la] = fs.readFileSync(PID, "utf8").split(/\s+/).map(Number);
   if (vechi && vechi !== process.pid && Date.now() - (la || 0) < BATAIE_MS) {
     process.kill(vechi, 0);
     jurnal("mai rulează un colector (PID " + vechi + ") - ies"); process.exit(0);
   }
 } catch {}
-const bate = () => { try { fs.writeFileSync(PID, process.pid + " " + Date.now()); } catch {} };
+const bate = () => { if (DOAR_INCARCA) return; try { fs.writeFileSync(PID, process.pid + " " + Date.now()); } catch {} };
 bate();
-const curataPid = () => { try { if (Number(fs.readFileSync(PID, "utf8").split(/\s+/)[0]) === process.pid) fs.unlinkSync(PID); } catch {} };
+const curataPid = () => { if (DOAR_INCARCA) return; try { if (Number(fs.readFileSync(PID, "utf8").split(/\s+/)[0]) === process.pid) fs.unlinkSync(PID); } catch {} };
 process.on("exit", curataPid);
 process.on("SIGINT", () => process.exit(0));
 process.on("SIGTERM", () => process.exit(0));

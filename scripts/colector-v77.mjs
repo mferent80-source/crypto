@@ -266,7 +266,10 @@ await test("colector.mjs SE INCARCA intreg (v84: o ordine gresita de incarcare l
   const { spawnSync } = await import("node:child_process");
   const r = spawnSync(process.execPath, [new URL("./colector.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")], { env: { ...process.env, COLECTOR_DOAR_INCARCA: "1" }, encoding: "utf8", timeout: 30000 });
   assert.equal(r.status, 0, (r.stderr || "").slice(0, 400));
-  assert.match(r.stdout, /INCARCAT true/);
+  assert.match(r.stdout, /INCARCAT true/, "stdout: " + r.stdout.slice(0, 200));
+  // si nu atinge colector.pid-ul colectorului care ruleaza (daca ruleaza)
+  const pidF = new URL("../data/colector.pid", import.meta.url);
+  if (fs.existsSync(pidF)) assert.ok(!fs.readFileSync(pidF, "utf8").startsWith(String(r.pid) + " "), "proba a scris in colector.pid");
 });
 
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {

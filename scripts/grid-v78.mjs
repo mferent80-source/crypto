@@ -836,5 +836,13 @@ await test("v81 Alerte plan: pragul de pe plus atins -> info 'planul tau: ies'; 
   assert.equal(r.mesaje.filter((x) => x.cheie === "plan").length, 0);
 });
 
+await test("v84.1 distanteGrid: MET la 0,3411 in 0,30-0,40 -> 12,05% pana jos, 17,27% pana sus; afara -> cu cat e afara; lipsa -> null", () => {
+  const d = TX.distanteGrid(Object.assign({}, botMET, { pretCurent: 0.3411 }));
+  aprox(d.josPct, (0.3411 - 0.3) / 0.3411, 1e-9); aprox(d.susPct, (0.4 - 0.3411) / 0.3411, 1e-9); assert.equal(d.inGrid, true);
+  assert.match(d.text, /↓ 12,0% până jos · ↑ 17,3% până sus/);
+  const sub = TX.distanteGrid(Object.assign({}, botMET, { pretCurent: 0.29 }));
+  assert.equal(sub.inGrid, false); assert.match(sub.text, /sub grid cu 3,4%/, "fata de pretul de acum, ca si celelalte distante");
+  assert.equal(TX.distanteGrid(Object.assign({}, botMET, { gridJos: null })), null);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);
