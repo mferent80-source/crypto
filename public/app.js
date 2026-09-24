@@ -4875,17 +4875,30 @@ function gridCopiaza(v){
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(v).then(gata,function(){toast("Nu am putut copia; scrie de mână: "+v,"bad")});
   else toast("Scrie de mână: "+v,"bad");
 }
-function grPret(x,info){
-  if(x==null||!Number.isFinite(x))return "—";
-  var zec=info&&Number.isFinite(Number(info.quotePrecision))?Number(info.quotePrecision):(x>=1000?2:x>=1?4:6);
-  return x.toFixed(zec);
+// Zecimalele monedei: DOAR daca quotePrecision e un intreg >= 0 dat explicit (null si "" NU
+// inseamna 0 - Number(null)===0 ar fi rotunjit preturile la intregi). Fara ea: dupa marime,
+// iar sub 0,0001 pastreaza 6 cifre semnificative (0.00001234, nu 0.000012).
+function grZec(info){
+  if(!info||info.quotePrecision==null||info.quotePrecision==="")return null;
+  var z=Number(info.quotePrecision);return Number.isInteger(z)&&z>=0&&z<=12?z:null;
 }
+function grFmt(x,zec){
+  if(x==null||!Number.isFinite(x))return null;
+  if(zec!=null)return x.toFixed(zec);
+  if(x>=1000)return x.toFixed(2);
+  if(x>=1)return x.toFixed(4);
+  if(x>=0.0001||x<=0)return x.toFixed(6);
+  return x.toFixed(Math.min(12,5-Math.floor(Math.log10(x))));
+}
+function grPret(x,info){var s=grFmt(x,grZec(info));return s==null?"—":s}
 // v78.1: randul pentru indicatorul GRID-FISA din TradingView (pine-scripts/GRID-FISA):
-// dir;jos;sus;grile;levier;stopJos;stopSus;lichJos;lichSus - lipsa se scrie 0, pretul la precizia monedei.
+// dir;jos;sus;grile;levier;stopJos;stopSus;lichJos;lichSus;suma - lipsa se scrie 0, pretul la precizia monedei.
+// v78.2: 10 campuri (+suma); stop-ul se trimite DOAR unde il arata fisa (la short nu exista stop jos;
+// la long, sus e take-profit - Pine il eticheteaza asa); precizia prin grZec/grFmt.
 function grCodTV(st,info){
-  var zec=info&&Number.isFinite(Number(info.quotePrecision))?Number(info.quotePrecision):null;
-  var p=function(x){if(x==null||!Number.isFinite(x))return "0";var z=zec!=null?zec:(x>=1000?2:x>=1?4:6);return x.toFixed(z)};
-  return [st.dir,p(st.jos),p(st.sus),String(st.grile),String(st.levier),p(st.stop&&st.stop.jos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus)].join(";");
+  var zec=grZec(info),p=function(x){var s=grFmt(x,zec);return s==null?"0":s};
+  var stopJos=st.dir==="short"?null:(st.stop&&st.stop.jos);
+  return [st.dir,p(st.jos),p(st.sus),String(st.grile),String(st.levier),p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0"].join(";");
 }
 var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
 var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};

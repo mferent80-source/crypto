@@ -298,12 +298,19 @@ await test("revizie 11: statisticile poarta iesirile medii din interval (pentru 
 
 // --- app.js: ajutatoarele pure ale ferestrei (Review Focus 1 si 2) ---
 const APP = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
-function scoateFunctia(nume) {
+function scoateUna(nume) {
   const i = APP.indexOf("function " + nume + "(");
   if (i < 0) return null;
   let d = 0, j = APP.indexOf("{", i);
   for (let k = j; k < APP.length; k++) { if (APP[k] === "{") d++; else if (APP[k] === "}" && --d === 0) return APP.slice(i, k + 1); }
   return null;
+}
+// functia ceruta + ajutatoarele pure de care depinde (grZec/grFmt), ca sa ruleze in afara paginii
+function scoateFunctia(nume) {
+  const f = scoateUna(nume);
+  if (!f) return null;
+  const aj = ["grZec", "grFmt"].filter((n) => n !== nume && f.includes(n + "(")).map(scoateUna).filter(Boolean);
+  return aj.concat([f]).join("\n");
 }
 await test("grSimbol: met / MET.PERP / METUSDT / MET_USDT_PERP -> MET_USDT_PERP; gol sau USDT -> null", () => {
   const src = scoateFunctia("grSimbol"); assert.ok(src, "grSimbol lipseste din app.js");
@@ -323,11 +330,38 @@ await test("v78.1 grCodTV: randul pentru GRID-FISA (Pine) = dir;jos;sus;grile;le
   const src = scoateFunctia("grCodTV"); assert.ok(src, "grCodTV lipseste din app.js");
   const f = new Function(`${src}; return grCodTV;`)();
   const st = { dir: "long", jos: 0.311573, sus: 0.369651, grile: 8, levier: 4, stop: { jos: 0.298111, sus: 0.385609 }, lichidare: { jos: 0.246893, sus: null } };
-  assert.equal(f(st, { quotePrecision: 4 }), "long;0.3116;0.3697;8;4;0.2981;0.3856;0.2469;0");
+  assert.equal(f(st, { quotePrecision: 4 }), "long;0.3116;0.3697;8;4;0.2981;0.3856;0.2469;0;0", "fara suma -> al 10-lea camp 0");
   const c = f({ dir: "short", jos: 82139.4, sus: 85969.2, grile: 7, levier: 5, stop: { jos: 81066.1, sus: 87092.9 }, lichidare: { jos: null, sus: 101234.5 } }, { quotePrecision: 1 });
-  assert.equal(c, "short;82139.4;85969.2;7;5;81066.1;87092.9;0;101234.5");
-  assert.equal(c.split(";").length, 9, "exact 9 campuri");
-  assert.equal(f(st, null), "long;0.311573;0.369651;8;4;0.298111;0.385609;0.246893;0", "fara info: 6 zecimale sub 1");
+  assert.equal(c, "short;82139.4;85969.2;7;5;0;87092.9;0;101234.5;0", "short: stopJos = 0");
+  assert.equal(c.split(";").length, 10, "exact 10 campuri");
+  assert.equal(f(st, null), "long;0.311573;0.369651;8;4;0.298111;0.385609;0.246893;0;0", "fara info: 6 zecimale sub 1");
+});
+
+await test("v78.2 grCodTV: precizia lipsa (null/\"\") NU inseamna 0 zecimale; preturi < 0,0001 pastreaza cifrele; short trimite stopJos=0; suma e al 10-lea camp", () => {
+  const src = scoateFunctia("grCodTV"); assert.ok(src, "grCodTV lipseste din app.js");
+  const f = new Function(`${src}; return grCodTV;`)();
+  const st = { dir: "neutru", jos: 0.311573, sus: 0.369651, grile: 8, levier: 4, suma: 250, stop: { jos: 0.298111, sus: 0.385609 }, lichidare: { jos: 0.246893, sus: null } };
+  const fara = f(st, null);
+  assert.equal(f(st, { quotePrecision: null }), fara, "null -> ca fara info");
+  assert.equal(f(st, { quotePrecision: "" }), fara, "\"\" -> ca fara info");
+  assert.ok(!/;0;0\.|^neutru;0;/.test(f(st, { quotePrecision: null })), "nu 0 zecimale");
+  assert.ok(fara.endsWith(";250"), fara);
+  const mic = f({ dir: "long", jos: 0.00001234, sus: 0.00001300, grile: 5, levier: 2, suma: 50, stop: { jos: 0.00001200, sus: 0.00001350 }, lichidare: { jos: 0.00000900, sus: null } }, null);
+  const c = mic.split(";"); assert.equal(c.length, 10, mic);
+  assert.ok(Number(c[1]) < Number(c[2]) && Number(c[5]) < Number(c[1]) && Number(c[6]) > Number(c[2]), "ordinea pastrata la preturi mici: " + mic);
+  assert.ok(Math.abs(Number(c[1]) - 0.00001234) < 1e-9, "jos pastreaza cifrele: " + c[1]);
+  assert.ok(!/e/i.test(mic), "fara notatie stiintifica");
+  const sh = f({ dir: "short", jos: 90, sus: 110, grile: 4, levier: 3, suma: 100, stop: { jos: 85, sus: 115 }, lichidare: { jos: null, sus: 140 } }, { quotePrecision: 2 });
+  assert.equal(sh, "short;90.00;110.00;4;3;0;115.00;0;140.00;100", "short: stopJos = 0 (fisa nu-l arata)");
+});
+
+await test("v78.2 grPret: precizia null/\"\" -> zecimale dupa marime, nu 0", () => {
+  const src = scoateFunctia("grPret"); assert.ok(src, "grPret lipseste din app.js");
+  const f = new Function(`${src}; return grPret;`)();
+  assert.equal(f(0.3348, { quotePrecision: null }), f(0.3348, null));
+  assert.notEqual(f(0.3348, { quotePrecision: "" }), "0");
+  assert.equal(f(0.3348, { quotePrecision: 4 }), "0.3348");
+  assert.equal(f(0.3348, { quotePrecision: 0 }), "0", "0 explicit ramane 0 zecimale");
 });
 
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
