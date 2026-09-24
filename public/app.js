@@ -3100,7 +3100,9 @@ function clearApiSessionToken(){try{localStorage.removeItem(APP_API_TOKEN_SESSIO
 // din nou - adica exact ce ne-am propus sa nu mai faca. Se precompleteaza.
 function renderApiAuthStatus(){const t=apiSessionToken();
   if($("apiAuthStatus"))$("apiAuthStatus").textContent=t?"ȚINUTĂ MINTE PE ACEST DISPOZITIV":"NEPUSĂ";
-  const c=$("apiSessionToken");if(c&&!c.value&&t)c.value=t}
+  const c=$("apiSessionToken");if(c&&!c.value&&t)c.value=t;
+  // Prima deschidere fara parola: aplicatia spune UNDE se pune, nu doar "401".
+  if($("parolaLipsa"))$("parolaLipsa").hidden=!!t}
 function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});if(same){const token=apiSessionToken();if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials})}
 async function getJSON(url){
   const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
@@ -4365,51 +4367,108 @@ function v71RenderJournal(){const symbol=v71CurrentSymbol(),j=v71StoredJournal(s
 // Jurnalul v71 citeste doar spot. Banii pot sta intr-un bot de grid pe
 // perpetue, invizibil peste tot altundeva. Aici ii aratam - si aratam
 // profitul NET, nu cifra bruta de grid care induce in eroare.
+// v74.6: lipsa se verifica INAINTE de +v. Number(null)===0 si
+// Number.isFinite(+null)===true - asa ajungea "nu stiu" pe ecran ca
+// "+0.0000 USDT" sau "lichidare la −0.0%".
+function botiNr(v){if(v==null||v===""||typeof v==="boolean")return null;const n=+v;return Number.isFinite(n)?n:null}
 function botiBan(v,zecimale=4,cuSemn=true){
-  return Number.isFinite(+v)?`${cuSemn&&+v>=0?'+':''}${(+v).toFixed(zecimale)} USDT`:'\u2014'
+  const n=botiNr(v);if(n===null)return '—';
+  return `${cuSemn&&n>=0?'+':''}${n.toFixed(zecimale)} USDT`
 }
-function botiClasa(v){return !Number.isFinite(+v)?'neutral':+v>0?'good':+v<0?'bad':'neutral'}
+function botiClasa(v){const n=botiNr(v);return n===null?'neutral':n>0?'good':n<0?'bad':'neutral'}
+// Suma pe boti a unui camp: daca un singur bot n-are cifra, totalul e
+// NECUNOSCUT ("—"), nu suma celorlalti - altfel un total partial s-ar citi ca intreg.
+function botiSuma(bots,camp){let t=0;for(const b of bots){const n=botiNr(b&&b[camp]);if(n===null)return null;t+=n}return bots.length?t:null}
+// Lichidarea dupa contractul rutei: partea (jos/sus), distanta SEMNATA,
+// DEPASITA, "fara pret"; distanta e fata de ULTIMUL pret, nu de pretul de marcaj.
+function botiLichidareText(b){
+  const pl=botiNr(b&&b.pretLichidare),abs=pl!==null&&pl>0?' (la '+num(pl)+')':'';
+  const parte=b&&b.lichidarePartea==='sus'?'sus':b&&b.lichidarePartea==='jos'?'jos':null;
+  if(b&&b.motivFaraDistanta==='fara-pret')return {text:'lichidare'+abs+': nu pot socoti (fără preț)',cls:'neutral'};
+  const d=botiNr(b&&b.distantaLichidarePct);
+  if(b&&b.lichidareDepasita===true||(d!==null&&d<0))return {text:'LICHIDARE DEPĂȘITĂ'+(parte?' ('+parte+')':'')+abs,cls:'bad'};
+  if(d===null)return {text:abs?'lichidare'+abs:'lichidare —',cls:'neutral'};
+  const semn=parte==='sus'?'+':parte==='jos'?'−':'';
+  return {text:'lichidare '+(parte?parte+' ':'')+'la '+semn+d.toFixed(1)+'%'+abs,cls:d<8?'bad':d<15?'tbWarn':''}
+}
+function botiLichidareHtml(b){const l=botiLichidareText(b);return `<span class="${l.cls}">${escapeHtml(l.text)}</span><br><span class="fine">față de ultimul preț</span>`}
+function botiBaniHtml(b){
+  const nesigur=b.pnlNerealizatSigur===false?' <span class="fine">(neutru: semn nesigur)</span>':'';
+  return `<span class="accountLabel">Realizat NET</span><b class="${botiClasa(b.profitNet)}">${botiBan(b.profitNet)}</b><br>`+
+    `<span class="accountLabel">Nerealizat (poziție)</span><b class="${botiClasa(b.pnlNerealizat)}">${botiBan(b.pnlNerealizat)}</b>${nesigur}<br>`+
+    `<span class="accountLabel">Total</span><b class="${botiClasa(b.profitTotal)}">${botiBan(b.profitTotal)}</b><br>`+
+    `<span class="fine">grid brut ${botiBan(b.gridProfitBrut)} · comision ${botiBan(b.comisioane)}</span>`
+}
+// Ce a raportat serverul ca NU a mers (ex. 429 pe preturi, totaluri incomplete).
+function botiProblemeText(p){
+  if(!p||typeof p!=='object')return [];
+  return Object.entries(p).map(([k,v])=>{
+    if(k==='preturi')return `Prețurile PERP nu s-au putut citi (${v}) - distanța la lichidare și nerealizatul pot lipsi.`;
+    if(k==='sumarIncomplet')return `Totalurile de sus sunt incomplete (lipsește: ${Array.isArray(v)?v.join(', '):v}) - se arată —.`;
+    return `${k}: ${Array.isArray(v)?v.join(', '):typeof v==='object'?JSON.stringify(v):v}`
+  })
+}
+// Du-l exact unde se pune parola, cu cursorul in camp.
+function mergiLaParola(){
+  navTo('settings');
+  const c=$('apiSessionToken');
+  if(c){try{c.scrollIntoView({block:'center'})}catch(e){}c.focus()}
+}
+// fetch() cazut arunca TypeError; fara nume, "reteaua a picat" nu se mai
+// deosebeste de o eroare oarecare in tablou-bot.js (explicaEroarea).
+function textEroare(e){const m=String(e&&e.message!=null?e.message:e);return e&&e.name==="TypeError"&&!/^TypeError/.test(m)?"TypeError: "+m:m}
+function eroareDeParola(mesaj,status){return status===401||/AUTH_(REQUIRED|INVALID)/.test(String(mesaj||''))}
 async function incarcaBoti(cuToast=false){
   const stare=$('botiStare'),randuri=$('botiRanduri');
-  if(stare)stare.textContent='CITESC\u2026';
-  if(randuri)randuri.innerHTML='<div class="emptyState">Intreb Pionex\u2026</div>';
+  if(stare)stare.textContent='CITESC…';
+  if(randuri)randuri.innerHTML='<div class="emptyState">Intreb Pionex…</div>';
   let d=null;
-  try{d=await getJSON('/api/bot-orders')}
+  try{d=await getJSON('/api/bot-orders');if(!d||!Array.isArray(d.bots))throw new Error('Raspuns nevalid de la /api/bot-orders - lipseste lista de boti.')}
   catch(e){
+    // Acelasi traducator ca pe Tablou (tablou-bot.js): omul afla CE sa faca, nu codul.
+    const ex=typeof TabloBot!=='undefined'&&TabloBot.explicaEroarea?TabloBot.explicaEroarea(textEroare(e),e.status,(typeof location!=='undefined'&&location.hostname)||''):{titlu:'Nu am putut citi boții',ceFac:e.message};
+    const buton=eroareDeParola(e.message,e.status)?'<br><button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>':'';
     if(stare){stare.textContent='EROARE';stare.className='stockBadge bad'}
-    if(randuri)randuri.innerHTML=`<div class="emptyState">${escapeHtml(e.message)}</div>`;
-    if(cuToast)toast(`Bo\u021bi: ${e.message}`,'bad');
+    if(randuri)randuri.innerHTML=`<div class="emptyState"><b>${escapeHtml(ex.titlu)}</b><br>${escapeHtml(ex.ceFac)}${buton}</div>`;
+    if(cuToast)toast(`Boți: ${ex.titlu}`,'bad');
     window.__botiPionex={eroare:e.message};return null
   }
   window.__botiPionex=d;
-  const s=d.sumar||{},bots=d.bots||[];
-  if($('botiNumar'))$('botiNumar').textContent=`${s.active||0} / ${s.numar||0}`;
+  const s=d.sumar||{},bots=d.bots.filter(Boolean);
+  if($('botiNumar'))$('botiNumar').textContent=`${s.active??'—'} / ${s.numar??bots.length}`;
   if($('botiInvestit'))$('botiInvestit').textContent=botiBan(s.investitTotal,2,false);
   if($('botiProfitNet')){const n=$('botiProfitNet');n.textContent=botiBan(s.profitNetTotal);n.className=botiClasa(s.profitNetTotal)}
+  const nerealizat=botiSuma(bots,'pnlNerealizat'),total=botiSuma(bots,'profitTotal');
+  if($('botiNerealizat')){const n=$('botiNerealizat');n.textContent=botiBan(nerealizat);n.className=botiClasa(nerealizat)}
+  if($('botiTotal')){const n=$('botiTotal');n.textContent=botiBan(total);n.className=botiClasa(total)}
   if($('botiProfitBrut'))$('botiProfitBrut').textContent=botiBan(s.gridProfitBrutTotal);
   if($('botiComisioane'))$('botiComisioane').textContent=botiBan(s.comisioaneTotal);
-  const toateAvert=bots.flatMap(b=>b.avertismente.map(a=>`${b.simbol}: ${a}`));
-  if($('botiAvertismente'))$('botiAvertismente').innerHTML=toateAvert.length
-    ?toateAvert.map(a=>`<div class="noticeBad">\u26a0 ${escapeHtml(a)}</div>`).join('')
-    :'';
+  const toateAvert=bots.flatMap(b=>(Array.isArray(b.avertismente)?b.avertismente:[]).map(a=>`${b.simbol}: ${a}`));
+  const probleme=botiProblemeText(d.probleme);
+  if($('botiAvertismente'))$('botiAvertismente').innerHTML=
+    toateAvert.map(a=>`<div class="noticeBad">⚠ ${escapeHtml(a)}</div>`).join('')+
+    probleme.map(a=>`<div class="noticeBad">⚠ Server: ${escapeHtml(a)}</div>`).join('');
   if(stare){
-    stare.textContent=bots.length?`${s.active||0} ACTIVI \u00b7 ${toateAvert.length} AVERTISMENTE`:'NICIUN BOT';
-    stare.className='stockBadge '+(toateAvert.length?'neutral':'good')
+    // "0 AVERTISMENTE" pe verde mintea cand serverul spunea ca n-a putut citi preturile.
+    const coadaProbleme=probleme.length?` · ${probleme.length} PROBLEME`:'';
+    stare.textContent=(bots.length?`${s.active??'—'} ACTIVI · ${toateAvert.length} AVERTISMENTE`:'NICIUN BOT')+coadaProbleme;
+    stare.className='stockBadge '+(toateAvert.length||probleme.length?'neutral':'good')
   }
   if(randuri)randuri.innerHTML=bots.length?(
     `<div class="accountRow"><div class="accountCell">Bot / pornit</div>
      <div class="accountCell">Investit / levier</div>
-     <div class="accountCell">Pre\u021b / interval</div>
-     <div class="accountCell">Profit NET</div></div>`+
+     <div class="accountCell">Preț / interval / lichidare</div>
+     <div class="accountCell">Bani (USDT)</div></div>`+
     bots.map(b=>`<div class="accountRow">
-      <div class="accountCell"><b>${escapeHtml(b.simbol)}</b><br>${b.pornitLa?new Date(b.pornitLa).toLocaleString():'\u2014'}<br>${escapeHtml(b.stareInterna||b.stare||'')}</div>
-      <div class="accountCell">${num(b.investit)} USDT<br>${b.levier?b.levier+'\u00d7 '+escapeHtml(b.directie||''):'\u2014'}<br>${b.ordinePerechi??0} perechi din ${b.ordinePlasate??0}</div>
-      <div class="accountCell">${b.pretCurent??'\u2014'}<br>${b.gridJos??'\u2014'} \u2026 ${b.gridSus??'\u2014'}<br>${Number.isFinite(+b.distantaLichidarePct)?'lichidare la \u2212'+(+b.distantaLichidarePct).toFixed(1)+'%':'\u2014'}</div>
-      <div class="accountCell ${botiClasa(b.profitNet)}">${botiBan(b.profitNet)}<br><span class="fine">grid brut ${botiBan(b.gridProfitBrut)}</span><br><span class="fine">comision ${botiBan(b.comisioane)}</span></div>
+      <div class="accountCell"><b>${escapeHtml(b.simbol)}</b><br>${b.pornitLa?new Date(b.pornitLa).toLocaleString():'—'}<br>${escapeHtml(b.stareInterna||b.stare||'')}</div>
+      <div class="accountCell">${botiBan(b.investit,2,false)}<br>${b.levier?escapeHtml(String(b.levier))+'× '+escapeHtml(b.directie||''):'—'}<br>${escapeHtml(String(b.ordinePerechi??'—'))} perechi din ${escapeHtml(String(b.ordinePlasate??'—'))}</div>
+      <div class="accountCell">${escapeHtml(String(b.pretCurent??'—'))}<br>${escapeHtml(String(b.gridJos??'—'))} … ${escapeHtml(String(b.gridSus??'—'))}<br>${botiLichidareHtml(b)}</div>
+      <div class="accountCell botiBani">${botiBaniHtml(b)}</div>
     </div>`).join('')
-  ):'<div class="emptyState">Niciun bot \u00een contul Pionex.</div>';
-  if(d.probleme&&cuToast)toast('Bo\u021bi: '+Object.values(d.probleme).join(' \u00b7 '),'warn');
-  if(cuToast)toast(`Bo\u021bi: ${bots.length} \u00b7 net ${botiBan(s.profitNetTotal)}`,(s.profitNetTotal||0)>=0?'good':'warn');
+  ):'<div class="emptyState">Niciun bot în contul Pionex.</div>';
+  if(probleme.length&&cuToast)toast('Boți: '+probleme.join(' · '),'warn');
+  const netTotal=botiNr(s.profitNetTotal);
+  if(cuToast)toast(`Boți: ${bots.length} · realizat net ${botiBan(s.profitNetTotal)}`,netTotal===null?'warn':netTotal>=0?'good':'warn');
   return d
 }
 var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1",TB_BOT_ALES="tabloBotAles_v1";
@@ -4491,7 +4550,7 @@ async function tbAduDate(){
     // Ruta a picat - nu stim daca exista bot sau nu. Golim botul curent ca sa
     // nu mai ceara lumanari si sa nu mai scrie in istoric cu date vechi -
     // altfel o pana de retea ar minti verdictul (masurat mai jos, in raport).
-    tbStare.eroare=e.message;tbStare.eroareStatus=e.status||null;tbStare.routeOk=false;
+    tbStare.eroare=textEroare(e);tbStare.eroareStatus=e.status||null;tbStare.routeOk=false;
     tbStare.bot=null;tbStare.botBrut=null;tbStare.boti=[];tbStare.motivAlegere=null;
   }
   if(tbStare.bot){
@@ -4518,7 +4577,7 @@ async function tbAduDate(){
       // pretSpot INGHETAT (o pana de WebSocket) nu are voie sa intre in istoric
       // ca fiind viu - aceeasi familie de bug ca pana de ruta de mai jos: daca
       // scriem tacut pretul mort, mediana basis-ului se otraveste in tacere.
-      ist=TabloBot.istoricAdauga(ist,{t:Date.now(),perechi:tbStare.bot.ordinePerechi||0,
+      ist=TabloBot.istoricAdauga(ist,{t:Date.now(),perechi:tbStare.bot.ordinePerechi??null,
         pretPerp:tbStare.bot.pretCurent,pretSpot:tbPretSpotProaspat()?tbStare.pretSpot:null},Date.now());
       tbStare.stocareStricata=!tbScrie(cheie,ist);
       tbStare.istoric=ist;
@@ -4588,7 +4647,28 @@ function tbNivelClasa(nivel){
   if(nivel==="OPRESTE"||nivel==="PAZESTE"||nivel==="EROARE")return "bad";
   if(nivel==="OPORTUNITATE"||nivel==="LINISTE")return "good";
   if(nivel==="REGLEAZA")return "tbWarn";
+  if(nivel==="OPRIT")return "tbOprit";
   return "mutedInfo";
+}
+// Unitatea vine din modul (Task 2): valoarea e DEJA in unitatea afisata
+// (comisionul ca procent, nu fractie) - aici doar o lipim de cifra.
+function tbCuUnitate(text,unitate){
+  if(!unitate||text==="\u2014"||text==="—")return text;
+  return unitate==="%"||unitate==="\u00d7"?text+unitate:text+" "+unitate;
+}
+// Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.
+function tbDeseneazaBanii(b){
+  var el=$("tbBani");if(!el)return;
+  if(!b){el.innerHTML='<div class="emptyState">\u2014</div>';if($("tbAvertismente"))$("tbAvertismente").innerHTML="";return}
+  var lich=botiLichidareText(b);
+  var celula=function(eticheta,valoare,cls){return '<div class="accountCell"><span class="accountLabel">'+escapeHtml(eticheta)+'</span><b class="'+(cls||"")+'">'+escapeHtml(valoare)+'</b></div>'};
+  el.innerHTML=celula("Investit",botiBan(b.investit,2,false))+
+    celula("Realizat NET",botiBan(b.profitNet),botiClasa(b.profitNet))+
+    celula("Nerealizat (poziție)",botiBan(b.pnlNerealizat)+(b.pnlNerealizatSigur===false?" (semn nesigur)":""),botiClasa(b.pnlNerealizat))+
+    celula("Total",botiBan(b.profitTotal),botiClasa(b.profitTotal))+
+    '<div class="accountCell"><span class="accountLabel">Lichidare</span><b class="'+lich.cls+'">'+escapeHtml(lich.text)+'</b><br><span class="fine">față de ultimul preț</span></div>';
+  var av=Array.isArray(b.avertismente)?b.avertismente:[];
+  if($("tbAvertismente"))$("tbAvertismente").innerHTML=av.map(function(a){return '<div class="noticeBad">\u26a0 '+escapeHtml(a)+'</div>'}).join("");
 }
 function renderTabloBot(){
   var eroareActiva=tbStare.routeOk===false;
@@ -4654,8 +4734,14 @@ function renderTabloBot(){
   if($("tbNivel")){$("tbNivel").textContent=v.nivel;$("tbNivel").className=tbNivelClasa(v.nivel)}
   if($("tbTitlu"))$("tbTitlu").textContent=v.titlu;
   if($("tbCeFac"))$("tbCeFac").textContent=v.ceFac+(note.length?" · "+note.join(" · "):"");
-  if($("tbDeCe"))$("tbDeCe").textContent=v.declansator
-    ? v.declansator.masura+" = "+(v.declansator.valoare==null?"—":v.declansator.valoare)+" (prag "+(v.declansator.prag==null?"—":v.declansator.prag)+")" : "";
+  if($("tbDeCe")){
+    var dUnit=v.declansator&&m[v.declansator.masura]?m[v.declansator.masura].unitate:null;
+    $("tbDeCe").textContent=v.declansator
+      ? v.declansator.masura+" = "+tbCuUnitate(v.declansator.valoare==null?"—":String(v.declansator.valoare),dUnit)+" (prag "+tbCuUnitate(v.declansator.prag==null?"—":String(v.declansator.prag),dUnit)+")" : "";
+  }
+  // La parola lipsa/gresita omul primeste si drumul, nu doar textul.
+  if($("tbSpreSetari"))$("tbSpreSetari").hidden=!(eroareActiva&&eroareDeParola(tbStare.eroare,tbStare.eroareStatus));
+  tbDeseneazaBanii(b);
   if($("tbPret")){
     if(tbStare.pretSpot==null)$("tbPret").textContent="—";
     else $("tbPret").textContent="spot "+tbStare.pretSpot+(tbPretSpotProaspat()?"":" (învechit)");
@@ -4675,19 +4761,19 @@ function renderTabloBot(){
         Math.round(p)+'% din interval</div><div class="accountCell">'+
         (b.gridSus!=null?b.gridSus:"—")+'</div><div class="accountCell '+clsLich+'">'+
         (m.lichidare.valoare!=null?"lichidare la "+tbFormateazaSemn(m.lichidare.valoare,1)+"%":"—")+
-        '</div></div>';
+        '<br><span class="fine">față de ultimul preț</span></div></div>';
     }
   }
   var randuri=[["poziția în interval",m.pozitieInterval],["ritmul perechilor",m.ritmPerechi],
     ["oscilație sau trend",m.eficienta],["amplitudine vs treaptă",m.amplitudine],
     ["până la lichidare",m.lichidare],["basis perp vs spot",m.basis],["comision vs grid",m.comision]];
   if($("tbMasuri"))$("tbMasuri").innerHTML=randuri.map(function(r){
-    var val=r[1]&&r[1].valoare!=null?tbFormateazaSemn(+r[1].valoare,2):"—";
+    var val=r[1]&&r[1].valoare!=null?tbCuUnitate(tbFormateazaSemn(+r[1].valoare,2),r[1].unitate):"—";
     var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara")?"bad":
       r[1]&&r[1].stare==="margine"?"tbWarn":r[1]&&r[1].stare==="bine"?"good":"mutedInfo";
     return '<div class="accountRow"><div class="accountCell">'+escapeHtml(r[0])+
       '</div><div class="accountCell '+cls+'">'+val+'</div><div class="accountCell">'+
-      escapeHtml(String((r[1]&&r[1].stare)||"—"))+"</div></div>";
+      escapeHtml(String((r[1]&&r[1].stare)||"—")+(r[1]&&typeof r[1].eticheta==="string"&&r[1].eticheta?" · "+r[1].eticheta:""))+"</div></div>";
   }).join("");
 }
 function porneTabloBot(){

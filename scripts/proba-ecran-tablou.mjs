@@ -380,7 +380,7 @@ async function main() {
       await b.ev(`navTo('tabloubot', true)`);
       await asteapta(600);
       await b.ev(`opresteTabloBot()`); // oprim ceasul de 8s - de-acum controlam noi fiecare apel
-      const NIVELE = ["FARA_BOT", "NEDOVEDIT", "OPRESTE", "PAZESTE", "REGLEAZA", "OPORTUNITATE", "LINISTE", "EROARE"];
+      const NIVELE = ["FARA_BOT", "NEDOVEDIT", "OPRIT", "OPRESTE", "PAZESTE", "REGLEAZA", "OPORTUNITATE", "LINISTE", "EROARE"];
       const nivel = await textEl(b, "tbNivel");
       const titlu = await textEl(b, "tbTitlu");
       const rigla = await textEl(b, "tbRigla");
@@ -695,6 +695,171 @@ async function main() {
       assert.ok(ordonatCrescator, "klinePerp trebuie sa fie crescator dupa timp indiferent de ordinea primita de la ruta");
     });
 
+    /* ═══ v74.6 · A: panoul de boti si Tabloul, dupa contractul rutei ═══════
+       Cifrele de bani LIPSA se arata "—", niciodata 0. Capcana dovedita:
+       Number.isFinite(+null)===true, deci +null trecea drept "+0.0000 USDT". */
+
+    // Task 2 schimba textele din tablou-bot.js in paralel. Pana la imbinare,
+    // explicaEroarea are inca textele vechi; probele de TEXT se aplica doar
+    // daca modulul e deja cel nou - restul (butonul, legatura) se probeaza mereu.
+    const textT2Nou = async () => b.ev(`!/Cheile Pionex nu sunt puse/.test(TabloBot.explicaEroarea("AUTH_REQUIRED",401,"127.0.0.1").titlu)`);
+    async function incarcaLista(bots, extra = {}) {
+      await seteazaMock(b, "botOrders", { corp: Object.assign({ bots }, extra), stare: 200 });
+      await b.ev(`incarcaBoti(false)`);
+      return b.ev(`({ randuri: document.getElementById('botiRanduri').textContent,
+        stare: document.getElementById('botiStare').textContent,
+        stareCls: document.getElementById('botiStare').className,
+        avert: document.getElementById('botiAvertismente').textContent,
+        net: document.getElementById('botiProfitNet').textContent,
+        investit: document.getElementById('botiInvestit').textContent,
+        nerealizat: document.getElementById('botiNerealizat')?.textContent ?? null,
+        total: document.getElementById('botiTotal')?.textContent ?? null })`);
+    }
+
+    await test("A1. lista: banii si lichidarea LIPSA se arata —, nu +0.0000 USDT si nici −0.0%", async () => {
+      const bot = botNormalizat(botBrut({ strategyId: "7101" }), {
+        profitNet: null, pnlNerealizat: null, profitTotal: null, echitate: null, investit: null,
+        distantaLichidarePct: null, lichidarePartea: null, pretLichidare: null, ordinePerechi: null,
+      });
+      const r = await incarcaLista([bot], { sumar: { numar: 1, active: 1, investitTotal: null, profitNetTotal: null,
+        gridProfitBrutTotal: 7.25, comisioaneTotal: -1.15, avertismente: 0 }, probleme: { sumarIncomplet: ["investitTotal", "profitNetTotal"] } });
+      assert.ok(!/[+−-]?0\.0000 USDT/.test(r.randuri), `o cifra lipsa a devenit 0 in rand: ${r.randuri}`);
+      assert.ok(!/0\.0%/.test(r.randuri), `lichidarea lipsa a devenit 0.0%: ${r.randuri}`);
+      assert.ok(!/0\.00(00)? USDT/.test(r.net + r.investit), `sumarul lipsa a devenit 0: net=${r.net} investit=${r.investit}`);
+      assert.equal(r.net, "—"); assert.equal(r.investit, "—");
+      assert.equal(r.nerealizat, "—", `nerealizatul total cu un bot fara cifra trebuie "—": ${r.nerealizat}`);
+      assert.equal(r.total, "—");
+    });
+
+    await test("A1b. lichidarea spune PARTEA (sus +X%), pretul absolut si fata de ce pret", async () => {
+      const bot = botNormalizat(botBrut({ strategyId: "7102" }), { lichidarePartea: "sus", distantaLichidarePct: 3.2, pretLichidare: 1.65 });
+      const r = await incarcaLista([bot]);
+      assert.match(r.randuri, /lichidare sus la \+3\.2%/, `trebuie "lichidare sus la +3.2%": ${r.randuri}`);
+      assert.match(r.randuri, /1[.,]65/, "pretul de lichidare absolut lipseste");
+      assert.match(r.randuri, /față de ultimul preț/, "lipseste nota: distanta e fata de ultimul pret, nu de marcaj");
+      const jos = await incarcaLista([botNormalizat(botBrut({ strategyId: "7103" }), { lichidarePartea: "jos", distantaLichidarePct: 12.4 })]);
+      assert.match(jos.randuri, /lichidare jos la −12\.4%/, `trebuie "lichidare jos la −12.4%": ${jos.randuri}`);
+    });
+
+    await test("A1c. lichidarea DEPASITA se scrie cu rosu, nu ca distanta obisnuita", async () => {
+      const bot = botNormalizat(botBrut({ strategyId: "7104" }), { lichidarePartea: "jos", distantaLichidarePct: -2.1, lichidareDepasita: true });
+      const r = await incarcaLista([bot]);
+      const rosu = await b.ev(`[...document.querySelectorAll('#botiRanduri .bad')].some(x=>/DEPĂȘITĂ/.test(x.textContent))`);
+      assert.ok(rosu, `"DEPĂȘITĂ" trebuie sa fie pe rosu (.bad): ${r.randuri}`);
+    });
+
+    await test("A1d. fara pret: 'nu pot socoti (fără preț)', nu o distanta inventata", async () => {
+      const bot = botNormalizat(botBrut({ strategyId: "7105" }), { distantaLichidarePct: null, motivFaraDistanta: "fara-pret", pretCurent: null });
+      const r = await incarcaLista([bot]);
+      assert.match(r.randuri, /nu pot socoti \(fără preț\)/, r.randuri);
+    });
+
+    await test("A2. lista: Realizat NET / Nerealizat (poziție) / Total, eticheta NET o singura data", async () => {
+      const r = await incarcaLista([botNormalizat(botBrut({ strategyId: "7201" }))]);
+      assert.match(r.randuri, /Realizat NET\s*\+4\.9000 USDT/, r.randuri);
+      assert.match(r.randuri, /Nerealizat \(poziție\)\s*\+7\.5000 USDT/, r.randuri);
+      assert.match(r.randuri, /Total\s*\+12\.4000 USDT/, r.randuri);
+      const netPeRand = await b.ev(`(() => { const c = document.querySelectorAll('#botiRanduri .accountRow')[1]; return c ? (c.textContent.match(/NET/g) || []).length : -1 })()`);
+      assert.equal(netPeRand, 1, `eticheta NET trebuie sa apara o singura data, pe cifra neta (are ${netPeRand})`);
+      assert.equal(r.nerealizat, "+7.5000 USDT"); assert.equal(r.total, "+12.4000 USDT");
+    });
+
+    await test("A2b. Tabloul arata banii (investit, realizat NET, nerealizat, total, lichidare) si avertismentele serverului", async () => {
+      const brut = botBrut({ strategyId: "7202" });
+      const bot = botNormalizat(brut, { avertismente: ["Opritorul pe pierdere e setat dar STINS — nu se va declanșa."] });
+      await seteazaMock(b, "botOrders", { corp: { bots: [bot] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const bani = await textEl(b, "tbBani");
+      assert.ok(bani, "lipseste #tbBani pe Tablou");
+      for (const re of [/Investit\s*150\.00 USDT/, /Realizat NET\s*\+4\.9000 USDT/, /Nerealizat \(poziție\)\s*\+7\.5000 USDT/, /Total\s*\+12\.4000 USDT/, /0[.,]8/, /față de ultimul preț/])
+        assert.match(String(bani), re, `Tabloul nu arata ${re}: ${bani}`);
+      const av = await textEl(b, "tbAvertismente");
+      assert.match(String(av), /STINS/, `avertismentul serverului lipseste de pe Tablou: ${av}`);
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut, { profitNet: null, pnlNerealizat: null, profitTotal: null })] }, stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const gol = await textEl(b, "tbBani");
+      assert.ok(!/0\.0000 USDT/.test(String(gol)), `pe Tablou lipsa a devenit 0: ${gol}`);
+    });
+
+    await test("A3. tabelul de masuri afiseaza unitatea venita din modul (comisionul deja in %)", async () => {
+      await b.ev(`(() => { if (TabloBot.__masoaraOriginal) return; const o = TabloBot.masoara; TabloBot.__masoaraOriginal = o;
+        TabloBot.masoara = function (a) { const m = o.apply(this, arguments);
+          m.comision = Object.assign({}, m.comision, { valoare: 62.5, unitate: "%", stare: "rau" });
+          m.amplitudine = Object.assign({}, m.amplitudine, { unitate: "×" });
+          return m; }; })()`);
+      try {
+        await incarcaBotSanatos({ strategyId: "7301" });
+        const com = await celula(b, 6);
+        assert.equal(com?.valoare, "62.50%", `comisionul trebuie afisat cu unitatea lui: ${com?.valoare}`);
+        const amp = await celula(b, 3);
+        assert.match(String(amp?.valoare), /×$|^—$/, `amplitudinea trebuie sa poarte "×": ${amp?.valoare}`);
+      } finally {
+        await b.ev(`if (TabloBot.__masoaraOriginal) { TabloBot.masoara = TabloBot.__masoaraOriginal; delete TabloBot.__masoaraOriginal; }`);
+      }
+    });
+
+    await test("A4. 401 pe Tablou: buton spre Setari, care chiar deschide campul parolei", async () => {
+      await seteazaMock(b, "botOrders", { corp: { error: "AUTH_REQUIRED", authenticated: false }, stare: 401 });
+      await b.ev(`tbAduDate()`);
+      const vizibil = await b.ev(`(() => { const x = document.getElementById('tbSpreSetari'); return !!x && !x.hidden })()`);
+      assert.ok(vizibil, "la 401 trebuie un buton spre Setari pe Tablou");
+      if (await textT2Nou()) assert.match(String(await textEl(b, "tbCeFac")), /Set[ăa]ri/, "textul Task 2 trebuie sa spuna Setari");
+      else console.log("       (textul lui 401 vine din tablou-bot.js - Task 2; aici se probeaza doar butonul)");
+      await b.ev(`document.getElementById('tbSpreSetari').click()`);
+      await asteapta(300);
+      const ajuns = await b.ev(`document.getElementById('settings').classList.contains('on') && document.activeElement === document.getElementById('apiSessionToken')`);
+      assert.ok(ajuns, "butonul trebuie sa deschida Setari cu cursorul in campul parolei");
+      await b.ev(`navTo('tabloubot'); opresteTabloBot()`);
+      await seteazaMock(b, "botOrders", { corp: { bots: [] }, stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const ascuns = await b.ev(`document.getElementById('tbSpreSetari').hidden`);
+      assert.equal(ascuns, true, "fara eroare de parola butonul nu are ce cauta acolo");
+    });
+
+    await test("A4b. 401 in panoul de boti: explicatie (nu codul brut) + buton spre Setari; retea cazuta: fara buton", async () => {
+      await seteazaMock(b, "botOrders", { corp: { error: "AUTH_INVALID", authenticated: false }, stare: 401 });
+      await b.ev(`incarcaBoti(false)`);
+      const t = await b.ev(`document.getElementById('botiRanduri').textContent`);
+      assert.ok(t.trim() !== "AUTH_INVALID", `panoul arata doar codul brut: ${t}`);
+      const buton = await b.ev(`!!document.querySelector('#botiRanduri [data-action-click="mergiLaParola()"]')`);
+      assert.ok(buton, `la 401 panoul de boti trebuie sa aiba butonul spre Setari: ${t}`);
+      await seteazaMock(b, "botOrders", { reteaPicata: true });
+      await b.ev(`incarcaBoti(false)`);
+      const buton2 = await b.ev(`!!document.querySelector('#botiRanduri [data-action-click="mergiLaParola()"]')`);
+      assert.equal(buton2, false, "la retea cazuta parola nu e vinovata - fara buton spre Setari");
+      if (await textT2Nou()) assert.match(await b.ev(`document.getElementById('botiRanduri').textContent`), /PORNESTE-CRYPTO-RADAR/);
+    });
+
+    await test("A5. starea NU spune '0 AVERTISMENTE' linistit cand serverul raporteaza probleme (429 pe preturi)", async () => {
+      const r = await incarcaLista([botNormalizat(botBrut({ strategyId: "7501" }))],
+        { sumar: { numar: 1, active: 1, investitTotal: 150, profitNetTotal: 4.9, gridProfitBrutTotal: 7.25, comisioaneTotal: -1.15, avertismente: 0 },
+          probleme: { preturi: "Pionex HTTP 429" } });
+      assert.match(r.stare, /PROBLEM/, `starea tace despre probleme: ${r.stare}`);
+      assert.ok(!/\bgood\b/.test(r.stareCls), `starea e verde desi sunt probleme: ${r.stareCls}`);
+      assert.match(r.avert, /429/, `problema nu se vede pe ecran: ${r.avert}`);
+    });
+
+    await test("A6. verdictul OPRIT (Task 2) are culoarea lui - nici verde, nici gri de 'nu stiu'", async () => {
+      const cls = await b.ev(`tbNivelClasa("OPRIT")`);
+      assert.ok(cls && cls !== "good" && cls !== "mutedInfo", `OPRIT a primit clasa ${cls}`);
+      const culoare = await b.ev(`(() => { const x = document.getElementById('tbNivel'); const v = x.className; x.className = tbNivelClasa("OPRIT"); const c = getComputedStyle(x).color; x.className = v; return c })()`);
+      const gri = await b.ev(`(() => { const x = document.getElementById('tbNivel'); const v = x.className; x.className = "mutedInfo"; const c = getComputedStyle(x).color; x.className = v; return c })()`);
+      assert.notEqual(culoare, gri, "OPRIT se vede la fel ca 'nu stiu'");
+    });
+
+    await test("A7. reteaua cazuta ajunge la explicaEroarea CU numele TypeError; perechile lipsa intra in istoric ca null", async () => {
+      await seteazaMock(b, "botOrders", { reteaPicata: true });
+      await b.ev(`tbAduDate()`);
+      const e = await b.ev(`tbStare.eroare`);
+      assert.match(String(e), /^TypeError/, `numele erorii s-a pierdut: ${e}`);
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut({ strategyId: "7701" }), { ordinePerechi: null })] }, stare: 200 });
+      await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
+      await b.ev(`tbAduDate()`);
+      const perechi = await b.ev(`tbStare.istoric[tbStare.istoric.length-1].perechi`);
+      assert.strictEqual(perechi, null, `lipsa perechilor s-a scris ca ${perechi}`);
+    });
+
     /* ═══ v74.4: parola nu se mai cere la fiecare repornire ═══════════════
        Pana acum statea in sessionStorage: se stergea la inchiderea tabului, deci
        pe telefon o cerea de fiecare data. Probele astea REINCARCA pagina - adica
@@ -733,6 +898,20 @@ async function main() {
       if (!(await asteaptaAplicatia(b))) throw new Error("aplicatia nu s-a reincarcat");
       const dupa = await b.ev(`apiSessionToken()`);
       assert.equal(dupa, "", "dupa Clear parola nu are voie sa reapara intr-un tab nou");
+    });
+
+    await test("A8. prima deschidere FARA parola: aplicatia spune unde se pune, cu buton; dupa ce o pui, tace", async () => {
+      // aici suntem dupa proba 20: parola uitata + tab nou = exact prima deschidere
+      const st = await b.ev(`(() => { const x = document.getElementById('parolaLipsa'); return x ? { vizibil: !x.hidden && x.offsetParent !== null, text: x.textContent } : null })()`);
+      assert.ok(st, "lipseste indicatia #parolaLipsa");
+      assert.ok(st.vizibil, "fara parola, indicatia trebuie sa se vada la deschidere");
+      assert.match(st.text, /Set[ăa]ri/, `indicatia nu spune unde se pune parola: ${st.text}`);
+      const buton = await b.ev(`!!document.querySelector('#parolaLipsa [data-action-click="mergiLaParola()"]')`);
+      assert.ok(buton, "indicatia trebuie sa aiba buton spre Setari");
+      await b.ev(`(() => { document.getElementById('apiSessionToken').value = 'parola-de-proba-a8'; saveApiSessionToken(); })()`);
+      const ascuns = await b.ev(`document.getElementById('parolaLipsa').hidden`);
+      assert.equal(ascuns, true, "dupa ce parola e pusa, indicatia nu mai are ce cauta pe ecran");
+      await b.ev(`clearApiSessionToken()`);
     });
 
     await test("21. textele din Settings nu mai mint despre cat tine parola", async () => {

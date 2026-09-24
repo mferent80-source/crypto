@@ -64,6 +64,7 @@
 <div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v71 · READ ONLY</span></div>
 </header>
 <main>
+<div class="noticeBad parolaLipsa" id="parolaLipsa" hidden=""><b>Parola aplicației nu e pusă pe acest dispozitiv.</b> Fără ea, boții și contul Pionex nu se văd. Se pune o singură dată, în <b>Setări → API Security Session</b> (textul APP_API_TOKEN de la pornire). <button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări</button></div>
 <div class="appbar">
 <div class="brand">
 <div class="logo">◈</div>
@@ -122,6 +123,12 @@
 <h3 id="tbTitlu">Aștept date</h3>
 <p id="tbCeFac" class="fine">—</p>
 <p id="tbDeCe" class="fine">—</p>
+<button class="actionGhost" id="tbSpreSetari" hidden="" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>
+</div>
+<div class="card full" id="tbBaniCard">
+<div class="sectionHead"><h3>Banii botului</h3><span class="stockBadge">USDT</span></div>
+<div class="accountGrid" id="tbBani"><div class="emptyState">—</div></div>
+<div id="tbAvertismente"></div>
 </div>
 <div class="card full">
 <div class="sectionHead"><h3>Preț și interval</h3><span class="stockBadge" id="tbPret">—</span></div>
@@ -2067,7 +2074,9 @@
 <div class="accountGrid">
 <div class="accountCell"><span class="accountLabel">Boți activi</span><b id="botiNumar">—</b></div>
 <div class="accountCell"><span class="accountLabel">Investit</span><b id="botiInvestit">—</b></div>
-<div class="accountCell"><span class="accountLabel">Profit NET</span><b id="botiProfitNet">—</b></div>
+<div class="accountCell"><span class="accountLabel">Realizat NET</span><b id="botiProfitNet">—</b></div>
+<div class="accountCell"><span class="accountLabel">Nerealizat (poziție)</span><b id="botiNerealizat">—</b></div>
+<div class="accountCell"><span class="accountLabel">Total</span><b id="botiTotal">—</b></div>
 <div class="accountCell"><span class="accountLabel">Profit grid (brut)</span><b id="botiProfitBrut">—</b></div>
 <div class="accountCell"><span class="accountLabel">Comisioane</span><b id="botiComisioane">—</b></div>
 </div>
