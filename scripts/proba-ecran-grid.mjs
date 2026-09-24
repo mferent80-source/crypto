@@ -184,6 +184,10 @@ async function scenariu(lat, inal, nume) {
     await test(`${nume} · v80 Tabloul botului: "botul vs fisa" cu tabel + "pe zi / la inchidere" cu cifre, fara gunoi`, async () => {
       await b.ev(`navTo('tabloubot',true)`);
       await panaCand(b, `!!document.querySelector("#tbFisaBot .tbCmp")`, 120000, "tabelul bot vs fisa");
+      // v82: semaforul sus, cu nivel + motiv + "ce as face eu"
+      await panaCand(b, `/ȚINE|ATENȚIE|IEȘI/.test(document.getElementById("tbSemafor").innerText)`, 30000, "semaforul");
+      const ts = await b.ev(`document.getElementById("tbSemafor").innerText`);
+      assert.match(ts, /Ce aș face eu/); FARA_GUNOI(ts);
       const t1 = await b.ev(`document.getElementById("tbFisaBot").innerText`), t2 = await b.ev(`document.getElementById("tbAcum").innerText`);
       assert.match(t1, /Pas net pe grilă/); assert.match(t1, /Verdictul de azi/);
       assert.match(t2, /Grile, ultimele 24 h/); assert.match(t2, /Dacă îl închizi acum, iei[\s\S]{0,10}\d/); assert.match(t2, /Prețul la care botul e pe zero/);

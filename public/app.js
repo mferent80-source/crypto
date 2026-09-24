@@ -5245,7 +5245,7 @@ async function tbAduFisaBot(b){
       suma:botiNr(b.investit)||100,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null};
   }catch(e){tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:null,eroare:grTextEroare(e)}}
-  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaExtra(tbStare.bot);if(typeof renderTabloSfaturi==="function")renderTabloSfaturi()}
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaExtra(tbStare.bot);tbDeseneazaSemafor(tbStare.bot);if(typeof renderTabloSfaturi==="function")renderTabloSfaturi()}
 }
 // ===== v81: saptamana, planul, marja, vs pozitie, evenimente =====
 var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botId:null,plan:null,la:0};
@@ -5293,6 +5293,36 @@ function tbDeseneazaSaptPlan(b){
   if(st.minus)h+='<div class="tbLinie"><span>Ies dacă pierd '+st.minus.prag.toFixed(2)+' USDT</span><b class="'+(st.minus.lipsa<=0?"bad":st.minus.lipsa<st.minus.prag*0.25?"tbWarn":"")+'">'+(st.minus.lipsa<=0?"ATINS — ieși":"mai sunt "+st.minus.lipsa.toFixed(2)+" USDT")+'</b></div>';
   if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+st.afara.prag+' ore</span><b>colectorul numără orele</b></div>';
   ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> exact ce ți-ai propus — ieși acum, fără să renegociezi.</p>':'');
+}
+// ===== v82: semaforul botului + muta gridul + socoteala semnalelor =====
+var tbSem={botId:null,la:0,v:null,inLucru:false};
+async function tbAduSemnale(b){
+  if(!b||!b.id||tbSem.inLucru||(tbSem.botId===b.id&&Date.now()-tbSem.la<2*60000))return;
+  tbSem.inLucru=true;
+  try{var d=await getJSON("/api/istoric-bot?action=semnale&bot="+encodeURIComponent(b.id));tbSem={botId:b.id,la:Date.now(),v:d&&d.semnale||null,inLucru:false}}
+  catch(e){tbSem={botId:b.id,la:Date.now(),v:null,inLucru:false}}
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaSemafor(tbStare.bot);
+}
+function tbDeseneazaSemafor(b){
+  var el=$("tbSemafor");if(!el)return;
+  if(!b){el.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
+  var f=tbFisa.botId===b.id?tbFisa.fisa:null,kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
+  var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null},Date.now());
+  var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f);
+  var sm=SemnaleBot.semafor({bot:b,fisa:f,plan:plan,costuri:TabloExtra.grileVsCosturi(b,Date.now()),btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
+  var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"]},n=N[sm.nivel];
+  var h='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(sm.motiv.charAt(0).toUpperCase()+sm.motiv.slice(1))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p></div></div>';
+  if(sm.componente.length>1)h+='<ul class="tbSemComp">'+sm.componente.slice(1).map(function(c){return '<li class="'+(c.nivel==="iesi"?"bad":"tbWarn")+'">'+escapeHtml(c.motiv)+'</li>'}).join("")+'</ul>';
+  if(!f)h+='<p class="tbSub">calculez fișa de azi pentru moneda botului (trendul, mișcarea, gridul propus)…</p>';
+  if(!ac)h+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de acasă (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';
+  if(iap)h+='<p class="tbSub">'+escapeHtml(iap.text)+'</p>';
+  if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")h+='<p class="tbSub">'+escapeHtml(ac.aglomerare.text)+'</p>';
+  if(muta){var s=muta.setare,i=grStare.monede&&grStare.monede[TabloBot.simboluri(b.baza,b.quote).pionex];
+    h+='<div class="tbMuta"><h5>Gridul propus acum (din fișa de azi)</h5>'+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",s.grile+" geometric",String(s.grile))+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}
+  // socoteala
+  var soc=kv?SemnaleBot.socoteala(kv.log||[]):null,E={tine:"ține",lichidare:"lichidare",plan:"planul tău",trend:"trend contra",miscare:"mișcare mare","ia-profit":"ia profit",muta:"mută gridul",costuri:"costuri",btc:"BTC în mișcare",aglomerare:"aglomerare"};
+  if(soc&&Object.keys(soc).length){h+='<details class="tbSoc"><summary>Socoteala semnalelor: au avut dreptate după 24 h?</summary><div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Semnal</th><th>Date</th><th>Judecate</th><th>Au avut dreptate</th></tr></thead><tbody>'+Object.keys(soc).map(function(k){var x=soc[k];return '<tr><td>'+escapeHtml(E[k]||k)+'</td><td>'+x.n+'</td><td>'+x.judecate+'</td><td>'+(x.rata==null?"încă nu":GridCalcul.procent(x.rata)+" ("+x.corecte+" din "+x.judecate+")")+'</td></tr>'}).join("")+'</tbody></table></div><p class="tbSub">„Ieși/atenție” au avut dreptate dacă în 24 h totalul botului a scăzut (ieșirea ar fi salvat bani); „ține” dacă n-a scăzut. Sub 10 judecate, e doar începutul.</p></details>'}
+  el.innerHTML=h;
 }
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
@@ -5342,7 +5372,7 @@ function tbDeseneazaBanii(b){
     rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
     tbRandUmpleri(b);
   tbAduUmpleri(b);
-  tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
+  tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);tbDeseneazaSemafor(b);tbAduSemnale(b);if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
 }

@@ -85,6 +85,7 @@ const Directie = incarca("directie.js", "Directie");
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
 const GridClasament = incarca("grid-clasament.js", "GridClasament");
+const SemnaleBot = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "semnale-bot.js"), "utf8") + "; return SemnaleBot;")(GridCalcul);
 const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "tablou-extra.js"), "utf8") + "; return TabloExtra;")(GridCalcul);
 const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
 const GridLaborator = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba);
@@ -157,9 +158,39 @@ async function directiaBotului(b) {
     // v79.1: regimul "miscare" pe 15M / 30 de zile - identic cu fisa (nu pe 4h ca in v79.0)
     let regim = null;
     try { regim = GridCalcul.regim(GridCalcul.bare(await lumanari15M(s))); } catch (e) { jurnal("regim 15M", b.id, e.message); }
-    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim };
+    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim, k4: k && k.data && k.data.klines, calculat: false };
   } catch (e) { jurnal("direcție", b.id, e.message); directii[b.id] = { la: Date.now(), fata4h: null, dir4h: null, regim: null }; }
   return directii[b.id];
+}
+
+// v82: semnalele botului. Fisa pe moneda botului (15M/30 z din cache, 4H din directie, 1D agregat),
+// regimul BTC (15M, cache), futures Binance (poate lipsi), planul si costurile -> SemnaleBot.
+const semnaleUlt = {}; // bot -> ultimul rezultat (se refoloseste intre calcule)
+async function semnaleBot(b, ctx, acum) {
+  const d = directii[b.id];
+  if (!d || d.calculat) return semnaleUlt[b.id] || null;
+  d.calculat = true;
+  const s = TabloBot.simboluri(b.baza, b.quote).pionex;
+  const r15 = await lumanari15M(s);
+  const b4 = GridCalcul.bare(d.k4), b1 = GridCalcul.agrega(b4, 86400000);
+  const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, H: 2, dir: null, levier: null, minNotional: null });
+  const f = fisa && !fisa.eroare ? fisa : null;
+  let regimBtc = null; try { regimBtc = GridCalcul.regim(GridCalcul.bare(await lumanari15M("BTC_USDT_PERP"))); } catch (e) { jurnal("regim BTC", e.message); }
+  let fut = null; try { fut = await cere("/api/market?type=futures&symbol=" + encodeURIComponent(String(b.baza || "").replace(/\.PERP$/, "") + "USDT")); } catch (e) { fut = null; }
+  const st = stareAlerte[b.id] || {};
+  const afaraOre = st._afaraDe ? (acum - st._afaraDe) / 3600000 : 0;
+  const dir = String(b.directie || "").toLowerCase();
+  const x = { bot: b, fisa: f, plan: ctx.plan || null, costuri: TabloExtra.grileVsCosturi(b, acum),
+    btc: SemnaleBot.btcAvertizare(regimBtc, f && f.regim), aglomerare: SemnaleBot.aglomerare(fut, dir),
+    muta: SemnaleBot.mutaGridul(b, f, afaraOre), iaProfit: SemnaleBot.iaProfit(b, f) };
+  x.semafor = SemnaleBot.semafor(x);
+  // socoteala in KV
+  let v = null; try { v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(b.id)); } catch (e) { v = null; }
+  let log = v && v.semnale && Array.isArray(v.semnale.log) ? v.semnale.log : [];
+  log = SemnaleBot.judeca(SemnaleBot.noteaza(log, x.semafor, b.profitTotal, acum), b.profitTotal, b.investit, acum);
+  try { await trimite("/api/istoric-bot?action=semnale", { bot: b.id, log, acum: { la: acum, btc: x.btc, aglomerare: x.aglomerare, afaraOre, regimBtc } }); } catch (e) { jurnal("semnale KV", e.message); }
+  semnaleUlt[b.id] = x;
+  return x;
 }
 
 // Alerte despre colector insusi: daca nu mai poate citi botul, sau un bot care
@@ -218,6 +249,8 @@ async function tura() {
       st._afaraDe = afara ? (st._afaraDe || acum) : null;
       if (pl && pl.plan) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe }, acum);
     } catch (e) { jurnal("plan", b.id, e.message); }
+    // v82: semnalele (o data la ~5 min, cand vin lumanari noi) - notate si judecate dupa 24 h
+    try { const sm = await semnaleBot(b, ctx, acum); if (sm) ctx.semnale = sm; } catch (e) { jurnal("semnale", b.id, e.message); }
     const inainte = stareAlerte[b.id] || {};
     const r = Alerte.evalueaza(b, ctx, inainte, acum);
     stareAlerte[b.id] = r.stare;

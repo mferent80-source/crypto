@@ -33,6 +33,7 @@ export async function onRequestGet({request,env}){
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
   if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
+  if(action==="semnale"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("semnale:"+bot)||"null")}catch{v=null}return json({bot,semnale:v})}
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
@@ -72,6 +73,16 @@ export async function onRequestPost({request,env}){
     // expira dupa 6 ore: un clasament de ieri nu trebuie sa arate ca unul de azi
     await env.ISTORIC.put("clasament",JSON.stringify({la,monede:curate}),{expirationTtl:6*3600});
     return json({ok:true,monede:curate.length});
+  }
+  if(action==="semnale"){
+    const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);
+    const txt=(v,m)=>typeof v==="string"?v.slice(0,m):"";
+    const NIV=["tine","atentie","iesi","info"];
+    const log=(Array.isArray(corp.log)?corp.log:[]).slice(-200).map(e=>e&&typeof e==="object"?{t:nr(e.t),cod:txt(e.cod,24).replace(/[^a-z0-9-]/g,""),nivel:NIV.includes(e.nivel)?e.nivel:"info",motiv:txt(e.motiv,200),total:nr(e.total),dreptate:e.dreptate===true?true:e.dreptate===false?false:null,totalDupa:nr(e.totalDupa)}:null).filter(e=>e&&e.t!==null);
+    const a=corp.acum&&typeof corp.acum==="object"?corp.acum:null;
+    const acum=a?{la:nr(a.la),btc:a.btc&&typeof a.btc==="object"?{nivel:txt(a.btc.nivel,10),text:txt(a.btc.text,300)}:null,aglomerare:a.aglomerare&&typeof a.aglomerare==="object"?{nivel:txt(a.aglomerare.nivel,10),text:txt(a.aglomerare.text,400)}:null,afaraOre:nr(a.afaraOre),regimBtc:a.regimBtc&&typeof a.regimBtc==="object"?{r4h:nr(a.regimBtc.r4h),r24h:nr(a.regimBtc.r24h),miscare:!!a.regimBtc.miscare}:null}:null;
+    await env.ISTORIC.put("semnale:"+bot,JSON.stringify({log,acum}));
+    return json({ok:true,log:log.length});
   }
   if(action==="plan"){
     const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);

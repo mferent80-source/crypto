@@ -10,7 +10,7 @@ var Alerte = (function () {
   "use strict";
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
-  var REPETA_CHEIE_MS = { miscare: 24 * 3600000 };   // miscarea se repeta cel mult o data pe zi
+  var REPETA_CHEIE_MS = { miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000 };   // semnalele se repeta rar
   // Histerezis: o alerta INTRA la un prag si IESE abia la unul mai larg, altfel
   // un bot care sta langa prag ar trimite un mesaj la fiecare minut (masurat:
   // 59/ora intre 14,9% si 15,1%). "A trecut" se spune doar dupa 10 minute stabile.
@@ -81,6 +81,16 @@ var Alerte = (function () {
       else if (at.indexOf("plus") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — ieși pe plus (" + (ctx.plan.plus ? "+" + ctx.plan.plus.prag : "pragul") + " USDT atins)", mesaj: "Ai atins ținta pe care ți-ai pus-o. Aș încasa acum." };
       else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — prețul e în afara gridului de peste " + (ctx.plan.afara ? ctx.plan.afara.prag : "?") + " ore", mesaj: "Ai hotărât să nu-l lași afară atât. Aș opri botul și aș face unul nou din fișă, pe unde e prețul." };
       else out.plan = { nivel: "ok", titlu: "", mesaj: "" };
+    }
+
+    // v82: semnalele actionabile (calculate de SemnaleBot in colector)
+    if (ctx && ctx.semnale) {
+      var sm = ctx.semnale;
+      out["s-iesi"] = sm.semafor && sm.semafor.nivel === "iesi" ? { nivel: "critic", titlu: nume + ": semaforul zice IEȘI — " + sm.semafor.motiv, mesaj: "Ce aș face eu: " + sm.semafor.faCe } : { nivel: "ok", titlu: "", mesaj: "" };
+      out["s-ia-profit"] = sm.iaProfit ? { nivel: "atentie", titlu: nume + ": moment bun să încasezi", mesaj: sm.iaProfit.text + " Ce aș face eu: aș închide pe plus acum." } : { nivel: "ok", titlu: "", mesaj: "" };
+      out["s-muta"] = sm.muta ? { nivel: "atentie", titlu: nume + ": mută gridul — " + sm.muta.motiv, mesaj: "Gridul propus acum: " + sm.muta.setare.jos + " – " + sm.muta.setare.sus + ", " + sm.muta.setare.grile + " grile, " + sm.muta.setare.levier + "×. Setările de copiat sunt în Tablou." } : { nivel: "ok", titlu: "", mesaj: "" };
+      out["s-btc"] = sm.btc ? { nivel: "atentie", titlu: nume + ": BTC a intrat în mișcare", mesaj: sm.btc.text + " Ce aș face eu: n-aș adăuga bani până nu vedem încotro trage BTC." } : { nivel: "ok", titlu: "", mesaj: "" };
+      out["s-aglomerare"] = sm.aglomerare && sm.aglomerare.nivel === "atentie" ? { nivel: "atentie", titlu: nume + ": mulțimea e înghesuită pe partea botului", mesaj: sm.aglomerare.text } : { nivel: "ok", titlu: "", mesaj: "" };
     }
 
     var opritorStins = b.opritorPierdere != null && b.opritorPierdereActiv === false;

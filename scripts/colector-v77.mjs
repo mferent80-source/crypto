@@ -233,6 +233,16 @@ await test("istoric: planul (v81) pe bot - se scrie curatat (doar numere pozitiv
   assert.equal((await cheama("POST", "action=plan", env, { corp: { plan: { plus: 1 } } })).status, 400);
 });
 
+await test("istoric: semnalele (v82) - log curatat (max 200, nivel necunoscut -> info, cod curatat) + instantaneul de acum; se citesc inapoi", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t = Date.now();
+  const log = new Array(210).fill(0).map((_, i) => ({ t: t + i, cod: i === 209 ? "Rau<x>" : "miscare", nivel: i === 209 ? "ceva" : "atentie", motiv: "m", total: -4.7, dreptate: i === 0 ? true : null }));
+  const w = await cheama("POST", "action=semnale", env, { corp: { bot: "2382", log, acum: { la: t, btc: { nivel: "atentie", text: "BTC" }, afaraOre: 0, regimBtc: { r4h: 2, r24h: 1, miscare: true } } } });
+  assert.equal(w.status, 200); assert.equal(w.d.log, 200);
+  const r = (await cheama("GET", "action=semnale&bot=2382", env)).d.semnale;
+  assert.equal(r.log.length, 200); assert.equal(r.log[199].cod, "aux"); assert.equal(r.log[199].nivel, "info");
+  assert.equal(r.acum.btc.text, "BTC"); assert.equal(r.acum.regimBtc.miscare, true); assert.strictEqual(r.acum.aglomerare, null);
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });

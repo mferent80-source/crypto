@@ -1455,3 +1455,18 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbEvL.tbEv-alerta{border-color:#ff8c00}
 #tabloubot .tbEvL.tbEv-iesire-sus,#tabloubot .tbEvL.tbEv-iesire-jos{border-color:#dc283c}
 #tabloubot .tbEvL.tbEv-revenire{border-color:#00aa5a}
+#tabloubot #tbSemaforCard{background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r);padding:14px 16px;margin-bottom:12px}
+#tabloubot .tbSemCap{display:flex;gap:16px;align-items:flex-start}
+#tabloubot .tbSemNivel{font-size:22px;font-weight:900;white-space:nowrap}
+#tabloubot .tbSemComp{margin:8px 0 0;padding-left:18px}
+#tabloubot .tbMuta{margin-top:10px;padding-top:8px;border-top:1px solid var(--tb-linie)}
+#tabloubot .tbMuta h5{margin:0 0 6px;font-size:14px}
+#tabloubot .grRand{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--tb-linie)}
+#tabloubot .grCopy{padding:2px 8px;font-size:12px}
+#tabloubot .tbSoc{margin-top:10px}
+#tabloubot .tbSoc summary{cursor:pointer;color:var(--muted)}
+#tabloubot .grTabel{width:100%;border-collapse:collapse;font-size:13px}
+#tabloubot .grTabel th,#tabloubot .grTabel td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--tb-linie)}
+@media (max-width:600px){#tabloubot .tbSemCap{flex-direction:column;gap:6px}}
+/* v82: semaforul inlocuieste verdictul vechi (masuratoarea ritmului ramane in "Masurile, dovada") */
+#tabloubot #tbVerdictCard{display:none}
