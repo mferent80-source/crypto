@@ -172,21 +172,24 @@ var TabloBot = (function () {
       }
     }
 
-    // Long: lichidarea e JOS (estimateLiquidationPriceDown). Short: lichidarea
-    // e SUS (estimateLiquidationPriceUp) - Task 5 aduce directia short, iar
-    // fara ramura asta masura ar da tacut un numar gresit pentru acei boti.
-    // Distanta poate iesi zero sau negativa cand pretul a trecut deja de prag
-    // - si asta e cazul cel mai periculos, nu are voie sa tacem la el.
+    // Lichidarea: AMBELE parti, cele care exista (Pionex trimite "0" pe partea
+    // care nu exista - garda >0). Un bot neutru le are pe amandoua; un long
+    // poate veni cu Jos "0" si Sus > 0. Se ia distanta SEMNATA cea mai mica:
+    // jos = (pret - jos) / pret, sus = (sus - pret) / pret. Negativa = pretul
+    // a trecut deja de prag (DEPASITA) - cazul cel mai periculos.
     var lichJos = nr(x.estimateLiquidationPriceDown);
     var lichSus = nr(x.estimateLiquidationPriceUp);
-    if (pretPerp !== null && pretPerp > 0 && lichJos !== null && lichJos > 0) {
-      var d = 100 * (pretPerp - lichJos) / pretPerp;
-      m.lichidare = { valoare: d, prag: { grav: 8, atentie: 15 },
-        stare: d < 8 ? "rau" : d < 15 ? "margine" : "bine" };
-    } else if (pretPerp !== null && pretPerp > 0 && lichSus !== null && lichSus > 0) {
-      var d = 100 * (lichSus - pretPerp) / pretPerp;
-      m.lichidare = { valoare: d, prag: { grav: 8, atentie: 15 },
-        stare: d < 8 ? "rau" : d < 15 ? "margine" : "bine" };
+    if (pretPerp !== null && pretPerp > 0) {
+      var parti = [];
+      if (lichJos !== null && lichJos > 0) parti.push({ partea: "jos", pret: lichJos, d: 100 * (pretPerp - lichJos) / pretPerp });
+      if (lichSus !== null && lichSus > 0) parti.push({ partea: "sus", pret: lichSus, d: 100 * (lichSus - pretPerp) / pretPerp });
+      if (parti.length) {
+        var cea = parti[0];
+        for (var pi = 1; pi < parti.length; pi++) if (parti[pi].d < cea.d) cea = parti[pi];
+        m.lichidare = { valoare: cea.d, prag: { grav: 8, atentie: 15 },
+          stare: cea.d < 8 ? "rau" : cea.d < 15 ? "margine" : "bine",
+          partea: cea.partea, pretLichidare: cea.pret, depasita: cea.d < 0 };
+      }
     }
 
     var brut = nr(x.gridProfit), taxe = nr(x.totalFee);

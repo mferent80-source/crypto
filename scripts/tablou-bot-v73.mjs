@@ -222,6 +222,55 @@ await test("botul short foloseste estimateLiquidationPriceUp, nu Down", () => {
   assert.equal(m.lichidare.stare, "bine");
 });
 
+// --- Audit 24.09: lichidarea citea DOAR partea de jos cand exista. Un bot
+// neutru are ambele parti; cea de SUS la 3,85% trecea drept "bine" (jos la 30%).
+
+await test("[audit] neutru cu ambele lichidari: Sus la 3,85% bate Jos la 30% si da OPRESTE", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "",
+    estimateLiquidationPriceDown: "70", estimateLiquidationPriceUp: "103.85" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - 3.85) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "sus");
+  assert.equal(m.lichidare.depasita, false);
+  assert.equal(m.lichidare.stare, "rau");
+  const mv = { ...masuriBune(), lichidare: m.lichidare };
+  assert.equal(T.verdict(mv, "GRID").nivel, "OPRESTE");
+});
+
+await test("[audit] ambele lichidari, Jos mai aproape: se ia Jos", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData,
+    estimateLiquidationPriceDown: "95", estimateLiquidationPriceUp: "130" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - 5) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "jos");
+});
+
+await test("[audit] long cu Jos '0' si Sus > 0 foloseste Sus", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "long",
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "112" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - 12) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "sus");
+});
+
+await test("[audit] short cu Jos '0' ramane corect (Sus) si semnul depasirii se vede", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "short",
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "95" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - (-5)) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "sus");
+  assert.equal(m.lichidare.depasita, true, "pretul peste lichidarea de sus = DEPASITA");
+  assert.equal(m.lichidare.stare, "rau");
+});
+
+await test("[audit] ambele parti '0' = nu exista lichidare, nu distanta 0", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData,
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "0" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.equal(m.lichidare.valoare, null);
+  assert.equal(m.lichidare.stare, "nu-se-poate");
+});
+
 await test("basis-ul e diferenta procentuala perp fata de spot", () => {
   const m = T.masoara({ ...INTRARI, klinePerp: ZIGZAG.concat({ close: 0.0160 }), pretSpot: 0.0155 });
   assert.ok(Math.abs(m.basis.valoare - 3.2258) < 0.01, `basis: ${m.basis.valoare}`);
