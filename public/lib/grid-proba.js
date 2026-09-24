@@ -160,6 +160,13 @@ var GridProba = (function () {
     return m > 0 ? m : null;
   }
 
+  // F4 "cat investesc?": suma la care cea mai proasta fereastra de pe istoric nu trece
+  // de pierderea acceptata din cont. Fara fereastra pe minus nu se poate socoti (null, nu infinit).
+  function sumaMaxima(sold, pierderePct, ceaMaiProasta) {
+    if (!(sold > 0) || !(pierderePct > 0) || ceaMaiProasta === null || ceaMaiProasta === undefined || !(ceaMaiProasta < 0)) return null;
+    return sold * (pierderePct / 100) / Math.abs(ceaMaiProasta);
+  }
+
   function fisa(o) {
     if (!(o.pret > 0)) return { eroare: "N-am prețul de acum al monedei." };
     if (!o.b15 || o.b15.length < 7 * C.BARE_ZI) return { eroare: "Prea puține lumânări ca să probez: moneda are " + (o.b15 ? (o.b15.length / C.BARE_ZI).toFixed(1) : "0") + " zile de istoric pe 15 minute, iar proba cere cel puțin 7 zile." };
@@ -188,6 +195,6 @@ var GridProba = (function () {
       contra: contrazice(pr, dir) };
   }
 
-  return { simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, fisa: fisa };
+  return { simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

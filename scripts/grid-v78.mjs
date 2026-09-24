@@ -402,5 +402,15 @@ await test("F1 Alerte: ctx.regim cu miscare -> 'gata linistea' (atentie) o data;
   assert.equal(r2.mesaje.length, 0);
 });
 
+// --- F4: cat investesc? ---
+await test("F4 sumaMaxima: sold 1000, pierdere acceptata 5%, cea mai proasta fereastra -40% -> 125 USDT; fara date -> null; cea mai proasta >= 0 -> null (nu infinit)", () => {
+  aprox(GP.sumaMaxima(1000, 5, -0.40), 125, 1e-9);
+  aprox(GP.sumaMaxima(486.05, 10, -0.2246), 216.4, 0.1);
+  assert.equal(GP.sumaMaxima(1000, 5, null), null);
+  assert.equal(GP.sumaMaxima(null, 5, -0.4), null);
+  assert.equal(GP.sumaMaxima(1000, 0, -0.4), null);
+  assert.equal(GP.sumaMaxima(1000, 5, 0.02), null, "nicio fereastra pe minus -> nu se poate socoti (nu infinit)");
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

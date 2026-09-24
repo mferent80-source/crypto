@@ -4820,7 +4820,7 @@ async function grAduMonede(){
   }catch(e){grStare.monede=null}
 }
 function porneGrid(){
-  grAduMonede();
+  grAduMonede();grSoldInPagina();
   if(!grStare.timer)grStare.timer=setInterval(function(){if(grPanouVizibil()&&grStare.simbol)gridCalculeaza()},GR_REIMPROSPATARE_MS);
   renderGrid();
 }
@@ -4867,6 +4867,14 @@ async function gridCalculeaza(fortat){
   finally{grStare.inLucru=false}
   renderGrid();
 }
+// F4: soldul si pierderea acceptata se tin minte pe dispozitiv (nu pleaca nicaieri)
+function grSoldCitit(){try{var v=JSON.parse(localStorage.getItem("grSold")||"null");return v&&typeof v==="object"?v:{}}catch(e){return {}}}
+function gridSold(){
+  var sold=grNumar($("grSold")&&$("grSold").value),pierdere=grNumar($("grPierdere")&&$("grPierdere").value);
+  try{localStorage.setItem("grSold",JSON.stringify({sold:sold,pierdere:pierdere}))}catch(e){}
+  if(grStare.fisa)renderGrid();
+}
+function grSoldInPagina(){var v=grSoldCitit();if($("grSold")&&v.sold>0&&!$("grSold").value)$("grSold").value=String(v.sold);if($("grPierdere")&&v.pierdere>0)$("grPierdere").value=String(v.pierdere)}
 function gridOrizont(h){grStare.H=Number(h)||2;[1,2,3].forEach(function(x){var b=$("grH"+x);if(b)b.setAttribute("aria-pressed",String(x===grStare.H))});if(grStare.date)gridCalculeaza()}
 function gridDirectie(d){grStare.dir=d==="auto"?null:d;["auto","long","neutru","short"].forEach(function(x){var b=$("grD"+x);if(b)b.setAttribute("aria-pressed",String((grStare.dir||"auto")===x))});if(grStare.date)gridCalculeaza()}
 function gridCopiaza(v){
@@ -4903,6 +4911,17 @@ function grCodTV(st,info){
 var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
 var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
+// F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
+function grRandSumaMaxima(f){
+  var v=grSoldCitit(),sold=grNumar($("grSold")&&$("grSold").value)||v.sold,pierdere=grNumar($("grPierdere")&&$("grPierdere").value)||v.pierdere||5;
+  var st=f.proba.pe[f.dir]&&f.proba.pe[f.dir].antren,rea=st?st.ceaMaiProasta:null;
+  if(!(sold>0))return grRand("Cât investesc?","scrie soldul contului mai sus și îți spun");
+  var max=GridProba.sumaMaxima(sold,pierdere,rea);
+  if(max==null)return grRand("Cât investesc?",rea==null?"n-am cea mai proastă fereastră":"pe istoric nicio fereastră n-a ieșit pe minus: nu pot socoti un maxim");
+  var P=GridCalcul.procent,text="cel mult "+Math.floor(max)+" USDT · ca cea mai proastă fereastră ("+P(rea)+") să nu treacă de "+pierdere+"% din "+sold+" USDT";
+  if(f.setare.suma>max)text+=" · ⚠ ai pus "+f.setare.suma+", adică "+(f.setare.suma*Math.abs(rea)/sold*100).toFixed(1).replace(".",",")+"% din cont în cel mai rău caz";
+  return grRand("Cât investesc?",text,String(Math.floor(max)));
+}
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
   if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
@@ -4930,6 +4949,7 @@ function renderGrid(){
     +grRand("Pe fiecare ordin",st.perOrdin.toFixed(2)+" USDT"+(st.redus?" (minim Pionex "+st.redus.minOrdin.toFixed(2)+")":i&&i.minNotional?" (minim Pionex "+i.minNotional+" USDT"+(Number(i.minSizeLimit)>0?" sau "+i.minSizeLimit+" "+escapeHtml(i.baseCurrency||""):"")+")":""))
     +grRand("Lichidare jos",lj!=null?grPret(lj,i)+" · "+P((st.jos-lj)/st.jos)+" sub grid":"nu se lichidează jos")
     +grRand("Lichidare sus",ls!=null?grPret(ls,i)+" · "+P((ls-st.sus)/st.sus)+" peste grid":"nu se lichidează sus")
+    +grRandSumaMaxima(f)
     +'</div>';
   var pr=f.proba,cel=function(x,k){if(!x||x[k]==null)return "—";return k==="lichidari"?String(x[k]):k==="opriri"?x[k]+"/"+x.n:k==="iesiriMedii"?x[k].toFixed(1).replace(".",","):P(x[k])};
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Proba pe ultimele '+Math.floor(pr.zile)+' zile</h4><span class="tbSub">'+pr.ferestre.antren+'+'+pr.ferestre.test+' ferestre de '+pr.H+'z, ~'+pr.ferestre.independente+' independente</span></div><div class="grTabelWrap"><table class="grTabel"><thead><tr><th></th>'
