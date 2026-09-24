@@ -403,6 +403,83 @@ await test("zero perechi in ultimele sase ore dar una-doua in ultima ora e rapor
   assert.equal(m.ritmPerechi.stare, "bine", `baza este 0, cand nu-i baza nu e rau`);
 });
 
+// --- Audit 24.09: ritmul impartea la 1h si 6h fixe, oricat de departe erau
+// capetele reale, si numara peste gauri din istoric (ecran inchis).
+
+function istoricRegulat(pasMin, peMinut, acum, oreInapoi, sari) {
+  const out = [];
+  for (let min = oreInapoi * 60; min >= 0; min -= pasMin) {
+    if (sari && sari(min)) continue;
+    out.push({ t: acum - min * 60000, perechi: (oreInapoi * 60 - min) * peMinut, pretPerp: 0.0155, pretSpot: 0.0155 });
+  }
+  return out;
+}
+
+await test("[audit] ritmul imparte la durata REALA dintre capete, nu la o ora fixa", () => {
+  // o pereche pe minut = 60/ora. Mostre din minut in minut, dar lipsesc -60..-57
+  // (gaura de 5 min, inca tolerata): capatul "de acum o ora" e de fapt la -61,
+  // cu 61 de perechi. 61 in 61 de minute = 60/ora, nu 61 "in ultima ora".
+  const ist = istoricRegulat(1, 1, ACUM, 8, (min) => min >= 57 && min <= 60);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.sursa, "istoric");
+  assert.ok(Math.abs(m.ritmPerechi.valoare - 60) < 1e-9, `ritm/ora: ${m.ritmPerechi.valoare} (61 perechi in 61 min = 60/ora)`);
+  assert.ok(Math.abs(m.ritmPerechi.baza - 60) < 1e-9, `baza/ora: ${m.ritmPerechi.baza}`);
+  assert.equal(m.ritmPerechi.stare, "bine");
+});
+
+await test("[audit] o gaura de 90 de minute intre capete da NECUNOSCUT, nu un ritm inventat", () => {
+  // 6 perechi/ora constant, dar ecranul a stat inchis intre -4h si -2h30.
+  const ist = istoricRegulat(1, 0.1, ACUM, 7, (min) => min < 240 && min > 150);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate", `stare: ${m.ritmPerechi.stare}, valoare ${m.ritmPerechi.valoare}`);
+  assert.equal(m.ritmPerechi.valoare, null, "fara trx24h, nu are ce arata");
+});
+
+await test("[audit] ultima mostra veche de 30 de minute (ecran inchis) da NECUNOSCUT", () => {
+  const ist = istoricRegulat(1, 0.1, ACUM - 30 * 60000, 7);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate");
+});
+
+await test("[audit] fara mostre destule, ritmul vine din trx24h marcat 'din Pionex 24h'", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: 48 } };
+  const scurt = istoricRegulat(1, 0.1, ACUM, 1);
+  const m = T.masoara({ ...INTRARI, bot, istoric: scurt, acum: ACUM });
+  assert.equal(m.ritmPerechi.sursa, "pionex-24h");
+  assert.equal(m.ritmPerechi.eticheta, "din Pionex 24h");
+  assert.equal(m.ritmPerechi.valoare, 2, "48 de perechi in 24h = 2 pe ora");
+  assert.equal(m.ritmPerechi.total24h, 48);
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate", "fara baza nu se judeca - nu da REGLEAZA");
+});
+
+await test("[audit] trx24h cu gaura in istoric: tot Pionex, nu ritmul peste gaura", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: "24" } };
+  const ist = istoricRegulat(1, 0.1, ACUM, 7, (min) => min < 240 && min > 150);
+  const m = T.masoara({ ...INTRARI, bot, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.sursa, "pionex-24h");
+  assert.equal(m.ritmPerechi.valoare, 1);
+});
+
+await test("[audit] trx24h lipsa / null / gol NU devine 0 perechi", () => {
+  const scurt = istoricRegulat(1, 0.1, ACUM, 1);
+  for (const v of [undefined, null, "", "abc"]) {
+    const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: v } };
+    const m = T.masoara({ ...INTRARI, bot, istoric: scurt, acum: ACUM });
+    assert.equal(m.ritmPerechi.valoare, null, `trx24h=${JSON.stringify(v)} a dat ${m.ritmPerechi.valoare}`);
+  }
+  const bot0 = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: 0 } };
+  assert.equal(T.masoara({ ...INTRARI, bot: bot0, istoric: scurt, acum: ACUM }).ritmPerechi.valoare, 0,
+    "0 trimis de Pionex e o cifra reala (nicio pereche in 24h)");
+});
+
+await test("[audit] mostra cu perechi lipsa (null) nu se socoteste ca 0", () => {
+  const ist = istoricRegulat(1, 0.1, ACUM, 7);
+  ist[ist.length - 1] = { ...ist[ist.length - 1], perechi: null };
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.notEqual(m.ritmPerechi.stare, "rau", "perechi null ar da ultima = -X sau 0 - fals");
+  assert.equal(m.ritmPerechi.sursa === "istoric" ? "gresit" : "ok", "ok");
+});
+
 await test("fara nimic pus, botul e presupus GRID", () => {
   const r = T.modBot(BOT, {});
   assert.equal(r.mod, "GRID");

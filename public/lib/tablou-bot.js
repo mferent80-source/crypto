@@ -11,7 +11,14 @@ var TabloBot = (function () {
       binance: (moneda + q).toUpperCase(),
     };
   }
-  function nr(v) { var x = Number(v); return isFinite(x) ? x : null; }
+  // Lipsa ramane LIPSA: Number(null) === 0, Number("") === 0, Number(false) === 0
+  // - fara garda de mai jos, un camp absent devenea tacut cifra 0 (comision 0%,
+  // interval de la 0, 0 perechi). Doar "0" trimis chiar ca numar/text e 0.
+  function nr(v) {
+    if (v === null || v === undefined || typeof v === "boolean") return null;
+    if (typeof v === "string" && v.trim() === "") return null;
+    var x = Number(v); return isFinite(x) ? x : null;
+  }
   var NECUNOSCUT = { valoare: null, stare: "nu-se-poate", prag: null };
 
   // Stare de cont raportata direct de Pionex (marginStatus / riskStatus).
@@ -217,16 +224,42 @@ var TabloBot = (function () {
     };
     var acum0 = istoric.length ? istoric[istoric.length - 1] : null;
     var acum1 = inUrma(ORA), acum7 = inUrma(7 * ORA);
+    // Audit 24.09: se imparte la durata REALA dintre capete (nu la 1h/6h fixe),
+    // iar o gaura >5 min oriunde intre capatul vechi si `acum` (ecran inchis,
+    // pana de retea) face ritmul NECUNOSCUT - nu se numara peste ea.
+    var ritmDinIstoric = false;
     if (acum0 && acum1 && acum7) {
-      var ultima = nr(acum0.perechi) - nr(acum1.perechi);
-      var baza = (nr(acum1.perechi) - nr(acum7.perechi)) / 6;
-      // Contor resetat: daca ultima sau baza-ul sunt negative, schimbul de bot s-a intamplat.
-      // Nu avem baza de comparatie, asa ca nu raportam ca "rau".
-      if (ultima < 0 || baza < 0) {
-        // Contor resetat, nu suprascriem ritmPerechi - ramane NECUNOSCUT
-      } else {
-        m.ritmPerechi = { valoare: ultima, baza: baza, prag: 0.40,
-          stare: baza > 0 && ultima / baza < 0.40 ? "rau" : "bine" };
+      var t0 = nr(acum0.t), t1 = nr(acum1.t), t7 = nr(acum7.t);
+      var p0 = nr(acum0.perechi), p1 = nr(acum1.perechi), p7 = nr(acum7.perechi);
+      var farGaura = t0 !== null && acum - t0 <= GAURA_MAX_MS;
+      var dupa7 = false, tPrec = null;
+      for (var gi = 0; gi < istoric.length && farGaura; gi++) {
+        var tg = nr(istoric[gi].t);
+        if (istoric[gi] === acum7) dupa7 = true;
+        if (!dupa7) continue;
+        if (tg === null || (tPrec !== null && tg - tPrec > GAURA_MAX_MS)) farGaura = false;
+        tPrec = tg;
+      }
+      if (farGaura && p0 !== null && p1 !== null && p7 !== null && t0 > t1 && t1 > t7) {
+        var ultima = (p0 - p1) / ((t0 - t1) / ORA);
+        var baza = (p1 - p7) / ((t1 - t7) / ORA);
+        // Contor resetat (bot inchis si redeschis): o diferenta negativa nu e
+        // ritm. Fara baza de comparatie nu raportam "rau" - ramane NECUNOSCUT.
+        if (!(ultima < 0 || baza < 0)) {
+          m.ritmPerechi = { valoare: ultima, baza: baza, prag: 0.40,
+            stare: baza > 0 && ultima / baza < 0.40 ? "rau" : "bine",
+            sursa: "istoric", eticheta: null };
+          ritmDinIstoric = true;
+        }
+      }
+    }
+    // Mostrele nu ajung: cifra lui Pionex (perechi in 24h), marcata ca atare.
+    // Fara baza nu se judeca (stare nu-se-poate) - doar se arata.
+    if (!ritmDinIstoric) {
+      var trx = nr(x.trx24h);
+      if (trx !== null && trx >= 0) {
+        m.ritmPerechi = { valoare: trx / 24, baza: null, prag: 0.40, stare: "nu-se-poate",
+          sursa: "pionex-24h", eticheta: "din Pionex 24h", total24h: trx };
       }
     }
     return m;
@@ -397,7 +430,7 @@ var TabloBot = (function () {
     }
     if (mod !== "DIRECTIONAL" && m.ritmPerechi.stare === "rau") {
       return { nivel: "REGLEAZA", titlu: "Ritmul a căzut",
-        ceFac: m.ritmPerechi.valoare + " perechi în ultima oră, față de " + Math.round(m.ritmPerechi.baza) + " obișnuit.",
+        ceFac: (Math.round(m.ritmPerechi.valoare * 10) / 10) + " perechi pe oră în ultima oră, față de " + (Math.round(m.ritmPerechi.baza * 10) / 10) + " obișnuit.",
         declansator: d("ritmPerechi", m.ritmPerechi.valoare, m.ritmPerechi.baza * 0.40) };
     }
     // O atingere trecatoare a marginii nu cere mutarea intervalului - doar o
