@@ -33,6 +33,7 @@ export async function onRequestGet({request,env}){
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
   if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
+  if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
   if(action!=="citeste")return json({error:"Unsupported action"},400);
   const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);
@@ -70,6 +71,15 @@ export async function onRequestPost({request,env}){
     // expira dupa 6 ore: un clasament de ieri nu trebuie sa arate ca unul de azi
     await env.ISTORIC.put("clasament",JSON.stringify({la,monede:curate}),{expirationTtl:6*3600});
     return json({ok:true,monede:curate.length});
+  }
+  if(action==="laborator"){
+    const la=nr(corp&&corp.la),q=corp&&Array.isArray(corp.intrebari)?corp.intrebari:null;
+    if(la===null||!q)return json({error:"Lipseste la sau intrebari"},400);
+    const g=x=>x&&typeof x==="object"?{n:nr(x.n),nEf:nr(x.nEf),pePlus:nr(x.pePlus),mediana:nr(x.mediana),ic:Array.isArray(x.ic)?[nr(x.ic[0]),nr(x.ic[1])]:null}:null;
+    const txt=(v,m)=>typeof v==="string"?v.slice(0,m):"";
+    const curate=q.slice(0,10).map(x=>x&&typeof x==="object"?{id:txt(x.id,32).replace(/[^a-z0-9-]/g,""),titlu:txt(x.titlu,160),eticheteA:txt(x.eticheteA,40),eticheteB:txt(x.eticheteB,40),verdict:["dovedit","contrazis","n-am-aflat"].includes(x.verdict)?x.verdict:"n-am-aflat",A:g(x.A),B:g(x.B),alegere:{A:g(x.alegere&&x.alegere.A),B:g(x.alegere&&x.alegere.B)},nevazut:{A:g(x.nevazut&&x.nevazut.A),B:g(x.nevazut&&x.nevazut.B)}}:null).filter(Boolean);
+    await env.ISTORIC.put("laborator",JSON.stringify({la,H:nr(corp.H),monede:nr(corp.monede),ferestre:nr(corp.ferestre),intrebari:curate}),{expirationTtl:3*24*3600});
+    return json({ok:true,intrebari:curate.length});
   }
   if(action==="alerte"){
     const a=corp&&corp.alerta;

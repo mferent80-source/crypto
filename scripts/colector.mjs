@@ -12,6 +12,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 import { trimiteDiscord } from "./lib/canal-discord.mjs";
+import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -84,6 +85,8 @@ const Directie = incarca("directie.js", "Directie");
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
 const GridClasament = incarca("grid-clasament.js", "GridClasament");
+const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
+const GridLaborator = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba);
 
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 async function cere(cale, opt = {}) {
@@ -235,12 +238,28 @@ async function turaClasament() {
 }
 
 if (CANAL === "discord" && !/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\//.test(DISCORD_WEBHOOK)) jurnal("ATENTIE: ALERTE_CANAL=discord dar DISCORD_WEBHOOK lipseste/gresit in .dev.vars - alertele raman doar in Radar");
+// v79.5: laboratorul de grid, o data pe zi (prima data la 30 de minute dupa pornire), niciodata
+// peste clasament. ~20 monede x 6 pagini x 1,6 s ~ 4 minute.
+const LABORATOR_MS = 24 * 3600000;
+let laboratorLa = Date.now() - LABORATOR_MS + 30 * 60000, laboratorInLucru = false;
+async function turaLaborator() {
+  if (process.env.COLECTOR_FARA_LABORATOR || laboratorInLucru || clasamentInLucru || Date.now() - laboratorLa < LABORATOR_MS) return;
+  laboratorInLucru = true;
+  try {
+    const cerePionex = (tip, simbol, end) => cere(tip === "tickers" ? "/api/market?type=pionex_tickers&market=PERP" : "/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : ""));
+    const r = await turaLaboratorModul({ cere: cerePionex, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridLaborator, GridClasament, top: 20, H: 2 });
+    if (r.monede >= 10) { await trimite("/api/istoric-bot?action=laborator", r); laboratorLa = Date.now(); }
+    else { jurnal("laborator NEURCAT: doar", r.monede, "monede"); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
+  } catch (e) { jurnal("laborator ESEC", e.message); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
+  laboratorInLucru = false;
+}
+
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal alerte: " + CANAL + (NTFY.topic ? " (" + NTFY.topic + (NTFY.nou ? ", NOU" : "") + ")" : ""));
 if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului, gata liniștea (oprește gridul)." });
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().catch((e) => jurnal("clasament", e.message));   // nu blocheaza tura de un minut
+  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
 }

@@ -1405,3 +1405,7 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbAlerta{padding:6px 8px;border-radius:8px;background:var(--tb-fond2);border:1px solid var(--tb-linie)}
 #tabloubot .tbAlerta b{display:block}
 #tabloubot .tbAlerta p{margin:2px 0 0}
+#gridset .grCalibrare{margin-top:12px;padding-top:10px;border-top:1px solid var(--tb-linie)}
+#gridset .grCalibrare h5{margin:0 0 6px;font-size:14px}
+#gridset .grLab{padding:8px 0;border-bottom:1px solid var(--tb-linie)}
+#gridset .grLab>div{margin-top:3px}

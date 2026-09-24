@@ -4820,7 +4820,7 @@ async function grAduMonede(){
   }catch(e){grStare.monede=null}
 }
 function porneGrid(){
-  grAduMonede();grSoldInPagina();gridJurnalActualizeaza(false);gridClasamentAdu(false);
+  grAduMonede();grSoldInPagina();gridJurnalActualizeaza(false);gridClasamentAdu(false);gridLaboratorAdu();
   if(!grStare.timer)grStare.timer=setInterval(function(){if(grPanouVizibil()&&grStare.simbol)gridCalculeaza()},GR_REIMPROSPATARE_MS);
   renderGrid();
 }
@@ -4956,6 +4956,20 @@ async function gridJurnalActualizeaza(fortat){
   finally{grJurnalStare.inLucru=false}
   renderGridJurnal();
 }
+// v79.4: calibrarea din rezultatele LUI - propune pragul "mediana verde", nu il schimba singur
+function grCalibrareHtml(l){
+  var c=GridJurnal.calibrare(l,GridCalcul.C.MEDIANA_VERDE),P=GridCalcul.procent,V=c.peVerdict;
+  var rand=function(k){var x=V[k];if(!x||!x.n)return "";return '<li>'+escapeHtml((GR_NIVEL[k]||[k])[0])+': '+x.pePlus+' din '+x.n+' pe plus ('+P(x.pePlus/x.n)+', IC '+P(x.ic[0])+' – '+P(x.ic[1])+')</li>'};
+  var h='<div class="grCalibrare"><h5>🎯 Calibrarea: verdictele au nimerit?</h5>';
+  if(!c.n)return h+'<p class="tbSub">Încă niciun bot închis din jurnal. Calibrarea pornește singură de la 30 de boți închiși.</p></div>';
+  h+='<ul class="grLista">'+["porneste","asteapta","nu"].map(rand).join("")+'</ul>';
+  if(!c.suficient)return h+'<p class="tbSub">'+c.n+' boți închiși: mai trebuie '+c.lipsa+' până propun ceva despre praguri (sub 30, orice „învățare” e noroc).</p></div>';
+  if(c.propus===null)return h+'<p class="tbSub">Nu am destui boți pe fiecare prag ca să aleg unul.</p></div>';
+  var ta=c.test.cuActual,tp=c.test.cuPropus;
+  h+='<p>Pragul „mediana verde” acum: <b>'+P(c.actual)+'</b> · ales pe primele 2/3 din boți: <b>'+P(c.propus)+'</b>. Pe ultima treime (nevăzută): cu pragul de acum '+ta.n+' boți, '+P(ta.pePlus)+' pe plus, medie '+P(ta.medie)+' · cu cel propus '+tp.n+' boți, '+P(tp.pePlus)+' pe plus, medie '+P(tp.medie)+'.</p>';
+  h+=c.confirmat?'<p class="good"><b>CONFIRMAT</b> pe boții nevăzuți: merită mutat pragul la '+P(c.propus)+'. Spune-mi și îl mut în cod (cu probă).</p>':'<p class="tbSub"><b>NECONFIRMAT</b>: pe boții nevăzuți diferența nu trece de noroc. Pragul rămâne.</p>';
+  return h+'</div>';
+}
 function renderGridJurnal(){
   var box=$("grJurnal"),sub=$("grJurnalSub");if(!box)return;
   var l=grJurnalCitit().slice().sort(function(a,b){return b.t-a.t}),P=GridCalcul.procent;
@@ -4974,7 +4988,8 @@ function renderGridJurnal(){
       +'<td class="'+(pct==null?"":pct>=0?"good":"bad")+'">'+escapeHtml(real)+'</td><td>'+escapeHtml(stare)+'</td>'
       +'<td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(e.id)+'" data-action-click="gridJurnalSterge(this.value)" aria-label="Șterge">✕</button></td></tr>';
   });
-  box.innerHTML=h+'</tbody></table></div><p class="grNota">Rezultatul real e profitul total al botului din Pionex (grile + poziție − comisioane), în % din investiție. Legarea se face pe monedă și pe ora pornirii (±). După 10–20 de boți, rezumatul de sus spune dacă verdictele au adus bani.</p>';
+  h+='</tbody></table></div>'+grCalibrareHtml(l);
+  box.innerHTML=h+'<p class="grNota">Rezultatul real e profitul total al botului din Pionex (grile + poziție − comisioane), în % din investiție. Legarea se face pe monedă și pe ora pornirii (±). După 10–20 de boți, rezumatul de sus spune dacă verdictele au adus bani.</p>';
 }
 // ===== F3: clasamentul (scris acasa de colector; aici doar se citeste si se arata) =====
 var grClasament={date:null,la:0,eroare:null,inLucru:false};
@@ -4985,6 +5000,25 @@ async function gridClasamentAdu(fortat){
   catch(e){grClasament.eroare=e&&e.status===503?"doar pe Radarul de acasă (colectorul îl socotește o dată pe oră)":textEroare(e)}
   finally{grClasament.inLucru=false;grClasament.la=Date.now()}
   renderGridClasament();
+}
+// v79.5: laboratorul (scris acasa de colector o data pe zi)
+var grLaborator={date:null,la:0,eroare:null};
+async function gridLaboratorAdu(){
+  if(Date.now()-grLaborator.la<10*60000&&grLaborator.date)return;
+  try{var d=await getJSON("/api/istoric-bot?action=laborator");grLaborator.date=d&&d.laborator||null;grLaborator.eroare=null}
+  catch(e){grLaborator.eroare=e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)}
+  grLaborator.la=Date.now();renderGridLaborator();
+}
+function renderGridLaborator(){
+  var box=$("grLaborator"),sub=$("grLaboratorSub");if(!box)return;
+  var L=grLaborator.date,P=GridCalcul.procent;
+  if(grLaborator.eroare){box.innerHTML='<p class="tbSub">'+escapeHtml(grLaborator.eroare)+'</p>';return}
+  if(!L||!Array.isArray(L.intrebari)){box.innerHTML='<p class="tbSub">Încă nu a rulat: colectorul de acasă îl face la ~30 de minute după pornire, apoi o dată pe zi.</p>';return}
+  if(sub)sub.textContent="socotit la "+new Date(L.la).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+" · "+L.monede+" monede · "+L.ferestre+" ferestre de grid neutru de "+L.H+" zile";
+  var V={dovedit:["✅ DOVEDIT","good"],contrazis:["↔️ SE CONTRAZICE","tbWarn"],"n-am-aflat":["❔ N-AM AFLAT","mutedInfo"]};
+  var g=function(x){return x?P(x.pePlus)+' pe plus <span class="tbSub">(IC '+(x.ic?P(x.ic[0])+' – '+P(x.ic[1]):"—")+', mediana '+P(x.mediana)+', '+x.nEf+' ferestre independente)</span>':"—"};
+  var pp=function(o,k){return P(o&&o[k]&&o[k].pePlus)};
+  box.innerHTML='<p class="grNota">Un grid NEUTRU standard, simulat pe fiecare fereastră de 2 zile, cu condițiile știute la pornire. „Dovedit” = aceeași diferență pe primele 2/3 și pe ultima treime (nevăzută), iar intervalele nu se ating. Altfel: n-am aflat — nu înseamnă că nu există, ci că datele nu ajung.</p>'+L.intrebari.map(function(q){var v=V[q.verdict]||V["n-am-aflat"];return '<div class="grLab"><b>'+escapeHtml(q.titlu)+'</b> <span class="'+v[1]+'">'+v[0]+'</span><div>'+escapeHtml(q.eticheteA)+': '+g(q.A)+'</div><div>'+escapeHtml(q.eticheteB)+': '+g(q.B)+'</div><div class="tbSub">pe zilele de alegere: '+pp(q.alegere,"A")+' vs '+pp(q.alegere,"B")+' · pe cele nevăzute: '+pp(q.nevazut,"A")+' vs '+pp(q.nevazut,"B")+'</div></div>'}).join("");
 }
 function gridClasamentAlege(simbol){if($("grMoneda"))$("grMoneda").value=String(simbol||"").replace(/_USDT_PERP$/,"");gridCalculeaza('fortat');if($("grFisa"))$("grFisa").scrollIntoView({behavior:"smooth",block:"start"})}
 function renderGridClasament(){

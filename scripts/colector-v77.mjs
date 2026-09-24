@@ -207,6 +207,20 @@ await test("canalul Discord (v79.2): webhook validat, embed colorat pe nivel, te
   assert.ok(jur.some((l) => /DISCORD_WEBHOOK/.test(l)));
 });
 
+await test("istoric: laboratorul (v79.5) se scrie curatat (verdict necunoscut -> n-am-aflat, id curatat, lipsa = null) si se citeste inapoi; corp stricat -> 400", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, la = Date.now();
+  assert.strictEqual((await cheama("GET", "action=laborator", env)).d.laborator, null);
+  const g = { n: 400, nEf: 50, pePlus: 0.5, mediana: "", ic: [0.37, 0.64] };
+  const w = await cheama("POST", "action=laborator", env, { corp: { la, H: 2, monede: 20, ferestre: 1620, intrebari: [
+    { id: "miscare", titlu: "T", eticheteA: "a", eticheteB: "b", verdict: "dovedit", A: g, B: g, alegere: { A: g, B: g }, nevazut: { A: g, B: g } },
+    { id: "RAU<script>", titlu: "x", verdict: "sigur", A: null, B: g }, "gunoi" ] } });
+  assert.equal(w.status, 200); assert.equal(w.d.intrebari, 2);
+  const r = (await cheama("GET", "action=laborator", env)).d.laborator;
+  assert.equal(r.monede, 20); assert.equal(r.intrebari[0].verdict, "dovedit"); assert.strictEqual(r.intrebari[0].A.mediana, null);
+  assert.equal(r.intrebari[1].id, "script"); assert.equal(r.intrebari[1].verdict, "n-am-aflat"); assert.strictEqual(r.intrebari[1].A, null);
+  assert.equal((await cheama("POST", "action=laborator", env, { corp: { intrebari: [] } })).status, 400);
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });

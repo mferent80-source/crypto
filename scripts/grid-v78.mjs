@@ -659,5 +659,80 @@ await test("v79.3 fisa poarta 'liniste' (n, k, p, ic, zileLiniste) pentru orizon
   assert.ok(f.liniste && typeof f.liniste.p === "number" && f.liniste.n >= 4, JSON.stringify(f.liniste));
 });
 
+// --- v79.4: calibrarea din jurnal (invata din rezultatele LUI, nu din istoric) ---
+function jurnalSintetic(n, regula) {
+  let l = [];
+  for (let i = 0; i < n; i++) {
+    const med = 0.001 + (i % 10) * 0.002;            // 0,1% ... 1,9%
+    const e = { id: "e" + i, t: T0 + i * ORA, simbol: "M" + i + "_USDT_PERP", verdict: med > 0.003 ? "porneste" : "asteapta", suma: 100, mediana: med, ceaMaiProasta: -0.2, botId: "b" + i, investit: 100, rezultat: regula(med, i), activ: false, inchisLa: T0 + i * ORA + 5 };
+    l.push(e);
+  }
+  return l;
+}
+await test("v79.4 calibrare: sub 30 de boti inchisi -> nu propune nimic, spune cati mai trebuie", () => {
+  const c = GJ.calibrare(jurnalSintetic(12, (m) => (m > 0.01 ? 2 : -2)), 0.003);
+  assert.equal(c.suficient, false); assert.equal(c.n, 12); assert.equal(c.lipsa, 18); assert.equal(c.propus, null);
+});
+await test("v79.4 calibrare: cand doar mediana > 1% a adus bani, pragul propus urca peste 1% si se verifica pe ultima treime (nevazuta)", () => {
+  const c = GJ.calibrare(jurnalSintetic(60, (m) => (m > 0.01 ? 3 : -2)), 0.003);
+  assert.equal(c.suficient, true);
+  assert.ok(c.propus > 0.01 && c.propus < 0.02, "propus " + c.propus);
+  assert.ok(c.test && c.test.cuPropus.pePlus > c.test.cuActual.pePlus, JSON.stringify(c.test));
+  assert.equal(c.confirmat, true);
+});
+await test("v79.4 calibrare: cand rezultatul NU depinde de mediana (zgomot) -> nu se confirma nimic, pragul ramane", () => {
+  const c = GJ.calibrare(jurnalSintetic(60, (m, i) => ((i * 7919) % 13 < 6 ? 2 : -2)), 0.003);
+  assert.equal(c.suficient, true); assert.equal(c.confirmat, false);
+});
+await test("v79.4 calibrare: pe verdict - cate, % pe plus cu IC Wilson; boti nelegati sau inca activi nu intra", () => {
+  const l = jurnalSintetic(40, (m) => (m > 0.003 ? 1 : -1));
+  l.push({ id: "x", t: T0, simbol: "X_USDT_PERP", verdict: "porneste", suma: 100, mediana: 0.02, botId: null, rezultat: null, activ: null });
+  l.push({ id: "y", t: T0, simbol: "Y_USDT_PERP", verdict: "porneste", suma: 100, mediana: 0.02, botId: "q", rezultat: 5, activ: true, inchisLa: null });
+  const c = GJ.calibrare(l, 0.003);
+  assert.equal(c.n, 40);
+  const p = c.peVerdict.porneste;
+  assert.equal(p.n, 32, "mediane > 0,3%: 8 din 10"); assert.equal(p.pePlus, 32); assert.ok(p.ic[0] > 0.85 && p.ic[1] === 1);
+});
+
+// --- v79.5: laboratorul de reguli pe grid ---
+const LAB_SRC = fs.existsSync(new URL("../public/lib/grid-laborator.js", import.meta.url)) ? fs.readFileSync(new URL("../public/lib/grid-laborator.js", import.meta.url), "utf8") : "";
+const GL = LAB_SRC ? new Function(`${SRC}; ${LAB_SRC}; return GridLaborator;`)() : null;
+await test("v79.5 modulul GridLaborator exista", () => assert.ok(GL, "grid-laborator.js lipseste"));
+await test("v79.5 ferestre: fiecare fereastra are net + conditii stiute LA START (schimbarea barelor de dupa start nu le schimba), parte a/t fara suprapunere", () => {
+  const b = bareDin(aleator(30 * 96 + 1, 41, 0.004));
+  const r = GL.ferestre(b, 2);
+  assert.ok(r.length > 60, "ferestre " + r.length);
+  // pe partea NEVAZUTA ("t") pragurile vin doar din primele 2/3 => nimic din viitor. (Pe partea de
+  // alegere "a", "obisnuitul" e potrivit pe aceleasi 20 de zile - de aceea verdictul cere acord pe "t".)
+  const f = r.filter((x) => x.parte === "t")[3];
+  for (const k of ["s", "net", "miscare", "linisteZile", "margine", "parte"]) assert.ok(k in f, k);
+  assert.ok(r.every((x) => x.parte === "a" || x.parte === "t"));
+  const nA = Math.round(b.length * 2 / 3);
+  assert.ok(r.filter((x) => x.parte === "a").every((x) => x.s + 192 <= nA) && r.filter((x) => x.parte === "t").every((x) => x.s >= nA));
+  // fara privire in viitor: stric TOT ce vine dupa startul ferestrei f -> conditiile ei raman aceleasi
+  const b2 = b.map((x, i) => i >= f.s ? { t: x.t, o: x.o * 3, h: x.h * 3, l: x.l * 3, c: x.c * 3 } : x);
+  const g = GL.ferestre(b2, 2).find((x) => x.s === f.s);
+  assert.deepEqual([g.miscare, g.linisteZile, g.margine], [f.miscare, f.linisteZile, f.margine]);
+});
+const rand = (parte, net, cond) => Object.assign({ parte, net, miscare: false, linisteZile: 0, margine: false }, cond);
+await test("v79.5 compara: efect real si stabil in ambele parti -> DOVEDIT; semn schimbat -> CONTRAZIS; putine/amestecate -> N-AM AFLAT; n efectiv = ferestre / 8", () => {
+  let rows = [];
+  for (let i = 0; i < 400; i++) rows.push(rand(i < 260 ? "a" : "t", (i % 10 < 8 ? -0.01 : 0.01), { miscare: true }), rand(i < 260 ? "a" : "t", (i % 10 < 2 ? -0.01 : 0.01), { miscare: false }));
+  const c = GL.compara(rows, (x) => x.miscare, (x) => !x.miscare, 2);
+  assert.equal(c.verdict, "dovedit"); assert.ok(c.A.pePlus < c.B.pePlus); assert.equal(c.A.nEf, Math.floor(400 / 8));
+  const rows2 = rows.map((x) => x.parte === "t" ? Object.assign({}, x, { miscare: !x.miscare }) : x);
+  assert.equal(GL.compara(rows2, (x) => x.miscare, (x) => !x.miscare, 2).verdict, "contrazis");
+  const putine = rows.slice(0, 30);
+  assert.equal(GL.compara(putine, (x) => x.miscare, (x) => !x.miscare, 2).verdict, "n-am-aflat");
+});
+await test("v79.5 intrebari: 3 intrebari cu titlu, grupe A/B si verdict; pe mers aleator nimic nu iese 'dovedit' din intamplare", () => {
+  let rows = [];
+  for (const sam of [41, 42, 43, 44]) rows = rows.concat(GL.ferestre(bareDin(aleator(30 * 96 + 1, sam, 0.004)), 2));
+  const q = GL.intrebari(rows, 2);
+  assert.equal(q.length, 3);
+  for (const x of q) { assert.ok(x.id && x.titlu && x.A && x.B && ["dovedit", "contrazis", "n-am-aflat"].includes(x.verdict), JSON.stringify(x).slice(0, 200)); }
+  assert.ok(q.every((x) => x.verdict !== "dovedit"), q.map((x) => x.id + ":" + x.verdict).join(" "));
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

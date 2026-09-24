@@ -99,6 +99,54 @@ var GridJurnal = (function () {
     return out;
   }
 
-  return { citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda };
+  function wilson(k, n) {
+    if (!(n > 0)) return [0, 1];
+    var z = 1.96, p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n));
+    return [Math.max(0, (c - m) / d), Math.min(1, (c + m) / d)];
+  }
+  function stat(l, T) {
+    var x = l.filter(function (e) { return T === null || e.mediana >= T; });
+    var plus = x.filter(function (e) { return e.pct > 0; }).length, s = 0;
+    x.forEach(function (e) { s += e.pct; });
+    return { n: x.length, pePlus: x.length ? plus / x.length : null, medie: x.length ? s / x.length : null };
+  }
+  // Calibrarea din rezultatele LUI (v79.4). Cazuri = boti legati si INCHISI, cu rezultat si
+  // mediana de proba. Sub 30 nu se propune nimic. Peste: pragul "mediana verde" se alege pe
+  // primele 2/3 (in timp) - cel mai mic prag cu cea mai buna medie, minim 5 boti luati - si
+  // se verifica pe ultima treime, nevazuta. Se PROPUNE; nu se schimba singur.
+  function calibrare(lista, pragActual) {
+    var inchise = (Array.isArray(lista) ? lista : []).filter(function (e) {
+      var baza = e && (e.investit > 0 ? e.investit : e.suma);
+      return e && e.botId && e.activ === false && e.rezultat !== null && e.rezultat !== undefined && e.mediana !== null && e.mediana !== undefined && baza > 0;
+    }).map(function (e) { var baza = e.investit > 0 ? e.investit : e.suma; return { t: e.t, verdict: e.verdict, mediana: e.mediana, pct: e.rezultat / baza }; })
+      .sort(function (a, b) { return a.t - b.t; });
+    var n = inchise.length, out = { n: n, lipsa: Math.max(0, 30 - n), suficient: n >= 30, peVerdict: {}, actual: pragActual, propus: null, antren: null, test: null, confirmat: false };
+    ["porneste", "asteapta", "nu"].forEach(function (v) {
+      var x = inchise.filter(function (e) { return e.verdict === v; }), k = x.filter(function (e) { return e.pct > 0; }).length;
+      out.peVerdict[v] = { n: x.length, pePlus: k, ic: wilson(k, x.length) };
+    });
+    if (!out.suficient) return out;
+    var nA = Math.floor(n * 2 / 3), A = inchise.slice(0, nA), B = inchise.slice(nA);
+    var cand = A.map(function (e) { return e.mediana; }).concat([pragActual]).sort(function (a, b) { return a - b; });
+    var best = null;
+    cand.forEach(function (T) {
+      var st = stat(A, T);
+      if (st.n < 5) return;
+      if (!best || st.medie > best.st.medie + 1e-12) best = { T: T, st: st };
+    });
+    if (!best) return out;
+    out.propus = best.T;
+    out.antren = { cuActual: stat(A, pragActual), cuPropus: best.st };
+    out.test = { cuActual: stat(B, pragActual), cuPropus: stat(B, best.T) };
+    var ta = out.test.cuActual, tp = out.test.cuPropus;
+    out.confirmat = best.T !== pragActual && tp.n >= 3 && ta.medie !== null && tp.medie > ta.medie && tp.pePlus >= ta.pePlus
+      && (tp.medie - ta.medie) >= 0.5 * (out.antren.cuPropus.medie - out.antren.cuActual.medie)
+      // si nu din noroc: marginea de jos (Wilson 95%) a ratei pe plus cu pragul propus trece de rata cu pragul de acum
+      && wilson(Math.round(tp.pePlus * tp.n), tp.n)[0] > ta.pePlus;
+    out.test.icPropus = wilson(Math.round(tp.pePlus * tp.n), tp.n);
+    return out;
+  }
+
+  return { citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda, calibrare: calibrare };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridJurnal = GridJurnal;
