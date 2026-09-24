@@ -262,6 +262,13 @@ await test("istoric: raportul de duminica (v84) se scrie curatat si se citeste i
   assert.equal((await cheama("POST", "action=raport", env, { corp: { la: 1 } })).status, 400);
 });
 
+await test("colector.mjs SE INCARCA intreg (v84: o ordine gresita de incarcare l-a oprit tacut; probele pe bucati nu vedeau)", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const r = spawnSync(process.execPath, [new URL("./colector.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")], { env: { ...process.env, COLECTOR_DOAR_INCARCA: "1" }, encoding: "utf8", timeout: 30000 });
+  assert.equal(r.status, 0, (r.stderr || "").slice(0, 400));
+  assert.match(r.stdout, /INCARCAT true/);
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });
