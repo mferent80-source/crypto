@@ -400,7 +400,7 @@ function gardaLansatoare() {
   for (const f of [LOCAL, TELEFON]) {
     const t = citeste(f);
     const intarziat = /EnableDelayedExpansion/i.test(t);
-    for (const n of ["port", "sanatate", "chei"]) {
+    for (const n of ["port", "sanatate", "chei", ...(f === TELEFON ? ["cloudflared"] : [])]) {
       const b = blocPs(t, n);
       if (!b) { pica(G, `${f}: lipseste blocul PowerShell [ps:${n}]`); continue; }
       if (b.ps.includes('"')) pica(G, `${f} [ps:${n}]: ghilimele duble in PowerShell - cmd.exe rupe comanda`);
@@ -445,13 +445,18 @@ function inlocuieste(text, vechi, nou, garda, ce) {
   if (!text.includes(vechi)) throw Error(`${garda}: nu gasesc "${vechi}" in ${ce} - proba nu poate izola blocul`);
   return text.split(vechi).join(nou);
 }
-function ps(comanda, cwd, timeoutMs = 60000) {
+// PowerShell-ul trece prin cmd.exe, dintr-un .bat temporar cu ACELASI setlocal ca
+// lansatorul: asa se vede si ce strica cmd (%, ! cu EnableDelayedExpansion, ").
+let nrBat = 0;
+function ps(comanda, cwd, intarziat, env = {}, timeoutMs = 60000) {
+  const bat = path.join(os.tmpdir(), `garda-v746-${process.pid}-${++nrBat}.bat`);
+  fs.writeFileSync(bat, ["@echo off", `setlocal EnableExtensions${intarziat ? " EnableDelayedExpansion" : ""}`, `powershell -NoProfile -Command "${comanda}"`, "exit /b %ERRORLEVEL%", ""].join(String.fromCharCode(13, 10)), "ascii");
   return new Promise((rez) => {
-    const p = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", comanda], { cwd, windowsHide: true });
+    const p = spawn("cmd.exe", ["/d", "/c", bat], { cwd, windowsHide: true, env: { ...process.env, ...env } });
     let out = "", err = "";
     p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (err += d));
     const t = setTimeout(() => { spawnSync("taskkill", ["/PID", String(p.pid), "/T", "/F"]); }, timeoutMs);
-    p.on("close", (cod) => { clearTimeout(t); rez({ cod, out, err }); });
+    p.on("close", (cod) => { clearTimeout(t); try { fs.rmSync(bat, { force: true }); } catch {} rez({ cod, out, err }); });
   });
 }
 function serverFals(port, raspuns, argumenteInPlus = []) {
@@ -472,24 +477,25 @@ async function gardaLansatoareViu() {
   try {
     for (const f of [LOCAL, TELEFON]) {
       const t = citeste(f);
+      const intarziat = /EnableDelayedExpansion/i.test(t);
       // --- [ps:port]: liber / al nostru / strain ---
       const bp = blocPs(t, "port");
       if (!bp) { pica(G, `${f}: fara [ps:port]`); continue; }
       const psPort = inlocuieste(bp.ps, "$port = 8788", `$port = ${PORT_PROBA}`, G, `${f} [ps:port]`);
-      let r = await ps(psPort, folder);
+      let r = await ps(psPort, folder, intarziat);
       if (r.cod !== 0) pica(G, `${f} [ps:port] port liber: iesire ${r.cod} (astept 0) ${r.out.trim()} ${r.err.trim().slice(0, 200)}`);
       const strain = await serverFals(PORT_PROBA, { status: 200, type: "text/html", body: "altceva" }); procese.push(strain);
-      r = await ps(psPort, folder);
+      r = await ps(psPort, folder, intarziat);
       if (r.cod !== 4) pica(G, `${f} [ps:port] port ocupat de un program STRAIN: iesire ${r.cod} (astept 4 = mesaj si iesire)`);
       if (!/ocupat/i.test(r.out)) pica(G, `${f} [ps:port] strain: mesajul nu spune ca portul e ocupat: "${r.out.trim()}"`);
       let traieste = spawnSync("tasklist", ["/FI", `PID eq ${strain.pid}`], { encoding: "utf8" }).stdout.includes(String(strain.pid));
       if (!traieste) pica(G, `${f} [ps:port] a OMORAT procesul strain de pe port`);
       opreste(strain);
       const alNostru = await serverFals(PORT_PROBA, { status: 200, type: "text/html", body: "x" }, ["wrangler", "pages", "dev", "--persist-to", path.join(folder, ".wrangler", "state")]); procese.push(alNostru);
-      r = await ps(psPort, folder);
+      r = await ps(psPort, folder, intarziat);
       if (r.cod !== 3) pica(G, `${f} [ps:port] port ocupat de wrangler-ul ACESTUI folder: iesire ${r.cod} (astept 3 = merge deja)`);
       const alt = path.join(tmp, "radar-alt"); fs.mkdirSync(alt, { recursive: true });
-      r = await ps(psPort, alt);
+      r = await ps(psPort, alt, intarziat);
       if (r.cod !== 4) pica(G, `${f} [ps:port] wrangler din ALT folder: iesire ${r.cod} (astept 4 - nu e al nostru)`);
       opreste(alNostru);
 
@@ -511,7 +517,7 @@ async function gardaLansatoareViu() {
       for (const [nume, rasp, asteptat] of cazuri) {
         try { fs.rmSync(marcaj, { force: true }); } catch {}
         const srv = rasp ? await serverFals(PORT_PROBA, rasp) : null; if (srv) procese.push(srv);
-        r = await ps(psS, folder);
+        r = await ps(psS, folder, intarziat);
         if (srv) opreste(srv);
         const deschis = fs.existsSync(marcaj);
         if (r.cod !== asteptat) pica(G, `${f} [ps:sanatate] ${nume}: iesire ${r.cod} (astept ${asteptat})`);
@@ -524,9 +530,11 @@ async function gardaLansatoareViu() {
       const fisier = ".proba-vars"; // NU .dev.vars: proba nu atinge niciodata fisierul de secrete
       const psC = inlocuieste(bc.ps, "'.dev.vars'", `'${fisier}'`, G, `${f} [ps:chei]`);
       if (/\.dev\.vars/.test(psC)) throw Error(`${f} [ps:chei]: .dev.vars ramas dupa inlocuire - opresc proba`);
-      const secret = "s3cr&t%x!y 'q'";
-      const stub = "function Read-Host { param([string]$Prompt, [switch]$AsSecureString) $v = @{ 'APP_API_TOKEN' = 'tok-proba'; 'PIONEX_API_KEY' = 'cheie-proba'; 'PIONEX_API_SECRET' = '" + secret.replace(/'/g, "''") + "' }[$Prompt.Trim()]; if ($AsSecureString) { $s = New-Object System.Security.SecureString; foreach ($c in $v.ToCharArray()) { $s.AppendChar($c) }; $s } else { if ($Prompt.Trim() -eq 'PIONEX_API_SECRET') { 'SECRET-CITIT-LA-VEDERE' } else { $v } } }; ";
-      r = await ps(stub + psC, folder);
+      // Secretul vine prin mediu, nu prin linia de comanda: in realitate il citeste
+      // Read-Host, deci cmd nu-l vede niciodata. Are exact caracterele care rupeau bat-ul vechi.
+      const secret = "s3cr&t%x!y 'q'^|";
+      const stub = "function Read-Host { param([string]$Prompt, [switch]$AsSecureString) $v = @{ 'APP_API_TOKEN' = 'tok-proba'; 'PIONEX_API_KEY' = 'cheie-proba'; 'PIONEX_API_SECRET' = $env:GARDA_SECRET }[$Prompt.Trim()]; if ($AsSecureString) { $s = New-Object System.Security.SecureString; foreach ($c in $v.ToCharArray()) { $s.AppendChar($c) }; $s } else { if ($Prompt.Trim() -eq 'PIONEX_API_SECRET') { 'SECRET-CITIT-LA-VEDERE' } else { $v } } }; ";
+      r = await ps(stub + psC, folder, intarziat, { GARDA_SECRET: secret });
       const scris = fs.existsSync(path.join(folder, fisier)) ? fs.readFileSync(path.join(folder, fisier), "utf8") : "";
       if (r.cod !== 0) pica(G, `${f} [ps:chei]: iesire ${r.cod} ${r.err.trim().slice(0, 200)}`);
       if (!scris.includes(`PIONEX_API_SECRET=${secret}\n`)) pica(G, `${f} [ps:chei]: secretul nu e scris ca text din SecureString (scris: ${JSON.stringify(scris.split("\n").find((l) => l.startsWith("PIONEX_API_SECRET")) || "")})`);
@@ -547,17 +555,17 @@ async function gardaLansatoareViu() {
         const baza = inlocuieste(inlocuieste(bcf.ps, "Join-Path $env:LOCALAPPDATA 'cloudflared'", `'${dirCf}'`, G, "[ps:cloudflared]"), "https://github.com/cloudflare/cloudflared/releases/download/", `http://127.0.0.1:${PORT_PROBA + 1}/`, G, "[ps:cloudflared]");
         const cuSha = (h) => baza.replace(/\$sha = '[0-9a-f]{64}'/, `$sha = '${h}'`);
         const exe = path.join(dirCf, "cloudflared.exe");
-        let r = await ps(cuSha("0".repeat(64)), tmp);
+        let r = await ps(cuSha("0".repeat(64)), tmp, true);
         if (r.cod !== 2) pica(G, `[ps:cloudflared] amprenta GRESITA: iesire ${r.cod} (astept 2)`);
         if (fs.existsSync(exe) || fs.existsSync(exe + ".descarcat")) pica(G, "[ps:cloudflared] amprenta GRESITA: fisierul descarcat a ramas pe disc");
         if (!/amprenta/i.test(r.out)) pica(G, `[ps:cloudflared] amprenta gresita: mesajul nu spune de amprenta: "${r.out.trim()}"`);
-        r = await ps(cuSha(bun), tmp);
+        r = await ps(cuSha(bun), tmp, true);
         if (r.cod !== 0 || !fs.existsSync(exe)) pica(G, `[ps:cloudflared] amprenta BUNA: iesire ${r.cod}, exe ${fs.existsSync(exe) ? "pus" : "LIPSA"}`);
         const inainte = cereri;
-        r = await ps(cuSha(bun), tmp);
+        r = await ps(cuSha(bun), tmp, true);
         if (r.cod !== 0 || cereri !== inainte) pica(G, `[ps:cloudflared] exe deja bun: iesire ${r.cod}, a descarcat din nou (${cereri - inainte} cereri)`);
         fs.writeFileSync(exe, "alt continut");
-        r = await ps(cuSha(bun), tmp);
+        r = await ps(cuSha(bun), tmp, true);
         if (r.cod !== 0 || crypto.createHash("sha256").update(fs.readFileSync(exe)).digest("hex") !== bun) pica(G, "[ps:cloudflared] exe vechi/necunoscut pe disc nu e inlocuit cu cel verificat");
       } finally { srv.close(); }
     }
