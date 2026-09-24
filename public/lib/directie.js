@@ -172,7 +172,7 @@ var Directie = (function () {
   function rezumatBare(mari, imp, cu, lat, descr) {
     if (imp.length === mari.length) return { text: "Piața merge ÎMPOTRIVA botului (" + descr + ").", ton: "rau" };
     if (imp.length) return { text: "Semnale amestecate: " + descr + ". O parte merge împotriva botului.", ton: "atentie" };
-    if (lat.length === mari.length) return { text: "Piața e laterală (" + descr + ") - regimul în care un grid câștigă.", ton: "bine" };
+    if (lat.length === mari.length) return { text: "Piața e laterală (" + descr + ") - regimul potrivit unui grid.", ton: "bine" };
     if (cu.length) return { text: "Piața merge cu botul (" + descr + ").", ton: "bine" };
     return { text: descr, ton: "atentie" };
   }

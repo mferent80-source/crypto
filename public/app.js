@@ -4870,12 +4870,14 @@ var TB_DIR_TF=[
   {tf:"60M",eticheta:"1 oră",orizont:24,limit:500,orizontText:"o zi"},
   {tf:"4H",eticheta:"4 ore",orizont:6,limit:500,orizontText:"o zi"},
   {tf:"1D",eticheta:"1 zi",orizont:7,limit:400,orizontText:"o săptămână"}];
+var TB_DIR_REINCERCARE_MS=30000;
 var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
 async function tbAduDirectie(){
   var b=tbStare.bot;if(!b||typeof Directie==="undefined")return;
   var s=TabloBot.simboluri(b.baza,b.quote).pionex;
   var d=tbStare.directie||(tbStare.directie={la:0,simbol:null,rez:null,inLucru:false});
-  if(d.inLucru||(d.simbol===s&&Date.now()-d.la<TB_DIR_MS))return;
+  var cheie=s+"|"+(b.directie||"");
+  if(d.inLucru||(d.simbol===cheie&&Date.now()-d.la<(d.eroare?TB_DIR_REINCERCARE_MS:TB_DIR_MS)))return;
   d.inLucru=true;
   try{
     var rez=[];
@@ -4889,7 +4891,7 @@ async function tbAduDirectie(){
         rez.push(Object.assign({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText},Directie.analizeaza(randuri,x.orizont,b.directie)));
       }catch(e){rez.push({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText,dir:null,stare:"eroare",motiv:textEroare(e)})}
     }
-    d.rez=rez;d.simbol=s;d.la=Date.now();
+    d.rez=rez;d.simbol=cheie;d.la=Date.now();d.eroare=rez.every(function(r){return r.stare==="eroare"});
   }finally{d.inLucru=false}
   renderTabloDirectia();
 }
@@ -4897,7 +4899,7 @@ async function tbAduGraficul(){
   var b=tbStare.bot;if(!b)return;
   var s=TabloBot.simboluri(b.baza,b.quote).pionex;
   var g=tbStare.grafic||(tbStare.grafic={la:0,simbol:null,randuri:null,inLucru:false});
-  if(g.inLucru||(g.simbol===s&&Date.now()-g.la<TB_GRAFIC_MS))return;
+  if(g.inLucru||(g.simbol===s&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS)))return;
   g.inLucru=true;
   try{
     var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval=5M&limit=288");
@@ -4921,7 +4923,7 @@ function renderTabloDirectia(){
     if(!r.dir)return '<div class="tbDirRand"><div class="tbDirTf">'+escapeHtml(r.eticheta)+'</div><div class="mutedInfo">—</div><div class="mutedInfo tbDirFata">—</div><div class="mutedInfo tbDirSch">'+escapeHtml(r.motiv||"n-am destule bare")+'</div></div>';
     var s=r.schimbare||{},sch;
     if(s.valoare==null)sch='<span class="mutedInfo">— ('+escapeHtml(s.motiv||"prea puține cazuri")+')</span>';
-    else sch='<b>'+Math.round(s.valoare)+'%</b> în următoarea '+escapeHtml(r.orizontText)+
+    else sch='în trecut, după o stare ca asta, s-a schimbat în <b>'+Math.round(s.valoare)+'%</b> din cazuri, după '+escapeHtml(r.orizontText)+
       '<br><span class="fine">din '+s.cazuri+' cazuri'+(s.ic?' · interval '+Math.round(s.ic.jos)+'–'+Math.round(s.ic.sus)+'%':'')+
       (s.spreOpus!=null?' · spre direcția opusă: '+Math.round(s.spreOpus)+'%':'')+' · '+(s.stare==="dovedit"?"dovedit":"puține cazuri")+'</span>';
     return '<div class="tbDirRand"><div class="tbDirTf">'+escapeHtml(r.eticheta)+'</div>'+
@@ -5009,15 +5011,15 @@ function tbActualizeazaBanda(){
   if(!b){el.hidden=true;return}
   var parti=[(b.baza||"").replace(/\.PERP$/,"")+" "+(b.directie||"")+(b.levier!=null?" "+b.levier+"\u00d7":"")];
   var tot=botiNr(b.profitTotal);
-  parti.push(tot===null?"total \u2014":"total "+(tot>0?"+":"")+tot.toFixed(2));
+  parti.push(tot===null?"total \u2014":"total "+(tot>0?"+":"")+tot.toFixed(2)+" USDT");
   var dist=botiNr(b.distantaLichidarePct);
-  if(dist!==null)parti.push(b.lichidareDepasita?"LICHIDARE DEPĂȘITĂ":"lichidare "+Math.abs(dist).toFixed(1)+"%");
+  parti.push(b.lichidareDepasita?"LICHIDARE DEPĂȘITĂ":dist===null?"lichidare \u2014":"lichidare "+Math.abs(dist).toFixed(1)+"%");
   var d=tbStare.directie,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
   if(z&&z.ton!=="nu-se-poate")parti.push(z.ton==="rau"?"piața: împotrivă":z.ton==="bine"?"piața: cu botul":"piața: amestecat");
   el.textContent=parti.join(" \u00b7 ");
   el.hidden=false;
   var rau=(dist!==null&&(b.lichidareDepasita||Math.abs(dist)<15))||(z&&z.ton==="rau");
-  el.className="statusChip botStrip "+(rau?"bad":tot!==null&&tot<0?"tbWarn":"good");
+  el.className="statusChip botStrip "+(rau?"bad":(tot===null||dist===null||tot<0)?"tbWarn":"good");
 }
 // Indicatorii generali (Dashboard, Engine, Multi-TF...) pornesc pe moneda
 // botului, nu pe BTC - o singura data, si doar daca omul n-a ales el alta.
@@ -5031,6 +5033,7 @@ function tbPiataPeBot(){
   if(!/^[A-Z0-9]{2,15}$/.test(baza))return;
   inp.value=baza;
   if($("heroCoin"))$("heroCoin").textContent=baza+" / USDT";
+  if($("topCoin"))$("topCoin").textContent=baza+"/USDT";
 }
 function renderTabloBot(){
   var eroareActiva=tbStare.routeOk===false;
