@@ -478,5 +478,46 @@ await test("F2 citeste: JSON stricat sau ne-lista -> lista goala, nu crapa", () 
   assert.equal(GJ.citeste(JSON.stringify([{ id: "x", t: T0, simbol: "A" }, null, "gunoi"])).length, 1);
 });
 
+// --- F5: grile / directie din umplerile reale ---
+const UMP_SRC = fs.existsSync(new URL("../public/lib/grid-umpleri.js", import.meta.url)) ? fs.readFileSync(new URL("../public/lib/grid-umpleri.js", import.meta.url), "utf8") : "";
+const GU = UMP_SRC ? new Function(`${SRC}; ${UMP_SRC}; return GridUmpleri;`)() : null;
+await test("F5 modulul GridUmpleri exista", () => assert.ok(GU, "grid-umpleri.js lipseste"));
+const U0 = 1_790_000_000_000;
+const ump = (t, side, price, size, fee, feeCoin) => ({ id: String(t), symbol: "MET_USDT_PERP", side, price: String(price), size: String(size), fee: String(fee == null ? 0 : fee), feeCoin: feeCoin || "USDT", timestamp: U0 + t * 60000 });
+await test("F5 citeste: umplerile Pionex (size/price/side/fee/timestamp) -> forma interna; randuri stricate sarite; comisionul in moneda de baza -> in USDT", () => {
+  const r = GU.citeste([ump(1, "BUY", 100, 2, 0.1), ump(2, "SELL", 104, 2, 0.002, "MET"), { id: "x" }, null, ump(3, "BUY", "abc", 1, 0)]);
+  assert.equal(r.length, 2);
+  assert.equal(r[0].side, "BUY"); assert.equal(r[0].pret, 100); assert.equal(r[0].cant, 2); assert.equal(r[0].fee, 0.1); assert.equal(r[0].t, U0 + 60000);
+  aprox(r[1].fee, 0.002 * 104, 1e-9, "fee in MET -> USDT");
+});
+await test("F5 imparte: long 90-110 / 4 grile, socotit de mana - grile +12,17, directie realizat +11,55 + nerealizat +12,50, comisioane 0,40", () => {
+  // niveluri 90 / 94,630 / 99,499 / 104,618 / 110. q = 2,5 monede pe celula.
+  // pornire la 100: cumpara 2 celule (cele de deasupra) la piata 100 (nu e nivel -> directie)
+  // apoi grid: cumpara la 94,630 (nivel), vinde la 99,499 -> grile: 2,5 x 4,869 = 12,17
+  // apoi urca: vinde la 104,618 o celula de la pornire -> directie realizat: 2,5 x 4,618 = 11,55
+  // pret acum 105: ramane 1 celula de la pornire, 2,5 x (105 - 100) = 12,50 nerealizat (directie)
+  const grid = { jos: 90, sus: 110, grile: 4, dir: "long", pornitLa: U0 };
+  const f = [ump(1, "BUY", 100, 5, 0.1), ump(10, "BUY", 94.630, 2.5, 0.1), ump(20, "SELL", 99.499, 2.5, 0.1), ump(30, "SELL", 104.618, 2.5, 0.1)];
+  const r = GU.imparte(GU.citeste(f), grid, 105);
+  aprox(r.grile, 12.1725, 0.01, "grile"); aprox(r.directieRealizat, 11.545, 0.01, "directie realizat"); aprox(r.nerealizat, 12.5, 1e-6, "nerealizat");
+  aprox(r.comisioane, 0.4, 1e-9); assert.equal(r.umpleri, 4); aprox(r.pozitie.cant, 2.5, 1e-9); aprox(r.pozitie.medie, 100, 1e-9);
+  aprox(r.total, 12.1725 + 11.545 + 12.5 - 0.4, 0.02, "total = grile + directie + nerealizat - comisioane");
+});
+await test("F5 imparte: short e oglinda (vinde la pornire, cumpara inapoi la nivel); umplerile de dinainte de pornire se ignora; fara umpleri -> zerouri cu n=0", () => {
+  const grid = { jos: 90, sus: 110, grile: 4, dir: "short", pornitLa: U0 };
+  const f = [ump(-5, "BUY", 100, 9, 0.1), ump(1, "SELL", 100, 5, 0.1), ump(10, "SELL", 104.618, 2.5, 0.1), ump(20, "BUY", 99.499, 2.5, 0.1)];
+  const r = GU.imparte(GU.citeste(f), grid, 100);
+  assert.equal(r.umpleri, 3);
+  aprox(r.grile, 2.5 * (104.618 - 99.499), 0.01, "grile short"); aprox(r.directieRealizat, 0, 1e-9); aprox(r.nerealizat, 0, 1e-9); aprox(r.pozitie.cant, -5, 1e-9);
+  const g = GU.imparte([], grid, 100);
+  assert.equal(g.umpleri, 0); assert.equal(g.grile, 0); assert.equal(g.nerealizat, 0);
+});
+await test("F5 imparte: neutru - o vanzare inchide intai celulele long tinute, restul deschide short", () => {
+  const grid = { jos: 90, sus: 110, grile: 4, dir: "neutru", pornitLa: U0 };
+  const f = [ump(10, "BUY", 94.630, 2.5, 0), ump(20, "SELL", 99.499, 5, 0)];   // 2,5 inchid long-ul, 2,5 deschid short (dupa primele 2 min = nu e pozitie de pornire)
+  const r = GU.imparte(GU.citeste(f), grid, 99);
+  aprox(r.grile, 2.5 * (99.499 - 94.630), 1e-6); aprox(r.pozitie.cant, -2.5, 1e-9); aprox(r.nerealizat, 2.5 * (99.499 - 99), 1e-6);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

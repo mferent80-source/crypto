@@ -4968,7 +4968,7 @@ function renderGridJurnal(){
       +'<td>'+escapeHtml((GR_DIR[e.dir]||e.dir||"?")+" "+(e.levier||"?")+"× · "+(e.grile||"?")+" grile · "+(e.suma!=null?e.suma:"?")+" USDT")+'</td>'
       +'<td>'+escapeHtml("mediana "+P(e.mediana)+", cea mai proastă "+P(e.ceaMaiProasta))+'</td>'
       +'<td class="'+(pct==null?"":pct>=0?"good":"bad")+'">'+escapeHtml(real)+'</td><td>'+escapeHtml(stare)+'</td>'
-      +'<td><button type="button" class="actionGhost grCopy" data-action-click="gridJurnalSterge(\''+escapeHtml(e.id)+'\')" aria-label="Șterge">✕</button></td></tr>';
+      +'<td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(e.id)+'" data-action-click="gridJurnalSterge(this.value)" aria-label="Șterge">✕</button></td></tr>';
   });
   box.innerHTML=h+'</tbody></table></div><p class="grNota">Rezultatul real e profitul total al botului din Pionex (grile + poziție − comisioane), în % din investiție. Legarea se face pe monedă și pe ora pornirii (±). După 10–20 de boți, rezumatul de sus spune dacă verdictele au adus bani.</p>';
 }
@@ -5067,6 +5067,47 @@ function tbCuUnitate(text,unitate){
   if(!unitate||text==="\u2014"||text==="—")return text;
   return unitate==="%"||unitate==="\u00d7"?text+unitate:text+" "+unitate;
 }
+// ===== F5: grile sau directie? - din umplerile REALE ale botului (logica pura in lib/grid-umpleri.js) =====
+// Se aduc rar (10 min): fiecare pagina e o cerere privata la Pionex, iar 429 racoreste toata ruta.
+var tbUmpleri={botId:null,la:0,inLucru:false,eroare:null,randuri:null,trunchiat:false};
+var TB_UMPLERI_MS=10*60000,TB_UMPLERI_PAGINI=12;
+async function tbAduUmpleri(b){
+  if(!b||!b.id||!(b.pornitLa>0))return;
+  if(tbUmpleri.inLucru)return;
+  if(tbUmpleri.botId===b.id&&Date.now()-tbUmpleri.la<(tbUmpleri.eroare?60000:TB_UMPLERI_MS))return;
+  tbUmpleri.inLucru=true;
+  try{
+    var s=TabloBot.simboluri(b.baza,b.quote).pionex,randuri=[],end=Date.now(),trunchiat=false;
+    for(var p=0;p<TB_UMPLERI_PAGINI;p++){
+      var d=await getJSON("/api/pionex-account?action=fills&symbol="+encodeURIComponent(s)+"&limit=100&startTime="+Math.floor(b.pornitLa)+"&endTime="+Math.floor(end));
+      var r=d&&d.data&&(Array.isArray(d.data.fills)?d.data.fills:Array.isArray(d.data)?d.data:null);
+      if(!r)throw Error((d&&(d.error||d.detail||d.message))||"Pionex nu a dat umplerile");
+      randuri=randuri.concat(r);
+      if(r.length<100)break;
+      var t=r.map(function(x){return Number(x&&x.timestamp)}).filter(Number.isFinite);
+      if(!t.length)break;
+      end=Math.min.apply(null,t)-1;
+      if(p===TB_UMPLERI_PAGINI-1)trunchiat=true;
+      await grPauza(400);
+    }
+    tbUmpleri={botId:b.id,la:Date.now(),inLucru:false,eroare:null,randuri:randuri,trunchiat:trunchiat};
+  }catch(e){tbUmpleri={botId:b.id,la:Date.now(),inLucru:false,eroare:textEroare(e),randuri:null,trunchiat:false}}
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaBanii(tbStare.bot);
+}
+function tbRandUmpleri(b){
+  var u=tbUmpleri,rand=function(et,val,cls,nota){return '<div class="tbLinie"><span>'+escapeHtml(et)+(nota?' <span class="tbSub">'+escapeHtml(nota)+'</span>':'')+'</span><b class="'+(cls||"")+'">'+escapeHtml(val)+'</b></div>'};
+  if(!b||u.botId!==b.id)return rand("Din grile / din direcție",u.inLucru?"citesc umplerile…":"—","tbSubVal","din umplerile reale");
+  if(u.eroare)return rand("Din grile / din direcție","nu pot citi umplerile: "+u.eroare,"tbSubVal");
+  var g={jos:Number(b.gridJos),sus:Number(b.gridSus),grile:Number(b.grile||b.nrGrile||b.randuri||0),dir:String(b.directie||"neutru").toLowerCase(),pornitLa:b.pornitLa};
+  if(!(g.grile>=2)){g.grile=Number(b.brut&&b.brut.buOrderData&&b.brut.buOrderData.row)||0}
+  if(!(g.jos>0&&g.sus>g.jos&&g.grile>=2))return rand("Din grile / din direcție","botul n-are interval/grile citite","tbSubVal");
+  var r=GridUmpleri.imparte(GridUmpleri.citeste(u.randuri),g,Number(b.pretCurent));
+  if(!r.umpleri)return rand("Din grile / din direcție","nicio umplere de la pornire","tbSubVal");
+  var dirTot=r.directieRealizat+r.nerealizat;
+  return rand("Din grile",botiBan(r.grile),botiClasa(r.grile),r.laNivel+" umpleri la nivel")
+    +rand("Din direcție",botiBan(dirTot),botiClasa(dirTot),"pornire "+botiBan(r.directieRealizat)+" + deschis "+botiBan(r.nerealizat))
+    +rand("Comisioane pe umpleri",botiBan(-r.comisioane),"tbSubVal",r.umpleri+" umpleri"+(u.trunchiat?" (doar ultimele "+(TB_UMPLERI_PAGINI*100)+")":""));
+}
 // Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.
 function tbDeseneazaBanii(b){
   var el=$("tbBani"),av=$("tbAvertismente");if(!el)return;
@@ -5079,7 +5120,9 @@ function tbDeseneazaBanii(b){
     '<div class="tbLinie tbLinieTotal"><span>Total</span><b class="'+botiClasa(b.profitTotal)+'">'+escapeHtml(botiBan(b.profitTotal))+'</b></div>'+
     rand("Profit brut din grid",botiBan(b.gridProfitBrut),"tbSubVal")+
     rand("Comisioane",botiBan(b.comisioane),"tbSubVal")+
-    rand("Finanțare",botiBan(b.finantare),"tbSubVal");
+    rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
+    tbRandUmpleri(b);
+  tbAduUmpleri(b);
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
 }

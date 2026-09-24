@@ -26,14 +26,15 @@ var GridJurnal = (function () {
     var v = null;
     try { v = JSON.parse(text || "null"); } catch (e) { v = null; }
     if (!Array.isArray(v)) return [];
-    return v.filter(function (e) { return e && typeof e === "object" && e.id && e.simbol; });
+    // id-ul ajunge in atribute HTML: doar litere, cifre, - si _
+    return v.filter(function (e) { return e && typeof e === "object" && typeof e.id === "string" && /^[A-Za-z0-9_-]+$/.test(e.id) && e.simbol; });
   }
 
   function adauga(lista, f, acum) {
     lista = Array.isArray(lista) ? lista.slice() : [];
     var st = f.setare || {}, pe = f.proba && f.proba.pe && f.proba.pe[f.dir], a = pe && pe.antren, t = pe && pe.test;
     var e = {
-      id: String(acum) + "-" + moneda(f.simbol), t: acum, simbol: f.simbol, dir: f.dir, H: f.H, pret: nr(f.pret),
+      id: String(acum) + "-" + moneda(f.simbol).replace(/[^A-Z0-9]/g, ""), t: acum, simbol: f.simbol, dir: f.dir, H: f.H, pret: nr(f.pret),
       verdict: f.verdict && f.verdict.nivel || null, suma: nr(st.suma),
       jos: nr(st.jos), sus: nr(st.sus), grile: nr(st.grile), levier: nr(st.levier),
       mediana: a ? nr(a.mediana) : null, ceaMaiProasta: a ? nr(a.ceaMaiProasta) : null, medianaNevazut: t ? nr(t.mediana) : null,
