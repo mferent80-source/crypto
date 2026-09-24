@@ -57,7 +57,7 @@ async function sendWebPush(subscription,payload,env){
   return fetch(subscription.endpoint,{method:"POST",headers:{
     "TTL":"120","Urgency":"normal","Content-Encoding":"aes128gcm","Content-Type":"application/octet-stream",
     "Authorization":`vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}`
-  },body})
+  },body,signal:AbortSignal.timeout(8000)})
 }
 function pushConfigured(env){return !!(env.PUSH_SUBSCRIPTIONS&&env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT)}
 async function broadcastPush(env,payload){
@@ -111,7 +111,7 @@ async function pionexGlobalGate(env){
   if(!env.DB){await sleep(1300);return}const key="pionex_global_next_at",prior=await stateGet(env.DB,key),now=Date.now(),next=Number(prior?.value||0);if(next>now)await sleep(Math.min(5000,next-now));await statePut(env.DB,key,String(Date.now()+1300))
 }
 async function fetchJson(url,opt={}){
-  const r=await fetch(url,{...opt,headers:{"accept":"application/json",...(opt.headers||{})}}),raw=await r.text();let d;try{d=JSON.parse(raw)}catch{throw Error(`Invalid JSON · HTTP ${r.status}`)}
+  const r=await fetch(url,{...opt,headers:{"accept":"application/json",...(opt.headers||{})},signal:AbortSignal.timeout(8000)}),raw=await r.text();let d;try{d=JSON.parse(raw)}catch{throw Error(`Invalid JSON · HTTP ${r.status}`)}
   if(!r.ok){const e=Error(d?.message||d?.msg||`HTTP ${r.status}`);e.status=r.status;e.retryAfter=Number(r.headers.get("retry-after")||0);throw e}
   if(d?.result===false||d?.status==="error"){const e=Error(d.message||d.error||"Provider error");e.status=Number(d.code)||502;throw e}
   return d
@@ -179,7 +179,7 @@ async function maybeAlert(env,result,runId){
   return {alerted:push.sent>0,push}
 }
 async function executeMonitor(env,trigger="scheduled"){
-  if(!env.DB)throw Error("D1 binding DB is required");await ensureTables(env.DB);const results=[];
+  if(!env.DB)throw Object.assign(Error("D1 binding DB is required"),{code:"DB_NOT_BOUND"});await ensureTables(env.DB);const results=[];
   if(env.MONITOR_CRYPTO!=="0"){
     try{const r=await runCryptoMonitor(env),w=await writeRun(env,r.market,r.provider,r.universeN,r.items,"OK",trigger),a=await maybeAlert(env,r,w.runId);results.push({...w,...r,alert:a})}
     catch(e){const status=e.status===429?"RATE_LIMITED":"ERROR",w=await writeRun(env,"CRYPTO","PIONEX",0,[],status,e.message);results.push({market:"CRYPTO",status,error:e.message,runId:w.runId})}
@@ -192,14 +192,31 @@ async function executeMonitor(env,trigger="scheduled"){
   return results
 }
 
+// Tokenul se compara in timp constant (ca in functions/_shared/auth.js): === se
+// opreste la primul caracter diferit si lasa timpul sa spuna cat din token e bun.
+async function tokenBun(token,asteptat){
+  if(!asteptat||!token)return false;
+  const [a,b]=await Promise.all([token,asteptat].map(async s=>new Uint8Array(await crypto.subtle.digest("SHA-256",ENC.encode(String(s))))));
+  let x=0;for(let i=0;i<a.length;i++)x|=a[i]^b[i];return x===0;
+}
+const FARA_DB="D1 nu e legat (binding DB lipsa in wrangler.monitor.toml) · monitorul nu poate salva nimic, deci nu ruleaza";
+
 export default {
-  async scheduled(event,env,ctx){ctx.waitUntil(executeMonitor(env,"scheduled"))},
+  async scheduled(event,env,ctx){
+    // Fara DB, executeMonitor arunca, iar waitUntil inghitea eroarea: cron-ul murea in tacere.
+    if(!env.DB){console.error("radar-monitor: "+FARA_DB);return}
+    ctx.waitUntil(executeMonitor(env,"scheduled").catch(e=>console.error("radar-monitor: rularea programata a picat · "+(e?.message||e))));
+  },
   async fetch(request,env){
     const u=new URL(request.url);
     const token=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"");
-    if(u.pathname==="/health"){if(env.MONITOR_TOKEN&&token===env.MONITOR_TOKEN)return json({ok:true,service:"crypto-radar-monitor",pushConfigured:pushConfigured(env),db:!!env.DB,crypto:env.MONITOR_CRYPTO!=="0",stocks:env.MONITOR_STOCKS==="1"});return json({ok:true})}
-    if(!env.MONITOR_TOKEN||token!==env.MONITOR_TOKEN)return json({error:"Unauthorized"},401);
-    if(request.method==="POST"&&u.pathname==="/run"){try{return json({ok:true,results:await executeMonitor(env,"manual")})}catch(e){return json({error:e.message},500)}}
+    const autorizat=await tokenBun(token,env.MONITOR_TOKEN);
+    if(u.pathname==="/health"){if(autorizat)return json({ok:true,service:"crypto-radar-monitor",pushConfigured:pushConfigured(env),db:!!env.DB,crypto:env.MONITOR_CRYPTO!=="0",stocks:env.MONITOR_STOCKS==="1"});return json({ok:true})}
+    if(!autorizat)return json({error:"Unauthorized"},401);
+    if(request.method==="POST"&&u.pathname==="/run"){
+      if(!env.DB)return json({error:"DB_NOT_BOUND",detail:FARA_DB},503);
+      try{return json({ok:true,results:await executeMonitor(env,"manual")})}catch(e){return json({error:e.message},500)}
+    }
     return json({error:"Not found"},404)
   }
 };
