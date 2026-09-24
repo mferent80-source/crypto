@@ -319,5 +319,16 @@ await test("grNumar: 100,5 -> 100.5; gol / 0 / -3 / abc -> null (nu 0)", () => {
   for (const t of ["", "0", "-3", "abc", null]) assert.equal(f(t), null, String(t));
 });
 
+await test("v78.1 grCodTV: randul pentru GRID-FISA (Pine) = dir;jos;sus;grile;levier;stopJos;stopSus;lichJos;lichSus, preturi la precizia monedei, lipsa = 0", () => {
+  const src = scoateFunctia("grCodTV"); assert.ok(src, "grCodTV lipseste din app.js");
+  const f = new Function(`${src}; return grCodTV;`)();
+  const st = { dir: "long", jos: 0.311573, sus: 0.369651, grile: 8, levier: 4, stop: { jos: 0.298111, sus: 0.385609 }, lichidare: { jos: 0.246893, sus: null } };
+  assert.equal(f(st, { quotePrecision: 4 }), "long;0.3116;0.3697;8;4;0.2981;0.3856;0.2469;0");
+  const c = f({ dir: "short", jos: 82139.4, sus: 85969.2, grile: 7, levier: 5, stop: { jos: 81066.1, sus: 87092.9 }, lichidare: { jos: null, sus: 101234.5 } }, { quotePrecision: 1 });
+  assert.equal(c, "short;82139.4;85969.2;7;5;81066.1;87092.9;0;101234.5");
+  assert.equal(c.split(";").length, 9, "exact 9 campuri");
+  assert.equal(f(st, null), "long;0.311573;0.369651;8;4;0.298111;0.385609;0.246893;0", "fara info: 6 zecimale sub 1");
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

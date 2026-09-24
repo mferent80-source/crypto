@@ -4880,6 +4880,13 @@ function grPret(x,info){
   var zec=info&&Number.isFinite(Number(info.quotePrecision))?Number(info.quotePrecision):(x>=1000?2:x>=1?4:6);
   return x.toFixed(zec);
 }
+// v78.1: randul pentru indicatorul GRID-FISA din TradingView (pine-scripts/GRID-FISA):
+// dir;jos;sus;grile;levier;stopJos;stopSus;lichJos;lichSus - lipsa se scrie 0, pretul la precizia monedei.
+function grCodTV(st,info){
+  var zec=info&&Number.isFinite(Number(info.quotePrecision))?Number(info.quotePrecision):null;
+  var p=function(x){if(x==null||!Number.isFinite(x))return "0";var z=zec!=null?zec:(x>=1000?2:x>=1?4:6);return x.toFixed(z)};
+  return [st.dir,p(st.jos),p(st.sus),String(st.grile),String(st.levier),p(st.stop&&st.stop.jos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus)].join(";");
+}
 var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
 var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
@@ -4902,6 +4909,7 @@ function renderGrid(){
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
     +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
+    +grRand("Pentru TradingView (GRID-FISA)","liniile din fișă, pe grafic",grCodTV(st,i))
     +'</div></div>';
   var lj=st.lichidare.jos,ls=st.lichidare.sus;
   h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Ce înseamnă în bani</h4></div>'
