@@ -29,7 +29,7 @@
 // scrie in sessionStorage pentru cazul in care cineva vrea sa il citeasca
 // manual din consola browserului.
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { rmSync, existsSync } from "node:fs";
 import assert from "node:assert/strict";
 
@@ -58,6 +58,10 @@ const BOOTSTRAP = `(() => {
   window.__proba = {
     botOrders: null, market: null,
     calls: { botOrders: 0, market: 0 },
+    // v74.6: orice alta ruta /api/<nume> se poate simula prin rute[nume] =
+    // {corp, stare} sau {reteaPicata:true}; toate cererile /api/ se numara
+    // in apeluri[] (calea cu tot cu query), ca sa se poata masura "o data".
+    rute: {}, apeluri: [],
     wsInstante: [],
     setItemLog: [],
     blocheazaScriereaPentru: null,
@@ -65,6 +69,17 @@ const BOOTSTRAP = `(() => {
   window.fetch = function (intrare, optiuni) {
     const url = typeof intrare === "string" ? intrare : (intrare && intrare.url) || String(intrare);
     const potriveste = (nume) => new RegExp("/api/" + nume).test(url);
+    const mApi = url.match(/\\/api\\/([a-z0-9-]+)(\\?[^#]*)?/i);
+    if (mApi) {
+      window.__proba.apeluri.push(mApi[1] + (mApi[2] || ""));
+      const r = window.__proba.rute[mApi[1]];
+      if (r) {
+        if (r.reteaPicata) return Promise.reject(new TypeError("Failed to fetch"));
+        return Promise.resolve(new Response(JSON.stringify(r.corp), {
+          status: r.stare || 200, headers: { "content-type": "application/json" },
+        }));
+      }
+    }
     for (const nume of ["bot-orders", "market"]) {
       if (!potriveste(nume)) continue;
       window.__proba.calls[nume === "bot-orders" ? "botOrders" : "market"]++;
@@ -172,8 +187,38 @@ async function porneste(lat, inal, profil) {
       return r?.result?.value;
     },
     async navigheaza(url) { await send("Page.navigate", { url }); },
-    inchide() { try { ws.close(); } catch {} try { proc.kill(); } catch {} },
+    inchide() {
+      try { ws.close(); } catch {}
+      // proc.kill() omoara doar procesul de sus; pe Windows copiii Chrome raman
+      // si tin profilul incuiat. taskkill /T ia tot arborele, dupa PID.
+      if (process.platform === "win32" && proc.pid) {
+        try { spawnSync("taskkill", ["/PID", String(proc.pid), "/T", "/F"], { stdio: "ignore" }); } catch {}
+      }
+      try { proc.kill(); } catch {}
+    },
   };
+}
+
+// v74.6: stergerea profilului nu mai e un catch{} gol. Pe Windows Chrome
+// tine fisierele incuiate cateva secunde dupa kill; incercam de mai multe ori
+// cu pauze tot mai lungi, iar daca tot ramane, SPUNEM (au ramas altadata
+// 16 GB de profiluri de proba in %TEMP% fara ca cineva sa afle).
+async function stergeProfilul(profil) {
+  let ultimaEroare = null;
+  for (let i = 0; i < 6; i++) {
+    try { rmSync(profil, { recursive: true, force: true, maxRetries: 3, retryDelay: 300 }); }
+    catch (e) { ultimaEroare = e; }
+    if (!existsSync(profil)) return true;
+    await asteapta(700 * (i + 1));
+  }
+  console.error(`
+  ATENTIE: profilul de proba a RAMAS pe disc: ${profil}` +
+    (ultimaEroare ? `
+  motiv: ${ultimaEroare.code || ""} ${ultimaEroare.message}` : "") +
+    `
+  sterge-l de mana (rmdir /s /q "${profil}") dupa ce se inchide Chrome.
+`);
+  return false;
 }
 
 async function asteaptaAplicatia(b, timeoutMs = 25000) {
@@ -192,6 +237,9 @@ async function asteaptaAplicatia(b, timeoutMs = 25000) {
 }
 
 /* ── date de proba (boti si lumanari, nu conteaza contul real) ────────── */
+// v74.6: TOATE cifrele de aici sunt INVENTATE (depozitul e public). Cele de
+// dinainte semanau prea mult cu contul lui (acelasi interval si comision) - au
+// fost mutate pe alt nivel de pret si alte sume, aceeasi forma.
 function botBrut(over = {}) {
   const baza = over.baza || "ADA.PERP", quote = over.quote || "USDT";
   const strategyId = over.strategyId === undefined ? "8001" : over.strategyId;
@@ -199,43 +247,55 @@ function botBrut(over = {}) {
   return {
     strategyId, base: baza, quote, createTime,
     buOrderData: Object.assign({
-      status: "running", bottom: "0.30", top: "0.34", row: 20,
-      trend: "long", leverage: 3, position: "1000",
-      gridProfit: "5.00", totalFee: "-0.40", totalRealizedProfit: "4.50",
-      exchangeOrderPairedCount: 42,
-      estimateLiquidationPriceDown: "0.20", estimateLiquidationPriceUp: "0",
+      status: "running", bottom: "1.20", top: "1.36", row: 24,
+      trend: "long", leverage: 2, position: "250",
+      gridProfit: "7.25", totalFee: "-1.15", totalRealizedProfit: "6.10",
+      totalFundingFee: "-0.05", usdtInvestment: "150", marginBalance: "154.90",
+      positionOpenPrice: "1.25",
+      exchangeOrderPairedCount: 37,
+      estimateLiquidationPriceDown: "0.80", estimateLiquidationPriceUp: "0",
       riskStatus: "TRADING", marginStatus: "NORMAL",
     }, over.buOrderData || {}),
   };
 }
+// Forma din contractul rutei (Task 1, planul din 24.09): pe langa campurile
+// vechi, profitRealizatBrut / profitNet / pnlNerealizat / echitate /
+// profitTotal / pretLichidare / lichidarePartea / lichidareDepasita.
 function botNormalizat(brut, over = {}) {
   const x = brut.buOrderData;
+  const pret = Number(x.bottom) + 0.08;
   return Object.assign({
     id: brut.strategyId != null ? String(brut.strategyId) : "",
     simbol: brut.base + "/" + brut.quote,
     baza: brut.base, quote: brut.quote,
     activ: String(x.status || "").toLowerCase() === "running",
     pornitLa: brut.createTime,
+    investit: 150, levier: 2, directie: "long",
     gridJos: Number(x.bottom), gridSus: Number(x.top),
-    distantaLichidarePct: 33,
-    pretCurent: Number(x.bottom) + 0.02,
-    profitNet: Number(x.totalRealizedProfit), gridProfitBrut: Number(x.gridProfit),
+    pretLichidare: 0.80, lichidarePartea: "jos", lichidareDepasita: false,
+    distantaLichidarePct: 38.5,
+    pretCurent: pret,
+    profitRealizatBrut: 6.10, profitNet: 4.90,
+    pnlNerealizat: 7.50, pnlNerealizatSigur: true,
+    echitate: 162.40, profitTotal: 12.40,
+    gridProfitBrut: Number(x.gridProfit),
     comisioane: Number(x.totalFee),
-    ordinePerechi: x.exchangeOrderPairedCount,
+    ordinePerechi: x.exchangeOrderPairedCount, ordinePlasate: 90,
+    avertismente: [],
     brut,
   }, over);
 }
 // lumanari chiar reale in forma (mai putine cheltuieli de proba): urcare
-// lina intre 0.30 si 0.32, ca ultimul pret sa cada in mijlocul intervalului
+// lina intre 1.20 si 1.28, ca ultimul pret sa cada in mijlocul intervalului
 // grid-ului de mai sus.
 function lumanariCorpMock(n = 60) {
   const chron = [];
   const t0 = Date.now() - n * 300000; // lumanari de 5 minute
   for (let i = 0; i < n; i++) {
-    const c = 0.30 + i * 0.00035;
+    const c = 1.20 + i * 0.0014;
     chron.push({
       time: t0 + i * 300000,
-      open: (c - 0.00005).toFixed(6), high: (c + 0.00005).toFixed(6), low: (c - 0.00005).toFixed(6),
+      open: (c - 0.0002).toFixed(6), high: (c + 0.0002).toFixed(6), low: (c - 0.0002).toFixed(6),
       close: c.toFixed(6), volume: "100",
     });
   }
@@ -355,7 +415,7 @@ async function main() {
        Defect pazit: pretul putea ingheta pe veci si era aratat ca viu. */
     await test("1. pretul vechi de peste un minut se marcheaza (invechit) si basis-ul devine nu-se-poate", async () => {
       await incarcaBotSanatos({ strategyId: "8101", baza: "ADA.PERP" });
-      const primit = await b.ev(`window.__probaTrimiteTick("0.321")`);
+      const primit = await b.ev(`window.__probaTrimiteTick("1.284")`);
       assert.ok(primit, "nu am gasit niciun WebSocket fals ca sa trimit un tick");
       await b.ev(`renderTabloBot()`);
       const pretProaspat = await textEl(b, "tbPret");
@@ -376,7 +436,7 @@ async function main() {
        Defect pazit: 406.451.512% marcat verde + OPORTUNITATE fabricat. */
     await test("2. la schimbarea simbolului, basis-ul e gol pana la primul tick nou, nu o cifra veche", async () => {
       await incarcaBotSanatos({ strategyId: "8201", baza: "ADA.PERP" });
-      await b.ev(`window.__probaTrimiteTick("0.321")`);
+      await b.ev(`window.__probaTrimiteTick("1.284")`);
       await b.ev(`renderTabloBot()`);
       const basisInainte = await celula(b, 5);
       assert.notEqual(basisInainte?.valoare, "—", "precheck: basis-ul cu tick ar trebui sa aiba o cifra");
@@ -480,7 +540,7 @@ async function main() {
     /* --- 1. marginStatus/riskStatus nu erau citite deloc --- */
     await test("8. marginStatus anormal (MARGIN_CALL) da OPRESTE pe ecran, nu LINISTE", async () => {
       const id = "8801";
-      await seedIstoricCopt(b, id, 35, 0.32); // istoricMin>=30 cerut de NEDOVEDIT (treapta 1, inaintea lui OPRESTE)
+      await seedIstoricCopt(b, id, 35, 1.28); // istoricMin>=30 cerut de NEDOVEDIT (treapta 1, inaintea lui OPRESTE)
       const brut = botBrut({ strategyId: id, baza: "ADA.PERP", buOrderData: { marginStatus: "MARGIN_CALL" } });
       await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut)] }, stare: 200 });
       await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
@@ -493,7 +553,7 @@ async function main() {
 
     await test("8b. riskStatus anormal (LIQUIDATION) da OPRESTE pe ecran, nu LINISTE", async () => {
       const id = "8802";
-      await seedIstoricCopt(b, id, 35, 0.32);
+      await seedIstoricCopt(b, id, 35, 1.28);
       const brut = botBrut({ strategyId: id, baza: "ADA.PERP", buOrderData: { riskStatus: "LIQUIDATION" } });
       await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut)] }, stare: 200 });
       await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
@@ -536,21 +596,21 @@ async function main() {
 
     /* --- 5. pretul folosit de verdict era vechi de pana la ~10 minute --- */
     await test("11. verdictul foloseste pretul VIU (pretCurent), nu inchiderea vechii lumanari de 5m", async () => {
-      const brut = botBrut({ strategyId: "8111", baza: "ADA.PERP", buOrderData: { bottom: "0.30", top: "0.40" } });
-      // pretCurent (live, din tickere) diferit de ultima inchidere de lumanare (~0.30..0.32)
-      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut, { pretCurent: 0.38 })] }, stare: 200 });
+      const brut = botBrut({ strategyId: "8111", baza: "ADA.PERP", buOrderData: { bottom: "1.20", top: "1.60" } });
+      // pretCurent (live, din tickere) diferit de ultima inchidere de lumanare (~1.20..1.28)
+      await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut, { pretCurent: 1.52 })] }, stare: 200 });
       await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
       await b.ev(`tbAduDate()`);
       const poz = await celula(b, 0); // "poziția în interval"
       const val = parseFloat(poz?.valoare);
-      // (0.38-0.30)/(0.40-0.30)*100 = 80% cu pretul viu; cu inchiderea lumanarii (~0.32) ar fi ~20%
-      assert.ok(val > 70 && val < 90, `pozitia ar trebui ~80% (pret viu 0.38), nu bazata pe inchiderea lumanarii: ${poz?.valoare}`);
+      // (1.52-1.20)/(1.60-1.20)*100 = 80% cu pretul viu; cu inchiderea lumanarii (~1.28) ar fi ~20%
+      assert.ok(val > 70 && val < 90, `pozitia ar trebui ~80% (pret viu 1.52), nu bazata pe inchiderea lumanarii: ${poz?.valoare}`);
     });
 
     /* --- 6. istoricul inghitea pretul spot inghetat in timpul unei pene de WS --- */
     await test("12. pretul spot inghetat NU intra in istoric - se scrie null, nu pretul mort", async () => {
       await incarcaBotSanatos({ strategyId: "8112", baza: "ADA.PERP" });
-      await b.ev(`window.__probaTrimiteTick("0.321")`);
+      await b.ev(`window.__probaTrimiteTick("1.284")`);
       await b.ev(`renderTabloBot()`);
       // simulam pana de WS: pretul devine "invechit" (>60s) FARA tick nou, ca la proba 1
       await b.ev(`tbStare.pretSpotLa = Date.now() - 61000;`);
@@ -692,7 +752,7 @@ async function main() {
     // kill - probele lasate azi cu 400ms/3 incercari chiar au ramas pe disc
     // (65 MB in cateva rulari). Asteptam mai mult si incercam mai des.
     await asteapta(1500);
-    try { rmSync(profil, { recursive: true, force: true, maxRetries: 8, retryDelay: 400 }); } catch { /* nu e fatal */ }
+    await stergeProfilul(profil);
   }
 
   console.log(`\n  ${ok} ok · ${picate} pica\n`);
