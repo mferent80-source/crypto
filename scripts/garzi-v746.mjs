@@ -697,6 +697,7 @@ async function gardaLansatoareViu() {
       psS = psS.replace(/\$i -lt \d+/, "$i -lt 2").replace(/Start-Sleep -Seconds \d+/, "Start-Sleep -Milliseconds 200");
       const marcaj = path.join(tmp, "browser-deschis.txt");
       // Browserul NU se deschide in proba: Start-Process e inlocuit cu un fisier-marcaj.
+      psS = psS.replace(/Start-Process -FilePath \$edge -ArgumentList '--app=(http:[^']+)'/g, `Set-Content -LiteralPath '${marcaj}' -Value '$1'`);
       psS = psS.replace(/Start-Process '(http:[^']+)'/g, `Set-Content -LiteralPath '${marcaj}' -Value '$1'`);
       // v77: nici colectorul nu porneste in proba - si el devine un fisier-marcaj.
       const marcajColector = path.join(tmp, "colector-pornit.txt");
