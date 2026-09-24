@@ -1431,17 +1431,77 @@ await test("eroare: AUTH pe versiunea PUBLICATA spune unde sa se duca, nu codul"
   assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR/,
     "trebuie sa-i spuna EXACT cu ce sa porneasca acasa");
   assert.match(e.ceFac, /Pionex/, "trebuie sa spuna de ce nu merge aici");
+  assert.match(e.ceFac, /Pune parola în Setări \(butonul ⚙\)/, "audit 24.09: 401 = parola, si pe publicat");
   assert.equal(e.local, false);
 });
 
-await test("eroare: AUTH pe LOCAL e alta poveste - acolo lipsesc cheile", () => {
+/* ── Audit 24.09: 401 NU inseamna "lipsesc cheile Pionex" ────────────────
+   401 vine din _shared/auth.js (AUTH_REQUIRED / AUTH_INVALID): lipseste sau e
+   gresita PAROLA aplicatiei (APP_API_TOKEN), nu cheile Pionex. Mesajul vechi il
+   trimitea sa reporneasca .bat-ul - degeaba. Cheile lipsa vin ca 503. */
+
+const SETARI = /Pune parola în Setări \(butonul ⚙\)/;
+
+await test("[audit] eroare: 401 AUTH_REQUIRED pe LOCAL -> parola in Setari, nu cheile", () => {
   for (const gazda of ["localhost", "127.0.0.1"]) {
     const e = T.explicaEroarea("AUTH_REQUIRED", 401, gazda);
     assert.equal(e.local, true, gazda + " trebuie recunoscut ca local");
-    assert.match(e.ceFac, /chei/i, `pe local, vina e la chei, nu la Cloudflare: "${e.ceFac}"`);
-    assert.ok(!/pages\.dev/.test(e.ceFac),
-      "pe local nu are rost sa-i vorbeasca despre versiunea publicata");
+    assert.match(e.ceFac, SETARI, `"${e.ceFac}"`);
+    assert.doesNotMatch(e.titlu + e.ceFac, /AUTH_REQUIRED|401/, "fara jargon");
+    assert.ok(!/pages\.dev/.test(e.ceFac), "pe local nu are rost sa-i vorbeasca despre versiunea publicata");
   }
+});
+
+await test("[audit] eroare: 401 AUTH_INVALID prin TUNEL (telefon) -> parola in Setari, nu 'du-te acasa'", () => {
+  const e = T.explicaEroarea("AUTH_INVALID", 401, "athens-potato.trycloudflare.com");
+  assert.match(e.ceFac, SETARI, `"${e.ceFac}"`);
+  assert.doesNotMatch(e.ceFac, /refuză cererile venite de la Cloudflare/,
+    "tunelul E serverul de acasa - nu are voie sa-l trimita acasa");
+  assert.match(e.titlu, /nu se potrivește/, "parola gresita se spune altfel decat parola lipsa");
+});
+
+await test("[audit] eroare: codul AUTH_REQUIRED fara status tot da mesajul cu Setari", () => {
+  const e = T.explicaEroarea("AUTH_REQUIRED", null, "127.0.0.1");
+  assert.match(e.ceFac, SETARI);
+});
+
+await test("[audit] eroare: 403 fara 'Bot reading' -> bifeaza dreptul la cheia Pionex", () => {
+  const e = T.explicaEroarea("Cheia Pionex nu are dreptul „Bot reading”. Bifează-l în Pionex › API Management (e doar citire) sau fă o cheie nouă cu el.", 403, "127.0.0.1");
+  assert.match(e.ceFac, /Bifează «Bot reading» la cheia Pionex/, `"${e.ceFac}"`);
+  assert.doesNotMatch(e.ceFac, /parola/i, "403 nu e o problema de parola");
+});
+
+await test("[audit] eroare de retea (Failed to fetch) -> serverul de acasa e oprit", () => {
+  for (const mesaj of ["Failed to fetch", "NetworkError when attempting to fetch resource.", "Load failed", "TypeError: Failed to fetch"]) {
+    const e = T.explicaEroarea(mesaj, null, "127.0.0.1");
+    assert.match(e.ceFac, /Serverul de acasă e oprit — pornește PORNESTE-CRYPTO-RADAR\.bat/, `${mesaj}: "${e.ceFac}"`);
+  }
+});
+
+await test("[audit] eroare: cheile lipsa pe server (503 / NOT_CONFIGURED) -> mesajul cu .bat", () => {
+  const cazuri = [
+    ["Cheile PIONEX_API_KEY / PIONEX_API_SECRET nu sunt configurate.", 503],
+    ["APP_API_TOKEN_NOT_CONFIGURED", 503],
+    ["NOT_CONFIGURED", null],
+  ];
+  for (const [mesaj, st] of cazuri) {
+    const e = T.explicaEroarea(mesaj, st, "127.0.0.1");
+    assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR\.bat/, `${mesaj}: "${e.ceFac}"`);
+    assert.match(e.ceFac, /chei/i, `${mesaj}: trebuie sa spuna ca e vorba de chei`);
+    assert.doesNotMatch(e.ceFac, /fereastra neagră de pe calculator/, "nu e o cadere la Pionex, e configurare");
+  }
+});
+
+await test("[audit] eroare: un cuvant care CONTINE 'rate' nu e limitare de ritm", () => {
+  // /RATE/ prindea "configuRATE", "geneRATE"... si spunea "s-au cerut date prea des".
+  const e = T.explicaEroarea("Pionex bot API: key expired, please regenerate", 502, "127.0.0.1");
+  assert.doesNotMatch(e.ceFac, /prea des/, `"${e.ceFac}"`);
+  assert.match(e.ceFac, /regenerate/, "mesajul brut ramane la vedere");
+});
+
+await test("[audit] eroare: 429 prin TUNEL e limitare de ritm, nu refuz de adresa Cloudflare", () => {
+  const e = T.explicaEroarea("RATE_LIMITED", 429, "athens-potato.trycloudflare.com");
+  assert.doesNotMatch(e.ceFac, /refuz de adresă/, `tunelul cere de acasa - "${e.ceFac}"`);
 });
 
 await test("eroare: 429 pe PUBLICAT e refuzul Pionex fata de IP, nu vina omului", () => {

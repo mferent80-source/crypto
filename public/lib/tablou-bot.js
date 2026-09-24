@@ -520,34 +520,59 @@ var TabloBot = (function () {
   function explicaEroarea(mesaj, status, gazda) {
     var g = String(gazda == null ? "" : gazda).toLowerCase();
     var local = g === "localhost" || g === "127.0.0.1" || g === "[::1]" || g === "";
+    // Versiunea PUBLICATA (Cloudflare) nu are cheile si Pionex o refuza. Un
+    // tunel (trycloudflare) NU e publicat: e serverul de acasa vazut de pe
+    // telefon - acolo parola chiar rezolva. Audit 24.09: "nelocal" trata tunelul
+    // ca pe versiunea publicata si il trimitea acasa degeaba.
+    var publicat = /\.pages\.dev$|\.workers\.dev$/.test(g);
     var brut = (mesaj == null || mesaj === "") ? "Eroare necunoscută." : String(mesaj);
-    // nr(null) intoarce 0 (Number(null) === 0), nu null - aceeasi capcana care a
+    // nr(null) intorcea 0 (Number(null) === 0), nu null - aceeasi capcana care a
     // fabricat basis -100% la pretPerpViu. Un status e valid doar daca e POZITIV.
     var stBrut = nr(status), st = (stBrut !== null && stBrut > 0) ? stBrut : null;
-    var eAuth = st === 401 || st === 403 || /AUTH/i.test(brut);
-    var eRitm = st === 429 || /RATE|429/i.test(brut);
+    // Fetch-ul n-a ajuns deloc la server: fara status, cu mesajul browserului.
+    var eRetea = st === null && /Failed to fetch|NetworkError|Load failed|TypeError/i.test(brut);
+    // Cheile Pionex (sau parola) lipsesc din configurarea SERVERULUI - 503.
+    var eNeconfigurat = /NOT_CONFIGURED|nu sunt configurate/i.test(brut);
+    var eParola = st === 401 || /AUTH_REQUIRED|AUTH_INVALID/.test(brut);
+    var eDrept = st === 403 || /PERMISSION|Bot reading/i.test(brut);
+    // Doar codul exact - /RATE/ prindea si "configuRATE" (cheile lipsa).
+    var eRitm = st === 429 || /RATE_LIMIT|\b429\b/i.test(brut);
 
-    if (eAuth && !local) {
-      return { local: local, titlu: "Boții se văd doar de pe calculatorul tău",
-        ceFac: "Ești pe versiunea publicată, care nu are cheile tale - și nici nu " +
-          "i-ar folosi: Pionex refuză cererile venite de la Cloudflare. Ca să-ți " +
-          "vezi boții, pornește aplicația acasă cu PORNESTE-CRYPTO-RADAR.bat și " +
-          "deschide adresa pe care ți-o scrie el." };
+    if (eRetea) {
+      return { local: local, titlu: "Nu ajung la server",
+        ceFac: publicat
+          ? "Nu am legătură cu serverul - verifică internetul. (" + brut + ")"
+          : "Serverul de acasă e oprit — pornește PORNESTE-CRYPTO-RADAR.bat. (" + brut + ")" };
     }
-    if (eAuth && local) {
+    if (eNeconfigurat) {
       return { local: local, titlu: "Cheile Pionex nu sunt puse",
-        ceFac: "Aplicația rulează, dar nu are cu ce să se legitimeze la Pionex. " +
+        ceFac: "Serverul rulează, dar nu are cheile Pionex sau parola aplicației. " +
           "Închide fereastra neagră și pornește din nou cu PORNESTE-CRYPTO-RADAR.bat - " +
           "îți cere cele trei chei o dată, la pornire." };
     }
-    if (eRitm && !local) {
+    if (eParola) {
+      var gresita = /AUTH_INVALID/.test(brut);
+      return { local: local,
+        titlu: gresita ? "Parola aplicației nu se potrivește" : "Lipsește parola aplicației",
+        ceFac: "Pune parola în Setări (butonul ⚙)" + (gresita ? " - cea de acum nu se potrivește" : "") +
+          ". Parola e textul APP_API_TOKEN pe care l-ai dat la pornirea cu PORNESTE-CRYPTO-RADAR.bat." +
+          (publicat ? " Atenție: pe versiunea publicată boții tot nu se văd - Pionex refuză " +
+            "cererile venite de la Cloudflare. Ca să-ți vezi boții, pornește aplicația acasă " +
+            "cu PORNESTE-CRYPTO-RADAR.bat și deschide adresa pe care ți-o scrie el." : "") };
+    }
+    if (eDrept) {
+      return { local: local, titlu: "Cheia Pionex nu are voie să citească boții",
+        ceFac: "Bifează «Bot reading» la cheia Pionex (Pionex › API Management - e doar " +
+          "citire) sau fă o cheie nouă cu el." };
+    }
+    if (eRitm && publicat) {
       return { local: local, titlu: "Pionex refuză cererile de aici",
         ceFac: "Nu e vina ta și nu trece cu așteptarea: măsurat, refuzul vine cu " +
           "găleata de jetoane PLINĂ, deci e refuz de adresă, nu limitare de ritm. " +
           "De acasă, prin PORNESTE-CRYPTO-RADAR.bat, merge." };
     }
-    if (eRitm && local) {
-      return { local: local, titlu: "Prea multe cereri către Pionex",
+    if (eRitm) {
+      return { local: local, titlu: "Prea multe cereri",
         ceFac: "S-au cerut date prea des. Lasă ecranul deschis un minut fără să " +
           "dai refresh - se reia singur." };
     }
