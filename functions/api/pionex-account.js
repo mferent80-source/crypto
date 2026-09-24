@@ -35,7 +35,12 @@ export async function onRequestGet({request,env}){
   if(action==="status")return json({configured,readOnly:true,tradingExposed:false});
   if(!configured)return json({error:"Pionex read-only API is not configured. Add PIONEX_API_KEY and PIONEX_API_SECRET as Cloudflare secrets."},503);
   try{
-    if(action==="balances")return json(await privateGet(env,"/api/v1/account/balances"));
+    if(action==="balances"){
+      // Soldul fara lista de balances nu e "sold zero": e un raspuns pe care nu-l intelegem.
+      const d=await privateGet(env,"/api/v1/account/balances");
+      if(!Array.isArray(d?.data?.balances))return json({error:"Pionex balances: data.balances nu e o lista",motiv:"forma-necunoscuta"},502);
+      return json(d);
+    }
     if(action==="openOrders")return json(await privateGet(env,"/api/v1/trade/openOrders",{symbol:safeSymbol(u)}));
     if(action==="fills")return json(await privateGet(env,"/api/v1/trade/fills",historyParams(u)));
     if(action==="orders")return json(await privateGet(env,"/api/v1/trade/allOrders",historyParams(u)));

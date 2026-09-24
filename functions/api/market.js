@@ -23,13 +23,15 @@ async function pionexRateGate(weight,fn,env){
 const H={"content-type":"application/json;charset=UTF-8","cache-control":"no-store"};
 const ok=x=>new Response(JSON.stringify(x),{headers:H});
 const softFail=(error,detail,retryAfter=null)=>ok({result:false,error,detail,retryAfter});
+// limit nenumeric ("abc") -> valoarea implicita; altfel Math.max(1,NaN) trimitea "limit=NaN".
+const limita=(u,implicit,min,max)=>{const x=Math.floor(Number(u.searchParams.get("limit")));return Number.isFinite(x)&&u.searchParams.get("limit")?Math.min(max,Math.max(min,x)):implicit};
 async function j(url){
   const r=await fetch(url,{headers:{
     "accept":"application/json,text/plain,*/*",
     "accept-language":"en-US,en;q=0.9",
     "cache-control":"no-cache",
     "user-agent":"Mozilla/5.0 CryptoRadar/43"
-  }});
+  },signal:AbortSignal.timeout(8000)});
   const text=await r.text();let data=null;try{data=JSON.parse(text)}catch{}
   if(!r.ok){
     const retry=r.headers.get("retry-after");
@@ -70,18 +72,20 @@ export async function onRequestGet({request,env}){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,"");
     const pi=(u.searchParams.get("interval")||"4H").toUpperCase();
     const allowed=new Set(["1M","5M","15M","30M","60M","4H","8H","12H","1D"]);
-    const interval=allowed.has(pi)?pi:"4H",limit=Math.min(500,Math.max(1,Number(u.searchParams.get("limit")||300)));
+    const interval=allowed.has(pi)?pi:"4H",limit=limita(u,300,1,500);
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}`,interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300,env))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_trades"){
-    const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=Math.min(500,Math.max(10,Number(u.searchParams.get("limit")||500)));
+    const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=limita(u,500,10,500);
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/trades?symbol=${encodeURIComponent(ps)}&limit=${limit}`,5,env))}catch(e){return softFail("Pionex trades unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_depth"){
-    const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=Math.min(1000,Math.max(1,Number(u.searchParams.get("limit")||100)));
+    const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=limita(u,100,1,1000);
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/depth?symbol=${encodeURIComponent(ps)}&limit=${limit}`,5,env))}catch(e){return softFail("Pionex depth unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
+  // futures trage 5 cereri Binance pe fiecare apel: fara autentificare, oricine putea folosi serverul ca proxy.
+  {const auth=await requireApiAuth(request,env,"market-futures",60);if(!auth.ok)return authErrorResponse(auth,H)}
   const symbol=(u.searchParams.get("symbol")||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");
   let funding=null,openInterest=null,longShort=null,oiHist5m=null,fundingHist=null;
   // Binance refuza cererile venite de pe Cloudflare (403 masurat 22.09). Pana acum
