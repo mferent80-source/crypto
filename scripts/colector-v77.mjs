@@ -243,6 +243,16 @@ await test("istoric: semnalele (v82) - log curatat (max 200, nivel necunoscut ->
   assert.equal(r.acum.btc.text, "BTC"); assert.equal(r.acum.regimBtc.miscare, true); assert.strictEqual(r.acum.aglomerare, null);
 });
 
+await test("istoric: contrafactualul (v83) - harta id -> ce ar fi zis, nivel necunoscut -> fara-date, se adauga fara sa stearga ce era", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  assert.deepEqual((await cheama("GET", "action=contrafactual", env)).d.contrafactual, {});
+  await cheama("POST", "action=contrafactual", env, { corp: { boti: [{ id: "t1", zice: { nivel: "nu", motive: ["a", "b"], dirTrend: "long" } }] } });
+  await cheama("POST", "action=contrafactual", env, { corp: { boti: [{ id: "t2", zice: { nivel: "ciudat" } }, { id: "", zice: { nivel: "nu" } }] } });
+  const m = (await cheama("GET", "action=contrafactual", env)).d.contrafactual;
+  assert.equal(m.t1.nivel, "nu"); assert.deepEqual(m.t1.motive, ["a", "b"]); assert.equal(m.t2.nivel, "fara-date"); assert.equal(Object.keys(m).length, 2);
+  assert.equal((await cheama("POST", "action=contrafactual", env, { corp: {} })).status, 400);
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });

@@ -33,6 +33,7 @@ export async function onRequestGet({request,env}){
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
   if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
+  if(action==="contrafactual"){let m={};try{m=JSON.parse(await env.ISTORIC.get("contrafactual")||"{}")}catch{m={}}return json({contrafactual:m&&typeof m==="object"?m:{}})}
   if(action==="semnale"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("semnale:"+bot)||"null")}catch{v=null}return json({bot,semnale:v})}
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
@@ -73,6 +74,17 @@ export async function onRequestPost({request,env}){
     // expira dupa 6 ore: un clasament de ieri nu trebuie sa arate ca unul de azi
     await env.ISTORIC.put("clasament",JSON.stringify({la,monede:curate}),{expirationTtl:6*3600});
     return json({ok:true,monede:curate.length});
+  }
+  if(action==="contrafactual"){
+    const l=corp&&Array.isArray(corp.boti)?corp.boti.slice(0,50):null;if(!l)return json({error:"Lipseste boti"},400);
+    let m={};try{m=JSON.parse(await env.ISTORIC.get("contrafactual")||"{}")}catch{m={}}
+    if(!m||typeof m!=="object")m={};
+    const txt=(v,k)=>typeof v==="string"?v.slice(0,k):"";
+    for(const x of l){const id=idBot(x&&x.id);if(!id||!x.zice)continue;
+      m[id]={nivel:["porneste","asteapta","nu","fara-date"].includes(x.zice.nivel)?x.zice.nivel:"fara-date",motive:(Array.isArray(x.zice.motive)?x.zice.motive:[]).slice(0,4).map(v=>txt(v,200)),dirTrend:txt(x.zice.dirTrend,8)||null,la:Date.now()}}
+    const ids=Object.keys(m);if(ids.length>500)for(const id of ids.slice(0,ids.length-500))delete m[id];
+    await env.ISTORIC.put("contrafactual",JSON.stringify(m));
+    return json({ok:true,n:Object.keys(m).length});
   }
   if(action==="semnale"){
     const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);

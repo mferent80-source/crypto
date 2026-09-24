@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 import { trimiteDiscord } from "./lib/canal-discord.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
+import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -85,6 +86,8 @@ const Directie = incarca("directie.js", "Directie");
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
 const GridClasament = incarca("grid-clasament.js", "GridClasament");
+const JurnalTrade = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "jurnal-trade.js"), "utf8") + "; return JurnalTrade;")(GridCalcul);
+const Contrafactual = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "contrafactual.js"), "utf8") + "; return Contrafactual;")();
 const SemnaleBot = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "semnale-bot.js"), "utf8") + "; return SemnaleBot;")(GridCalcul);
 const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "tablou-extra.js"), "utf8") + "; return TabloExtra;")(GridCalcul);
 const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
@@ -296,12 +299,29 @@ async function turaLaborator() {
   laboratorInLucru = false;
 }
 
+// v83: "daca ascultai de Radar" pentru botii inchisi - o data pe ora, cel mult 5 boti noi pe tura
+let cfLa = Date.now() - 3600000 + 10 * 60000, cfInLucru = false;
+async function turaCf() {
+  if (process.env.COLECTOR_FARA_CLASAMENT || cfInLucru || clasamentInLucru || laboratorInLucru || Date.now() - cfLa < 3600000) return;
+  cfInLucru = true;
+  try {
+    const v = await cere("/api/istoric-bot?action=contrafactual");
+    const gata = {}; Object.keys((v && v.contrafactual) || {}).forEach((k) => { gata[k] = true; });
+    const rez = await turaContrafactual({
+      cereBoti: async () => { const d = await cere("/api/bot-orders?status=finished&limit=100"); return (d && Array.isArray(d.bots) ? d.bots : []).map((x) => x.brut || x); },
+      cereKlines: async (s, iv, lim, end) => { const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=" + iv + "&limit=" + lim + "&endTime=" + end); await new Promise((r) => setTimeout(r, 1600)); if (!k || !k.data || !Array.isArray(k.data.klines)) throw new Error((k && (k.error || k.message)) || "fara lumanari"); return k.data.klines; },
+      gata, GridCalcul, GridProba, JurnalTrade, Contrafactual, jurnal, max: 5 });
+    if (rez.length) await trimite("/api/istoric-bot?action=contrafactual", { boti: rez });
+  } catch (e) { jurnal("contrafactual ESEC", e.message); }
+  cfLa = Date.now(); cfInLucru = false;
+}
+
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal alerte: " + CANAL + (NTFY.topic ? " (" + NTFY.topic + (NTFY.nou ? ", NOU" : "") + ")" : ""));
 if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului, gata liniștea (oprește gridul)." });
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
 }

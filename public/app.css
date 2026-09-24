@@ -1470,3 +1470,10 @@ body.peTablou main>.note{display:none}
 @media (max-width:600px){#tabloubot .tbSemCap{flex-direction:column;gap:6px}}
 /* v82: semaforul inlocuieste verdictul vechi (masuratoarea ritmului ramane in "Masurile, dovada") */
 #tabloubot #tbVerdictCard{display:none}
+#jurnaltrade .jtCireasa{border:1px solid rgba(220,40,60,.5);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:linear-gradient(135deg,rgba(220,40,60,.10),rgba(12,22,33,.6))}
+#jurnaltrade .jtCireasa h4{margin:0 0 10px;font-size:18px}
+#jurnaltrade .jtCirGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+#jurnaltrade .jtCirGrid>div{display:flex;flex-direction:column;gap:4px}
+#jurnaltrade .jtCirGrid b{font-size:20px;font-weight:900}
+#jurnaltrade .jtCf{margin:6px 0 0}
+@media (max-width:700px){#jurnaltrade .jtCirGrid{grid-template-columns:1fr 1fr}}

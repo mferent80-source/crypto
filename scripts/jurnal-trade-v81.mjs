@@ -4,8 +4,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8") : "";
-const SRC = citeste("../public/lib/grid-calcul.js") + "\n" + citeste("../public/lib/jurnal-trade.js");
-const JT = new Function(`${SRC}; return typeof JurnalTrade !== "undefined" ? JurnalTrade : null;`)();
+const SRC = ["grid-calcul.js", "grid-proba.js", "jurnal-trade.js", "contrafactual.js"].map((f) => citeste("../public/lib/" + f)).join("\n");
+const M = new Function(`${SRC}; return { JT: typeof JurnalTrade !== "undefined" ? JurnalTrade : null, CF: typeof Contrafactual !== "undefined" ? Contrafactual : null };`)();
+const JT = M.JT, CF = M.CF;
 const BOTI = JSON.parse(fs.readFileSync(new URL("./fixturi/boti-inchisi-2026-09-24.json", import.meta.url), "utf8"));
 
 let teste = 0, picate = 0;
@@ -80,6 +81,35 @@ await test("lipsa ramane lipsa: bot fara closeTime sau fara realizat -> sarit, n
   b[0].closeTime = null; b[1].buOrderData.totalRealizedProfit = null;
   assert.equal(JT.din(b).length, 0);
   assert.deepEqual(JT.din(null), []);
+});
+
+// --- v83: "Daca ascultai de Radar" ---
+await test("v83 modulul Contrafactual exista", () => assert.ok(CF, "contrafactual.js lipseste"));
+await test("v83 taie: pastreaza DOAR lumanarile inchise inainte de pornire (bara in formare la pornire iese)", () => {
+  const Q = 15 * 60000, P = 1_789_000_000_000 - (1_789_000_000_000 % Q) + 7 * 60000;   // pornit la minutul 7 dintr-o bara
+  const r = [0, 1, 2, 3, 4].map((i) => ({ time: P - 7 * 60000 - (3 - i) * Q, close: "1" }));   // ultimele: bara inchisa inainte, bara la pornire, una dupa
+  const t = CF.taie(r, P, Q);
+  assert.ok(t.every((x) => x.time + Q <= P), JSON.stringify(t.map((x) => x.time - P)));
+  assert.equal(t.length, 3);
+});
+const fisaCF = (o) => Object.assign({ dir: "long", directie: { dir: "long", tarie: "tare" }, verdict: { nivel: "porneste", motive: [] } }, o || {});
+const tr = (o) => Object.assign({ id: "x", moneda: "COTI", dir: "long", rezultat: 1, greseli: [] }, o || {});
+await test("v83 zice: verdictul fisei; + reguli: short contra trend long tare -> NU; reintrare -> NU; asteapta ramane asteapta", () => {
+  assert.equal(CF.zice(fisaCF(), tr()).nivel, "porneste");
+  const c = CF.zice(fisaCF(), tr({ dir: "short" }));
+  assert.equal(c.nivel, "nu"); assert.ok(c.motive.some((m) => /contra trendului/.test(m)), c.motive.join(" | "));
+  assert.equal(CF.zice(fisaCF(), tr({ greseli: [{ cod: "reintrare" }] })).nivel, "nu");
+  assert.equal(CF.zice(fisaCF({ verdict: { nivel: "asteapta", motive: ["la limita"] } }), tr()).nivel, "asteapta");
+  assert.equal(CF.zice(fisaCF({ verdict: { nivel: "nu", motive: ["miscare"] } }), tr()).nivel, "nu");
+  assert.equal(CF.zice(null, tr()).nivel, "fara-date");
+  assert.equal(CF.zice(fisaCF({ directie: { dir: "long", tarie: "slab" } }), tr({ dir: "short" })).nivel, "porneste", "contra unui trend SLAB nu blocheaza");
+});
+await test("v83 rezumat: real vs doar verde vs verde+galben; cat au salvat blocarile si cat au ratat", () => {
+  const l = [{ t: tr({ rezultat: -21 }), z: { nivel: "nu" } }, { t: tr({ rezultat: 3 }), z: { nivel: "porneste" } }, { t: tr({ rezultat: 2 }), z: { nivel: "nu" } }, { t: tr({ rezultat: -1 }), z: { nivel: "asteapta" } }, { t: tr({ rezultat: 5 }), z: { nivel: "fara-date" } }];
+  const r = CF.rezumat(l);
+  assert.equal(r.real, -12); assert.equal(r.doarVerde, 3); assert.equal(r.verdeGalben, 2);
+  assert.equal(r.blocateSalvat, 21); assert.equal(r.blocateRatat, 2); assert.equal(r.faraDate, 1);
+  assert.equal(r.judecate, 4);
 });
 
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
