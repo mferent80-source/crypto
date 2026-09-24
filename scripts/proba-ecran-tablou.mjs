@@ -964,6 +964,90 @@ async function main() {
       assert.equal(r.ch, "—", `variatia lipsa a devenit: ${r.ch}`);
     });
 
+    /* ═══ v74.6 · C8: kNN "Hist ↑ X%" e NEDOVEDIT (48,8% directie pe mers aleator) ═══ */
+    // serie de mers aleator, cu samanta fixa (proba e determinista)
+    const MERS_ALEATOR = `(() => { let s = 12345, p = 100; const r = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+      const t0 = Date.now() - 750 * 3600000, j = [];
+      for (let i = 0; i < 750; i++) { const o = p; p = p * (1 + (r() - 0.5) * 0.02); j.push([t0 + i * 3600000, String(o), String(Math.max(o, p) * 1.001), String(Math.min(o, p) * 0.999), String(p), String(100 + r() * 50)]); }
+      return j; })()`;
+    await test("C8a. kNN poarta banda de zgomot si eticheta 'nedovedit'; in banda NU e BULLISH/BEARISH", async () => {
+      const hp = await b.ev(`(() => { const hp = historicalProbability(${MERS_ALEATOR}, 4); return hp && { up: hp.up, banda: hp.banda, ver: hp.ver, nedovedit: hp.nedovedit, eticheta: knnEticheta(hp) } })()`);
+      assert.ok(hp, "historicalProbability n-a dat nimic pe 750 de lumanari");
+      assert.ok(Number.isFinite(hp.banda) && hp.banda > 0, `lipseste banda de zgomot: ${hp.banda}`);
+      assert.equal(hp.nedovedit, true, "kNN trebuie marcat nedovedit");
+      if (Math.abs(hp.up - 50) <= hp.banda) assert.equal(hp.ver, "NEUTRAL", `in banda (${hp.up.toFixed(1)}% ±${hp.banda.toFixed(1)}) a colorat ${hp.ver}`);
+      assert.match(hp.eticheta.text, /±\s?\d/, `procentul fara banda: ${hp.eticheta.text}`);
+      assert.match(hp.eticheta.text, /nedovedit/, `fara eticheta nedovedit: ${hp.eticheta.text}`);
+      const inBanda = await b.ev(`knnEticheta({ up: 70, down: 30, banda: 25, ver: "NEUTRAL", nedovedit: true })`);
+      assert.equal(inBanda.cls, "neutral", `70% cu banda ±25 e zgomot, nu culoare: ${inBanda.cls}`);
+    });
+
+    await test("C8b. ponderea kNN in scorul LONG/SHORT e 0: Hist 95% sau 5% dau acelasi scor", async () => {
+      const r = await b.ev(`(() => {
+        const q = { score: 60, structureScore: 55, volScore: 50, divergence: "NONE", ichimoku: "NONE", smc: { trap: false }, breakout: "NONE" };
+        const mc = { avg: 58 };
+        const sus = signalModel(q, { h4: { up: 95, down: 5 } }, mc), jos = signalModel(q, { h4: { up: 5, down: 95 } }, mc);
+        return { l1: sus.long, l2: jos.long, s1: sus.short, s2: jos.short };
+      })()`);
+      assert.equal(r.l1, r.l2, `LONG depinde inca de kNN: ${r.l1} vs ${r.l2}`);
+      assert.equal(r.s1, r.s2, `SHORT depinde inca de kNN: ${r.s1} vs ${r.s2}`);
+    });
+
+    /* ═══ v74.6 · C9: semnalele pe bare INCHISE; pretul viu doar pentru afisare ═══ */
+    await test("C9. analiza foloseste doar bare inchise (si in MTF); pretul viu ramane pe ecran; variatia lipsa = —", async () => {
+      const r = await b.ev(`(async () => {
+        const j = ${MERS_ALEATOR};
+        const ora = 3600000, baza = Math.floor(Date.now() / ora) * ora;
+        j.forEach((x, i) => { x[0] = baza - (j.length - i) * ora; });
+        const ultimaInchisa = +j[j.length - 1][4], viu = ultimaInchisa * 10;
+        j.push([baza, String(ultimaInchisa), String(viu), String(ultimaInchisa), String(viu), "100"]); // bara IN FORMARE
+        const salvat = { k: window.analysisKlines, t: window.analysisTicker, tf: document.getElementById('tf').value };
+        window.analysisKlines = async () => j.map(x => x.slice());
+        window.analysisTicker = async () => ({ lastPrice: String(viu), priceChangePercent: null, quoteVolume: "1000" });
+        document.getElementById('tf').value = "1h";
+        try {
+          await analyze(false);
+          const st = window.__radarState;
+          return { ok: !!st, pretSemnal: st && st.q.price, ultimaInchisa, viu,
+            mtf: st && (st.m || []).map(x => x.price), pretEcran: document.getElementById('heroPrice').textContent,
+            ch: document.getElementById('hero24').textContent, viuFormatat: num(viu), inchisFormatat: num(ultimaInchisa), semnalPret: window.__signalState && window.__signalState.q.price };
+        } finally { window.analysisKlines = salvat.k; window.analysisTicker = salvat.t; document.getElementById('tf').value = salvat.tf; stopProviderLive(); }
+      })()`);
+      assert.ok(r.ok, "analiza nu a produs stare");
+      assert.ok(Math.abs(r.pretSemnal - r.ultimaInchisa) < 1e-9, `semnalul a folosit bara in formare: ${r.pretSemnal} (inchisa ${r.ultimaInchisa}, vie ${r.viu})`);
+      assert.ok(Math.abs(r.semnalPret - r.ultimaInchisa) < 1e-9, "starea semnalului (autoLogResearchSetup o citeste) a folosit bara in formare");
+      assert.ok(r.mtf.length > 0 && r.mtf.every((p) => Math.abs(p - r.ultimaInchisa) < 1e-9), `MTF a folosit bara in formare: ${JSON.stringify(r.mtf)}`);
+      assert.equal(r.pretEcran, r.viuFormatat, `pe ecran trebuie pretul VIU (${r.viuFormatat}), nu cel inchis (${r.inchisFormatat})`);
+      assert.equal(r.ch, "—", `variatia 24h lipsa a devenit: ${r.ch}`);
+    });
+
+    /* ═══ v74.6 · C10: portile SMALL LIVE READY pe limita de jos a IC 95% ═══ */
+    await test("C10. poarta de asteptare cere IC95 jos > 0, nu doar media punctuala", async () => {
+      const r = await b.ev(`(() => {
+        const salvat = { rows: window.prRows, paper: window.prPaperStats };
+        const t0 = Date.now() - 60 * 86400000, regim = ["TREND UP", "RANGE", "TREND DOWN"];
+        const faRanduri = (fn, n) => Array.from({ length: n }, (_, i) => ({ r: fn(i), ts: t0 + i * 3600000 * 8, regime: regim[i % 3], tf: "4h" }));
+        try {
+          window.prPaperStats = () => prStats([]);
+          // media +0.10 R, dar zgomot mare: IC95 cuprinde zero => NU e dovedit
+          window.prRows = () => faRanduri((i) => (i % 2 ? 3.1 : -2.9), 160);
+          const zgomot = profitReadinessSnapshot();
+          // media +0.20 R cu zgomot mic: IC95 peste zero => dovedit
+          window.prRows = () => faRanduri((i) => (i % 2 ? 0.25 : 0.15), 160);
+          const curat = profitReadinessSnapshot();
+          const poarta = (s, id) => (s.liveGates.concat(s.paperGates)).find((g) => g.id === id);
+          return { zg010: poarta(zgomot, "exp010"), zg0: poarta(zgomot, "exp0"), cu010: poarta(curat, "exp010"), cu0: poarta(curat, "exp0"),
+            ci: zgomot.stats.expCi };
+        } finally { window.prRows = salvat.rows; window.prPaperStats = salvat.paper; }
+      })()`);
+      assert.ok(Array.isArray(r.ci) && r.ci[0] < 0 && r.ci[1] > 0, `IC95 al seriei zgomotoase ar trebui sa cuprinda zero: ${JSON.stringify(r.ci)}`);
+      assert.equal(r.zg010.pass, false, `media +0.10R cu IC care cuprinde zero a trecut poarta: ${r.zg010.current}`);
+      assert.equal(r.zg0.pass, false, `poarta de Paper a trecut pe media punctuala: ${r.zg0.current}`);
+      assert.equal(r.cu010.pass, true, `seria curata ar trebui sa treaca: ${r.cu010.current}`);
+      assert.equal(r.cu0.pass, true);
+      assert.match(r.zg010.current, /IC95/, `nu se vede intervalul: ${r.zg010.current}`);
+    });
+
     /* ═══ v74.4: parola nu se mai cere la fiecare repornire ═══════════════
        Pana acum statea in sessionStorage: se stergea la inchiderea tabului, deci
        pe telefon o cerea de fiecare data. Probele astea REINCARCA pagina - adica

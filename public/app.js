@@ -55,7 +55,7 @@ function calculateRisk(){
  let warn=margin>capital?"Margin exceeds capital":notional>capital*5?"High exposure":fees>riskAmt*.15?"Fees material":"OK";$("riskWarning").textContent=warn;$("riskWarning").className=warn==="OK"?"good":"bad"
 }
 function signalExplanation(q,hs,mc){
- const hist=hs.h4?hs.h4.up:50,arr=[["Trend",q.trendScore,(q.trendScore-50)*.34],["Momentum",q.momScore,(q.momScore-50)*.27],["Volume",q.volScore,(q.volScore-50)*.15],["Structure",q.structureScore,(q.structureScore-50)*.24],["MTF",mc.avg,(mc.avg-50)*.20],["Historical",hist,(hist-50)*.22],["ADX",q.adx,q.adx>=25?4:0],["CMF",q.cmf,q.cmf*20]];
+ const hist=hs.h4?hs.h4.up:50,arr=[["Trend",q.trendScore,(q.trendScore-50)*.34],["Momentum",q.momScore,(q.momScore-50)*.27],["Volume",q.volScore,(q.volScore-50)*.15],["Structure",q.structureScore,(q.structureScore-50)*.24],["MTF",mc.avg,(mc.avg-50)*.20],["Historical (nedovedit)",hist,0],["ADX",q.adx,q.adx>=25?4:0],["CMF",q.cmf,q.cmf*20]];
  $("explainList").innerHTML=arr.map(([n,v,c])=>`<div class="explainRow"><span>${n}</span><b>${typeof v==="number"?v.toFixed(1):v}</b><b class="contrib ${c>0?"good":c<0?"bad":"neutral"}">${c>=0?"+":""}${c.toFixed(1)}</b></div>`).join("")
 }
 function renderLifecycle(){const ss=window.__signalState,steps=["NEW","CONFIRMED","ENTRY","TP1","TP2","TP3","STOP","INVALIDATED"],dir=ss?.sm.direction||"WAIT";let status="NEW";if(dir!=="WAIT")status=ss.sm.edge>=12?"CONFIRMED":"NEW";$("lifecycle").innerHTML=steps.map(x=>`<span class="lifeStep ${x===status?"on":""}">${x}</span>`).join("")}
@@ -248,11 +248,11 @@ function buildDecision(q,hs,mc,sm){
  push("Structure",q.structureScore>=55,q.structureScore.toFixed(0)+"/100");
  push("Volume",q.volScore>=55,q.volScore.toFixed(0)+"/100");
  push("MTF",mc.avg>=55,mc.avg.toFixed(0)+"/100");
- const hp=hs.h4; if(hp)push("Historical",hp.up>=55,`${hp.up.toFixed(0)}% up`);
+ const hp=hs.h4; if(hp)push("Historical · nedovedit",null,knnEticheta(hp).text.replace(/^Hist /,""));
  let blocker="None";if(sm.direction==="WAIT"){if(sm.edge<8)blocker="LONG/SHORT too close";else if(Math.max(sm.long,sm.short)<appSettings().signalMin)blocker="Confidence below threshold";else if(q.smc.trap)blocker="Liquidity trap";else blocker="Insufficient confluence"}
  $("decisionAction").textContent=sm.direction;$("decisionAction").className="decisionBig "+(sm.direction==="LONG"?"good":sm.direction==="SHORT"?"bad":"neutral");
- $("decisionSub").textContent=`Edge ${sm.edge.toFixed(0)} · Score ${q.score.toFixed(0)} · MTF ${mc.avg.toFixed(0)}`;$("decisionLong").textContent=sm.long.toFixed(0);$("decisionShort").textContent=sm.short.toFixed(0);$("decisionRegime").textContent=q.regime;$("decisionHist").textContent=hp?`${hp.up.toFixed(0)}%↑ / ${hp.down.toFixed(0)}%↓`:"N/A";$("decisionBlocker").textContent=blocker;
- $("decisionReasons").innerHTML=reasons.map(r=>`<div class="reason"><span>${r.good?"✓":"×"}</span><span>${r.name}</span><b class="${r.good?"good":"bad"}">${r.txt}</b></div>`).join("");renderV65DecisionOS(false)
+ $("decisionSub").textContent=`Edge ${sm.edge.toFixed(0)} · Score ${q.score.toFixed(0)} · MTF ${mc.avg.toFixed(0)}`;$("decisionLong").textContent=sm.long.toFixed(0);$("decisionShort").textContent=sm.short.toFixed(0);$("decisionRegime").textContent=q.regime;$("decisionHist").textContent=hp?`${hp.up.toFixed(0)}%↑ / ${hp.down.toFixed(0)}%↓${Number.isFinite(+hp.banda)?" ±"+hp.banda.toFixed(0):""} · nedovedit`:"N/A";$("decisionBlocker").textContent=blocker;
+ $("decisionReasons").innerHTML=reasons.map(r=>`<div class="reason"><span>${r.good===null?"·":r.good?"✓":"×"}</span><span>${r.name}</span><b class="${r.good===null?"neutral":r.good?"good":"bad"}">${r.txt}</b></div>`).join("");renderV65DecisionOS(false)
 }
 function returnsFromKlines(k,n=100){let c=k.map(x=>+x[4]).slice(-(n+1)),r=[];for(let i=1;i<c.length;i++)r.push(c[i]/c[i-1]-1);return r}
 function corr(a,b){let n=Math.min(a.length,b.length);if(n<5)return NaN;a=a.slice(-n);b=b.slice(-n);let ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n,num=0,da=0,db=0;for(let i=0;i<n;i++){let x=a[i]-ma,y=b[i]-mb;num+=x*y;da+=x*x;db+=y*y}return da&&db?num/Math.sqrt(da*db):NaN}
@@ -565,7 +565,13 @@ function prMarketOf(x){return x?.market||((x?.source||"BINANCE")==="TWELVEDATA"?
 function prRows(market=assetClass(),source=analysisSource()){
   return chronologicalRows(researchJournalRows().filter(x=>Number.isFinite(metricR(x))&&prMarketOf(x)===market&&(!source||(x.source||"BINANCE")===source)).map(x=>({...x,r:metricR(x)})))
 }
-function prStats(rows){const vals=(rows||[]).map(x=>Number.isFinite(x.r)?x.r:metricR(x)).filter(Number.isFinite),st=statPack(vals),ts=(rows||[]).map(x=>+x.ts||0).filter(x=>x>0).sort((a,b)=>a-b),spanDays=ts.length>1?(ts.at(-1)-ts[0])/86400000:0,regimes=new Map(),tfs=new Map();for(const x of rows||[]){const rg=typeof canonicalRegime==="function"?canonicalRegime(x):String(x.regime||"UNKNOWN"),tf=String(x.tf||"?");regimes.set(rg,(regimes.get(rg)||0)+1);tfs.set(tf,(tfs.get(tf)||0)+1)}return {...st,spanDays,regimes:[...regimes.entries()],regimeN:[...regimes.values()].filter(n=>n>=10).length,tfN:[...tfs.values()].filter(n=>n>=10).length}}
+// v74.6: IC 95% al asteptarii (bootstrap pe blocuri, samanta fixa - acelasi
+// rezultat la fiecare rulare). Portile cer limita de JOS > 0, nu media: o
+// medie de +0,10R cu zgomot de ±3R nu dovedeste nimic.
+function prExpCi(vals){if(!vals||vals.length<10)return [NaN,NaN];const n=vals.length,m=[];for(const ix of movingBlockBootstrapIndices(n,400,5)){let s=0;for(const i of ix)s+=vals[i];m.push(s/n)}return ci95(m)}
+function prCiText(st){return Array.isArray(st.expCi)&&Number.isFinite(st.expCi[0])?` · IC95 [${st.expCi[0].toFixed(2)}; ${st.expCi[1].toFixed(2)}]`:" · IC95 —"}
+function prExpDovedit(st){return Array.isArray(st.expCi)&&Number.isFinite(st.expCi[0])&&st.expCi[0]>0}
+function prStats(rows){const vals=(rows||[]).map(x=>Number.isFinite(x.r)?x.r:metricR(x)).filter(Number.isFinite),st={...statPack(vals),expCi:prExpCi(vals)},ts=(rows||[]).map(x=>+x.ts||0).filter(x=>x>0).sort((a,b)=>a-b),spanDays=ts.length>1?(ts.at(-1)-ts[0])/86400000:0,regimes=new Map(),tfs=new Map();for(const x of rows||[]){const rg=typeof canonicalRegime==="function"?canonicalRegime(x):String(x.regime||"UNKNOWN"),tf=String(x.tf||"?");regimes.set(rg,(regimes.get(rg)||0)+1);tfs.set(tf,(tfs.get(tf)||0)+1)}return {...st,spanDays,regimes:[...regimes.entries()],regimeN:[...regimes.values()].filter(n=>n>=10).length,tfN:[...tfs.values()].filter(n=>n>=10).length}}
 function prPaperStats(market=assetClass(),source=analysisSource()){
   const rows=paperTrades().map(paperMigrateTrade).filter(t=>paperTerminalStatus(t)&&(+t.qtyFilled||0)>0&&(+t.riskUsd||0)>0&&prMarketOf(t)===market&&(!source||(t.source||"BINANCE")===source)).map(t=>({...t,r:(+t.realizedUsd||0)/(+t.riskUsd||1),ts:+t.opened||+t.created||+t.ts||0})).sort((a,b)=>a.ts-b.ts);return {...prStats(rows),rows}
 }
@@ -587,7 +593,7 @@ function profitReadinessSnapshot(market=assetClass(),source=analysisSource()){
   const rows=prRows(market,source),stats=prStats(rows),start=forwardStart(),forward=prStats(start?rows.filter(x=>(+x.ts||0)>=start):[]),paper=prPaperStats(market,source),recent=prStats(rows.slice(-20)),providerVerified=profitProviderVerified(market,source),st=window.__radarState,currentMatch=!!(st&&assetClass()===market&&(st.source||analysisSource())===source),quality=currentMatch?masterDataQuality():NaN,model=currentMatch?prModelGate():{state:"N/A",usable:false,drift:"NO TEST",disagreement:NaN},oos=currentMatch?currentProfitReadinessOos():null,oosAge=oos?Date.now()-(+oos.ts||0):Infinity,oosPass=!!(oos&&oos.pass&&oosAge<=14*86400000),online=typeof navigator==="undefined"?true:navigator.onLine!==false;
   const paperGates=[
     prGate("sample40","Resolved cost-aware sample",stats.n>=40,stats.n,"≥ 40"),
-    prGate("exp0","Net expectancy positive",stats.n>=40&&stats.avg>0,stats.n?stats.avg.toFixed(2)+" R":"—","> 0 R"),
+    prGate("exp0","Net expectancy positive (IC95)",stats.n>=40&&prExpDovedit(stats),stats.n?stats.avg.toFixed(2)+" R"+prCiText(stats):"—","IC95 jos > 0 R"),
     prGate("pf110","Profit factor floor",stats.n>=40&&stats.pf>=1.10,stats.n?stats.pf.toFixed(2):"—","≥ 1.10"),
     prGate("dd15","Drawdown containment",stats.n>=40&&stats.dd>=-15,stats.n?stats.dd.toFixed(2)+" R":"—","≥ -15 R"),
     prGate("span7","Evidence time span",stats.spanDays>=7,stats.spanDays.toFixed(1)+" d","≥ 7 days"),
@@ -595,15 +601,15 @@ function profitReadinessSnapshot(market=assetClass(),source=analysisSource()){
   ];
   const liveGates=[
     prGate("sample150","Resolved cost-aware sample",stats.n>=150,stats.n,"≥ 150"),
-    prGate("exp010","Net expectancy",stats.n>=150&&stats.avg>=.10,stats.n?stats.avg.toFixed(2)+" R":"—","≥ +0.10 R"),
+    prGate("exp010","Net expectancy (IC95)",stats.n>=150&&stats.avg>=.10&&prExpDovedit(stats),stats.n?stats.avg.toFixed(2)+" R"+prCiText(stats):"—","≥ +0.10 R și IC95 jos > 0"),
     prGate("pf125","Profit factor",stats.n>=150&&stats.pf>=1.25,stats.n?stats.pf.toFixed(2):"—","≥ 1.25"),
     prGate("dd10","Max drawdown",stats.n>=150&&stats.dd>=-10,stats.n?stats.dd.toFixed(2)+" R":"—","≥ -10 R"),
     prGate("span30","Evidence time span",stats.spanDays>=30,stats.spanDays.toFixed(1)+" d","≥ 30 days"),
     prGate("forward60","Forward resolved sample",forward.n>=60,forward.n,"≥ 60"),
-    prGate("forwardExp","Forward expectancy",forward.n>=60&&forward.avg>=.08,forward.n?forward.avg.toFixed(2)+" R":"—","≥ +0.08 R"),
+    prGate("forwardExp","Forward expectancy (IC95)",forward.n>=60&&forward.avg>=.08&&prExpDovedit(forward),forward.n?forward.avg.toFixed(2)+" R"+prCiText(forward):"—","≥ +0.08 R și IC95 jos > 0"),
     prGate("forwardPf","Forward profit factor",forward.n>=60&&forward.pf>=1.25,forward.n?forward.pf.toFixed(2):"—","≥ 1.25"),
     prGate("paper50","Completed Paper executions",paper.n>=50,paper.n,"≥ 50"),
-    prGate("paperExp","Paper expectancy",paper.n>=50&&paper.avg>=.05,paper.n?paper.avg.toFixed(2)+" R":"—","≥ +0.05 R"),
+    prGate("paperExp","Paper expectancy (IC95)",paper.n>=50&&paper.avg>=.05&&prExpDovedit(paper),paper.n?paper.avg.toFixed(2)+" R"+prCiText(paper):"—","≥ +0.05 R și IC95 jos > 0"),
     prGate("paperPf","Paper profit factor",paper.n>=50&&paper.pf>=1.20,paper.n?paper.pf.toFixed(2):"—","≥ 1.20"),
     prGate("paperDd","Paper max drawdown",paper.n>=50&&paper.dd>=-8,paper.n?paper.dd.toFixed(2)+" R":"—","≥ -8 R"),
     prGate("regimes3","Regime diversity",stats.regimeN>=3,stats.regimeN,"≥ 3 regimes with N≥10"),
@@ -3469,7 +3475,7 @@ async function analysisTicker(sym,src=analysisSource()){
 }
 async function analysisMtfData(sym,src=analysisSource()){
   const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"],errors={};
-  const jobs=await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(await analysisKlines(sym,tf,300,src),mode)}}catch(e){errors[tf]=String(e?.message||e||"MTF unavailable");return null}}));
+  const jobs=await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(bareInchise(await analysisKlines(sym,tf,300,src),tf),mode)}}catch(e){errors[tf]=String(e?.message||e||"MTF unavailable");return null}}));
   const rows=jobs.filter(Boolean);rows.expected=tfs.length;rows.coverage=rows.length/tfs.length;rows.missing=tfs.filter(tf=>!rows.some(x=>x.tf===tf));rows.errors=errors;rows.identity={market:assetClass(),symbol:sym,source:src,ts:Date.now()};return rows
 }
 let pionexLiveTimer=null,pionexLiveSeq=0;
@@ -3717,7 +3723,27 @@ function historicalProbability(j,horizon=4){
   let k=Math.min(60,Math.max(20,Math.floor(samples.length*.12))), near=samples.slice(0,k), ws=0, upw=0, av=0;
   near.forEach(x=>{let w=1/(.25+x.dist);ws+=w;if(x.ret>0)upw+=w;av+=x.ret*w});
   let up=upw/ws*100, down=100-up, avg=av/ws, strength=Math.abs(up-50)*2;
-  return {up,down,avg,k,strength,ver:up>=58?"BULLISH":up<=42?"BEARISH":"NEUTRAL"};
+  // v74.6: banda de zgomot. Masurat: pe mers ALEATOR kNN-ul ghiceste directia
+  // in 48,8% din cazuri - deci procentul, singur, nu dovedeste nimic. Banda e
+  // intervalul binomial 95% in jurul lui 50%, pe numarul EFECTIV de analogi
+  // (ponderile inegale il micsoreaza). Cat e in banda: NEUTRAL, fara culoare.
+  let w2=0;near.forEach(x=>{let w=1/(.25+x.dist);w2+=w*w});
+  const nEff=w2?ws*ws/w2:k,banda=1.96*Math.sqrt(.25/Math.max(1,nEff))*100,inBanda=Math.abs(up-50)<=banda;
+  return {up,down,avg,k,strength,banda,nEff,inBanda,nedovedit:true,ver:inBanda?"NEUTRAL":up>=58?"BULLISH":up<=42?"BEARISH":"NEUTRAL"};
+}
+// Eticheta afisata pentru kNN: procentul, banda si "nedovedit" - niciodata singur.
+function knnEticheta(hp){
+  if(!hp||!Number.isFinite(+hp.up))return {text:"Hist —",cls:"neutral"};
+  const b=Number.isFinite(+hp.banda)?+hp.banda:null,inBanda=b===null||Math.abs(hp.up-50)<=b;
+  return {text:`Hist ↑ ${(+hp.up).toFixed(0)}%${b!==null?" ±"+b.toFixed(0):""} · nedovedit`,cls:inBanda?"neutral":cls(hp.ver)}
+}
+// v74.6: bara in FORMARE (deschisa acum, inca se misca) nu intra in semnale:
+// un semnal calculat pe ea se schimba pana la inchidere si jurnalul automat il
+// retinea ca si cum ar fi fost final. Pretul viu ramane doar pentru afisare.
+function bareInchise(j,tf,acum=Date.now()){
+  if(!Array.isArray(j)||!j.length)return j||[];
+  const ms=tfMinutes(tf)*60000,t=+j[j.length-1][0];
+  return Number.isFinite(t)&&t+ms>acum?j.slice(0,-1):j
 }
 function historicalSet(j){return {h1:historicalProbability(j,1),h4:historicalProbability(j,4),h12:historicalProbability(j,12)}}
 
@@ -3742,8 +3768,9 @@ function mtfComposite(m){
 }
 
 function signalModel(q,hs,mc){
-  const hp=hs&&hs.h4?hs.h4:null;
-  const histUp=hp?hp.up:50,histDown=hp?hp.down:50;
+  // v74.6: kNN are pondere 0 in scor (nedovedit: 48,8% directie pe mers aleator).
+  // Se pune 50 = neutru, ca pragurile si scala scorului sa ramana aceleasi.
+  const histUp=50,histDown=50;
   let long=0.42*q.score+0.22*histUp+0.20*mc.avg+0.10*q.structureScore+0.06*q.volScore;
   let short=0.42*(100-q.score)+0.22*histDown+0.20*(100-mc.avg)+0.10*(100-q.structureScore)+0.06*(100-q.volScore);
   if(q.divergence==="BULL DIV")long+=4;
@@ -3775,8 +3802,8 @@ function updateSignalUI(q,hs,mc){
   window.__signalState={sm,tm,q,hs,mc};
   $("longConf").textContent=sm.long.toFixed(0)+"/100";$("shortConf").textContent=sm.short.toFixed(0)+"/100";
   $("longBar").style.width=sm.long+"%";$("shortBar").style.width=sm.short+"%";
-  $("longWhy").textContent=`Trend ${q.trendScore.toFixed(0)} · hist ↑ ${(hs.h4?hs.h4.up:50).toFixed(0)} · MTF ${mc.avg.toFixed(0)} · SMC ${q.structureScore.toFixed(0)}`;
-  $("shortWhy").textContent=`Trend ${(100-q.trendScore).toFixed(0)} · hist ↓ ${(hs.h4?hs.h4.down:50).toFixed(0)} · MTF ${(100-mc.avg).toFixed(0)} · SMC ${(100-q.structureScore).toFixed(0)}`;
+  $("longWhy").textContent=`Trend ${q.trendScore.toFixed(0)} · hist ↑ ${(hs.h4?hs.h4.up:50).toFixed(0)} (pondere 0, nedovedit) · MTF ${mc.avg.toFixed(0)} · SMC ${q.structureScore.toFixed(0)}`;
+  $("shortWhy").textContent=`Trend ${(100-q.trendScore).toFixed(0)} · hist ↓ ${(hs.h4?hs.h4.down:50).toFixed(0)} (pondere 0, nedovedit) · MTF ${(100-mc.avg).toFixed(0)} · SMC ${(100-q.structureScore).toFixed(0)}`;
   $("tradeDecision").textContent=tm.direction;$("tradeDecision").className="value "+(tm.direction==="LONG"?"good":tm.direction==="SHORT"?"bad":"neutral");
   for(const [id,val] of [["entryLow",tm.entryLow],["entryHigh",tm.entryHigh],["signalStop",tm.stop],["tp1",tm.tp1]])$(id).textContent=tm.direction==="WAIT"?"—":num(val);
   $("tp23").textContent=tm.direction==="WAIT"?"—":`${num(tm.tp2)} / ${num(tm.tp3)}`;
@@ -4005,8 +4032,12 @@ async function analyze(save,fallbackTried=false){
  invalidateDecisionContext(sym,src,t,false);
  $("symbol").value=assetClass()==="STOCKS"?stockSymbol(sym):coin(sym);syncTop(sym,t,mode);updateSourceLineage(src);setBusy(true,`Actualizare engine · ${src}…`);
  try{
-  let [j,tick,m]=await Promise.all([analysisKlines(sym,t,750,src),analysisTicker(sym,src),mtfData(sym,src)]),q=calc(j,mode),hs=historicalSet(j),mc=mtfComposite(m);
-  if(!j||j.length<100)throw Error(`${src} returned insufficient candle history`);
+  let [j,tick,m]=await Promise.all([analysisKlines(sym,t,750,src),analysisTicker(sym,src),mtfData(sym,src)]);
+  const jInchise=bareInchise(j,t);
+  if(!jInchise||jInchise.length<100)throw Error(`${src} returned insufficient candle history`);
+  let q=calc(jInchise,mode),hs=historicalSet(jInchise),mc=mtfComposite(m);
+  // pretul VIU (bara in formare / ticker) doar pentru ecran; semnalele stau pe q.price (inchis)
+  const pretViu=Number.isFinite(+j.at(-1)?.[4])?+j.at(-1)[4]:q.price;
   window.__radarState={symbol:sym,tf:t,mode,j,q,m,tick,hs,source:src};
   const breadthPromise=refreshMarketBreadthV64(false,false).catch(()=>null);
   if(save){remember(sym);localStorage.setItem("mode",mode);if(assetClass()==="STOCKS")localStorage.setItem("lastStock",stockSymbol(sym));else localStorage.setItem("lastCrypto",coin(sym))}
@@ -4016,17 +4047,17 @@ async function analyze(save,fallbackTried=false){
   else{renderLiquidationProxy(q,window.__derivativesState||{});renderQuantFlow(q,window.__derivativesState||{})}
   buildDecision(q,hs,mc,window.__signalState.sm);autoLogResearchSetup();checkAlertsPro();v60AutoReviewResolved();evaluateResearchJournalSilent().then(()=>{v60AutoReviewResolved();renderEdgePro()}).catch(()=>{});
   const ss=window.__signalState;
-  $("heroPrice").textContent=num(q.price);
+  $("heroPrice").textContent=num(pretViu);
   $("heroSignal").textContent=ss.sm.direction;$("heroSignal").className="heroSignal "+(ss.sm.direction==="LONG"?"good":ss.sm.direction==="SHORT"?"bad":"neutral");
   $("heroConfidence").textContent=`LONG ${ss.sm.long.toFixed(0)} · SHORT ${ss.sm.short.toFixed(0)}`;
-  $("heroRegime").textContent=q.regime;$("heroAdx").textContent=`ADX ${q.adx.toFixed(0)}`;$("heroProb").textContent=`Hist ↑ ${(hs.h4?hs.h4.up:50).toFixed(0)}%`;
-  let heroCh=+tick.priceChangePercent;$("hero24").textContent=(heroCh>=0?"+":"")+heroCh.toFixed(2)+"%";$("hero24").className="qv "+(heroCh>=0?"good":"bad");
+  $("heroRegime").textContent=q.regime;$("heroAdx").textContent=`ADX ${q.adx.toFixed(0)}`;$("heroProb").textContent=knnEticheta(hs.h4).text;
+  let heroCh=botiNr(tick.priceChangePercent);$("hero24").textContent=heroCh===null?"—":(heroCh>=0?"+":"")+heroCh.toFixed(2)+"%";$("hero24").className="qv "+(heroCh===null?"neutral":heroCh>=0?"good":"bad");
   $("heroMtf").textContent=mc.avg.toFixed(0)+"/100";$("heroVol").textContent=q.atrPct.toFixed(2)+"%";$("heroVol24").textContent=compact(+tick.quoteVolume);
 
   $("verdict").textContent=comp;$("verdict").className="value "+cls(comp);$("fill").style.width=avg+"%";$("conf").textContent=`Weighted Multi-TF ${avg.toFixed(0)}/100 · acord ${confidence}% · ${q.regime}`;
-  if(hp){$("pverdict").textContent=hp.ver;$("pverdict").className="value "+cls(hp.ver);$("pfill").style.width=hp.up+"%";$("pstats").textContent=`kNN: ${hp.k} analogi · ↑ ${hp.up.toFixed(1)}% · ↓ ${hp.down.toFixed(1)}% · medie 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · putere ${hp.strength.toFixed(0)}/100`}if(hp){let gv=Math.round(hp.up);$("probGauge").style.setProperty("--p",gv);$("probGauge").style.setProperty("--gc",gv>=58?"#55d89b":gv<=42?"#ff6b78":"#f5c451");$("gaugeVal").textContent=gv+"%";$("gaugeLabel").textContent=hp.ver;$("gaugeLabel").className="value "+cls(hp.ver)}
+  if(hp){const ke=knnEticheta(hp);$("pverdict").textContent=hp.ver+" · nedovedit";$("pverdict").className="value "+ke.cls;$("pfill").style.width=hp.up+"%";$("pstats").textContent=`kNN: ${hp.k} analogi · ↑ ${hp.up.toFixed(1)}% ±${hp.banda.toFixed(1)} (banda de zgomot) · ↓ ${hp.down.toFixed(1)}% · medie 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · NEDOVEDIT: pe mers aleator ghicește direcția în 48,8% din cazuri, deci nu intră în scor`}if(hp){let gv=Math.round(hp.up);$("probGauge").style.setProperty("--p",gv);$("probGauge").style.setProperty("--gc",hp.inBanda?"#8a98ab":gv>=58?"#55d89b":gv<=42?"#ff6b78":"#f5c451");$("gaugeVal").textContent=gv+"% ±"+hp.banda.toFixed(0);$("gaugeLabel").textContent=hp.ver+" · nedovedit";$("gaugeLabel").className="value "+knnEticheta(hp).cls}
 
-  $("price").textContent=num(q.price);let ch=+tick.priceChangePercent;$("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch>=0?"good":"bad");$("volume24").textContent=compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";
+  $("price").textContent=num(pretViu);let ch=botiNr(tick.priceChangePercent);$("change").textContent=ch===null?"—":(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch===null?"neutral":ch>=0?"good":"bad");$("volume24").textContent=compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";
   $("rsi").textContent=q.rsi.toFixed(1);$("ema").textContent=q.ema? "Bull stack":"Mixed / bear";$("ema").className=q.ema?"good":"bad";
   $("macd").textContent=q.macd?"Pozitiv":"Negativ";$("macd").className=q.macd?"good":"bad";
   $("adx").textContent=`${q.adx.toFixed(1)} · +DI ${q.pdi.toFixed(0)} / -DI ${q.mdi.toFixed(0)}`;$("adx").className=q.adx>=25?(q.pdi>q.mdi?"good":"bad"):"neutral";
@@ -4045,7 +4076,7 @@ async function analyze(save,fallbackTried=false){
   $("signal").textContent=q.signal;$("signal").className="value "+(q.signal==="LONG"?"good":q.signal==="SHORT"?"bad":"neutral");$("enginefill").style.width=q.score+"%";$("quality").textContent=`Confluență ${q.confluence.toFixed(0)}/100 · calitate ${q.quality} · scor ${q.score.toFixed(0)}/100`;
   $("regime").textContent=q.regime;$("trendScore").textContent=q.trendScore.toFixed(0)+"/100";$("momScore").textContent=q.momScore.toFixed(0)+"/100";$("smcScore").textContent=q.structureScore.toFixed(0)+"/100";
   $("bos").textContent=q.smc.bos;$("sweep").textContent=q.smc.sweep;$("fvg").textContent=q.smc.fvg;$("volumeSignal").textContent=q.vr>=1.5?"PUTERNIC":q.vr>=1.1?"CONFIRMĂ":"SLAB";
-  let htxt=[];for(const [lab,h] of [["1",hs.h1],["4",hs.h4],["12",hs.h12]])if(h)htxt.push(`${lab}c ${h.up.toFixed(0)}%↑`);$("knnset").textContent=htxt.join(" · ")||"N/A";
+  let htxt=[];for(const [lab,h] of [["1",hs.h1],["4",hs.h4],["12",hs.h12]])if(h)htxt.push(`${lab}c ${h.up.toFixed(0)}%↑ ±${Number.isFinite(+h.banda)?h.banda.toFixed(0):"?"}`);$("knnset").textContent=htxt.length?htxt.join(" · ")+" · nedovedit":"N/A";
   $("engineNotes").textContent=`Profil ${mode.toUpperCase()} · ${q.regime}. Trend ${q.trendScore.toFixed(0)}, momentum ${q.momScore.toFixed(0)}, volum ${q.volScore.toFixed(0)}, structură ${q.structureScore.toFixed(0)}. Filtrul de liquidity trap este ${q.smc.trap?"ACTIV":"inactiv"}. Confidence LONG/SHORT este calculat separat în tab-ul Signals.`;
 
   let dir=mc.comp==="BULLISH"?1:mc.comp==="BEARISH"?-1:0,baseStop=Math.max(q.atr*1.8,q.price*.004),inv,tar,trail,txt,risk;
