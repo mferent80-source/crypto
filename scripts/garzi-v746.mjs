@@ -105,7 +105,9 @@ async function gardaAuth() {
         // (b) orice alta forma (switch/case, destructurare, .includes, obiect de rute): toate
         //     textele scurte din corp care arata a nume de actiune, incercate si ca action=, si ca type=.
         //     Pentru ele regula e: fara token, niciun 2xx in afara formei de config.
-        const texte = new Set([...c.matchAll(/["']([A-Za-z][A-Za-z0-9_-]{0,39})["']/g)].map((m) => m[1]));
+        // Din TOT fisierul, nu doar din corpul handlerului: o functie de rutare pusa
+        // deasupra (function ruteaza(action){switch(action){case "sold":...}}) ar scapa.
+        const texte = new Set([...src.matchAll(/["'`]([A-Za-z][A-Za-z0-9_-]{0,39})["'`]/g)].map((m) => m[1]));
         const cereri = new Set(["", "action=__garda_inventata__", "type=__garda_inventata__", ...cunoscute]);
         for (const t of texte) { cereri.add(`action=${t}`); cereri.add(`type=${t}`); }
         for (const metoda of metode) {
@@ -117,7 +119,10 @@ async function gardaAuth() {
               const url = `https://garda.test/api/${nume}${q ? "?" + q : ""}`;
               const headers = { origin: "https://garda.test", "content-type": "application/json", "cf-connecting-ip": `10.74.${(++ip >> 8) % 250}.${ip % 250}-${ip}` };
               if (token) headers.authorization = `Bearer ${token}`;
-              const request = new Request(url, { method: metoda, headers, body: metoda === "GET" ? undefined : "{}" });
+              // Corpul poarta si el actiunea: un onRequestPost care citeste b.action ar scapa cu "{}".
+              const [pq, vq] = q ? q.split("=") : [];
+              const corpCerere = metoda === "GET" ? undefined : JSON.stringify(q ? { [pq]: vq } : {});
+              const request = new Request(url, { method: metoda, headers, body: corpCerere });
               let st, text = "";
               try { const r = await mod[h]({ request, env: { APP_API_TOKEN: TOKEN }, params: {}, waitUntil() {}, next: async () => new Response("urmatorul", { status: 599 }) }); st = r.status; text = await r.text(); }
               catch (e) { st = `exceptie ${e.message}`; }
@@ -224,10 +229,11 @@ function domMinimal(html) {
     getElementById: byId, querySelector: (s) => meta(s) || cauta(s)[0] || null, querySelectorAll: (s) => cauta(s),
     getElementsByTagName: (t) => cauta(t), getElementsByClassName: (c) => cauta(String(c).split(/\s+/).map((x) => "." + x).join("")),
     createElement: (t) => el(null, t), createTextNode: () => el(null, "#text"), createDocumentFragment: () => el(null, "#fragment"),
-    addEventListener() {}, removeEventListener() {}, dispatchEvent: () => true,
+    addEventListener: (tip, fn) => { if (/^(load|DOMContentLoaded|readystatechange)$/.test(tip) && typeof fn === "function") pornire.push([tip, fn]); }, removeEventListener() {}, dispatchEvent: () => true,
   };
   // Timerele se strang aici si proba le ruleaza dupa pornire (cele scurte, 0-100 ms).
   const timere = new Map();
+  const pornire = []; // ascultatori load / DOMContentLoaded, declansati o data de proba
   let nrTimer = 0;
   const pune = (fn, ms, repeta) => { const id = ++nrTimer; if (typeof fn === "function") timere.set(id, { fn, ms: Number(ms) || 0, repeta }); return id; };
   const scoate = (id) => { timere.delete(id); };
@@ -237,18 +243,19 @@ function domMinimal(html) {
     location: new URL("http://127.0.0.1:18799/"), navigator: { onLine: true, userAgent: "garda-v746", language: "ro" },
     setTimeout: (fn, ms) => pune(fn, ms, false), clearTimeout: scoate, setInterval: (fn, ms) => pune(fn, ms, true), clearInterval: scoate,
     requestAnimationFrame: (fn) => pune(fn, 16, false), cancelAnimationFrame: scoate,
+    addEventListener: (tip, fn) => { if (/^(load|DOMContentLoaded|pageshow)$/.test(tip) && typeof fn === "function") pornire.push([tip, fn]); },
     fetch: () => Promise.reject(new TypeError("Failed to fetch (garda vm)")),
     WebSocket: class { constructor() { this.readyState = 0; } close() {} send() {} addEventListener() {} },
     Worker: class { postMessage() {} terminate() {} addEventListener() {} },
     matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {} }),
-    addEventListener() {}, removeEventListener() {}, dispatchEvent: () => true,
+    removeEventListener() {}, dispatchEvent: () => true,
     alert() {}, confirm: () => false, prompt: () => null, open: () => null, scrollTo() {},
     getComputedStyle: () => new Proxy({}, { get: () => "" }), innerWidth: 1280, innerHeight: 800, devicePixelRatio: 1,
     crypto: globalThis.crypto, TextEncoder, TextDecoder, URL, URLSearchParams, AbortController, AbortSignal, Headers, Request, Response, Blob, structuredClone, performance,
     history: { pushState() {}, replaceState() {}, state: null },
   };
   ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx;
-  return { ctx, timere, nrElemente: toate.length };
+  return { ctx, timere, pornire, nrElemente: toate.length };
 }
 
 async function gardaEcranVm() {
@@ -257,7 +264,7 @@ async function gardaEcranVm() {
   // Ordinea din index.html: tablou-bot.js, apoi app.js. O citesc din pagina, nu o presupun.
   const scripturi = [...html.matchAll(/<script\b[^>]*\bsrc="\/([^"]+)"/g)].map((m) => "public/" + m[1]);
   if (!scripturi.includes("public/app.js")) { pica(G, "index.html nu mai incarca /app.js"); return; }
-  const { ctx, timere, nrElemente } = domMinimal(html);
+  const { ctx, timere, pornire, nrElemente } = domMinimal(html);
   vm.createContext(ctx);
   const respinse = [];
   const asculta = (e) => respinse.push(`${e && e.name || "Error"}: ${String(e && e.message || e).slice(0, 140)}`);
@@ -273,6 +280,15 @@ async function gardaEcranVm() {
       }
     }
     await new Promise((r) => setTimeout(r, 30));
+    // DOMContentLoaded / load: in browser vin dupa scripturi; aici le declansez o data.
+    for (const [tip, fn] of pornire.splice(0)) {
+      try { await fn({ type: tip, target: ctx.document, currentTarget: ctx, preventDefault() {}, stopPropagation() {} }); }
+      catch (e) {
+        const linie = String(e && e.stack || e).split("\n").find((x) => /public\//.test(x)) || "";
+        pica(G, `ascultatorul de "${tip}" crapa: ${e && e.name}: ${String(e && e.message).slice(0, 140)} ${linie.trim().slice(0, 80)}`);
+      }
+    }
+    await new Promise((r) => setTimeout(r, 20));
     // Timerele scurte (0-100 ms) puse la pornire ruleaza o data, in 3 runde (un timer
     // poate pune altul). Un crash intr-un setTimeout(...,0) de la pornire omoara ecranul la fel.
     for (let runda = 0; runda < 3; runda++) {
@@ -294,7 +310,7 @@ async function gardaEcranVm() {
   if (respinse.length) pica(G, `${respinse.length} promisiuni respinse netratate la pornire, prima: ${respinse[0]}`);
   const lipsa = ["navTo", "apiFetch", "TabloBot"].filter((n) => vm.runInContext(`typeof ${n}`, ctx) === "undefined");
   if (lipsa.length) pica(G, `dupa incarcare lipsesc: ${lipsa.join(", ")} - app.js nu a ajuns pana la capat`);
-  if (!rezultate.some((r) => r.garda === G && !r.ok)) trece(G, `${scripturi.join(" + ")} incarcate pana la capat; ${rulate} timere scurte rulate; 0 promisiuni respinse; DOM cu ${nrElemente} elemente din index.html`);
+  if (!rezultate.some((r) => r.garda === G && !r.ok)) trece(G, `${scripturi.join(" + ")} incarcate pana la capat; evenimentele de pornire declansate; ${rulate} timere scurte rulate; 0 promisiuni respinse; DOM cu ${nrElemente} elemente din index.html`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -408,6 +424,11 @@ function gardaPackage() {
     if (!new RegExp(`npm run ${n}(\\s|$)`).test(test)) pica(G, `npm test nu cheama ${n}`);
     if (!s[n]) pica(G, `lipseste scriptul ${n}`);
   }
+  // Regula generala: ORICE test:* din scripts (in afara de test:ecran, care cere Chrome
+  // + server) e in lantul npm test. O proba noua nelegata nu ruleaza niciodata la livrare.
+  for (const n of Object.keys(s).filter((k) => /^test:/.test(k) && k !== "test:ecran")) {
+    if (!new RegExp(`npm run ${n}(\\s|$)`).test(test)) pica(G, `scriptul ${n} exista dar npm test nu il cheama - proba nu ruleaza la livrare`);
+  }
   if (!/security-v57\.mjs/.test(s["test:security"] || "")) pica(G, "test:security nu mai cheama scripts/security-v57.mjs (proba tokenului gresit)");
   if (!/garzi-v746\.mjs/.test(s["test:garzi"] || "")) pica(G, "test:garzi nu cheama scripts/garzi-v746.mjs");
   // wrangler fixat pe o versiune EXACTA, aceeasi in package.json si in ambele lansatoare
@@ -471,8 +492,12 @@ function gardaBat() {
     if (lf !== crlf) pica(G, `${f}: ${lf - crlf} randuri cu LF simplu in arborele de lucru - cmd.exe le toaca`);
     const linii = o.toString("latin1").split(/\r?\n/);
     linii.forEach((l, i) => {
-      if (/^\s*(@?rem\b|::|echo\b)/i.test(l)) return;
-      if (/(^|[\s&|(])(del|erase|rd|rmdir)\s[^\r\n]*%/i.test(l)) pica(G, `${f}:${i + 1}: stergere cu variabila - "${l.trim().slice(0, 70)}" (cai fixe sau PowerShell pe cale verificata)`);
+      if (/^\s*(@?rem\b|::)/i.test(l)) return; // rem inghite tot randul, cu & cu tot
+      // "echo curat & del /q "%X%\*"" - dupa & / && / || / | incepe alta comanda.
+      // ^& (scapat) nu desparte; echo-ul insusi e doar text.
+      const comenzi = l.replace(/\^[&|]/g, "").split(/&&|\|\||&|\|/);
+      const rea = comenzi.find((c) => /^\s*[@(]*\s*(if\s+(not\s+)?exist\s+("[^"]*"|\S+)\s+)?(del|erase|rd|rmdir)\s[^\r\n]*%/i.test(c));
+      if (rea) pica(G, `${f}:${i + 1}: stergere cu variabila - "${l.trim().slice(0, 70)}" (cai fixe sau PowerShell pe cale verificata)`);
     });
   }
   const r = spawnSync("git", ["check-attr", "eol", "--", ...bat], { cwd: RADACINA, encoding: "utf8" });
