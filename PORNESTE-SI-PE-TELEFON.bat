@@ -14,8 +14,9 @@ set "FARATUNEL="
 
 rem PID-urile de la o rulare veche nu se mai opresc: pana scriu unul nou,
 rem PID-ul acela poate fi al altui program.
-if exist "%PIDSRV%" del "%PIDSRV%" >nul 2>&1
-if exist "%PIDTUN%" del "%PIDTUN%" >nul 2>&1
+rem Nicio stergere cu variabila in .bat (un del cu variabila goala a sters odata
+rem o radacina intreaga): PowerShell sterge doar fisiere cu nume FIX din TEMP.
+powershell -NoProfile -Command "$d = $env:TEMP; if ($d -and (Test-Path -LiteralPath $d -PathType Container)) { foreach ($n in 'crypto-radar-server.pid','crypto-radar-tunel.pid') { $f = Join-Path $d $n; if (Test-Path -LiteralPath $f -PathType Leaf) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue } } }"
 
 echo.
 echo ================================================================
@@ -183,8 +184,7 @@ echo.
 if defined FARATUNEL goto :doarlocal
 
 echo   Ridic tunelul ...
-if exist "%LOG%" del "%LOG%" >nul 2>&1
-if exist "%LOG%.out" del "%LOG%.out" >nul 2>&1
+powershell -NoProfile -Command "$d = $env:TEMP; if ($d -and (Test-Path -LiteralPath $d -PathType Container)) { foreach ($n in 'crypto-radar-tunel.log','crypto-radar-tunel.log.out') { $f = Join-Path $d $n; if (Test-Path -LiteralPath $f -PathType Leaf) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue } } }"
 rem Pornesc exe-ul DIRECT: prin cmd, din powershell, din batch, cu redirectare
 rem erau prea multe straturi de ghilimele si nu pornea deloc.
 rem cloudflared scrie adresa pe STDERR, deci acolo ma uit.
@@ -245,9 +245,9 @@ rem opresc "orice asculta pe 8788": acolo putea fi alt program al tau.
 for %%f in ("%PIDTUN%" "%PIDSRV%") do (
   if exist %%f (
     for /f "usebackq delims=" %%i in (%%f) do taskkill /f /t /pid %%i >nul 2>&1
-    del %%f >nul 2>&1
   )
 )
+powershell -NoProfile -Command "$d = $env:TEMP; if ($d -and (Test-Path -LiteralPath $d -PathType Container)) { foreach ($n in 'crypto-radar-server.pid','crypto-radar-tunel.pid') { $f = Join-Path $d $n; if (Test-Path -LiteralPath $f -PathType Leaf) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue } } }"
 if defined REFOLOSIT echo   Serverul era pornit din alta fereastra - il las sa mearga.
 echo   Gata. Nu mai esti vizibil de pe telefon.
 echo.
