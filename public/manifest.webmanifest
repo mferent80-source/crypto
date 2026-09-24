@@ -1,7 +1,7 @@
 {
   "name": "Crypto Radar Pro \u00b7 Multi-Market",
   "short_name": "Market Radar",
-  "description": "Crypto Radar Pro v71: strict read-only Pionex journal with per-symbol FIFO, fee conversion, bounded history backfill and honest reconciliation state.",
+  "description": "Crypto Radar Pro: analiză de piață și tabloul boților de grid Pionex, doar citire - nu plasează ordine.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

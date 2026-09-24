@@ -13,12 +13,12 @@ function startLiveSocket(sym){
    if(seq!==liveSocketSeq)return;
    try{
      liveSocket=new WebSocket(`wss://stream.binance.com:9443/ws/${liveSymbol}@ticker`);
-     liveSocket.onopen=()=>{if(seq!==liveSocketSeq)return;lastWsTick=Date.now();wsReconnectAttempt=0;$("wsDot").classList.add("live");$("wsStatus").classList.remove("wsStale");$("wsStatus").textContent="WS LIVE"};
+     liveSocket.onopen=()=>{if(seq!==liveSocketSeq)return;lastWsTick=Date.now();wsReconnectAttempt=0;$("wsDot")?.classList.add("live");$("wsStatus").classList.remove("wsStale");$("wsStatus").textContent="WS LIVE"};
      liveSocket.onmessage=e=>{if(seq!==liveSocketSeq)return;lastWsTick=Date.now();markFresh("ws");try{const d=JSON.parse(e.data);if(window.__radarState&&window.__radarState.symbol===sym){$("heroPrice").textContent=num(+d.c);$("price").textContent=num(+d.c);$("hero24").textContent=(+d.P>=0?"+":"")+(+d.P).toFixed(2)+"%"}}catch{}};
-     liveSocket.onerror=()=>{if(seq===liveSocketSeq){$("wsDot").classList.remove("live");$("wsStatus").textContent="WS ERROR"}};
+     liveSocket.onerror=()=>{if(seq===liveSocketSeq){$("wsDot")?.classList.remove("live");$("wsStatus").textContent="WS ERROR"}};
      liveSocket.onclose=()=>{
        if(seq!==liveSocketSeq)return;
-       $("wsDot").classList.remove("live");$("wsStatus").textContent="WS RETRY";$("wsStatus").classList.add("wsStale");
+       $("wsDot")?.classList.remove("live");$("wsStatus").textContent="WS RETRY";$("wsStatus").classList.add("wsStale");
        wsReconnectAttempt++;perfStats.wsReconnects++;
        const delay=Math.min(30000,1000*Math.pow(2,Math.min(wsReconnectAttempt,5)));
        wsReconnectTimer=setTimeout(connect,delay)
@@ -30,23 +30,25 @@ function startLiveSocket(sym){
  connect()
 }
 setInterval(()=>{
- if(lastWsTick&&Date.now()-lastWsTick>45000&&$("wsStatus")){$("wsStatus").textContent="WS STALE";$("wsStatus").classList.add("wsStale");$("wsDot").classList.remove("live")}
+ if(lastWsTick&&Date.now()-lastWsTick>45000&&$("wsStatus")){$("wsStatus").textContent="WS STALE";$("wsStatus").classList.add("wsStale");$("wsDot")?.classList.remove("live")}
 },15000);
 function toggleChartFullscreen(){const c=$("chartCard");c.classList.toggle("fullscreenChart");setTimeout(()=>window.__radarState&&draw(window.__radarState.q),50)}
 function volumeProfile(j,bins=24){
- const rows=j.slice(-240),hi=Math.max(...rows.map(x=>+x[2])),lo=Math.min(...rows.map(x=>+x[3])),step=(hi-lo)/bins||1,vol=Array(bins).fill(0);
+ const rows=j.slice(-240);if(areVolLipsa(rows))return null;const hi=Math.max(...rows.map(x=>+x[2])),lo=Math.min(...rows.map(x=>+x[3])),step=(hi-lo)/bins||1,vol=Array(bins).fill(0);
  rows.forEach(x=>{const tp=(+x[2]+ +x[3]+ +x[4])/3,idx=Math.max(0,Math.min(bins-1,Math.floor((tp-lo)/step)));vol[idx]+=+x[5]});
  const total=vol.reduce((a,b)=>a+b,0),pocIdx=vol.indexOf(Math.max(...vol)),pairs=vol.map((v,i)=>({i,v})).sort((a,b)=>b.v-a.v);let acc=0,sel=[];
  for(const q of pairs){sel.push(q.i);acc+=q.v;if(acc>=total*.7)break}
  const mid=i=>lo+(i+.5)*step;return {hi,lo,step,vol,poc:mid(pocIdx),val:mid(Math.min(...sel)),vah:mid(Math.max(...sel)),hvn:mid(pocIdx),total}
 }
-function anchoredVWAP(j,startIdx){let pv=0,v=0;for(let i=Math.max(0,startIdx);i<j.length;i++){const x=j[i],tp=(+x[2]+ +x[3]+ +x[4])/3,vol=+x[5];pv+=tp*vol;v+=vol}return v?pv/v:+j[j.length-1][4]}
+function anchoredVWAP(j,startIdx){if(volLipsaIn(j,startIdx,j.length-1))return null;let pv=0,v=0;for(let i=Math.max(0,startIdx);i<j.length;i++){const x=j[i],tp=(+x[2]+ +x[3]+ +x[4])/3,vol=+x[5];pv+=tp*vol;v+=vol}return v?pv/v:+j[j.length-1][4]}
 function renderVolumeProfile(){
- const st=window.__radarState;if(!st)return;const j=st.j,vp=volumeProfile(j),box=$("vpBars"),mx=Math.max(...vp.vol);
+ const st=window.__radarState;if(!st)return;const j=st.j,vp=volumeProfile(j),box=$("vpBars");
+ if(!vp){box.innerHTML='<div class="emptyState">Volumul lipsește la unele lumânări - profilul de volum nu se poate calcula.</div>';for(const id of ["vpPoc","vpVah","vpVal","vpHvn","avwapLow","avwapHigh","sessionVwap"])if($(id))$(id).textContent="—";return}
+ const mx=Math.max(...vp.vol);
  box.innerHTML=vp.vol.map((v,i)=>`<div class="vpRow"><span>${num(vp.lo+(i+.5)*vp.step)}</span><div class="vpTrack"><div class="vpFill" style="width:${mx?100*v/mx:0}%"></div></div><span>${(100*v/vp.total).toFixed(1)}%</span></div>`).join("");
  $("vpPoc").textContent=num(vp.poc);$("vpVah").textContent=num(vp.vah);$("vpVal").textContent=num(vp.val);$("vpHvn").textContent=num(vp.hvn);
  const closes=j.map(x=>+x[4]),last=j.length-1,look=80,sub=closes.slice(Math.max(0,last-look)),loRel=sub.indexOf(Math.min(...sub)),hiRel=sub.indexOf(Math.max(...sub)),base=Math.max(0,last-look);
- $("avwapLow").textContent=num(anchoredVWAP(j,base+loRel));$("avwapHigh").textContent=num(anchoredVWAP(j,base+hiRel));$("sessionVwap").textContent=num(anchoredVWAP(j,Math.max(0,j.length-24)))
+ $("avwapLow").textContent=numSau(anchoredVWAP(j,base+loRel));$("avwapHigh").textContent=numSau(anchoredVWAP(j,base+hiRel));$("sessionVwap").textContent=numSau(anchoredVWAP(j,Math.max(0,j.length-24)))
 }
 function calculateRisk(){
  const ss=window.__signalState;if(!ss||ss.tm.direction==="WAIT"){toast("Need an active LONG/SHORT setup","warn");return}
@@ -55,8 +57,8 @@ function calculateRisk(){
  let warn=margin>capital?"Margin exceeds capital":notional>capital*5?"High exposure":fees>riskAmt*.15?"Fees material":"OK";$("riskWarning").textContent=warn;$("riskWarning").className=warn==="OK"?"good":"bad"
 }
 function signalExplanation(q,hs,mc){
- const hist=hs.h4?hs.h4.up:50,arr=[["Trend",q.trendScore,(q.trendScore-50)*.34],["Momentum",q.momScore,(q.momScore-50)*.27],["Volume",q.volScore,(q.volScore-50)*.15],["Structure",q.structureScore,(q.structureScore-50)*.24],["MTF",mc.avg,(mc.avg-50)*.20],["Historical",hist,(hist-50)*.22],["ADX",q.adx,q.adx>=25?4:0],["CMF",q.cmf,q.cmf*20]];
- $("explainList").innerHTML=arr.map(([n,v,c])=>`<div class="explainRow"><span>${n}</span><b>${typeof v==="number"?v.toFixed(1):v}</b><b class="contrib ${c>0?"good":c<0?"bad":"neutral"}">${c>=0?"+":""}${c.toFixed(1)}</b></div>`).join("")
+ const hist=hs.h4?hs.h4.up:50,arr=[["Trend",q.trendScore,(q.trendScore-50)*.34],["Momentum",q.momScore,(q.momScore-50)*.27],["Volume",q.volScore,q.volScore===null?0:(q.volScore-50)*.15],["Structure",q.structureScore,(q.structureScore-50)*.24],["MTF",mc.avg,(mc.avg-50)*.20],["Historical (nedovedit)",hist,0],["ADX",q.adx,q.adx>=25?4:0],["CMF",q.cmf,q.cmf===null?0:q.cmf*20]];
+ $("explainList").innerHTML=arr.map(([n,v,c])=>`<div class="explainRow"><span>${n}</span><b class="${v==null?"lipsa":""}">${v==null?"—":typeof v==="number"?v.toFixed(1):v}</b><b class="contrib ${c>0?"good":c<0?"bad":"neutral"}">${c>=0?"+":""}${c.toFixed(1)}</b></div>`).join("")
 }
 function renderLifecycle(){const ss=window.__signalState,steps=["NEW","CONFIRMED","ENTRY","TP1","TP2","TP3","STOP","INVALIDATED"],dir=ss?.sm.direction||"WAIT";let status="NEW";if(dir!=="WAIT")status=ss.sm.edge>=12?"CONFIRMED":"NEW";$("lifecycle").innerHTML=steps.map(x=>`<span class="lifeStep ${x===status?"on":""}">${x}</span>`).join("")}
 async function loadDepth(){
@@ -75,11 +77,11 @@ const marketBreadthV64Cache=new Map();
 function v64Pct(x){return Number.isFinite(+x)?(+x).toFixed(0)+'%':'—'}
 function v64BreadthClass(state){return state==='BULLISH'?'good':state==='BEARISH'?'bad':'neutral'}
 function v64BreadthRow(symbol,rows){
- const j=[...(rows||[])].sort((a,b)=>+a[0]-+b[0]);if(j.length<55)return null;const c=j.map(x=>+x[4]),v=j.map(x=>+x[5]||0),n=c.length,last=c.at(-1),prev=c.at(-2),e20=ema(c,20).at(-1),e50=ema(c,50).at(-1),e200=j.length>=200?ema(c,200).at(-1):NaN,rsi=RSI(c,14).at(-1),look=j.slice(-21,-1),priorHigh=Math.max(...look.map(x=>+x[2])),priorLow=Math.min(...look.map(x=>+x[3])),adv=last>prev,ret=prev?last/prev-1:0,vol=v.at(-1)||0;
- return {symbol,advance:adv,ret,volume:vol,advVolume:adv?vol:0,decVolume:adv?0:vol,above20:last>e20,above50:last>e50,above200:Number.isFinite(e200)?last>e200:null,rsiAbove50:Number.isFinite(rsi)?rsi>50:null,newHigh:last>priorHigh,newLow:last<priorLow,last,prev};
+ const j=[...(rows||[])].sort((a,b)=>+a[0]-+b[0]);if(j.length<55)return null;const c=j.map(x=>+x[4]),v=j.map(x=>+x[5]||0),n=c.length,last=c.at(-1),prev=c.at(-2),e20=ema(c,20).at(-1),e50=ema(c,50).at(-1),e200=j.length>=200?ema(c,200).at(-1):NaN,rsi=RSI(c,14).at(-1),look=j.slice(-21,-1),priorHigh=Math.max(...look.map(x=>+x[2])),priorLow=Math.min(...look.map(x=>+x[3])),adv=last>prev,ret=prev?last/prev-1:0,vol=volBara(j.at(-1));
+ return {symbol,advance:adv,ret,volume:vol,advVolume:vol===null?null:adv?vol:0,decVolume:vol===null?null:adv?0:vol,above20:last>e20,above50:last>e50,above200:Number.isFinite(e200)?last>e200:null,rsiAbove50:Number.isFinite(rsi)?rsi>50:null,newHigh:last>priorHigh,newLow:last<priorLow,last,prev};
 }
 function v64AggregateBreadth(rows,meta={}){
- const a=(rows||[]).filter(Boolean),n=a.length,total=Math.max(n,+meta.total||n);if(!n)return {ts:Date.now(),state:'UNAVAILABLE',score:NaN,n:0,total,coverage:0,...meta};const pct=fn=>100*a.filter(fn).length/n,participation=pct(x=>x.advance),above20=pct(x=>x.above20),above50=pct(x=>x.above50),a200=a.filter(x=>x.above200!==null),above200=a200.length?100*a200.filter(x=>x.above200).length/a200.length:NaN,momRows=a.filter(x=>x.rsiAbove50!==null),momentum=momRows.length?100*momRows.filter(x=>x.rsiAbove50).length/momRows.length:NaN,volTotal=a.reduce((z,x)=>z+x.volume,0),volume=volTotal?100*a.reduce((z,x)=>z+x.advVolume,0)/volTotal:50,highs=a.filter(x=>x.newHigh).length,lows=a.filter(x=>x.newLow).length,highLow=highs+lows?50+50*(highs-lows)/(highs+lows):50,trendVals=[above20,above50,above200].filter(Number.isFinite),trend=trendVals.length?trendVals.reduce((x,y)=>x+y,0)/trendVals.length:50,score=Math.max(0,Math.min(100,.20*participation+.30*trend+.20*momentum+.18*volume+.12*highLow)),state=score>=65?'BULLISH':score<=35?'BEARISH':'NEUTRAL',coverage=100*n/Math.max(1,total),bench=+meta.benchmarkReturn||0,divergence=bench>=3&&score<45?'BEARISH DIVERGENCE':bench<=-3&&score>55?'BULLISH DIVERGENCE':'NONE',nonBench=a.filter(x=>!['BTC','BTCUSDT','QQQ'].includes(String(x.symbol).toUpperCase())),altParticipation=nonBench.length?100*nonBench.filter(x=>x.advance).length/nonBench.length:participation;
+ const a=(rows||[]).filter(Boolean),n=a.length,total=Math.max(n,+meta.total||n);if(!n)return {ts:Date.now(),state:'UNAVAILABLE',score:NaN,n:0,total,coverage:0,...meta};const pct=fn=>100*a.filter(fn).length/n,participation=pct(x=>x.advance),above20=pct(x=>x.above20),above50=pct(x=>x.above50),a200=a.filter(x=>x.above200!==null),above200=a200.length?100*a200.filter(x=>x.above200).length/a200.length:NaN,momRows=a.filter(x=>x.rsiAbove50!==null),momentum=momRows.length?100*momRows.filter(x=>x.rsiAbove50).length/momRows.length:NaN,cuVol=a.filter(x=>x.volume!=null),volTotal=cuVol.reduce((z,x)=>z+x.volume,0),volume=volTotal?100*cuVol.reduce((z,x)=>z+x.advVolume,0)/volTotal:50,highs=a.filter(x=>x.newHigh).length,lows=a.filter(x=>x.newLow).length,highLow=highs+lows?50+50*(highs-lows)/(highs+lows):50,trendVals=[above20,above50,above200].filter(Number.isFinite),trend=trendVals.length?trendVals.reduce((x,y)=>x+y,0)/trendVals.length:50,score=Math.max(0,Math.min(100,.20*participation+.30*trend+.20*momentum+.18*volume+.12*highLow)),state=score>=65?'BULLISH':score<=35?'BEARISH':'NEUTRAL',coverage=100*n/Math.max(1,total),bench=+meta.benchmarkReturn||0,divergence=bench>=3&&score<45?'BEARISH DIVERGENCE':bench<=-3&&score>55?'BULLISH DIVERGENCE':'NONE',nonBench=a.filter(x=>!['BTC','BTCUSDT','QQQ'].includes(String(x.symbol).toUpperCase())),altParticipation=nonBench.length?100*nonBench.filter(x=>x.advance).length/nonBench.length:participation;
  return {ts:Date.now(),state,score,participation,trend,above20,above50,above200,momentum,volume,highs,lows,highLow,divergence,coverage,n,total,altParticipation,benchmarkReturn:bench,depth:meta.depth||'FAST',market:meta.market||assetClass(),source:meta.source||analysisSource(),universe:meta.universe||'REPRESENTATIVE',rows:a};
 }
 function v64BreadthFromAnalysisRows(rows,meta={}){
@@ -130,16 +132,23 @@ function v62LocalIntegritySnapshot(){
     {name:'MTF coverage',state:mtf>=.75?'OK':mtf>=.5?'STALE':'FAIL',detail:`${Math.round(mtf*100)}%`},
     {name:'Master data quality',state:quality>=80?'OK':quality>=65?'STALE':'FAIL',detail:`${quality.toFixed(0)}/100`}
   ];
-  const score=rows.reduce((a,x)=>a+(x.state==='OK'?100:x.state==='STALE'?55:10),0)/rows.length;return {ts:Date.now(),market,symbol:st?.symbol||null,source:st?.source||analysisSource(),score,quality,rows}
+  // v74.6: inainte de ORICE analiza, verificarile locale nu au ce masura. Asta
+  // e "neincercat", nu "picat" - altfel Health scria FAIL 46/100 la pornire si
+  // watchdog-ul intra in SAFE MODE HARD fara nicio problema reala.
+  // Identitatea, MTF si calitatea tin de o ANALIZA; REST/WS doar de mostra lor.
+  if(!st)for(const x of rows.slice(2)){x.state='NEÎNCERCAT';x.detail='nicio analiză rulată încă'}
+  if(rest.age===Infinity){rows[0].state='NEÎNCERCAT'}if(live.age===Infinity){rows[1].state='NEÎNCERCAT'}
+  const masurate=rows.filter(x=>x.state!=='NEÎNCERCAT');
+  const score=masurate.length?masurate.reduce((a,x)=>a+(x.state==='OK'?100:x.state==='STALE'?55:10),0)/masurate.length:null;return {ts:Date.now(),market,symbol:st?.symbol||null,source:st?.source||analysisSource(),score,quality,rows,neincercat:!masurate.length}
 }
-function v62ProviderStateClass(state){return state==='OK'?'good':state==='DEGRADED'||state==='CONFIGURED'||state==='STALE'?'neutral':'bad'}
+function v62ProviderStateClass(state){return state==='OK'?'good':state==='DEGRADED'||state==='CONFIGURED'||state==='STALE'||state==='NEÎNCERCAT'?'neutral':'bad'}
 async function runProviderHealthV62(deep=true){
   const status=$('providerHealthStatus'),table=$('providerHealthTable');if(status)status.textContent='Checking providers…';if(table)table.innerHTML='<div class="emptyState">Running server + local integrity probes…</div>';
   let server=null,error=null;try{server=await getJSON(`/api/provider-health?deep=${deep?1:0}`)}catch(e){error=e.message}
-  const local=v62LocalIntegritySnapshot(),providers=server?.providers||[],required=providers.filter(x=>x.required!==false),ok=required.filter(x=>x.state==='OK'||x.state==='CONFIGURED').length,providerScore=required.length?100*ok/required.length:0,combined=Math.round(.55*providerScore+.45*local.score),state=error?'DEGRADED':combined>=85?'OK':combined>=65?'DEGRADED':'FAIL',snapshot={ts:Date.now(),state,score:combined,providerScore,server,local,error};window.__providerHealthV62=snapshot;
-  if($('providerHealthScore'))$('providerHealthScore').textContent=`${combined}/100`;if($('providerHealthOverall')){$('providerHealthOverall').textContent=state;$('providerHealthOverall').className=v62ProviderStateClass(state)}if($('providerHealthLocal'))$('providerHealthLocal').textContent=`${local.score.toFixed(0)}/100`;if($('providerHealthRequired'))$('providerHealthRequired').textContent=`${ok}/${required.length}`;
+  const local=v62LocalIntegritySnapshot(),providers=server?.providers||[],required=providers.filter(x=>x.required!==false),ok=required.filter(x=>x.state==='OK'||x.state==='CONFIGURED').length,providerScore=required.length?100*ok/required.length:0,combined=Math.round(local.score===null?providerScore:.55*providerScore+.45*local.score),state=error?'DEGRADED':local.neincercat?'NEÎNCERCAT':combined>=85?'OK':combined>=65?'DEGRADED':'FAIL',snapshot={ts:Date.now(),state,score:state==='NEÎNCERCAT'?null:combined,providerScore,server,local,error};window.__providerHealthV62=snapshot;
+  if($('providerHealthScore'))$('providerHealthScore').textContent=state==='NEÎNCERCAT'?'—':`${combined}/100`;if($('providerHealthOverall')){$('providerHealthOverall').textContent=state;$('providerHealthOverall').className=v62ProviderStateClass(state)}if($('providerHealthLocal'))$('providerHealthLocal').textContent=local.score===null?'NEÎNCERCAT':`${local.score.toFixed(0)}/100`;if($('providerHealthRequired'))$('providerHealthRequired').textContent=`${ok}/${required.length}`;
   if(table){const all=[...providers,...local.rows.map(x=>({name:'LOCAL · '+x.name,state:x.state,latencyMs:null,detail:x.detail,configured:true}))];table.innerHTML=all.length?`<div class="providerHealthRow providerHealthHead"><div>Provider / check</div><div>State</div><div>Latency</div><div>Detail</div></div>`+all.map(x=>`<div class="providerHealthRow"><div><b>${escapeHtml(x.name||'—')}</b></div><div class="${v62ProviderStateClass(x.state)}">${escapeHtml(x.state||'—')}</div><div>${Number.isFinite(+x.latencyMs)?Math.round(+x.latencyMs)+' ms':'—'}</div><div>${escapeHtml(x.detail||x.error||'—')}</div></div>`).join(''):'<div class="emptyState">No provider checks returned.</div>'}
-  if(status)status.textContent=`${state} · ${combined}/100 · ${new Date().toLocaleTimeString()}`;await localDbPutRecord('provider_health_v62',String(Math.floor(Date.now()/300000)),snapshot,Date.now());return snapshot
+  if(status)status.textContent=`${state} · ${state==='NEÎNCERCAT'?'—':combined+'/100'} · ${new Date().toLocaleTimeString()}`;await localDbPutRecord('provider_health_v62',String(Math.floor(Date.now()/300000)),snapshot,Date.now());return snapshot
 }
 function exportProviderHealthV62(){const x=window.__providerHealthV62;if(!x)return toast('Run Provider Health first','warn');downloadTextFile(`crypto-radar-v66-provider-health-${Date.now()}.json`,JSON.stringify(x,null,2),'application/json')}
 
@@ -246,13 +255,13 @@ function buildDecision(q,hs,mc,sm){
  push("Trend",q.trendScore>=55,q.trendScore.toFixed(0)+"/100");
  push("Momentum",q.momScore>=55,q.momScore.toFixed(0)+"/100");
  push("Structure",q.structureScore>=55,q.structureScore.toFixed(0)+"/100");
- push("Volume",q.volScore>=55,q.volScore.toFixed(0)+"/100");
+ if(q.volScore===null)push("Volume",null,"—");else push("Volume",q.volScore>=55,q.volScore.toFixed(0)+"/100");
  push("MTF",mc.avg>=55,mc.avg.toFixed(0)+"/100");
- const hp=hs.h4; if(hp)push("Historical",hp.up>=55,`${hp.up.toFixed(0)}% up`);
+ const hp=hs.h4; if(hp)push("Historical · nedovedit",null,knnEticheta(hp).text.replace(/^Hist /,""));
  let blocker="None";if(sm.direction==="WAIT"){if(sm.edge<8)blocker="LONG/SHORT too close";else if(Math.max(sm.long,sm.short)<appSettings().signalMin)blocker="Confidence below threshold";else if(q.smc.trap)blocker="Liquidity trap";else blocker="Insufficient confluence"}
  $("decisionAction").textContent=sm.direction;$("decisionAction").className="decisionBig "+(sm.direction==="LONG"?"good":sm.direction==="SHORT"?"bad":"neutral");
- $("decisionSub").textContent=`Edge ${sm.edge.toFixed(0)} · Score ${q.score.toFixed(0)} · MTF ${mc.avg.toFixed(0)}`;$("decisionLong").textContent=sm.long.toFixed(0);$("decisionShort").textContent=sm.short.toFixed(0);$("decisionRegime").textContent=q.regime;$("decisionHist").textContent=hp?`${hp.up.toFixed(0)}%↑ / ${hp.down.toFixed(0)}%↓`:"N/A";$("decisionBlocker").textContent=blocker;
- $("decisionReasons").innerHTML=reasons.map(r=>`<div class="reason"><span>${r.good?"✓":"×"}</span><span>${r.name}</span><b class="${r.good?"good":"bad"}">${r.txt}</b></div>`).join("");renderV65DecisionOS(false)
+ $("decisionSub").textContent=`Edge ${sm.edge.toFixed(0)} · Score ${q.score.toFixed(0)} · MTF ${mc.avg.toFixed(0)}`;$("decisionLong").textContent=sm.long.toFixed(0);$("decisionShort").textContent=sm.short.toFixed(0);$("decisionRegime").textContent=q.regime;$("decisionHist").textContent=hp?`${hp.up.toFixed(0)}%↑ / ${hp.down.toFixed(0)}%↓${Number.isFinite(+hp.banda)?" ±"+hp.banda.toFixed(0):""} · nedovedit`:"N/A";$("decisionBlocker").textContent=blocker;
+ $("decisionReasons").innerHTML=reasons.map(r=>`<div class="reason"><span>${r.good===null?"·":r.good?"✓":"×"}</span><span>${r.name}</span><b class="${r.good===null?"neutral":r.good?"good":"bad"}">${r.txt}</b></div>`).join("");renderV65DecisionOS(false)
 }
 function returnsFromKlines(k,n=100){let c=k.map(x=>+x[4]).slice(-(n+1)),r=[];for(let i=1;i<c.length;i++)r.push(c[i]/c[i-1]-1);return r}
 function corr(a,b){let n=Math.min(a.length,b.length);if(n<5)return NaN;a=a.slice(-n);b=b.slice(-n);let ma=a.reduce((x,y)=>x+y,0)/n,mb=b.reduce((x,y)=>x+y,0)/n,num=0,da=0,db=0;for(let i=0;i<n;i++){let x=a[i]-ma,y=b[i]-mb;num+=x*y;da+=x*x;db+=y*y}return da&&db?num/Math.sqrt(da*db):NaN}
@@ -314,18 +323,20 @@ function paperMigrateTrade(t){
 }
 function paperDynamicSlipBps(t,rows){
  const cfg=appSettings(),r=(rows||[]).slice(-21);if(r.length<2)return Math.max(1,+cfg.slippageBps||0);
- const last=+r.at(-1)[4],atrArr=ATR(r.map(x=>+x[2]),r.map(x=>+x[3]),r.map(x=>+x[4]),14),atr=atrArr.at(-1),atrPct=last&&Number.isFinite(atr)?atr/last*100:0,turn=r.slice(-20).reduce((a,x)=>a+(+x[4])*(+x[5]||0),0)/Math.max(1,r.slice(-20).length);
- let liq=turn>=100_000_000?.8:turn>=20_000_000?1.5:turn>=5_000_000?3:turn>=1_000_000?6:11;
+ const last=+r.at(-1)[4],atrArr=ATR(r.map(x=>+x[2]),r.map(x=>+x[3]),r.map(x=>+x[4]),14),atr=atrArr.at(-1),atrPct=last&&Number.isFinite(atr)?atr/last*100:0,turn=areVolLipsa(r.slice(-20))?null:r.slice(-20).reduce((a,x)=>a+(+x[4])*(+x[5]||0),0)/Math.max(1,r.slice(-20).length);
+ // rulaj necunoscut (volum lipsa) => treapta cea mai prudenta, spusa explicit
+ let liq=turn===null?11:turn>=100_000_000?.8:turn>=20_000_000?1.5:turn>=5_000_000?3:turn>=1_000_000?6:11;
  if((t.source||"BINANCE")==="TWELVEDATA")liq+=1;
  const vol=Math.min(12,Math.max(0,atrPct*.85));
  return Math.max(+cfg.slippageBps||0,liq+vol)
 }
 function paperAdversePrice(price,orderSide,slipBps){const k=Math.max(0,+slipBps||0)/10000;return orderSide==="BUY"?price*(1+k):price*(1-k)}
 function paperEntryOrderFillFraction(t,order,bar,history){
- const dir=t.direction==="LONG"?1:-1,o=+bar[1],h=+bar[2],l=+bar[3],c=+bar[4],v=+bar[5]||0,limit=+order.price,zone=Math.max(Math.abs((+t.entryHigh)-(+t.entryLow)),Math.abs((+t.plannedEntry)-(+t.stop))*.08,Math.abs(limit)*.0005);
+ const dir=t.direction==="LONG"?1:-1,o=+bar[1],h=+bar[2],l=+bar[3],c=+bar[4],vLipsa=volBara(bar)===null,v=+bar[5]||0,limit=+order.price,zone=Math.max(Math.abs((+t.entryHigh)-(+t.entryLow)),Math.abs((+t.plannedEntry)-(+t.stop))*.08,Math.abs(limit)*.0005);
  const touched=dir>0?l<=limit:h>=limit;if(!touched)return {fraction:0,price:null,vr:0,penetration:0};
- const penetration=clamp(dir>0?(limit-l)/zone:(h-limit)/zone,0,1),prev=(history||[]).slice(-20),av=prev.length?prev.reduce((a,x)=>a+(+x[5]||0),0)/prev.length:0,vr=av?v/av:1,barTurnover=Math.max(1,c*v),participation=((+order.qtyTarget||0)*limit)/barTurnover;
- let capacity=participation<=.001?1:participation<=.01?.85:participation<=.05?.55:.25;const model=t.fillModel==="BALANCED"?1:.78,volScore=clamp(vr/1.6,0,1);let fraction=(.16+.56*penetration+.24*volScore)*capacity*model;
+ const penetration=clamp(dir>0?(limit-l)/zone:(h-limit)/zone,0,1),prev=(history||[]).slice(-20),av=prev.length?prev.reduce((a,x)=>a+(+x[5]||0),0)/prev.length:0,vr=vLipsa||areVolLipsa(prev)?null:av?v/av:1,barTurnover=Math.max(1,c*v),participation=((+order.qtyTarget||0)*limit)/barTurnover;
+ // volum lipsa: capacitatea si impulsul de volum nu se pot masura - se ia varianta prudenta (ca la volum 0), dar vr ramane null
+ let capacity=vLipsa?.25:participation<=.001?1:participation<=.01?.85:participation<=.05?.55:.25;const model=t.fillModel==="BALANCED"?1:.78,volScore=vr===null?0:clamp(vr/1.6,0,1);let fraction=(.16+.56*penetration+.24*volScore)*capacity*model;
  const crossedOpen=dir>0?o<=limit:o>=limit;if(crossedOpen)fraction=Math.max(fraction,t.fillModel==="BALANCED"?.95:.78);fraction=clamp(fraction,.08,1);
  const price=dir>0?(o<=limit?Math.min(o,limit):limit):(o>=limit?Math.max(o,limit):limit);return {fraction,price,vr,penetration}
 }
@@ -565,7 +576,13 @@ function prMarketOf(x){return x?.market||((x?.source||"BINANCE")==="TWELVEDATA"?
 function prRows(market=assetClass(),source=analysisSource()){
   return chronologicalRows(researchJournalRows().filter(x=>Number.isFinite(metricR(x))&&prMarketOf(x)===market&&(!source||(x.source||"BINANCE")===source)).map(x=>({...x,r:metricR(x)})))
 }
-function prStats(rows){const vals=(rows||[]).map(x=>Number.isFinite(x.r)?x.r:metricR(x)).filter(Number.isFinite),st=statPack(vals),ts=(rows||[]).map(x=>+x.ts||0).filter(x=>x>0).sort((a,b)=>a-b),spanDays=ts.length>1?(ts.at(-1)-ts[0])/86400000:0,regimes=new Map(),tfs=new Map();for(const x of rows||[]){const rg=typeof canonicalRegime==="function"?canonicalRegime(x):String(x.regime||"UNKNOWN"),tf=String(x.tf||"?");regimes.set(rg,(regimes.get(rg)||0)+1);tfs.set(tf,(tfs.get(tf)||0)+1)}return {...st,spanDays,regimes:[...regimes.entries()],regimeN:[...regimes.values()].filter(n=>n>=10).length,tfN:[...tfs.values()].filter(n=>n>=10).length}}
+// v74.6: IC 95% al asteptarii (bootstrap pe blocuri, samanta fixa - acelasi
+// rezultat la fiecare rulare). Portile cer limita de JOS > 0, nu media: o
+// medie de +0,10R cu zgomot de ±3R nu dovedeste nimic.
+function prExpCi(vals){if(!vals||vals.length<10)return [NaN,NaN];const n=vals.length,m=[];for(const ix of movingBlockBootstrapIndices(n,400,5)){let s=0;for(const i of ix)s+=vals[i];m.push(s/n)}return ci95(m)}
+function prCiText(st){return Array.isArray(st.expCi)&&Number.isFinite(st.expCi[0])?` · IC95 [${st.expCi[0].toFixed(2)}; ${st.expCi[1].toFixed(2)}]`:" · IC95 —"}
+function prExpDovedit(st){return Array.isArray(st.expCi)&&Number.isFinite(st.expCi[0])&&st.expCi[0]>0}
+function prStats(rows){const vals=(rows||[]).map(x=>Number.isFinite(x.r)?x.r:metricR(x)).filter(Number.isFinite),st={...statPack(vals),expCi:prExpCi(vals)},ts=(rows||[]).map(x=>+x.ts||0).filter(x=>x>0).sort((a,b)=>a-b),spanDays=ts.length>1?(ts.at(-1)-ts[0])/86400000:0,regimes=new Map(),tfs=new Map();for(const x of rows||[]){const rg=typeof canonicalRegime==="function"?canonicalRegime(x):String(x.regime||"UNKNOWN"),tf=String(x.tf||"?");regimes.set(rg,(regimes.get(rg)||0)+1);tfs.set(tf,(tfs.get(tf)||0)+1)}return {...st,spanDays,regimes:[...regimes.entries()],regimeN:[...regimes.values()].filter(n=>n>=10).length,tfN:[...tfs.values()].filter(n=>n>=10).length}}
 function prPaperStats(market=assetClass(),source=analysisSource()){
   const rows=paperTrades().map(paperMigrateTrade).filter(t=>paperTerminalStatus(t)&&(+t.qtyFilled||0)>0&&(+t.riskUsd||0)>0&&prMarketOf(t)===market&&(!source||(t.source||"BINANCE")===source)).map(t=>({...t,r:(+t.realizedUsd||0)/(+t.riskUsd||1),ts:+t.opened||+t.created||+t.ts||0})).sort((a,b)=>a.ts-b.ts);return {...prStats(rows),rows}
 }
@@ -587,7 +604,7 @@ function profitReadinessSnapshot(market=assetClass(),source=analysisSource()){
   const rows=prRows(market,source),stats=prStats(rows),start=forwardStart(),forward=prStats(start?rows.filter(x=>(+x.ts||0)>=start):[]),paper=prPaperStats(market,source),recent=prStats(rows.slice(-20)),providerVerified=profitProviderVerified(market,source),st=window.__radarState,currentMatch=!!(st&&assetClass()===market&&(st.source||analysisSource())===source),quality=currentMatch?masterDataQuality():NaN,model=currentMatch?prModelGate():{state:"N/A",usable:false,drift:"NO TEST",disagreement:NaN},oos=currentMatch?currentProfitReadinessOos():null,oosAge=oos?Date.now()-(+oos.ts||0):Infinity,oosPass=!!(oos&&oos.pass&&oosAge<=14*86400000),online=typeof navigator==="undefined"?true:navigator.onLine!==false;
   const paperGates=[
     prGate("sample40","Resolved cost-aware sample",stats.n>=40,stats.n,"≥ 40"),
-    prGate("exp0","Net expectancy positive",stats.n>=40&&stats.avg>0,stats.n?stats.avg.toFixed(2)+" R":"—","> 0 R"),
+    prGate("exp0","Net expectancy positive (IC95)",stats.n>=40&&prExpDovedit(stats),stats.n?stats.avg.toFixed(2)+" R"+prCiText(stats):"—","IC95 jos > 0 R"),
     prGate("pf110","Profit factor floor",stats.n>=40&&stats.pf>=1.10,stats.n?stats.pf.toFixed(2):"—","≥ 1.10"),
     prGate("dd15","Drawdown containment",stats.n>=40&&stats.dd>=-15,stats.n?stats.dd.toFixed(2)+" R":"—","≥ -15 R"),
     prGate("span7","Evidence time span",stats.spanDays>=7,stats.spanDays.toFixed(1)+" d","≥ 7 days"),
@@ -595,15 +612,15 @@ function profitReadinessSnapshot(market=assetClass(),source=analysisSource()){
   ];
   const liveGates=[
     prGate("sample150","Resolved cost-aware sample",stats.n>=150,stats.n,"≥ 150"),
-    prGate("exp010","Net expectancy",stats.n>=150&&stats.avg>=.10,stats.n?stats.avg.toFixed(2)+" R":"—","≥ +0.10 R"),
+    prGate("exp010","Net expectancy (IC95)",stats.n>=150&&stats.avg>=.10&&prExpDovedit(stats),stats.n?stats.avg.toFixed(2)+" R"+prCiText(stats):"—","≥ +0.10 R și IC95 jos > 0"),
     prGate("pf125","Profit factor",stats.n>=150&&stats.pf>=1.25,stats.n?stats.pf.toFixed(2):"—","≥ 1.25"),
     prGate("dd10","Max drawdown",stats.n>=150&&stats.dd>=-10,stats.n?stats.dd.toFixed(2)+" R":"—","≥ -10 R"),
     prGate("span30","Evidence time span",stats.spanDays>=30,stats.spanDays.toFixed(1)+" d","≥ 30 days"),
     prGate("forward60","Forward resolved sample",forward.n>=60,forward.n,"≥ 60"),
-    prGate("forwardExp","Forward expectancy",forward.n>=60&&forward.avg>=.08,forward.n?forward.avg.toFixed(2)+" R":"—","≥ +0.08 R"),
+    prGate("forwardExp","Forward expectancy (IC95)",forward.n>=60&&forward.avg>=.08&&prExpDovedit(forward),forward.n?forward.avg.toFixed(2)+" R"+prCiText(forward):"—","≥ +0.08 R și IC95 jos > 0"),
     prGate("forwardPf","Forward profit factor",forward.n>=60&&forward.pf>=1.25,forward.n?forward.pf.toFixed(2):"—","≥ 1.25"),
     prGate("paper50","Completed Paper executions",paper.n>=50,paper.n,"≥ 50"),
-    prGate("paperExp","Paper expectancy",paper.n>=50&&paper.avg>=.05,paper.n?paper.avg.toFixed(2)+" R":"—","≥ +0.05 R"),
+    prGate("paperExp","Paper expectancy (IC95)",paper.n>=50&&paper.avg>=.05&&prExpDovedit(paper),paper.n?paper.avg.toFixed(2)+" R"+prCiText(paper):"—","≥ +0.05 R și IC95 jos > 0"),
     prGate("paperPf","Paper profit factor",paper.n>=50&&paper.pf>=1.20,paper.n?paper.pf.toFixed(2):"—","≥ 1.20"),
     prGate("paperDd","Paper max drawdown",paper.n>=50&&paper.dd>=-8,paper.n?paper.dd.toFixed(2)+" R":"—","≥ -8 R"),
     prGate("regimes3","Regime diversity",stats.regimeN>=3,stats.regimeN,"≥ 3 regimes with N≥10"),
@@ -706,7 +723,13 @@ function loadScanPrefs(){
  if($("pionexScanMode")&&$("scanDepth"))$("pionexScanMode").textContent=$("scanDepth").value==="DEEP"?"Mode DEEP MTF":"Mode FAST 4H"
 }
 
-const APP_VERSION="v71";
+// v74.6: versiunea are O SINGURA sursa - <meta name="app-version"> din
+// index.html (o urca livrarea). Inainte era scrisa aici de mana si ramasese
+// "v71" in antet si in Health la v74.5.
+const APP_VERSION=(typeof document!=="undefined"&&document.querySelector('meta[name="app-version"]')?.content)||"v?";
+// document.getElementById, nu $: aici $ (const, mai jos in fisier) e inca in zona moarta.
+function aplicaVersiunea(){for(const id of ["antetVersiune","topVersiune","sideVersiune","healthAppVersion"]){const el=document.getElementById(id);if(el)el.textContent=/^v[\d.?]+/.test(el.textContent)?el.textContent.replace(/^v[\d.?]+/,APP_VERSION):APP_VERSION}}
+if(typeof document!=="undefined")aplicaVersiunea();
 let researchWorkerInstance=null,researchWorkerSeq=0;const researchWorkerPending=new Map();
 function researchWorkerSupported(){return typeof Worker!=="undefined"}
 function ensureResearchWorker(){
@@ -726,10 +749,11 @@ async function runAutoTrainingLocked(kind,fn){if(mlAutoTrainingLocks[kind])retur
 let deferredInstallPrompt=null,pwaWaitingWorker=null;
 function isStandalonePwa(){return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true}
 function showPwaInstall(){
- if(isStandalonePwa()||localStorage.getItem("pwaInstallDismissed")==="1")return;
+ let inchisDeOm=false;try{inchisDeOm=localStorage.getItem("pwaInstallDismissed")==="1"}catch{}
+ if(isStandalonePwa()||inchisDeOm)return;
  if($("pwaInstallCard"))$("pwaInstallCard").classList.add("on")
 }
-function dismissPwaInstall(){localStorage.setItem("pwaInstallDismissed","1");if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on")}
+function dismissPwaInstall(){try{localStorage.setItem("pwaInstallDismissed","1")}catch{}if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on")}
 async function installPwa(){
  if(deferredInstallPrompt){
    deferredInstallPrompt.prompt();try{await deferredInstallPrompt.userChoice}catch{}
@@ -812,7 +836,7 @@ function renderOpportunity(){
 }
 function setupQualityCurrent(){
  const st=window.__radarState,ss=window.__signalState;if(!st||!ss)return null;const q=st.q,sm=ss.sm,tm=ss.tm;
- const trend=clamp((q.trendScore+q.momScore)/2),entry=clamp(55+q.structureScore*.25+(q.smc?.trap?-25:10)),liq=clamp(q.volScore*.65+(q.smc?.trap?25:70)*.35);
+ const trend=clamp((q.trendScore+q.momScore)/2),entry=clamp(55+q.structureScore*.25+(q.smc?.trap?-25:10)),liq=clamp(q.volScore==null?(q.smc?.trap?25:70):q.volScore*.65+(q.smc?.trap?25:70)*.35);
  const entryPx=(tm.entryLow+tm.entryHigh)/2,risk=Math.abs(entryPx-tm.stop),reward=Math.abs(tm.tp2-entryPx),rr=risk?reward/risk:0,riskQ=clamp(rr/2.2*100);
  let micro=50,ms=window.__microState;if(assetClass()==="CRYPTO"&&ms&&ms.symbol===`${coin(st.symbol)}_USDT`&&ms.composite){let v=ms.composite.score;micro=clamp(50+(tm.direction==="LONG"?v:-v)*.5)}
  const fresh=Date.now()-(dataFresh.rest||0),data=clamp(100-(fresh>120000?35:fresh>60000?20:0)-(st.source!==analysisSource()?20:0));
@@ -1265,13 +1289,20 @@ function paperExit(t,price,qty,label){
 function drawPaperEquity(){
  const cv=$("paperEquityCurve");if(!cv)return;const ctx=cv.getContext("2d"),st=paperAccountStats(),a=[...paperHistory(),{ts:Date.now(),equity:st.equity}],w=cv.width,h=cv.height,pad=18;ctx.clearRect(0,0,w,h);if(a.length<2)return;const vals=a.map(x=>x.equity),mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1,x=i=>pad+i/(a.length-1)*(w-2*pad),y=v=>h-pad-(v-mn)/rg*(h-2*pad);ctx.strokeStyle="#69a7ff";ctx.lineWidth=2;ctx.beginPath();a.forEach((v,i)=>i?ctx.lineTo(x(i),y(v.equity)):ctx.moveTo(x(i),y(v.equity)));ctx.stroke()
 }
-async function pushServerConfig(){
+// v74.6: la pornire o cereau 3-4 functii deodata (4 cereri identice). Acum
+// prima cerere e tinuta minte; doar activarea notificarilor (actiunea omului) o reia.
+let pushConfigPromis=null;
+function pushServerConfig(reia=false){
+ if(!reia&&pushConfigPromis)return pushConfigPromis;
+ return pushConfigPromis=pushServerConfigCitire();
+}
+async function pushServerConfigCitire(){
  try{const r=await getJSON("/api/push?action=config");window.__pushServerConfig=r;if($("pushServerStatus"))$("pushServerStatus").textContent=!r.configured?"NEEDS CONFIG":r.deliverySenderConfigured?"READY":"SUBSCRIBE READY · SENDER NEEDED";return r}catch(e){if($("pushServerStatus"))$("pushServerStatus").textContent="UNAVAILABLE";return {configured:false}}
 }
 function b64ToU8(s){const pad="=".repeat((4-s.length%4)%4),b=(s+pad).replace(/-/g,"+").replace(/_/g,"/"),raw=atob(b);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function enablePushAlerts(){
  if(!("serviceWorker" in navigator)||!("PushManager" in window)){toast("Push API unsupported","warn");return}
- const cfg=await pushServerConfig();if(!cfg.configured||!cfg.publicKey){toast("Push server needs VAPID_PUBLIC_KEY + PUSH_SUBSCRIPTIONS KV","warn");return}
+ const cfg=await pushServerConfig(true);if(!cfg.configured||!cfg.publicKey){toast("Push server needs VAPID_PUBLIC_KEY + PUSH_SUBSCRIPTIONS KV","warn");return}
  const perm=await Notification.requestPermission();if(perm!=="granted"){renderPushStatus();return}
  const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(cfg.publicKey)});
  const r=await apiFetch("/api/push?action=subscribe",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(sub)});const d=await r.json();window.__pushState=d.saved?(cfg.deliverySenderConfigured?"SUBSCRIBED":"SUBSCRIBED · SENDER NEEDED"):"ERROR";renderPushStatus();renderDailyDesk();toast(d.saved?(cfg.deliverySenderConfigured?"Push subscription active":"Subscription saved; closed-app sender/monitor still needs Cloudflare configuration."):"Push subscription not saved",d.saved?"good":"warn")
@@ -1302,7 +1333,10 @@ const NDX_SNAPSHOT_DATE="2026-09-18";
 const NDX_HISTORY_COVERAGE_START="2025-12-22";
 function referenceSnapshotAge(date){const t=Date.parse(String(date||"")+"T00:00:00Z");return Number.isFinite(t)?Math.max(0,(Date.now()-t)/86400000):Infinity}
 function referenceSnapshotState(date,warnDays=30,staleDays=90){const age=referenceSnapshotAge(date),state=age>=staleDays?"STALE":age>=warnDays?"AGING":"FRESH";return {date,age,state,warnDays,staleDays,label:`${state} · ${Number.isFinite(age)?age.toFixed(0):"?"}d old`}}
-function referenceDataGovernance(){return {nasdaq:referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90),pionex:referenceSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE,30,90),ts:Date.now()}}
+// v74.6: lista de monede Pionex se schimba zilnic - o rezerva de 4 zile nu e
+// "FRESH". Pragurile: 1 zi = AGING, 3 zile = STALE (NDX ramane pe 30/90).
+function pionexSnapshotState(date){return referenceSnapshotState(date,1,3)}
+function referenceDataGovernance(){return {nasdaq:referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90),pionex:pionexSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE),ts:Date.now()}}
 const NDX_UNIVERSE=["ADBE","AMD","ABNB","ALNY","GOOGL","GOOG","AMZN","AEP","AMGN","ADI","AAPL","AMAT","APP","ARM","ASML","ADSK","ADP","AXON","BKR","BKNG","AVGO","CDNS","CTAS","CSCO","CCEP","CMCSA","CEG","CPRT","COST","CRWD","CSX","DASH","DDOG","DXCM","FANG","EXC","FAST","FER","FTNT","GEHC","GILD","HON","HONA","IDXX","INTC","INTU","ISRG","KDP","KLAC","LITE","LRCX","LIN","MAR","MRVL","MELI","META","MCHP","MU","MSFT","MSTR","MDLZ","MPWR","MNST","NFLX","NVDA","NXPI","ORLY","ODFL","PCAR","PLTR","PANW","PAYX","PYPL","PDD","PEP","QCOM","REGN","ROP","ROST","SNDK","STX","SHOP","SBUX","SNPS","TMUS","TTWO","TSLA","TXN","TRI","VRTX","WMT","WBD","WDC","WDAY","XEL","ALAB","CRWV","NBIS","RKLB","TER","SPCX"];
 const NDX_CORE30=["AAPL","MSFT","NVDA","AMZN","GOOGL","GOOG","META","AVGO","TSLA","AMD","COST","NFLX","PLTR","MU","AMAT","QCOM","LRCX","INTC","ARM","ASML","APP","CRWD","PANW","SHOP","SPCX","CRWV","RKLB","ALAB","TER","MSTR"];
 const NDX_MEMBERSHIP_EVENTS=[{"date":"2025-12-22","added":["ALNY","FER","INSM","MPWR","STX","WDC"],"removed":["BIIB","CDW","GFS","LULU","ON","TTD"],"kind":"ANNUAL_RECONSTITUTION","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-01-05","added":["VSNT"],"removed":[],"kind":"SPINOFF","confidence":"RECONCILED","source":"CORPORATE_ACTION"},{"date":"2026-01-09","added":[],"removed":["VSNT"],"kind":"OFF_CYCLE_DELETION","confidence":"RECONCILED","source":"INDEX_HISTORY"},{"date":"2026-01-20","added":["WMT"],"removed":["AZN"],"kind":"OFF_CYCLE_REPLACEMENT","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-04-20","added":["SNDK"],"removed":["TEAM"],"kind":"OFF_CYCLE_REPLACEMENT","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-05-18","added":["LITE"],"removed":["CSGP"],"kind":"OFF_CYCLE_REPLACEMENT","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-06-22","added":["ALAB","CRWV","NBIS","RKLB","TER"],"removed":["CHTR","CTSH","INSM","VRSK","ZS"],"kind":"QUARTERLY_RECONSTITUTION","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-06-29","added":["HONA"],"removed":[],"kind":"SPINOFF","confidence":"RECONCILED","source":"CORPORATE_ACTION"},{"date":"2026-07-07","added":["SPCX"],"removed":[],"kind":"FAST_ENTRY","confidence":"OFFICIAL","source":"NASDAQ"},{"date":"2026-08-05","added":[],"removed":["EA"],"kind":"TAKE_PRIVATE","confidence":"RECONCILED","source":"CORPORATE_ACTION"},{"date":"2026-09-14","added":[],"removed":["KHC"],"kind":"EXCHANGE_TRANSFER","confidence":"RECONCILED","source":"CORPORATE_ACTION"}];
@@ -1404,8 +1438,8 @@ async function loadStockContext(force=false){
   if(!force&&stockContextCache.symbol===key&&Date.now()-stockContextCache.ts<60000){renderStockContext(stockContextCache.data);return}
   try{
     const [daily,qqqDaily,tick,qqqTick,cfg]=await Promise.all([stockSeries(sym,"1d",80),stockSeries("QQQ","1d",80),stockTicker(sym),stockTicker("QQQ"),stockConfig()]);
-    const last=daily[daily.length-1],prev=daily[daily.length-2],avg20=daily.slice(-21,-1).reduce((a,x)=>a+(+x[5]||0),0)/Math.max(1,daily.slice(-21,-1).length);
-    const gap=prev&&+prev[4]?((+last[1]/+prev[4])-1)*100:null,rvol=avg20?(+last[5]||0)/avg20:null,p20=performanceFromRows(daily,20),q20=performanceFromRows(qqqDaily,20);
+    const last=daily[daily.length-1],prev=daily[daily.length-2],avg20=areVolLipsa(daily.slice(-21,-1))?null:daily.slice(-21,-1).reduce((a,x)=>a+(+x[5]||0),0)/Math.max(1,daily.slice(-21,-1).length);
+    const gap=prev&&+prev[4]?((+last[1]/+prev[4])-1)*100:null,rvol=avg20&&volBara(last)!==null?volBara(last)/avg20:null,p20=performanceFromRows(daily,20),q20=performanceFromRows(qqqDaily,20);
     const sess=stockSessionState(),data={sym,daily,qqqDaily,tick,qqqTick,cfg,gap,rvol,p20,q20,rs20:Number.isFinite(p20)&&Number.isFinite(q20)?p20-q20:null,prev,sess};
     stockContextCache={ts:Date.now(),symbol:key,data};renderStockContext(data)
   }catch(e){
@@ -1420,7 +1454,7 @@ function renderStockContext(d){
   $("stockQqq").textContent=Number.isFinite(+qqqTick.priceChangePercent)?pctText(+qqqTick.priceChangePercent):"—";
   const rel=Number.isFinite(+tick.priceChangePercent)&&Number.isFinite(+qqqTick.priceChangePercent)?+tick.priceChangePercent-+qqqTick.priceChangePercent:null;
   $("stockRelQqq").textContent=Number.isFinite(rel)?pctText(rel):"—";$("stockPdh").textContent=prev?num(+prev[2]):"—";$("stockPdl").textContent=prev?num(+prev[3]):"—";
-  const st=window.__radarState;$("stockVwap").textContent=st&&st.source==="TWELVEDATA"&&st.tf!=="1d"?num(st.q.calendarVwaps.day):"Intraday only";$("stock20d").textContent=Number.isFinite(p20)?pctText(p20):"—";$("stockQqq20d").textContent=Number.isFinite(q20)?pctText(q20):"—";$("stockRs20d").textContent=Number.isFinite(rs20)?pctText(rs20):"—";
+  const st=window.__radarState;$("stockVwap").textContent=st&&st.source==="TWELVEDATA"&&st.tf!=="1d"?numSau(st.q.calendarVwaps.day):"Intraday only";$("stock20d").textContent=Number.isFinite(p20)?pctText(p20):"—";$("stockQqq20d").textContent=Number.isFinite(q20)?pctText(q20):"—";$("stockRs20d").textContent=Number.isFinite(rs20)?pctText(rs20):"—";
   $("stockProviderState").textContent=cfg?.configured?"READY":"NEEDS API KEY";$("stockProviderState").className="edgeState "+(cfg?.configured?"good":"neutral");$("stockApiState").textContent=cfg?.configured?"SERVER KEY OK":"TWELVE_DATA_API_KEY MISSING";
   $("stockExchange").textContent=tick.exchange||"—";$("stockMarketOpen").textContent=tick.isMarketOpen===true?"YES":tick.isMarketOpen===false?"NO":"—";$("stockLastQuote").textContent=tick.datetime||"—";
 }
@@ -1436,7 +1470,7 @@ async function checkStocksHealth(){
 function updateScannerUi(){
   const stocks=assetClass()==="STOCKS";
   if($("scanTitle"))$("scanTitle").textContent=stocks?"Nasdaq-100 Scanner":"Pionex Universe · Binance Engine";
-  if($("scanSubtitle")){const ref=referenceDataGovernance();$("scanSubtitle").textContent=stocks?`NDX research universe · snapshot ${NDX_SNAPSHOT_DATE} · ${ref.nasdaq.label} · Twelve Data`:`Univers Pionex SPOT/USDT · analiza tehnică folosește Binance direct · fallback ${ref.pionex.label}`;}
+  if($("scanSubtitle")){const ref=referenceDataGovernance();$("scanSubtitle").textContent=stocks?`NDX research universe · snapshot ${NDX_SNAPSHOT_DATE} · ${ref.nasdaq.label} · Twelve Data`:`Univers Pionex SPOT/USDT · analiza tehnică folosește Binance direct · rezerva (snapshot) ${ref.pionex.label}`;}
   if($("scanSourceBadge")){$("scanSourceBadge").textContent=stocks?"NASDAQ / US STOCKS":"PIONEX COINS · BINANCE DATA";$("scanSourceBadge").className=stocks?"stockBadge":"pionexBadge"}
   if($("scanAssetHead"))$("scanAssetHead").textContent=stocks?"Ticker":"Coin";if($("scanTurnoverHead"))$("scanTurnoverHead").textContent=stocks?"Daily $ volume":"24h Turnover";
   if($("scanActionBtn"))$("scanActionBtn").textContent=stocks?"↻ Scan Nasdaq universe":"↻ Rescanează Pionex Top 100";
@@ -1449,7 +1483,7 @@ function updateScannerUi(){
   if($("oppScanBtn"))$("oppScanBtn").textContent=stocks?"Scan Nasdaq":"Scan Pionex";
 }
 function stockRowFromSeries(symbol,rows){
-  if(!rows||rows.length<60)return null;const q=calc(rows,$("mode")?.value||"auto"),last=rows[rows.length-1],prev=rows[rows.length-2],price=+last[4],change=prev&&+prev[4]?((price/+prev[4])-1)*100:0,turnover=price*(+last[5]||0);
+  if(!rows||rows.length<60)return null;const q=calc(rows,$("mode")?.value||"auto"),last=rows[rows.length-1],prev=rows[rows.length-2],price=+last[4],change=prev&&+prev[4]?((price/+prev[4])-1)*100:0,turnover=botiNr(last[5])===null?null:price*+last[5];
   return {c:symbol,stockSymbol:symbol,avg:q.score,dir:q.ver,conf:q.confluence,adx:q.adx,regime:q.regime,turnover,change,source:"TWELVEDATA",trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile}
 }
 async function runNasdaqScan(depth="FAST"){
@@ -1458,7 +1492,7 @@ async function runNasdaqScan(depth="FAST"){
 async function scanStocks(){
   let box=$("scanout"),depth=$("scanDepth")?.value||"FAST",universe=depth==="DEEP"?NDX_UNIVERSE:NDX_CORE30;
   if(activeScanToken)activeScanToken.cancelled=true;const token={cancelled:false,id:Date.now()},started=performance.now();activeScanToken=token;scannerRows=[];perfStats.lastScanner="STOCKS RUNNING";
-  const ndxRef=referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90);if(depth==="DEEP"&&ndxRef.state==="STALE"&&!confirm(`Nasdaq reference universe is ${ndxRef.label}. Continue a full-universe research scan with stale membership?`))return;$("scanCancelBtn").disabled=false;$("scanProgressBar").style.width="0%";$("scanProcessed").textContent=`0/${universe.length}`;$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent="—";$("scanElapsed").textContent="0s";$("pionexUniverseCount").textContent=`Universe ${universe.length}/${NDX_UNIVERSE.length}`;$("pionexUniverseTime").textContent=`Snapshot ${NDX_SNAPSHOT_DATE} · ${ndxRef.label}`;updateScannerUi();
+  const ndxRef=referenceSnapshotState(NDX_SNAPSHOT_DATE,30,90);if(depth==="DEEP"&&ndxRef.state==="STALE"&&!confirm(`Nasdaq reference universe is ${ndxRef.label}. Continue a full-universe research scan with stale membership?`))return;scanButonStop(true);$("scanProgressBar").style.width="0%";$("scanProcessed").textContent=`0/${universe.length}`;$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent="—";$("scanElapsed").textContent="0s";$("pionexUniverseCount").textContent=`Universe ${universe.length}/${NDX_UNIVERSE.length}`;$("pionexUniverseTime").textContent=`Snapshot ${NDX_SNAPSHOT_DATE} · ${ndxRef.label}`;updateScannerUi();
   box.innerHTML="Loading Nasdaq daily history via Twelve Data…";
   try{
     const cfg=await stockConfig(true);if(!cfg.configured)throw Error("TWELVE_DATA_API_KEY is not configured in Cloudflare");
@@ -1474,7 +1508,7 @@ async function scanStocks(){
     if(token.cancelled){box.innerHTML='<div class="row"><span>Stock scan stopped.</span></div>';return}
     scannerRows=out;renderScan();const scanBreadth=v64BreadthFromAnalysisRows(scannerRows,{market:assetClass(),source:analysisSource(),total:scannerRows.length,depth:"SCANNER",universe:"CURRENT SCANNER RESULTS"});if(!window.__marketBreadthV64||Date.now()-(+window.__marketBreadthV64.ts||0)>10*60000)renderMarketBreadthV64(scanBreadth);renderOpportunity();renderDailyDesk();perfStats.lastScanner=`STOCKS OK ${out.length}/${universe.length}`;persistScannerHistory("STOCKS","TWELVEDATA",universe.length,out,depth).catch(()=>{});toast(`Nasdaq scanner: ${out.length}/${universe.length} analyzed`,"good")
   }catch(e){scannerRows=[];box.innerHTML=`<div class="row"><span>US Stocks scanner unavailable.</span><b>${escapeHtml(e.message)}</b></div>`;perfStats.lastScanner="STOCKS ERROR · "+e.message;toast("US stock data unavailable: "+e.message,"bad")}
-  finally{if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}$("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"}
+  finally{if(activeScanToken===token){activeScanToken=null;scanButonStop(false)}$("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"}
 }
 function selectStockScan(c){setAssetClass("STOCKS");$("symbol").value=c;localStorage.setItem("lastStock",c);show("dash");analyze(true)}
 
@@ -1552,7 +1586,7 @@ async function loadCloudMonitor(loadHistory=true){
 }
 
 function distributedVolumeProfile(j,bins=48,look=240){
- const rows=j.slice(-look);if(!rows.length)return null;const hi=Math.max(...rows.map(x=>+x[2])),lo=Math.min(...rows.map(x=>+x[3])),step=(hi-lo)/bins||1,vol=Array(bins).fill(0),tpo=Array(bins).fill(0);
+ const rows=j.slice(-look);if(!rows.length||areVolLipsa(rows))return null;const hi=Math.max(...rows.map(x=>+x[2])),lo=Math.min(...rows.map(x=>+x[3])),step=(hi-lo)/bins||1,vol=Array(bins).fill(0),tpo=Array(bins).fill(0);
  for(const x of rows){const l=+x[3],h=+x[2],v=+x[5]||0,a=Math.max(0,Math.min(bins-1,Math.floor((l-lo)/step))),b=Math.max(0,Math.min(bins-1,Math.floor((h-lo)/step))),n=Math.max(1,b-a+1),share=v/n;for(let k=a;k<=b;k++){vol[k]+=share;tpo[k]++}}
  const total=vol.reduce((a,b)=>a+b,0),pocIdx=vol.indexOf(Math.max(...vol)),pairs=vol.map((v,i)=>({i,v})).sort((a,b)=>b.v-a.v);let acc=0,sel=[];for(const q of pairs){sel.push(q.i);acc+=q.v;if(acc>=total*.70)break}
  const mid=i=>lo+(i+.5)*step,nodes=[];for(let i=1;i<bins-1;i++){if(vol[i]>vol[i-1]&&vol[i]>=vol[i+1])nodes.push({type:"HVN",i,price:mid(i),value:vol[i]});if(vol[i]<vol[i-1]&&vol[i]<=vol[i+1])nodes.push({type:"LVN",i,price:mid(i),value:vol[i]})}
@@ -1615,7 +1649,7 @@ function cryptoSessionForTs(ts){const d=new Date(ts),m=d.getUTCHours()*60+d.getU
 function stockSessionForTs(ts){const p=nyParts(ts),m=p.minutes;if(["Sat","Sun"].includes(p.weekday))return "CLOSED";if(m>=240&&m<570)return "PRE-MARKET";if(m>=570&&m<960)return "REGULAR";if(m>=960&&m<1200)return "AFTER-HOURS";return "CLOSED"}
 function sessionForTs(ts){return assetClass()==="STOCKS"?stockSessionForTs(ts):cryptoSessionForTs(ts)}
 function sessionDateKey(ts){return assetClass()==="STOCKS"?nyParts(ts).date:utcDayKey(ts)}
-function weightedVwapRows(rows){let pv=0,v=0;for(const x of rows){const tp=(+x[2]+ +x[3]+ +x[4])/3,vol=+x[5]||0;pv+=tp*vol;v+=vol}return v?pv/v:NaN}
+function weightedVwapRows(rows){if(areVolLipsa(rows))return NaN;let pv=0,v=0;for(const x of rows){const tp=(+x[2]+ +x[3]+ +x[4])/3,vol=+x[5]||0;pv+=tp*vol;v+=vol}return v?pv/v:NaN}
 function groupHighLow(rows){return rows?.length?{high:Math.max(...rows.map(x=>+x[2])),low:Math.min(...rows.map(x=>+x[3]))}:null}
 function sessionStructureData(j,tf){
   if(!j?.length)return null;const lastTs=+j.at(-1)[0],curSession=sessionForTs(lastTs),curDate=sessionDateKey(lastTs),intraday=tf!=="1d";
@@ -1625,14 +1659,15 @@ function sessionStructureData(j,tf){
   return {curSession,intraday,curHL,curVwap,opening,prevDay,prevWeekHL,ladder}
 }
 function localAtrAt(j,i,n=14){if(i<1)return 0;let s=0,c=0;for(let k=Math.max(1,i-n+1);k<=i;k++){const h=+j[k][2],l=+j[k][3],pc=+j[k-1][4];s+=Math.max(h-l,Math.abs(h-pc),Math.abs(l-pc));c++}return c?s/c:0}
-function localVolAvg(j,i,n=20){const a=j.slice(Math.max(0,i-n),i).map(x=>+x[5]||0);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0}
+function localVolAvg(j,i,n=20){if(volLipsaIn(j,i-n,i-1))return null;const a=j.slice(Math.max(0,i-n),i).map(x=>+x[5]||0);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0}
 function premiumDiscount(j,look=100){const r=j.slice(-look),hi=Math.max(...r.map(x=>+x[2])),lo=Math.min(...r.map(x=>+x[3])),eq=(hi+lo)/2,p=+r.at(-1)[4];return {hi,lo,eq,price:p,zone:p>eq?"PREMIUM":p<eq?"DISCOUNT":"EQUILIBRIUM",pct:(p-lo)/(hi-lo||1)*100}}
 
 function orderBlockLifecycle(j,look=220){
   const start=Math.max(2,j.length-look),zones=[];
   for(let i=start+1;i<j.length;i++){
-    const prev=j[i-1],cur=j[i],po=+prev[1],pc=+prev[4],co=+cur[1],cc=+cur[4],atr=localAtrAt(j,i),body=Math.abs(cc-co),v=+cur[5]||0,vavg=localVolAvg(j,i),disp=atr?body/atr:0,vr=vavg?v/vavg:1;
-    if(disp<1.15||vr<1.05)continue;
+    const prev=j[i-1],cur=j[i],po=+prev[1],pc=+prev[4],co=+cur[1],cc=+cur[4],atr=localAtrAt(j,i),body=Math.abs(cc-co),v=volBara(cur),vavg=localVolAvg(j,i),disp=atr?body/atr:0,vr=v===null||vavg===null?null:vavg?v/vavg:1;
+    // fara volum nu se poate confirma blocul (vr null) - nu se inventeaza unul
+    if(disp<1.15||vr===null||vr<1.05)continue;
     if(pc<po&&cc>+prev[2])zones.push({type:"BULLISH",created:i,low:+prev[3],high:Math.max(po,pc),disp,vr,status:"UNMITIGATED",breaker:false});
     else if(pc>po&&cc<+prev[3])zones.push({type:"BEARISH",created:i,low:Math.min(po,pc),high:+prev[2],disp,vr,status:"UNMITIGATED",breaker:false});
   }
@@ -1655,13 +1690,13 @@ function fvgLifecycleV38(j,look=220){
 }
 function latestSweepConfirmation(j){
   if(j.length<30)return null;const start=Math.max(22,j.length-16);let best=null;
-  for(let i=start;i<j.length-1;i++){const prev=j.slice(i-20,i),ph=Math.max(...prev.map(x=>+x[2])),pl=Math.min(...prev.map(x=>+x[3])),x=j[i],h=+x[2],l=+x[3],c=+x[4],v=+x[5]||0,atr=localAtrAt(j,i),next=j[i+1],nBody=Math.abs(+next[4]-+next[1]),nDir=+next[4]>+next[1]?1:-1,vavg=localVolAvg(j,i);let type=null,dir=0,level=0;
+  for(let i=start;i<j.length-1;i++){const prev=j.slice(i-20,i),ph=Math.max(...prev.map(x=>+x[2])),pl=Math.min(...prev.map(x=>+x[3])),x=j[i],h=+x[2],l=+x[3],c=+x[4],v=volBara(x),atr=localAtrAt(j,i),next=j[i+1],nBody=Math.abs(+next[4]-+next[1]),nDir=+next[4]>+next[1]?1:-1,vavg=localVolAvg(j,i);let type=null,dir=0,level=0;
     if(h>ph&&c<ph){type="BUY-SIDE SWEEP";dir=-1;level=ph}else if(l<pl&&c>pl){type="SELL-SIDE SWEEP";dir=1;level=pl}else continue;
-    const displacement=atr?nBody/atr:0,dispOk=displacement>=.8&&nDir===dir,vr=vavg?v/vavg:1,volOk=vr>=1.2,score=40+(dispOk?35:Math.min(20,displacement*20))+(volOk?25:Math.min(15,vr*8));best={i,type,reclaim:true,dir,level,displacement,dispOk,volumeRatio:vr,volOk,score:clamp(score),ts:+x[0]}
+    const displacement=atr?nBody/atr:0,dispOk=displacement>=.8&&nDir===dir,vr=v===null||vavg===null?null:vavg?v/vavg:1,volOk=vr!==null&&vr>=1.2,score=40+(dispOk?35:Math.min(20,displacement*20))+(volOk?25:vr===null?0:Math.min(15,vr*8));best={i,type,reclaim:true,dir,level,displacement,dispOk,volumeRatio:vr,volOk,score:clamp(score),ts:+x[0]}
   }return best
 }
 function executionFriction(st=window.__radarState){
-  if(!st?.j?.length)return null;const cfg=appSettings(),q=st.q,rows=st.j.slice(-20),notional=rows.reduce((a,x)=>a+(+x[4])*(+x[5]||0),0)/Math.max(1,rows.length),atrPct=+q.atrPct||0;let liqBps=notional>=100000000?1:notional>=20000000?2:notional>=5000000?4:notional>=1000000?7:12;if(st.source==="TWELVEDATA")liqBps+=1;const volBps=Math.min(15,Math.max(0,atrPct*.85)),slip=Math.max(1,liqBps+volBps),fee=+cfg.feeBps||0,round=2*(fee+slip),tier=notional>=100000000?"DEEP":notional>=20000000?"GOOD":notional>=5000000?"MEDIUM":notional>=1000000?"THIN":"VERY THIN",vol=atrPct>=6?"EXTREME":atrPct>=3?"HIGH":atrPct>=1.5?"NORMAL":"LOW",tm=window.__signalState?.tm,entry=tm?(tm.entryLow+tm.entryHigh)/2:null,risk=tm&&entry?Math.abs(entry-tm.stop)/entry:null,costR=risk?round/10000/risk:null;return {feeBps:fee,slippageBps:slip,roundTripBps:round,liquidityTier:tier,volTier:vol,notional,atrPct,costR}
+  if(!st?.j?.length)return null;const cfg=appSettings(),q=st.q,rows=st.j.slice(-20),notional=areVolLipsa(rows)?null:rows.reduce((a,x)=>a+(+x[4])*(+x[5]||0),0)/Math.max(1,rows.length),atrPct=+q.atrPct||0;let liqBps=notional===null?12:notional>=100000000?1:notional>=20000000?2:notional>=5000000?4:notional>=1000000?7:12;if(st.source==="TWELVEDATA")liqBps+=1;const volBps=Math.min(15,Math.max(0,atrPct*.85)),slip=Math.max(1,liqBps+volBps),fee=+cfg.feeBps||0,round=2*(fee+slip),tier=notional===null?"NECUNOSCUT (volum lipsă)":notional>=100000000?"DEEP":notional>=20000000?"GOOD":notional>=5000000?"MEDIUM":notional>=1000000?"THIN":"VERY THIN",vol=atrPct>=6?"EXTREME":atrPct>=3?"HIGH":atrPct>=1.5?"NORMAL":"LOW",tm=window.__signalState?.tm,entry=tm?(tm.entryLow+tm.entryHigh)/2:null,risk=tm&&entry?Math.abs(entry-tm.stop)/entry:null,costR=risk?round/10000/risk:null;return {feeBps:fee,slippageBps:slip,roundTripBps:round,liquidityTier:tier,volTier:vol,notional,atrPct,costR}
 }
 function renderSessionStructure(){
   const st=window.__radarState;if(!st){$("sessionLadder").innerHTML='<div class="emptyState">Run analysis first.</div>';return}const d=sessionStructureData(st.j,st.tf);if(!d)return;$("sessCurrent").textContent=d.intraday?d.curSession:"DAILY TF";$("sessCurrent").className=d.intraday?"sessionActive":"sessionInactive";$("sessHighLow").textContent=d.curHL?`${num(d.curHL.high)} / ${num(d.curHL.low)}`:"Intraday only";$("sessVwap").textContent=Number.isFinite(d.curVwap)?num(d.curVwap):"Intraday only";$("sessOpening").textContent=d.opening?`${num(d.opening.high)} / ${num(d.opening.low)}`:"Intraday only";$("sessPrevDay").textContent=d.prevDay?`${num(d.prevDay.high)} / ${num(d.prevDay.low)}`:"—";$("sessPrevWeek").textContent=d.prevWeekHL?`${num(d.prevWeekHL.high)} / ${num(d.prevWeekHL.low)}`:"—";
@@ -1669,13 +1704,13 @@ function renderSessionStructure(){
 }
 function renderOrderBlocks(){
   const st=window.__radarState;if(!st)return;const zones=orderBlockLifecycle(st.j),p=st.q.price,pd=premiumDiscount(st.j),bull=[...zones].filter(x=>x.type==="BULLISH"&&!x.breaker).sort((a,b)=>Math.abs(a.mid-p)-Math.abs(b.mid-p))[0],bear=[...zones].filter(x=>x.type==="BEARISH"&&!x.breaker).sort((a,b)=>Math.abs(a.mid-p)-Math.abs(b.mid-p))[0],breakers=zones.filter(x=>x.breaker),unmit=zones.filter(x=>x.status==="UNMITIGATED");$("obBull").textContent=bull?`${num(bull.low)}–${num(bull.high)} · ${bull.status}`:"—";$("obBear").textContent=bear?`${num(bear.low)}–${num(bear.high)} · ${bear.status}`:"—";$("obBreakers").textContent=breakers.length;$("obUnmitigated").textContent=unmit.length;$("pdZone").textContent=`${pd.zone} · ${pd.pct.toFixed(0)}%`;$("structureBiasV38").textContent=st.q.structure2?.event||st.q.structure2?.trend||st.q.regime||"—";
-  const shown=[...zones].sort((a,b)=>b.created-a.created).slice(0,12);$("orderBlockRows").innerHTML=shown.length?`<div class="structureRow"><div class="structureCell">Type</div><div class="structureCell">Zone</div><div class="structureCell">Status</div><div class="structureCell">Disp.</div><div class="structureCell">Vol</div><div class="structureCell">Strength</div></div>`+shown.map(x=>`<div class="structureRow"><div class="structureCell ${x.type==="BULLISH"?"zoneBull":"zoneBear"}">${x.type}</div><div class="structureCell">${num(x.low)}–${num(x.high)}</div><div class="structureCell">${x.status}</div><div class="structureCell">${x.disp.toFixed(2)} ATR</div><div class="structureCell">${x.vr.toFixed(2)}×</div><div class="structureCell">${x.strength.toFixed(0)}/100</div></div>`).join(""):'<div class="emptyState">No displacement order blocks found.</div>';window.__structureV38={...(window.__structureV38||{}),orderBlocks:zones,premiumDiscount:pd}
+  const shown=[...zones].sort((a,b)=>b.created-a.created).slice(0,12);$("orderBlockRows").innerHTML=shown.length?`<div class="structureRow"><div class="structureCell">Type</div><div class="structureCell">Zone</div><div class="structureCell">Status</div><div class="structureCell">Disp.</div><div class="structureCell">Vol</div><div class="structureCell">Strength</div></div>`+shown.map(x=>`<div class="structureRow"><div class="structureCell ${x.type==="BULLISH"?"zoneBull":"zoneBear"}">${x.type}</div><div class="structureCell">${num(x.low)}–${num(x.high)}</div><div class="structureCell">${x.status}</div><div class="structureCell">${x.disp.toFixed(2)} ATR</div><div class="structureCell">${(x.vr==null?"—":x.vr.toFixed(2))}×</div><div class="structureCell">${x.strength.toFixed(0)}/100</div></div>`).join(""):'<div class="emptyState">No displacement order blocks found.</div>';window.__structureV38={...(window.__structureV38||{}),orderBlocks:zones,premiumDiscount:pd}
 }
 function renderFvgLifecycle(){
   const st=window.__radarState;if(!st)return;const a=fvgLifecycleV38(st.j),p=st.q.price,bull=a.filter(x=>x.type==="BULLISH"&&["NEW","PARTIAL"].includes(x.status)),bear=a.filter(x=>x.type==="BEARISH"&&["NEW","PARTIAL"].includes(x.status)),mit=a.filter(x=>x.status==="MITIGATED"),part=a.filter(x=>x.status==="PARTIAL"),inv=a.filter(x=>x.status==="INVALIDATED"),active=[...bull,...bear].sort((x,y)=>Math.abs(x.mid-p)-Math.abs(y.mid-p)),near=active[0];$("fvgBullActive").textContent=bull.length;$("fvgBearActive").textContent=bear.length;$("fvgMitigated").textContent=mit.length;$("fvgPartial").textContent=part.length;$("fvgInvalid").textContent=inv.length;$("fvgNearest").textContent=near?`${near.type} · ${num(near.low)}–${num(near.high)} · ${near.status}`:"NONE";
   const shown=[...a].sort((x,y)=>y.created-x.created).slice(0,14);$("fvgRows").innerHTML=shown.length?`<div class="structureRow"><div class="structureCell">Type</div><div class="structureCell">Gap</div><div class="structureCell">Status</div><div class="structureCell">Fill</div><div class="structureCell">Distance</div><div class="structureCell">Age</div></div>`+shown.map(x=>`<div class="structureRow"><div class="structureCell ${x.type==="BULLISH"?"zoneBull":"zoneBear"}">${x.type}</div><div class="structureCell">${num(x.low)}–${num(x.high)}</div><div class="structureCell">${x.status}</div><div class="structureCell">${(100*(x.fill||0)).toFixed(0)}%</div><div class="structureCell">${(100*(x.mid/p-1)).toFixed(2)}%</div><div class="structureCell">${st.j.length-1-x.created} bars</div></div>`).join(""):'<div class="emptyState">No FVGs found.</div>';window.__structureV38={...(window.__structureV38||{}),fvgs:a,nearestFvg:near||null}
 }
-function renderSweepConfirmation(){const st=window.__radarState;if(!st)return;const x=latestSweepConfirmation(st.j);$("sweepType").textContent=x?.type||"NONE";$("sweepReclaim").textContent=x?"YES":"—";$("sweepDisp").textContent=x?`${x.dispOk?"YES":"NO"} · ${x.displacement.toFixed(2)} ATR`:"—";$("sweepVolume").textContent=x?`${x.volOk?"YES":"NO"} · ${x.volumeRatio.toFixed(2)}×`:"—";$("sweepScore").textContent=x?x.score.toFixed(0)+"/100":"—";$("sweepImpact").textContent=x&&x.score>=75?"VALIDATE · STRONG":x&&x.score>=55?"VALIDATE · MEDIUM":"ADVISORY";window.__structureV38={...(window.__structureV38||{}),sweep:x}}
+function renderSweepConfirmation(){const st=window.__radarState;if(!st)return;const x=latestSweepConfirmation(st.j);$("sweepType").textContent=x?.type||"NONE";$("sweepReclaim").textContent=x?"YES":"—";$("sweepDisp").textContent=x?`${x.dispOk?"YES":"NO"} · ${x.displacement.toFixed(2)} ATR`:"—";$("sweepVolume").textContent=x?(x.volumeRatio==null?"— (volum lipsă)":`${x.volOk?"YES":"NO"} · ${x.volumeRatio.toFixed(2)}×`):"—";$("sweepScore").textContent=x?x.score.toFixed(0)+"/100":"—";$("sweepImpact").textContent=x&&x.score>=75?"VALIDATE · STRONG":x&&x.score>=55?"VALIDATE · MEDIUM":"ADVISORY";window.__structureV38={...(window.__structureV38||{}),sweep:x}}
 function renderExecutionFriction(){const x=executionFriction();if(!x)return;$("fricFee").textContent=x.feeBps.toFixed(1)+" bps / side";$("fricSlip").textContent=x.slippageBps.toFixed(1)+" bps / side";$("fricRound").textContent=x.roundTripBps.toFixed(1)+" bps";$("fricLiquidity").textContent=x.liquidityTier;$("fricVol").textContent=x.volTier;$("fricCostR").textContent=Number.isFinite(x.costR)?x.costR.toFixed(2)+" R":"—";window.__structureV38={...(window.__structureV38||{}),friction:x}}
 function structureValidation(){
   const src=analysisSource(),r=journal().filter(x=>(x.source||"BINANCE")===src&&Number.isFinite(metricR(x))),stats=a=>{const v=a.map(metricR).filter(Number.isFinite);return {n:v.length,avg:v.length?v.reduce((x,y)=>x+y,0)/v.length:NaN}};
@@ -1894,9 +1929,9 @@ function startLiquidationTape(){
 }
 
 const ML_FEATURES=["confidence","trend","momentum","volume","structure","adx","hist","mtf","mfi","cmf","micro","sweep","friction"];
-function mlAligned(v,dir){const x=Number.isFinite(+v)?+v:50;return clamp(dir>0?x:100-x)/100}
+function mlAligned(v,dir){const x=v!=null&&v!==""&&Number.isFinite(+v)?+v:50;return clamp(dir>0?x:100-x)/100}
 function mlFeatureRow(x){
-  const dir=x.direction==="SHORT"?-1:1,conf=Math.max(+x.longConf||0,+x.shortConf||0)/100,cmf=Number.isFinite(+x.cmf)?clamp(.5+dir*(+x.cmf)/2,0,1):.5,micro=Number.isFinite(+x.microScore)?clamp(.5+dir*(+x.microScore)/200,0,1):.5;
+  const dir=x.direction==="SHORT"?-1:1,conf=Math.max(+x.longConf||0,+x.shortConf||0)/100,cmf=x.cmf!=null&&Number.isFinite(+x.cmf)?clamp(.5+dir*(+x.cmf)/2,0,1):.5,micro=Number.isFinite(+x.microScore)?clamp(.5+dir*(+x.microScore)/200,0,1):.5;
   let sweep=.5;if(Number.isFinite(+x.sweepScore)&&x.sweepType){const aligned=(dir>0&&String(x.sweepType).startsWith("SELL-SIDE"))||(dir<0&&String(x.sweepType).startsWith("BUY-SIDE"));sweep=clamp(.5+(aligned?1:-1)*(+x.sweepScore)/200,0,1)}
   const friction=Number.isFinite(+x.frictionBps)?clamp(1-(+x.frictionBps)/120,0,1):.5;
   const vals=[conf,mlAligned(x.trendScore,dir),mlAligned(x.momScore,dir),mlAligned(x.volScore,dir),mlAligned(x.structureScore,dir),clamp((+x.adx||20)/50,0,1),mlAligned(x.histUp,dir),mlAligned(x.mtf,dir),mlAligned(x.mfi,dir),cmf,micro,sweep,friction];
@@ -2412,17 +2447,17 @@ function buildVerdictCenterSnapshot(){
   add(vcItem("Base signal engine","Technical",baseBias,`${ss.tm?.direction||"WAIT"} · L ${(+ss.sm?.long||0).toFixed(0)} / S ${(+ss.sm?.short||0).toFixed(0)}`,"Primary directional engine",{weight:.12}));
   add(vcItem("Trend composite","Technical",vcScoreBias(q.trendScore),Number.isFinite(+q.trendScore)?(+q.trendScore).toFixed(0)+"/100":"—","EMA20/50/200 + Supertrend + DMI composite",{weight:.055}));
   add(vcItem("Momentum composite","Technical",vcScoreBias(q.momScore),Number.isFinite(+q.momScore)?(+q.momScore).toFixed(0)+"/100":"—","RSI + MACD + ROC + Stoch RSI composite",{weight:.045}));
-  add(vcItem("Volume / VWAP composite","Technical",vcScoreBias(q.volScore),Number.isFinite(+q.volScore)?(+q.volScore).toFixed(0)+"/100":"—","Relative volume plus VWAP position",{weight:.03}));
+  add(vcItem("Volume / VWAP composite","Technical",(q.volScore==null?NaN:vcScoreBias(q.volScore)),q.volScore!=null&&Number.isFinite(+q.volScore)?(+q.volScore).toFixed(0)+"/100":"—","Relative volume plus VWAP position",{weight:.03}));
   add(vcItem("Structure composite","Technical",vcScoreBias(q.structureScore),Number.isFinite(+q.structureScore)?(+q.structureScore).toFixed(0)+"/100":"—","SMC/structure score and breakout adjustment",{weight:.045}));
   add(vcItem("Multi-timeframe composite","Technical",vcScoreBias(ss.mc?.avg),Number.isFinite(+ss.mc?.avg)?`${(+ss.mc.avg).toFixed(0)}/100 · ${ss.mc.comp||""}`:"—","Weighted 15m/1h/4h/1d context",{weight:.06}));
   add(vcItem("RSI","Technical",Number.isFinite(+q.rsi)?clamp((+q.rsi-50)/25,-1,1):NaN,Number.isFinite(+q.rsi)?(+q.rsi).toFixed(1):"—","Directional around 50; overbought/oversold is not treated as a hard reversal",{weight:.018}));
   add(vcItem("MACD histogram","Technical",vcBoolBias(q.macd),q.macd===true?"POSITIVE":q.macd===false?"NEGATIVE":"—","Sign of MACD histogram",{weight:.02}));
   add(vcItem("Supertrend","Technical",vcTextBias(q.supertrend,["BULL"],["BEAR"]),q.supertrend||"—","Current Supertrend state",{weight:.025}));
   add(vcItem("Ichimoku","Technical",vcTextBias(q.ichimoku,["BULL"],["BEAR"]),q.ichimoku||"—","Current cloud state",{weight:.018}));
-  add(vcItem("VWAP position","Technical",Number.isFinite(+q.price)&&q.vwapAbove!==undefined?(q.vwapAbove?.45:-.45):NaN,q.vwapAbove===true?"ABOVE":q.vwapAbove===false?"BELOW":"—","Price versus rolling VWAP",{weight:.015}));
+  add(vcItem("VWAP position","Technical",Number.isFinite(+q.price)&&typeof q.vwapAbove==="boolean"?(q.vwapAbove?.45:-.45):NaN,q.vwapAbove===true?"ABOVE":q.vwapAbove===false?"BELOW":"—","Price versus rolling VWAP",{weight:.015}));
   add(vcItem("Breakout","Technical",vcTextBias(q.breakout,["UP"],["DOWN"]),q.breakout||"NONE","Breakout relative to recent range",{weight:.022}));
-  add(vcItem("CMF","Technical",Number.isFinite(+q.cmf)?clamp(+q.cmf/.25,-1,1):NaN,Number.isFinite(+q.cmf)?(+q.cmf).toFixed(3):"—","Chaikin Money Flow",{weight:.018}));
-  add(vcItem("MFI","Technical",Number.isFinite(+q.mfi)?clamp((+q.mfi-50)/25,-1,1):NaN,Number.isFinite(+q.mfi)?(+q.mfi).toFixed(1):"—","Money Flow Index around 50",{weight:.015}));
+  add(vcItem("CMF","Technical",q.cmf!=null&&Number.isFinite(+q.cmf)?clamp(+q.cmf/.25,-1,1):NaN,q.cmf!=null&&Number.isFinite(+q.cmf)?(+q.cmf).toFixed(3):"—","Chaikin Money Flow",{weight:.018}));
+  add(vcItem("MFI","Technical",q.mfi!=null&&Number.isFinite(+q.mfi)?clamp((+q.mfi-50)/25,-1,1):NaN,q.mfi!=null&&Number.isFinite(+q.mfi)?(+q.mfi).toFixed(1):"—","Money Flow Index around 50",{weight:.015}));
   add(vcItem("RSI divergence","Technical",vcTextBias(q.divergence,["BULL"],["BEAR"]),q.divergence||"NONE","Detected RSI divergence",{weight:.018}));
 
   const vp=vcSafe(()=>volumeProfile(st.j),null);
@@ -3094,14 +3129,21 @@ const APP_API_TOKEN_SESSION_KEY="cryptoRadarApiTokenV54";
 // stergea la inchiderea tabului, deci pe telefon o cerea de fiecare data.
 // sessionStorage ramane citit ca sa nu cada sesiunea deschisa in momentul livrarii.
 function apiSessionToken(){try{return localStorage.getItem(APP_API_TOKEN_SESSION_KEY)||sessionStorage.getItem(APP_API_TOKEN_SESSION_KEY)||""}catch{return ""}}
-function saveApiSessionToken(){const v=$("apiSessionToken")?.value?.trim()||"";try{if(v){localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}else{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}}catch{}renderApiAuthStatus();toast(v?"Parola e ținută minte pe acest dispozitiv":"Parola a fost ștearsă",v?"good":"warn")}
-function clearApiSessionToken(){try{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}catch{}if($("apiSessionToken"))$("apiSessionToken").value="";renderApiAuthStatus();toast("Parola a fost uitată de pe acest dispozitiv","good")}
+function saveApiSessionToken(){apiTokenRespins=null;const v=$("apiSessionToken")?.value?.trim()||"";try{if(v){localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}else{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}}catch{}renderApiAuthStatus();toast(v?"Parola e ținută minte pe acest dispozitiv":"Parola a fost ștearsă",v?"good":"warn")}
+function clearApiSessionToken(){apiTokenRespins=null;try{localStorage.removeItem(APP_API_TOKEN_SESSION_KEY);sessionStorage.removeItem(APP_API_TOKEN_SESSION_KEY)}catch{}if($("apiSessionToken"))$("apiSessionToken").value="";renderApiAuthStatus();toast("Parola a fost uitată de pe acest dispozitiv","good")}
 // Un camp GOL peste o parola salvata l-ar face sa creada ca trebuie s-o puna
 // din nou - adica exact ce ne-am propus sa nu mai faca. Se precompleteaza.
 function renderApiAuthStatus(){const t=apiSessionToken();
   if($("apiAuthStatus"))$("apiAuthStatus").textContent=t?"ȚINUTĂ MINTE PE ACEST DISPOZITIV":"NEPUSĂ";
-  const c=$("apiSessionToken");if(c&&!c.value&&t)c.value=t}
-function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});if(same){const token=apiSessionToken();if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials})}
+  const c=$("apiSessionToken");if(c&&!c.value&&t)c.value=t;
+  // Prima deschidere fara parola: aplicatia spune UNDE se pune, nu doar "401".
+  if($("parolaLipsa"))$("parolaLipsa").hidden=!!t}
+// v74.6: serverul blocheaza IP-ul un minut (429 AUTH_RATE_LIMITED) dupa 10
+// parole gresite pe minut - iar Tabloul intreaba la 8 s. Un token pe care
+// serverul l-a respins (AUTH_INVALID) nu mai pleaca AUTOMAT pana cand omul
+// nu pune alta parola (sau o salveaza din nou) in Setari.
+let apiTokenRespins=null;
+function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials}).then(r=>{if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID")apiTokenRespins=token;return r},()=>r);return r})}
 async function getJSON(url){
   const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
   const raw=await r.text();
@@ -3238,7 +3280,7 @@ async function pionexTop100(){
       return pionexUniverse
     }
     pionexUniverse=staticPionexUniverse();pionexUniverseUpdated=Date.now();
-    const snapRef=referenceSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE,30,90);setScanUniverseStatus("PIONEX_SNAPSHOT",`${reason} · embedded Pionex/USDT core · ${snapRef.label} · Binance candles${snapRef.state==="STALE"?" · refresh live/saved universe before relying on membership":""}`);
+    const snapRef=pionexSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE);setScanUniverseStatus("PIONEX_SNAPSHOT",`${reason} · embedded Pionex/USDT core · ${snapRef.label} · Binance candles${snapRef.state==="STALE"?" · refresh live/saved universe before relying on membership":""}`);
     if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}`;
     if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Fallback snapshot ${PIONEX_FALLBACK_SNAPSHOT_DATE}`;
     return pionexUniverse
@@ -3280,6 +3322,16 @@ async function pionexKlines(pionexSymbol,tf,limit=300){
     return [ts,String(o),String(h),String(l),String(c),String(v),ts+1,String(v*c)]
   }).sort((a,b)=>a[0]-b[0])
 }
+// v74.6: lista perechilor SPOT de pe Binance, o data pe ora. O moneda Pionex
+// care nu e pe Binance producea cate 8 erori CORS (cate o gazda) la fiecare scan.
+function binanceSimboluriSpot(){
+  return memoRequest(cacheKey("binance-simboluri","spot"),3600000,async()=>{
+    const d=await market("/ticker/price");
+    if(!Array.isArray(d)||d.length<50)throw Error("lista Binance incompleta");
+    return new Set(d.map(x=>String(x.symbol||"").toUpperCase()))
+  })
+}
+function scanButonStop(activ){const x=$("scanCancelBtn");if(x){x.disabled=!activ;x.hidden=!activ}}
 async function pionexUniverseBinanceKlines(item,tf,limit=300){
   const symbol=`${String(item.base||"").toUpperCase()}USDT`;
   return klines(symbol,tf,limit)
@@ -3461,7 +3513,7 @@ async function analysisTicker(sym,src=analysisSource()){
 }
 async function analysisMtfData(sym,src=analysisSource()){
   const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"],errors={};
-  const jobs=await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(await analysisKlines(sym,tf,300,src),mode)}}catch(e){errors[tf]=String(e?.message||e||"MTF unavailable");return null}}));
+  const jobs=await Promise.all(tfs.map(async tf=>{try{return {tf,...calc(bareInchise(await analysisKlines(sym,tf,300,src),tf,Date.now(),src),mode)}}catch(e){errors[tf]=String(e?.message||e||"MTF unavailable");return null}}));
   const rows=jobs.filter(Boolean);rows.expected=tfs.length;rows.coverage=rows.length/tfs.length;rows.missing=tfs.filter(tf=>!rows.some(x=>x.tf===tf));rows.errors=errors;rows.identity={market:assetClass(),symbol:sym,source:src,ts:Date.now()};return rows
 }
 let pionexLiveTimer=null,pionexLiveSeq=0;
@@ -3470,7 +3522,7 @@ function stopPionexLive(){
 }
 function stopBinanceLive(){
   try{liveSocketSeq++;if(wsReconnectTimer){clearTimeout(wsReconnectTimer);wsReconnectTimer=null}if(liveSocket){liveSocket.onclose=null;liveSocket.close();liveSocket=null}}catch{}
-  if($("wsDot"))$("wsDot").classList.remove("live")
+  if($("wsDot"))$("wsDot")?.classList.remove("live")
 }
 function stopProviderLive(){stopPionexLive();stopBinanceLive();stopStockLive()}
 function startPionexLive(sym){
@@ -3481,13 +3533,13 @@ function startPionexLive(sym){
       const d=await analysisTicker(sym,"PIONEX");if(seq!==pionexLiveSeq)return;
       const px=Number(d.lastPrice),ch=Number(d.priceChangePercent);lastWsTick=Date.now();markFresh("ws");
       if($("wsStatus")){$("wsStatus").textContent="PIONEX LIVE";$("wsStatus").classList.remove("wsStale")}
-      if($("wsDot"))$("wsDot").classList.add("live");
+      if($("wsDot"))$("wsDot")?.classList.add("live");
       if(window.__radarState&&window.__radarState.symbol===sym&&window.__radarState.source==="PIONEX"){
         $("heroPrice").textContent=num(px);$("price").textContent=num(px);$("hero24").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%"
       }
     }catch{
       if($("wsStatus")){$("wsStatus").textContent="PIONEX RETRY";$("wsStatus").classList.add("wsStale")}
-      if($("wsDot"))$("wsDot").classList.remove("live")
+      if($("wsDot"))$("wsDot")?.classList.remove("live")
     }
   }
   if(!pionexScannerActive&&!pionexCooldownRemaining())poll();pionexLiveTimer=setInterval(()=>{if(!pionexScannerActive&&!pionexCooldownRemaining())poll()},30000)
@@ -3495,7 +3547,7 @@ function startPionexLive(sym){
 function stopStockLive(){stockLiveSeq++;if(stockLiveTimer){clearInterval(stockLiveTimer);stockLiveTimer=null}}
 function startStockLive(sym){
   stopPionexLive();stopBinanceLive();stopStockLive();const seq=++stockLiveSeq;
-  async function poll(){if(seq!==stockLiveSeq)return;try{const d=await stockTicker(sym);if(seq!==stockLiveSeq)return;const px=Number(d.lastPrice),ch=Number(d.priceChangePercent);lastWsTick=Date.now();markFresh("ws");if($("wsStatus")){$("wsStatus").textContent="US STOCKS";$("wsStatus").classList.remove("wsStale")}if($("wsDot"))$("wsDot").classList.add("live");if(window.__radarState?.symbol===sym&&window.__radarState?.source==="TWELVEDATA"){$("heroPrice").textContent=num(px);$("price").textContent=num(px);$("hero24").textContent=pctText(ch);$("change").textContent=pctText(ch)}}catch{if($("wsStatus"))$("wsStatus").textContent="STOCK DATA RETRY"}}
+  async function poll(){if(seq!==stockLiveSeq)return;try{const d=await stockTicker(sym);if(seq!==stockLiveSeq)return;const px=botiNr(d.lastPrice),ch=botiNr(d.priceChangePercent);lastWsTick=Date.now();markFresh("ws");if($("wsStatus")){$("wsStatus").textContent="US STOCKS";$("wsStatus").classList.remove("wsStale")}if($("wsDot"))$("wsDot")?.classList.add("live");if(window.__radarState?.symbol===sym&&window.__radarState?.source==="TWELVEDATA"){$("heroPrice").textContent=px===null?"—":num(px);$("price").textContent=px===null?"—":num(px);$("hero24").textContent=ch===null?"—":pctText(ch);$("change").textContent=ch===null?"—":pctText(ch)}}catch{if($("wsStatus"))$("wsStatus").textContent="STOCK DATA RETRY"}}
   poll();stockLiveTimer=setInterval(poll,30000)
 }
 function startProviderLive(sym,src=analysisSource()){
@@ -3518,12 +3570,13 @@ function superTrend(h,l,c,atr,n=14,mult=2.8){
  for(let i=0;i<len;i++){let mid=(h[i]+l[i])/2,bu=mid+mult*atr[i],bd=mid-mult*atr[i];if(i===0){up[i]=bu;dn[i]=bd;line[i]=bd;continue}up[i]=(bu<up[i-1]||c[i-1]>up[i-1])?bu:up[i-1];dn[i]=(bd>dn[i-1]||c[i-1]<dn[i-1])?bd:dn[i-1];if(c[i]>up[i-1])trend[i]=1;else if(c[i]<dn[i-1])trend[i]=-1;else trend[i]=trend[i-1];line[i]=trend[i]===1?dn[i]:up[i]}
  return {trend,line}
 }
-function smcState(h,l,c,v){
+function smcState(h,l,c,v,volOk=true){
  let i=c.length-1,start=Math.max(5,i-20),ph=Math.max(...h.slice(start,i)),pl=Math.min(...l.slice(start,i));
  let bosUp=c[i]>ph,bosDown=c[i]<pl,sweepHigh=h[i]>ph&&c[i]<ph,sweepLow=l[i]<pl&&c[i]>pl;
  let fvg="NONE";for(let z=Math.max(2,i-12);z<=i;z++){if(l[z]>h[z-2])fvg="BULL";else if(h[z]<l[z-2])fvg="BEAR"}
  let volBase=v.slice(Math.max(0,i-20),i).reduce((a,b)=>a+b,0)/Math.max(1,Math.min(20,i));
- let trap=(bosUp&&v[i]<volBase*.9)||(bosDown&&v[i]<volBase*.9)||sweepHigh||sweepLow;
+ // fara volum in fereastra nu se poate spune "breakout pe volum slab" - ramane doar sweep-ul
+ let trap=(volOk&&((bosUp&&v[i]<volBase*.9)||(bosDown&&v[i]<volBase*.9)))||sweepHigh||sweepLow;
  let score=50;if(bosUp)score+=24;if(bosDown)score-=24;if(sweepLow)score+=16;if(sweepHigh)score-=16;if(fvg==="BULL")score+=8;if(fvg==="BEAR")score-=8;if(trap&&bosUp)score-=10;if(trap&&bosDown)score+=10;
  return {bos:bosUp?"BOS UP":bosDown?"BOS DOWN":"NONE",sweep:sweepLow?"SWEEP LOW":sweepHigh?"SWEEP HIGH":trap?"LOW-VOL BREAK":"NONE",fvg,trap,score:Math.max(0,Math.min(100,score)),prevHigh:ph,prevLow:pl}
 }
@@ -3590,6 +3643,7 @@ function candleDeltaProxy(j){
  for(const x of j){let h=+x[2],l=+x[3],c=+x[4],v=+x[5],range=h-l,clv=range?Math.max(-1,Math.min(1,(2*c-h-l)/range)):0,delta=v*clv;d.push(delta);acc+=delta;cvd.push(acc)}
  let i=j.length-1,look=Math.min(20,i),pchg=+j[i][4]-+j[i-look][4],cchg=cvd[i]-cvd[i-look],div="NONE";
  if(pchg>0&&cchg<0)div="BEAR DIV";else if(pchg<0&&cchg>0)div="BULL DIV";
+ if(volLipsaIn(j,i-look,i))return {delta:null,deltaPct:null,cvd:null,slope20:null,divergence:"N/A",series:[]};
  let vol=+j[i][5]||1;return {delta:d[i],deltaPct:d[i]/vol*100,cvd:cvd[i],slope20:cchg/Math.max(1,look),divergence:div,series:cvd.slice(-160)}
 }
 function keltnerState(h,l,c,n=20,mult=1.5){const mid=ema(c,n),atr=ATR(h,l,c,n),i=c.length-1;return {mid:mid[i],upper:mid[i]+mult*atr[i],lower:mid[i]-mult*atr[i],atr:atr[i]}}
@@ -3615,9 +3669,9 @@ function realizedVolatility(c,n=20){let r=[];for(let i=1;i<c.length;i++)r.push(M
 function rollingRvPercentile(c,n=20,look=160){let vals=[];for(let end=Math.max(n+1,c.length-look);end<=c.length;end++){let v=realizedVolatility(c.slice(0,end),n);if(Number.isFinite(v))vals.push(v)}let cur=vals[vals.length-1]||0;return {value:cur,percentile:pctRank(vals,cur)}}
 function parkinsonVol(h,l,n=20){let a=[];for(let i=Math.max(0,h.length-n);i<h.length;i++){if(l[i]>0&&h[i]>0)a.push(Math.log(h[i]/l[i])**2)}return a.length?Math.sqrt(a.reduce((x,y)=>x+y,0)/(4*Math.log(2)*a.length)*n)*100:0}
 function garmanKlassVol(j,n=20){let a=[];for(const x of j.slice(-n)){let o=+x[1],h=+x[2],l=+x[3],c=+x[4];if(o>0&&h>0&&l>0&&c>0)a.push(.5*Math.log(h/l)**2-(2*Math.log(2)-1)*Math.log(c/o)**2)}let v=a.length?a.reduce((x,y)=>x+y,0)/a.length:0;return Math.sqrt(Math.max(0,v)*n)*100}
-function weightedVwapBand(j,n=50){const a=j.slice(-n);let sw=0,sp=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];sw+=w;sp+=p*w}let mid=sw?sp/sw:+a[a.length-1][4],varw=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];varw+=w*(p-mid)**2}let sd=sw?Math.sqrt(varw/sw):0;return {mid,sd,u1:mid+sd,l1:mid-sd,u2:mid+2*sd,l2:mid-2*sd}}
+function weightedVwapBand(j,n=50){const a=j.slice(-n);if(areVolLipsa(a))return {mid:null,sd:null,u1:null,l1:null,u2:null,l2:null};let sw=0,sp=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];sw+=w;sp+=p*w}let mid=sw?sp/sw:+a[a.length-1][4],varw=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];varw+=w*(p-mid)**2}let sd=sw?Math.sqrt(varw/sw):0;return {mid,sd,u1:mid+sd,l1:mid-sd,u2:mid+2*sd,l2:mid-2*sd}}
 function periodStart(ts,type){const d=new Date(ts),y=d.getUTCFullYear(),m=d.getUTCMonth(),day=d.getUTCDate();if(type==="day")return Date.UTC(y,m,day);if(type==="month")return Date.UTC(y,m,1);let dow=(d.getUTCDay()+6)%7;return Date.UTC(y,m,day-dow)}
-function calendarVwap(j,type){const start=periodStart(+j[j.length-1][0],type),a=j.filter(x=>+x[0]>=start);if(!a.length)return NaN;let sw=0,sp=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];sw+=w;sp+=p*w}return sw?sp/sw:NaN}
+function calendarVwap(j,type){const start=periodStart(+j[j.length-1][0],type),a=j.filter(x=>+x[0]>=start);if(!a.length)return NaN;if(areVolLipsa(a))return null;let sw=0,sp=0;for(const x of a){let p=(+x[2]+ +x[3]+ +x[4])/3,w=+x[5];sw+=w;sp+=p*w}return sw?sp/sw:NaN}
 function previousPeriodHL(j,type){const last=+j[j.length-1][0],cur=periodStart(last,type),prev=type==="day"?cur-86400000:cur-7*86400000,a=j.filter(x=>+x[0]>=prev&&+x[0]<cur);if(!a.length)return null;return {high:Math.max(...a.map(x=>+x[2])),low:Math.min(...a.map(x=>+x[3]))}}
 function equalLiquidity(h,l,atrNow,look=60){const start=Math.max(0,h.length-look),tol=Math.max(atrNow*.15,1e-12);let eh=null,el=null;for(let i=h.length-1;i>=start;i--){for(let k=i-2;k>=start;k--){if(eh==null&&Math.abs(h[i]-h[k])<=tol)eh=(h[i]+h[k])/2;if(el==null&&Math.abs(l[i]-l[k])<=tol)el=(l[i]+l[k])/2;if(eh!=null&&el!=null)return {equalHigh:eh,equalLow:el}}}return {equalHigh:eh,equalLow:el}}
 function fvgLifecycle(j,look=80){
@@ -3628,10 +3682,12 @@ function fvgLifecycle(j,look=80){
 function liquidityMap(j,atrNow){const h=j.map(x=>+x[2]),l=j.map(x=>+x[3]),c=+j[j.length-1][4],pd=previousPeriodHL(j,"day"),pw=previousPeriodHL(j,"week"),eq=equalLiquidity(h,l,atrNow),hi=Math.max(...h.slice(-50)),lo=Math.min(...l.slice(-50)),mid=(hi+lo)/2;return {prevDay:pd,prevWeek:pw,equalHigh:eq.equalHigh,equalLow:eq.equalLow,premium:c>=mid?"PREMIUM":"DISCOUNT",mid,fvg:fvgLifecycle(j)}}
 function regimeFusion(q){let trend=0,range=0,reasons=[];if(q.chop<38){trend+=2;reasons.push("low CHOP")}else if(q.chop>61){range+=2;reasons.push("high CHOP")}if(q.efficiency>=.45){trend+=2;reasons.push("efficient move")}else if(q.efficiency<.25){range+=1;reasons.push("low efficiency")}if(q.hurst>=.55){trend+=1;reasons.push("persistent Hurst")}else if(q.hurst<=.45){range+=1;reasons.push("mean-reverting Hurst")}if(q.adx>=25)trend+=1;else range+=1;let state=trend>=4?"TRENDING":range>=4?(q.hurst<=.45?"MEAN-REVERTING":"CHOPPY"):"TRANSITION",quality=Math.max(0,Math.min(100,50+(trend-range)*10));return {state,quality,reason:reasons.join(" · ")||"mixed regime evidence"}}
 function calc(j,mode="auto"){
- let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>+x[5]),i=c.length-1;
+ let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>volBara(x)??0),i=c.length-1;
+ // ferestrele exacte ale indicatorilor de volum (vezi rollingVWAP/MFI/CMF/OBV/vr mai jos)
+ const lipsaVwap=volLipsaIn(j,i-49,i),lipsaMfi=volLipsaIn(j,i-13,i),lipsaCmf=volLipsaIn(j,i-19,i),lipsaVr=volLipsaIn(j,i-19,i),lipsaObv=volLipsaIn(j,i-19,i),lipsaSmc=volLipsaIn(j,i-20,i);
  let e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,z)=>x-m26[z]),sig=ema(m,9),hist=m.map((x,z)=>x-sig[z]);
  let atr=ATR(hi,lo,c,14),dm=DMI(hi,lo,c,14),stoch=stochRSI(rr,14),ma20=sma(c,20),sd20=stddev(c,20),vwap=rollingVWAP(hi,lo,c,v,50),mfiArr=MFI(hi,lo,c,v,14),cmfArr=CMF(hi,lo,c,v,20),obvArr=OBV(c,v),ichi=ichimoku(hi,lo,c),divergence=rsiDivergence(c,rr),levels=levelLadder(hi,lo,c,50);
- let atrPct=atr[i]/c[i]*100,p=profileParams(mode,atrPct,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v),structure2=swingStructure(hi,lo,c,3);
+ let atrPct=atr[i]/c[i]*100,p=profileParams(mode,atrPct,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v,!lipsaSmc),structure2=swingStructure(hi,lo,c,3);
  let deltaFlow=candleDeltaProxy(j),ttm=ttmSqueeze(hi,lo,c,20),chop=choppinessIndex(hi,lo,c,14),efficiency=efficiencyRatio(c,20),hurst=hurstExponent(c,80),rv=rollingRvPercentile(c,20,160),parkVol=parkinsonVol(hi,lo,20),gkVol=garmanKlassVol(j,20),vwapBands=weightedVwapBand(j,50),calendarVwaps={day:calendarVwap(j,"day"),week:calendarVwap(j,"week"),month:calendarVwap(j,"month")};
  let vm=v.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,v.length),vr=v[i]/(vm||1),roc10=(c[i]/c[Math.max(0,i-10)]-1)*100;
  let upper=ma20[i]+2*sd20[i],lower=ma20[i]-2*sd20[i],bbpos=(c[i]-lower)/Math.max(upper-lower,1e-12)*100;
@@ -3640,20 +3696,20 @@ function calc(j,mode="auto"){
  trendScore+=c[i]>e20[i]?9:-9;trendScore+=e20[i]>e50[i]?11:-11;trendScore+=e50[i]>e200[i]?13:-13;trendScore+=st.trend[i]>0?12:-12;trendScore+=dm.pdi[i]>dm.mdi[i]?5:-5;
  trendScore=Math.max(0,Math.min(100,trendScore));
  let momScore=50;momScore+=rr[i]>=55?10:rr[i]<=45?-10:0;momScore+=hist[i]>0?13:-13;momScore+=roc10>0?10:-10;momScore+=stoch[i]>55?7:stoch[i]<45?-7:0;momScore=Math.max(0,Math.min(100,momScore));
- let volScore=50;if(vr>=1.5)volScore+=c[i]>=c[i-1]?24:-24;else if(vr>=1.1)volScore+=c[i]>=c[i-1]?12:-12;if(c[i]>vwap[i])volScore+=8;else volScore-=8;volScore=Math.max(0,Math.min(100,volScore));
+ let volScore=null;if(!lipsaVr&&!lipsaVwap){volScore=50;if(vr>=1.5)volScore+=c[i]>=c[i-1]?24:-24;else if(vr>=1.1)volScore+=c[i]>=c[i-1]?12:-12;if(c[i]>vwap[i])volScore+=8;else volScore-=8;volScore=Math.max(0,Math.min(100,volScore))}
  let structureScore=smc.score;if(bo==="UP")structureScore=Math.min(100,structureScore+12);if(bo==="DOWN")structureScore=Math.max(0,structureScore-12);
  let regime=dm.adx[i]>=25?(trendScore>=55?"TREND BULL":"TREND BEAR"):(atrPct>=3?"VOLATILE RANGE":"RANGE"),liquidity=liquidityMap(j,atr[i]);
  let w=mode==="scalp"?[.25,.32,.18,.25]:mode==="swing"?[.42,.20,.12,.26]:[.34,.27,.15,.24];
  if(mode==="auto"&&regime==="RANGE")w=[.22,.28,.20,.30];
- let score=trendScore*w[0]+momScore*w[1]+volScore*w[2]+structureScore*w[3];
+ let score=volScore===null?(trendScore*w[0]+momScore*w[1]+structureScore*w[3])/(w[0]+w[1]+w[3]):trendScore*w[0]+momScore*w[1]+volScore*w[2]+structureScore*w[3];
  if(rr[i]>78)score-=5;if(rr[i]<22)score+=5;if(smc.trap&&bo==="UP")score-=7;if(smc.trap&&bo==="DOWN")score+=7;
  score=Math.max(0,Math.min(100,score));
  let threshold=p.signal,ver=score>=threshold?"BULLISH":score<=100-threshold?"BEARISH":"NEUTRAL",signal=score>=threshold+2?"LONG":score<=98-threshold?"SHORT":"WAIT";
  let confluence=Math.min(100,Math.abs(score-50)*2),quality=confluence>=78?"A":confluence>=62?"B":confluence>=46?"C":"D";
  return{
   price:c[i],score,signal,quality,confluence,regime,trendScore,momScore,volScore,structureScore,structure2,
-  rsi:rr[i],stoch:stoch[i],mfi:mfiArr[i],cmf:cmfArr[i],obvSlope:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr,ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
-  adx:dm.adx[i],pdi:dm.pdi[i],mdi:dm.mdi[i],supertrend:st.trend[i]>0?"BULL":"BEAR",bbpos,vwapAbove:c[i]>=vwap[i],levels,
+  rsi:rr[i],stoch:stoch[i],mfi:lipsaMfi?null:mfiArr[i],cmf:lipsaCmf?null:cmfArr[i],obvSlope:lipsaObv?null:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr:lipsaVr?null:vr,volumLipsa:areVolLipsa(j),ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
+  adx:dm.adx[i],pdi:dm.pdi[i],mdi:dm.mdi[i],supertrend:st.trend[i]>0?"BULL":"BEAR",bbpos,vwapAbove:lipsaVwap?null:c[i]>=vwap[i],levels,
   atr:atr[i],atrPct,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,smc,
   deltaFlow,ttm,chop,efficiency,hurst,rv20:rv.value,rvPercentile:rv.percentile,parkVol,gkVol,vwapBands,calendarVwaps,liquidity,
   candles:j.slice(-160),closes:c.slice(-160),e20:e20.slice(-160),e50:e50.slice(-160)
@@ -3692,12 +3748,13 @@ function historicalProbability(j,horizon=4){
   if(n<260)return null;
   const e20=ema(c,20), e50=ema(c,50), e200=ema(c,200), rr=RSI(c);
   const m12=ema(c,12), m26=ema(c,26), mac=m12.map((x,i)=>x-m26[i]), sig=ema(mac,9);
-  const feat=(i)=>{
+  let feat=(i)=>{
     if(i<205)return null;
     let a=Math.max(0,i-19), vm=0; for(let z=a;z<=i;z++)vm+=v[z]; vm/=Math.max(1,i-a+1);
     return [(c[i]/e20[i]-1)*100,(e20[i]/e50[i]-1)*100,(e50[i]/e200[i]-1)*100,(rr[i]-50)/10,(mac[i]-sig[i])/(c[i]||1)*10000,Math.log(Math.max(v[i]/(vm||1),.05))];
   };
   const cur=feat(n-1); if(!cur)return null;
+  if(areVolLipsa(j)){cur[5]=0;const f0=feat;feat=(i)=>{const f=f0(i);if(f)f[5]=0;return f}}
   let samples=[], scales=[1.2,1,1,1,1,.8];
   for(let i=205;i<n-horizon-2;i+=2){
     let f=feat(i), d=0;
@@ -3709,8 +3766,42 @@ function historicalProbability(j,horizon=4){
   let k=Math.min(60,Math.max(20,Math.floor(samples.length*.12))), near=samples.slice(0,k), ws=0, upw=0, av=0;
   near.forEach(x=>{let w=1/(.25+x.dist);ws+=w;if(x.ret>0)upw+=w;av+=x.ret*w});
   let up=upw/ws*100, down=100-up, avg=av/ws, strength=Math.abs(up-50)*2;
-  return {up,down,avg,k,strength,ver:up>=58?"BULLISH":up<=42?"BEARISH":"NEUTRAL"};
+  // v74.6: banda de zgomot. Masurat: pe mers ALEATOR kNN-ul ghiceste directia
+  // in 48,8% din cazuri - deci procentul, singur, nu dovedeste nimic. Banda e
+  // intervalul binomial 95% in jurul lui 50%, pe numarul EFECTIV de analogi
+  // (ponderile inegale il micsoreaza). Cat e in banda: NEUTRAL, fara culoare.
+  let w2=0;near.forEach(x=>{let w=1/(.25+x.dist);w2+=w*w});
+  const nEff=w2?ws*ws/w2:k,banda=1.96*Math.sqrt(.25/Math.max(1,nEff))*100,inBanda=Math.abs(up-50)<=banda;
+  return {up,down,avg,k,strength,banda,nEff,inBanda,nedovedit:true,ver:inBanda?"NEUTRAL":up>=58?"BULLISH":up<=42?"BEARISH":"NEUTRAL"};
 }
+// Eticheta afisata pentru kNN: procentul, banda si "nedovedit" - niciodata singur.
+function knnEticheta(hp){
+  if(!hp||!Number.isFinite(+hp.up))return {text:"Hist —",cls:"neutral"};
+  const b=Number.isFinite(+hp.banda)?+hp.banda:null,inBanda=b===null||Math.abs(hp.up-50)<=b;
+  return {text:`Hist ↑ ${(+hp.up).toFixed(0)}%${b!==null?" ±"+b.toFixed(0):""} · nedovedit`,cls:inBanda?"neutral":cls(hp.ver)}
+}
+// v74.6: bara in FORMARE (deschisa acum, inca se misca) nu intra in semnale:
+// un semnal calculat pe ea se schimba pana la inchidere si jurnalul automat il
+// retinea ca si cum ar fi fost final. Pretul viu ramane doar pentru afisare.
+// Runda 1: la actiuni pe 1d, functions/api/stocks.js (nyCloseUtcMs) pune pe
+// bara ora INCHIDERII bursei (20:00/21:00 UTC), nu a deschiderii - acolo bara e
+// in formare doar daca ora ei e inca in viitor. Restul surselor (Binance,
+// Pionex, actiuni intraday) poarta ora de DESCHIDERE: in formare = t + interval > acum.
+function bareInchise(j,tf,acum=Date.now(),sursa=null){
+  if(!Array.isArray(j)||!j.length)return j||[];
+  const ms=tfMinutes(tf)*60000,t=+j[j.length-1][0];
+  if(!Number.isFinite(t))return j;
+  const inFormare=sursa==="TWELVEDATA"&&tf==="1d"?t>acum:t+ms>acum;
+  return inFormare?j.slice(0,-1):j
+}
+// Runda 1 (regula controlorului): volumul LIPSA (null de la serverul de actiuni)
+// nu mai e 0. O lumanare fara volum in fereastra unui indicator de volum face
+// indicatorul null ("—"), iar volScore null iese din scor (ponderea lui se scoate
+// din numitor). Cu volum complet (cripto) totul ramane exact ca inainte.
+function volBara(x){const v=x&&x[5];if(v==null||v==="")return null;const n=+v;return Number.isFinite(n)?n:null}
+function volLipsaIn(j,de,pana){if(!Array.isArray(j))return false;for(let k=Math.max(0,de);k<=Math.min(j.length-1,pana);k++)if(volBara(j[k])===null)return true;return false}
+function areVolLipsa(rows){return volLipsaIn(rows,0,(rows||[]).length-1)}
+function numSau(x){return x==null||!Number.isFinite(+x)?"—":num(x)}
 function historicalSet(j){return {h1:historicalProbability(j,1),h4:historicalProbability(j,4),h12:historicalProbability(j,12)}}
 
 async function loadFearGreed(){
@@ -3734,10 +3825,13 @@ function mtfComposite(m){
 }
 
 function signalModel(q,hs,mc){
-  const hp=hs&&hs.h4?hs.h4:null;
-  const histUp=hp?hp.up:50,histDown=hp?hp.down:50;
-  let long=0.42*q.score+0.22*histUp+0.20*mc.avg+0.10*q.structureScore+0.06*q.volScore;
-  let short=0.42*(100-q.score)+0.22*histDown+0.20*(100-mc.avg)+0.10*(100-q.structureScore)+0.06*(100-q.volScore);
+  // v74.6: kNN are pondere 0 in scor (nedovedit: 48,8% directie pe mers aleator).
+  // Se pune 50 = neutru, ca pragurile si scala scorului sa ramana aceleasi.
+  const histUp=50,histDown=50;
+  // volScore null (volum lipsa): ponderea lui (0.06) iese din numitor
+  const faraVol=q.volScore==null,numitor=faraVol?.94:1;
+  let long=(0.42*q.score+0.22*histUp+0.20*mc.avg+0.10*q.structureScore+(faraVol?0:0.06*q.volScore))/numitor;
+  let short=(0.42*(100-q.score)+0.22*histDown+0.20*(100-mc.avg)+0.10*(100-q.structureScore)+(faraVol?0:0.06*(100-q.volScore)))/numitor;
   if(q.divergence==="BULL DIV")long+=4;
   if(q.divergence==="BEAR DIV")short+=4;
   if(q.ichimoku==="BULL")long+=3;
@@ -3767,8 +3861,8 @@ function updateSignalUI(q,hs,mc){
   window.__signalState={sm,tm,q,hs,mc};
   $("longConf").textContent=sm.long.toFixed(0)+"/100";$("shortConf").textContent=sm.short.toFixed(0)+"/100";
   $("longBar").style.width=sm.long+"%";$("shortBar").style.width=sm.short+"%";
-  $("longWhy").textContent=`Trend ${q.trendScore.toFixed(0)} · hist ↑ ${(hs.h4?hs.h4.up:50).toFixed(0)} · MTF ${mc.avg.toFixed(0)} · SMC ${q.structureScore.toFixed(0)}`;
-  $("shortWhy").textContent=`Trend ${(100-q.trendScore).toFixed(0)} · hist ↓ ${(hs.h4?hs.h4.down:50).toFixed(0)} · MTF ${(100-mc.avg).toFixed(0)} · SMC ${(100-q.structureScore).toFixed(0)}`;
+  $("longWhy").textContent=`Trend ${q.trendScore.toFixed(0)} · hist ↑ ${(hs.h4?hs.h4.up:50).toFixed(0)} (pondere 0, nedovedit) · MTF ${mc.avg.toFixed(0)} · SMC ${q.structureScore.toFixed(0)}`;
+  $("shortWhy").textContent=`Trend ${(100-q.trendScore).toFixed(0)} · hist ↓ ${(hs.h4?hs.h4.down:50).toFixed(0)} (pondere 0, nedovedit) · MTF ${(100-mc.avg).toFixed(0)} · SMC ${(100-q.structureScore).toFixed(0)}`;
   $("tradeDecision").textContent=tm.direction;$("tradeDecision").className="value "+(tm.direction==="LONG"?"good":tm.direction==="SHORT"?"bad":"neutral");
   for(const [id,val] of [["entryLow",tm.entryLow],["entryHigh",tm.entryHigh],["signalStop",tm.stop],["tp1",tm.tp1]])$(id).textContent=tm.direction==="WAIT"?"—":num(val);
   $("tp23").textContent=tm.direction==="WAIT"?"—":`${num(tm.tp2)} / ${num(tm.tp3)}`;
@@ -3951,22 +4045,22 @@ function renderSrHeat(q){
 }
 function updateOrderFlow(q,deriv){
  const last=q.candles[q.candles.length-1],o=+last[1],h=+last[2],l=+last[3],c=+last[4],range=Math.max(h-l,1e-12),closeLoc=(c-l)/range;
- let buy=50+(closeLoc-.5)*42+(q.cmf*28)+(q.mfi-50)*.18+(q.vwapAbove?5:-5);buy=Math.max(5,Math.min(95,buy));let sell=100-buy;
+ let buy=50+(closeLoc-.5)*42+(q.cmf==null?0:q.cmf*28)+(q.mfi==null?0:(q.mfi-50)*.18)+(q.vwapAbove==null?0:q.vwapAbove?5:-5);buy=Math.max(5,Math.min(95,buy));let sell=100-buy;
  $("buyPressure").textContent=buy.toFixed(0)+"%";$("buyMeter").style.width=buy+"%";$("sellMeter").style.width=sell+"%";
- $("volumeImpulse").textContent=q.vr.toFixed(2)+"x";$("closeLocation").textContent=(closeLoc*100).toFixed(0)+"%";$("moneyDelta").textContent=(buy-sell>=0?"+":"")+(buy-sell).toFixed(0);
+ $("volumeImpulse").textContent=q.vr==null?"—":q.vr.toFixed(2)+"x";$("closeLocation").textContent=(closeLoc*100).toFixed(0)+"%";$("moneyDelta").textContent=(buy-sell>=0?"+":"")+(buy-sell).toFixed(0);
  $("derivPressure").textContent=deriv&&deriv.ls!=null?(deriv.ls>1.15?"LONG HEAVY":deriv.ls<.87?"SHORT HEAVY":"BALANCED"):"N/A";
  $("derivPressure").className="flowBig "+(deriv&&deriv.ls!=null?(deriv.ls>1.15?"good":deriv.ls<.87?"bad":"neutral"):"neutral");
  $("ofLongs").textContent=deriv&&deriv.longPct!=null?deriv.longPct.toFixed(1)+"%":"N/A";$("ofShorts").textContent=deriv&&deriv.shortPct!=null?deriv.shortPct.toFixed(1)+"%":"N/A";
  $("ofOi").textContent=deriv&&deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+deriv.oiTrend:""):"N/A";$("ofFunding").textContent=deriv&&deriv.funding!=null?(deriv.funding*100).toFixed(4)+"%":"N/A";
 }
 function updateFlowWindow(q){
- const deriv=window.__derivativesState||{},flowScore=(q.mfi>=55?1:q.mfi<=45?-1:0)+(q.cmf>0?1:-1)+(q.obvSlope>0?1:-1)+(q.vwapAbove?1:-1),flowBias=flowScore>=2?"ACCUMULATION":flowScore<=-2?"DISTRIBUTION":"BALANCED";
+ const deriv=window.__derivativesState||{},flowScore=(q.mfi==null?0:q.mfi>=55?1:q.mfi<=45?-1:0)+(q.cmf==null?0:q.cmf>0?1:-1)+(q.obvSlope==null?0:q.obvSlope>0?1:-1)+(q.vwapAbove==null?0:q.vwapAbove?1:-1),flowBias=flowScore>=2?"ACCUMULATION":flowScore<=-2?"DISTRIBUTION":"BALANCED";
  $("flowBias").textContent=flowBias;$("flowBias").className=flowBias==="ACCUMULATION"?"good":flowBias==="DISTRIBUTION"?"bad":"neutral";
- $("flowMfi").textContent=q.mfi.toFixed(1);$("flowCmf").textContent=q.cmf.toFixed(3);$("flowObv").textContent=q.obvSlope>0?"UP":"DOWN";
+ $("flowMfi").textContent=q.mfi==null?"—":q.mfi.toFixed(1);$("flowCmf").textContent=q.cmf==null?"—":q.cmf.toFixed(3);$("flowObv").textContent=q.obvSlope==null?"—":q.obvSlope>0?"UP":"DOWN";
  $("flowOi").textContent=deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+deriv.oiTrend:""):"N/A";
  $("flowLs").textContent=deriv.longPct!=null?`${deriv.longPct.toFixed(0)} / ${deriv.shortPct.toFixed(0)}`:"N/A";
  $("flowFunding").textContent=deriv.funding!=null?`${(deriv.funding*100).toFixed(4)}% · ${deriv.context||"BALANCED"}`:"N/A";
- $("flowSummary").textContent=`${flowBias} · ${q.cmf>0?"capital inflow":"capital outflow"} · ${q.vr>=1.2?"volume confirms":"volume weak"}`;
+ $("flowSummary").textContent=`${flowBias} · ${q.cmf==null?"capital flow —":q.cmf>0?"capital inflow":"capital outflow"} · ${q.vr==null?"volum lipsă":q.vr>=1.2?"volume confirms":"volume weak"}`;
  updateOrderFlow(q,deriv);checkAlerts(q,window.__signalState?.sm,deriv)
 }
 
@@ -3980,10 +4074,10 @@ function renderOiFundingMatrix(q,deriv){
 }
 function renderQuantFlow(q,deriv=window.__derivativesState||{}){
  if(!q)return;
- $("flowDelta").textContent=compact(Math.abs(q.deltaFlow.delta))+(q.deltaFlow.delta>=0?" buy":" sell");$("flowDelta").className=q.deltaFlow.delta>=0?"good":"bad";$("flowDeltaPct").textContent=pctText(q.deltaFlow.deltaPct);$("flowDeltaPct").className=q.deltaFlow.deltaPct>=0?"good":"bad";$("flowCvdSlope").textContent=(q.deltaFlow.slope20>=0?"+":"")+compact(Math.abs(q.deltaFlow.slope20));$("flowCvdSlope").className=q.deltaFlow.slope20>=0?"good":"bad";$("flowCvdDiv").textContent=q.deltaFlow.divergence;$("flowCvdDiv").className=q.deltaFlow.divergence==="BULL DIV"?"good":q.deltaFlow.divergence==="BEAR DIV"?"bad":"neutral";
+ if(q.deltaFlow.delta==null){for(const id of ["flowDelta","flowDeltaPct","flowCvdSlope","flowCvdDiv"])if($(id)){$(id).textContent="—";$(id).className="lipsa"}}else{$("flowDelta").textContent=compact(Math.abs(q.deltaFlow.delta))+(q.deltaFlow.delta>=0?" buy":" sell");$("flowDelta").className=q.deltaFlow.delta>=0?"good":"bad";$("flowDeltaPct").textContent=pctText(q.deltaFlow.deltaPct);$("flowDeltaPct").className=q.deltaFlow.deltaPct>=0?"good":"bad";$("flowCvdSlope").textContent=(q.deltaFlow.slope20>=0?"+":"")+compact(Math.abs(q.deltaFlow.slope20));$("flowCvdSlope").className=q.deltaFlow.slope20>=0?"good":"bad";$("flowCvdDiv").textContent=q.deltaFlow.divergence;$("flowCvdDiv").className=q.deltaFlow.divergence==="BULL DIV"?"good":q.deltaFlow.divergence==="BEAR DIV"?"bad":"neutral"}
  const f=regimeFusion(q);$("fusionRegime").textContent=f.state;$("fusionRegime").className="regimeBig "+(f.state==="TRENDING"?"good":f.state==="MEAN-REVERTING"||f.state==="CHOPPY"?"neutral":"");$("fusionReason").textContent=f.reason;$("fusionQuality").textContent=f.quality.toFixed(0)+"/100";$("fusionBase").textContent=q.regime;
  $("ttmState").textContent=q.ttm.state;$("ttmMomentum").textContent=(q.ttm.momentum>=0?"+":"")+num(q.ttm.momentum);$("ttmMomentum").className=q.ttm.momentum>=0?"good":"bad";$("chopValue").textContent=q.chop.toFixed(1);$("erValue").textContent=q.efficiency.toFixed(3);$("hurstValue").textContent=q.hurst.toFixed(3);$("rvPercentile").textContent=q.rvPercentile.toFixed(0)+"%";$("parkinsonVol").textContent=q.parkVol.toFixed(2)+"%";$("gkVol").textContent=q.gkVol.toFixed(2)+"%";
- const cv=q.calendarVwaps;$("vwapCalendar").textContent=`D ${num(cv.day)} · W ${num(cv.week)} · M ${num(cv.month)}`;$("vwapBand1").textContent=`${num(q.vwapBands.l1)} ↔ ${num(q.vwapBands.u1)}`;$("vwapBand2").textContent=`${num(q.vwapBands.l2)} ↔ ${num(q.vwapBands.u2)}`;
+ const cv=q.calendarVwaps;$("vwapCalendar").textContent=`D ${numSau(cv.day)} · W ${numSau(cv.week)} · M ${numSau(cv.month)}`;$("vwapBand1").textContent=`${numSau(q.vwapBands.l1)} ↔ ${numSau(q.vwapBands.u1)}`;$("vwapBand2").textContent=`${numSau(q.vwapBands.l2)} ↔ ${numSau(q.vwapBands.u2)}`;
  const L=q.liquidity;$("liqPrevDay").textContent=L.prevDay?`${num(L.prevDay.low)} / ${num(L.prevDay.high)}`:"N/A";$("liqPrevWeek").textContent=L.prevWeek?`${num(L.prevWeek.low)} / ${num(L.prevWeek.high)}`:"N/A";$("liqEqHigh").textContent=L.equalHigh?num(L.equalHigh):"None";$("liqEqLow").textContent=L.equalLow?num(L.equalLow):"None";$("liqPremium").textContent=L.premium;
  if(L.fvg){$("fvgType").textContent=L.fvg.type;$("fvgStatus").textContent=L.fvg.status;$("fvgZone").textContent=`${num(L.fvg.low)} ↔ ${num(L.fvg.high)}`}else{$("fvgType").textContent=$("fvgStatus").textContent=$("fvgZone").textContent="None"}
  renderOiFundingMatrix(q,deriv)
@@ -3997,8 +4091,12 @@ async function analyze(save,fallbackTried=false){
  invalidateDecisionContext(sym,src,t,false);
  $("symbol").value=assetClass()==="STOCKS"?stockSymbol(sym):coin(sym);syncTop(sym,t,mode);updateSourceLineage(src);setBusy(true,`Actualizare engine · ${src}…`);
  try{
-  let [j,tick,m]=await Promise.all([analysisKlines(sym,t,750,src),analysisTicker(sym,src),mtfData(sym,src)]),q=calc(j,mode),hs=historicalSet(j),mc=mtfComposite(m);
-  if(!j||j.length<100)throw Error(`${src} returned insufficient candle history`);
+  let [j,tick,m]=await Promise.all([analysisKlines(sym,t,750,src),analysisTicker(sym,src),mtfData(sym,src)]);
+  const jInchise=bareInchise(j,t,Date.now(),src);
+  if(!jInchise||jInchise.length<100)throw Error(`${src} returned insufficient candle history`);
+  let q=calc(jInchise,mode),hs=historicalSet(jInchise),mc=mtfComposite(m);
+  // pretul VIU (bara in formare / ticker) doar pentru ecran; semnalele stau pe q.price (inchis)
+  const pretViu=Number.isFinite(+j.at(-1)?.[4])?+j.at(-1)[4]:q.price;
   window.__radarState={symbol:sym,tf:t,mode,j,q,m,tick,hs,source:src};
   const breadthPromise=refreshMarketBreadthV64(false,false).catch(()=>null);
   if(save){remember(sym);localStorage.setItem("mode",mode);if(assetClass()==="STOCKS")localStorage.setItem("lastStock",stockSymbol(sym));else localStorage.setItem("lastCrypto",coin(sym))}
@@ -4008,25 +4106,25 @@ async function analyze(save,fallbackTried=false){
   else{renderLiquidationProxy(q,window.__derivativesState||{});renderQuantFlow(q,window.__derivativesState||{})}
   buildDecision(q,hs,mc,window.__signalState.sm);autoLogResearchSetup();checkAlertsPro();v60AutoReviewResolved();evaluateResearchJournalSilent().then(()=>{v60AutoReviewResolved();renderEdgePro()}).catch(()=>{});
   const ss=window.__signalState;
-  $("heroPrice").textContent=num(q.price);
+  $("heroPrice").textContent=num(pretViu);
   $("heroSignal").textContent=ss.sm.direction;$("heroSignal").className="heroSignal "+(ss.sm.direction==="LONG"?"good":ss.sm.direction==="SHORT"?"bad":"neutral");
   $("heroConfidence").textContent=`LONG ${ss.sm.long.toFixed(0)} · SHORT ${ss.sm.short.toFixed(0)}`;
-  $("heroRegime").textContent=q.regime;$("heroAdx").textContent=`ADX ${q.adx.toFixed(0)}`;$("heroProb").textContent=`Hist ↑ ${(hs.h4?hs.h4.up:50).toFixed(0)}%`;
-  let heroCh=+tick.priceChangePercent;$("hero24").textContent=(heroCh>=0?"+":"")+heroCh.toFixed(2)+"%";$("hero24").className="qv "+(heroCh>=0?"good":"bad");
-  $("heroMtf").textContent=mc.avg.toFixed(0)+"/100";$("heroVol").textContent=q.atrPct.toFixed(2)+"%";$("heroVol24").textContent=compact(+tick.quoteVolume);
+  $("heroRegime").textContent=q.regime;$("heroAdx").textContent=`ADX ${q.adx.toFixed(0)}`;$("heroProb").textContent=knnEticheta(hs.h4).text;
+  let heroCh=botiNr(tick.priceChangePercent);$("hero24").textContent=heroCh===null?"—":(heroCh>=0?"+":"")+heroCh.toFixed(2)+"%";$("hero24").className="qv "+(heroCh===null?"neutral":heroCh>=0?"good":"bad");
+  $("heroMtf").textContent=mc.avg.toFixed(0)+"/100";$("heroVol").textContent=q.atrPct.toFixed(2)+"%";$("heroVol24").textContent=botiNr(tick.quoteVolume)===null?"—":compact(+tick.quoteVolume);
 
   $("verdict").textContent=comp;$("verdict").className="value "+cls(comp);$("fill").style.width=avg+"%";$("conf").textContent=`Weighted Multi-TF ${avg.toFixed(0)}/100 · acord ${confidence}% · ${q.regime}`;
-  if(hp){$("pverdict").textContent=hp.ver;$("pverdict").className="value "+cls(hp.ver);$("pfill").style.width=hp.up+"%";$("pstats").textContent=`kNN: ${hp.k} analogi · ↑ ${hp.up.toFixed(1)}% · ↓ ${hp.down.toFixed(1)}% · medie 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · putere ${hp.strength.toFixed(0)}/100`}if(hp){let gv=Math.round(hp.up);$("probGauge").style.setProperty("--p",gv);$("probGauge").style.setProperty("--gc",gv>=58?"#55d89b":gv<=42?"#ff6b78":"#f5c451");$("gaugeVal").textContent=gv+"%";$("gaugeLabel").textContent=hp.ver;$("gaugeLabel").className="value "+cls(hp.ver)}
+  if(hp){const ke=knnEticheta(hp);$("pverdict").textContent=hp.ver+" · nedovedit";$("pverdict").className="value "+ke.cls;$("pfill").style.width=hp.up+"%";$("pstats").textContent=`kNN: ${hp.k} analogi · ↑ ${hp.up.toFixed(1)}% ±${hp.banda.toFixed(1)} (banda de zgomot) · ↓ ${hp.down.toFixed(1)}% · medie 4 lumânări ${hp.avg>=0?"+":""}${hp.avg.toFixed(2)}% · NEDOVEDIT: pe mers aleator ghicește direcția în 48,8% din cazuri, deci nu intră în scor`}if(hp){let gv=Math.round(hp.up);$("probGauge").style.setProperty("--p",gv);$("probGauge").style.setProperty("--gc",hp.inBanda?"#8a98ab":gv>=58?"#55d89b":gv<=42?"#ff6b78":"#f5c451");$("gaugeVal").textContent=gv+"% ±"+hp.banda.toFixed(0);$("gaugeLabel").textContent=hp.ver+" · nedovedit";$("gaugeLabel").className="value "+knnEticheta(hp).cls}
 
-  $("price").textContent=num(q.price);let ch=+tick.priceChangePercent;$("change").textContent=(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch>=0?"good":"bad");$("volume24").textContent=compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";
+  $("price").textContent=num(pretViu);let ch=botiNr(tick.priceChangePercent);$("change").textContent=ch===null?"—":(ch>=0?"+":"")+ch.toFixed(2)+"%";$("change").className="value "+(ch===null?"neutral":ch>=0?"good":"bad");$("volume24").textContent=botiNr(tick.quoteVolume)===null?"—":compact(+tick.quoteVolume);$("score").textContent=Math.round(q.score)+"/100";
   $("rsi").textContent=q.rsi.toFixed(1);$("ema").textContent=q.ema? "Bull stack":"Mixed / bear";$("ema").className=q.ema?"good":"bad";
   $("macd").textContent=q.macd?"Pozitiv":"Negativ";$("macd").className=q.macd?"good":"bad";
   $("adx").textContent=`${q.adx.toFixed(1)} · +DI ${q.pdi.toFixed(0)} / -DI ${q.mdi.toFixed(0)}`;$("adx").className=q.adx>=25?(q.pdi>q.mdi?"good":"bad"):"neutral";
   $("supertrend").textContent=q.supertrend;$("supertrend").className=q.supertrend==="BULL"?"good":"bad";
   $("stoch").textContent=q.stoch.toFixed(1);$("stoch").className=q.stoch>=55?"good":q.stoch<=45?"bad":"neutral";
   $("bb").textContent=q.bbpos.toFixed(0)+"%";$("bb").className=q.bbpos>55?"good":q.bbpos<45?"bad":"neutral";
-  $("vwap").textContent=q.vwapAbove?"Peste VWAP":"Sub VWAP";$("vwap").className=q.vwapAbove?"good":"bad";
-  $("atrp").textContent=`${q.atrPct.toFixed(2)}% · ATR ${num(q.atr)}`;$("vr").textContent=q.vr.toFixed(2)+"x";$("sr").textContent=num(q.sup)+" / "+num(q.res);$("mfi").textContent=q.mfi.toFixed(1);$("mfi").className="n "+(q.mfi>=55?"good":q.mfi<=45?"bad":"neutral");$("obv").textContent=q.obvSlope>0?"UP":"DOWN";$("obv").className="n "+(q.obvSlope>0?"good":"bad");$("ichi").textContent=q.ichimoku;$("ichi").className="n "+(q.ichimoku==="BULL"?"good":q.ichimoku==="BEAR"?"bad":"neutral");$("divergence").textContent=q.divergence;$("divergence").className="n "+(q.divergence==="BULL DIV"?"good":q.divergence==="BEAR DIV"?"bad":"neutral");
+  $("vwap").textContent=q.vwapAbove==null?"—":q.vwapAbove?"Peste VWAP":"Sub VWAP";$("vwap").className=q.vwapAbove==null?"lipsa":q.vwapAbove?"good":"bad";
+  $("atrp").textContent=`${q.atrPct.toFixed(2)}% · ATR ${num(q.atr)}`;$("vr").textContent=q.vr==null?"—":q.vr.toFixed(2)+"x";$("sr").textContent=num(q.sup)+" / "+num(q.res);$("mfi").textContent=q.mfi==null?"—":q.mfi.toFixed(1);$("mfi").className="n "+(q.mfi==null?"lipsa":q.mfi>=55?"good":q.mfi<=45?"bad":"neutral");$("obv").textContent=q.obvSlope==null?"—":q.obvSlope>0?"UP":"DOWN";$("obv").className="n "+(q.obvSlope==null?"lipsa":q.obvSlope>0?"good":"bad");$("ichi").textContent=q.ichimoku;$("ichi").className="n "+(q.ichimoku==="BULL"?"good":q.ichimoku==="BEAR"?"bad":"neutral");$("divergence").textContent=q.divergence;$("divergence").className="n "+(q.divergence==="BULL DIV"?"good":q.divergence==="BEAR DIV"?"bad":"neutral");
   $("pivot").textContent=num(q.levels.pivot);$("s1").textContent=num(q.levels.s1);$("s2").textContent=num(q.levels.s2);$("s3").textContent=num(q.levels.s3);$("r1").textContent=num(q.levels.r1);$("r2").textContent=num(q.levels.r2);$("r3").textContent=num(q.levels.r3);$("range50").textContent=num(q.levels.range);
   $("pivotBias").textContent=q.levels.bias;$("pivotBias").className=(q.levels.bias.includes("BULL")?"good":q.levels.bias.includes("BEAR")?"bad":"neutral");
   $("breakAbove").textContent=num(q.levels.breakAbove);$("breakBelow").textContent=num(q.levels.breakBelow);$("nearestZone").textContent=q.levels.nearest;
@@ -4036,9 +4134,9 @@ async function analyze(save,fallbackTried=false){
 
   $("signal").textContent=q.signal;$("signal").className="value "+(q.signal==="LONG"?"good":q.signal==="SHORT"?"bad":"neutral");$("enginefill").style.width=q.score+"%";$("quality").textContent=`Confluență ${q.confluence.toFixed(0)}/100 · calitate ${q.quality} · scor ${q.score.toFixed(0)}/100`;
   $("regime").textContent=q.regime;$("trendScore").textContent=q.trendScore.toFixed(0)+"/100";$("momScore").textContent=q.momScore.toFixed(0)+"/100";$("smcScore").textContent=q.structureScore.toFixed(0)+"/100";
-  $("bos").textContent=q.smc.bos;$("sweep").textContent=q.smc.sweep;$("fvg").textContent=q.smc.fvg;$("volumeSignal").textContent=q.vr>=1.5?"PUTERNIC":q.vr>=1.1?"CONFIRMĂ":"SLAB";
-  let htxt=[];for(const [lab,h] of [["1",hs.h1],["4",hs.h4],["12",hs.h12]])if(h)htxt.push(`${lab}c ${h.up.toFixed(0)}%↑`);$("knnset").textContent=htxt.join(" · ")||"N/A";
-  $("engineNotes").textContent=`Profil ${mode.toUpperCase()} · ${q.regime}. Trend ${q.trendScore.toFixed(0)}, momentum ${q.momScore.toFixed(0)}, volum ${q.volScore.toFixed(0)}, structură ${q.structureScore.toFixed(0)}. Filtrul de liquidity trap este ${q.smc.trap?"ACTIV":"inactiv"}. Confidence LONG/SHORT este calculat separat în tab-ul Signals.`;
+  $("bos").textContent=q.smc.bos;$("sweep").textContent=q.smc.sweep;$("fvg").textContent=q.smc.fvg;$("volumeSignal").textContent=q.vr==null?"—":q.vr>=1.5?"PUTERNIC":q.vr>=1.1?"CONFIRMĂ":"SLAB";
+  let htxt=[];for(const [lab,h] of [["1",hs.h1],["4",hs.h4],["12",hs.h12]])if(h)htxt.push(`${lab}c ${h.up.toFixed(0)}%↑ ±${Number.isFinite(+h.banda)?h.banda.toFixed(0):"?"}`);$("knnset").textContent=htxt.length?htxt.join(" · ")+" · nedovedit":"N/A";
+  $("engineNotes").textContent=`Profil ${mode.toUpperCase()} · ${q.regime}. Trend ${q.trendScore.toFixed(0)}, momentum ${q.momScore.toFixed(0)}, volum ${q.volScore==null?"— (lipsește, scos din scor)":q.volScore.toFixed(0)}, structură ${q.structureScore.toFixed(0)}. Filtrul de liquidity trap este ${q.smc.trap?"ACTIV":"inactiv"}. Confidence LONG/SHORT este calculat separat în tab-ul Signals.`;
 
   let dir=mc.comp==="BULLISH"?1:mc.comp==="BEARISH"?-1:0,baseStop=Math.max(q.atr*1.8,q.price*.004),inv,tar,trail,txt,risk;
   if(dir>0){inv=Math.max(q.sup,q.price-baseStop);let r=q.price-inv;tar=q.price+r*2.0;trail=q.price-q.atr*1.5;txt="Confluență bullish: trend, momentum, structură și MTF sunt combinate. Confirmarea ideală este volum peste medie și lipsa unui liquidity trap."}
@@ -4092,8 +4190,9 @@ async function backtestCurrent(){
 async function derivatives(){
  if(assetClass()==="STOCKS"){$("ftext").textContent="Crypto futures context is not mixed into US stock signals.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";window.__derivativesState={};return}
  let sym=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";
- let d=null,histOI=null,fundingHist=null;
- try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}catch{}
+ let d=null,histOI=null,fundingHist=null,motivFutures="";
+ try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}
+ catch(e){motivFutures=eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
  if(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null)){
    try{
     let [fr,oi,ls,oih,fh]=await Promise.all([
@@ -4121,32 +4220,40 @@ async function derivatives(){
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
  window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats};markFresh("futures");
  if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q);renderLiquidationProxy(window.__radarState.q,window.__derivativesState);renderQuantFlow(window.__radarState.q,window.__derivativesState)}
- $("ftext").textContent=(fr==null&&oi==null&&ls==null)?"Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională.":"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
+ $("ftext").textContent=(fr==null&&oi==null&&ls==null)?("Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională."+(motivFutures?" "+motivFutures:"")):"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
 }
 let scannerRows=[];
 function renderScan(){
  let dir=$("scanDir")?.value||"ALL",reg=$("scanRegime")?.value||"ALL",minAdx=+($("scanAdx")?.value||0),minStrength=+($("scanScore")?.value||0),q=($("scanSearch")?.value||"").trim().toUpperCase(),sort=$("scanSort")?.value||"strength";
- let rows=scannerRows.filter(x=>(!q||x.c.includes(q))&&(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&Math.abs(x.avg-50)*2>=minStrength);
- rows=[...rows].sort((a,b)=>sort==="turnover"?b.turnover-a.turnover:sort==="adx"?b.adx-a.adx:sort==="change"?Math.abs(b.change)-Math.abs(a.change):Math.abs(b.avg-50)-Math.abs(a.avg-50)||b.turnover-a.turnover);
+ let rows=scannerRows.filter(x=>(!q||x.c.includes(q))&&(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&(!minStrength||Math.abs(x.avg-50)*2>=minStrength));
+ // Forta = |scor-50|*2, ca filtrul "Forta >= X". Un scor lipsa (NaN) facea
+ // comparatorul inconsistent - acum sta la coada.
+ const forta=x=>Number.isFinite(+x.avg)?Math.abs(+x.avg-50)*2:-1;
+ rows=[...rows].sort((a,b)=>sort==="turnover"?(b.turnover??-1)-(a.turnover??-1):sort==="adx"?b.adx-a.adx:sort==="change"?Math.abs(b.change)-Math.abs(a.change):(forta(b)-forta(a))||(b.turnover-a.turnover));
  const stockMode=assetClass()==="STOCKS";
- $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" data-action-click="${stockMode?"selectStockScan":"selectPionexScan"}('${x.c}')"><b>${escapeHtml(x.c)}</b><span>${x.avg.toFixed(0)}</span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span><span>${compact(x.turnover)}</span></div>`).join(""):`<div class="row"><span>${stockMode?"No US stock results for current filters.":"Niciun rezultat Pionex pentru filtrele selectate."}</span></div>`;
+ $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" data-action-click="${stockMode?"selectStockScan":"selectPionexScan"}('${x.c}')"><b>${escapeHtml(x.c)}</b><span>${Number.isFinite(+x.avg)?(+x.avg).toFixed(0):"—"} <small class="muted">forță ${forta(x)>=0?forta(x).toFixed(0):"—"}</small></span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span><span>${x.turnover==null?"—":compact(x.turnover)}</span></div>`).join(""):`<div class="row"><span>${stockMode?"No US stock results for current filters.":"Niciun rezultat Pionex pentru filtrele selectate."}</span></div>`;
 }
 let activeScanToken=null;
 function cancelScan(){
- if(activeScanToken){activeScanToken.cancelled=true;perfStats.lastScanner="CANCELLED";$("scanCancelBtn").disabled=true;toast("Scan oprit","warn")}
+ if(activeScanToken){activeScanToken.cancelled=true;perfStats.lastScanner="CANCELLED";scanButonStop(false);toast("Scan oprit","warn")}
 }
 async function scan(){
  if(assetClass()==="STOCKS")return scanStocks();
  let box=$("scanout"),depth=$("scanDepth")?.value||"FAST";
  if(activeScanToken)activeScanToken.cancelled=true;
  const token={cancelled:false,id:Date.now()},started=performance.now();activeScanToken=token;pionexScannerActive=true;scannerRows=[];perfStats.lastScanner="RUNNING";
- $("scanCancelBtn").disabled=false;$("scanProgressBar").style.width="0%";$("scanProcessed").textContent="0/0";$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent=perfStats.pionexCacheHits;$("scanElapsed").textContent="0s";
+ scanButonStop(true);$("scanProgressBar").style.width="0%";$("scanProcessed").textContent="0/0";$("scanResults").textContent="0";$("scanErrors").textContent="0";$("scanCacheHits").textContent=perfStats.pionexCacheHits;$("scanElapsed").textContent="0s";
  box.innerHTML="Încarc universul Pionex · analiza tehnică va folosi Binance…";
  try{
-   const top=await pionexTop100();
+   const universPionex=await pionexTop100();
    if(token.cancelled)return;
-   if(!top.length)throw Error("Pionex nu a returnat piețe SPOT/USDT eligibile");
-   $("pionexScanMode").textContent=depth==="DEEP"?"Mode DEEP MTF · Binance candles":"Mode FAST 4H · Binance candles";
+   if(!universPionex.length)throw Error("Pionex nu a returnat piețe SPOT/USDT eligibile");
+   // Fara lista Binance (a picat), nu ghicim: se incearca toate, ca inainte.
+   const peBinance=await binanceSimboluriSpot().catch(()=>null);
+   const top=peBinance?universPionex.filter(x=>peBinance.has(`${String(x.base||"").toUpperCase()}USDT`)):universPionex;
+   const sarite=universPionex.length-top.length;
+   if(!top.length)throw Error("Niciuna dintre monedele Pionex nu e pe Binance");
+   $("pionexScanMode").textContent=(depth==="DEEP"?"Mode DEEP MTF · Binance candles":"Mode FAST 4H · Binance candles")+(sarite?` · ${sarite} sărite (nu sunt pe Binance)`:"");
    $("scanProcessed").textContent=`0/${top.length}`;
    const concurrency=4;
    const worker=async item=>depth==="DEEP"?pionexScanDeep(item):pionexScanFast(item);
@@ -4164,7 +4271,7 @@ async function scan(){
    if(!token.cancelled){box.innerHTML=`<div class="row"><span>Scanner error.</span><b>${escapeHtml(e.message)}</b></div>`;perfStats.lastScanner="SCANNER ERROR · "+e.message;toast("Scanner error: "+e.message,"bad")}
  }finally{
    pionexScannerActive=false;
-   if(activeScanToken===token){activeScanToken=null;$("scanCancelBtn").disabled=true}
+   if(activeScanToken===token){activeScanToken=null;scanButonStop(false)}
    $("scanElapsed").textContent=((performance.now()-started)/1000).toFixed(1)+"s"
  }
 }
@@ -4200,7 +4307,7 @@ function renderReplayFrame(){if(!replayState.rows.length)return;replayState.mode
 function replayCsvCell(v){const s=String(v??'');return /[",\n]/.test(s)?`"${s.replaceAll('"','""')}"`:s}
 function exportReplaySession(kind='csv'){const rows=replayState.session;if(!rows.length)return toast('No replay frames to export','warn');if(kind==='json')return downloadTextFile(`crypto-radar-v66-replay-${replayState.symbol}-${Date.now()}.json`,JSON.stringify({version:'v66',strictPrefix:true,rows},null,2),'application/json');const cols=['time','market','symbol','source','tf','mode','direction','score','regime','adx','rvPercentile','outcomeRawPct','outcomeNetPct','horizon'],lines=[cols.join(',')];for(const x of rows)lines.push([new Date(x.ts).toISOString(),x.market,x.symbol,x.source,x.tf,x.mode,x.direction,x.score,x.regime,x.adx,x.rvPercentile,x.outcome?.rawPct,x.outcome?.netPct,x.outcome?.horizon].map(replayCsvCell).join(','));downloadTextFile(`crypto-radar-v66-replay-${replayState.symbol}-${Date.now()}.csv`,lines.join('\n'),'text/csv')}
 function historicalRankScore(row){const strength=clamp(Math.abs((+row.avg||50)-50)*2),conf=clamp(+row.conf||0),adxQ=clamp((+row.adx||0)/40*100),structure=clamp(+row.structure||50),volume=clamp(+row.volume||50),chop=Number.isFinite(+row.chop)?+row.chop:50,eff=Number.isFinite(+row.efficiency)?+row.efficiency:.3,regimeQ=clamp(55+(String(row.regime||'').includes('TREND')?12:0)+(chop<45?10:chop>62?-15:0)+(eff>.45?10:eff<.2?-10:0));return clamp(.32*strength+.20*conf+.16*adxQ+.12*structure+.10*volume+.10*regimeQ)}
-function historicalScannerRow(symbol,rows,anchorTs,horizon,mode,source){const ordered=[...(rows||[])].sort((a,b)=>+a[0]-+b[0]),index=replayLastIndexAtOrBefore(ordered,anchorTs);if(index<REPLAY_MIN_BARS-1||index+horizon>=ordered.length)return null;const prefix=replayPrefix(ordered,index),q=calc(prefix,mode),outcome=replayOutcome(ordered,index,horizon,q.signal),recent=prefix.slice(-6),turnover=recent.reduce((a,x)=>a+(+x[4])*(+x[5]||0),0),row={c:symbol,avg:q.score,dir:q.ver,signal:q.signal,conf:q.confluence,adx:q.adx,regime:q.regime,turnover,source,trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile,replayTs:+prefix.at(-1)[0],price:q.price,outcomeRawPct:outcome?.rawPct??null,outcomeNetPct:outcome?.netPct??null,hit:outcome?.hit??null};row.histScore=historicalRankScore(row);return row}
+function historicalScannerRow(symbol,rows,anchorTs,horizon,mode,source){const ordered=[...(rows||[])].sort((a,b)=>+a[0]-+b[0]),index=replayLastIndexAtOrBefore(ordered,anchorTs);if(index<REPLAY_MIN_BARS-1||index+horizon>=ordered.length)return null;const prefix=replayPrefix(ordered,index),q=calc(prefix,mode),outcome=replayOutcome(ordered,index,horizon,q.signal),recent=prefix.slice(-6),turnover=areVolLipsa(recent)?null:recent.reduce((a,x)=>a+(+x[4])*(+x[5]||0),0),row={c:symbol,avg:q.score,dir:q.ver,signal:q.signal,conf:q.confluence,adx:q.adx,regime:q.regime,turnover,source,trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile,replayTs:+prefix.at(-1)[0],price:q.price,outcomeRawPct:outcome?.rawPct??null,outcomeNetPct:outcome?.netPct??null,hit:outcome?.hit??null};row.histScore=historicalRankScore(row);return row}
 function cancelHistoricalScanner(){if(historicalScanToken){historicalScanToken.cancelled=true;$('histScanStatus').textContent='Cancelling…'}}
 function renderHistoricalScanner(){const box=$('histScanTable');if(!box)return;const rows=historicalScannerRows.slice(0,50);box.innerHTML=rows.length?`<div class="histScanRow histScanHead"><div class="histScanCell">#</div><div class="histScanCell">Asset</div><div class="histScanCell">Hist score</div><div class="histScanCell">Signal</div><div class="histScanCell">ADX</div><div class="histScanCell">Regime</div><div class="histScanCell">Outcome</div><div class="histScanCell">Hit</div></div>`+rows.map((x,i)=>`<div class="histScanRow"><div class="histScanCell histRank">${i+1}</div><div class="histScanCell"><b>${escapeHtml(x.c)}</b></div><div class="histScanCell">${x.histScore.toFixed(1)}</div><div class="histScanCell ${replayDirectionClass(x.signal)}">${x.signal}</div><div class="histScanCell">${x.adx.toFixed(0)}</div><div class="histScanCell">${escapeHtml(x.regime)}</div><div class="histScanCell ${Number.isFinite(x.outcomeNetPct)?(x.outcomeNetPct>=0?'good':'bad'):''}">${Number.isFinite(x.outcomeNetPct)?`${x.outcomeNetPct>=0?'+':''}${x.outcomeNetPct.toFixed(2)}%`:'N/A'}</div><div class="histScanCell">${x.hit==null?'—':x.hit?'✓':'✕'}</div></div>`).join(''):'<div class="emptyState">No historical scanner results.</div>';const top=historicalScannerRows.slice(0,10),dir=top.filter(x=>x.hit!=null),hit=dir.length?dir.filter(x=>x.hit).length/dir.length:NaN,avg=dir.length?dir.reduce((a,x)=>a+(+x.outcomeNetPct||0),0)/dir.length:NaN;$('histScanTopHit').textContent=Number.isFinite(hit)?(hit*100).toFixed(0)+'%':'—';$('histScanAvg').textContent=Number.isFinite(avg)?`${avg>=0?'+':''}${avg.toFixed(2)}%`:'—'}
 async function historicalCryptoRows(universe,anchorTs,horizon,mode,token){const out=[],total=universe.length;let done=0;const worker=async item=>{if(token.cancelled)return null;const rows=await klines(`${String(item.base).toUpperCase()}USDT`,'4h',500);return historicalScannerRow(String(item.base).toUpperCase(),rows,anchorTs,horizon,mode,'BINANCE')};const progress=(d,t,rows)=>{done=d;historicalScannerRows=rows.filter(Boolean).sort((a,b)=>b.histScore-a.histScore);$('histScanProcessed').textContent=`${done}/${total}`;$('histScanProgress').style.width=(100*done/total).toFixed(1)+'%';if(done%8===0||done===total)renderHistoricalScanner()};const run=await runPool(universe,worker,4,progress,token);return run.results.filter(Boolean)}
@@ -4341,13 +4448,22 @@ function v71StoredJournal(symbol=v71CurrentSymbol()){const s=v71SafeSymbol(symbo
 function v71Id(x,kind="fill"){const keys=kind==="order"?["orderId","order_id","id"]:["fillId","fill_id","tradeId","trade_id","id"];for(const k of keys)if(x?.[k]!=null&&String(x[k]))return String(x[k]);return [kind,x?.orderId||x?.order_id||"?",x?.timestamp||x?.time||x?.createTime||0,x?.side||"?",x?.price||0,x?.size||x?.quantity||x?.amount||0].join(":")}
 function v71Rows(payload,keys){for(const k of keys){const v=k.split(".").reduce((a,p)=>a?.[p],payload);if(Array.isArray(v))return v}return []}
 function v71FeeUsd(fee,feeCoin,symbol,price){const amount=Math.abs(+fee||0),coin=String(feeCoin||"").toUpperCase(),[base,quote]=v71SafeSymbol(symbol).split("_");if(!amount)return {feeUsd:0,coverage:"ZERO"};if(coin===quote||coin==="USDT")return {feeUsd:amount,coverage:"QUOTE_EXACT"};if(coin===base&&Number.isFinite(+price)&&+price>0)return {feeUsd:amount*+price,coverage:"BASE_AT_FILL"};return {feeUsd:null,coverage:"UNRESOLVED"}}
-function v71NormalizeFill(x,symbol){const resolvedSymbol=v71SafeSymbol(x.symbol||symbol),side=String(x.side||x.orderSide||"").toUpperCase(),price=+x.price||+x.fillPrice||+x.avgPrice||0,qty=+x.size||+x.quantity||+x.qty||+x.filledSize||0,fee=Math.abs(+x.fee||+x.feeAmount||+x.commission||0),feeCoin=String(x.feeCoin||x.feeAsset||x.commissionAsset||"USDT").toUpperCase(),ts=+x.timestamp||+x.time||+x.createTime||+x.updatedTime||Date.now(),converted=v71FeeUsd(fee,feeCoin,resolvedSymbol,price);return {fillId:v71Id(x),orderId:v71Id(x,"order"),symbol:resolvedSymbol,side,price,qty,quote:price*qty,fee,feeCoin,feeUsd:converted.feeUsd,feeCoverage:converted.coverage,ts,rawStatus:String(x.status||"FILLED"),source:"PIONEX"}}
+function v71NormalizeFill(x,symbol){const resolvedSymbol=v71SafeSymbol(x.symbol||symbol),side=String(x.side||x.orderSide||"").toUpperCase(),price=+x.price||+x.fillPrice||+x.avgPrice||0,qty=+x.size||+x.quantity||+x.qty||+x.filledSize||0,fee=Math.abs(+x.fee||+x.feeAmount||+x.commission||0),feeCoin=String(x.feeCoin||x.feeAsset||x.commissionAsset||"").toUpperCase(),ts=+x.timestamp||+x.time||+x.createTime||+x.updatedTime||null,converted=v71FeeUsd(fee,feeCoin,resolvedSymbol,price);return {fillId:v71Id(x),orderId:v71Id(x,"order"),symbol:resolvedSymbol,side,price,qty,quote:price*qty,fee,feeCoin,feeUsd:converted.feeUsd,feeCoverage:converted.coverage,ts,rawStatus:String(x.status||"FILLED"),source:"PIONEX"}}
 function v71Dedupe(rows,key="fillId"){const map=new Map();for(const x of rows||[]){const id=String(x?.[key]||""),symbol=v71SafeSymbol(x?.symbol),compound=`${symbol}|${id}`;if(id&&symbol&&!map.has(compound))map.set(compound,x)}return [...map.values()].sort((a,b)=>(+a.ts||0)-(+b.ts||0))}
-function v71BuildTrades(fills,radarOrderIds=[]){const radar=new Set((radarOrderIds||[]).map(String)),lotBooks=new Map(),trades=[],unmatched=[];for(const f of v71Dedupe(fills)){const symbol=v71SafeSymbol(f.symbol);if(!symbol||!f.qty||!f.price||!["BUY","SELL"].includes(f.side)){unmatched.push({...f,reason:"INVALID_FILL"});continue}const lots=lotBooks.get(symbol)||[];lotBooks.set(symbol,lots);if(f.side==="BUY"){lots.push({...f,remaining:f.qty,feeRemainingUsd:f.feeUsd!=null&&Number.isFinite(+f.feeUsd)?+f.feeUsd:null});continue}let remain=f.qty;while(remain>1e-12&&lots.length){const lot=lots[0],q=Math.min(remain,lot.remaining),buyFee=lot.feeRemainingUsd!=null&&Number.isFinite(+lot.feeRemainingUsd)?+lot.feeRemainingUsd*q/lot.remaining:null,sellFee=f.feeUsd!=null&&Number.isFinite(+f.feeUsd)?+f.feeUsd*q/f.qty:null,gross=(f.price-lot.price)*q,fees=buyFee!=null&&sellFee!=null?buyFee+sellFee:null,net=fees!=null?gross-fees:null,origin=radar.has(String(lot.orderId))||radar.has(String(f.orderId))?"RADAR":"MANUAL",feeCoverage=fees!=null?`${lot.feeCoverage}+${f.feeCoverage}`:"UNRESOLVED";trades.push({id:`${symbol}:${lot.fillId}:${f.fillId}:${trades.length}`,symbol,side:"LONG",openedAt:lot.ts,closedAt:f.ts,entry:lot.price,exit:f.price,qty:q,grossPnl:gross,fees,funding:0,netPnl:net,returnPct:lot.price&&net!=null?net/(lot.price*q)*100:null,feeCoverage,entryOrderId:lot.orderId,exitOrderId:f.orderId,entryFillId:lot.fillId,exitFillId:f.fillId,origin,status:net!=null?"CLOSED":"REVIEW_FEE",source:"PIONEX"});lot.remaining-=q;if(lot.feeRemainingUsd!=null&&buyFee!=null)lot.feeRemainingUsd=Math.max(0,lot.feeRemainingUsd-buyFee);remain-=q;if(lot.remaining<=1e-12)lots.shift()}if(remain>1e-12)unmatched.push({...f,qty:remain,reason:"SELL_WITHOUT_MATCHED_BUY"})}return {trades,openLots:[...lotBooks.values()].flat(),unmatched}}
+function v71BuildTrades(fills,radarOrderIds=[]){const radar=new Set((radarOrderIds||[]).map(String)),lotBooks=new Map(),trades=[],unmatched=[];for(const f of v71Dedupe(fills)){const symbol=v71SafeSymbol(f.symbol);if(!symbol||!f.qty||!f.price||!["BUY","SELL"].includes(f.side)){unmatched.push({...f,reason:"INVALID_FILL"});continue}if(!(+f.ts>0)){unmatched.push({...f,reason:"MISSING_TIMESTAMP"});continue}const lots=lotBooks.get(symbol)||[];lotBooks.set(symbol,lots);if(f.side==="BUY"){const feeInBaza=String(f.feeCoin||"").toUpperCase()===symbol.split("_")[0]&&+f.fee>0&&+f.fee<f.qty?+f.fee:0;lots.push({...f,remaining:f.qty-feeInBaza,feeRemainingUsd:f.feeUsd!=null&&Number.isFinite(+f.feeUsd)?+f.feeUsd:null});continue}let remain=f.qty;while(remain>1e-12&&lots.length){const lot=lots[0],q=Math.min(remain,lot.remaining),buyFee=lot.feeRemainingUsd!=null&&Number.isFinite(+lot.feeRemainingUsd)?+lot.feeRemainingUsd*q/lot.remaining:null,sellFee=f.feeUsd!=null&&Number.isFinite(+f.feeUsd)?+f.feeUsd*q/f.qty:null,gross=(f.price-lot.price)*q,fees=buyFee!=null&&sellFee!=null?buyFee+sellFee:null,net=fees!=null?gross-fees:null,origin=radar.has(String(lot.orderId))||radar.has(String(f.orderId))?"RADAR":"MANUAL",feeCoverage=fees!=null?`${lot.feeCoverage}+${f.feeCoverage}`:"UNRESOLVED";trades.push({id:`${symbol}:${lot.fillId}:${f.fillId}:${trades.length}`,symbol,side:"LONG",openedAt:lot.ts,closedAt:f.ts,entry:lot.price,exit:f.price,qty:q,grossPnl:gross,fees,funding:0,netPnl:net,returnPct:lot.price&&net!=null?net/(lot.price*q)*100:null,feeCoverage,entryOrderId:lot.orderId,exitOrderId:f.orderId,entryFillId:lot.fillId,exitFillId:f.fillId,origin,status:net!=null?"CLOSED":"REVIEW_FEE",source:"PIONEX"});lot.remaining-=q;if(lot.feeRemainingUsd!=null&&buyFee!=null)lot.feeRemainingUsd=Math.max(0,lot.feeRemainingUsd-buyFee);remain-=q;if(lot.remaining<=1e-12)lots.shift()}if(remain>1e-12)unmatched.push({...f,qty:remain,reason:"SELL_WITHOUT_MATCHED_BUY"})}return {trades,openLots:[...lotBooks.values()].flat(),unmatched}}
 async function v71RadarOrderIds(){const ids=[];try{const rows=(await localDbRecords("live_execution_v68",0,5000)).map(x=>x.data);for(const x of rows)for(const k of ["orderId","entryOrderId","exitOrderId"])if(x?.[k]!=null)ids.push(String(x[k]))}catch{}return [...new Set(ids)]}
 function v71JournalStats(j=v71StoredJournal()){const t=j.trades||[],resolved=t.filter(x=>x.netPnl!=null&&Number.isFinite(+x.netPnl)),net=resolved.reduce((a,x)=>a+(+x.netPnl||0),0),fees=resolved.reduce((a,x)=>a+(+x.fees||0),0),wins=resolved.filter(x=>+x.netPnl>0).length,radar=t.filter(x=>x.origin==="RADAR").length,feeReview=t.length-resolved.length;return {fills:(j.fills||[]).length,trades:t.length,resolved:resolved.length,net,fees,funding:0,wins,winRate:resolved.length?wins/resolved.length:0,radar,manual:t.length-radar,unmatched:(j.unmatched||[]).length,openLots:(j.openLots||[]).length,feeReview,complete:!!j.complete}}
 // v71: Pionex refuza rafalele. La 429 serverul spune cat sa astepte; reluam
 // de cateva ori in loc sa omoram toata sincronizarea de 365 de zile.
+// v74.6: si fara 429, cererile de istoric pleaca la cel putin 1,1 s una de
+// alta - 365 de zile inseamna zeci de ferestre, iar Pionex refuza rafalele.
+let v71UltimaCerere=0;
+const V71_PAUZA_MS=1100;
+async function v71Pauza(){
+  const astept=v71UltimaCerere+V71_PAUZA_MS-Date.now();
+  if(astept>0)await new Promise(r=>setTimeout(r,astept));
+  v71UltimaCerere=Date.now();
+}
 async function v71CereCuRabdare(url,incercari=4){
   for(let i=0;;i++){
     try{return await getJSON(url)}
@@ -4358,58 +4474,131 @@ async function v71CereCuRabdare(url,incercari=4){
     }
   }
 }
-async function v71HistoryWindow(action,symbol,startTime,endTime,depth=0,budget={requests:0,truncated:false}){if(budget.requests>=64){budget.truncated=true;return []}budget.requests++;const q=new URLSearchParams({action,symbol,limit:"100",startTime:String(Math.max(0,Math.floor(startTime))),endTime:String(Math.max(0,Math.floor(endTime)))}),payload=await v71CereCuRabdare(`/api/pionex-account?${q}`),rows=v71Rows(payload,action==="fills"?["data.fills","data.trades","data","fills"]:["data.orders","data","orders"]);if(rows.length<100||depth>=12||endTime-startTime<=3600000){if(rows.length>=100)budget.truncated=true;return rows}const mid=Math.floor((startTime+endTime)/2),left=await v71HistoryWindow(action,symbol,startTime,mid,depth+1,budget),right=await v71HistoryWindow(action,symbol,mid+1,endTime,depth+1,budget);return [...left,...right]}
+async function v71HistoryWindow(action,symbol,startTime,endTime,depth=0,budget={requests:0,truncated:false}){if(budget.requests>=64){budget.truncated=true;return []}budget.requests++;const q=new URLSearchParams({action,symbol,limit:"100",startTime:String(Math.max(0,Math.floor(startTime))),endTime:String(Math.max(0,Math.floor(endTime)))}),payload=(await v71Pauza(),await v71CereCuRabdare(`/api/pionex-account?${q}`)),rows=v71Rows(payload,action==="fills"?["data.fills","data.trades","data","fills"]:["data.orders","data","orders"]);if(rows.length<100||depth>=12||endTime-startTime<=3600000){if(rows.length>=100)budget.truncated=true;return rows}const mid=Math.floor((startTime+endTime)/2),left=await v71HistoryWindow(action,symbol,startTime,mid,depth+1,budget),right=await v71HistoryWindow(action,symbol,mid+1,endTime,depth+1,budget);return [...left,...right]}
 async function v71FetchHistory(action,symbol){const end=Date.now(),start=end-365*86400000,budget={requests:0,truncated:false},rows=[],windowMs=30*86400000;for(let from=start;from<end&&budget.requests<64;from+=windowMs){const to=Math.min(end,from+windowMs-1);rows.push(...await v71HistoryWindow(action,symbol,from,to,0,budget))}if(budget.requests>=64)budget.truncated=true;return {rows,requests:budget.requests,truncated:budget.truncated,start,end}}
 function v71RenderJournal(){const symbol=v71CurrentSymbol(),j=v71StoredJournal(symbol),s=v71JournalStats(j);if($("v71FillCount"))$("v71FillCount").textContent=s.fills;if($("v71TradeCount"))$("v71TradeCount").textContent=s.trades;if($("v71NetPnl")){$("v71NetPnl").textContent=s.resolved?(s.net>=0?"+":"")+s.net.toFixed(4)+" USDT":"—";$("v71NetPnl").className=s.net>0?"good":s.net<0?"bad":"neutral"}const issues=s.unmatched+s.feeReview+(j.missingOrders||[]).length+(j.complete?0:1);if($("v71ReconState")){$("v71ReconState").textContent=issues?`REVIEW ${issues}`:"RECONCILED";$("v71ReconState").className=issues?"neutral":"good"}if($("v71SyncNote"))$("v71SyncNote").textContent=j.updated?`${symbol} · last sync ${new Date(j.updated).toLocaleString()} · fees ${s.fees.toFixed(4)} USDT · ${s.radar} RADAR / ${s.manual} MANUAL · open lots ${s.openLots} · ${j.complete?"365d complete":"history truncated"}.`:`${symbol||"Current symbol"} has not been synchronized.`;if($("v71JournalRows"))$("v71JournalRows").innerHTML=s.trades?`<div class="accountRow"><div class="accountCell">Closed / Origin</div><div class="accountCell">Entry → Exit</div><div class="accountCell">Qty / Fees</div><div class="accountCell">Net P&amp;L</div></div>`+[...j.trades].sort((a,b)=>b.closedAt-a.closedAt).slice(0,40).map(x=>`<div class="accountRow"><div class="accountCell">${new Date(x.closedAt).toLocaleString()}<br>${escapeHtml(x.origin)}</div><div class="accountCell">${num(x.entry)} → ${num(x.exit)}</div><div class="accountCell">${(+x.qty).toFixed(8)}<br>${x.fees!=null&&Number.isFinite(+x.fees)?`fee ${(+x.fees).toFixed(4)} USDT`:"fee REVIEW"}</div><div class="accountCell ${x.netPnl!=null&&Number.isFinite(+x.netPnl)?x.netPnl>=0?"good":"bad":"neutral"}">${x.netPnl!=null&&Number.isFinite(+x.netPnl)?`${x.netPnl>=0?"+":""}${(+x.netPnl).toFixed(4)} USDT`:"REVIEW FEE"}</div></div>`).join(""):'<div class="emptyState">No closed Pionex trades synchronized for this symbol.</div>';window.__pionexJournalV71={journal:j,stats:s};return s}
 // --- Boti de grid Pionex -------------------------------------------------
 // Jurnalul v71 citeste doar spot. Banii pot sta intr-un bot de grid pe
 // perpetue, invizibil peste tot altundeva. Aici ii aratam - si aratam
 // profitul NET, nu cifra bruta de grid care induce in eroare.
+// v74.6: lipsa se verifica INAINTE de +v. Number(null)===0 si
+// Number.isFinite(+null)===true - asa ajungea "nu stiu" pe ecran ca
+// "+0.0000 USDT" sau "lichidare la −0.0%".
+function botiNr(v){if(v==null||v===""||typeof v==="boolean")return null;const n=+v;return Number.isFinite(n)?n:null}
 function botiBan(v,zecimale=4,cuSemn=true){
-  return Number.isFinite(+v)?`${cuSemn&&+v>=0?'+':''}${(+v).toFixed(zecimale)} USDT`:'\u2014'
+  const n=botiNr(v);if(n===null)return '—';
+  return `${cuSemn&&n>=0?'+':''}${n.toFixed(zecimale)} USDT`
 }
-function botiClasa(v){return !Number.isFinite(+v)?'neutral':+v>0?'good':+v<0?'bad':'neutral'}
+function botiClasa(v){const n=botiNr(v);return n===null?'lipsa':n>0?'good':n<0?'bad':'neutral'}
+// Suma pe boti a unui camp: daca un singur bot n-are cifra, totalul e
+// NECUNOSCUT ("—"), nu suma celorlalti - altfel un total partial s-ar citi ca intreg.
+function botiSuma(bots,camp){let t=0;for(const b of bots){const n=botiNr(b&&b[camp]);if(n===null)return null;t+=n}return bots.length?t:null}
+// Lichidarea dupa contractul rutei: partea (jos/sus), distanta SEMNATA,
+// DEPASITA, "fara pret"; distanta e fata de ULTIMUL pret, nu de pretul de marcaj.
+function botiLichidareText(b){
+  const pl=botiNr(b&&b.pretLichidare),abs=pl!==null&&pl>0?' (la '+num(pl)+')':'';
+  const parte=b&&b.lichidarePartea==='sus'?'sus':b&&b.lichidarePartea==='jos'?'jos':null;
+  if(b&&b.motivFaraDistanta==='fara-pret')return {text:'lichidare'+abs+': nu pot socoti (fără preț)',cls:'neutral'};
+  const d=botiNr(b&&b.distantaLichidarePct);
+  if(b&&b.lichidareDepasita===true||(d!==null&&d<0))return {text:'LICHIDARE DEPĂȘITĂ'+(parte?' ('+parte+')':'')+abs,cls:'bad'};
+  if(d===null)return {text:abs?'lichidare'+abs:'lichidare —',cls:'neutral'};
+  const semn=parte==='sus'?'+':parte==='jos'?'−':'';
+  return {text:'lichidare '+(parte?parte+' ':'')+'la '+semn+d.toFixed(1)+'%'+abs,cls:d<8?'bad':d<15?'tbWarn':''}
+}
+// Aceeasi forma si pentru masura Tabloului (tablou-bot.js: valoare/partea/depasita/pretLichidare).
+function tbLichidareDinMasura(ml){return botiLichidareText({lichidarePartea:ml&&ml.partea,distantaLichidarePct:ml&&ml.valoare,lichidareDepasita:!!(ml&&ml.depasita),pretLichidare:ml&&ml.pretLichidare})}
+function tbLichidareScurt(ml){
+  const d=ml&&ml.valoare,parte=ml&&(ml.partea==="sus"||ml.partea==="jos")?ml.partea:null;
+  if(d==null)return "—";
+  if(ml.depasita||d<0)return "DEPĂȘITĂ"+(parte?" ("+parte+")":"")+" "+tbFormateazaSemn(+d,2)+"%";
+  return parte?parte+" "+(parte==="sus"?"+":"\u2212")+Math.abs(+d).toFixed(2)+"%":tbFormateazaSemn(+d,2)+"%";
+}
+function botiLichidareHtml(b){const l=botiLichidareText(b);return `<span class="${l.cls}">${escapeHtml(l.text)}</span><br><span class="fine">față de ultimul preț</span>`}
+function botiBaniHtml(b){
+  const nesigur=b.pnlNerealizatSigur===false?' <span class="fine">(neutru: semn nesigur)</span>':'';
+  return `<span class="accountLabel">Realizat NET</span><b class="${botiClasa(b.profitNet)}">${botiBan(b.profitNet)}</b><br>`+
+    `<span class="accountLabel">Nerealizat (poziție)</span><b class="${botiClasa(b.pnlNerealizat)}">${botiBan(b.pnlNerealizat)}</b>${nesigur}<br>`+
+    `<span class="accountLabel">Total</span><b class="${botiClasa(b.profitTotal)}">${botiBan(b.profitTotal)}</b><br>`+
+    `<span class="fine">realizat brut ${botiBan(b.profitRealizatBrut)} (fără comisioane/finanțare) · grid brut ${botiBan(b.gridProfitBrut)} · comision ${botiBan(b.comisioane)}</span>`
+}
+// Ce a raportat serverul ca NU a mers (ex. 429 pe preturi, totaluri incomplete).
+function botiProblemeText(p){
+  if(!p||typeof p!=='object')return [];
+  return Object.entries(p).map(([k,v])=>{
+    if(k==='preturi')return `Prețurile PERP nu s-au putut citi (${v}) - distanța la lichidare și nerealizatul pot lipsi.`;
+    if(k==='sumarIncomplet')return `Totalurile de sus sunt incomplete (lipsește: ${Array.isArray(v)?v.join(', '):v}) - se arată —.`;
+    return `${k}: ${Array.isArray(v)?v.join(', '):typeof v==='object'?JSON.stringify(v):v}`
+  })
+}
+// Du-l exact unde se pune parola, cu cursorul in camp.
+function mergiLaParola(){
+  navTo('settings');
+  const c=$('apiSessionToken');
+  if(c){try{c.scrollIntoView({block:'center'})}catch(e){}c.focus()}
+}
+// fetch() cazut arunca TypeError; fara nume, "reteaua a picat" nu se mai
+// deosebeste de o eroare oarecare in tablou-bot.js (explicaEroarea).
+function textEroare(e){const m=String(e&&e.message!=null?e.message:e);return e&&e.name==="TypeError"&&!/^TypeError/.test(m)?"TypeError: "+m:m}
+function eroareDeParola(mesaj,status){return status===401||/AUTH_(REQUIRED|INVALID|RATE_LIMITED)/.test(String(mesaj||''))}
+// Traducerea erorilor pentru om: cea de la tablou-bot.js (Task 2), plus
+// blocarea pe parole gresite, care vine de la server si nu e o eroare Pionex.
+function explicaEroareaAplicatiei(mesaj,status){
+  if(/AUTH_RATE_LIMITED/.test(String(mesaj||'')))return {titlu:"Prea multe parole greșite",
+    ceFac:"Serverul a oprit pentru un minut cererile de pe acest dispozitiv, după prea multe parole greșite. Așteaptă un minut și verifică parola din Setări (trebuie să fie exact textul APP_API_TOKEN de la pornire)."};
+  if(typeof TabloBot!=='undefined'&&TabloBot.explicaEroarea)return TabloBot.explicaEroarea(mesaj,status,(typeof location!=='undefined'&&location.hostname)||'');
+  return {titlu:"Nu am putut citi boții",ceFac:String(mesaj||"")}
+}
 async function incarcaBoti(cuToast=false){
   const stare=$('botiStare'),randuri=$('botiRanduri');
-  if(stare)stare.textContent='CITESC\u2026';
-  if(randuri)randuri.innerHTML='<div class="emptyState">Intreb Pionex\u2026</div>';
+  if(stare)stare.textContent='CITESC…';
+  if(randuri)randuri.innerHTML='<div class="emptyState">Intreb Pionex…</div>';
   let d=null;
-  try{d=await getJSON('/api/bot-orders')}
+  try{d=await getJSON('/api/bot-orders');if(!d||!Array.isArray(d.bots))throw new Error('Raspuns nevalid de la /api/bot-orders - lipseste lista de boti.')}
   catch(e){
+    // Acelasi traducator ca pe Tablou (tablou-bot.js): omul afla CE sa faca, nu codul.
+    const ex=explicaEroareaAplicatiei(textEroare(e),e.status);
+    const buton=eroareDeParola(e.message,e.status)?'<br><button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>':'';
     if(stare){stare.textContent='EROARE';stare.className='stockBadge bad'}
-    if(randuri)randuri.innerHTML=`<div class="emptyState">${escapeHtml(e.message)}</div>`;
-    if(cuToast)toast(`Bo\u021bi: ${e.message}`,'bad');
+    if(randuri)randuri.innerHTML=`<div class="emptyState"><b>${escapeHtml(ex.titlu)}</b><br>${escapeHtml(ex.ceFac)}${buton}</div>`;
+    if(cuToast)toast(`Boți: ${ex.titlu}`,'bad');
     window.__botiPionex={eroare:e.message};return null
   }
   window.__botiPionex=d;
-  const s=d.sumar||{},bots=d.bots||[];
-  if($('botiNumar'))$('botiNumar').textContent=`${s.active||0} / ${s.numar||0}`;
+  const s=d.sumar||{},bots=d.bots.filter(Boolean);
+  if($('botiNumar'))$('botiNumar').textContent=`${s.active??'—'} / ${s.numar??bots.length}`;
   if($('botiInvestit'))$('botiInvestit').textContent=botiBan(s.investitTotal,2,false);
   if($('botiProfitNet')){const n=$('botiProfitNet');n.textContent=botiBan(s.profitNetTotal);n.className=botiClasa(s.profitNetTotal)}
+  const nerealizat=botiSuma(bots,'pnlNerealizat'),total=botiSuma(bots,'profitTotal');
+  if($('botiNerealizat')){const n=$('botiNerealizat');n.textContent=botiBan(nerealizat);n.className=botiClasa(nerealizat)}
+  if($('botiTotal')){const n=$('botiTotal');n.textContent=botiBan(total);n.className=botiClasa(total)}
   if($('botiProfitBrut'))$('botiProfitBrut').textContent=botiBan(s.gridProfitBrutTotal);
   if($('botiComisioane'))$('botiComisioane').textContent=botiBan(s.comisioaneTotal);
-  const toateAvert=bots.flatMap(b=>b.avertismente.map(a=>`${b.simbol}: ${a}`));
-  if($('botiAvertismente'))$('botiAvertismente').innerHTML=toateAvert.length
-    ?toateAvert.map(a=>`<div class="noticeBad">\u26a0 ${escapeHtml(a)}</div>`).join('')
-    :'';
+  const toateAvert=bots.flatMap(b=>(Array.isArray(b.avertismente)?b.avertismente:[]).map(a=>`${b.simbol}: ${a}`));
+  const probleme=botiProblemeText(d.probleme);
+  if($('botiAvertismente'))$('botiAvertismente').innerHTML=
+    toateAvert.map(a=>`<div class="noticeBad">⚠ ${escapeHtml(a)}</div>`).join('')+
+    probleme.map(a=>`<div class="noticeBad">⚠ Server: ${escapeHtml(a)}</div>`).join('');
   if(stare){
-    stare.textContent=bots.length?`${s.active||0} ACTIVI \u00b7 ${toateAvert.length} AVERTISMENTE`:'NICIUN BOT';
-    stare.className='stockBadge '+(toateAvert.length?'neutral':'good')
+    // "0 AVERTISMENTE" pe verde mintea cand serverul spunea ca n-a putut citi preturile.
+    const coadaProbleme=probleme.length?` · ${probleme.length} PROBLEME`:'';
+    stare.textContent=(bots.length?`${s.active??'—'} ACTIVI · ${toateAvert.length} AVERTISMENTE`:'NICIUN BOT')+coadaProbleme;
+    stare.className='stockBadge '+(toateAvert.length||probleme.length?'neutral':'good')
   }
   if(randuri)randuri.innerHTML=bots.length?(
     `<div class="accountRow"><div class="accountCell">Bot / pornit</div>
      <div class="accountCell">Investit / levier</div>
-     <div class="accountCell">Pre\u021b / interval</div>
-     <div class="accountCell">Profit NET</div></div>`+
+     <div class="accountCell">Preț / interval / lichidare</div>
+     <div class="accountCell">Bani (USDT)</div></div>`+
     bots.map(b=>`<div class="accountRow">
-      <div class="accountCell"><b>${escapeHtml(b.simbol)}</b><br>${b.pornitLa?new Date(b.pornitLa).toLocaleString():'\u2014'}<br>${escapeHtml(b.stareInterna||b.stare||'')}</div>
-      <div class="accountCell">${num(b.investit)} USDT<br>${b.levier?b.levier+'\u00d7 '+escapeHtml(b.directie||''):'\u2014'}<br>${b.ordinePerechi??0} perechi din ${b.ordinePlasate??0}</div>
-      <div class="accountCell">${b.pretCurent??'\u2014'}<br>${b.gridJos??'\u2014'} \u2026 ${b.gridSus??'\u2014'}<br>${Number.isFinite(+b.distantaLichidarePct)?'lichidare la \u2212'+(+b.distantaLichidarePct).toFixed(1)+'%':'\u2014'}</div>
-      <div class="accountCell ${botiClasa(b.profitNet)}">${botiBan(b.profitNet)}<br><span class="fine">grid brut ${botiBan(b.gridProfitBrut)}</span><br><span class="fine">comision ${botiBan(b.comisioane)}</span></div>
+      <div class="accountCell"><b>${escapeHtml(b.simbol)}</b><br>${b.pornitLa?new Date(b.pornitLa).toLocaleString():'—'}<br>${escapeHtml(b.stareInterna||b.stare||'')}</div>
+      <div class="accountCell">${botiBan(b.investit,2,false)}<br>${b.levier?escapeHtml(String(b.levier))+'× '+escapeHtml(b.directie||''):'—'}<br>${escapeHtml(String(b.ordinePerechi??'—'))} perechi din ${escapeHtml(String(b.ordinePlasate??'—'))}</div>
+      <div class="accountCell">${escapeHtml(String(b.pretCurent??'—'))}<br>${escapeHtml(String(b.gridJos??'—'))} … ${escapeHtml(String(b.gridSus??'—'))}<br>${botiLichidareHtml(b)}</div>
+      <div class="accountCell botiBani">${botiBaniHtml(b)}</div>
     </div>`).join('')
-  ):'<div class="emptyState">Niciun bot \u00een contul Pionex.</div>';
-  if(d.probleme&&cuToast)toast('Bo\u021bi: '+Object.values(d.probleme).join(' \u00b7 '),'warn');
-  if(cuToast)toast(`Bo\u021bi: ${bots.length} \u00b7 net ${botiBan(s.profitNetTotal)}`,(s.profitNetTotal||0)>=0?'good':'warn');
+  ):'<div class="emptyState">Niciun bot în contul Pionex.</div>';
+  if(probleme.length&&cuToast)toast('Boți: '+probleme.join(' · '),'warn');
+  const netTotal=botiNr(s.profitNetTotal);
+  if(cuToast)toast(`Boți: ${bots.length} · realizat net ${botiBan(s.profitNetTotal)}`,netTotal===null?'warn':netTotal>=0?'good':'warn');
   return d
 }
 var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1",TB_BOT_ALES="tabloBotAles_v1";
@@ -4491,7 +4680,7 @@ async function tbAduDate(){
     // Ruta a picat - nu stim daca exista bot sau nu. Golim botul curent ca sa
     // nu mai ceara lumanari si sa nu mai scrie in istoric cu date vechi -
     // altfel o pana de retea ar minti verdictul (masurat mai jos, in raport).
-    tbStare.eroare=e.message;tbStare.eroareStatus=e.status||null;tbStare.routeOk=false;
+    tbStare.eroare=textEroare(e);tbStare.eroareStatus=e.status||null;tbStare.routeOk=false;
     tbStare.bot=null;tbStare.botBrut=null;tbStare.boti=[];tbStare.motivAlegere=null;
   }
   if(tbStare.bot){
@@ -4518,7 +4707,7 @@ async function tbAduDate(){
       // pretSpot INGHETAT (o pana de WebSocket) nu are voie sa intre in istoric
       // ca fiind viu - aceeasi familie de bug ca pana de ruta de mai jos: daca
       // scriem tacut pretul mort, mediana basis-ului se otraveste in tacere.
-      ist=TabloBot.istoricAdauga(ist,{t:Date.now(),perechi:tbStare.bot.ordinePerechi||0,
+      ist=TabloBot.istoricAdauga(ist,{t:Date.now(),perechi:tbStare.bot.ordinePerechi??null,
         pretPerp:tbStare.bot.pretCurent,pretSpot:tbPretSpotProaspat()?tbStare.pretSpot:null},Date.now());
       tbStare.stocareStricata=!tbScrie(cheie,ist);
       tbStare.istoric=ist;
@@ -4588,7 +4777,28 @@ function tbNivelClasa(nivel){
   if(nivel==="OPRESTE"||nivel==="PAZESTE"||nivel==="EROARE")return "bad";
   if(nivel==="OPORTUNITATE"||nivel==="LINISTE")return "good";
   if(nivel==="REGLEAZA")return "tbWarn";
+  if(nivel==="OPRIT")return "tbOprit";
   return "mutedInfo";
+}
+// Unitatea vine din modul (Task 2): valoarea e DEJA in unitatea afisata
+// (comisionul ca procent, nu fractie) - aici doar o lipim de cifra.
+function tbCuUnitate(text,unitate){
+  if(!unitate||text==="\u2014"||text==="—")return text;
+  return unitate==="%"||unitate==="\u00d7"?text+unitate:text+" "+unitate;
+}
+// Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.
+function tbDeseneazaBanii(b){
+  var el=$("tbBani");if(!el)return;
+  if(!b){el.innerHTML='<div class="emptyState">\u2014</div>';if($("tbAvertismente"))$("tbAvertismente").innerHTML="";return}
+  var lich=botiLichidareText(b);
+  var celula=function(eticheta,valoare,cls){return '<div class="accountCell"><span class="accountLabel">'+escapeHtml(eticheta)+'</span><b class="'+(cls||"")+'">'+escapeHtml(valoare)+'</b></div>'};
+  el.innerHTML=celula("Investit",botiBan(b.investit,2,false))+
+    celula("Realizat NET",botiBan(b.profitNet),botiClasa(b.profitNet))+
+    celula("Nerealizat (poziție)",botiBan(b.pnlNerealizat)+(b.pnlNerealizatSigur===false?" (semn nesigur)":""),botiClasa(b.pnlNerealizat))+
+    celula("Total",botiBan(b.profitTotal),botiClasa(b.profitTotal))+
+    '<div class="accountCell"><span class="accountLabel">Lichidare</span><b class="'+lich.cls+'">'+escapeHtml(lich.text)+'</b><br><span class="fine">față de ultimul preț</span></div>';
+  var av=Array.isArray(b.avertismente)?b.avertismente:[];
+  if($("tbAvertismente"))$("tbAvertismente").innerHTML=av.map(function(a){return '<div class="noticeBad">\u26a0 '+escapeHtml(a)+'</div>'}).join("");
 }
 function renderTabloBot(){
   var eroareActiva=tbStare.routeOk===false;
@@ -4609,8 +4819,7 @@ function renderTabloBot(){
   if(eroareActiva){
     // "AUTH_REQUIRED" e corect tehnic si inutil pentru om: nu-i spune nici unde
     // e, nici ce are de facut. explicaEroarea traduce in ce trebuie sa faca.
-    var ex=TabloBot.explicaEroarea(tbStare.eroare,tbStare.eroareStatus,
-      (typeof location!=="undefined"&&location.hostname)||"");
+    var ex=explicaEroareaAplicatiei(tbStare.eroare,tbStare.eroareStatus);
     v={nivel:"EROARE",titlu:ex.titlu,ceFac:ex.ceFac,declansator:null};
   }else if(b&&tbStare.stocareStricata){
     v={nivel:"EROARE",titlu:"Stocarea locală nu funcționează",
@@ -4654,8 +4863,14 @@ function renderTabloBot(){
   if($("tbNivel")){$("tbNivel").textContent=v.nivel;$("tbNivel").className=tbNivelClasa(v.nivel)}
   if($("tbTitlu"))$("tbTitlu").textContent=v.titlu;
   if($("tbCeFac"))$("tbCeFac").textContent=v.ceFac+(note.length?" · "+note.join(" · "):"");
-  if($("tbDeCe"))$("tbDeCe").textContent=v.declansator
-    ? v.declansator.masura+" = "+(v.declansator.valoare==null?"—":v.declansator.valoare)+" (prag "+(v.declansator.prag==null?"—":v.declansator.prag)+")" : "";
+  if($("tbDeCe")){
+    var dUnit=v.declansator&&m[v.declansator.masura]?m[v.declansator.masura].unitate:null;
+    $("tbDeCe").textContent=v.declansator
+      ? v.declansator.masura+" = "+tbCuUnitate(v.declansator.valoare==null?"—":String(v.declansator.valoare),dUnit)+" (prag "+tbCuUnitate(v.declansator.prag==null?"—":String(v.declansator.prag),dUnit)+")" : "";
+  }
+  // La parola lipsa/gresita omul primeste si drumul, nu doar textul.
+  if($("tbSpreSetari"))$("tbSpreSetari").hidden=!(eroareActiva&&eroareDeParola(tbStare.eroare,tbStare.eroareStatus));
+  tbDeseneazaBanii(b);
   if($("tbPret")){
     if(tbStare.pretSpot==null)$("tbPret").textContent="—";
     else $("tbPret").textContent="spot "+tbStare.pretSpot+(tbPretSpotProaspat()?"":" (învechit)");
@@ -4669,25 +4884,26 @@ function renderTabloBot(){
     }else{
       var loc=Math.max(0,Math.min(100,p)),trepte=20,poz=Math.round(loc/100*trepte);
       var bara="";for(var i=0;i<=trepte;i++)bara+=i===poz?"●":"─";
-      var clsLich=m.lichidare.stare==="rau"?"bad":m.lichidare.stare==="margine"?"tbWarn":"mutedInfo";
+      var lichR=tbLichidareDinMasura(m.lichidare);
+      var clsLich=lichR.cls==="bad"||m.lichidare.stare==="rau"?"bad":m.lichidare.stare==="margine"?"tbWarn":"mutedInfo";
       $("tbRigla").innerHTML='<div class="accountRow"><div class="accountCell">'+
         (b.gridJos!=null?b.gridJos:"—")+'</div><div class="accountCell"><b>'+bara+'</b><br>'+
         Math.round(p)+'% din interval</div><div class="accountCell">'+
         (b.gridSus!=null?b.gridSus:"—")+'</div><div class="accountCell '+clsLich+'">'+
-        (m.lichidare.valoare!=null?"lichidare la "+tbFormateazaSemn(m.lichidare.valoare,1)+"%":"—")+
-        '</div></div>';
+        escapeHtml(m.lichidare.valoare!=null?lichR.text:"—")+
+        '<br><span class="fine">față de ultimul preț</span></div></div>';
     }
   }
   var randuri=[["poziția în interval",m.pozitieInterval],["ritmul perechilor",m.ritmPerechi],
     ["oscilație sau trend",m.eficienta],["amplitudine vs treaptă",m.amplitudine],
     ["până la lichidare",m.lichidare],["basis perp vs spot",m.basis],["comision vs grid",m.comision]];
   if($("tbMasuri"))$("tbMasuri").innerHTML=randuri.map(function(r){
-    var val=r[1]&&r[1].valoare!=null?tbFormateazaSemn(+r[1].valoare,2):"—";
-    var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara")?"bad":
+    var val=r[1]&&r[1].valoare!=null?(r[1]===m.lichidare?tbLichidareScurt(r[1]):tbCuUnitate(tbFormateazaSemn(+r[1].valoare,2),r[1].unitate)):"—";
+    var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara"||(r[1]===m.lichidare&&(r[1].depasita||+r[1].valoare<0)))?"bad":
       r[1]&&r[1].stare==="margine"?"tbWarn":r[1]&&r[1].stare==="bine"?"good":"mutedInfo";
     return '<div class="accountRow"><div class="accountCell">'+escapeHtml(r[0])+
       '</div><div class="accountCell '+cls+'">'+val+'</div><div class="accountCell">'+
-      escapeHtml(String((r[1]&&r[1].stare)||"—"))+"</div></div>";
+      escapeHtml(String((r[1]&&r[1].stare)||"—")+(r[1]&&typeof r[1].eticheta==="string"&&r[1].eticheta?" · "+r[1].eticheta:""))+"</div></div>";
   }).join("");
 }
 function porneTabloBot(){
@@ -4740,7 +4956,7 @@ function v65EventRisk(){const e=externalIntelState?.calendar?.summary||{},news=w
 function v65WhyWrong(){const losses=researchJournalRows().filter(x=>Number.isFinite(metricR(x))&&metricR(x)<0).sort((a,b)=>(+b.ts||0)-(+a.ts||0)),x=losses[0];if(!x)return v65Module("replay","Decision Replay / Why Was I Wrong?","NO LOSS TO REVIEW",55,0,"No resolved losing trade available.","Collect forward outcomes.");const r=typeof v60ReviewTrade==="function"?v60ReviewTrade(x):{grade:"?",processScore:50,diagnosis:"Loss available"},state=r.processScore>=70?"GOOD PROCESS / BAD OUTCOME":r.processScore>=50?"MIXED PROCESS":"PROCESS FAILURE",detail=`${coin(x.symbol)} ${x.direction} ${metricR(x).toFixed(2)}R · ${r.diagnosis}`;return v65Module("replay","Decision Replay / Why Was I Wrong?",state,r.processScore,0,detail,`Review ${new Date(x.ts).toLocaleDateString()} · grade ${r.grade}`,r.processScore<50?"WARN":"INFO",{trade:x,review:r})}
 function v65WindowStats(ms){const now=Date.now(),rows=researchJournalRows().filter(x=>Number.isFinite(metricR(x))&&(+x.ts||0)>=now-ms),s=statPack(rows.map(metricR));return {...s}}
 function v65ControlRoom(){const d=v65WindowStats(86400000),w=v65WindowStats(7*86400000),m=v65WindowStats(30*86400000),edge=typeof v61EdgeDriftSnapshot==="function"?v61EdgeDriftSnapshot(false):null,gov=typeof v61RiskGovernor==="function"?v61RiskGovernor(edge):null,cb=paperCircuitBreaker(),state=cb.state==="PAUSE"||edge?.state==="SEVERE"?"DEFENSIVE":w.n>=5&&w.avg>0&&w.pf>=1.1?"HEALTHY":w.n?"WATCH":"LEARNING",score=state==="HEALTHY"?85:state==="DEFENSIVE"?20:state==="WATCH"?58:45,detail=`Today N${d.n} ${d.n?d.avg.toFixed(2)+"R":"—"} · 7D N${w.n} ${w.n?w.avg.toFixed(2)+"R PF "+w.pf.toFixed(2):"—"} · 30D N${m.n}`;return v65Module("control","Live Performance Control Room",state,score,0,detail,`Governor ${gov?.state||"N/A"} ${Number.isFinite(+gov?.mult)?(+gov.mult).toFixed(2)+"×":""} · Paper CB ${cb.state}`,state==="DEFENSIVE"?"WARN":"INFO",{today:d,d7:w,d30:m,edge,governor:gov,circuit:cb})}
-function v65KillSwitch(eventRisk=null,control=null){const ev=eventRisk||v65EventRisk(),ctl=control||v65ControlRoom(),edge=typeof v61EdgeDriftSnapshot==="function"?v61EdgeDriftSnapshot(false):null,gov=typeof v61RiskGovernor==="function"?v61RiskGovernor(edge):null,cb=paperCircuitBreaker(),ph=window.__providerHealthV62,interrupt=typeof v63InterruptionGuard==="function"?v63InterruptionGuard():{state:"N/A"},gap=typeof v63ExecutionGapStats==="function"?v63ExecutionGapStats():{n:0,mae:NaN,state:"LEARNING"},reasons=[];let hard=false,caution=false;const hardAdd=x=>{hard=true;reasons.push(x)},warn=x=>{caution=true;reasons.push(x)};if(cb.state==="PAUSE")hardAdd("Paper circuit breaker");if(gov?.mult===0||gov?.state==="PAUSE")hardAdd("Risk Governor PAUSE");if(edge?.state==="SEVERE")hardAdd("Severe edge drift");if(ev.state==="BLACKOUT")hardAdd("Macro/event BLACKOUT");if(interrupt.state==="SUSPECTED")hardAdd("Suspected market/data interruption");if(ph&&(+ph.score||0)<50)hardAdd(`Provider health ${(+ph.score||0).toFixed(0)}/100`);else if(ph&&(+ph.score||0)<75)warn(`Provider health ${(+ph.score||0).toFixed(0)}/100`);if(gap.n>=8&&Number.isFinite(+gap.mae)&&+gap.mae>25)hardAdd(`Execution gap MAE ${(+gap.mae).toFixed(1)}bps`);else if(gap.n>=8&&Number.isFinite(+gap.mae)&&+gap.mae>15)warn(`Execution gap MAE ${(+gap.mae).toFixed(1)}bps`);if(ctl.state==="DEFENSIVE")warn("Performance control defensive");if(ev.state==="HIGH EVENT RISK")warn("High event risk");const state=hard?"NO NEW TRADES":caution?"CAUTION":"NORMAL",score=hard?0:caution?45:95;return v65Module("kill","Kill Switch / Capital Preservation",state,score,0,reasons.join(" · ")||"No capital-preservation blocker detected.",hard?"BLOCK ALL NEW PAPER ENTRIES":caution?"REDUCE / WAIT FOR CLEANER CONDITIONS":"NORMAL OPERATION",hard?"BLOCK":caution?"WARN":"INFO",{hard,caution,reasons})}
+function v65KillSwitch(eventRisk=null,control=null){const ev=eventRisk||v65EventRisk(),ctl=control||v65ControlRoom(),edge=typeof v61EdgeDriftSnapshot==="function"?v61EdgeDriftSnapshot(false):null,gov=typeof v61RiskGovernor==="function"?v61RiskGovernor(edge):null,cb=paperCircuitBreaker(),ph=window.__providerHealthV62,interrupt=typeof v63InterruptionGuard==="function"?v63InterruptionGuard():{state:"N/A"},gap=typeof v63ExecutionGapStats==="function"?v63ExecutionGapStats():{n:0,mae:NaN,state:"LEARNING"},reasons=[];let hard=false,caution=false;const hardAdd=x=>{hard=true;reasons.push(x)},warn=x=>{caution=true;reasons.push(x)};if(cb.state==="PAUSE")hardAdd("Paper circuit breaker");if(gov?.mult===0||gov?.state==="PAUSE")hardAdd("Risk Governor PAUSE");if(edge?.state==="SEVERE")hardAdd("Severe edge drift");if(ev.state==="BLACKOUT")hardAdd("Macro/event BLACKOUT");if(interrupt.state==="SUSPECTED")hardAdd("Suspected market/data interruption");if(ph&&ph.state!=="NEÎNCERCAT"&&(+ph.score||0)<50)hardAdd(`Provider health ${(+ph.score||0).toFixed(0)}/100`);else if(ph&&ph.state!=="NEÎNCERCAT"&&(+ph.score||0)<75)warn(`Provider health ${(+ph.score||0).toFixed(0)}/100`);if(gap.n>=8&&Number.isFinite(+gap.mae)&&+gap.mae>25)hardAdd(`Execution gap MAE ${(+gap.mae).toFixed(1)}bps`);else if(gap.n>=8&&Number.isFinite(+gap.mae)&&+gap.mae>15)warn(`Execution gap MAE ${(+gap.mae).toFixed(1)}bps`);if(ctl.state==="DEFENSIVE")warn("Performance control defensive");if(ev.state==="HIGH EVENT RISK")warn("High event risk");const state=hard?"NO NEW TRADES":caution?"CAUTION":"NORMAL",score=hard?0:caution?45:95;return v65Module("kill","Kill Switch / Capital Preservation",state,score,0,reasons.join(" · ")||"No capital-preservation blocker detected.",hard?"BLOCK ALL NEW PAPER ENTRIES":caution?"REDUCE / WAIT FOR CLEANER CONDITIONS":"NORMAL OPERATION",hard?"BLOCK":caution?"WARN":"INFO",{hard,caution,reasons})}
 function v65DecisionSuite(persist=false){const regime=v65RegimeIntelligence(),structure=v65LiquidityStructure(),cross=v65CrossAssetConfirmation(),conflict=v65ConflictResolver(),entry=v65AdaptiveEntry(window.__radarState,window.__signalState,conflict),exit=v65DynamicExit(window.__radarState,window.__signalState,conflict),allocator=v65PortfolioAllocator(),failure=v65FailureMemory(),event=v65EventRisk(),replay=v65WhyWrong(),control=v65ControlRoom(),kill=v65KillSwitch(event,control),modules=[regime,structure,cross,conflict,entry,exit,allocator,failure,event,replay,control,kill],scores=modules.filter(x=>Number.isFinite(+x.score)).map(x=>+x.score),quality=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0,dirMods=[regime,structure,cross].filter(x=>Number.isFinite(+x.bias)),alignment=dirMods.length?dirMods.reduce((a,x)=>a+x.bias,0)/dirMods.length:0,state=kill.state==="NO NEW TRADES"?"CAPITAL PRESERVATION":conflict.state==="HIGH CONFLICT"||event.state==="BLACKOUT"?"WAIT":quality>=72?"DECISION READY":quality>=55?"CAUTION":"LEARNING",summary={state,quality,alignment,kill:kill.state,entry:entry.state,exit:exit.state};const out={ts:Date.now(),version:"v65",market:assetClass(),symbol:window.__radarState?.symbol||norm($("symbol")?.value||""),tf:window.__radarState?.tf||$("tf")?.value||"",modules,summary,killSwitch:kill,entry,exit,conflict,regime,structure,crossAsset:cross,allocator,failure,eventRisk:event,replay,control};window.__decisionIntelV65=out;if(persist&&localDbSupported()&&!appSettings().privacySessionOnly)localDbPutRecord("decision_intel_v65",`${Math.floor(out.ts/300000)}|${out.market}|${out.symbol}|${out.tf}`,out,out.ts).catch(()=>{});return out}
 function v65ToolClass(m){return m.severity==="BLOCK"||String(m.state).includes("NO NEW")?"bad":m.severity==="WARN"||String(m.state).includes("CAUTION")||String(m.state).includes("CONFLICT")||String(m.state).includes("WATCH")?"warn":"good"}
 function v65ToolHtml(m,i){return `<div class="decisionTool ${v65ToolClass(m)}"><div class="decisionToolHead"><b><span class="decisionToolNum">${String(i+1).padStart(2,"0")}</span>${escapeHtml(m.label)}</b><span class="decisionToolState">${escapeHtml(m.state)}</span></div><div class="decisionToolScore">${Math.round(m.score)}/100</div><div class="decisionToolDetail">${escapeHtml(m.detail||"—")}</div><div class="decisionToolAction">${escapeHtml(m.action||"")}</div></div>`}
@@ -4762,7 +4978,7 @@ function v66Pf(vals){const gp=vals.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=-vals.
 function v66OutcomeTracker(rows=v66Rows()){const vals=rows.map(x=>x._r),st=statPack(vals),correct=vals.filter(x=>x>.05).length,wrong=vals.filter(x=>x<-.05).length,neutral=vals.length-correct-wrong,last=rows.slice(-20),recent=statPack(last.map(x=>x._r)),state=st.n<20?"COLLECTING":st.avg>0&&st.pf>=1.15?"POSITIVE OBSERVED EDGE":st.avg<0||st.pf<.95?"NEGATIVE OBSERVED EDGE":"MIXED";return {state,score:st.n?Math.round(v66Clamp(50+st.avg*35+(st.pf-1)*15)):20,detail:`N${st.n} · ${st.avg.toFixed(2)}R · PF ${st.pf.toFixed(2)} · W/L/N ${correct}/${wrong}/${neutral}`,action:`Recent20 ${recent.n?recent.avg.toFixed(2)+"R · PF "+recent.pf.toFixed(2):"insufficient"}`,stats:st,recent,correct,wrong,neutral}}
 function v66Calibration(rows=v66Rows()){const defs=[[50,59],[60,64],[65,69],[70,74],[75,79],[80,89],[90,100]],buckets=[],all=[];let total=0,ece=0,brier=0;for(const [lo,hi] of defs){const z=rows.filter(x=>{const c=Math.max(+x.longConf||0,+x.shortConf||0);return c>=lo&&c<=hi}),n=z.length,w=z.filter(x=>x._r>0).length,pred=n?z.reduce((a,x)=>a+Math.max(+x.longConf||0,+x.shortConf||0),0)/n/100:NaN,obs=n?w/n:NaN,shrunk=n?(w+5)/(n+10):NaN,gap=n?Math.abs(pred-obs):NaN,avg=n?z.reduce((a,x)=>a+x._r,0)/n:NaN;if(n){total+=n;ece+=gap*n;for(const x of z){const p=Math.max(+x.longConf||0,+x.shortConf||0)/100,y=x._r>0?1:0;brier+=(p-y)**2;all.push({p,y})}}buckets.push({range:`${lo}-${hi}`,n,pred,obs,shrunk,gap,avg})}ece=total?ece/total*100:NaN;brier=total?brier/total:NaN;const state=total<30?"LOW SAMPLE":ece<=8?"WELL CALIBRATED":ece<=15?"WATCH":"MISCALIBRATED",score=total<10?20:v66Clamp(100-(Number.isFinite(ece)?ece*3:50))*Math.min(1,total/60);return {state,score,detail:`N${total} · ECE ${Number.isFinite(ece)?ece.toFixed(1)+"pp":"—"} · Brier ${Number.isFinite(brier)?brier.toFixed(3):"—"}`,action:state==="MISCALIBRATED"?"Do not treat raw confidence as probability.":"Use empirical bucket rates alongside raw confidence.",n:total,ece,brier,buckets}}
 function v66Dir(x){return x.direction==="SHORT"?-1:x.direction==="LONG"?1:0}
-function v66FactorValue(x,key){const d=v66Dir(x),norm=v=>Number.isFinite(+v)?Math.max(-1,Math.min(1,(+v-50)/50)):NaN;if(key==="confidence"){const c=Math.max(+x.longConf||0,+x.shortConf||0);return Number.isFinite(c)?Math.max(-1,Math.min(1,(c-50)/50)):NaN}if(key==="trend")return d?d*norm(x.trendScore):NaN;if(key==="momentum")return d?d*norm(x.momScore):NaN;if(key==="volume")return norm(x.volScore);if(key==="structure")return d?d*norm(x.structureScore):NaN;if(key==="mtf")return d?d*norm(x.mtf):NaN;if(key==="micro"){if(Number.isFinite(+x.microDeltaPct))return d*Math.max(-1,Math.min(1,+x.microDeltaPct/35));if(Number.isFinite(+x.microScore))return d*norm(x.microScore);return NaN}if(key==="breadth"){if(Number.isFinite(+x.breadthAlignment))return Math.max(-1,Math.min(1,+x.breadthAlignment));return d&&Number.isFinite(+x.breadthScore)?d*norm(x.breadthScore):NaN}if(key==="context")return d&&Number.isFinite(+x.contextScore)?d*norm(x.contextScore):NaN;if(key==="news"){const s=String(x.eventRiskV65||x.newsRisk||"").toUpperCase();if(s.includes("BLACKOUT"))return -1;if(s.includes("HIGH"))return -.7;if(s.includes("ELEVATED"))return -.35;if(s.includes("LOW")||s.includes("CLEAR"))return .2;const n=Number(x.newsRisk);return Number.isFinite(n)?Math.max(-1,Math.min(1,.4-n/100)):NaN}if(key==="decision")return Number.isFinite(+x.decisionOsScore)?norm(x.decisionOsScore):NaN;if(key==="conflict"){const s=String(x.conflictStateV65||"");return s==="CLEAR"?.5:s==="MIXED"?-.15:s.includes("HIGH")?-.8:NaN}return NaN}
+function v66FactorValue(x,key){const d=v66Dir(x),norm=v=>v!=null&&v!==""&&Number.isFinite(+v)?Math.max(-1,Math.min(1,(+v-50)/50)):NaN;if(key==="confidence"){const c=Math.max(+x.longConf||0,+x.shortConf||0);return Number.isFinite(c)?Math.max(-1,Math.min(1,(c-50)/50)):NaN}if(key==="trend")return d?d*norm(x.trendScore):NaN;if(key==="momentum")return d?d*norm(x.momScore):NaN;if(key==="volume")return norm(x.volScore);if(key==="structure")return d?d*norm(x.structureScore):NaN;if(key==="mtf")return d?d*norm(x.mtf):NaN;if(key==="micro"){if(Number.isFinite(+x.microDeltaPct))return d*Math.max(-1,Math.min(1,+x.microDeltaPct/35));if(Number.isFinite(+x.microScore))return d*norm(x.microScore);return NaN}if(key==="breadth"){if(Number.isFinite(+x.breadthAlignment))return Math.max(-1,Math.min(1,+x.breadthAlignment));return d&&Number.isFinite(+x.breadthScore)?d*norm(x.breadthScore):NaN}if(key==="context")return d&&Number.isFinite(+x.contextScore)?d*norm(x.contextScore):NaN;if(key==="news"){const s=String(x.eventRiskV65||x.newsRisk||"").toUpperCase();if(s.includes("BLACKOUT"))return -1;if(s.includes("HIGH"))return -.7;if(s.includes("ELEVATED"))return -.35;if(s.includes("LOW")||s.includes("CLEAR"))return .2;const n=Number(x.newsRisk);return Number.isFinite(n)?Math.max(-1,Math.min(1,.4-n/100)):NaN}if(key==="decision")return Number.isFinite(+x.decisionOsScore)?norm(x.decisionOsScore):NaN;if(key==="conflict"){const s=String(x.conflictStateV65||"");return s==="CLEAR"?.5:s==="MIXED"?-.15:s.includes("HIGH")?-.8:NaN}return NaN}
 function v66Pearson(pairs){const a=pairs.filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));if(a.length<3)return NaN;const mx=a.reduce((s,x)=>s+x[0],0)/a.length,my=a.reduce((s,x)=>s+x[1],0)/a.length;let num=0,dx=0,dy=0;for(const [x,y] of a){num+=(x-mx)*(y-my);dx+=(x-mx)**2;dy+=(y-my)**2}return dx&&dy?num/Math.sqrt(dx*dy):NaN}
 function v66Contribution(rows=v66Rows()){const items=V66_FACTORS.map(f=>{const z=rows.map(x=>({x,v:v66FactorValue(x,f.key),r:x._r})).filter(o=>Number.isFinite(o.v)),aligned=z.filter(o=>o.v>.15).map(o=>o.r),opposed=z.filter(o=>o.v<-.15).map(o=>o.r),corr=v66Pearson(z.map(o=>[o.v,o.r])),a=v66MeanCi(aligned),o=v66MeanCi(opposed),delta=(a.n&&o.n)?a.mean-o.mean:NaN,state=z.length<12?"INSUFFICIENT":Number.isFinite(corr)&&corr>=.12?"HELPFUL":Number.isFinite(corr)&&corr<=-.12?"HARMFUL":"MIXED";return {...f,n:z.length,corr,aligned:a,opposed:o,delta,state}}).sort((a,b)=>Math.abs(b.corr||0)-Math.abs(a.corr||0));const usable=items.filter(x=>x.n>=12&&Number.isFinite(x.corr)),helpful=usable.filter(x=>x.corr>.12).length,harmful=usable.filter(x=>x.corr<-.12).length,state=rows.length<20?"LEARNING":harmful>helpful?"NOISY / DEGRADING":"ATTRIBUTION AVAILABLE",score=v66Clamp(50+(helpful-harmful)*6+Math.min(20,rows.length/3));return {state,score,detail:`${helpful} helpful · ${harmful} harmful · ${usable.length} testable factors`,action:"Observational attribution only; confirm with forward/ablation evidence.",items}}
 function v66CompositeScore(x,skip=null){const vals=V66_FACTORS.filter(f=>f.key!==skip).map(f=>v66FactorValue(x,f.key)).filter(Number.isFinite);return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:NaN}
@@ -4818,7 +5034,7 @@ function v67RecoverySnapshot(){const snap={ts:v67Now(),bootId:window.__v67BootId
 function v67RunReconcile(fix=true){const p=paperTrades(),s=shadowTradesV60(),r=v67ReconcileArrays(p,s);if(fix&&r.changed){setPaperTrades(r.paper);setShadowTradesV60(r.shadow);v67Incident("WARN","STATE_RECONCILED",`Removed duplicate IDs · Paper ${r.paperDupIds} · Shadow ${r.shadowDupIds}`,r)}if(r.activeDuplicateFingerprints>0)v67Incident("HARD","ACTIVE_DUPLICATE_SIGNAL",`${r.activeDuplicateFingerprints} duplicate active Paper fingerprints detected`,r);v67LastReconcile={ts:v67Now(),...r};renderV67Operations(false);return v67LastReconcile}
 function v67HeartbeatAge(ts){return Number.isFinite(+ts)?Math.max(0,v67Now()-+ts):Infinity}
 function v67OperationsSnapshot(persist=false){const now=v67Now(),cfg=v67OpsSettings(),prior=v60StoreGet("opsHeartbeatV67",null),provider=window.__providerHealthV62||null,rec=v67LastReconcile||v67ReconcileArrays(paperTrades(),shadowTradesV60()),kill=window.__decisionIntelV65?.killSwitch||null,online=typeof navigator==="undefined"?true:navigator.onLine!==false,crypto=typeof assetClass==="function"&&assetClass()==="CRYPTO",wsRequired=crypto&&!!window.__radarState,lastTick=typeof lastWsTick!=="undefined"?+lastWsTick||0:0,checks=[];
- const add=(code,ok,severity,label,penalty)=>checks.push({code,ok:!!ok,severity,label,penalty});add("MANUAL",!v67ManualState(),"HARD",v67OpsSettings().pauseReason||"Manual operations pause",55);add("ONLINE",online,"HARD","Browser/network offline",45);add("WS",!wsRequired||!lastTick||now-lastTick<=cfg.wsStaleMs,"WARN","Live websocket stale",15);add("PROVIDER",!provider||((+provider.score||0)>=75&&now-(+provider.ts||now)<=cfg.providerStaleMs),provider&&(+provider.score||0)<50?"HARD":"WARN",provider?`Provider health ${(+provider.score||0).toFixed(0)}/100 or stale`:"Provider health not checked",provider?25:8);add("KILL",!kill||kill.state!=="NO NEW TRADES","HARD","Capital Preservation kill switch active",50);add("DUP",(+rec.activeDuplicateFingerprints||0)===0,"HARD","Duplicate active signal state",50);add("IDB",localDbSupported(),"WARN","IndexedDB unavailable",8);
+ const add=(code,ok,severity,label,penalty)=>checks.push({code,ok:!!ok,severity,label,penalty});add("MANUAL",!v67ManualState(),"HARD",v67OpsSettings().pauseReason||"Manual operations pause",55);add("ONLINE",online,"HARD","Browser/network offline",45);add("WS",!wsRequired||!lastTick||now-lastTick<=cfg.wsStaleMs,"WARN","Live websocket stale",15);add("PROVIDER",!provider||provider.state==="NEÎNCERCAT"||((+provider.score||0)>=75&&now-(+provider.ts||now)<=cfg.providerStaleMs),provider&&provider.state!=="NEÎNCERCAT"&&(+provider.score||0)<50?"HARD":"WARN",provider?.state==="NEÎNCERCAT"?"Provider health NEÎNCERCAT (nicio analiză încă)":provider?`Provider health ${(+provider.score||0).toFixed(0)}/100 or stale`:"Provider health not checked",provider&&provider.state!=="NEÎNCERCAT"?25:8);add("KILL",!kill||kill.state!=="NO NEW TRADES","HARD","Capital Preservation kill switch active",50);add("DUP",(+rec.activeDuplicateFingerprints||0)===0,"HARD","Duplicate active signal state",50);add("IDB",localDbSupported(),"WARN","IndexedDB unavailable",8);
  const scored=v67OpsScore(checks),hb={ts:now,bootId:window.__v67BootId||"",state:scored.state,score:scored.score,paperActive:paperTrades().filter(x=>{paperMigrateTrade(x);return paperOrderActive(x)}).length,shadowActive:shadowTradesV60().filter(x=>x.status==="ACTIVE").length};const recovery=v60StoreGet("opsRecoveryStatusV67",{state:"CLEAN",detail:"No recovery action required."}),out={...scored,ts:now,checks,heartbeat:hb,priorHeartbeat:prior,recovery,reconcile:rec,manualPause:v67ManualState(),incidentCount:v67Incidents().filter(x=>!x.ack).length};window.__opsV67=out;if(persist){v60StoreSet("opsHeartbeatV67",hb);v67RecoverySnapshot();if(localDbSupported()&&!appSettings().privacySessionOnly)localDbPutRecord("ops_heartbeat_v67",String(Math.floor(now/60000)),out,now).catch(()=>{})}return out}
 function v67EntryAllowed(kind,direction){const ops=v67OperationsSnapshot(false);if(ops.hardBlock){toast(`${kind} blocked by Operations v67 · ${ops.state}: ${ops.reasons[0]||"unsafe runtime"}`,"bad");return false}const d=v67DuplicateSignalGate(kind,direction);if(d.blocked){v67Incident("WARN","DUPLICATE_SIGNAL_BLOCK",`${kind} duplicate blocked · ${d.reason}`,{fp:d.fp});toast(`${kind} duplicate blocked · ${d.reason}`,"warn");return false}return true}
 function v67RecoverAfterRestart(){const prev=v60StoreGet(V67_RECOVERY_KEY,null),now=v67Now();let status={state:"CLEAN",detail:"No prior active simulation state."};if(prev&&(prev.paper?.length||prev.shadow?.length)){const age=now-(+prev.ts||0);status={state:age<24*3600000?"RECONCILED":"STALE SNAPSHOT",detail:`Prior snapshot age ${Math.round(age/1000)}s · Paper ${prev.paper?.length||0} · Shadow ${prev.shadow?.length||0}`};const r=v67RunReconcile(true);status.reconcile=r;if(age<24*3600000&&typeof navigator!=="undefined"&&navigator.onLine!==false){setTimeout(()=>{refreshPaper().catch(()=>{});refreshShadowLive(true).catch(()=>{})},1200)}v67Incident("WARN","RESTART_RECOVERY",status.detail,status)}v60StoreSet("opsRecoveryStatusV67",status);return status}

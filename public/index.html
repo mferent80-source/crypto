@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v74.5" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar Pro Lite</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -53,7 +53,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div style="font-size:11px;font-weight:800;margin-top:3px">v74.5 · TABLOUL BOTULUI</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v74.5 · TABLOUL BOTULUI</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -61,15 +61,16 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip">v71 · READ ONLY</span></div>
+<div class="topRight"><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v74.5 · READ ONLY</span></div>
 </header>
 <main>
+<div class="noticeBad parolaLipsa" id="parolaLipsa" hidden=""><b>Parola aplicației nu e pusă pe acest dispozitiv.</b> Fără ea, boții și contul Pionex nu se văd. Se pune o singură dată, în <b>Setări → API Security Session</b> (textul APP_API_TOKEN de la pornire). <button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări</button></div>
 <div class="appbar">
 <div class="brand">
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge">v71 · PIONEX JOURNAL CORRECTNESS &amp; SECURITY HOTFIX · AUDITED</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v74.5 · CRYPTO RADAR · PIONEX DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -122,6 +123,12 @@
 <h3 id="tbTitlu">Aștept date</h3>
 <p id="tbCeFac" class="fine">—</p>
 <p id="tbDeCe" class="fine">—</p>
+<button class="actionGhost" id="tbSpreSetari" hidden="" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>
+</div>
+<div class="card full" id="tbBaniCard">
+<div class="sectionHead"><h3>Banii botului</h3><span class="stockBadge">USDT</span></div>
+<div class="accountGrid" id="tbBani"><div class="emptyState">—</div></div>
+<div id="tbAvertismente"></div>
 </div>
 <div class="card full">
 <div class="sectionHead"><h3>Preț și interval</h3><span class="stockBadge" id="tbPret">—</span></div>
@@ -1183,7 +1190,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v66</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v74.5</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -2067,7 +2074,9 @@
 <div class="accountGrid">
 <div class="accountCell"><span class="accountLabel">Boți activi</span><b id="botiNumar">—</b></div>
 <div class="accountCell"><span class="accountLabel">Investit</span><b id="botiInvestit">—</b></div>
-<div class="accountCell"><span class="accountLabel">Profit NET</span><b id="botiProfitNet">—</b></div>
+<div class="accountCell"><span class="accountLabel">Realizat NET</span><b id="botiProfitNet">—</b></div>
+<div class="accountCell"><span class="accountLabel">Nerealizat (poziție)</span><b id="botiNerealizat">—</b></div>
+<div class="accountCell"><span class="accountLabel">Total</span><b id="botiTotal">—</b></div>
 <div class="accountCell"><span class="accountLabel">Profit grid (brut)</span><b id="botiProfitBrut">—</b></div>
 <div class="accountCell"><span class="accountLabel">Comisioane</span><b id="botiComisioane">—</b></div>
 </div>
@@ -2151,10 +2160,10 @@
 </div>
 <div class="scannerToolbar">
 <input aria-label="Scan Search" data-action-input="saveScanPrefs();renderScan()" id="scanSearch" placeholder="Caută coin..."/>
-<select aria-label="Scan Sort" data-action-change="saveScanPrefs();renderScan()" id="scanSort"><option value="strength">Sort: Strength</option><option value="turnover">Sort: Turnover</option><option value="adx">Sort: ADX</option><option value="change">Sort: 24h %</option></select>
-<button class="actionGhost" data-action-click="cancelScan()" disabled="" id="scanCancelBtn">Stop scan</button>
+<select aria-label="Scan Sort" data-action-change="saveScanPrefs();renderScan()" id="scanSort"><option value="strength">Sort: Strength (forță)</option><option value="turnover">Sort: Turnover</option><option value="adx">Sort: ADX</option><option value="change">Sort: 24h %</option></select>
+<button class="actionGhost" data-action-click="cancelScan()" disabled="" hidden="" id="scanCancelBtn">Stop scan</button>
 </div>
-<div class="scanTableHead"><b id="scanAssetHead">Coin</b><b>Score</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b><b id="scanTurnoverHead">24h Turnover</b></div>
+<div class="scanTableHead"><b id="scanAssetHead">Coin</b><b>Score · forță</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b><b id="scanTurnoverHead">24h Turnover</b></div>
 <div id="scanout">Apasă Rescanează pentru universul Pionex.</div>
 <div class="scanRecovery">Universe source: <b id="scanUniverseSource">—</b> · <span id="scanUniverseNote">Pionex live when available; saved/snapshot fallback otherwise.</span></div>
 </div><button data-action-click="scan()" id="scanActionBtn" style="width:100%;margin-top:7px">↻ Scanează coinurile Pionex</button></section>
