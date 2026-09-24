@@ -222,6 +222,55 @@ await test("botul short foloseste estimateLiquidationPriceUp, nu Down", () => {
   assert.equal(m.lichidare.stare, "bine");
 });
 
+// --- Audit 24.09: lichidarea citea DOAR partea de jos cand exista. Un bot
+// neutru are ambele parti; cea de SUS la 3,85% trecea drept "bine" (jos la 30%).
+
+await test("[audit] neutru cu ambele lichidari: Sus la 3,85% bate Jos la 30% si da OPRESTE", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "",
+    estimateLiquidationPriceDown: "70", estimateLiquidationPriceUp: "103.85" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - 3.85) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "sus");
+  assert.equal(m.lichidare.depasita, false);
+  assert.equal(m.lichidare.stare, "rau");
+  const mv = { ...masuriBune(), lichidare: m.lichidare };
+  assert.equal(T.verdict(mv, "GRID").nivel, "OPRESTE");
+});
+
+await test("[audit] ambele lichidari, Jos mai aproape: se ia Jos", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData,
+    estimateLiquidationPriceDown: "95", estimateLiquidationPriceUp: "130" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - 5) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "jos");
+});
+
+await test("[audit] long cu Jos '0' si Sus > 0 foloseste Sus", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "long",
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "112" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - 12) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "sus");
+});
+
+await test("[audit] short cu Jos '0' ramane corect (Sus) si semnul depasirii se vede", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trend: "short",
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "95" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.ok(Math.abs(m.lichidare.valoare - (-5)) < 1e-9, `lichidare: ${m.lichidare.valoare}`);
+  assert.equal(m.lichidare.partea, "sus");
+  assert.equal(m.lichidare.depasita, true, "pretul peste lichidarea de sus = DEPASITA");
+  assert.equal(m.lichidare.stare, "rau");
+});
+
+await test("[audit] ambele parti '0' = nu exista lichidare, nu distanta 0", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData,
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "0" } };
+  const m = T.masoara({ ...INTRARI, bot, klinePerp: ZIGZAG.concat({ close: 100 }) });
+  assert.equal(m.lichidare.valoare, null);
+  assert.equal(m.lichidare.stare, "nu-se-poate");
+});
+
 await test("basis-ul e diferenta procentuala perp fata de spot", () => {
   const m = T.masoara({ ...INTRARI, klinePerp: ZIGZAG.concat({ close: 0.0160 }), pretSpot: 0.0155 });
   assert.ok(Math.abs(m.basis.valoare - 3.2258) < 0.01, `basis: ${m.basis.valoare}`);
@@ -243,7 +292,10 @@ await test("basis-ul care SARE peste dublul medianei e raportat rau", () => {
 
 await test("comisionul se raporteaza la profitul brut din grid", () => {
   const m = T.masoara(INTRARI);
-  assert.ok(Math.abs(m.comision.valoare - 0.45 / 2.30) < 1e-6, `comision: ${m.comision.valoare}`);
+  // Audit 24.09: comisionul vine deja in PROCENTE (unitatea afisata), nu fractie.
+  assert.ok(Math.abs(m.comision.valoare - 100 * 0.45 / 2.30) < 1e-6, `comision: ${m.comision.valoare}`);
+  assert.equal(m.comision.unitate, "%");
+  assert.equal(m.comision.prag, 50);
   assert.equal(m.comision.stare, "bine");
 });
 
@@ -354,6 +406,143 @@ await test("zero perechi in ultimele sase ore dar una-doua in ultima ora e rapor
   assert.equal(m.ritmPerechi.stare, "bine", `baza este 0, cand nu-i baza nu e rau`);
 });
 
+// --- Audit 24.09: ritmul impartea la 1h si 6h fixe, oricat de departe erau
+// capetele reale, si numara peste gauri din istoric (ecran inchis).
+
+function istoricRegulat(pasMin, peMinut, acum, oreInapoi, sari) {
+  const out = [];
+  for (let min = oreInapoi * 60; min >= 0; min -= pasMin) {
+    if (sari && sari(min)) continue;
+    out.push({ t: acum - min * 60000, perechi: (oreInapoi * 60 - min) * peMinut, pretPerp: 0.0155, pretSpot: 0.0155 });
+  }
+  return out;
+}
+
+await test("[audit] ritmul imparte la durata REALA dintre capete, nu la o ora fixa", () => {
+  // o pereche pe minut = 60/ora. Mostre din minut in minut, dar lipsesc -60..-57
+  // (gaura de 5 min, inca tolerata): capatul "de acum o ora" e de fapt la -61,
+  // cu 61 de perechi. 61 in 61 de minute = 60/ora, nu 61 "in ultima ora".
+  const ist = istoricRegulat(1, 1, ACUM, 8, (min) => min >= 57 && min <= 60);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.sursa, "istoric");
+  assert.ok(Math.abs(m.ritmPerechi.valoare - 60) < 1e-9, `ritm/ora: ${m.ritmPerechi.valoare} (61 perechi in 61 min = 60/ora)`);
+  assert.ok(Math.abs(m.ritmPerechi.baza - 60) < 1e-9, `baza/ora: ${m.ritmPerechi.baza}`);
+  assert.equal(m.ritmPerechi.stare, "bine");
+});
+
+await test("[audit] o gaura de 90 de minute intre capete da NECUNOSCUT, nu un ritm inventat", () => {
+  // 6 perechi/ora constant, dar ecranul a stat inchis intre -4h si -2h30.
+  const ist = istoricRegulat(1, 0.1, ACUM, 7, (min) => min < 240 && min > 150);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate", `stare: ${m.ritmPerechi.stare}, valoare ${m.ritmPerechi.valoare}`);
+  assert.equal(m.ritmPerechi.valoare, null, "fara trx24h, nu are ce arata");
+});
+
+await test("[audit] ultima mostra veche de 30 de minute (ecran inchis) da NECUNOSCUT", () => {
+  const ist = istoricRegulat(1, 0.1, ACUM - 30 * 60000, 7);
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate");
+});
+
+await test("[audit] fara mostre destule, ritmul vine din trx24h marcat 'din Pionex 24h'", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: 48 } };
+  const scurt = istoricRegulat(1, 0.1, ACUM, 1);
+  const m = T.masoara({ ...INTRARI, bot, istoric: scurt, acum: ACUM });
+  assert.equal(m.ritmPerechi.sursa, "pionex-24h");
+  assert.equal(m.ritmPerechi.eticheta, "din Pionex 24h");
+  assert.equal(m.ritmPerechi.valoare, 2, "48 de perechi in 24h = 2 pe ora");
+  assert.equal(m.ritmPerechi.total24h, 48);
+  assert.equal(m.ritmPerechi.stare, "nu-se-poate", "fara baza nu se judeca - nu da REGLEAZA");
+});
+
+await test("[audit] trx24h cu gaura in istoric: tot Pionex, nu ritmul peste gaura", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: "24" } };
+  const ist = istoricRegulat(1, 0.1, ACUM, 7, (min) => min < 240 && min > 150);
+  const m = T.masoara({ ...INTRARI, bot, istoric: ist, acum: ACUM });
+  assert.equal(m.ritmPerechi.sursa, "pionex-24h");
+  assert.equal(m.ritmPerechi.valoare, 1);
+});
+
+await test("[audit] trx24h lipsa / null / gol NU devine 0 perechi", () => {
+  const scurt = istoricRegulat(1, 0.1, ACUM, 1);
+  for (const v of [undefined, null, "", "abc"]) {
+    const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: v } };
+    const m = T.masoara({ ...INTRARI, bot, istoric: scurt, acum: ACUM });
+    assert.equal(m.ritmPerechi.valoare, null, `trx24h=${JSON.stringify(v)} a dat ${m.ritmPerechi.valoare}`);
+  }
+  const bot0 = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: 0 } };
+  assert.equal(T.masoara({ ...INTRARI, bot: bot0, istoric: scurt, acum: ACUM }).ritmPerechi.valoare, 0,
+    "0 trimis de Pionex e o cifra reala (nicio pereche in 24h)");
+});
+
+await test("[audit] mostra cu perechi lipsa (null) nu se socoteste ca 0", () => {
+  const ist = istoricRegulat(1, 0.1, ACUM, 7);
+  ist[ist.length - 1] = { ...ist[ist.length - 1], perechi: null };
+  const m = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM });
+  assert.notEqual(m.ritmPerechi.stare, "rau", "perechi null ar da ultima = -X sau 0 - fals");
+  assert.equal(m.ritmPerechi.sursa === "istoric" ? "gresit" : "ok", "ok");
+});
+
+// Fix runda 1: proba de mai sus trece si FARA garda p0/p1/p7 (diferenta negativa
+// cade pe garda de contor resetat). Aici null pe CAPETE: la -7h, null->0 face
+// baza = tot contorul / 6h => "Ritmul a cazut" fals.
+await test("[runda1] perechi null pe capatul de acum 7h si/sau 1h nu fabrica ritm", () => {
+  const baza = istoricRegulat(1, 0.1, ACUM, 7).map((h) => ({ ...h, perechi: 1000 + h.perechi }));
+  const IDX7 = 0, IDX1 = 360; // mostrele de la -420 si -60 de minute
+  assert.equal(baza[IDX7].t, ACUM - 420 * 60000, "precheck capat 7h");
+  assert.equal(baza[IDX1].t, ACUM - 60 * 60000, "precheck capat 1h");
+  const cazuri = { "7h": [IDX7], "1h": [IDX1], "7h+1h": [IDX7, IDX1] };
+  for (const [nume, idx] of Object.entries(cazuri)) {
+    const ist = baza.map((h, i) => (idx.includes(i) ? { ...h, perechi: null } : h));
+    const r = T.masoara({ ...INTRARI, istoric: ist, acum: ACUM }).ritmPerechi;
+    assert.notEqual(r.stare, "rau", `${nume}: ${JSON.stringify(r)}`);
+    assert.notEqual(r.sursa, "istoric", `${nume}: capat lipsa, ritmul nu se socoteste din istoric`);
+    assert.equal(r.valoare, null, `${nume}: fara trx24h nu are ce arata`);
+  }
+});
+
+// --- Audit 24.09, punctul 5: lipsa nu devine 0 nicaieri in masoara().
+
+await test("[audit] totalFee lipsa (null) nu da comision 0% 'bine'", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, totalFee: null } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.comision.valoare, null, `comision: ${m.comision.valoare}`);
+  assert.equal(m.comision.stare, "nu-se-poate");
+});
+
+await test("[audit] bottom lipsa (null) nu face intervalul sa inceapa de la 0", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, bottom: null } };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.pozitieInterval.valoare, null, `pozitie: ${m.pozitieInterval.valoare}`);
+  assert.equal(m.pozitieInterval.stare, "nu-se-poate");
+});
+
+await test("[audit] pretSpot lipsa ramane null, nu 0", () => {
+  assert.equal(T.masoara({ ...INTRARI, pretSpot: null }).pretSpot, null);
+  assert.equal(T.masoara({ ...INTRARI, pretSpot: "" }).pretSpot, null);
+});
+
+await test("[audit] ora pornirii lipsa: varsta e null si verdictul nu scrie '0 minute'", () => {
+  const bot = { ...BOT, createTime: undefined };
+  const m = T.masoara({ ...INTRARI, bot });
+  assert.equal(m.varstaBotMin, null, `varsta: ${m.varstaBotMin}`);
+  const v = T.verdict({ ...masuriBune(), varstaBotMin: null }, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT");
+  assert.equal(v.declansator.masura, "varstaBot");
+  assert.equal(v.declansator.valoare, null, "lipsa nu se scrie ca 0");
+  assert.doesNotMatch(v.ceFac, /\b0 de minute/, v.ceFac);
+});
+
+await test("[audit] istoric cu prima mostra fara timp: istoricMin null si NEDOVEDIT, nu LINISTE", () => {
+  const ist = ISTORIC.map((h, i) => (i === 0 ? { ...h, t: null } : h));
+  const m = T.masoara({ ...INTRARI, istoric: ist });
+  assert.equal(m.istoricMin, null, `istoricMin: ${m.istoricMin}`);
+  const v = T.verdict({ ...masuriBune(), istoricMin: null }, "GRID");
+  assert.equal(v.nivel, "NEDOVEDIT");
+  assert.equal(v.declansator.masura, "istoric");
+  assert.equal(v.declansator.valoare, null);
+});
+
 await test("fara nimic pus, botul e presupus GRID", () => {
   const r = T.modBot(BOT, {});
   assert.equal(r.mod, "GRID");
@@ -426,7 +615,7 @@ function masuriBune() {
     amplitudine: { valoare: 2.0, stare: "bine", prag: 1.0 },
     lichidare: { valoare: 20, stare: "bine", prag: { grav: 8, atentie: 15 } },
     basis: { valoare: 0.1, stare: "bine", prag: 1.0 },
-    comision: { valoare: 0.2, stare: "bine", prag: 0.50 },
+    comision: { valoare: 20, stare: "bine", prag: 50 },
     directieBot: 0,
     marginStatus: { valoare: "NORMAL", stare: "bine", prag: "NORMAL" },
     riskStatus: { valoare: "TRADING", stare: "bine", prag: "TRADING" },
@@ -584,11 +773,41 @@ await test("fara bot, verdictul e FARA_BOT si nu inventeaza cifre", () => {
 });
 
 await test("fiecare verdict poarta cifra si pragul care l-au dat", () => {
-  const m = masuriBune(); m.comision = { valoare: 0.7, stare: "rau", prag: 0.50 };
+  const m = masuriBune(); m.comision = { valoare: 70, stare: "rau", prag: 50 };
   const v = T.verdict(m, "GRID");
   assert.ok(v.declansator, "lipseste declansatorul");
   assert.equal(v.declansator.masura, "comision");
-  assert.equal(v.declansator.prag, 0.50);
+  assert.equal(v.declansator.prag, 50, "pragul in aceeasi unitate ca valoarea (procente)");
+  assert.equal(v.declansator.valoare, 70);
+  assert.equal(v.declansator.unitate, "%", "declansatorul poarta si unitatea");
+});
+
+// --- Audit 24.09: fiecare masura poarta `unitate`, iar valoarea e deja in
+// unitatea afisata. Ecranul (Task 3) doar o lipeste langa cifra.
+const UNITATI = { pozitieInterval: "%", ritmPerechi: "perechi/oră", eficienta: "",
+  amplitudine: "×", lichidare: "%", comision: "%", basis: "%",
+  marginStatus: "", riskStatus: "", stareBot: "" };
+
+await test("[audit] fiecare masura intoarsa poarta unitatea ei (bot sanatos)", () => {
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, trx24h: 24 } };
+  const m = T.masoara({ ...INTRARI, bot });
+  for (const [camp, u] of Object.entries(UNITATI)) {
+    assert.ok(m[camp], `lipseste masura ${camp}`);
+    assert.equal(m[camp].unitate, u, `${camp}.unitate = ${JSON.stringify(m[camp].unitate)}, asteptat ${JSON.stringify(u)}`);
+  }
+});
+
+await test("[audit] unitatea exista si pe masurile care nu se pot socoti (fara bot)", () => {
+  const m = T.masoara({ ...INTRARI, bot: null });
+  for (const [camp, u] of Object.entries(UNITATI)) {
+    assert.equal(m[camp].unitate, u, `${camp} (nu-se-poate).unitate = ${JSON.stringify(m[camp].unitate)}`);
+  }
+  assert.notEqual(m.lichidare, m.comision, "masurile lipsa nu au voie sa impartaseasca acelasi obiect");
+});
+
+await test("[audit] declansatorul lichidarii poarta %", () => {
+  const m = masuriBune(); m.lichidare = { valoare: 5, stare: "rau", prag: { grav: 8, atentie: 15 }, unitate: "%" };
+  assert.equal(T.verdict(m, "GRID").declansator.unitate, "%");
 });
 
 // --- reparatiile din revizia Task 4: fals LINISTE, NEDOVEDIT pe o singura cauza,
@@ -637,12 +856,158 @@ await test("NEDOVEDIT din istoric scurt nu da vina pe varsta", () => {
   assert.equal(v.declansator.valoare, 10);
 });
 
-await test("date insuficiente SI lichidare sub 8 cer tot NEDOVEDIT, nu OPRESTE", () => {
+// --- Audit sever 24.09: rosul nu se ascunde NICIODATA in spatele lui "Nu stiu inca".
+// Regula veche ("NEDOVEDIT e prima dinadins") ascundea "Iesi" la un bot tanar cu
+// lichidarea la 4,6% sau cu LIQUIDATING raportat de Pionex. NEDOVEDIT opreste
+// doar verdictele verzi si pe cele de ritm.
+
+await test("[audit] date insuficiente SI lichidare sub 8 dau OPRESTE, nu NEDOVEDIT", () => {
   const m = masuriBune();
   m.varstaBotMin = 47;
   m.lichidare = { valoare: 6, stare: "rau", prag: { grav: 8, atentie: 15 } };
   const v = T.verdict(m, "GRID");
-  assert.equal(v.nivel, "NEDOVEDIT", "NEDOVEDIT trebuie sa ramana prima treapta, inaintea lui OPRESTE");
+  assert.equal(v.nivel, "OPRESTE", "rosul nu are voie sa se ascunda in spatele lui 'Nu stiu inca'");
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+// Bot long real ca forma: lichidarea JOS, partea de SUS vine "0" (nu exista).
+const PRET_A = 0.0156; // ultima inchidere din ZIGZAG
+function botAudit(peste) {
+  const x = { ...BOT.buOrderData, ...(peste && peste.buOrderData) };
+  return { ...BOT, status: "open", createTime: ACUM - 5 * 3600000, ...(peste || {}), buOrderData: x };
+}
+const LICH_46 = String(PRET_A * (1 - 0.046)); // lichidarea la 4,6% sub pret
+const ISTORIC_COPT = Array.from({ length: 400 }, (_, i) => ({
+  t: ACUM - (400 - i) * 60000, perechi: i, pretPerp: PRET_A, pretSpot: PRET_A,
+}));
+function intrariAudit(bot, peste) {
+  return { bot, klinePerp: ZIGZAG, pretSpot: PRET_A, istoric: ISTORIC_COPT, acum: ACUM, ...(peste || {}) };
+}
+
+await test("[audit] bot de 60 de minute cu lichidarea la 4,6% da OPRESTE, nu NEDOVEDIT", () => {
+  const bot = botAudit({ createTime: ACUM - 60 * 60000, buOrderData: { estimateLiquidationPriceDown: LICH_46 } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.ok(Math.abs(m.lichidare.valoare - 4.6) < 1e-6, `precheck lichidare: ${m.lichidare.valoare}`);
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.titlu, "Ieși");
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+await test("[audit] istoric de 1 minut + marginStatus LIQUIDATING da OPRESTE", () => {
+  const bot = botAudit({ buOrderData: { marginStatus: "LIQUIDATING" } });
+  const m = T.masoara(intrariAudit(bot, { istoric: [{ t: ACUM - 60000, perechi: 5, pretPerp: PRET_A, pretSpot: PRET_A }] }));
+  assert.ok(m.istoricMin < 30, `precheck istoric scurt: ${m.istoricMin}`);
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.declansator.masura, "marginStatus");
+});
+
+await test("[audit] 30 de lumanari + lichidarea la 4,6% da OPRESTE", () => {
+  const bot = botAudit({ buOrderData: { estimateLiquidationPriceDown: LICH_46 } });
+  const m = T.masoara(intrariAudit(bot, { klinePerp: ZIGZAG.slice(-30) }));
+  assert.equal(m.lumanari, 30, "precheck");
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+});
+
+await test("[audit] lichidare lipsa (ambele '0') + marginStatus LIQUIDATING da OPRESTE", () => {
+  const bot = botAudit({ buOrderData: { marginStatus: "LIQUIDATING",
+    estimateLiquidationPriceDown: "0", estimateLiquidationPriceUp: "0" } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.equal(m.lichidare.stare, "nu-se-poate", "precheck");
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.declansator.masura, "marginStatus");
+});
+
+await test("[audit] lichidarea 8-15% la un bot tanar da PAZESTE, nu NEDOVEDIT", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30;
+  m.lichidare = { valoare: 10, stare: "margine", prag: { grav: 8, atentie: 15 } };
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "PAZESTE", `a dat ${v.nivel}`);
+  assert.equal(v.declansator.masura, "lichidare");
+});
+
+await test("[audit] pretul iesit din interval la un bot tanar da PAZESTE, nu NEDOVEDIT", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30;
+  m.pozitieInterval = { valoare: 104, stare: "afara", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "PAZESTE");
+  m.directieBot = 1; m.pozitieInterval = { valoare: -5, stare: "afara", prag: { margine: 15 } };
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "PAZESTE", "impotriva pozitiei, in DIRECTIONAL");
+});
+
+await test("[audit] NEDOVEDIT opreste tot verdictele VERZI (iesire in favoare la un bot tanar)", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30; m.directieBot = 1;
+  m.eficienta = { valoare: 0.45, semn: 1, stare: "bine", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 108, stare: "afara", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "NEDOVEDIT", "OPORTUNITATE e verde - asteapta dovada");
+  m.varstaBotMin = 300;
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "OPORTUNITATE", "controlul: cu dovada, OPORTUNITATE");
+});
+
+await test("[audit] trendul pe mai putin de 48 de lumanari nu e dovedit - NEDOVEDIT, nu PAZESTE", () => {
+  const m = masuriBune();
+  m.lumanari = 30;
+  m.eficienta = { valoare: 0.8, semn: 1, stare: "trend", prag: { trend: 0.60, zigzag: 0.30 } };
+  m.pozitieInterval = { valoare: 90, stare: "margine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "GRID").nivel, "NEDOVEDIT", "GRID: trend + margine pe 30 de lumanari");
+  m.directieBot = -1; m.pozitieInterval = { valoare: 50, stare: "bine", prag: { margine: 15 } };
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "NEDOVEDIT", "DIRECTIONAL: trend contra pe 30 de lumanari");
+  m.lumanari = 60;
+  assert.equal(T.verdict(m, "DIRECTIONAL").nivel, "PAZESTE", "controlul: cu 60 de lumanari, trendul contra alarmeaza");
+});
+
+await test("[audit] NEDOVEDIT opreste tot ritmul (REGLEAZA) la un bot tanar", () => {
+  const m = masuriBune();
+  m.varstaBotMin = 30;
+  m.ritmPerechi = { valoare: 3, baza: 10, stare: "rau", prag: 0.40 };
+  assert.equal(T.verdict(m, "GRID").nivel, "NEDOVEDIT");
+});
+
+await test("[audit] bot INCHIS (status closed) da OPRIT 'Botul e oprit', nu Merge", () => {
+  const bot = botAudit({ status: "closed", buOrderData: { status: "closed" } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.equal(m.stareBot && m.stareBot.stare, "oprit", `stareBot: ${JSON.stringify(m.stareBot)}`);
+  const v = T.verdict(m, "GRID");
+  assert.equal(v.nivel, "OPRIT", `a dat ${v.nivel} (${v.titlu})`);
+  assert.equal(v.titlu, "Botul e oprit");
+});
+
+await test("[audit] bot CLOSED doar la nivelul de sus (buOrderData fara status) da tot OPRIT", () => {
+  const bot = botAudit({ status: "CLOSED", buOrderData: { status: undefined } });
+  assert.equal(T.verdict(T.masoara(intrariAudit(bot)), "GRID").nivel, "OPRIT");
+});
+
+await test("[audit] bot care merge (open/running) NU e OPRIT", () => {
+  const m = T.masoara(intrariAudit(botAudit()));
+  assert.equal(m.stareBot && m.stareBot.stare, "bine");
+  assert.notEqual(T.verdict(m, "GRID").nivel, "OPRIT");
+});
+
+await test("[runda1] buOrderData.status lipsa + sus 'running' = merge, nu OPRIT fals", () => {
+  // bot-orders.js il socoteste activ: String(x.status||bot.status).toLowerCase()==="running"
+  const bot = botAudit({ status: "running", buOrderData: { status: undefined } });
+  const m = T.masoara(intrariAudit(bot));
+  assert.equal(m.stareBot.stare, "bine", JSON.stringify(m.stareBot));
+  assert.notEqual(T.verdict(m, "GRID").nivel, "OPRIT");
+});
+
+await test("[audit] bot pe PAUZA cu lichidarea la 4,6% da OPRESTE (pozitia tot exista)", () => {
+  const bot = botAudit({ buOrderData: { status: "paused", estimateLiquidationPriceDown: LICH_46 } });
+  const v = T.verdict(T.masoara(intrariAudit(bot)), "GRID");
+  assert.equal(v.nivel, "OPRESTE", `a dat ${v.nivel}`);
+});
+
+await test("[audit] bot pe PAUZA, altfel sanatos, da OPRIT si spune starea, nu Merge", () => {
+  const bot = botAudit({ buOrderData: { status: "paused" } });
+  const v = T.verdict(T.masoara(intrariAudit(bot)), "GRID");
+  assert.equal(v.nivel, "OPRIT", `a dat ${v.nivel} (${v.titlu})`);
+  assert.match(v.ceFac, /paused/i, "trebuie sa spuna ce stare raporteaza Pionex");
 });
 
 await test("DIRECTIONAL fara directieBot cunoscuta: iesirea din interval nu presupune impotriva", () => {
@@ -673,7 +1038,7 @@ await test("lichidarea negativa (deja trecuta) nu scrie minus in fata cifrei", (
 
 await test("comisionul care manaca gridul da REGLEAZA (nu doar declansatorul - si nivelul)", () => {
   const m = masuriBune();
-  m.comision = { valoare: 0.7, stare: "rau", prag: 0.50 };
+  m.comision = { valoare: 70, stare: "rau", prag: 50 };
   const v = T.verdict(m, "GRID");
   assert.equal(v.nivel, "REGLEAZA");
   assert.equal(v.declansator.masura, "comision");
@@ -1092,17 +1457,95 @@ await test("eroare: AUTH pe versiunea PUBLICATA spune unde sa se duca, nu codul"
   assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR/,
     "trebuie sa-i spuna EXACT cu ce sa porneasca acasa");
   assert.match(e.ceFac, /Pionex/, "trebuie sa spuna de ce nu merge aici");
+  assert.match(e.ceFac, /Pune parola în Setări \(butonul ⚙\)/, "audit 24.09: 401 = parola, si pe publicat");
   assert.equal(e.local, false);
 });
 
-await test("eroare: AUTH pe LOCAL e alta poveste - acolo lipsesc cheile", () => {
+/* ── Audit 24.09: 401 NU inseamna "lipsesc cheile Pionex" ────────────────
+   401 vine din _shared/auth.js (AUTH_REQUIRED / AUTH_INVALID): lipseste sau e
+   gresita PAROLA aplicatiei (APP_API_TOKEN), nu cheile Pionex. Mesajul vechi il
+   trimitea sa reporneasca .bat-ul - degeaba. Cheile lipsa vin ca 503. */
+
+const SETARI = /Pune parola în Setări \(butonul ⚙\)/;
+
+await test("[audit] eroare: 401 AUTH_REQUIRED pe LOCAL -> parola in Setari, nu cheile", () => {
   for (const gazda of ["localhost", "127.0.0.1"]) {
     const e = T.explicaEroarea("AUTH_REQUIRED", 401, gazda);
     assert.equal(e.local, true, gazda + " trebuie recunoscut ca local");
-    assert.match(e.ceFac, /chei/i, `pe local, vina e la chei, nu la Cloudflare: "${e.ceFac}"`);
-    assert.ok(!/pages\.dev/.test(e.ceFac),
-      "pe local nu are rost sa-i vorbeasca despre versiunea publicata");
+    assert.match(e.ceFac, SETARI, `"${e.ceFac}"`);
+    assert.doesNotMatch(e.titlu + e.ceFac, /AUTH_REQUIRED|401/, "fara jargon");
+    assert.ok(!/pages\.dev/.test(e.ceFac), "pe local nu are rost sa-i vorbeasca despre versiunea publicata");
   }
+});
+
+await test("[audit] eroare: 401 AUTH_INVALID prin TUNEL (telefon) -> parola in Setari, nu 'du-te acasa'", () => {
+  const e = T.explicaEroarea("AUTH_INVALID", 401, "athens-potato.trycloudflare.com");
+  assert.match(e.ceFac, SETARI, `"${e.ceFac}"`);
+  assert.doesNotMatch(e.ceFac, /refuză cererile venite de la Cloudflare/,
+    "tunelul E serverul de acasa - nu are voie sa-l trimita acasa");
+  assert.match(e.titlu, /nu se potrivește/, "parola gresita se spune altfel decat parola lipsa");
+});
+
+await test("[audit] eroare: codul AUTH_REQUIRED fara status tot da mesajul cu Setari", () => {
+  const e = T.explicaEroarea("AUTH_REQUIRED", null, "127.0.0.1");
+  assert.match(e.ceFac, SETARI);
+});
+
+await test("[audit] eroare: 403 fara 'Bot reading' -> bifeaza dreptul la cheia Pionex", () => {
+  const e = T.explicaEroarea("Cheia Pionex nu are dreptul „Bot reading”. Bifează-l în Pionex › API Management (e doar citire) sau fă o cheie nouă cu el.", 403, "127.0.0.1");
+  assert.match(e.ceFac, /Bifează «Bot reading» la cheia Pionex/, `"${e.ceFac}"`);
+  assert.doesNotMatch(e.ceFac, /parola/i, "403 nu e o problema de parola");
+});
+
+await test("[audit] eroare de retea (Failed to fetch) -> serverul de acasa e oprit", () => {
+  for (const mesaj of ["Failed to fetch", "NetworkError when attempting to fetch resource.", "Load failed", "TypeError: Failed to fetch"]) {
+    const e = T.explicaEroarea(mesaj, null, "127.0.0.1");
+    assert.match(e.ceFac, /Serverul de acasă e oprit — pornește PORNESTE-CRYPTO-RADAR\.bat/, `${mesaj}: "${e.ceFac}"`);
+  }
+});
+
+await test("[audit] eroare: cheile lipsa pe server (503 / NOT_CONFIGURED) -> mesajul cu .bat", () => {
+  const cazuri = [
+    ["Cheile PIONEX_API_KEY / PIONEX_API_SECRET nu sunt configurate.", 503],
+    ["APP_API_TOKEN_NOT_CONFIGURED", 503],
+    ["NOT_CONFIGURED", null],
+  ];
+  for (const [mesaj, st] of cazuri) {
+    const e = T.explicaEroarea(mesaj, st, "127.0.0.1");
+    assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR\.bat/, `${mesaj}: "${e.ceFac}"`);
+    assert.match(e.ceFac, /chei/i, `${mesaj}: trebuie sa spuna ca e vorba de chei`);
+    assert.doesNotMatch(e.ceFac, /fereastra neagră de pe calculator/, "nu e o cadere la Pionex, e configurare");
+  }
+});
+
+await test("[runda1] un bug TypeError din cod NU e 'serverul de acasa e oprit'", () => {
+  for (const mesaj of ["TypeError: x is undefined", "TypeError: Cannot read properties of null (reading 'bots')"]) {
+    const e = T.explicaEroarea(mesaj, null, "127.0.0.1");
+    assert.doesNotMatch(e.ceFac, /Serverul de acasă e oprit/, `${mesaj}: "${e.ceFac}"`);
+    assert.match(e.ceFac, /TypeError/, "mesajul brut ramane la vedere");
+  }
+  const r = T.explicaEroarea("TypeError: network error", null, "127.0.0.1");
+  assert.match(r.ceFac, /Serverul de acasă e oprit/, "controlul: un TypeError de RETEA ramane retea");
+});
+
+await test("[runda1] APP_API_TOKEN_NOT_CONFIGURED are titlu propriu (parola pe server), nu 'cheile Pionex'", () => {
+  const e = T.explicaEroarea("APP_API_TOKEN_NOT_CONFIGURED", 503, "127.0.0.1");
+  assert.equal(e.titlu, "Parola aplicației nu e pusă pe server — pornește din nou .bat");
+  assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR\.bat/);
+  const k = T.explicaEroarea("Cheile PIONEX_API_KEY / PIONEX_API_SECRET nu sunt configurate.", 503, "127.0.0.1");
+  assert.equal(k.titlu, "Cheile Pionex nu sunt puse", "controlul: cheile Pionex lipsa raman cu titlul lor");
+});
+
+await test("[audit] eroare: un cuvant care CONTINE 'rate' nu e limitare de ritm", () => {
+  // /RATE/ prindea "configuRATE", "geneRATE"... si spunea "s-au cerut date prea des".
+  const e = T.explicaEroarea("Pionex bot API: key expired, please regenerate", 502, "127.0.0.1");
+  assert.doesNotMatch(e.ceFac, /prea des/, `"${e.ceFac}"`);
+  assert.match(e.ceFac, /regenerate/, "mesajul brut ramane la vedere");
+});
+
+await test("[audit] eroare: 429 prin TUNEL e limitare de ritm, nu refuz de adresa Cloudflare", () => {
+  const e = T.explicaEroarea("RATE_LIMITED", 429, "athens-potato.trycloudflare.com");
+  assert.doesNotMatch(e.ceFac, /refuz de adresă/, `tunelul cere de acasa - "${e.ceFac}"`);
 });
 
 await test("eroare: 429 pe PUBLICAT e refuzul Pionex fata de IP, nu vina omului", () => {
