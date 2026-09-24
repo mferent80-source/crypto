@@ -1,12 +1,19 @@
 # Secrete locale — NU se comit NICIODATA. Repo-ul asta e PUBLIC.
-.dev.vars
-.dev.vars.*
+# .dev.vars* prinde si copiile: .dev.vars.bak, .dev.vars-vechi, .dev.vars2
+.dev.vars*
 !.dev.vars.exemplu
 .env
 .env.*
 
 # Stare locala wrangler / miniflare
 .wrangler/
+
+# Profiluri Chrome lasate de probele de ecran (cookie-uri, sessionStorage cu
+# token) - proba-ecran-tablou.mjs le face in TEMP, dar primeste si un dosar
+# dat de mana, care poate cadea in repo.
+tablou-bot-proba-*/
+profil-proba*/
+*-profil-proba*/
 
 # Dependinte
 node_modules/

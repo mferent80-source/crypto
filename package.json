@@ -4,15 +4,18 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "22.x"
+    "node": ">=22"
   },
   "packageManager": "npm@10.9.2",
   "scripts": {
-    "dev": "npx --yes wrangler@4 pages dev public",
-    "deploy": "npm run predeploy && npx --yes wrangler@4 pages deploy public",
+    "dev": "npx --yes wrangler@4.137.0 pages dev public --ip 127.0.0.1",
+    "deploy": "npx --yes wrangler@4.137.0 pages deploy public --project-name crypto",
     "predeploy": "npm test",
-    "test": "npm run test:syntax && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou",
+    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo",
     "test:syntax": "node scripts/syntax-v71.mjs",
+    "test:garzi": "node scripts/garzi-v746.mjs",
+    "test:security": "node scripts/security-v57.mjs",
+    "test:server": "node scripts/server-v746.mjs",
     "test:pionexjournal": "node scripts/pionex-journal-v71.mjs",
     "test:providers": "node scripts/provider-health-v69.mjs",
     "test:market": "node scripts/market-futures-v69.mjs",
@@ -20,6 +23,7 @@
     "vapid:generate": "node scripts/generate-vapid.mjs",
     "test:bots": "node scripts/bot-orders-v72.mjs",
     "test:tablou": "node scripts/tablou-bot-v73.mjs",
+    "test:fifo": "node scripts/jurnal-fifo-v746.mjs",
     "test:ecran": "node scripts/proba-ecran-tablou.mjs"
   }
 }

@@ -24,8 +24,16 @@ function fisiere(dir, potrivire) {
 const js = [
   ...fisiere("functions", /\.js$/),
   ...fisiere("workers", /\.js$/),
+  // lib/* se incarca in pagina inaintea lui app.js: o paranteza pierduta aici
+  // omoara si tabloul, si tot ce foloseste TabloBot din app.js.
+  ...fisiere("public/lib", /\.js$/),
   "public/app.js", "public/sw.js", "public/research-worker.js",
 ].filter((f) => fs.existsSync(path.join(RADACINA, f)));
+// Garda pe lista insasi: daca un dosar dispare din acoperire, proba ar trece
+// verificand mai putin, fara sa spuna. Cer macar cate un fisier din fiecare.
+for (const [dosar, re] of [["functions/api/", /^functions[\\/]api[\\/]/], ["functions/_shared/", /^functions[\\/]_shared[\\/]/], ["public/lib/", /^public[\\/]lib[\\/]/]]) {
+  if (!js.some((f) => re.test(f))) probleme.push(`nu verific niciun fisier din ${dosar} - acoperirea s-a pierdut`);
+}
 
 for (const f of js) {
   verificate++;

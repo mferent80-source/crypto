@@ -1,0 +1,4 @@
+# .bat cu LF: cmd.exe toaca inceputurile de linie si se strica pe tacute.
+# La checkout ies mereu CRLF, oricare ar fi core.autocrlf al celui care cloneaza.
+*.bat text eol=crlf
+*.cmd text eol=crlf
