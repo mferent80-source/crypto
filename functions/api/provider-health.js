@@ -1,4 +1,5 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
+import {pionexPrivatGet} from "../_shared/pionex.js";
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:H});
 
@@ -13,11 +14,11 @@ const rand=(name,state,detail,required=true,extra={})=>
 
 // Probele de retea au cronometru si nu arunca niciodata: o gazda moarta trebuie
 // sa apara ca un rand FAIL cu motivul la vedere, nu sa darame ruta.
-async function probeaza(name,url,required=true,ms=6000){
+async function probeaza(name,url,required=true,ms=6000,antete={}){
   const t0=Date.now();
   const opreste=new AbortController(),ceas=setTimeout(()=>opreste.abort(),ms);
   try{
-    const r=await fetch(url,{headers:{accept:"application/json"},signal:opreste.signal});
+    const r=await fetch(url,{headers:{accept:"application/json",...antete},signal:opreste.signal});
     const latentaMs=Date.now()-t0;
     if(!r.ok){
       const corp=(await r.text().catch(()=>"")).slice(0,90).replace(/\s+/g," ").trim();
@@ -30,6 +31,23 @@ async function probeaza(name,url,required=true,ms=6000){
   }finally{clearTimeout(ceas)}
 }
 
+async function cheiaPionex(env){
+  const nume="PIONEX · cheia API (citire boti)";
+  if(!(env.PIONEX_API_KEY&&env.PIONEX_API_SECRET))return rand(nume,"FAIL","lipsesc PIONEX_API_KEY / PIONEX_API_SECRET");
+  const t0=Date.now();
+  try{
+    const {r,data}=await pionexPrivatGet(env,"/api/v1/bot/orders",{limit:1});
+    const latencyMs=Date.now()-t0,cod=String(data?.code||""),mesaj=String(data?.message||"").slice(0,80);
+    if(r.ok&&data?.result===true&&Array.isArray(data?.data?.results))return rand(nume,"OK","ok · citirea bot/orders a mers",true,{latencyMs});
+    if(/PERMISSION/i.test(cod))return rand(nume,"FAIL","fără Bot reading · bifează-l în Pionex › API Management",true,{latencyMs});
+    if(r.status===401||r.status===403||/KEY|SIGN|AUTH|TIMESTAMP/i.test(cod))return rand(nume,"FAIL",`cheie invalidă · ${cod||"HTTP "+r.status}${mesaj?" · "+mesaj:""}`,true,{latencyMs});
+    return rand(nume,"FAIL",`răspuns neașteptat · ${cod||"HTTP "+r.status}${mesaj?" · "+mesaj:""}`,true,{latencyMs});
+  }catch(e){
+    if(e?.status===429)return rand(nume,"DEGRADED",`429 · Pionex cere pauză ${e.retryAfter||"?"} s · cheia nu s-a putut verifica acum`,true,{latencyMs:Date.now()-t0});
+    return rand(nume,"FAIL",String(e?.message||e).slice(0,90),true,{latencyMs:Date.now()-t0});
+  }
+}
+
 export async function onRequestGet({request,env}){
   const auth=await requireApiAuth(request,env,"provider-health",30);
   if(!auth.ok)return authErrorResponse(auth,H);
@@ -38,9 +56,10 @@ export async function onRequestGet({request,env}){
   const providers=[];
 
   // --- ce e configurat pe server (nu costa nicio cerere) ---
-  const pionexChei=!!(env.PIONEX_API_KEY&&env.PIONEX_API_SECRET);
-  providers.push(rand("PIONEX · chei read-only",pionexChei?"CONFIGURED":"FAIL",
-    pionexChei?"PIONEX_API_KEY si PIONEX_API_SECRET sunt puse":"lipsesc PIONEX_API_KEY / PIONEX_API_SECRET"));
+  // Pionex: nu ajunge ca variabilele sa existe - o cheie stearsa, fara "Bot reading"
+  // sau in racire arata la fel. Se face o citire REALA bot/orders (limit 1), prin
+  // aceeasi poarta de ritm ca restul cererilor private.
+  providers.push(await cheiaPionex(env));
 
   providers.push(rand("D1 · depozitul de istoric",env.DB?.prepare?"CONFIGURED":"FAIL",
     env.DB?.prepare?"legatura DB exista":"DB nelegat · nu se salveaza rulari, snapshot-uri sau semnale"));
@@ -66,7 +85,7 @@ export async function onRequestGet({request,env}){
     const probe=await Promise.all([
       probeaza("PIONEX · acces de pe server","https://api.pionex.com/api/v1/market/tickers?type=SPOT"),
       probeaza("BINANCE FUTURES · acces de pe server","https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT"),
-      probeaza("COINGECKO · acces de pe server","https://api.coingecko.com/api/v3/ping",false),
+      probeaza("COINGECKO · acces de pe server","https://api.coingecko.com/api/v3/ping",false,6000,{"user-agent":"CryptoRadar/74 (+read-only)"}),
     ]);
     providers.push(...probe);
   }

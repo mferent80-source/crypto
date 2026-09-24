@@ -72,10 +72,13 @@ await test("fiecare rand are forma pe care o randeaza tabelul", async () => {
   }
 });
 
-await test("fara deep NU se suna niciun furnizor", async () => {
+// v74.6: fara deep se face O SINGURA cerere - citirea reala a cheii Pionex
+// (bot/orders, limit 1). Existenta variabilelor nu mai trece drept "cheie buna".
+await test("fara deep se suna DOAR citirea cheii Pionex (bot/orders)", async () => {
   fetchStub({ status: 200 });
   await cheama("deep=0", ENV_PLIN, proaspat());
-  assert.equal(cereri.length, 0, `a sunat ${cereri.length} furnizori desi deep=0`);
+  assert.equal(cereri.length, 1, `a sunat ${cereri.length} furnizori desi deep=0: ${cereri.join(" | ")}`);
+  assert.match(cereri[0], /\/api\/v1\/bot\/orders\?/, `cererea nu e citirea cheii: ${cereri[0]}`);
 });
 
 await test("cu deep=1 chiar se probeaza furnizorii", async () => {
