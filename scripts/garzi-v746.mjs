@@ -697,12 +697,15 @@ async function gardaLansatoareViu() {
       psS = psS.replace(/\$i -lt \d+/, "$i -lt 2").replace(/Start-Sleep -Seconds \d+/, "Start-Sleep -Milliseconds 200");
       const marcaj = path.join(tmp, "browser-deschis.txt");
       // Browserul NU se deschide in proba: Start-Process e inlocuit cu un fisier-marcaj.
+      // v77.5: nici ferestrele reale ale Radarului nu se inchid in proba.
+      psS = psS.replace(/& powershell -NoProfile -ExecutionPolicy Bypass -File 'scripts\\inchide-ferestre\.ps1' \| Out-Host; /g, '');
       psS = psS.replace(/Start-Process -FilePath \$edge -ArgumentList '--app=(http:[^']+)'/g, `Set-Content -LiteralPath '${marcaj}' -Value '$1'`);
       psS = psS.replace(/Start-Process '(http:[^']+)'/g, `Set-Content -LiteralPath '${marcaj}' -Value '$1'`);
       // v77: nici colectorul nu porneste in proba - si el devine un fisier-marcaj.
       const marcajColector = path.join(tmp, "colector-pornit.txt");
       psS = psS.replace(/Start-Process -FilePath 'node' -ArgumentList '[^']*colector\.mjs' -WorkingDirectory \(Get-Location\)\.Path -WindowStyle Hidden( -ErrorAction Stop)?/g, `Set-Content -LiteralPath '${marcajColector}' -Value 'colector'`);
       if (/Start-Process/.test(psS)) throw Error(`${f} [ps:sanatate]: Start-Process ramas dupa inlocuire - opresc proba ca sa nu deschid un browser`);
+      if (/inchide-ferestre/.test(psS)) throw Error(`${f} [ps:sanatate]: inchiderea ferestrelor a ramas in proba - ar inchide ferestrele reale ale Radarului`);
       const cazuri = [
         ["nimic pe port", null, 1],
         ["HTML cu 200 (alt program sau ruta inexistenta)", { status: 200, type: "text/html", body: "<!doctype html><title>x</title>" }, 1],
