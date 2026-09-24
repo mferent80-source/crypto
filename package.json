@@ -28,6 +28,7 @@
     "test:directie": "node scripts/directie-v75.mjs",
     "test:colector": "node scripts/colector-v77.mjs",
     "test:scenarii": "node scripts/scenariu-v77.mjs",
-    "test:grid": "node scripts/grid-v78.mjs"
+    "test:grid": "node scripts/grid-v78.mjs",
+    "test:ecran-grid": "node scripts/proba-ecran-grid.mjs"
   }
 }
