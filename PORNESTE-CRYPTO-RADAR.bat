@@ -34,6 +34,10 @@ if errorlevel 1 (
   goto :versiune
 )
 echo   Caut o versiune mai noua...
+rem Versiunea DE DINAINTE de pull, citita acum (nu din istoricul git: HEAD@{1}
+rem arata si mutari facute de altcineva, iar lansatorul repornea la nesfarsit).
+set "INAINTE="
+for /f %%h in ('git rev-parse HEAD 2^>nul') do set "INAINTE=%%h"
 rem Tot pasul de actualizare sta intr-un singur bloc ( ... ): cmd il citeste
 rem INTREG inainte sa-l ruleze. Altfel, un git pull care schimba chiar acest
 rem .bat ar face cmd sa citeasca fisierul nou de la pozitia veche si sa ruleze
@@ -46,10 +50,18 @@ rem bucati de randuri. Daca s-a schimbat un lansator, il pornesc din nou curat.
     echo       Daca se repeta, deschide un terminal aici si ruleaza: git pull
     echo.
   ) else (
-    git diff --quiet "HEAD@{1}" HEAD -- PORNESTE-CRYPTO-RADAR.bat PORNESTE-SI-PE-TELEFON.bat >nul 2>&1
-    if errorlevel 1 (
+    set "LANSATOR_NOU="
+    if defined INAINTE git diff --quiet %INAINTE% HEAD -- PORNESTE-CRYPTO-RADAR.bat PORNESTE-SI-PE-TELEFON.bat >nul 2>&1 || set "LANSATOR_NOU=1"
+    if defined LANSATOR_NOU (
+      rem un lansator deja repornit nu mai reporneste inca o data: nicio bucla
+      rem posibila. Iar dupa un pull care l-a schimbat nu continua cu fisierul nou.
+      if "%~1"=="--repornit" (
+        echo   [!] Lansatorul s-a schimbat din nou chiar acum. Inchide fereastra si porneste-l iar.
+        pause
+        exit
+      )
       echo   [OK] Am adus si un lansator nou. Il pornesc din nou, intr-o fereastra noua.
-      start "" "%~f0"
+      start "" "%~f0" --repornit
       exit
     )
     echo   [OK] La zi.

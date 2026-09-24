@@ -1,9 +1,9 @@
 {
-  "version": "v77.0",
-  "badge": "v77.0 · TABLOUL BOTULUI",
+  "version": "v77.1",
+  "badge": "v77.1 · TABLOUL BOTULUI",
   "engineContract": "54.1",
   "dataSchema": 54,
-  "baseRelease": "v76.0 · TABLOUL BOTULUI",
+  "baseRelease": "v77.0 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
