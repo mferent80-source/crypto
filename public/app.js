@@ -5175,7 +5175,9 @@ async function tbAduExtra(){
   try{
     // Istoricul strans de colectorul de acasa (pe pagina publicata raspunde 503 - atunci ramane cel din browser).
     try{var ist=await getJSON("/api/istoric-bot?action=citeste&ore=24&bot="+encodeURIComponent(b.id));
-      tbStare.istoricServer={bot:b.id,intrari:Array.isArray(ist.intrari)?ist.intrari:[],config:ist.config||null};e.istoricEroare=null}
+      tbStare.istoricServer={bot:b.id,intrari:Array.isArray(ist.intrari)?ist.intrari:[],config:ist.config||null};e.istoricEroare=null;
+      // v79.1: alertele colectorului stau in KV (fara ntfy) si se vad aici
+      try{var al=await getJSON("/api/istoric-bot?action=alerte");tbStare.alerteServer=al&&Array.isArray(al.alerte)?al.alerte:[]}catch(x2){tbStare.alerteServer=null}}
     catch(x){e.istoricEroare=x.status===503?"doar-acasa":textEroare(x)}
     try{var f=await getJSON("/api/pionex-account?action=futures");e.futures=f&&f.usdt?f.usdt:null;e.futuresEroare=null}
     catch(x){e.futures=null;e.futuresEroare=textEroare(x)}
@@ -5225,12 +5227,19 @@ function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
   var s=tbStare.istoricServer,c=s&&s.config,e=tbStare.extra||{};
   if(e.istoricEroare==="doar-acasa"){el.innerHTML='<p class="tbSub">Alertele pe telefon și istoricul de 7 zile merg de pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat).</p>';return}
-  if(!c||!c.ntfyTopic){el.innerHTML='<p class="tbSub">Colectorul de acasă n-a pornit încă. Pornește din nou PORNESTE-CRYPTO-RADAR.bat.</p>';return}
+  if(!c||!c.colectorLa){el.innerHTML='<p class="tbSub">Colectorul de acasă n-a pornit încă. Pornește din nou PORNESTE-CRYPTO-RADAR.bat.</p>';return}
   var min=c.colectorLa?Math.round((Date.now()-c.colectorLa)/60000):null;
   var viu=min!==null&&min<=3;
-  el.innerHTML='<div class="tbLinie"><span>Colectorul de acasă</span><b class="'+(viu?"good":"bad")+'">'+(min===null?"—":viu?"merge (acum "+Math.max(0,min)+" min)":"oprit de "+min+" min")+'</b></div>'+
+  var canal=c.canal==="ntfy"&&c.ntfyTopic?"ntfy · canal "+c.ntfyTopic:c.canal==="telegram"?"Telegram":"doar aici, în Radar (niciun canal extern legat încă)";
+  var lista=Array.isArray(tbStare.alerteServer)?tbStare.alerteServer.slice(0,12):null;
+  var NIV={critic:["🔴","bad"],atentie:["🟠","tbWarn"],info:["🟢","good"]};
+  var h='<div class="tbLinie"><span>Colectorul de acasă</span><b class="'+(viu?"good":"bad")+'">'+(min===null?"—":viu?"merge (acum "+Math.max(0,min)+" min)":"oprit de "+min+" min")+'</b></div>'+
     '<div class="tbLinie"><span>Istoric strâns pe server</span><b>'+(s.intrari.length?Math.round((Date.now()-s.intrari[0].t)/3600000*10)/10+" ore":"—")+'</b></div>'+
-    '<p class="tbSub">Alerte pe telefon: instalează aplicația <b>ntfy</b>, apasă „+” și abonează-te la canalul <b class="tbCanal">'+escapeHtml(c.ntfyTopic)+'</b>. Numele canalului e secret: nu-l da nimănui.</p>';
+    '<div class="tbLinie"><span>Canalul de alerte</span><b>'+escapeHtml(canal)+'</b></div>';
+  if(lista===null)h+='<p class="tbSub">Nu pot citi alertele de pe server.</p>';
+  else if(!lista.length)h+='<p class="tbSub">Nicio alertă încă. Aici apar: lichidare aproape, Pionex în stare anormală, preț ieșit din grid, piața pe 4h împotriva botului, mișcare mare.</p>';
+  else h+='<div class="tbAlerteLista">'+lista.map(function(a){var n=NIV[a.nivel]||NIV.info;return '<div class="tbAlerta"><span class="tbSub">'+escapeHtml(new Date(a.t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</span><b class="'+n[1]+'">'+n[0]+' '+escapeHtml(a.titlu)+'</b>'+(a.mesaj?'<p class="tbSub">'+escapeHtml(a.mesaj)+'</p>':'')+'</div>'}).join("")+'</div>';
+  el.innerHTML=h;
 }
 function tbDeseneazaKpi(){
   var b=tbStare.routeOk===false?null:tbStare.bot;

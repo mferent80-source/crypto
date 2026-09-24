@@ -1401,3 +1401,7 @@ body.peTablou main>.note{display:none}
 #gridset details.tbBloc>summary h4{margin:0;display:inline}
 #gridset details.tbBloc>summary .tbSub{margin-left:auto}
 #gridset #grClasament{margin-top:10px}
+#tabloubot .tbAlerteLista{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:320px;overflow:auto}
+#tabloubot .tbAlerta{padding:6px 8px;border-radius:8px;background:var(--tb-fond2);border:1px solid var(--tb-linie)}
+#tabloubot .tbAlerta b{display:block}
+#tabloubot .tbAlerta p{margin:2px 0 0}

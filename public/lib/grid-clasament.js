@@ -10,7 +10,7 @@ var GridClasament = (function () {
   var BARE_2Z = 12;   // 2 zile in bare de 4h
 
   function judeca(simbol, b4h, volum) {
-    var out = { simbol: simbol, volum: volum == null ? null : volum, pret: null, regim: null, latime: null, dir: null, tarie: null, pas: null, grile: null, profitGrila: null, traversariZi: null, scor: null, stare: "fara-date" };
+    var out = { simbol: simbol, volum: volum == null ? null : volum, pret: null, regim: null, latime: null, dir: null, tarie: null, motive: [], pas: null, grile: null, profitGrila: null, traversariZi: null, scor: null, stare: "fara-date" };
     if (!Array.isArray(b4h) || b4h.length < 50) return out;
     out.pret = b4h[b4h.length - 1].c;
     out.regim = G.regimPeBare(b4h, 1, 6);
@@ -22,8 +22,9 @@ var GridClasament = (function () {
       lat.push((mx - mn) / b4h[s].o);
     }
     out.latime = G.percentila(lat, 0.75);
-    var d = G.directie(b4h, null);
-    out.dir = d.dir; out.tarie = d.tarie;
+    // 1z agregat local din 4h (6 bare = o zi): aceeasi directie ca in fisa, zero cereri in plus
+    var d = G.directie(b4h, G.agrega(b4h, 86400000));
+    out.dir = d.dir; out.tarie = d.tarie; out.motive = d.motive;
     // pasul: miscarea tipica pe 15 min ~ cea pe 4h / 4 (radacina din 16 bare); pas max = x3
     var hl = [];
     for (var j = 0; j < b4h.length; j++) hl.push((b4h[j].h - b4h[j].l) / b4h[j].c);

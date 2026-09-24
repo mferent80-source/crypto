@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -55,7 +56,11 @@ function citesteVars() {
 const TOKEN = citesteVars().APP_API_TOKEN;
 if (!TOKEN) { jurnal("lipsește APP_API_TOKEN în .dev.vars - ies"); process.exit(1); }
 
-// Canalul ntfy: nume secret, generat o data si pastrat in data/ntfy.json.
+// v79.1: canalul extern e OPRIT implicit (omul nu lucreaza cu ntfy). Alertele merg mereu
+// in KV-ul de acasa (istoric-bot?action=alerte) si se vad in Radar; ALERTE_CANAL=ntfy le
+// trimite si pe ntfy. Alt canal (telegram etc.) se leaga in trimiteAlerta(), o singura data.
+const CANAL = (process.env.ALERTE_CANAL || "radar").toLowerCase();
+// Canalul ntfy: nume secret, generat o data si pastrat in data/ntfy.json (doar cand e cerut).
 const NTFY_FIS = path.join(DATA, "ntfy.json");
 function canalNtfy() {
   try { const c = JSON.parse(fs.readFileSync(NTFY_FIS, "utf8")); if (/^[A-Za-z0-9_-]{8,64}$/.test(c.topic)) return { topic: c.topic, nou: false }; } catch {}
@@ -63,7 +68,7 @@ function canalNtfy() {
   fs.writeFileSync(NTFY_FIS, JSON.stringify({ topic, facut: new Date().toISOString() }, null, 2));
   return { topic, nou: true };
 }
-const NTFY = canalNtfy();
+const NTFY = CANAL === "ntfy" ? canalNtfy() : { topic: null, nou: false };
 
 function incarca(fisier, nume) {
   const src = fs.readFileSync(path.join(RAD, "public", "lib", fisier), "utf8");
@@ -84,6 +89,17 @@ async function cere(cale, opt = {}) {
 }
 const trimite = (cale, corp) => cere(cale, { method: "POST", body: JSON.stringify(corp), headers: { "content-type": "application/json", origin: BAZA } });
 
+// Alerta pleaca INTAI in KV (se vede in Radar, pe orice dispozitiv de acasa); apoi, daca e
+// cerut, pe canalul extern. "Trimisa" = a ajuns macar in KV.
+async function trimiteAlerta(m, bot, cheie) {
+  let inKv = false;
+  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null } }); inKv = !!(r && r.ok); }
+  catch (e) { jurnal("alerta in KV EȘEC", e.message); }
+  if (CANAL === "ntfy") { const ok = await ntfy(m); return inKv || ok; }
+  if (!inKv) jurnal("alerta NETRIMISA", m.nivel, m.titlu);
+  else jurnal("alerta", m.nivel, m.titlu);
+  return inKv;
+}
 async function ntfy(m) {
   if (process.env.COLECTOR_FARA_NTFY) { jurnal("ntfy (probă, netrimis)", m.nivel, m.titlu); return true; }
   try {
@@ -98,7 +114,28 @@ async function ntfy(m) {
 
 const STARE_FIS = path.join(DATA, "alerte-stare.json");
 let stareAlerte = {}; try { stareAlerte = JSON.parse(fs.readFileSync(STARE_FIS, "utf8")); } catch {}
-const directii = {}; // bot -> { la, fata4h, dir4h }
+const directii = {}; // bot -> { la, fata4h, dir4h, regim }
+// v79.1: regimul "miscare" pe ACELEASI lumanari ca fisa: 15M, ~30 de zile. La prima tura se
+// aduc 6 pagini (cu pauza), apoi doar pagina cea mai noua se imbina peste cele vechi.
+const lumanari15 = {}; // simbol -> { randuri, la }
+async function lumanari15M(s) {
+  const st = lumanari15[s];
+  if (st && Date.now() - st.la < DIRECTIE_MS) return st.randuri;
+  let randuri = st ? st.randuri : [], end = null;
+  const pagini = st ? 1 : 6;
+  for (let p = 0; p < pagini; p++) {
+    const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : ""));
+    const r = k && k.data && Array.isArray(k.data.klines) ? k.data.klines : null;
+    if (!r) throw new Error((k && (k.error || k.message)) || "fara lumanari 15M");
+    randuri = GridCalcul.imbinaRanduri(randuri, r, 3000);
+    const t = r.map((x) => Number(x && x.time)).filter(Number.isFinite);
+    if (r.length < 500 || !t.length) break;
+    end = Math.min(...t) - 1;
+    if (p < pagini - 1) await new Promise((rs) => setTimeout(rs, 1600));
+  }
+  lumanari15[s] = { randuri, la: Date.now() };
+  return randuri;
+}
 
 async function directiaBotului(b) {
   const d = directii[b.id];
@@ -107,8 +144,9 @@ async function directiaBotului(b) {
   try {
     const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=4H&limit=500");
     const a = Directie.analizeaza(k && k.data && k.data.klines, 6, b.directie);
-    // v79 F1: regimul "miscare" pe aceleasi lumanari de 4h (1 bara = 4h, 6 bare = 24h)
-    const regim = GridCalcul.regimPeBare(GridCalcul.bare(k && k.data && k.data.klines), 1, 6);
+    // v79.1: regimul "miscare" pe 15M / 30 de zile - identic cu fisa (nu pe 4h ca in v79.0)
+    let regim = null;
+    try { regim = GridCalcul.regim(GridCalcul.bare(await lumanari15M(s))); } catch (e) { jurnal("regim 15M", b.id, e.message); }
     directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim };
   } catch (e) { jurnal("direcție", b.id, e.message); directii[b.id] = { la: Date.now(), fata4h: null, dir4h: null, regim: null }; }
   return directii[b.id];
@@ -119,7 +157,7 @@ async function directiaBotului(b) {
 // tacerea alertelor s-ar citi ca "totul e bine".
 const META = "_colector";
 function meta() { return stareAlerte[META] || (stareAlerte[META] = { citireRea: 0, anuntatRau: 0, cunoscuti: {} }); }
-async function anuntaColector(nivel, titlu, mesaj) { return ntfy({ nivel, titlu, mesaj }); }
+async function anuntaColector(nivel, titlu, mesaj) { return trimiteAlerta({ nivel, titlu, mesaj }, null, "colector"); }
 
 let esecuri = 0;
 async function tura() {
@@ -167,12 +205,12 @@ async function tura() {
     stareAlerte[b.id] = r.stare;
     // o alerta care n-a plecat (ntfy picat, fara internet) nu se trece ca trimisa:
     // starea ei revine la cea de dinainte, ca tura urmatoare s-o reincerce
-    for (const msg of r.mesaje) if (!(await ntfy(msg))) {
+    for (const msg of r.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) {
       if (inainte[msg.cheie]) stareAlerte[b.id][msg.cheie] = inainte[msg.cheie]; else delete stareAlerte[b.id][msg.cheie];
     }
   }
   try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
-  try { await trimite("/api/istoric-bot?action=config", { ntfyTopic: NTFY.topic, colectorLa: acum }); } catch (e) { jurnal("config", e.message); }
+  try { await trimite("/api/istoric-bot?action=config", Object.assign({ colectorLa: acum, canal: CANAL === "ntfy" ? "ntfy" : "radar" }, NTFY.topic ? { ntfyTopic: NTFY.topic } : {})); } catch (e) { jurnal("config", e.message); }
 }
 
 // v79 F3: o data pe ora, "pe care monede pornesc grid acum?" pe top 100 PERP dupa volum,
@@ -183,33 +221,14 @@ let clasamentLa = 0, clasamentInLucru = false;
 async function turaClasament() {
   if (clasamentInLucru || Date.now() - clasamentLa < CLASAMENT_MS) return;
   clasamentInLucru = true;
-  const t0 = Date.now();
   try {
-    const tk = await cere("/api/market?type=pionex_tickers&market=PERP");
-    const lista = GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, CLASAMENT_TOP);
-    const monede = [];
-    let esecuri = 0;
-    // Ruta publica are 45 de cereri/minut pe IP, impartite cu browserul: aici cel mult ~35/min.
-    for (const m of lista) {
-      try {
-        const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(m.simbol) + "&interval=4H&limit=500");
-        const bare = GridCalcul.bare(k && k.data && k.data.klines);
-        if (!bare.length) throw new Error((k && (k.error || k.message || k.code)) || "fara lumanari");   // 200 cu result:false e tot esec
-        monede.push(GridClasament.judeca(m.simbol, bare, m.volum));
-      } catch (e) { esecuri++; monede.push(GridClasament.judeca(m.simbol, null, m.volum)); if (esecuri >= 15) { jurnal("clasament: prea multe esecuri, ma opresc la", monede.length); break; } }
-      await new Promise((r) => setTimeout(r, 1600));
-    }
-    const rz = GridClasament.rezumat({ la: Date.now(), monede });
-    // o lista cu multe goluri nu inlocuieste una buna
-    if (!monede.length || rz.faraDate > monede.length * 0.2) { jurnal("clasament NEURCAT:", rz.faraDate, "fara date din", monede.length); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; clasamentInLucru = false; return; }
-    const r = await trimite("/api/istoric-bot?action=clasament", { la: Date.now(), monede });
-    clasamentLa = Date.now();
-    jurnal("clasament:", monede.length, "monede in", Math.round((Date.now() - t0) / 1000) + " s;", rz.evita, "de evitat,", rz.candidati, "candidati,", rz.faraDate, "fara date;", (r && r.ok) ? "urcat" : "NEURCAT");
-  } catch (e) { jurnal("clasament ESEC", e.message); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; }   // reincearca in 10 min
+    const r = await turaClasamentModul({ cere, trimite, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridClasament, top: CLASAMENT_TOP });
+    clasamentLa = r.urcat ? Date.now() : Date.now() - CLASAMENT_MS + 10 * 60000;   // neurcat -> reincearca in 10 min
+  } catch (e) { jurnal("clasament ESEC", e.message); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; }
   clasamentInLucru = false;
 }
 
-jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal ntfy " + NTFY.topic + (NTFY.nou ? " (NOU)" : ""));
+jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal alerte: " + CANAL + (NTFY.topic ? " (" + NTFY.topic + (NTFY.nou ? ", NOU" : "") + ")" : ""));
 if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului, gata liniștea (oprește gridul)." });
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 async function bucla() {

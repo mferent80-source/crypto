@@ -62,6 +62,27 @@ var GridCalcul = (function () {
     return cea ? cea.c : null;
   }
 
+  // Bare mai mici -> bare de "pasMs" (ex. 6 x 4h -> 1z), aliniate pe multipli de pasMs (UTC).
+  // Ultima bara (in formare) se pastreaza: cine o vrea afara, o scoate.
+  function agrega(b, pasMs) {
+    var out = [], cur = null;
+    for (var i = 0; i < (b ? b.length : 0); i++) {
+      var x = b[i], t0 = Math.floor(x.t / pasMs) * pasMs;
+      if (!cur || cur.t !== t0) { cur = { t: t0, o: x.o, h: x.h, l: x.l, c: x.c }; out.push(cur); }
+      else { if (x.h > cur.h) cur.h = x.h; if (x.l < cur.l) cur.l = x.l; cur.c = x.c; }
+    }
+    return out;
+  }
+  // Randuri Pionex vechi + noi (aceeasi forma bruta) -> fara dubluri pe time, crescator, ultimele n.
+  function imbinaRanduri(vechi, noi, n) {
+    var m = {}, lista = [];
+    [vechi, noi].forEach(function (a) { if (Array.isArray(a)) a.forEach(function (r) { var t = r && nr(Array.isArray(r) ? r[0] : r.time); if (t !== null) m[t] = r; }); });
+    Object.keys(m).forEach(function (k) { lista.push({ t: Number(k), r: m[k] }); });
+    lista.sort(function (a, b) { return a.t - b.t; });
+    if (n > 0 && lista.length > n) lista = lista.slice(lista.length - n);
+    return lista.map(function (x) { return x.r; });
+  }
+
   function mediana(a) {
     if (!a || !a.length) return null;
     var s = a.slice().sort(crescator), m = s.length >> 1;
@@ -240,7 +261,7 @@ var GridCalcul = (function () {
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };
   }
 
-  return { C: C, bare: bare, pretCurent: pretCurent, mediana: mediana, percentila: percentila, procent: procent,
+  return { C: C, bare: bare, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
     regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict };

@@ -61,6 +61,9 @@ var GridJurnal = (function () {
         for (var i = 0; i < boti.length; i++) {
           var b = boti[i];
           if (!b || !b.id || legati[String(b.id)] || moneda(b.baza) !== moneda(e.simbol)) continue;
+          // fisa e pe PERP: se leaga doar de un bot futures (baza "X.PERP"), nu de unul spot pe aceeasi moneda
+          var fisaPerp = /_PERP$/i.test(String(e.simbol)), botPerp = /\.PERP$/i.test(String(b.baza || ""));
+          if (fisaPerp !== botPerp) continue;
           var p = nr(b.pornitLa);
           if (p === null || p < e.t - LEAGA_INAINTE_MS || p > e.t + LEAGA_DUPA_MS) continue;
           e.botId = String(b.id); legati[e.botId] = true; break;

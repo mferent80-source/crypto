@@ -586,5 +586,38 @@ await test("F3 rezumat: cate de evitat / candidati / fara date + ora socotirii",
   assert.equal(r.evita, 1); assert.equal(r.candidati, 2); assert.equal(r.faraDate, 1); assert.equal(r.la, 1_790_000_000_000);
 });
 
+// --- v79.1: fara ntfy + cele 5 amanate ---
+await test("v79.1 GridCalcul.agrega: 6 bare de 4h -> o bara de 1z (o/h/l/c corecte, aliniate pe zi UTC); ziua in formare la coada se pastreaza", () => {
+  const T = 1_790_000_000_000 - (1_790_000_000_000 % 86400000);   // miezul noptii UTC
+  const b = [];
+  for (let i = 0; i < 14; i++) b.push({ t: T + i * 4 * 3600000, o: 100 + i, h: 110 + i, l: 90 + i, c: 101 + i });
+  const z = GC.agrega(b, 86400000);
+  assert.equal(z.length, 3, "2 zile intregi + 2 bare din a treia");
+  assert.deepEqual([z[0].o, z[0].h, z[0].l, z[0].c, z[0].t], [100, 115, 90, 106, T]);
+  assert.deepEqual([z[1].o, z[1].c], [106, 112]);
+  assert.deepEqual(GC.agrega([], 86400000), []);
+});
+await test("v79.1 GridCalcul.imbinaRanduri: randuri Pionex vechi + noi -> fara dubluri, crescator, taiat la n", () => {
+  const r = (t) => ({ time: t, open: "1", high: "1", low: "1", close: "1" });
+  const v = [r(1), r(2), r(3)], n = [r(3), r(4), r(2)];
+  assert.deepEqual(GC.imbinaRanduri(v, n, 10).map((x) => x.time), [1, 2, 3, 4]);
+  assert.deepEqual(GC.imbinaRanduri(v, n, 2).map((x) => x.time), [3, 4], "se tin cele mai noi");
+  assert.deepEqual(GC.imbinaRanduri(null, n, 10).map((x) => x.time), [2, 3, 4]);
+});
+await test("v79.1 F2 leaga DOAR boti de acelasi fel: fisa PERP nu se leaga de un bot spot pe aceeasi moneda", () => {
+  const l = GJ.adauga([], fisaFalsa(), T0);
+  const spot = [{ id: "s1", baza: "MET", quote: "USDT", activ: true, pornitLa: T0 + ORA, investit: 100, profitTotal: 1 }];
+  assert.equal(GJ.actualizeaza(l, spot, T0 + 2 * ORA)[0].botId, null);
+  const perp = [{ id: "p1", baza: "MET.PERP", quote: "USDT", activ: true, pornitLa: T0 + ORA, investit: 100, profitTotal: 1 }];
+  assert.equal(GJ.actualizeaza(l, perp, T0 + 2 * ORA)[0].botId, "p1");
+});
+await test("v79.1 F3 judeca foloseste si directia pe 1z (agregata din 4h) - motivele au si '1z:'", () => {
+  const lin = aleator(500, 31, 0.012); for (let i = lin.length - 8; i < lin.length; i++) lin[i] = lin[i - 1] * (1 + 0.0005 * (i % 2 ? 1 : -1));
+  const T = 1_790_000_000_000 - (1_790_000_000_000 % 86400000);
+  const b = lin.map((c, i) => { const o = i ? lin[i - 1] : c; return { t: T + i * 4 * 3600000, o, h: Math.max(o, c) * 1.004, l: Math.min(o, c) * 0.996, c }; });
+  const j = GCL.judeca("X", b, 1);
+  assert.ok(Array.isArray(j.motive) && j.motive.some((m) => /^1z:/.test(m)) && !j.motive.some((m) => /prea puține/.test(m)), JSON.stringify(j.motive));
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

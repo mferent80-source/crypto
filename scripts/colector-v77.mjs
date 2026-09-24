@@ -158,6 +158,37 @@ await test("istoric: clasamentul (v79 F3) se scrie curatat si se citeste inapoi;
   assert.equal((await cheama("POST", "action=clasament", env, { corp: { monede: [] } })).status, 400);
 });
 
+await test("istoric: alertele (v79.1, fara ntfy) se pun in KV curatate, se tin ultimele 100, se citesc cele mai noi primele", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t = Date.now();
+  for (let i = 0; i < 103; i++) await cheama("POST", "action=alerte", env, { corp: { alerta: { t: t + i, nivel: i % 2 ? "atentie" : "critic", titlu: "MET: proba " + i + " <b>", mesaj: "m", bot: "2382", cheie: "lich" } } });
+  const r = await cheama("GET", "action=alerte", env);
+  assert.equal(r.status, 200); assert.equal(r.d.alerte.length, 100);
+  assert.equal(r.d.alerte[0].titlu, "MET: proba 102 <b>", "cea mai noua prima (escaparea e treaba ecranului)");
+  assert.equal(r.d.alerte[99].t, t + 3);
+  assert.equal((await cheama("POST", "action=alerte", env, { corp: { alerta: { nivel: "x" } } })).status, 400, "fara t/titlu -> 400");
+  assert.equal((await cheama("POST", "action=alerte", env, { corp: { alerta: { t: t + 1000, nivel: "gresit", titlu: "a" } } })).d.ok, true);
+  assert.equal((await cheama("GET", "action=alerte", env)).d.alerte[0].nivel, "info", "nivel necunoscut -> info");
+});
+
+await test("tura de clasament (v79.1, modul testabil): top dupa volum, o cerere de 4H pe moneda, result:false = esec, >20% fara date -> NU se urca; altfel se urca", async () => {
+  const { turaClasament } = await import("./lib/tura-clasament.mjs");
+  const GC = new Function(`${fs.readFileSync(new URL("../public/lib/grid-calcul.js", import.meta.url), "utf8")}; return GridCalcul;`)();
+  const GCL = new Function(`${fs.readFileSync(new URL("../public/lib/grid-calcul.js", import.meta.url), "utf8")}; ${fs.readFileSync(new URL("../public/lib/grid-clasament.js", import.meta.url), "utf8")}; return GridClasament;`)();
+  const Q = 4 * 3600000, T = 1_790_000_000_000 - (1_790_000_000_000 % 86400000);
+  const klines = (n, s) => { let p = 1, x = s || 5; const out = []; for (let i = 0; i < n; i++) { x = (x * 16807) % 2147483647; p *= 1 + ((x / 2147483647) - 0.5) * 0.01; out.push({ time: T + i * Q, open: String(p), high: String(p * 1.004), low: String(p * 0.996), close: String(p * 1.001) }); } return out; };
+  const tickers = [{ symbol: "A_USDT_PERP", amount: "900" }, { symbol: "B_USDT_PERP", amount: "500" }, { symbol: "C_USDT_PERP", amount: "100" }, { symbol: "D_USDT", amount: "9999" }];
+  const apeluri = [], urcari = [], jurnal = [];
+  const deps = (rasp) => ({ cere: async (c) => { apeluri.push(c); return rasp(c); }, trimite: async (c, corp) => { urcari.push(corp); return { ok: true }; }, jurnal: (...a) => jurnal.push(a.join(" ")), pauza: async () => {}, GridCalcul: GC, GridClasament: GCL, top: 2 });
+  // toate bune -> 2 monede (top 2), urcat
+  let r = await turaClasament(deps((c) => c.includes("tickers") ? { data: { tickers } } : { data: { klines: klines(500, c.includes("A_") ? 5 : 9) } }));
+  assert.equal(r.urcat, true); assert.equal(r.monede.length, 2); assert.equal(urcari.length, 1);
+  assert.deepEqual(apeluri.slice(1).map((c) => c.match(/symbol=([A-Z_]+)/)[1]), ["A_USDT_PERP", "B_USDT_PERP"]);
+  // result:false pe una din doua (200 fara klines) -> 50% fara date -> NU se urca
+  urcari.length = 0;
+  r = await turaClasament(deps((c) => c.includes("tickers") ? { data: { tickers } } : c.includes("A_") ? { result: false, code: "RATE_LIMITED" } : { data: { klines: klines(500) } }));
+  assert.equal(r.urcat, false); assert.equal(urcari.length, 0); assert.ok(jurnal.some((l) => /NEURCAT/.test(l)));
+});
+
 await test("istoric: intrarile mai vechi de 7 zile se taie; 'ore' limiteaza citirea", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, acum = Date.now();
   await cheama("POST", "action=adauga", env, { corp: { bot: "b1", intrare: { t: acum - 8 * 24 * ORA, perechi: 1 } } });
