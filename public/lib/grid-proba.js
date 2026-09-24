@@ -185,13 +185,13 @@ var GridProba = (function () {
         st.redus = { de: de, la: st.grile, minOrdin: mo };
       } else sumaMinima = mo * C.GRILE_MIN / st.levier;
     }
-    var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret);
+    var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret), liniste = G.linisteTine(o.b15, o.H);
     var v = G.verdict({ regim: rg, stat: ales, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur });
     if (sumaMinima !== null) {
       v = { nivel: "nu", motive: ["suma e prea mică: Pionex cere cel puțin " + mo.toFixed(2) + " USDT pe ordin, deci pentru 2 grile la " + st.levier + "× îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
     }
     return { simbol: o.simbol, pret: o.pret, H: o.H, directie: dT, dir: dir, manual: !!o.dir, setare: st, proba: pr, verdict: v,
-      regim: rg, pozitie: poz, sumaMinima: sumaMinima,
+      regim: rg, pozitie: poz, liniste: liniste, sumaMinima: sumaMinima,
       contra: contrazice(pr, dir) };
   }
 

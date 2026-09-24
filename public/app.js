@@ -5002,6 +5002,14 @@ function renderGridClasament(){
   });
   box.innerHTML=h+'</tbody></table></div>';
 }
+// v79.3: "linistea de acum, cat mai tine?" - frecventa din perioadele de liniste ale monedei (nu predictie)
+function grLinisteTine(f){
+  var l=f.liniste,P=GridCalcul.procent;if(!l)return "";
+  var z=function(x){return x.toFixed(1).replace(".",",")};
+  if(!l.linisteAcum)return '<li>Pe 24 h moneda e în <b>mișcare</b> acum: nu e o liniște de măsurat.</li>';
+  if(!l.suficient)return '<li>Liniște de <b>'+z(l.zileLiniste)+' zile</b> (pe 24 h). În ultimele 30 de zile doar '+l.n+' perioade au ajuns la lungimea asta: prea puține ca să spun cât mai ține.</li>';
+  return '<li>Liniște de <b>'+z(l.zileLiniste)+' zile</b> (pe 24 h). Din <b>'+l.n+'</b> perioade de liniște ale monedei care au ajuns aici, <b>'+l.k+'</b> au mai ținut încă '+l.H+' zile: <b>'+P(l.p)+'</b> (IC '+P(l.ic[0])+' – '+P(l.ic[1])+'). E o frecvență din trecut, nu o promisiune.</li>';
+}
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
   if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
@@ -5040,6 +5048,7 @@ function renderGrid(){
   var rg=f.regim;
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Când îl oprești</h4></div><ul class="grLista">'
     +'<li>Stop-urile de mai sus sunt la două grile dincolo de marginile gridului, înaintea lichidării.</li>'
+    +grLinisteTine(f)
     +'<li>Când alertele Radarului anunță «gata liniștea», oprește-l: după mișcare gridul iese cel mai rău.</li>'
     +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")
     +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Gridul a ieșit în medie pe minus când l-am măsurat pe 30 de monede; ce s-a dovedit e să nu-l pornești după mișcare.</p></div>';

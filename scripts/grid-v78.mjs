@@ -619,5 +619,39 @@ await test("v79.1 F3 judeca foloseste si directia pe 1z (agregata din 4h) - moti
   assert.ok(Array.isArray(j.motive) && j.motive.some((m) => /^1z:/.test(m)) && !j.motive.some((m) => /prea puține/.test(m)), JSON.stringify(j.motive));
 });
 
+// --- v79.3: "linistea de acum, cat mai tine?" - frecventa din perioadele de liniste ale monedei ---
+// serie sintetica: blocuri linistite de L bare (zgomot mic) despartite de o bara cu salt de 12%;
+// la coada, o liniste de 150 de bare (starea de acum).
+function serieLiniste(L, blocuri, coada) {
+  const out = []; let p = 1, s = 17;
+  const pas = () => { s = (s * 16807) % 2147483647; return ((s / 2147483647) - 0.5) * 0.002; };
+  for (let b = 0; b < blocuri; b++) { for (let i = 0; i < L; i++) { p *= 1 + pas(); out.push(p); } p *= 1.12; out.push(p); }
+  for (let i = 0; i < coada; i++) { p *= 1 + pas(); out.push(p); }
+  return bareDin(out, 0.0005);
+}
+await test("v79.3 linisteTine: perioade lungi (500 bare) -> linistea de 150 de bare a mai tinut 2 zile in ~toate cazurile; perioade scurte (280) -> in niciunul; prea putine perioade -> nesuficient", () => {
+  const lung = GC.linisteTine(serieLiniste(500, 6, 150), 2);
+  assert.ok(lung && lung.n >= 4, JSON.stringify(lung));
+  assert.ok(lung.p >= 0.8, "p " + lung.p + " (zgomotul poate rupe o perioada)");
+  assert.ok(lung.ic[0] <= lung.p && lung.ic[1] >= lung.p && lung.ic[0] >= 0 && lung.ic[1] <= 1);
+  aprox(lung.zileLiniste, 150 / 96, 0.2, "linistea de acum ~1,56 zile");
+  const scurt = GC.linisteTine(serieLiniste(280, 8, 150), 2);
+  assert.ok(scurt && scurt.n >= 4, JSON.stringify(scurt));
+  assert.equal(scurt.k, 0); assert.equal(scurt.p, 0);
+  const putine = GC.linisteTine(serieLiniste(500, 2, 150), 2);
+  assert.equal(putine.suficient, false);
+  assert.equal(GC.linisteTine(serieLiniste(500, 6, 150).slice(0, 100), 2), null, "sub 2 zile de istoric -> null");
+});
+await test("v79.3 linisteTine: daca ACUM e miscare, nu e nimic de intrebat (linisteAcum=false)", () => {
+  const b = serieLiniste(500, 4, 5);   // saltul e cu 5 bare in urma -> r4h inca mare
+  const r = GC.linisteTine(b, 2);
+  assert.equal(r.linisteAcum, false);
+});
+await test("v79.3 fisa poarta 'liniste' (n, k, p, ic, zileLiniste) pentru orizontul ales", () => {
+  const b = serieLiniste(500, 6, 150);
+  const f = GP.fisa({ simbol: "T", pret: b[b.length - 1].c, b15: b, b4h: b4, b1d: b1, suma: 100, H: 2, dir: null, levier: null, minNotional: 1 });
+  assert.ok(f.liniste && typeof f.liniste.p === "number" && f.liniste.n >= 4, JSON.stringify(f.liniste));
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

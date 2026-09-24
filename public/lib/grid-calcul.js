@@ -234,6 +234,61 @@ var GridCalcul = (function () {
     return { r4h: r4, r24h: r24, miscare: (r4 !== null && r4 > C.PRAG_MISCARE) || (r24 !== null && r24 > C.PRAG_MISCARE) };
   }
   function regim(b) { return regimPeBare(b, 16, C.BARE_ZI); }
+  // Intervalul Wilson (95%) pentru k din n - acelasi ca in Directie.
+  function wilson(k, n) {
+    if (!(n > 0)) return [0, 1];
+    var z = 1.96, p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n));
+    return [Math.max(0, (c - m) / d), Math.min(1, (c + m) / d)];
+  }
+
+  // "Linistea de acum, cat mai tine?" - o FRECVENTA din perioadele de liniste ale monedei,
+  // nu o predictie. Pentru DURATA, scara e miscarea pe 24 h (cea pe 4 h e prea zgomotoasa:
+  // zgomotul pur o trece de prag in ~8% din bare, deci ar rupe "linistea" la fiecare ~12
+  // bare). O perioada de liniste incepe cand miscarea pe 24 h coboara sub 1,2 x obisnuit
+  // (percentila 75 pe tot istoricul dat) si se termina cand trece de 1,5 x. Se iau perioadele
+  // care au ajuns la lungimea celei de acum (plafon 3 zile) si se numara cate au mai tinut
+  // inca H zile. Fiecare perioada e un caz independent; cea de acum (neterminata) nu se numara.
+  function linisteTine(b, H) {
+    if (!b || b.length < 2 * C.BARE_ZI + 1) return null;
+    var W = H * C.BARE_ZI, n = b.length, i;
+    var m4 = new Array(n), m24 = new Array(n), l4 = [], l24 = [];
+    for (i = 0; i < n; i++) {
+      m4[i] = i >= 16 ? Math.abs(b[i].c - b[i - 16].c) / b[i - 16].c : null;
+      m24[i] = i >= C.BARE_ZI ? Math.abs(b[i].c - b[i - C.BARE_ZI].c) / b[i - C.BARE_ZI].c : null;
+      if (m4[i] !== null) l4.push(m4[i]); if (m24[i] !== null) l24.push(m24[i]);
+    }
+    var o4 = percentila(l4, 0.75), o24 = percentila(l24, 0.75);
+    if (!(o4 > 0) || !(o24 > 0)) return null;
+    var mis = new Array(n), inMis = true;   // pana la prima coborare sub 1,2x nu stim -> "miscare"
+    for (i = 0; i < n; i++) {
+      if (m24[i] === null) { mis[i] = true; continue; }
+      if (inMis && m24[i] < 1.2 * o24) inMis = false;
+      else if (!inMis && m24[i] > C.PRAG_MISCARE * o24) inMis = true;
+      mis[i] = inMis;
+    }
+    // perioadele de liniste: [start, sfarsit) - sfarsitul e prima bara cu miscare sau n
+    var perioade = [], start = null;
+    for (i = C.BARE_ZI; i < n; i++) {
+      if (!mis[i]) { if (start === null) start = i; }
+      else if (start !== null) { perioade.push({ s: start, e: i, terminata: true }); start = null; }
+    }
+    var acum = null;
+    if (start !== null) { acum = { s: start, e: n, terminata: false }; }
+    var linisteAcum = acum !== null;
+    var D = linisteAcum ? Math.min(n - acum.s, 3 * C.BARE_ZI) : null;
+    var out = { linisteAcum: linisteAcum, zileLiniste: linisteAcum ? (n - acum.s) / C.BARE_ZI : 0, H: H, n: 0, k: 0, p: null, ic: null, suficient: false, perioade: perioade.length };
+    if (!linisteAcum) return out;
+    for (i = 0; i < perioade.length; i++) {
+      var per = perioade[i], lung = per.e - per.s;
+      if (lung < D) continue;
+      out.n++;
+      if (lung - D >= W) out.k++;
+    }
+    if (out.n > 0) { out.p = out.k / out.n; out.ic = wilson(out.k, out.n); }
+    out.suficient = out.n >= 5;
+    return out;
+  }
+
   function pozitie7z(b4h, pret) {
     if (!b4h || b4h.length < 42 || !(pret > 0)) return null;
     var mx = -Infinity, mn = Infinity;
@@ -264,6 +319,6 @@ var GridCalcul = (function () {
   return { C: C, bare: bare, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
-    regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict };
+    regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridCalcul = GridCalcul;
