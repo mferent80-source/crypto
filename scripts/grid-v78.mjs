@@ -252,5 +252,28 @@ await test("fisa: moneda cu 12 zile -> merge, dar verdictul maxim e asteapta si 
 });
 
 
+// --- app.js: ajutatoarele pure ale ferestrei (Review Focus 1 si 2) ---
+const APP = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+function scoateFunctia(nume) {
+  const i = APP.indexOf("function " + nume + "(");
+  if (i < 0) return null;
+  let d = 0, j = APP.indexOf("{", i);
+  for (let k = j; k < APP.length; k++) { if (APP[k] === "{") d++; else if (APP[k] === "}" && --d === 0) return APP.slice(i, k + 1); }
+  return null;
+}
+await test("grSimbol: met / MET.PERP / METUSDT / MET_USDT_PERP -> MET_USDT_PERP; gol sau USDT -> null", () => {
+  const src = scoateFunctia("grSimbol"); assert.ok(src, "grSimbol lipseste din app.js");
+  const f = new Function(`${src}; return grSimbol;`)();
+  for (const t of ["met", " MET.PERP ", "METUSDT", "MET_USDT_PERP", "met-usdt"]) assert.equal(f(t), "MET_USDT_PERP", t);
+  assert.equal(f("1000pepe"), "1000PEPE_USDT_PERP");
+  for (const t of ["", "  ", "USDT", null, undefined]) assert.equal(f(t), null, String(t));
+});
+await test("grNumar: 100,5 -> 100.5; gol / 0 / -3 / abc -> null (nu 0)", () => {
+  const src = scoateFunctia("grNumar"); assert.ok(src, "grNumar lipseste din app.js");
+  const f = new Function(`${src}; return grNumar;`)();
+  assert.equal(f("100,5"), 100.5); assert.equal(f(" 250 "), 250);
+  for (const t of ["", "0", "-3", "abc", null]) assert.equal(f(t), null, String(t));
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

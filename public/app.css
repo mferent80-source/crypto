@@ -1246,9 +1246,9 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 /* v76 Tabloul botului, reasezat. Un singur sistem: colturi 12px pe blocuri,
    linii subtiri in loc de cutii in cutii, gri pentru etichete, alb pentru
    cifre, culoare DOAR unde inseamna ceva (bani, pericol, directie). */
-#tabloubot{--tb-r:12px;--tb-linie:rgba(144,160,182,.16);--tb-fond:#0c1621;--tb-fond2:#0f1b28;font-variant-numeric:tabular-nums}
-#tabloubot .tbSub{color:var(--muted);font-size:14px;line-height:1.4}
-#tabloubot .tbEt2{color:var(--muted);font-size:14px}
+#tabloubot,#gridset{--tb-r:12px;--tb-linie:rgba(144,160,182,.16);--tb-fond:#0c1621;--tb-fond2:#0f1b28;font-variant-numeric:tabular-nums}
+#tabloubot .tbSub,#gridset .tbSub{color:var(--muted);font-size:14px;line-height:1.4}
+#tabloubot .tbEt2,#gridset .tbEt2{color:var(--muted);font-size:14px}
 #tabloubot h4{margin:0;font-size:16px;font-weight:700;color:var(--text)}
 #tabloubot .tbAntet{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 12px}
 #tabloubot .tbIdent{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -1282,10 +1282,10 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 #tabloubot .tbGaugePunct{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--text);border:2px solid var(--bg)}
 #tabloubot .tbGaugePunct.bad{background:var(--bad)}
 
-#tabloubot .tbRand{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+#tabloubot .tbRand,#gridset .tbRand{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 #tabloubot .tbRandGrafic{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
-#tabloubot .tbBloc{padding:14px 16px;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);min-width:0}
-#tabloubot .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 10px}
+#tabloubot .tbBloc,#gridset .tbBloc{padding:14px 16px;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);min-width:0}
+#tabloubot .tbBlocCap,#gridset .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 10px}
 
 #tabloubot .tbRezumat{font-size:16px;font-weight:700;padding:10px 12px;margin:0 0 8px;border-radius:8px;background:var(--tb-fond2);border-left:3px solid var(--muted)}
 #tabloubot .tbDirR{padding:10px 2px;border-top:1px solid var(--tb-linie)}
@@ -1313,7 +1313,7 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
   #tabloubot .tbKpi{grid-template-columns:1fr 1fr}
   #tabloubot .tbKpiCel:nth-child(3){border-left:0}
   #tabloubot .tbKpiCel:nth-child(n+3){border-top:1px solid var(--tb-linie)}
-  #tabloubot .tbRandGrafic,#tabloubot .tbRand{grid-template-columns:1fr}
+  #tabloubot .tbRandGrafic,#tabloubot .tbRand,#gridset .tbRand{grid-template-columns:1fr}
 }
 @media(max-width:560px){
   #tabloubot .tbVerdict{grid-template-columns:1fr;gap:6px;padding:12px 14px}
@@ -1323,7 +1323,8 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
   #tabloubot .tbAntet{flex-wrap:wrap}
   #tabloubot .tbGraficZona{height:210px}
 }
-
+
+
 /* v76: graficul umple inaltimea randului; directia pe un rand si pe telefon; nota generala ascunsa pe Tablou */
 #tabloubot #tbGraficCard{display:flex;flex-direction:column}
 #tabloubot #tbGraficCard .tbGrafic{flex:1;display:flex;flex-direction:column}
@@ -1340,7 +1341,8 @@ body.peTablou main>.note{display:none}
   #tabloubot .tbDirFata{margin-left:0;text-align:left;flex-basis:100%}
   #tabloubot #tbGraficCard .tbGraficZona{min-height:200px}
 }
-
+
+
 /* v77: sfaturi, scenarii, alerte, perioada graficului */
 #tabloubot .tbSfaturiBloc{margin-bottom:12px}
 #tabloubot #tbSfaturi{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
@@ -1360,11 +1362,32 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbPropriu input{width:110px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;font-size:15px}
 #tabloubot .tbPropriu input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #tabloubot .tbCanal{font-family:ui-monospace,Consolas,monospace;user-select:all;color:var(--text)}
-#tabloubot .tbInterval{display:flex;gap:4px}
-#tabloubot .tbIntBtn{white-space:nowrap;padding:4px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
-#tabloubot .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
-#tabloubot .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#tabloubot .tbInterval,#gridset .tbInterval{display:flex;gap:4px}
+#tabloubot .tbIntBtn,#gridset .tbIntBtn{white-space:nowrap;padding:4px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+#tabloubot .tbIntBtn[aria-pressed="true"],#gridset .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
+#tabloubot .tbIntBtn:focus-visible,#gridset .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #tabloubot .tbNivelGrid{stroke:rgba(144,160,182,.13);stroke-width:1;vector-effect:non-scaling-stroke}
 @media(max-width:560px){#tabloubot #tbSfaturi{grid-template-columns:1fr}#tabloubot .tbScenCap,#tabloubot .tbScenRand{grid-template-columns:1.4fr .6fr 1fr;font-size:14px}}
 
 .pePublicat{margin:0 0 10px;font-size:16px;line-height:1.5}.pePublicat a{margin-left:8px;display:inline-block;padding:6px 14px;border:1px solid var(--accent);border-radius:8px;color:var(--text);text-decoration:none;font-weight:800}.pePublicat a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.pePublicat[hidden]{display:none!important}
+
+/* v78: Grid - ce setez acum? (#gridset); mosteneste .tb* de la Tabloul botului */
+#gridset .grIntrari{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+#gridset .grCamp{display:flex;flex-direction:column;gap:4px;min-width:0}
+#gridset .grCamp input,#gridset .grCamp select{min-width:110px}
+#gridset .grCalc{padding:8px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#06101a;font:inherit;font-weight:800}
+#gridset .grVerdict{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid currentColor;margin:12px 0}
+#gridset .grVEt{font-size:20px;font-weight:900;white-space:nowrap}
+#gridset .grVMotiv{margin:2px 0 0;font-weight:700;color:var(--text)}
+#gridset .grLista{margin:6px 0 0;padding-left:18px;color:var(--text)}
+#gridset .grDir{font-size:18px;font-weight:900;margin:4px 0}
+#gridset .grRand{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--tb-linie)}
+#gridset .grRand b{text-align:right;font-variant-numeric:tabular-nums}
+#gridset .grCopy{padding:2px 8px;font-size:12px}
+#gridset .grTabelWrap{overflow-x:auto}
+#gridset .grTabel{width:100%;border-collapse:collapse;font-size:13px}
+#gridset .grTabel th,#gridset .grTabel td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--tb-linie)}
+#gridset .grTabel tbody th{text-align:left;font-weight:600;color:var(--muted)}
+#gridset .grAles{outline:2px solid rgba(120,180,255,.5);outline-offset:-2px}
+#gridset .grNota{color:var(--muted);font-size:12px;margin:8px 0 0}
+@media (max-width:600px){#gridset .grVerdict{flex-direction:column}#gridset .grRand{grid-template-columns:1fr auto}#gridset .grRand .grCopy{grid-column:2}}

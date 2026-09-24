@@ -3010,6 +3010,7 @@ function navTo(id,load=false){
  if(load){
    if(id==="mtf")multiTF();
    else if(id==="tabloubot")porneTabloBot();
+   else if(id==="gridset")porneGrid();
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
    else if(id==="stocks"){loadStockContext();checkStocksHealth()}
    else if(id==="scan")scan();
@@ -4798,6 +4799,130 @@ function opresteTabloBot(){
 // din porneTabloBot() a fost scos, ca sa nu bata Pionex de doua ori cat esti
 // pe panou (limita de ritm a bursei e a omului, nu a codului).
 var tbColector=null,tbColectorPas=0;
+// ===== v78: 🧮 Grid - ce setez acum? =====
+// Calculul e in lib/grid-calcul.js + lib/grid-proba.js (probate in scripts/grid-v78.mjs);
+// aici doar aduc lumanarile Pionex si desenez fisa. Merge intreg doar de acasa:
+// pe Cloudflare Pionex refuza cererile (v72), iar fisa o spune, nu arata cifre goale.
+var grStare={H:2,dir:null,simbol:null,date:null,la:0,inLucru:false,eroare:null,fisa:null,monede:null,timer:null};
+var GR_REIMPROSPATARE_MS=5*60*1000;
+function grSimbol(t){var s=String(t==null?"":t).trim().toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/PERP$/,"").replace(/USDT$/,"");return s?s+"_USDT_PERP":null}
+function grNumar(t){var s=String(t==null?"":t).trim().replace(/\s/g,"").replace(",",".");if(!s)return null;var x=Number(s);return Number.isFinite(x)&&x>0?x:null}
+function grPanouVizibil(){return !!($("gridset")&&$("gridset").classList.contains("on"))}
+async function grAduMonede(){
+  if(grStare.monede)return;
+  try{
+    var d=await getJSON("/api/market?type=pionex_symbols&market=PERP");
+    var a=d&&d.data&&Array.isArray(d.data.symbols)?d.data.symbols:[];
+    var m={};a.forEach(function(x){if(x&&x.symbol&&x.status==="TRADING")m[x.symbol]=x});
+    if(!Object.keys(m).length)return;
+    grStare.monede=m;
+    var dl=$("grMonede");if(dl)dl.innerHTML=Object.keys(m).sort().map(function(s){return '<option value="'+escapeHtml(s.replace(/_USDT_PERP$/,""))+'">'}).join("");
+  }catch(e){grStare.monede=null}
+}
+function porneGrid(){
+  grAduMonede();
+  if(!grStare.timer)grStare.timer=setInterval(function(){if(grPanouVizibil()&&grStare.simbol)gridCalculeaza()},GR_REIMPROSPATARE_MS);
+  renderGrid();
+}
+function grPauza(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function grRanduri(k){return k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null}
+async function grAduLumanari(simbol){
+  var baza="/api/market?type=pionex_klines&symbol="+encodeURIComponent(simbol);
+  var r15=[],end=null;
+  for(var p=0;p<6;p++){
+    var k=await getJSON(baza+"&interval=15M&limit=500"+(end?"&endTime="+end:""));
+    var r=grRanduri(k);
+    if(!r){if(p===0)throw Error((k&&(k.error||k.detail))||"Pionex nu a dat lumânări");break}
+    r15=r15.concat(r);
+    var t=r.map(function(x){return Number(x&&x.time)}).filter(Number.isFinite);
+    if(r.length<500||!t.length)break;
+    end=Math.min.apply(null,t)-1;
+    await grPauza(350);
+  }
+  var r4=grRanduri(await getJSON(baza+"&interval=4H&limit=300"));await grPauza(350);
+  var r1=grRanduri(await getJSON(baza+"&interval=1D&limit=200"));
+  return {r15:r15,r4:r4||[],r1:r1||[]};
+}
+function grTextEroare(e){
+  var local=/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+  if(!local&&e&&(e.status===429||e.status===403||/429|unavailable/i.test(String(e.message))))return "Pionex nu răspunde de aici: pe versiunea publicată refuză cererile. Deschide Radarul de acasă (PORNESTE-CRYPTO-RADAR.bat).";
+  return textEroare(e);
+}
+async function gridCalculeaza(fortat){
+  var simbol=grSimbol($("grMoneda")&&$("grMoneda").value),suma=grNumar($("grSuma")&&$("grSuma").value),lev=grNumar($("grLevier")&&$("grLevier").value);
+  if(!simbol){grStare.fisa=null;grStare.eroare="Scrie o monedă, de exemplu MET.";renderGrid();return}
+  if(!suma){grStare.fisa=null;grStare.eroare="Scrie suma în USDT, de exemplu 100.";renderGrid();return}
+  if(grStare.inLucru)return;
+  var proaspat=grStare.date&&grStare.simbol===simbol&&Date.now()-grStare.la<GR_REIMPROSPATARE_MS-5000&&!fortat;
+  grStare.inLucru=true;grStare.eroare=null;renderGrid();
+  try{
+    if(!proaspat){grStare.date=await grAduLumanari(simbol);grStare.simbol=simbol;grStare.la=Date.now()}
+    var d=grStare.date,info=grStare.monede&&grStare.monede[simbol];
+    if(grStare.monede&&!info)throw Error(simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.");
+    var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),
+      suma:suma,H:grStare.H,dir:grStare.dir,levier:lev?Math.round(lev):null,minNotional:info?Number(info.minNotional):null});
+    if(f.eroare){grStare.fisa=null;grStare.eroare=f.eroare}else{f.info=info||null;grStare.fisa=f}
+  }catch(e){grStare.fisa=null;grStare.eroare=grTextEroare(e)}
+  finally{grStare.inLucru=false}
+  renderGrid();
+}
+function gridOrizont(h){grStare.H=Number(h)||2;[1,2,3].forEach(function(x){var b=$("grH"+x);if(b)b.setAttribute("aria-pressed",String(x===grStare.H))});if(grStare.date)gridCalculeaza()}
+function gridDirectie(d){grStare.dir=d==="auto"?null:d;["auto","long","neutru","short"].forEach(function(x){var b=$("grD"+x);if(b)b.setAttribute("aria-pressed",String((grStare.dir||"auto")===x))});if(grStare.date)gridCalculeaza()}
+function gridCopiaza(v){
+  v=String(v==null?"":v);if(!v)return;
+  var gata=function(){toast("Copiat: "+v,"good")};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(v).then(gata,function(){toast("Nu am putut copia; scrie de mână: "+v,"bad")});
+  else toast("Scrie de mână: "+v,"bad");
+}
+function grPret(x,info){
+  if(x==null||!Number.isFinite(x))return "—";
+  var zec=info&&Number.isFinite(Number(info.quotePrecision))?Number(info.quotePrecision):(x>=1000?2:x>=1?4:6);
+  return x.toFixed(zec);
+}
+var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
+var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};
+function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
+function renderGrid(){
+  var box=$("grFisa"),stare=$("grStare");if(!box)return;
+  if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
+  if(grStare.eroare){box.innerHTML='<div class="tbBloc"><p class="bad">'+escapeHtml(grStare.eroare)+'</p></div>';return}
+  var f=grStare.fisa;
+  if(!f){if(!grStare.inLucru)box.innerHTML='<div class="emptyState">Scrie o monedă (de exemplu MET) și suma. Fișa se recalculează singură la 5 minute cât stă deschisă.</div>';return}
+  var st=f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive;
+  var h='<div class="grVerdict '+niv[1]+'"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>';
+  h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
+    +(f.contra?'<p class="tbWarn">Trendul zice '+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div>';
+  h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Setările de pus în Pionex</h4><span class="tbSub">Futures Grid · '+escapeHtml(f.simbol.replace(/_USDT_PERP$/,""))+'/USDT</span></div>'
+    +grRand("Direcție",GR_DIR_PIONEX[f.dir],GR_DIR_PIONEX[f.dir])
+    +grRand("Preț de jos",grPret(st.jos,i),grPret(st.jos,i))
+    +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
+    +grRand("Număr de grile",st.grile+" (geometric)",String(st.grile))
+    +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
+    +grRand("Investiție",st.suma+" USDT",String(st.suma))
+    +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
+    +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
+    +'</div></div>';
+  var lj=st.lichidare.jos,ls=st.lichidare.sus;
+  h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Ce înseamnă în bani</h4></div>'
+    +grRand("Pasul grilei",P(st.pas))+grRand("Profit pe grilă, după comision",P(st.profitGrila)+" ≈ "+(st.perOrdin*st.profitGrila).toFixed(3)+" USDT")
+    +grRand("Pe fiecare ordin",st.perOrdin.toFixed(2)+" USDT"+(i&&i.minNotional?" (minim Pionex "+i.minNotional+")":""))
+    +grRand("Lichidare jos",lj!=null?grPret(lj,i)+" · "+P((st.jos-lj)/st.jos)+" sub grid":"nu se lichidează jos")
+    +grRand("Lichidare sus",ls!=null?grPret(ls,i)+" · "+P((ls-st.sus)/st.sus)+" peste grid":"nu se lichidează sus")
+    +'</div>';
+  var pr=f.proba,cel=function(x,k){if(!x||x[k]==null)return "—";return k==="lichidari"?String(x[k]):k==="opriri"?x[k]+"/"+x.n:P(x[k])};
+  h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Proba pe ultimele '+Math.floor(pr.zile)+' zile</h4><span class="tbSub">'+pr.ferestre.antren+'+'+pr.ferestre.test+' ferestre de '+pr.H+'z, ~'+pr.ferestre.independente+' independente</span></div><div class="grTabelWrap"><table class="grTabel"><thead><tr><th></th>'
+    +["long","neutru","short"].map(function(d){return '<th'+(d===f.dir?' class="grAles"':"")+'>'+GR_DIR[d]+(d===pr.recomandata?" ⭐":"")+'</th>'}).join("")+'</tr></thead><tbody>'
+    +[["Mediana (zilele de alegere)","antren","mediana"],["Cea mai proastă fereastră","antren","ceaMaiProasta"],["De câte ori a lovit stopul","antren","opriri"],["Lichidări","antren","lichidari"],["Mediana pe zilele nevăzute","test","mediana"]].map(function(r){return '<tr><th>'+r[0]+'</th>'+["long","neutru","short"].map(function(d){return '<td>'+cel(pr.pe[d][r[1]],r[2])+'</td>'}).join("")+'</tr>'}).join("")
+    +'</tbody></table></div><p class="grNota">⭐ = cea mai bună pe istoric (platou, nu vârf). Aleasă pe primele 2/3 din zile, verificată pe ultima 1/3.</p></div></div>';
+  var rg=f.regim;
+  h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Când îl oprești</h4></div><ul class="grLista">'
+    +'<li>Stop-urile de mai sus sunt la două grile dincolo de marginile gridului, înaintea lichidării.</li>'
+    +'<li>Când alertele Radarului anunță «gata liniștea», oprește-l: după mișcare gridul iese cel mai rău.</li>'
+    +(rg?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")
+    +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Gridul a ieșit în medie pe minus când l-am măsurat pe 30 de monede; ce s-a dovedit e să nu-l pornești după mișcare.</p></div>';
+  box.innerHTML=h;
+}
+
 function tbPanouVizibil(){return !!($("tabloubot")&&$("tabloubot").classList.contains("on"))}
 // Cadenta REALA cu care ruleaza colectorul acum (nu o recalculare pe hartie) -
 // masurabila din proba, ca sa nu ramana o garda oarba pe un camp sters.
