@@ -1394,3 +1394,10 @@ body.peTablou main>.note{display:none}
 #gridset .grPornit{margin:8px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #gridset .grRezumat{margin:0 0 8px;font-weight:700}
 #gridset .grTabel td{white-space:nowrap}
+#gridset details.tbBloc>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;flex-wrap:wrap}
+#gridset details.tbBloc>summary::-webkit-details-marker{display:none}
+#gridset details.tbBloc>summary::before{content:"▸";color:var(--muted);font-size:14px}
+#gridset details.tbBloc[open]>summary::before{content:"▾"}
+#gridset details.tbBloc>summary h4{margin:0;display:inline}
+#gridset details.tbBloc>summary .tbSub{margin-left:auto}
+#gridset #grClasament{margin-top:10px}
