@@ -53,7 +53,7 @@ echo   Caut o versiune mai noua...
 git pull --ff-only
 if errorlevel 1 (
   echo.
-  echo   [!] Nu am putut aduce versiunea noua - continui cu ce e pe disc.
+  echo   [ATENTIE] Nu am putut aduce versiunea noua - continui cu ce e pe disc.
   echo       Daca se repeta, deschide un terminal aici si ruleaza: git pull
   echo.
 ) else (
@@ -83,7 +83,7 @@ if "%RC%"=="4" (
 )
 if "%RC%"=="3" goto :DEJAPORNIT
 if not "%RC%"=="0" (
-  echo   [!] Nu am putut verifica portul 8788 - incerc oricum.
+  echo   [ATENTIE] Nu am putut verifica portul 8788 - incerc oricum.
   echo.
 )
 
@@ -100,7 +100,7 @@ if defined CHEIOK (
   goto :DUPACHEI
 )
 if exist ".dev.vars" (
-  echo   [!] .dev.vars exista dar e incomplet - ti le cer din nou.
+  echo   [ATENTIE] .dev.vars exista dar e incomplet - ti le cer din nou.
   echo.
 )
 
@@ -155,7 +155,7 @@ rem GitHub. Amprenta gresita = fisier sters, tunel nepornit.
 rem [ps:cloudflared]
 powershell -NoProfile -Command "$ver = '2026.9.1'; $sha = '2837888cc0f5d58f15b6dc478376de90b4d3ba5241c7947455d1e0a0df429712'; $dir = Join-Path $env:LOCALAPPDATA 'cloudflared'; $cf = Join-Path $dir 'cloudflared.exe'; if ((Test-Path -LiteralPath $cf) -and ((Get-FileHash -Algorithm SHA256 -LiteralPath $cf).Hash.ToLower() -eq $sha)) { exit 0 }; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $tmp = $cf + '.descarcat'; Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; Write-Host ('  Aduc cloudflared ' + $ver + ' - unealta de tunel, ~60 MB - si ii verific amprenta...'); try { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri ('https://github.com/cloudflare/cloudflared/releases/download/' + $ver + '/cloudflared-windows-amd64.exe') -OutFile $tmp -UseBasicParsing -ErrorAction Stop } catch { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; Write-Host '  [ATENTIE] Nu am putut descarca cloudflared.'; exit 1 }; $h = (Get-FileHash -Algorithm SHA256 -LiteralPath $tmp).Hash.ToLower(); if ($h -ne $sha) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; Write-Host '  [ATENTIE] AMPRENTA GRESITA la cloudflared descarcat - l-am sters si NU il pornesc.'; Write-Host ('      asteptat ' + $sha); Write-Host ('      primit   ' + $h); exit 2 }; try { Move-Item -LiteralPath $tmp -Destination $cf -Force -ErrorAction Stop } catch { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; Write-Host '  [ATENTIE] Nu pot inlocui cloudflared.exe - poate ruleaza deja un tunel.'; exit 1 }; Write-Host '  [OK] cloudflared adus si verificat.'; exit 0"
 if errorlevel 1 (
-  echo   [!] Fara tunel: merge doar local, nu si de pe telefon.
+  echo   [ATENTIE] Fara tunel: merge doar local, nu si de pe telefon.
   echo.
   set "FARATUNEL=1"
 )
@@ -172,7 +172,7 @@ rem Proba de pornire: JSON-ul aplicatiei pe /api/market?type=health, nu orice 20
 rem [ps:sanatate]
 powershell -NoProfile -Command "$u = 'http://127.0.0.1:8788/api/market?type=health'; for ($i = 0; $i -lt 90; $i++) { try { $r = Invoke-RestMethod -Uri $u -TimeoutSec 3 -ErrorAction Stop; if ($r -and $r.ok -eq $true -and $r.service -eq 'crypto-radar') { exit 0 } } catch {}; Start-Sleep -Seconds 2 }; Write-Host ''; Write-Host '  [ATENTIE] Pe 127.0.0.1:8788 nu raspunde Crypto Radar (am cerut /api/market?type=health).'; Write-Host '      Nu deschid browserul pe un raspuns care nu e al aplicatiei.'; exit 1"
 if errorlevel 1 (
-  echo   [!] Serverul nu a raspuns ca Crypto Radar in 3 minute. Uita-te in
+  echo   [ATENTIE] Serverul nu a raspuns ca Crypto Radar in 3 minute. Uita-te in
   echo       fereastra minimizata "Crypto Radar - server" ca sa vezi ce scrie acolo.
   echo.
   pause
@@ -200,7 +200,7 @@ for /l %%i in (1,1,40) do (
 )
 
 if not defined TURL (
-  echo   [!] Tunelul nu a dat o adresa. Aplicatia merge totusi local.
+  echo   [ATENTIE] Tunelul nu a dat o adresa. Aplicatia merge totusi local.
   echo       Jurnalul tunelului: %LOG%
   echo.
   goto :doarlocal

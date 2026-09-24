@@ -400,6 +400,12 @@ function gardaLansatoare() {
   for (const f of [LOCAL, TELEFON]) {
     const t = citeste(f);
     const intarziat = /EnableDelayedExpansion/i.test(t);
+    // Cu EnableDelayedExpansion, cmd mananca orice "!" care nu e !VARIABILA!:
+    // "echo [!] Tunelul nu a dat o adresa" iesea "[" si restul taiat.
+    if (intarziat) {
+      const rele = t.split(/\r?\n/).map((l, i) => [i + 1, l]).filter(([, l]) => !/^\s*rem\b/i.test(l) && l.replace(/![A-Za-z_][\w]*!/g, "").includes("!"));
+      if (rele.length) pica(G, `${f}: ${rele.length} randuri cu "!" sub EnableDelayedExpansion (cmd il mananca), primul la ${rele[0][0]}: ${rele[0][1].trim().slice(0, 70)}`);
+    }
     for (const n of ["port", "sanatate", "chei", ...(f === TELEFON ? ["cloudflared"] : [])]) {
       const b = blocPs(t, n);
       if (!b) { pica(G, `${f}: lipseste blocul PowerShell [ps:${n}]`); continue; }
