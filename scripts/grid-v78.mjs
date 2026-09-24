@@ -1,0 +1,139 @@
+// Probele v78: Grid - ce setez acum? (public/lib/grid-calcul.js + grid-proba.js)
+// Specul: docs/superpowers/specs/2026-09-24-grid-ce-setez-design.md
+import assert from "node:assert/strict";
+import fs from "node:fs";
+
+const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8") : "";
+const SRC = citeste("../public/lib/grid-calcul.js") + "\n" + citeste("../public/lib/grid-proba.js");
+const M = new Function(`${SRC}; return { GC: typeof GridCalcul!=="undefined"?GridCalcul:null, GP: typeof GridProba!=="undefined"?GridProba:null };`)();
+const GC = M.GC, GP = M.GP;
+
+let teste = 0, picate = 0;
+async function test(nume, fn) {
+  teste++;
+  await Promise.resolve().then(fn)
+    .then(() => console.log(`  ok   ${nume}`))
+    .catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e.message}`); });
+}
+const aprox = (a, b, eps, msg) => assert.ok(Math.abs(a - b) <= eps, `${msg || ""} ${a} vs ${b}`);
+const Q = 15 * 60000;
+// bare crescatoare din preturi de inchidere: o = inchiderea anterioara, h/l cu o marja mica
+function bareDin(inch, marja = 0.001, t0 = 1_780_000_000_000) {
+  return inch.map((c, i) => { const o = i ? inch[i - 1] : c; return { t: t0 + i * Q, o, h: Math.max(o, c) * (1 + marja), l: Math.min(o, c) * (1 - marja), c }; });
+}
+// Mers aleator cu samanta fixa, ca proba sa fie repetabila.
+function aleator(n, samanta = 7, vol = 0.004) {
+  let s = samanta, p = 1; const out = [];
+  for (let i = 0; i < n; i++) { s = (s * 16807) % 2147483647; p *= 1 + ((s / 2147483647) - 0.5) * vol; out.push(p); }
+  return out;
+}
+
+console.log("\nV78 · grid - ce setez acum · proba\n");
+
+await test("modulul GridCalcul exista", () => assert.ok(GC, "GridCalcul lipseste"));
+
+await test("bare: sorteaza, scoate dublurile si bara in formare, sare peste randuri stricate (nu le face 0)", () => {
+  const r = [
+    { time: 3000, open: "3", high: "3.1", low: "2.9", close: "3" },
+    { time: 1000, open: "1", high: "1.1", low: "0.9", close: "1" },
+    { time: 3000, open: "3", high: "3.1", low: "2.9", close: "3" },   // dublura din pagina suprapusa
+    { time: 2000, open: "2", high: null, low: "1.9", close: "2" },     // stricat
+    { time: 4000, open: "4", high: "4.2", low: "3.9", close: "4.1" }, // in formare
+  ];
+  assert.deepEqual(GC.bare(r).map((b) => b.t), [1000, 3000]);
+  assert.equal(GC.pretCurent(r), 4.1);
+  assert.equal(GC.pretCurent([]), null);
+});
+
+await test("percentila si mediana", () => {
+  assert.equal(GC.mediana([3, 1, 2]), 2);
+  assert.equal(GC.mediana([]), null);
+  aprox(GC.percentila([0, 10, 20, 30, 40], 0.75), 30, 1e-9);
+  aprox(GC.percentila([0, 10], 0.6), 6, 1e-9);
+});
+
+await test("nrGrile: jos 90, sus 110, pas 1% -> 20; strunit la 2..150", () => {
+  assert.equal(GC.nrGrile(90, 110, 0.01), 20);
+  assert.equal(GC.nrGrile(100, 100.1, 0.01), 2);
+  assert.equal(GC.nrGrile(10, 1000, 0.0035), 150);
+});
+
+await test("plaseaza: neutru centrat, long 60% deasupra, short 40% deasupra", () => {
+  const n = GC.plaseaza(100, 0.1, "neutru"), l = GC.plaseaza(100, 0.1, "long"), s = GC.plaseaza(100, 0.1, "short");
+  aprox(n.jos, 95, 1e-9); aprox(n.sus, 105, 1e-9);
+  aprox(l.jos, 96, 1e-9); aprox(l.sus, 106, 1e-9);
+  aprox(s.jos, 94, 1e-9); aprox(s.sus, 104, 1e-9);
+});
+
+await test("lichidare long socotita de mana: 90-110, 2 grile, pret 100, 5x -> ~76,61", () => {
+  // niveluri 90 / 99,4987 / 110; celula 0 cumparata la 90, celula 1 (peste pret) la 100
+  // q0 = 5/2/90, q1 = 5/2/99,4987; Q = 0,052904; cost = 2,5 + 2,51259 = 5,01259
+  // p = (cost - 1) / (Q * 0,99) = 76,61 (verificat in Python)
+  const lq = GC.lichidare(GC.niveluri(90, 110, 2), 100, "long", 5);
+  aprox(lq.jos, 76.61, 0.02, "lichidarea long");
+  assert.equal(lq.sus, null);
+});
+
+await test("levierSigur: lichidarea sta la cel putin o latime dincolo de margine; plafon 5x", () => {
+  for (const dir of ["long", "neutru", "short"]) {
+    const r = GC.levierSigur(95, 105, 100, dir, 20);
+    assert.ok(r.levier >= 1 && r.levier <= 5, dir);
+    if (r.lichidare.jos !== null) assert.ok(r.lichidare.jos <= 95 - 10, `${dir} jos ${r.lichidare.jos}`);
+    if (r.lichidare.sus !== null) assert.ok(r.lichidare.sus >= 105 + 10, `${dir} sus ${r.lichidare.sus}`);
+  }
+});
+
+await test("construieste: pas >= 0,35%, profit net pe grila >= 0,25%, stop inaintea lichidarii", () => {
+  const st = GC.construieste({ pret: 100, lat: 0.08, pas: 0.0035, dir: "long", suma: 100 });
+  assert.ok(st.pas >= 0.0035 - 1e-9, `pas ${st.pas}`);
+  assert.ok(st.profitGrila >= 0.0025 - 1e-9, `profit ${st.profitGrila}`);
+  assert.ok(st.stop.jos < st.jos && st.stop.sus > st.sus);
+  assert.ok(st.lichidare.jos === null || st.lichidare.jos < st.stop.jos, "lichidarea inaintea stopului");
+  aprox(st.perOrdin, 100 * st.levier / st.grile, 1e-9);
+  assert.equal(st.pesteSigur, false);
+});
+
+await test("construieste cu levier ales peste cel sigur -> pesteSigur", () => {
+  const st = GC.construieste({ pret: 100, lat: 0.3, pas: 0.01, dir: "long", suma: 100, levier: 20 });
+  assert.equal(st.levier, 20);
+  assert.equal(st.pesteSigur, true);
+});
+
+await test("directie: urcare -> long, coborare -> short, oscilatie -> neutru; mereu cu motive", () => {
+  const sus = bareDin(Array.from({ length: 120 }, (_, i) => 1 + i * 0.01));
+  const jos = bareDin(Array.from({ length: 120 }, (_, i) => 3 - i * 0.01));
+  const lat = bareDin(Array.from({ length: 120 }, (_, i) => 2 + 0.05 * Math.sin(i * 0.7)));
+  assert.equal(GC.directie(sus, sus).dir, "long");
+  assert.equal(GC.directie(jos, jos).dir, "short");
+  assert.equal(GC.directie(lat, lat).dir, "neutru");
+  assert.equal(GC.directie(sus, sus).tarie, "tare");
+  assert.ok(GC.directie(sus, sus).motive.length >= 2);
+  assert.equal(GC.directie(sus.slice(0, 20), null).tarie, "fara-date");
+});
+
+await test("regim: liniste -> nu e miscare; salt mare in ultimele 4h -> miscare", () => {
+  const lin = bareDin(aleator(30 * 96, 3, 0.004));
+  assert.equal(GC.regim(lin).miscare, false, JSON.stringify(GC.regim(lin)));
+  const inch = aleator(30 * 96, 3, 0.004);
+  for (let i = inch.length - 16; i < inch.length; i++) inch[i] = inch[i - 1] * 1.006;   // +10% in 4h
+  assert.equal(GC.regim(bareDin(inch)).miscare, true);
+  assert.equal(GC.regim(lin.slice(0, 50)), null, "prea putin -> null, nu fals");
+});
+
+await test("verdict: miscare -> nu; liniste + proba buna -> porneste; proba la limita -> asteapta; fara date -> fara-date", () => {
+  const bun = { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.004 } };
+  const linist = { r4h: 0.8, r24h: 0.9, miscare: false };
+  assert.equal(GC.verdict({ regim: { r4h: 2.1, r24h: 1, miscare: true }, stat: bun, zile: 30, pozitie: 0.5 }).nivel, "nu");
+  assert.equal(GC.verdict({ regim: linist, stat: bun, zile: 30, pozitie: 0.5 }).nivel, "porneste");
+  assert.equal(GC.verdict({ regim: linist, stat: { antren: { mediana: 0.001, lichidari: 0 }, test: { mediana: 0.002 } }, zile: 30, pozitie: 0.5 }).nivel, "asteapta");
+  assert.equal(GC.verdict({ regim: linist, stat: { antren: { mediana: -0.01, lichidari: 0 }, test: null }, zile: 30, pozitie: 0.5 }).nivel, "nu");
+  assert.equal(GC.verdict({ regim: linist, stat: { antren: { mediana: 0.02, lichidari: 2 }, test: null }, zile: 30, pozitie: 0.5 }).nivel, "nu");
+  assert.equal(GC.verdict({ regim: linist, stat: bun, zile: 30, pozitie: 0.97 }).nivel, "asteapta");
+  assert.equal(GC.verdict({ regim: linist, stat: bun, zile: 12, pozitie: 0.5 }).nivel, "asteapta");
+  assert.equal(GC.verdict({ regim: null, stat: bun, zile: 30, pozitie: 0.5 }).nivel, "fara-date");
+});
+
+// --- Task 3 adauga aici probele simulatorului si ale fisei ---
+
+console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
+if (picate) process.exit(1);
