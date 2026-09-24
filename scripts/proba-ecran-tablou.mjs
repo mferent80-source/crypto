@@ -1241,6 +1241,155 @@ async function main() {
       assert.equal(r.ultima, "—", `coloana de rulaj arata: ${r.ultima}`);
     });
 
+    /* ═══ v74.6 · fix runda 1 (revizia) ═══════════════════════════════════ */
+    await test("F1. actiuni 1d (TWELVEDATA): bara poarta ora INCHIDERII - o bara inchisa nu se taie", async () => {
+      const r = await b.ev(`(() => {
+        const bara = (t) => [t, "100", "101", "99", "100.5", "1000", t + 1, "100500"];
+        const z22 = Date.UTC(2026, 8, 22, 20), z23 = Date.UTC(2026, 8, 23, 20); // 16:00 New York (EDT) = 20:00 UTC
+        const j = [bara(z22), bara(z23)];
+        const n = (acum) => bareInchise(j, "1d", acum, "TWELVEDATA").length;
+        const zAzi = Date.UTC(2026, 8, 24, 20);
+        return { laInchidere: n(Date.UTC(2026, 8, 23, 21)), aDouaZi: n(Date.UTC(2026, 8, 24, 12)), sambata: n(Date.UTC(2026, 8, 26, 10)),
+          baraDeAzi: bareInchise([bara(z23), bara(zAzi)], "1d", Date.UTC(2026, 8, 24, 15), "TWELVEDATA").length,
+          cripto: bareInchise([bara(Date.UTC(2026, 8, 24, 10)), bara(Date.UTC(2026, 8, 24, 11))], "1h", Date.UTC(2026, 8, 24, 11, 30), "BINANCE").length };
+      })()`);
+      assert.equal(r.laInchidere, 2, `la 21:00 UTC pe 23, bara zilei 23 e inchisa: au ramas ${r.laInchidere} din 2`);
+      assert.equal(r.aDouaZi, 2, `pe 24 la 12:00 UTC au ramas ${r.aDouaZi} din 2`);
+      assert.equal(r.sambata, 2, `sambata au ramas ${r.sambata} din 2`);
+      assert.equal(r.baraDeAzi, 1, "bara zilei de AZI (inchiderea la 20:00, acum 15:00) e in formare si se scoate");
+      assert.equal(r.cripto, 1, "la cripto (ora de DESCHIDERE pe bara) regula veche ramane");
+    });
+
+    await test("F1b. analiza pe TWELVEDATA 1d trimite sursa la bareInchise (nu taie ultima zi inchisa)", async () => {
+      const r = await b.ev(`(async () => {
+        const zi = 86400000, azi = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 20) - zi; // ieri, 20:00 UTC
+        const j = ${MERS_ALEATOR}.slice(-300); j.forEach((x, i) => { x[0] = azi - (j.length - 1 - i) * zi; });
+        const s = { k: window.analysisKlines, t: window.analysisTicker, src: window.analysisSource, tf: document.getElementById('tf').value };
+        window.analysisKlines = async () => j.map(x => x.slice());
+        window.analysisTicker = async () => ({ lastPrice: j.at(-1)[4], priceChangePercent: "0.5", quoteVolume: "1000" });
+        window.analysisSource = () => "TWELVEDATA";
+        document.getElementById('tf').value = "1d";
+        try { await analyze(false); return { pret: window.__radarState.q.price, ultima: +j.at(-1)[4] }; }
+        finally { window.analysisKlines = s.k; window.analysisTicker = s.t; window.analysisSource = s.src; document.getElementById('tf').value = s.tf; stopProviderLive(); }
+      })()`);
+      assert.ok(Math.abs(r.pret - r.ultima) < 1e-9, `analiza a taiat ultima zi INCHISA: pret ${r.pret}, ultima inchidere ${r.ultima}`);
+    });
+
+    await test("F2. volum lipsa (null) la actiuni: indicatorii de volum ies null, volScore nu intra in scor", async () => {
+      const r = await b.ev(`(() => {
+        const j = ${MERS_ALEATOR}.slice(-300); j[j.length - 3][5] = null; // o singura lumanare fara volum, in fereastra
+        const q = calc(j, "auto");
+        const w = q.regime === "RANGE" ? [.22, .28, .20, .30] : [.34, .27, .15, .24];
+        let astept = (q.trendScore * w[0] + q.momScore * w[1] + q.structureScore * w[3]) / (w[0] + w[1] + w[3]);
+        if (q.rsi > 78) astept -= 5; if (q.rsi < 22) astept += 5;
+        if (q.smc.trap && q.breakout === "UP") astept -= 7; if (q.smc.trap && q.breakout === "DOWN") astept += 7;
+        astept = Math.max(0, Math.min(100, astept));
+        const complet = calc(${MERS_ALEATOR}.slice(-300), "auto");
+        // scorul LONG/SHORT: ponderea volumului (0.06) iese din numitor, nu se aduna 0
+        const sm = signalModel(q, { h4: null }, { avg: 58 });
+        let lung = (0.42 * q.score + 0.22 * 50 + 0.20 * 58 + 0.10 * q.structureScore) / 0.94;
+        if (q.divergence === "BULL DIV") lung += 4; if (q.ichimoku === "BULL") lung += 3; if (q.smc.trap && q.breakout === "UP") lung -= 5;
+        lung = Math.max(0, Math.min(100, lung));
+        return { volScore: q.volScore, mfi: q.mfi, cmf: q.cmf, vr: q.vr, obv: q.obvSlope, vwap: q.vwapAbove, score: q.score, astept, lung, smLong: sm.long,
+          vp: volumeProfile(j), completVol: complet.volScore };
+      })()`);
+      for (const k of ["volScore", "mfi", "cmf", "vr", "obv", "vwap"]) assert.strictEqual(r[k], null, `${k} cu volum lipsa: ${r[k]}`);
+      assert.ok(Math.abs(r.score - r.astept) < 1e-9, `scorul (${r.score}) nu e cel fara componenta de volum (${r.astept})`);
+      assert.strictEqual(r.vp, null, "profilul de volum cu volum lipsa trebuie null");
+      assert.ok(Math.abs(r.smLong - r.lung) < 1e-9, `LONG (${r.smLong}) nu scoate volumul din numitor (${r.lung})`);
+      assert.ok(Number.isFinite(r.completVol), "cu volum complet volScore ramane cifra");
+    });
+
+    await test("F2b. analiza cu volum lipsa: fara exceptii, ecranul arata — la MFI/OBV/VWAP/VR/volum", async () => {
+      const r = await b.ev(`(async () => {
+        const j = ${MERS_ALEATOR}; const ora = 3600000, baza = Date.now() - 30000;
+        j.forEach((x, i) => { x[0] = baza - (j.length - i) * ora; }); j[j.length - 2][5] = null;
+        const s = { k: window.analysisKlines, t: window.analysisTicker, tf: document.getElementById('tf').value };
+        window.analysisKlines = async () => j.map(x => x.slice());
+        window.analysisTicker = async () => ({ lastPrice: j.at(-1)[4], priceChangePercent: "0.5", quoteVolume: null });
+        document.getElementById('tf').value = "1h";
+        const erori = []; const h = (e) => erori.push(String(e.message || e.reason || e) + (e.lineno ? " @" + e.lineno + ":" + e.colno : "") + (e.error && e.error.stack ? " " + String(e.error.stack).slice(0, 300) : "")); window.addEventListener('error', h); window.addEventListener('unhandledrejection', h);
+        try { await analyze(false); await new Promise(r => setTimeout(r, 300));
+          // si panourile care se deseneaza doar la navigare (profil, blocuri, sweep, frictiune, sesiuni, verdict, flux)
+          const st = window.__radarState, randari = [];
+          for (const [nume, f] of [["renderVolumeProfile", () => renderVolumeProfile()], ["renderAdvancedProfile", () => renderAdvancedProfile()],
+            ["renderOrderBlocks", () => renderOrderBlocks()], ["renderSweepConfirmation", () => renderSweepConfirmation()],
+            ["renderExecutionFriction", () => renderExecutionFriction()], ["renderSessionStructure", () => renderSessionStructure()],
+            ["renderStructureSession", () => renderStructureSession()], ["renderVerdictCenter", () => renderVerdictCenter(false)],
+            ["renderQuantFlow", () => renderQuantFlow(st.q, window.__derivativesState || {})], ["updateFlowWindow", () => updateFlowWindow(st.q)],
+            ["renderTrueTradeFlow", () => renderTrueTradeFlow()], ["signalModel", () => { const r = signalModel(st.q, st.hs, mtfComposite(st.m)); if (!Number.isFinite(r.long) || !Number.isFinite(r.short)) throw new Error("scor LONG/SHORT nefinit"); }]]) {
+            try { await f(); } catch (e) { randari.push(nume + ": " + e.message); }
+          }
+          erori.push(...randari);
+          return { erori, st: !!window.__radarState, t: ["mfi", "obv", "vwap", "vr", "volumeSignal"].map(id => document.getElementById(id)?.textContent),
+            cls: document.getElementById('mfi')?.className };
+        } finally { window.removeEventListener('error', h); window.removeEventListener('unhandledrejection', h);
+          window.analysisKlines = s.k; window.analysisTicker = s.t; document.getElementById('tf').value = s.tf; stopProviderLive(); }
+      })()`);
+      assert.deepEqual(r.erori, [], `exceptii: ${r.erori.join(" | ")}`);
+      assert.ok(r.st, "analiza nu a produs stare");
+      assert.deepEqual(r.t, ["—", "—", "—", "—", "—"], `volumul lipsa a devenit cifra: ${r.t}`);
+      assert.match(String(r.cls), /\blipsa\b/, `"—" trebuie estompat, nu colorat: ${r.cls}`);
+    });
+
+    await test("F3. Health NEINCERCAT: ecranul si watchdog-ul spun acelasi lucru (nici 0/100, nici SAFE MODE)", async () => {
+      const r = await b.ev(`(async () => {
+        const stare = window.__radarState, rest = dataFresh.rest, ws = lastWsTick;
+        window.__radarState = null; dataFresh.rest = 0; lastWsTick = 0;
+        window.__proba.rute["provider-health"] = { corp: { providers: [] }, stare: 200 };
+        try {
+          const snap = await runProviderHealthV62(false);
+          const ops = v67OperationsSnapshot(false);
+          const prov = (ops.checks || []).find(x => x.code === "PROVIDER");
+          return { stare: snap.state, scor: snap.score, ecran: document.getElementById('providerHealthScore')?.textContent,
+            ops: ops.state, prov: prov && { ok: prov.ok, sev: prov.severity, label: prov.label } };
+        } finally { window.__radarState = stare; dataFresh.rest = rest; lastWsTick = ws; delete window.__proba.rute["provider-health"]; }
+      })()`);
+      assert.equal(r.stare, "NEÎNCERCAT");
+      assert.strictEqual(r.scor, null, `scorul trimis mai departe: ${r.scor}`);
+      assert.ok(!/^0\/100/.test(String(r.ecran)), `ecranul scrie ${r.ecran}`);
+      assert.ok(r.prov && r.prov.sev !== "HARD", `watchdog-ul trateaza NEINCERCAT ca HARD: ${JSON.stringify(r.prov)}`);
+      assert.equal(r.prov.ok, true, "neincercat nu e o verificare picata - la fel ca pe ecran");
+      assert.ok(!/SAFE MODE|EMERGENCY/.test(r.ops), `watchdog: ${r.ops}`);
+      assert.match(String(r.prov.label), /NE[ÎI]NCERCAT|not checked/i, `watchdog-ul nu spune ce spune ecranul: ${r.prov.label}`);
+    });
+
+    await test("F4. lichidarea are O SINGURA forma pe Tablou: rigla, masura si cardul (parte + semn + DEPASITA)", async () => {
+      await b.ev(`(() => { if (TabloBot.__masoaraOriginal) return; const o = TabloBot.masoara; TabloBot.__masoaraOriginal = o;
+        TabloBot.masoara = function (a) { const m = o.apply(this, arguments);
+          m.lichidare = Object.assign({}, m.lichidare, window.__lichProba); return m; }; })()`);
+      try {
+        await b.ev(`window.__lichProba = { valoare: 37.5, partea: "jos", depasita: false, pretLichidare: 0.8, stare: "bine", unitate: "%" }`);
+        await incarcaBotSanatos({ strategyId: "7801" });
+        const rigla = await textEl(b, "tbRigla"), masura = (await celula(b, 4))?.valoare, bani = await textEl(b, "tbBani");
+        assert.match(String(rigla), /lichidare jos la −37\.5%/, `rigla: ${rigla}`);
+        assert.match(String(masura), /jos −37\.50%/, `masura: ${masura}`);
+        assert.match(String(bani), /lichidare jos la −38\.5%/, `cardul: ${bani}`);
+        await b.ev(`window.__lichProba = { valoare: -2.1, partea: "sus", depasita: true, pretLichidare: 1.26, stare: "rau", unitate: "%" }`);
+        await b.ev(`renderTabloBot()`);
+        const rigla2 = await b.ev(`[...document.querySelectorAll('#tbRigla .bad')].map(x => x.textContent).join(' ')`);
+        const masura2 = (await celula(b, 4))?.valoare;
+        assert.match(rigla2, /LICHIDARE DEPĂȘITĂ \(sus\)/, `rigla nu spune DEPASITA pe rosu: ${rigla2}`);
+        assert.match(String(masura2), /DEPĂȘITĂ/, `masura nu spune DEPASITA: ${masura2}`);
+      } finally {
+        await b.ev(`if (TabloBot.__masoaraOriginal) { TabloBot.masoara = TabloBot.__masoaraOriginal; delete TabloBot.__masoaraOriginal; } delete window.__lichProba;`);
+      }
+    });
+
+    await test("F5. '—' (lipsa) e estompat (gri), nu ambra ca o valoare", async () => {
+      await b.ev(`navTo('account')`);
+      await incarcaLista([botNormalizat(botBrut({ strategyId: "7901" }), { profitNet: null, pnlNerealizat: null, profitTotal: null })]);
+      const r = await b.ev(`(() => {
+        const liniute = [...document.querySelectorAll('#botiRanduri b')].filter(x => x.textContent.trim() === "—");
+        const ambra = getComputedStyle(Object.assign(document.body.appendChild(document.createElement('b')), { className: 'neutral' })).color;
+        const mut = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+        return { n: liniute.length, clase: liniute.map(x => x.className), culori: liniute.map(x => getComputedStyle(x).color), ambra };
+      })()`);
+      assert.ok(r.n >= 3, `nu gasesc liniutele de lipsa (${r.n})`);
+      assert.ok(r.clase.every((c) => /\blipsa\b/.test(c)), `clase: ${r.clase}`);
+      assert.ok(r.culori.every((c) => c !== r.ambra), `"—" are culoarea ambra a valorilor: ${r.culori}`);
+    });
+
     /* ═══ v74.4: parola nu se mai cere la fiecare repornire ═══════════════
        Pana acum statea in sessionStorage: se stergea la inchiderea tabului, deci
        pe telefon o cerea de fiecare data. Probele astea REINCARCA pagina - adica

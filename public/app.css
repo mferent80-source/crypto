@@ -1200,6 +1200,8 @@ body{min-height:100vh;overflow-x:hidden}
 .noticeBad{margin:6px 0;padding:8px 10px;border:1px solid rgba(255,107,120,.34);border-radius:10px;background:rgba(255,107,120,.07);font-size:11px;line-height:1.4}
 #tbSpreSetari{margin-top:8px}
 #tbNivel.tbOprit{color:#8fb4ff}
+/* "—" = lipsa, nu valoare: gri estompat (ambra .neutral se citea ca o cifra) */
+.lipsa,b.lipsa,.n.lipsa{color:#6f8196!important;font-weight:600}
 .parolaLipsa{margin:0 0 10px}.parolaLipsa button{margin-left:6px}
 /* v74.6 telefon: randul botului se rupe pe doua linii (banii la vedere), tabelul
    de module se deruleaza deja in el insusi (overflow:auto) - pagina curgea din
