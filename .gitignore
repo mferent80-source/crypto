@@ -21,3 +21,6 @@ node_modules/
 # Gunoi de sistem
 Thumbs.db
 desktop.ini
+
+# Colectorul de acasa: istoricul, starea alertelor, canalul ntfy (secret), jurnalul
+data/

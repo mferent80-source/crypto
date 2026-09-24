@@ -698,6 +698,9 @@ async function gardaLansatoareViu() {
       const marcaj = path.join(tmp, "browser-deschis.txt");
       // Browserul NU se deschide in proba: Start-Process e inlocuit cu un fisier-marcaj.
       psS = psS.replace(/Start-Process '(http:[^']+)'/g, `Set-Content -LiteralPath '${marcaj}' -Value '$1'`);
+      // v77: nici colectorul nu porneste in proba - si el devine un fisier-marcaj.
+      const marcajColector = path.join(tmp, "colector-pornit.txt");
+      psS = psS.replace(/Start-Process -FilePath 'node' -ArgumentList '[^']*colector\.mjs' -WorkingDirectory \(Get-Location\)\.Path -WindowStyle Hidden( -ErrorAction Stop)?/g, `Set-Content -LiteralPath '${marcajColector}' -Value 'colector'`);
       if (/Start-Process/.test(psS)) throw Error(`${f} [ps:sanatate]: Start-Process ramas dupa inlocuire - opresc proba ca sa nu deschid un browser`);
       const cazuri = [
         ["nimic pe port", null, 1],
@@ -706,11 +709,14 @@ async function gardaLansatoareViu() {
         ["Crypto Radar", { status: 200, type: "application/json", body: '{"ok":true,"service":"crypto-radar","version":"v56"}' }, 0],
       ];
       for (const [nume, rasp, asteptat] of cazuri) {
-        try { fs.rmSync(marcaj, { force: true }); } catch {}
+        try { fs.rmSync(marcaj, { force: true }); fs.rmSync(marcajColector, { force: true }); } catch {}
         const srv = rasp ? await serverFals(PORT_PROBA, rasp) : null; if (srv) procese.push(srv);
         r = await ps(psS, folder, intarziat);
         if (srv) opreste(srv);
         const deschis = fs.existsSync(marcaj);
+        // Colectorul (care citeste contul si trimite alerte) porneste DOAR cand raspunde chiar aplicatia.
+        const colector = fs.existsSync(marcajColector);
+        if (colector !== (asteptat === 0)) pica(G, `${f} [ps:sanatate] ${nume}: colector ${colector ? "PORNIT" : "nepornit"} (astept ${asteptat === 0 ? "pornit" : "nepornit"})`);
         if (r.cod !== asteptat) pica(G, `${f} [ps:sanatate] ${nume}: iesire ${r.cod} (astept ${asteptat})`);
         if (f === LOCAL && deschis !== (asteptat === 0)) pica(G, `${f} [ps:sanatate] ${nume}: browser ${deschis ? "DESCHIS" : "nedeschis"} (astept ${asteptat === 0 ? "deschis" : "nedeschis"})`);
       }

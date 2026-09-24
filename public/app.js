@@ -4721,6 +4721,8 @@ async function tbAduDate(){
         comisioane:b.comisioane!=null?Number(b.comisioane):null,
         gridProfitBrut:b.gridProfitBrut!=null?Number(b.gridProfitBrut):null,
         investit:b.investit!=null?Number(b.investit):null},Date.now());
+      var srv=tbStare.istoricServer;
+      if(srv&&srv.bot===tbStare.bot.id&&srv.intrari.length)ist=TabloBot.imbinaIstoric(ist,srv.intrari,Date.now());
       tbStare.stocareStricata=!tbScrie(cheie,ist);
       tbStare.istoric=ist;
     }else{
@@ -4862,6 +4864,75 @@ function tbDeseneazaBanii(b){
 }
 // Banda cu cele patru cifre de sus: ce se citeste dintr-o privire. Doar din
 // campurile rutei (aceleasi ca in lista de boti); lipsa ramane "—".
+// v77: sfaturile, scenariile de pret, istoricul de pe serverul de acasa,
+// alertele pe telefon (ntfy), marja din futures si finantarea. Cifrele vin din
+// modulele pure (Scenariu, Sfaturi, Alerte, Directie), probate fara browser.
+var TB_EXTRA_MS=5*60000;
+async function tbAduExtra(){
+  var b=tbStare.bot;if(!b||!b.id)return;
+  var e=tbStare.extra||(tbStare.extra={la:0,bot:null,inLucru:false});
+  if(e.inLucru||(e.bot===b.id&&Date.now()-e.la<TB_EXTRA_MS))return;
+  e.inLucru=true;
+  try{
+    // Istoricul strans de colectorul de acasa (pe pagina publicata raspunde 503 - atunci ramane cel din browser).
+    try{var ist=await getJSON("/api/istoric-bot?action=citeste&ore=24&bot="+encodeURIComponent(b.id));
+      tbStare.istoricServer={bot:b.id,intrari:Array.isArray(ist.intrari)?ist.intrari:[],config:ist.config||null};e.istoricEroare=null}
+    catch(x){e.istoricEroare=x.status===503?"doar-acasa":textEroare(x)}
+    try{var f=await getJSON("/api/pionex-account?action=futures");e.futures=f&&f.usdt?f.usdt:null;e.futuresEroare=null}
+    catch(x){e.futures=null;e.futuresEroare=textEroare(x)}
+    try{var baza=String(b.baza||"").replace(/\.PERP$/,"").toUpperCase();
+      var fu=await getJSON("/api/market?type=futures&symbol="+encodeURIComponent(baza+"USDT"));e.funding=fu&&fu.funding!=null?Number(fu.funding):null}
+    catch(x){e.funding=null}
+    e.bot=b.id;e.la=Date.now();
+  }finally{e.inLucru=false}
+  renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();
+}
+function tbTinteScenariu(b){
+  var t=[],p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus),opr=botiNr(b.opritorPierdere);
+  if(p!==null){t.push({eticheta:"+5%",pret:p*1.05});t.push({eticheta:"−5%",pret:p*0.95});t.push({eticheta:"−10%",pret:p*0.9})}
+  if(sus!==null)t.push({eticheta:"marginea de sus",pret:sus});
+  if(jos!==null)t.push({eticheta:"jos",pret:jos});
+  if(opr!==null&&opr!==jos)t.push({eticheta:"opritorul",pret:opr});
+  var propriu=tbStare.scenariuPropriu;if(propriu>0)t.push({eticheta:"prețul tău",pret:propriu});
+  return t;
+}
+function tbScenariuPropriu(v){var x=Number(String(v||"").replace(",","."));tbStare.scenariuPropriu=x>0&&isFinite(x)?x:null;renderTabloScenarii()}
+function renderTabloScenarii(){
+  var el=$("tbScenarii");if(!el)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot;
+  if(!b||typeof Scenariu==="undefined"){el.innerHTML='<p class="tbSub">—</p>';return}
+  var r=Scenariu.scenarii(tbStare.botBrut,b,tbTinteScenariu(b));
+  if(!r.ok){el.innerHTML='<p class="tbSub">'+escapeHtml(r.motiv)+'</p>';return}
+  var nume={jos:"marginea de jos"};
+  var randuri=r.randuri.slice().sort(function(a,c){return c.pret-a.pret});
+  el.innerHTML='<div class="tbScenCap"><span>Dacă prețul ajunge la</span><span>Poziția</span><span>Totalul ar fi</span></div>'+
+    randuri.map(function(x){return '<div class="tbScenRand'+(x.gol?' tbScenGol':'')+'"><span><b>'+escapeHtml(tbPretScurt(x.pret))+'</b> <span class="tbSub">'+escapeHtml(/^[+−]/.test(x.eticheta)?x.eticheta:(nume[x.eticheta]||x.eticheta)+' · '+tbFormateazaSemn(x.miscare,1)+'%')+'</span></span>'+
+      '<span>'+Math.round(x.pozitie)+'</span>'+(x.gol?'<b class="bad">lichidat, ≈ −'+escapeHtml(r.grid.inv.toFixed(2))+' USDT</b>':'<b class="'+(x.total>0?"good":x.total<0?"bad":"")+'">'+escapeHtml(botiBan(x.total,2))+'</b>')+'</div>'}).join("")+
+    '<p class="tbSub tbScenNota">Aproximare pe gridul tău ('+r.grid.randuri+' niveluri, câte '+r.grid.q+' pe nivel). După model, contul botului s-ar goli pe la <b>'+escapeHtml(tbPretScurt(r.pretGolire))+'</b>; Pionex estimează lichidarea la '+escapeHtml(tbPretScurt(botiNr(b.pretLichidare)))+'.</p>';
+}
+function renderTabloSfaturi(){
+  var el=$("tbSfaturi");if(!el)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot;
+  if(!b||typeof Sfaturi==="undefined"||typeof Scenariu==="undefined"){el.innerHTML='<p class="tbSub">Aștept botul…</p>';return}
+  var d=tbStare.directie,r4=d&&d.rez?d.rez.filter(function(x){return x.tf==="4H"})[0]:null,e=tbStare.extra||{};
+  var scen=Scenariu.scenarii(tbStare.botBrut,b,[{eticheta:"jos",pret:botiNr(b.gridJos)}]);
+  var k4=d&&d.randuri4h,p=botiNr(b.pretCurent),jos=botiNr(b.gridJos);
+  var sanse=k4&&p!==null&&jos!==null?{josZi:Scenariu.sansaAtingere(k4,p,jos,6),josSapt:Scenariu.sansaAtingere(k4,p,jos,42)}:{};
+  var lista=Sfaturi.sfaturi({bot:b,scen:scen,sanse:sanse,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,
+    futures:e.futures?{disponibil:e.futures.disponibil}:null,funding:e.funding,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir});
+  el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.deCe?'<p class="tbSub">'+escapeHtml(s.deCe)+'</p>':'')+'</div>'}).join("");
+}
+function renderTabloAlerte(){
+  var el=$("tbAlerteStare");if(!el)return;
+  var s=tbStare.istoricServer,c=s&&s.config,e=tbStare.extra||{};
+  if(e.istoricEroare==="doar-acasa"){el.innerHTML='<p class="tbSub">Alertele pe telefon și istoricul de 7 zile merg de pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat).</p>';return}
+  if(!c||!c.ntfyTopic){el.innerHTML='<p class="tbSub">Colectorul de acasă n-a pornit încă. Pornește din nou PORNESTE-CRYPTO-RADAR.bat.</p>';return}
+  var min=c.colectorLa?Math.round((Date.now()-c.colectorLa)/60000):null;
+  var viu=min!==null&&min<=3;
+  el.innerHTML='<div class="tbLinie"><span>Colectorul de acasă</span><b class="'+(viu?"good":"bad")+'">'+(min===null?"—":viu?"merge (acum "+Math.max(0,min)+" min)":"oprit de "+min+" min")+'</b></div>'+
+    '<div class="tbLinie"><span>Istoric strâns pe server</span><b>'+(s.intrari.length?Math.round((Date.now()-s.intrari[0].t)/3600000*10)/10+" ore":"—")+'</b></div>'+
+    '<p class="tbSub">Alerte pe telefon: instalează aplicația <b>ntfy</b>, apasă „+” și abonează-te la canalul <b class="tbCanal">'+escapeHtml(c.ntfyTopic)+'</b>. Numele canalului e secret: nu-l da nimănui.</p>';
+}
 function tbDeseneazaKpi(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
   var pune=function(id,text,cls){var e=$(id);if(!e)return;e.textContent=text;if(cls!=null)e.className=(e.classList.contains("tbKpiVal")?"tbKpiVal ":"tbSub ")+cls};
@@ -4903,6 +4974,8 @@ var TB_DIR_TF=[
   {tf:"1D",eticheta:"1 zi",orizont:7,limit:400,orizontText:"o săptămână"}];
 var TB_DIR_REINCERCARE_MS=30000;
 var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
+var TB_PERIOADE={"24h":{i:"5M",l:288,gaura:12*60000},"3z":{i:"15M",l:288,gaura:40*60000},"7z":{i:"60M",l:168,gaura:150*60000}};
+function tbAlegeInterval(p){if(!TB_PERIOADE[p])return;tbStare.graficInterval=p;["24h","3z","7z"].forEach(function(k){var e=$("tbInt"+k);if(e)e.setAttribute("aria-pressed",String(k===p))});if(tbStare.grafic)tbStare.grafic.la=0;tbAduGraficul()}
 async function tbAduDirectie(){
   var b=tbStare.bot;if(!b||typeof Directie==="undefined")return;
   var s=TabloBot.simboluri(b.baza,b.quote).pionex;
@@ -4920,6 +4993,7 @@ async function tbAduDirectie(){
         var randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;
         if(!randuri)throw new Error((k&&k.error)||"Pionex nu a dat lumânări");
         rez.push(Object.assign({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText},Directie.analizeaza(randuri,x.orizont,b.directie)));
+        if(x.tf==="4H")d.randuri4h=randuri;
       }catch(e){rez.push({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText,dir:null,stare:"eroare",motiv:textEroare(e)})}
     }
     d.rez=rez;d.simbol=cheie;d.la=Date.now();d.eroare=rez.every(function(r){return r.stare==="eroare"});
@@ -4930,12 +5004,14 @@ async function tbAduGraficul(){
   var b=tbStare.bot;if(!b)return;
   var s=TabloBot.simboluri(b.baza,b.quote).pionex;
   var g=tbStare.grafic||(tbStare.grafic={la:0,simbol:null,randuri:null,inLucru:false});
-  if(g.inLucru||(g.simbol===s&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS)))return;
+  var cheieG=s+"|"+(tbStare.graficInterval||"24h");
+  if(g.inLucru||(g.simbol===cheieG&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS)))return;
   g.inLucru=true;
   try{
-    var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval=5M&limit=288");
+    var per=TB_PERIOADE[tbStare.graficInterval||"24h"];
+    var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+per.i+"&limit="+per.l);
     g.randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;g.eroare=g.randuri?null:"Pionex nu a dat prețuri";
-    g.simbol=s;g.la=Date.now();
+    g.simbol=cheieG;g.la=Date.now();
   }catch(e){g.eroare=textEroare(e)}finally{g.inLucru=false}
   renderTabloGrafic();
 }
@@ -4972,7 +5048,8 @@ function renderTabloGrafic(){
   if(!b){el.innerHTML='<div class="emptyState">—</div>';return}
   if(!g||!g.randuri){el.innerHTML='<div class="emptyState">'+escapeHtml(g&&g.eroare?"Nu am prețurile: "+g.eroare:"Aștept prețurile…")+'</div>';return}
   var ist=g.randuri.map(function(r){return {t:Number(Array.isArray(r)?r[0]:r.time),pretPerp:Array.isArray(r)?r[4]:r.close}});
-  var geo=TabloBot.geometrieGrafic(ist,brut,Date.now());
+  var per=TB_PERIOADE[tbStare.graficInterval||"24h"];
+  var geo=TabloBot.geometrieGrafic(ist,brut,Date.now(),per.gaura);
   if(!geo.destul){el.innerHTML='<div class="emptyState">Prea puține prețuri pentru grafic.</div>';return}
   var W=1000,H=240,Y=function(f){return (H*(1-f)).toFixed(1)},X=function(f){return (W*f).toFixed(1)};
   var pret=function(p){return (p-geo.minPret)/(geo.maxPret-geo.minPret)};
@@ -4991,6 +5068,10 @@ function renderTabloGrafic(){
     svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(lich))+'" y2="'+Y(pret(lich))+'" class="tbLinieLich"/>';
     etich.push({f:pret(lich),t:"lichidare "+tbPretScurt(lich),c:"tbEtLich"});
   }
+  // Nivelurile gridului, subtiri: se vede pe ce trepte cumpara si vinde botul.
+  var xo=(brut&&brut.buOrderData)||{},gj=botiNr(xo.bottom),gs=botiNr(xo.top),gr=botiNr(xo.row);
+  if(gj!==null&&gs!==null&&gr>=1){var pas=(gs-gj)/gr,sare=Math.max(1,Math.ceil(gr/30));
+    for(var ni=0;ni<=gr;ni+=sare){var L=gj+ni*pas;if(L>geo.minPret&&L<geo.maxPret)svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(L))+'" y2="'+Y(pret(L))+'" class="tbNivelGrid"/>'}}
   geo.segmente.forEach(function(seg){svg+='<polyline class="tbLiniePret" points="'+seg.map(function(p){return X(p.x)+","+Y(p.y)}).join(" ")+'"/>'});
   svg+='<line class="tbCruce" x1="0" x2="0" y1="0" y2="'+H+'" style="display:none"/></svg>';
   var ultim=ist.filter(function(h){return Number(h.pretPerp)>0}).sort(function(a,c){return a.t-c.t});
@@ -5000,7 +5081,7 @@ function renderTabloGrafic(){
   etich.sort(function(a,c){return c.f-a.f});var ult=-1;
   var etHtml=etich.filter(function(e){var sus=(1-e.f)*100;if(ult>=0&&sus-ult<9)return false;ult=sus;return true})
     .map(function(e){return '<span class="tbEt '+e.c+'" style="top:calc('+((1-e.f)*100).toFixed(1)+'% - 9px)">'+escapeHtml(e.t)+'</span>'}).join("");
-  var ora=function(t){var d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+  var ora=function(t){var d=new Date(t),h=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");return (tbStare.graficInterval||"24h")==="24h"?h:(d.getDate()+"."+String(d.getMonth()+1).padStart(2,"0")+" "+h)};
   el.innerHTML='<div class="tbGraficZona">'+svg+etHtml+'<div class="tbTip" hidden></div></div>'+
     '<div class="tbAxa"><span>'+ora(geo.deLa)+'</span><span>'+ora(geo.deLa+(geo.panaLa-geo.deLa)/2)+'</span><span>'+ora(geo.panaLa)+'</span></div>';
   var zona=el.querySelector(".tbGraficZona"),cruce=el.querySelector(".tbCruce"),tip=el.querySelector(".tbTip");
@@ -5033,7 +5114,7 @@ function renderTabloDovada(){
     rand("Timp cu prețul în interval",f.timpInInterval,function(x){return Math.round(x.valoare)+"%"})+
     rand("Timp lângă o margine a gridului",f.desLaMargine,function(x){return Math.round(x.valoare)+"%"});
 }
-function tbDeseneazaTabloulUnic(){renderTabloDirectia();tbDeseneazaKpi();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbPiataPeBot()}
+function tbDeseneazaTabloulUnic(){renderTabloDirectia();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbPiataPeBot()}
 // Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
 // vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
 function tbActualizeazaBanda(){

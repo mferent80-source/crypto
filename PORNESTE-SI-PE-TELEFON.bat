@@ -51,15 +51,27 @@ if errorlevel 1 (
   goto :versiune
 )
 echo   Caut o versiune mai noua...
-git pull --ff-only
-if errorlevel 1 (
-  echo.
-  echo   [ATENTIE] Nu am putut aduce versiunea noua - continui cu ce e pe disc.
-  echo       Daca se repeta, deschide un terminal aici si ruleaza: git pull
-  echo.
-) else (
-  echo   [OK] La zi.
-  echo.
+rem Tot pasul de actualizare sta intr-un singur bloc ( ... ): cmd il citeste
+rem INTREG inainte sa-l ruleze. Altfel, un git pull care schimba chiar acest
+rem .bat ar face cmd sa citeasca fisierul nou de la pozitia veche si sa ruleze
+rem bucati de randuri. Daca s-a schimbat un lansator, il pornesc din nou curat.
+(
+  git pull --ff-only
+  if errorlevel 1 (
+    echo.
+    echo   [ATENTIE] Nu am putut aduce versiunea noua - continui cu ce e pe disc.
+    echo       Daca se repeta, deschide un terminal aici si ruleaza: git pull
+    echo.
+  ) else (
+    git diff --quiet "HEAD@{1}" HEAD -- PORNESTE-CRYPTO-RADAR.bat PORNESTE-SI-PE-TELEFON.bat >nul 2>&1
+    if errorlevel 1 (
+      echo   [OK] Am adus si un lansator nou. Il pornesc din nou, intr-o fereastra noua.
+      start "" "%~f0"
+      exit
+    )
+    echo   [OK] La zi.
+    echo.
+  )
 )
 
 :versiune
@@ -166,12 +178,12 @@ echo   Pornesc serverul pe http://127.0.0.1:8788 ...
 rem Retin PID-ul: oprirea dupa titlul ferestrei NU functioneaza (masurat -
 rem serverul ramanea pornit dupa inchiderea lansatorului). Cu PID-ul propriu
 rem opresc exact arborele meu, fara sa ating alt wrangler sau alt server.
-powershell -NoProfile -Command "$q = [char]34; $st = Join-Path (Get-Location).Path '.wrangler\state'; $p = Start-Process -FilePath 'cmd.exe' -ArgumentList ('/c title Crypto Radar - server && npx --yes wrangler@4.137.0 pages dev public --port 8788 --ip 127.0.0.1 --persist-to ' + $q + $st + $q + ' --compatibility-date=2026-01-01') -WindowStyle Minimized -PassThru; $p.Id | Out-File -Encoding ascii -NoNewline '%PIDSRV%'"
+powershell -NoProfile -Command "$q = [char]34; $st = Join-Path (Get-Location).Path '.wrangler\state'; $p = Start-Process -FilePath 'cmd.exe' -ArgumentList ('/c title Crypto Radar - server && npx --yes wrangler@4.137.0 pages dev public --port 8788 --ip 127.0.0.1 --kv ISTORIC --persist-to ' + $q + $st + $q + ' --compatibility-date=2026-01-01') -WindowStyle Minimized -PassThru; $p.Id | Out-File -Encoding ascii -NoNewline '%PIDSRV%'"
 
 :asteptare
 rem Proba de pornire: JSON-ul aplicatiei pe /api/market?type=health, nu orice 200.
 rem [ps:sanatate]
-powershell -NoProfile -Command "$u = 'http://127.0.0.1:8788/api/market?type=health'; for ($i = 0; $i -lt 90; $i++) { try { $r = Invoke-RestMethod -Uri $u -TimeoutSec 3 -ErrorAction Stop; if ($r -and $r.ok -eq $true -and $r.service -eq 'crypto-radar') { exit 0 } } catch {}; Start-Sleep -Seconds 2 }; Write-Host ''; Write-Host '  [ATENTIE] Pe 127.0.0.1:8788 nu raspunde Crypto Radar (am cerut /api/market?type=health).'; Write-Host '      Nu deschid browserul pe un raspuns care nu e al aplicatiei.'; exit 1"
+powershell -NoProfile -Command "$u = 'http://127.0.0.1:8788/api/market?type=health'; for ($i = 0; $i -lt 90; $i++) { try { $r = Invoke-RestMethod -Uri $u -TimeoutSec 3 -ErrorAction Stop; if ($r -and $r.ok -eq $true -and $r.service -eq 'crypto-radar') { try { Start-Process -FilePath 'node' -ArgumentList 'scripts\colector.mjs' -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -ErrorAction Stop } catch { Write-Host '  [ATENTIE] Colectorul de alerte nu a pornit (node lipsa?).' }; exit 0 } } catch {}; Start-Sleep -Seconds 2 }; Write-Host ''; Write-Host '  [ATENTIE] Pe 127.0.0.1:8788 nu raspunde Crypto Radar (am cerut /api/market?type=health).'; Write-Host '      Nu deschid browserul pe un raspuns care nu e al aplicatiei.'; exit 1"
 if errorlevel 1 (
   echo   [ATENTIE] Serverul nu a raspuns ca Crypto Radar in 3 minute. Uita-te in
   echo       fereastra minimizata "Crypto Radar - server" ca sa vezi ce scrie acolo.

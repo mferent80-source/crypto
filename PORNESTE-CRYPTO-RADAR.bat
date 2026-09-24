@@ -34,15 +34,27 @@ if errorlevel 1 (
   goto :versiune
 )
 echo   Caut o versiune mai noua...
-git pull --ff-only
-if errorlevel 1 (
-  echo.
-  echo   [!] Nu am putut aduce versiunea noua - continui cu ce e pe disc.
-  echo       Daca se repeta, deschide un terminal aici si ruleaza: git pull
-  echo.
-) else (
-  echo   [OK] La zi.
-  echo.
+rem Tot pasul de actualizare sta intr-un singur bloc ( ... ): cmd il citeste
+rem INTREG inainte sa-l ruleze. Altfel, un git pull care schimba chiar acest
+rem .bat ar face cmd sa citeasca fisierul nou de la pozitia veche si sa ruleze
+rem bucati de randuri. Daca s-a schimbat un lansator, il pornesc din nou curat.
+(
+  git pull --ff-only
+  if errorlevel 1 (
+    echo.
+    echo   [!] Nu am putut aduce versiunea noua - continui cu ce e pe disc.
+    echo       Daca se repeta, deschide un terminal aici si ruleaza: git pull
+    echo.
+  ) else (
+    git diff --quiet "HEAD@{1}" HEAD -- PORNESTE-CRYPTO-RADAR.bat PORNESTE-SI-PE-TELEFON.bat >nul 2>&1
+    if errorlevel 1 (
+      echo   [OK] Am adus si un lansator nou. Il pornesc din nou, intr-o fereastra noua.
+      start "" "%~f0"
+      exit
+    )
+    echo   [OK] La zi.
+    echo.
+  )
 )
 
 :versiune
@@ -148,14 +160,17 @@ echo.
 rem Browserul se deschide doar dupa ce /api/market?type=health raspunde cu
 rem JSON-ul aplicatiei - nu dupa un ceas si nu pe orice 200 de pe 8788.
 rem [ps:sanatate]
-%PORNIRE% powershell -NoProfile -Command "$u = 'http://127.0.0.1:8788/api/market?type=health'; for ($i = 0; $i -lt 90; $i++) { try { $r = Invoke-RestMethod -Uri $u -TimeoutSec 3 -ErrorAction Stop; if ($r -and $r.ok -eq $true -and $r.service -eq 'crypto-radar') { Start-Process 'http://127.0.0.1:8788/'; exit 0 } } catch {}; Start-Sleep -Seconds 2 }; Write-Host ''; Write-Host '  [ATENTIE] Pe 127.0.0.1:8788 nu raspunde Crypto Radar (am cerut /api/market?type=health).'; Write-Host '      Nu deschid browserul pe un raspuns care nu e al aplicatiei.'; exit 1"
+%PORNIRE% powershell -NoProfile -Command "$u = 'http://127.0.0.1:8788/api/market?type=health'; for ($i = 0; $i -lt 90; $i++) { try { $r = Invoke-RestMethod -Uri $u -TimeoutSec 3 -ErrorAction Stop; if ($r -and $r.ok -eq $true -and $r.service -eq 'crypto-radar') { try { Start-Process -FilePath 'node' -ArgumentList 'scripts\colector.mjs' -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -ErrorAction Stop } catch { Write-Host '  [ATENTIE] Colectorul de alerte nu a pornit (node lipsa?).' }; Start-Process 'http://127.0.0.1:8788/'; exit 0 } } catch {}; Start-Sleep -Seconds 2 }; Write-Host ''; Write-Host '  [ATENTIE] Pe 127.0.0.1:8788 nu raspunde Crypto Radar (am cerut /api/market?type=health).'; Write-Host '      Nu deschid browserul pe un raspuns care nu e al aplicatiei.'; exit 1"
 set "RC=%ERRORLEVEL%"
 if defined DEJA goto :DEJAGATA
 
 rem --ip 127.0.0.1: serverul are cheile Pionex, deci asculta DOAR pe
 rem calculatorul asta. Telefonul intra prin tunel (PORNESTE-SI-PE-TELEFON.bat).
 rem --persist-to cu calea folderului: dupa ea recunoaste [ps:port] serverul nostru.
-call npx --yes wrangler@4.137.0 pages dev public --port 8788 --ip 127.0.0.1 --persist-to "%CD%\.wrangler\state" --compatibility-date=2026-01-01
+rem --kv ISTORIC: istoricul botului strans de colector (scripts\colector.mjs),
+rem pastrat pe disc in .wrangler\state. Colectorul porneste ascuns cand serverul
+rem raspunde si se opreste singur la 5 minute dupa ce serverul se opreste.
+call npx --yes wrangler@4.137.0 pages dev public --port 8788 --ip 127.0.0.1 --kv ISTORIC --persist-to "%CD%\.wrangler\state" --compatibility-date=2026-01-01
 
 echo.
 echo   Serverul s-a oprit.

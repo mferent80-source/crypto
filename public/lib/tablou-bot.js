@@ -723,7 +723,11 @@ var TabloBot = (function () {
   // Graficul se construieste aici (pur), ca sa poata fi probat fara browser.
   // Regulile care-l impiedica sa minta sunt in spec; fiecare are proba ei.
   var GAURA_GRAFIC_MS = 5 * 60000;
-  function geometrieGrafic(istoric, bot, acum) {
+  // gauraMs (optional): peste cat timp intre doua puncte linia se rupe. Pentru
+  // istoricul pe minut e 5 min; pentru lumanari de 15 min / 1 ora trebuie mai mare,
+  // altfel fiecare lumanare ar fi o "gaura".
+  function geometrieGrafic(istoric, bot, acum, gauraMs) {
+    var gaura = nr(gauraMs) > 0 ? nr(gauraMs) : GAURA_GRAFIC_MS;
     var gol = { destul: false, segmente: [], banda: null, lichidare: null,
       minPret: null, maxPret: null, deLa: null, panaLa: null };
     var puncte = [];
@@ -771,7 +775,7 @@ var TabloBot = (function () {
 
     var segmente = [], curent = [];
     for (var k = 0; k < puncte.length; k++) {
-      if (k > 0 && puncte[k].t - puncte[k - 1].t > GAURA_GRAFIC_MS) {
+      if (k > 0 && puncte[k].t - puncte[k - 1].t > gaura) {
         if (curent.length) segmente.push(curent);
         curent = [];
       }
@@ -786,6 +790,21 @@ var TabloBot = (function () {
   }
 
   var ZI = 24 * 3600000, MAXIM = 1440;
+  // v77: istoricul din browser + cel strans de serverul de acasa, un punct pe
+  // minut. Pe acelasi minut castiga intrarea din browser (are si pretul spot).
+  function imbinaIstoric(local, server, acum) {
+    var pe = {};
+    [server || [], local || []].forEach(function (lista) {
+      for (var i = 0; i < lista.length; i++) {
+        var h = lista[i], t = h && nr(h.t);
+        if (t === null || t <= 0 || acum - t > ZI || t > acum + 60000) continue;
+        pe[Math.floor(t / 60000)] = h;
+      }
+    });
+    var out = Object.keys(pe).map(function (k) { return pe[k]; });
+    out.sort(function (a, b) { return nr(a.t) - nr(b.t); });
+    return out.length > MAXIM ? out.slice(out.length - MAXIM) : out;
+  }
   function istoricAdauga(istoric, intrare, acum) {
     var t = nr(intrare.t);
     if (!t) return istoric || [];
@@ -809,6 +828,6 @@ var TabloBot = (function () {
 
   return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte,
     istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea,
-    frecvente: frecvente, geometrieGrafic: geometrieGrafic };
+    frecvente: frecvente, geometrieGrafic: geometrieGrafic, imbinaIstoric: imbinaIstoric };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloBot = TabloBot;

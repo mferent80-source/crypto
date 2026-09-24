@@ -41,6 +41,16 @@ export async function onRequestGet({request,env}){
       if(!Array.isArray(d?.data?.balances))return json({error:"Pionex balances: data.balances nu e o lista",motiv:"forma-necunoscuta"},502);
       return json(d);
     }
+    if(action==="futures"){
+      // v77: contul futures MANUAL (in afara botilor). Doar USDT: cat e liber
+      // pentru a adauga marja unui bot care se apropie de lichidare.
+      const d=await privateGet(env,"/uapi/v1/account/detail");
+      const lista=d?.data?.balances;
+      if(!Array.isArray(lista))return json({error:"Pionex futures: data.balances nu e o lista",motiv:"forma-necunoscuta"},502);
+      const usdt=lista.find(x=>x&&x.coin==="USDT")||null;
+      const n=v=>{if(v==null||v==="")return null;const x=Number(v);return Number.isFinite(x)?x:null};
+      return json({usdt:usdt?{disponibil:n(usdt.available),total:n(usdt.assets),nerealizat:n(usdt.unrealizedPnL),marjaFolosita:n(usdt.totalInitialMargin)}:null});
+    }
     if(action==="openOrders")return json(await privateGet(env,"/api/v1/trade/openOrders",{symbol:safeSymbol(u)}));
     if(action==="fills")return json(await privateGet(env,"/api/v1/trade/fills",historyParams(u)));
     if(action==="orders")return json(await privateGet(env,"/api/v1/trade/allOrders",historyParams(u)));

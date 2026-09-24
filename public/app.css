@@ -1340,3 +1340,29 @@ body.peTablou main>.note{display:none}
   #tabloubot .tbDirFata{margin-left:0;text-align:left;flex-basis:100%}
   #tabloubot #tbGraficCard .tbGraficZona{min-height:200px}
 }
+
+/* v77: sfaturi, scenarii, alerte, perioada graficului */
+#tabloubot .tbSfaturiBloc{margin-bottom:12px}
+#tabloubot #tbSfaturi{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+#tabloubot .tbSfat{padding:12px 14px;border-radius:10px;background:var(--tb-fond2);border-left:3px solid var(--muted)}
+#tabloubot .tbSfat b{display:block;font-size:16px;margin-bottom:4px}
+#tabloubot .tbSfat p{margin:0 0 4px;font-size:15px;line-height:1.45}
+#tabloubot .tbSfat-critic{border-left-color:var(--bad);background:rgba(255,107,120,.07)}
+#tabloubot .tbSfat-atentie{border-left-color:var(--warn)}
+#tabloubot .tbSfat-bine{border-left-color:var(--good)}
+#tabloubot .tbScenCap,#tabloubot .tbScenRand{display:grid;grid-template-columns:1.6fr .6fr 1fr;gap:10px;padding:8px 0;align-items:baseline}
+#tabloubot .tbScenCap{color:var(--muted);font-size:13px}
+#tabloubot .tbScenRand{border-top:1px solid var(--tb-linie)}
+#tabloubot .tbScenRand>:nth-child(n+2),#tabloubot .tbScenCap>:nth-child(n+2){text-align:right}
+#tabloubot .tbScenGol{background:rgba(255,107,120,.07)}
+#tabloubot .tbScenNota{margin-top:8px}
+#tabloubot .tbPropriu{display:flex;align-items:center;gap:8px}
+#tabloubot .tbPropriu input{width:110px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;font-size:15px}
+#tabloubot .tbPropriu input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#tabloubot .tbCanal{font-family:ui-monospace,Consolas,monospace;user-select:all;color:var(--text)}
+#tabloubot .tbInterval{display:flex;gap:4px}
+#tabloubot .tbIntBtn{white-space:nowrap;padding:4px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+#tabloubot .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
+#tabloubot .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#tabloubot .tbNivelGrid{stroke:rgba(144,160,182,.13);stroke-width:1;vector-effect:non-scaling-stroke}
+@media(max-width:560px){#tabloubot #tbSfaturi{grid-template-columns:1fr}#tabloubot .tbScenCap,#tabloubot .tbScenRand{grid-template-columns:1.4fr .6fr 1fr;font-size:14px}}
