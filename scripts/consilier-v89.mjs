@@ -30,6 +30,11 @@ await test("piata: Nasdaq pe trend sus + VIX mic -> bine; Nasdaq in jos sau VIX 
   assert.ok(p.parti.some((x) => /Nasdaq/.test(x.et))); assert.ok(p.parti.some((x) => /VIX/.test(x.et))); assert.ok(p.parti.some((x) => /71/.test(x.val) && /lăcomie/.test(x.val)));
 });
 
+await test("piata: miscarile foarte mici au doua zecimale (nu '−0,0%')", () => {
+  const q = urca.slice(); q[q.length - 1] = { ...q.at(-1), c: q.at(-2).c * 0.9997 };
+  const p = K.piata({ qqq: q }); assert.doesNotMatch(p.text, /[+−]0,0%/); assert.match(p.text, /−0,03%/);
+});
+
 // ---------------- sfaturile pe o pozitie ----------------
 const poz = (o) => ({ ticker: "APLD_US_EQ", simbol: "APLD", pret: 27, pretMediu: 29.5, pctLei: -0.06, ppl: -300, sem: { nivel: "atentie" }, niv: { tintaPozitie: 36, stopPozitie: 26 }, pond: 0.12, de: ACUM - 10 * ZI, ...o });
 await test("sfaturi: istoricul LUI pe acelasi simbol (cu 'putine cazuri' sub 10) si, daca a pierdut de obicei pe el, 'n-as adauga'", () => {

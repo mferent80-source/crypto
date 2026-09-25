@@ -211,6 +211,10 @@ await test("ruta cf (v87): pastreaza proba cu stop {8,10,15: {pct, zi} | null}, 
   await posteaza("action=cf", { verdicte: { s1: { nivel: "nu", motive: [], greseli: [], stop: { 8: { pct: -0.083, zi: 1 }, 10: null, 15: { pct: "rau" }, 99: { pct: 1 } } } } }, env);
   const g = await cheama("action=cf", env);
   assert.deepEqual(g.corp.cf.s1.stop, { 8: { pct: -0.083, zi: 1 }, 10: null, 15: null });
+  // v89: proba GOALA (trade fara preturi / pret nepotrivit) se pastreaza goala - altfel colectorul o reface la infinit
+  await posteaza("action=cf", { verdicte: { s9: { nivel: "fara-date", motive: [], greseli: [], stop: {}, stopU: {} } } }, env);
+  const g9 = await cheama("action=cf", env);
+  assert.deepEqual(g9.corp.cf.s9.stop, {}); assert.deepEqual(g9.corp.cf.s9.stopU, {});
 });
 
 const { turaT212 } = await import("./lib/tura-t212.mjs");

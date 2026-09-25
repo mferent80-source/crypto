@@ -27,11 +27,11 @@ var Consilier = (function () {
     var vix = ultima(o.vix), vv = vix ? vix.c : null;
     if (q) {
       var st = AS.stare(q), u = ultima(q), a = q[q.length - 2], ch = a ? u.c / a.c - 1 : null, dir = st.trend.dir;
-      parti.push({ et: "Nasdaq (QQQ)", val: (dir === "sus" ? "↑ trend sus" : dir === "jos" ? "↓ trend jos" : dir === "lateral" ? "→ lateral" : "—") + (ch !== null ? " · ultima zi " + P(ch) : ""), cls: dir === "sus" ? "good" : dir === "jos" ? "bad" : "" });
+      parti.push({ et: "Nasdaq (QQQ)", val: (dir === "sus" ? "↑ trend sus" : dir === "jos" ? "↓ trend jos" : dir === "lateral" ? "→ lateral" : "—") + (ch !== null ? " · ultima zi " + P(ch, Math.abs(ch) < 0.001 ? 2 : 1) : ""), cls: dir === "sus" ? "good" : dir === "jos" ? "bad" : "" });
       ton = dir === "jos" || (vv !== null && vv >= 25) ? "rau" : (vv !== null && vv >= 20) || dir === "lateral" ? "atentie" : "bine";
     }
     var s = ultima(o.spy), s0 = Array.isArray(o.spy) && o.spy.length > 1 ? o.spy[o.spy.length - 2] : null;
-    if (s && s0) parti.push({ et: "S&P 500", val: "ultima zi " + P(s.c / s0.c - 1), cls: s.c >= s0.c ? "good" : "bad" });
+    if (s && s0) parti.push({ et: "S&P 500", val: "ultima zi " + P(s.c / s0.c - 1, Math.abs(s.c / s0.c - 1) < 0.001 ? 2 : 1), cls: s.c >= s0.c ? "good" : "bad" });
     if (vv !== null) parti.push({ et: "VIX", val: vv.toFixed(1).replace(".", ",") + (vv >= 25 ? " (frică mare)" : vv >= 20 ? " (agitat)" : " (liniște)"), cls: vv >= 25 ? "bad" : vv >= 20 ? "tbWarn" : "good" });
     if (o.fg && isFinite(o.fg.valoare)) parti.push({ et: "Frica/lăcomia crypto", val: o.fg.valoare + " (" + (FG[o.fg.clasa] || o.fg.clasa || "—") + ")", cls: o.fg.valoare >= 75 || o.fg.valoare <= 25 ? "tbWarn" : "" });
     var text = parti.map(function (x) { return x.et + ": " + x.val; }).join(" · ");

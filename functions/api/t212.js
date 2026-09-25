@@ -101,8 +101,11 @@ export async function onRequestPost({ request, env }) {
       m[id] = { nivel: NIV.includes(x.nivel) ? x.nivel : "fara-date", motive: (Array.isArray(x.motive) ? x.motive : []).slice(0, 4).map((z) => txt(z, 200)).filter(Boolean), greseli: (Array.isArray(x.greseli) ? x.greseli : []).filter((z) => GR.includes(z)) };
       // v87: proba cu stop (-8/-10/-15%): {pct, zi} sau null (neatins)
       // v88: stopul care URCA (planul Radarului, -15%, -25% de la maxim)
-      if (x.stopU && typeof x.stopU === "object" && Object.keys(x.stopU).length) { const su = {}; ["plan", "u15", "u25"].forEach((p) => { const y = x.stopU[p]; const pc = y && nr(y.pct); su[p] = pc !== null && pc > -1 && pc < 5 ? { pct: pc, zi: nr(y.zi), trail: nr(y.trail) } : null; }); m[id].stopU = su; }
-      if (x.stop && typeof x.stop === "object" && Object.keys(x.stop).length) { const st = {}; ["8", "10", "15"].forEach((p) => { const y = x.stop[p]; const pc = y && nr(y.pct); st[p] = pc !== null && pc > -1 && pc < 1 ? { pct: pc, zi: nr(y.zi) } : null; }); m[id].stop = st; }
+      // v89: proba GOALA se pastreaza goala ({}), altfel colectorul crede ca lipseste si o reface la fiecare tura
+      if (x.stopU && typeof x.stopU === "object" && !Object.keys(x.stopU).length) m[id].stopU = {};
+      else if (x.stopU && typeof x.stopU === "object") { const su = {}; ["plan", "u15", "u25"].forEach((p) => { const y = x.stopU[p]; const pc = y && nr(y.pct); su[p] = pc !== null && pc > -1 && pc < 5 ? { pct: pc, zi: nr(y.zi), trail: nr(y.trail) } : null; }); m[id].stopU = su; }
+      if (x.stop && typeof x.stop === "object" && !Object.keys(x.stop).length) m[id].stop = {};
+      else if (x.stop && typeof x.stop === "object") { const st = {}; ["8", "10", "15"].forEach((p) => { const y = x.stop[p]; const pc = y && nr(y.pct); st[p] = pc !== null && pc > -1 && pc < 1 ? { pct: pc, zi: nr(y.zi) } : null; }); m[id].stop = st; }
     });
     const ids = Object.keys(m); if (ids.length > 6000) ids.slice(0, ids.length - 6000).forEach((k) => delete m[k]);
     await env.ISTORIC.put("t212:cf", JSON.stringify(m));
