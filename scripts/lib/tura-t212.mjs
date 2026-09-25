@@ -55,7 +55,7 @@ export async function turaPlanuri(d) {
     try {
       if (!x || !(x.quantity > 0)) continue;
       const plan = await d.cerePlan(x.ticker);
-      if (!plan) continue;
+      if (!plan || plan.proba) continue;   // v88: planul unei probe de ecran nu da alerte
       const bare = (await d.cereBare(x.ticker)) || [], de = Date.parse(x.initialFillDate || "");
       let mx = null;
       if (Number.isFinite(de)) for (const b of bare) if (b.t + 86400000 > de) mx = mx === null ? b.h : Math.max(mx, b.h);

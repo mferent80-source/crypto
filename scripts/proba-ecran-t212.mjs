@@ -163,6 +163,8 @@ async function scenariu(lat, inal, nume) {
       await panaCand(b, `!!(t212.planuri["${tk}"]&&t212.planuri["${tk}"].trailPct===55)`, 15000, "planul salvat");
       const citit = await b.ev(`getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent("t212-${tk}")).then(d=>d.plan&&d.plan.trailPct)`);
       assert.equal(citit, 55);
+      // v88: planul pus de proba e marcat "proba" - colectorul nu da alerte pe el (25.09: alerta falsa pe APLD)
+      assert.equal(await b.ev(`getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent("t212-${tk}")).then(d=>d.plan&&d.plan.proba)`), true);
       await b.ev(`["Stop","Tinta","Trail"].forEach(k=>{document.getElementById("t212"+k+"-${tk}").value=""});t212PlanSalveaza("${tk}")`);
       await panaCand(b, `t212.planuri["${tk}"]===null`, 15000, "planul sters");
       assert.equal(await b.ev(`getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent("t212-${tk}")).then(d=>d.plan)`), null);

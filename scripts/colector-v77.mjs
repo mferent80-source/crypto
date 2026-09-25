@@ -239,6 +239,8 @@ await test("istoric: planul pe o actiune T212 (v85) - stop, tinta, -X% de la max
   const r = (await cheama("GET", "action=plan&bot=t212-NPA_US_EQ", env)).d.plan;
   assert.equal(r.stop, 65.5); assert.equal(r.tinta, 120); assert.equal(r.trailPct, 8); assert.strictEqual(r.plus, null);
   await cheama("POST", "action=plan", env, { corp: { bot: "t212-X_US_EQ", plan: { trailPct: 95 } } });
+  await cheama("POST", "action=plan", env, { corp: { bot: "t212-P_US_EQ", plan: { stop: 1, proba: true } } });
+  assert.equal((await cheama("GET", "action=plan&bot=t212-P_US_EQ", env)).d.plan.proba, true, "v88: planul de proba ramane marcat");
   assert.strictEqual((await cheama("GET", "action=plan&bot=t212-X_US_EQ", env)).d.plan.trailPct, null);
 });
 

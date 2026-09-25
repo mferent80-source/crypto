@@ -111,6 +111,8 @@ export async function onRequestPost({request,env}){
     // v85: pe actiunile T212 (bot = "t212-<TICKER>") planul are stop, tinta si "ies la -X% de la maxim"
     const tr=poz(p&&p.trailPct);
     const plan={plus:poz(p&&p.plus),minus:poz(p&&p.minus),afaraOre:poz(p&&p.afaraOre),stop:poz(p&&p.stop),tinta:poz(p&&p.tinta),trailPct:tr!==null&&tr<=90?tr:null,la:Date.now()};
+    // v88: planul pus de o PROBA de ecran ramane marcat, ca sa nu declanseze alerte reale (colectorul il sare)
+    if(p&&p.proba===true)plan.proba=true;
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
     return json({ok:true,plan});
   }

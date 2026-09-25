@@ -80,7 +80,7 @@ async function t212PlanSalveaza(tk) {
   var g = function (p) { var e = $(p + tk); return e ? t212Nr(e.value) : null; };
   var plan = { stop: g("t212Stop-"), tinta: g("t212Tinta-"), trailPct: g("t212Trail-") }, gol = plan.stop === null && plan.tinta === null && plan.trailPct === null;
   try {
-    var r = await apiFetch("/api/istoric-bot?action=plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ bot: "t212-" + tk, plan: gol ? null : plan }) });
+    var r = await apiFetch("/api/istoric-bot?action=plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ bot: "t212-" + tk, plan: gol ? null : (window.__proba ? Object.assign({ proba: true }, plan) : plan) }) });
     var d = await r.json().catch(function () { return null; });
     if (!r.ok) throw new Error(d && d.error || "HTTP " + r.status);
     t212.planuri[tk] = d && d.plan || null; t212Render();
@@ -236,7 +236,7 @@ async function t212PuneToate() {
   for (var i = 0; i < tk.length; i++) {
     var n = t212.niveluri[tk[i]];
     try {
-      var r = await apiFetch("/api/istoric-bot?action=plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ bot: "t212-" + tk[i], plan: { trailPct: +n.trailPct.toFixed(1), tinta: n.tintaPozitie } }) });
+      var r = await apiFetch("/api/istoric-bot?action=plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ bot: "t212-" + tk[i], plan: Object.assign({ trailPct: +n.trailPct.toFixed(1), tinta: n.tintaPozitie }, window.__proba ? { proba: true } : {}) }) });
       var d = await r.json().catch(function () { return null; });
       if (r.ok) { t212.planuri[tk[i]] = d && d.plan || null; ok++; }
     } catch (e) {}

@@ -259,7 +259,7 @@ async function tura() {
       const st = stareAlerte[b.id] || (stareAlerte[b.id] = {});
       const p = Number(b.pretCurent), afara = Number.isFinite(p) && b.gridJos != null && b.gridSus != null && (p < Number(b.gridJos) || p > Number(b.gridSus));
       st._afaraDe = afara ? (st._afaraDe || acum) : null;
-      if (pl && pl.plan) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe }, acum);
+      if (pl && pl.plan && !pl.plan.proba) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe }, acum);   // v88: nu si planul unei probe
     } catch (e) { jurnal("plan", b.id, e.message); }
     // v82: semnalele (o data la ~5 min, cand vin lumanari noi) - notate si judecate dupa 24 h
     try { const sm = await semnaleBot(b, ctx, acum); if (sm) ctx.semnale = sm; } catch (e) { jurnal("semnale", b.id, e.message); }

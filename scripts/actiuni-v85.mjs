@@ -232,5 +232,12 @@ await test("sfaturile nu contrazic restul ecranului: IESI fara plan nu zice 'ce 
   const q = A.portofoliu([{ simbol: "APLD", valoare: 23 }, { simbol: "X", valoare: 19 }, { simbol: "Y", valoare: 19 }, { simbol: "Z", valoare: 19 }, { simbol: "W", valoare: 20 }], 0);
   assert.match(q.ceAsFace, /APLD e 23% din cont/); assert.doesNotMatch(q.ceAsFace, /ok/);
 });
+await test("v88: un plan salvat de o PROBA de ecran (proba: true) nu declanseaza alerte (25.09: o proba a pus un plan pe APLD si a venit o alerta falsa)", async () => {
+  const { turaPlanuri } = await import("./lib/tura-t212.mjs");
+  const trimise = [];
+  await turaPlanuri({ cerePozitii: async () => [{ ticker: "AAA_US_EQ", quantity: 1, averagePrice: 100, currentPrice: 80 }], cerePlan: async () => ({ stop: 90, proba: true }),
+    cereBare: async () => [], trimite: async (m, k) => { trimise.push(k); return true; }, stare: {}, ActiuniSemnale: A, T212: { simbol: (t) => t }, jurnal: () => {}, acum: Date.UTC(2026, 8, 25) });
+  assert.deepEqual(trimise, []);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

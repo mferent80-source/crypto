@@ -5325,7 +5325,7 @@ function tbPlanInForm(){var p=tbPlan.plan||{};[["tbPlanPlus","plus"],["tbPlanMin
 async function tbPlanSalveaza(){
   var b=tbStare.bot;if(!b)return;
   var plan={plus:grNumar($("tbPlanPlus")&&$("tbPlanPlus").value),minus:grNumar($("tbPlanMinus")&&$("tbPlanMinus").value),afaraOre:grNumar($("tbPlanAfara")&&$("tbPlanAfara").value)};
-  try{var r=await apiFetch("/api/istoric-bot?action=plan",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bot:b.id,plan:plan})});var d=await r.json();
+  try{var r=await apiFetch("/api/istoric-bot?action=plan",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bot:b.id,plan:window.__proba?Object.assign({proba:true},plan):plan})});var d=await r.json();
     if(!r.ok)throw Object.assign(new Error(d&&d.error||("HTTP "+r.status)),{status:r.status});
     tbPlan={botId:b.id,plan:d.plan,la:Date.now()};toast("Planul e salvat; colectorul te anunță când atingi un prag","good")}
   catch(e){toast("Nu am putut salva planul: "+(e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)),"bad")}
