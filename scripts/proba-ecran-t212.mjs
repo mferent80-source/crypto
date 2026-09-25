@@ -216,6 +216,13 @@ async function scenariu(lat, inal, nume) {
       assert.equal(await b.ev(`document.getElementById("jtActiuni").hidden`), true);
     });
 
+    await test(`${nume} · pozitiile si coloana cu poarta/portofoliul NU se suprapun (pe telefon: una sub alta)`, async () => {
+      await b.ev(`deschideT212()`); await asteapta(400);
+      const r = await b.ev(`(()=>{const a=document.querySelector(".t212Grila>.t212Panou").getBoundingClientRect(),c=document.querySelector(".t212Side").getBoundingClientRect();return {suprapus:!(a.right<=c.left+1||c.right<=a.left+1||a.bottom<=c.top+1||c.bottom<=a.top+1),subAlta:c.top>=a.bottom-1}})()`);
+      assert.equal(r.suprapus, false, "coloana din dreapta acopera tabelul");
+      if (lat < 600) assert.equal(r.subAlta, true, "pe telefon poarta si portofoliul vin SUB pozitii");
+    });
+
     await test(`${nume} · consola curata si fara defilare orizontala`, async () => {
       assert.deepEqual(b.exceptii, []); assert.deepEqual(b.consola, []);
       await b.ev(`openStocksDesk()`);

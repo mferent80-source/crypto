@@ -1597,3 +1597,18 @@ body.peTablou main>.note{display:none}
 .t212PoartaCorp{padding:8px 12px;gap:6px}#t212Pf{padding:8px 12px;gap:4px}
 .t212BtnLinie,.t212Btn{padding:5px 10px}
 @media (max-width:640px){.t212Cel{padding:6px 10px}.t212Val{font-size:16px}.t212TodoRand{grid-template-columns:5px 1fr;padding:5px 10px}.t212PanouCap{padding:6px 10px}.t212Tab tr.t212Rand{padding:7px 10px}.t212Tab tr.t212Det td{padding:0 10px 10px}}
+/* v85.5: scrisul ca in demo (14px, nu 16px-ul de baza al Radarului) + randul pe telefon pe doua linii */
+.t212Card{font-size:14px;line-height:1.4}
+.t212Card h3{font-size:18px}.t212TodoRand b{font-size:14px}.t212Tab td{font-size:14px}.t212Tab .t212Mic{font-size:11.5px}
+@media (max-width:640px){
+  .t212Tab tr.t212Rand{grid-template-columns:1fr auto;gap:1px 10px;padding:6px 10px}
+  .t212Tab tr.t212Rand .t212Sim .t212Mic{display:none}
+  .t212Tab tr.t212Rand td.c-rez b{font-size:14px}
+  .t212Tab tr.t212Rand td.c-rez .t212Mic{display:inline;margin-left:4px}
+  .t212Tab tr.t212Rand td.c-stop .t212Mic,.t212Tab tr.t212Rand td.c-tinta .t212Mic{display:inline;margin-left:4px}
+  .t212Tab tr.t212Rand td.c-plan:not(:has(.ok)){display:none}
+  .t212TodoRand>button{padding:4px 10px}
+  .t212Kpi .tbSub{font-size:11px}
+}
+/* v85.5: regula "mai strans" de mai sus (310px) anulase trecerea pe o coloana - o pun inapoi DUPA ea */
+@media (max-width:1100px){.t212Grila{grid-template-columns:1fr}}
