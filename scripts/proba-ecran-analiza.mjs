@@ -130,6 +130,17 @@ try {
     assert.ok(numar(r1.pret) > 5, `VVV: ${r1.pret}`);
     assert.equal(await b.ev(`localStorage.getItem("analysisProvider")`), "BINANCE", "sursa lui a fost suprascrisa permanent");
   });
+  // v91.3: fluxul (tranzactiile ultimelor 15 min) cerea MEREU de la Binance -> pe VVV gol, fara eroare
+  const flux = (moneda) => b.ev(`(async()=>{document.getElementById("symbol").value=${JSON.stringify(moneda)};await loadTrueTradeFlow(true);const f=trueFlowState||{};return {n:f.n,err:f.error||null,bursa:f.bursa||null,ecran:document.getElementById("trueFlowN").textContent}})()`);
+  await test("fluxul pe BTC ramane de la Binance (neschimbat)", async () => {
+    const f = await flux("BTC");
+    assert.equal(f.err, null, `eroare: ${f.err}`); assert.ok(f.n > 0, `n: ${f.n}`); assert.equal(f.bursa, "BINANCE");
+  });
+  await test("fluxul pe VVV (nu e pe Binance) -> tranzactiile de la Pionex futures, scris pe ecran", async () => {
+    const f = await flux("VVV");
+    assert.equal(f.err, null, `eroare: ${f.err}`); assert.ok(f.n > 0, `n: ${f.n}`); assert.equal(f.bursa, "PIONEX");
+    assert.match(f.ecran, /Pionex/, `pe ecran: ${f.ecran}`);
+  });
   await test("moneda inexistenta -> mesaj limpede in romana, nu 'Invalid symbol'", async () => {
     const r = await analizeaza(b, "ZQXWV", "BINANCE");
     assert.match(r.stare, /nu există nici pe Binance, nici pe Pionex/i, `stare: ${r.stare}`);
