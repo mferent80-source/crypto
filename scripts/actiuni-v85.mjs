@@ -142,5 +142,44 @@ await test("tura planurilor (colector): alerta pleaca o singura data pe cheie; f
   assert.deepEqual(trimise, ["t212-AAA_US_EQ-stop-2026-09-25"], "o singura alerta, o singura data");
   assert.deepEqual(cereriPret, ["AAA_US_EQ", "AAA_US_EQ"], "preturi doar pentru pozitia cu plan");
 });
+await test("la cumparare (daca ascultai de Radar): doar barele DINAINTE; trend jos -> nu; dupa miscare + langa maxim -> asteapta cu greselile lor; prea putine bare -> fara-date; planul nu conteaza (atunci nu stiam)", () => {
+  const b = urca.slice(0, 280), u = b.at(-1); b[b.length - 1] = { ...u, c: u.c * 1.15, h: u.c * 1.16 };
+  const t = tr({ id: "9", pornit: b.at(-1).t + ZI / 2, pretCumparare: b.at(-1).c });
+  const z = A.laCumparare(t, b.concat(urca.slice(280)), []);
+  assert.equal(z.nivel, "asteapta"); assert.ok(z.greseli.includes("dupa-miscare") && z.greseli.includes("langa-max7z"), z.greseli);
+  assert.ok(!z.motive.some((m) => /plan/.test(m)), "fara motivul de plan: la cumparare nu-l stim");
+  const j = A.laCumparare(tr({ pornit: coboara.at(-1).t + ZI, pretCumparare: coboara.at(-1).c }), coboara, []);
+  assert.equal(j.nivel, "nu");
+  const ok = A.laCumparare(tr({ pornit: urca.at(-30).t + ZI / 2, pretCumparare: urca.at(-30).c * 0.9 }), urca, []);
+  assert.equal(ok.nivel, "cumpara", ok.motive.join(" | "));
+  assert.equal(A.laCumparare(tr({ pornit: urca[30].t }), urca, []).nivel, "fara-date");
+  assert.equal(A.laCumparare(tr({}), null, []).nivel, "fara-date");
+  // recumparare dupa o vanzare pe minus cu 5 ore inainte
+  const v = A.laCumparare(tr({ pornit: urca.at(-30).t + ZI / 2, pretCumparare: urca.at(-30).c * 0.9 }), urca, [tr({ ticker: "AAPL_US_EQ", inchis: urca.at(-30).t + ZI / 2 - 5 * 3600000, rezultat: -10 })]);
+  assert.equal(v.nivel, "asteapta"); assert.match(v.motive.join(" "), /recump/);
+});
+await test("tura 'daca ascultai' pe actiuni (colector): doar trade-urile fara verdict, cate `max` actiuni pe tura, o actiune fara preturi -> fara-date (nu se reincearca la infinit)", async () => {
+  const { turaCfActiuni } = await import("./lib/tura-t212.mjs");
+  const um = [{ id: "b1", t: urca.at(-30).t + ZI / 2, side: "BUY", ticker: "AAA_US_EQ", qty: 1, pret: 90, net: 400, fee: 1, realizat: null },
+    { id: "s1", t: urca.at(-20).t, side: "SELL", ticker: "AAA_US_EQ", qty: 1, pret: 95, net: 420, fee: 1, realizat: 21 },
+    { id: "b2", t: urca.at(-30).t, side: "BUY", ticker: "ZZZ_US_EQ", qty: 1, pret: 5, net: 20, fee: 0, realizat: null },
+    { id: "s2", t: urca.at(-25).t, side: "SELL", ticker: "ZZZ_US_EQ", qty: 1, pret: 4, net: 16, fee: 0, realizat: -4 },
+    { id: "b3", t: urca.at(-30).t, side: "BUY", ticker: "QQQ9_US_EQ", qty: 1, pret: 5, net: 20, fee: 0, realizat: null },
+    { id: "s3", t: urca.at(-25).t, side: "SELL", ticker: "QQQ9_US_EQ", qty: 1, pret: 4, net: 16, fee: 0, realizat: -4 }];
+  const T = new Function(fs.readFileSync(new URL("../public/lib/t212.js", import.meta.url), "utf8") + "; return T212;")();
+  const salvat = {}, cerute = [], scrieri = [];
+  const d = { umpleri: async () => um, gata: async () => ({ ...salvat }), cereBare: async (tk) => { cerute.push(tk); return tk === "AAA_US_EQ" ? urca : null; },
+    salveaza: async (m) => { scrieri.push(Object.keys(m).length); Object.assign(salvat, m); }, T212: T, ActiuniSemnale: A, pauza: async () => {}, jurnal: () => {}, max: 2 };
+  const r1 = await turaCfActiuni(d);
+  assert.equal(cerute.length, 2); assert.equal(r1.judecate, 2); assert.deepEqual(scrieri, [2], "o singura scriere pentru toata tura (limita de 30/min a rutei)");
+  assert.equal(salvat.s1.nivel, "cumpara"); assert.equal(Object.values(salvat).filter((x) => x.nivel === "fara-date").length, 1);
+  await turaCfActiuni(d); assert.equal(cerute.length, 3, "doar actiunea ramasa"); assert.equal(Object.keys(salvat).length, 3);
+  await turaCfActiuni(d); assert.equal(cerute.length, 3, "nimic de facut -> nicio cerere");
+});
+await test("rezumat jurnal + verdictele 'daca ascultai' (ctx.cf): greselile cu preturi intra in tabel cu costul lor", () => {
+  const l = [tr({ id: "a", rezultat: -50 }), tr({ id: "b", rezultat: 20 })];
+  const r = A.rezumatJurnal(l, { cf: { a: { nivel: "asteapta", greseli: ["dupa-miscare"] }, b: { nivel: "cumpara", greseli: [] } } });
+  const g = r.greseli.find((x) => x.cod === "dupa-miscare"); assert.equal(g.n, 1); aprox(g.cost, -50, 1e-9); assert.match(g.text, /mișcare mare/);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

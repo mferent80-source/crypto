@@ -106,7 +106,9 @@ var ActiuniSemnale = (function () {
       r.total += t.rezultat || 0; r.totalOficial += t.rezultatOficial !== null && t.rezultatOficial !== undefined ? t.rezultatOficial : t.rezultat || 0; r.comisioane += t.comisioane || 0;
       if (t.extCumparare || t.extVanzare) { ext.n++; ext.total += t.rezultat || 0; }
       var bare = c.barePe && c.barePe[t.ticker];
-      greseli(t, { umpleri: c.umpleri, bare: bare }).forEach(function (x) { var a = gr[x.cod] || (gr[x.cod] = { cod: x.cod, text: x.text, n: 0, cost: 0 }); a.n++; a.cost += t.rezultat || 0; });
+      var gl = greseli(t, { umpleri: c.umpleri, bare: bare }), cf = c.cf && c.cf[t.id];
+      if (cf && Array.isArray(cf.greseli)) cf.greseli.forEach(function (k) { if (TEXT[k] && !gl.some(function (x) { return x.cod === k; })) gl.push({ cod: k, text: TEXT[k] }); });
+      gl.forEach(function (x) { var a = gr[x.cod] || (gr[x.cod] = { cod: x.cod, text: x.text, n: 0, cost: 0 }); a.n++; a.cost += t.rezultat || 0; });
     });
     r.greseli = Object.keys(gr).map(function (k) { return gr[k]; }).sort(function (a, b) { return a.cost - b.cost; });
     r.ext = ext;
@@ -123,7 +125,7 @@ var ActiuniSemnale = (function () {
     if (s.miscare && s.miscare.mare) galben.push("azi / săptămâna asta s-a mișcat mult peste obișnuit — nu cumpăra după mișcare");
     if (s.distMax7z !== null && s.distMax7z > -0.02) galben.push("prețul e lângă maximul pe 7 zile (" + P(s.distMax7z) + ")");
     var p = o.plan || {};
-    if (!(p.stop > 0 || p.trailPct > 0)) galben.push("n-ai scris un plan de ieșire (stop sau −X% de la maxim)");
+    if (!o.faraPlan && !(p.stop > 0 || p.trailPct > 0)) galben.push("n-ai scris un plan de ieșire (stop sau −X% de la maxim)");
     if (o.vandutPeMinusAcumOre !== null && o.vandutPeMinusAcumOre !== undefined && o.vandutPeMinusAcumOre < 24) galben.push("ai vândut-o pe minus acum " + Math.round(o.vandutPeMinusAcumOre) + " h — recumpărarea imediată e una din greșelile tale");
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "cumpara", motive: rosu.concat(galben) };
   }
@@ -154,6 +156,19 @@ var ActiuniSemnale = (function () {
     return v > 0 ? cov / v : null;
   }
 
+  // "Daca ascultai de Radar" pe o cumparare: poarta refacuta DOAR cu zilele inchise inainte de cumparare.
+  // Planul nu intra (atunci nu-l stim). inchise = T212.perechi().inchise (pentru recumpararea dupa pierdere).
+  function laCumparare(t, bare, inchise) {
+    var b = Array.isArray(bare) ? bare.filter(function (x) { return x.t + 8 * 3600000 <= t.pornit; }) : [];
+    if (b.length < 60) return { nivel: "fara-date", motive: ["prea puține zile de prețuri înainte de cumpărare"], greseli: [] };
+    var st = stare(b, t.pretCumparare), ore = null;
+    (Array.isArray(inchise) ? inchise : []).forEach(function (x) { if (x.ticker === t.ticker && x.rezultat < 0 && x.inchis <= t.pornit) { var o = (t.pornit - x.inchis) / 3600000; if (ore === null || o < ore) ore = o; } });
+    var v = poarta({ stare: st, plan: null, faraPlan: true, vandutPeMinusAcumOre: ore }), g = [];
+    if (st.miscare && st.miscare.mare) g.push("dupa-miscare");
+    if (st.max7z && t.pretCumparare >= st.max7z * 0.98) g.push("langa-max7z");
+    return { nivel: v.nivel, motive: v.motive.slice(0, 4), greseli: g };
+  }
+
   // Alertele planului pentru colector: doar pragurile scrise de EL. Cheia e pe zi (ora Romaniei nu conteaza
   // aici: o zi UTC), ca acelasi prag sa sune o data pe zi, nu la fiecare minut.
   function alertePlan(p, acum) {
@@ -178,6 +193,6 @@ var ActiuniSemnale = (function () {
     return linii;
   }
 
-  return { raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

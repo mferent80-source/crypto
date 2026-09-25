@@ -24,6 +24,8 @@ async function t212Porneste(forta) {
     t212.poz = (p && Array.isArray(p.pozitii) ? p.pozitii : []).filter(function (x) { return x && x.quantity > 0; });
   } catch (e) { t212.eroare = t212Eroare(e); }
   try { t212.istoric = await getJSON("/api/t212?action=istoric"); t212.istoricEroare = null; } catch (e) { t212.istoric = null; t212.istoricEroare = t212Eroare(e); }
+  try { var cf = await getJSON("/api/t212?action=cf"); t212.cf = cf && cf.cf || {}; } catch (e) { t212.cf = null; }
+  t212JurnalCache.n = -1;
   t212.la = Date.now(); t212Render();
   if (!t212.eroare && t212.poz) {
     for (var i = 0; i < t212.poz.length; i++) {
@@ -37,6 +39,14 @@ async function t212Porneste(forta) {
   }
   t212.inLucru = false; t212Render();
   if (typeof jtRenderActiuni === "function") jtRenderActiuni();
+}
+// Drumul spre card din ORICE mod (Crypto sau US Stocks): butonul "Nasdaq / US Stocks" din meniu apare
+// doar in modul US Stocks, asa ca pana la v85.1 cardul nu se gasea din modul Crypto.
+function deschideT212() {
+  openStocksDesk();
+  document.querySelectorAll("[data-nav]").forEach(function (x) { x.classList.toggle("active", x.dataset.nav === "t212"); });
+  t212Porneste(false);
+  setTimeout(function () { var c = $("t212Card"); if (c && c.scrollIntoView) c.scrollIntoView({ block: "start", behavior: "smooth" }); }, 60);
 }
 function t212Nume(tk) {
   var u = t212.istoric && t212.istoric.umpleri || [];
@@ -143,7 +153,7 @@ function t212Jurnal() {
   var u = t212.istoric && Array.isArray(t212.istoric.umpleri) ? t212.istoric.umpleri : null;
   if (!u || !u.length) return null;
   if (t212JurnalCache.n === u.length && t212JurnalCache.v) return t212JurnalCache.v;
-  var p = T212.perechi(u), r = ActiuniSemnale.rezumatJurnal(p.inchise, { umpleri: u });
+  var p = T212.perechi(u), r = ActiuniSemnale.rezumatJurnal(p.inchise, { umpleri: u, cf: t212.cf || {} });
   t212JurnalCache = { n: u.length, v: { p: p, r: r, u: u } };
   return t212JurnalCache.v;
 }
@@ -171,6 +181,7 @@ function jtRenderActiuni() {
   h += '<div class="tbKpi jtKpi">' + cel("Câștigat REAL", L(r.total), cls(r.total), r.n + " trade-uri, " + r.pePlus + " pe plus (" + P(r.n ? r.pePlus / r.n : null).replace("+", "") + ")")
     + cel("T212 îți arată", L(r.totalOficial), "", "fără comisioane") + cel("Comisioane de conversie", L(-r.comisioane), "bad", "0,15% la fiecare schimb lei↔dolari")
     + cel("Vândute în afara orelor", L(r.ext.total), cls(r.ext.total), r.ext.n + " trade-uri") + '</div>';
+  h += t212Cireasa(l);
   if (!st.complet) h += '<p class="tbWarn">Istoricul încă se coboară (' + (st.ordine || 0) + ' ordine până acum) — cifrele cresc până se termină.</p>';
   // pe durata: aici s-a vazut unde se duc banii
   var g = [["sub o zi", 0, 24], ["1–7 zile", 24, 168], ["1–4 săptămâni", 168, 672], ["peste o lună", 672, Infinity]].map(function (x) {
@@ -189,14 +200,33 @@ function jtRenderActiuni() {
   var mari = l.slice().sort(function (a, b) { return a.rezultat - b.rezultat; }).slice(0, 5).filter(function (t) { return t.rezultat < 0; });
   if (mari.length) h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Cele mai mari 5 pierderi</h4><span class="tbSub">' + L(mari.reduce(function (s, t) { return s + t.rezultat; }, 0)) + ' împreună</span></div><ul class="grLista">' + mari.map(function (t) { return '<li><b>' + escapeHtml(T212.simbol(t.ticker)) + '</b> <span class="bad">' + L(t.rezultat) + '</span> (' + P(t.pct) + ', ținut ' + Math.round(t.durataOre / 24) + ' zile, ' + new Date(t.inchis).toLocaleDateString("ro-RO") + ')</li>'; }).join("") + '</ul></div>';
   // fiecare trade (cele mai noi 150)
-  var note = typeof jtNote === "function" ? jtNote() : {}, data = function (t) { return new Date(t).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }); };
+  var cfm = t212.cf || {}, note = typeof jtNote === "function" ? jtNote() : {}, data = function (t) { return new Date(t).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }); };
   h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Fiecare trade</h4><span class="tbSub">cele mai noi ' + Math.min(150, l.length) + ' din ' + l.length + ' · o vânzare = un trade</span></div>' + l.slice(0, 150).map(function (t) {
-    var gr = ActiuniSemnale.greseli(t, { umpleri: j.u }), dur = t.durataOre < 24 ? Math.max(1, Math.round(t.durataOre)) + " h" : Math.round(t.durataOre / 24) + " zile", id = "t212-" + t.id;
+    var gr = ActiuniSemnale.greseli(t, { umpleri: j.u }), cfg = cfm[t.id] && cfm[t.id].greseli || [], dur = t.durataOre < 24 ? Math.max(1, Math.round(t.durataOre)) + " h" : Math.round(t.durataOre / 24) + " zile", id = "t212-" + t.id;
+    cfg.forEach(function (k) { if (ActiuniSemnale.TEXT[k] && !gr.some(function (x) { return x.cod === k; })) gr.push({ cod: k, text: ActiuniSemnale.TEXT[k] }); });
     return '<div class="jtTrade"><div class="jtCap"><b>' + escapeHtml(T212.simbol(t.ticker)) + '</b> <span class="tbSub">' + escapeHtml((+t.qty.toFixed(4)) + " buc · " + t212Usd(t.pretCumparare) + " → " + t212Usd(t.pretVanzare) + " · " + data(t.pornit) + " → " + data(t.inchis) + " (" + dur + ")" + (t.extVanzare ? " · vândut în afara orelor" : "")) + '</span><b class="jtRez ' + cls(t.rezultat) + '">' + L(t.rezultat) + ' <span class="tbSub">' + P(t.pct) + '</span></b></div>'
       + '<div class="tbSub">T212 arată ' + L(t.rezultatOficial) + ' · comisioane ' + L(-(t.comisioane || 0)) + (t.partial ? ' · o parte din vânzare n-are cumpărarea în istoric' : '') + '</div>'
+      + (cfm[t.id] && cfm[t.id].nivel !== "fara-date" ? '<p class="jtCf">Radarul ar fi zis la cumpărare: <b class="' + (T212_POARTA[cfm[t.id].nivel] || ["", ""])[1] + '">' + escapeHtml((T212_POARTA[cfm[t.id].nivel] || [cfm[t.id].nivel])[0]) + '</b>' + (cfm[t.id].motive && cfm[t.id].motive.length ? ' <span class="tbSub">— ' + escapeHtml(cfm[t.id].motive.join("; ")) + '</span>' : '') + '</p>' : '')
       + (gr.length ? '<ul class="jtGreseli">' + gr.map(function (x) { return '<li><b>' + escapeHtml(x.text) + '</b></li>'; }).join("") + '</ul>' : '')
       + '<textarea class="jtNota" data-id="' + escapeHtml(id) + '" rows="1" placeholder="De ce am cumpărat, ce aș face altfel…">' + escapeHtml(note[id] || "") + '</textarea></div>';
   }).join("") + '</div>';
   box.innerHTML = h;
+}
+// 🍒 "Daca ascultai de Radar" pe actiuni: verdictul portii la ora fiecarei cumparari (colectorul de acasa)
+function t212Cireasa(l) {
+  var cfm = t212.cf;
+  if (!cfm) return '<p class="tbSub">🍒 „Dacă ascultai de Radar” se socotește pe serverul de acasă.</p>';
+  var m = { cumpara: "porneste", asteapta: "asteapta", nu: "nu" };
+  var cr = Contrafactual.rezumat(l.map(function (t) { var z = cfm[t.id]; return { t: t, z: { nivel: z && m[z.nivel] || "fara-date" } }; }));
+  var toate = l.filter(function (t) { return cfm[t.id]; }).length;
+  if (!cr.judecate) return '<p class="tbSub">🍒 „Dacă ascultai de Radar”: colectorul de acasă îl socotește pentru fiecare trade (40 de acțiuni pe oră). ' + (toate ? toate + ' trade-uri văzute, fără prețuri pentru ele.' : 'Încă n-a terminat niciunul.') + '</p>';
+  var L = function (v) { return t212Lei(v); }, cls = t212Cls, bine = cr.doarVerde > cr.realJudecate;
+  return '<div class="jtCireasa"><h4>🍒 Dacă ascultai de Radar</h4><div class="jtCirGrid">'
+    + '<div><span class="tbEt2">Ce ai făcut (pe cei ' + cr.judecate + ' judecați)</span><b class="' + cls(cr.realJudecate) + '">' + L(cr.realJudecate) + '</b></div>'
+    + '<div><span class="tbEt2">Dacă cumpărai doar pe 🟢 (' + cr.nVerde + ')</span><b class="' + cls(cr.doarVerde) + '">' + L(cr.doarVerde) + '</b></div>'
+    + '<div><span class="tbEt2">Pierderi evitate de 🔴 (' + cr.nBlocate + ')</span><b class="good">' + L(cr.blocateSalvat) + '</b></div>'
+    + '<div><span class="tbEt2">Câștiguri pe care 🔴 le-ar fi ratat</span><b class="bad">' + L(-cr.blocateRatat) + '</b></div></div>'
+    + '<p class="tbFac">👉 <b>Ce aș face eu:</b> ' + (bine ? 'aș cumpăra doar când poarta zice 🟢: pe trade-urile tale ar fi însemnat ' + L(cr.doarVerde - cr.realJudecate) + ' față de ce ai făcut.' : 'pe trade-urile tale poarta n-ar fi ajutat în total; aș folosi-o doar ca frână la „după mișcare” și „recumpărat imediat”, nu ca semnal de cumpărare.') + '</p>'
+    + '<p class="tbSub">Radarul a văzut doar zilele închise înainte de fiecare cumpărare; planul nu intră (atunci nu-l știa). ' + (cr.faraDate ? cr.faraDate + ' trade-uri fără prețuri (mai ales acțiuni europene — Radarul caută prețuri doar pe bursa americană — și câteva delistate) nu sunt judecate. ' : '') + 'E un semn, nu o dovadă: poarta nu e antrenată pe trade-urile tale, doar aplicată pe ele.</p></div>';
 }
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", function () { jtAplicaFiltru(); });

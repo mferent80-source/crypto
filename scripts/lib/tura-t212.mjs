@@ -69,3 +69,29 @@ export async function turaPlanuri(d) {
   }
   return { trimise };
 }
+
+// "Daca ascultai de Radar" pe actiuni (v85): pentru fiecare trade inchis fara verdict, poarta refacuta cu
+// barele zilnice de DINAINTE de cumparare. Cate `max` actiuni pe tura (o cerere de preturi pe actiune);
+// o actiune fara preturi (delistata) primeste "fara-date", ca sa nu fie ceruta la infinit.
+// deps: { umpleri() -> [umpleri], gata() -> {id: verdict}, cereBare(ticker, nume) -> bare|null,
+//         salveaza({id: verdict}), T212, ActiuniSemnale, pauza, jurnal, max (40) }
+export async function turaCfActiuni(d) {
+  const u = (await d.umpleri()) || [], gata = (await d.gata()) || {};
+  const inchise = d.T212.perechi(u).inchise, peTicker = new Map();
+  for (const t of inchise) if (!gata[t.id]) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
+  const nume = {}; for (const x of u) if (x.nume && x.nume !== x.ticker) nume[x.ticker] = x.nume;
+  let judecate = 0, actiuni = 0, strans = {};
+  // scrierile se strang cate 200 (ruta de scriere lasa 30 pe minut; una pe actiune ar lovi limita)
+  const scrie = async () => { const k = Object.keys(strans); if (!k.length) return; const b = strans; strans = {}; await d.salveaza(b); };
+  for (const [tk, lista] of peTicker) {
+    if (actiuni >= (d.max || 40)) break;
+    if (actiuni > 0) await d.pauza(1200);
+    actiuni++;
+    let bare = null; try { bare = await d.cereBare(tk, nume[tk] || ""); } catch (e) { d.jurnal("cf actiuni", tk, e.message); continue; }
+    for (const t of lista) { strans[t.id] = bare && bare.length ? d.ActiuniSemnale.laCumparare(t, bare, inchise) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [] }; judecate++; }
+    if (Object.keys(strans).length >= 200) await scrie();
+  }
+  await scrie();
+  if (judecate) d.jurnal("cf actiuni: " + judecate + " trade-uri judecate pe " + actiuni + " actiuni" + (peTicker.size > actiuni ? " · mai sunt " + (peTicker.size - actiuni) : ""));
+  return { judecate, actiuni, ramase: Math.max(0, peTicker.size - actiuni) };
+}

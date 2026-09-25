@@ -15,7 +15,7 @@ var T212 = (function () {
   // T212 pastreaza simbolul SPAC-ului de dinainte de listare (verificat pe numele din ordinele lui, 25.09)
   var REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO" };
   function candidati(ticker) {
-    var m = String(ticker || "").match(/^([A-Za-z0-9.]+)_US_EQ$/);
+    var m = String(ticker || "").match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
     if (!m) return [];
     var s = m[1].toUpperCase().replace(/\./g, "-"), out = [s], fara = s.replace(/\d+$/, "");
     if (fara && fara !== s) out.push(fara);

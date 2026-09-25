@@ -14,7 +14,7 @@ import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 import { trimiteDiscord } from "./lib/canal-discord.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
-import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul } from "./lib/tura-t212.mjs";
+import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -364,6 +364,27 @@ async function turaPlanuriT212() {
   planT212InLucru = false;
 }
 
+// v85: "daca ascultai de Radar" pe actiuni - o data pe ora, 40 de actiuni pe tura (cat timp mai sunt, la 10 min)
+let cfActLa = Date.now() - 3600000 + 15 * 60000, cfActInLucru = false;
+async function turaCfActiuni() {
+  if (process.env.COLECTOR_FARA_T212 || cfActInLucru || t212InLucru || Date.now() - cfActLa < 3600000) return;
+  const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) { cfActLa = Date.now(); return; }
+  cfActInLucru = true;
+  try {
+    const r = await turaCfActiuniModul({
+      umpleri: async () => { const d = await cere("/api/t212?action=istoric"); return d && d.umpleri || []; },
+      gata: async () => { const d = await cere("/api/t212?action=cf"); return d && d.cf || {}; },
+      cereBare: async (tk, nm) => {
+        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); return GridCalcul.bare(d && d.randuri || []); }
+        catch (e) { if (e.status === 404) return null; throw e; }   // 404 = fara preturi (delistata); altceva se reincearca
+      },
+      salveaza: (m) => trimite("/api/t212?action=cf", { verdicte: m }),
+      T212, ActiuniSemnale, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 40 });
+    cfActLa = r.ramase ? Date.now() - 3600000 + 10 * 60000 : Date.now();
+  } catch (e) { jurnal("cf actiuni ESEC", e.message); cfActLa = Date.now() - 3600000 + 20 * 60000; }
+  cfActInLucru = false;
+}
+
 // v84: raportul de duminica - o data pe saptamana, duminica dupa ora 20 (ora Romaniei)
 function saptamanaRo(t) {
   const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t));
@@ -397,7 +418,7 @@ if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt le
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message));
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
 }

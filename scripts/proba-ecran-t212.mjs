@@ -122,7 +122,16 @@ async function scenariu(lat, inal, nume) {
     await b.navigheaza(URL_T);
     await panaCand(b, `document.readyState==="complete"&&typeof t212Porneste==="function"&&typeof ActiuniSemnale!=="undefined"&&typeof T212!=="undefined"`, 25000, "aplicatia sa se incarce");
     if (TOKEN) await b.ev(`try{localStorage.setItem("cryptoRadarApiTokenV54",${JSON.stringify(TOKEN)})}catch(e){}`);
-    await b.ev(`openStocksDesk()`);
+    // DRUMUL LUI (v85.1): din modul Crypto, prin meniu - nu cu openStocksDesk() chemat din cod
+    await b.ev(`setAssetClass("CRYPTO")`);
+    await test(`${nume} · din modul Crypto, butonul "Trading 212" se VEDE in meniu si duce la card`, async () => {
+      const sel = lat < 600 ? `#moreDrawer .moreBtn` : `.sideBtn[data-nav="t212"]`;
+      if (lat < 600) { await b.ev(`document.querySelector('.mobileBottom [data-action-click="openMoreDrawer()"]').click()`); }
+      const buton = `[...document.querySelectorAll('${sel}')].find(x=>/Trading 212/.test(x.textContent))`;
+      assert.ok(await b.ev(`(()=>{const e=${buton};if(!e)return false;const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).display!=="none"})()`), "butonul Trading 212 nu se vede in modul Crypto");
+      await b.ev(`${buton}.click()`);
+      await panaCand(b, `(()=>{const c=document.getElementById("t212Card");if(!c)return false;const r=c.getBoundingClientRect();return r.width>0&&r.height>0})()`, 15000, "cardul T212 vizibil dupa clic");
+    });
 
     await test(`${nume} · US Stocks -> contul T212: cifrele, fiecare pozitie cu semafor, sfat si plan; portofoliul; fara gunoi`, async () => {
       await panaCand(b, `!!document.querySelector("#t212Continut .t212Kpi")`, 40000, "cifrele contului");
@@ -163,7 +172,7 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`navTo('jurnaltrade',true);jtAlegeFiltru('actiuni')`);
       await panaCand(b, `/Câștigat REAL/.test(document.getElementById("jtActiuni").innerText)`, 30000, "jurnalul de actiuni");
       const t = await b.ev(`document.getElementById("jtActiuni").innerText`);
-      assert.match(t, /Cât ai ținut/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Cele mai mari 5 pierderi/);
+      assert.match(t, /Cât ai ținut/); assert.match(t, /Dacă ascultai de Radar/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Cele mai mari 5 pierderi/);
       assert.ok((await b.ev(`document.querySelectorAll("#jtActiuni .jtTrade").length`)) > 100);
       assert.equal(await b.ev(`document.getElementById("jtCrypto").hidden`), true);
       FARA_GUNOI(t);

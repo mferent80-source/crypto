@@ -33,7 +33,7 @@ async function t212(env, cale, actiune) {
 const REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO" };
 // AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B_US_EQ -> [BRK-B]; ne-US -> []
 function candidati(ticker) {
-  const m = String(ticker || "").match(/^([A-Za-z0-9.]+)_US_EQ$/);
+  const m = String(ticker || "").match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
   if (!m) return [];
   const s = m[1].toUpperCase().replace(/\./g, "-"), out = [s], fara = s.replace(/\d+$/, "");
   if (fara && fara !== s) out.push(fara);
@@ -43,6 +43,9 @@ function candidati(ticker) {
 async function yahoo(simbol, interval) {
   const range = interval === "1h" ? "60d" : "2y";
   const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=${interval}&range=${range}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+  // refuzul Yahoo (prea multe cereri / pana) NU e "fara preturi": urca, ca cine cere sa reincerce mai tarziu
+  if (r.status === 429) throw Object.assign(new Error("Yahoo a limitat cererile de prețuri"), { status: 429, retryAfter: 60 });
+  if (r.status >= 500) throw Object.assign(new Error("Yahoo: HTTP " + r.status), { status: 502 });
   let j = null; try { j = await r.json(); } catch {}
   const res = j && j.chart && Array.isArray(j.chart.result) ? j.chart.result[0] : null;
   if (!r.ok || !res || !Array.isArray(res.timestamp)) return null;
@@ -89,9 +92,22 @@ export async function onRequestPost({ request, env }) {
   const auth = await requireApiAuth(request, env, "t212-write", 30); if (!auth.ok) return authErrorResponse(auth, H);
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
-  if (new URL(request.url).searchParams.get("action") !== "istoric") return json({ error: "Acțiune necunoscută" }, 400);
+  const act = new URL(request.url).searchParams.get("action");
+  if (act !== "istoric" && act !== "cf") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
+  if (act === "cf") {
+    // "daca ascultai de Radar" pe actiuni: {id trade: {nivel, motive, greseli}}, scris de colector
+    const NIV = ["cumpara", "asteapta", "nu", "fara-date"], GR = ["dupa-miscare", "langa-max7z"];
+    const m = await citesteKv(env, "t212:cf", {}), v = corp && corp.verdicte && typeof corp.verdicte === "object" ? corp.verdicte : {};
+    Object.keys(v).slice(0, 300).forEach((k) => {
+      const id = txt(k, 40).replace(/[^A-Za-z0-9_-]/g, ""), x = v[k]; if (!id || !x || typeof x !== "object") return;
+      m[id] = { nivel: NIV.includes(x.nivel) ? x.nivel : "fara-date", motive: (Array.isArray(x.motive) ? x.motive : []).slice(0, 4).map((z) => txt(z, 200)).filter(Boolean), greseli: (Array.isArray(x.greseli) ? x.greseli : []).filter((z) => GR.includes(z)) };
+    });
+    const ids = Object.keys(m); if (ids.length > 6000) ids.slice(0, ids.length - 6000).forEach((k) => delete m[k]);
+    await env.ISTORIC.put("t212:cf", JSON.stringify(m));
+    return json({ ok: true, n: Object.keys(m).length });
+  }
   const ordine = (Array.isArray(corp && corp.ordine) ? corp.ordine : []).slice(0, 200).map((x) => txt(String(x), 40).replace(/[^A-Za-z0-9_-]/g, "")).filter(Boolean);
   const vazute = new Set(await citesteKv(env, "t212:ordine", [])), inainte = vazute.size;
   ordine.forEach((o) => vazute.add(o));
@@ -132,6 +148,11 @@ export async function onRequestGet({ request, env }) {
         }
       }
       return json({ error: "Fără prețuri pentru " + tk + " (poate a fost delistată sau redenumită)." }, 404);
+    }
+    if (a === "cf") {
+      if (!env.ISTORIC?.get) return faraKv();
+      const m = await citesteKv(env, "t212:cf", {});
+      return json({ cf: m && typeof m === "object" ? m : {} });
     }
     if (a === "istoric") {
       if (!env.ISTORIC?.get) return faraKv();

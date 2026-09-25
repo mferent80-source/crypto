@@ -61,6 +61,14 @@ await test("ruta preturi: nici un candidat nu are date -> cauta dupa NUMELE comp
   assert.equal((await cheama("action=preturi&ticker=ZZQY_US_EQ&interval=1d")).status, 404);
 });
 
+await test("ruta preturi: Yahoo refuza (429/5xx) -> 429 cu retryAfter, NU 404 'fara preturi' (altfel trade-ul ramane judecat 'fara date' pe veci)", async () => {
+  fetchStub(() => ({ status: 429, corp: "Too Many Requests" }));
+  const r = await cheama("action=preturi&ticker=AVAV_US_EQ&interval=1d");
+  assert.equal(r.status, 429, JSON.stringify(r.corp)); assert.ok(r.corp.retryAfter > 0);
+  fetchStub(() => ({ status: 503, corp: "" }));
+  assert.equal((await cheama("action=preturi&ticker=AVAV_US_EQ&interval=1d")).status, 502);
+});
+
 await test("ruta: 429 de la T212 -> 429 cu retryAfter, nu 500; 403 -> spune ce permisiune lipseste", async () => {
   fetchStub(() => ({ status: 429, corp: { code: "BusinessException" } }));
   const r = await cheama("action=pozitii");
@@ -121,6 +129,7 @@ await test("simboluri: AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B
   assert.deepEqual(T.candidati("NPA_US_EQ"), ["ASTS", "NPA"]); assert.equal(T.simbol("NPA_US_EQ"), "ASTS");
   assert.equal(T.simbol("XPOA_US_EQ"), "QBTS"); assert.equal(T.simbol("IPOB_US_EQ"), "OPEN"); assert.equal(T.simbol("ALUS_US_EQ"), "TE"); assert.equal(T.simbol("GWAC_US_EQ"), "CIFR");
   assert.equal(T.simbol("SNDK1_US_EQ"), "SNDK");
+  assert.deepEqual(T.candidati("AVAV__US_EQ"), ["AVAV"], "T212 scrie AeroVironment cu doua liniute jos (vazut in ordinele lui, 25.09)");
 });
 
 await test("forma REALA (verificata 25.09): vanzarea vine cu cantitate NEGATIVA si cu realisedProfitLoss -> rezultatul REAL = oficialul T212 minus comisioanele de conversie; FIFO ramane verificare", () => {
@@ -169,6 +178,16 @@ await test("ruta istoric: umplerile se curata (side necunoscut / t lipsa ies; li
   const g = await cheama("action=istoric", env);
   assert.deepEqual(g.corp.umpleri.map((x) => x.id), ["9"]); assert.strictEqual(g.corp.umpleri[0].fx, null); assert.strictEqual(g.corp.umpleri[0].realizat, null);
   assert.strictEqual(g.corp.stare.cursorVechi, null, "cursor cu litere refuzat");
+});
+
+await test("ruta cf (daca ascultai, actiuni): POST imbina verdictele curatate (nivel necunoscut -> fara-date, motive taiate), GET le da inapoi; fara KV -> 503", async () => {
+  assert.equal((await cheama("action=cf", ENV)).status, 503);
+  const kv = kvFals(), env = { ...ENV, ISTORIC: kv };
+  await posteaza("action=cf", { verdicte: { s1: { nivel: "cumpara", motive: [], greseli: [] }, "s 2": { nivel: "hack", motive: ["x".repeat(500)], greseli: ["dupa-miscare", "<b>"] } } }, env);
+  await posteaza("action=cf", { verdicte: { s3: { nivel: "nu", motive: ["trend jos"], greseli: [] } } }, env);
+  const g = await cheama("action=cf", env);
+  assert.equal(g.status, 200); assert.deepEqual(Object.keys(g.corp.cf).sort(), ["s1", "s2", "s3"]);
+  assert.equal(g.corp.cf.s2.nivel, "fara-date"); assert.ok(g.corp.cf.s2.motive[0].length <= 200); assert.deepEqual(g.corp.cf.s2.greseli, ["dupa-miscare"]);
 });
 
 const { turaT212 } = await import("./lib/tura-t212.mjs");
