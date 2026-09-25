@@ -1492,3 +1492,24 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbPill-bine{background:#00aa5a}
 #tabloubot .tbPill-atentie{background:#c89600}
 #tabloubot .tbPill-rau{background:#dc283c}
+/* v85: Trading 212 in US Stocks + jurnalul de actiuni */
+.t212Card{--tb-linie:rgba(144,160,182,.16);--tb-fond:#0c1621;--tb-fond2:#0f1b28;margin:10px 0 12px;padding:14px 16px;border-radius:12px;border:1px solid rgba(79,209,197,.35);background:linear-gradient(135deg,rgba(79,209,197,.07),rgba(12,22,33,.6));font-variant-numeric:tabular-nums}
+.t212CapCard{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}.t212CapCard h3{margin:0}.t212CapCard .t212Btn{margin-left:auto}
+.t212Card .tbSub,.t212Card .tbEt2{color:var(--muted);font-size:12px}.t212Card .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}.t212Card .tbBlocCap h4{margin:0}
+.t212Btn{width:auto;flex:0 0 auto;align-self:center;padding:6px 12px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:inherit;font-weight:800;cursor:pointer}.t212BtnPlin{background:var(--accent);color:#06101a}
+.t212Kpi{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--tb-linie);border-radius:12px;background:var(--tb-fond);margin-bottom:10px}
+.t212Cel{display:flex;flex-direction:column;gap:4px;padding:12px 14px;min-width:0}.t212Cel+.t212Cel{border-left:1px solid var(--tb-linie)}
+.t212Val{font-size:22px;font-weight:900}.t212Val.good,.t212Card .good{color:var(--good)}.t212Val.bad,.t212Card .bad{color:var(--bad)}.t212Card .tbWarn{color:var(--warn)}.t212Muted{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.t212Fac{margin:8px 0;padding:6px 10px;border-left:3px solid var(--accent);background:rgba(79,209,197,.08);border-radius:4px}
+.t212Rand{padding:12px 14px;margin-bottom:8px;border:1px solid var(--tb-linie);border-radius:12px;background:var(--tb-fond)}
+.t212Cap{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.t212Sim{font-size:18px}.t212Rez{margin-left:auto;font-size:17px}
+.t212Pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:900;color:#fff;white-space:nowrap}.t212Pill-tine{background:#00aa5a}.t212Pill-atentie{background:#c89600}.t212Pill-iesi{background:#dc283c}.t212Pill-fara{background:#4a5566}
+.t212Motive{margin:6px 0 0;padding-left:18px}
+.t212Plan{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:6px}.t212Plan label{display:flex;align-items:center;gap:4px;font-size:13px}.t212Plan input{width:74px}
+.t212Bloc{padding:12px 14px;margin-top:10px;border:1px solid var(--tb-linie);border-radius:12px;background:var(--tb-fond)}
+.t212Bara{display:grid;grid-template-columns:70px 1fr 56px 120px;gap:10px;align-items:center;padding:4px 0}.t212BaraFond{height:10px;border-radius:6px;background:var(--tb-fond2);overflow:hidden}.t212BaraPlin{height:100%;background:var(--good)}.t212BaraPlin.atentie{background:var(--warn)}.t212BaraPlin.rau{background:var(--bad)}.t212Bara b{text-align:right}
+.t212Intrari{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}.t212Intrari label{display:flex;flex-direction:column;gap:4px}.t212Intrari input{min-width:110px}
+.t212Verdict{display:flex;flex-direction:column;gap:4px;padding:12px 14px;margin-top:10px;border:1px solid currentColor;border-radius:12px}.t212Verdict b{font-size:18px}
+#jurnaltrade .jtFiltru{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}#jurnaltrade .jtFiltru .tbIntBtn{width:auto;flex:0 0 auto;padding:6px 12px;border-radius:8px;border:1px solid var(--tb-linie);background:var(--tb-fond);color:var(--text);font:inherit;cursor:pointer}#jurnaltrade .jtFiltru .tbIntBtn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:800}
+#jurnaltrade .jtTitluPiata{margin:4px 0 10px}#jurnaltrade #jtActiuni+#jtCrypto:not([hidden]){margin-top:18px}
+@media (max-width:700px){.t212Kpi{grid-template-columns:1fr 1fr}.t212Cel:nth-child(3){border-left:0}.t212Cel:nth-child(n+3){border-top:1px solid var(--tb-linie)}.t212Bara{grid-template-columns:56px 1fr 48px}.t212Bara .tbSub{display:none}.t212Rez{margin-left:0;width:100%}}

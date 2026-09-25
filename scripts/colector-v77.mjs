@@ -233,6 +233,15 @@ await test("istoric: planul (v81) pe bot - se scrie curatat (doar numere pozitiv
   assert.equal((await cheama("POST", "action=plan", env, { corp: { plan: { plus: 1 } } })).status, 400);
 });
 
+await test("istoric: planul pe o actiune T212 (v85) - stop, tinta, -X% de la maxim; trailPct peste 90 refuzat (ar fi o greseala de tastare)", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  await cheama("POST", "action=plan", env, { corp: { bot: "t212-NPA_US_EQ", plan: { stop: "65.5", tinta: 120, trailPct: 8 } } });
+  const r = (await cheama("GET", "action=plan&bot=t212-NPA_US_EQ", env)).d.plan;
+  assert.equal(r.stop, 65.5); assert.equal(r.tinta, 120); assert.equal(r.trailPct, 8); assert.strictEqual(r.plus, null);
+  await cheama("POST", "action=plan", env, { corp: { bot: "t212-X_US_EQ", plan: { trailPct: 95 } } });
+  assert.strictEqual((await cheama("GET", "action=plan&bot=t212-X_US_EQ", env)).d.plan.trailPct, null);
+});
+
 await test("istoric: semnalele (v82) - log curatat (max 200, nivel necunoscut -> info, cod curatat) + instantaneul de acum; se citesc inapoi", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t = Date.now();
   const log = new Array(210).fill(0).map((_, i) => ({ t: t + i, cod: i === 209 ? "Rau<x>" : "miscare", nivel: i === 209 ? "ceva" : "atentie", motiv: "m", total: -4.7, dreptate: i === 0 ? true : null }));

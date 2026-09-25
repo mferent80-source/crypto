@@ -50,6 +50,17 @@ await test("ruta ordine: o pagina, cursorul trece mai departe; nextPagePath spre
   assert.equal((await cheama("action=ordine&cursor=abc")).status, 400, "cursor doar cifre");
 });
 
+await test("ruta preturi: nici un candidat nu are date -> cauta dupa NUMELE companiei (doar actiuni US), ia primul simbol care are preturi; fara nume -> 404", async () => {
+  const bune = { corp: { chart: { result: [{ meta: {}, timestamp: [1700000000, 1700086400], indicators: { quote: [{ open: [1, 2], high: [2, 3], low: [0.5, 1.5], close: [1.5, 2.5], volume: [1, 1] }] } }] } } };
+  fetchStub((u) => /finance\/search/.test(u) ? { corp: { quotes: [{ symbol: "E20.DE", quoteType: "EQUITY", exchange: "GER" }, { symbol: "ECHO", quoteType: "EQUITY", exchange: "NMS" }] } }
+    : /chart\/ECHO\?/.test(u) ? bune : { status: 404, corp: { chart: { result: null } } });
+  const r = await cheama("action=preturi&ticker=ZZQX_US_EQ&interval=1d&nume=" + encodeURIComponent("EchoStar"));
+  assert.equal(r.status, 200); assert.equal(r.corp.simbol, "ECHO"); assert.equal(r.corp.gasitDupaNume, true);
+  assert.ok(cereri.some((c) => /finance\/search\?q=EchoStar/.test(c.url)), cereri.map((c) => c.url).join(" "));
+  assert.ok(!cereri.some((c) => /chart\/E20\.DE/.test(c.url)), "bursele din afara SUA se sar");
+  assert.equal((await cheama("action=preturi&ticker=ZZQY_US_EQ&interval=1d")).status, 404);
+});
+
 await test("ruta: 429 de la T212 -> 429 cu retryAfter, nu 500; 403 -> spune ce permisiune lipseste", async () => {
   fetchStub(() => ({ status: 429, corp: { code: "BusinessException" } }));
   const r = await cheama("action=pozitii");
@@ -66,6 +77,8 @@ await test("ruta preturi: fara Twelve Data -> Yahoo; AAPL_US_EQ -> AAPL; SNDK1 f
   assert.equal(r.status, 200); assert.equal(r.corp.simbol, "AAPL"); assert.equal(r.corp.sursa, "yahoo");
   assert.deepEqual(r.corp.randuri[0], { time: 1700000000000, open: 1, high: 2, low: 0.5, close: 1.5, volume: 10 });
   assert.equal(r.corp.randuri.length, 1, "bara cu close null se sare, nu devine 0");
+  const n = await cheama("action=preturi&ticker=NPA_US_EQ&interval=1d");
+  assert.equal(n.corp.simbol, "ASTS", "NPA e AST SpaceMobile -> ASTS pe bursa");
   const s = await cheama("action=preturi&ticker=SNDK1_US_EQ&interval=1d");
   assert.equal(s.corp.simbol, "SNDK"); assert.ok(cereri.some((c) => /chart\/SNDK1\?/.test(c.url)) && cereri.some((c) => /chart\/SNDK\?/.test(c.url)));
 });
@@ -104,6 +117,10 @@ await test("simboluri: AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B
   assert.deepEqual(T.candidati("SNDK1_US_EQ"), ["SNDK1", "SNDK"]);
   assert.deepEqual(T.candidati("BRK.B_US_EQ"), ["BRK-B"]);
   assert.deepEqual(T.candidati("VUSAl_EQ"), []);
+  // tickerele SPAC vechi pastrate de T212 (verificat pe numele din ordinele lui, 25.09)
+  assert.deepEqual(T.candidati("NPA_US_EQ"), ["ASTS", "NPA"]); assert.equal(T.simbol("NPA_US_EQ"), "ASTS");
+  assert.equal(T.simbol("XPOA_US_EQ"), "QBTS"); assert.equal(T.simbol("IPOB_US_EQ"), "OPEN"); assert.equal(T.simbol("ALUS_US_EQ"), "TE"); assert.equal(T.simbol("GWAC_US_EQ"), "CIFR");
+  assert.equal(T.simbol("SNDK1_US_EQ"), "SNDK");
 });
 
 await test("forma REALA (verificata 25.09): vanzarea vine cu cantitate NEGATIVA si cu realisedProfitLoss -> rezultatul REAL = oficialul T212 minus comisioanele de conversie; FIFO ramane verificare", () => {
@@ -118,6 +135,76 @@ await test("forma REALA (verificata 25.09): vanzarea vine cu cantitate NEGATIVA 
   aprox(r.inchise[0].rezultat, 29.47 - 7.5 - 7.77, 1e-9, "rezultatul REAL, cu comisioanele scazute"); aprox(r.inchise[0].comisioane, 15.27, 1e-9);
   aprox(r.inchise[0].rezultatFifo, 5172.5 - 5000, 1e-6, "FIFO al nostru, ca verificare (net include comisionul)");
   assert.equal(r.inchise[0].extVanzare, true);
+});
+// ---------------- istoricul complet (KV de acasa) + tura colectorului ----------------
+function kvFals() { const m = new Map(); return { m, get: async (k) => (m.has(k) ? m.get(k) : null), put: async (k, v) => { m.set(k, v); } }; }
+async function posteaza(qs, corp, env) {
+  const m = await import(`../functions/api/t212.js?t=${Date.now()}_${Math.random()}`);
+  const h = { "cf-connecting-ip": "10.86.0." + (++ip % 250), authorization: "Bearer " + TOKEN, origin: "https://exemplu.test", "content-type": "application/json" };
+  const res = await m.onRequestPost({ request: new Request(`https://exemplu.test/api/t212?${qs}`, { method: "POST", headers: h, body: JSON.stringify(corp) }), env });
+  let c = null; try { c = JSON.parse(await res.text()); } catch {}
+  return { status: res.status, corp: c };
+}
+const umpl = (id, t, side) => ({ id: String(id), t, side, ticker: "AAPL_US_EQ", simbol: "AAPL", nume: "Apple", qty: 1, pret: 100, net: 450, fee: 1, moneda: "RON", fx: 0.22, ext: false, realizat: side === "SELL" ? 5 : null });
+
+await test("ruta istoric: fara KV -> 503 cu motiv; POST salveaza, deduplica pe id, spune cate ordine sunt NOI; GET da umplerile in ordine si starea", async () => {
+  assert.equal((await cheama("action=istoric", ENV)).status, 503);
+  const kv = kvFals(), env = { ...ENV, ISTORIC: kv };
+  const a = await posteaza("action=istoric", { ordine: ["1", "2", "3"], umpleri: [umpl(1, 200, "SELL"), umpl(2, 100, "BUY")], stare: { cursorVechi: "77", complet: false } }, env);
+  assert.equal(a.status, 200); assert.equal(a.corp.noi, 3);
+  const b = await posteaza("action=istoric", { ordine: ["3", "4"], umpleri: [umpl(2, 100, "BUY"), umpl(4, 300, "BUY")], stare: null }, env);
+  assert.equal(b.corp.noi, 1, "doar 4 e nou");
+  const g = await cheama("action=istoric", env);
+  assert.equal(g.status, 200); assert.deepEqual(g.corp.umpleri.map((x) => x.id), ["2", "1", "4"], "sortate dupa timp, fara dubluri");
+  assert.equal(g.corp.stare.cursorVechi, "77"); assert.equal(g.corp.stare.complet, false); assert.equal(g.corp.stare.ordine, 4);
+  // fara origine -> refuzat (ca istoric-bot)
+  const m = await import(`../functions/api/t212.js?t=${Date.now()}`);
+  const r = await m.onRequestPost({ request: new Request("https://exemplu.test/api/t212?action=istoric", { method: "POST", headers: { authorization: "Bearer " + TOKEN, "cf-connecting-ip": "10.87.0.1" }, body: "{}" }), env });
+  assert.equal(r.status, 403);
+});
+await test("ruta istoric: umplerile se curata (side necunoscut / t lipsa ies; lipsa ramane null, nu 0; cursor doar cifre)", async () => {
+  const kv = kvFals(), env = { ...ENV, ISTORIC: kv };
+  const rau = { ...umpl(9, 100, "BUY"), fx: null, realizat: undefined };
+  await posteaza("action=istoric", { ordine: ["9"], umpleri: [rau, { ...umpl(8, 100, "HOLD") }, { ...umpl(7, null, "BUY") }], stare: { cursorVechi: "12abc", complet: false } }, env);
+  const g = await cheama("action=istoric", env);
+  assert.deepEqual(g.corp.umpleri.map((x) => x.id), ["9"]); assert.strictEqual(g.corp.umpleri[0].fx, null); assert.strictEqual(g.corp.umpleri[0].realizat, null);
+  assert.strictEqual(g.corp.stare.cursorVechi, null, "cursor cu litere refuzat");
+});
+
+const { turaT212 } = await import("./lib/tura-t212.mjs");
+// istoric fals: 5 pagini a cate 2 ordine, cele mai noi primele
+function istoricFals(nrPagini, primulId) {
+  const pagini = []; let id = primulId;
+  for (let p = 0; p < nrPagini; p++) { const items = []; for (let i = 0; i < 2; i++) items.push({ order: { id: id-- } }); pagini.push(items); }
+  return pagini;
+}
+function contFals(pagini) {
+  const vazute = new Set(), stare = { complet: false, cursorVechi: null }, cereri = [];
+  return { cereri, vazute, stare, deps: (max) => ({
+    max, pasMs: 0, pauza: async () => {}, jurnal: () => {}, umpleri: () => [],
+    cereStare: async () => ({ ...stare }),
+    cerePagina: async (c) => { cereri.push(c); const i = c === null ? 0 : Number(c); return { items: pagini[i], cursor: i + 1 < pagini.length ? String(i + 1) : null }; },
+    salveaza: async ({ ordine, stare: s }) => { let noi = 0; ordine.forEach((o) => { if (!vazute.has(o)) { vazute.add(o); noi++; } }); if (s) Object.assign(stare, s); return { noi }; } }) };
+}
+await test("tura T212: prima data coboara cate `max` pagini si tine minte cursorul; tura urmatoare citeste capul, da de pagina stiuta si continua de unde a ramas; apoi doar capul", async () => {
+  const pagini = istoricFals(5, 100), c = contFals(pagini);
+  const r1 = await turaT212(c.deps(2));
+  assert.equal(r1.pagini, 2); assert.equal(r1.complet, false); assert.equal(c.stare.cursorVechi, "2"); assert.equal(c.vazute.size, 4);
+  const r2 = await turaT212(c.deps(10));
+  assert.deepEqual(c.cereri.slice(2), [null, "2", "3", "4"], "capul (stiut) -> sare la cursorul vechi");
+  assert.equal(r2.complet, true); assert.equal(c.vazute.size, 10); assert.equal(c.stare.complet, true);
+  // ordine noi deasupra: 4 noi -> capul are 2 pagini noi, a treia (fosta prima) e stiuta in intregime
+  pagini.unshift([{ order: { id: 104 } }, { order: { id: 103 } }], [{ order: { id: 102 } }, { order: { id: 101 } }]);
+  c.cereri.length = 0;
+  const r3 = await turaT212(c.deps(10));
+  assert.deepEqual(c.cereri, [null, "1", "2"], "se opreste la prima pagina fara nimic nou"); assert.equal(r3.noi, 4); assert.equal(c.vazute.size, 14);
+});
+await test("tura T212: istoric de o singura pagina -> complet din prima; cerere picata -> eroarea urca (colectorul o scrie in jurnal), cursorul ramas nu se pierde", async () => {
+  const c = contFals(istoricFals(1, 5));
+  assert.equal((await turaT212(c.deps(12))).complet, true);
+  const c2 = contFals(istoricFals(4, 50)); await turaT212(c2.deps(1));
+  const d = c2.deps(12); d.cerePagina = async () => { throw new Error("429"); };
+  await assert.rejects(() => turaT212(d), /429/); assert.equal(c2.stare.cursorVechi, "1");
 });
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

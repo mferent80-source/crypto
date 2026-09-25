@@ -3011,9 +3011,9 @@ function navTo(id,load=false){
    if(id==="mtf")multiTF();
    else if(id==="tabloubot")porneTabloBot();
    else if(id==="gridset")porneGrid();
-   else if(id==="jurnaltrade")jtPorneste();
+   else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
-   else if(id==="stocks"){loadStockContext();checkStocksHealth()}
+   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof t212Porneste==="function")t212Porneste(false)}
    else if(id==="scan")scan();
    else if(id==="replaylab")renderReplayLab();
    else if(id==="market")loadMarketOverview();

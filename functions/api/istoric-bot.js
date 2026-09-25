@@ -77,7 +77,7 @@ export async function onRequestPost({request,env}){
     return json({ok:true,monede:curate.length});
   }
   if(action==="raport"){
-    const la=nr(corp&&corp.la),linii=corp&&Array.isArray(corp.linii)?corp.linii.slice(0,12).map(x=>typeof x==="string"?x.slice(0,400):"").filter(Boolean):null;
+    const la=nr(corp&&corp.la),linii=corp&&Array.isArray(corp.linii)?corp.linii.slice(0,16).map(x=>typeof x==="string"?x.slice(0,400):"").filter(Boolean):null;
     if(la===null||!linii)return json({error:"Lipseste la sau linii"},400);
     await env.ISTORIC.put("raport",JSON.stringify({la,linii,saptamana:typeof corp.saptamana==="string"?corp.saptamana.slice(0,12):null}));
     return json({ok:true});
@@ -108,7 +108,9 @@ export async function onRequestPost({request,env}){
     const p=corp&&corp.plan;
     if(p===null){await env.ISTORIC.put("plan:"+bot,"null");return json({ok:true,plan:null})}
     const poz=v=>{const x=nr(v);return x!==null&&x>0&&x<1e7?x:null};
-    const plan={plus:poz(p&&p.plus),minus:poz(p&&p.minus),afaraOre:poz(p&&p.afaraOre),la:Date.now()};
+    // v85: pe actiunile T212 (bot = "t212-<TICKER>") planul are stop, tinta si "ies la -X% de la maxim"
+    const tr=poz(p&&p.trailPct);
+    const plan={plus:poz(p&&p.plus),minus:poz(p&&p.minus),afaraOre:poz(p&&p.afaraOre),stop:poz(p&&p.stop),tinta:poz(p&&p.tinta),trailPct:tr!==null&&tr<=90?tr:null,la:Date.now()};
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
     return json({ok:true,plan});
   }

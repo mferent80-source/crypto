@@ -5,8 +5,10 @@
 //   ?action=ordine[&cursor=<cifre>] -> o pagina de istoric (50), cu cursorul paginii urmatoare
 //   ?action=preturi&ticker=AAPL_US_EQ&interval=1d|1h -> lumanari (Twelve Data daca e cheia, altfel Yahoo)
 //                                                       in forma randurilor Pionex {time, open, high, low, close}
+//   ?action=istoric   -> istoricul COMPLET al umplerilor, strans de colector in KV-ul de acasa (ISTORIC)
+//   POST ?action=istoric {ordine:[id], umpleri:[...], stare} -> colectorul adauga o pagina (dedup pe id)
 // Verificat pe contul lui (25.09): istoricul vine ca items[{order, fill}], pagini cu nextPagePath.
-import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
+import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
 
 const H = { "content-type": "application/json", "cache-control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: H });
@@ -27,12 +29,15 @@ async function t212(env, cale, actiune) {
   return j;
 }
 
+// T212 pastreaza simbolul SPAC-ului de dinainte de listare (la fel in public/lib/t212.js)
+const REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO" };
 // AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B_US_EQ -> [BRK-B]; ne-US -> []
 function candidati(ticker) {
   const m = String(ticker || "").match(/^([A-Za-z0-9.]+)_US_EQ$/);
   if (!m) return [];
   const s = m[1].toUpperCase().replace(/\./g, "-"), out = [s], fara = s.replace(/\d+$/, "");
   if (fara && fara !== s) out.push(fara);
+  if (REDENUMIT[s]) out.unshift(REDENUMIT[s]);
   return out;
 }
 async function yahoo(simbol, interval) {
@@ -48,6 +53,14 @@ async function yahoo(simbol, interval) {
   });
   return out.length ? out : null;
 }
+// Rezerva: niciun simbol n-are preturi (redenumire noua) -> cauta compania dupa NUMELE din ordinele T212,
+// doar pe bursele americane, si ia primul simbol care chiar are lumanari.
+const BURSE_US = ["NMS", "NGM", "NCM", "NYQ", "ASE", "PCX", "BTS", "NAS", "NYS"];
+async function dupaNume(nume) {
+  const r = await fetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(nume)}&quotesCount=6&newsCount=0`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+  let j = null; try { j = await r.json(); } catch {}
+  return (j && Array.isArray(j.quotes) ? j.quotes : []).filter((q) => q && q.quoteType === "EQUITY" && BURSE_US.includes(q.exchange) && /^[A-Z][A-Z0-9-]{0,9}$/.test(q.symbol || "")).map((q) => q.symbol).slice(0, 3);
+}
 async function twelve(env, simbol, interval) {
   const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${interval === "1h" ? "1h" : "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`);
   let j = null; try { j = await r.json(); } catch {}
@@ -55,6 +68,44 @@ async function twelve(env, simbol, interval) {
   const out = j.values.map((v) => ({ time: Date.parse(String(v.datetime).replace(" ", "T") + (String(v.datetime).length <= 10 ? "T00:00:00Z" : "Z")), open: Number(v.open), high: Number(v.high), low: Number(v.low), close: Number(v.close), volume: v.volume == null ? null : Number(v.volume) }))
     .filter((x) => Number.isFinite(x.time) && [x.open, x.high, x.low, x.close].every((y) => Number.isFinite(y) && y > 0));
   return out.length ? out : null;
+}
+
+// Istoricul complet: umplerile curatate (lipsa ramane null, nu 0), ordinele vazute (id-uri, ca tura
+// colectorului sa stie unde se suprapune) si starea coborarii prin pagini.
+const nr = (v) => { if (typeof v === "number") return Number.isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; const x = Number(v); return Number.isFinite(x) ? x : null; };
+const txt = (v, m) => (typeof v === "string" ? v.slice(0, m) : "");
+function curataUmplere(x) {
+  if (!x || typeof x !== "object") return null;
+  const id = txt(x.id, 40).replace(/[^A-Za-z0-9_-]/g, ""), t = nr(x.t), side = x.side === "BUY" || x.side === "SELL" ? x.side : null;
+  const qty = nr(x.qty), pret = nr(x.pret), net = nr(x.net);
+  if (!id || t === null || t <= 0 || !side || !(qty > 0) || !(pret > 0) || net === null) return null;
+  return { id, t, side, ticker: txt(x.ticker, 40).replace(/[^A-Za-z0-9._]/g, ""), simbol: txt(x.simbol, 16).replace(/[^A-Za-z0-9.-]/g, ""), nume: txt(x.nume, 80),
+    qty, pret, net, fee: nr(x.fee), moneda: txt(x.moneda, 3) || null, fx: nr(x.fx), ext: !!x.ext, realizat: side === "SELL" ? nr(x.realizat) : null };
+}
+async function citesteKv(env, k, implicit) { try { const v = JSON.parse((await env.ISTORIC.get(k)) || "null"); return v === null ? implicit : v; } catch { return implicit; } }
+const faraKv = () => json({ error: "ISTORIC_DOAR_ACASA", detail: "Istoricul complet Trading 212 se strânge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat), de colector." }, 503);
+
+export async function onRequestPost({ request, env }) {
+  const auth = await requireApiAuth(request, env, "t212-write", 30); if (!auth.ok) return authErrorResponse(auth, H);
+  if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
+  if (!env.ISTORIC?.put) return faraKv();
+  if (new URL(request.url).searchParams.get("action") !== "istoric") return json({ error: "Acțiune necunoscută" }, 400);
+  const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
+  let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
+  const ordine = (Array.isArray(corp && corp.ordine) ? corp.ordine : []).slice(0, 200).map((x) => txt(String(x), 40).replace(/[^A-Za-z0-9_-]/g, "")).filter(Boolean);
+  const vazute = new Set(await citesteKv(env, "t212:ordine", [])), inainte = vazute.size;
+  ordine.forEach((o) => vazute.add(o));
+  const umpleri = await citesteKv(env, "t212:umpleri", []), dupaId = new Map((Array.isArray(umpleri) ? umpleri : []).map((x) => [x.id, x]));
+  (Array.isArray(corp && corp.umpleri) ? corp.umpleri : []).slice(0, 200).forEach((x) => { const c = curataUmplere(x); if (c) dupaId.set(c.id, c); });
+  const lista = [...dupaId.values()].sort((a, b) => a.t - b.t);
+  await env.ISTORIC.put("t212:ordine", JSON.stringify([...vazute]));
+  await env.ISTORIC.put("t212:umpleri", JSON.stringify(lista));
+  const s = corp && corp.stare;
+  if (s && typeof s === "object") {
+    const cur = typeof s.cursorVechi === "string" && /^\d{1,20}$/.test(s.cursorVechi) ? s.cursorVechi : null;
+    await env.ISTORIC.put("t212:stare", JSON.stringify({ cursorVechi: cur, complet: s.complet === true, la: Date.now() }));
+  }
+  return json({ ok: true, noi: vazute.size - inainte, umpleri: lista.length });
 }
 
 export async function onRequestGet({ request, env }) {
@@ -72,7 +123,20 @@ export async function onRequestGet({ request, env }) {
         if (!rows) { rows = await yahoo(s, iv); sursa = "yahoo"; }
         if (rows) { const v = { ticker: tk, simbol: s, sursa, interval: iv, randuri: rows }; inCache(k, v, iv === "1h" ? 300 : 1800); return json(v); }
       }
+      const nume = String(u.searchParams.get("nume") || "").replace(/[^\p{L}\p{N} .,&'-]/gu, "").trim().slice(0, 60);
+      if (nume.length >= 3) {
+        for (const s of await dupaNume(nume)) {
+          if (cand.includes(s)) continue;
+          const rows = await yahoo(s, iv);
+          if (rows) { const v = { ticker: tk, simbol: s, sursa: "yahoo", interval: iv, randuri: rows, gasitDupaNume: true }; inCache(k, v, iv === "1h" ? 300 : 1800); return json(v); }
+        }
+      }
       return json({ error: "Fără prețuri pentru " + tk + " (poate a fost delistată sau redenumită)." }, 404);
+    }
+    if (a === "istoric") {
+      if (!env.ISTORIC?.get) return faraKv();
+      const [umpleri, stare, ordine] = await Promise.all([citesteKv(env, "t212:umpleri", []), citesteKv(env, "t212:stare", null), citesteKv(env, "t212:ordine", [])]);
+      return json({ umpleri: Array.isArray(umpleri) ? umpleri : [], stare: Object.assign({ complet: false, cursorVechi: null, la: null }, stare || {}, { ordine: Array.isArray(ordine) ? ordine.length : 0 }) });
     }
     if (!(env.T212_API_KEY && env.T212_API_SECRET)) return json({ error: "Lipsesc T212_API_KEY / T212_API_SECRET în .dev.vars — pune-le cu PUNE-CHEILE-T212.bat și repornește Radarul." }, 503);
     if (a === "cont") {

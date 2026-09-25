@@ -12,14 +12,21 @@ var T212 = (function () {
     if (typeof v !== "string" || !v.trim()) return null;
     var x = Number(v); return isFinite(x) ? x : null;
   }
+  // T212 pastreaza simbolul SPAC-ului de dinainte de listare (verificat pe numele din ordinele lui, 25.09)
+  var REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO" };
   function candidati(ticker) {
     var m = String(ticker || "").match(/^([A-Za-z0-9.]+)_US_EQ$/);
     if (!m) return [];
     var s = m[1].toUpperCase().replace(/\./g, "-"), out = [s], fara = s.replace(/\d+$/, "");
     if (fara && fara !== s) out.push(fara);
+    if (REDENUMIT[s]) out.unshift(REDENUMIT[s]);
     return out;
   }
-  function simbol(ticker) { var c = candidati(ticker); return c.length ? c[c.length - 1] : String(ticker || "").split("_")[0]; }
+  function simbol(ticker) {
+    var c = candidati(ticker); if (!c.length) return String(ticker || "").split("_")[0];
+    var s = String(ticker).split("_")[0].toUpperCase();
+    return REDENUMIT[s] || c[c.length - 1];
+  }
 
   function umpleri(items) {
     var out = [];

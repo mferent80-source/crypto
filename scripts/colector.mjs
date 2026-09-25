@@ -14,6 +14,7 @@ import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 import { trimiteDiscord } from "./lib/canal-discord.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
+import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul } from "./lib/tura-t212.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -95,10 +96,12 @@ const SemnaleBot = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "pu
 const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "tablou-extra.js"), "utf8") + "; return TabloExtra;")(GridCalcul);
 const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
 const GridLaborator = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba);
+const T212 = incarca("t212.js", "T212");
+const ActiuniSemnale = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "actiuni-semnale.js"), "utf8") + "; return ActiuniSemnale;")(GridCalcul);
 const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade);
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, Directie, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri].every(Boolean)); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, Directie, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale].every(Boolean)); process.exit(0); }
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 async function cere(cale, opt = {}) {
   const r = await fetch(BAZA + cale, { ...opt, headers: { ...ANTET, ...(opt.headers || {}) }, signal: AbortSignal.timeout(20000) });
@@ -323,6 +326,44 @@ async function turaCf() {
   cfLa = Date.now(); cfInLucru = false;
 }
 
+// v85: istoricul COMPLET Trading 212 in KV-ul de acasa - o data la 30 de minute, doar cu cheile T212 puse.
+// T212 lasa 6 cereri de istoric pe minut => o pagina la 11 s, cel mult 12 pagini pe tura (~2 minute).
+let t212La = Date.now() - 30 * 60000 + 2 * 60000, t212InLucru = false;
+async function turaT212() {
+  if (process.env.COLECTOR_FARA_T212 || t212InLucru || Date.now() - t212La < 30 * 60000) return;
+  const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) { t212La = Date.now(); return; }
+  t212InLucru = true;
+  try {
+    const r = await turaT212Modul({
+      cereStare: async () => { const d = await cere("/api/t212?action=istoric"); return d && d.stare || {}; },
+      cerePagina: (c) => cere("/api/t212?action=ordine" + (c ? "&cursor=" + encodeURIComponent(c) : "")),
+      salveaza: (corp) => trimite("/api/t212?action=istoric", corp),
+      umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 12 });
+    // cat timp istoricul inca se coboara, tura urmatoare vine peste 3 minute, nu peste 30
+    t212La = r.complet ? Date.now() : Date.now() - 27 * 60000;
+  } catch (e) { jurnal("t212 ESEC", e.message); t212La = Date.now() - 20 * 60000; }
+  t212InLucru = false;
+}
+
+// v85: alertele planurilor scrise de el pe pozitiile T212 (stop / tinta / -X% de la maxim) - la 5 minute,
+// separat de clasament (acela poate tine 3 minute). O alerta o data pe prag pe zi (cheile raman 3 zile).
+let planT212La = 0, planT212InLucru = false;
+async function turaPlanuriT212() {
+  if (process.env.COLECTOR_FARA_T212 || planT212InLucru || Date.now() - planT212La < 5 * 60000) return;
+  const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) { planT212La = Date.now(); return; }
+  planT212InLucru = true; planT212La = Date.now();
+  const m = meta(), st = m.t212Alerte || (m.t212Alerte = {}), prag = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  for (const k of Object.keys(st)) if (k.slice(-10) < prag) delete st[k];
+  try {
+    await turaPlanuriModul({
+      cerePozitii: async () => { const d = await cere("/api/t212?action=pozitii"); return d && d.pozitii || []; },
+      cerePlan: async (tk) => { const d = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + tk)); return d && d.plan || null; },
+      cereBare: async (tk) => { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)); return GridCalcul.bare(d && d.randuri || []); },
+      trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "")), stare: st, ActiuniSemnale, T212, jurnal });
+  } catch (e) { jurnal("planuri t212 ESEC", e.message); }
+  planT212InLucru = false;
+}
+
 // v84: raportul de duminica - o data pe saptamana, duminica dupa ora 20 (ora Romaniei)
 function saptamanaRo(t) {
   const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t));
@@ -343,6 +384,8 @@ async function turaRaport(acum) {
     }
     let lab = null; try { const v = await cere("/api/istoric-bot?action=laborator"); lab = v && v.laborator; } catch (e) {}
     const rap = Obiceiuri.raportDuminica({ trades, acum, socoteala: soc, laborator: lab });
+    // v85: si actiunile (Trading 212), din istoricul strans acasa
+    try { const h = await cere("/api/t212?action=istoric"); if (h && Array.isArray(h.umpleri) && h.umpleri.length) rap.linii = rap.linii.concat(ActiuniSemnale.raportSaptamana(T212.perechi(h.umpleri).inchise, acum)); } catch (e) { jurnal("raport t212", e.message); }
     await trimite("/api/istoric-bot?action=raport", { la: acum, linii: rap.linii, saptamana: r.data });
     if (await trimiteAlerta({ nivel: "info", titlu: "Raportul de duminică (" + r.data + ")", mesaj: rap.linii.join("\n") }, null, "raport")) m.raportTrimis = r.data;
   } catch (e) { jurnal("raport ESEC", e.message); }
@@ -353,7 +396,8 @@ if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt le
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message));
+  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
 }
