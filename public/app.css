@@ -1662,3 +1662,7 @@ body.peT212 .toolbar,body.peT212 .heroStrip,body.peT212 .tabs{display:none}
 .t212Link .t212BtnLinie{margin-left:auto}
 #tabloubot .tbSus #tbSemafor .tbFac{margin:4px 0 0}#tabloubot .tbSus .tbSemCap{align-items:flex-start}
 #tabloubot .tbMain #tbAcum .tbLinie{padding:3px 0}
+/* v87: tot contul pe un rand (ambele pagini) */
+.contTot{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:13px;font-variant-numeric:tabular-nums}
+.contTot .good{color:var(--good)}.contTot .bad{color:var(--bad)}.contTot .tbSub{color:var(--muted);font-size:12px}
+.contTotSep{color:var(--line)}

@@ -78,7 +78,8 @@ export async function turaPlanuri(d) {
 export async function turaCfActiuni(d) {
   const u = (await d.umpleri()) || [], gata = (await d.gata()) || {};
   const inchise = d.T212.perechi(u).inchise, peTicker = new Map();
-  for (const t of inchise) if (!gata[t.id]) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
+  // v87: verdictele vechi, fara proba cu stop, se refac o data (cu aceleasi preturi)
+  for (const t of inchise) if (!gata[t.id] || !gata[t.id].stop) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
   const nume = {}; for (const x of u) if (x.nume && x.nume !== x.ticker) nume[x.ticker] = x.nume;
   let judecate = 0, actiuni = 0, strans = {};
   // scrierile se strang cate 200 (ruta de scriere lasa 30 pe minut; una pe actiune ar lovi limita)
@@ -88,7 +89,10 @@ export async function turaCfActiuni(d) {
     if (actiuni > 0) await d.pauza(1200);
     actiuni++;
     let bare = null; try { bare = await d.cereBare(tk, nume[tk] || ""); } catch (e) { d.jurnal("cf actiuni", tk, e.message); continue; }
-    for (const t of lista) { strans[t.id] = bare && bare.length ? d.ActiuniSemnale.laCumparare(t, bare, inchise) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [] }; judecate++; }
+    for (const t of lista) {
+      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]) }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {} };
+      judecate++;
+    }
     if (Object.keys(strans).length >= 200) await scrie();
   }
   await scrie();

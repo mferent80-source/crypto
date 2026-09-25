@@ -13,7 +13,7 @@ import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
 const H = { "content-type": "application/json", "cache-control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: H });
 const BAZA = "https://live.trading212.com/api/v0";
-const PERMISIUNE = { cont: "Account data", pozitii: "Portfolio", ordine: "History / Orders" };
+const PERMISIUNE = { cont: "Account data", pozitii: "Portfolio", ordine: "History / Orders", dividende: "History / Dividends" };
 const cache = new Map(); // cheie -> {pana, valoare} (in memoria serverului de acasa)
 
 function dinCache(k) { const c = cache.get(k); return c && c.pana > Date.now() ? c.valoare : null; }
@@ -30,7 +30,7 @@ async function t212(env, cale, actiune) {
 }
 
 // T212 pastreaza simbolul SPAC-ului de dinainte de listare (la fel in public/lib/t212.js)
-const REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO" };
+const REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO", FB: "META" };
 // AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B_US_EQ -> [BRK-B]; ne-US -> []
 function candidati(ticker) {
   const m = String(ticker || "").match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
@@ -63,6 +63,12 @@ async function dupaNume(nume) {
   const r = await fetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(nume)}&quotesCount=6&newsCount=0`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
   let j = null; try { j = await r.json(); } catch {}
   return (j && Array.isArray(j.quotes) ? j.quotes : []).filter((q) => q && q.quoteType === "EQUITY" && BURSE_US.includes(q.exchange) && /^[A-Z][A-Z0-9-]{0,9}$/.test(q.symbol || "")).map((q) => q.symbol).slice(0, 3);
+}
+// v87: data rezultatelor trimestriale, de la Nasdaq (fara cheie). Aceeasi regula ca T212.dataRezultate.
+function dataRezultate(j) {
+  const t = j && j.data && j.data.reportText; if (typeof t !== "string") return null;
+  const m = t.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (!m) return null;
+  return { data: m[3] + "-" + m[1] + "-" + m[2], sigur: !/estimated|expected/i.test(t) };
 }
 async function twelve(env, simbol, interval) {
   const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${interval === "1h" ? "1h" : "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`);
@@ -103,6 +109,8 @@ export async function onRequestPost({ request, env }) {
     Object.keys(v).slice(0, 300).forEach((k) => {
       const id = txt(k, 40).replace(/[^A-Za-z0-9_-]/g, ""), x = v[k]; if (!id || !x || typeof x !== "object") return;
       m[id] = { nivel: NIV.includes(x.nivel) ? x.nivel : "fara-date", motive: (Array.isArray(x.motive) ? x.motive : []).slice(0, 4).map((z) => txt(z, 200)).filter(Boolean), greseli: (Array.isArray(x.greseli) ? x.greseli : []).filter((z) => GR.includes(z)) };
+      // v87: proba cu stop (-8/-10/-15%): {pct, zi} sau null (neatins)
+      if (x.stop && typeof x.stop === "object" && Object.keys(x.stop).length) { const st = {}; ["8", "10", "15"].forEach((p) => { const y = x.stop[p]; const pc = y && nr(y.pct); st[p] = pc !== null && pc > -1 && pc < 1 ? { pct: pc, zi: nr(y.zi) } : null; }); m[id].stop = st; }
     });
     const ids = Object.keys(m); if (ids.length > 6000) ids.slice(0, ids.length - 6000).forEach((k) => delete m[k]);
     await env.ISTORIC.put("t212:cf", JSON.stringify(m));
@@ -149,6 +157,16 @@ export async function onRequestGet({ request, env }) {
       }
       return json({ error: "Fără prețuri pentru " + tk + " (poate a fost delistată sau redenumită)." }, 404);
     }
+    if (a === "rezultate") {
+      const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = candidati(tk);
+      if (!cand.length) return json({ error: "Doar acțiuni americane (_US_EQ)." }, 404);
+      const k = "rez:" + tk, c = dinCache(k); if (c) return json(c);
+      const r = await fetch("https://api.nasdaq.com/api/analyst/" + encodeURIComponent(cand[0]) + "/earnings-date", { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+      let j = null; try { j = await r.json(); } catch {}
+      if (!r.ok && r.status !== 404) return json({ error: "Nasdaq: HTTP " + r.status }, 502);
+      const d = dataRezultate(j), v = { ticker: tk, simbol: cand[0], data: d ? d.data : null, sigur: d ? d.sigur : null };
+      inCache(k, v, 12 * 3600); return json(v);
+    }
     if (a === "cf") {
       if (!env.ISTORIC?.get) return faraKv();
       const m = await citesteKv(env, "t212:cf", {});
@@ -169,6 +187,17 @@ export async function onRequestGet({ request, env }) {
       const c = dinCache("poz"); if (c) return json(c);
       const p = await t212(env, "/equity/portfolio", "pozitii");
       const v = { pozitii: Array.isArray(p) ? p : [] }; inCache("poz", v, 30); return json(v);
+    }
+    if (a === "dividende") {
+      const c = dinCache("div"); if (c) return json(c);
+      let cur = null, items = [];
+      for (let pag = 0; pag < 20; pag++) {
+        const d = await t212(env, "/history/dividends?limit=50" + (cur ? "&cursor=" + cur : ""), "dividende");
+        (Array.isArray(d && d.items) ? d.items : []).forEach((x) => { if (x && x.ticker) items.push({ ticker: String(x.ticker).slice(0, 40), amount: nr(x.amount), currency: txt(x.currency, 3) || null, paidOn: txt(x.paidOn, 40) || null }); });
+        const np = d && typeof d.nextPagePath === "string" ? d.nextPagePath : "", m = np.startsWith("/api/v0/history/dividends?") ? np.match(/[?&]cursor=([A-Za-z0-9_-]{1,40})/) : null;
+        if (!m) break; cur = m[1];
+      }
+      const v = { items }; inCache("div", v, 3600); return json(v);
     }
     if (a === "ordine") {
       const cur = u.searchParams.get("cursor");

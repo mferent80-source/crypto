@@ -190,6 +190,29 @@ await test("ruta cf (daca ascultai, actiuni): POST imbina verdictele curatate (n
   assert.equal(g.corp.cf.s2.nivel, "fara-date"); assert.ok(g.corp.cf.s2.motive[0].length <= 200); assert.deepEqual(g.corp.cf.s2.greseli, ["dupa-miscare"]);
 });
 
+await test("ruta dividende (v87): toate paginile T212, suma si randurile compacte; 403 -> spune permisiunea", async () => {
+  fetchStub((u) => /history\/dividends/.test(u) ? (/cursor=2/.test(u) ? { corp: { items: [{ ticker: "MPC_US_EQ", amount: 2.5, paidOn: "2026-09-10T13:00:00Z", currency: "RON" }], nextPagePath: null } }
+    : { corp: { items: [{ ticker: "WDC_US_EQ", amount: 1.22, paidOn: "2026-09-17T13:00:00Z", currency: "RON" }], nextPagePath: "/api/v0/history/dividends?limit=50&cursor=2" } }) : { status: 404, corp: {} });
+  const r = await cheama("action=dividende");
+  assert.equal(r.status, 200); assert.equal(r.corp.items.length, 2); assert.equal(r.corp.items[0].ticker, "WDC_US_EQ");
+  fetchStub(() => ({ status: 403, corp: "" }));
+  const e = await cheama("action=dividende&x=1"); assert.equal(e.status, 403); assert.match(e.corp.error, /Dividend/i);
+});
+await test("ruta rezultate (v87): Nasdaq -> data; NPA -> intreaba de ASTS; fara data -> data null (nu inventata)", async () => {
+  fetchStub((u) => /api\.nasdaq\.com\/api\/analyst\/ASTS\/earnings-date/.test(u) ? { corp: { data: { reportText: "AST SpaceMobile is estimated to report earnings on  11/10/2026. The" } } }
+    : { corp: { data: { reportText: "Our vendor, Zacks, hasn't provided us with the upcoming earnings report date." } } });
+  const r = await cheama("action=rezultate&ticker=NPA_US_EQ");
+  assert.equal(r.status, 200); assert.equal(r.corp.simbol, "ASTS"); assert.equal(r.corp.data, "2026-11-10"); assert.equal(r.corp.sigur, false);
+  const n = await cheama("action=rezultate&ticker=AVGO_US_EQ"); assert.strictEqual(n.corp.data, null);
+  assert.equal((await cheama("action=rezultate&ticker=VUSAl_EQ")).status, 404);
+});
+await test("ruta cf (v87): pastreaza proba cu stop {8,10,15: {pct, zi} | null}, curatata", async () => {
+  const kv = kvFals(), env = { ...ENV, ISTORIC: kv };
+  await posteaza("action=cf", { verdicte: { s1: { nivel: "nu", motive: [], greseli: [], stop: { 8: { pct: -0.083, zi: 1 }, 10: null, 15: { pct: "rau" }, 99: { pct: 1 } } } } }, env);
+  const g = await cheama("action=cf", env);
+  assert.deepEqual(g.corp.cf.s1.stop, { 8: { pct: -0.083, zi: 1 }, 10: null, 15: null });
+});
+
 const { turaT212 } = await import("./lib/tura-t212.mjs");
 // istoric fals: 5 pagini a cate 2 ordine, cele mai noi primele
 function istoricFals(nrPagini, primulId) {

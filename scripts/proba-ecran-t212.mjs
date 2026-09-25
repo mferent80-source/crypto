@@ -143,6 +143,9 @@ async function scenariu(lat, inal, nume) {
       assert.equal(await b.ev(`[...document.querySelectorAll("#t212Continut .t212Det .t212Plan button")].filter(x=>/Salvează planul/.test(x.textContent)).length`), n, "planul pe fiecare pozitie");
       assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Det:not([hidden])").length`), 0, "detaliile inchise la deschidere (compact)");
       assert.match(t, /Câștigat real/i); assert.match(t, /T212 arată/i); assert.match(t, /Portofoliul/i); assert.match(t, /Ce ai de făcut acum/i);
+      // v87: tot contul pe un rand + data rezultatelor la macar o pozitie (Nasdaq)
+      await panaCand(b, `/Pionex/.test(document.querySelector("#t212Card [data-cont-tot]").innerText)&&/Trading 212/.test(document.querySelector("#t212Card [data-cont-tot]").innerText)`, 30000, "randul cu tot contul");
+      assert.ok((await b.ev(`[...document.querySelectorAll("#t212Continut .t212Sim .t212Mic")].filter(x=>/rezultate [0-9]{2}[.][0-9]{2}/.test(x.textContent)).length`)) > 0, "nicio data de rezultate");
       // procentul principal e in LEI, ca in Trading 212; pretul in dolari sta langa el
       assert.match(await b.ev(`document.querySelector("#t212Continut tr.t212Rand .c-rez").innerText`), /preț/);
       // ordinea: IESI inaintea ATENTIE inaintea TINE
@@ -196,6 +199,7 @@ async function scenariu(lat, inal, nume) {
       const t = await b.ev(`document.getElementById("t212PoartaRez").innerText`);
       assert.match(t, /CUMPĂR|AȘTEAPTĂ|NU ACUM|FĂRĂ DATE/); assert.match(t, /ASTS/); assert.match(t, /Ce aș face eu/); FARA_GUNOI(t);
       assert.match(t, /Prețurile calculate pentru ASTS/); assert.match(t, /Cât cumperi/);
+      if (!/NU ACUM/.test(t)) assert.match(t, /comision dus-întors/);
       // verdictul si marimea nu se contrazic: pe "NU ACUM" nu se da un numar de bucati
       if (/NU ACUM/.test(t)) assert.match(t, /nu cumpăr acum — vezi verdictul/); else assert.match(t, /1% din cont|citește întâi contul/);
       await b.ev(`document.getElementById("t212PoartaRez").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, `poarta-${nume}.png`));
@@ -205,7 +209,8 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`navTo('jurnaltrade',true);jtAlegeFiltru('actiuni')`);
       await panaCand(b, `/Câștigat REAL/.test(document.getElementById("jtActiuni").innerText)`, 30000, "jurnalul de actiuni");
       const t = await b.ev(`document.getElementById("jtActiuni").innerText`);
-      assert.match(t, /Cât ai ținut/); assert.match(t, /Dacă ascultai de Radar/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Cele mai mari 5 pierderi/);
+      assert.match(t, /Cât ai ținut/); assert.match(t, /Dacă ascultai de Radar/);
+      assert.match(t, /Cât te-ar fi salvat stopul/); assert.match(t, /Regulile tale/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Cele mai mari 5 pierderi/);
       assert.ok((await b.ev(`document.querySelectorAll("#jtActiuni .jtTrade").length`)) > 100);
       assert.equal(await b.ev(`document.getElementById("jtCrypto").hidden`), true);
       FARA_GUNOI(t);
@@ -267,6 +272,10 @@ await scenariu(390, 844, "telefon");
       assert.equal(r, true, "graficul si coloana din dreapta se suprapun");
       for (const id of ["tbKpiPozPill", "tbGrafic", "tbScenarii", "tbDirectie", "tbBani", "tbAcum", "tbSfaturi", "tbFisaBot", "tbSapt", "tbPlanStare", "tbAlerteStare", "tbPort", "tbMasuri"]) assert.ok(await b.ev(`!!document.getElementById("${id}")`), "lipseste #" + id);
       await b.ev(`tbDeschidePlan()`); assert.equal(await b.ev(`document.getElementById("tbPl-plan").open`), true, "'Scrie planul' deschide planul");
+      // v87: randul cu tot contul si pe Tablou; ritmul de recuperare langa rezultat (cand botul e pe minus)
+      await panaCand(b, `/Trading 212/.test(document.querySelector("#tabloubot [data-cont-tot]").innerText)`, 30000, "randul contului pe Tablou");
+      const sub = await b.ev(`document.getElementById("tbKpiTotalSub").textContent`), tot = await b.ev(`tbStare.bot&&+tbStare.bot.profitTotal`);
+      if (tot < 0) assert.match(sub, /zile până pe zero|nu se recuperează/, "ritmul de recuperare: " + sub);
     });
     await test("monitor 1920 · dupa clic pe Trading 212, cifrele contului se vad (nu sunt sub bara de sus)", async () => {
       await b.ev(`document.querySelector('.sideBtn[data-nav="t212"]').click()`); await asteapta(1500);

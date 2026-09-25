@@ -164,6 +164,7 @@ var ActiuniSemnale = (function () {
   function laCumparare(t, bare, inchise) {
     var b = Array.isArray(bare) ? bare.filter(function (x) { return x.t + 8 * 3600000 <= t.pornit; }) : [];
     if (b.length < 60) return { nivel: "fara-date", motive: ["prea puține zile de prețuri înainte de cumpărare"], greseli: [] };
+    if (!pretPotrivit(t, bare)) return { nivel: "fara-date", motive: ["prețurile găsite nu se potrivesc cu ale tale (split sau alt simbol)"], greseli: [] };
     var st = stare(b, t.pretCumparare), ore = null;
     (Array.isArray(inchise) ? inchise : []).forEach(function (x) { if (x.ticker === t.ticker && x.rezultat < 0 && x.inchis <= t.pornit) { var o = (t.pornit - x.inchis) / 3600000; if (ore === null || o < ore) ore = o; } });
     var v = poarta({ stare: st, plan: null, faraPlan: true, vandutPeMinusAcumOre: ore }), g = [];
@@ -184,7 +185,7 @@ var ActiuniSemnale = (function () {
     }
     return out;
   }
-  var K = [1.5, 2, 2.5, 3], COST = 0.003, ORIZONT = 20;
+  var K = [1.5, 2, 2.5, 3], COST = 0.003, ORIZONT = 20, COST_CONV = 0.003;
   // Proba pe istoricul actiunii: intrare la inchidere, stop la k*ATR, tinta la 2k*ATR, cel mult 20 de zile;
   // doar zilele in aceeasi stare ca acum (EMA20 fata de EMA50), minus 0,30% comisionul de conversie.
   function proba(b, a, dirAcum) {
@@ -239,7 +240,102 @@ var ActiuniSemnale = (function () {
     if (!o || !(o.cont > 0) || !(o.intrare > 0) || !(o.stop > 0) || o.stop >= o.intrare) return null;
     var fx = o.fx > 0 ? o.fx : 1, riscLei = o.cont * 0.01, peBucLei = (o.intrare - o.stop) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = o.cont * 0.20, plaf = false;
     if (suma > plafon + 1e-9) { buc = plafon * fx / o.intrare; suma = plafon; plaf = true; }
-    return { bucati: Math.round(buc * 10000) / 10000, suma: suma, risc: buc * peBucLei, plafonat: plaf };
+    // v87: comisionul de conversie dus-intors (0,15% + 0,15%) si cat trebuie sa urce ca sa iesi pe zero
+    return { bucati: Math.round(buc * 10000) / 10000, suma: suma, risc: buc * peBucLei, plafonat: plaf, comision: suma * COST_CONV, peZero: COST_CONV };
+  }
+
+  // ---------------- v87: frana de "cumparat in jos" ----------------
+  // Cumpararile facute cand pozitia pe actiunea aia era pe minus (pret sub costul mediu al bucatilor tinute,
+  // in dolari). nr = a cata la rand; o cumparare peste medie rupe sirul; vanzarea totala il ia de la capat.
+  function cumparariInJos(u) {
+    var lot = {}, sir = {}, out = [];
+    (Array.isArray(u) ? u : []).filter(function (x) { return x && x.ticker && x.qty > 0 && x.pret > 0; }).sort(function (a, b) { return a.t - b.t; }).forEach(function (x) {
+      var L = lot[x.ticker] || (lot[x.ticker] = { q: 0, cost: 0 });
+      if (x.side === "BUY") {
+        var mediu = L.q > 1e-9 ? L.cost / L.q : null;
+        if (mediu !== null && x.pret < mediu * 0.995) { sir[x.ticker] = (sir[x.ticker] || 0) + 1; out.push({ id: x.id, ticker: x.ticker, t: x.t, pret: x.pret, mediu: mediu, sub: x.pret / mediu - 1, nr: sir[x.ticker], suma: x.net }); }
+        else if (mediu === null || x.pret >= mediu) sir[x.ticker] = 0;
+        L.q += x.qty; L.cost += x.qty * x.pret;
+      } else if (x.side === "SELL" && L.q > 1e-9) {
+        var q = Math.min(x.qty, L.q); L.cost -= L.cost * q / L.q; L.q -= q;
+        if (L.q <= 1e-9) { L.q = 0; L.cost = 0; sir[x.ticker] = 0; }
+      }
+    });
+    return out;
+  }
+  function alertaFrana(x, simbol) {
+    var s = simbol || x.ticker, a2 = x.nr >= 2;
+    return { nivel: a2 ? "critic" : "atentie", titlu: s + ": ai cumpărat în plus pe minus" + (a2 ? " (a " + x.nr + "-a oară la rând)" : ""),
+      mesaj: "Ai cumpărat la $" + x.pret.toFixed(2) + ", cu " + P(x.sub) + " sub prețul tău mediu ($" + x.mediu.toFixed(2) + ")" + (x.suma > 0 ? ", " + Math.round(x.suma).toLocaleString("ro-RO") + " lei" : "") + ". 👉 Ce aș face eu: nu mai adaug pe minus — așa a crescut NPA la 33.000 de lei și a pierdut 8.165." };
+  }
+
+  // ---------------- v87: cat te-ar fi salvat stopul ----------------
+  // Pe barele zilnice DINTRE ziua cumpararii si ziua vanzarii (ele nu intra: nu stim ordinea din zi): prima zi
+  // in care minimul atinge stopul -> iesire la stop sau la deschidere, daca a deschis sub el; minus 0,30% conversia.
+  // Pretul Yahoo din ziua cumpararii se potriveste cu al lui? Nu, la split (Yahoo ajusteaza trecutul, T212 nu)
+  // sau cand simbolul a ajuns la alta companie (FB) -> false: acel trade nu se judeca.
+  function pretPotrivit(t, b) {
+    var z = Math.floor(t.pornit / ZI), bar = null;
+    for (var i = 0; i < b.length; i++) if (Math.floor(b[i].t / ZI) >= z) { bar = b[i]; break; }
+    if (!bar || !(t.pretCumparare > 0)) return true;
+    var r = bar.c / t.pretCumparare; return r >= 0.7 && r <= 1.43;
+  }
+  function cuStop(t, bare, praguri) {
+    var out = {}, b = Array.isArray(bare) ? bare : [], intr = t && t.pretCumparare;
+    if (b.length && t && !pretPotrivit(t, b)) return out;
+    (praguri || [8, 10, 15]).forEach(function (p) {
+      out[p] = null;
+      if (!(intr > 0) || !b.length) return;
+      var st = intr * (1 - p / 100), z0 = Math.floor(t.pornit / ZI), z1 = Math.floor(t.inchis / ZI);
+      for (var i = 0; i < b.length; i++) {
+        var z = Math.floor(b[i].t / ZI); if (z <= z0) continue; if (z >= z1) break;
+        if (b[i].l <= st) { out[p] = { pct: Math.min(b[i].o, st) / intr - 1 - COST_CONV, zi: b[i].t }; break; }
+      }
+    });
+    return out;
+  }
+  // Pe trade-urile care au proba de stop (cf[id].stop): totalul real fata de cel cu stop, pe fiecare prag.
+  function rezumatStop(inchise, cf, praguri) {
+    praguri = praguri || [8, 10, 15];
+    var r = { judecate: 0, real: 0, praguri: {} };
+    praguri.forEach(function (p) { r.praguri[p] = { total: 0, atinse: 0, castigatoareTaiate: 0, dif: 0 }; });
+    (Array.isArray(inchise) ? inchise : []).forEach(function (t) {
+      var v = cf && cf[t.id], s = v && v.stop; if (!s || !Object.keys(s).length || v.nivel === "fara-date" || !(t.cost > 0)) return;
+      r.judecate++; r.real += t.rezultat;
+      praguri.forEach(function (p) {
+        var x = s[p], g = r.praguri[p];
+        if (x && x.pct !== null && x.pct !== undefined) { g.total += t.cost * x.pct; g.atinse++; if (t.rezultat > 0) g.castigatoareTaiate++; }
+        else g.total += t.rezultat;
+      });
+    });
+    praguri.forEach(function (p) { r.praguri[p].dif = r.praguri[p].total - r.real; });
+    return r;
+  }
+
+  // ---------------- v87: regulile tale (din jurnalul de actiuni) ----------------
+  function oraRo(t, tz) {
+    try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz || "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t))); } catch (e) { return new Date(t).getUTCHours() + 3; }
+  }
+  function ziRo(t, tz) {
+    try { return new Intl.DateTimeFormat("ro-RO", { timeZone: tz || "Europe/Bucharest", weekday: "long" }).format(new Date(t)); } catch (e) { return ""; }
+  }
+  function reguliPersonale(inchise, tz) {
+    var l = (Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && isFinite(t.rezultat) && t.pornit > 0; });
+    if (l.length < 60) return { suficient: false, n: l.length, lipsa: 60 - l.length, reguli: [] };
+    var plus = l.filter(function (t) { return t.rezultat > 0; }).length, rata = plus / l.length, grupe = {};
+    function ad(k, t) { (grupe[k] = grupe[k] || []).push(t); }
+    l.forEach(function (t) {
+      var h = oraRo(t.pornit, tz);
+      ad(h >= 23 || h < 11 ? "cumpărate noaptea (după 23 sau înainte de 11), în afara orelor" : h < 16 ? "cumpărate între 11 și 16:30, înainte de deschidere" : h < 18 ? "cumpărate în prima oră și jumătate după deschidere" : "cumpărate după 18", t);
+      if (t.extCumparare) ad("cumpărate în afara orelor de bursă", t);
+      ad("cumpărate " + ziRo(t.pornit, tz), t);
+      var c = t.cost || 0; ad(c < 1000 ? "sub 1.000 de lei" : c < 3000 ? "de 1.000–3.000 de lei" : c < 6000 ? "de 3.000–6.000 de lei" : "de peste 6.000 de lei", t);
+    });
+    var reguli = Object.keys(grupe).map(function (k) {
+      var g = grupe[k], p = g.filter(function (t) { return t.rezultat > 0; }).length, tot = 0; g.forEach(function (t) { tot += t.rezultat; });
+      return { grupa: k, n: g.length, pePlus: p / g.length, total: tot, text: "Trade-urile " + k + ": " + p + " din " + g.length + " pe plus (" + Math.round(p / g.length * 100) + "%, față de " + Math.round(rata * 100) + "% în general), total " + L(tot) + "." };
+    }).filter(function (g) { return g.n >= 30 && g.n < l.length && g.total < 0 && g.pePlus < rata - 0.05; }).sort(function (a, b) { return a.total - b.total; });
+    return { suficient: true, n: l.length, rata: rata, reguli: reguli };
   }
 
   // Alertele planului pentru colector: doar pragurile scrise de EL. Cheia e pe zi (ora Romaniei nu conteaza
@@ -266,6 +362,6 @@ var ActiuniSemnale = (function () {
     return linii;
   }
 
-  return { atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

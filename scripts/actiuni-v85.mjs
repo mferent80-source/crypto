@@ -160,8 +160,9 @@ await test("la cumparare (daca ascultai de Radar): doar barele DINAINTE; trend j
 });
 await test("tura 'daca ascultai' pe actiuni (colector): doar trade-urile fara verdict, cate `max` actiuni pe tura, o actiune fara preturi -> fara-date (nu se reincearca la infinit)", async () => {
   const { turaCfActiuni } = await import("./lib/tura-t212.mjs");
-  const um = [{ id: "b1", t: urca.at(-30).t + ZI / 2, side: "BUY", ticker: "AAA_US_EQ", qty: 1, pret: 90, net: 400, fee: 1, realizat: null },
-    { id: "s1", t: urca.at(-20).t, side: "SELL", ticker: "AAA_US_EQ", qty: 1, pret: 95, net: 420, fee: 1, realizat: 21 },
+  // preturile tranzactiilor = cele din serie (altfel verificarea "pret potrivit" le respinge ca split)
+  const um = [{ id: "b1", t: urca.at(-30).t + ZI / 2, side: "BUY", ticker: "AAA_US_EQ", qty: 1, pret: urca.at(-30).c * 0.97, net: 400, fee: 1, realizat: null },
+    { id: "s1", t: urca.at(-20).t, side: "SELL", ticker: "AAA_US_EQ", qty: 1, pret: urca.at(-20).c, net: 420, fee: 1, realizat: 21 },
     { id: "b2", t: urca.at(-30).t, side: "BUY", ticker: "ZZZ_US_EQ", qty: 1, pret: 5, net: 20, fee: 0, realizat: null },
     { id: "s2", t: urca.at(-25).t, side: "SELL", ticker: "ZZZ_US_EQ", qty: 1, pret: 4, net: 16, fee: 0, realizat: -4 },
     { id: "b3", t: urca.at(-30).t, side: "BUY", ticker: "QQQ9_US_EQ", qty: 1, pret: 5, net: 20, fee: 0, realizat: null },

@@ -13,7 +13,7 @@ var T212 = (function () {
     var x = Number(v); return isFinite(x) ? x : null;
   }
   // T212 pastreaza simbolul SPAC-ului de dinainte de listare (verificat pe numele din ordinele lui, 25.09)
-  var REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO" };
+  var REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO", FB: "META" };
   function candidati(ticker) {
     var m = String(ticker || "").match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
     if (!m) return [];
@@ -77,6 +77,23 @@ var T212 = (function () {
     return { inchise: inchise.sort(function (a, b) { return b.inchis - a.inchis; }), deschise: deschise, faraCumparare: fara };
   }
 
-  return { umpleri: umpleri, perechi: perechi, candidati: candidati, simbol: simbol };
+  // v87: dividendele (T212 /history/dividends, suma in moneda contului)
+  function dividende(items) {
+    var r = { total: 0, n: 0, peActiune: {}, ultima: null };
+    (Array.isArray(items) ? items : []).forEach(function (x) {
+      var a = x && nr(x.amount); if (a === null || !x.ticker) return;
+      r.total += a; r.n++; r.peActiune[x.ticker] = (r.peActiune[x.ticker] || 0) + a;
+      var t = Date.parse(x.paidOn || ""); if (isFinite(t) && (r.ultima === null || t > r.ultima)) r.ultima = t;
+    });
+    return r;
+  }
+  // v87: data rezultatelor trimestriale din raspunsul Nasdaq (api.nasdaq.com/api/analyst/<S>/earnings-date)
+  function dataRezultate(j) {
+    var t = j && j.data && j.data.reportText; if (typeof t !== "string") return null;
+    var m = t.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (!m) return null;
+    return { data: m[3] + "-" + m[1] + "-" + m[2], sigur: !/estimated|expected/i.test(t) };
+  }
+
+  return { umpleri: umpleri, perechi: perechi, candidati: candidati, simbol: simbol, dividende: dividende, dataRezultate: dataRezultate };
 })();
 if (typeof globalThis !== "undefined") globalThis.T212 = T212;

@@ -330,18 +330,18 @@ async function turaCf() {
 // T212 lasa 6 cereri de istoric pe minut => o pagina la 11 s, cel mult 12 pagini pe tura (~2 minute).
 let t212La = Date.now() - 30 * 60000 + 2 * 60000, t212InLucru = false;
 async function turaT212() {
-  if (process.env.COLECTOR_FARA_T212 || t212InLucru || Date.now() - t212La < 30 * 60000) return;
+  if (process.env.COLECTOR_FARA_T212 || t212InLucru || Date.now() - t212La < 5 * 60000) return;
   const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) { t212La = Date.now(); return; }
   t212InLucru = true;
   try {
-    const r = await turaT212Modul({
+    await turaT212Modul({
       cereStare: async () => { const d = await cere("/api/t212?action=istoric"); return d && d.stare || {}; },
       cerePagina: (c) => cere("/api/t212?action=ordine" + (c ? "&cursor=" + encodeURIComponent(c) : "")),
       salveaza: (corp) => trimite("/api/t212?action=istoric", corp),
       umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 12 });
-    // cat timp istoricul inca se coboara, tura urmatoare vine peste 3 minute, nu peste 30
-    t212La = r.complet ? Date.now() : Date.now() - 27 * 60000;
-  } catch (e) { jurnal("t212 ESEC", e.message); t212La = Date.now() - 20 * 60000; }
+    // v87: la 5 minute (o pagina de cap pe tura), ca frana de "cumparat in jos" sa vina repede dupa cumparare
+    t212La = Date.now();
+  } catch (e) { jurnal("t212 ESEC", e.message); t212La = Date.now() + 5 * 60000; }
   t212InLucru = false;
 }
 
@@ -361,6 +361,25 @@ async function turaPlanuriT212() {
       cereBare: async (tk) => { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)); return GridCalcul.bare(d && d.randuri || []); },
       trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "")), stare: st, ActiuniSemnale, T212, jurnal });
   } catch (e) { jurnal("planuri t212 ESEC", e.message); }
+  // v87: frana de "cumparat in jos" (NPA: 4 cumparari pe minus, -8.165 lei) + plafonul de 20% din cont
+  try {
+    const zi = new Date().toISOString().slice(0, 10), h = await cere("/api/t212?action=istoric");
+    for (const x of ActiuniSemnale.cumparariInJos((h && h.umpleri) || []).filter((y) => Date.now() - y.t < 24 * 3600000)) {
+      const k = "t212-injos-" + x.id + "-" + new Date(x.t).toISOString().slice(0, 10);
+      if (st[k]) continue;
+      if (await trimiteAlerta(ActiuniSemnale.alertaFrana(x, T212.simbol(x.ticker)), null, k.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60))) st[k] = true;
+    }
+    const c = await cere("/api/t212?action=cont"), pz = await cere("/api/t212?action=pozitii");
+    const cash = c && c.cash || {}, poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
+    let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
+    const inv = cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
+    if (inv !== null && usd > 0) for (const x of poz) {
+      const pond = x.quantity * x.currentPrice / usd * inv / cash.total, k = "t212-conc-" + x.ticker + "-" + zi;
+      if (pond <= 0.2 || st[k]) continue;
+      const s = T212.simbol(x.ticker);
+      if (await trimiteAlerta({ nivel: "atentie", titlu: s + " e " + Math.round(pond * 100) + "% din contul Trading 212", mesaj: "Peste plafonul de 20%: o zi proastă a ei e ziua proastă a contului. 👉 Ce aș face eu: n-aș mai adăuga la " + s + "; la următoarea creștere aș vinde o parte." }, null, k.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60))) st[k] = true;
+    }
+  } catch (e) { jurnal("frana t212", e.message); }
   planT212InLucru = false;
 }
 

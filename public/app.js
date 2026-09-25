@@ -3014,7 +3014,7 @@ function navTo(id,load=false){
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
    else if(id==="stocks"){loadStockContext();checkStocksHealth()}
-   else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false)}
+   else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false);if(typeof contTotAsigura==="function")contTotAsigura()}
    else if(id==="scan")scan();
    else if(id==="replaylab")renderReplayLab();
    else if(id==="market")loadMarketOverview();
@@ -5539,7 +5539,9 @@ function tbRenderTodo(){
   pune("tbPlSub-alerte",azi?azi+" în ultimele 24 h":"niciuna în ultimele 24 h");
   pune("tbPlSub-avert",aver.length?aver.length+(aver.length===1?" de la server":" de la server"):"niciunul");
   pune("tbPlSub-plan",planGol?"niciun plan încă — scrie-l la rece":"planul e pus · colectorul te anunță");
+  tbContTot();
 }
+function tbContTot(){if(typeof contTotRender==="function"){contTotRender();if(!contTot.inLucru&&(!t212.cont||!t212.istoric))contTotAsigura()}}
 function tbDeschidePlan(){var d=$("tbPl-plan");if(!d)return;d.open=true;if(d.scrollIntoView)d.scrollIntoView({block:"center",behavior:"smooth"});var i=d.querySelector("input");if(i)setTimeout(function(){i.focus()},250)}
 function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
@@ -5567,7 +5569,9 @@ function tbDeseneazaKpi(){
     ["tbKpiTotalSub","tbKpiLichSub","tbKpiPretSub","tbKpiPiataSub"].forEach(function(id){pune(id,"—","")});return}
   var tot=botiNr(b.profitTotal),inv=botiNr(b.investit);
   pune("tbKpiTotal",tot===null?"—":(tot>0?"+":"")+tot.toFixed(2),botiClasa(b.profitTotal));
-  pune("tbKpiTotalSub",tot!==null&&inv!==null&&inv>0?tbFormateazaSemn(100*tot/inv,2)+"% din "+inv.toFixed(2)+" investiți":"cu tot cu poziția deschisă","");
+  // v87: ritmul de recuperare (grile - costuri pe zi) langa rezultat
+  var rr=typeof TabloExtra!=="undefined"?TabloExtra.ritmRecuperare(tot,TabloExtra.grileVsCosturi(b,Date.now()).netZi):null;
+  pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?tbFormateazaSemn(100*tot/inv,2)+"% din "+inv.toFixed(2)+" investiți":"cu tot cu poziția deschisă")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):""),"");
   var dist=botiNr(b.distantaLichidarePct),dep=!!b.lichidareDepasita,parte=b.lichidarePartea==="sus"?"sus":b.lichidarePartea==="jos"?"jos":null;
   var nivel=dep||(dist!==null&&Math.abs(dist)<8)?"bad":dist!==null&&Math.abs(dist)<15?"tbWarn":dist===null?"mutedInfo":"good";
   pune("tbKpiLich",dep?"DEPĂȘITĂ":dist===null?"—":Math.abs(dist).toFixed(1)+"%",nivel);

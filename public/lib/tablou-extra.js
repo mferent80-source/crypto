@@ -37,6 +37,8 @@ var TabloExtra = (function () {
     out.randuri.push({ et: "Grile", bot: g ? g.grile + " " + g.mod : "—", fisa: st.grile + " geometric" });
     out.randuri.push({ et: "Pas net pe grilă", bot: g ? pr(g.netPct) : "—", fisa: pr(st.profitGrila) });
     out.randuri.push({ et: "Levier", bot: lev !== null ? lev + "×" : "—", fisa: st.levier + "× (sigur " + st.levierSigur + "×)" });
+    var cb = g ? comisionDinUmplere(g.netPct) : null, cf = comisionDinUmplere(st.profitGrila);
+    out.randuri.push({ et: "Comisionul ia din fiecare umplere", bot: cb !== null ? Math.round(cb * 100) + "%" : "—", fisa: cf !== null ? Math.round(cf * 100) + "%" : "—" });
     out.randuri.push({ et: "Verdictul de azi", bot: "", fisa: f.verdict && f.verdict.nivel || "—" });
     if (g && g.preaDese) out.semnale.push("grile prea dese: fiecare umplere lasă " + pr(g.netPct) + " după comision (fișa cere cel puțin " + pr(C.PAS_MIN - 2 * C.COMISION) + ")");
     if (lev !== null && st.levierSigur > 0 && lev > st.levierSigur) out.semnale.push("levier " + lev + "× peste cel sigur azi (" + st.levierSigur + "×): lichidarea stă mai aproape decât o lățime de interval");
@@ -210,7 +212,21 @@ var TabloExtra = (function () {
     return out;
   }
 
-  return { ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
+  // v87: in cate zile ajunge botul pe zero la ritmul de azi (grile - costuri pe zi), daca pretul sta pe loc
+  function ritmRecuperare(total, netZi) {
+    if (total === null || total === undefined || !isFinite(total) || netZi === null || netZi === undefined || !isFinite(netZi)) return null;
+    if (total >= 0) return { zile: 0, text: "botul e pe plus: nimic de recuperat" };
+    if (netZi <= 0) return { zile: null, text: "la ritmul de azi nu se recuperează: grilele nu acoperă costurile" };
+    var z = -total / netZi;
+    return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") : Math.round(z)) + " zile până pe zero, la ritmul de azi (" + (netZi >= 0 ? "+" : "") + netZi.toFixed(2) + " USDT/zi), dacă prețul stă pe loc" };
+  }
+  // v87: cat din castigul unei umpleri ia comisionul (0,05% la intrare + 0,05% la iesire)
+  function comisionDinUmplere(netPct) {
+    if (netPct === null || netPct === undefined || !isFinite(netPct)) return null;
+    var c = 2 * C.COMISION; return c / (netPct + c);
+  }
+
+  return { ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

@@ -10,7 +10,7 @@ var Alerte = (function () {
   "use strict";
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
-  var REPETA_CHEIE_MS = { miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000 };   // semnalele se repeta rar
+  var REPETA_CHEIE_MS = { "opritor:atentie": 24 * 3600000, miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000 };   // semnalele se repeta rar
   // Histerezis: o alerta INTRA la un prag si IESE abia la unul mai larg, altfel
   // un bot care sta langa prag ar trimite un mesaj la fiecare minut (masurat:
   // 59/ora intre 14,9% si 15,1%). "A trecut" se spune doar dupa 10 minute stabile.
@@ -94,9 +94,14 @@ var Alerte = (function () {
     }
 
     var opritorStins = b.opritorPierdere != null && b.opritorPierdereActiv === false;
-    out.opritor = (opritorStins && dist !== null && Math.abs(dist) < 20)
-      ? { nivel: "atentie", titlu: nume + ": opritorul pe pierdere e STINS", mesaj: "E setat la " + pret(nr(b.opritorPierdere)) + ", dar nu e pornit, iar lichidarea e la " + Math.abs(dist).toFixed(1) + "%." }
-      : { nivel: "ok", titlu: "", mesaj: "" };
+    // v87: intra sub 20% si iese abia peste 23% (sub 20% plus-minus nu mai "clipeste"); sub 10% urca la CRITIC;
+    // cat sta "atentie" se repeta cel mult o data pe zi (REPETA_CHEIE_MS), nu la 3 ore.
+    var fo = fost("opritor"), dA = dist !== null ? Math.abs(dist) : null;
+    out.opritor = (opritorStins && dA !== null && dA < (fo !== "ok" ? 23 : 20))
+      ? (dA < (fo === "critic" ? 11 : 10)
+        ? { nivel: "critic", titlu: nume + ": opritorul e STINS și lichidarea e la " + dA.toFixed(1) + "%", mesaj: "Opritorul pe pierdere e setat la " + pret(nr(b.opritorPierdere)) + ", dar nu e pornit. 👉 Pornește-l în Pionex acum sau închide botul." }
+        : { nivel: "atentie", titlu: nume + ": opritorul pe pierdere e STINS", mesaj: "E setat la " + pret(nr(b.opritorPierdere)) + ", dar nu e pornit, iar lichidarea e la " + dA.toFixed(1) + "%." })
+      : (opritorStins && dA === null ? null : { nivel: "ok", titlu: "", mesaj: "" });
     return out;
   }
 
@@ -121,7 +126,7 @@ var Alerte = (function () {
       }
       var trimite = false;
       if (RANG[a.nivel] > RANG[v.nivel]) trimite = true;                       // s-a agravat
-      else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= (REPETA_CHEIE_MS[cheie] || REPETA_MS[a.nivel])) trimite = true; // persista
+      else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= (REPETA_CHEIE_MS[cheie + ":" + a.nivel] || REPETA_CHEIE_MS[cheie] || REPETA_MS[a.nivel])) trimite = true; // persista
       if (trimite) mesaje.push({ cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
       // coborarea critic -> atentie NU reseteaza ceasul: o revenire rapida in critic nu e o agravare noua
       nou[cheie] = { nivel: a.nivel, la: trimite ? acum : (RANG[a.nivel] <= RANG[v.nivel] ? v.la : acum) };

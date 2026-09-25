@@ -2,7 +2,7 @@
 // Jurnal de trade (filtrul Crypto / Actiuni / Tot). Doar CITIRE: cheia T212 e doar de citire si sta acasa.
 // Foloseste din app.js: $, getJSON, apiFetch, escapeHtml, toast; din lib: GridCalcul, T212, ActiuniSemnale.
 // Calculele stau in lib (probate in scripts/t212-v85.mjs si scripts/actiuni-v85.mjs); aici doar se arata.
-var t212 = { niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
+var t212 = { dividende: null, rezultate: {}, niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
 var T212_NIVEL = { tine: ["ȚINE", "t212Pill-tine"], atentie: ["ATENȚIE", "t212Pill-atentie"], iesi: ["IEȘI", "t212Pill-iesi"], "fara-date": ["FĂRĂ DATE", "t212Pill-fara"] };
 var T212_POARTA = { cumpara: ["🟢 CUMPĂR", "good"], asteapta: ["🟡 AȘTEAPTĂ", "tbWarn"], nu: ["🔴 NU ACUM", "bad"], "fara-date": ["⚪ FĂRĂ DATE", ""] };
 
@@ -10,6 +10,7 @@ function t212Lei(v, z) { if (v === null || v === undefined || !isFinite(v)) retu
 function t212Suma(v) { return v === null || v === undefined || !isFinite(v) ? "—" : Math.round(v).toLocaleString("ro-RO") + " lei"; }
 function t212Pct(v) { return v === null || v === undefined || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; }
 function t212Usd(v) { return v === null || v === undefined || !isFinite(v) ? "—" : "$" + (v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(3) : v.toPrecision(3)); }
+function t212ZiScurta(iso) { var m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + "." + m[2] : "—"; }
 function t212Cls(v) { return v === null || v === undefined || !isFinite(v) ? "" : v >= 0 ? "good" : "bad"; }
 function t212Nr(v) { var x = Number(String(v === null || v === undefined ? "" : v).replace(",", ".").trim()); return String(v || "").trim() && isFinite(x) && x > 0 ? x : null; }
 function t212Eroare(e) { var m = e && e.message || String(e); return /503|PUNE-CHEILE|Lipsesc T212/.test(m) ? "Lipsesc cheile Trading 212 pe serverul de acasă: pornește PUNE-CHEILE-T212.bat, apoi repornește Radarul." : /401|AUTH/.test(m) ? "Serverul a cerut parola aplicației (Setări)." : m; }
@@ -25,11 +26,13 @@ async function t212Porneste(forta) {
   } catch (e) { t212.eroare = t212Eroare(e); }
   try { t212.istoric = await getJSON("/api/t212?action=istoric"); t212.istoricEroare = null; } catch (e) { t212.istoric = null; t212.istoricEroare = t212Eroare(e); }
   try { var cf = await getJSON("/api/t212?action=cf"); t212.cf = cf && cf.cf || {}; } catch (e) { t212.cf = null; }
+  try { var dv = await getJSON("/api/t212?action=dividende"); t212.dividende = T212.dividende(dv && dv.items || []); } catch (e) { t212.dividende = null; }
   t212JurnalCache.n = -1;
   t212.la = Date.now(); t212Render();
   if (!t212.eroare && t212.poz) {
     for (var i = 0; i < t212.poz.length; i++) {
       var tk = t212.poz[i].ticker;
+      if (!t212.rezultate[tk]) { try { t212.rezultate[tk] = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); } catch (e) { t212.rezultate[tk] = { data: null }; } }
       try { var pl = await getJSON("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + tk)); t212.planuri[tk] = pl && pl.plan || null; } catch (e) { t212.planuri[tk] = t212.planuri[tk] || null; }
       if (!t212.bare[tk] || forta) { try { var nm = t212Nume(tk), b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); t212.simbolPret[tk] = b && b.simbol || null; t212.bare[tk] = GridCalcul.bare(b && b.randuri || []); } catch (e) { t212.bare[tk] = []; } }
       t212Render();
@@ -137,7 +140,7 @@ function t212Render() {
   var cel = function (et, v, cls, sub) { return '<div class="t212Cel"><span class="t212Et">' + escapeHtml(et) + '</span><b class="t212Val ' + (cls || "") + '">' + escapeHtml(v) + '</b><span class="tbSub">' + sub + '</span></div>'; };
   var h = '<div class="t212Kpi">' + cel("Contul", t212Suma(c.total), "", "liber " + escapeHtml(t212Suma(c.free)) + (pf.cash !== null ? " · " + escapeHtml(t212Pct(pf.cash).replace("+", "")) : ""))
     + cel("Pe pozițiile deschise", t212Lei(c.ppl), t212Cls(c.ppl), poz.length + " poziții · " + pe + " pe plus")
-    + (j ? cel("Câștigat real, închise", t212Lei(j.r.total), t212Cls(j.r.total), 'T212 arată <span class="t212Muted">' + escapeHtml(t212Lei(c.result).replace(" lei", "")) + '</span> · comisioane ' + escapeHtml(t212Lei(-j.r.comisioane).replace(" lei", "")))
+    + (j ? cel("Câștigat real, închise", t212Lei(j.r.total), t212Cls(j.r.total), 'T212 arată <span class="t212Muted">' + escapeHtml(t212Lei(c.result).replace(" lei", "")) + '</span> · comisioane ' + escapeHtml(t212Lei(-j.r.comisioane).replace(" lei", "")) + (t212.dividende && t212.dividende.n ? ' · dividende ' + escapeHtml(t212Lei(t212.dividende.total, 2).replace(" lei", "")) : ''))
       : cel("Rezultat (după T212)", t212Lei(c.result), t212Cls(c.result), escapeHtml(t212.istoricEroare || "fără comisioanele de conversie; istoricul se strânge acasă")))
     + cel("Dacă Nasdaq scade 10%", poz.length ? t212Lei(pf.soc) : "—", poz.length ? "bad" : "", "beta din QQQ, pe fiecare acțiune") + '</div>';
 
@@ -152,6 +155,14 @@ function t212Render() {
   });
   var slabe = poz.filter(function (p) { return p.niv && p.niv.proba.medie !== null && p.niv.proba.medie <= 0; }).map(function (p) { return p.simbol; });
   if (slabe.length) todo.push({ c: "n", t: slabe.join(" și ") + ": proba pe istoric e pe minus în starea de acum", s: "Stopul calculat doar limitează pierderea. N-aș adăuga la " + (slabe.length === 1 ? "ea" : "ele") + ".", b: "" });
+  // v87: frana de "cumparat in jos" (ultimele 7 zile) si rezultatele trimestriale in urmatoarele 10 zile
+  var jos7 = t212.istoric && Array.isArray(t212.istoric.umpleri) ? ActiuniSemnale.cumparariInJos(t212.istoric.umpleri).filter(function (x) { return Date.now() - x.t < 7 * 86400000; }) : [];
+  jos7.slice(-3).reverse().forEach(function (x) { var a = ActiuniSemnale.alertaFrana(x, T212.simbol(x.ticker)); todo.push({ c: a.nivel === "critic" ? "r" : "g", t: a.titlu + " · " + new Date(x.t).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit" }), s: a.mesaj, b: "" }); });
+  poz.forEach(function (p) {
+    var r = t212.rezultate[p.ticker], zile = r && r.data ? Math.ceil((Date.parse(r.data + "T12:00:00Z") - Date.now()) / 86400000) : null;
+    if (zile !== null && zile >= 0 && zile <= 10) todo.push({ c: "n", t: p.simbol + " își anunță rezultatele pe " + t212ZiScurta(r.data) + (zile === 0 ? " (azi)" : zile === 1 ? " (mâine)" : " (peste " + zile + " zile)"), s: "Prețul poate sări 10–20% într-o noapte, în orice direcție. 👉 Aș avea stopul pus înainte și n-aș cumpăra în plus chiar înainte de anunț.", b: '<button type="button" class="t212BtnLinie" data-action-click="t212Deschide(\'' + escapeHtml(p.ticker) + '\')">Vezi ' + escapeHtml(p.simbol) + '</button>' });
+  });
+  var RT = { r: 0, g: 1, n: 2, v: 3 }; todo.sort(function (a, b) { return RT[a.c] - RT[b.c]; });
   h += '<section class="t212Todo" aria-label="Ce ai de făcut acum"><div class="t212TodoCap"><h4>Ce ai de făcut acum</h4><span class="tbSub">în ordinea urgenței</span></div>'
     + (todo.length ? todo.map(function (x) { return '<div class="t212TodoRand"><span class="t212Dunga ' + x.c + '"></span><div><b>' + escapeHtml(x.t) + '</b><p>' + escapeHtml(x.s) + '</p></div>' + x.b + '</div>'; }).join("")
       : '<div class="t212TodoRand"><span class="t212Dunga v"></span><div><b>Nimic urgent</b><p>' + (poz.length ? "Toate pozițiile au plan și niciuna n-a atins stopul." : "N-ai poziții deschise.") + '</p></div></div>') + '</section>';
@@ -171,6 +182,7 @@ function t212Render() {
     }).join("") + '<p class="tbSub t212PfNota">Bara plină = 30% din cont. Galben peste 15%, roșu peste 20%.</p><p class="t212Fac">' + escapeHtml(pf.ceAsFace) + '</p>';
   }
   t212RenderPoarta();
+  if (typeof contTotRender === "function") contTotRender();
 }
 
 function t212RandPozitie(p) {
@@ -179,7 +191,7 @@ function t212RandPozitie(p) {
   var planTxt = p.plan ? [pl.trailPct ? "−" + String(pl.trailPct).replace(".", ",") + "% de la max" : "", pl.stop ? "stop " + t212Usd(pl.stop) : "", pl.tinta ? "țintă " + t212Usd(pl.tinta) : ""].filter(Boolean).join(" · ") : "";
   var w = p.pond > 0.2 ? " rau" : p.pond > 0.15 ? " atentie" : "";
   var rand = '<tr class="t212Rand" id="t212R-' + tk + '" tabindex="0" aria-expanded="' + des + '" data-action-click="t212Comuta(\'' + tk + '\')">'
-    + '<td><div class="t212Sim"><span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + (+p.qty.toFixed(2)) + ' buc · mediu ' + t212Usd(p.pretMediu) + '</span></div></div></td>'
+    + '<td><div class="t212Sim"><span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + (+p.qty.toFixed(2)) + ' buc · mediu ' + t212Usd(p.pretMediu) + (t212.rezultate[p.ticker] && t212.rezultate[p.ticker].data ? ' · rezultate ' + t212ZiScurta(t212.rezultate[p.ticker].data) : '') + '</span></div></div></td>'
     + '<td class="c-acum">' + t212Usd(p.pret) + '</td>'
     + '<td class="c-rez"><b class="' + t212Cls(p.ppl) + '">' + t212Lei(p.ppl) + '</b><span class="t212Mic">' + (p.pctLei !== null ? t212Pct(p.pctLei) + ' · preț ' + t212Pct(pctPret) : 'preț ' + t212Pct(pctPret)) + '</span></td>'
     + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' : '—') + '</td>'
@@ -259,7 +271,7 @@ function t212PreturiPoarta(p) {
     + '<div><span class="tbEt2">Intrare (ordin limită)</span><b>' + (n.intrare ? t212Usd(n.intrare.pret) : "—") + '</b><span class="tbSub">' + escapeHtml(n.intrare ? n.intrare.motiv + (n.intrare.pret < p.st.pret ? " · " + t212Pct(n.intrare.pret / p.st.pret - 1) + " față de acum" : "") : n.intrareMotiv) + '</span></div>'
     + '<div><span class="tbEt2">Stop' + (n.intrare ? "" : " (dacă o cumperi totuși)") + '</span><b class="bad">' + t212Usd(n.stop) + '</b><span class="tbSub">' + t212Pct(-n.riscPct) + (n.intrare ? ' de la intrare' : ' de la prețul de acum') + (p.planScris ? " · ai scris tu alt stop — poarta îl folosește pe al tău" : "") + '</span></div>'
     + '<div><span class="tbEt2">Țintă</span><b class="good">' + t212Usd(n.tinta) + '</b><span class="tbSub">' + t212Pct(n.tinta / baza - 1) + ' (2× riscul)</span></div>'
-    + '<div><span class="tbEt2">Cât cumperi</span><b>' + (m ? (+m.bucati.toFixed(3)).toLocaleString("ro-RO") + ' buc' : "—") + '</b><span class="tbSub">' + (m ? "≈ " + t212Suma(m.suma) + " · la stop pierzi ~" + t212Suma(m.risc) + " (1% din cont)" + (m.plafonat ? " · tăiat la 20% din cont" : "") : !cumpar ? "nu cumpăr acum — vezi verdictul de sus" : "citește întâi contul") + '</span></div></div>'
+    + '<div><span class="tbEt2">Cât cumperi</span><b>' + (m ? (+m.bucati.toFixed(3)).toLocaleString("ro-RO") + ' buc' : "—") + '</b><span class="tbSub">' + (m ? "≈ " + t212Suma(m.suma) + " · la stop pierzi ~" + t212Suma(m.risc) + " (1% din cont)" + (m.plafonat ? " · tăiat la 20% din cont" : "") + " · comision dus-întors ~" + t212Suma(m.comision) + ", deci ieși pe zero abia la +0,3%" : !cumpar ? "nu cumpăr acum — vezi verdictul de sus" : "citește întâi contul") + '</span></div></div>'
     + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
 }
 function t212RenderPoarta() {
@@ -269,7 +281,7 @@ function t212RenderPoarta() {
   out.innerHTML = '<div class="t212Verdict ' + n[1] + '"><b>' + n[0] + ' · ' + escapeHtml(p.simbol) + '</b><span class="tbSub">acum ' + t212Usd(st.pret) + ' · trend ' + escapeHtml(st.trend.dir) + ' · față de maximul pe 7 zile ' + t212Pct(st.distMax7z) + ' · pe 52 săpt. ' + t212Pct(st.distMax52) + '</span></div>'
     + (p.v.motive.length ? '<ul class="t212Motive">' + p.v.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '<p class="good">Nimic de obiectat.</p>')
     + t212PreturiPoarta(p)
-    + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + (p.v.nivel === "cumpara" ? "cumpăr, dar cel mult " + (p.tot ? Math.round(p.tot * 0.2).toLocaleString("ro-RO") + " lei (20% din cont)" : "20% din cont") + " și pun stopul scris imediat după." : p.v.nivel === "nu" ? "nu cumpăr acum; pentru acțiuni cumperi doar long, deci aștept să se întoarcă trendul." : p.v.nivel === "asteapta" ? "aștept până se rezolvă ce e mai sus — mai ales planul: fără stop scris, NPA a costat 8.165 lei." : "fără prețuri nu judec.") + '</p>';
+    + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + (p.v.nivel === "cumpara" ? "cumpăr, dar cel mult " + (p.tot ? Math.round(p.tot * 0.2).toLocaleString("ro-RO") + " lei (20% din cont)" : "20% din cont") + " și pun stopul scris imediat după." : p.v.nivel === "nu" ? "nu cumpăr acum; pentru acțiuni cumperi doar long, deci aștept să se întoarcă trendul." : p.v.nivel === "asteapta" ? "aștept până se rezolvă ce e mai sus — mai ales planul: fără un plan scris, NPA a crescut prin cumpărări în jos la 33.000 de lei și a costat 8.165." : "fără prețuri nu judec.") + '</p>';
 }
 
 // ---------------- jurnalul de actiuni ----------------
@@ -303,7 +315,7 @@ function jtRenderActiuni() {
   var r = j.r, l = j.p.inchise, P = t212Pct, L = function (v) { return t212Lei(v); }, cls = t212Cls;
   var cel = function (et, v, c, sub) { return '<div class="tbKpiCel"><span class="tbEt2">' + escapeHtml(et) + '</span><b class="tbKpiVal ' + (c || "") + '">' + escapeHtml(v) + '</b>' + (sub ? '<span class="tbSub">' + escapeHtml(sub) + '</span>' : "") + '</div>'; };
   var st = t212.istoric.stare || {}, h = '<h3 class="jtTitluPiata">📈 Acțiuni · Trading 212</h3>';
-  h += '<div class="tbKpi jtKpi">' + cel("Câștigat REAL", L(r.total), cls(r.total), r.n + " trade-uri, " + r.pePlus + " pe plus (" + P(r.n ? r.pePlus / r.n : null).replace("+", "") + ")")
+  h += '<div class="tbKpi jtKpi">' + cel("Câștigat REAL", L(r.total), cls(r.total), r.n + " trade-uri, " + r.pePlus + " pe plus (" + P(r.n ? r.pePlus / r.n : null).replace("+", "") + ")" + (t212.dividende && t212.dividende.n ? " · + dividende " + t212Lei(t212.dividende.total, 2) : ""))
     + cel("T212 îți arată", L(r.totalOficial), "", "fără comisioane") + cel("Comisioane de conversie", L(-r.comisioane), "bad", "0,15% la fiecare schimb lei↔dolari")
     + cel("Vândute în afara orelor", L(r.ext.total), cls(r.ext.total), r.ext.n + " trade-uri") + '</div>';
   h += t212Cireasa(l);
@@ -317,7 +329,8 @@ function jtRenderActiuni() {
   var cea = g.slice().sort(function (a, b) { return a.tot - b.tot; })[0];
   h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Cât ai ținut — și ce a ieșit</h4><span class="tbSub">rezultat real, după comisioane</span></div><div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Ținut</th><th>Trade-uri</th><th>Pe plus</th><th>Comisioane</th><th>Real</th></tr></thead><tbody>'
     + g.map(function (x) { return '<tr><td>' + x.et + '</td><td>' + x.n + '</td><td>' + (x.n ? Math.round(x.plus / x.n * 100) + "%" : "—") + '</td><td class="bad">' + L(-x.com) + '</td><td class="' + cls(x.tot) + '"><b>' + L(x.tot) + '</b></td></tr>'; }).join("") + '</tbody></table></div>'
-    + (cea && cea.tot < 0 ? '<p class="tbFac">👉 <b>Ce aș face eu:</b> banii se pierd pe trade-urile ținute ' + escapeHtml(cea.et) + ' (' + L(cea.tot) + ') — adică pe cele rămase pe minus și lăsate „să-și revină”. Aș pune la fiecare cumpărare un stop scris (−8…−10%) și l-aș respecta.</p>' : '') + '</div>';
+    + (cea && cea.tot < 0 ? '<p class="tbFac">👉 <b>Ce aș face eu:</b> banii se pierd pe trade-urile ținute ' + escapeHtml(cea.et) + ' (' + L(cea.tot) + ') — adică pe cele rămase pe minus și lăsate „să-și revină”. ' + t212SfatStop(l) + '</p>' : '') + '</div>';
+  h += t212StopBloc(l) + t212ReguliBloc(l);
   // greselile cu costul lor
   h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Greșelile care te-au costat</h4><span class="tbSub">găsite automat; suma = rezultatul trade-urilor care le-au avut</span></div>'
     + (r.greseli.length ? '<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Greșeala</th><th>De câte ori</th><th>Rezultatul lor</th></tr></thead><tbody>' + r.greseli.map(function (x) { return '<tr><td><b>' + escapeHtml(x.text) + '</b></td><td>' + x.n + '</td><td class="' + cls(x.cost) + '">' + L(x.cost) + '</td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="good">Nicio greșeală găsită automat.</p>') + '</div>';
@@ -337,6 +350,38 @@ function jtRenderActiuni() {
   }).join("") + '</div>';
   box.innerHTML = h;
 }
+// v87: "cat te-ar fi salvat stopul" - rejucat pe preturile reale (zilnice), din verdictele colectorului
+function t212StopBloc(l) {
+  var cfm = t212.cf; if (!cfm) return "";
+  var r = ActiuniSemnale.rezumatStop(l, cfm, [8, 10, 15]), L = function (v) { return t212Lei(v); };
+  if (!r.judecate) return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4></div><p class="tbSub">Colectorul de acasă rejoacă trade-urile tale cu un stop (40 de acțiuni pe oră). Încă n-a terminat niciunul.</p></div>';
+  var best = [8, 10, 15].slice().sort(function (a, b) { return r.praguri[b].total - r.praguri[a].total; })[0], bp = r.praguri[best];
+  return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4><span class="tbSub">trade-urile tale rejucate pe prețurile zilnice reale · ' + r.judecate + ' judecate</span></div>'
+    + '<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Stop la</th><th>Totalul ar fi fost</th><th>Față de ce ai făcut</th><th>Trade-uri oprite</th><th>Din care câștigătoare tăiate</th></tr></thead><tbody>'
+    + '<tr><td>fără stop (ce ai făcut)</td><td class="' + t212Cls(r.real) + '"><b>' + L(r.real) + '</b></td><td>—</td><td>—</td><td>—</td></tr>'
+    + [8, 10, 15].map(function (p) { var g = r.praguri[p]; return '<tr><td>−' + p + '%</td><td class="' + t212Cls(g.total) + '"><b>' + L(g.total) + '</b></td><td class="' + t212Cls(g.dif) + '">' + L(g.dif) + '</td><td>' + g.atinse + '</td><td>' + g.castigatoareTaiate + '</td></tr>'; }).join("") + '</tbody></table></div>'
+    + '<p class="tbFac">👉 <b>Ce aș face eu:</b> ' + (bp.dif > 0 ? 'stop la −' + best + '% pus din prima clipă: pe trade-urile tale ar fi însemnat ' + L(bp.dif) + ' în plus, deși ar fi tăiat și ' + bp.castigatoareTaiate + ' trade-uri care până la urmă au ieșit pe plus.' : 'pe trade-urile tale un stop fix n-ar fi ajutat în total — ar fi tăiat prea multe care își reveneau. Pierderile mari au venit din cumpărările în plus pe minus și din pozițiile prea mari (NPA), nu din lipsa unui stop strâns: acolo aș pune frâna. Stopul care urcă după maxim, din planul fiecărei poziții, e ales pe istoricul fiecărei acțiuni; pe trade-urile tale încă nu l-am probat.') + '</p>'
+    + '<p class="tbSub">Pe prețuri de închidere zilnice: ziua cumpărării și a vânzării nu intră (nu știm ordinea din zi). Cu stop, rezultatul = prețul de ieșire față de cel de cumpărare, minus 0,30% comisionul; cursul dolar/leu nu intră.</p></div>';
+}
+// v87: sfatul pentru pozitiile tinute pe minus vine din proba cu stop, nu dintr-o regula de manual. Pe datele
+// lui (25.09) un stop fix strans ar fi iesit MAI RAU (-8%: ~-6.700 lei fata de +4.091): taia prea multe care isi
+// reveneau. Ce l-ar fi ajutat: sa nu cumpere in plus pe minus (NPA) si sa nu puna mult pe o actiune.
+function t212SfatStop(l) {
+  var r = t212.cf ? ActiuniSemnale.rezumatStop(l, t212.cf, [8, 10, 15]) : null;
+  if (!r || !r.judecate) return "Aș avea un plan de ieșire scris la fiecare cumpărare.";
+  var best = [8, 10, 15].slice().sort(function (a, b) { return r.praguri[b].dif - r.praguri[a].dif; })[0];
+  return r.praguri[best].dif > 0 ? "Aș pune la fiecare cumpărare un stop la −" + best + "% și l-aș respecta: pe trade-urile tale ar fi adus " + t212Lei(r.praguri[best].dif) + "."
+    : "Un stop fix strâns nu te-ar fi ajutat (vezi „Cât te-ar fi salvat stopul”, mai jos). Ce te-ar fi ajutat: să nu cumperi în plus pe minus și să nu pui mult pe o singură acțiune — de aici au venit pierderile mari (NPA).";
+}
+// v87: regulile tale, invatate din jurnalul de actiuni
+function t212ReguliBloc(l) {
+  var r = ActiuniSemnale.reguliPersonale(l, "Europe/Bucharest");
+  return '<div class="tbBloc"><div class="tbBlocCap"><h4>🧭 Regulile tale (învățate din jurnal)</h4><span class="tbSub">grupe de cel puțin 30 de trade-uri care ies clar mai rău decât restul</span></div>'
+    + (!r.suficient ? '<p class="tbSub">' + r.n + ' trade-uri: mai trebuie ' + r.lipsa + '.</p>'
+      : r.reguli.length ? '<ul class="grLista">' + r.reguli.slice(0, 5).map(function (x) { return '<li class="bad">' + escapeHtml(x.text) + '</li>'; }).join("") + '</ul><p class="tbFac">👉 <b>Ce aș face eu:</b> aș evita trade-urile ' + escapeHtml(r.reguli[0].grupa) + ' până nu se schimbă cifra.</p>'
+      : '<p class="good">Pe ' + r.n + ' trade-uri nu văd o grupă care să iasă clar mai rău decât restul.</p>') + '</div>';
+}
+
 // 🍒 "Daca ascultai de Radar" pe actiuni: verdictul portii la ora fiecarei cumparari (colectorul de acasa)
 function t212Cireasa(l) {
   var cfm = t212.cf;
@@ -355,3 +400,30 @@ function t212Cireasa(l) {
     + '<p class="tbSub">Radarul a văzut doar zilele închise înainte de fiecare cumpărare; planul nu intră (atunci nu-l știa). ' + (cr.faraDate ? cr.faraDate + ' trade-uri fără prețuri (mai ales acțiuni europene — Radarul caută prețuri doar pe bursa americană — și câteva delistate) nu sunt judecate. ' : '') + 'E un semn, nu o dovadă: poarta nu e antrenată pe trade-urile tale, doar aplicată pe ele.</p></div>';
 }
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", function () { jtAplicaFiltru(); });
+
+// v87: tot contul pe un rand, sus pe ambele pagini: botii Pionex (USDT, cu echivalentul in lei) si Trading 212 (lei)
+var contTot = { boti: null, botiLa: 0, inLucru: false };
+async function contTotAsigura() {
+  if (contTot.inLucru) return; contTot.inLucru = true;
+  try {
+    var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : null;
+    if (!boti && Date.now() - contTot.botiLa > 60000) { try { var d = await getJSON("/api/bot-orders"); contTot.boti = d && Array.isArray(d.bots) ? d.bots : []; contTot.botiLa = Date.now(); } catch (e) { contTot.boti = contTot.boti || null; } }
+    if (!t212.cont) { try { t212.cont = await getJSON("/api/t212?action=cont"); } catch (e) {} }
+    if (!t212.istoric) { try { t212.istoric = await getJSON("/api/t212?action=istoric"); } catch (e) {} }
+  } finally { contTot.inLucru = false; }
+  contTotRender();
+}
+function contTotRender() {
+  var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : contTot.boti;
+  var act = (boti || []).filter(function (b) { return b && b.activ; }), usdt = 0, areUsdt = false;
+  act.forEach(function (b) { var v = Number(b.profitTotal); if (isFinite(v)) { usdt += v; areUsdt = true; } });
+  var fx = t212Fx(), c = t212.cont && t212.cont.cash, parti = [];
+  parti.push(boti ? '<span><b>Pionex</b> · ' + act.length + (act.length === 1 ? " bot activ" : " boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + (usdt >= 0 ? "+" : "−") + Math.abs(usdt).toFixed(2) + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
+  parti.push(c ? '<span><b>Trading 212</b> · ' + escapeHtml(t212Suma(c.total)) + ' · deschise <b class="' + t212Cls(c.ppl) + '">' + escapeHtml(t212Lei(c.ppl)) + '</b></span>' : '<span class="tbSub">Trading 212: aduc contul…</span>');
+  // actiunile pe IESI: semaforul le-a pus deja in tabelul pozitiilor
+  var iesi = document.querySelectorAll("#t212Continut .t212Pill-iesi").length;
+  var lich = act.filter(function (b) { var d = Number(b.distantaLichidarePct); return b.lichidareDepasita || (isFinite(d) && Math.abs(d) < 15); }).length;
+  var ati = iesi + lich;
+  parti.push(ati ? '<span class="bad">⚠️ ' + (iesi ? iesi + (iesi === 1 ? " acțiune de ieșit" : " acțiuni de ieșit") : "") + (iesi && lich ? " · " : "") + (lich ? lich + (lich === 1 ? " bot aproape de lichidare" : " boți aproape de lichidare") : "") + '</span>' : '<span class="good">✓ nimic roșu</span>');
+  document.querySelectorAll("[data-cont-tot]").forEach(function (el) { el.innerHTML = parti.join('<span class="contTotSep">│</span>'); });
+}
