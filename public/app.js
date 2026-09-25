@@ -5160,6 +5160,7 @@ function renderGrid(){
   var st=f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive;
   var h='<div class="grVerdict '+niv[1]+'"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>';
   h+=grPoartaHtml(f);
+  if(typeof grBiletTu==="function")h+=grBiletTu(f);
   h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
     +(f.contra?'<p class="tbWarn">'+(f.manual?"Ai ales ":"Trendul zice ")+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div>';
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Setările de pus în Pionex</h4><span class="tbSub">Futures Grid · '+escapeHtml(f.simbol.replace(/_USDT_PERP$/,""))+'/USDT</span></div>'
@@ -5534,8 +5535,10 @@ function tbRenderTodo(){
   var alerte=(Array.isArray(tbStare.alerteServer)?tbStare.alerteServer:[]).filter(function(a){return a&&(!a.bot||String(a.bot)===String(b.id))});
   var aver=tbStare.avertLista||(Array.isArray(b.avertismente)?b.avertismente:[]);
   var l=TabloExtra.ceAiDeFacut({acum:Date.now(),sfaturi:tbStare.sfaturiLista||[],avertismente:aver,alerte:alerte,planGol:planGol});
+  // v89: consilierul - istoricul tau pe moneda, frica/lacomia crypto, stirile despre moneda
+  if(typeof consilierBot==="function"){var cb=consilierBot(b);if(cb.length){l=l.filter(function(x){return x.c!=="v"});cb.forEach(function(x){l.push({c:x.nivel,titlu:x.titlu,text:(x.text?x.text+" ":"")+(x.ceAsFace?"👉 "+x.ceAsFace:""),n:0,stiri:x.stiri})});var RO={r:0,g:1,n:2,v:3};l.sort(function(a,c){return RO[a.c]-RO[c.c]})}}
   box.innerHTML=l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1);
-    return '<div class="tbTodoRand"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
+    return '<div class="tbTodoRand"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+(x.stiri&&typeof t212StiriHtml==="function"?t212StiriHtml(x.stiri,3):'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
   var azi=alerte.filter(function(a){return a.t>0&&Date.now()-a.t<86400000}).length,pune=function(id,t){var e=$(id);if(e)e.textContent=t};
   pune("tbPlSub-alerte",azi?azi+" în ultimele 24 h":"niciuna în ultimele 24 h");
   pune("tbPlSub-avert",aver.length?aver.length+(aver.length===1?" de la server":" de la server"):"niciunul");

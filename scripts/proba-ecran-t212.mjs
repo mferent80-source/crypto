@@ -178,7 +178,11 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`document.getElementById("t212R-${tk0}").click()`);
       assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), false, "clic pe rand deschide detaliile");
       const t = await b.ev(`document.querySelector("#t212Det-${tk0} .t212Preturi").innerText`);
-      assert.match(t, /Stop care urcă după maxim/); assert.match(t, /Țintă/); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
+      assert.match(t, /Stop care urcă după maxim/); assert.match(t, /Țintă/);
+      // v89: sfaturile consilierului in detaliu + "Piata azi" sus
+      const tDet = await b.ev(`document.getElementById("t212Det-${tk0}").innerText`);
+      assert.match(tDet, /Sfaturi/i, "blocul de sfaturi din detaliu"); FARA_GUNOI(tDet);
+      await panaCand(b, `/Nasdaq/.test(document.querySelector("#t212Card [data-piata-azi]").innerText)`, 30000, "Piata azi"); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
       await b.poza(path.join(DOSAR_POZE, `t212-deschis-${nume}.png`));
       await b.ev(`document.getElementById("t212R-${tk0}").click()`);
       assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), true, "al doilea clic il inchide");
@@ -202,6 +206,7 @@ async function scenariu(lat, inal, nume) {
       assert.match(t, /CUMPĂR|AȘTEAPTĂ|NU ACUM|FĂRĂ DATE/); assert.match(t, /ASTS/); assert.match(t, /Ce aș face eu/); FARA_GUNOI(t);
       assert.match(t, /Prețurile calculate pentru ASTS/); assert.match(t, /Cât cumperi/);
       if (!/NU ACUM/.test(t)) assert.match(t, /comision dus-întors/);
+      assert.match(t, /Ce spune istoricul tău/i, "v89: biletul la intrare");
       // verdictul si marimea nu se contrazic: pe "NU ACUM" nu se da un numar de bucati
       if (/NU ACUM/.test(t)) assert.match(t, /nu cumpăr acum — vezi verdictul/); else assert.match(t, /1% din cont|citește întâi contul/);
       await b.ev(`document.getElementById("t212PoartaRez").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, `poarta-${nume}.png`));

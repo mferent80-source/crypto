@@ -14,6 +14,7 @@ import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 import { trimiteDiscord } from "./lib/canal-discord.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
+import { turaDimineata as turaDimineataModul } from "./lib/tura-dimineata.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -98,10 +99,11 @@ const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "pub
 const GridLaborator = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba);
 const T212 = incarca("t212.js", "T212");
 const ActiuniSemnale = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "actiuni-semnale.js"), "utf8") + "; return ActiuniSemnale;")(GridCalcul);
+const Consilier = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "consilier.js"), "utf8") + "; return Consilier;")(ActiuniSemnale);
 const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade);
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, Directie, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale].every(Boolean)); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, Directie, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier].every(Boolean)); process.exit(0); }
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 async function cere(cale, opt = {}) {
   const r = await fetch(BAZA + cale, { ...opt, headers: { ...ANTET, ...(opt.headers || {}) }, signal: AbortSignal.timeout(20000) });
@@ -404,6 +406,45 @@ async function turaCfActiuni() {
   cfActInLucru = false;
 }
 
+// v89: rezumatul de dimineata - o data pe zi, dupa 9:00 ora Romaniei (Radar + Discord)
+let dimineataInLucru = false;
+async function dateDimineata() {
+  const out = { deIesit: [], rezultate: [], plafon: [], stiri: [], boti: [] };
+  const bare = (r) => (Array.isArray(r) && r.length ? GridCalcul.bare(r.concat([r[r.length - 1]])) : null);   // bare() scoate ultima (in formare): o dublez
+  try { const pz = await cere("/api/stiri?action=piata"); out.piata = Consilier.piata({ qqq: bare(pz.qqq), spy: bare(pz.spy), vix: bare(pz.vix), fg: pz.fg }); } catch (e) { jurnal("dimineata piata", e.message); }
+  const v = citesteVarsSigur();
+  if (v.T212_API_KEY && v.T212_API_SECRET) {
+    try {
+      const c = await cere("/api/t212?action=cont"), pz = await cere("/api/t212?action=pozitii"), h = await cere("/api/t212?action=istoric");
+      const poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0), des = T212.perechi((h && h.umpleri) || []).deschise, cash = c && c.cash || {};
+      let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
+      const inv = cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
+      for (const x of poz) {
+        const s = T212.simbol(x.ticker);
+        try {
+          const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)), st = ActiuniSemnale.stare(GridCalcul.bare(d && d.randuri || []), x.currentPrice);
+          if (ActiuniSemnale.semafor({ ticker: x.ticker, simbol: s, qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan: null }, st).nivel === "iesi") {
+            let q = 0, cost = 0; des.forEach((l) => { if (l.ticker === x.ticker) { q += l.qty; cost += l.qty * l.costBuc; } });
+            out.deIesit.push({ simbol: s, pctLei: q > 0 && Math.abs(q - x.quantity) / x.quantity < 0.02 ? x.ppl / (cost * x.quantity / q) : null });
+          }
+        } catch (e) { jurnal("dimineata", s, e.message); }
+        try { const r = await cere("/api/t212?action=rezultate&ticker=" + encodeURIComponent(x.ticker)); if (r && r.data) out.rezultate.push({ simbol: s, data: r.data }); } catch {}
+        if (inv !== null && usd > 0) { const pond = x.quantity * x.currentPrice / usd * inv / cash.total; if (pond > 0.2) out.plafon.push({ simbol: s, pond }); }
+        try { const sn = await cere("/api/stiri?action=actiune&ticker=" + encodeURIComponent(x.ticker)); const t = (sn && sn.stiri || []).find((y) => y.la && Date.now() - y.la < 24 * 3600000); if (t) out.stiri.push({ simbol: s, titlu: t.titlu }); } catch {}
+      }
+    } catch (e) { jurnal("dimineata t212", e.message); }
+  }
+  try { const bo = await cere("/api/bot-orders"); out.boti = (bo && bo.bots || []).filter((b) => b.activ && Number.isFinite(Number(b.distantaLichidarePct)) && Math.abs(Number(b.distantaLichidarePct)) < 15).map((b) => ({ nume: String(b.baza || "").replace(/\.PERP$/, ""), lich: Math.abs(Number(b.distantaLichidarePct)) })); } catch {}
+  return out;
+}
+async function turaDimineata() {
+  if (process.env.COLECTOR_FARA_DIMINEATA || dimineataInLucru) return;
+  dimineataInLucru = true;
+  try { const r = await turaDimineataModul({ date: dateDimineata, Consilier, trimite: (m) => trimiteAlerta(m, null, "dimineata"), stare: meta(), jurnal }); if (r.trimis) jurnal("rezumatul de dimineata trimis"); }
+  catch (e) { jurnal("dimineata ESEC", e.message); }
+  dimineataInLucru = false;
+}
+
 // v84: raportul de duminica - o data pe saptamana, duminica dupa ora 20 (ora Romaniei)
 function saptamanaRo(t) {
   const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t));
@@ -437,6 +478,7 @@ if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt le
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message));
+  turaDimineata().catch((e) => jurnal("dimineata", e.message));
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);

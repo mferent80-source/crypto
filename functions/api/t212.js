@@ -9,6 +9,7 @@
 //   POST ?action=istoric {ordine:[id], umpleri:[...], stare} -> colectorul adauga o pagina (dedup pe id)
 // Verificat pe contul lui (25.09): istoricul vine ca items[{order, fill}], pagini cu nextPagePath.
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
+import { candidati } from "../_shared/simboluri.js";
 
 const H = { "content-type": "application/json", "cache-control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: H });
@@ -29,24 +30,6 @@ async function t212(env, cale, actiune) {
   return j;
 }
 
-// T212 pastreaza simbolul SPAC-ului de dinainte de listare (la fel in public/lib/t212.js)
-const REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO", FB: "META" };
-// AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B_US_EQ -> [BRK-B]; ne-US -> []
-// v88: bursele europene / Canada (la fel in public/lib/t212.js)
-const BURSA = { l: ".L", d: ".DE", p: ".PA", a: ".AS", s: ".SW", m: ".MI" }, TARA = { AT: ".VI", CA: ".TO" };
-function candidati(ticker) {
-  const t = String(ticker || ""), m = t.match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
-  if (!m) {
-    const e = t.match(/^([A-Z0-9]+)([a-z])_EQ$/);
-    if (e && BURSA[e[2]]) { const b = e[1], o = [b + BURSA[e[2]]], f = b.replace(/\d+$/, ""); if (f && f !== b) o.push(f + BURSA[e[2]]); return o; }
-    const c = t.match(/^([A-Z0-9]+)_(AT|CA)_EQ$/);
-    return c ? [c[1] + TARA[c[2]]] : [];
-  }
-  const s = m[1].toUpperCase().replace(/\./g, "-"), out = [s], fara = s.replace(/\d+$/, "");
-  if (fara && fara !== s) out.push(fara);
-  if (REDENUMIT[s]) out.unshift(REDENUMIT[s]);
-  return out;
-}
 async function yahoo(simbol, interval) {
   const range = interval === "1h" ? "60d" : "2y";
   const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=${interval}&range=${range}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
@@ -142,7 +125,7 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestGet({ request, env }) {
-  const auth = await requireApiAuth(request, env, "t212", 60); if (!auth.ok) return authErrorResponse(auth, H);
+  const auth = await requireApiAuth(request, env, "t212", 180); if (!auth.ok) return authErrorResponse(auth, H);
   const u = new URL(request.url), a = u.searchParams.get("action") || "";
   try {
     if (a === "preturi") {

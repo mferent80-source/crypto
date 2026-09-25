@@ -1686,3 +1686,14 @@ body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none
 #jurnaltrade details.tbPl>summary .tbSub{margin-left:auto;text-align:right}
 #jurnaltrade details.jtPl .jtTrade{padding:8px 12px}
 #jurnaltrade details.jtPl>#jtLista{padding:0 0 4px}
+/* v89: consilierul - sfaturile pe pozitie, stirile, biletul, piata azi */
+.piataAzi{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:5px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:12.5px;font-variant-numeric:tabular-nums}
+.piataAzi .good{color:var(--good)}.piataAzi .bad{color:var(--bad)}.piataAzi .tbWarn{color:var(--warn)}.piataAzi .tbSub{color:var(--muted)}
+.t212Sfaturi{margin:8px 0}.t212Sfaturi h5{margin:4px 0 6px}
+.t212Sfat{padding:6px 8px;margin:0 0 6px;border-left:3px solid #6c7a8e;background:rgba(144,160,182,.06);border-radius:4px}
+.t212Sfat-r{border-left-color:var(--bad)}.t212Sfat-g{border-left-color:var(--warn)}.t212Sfat-v{border-left-color:var(--good)}
+.t212Sursa{display:inline-block;margin-right:6px;padding:0 6px;border-radius:999px;background:var(--tb-fond2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.t212SfatFac{margin-top:3px}
+.t212Stiri{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:2px}.t212Stiri a{color:var(--accent);text-decoration:none}.t212Stiri a:hover{text-decoration:underline}
+.t212Bilet{margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}.t212Bilet h5{margin:0 0 4px}
+.t212Bilet .bad{color:var(--bad)}.t212Bilet .good{color:var(--good)}
