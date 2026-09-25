@@ -3013,7 +3013,8 @@ function navTo(id,load=false){
    else if(id==="gridset")porneGrid();
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
-   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof t212Porneste==="function")t212Porneste(false)}
+   else if(id==="stocks"){loadStockContext();checkStocksHealth()}
+   else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false)}
    else if(id==="scan")scan();
    else if(id==="replaylab")renderReplayLab();
    else if(id==="market")loadMarketOverview();
@@ -3114,7 +3115,7 @@ function loadPionexUniverseCache(){
 
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
-function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
+function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peT212",id==="t212");var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 const MARKET_BASES=[
@@ -5337,6 +5338,7 @@ function tbMarjaCalc(v){
 }
 function tbDeseneazaSaptPlan(b){
   var el=$("tbSapt"),ps=$("tbPlanStare"),P=GridCalcul.procent;if(!el||!ps)return;
+  tbRenderTodo();
   if(!b){el.innerHTML=ps.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
   // (1) saptamana
   if(tbSapt.botId!==b.id)el.innerHTML='<p class="tbSub">aduc istoricul de 7 zile…</p>';
@@ -5451,6 +5453,7 @@ function tbDeseneazaBanii(b){
   tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);tbDeseneazaSemafor(b);tbAduSemnale(b);tbDeseneazaPortofoliu();if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
+  tbStare.avertLista=lista;tbRenderTodo();
 }
 // Banda cu cele patru cifre de sus: ce se citeste dintr-o privire. Doar din
 // campurile rutei (aceleasi ca in lista de boti); lipsa ramane "—".
@@ -5516,8 +5519,28 @@ function renderTabloSfaturi(){
   var lista=Sfaturi.sfaturi({bot:b,scen:scen,sanse:sanse,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,
     funding:e.funding,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,
     fisa:tbFisa.botId===b.id?tbFisa.fisa:null,costuri:TabloExtra.grileVsCosturi(b,Date.now()),zero:TabloExtra.dacaInchizi(b),geom:TabloExtra.geometrieBot(b),ritm:ritm});
+  tbStare.sfaturiLista=lista;
   el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(s.faCe)+'</p>':'')+(s.deCe?'<p class="tbSub">'+escapeHtml(s.deCe)+'</p>':'')+'</div>'}).join("");
+  tbRenderTodo();
 }
+// v86: "Ce ai de facut acum" - sfaturile, avertismentele serverului, alertele colectorului (stranse) si planul
+// lipsa, fiecare o singura data (TabloExtra.ceAiDeFacut, probat in scripts/tablou-v86.mjs)
+function tbRenderTodo(){
+  var box=$("tbTodoLista");if(!box)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot;
+  if(!b){box.innerHTML='<p class="tbSub tbTodoGol">Aștept botul…</p>';return}
+  var pl=tbPlan.botId===b.id?tbPlan.plan:null,planGol=!(pl&&(pl.plus||pl.minus||pl.afaraOre));
+  var alerte=(Array.isArray(tbStare.alerteServer)?tbStare.alerteServer:[]).filter(function(a){return a&&(!a.bot||String(a.bot)===String(b.id))});
+  var aver=tbStare.avertLista||(Array.isArray(b.avertismente)?b.avertismente:[]);
+  var l=TabloExtra.ceAiDeFacut({acum:Date.now(),sfaturi:tbStare.sfaturiLista||[],avertismente:aver,alerte:alerte,planGol:planGol});
+  box.innerHTML=l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1);
+    return '<div class="tbTodoRand"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
+  var azi=alerte.filter(function(a){return a.t>0&&Date.now()-a.t<86400000}).length,pune=function(id,t){var e=$(id);if(e)e.textContent=t};
+  pune("tbPlSub-alerte",azi?azi+" în ultimele 24 h":"niciuna în ultimele 24 h");
+  pune("tbPlSub-avert",aver.length?aver.length+(aver.length===1?" de la server":" de la server"):"niciunul");
+  pune("tbPlSub-plan",planGol?"niciun plan încă — scrie-l la rece":"planul e pus · colectorul te anunță");
+}
+function tbDeschidePlan(){var d=$("tbPl-plan");if(!d)return;d.open=true;if(d.scrollIntoView)d.scrollIntoView({block:"center",behavior:"smooth"});var i=d.querySelector("input");if(i)setTimeout(function(){i.focus()},250)}
 function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
   var s=tbStare.istoricServer,c=s&&s.config,e=tbStare.extra||{};
@@ -5535,6 +5558,7 @@ function renderTabloAlerte(){
   else if(!lista.length)h+='<p class="tbSub">Nicio alertă încă. Aici apar: lichidare aproape, Pionex în stare anormală, preț ieșit din grid, piața pe 4h împotriva botului, mișcare mare.</p>';
   else h+='<div class="tbAlerteLista">'+lista.map(function(a){var n=NIV[a.nivel]||NIV.info;return '<div class="tbAlerta"><span class="tbSub">'+escapeHtml(new Date(a.t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</span><b class="'+n[1]+'">'+n[0]+' '+escapeHtml(a.titlu)+'</b>'+(a.mesaj?'<p class="tbSub">'+escapeHtml(a.mesaj)+'</p>':'')+'</div>'}).join("")+'</div>';
   el.innerHTML=h;
+  tbRenderTodo();
 }
 function tbDeseneazaKpi(){
   var b=tbStare.routeOk===false?null:tbStare.bot;

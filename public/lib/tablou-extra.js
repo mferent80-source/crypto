@@ -163,7 +163,54 @@ var TabloExtra = (function () {
     return { poz: poz, pill: pill, ton: ton, josPct: j, susPct: s, inGrid: inGrid, text: inGrid ? "↓ " + f(j) + " până jos · ↑ " + f(s) + " până sus" : p < jos ? "sub grid cu " + f(-j) : "peste grid cu " + f(-s) };
   }
 
-  return { distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
+  // v86: "Ce ai de facut acum" pe Tabloul botului - fiecare lucru O SINGURA DATA, in ordinea urgentei.
+  // Surse: alertele colectorului din ultimele 24 h (critic/atentie, stranse pe titlu: 5 la fel = un rand "x5"),
+  // avertismentele serverului (unite cu alerta care spune acelasi lucru), sfaturile (critic/atentie; info doar
+  // daca are "ce as face eu"; "bine" nu) si planul lipsa. c: r = rosu, g = galben, n = gri, v = nimic urgent.
+  function ceAiDeFacut(o) {
+    o = o || {};
+    var acum = o.acum || Date.now(), out = [];
+    function norm(x) { return String(x || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
+    function cuv(x) { return norm(x).split(" ").filter(function (w) { return w.length >= 4; }); }
+    function acelasi(a, b) {
+      var A = cuv(a), B = cuv(b); if (!A.length || !B.length) return false;
+      var comune = A.filter(function (w) { return B.indexOf(w) >= 0; }).length;
+      return comune >= Math.min(3, A.length, B.length);
+    }
+    // 1) alertele stranse
+    var gr = [];
+    (Array.isArray(o.alerte) ? o.alerte : []).forEach(function (a) {
+      if (!a || !a.titlu || !(a.t > 0) || acum - a.t > 86400000 || (a.nivel !== "critic" && a.nivel !== "atentie")) return;
+      var t = String(a.titlu).replace(/^[A-Z0-9._-]+: /, ""), g = null;
+      for (var i = 0; i < gr.length; i++) if (norm(gr[i].titlu) === norm(t)) { g = gr[i]; break; }
+      if (!g) { g = { c: a.nivel === "critic" ? "r" : "g", titlu: t, text: String(a.mesaj || ""), n: 0, ultima: a.t }; gr.push(g); }
+      g.n++; if (a.nivel === "critic") g.c = "r"; if (a.t > g.ultima) { g.ultima = a.t; g.text = String(a.mesaj || g.text); }
+    });
+    // 2) avertismentele serverului; cel care spune acelasi lucru ca o alerta o inghite (si ii ia numarul)
+    (Array.isArray(o.avertismente) ? o.avertismente : []).forEach(function (a) {
+      if (!a || !String(a).trim()) return;
+      var it = { c: "g", titlu: String(a), text: "", n: 0 };
+      for (var i = 0; i < gr.length; i++) if (acelasi(gr[i].titlu, a)) { it.c = gr[i].c; it.n = gr[i].n; it.text = gr[i].text; gr.splice(i, 1); break; }
+      out.push(it);
+    });
+    out = out.concat(gr);
+    // 3) sfaturile
+    var bine = null;
+    (Array.isArray(o.sfaturi) ? o.sfaturi : []).forEach(function (x) {
+      if (!x || !x.titlu) return;
+      if (x.ton === "bine") { if (/nimic urgent/i.test(x.titlu)) bine = x; return; }
+      var c = x.ton === "critic" ? "r" : x.ton === "atentie" ? "g" : x.faCe ? "n" : null;
+      if (!c || out.some(function (y) { return acelasi(y.titlu, x.titlu); })) return;
+      out.push({ c: c, titlu: x.titlu, text: String(x.text || "") + (x.faCe ? " 👉 " + x.faCe : ""), n: 0 });
+    });
+    if (o.planGol) out.push({ c: "n", titlu: "Nu ai un plan pentru bot", text: "Scrie-l la rece. Colectorul te anunță când se atinge un prag.", n: 0, actiune: "plan" });
+    var R = { r: 0, g: 1, n: 2 };
+    out.sort(function (a, b) { return R[a.c] - R[b.c]; });
+    if (!out.length) out.push({ c: "v", titlu: "Nimic urgent", text: bine ? String(bine.text || "") + (bine.faCe ? " 👉 " + bine.faCe : "") : "Nu văd nimic care să ceară o mișcare acum.", n: 0 });
+    return out;
+  }
+
+  return { ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

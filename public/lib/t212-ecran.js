@@ -40,13 +40,11 @@ async function t212Porneste(forta) {
   t212.inLucru = false; t212Render();
   if (typeof jtRenderActiuni === "function") jtRenderActiuni();
 }
-// Drumul spre card din ORICE mod (Crypto sau US Stocks): butonul "Nasdaq / US Stocks" din meniu apare
-// doar in modul US Stocks, asa ca pana la v85.1 cardul nu se gasea din modul Crypto.
+// v86: Trading 212 are PAGINA LUI (ca Tabloul botului): fara bara de cautare, blocul "AAPL" si filele de
+// deasupra - "fa la fel toata pagina" (25.09). Merge din orice mod, Crypto sau US Stocks.
 function deschideT212() {
-  openStocksDesk();
-  document.querySelectorAll("[data-nav]").forEach(function (x) { x.classList.toggle("active", x.dataset.nav === "t212"); });
-  t212Porneste(false);
-  setTimeout(function () { var c = $("t212Card"); if (c && c.scrollIntoView) c.scrollIntoView({ block: "start", behavior: "smooth" }); }, 60);
+  navTo("t212", true);
+  if (typeof window.scrollTo === "function") window.scrollTo(0, 0);
 }
 function t212Nume(tk) {
   var u = t212.istoric && t212.istoric.umpleri || [];

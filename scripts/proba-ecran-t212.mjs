@@ -251,7 +251,25 @@ await scenariu(390, 844, "telefon");
     await test("monitor 1920 · cardul T212 are cel mult 1.180 px (ca demo-ul), nu tot ecranul", async () => {
       assert.ok((await b.ev(`document.getElementById("t212Card").getBoundingClientRect().width`)) <= 1181);
     });
+    await test("monitor 1920 · Trading 212 e pagina lui: fara bara de cautare / blocul pietei / file deasupra", async () => {
+      assert.equal(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none");
+      assert.equal(await b.ev(`document.getElementById("t212").classList.contains("on")`), true);
+    });
+    await test("monitor 1920 · Tabloul botului (v86): latimea demo-ului, 'Ce ai de facut acum' fara dubluri, coloanele nu se suprapun", async () => {
+      await b.ev(`navTo('tabloubot',true)`);
+      await panaCand(b, `document.querySelectorAll("#tbTodoLista .tbTodoRand").length>0`, 60000, "lista 'ce ai de facut'");
+      await asteapta(4000);
+      assert.ok((await b.ev(`document.querySelector("#tabloubot .tbCadru").getBoundingClientRect().width`)) <= 1181);
+      assert.equal(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none");
+      const titluri = await b.ev(`[...document.querySelectorAll("#tbTodoLista .tbTodoRand b")].map(x=>x.textContent.toLowerCase())`);
+      assert.equal(new Set(titluri).size, titluri.length, "randuri dublate: " + titluri.join(" | "));
+      const r = await b.ev(`(()=>{const a=document.querySelector("#tabloubot .tbMain").getBoundingClientRect(),c=document.querySelector("#tabloubot .tbSideNou").getBoundingClientRect();return a.right<=c.left+1||c.right<=a.left+1||a.bottom<=c.top+1||c.bottom<=a.top+1})()`);
+      assert.equal(r, true, "graficul si coloana din dreapta se suprapun");
+      for (const id of ["tbKpiPozPill", "tbGrafic", "tbScenarii", "tbDirectie", "tbBani", "tbAcum", "tbSfaturi", "tbFisaBot", "tbSapt", "tbPlanStare", "tbAlerteStare", "tbPort", "tbMasuri"]) assert.ok(await b.ev(`!!document.getElementById("${id}")`), "lipseste #" + id);
+      await b.ev(`tbDeschidePlan()`); assert.equal(await b.ev(`document.getElementById("tbPl-plan").open`), true, "'Scrie planul' deschide planul");
+    });
     await test("monitor 1920 · dupa clic pe Trading 212, cifrele contului se vad (nu sunt sub bara de sus)", async () => {
+      await b.ev(`document.querySelector('.sideBtn[data-nav="t212"]').click()`); await asteapta(1500);
       const r = await b.ev(`(()=>{const k=document.querySelector("#t212Sus .t212Kpi").getBoundingClientRect();const x=k.left+30,y=k.top+12;const e=document.elementFromPoint(x,y);return {top:Math.round(k.top),pe:!!(e&&e.closest("#t212Card"))}})()`);
       assert.equal(r.pe, true, "la y=" + r.top + " peste cifre e alt element (bara de sus)");
     });

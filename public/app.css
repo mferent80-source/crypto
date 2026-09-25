@@ -1615,3 +1615,50 @@ body.peTablou main>.note{display:none}
 /* v85.6: pe ecrane late cardul se intindea pe 1.700 px ("mai labartat decat demo-ul") - latimea demo-ului, centrat;
    si bara de sus lipita nu mai acopera cifrele cand "Trading 212" coboara la card */
 .t212Card{max-width:1180px;margin-inline:auto;scroll-margin-top:84px}
+/* v86: Tabloul botului reasezat ca demo-ul (toata pagina): latimea demo-ului, scris 14px, verdictul + cifrele pe
+   un rand, "Ce ai de facut acum", graficul + scenariile langa directie/bani/pe zi, restul pliat */
+#tabloubot .tbCadru{max-width:1180px;margin-inline:auto;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.4}
+#tabloubot .tbCadru>.sectionHead{margin:0}
+#tabloubot .tbBloc{padding:10px 12px}
+#tabloubot .tbBlocCap{margin:0 0 6px}
+#tabloubot .tbSus{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,4fr);gap:0;background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r)}
+#tabloubot .tbSus>#tbSemaforCard{border:0;border-radius:var(--tb-r) 0 0 var(--tb-r);background:linear-gradient(135deg,rgba(0,170,90,.12),transparent);margin:0}
+#tabloubot .tbSus>#tbKpi{border:0;border-left:1px solid var(--tb-linie);border-radius:0;margin:0;background:transparent;grid-template-columns:repeat(4,minmax(0,1fr))}
+#tabloubot .tbKpiCel{padding:8px 12px;gap:2px}
+#tabloubot .tbKpiVal,#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:18px}
+#tabloubot .tbSemCap{gap:8px}
+#tabloubot .tbSemCap b{font-size:14px}
+#tabloubot .tbTodo{background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r);padding:4px 0}
+#tabloubot .tbTodoCap{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 12px 2px}
+#tabloubot .tbTodoCap h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+#tabloubot .tbTodoRand{display:grid;grid-template-columns:6px 1fr auto;gap:10px;align-items:center;padding:5px 12px;border-top:1px solid var(--tb-linie)}
+#tabloubot #tbTodoLista>.tbTodoRand:first-child{border-top:0}
+#tabloubot .tbTodoRand p{margin:1px 0 0;color:var(--muted);font-size:12px}
+#tabloubot .tbTodoGol{padding:4px 12px}
+#tabloubot .tbDunga{align-self:stretch;border-radius:4px;background:var(--muted)}#tabloubot .tbDunga.r{background:var(--bad)}#tabloubot .tbDunga.g{background:var(--warn)}#tabloubot .tbDunga.n{background:#6c7a8e}#tabloubot .tbDunga.v{background:var(--good)}
+#tabloubot .tbNr{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--tb-fond2);color:var(--muted);font-size:11.5px}
+#tabloubot .tbBtnLinie{padding:5px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--text);font:inherit;cursor:pointer;white-space:nowrap}#tabloubot .tbBtnLinie:hover{border-color:var(--accent);color:var(--accent)}
+#tabloubot .tbGrilaNoua{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:8px;align-items:start}
+#tabloubot .tbMain,#tabloubot .tbSideNou{display:flex;flex-direction:column;gap:8px;min-width:0}
+#tabloubot .tbDirR,#tabloubot .tbDirRand{padding:6px 10px}
+#tabloubot .tbLinie{padding:3px 0}
+#tabloubot details.tbPl{background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r)}
+#tabloubot details.tbPl>summary{list-style:none;display:flex;align-items:baseline;gap:10px;padding:7px 12px;cursor:pointer}
+#tabloubot details.tbPl>summary::-webkit-details-marker{display:none}
+#tabloubot details.tbPl>summary::before{content:"▸";color:var(--muted)}
+#tabloubot details.tbPl[open]>summary::before{content:"▾"}
+#tabloubot details.tbPl>summary b{font-size:14px}
+#tabloubot details.tbPl>summary .tbSub{margin-left:auto;text-align:right}
+#tabloubot details.tbPl>.tbBloc{border:0;background:transparent;padding-top:0;margin:0}
+#tabloubot details.tbPl>.tbBloc>.tbBlocCap>h4{display:none}
+#tabloubot details.tbPl>.tbBloc>.tbBlocCap:not(:has(input,select,button,label)){display:none}
+#tabloubot details.tbDetalii>summary{padding:7px 12px}
+@media (max-width:1000px){#tabloubot .tbGrilaNoua{grid-template-columns:1fr}#tabloubot .tbSus{grid-template-columns:1fr}#tabloubot .tbSus>#tbSemaforCard{border-radius:var(--tb-r) var(--tb-r) 0 0}#tabloubot .tbSus>#tbKpi{border-left:0;border-top:1px solid var(--tb-linie)}}
+@media (max-width:640px){#tabloubot .tbSus>#tbKpi{grid-template-columns:1fr 1fr}#tabloubot .tbTodoRand{grid-template-columns:5px 1fr;padding:5px 10px}#tabloubot .tbTodoRand>button{grid-column:2;justify-self:start}#tabloubot .tbKpiVal,#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:17px}}
+/* v86: pagina Trading 212 - la fel ca Tabloul botului, fara bara de cautare / blocul pietei / file */
+body.peT212 .toolbar,body.peT212 .heroStrip,body.peT212 .tabs{display:none}
+#t212 .t212Card{margin-top:4px}
+.t212Link{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 12px;padding:10px 12px;border:1px solid rgba(79,209,197,.35);border-radius:10px;background:rgba(79,209,197,.06)}
+.t212Link .t212BtnLinie{margin-left:auto}
+#tabloubot .tbSus #tbSemafor .tbFac{margin:4px 0 0}#tabloubot .tbSus .tbSemCap{align-items:flex-start}
+#tabloubot .tbMain #tbAcum .tbLinie{padding:3px 0}

@@ -175,7 +175,8 @@ async function scenariu(lat, inal, nume) {
       await asteapta(1500);
       const n1 = await b.ev(`(JSON.parse(localStorage.getItem("grJurnal")||"[]")).length`);
       assert.equal(n1, n0 + 1, "jurnalul nu a primit intrarea");
-      assert.match(await b.ev(`document.getElementById("grJurnal").innerText`), /MET/);
+      // se redeseneaza dupa un raspuns de la server: astept, nu citesc dupa un timp fix (pica aleator pe 25.09)
+      await panaCand(b, `/MET/.test(document.getElementById("grJurnal").innerText)`, 15000, "MET in jurnalul gridurilor");
       assert.ok(await b.ev(`!!document.getElementById("grClasament")`), "cutia de clasament lipseste");
       FARA_GUNOI(await b.ev(`document.getElementById("grJurnal").innerText`));
       await b.ev(`localStorage.removeItem("grJurnal")`);
@@ -200,6 +201,8 @@ async function scenariu(lat, inal, nume) {
       await panaCand(b, `/ȚINE|ATENȚIE|IEȘI/.test(document.getElementById("tbSemafor").innerText)`, 30000, "semaforul");
       const ts = await b.ev(`document.getElementById("tbSemafor").innerText`);
       assert.match(ts, /Ce aș face eu/); FARA_GUNOI(ts);
+      // v86: fisa, sfaturile, saptamana, planul stau in sectiuni pliate - le deschid cum ar face el (clic pe titlu)
+      await b.ev(`document.querySelectorAll("#tabloubot details.tbPl").forEach(d=>{if(!d.open)d.querySelector("summary").click()})`);
       const t1 = await b.ev(`document.getElementById("tbFisaBot").innerText`), t2 = await b.ev(`document.getElementById("tbAcum").innerText`);
       assert.match(t1, /Pas net pe grilă/); assert.match(t1, /Verdictul de azi/);
       assert.match(await b.ev(`document.getElementById("tbKpiPretSub").textContent`), /↓ \d+,\d% până jos · ↑ \d+,\d% până sus|grid cu/, "v84.1: distantele pana la margini");
