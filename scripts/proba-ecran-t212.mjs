@@ -210,7 +210,13 @@ async function scenariu(lat, inal, nume) {
       await panaCand(b, `/Câștigat REAL/.test(document.getElementById("jtActiuni").innerText)`, 30000, "jurnalul de actiuni");
       const t = await b.ev(`document.getElementById("jtActiuni").innerText`);
       assert.match(t, /Cât ai ținut/); assert.match(t, /Dacă ascultai de Radar/);
-      assert.match(t, /Cât te-ar fi salvat stopul/); assert.match(t, /Regulile tale/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Cele mai mari 5 pierderi/);
+      assert.match(t, /Cât te-ar fi salvat stopul/); assert.match(t, /Regulile tale/);
+      // v88: variantele care urca in tabelul stopului; Jurnalul e pagina lui; lista "Fiecare trade" pliata, se deschide la clic
+      assert.match(t, /urcă după maxim — planul Radarului/); assert.match(t, /urcă, −15% de la maxim/);
+      assert.equal(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none");
+      assert.equal(await b.ev(`document.getElementById("jtPl-actiuni").open`), false, "lista lunga pliata la deschidere");
+      await b.ev(`document.querySelector("#jtPl-actiuni summary").click()`);
+      assert.ok((await b.ev(`document.querySelector("#jtPl-actiuni .jtTrade").getBoundingClientRect().height`)) > 0, "clic pe titlu deschide lista"); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Cele mai mari 5 pierderi/);
       assert.ok((await b.ev(`document.querySelectorAll("#jtActiuni .jtTrade").length`)) > 100);
       assert.equal(await b.ev(`document.getElementById("jtCrypto").hidden`), true);
       FARA_GUNOI(t);

@@ -79,7 +79,7 @@ export async function turaCfActiuni(d) {
   const u = (await d.umpleri()) || [], gata = (await d.gata()) || {};
   const inchise = d.T212.perechi(u).inchise, peTicker = new Map();
   // v87: verdictele vechi, fara proba cu stop, se refac o data (cu aceleasi preturi)
-  for (const t of inchise) if (!gata[t.id] || !gata[t.id].stop) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
+  for (const t of inchise) if (!gata[t.id] || !gata[t.id].stop || !gata[t.id].stopU) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
   const nume = {}; for (const x of u) if (x.nume && x.nume !== x.ticker) nume[x.ticker] = x.nume;
   let judecate = 0, actiuni = 0, strans = {};
   // scrierile se strang cate 200 (ruta de scriere lasa 30 pe minut; una pe actiune ar lovi limita)
@@ -90,7 +90,13 @@ export async function turaCfActiuni(d) {
     actiuni++;
     let bare = null; try { bare = await d.cereBare(tk, nume[tk] || ""); } catch (e) { d.jurnal("cf actiuni", tk, e.message); continue; }
     for (const t of lista) {
-      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]) }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {} };
+      let stopU = {};
+      if (bare && bare.length) {
+        // planul Radarului: -X% de la maxim, cu X din pretul calculat la ora cumpararii (doar zilele de dinainte)
+        const inainte = bare.filter((b) => b.t + 8 * 3600000 <= t.pornit), n = inainte.length >= 120 ? d.ActiuniSemnale.niveluri(inainte, t.pretCumparare, {}) : null;
+        stopU = d.ActiuniSemnale.cuStopUrcator(t, bare, [{ cheie: "plan", trailPct: n && n.nivel === "ok" ? n.trailPct : null }, { cheie: "u15", pct: 15 }, { cheie: "u25", pct: 25 }]);
+      }
+      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {} };
       judecate++;
     }
     if (Object.keys(strans).length >= 200) await scrie();

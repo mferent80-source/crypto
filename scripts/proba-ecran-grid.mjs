@@ -230,6 +230,9 @@ async function scenariu(lat, inal, nume) {
 
     await test(`${nume} · v81 Jurnalul de trade: botii inchisi reali, greselile ordonate, notita se salveaza`, async () => {
       await b.ev(`navTo('jurnaltrade',true)`);
+      // v88: lista "Fiecare trade" e pliata - o deschid cu clic, ca el
+      await panaCand(b, `!!document.getElementById("jtPl-crypto")`, 20000, "lista pliata");
+      await b.ev(`(()=>{const d=document.getElementById("jtPl-crypto");if(!d.open)d.querySelector("summary").click()})()`);
       await panaCand(b, `/COTI/.test(document.getElementById("jtLista").innerText)`, 60000, "lista de trade-uri");
       const t = await b.ev(`document.getElementById("jurnaltrade").innerText`);
       assert.match(t, /Rezultat total/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Poziția a mâncat grilele/);

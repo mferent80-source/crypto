@@ -14,9 +14,16 @@ var T212 = (function () {
   }
   // T212 pastreaza simbolul SPAC-ului de dinainte de listare (verificat pe numele din ordinele lui, 25.09)
   var REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO", FB: "META" };
+  // v88: bursele europene / Canada. T212 pune litera bursei la coada simbolului (VUSAl = Londra) sau tara in mijloc.
+  var BURSA = { l: ".L", d: ".DE", p: ".PA", a: ".AS", s: ".SW", m: ".MI" }, TARA = { AT: ".VI", CA: ".TO" };
   function candidati(ticker) {
-    var m = String(ticker || "").match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
-    if (!m) return [];
+    var t = String(ticker || ""), m = t.match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
+    if (!m) {
+      var e = t.match(/^([A-Z0-9]+)([a-z])_EQ$/);
+      if (e && BURSA[e[2]]) { var b = e[1], o = [b + BURSA[e[2]]], f = b.replace(/\d+$/, ""); if (f && f !== b) o.push(f + BURSA[e[2]]); return o; }
+      var c = t.match(/^([A-Z0-9]+)_(AT|CA)_EQ$/);
+      return c ? [c[1] + TARA[c[2]]] : [];
+    }
     var s = m[1].toUpperCase().replace(/\./g, "-"), out = [s], fara = s.replace(/\d+$/, "");
     if (fara && fara !== s) out.push(fara);
     if (REDENUMIT[s]) out.unshift(REDENUMIT[s]);

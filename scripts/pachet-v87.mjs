@@ -133,5 +133,37 @@ await test("preturi nepotrivite (split / alt simbol): pretul Yahoo din ziua cump
   assert.equal(A.rezumatStop([{ id: "a", cost: 1000, rezultat: 10 }], { a: { nivel: "fara-date", stop: { 8: null } } }, [8]).judecate, 0);
   assert.deepEqual(T.candidati("FB_US_EQ"), ["META", "FB"]);
 });
+// ---------------- v88 ----------------
+await test("v88 simboluri europene: litera bursei T212 -> sufixul Yahoo (l .L, d .DE, p .PA, a .AS, s .SW, m .MI, _AT .VI, _CA .TO); cifra de la coada se incearca si fara", () => {
+  assert.deepEqual(T.candidati("VUSAl_EQ"), ["VUSA.L"]); assert.deepEqual(T.candidati("SAPd_EQ"), ["SAP.DE"]); assert.deepEqual(T.candidati("MCp_EQ"), ["MC.PA"]);
+  assert.deepEqual(T.candidati("ASMLa_EQ"), ["ASML.AS"]); assert.deepEqual(T.candidati("NOVNs_EQ"), ["NOVN.SW"]); assert.deepEqual(T.candidati("3MSTm_EQ"), ["3MST.MI"]);
+  assert.deepEqual(T.candidati("PAL_AT_EQ"), ["PAL.VI"]); assert.deepEqual(T.candidati("WEED_CA_EQ"), ["WEED.TO"]);
+  assert.deepEqual(T.candidati("8JO1d_EQ"), ["8JO1.DE", "8JO.DE"]);
+  assert.deepEqual(T.candidati("AAPL_US_EQ"), ["AAPL"], "americanele raman cum erau"); assert.deepEqual(T.candidati("XYZq_EQ"), [], "litera necunoscuta -> nimic, nu ghicit");
+});
+await test("v88 stopul care URCA dupa maxim: maximul din zilele DE DINAINTE (nu al zilei in care atinge), iesire la stop sau la deschidere; planul Radarului = trailPct din niveluri la ora cumpararii", () => {
+  const b = bare([[100, 101, 99, 100], [100, 120, 100, 118], [118, 119, 112, 113], [113, 114, 100, 101], [101, 102, 95, 96]]);
+  const t = { pornit: b[0].t + 3600000, inchis: b[4].t + 3600000, pretCumparare: 100 };
+  const r = A.cuStopUrcator(t, b, [{ cheie: "u10", pct: 10 }, { cheie: "u25", pct: 25 }]);
+  // max dupa ziua 2 = 120 -> stop 108; ziua 3 minim 112 (nu), ziua 4 minim 100 <= 108 -> iesire la 108
+  assert.equal(r.u10.zi, b[3].t); ((a, e) => assert.ok(Math.abs(a - e) < 1e-12, a + " vs " + e))(r.u10.pct, 1.08 - 1 - 0.003);
+  assert.strictEqual(r.u25, null, "120 * 0,75 = 90 nu e atins");
+  const p = A.cuStopUrcator(t, b, [{ cheie: "plan", trailPct: 5 }]); assert.equal(p.plan.zi, b[2].t, "-5% din 120 = 114; ziua 3 minim 112");
+  assert.deepEqual(A.cuStopUrcator({ ...t, pretCumparare: 750 }, b, [{ cheie: "u10", pct: 10 }]), {}, "pret nepotrivit -> nu se judeca");
+});
+await test("v88 rezumatul pe alt camp (stopU) si pe chei text (plan, u15, u25)", () => {
+  const tr = [{ id: "a", cost: 1000, rezultat: -300 }, { id: "b", cost: 1000, rezultat: 50 }];
+  const cf = { a: { stopU: { plan: { pct: -0.05 }, u15: { pct: -0.153 } } }, b: { stopU: { plan: null, u15: { pct: 0.02 } } } };
+  const r = A.rezumatStop(tr, cf, ["plan", "u15"], "stopU");
+  assert.equal(r.judecate, 2); ((a, e) => assert.ok(Math.abs(a - e) < 1e-9, a + " vs " + e))(r.praguri.plan.total, -50 + 50); assert.equal(r.praguri.u15.castigatoareTaiate, 1);
+});
+await test("v88 stopul propus pentru pozitii: cel putin -15% de la maxim (pe trade-urile lui, -15% care urca a iesit +1.001 lei; cele mai stranse, mai rau)", () => {
+  const b = []; for (let i = 0; i < 300; i++) { const c = 100 * Math.pow(1.002, i) * (1 + 0.004 * Math.sin(i)); b.push({ t: Date.UTC(2025, 0, 1) + i * ZI, o: c, h: c * 1.01, l: c * 0.99, c }); }
+  const p = b.at(-1).c, mx = p * 1.05;
+  const n = A.niveluri(b, p, { pretMediu: p * 0.9, maxDupaCumparare: mx, minTrail: 0.15 });
+  ((a, e) => assert.ok(Math.abs(a - e) < 1e-9, a + " vs " + e))(n.trailPct, 15); ((a, e) => assert.ok(Math.abs(a - e) < 1e-6, a + " vs " + e))(n.stopPozitie, mx * 0.85);
+  const fara = A.niveluri(b, p, { pretMediu: p * 0.9, maxDupaCumparare: mx });
+  assert.ok(fara.trailPct < 15, "fara minTrail ramane cel din ATR: " + fara.trailPct);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

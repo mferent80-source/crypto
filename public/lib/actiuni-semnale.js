@@ -230,9 +230,11 @@ var ActiuniSemnale = (function () {
     else if (dir === "sus") { var pi = Math.min(pret, Math.max(e20, pret - 0.5 * A_)); intrare = { pret: r2(pi), motiv: pi < pret ? "retragere spre media pe 20 de zile (ordin limită), nu după mișcare" : "prețul e deja la media pe 20 de zile" }; }
     else { var mn = minL(b, 20), pl = Math.min(pret, mn + 0.25 * A_); intrare = { pret: r2(pl), motiv: "lateral: aproape de minimul pe 20 de zile" }; }
     var baza = intrare ? intrare.pret : pret, ref = o.maxDupaCumparare > 0 ? Math.max(o.maxDupaCumparare, pret) : pret;
-    var stopPoz = ref - d;
+    // o.minTrail (v88): pentru pozitiile deschise, stopul care urca e cel putin -X% de la maxim - pe trade-urile lui
+    // (25.09) -15% care urca a iesit +1.001 lei fata de fara stop, iar variantele mai stranse, mai rau
+    var dT = o.minTrail > 0 ? Math.max(d, ref * o.minTrail) : d, stopPoz = ref - dT;
     return { nivel: "ok", trend: dir, atr: A_, k: pr.k, d: d, riscPct: d / baza, proba: pr, intrare: intrare, intrareMotiv: motivI,
-      stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: d / ref * 100, stopAtins: stopPoz >= pret, tintaPozitie: r2(pret + 2 * d) };
+      stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: dT / ref * 100, trailMinim: dT > d, stopAtins: stopPoz >= pret, tintaPozitie: r2(pret + 2 * d) };
   }
   // Cate bucati ca atingerea stopului sa coste cel mult 1% din cont, plafon 20% din cont pe o actiune.
   // intrare/stop in dolari; cont in lei; fx = dolari pe leu (din umplerile T212); lipsa fx -> aceeasi moneda
@@ -294,13 +296,32 @@ var ActiuniSemnale = (function () {
     });
     return out;
   }
-  // Pe trade-urile care au proba de stop (cf[id].stop): totalul real fata de cel cu stop, pe fiecare prag.
-  function rezumatStop(inchise, cf, praguri) {
-    praguri = praguri || [8, 10, 15];
+  // v88: stopul care URCA dupa maxim. Maximul vine din zilele DE DINAINTE (al zilei curente nu se stie la ce ora a
+  // fost fata de minim); ziua cumpararii si a vanzarii nu intra. variante: [{cheie, pct} | {cheie, trailPct}]
+  function cuStopUrcator(t, bare, variante) {
+    var out = {}, b = Array.isArray(bare) ? bare : [], intr = t && t.pretCumparare;
+    if (b.length && t && !pretPotrivit(t, b)) return out;
+    (variante || []).forEach(function (v) {
+      out[v.cheie] = null;
+      var tr = v.pct > 0 ? v.pct : v.trailPct > 0 ? v.trailPct : null;
+      if (!(intr > 0) || !b.length || !tr) return;
+      var z0 = Math.floor(t.pornit / ZI), z1 = Math.floor(t.inchis / ZI), mx = intr;
+      for (var i = 0; i < b.length; i++) {
+        var z = Math.floor(b[i].t / ZI); if (z <= z0) continue; if (z >= z1) break;
+        var st = mx * (1 - tr / 100);
+        if (b[i].l <= st) { out[v.cheie] = { pct: Math.min(b[i].o, st) / intr - 1 - COST_CONV, zi: b[i].t, trail: tr }; break; }
+        if (b[i].h > mx) mx = b[i].h;
+      }
+    });
+    return out;
+  }
+  // Pe trade-urile care au proba de stop (cf[id][camp], implicit "stop"): totalul real fata de cel cu stop, pe fiecare prag.
+  function rezumatStop(inchise, cf, praguri, camp) {
+    praguri = praguri || [8, 10, 15]; camp = camp || "stop";
     var r = { judecate: 0, real: 0, praguri: {} };
     praguri.forEach(function (p) { r.praguri[p] = { total: 0, atinse: 0, castigatoareTaiate: 0, dif: 0 }; });
     (Array.isArray(inchise) ? inchise : []).forEach(function (t) {
-      var v = cf && cf[t.id], s = v && v.stop; if (!s || !Object.keys(s).length || v.nivel === "fara-date" || !(t.cost > 0)) return;
+      var v = cf && cf[t.id], s = v && v[camp]; if (!s || !Object.keys(s).length || v.nivel === "fara-date" || !(t.cost > 0)) return;
       r.judecate++; r.real += t.rezultat;
       praguri.forEach(function (p) {
         var x = s[p], g = r.praguri[p];
@@ -362,6 +383,6 @@ var ActiuniSemnale = (function () {
     return linii;
   }
 
-  return { cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

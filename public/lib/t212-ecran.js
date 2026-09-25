@@ -107,7 +107,8 @@ function t212CostLei(tk, qty) {
 function t212PregatesteP(x, pond) {
   var p = t212Pozitie(x), b = t212.bare[p.ticker] || [];
   p.st = ActiuniSemnale.stare(b, p.pret); p.sem = ActiuniSemnale.semafor(p, p.st);
-  var n = b.length ? ActiuniSemnale.niveluri(b, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: p.maxDupaCumparare }) : null;
+  // v88: stopul care urca pentru pozitii e cel putin -15% de la maxim (proba pe trade-urile lui, "Cat te-ar fi salvat stopul")
+  var n = b.length ? ActiuniSemnale.niveluri(b, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: p.maxDupaCumparare, minTrail: 0.15 }) : null;
   p.niv = n && n.nivel === "ok" ? n : null; if (p.niv) t212.niveluri[p.ticker] = p.niv;
   p.nivMotiv = n && n.nivel !== "ok" ? n.motiv : null;
   p.cost = t212CostLei(p.ticker, p.qty); p.pctLei = p.cost ? p.ppl / p.cost : null; p.fxPpl = x.fxPpl;
@@ -215,6 +216,7 @@ function t212RandPozitie(p) {
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="t212PlanSalveaza(\'' + tk + '\')">Salvează planul</button>'
     + (p.plan ? '<button type="button" class="t212BtnLinie" data-action-click="t212PlanSterge(\'' + tk + '\')">Șterge</button>' : '') + '</div>'
     + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212Usd(n.tintaPozitie) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
+      + (n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
       + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
       : '<p class="tbSub">' + escapeHtml(p.nivMotiv || "Prețurile calculate apar după ce vin prețurile zilnice.") + '</p>') + '</div>';
   return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="8"><div class="t212DetGrila">' + stanga + dreapta + '</div></td></tr>';
@@ -339,7 +341,7 @@ function jtRenderActiuni() {
   if (mari.length) h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Cele mai mari 5 pierderi</h4><span class="tbSub">' + L(mari.reduce(function (s, t) { return s + t.rezultat; }, 0)) + ' împreună</span></div><ul class="grLista">' + mari.map(function (t) { return '<li><b>' + escapeHtml(T212.simbol(t.ticker)) + '</b> <span class="bad">' + L(t.rezultat) + '</span> (' + P(t.pct) + ', ținut ' + Math.round(t.durataOre / 24) + ' zile, ' + new Date(t.inchis).toLocaleDateString("ro-RO") + ')</li>'; }).join("") + '</ul></div>';
   // fiecare trade (cele mai noi 150)
   var cfm = t212.cf || {}, note = typeof jtNote === "function" ? jtNote() : {}, data = function (t) { return new Date(t).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }); };
-  h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Fiecare trade</h4><span class="tbSub">cele mai noi ' + Math.min(150, l.length) + ' din ' + l.length + ' · o vânzare = un trade</span></div>' + l.slice(0, 150).map(function (t) {
+  h += '<details class="tbPl jtPl" id="jtPl-actiuni"><summary><b>Fiecare trade</b><span class="tbSub">cele mai noi ' + Math.min(150, l.length) + ' din ' + l.length + ' · o vânzare = un trade</span></summary>' + l.slice(0, 150).map(function (t) {
     var gr = ActiuniSemnale.greseli(t, { umpleri: j.u }), cfg = cfm[t.id] && cfm[t.id].greseli || [], dur = t.durataOre < 24 ? Math.max(1, Math.round(t.durataOre)) + " h" : Math.round(t.durataOre / 24) + " zile", id = "t212-" + t.id;
     cfg.forEach(function (k) { if (ActiuniSemnale.TEXT[k] && !gr.some(function (x) { return x.cod === k; })) gr.push({ cod: k, text: ActiuniSemnale.TEXT[k] }); });
     return '<div class="jtTrade"><div class="jtCap"><b>' + escapeHtml(T212.simbol(t.ticker)) + '</b> <span class="tbSub">' + escapeHtml((+t.qty.toFixed(4)) + " buc · " + t212Usd(t.pretCumparare) + " → " + t212Usd(t.pretVanzare) + " · " + data(t.pornit) + " → " + data(t.inchis) + " (" + dur + ")" + (t.extVanzare ? " · vândut în afara orelor" : "")) + '</span><b class="jtRez ' + cls(t.rezultat) + '">' + L(t.rezultat) + ' <span class="tbSub">' + P(t.pct) + '</span></b></div>'
@@ -347,31 +349,43 @@ function jtRenderActiuni() {
       + (cfm[t.id] && cfm[t.id].nivel !== "fara-date" ? '<p class="jtCf">Radarul ar fi zis la cumpărare: <b class="' + (T212_POARTA[cfm[t.id].nivel] || ["", ""])[1] + '">' + escapeHtml((T212_POARTA[cfm[t.id].nivel] || [cfm[t.id].nivel])[0]) + '</b>' + (cfm[t.id].motive && cfm[t.id].motive.length ? ' <span class="tbSub">— ' + escapeHtml(cfm[t.id].motive.join("; ")) + '</span>' : '') + '</p>' : '')
       + (gr.length ? '<ul class="jtGreseli">' + gr.map(function (x) { return '<li><b>' + escapeHtml(x.text) + '</b></li>'; }).join("") + '</ul>' : '')
       + '<textarea class="jtNota" data-id="' + escapeHtml(id) + '" rows="1" placeholder="De ce am cumpărat, ce aș face altfel…">' + escapeHtml(note[id] || "") + '</textarea></div>';
-  }).join("") + '</div>';
+  }).join("") + '</details>';
   box.innerHTML = h;
 }
 // v87: "cat te-ar fi salvat stopul" - rejucat pe preturile reale (zilnice), din verdictele colectorului
-function t212StopBloc(l) {
-  var cfm = t212.cf; if (!cfm) return "";
-  var r = ActiuniSemnale.rezumatStop(l, cfm, [8, 10, 15]), L = function (v) { return t212Lei(v); };
-  if (!r.judecate) return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4></div><p class="tbSub">Colectorul de acasă rejoacă trade-urile tale cu un stop (40 de acțiuni pe oră). Încă n-a terminat niciunul.</p></div>';
-  var best = [8, 10, 15].slice().sort(function (a, b) { return r.praguri[b].total - r.praguri[a].total; })[0], bp = r.praguri[best];
-  return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4><span class="tbSub">trade-urile tale rejucate pe prețurile zilnice reale · ' + r.judecate + ' judecate</span></div>'
-    + '<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Stop la</th><th>Totalul ar fi fost</th><th>Față de ce ai făcut</th><th>Trade-uri oprite</th><th>Din care câștigătoare tăiate</th></tr></thead><tbody>'
-    + '<tr><td>fără stop (ce ai făcut)</td><td class="' + t212Cls(r.real) + '"><b>' + L(r.real) + '</b></td><td>—</td><td>—</td><td>—</td></tr>'
-    + [8, 10, 15].map(function (p) { var g = r.praguri[p]; return '<tr><td>−' + p + '%</td><td class="' + t212Cls(g.total) + '"><b>' + L(g.total) + '</b></td><td class="' + t212Cls(g.dif) + '">' + L(g.dif) + '</td><td>' + g.atinse + '</td><td>' + g.castigatoareTaiate + '</td></tr>'; }).join("") + '</tbody></table></div>'
-    + '<p class="tbFac">👉 <b>Ce aș face eu:</b> ' + (bp.dif > 0 ? 'stop la −' + best + '% pus din prima clipă: pe trade-urile tale ar fi însemnat ' + L(bp.dif) + ' în plus, deși ar fi tăiat și ' + bp.castigatoareTaiate + ' trade-uri care până la urmă au ieșit pe plus.' : 'pe trade-urile tale un stop fix n-ar fi ajutat în total — ar fi tăiat prea multe care își reveneau. Pierderile mari au venit din cumpărările în plus pe minus și din pozițiile prea mari (NPA), nu din lipsa unui stop strâns: acolo aș pune frâna. Stopul care urcă după maxim, din planul fiecărei poziții, e ales pe istoricul fiecărei acțiuni; pe trade-urile tale încă nu l-am probat.') + '</p>'
-    + '<p class="tbSub">Pe prețuri de închidere zilnice: ziua cumpărării și a vânzării nu intră (nu știm ordinea din zi). Cu stop, rezultatul = prețul de ieșire față de cel de cumpărare, minus 0,30% comisionul; cursul dolar/leu nu intră.</p></div>';
+// v88: toate variantele de stop, rejucate pe trade-urile lui: fix (-8/-10/-15%) si care URCA dupa maxim (planul
+// Radarului, -15%, -25%). Sfatul se ia din cea mai buna varianta, oricare ar fi ea - inclusiv "fara stop".
+var T212_VARIANTE_STOP = [
+  { camp: "stop", k: 8, et: "fix, −8% de la cumpărare" }, { camp: "stop", k: 10, et: "fix, −10%" }, { camp: "stop", k: 15, et: "fix, −15%" },
+  { camp: "stopU", k: "plan", et: "urcă după maxim — planul Radarului (k×ATR, 3–15%)" }, { camp: "stopU", k: "u15", et: "urcă, −15% de la maxim" }, { camp: "stopU", k: "u25", et: "urcă, −25% de la maxim" }];
+function t212Variante(l) {
+  var cfm = t212.cf; if (!cfm) return null;
+  var rs = ActiuniSemnale.rezumatStop(l, cfm, [8, 10, 15], "stop"), ru = ActiuniSemnale.rezumatStop(l, cfm, ["plan", "u15", "u25"], "stopU");
+  var v = T212_VARIANTE_STOP.map(function (x) { var r = x.camp === "stop" ? rs : ru, g = r.praguri[x.k]; return { et: x.et, camp: x.camp, k: x.k, judecate: r.judecate, real: r.real, total: g.total, dif: g.dif, atinse: g.atinse, taiate: g.castigatoareTaiate }; });
+  return { rs: rs, ru: ru, v: v, best: v.slice().sort(function (a, b) { return b.dif - a.dif; })[0] };
 }
-// v87: sfatul pentru pozitiile tinute pe minus vine din proba cu stop, nu dintr-o regula de manual. Pe datele
-// lui (25.09) un stop fix strans ar fi iesit MAI RAU (-8%: ~-6.700 lei fata de +4.091): taia prea multe care isi
-// reveneau. Ce l-ar fi ajutat: sa nu cumpere in plus pe minus (NPA) si sa nu puna mult pe o actiune.
+function t212StopBloc(l) {
+  var x = t212Variante(l), L = function (v) { return t212Lei(v); };
+  if (!x) return "";
+  if (!x.rs.judecate && !x.ru.judecate) return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4></div><p class="tbSub">Colectorul de acasă rejoacă trade-urile tale cu un stop (40 de acțiuni pe oră). Încă n-a terminat niciunul.</p></div>';
+  var rand = function (v) { return '<tr><td>' + escapeHtml(v.et) + '</td><td class="' + t212Cls(v.total) + '"><b>' + L(v.total) + '</b></td><td class="' + t212Cls(v.dif) + '">' + L(v.dif) + '</td><td>' + v.atinse + '</td><td>' + v.taiate + '</td></tr>'; };
+  var b = x.best, fara = b.dif <= 0;
+  return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4><span class="tbSub">trade-urile tale rejucate pe prețurile zilnice reale · ' + x.rs.judecate + ' judecate</span></div>'
+    + '<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Stopul</th><th>Totalul ar fi fost</th><th>Față de ce ai făcut</th><th>Trade-uri oprite</th><th>Din care câștigătoare tăiate</th></tr></thead><tbody>'
+    + '<tr><td>fără stop (ce ai făcut)</td><td class="' + t212Cls(x.rs.real) + '"><b>' + L(x.rs.real) + '</b></td><td>—</td><td>—</td><td>—</td></tr>'
+    + x.v.map(rand).join("") + '</tbody></table></div>'
+    + '<p class="tbFac">👉 <b>Ce aș face eu:</b> ' + (fara ? 'pe trade-urile tale niciun stop — nici fix, nici care urcă — n-ar fi ajutat în total: tăia prea multe care își reveneau. Pierderile mari au venit din cumpărările în plus pe minus și din pozițiile prea mari (NPA): acolo aș pune frâna, nu un stop strâns.'
+      : 'varianta care ar fi ajutat cel mai mult e „' + escapeHtml(b.et) + '”: ' + L(b.dif) + ' față de ce ai făcut, deși ar fi tăiat și ' + b.taiate + ' trade-uri care până la urmă au ieșit pe plus.') + '</p>'
+    + '<p class="tbSub">Pe barele zilnice: ziua cumpărării și a vânzării nu intră (nu știm ordinea din zi); la stopul care urcă, maximul vine din zilele de dinainte. Rezultatul = prețul de ieșire față de cel de cumpărare, minus 0,30% comisionul; cursul dolar/leu nu intră. Trade-urile la care prețul găsit nu se potrivește cu al tău (split, alt simbol) nu sunt judecate.</p></div>';
+}
+// Sfatul pentru pozitiile tinute pe minus vine din proba cu stop, nu dintr-o regula de manual (v87: stopul fix
+// strans ar fi iesit MAI RAU pe trade-urile lui). v88: si varianta care urca intra in socoteala.
 function t212SfatStop(l) {
-  var r = t212.cf ? ActiuniSemnale.rezumatStop(l, t212.cf, [8, 10, 15]) : null;
-  if (!r || !r.judecate) return "Aș avea un plan de ieșire scris la fiecare cumpărare.";
-  var best = [8, 10, 15].slice().sort(function (a, b) { return r.praguri[b].dif - r.praguri[a].dif; })[0];
-  return r.praguri[best].dif > 0 ? "Aș pune la fiecare cumpărare un stop la −" + best + "% și l-aș respecta: pe trade-urile tale ar fi adus " + t212Lei(r.praguri[best].dif) + "."
-    : "Un stop fix strâns nu te-ar fi ajutat (vezi „Cât te-ar fi salvat stopul”, mai jos). Ce te-ar fi ajutat: să nu cumperi în plus pe minus și să nu pui mult pe o singură acțiune — de aici au venit pierderile mari (NPA).";
+  var x = t212Variante(l);
+  if (!x || !x.rs.judecate) return "Aș avea un plan de ieșire scris la fiecare cumpărare.";
+  var b = x.best;
+  return b.dif > 0 ? "Pe trade-urile tale ar fi ajutat stopul „" + b.et + "”: " + t212Lei(b.dif) + " în plus — l-aș pune la fiecare cumpărare."
+    : "Un stop strâns nu te-ar fi ajutat (vezi „Cât te-ar fi salvat stopul”, mai jos). Ce te-ar fi ajutat: să nu cumperi în plus pe minus și să nu pui mult pe o singură acțiune — de aici au venit pierderile mari (NPA).";
 }
 // v87: regulile tale, invatate din jurnalul de actiuni
 function t212ReguliBloc(l) {

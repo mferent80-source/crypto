@@ -32,9 +32,16 @@ async function t212(env, cale, actiune) {
 // T212 pastreaza simbolul SPAC-ului de dinainte de listare (la fel in public/lib/t212.js)
 const REDENUMIT = { NPA: "ASTS", XPOA: "QBTS", IPOB: "OPEN", ALUS: "TE", GWAC: "CIFR", SATS: "ECHO", FB: "META" };
 // AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B_US_EQ -> [BRK-B]; ne-US -> []
+// v88: bursele europene / Canada (la fel in public/lib/t212.js)
+const BURSA = { l: ".L", d: ".DE", p: ".PA", a: ".AS", s: ".SW", m: ".MI" }, TARA = { AT: ".VI", CA: ".TO" };
 function candidati(ticker) {
-  const m = String(ticker || "").match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
-  if (!m) return [];
+  const t = String(ticker || ""), m = t.match(/^([A-Za-z0-9.]+?)_+US_EQ$/);
+  if (!m) {
+    const e = t.match(/^([A-Z0-9]+)([a-z])_EQ$/);
+    if (e && BURSA[e[2]]) { const b = e[1], o = [b + BURSA[e[2]]], f = b.replace(/\d+$/, ""); if (f && f !== b) o.push(f + BURSA[e[2]]); return o; }
+    const c = t.match(/^([A-Z0-9]+)_(AT|CA)_EQ$/);
+    return c ? [c[1] + TARA[c[2]]] : [];
+  }
   const s = m[1].toUpperCase().replace(/\./g, "-"), out = [s], fara = s.replace(/\d+$/, "");
   if (fara && fara !== s) out.push(fara);
   if (REDENUMIT[s]) out.unshift(REDENUMIT[s]);
@@ -110,6 +117,8 @@ export async function onRequestPost({ request, env }) {
       const id = txt(k, 40).replace(/[^A-Za-z0-9_-]/g, ""), x = v[k]; if (!id || !x || typeof x !== "object") return;
       m[id] = { nivel: NIV.includes(x.nivel) ? x.nivel : "fara-date", motive: (Array.isArray(x.motive) ? x.motive : []).slice(0, 4).map((z) => txt(z, 200)).filter(Boolean), greseli: (Array.isArray(x.greseli) ? x.greseli : []).filter((z) => GR.includes(z)) };
       // v87: proba cu stop (-8/-10/-15%): {pct, zi} sau null (neatins)
+      // v88: stopul care URCA (planul Radarului, -15%, -25% de la maxim)
+      if (x.stopU && typeof x.stopU === "object" && Object.keys(x.stopU).length) { const su = {}; ["plan", "u15", "u25"].forEach((p) => { const y = x.stopU[p]; const pc = y && nr(y.pct); su[p] = pc !== null && pc > -1 && pc < 5 ? { pct: pc, zi: nr(y.zi), trail: nr(y.trail) } : null; }); m[id].stopU = su; }
       if (x.stop && typeof x.stop === "object" && Object.keys(x.stop).length) { const st = {}; ["8", "10", "15"].forEach((p) => { const y = x.stop[p]; const pc = y && nr(y.pct); st[p] = pc !== null && pc > -1 && pc < 1 ? { pct: pc, zi: nr(y.zi) } : null; }); m[id].stop = st; }
     });
     const ids = Object.keys(m); if (ids.length > 6000) ids.slice(0, ids.length - 6000).forEach((k) => delete m[k]);
@@ -139,7 +148,7 @@ export async function onRequestGet({ request, env }) {
     if (a === "preturi") {
       const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), iv = u.searchParams.get("interval") === "1h" ? "1h" : "1d";
       const cand = candidati(tk);
-      if (!cand.length) return json({ error: "Nu știu simbolul american pentru " + tk + " (doar acțiuni _US_EQ)." }, 404);
+      if (!cand.length) return json({ error: "Nu știu simbolul de bursă pentru " + tk + "." }, 404);
       const k = "p:" + tk + ":" + iv, c = dinCache(k); if (c) return json(c);
       for (const s of cand) {
         let rows = null, sursa = null;
@@ -158,8 +167,8 @@ export async function onRequestGet({ request, env }) {
       return json({ error: "Fără prețuri pentru " + tk + " (poate a fost delistată sau redenumită)." }, 404);
     }
     if (a === "rezultate") {
-      const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = candidati(tk);
-      if (!cand.length) return json({ error: "Doar acțiuni americane (_US_EQ)." }, 404);
+      const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = /_US_EQ$/.test(tk) ? candidati(tk) : [];
+      if (!cand.length) return json({ error: "Data rezultatelor: doar acțiuni americane (_US_EQ)." }, 404);
       const k = "rez:" + tk, c = dinCache(k); if (c) return json(c);
       const r = await fetch("https://api.nasdaq.com/api/analyst/" + encodeURIComponent(cand[0]) + "/earnings-date", { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
       let j = null; try { j = await r.json(); } catch {}

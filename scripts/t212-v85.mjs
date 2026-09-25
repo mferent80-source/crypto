@@ -124,7 +124,7 @@ await test("simboluri: AAPL_US_EQ -> [AAPL]; SNDK1_US_EQ -> [SNDK1, SNDK]; BRK.B
   assert.deepEqual(T.candidati("AAPL_US_EQ"), ["AAPL"]);
   assert.deepEqual(T.candidati("SNDK1_US_EQ"), ["SNDK1", "SNDK"]);
   assert.deepEqual(T.candidati("BRK.B_US_EQ"), ["BRK-B"]);
-  assert.deepEqual(T.candidati("VUSAl_EQ"), []);
+  assert.deepEqual(T.candidati("VUSAl_EQ"), ["VUSA.L"], "v88: Londra -> .L");
   // tickerele SPAC vechi pastrate de T212 (verificat pe numele din ordinele lui, 25.09)
   assert.deepEqual(T.candidati("NPA_US_EQ"), ["ASTS", "NPA"]); assert.equal(T.simbol("NPA_US_EQ"), "ASTS");
   assert.equal(T.simbol("XPOA_US_EQ"), "QBTS"); assert.equal(T.simbol("IPOB_US_EQ"), "OPEN"); assert.equal(T.simbol("ALUS_US_EQ"), "TE"); assert.equal(T.simbol("GWAC_US_EQ"), "CIFR");

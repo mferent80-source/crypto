@@ -1666,3 +1666,23 @@ body.peT212 .toolbar,body.peT212 .heroStrip,body.peT212 .tabs{display:none}
 .contTot{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:13px;font-variant-numeric:tabular-nums}
 .contTot .good{color:var(--good)}.contTot .bad{color:var(--bad)}.contTot .tbSub{color:var(--muted);font-size:12px}
 .contTotSep{color:var(--line)}
+/* v88: Jurnalul de trade ca celelalte pagini - pagina proprie, latimea demo-ului, 14px, listele lungi pliate */
+body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none}
+#jurnaltrade>*{max-width:1180px;margin-left:auto;margin-right:auto}
+#jurnaltrade{font-size:14px;line-height:1.4}
+#jurnaltrade #jtCrypto,#jurnaltrade #jtActiuni{display:flex;flex-direction:column;gap:8px}
+#jurnaltrade #jtCrypto[hidden],#jurnaltrade #jtActiuni[hidden]{display:none}
+#jurnaltrade .tbBloc{padding:10px 12px;margin-bottom:0}
+#jurnaltrade .jtKpi{margin-bottom:0}
+#jurnaltrade .tbKpiCel{padding:8px 12px}
+#jurnaltrade .tbKpiVal{font-size:18px}
+#jurnaltrade .jtCireasa{padding:10px 12px;margin-bottom:0}#jurnaltrade .jtCireasa h4{font-size:15px;margin-bottom:6px}#jurnaltrade .jtCirGrid b{font-size:17px}
+#jurnaltrade .grTabel th,#jurnaltrade .grTabel td{padding:4px 8px}
+#jurnaltrade details.tbPl{background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r)}
+#jurnaltrade details.tbPl>summary{list-style:none;display:flex;align-items:baseline;gap:10px;padding:8px 12px;cursor:pointer}
+#jurnaltrade details.tbPl>summary::-webkit-details-marker{display:none}
+#jurnaltrade details.tbPl>summary::before{content:"▸";color:var(--muted)}
+#jurnaltrade details.tbPl[open]>summary::before{content:"▾"}
+#jurnaltrade details.tbPl>summary .tbSub{margin-left:auto;text-align:right}
+#jurnaltrade details.jtPl .jtTrade{padding:8px 12px}
+#jurnaltrade details.jtPl>#jtLista{padding:0 0 4px}
