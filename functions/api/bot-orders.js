@@ -113,10 +113,10 @@ function normalizeaza(bot,preturi){
   const profitTotal=toate(echitate,investit)?echitate-investit:null;
   const lich=lichidare(pret,lichJos,lichSus,dir);
 
-  const opritorProfitActiv=!!x.stopProfitEnabled,opritorPierdereActiv=!!x.stopLossEnabled;
+  // v91.1: stopLossEnabled/stopProfitEnabled vin false si cand SL/TP sunt puse si active in Pionex (botul VVV, 25.09):
+  // pretul pus = opritor pus. "STINS" era o citire gresita a campului.
+  const opritorProfitActiv=!!x.stopProfitEnabled||!!nr(x.profitStop),opritorPierdereActiv=!!x.stopLossEnabled||!!nr(x.lossStop);
   const avertismente=[];
-  if(nr(x.profitStop)&&!opritorProfitActiv)avertismente.push("Opritorul pe profit e setat dar STINS — nu se va declanșa.");
-  if(nr(x.lossStop)&&!opritorPierdereActiv)avertismente.push("Opritorul pe pierdere e setat dar STINS — nu se va declanșa.");
   if(!nr(x.profitStop)&&!nr(x.lossStop))avertismente.push("Botul nu are niciun opritor configurat.");
   if(pret&&jos&&sus&&(pret<jos||pret>sus))
     avertismente.push(`Prețul ${pret} a ieșit din intervalul grid (${jos}…${sus}) — botul nu mai câștigă din oscilații.`);

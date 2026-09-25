@@ -330,13 +330,19 @@ await test("comisioane mai mari decat gridul: avertismentul vechi se aprinde", a
   assert.match(b.avertismente.join(" | "), /comisioanele mănâncă mai mult decât câștigă botul/);
 });
 
-await test("AVERTIZEAZA cand opritoarele sunt setate dar STINSE", async () => {
+// v91.1: Pionex trimite stopLossEnabled=false si cand SL/TP SUNT puse si active (dovada: botul VVV, 25.09 -
+// aplicatia arata "Luare profit/Limitare pierderi 35,491 / 26,633", API-ul da enabled=false). Pretul pus = opritor pus.
+await test("pretul de SL/TP pus = opritor ACTIV, chiar daca Pionex trimite stopLossEnabled=false (nu mai scrie STINS)", async () => {
   const b = await unBot([BOT]);
   assert.ok(Array.isArray(b.avertismente), "botul n-are lista de avertismente");
   const a = b.avertismente.join(" | ");
-  assert.match(a, /opritor(ul)? pe profit.*stins/i, `nu avertizeaza despre opritorul de profit stins: ${a}`);
-  assert.match(a, /opritor(ul)? pe pierdere.*stins/i, `nu avertizeaza despre opritorul de pierdere stins: ${a}`);
-  assert.equal(b.opritorProfitActiv, false);
+  assert.doesNotMatch(a, /stins/i, `avertisment fals de opritor STINS: ${a}`);
+  assert.equal(b.opritorProfitActiv, true);
+  assert.equal(b.opritorPierdereActiv, true);
+});
+await test("fara pret de SL si TP -> 'niciun opritor' si inactiv", async () => {
+  const b = await unBot([cuDate({ lossStop: "", profitStop: "" })]);
+  assert.match(b.avertismente.join(" | "), /niciun opritor/i);
   assert.equal(b.opritorPierdereActiv, false);
 });
 
