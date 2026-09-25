@@ -181,5 +181,48 @@ await test("rezumat jurnal + verdictele 'daca ascultai' (ctx.cf): greselile cu p
   const r = A.rezumatJurnal(l, { cf: { a: { nivel: "asteapta", greseli: ["dupa-miscare"] }, b: { nivel: "cumpara", greseli: [] } } });
   const g = r.greseli.find((x) => x.cod === "dupa-miscare"); assert.equal(g.n, 1); aprox(g.cost, -50, 1e-9); assert.match(g.text, /mișcare mare/);
 });
+await test("preturi: ATR = media pe 14 zile a intervalului adevarat (cu golul fata de inchiderea de ieri)", () => {
+  const b = zilnice(30, () => 100).map((x, i) => ({ ...x, h: 102, l: 98, c: 100, o: 100 }));
+  b[29] = { ...b[29], o: 110, h: 111, l: 109, c: 110 };   // gol: TR = max(2, |111-100|, |109-100|) = 11
+  const a = A.atr(b);
+  aprox(a[28], 4, 1e-9); aprox(a[29], (13 * 4 + 11) / 14, 1e-9); assert.strictEqual(a[5], null);
+});
+await test("preturi: pe trend sus -> intrare sub pretul de acum (retragere), stop < intrare < tinta, tinta = 2R; k ales din proba pe istoric, cu n si rezultatul probei", () => {
+  const n = A.niveluri(urca, urca.at(-1).c, {});
+  assert.equal(n.trend, "sus"); assert.ok(n.intrare && n.intrare.pret <= urca.at(-1).c, JSON.stringify(n.intrare));
+  assert.ok(n.stop < n.intrare.pret && n.intrare.pret < n.tinta);
+  aprox(n.tinta - n.intrare.pret, 2 * (n.intrare.pret - n.stop), 1e-6);
+  assert.ok([1.5, 2, 2.5, 3].includes(n.k)); assert.ok(n.proba.n >= 30 && n.proba.medie !== null);
+  assert.ok(n.riscPct >= 0.03 && n.riscPct <= 0.15, "stopul intre 3% si 15% " + n.riscPct);
+});
+await test("preturi: trend jos -> fara intrare (doar long), dar stop/tinta pentru o pozitie deschisa tot se dau; prea putine bare -> fara-date", () => {
+  const n = A.niveluri(coboara, coboara.at(-1).c, { pretMediu: 60 });
+  assert.strictEqual(n.intrare, null); assert.match(n.intrareMotiv, /jos/);
+  assert.ok(n.stop > 0 && n.tinta > n.stop);
+  assert.equal(A.niveluri(urca.slice(0, 40), 100, {}).nivel, "fara-date"); assert.equal(A.niveluri(null, 100, {}).nivel, "fara-date");
+});
+await test("preturi pentru o pozitie deschisa: stopul urca dupa maximul de dupa cumparare (chandelier) si se da si ca -X% de la maxim; peste pretul de acum -> spune ca stopul e deja atins", () => {
+  const p = urca.at(-1).c, mx = p * 1.05;
+  const n = A.niveluri(urca, p, { pretMediu: p * 0.8, maxDupaCumparare: mx });
+  // d = k*ATR, tinut intre 3% si 15% din pret (aici ATR-ul sintetic e mic -> plafonul de 3%)
+  aprox(n.d, Math.min(0.15 * p, Math.max(0.03 * p, n.k * n.atr)), 1e-9);
+  aprox(n.stopPozitie, mx - n.d, 1e-6); aprox(n.trailPct, n.d / mx * 100, 1e-6);
+  const sus = A.niveluri(urca, p * 0.5, { pretMediu: p, maxDupaCumparare: p * 1.2 });
+  assert.equal(sus.stopAtins, true);
+});
+await test("marimea pozitiei: risc 1% din cont la stop, plafon 20% din cont; cont lipsa -> null", () => {
+  const m = A.marime({ intrare: 100, stop: 95, cont: 30000, fx: null });
+  // risc 300 lei / 5 pe bucata = 60 buc = 6000 lei = 20% -> exact plafonul
+  aprox(m.bucati, 60, 1e-9); aprox(m.suma, 6000, 1e-9); assert.equal(m.plafonat, false);
+  const p = A.marime({ intrare: 100, stop: 99, cont: 30000 });
+  aprox(p.suma, 6000, 1e-9); assert.equal(p.plafonat, true, "stop strans -> ar iesi 300 buc, plafonul 20% taie");
+  assert.strictEqual(A.marime({ intrare: 100, stop: 95, cont: null }), null);
+});
+await test("semafor: ATENTIE din miscare mare pe trend SUS nu zice 'pana se intoarce trendul' (trendul e deja sus)", () => {
+  const b = urca.slice(); const u = b.at(-1); b[b.length - 1] = { ...u, c: u.c * 0.93, l: u.c * 0.92 };
+  const st = A.stare(b); assert.equal(st.trend.dir, "sus");
+  const r = A.semafor(poz({ pret: b.at(-1).c, pretMediu: b.at(-1).c * 1.01 }), st);
+  assert.equal(r.nivel, "atentie"); assert.doesNotMatch(r.ceAsFace, /întoarce trendul/); assert.match(r.ceAsFace, /mișc|liniș/);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

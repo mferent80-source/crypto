@@ -159,6 +159,23 @@ async function scenariu(lat, inal, nume) {
       assert.equal(await b.ev(`getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent("t212-${tk}")).then(d=>d.plan)`), null);
     });
 
+    await test(`${nume} · preturile calculate: pe fiecare pozitie cu preturi - stop care urca, tinta, proba; "Pune ca plan" scrie planul (apoi il sterg)`, async () => {
+      const cuBare = await b.ev(`t212.poz.filter(p=>(t212.bare[p.ticker]||[]).length>=120).length`);
+      assert.ok(cuBare > 0);
+      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut .t212Preturi").length`), cuBare);
+      const t = await b.ev(`document.querySelector("#t212Continut .t212Preturi").innerText`);
+      assert.match(t, /Stop care urcă după maxim/); assert.match(t, /Țintă/); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
+      const tk = await b.ev(`t212.poz.find(p=>t212.niveluri[p.ticker]&&!t212.planuri[p.ticker])?.ticker||""`);
+      if (!tk) return;
+      const astept = await b.ev(`+t212.niveluri["${tk}"].trailPct.toFixed(1)`);
+      await b.ev(`t212PuneNiveluri("${tk}")`);
+      await panaCand(b, `!!(t212.planuri["${tk}"]&&t212.planuri["${tk}"].trailPct)`, 15000, "planul din preturile calculate");
+      assert.equal(await b.ev(`t212.planuri["${tk}"].trailPct`), astept);
+      assert.ok((await b.ev(`t212.planuri["${tk}"].tinta`)) > 0);
+      await b.ev(`["Stop","Tinta","Trail"].forEach(k=>{const e=document.getElementById("t212"+k+"-${tk}");if(e)e.value=""});t212PlanSalveaza("${tk}")`);
+      await panaCand(b, `t212.planuri["${tk}"]===null`, 15000, "planul sters");
+    });
+
     await test(`${nume} · poarta: ASTS -> verdict cu motive si "ce as face eu"; simbol gol -> cere simbolul`, async () => {
       await b.ev(`document.getElementById("t212PSimbol").value="";t212Poarta()`);
       assert.match(await b.ev(`document.getElementById("t212PoartaRez").innerText`), /Scrie simbolul/);
@@ -166,6 +183,10 @@ async function scenariu(lat, inal, nume) {
       await panaCand(b, `!!document.querySelector("#t212PoartaRez .t212Verdict")`, 30000, "verdictul portii");
       const t = await b.ev(`document.getElementById("t212PoartaRez").innerText`);
       assert.match(t, /CUMPĂR|AȘTEAPTĂ|NU ACUM|FĂRĂ DATE/); assert.match(t, /ASTS/); assert.match(t, /Ce aș face eu/); FARA_GUNOI(t);
+      assert.match(t, /Prețurile calculate pentru ASTS/); assert.match(t, /Cât cumperi/);
+      // verdictul si marimea nu se contrazic: pe "NU ACUM" nu se da un numar de bucati
+      if (/NU ACUM/.test(t)) assert.match(t, /nu cumpăr acum — vezi verdictul/); else assert.match(t, /1% din cont|citește întâi contul/);
+      await b.ev(`document.getElementById("t212PoartaRez").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, `poarta-${nume}.png`));
     });
 
     await test(`${nume} · Jurnal: filtrul Actiuni arata jurnalul T212 (real vs T212, pe durata, greseli, trade-uri); Crypto il ascunde; Tot le arata pe amandoua`, async () => {
