@@ -53,5 +53,12 @@ await test("ordinea: rosu, galben, gri - oricum ar veni; intrari stricate (null,
   const c = l.map((x) => x.c); assert.deepEqual(c, c.slice().sort((a, b) => "rgnv".indexOf(a) - "rgnv".indexOf(b)));
   assert.equal(l[0].c, "r");
 });
+await test("v90: alertele altui bot, ale actiunilor T212 si cele vechi ale colectorului NU intra pe Tabloul botului afisat", () => {
+  const f = X.alerteleBotului([{ t: ACUM - 60000, nivel: "critic", titlu: "MET nu mai apare", bot: "met1" }, { t: ACUM - 60000, nivel: "atentie", titlu: "VVV: lichidarea la 14%", bot: "vvv1" },
+    { t: ACUM - 60000, nivel: "critic", titlu: "−12,9% de la maxim, cum ai scris în plan", bot: null, cheie: "t212-APLD_US_EQ-trail-2026-09-25" },
+    { t: ACUM - 5 * 3600000, nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul", bot: null, cheie: "colector" },
+    { t: ACUM - 30 * 60000, nivel: "critic", titlu: "Colectorul nu mai vede Pionex", bot: null, cheie: "colector" }], "vvv1", ACUM);
+  assert.deepEqual(f.map((a) => a.titlu), ["VVV: lichidarea la 14%", "Colectorul nu mai vede Pionex"]);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

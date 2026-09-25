@@ -5532,7 +5532,7 @@ function tbRenderTodo(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
   if(!b){box.innerHTML='<p class="tbSub tbTodoGol">Aștept botul…</p>';return}
   var pl=tbPlan.botId===b.id?tbPlan.plan:null,planGol=!(pl&&(pl.plus||pl.minus||pl.afaraOre));
-  var alerte=(Array.isArray(tbStare.alerteServer)?tbStare.alerteServer:[]).filter(function(a){return a&&(!a.bot||String(a.bot)===String(b.id))});
+  var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer,b.id,Date.now());
   var aver=tbStare.avertLista||(Array.isArray(b.avertismente)?b.avertismente:[]);
   var l=TabloExtra.ceAiDeFacut({acum:Date.now(),sfaturi:tbStare.sfaturiLista||[],avertismente:aver,alerte:alerte,planGol:planGol});
   // v89: consilierul - istoricul tau pe moneda, frica/lacomia crypto, stirile despre moneda

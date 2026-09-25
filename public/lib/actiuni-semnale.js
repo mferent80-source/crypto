@@ -64,7 +64,9 @@ var ActiuniSemnale = (function () {
     var arePlan = plan.stop > 0 || plan.trailPct > 0 || plan.tinta > 0;
     if (pct <= -0.20 && !arePlan) atentie.push("pe minus " + P(pct) + " fără plan scris");
     var nivel = iesi.length ? "iesi" : atentie.length ? "atentie" : "tine", sfat;
-    if (nivel === "iesi") sfat = arePlan ? "👉 Ce aș face eu: aș respecta ce am scris înainte — ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi." : "👉 Ce aș face eu: ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi.";
+    // "ce am scris" doar cand PLANUL a cerut iesirea (stop / -X% atins), nu cand iesirea vine din trend
+    var planAtins = (plan.stop > 0 && p.pret <= plan.stop) || (plan.trailPct > 0 && ref && p.pret <= ref * (1 - plan.trailPct / 100));
+    if (nivel === "iesi") sfat = planAtins ? "👉 Ce aș face eu: aș respecta ce am scris înainte — ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi." : "👉 Ce aș face eu: ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi.";
     else if (plan.tinta > 0 && p.pret >= plan.tinta) sfat = "👉 Ce aș face eu: iau profit pe o parte și mut stopul la prețul de intrare (" + p.pretMediu.toFixed(2) + ") pe rest.";
     else if (pct <= -0.20 && !arePlan) sfat = "👉 Ce aș face eu: scriu ACUM un plan (stop sau „ies la −X% de la maxim”); fără el, minusul doar crește în liniște.";
     else if (nivel === "atentie" && areDate && st.trend.dir === "jos") sfat = "👉 Ce aș face eu: nu cumpăr în plus pe " + s + " până nu se întoarce trendul; dacă n-am stop, îl pun.";

@@ -182,7 +182,11 @@ async function scenariu(lat, inal, nume) {
       // v89: sfaturile consilierului in detaliu + "Piata azi" sus
       const tDet = await b.ev(`document.getElementById("t212Det-${tk0}").innerText`);
       assert.match(tDet, /Sfaturi/i, "blocul de sfaturi din detaliu"); FARA_GUNOI(tDet);
-      await panaCand(b, `/Nasdaq/.test(document.querySelector("#t212Card [data-piata-azi]").innerText)`, 30000, "Piata azi"); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
+      await panaCand(b, `/Nasdaq/.test(document.querySelector("#t212Card [data-piata-azi]").innerText)`, 30000, "Piata azi");
+      // v90: ideile de cumparare - randuri cu "Biletul", nota cinstita (filtru, nu predictie)
+      const ti = await b.ev(`document.getElementById("t212Idei").innerText`);
+      assert.match(ti, /Idei de cumpărare/i); assert.match(ti, /nu o predicție/); FARA_GUNOI(ti);
+      assert.ok((await b.ev(`document.querySelectorAll("#t212Idei .t212IdeiTab tbody tr").length`)) > 0 || /nicio acțiune nu trece/.test(ti), "nici idei, nici mesajul de zi fara idei"); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
       await b.poza(path.join(DOSAR_POZE, `t212-deschis-${nume}.png`));
       await b.ev(`document.getElementById("t212R-${tk0}").click()`);
       assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), true, "al doilea clic il inchide");
@@ -287,6 +291,9 @@ await scenariu(390, 844, "telefon");
       await b.ev(`tbDeschidePlan()`); assert.equal(await b.ev(`document.getElementById("tbPl-plan").open`), true, "'Scrie planul' deschide planul");
       // v87: randul cu tot contul si pe Tablou; ritmul de recuperare langa rezultat (cand botul e pe minus)
       await panaCand(b, `/Trading 212/.test(document.querySelector("#tabloubot [data-cont-tot]").innerText)`, 30000, "randul contului pe Tablou");
+      // v90: ideile de boti pe Tablou (candidatii din clasament, cu butonul "Fisa")
+      await panaCand(b, `/Pe ce aș porni un bot/i.test(document.getElementById("tbIdei").innerText)`, 30000, "ideile de boti");
+      FARA_GUNOI(await b.ev(`document.getElementById("tbIdei").innerText`));
       const sub = await b.ev(`document.getElementById("tbKpiTotalSub").textContent`), tot = await b.ev(`tbStare.bot&&+tbStare.bot.profitTotal`);
       if (tot < 0) assert.match(sub, /zile până pe zero|nu se recuperează/, "ritmul de recuperare: " + sub);
     });

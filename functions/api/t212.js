@@ -89,9 +89,29 @@ export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
-  if (act !== "istoric" && act !== "cf") return json({ error: "Acțiune necunoscută" }, 400);
+  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
+  if (act === "idei") {
+    // v90: ideile de cumparare ale zilei (colectorul) + istoricul lor, ca sa se poata URMARI cum ies (o data pe zi pe simbol)
+    const sim = (v) => txt(v, 16).replace(/[^A-Za-z0-9.-]/g, ""), tk = (v) => txt(v, 40).replace(/[^A-Za-z0-9._]/g, "");
+    const act2 = (Array.isArray(corp && corp.actiuni) ? corp.actiuni : []).slice(0, 10).map((x) => ({ ticker: tk(x && x.ticker), simbol: sim(x && x.simbol), pret: nr(x && x.pret), intrare: nr(x && x.intrare), stop: nr(x && x.stop), tinta: nr(x && x.tinta), scor: nr(x && x.scor), pePlusProba: nr(x && x.pePlusProba), nProba: nr(x && x.nProba), rezultate: txt(x && x.rezultate, 10) || null,
+      motive: (Array.isArray(x && x.motive) ? x.motive : []).slice(0, 5).map((z) => txt(z, 200)), istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null })).filter((x) => x.ticker && x.pret > 0);
+    const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
+    const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;
+    await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, urmarire: urm }));
+    const ist = await citesteKv(env, "t212:idei-istoric", []), l = Array.isArray(ist) ? ist : [];
+    act2.forEach((x) => { if (!l.some((y) => y.zi === zi && y.ticker === x.ticker)) l.push({ zi, ticker: x.ticker, simbol: x.simbol, pret: x.pret }); });
+    const de = new Date(Date.now() - 150 * 86400000).toISOString().slice(0, 10);
+    await env.ISTORIC.put("t212:idei-istoric", JSON.stringify(l.filter((x) => x.zi >= de).slice(-1000)));
+    return json({ ok: true, actiuni: act2.length });
+  }
+  if (act === "lista") {
+    // v90: simbolurile urmarite de el (se adauga la universul ideilor)
+    const l = (Array.isArray(corp && corp.simboluri) ? corp.simboluri : []).map((x) => String(x || "").toUpperCase().trim()).filter((x) => /^[A-Z][A-Z0-9.-]{0,9}$/.test(x)).slice(0, 30);
+    await env.ISTORIC.put("t212:lista", JSON.stringify([...new Set(l)]));
+    return json({ ok: true, lista: [...new Set(l)] });
+  }
   if (act === "cf") {
     // "daca ascultai de Radar" pe actiuni: {id trade: {nivel, motive, greseli}}, scris de colector
     const NIV = ["cumpara", "asteapta", "nu", "fara-date"], GR = ["dupa-miscare", "langa-max7z"];
@@ -161,6 +181,11 @@ export async function onRequestGet({ request, env }) {
       if (!r.ok && r.status !== 404) return json({ error: "Nasdaq: HTTP " + r.status }, 502);
       const d = dataRezultate(j), v = { ticker: tk, simbol: cand[0], data: d ? d.data : null, sigur: d ? d.sigur : null };
       inCache(k, v, 12 * 3600); return json(v);
+    }
+    if (a === "idei") {
+      if (!env.ISTORIC?.get) return faraKv();
+      const [idei, istoric, lista] = await Promise.all([citesteKv(env, "t212:idei", null), citesteKv(env, "t212:idei-istoric", []), citesteKv(env, "t212:lista", [])]);
+      return json({ idei, istoric: Array.isArray(istoric) ? istoric : [], lista: Array.isArray(lista) ? lista : [] });
     }
     if (a === "cf") {
       if (!env.ISTORIC?.get) return faraKv();

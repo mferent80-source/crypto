@@ -116,12 +116,18 @@ await test("corp care nu e JSON, cu HTTP 200, e 502", async () => {
   assert.ok(r.corp?.motiv, "lipseste motivul");
 });
 
-await test("data.results care nu e lista (null / obiect) e 502", async () => {
-  for (const results of [null, {}, "x"]) {
+await test("data.results care nu e lista (obiect / text) e 502", async () => {
+  for (const results of [{}, "x"]) {
     fetchStub((u) => u.includes("/bot/orders") ? { corp: { result: true, data: { results } } } : RASPUNS_BUN(u));
     const r = await cheama("", ENV, proaspat());
     assert.equal(r.status, 502, `results=${JSON.stringify(results)}: asteptam 502, am primit ${r.status}`);
   }
+});
+
+await test("v90: result:true + results:null = zero boti pornit (asa raspunde Pionex cand n-ai niciun bot activ - vazut 25.09, dupa inchiderea lui MET)", async () => {
+  fetchStub((u) => u.includes("/bot/orders") ? { corp: { result: true, data: { results: null, nextPageToken: null } } } : RASPUNS_BUN(u));
+  const r = await cheama("", ENV, proaspat());
+  assert.equal(r.status, 200, "am primit " + r.status); assert.deepEqual(r.corp.bots, []);
 });
 
 await test("zero boti e zero boti, nu eroare (result:true + results:[])", async () => {

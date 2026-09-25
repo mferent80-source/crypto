@@ -2,7 +2,7 @@
 // Jurnal de trade (filtrul Crypto / Actiuni / Tot). Doar CITIRE: cheia T212 e doar de citire si sta acasa.
 // Foloseste din app.js: $, getJSON, apiFetch, escapeHtml, toast; din lib: GridCalcul, T212, ActiuniSemnale.
 // Calculele stau in lib (probate in scripts/t212-v85.mjs si scripts/actiuni-v85.mjs); aici doar se arata.
-var t212 = { stiri: {}, piata: null, dividende: null, rezultate: {}, niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
+var t212 = { idei: null, stiri: {}, piata: null, dividende: null, rezultate: {}, niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
 var T212_NIVEL = { tine: ["ȚINE", "t212Pill-tine"], atentie: ["ATENȚIE", "t212Pill-atentie"], iesi: ["IEȘI", "t212Pill-iesi"], "fara-date": ["FĂRĂ DATE", "t212Pill-fara"] };
 var T212_POARTA = { cumpara: ["🟢 CUMPĂR", "good"], asteapta: ["🟡 AȘTEAPTĂ", "tbWarn"], nu: ["🔴 NU ACUM", "bad"], "fara-date": ["⚪ FĂRĂ DATE", ""] };
 
@@ -27,6 +27,7 @@ async function t212Porneste(forta) {
   try { t212.istoric = await getJSON("/api/t212?action=istoric"); t212.istoricEroare = null; } catch (e) { t212.istoric = null; t212.istoricEroare = t212Eroare(e); }
   try { var cf = await getJSON("/api/t212?action=cf"); t212.cf = cf && cf.cf || {}; } catch (e) { t212.cf = null; }
   try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) { t212.piata = null; }
+  try { t212.idei = await getJSON("/api/t212?action=idei"); } catch (e) { t212.idei = null; }
   try { var dv = await getJSON("/api/t212?action=dividende"); t212.dividende = T212.dividende(dv && dv.items || []); } catch (e) { t212.dividende = null; }
   t212JurnalCache.n = -1;
   t212.la = Date.now(); t212Render();
@@ -193,7 +194,56 @@ function t212Render() {
     }).join("") + '<p class="tbSub t212PfNota">Bara plină = 30% din cont. Galben peste 15%, roșu peste 20%.</p><p class="t212Fac">' + escapeHtml(pf.ceAsFace) + '</p>';
   }
   t212RenderPoarta();
+  t212IdeiRender();
   if (typeof contTotRender === "function") contTotRender();
+}
+// v90: ideile de cumparare (colectorul, in fiecare dimineata de la 8:00) - un filtru, nu o predictie
+function t212IdeiRender() {
+  var box = $("t212Idei"); if (!box) return;
+  var d = t212.idei, id = d && d.idei, l = id && Array.isArray(id.actiuni) ? id.actiuni : [];
+  var h = '<div class="t212PanouCap"><h4>💡 Idei de cumpărare</h4><span class="tbSub">' + (id ? escapeHtml("din " + (id.judecate || 0) + " acțiuni judecate pe " + t212ZiScurta(id.zi) + ", " + (id.trecute || 0) + " trec de poartă") : "colectorul le caută în fiecare dimineață de la 8:00") + '</span></div>';
+  h += '<p class="tbSub t212IdeiNota">Un filtru care te ține departe de situațiile proaste (trend în jos, după mișcare, lângă maxim, rezultate în 10 zile), nu o predicție: pe trade-urile tale, „doar pe 🟢” a adus mai puțin decât ai făcut singur. ' + escapeHtml(id && id.urmarire ? id.urmarire.text : "Ideile se urmăresc: după ~30 se poate spune dacă merită urmate.") + '</p>';
+  if (!l.length) h += '<p class="tbSub t212Gol">' + (id ? "Azi nicio acțiune nu trece de poartă — și asta e un răspuns: n-aș cumpăra nimic nou azi." : "Primele idei apar după prima trecere a colectorului.") + '</p>';
+  else h += '<div class="t212TabWrap"><table class="t212Tab t212IdeiTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Intrare</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>'
+    + l.map(function (x) {
+      var ist = x.istoric && x.istoric.n ? x.istoric.n + " trade-uri, " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
+      return '<tr><td><b>' + escapeHtml(x.simbol) + '</b><span class="t212Mic">' + escapeHtml((x.motive || [])[2] || "") + '</span></td><td>' + t212Usd(x.pret) + '</td><td>' + t212Usd(x.intrare) + '</td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">−15%, urcă</span></td><td class="good">' + t212Usd(x.tinta) + '</td><td><span class="t212Mic ' + (x.istoric && x.istoric.total < 0 ? "bad" : "") + '">' + escapeHtml(ist) + '</span></td><td><button type="button" class="t212BtnLinie" data-action-click="t212BiletPentru(\'' + escapeHtml(x.simbol) + '\')">Biletul</button></td></tr>';
+    }).join("") + '</tbody></table></div>';
+  var lista = d && Array.isArray(d.lista) ? d.lista : [];
+  h += '<div class="t212Lista"><label for="t212ListaIn" class="tbSub">Urmăresc și (simboluri, despărțite prin virgulă):</label><input id="t212ListaIn" value="' + escapeHtml(lista.join(", ")) + '" placeholder="ex. ASTS, MSFT, NVDA" autocomplete="off"><button type="button" class="t212BtnLinie" data-action-click="t212ListaSalveaza()">Salvează</button></div>';
+  box.innerHTML = h;
+}
+function t212BiletPentru(sim) {
+  var e = $("t212PSimbol"); if (e) e.value = sim;
+  t212Poarta();
+  var r = $("t212PoartaRez"); if (r && r.scrollIntoView) r.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+async function t212ListaSalveaza() {
+  var e = $("t212ListaIn"), l = String(e && e.value || "").split(/[,\s]+/).filter(Boolean);
+  try {
+    var r = await apiFetch("/api/t212?action=lista", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ simboluri: l }) });
+    var d = await r.json().catch(function () { return null; }); if (!r.ok) throw new Error(d && d.error || "HTTP " + r.status);
+    if (t212.idei) t212.idei.lista = d.lista; t212IdeiRender();
+    toast("Lista e salvată: colectorul le judecă de mâine dimineață", "good");
+  } catch (x) { toast("Lista nu s-a salvat: " + t212Eroare(x), "bad"); }
+}
+// v90: ideile de boti - candidatii din clasamentul colectorului, cu istoricul tau pe moneda
+function tbIdeiRender() {
+  var box = $("tbIdei"); if (!box || typeof Idei === "undefined") return;
+  var cl = contTot.clasament, l = Idei.ideiBoti(cl, contTot.inchise || [], 5);
+  var h = '<div class="tbTodoCap"><h4>💡 Pe ce aș porni un bot acum</h4><span class="tbSub">' + (cl && cl.la ? "clasamentul de la " + escapeHtml(new Date(cl.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })) + ", top 100 PERP" : "colectorul face clasamentul o dată pe oră") + '</span></div>';
+  if (!l.length) h += '<p class="tbSub tbTodoGol">' + (cl ? "Acum nicio monedă nu e candidată." : "Aștept clasamentul…") + '</p>';
+  else h += l.map(function (x) {
+    var ist = x.istoric.n ? "istoricul tău: " + x.istoric.n + (x.istoric.n === 1 ? " bot" : " boți") + ", " + x.istoric.pePlus + " pe plus, " + (x.istoric.total >= 0 ? "+" : "−") + Math.abs(x.istoric.total).toFixed(2) + " USDT" : "n-ai mai avut boți pe ea";
+    var det = [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ");
+    return '<div class="tbTodoRand"><span class="tbDunga ' + (x.istoric.n >= 3 && x.istoric.total < 0 ? "g" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist) + '</p></div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + escapeHtml(x.moneda) + '\')">Fișa</button></div>';
+  }).join("");
+  box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>';
+}
+function gridDeschideMoneda(m) {
+  navTo("gridset", true);
+  var e = $("grMoneda"); if (e) e.value = m;
+  if (typeof gridCalculeaza === "function") gridCalculeaza("fortat");
 }
 
 function t212RandPozitie(p) {
@@ -467,7 +517,7 @@ function t212Cireasa(l) {
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", function () { jtAplicaFiltru(); });
 
 // v87: tot contul pe un rand, sus pe ambele pagini: botii Pionex (USDT, cu echivalentul in lei) si Trading 212 (lei)
-var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {} };
+var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0 };
 async function contTotStiriCrypto(m) {
   if (!m || contTot.stiriCrypto[m]) return;
   try { var sc = await getJSON("/api/stiri?action=crypto&moneda=" + encodeURIComponent(m)); contTot.stiriCrypto[m] = sc && sc.moneda || []; } catch (e) { contTot.stiriCrypto[m] = []; }
@@ -500,6 +550,7 @@ async function contTotAsigura() {
     if (!t212.piata) { try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) {} }
     // v89: botii inchisi (istoricul lui pe monede) si stirile despre moneda botului de pe Tablou
     if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { var fb = await getJSON("/api/bot-orders?status=finished&limit=100"); contTot.inchise = JurnalTrade.din((fb && fb.bots || []).map(function (x) { return x.brut || x; })); } catch (e) { contTot.inchise = []; } }
+    if (Date.now() - contTot.clasamentLa > 10 * 60000) { try { var cl = await getJSON("/api/istoric-bot?action=clasament"); contTot.clasament = cl && cl.clasament || null; contTot.clasamentLa = Date.now(); } catch (e) {} }
     var bb = typeof tbStare !== "undefined" && tbStare.bot; if (bb) await contTotStiriCrypto(String(bb.baza || "").replace(/\.PERP$/, ""));
   } finally { contTot.inLucru = false; }
   contTotRender();
@@ -518,4 +569,5 @@ function contTotRender() {
   parti.push(ati ? '<span class="bad">⚠️ ' + (iesi ? iesi + (iesi === 1 ? " acțiune de ieșit" : " acțiuni de ieșit") : "") + (iesi && lich ? " · " : "") + (lich ? lich + (lich === 1 ? " bot aproape de lichidare" : " boți aproape de lichidare") : "") + '</span>' : '<span class="good">✓ nimic roșu</span>');
   document.querySelectorAll("[data-cont-tot]").forEach(function (el) { el.innerHTML = parti.join('<span class="contTotSep">│</span>'); });
   piataAziRender();
+  tbIdeiRender();
 }

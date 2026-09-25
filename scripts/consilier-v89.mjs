@@ -96,6 +96,11 @@ await test("rezumatul de dimineata: piata, de iesit, rezultate in 7 zile, peste 
   assert.match(K.rezumatDimineata({ acum: ACUM, piata: { text: "Nasdaq: trend sus" } }).linii.join(" "), /nimic de făcut/i);
 });
 
+await test("rezumatul de dimineata (v90): randul 'Idei azi' cu actiunile si botii propusi", () => {
+  const r = K.rezumatDimineata({ acum: ACUM, idei: ["MSFT", "ASTS"], ideiBoti: ["BTC", "SOL"] });
+  assert.match(r.linii.join(" | "), /💡 Idei azi: MSFT, ASTS · boți: BTC, SOL/);
+});
+
 // ---------------- ruta /api/stiri ----------------
 const TOKEN = "proba-token-1234567890", ENV = { APP_API_TOKEN: TOKEN };
 let cereri = [], ip = 0;

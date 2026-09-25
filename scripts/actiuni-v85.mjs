@@ -239,5 +239,11 @@ await test("v88: un plan salvat de o PROBA de ecran (proba: true) nu declanseaza
     cereBare: async () => [], trimite: async (m, k) => { trimise.push(k); return true; }, stare: {}, ActiuniSemnale: A, T212: { simbol: (t) => t }, jurnal: () => {}, acum: Date.UTC(2026, 8, 25) });
   assert.deepEqual(trimise, []);
 });
+await test("v90 semafor: IESI din TREND cu un plan pus, dar neatins -> nu zice 'ce am scris' (planul nu cere iesirea); IESI din PLAN -> zice", () => {
+  const t = A.semafor(poz({ pret: 85, plan: { trailPct: 15 }, maxDupaCumparare: 90 }), A.stare(coboara));
+  assert.equal(t.nivel, "iesi"); assert.doesNotMatch(t.ceAsFace, /ce am scris/);
+  const p = A.semafor(poz({ pret: 85, plan: { stop: 90 } }), A.stare(urca));
+  assert.equal(p.nivel, "iesi"); assert.match(p.ceAsFace, /ce am scris/);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

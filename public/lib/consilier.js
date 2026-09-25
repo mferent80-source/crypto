@@ -116,6 +116,8 @@ var Consilier = (function () {
     (o.plafon || []).forEach(function (x) { deFacut++; linii.push("⚖️ " + x.simbol + " e " + Math.round(x.pond * 100) + "% din cont (plafonul e 20%)"); });
     (o.boti || []).forEach(function (x) { deFacut++; linii.push("⚠️ Botul " + x.nume + ": lichidarea la " + x.lich.toFixed(1).replace(".", ",") + "%"); });
     (o.stiri || []).slice(0, 3).forEach(function (x) { linii.push("📰 " + x.simbol + ": " + x.titlu); });
+    // v90: ideile de cumparare ale zilei (un filtru, nu o predictie)
+    if ((o.idei && o.idei.length) || (o.ideiBoti && o.ideiBoti.length)) linii.push("💡 Idei azi: " + ((o.idei || []).join(", ") || "—") + ((o.ideiBoti && o.ideiBoti.length) ? " · boți: " + o.ideiBoti.join(", ") : ""));
     if (!deFacut) linii.push("✓ Azi nu e nimic de făcut pe poziții.");
     return { titlu: "Rezumatul de dimineață", linii: linii };
   }

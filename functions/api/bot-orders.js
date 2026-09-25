@@ -41,6 +41,9 @@ async function citesteBoti(env,params={}){
   // (corp ne-JSON, fara result:true, results care nu e lista) e eroare, nu "0 boti".
   if(!d)throw Object.assign(Error("Pionex bot API: raspuns care nu e JSON"),{status:502,motiv:"corp-ne-json"});
   if(d.result!==true)throw Object.assign(Error("Pionex bot API: raspuns fara result:true"),{status:502,motiv:"fara-result-true"});
+  // v90: cand n-ai niciun bot pornit, Pionex raspunde result:true + results:null (vazut 25.09, dupa inchiderea lui
+  // MET) - asta e "zero boti", nu o forma stricata. Orice alt ne-sir ramane eroare.
+  if(d.data&&d.data.results===null)return [];
   if(!Array.isArray(d.data?.results))throw Object.assign(Error("Pionex bot API: data.results nu e o lista"),{status:502,motiv:"forma-necunoscuta"});
   return d.data.results;
 }

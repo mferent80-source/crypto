@@ -226,7 +226,14 @@ var TabloExtra = (function () {
     var c = 2 * C.COMISION; return c / (netPct + c);
   }
 
-  return { ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
+  // v90: pe Tabloul unui bot intra doar alertele LUI si, din cele fara bot, doar ale colectorului din ultimele 2 ore
+  // (nu ale altui bot, nu ale actiunilor T212, nu rezumatul de dimineata)
+  function alerteleBotului(alerte, botId, acum) {
+    var a0 = acum || Date.now();
+    return (Array.isArray(alerte) ? alerte : []).filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a0 - a.t < 2 * 3600000); });
+  }
+
+  return { alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;
