@@ -228,12 +228,18 @@ var TabloExtra = (function () {
 
   // v90: pe Tabloul unui bot intra doar alertele LUI si, din cele fara bot, doar ale colectorului din ultimele 2 ore
   // (nu ale altui bot, nu ale actiunilor T212, nu rezumatul de dimineata)
+  // v91.4: "nu mai poate citi botul" e REZOLVATA cand vine dupa ea revenirea colectorului ("citeste din nou botul")
+  function alertaRezolvata(a, lista) {
+    if (!a || a.cheie !== "colector" || !/nu mai poate citi/i.test(String(a.titlu || ""))) return false;
+    return (Array.isArray(lista) ? lista : []).some(function (b) { return b && b.cheie === "colector" && b.t >= a.t && /citește din nou|citeste din nou/i.test(String(b.titlu || "")); });
+  }
+  // alertele colectorului: 2 ore, fara cele informative (revenirea), fara cele rezolvate si fara "X nu mai apare in lista" (e despre ALT bot, deja inchis)
   function alerteleBotului(alerte, botId, acum) {
-    var a0 = acum || Date.now();
-    return (Array.isArray(alerte) ? alerte : []).filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a0 - a.t < 2 * 3600000); });
+    var a0 = acum || Date.now(), l = Array.isArray(alerte) ? alerte : [];
+    return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
+  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

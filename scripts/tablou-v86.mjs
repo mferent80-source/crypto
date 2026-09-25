@@ -60,5 +60,26 @@ await test("v90: alertele altui bot, ale actiunilor T212 si cele vechi ale colec
     { t: ACUM - 30 * 60000, nivel: "critic", titlu: "Colectorul nu mai vede Pionex", bot: null, cheie: "colector" }], "vvv1", ACUM);
   assert.deepEqual(f.map((a) => a.titlu), ["VVV: lichidarea la 14%", "Colectorul nu mai vede Pionex"]);
 });
+// v91.4: 25.09 "inca e mesajul in app" - la 20:46 "nu mai poate citi botul", la 20:48 "citeste din nou" + "MET nu mai apare";
+// pe Tabloul lui VVV, la 21:30, ramaneau amandoua in "Ce ai de facut acum".
+const PAT = [
+  { t: ACUM - 104 * 60000, nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul", mesaj: "De 11 minute: ...", bot: null, cheie: "colector" },
+  { t: ACUM - 102 * 60000, nivel: "info", titlu: "Crypto Radar citește din nou botul", mesaj: "Alertele merg din nou.", bot: null, cheie: "colector" },
+  { t: ACUM - 102 * 60000, nivel: "critic", titlu: "MET nu mai apare în lista Pionex", mesaj: "Poate a fost închis sau lichidat.", bot: null, cheie: "colector" },
+];
+await test("v91.4: 'nu mai poate citi botul' urmata de 'citeste din nou' NU mai e de facut; 'MET nu mai apare' nu intra pe Tabloul lui VVV", () => {
+  assert.deepEqual(X.alerteleBotului(PAT, "vvv1", ACUM).map((a) => a.titlu), []);
+  const l = X.ceAiDeFacut({ acum: ACUM, alerte: X.alerteleBotului(PAT, "vvv1", ACUM), avertismente: [], sfaturi: [], planGol: false });
+  assert.ok(!l.some((x) => /citi botul|MET/.test(x.titlu)), JSON.stringify(l.map((x) => x.titlu)));
+});
+await test("v91.4: 'nu mai poate citi botul' FARA revenire ramane (problema e de acum)", () => {
+  assert.deepEqual(X.alerteleBotului([PAT[0]], "vvv1", ACUM).map((a) => a.titlu), ["Crypto Radar nu mai poate citi botul"]);
+});
+await test("v91.4: in istoric alerta rezolvata e marcata; cea nerezolvata si revenirea insasi nu", () => {
+  assert.equal(X.alertaRezolvata(PAT[0], PAT), true);
+  assert.equal(X.alertaRezolvata(PAT[0], [PAT[0]]), false);
+  assert.equal(X.alertaRezolvata(PAT[1], PAT), false);
+  assert.equal(X.alertaRezolvata(null, PAT), false);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

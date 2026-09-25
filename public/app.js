@@ -5593,7 +5593,7 @@ function renderTabloAlerte(){
     '<div class="tbLinie"><span>Canalul de alerte</span><b>'+escapeHtml(canal)+'</b></div>';
   if(lista===null)h+='<p class="tbSub">Nu pot citi alertele de pe server.</p>';
   else if(!lista.length)h+='<p class="tbSub">Nicio alertă încă. Aici apar: lichidare aproape, Pionex în stare anormală, preț ieșit din grid, piața pe 4h împotriva botului, mișcare mare.</p>';
-  else h+='<div class="tbAlerteLista">'+lista.map(function(a){var n=NIV[a.nivel]||NIV.info;return '<div class="tbAlerta"><span class="tbSub">'+escapeHtml(new Date(a.t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</span><b class="'+n[1]+'">'+n[0]+' '+escapeHtml(a.titlu)+'</b>'+(a.mesaj?'<p class="tbSub">'+escapeHtml(a.mesaj)+'</p>':'')+'</div>'}).join("")+'</div>';
+  else h+='<div class="tbAlerteLista">'+lista.map(function(a){var n=NIV[a.nivel]||NIV.info;return '<div class="tbAlerta"><span class="tbSub">'+escapeHtml(new Date(a.t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</span><b class="'+n[1]+'">'+n[0]+' '+escapeHtml(a.titlu)+'</b>'+(TabloExtra.alertaRezolvata(a,tbStare.alerteServer)?' <span class="tbSub">· ✓ rezolvată</span>':'')+(a.mesaj?'<p class="tbSub">'+escapeHtml(a.mesaj)+'</p>':'')+'</div>'}).join("")+'</div>';
   el.innerHTML=h;
   tbRenderTodo();
 }
