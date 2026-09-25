@@ -844,5 +844,13 @@ await test("v84.1 distanteGrid: MET la 0,3411 in 0,30-0,40 -> 12,05% pana jos, 1
   assert.equal(sub.inGrid, false); assert.match(sub.text, /sub grid cu 3,4%/, "fata de pretul de acum, ca si celelalte distante");
   assert.equal(TX.distanteGrid(Object.assign({}, botMET, { gridJos: null })), null);
 });
+await test("v84.2 pill-ul pozitiei: 0,3411 in 0,30-0,40 -> 41% in grid, verde; 0,305 -> 5%, rosu; 0,32 -> 20%, galben; afara -> rosu 'sub grid'", () => {
+  const d = (p) => TX.distanteGrid(Object.assign({}, botMET, { pretCurent: p }));
+  assert.equal(d(0.3411).pill, "41% în grid"); assert.equal(d(0.3411).ton, "bine");
+  assert.equal(d(0.305).pill, "5% în grid"); assert.equal(d(0.305).ton, "rau");
+  assert.equal(d(0.32).ton, "atentie"); assert.equal(d(0.39).ton, "atentie");
+  assert.equal(d(0.29).pill, "sub grid"); assert.equal(d(0.29).ton, "rau");
+  assert.equal(d(0.41).pill, "peste grid");
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

@@ -204,6 +204,7 @@ async function scenariu(lat, inal, nume) {
       assert.match(t1, /Pas net pe grilă/); assert.match(t1, /Verdictul de azi/);
       assert.match(await b.ev(`document.getElementById("tbKpiPretSub").textContent`), /↓ \d+,\d% până jos · ↑ \d+,\d% până sus|grid cu/, "v84.1: distantele pana la margini");
       assert.match(await b.ev(`document.getElementById("botStrip").textContent`), /grid ↓\d/);
+      assert.match(await b.ev(`document.getElementById("tbKpiPozPill").textContent`), /^\d{1,3}% în grid$|^(sub|peste) grid$/, "v84.2: pill-ul pozitiei");
       assert.match(t2, /Grile, ultimele 24 h/); assert.match(t2, /Dacă îl închizi acum, iei[\s\S]{0,10}\d/); assert.match(t2, /Prețul la care botul e pe zero/);
       FARA_GUNOI(t1); FARA_GUNOI(t2);
       // v80.1: sfaturile au "Ce as face eu" si nu mai vorbesc de opritor / USDT liberi

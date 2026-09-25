@@ -156,7 +156,11 @@ var TabloExtra = (function () {
     if (p === null || !(p > 0) || jos === null || sus === null || !(sus > jos)) return null;
     var f = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; };
     var j = (p - jos) / p, s = (sus - p) / p, inGrid = p >= jos && p <= sus;
-    return { josPct: j, susPct: s, inGrid: inGrid, text: inGrid ? "↓ " + f(j) + " până jos · ↑ " + f(s) + " până sus" : p < jos ? "sub grid cu " + f(-j) : "peste grid cu " + f(-s) };
+    // v84.2: pill-ul pozitiei - verde la mijloc, galben in 10-25% de la o margine, rosu sub 10% sau afara
+    var poz = (p - jos) / (sus - jos), m = Math.min(poz, 1 - poz);
+    var pill = inGrid ? Math.round(poz * 100) + "% în grid" : p < jos ? "sub grid" : "peste grid";
+    var ton = !inGrid || m < 0.10 ? "rau" : m < 0.25 ? "atentie" : "bine";
+    return { poz: poz, pill: pill, ton: ton, josPct: j, susPct: s, inGrid: inGrid, text: inGrid ? "↓ " + f(j) + " până jos · ↑ " + f(s) + " până sus" : p < jos ? "sub grid cu " + f(-j) : "peste grid cu " + f(-s) };
   }
 
   return { distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,

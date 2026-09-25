@@ -5556,6 +5556,7 @@ function tbDeseneazaKpi(){
   pune("tbKpiPret",p===null?"—":tbPretScurt(p),"");
   var poz=(p!==null&&jos!==null&&sus!==null&&sus>jos)?(p-jos)/(sus-jos):null;
   var dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(b):null;
+  var pill=$("tbKpiPozPill");if(pill){if(dg){pill.hidden=false;pill.textContent=dg.pill;pill.className="tbPill tbPill-"+dg.ton}else pill.hidden=true}
   pune("tbKpiPretSub",poz===null?"fără grid citit":(dg?dg.text:(poz<0?"sub grid":poz>1?"peste grid":Math.round(poz*100)+"% din interval"))+" · "+tbPretScurt(jos)+" - "+tbPretScurt(sus),poz!==null&&(poz<0||poz>1)?"bad":"");
   var punct=$("tbKpiGridPunct");
   if(punct){punct.hidden=poz===null;if(poz!==null){punct.style.left=(Math.min(1,Math.max(0,poz))*100).toFixed(1)+"%";punct.className="tbGaugePunct"+(poz<0||poz>1?" bad":"")}}

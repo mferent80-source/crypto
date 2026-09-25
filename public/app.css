@@ -1487,3 +1487,8 @@ body.peTablou main>.note{display:none}
 #gridset .tbFac,#jurnaltrade .tbFac{margin:6px 0;padding:6px 8px;border-left:3px solid var(--accent);background:rgba(79,209,197,.08);border-radius:4px}
 #tabloubot #tbPortCard{margin-bottom:12px}
 @media (max-width:600px){#gridset .grHartieRand{grid-template-columns:1fr auto}}
+#tabloubot .tbKpiRand{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#tabloubot .tbPill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:800;color:#fff;white-space:nowrap}
+#tabloubot .tbPill-bine{background:#00aa5a}
+#tabloubot .tbPill-atentie{background:#c89600}
+#tabloubot .tbPill-rau{background:#dc283c}
