@@ -1585,3 +1585,15 @@ body.peTablou main>.note{display:none}
   .t212TodoRand{grid-template-columns:6px 1fr}.t212TodoRand>button{grid-column:2;justify-self:start}
 }
 .t212Det[hidden]{display:none!important}
+/* v85.4: Trading 212 mai strans (cererea lui 25.09: "un pic mai strans pe ambele ecrane") */
+.t212Card{gap:8px}.t212CapCard h3{font-size:18px}
+.t212Cel{padding:7px 12px}.t212Val{font-size:17px}.t212Et{font-size:11px}
+.t212TodoCap{padding:6px 12px 2px}.t212TodoRand{grid-template-columns:6px 1fr auto;gap:10px;padding:5px 12px}.t212TodoRand p{font-size:12px}
+.t212Grila{gap:8px;grid-template-columns:minmax(0,1fr) 310px}.t212Side{gap:8px}
+.t212PanouCap{padding:7px 12px}.t212PanouCap h4{font-size:14px}
+.t212Tab th{padding:6px 8px}.t212Tab td{padding:6px 8px}.t212Tab th:first-child,.t212Tab td:first-child{padding-left:12px}
+.t212Sim b{font-size:14px}.t212Tab .t212Pill{min-width:58px;padding:1px 6px;font-size:10.5px}
+.t212Det td{padding:0 12px 10px}.t212DetGrila{gap:12px}
+.t212PoartaCorp{padding:8px 12px;gap:6px}#t212Pf{padding:8px 12px;gap:4px}
+.t212BtnLinie,.t212Btn{padding:5px 10px}
+@media (max-width:640px){.t212Cel{padding:6px 10px}.t212Val{font-size:16px}.t212TodoRand{grid-template-columns:5px 1fr;padding:5px 10px}.t212PanouCap{padding:6px 10px}.t212Tab tr.t212Rand{padding:7px 10px}.t212Tab tr.t212Det td{padding:0 10px 10px}}
