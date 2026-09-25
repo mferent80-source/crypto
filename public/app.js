@@ -3505,19 +3505,32 @@ function updateSourceLineage(src=analysisSource()){
 async function pionexTickerSymbol(pionexSymbol){
   const key=cacheKey("pionex-ticker",pionexSymbol);
   return memoRequest(key,5000,async()=>{
-    const d=await pionexRequest("/api/v1/market/tickers?type=SPOT","pionex_tickers"),rows=d?.data?.tickers||[],t=rows.find(x=>x.symbol===pionexSymbol);
+    const perp=/_PERP$/.test(pionexSymbol),d=await pionexRequest(`/api/v1/market/tickers?type=${perp?"PERP":"SPOT"}`,"pionex_tickers",perp?"&market=PERP":""),rows=d?.data?.tickers||[],t=rows.find(x=>x.symbol===pionexSymbol);
     if(!t)throw Error(`Pionex symbol unavailable: ${pionexSymbol}`);
     const close=Number(t.close),open=Number(t.open),amount=Number(t.amount||0);
     return {symbol:pionexSymbol,lastPrice:String(close),priceChangePercent:String(open?((close/open)-1)*100:0),quoteVolume:String(amount),highPrice:String(t.high||""),lowPrice:String(t.low||"")}
   })
 }
+// v91.2: unele monede sunt pe Pionex DOAR ca futures (ex. VVV: VVV_USDT nu exista, VVV_USDT_PERP da).
+// Intai spot, apoi futures; null = moneda nu e deloc pe Pionex. Arunca doar daca Pionex nu raspunde.
+const pionexPiataMonedei=new Map();
+async function pionexSimbolAnaliza(sym){
+  const c=coin(sym);if(pionexPiataMonedei.has(c))return pionexPiataMonedei.get(c);
+  const are=async mk=>{const d=await pionexRequest(`/api/v1/market/tickers?type=${mk}`,"pionex_tickers",mk==="PERP"?"&market=PERP":"");const tinta=mk==="PERP"?`${c}_USDT_PERP`:`${c}_USDT`;return (d?.data?.tickers||[]).some(x=>x.symbol===tinta)};
+  const r=await are("SPOT")?{simbol:`${c}_USDT`,piata:"SPOT"}:await are("PERP")?{simbol:`${c}_USDT_PERP`,piata:"PERP"}:null;
+  pionexPiataMonedei.set(c,r);return r
+}
 async function analysisKlines(sym,tf,limit=300,src=analysisSource()){
   if(src==="TWELVEDATA")return stockSeries(stockSymbol(sym),tf,limit);
-  return src==="PIONEX"?pionexKlines(`${coin(sym)}_USDT`,tf,Math.min(500,limit)):klines(sym,tf,limit)
+  if(src!=="PIONEX")return klines(sym,tf,limit);
+  const px=await pionexSimbolAnaliza(sym).catch(()=>null);
+  return pionexKlines(px?.simbol||`${coin(sym)}_USDT`,tf,Math.min(500,limit))
 }
 async function analysisTicker(sym,src=analysisSource()){
   if(src==="TWELVEDATA")return stockTicker(stockSymbol(sym));
-  return src==="PIONEX"?pionexTickerSymbol(`${coin(sym)}_USDT`):ticker(sym)
+  if(src!=="PIONEX")return ticker(sym);
+  const px=await pionexSimbolAnaliza(sym).catch(()=>null);
+  return pionexTickerSymbol(px?.simbol||`${coin(sym)}_USDT`)
 }
 async function analysisMtfData(sym,src=analysisSource()){
   const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"],errors={};
@@ -4092,10 +4105,10 @@ function renderQuantFlow(q,deriv=window.__derivativesState||{}){
 }
 function applyNetworkState(){const on=navigator.onLine!==false,b=$("offlineBanner"),networkFns=/\b(analyze|runPionexScan|runStockScan|loadExternalIntelligence|loadEconomicCalendar|loadOnchainIntel|loadPredictiveLiquidationMap|loadOptionsIntel|loadHistoricalCvd|loadCloudMonitor|checkPionexHealth|runHealthCheck|loadReplayHistory|runHistoricalScanner)\s*\(/;if(b)b.hidden=on;document.body.classList.toggle("offlineMode",!on);for(const el of document.querySelectorAll("button[data-action-click]")){const needs=networkFns.test(el.dataset.actionClick||"");if(needs){el.disabled=!on;el.setAttribute("aria-disabled",String(!on));if(!on)el.title="Unavailable offline";else if(el.title==="Unavailable offline")el.removeAttribute("title")}}if($("status")&&!on)$("status").textContent="OFFLINE · read-only local research mode";return on}
 window.addEventListener("online",()=>{applyNetworkState();toast("Network restored","good")});window.addEventListener("offline",()=>{applyNetworkState();toast("Offline · local research remains available","warn")});
-async function analyze(save,fallbackTried=false){
+async function analyze(save,fallbackTried=false,srcFortat=null){
  if(!applyNetworkState()){toast("Offline · analysis requires network. Local journal/reports remain available.","warn");return}
- let sym=norm($("symbol").value),t=$("tf").value,mode=$("mode").value,src=analysisSource();
- if(assetClass()==="CRYPTO"&&src==="PIONEX"&&pionexCooldownRemaining()>0){setAnalysisSource("BINANCE");src="BINANCE";toast("Pionex este în cooldown · am revenit automat la Binance.","warn")}
+ let sym=norm($("symbol").value),t=$("tf").value,mode=$("mode").value,src=srcFortat||analysisSource();
+ if(!srcFortat&&assetClass()==="CRYPTO"&&src==="PIONEX"&&pionexCooldownRemaining()>0){setAnalysisSource("BINANCE");src="BINANCE";toast("Pionex este în cooldown · am revenit automat la Binance.","warn")}
  invalidateDecisionContext(sym,src,t,false);
  $("symbol").value=assetClass()==="STOCKS"?stockSymbol(sym):coin(sym);syncTop(sym,t,mode);updateSourceLineage(src);setBusy(true,`Actualizare engine · ${src}…`);
  try{
@@ -4164,6 +4177,14 @@ async function analyze(save,fallbackTried=false){
      $("topLive").className="statusChip warn";$("topLive").textContent="PIONEX → BINANCE";
      toast("Pionex indisponibil · fallback automat la Binance.","warn");
      return analyze(save,true)
+   }
+   // v91.2: Binance nu are moneda (raspunde 400 FARA CORS => browserul vede doar "Failed to fetch") sau nu raspunde:
+   // incearca Pionex (spot, apoi futures) DOAR pentru analiza asta - sursa aleasa ramane Binance.
+   if(assetClass()==="CRYPTO"&&failedSource==="BINANCE"&&!fallbackTried){
+     const c=coin(sym);let px,pionexTace=false;try{px=await pionexSimbolAnaliza(sym)}catch(_){pionexTace=true}
+     if(px){setBusy(false);toast(`${c}: Binance nu a dat date · am luat analiza de la Pionex${px.piata==="PERP"?" futures":""}. Sursa ta rămâne Binance.`,"warn");return analyze(save,true,"PIONEX")}
+     const msg=pionexTace?`${c}: Binance nu a dat date, iar Pionex nu răspunde acum — încearcă peste un minut.`:`${c} nu există nici pe Binance, nici pe Pionex — verifică numele monedei.`;
+     setBusy(false,msg);$("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";toast(msg,"bad");return
    }
    setBusy(false,"Eroare "+failedSource+": "+e.message);
    $("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";
