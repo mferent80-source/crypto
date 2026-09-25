@@ -64,7 +64,7 @@ var ActiuniSemnale = (function () {
     var arePlan = plan.stop > 0 || plan.trailPct > 0 || plan.tinta > 0;
     if (pct <= -0.20 && !arePlan) atentie.push("pe minus " + P(pct) + " fără plan scris");
     var nivel = iesi.length ? "iesi" : atentie.length ? "atentie" : "tine", sfat;
-    if (nivel === "iesi") sfat = "👉 Ce aș face eu: aș respecta ce am scris înainte — ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi.";
+    if (nivel === "iesi") sfat = arePlan ? "👉 Ce aș face eu: aș respecta ce am scris înainte — ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi." : "👉 Ce aș face eu: ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi.";
     else if (plan.tinta > 0 && p.pret >= plan.tinta) sfat = "👉 Ce aș face eu: iau profit pe o parte și mut stopul la prețul de intrare (" + p.pretMediu.toFixed(2) + ") pe rest.";
     else if (pct <= -0.20 && !arePlan) sfat = "👉 Ce aș face eu: scriu ACUM un plan (stop sau „ies la −X% de la maxim”); fără el, minusul doar crește în liniște.";
     else if (nivel === "atentie" && areDate && st.trend.dir === "jos") sfat = "👉 Ce aș face eu: nu cumpăr în plus pe " + s + " până nu se întoarce trendul; dacă n-am stop, îl pun.";
@@ -140,9 +140,11 @@ var ActiuniSemnale = (function () {
       var b = x.beta > 0 ? x.beta : 1, r = { simbol: x.simbol, valoare: x.valoare, pondere: total > 0 ? x.valoare / total : null, beta: x.beta > 0 ? x.beta : null, soc: -x.valoare * 0.10 * b };
       soc += r.soc; if (!cea || r.valoare > cea.valoare) cea = r; return r;
     }).sort(function (a, b) { return b.valoare - a.valoare; });
-    var sfat = !rows.length ? "👉 N-ai poziții deschise." : cea.pondere > 0.30
-      ? "👉 Ce aș face eu: " + cea.simbol + " e " + P(cea.pondere, 0) + " din cont — aș ține o singură acțiune sub 25–30%, ca o zi proastă a ei să nu fie ziua proastă a contului."
-      : "👉 Ce aș face eu: împărțirea e ok (cea mai mare, " + cea.simbol + ", e " + P(cea.pondere, 0) + "). La o scădere de 10% a Nasdaq-ului contul ar pierde cam " + L(soc) + ".";
+    // plafonul: 20% din cont pe o actiune (acelasi prag ca "Ce ai de facut acum" si marimea pozitiei)
+    var pc = function (x) { return P(x, 0).replace("+", ""); };
+    var sfat = !rows.length ? "👉 N-ai poziții deschise." : cea.pondere > 0.20
+      ? "👉 Ce aș face eu: " + cea.simbol + " e " + pc(cea.pondere) + " din cont — aș ține o singură acțiune sub 20%, ca o zi proastă a ei să nu fie ziua proastă a contului. La o scădere de 10% a Nasdaq-ului contul ar pierde cam " + L(soc) + "."
+      : "👉 Ce aș face eu: împărțirea e ok (cea mai mare, " + cea.simbol + ", e " + pc(cea.pondere) + "). La o scădere de 10% a Nasdaq-ului contul ar pierde cam " + L(soc) + ".";
     return { total: total, investit: inv, cash: total > 0 ? (cash > 0 ? cash : 0) / total : null, pozitii: rows, cea: cea, soc: soc, ceAsFace: sfat };
   }
 

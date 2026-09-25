@@ -224,5 +224,12 @@ await test("semafor: ATENTIE din miscare mare pe trend SUS nu zice 'pana se into
   const r = A.semafor(poz({ pret: b.at(-1).c, pretMediu: b.at(-1).c * 1.01 }), st);
   assert.equal(r.nivel, "atentie"); assert.doesNotMatch(r.ceAsFace, /întoarce trendul/); assert.match(r.ceAsFace, /mișc|liniș/);
 });
+await test("sfaturile nu contrazic restul ecranului: IESI fara plan nu zice 'ce am scris'; portofoliul avertizeaza peste 20% (plafonul), fara semn +", () => {
+  const r = A.semafor(poz({ pret: 85 }), A.stare(coboara));
+  assert.equal(r.nivel, "iesi"); assert.doesNotMatch(r.ceAsFace, /scris/);
+  const cu = A.semafor(poz({ pret: 85, plan: { stop: 90 } }), A.stare(coboara)); assert.match(cu.ceAsFace, /scris/);
+  const q = A.portofoliu([{ simbol: "APLD", valoare: 23 }, { simbol: "X", valoare: 19 }, { simbol: "Y", valoare: 19 }, { simbol: "Z", valoare: 19 }, { simbol: "W", valoare: 20 }], 0);
+  assert.match(q.ceAsFace, /APLD e 23% din cont/); assert.doesNotMatch(q.ceAsFace, /ok/);
+});
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

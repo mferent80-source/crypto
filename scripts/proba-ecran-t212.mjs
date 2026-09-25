@@ -113,7 +113,7 @@ async function test(nume, fn) {
 }
 
 const FARA_GUNOI = (t) => { for (const g of ["NaN", "undefined", "null", "Infinity", "[object"]) assert.ok(!t.includes(g), `pe ecran apare "${g}"`); };
-const CONT = `document.getElementById("t212Continut").innerText`;
+const CONT = `document.getElementById("t212Card").innerText`;
 
 async function scenariu(lat, inal, nume) {
   const profil = path.join(tmpdir(), `proba-t212-${nume}-${Date.now()}`);
@@ -134,14 +134,20 @@ async function scenariu(lat, inal, nume) {
     });
 
     await test(`${nume} · US Stocks -> contul T212: cifrele, fiecare pozitie cu semafor, sfat si plan; portofoliul; fara gunoi`, async () => {
-      await panaCand(b, `!!document.querySelector("#t212Continut .t212Kpi")`, 40000, "cifrele contului");
+      await panaCand(b, `!!document.querySelector("#t212Sus .t212Kpi")`, 40000, "cifrele contului");
       await panaCand(b, `!t212.inLucru`, 120000, "preturile zilnice pentru fiecare pozitie");
       const t = await b.ev(CONT), n = await b.ev(`(t212.poz||[]).length`);
       assert.ok(n > 0, "contul are pozitii (7 pe 25.09)");
-      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut .t212Rand").length`), n);
-      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut .t212Rand .t212Pill").length`), n, "un semafor pe fiecare pozitie");
-      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut .t212Rand .t212Plan button").length`), n, "planul pe fiecare pozitie");
-      assert.match(t, /Câștigat REAL/); assert.match(t, /T212 îți arată/); assert.match(t, /Portofoliul/); assert.match(t, /Ce aș face eu/);
+      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Rand").length`), n, "un rand pe actiune");
+      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Rand .t212Pill").length`), n, "un semafor pe fiecare pozitie");
+      assert.equal(await b.ev(`[...document.querySelectorAll("#t212Continut .t212Det .t212Plan button")].filter(x=>/Salvează planul/.test(x.textContent)).length`), n, "planul pe fiecare pozitie");
+      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Det:not([hidden])").length`), 0, "detaliile inchise la deschidere (compact)");
+      assert.match(t, /Câștigat real/i); assert.match(t, /T212 arată/i); assert.match(t, /Portofoliul/i); assert.match(t, /Ce ai de făcut acum/i);
+      // procentul principal e in LEI, ca in Trading 212; pretul in dolari sta langa el
+      assert.match(await b.ev(`document.querySelector("#t212Continut tr.t212Rand .c-rez").innerText`), /preț/);
+      // ordinea: IESI inaintea ATENTIE inaintea TINE
+      const ord = await b.ev(`[...document.querySelectorAll("#t212Continut tr.t212Rand .t212Pill")].map(x=>({"IEȘI":0,"ATENȚIE":1,"FĂRĂ DATE":2,"ȚINE":3})[x.textContent.trim()])`);
+      assert.deepEqual(ord, ord.slice().sort((a, c) => a - c), "pozitiile in ordinea urgentei: " + ord);
       assert.ok((await b.ev(`document.querySelectorAll("#t212Continut .t212Pill-fara").length`)) < n, "macar o pozitie cu preturi (Yahoo)");
       FARA_GUNOI(t);
       await b.poza(path.join(DOSAR_POZE, `t212-${nume}.png`));
@@ -162,9 +168,15 @@ async function scenariu(lat, inal, nume) {
     await test(`${nume} · preturile calculate: pe fiecare pozitie cu preturi - stop care urca, tinta, proba; "Pune ca plan" scrie planul (apoi il sterg)`, async () => {
       const cuBare = await b.ev(`t212.poz.filter(p=>(t212.bare[p.ticker]||[]).length>=120).length`);
       assert.ok(cuBare > 0);
-      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut .t212Preturi").length`), cuBare);
-      const t = await b.ev(`document.querySelector("#t212Continut .t212Preturi").innerText`);
+      // drumul lui: clic pe rand -> detaliile se deschid (cu preturile si planul)
+      const tk0 = await b.ev(`t212.poz.find(p=>t212.niveluri[p.ticker]).ticker`);
+      await b.ev(`document.getElementById("t212R-${tk0}").click()`);
+      assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), false, "clic pe rand deschide detaliile");
+      const t = await b.ev(`document.querySelector("#t212Det-${tk0} .t212Preturi").innerText`);
       assert.match(t, /Stop care urcă după maxim/); assert.match(t, /Țintă/); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
+      await b.poza(path.join(DOSAR_POZE, `t212-deschis-${nume}.png`));
+      await b.ev(`document.getElementById("t212R-${tk0}").click()`);
+      assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), true, "al doilea clic il inchide");
       const tk = await b.ev(`t212.poz.find(p=>t212.niveluri[p.ticker]&&!t212.planuri[p.ticker])?.ticker||""`);
       if (!tk) return;
       const astept = await b.ev(`+t212.niveluri["${tk}"].trailPct.toFixed(1)`);
