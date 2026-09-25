@@ -2,7 +2,7 @@
 // Jurnal de trade (filtrul Crypto / Actiuni / Tot). Doar CITIRE: cheia T212 e doar de citire si sta acasa.
 // Foloseste din app.js: $, getJSON, apiFetch, escapeHtml, toast; din lib: GridCalcul, T212, ActiuniSemnale.
 // Calculele stau in lib (probate in scripts/t212-v85.mjs si scripts/actiuni-v85.mjs); aici doar se arata.
-var t212 = { idei: null, stiri: {}, piata: null, dividende: null, rezultate: {}, niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
+var t212 = { sfaturiIst: null, anDecl: null, idei: null, stiri: {}, piata: null, dividende: null, rezultate: {}, niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
 var T212_NIVEL = { tine: ["ȚINE", "t212Pill-tine"], atentie: ["ATENȚIE", "t212Pill-atentie"], iesi: ["IEȘI", "t212Pill-iesi"], "fara-date": ["FĂRĂ DATE", "t212Pill-fara"] };
 var T212_POARTA = { cumpara: ["🟢 CUMPĂR", "good"], asteapta: ["🟡 AȘTEAPTĂ", "tbWarn"], nu: ["🔴 NU ACUM", "bad"], "fara-date": ["⚪ FĂRĂ DATE", ""] };
 
@@ -28,7 +28,8 @@ async function t212Porneste(forta) {
   try { var cf = await getJSON("/api/t212?action=cf"); t212.cf = cf && cf.cf || {}; } catch (e) { t212.cf = null; }
   try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) { t212.piata = null; }
   try { t212.idei = await getJSON("/api/t212?action=idei"); } catch (e) { t212.idei = null; }
-  try { var dv = await getJSON("/api/t212?action=dividende"); t212.dividende = T212.dividende(dv && dv.items || []); } catch (e) { t212.dividende = null; }
+  try { var sfi = await getJSON("/api/t212?action=sfaturi"); t212.sfaturiIst = sfi && sfi.sfaturi || []; } catch (e) { t212.sfaturiIst = null; }
+  try { var dv = await getJSON("/api/t212?action=dividende"); t212.dividendeItems = dv && dv.items || []; t212.dividende = T212.dividende(t212.dividendeItems); } catch (e) { t212.dividende = null; }
   t212JurnalCache.n = -1;
   t212.la = Date.now(); t212Render();
   if (!t212.eroare && t212.poz) {
@@ -209,6 +210,15 @@ function t212IdeiRender() {
       var ist = x.istoric && x.istoric.n ? x.istoric.n + " trade-uri, " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
       return '<tr><td><b>' + escapeHtml(x.simbol) + '</b><span class="t212Mic">' + escapeHtml((x.motive || [])[2] || "") + '</span></td><td>' + t212Usd(x.pret) + '</td><td>' + t212Usd(x.intrare) + '</td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">−15%, urcă</span></td><td class="good">' + t212Usd(x.tinta) + '</td><td><span class="t212Mic ' + (x.istoric && x.istoric.total < 0 ? "bad" : "") + '">' + escapeHtml(ist) + '</span></td><td><button type="button" class="t212BtnLinie" data-action-click="t212BiletPentru(\'' + escapeHtml(x.simbol) + '\')">Biletul</button></td></tr>';
     }).join("") + '</tbody></table></div>';
+  // v91: socoteala sfaturilor - au avut dreptate semafoarele? (dupa 5 / 10 / 20 de zile)
+  if (t212.sfaturiIst && typeof Consilier !== "undefined") {
+    var sc = Consilier.socotealaSfaturi(t212.sfaturiIst), NV = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
+    var cel = function (x) { return x.n ? x.dreptate + " din " + x.n + ' <span class="t212Mic">' + t212Pct(x.medie) + '</span>' : '<span class="t212Estompat">—</span>'; };
+    h += '<div class="t212Socoteala"><h5>📏 Socoteala sfaturilor <span class="t212Estompat">· au avut dreptate? (IEȘI/ATENȚIE: prețul a scăzut după; ȚINE: a crescut)</span></h5>'
+      + '<div class="t212TabWrap"><table class="t212Tab"><thead><tr><th>Semaforul</th><th>după 5 zile</th><th>după 10 zile</th><th>după 20 de zile</th></tr></thead><tbody>'
+      + Object.keys(NV).map(function (k) { return '<tr><td><b>' + NV[k] + '</b></td><td>' + cel(sc[k][5]) + '</td><td>' + cel(sc[k][10]) + '</td><td>' + cel(sc[k][20]) + '</td></tr>'; }).join("")
+      + '</tbody></table></div><p class="tbSub">' + escapeHtml(sc.text) + ' Se notează în fiecare dimineață, pe fiecare poziție.</p></div>';
+  }
   var lista = d && Array.isArray(d.lista) ? d.lista : [];
   h += '<div class="t212Lista"><label for="t212ListaIn" class="tbSub">Urmăresc și (simboluri, despărțite prin virgulă):</label><input id="t212ListaIn" value="' + escapeHtml(lista.join(", ")) + '" placeholder="ex. ASTS, MSFT, NVDA" autocomplete="off"><button type="button" class="t212BtnLinie" data-action-click="t212ListaSalveaza()">Salvează</button></div>';
   box.innerHTML = h;
@@ -433,7 +443,7 @@ function jtRenderActiuni() {
   h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Cât ai ținut — și ce a ieșit</h4><span class="tbSub">rezultat real, după comisioane</span></div><div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Ținut</th><th>Trade-uri</th><th>Pe plus</th><th>Comisioane</th><th>Real</th></tr></thead><tbody>'
     + g.map(function (x) { return '<tr><td>' + x.et + '</td><td>' + x.n + '</td><td>' + (x.n ? Math.round(x.plus / x.n * 100) + "%" : "—") + '</td><td class="bad">' + L(-x.com) + '</td><td class="' + cls(x.tot) + '"><b>' + L(x.tot) + '</b></td></tr>'; }).join("") + '</tbody></table></div>'
     + (cea && cea.tot < 0 ? '<p class="tbFac">👉 <b>Ce aș face eu:</b> banii se pierd pe trade-urile ținute ' + escapeHtml(cea.et) + ' (' + L(cea.tot) + ') — adică pe cele rămase pe minus și lăsate „să-și revină”. ' + t212SfatStop(l) + '</p>' : '') + '</div>';
-  h += t212StopBloc(l) + t212ReguliBloc(l);
+  h += t212StopBloc(l) + t212ReguliBloc(l) + t212DeclaratieBloc(l);
   // greselile cu costul lor
   h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Greșelile care te-au costat</h4><span class="tbSub">găsite automat; suma = rezultatul trade-urilor care le-au avut</span></div>'
     + (r.greseli.length ? '<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Greșeala</th><th>De câte ori</th><th>Rezultatul lor</th></tr></thead><tbody>' + r.greseli.map(function (x) { return '<tr><td><b>' + escapeHtml(x.text) + '</b></td><td>' + x.n + '</td><td class="' + cls(x.cost) + '">' + L(x.cost) + '</td></tr>'; }).join("") + '</tbody></table></div>' : '<p class="good">Nicio greșeală găsită automat.</p>') + '</div>';
@@ -487,6 +497,38 @@ function t212SfatStop(l) {
   var b = x.best;
   return b.dif > 0 ? "Pe trade-urile tale ar fi ajutat stopul „" + b.et + "”: " + t212Lei(b.dif) + " în plus — l-aș pune la fiecare cumpărare."
     : "Un stop strâns nu te-ar fi ajutat (vezi „Cât te-ar fi salvat stopul”, mai jos). Ce te-ar fi ajutat: să nu cumperi în plus pe minus și să nu pui mult pe o singură acțiune — de aici au venit pierderile mari (NPA).";
+}
+// v91: raportul pentru Declaratia Unica (anul inchiderii), cu butonul de copiat pentru contabil
+function t212BotiInchisi() {
+  if (typeof jtStare !== "undefined" && jtStare.boti && typeof JurnalTrade !== "undefined") return JurnalTrade.din(jtStare.boti);
+  return typeof contTot !== "undefined" && contTot.inchise ? contTot.inchise : [];
+}
+function t212RaportDecl(l) {
+  var an = t212.anDecl || new Date().getUTCFullYear();
+  return T212.raportAnual({ inchise: l, dividende: t212.dividendeItems || [], boti: t212BotiInchisi(), an: an });
+}
+function t212DeclaratieBloc(l) {
+  var r = t212RaportDecl(l), t = r.t212, px = r.pionex, L = function (v) { return t212Lei(v, 2); };
+  var ani = r.ani.length ? r.ani : [r.an];
+  return '<div class="tbBloc" id="t212Decl"><div class="tbBlocCap"><h4>🧾 Pentru Declarația Unică</h4><span class="tbSub">pe anul vânzării · ' + ani.map(function (a) { return '<button type="button" class="t212BtnLinie' + (a === r.an ? " t212BtnAles" : "") + '" data-action-click="t212AnDeclaratie(' + a + ')">' + a + '</button>'; }).join(" ") + '</span></div>'
+    + '<div class="grTabelWrap"><table class="grTabel"><tbody>'
+    + '<tr><td>Trading 212 · vânzări în ' + r.an + '</td><td><b>' + t.n + '</b></td></tr>'
+    + '<tr><td>Câștiguri (trade-urile pe plus)</td><td class="good"><b>' + L(t.castiguri) + '</b></td></tr>'
+    + '<tr><td>Pierderi (trade-urile pe minus)</td><td class="bad"><b>' + L(t.pierderi) + '</b></td></tr>'
+    + '<tr><td><b>Câștig NET din acțiuni</b></td><td class="' + t212Cls(t.net) + '"><b>' + L(t.net) + '</b></td></tr>'
+    + '<tr><td>Din care comisioane de conversie (deja scăzute)</td><td>' + L(-t.comisioane) + '</td></tr>'
+    + '<tr><td>Dividende încasate în ' + r.an + '</td><td>' + L(t.dividende) + '</td></tr>'
+    + '<tr><td>Pionex · boți închiși în ' + r.an + '</td><td><b>' + px.n + '</b> · NET <b class="' + t212Cls(px.net) + '">' + (px.net >= 0 ? "+" : "−") + Math.abs(px.net).toFixed(2) + ' USDT</b></td></tr>'
+    + '</tbody></table></div>'
+    + '<p class="tbSub">Sumele T212 sunt în lei, la cursul din ziua fiecărei tranzacții (așa le dă Trading 212), cu comisioanele de conversie scăzute. Pionex e în USDT: conversia în lei se face cu cursul BNR din ziua fiecărei închideri. Cotele de impozit și CASS le verifici cu contabilul — eu îți dau cifrele.</p>'
+    + '<button type="button" class="t212BtnLinie" data-action-click="t212CopiazaDeclaratia()">Copiază pentru contabil</button></div>';
+}
+function t212AnDeclaratie(an) { t212.anDecl = an; if (typeof jtRenderActiuni === "function") jtRenderActiuni(); }
+function t212CopiazaDeclaratia() {
+  var j = t212Jurnal(); if (!j) return;
+  var txt = t212RaportDecl(j.p.inchise).text;
+  var ok = function () { toast("Copiat — lipește-l în mesajul către contabil", "good"); };
+  try { navigator.clipboard.writeText(txt).then(ok, function () { window.prompt("Copiază textul:", txt); }); } catch (e) { window.prompt("Copiază textul:", txt); }
 }
 // v87: regulile tale, invatate din jurnalul de actiuni
 function t212ReguliBloc(l) {

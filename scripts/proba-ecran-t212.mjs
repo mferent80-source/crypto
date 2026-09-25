@@ -186,6 +186,7 @@ async function scenariu(lat, inal, nume) {
       // v90: ideile de cumparare - randuri cu "Biletul", nota cinstita (filtru, nu predictie)
       const ti = await b.ev(`document.getElementById("t212Idei").innerText`);
       assert.match(ti, /Idei de cumpărare/i); assert.match(ti, /nu o predicție/); FARA_GUNOI(ti);
+      assert.match(ti, /Socoteala sfaturilor/i, "v91: socoteala sfaturilor");
       assert.ok((await b.ev(`document.querySelectorAll("#t212Idei .t212IdeiTab tbody tr").length`)) > 0 || /nicio acțiune nu trece/.test(ti), "nici idei, nici mesajul de zi fara idei"); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
       await b.poza(path.join(DOSAR_POZE, `t212-deschis-${nume}.png`));
       await b.ev(`document.getElementById("t212R-${tk0}").click()`);
@@ -224,6 +225,8 @@ async function scenariu(lat, inal, nume) {
       assert.match(t, /Cât te-ar fi salvat stopul/); assert.match(t, /Regulile tale/);
       // v88: variantele care urca in tabelul stopului; Jurnalul e pagina lui; lista "Fiecare trade" pliata, se deschide la clic
       assert.match(t, /urcă după maxim — planul Radarului/); assert.match(t, /urcă, −15% de la maxim/);
+      // v91: raportul pentru Declaratia Unica, cu anii si butonul de copiat
+      assert.match(t, /Pentru Declarația Unică/i); assert.match(t, /Câștig NET din acțiuni/); assert.match(t, /Copiază pentru contabil/);
       assert.equal(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none");
       assert.equal(await b.ev(`document.getElementById("jtPl-actiuni").open`), false, "lista lunga pliata la deschidere");
       await b.ev(`document.querySelector("#jtPl-actiuni summary").click()`);

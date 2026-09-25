@@ -1703,3 +1703,7 @@ body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none
 .t212Lista{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px 12px}.t212Lista input{flex:1 1 220px;min-width:0;padding:6px 8px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit}
 #tabloubot .tbIdei{order:0}
 @media (max-width:640px){.t212IdeiTab thead{display:none}.t212IdeiTab,.t212IdeiTab tbody,.t212IdeiTab tr,.t212IdeiTab td{display:block}.t212IdeiTab tr{padding:8px 10px;border-bottom:1px solid var(--tb-linie)}.t212IdeiTab td{padding:1px 0;border:0;text-align:left}}
+/* v91: socoteala sfaturilor, Declaratia Unica */
+.t212Socoteala{padding:8px 12px}.t212Socoteala h5{margin:0 0 6px}
+.t212BtnAles{border-color:var(--accent);color:var(--accent);font-weight:800}
+#t212Decl .grTabel td:last-child{text-align:right}

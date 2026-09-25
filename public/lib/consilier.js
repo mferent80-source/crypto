@@ -119,9 +119,47 @@ var Consilier = (function () {
     // v90: ideile de cumparare ale zilei (un filtru, nu o predictie)
     if ((o.idei && o.idei.length) || (o.ideiBoti && o.ideiBoti.length)) linii.push("💡 Idei azi: " + ((o.idei || []).join(", ") || "—") + ((o.ideiBoti && o.ideiBoti.length) ? " · boți: " + o.ideiBoti.join(", ") : ""));
     if (!deFacut) linii.push("✓ Azi nu e nimic de făcut pe poziții.");
+    if (o.link) linii.push("🔗 Radarul pe telefon: " + o.link);
     return { titlu: "Rezumatul de dimineață", linii: linii };
   }
 
-  return { piata: piata, sfaturiPozitie: sfaturiPozitie, situatiiAsemanatoare: situatiiAsemanatoare, sfaturiBot: sfaturiBot, rezumatDimineata: rezumatDimineata };
+  // ---------------- v91: socoteala sfaturilor la actiuni ----------------
+  // intrari {zi, ticker, nivel: iesi|atentie|tine, pret, p5?, p10?, p20?}: pretul zilei sfatului si inchiderea dupa 5/10/20 zile.
+  // IESI / ATENTIE au avut dreptate daca pretul a SCAZUT; TINE, daca a CRESCUT. Fara orizont atins = neevaluat.
+  var ORIZ = [5, 10, 20], NIV = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
+  function socotealaSfaturi(l) {
+    var r = {}, lista = Array.isArray(l) ? l : [];
+    Object.keys(NIV).forEach(function (nv) {
+      r[nv] = {};
+      ORIZ.forEach(function (h) {
+        var v = lista.filter(function (x) { return x && x.nivel === nv && x.pret > 0 && x["p" + h] > 0; }).map(function (x) { return x["p" + h] / x.pret - 1; });
+        var d = v.filter(function (c) { return nv === "tine" ? c > 0 : c < 0; }).length, s = 0; v.forEach(function (c) { s += c; });
+        r[nv][h] = { n: v.length, dreptate: d, medie: v.length ? s / v.length : null };
+      });
+    });
+    var parti = Object.keys(NIV).map(function (nv) { var x = r[nv][10].n ? r[nv][10] : r[nv][5]; var h = r[nv][10].n ? 10 : 5; return x.n ? NIV[nv] + ": după " + h + " zile a avut dreptate în " + x.dreptate + " din " + x.n + " (prețul " + P(x.medie) + " în medie)" : null; }).filter(Boolean);
+    r.text = parti.length ? parti.join(" · ") + (lista.length < 30 ? " — puține cazuri încă." : ".") : "Încă nimic evaluat: fiecare sfat se judecă după 5, 10 și 20 de zile.";
+    return r;
+  }
+  // ce se poate evalua azi: orizontul trecut, pretul lipsa; pretul = inchiderea primei zile de dupa orizont
+  function deEvaluat(l, barePe, acum) {
+    var out = [], a = acum || Date.now();
+    (Array.isArray(l) ? l : []).forEach(function (x) {
+      if (!x || !x.zi || !x.ticker) return;
+      var z0 = Date.parse(x.zi + "T00:00:00Z"), b = barePe && barePe[x.ticker];
+      ORIZ.forEach(function (h) {
+        var k = "p" + h; if (x[k] > 0 || a < z0 + h * ZI || !Array.isArray(b)) return;
+        for (var i = 0; i < b.length; i++) if (b[i].t >= z0 + h * ZI) { out.push({ zi: x.zi, ticker: x.ticker, cheie: k, pret: b[i].c }); break; }
+      });
+    });
+    return out;
+  }
+  // v91: adresa tunelului (cloudflared scrie adresa trycloudflare in jurnal; ultima e cea buna)
+  function adresaTunel(text) {
+    var m = String(text || "").match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/g);
+    return m && m.length ? m[m.length - 1] : null;
+  }
+
+  return { socotealaSfaturi: socotealaSfaturi, deEvaluat: deEvaluat, adresaTunel: adresaTunel, piata: piata, sfaturiPozitie: sfaturiPozitie, situatiiAsemanatoare: situatiiAsemanatoare, sfaturiBot: sfaturiBot, rezumatDimineata: rezumatDimineata };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consilier = Consilier;

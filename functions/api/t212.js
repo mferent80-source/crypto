@@ -89,7 +89,7 @@ export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
-  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista") return json({ error: "Acțiune necunoscută" }, 400);
+  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
   if (act === "idei") {
@@ -105,6 +105,22 @@ export async function onRequestPost({ request, env }) {
     const de = new Date(Date.now() - 150 * 86400000).toISOString().slice(0, 10);
     await env.ISTORIC.put("t212:idei-istoric", JSON.stringify(l.filter((x) => x.zi >= de).slice(-1000)));
     return json({ ok: true, actiuni: act2.length });
+  }
+  if (act === "sfaturi") {
+    // v91: socoteala sfaturilor - semaforul fiecarei pozitii, o data pe zi, si pretul dupa 5/10/20 zile
+    const l = await citesteKv(env, "t212:sfaturi", []), lista = Array.isArray(l) ? l : [], ziOk = (z) => /^\d{4}-\d{2}-\d{2}$/.test(String(z || ""));
+    (Array.isArray(corp && corp.intrari) ? corp.intrari : []).slice(0, 50).forEach((x) => {
+      const tk = txt(x && x.ticker, 40).replace(/[^A-Za-z0-9._]/g, ""), pr = nr(x && x.pret);
+      if (!ziOk(x && x.zi) || !tk || !["iesi", "atentie", "tine"].includes(x && x.nivel) || !(pr > 0)) return;
+      if (!lista.some((y) => y.zi === x.zi && y.ticker === tk)) lista.push({ zi: x.zi, ticker: tk, nivel: x.nivel, pret: pr });
+    });
+    (Array.isArray(corp && corp.evaluari) ? corp.evaluari : []).slice(0, 300).forEach((e) => {
+      const pr = nr(e && e.pret); if (!["p5", "p10", "p20"].includes(e && e.cheie) || !(pr > 0)) return;
+      const y = lista.find((z) => z.zi === e.zi && z.ticker === e.ticker); if (y) y[e.cheie] = pr;
+    });
+    const de = new Date(Date.now() - 250 * 86400000).toISOString().slice(0, 10);
+    await env.ISTORIC.put("t212:sfaturi", JSON.stringify(lista.filter((x) => x.zi >= de).slice(-2000)));
+    return json({ ok: true, n: lista.length });
   }
   if (act === "lista") {
     // v90: simbolurile urmarite de el (se adauga la universul ideilor)
@@ -181,6 +197,11 @@ export async function onRequestGet({ request, env }) {
       if (!r.ok && r.status !== 404) return json({ error: "Nasdaq: HTTP " + r.status }, 502);
       const d = dataRezultate(j), v = { ticker: tk, simbol: cand[0], data: d ? d.data : null, sigur: d ? d.sigur : null };
       inCache(k, v, 12 * 3600); return json(v);
+    }
+    if (a === "sfaturi") {
+      if (!env.ISTORIC?.get) return faraKv();
+      const l = await citesteKv(env, "t212:sfaturi", []);
+      return json({ sfaturi: Array.isArray(l) ? l : [] });
     }
     if (a === "idei") {
       if (!env.ISTORIC?.get) return faraKv();
