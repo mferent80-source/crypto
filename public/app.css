@@ -1612,3 +1612,6 @@ body.peTablou main>.note{display:none}
 }
 /* v85.5: regula "mai strans" de mai sus (310px) anulase trecerea pe o coloana - o pun inapoi DUPA ea */
 @media (max-width:1100px){.t212Grila{grid-template-columns:1fr}}
+/* v85.6: pe ecrane late cardul se intindea pe 1.700 px ("mai labartat decat demo-ul") - latimea demo-ului, centrat;
+   si bara de sus lipita nu mai acopera cifrele cand "Trading 212" coboara la card */
+.t212Card{max-width:1180px;margin-inline:auto;scroll-margin-top:84px}

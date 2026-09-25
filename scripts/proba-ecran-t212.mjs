@@ -238,5 +238,24 @@ console.log(`\nV85 · proba de ecran · Trading 212 · ${URL_T} · poze in ${DOS
 if (!BROWSER) { console.log("  nu gasesc Chrome/Edge"); process.exit(2); }
 await scenariu(1440, 900, "pc");
 await scenariu(390, 844, "telefon");
+// v85.6: pe monitorul lat cardul are latimea demo-ului (nu 1.700 px) si bara de sus nu acopera cifrele dupa "Trading 212"
+{
+  const pr = path.join(tmpdir(), `proba-t212-lat-${Date.now()}`), b = await porneste(1920, 1000, pr);
+  try {
+    await b.navigheaza(URL_T);
+    await panaCand(b, `typeof deschideT212==="function"`, 25000, "aplicatia");
+    if (TOKEN) await b.ev(`try{localStorage.setItem("cryptoRadarApiTokenV54",${JSON.stringify(TOKEN)})}catch(e){}`);
+    await b.ev(`setAssetClass("CRYPTO");document.querySelector('.sideBtn[data-nav="t212"]').click()`);
+    await panaCand(b, `!!document.querySelector("#t212Sus .t212Kpi")`, 40000, "cifrele contului");
+    await asteapta(1500);
+    await test("monitor 1920 · cardul T212 are cel mult 1.180 px (ca demo-ul), nu tot ecranul", async () => {
+      assert.ok((await b.ev(`document.getElementById("t212Card").getBoundingClientRect().width`)) <= 1181);
+    });
+    await test("monitor 1920 · dupa clic pe Trading 212, cifrele contului se vad (nu sunt sub bara de sus)", async () => {
+      const r = await b.ev(`(()=>{const k=document.querySelector("#t212Sus .t212Kpi").getBoundingClientRect();const x=k.left+30,y=k.top+12;const e=document.elementFromPoint(x,y);return {top:Math.round(k.top),pe:!!(e&&e.closest("#t212Card"))}})()`);
+      assert.equal(r.pe, true, "la y=" + r.top + " peste cifre e alt element (bara de sus)");
+    });
+  } finally { b.inchide(); await asteapta(800); await stergeProfilul(pr); }
+}
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

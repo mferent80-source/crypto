@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "85.5.0",
+  "version": "85.6.0",
   "private": true,
   "type": "module",
   "engines": {
