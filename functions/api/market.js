@@ -1,4 +1,5 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
+import {dupaCelDinFata} from "../_shared/poarta.js";
 const ENGINE_CONTRACT_VERSION="54.1";
 const FUT="https://fapi.binance.com";
 const PIONEX="https://api.pionex.com";
@@ -8,7 +9,8 @@ async function reservePionexGlobal(env,spacing){
   if(!env?.DB?.prepare)return 0;try{const now=Date.now(),stmt=env.DB.prepare(`INSERT INTO monitor_state(key,value,updated_ts) VALUES('pionex_pages_next_at',?,?) ON CONFLICT(key) DO UPDATE SET value=CAST(MAX(CAST(monitor_state.value AS INTEGER), ?)+? AS TEXT), updated_ts=? RETURNING value`).bind(String(now+spacing),now,now,spacing,now),r=await stmt.first(),next=Number(r?.value);return Number.isFinite(next)?Math.max(0,(next-spacing)-now):0}catch{return 0}
 }
 async function pionexRateGate(weight,fn,env){
-  const run=pionexGate.then(async()=>{
+  // v91.7: cererea din fata e asteptata cel mult cat poate dura ea (pauza + 8 s de fetch + marja) - _shared/poarta.js
+  const run=dupaCelDinFata(pionexGate,12000).then(async()=>{
     const blocked=Math.max(0,pionexBlockedUntil-Date.now());
     if(blocked){const e=Error("upstream cooldown "+Math.ceil(blocked/1000)+"s");e.status=429;e.retryAfter=Math.ceil(blocked/1000);throw e}
     const spacing=Math.max(1100,Math.max(1,weight)*300),globalDelay=await reservePionexGlobal(env,spacing),delay=Math.max(globalDelay,Math.max(0,pionexNextAt-Date.now()));

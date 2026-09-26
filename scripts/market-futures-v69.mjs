@@ -75,5 +75,20 @@ await test("un refuz partial se vede, restul datelor trec mai departe", async ()
   assert.ok(!r.corp.probleme?.funding, "apelul reusit apare gresit ca problema");
 });
 
+// v91.7: 26.09 13:10 - pretul de pe Tablou, directia si clasamentul: "HTTP 500 · Worker's code had hung".
+// Coada globala pionexGate astepta dupa o cerere abandonata care nu se mai termina (acelasi rau ca in v91.5).
+await test("o cerere AGATATA in coada Pionex publica nu blocheaza pretul urmator (raspunde sub 15 s)", async () => {
+  let n = 0;
+  globalThis.fetch = () => (++n === 1 ? new Promise(() => {}) : Promise.resolve(new Response(JSON.stringify({ result: true, data: { klines: [{ time: 1, open: "1", close: "1", high: "1", low: "1", volume: "1" }] } }), { status: 200, headers: { "content-type": "application/json" } })));
+  const { onRequestGet } = await import(proaspat());
+  const cere = (sym) => onRequestGet({ request: new Request(`https://exemplu.test/api/market?type=pionex_klines&symbol=${sym}&interval=15M&limit=5`, { headers: { authorization: `Bearer ${TOKEN}` } }), env: ENV });
+  cere("AAA_USDT_PERP").catch(() => {});   // cererea care moare si nu se mai termina
+  const t0 = Date.now();
+  const res = await Promise.race([cere("VVV_USDT_PERP"), new Promise((_, nu) => setTimeout(() => nu(Error("a doua cerere a asteptat peste 15 s - coada e agatata")), 15000))]);
+  const corp = await res.json();
+  assert.equal(res.status, 200); assert.ok(corp.data && corp.data.klines && corp.data.klines.length === 1, JSON.stringify(corp).slice(0, 200));
+  assert.ok(Date.now() - t0 < 15000);
+});
+
 console.log(`\nV69_MARKET_FUTURES ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

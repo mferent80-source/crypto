@@ -1,3 +1,4 @@
+import {dupaCelDinFata} from "../_shared/poarta.js";
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 const TD="https://api.twelvedata.com";
 const H={"content-type":"application/json","cache-control":"no-store"};
@@ -8,7 +9,8 @@ const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:H});
 let tdGate=Promise.resolve(),tdNextAt=0;
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function tdRateGate(fn){
-  const run=tdGate.then(async()=>{
+  // v91.7: aceeasi coada globala ca la Pionex - nu astepta la nesfarsit dupa o cerere abandonata (_shared/poarta.js)
+  const run=dupaCelDinFata(tdGate,15000).then(async()=>{
     const delay=Math.max(0,tdNextAt-Date.now());
     if(delay)await wait(delay);
     tdNextAt=Date.now()+300;
