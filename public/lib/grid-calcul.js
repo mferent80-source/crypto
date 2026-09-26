@@ -43,6 +43,14 @@ var GridCalcul = (function () {
 
   // Lumanari Pionex (orice ordine, din pagini care se pot suprapune) -> crescator,
   // fara dubluri, fara bara in formare (cea mai noua). Un rand stricat se sare, nu devine 0.
+  // v92: barele ZILNICE de bursa (Yahoo) - ultima zi e inchisa (sambata e vinerea), nu "in formare":
+  // aceleasi bare, ordonate si fara dubluri, dar FARA sa scoata ultima (vezi bare() mai jos).
+  function bareToate(randuri) {
+    if (!Array.isArray(randuri)) return [];
+    var vazut = {}, v = [];
+    for (var i = 0; i < randuri.length; i++) { var b = citeste(randuri[i]); if (b && !vazut[b.t]) { vazut[b.t] = 1; v.push(b); } }
+    return v.sort(function (x, y) { return x.t - y.t; });
+  }
   function bare(randuri) {
     if (!Array.isArray(randuri)) return [];
     var vazut = {}, v = [];
@@ -316,7 +324,7 @@ var GridCalcul = (function () {
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };
   }
 
-  return { C: C, bare: bare, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
+  return { C: C, bare: bare, bareToate: bareToate, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
     regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine };

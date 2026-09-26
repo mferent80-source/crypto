@@ -200,6 +200,25 @@ try {
     assert.equal(await reincarca(URL_T + "?panel=gridset"), "gridset");
   });
 
+  // v92: Home "Piata azi" (demo aprobat 26.09) - contextul general, nu dublura Tabloului
+  await test("Home: vremea pietei are verdict, cele 8 carduri au date reale, rezumatele pliate sunt pline, banda de sus e ascunsa", async () => {
+    await b.ev(`navTo("dash",true);true`);
+    await panaCand(b, `!/Aștept|Aduc|Calculez/.test(document.getElementById("acasa").innerText)&&/AMESTECAT|LINIȘTE|MIȘCARE/.test(document.getElementById("acVreme").innerText)`, 90000, "Home sa-si aduca datele");
+    const r = await b.ev(`({ ids: ["acBtc","acFg","acLarg","acBurse","acMisca","acBoti","acT212","acIdei"].map(id=>[id,(document.getElementById(id).innerText||"").length]),
+      sub: [...document.querySelectorAll("#dash .acPlSub")].map(x=>x.textContent), gunoi: /NaN|undefined|null|AUTH_/.test(document.getElementById("acasa").innerText),
+      hero: getComputedStyle(document.querySelector(".heroStrip")).display, bara: getComputedStyle(document.querySelector(".toolbar")).display })`);
+    for (const [id, n] of r.ids) assert.ok(n > 40, `cardul ${id} e aproape gol (${n} semne)`);
+    assert.equal(r.sub.length, 7); for (const x of r.sub) assert.ok(x && x !== "—", `rezumat gol: ${JSON.stringify(r.sub)}`);
+    assert.equal(r.gunoi, false); assert.equal(r.hero, "none"); assert.equal(r.bara, "none");
+  });
+  await test("Home: 'Analiza unei monede' deschisa -> apare bara cu moneda + Analizeaza si graficul; pe alta pagina banda de sus revine", async () => {
+    const r = await b.ev(`(()=>{const d=document.getElementById("acPl-moneda");d.open=true;d.dispatchEvent(new Event("toggle"));return new Promise(ok=>setTimeout(()=>ok({bara:getComputedStyle(document.querySelector(".toolbar")).display,
+      graf:document.getElementById("chart").getBoundingClientRect().width})),300)})()`);
+    assert.notEqual(r.bara, "none", "bara cu Analizeaza nu apare"); assert.ok(r.graf > 200, `graficul are ${r.graf}px`);
+    await b.ev(`document.getElementById("acPl-moneda").open=false;navTo("mtf");true`);
+    assert.notEqual(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none", "banda de sus a disparut si de pe alte pagini");
+  });
+
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);
   });

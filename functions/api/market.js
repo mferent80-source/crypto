@@ -63,7 +63,10 @@ async function pionexCached(url,ttl=30,env=null){
 export async function onRequestGet({request,env}){
   const u=new URL(request.url),type=u.searchParams.get("type");
   if(type==="health")return ok({ok:true,service:"crypto-radar",version:"v56"});
-  if(String(type||"").startsWith("pionex_")){const auth=await requireApiAuth(request,env,"pionex-public-proxy",45);if(!auth.ok)return authErrorResponse(auth,H)}
+  // v92: 45 -> 120/min. Limita se numara pe IP: acasa, colectorul (clasamentul: ~32/min, 3 min pe ora) si browserul
+  // au ACELASI IP (127.0.0.1) - o pagina deschisa in timpul clasamentului primea RATE_LIMITED. Pionex e ferit oricum
+  // de pionexGate (o cerere la 1,1 s) si de racirea la 429.
+  if(String(type||"").startsWith("pionex_")){const auth=await requireApiAuth(request,env,"pionex-public-proxy",120);if(!auth.ok)return authErrorResponse(auth,H)}
   if(type==="pionex_symbols"){
     const mk=String(u.searchParams.get("market")||"").toUpperCase()==="PERP"?"PERP":"SPOT";
     try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=${mk}`,3600,env))}catch(e){return softFail("Pionex symbols unavailable",e.message,e.status===429?(e.retryAfter||60):null)}

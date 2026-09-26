@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v91.11" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v92.0" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar Pro Lite</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -56,7 +56,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v91.11 · ALERTELE BOTULUI</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v92.0 · PIAȚA AZI</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -64,7 +64,7 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip botStrip" id="botStrip" type="button" hidden data-action-click="navTo('tabloubot',true)" title="Deschide Tabloul botului">—</button><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v91.11 · READ ONLY</span></div>
+<div class="topRight"><button class="statusChip botStrip" id="botStrip" type="button" hidden data-action-click="navTo('tabloubot',true)" title="Deschide Tabloul botului">—</button><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v92.0 · READ ONLY</span></div>
 </header>
 <main>
 <div class="noticeBad pePublicat" id="pePublicat" hidden=""><b>Aici e versiunea publicată: boții tăi nu se văd.</b> Pionex nu răspunde serverelor Cloudflare, de unde vine pagina asta. Boții, banii și alertele se văd în Radarul de acasă, pornit cu „Crypto Radar (local)” de pe Desktop. <a class="actionGhost" href="http://127.0.0.1:8788/">Deschide Radarul de acasă</a></div><div class="noticeBad parolaLipsa" id="parolaLipsa" hidden=""><b>Parola aplicației nu e pusă pe acest dispozitiv.</b> Fără ea, boții și contul Pionex nu se văd. Se pune o singură dată, în <b>Setări → API Security Session</b> (textul APP_API_TOKEN de la pornire). <button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări</button></div>
@@ -73,7 +73,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v91.11 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v92.0 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -161,19 +161,7 @@
 <div class="tbBloc" id="grJurnalCard"><div class="tbBlocCap"><h4>📒 Jurnalul gridurilor: se dovedește?</h4><span class="tbSub" id="grJurnalSub">apasă „am pornit botul” pe o fișă; rezultatul real vine singur din Pionex</span></div><div id="grJurnal"><p class="tbSub">Niciun grid pornit din fișă încă.</p></div></div>
 </section>
 
-<section class="panel on" id="dash"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid dashWideGrid">
-<div class="card full dashLineage">
-<div class="sectionHead"><h3>Data Lineage</h3><span class="small">No silent spot-source mixing</span></div>
-<div class="sourceCard">
-<div class="sourceBox"><span class="label">Primary market data</span><b class="sourceNative" id="sourceSpot">PIONEX</b></div>
-<div class="sourceBox"><span class="label">Multi-TF</span><b class="sourceNative" id="sourceMtf">PIONEX</b></div>
-<div class="sourceBox"><span class="label">Live price</span><b class="sourceNative" id="sourceLive">PIONEX REST</b></div>
-<div class="sourceBox"><span class="label">Microstructure / Session</span><b class="sourceNative" id="sourceMicro">PIONEX</b></div>
-<div class="sourceBox"><span class="label">External context</span><b class="sourceExternal" id="sourceDeriv">BINANCE FUTURES</b></div>
-</div>
-<div class="providerNote" id="sourceNote">Spot indicators, historical analogs, chart, MTF and backtests follow the selected primary source. Futures remains optional external context.</div>
-</div>
-<div class="card full masterVerdict dashMaster">
+<section class="panel on" id="dash"><div class="acasa" id="acasa"><div class="acAntet"><h3>Piața azi</h3><span class="acSub" id="acCand">—</span><div class="acDr"><button class="acBtn" type="button" data-action-click="navTo('tabloubot',true)">Tabloul botului</button><button class="acBtn" type="button" data-action-click="navTo('t212',true)">Trading 212</button><button class="acBtn" type="button" data-action-click="navTo('gridset',true)">Grid: ce setez?</button></div></div><div class="acVreme" id="acVreme"><div class="acSub">Aștept clasamentul pieței…</div></div><div class="acPuls"><div class="acBloc" id="acBtc"></div><div class="acBloc" id="acFg"></div><div class="acBloc" id="acLarg"></div></div><div class="acDoua"><div class="acBloc" id="acBurse"></div><div class="acBloc" id="acMisca"></div></div><div class="acGrupCap">Ce înseamnă pentru tine</div><div class="acTine"><div class="acBloc" id="acBoti"></div><div class="acBloc" id="acT212"></div><div class="acBloc" id="acIdei"></div></div><div class="acGrupCap">Mai în detaliu</div></div><div class="acGrupuri"><details class="acPl" id="acPl-moneda"><summary><b>Analiza unei monede</b><span class="acPlSub" id="acPlSub-moneda">—</span></summary><div class="acPlCorp"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid dashWideGrid"><div class="card full masterVerdict dashMaster">
 <div class="sectionHead"><h3>Master Verdict · Ce fac acum?</h3><span class="validationBadge">EXPLAINED DECISION · RESEARCH / PAPER · NO GUARANTEE</span></div>
 <div class="decisionBrief" id="decisionBrief">
   <div class="decisionPrimary">
@@ -263,35 +251,15 @@
 <div class="masterReasonBox"><b class="bad">Risks / blockers</b><div id="masterRisks">—</div></div>
 </div>
 <div class="masterReasonBox" style="margin-top:8px"><b>Trade map</b><div class="small" id="masterTradeMap">—</div></div>
-</div>
-<div class="card full prGateDash dashReadiness">
-  <div class="sectionHead"><h3>Profit Readiness Gate</h3><div><span class="validationBadge">EVIDENCE GATE · NOT A PROFIT GUARANTEE</span> <button class="actionGhost" data-action-click="navTo('profitready')">Open full gate</button></div></div>
-  <div class="prDashHero">
-    <div><span class="label">Current market readiness</span><div id="prDashState" class="prState prNotReady">NOT READY</div><div id="prDashReason" class="small">Collect cost-aware forward and Paper evidence before considering live capital.</div></div>
-    <div class="prDashMeter"><span class="label">Gate coverage</span><b id="prDashCoverage">0%</b><div class="prTrack"><i id="prDashBar" style="width:0%"></i></div></div>
-  </div>
-  <div class="prDashKpis">
-    <div class="prMini"><span class="label">Resolved</span><b id="prDashN">0</b></div>
-    <div class="prMini"><span class="label">Expectancy</span><b id="prDashExp">—</b></div>
-    <div class="prMini"><span class="label">Profit factor</span><b id="prDashPf">—</b></div>
-    <div class="prMini"><span class="label">Forward</span><b id="prDashForward">0</b></div>
-    <div class="prMini"><span class="label">Paper completed</span><b id="prDashPaper">0</b></div>
-    <div class="prMini"><span class="label">Next milestone</span><b id="prDashNext">—</b></div>
-  </div>
-</div>
-<div class="card full hero dashComposite"><div class="label">Verdict compozit</div><div class="value" id="verdict">—</div><div class="bar"><div class="fill" id="fill"></div></div><div class="muted" id="conf" style="margin-top:5px">—</div></div><div class="card full hero dashProbabilistic"><div class="label">Verdict probabilistic · modele istorice similare</div><div class="value" id="pverdict">—</div><div class="bar"><div class="fill" id="pfill"></div></div><div class="muted" id="pstats" style="margin-top:5px">Calibrare locală pe istoricul disponibil…</div></div><div class="card full dashSentiment"><div class="gaugeWrap">
+</div><div class="card full hero dashComposite"><div class="label">Verdict compozit</div><div class="value" id="verdict">—</div><div class="bar"><div class="fill" id="fill"></div></div><div class="muted" id="conf" style="margin-top:5px">—</div></div><div class="card full hero dashProbabilistic"><div class="label">Verdict probabilistic · modele istorice similare</div><div class="value" id="pverdict">—</div><div class="bar"><div class="fill" id="pfill"></div></div><div class="muted" id="pstats" style="margin-top:5px">Calibrare locală pe istoricul disponibil…</div></div><div class="card full dashSentiment"><div class="gaugeWrap">
 <div class="gauge" id="probGauge" style="--p:50;--gc:#f5c451"><div class="gaugeInner"><b id="gaugeVal">50%</b><span>Bias UP</span></div></div>
 <div><div class="label">Probability &amp; market context</div><div class="value neutral" id="gaugeLabel">NEUTRAL</div>
 <div class="row"><span>Fear &amp; Greed</span><b id="fearGreed">—</b></div>
 <div class="sentimentBand"><span class="sentimentNeedle" id="sentimentNeedle" style="left:50%"></span></div>
 <div class="small" id="sentimentText">Sentiment extern opțional; engine-ul tehnic nu depinde de el.</div></div>
-</div></div>
-<div class="card kpi"><div class="label">Preț</div><div class="value" id="price">—</div></div><div class="card kpi"><div class="label">24H</div><div class="value" id="change">—</div></div>
-<div class="card kpi"><div class="label" id="volume24Label">Volum 24H USDT</div><div class="value" id="volume24">—</div></div><div class="card kpi"><div class="label">Scor TF</div><div class="value" id="score">—</div></div>
-<div class="card full dashChart" id="chartCard"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
+</div></div><div class="card kpi"><div class="label">Preț</div><div class="value" id="price">—</div></div><div class="card kpi"><div class="label">24H</div><div class="value" id="change">—</div></div><div class="card kpi"><div class="label" id="volume24Label">Volum 24H USDT</div><div class="value" id="volume24">—</div></div><div class="card kpi"><div class="label">Scor TF</div><div class="value" id="score">—</div></div><div class="card full dashChart" id="chartCard"><div class="chartHeader"><div><div class="label">Price action</div><div class="sectionTitle">Candlestick · EMA · volume</div></div><div class="legend"><span><i style="background:#55d89b"></i>Bull</span><span><i style="background:#ff6b78"></i>Bear</span><span><i style="background:#4fd1c5"></i>EMA20</span><span><i style="background:#7f8da3"></i>EMA50</span></div></div>
 <div class="chartToolbar"><button data-action-click="setChartBars(50)" type="button">50 bars</button><button data-action-click="setChartBars(100)" type="button">100 bars</button><button data-action-click="setChartBars(160)" type="button">160 bars</button><button data-action-click="toggleChartFullscreen()" type="button">Fullscreen</button></div><div class="chartZoneLegend"><span class="lz">Support zone</span><span class="rz">Resistance zone</span><span class="pz">Pivot zone</span></div>
-<div style="overflow:hidden"><canvas aria-label="Chart" height="360" id="chart" role="img" width="1000"></canvas></div></div>
-<div class="card full dashMarketContext">
+<div style="overflow:hidden"><canvas aria-label="Chart" height="360" id="chart" role="img" width="1000"></canvas></div></div><div class="card full dashMarketContext">
 <div class="sectionHead"><h3>Market Context</h3><span class="small" id="marketContextSubtitle">Cross-market crypto context</span></div>
 <div class="ctxGrid">
 <div class="ctxBox"><span class="label">Benchmark</span><b id="ctxBtc">—</b></div>
@@ -299,49 +267,7 @@
 <div class="ctxBox"><span class="label">Breadth</span><b id="ctxBreadth">—</b></div>
 <div class="ctxBox"><span class="label">Market regime</span><b id="ctxRegime">—</b></div>
 </div>
-</div>
-<div class="card full dashBreadth marketBreadthCard">
-<div class="sectionHead"><h3>Market Breadth Pro</h3><div><span class="validationBadge">PARTICIPATION · TREND · VOLUME · MOMENTUM</span> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Refresh</button> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,true)">Full universe</button></div></div>
-<div class="breadthHero">
-  <div><span class="label">Breadth state</span><div class="breadthState neutral" id="breadthState">NOT LOADED</div><div class="small" id="breadthSummary">Run analysis or refresh breadth.</div></div>
-  <div class="breadthScoreWrap"><span class="label">Breadth score</span><b id="breadthScore">—</b><div class="breadthTrack"><i id="breadthBar" style="width:0%"></i></div></div>
-</div>
-<div class="breadthGrid">
-  <div class="breadthBox"><span>Advancing participation</span><b id="breadthParticipation">—</b></div>
-  <div class="breadthBox"><span>Above EMA20 / 50 / 200</span><b id="breadthTrend">—</b></div>
-  <div class="breadthBox"><span>Volume breadth</span><b id="breadthVolume">—</b></div>
-  <div class="breadthBox"><span>Momentum · RSI &gt; 50</span><b id="breadthMomentum">—</b></div>
-  <div class="breadthBox"><span>New highs / lows</span><b id="breadthHighLow">—</b></div>
-  <div class="breadthBox"><span>Divergence</span><b id="breadthDivergence">—</b></div>
-  <div class="breadthBox"><span>Universe coverage</span><b id="breadthCoverage">—</b></div>
-  <div class="breadthBox"><span id="breadthAltLabel">Alt / broad participation</span><b id="breadthAltParticipation">—</b></div>
-</div>
-<p class="note" id="breadthNote">Breadth is a confirmation/context layer, not an independent BUY/SELL signal. Fast mode uses a representative basket; Full universe is explicit because it can require materially more provider requests.</p>
-</div>
-<div class="card full dashDecisionOS decisionOsCard">
-<div class="sectionHead"><h3>Decision Intelligence OS Pro</h3><div><span class="validationBadge">12 DECISION ENGINES · CAPITAL PRESERVATION FIRST</span> <button class="actionGhost" data-action-click="refreshV65DecisionOS(true)">Refresh</button> <button class="actionGhost" data-action-click="navTo('decision')">Open Verdict page</button></div></div>
-<div class="decisionOsHero"><div><span class="label">Decision OS state</span><div class="decisionOsState neutral" id="v65DashState">WAIT DATA</div><div class="small" id="v65DashSummary">Run analysis to synthesize all decision instruments.</div></div><div class="decisionOsKpi"><span class="label">Decision quality</span><b id="v65DashScore">—</b></div><div class="decisionOsKpi"><span class="label">Kill switch</span><b id="v65DashKill">—</b></div><div class="decisionOsKpi"><span class="label">Recommended entry</span><b id="v65DashEntry">—</b></div><div class="decisionOsKpi"><span class="label">Position action</span><b id="v65DashExit">—</b></div></div>
-<div class="decisionToolGrid" id="v65DashGrid"><div class="emptyState">Run analysis first.</div></div>
-<p class="note">The 12 engines are a decision/control layer. They can confirm, delay, reduce or block Paper decisions; none is a standalone profit guarantee or a live-order instruction.</p>
-</div>
-<div class="card full dashEdgeCalibration edgeCalCard">
-<div class="sectionHead"><h3>Real-Time Edge Validation &amp; Calibration Pro</h3><div><span class="validationBadge">13 VALIDATION ENGINES · OBSERVATIONAL / FORWARD-AWARE</span> <button class="actionGhost" data-action-click="refreshV66EdgeValidation(true)">Refresh evidence</button> <button class="actionGhost" data-action-click="navTo('decision')">Open Verdict page</button></div></div>
-<div class="edgeCalHero"><div><span class="label">Edge validation state</span><div class="edgeCalState neutral" id="v66DashState">WAIT DATA</div><div class="small" id="v66DashSummary">Collect resolved outcomes to validate calibration and module contribution.</div></div><div class="edgeCalKpi"><span class="label">Verdict quality</span><b id="v66DashQuality">—</b></div><div class="edgeCalKpi"><span class="label">Calibration ECE</span><b id="v66DashEce">—</b></div><div class="edgeCalKpi"><span class="label">Edge decay</span><b id="v66DashDecay">—</b></div><div class="edgeCalKpi"><span class="label">Data sufficiency</span><b id="v66DashSuff">—</b></div></div>
-<div class="decisionToolGrid edgeCalTools" id="v66DashGrid"><div class="emptyState">No resolved validation evidence yet.</div></div>
-<div class="edgeCalTables"><div><div class="label">Confidence calibration</div><div class="edgeCalTable" id="v66DashCalibration"><div class="emptyState">No calibration sample.</div></div></div><div><div class="label">Module contribution / ablation</div><div class="edgeCalTable" id="v66DashContrib"><div class="emptyState">No contribution sample.</div></div></div><div><div class="label">Backtest / Paper / Shadow / Forward</div><div class="edgeCalTable" id="v66DashLayers"><div class="emptyState">No comparable layers yet.</div></div></div></div>
-<p class="note">Contribution and ablation are observational diagnostics, not causal proof. v66 can block a new research/Paper setup only on mature severe edge decay or a statistically mature blacklisted Setup DNA; small samples never create a hard block.</p>
-</div>
-<div class="card full dashOperations opsV67Card">
-<div class="sectionHead"><h3>Production Trading Operations Pro</h3><div><span class="validationBadge">WATCHDOG · RECOVERY · RECONCILIATION · INCIDENT CONTROL</span> <button class="actionGhost" data-action-click="refreshV67Operations(true)">Run checks</button> <button class="actionGhost" data-action-click="v67RunReconcile(true)">Reconcile</button></div></div>
-<div class="decisionOsHero"><div><span class="label">Operations state</span><div class="decisionOsState neutral" id="v67DashState">BOOTING</div><div class="small" id="v67DashSummary">Operational watchdog is initializing.</div></div><div class="decisionOsKpi"><span class="label">Ops score</span><b id="v67DashScore">—</b></div><div class="decisionOsKpi"><span class="label">Heartbeat</span><b id="v67DashHeartbeat">—</b></div><div class="decisionOsKpi"><span class="label">Recovery</span><b id="v67DashRecovery">—</b></div><div class="decisionOsKpi"><span class="label">Incidents</span><b id="v67DashIncidents">0</b></div></div>
-<div class="decisionToolGrid" id="v67DashGrid"><div class="emptyState">Operational checks are initializing.</div></div>
-<div class="decisionOsFooter"><b>Controls:</b> <button class="actionGhost" data-action-click="v67EmergencyPause('MANUAL PAUSE')">Pause new entries</button> <button class="actionGhost" data-action-click="v67ResumeOperations()">Resume</button> <button class="actionGhost" data-action-click="v67FlattenAndPause()">Flatten Paper + pause</button></div>
-<p class="note">v67 is an operations/control layer. It can block new Paper/Shadow entries when runtime state is unsafe, but it never sends a real-money order.</p>
-</div>
-
-<div class="card full dashSignalExplain"><div class="sectionHead"><h3>Signal Explanation</h3><span class="small">Module contribution</span></div><div class="explainList" id="explainList"></div></div>
-<div class="card full dashLifecycle"><div class="sectionHead"><h3>Signal Lifecycle</h3><span class="small">NEW → CONFIRMED → ENTRY → TP / STOP</span></div><div class="lifeTrack" id="lifecycle"></div></div>
-<div class="card full dashVolSqueeze">
+</div><div class="card full dashSignalExplain"><div class="sectionHead"><h3>Signal Explanation</h3><span class="small">Module contribution</span></div><div class="explainList" id="explainList"></div></div><div class="card full dashLifecycle"><div class="sectionHead"><h3>Signal Lifecycle</h3><span class="small">NEW → CONFIRMED → ENTRY → TP / STOP</span></div><div class="lifeTrack" id="lifecycle"></div></div><div class="card full dashVolSqueeze">
 <div class="sectionHead"><h3>Volatility &amp; Squeeze Engine</h3><span class="small">Compression · expansion · percentile</span></div>
 <div class="volGrid">
 <div class="volBox"><span class="label">ATR percentile</span><b id="volAtrPct">—</b></div>
@@ -349,19 +275,16 @@
 <div class="volBox"><span class="label">Squeeze</span><b id="volSqueeze">—</b></div>
 <div class="volBox"><span class="label">Expansion risk</span><b id="volExpansion">—</b></div>
 </div>
-</div>
-<div class="card full dashLiqProxy">
+</div><div class="card full dashLiqProxy">
 <div class="sectionHead"><h3>Liquidation-Risk Proxy</h3><span class="small">Estimated leverage pressure · not exchange liquidation data</span></div>
 <div class="proxyMap" id="proxyMap"></div>
 <div class="row"><span>Proxy bias</span><b id="proxyBias">—</b></div>
-</div>
-<div class="card full dashAdvanced"><div class="sectionTitle">Advanced context</div><div class="metricGrid">
+</div><div class="card full dashAdvanced"><div class="sectionTitle">Advanced context</div><div class="metricGrid">
 <div class="metricBox"><div class="label">MFI</div><div class="n" id="mfi">—</div></div>
 <div class="metricBox"><div class="label">OBV trend</div><div class="n" id="obv">—</div></div>
 <div class="metricBox"><div class="label">Ichimoku</div><div class="n" id="ichi">—</div></div>
 <div class="metricBox"><div class="label">RSI divergence</div><div class="n" id="divergence">—</div></div>
-</div></div>
-<div class="card full dashSrLadder">
+</div></div><div class="card full dashSrLadder">
 <div class="sectionHead"><h3>Support / Resistance Ladder</h3><span class="small">Pivot · multi-threshold levels</span></div>
 <div class="row"><span>Pivot / bias</span><b id="pivotBias">—</b></div>
 <div class="levelsGrid">
@@ -379,12 +302,10 @@
 <div class="zoneChip"><span class="label">Breakdown below</span><b id="breakBelow">—</b></div>
 <div class="zoneChip"><span class="label">Nearest zone</span><b id="nearestZone">—</b></div>
 </div>
-</div>
-<div class="card full dashSrHeat">
+</div><div class="card full dashSrHeat">
 <div class="sectionHead"><h3>S/R Heatmap</h3><span class="small">Distance &amp; pressure around active levels</span></div>
 <div class="srHeat" id="srHeat"></div>
-</div>
-<div class="card full dashOrderFlow">
+</div><div class="card full dashOrderFlow">
 <div class="sectionHead"><h3>Order-Flow Style Window</h3><span class="small">Volume pressure · proxy, not exchange tape</span></div>
 <div class="orderFlow">
 <div class="flowSide">
@@ -402,8 +323,7 @@
 <div class="ofRow"><span>Funding</span><b id="ofFunding">—</b></div>
 </div>
 </div>
-</div>
-<div class="card full dashMoneyFlow">
+</div><div class="card full dashMoneyFlow">
 <div class="sectionHead"><h3>Money Flow Window</h3><span class="small">Flow + derivatives context</span></div>
 <div class="row"><span>Flow bias</span><b id="flowBias">—</b></div>
 <div class="flowGrid">
@@ -415,8 +335,7 @@
 </div>
 <div class="row"><span>Funding / crowding</span><b id="flowFunding">—</b></div>
 <div class="row"><span>Money pressure summary</span><b id="flowSummary">—</b></div>
-</div>
-<div class="card full dashIndicatorMatrix"><div class="sectionTitle">Indicator matrix</div>
+</div><div class="card full dashIndicatorMatrix"><div class="sectionTitle">Indicator matrix</div>
 <div class="row"><span>RSI 14</span><b id="rsi">—</b></div>
 <div class="row"><span>EMA 20 / 50 / 200</span><b id="ema">—</b></div>
 <div class="row"><span>MACD histogram</span><b id="macd">—</b></div>
@@ -429,14 +348,70 @@
 <div class="row"><span>Volum / MA20</span><b id="vr">—</b></div>
 <div class="row"><span>Support / Resistance</span><b id="sr">—</b></div>
 <div class="row"><span>Breakout / Donchian</span><b id="breakout">—</b></div>
-</div>
-<div class="card full dashTechPlan"><div class="label">Plan tehnic orientativ · ATR + structură</div><p id="setup">—</p><div class="miniGrid">
+</div><div class="card full dashTechPlan"><div class="label">Plan tehnic orientativ · ATR + structură</div><p id="setup">—</p><div class="miniGrid">
 <div class="mini"><span class="label">Invalidare</span><b id="invalid">—</b></div>
 <div class="mini"><span class="label">Țintă 1</span><b id="target">—</b></div>
 <div class="mini"><span class="label">Trailing</span><b id="trail">—</b></div>
 <div class="mini"><span class="label">Risk</span><b id="risk">—</b></div>
-</div></div>
-</div></section>
+</div></div></div></div></details><details class="acPl" id="acPl-largime"><summary><b>Lărgimea pieței, pe larg</b><span class="acPlSub" id="acPlSub-largime">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full dashBreadth marketBreadthCard">
+<div class="sectionHead"><h3>Market Breadth Pro</h3><div><span class="validationBadge">PARTICIPATION · TREND · VOLUME · MOMENTUM</span> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Refresh</button> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,true)">Full universe</button></div></div>
+<div class="breadthHero">
+  <div><span class="label">Breadth state</span><div class="breadthState neutral" id="breadthState">NOT LOADED</div><div class="small" id="breadthSummary">Run analysis or refresh breadth.</div></div>
+  <div class="breadthScoreWrap"><span class="label">Breadth score</span><b id="breadthScore">—</b><div class="breadthTrack"><i id="breadthBar" style="width:0%"></i></div></div>
+</div>
+<div class="breadthGrid">
+  <div class="breadthBox"><span>Advancing participation</span><b id="breadthParticipation">—</b></div>
+  <div class="breadthBox"><span>Above EMA20 / 50 / 200</span><b id="breadthTrend">—</b></div>
+  <div class="breadthBox"><span>Volume breadth</span><b id="breadthVolume">—</b></div>
+  <div class="breadthBox"><span>Momentum · RSI &gt; 50</span><b id="breadthMomentum">—</b></div>
+  <div class="breadthBox"><span>New highs / lows</span><b id="breadthHighLow">—</b></div>
+  <div class="breadthBox"><span>Divergence</span><b id="breadthDivergence">—</b></div>
+  <div class="breadthBox"><span>Universe coverage</span><b id="breadthCoverage">—</b></div>
+  <div class="breadthBox"><span id="breadthAltLabel">Alt / broad participation</span><b id="breadthAltParticipation">—</b></div>
+</div>
+<p class="note" id="breadthNote">Breadth is a confirmation/context layer, not an independent BUY/SELL signal. Fast mode uses a representative basket; Full universe is explicit because it can require materially more provider requests.</p>
+</div></div></div></details><details class="acPl" id="acPl-decizii"><summary><b>Deciziile (12 motoare)</b><span class="acPlSub" id="acPlSub-decizii">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full dashDecisionOS decisionOsCard">
+<div class="sectionHead"><h3>Decision Intelligence OS Pro</h3><div><span class="validationBadge">12 DECISION ENGINES · CAPITAL PRESERVATION FIRST</span> <button class="actionGhost" data-action-click="refreshV65DecisionOS(true)">Refresh</button> <button class="actionGhost" data-action-click="navTo('decision')">Open Verdict page</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Decision OS state</span><div class="decisionOsState neutral" id="v65DashState">WAIT DATA</div><div class="small" id="v65DashSummary">Run analysis to synthesize all decision instruments.</div></div><div class="decisionOsKpi"><span class="label">Decision quality</span><b id="v65DashScore">—</b></div><div class="decisionOsKpi"><span class="label">Kill switch</span><b id="v65DashKill">—</b></div><div class="decisionOsKpi"><span class="label">Recommended entry</span><b id="v65DashEntry">—</b></div><div class="decisionOsKpi"><span class="label">Position action</span><b id="v65DashExit">—</b></div></div>
+<div class="decisionToolGrid" id="v65DashGrid"><div class="emptyState">Run analysis first.</div></div>
+<p class="note">The 12 engines are a decision/control layer. They can confirm, delay, reduce or block Paper decisions; none is a standalone profit guarantee or a live-order instruction.</p>
+</div></div></div></details><details class="acPl" id="acPl-validare"><summary><b>Validarea avantajului (13 motoare)</b><span class="acPlSub" id="acPlSub-validare">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full dashEdgeCalibration edgeCalCard">
+<div class="sectionHead"><h3>Real-Time Edge Validation &amp; Calibration Pro</h3><div><span class="validationBadge">13 VALIDATION ENGINES · OBSERVATIONAL / FORWARD-AWARE</span> <button class="actionGhost" data-action-click="refreshV66EdgeValidation(true)">Refresh evidence</button> <button class="actionGhost" data-action-click="navTo('decision')">Open Verdict page</button></div></div>
+<div class="edgeCalHero"><div><span class="label">Edge validation state</span><div class="edgeCalState neutral" id="v66DashState">WAIT DATA</div><div class="small" id="v66DashSummary">Collect resolved outcomes to validate calibration and module contribution.</div></div><div class="edgeCalKpi"><span class="label">Verdict quality</span><b id="v66DashQuality">—</b></div><div class="edgeCalKpi"><span class="label">Calibration ECE</span><b id="v66DashEce">—</b></div><div class="edgeCalKpi"><span class="label">Edge decay</span><b id="v66DashDecay">—</b></div><div class="edgeCalKpi"><span class="label">Data sufficiency</span><b id="v66DashSuff">—</b></div></div>
+<div class="decisionToolGrid edgeCalTools" id="v66DashGrid"><div class="emptyState">No resolved validation evidence yet.</div></div>
+<div class="edgeCalTables"><div><div class="label">Confidence calibration</div><div class="edgeCalTable" id="v66DashCalibration"><div class="emptyState">No calibration sample.</div></div></div><div><div class="label">Module contribution / ablation</div><div class="edgeCalTable" id="v66DashContrib"><div class="emptyState">No contribution sample.</div></div></div><div><div class="label">Backtest / Paper / Shadow / Forward</div><div class="edgeCalTable" id="v66DashLayers"><div class="emptyState">No comparable layers yet.</div></div></div></div>
+<p class="note">Contribution and ablation are observational diagnostics, not causal proof. v66 can block a new research/Paper setup only on mature severe edge decay or a statistically mature blacklisted Setup DNA; small samples never create a hard block.</p>
+</div></div></div></details><details class="acPl" id="acPl-profit"><summary><b>Gata pentru profit?</b><span class="acPlSub" id="acPlSub-profit">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full prGateDash dashReadiness">
+  <div class="sectionHead"><h3>Profit Readiness Gate</h3><div><span class="validationBadge">EVIDENCE GATE · NOT A PROFIT GUARANTEE</span> <button class="actionGhost" data-action-click="navTo('profitready')">Open full gate</button></div></div>
+  <div class="prDashHero">
+    <div><span class="label">Current market readiness</span><div id="prDashState" class="prState prNotReady">NOT READY</div><div id="prDashReason" class="small">Collect cost-aware forward and Paper evidence before considering live capital.</div></div>
+    <div class="prDashMeter"><span class="label">Gate coverage</span><b id="prDashCoverage">0%</b><div class="prTrack"><i id="prDashBar" style="width:0%"></i></div></div>
+  </div>
+  <div class="prDashKpis">
+    <div class="prMini"><span class="label">Resolved</span><b id="prDashN">0</b></div>
+    <div class="prMini"><span class="label">Expectancy</span><b id="prDashExp">—</b></div>
+    <div class="prMini"><span class="label">Profit factor</span><b id="prDashPf">—</b></div>
+    <div class="prMini"><span class="label">Forward</span><b id="prDashForward">0</b></div>
+    <div class="prMini"><span class="label">Paper completed</span><b id="prDashPaper">0</b></div>
+    <div class="prMini"><span class="label">Next milestone</span><b id="prDashNext">—</b></div>
+  </div>
+</div></div></div></details><details class="acPl" id="acPl-operatiuni"><summary><b>Operațiunile</b><span class="acPlSub" id="acPlSub-operatiuni">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full dashOperations opsV67Card">
+<div class="sectionHead"><h3>Production Trading Operations Pro</h3><div><span class="validationBadge">WATCHDOG · RECOVERY · RECONCILIATION · INCIDENT CONTROL</span> <button class="actionGhost" data-action-click="refreshV67Operations(true)">Run checks</button> <button class="actionGhost" data-action-click="v67RunReconcile(true)">Reconcile</button></div></div>
+<div class="decisionOsHero"><div><span class="label">Operations state</span><div class="decisionOsState neutral" id="v67DashState">BOOTING</div><div class="small" id="v67DashSummary">Operational watchdog is initializing.</div></div><div class="decisionOsKpi"><span class="label">Ops score</span><b id="v67DashScore">—</b></div><div class="decisionOsKpi"><span class="label">Heartbeat</span><b id="v67DashHeartbeat">—</b></div><div class="decisionOsKpi"><span class="label">Recovery</span><b id="v67DashRecovery">—</b></div><div class="decisionOsKpi"><span class="label">Incidents</span><b id="v67DashIncidents">0</b></div></div>
+<div class="decisionToolGrid" id="v67DashGrid"><div class="emptyState">Operational checks are initializing.</div></div>
+<div class="decisionOsFooter"><b>Controls:</b> <button class="actionGhost" data-action-click="v67EmergencyPause('MANUAL PAUSE')">Pause new entries</button> <button class="actionGhost" data-action-click="v67ResumeOperations()">Resume</button> <button class="actionGhost" data-action-click="v67FlattenAndPause()">Flatten Paper + pause</button></div>
+<p class="note">v67 is an operations/control layer. It can block new Paper/Shadow entries when runtime state is unsafe, but it never sends a real-money order.</p>
+</div></div></div></details><details class="acPl" id="acPl-provenienta"><summary><b>Proveniența datelor</b><span class="acPlSub" id="acPlSub-provenienta">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full dashLineage">
+<div class="sectionHead"><h3>Data Lineage</h3><span class="small">No silent spot-source mixing</span></div>
+<div class="sourceCard">
+<div class="sourceBox"><span class="label">Primary market data</span><b class="sourceNative" id="sourceSpot">PIONEX</b></div>
+<div class="sourceBox"><span class="label">Multi-TF</span><b class="sourceNative" id="sourceMtf">PIONEX</b></div>
+<div class="sourceBox"><span class="label">Live price</span><b class="sourceNative" id="sourceLive">PIONEX REST</b></div>
+<div class="sourceBox"><span class="label">Microstructure / Session</span><b class="sourceNative" id="sourceMicro">PIONEX</b></div>
+<div class="sourceBox"><span class="label">External context</span><b class="sourceExternal" id="sourceDeriv">BINANCE FUTURES</b></div>
+</div>
+<div class="providerNote" id="sourceNote">Spot indicators, historical analogs, chart, MTF and backtests follow the selected primary source. Futures remains optional external context.</div>
+</div></div></div></details></div></section>
 <section class="panel" id="engine"><div class="sectionHead"><h3>Quant Engine</h3><span class="small">Adaptive confluence model</span></div><div class="grid">
 <div class="card full hero"><div class="label">Adaptive signal engine</div><div class="value" id="signal">—</div><div class="bar"><div class="fill" id="enginefill"></div></div><div class="muted" id="quality" style="margin-top:6px">Confluență —</div></div>
 <div class="card kpi"><div class="label">Market regime</div><div class="value" id="regime">—</div></div>
@@ -1212,7 +1187,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v91.11</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v92.0</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -2325,5 +2300,5 @@
 <button class="moreBtn" data-action-click="moreNav('settings')"><b>⚙</b>Settings</button>
 <button class="moreBtn" data-action-click="moreNav('health')"><b>●</b>Health</button>
 </div>
-</div></div><script src="/lib/grid-calcul.js"></script><script src="/lib/grid-proba.js"></script><script src="/lib/grid-jurnal.js"></script><script src="/lib/grid-umpleri.js"></script><script src="/lib/grid-clasament.js"></script><script src="/lib/grid-laborator.js"></script><script src="/lib/tablou-extra.js"></script><script src="/lib/indicatori-bot.js"></script><script src="/lib/jurnal-trade.js"></script><script src="/lib/semnale-bot.js"></script><script src="/lib/contrafactual.js"></script><script src="/lib/obiceiuri.js"></script><script src="/lib/tablou-bot.js"></script><script src="/lib/directie.js"></script><script src="/lib/alerte.js"></script><script src="/lib/scenariu.js"></script><script src="/lib/sfaturi.js"></script><script src="/lib/t212.js"></script><script src="/lib/actiuni-semnale.js"></script><script src="/lib/consilier.js"></script><script src="/lib/idei.js"></script><script defer="" src="/app.js"></script><script defer="" src="/lib/t212-ecran.js"></script>
+</div></div><script src="/lib/grid-calcul.js"></script><script src="/lib/grid-proba.js"></script><script src="/lib/grid-jurnal.js"></script><script src="/lib/grid-umpleri.js"></script><script src="/lib/grid-clasament.js"></script><script src="/lib/grid-laborator.js"></script><script src="/lib/tablou-extra.js"></script><script src="/lib/indicatori-bot.js"></script><script src="/lib/jurnal-trade.js"></script><script src="/lib/semnale-bot.js"></script><script src="/lib/contrafactual.js"></script><script src="/lib/obiceiuri.js"></script><script src="/lib/tablou-bot.js"></script><script src="/lib/directie.js"></script><script src="/lib/alerte.js"></script><script src="/lib/scenariu.js"></script><script src="/lib/sfaturi.js"></script><script src="/lib/t212.js"></script><script src="/lib/actiuni-semnale.js"></script><script src="/lib/consilier.js"></script><script src="/lib/idei.js"></script><script src="/lib/acasa.js"></script><script defer="" src="/app.js"></script><script defer="" src="/lib/t212-ecran.js"></script><script defer="" src="/lib/acasa-ecran.js"></script>
 </body></html>

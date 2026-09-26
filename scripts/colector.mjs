@@ -484,8 +484,8 @@ async function turaIdeiZi() {
 let dimineataInLucru = false;
 async function dateDimineata() {
   const out = { deIesit: [], rezultate: [], plafon: [], stiri: [], boti: [] };
-  const bare = (r) => (Array.isArray(r) && r.length ? GridCalcul.bare(r.concat([r[r.length - 1]])) : null);   // bare() scoate ultima (in formare): o dublez
-  try { const pz = await cere("/api/stiri?action=piata"); out.piata = Consilier.piata({ qqq: bare(pz.qqq), spy: bare(pz.spy), vix: bare(pz.vix), fg: pz.fg }); } catch (e) { jurnal("dimineata piata", e.message); }
+  // v92: barele zilnice de bursa CU ultima zi (bare() o scotea - "ultima zi" arata ziua de dinainte)
+  try { const pz = await cere("/api/stiri?action=piata"); const zi = (r) => (Array.isArray(r) && r.length ? GridCalcul.bareToate(r) : null); out.piata = Consilier.piata({ qqq: zi(pz.qqq), spy: zi(pz.spy), vix: zi(pz.vix), fg: pz.fg }); } catch (e) { jurnal("dimineata piata", e.message); }
   const v = citesteVarsSigur();
   if (v.T212_API_KEY && v.T212_API_SECRET) {
     try {

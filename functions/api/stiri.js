@@ -57,11 +57,13 @@ export async function onRequestGet({ request, env }) {
     inCache(k, v, 1800); return json(v);
   }
   if (a === "piata") {
-    const c = dinCache("piata"); if (c) return json(c);
-    const [qqq, spy, vix, fgR] = await Promise.all([chart("QQQ"), chart("SPY"), chart("^VIX"), fetch("https://api.alternative.me/fng/?limit=1", { headers: UA }).then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
+    const c = dinCache("piata2"); if (c) return json(c);
+    const [qqq, spy, vix, fgR] = await Promise.all([chart("QQQ"), chart("SPY"), chart("^VIX"), fetch("https://api.alternative.me/fng/?limit=31", { headers: UA }).then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
     const f = fgR && Array.isArray(fgR.data) && fgR.data[0], val = f ? Number(f.value) : NaN;
-    const v = { qqq, spy, vix, fg: Number.isFinite(val) ? { valoare: val, clasa: String(f.value_classification || "").slice(0, 20) } : null };
-    inCache("piata", v, 1800); return json(v);
+    // v92: si istoricul pe 30 de zile (alternative.me da de la azi spre trecut) - pentru Home, de la cel mai vechi la azi
+    const istoric = (fgR && Array.isArray(fgR.data) ? fgR.data : []).map((x) => Number(x && x.value)).filter(Number.isFinite).reverse();
+    const v = { qqq, spy, vix, fg: Number.isFinite(val) ? { valoare: val, clasa: String(f.value_classification || "").slice(0, 20), istoric } : null };
+    inCache("piata2", v, 1800); return json(v);
   }
   return json({ error: "Acțiune necunoscută" }, 400);
 }

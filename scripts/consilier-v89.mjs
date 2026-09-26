@@ -130,7 +130,7 @@ await test("ruta stiri piata: QQQ, SPY, ^VIX (Yahoo) + frica/lacomia (alternativ
   fetchStub((u) => /chart\/QQQ/.test(u) ? { corp: chart(500) } : /chart\/SPY/.test(u) ? { corp: chart(600) } : /chart\/%5EVIX/.test(u) ? { status: 500, corp: "" } : /alternative\.me/.test(u) ? { corp: JSON.stringify({ data: [{ value: "71", value_classification: "Greed" }] }) } : { status: 404, corp: "" });
   const r = await cheama("action=piata");
   assert.equal(r.status, 200); assert.equal(r.corp.qqq.length, 2); assert.equal(r.corp.spy[0].close, 600); assert.strictEqual(r.corp.vix, null);
-  assert.deepEqual(r.corp.fg, { valoare: 71, clasa: "Greed" });
+  assert.equal(r.corp.fg.valoare, 71); assert.equal(r.corp.fg.clasa, "Greed");   // v92: + istoric (pentru Home)
 });
 
 // ---------------- tura de dimineata (colector) ----------------

@@ -377,7 +377,8 @@ function t212SfaturiHtml(l) {
 // raspunsul rutei -> "Piata azi" (barele zilnice ale rutei au forma randurilor Pionex)
 function t212PiataDin(pz) {
   if (!pz || typeof Consilier === "undefined") return null;
-  var b = function (r) { return Array.isArray(r) ? GridCalcul.bare(r.concat([r[r.length - 1]])) : null; };
+  // v92: barele zilnice de bursa, CU ultima zi (bare() o scotea: "ultima zi" arata ziua de dinainte)
+  var b = function (r) { return Array.isArray(r) && r.length ? GridCalcul.bareToate(r) : null; };
   return Consilier.piata({ qqq: b(pz.qqq), spy: b(pz.spy), vix: b(pz.vix), fg: pz.fg });
 }
 function piataAziRender() {
