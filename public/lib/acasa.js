@@ -149,6 +149,40 @@ var Acasa = (function () {
     return { urmatoare: u, text: text };
   }
 
-  return { vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7 };
+  // ======================= v94 =======================
+  // miscarea obisnuita: percentila 75 a miscarilor pe k bare (actiuni: zilnic k=1; crypto: bare de 1 ora, k=24), in %
+  function miscareTipica(c, k) {
+    var l = (Array.isArray(c) ? c : []).map(nr).filter(function (v) { return v !== null && v > 0; }), m = [];
+    for (var i = k; i < l.length; i++) m.push(Math.abs(l[i] / l[i - k] - 1));
+    if (m.length < 20) return null;
+    m.sort(function (a, b) { return a - b; });
+    return Math.round(m[Math.floor(m.length * 0.75)] * 10000) / 100;
+  }
+  function medianaDe(l) { var v = l.filter(function (x) { return x !== null && isFinite(x); }).sort(function (a, b) { return a - b; }); return v.length ? v[Math.floor(v.length / 2)] : null; }
+  // funding-ul pe toata piata: l = [{s, rate, hist[]}] (Pionex fundingRates pe primele monede dupa volum)
+  function fundingPiata(l) {
+    l = (Array.isArray(l) ? l : []).filter(function (x) { return x && x.s && nr(x.rate) !== null; });
+    if (!l.length) return null;
+    var med = medianaDe(l.map(function (x) { return nr(x.rate); })), uz = medianaDe(l.map(function (x) { return medianaDe((x.hist || []).map(nr)); }));
+    var lng = l.filter(function (x) { return x.rate > 0; }).length, raport = uz && uz * med > 0 ? med / uz : null;
+    var ingh = l.slice().sort(function (a, b) { return b.rate - a.rate; }).slice(0, 3).map(function (x) { return { s: x.s, rate: x.rate }; });
+    var pct = function (v) { return (v * 100).toFixed(3).replace(".", ",") + "%"; };
+    var ton = raport !== null && raport >= 3 && med > 0.0001 ? "atentie" : raport !== null && raport >= 3 && med < 0 ? "atentie" : "neutru";
+    var text = lng + " din " + l.length + " monede: plătesc long · funding median " + pct(med) + (raport !== null ? " (" + (raport >= 2 ? Math.round(raport) + "× față de obicei" : raport <= 0.5 ? "sub obicei" : "ca de obicei") + ")" : "")
+      + (ton === "atentie" ? ". Mulți s-au înghesuit pe long: urcările țin mai greu și căderile vin mai brusc." : ".");
+    return { n: l.length, long: lng, mediana: med, uzual: uz, raport: raport, inghesuiti: ingh, ton: ton, text: text };
+  }
+  // ce s-a schimbat de ieri: azi {zi, fg, inMiscare, vix, ndxE50, ...} fata de ultima poza dinaintea zilei de azi
+  function schimbari(azi, lista) {
+    var ier = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.zi && azi && x.zi < azi.zi; }).sort(function (a, b) { return a.zi < b.zi ? -1 : 1; }).pop(), o = {};
+    if (!ier) return o;
+    Object.keys(azi).forEach(function (k) {
+      if (k === "zi") return; var a = nr(azi[k]), b = nr(ier[k]); if (a === null || b === null) return;
+      var d = Math.round((a - b) * 100) / 100; o[k] = { d: d, sag: d > 0 ? "↑" : d < 0 ? "↓" : "=", de: b };
+    });
+    return o;
+  }
+
+  return { miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7 };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

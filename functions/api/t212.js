@@ -84,12 +84,21 @@ function curataUmplere(x) {
 async function citesteKv(env, k, implicit) { try { const v = JSON.parse((await env.ISTORIC.get(k)) || "null"); return v === null ? implicit : v; } catch { return implicit; } }
 const faraKv = () => json({ error: "ISTORIC_DOAR_ACASA", detail: "Istoricul complet Trading 212 se strânge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat), de colector." }, 503);
 
+// v93/v94: rezumatul Nasdaq 100 (Home: largimea, cine se misca, cele 7 mari) - din tura de idei si din tura din timpul bursei
+async function salveazaNdx(env, corp, zi) {
+  if (Array.isArray(corp && corp.ndx)) {
+    const b = (v) => v === true;
+    const ndx = corp.ndx.slice(0, 150).map((x) => ({ s: String(x && x.s || "").toUpperCase().replace(/[^A-Z0-9.-]/g, "").slice(0, 10), p: nr(x && x.p), ch: nr(x && x.ch), ch5: nr(x && x.ch5), e50: b(x && x.e50), e200: b(x && x.e200), rsi: nr(x && x.rsi), mis: nr(x && x.mis) }))
+      .filter((x) => x.s && x.ch !== null);
+    await env.ISTORIC.put("t212:ndx", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, actiuni: ndx }));
+  }
+}
 export async function onRequestPost({ request, env }) {
   const auth = await requireApiAuth(request, env, "t212-write", 30); if (!auth.ok) return authErrorResponse(auth, H);
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
-  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi") return json({ error: "Acțiune necunoscută" }, 400);
+  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
   if (act === "idei") {
@@ -100,18 +109,18 @@ export async function onRequestPost({ request, env }) {
     const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
     const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;
     await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, urmarire: urm }));
-    // v93: rezumatul Nasdaq 100 (pentru Home: largimea, cine se misca, cele 7 mari), din aceleasi bare zilnice
-    if (Array.isArray(corp && corp.ndx)) {
-      const b = (v) => v === true;
-      const ndx = corp.ndx.slice(0, 150).map((x) => ({ s: String(x && x.s || "").toUpperCase().replace(/[^A-Z0-9.-]/g, "").slice(0, 10), p: nr(x && x.p), ch: nr(x && x.ch), ch5: nr(x && x.ch5), e50: b(x && x.e50), e200: b(x && x.e200), rsi: nr(x && x.rsi), mis: nr(x && x.mis) }))
-        .filter((x) => x.s && x.ch !== null);
-      await env.ISTORIC.put("t212:ndx", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, actiuni: ndx }));
-    }
+    await salveazaNdx(env, corp, zi);
     const ist = await citesteKv(env, "t212:idei-istoric", []), l = Array.isArray(ist) ? ist : [];
     act2.forEach((x) => { if (!l.some((y) => y.zi === zi && y.ticker === x.ticker)) l.push({ zi, ticker: x.ticker, simbol: x.simbol, pret: x.pret }); });
     const de = new Date(Date.now() - 150 * 86400000).toISOString().slice(0, 10);
     await env.ISTORIC.put("t212:idei-istoric", JSON.stringify(l.filter((x) => x.zi >= de).slice(-1000)));
     return json({ ok: true, actiuni: act2.length });
+  }
+  // v94: rezumatul Nasdaq 100 si in timpul bursei (colectorul, o data pe ora) - fara idei
+  if (act === "ndx") {
+    const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
+    await salveazaNdx(env, corp, zi);
+    return json({ ok: true });
   }
   if (act === "sfaturi") {
     // v91: socoteala sfaturilor - semaforul fiecarei pozitii, o data pe zi, si pretul dupa 5/10/20 zile

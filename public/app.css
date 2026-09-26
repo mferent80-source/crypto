@@ -1798,3 +1798,7 @@ body.peAcasa:not(.acMonedaDeschisa) .toolbar{display:none}
 #dash .acStire:hover{color:var(--accent)}#dash .acStire span{margin-right:8px;font-size:12px}
 #dash .acRez{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;font-size:13px;font-variant-numeric:tabular-nums}#dash .acRez span{color:var(--muted)}
 @media (max-width:900px){#dash .acVerdicte{grid-template-columns:1fr}#dash .acVerd+.acVerd{border-left:0;border-top:1px solid var(--tb-linie)}}
+/* v94: fata de ieri, funding pe piata */
+#dash .acIeri{font-size:12px;font-weight:700;margin-left:4px;white-space:nowrap}
+#dash .acFund{margin-top:6px;font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--tb-linie);background:rgba(132,161,184,.05)}
+#dash .acFund-atentie{border-color:rgba(245,196,81,.45);background:rgba(245,196,81,.07)}

@@ -229,6 +229,56 @@ var Alerte = (function () {
     return { nivel: "info", titlu: "📊 Mediul boților", mesaj: linii.join("\n") };
   }
 
-  return { evalueaza: evalueaza, reguli: reguli, grila: grila, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti };
+  // ======================= v94 =======================
+  function ziRo(acum) { try { var o = {}; new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(acum)).forEach(function (x) { o[x.type] = x.value; }); return o.year + "-" + o.month + "-" + o.day; } catch (e) { return new Date(acum).toISOString().slice(0, 10); } }
+  var V1 = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace(".", ","); };
+  // Miscare NEOBISNUITA pe o moneda / actiune din portofoliu (pragul ales de el, 26.09): peste 2x miscarea ei
+  // obisnuita SI minim 3%. O data pe zi pe fiecare directie; din nou doar daca miscarea s-a dublat.
+  // o = {cheie, nume, fel: "acțiune"|"monedă", ch (%), tipic (%), pret}; st = {zi, sus, jos}
+  function miscareNeobisnuita(o, st, acum) {
+    acum = acum || Date.now(); o = o || {};
+    var ch = nr(o.ch), tip = nr(o.tipic);
+    if (ch === null) return { mesaj: null, stare: st || null };
+    var prag = Math.max(3, tip !== null ? 2 * tip : 0), a = Math.abs(ch);
+    if (a < prag) return { mesaj: null, stare: st || null };
+    var zi = ziRo(acum), s = st && st.zi === zi ? { zi: zi, sus: st.sus || 0, jos: st.jos || 0 } : { zi: zi, sus: 0, jos: 0 }, dir = ch > 0 ? "sus" : "jos";
+    if (s[dir] && a < 2 * s[dir]) return { mesaj: null, stare: st };
+    s[dir] = a;
+    var ea = o.fel === "monedă" ? "ei" : "ei", fer = o.fel === "monedă" ? "pe 24 h" : "pe zi";
+    return { stare: s, mesaj: { cheie: "miscare-" + (o.cheie || o.nume), nivel: "atentie",
+      titlu: (o.nume || "?") + ": " + (ch > 0 ? "urcă" : "scade") + " " + (ch > 0 ? "+" : "−") + V1(a) + "% " + (o.fel === "monedă" ? "în 24 h" : "azi"),
+      mesaj: (tip !== null ? "E " + V1(a / tip) + "× mișcarea " + ea + " obișnuită (" + V1(tip) + "% " + fer + ")." : "Peste pragul de 3%.") + (nr(o.pret) !== null ? " Prețul " + pret(nr(o.pret)) + "." : "")
+        + " Ce aș face eu: mă uit " + (o.fel === "monedă" ? "în Tabloul botului" : "în Trading 212") + " înainte să fac ceva; o mișcare mare nu cere singură o decizie." } };
+  }
+  // Schimbarea "vremii pietei" (Home): crypto (liniste/amestecat/miscare), Nasdaq (larga/ingusta/lateral/scade/frica)
+  // si legatura BTC - bursa (urmeaza >= 0,5 / separat < 0,3). O schimbare se anunta abia cand se confirma de 2 ori la rand.
+  var RAU = { miscare: 1, scade: 1, frica: 1 };
+  function schimbareVreme(st, o, acum) {
+    o = o || {}; var n = st ? JSON.parse(JSON.stringify(st)) : {}, mesaje = [], init = !st;
+    [["crypto", "Crypto"], ["bursa", "Nasdaq"]].forEach(function (p) {
+      var v = o[p[0]], niv = v && v.nivel; if (!niv || niv === "fara-date") return;
+      var c = n[p[0]] || null;
+      if (init || !c) { n[p[0]] = { nivel: niv, cand: null }; return; }
+      if (niv === c.nivel) { c.cand = null; return; }
+      if (c.cand === niv) {
+        mesaje.push({ cheie: "vreme-" + p[0], nivel: RAU[niv] ? "critic" : "info", titlu: p[1] + ": " + (v.eticheta || niv), mesaj: (v.titlu ? v.titlu + " " : "") + (v.faCe ? "Ce aș face eu: " + v.faCe : "") });
+        n[p[0]] = { nivel: niv, cand: null };
+      } else c.cand = niv;
+    });
+    var r = o.corelatie ? nr(o.corelatie.r) : null;
+    if (r !== null) {
+      var cur = n.cor ? n.cor.stare : null, tinta = r >= 0.5 ? "urmeaza" : r < 0.3 ? "separat" : cur;
+      if (init || !n.cor) n.cor = { stare: r >= 0.5 ? "urmeaza" : "separat", cand: null };
+      else if (tinta === n.cor.stare) n.cor.cand = null;
+      else if (n.cor.cand === tinta) {
+        mesaje.push({ cheie: "vreme-corelatie", nivel: "info", titlu: tinta === "urmeaza" ? "BTC urmează bursa acum (" + r.toFixed(2).replace(".", ",") + ")" : "BTC merge din nou pe drumul lui (" + r.toFixed(2).replace(".", ",") + ")",
+          mesaj: tinta === "urmeaza" ? "Pe ultimele 30 de zile de bursă BTC se mișcă odată cu Nasdaq: o scădere a bursei trage și crypto. Ce aș face eu: mă uit la VIX și la Nasdaq înainte să pornesc boți long." : "Bursa nu mai trage BTC după ea: crypto se judecă din nou pe datele lui." });
+        n.cor = { stare: tinta, cand: null };
+      } else n.cor.cand = tinta;
+    }
+    return { mesaje: mesaje, stare: n };
+  }
+
+  return { miscareNeobisnuita: miscareNeobisnuita, schimbareVreme: schimbareVreme, evalueaza: evalueaza, reguli: reguli, grila: grila, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti };
 })();
 if (typeof globalThis !== "undefined") globalThis.Alerte = Alerte;

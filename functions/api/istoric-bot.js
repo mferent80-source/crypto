@@ -39,6 +39,8 @@ export async function onRequestGet({request,env}){
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
+  // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
+  if(action==="piata"){let f=null,l=[];try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}return json({funding:f,instantanee:Array.isArray(l)?l:[]})}
   if(action!=="citeste")return json({error:"Unsupported action"},400);
   const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);
   const ore=Math.min(168,Math.max(1,Math.floor(Number(u.searchParams.get("ore")))||24));
@@ -54,6 +56,20 @@ export async function onRequestPost({request,env}){
   const u=new URL(request.url),action=u.searchParams.get("action");
   const text=await request.text();if(text.length>65536)return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
+  if(action==="piata"){
+    const txt=(v,k)=>typeof v==="string"?v.slice(0,k):"",sim=v=>txt(v,16).toUpperCase().replace(/[^A-Z0-9]/g,"");
+    const f=corp&&corp.funding;
+    if(f&&typeof f==="object")await env.ISTORIC.put("piata:funding",JSON.stringify({la:nr(corp.la)||Date.now(),n:nr(f.n),long:nr(f.long),mediana:nr(f.mediana),uzual:nr(f.uzual),raport:nr(f.raport),
+      ton:f.ton==="atentie"?"atentie":"neutru",text:txt(f.text,300),inghesuiti:(Array.isArray(f.inghesuiti)?f.inghesuiti:[]).slice(0,5).map(x=>({s:sim(x&&x.s),rate:nr(x&&x.rate)})).filter(x=>x.s&&x.rate!==null)}));
+    const z=corp&&corp.instantaneu;
+    if(z&&typeof z==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(z.zi))){
+      let l=[];try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
+      const o={zi:z.zi};["fg","inMiscare","vix","ndxE50","btc","largime","fundingMed"].forEach(k=>{const v=nr(z[k]);if(v!==null)o[k]=v});
+      l=l.filter(x=>x&&x.zi!==z.zi);l.push(o);l.sort((a,b)=>a.zi<b.zi?-1:1);
+      await env.ISTORIC.put("piata:instantanee",JSON.stringify(l.slice(-14)));
+    }
+    return json({ok:true});
+  }
   if(action==="adauga"){
     const bot=idBot(corp&&corp.bot),intrare=curata(corp&&corp.intrare);
     if(!bot||!intrare)return json({error:"Lipseste bot sau intrare valida"},400);
