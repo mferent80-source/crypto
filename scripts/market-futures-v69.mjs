@@ -90,5 +90,16 @@ await test("o cerere AGATATA in coada Pionex publica nu blocheaza pretul urmator
   assert.ok(Date.now() - t0 < 15000);
 });
 
+// v91.9: rata de funding Pionex (istoricul, ~16 zile) pentru "Mediul botului"; simbolul se curata, limita e fixa
+await test("pionex_funding: cere fundingRates cu simbolul curatat si 100 de rate, intoarce raspunsul Pionex", async () => {
+  let cerut = null;
+  globalThis.fetch = async (url) => { cerut = String(url); return new Response(JSON.stringify({ result: true, data: { symbol: "VVV_USDT_PERP", rates: [{ fundingRate: "0.00005", fundingTime: 1 }] } }), { status: 200, headers: { "content-type": "application/json" } }); };
+  const { onRequestGet } = await import(proaspat());
+  const res = await onRequestGet({ request: new Request("https://exemplu.test/api/market?type=pionex_funding&symbol=vvv_usdt_perp<x>", { headers: { authorization: `Bearer ${TOKEN}` } }), env: ENV });
+  const corp = await res.json();
+  assert.equal(res.status, 200); assert.equal(corp.data.rates[0].fundingRate, "0.00005");
+  assert.equal(cerut, "https://api.pionex.com/api/v1/market/fundingRates?symbol=VVV_USDT_PERPX&limit=100");
+});
+
 console.log(`\nV69_MARKET_FUTURES ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

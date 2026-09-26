@@ -169,6 +169,15 @@ try {
     assert.equal(r.coloane, 5); assert.ok(r.v.some((t) => /[↑↓↔] \d+/.test(t)), `niciun verdict calculat: ${r.v}`);
     assert.match(r.pred, /48,8%/); assert.match(r.rez, /Cu botul|Urcă pe/); assert.equal(r.gunoi, false);
   });
+  // v91.9: "fa toate 3 si lasa tabelul cum e" - Mediul botului cu date REALE (nu "n-am ..."), tabelul neatins
+  await test("Tabloul: 'Mediul botului' are cele 3 randuri cu date reale (miscarea, funding-ul, BTC) si tabelul a ramas cu 10 randuri", async () => {
+    await panaCand(b, `document.querySelectorAll("#tbIndicatori .tbMediuR").length===3`, 60000, "Mediul botului");
+    const r = await b.ev(`({randuri:[...document.querySelectorAll("#tbIndicatori .tbMediuR")].map(x=>x.textContent), tabel:document.querySelectorAll("#tbIndicatori .tbIndTab tbody tr").length})`);
+    assert.equal(r.randuri.length, 3);
+    assert.match(r.randuri[0], /^Mișcarea(liniște|mișcare) · 4h \d/); assert.match(r.randuri[1], /^Funding-?\d|^Funding\d/); assert.match(r.randuri[2], /^BTC[↑↓↔]/);
+    for (const t of r.randuri) assert.doesNotMatch(t, /n-am/, `rand fara date: ${t}`);
+    assert.equal(r.tabel, 10);
+  });
   await test("pe Trading 212 + reincarcare -> ramane pe Trading 212", async () => {
     await b.ev(`navTo("t212",true);true`);
     assert.equal(await reincarca(), "t212");

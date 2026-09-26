@@ -5672,6 +5672,9 @@ async function tbAduDirectie(){
         if(x.tf==="4H")d.randuri4h=randuri;
       }catch(e){rez.push({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText,dir:null,stare:"eroare",motiv:textEroare(e)})}
     }
+    // v91.9: "Mediul botului" - rata de funding a monedei si lumanarile de 4h ale BTC (2 cereri in plus la 5 min)
+    try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(s));d.fundingRates=fr&&fr.data&&Array.isArray(fr.data.rates)?fr.data.rates:null}catch(e){d.fundingRates=null}
+    try{var kb=await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200");d.btc4h=kb&&kb.data&&Array.isArray(kb.data.klines)?kb.data.klines:null}catch(e){d.btc4h=null}
     d.rez=rez;d.simbol=cheie;d.la=Date.now();d.eroare=rez.every(function(r){return r.stare==="eroare"});
     tbCalculeazaIndicatorii(d);
   }finally{d.inLucru=false}
@@ -5682,6 +5685,16 @@ async function tbAduDirectie(){
 var TB_TF_CALC={"15M":"15m","60M":"1h","4H":"4h","1D":"1d"};
 function tbCalculeazaIndicatorii(d){
   if(typeof IndicatoriBot==="undefined"||!d)return;
+  // v91.9: Mediul botului - miscarea monedei (1h: 4h si 24h fata de obisnuit), funding-ul, BTC pe 4h
+  var G=typeof GridCalcul!=="undefined"?GridCalcul:null,bot=tbStare.bot,regim=null,btc=null,fund=null;
+  try{if(G&&d.randuriPe&&d.randuriPe["60M"])regim=G.regimPeBare(G.bare(d.randuriPe["60M"]),4,24)}catch(e){regim=null}
+  try{if(G&&d.btc4h&&typeof Directie!=="undefined"){var an=Directie.analizeaza(d.btc4h,6,bot&&bot.directie);btc={dir:an&&an.dir||null,regim:G.regimPeBare(G.bare(d.btc4h),1,6)}}}catch(e){btc=null}
+  if(Array.isArray(d.fundingRates)&&d.fundingRates.length){
+    var fr=d.fundingRates.slice().sort(function(a,b){return Number(b.fundingTime)-Number(a.fundingTime)});
+    var iv=fr.length>1?Math.round((Number(fr[0].fundingTime)-Number(fr[1].fundingTime))/3600000):0;
+    fund={rate:Number(fr[0].fundingRate),hist:fr.map(function(x){return Number(x.fundingRate)}),intervalOre:iv>0?iv:8};
+  }
+  d.mediu={regim:regim,btc:btc,funding:fund};
   d.indicatori=TB_DIR_TF.map(function(x){
     var rows=d.randuriPe&&d.randuriPe[x.tf],q=null,hp=null,eroare=null;
     try{var j=bareInchise(IndicatoriBot.dinPionex(rows),TB_TF_CALC[x.tf],Date.now());if(j.length>=60)q=calc(j,"auto");else eroare="doar "+j.length+" bare închise";
@@ -5697,7 +5710,12 @@ function renderTabloIndicatori(){
   var z=IndicatoriBot.rezumat(l,b.directie);
   rz.className="tbRezumat "+tbTon(z.ton);rz.textContent=z.text;
   var cel=l.map(function(x){return IndicatoriBot.celule(x.q)});
-  el.innerHTML='<div class="tbIndWrap"><table class="tbIndTab"><thead><tr><th></th>'+l.map(function(x){return '<th>'+escapeHtml(x.eticheta.replace(" min","m").replace(" oră","h").replace(" ore","h").replace(" zi","z"))+'</th>'}).join("")+'</tr></thead><tbody>'+
+  var cost=TabloExtra.grileVsCosturi(b,Date.now());
+  var med=IndicatoriBot.mediu(Object.assign({fundingZi:cost&&cost.fundingZi},d.mediu||{}),b.directie);
+  var TON={bine:"good",rau:"bad",atentie:"tbWarn",neutru:"mutedInfo"};
+  el.innerHTML='<div class="tbMediu"><div class="tbMediuCap">Mediul botului</div>'+med.map(function(m){
+      return '<div class="tbMediuR" title="'+escapeHtml(m.titlu)+'"><span>'+escapeHtml(m.eticheta)+'</span><b class="'+(TON[m.ton]||"mutedInfo")+'">'+escapeHtml(m.text)+'</b></div>'}).join("")+'</div>'+
+    '<div class="tbIndWrap"><table class="tbIndTab"><thead><tr><th></th>'+l.map(function(x){return '<th>'+escapeHtml(x.eticheta.replace(" min","m").replace(" oră","h").replace(" ore","h").replace(" zi","z"))+'</th>'}).join("")+'</tr></thead><tbody>'+
     IndicatoriBot.RANDURI.map(function(r){
       return '<tr><td title="'+escapeHtml(r.titlu)+'">'+escapeHtml(r.eticheta)+'</td>'+cel.map(function(c,i){
         var v=c&&c[r.k];if(!v)return '<td class="mutedInfo" title="prea puține bare închise">—</td>';

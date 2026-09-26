@@ -1717,6 +1717,11 @@ body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none
 #tabloubot .tbIndTab td:first-child{text-align:left;color:var(--muted,#8aa0b4)}
 #tabloubot .tbIndTab tr:first-child td{font-weight:800}
 #tabloubot .tbIndNota{margin:6px 0 0}
+#tabloubot .tbMediu{margin:0 0 8px;padding:6px 8px;border-radius:8px;border:1px solid var(--tb-linie,#23374a);background:rgba(132,161,184,.05)}
+#tabloubot .tbMediuCap{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#8aa0b4);margin-bottom:3px}
+#tabloubot .tbMediuR{display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px;padding:2px 0;font-size:12.5px;line-height:1.35}
+#tabloubot .tbMediuR>span{color:var(--muted,#8aa0b4)}
+#tabloubot .tbMediuR>b{font-weight:700;overflow-wrap:anywhere}
 #tabloubot .tbIndEst td{border-top:2px solid var(--tb-linie,#23374a);font-style:italic}
 #tabloubot .tbIndPred{margin:8px 0 0;font-size:12.5px;line-height:1.45;padding:7px 9px;border-radius:8px;background:rgba(132,161,184,.07);border:1px dashed rgba(132,161,184,.3)}
 @media (max-width:1180px){#tabloubot .tbGraficRand{grid-template-columns:1fr}}

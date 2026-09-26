@@ -82,6 +82,11 @@ export async function onRequestGet({request,env}){
     const endQ=etRaw&&Number.isFinite(et)&&et>0?`&endTime=${et}`:"";
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}${endQ}`,interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300,env))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
+  if(type==="pionex_funding"){
+    // v91.9: ratele de funding (ultimele 100, la 4 h la Pionex = ~16 zile) pentru "Mediul botului" din Tablou
+    const ps=(u.searchParams.get("symbol")||"BTC_USDT_PERP").toUpperCase().replace(/[^A-Z0-9_]/g,"");
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/fundingRates?symbol=${encodeURIComponent(ps)}&limit=100`,300,env))}catch(e){return softFail("Pionex funding unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+  }
   if(type==="pionex_trades"){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=limita(u,500,10,500);
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/trades?symbol=${encodeURIComponent(ps)}&limit=${limit}`,5,env))}catch(e){return softFail("Pionex trades unavailable",e.message,e.status===429?(e.retryAfter||60):null)}

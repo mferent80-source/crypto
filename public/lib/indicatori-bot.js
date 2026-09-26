@@ -102,6 +102,48 @@ var IndicatoriBot = (function () {
     return { ton: "neutru", text: "Estimare pe 16 ore: " + (sus ? "urcare" : "coborâre") + " în " + pct + "% din situațiile asemănătoare" + (avg !== null ? " (în medie " + (avg >= 0 ? "+" : "−") + Math.abs(avg).toFixed(1).replace(".", ",") + "%)" : "") + fata + ". " + CINSTIT };
   }
 
-  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, ORIZONT: ORIZONT, RANDURI: RANDURI };
+  // ---- v91.9: "Mediul botului" - trei lucruri care NU vin din acelasi pret ca tabelul ----
+  // o.regim {r4h, r24h, miscare} (GridCalcul.regimPeBare pe barele de 1 ora ale monedei)
+  // o.funding {rate, hist[], intervalOre} (Pionex fundingRates), o.fundingZi (cat a platit botul pe zi, din bot)
+  // o.btc {dir: urca|coboara|lateral, regim} (Directie + regimPeBare pe barele de 4h ale BTC)
+  function x1(v) { return (Math.round(v * 10) / 10).toFixed(1).replace(".", ",") + "×"; }
+  function median(l) { var v = l.filter(function (x) { return nr(x) !== null; }).sort(function (a, b) { return a - b; }); return v.length ? v[Math.floor(v.length / 2)] : null; }
+  function mediu(o, botDir) {
+    o = o || {};
+    var out = [], rg = o.regim, r4 = rg ? nr(rg.r4h) : null, r24 = rg ? nr(rg.r24h) : null;
+    var titluMis = "Pragul e 1,5× mișcarea obișnuită a monedei (pe ultimele ~3 săptămâni). Singurul semnal DOVEDIT pentru grid în Radar: pornit sau ținut după mișcare, gridul iese cel mai rău; în liniște se descurcă.";
+    if (r4 === null && r24 === null) out.push({ k: "miscare", eticheta: "Mișcarea", text: "n-am destule bare de 1 oră", ton: "neutru", titlu: titluMis });
+    else {
+      var mis = !!rg.miscare, parti = [];
+      if (r4 !== null) parti.push("4h " + x1(r4)); if (r24 !== null) parti.push("24h " + x1(r24));
+      out.push({ k: "miscare", eticheta: "Mișcarea", text: (mis ? "mișcare" : "liniște") + " · " + parti.join(" · ") + " din obișnuit", ton: mis ? "rau" : "bine",
+        titlu: titluMis + (mis ? " Acum e mișcare: aș fi gata să opresc botul." : "") });
+    }
+    var f = o.funding, rate = f ? nr(f.rate) : null, ore = f && nr(f.intervalOre) ? f.intervalOre : 8;
+    var titluF = "Funding-ul se plătește la fiecare " + ore + " ore între long și short. Mult peste obișnuit = mulți înghesuiți pe o parte; pe partea botului e și cost, și risc de descărcare bruscă a prețului.";
+    if (rate === null) out.push({ k: "funding", eticheta: "Funding", text: "n-am rata de la Pionex", ton: "neutru", titlu: titluF });
+    else {
+      var med = median((f.hist || []).map(Number)), plateste = rate > 0 ? "long" : rate < 0 ? "short" : null;
+      var botPlateste = plateste && botDir === plateste, botIncaseaza = plateste && (botDir === "long" || botDir === "short") && botDir !== plateste;
+      var raport = med && med * rate > 0 ? Math.abs(rate / med) : null;
+      var fata = raport === null ? "" : raport >= 2 ? " · " + Math.round(raport) + "× față de obicei" : raport <= 0.5 ? " · sub obicei" : " · ca de obicei";
+      var fz = nr(o.fundingZi), cost = fz !== null ? " · botul: " + (fz >= 0 ? "+" : "−") + Math.abs(fz).toFixed(2).replace(".", ",") + " USDT pe zi" : "";
+      var cine = plateste ? "plătesc " + plateste + (botPlateste ? " (tu plătești)" : botIncaseaza ? " (tu încasezi)" : "") : "zero";
+      out.push({ k: "funding", eticheta: "Funding", text: (rate * 100).toFixed(3).replace(".", ",") + "% la " + ore + "h · " + cine + fata + cost,
+        ton: botPlateste && raport !== null && raport >= 2 && Math.abs(rate) >= 0.0001 ? "atentie" : botIncaseaza ? "bine" : "neutru", titlu: titluF });
+    }
+    var b = o.btc, bd = b && b.dir, br = b && b.regim, bm = br ? nr(br.r4h) : null;
+    var titluB = "Monedele mici merg de obicei după BTC: o cădere bruscă a lui trage și moneda botului spre marginea de jos a gridului.";
+    if (!bd) out.push({ k: "btc", eticheta: "BTC", text: "n-am lumânările BTC", ton: "neutru", titlu: titluB });
+    else {
+      var S = { urca: "↑ urcă", coboara: "↓ coboară", lateral: "↔ lateral" }, bmis = !!(br && br.miscare);
+      var contra = (botDir === "long" && bd === "coboara") || (botDir === "short" && bd === "urca"), cu = (botDir === "long" && bd === "urca") || (botDir === "short" && bd === "coboara");
+      out.push({ k: "btc", eticheta: "BTC", text: (S[bd] || "↔ lateral") + " pe 4h · " + (bmis ? "mișcare" : "liniște") + (bm !== null ? " (" + x1(bm) + ")" : ""),
+        ton: contra ? (bmis ? "rau" : "atentie") : cu ? "bine" : "neutru", titlu: titluB });
+    }
+    return out;
+  }
+
+  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI };
 })();
 if (typeof globalThis !== "undefined") globalThis.IndicatoriBot = IndicatoriBot;

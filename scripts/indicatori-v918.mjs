@@ -90,5 +90,38 @@ await test("predictia: pe 4 ore (orizontul botului), cu directia, fata de bot si
   assert.match(I.predictie(null, "long").text, /n-am destule bare/i);
 });
 
+// v91.9: "fa toate 3 si lasa tabelul cum e" - Mediul botului: miscarea (singurul semnal DOVEDIT pentru grid),
+// funding-ul (cost + cine e inghesuit) si BTC (monedele mici merg dupa el).
+const F = (rate, hist) => ({ rate, hist: hist || Array(90).fill(0.00005), intervalOre: 4 });
+await test("mediul: miscarea - liniste sub prag = bine; peste 1,5x pe 4h sau 24h = rau, cu motivul dovedit", () => {
+  const m = I.mediu({ regim: { r4h: 0.3, r24h: 0.48, miscare: false } }, "long").find((x) => x.k === "miscare");
+  assert.equal(m.ton, "bine"); assert.match(m.text, /liniște/); assert.match(m.text, /0,3×/); assert.match(m.text, /0,48×|0,5×/); assert.match(m.titlu, /1,5×/);
+  const r = I.mediu({ regim: { r4h: 2.1, r24h: 0.9, miscare: true } }, "long").find((x) => x.k === "miscare");
+  assert.equal(r.ton, "rau"); assert.match(r.text, /mișcare/); assert.match(r.titlu, /după mișcare/);
+  assert.equal(I.mediu({ regim: null }, "long").find((x) => x.k === "miscare").ton, "neutru");
+});
+await test("mediul: funding - cine plateste, cat pe zi (din bot), fata de obisnuit; mult peste obisnuit pe partea botului = atentie", () => {
+  const n = I.mediu({ funding: F(0.00005), fundingZi: -0.0548 }, "long").find((x) => x.k === "funding");
+  assert.equal(n.ton, "neutru"); assert.match(n.text, /0,005%/); assert.match(n.text, /plătesc long/); assert.match(n.text, /−0,05 USDT pe zi/); assert.match(n.text, /ca de obicei/);
+  const mare = I.mediu({ funding: F(0.0004), fundingZi: -0.3 }, "long").find((x) => x.k === "funding");
+  assert.equal(mare.ton, "atentie"); assert.match(mare.text, /8× față de obicei/); assert.match(mare.titlu, /înghesui/);
+  const sh = I.mediu({ funding: F(0.0004) }, "short").find((x) => x.k === "funding"); assert.match(sh.text, /încasezi/); assert.equal(sh.ton, "bine");
+  const neg = I.mediu({ funding: F(-0.0002) }, "long").find((x) => x.k === "funding"); assert.match(neg.text, /plătesc short/); assert.match(neg.text, /încasezi/);
+  assert.equal(I.mediu({ funding: null }, "long").find((x) => x.k === "funding").ton, "neutru");
+});
+await test("mediul: BTC - directia pe 4h + miscarea; BTC coboara in miscare contra unui bot long = rau, doar coboara = atentie", () => {
+  const b = I.mediu({ btc: { dir: "urca", regim: { r4h: 0.25, r24h: 0.48, miscare: false } } }, "long").find((x) => x.k === "btc");
+  assert.equal(b.ton, "bine"); assert.match(b.text, /↑ urcă/); assert.match(b.text, /liniște/);
+  assert.equal(I.mediu({ btc: { dir: "coboara", regim: { r4h: 1.8, r24h: 1.2, miscare: true } } }, "long").find((x) => x.k === "btc").ton, "rau");
+  assert.equal(I.mediu({ btc: { dir: "coboara", regim: { r4h: 0.4, r24h: 0.5, miscare: false } } }, "long").find((x) => x.k === "btc").ton, "atentie");
+  assert.equal(I.mediu({ btc: null }, "long").find((x) => x.k === "btc").ton, "neutru");
+});
+await test("mediul: mereu 3 randuri, in ordinea miscare / funding / BTC; fara NaN pe date stricate", () => {
+  const l = I.mediu({ regim: { r4h: NaN, r24h: null }, funding: { rate: NaN, hist: [] }, btc: { dir: null, regim: null } }, "long");
+  assert.deepEqual(l.map((x) => x.k), ["miscare", "funding", "btc"]);
+  assert.ok(!/NaN|undefined|null/.test(JSON.stringify(l)), JSON.stringify(l));
+  assert.deepEqual(I.mediu(null, null).map((x) => x.k), ["miscare", "funding", "btc"]);
+});
+
 console.log(`\nINDICATORI_V918 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
