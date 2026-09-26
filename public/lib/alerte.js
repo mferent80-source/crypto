@@ -10,7 +10,8 @@ var Alerte = (function () {
   "use strict";
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
-  var REPETA_CHEIE_MS = { "opritor:atentie": 24 * 3600000, miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000 };   // semnalele se repeta rar
+  var REPETA_CHEIE_MS = { "opritor:atentie": 24 * 3600000, miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000,
+    "m-btc": 12 * 3600000, "m-funding": 12 * 3600000, "p-zero": 12 * 3600000, "p-margine": 12 * 3600000 };   // semnalele se repeta rar
   // Histerezis: o alerta INTRA la un prag si IESE abia la unul mai larg, altfel
   // un bot care sta langa prag ar trimite un mesaj la fiecare minut (masurat:
   // 59/ora intre 14,9% si 15,1%). "A trecut" se spune doar dupa 10 minute stabile.
@@ -93,6 +94,38 @@ var Alerte = (function () {
       out["s-aglomerare"] = sm.aglomerare && sm.aglomerare.nivel === "atentie" ? { nivel: "atentie", titlu: nume + ": mulțimea e înghesuită pe partea botului", mesaj: sm.aglomerare.text } : { nivel: "ok", titlu: "", mesaj: "" };
     }
 
+    // v91.11 (2): din "Mediul botului" (IndicatoriBot.mediu) - BTC pe 4h impotriva botului si funding-ul
+    // mult peste obicei pe partea botului. Miscarea mare ramane pe regula ei masurata (out.miscare).
+    // Fara date ("n-am ...") -> null: starea ramane cum era, nu se anunta un "a trecut" fals.
+    if (ctx && Array.isArray(ctx.mediu)) {
+      var gaseste = function (k) { for (var i = 0; i < ctx.mediu.length; i++) if (ctx.mediu[i] && ctx.mediu[i].k === k) return ctx.mediu[i]; return null; };
+      var mb = gaseste("btc"), mf = gaseste("funding"), fara = function (m) { return !m || /^n-am/.test(String(m.text || "")); };
+      out["m-btc"] = fara(mb) ? null : (mb.ton === "rau" || mb.ton === "atentie")
+        ? { nivel: "atentie", titlu: nume + ": BTC pe 4 ore merge împotriva botului", mesaj: "BTC: " + mb.text + ". Monedele mici îl urmează de obicei. Ce aș face eu: n-aș adăuga bani în bot cât BTC trage împotrivă; dacă BTC intră în mișcare mare, fii gata să-l oprești." }
+        : { nivel: "ok", titlu: nume + ": BTC nu mai merge împotriva botului", mesaj: "BTC: " + mb.text + "." };
+      out["m-funding"] = fara(mf) ? null : mf.ton === "atentie"
+        ? { nivel: "atentie", titlu: nume + ": funding-ul e mult peste obicei, pe partea botului", mesaj: "Funding: " + mf.text + ". Mulți s-au înghesuit pe aceeași parte: te costă mai mult și crește riscul unei căderi bruște. Ce aș face eu: n-aș mări botul acum." }
+        : { nivel: "ok", titlu: nume + ": funding-ul a revenit la normal", mesaj: "Funding: " + mf.text + "." };
+    }
+
+    // v91.11 (4): pragurile puse de Radar pe fiecare bot
+    // - "iese pe zero": pretul la care, inchis acum, botul iese fara pierdere (TabloExtra.dacaInchizi)
+    var pz = ctx ? nr(ctx.pretZero) : null, dirB = String(b.directie || "").toLowerCase();
+    if (pz !== null && p !== null && (dirB === "long" || dirB === "short")) {
+      var peZero = fost("p-zero") !== "ok" ? (dirB === "long" ? p >= pz * 0.997 : p <= pz * 1.003) : (dirB === "long" ? p >= pz : p <= pz);
+      out["p-zero"] = peZero
+        ? { nivel: "atentie", titlu: nume + ": botul a ajuns pe zero (" + pret(pz) + ")", mesaj: "Prețul e " + pret(p) + ": dacă îl închizi acum, ieși fără pierdere (după comisionul de închidere). Hotărăști tu: îl lași să prindă grilele sau ieși." }
+        : { nivel: "ok", titlu: "", mesaj: "" };
+    }
+    // - la 1% de o margine a gridului (inauntru); iese abia peste 1,5%. Afara din grid e regula "grid".
+    if (p !== null && jos !== null && sus !== null) {
+      var lim = fost("p-margine") !== "ok" ? 0.015 : 0.01, dj = (p - jos) / p, ds = (sus - p) / p;
+      var langa = p >= jos && p <= sus && (dj < lim || ds < lim);
+      out["p-margine"] = langa
+        ? { nivel: "atentie", titlu: nume + ": prețul e la " + (Math.min(dj, ds) * 100).toFixed(1).replace(".", ",") + "% de marginea de " + (dj <= ds ? "jos (" + pret(jos) + ")" : "sus (" + pret(sus) + ")"), mesaj: "Dacă iese din grid, botul nu mai tranzacționează cât stă afară" + (dj <= ds ? " și poziția rămâne plină pe scădere." : ".") + " Uită-te la Tablou." }
+        : { nivel: "ok", titlu: "", mesaj: "" };
+    }
+
     var opritorStins = b.opritorPierdere != null && b.opritorPierdereActiv === false;
     // v87: intra sub 20% si iese abia peste 23% (sub 20% plus-minus nu mai "clipeste"); sub 10% urca la CRITIC;
     // cat sta "atentie" se repeta cel mult o data pe zi (REPETA_CHEIE_MS), nu la 3 ore.
@@ -134,6 +167,68 @@ var Alerte = (function () {
     return { mesaje: mesaje, stare: nou };
   }
 
-  return { evalueaza: evalueaza, reguli: reguli };
+  // ---- v91.11 (4) grila atinsa / pereche incheiata: EVENIMENTE (nu stari), un singur mesaj pe tura ----
+  function contori(b) {
+    var bu = b && b.brut && b.brut.buOrderData;
+    return { u: bu ? nr(bu.closedExchangeOrderCount) : null, per: nr(b && b.ordinePerechi), g: nr(b && b.gridProfitBrut), poz: nr(b && b.pozitie) };
+  }
+  function grila(b, vechi) {
+    var c = contori(b), nume = String((b && (b.baza || b.simbol)) || "botul").replace(/\.PERP$/, ""), mesaje = [];
+    if (!vechi || c.u === null || vechi.u === null || vechi.u === undefined || c.u < vechi.u || (c.per !== null && vechi.per !== null && c.per < vechi.per)) return { mesaje: mesaje, contori: c };
+    var noiPer = c.per !== null && vechi.per !== null ? c.per - vechi.per : 0, noiU = c.u - vechi.u, p = nr(b.pretCurent);
+    if (noiPer > 0) {
+      var dg = c.g !== null && vechi.g !== null ? c.g - vechi.g : null, U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+      mesaje.push({ cheie: "grila", nivel: "info", titlu: "✅ " + nume + ": " + (noiPer === 1 ? "pereche încheiată" : noiPer + " perechi încheiate") + (dg !== null ? " " + U(dg) : ""),
+        mesaj: "Grilele au adus " + (c.g !== null ? U(c.g) : "?") + " de la pornire (" + c.per + " perechi)." + (p !== null ? " Prețul " + pret(p) + "." : "") });
+    } else if (noiU > 0) {
+      var dir = String(b.directie || "").toLowerCase(), crescut = c.poz !== null && vechi.poz !== null ? Math.abs(c.poz) > Math.abs(vechi.poz) : null;
+      var fapta = crescut === null ? "" : dir === "short" ? (crescut ? " — a vândut" : " — a cumpărat") : (crescut ? " — a cumpărat" : " — a vândut");
+      mesaje.push({ cheie: "grila", nivel: "info", titlu: nume + ": " + (noiU === 1 ? "grilă atinsă" : noiU + " grile atinse") + fapta + (p !== null ? " la ~" + pret(p) : ""),
+        mesaj: "Poziția e acum " + (c.poz !== null ? c.poz : "?") + ". Perechea se încheie când prețul ajunge la linia următoare în sens invers." });
+    }
+    return { mesaje: mesaje, contori: c };
+  }
+
+  // ---- v91.11 (1) preturile moarte: 10 minute la rand fara preturi -> CRITIC (repeta la 3 h); prima reusita -> "din nou" ----
+  var PRETURI_MS = 10 * 60000, PRETURI_REPETA_MS = 3 * 3600000;
+  function preturi(st, rez, acum) {
+    st = st || { reaDe: null, anuntatLa: null }; acum = acum || Date.now();
+    var n = { reaDe: st.reaDe || null, anuntatLa: st.anuntatLa || null, eroare: st.eroare || null };
+    if (rez && rez.ok) {
+      var m = n.anuntatLa ? { nivel: "info", titlu: "Crypto Radar primește din nou prețurile", mesaj: "Graficul, indicatorii, direcția pieței și clasamentul merg din nou." } : null;
+      return { stare: { reaDe: null, anuntatLa: null, eroare: null }, mesaj: m };
+    }
+    n.reaDe = n.reaDe || acum; n.eroare = String(rez && rez.eroare || "eroare necunoscută").slice(0, 200);
+    var de = acum - n.reaDe;
+    if (de >= PRETURI_MS && (!n.anuntatLa || acum - n.anuntatLa >= PRETURI_REPETA_MS))
+      return { stare: n, mesaj: { nivel: "critic", titlu: "Crypto Radar nu mai primește prețurile de la Pionex", mesaj: "De " + Math.round(de / 60000) + " minute: " + n.eroare + ". Graficul, indicatorii, direcția pieței și clasamentul sunt goale, iar alertele de piață nu mai sunt de încredere. De obicei trece singur; dacă ține, repornește Radarul." } };
+    return { stare: n, mesaj: null };
+  }
+  // se cheama DOAR dupa ce mesajul a plecat (altfel tura urmatoare il reincearca)
+  function anuntatPreturi(st, acum) { var n = Object.assign({}, st || {}); n.anuntatLa = acum || Date.now(); return n; }
+
+  // ---- v91.11 (2) raportul "Mediul botilor" la 9, 12, 15, 18, 21 (ora Romaniei) ----
+  var ORE_RAPORT = [9, 12, 15, 18, 21];
+  function slotRaport(acum) {
+    var d = new Date(acum || Date.now()), o = {};
+    try { new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(d).forEach(function (x) { o[x.type] = x.value; }); } catch (e) { return null; }
+    var h = Number(o.hour);
+    return ORE_RAPORT.indexOf(h) >= 0 ? o.year + "-" + o.month + "-" + o.day + " " + (h < 10 ? "0" : "") + h : null;
+  }
+  function raportBoti(lista, acum) {
+    var l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.b; });
+    if (!l.length) return null;
+    var BUL = { bine: "🟢", atentie: "🟡", rau: "🔴", neutru: "⚪" }, linii = [];
+    l.forEach(function (x) {
+      var b = x.b, nume = String(b.baza || b.simbol || "botul").replace(/\.PERP$/, ""), tot = nr(b.profitTotal), p = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), li = nr(b.distantaLichidarePct);
+      var cap = nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "") + (tot !== null ? " · total " + (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(2).replace(".", ",") + " USDT" : "")
+        + (p !== null ? " · preț " + pret(p) + (jos !== null && sus !== null && sus > jos ? " (" + Math.round((p - jos) / (sus - jos) * 100) + "% în grid)" : "") : "") + (li !== null ? " · lichidare la " + Math.round(Math.abs(li)) + "%" : "");
+      linii.push(cap);
+      (Array.isArray(x.mediu) ? x.mediu : []).forEach(function (m) { if (m) linii.push("   " + (BUL[m.ton] || "⚪") + " " + m.eticheta + ": " + m.text); });
+    });
+    return { nivel: "info", titlu: "📊 Mediul boților", mesaj: linii.join("\n") };
+  }
+
+  return { evalueaza: evalueaza, reguli: reguli, grila: grila, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti };
 })();
 if (typeof globalThis !== "undefined") globalThis.Alerte = Alerte;
