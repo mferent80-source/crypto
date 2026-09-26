@@ -203,11 +203,13 @@ try {
   // v92: Home "Piata azi" (demo aprobat 26.09) - contextul general, nu dublura Tabloului
   await test("Home: vremea pietei are verdict, cele 8 carduri au date reale, rezumatele pliate sunt pline, banda de sus e ascunsa", async () => {
     await b.ev(`navTo("dash",true);true`);
-    await panaCand(b, `!/Aștept|Aduc|Calculez/.test(document.getElementById("acasa").innerText)&&/AMESTECAT|LINIȘTE|MIȘCARE/.test(document.getElementById("acVreme").innerText)`, 90000, "Home sa-si aduca datele");
-    const r = await b.ev(`({ ids: ["acBtc","acFg","acLarg","acBurse","acMisca","acBoti","acT212","acIdei"].map(id=>[id,(document.getElementById(id).innerText||"").length]),
+    await panaCand(b, `!/Aștept|Aduc|Calculez/.test(document.getElementById("acasa").innerText)&&/AMESTECAT|LINIȘTE|MIȘCARE/.test(document.getElementById("acVremeCrypto").innerText)&&/URCARE|LATERAL|SCADE|FRICĂ/.test(document.getElementById("acVremeBursa").innerText)`, 90000, "Home sa-si aduca datele");
+    const r = await b.ev(`({ ids: ["acVremeCrypto","acVremeBursa","acBtc","acFg","acLarg","acNasdaq","acVix","acLargNdx","acMisca","acMiscaNdx","acCalendar","acStiri","acBoti","acT212","acIdei"].map(id=>[id,(document.getElementById(id).innerText||"").length]),
       sub: [...document.querySelectorAll("#dash .acPlSub")].map(x=>x.textContent), gunoi: /NaN|undefined|null|AUTH_/.test(document.getElementById("acasa").innerText),
       hero: getComputedStyle(document.querySelector(".heroStrip")).display, bara: getComputedStyle(document.querySelector(".toolbar")).display })`);
     for (const [id, n] of r.ids) assert.ok(n > 40, `cardul ${id} e aproape gol (${n} semne)`);
+    assert.match(await b.ev(`document.getElementById("acLegatura").innerText`), /BTC și bursa/, "lipseste corelatia BTC - Nasdaq");
+    assert.match(await b.ev(`document.getElementById("acNasdaq").innerText`), /Cele 7 mari/, "lipsesc cele 7 mari");
     assert.equal(r.sub.length, 7); for (const x of r.sub) assert.ok(x && x !== "—", `rezumat gol: ${JSON.stringify(r.sub)}`);
     assert.equal(r.gunoi, false); assert.equal(r.hero, "none"); assert.equal(r.bara, "none");
   });

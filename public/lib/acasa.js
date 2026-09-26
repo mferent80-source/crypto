@@ -78,6 +78,77 @@ var Acasa = (function () {
     "LOW": "puține", "WAIT DATA": "așteaptă datele", "HIGH": "multe", "MEDIUM": "medii", "OK": "în regulă" };
   function ro(t) { var k = String(t == null ? "" : t).trim(); return RO[k.toUpperCase()] || k; }
 
-  return { vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro };
+  // ======================= v93: partea Nasdaq (Home mixt) =======================
+  function ema(c, n) { var k = 2 / (n + 1), e = c[0]; for (var i = 1; i < c.length; i++) e = c[i] * k + e * (1 - k); return e; }
+  function rsi(c, n) { n = n || 14; var g = 0, l = 0; for (var i = c.length - n; i < c.length; i++) { var d = c[i] - c[i - 1]; if (d > 0) g += d; else l -= d; } return l === 0 ? 100 : 100 - 100 / (1 + g / l); }
+  // bare zilnice {t,c} (cu ultima zi inchisa) -> rezumatul unei actiuni; colectorul il face in tura de idei
+  function rezumatActiune(b) {
+    var c = (Array.isArray(b) ? b : []).map(function (x) { return nr(x && x.c); }).filter(function (v) { return v !== null && v > 0; });
+    if (c.length < 210) return null;
+    var u = c[c.length - 1], m = [];
+    for (var i = c.length - 120; i < c.length - 1; i++) m.push(Math.abs(c[i] / c[i - 1] - 1));
+    m.sort(function (x, y) { return x - y; });
+    var p75 = m[Math.floor(m.length * 0.75)] || 0, ch = (u / c[c.length - 2] - 1) * 100;
+    var r2 = function (v) { return Math.round(v * 100) / 100; };
+    return { p: u, ch: r2(ch), ch5: r2((u / c[c.length - 6] - 1) * 100), e50: u > ema(c.slice(-200), 50), e200: u > ema(c, 200), rsi: Math.round(rsi(c) * 10) / 10, mis: p75 > 0 ? r2(Math.abs(ch / 100) / p75) : null };
+  }
+  var MAG7 = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"];
+  function largimeNdx(l) {
+    l = (Array.isArray(l) ? l : []).filter(function (x) { return x && x.s && nr(x.ch) !== null; });
+    if (!l.length) return null;
+    var cnt = function (f) { return l.filter(f).length; };
+    var s = l.slice().sort(function (a, b) { return b.ch - a.ch; }), tag = function (x) { return { s: x.s, ch: x.ch, miscare: nr(x.mis) !== null && x.mis > 1.5 }; };
+    var mag = MAG7.map(function (k) { for (var i = 0; i < l.length; i++) if (l[i].s === k) return { s: k, ch: l[i].ch, e50: !!l[i].e50 }; return null; }).filter(Boolean);
+    var mu = mag.filter(function (x) { return x.ch > 0; }).length;
+    return { n: l.length, urca: cnt(function (x) { return x.ch > 0; }), e50: cnt(function (x) { return x.e50; }), e200: cnt(function (x) { return x.e200; }), rsi: cnt(function (x) { return nr(x.rsi) !== null && x.rsi > 50; }),
+      inMiscare: l.filter(function (x) { return nr(x.mis) !== null && x.mis > 1.5; }).map(function (x) { return x.s; }),
+      sus: s.filter(function (x) { return x.ch > 0; }).slice(0, 5).map(tag), jos: s.filter(function (x) { return x.ch < 0; }).reverse().slice(0, 5).map(tag),
+      mag7: mag, mag7Urca: mu, mag7Text: mag.length ? mu + " din " + mag.length + " mari au urcat" + (mag.filter(function (x) { return x.e50; }).length ? ", " + mag.filter(function (x) { return x.e50; }).length + " peste media de 50" : "") : "" };
+  }
+  // qqq: bare zilnice {c}; vix: numar; ndx: largimeNdx(...)
+  function vremeBursa(o) {
+    o = o || {};
+    var c = (Array.isArray(o.qqq) ? o.qqq : []).map(function (x) { return nr(x && x.c); }).filter(function (v) { return v !== null; }), vix = nr(o.vix), nd = o.ndx;
+    if (c.length < 200) return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: "Bursele n-au venit încă.", text: "", faCe: "" };
+    var u = c[c.length - 1], e50 = ema(c.slice(-200), 50), e200 = ema(c, 200), sens = u > e50 && e50 > e200 ? "sus" : u < e50 && e50 < e200 ? "jos" : "lateral";
+    var cota = nd && nd.n ? nd.e50 / nd.n : null, vx = vix !== null ? "VIX " + vix.toFixed(1).replace(".", ",") : "";
+    var partNd = nd && nd.n ? " Doar " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile." : "";
+    if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aștept ca VIX să coboare sub 25." };
+    if (sens === "jos") return { nivel: "scade", eticheta: "🔴 BURSA SCADE", titlu: "Nasdaq e în trend de coborâre.", text: "Prețul e sub mediile de 50 și 200 de zile" + (vx ? ", " + vx : "") + "." + (partNd ? partNd.replace("Doar ", "") : ""), faCe: "N-aș cumpăra contra trendului; țin doar ce are stopul pus." };
+    if (sens === "lateral") return { nivel: "lateral", eticheta: "🟡 LATERAL", titlu: "Nasdaq n-are o direcție clară.", text: (vx ? vx + ". " : "") + partNd.trim(), faCe: "Cumpăr doar ce e deja pe trend, cu stop; restul aștept." };
+    if (cota !== null && cota < 0.6) return { nivel: "ingusta", eticheta: "🟡 URCARE ÎNGUSTĂ", titlu: "Indicele urcă" + (vix !== null && vix < 20 ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile.", faCe: "Cumpăr doar ce e deja pe trend, cum sunt ideile de azi. N-aș încerca să prind acțiunile de sub media de 200." };
+    return { nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile." : ""), faCe: "Mediu bun pentru ideile pe trend; stopul rămâne obligatoriu." };
+  }
+  // corelatia randamentelor zilnice BTC - Nasdaq pe ultimele n zile COMUNE (bursa n-are weekend)
+  function corelatie(btc, qqq, n) {
+    n = n || 30;
+    var zi = function (t) { return new Date(t).toISOString().slice(0, 10); }, mb = {};
+    (Array.isArray(btc) ? btc : []).forEach(function (x) { if (x && nr(x.c) > 0) mb[zi(x.t)] = x.c; });
+    var q = (Array.isArray(qqq) ? qqq : []).filter(function (x) { return x && nr(x.c) > 0 && mb[zi(x.t)]; }).sort(function (a, b) { return a.t - b.t; });
+    var rb = [], rq = [];
+    for (var i = 1; i < q.length; i++) { rq.push(q[i].c / q[i - 1].c - 1); rb.push(mb[zi(q[i].t)] / mb[zi(q[i - 1].t)] - 1); }
+    rb = rb.slice(-n); rq = rq.slice(-n);
+    if (rb.length < 15) return null;
+    var m = function (l) { var s = 0; l.forEach(function (v) { s += v; }); return s / l.length; }, mbv = m(rb), mqv = m(rq), sx = 0, sy = 0, sxy = 0;
+    for (var j = 0; j < rb.length; j++) { var dx = rb[j] - mbv, dy = rq[j] - mqv; sx += dx * dx; sy += dy * dy; sxy += dx * dy; }
+    var r = sx > 0 && sy > 0 ? sxy / Math.sqrt(sx * sy) : 0, rt = r.toFixed(2).replace(".", ",");
+    var text = r >= 0.5 ? "BTC urmează bursa acum (" + rt + "): o scădere a Nasdaq trage și crypto." : r <= -0.3 ? "BTC merge invers față de bursă acum (" + rt + ")." : "BTC merge pe drumul lui acum (" + rt + "): bursa nu-l trage după ea.";
+    return { r: r, n: rb.length, text: text };
+  }
+  // calendarul saptamanii (faireconomy): doar SUA, impact mare/mediu, doar ce urmeaza
+  var ZILE = ["dum", "lun", "mar", "mie", "joi", "vin", "sâm"];
+  function calendar(l, acum) {
+    acum = acum || Date.now();
+    var u = (Array.isArray(l) ? l : []).filter(function (x) { return x && x.country === "USD" && (x.impact === "High" || x.impact === "Medium"); })
+      .map(function (x) { return { t: Date.parse(x.date), titlu: String(x.title || ""), mare: x.impact === "High", prognoza: x.forecast || "", anterior: x.previous || "" }; })
+      .filter(function (x) { return isFinite(x.t) && x.t > acum; }).sort(function (a, b) { return a.t - b.t; }).slice(0, 8);
+    var mari = u.filter(function (x) { return x.mare; }).length;
+    var text = !u.length ? "Nimic important de aici până la sfârșitul săptămânii. Calendarul săptămânii viitoare apare duminică seara."
+      : mari ? mari + (mari === 1 ? " eveniment mare" : " evenimente mari") + " în SUA de aici până la sfârșitul săptămânii: în ziua lor piețele se mișcă mai tare, n-aș porni boți noi chiar înainte." : "Doar evenimente de impact mediu în SUA săptămâna asta.";
+    u.forEach(function (x) { var d = new Date(x.t); x.cand = ZILE[d.getDay()] + " " + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }); });
+    return { urmatoare: u, text: text };
+  }
+
+  return { vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7 };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

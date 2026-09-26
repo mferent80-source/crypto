@@ -2,6 +2,8 @@
 //   ?action=actiune&ticker=AAPL_US_EQ -> titlurile Yahoo pentru simbolul de bursa (RSS), cel mult 6
 //   ?action=crypto&moneda=MET          -> titlurile Cointelegraph + CoinDesk care pomenesc moneda (cuvant intreg) + generale
 //   ?action=piata                      -> QQQ, SPY, ^VIX (Yahoo, zilnic, un an) + frica/lacomia crypto (alternative.me)
+//   ?action=bursa                      -> v93: stirile de piata CNBC (Markets), cele mai noi 3
+//   ?action=calendar                   -> v93: calendarul economic al saptamanii (faireconomy), doar SUA, impact mare/mediu
 // Stirile NU se interpreteaza: titlu, ora, link. Lipsa unei surse -> null / [], nu 0. Probat in scripts/consilier-v89.mjs.
 import { requireApiAuth, authErrorResponse } from "../_shared/auth.js";
 import { candidati } from "../_shared/simboluri.js";
@@ -55,6 +57,20 @@ export async function onRequestGet({ request, env }) {
     const re = m ? new RegExp("(^|[^A-Za-z0-9])" + m + "([^A-Za-z0-9]|$)") : null;
     const v = { moneda: re ? ct.concat(cd).filter((x) => re.test(x.titlu)).slice(0, 6) : [], general: ct.slice(0, 5) };
     inCache(k, v, 1800); return json(v);
+  }
+  if (a === "bursa") {
+    const c = dinCache("bursa"); if (c) return json(c);
+    const l = (await aduRss("https://www.cnbc.com/id/20910258/device/rss/rss.html", 30)).sort((x, y) => (y.la || 0) - (x.la || 0)).slice(0, 3);
+    const v = { stiri: l }; inCache("bursa", v, 1800); return json(v);
+  }
+  if (a === "calendar") {
+    const c = dinCache("calendar"); if (c) return json(c);
+    let l = [];
+    try { const r = await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json", { headers: UA }); if (r.ok) l = await r.json(); } catch { l = []; }
+    const cur = (t, n) => decodeaza(String(t == null ? "" : t)).replace(/<[^>]+>/g, "").trim().slice(0, n);
+    const ev = (Array.isArray(l) ? l : []).filter((x) => x && x.country === "USD" && (x.impact === "High" || x.impact === "Medium") && Number.isFinite(Date.parse(x.date)))
+      .map((x) => ({ date: cur(x.date, 40), title: cur(x.title, 120), impact: x.impact, country: "USD", forecast: cur(x.forecast, 20), previous: cur(x.previous, 20) }));
+    const v = { la: Date.now(), evenimente: ev }; inCache("calendar", v, 3600); return json(v);
   }
   if (a === "piata") {
     const c = dinCache("piata2"); if (c) return json(c);

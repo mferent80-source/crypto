@@ -100,6 +100,13 @@ export async function onRequestPost({ request, env }) {
     const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
     const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;
     await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, urmarire: urm }));
+    // v93: rezumatul Nasdaq 100 (pentru Home: largimea, cine se misca, cele 7 mari), din aceleasi bare zilnice
+    if (Array.isArray(corp && corp.ndx)) {
+      const b = (v) => v === true;
+      const ndx = corp.ndx.slice(0, 150).map((x) => ({ s: String(x && x.s || "").toUpperCase().replace(/[^A-Z0-9.-]/g, "").slice(0, 10), p: nr(x && x.p), ch: nr(x && x.ch), ch5: nr(x && x.ch5), e50: b(x && x.e50), e200: b(x && x.e200), rsi: nr(x && x.rsi), mis: nr(x && x.mis) }))
+        .filter((x) => x.s && x.ch !== null);
+      await env.ISTORIC.put("t212:ndx", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, actiuni: ndx }));
+    }
     const ist = await citesteKv(env, "t212:idei-istoric", []), l = Array.isArray(ist) ? ist : [];
     act2.forEach((x) => { if (!l.some((y) => y.zi === zi && y.ticker === x.ticker)) l.push({ zi, ticker: x.ticker, simbol: x.simbol, pret: x.pret }); });
     const de = new Date(Date.now() - 150 * 86400000).toISOString().slice(0, 10);
@@ -202,6 +209,11 @@ export async function onRequestGet({ request, env }) {
       if (!env.ISTORIC?.get) return faraKv();
       const l = await citesteKv(env, "t212:sfaturi", []);
       return json({ sfaturi: Array.isArray(l) ? l : [] });
+    }
+    if (a === "ndx") {
+      if (!env.ISTORIC?.get) return faraKv();
+      const v = await citesteKv(env, "t212:ndx", null);
+      return json(v && typeof v === "object" ? v : { la: null, zi: null, actiuni: [] });
     }
     if (a === "idei") {
       if (!env.ISTORIC?.get) return faraKv();
