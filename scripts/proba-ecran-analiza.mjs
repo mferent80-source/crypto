@@ -145,6 +145,32 @@ try {
     const r = await analizeaza(b, "ZQXWV", "BINANCE");
     assert.match(r.stare, /nu există nici pe Binance, nici pe Pionex/i, `stare: ${r.stare}`);
   });
+  // v91.6: 26.09 "fa in asa fel ca la actualizare pagina sau app sa ramana in pagina in care se afla"
+  const reincarca = async (url = URL_T) => {
+    await b.navigheaza(url);
+    await asteapta(1500);
+    await panaCand(b, `document.readyState==="complete"&&typeof navTo==="function"`, 25000, "aplicatia sa se reincarce");
+    await asteapta(2500);   // deep link-ul ruleaza la ~0,9 s dupa incarcare
+    return b.ev(`(document.querySelector(".panel.on")||{}).id`);
+  };
+  await test("pe Tabloul botului + reincarcare -> ramane pe Tabloul botului, cu datele incarcate", async () => {
+    await b.ev(`navTo("tabloubot",true);true`);
+    assert.equal(await reincarca(), "tabloubot");
+    await panaCand(b, `/PERP/.test((document.getElementById("tbSimbol")||{}).textContent||"")`, 30000, "Tabloul sa-si aduca botul dupa reincarcare");
+  });
+  await test("pe Trading 212 + reincarcare -> ramane pe Trading 212", async () => {
+    await b.ev(`navTo("t212",true);true`);
+    assert.equal(await reincarca(), "t212");
+  });
+  await test("inapoi pe Home + reincarcare -> Home (nu ultima pagina de dinainte)", async () => {
+    await b.ev(`navTo("dash");true`);
+    assert.equal(await reincarca(), "dash");
+  });
+  await test("linkul cu ?panel= are intaietate fata de pagina tinuta minte", async () => {
+    await b.ev(`navTo("tabloubot",true);true`);
+    assert.equal(await reincarca(URL_T + "?panel=gridset"), "gridset");
+  });
+
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);
   });

@@ -776,9 +776,14 @@ function pwaHandleRegistration(reg){
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstallPrompt=e;showPwaInstall()});
 window.addEventListener("appinstalled",()=>{deferredInstallPrompt=null;localStorage.removeItem("pwaInstallDismissed");if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on");toast("Crypto Radar instalat","good")});
 navigator.serviceWorker?.addEventListener("controllerchange",()=>location.reload());
+const PAGINA_CURENTA_KEY="paginaCurenta";
 function pwaInitDeepLink(){
  const q=new URLSearchParams(location.search),panel=q.get("panel");
- if(panel&&document.getElementById(panel))setTimeout(()=>navTo(panel,true),120)
+ if(panel&&document.getElementById(panel)){setTimeout(()=>navTo(panel,true),120);return}
+ // v91.6: fara link explicit, revine pe pagina de dinainte de reincarcare (Home = pagina de start, nu e nevoie)
+ let ultima=null;try{ultima=localStorage.getItem(PAGINA_CURENTA_KEY)}catch(_){}
+ const el=ultima&&document.getElementById(ultima);
+ if(el&&el.classList.contains("panel")&&ultima!=="dash")setTimeout(()=>navTo(ultima,true),120)
 }
 function renderPwaHealth(){
  if($("healthPwaMode"))$("healthPwaMode").textContent=isStandalonePwa()?"INSTALLED":"BROWSER";
@@ -3016,6 +3021,8 @@ function toast(msg,type=""){
 }
 function navTo(id,load=false){
  show(id);
+ // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
+ try{localStorage.setItem(PAGINA_CURENTA_KEY,id)}catch(_){}
  document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id));
  if(load){
    if(id==="mtf")multiTF();
