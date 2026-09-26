@@ -178,6 +178,15 @@ try {
     for (const t of r.randuri) assert.doesNotMatch(t, /n-am/, `rand fara date: ${t}`);
     assert.equal(r.tabel, 10);
   });
+  // v91.10: "partea de grafic si tabel vreau sa o urci in pagina si dupa sa apara sugestiile de coinuri"
+  await test("Tabloul: ordinea pe ecran = starea botului, grafic + indicatori, sugestiile de monede, ce ai de facut; graficul pe toata latimea", async () => {
+    const r = await b.ev(`(()=>{const y=(id)=>{const e=document.getElementById(id);return e?Math.round(e.getBoundingClientRect().top):null};
+      const c=document.querySelector("#tabloubot .tbCadru").getBoundingClientRect(),g=document.querySelector("#tabloubot .tbGraficRand").getBoundingClientRect();
+      return {sus:y("tbSemaforCard"),grafic:y("tbGraficCard"),idei:y("tbIdei"),todo:y("tbTodo"),directie:y("tbDirectieCard"),lat:Math.round(g.width),cadru:Math.round(c.width)}})()`);
+    assert.ok(r.sus < r.grafic && r.grafic < r.idei && r.idei < r.todo, `ordinea: ${JSON.stringify(r)}`);
+    assert.ok(r.todo < r.directie, `Directia pietei trebuie sa ramana dupa: ${JSON.stringify(r)}`);
+    assert.ok(r.lat >= r.cadru - 2, `graficul + indicatorii nu ocupa toata latimea: ${r.lat} din ${r.cadru}`);
+  });
   await test("pe Trading 212 + reincarcare -> ramane pe Trading 212", async () => {
     await b.ev(`navTo("t212",true);true`);
     assert.equal(await reincarca(), "t212");

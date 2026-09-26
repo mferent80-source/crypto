@@ -1,4 +1,4 @@
-const CACHE="crypto-radar-v91-9";
+const CACHE="crypto-radar-v91-10";
 const APP_SHELL=["/","/index.html","/app.css","/app.js","/research-worker.js","/engine-contract.json","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png","/lib/grid-calcul.js","/lib/grid-proba.js","/lib/grid-jurnal.js","/lib/grid-umpleri.js","/lib/grid-clasament.js","/lib/grid-laborator.js","/lib/tablou-extra.js","/lib/indicatori-bot.js","/lib/jurnal-trade.js","/lib/semnale-bot.js","/lib/contrafactual.js","/lib/obiceiuri.js","/lib/tablou-bot.js","/lib/directie.js","/lib/alerte.js","/lib/scenariu.js","/lib/sfaturi.js","/lib/t212.js","/lib/actiuni-semnale.js","/lib/consilier.js","/lib/idei.js","/lib/t212-ecran.js"];
 
 self.addEventListener("install",event=>{

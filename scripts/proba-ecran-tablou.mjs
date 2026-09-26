@@ -518,6 +518,9 @@ async function main() {
       const scrisLaInceput = await b.ev(`window.__proba.setItemLog.some(k=>k==='tabloBotIstoric_v1_${id}')`);
       assert.ok(scrisLaInceput, "precheck: primul apel reusit ar trebui sa scrie un istoric");
 
+      // v91.10: cererile PORNITE inainte de pana (directia: 4 intervale + funding + BTC, distantate de server)
+      // nu sunt "cerute in timpul penei" - se asteapta sa se termine, apoi se numara
+      for (let i = 0; i < 60; i++) { if (await b.ev(`!(tbStare.directie&&tbStare.directie.inLucru)&&!(tbStare.grafic&&tbStare.grafic.inLucru)`)) break; await asteapta(500); }
       await b.ev(`window.__proba.setItemLog = []`);
       const apeluriMarketInainte = await b.ev(`window.__proba.calls.market`);
       await seteazaMock(b, "botOrders", { reteaPicata: true });
