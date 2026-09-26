@@ -379,6 +379,22 @@ await test("429 de la Pionex: ruta intoarce 429 cu retryAfter (corp + antet)", a
   assert.equal(r.headers.get("retry-after"), "9", "lipseste antetul retry-after");
 });
 
+// v91.5: 26.09 06:49 - o cerere abandonata (telefonul a pierdut legatura) a lasat poarta comuna agatata:
+// Cloudflare anuleaza timerele cererii moarte, promisiunea ei nu se mai termina, iar TOATE cererile de dupa
+// asteptau la nesfarsit ("Worker's code had hung"). Pagina botului ramanea cu "—" peste tot.
+await test("o cerere AGATATA in poarta Pionex nu le blocheaza pe cele de dupa (asteapta cel mult ~10 s)", async () => {
+  const { pionexPrivatGet } = await import("../functions/_shared/pionex.js");
+  const nativ = globalThis.fetch; let n = 0;
+  globalThis.fetch = () => (++n === 1 ? new Promise(() => {}) : Promise.resolve(new Response(JSON.stringify({ result: true, data: {} }), { status: 200 })));
+  try {
+    pionexPrivatGet(ENV, "/api/v1/bot/orders", {}).catch(() => {});   // cererea care moare si nu se mai termina
+    const t0 = Date.now();
+    const r = await Promise.race([pionexPrivatGet(ENV, "/api/v1/bot/orders", {}), new Promise((_, nu) => setTimeout(() => nu(Error("a doua cerere a asteptat peste 15 s - poarta e agatata")), 15000))]);
+    assert.equal(r.r.status, 200);
+    assert.ok(Date.now() - t0 < 15000);
+  } finally { globalThis.fetch = nativ; }
+});
+
 await test("racirea dupa 429 pe bot-orders opreste si pionex-account (aceeasi cheie)", async () => {
   fetchStub(() => ({ status: 429, corp: "Too Many Requests", headers: { "retry-after": "30" } }));
   await cheama("", ENV, proaspat());

@@ -1282,7 +1282,7 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 #tabloubot .tbGaugePunct{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--text);border:2px solid var(--bg)}
 #tabloubot .tbGaugePunct.bad{background:var(--bad)}
 
-#tabloubot .tbRand,#gridset .tbRand{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+#tabloubot .tbRand,#gridset .tbRand{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:12px}
 #tabloubot .tbRandGrafic{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
 #tabloubot .tbBloc,#gridset .tbBloc{padding:14px 16px;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);min-width:0}
 #tabloubot .tbBlocCap,#gridset .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 10px}
@@ -1313,7 +1313,7 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
   #tabloubot .tbKpi{grid-template-columns:1fr 1fr}
   #tabloubot .tbKpiCel:nth-child(3){border-left:0}
   #tabloubot .tbKpiCel:nth-child(n+3){border-top:1px solid var(--tb-linie)}
-  #tabloubot .tbRandGrafic,#tabloubot .tbRand,#gridset .tbRand{grid-template-columns:1fr}
+  #tabloubot .tbRandGrafic,#tabloubot .tbRand,#gridset .tbRand{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:560px){
   #tabloubot .tbVerdict{grid-template-columns:1fr;gap:6px;padding:12px 14px}

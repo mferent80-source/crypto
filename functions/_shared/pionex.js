@@ -23,8 +23,14 @@ const sortedQuery=p=>Object.keys(p).sort().map(k=>`${k}=${p[k]}`).join("&");
 const PAUZA_MS=250, RACIRE_MIN_S=15;
 let poarta=Promise.resolve(),urmatorulLa=0,racePanaLa=0;
 const asteapta=ms=>new Promise(r=>setTimeout(r,ms));
+// v91.5: o cerere ABANDONATA (clientul a plecat) are timerele anulate de Cloudflare: promisiunea ei nu se mai
+// termina si poarta ramanea agatata pentru TOATE cererile de dupa (26.09, 06:49). Cererea din fata e asteptata
+// cel mult cat poate dura ea legitim (TIMEOUT_MS + marja), apoi se trece peste ea.
+const ASTEPTARE_MAX_MS=TIMEOUT_MS+2000;
 function cuRitm(fn){
-  const rulare=poarta.then(async()=>{
+  const inainte=poarta;let t;
+  const rand=Promise.race([inainte,new Promise(r=>{t=setTimeout(r,ASTEPTARE_MAX_MS)})]).finally(()=>clearTimeout(t));
+  const rulare=rand.then(async()=>{
     const racire=Math.max(0,racePanaLa-Date.now());
     if(racire){
       const s=Math.ceil(racire/1000);

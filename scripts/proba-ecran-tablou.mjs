@@ -452,8 +452,10 @@ async function main() {
       // sare peste text ascuns, textContent nu.
       // v74.6: versiunea se citeste din <meta name="app-version"> (o urca livrarea),
       // nu se scrie aici de mana - altfel proba ar pica la fiecare versiune noua.
-      const areBadge = await b.ev(`document.body.textContent.includes((document.querySelector('meta[name="app-version"]')?.content || '?') + ' · TABLOUL BOTULUI')`);
-      assert.ok(areBadge, "badge-ul <versiune> · TABLOUL BOTULUI nu apare pe pagina");
+      // v91.5: numele de dupa versiune se schimba la fiecare livrare (din v78 nu mai e "TABLOUL BOTULUI");
+      // ce conteaza e ca badge-ul din pagina poarta versiunea din meta
+      const areBadge = await b.ev(`(document.getElementById('sideVersiune')?.textContent || '').startsWith((document.querySelector('meta[name="app-version"]')?.content || '?') + ' · ')`);
+      assert.ok(areBadge, "badge-ul <versiune> · ... din pagina nu poarta versiunea din meta");
     });
 
     await test("fara bot in cont: FARA_BOT, tot 7 masuri, rigla spune asta", async () => {
@@ -1181,6 +1183,16 @@ async function main() {
       const r = await b.ev(`({ pagina: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         antet: (() => { const h = document.querySelector('#tabloubot .sectionHead'); return h.scrollWidth - h.clientWidth })() })`);
       assert.ok(r.pagina <= 1 && r.antet <= 1, `pe telefon Tabloul curge lateral: pagina ${r.pagina}px, antetul ${r.antet}px`);
+    });
+    // v91.5: 26.09 poza lui de pe telefon - textul TAIAT in dreapta. D12e trecea: pagina nu curge lateral fiindca
+    // surplusul e ASCUNS, nu derulat. Rigla (.accountRow min 520px) intindea coloana .tbRand (1fr = minim continutul).
+    await test("D12f. telefon: nimic din Tablou nu iese din ecran (doar in containere cu scroll PROPRIU, care incap)", async () => {
+      await b.ev(`document.querySelectorAll('#tabloubot details').forEach(d=>d.open=true);true`);
+      const iesite = await b.ev(`(() => { const W = document.documentElement.clientWidth, rad = document.getElementById('tabloubot');
+        return [...rad.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); if (!(r.width > 0) || r.right <= W + 1) return false;
+          for (let a = e.parentElement; a && a !== rad; a = a.parentElement) { const o = getComputedStyle(a).overflowX; if ((o === 'auto' || o === 'scroll') && a.getBoundingClientRect().right <= W + 1) return false; }
+          return true; }).slice(0, 6).map((e) => (e.id ? '#' + e.id : '') + '.' + String(e.className).split(' ')[0] + ' ' + Math.round(e.getBoundingClientRect().width) + 'px'); })()`);
+      assert.deepEqual(iesite, [], `ies din ecranul de telefon: ${iesite.join(', ')}`);
     });
 
     await test("D14. Health inainte de orice analiza: verificarile locale sunt NEINCERCAT, nu FAIL; watchdog-ul nu intra in SAFE MODE pentru asta", async () => {
