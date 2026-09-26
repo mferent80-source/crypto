@@ -183,6 +183,70 @@ var Acasa = (function () {
     return o;
   }
 
-  return { miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7 };
+  // ======================= v95 =======================
+  var SECT = {
+    "Cipuri": "AMD ADI AMAT ARM ASML AVGO INTC KLAC LRCX MRVL MCHP MU MPWR NVDA NXPI QCOM TXN ALAB TER LITE SNDK",
+    "Hardware & cloud": "AAPL CSCO STX WDC CRWV NBIS",
+    "Software": "ADBE APP ADSK CDNS CRWD DDOG FTNT INTU MSFT PANW PLTR ROP SNPS WDAY MSTR ADP PAYX PYPL",
+    "Internet & media": "GOOGL GOOG META NFLX CMCSA WBD TMUS TTWO",
+    "Comerț & consum": "AMZN COST WMT PDD MELI SHOP ABNB BKNG DASH MAR SBUX ROST ORLY TSLA PEP KDP MDLZ MNST CCEP",
+    "Sănătate": "ALNY AMGN DXCM GEHC GILD IDXX ISRG REGN VRTX",
+    "Energie & utilități": "AEP BKR CEG EXC FANG XEL LIN",
+    "Industrie & transport": "AXON CTAS CPRT CSX FAST FER HON HONA ODFL PCAR TRI RKLB SPCX"
+  }, SECTOR = {};
+  Object.keys(SECT).forEach(function (k) { SECT[k].split(" ").forEach(function (s) { SECTOR[s] = k; }); });
+  function sectoare(l) {
+    var g = {};
+    (Array.isArray(l) ? l : []).forEach(function (x) {
+      if (!x || !x.s || nr(x.ch) === null) return; var k = SECTOR[x.s] || "Altele";
+      var o = g[k] || (g[k] = { nume: k, n: 0, sch: 0, sch5: 0, n5: 0, urca: 0 }); o.n++; o.sch += x.ch; if (nr(x.ch5) !== null) { o.sch5 += x.ch5; o.n5++; } if (x.ch > 0) o.urca++;
+    });
+    return Object.keys(g).map(function (k) { var o = g[k]; return { nume: o.nume, n: o.n, ch: Math.round(o.sch / o.n * 100) / 100, ch5: o.n5 ? Math.round(o.sch5 / o.n5 * 100) / 100 : null, urca: o.urca }; })
+      .sort(function (a, b) { return (b.ch5 == null ? -1e9 : b.ch5) - (a.ch5 == null ? -1e9 : a.ch5); });
+  }
+  // ziua ta: boti (suma totalurilor) si contul T212 fata de poza de ieri dimineata
+  function ziuaTa(azi, lista, ziAzi) {
+    var ier = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.zi && x.zi < ziAzi; }).sort(function (a, b) { return a.zi < b.zi ? -1 : 1; }).pop();
+    if (!ier || !azi) return null;
+    var d = function (k) { var a = nr(azi[k]), b = nr(ier[k]); return a !== null && b !== null ? Math.round((a - b) * 100) / 100 : null; };
+    var o = { boti: d("botiTotal"), t212: d("t212Total"), de: ier.zi };
+    return o.boti === null && o.t212 === null ? null : o;
+  }
+  // raportul de duminica seara (Discord): saptamana care a trecut + ce vine + ce as face
+  function semn(v, z) { return v === null || v === undefined || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; }
+  function raportSaptamana(o) {
+    o = o || {}; var L = [];
+    L.push("₿ Crypto: BTC " + semn(nr(o.btc7)) + " pe 7 zile" + (o.vreme && o.vreme.eticheta ? " · acum " + o.vreme.eticheta : ""));
+    L.push("📈 Nasdaq " + semn(nr(o.qqq5)) + " pe săptămână" + (nr(o.vix) !== null ? " · VIX " + nr(o.vix).toFixed(1).replace(".", ",") : "") + (o.vremeBursa && o.vremeBursa.eticheta ? " · " + o.vremeBursa.eticheta : ""));
+    var mm = function (l) { return (l || []).slice(0, 3).map(function (x) { return x.s + " " + semn(nr(x.ch5)); }).join(", "); };
+    if ((o.sus || []).length || (o.jos || []).length) L.push("↕ Nasdaq 100 pe săptămână: sus " + (mm(o.sus) || "—") + " · jos " + (mm(o.jos) || "—"));
+    var bt = nr(o.botiTotal), tp = nr(o.t212Ppl);
+    if (bt !== null || tp !== null) L.push("💼 Tu: boți " + (bt === null ? "—" : (bt >= 0 ? "+" : "−") + Math.abs(bt).toFixed(2).replace(".", ",") + " USDT") + " · acțiuni deschise " + (tp === null ? "—" : (tp >= 0 ? "+" : "−") + Math.abs(Math.round(tp)).toLocaleString("ro-RO") + " lei"));
+    var cal = (o.calendar || []).filter(function (x) { return x && x.mare; }).slice(0, 5);
+    L.push("📅 Săptămâna asta: " + (cal.length ? cal.map(function (x) { return x.cand + " " + x.titlu; }).join(" · ") : "nimic mare anunțat încă în SUA"));
+    var rz = (o.rezultate || []).slice(0, 4);
+    if (rz.length) L.push("🧾 Rezultate la acțiunile tale: " + rz.map(function (x) { return x.simbol + " " + x.data; }).join(" · "));
+    var fac = [];
+    if (o.vreme && o.vreme.faCe) fac.push("crypto: " + o.vreme.faCe);
+    if (o.vremeBursa && o.vremeBursa.faCe) fac.push("bursă: " + o.vremeBursa.faCe);
+    if (cal.length) fac.push("n-aș porni boți noi și n-aș cumpăra chiar înainte de " + cal[0].titlu + ".");
+    L.push("👉 Ce aș face eu: " + (fac.length ? fac.join(" ") : "aștept datele de luni dimineață."));
+    return { nivel: "info", titlu: "📊 Săptămâna pieței", mesaj: L.join("\n") };
+  }
+  // socoteala alertelor: miscarile neobisnuite au continuat? (dupa 24 h si 3 zile) + dupa "MISCARE" cat s-a mai miscat BTC
+  function socotealaAlerte(l) {
+    l = Array.isArray(l) ? l : [];
+    var mi = l.filter(function (x) { return x && x.fel !== "vreme" && nr(x.pret) > 0; }), ve = l.filter(function (x) { return x && x.fel === "vreme" && nr(x.pret) > 0; });
+    var cont = function (x, k) { var r = x[k] / x.pret - 1; return x.dir === "sus" ? r > 0 : r < 0; };
+    var c1 = mi.filter(function (x) { return nr(x.p1) > 0; }), c3 = mi.filter(function (x) { return nr(x.p3) > 0; }), v1 = ve.filter(function (x) { return nr(x.p1) > 0; });
+    var o = { n: l.length, n1: c1.length, continua1: c1.filter(function (x) { return cont(x, "p1"); }).length, n3: c3.length, continua3: c3.filter(function (x) { return cont(x, "p3"); }).length };
+    o.text = !l.length ? "Nicio alertă încă: se adună de acum." : !o.n1 ? l.length + " alerte trimise; primele socoteli după 24 de ore." :
+      "Din " + o.n1 + " mișcări neobișnuite, " + o.continua1 + " din " + o.n1 + " au continuat în aceeași direcție după 24 h" + (o.n3 ? " și " + o.continua3 + " din " + o.n3 + " după 3 zile" : "") + "." + (o.n1 < 20 ? " Puține cazuri încă." : "");
+    var mv = v1.length ? v1.reduce(function (s, x) { return s + Math.abs(x.p1 / x.pret - 1); }, 0) / v1.length * 100 : null;
+    o.textVreme = mv === null ? "" : "După alertele de vreme, BTC s-a mai mișcat în medie " + mv.toFixed(1).replace(".", ",") + "% în 24 h (" + v1.length + " cazuri).";
+    return o;
+  }
+
+  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7 };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

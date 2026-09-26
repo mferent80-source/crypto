@@ -204,7 +204,7 @@ try {
   await test("Home: vremea pietei are verdict, cele 8 carduri au date reale, rezumatele pliate sunt pline, banda de sus e ascunsa", async () => {
     await b.ev(`navTo("dash",true);true`);
     await panaCand(b, `!/Aștept|Aduc|Calculez/.test(document.getElementById("acasa").innerText)&&/AMESTECAT|LINIȘTE|MIȘCARE/.test(document.getElementById("acVremeCrypto").innerText)&&/URCARE|LATERAL|SCADE|FRICĂ/.test(document.getElementById("acVremeBursa").innerText)`, 90000, "Home sa-si aduca datele");
-    const r = await b.ev(`({ ids: ["acVremeCrypto","acVremeBursa","acBtc","acFg","acLarg","acNasdaq","acVix","acLargNdx","acMisca","acMiscaNdx","acCalendar","acStiri","acBoti","acT212","acIdei"].map(id=>[id,(document.getElementById(id).innerText||"").length]),
+    const r = await b.ev(`({ ids: ["acVremeCrypto","acVremeBursa","acBtc","acFg","acLarg","acNasdaq","acVix","acLargNdx","acMisca","acMiscaNdx","acCalendar","acStiri","acBoti","acT212","acIdei","acMacro","acSectoare","acHarta"].map(id=>[id,(document.getElementById(id).innerText||"").length]),
       sub: [...document.querySelectorAll("#dash .acPlSub")].map(x=>x.textContent), gunoi: /NaN|undefined|null|AUTH_/.test(document.getElementById("acasa").innerText),
       hero: getComputedStyle(document.querySelector(".heroStrip")).display, bara: getComputedStyle(document.querySelector(".toolbar")).display })`);
     for (const [id, n] of r.ids) assert.ok(n > 40, `cardul ${id} e aproape gol (${n} semne)`);

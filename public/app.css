@@ -1802,3 +1802,15 @@ body.peAcasa:not(.acMonedaDeschisa) .toolbar{display:none}
 #dash .acIeri{font-size:12px;font-weight:700;margin-left:4px;white-space:nowrap}
 #dash .acFund{margin-top:6px;font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--tb-linie);background:rgba(132,161,184,.05)}
 #dash .acFund-atentie{border-color:rgba(245,196,81,.45);background:rgba(245,196,81,.07)}
+/* v95: dobanzi/dolar/aur, sectoare, harta, ziua ta */
+#dash .acTrSub{display:block;font-size:11px;font-weight:400}
+#dash .acSec{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 58px 52px;gap:8px;align-items:center;font-size:12.5px;padding:2px 0;font-variant-numeric:tabular-nums}
+#dash .acSec i{position:relative;display:block;height:8px;border-radius:4px;background:rgba(144,160,182,.1)}
+#dash .acSec i b{position:absolute;top:0;height:8px;border-radius:4px}#dash .acSecSus{background:var(--good)}#dash .acSecJos{background:var(--bad)}
+#dash .acSec em{font-style:normal;text-align:right;font-weight:700}
+#dash .acHarte{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#dash .acHarte h5{margin:0 0 6px;font-size:12.5px;color:var(--muted);font-weight:700}
+#dash .acHg{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:3px}
+#dash .acHp{font-size:10.5px;font-weight:700;text-align:center;padding:6px 2px;border-radius:5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dash .acZi{border-top:1px dashed var(--tb-linie);padding-top:3px;margin-top:2px}
+@media (max-width:900px){#dash .acHarte{grid-template-columns:1fr}#dash .acSec{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 54px 48px}}

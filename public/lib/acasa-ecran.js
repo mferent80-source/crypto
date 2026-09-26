@@ -189,6 +189,32 @@ function acasaDeseneaza() {
       + '<p class="acEt">' + escapeHtml(vb.nivel === "ingusta" ? "Indicele urcă, dar o bună parte din acțiuni sunt sub medii: urcarea e dusă de câteva acțiuni mari." : vb.nivel === "larga" ? "Majoritatea acțiunilor urcă odată cu indicele." : vb.nivel === "scade" ? "Majoritatea acțiunilor coboară." : "") + (ndxZi ? (/^azi/.test(ndxZi) ? " Actualizat " + ndxZi + ", o dată pe oră cât e bursa deschisă." : " Calculat la închiderea din " + ndxZi.replace(/\.$/, "") + ".") : "") + '</p>'
       : '<p class="acMut">' + escapeHtml(d.ndxErr ? "N-am lărgimea Nasdaq: " + d.ndxErr : "Lărgimea Nasdaq o calculează colectorul de acasă în fiecare dimineață, după ora 8.") + '</p>');
 
+  // v95: dobanzi, dolar, aur, dolar/leu
+  var macroRand = function (nume, serieB, cul, fmt, sub, invers) {
+    var b = serieB ? GridCalcul.bareToate(serieB) : null, u = ultim(b), c1 = ch(b, 1);
+    return '<div class="acTr"><b>' + nume + (sub ? '<span class="acMut acTrSub">' + sub + '</span>' : '') + '</b>' + acSpark(serie(b), cul, 30) + '<span class="acV">' + (u == null ? "—" : fmt(u)) + ' <span class="' + (c1 == null ? "" : (invers ? c1 <= 0 : c1 >= 0) ? "good" : "bad") + '">' + acPct(c1) + '</span></span></div>';
+  };
+  $("acMacro").innerHTML = '<div class="acCap"><h4>Dobânzi, dolar, aur</h4><span class="acSub">3 luni · ultima închidere</span></div>'
+    + (p.tnx || p.dxy || p.aur || p.usdron ? macroRand("Dobânda SUA 10 ani", p.tnx, "#f5c451", function (v) { return acNr(v, 2) + "%"; }, "", true)
+      + macroRand("Dolarul", p.dxy, "#69a7ff", function (v) { return acNr(v, 2); }, "indicele DXY")
+      + macroRand("Aurul", p.aur, "#f5c451", function (v) { return acNr(v, 0) + " $"; })
+      + macroRand("Dolar / leu", p.usdron, "#90a0b6", function (v) { return acNr(v, 4); }, "pentru T212")
+      + '<p class="acEt">Dobânzi și dolar în creștere apasă de obicei și pe acțiuni, și pe crypto; aurul urcă când lumea fuge de risc.</p>'
+      : '<p class="acMut">Aduc datele…</p>');
+  // v95: sectoarele Nasdaq 100 (din rezumatul zilnic al colectorului)
+  var sec = ndxL && d.ndx ? Acasa.sectoare(d.ndx.actiuni) : [], smax = Math.max.apply(null, sec.map(function (x) { return Math.abs(x.ch5 || 0); }).concat([1]));
+  $("acSectoare").innerHTML = '<div class="acCap"><h4>Sectoarele Nasdaq 100</h4><span class="acSub">pe 5 zile · azi</span></div>'
+    + (sec.length ? sec.map(function (x) { var w = Math.round(Math.abs(x.ch5 || 0) / smax * 50); return '<div class="acSec"><span>' + escapeHtml(x.nume) + ' <span class="acMut">' + x.urca + '/' + x.n + '</span></span><i><b class="' + ((x.ch5 || 0) >= 0 ? "acSecSus" : "acSecJos") + '" style="width:' + w + '%;' + ((x.ch5 || 0) >= 0 ? "left:50%" : "right:50%") + '"></b></i><em class="' + ((x.ch5 || 0) >= 0 ? "good" : "bad") + '">' + acPct(x.ch5, 1) + '</em><em class="acMut">' + acPct(x.ch, 1) + '</em></div>'; }).join("")
+      + '<p class="acEt">Cine duce indicele: sectoarele de sus au urcat cel mai mult în ultimele 5 zile; cifra gri e ultima zi.</p>' : '<p class="acMut">Vine din tura de dimineață a colectorului.</p>');
+  // v95: harta colorata - Nasdaq 100 si primele 60 de futures, dupa miscarea zilei
+  var cul = function (v) { if (v == null || !isFinite(v)) return "rgba(144,160,182,.15)"; var a = Math.min(1, Math.abs(v) / 4); return v >= 0 ? "rgba(85,216,155," + (0.15 + a * 0.75).toFixed(2) + ")" : "rgba(255,107,120," + (0.15 + a * 0.75).toFixed(2) + ")"; };
+  var patrat = function (s2, v) { return '<span class="acHp" style="background:' + cul(v) + '" title="' + escapeHtml(s2 + " " + acPct(v, 1)) + '">' + escapeHtml(s2) + '</span>'; };
+  var ndxOrd = ndxL && d.ndx ? d.ndx.actiuni.slice().sort(function (a, b) { return (Acasa.SECTOR[a.s] || "~").localeCompare(Acasa.SECTOR[b.s] || "~") || b.ch - a.ch; }) : [];
+  var crOrd = (Acasa.miscari(d.tickers, { top: 60 }).sus || []).length ? (function () { var m2 = Acasa.miscari(d.tickers, { top: 60 }); var l2 = []; (d.tickers || []).forEach(function (x) { var g = m2.gasit(String(x.symbol || "").replace(/_USDT_PERP$/, "")); if (g && l2.indexOf(g) < 0) l2.push(g); }); return l2.sort(function (a, b) { return b.v - a.v; }).slice(0, 60); })() : [];
+  $("acHarta").innerHTML = '<div class="acCap"><h4>Harta pieței</h4><span class="acSub">verde urcă, roșu scade · cu cât mai intens, cu atât mai mult (±4% = plin)</span></div>'
+    + '<div class="acHarte"><div><h5>Nasdaq 100 · pe sectoare</h5><div class="acHg">' + (ndxOrd.length ? ndxOrd.map(function (x) { return patrat(x.s, x.ch); }).join("") : '<span class="acMut">vine din tura de dimineață</span>') + '</div></div>'
+    + '<div><h5>Crypto · primele 60 după volum</h5><div class="acHg">' + (crOrd.length ? crOrd.map(function (x) { return patrat(x.s, x.ch); }).join("") : '<span class="acMut">aduc prețurile…</span>') + '</div></div></div>';
+
   // 3. cine se misca, pe amandoua
   $("acMisca").innerHTML = '<div class="acCap"><h4>Cine se mișcă · crypto</h4><span class="acSub">top ' + (mis.n || 60) + ' futures · 24 h</span></div>'
     + (mis.n ? '<div class="acMis"><div><h5>Urcă</h5>' + acMisList(mis.sus) + '</div><div><h5>Scad</h5>' + acMisList(mis.jos) + '</div></div>'
@@ -221,13 +247,18 @@ function acasaDeseneaza() {
       + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + Math.max(rg.r4h || 0, rg.r24h || 0).toFixed(1).replace(".", ",") + "×" : "")) + '</b></div>';
   });
   if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>';
+  // v95: ziua ta - fata de poza de ieri dimineata (colectorul, dupa ora 9)
+  var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
+  var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz);
+  if (zt && zt.boti !== null && act.length) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(2) + ' USDT</b></div>';
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 
   var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = document.querySelectorAll("#t212Continut .t212Pill-iesi").length, rz = d.rezultate && d.rezultate.l || [];
   var azi = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z").getTime(), zile = function (z) { return Math.round((Date.parse(z + "T00:00:00Z") - azi) / 86400000); };
   $("acT212").innerHTML = '<div class="acCap"><h4>Acțiunile tale</h4><span class="acSub">Trading 212 · ' + (deschis ? "bursa e deschisă" : "bursa e închisă") + '</span></div>'
     + (c ? '<div class="acLin"><span>Contul</span><b>' + escapeHtml(acLei(c.total)) + '</b></div><div class="acLin"><span>Pozițiile deschise</span><b class="' + (Number(c.ppl) >= 0 ? "good" : "bad") + '">' + escapeHtml(typeof t212Lei === "function" ? t212Lei(c.ppl) : String(c.ppl)) + '</b></div>'
-      + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi ? "bad" : "good") + '">' + (iesi ? iesi + " de ieșit" : "nimic roșu") + '</b></div>' : '<p class="acMut">Aduc contul…</p>')
+      + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi ? "bad" : "good") + '">' + (iesi ? iesi + " de ieșit" : "nimic roșu") + '</b></div>'
+      + (zt && zt.t212 !== null ? '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.t212 >= 0 ? "good" : "bad") + '">' + (zt.t212 >= 0 ? "+" : "−") + escapeHtml(acLei(Math.abs(zt.t212))) + '</b></div>' : '') : '<p class="acMut">Aduc contul…</p>')
     + (rz.length ? '<div class="acEt" style="margin-top:4px">Următoarele rezultate financiare' + (rz.some(function (x) { return !x.sigur; }) ? " (estimate)" : "") + ':</div><div class="acRez">' + rz.slice(0, 3).map(function (x) { var z = zile(x.data); return '<b>' + escapeHtml(x.simbol) + '</b><span>' + escapeHtml(acZiRo(x.data)) + '</span><b class="' + (z <= 14 ? "warn" : "acMut") + '">' + (z <= 0 ? "azi" : z === 1 ? "mâine" : "peste " + z + " zile") + '</b>'; }).join("") + '</div>' : '')
     + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>';
 
@@ -238,6 +269,10 @@ function acasaDeseneaza() {
     + '<div class="acEt" style="margin-top:4px">Monede liniștite pentru un bot grid:</div>'
     + (cl && cl.buni.length ? '<div class="acChips">' + cl.buni.slice(0, 5).map(function (x) { return '<span>' + escapeHtml(String(x.simbol).replace(/_USDT_PERP$/, "")) + '</span>'; }).join("") + '</div>' : '<p class="acMut">Aștept clasamentul…</p>')
     + '<button class="acBtn" type="button" data-action-click="navTo(\'gridset\',true)">Deschide Grid</button>';
+
+  // v95: socoteala alertelor de miscare (au continuat?) - apare cand colectorul a strans alerte
+  var so = pc.socoteala;
+  if ($("acSocoteala")) { $("acSocoteala").hidden = !(so && so.n); if (so && so.n) $("acSocoteala").innerHTML = '📏 <b>Socoteala alertelor:</b> ' + escapeHtml(so.text) + (so.textVreme ? ' ' + escapeHtml(so.textVreme) : ''); }
 
   acasaRezumate(larg);
 }

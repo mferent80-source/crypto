@@ -51,6 +51,19 @@ var GridCalcul = (function () {
     for (var i = 0; i < randuri.length; i++) { var b = citeste(randuri[i]); if (b && !vazut[b.t]) { vazut[b.t] = 1; v.push(b); } }
     return v.sort(function (x, y) { return x.t - y.t; });
   }
+  // v95: barele ZILNICE ale unei actiuni americane: bara de AZI se scoate doar cat bursa e deschisa (e in formare);
+  // sambata, duminica si dupa inchidere ultima bara e o zi inchisa si ramane (bare() o arunca mereu).
+  function bareBursa(randuri, acum) {
+    var v = bareToate(randuri); if (!v.length) return v;
+    try {
+      var o = {}, n = new Date(acum || Date.now());
+      new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(n).forEach(function (x) { o[x.type] = x.value; });
+      var azi = o.year + "-" + o.month + "-" + o.day, min = Number(o.hour) * 60 + Number(o.minute), deschisa = ["Sat", "Sun"].indexOf(o.weekday) < 0 && min >= 570 && min < 960;
+      var zu = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(v[v.length - 1].t));
+      if (deschisa && zu === azi) v.pop();
+    } catch (e) {}
+    return v;
+  }
   function bare(randuri) {
     if (!Array.isArray(randuri)) return [];
     var vazut = {}, v = [];
@@ -324,7 +337,7 @@ var GridCalcul = (function () {
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };
   }
 
-  return { C: C, bare: bare, bareToate: bareToate, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
+  return { C: C, bare: bare, bareToate: bareToate, bareBursa: bareBursa, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
     regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine };

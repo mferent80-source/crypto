@@ -25,8 +25,10 @@ function lume(o = {}) {
     "/api/istoric-bot?action=clasament": { clasament },
     "/api/stiri?action=piata": { qqq: zil(260, (i) => 100 * Math.pow(1.002, i)), spy: zil(260, (i) => 100), vix: zil(40, () => o.vix ?? 15), fg: { valoare: 74, clasa: "Greed", istoric: [70, 74] } },
     "/api/t212?action=ndx": { la: SAMBATA, zi: "2026-09-26", actiuni: [{ s: "AAPL", ch: 1, e50: true, e200: true, rsi: 60 }, { s: "MSFT", ch: -1, e50: false, e200: true, rsi: 40 }] },
-    "/api/bot-orders": { bots: [{ id: "2383", baza: "VVV.PERP", activ: true, pretCurent: 29.7 }] },
+    "/api/bot-orders": { bots: [{ id: "2383", baza: "VVV.PERP", activ: true, pretCurent: 29.7, profitTotal: -7.75 }] },
     "/api/t212?action=pozitii": [{ ticker: "APLD_US_EQ" }, { ticker: "VOW3d_EQ" }],
+    "/api/t212?action=cont": { cash: { total: 29251, ppl: -1447 } },
+    "/api/stiri?action=calendar": { evenimente: [{ date: "2026-09-30T14:00:00-04:00", title: "FOMC Statement", impact: "High", country: "USD" }] },
     "/api/market?type=pionex_tickers&market=PERP": { data: { tickers: Array.from({ length: 40 }, (_, i) => ({ symbol: "C" + i + "_USDT_PERP", amount: String(1e9 - i), open: "1", close: "1" })) } },
   };
   const cere = async (u) => {
@@ -92,6 +94,30 @@ await test("o sursa picata nu opreste restul turei (pozitii T212 cu eroare -> Na
   w.d.cere = async (u) => { if (/pozitii/.test(u)) throw Object.assign(new Error("T212 picat"), { status: 502 }); return c0(u); };
   await turaPiata(w.d, st, LUNI);
   assert.ok(w.trimise.some((x) => /action=ndx/.test(x[0]))); assert.ok(st.vreme && st.vreme.bursa);
+});
+
+// ---------------- v95 ----------------
+const DUMINICA = Date.UTC(2026, 8, 27, 17, 30);   // 20:30 Bucuresti
+await test("v95 poza zilnica: pune si totalul botilor si contul T212 (pentru 'ziua ta')", async () => {
+  const w = lume(), st = {};
+  await turaPiata(w.d, st, SAMBATA);
+  const z = w.trimise.find((x) => /action=piata/.test(x[0]) && x[1].instantaneu)[1].instantaneu;
+  assert.equal(z.botiTotal, -7.75); assert.equal(z.t212Total, 29251);
+});
+await test("v95 raportul de duminica: dupa ora 20 (Bucuresti), o singura data, cu saptamana pietei si calendarul", async () => {
+  const w = lume(), st = {};
+  await turaPiata(w.d, st, SAMBATA); assert.ok(!w.alerte.some((x) => /Săptămâna/.test(x.titlu)), "a trimis sambata");
+  await turaPiata(w.d, st, DUMINICA); await turaPiata(w.d, st, DUMINICA + 2 * ORA);
+  const r = w.alerte.filter((x) => /Săptămâna pieței/.test(x.titlu)); assert.equal(r.length, 1);
+  assert.match(r[0].mesaj, /FOMC Statement/); assert.match(r[0].mesaj, /Ce aș face eu/); assert.match(r[0].mesaj, /−7,75 USDT/);
+});
+await test("v95 socoteala: alerta de miscare se tine minte cu pretul; dupa 24 h i se pune pretul de atunci si se trimite socoteala", async () => {
+  const w = lume({ vvvScade: true }), st = {};
+  await turaPiata(w.d, st, SAMBATA);
+  assert.equal(st.soc.length, 1); assert.equal(st.soc[0].sim, "VVV"); assert.equal(st.soc[0].dir, "jos"); assert.ok(st.soc[0].pret > 0);
+  await turaPiata(w.d, st, SAMBATA + 25 * ORA);
+  assert.ok(st.soc[0].p1 > 0, "nu s-a pus pretul dupa 24 h");
+  const t = w.trimise.filter((x) => /action=piata/.test(x[0]) && x[1].socoteala); assert.ok(t.length, "socoteala nu s-a trimis"); assert.equal(t[t.length - 1][1].socoteala.n1, 1);
 });
 
 console.log(`\nTURA_PIATA_V94 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);

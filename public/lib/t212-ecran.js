@@ -38,10 +38,10 @@ async function t212Porneste(forta) {
       if (!t212.stiri[tk]) { try { var sn = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); t212.stiri[tk] = sn && sn.stiri || []; } catch (e) { t212.stiri[tk] = []; } }
       if (!t212.rezultate[tk]) { try { t212.rezultate[tk] = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); } catch (e) { t212.rezultate[tk] = { data: null }; } }
       try { var pl = await getJSON("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + tk)); t212.planuri[tk] = pl && pl.plan || null; } catch (e) { t212.planuri[tk] = t212.planuri[tk] || null; }
-      if (!t212.bare[tk] || forta) { try { var nm = t212Nume(tk), b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); t212.simbolPret[tk] = b && b.simbol || null; t212.bare[tk] = GridCalcul.bare(b && b.randuri || []); } catch (e) { t212.bare[tk] = []; } }
+      if (!t212.bare[tk] || forta) { try { var nm = t212Nume(tk), b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); t212.simbolPret[tk] = b && b.simbol || null; t212.bare[tk] = GridCalcul.bareBursa(b && b.randuri || [], Date.now()); } catch (e) { t212.bare[tk] = []; } }
       t212Render();
     }
-    if (!t212.bare.QQQ_US_EQ) { try { var q = await getJSON("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ"); t212.bare.QQQ_US_EQ = GridCalcul.bare(q && q.randuri || []); } catch (e) { t212.bare.QQQ_US_EQ = []; } }
+    if (!t212.bare.QQQ_US_EQ) { try { var q = await getJSON("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ"); t212.bare.QQQ_US_EQ = GridCalcul.bareBursa(q && q.randuri || [], Date.now()); } catch (e) { t212.bare.QQQ_US_EQ = []; } }
     t212.poz.forEach(function (x) { t212.beta[x.ticker] = ActiuniSemnale.beta(t212.bare[x.ticker], t212.bare.QQQ_US_EQ); });
   }
   t212.inLucru = false; t212Render();

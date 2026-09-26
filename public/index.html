@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v94.0" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v95.0" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar Pro Lite</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -56,7 +56,7 @@
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v94.0 · ALERTE PE PORTOFOLIU</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v95.0 · SECTOARE, HARTA, ZIUA TA</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -64,7 +64,7 @@
 <div class="mainArea">
 <header class="topStatus">
 <div class="topLeft"><div class="topCoin" id="topCoin">BTC/USDT</div><span class="statusChip" id="topTf">4h</span><span class="statusChip" id="topMode">AUTO</span><span class="statusChip" id="topSource">PIONEX</span></div>
-<div class="topRight"><button class="statusChip botStrip" id="botStrip" type="button" hidden data-action-click="navTo('tabloubot',true)" title="Deschide Tabloul botului">—</button><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v94.0 · READ ONLY</span></div>
+<div class="topRight"><button class="statusChip botStrip" id="botStrip" type="button" hidden data-action-click="navTo('tabloubot',true)" title="Deschide Tabloul botului">—</button><button class="statusChip" data-action-click="navTo('alerts')" style="width:auto" type="button">Alerts <span class="badgeNum" id="topAlertCount" style="display:none">0</span></button><span class="statusChip" id="wsStatus"><span class="wsDot" id="wsDot"></span>WS</span><span class="statusChip live" id="topLive">LIVE DATA</span><span class="statusChip" id="topVersiune">v95.0 · READ ONLY</span></div>
 </header>
 <main>
 <div class="noticeBad pePublicat" id="pePublicat" hidden=""><b>Aici e versiunea publicată: boții tăi nu se văd.</b> Pionex nu răspunde serverelor Cloudflare, de unde vine pagina asta. Boții, banii și alertele se văd în Radarul de acasă, pornit cu „Crypto Radar (local)” de pe Desktop. <a class="actionGhost" href="http://127.0.0.1:8788/">Deschide Radarul de acasă</a></div><div class="noticeBad parolaLipsa" id="parolaLipsa" hidden=""><b>Parola aplicației nu e pusă pe acest dispozitiv.</b> Fără ea, boții și contul Pionex nu se văd. Se pune o singură dată, în <b>Setări → API Security Session</b> (textul APP_API_TOKEN de la pornire). <button class="actionGhost" data-action-click="mergiLaParola()">Deschide Setări</button></div>
@@ -73,7 +73,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v94.0 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v95.0 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -161,7 +161,7 @@
 <div class="tbBloc" id="grJurnalCard"><div class="tbBlocCap"><h4>📒 Jurnalul gridurilor: se dovedește?</h4><span class="tbSub" id="grJurnalSub">apasă „am pornit botul” pe o fișă; rezultatul real vine singur din Pionex</span></div><div id="grJurnal"><p class="tbSub">Niciun grid pornit din fișă încă.</p></div></div>
 </section>
 
-<section class="panel on" id="dash"><div class="acasa" id="acasa"><div class="acAntet"><h3>Piața azi</h3><span class="acSub" id="acCand">—</span><div class="acDr"><button class="acBtn" type="button" data-action-click="navTo('tabloubot',true)">Tabloul botului</button><button class="acBtn" type="button" data-action-click="navTo('t212',true)">Trading 212</button><button class="acBtn" type="button" data-action-click="navTo('gridset',true)">Grid: ce setez?</button></div></div><div class="acVerdicte"><div class="acVerd" id="acVremeCrypto"><div class="acSub">Aștept clasamentul pieței…</div></div><div class="acVerd" id="acVremeBursa"><div class="acSub">Aștept bursele…</div></div></div><div class="acLegatura" id="acLegatura"></div><div class="acRandCap"><b>Crypto</b><span>live</span></div><div class="acPuls"><div class="acBloc" id="acBtc"></div><div class="acBloc" id="acFg"></div><div class="acBloc" id="acLarg"></div></div><div class="acRandCap"><b>Nasdaq</b><span id="acBursaCand">—</span></div><div class="acPuls"><div class="acBloc" id="acNasdaq"></div><div class="acBloc" id="acVix"></div><div class="acBloc" id="acLargNdx"></div></div><div class="acDoua"><div class="acBloc" id="acMisca"></div><div class="acBloc" id="acMiscaNdx"></div></div><div class="acDoua"><div class="acBloc" id="acCalendar"></div><div class="acBloc" id="acStiri"></div></div><div class="acGrupCap">Ce înseamnă pentru tine</div><div class="acTine"><div class="acBloc" id="acBoti"></div><div class="acBloc" id="acT212"></div><div class="acBloc" id="acIdei"></div></div><div class="acGrupCap">Mai în detaliu</div></div><div class="acGrupuri"><details class="acPl" id="acPl-moneda"><summary><b>Analiza unei monede</b><span class="acPlSub" id="acPlSub-moneda">—</span></summary><div class="acPlCorp"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid dashWideGrid"><div class="card full masterVerdict dashMaster">
+<section class="panel on" id="dash"><div class="acasa" id="acasa"><div class="acAntet"><h3>Piața azi</h3><span class="acSub" id="acCand">—</span><div class="acDr"><button class="acBtn" type="button" data-action-click="navTo('tabloubot',true)">Tabloul botului</button><button class="acBtn" type="button" data-action-click="navTo('t212',true)">Trading 212</button><button class="acBtn" type="button" data-action-click="navTo('gridset',true)">Grid: ce setez?</button></div></div><div class="acVerdicte"><div class="acVerd" id="acVremeCrypto"><div class="acSub">Aștept clasamentul pieței…</div></div><div class="acVerd" id="acVremeBursa"><div class="acSub">Aștept bursele…</div></div></div><div class="acLegatura" id="acLegatura"></div><div class="acRandCap"><b>Crypto</b><span>live</span></div><div class="acPuls"><div class="acBloc" id="acBtc"></div><div class="acBloc" id="acFg"></div><div class="acBloc" id="acLarg"></div></div><div class="acRandCap"><b>Nasdaq</b><span id="acBursaCand">—</span></div><div class="acPuls"><div class="acBloc" id="acNasdaq"></div><div class="acBloc" id="acVix"></div><div class="acBloc" id="acLargNdx"></div></div><div class="acDoua"><div class="acBloc" id="acMacro"></div><div class="acBloc" id="acSectoare"></div></div><div class="acBloc" id="acHarta"></div><div class="acDoua"><div class="acBloc" id="acMisca"></div><div class="acBloc" id="acMiscaNdx"></div></div><div class="acDoua"><div class="acBloc" id="acCalendar"></div><div class="acBloc" id="acStiri"></div></div><div class="acGrupCap">Ce înseamnă pentru tine</div><div class="acTine"><div class="acBloc" id="acBoti"></div><div class="acBloc" id="acT212"></div><div class="acBloc" id="acIdei"></div></div><div class="acLegatura" id="acSocoteala" hidden></div><div class="acGrupCap">Mai în detaliu</div></div><div class="acGrupuri"><details class="acPl" id="acPl-moneda"><summary><b>Analiza unei monede</b><span class="acPlSub" id="acPlSub-moneda">—</span></summary><div class="acPlCorp"><div class="sectionHead"><h3>Market Overview</h3><div class="dataStatus"><span class="statusChip live">Spot live</span><span class="sourceLock" id="dashSourceLock">PIONEX LOCK</span></div></div><div class="grid dashWideGrid"><div class="card full masterVerdict dashMaster">
 <div class="sectionHead"><h3>Master Verdict · Ce fac acum?</h3><span class="validationBadge">EXPLAINED DECISION · RESEARCH / PAPER · NO GUARANTEE</span></div>
 <div class="decisionBrief" id="decisionBrief">
   <div class="decisionPrimary">
@@ -1187,7 +1187,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v94.0</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v95.0</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>

@@ -24,6 +24,8 @@ function sumarClasament(c) {
   return o;
 }
 async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.jurnal("piata " + ce, e.message); return null; } }
+// v95: socoteala alertelor - fiecare alerta de miscare, tinuta minte cu pretul ei (ultimele 300)
+function noteaza(st, o) { st.soc = (st.soc || []).concat([o]).slice(-300); }
 async function trimiteToate(d, mesaje) { let toate = true; for (const m of mesaje) if (!(await d.trimiteAlerta(m, null, m.cheie))) toate = false; return toate; }
 
 // ---- 1. vremea pietei (crypto + Nasdaq + legatura BTC - bursa), la 10 minute ----
@@ -40,7 +42,11 @@ async function vreme(d, st, acum) {
   const v = A.vreme({ clasament: cl, btc: { miscare: reg ? !!reg.miscare : false }, fg }), vb = A.vremeBursa({ qqq, vix, ndx: ndL });
   const co = b1d && qqq ? A.corelatie(b1d, qqq, 30) : null;
   const r = d.Alerte.schimbareVreme(st.vreme || null, { crypto: v, bursa: vb, corelatie: co }, acum);
-  if (await trimiteToate(d, r.mesaje)) st.vreme = r.stare;
+  if (await trimiteToate(d, r.mesaje)) {
+    st.vreme = r.stare;
+    // v95: dupa "crypto in MISCARE" se masoara cat s-a mai miscat BTC
+    if (b1h && b1h.length && r.mesaje.some((m) => m.cheie === "vreme-crypto" && m.nivel === "critic")) noteaza(st, { t: acum, cheie: "vreme-crypto", sim: "BTC", fel: "vreme", pret: b1h[b1h.length - 1].c });
+  }
   st.ult = { fg, inMiscare: cl ? cl.evita : null, vix, ndxE50: ndL ? ndL.e50 : null, btc: b1h && b1h.length ? b1h[b1h.length - 1].c : null };
 }
 
@@ -71,7 +77,7 @@ async function boti(d, st, acum) {
     if (c.length < 60) continue;
     const ch = (c[c.length - 1] / c[c.length - 25] - 1) * 100, tip = d.Acasa.miscareTipica(c.slice(0, -1), 24), cheie = "bot-" + nume;
     const x = d.Alerte.miscareNeobisnuita({ cheie, nume, fel: "monedă", ch, tipic: tip, pret: c[c.length - 1] }, st.miscari[cheie] || null, acum);
-    if (!x.mesaj || await d.trimiteAlerta(x.mesaj, b.id || null, x.mesaj.cheie)) st.miscari[cheie] = x.stare;
+    if (!x.mesaj || await d.trimiteAlerta(x.mesaj, b.id || null, x.mesaj.cheie)) { st.miscari[cheie] = x.stare; if (x.mesaj) noteaza(st, { t: acum, cheie, sim: nume, fel: "monedă", dir: ch > 0 ? "sus" : "jos", pret: c[c.length - 1] }); }
   }
 }
 
@@ -90,7 +96,7 @@ async function bursaLaZi(d, st, acum, zi) {
     const sim = t.replace(/_US_EQ$/, ""), b = await ia(sim); if (!b || b.length < 30) continue;
     const c = b.map((x) => x.c), ch = (c[c.length - 1] / c[c.length - 2] - 1) * 100, tip = A.miscareTipica(c.slice(-122, -1), 1), cheie = "act-" + sim;
     const x = d.Alerte.miscareNeobisnuita({ cheie, nume: sim, fel: "acțiune", ch, tipic: tip, pret: c[c.length - 1] }, st.miscari[cheie] || null, acum);
-    if (!x.mesaj || await d.trimiteAlerta(x.mesaj, null, x.mesaj.cheie)) st.miscari[cheie] = x.stare;
+    if (!x.mesaj || await d.trimiteAlerta(x.mesaj, null, x.mesaj.cheie)) { st.miscari[cheie] = x.stare; if (x.mesaj) noteaza(st, { t: acum, cheie, sim, fel: "acțiune", dir: ch > 0 ? "sus" : "jos", pret: c[c.length - 1] }); }
   }
 }
 
@@ -98,8 +104,56 @@ async function bursaLaZi(d, st, acum, zi) {
 async function poza(d, st, acum) {
   const r = ceas(acum, "Europe/Bucharest");
   if (r.min < 540 || st.pozaZi === r.zi || !st.ult) return;
-  await d.trimite("/api/istoric-bot?action=piata", { la: acum, instantaneu: Object.assign({ zi: r.zi, fundingMed: st.funding ? st.funding.mediana : null }, st.ult) });
+  // v95: si botii (suma totalurilor) + contul T212 -> Home: "ziua ta" (castig / pierdere fata de ieri dimineata)
+  const bo = await incearca(d, "boti poza", () => d.cere("/api/bot-orders")), co = await incearca(d, "cont poza", () => d.cere("/api/t212?action=cont"));
+  const act = (bo && Array.isArray(bo.bots) ? bo.bots : []).filter((b) => b && b.activ !== false && Number.isFinite(Number(b.profitTotal)));
+  const ca = co && co.cash, eu = { botiTotal: act.length ? Math.round(act.reduce((s, b) => s + Number(b.profitTotal), 0) * 100) / 100 : null, t212Total: ca && Number.isFinite(Number(ca.total)) ? Number(ca.total) : null, t212Ppl: ca && Number.isFinite(Number(ca.ppl)) ? Number(ca.ppl) : null };
+  await d.trimite("/api/istoric-bot?action=piata", { la: acum, instantaneu: Object.assign({ zi: r.zi, fundingMed: st.funding ? st.funding.mediana : null }, st.ult, eu) });
   st.pozaZi = r.zi;
+}
+
+// ---- 6. socoteala alertelor: pretul dupa 24 h si dupa 3 zile, apoi socoteala trimisa (Home + raport) ----
+async function socoteala(d, st, acum) {
+  const l = st.soc || []; let schimbat = false;
+  const pretAcum = async (x) => {
+    if (x.fel === "acțiune") { const r = await d.cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.sim + "_US_EQ")); const b = d.GridCalcul.bareToate(r && r.randuri); return b.length ? b[b.length - 1].c : null; }
+    const k = await d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(x.sim + "_USDT_PERP") + "&interval=60M&limit=5");
+    const c = (k && k.data && k.data.klines || []).slice().sort((a, b) => Number(a.time) - Number(b.time)); return c.length ? Number(c[c.length - 1].close) : null;
+  };
+  for (const x of l) for (const [k, ore] of [["p1", 24], ["p3", 72]]) {
+    if (x[k] !== undefined || acum - x.t < ore * ORA) continue;
+    // evaluat la cel mult 6 h dupa termen: pretul de acum ~ pretul de atunci; mai tarziu (colector oprit) -> se renunta
+    if (acum - x.t > (ore + 6) * ORA) { x[k] = 0; schimbat = true; continue; }
+    const p = await incearca(d, "socoteala " + x.sim, () => pretAcum(x)); if (p > 0) { x[k] = p; schimbat = true; }
+  }
+  if (schimbat || st.socTrimisN !== l.length) { await d.trimite("/api/istoric-bot?action=piata", { la: acum, socoteala: d.Acasa.socotealaAlerte(l) }); st.socTrimisN = l.length; }
+}
+
+// ---- 7. raportul de duminica seara (dupa 20:00 Bucuresti), o data ----
+async function raportSaptamana(d, st, acum) {
+  const r = ceas(acum, "Europe/Bucharest");
+  if (r.sapt !== "Sun" || r.min < 1200 || st.raportSaptZi === r.zi) return;
+  const A = d.Acasa, G = d.GridCalcul;
+  const p = await incearca(d, "raport bursele", () => d.cere("/api/stiri?action=piata")) || {};
+  const qqq = p.qqq ? G.bareToate(p.qqq) : null, vixB = p.vix ? G.bareToate(p.vix) : null, vix = vixB && vixB.length ? vixB[vixB.length - 1].c : null;
+  const b1d = await incearca(d, "raport BTC", async () => G.bareToate((await d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=30")).data.klines));
+  const nd = await incearca(d, "raport ndx", () => d.cere("/api/t212?action=ndx")), l = nd && Array.isArray(nd.actiuni) ? nd.actiuni.filter((x) => Number.isFinite(x.ch5)) : [];
+  const s5 = l.slice().sort((a, b) => b.ch5 - a.ch5);
+  const cl = await incearca(d, "raport clasament", async () => sumarClasament((await d.cere("/api/istoric-bot?action=clasament")).clasament));
+  const bo = await incearca(d, "raport boti", () => d.cere("/api/bot-orders")), act = (bo && Array.isArray(bo.bots) ? bo.bots : []).filter((b) => b && b.activ !== false && Number.isFinite(Number(b.profitTotal)));
+  const co = await incearca(d, "raport cont", () => d.cere("/api/t212?action=cont"));
+  const ca = await incearca(d, "raport calendar", () => d.cere("/api/stiri?action=calendar")), cal = A.calendar(ca && ca.evenimente, acum).urmatoare;
+  const poz = await incearca(d, "raport pozitii", () => d.cere("/api/t212?action=pozitii")), rz = [];
+  for (const t of (Array.isArray(poz) ? poz : poz && (poz.items || poz.pozitii) || []).map((x) => x && x.ticker).filter((t) => /_US_EQ$/.test(String(t))).slice(0, 10)) {
+    const x = await incearca(d, "raport rezultate", () => d.cere("/api/t212?action=rezultate&ticker=" + encodeURIComponent(t)));
+    if (x && x.data && Date.parse(x.data) - acum < 14 * 86400000) rz.push({ simbol: x.simbol || t.split("_")[0], data: x.data });
+  }
+  rz.sort((a, b) => (a.data < b.data ? -1 : 1));
+  const m = A.raportSaptamana({ btc7: b1d && b1d.length > 7 ? (b1d[b1d.length - 1].c / b1d[b1d.length - 8].c - 1) * 100 : null,
+    vreme: A.vreme({ clasament: cl, btc: { miscare: false }, fg: p.fg ? p.fg.valoare : null }), qqq5: qqq && qqq.length > 5 ? (qqq[qqq.length - 1].c / qqq[qqq.length - 6].c - 1) * 100 : null, vix,
+    vremeBursa: A.vremeBursa({ qqq, vix, ndx: A.largimeNdx(l) }), sus: s5.slice(0, 3), jos: s5.slice(-3).reverse(),
+    botiTotal: act.length ? act.reduce((s, b) => s + Number(b.profitTotal), 0) : null, t212Ppl: co && co.cash ? Number(co.cash.ppl) : null, calendar: cal, rezultate: rz });
+  if (await d.trimiteAlerta(m, null, "raport-saptamana")) st.raportSaptZi = r.zi;
 }
 
 export async function turaPiata(d, st, acum) {
@@ -114,5 +168,7 @@ export async function turaPiata(d, st, acum) {
     await incearca(d, "bursa", () => bursaLaZi(d, st, acum, bu.zi));
   }
   await incearca(d, "poza", () => poza(d, st, acum));
+  if (acum - la("soc") >= ORA) { facut("soc"); await incearca(d, "socoteala", () => socoteala(d, st, acum)); }
+  await incearca(d, "raport saptamana", () => raportSaptamana(d, st, acum));
   return st;
 }

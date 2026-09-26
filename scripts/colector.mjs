@@ -405,7 +405,7 @@ async function turaPlanuriT212() {
     await turaPlanuriModul({
       cerePozitii: async () => { const d = await cere("/api/t212?action=pozitii"); return d && d.pozitii || []; },
       cerePlan: async (tk) => { const d = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + tk)); return d && d.plan || null; },
-      cereBare: async (tk) => { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)); return GridCalcul.bare(d && d.randuri || []); },
+      cereBare: async (tk) => { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)); return GridCalcul.bareBursa(d && d.randuri || [], Date.now()); },
       trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "")), stare: st, ActiuniSemnale, T212, jurnal });
   } catch (e) { jurnal("planuri t212 ESEC", e.message); }
   // v87: frana de "cumparat in jos" (NPA: 4 cumparari pe minus, -8.165 lei) + plafonul de 20% din cont
@@ -441,7 +441,7 @@ async function turaCfActiuni() {
       umpleri: async () => { const d = await cere("/api/t212?action=istoric"); return d && d.umpleri || []; },
       gata: async () => { const d = await cere("/api/t212?action=cf"); return d && d.cf || {}; },
       cereBare: async (tk, nm) => {
-        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); return GridCalcul.bare(d && d.randuri || []); }
+        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); return GridCalcul.bareBursa(d && d.randuri || [], Date.now()); }
         catch (e) { if (e.status === 404) return null; throw e; }   // 404 = fara preturi (delistata); altceva se reincearca
       },
       salveaza: (m) => trimite("/api/t212?action=cf", { verdicte: m }),
@@ -501,7 +501,7 @@ async function dateDimineata() {
       for (const x of poz) {
         const s = T212.simbol(x.ticker);
         try {
-          const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)), bare = GridCalcul.bare(d && d.randuri || []), st = ActiuniSemnale.stare(bare, x.currentPrice);
+          const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)), bare = GridCalcul.bareBursa(d && d.randuri || [], Date.now()), st = ActiuniSemnale.stare(bare, x.currentPrice);
           barePe[x.ticker] = bare;
           const niv = ActiuniSemnale.semafor({ ticker: x.ticker, simbol: s, qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan: null }, st).nivel;
           if (niv !== "fara-date") intrari.push({ zi, ticker: x.ticker, nivel: niv, pret: x.currentPrice });   // v91: socoteala sfaturilor
@@ -517,7 +517,7 @@ async function dateDimineata() {
       // v91: socoteala sfaturilor - semaforul de azi + preturile dupa 5/10/20 zile pentru sfaturile vechi
       try {
         const sf = await cere("/api/t212?action=sfaturi"), lista = (sf && sf.sfaturi) || [];
-        for (const tk of [...new Set(lista.map((y) => y.ticker))]) if (!barePe[tk]) { try { barePe[tk] = GridCalcul.bare((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []); } catch {} }
+        for (const tk of [...new Set(lista.map((y) => y.ticker))]) if (!barePe[tk]) { try { barePe[tk] = GridCalcul.bareBursa((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || [], Date.now()); } catch {} }
         await trimite("/api/t212?action=sfaturi", { intrari, evaluari: Consilier.deEvaluat(lista, barePe, Date.now()) });
       } catch (e) { jurnal("socoteala sfaturi", e.message); }
     } catch (e) { jurnal("dimineata t212", e.message); }

@@ -40,7 +40,7 @@ export async function onRequestGet({request,env}){
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
   // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
-  if(action==="piata"){let f=null,l=[];try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}return json({funding:f,instantanee:Array.isArray(l)?l:[]})}
+  if(action==="piata"){let f=null,l=[],so=null;try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}try{so=JSON.parse(await env.ISTORIC.get("piata:socoteala")||"null")}catch{so=null}return json({funding:f,instantanee:Array.isArray(l)?l:[],socoteala:so})}
   if(action!=="citeste")return json({error:"Unsupported action"},400);
   const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);
   const ore=Math.min(168,Math.max(1,Math.floor(Number(u.searchParams.get("ore")))||24));
@@ -61,10 +61,13 @@ export async function onRequestPost({request,env}){
     const f=corp&&corp.funding;
     if(f&&typeof f==="object")await env.ISTORIC.put("piata:funding",JSON.stringify({la:nr(corp.la)||Date.now(),n:nr(f.n),long:nr(f.long),mediana:nr(f.mediana),uzual:nr(f.uzual),raport:nr(f.raport),
       ton:f.ton==="atentie"?"atentie":"neutru",text:txt(f.text,300),inghesuiti:(Array.isArray(f.inghesuiti)?f.inghesuiti:[]).slice(0,5).map(x=>({s:sim(x&&x.s),rate:nr(x&&x.rate)})).filter(x=>x.s&&x.rate!==null)}));
+    // v95: socoteala alertelor (cate miscari neobisnuite au continuat)
+    const so=corp&&corp.socoteala;
+    if(so&&typeof so==="object")await env.ISTORIC.put("piata:socoteala",JSON.stringify({la:nr(corp.la)||Date.now(),n:nr(so.n),n1:nr(so.n1),continua1:nr(so.continua1),n3:nr(so.n3),continua3:nr(so.continua3),text:txt(so.text,300),textVreme:txt(so.textVreme,300)}));
     const z=corp&&corp.instantaneu;
     if(z&&typeof z==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(z.zi))){
       let l=[];try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
-      const o={zi:z.zi};["fg","inMiscare","vix","ndxE50","btc","largime","fundingMed"].forEach(k=>{const v=nr(z[k]);if(v!==null)o[k]=v});
+      const o={zi:z.zi};["fg","inMiscare","vix","ndxE50","btc","largime","fundingMed","botiTotal","t212Total","t212Ppl"].forEach(k=>{const v=nr(z[k]);if(v!==null)o[k]=v});
       l=l.filter(x=>x&&x.zi!==z.zi);l.push(o);l.sort((a,b)=>a.zi<b.zi?-1:1);
       await env.ISTORIC.put("piata:instantanee",JSON.stringify(l.slice(-14)));
     }
