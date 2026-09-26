@@ -1707,3 +1707,16 @@ body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none
 .t212Socoteala{padding:8px 12px}.t212Socoteala h5{margin:0 0 6px}
 .t212BtnAles{border-color:var(--accent);color:var(--accent);font-weight:800}
 #t212Decl .grTabel td:last-child{text-align:right}
+/* v91.8: "Ce spun indicatorii" langa grafic */
+#tabloubot .tbGraficRand{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:8px;align-items:stretch}
+#tabloubot .tbGraficRand>.tbBloc{min-width:0}
+#tabloubot .tbIndWrap{overflow-x:auto;max-width:100%}
+#tabloubot .tbIndTab{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+#tabloubot .tbIndTab th{font-weight:700;color:var(--muted,#8aa0b4);text-align:right;padding:3px 4px;font-size:11.5px}
+#tabloubot .tbIndTab td{padding:3px 4px;text-align:right;white-space:nowrap;border-top:1px solid var(--tb-linie,#23374a)}
+#tabloubot .tbIndTab td:first-child{text-align:left;color:var(--muted,#8aa0b4)}
+#tabloubot .tbIndTab tr:first-child td{font-weight:800}
+#tabloubot .tbIndNota{margin:6px 0 0}
+#tabloubot .tbIndEst td{border-top:2px solid var(--tb-linie,#23374a);font-style:italic}
+#tabloubot .tbIndPred{margin:8px 0 0;font-size:12.5px;line-height:1.45;padding:7px 9px;border-radius:8px;background:rgba(132,161,184,.07);border:1px dashed rgba(132,161,184,.3)}
+@media (max-width:1180px){#tabloubot .tbGraficRand{grid-template-columns:1fr}}

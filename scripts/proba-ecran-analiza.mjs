@@ -158,6 +158,17 @@ try {
     assert.equal(await reincarca(), "tabloubot");
     await panaCand(b, `/PERP/.test((document.getElementById("tbSimbol")||{}).textContent||"")`, 30000, "Tabloul sa-si aduca botul dupa reincarcare");
   });
+  // v91.8: "pune in tablou bot fereastra cu ce spun indicatorii, pe langa grafic" + "poate sa arate si o predictie"
+  await test("Tabloul: fereastra 'Ce spun indicatorii' STA LANGA grafic, cu 10 randuri x 4 intervale, verdicte calculate si predictia cu eticheta onesta", async () => {
+    await panaCand(b, `document.querySelectorAll("#tbIndicatori .tbIndTab tbody tr").length===10`, 60000, "tabelul de indicatori");
+    const r = await b.ev(`(()=>{const g=document.getElementById("tbGraficCard").getBoundingClientRect(),i=document.getElementById("tbIndicatoriCard").getBoundingClientRect();
+      const v=[...document.querySelectorAll("#tbIndicatori .tbIndTab tbody tr:first-child td")].slice(1).map(td=>td.textContent);
+      return {langa:Math.abs(g.top-i.top)<2&&i.left>g.right-1, coloane:document.querySelectorAll("#tbIndicatori .tbIndTab thead th").length, v,
+        pred:(document.querySelector("#tbIndicatori .tbIndPred")||{}).textContent||"", rez:document.getElementById("tbIndicatoriRezumat").textContent, gunoi:/NaN|undefined|null/.test(document.getElementById("tbIndicatoriCard").textContent)}})()`);
+    assert.ok(r.langa, "fereastra nu sta langa grafic (la 1440 px)");
+    assert.equal(r.coloane, 5); assert.ok(r.v.some((t) => /[↑↓↔] \d+/.test(t)), `niciun verdict calculat: ${r.v}`);
+    assert.match(r.pred, /48,8%/); assert.match(r.rez, /Cu botul|Urcă pe/); assert.equal(r.gunoi, false);
+  });
   await test("pe Trading 212 + reincarcare -> ramane pe Trading 212", async () => {
     await b.ev(`navTo("t212",true);true`);
     assert.equal(await reincarca(), "t212");

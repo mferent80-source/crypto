@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "91.7.0",
+  "version": "91.8.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -23,7 +23,7 @@
     "monitor:config": "node scripts/configure-monitor.mjs",
     "vapid:generate": "node scripts/generate-vapid.mjs",
     "test:bots": "node scripts/bot-orders-v72.mjs",
-    "test:tablou": "node scripts/tablou-bot-v73.mjs",
+    "test:tablou": "node scripts/tablou-bot-v73.mjs && node scripts/indicatori-v918.mjs",
     "test:fifo": "node scripts/jurnal-fifo-v746.mjs",
     "test:ecran": "node scripts/proba-ecran-tablou.mjs",
     "test:directie": "node scripts/directie-v75.mjs",

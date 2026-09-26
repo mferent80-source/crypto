@@ -5668,12 +5668,44 @@ async function tbAduDirectie(){
         var randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;
         if(!randuri)throw new Error((k&&k.error)||"Pionex nu a dat lumânări");
         rez.push(Object.assign({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText},Directie.analizeaza(randuri,x.orizont,b.directie)));
+        (d.randuriPe||(d.randuriPe={}))[x.tf]=randuri;
         if(x.tf==="4H")d.randuri4h=randuri;
       }catch(e){rez.push({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText,dir:null,stare:"eroare",motiv:textEroare(e)})}
     }
     d.rez=rez;d.simbol=cheie;d.la=Date.now();d.eroare=rez.every(function(r){return r.stare==="eroare"});
+    tbCalculeazaIndicatorii(d);
   }finally{d.inLucru=false}
-  renderTabloDirectia();
+  renderTabloDirectia();renderTabloIndicatori();
+}
+// v91.8: "Ce spun indicatorii" langa grafic - aceleasi calcule ca "Analizeaza piata" (calc), pe barele INCHISE
+// ale celor 4 intervale pe care Tabloul le aduce deja pentru directie (zero cereri in plus catre Pionex).
+var TB_TF_CALC={"15M":"15m","60M":"1h","4H":"4h","1D":"1d"};
+function tbCalculeazaIndicatorii(d){
+  if(typeof IndicatoriBot==="undefined"||!d)return;
+  d.indicatori=TB_DIR_TF.map(function(x){
+    var rows=d.randuriPe&&d.randuriPe[x.tf],q=null,hp=null,eroare=null;
+    try{var j=bareInchise(IndicatoriBot.dinPionex(rows),TB_TF_CALC[x.tf],Date.now());if(j.length>=60)q=calc(j,"auto");else eroare="doar "+j.length+" bare închise";
+      hp=j.length>=260?historicalProbability(j,4):null}catch(e){q=null;eroare=String(e&&e.message||e)}
+    return {tf:x.tf,eticheta:x.eticheta,q:q,hp:hp,eroare:eroare};
+  });
+}
+function renderTabloIndicatori(){
+  var el=$("tbIndicatori"),rz=$("tbIndicatoriRezumat");if(!el||!rz||typeof IndicatoriBot==="undefined")return;
+  var b=tbStare.routeOk===false?null:tbStare.bot,d=tbStare.directie,l=d&&d.simbol&&b&&d.simbol.indexOf(TabloBot.simboluri(b.baza,b.quote).pionex+"|")===0?d.indicatori:null;
+  if(!b){rz.className="tbRezumat mutedInfo";rz.textContent="Fără bot, n-am pe ce monedă să citesc indicatorii.";el.innerHTML="";return}
+  if(!l){rz.className="tbRezumat mutedInfo";rz.textContent="Aștept lumânările…";el.innerHTML="";return}
+  var z=IndicatoriBot.rezumat(l,b.directie);
+  rz.className="tbRezumat "+tbTon(z.ton);rz.textContent=z.text;
+  var cel=l.map(function(x){return IndicatoriBot.celule(x.q)});
+  el.innerHTML='<div class="tbIndWrap"><table class="tbIndTab"><thead><tr><th></th>'+l.map(function(x){return '<th>'+escapeHtml(x.eticheta.replace(" min","m").replace(" oră","h").replace(" ore","h").replace(" zi","z"))+'</th>'}).join("")+'</tr></thead><tbody>'+
+    IndicatoriBot.RANDURI.map(function(r){
+      return '<tr><td title="'+escapeHtml(r.titlu)+'">'+escapeHtml(r.eticheta)+'</td>'+cel.map(function(c,i){
+        var v=c&&c[r.k];if(!v)return '<td class="mutedInfo" title="prea puține bare închise">—</td>';
+        return '<td class="'+(v.c==="lipsa"||v.c==="neutral"?"mutedInfo":v.c)+'" title="'+escapeHtml(r.eticheta+" · "+l[i].eticheta+": "+(v.titlu||v.t))+'">'+escapeHtml(v.t)+'</td>'}).join("")+'</tr>'}).join("")+
+    '<tr class="tbIndEst"><td title="Estimarea din istoric: situații asemănătoare cu acum și ce a făcut prețul după 4 bare. Nedovedită.">Estimare</td>'+l.map(function(x){
+      var e=IndicatoriBot.estimare(x.hp,IndicatoriBot.ORIZONT[x.eticheta]||"4 bare");
+      return '<td class="'+(e.c==="lipsa"||e.c==="neutral"?"mutedInfo":e.c)+'" title="'+escapeHtml("Estimare · "+x.eticheta+": "+e.titlu)+'">'+escapeHtml(e.t)+'</td>'}).join("")+'</tr>'+
+    '</tbody></table></div><p class="tbIndPred">🔮 '+escapeHtml(IndicatoriBot.predictie(l,b.directie).text)+'</p><p class="tbSub tbIndNota">Indicatorii arată ce e acum pe grafic; doar rândul „Estimare” privește înainte. Ține mouse-ul pe o celulă ca să vezi ce înseamnă.</p>';
 }
 async function tbAduGraficul(){
   var b=tbStare.bot;if(!b)return;
@@ -5793,7 +5825,7 @@ function renderTabloDovada(){
     rand("Timp cu prețul în interval",f.timpInInterval,function(x){return Math.round(x.valoare)+"%"})+
     rand("Timp lângă o margine a gridului",f.desLaMargine,function(x){return Math.round(x.valoare)+"%"});
 }
-function tbDeseneazaTabloulUnic(){renderTabloDirectia();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbPiataPeBot()}
+function tbDeseneazaTabloulUnic(){renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbPiataPeBot()}
 // Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
 // vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
 function tbActualizeazaBanda(){
