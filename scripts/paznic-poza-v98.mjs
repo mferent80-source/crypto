@@ -1,7 +1,7 @@
 // Proba rutelor /poza si /simboluri ale paznicului (v98): tokenul colectorului, cheia de citire, ETag/304, CORS, marimea. Fara retea.
 // Rulare: node scripts/paznic-poza-v98.mjs
 import assert from "node:assert/strict";
-import paznic, { pozaScrie, pozaCiteste, simboluriScrie, simboluriCiteste, origineOk } from "../paznic/worker.mjs";
+import paznic, { pozaScrie, pozaCiteste, simboluriScrie, simboluriCiteste, origineOk, verifica } from "../paznic/worker.mjs";
 
 let teste = 0, picate = 0;
 async function test(nume, fn) {
@@ -67,6 +67,13 @@ await test("CORS: originea suitei primeste antetele, alta origine nu; OPTIONS = 
 await test("/bataie merge ca inainte (nu s-a stricat v97)", async () => {
   const w = lume(); const r = await w.cere("/bataie", "POST", { authorization: "Bearer " + TOK }, JSON.stringify({ pid: 1 }));
   assert.equal(r.status, 200); assert.equal(JSON.parse(w.kv.get("stare")).pid, 1);
+});
+await test("poza tine loc de bataie: fara /bataie, cu poza de 3 minute paznicul zice 'bate'; poza de 40 de minute nu mai tine", async () => {
+  const MIN = 60000, T0 = Date.UTC(2026, 8, 27, 12, 0), w = lume(), f = async () => ({ ok: true });
+  await w.cere("/poza", "POST", { authorization: "Bearer " + TOK }, JSON.stringify({ la: T0 - 3 * MIN, t212: [] }));
+  assert.equal((await verifica(w.env, T0, f)).stare, "bate", "poza proaspata = colectorul traieste, fara scriere in plus");
+  await w.cere("/poza", "POST", { authorization: "Bearer " + TOK }, JSON.stringify({ la: T0 - 40 * MIN, t212: [] }));
+  assert.notEqual((await verifica(w.env, T0, f)).stare, "bate", "poza veche de 40 min nu mai tine loc de bataie");
 });
 await test("functiile pure: pozaScrie / pozaCiteste / simboluriScrie / simboluriCiteste", async () => {
   const w = lume();

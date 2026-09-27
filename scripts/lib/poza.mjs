@@ -92,12 +92,59 @@ function simbolPoza(x, acum) {
     analisti: e && e.analisti ? { tinta: rot(e.analisti.tinta, 2), recom: e.analisti.recom || null, n: nr(e.analisti.n) } : null,
     shortFloat: e ? rot(e.shortFloat, 4) : null };
 }
+// ---- v98.1: ajutoare pentru colector (pure) ----
+const NY = "America/New_York";
+function ziNY(t) { return new Intl.DateTimeFormat("en-CA", { timeZone: NY }).format(new Date(t)); }
+// inchiderea ultimei sesiuni INCHEIATE (ziua New York): "azi" fata de ea, nu fata de bara de azi
+export function prevClose(bare, acum) {
+  if (!Array.isArray(bare) || !bare.length) return null;
+  // barele zilnice sunt stampilate pe ZI (Yahoo: 13:30Z = deschiderea NY; unele surse: miezul noptii UTC) -> ziua UTC a barei;
+  // "azi" e ziua New York de acum (bursa lor)
+  const azi = ziNY(acum); let v = null;
+  for (const b of bare) if (b && nr(b.c) !== null && nr(b.t) !== null && new Date(b.t).toISOString().slice(0, 10) < azi) v = b.c;
+  return v;
+}
+// cat de des pleaca poza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri), altfel 5 minute
+// (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: 2 min x 16 h = 480 + noaptea 96 + bataia = sub limita)
+export function cadentaPoza({ acum, botiActivi }) {
+  if (botiActivi > 0) return 120000;
+  const p = new Intl.DateTimeFormat("en-US", { timeZone: NY, weekday: "short", hour: "numeric", hour12: false }).formatToParts(new Date(acum));
+  const zi = (p.find((x) => x.type === "weekday") || {}).value, ora = Number((p.find((x) => x.type === "hour") || {}).value) % 24;
+  return zi !== "Sat" && zi !== "Sun" && ora >= 4 && ora < 20 ? 120000 : 300000;
+}
+function pctTxt(v, z = 1) { return (Math.abs(v) * 100).toFixed(z).replace(".", ",") + "%"; }
+function miiTxt(v) { v = nr(v) || 0; return Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1).replace(".", ",") + " mil." : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + " k" : String(Math.round(v)); }
+// alertele pe simbolurile paginii (I-463): miscarea zilei peste 2x ATR-ul propriu (media |Δ zi| pe 14 zile) si o cumparare
+// de insider aparuta fata de poza anterioara. Cheile contin ziua: colectorul le dedupeaza (o alerta pe zi per simbol).
+export function alerteSimboluri(simboluri, anterioare, acum) {
+  const zi = new Date(acum).toISOString().slice(0, 10), out = [];
+  for (const s of Array.isArray(simboluri) ? simboluri : []) {
+    if (!s || !s.s) continue;
+    const c = Array.isArray(s.closes30) ? s.closes30 : [];
+    if (c.length >= 15 && nr(s.pret) && nr(s.prev)) {
+      const ult = c.slice(-15); let suma = 0, n = 0;
+      for (let k = 1; k < ult.length; k++) if (ult[k - 1] > 0 && ult[k] > 0) { suma += Math.abs(ult[k] / ult[k - 1] - 1); n++; }
+      const atr = n ? suma / n : null, d = s.pret / s.prev - 1;
+      if (atr && Math.abs(d) > 2 * atr) out.push({ cheie: "sim-miscare-" + s.s + "-" + zi, nivel: "atentie",
+        titlu: s.s + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " azi, de " + (Math.abs(d) / atr).toFixed(1).replace(".", ",") + "× mișcarea lui obișnuită",
+        mesaj: "Mișcarea zilei e peste 2× ATR-ul propriu (" + pctTxt(atr) + " pe zi, media ultimelor 14 zile). Pragul de 2× ATR e o ipoteză, nu un semnal dovedit: o dată pe zi per simbol, ca să vezi când i se întâmplă ceva NEOBIȘNUIT lui, nu la fiecare procent." });
+    }
+    const i = s.insideri, v = i && i.verdict, va = anterioare && anterioare[s.s] && anterioare[s.s].insideri && anterioare[s.s].insideri.verdict;
+    if ((v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
+      const t = (i.top || []).find((x) => x && x.f === "buy");
+      out.push({ cheie: "sim-insider-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
+        mesaj: (t ? t.cine + " (" + t.rol + ") a cumpărat " + miiTxt(t.act) + " acțiuni, ~$" + miiTxt(t.val) + (t.d ? ", pe " + String(t.d).replace("-", ".") : "") + ". " : "") + "Cumpărările cu bani ale insiderilor contează, acțiunile primite gratis nu. E informație, nu îndemn." });
+    }
+  }
+  return out;
+}
+
 export function construiestePoza(i) {
   const acum = nr(i.acum) || Date.now();
   const t212 = (i.t212 || []).filter((x) => x && x.qty > 0).map(pozitieT212), boti = (i.boti || []).filter((b) => b && b.id).map(botPoza);
   // t212La = cand au fost citite pozitiile (la o limitare de cereri raman cele de la poza anterioara); t212Eroare = ce a spus T212
   const t212Eroare = i.t212Eroare ? String(i.t212Eroare) : null;
-  return { la: acum, versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, t212, t212La: nr(i.t212La), t212Eroare, boti,
+  return { la: acum, versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, radarUrl: i.radarUrl ? String(i.radarUrl) : null, t212, t212La: nr(i.t212La), t212Eroare, boti,
     simboluri: (i.simboluri || []).filter((x) => x && x.s).map((x) => simbolPoza(x, acum)),
     gol: { boti: boti.length ? null : "niciun bot activ", t212: t212.length ? null : (t212Eroare ? "Trading 212 n-a răspuns (" + t212Eroare + "); pozițiile vin cu poza următoare" : "nicio poziție deschisă") } };
 }

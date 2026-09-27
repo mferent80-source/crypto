@@ -73,13 +73,16 @@ export async function bataie(env, corp, acum, f = fetch) {
 // cronul: tace de 30 de minute -> anunta; apoi o amintire la 6 ore
 export async function verifica(env, acum, f = fetch) {
   const s = await citeste(env);
-  if (!s.la) return { stare: "fara-bataie" };
-  const tace = acum - s.la;
+  // v98.1: poza colectorului tine loc de bataie (vine la 2-5 minute); asa colectorul nu mai scrie o cheie in plus pentru puls
+  let laPoza = 0; try { laPoza = Number(laDinText(await env.PAZNIC.get("poza"))) || 0; } catch { laPoza = 0; }
+  const la = Math.max(Number(s.la) || 0, laPoza);
+  if (!la) return { stare: "fara-bataie" };
+  const tace = acum - la;
   if (tace < TACE_MS) return { stare: "bate" };
   if (s.anuntatLa && acum - s.anuntatLa < AMINTIRE_MS) return { stare: "tace-anuntat" };
   const prima = !s.anuntatLa;
   const ok = await discord(env, "critic", "Crypto Radar: colectorul tace de " + minute(tace),
-    "Ultimul semn de la PC-ul de acasă: " + ora(s.la) + ". Cât tace, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
+    "Ultimul semn de la PC-ul de acasă: " + ora(la) + ". Cât tace, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
     (prima ? " Verifică: e pornit PC-ul? merge internetul? rulează PORNESTE-CRYPTO-RADAR.bat?" : " Încă tace."), f);
   if (ok) await scrie(env, { ...s, anuntatLa: acum });
   return { stare: ok ? "anuntat" : "discord-picat" };

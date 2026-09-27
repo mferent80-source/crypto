@@ -21,9 +21,9 @@ import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { construiestePoza, costLeiDinLoturi, nivDinNiveluri } from "./lib/poza.mjs";
+import { construiestePoza, costLeiDinLoturi, nivDinNiveluri, prevClose, cadentaPoza, alerteSimboluri } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v98.0";
+const VERSIUNE_COLECTOR = "v98.1";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -497,7 +497,9 @@ async function turaCfActiuni() {
 const PAZNIC_URL = process.env.PAZNIC_URL || VARS.PAZNIC_URL || "", PAZNIC_TOKEN = process.env.PAZNIC_TOKEN || VARS.PAZNIC_TOKEN || "";
 let paznicLa = 0;
 async function turaPaznic() {
-  if (!PAZNIC_URL || !PAZNIC_TOKEN || Date.now() - paznicLa < 5 * 60000) return;
+  // v98.1: poza tine loc de bataie in worker (verifica citeste si `la` din poza) - cat poza pleaca, bataia separata e la 10 min (scrieri KV)
+  const pas = Date.now() - pozaOkLa < 10 * 60000 ? 10 * 60000 : 5 * 60000;
+  if (!PAZNIC_URL || !PAZNIC_TOKEN || Date.now() - paznicLa < pas) return;
   paznicLa = Date.now();
   try {
     const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/bataie", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ pid: process.pid, versiune: VERSIUNE_COLECTOR }), signal: AbortSignal.timeout(15000) });
@@ -507,7 +509,7 @@ async function turaPaznic() {
 
 // v98: poza pentru pagina alerts din Trading Tools - la 5 minute, prin paznic (POST /poza); lista de simboluri a paginii
 // vine tot de acolo (GET /simboluri). Datele externe (Yahoo) au cache pe disc; o poza care nu pleaca se reincearca la tura urmatoare.
-const POZA_MS = 5 * 60000, DUBLURI = { "1QZ.DE": "COIN", "MIGA.MU": "MSTR", "NFC.F": "NFLX" };
+const DUBLURI = { "1QZ.DE": "COIN", "MIGA.MU": "MSTR", "NFC.F": "NFLX" };   // dublurile germane iau insiderii/rezultatele companiei din SUA
 const yahooExtra = creeazaYahooExtra({ fisier: path.join(DATA, "poza-ext.json"), jurnal });
 let pozaLa = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   // T212 limiteaza cererile: la o citire picata raman pozitiile de la poza anterioara
 function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
@@ -529,7 +531,8 @@ async function pozitiiPentruPoza() {
     const p = { ticker: x.ticker, simbol: T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx };
     const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
     const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: 0.15 }) : null;
-    out.push({ ...p, prev: bare.length > 1 ? bare[bare.length - 2].c : null, la: bare.length ? bare[bare.length - 1].t : null, ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
+    // v98.1: `la` = cand a fost citit pretul T212 (pagina il arata cu chip „T212" cat e proaspat); `prev` = inchiderea ultimei sesiuni incheiate (NY)
+    out.push({ ...p, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
       niv: nivDinNiveluri(n, plan),   // stopul POZITIEI (urca dupa maxim), ca in pagina T212 a Radarului - nu stopul de intrare
       pondere: inv !== null && usd > 0 && cash.total > 0 ? x.quantity * x.currentPrice / usd * inv / cash.total : null });
   }
@@ -557,18 +560,41 @@ async function simboluriPentruPoza() {
   }
   return out;
 }
+// v98.1 (I-462): adresa tunelului (PORNESTE-SI-PE-TELEFON.bat scrie jurnalul in %TEMP%), doar daca raspunde ca Radar; o data la 5 minute
+let tunelLa = 0, tunelUrl = null;
+async function adresaRadarului() {
+  if (Date.now() - tunelLa < 5 * 60000) return tunelUrl;
+  tunelLa = Date.now(); tunelUrl = null;
+  try {
+    const u = Consilier.adresaTunel(fs.readFileSync(path.join(os.tmpdir(), "crypto-radar-tunel.log"), "utf8"));
+    if (u) { const r = await fetch(u + "/api/market?type=health", { signal: AbortSignal.timeout(6000) }); const j = r.ok ? await r.json() : null; if (j && j.service === "crypto-radar") tunelUrl = u; }
+  } catch {}
+  return tunelUrl;
+}
+let pozaOkLa = 0, ultimeleSimboluri = {};
 async function turaPoza() {
-  if (!PAZNIC_URL || !PAZNIC_TOKEN || pozaInLucru || Date.now() - pozaLa < POZA_MS) return;
+  const botiActivi = ultimiiBoti.filter((b) => b && b.id && b.activ !== false).length;
+  if (!PAZNIC_URL || !PAZNIC_TOKEN || pozaInLucru || Date.now() - pozaLa < cadentaPoza({ acum: Date.now(), botiActivi })) return;   // I-461: 2 min in piata / cu bot, 5 min in rest
   pozaInLucru = true; pozaLa = Date.now();
   try {
     let t212Eroare = null;
-    const [t212, boti, simboluri] = await Promise.all([
+    const [t212, boti, simboluri, radarUrl] = await Promise.all([
       pozitiiPentruPoza().then((l) => { ultimeleT212 = { lista: l, la: Date.now() }; return l; }).catch((e) => { t212Eroare = e.message; jurnal("poza: t212", e.message); return ultimeleT212.lista; }),
-      botiPentruPoza(), simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; })]);
-    const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri }), text = JSON.stringify(poza);
+      botiPentruPoza(), simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; }), adresaRadarului()]);
+    const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri }), text = JSON.stringify(poza);
     const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
-    if (!r.ok) jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120)); else jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", t212.length + " poziții", boti.length + " boți", simboluri.length + " simboluri");
-  } catch (e) { jurnal("poza: n-a plecat", e.message); pozaLa = Date.now() - POZA_MS + 60000; }
+    if (!r.ok) jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));
+    else { pozaOkLa = Date.now(); jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", t212.length + " poziții", boti.length + " boți", simboluri.length + " simboluri", radarUrl ? "tunel" : ""); }
+    // I-463: alertele pe simbolurile paginii (miscare > 2x ATR propriu, cumparare noua de insider) - o data pe zi per simbol
+    const m = meta(), st = m.simAlerte || (m.simAlerte = {}), prag = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+    for (const k of Object.keys(st)) if (k.slice(-10) < prag) delete st[k];
+    for (const a of alerteSimboluri(poza.simboluri, ultimeleSimboluri, Date.now())) {
+      if (st[a.cheie]) continue;
+      if (await trimiteAlerta({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, null, a.cheie.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60))) st[a.cheie] = true;
+    }
+    if (poza.simboluri.length) { ultimeleSimboluri = {}; for (const s of poza.simboluri) ultimeleSimboluri[s.s] = s; }
+    try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
+  } catch (e) { jurnal("poza: n-a plecat", e.message); pozaLa = Date.now() - 4 * 60000; }
   pozaInLucru = false;
 }
 

@@ -1,7 +1,7 @@
 // Proba pozei colectorului (v98): construirea din fixture-uri, regula insiderilor, campurile lipsa, marimea. Fara retea.
 // Rulare: node scripts/poza-v98.mjs
 import assert from "node:assert/strict";
-import { construiestePoza, insideri, clasifica, esantion, costLeiDinLoturi, nivDinNiveluri } from "./lib/poza.mjs";
+import { construiestePoza, insideri, clasifica, esantion, costLeiDinLoturi, nivDinNiveluri, prevClose, cadentaPoza, alerteSimboluri } from "./lib/poza.mjs";
 
 let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${e.stack.split("\n").slice(0, 3).join(" | ")}`); } }
@@ -80,6 +80,36 @@ await test("nivDinNiveluri: stopul POZITIEI (stopPozitie, cel care urca dupa max
   assert.deepEqual(nivDinNiveluri({ ...n, trend: { dir: "sus" } }, null).trend, "sus");
   assert.equal(nivDinNiveluri({ nivel: "fara-date", motiv: "prea putine zile" }, null), null);
   assert.equal(nivDinNiveluri(null, null), null);
+});
+await test("prevClose: inchiderea ultimei sesiuni INCHEIATE (ziua New York), nu bara de azi", () => {
+  const b = [{ t: Date.UTC(2026, 8, 24), c: 350.36 }, { t: Date.UTC(2026, 8, 25), c: 352.81 }];
+  assert.equal(prevClose(b, ACUM), 352.81, "duminica: vineri e ultima sesiune incheiata");
+  const cuLuni = b.concat([{ t: Date.UTC(2026, 8, 28), c: 360 }]);
+  assert.equal(prevClose(cuLuni, Date.UTC(2026, 8, 28, 15)), 352.81, "luni in sesiune: bara de azi nu e 'prev'");
+  assert.equal(prevClose(cuLuni, Date.UTC(2026, 8, 28, 21, 30)), 352.81, "luni dupa inchidere (17:30 NY): tot vineri");
+  assert.equal(prevClose(cuLuni, Date.UTC(2026, 8, 29, 10)), 360, "marti pre-market: luni");
+  assert.equal(prevClose([], ACUM), null); assert.equal(prevClose(null, ACUM), null);
+});
+await test("cadentaPoza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri); altfel 5 minute", () => {
+  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 18, 0), botiActivi: 0 }), 120000, "luni 14:00 NY");
+  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 9, 0), botiActivi: 0 }), 120000, "luni 5:00 NY = pre-market");
+  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 29, 1, 0), botiActivi: 0 }), 300000, "luni 21:00 NY = noapte");
+  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 0 }), 300000, "duminica");
+  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 1 }), 120000, "bot activ = 2 minute oricand");
+});
+await test("alerteSimboluri: miscare peste 2x ATR-ul propriu (o data pe zi) si cumparare noua de insider (fata de poza anterioara)", () => {
+  const c = Array.from({ length: 30 }, (_, i) => 100 + (i % 2 ? 0.5 : -0.5));   // ~1%/zi -> ATR ~1%
+  const ins = (verdict) => ({ form4: true, verdict, bp: verdict === "neut" ? 0 : 1, net: 5000, top: [{ d: "09-25", cine: "Ion Pop", rol: "Chief Executive Officer", f: "buy", act: 5000, val: 250000 }] });
+  const linistit = { s: "AAA", moneda: "$", pret: 100.4, prev: 100, closes30: c, insideri: ins("neut") };
+  const miscat = { s: "BBB", moneda: "$", pret: 104, prev: 100, closes30: c, insideri: ins("neut") };
+  const cumparat = { s: "CCC", moneda: "$", pret: 100, prev: 100, closes30: c, insideri: ins("bull1") };
+  const a = alerteSimboluri([linistit, miscat, cumparat], { CCC: { insideri: { verdict: "neut" } } }, ACUM);
+  assert.deepEqual(a.map((x) => x.cheie), ["sim-miscare-BBB-2026-09-27", "sim-insider-CCC-2026-09-27"]);
+  assert.match(a[0].titlu, /BBB/); assert.match(a[0].mesaj, /ATR/); assert.match(a[0].mesaj, /ipotez/i, "pragul e o ipoteza, se spune");
+  assert.match(a[1].titlu, /CCC/); assert.match(a[1].mesaj, /Ion Pop/);
+  assert.equal(alerteSimboluri([cumparat], { CCC: { insideri: { verdict: "bull1" } } }, ACUM).length, 0, "acelasi verdict ca la poza anterioara = nimic nou");
+  assert.equal(alerteSimboluri([cumparat], {}, ACUM).length, 1, "prima poza cu cumparare (fara anterior) = anunt");
+  assert.equal(alerteSimboluri([{ ...miscat, closes30: c.slice(0, 5) }], {}, ACUM).length, 0, "sub 15 inchideri nu judecam miscarea");
 });
 await test("marimea: 12 boti x 30 poze + 60 simboluri x top 3 ramane sub 512 KB", () => {
   const b = Array.from({ length: 12 }, (_, i) => ({ id: String(i), baza: "X" + i + ".PERP", directie: "long", levier: 3, investit: 100, gridJos: 1, gridSus: 2, pretCurent: 1.5, distantaLichidarePct: 20, ordinePerechi: 10, gridProfitBrut: 1, profitNet: 0.5, comisioane: -0.1, profitTotal: 0.4, plan: null, zero: 1.4, pret30: Array.from({ length: 30 }, () => 1.5), semafor: null }));
