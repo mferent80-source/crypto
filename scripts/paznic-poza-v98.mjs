@@ -22,7 +22,8 @@ await test("POST /poza: fara token 401; cu tokenul colectorului scrie poza si 'l
   assert.equal((await w.cere("/poza", "POST", { authorization: "Bearer " + CHEIE }, POZA)).status, 401, "cheia de citire NU scrie poza");
   const r = await w.cere("/poza", "POST", { authorization: "Bearer " + TOK }, POZA);
   assert.equal(r.status, 200); const j = await r.json(); assert.equal(j.ok, true); assert.equal(j.la, 1790530000000); assert.equal(j.marime, POZA.length);
-  assert.equal(w.kv.get("poza:la"), "1790530000000");
+  assert.equal(w.kv.size, 1, "o singura scriere KV pe poza (limita zilnica a KV-ului, si fara doua chei ne-atomice)");
+  assert.equal(w.kv.get("poza"), POZA);
   assert.equal((await w.cere("/poza", "POST", { authorization: "Bearer " + TOK }, "{nu e json")).status, 400);
   assert.equal((await w.cere("/poza", "POST", { authorization: "Bearer " + TOK }, JSON.stringify({ t212: [] }))).status, 400);
 });

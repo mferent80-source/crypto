@@ -21,7 +21,7 @@ import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { construiestePoza, costLeiDinLoturi } from "./lib/poza.mjs";
+import { construiestePoza, costLeiDinLoturi, nivDinNiveluri } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 const VERSIUNE_COLECTOR = "v98.0";
 
@@ -530,7 +530,7 @@ async function pozitiiPentruPoza() {
     const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
     const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: 0.15 }) : null;
     out.push({ ...p, prev: bare.length > 1 ? bare[bare.length - 2].c : null, la: bare.length ? bare[bare.length - 1].t : null, ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
-      niv: n && n.nivel === "ok" ? { stop: n.stop, tinta: n.tinta, trend: n.trend && n.trend.dir ? n.trend.dir : (typeof n.trend === "string" ? n.trend : null) } : null,
+      niv: nivDinNiveluri(n, plan),   // stopul POZITIEI (urca dupa maxim), ca in pagina T212 a Radarului - nu stopul de intrare
       pondere: inv !== null && usd > 0 && cash.total > 0 ? x.quantity * x.currentPrice / usd * inv / cash.total : null });
   }
   return out;

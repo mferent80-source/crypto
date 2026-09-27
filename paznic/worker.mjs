@@ -21,13 +21,17 @@ export async function pozaScrie(env, text) {
   if (text.length > POZA_MAX) return { status: 413, corp: { error: "poza prea mare", max: POZA_MAX, marime: text.length } };
   let p; try { p = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
   if (!p || typeof p !== "object" || Array.isArray(p) || !(Number(p.la) > 0)) return { status: 400, corp: { error: "lipseste 'la'" } };
-  await env.PAZNIC.put("poza", text); await env.PAZNIC.put("poza:la", String(Number(p.la)));
+  // o singura cheie (o scriere pe poza: KV-ul are limita zilnica de scrieri; si nicio pereche de chei ne-atomica)
+  await env.PAZNIC.put("poza", text);
   return { status: 200, corp: { ok: true, la: Number(p.la), marime: text.length } };
 }
+// ETag-ul = "la" din corp (primul camp al pozei), fara a doua cheie
+function laDinText(text) { const m = /"la"\s*:\s*(\d{10,})/.exec(String(text || "").slice(0, 200)); return m ? m[1] : null; }
 export async function pozaCiteste(env, ifNoneMatch) {
-  const la = await env.PAZNIC.get("poza:la"); if (!la) return { status: 404, corp: { error: "nicio poza inca" } };
+  const text = await env.PAZNIC.get("poza"); const la = laDinText(text);
+  if (!text || !la) return { status: 404, corp: { error: "nicio poza inca" } };
   const etag = '"' + la + '"'; if (ifNoneMatch && ifNoneMatch === etag) return { status: 304, etag };
-  return { status: 200, text: await env.PAZNIC.get("poza"), etag };
+  return { status: 200, text, etag };
 }
 // lista de simboluri a paginii, pentru colector (max 60, curatate, fara dubluri)
 export async function simboluriScrie(env, text) {

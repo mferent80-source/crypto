@@ -1,7 +1,7 @@
 // Proba pozei colectorului (v98): construirea din fixture-uri, regula insiderilor, campurile lipsa, marimea. Fara retea.
 // Rulare: node scripts/poza-v98.mjs
 import assert from "node:assert/strict";
-import { construiestePoza, insideri, clasifica, esantion, costLeiDinLoturi } from "./lib/poza.mjs";
+import { construiestePoza, insideri, clasifica, esantion, costLeiDinLoturi, nivDinNiveluri } from "./lib/poza.mjs";
 
 let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${e.stack.split("\n").slice(0, 3).join(" | ")}`); } }
@@ -71,6 +71,15 @@ await test("Trading 212 n-a raspuns: pozitiile de la poza anterioara raman, cu o
   assert.equal(p.t212.length, 1); assert.equal(p.t212La, ACUM - 600000); assert.match(p.t212Eroare, /limitat/); assert.equal(p.gol.t212, null);
   const g = construiestePoza({ acum: ACUM, versiune: "v98.0", t212: [], t212La: null, t212Eroare: "Trading 212 a limitat cererile", boti: [], simboluri: [] });
   assert.match(g.gol.t212, /n-a răspuns/); assert.doesNotMatch(g.gol.t212, /nicio poziție/);
+});
+await test("nivDinNiveluri: stopul POZITIEI (stopPozitie, cel care urca dupa maxim), nu stopul de intrare; tinta din plan bate tintaPozitie; trend string sau {dir}", () => {
+  // forma reala a lui ActiuniSemnale.niveluri(): stop/tinta sunt pentru o CUMPARARE NOUA; stopPozitie/tintaPozitie sunt ale pozitiei
+  const n = { nivel: "ok", trend: "jos", stop: 323.23, tinta: 400.0, stopPozitie: 350.63, tintaPozitie: 413.47, stopAtins: false, trailPct: 15 };
+  assert.deepEqual(nivDinNiveluri(n, null), { stop: 350.63, tinta: 413.47, trend: "jos" });
+  assert.deepEqual(nivDinNiveluri(n, { tinta: 420 }), { stop: 350.63, tinta: 420, trend: "jos" });
+  assert.deepEqual(nivDinNiveluri({ ...n, trend: { dir: "sus" } }, null).trend, "sus");
+  assert.equal(nivDinNiveluri({ nivel: "fara-date", motiv: "prea putine zile" }, null), null);
+  assert.equal(nivDinNiveluri(null, null), null);
 });
 await test("marimea: 12 boti x 30 poze + 60 simboluri x top 3 ramane sub 512 KB", () => {
   const b = Array.from({ length: 12 }, (_, i) => ({ id: String(i), baza: "X" + i + ".PERP", directie: "long", levier: 3, investit: 100, gridJos: 1, gridSus: 2, pretCurent: 1.5, distantaLichidarePct: 20, ordinePerechi: 10, gridProfitBrut: 1, profitNet: 0.5, comisioane: -0.1, profitTotal: 0.4, plan: null, zero: 1.4, pret30: Array.from({ length: 30 }, () => 1.5), semafor: null }));

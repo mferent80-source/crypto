@@ -44,6 +44,13 @@ export function costLeiDinLoturi(loturi, ticker, qty) {
   return cost * qty / q;
 }
 // zile calendaristice de la ziua de azi (UTC) pana la data (nu ore rotunjite: "in 25 de zile" e diferenta de date)
+// ActiuniSemnale.niveluri() -> ce intra in poza pentru o POZITIE: stopul care urca dupa maxim (stopPozitie) si tinta pozitiei
+// (tintaPozitie), NU stop/tinta (acelea sunt pentru o cumparare noua). Planul lui, daca are tinta, bate tinta calculata.
+export function nivDinNiveluri(n, plan) {
+  if (!n || n.nivel !== "ok") return null;
+  const trend = n.trend && typeof n.trend === "object" ? n.trend.dir : n.trend;
+  return { stop: nr(n.stopPozitie), tinta: nr(plan && plan.tinta) ?? nr(n.tintaPozitie), trend: trend ? String(trend) : null };
+}
 function zileDinData(iso, acum) {
   const d = Date.parse(String(iso || "") + "T00:00:00Z"); if (!Number.isFinite(d)) return null;
   const a = new Date(acum), azi = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate());
