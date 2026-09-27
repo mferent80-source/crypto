@@ -149,5 +149,22 @@ await test("socoteala pe bani: 'tine' urmat = castigul de dupa; 'iesi' urmat = c
   assert.equal(S.podeaPeBani([{ cod: "tine", total: 1 }], 5), null);
 });
 
+// ---- v97.6: planul propus la botul nou fara plan ----
+await test("propunePlan: planul lui de la VVV (+3/-14/12h pe 91,9) scalat la 96,63 USDT; fara plan: 3% / 15% / 12 h; fara nimic: null", async () => {
+  const p = T.propunePlan({ plus: 3, minus: 14, afaraOre: 12, investit: 91.9, nume: "VVV" }, 96.63);
+  assert.deepEqual([p.plus, p.minus, p.afaraOre], [3.2, 14.7, 12]); assert.match(p.nota, /după planul tău de la VVV \(\+3 \/ −14 USDT \/ 12 h, scalat de la 91,9 la 96,6 USDT\)/);
+  const f = T.propunePlan({ plus: 3, minus: 14 }, 50); assert.deepEqual([f.plus, f.minus, f.afaraOre], [3, 14, 12], "fără suma botului vechi: aceleași sume");
+  const d = T.propunePlan(null, 100); assert.deepEqual([d.plus, d.minus, d.afaraOre], [3, 15, 12]); assert.match(d.nota, /propunerea mea/);
+  assert.equal(T.propunePlan(null, null), null);
+});
+await test("ruta ultimulPlan: cel mai nou plan pe un bot Pionex - sare peste T212, peste probe si peste planurile goale", async () => {
+  const kv = new Map([["plan:2382", JSON.stringify({ plus: 2, minus: 10, la: 100 })], ["plan:2383", JSON.stringify({ plus: 3, minus: 14, afaraOre: 12, la: 200 })],
+    ["plan:t212-APLD_US_EQ", JSON.stringify({ stop: 5, la: 900 })], ["plan:proba-1", JSON.stringify({ plus: 9, minus: 9, proba: true, la: 999 })], ["plan:2384", "null"], ["alte", "x"]]);
+  const env = { APP_API_TOKEN: "proba-token-1234567890", ISTORIC: { get: async (k) => kv.get(k) ?? null, list: async ({ prefix }) => ({ keys: [...kv.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })) }) } };
+  const m = await import(`../functions/api/istoric-bot.js?t=${Date.now()}`);
+  const r = JSON.parse(await (await m.onRequestGet({ request: new Request("https://x.test/api/istoric-bot?action=ultimulPlan", { headers: { authorization: "Bearer proba-token-1234567890", "cf-connecting-ip": "10.97.6.1" } }), env })).text());
+  assert.equal(r.bot, "2383"); assert.equal(r.plan.plus, 3);
+});
+
 console.log(`CU_BOTUL_V963 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;

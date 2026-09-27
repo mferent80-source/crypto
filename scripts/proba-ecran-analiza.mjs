@@ -281,7 +281,7 @@ try {
   await test("Scan: click pe o moneda si pe o actiune -> nume, 'Acum', graficul, tabelul pe 7 perioade; 1A schimba graficul; cursorul arata pretul", async () => {
     for (const id of ["cBTC", "aNVDA"]) {
       await b.ev(`{const c=document.getElementById("scCaut");c.value="${id.slice(1)}";c.dispatchEvent(new Event("input",{bubbles:true}))}scanSt.deschis=null;scanDeseneaza();document.querySelector('.scRand[data-scid="${id}"]').click();true`);
-      await panaCand(b, `!!document.getElementById("scGrafSvg")&&document.querySelectorAll(".scStari tbody tr").length===7`, 30000, "graficul " + id);
+      await panaCand(b, `!!document.getElementById("scGrafSvg")&&document.querySelectorAll(".scStari tbody tr").length===7`, 60000, "graficul " + id);   // 60 s: dupa multe cereri Pionex la rand, coada serverului le intarzie
       const r = await b.ev(`(()=>({cine:document.querySelector(".scCine").innerText,acum:document.querySelector(".scAcum").innerText,eti:document.getElementById("scGrafEti").innerText,plan:document.querySelector(".scDetDr").innerText}))()`);
       assert.match(r.cine, id === "cBTC" ? /Bitcoin/ : /NVIDIA/i, "numele: " + r.cine); assert.match(r.acum, /^Acum: pe o săptămână/); assert.match(r.eti, /în 1 lună/);
       assert.match(r.plan, /Stop/); if (id === "cBTC") assert.match(r.plan, /Funding/);
@@ -372,6 +372,24 @@ try {
     assert.ok(await b.ev(`document.getElementById("tabloubot").classList.contains("on")`), "alerta de bot nu duce la Tablou");
     assert.equal(await b.ev(`alCentruNecitite()`), 0, "după ce le-a văzut, rămân necitite");
     await b.ev(`document.querySelector('#alCentru [data-alf="toate"]').click();true`);
+  });
+
+  // v97.6 (27.09, ICP pornit fara plan): botul fara plan -> banner sus in Tablou, cu propunerea dupa planul lui cel mai nou;
+  // "Pune planul propus" completeaza campurile si salveaza (aici salvarea e prinsa, nu ajunge pe server)
+  await test("Tablou: botul fara plan -> banner cu propunerea (planul lui cel mai nou, scalat) si 'Pune planul propus' completeaza + salveaza", async () => {
+    await b.ev(`navTo("tabloubot");window.__salvat=null;window.__tbPS=tbPlanSalveaza;tbPlanSalveaza=async function(){window.__salvat={plus:document.getElementById("tbPlanPlus").value,minus:document.getElementById("tbPlanMinus").value,ore:document.getElementById("tbPlanAfara").value}};
+      window.__botProba={id:"proba-976",baza:"ICP.PERP",quote:"USDT",investit:96.63,directie:"long",pretCurent:3.2,gridJos:3.0,gridSus:3.4,distantaLichidarePct:36,profitTotal:-0.3,activ:true};
+      tbPlan={botId:"proba-976",plan:null,la:Date.now()};tbPropPlan={botId:null,p:null,inLucru:false};["tbPlanPlus","tbPlanMinus","tbPlanAfara"].forEach(function(i){document.getElementById(i).value=""});
+      tbDeseneazaSemafor(window.__botProba);true`);
+    await panaCand(b, `(()=>{tbDeseneazaSemafor(window.__botProba);const e=document.querySelector("#tbSemafor .tbFaraPlan");return !!e&&/Propun/.test(e.innerText)})()`, 20000, "bannerul cu propunerea");
+    // propunerea asteptata = planul lui cel mai nou (de pe server), scalat la 96,63 USDT - calculata aici la fel
+    const ast = await b.ev(`(async()=>{const u=await getJSON("/api/istoric-bot?action=ultimulPlan");if(!u.plan)return TabloExtra.propunePlan(null,96.63);const f=await getJSON("/api/bot-orders?status=finished&limit=30"),a=await getJSON("/api/bot-orders"),x=(f.bots||[]).concat(a.bots||[]).find(y=>String(y.id)===String(u.bot));return TabloExtra.propunePlan({plus:u.plan.plus,minus:u.plan.minus,afaraOre:u.plan.afaraOre,investit:x?x.investit:null,nume:x?String(x.baza).replace(/\.PERP$/,""):null},96.63)})()`);
+    const v = (n) => String(n).replace(".", ","), t = await b.ev(`document.querySelector("#tbSemafor .tbFaraPlan").innerText`);
+    assert.match(t, /ICP n-are plan/); assert.ok(t.includes("+" + v(ast.plus) + " USDT") && t.includes("−" + v(ast.minus) + " USDT") && t.includes(ast.afaraOre + " h"), "propunerea: " + t);
+    assert.doesNotMatch(t, /botul de dinainte/, "numele botului cu planul n-a fost găsit");
+    await b.ev(`document.querySelector("#tbSemafor .tbFaraPlan button").click();true`); await asteapta(300);
+    assert.deepEqual(await b.ev(`window.__salvat`), { plus: v(ast.plus), minus: v(ast.minus), ore: String(ast.afaraOre) });
+    await b.ev(`tbPlanSalveaza=window.__tbPS;tbPlan={botId:null,plan:null,la:0};["tbPlanPlus","tbPlanMinus","tbPlanAfara"].forEach(function(i){document.getElementById(i).value=""});true`);
   });
 
   await test("fara exceptii neprinse in pagina", async () => {

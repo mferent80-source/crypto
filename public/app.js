@@ -5380,6 +5380,23 @@ async function tbAduSaptamana(b){
   try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(b.id));tbPlan={botId:b.id,plan:p&&p.plan||null,la:Date.now()};tbPlanInForm()}catch(e){}
   if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaSaptPlan(tbStare.bot);
 }
+// v97.6 (27.09, ICP pornit fara plan): propunerea de plan pentru botul care n-are, dupa planul lui cel mai nou
+var tbPropPlan={botId:null,p:null,inLucru:false};
+async function tbAduPropunerePlan(b){
+  if(!b||tbPropPlan.inLucru||tbPropPlan.botId===b.id)return;
+  tbPropPlan={botId:b.id,p:null,inLucru:true};
+  var ult=null;
+  try{var u=await getJSON("/api/istoric-bot?action=ultimulPlan");
+    if(u&&u.plan){ult={plus:u.plan.plus,minus:u.plan.minus,afaraOre:u.plan.afaraOre};
+      try{var fb=await getJSON("/api/bot-orders?status=finished&limit=30"),fa=await getJSON("/api/bot-orders").catch(function(){return null}),x=(fb&&fb.bots||[]).concat(fa&&fa.bots||[]).find(function(y){return y&&String(y.id)===String(u.bot)});if(x){ult.investit=botiNr(x.investit);ult.nume=String(x.baza||"").replace(/\.PERP$/,"")}}catch(e){}}}catch(e){}
+  tbPropPlan={botId:b.id,p:TabloExtra.propunePlan(ult,b.investit),inLucru:false};
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaSemafor(tbStare.bot);
+}
+function tbPunePlanPropus(){
+  var p=tbPropPlan.p;if(!p)return;
+  [["tbPlanPlus","plus"],["tbPlanMinus","minus"],["tbPlanAfara","afaraOre"]].forEach(function(x){var e=$(x[0]);if(e&&p[x[1]]!=null)e.value=String(p[x[1]]).replace(".",",")});
+  tbPlanSalveaza().then(function(){if(tbStare.bot)tbDeseneazaSemafor(tbStare.bot)});
+}
 function tbPlanInForm(){var p=tbPlan.plan||{};[["tbPlanPlus","plus"],["tbPlanMinus","minus"],["tbPlanAfara","afaraOre"]].forEach(function(x){var e=$(x[0]);if(e&&!e.value&&p[x[1]]!=null)e.value=String(p[x[1]])})}
 async function tbPlanSalveaza(){
   var b=tbStare.bot;if(!b)return;
@@ -5449,7 +5466,13 @@ function tbDeseneazaSemafor(b){
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f);
   var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:TabloExtra.dacaInchizi(b),plan:plan,costuri:TabloExtra.grileVsCosturi(b,Date.now()),btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
   var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"]},n=N[sm.nivel];
-  var h='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(sm.motiv.charAt(0).toUpperCase()+sm.motiv.slice(1))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p></div></div>';
+  // v97.6: botul n-are plan -> sus, inaintea semaforului: propunerea si un singur buton
+  var faraPlan=tbPlan.botId===b.id&&tbPlan.la&&!(tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre));
+  if(faraPlan&&tbPropPlan.botId!==b.id)tbAduPropunerePlan(b);
+  var pp=faraPlan&&tbPropPlan.botId===b.id?tbPropPlan.p:null;
+  var h=faraPlan?'<div class="tbFaraPlan">📝 <b>'+escapeHtml(String(b.baza||"Botul").replace(/\.PERP$/,""))+' n-are plan.</b> Fără țintă și prag scrise la rece, panoul nu-ți poate spune când să încasezi sau să ieși (nici podeaua).'
+    +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
+  h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(sm.motiv.charAt(0).toUpperCase()+sm.motiv.slice(1))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p></div></div>';
   if(sm.componente.length>1)h+='<ul class="tbSemComp">'+sm.componente.slice(1).map(function(c){return '<li class="'+(c.nivel==="iesi"?"bad":"tbWarn")+'">'+escapeHtml(c.motiv)+'</li>'}).join("")+'</ul>';
   if(!f)h+='<p class="tbSub">calculez fișa de azi pentru moneda botului (trendul, mișcarea, gridul propus)…</p>';
   if(!ac)h+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de acasă (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';

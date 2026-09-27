@@ -39,6 +39,10 @@ export async function onRequestGet({request,env}){
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
+  // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
+  if(action==="ultimulPlan"){let bun=null;try{const l=await env.ISTORIC.list({prefix:"plan:"});for(const k of (l&&l.keys)||[]){const id=k.name.slice(5);if(/^t212-/.test(id))continue;
+      let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(p.plus>0||p.minus>0))continue;if(!bun||(p.la||0)>(bun.plan.la||0))bun={bot:id,plan:p}}}catch{bun=null}
+    return json(bun||{bot:null,plan:null})}
   // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
   if(action==="piata"){let f=null,l=[],so=null;try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}try{so=JSON.parse(await env.ISTORIC.get("piata:socoteala")||"null")}catch{so=null}return json({funding:f,instantanee:Array.isArray(l)?l:[],socoteala:so})}
   // v96: pagina Scan - rezumatul zilnic al monedelor si al actiunilor + numele, de la colector

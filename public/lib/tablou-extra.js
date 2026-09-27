@@ -107,6 +107,18 @@ var TabloExtra = (function () {
     return { pret: pret, pastrezi: pastrezi, perna: PERNA, opritor: op, opritorPastreaza: op !== null ? totalLaPret(b, op) : null };
   }
 
+  // v97.6 "plan cerut la botul nou": ult = { plus, minus, afaraOre, investit?, nume? } (planul lui cel mai nou)
+  function propunePlan(ult, investitNou) {
+    var inv = nr(investitNou), r1 = function (v) { return v === null || !isFinite(v) ? null : Math.round(v * 10) / 10; };
+    if (ult && (nr(ult.plus) > 0 || nr(ult.minus) > 0)) {
+      var ui = nr(ult.investit), k = ui > 0 && inv > 0 ? inv / ui : 1, v = function (x) { return String(x).replace(".", ","); }, cum = ui > 0 && inv > 0 ? "scalat de la " + v(r1(ui)) + " la " + v(r1(inv)) + " USDT" : "aceleași sume";
+      return { plus: r1(nr(ult.plus) * k), minus: r1(nr(ult.minus) * k), afaraOre: nr(ult.afaraOre) || 12,
+        nota: "după planul tău de la " + (ult.nume || "botul de dinainte") + " (+" + v(ult.plus) + " / −" + v(ult.minus) + " USDT" + (ult.afaraOre ? " / " + ult.afaraOre + " h" : "") + ", " + cum + ")" };
+    }
+    if (inv > 0) return { plus: r1(inv * 0.03), minus: r1(inv * 0.15), afaraOre: 12, nota: "propunerea mea: +3% / −15% din investiție / 12 h afară din grid" };
+    return null;
+  }
+
   function legaturaJurnal(lista, b) {
     if (!Array.isArray(lista) || !b || !b.id) return null;
     for (var i = 0; i < lista.length; i++) if (lista[i] && String(lista[i].botId) === String(b.id)) return lista[i];
@@ -277,7 +289,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, legaturaJurnal: legaturaJurnal,
+  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

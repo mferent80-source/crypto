@@ -293,6 +293,15 @@ async function tura() {
       const p = Number(b.pretCurent), afara = Number.isFinite(p) && b.gridJos != null && b.gridSus != null && (p < Number(b.gridJos) || p > Number(b.gridSus));
       st._afaraDe = afara ? (st._afaraDe || acum) : null;
       if (pl && pl.plan && !pl.plan.proba) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe }, acum);   // v88: nu si planul unei probe
+      // v97.6: botul nou fara plan -> o data pe Discord, cu propunerea (dupa planul lui cel mai nou), la 10 min dupa pornire
+      if (pl && !pl.plan && !st._faraPlan && Number(b.pornitLa) > 0 && acum - Number(b.pornitLa) > 10 * 60000) {
+        let ult = null;
+        try { const u = await cere("/api/istoric-bot?action=ultimulPlan"); if (u && u.plan) { ult = { plus: u.plan.plus, minus: u.plan.minus, afaraOre: u.plan.afaraOre };
+          try { const fb = await cere("/api/bot-orders?status=finished&limit=30"), fa = await cere("/api/bot-orders").catch(() => null); const x = (fb && fb.bots || []).concat(fa && fa.bots || []).find((y) => String(y.id) === String(u.bot)); if (x) { ult.investit = Number(x.investit) || null; ult.nume = String(x.baza || "").replace(/\.PERP$/, ""); } } catch {} } } catch {}
+        const pp = TabloExtra.propunePlan(ult, b.investit), nume = String(b.baza || "botul").replace(/\.PERP$/, "");
+        const m = { nivel: "atentie", cheie: "fara-plan", titlu: nume + ": botul n-are plan", mesaj: "Fără țintă și prag scrise la rece nu te pot anunța când să încasezi sau să ieși." + (pp ? " Propun: plus +" + pp.plus + " USDT, minus −" + pp.minus + " USDT, " + pp.afaraOre + " h afară din grid (" + pp.nota + "). Îl pui din Tablou → „Pune planul propus”." : " Scrie-l în Tablou → „Planul tău”.") };
+        if (await trimiteAlerta(m, b.id, m.cheie)) st._faraPlan = true;
+      }
     } catch (e) { jurnal("plan", b.id, e.message); }
     // v82: semnalele (o data la ~5 min, cand vin lumanari noi) - notate si judecate dupa 24 h
     try { const sm = await semnaleBot(b, ctx, acum); if (sm) ctx.semnale = sm; } catch (e) { jurnal("semnale", b.id, e.message); }

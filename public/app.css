@@ -1937,3 +1937,5 @@ body.peScan .heroStrip,body.peScan .tabs,body.peScan .toolbar{display:none}
 #alerts .alGol{color:var(--muted);margin:6px 0}
 @media (max-width:760px){#alerts .alRand{grid-template-columns:12px minmax(0,1fr)}#alerts .alRand .alBtn{grid-column:2;justify-self:start}}
 body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none}
+#tabloubot .tbFaraPlan{margin:0 0 10px;padding:9px 12px;border:1px solid var(--warn);border-radius:10px;background:rgba(245,196,81,.07);font-size:13.5px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+#tabloubot .tbFaraPlan .actionGhost{margin-left:auto}
