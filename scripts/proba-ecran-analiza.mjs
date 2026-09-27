@@ -332,6 +332,21 @@ try {
     await b.ev(`window.grDinScan=null;navTo("scan");document.querySelector('#scRetete [data-scr="toate"]').click();scanSt.deschis=null;true`);
   });
 
+  // v97.3 (27.09: "apăs pe Fișa și mă duce aiurea, fără nimic legat de moneda respectivă"): butonul Fișa din Tablou
+  // ("Pe ce aș porni un bot acum") -> fisa ACELEI monede, pe ecran; niciodata fisa altei monede sub numele ei
+  await test("Tablou -> 'Fisa' pe o moneda propusa: pagina de grid cu fisa EI (nu a botului), verdictul pe ecran", async () => {
+    await b.ev(`navTo("tabloubot",true);true`);
+    await panaCand(b, `[...document.querySelectorAll("#tbIdei button")].some(x=>/^Fi[șs]a$/.test(x.textContent.trim()))`, 60000, "ideile de boti cu butonul Fisa");
+    const m = await b.ev(`(()=>{const x=[...document.querySelectorAll("#tbIdei button")].find(x=>/^Fi[șs]a$/.test(x.textContent.trim()));x.click();return /'([^']+)'/.exec(x.dataset.actionClick)[1]})()`);
+    await asteapta(400);
+    const intai = await b.ev(`({f:grStare.fisa&&grStare.fisa.simbol,txt:document.getElementById("grFisa").innerText.slice(0,120)})`);
+    if (intai.f && intai.f !== m + "_USDT_PERP") assert.match(intai.txt, new RegExp("Calculez fișa pentru " + m), "a arătat fișa altei monede: " + intai.f);
+    await panaCand(b, `grStare.fisa&&grStare.fisa.simbol===${JSON.stringify(m + "_USDT_PERP")}&&!grStare.inLucru`, 90000, "fisa monedei " + m);
+    await asteapta(900);
+    const r = await b.ev(`(()=>{const v=document.querySelector("#grFisa .grVerdict"),q=v.getBoundingClientRect();return {pag:document.getElementById("gridset").classList.contains("on"),mon:document.getElementById("grMoneda").value,top:q.top,h:innerHeight}})()`);
+    assert.ok(r.pag); assert.equal(r.mon, m); assert.ok(r.top >= 0 && r.top < r.h * 0.8, "verdictul fișei nu e pe ecran: top " + r.top);
+  });
+
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);
   });

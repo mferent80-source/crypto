@@ -1912,3 +1912,6 @@ body.peScan .heroStrip,body.peScan .tabs,body.peScan .toolbar{display:none}
   #scan .scRand>span:nth-child(7){grid-area:t}#scan .scRand>span:nth-child(11){grid-area:k;min-width:58px}
   #scan .scRand>span:nth-child(6),#scan .scRand>span:nth-child(8),#scan .scRand>span:nth-child(9),#scan .scRand>span:nth-child(10){display:none}
   #scan .scDr{margin-left:0}}
+/* v97.3: dus la fisa din butonul Fisa / Scan - sa nu ramana sub bara de sus fixa */
+#grFisa{scroll-margin-top:90px}
+@media (max-width:760px){#grFisa{scroll-margin-top:150px}}

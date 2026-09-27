@@ -250,8 +250,10 @@ function tbIdeiRender() {
   }).join("");
   box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>';
 }
+// v97.3: acelasi drum ca din clasament / Scan: moneda aleasa, calculul ei, pagina dusa la fisa (nu lasata sus)
 function gridDeschideMoneda(m) {
   navTo("gridset", true);
+  if (typeof gridClasamentAlege === "function") { gridClasamentAlege(m); return; }
   var e = $("grMoneda"); if (e) e.value = m;
   if (typeof gridCalculeaza === "function") gridCalculeaza("fortat");
 }

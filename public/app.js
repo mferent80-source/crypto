@@ -4914,6 +4914,8 @@ async function gridCalculeaza(fortat){
   }catch(e){grStare.fisa=null;grStare.eroare=grTextEroare(e)}
   finally{grStare.inLucru=false}
   renderGrid();
+  // v97.3: venit din "Fișa" / Scan / clasament -> dupa calcul, pagina merge la fisa monedei alese (si pe telefon)
+  if(grStare.duLaFisa&&grStare.duLaFisa===simbol&&(grStare.fisa||grStare.eroare)){grStare.duLaFisa=null;if($("grFisa"))$("grFisa").scrollIntoView({behavior:"smooth",block:"start"})}
   // a apasat pe alta moneda / alta directie cat se calcula: refacem pe ce e ACUM in inputuri
   if(grStare.reface){grStare.reface=false;gridCalculeaza('fortat')}
 }
@@ -5126,7 +5128,7 @@ function renderGridLaborator(){
   var pp=function(o,k){return P(o&&o[k]&&o[k].pePlus)};
   box.innerHTML='<p class="grNota">Un grid NEUTRU standard, simulat pe fiecare fereastră de 2 zile, cu condițiile știute la pornire. „Dovedit” = aceeași diferență pe primele 2/3 și pe ultima treime (nevăzută), iar intervalele nu se ating. Altfel: n-am aflat — nu înseamnă că nu există, ci că datele nu ajung.</p>'+L.intrebari.map(function(q){var v=V[q.verdict]||V["n-am-aflat"];return '<div class="grLab"><b>'+escapeHtml(q.titlu)+'</b> <span class="'+v[1]+'">'+v[0]+'</span><div>'+escapeHtml(q.eticheteA)+': '+g(q.A)+'</div><div>'+escapeHtml(q.eticheteB)+': '+g(q.B)+'</div><div class="tbSub">pe zilele de alegere: '+pp(q.alegere,"A")+' vs '+pp(q.alegere,"B")+' · pe cele nevăzute: '+pp(q.nevazut,"A")+' vs '+pp(q.nevazut,"B")+'</div></div>'}).join("");
 }
-function gridClasamentAlege(simbol){if($("grMoneda"))$("grMoneda").value=String(simbol||"").replace(/_USDT_PERP$/,"");gridCalculeaza('fortat');if($("grFisa"))$("grFisa").scrollIntoView({behavior:"smooth",block:"start"})}
+function gridClasamentAlege(simbol){if($("grMoneda"))$("grMoneda").value=String(simbol||"").replace(/_USDT_PERP$/,"");grStare.duLaFisa=grSimbol(simbol);gridCalculeaza('fortat');setTimeout(function(){if($("grFisa"))$("grFisa").scrollIntoView({behavior:"smooth",block:"start"})},150)}
 function renderGridClasament(){
   var box=$("grClasament"),sub=$("grClasamentSub");if(!box)return;
   var c=grClasament.date,P=GridCalcul.procent;
@@ -5208,8 +5210,11 @@ function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
   if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
   if(grStare.eroare){box.innerHTML='<div class="tbBloc"><p class="bad">'+escapeHtml(grStare.eroare)+'</p></div>';return}
-  var f=grStare.fisa;
-  if(!f){if(!grStare.inLucru)box.innerHTML='<div class="emptyState">Scrie o monedă (de exemplu MET) și suma. Fișa se recalculează singură la 5 minute cât stă deschisă.</div>';return}
+  var f=grStare.fisa,ceScrie=grSimbol($("grMoneda")&&$("grMoneda").value);
+  // v97.3 (27.09: "apăs pe Fișa și mă duce aiurea, fără nimic legat de moneda respectivă"): fisa altei monede (cea calculata
+  // inainte, de ex. a botului) nu se arata sub numele celei alese; cat se calculeaza, se spune CARE moneda
+  if(f&&ceScrie&&f.simbol!==ceScrie){box.innerHTML='<div class="emptyState">Calculez fișa pentru <b>'+escapeHtml(ceScrie.replace(/_USDT_PERP$/,""))+'</b>… (aduc ~30 de zile de lumânări)</div>';return}
+  if(!f){box.innerHTML=grStare.inLucru&&ceScrie?'<div class="emptyState">Calculez fișa pentru <b>'+escapeHtml(ceScrie.replace(/_USDT_PERP$/,""))+'</b>… (aduc ~30 de zile de lumânări)</div>':'<div class="emptyState">Scrie o monedă (de exemplu MET) și suma. Fișa se recalculează singură la 5 minute cât stă deschisă.</div>';return}
   var st=f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive;
   var h='<div class="grVerdict '+niv[1]+'"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>';
   h+=grPoartaHtml(f);
