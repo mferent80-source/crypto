@@ -17,6 +17,7 @@ import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
 import { turaDimineata as turaDimineataModul } from "./lib/tura-dimineata.mjs";
 import { turaIdei as turaIdeiModul } from "./lib/tura-idei.mjs";
 import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
+import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
@@ -94,6 +95,7 @@ const Alerte = incarca("alerte.js", "Alerte");
 const IndicatoriBot = incarca("indicatori-bot.js", "IndicatoriBot");
 const Acasa = incarca("acasa.js", "Acasa");   // v93: rezumatul zilnic al actiunilor Nasdaq 100 (Home)   // v91.11: "Mediul botului" (acelasi ca in Tablou)
 const Directie = incarca("directie.js", "Directie");
+const Scan = incarca("scan.js", "Scan");   // v96: rezumatul zilnic pentru pagina Scan
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
 const GridClasament = incarca("grid-clasament.js", "GridClasament");
@@ -112,7 +114,7 @@ const NDX = (() => { try { const m = fs.readFileSync(path.join(RAD, "public", "a
 const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade);
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei].every(Boolean) && NDX.length > 90); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei].every(Boolean) && NDX.length > 90); process.exit(0); }
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 // v91.11 (1): pe tura, cate cereri de PRETURI Pionex au mers / au picat (26.09: 1 ora de preturi moarte fara nicio alerta)
 let preturiTura = { ok: 0, rau: 0, eroare: null };
@@ -605,13 +607,28 @@ async function turaPiataColector() {
   piataInLucru = false;
 }
 
+// v96: pagina Scan - rezumatul zilnic al top 100 PERP (o data pe ora) si al actiunilor (Nasdaq 100 + ale lui),
+// cu ritmul lui in scripts/lib/tura-scan.mjs; porneste dupa clasament (monedele vin din el)
+let scanInLucru = false;
+async function turaScanColector() {
+  if (scanInLucru || process.env.COLECTOR_FARA_CLASAMENT) return;
+  scanInLucru = true;
+  try {
+    const m = meta(); m.scan = m.scan || {};
+    const afara = async (u) => { const r = await fetch(u, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" }, signal: AbortSignal.timeout(20000) }); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); };
+    await turaScanModul({ cere, trimite, afara, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Scan, GridCalcul, NDX }, m.scan, Date.now());
+    try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
+  } catch (e) { jurnal("scan ESEC", e.message); }
+  scanInLucru = false;
+}
+
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message));
   turaCopie();
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).catch((e) => jurnal("idei/dimineata", e.message));
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
 }

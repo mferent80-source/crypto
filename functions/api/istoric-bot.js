@@ -41,6 +41,8 @@ export async function onRequestGet({request,env}){
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
   // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
   if(action==="piata"){let f=null,l=[],so=null;try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}try{so=JSON.parse(await env.ISTORIC.get("piata:socoteala")||"null")}catch{so=null}return json({funding:f,instantanee:Array.isArray(l)?l:[],socoteala:so})}
+  // v96: pagina Scan - rezumatul zilnic al monedelor si al actiunilor + numele, de la colector
+  if(action==="scan"){const ia=async k=>{try{return JSON.parse(await env.ISTORIC.get(k)||"null")}catch{return null}};return json({crypto:await ia("scan:c"),actiuni:await ia("scan:a"),nume:(await ia("scan:nume"))||{}})}
   if(action!=="citeste")return json({error:"Unsupported action"},400);
   const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);
   const ore=Math.min(168,Math.max(1,Math.floor(Number(u.searchParams.get("ore")))||24));
@@ -54,7 +56,7 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>65536)return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="scan"?393216:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   if(action==="piata"){
     const txt=(v,k)=>typeof v==="string"?v.slice(0,k):"",sim=v=>txt(v,16).toUpperCase().replace(/[^A-Z0-9]/g,"");
@@ -84,6 +86,27 @@ export async function onRequestPost({request,env}){
     const de=Date.now()-PASTRARE_MS,pastrat=fara.filter(x=>x.t>=de);
     await env.ISTORIC.put("ist:"+bot,JSON.stringify(pastrat));
     return json({ok:true,intrari:pastrat.length});
+  }
+  if(action==="scan"){
+    // v96: un rand = rezumatul zilnic (Scan.rezumat) + pentru monede campurile din clasament; restul se arunca
+    const NR=["p","ch","ch7","ch30","rsi","mis","dMax20","dMin20","atrPct","vol","rang","gs","grile","pas","traversari","latime"],BO=["e20","e50","sparge","miscare","inafara"];
+    const rand=x=>{if(!x||typeof x!=="object")return null;const s=String(x.s||"").toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,16);if(!s||!(nr(x.p)>0))return null;
+      const o={s};NR.forEach(k=>{const v=nr(x[k]);if(v!==null)o[k]=v});BO.forEach(k=>{if(x[k]!==undefined)o[k]=!!x[k]});o.e200=x.e200===null||x.e200===undefined?null:!!x.e200;
+      if(typeof x.tk==="string")o.tk=x.tk.replace(/[^A-Za-z0-9._]/g,"").slice(0,24);
+      if(["evita","candidat","fara-date"].includes(x.stare))o.stare=x.stare;if(["long","neutru","short"].includes(x.dir))o.dir=x.dir;if(["tare","mediu","slab"].includes(x.tarie))o.tarie=x.tarie;
+      o.spark=(Array.isArray(x.spark)?x.spark:[]).slice(-30).map(nr).filter(v=>v!==null&&v>0);return o};
+    if(corp&&(corp.fel==="c"||corp.fel==="a")){
+      const la=nr(corp.la),l=Array.isArray(corp.randuri)?corp.randuri.slice(0,300).map(rand).filter(Boolean):[];
+      if(la===null||!l.length)return json({error:"Lipseste la sau randuri"},400);
+      await env.ISTORIC.put("scan:"+corp.fel,JSON.stringify({la,randuri:l}));
+      return json({ok:true,randuri:l.length});
+    }
+    if(corp&&corp.nume&&typeof corp.nume==="object"){
+      const o={};Object.keys(corp.nume).slice(0,800).forEach(k=>{if(/^[ca][A-Z0-9.-]{1,16}$/.test(k)&&typeof corp.nume[k]==="string")o[k]=corp.nume[k].replace(/[<>]/g,"").slice(0,80)});
+      await env.ISTORIC.put("scan:nume",JSON.stringify(o));
+      return json({ok:true,nume:Object.keys(o).length});
+    }
+    return json({error:"Lipseste fel sau nume"},400);
   }
   if(action==="clasament"){
     const la=nr(corp&&corp.la),monede=corp&&Array.isArray(corp.monede)?corp.monede:null;
