@@ -2,8 +2,47 @@
 // tac FARA niciun semn. Colectorul bate aici la 5 minute (POST /bataie, cu tokenul PAZNIC_TOKEN); cronul de la 10 minute
 // verifica: fara bataie de 30 de minute -> un mesaj pe Discord; tot linistit -> cate o amintire la 6 ore; bataia revine ->
 // "a revenit". Secretele (DISCORD_WEBHOOK, PAZNIC_TOKEN) stau in Cloudflare (wrangler secret put), nu in cod.
+// v98: /poza (poza colectorului pentru pagina alerts din Trading Tools) si /simboluri (lista paginii), cheia de citire
+// CHEIE_CITIRE (wrangler secret put), CORS doar pentru originea suitei.
 const TACE_MS = 30 * 60000, AMINTIRE_MS = 6 * 3600000;
-const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+const POZA_MAX = 512 * 1024, SIMBOLURI_MAX = 60;
+const ORIGINI = [/^https:\/\/mferent80-source\.github\.io$/, /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/];
+export function origineOk(o) { return !!o && ORIGINI.some((r) => r.test(String(o))); }
+function cors(request) {
+  const o = request.headers.get("origin");
+  if (!origineOk(o)) return {};
+  return { "access-control-allow-origin": o, "access-control-allow-headers": "authorization, content-type, if-none-match", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-expose-headers": "etag", "vary": "origin" };
+}
+const J = (o, s = 200, h = {}) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", "cache-control": "no-store", ...h } });
+function autorizat(request, secret) { const s = String(secret || ""); return s.length >= 20 && request.headers.get("authorization") === "Bearer " + s; }
+
+// poza colectorului: scrisa de acasa cu tokenul, citita de pagina cu cheia de citire
+export async function pozaScrie(env, text) {
+  if (text.length > POZA_MAX) return { status: 413, corp: { error: "poza prea mare", max: POZA_MAX, marime: text.length } };
+  let p; try { p = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
+  if (!p || typeof p !== "object" || Array.isArray(p) || !(Number(p.la) > 0)) return { status: 400, corp: { error: "lipseste 'la'" } };
+  await env.PAZNIC.put("poza", text); await env.PAZNIC.put("poza:la", String(Number(p.la)));
+  return { status: 200, corp: { ok: true, la: Number(p.la), marime: text.length } };
+}
+export async function pozaCiteste(env, ifNoneMatch) {
+  const la = await env.PAZNIC.get("poza:la"); if (!la) return { status: 404, corp: { error: "nicio poza inca" } };
+  const etag = '"' + la + '"'; if (ifNoneMatch && ifNoneMatch === etag) return { status: 304, etag };
+  return { status: 200, text: await env.PAZNIC.get("poza"), etag };
+}
+// lista de simboluri a paginii, pentru colector (max 60, curatate, fara dubluri)
+export async function simboluriScrie(env, text) {
+  let c; try { c = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
+  const l = c && Array.isArray(c.simboluri) ? c.simboluri : null; if (!l) return { status: 400, corp: { error: "lipseste 'simboluri'" } };
+  const out = [], vazut = new Set();
+  for (const x of l) {
+    const s = String(x && x.s || "").toUpperCase().replace(/[^A-Z0-9.\-=^]/g, "").slice(0, 16);
+    if (!s || vazut.has(s)) continue; vazut.add(s); out.push({ s, nota: String(x && x.nota || "").slice(0, 80) });
+    if (out.length >= SIMBOLURI_MAX) break;
+  }
+  await env.PAZNIC.put("simboluri", JSON.stringify({ simboluri: out, la: Date.now() }));
+  return { status: 200, corp: { ok: true, n: out.length } };
+}
+export async function simboluriCiteste(env) { let o = null; try { o = JSON.parse(await env.PAZNIC.get("simboluri") || "null"); } catch { o = null; } return o && Array.isArray(o.simboluri) ? o : { simboluri: [], la: null }; }
 
 async function citeste(env) { try { return JSON.parse(await env.PAZNIC.get("stare") || "null") || {}; } catch { return {}; } }
 async function scrie(env, s) { await env.PAZNIC.put("stare", JSON.stringify(s)); }
@@ -44,14 +83,32 @@ export async function verifica(env, acum, f = fetch) {
 
 export default {
   async fetch(request, env) {
-    const u = new URL(request.url);
-    if (u.pathname !== "/bataie") return J({ serviciu: "paznicul colectorului Crypto Radar" });
-    if (request.method !== "POST") return J({ error: "doar POST" }, 405);
-    const tok = String(env.PAZNIC_TOKEN || "");
-    if (tok.length < 20 || request.headers.get("authorization") !== "Bearer " + tok) return J({ error: "neautorizat" }, 401);
-    let corp = null; try { corp = JSON.parse((await request.text()).slice(0, 2000)); } catch { corp = null; }
-    const s = await bataie(env, corp, Date.now());
-    return J({ ok: true, la: s.la });
+    const u = new URL(request.url), h = cors(request), m = request.method;
+    if (m === "OPTIONS") return new Response(null, { status: 204, headers: h });
+    if (u.pathname === "/bataie") {
+      if (m !== "POST") return J({ error: "doar POST" }, 405, h);
+      if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h);
+      let corp = null; try { corp = JSON.parse((await request.text()).slice(0, 2000)); } catch { corp = null; }
+      const s = await bataie(env, corp, Date.now());
+      return J({ ok: true, la: s.la }, 200, h);
+    }
+    if (u.pathname === "/poza") {
+      if (m === "POST") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); const r = await pozaScrie(env, await request.text()); return J(r.corp, r.status, h); }
+      if (m === "GET") {
+        if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h);
+        const r = await pozaCiteste(env, request.headers.get("if-none-match"));
+        if (r.status === 304) return new Response(null, { status: 304, headers: { ...h, etag: r.etag } });
+        if (r.status !== 200) return J(r.corp, r.status, h);
+        return new Response(r.text, { status: 200, headers: { ...h, "content-type": "application/json", "cache-control": "no-store", etag: r.etag } });
+      }
+      return J({ error: "doar GET sau POST" }, 405, h);
+    }
+    if (u.pathname === "/simboluri") {
+      if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await simboluriScrie(env, await request.text()); return J(r.corp, r.status, h); }
+      if (m === "GET") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); return J(await simboluriCiteste(env), 200, h); }
+      return J({ error: "doar GET sau POST" }, 405, h);
+    }
+    return J({ serviciu: "paznicul colectorului Crypto Radar" }, 200, h);
   },
   async scheduled(event, env, ctx) { ctx.waitUntil(verifica(env, Date.now())); }
 };
