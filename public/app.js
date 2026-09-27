@@ -2979,7 +2979,7 @@ function renderAlerts(){
  updateAlertBadges()
 }
 function updateAlertBadges(){
- const n=appAlerts().filter(x=>!x.read).length;for(const id of ["sideAlertCount","topAlertCount"]){const e=$(id);if(e){e.textContent=n;e.style.display=n?"inline-grid":"none"}}
+ const n=appAlerts().filter(x=>!x.read).length+(typeof alCentruNecitite==="function"?alCentruNecitite():0);for(const id of ["sideAlertCount","topAlertCount"]){const e=$(id);if(e){e.textContent=n;e.style.display=n?"inline-grid":"none"}}
 }
 function clearAlerts(){localStorage.removeItem("radarAlerts");renderAlerts();toast("Alerts cleared","warn")}
 function markAlertsRead(){let a=appAlerts();a.forEach(x=>x.read=true);putAlerts(a)}
@@ -3054,7 +3054,7 @@ function navTo(id,load=false){
    else if(id==="structurelab")renderStructureSession();
    else if(id==="intel"){loadContextIntel(true);loadIntelNews(false);loadExternalIntelligence(false).catch(()=>{})}
  } else {
-   if(id==="alerts")renderAlerts();
+   if(id==="alerts"){renderAlerts();if(typeof alCentruPorneste==="function")alCentruPorneste(true)}   // v97.4: si alertele de acasa (boti, actiuni, piata)
    if(id==="desk")renderDailyDesk();
    if(id==="opportunity")renderOpportunity();
    if(id==="calibration")renderCalibrationLab();
@@ -3135,7 +3135,7 @@ function loadPionexUniverseCache(){
 
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
-function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peAcasa",id==="dash");document.body.classList.toggle("peScan",id==="scan");if(typeof acasaBara==="function")acasaBara();document.body.classList.toggle("peT212",id==="t212");document.body.classList.toggle("peJurnal",id==="jurnaltrade");var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
+function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peAcasa",id==="dash");document.body.classList.toggle("peScan",id==="scan");document.body.classList.toggle("peAlerte",id==="alerts");if(typeof acasaBara==="function")acasaBara();document.body.classList.toggle("peT212",id==="t212");document.body.classList.toggle("peJurnal",id==="jurnaltrade");var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 const MARKET_BASES=[

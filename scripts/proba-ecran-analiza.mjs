@@ -82,7 +82,11 @@ async function panaCand(b, expr, ms, ce) {
 }
 
 let teste = 0, picate = 0;
+// v97.4: testele care cer un bot pornit se sar (cu mesaj) cand la Pionex nu e niciunul - nu e o greseala de cod
+let areBot = null;
 async function test(nume, fn) {
+  if (/^(pe Tabloul botului|Tabloul:)/.test(nume) && areBot === false) { console.log(`  SARIT ${nume}
+       fără bot activ la Pionex acum`); return; }
   teste++;
   try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${e.message}`); }
 }
@@ -153,6 +157,8 @@ try {
     await asteapta(2500);   // deep link-ul ruleaza la ~0,9 s dupa incarcare
     return b.ev(`(document.querySelector(".panel.on")||{}).id`);
   };
+  areBot = await b.ev(`(async()=>{try{const d=await getJSON("/api/bot-orders");return (d.bots||[]).some(x=>x&&x.activ)}catch(e){return null}})()`);
+  if (areBot === false) console.log("  (fără bot activ la Pionex: testele Tabloului care au nevoie de un bot se sar)");
   await test("pe Tabloul botului + reincarcare -> ramane pe Tabloul botului, cu datele incarcate", async () => {
     await b.ev(`navTo("tabloubot",true);true`);
     assert.equal(await reincarca(), "tabloubot");
@@ -345,6 +351,27 @@ try {
     await asteapta(900);
     const r = await b.ev(`(()=>{const v=document.querySelector("#grFisa .grVerdict"),q=v.getBoundingClientRect();return {pag:document.getElementById("gridset").classList.contains("on"),mon:document.getElementById("grMoneda").value,top:q.top,h:innerHeight}})()`);
     assert.ok(r.pag); assert.equal(r.mon, m); assert.ok(r.top >= 0 && r.top < r.h * 0.8, "verdictul fișei nu e pe ecran: top " + r.top);
+  });
+
+  // v97.4 (27.09: "leagă pagina Alerts cu boții și stocks, să apară și acolo automat")
+  await test("Alerts: alertele de acasa apar singure (boti, actiuni, piata), filtrele si 'Doar importante' merg, butonul duce la pagina lor", async () => {
+    await b.ev(`try{localStorage.setItem("alCentruVazutLa","0")}catch(e){};alCentruPorneste(true);true`); await asteapta(1500);
+    const nou = await b.ev(`alCentruNecitite()`); assert.ok(nou > 0, "nicio alertă necitită"); 
+    assert.ok((await b.ev(`Number(document.getElementById("sideAlertCount").textContent)`)) >= nou, "insigna din meniu nu le numără");
+    await b.ev(`navTo("alerts");true`);
+    await panaCand(b, `document.querySelectorAll("#alCentru .alRand").length>0`, 20000, "alertele de acasa pe pagina");
+    const r = await b.ev(`(()=>{const f=[...document.querySelectorAll("#alCentru .alFila")].map(x=>x.innerText),n=document.querySelectorAll("#alCentru .alRand").length;return {f,n,zi:document.querySelector("#alCentru .alZi").innerText,vechi:!!document.getElementById("alertList")}})()`);
+    assert.equal(r.f.length, 4); assert.match(r.f[1], /Boți și crypto \d+/); assert.match(r.f[2], /Acțiuni \d+/); assert.ok(r.vechi, "lista veche a dispărut");
+    await b.ev(`document.querySelector('#alCentru [data-alf="actiuni"]').click();true`); await asteapta(200);
+    const act = await b.ev(`[...document.querySelectorAll("#alCentru .alRand .alMeta")].map(x=>x.innerText)`);
+    assert.ok(act.every((t) => /Acțiuni/.test(t)), "la Acțiuni au apărut și altele: " + act.join(" | "));
+    await b.ev(`document.getElementById("alImp").click();true`); await asteapta(200);
+    assert.ok(await b.ev(`[...document.querySelectorAll("#alCentru .alRand")].every(x=>/atentie|critic/.test(x.className))`), "«doar importante» lasă și info");
+    await b.ev(`document.getElementById("alImp").click();document.querySelector('#alCentru [data-alf="boti"]').click();true`); await asteapta(200);
+    await b.ev(`document.querySelector('#alCentru .alRand [data-alpag]').click();true`); await asteapta(600);
+    assert.ok(await b.ev(`document.getElementById("tabloubot").classList.contains("on")`), "alerta de bot nu duce la Tablou");
+    assert.equal(await b.ev(`alCentruNecitite()`), 0, "după ce le-a văzut, rămân necitite");
+    await b.ev(`document.querySelector('#alCentru [data-alf="toate"]').click();true`);
   });
 
   await test("fara exceptii neprinse in pagina", async () => {
