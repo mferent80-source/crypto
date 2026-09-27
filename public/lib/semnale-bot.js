@@ -162,21 +162,35 @@ var SemnaleBot = (function () {
       if (e.dreptate !== null && e.dreptate !== undefined) return e;
       if (!(acum - e.t > 24 * ORA) || e.total === null) return e;
       var o = {}; for (var k in e) o[k] = e[k];
-      o.dreptate = e.nivel === "tine" ? t >= e.total - prag : t < e.total - prag;
+      // v97.1: "podea" si "cu-botul" spun tot "tine-l" (chiar cand podeaua e 🟡) -> se judeca drept "tine"
+      o.dreptate = stai(e) ? t >= e.total - prag : t < e.total - prag;
       o.totalDupa = t; o.judecatLa = acum;
       return o;
     });
   }
+  function stai(e) { return e.nivel === "tine" || e.cod === "podea" || e.cod === "cu-botul"; }
+  // v97.1 (ideea 3, 27.09): si PE BANI - cat ar fi adus semnalul, urmat, in 24 h: "tine" = totalul de dupa minus cel de atunci,
+  // "iesi / atentie" = ce pastrai iesind (totalul de atunci) minus ce a ramas daca stateai. Pozitiv = semnalul a ajutat.
   function socoteala(log) {
     var r = {};
     (Array.isArray(log) ? log : []).forEach(function (e) {
-      var x = r[e.cod] || (r[e.cod] = { n: 0, judecate: 0, corecte: 0, rata: null });
+      var x = r[e.cod] || (r[e.cod] = { n: 0, judecate: 0, corecte: 0, rata: null, bani: 0, baniN: 0 });
       x.n++; if (e.dreptate === true || e.dreptate === false) { x.judecate++; if (e.dreptate) x.corecte++; }
+      var a = nr(e.total), d = nr(e.totalDupa);
+      if ((e.dreptate === true || e.dreptate === false) && a !== null && d !== null) { x.bani += stai(e) ? d - a : a - d; x.baniN++; }
     });
     Object.keys(r).forEach(function (k) { r[k].rata = r[k].judecate ? r[k].corecte / r[k].judecate : null; });
     return r;
   }
 
-  return { sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala };
+  // v97.1: "tinta devine podea" pe banii lui - prima data cand tinta a fost atinsa (in jurnalul de semnale) fata de acum
+  function podeaPeBani(log, totalAcum) {
+    var t = nr(totalAcum), l = Array.isArray(log) ? log : [], prima = null;
+    for (var i = 0; i < l.length; i++) { var e = l[i]; if (e && (e.cod === "podea" || (e.cod === "plan" && /ținta/.test(e.motiv || ""))) && nr(e.total) !== null) { prima = e; break; } }
+    if (!prima || t === null) return null;
+    return { la: prima.t, laIesire: prima.total, acum: t, dif: t - prima.total };
+  }
+
+  return { podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;

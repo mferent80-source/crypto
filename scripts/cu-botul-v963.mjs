@@ -136,5 +136,18 @@ await test("Discord 'poti urca opritorul': o data pe treapta (max 1 USDT, 1/4 di
   const sub = { ...bb(30.4, 26.6), profitTotal: 2 }; assert.equal(ev(sub, st).stare, null, "ținta nu mai e atinsă: treapta se uită, ciclu nou");
 });
 
+// ---- v97.1: socoteala pe bani + podeaua pe banii lui ----
+await test("socoteala pe bani: 'tine' urmat = castigul de dupa; 'iesi' urmat = ce pastrai iesind; podeaua se judeca drept 'tine'", async () => {
+  const ORA = 3600000, log = [
+    { t: 0, cod: "tine", nivel: "tine", total: 1, dreptate: null }, { t: 0, cod: "plan", nivel: "iesi", motiv: "planul tău: ținta de +3 USDT e atinsă", total: 4, dreptate: null },
+    { t: 0, cod: "podea", nivel: "atentie", motiv: "ținta ta de +3 USDT e atinsă — păstreaz-o", total: 4.5, dreptate: null }, { t: 30 * ORA, cod: "tine", nivel: "tine", total: 5, dreptate: null }];
+  const j = S.judeca(log, 6, 100, 25 * ORA);
+  assert.equal(j[2].dreptate, true, "podeaua 🟡 zice «ține»: totalul a urcat -> a avut dreptate"); assert.equal(j[1].dreptate, false); assert.equal(j[3].dreptate, null, "sub 24 h: încă nu");
+  const s = S.socoteala(j);
+  assert.equal(s.tine.bani, 5); assert.equal(s.plan.bani, -2, "ieșind la +4 pierdeai 2 față de +6"); assert.equal(s.podea.bani, 1.5); assert.equal(s.tine.baniN, 1);
+  const pb = S.podeaPeBani(j, 5.05); assert.equal(pb.laIesire, 4); assert.ok(Math.abs(pb.dif - 1.05) < 1e-9, "prima «țintă atinsă» e cea de referință");
+  assert.equal(S.podeaPeBani([{ cod: "tine", total: 1 }], 5), null);
+});
+
 console.log(`CU_BOTUL_V963 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;

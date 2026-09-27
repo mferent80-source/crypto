@@ -1464,6 +1464,7 @@ body.peTablou main>.note{display:none}
 #tabloubot .grRand{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--tb-linie)}
 #tabloubot .grCopy{padding:2px 8px;font-size:12px}
 #tabloubot .tbSoc{margin-top:10px}
+#tabloubot .tbPodeaBani{margin:8px 0 0;font-size:13px;padding:7px 10px;border-left:3px solid var(--accent);background:rgba(79,209,197,.06);border-radius:0 8px 8px 0}
 #tabloubot .tbSoc summary{cursor:pointer;color:var(--muted)}
 #tabloubot .grTabel{width:100%;border-collapse:collapse;font-size:13px}
 #tabloubot .grTabel th,#tabloubot .grTabel td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--tb-linie)}
