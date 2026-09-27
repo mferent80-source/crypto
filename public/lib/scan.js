@@ -105,6 +105,47 @@ var Scan = (function () {
     return o;
   }
 
-  return { rezumat: rezumat, fata: fata, scor: scor, semafor: semafor, RETETE: RETETE, retete: retete, PER: PER, puncte: puncte, starePer: starePer, SENS: SENS, textAcum: textAcum, plan: plan };
+  // v96.2: cat a mers fiecare reteta IN TRECUT, pe barele zilnice ale fiecaruia: in fiecare zi se face rezumatul doar cu
+  // ce se stia atunci; o INTRARE = ziua in care a intrat in reteta (ieri nu era). Dupa o saptamana si dupa o luna:
+  // cate au fost pe plus si mediana castigului, fata de "orice zi" (aceeasi piata, aceleasi zile). Gridul nu se poate
+  // masura in urma (depinde de clasamentul de grid al zilei). ore = [bare pana la o saptamana, bare pana la o luna].
+  function istoricRetete(listaBare, fel, ore) {
+    ore = ore || (fel === "a" ? [5, 21] : [7, 30]);
+    var K = ["trend", "revenire", "spargere", "miscare"], acc = { baza: [[], []] };
+    K.forEach(function (k) { acc[k] = [[], []]; });
+    var instr = 0;
+    (Array.isArray(listaBare) ? listaBare : []).forEach(function (b) {
+      b = (Array.isArray(b) ? b : []).filter(function (x) { return x && nr(x.c) > 0 && nr(x.h) > 0 && nr(x.l) > 0; });
+      if (b.length < 60 + ore[0] + 1) return;
+      instr++;
+      var ieri = null;
+      for (var d = 59; d < b.length; d++) {
+        var z = rezumat(b.slice(0, d + 1)); if (!z) { ieri = null; continue; }
+        z.fel = fel;
+        var azi = {}; retete(z).forEach(function (k) { azi[k] = true; });
+        var fw = ore.map(function (h) { return d + h < b.length ? (b[d + h].c / b[d].c - 1) * 100 : null; });
+        fw.forEach(function (v, i) { if (v !== null) acc.baza[i].push(v); });
+        if (ieri) K.forEach(function (k) { if (azi[k] && !ieri[k]) fw.forEach(function (v, i) { if (v !== null) acc[k][i].push(v); }); });
+        ieri = azi;
+      }
+    });
+    var sum = function (l) {
+      if (!l.length) return { n: 0, pe: null, med: null };
+      var s = l.slice().sort(function (x, y) { return x - y; }), m = s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+      return { n: l.length, pe: Math.round(l.filter(function (v) { return v > 0; }).length / l.length * 100), med: r2(m) };
+    };
+    var o = { instr: instr, ore: ore };
+    Object.keys(acc).forEach(function (k) { o[k] = { s: sum(acc[k][0]), l: sum(acc[k][1]) }; });
+    return o;
+  }
+  // textul pentru o reteta pe o piata: "dupa o saptamana 58% pe plus (mediana +1,2%) ..." sau null
+  function textIstoric(ist, k) {
+    var x = ist && ist[k], b = ist && ist.baza; if (!x || !x.s || !x.s.n) return null;
+    var p = function (o) { return o && o.n ? o.pe + "% pe plus (mediana " + semn(o.med) + ")" : "—"; };
+    return { text: "după o săptămână " + p(x.s) + ", după o lună " + p(x.l), baza: b && b.s.n ? "orice zi: " + p(b.s) + " / " + p(b.l) : "", n: x.s.n, putine: x.s.n < 30,
+      mai: b && b.s.n && x.s.pe !== null ? x.s.pe - b.s.pe : null };
+  }
+
+  return { istoricRetete: istoricRetete, textIstoric: textIstoric, rezumat: rezumat, fata: fata, scor: scor, semafor: semafor, RETETE: RETETE, retete: retete, PER: PER, puncte: puncte, starePer: starePer, SENS: SENS, textAcum: textAcum, plan: plan };
 })();
 if (typeof globalThis !== "undefined") globalThis.Scan = Scan;

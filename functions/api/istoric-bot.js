@@ -42,7 +42,9 @@ export async function onRequestGet({request,env}){
   // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
   if(action==="piata"){let f=null,l=[],so=null;try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}try{so=JSON.parse(await env.ISTORIC.get("piata:socoteala")||"null")}catch{so=null}return json({funding:f,instantanee:Array.isArray(l)?l:[],socoteala:so})}
   // v96: pagina Scan - rezumatul zilnic al monedelor si al actiunilor + numele, de la colector
-  if(action==="scan"){const ia=async k=>{try{return JSON.parse(await env.ISTORIC.get(k)||"null")}catch{return null}};return json({crypto:await ia("scan:c"),actiuni:await ia("scan:a"),nume:(await ia("scan:nume"))||{}})}
+  if(action==="scan"){const ia=async k=>{try{return JSON.parse(await env.ISTORIC.get(k)||"null")}catch{return null}};const urmarite=(await ia("scan:urmarite"))||[];
+    if(u.searchParams.get("doar")==="urmarite")return json({urmarite});
+    return json({crypto:await ia("scan:c"),actiuni:await ia("scan:a"),nume:(await ia("scan:nume"))||{},istoric:{c:await ia("scan:ist:c"),a:await ia("scan:ist:a")},urmarite})}
   if(action!=="citeste")return json({error:"Unsupported action"},400);
   const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);
   const ore=Math.min(168,Math.max(1,Math.floor(Number(u.searchParams.get("ore")))||24));
@@ -105,6 +107,20 @@ export async function onRequestPost({request,env}){
       const o={};Object.keys(corp.nume).slice(0,800).forEach(k=>{if(/^[ca][A-Z0-9.-]{1,16}$/.test(k)&&typeof corp.nume[k]==="string")o[k]=corp.nume[k].replace(/[<>]/g,"").slice(0,80)});
       await env.ISTORIC.put("scan:nume",JSON.stringify(o));
       return json({ok:true,nume:Object.keys(o).length});
+    }
+    // v96.2: simbolurile urmarite de el (alerta pe Discord la intrarea / iesirea dintr-o reteta) - lista intreaga, max 60
+    if(corp&&Array.isArray(corp.urmarite)){
+      const l=[...new Set(corp.urmarite.filter(x=>typeof x==="string"&&/^[ca][A-Z0-9.-]{1,16}$/.test(x)))].slice(0,60);
+      await env.ISTORIC.put("scan:urmarite",JSON.stringify(l));
+      return json({ok:true,urmarite:l});
+    }
+    // v96.2: cat a mers fiecare reteta in trecut (colectorul, o data pe zi pe piata)
+    const ist=corp&&corp.istoric;
+    if(ist&&(ist.fel==="c"||ist.fel==="a")){
+      const sum=o=>({n:nr(o&&o.n)||0,pe:nr(o&&o.pe),med:nr(o&&o.med)}),o={la:nr(ist.la)||Date.now(),instr:nr(ist.instr)||0,ore:(Array.isArray(ist.ore)?ist.ore:[]).slice(0,2).map(nr)};
+      ["baza","trend","revenire","spargere","miscare"].forEach(k=>{const x=ist[k];o[k]={s:sum(x&&x.s),l:sum(x&&x.l)}});
+      await env.ISTORIC.put("scan:ist:"+ist.fel,JSON.stringify(o));
+      return json({ok:true});
     }
     return json({error:"Lipseste fel sau nume"},400);
   }

@@ -137,6 +137,42 @@ await test("ruta: POST scan pastreaza doar campurile cunoscute (numere curate, f
   assert.ok(JSON.stringify({ fel: "a", la: T0, randuri: mare }).length > 65536, "proba chiar trece de 64 KB");
 });
 
+// ---- v96.2: cat a mers reteta in trecut + alertele pentru simbolurile urmarite ----
+await test("istoric: o INTRARE in reteta = ziua in care intra (nu fiecare zi in care e in ea); castigul dupa 7 / 30 de bare; 'orice zi' ca termen de comparatie", async () => {
+  // 150 de zile pe loc (+-), apoi 100 de zile de urcare: intra in trend o singura data, apoi castiga
+  const b = Array.from({ length: 250 }, (_, i) => { const c = i < 150 ? 100 + (i % 2 ? 0.5 : -0.5) : 100 * Math.pow(1.006, i - 150); return { t: i, h: c * 1.002, l: c * 0.998, c }; });
+  const r = S.istoricRetete([b, b.slice(0, 50)], "c");
+  assert.equal(r.instr, 1, "sub 68 de bare nu se numara"); assert.deepEqual(r.ore, [7, 30]);
+  assert.ok(r.trend.s.n >= 1 && r.trend.s.n <= 3, "intrari in trend: " + r.trend.s.n); assert.equal(r.trend.s.pe, 100); assert.ok(r.trend.s.med > 2, "mediana " + r.trend.s.med);
+  assert.ok(r.baza.s.n > 150, "orice zi: " + r.baza.s.n); assert.equal(S.istoricRetete([b], "a").ore[0], 5, "la actiuni o saptamana = 5 zile de bursa");
+  const t = S.textIstoric(r, "trend"); assert.match(t.text, /^după o săptămână 100% pe plus \(mediana \+\d+,\d%\), după o lună /); assert.equal(t.putine, true); assert.ok(t.mai > 0);
+  assert.equal(S.textIstoric(r, "revenire"), null, "fara intrari = null, nu 0%"); assert.equal(S.textIstoric(null, "trend"), null);
+});
+await test("urmarite: primul scan doar tine minte; apoi intrare si iesire din reteta pe Discord; ce nu urmareste nu primeste nimic", async () => {
+  const { anuntaUrmarite } = await import("./lib/tura-scan.mjs");
+  const trimise = [], d = { Scan: S, trimiteAlerta: async (m, b, k) => { trimise.push(m); return true; } }, st = {};
+  const x = (s, o) => ({ s, p: 10, ch: 1, ch7: 2, rsi: 60, e20: true, e50: true, e200: true, ch30: 5, sparge: false, mis: 0.5, ...o });
+  await anuntaUrmarite(d, st, "a", [x("NVDA"), x("AMD")], ["aNVDA", "cBTC"]);
+  assert.equal(trimise.length, 0); assert.deepEqual(st.urm.aNVDA, ["trend"]); assert.equal(st.urm.aAMD, undefined);
+  await anuntaUrmarite(d, st, "a", [x("NVDA", { sparge: true, rsi: 75 }), x("AMD", { sparge: true })], ["aNVDA"]);
+  assert.deepEqual(trimise.map((m) => m.titlu), ["🔔 NVDA a intrat în 🚀 Spargere", "🔕 NVDA a ieșit din 📈 Trend confirmat"]);
+  assert.match(trimise[0].mesaj, /^Preț \$10 · azi \+1,0% · 7 zile \+2,0% · RSI 75/); assert.equal(trimise[0].cheie, "reteta-aNVDA-spargere");
+  await anuntaUrmarite(d, st, "a", [x("NVDA", { sparge: true, rsi: 75 })], []);
+  assert.equal(st.urm.aNVDA, undefined, "cand nu-l mai urmareste, starea se sterge (la reluare nu vine o alerta veche)");
+});
+await test("ruta: lista de urmarite (curatata, max 60) si istoricul retetelor se salveaza; GET doar=urmarite intoarce doar lista", async () => {
+  const kv = new Map(), env = { APP_API_TOKEN: TOKEN, ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const m = await import(`../functions/api/istoric-bot.js?t=${Date.now()}`);
+  const h = { authorization: "Bearer " + TOKEN, "content-type": "application/json", origin: "https://exemplu.test", "cf-connecting-ip": "10.96.3.1" };
+  const post = (corp) => m.onRequestPost({ request: new Request("https://exemplu.test/api/istoric-bot?action=scan", { method: "POST", headers: h, body: JSON.stringify(corp) }), env });
+  const r = JSON.parse(await (await post({ urmarite: ["aNVDA", "cBTC", "aNVDA", "<b>", "x", 5, ...Array.from({ length: 80 }, (_, i) => "cX" + i)] })).text());
+  assert.equal(r.urmarite.length, 60); assert.deepEqual(r.urmarite.slice(0, 3), ["aNVDA", "cBTC", "cX0"]);
+  assert.equal((await post({ istoric: { fel: "c", la: T0, instr: 90, ore: [7, 30], trend: { s: { n: 40, pe: 58, med: 1.2, rau: 1 }, l: { n: 38, pe: 61, med: 4 } }, baza: { s: { n: 9000, pe: 52, med: 0.3 }, l: { n: 8000, pe: 53, med: 1 } } } })).status, 200);
+  const cere = async (q) => JSON.parse(await (await m.onRequestGet({ request: new Request("https://exemplu.test/api/istoric-bot?action=scan" + q, { headers: h }), env })).text());
+  assert.deepEqual(Object.keys(await cere("&doar=urmarite")), ["urmarite"]);
+  const g = await cere(""); assert.deepEqual(g.istoric.c.trend.s, { n: 40, pe: 58, med: 1.2 }); assert.deepEqual(g.istoric.c.revenire.s, { n: 0, pe: null, med: null }); assert.equal(g.istoric.a, null); assert.equal(g.urmarite.length, 60);
+});
+
 // ---- v96.1: fara cheia Twelve Data, /api/stocks ia preturile de la Yahoo (analiza actiunilor) ----
 await test("stocks fara cheie: seria pe 4h se face din barele de 1h (4 cate 4, pe zi), 1d si cotatia vin de la Yahoo; earnings spune ca trebuie cheia", async () => {
   const vechi = globalThis.fetch, cerute = [];

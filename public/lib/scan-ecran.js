@@ -123,7 +123,7 @@ function scanDeseneaza() {
   if (r.k === "grid" && v && v.nivel === "miscare") av += '<span class="scAv">⚠ Crypto e în mișcare acum: gridul pierde în regimul ăsta. Lista e de urmărit, nu de pornit.</span>';
   if (r.k === "grid" && scanSt.fel === "a") av += '<span class="scAv">Gridul e doar pentru monede: Trading 212 n-are boți.</span>';
   if (r.k === "spargere" && scanSt.fel !== "c") av += '<span class="scAv">La acțiuni, verifică data rezultatelor financiare: o spargere chiar înainte de rezultate e un pariu, nu un semnal.</span>';
-  $("scExplic").innerHTML = '<span>' + r.e + '</span>' + av;
+  $("scExplic").innerHTML = '<span>' + r.e + '</span>' + av + scIstoricHtml(r.k);
   // filele
   var vechi = scanSt.fel;
   $("scFile").innerHTML = [["toate", "Toate"], ["c", "Crypto"], ["a", "Acțiuni"]].map(function (x) {
@@ -148,12 +148,41 @@ function scanDeseneaza() {
   }
   $("scLista").innerHTML = cap + html;
 }
+// v96.2: "cat a mers reteta in trecut" - calculat de colector pe barele zilnice, o data pe zi
+function scIstoricHtml(k) {
+  if (k === "toate") return "";
+  if (k === "grid") return '<span class="scIst">📏 <b>În trecut:</b> gridul nu se poate măsura în urmă, fiindcă depinde de clasamentul de grid din ziua aceea. Ce a mers pe boții tăi e pe pagina „Grid: ce setez?”.</span>';
+  var ist = scanSt.d.scan && scanSt.d.scan.istoric || {}, l = [];
+  [["c", "Crypto"], ["a", "Acțiuni"]].forEach(function (m) {
+    if (scanSt.fel !== "toate" && scanSt.fel !== m[0]) return;
+    var t = Scan.textIstoric(ist[m[0]], k), o = ist[m[0]];
+    if (!t) { if (o) l.push('<span class="scIst"><b>' + m[1] + ':</b> nicio intrare în rețeta asta în istoricul adus.</span>'); return; }
+    var cmp = t.mai === null ? "" : t.mai >= 3 ? ' <span class="good">(mai des pe plus decât o zi oarecare)</span>' : t.mai <= -3 ? ' <span class="bad">(mai rar pe plus decât o zi oarecare)</span>' : ' <span class="scMut">(cam ca o zi oarecare)</span>';
+    l.push('<span class="scIst"><b>' + m[1] + '</b> · ' + t.n + ' intrări' + (t.putine ? ' <span class="warn">— puține cazuri, cifrele sunt orientative</span>' : '') + ': ' + t.text + cmp + '. <span class="scMut">' + t.baza + '</span></span>');
+  });
+  if (!l.length) return '<span class="scIst scMut">📏 Cât a mers rețeta în trecut apare după prima tură de noapte a colectorului.</span>';
+  return '<span class="scIst">📏 <b>În trecut</b> <span class="scMut">(ultimul an pe monedele de azi din top 100 și 2 ani pe acțiunile de azi: cele care au rezistat, deci cifrele sunt puțin prea bune; nu e o promisiune)</span></span>' + l.join("");
+}
+function scUrmarit(id) { var u = scanSt.d.scan && scanSt.d.scan.urmarite; return !!(u && u.indexOf(id) >= 0); }
+async function scUrmareste(id) {
+  var u = (scanSt.d.scan && scanSt.d.scan.urmarite || []).slice(), i = u.indexOf(id);
+  if (i >= 0) u.splice(i, 1); else u.push(id);
+  scanSt.urmEroare = null;
+  try {
+    var rr = await apiFetch("/api/istoric-bot?action=scan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ urmarite: u }) }), r = null;
+    try { r = await rr.json(); } catch (e2) {}
+    if (!rr.ok) throw new Error((r && r.error) || "HTTP " + rr.status);
+    if (scanSt.d.scan) scanSt.d.scan.urmarite = r && Array.isArray(r.urmarite) ? r.urmarite : u;
+  } catch (e) { scanSt.urmEroare = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); }
+  scanDeseneaza();
+}
 function scMarcaje(x) {
   var m = "";
   if (x.bot) m += '<span class="scMk" title="ai bot pornit pe ea">🤖</span>';
   if (x.port) m += '<span class="scMk" title="e în portofoliul tău Trading 212">💼</span>';
   if (x.rezZile != null && x.rezZile >= 0 && x.rezZile <= 7) m += '<span class="scMk" title="rezultate financiare peste ' + x.rezZile + ' zile">🧾</span>';
   if (x.funding) m += '<span class="scMk" title="funding scump: cei pe long plătesc mult">💸</span>';
+  if (scUrmarit(x.fel + x.s)) m += '<span class="scMk" title="îl urmărești: primești pe Discord când intră într-o rețetă sau iese din ea">🔔</span>';
   return m;
 }
 function scRand(x) {
@@ -217,6 +246,8 @@ function scDetaliu(x) {
     + '<div class="scActiuni"><button class="scBtn acc" type="button" data-scanaliza="' + escapeHtml(id) + '">Analiza completă ' + escapeHtml(x.s) + '</button>'
       + (x.fel === "c" ? '<button class="scBtn" type="button" data-scgrid="' + escapeHtml(x.s) + '">Grid: ce setez?</button>' : x.port ? '<button class="scBtn" type="button" data-action-click="navTo(&quot;t212&quot;,true)">Deschide Trading 212</button>' : '') + '</div>'
     + '<p class="scNota">„Analiza completă” deschide pagina cu toți indicatorii, nivelurile și fluxul pentru ' + escapeHtml(x.s) + '.</p>'
+    + '<div class="scUrm"><button class="scBtn' + (scUrmarit(id) ? ' urm' : '') + '" type="button" data-scurm="' + escapeHtml(id) + '">' + (scUrmarit(id) ? '🔕 Nu mai anunța' : '🔔 Anunță-mă') + '</button>'
+    + '<span class="scNota">' + (scanSt.urmEroare ? '<span class="bad">Nu am putut salva: ' + escapeHtml(scanSt.urmEroare) + '</span>' : scUrmarit(id) ? 'Primești pe Discord când ' + escapeHtml(x.s) + ' intră într-o rețetă sau iese din ea (verificat la fiecare scan).' : 'Pe Discord, când intră într-o rețetă sau iese din ea.') + '</span></div>'
     + '</div></div>';
 }
 var SC_W = 640, SC_H = 240, SC_PY = 34;
@@ -283,7 +314,8 @@ function scanGrid(s) { navTo("gridset", true); setTimeout(function () { if (type
 
 document.addEventListener("click", function (e) {
   if (!e.target.closest || !e.target.closest("#scNou")) return;
-  var t = e.target.closest("[data-scper],[data-sctot],[data-scr],[data-scf],[data-scanaliza],[data-scgrid],#scToate,#scRescan,.scRand"); if (!t) return;
+  var t = e.target.closest("[data-scurm],[data-scper],[data-sctot],[data-scr],[data-scf],[data-scanaliza],[data-scgrid],#scToate,#scRescan,.scRand"); if (!t) return;
+  if (t.dataset.scurm) { scUrmareste(t.dataset.scurm); return; }
   if (t.dataset.scper) scanSt.per = t.dataset.scper;
   else if (t.dataset.sctot) scanSt["tot" + t.dataset.sctot] = true;
   else if (t.dataset.scr) { scanSt.r = t.dataset.scr; scanSt.tot = scanSt.totc = scanSt.tota = false; scanSt.deschis = null; }

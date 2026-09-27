@@ -295,6 +295,28 @@ try {
     assert.doesNotMatch(r.st, /^Eroare/, r.st); assert.match(r.sym, new RegExp(id.slice(1))); assert.ok(Number(r.pret) > 10, "pret: " + r.pret);
     await b.ev(`document.getElementById("acPl-moneda").open=false;setAssetClass("CRYPTO");document.getElementById("symbol").value="BTC";navTo("scan");{const c=document.getElementById("scCaut");c.value="";c.dispatchEvent(new Event("input",{bubbles:true}))}true`);
   });
+  // v96.2: cat a mers reteta in trecut (colectorul) + "Anunta-ma" (lista pe server; proba o lasa cum a gasit-o)
+  await test("Scan: reteta 'Trend confirmat' arata istoricul pe Crypto si pe Actiuni, cu 'orice zi' alaturi; la grid spune de ce nu se poate", async () => {
+    await b.ev(`navTo("scan");scanPorneste(true);true`);
+    await panaCand(b, `!!(scanSt.d.scan&&scanSt.d.scan.istoric&&scanSt.d.scan.istoric.c&&scanSt.d.scan.istoric.a)`, 30000, "istoricul retetelor");
+    await b.ev(`document.querySelector('#scRetete [data-scr="trend"]').click();true`); await asteapta(200);
+    const t = await b.ev(`document.getElementById("scExplic").innerText`);
+    assert.match(t, /În trecut/); assert.match(t, /Crypto · \d+ intrări/); assert.match(t, /Acțiuni · \d+ intrări/); assert.match(t, /după o săptămână \d+% pe plus/); assert.match(t, /orice zi: \d+%/);
+    await b.ev(`document.querySelector('#scRetete [data-scr="grid"]').click();true`); await asteapta(200);
+    assert.match(await b.ev(`document.getElementById("scExplic").innerText`), /nu se poate măsura în urmă/);
+    await b.ev(`document.querySelector('#scRetete [data-scr="toate"]').click();true`);
+  });
+  await test("Scan: 'Anunta-ma' pe NVDA pune 🔔 pe rand, lista se salveaza pe server; 'Nu mai anunta' o scoate (proba nu lasa nimic)", async () => {
+    const aveam = await b.ev(`(scanSt.d.scan.urmarite||[]).indexOf("aNVDA")>=0`);
+    const apasa = () => b.ev(`{const c=document.getElementById("scCaut");c.value="NVDA";c.dispatchEvent(new Event("input",{bubbles:true}))}scanSt.deschis="aNVDA";scanDeseneaza();document.querySelector('[data-scurm="aNVDA"]').click();true`);
+    const stare = () => b.ev(`(async()=>{const g=await getJSON("/api/istoric-bot?action=scan&doar=urmarite");return {srv:g.urmarite.indexOf("aNVDA")>=0,mk:/🔔/.test(document.querySelector('.scRand[data-scid="aNVDA"]').innerText),btn:document.querySelector('[data-scurm="aNVDA"]').innerText}})()`);
+    await apasa(); await asteapta(1500);
+    const s1 = await stare(); assert.equal(s1.srv, !aveam); assert.equal(s1.mk, !aveam); assert.match(s1.btn, aveam ? /Anunță-mă/ : /Nu mai anunța/);
+    await apasa(); await asteapta(1500);
+    const s2 = await stare(); assert.equal(s2.srv, aveam, "proba a lăsat lista schimbată"); assert.equal(s2.mk, aveam);
+    await b.ev(`{const c=document.getElementById("scCaut");c.value="";c.dispatchEvent(new Event("input",{bubbles:true}))}scanSt.deschis=null;true`);
+  });
+
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);
   });

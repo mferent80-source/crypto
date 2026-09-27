@@ -3,7 +3,9 @@
 // Ritm: crypto o data pe ora; actiunile o data pe ora cat bursa e deschisa, o data dupa inchidere si oricand
 // ultimul scan e mai vechi de 20 de ore (weekend, colector repornit). Numele: o data pe zi, doar ce lipseste.
 // Probat in scripts/scan-v96.mjs (server fals).
-// d = { cere, trimite, afara(url) -> JSON, jurnal, pauza, Scan, GridCalcul, NDX, pauzaMs? }
+// v96.2: o data pe zi, pe fiecare piata, "cat a mers reteta in trecut" (Scan.istoricRetete pe barele deja aduse) si,
+// dupa fiecare scan, alerta pe Discord cand un simbol URMARIT de el intra intr-o reteta sau iese din ea.
+// d = { cere, trimite, trimiteAlerta?, afara(url) -> JSON, jurnal, pauza, Scan, GridCalcul, NDX, pauzaMs? }
 const ORA = 3600000;
 function ceas(acum, tz) {
   const o = {};
@@ -24,18 +26,20 @@ function cuVolum(G, randuri, cheieV) {
 export async function scanCrypto(d, acum) {
   const cl = await d.cere("/api/istoric-bot?action=clasament"), m = cl && cl.clasament && Array.isArray(cl.clasament.monede) ? cl.clasament.monede : [];
   if (!m.length) { d.jurnal("scan crypto: clasamentul e gol, astept"); return null; }
-  const randuri = [];
+  const randuri = [], bare = [];
   for (let i = 0; i < m.length; i++) {
     const x = m[i], s = String(x.simbol || "").replace(/_USDT_PERP$/, "");
     if (i) await d.pauza(d.pauzaMs == null ? 900 : d.pauzaMs);
-    const k = await incearca(d, s, () => d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(x.simbol) + "&interval=1D&limit=260"));
-    const z = d.Scan.rezumat(cuVolum(d.GridCalcul, k && k.data && k.data.klines, "volume"));
+    const k = await incearca(d, s, () => d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(x.simbol) + "&interval=1D&limit=400"));
+    const b = cuVolum(d.GridCalcul, k && k.data && k.data.klines, "volume"), z = d.Scan.rezumat(b);
     if (!z) continue;
+    bare.push(b);
     randuri.push({ s, ...z, vol: Number(x.volum) || z.vol, rang: i + 1, gs: Number(x.scor) || 0, stare: x.stare, dir: x.dir, tarie: x.tarie, miscare: !!(x.regim && x.regim.miscare),
       grile: x.grile, pas: x.pas, traversari: x.traversariZi, latime: x.latime });
   }
   if (randuri.length < m.length * 0.8) { d.jurnal("scan crypto NEURCAT:", randuri.length, "din", m.length); return null; }
   await d.trimite("/api/istoric-bot?action=scan", { fel: "c", la: acum, randuri });
+  randuri.bare = bare;
   return randuri;
 }
 
@@ -45,16 +49,18 @@ export async function scanActiuni(d, acum) {
   const lista = [], vazut = new Set();
   for (const s of d.NDX || []) if (!vazut.has(s)) { vazut.add(s); lista.push({ s, tk: s + "_US_EQ" }); }
   for (const tk of ale) { const s = tk.replace(/_US_EQ$/, "").replace(/\d+$/, ""); if (!vazut.has(s)) { vazut.add(s); lista.push({ s, tk, al: true }); } }
-  const randuri = [];
+  const randuri = [], bare = [];
   for (let i = 0; i < lista.length; i++) {
     const x = lista[i];
     if (i) await d.pauza(d.pauzaMs == null ? 700 : d.pauzaMs);
     const r = await incearca(d, x.s, () => d.cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.tk)));
-    const z = d.Scan.rezumat(cuVolum(d.GridCalcul, r && r.randuri, "volume"));
+    const b = cuVolum(d.GridCalcul, r && r.randuri, "volume"), z = d.Scan.rezumat(b);
+    if (z) bare.push(b);
     if (z) randuri.push({ s: x.s, tk: x.tk, ...z, ...(x.al ? { inafara: !new Set(d.NDX || []).has(x.s) } : {}) });
   }
   if (randuri.length < lista.length * 0.8) { d.jurnal("scan actiuni NEURCAT:", randuri.length, "din", lista.length); return null; }
   await d.trimite("/api/istoric-bot?action=scan", { fel: "a", la: acum, randuri });
+  randuri.bare = bare;
   return randuri;
 }
 
@@ -80,6 +86,28 @@ export async function scanNume(d, cr, ac, vechi) {
   return nume;
 }
 
+// alerta pentru simbolurile urmarite: intrare / iesire din reteta fata de scanul trecut (primul scan doar tine minte)
+export async function anuntaUrmarite(d, st, fel, randuri, urmarite) {
+  st.urm = st.urm || {};
+  const pe = new Set((urmarite || []).filter((id) => id[0] === fel)), R = d.Scan.RETETE;
+  for (const x of randuri || []) {
+    const id = fel + x.s; if (!pe.has(id)) { delete st.urm[id]; continue; }
+    const acum = d.Scan.retete({ ...x, fel }), vechi = st.urm[id];
+    st.urm[id] = acum;
+    if (!vechi) continue;
+    const nume = (k) => (R.find((r) => r.k === k) || {}).t || k, pret = (fel === "a" ? "$" : "") + x.p;
+    const ch = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
+    for (const k of acum.filter((k) => !vechi.includes(k))) {
+      const m = { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + nume(k), mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + ". Pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k };
+      if (d.trimiteAlerta) await d.trimiteAlerta(m, null, m.cheie);
+    }
+    for (const k of vechi.filter((k) => !acum.includes(k))) {
+      const m = { nivel: "info", titlu: "🔕 " + x.s + " a ieșit din " + nume(k), mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + ".", cheie: "reteta-iesit-" + id + "-" + k };
+      if (d.trimiteAlerta) await d.trimiteAlerta(m, null, m.cheie);
+    }
+  }
+}
+
 export async function turaScan(d, st, acum) {
   const la = (k) => st[k] || 0;
   let cr = null, ac = null;
@@ -91,6 +119,19 @@ export async function turaScan(d, st, acum) {
     st.acLa = ac ? acum : acum - ORA + 15 * 60000; if (ac) { st.acN = ac.length; if (bu.dupaInchidere) st.acInchisZi = bu.zi; }
   }
   const zi = ceas(acum, "Europe/Bucharest").zi;
+  // urmaritele lui: dupa fiecare scan, intrare / iesire din retete
+  if (cr || ac) {
+    const v = await incearca(d, "urmarite", () => d.cere("/api/istoric-bot?action=scan&doar=urmarite")), urm = v && Array.isArray(v.urmarite) ? v.urmarite : [];
+    if (cr) await incearca(d, "urmarite crypto", () => anuntaUrmarite(d, st, "c", cr, urm));
+    if (ac) await incearca(d, "urmarite actiuni", () => anuntaUrmarite(d, st, "a", ac, urm));
+  }
+  // cat a mers fiecare reteta in trecut: o data pe zi pe fiecare piata (cateva secunde de calcul)
+  for (const [fel, l] of [["c", cr], ["a", ac]]) {
+    if (!l || !l.bare || st["ist" + fel] === zi) continue;
+    const ist = d.Scan.istoricRetete(l.bare, fel);
+    const r = await incearca(d, "istoric " + fel, () => d.trimite("/api/istoric-bot?action=scan", { istoric: { fel, la: acum, ...ist } }));
+    if (r) { st["ist" + fel] = zi; d.jurnal("scan istoric " + fel + ":", ist.instr, "instrumente,", ist.trend.s.n, "intrari in trend"); }
+  }
   if ((cr || ac) && st.numeZi !== zi) {
     const v = await incearca(d, "citesc numele", () => d.cere("/api/istoric-bot?action=scan"));
     const n = await incearca(d, "numele", () => scanNume(d, cr || (v && v.crypto && v.crypto.randuri) || [], ac || (v && v.actiuni && v.actiuni.randuri) || [], v && v.nume));

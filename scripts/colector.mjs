@@ -616,7 +616,7 @@ async function turaScanColector() {
   try {
     const m = meta(); m.scan = m.scan || {};
     const afara = async (u) => { const r = await fetch(u, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" }, signal: AbortSignal.timeout(20000) }); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); };
-    await turaScanModul({ cere, trimite, afara, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Scan, GridCalcul, NDX }, m.scan, Date.now());
+    await turaScanModul({ cere, trimite, trimiteAlerta, afara, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Scan, GridCalcul, NDX }, m.scan, Date.now());
     try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
   } catch (e) { jurnal("scan ESEC", e.message); }
   scanInLucru = false;
