@@ -295,9 +295,25 @@ function acasaRezumate(larg) {
   set("operatiuni", [Acasa.ro(t("v67DashState")), t("v67DashScore"), t("v67DashIncidents") ? t("v67DashIncidents") + " incidente" : ""]);
   set("provenienta", ["prețuri " + t("sourceSpot"), "live " + t("sourceLive"), "microstructură " + t("sourceMicro"), "derivate " + t("sourceDeriv")]);
 }
+// v95.1: bara de cautare (moneda, tf, "Analizeaza piata") se muta IN grupul "Analiza unei monede" cat e deschis pe Home,
+// ca sa fie langa grafic, nu sus in pagina; la iesire se intoarce la locul ei (celelalte pagini o folosesc sus).
+var acasaBaraLoc = null;
+function acasaBara() {
+  var bara = document.querySelector(".toolbar"), pl = document.getElementById("acPl-moneda"); if (!bara || !pl) return;
+  if (!acasaBaraLoc) { acasaBaraLoc = document.createComment("locul barei"); bara.parentNode.insertBefore(acasaBaraLoc, bara); }
+  var inGrup = document.body.classList.contains("peAcasa") && pl.open, corp = pl.querySelector(".acPlCorp");
+  if (inGrup && corp && bara.parentNode !== corp) corp.insertBefore(bara, corp.firstChild);
+  else if (!inGrup && bara.parentNode !== acasaBaraLoc.parentNode) acasaBaraLoc.parentNode.insertBefore(bara, acasaBaraLoc.nextSibling);
+}
+function acasaDeschideAnaliza() {
+  var pl = document.getElementById("acPl-moneda"); if (!pl) return;
+  pl.open = true; document.body.classList.add("acMonedaDeschisa"); acasaBara();
+  pl.scrollIntoView({ behavior: "smooth", block: "start" });
+  var s = document.getElementById("symbol"); if (s) setTimeout(function () { s.focus(); s.select(); }, 350);
+}
 document.addEventListener("toggle", function (e) {
   var t = e.target; if (!t || !t.classList || !t.classList.contains("acPl")) return;
-  // bara de sus (moneda + "Analizeaza piata") apare doar cand deschizi analiza unei monede
-  if (t.id === "acPl-moneda") document.body.classList.toggle("acMonedaDeschisa", t.open);
+  // bara de cautare (moneda + "Analizeaza piata") apare doar cand deschizi analiza unei monede - in grupul ei
+  if (t.id === "acPl-moneda") { document.body.classList.toggle("acMonedaDeschisa", t.open); acasaBara(); }
   if (typeof Acasa !== "undefined") acasaRezumate(Acasa.largime(acasa.d.largime));
 }, true);

@@ -221,6 +221,33 @@ try {
     assert.notEqual(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none", "banda de sus a disparut si de pe alte pagini");
   });
 
+  // v95.1: 27.09 "analiza unei monede in pagina home nu are search bar" - bara era afisata, dar SUS in pagina,
+  // departe de grupul deschis (proba de mai sus vedea doar display != none). Acum: butonul din antet si bara IN grup, pe ecran.
+  await test("Home: butonul 'Analizeaza o moneda' deschide grupul, bara de cautare e IN grup si pe ecran, ETH se analizeaza", async () => {
+    await b.ev(`navTo("dash");window.scrollTo(0,0);true`); await asteapta(500);
+    await b.ev(`[...document.querySelectorAll("#acasa .acBtn")].find(x=>/Analizează o monedă/.test(x.textContent)).click();true`);
+    await asteapta(1200);
+    const r = await b.ev(`(()=>{const bar=document.querySelector(".toolbar"),s=document.getElementById("symbol").getBoundingClientRect(),bt=document.getElementById("analyzeBtn").getBoundingClientRect();
+      return {inGrup:!!bar.closest("#acPl-moneda"),deschis:document.getElementById("acPl-moneda").open,disp:getComputedStyle(bar).display,
+        sTop:s.top,sH:s.height,btTop:bt.top,vh:innerHeight,focus:document.activeElement&&document.activeElement.id}})()`);
+    assert.ok(r.deschis, "grupul nu s-a deschis"); assert.ok(r.inGrup, "bara nu e in grupul 'Analiza unei monede'");
+    assert.notEqual(r.disp, "none"); assert.ok(r.sH > 10 && r.sTop >= 0 && r.sTop < r.vh, `campul monedei nu e pe ecran: top ${r.sTop}, h ${r.sH}`);
+    assert.ok(r.btTop >= 0 && r.btTop < r.vh, `butonul Analizeaza nu e pe ecran: ${r.btTop}`);
+    assert.equal(r.focus, "symbol", "cursorul nu e in campul monedei");
+    const e = await analizeaza(b, "ETH", "BINANCE");
+    assert.doesNotMatch(e.stare, /^Eroare/, `stare: ${e.stare}`); assert.ok(numar(e.pret) > 100, `pret ETH: ${e.pret}`);
+  });
+  await test("bara se intoarce sus pe celelalte pagini (Scanner/MTF) si revine in grup la intoarcerea pe Home", async () => {
+    await b.ev(`navTo("mtf");true`); await asteapta(400);
+    const r = await b.ev(`(()=>{const bar=document.querySelector(".toolbar");return {inDash:!!bar.closest("#dash"),disp:getComputedStyle(bar).display}})()`);
+    assert.ok(!r.inDash, "bara a ramas prinsa in Home"); assert.notEqual(r.disp, "none", "bara lipseste de pe MTF");
+    await b.ev(`navTo("dash");true`); await asteapta(400);
+    assert.ok(await b.ev(`!!document.querySelector(".toolbar").closest("#acPl-moneda")`), "la intoarcere bara nu mai e in grup");
+    await b.ev(`document.getElementById("acPl-moneda").open=false;true`); await asteapta(300);
+    const z = await b.ev(`(()=>{const bar=document.querySelector(".toolbar");return {inDash:!!bar.closest("#dash"),disp:getComputedStyle(bar).display}})()`);
+    assert.ok(!z.inDash && z.disp === "none", `grup inchis: bara ${JSON.stringify(z)}`);
+  });
+
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);
   });
