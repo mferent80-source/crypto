@@ -139,6 +139,8 @@ async function trimiteAlerta(m, bot, cheie) {
   let inKv = false;
   try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null } }); inKv = !!(r && r.ok); }
   catch (e) { jurnal("alerta in KV EȘEC", e.message); }
+  // v97.9: unele alerte (grila atinsa) raman doar in Radar - pagina Alerts le arata, canalul extern nu le primeste
+  if (m.doarRadar) { jurnal("alerta (doar în Radar)", m.nivel, m.titlu); return inKv; }
   if (CANAL === "ntfy") { const ok = await ntfy(m); return inKv || ok; }
   if (CANAL === "discord") { const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal }); return inKv || ok; }
   if (!inKv) jurnal("alerta NETRIMISA", m.nivel, m.titlu);
@@ -273,7 +275,19 @@ async function tura() {
   const acumIds = {}; for (const b of boti) if (b && b.id) acumIds[b.id] = true;
   for (const id of Object.keys(m.cunoscuti)) {
     if (!acumIds[id] && m.cunoscuti[id].activ) {
-      if (await anuntaColector("critic", (m.cunoscuti[id].nume || "Botul") + " nu mai apare în lista Pionex", "Poate a fost închis sau lichidat. Verifică în aplicația Pionex.")) m.cunoscuti[id].activ = false;
+      // v97.7: fisa de inchidere - botul cautat printre cei inchisi (motivul, rezultatul, planul, lectia); negasit -> mesajul vechi
+      let fisa = null;
+      try {
+        const fb = await cere("/api/bot-orders?status=finished&limit=10"), x = (fb && fb.bots || []).find((y) => String(y.id) === String(id));
+        if (x) {
+          let plan = null, atrPct = null;
+          try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); plan = p && p.plan && !p.plan.proba ? p.plan : null; } catch {}
+          try { const sc = await cere("/api/istoric-bot?action=scan"), sim = String(x.baza || "").replace(/\.PERP$/, ""), r = (sc && sc.crypto && sc.crypto.randuri || []).find((q) => q.s === sim); atrPct = r ? r.atrPct : null; } catch {}
+          fisa = TabloExtra.fisaInchidere(x, { plan, atrPct });
+        }
+      } catch (e) { jurnal("fisa de inchidere", id, e.message); }
+      const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaColector("critic", (m.cunoscuti[id].nume || "Botul") + " nu mai apare în lista Pionex", "Poate a fost închis sau lichidat. Verifică în aplicația Pionex.");
+      if (trimis) m.cunoscuti[id].activ = false;
     }
   }
   for (const b of boti) if (b && b.id) m.cunoscuti[b.id] = { activ: b.activ !== false, nume: String(b.baza || "").replace(/\.PERP$/, "") };

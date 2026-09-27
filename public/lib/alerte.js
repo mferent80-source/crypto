@@ -214,7 +214,9 @@ var Alerte = (function () {
     } else if (noiU > 0) {
       var dir = String(b.directie || "").toLowerCase(), crescut = c.poz !== null && vechi.poz !== null ? Math.abs(c.poz) > Math.abs(vechi.poz) : null;
       var fapta = crescut === null ? "" : dir === "short" ? (crescut ? " — a vândut" : " — a cumpărat") : (crescut ? " — a cumpărat" : " — a vândut");
-      mesaje.push({ cheie: "grila", nivel: "info", titlu: nume + ": " + (noiU === 1 ? "grilă atinsă" : noiU + " grile atinse") + fapta + (p !== null ? " la ~" + pret(p) : ""),
+      // v97.9 (27.09: 18 din 62 de alerte erau "grila atinsa"): cumpararea / vanzarea simpla ramane in Radar (pagina Alerts),
+      // nu mai pleaca pe Discord; perechea incheiata (banii) pleaca in continuare
+      mesaje.push({ cheie: "grila", nivel: "info", doarRadar: true, titlu: nume + ": " + (noiU === 1 ? "grilă atinsă" : noiU + " grile atinse") + fapta + (p !== null ? " la ~" + pret(p) : ""),
         mesaj: "Poziția e acum " + (c.poz !== null ? c.poz : "?") + ". Perechea se încheie când prețul ajunge la linia următoare în sens invers." });
     }
     return { mesaje: mesaje, contori: c };

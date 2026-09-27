@@ -5458,9 +5458,41 @@ function tbDeseneazaPortofoliu(){
     +(p.lichidatiLaSoc.length?'<div class="tbLinie"><span>S-ar lichida la −10%</span><b class="bad">'+escapeHtml(p.lichidatiLaSoc.join(", "))+'</b></div>':'')
     +(p.acelasiPariu?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+Math.max(p.peParte.long,p.peParte.short)+' boți pe aceeași parte sunt un singur pariu, nu mai multe. N-aș mai porni unul pe partea asta; aș lua următorul neutru sau pe partea cealaltă.</p>':'');
 }
+// v97.8 (27.09, fara niciun bot pornit): in locul semaforului, pregatirea urmatorului bot - fisa de inchidere a ultimului,
+// vremea pietei (ca pe Home) si primele 3 monede "Bun pentru grid" din Scan, fiecare cu fisa ei
+var tbPreg={la:0,inLucru:false,fisa:null,vreme:null,grid:null};
+async function tbPregatireAdu(){
+  if(tbPreg.inLucru||Date.now()-tbPreg.la<5*60000)return;
+  tbPreg.inLucru=true;
+  try{
+    var fb=await getJSON("/api/bot-orders?status=finished&limit=1"),x=fb&&fb.bots&&fb.bots[0],sc=null;
+    try{sc=await getJSON("/api/istoric-bot?action=scan")}catch(e){}
+    if(x){var pl=null;try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(x.id));pl=p&&p.plan&&!p.plan.proba?p.plan:null}catch(e){}
+      var sim=String(x.baza||"").replace(/\.PERP$/,""),r=sc&&sc.crypto?(sc.crypto.randuri||[]).find(function(q){return q.s===sim}):null;
+      tbPreg.fisa=TabloExtra.fisaInchidere(x,{plan:pl,atrPct:r?r.atrPct:null})}
+    try{var cl=await getJSON("/api/istoric-bot?action=clasament"),c=cl&&cl.clasament,btc=c&&(c.monede||[]).find(function(m){return m.simbol==="BTC_USDT_PERP"});
+      if(typeof Acasa!=="undefined"&&typeof acClasamentSumar==="function")tbPreg.vreme=Acasa.vreme({clasament:acClasamentSumar(c),btc:{miscare:!!(btc&&btc.regim&&btc.regim.miscare)},fg:null})}catch(e){}
+    if(sc&&sc.crypto&&typeof Scan!=="undefined"){var g=Scan.RETETE.find(function(q){return q.k==="grid"});
+      tbPreg.grid=(sc.crypto.randuri||[]).map(function(q){return Object.assign({fel:"c"},q)}).filter(g.f).sort(function(a,b2){return (b2.gs||0)-(a.gs||0)}).slice(0,3)}
+    tbPreg.la=Date.now();
+  }catch(e){tbPreg.la=Date.now()-4*60000}
+  finally{tbPreg.inLucru=false}
+  var el=$("tbSemafor");if(el&&!(tbStare.bot))tbPregatire(el);
+}
+function tbPregatire(el){
+  if(Date.now()-tbPreg.la>=5*60000&&!tbPreg.inLucru)tbPregatireAdu();
+  var h='<div class="tbPreg"><div class="tbSemCap"><span class="tbSemNivel">🅿️ FĂRĂ BOT</span><div><b>Niciun bot pornit acum — pregătirea următorului</b><p class="tbSub">ce a fost, cum e piața, pe ce aș porni</p></div></div>';
+  var f=tbPreg.fisa,v=tbPreg.vreme,g=tbPreg.grid;
+  if(!f&&!v&&!g)return el.innerHTML=h+'<p class="tbSub">'+(tbPreg.inLucru?"aduc ultimul bot închis, vremea și candidații…":"—")+'</p></div>';
+  if(f)h+='<div class="tbPregBloc"><h5>Ultimul bot închis</h5><p class="tbPregTitlu '+(f.nivel==="info"?"good":f.nivel==="critic"?"bad":"tbWarn")+'">'+escapeHtml(f.titlu.replace(/^🔍 /,""))+'</p>'+f.mesaj.split("\n").map(function(t){return '<p class="tbPregRand">'+escapeHtml(t)+'</p>'}).join("")+'</div>';
+  if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+'</div>';
+  if(g&&g.length)h+='<div class="tbPregBloc"><h5>Pe ce aș porni (🟦 Bun pentru grid, din Scan)</h5>'+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?q.grile+" grile · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+escapeHtml(q.s)+'\')">Fișa</button></div>'}).join("")
+    +(v&&v.nivel==="miscare"?'<p class="tbWarn">Piața e în mișcare: aș aștepta liniștea înainte de un grid nou.</p>':'')+'</div>';
+  el.innerHTML=h+'</div>';
+}
 function tbDeseneazaSemafor(b){
   var el=$("tbSemafor");if(!el)return;
-  if(!b){el.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
+  if(!b){tbPregatire(el);return}
   var f=tbFisa.botId===b.id?tbFisa.fisa:null,kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
   var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null},Date.now());
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f);

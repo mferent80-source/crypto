@@ -119,6 +119,37 @@ var TabloExtra = (function () {
     return null;
   }
 
+  // v97.7 "fisa de inchidere" (27.09: ICP inchis de opritor dupa 1,5 h, VVV incasat peste tinta): cat a tinut, cu cat a
+  // iesit si DE CE, cat au adus grilele si cat pozitia, ce spunea planul lui si lectia - doar din fapte.
+  // b = botul inchis (bot-orders?status=finished), o = { plan?: {plus, minus}, atrPct?: miscarea zilnica a monedei (Scan) }
+  var MOTIV = { user_cancel: "l-ai închis tu", loss_stop: "opritorul de pierdere", profit_stop: "opritorul de profit (ținta)", liquidation: "LICHIDAT", liquidated: "LICHIDAT", system_cancel: "închis de Pionex" };
+  function fisaInchidere(b, o) {
+    o = o || {};
+    var nume = String(b && b.baza || "Botul").replace(/\.PERP$/, ""), tot = nr(b && b.profitTotal), inv = nr(b && b.investit), grid = nr(b && b.gridProfitBrut);
+    var t0 = nr(b && b.pornitLa), t1 = nr(b && b.inchisLa), mot = String(b && b.motivInchidere || ""), lichidat = /liquid/i.test(mot);
+    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; }, P = function (v, z) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; };
+    var dur = t0 && t1 && t1 > t0 ? t1 - t0 : null, durTxt = dur === null ? "" : dur < 3600000 ? Math.round(dur / 60000) + " min" : dur < 48 * 3600000 ? Math.floor(dur / 3600000) + " h " + Math.round(dur % 3600000 / 60000) + " min" : (dur / 86400000).toFixed(1).replace(".", ",") + " zile";
+    var pct = tot !== null && inv > 0 ? tot / inv * 100 : null;
+    var titlu = "🔍 " + nume + " închis: " + (tot === null ? "rezultat necunoscut" : U(tot) + (pct !== null ? " (" + P(pct) + ")" : "")) + (durTxt ? " după " + durTxt : "");
+    var L = [];
+    var mt = MOTIV[mot] || (mot ? mot.replace(/_/g, " ") : "necunoscut");
+    if (mot === "loss_stop" && b.opritorPierdereTip === "raport" && nr(b.opritorPierdereRaport) !== null) mt += " (" + P(nr(b.opritorPierdereRaport) * 100, 2) + " din investiție)";
+    L.push("De ce: " + mt + ".");
+    if (grid !== null && tot !== null) L.push("Grilele au adus " + U(grid) + (nr(b.ordinePerechi) !== null ? " în " + b.ordinePerechi + " perechi" : "") + "; poziția și costurile au dus restul (" + U(tot - grid) + ").");
+    var pl = o.plan, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
+    if (plus || minus) L.push("Planul tău: +" + (plus || "—") + " / −" + (minus || "—") + " USDT → " + (tot === null ? "—" : plus && tot >= plus ? "ținta atinsă" + (tot > plus ? ", ai ieșit peste ea" : "") : minus && tot <= -minus ? "pragul de minus atins" : tot < 0 ? "ai ieșit înainte de pragul tău de minus" : "ai ieșit înainte de țintă") + ".");
+    else L.push("Planul tău: n-avea plan scris.");
+    // lectiile - doar din fapte
+    var lec = [], atr = nr(o.atrPct), rap = nr(b.opritorPierdereRaport), lev = nr(b.levier) || 1;
+    if (mot === "loss_stop" && atr !== null && rap !== null && Math.abs(rap * 100) / lev < atr) lec.push("opritorul (" + P(rap * 100, 2) + " din investiție, adică ~" + (Math.abs(rap * 100) / lev).toFixed(1).replace(".", ",") + "% din preț la levier " + lev + "×) era mai mic decât mișcarea unei zile obișnuite a " + nume + " (~" + atr.toFixed(1).replace(".", ",") + "%): o zi normală îl putea atinge");
+    if (tot !== null && tot < 0 && dur !== null && dur < 3 * 3600000) lec.push("a ținut sub 3 ore: gridul n-a apucat să facă perechi");
+    if (plus && tot !== null && tot > plus && mot === "user_cancel") lec.push("ai ieșit peste ținta ta: ținerea după țintă a adus " + U(tot - plus));
+    if (grid !== null && tot !== null && grid > 0 && tot < 0) lec.push("grilele au câștigat, dar poziția a pierdut mai mult: greșeala nr. 1 din jurnalul tău");
+    else if (grid !== null && tot !== null && grid > 0 && tot >= 0 && tot < grid * 0.7) lec.push("poziția a mâncat " + U(grid - tot).replace("+", "") + " din ce au făcut grilele (greșeala nr. 1 din jurnalul tău, dar tot pe plus)");
+    if (lec.length) L.push("Lecția: " + lec.join("; ") + ".");
+    return { nivel: lichidat ? "critic" : tot !== null && tot < 0 ? "atentie" : "info", titlu: titlu, mesaj: L.join("\n"), lichidat: lichidat, tot: tot, pct: pct, durata: dur, motiv: mot };
+  }
+
   function legaturaJurnal(lista, b) {
     if (!Array.isArray(lista) || !b || !b.id) return null;
     for (var i = 0; i < lista.length; i++) if (lista[i] && String(lista[i].botId) === String(b.id)) return lista[i];
@@ -289,7 +320,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, legaturaJurnal: legaturaJurnal,
+  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

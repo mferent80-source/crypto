@@ -166,5 +166,30 @@ await test("ruta ultimulPlan: cel mai nou plan pe un bot Pionex - sare peste T21
   assert.equal(r.bot, "2383"); assert.equal(r.plan.plus, 3);
 });
 
+// ---- v97.7: fisa de inchidere, pe cei trei boti reali din 27.09 ----
+const inchis = (o) => ({ baza: "ICP.PERP", investit: 96.63, profitTotal: -3.1136879999999962, gridProfitBrut: 0, ordinePerechi: 0, pornitLa: Date.UTC(2026, 8, 27, 11, 27, 58), inchisLa: Date.UTC(2026, 8, 27, 13, 4, 9), motivInchidere: "loss_stop", opritorPierdereTip: "raport", opritorPierdereRaport: -0.0295, levier: 3, ...o });
+await test("fisa de inchidere ICP: opritorul -2,95% la levier 3x (~1% din pret) < ziua obisnuita 6,7%; sub 3 ore; fara plan", async () => {
+  const f = T.fisaInchidere(inchis(), { plan: null, atrPct: 6.7 });
+  assert.equal(f.nivel, "atentie"); assert.equal(f.titlu, "🔍 ICP închis: −3,11 USDT (−3,2%) după 1 h 36 min");
+  assert.match(f.mesaj, /^De ce: opritorul de pierdere \(−2,95% din investiție\)\./); assert.match(f.mesaj, /Planul tău: n-avea plan scris\./);
+  assert.match(f.mesaj, /~1,0% din preț la levier 3×\) era mai mic decât mișcarea unei zile obișnuite a ICP \(~6,7%\)/); assert.match(f.mesaj, /sub 3 ore/);
+});
+await test("fisa de inchidere VVV: inchis de el, peste tinta de +3 (tinerea a adus +1,73); MET: pozitia a mancat din grile; lichidat = critic", async () => {
+  const v = T.fisaInchidere(inchis({ baza: "VVV.PERP", investit: 91.9, profitTotal: 4.73, gridProfitBrut: 1.45, ordinePerechi: 10, motivInchidere: "user_cancel", opritorPierdereTip: "pret", pornitLa: 1e12, inchisLa: 1e12 + 41.5 * 3600000 }), { plan: { plus: 3, minus: 14 }, atrPct: 5 });
+  assert.equal(v.nivel, "info"); assert.match(v.mesaj, /De ce: l-ai închis tu\./); assert.match(v.mesaj, /ținta atinsă, ai ieșit peste ea/); assert.match(v.mesaj, /ținerea după țintă a adus \+1,73 USDT/);
+  const m = T.fisaInchidere(inchis({ baza: "MET.PERP", investit: 88.98, profitTotal: 2.93, gridProfitBrut: 7.18, ordinePerechi: 564, motivInchidere: "user_cancel", opritorPierdereTip: "pret", pornitLa: 1e12, inchisLa: 1e12 + 48 * 3600000 }), {});
+  assert.match(m.mesaj, /poziția a mâncat 4,25 USDT din ce au făcut grilele/); assert.match(m.titlu, /după 2,0 zile/);
+  assert.equal(T.fisaInchidere(inchis({ motivInchidere: "liquidation" }), {}).nivel, "critic");
+});
+
+// ---- v97.9: "grila atinsa" doar in Radar, "pereche incheiata" si pe Discord ----
+await test("grila atinsa (cumparare simpla) = doarRadar; pereche incheiata = pleaca si pe Discord", async () => {
+  const bu = (n) => ({ brut: { buOrderData: { closedExchangeOrderCount: n } } }), b0 = { baza: "PENDLE.PERP", directie: "long", pretCurent: 2.6, ordinePerechi: 3, gridProfitBrut: 0.5, pozitie: 5, ...bu(10) };
+  const st = A.grila(b0, null).contori;
+  const cump = A.grila({ ...b0, ...bu(11), pozitie: 6 }, st).mesaje; assert.equal(cump.length, 1); assert.match(cump[0].titlu, /grilă atinsă — a cumpărat/); assert.equal(cump[0].doarRadar, true);
+  const per = A.grila({ ...b0, ...bu(12), ordinePerechi: 4, gridProfitBrut: 0.62, pozitie: 5 }, st).mesaje; assert.equal(per.length, 1); assert.match(per[0].titlu, /pereche încheiată/); assert.equal(per[0].doarRadar, undefined);
+  const src = fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"); assert.match(src, /if \(m\.doarRadar\) \{ jurnal\("alerta \(doar în Radar\)"/, "colectorul nu ține cont de doarRadar");
+});
+
 console.log(`CU_BOTUL_V963 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;

@@ -392,6 +392,17 @@ try {
     await b.ev(`tbPlanSalveaza=window.__tbPS;tbPlan={botId:null,plan:null,la:0};["tbPlanPlus","tbPlanMinus","tbPlanAfara"].forEach(function(i){document.getElementById(i).value=""});true`);
   });
 
+  // v97.8: Tabloul fara bot -> pregatirea urmatorului (ultimul bot inchis cu fisa lui, vremea, 3 monede de grid cu Fisa)
+  await test("Tablou fara bot: pregatirea urmatorului - fisa de inchidere a ultimului bot, vremea, 3 monede 'Bun pentru grid' cu Fisa", async () => {
+    await b.ev(`navTo("tabloubot");tbPreg={la:0,inLucru:false,fisa:null,vreme:null,grid:null};tbPregatire(document.getElementById("tbSemafor"));true`);
+    await panaCand(b, `!tbPreg.inLucru&&tbPreg.la>0`, 60000, "datele pregatirii");
+    await b.ev(`tbPregatire(document.getElementById("tbSemafor"));true`);
+    const r = await b.ev(`(()=>{const e=document.querySelector("#tbSemafor .tbPreg");return {t:e.innerText,fise:e.querySelectorAll("button[data-action-click^='gridDeschideMoneda']").length}})()`);
+    assert.match(r.t, /FĂRĂ BOT/); assert.match(r.t, /Ultimul bot închis/i); assert.match(r.t, /De ce: /); assert.match(r.t, /Vremea pieței/i);
+    assert.ok(r.fise >= 1 && r.fise <= 3, "butoane Fișa: " + r.fise);
+    await b.ev(`if(tbStare.bot)tbDeseneazaSemafor(tbStare.bot);true`);
+  });
+
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);
   });
