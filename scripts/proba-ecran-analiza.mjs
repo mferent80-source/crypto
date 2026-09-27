@@ -317,6 +317,21 @@ try {
     await b.ev(`{const c=document.getElementById("scCaut");c.value="";c.dispatchEvent(new Event("input",{bubbles:true}))}scanSt.deschis=null;true`);
   });
 
+  // v97.2 (ideea 4): din Scan, "Grid: ce setez?" pe o moneda buna de grid -> fisa cu planul completat dupa planul lui
+  await test("Scan -> 'Grid: ce setez?' pe o moneda de grid: fisa ei, cu planul (plus / minus / ore) completat si nota 'Venit din Scan'", async () => {
+    await b.ev(`navTo("scan");document.querySelector('#scRetete [data-scr="grid"]').click();true`); await asteapta(300);
+    const id = await b.ev(`document.querySelector("#scLista .scRand").dataset.scid`); assert.match(id, /^c/);
+    await b.ev(`scanSt.deschis="${id}";scanDeseneaza();document.querySelector('[data-scgrid]').click();true`);
+    await panaCand(b, `document.getElementById("gridset").classList.contains("on")&&!!document.querySelector(".grDinScan")&&!!document.getElementById("grPlanPlus")`, 90000, "fisa de grid cu planul");
+    const r = await b.ev(`({mon:document.getElementById("grMoneda").value,plus:document.getElementById("grPlanPlus").value,minus:document.getElementById("grPlanMinus").value,ore:document.getElementById("grPlanAfara").value,nota:document.querySelector(".grDinScan").innerText})`);
+    assert.equal(r.mon.toUpperCase(), id.slice(1)); assert.ok(Number(r.plus.replace(",", ".")) > 0, "plus: " + r.plus); assert.ok(Number(r.minus.replace(",", ".")) > 0, "minus: " + r.minus);
+    assert.match(r.nota, /Venit din Scan/); assert.match(r.nota, /ținta devine podea/);
+    // ce scrie el ramane la redesenare
+    await b.ev(`document.getElementById("grPlanPlus").value="7";renderGrid();true`); await asteapta(300);
+    assert.equal(await b.ev(`document.getElementById("grPlanPlus").value`), "7", "redesenarea i-a șters cifra");
+    await b.ev(`window.grDinScan=null;navTo("scan");document.querySelector('#scRetete [data-scr="toate"]').click();scanSt.deschis=null;true`);
+  });
+
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);
   });

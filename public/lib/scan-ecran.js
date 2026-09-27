@@ -310,7 +310,16 @@ function scanAnalizeaza(id) {
   if (typeof acasaDeschideAnaliza === "function") acasaDeschideAnaliza();
   if (typeof analyze === "function") analyze(true);
 }
-function scanGrid(s) { navTo("gridset", true); setTimeout(function () { if (typeof gridClasamentAlege === "function") gridClasamentAlege(s + "_USDT_PERP"); }, 400); }
+// v97.2 (ideea 4): "Grid: ce setez?" din Scan deschide fisa cu PLANUL completat, dupa planul lui de la botul activ
+async function scanGrid(s) {
+  var sug = null;
+  try {
+    var boti = typeof contTot !== "undefined" && contTot.boti ? contTot.boti : ((await getJSON("/api/bot-orders")) || {}).bots, b = (boti || []).find(function (x) { return x && x.activ; });
+    if (b) { var p = await getJSON("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id)), pl = p && p.plan; if (pl && (pl.plus > 0 || pl.minus > 0)) sug = { plus: pl.plus, minus: pl.minus, afaraOre: pl.afaraOre, investit: Number(b.investit) || null, nume: String(b.baza || "").replace(/\.PERP$/, "") }; }
+  } catch (e) {}
+  window.grDinScan = { simbol: s, la: Date.now(), sug: sug };
+  navTo("gridset", true); setTimeout(function () { if (typeof gridClasamentAlege === "function") gridClasamentAlege(s + "_USDT_PERP"); }, 400);
+}
 
 document.addEventListener("click", function (e) {
   if (!e.target.closest || !e.target.closest("#scNou")) return;

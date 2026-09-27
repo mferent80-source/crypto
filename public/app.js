@@ -4976,9 +4976,21 @@ function grRandSumaMaxima(f){
 }
 // ===== v84: poarta de pornire, botii de hartie =====
 var grPoartaRez=null;
+// v97.2 (ideea 4): venit din Scan -> planul propus: planul lui de la botul activ, pe suma de aici (altfel 3% / 15% / 12 h)
+function grPlanDinScan(f){
+  var ds=window.grDinScan;if(!ds||grPoartaRez||Date.now()-ds.la>30*60000||grSimbol(ds.simbol)!==f.simbol)return null;
+  var su=f.setare&&Number(f.setare.suma)>0?Number(f.setare.suma):null,g=ds.sug,r1=function(v){return v==null||!isFinite(v)?null:Math.round(v*10)/10};
+  if(g&&g.investit>0&&su){var k=su/g.investit;return {plus:r1(g.plus*k),minus:r1(g.minus*k),afaraOre:g.afaraOre||null,nota:"după planul tău de la "+g.nume+" (+"+g.plus+" / −"+g.minus+" USDT"+(g.afaraOre?" / "+g.afaraOre+" h":"")+" la "+r1(g.investit)+" USDT), pe cei "+su+" USDT de aici"}}
+  if(g)return {plus:g.plus||null,minus:g.minus||null,afaraOre:g.afaraOre||null,nota:"la fel ca planul tău de la "+g.nume};
+  if(su)return {plus:r1(su*0.03),minus:r1(su*0.15),afaraOre:12,nota:"propunerea mea: +3% / −15% din sumă / 12 h afară"};
+  return null;
+}
 function grPoartaHtml(f){
   var p=grPoartaRez&&grPoartaRez.simbol===f.simbol?grPoartaRez:null,h='<div class="grPoarta"><div class="grPoartaCap"><b>🚦 Poarta de pornire</b> <span class="tbSub">10 secunde înainte să pornești botul în Pionex</span></div>';
-  h+='<div class="grPoartaForm"><label><span class="tbEt2">Ies pe plus la, USDT</span><input id="grPlanPlus" inputmode="decimal" placeholder="ex. 5"></label><label><span class="tbEt2">Ies dacă pierd, USDT</span><input id="grPlanMinus" inputmode="decimal" placeholder="ex. 10"></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPlanAfara" inputmode="decimal" placeholder="ex. 12"></label>'
+  // ce a scris el ramane la redesenare; propunerea din Scan se pune doar in campurile goale
+  var ds=grPlanDinScan(f),ID={plus:"grPlanPlus",minus:"grPlanMinus",afaraOre:"grPlanAfara"},vv=function(k){var el=$(ID[k]),v=el&&el.value.trim()?el.value.trim():ds&&ds[k]!=null?String(ds[k]).replace(".",","):"";return v?' value="'+escapeHtml(v)+'"':''};
+  if(ds)h+='<p class="tbFac grDinScan">📝 <b>Venit din Scan:</b> planul e completat '+escapeHtml(ds.nota)+'. Când ținta e atinsă, panoul botului îți spune unde muți opritorul (ținta devine podea). Schimbă cifrele dacă vrei, apoi „Verifică poarta”.</p>';
+  h+='<div class="grPoartaForm"><label><span class="tbEt2">Ies pe plus la, USDT</span><input id="grPlanPlus" inputmode="decimal" placeholder="ex. 5"'+vv("plus")+'></label><label><span class="tbEt2">Ies dacă pierd, USDT</span><input id="grPlanMinus" inputmode="decimal" placeholder="ex. 10"'+vv("minus")+'></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPlanAfara" inputmode="decimal" placeholder="ex. 12"'+vv("afaraOre")+'></label>'
     +'<button type="button" class="grCalc" data-action-click="gridPoarta()">Verifică poarta</button><button type="button" class="actionGhost" data-action-click="gridHartiePorneste()">🧾 Pornește pe hârtie</button></div>';
   if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+escapeHtml(r.text)+(!r.ok&&r.cost?' <span class="tbSub">('+escapeHtml(r.cost)+')</span>':'')+'</li>'}).join("")+'</ul>'
     +(p.rez.trecut?'<p class="tbFac">👉 <b>Ce aș face eu:</b> toate regulile trec — pornește, iar eu îl notez în jurnal cu planul tău.</p>':'<p class="tbFac">👉 <b>Ce aș face eu:</b> aș aștepta. Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate.</p>')
