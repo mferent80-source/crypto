@@ -81,7 +81,7 @@ var SemnaleBot = (function () {
     var peProfit = pz !== null && p !== null && (dir === "long" ? pz < p : pz > p);
     if (peProfit) {
       var ok = op !== null && (dir === "long" ? op >= pz : op <= pz);
-      t.push(ok ? "Opritorul tău (" + fmt(op) + ") e deja dincolo de prețul de zero (" + fmt(pz) + "): o întoarcere nu te mai poate duce pe minus." : "Aș muta opritorul de pierdere la prețul de zero (" + fmt(pz) + "), ca o întoarcere să nu transforme câștigul în pierdere.");
+      t.push(ok ? "Opritorul tău (" + numeOp(b, op, fmt) + ") e deja dincolo de prețul de zero (" + fmt(pz) + "): o întoarcere nu te mai poate duce pe minus." : "Aș muta opritorul de pierdere la prețul de zero (" + fmt(pz) + "), ca o întoarcere să nu transforme câștigul în pierdere.");
     }
     var marg = dir === "long" ? sus : jos;
     if (marg !== null && p !== null && p > 0) {
@@ -93,6 +93,8 @@ var SemnaleBot = (function () {
     return t.join(" ");
   }
 
+  // v97.5: opritorul cum l-a pus el - in procente (Pionex "profit_ratio") sau in pret
+  function numeOp(b, op, fmt) { var r = nr(b && b.opritorPierdereRaport); return b && b.opritorPierdereTip === "raport" && r !== null ? (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(2).replace(".", ",") + "% din investiție, ≈ " + fmt(op) : fmt(op); }
   function distPodea(x, p) { return (Math.abs(x / p - 1) * 100).toFixed(1).replace(".", ",") + "%"; }
 
   // intrare: { bot, fisa, plan (TabloExtra.planStare), costuri, btc, aglomerare, muta, iaProfit, zero? (TabloExtra.dacaInchizi) }
@@ -130,7 +132,7 @@ var SemnaleBot = (function () {
       var urcaTxt = ur && (ur.opritorPastreaza === null || ur.opritorPastreaza < ur.pastrezi - 0.5) ? " Cu " + (ur.perna * 100).toFixed(1).replace(".", ",") + "% loc de respirație, opritorul la " + fp(ur.pret) + " îți păstrează +" + ur.pastrezi.toFixed(2).replace(".", ",") + " USDT" + (ur.opritorPastreaza !== null ? " (cel de acum păstrează " + (ur.opritorPastreaza >= 0 ? "+" : "−") + Math.abs(ur.opritorPastreaza).toFixed(2).replace(".", ",") + ")" : "") + "." : "";
       c = c.filter(function (y) { return !(y.cod === "plan" && y.nivel === "iesi"); });
       c.unshift(laAdapost
-        ? { nivel: "podea", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă și e la adăpost: opritorul tău (" + fp(op) + ")" + (opPast !== null ? " îți păstrează +" + opPast.toFixed(2).replace(".", ",") + " USDT dacă piața se întoarce" : " e dincolo de " + fp(podea) + ", unde totalul e exact +" + tinta),
+        ? { nivel: "podea", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă și e la adăpost: opritorul tău (" + numeOp(b, op, fp) + ")" + (opPast !== null ? " îți păstrează +" + opPast.toFixed(2).replace(".", ",") + " USDT dacă piața se întoarce" : " e dincolo de " + fp(podea) + ", unde totalul e exact +" + tinta),
             faCe: "L-aș lăsa să lucreze. O întoarcere te scoate tot cu cel puțin +" + tinta + " USDT." + (urcaTxt || " Pe măsură ce urcă, poți ridica opritorul; îți scriu pe Discord când merită.") }
         : { nivel: "atentie", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă — păstreaz-o",
             faCe: "Aș muta opritorul de pierdere din Pionex la " + fp(podea) + " (" + distPodea(podea, p0) + " de prețul de acum; acolo, închizând, totalul e exact +" + tinta + " USDT, după comision): câștigul nu se mai poate pierde, iar botul merge mai departe cât merge." + (Math.abs(podea / p0 - 1) < 0.02 ? " E aproape: o mișcare obișnuită îl poate atinge, deci practic încasezi +" + tinta + " curând; dacă vrei loc de respirație, pune-l mai departe și accepți ceva mai puțin decât ținta." : "") + urcaTxt + " Prețul ăsta se schimbă când botul cumpără sau vinde; panoul îl recalculează." });

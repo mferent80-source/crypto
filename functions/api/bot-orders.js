@@ -116,6 +116,13 @@ function normalizeaza(bot,preturi){
   // v91.1: stopLossEnabled/stopProfitEnabled vin false si cand SL/TP sunt puse si active in Pionex (botul VVV, 25.09):
   // pretul pus = opritor pus. "STINS" era o citire gresita a campului.
   const opritorProfitActiv=!!x.stopProfitEnabled||!!nr(x.profitStop),opritorPierdereActiv=!!x.stopLossEnabled||!!nr(x.lossStop);
+  // v97.5 (27.09, botul ICP): opritorul poate veni ca RAPORT din investitie (lossStopType/profitStopType="profit_ratio",
+  // ex. lossStop=-0.0295 = -2,95%), nu ca pret. Se transforma in pretul la care totalul atinge raportul
+  // (total(X) = profitNet + pnl(X) = r * investit), ca restul aplicatiei sa lucreze tot cu preturi; raportul ramane alaturi.
+  const pretDinRaport=r=>{if(r===null||!toate(investit,profitNet,pozitie,pretDeschidere)||!(Math.abs(pozitie)>0)||!(esteLong||esteShort))return null;
+    const X=pretDeschidere+(esteLong?1:-1)*(r*investit-profitNet)/Math.abs(pozitie);return X>0?X:null};
+  const tipPierdere=x.lossStopType==="profit_ratio"?"raport":x.lossStopType==="price"?"pret":null,tipProfit=x.profitStopType==="profit_ratio"?"raport":x.profitStopType==="price"?"pret":null;
+  const opPierdere=tipPierdere==="raport"?pretDinRaport(nr(x.lossStop)):nr(x.lossStop),opProfit=tipProfit==="raport"?pretDinRaport(nr(x.profitStop)):nr(x.profitStop);
   const avertismente=[];
   if(!nr(x.profitStop)&&!nr(x.lossStop))avertismente.push("Botul nu are niciun opritor configurat.");
   if(pret&&jos&&sus&&(pret<jos||pret>sus))
@@ -171,8 +178,10 @@ function normalizeaza(bot,preturi){
     ...lich,
     stareRisc:x.riskStatus||null,
     stareMargine:x.marginStatus||null,
-    opritorProfit:nr(x.profitStop),opritorProfitActiv,
-    opritorPierdere:nr(x.lossStop),opritorPierdereActiv,
+    opritorProfit:opProfit,opritorProfitActiv,opritorProfitTip:tipProfit,opritorProfitRaport:tipProfit==="raport"?nr(x.profitStop):null,
+    opritorPierdere:opPierdere,opritorPierdereActiv,opritorPierdereTip:tipPierdere,opritorPierdereRaport:tipPierdere==="raport"?nr(x.lossStop):null,
+    // v97.5: de ce s-a inchis (user_cancel / loss_stop / profit_stop / ...) - pentru fisa de inchidere
+    motivInchidere:typeof x.reasonBy==="string"?x.reasonBy.replace(/[^a-z_]/gi,"").slice(0,30):null,
 
     avertismente,
 

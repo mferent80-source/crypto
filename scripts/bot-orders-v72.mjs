@@ -487,5 +487,16 @@ await test("fiecare bot poarta si forma bruta de la Pionex", async () => {
   assert.equal(b.brut.createTime, 1780000000000, "lipseste sau e gresit `brut.createTime` - varstaBotMin ar iesi mereu 0");
 });
 
+// v97.5 (27.09, botul ICP): opritorul dat ca RAPORT din investitie (lossStopType="profit_ratio", -0.0295 = -2,95%)
+await test("opritorul in procente (profit_ratio) devine PRETUL la care totalul atinge procentul; cel in pret ramane; motivul inchiderii vine si el", async () => {
+  const b = await unBot([cuDate({ lossStopType: "profit_ratio", lossStop: "-0.0295", profitStopType: "price", profitStop: "0.05", reasonBy: "loss_stop" })]);
+  // investit 200, net -1,95, pozitie 10000 long la 0,031: -1,95 + 10000*(X - 0,031) = -5,9  ->  X = 0,030605
+  assert.ok(Math.abs(b.opritorPierdere - 0.030605) < 1e-9, "pret: " + b.opritorPierdere); assert.equal(b.opritorPierdereTip, "raport"); assert.equal(b.opritorPierdereRaport, -0.0295);
+  assert.equal(b.opritorProfit, 0.05); assert.equal(b.opritorProfitTip, "pret"); assert.equal(b.opritorProfitRaport, null); assert.equal(b.motivInchidere, "loss_stop");
+  const v = await unBot([cuDate({ lossStopType: "price", lossStop: "0.02" })]); assert.equal(v.opritorPierdere, 0.02); assert.equal(v.opritorPierdereTip, "pret");
+  const fara = await unBot([cuDate({ lossStopType: "profit_ratio", lossStop: "-0.03", position: "0" })]); assert.equal(fara.opritorPierdere, null, "fără poziție nu se poate calcula prețul");
+  const vechi = await unBot([BOT]); assert.equal(vechi.opritorPierdere, 0.02, "fără tip (forma veche): ca înainte"); assert.equal(vechi.opritorPierdereTip, null);
+});
+
 console.log(`\nV72_BOT_ORDERS ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
