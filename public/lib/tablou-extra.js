@@ -77,6 +77,17 @@ var TabloExtra = (function () {
     return out;
   }
 
+  // v96.4: pretul la care, inchizand, totalul botului e exact T (T = 0 da pretul de zero din dacaInchizi).
+  // long: total = net + q*(X - pd) - q*X*com  =>  X = (q*pd - net + T) / (q*(1 - com)); short oglindit.
+  function pretPentruTotal(b, T, comision) {
+    comision = comision == null ? C.COMISION : comision;
+    var net = nr(b && b.profitNet), q = nr(b && b.pozitie), pd = nr(b && b.pretDeschidere), t = nr(T), dir = String(b && b.directie || "").toLowerCase();
+    if (q === null || !(Math.abs(q) > 0) || !(pd > 0) || net === null || t === null || (b && b.pnlNerealizatSigur === false)) return null;
+    q = Math.abs(q);
+    var x = dir === "long" ? (q * pd - net + t) / (q * (1 - comision)) : dir === "short" ? (q * pd + net - t) / (q * (1 + comision)) : null;
+    return x !== null && x > 0 ? x : null;
+  }
+
   function legaturaJurnal(lista, b) {
     if (!Array.isArray(lista) || !b || !b.id) return null;
     for (var i = 0; i < lista.length; i++) if (lista[i] && String(lista[i].botId) === String(b.id)) return lista[i];
@@ -128,7 +139,11 @@ var TabloExtra = (function () {
   function planStare(b, plan, stare, acum) {
     if (!plan || !b) return null;
     var tot = nr(b.profitTotal), out = { plus: null, minus: null, afara: null, atins: [] };
-    if (nr(plan.plus) > 0 && tot !== null) { out.plus = { prag: nr(plan.plus), lipsa: nr(plan.plus) - tot }; if (tot >= nr(plan.plus)) out.atins.push("plus"); }
+    if (nr(plan.plus) > 0 && tot !== null) {
+      // v96.4 "tinta devine podea": pretul la care totalul e exact tinta - acolo se pune opritorul, cand tinta e atinsa
+      out.plus = { prag: nr(plan.plus), lipsa: nr(plan.plus) - tot, podea: pretPentruTotal(b, nr(plan.plus)) };
+      if (tot >= nr(plan.plus)) out.atins.push("plus");
+    }
     if (nr(plan.minus) > 0 && tot !== null) { out.minus = { prag: nr(plan.minus), lipsa: nr(plan.minus) + tot }; if (tot <= -nr(plan.minus)) out.atins.push("minus"); }
     if (nr(plan.afaraOre) > 0) {
       var de = stare && nr(stare.afaraDe), ore = de ? ((acum || Date.now()) - de) / 3600000 : 0;
@@ -239,7 +254,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, legaturaJurnal: legaturaJurnal,
+  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

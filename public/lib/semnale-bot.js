@@ -93,6 +93,8 @@ var SemnaleBot = (function () {
     return t.join(" ");
   }
 
+  function distPodea(x, p) { return (Math.abs(x / p - 1) * 100).toFixed(1).replace(".", ",") + "%"; }
+
   // intrare: { bot, fisa, plan (TabloExtra.planStare), costuri, btc, aglomerare, muta, iaProfit, zero? (TabloExtra.dacaInchizi) }
   function semafor(x) {
     var b = x.bot || {}, f = x.fisa || null, c = [], dist = nr(b.distantaLichidarePct), dir = String(b.directie || "").toLowerCase();
@@ -115,7 +117,23 @@ var SemnaleBot = (function () {
     if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc ce aduc grilele", faCe: "La următorul bot: levier mai mic sau grile mai rare." });
     if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC a intrat în mișcare, moneda încă nu", faCe: "Aș fi pregătit: n-aș adăuga bani până nu vedem încotro trage BTC." });
     if (x.aglomerare && x.aglomerare.nivel === "atentie") c.push({ nivel: "atentie", cod: "aglomerare", motiv: "mulțimea e înghesuită pe partea botului", faCe: "Aș strânge riscul: marjă în plus sau o parte închisă, înainte de o curățare." });
+    // v96.4 (27.09, alegerea lui: "tinta devine podea"): tinta de plus atinsa, dar conditiile sunt bune (niciun alt 🔴,
+    // piata nu merge contra botului) -> nu "ieși", ci "pastreaz-o": opritorul la pretul la care totalul e exact tinta.
+    var podea = pl && pl.plus && nr(pl.plus.podea), p0 = nr(b.pretCurent), op = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null;
+    var altIesi = c.some(function (y) { return y.nivel === "iesi" && y.cod !== "plan"; }) || (pl && Array.isArray(pl.atins) && pl.atins.indexOf("minus") >= 0);
+    if (pl && Array.isArray(pl.atins) && pl.atins.indexOf("plus") >= 0 && !altIesi && sf !== "contra" && podea !== null && p0 !== null && (dir === "long" ? podea < p0 : dir === "short" ? podea > p0 : false)) {
+      var tinta = pl.plus.prag, fp = function (v) { return v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); };
+      var laAdapost = op !== null && (dir === "long" ? op >= podea : op <= podea);
+      c = c.filter(function (y) { return !(y.cod === "plan" && y.nivel === "iesi"); });
+      c.unshift(laAdapost
+        ? { nivel: "podea", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă și e la adăpost: opritorul (" + fp(op) + ") e dincolo de " + fp(podea) + ", unde totalul e exact +" + tinta,
+            faCe: "L-aș lăsa să lucreze. Pe măsură ce urcă, poți ridica opritorul; o întoarcere te scoate tot cu cel puțin +" + tinta + " USDT." }
+        : { nivel: "atentie", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă — păstreaz-o",
+            faCe: "Aș muta opritorul de pierdere din Pionex la " + fp(podea) + " (" + distPodea(podea, p0) + " de prețul de acum; acolo, închizând, totalul e exact +" + tinta + " USDT, după comision): câștigul nu se mai poate pierde, iar botul merge mai departe cât merge." + (Math.abs(podea / p0 - 1) < 0.02 ? " E aproape: o mișcare obișnuită îl poate atinge, deci practic încasezi +" + tinta + " curând; dacă vrei loc de respirație, pune-l mai departe și accepți ceva mai puțin decât ținta." : "") + " Prețul ăsta se schimbă când botul cumpără sau vinde; panoul îl recalculează." });
+    }
     var iesi = c.filter(function (y) { return y.nivel === "iesi"; }), at = c.filter(function (y) { return y.nivel === "atentie"; });
+    var pod = c.filter(function (y) { return y.nivel === "podea"; })[0];
+    if (!iesi.length && !at.length && pod) return { nivel: "tine", cod: "podea", motiv: pod.motiv, faCe: pod.faCe, componente: [] };
     var prim = iesi[0] || at[0];
     if (!prim && sf === "cu") return { nivel: "tine", cod: "cu-botul", motiv: "mișcarea e cu botul (" + xMis + " față de obișnuit): lucrează pentru tine", faCe: pasiCuBotul(b, dir, x.zero), componente: [] };
     if (!prim) return { nivel: "tine", cod: "tine", motiv: "nimic nu cere o mișcare acum", faCe: "L-aș lăsa să lucreze și m-aș uita din nou diseară.", componente: [] };

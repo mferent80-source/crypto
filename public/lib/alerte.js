@@ -82,7 +82,18 @@ var Alerte = (function () {
     if (ctx && ctx.plan && Array.isArray(ctx.plan.atins)) {
       var at = ctx.plan.atins;
       if (at.indexOf("minus") >= 0) out.plan = { nivel: "critic", titlu: nume + ": planul tău — ieși (pierderea a atins " + (ctx.plan.minus ? ctx.plan.minus.prag : "pragul") + " USDT)", mesaj: "Ai hotărât dinainte să ieși aici. Aș face-o acum, în Pionex, fără să renegociez cu mine." };
-      else if (at.indexOf("plus") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — ieși pe plus (" + (ctx.plan.plus ? "+" + ctx.plan.plus.prag : "pragul") + " USDT atins)", mesaj: "Ai atins ținta pe care ți-ai pus-o. Aș încasa acum." };
+      else if (at.indexOf("plus") >= 0) {
+        // v96.4 "tinta devine podea": conditii bune -> pastreaz-o cu opritorul la pretul la care totalul e exact tinta
+        var pod = ctx.plan.plus && nr(ctx.plan.plus.podea), pA = nr(b.pretCurent), dP = String(b.directie || "").toLowerCase(), rgP = ctx.regim;
+        var contraP = rgP && rgP.miscare && rgP.sens && (dP === "long" || dP === "short") && (dP === "long") !== (rgP.sens === "urca"), distP = nr(b.distantaLichidarePct);
+        var opP = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null, bun = pod !== null && pA !== null && !contraP && (distP === null || Math.abs(distP) >= 15) && (dP === "long" ? pod < pA : dP === "short" ? pod > pA : false);
+        if (bun) {
+          var adapost = opP !== null && (dP === "long" ? opP >= pod : opP <= pod);
+          out.plan = adapost
+            ? { nivel: "info", titlu: nume + ": ținta de +" + ctx.plan.plus.prag + " USDT e la adăpost", mesaj: "Opritorul (" + pret(opP) + ") e dincolo de " + pret(pod) + ", unde totalul e exact ținta. Botul merge mai departe." }
+            : { nivel: "atentie", titlu: nume + ": ținta de +" + ctx.plan.plus.prag + " USDT e atinsă — păstreaz-o", mesaj: "Condițiile sunt bune. Mută opritorul de pierdere din Pionex la " + pret(pod) + " (" + (Math.abs(pod / pA - 1) * 100).toFixed(1).replace(".", ",") + "% de prețul de acum" + (Math.abs(pod / pA - 1) < 0.02 ? ", aproape: o mișcare obișnuită îl poate atinge" : "") + "): acolo, închizând, totalul e exact +" + ctx.plan.plus.prag + " USDT. Câștigul nu se mai poate pierde, iar botul merge mai departe." };
+        } else out.plan = { nivel: "atentie", titlu: nume + ": planul tău — ieși pe plus (" + (ctx.plan.plus ? "+" + ctx.plan.plus.prag : "pragul") + " USDT atins)", mesaj: "Ai atins ținta pe care ți-ai pus-o. Aș încasa acum." };
+      }
       else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — prețul e în afara gridului de peste " + (ctx.plan.afara ? ctx.plan.afara.prag : "?") + " ore", mesaj: "Ai hotărât să nu-l lași afară atât. Aș opri botul și aș face unul nou din fișă, pe unde e prețul." };
       else out.plan = { nivel: "ok", titlu: "", mesaj: "" };
     }

@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 
-for (const f of ["grid-calcul.js", "alerte.js", "semnale-bot.js", "sfaturi.js", "indicatori-bot.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
-const { GridCalcul: G, SemnaleBot: S, Sfaturi, IndicatoriBot: I, Alerte: A } = globalThis;
+for (const f of ["grid-calcul.js", "tablou-extra.js", "alerte.js", "semnale-bot.js", "sfaturi.js", "indicatori-bot.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
+const { GridCalcul: G, SemnaleBot: S, Sfaturi, IndicatoriBot: I, Alerte: A, TabloExtra: T } = globalThis;
 let teste = 0, picate = 0;
 async function test(nume, fn) {
   teste++;
@@ -70,6 +70,41 @@ await test("alerta pe Discord: miscarea cu botul pleaca 'info' (lasa-l sa lucrez
   const cu = A.reguli(b, up).miscare, co = A.reguli(b, dn).miscare;
   assert.equal(cu.nivel, "info"); assert.match(cu.titlu, /CU botul — lasă-l să lucreze/); assert.doesNotMatch(cu.mesaj, /oprești/);
   assert.equal(co.nivel, "atentie"); assert.match(co.titlu, /împotriva botului/);
+});
+
+// ---- v96.4: "tinta devine podea" (alegerea lui, 27.09: tinta atinsa, conditii bune -> nu "ieși", ci pastreaz-o) ----
+// VVV pe viu: pozitie 5,9 long la 30,291, net 1,535, pret 30,756 -> podeaua de +3 la ~30,555 (0,7% sub pret)
+const vvv = (o) => ({ directie: "long", pozitie: 5.9, pretDeschidere: 30.291071485268713, profitNet: 1.535324366794896, pretCurent: 30.756, profitTotal: 4.28, investit: 91.9, gridJos: 28.464, gridSus: 33.346, distantaLichidarePct: 28.8, opritorPierdere: 26.633, opritorPierdereActiv: true, ...o });
+await test("pretPentruTotal: T=0 = pretul de zero; la pretul gasit, totalul dupa comision e exact T; short oglindit; date nesigure -> null", async () => {
+  const b = vvv(), com = G.C.COMISION, x = T.pretPentruTotal(b, 3);
+  assert.ok(Math.abs(T.pretPentruTotal(b, 0) - T.dacaInchizi(b).pretZero) < 1e-9);
+  assert.ok(Math.abs(b.profitNet + 5.9 * (x - b.pretDeschidere) - 5.9 * x * com - 3) < 1e-9, "totalul la podea"); assert.ok(x > 30.5 && x < 30.6, "podea " + x);
+  const sh = { ...b, directie: "short", pozitie: -5.9 }, y = T.pretPentruTotal(sh, 3);
+  assert.ok(Math.abs(sh.profitNet + 5.9 * (sh.pretDeschidere - y) - 5.9 * y * com - 3) < 1e-9);
+  assert.equal(T.pretPentruTotal({ ...b, pnlNerealizatSigur: false }, 3), null); assert.equal(T.pretPentruTotal({ ...b, pozitie: 0 }, 3), null);
+  assert.ok(Math.abs(T.planStare(b, { plus: 3 }, {}, 0).plus.podea - x) < 1e-12, "planStare poartă podeaua");
+});
+const plan = (b) => T.planStare(b, { plus: 3, minus: 14 }, {}, 0);
+await test("semafor: tinta atinsa + conditii bune = 🟡 'pastreaz-o' cu pretul-podea, distanta si avertismentul ca e aproape (nu 🔴)", async () => {
+  const b = vvv({ opritorPierdere: 26.633 }), r = S.semafor({ bot: b, fisa: { regim: LIN }, plan: plan(b) });
+  assert.equal(r.nivel, "atentie"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /ținta ta de \+3 USDT e atinsă — păstreaz-o/);
+  assert.match(r.faCe, /opritorul de pierdere din Pionex la 30\.55\d\d \(0,7% de prețul de acum/); assert.match(r.faCe, /E aproape/);
+  assert.equal(r.componente.some((c) => c.nivel === "iesi"), false);
+  const cu = S.semafor({ bot: b, fisa: { regim: SUS }, plan: plan(b) }); assert.equal(cu.cod, "podea", "și cu mișcarea cu botul");
+});
+await test("semafor: opritorul deja peste podea = 🟢 'la adapost'; miscare CONTRA, lichidare aproape sau minusul atins raman 🔴", async () => {
+  const sus = vvv({ opritorPierdere: 30.6 }), r = S.semafor({ bot: sus, fisa: { regim: LIN }, plan: plan(sus) });
+  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /la adăpost/);
+  const contra = S.semafor({ bot: vvv(), fisa: { regim: JOS }, plan: plan(vvv()) }); assert.equal(contra.nivel, "iesi"); assert.equal(contra.cod, "plan");
+  const lich = S.semafor({ bot: vvv({ distantaLichidarePct: 6 }), fisa: { regim: LIN }, plan: plan(vvv()) }); assert.equal(lich.nivel, "iesi"); assert.notEqual(lich.cod, "podea");
+  const faraDate = vvv({ pnlNerealizatSigur: false }); assert.equal(S.semafor({ bot: faraDate, fisa: { regim: LIN }, plan: plan(faraDate) }).cod, "plan", "fără preț-podea calculabil: ca înainte");
+});
+await test("alerta pe Discord: tinta atinsa + conditii bune -> 'pastreaz-o' cu pretul; la adapost -> info; contra -> 'ieși pe plus' ca inainte", async () => {
+  const b = { ...vvv(), id: "2383", baza: "VVV.PERP", activ: true };
+  const r = A.reguli(b, { plan: plan(b), regim: { ...LIN, r4h: 1, r24h: 1 } }).plan;
+  assert.equal(r.nivel, "atentie"); assert.match(r.titlu, /păstreaz-o/); assert.match(r.mesaj, /0,7% de prețul de acum, aproape/);
+  const ad = { ...b, opritorPierdere: 30.6 }; assert.equal(A.reguli(ad, { plan: plan(ad), regim: { ...LIN, r4h: 1, r24h: 1 } }).plan.nivel, "info");
+  assert.match(A.reguli(b, { plan: plan(b), regim: { ...JOS, r4h: 3, r24h: 3 } }).plan.titlu, /ieși pe plus/);
 });
 
 console.log(`CU_BOTUL_V963 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}`);
