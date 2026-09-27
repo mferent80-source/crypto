@@ -123,13 +123,17 @@ var SemnaleBot = (function () {
     var altIesi = c.some(function (y) { return y.nivel === "iesi" && y.cod !== "plan"; }) || (pl && Array.isArray(pl.atins) && pl.atins.indexOf("minus") >= 0);
     if (pl && Array.isArray(pl.atins) && pl.atins.indexOf("plus") >= 0 && !altIesi && sf !== "contra" && podea !== null && p0 !== null && (dir === "long" ? podea < p0 : dir === "short" ? podea > p0 : false)) {
       var tinta = pl.plus.prag, fp = function (v) { return v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); };
-      var laAdapost = op !== null && (dir === "long" ? op >= podea : op <= podea);
+      // la adapost = opritorul lui pastreaza tinta (toleranta: 1% din tinta, min 5 centi - rotunjirea la pasul de pret Pionex)
+      var opPast = nr(pl.plus.opritorPastreaza), tol = Math.max(0.05, tinta * 0.01);
+      var laAdapost = op !== null && (opPast !== null ? opPast >= tinta - tol : (dir === "long" ? op >= podea : op <= podea)), ur = pl.plus.urca;
+      // v96.5 opritorul care urca: la 1,5% de pret pastrezi mai mult decat tinta -> spune cat
+      var urcaTxt = ur && (ur.opritorPastreaza === null || ur.opritorPastreaza < ur.pastrezi - 0.5) ? " Cu " + (ur.perna * 100).toFixed(1).replace(".", ",") + "% loc de respirație, opritorul la " + fp(ur.pret) + " îți păstrează +" + ur.pastrezi.toFixed(2).replace(".", ",") + " USDT" + (ur.opritorPastreaza !== null ? " (cel de acum păstrează " + (ur.opritorPastreaza >= 0 ? "+" : "−") + Math.abs(ur.opritorPastreaza).toFixed(2).replace(".", ",") + ")" : "") + "." : "";
       c = c.filter(function (y) { return !(y.cod === "plan" && y.nivel === "iesi"); });
       c.unshift(laAdapost
-        ? { nivel: "podea", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă și e la adăpost: opritorul (" + fp(op) + ") e dincolo de " + fp(podea) + ", unde totalul e exact +" + tinta,
-            faCe: "L-aș lăsa să lucreze. Pe măsură ce urcă, poți ridica opritorul; o întoarcere te scoate tot cu cel puțin +" + tinta + " USDT." }
+        ? { nivel: "podea", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă și e la adăpost: opritorul tău (" + fp(op) + ")" + (opPast !== null ? " îți păstrează +" + opPast.toFixed(2).replace(".", ",") + " USDT dacă piața se întoarce" : " e dincolo de " + fp(podea) + ", unde totalul e exact +" + tinta),
+            faCe: "L-aș lăsa să lucreze. O întoarcere te scoate tot cu cel puțin +" + tinta + " USDT." + (urcaTxt || " Pe măsură ce urcă, poți ridica opritorul; îți scriu pe Discord când merită.") }
         : { nivel: "atentie", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă — păstreaz-o",
-            faCe: "Aș muta opritorul de pierdere din Pionex la " + fp(podea) + " (" + distPodea(podea, p0) + " de prețul de acum; acolo, închizând, totalul e exact +" + tinta + " USDT, după comision): câștigul nu se mai poate pierde, iar botul merge mai departe cât merge." + (Math.abs(podea / p0 - 1) < 0.02 ? " E aproape: o mișcare obișnuită îl poate atinge, deci practic încasezi +" + tinta + " curând; dacă vrei loc de respirație, pune-l mai departe și accepți ceva mai puțin decât ținta." : "") + " Prețul ăsta se schimbă când botul cumpără sau vinde; panoul îl recalculează." });
+            faCe: "Aș muta opritorul de pierdere din Pionex la " + fp(podea) + " (" + distPodea(podea, p0) + " de prețul de acum; acolo, închizând, totalul e exact +" + tinta + " USDT, după comision): câștigul nu se mai poate pierde, iar botul merge mai departe cât merge." + (Math.abs(podea / p0 - 1) < 0.02 ? " E aproape: o mișcare obișnuită îl poate atinge, deci practic încasezi +" + tinta + " curând; dacă vrei loc de respirație, pune-l mai departe și accepți ceva mai puțin decât ținta." : "") + urcaTxt + " Prețul ăsta se schimbă când botul cumpără sau vinde; panoul îl recalculează." });
     }
     var iesi = c.filter(function (y) { return y.nivel === "iesi"; }), at = c.filter(function (y) { return y.nivel === "atentie"; });
     var pod = c.filter(function (y) { return y.nivel === "podea"; })[0];

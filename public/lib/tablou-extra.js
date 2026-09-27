@@ -88,6 +88,25 @@ var TabloExtra = (function () {
     return x !== null && x > 0 ? x : null;
   }
 
+  // v96.5: totalul botului daca se inchide la pretul X (dupa comisionul de inchidere) - inversa lui pretPentruTotal
+  function totalLaPret(b, X, comision) {
+    comision = comision == null ? C.COMISION : comision;
+    var net = nr(b && b.profitNet), q = nr(b && b.pozitie), pd = nr(b && b.pretDeschidere), x = nr(X), dir = String(b && b.directie || "").toLowerCase();
+    if (q === null || !(Math.abs(q) > 0) || !(pd > 0) || net === null || !(x > 0) || (b && b.pnlNerealizatSigur === false)) return null;
+    q = Math.abs(q);
+    return dir === "long" ? net + q * (x - pd) - q * x * comision : dir === "short" ? net + q * (pd - x) - q * x * comision : null;
+  }
+  // v96.5 "opritorul care urca": dupa tinta, opritorul la PERNA sub pret (1,5%) - cat pastreaza; si cat pastreaza opritorul de acum
+  var PERNA = 0.015;
+  function podeaUrca(b, prag) {
+    var p = nr(b && b.pretCurent), dir = String(b && b.directie || "").toLowerCase(), t = nr(prag);
+    if (p === null || t === null || (dir !== "long" && dir !== "short")) return null;
+    var pret = dir === "long" ? p * (1 - PERNA) : p * (1 + PERNA), pastrezi = totalLaPret(b, pret);
+    if (pastrezi === null || pastrezi <= t) return null;
+    var op = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null;
+    return { pret: pret, pastrezi: pastrezi, perna: PERNA, opritor: op, opritorPastreaza: op !== null ? totalLaPret(b, op) : null };
+  }
+
   function legaturaJurnal(lista, b) {
     if (!Array.isArray(lista) || !b || !b.id) return null;
     for (var i = 0; i < lista.length; i++) if (lista[i] && String(lista[i].botId) === String(b.id)) return lista[i];
@@ -142,7 +161,11 @@ var TabloExtra = (function () {
     if (nr(plan.plus) > 0 && tot !== null) {
       // v96.4 "tinta devine podea": pretul la care totalul e exact tinta - acolo se pune opritorul, cand tinta e atinsa
       out.plus = { prag: nr(plan.plus), lipsa: nr(plan.plus) - tot, podea: pretPentruTotal(b, nr(plan.plus)) };
-      if (tot >= nr(plan.plus)) out.atins.push("plus");
+      if (tot >= nr(plan.plus)) { out.atins.push("plus"); out.plus.urca = podeaUrca(b, nr(plan.plus)); }
+      // v96.5: cat pastreaza opritorul LUI de acum (27.09: l-a pus la 30,511 = podeaua 30,5111 rotunjita la pasul Pionex
+      // si panoul tot zicea "muta-l" - comparam preturi la a 4-a zecimala; acum se compara SUMA pastrata)
+      var opA = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null;
+      out.plus.opritorPastreaza = opA !== null ? totalLaPret(b, opA) : null;
     }
     if (nr(plan.minus) > 0 && tot !== null) { out.minus = { prag: nr(plan.minus), lipsa: nr(plan.minus) + tot }; if (tot <= -nr(plan.minus)) out.atins.push("minus"); }
     if (nr(plan.afaraOre) > 0) {
@@ -254,7 +277,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, legaturaJurnal: legaturaJurnal,
+  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

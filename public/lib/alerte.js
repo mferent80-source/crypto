@@ -88,7 +88,8 @@ var Alerte = (function () {
         var contraP = rgP && rgP.miscare && rgP.sens && (dP === "long" || dP === "short") && (dP === "long") !== (rgP.sens === "urca"), distP = nr(b.distantaLichidarePct);
         var opP = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null, bun = pod !== null && pA !== null && !contraP && (distP === null || Math.abs(distP) >= 15) && (dP === "long" ? pod < pA : dP === "short" ? pod > pA : false);
         if (bun) {
-          var adapost = opP !== null && (dP === "long" ? opP >= pod : opP <= pod);
+          var opPa = nr(ctx.plan.plus.opritorPastreaza), tolA = Math.max(0.05, ctx.plan.plus.prag * 0.01);
+          var adapost = opP !== null && (opPa !== null ? opPa >= ctx.plan.plus.prag - tolA : (dP === "long" ? opP >= pod : opP <= pod));
           out.plan = adapost
             ? { nivel: "info", titlu: nume + ": ținta de +" + ctx.plan.plus.prag + " USDT e la adăpost", mesaj: "Opritorul (" + pret(opP) + ") e dincolo de " + pret(pod) + ", unde totalul e exact ținta. Botul merge mai departe." }
             : { nivel: "atentie", titlu: nume + ": ținta de +" + ctx.plan.plus.prag + " USDT e atinsă — păstreaz-o", mesaj: "Condițiile sunt bune. Mută opritorul de pierdere din Pionex la " + pret(pod) + " (" + (Math.abs(pod / pA - 1) * 100).toFixed(1).replace(".", ",") + "% de prețul de acum" + (Math.abs(pod / pA - 1) < 0.02 ? ", aproape: o mișcare obișnuită îl poate atinge" : "") + "): acolo, închizând, totalul e exact +" + ctx.plan.plus.prag + " USDT. Câștigul nu se mai poate pierde, iar botul merge mai departe." };
@@ -186,6 +187,22 @@ var Alerte = (function () {
     var bu = b && b.brut && b.brut.buOrderData;
     return { u: bu ? nr(bu.closedExchangeOrderCount) : null, per: nr(b && b.ordinePerechi), g: nr(b && b.gridProfitBrut), poz: nr(b && b.pozitie) };
   }
+  // v96.5 "opritorul care urca" (27.09): dupa tinta, cand opritorul la 1,5% de pret ar pastra cu o TREAPTA mai mult
+  // decat ce s-a anuntat / decat pastreaza opritorul de acum. Treapta = max(1 USDT, 1/4 din tinta). Doar cu conditii
+  // bune (fara miscare contra, lichidarea departe). Starea (vechi) = { anuntat } - se sterge cand tinta nu mai e atinsa.
+  function podeaUrca(b, plan, ctx, vechi) {
+    var nume = String((b && (b.baza || b.simbol)) || "botul").replace(/\.PERP$/, ""), pl = plan && plan.plus, u = pl && pl.urca;
+    if (!pl || !plan.atins || plan.atins.indexOf("plus") < 0) return { mesaje: [], stare: null };
+    var d = String(b.directie || "").toLowerCase(), rg = ctx && ctx.regim, dist = nr(b.distantaLichidarePct);
+    var contra = rg && rg.miscare && rg.sens && (d === "long" || d === "short") && (d === "long") !== (rg.sens === "urca");
+    if (!u || contra || (dist !== null && Math.abs(dist) < 15)) return { mesaje: [], stare: vechi || null };
+    var treapta = Math.max(1, pl.prag / 4), baza = Math.max(pl.prag, vechi && nr(vechi.anuntat) !== null ? vechi.anuntat : -Infinity, u.opritorPastreaza !== null ? u.opritorPastreaza : -Infinity);
+    if (u.pastrezi < baza + treapta) return { mesaje: [], stare: vechi || null };
+    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+    return { stare: { anuntat: u.pastrezi }, mesaje: [{ cheie: "podea-urca", nivel: "info", titlu: "🪜 " + nume + ": poți urca opritorul — păstrezi " + U(u.pastrezi),
+      mesaj: "Opritorul de pierdere la " + pret(u.pret) + " (" + (u.perna * 100).toFixed(1).replace(".", ",") + "% de prețul de acum) îți păstrează " + U(u.pastrezi) + " dacă piața se întoarce" + (u.opritorPastreaza !== null ? "; cel de acum (" + pret(u.opritor) + ") păstrează " + U(u.opritorPastreaza) : "") + ". Îl muți în Pionex; botul merge mai departe." }] };
+  }
+
   function grila(b, vechi) {
     var c = contori(b), nume = String((b && (b.baza || b.simbol)) || "botul").replace(/\.PERP$/, ""), mesaje = [];
     if (!vechi || c.u === null || vechi.u === null || vechi.u === undefined || c.u < vechi.u || (c.per !== null && vechi.per !== null && c.per < vechi.per)) return { mesaje: mesaje, contori: c };
@@ -293,6 +310,6 @@ var Alerte = (function () {
     return { mesaje: mesaje, stare: n };
   }
 
-  return { miscareNeobisnuita: miscareNeobisnuita, schimbareVreme: schimbareVreme, evalueaza: evalueaza, reguli: reguli, grila: grila, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti };
+  return { miscareNeobisnuita: miscareNeobisnuita, schimbareVreme: schimbareVreme, evalueaza: evalueaza, reguli: reguli, grila: grila, podeaUrca: podeaUrca, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti };
 })();
 if (typeof globalThis !== "undefined") globalThis.Alerte = Alerte;

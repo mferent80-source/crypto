@@ -313,6 +313,13 @@ async function tura() {
       for (const msg of g.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) plecat = false;
       if (plecat) stareAlerte[b.id]._grila = g.contori;
     } catch (e) { jurnal("grila", b.id, e.message); }
+    // v96.5 opritorul care urca: dupa tinta, o data pe treapta; treapta se tine minte abia dupa ce mesajul a plecat
+    try {
+      const pu = Alerte.podeaUrca(b, ctx.plan || null, ctx, stareAlerte[b.id]._podea || null);
+      let plecat = true;
+      for (const msg of pu.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) plecat = false;
+      if (plecat) { if (pu.stare) stareAlerte[b.id]._podea = pu.stare; else delete stareAlerte[b.id]._podea; }
+    } catch (e) { jurnal("podea", b.id, e.message); }
     // o alerta care n-a plecat (ntfy picat, fara internet) nu se trece ca trimisa:
     // starea ei revine la cea de dinainte, ca tura urmatoare s-o reincerce
     for (const msg of r.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) {

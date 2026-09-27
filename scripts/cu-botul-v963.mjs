@@ -107,5 +107,34 @@ await test("alerta pe Discord: tinta atinsa + conditii bune -> 'pastreaz-o' cu p
   assert.match(A.reguli(b, { plan: plan(b), regim: { ...JOS, r4h: 3, r24h: 3 } }).plan.titlu, /ieși pe plus/);
 });
 
+// ---- v96.5: opritorul pus la podeaua ROTUNJITA la pasul Pionex (cazul lui, 27.09) + opritorul care urca ----
+await test("opritorul la podeaua rotunjita in jos (30,511 vs 30,5111) = 🟢 'la adapost, iti pastreaza +3,00' - nu 'muta-l'", async () => {
+  const b0 = vvv(), pod = T.pretPentruTotal(b0, 3), b = vvv({ opritorPierdere: Math.floor(pod * 1000) / 1000 });
+  assert.ok(b.opritorPierdere < pod, "chiar e sub podea, la a 4-a zecimală");
+  const r = S.semafor({ bot: b, fisa: { regim: LIN }, plan: plan(b) });
+  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /la adăpost: opritorul tău \(30\.5\d+\) îți păstrează \+3,00 USDT/);
+  const departe = vvv({ opritorPierdere: pod * 0.99 }); assert.equal(S.semafor({ bot: departe, fisa: { regim: LIN }, plan: plan(departe) }).nivel, "atentie", "1% sub podea = nu e la adăpost");
+  const a = { ...b, id: "2383", baza: "VVV.PERP", activ: true }; assert.equal(A.reguli(a, { plan: plan(a), regim: { ...LIN, r4h: 1, r24h: 1 } }).plan.nivel, "info", "și alerta îl vede la adăpost");
+});
+await test("totalLaPret e inversa lui pretPentruTotal; podeaUrca: la 1,5% sub pret cat pastrezi (doar peste tinta)", async () => {
+  const b = vvv(); assert.ok(Math.abs(T.totalLaPret(b, T.pretPentruTotal(b, 3.7)) - 3.7) < 1e-9);
+  assert.equal(T.podeaUrca(b, 3), null, "la VVV acum 1,5% sub preț păstrezi sub +3 -> nimic de urcat");
+  const sus = vvv({ pretCurent: 31.5 }), u = T.podeaUrca(sus, 3);
+  assert.ok(Math.abs(u.pret - 31.5 * 0.985) < 1e-9); assert.ok(u.pastrezi > 3); assert.ok(Math.abs(u.pastrezi - T.totalLaPret(sus, u.pret)) < 1e-12);
+  const r = S.semafor({ bot: sus, fisa: { regim: LIN }, plan: plan(sus) }); assert.match(r.faCe, /Cu 1,5% loc de respirație, opritorul la 31\.0275 îți păstrează \+\d+,\d\d USDT \(cel de acum păstrează −/);
+});
+await test("Discord 'poti urca opritorul': o data pe treapta (max 1 USDT, 1/4 din tinta), nu sub opritorul de acum, nu pe miscarea contra", async () => {
+  const bb = (p, op) => ({ ...vvv({ pretCurent: p, opritorPierdere: op }), id: "2383", baza: "VVV.PERP", activ: true });
+  const ev = (b, st, rg) => A.podeaUrca(b, plan(b), { regim: rg || { ...LIN, r4h: 1, r24h: 1 } }, st);
+  let b = bb(31.5, 26.6), r = ev(b, null);
+  assert.equal(r.mesaje.length, 1); assert.match(r.mesaje[0].titlu, /^🪜 VVV: poți urca opritorul — păstrezi \+\d+,\d\d USDT$/); assert.match(r.mesaje[0].mesaj, /1,5% de prețul de acum/);
+  const st = r.stare; assert.equal(ev(bb(31.55, 26.6), st).mesaje.length, 0, "sub o treaptă în plus: tăcere");
+  const x = T.podeaUrca(bb(31.5, 26.6), 3).pastrezi; let p = 31.5; while (T.podeaUrca(bb(p, 26.6), 3).pastrezi < x + 1) p += 0.01;
+  assert.equal(ev(bb(p + 0.01, 26.6), st).mesaje.length, 1, "o treaptă (1 USDT) mai sus: din nou");
+  const u = T.podeaUrca(bb(31.5, 26.6), 3); assert.equal(ev(bb(31.5, u.pret), null).mesaje.length, 0, "opritorul lui e deja acolo: nimic");
+  assert.equal(ev(b, null, { ...JOS, r4h: 3, r24h: 3 }).mesaje.length, 0, "mișcare contra: nu se urcă opritorul");
+  const sub = { ...bb(30.4, 26.6), profitTotal: 2 }; assert.equal(ev(sub, st).stare, null, "ținta nu mai e atinsă: treapta se uită, ciclu nou");
+});
+
 console.log(`CU_BOTUL_V963 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;
