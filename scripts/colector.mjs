@@ -461,6 +461,19 @@ async function turaCfActiuni() {
 }
 
 // v91: copia de siguranta a datelor Radarului (KV-ul local al serverului), o data pe zi, ultimele 14 zile
+// v97: bataia catre paznic (Cloudflare, paznic/worker.mjs) la 5 minute - daca tace 30 de minute, paznicul
+// scrie pe Discord ca alertele botului nu mai vin (PC oprit, internet cazut, colector mort)
+const PAZNIC_URL = process.env.PAZNIC_URL || VARS.PAZNIC_URL || "", PAZNIC_TOKEN = process.env.PAZNIC_TOKEN || VARS.PAZNIC_TOKEN || "";
+let paznicLa = 0;
+async function turaPaznic() {
+  if (!PAZNIC_URL || !PAZNIC_TOKEN || Date.now() - paznicLa < 5 * 60000) return;
+  paznicLa = Date.now();
+  try {
+    const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/bataie", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ pid: process.pid, versiune: "v97" }), signal: AbortSignal.timeout(15000) });
+    if (!r.ok) jurnal("paznic: bataia refuzata", r.status);
+  } catch (e) { jurnal("paznic: bataia n-a plecat", e.message); paznicLa = Date.now() - 4 * 60000; }
+}
+
 function turaCopie() {
   try { const r = faCopie({ sursa: path.join(RAD, ".wrangler", "state", "v3", "kv"), dest: path.join(DATA, "copii"), zi: new Date().toISOString().slice(0, 10), pastreaza: 14 }); if (r.facut) jurnal("copie de siguranta: " + r.tinta); }
   catch (e) { jurnal("copie ESEC", e.message); }
@@ -633,6 +646,7 @@ async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message));
   turaCopie();
+  turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).catch((e) => jurnal("idei/dimineata", e.message));
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut

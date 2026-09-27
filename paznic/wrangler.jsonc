@@ -1,0 +1,13 @@
+{
+  // Paznicul colectorului Crypto Radar (v97): un Worker mic, separat de aplicatie.
+  // ⚠️ Cronul TREBUIE sa ramana aici: `wrangler deploy` fara "triggers.crons" il STERGE.
+  // Secretele se pun cu: wrangler secret put DISCORD_WEBHOOK / PAZNIC_TOKEN (nu stau in fisier).
+  "name": "paznic-radar",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-11",
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "kv_namespaces": [
+    { "binding": "PAZNIC", "id": "55a8f3ce117a4c9a96b70914224bf60c" }
+  ],
+  "observability": { "enabled": true }
+}
