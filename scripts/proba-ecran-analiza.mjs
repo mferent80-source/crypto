@@ -286,15 +286,14 @@ try {
       await b.ev(`scanSt.per="1L";true`);
     }
   });
-  await test("Scan: 'Analiza completa' pe o moneda (ETH) duce la analiza ei pe Home; la actiuni butonul nu apare (analiza lor cere cheia Twelve Data)", async () => {
-    await b.ev(`{const c=document.getElementById("scCaut");c.value="NVDA";c.dispatchEvent(new Event("input",{bubbles:true}))}scanSt.deschis="aNVDA";scanDeseneaza();true`);
-    const a = await b.ev(`({btn:!!document.querySelector('[data-scanaliza="aNVDA"]'),nota:document.querySelector(".scDetDr").innerText})`);
-    assert.equal(a.btn, false); assert.match(a.nota, /Twelve Data/);
-    await b.ev(`{const c=document.getElementById("scCaut");c.value="ETH";c.dispatchEvent(new Event("input",{bubbles:true}))}scanSt.deschis="cETH";scanDeseneaza();window.__radarState=null;document.querySelector('[data-scanaliza="cETH"]').click();true`); await asteapta(600);
-    await panaCand(b, `!document.getElementById("analyzeBtn").disabled&&!!window.__radarState`, 90000, "analiza ETH");
-    const r = await b.ev(`({pag:document.getElementById("dash").classList.contains("on"),sim:document.getElementById("symbol").value,deschis:document.getElementById("acPl-moneda").open,st:document.getElementById("status").textContent,sym:window.__radarState.symbol})`);
-    assert.ok(r.pag, "nu e pe Home"); assert.equal(r.sim, "ETH"); assert.ok(r.deschis, "grupul analizei nu s-a deschis"); assert.doesNotMatch(r.st, /^Eroare/, r.st); assert.match(r.sym, /ETH/);
-    await b.ev(`document.getElementById("acPl-moneda").open=false;navTo("scan");{const c=document.getElementById("scCaut");c.value="";c.dispatchEvent(new Event("input",{bubbles:true}))}true`);
+  // v96.1: fara cheia Twelve Data, analiza actiunilor ia preturile de la Yahoo (inainte: "TWELVE_DATA_API_KEY is not configured")
+  for (const [id, cls] of [["aNVDA", "STOCKS"], ["cETH", "CRYPTO"]]) await test(`Scan: 'Analiza completa' pe ${id.slice(1)} duce la analiza ei pe Home (${cls}), cu pretul, fara eroare`, async () => {
+    await b.ev(`{const c=document.getElementById("scCaut");c.value="${id.slice(1)}";c.dispatchEvent(new Event("input",{bubbles:true}))}scanSt.deschis="${id}";scanDeseneaza();window.__radarState=null;document.querySelector('[data-scanaliza="${id}"]').click();true`); await asteapta(600);
+    await panaCand(b, `!document.getElementById("analyzeBtn").disabled&&!!window.__radarState`, 90000, "analiza " + id);
+    const r = await b.ev(`({pag:document.getElementById("dash").classList.contains("on"),sim:document.getElementById("symbol").value,cls:document.getElementById("assetClass").value,deschis:document.getElementById("acPl-moneda").open,st:document.getElementById("status").textContent,sym:window.__radarState.symbol,pret:window.__radarState.q&&window.__radarState.q.price})`);
+    assert.ok(r.pag, "nu e pe Home"); assert.equal(r.sim, id.slice(1)); assert.equal(r.cls, cls); assert.ok(r.deschis, "grupul analizei nu s-a deschis");
+    assert.doesNotMatch(r.st, /^Eroare/, r.st); assert.match(r.sym, new RegExp(id.slice(1))); assert.ok(Number(r.pret) > 10, "pret: " + r.pret);
+    await b.ev(`document.getElementById("acPl-moneda").open=false;setAssetClass("CRYPTO");document.getElementById("symbol").value="BTC";navTo("scan");{const c=document.getElementById("scCaut");c.value="";c.dispatchEvent(new Event("input",{bubbles:true}))}true`);
   });
   await test("fara exceptii neprinse in pagina", async () => {
     assert.deepEqual(b.exceptii, []);

@@ -137,5 +137,34 @@ await test("ruta: POST scan pastreaza doar campurile cunoscute (numere curate, f
   assert.ok(JSON.stringify({ fel: "a", la: T0, randuri: mare }).length > 65536, "proba chiar trece de 64 KB");
 });
 
+// ---- v96.1: fara cheia Twelve Data, /api/stocks ia preturile de la Yahoo (analiza actiunilor) ----
+await test("stocks fara cheie: seria pe 4h se face din barele de 1h (4 cate 4, pe zi), 1d si cotatia vin de la Yahoo; earnings spune ca trebuie cheia", async () => {
+  const vechi = globalThis.fetch, cerute = [];
+  // 2 zile x 7 bare pe ora (9:30..15:30 New York = 13:30..19:30 UTC in septembrie)
+  const zi = (d) => Array.from({ length: 7 }, (_, i) => Date.UTC(2026, 8, d, 13, 30) / 1000 + i * 3600);
+  const t1 = [...zi(24), ...zi(25)], c1 = t1.map((_, i) => 100 + i);
+  globalThis.fetch = async (u) => {
+    cerute.push(String(u));
+    const iv = /interval=([^&]+)/.exec(u)[1];
+    const t = iv === "60m" ? t1 : [Date.UTC(2026, 8, 24, 13, 30) / 1000, Date.UTC(2026, 8, 25, 13, 30) / 1000], c = iv === "60m" ? c1 : [200, 210];
+    return new Response(JSON.stringify({ chart: { result: [{ meta: { regularMarketPrice: 211, chartPreviousClose: 199, exchangeName: "NMS", currency: "USD", regularMarketVolume: 5 }, timestamp: t,
+      indicators: { quote: [{ open: c, high: c.map((x) => x + 1), low: c.map((x) => x - 1), close: c, volume: c.map(() => 10) }] } }] } }), { status: 200 });
+  };
+  try {
+    const m = await import(`../functions/api/stocks.js?t=${Date.now()}`), env = { APP_API_TOKEN: TOKEN };
+    const h = { authorization: "Bearer " + TOKEN, "cf-connecting-ip": "10.96.2.1" };
+    const cere = async (q) => JSON.parse(await (await m.onRequestGet({ request: new Request("https://exemplu.test/api/stocks?" + q, { headers: h }), env })).text());
+    const cfg = await cere("action=config"); assert.equal(cfg.configured, true); assert.equal(cfg.provider, "YAHOO");
+    const s4 = await cere("action=series&symbol=NVDA&tf=4h&limit=300");
+    assert.equal(s4.provider, "YAHOO"); assert.equal(s4.rows.length, 4, "7 bare pe zi -> 4 + 3, doua zile -> 4 bare de 4h");
+    assert.deepEqual(s4.rows[0].slice(1, 5), ["100", "104", "99", "103"]); assert.deepEqual(s4.rows[1].slice(1, 5), ["104", "107", "103", "106"]); assert.equal(s4.rows[0][5], "40");
+    const s1 = await cere("action=series&symbol=NVDA&tf=1d&limit=300"); assert.equal(s1.rows.length, 2); assert.equal(s1.rows[1][4], "210");
+    assert.equal(new Date(s1.rows[1][0]).toISOString(), "2026-09-25T20:00:00.000Z", "bara zilnica e pusa la inchiderea New York, ca la Twelve Data");
+    const q = await cere("action=quote&symbol=NVDA"); assert.equal(q.quote.lastPrice, "211"); assert.equal(q.quote.previousClose, "200");
+    const e = await cere("action=earnings&symbol=NVDA"); assert.match(e.error, /cheia Twelve Data/);
+    assert.ok(cerute.every((u) => u.startsWith("https://query1.finance.yahoo.com/")), "a cerut altceva decât Yahoo");
+  } finally { globalThis.fetch = vechi; }
+});
+
 console.log(`SCAN_V96 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;

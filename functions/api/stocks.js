@@ -78,6 +78,59 @@ function normalizeQuote(d,symbol){
     isMarketOpen:typeof d.is_market_open==="boolean"?d.is_market_open:null,datetime:d.datetime||"",timestamp
   }
 }
+// v96.1: fara cheia Twelve Data, preturile vin de la Yahoo (aceeasi sursa ca Trading 212 / Scan): acelasi format de
+// raspuns, ca analiza actiunilor sa mearga. 4h nu exista la Yahoo -> se face din barele de 1 ora (4 cate 4, pe zi).
+const YCACHE=new Map();
+function yDin(k){const x=YCACHE.get(k);if(x&&x.exp>Date.now())return x.v;YCACHE.delete(k);return null}
+function yIn(k,v,ttl){if(YCACHE.size>400)YCACHE.clear();YCACHE.set(k,{v,exp:Date.now()+ttl*1000})}
+async function yahooChart(symbol,interval,range){
+  const k=symbol+"|"+interval+"|"+range,c=yDin(k);if(c)return c;
+  const r=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`,{headers:{"user-agent":"Mozilla/5.0",accept:"application/json"},signal:AbortSignal.timeout(10000)});
+  if(r.status===429)throw Object.assign(new Error("Yahoo a limitat cererile de prețuri"),{status:429});
+  let j=null;try{j=await r.json()}catch{}
+  const res=j&&j.chart&&Array.isArray(j.chart.result)?j.chart.result[0]:null;
+  if(!r.ok||!res)throw Object.assign(new Error((j&&j.chart&&j.chart.error&&j.chart.error.description)||"Yahoo: HTTP "+r.status),{status:r.status===404?404:502});
+  yIn(k,res,interval==="1d"?600:60);return res
+}
+function nyZi(ms){return new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(new Date(ms))}
+async function yahooRows(symbol,tf,limit){
+  const iv=tf==="15m"?"15m":tf==="1h"||tf==="4h"?"60m":"1d",range=tf==="15m"?"60d":tf==="1h"?(limit>700?"730d":"1y"):tf==="4h"?"730d":(limit>480?"5y":"2y");
+  const res=await yahooChart(symbol,iv,range),q=(res.indicators&&res.indicators.quote&&res.indicators.quote[0])||{},ts=res.timestamp||[];
+  let rows=[];
+  ts.forEach((t,i)=>{const o=q.open&&q.open[i],h=q.high&&q.high[i],l=q.low&&q.low[i],c=q.close&&q.close[i],v=q.volume&&q.volume[i];
+    if(![o,h,l,c].every(x=>typeof x==="number"&&x>0))return;
+    const ms=iv==="1d"?nyCloseUtcMs(nyZi(t*1000)):t*1000,vol=typeof v==="number"?v:null;
+    rows.push([ms,String(o),String(h),String(l),String(c),vol===null?null:String(vol),ms+1,vol===null?null:String(vol*c),new Date(ms).toISOString()])});
+  if(tf==="4h"){
+    const g=[];let cur=null,n=0,zi="";
+    for(const r of rows){const z=nyZi(r[0]);if(!cur||z!==zi||n>=4){if(cur)g.push(cur);cur=r.slice();zi=z;n=1;continue}
+      cur[2]=String(Math.max(+cur[2],+r[2]));cur[3]=String(Math.min(+cur[3],+r[3]));cur[4]=r[4];cur[5]=cur[5]===null||r[5]===null?null:String(+cur[5]+ +r[5]);cur[7]=cur[5]===null?null:String(+cur[5]*+cur[4]);n++}
+    if(cur)g.push(cur);rows=g}
+  // ultima bara de azi e in formare -> se pastreaza (ca la Twelve Data), analiza stie sa o trateze
+  const norm=splitLikeDiscontinuity(rows.slice(-limit),tf);
+  return {rows:norm.rows,meta:{symbol,interval:tf,exchange:res.meta&&res.meta.exchangeName||null,currency:res.meta&&res.meta.currency||"USD"},guard:{guarded:norm.guarded,breaks:norm.breaks,warning:norm.warning||null,method:tf==="1d"?"Yahoo daily":"intraday discontinuity guard"}}
+}
+async function yahooQuote(symbol){
+  const res=await yahooChart(symbol,"1d","5d"),m=res.meta||{},q=(res.indicators&&res.indicators.quote&&res.indicators.quote[0])||{},n=(res.timestamp||[]).length-1;
+  const pc=m.chartPreviousClose??m.previousClose,prev=n>=1&&q.close&&q.close[n-1]>0?q.close[n-1]:pc;
+  return normalizeQuote({symbol,close:m.regularMarketPrice,previous_close:prev,volume:m.regularMarketVolume??(q.volume&&q.volume[n]),open:q.open&&q.open[n],high:m.regularMarketDayHigh??(q.high&&q.high[n]),low:m.regularMarketDayLow??(q.low&&q.low[n]),
+    exchange:m.exchangeName,currency:m.currency||"USD",timestamp:m.regularMarketTime,is_market_open:m.currentTradingPeriod&&m.currentTradingPeriod.regular?Date.now()/1000>=m.currentTradingPeriod.regular.start&&Date.now()/1000<m.currentTradingPeriod.regular.end:null},symbol)
+}
+async function faraCheie(action,u){
+  if(action==="quote"){const symbol=safeSymbol(u.searchParams.get("symbol"));return json({provider:"YAHOO",quote:await yahooQuote(symbol)})}
+  if(action==="series"){
+    const symbol=safeSymbol(u.searchParams.get("symbol")),tf=(u.searchParams.get("tf")||"1d").toLowerCase(),limit=Math.min(1000,Math.max(100,Number(u.searchParams.get("limit")||300)));
+    const y=await yahooRows(symbol,tf,limit);return json({provider:"YAHOO",symbol,tf,meta:y.meta,rows:y.rows,corporateActionGuard:y.guard})
+  }
+  if(action==="batch_series"){
+    const symbols=(u.searchParams.get("symbols")||"").split(",").map(safeSymbol).filter(Boolean).slice(0,20),tf=(u.searchParams.get("tf")||"1d").toLowerCase(),limit=Math.min(500,Math.max(60,Number(u.searchParams.get("limit")||260)));
+    if(!symbols.length)return json({error:"No stock symbols supplied"},400);
+    const data={};
+    for(const symbol of symbols){try{const y=await yahooRows(symbol,tf,limit);data[symbol]={meta:y.meta,rows:y.rows,corporateActionGuard:y.guard}}catch(e){data[symbol]={error:e.message,rows:[]}}}
+    return json({provider:"YAHOO",tf,data})
+  }
+  return json({error:"Pentru "+action+" trebuie cheia Twelve Data (TWELVE_DATA_API_KEY); fără ea merg doar prețurile și graficele (Yahoo)."},503)
+}
 function batchNodes(data,symbols){
   if(data?.values)return {[symbols[0]]:data};
   const out={};
@@ -91,10 +144,11 @@ function batchNodes(data,symbols){
 export async function onRequestGet({request,env}){
   const u=new URL(request.url),action=u.searchParams.get("action")||"config";
   if(action==="config"){
-    return json({configured:!!env.TWELVE_DATA_API_KEY,provider:"TWELVE_DATA",serverSideKey:true,ndxSnapshotDate:NDX_SNAPSHOT_DATE,ndxCount:NDX_COUNT,authRequired:true});
+    // v96.1: "configured" = are de unde lua preturi; fara cheie, Yahoo (provider spune care)
+    return json({configured:true,provider:env.TWELVE_DATA_API_KEY?"TWELVE_DATA":"YAHOO",serverSideKey:true,ndxSnapshotDate:NDX_SNAPSHOT_DATE,ndxCount:NDX_COUNT,authRequired:true});
   }
   const auth=await requireApiAuth(request,env,"stocks",60);if(!auth.ok)return authErrorResponse(auth,H);
-  if(!env.TWELVE_DATA_API_KEY)return json({error:"TWELVE_DATA_API_KEY is not configured in Cloudflare"},503);
+  if(!env.TWELVE_DATA_API_KEY){try{return await faraCheie(action,u)}catch(e){return json({error:e.message,provider:"YAHOO"},e.status===429?429:e.status===404?404:502)}}
 
   try{
     if(action==="quote"){

@@ -213,11 +213,10 @@ function scDetaliu(x) {
     + scGrafic(x, serie) + tab + mele + '</div>'
     + '<div class="scDetDr"><div><h5>Intră în</h5><div class="scChips">' + inR + '</div></div><div><h5>De ce</h5><ul>' + de.map(function (t) { return "<li>" + t + "</li>"; }).join("") + '</ul></div>'
     + '<div>' + plan + '</div>'
-    // analiza cu toti indicatorii merge pe monede; pe actiuni cere cheia Twelve Data (nepusa) -> la actiuni nu se promite
-    + (x.fel === "c" ? '<div class="scActiuni"><button class="scBtn acc" type="button" data-scanaliza="' + escapeHtml(id) + '">Analiza completă ' + escapeHtml(x.s) + '</button><button class="scBtn" type="button" data-scgrid="' + escapeHtml(x.s) + '">Grid: ce setez?</button></div>'
-      + '<p class="scNota">„Analiza completă” deschide pagina cu toți indicatorii, nivelurile și fluxul pentru ' + escapeHtml(x.s) + '.</p>'
-      : (x.port ? '<div class="scActiuni"><button class="scBtn acc" type="button" data-action-click="navTo(&quot;t212&quot;,true)">Deschide Trading 212</button></div>' : '')
-      + '<p class="scNota">Analiza cu toți indicatorii (pagina de pe Home) merge doar pe monede: pentru acțiuni cere o cheie Twelve Data, care nu e pusă. Graficul și stările de aici vin din prețurile zilnice și pe oră.</p>')
+    // v96.1: analiza cu toti indicatorii merge si pe actiuni (preturile de la Yahoo cand nu e cheia Twelve Data)
+    + '<div class="scActiuni"><button class="scBtn acc" type="button" data-scanaliza="' + escapeHtml(id) + '">Analiza completă ' + escapeHtml(x.s) + '</button>'
+      + (x.fel === "c" ? '<button class="scBtn" type="button" data-scgrid="' + escapeHtml(x.s) + '">Grid: ce setez?</button>' : x.port ? '<button class="scBtn" type="button" data-action-click="navTo(&quot;t212&quot;,true)">Deschide Trading 212</button>' : '') + '</div>'
+    + '<p class="scNota">„Analiza completă” deschide pagina cu toți indicatorii, nivelurile și fluxul pentru ' + escapeHtml(x.s) + '.</p>'
     + '</div></div>';
 }
 var SC_W = 640, SC_H = 240, SC_PY = 34;
