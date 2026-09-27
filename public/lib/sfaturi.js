@@ -74,8 +74,14 @@ var Sfaturi = (function () {
 
     // B) Regimul acum: miscare mare vs liniste (cu frecventa "cat mai tine").
     var rg = fisa && fisa.regim;
-    if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
-      out.push({ ton: "atentie", titlu: "Mișcare mare acum (4h " + X(rg.r4h) + ", 24h " + X(rg.r24h) + " față de obișnuit)",
+    var cuB = rg && rg.miscare && rg.sens && (dirBot === "long" || dirBot === "short") && (dirBot === "long") === (rg.sens === "urca");
+    if (cuB && rg.r4h != null && rg.r24h != null) {
+      out.push({ ton: "bine", titlu: "Mișcare mare CU botul (4h " + X(rg.r4h) + ", 24h " + X(rg.r24h) + " față de obișnuit)",
+        text: "Prețul merge în direcția botului: grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum, iar poziția se micșorează. Riscul e la întoarcere, când gridul cumpără înapoi la fiecare grilă.",
+        deCe: "Măsurat pe 40 de monede (27.09): după o mișcare cu botul gridul a ieșit pe plus în 59% din ferestre, contra 50%, în liniște 56% — nimic dovedit, dar nicio pagubă văzută pe mișcarea cu botul.",
+        faCe: "L-aș lăsa să lucreze, fără bani în plus; aș pune opritorul la prețul de zero și aș urmări marginea " + (dirBot === "long" ? "de sus" : "de jos") + " (vezi semaforul de sus)." });
+    } else if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
+      out.push({ ton: "atentie", titlu: "Mișcare mare acum" + (rg.sens && (dirBot === "long" || dirBot === "short") ? " împotriva botului" : "") + " (4h " + X(rg.r4h) + ", 24h " + X(rg.r24h) + " față de obișnuit)",
         text: "În mișcare gridul nu mai face perechi, doar strânge poziție pe direcția prețului. Când se liniștește, reia perechile.",
         deCe: "„Obișnuit” = percentila 75 a mișcărilor monedei pe 30 de zile.",
         faCe: "Nu adăuga bani acum și n-aș porni alt grid pe moneda asta până nu revine liniștea. Pe ăsta l-aș lăsa cât lichidarea e peste 15%." });

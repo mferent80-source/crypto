@@ -5430,7 +5430,7 @@ function tbDeseneazaSemafor(b){
   var f=tbFisa.botId===b.id?tbFisa.fisa:null,kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
   var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null},Date.now());
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f);
-  var sm=SemnaleBot.semafor({bot:b,fisa:f,plan:plan,costuri:TabloExtra.grileVsCosturi(b,Date.now()),btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
+  var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:TabloExtra.dacaInchizi(b),plan:plan,costuri:TabloExtra.grileVsCosturi(b,Date.now()),btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
   var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"]},n=N[sm.nivel];
   var h='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(sm.motiv.charAt(0).toUpperCase()+sm.motiv.slice(1))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p></div></div>';
   if(sm.componente.length>1)h+='<ul class="tbSemComp">'+sm.componente.slice(1).map(function(c){return '<li class="'+(c.nivel==="iesi"?"bad":"tbWarn")+'">'+escapeHtml(c.motiv)+'</li>'}).join("")+'</ul>';

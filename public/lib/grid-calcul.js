@@ -252,7 +252,10 @@ var GridCalcul = (function () {
       return ob > 0 ? m[m.length - 1] / ob : null;
     }
     var r4 = raport(k4), r24 = raport(k24);
-    return { r4h: r4, r24h: r24, miscare: (r4 !== null && r4 > C.PRAG_MISCARE) || (r24 !== null && r24 > C.PRAG_MISCARE) };
+    // v96.3: si SENSUL miscarii (27.09: "daca miscarea e cu botul nu ar trebui sa ma sfatuiasca sa ies")
+    var u = b.length - 1, s4 = (b[u].c - b[u - k4].c) / b[u - k4].c, s24 = (b[u].c - b[u - k24].c) / b[u - k24].c;
+    var t4 = r4 !== null && r4 > C.PRAG_MISCARE, t24 = r24 !== null && r24 > C.PRAG_MISCARE, s = t24 ? s24 : t4 ? s4 : 0;
+    return { r4h: r4, r24h: r24, miscare: t4 || t24, s4h: s4, s24h: s24, sens: s > 0 ? "urca" : s < 0 ? "coboara" : null };
   }
   function regim(b) { return regimPeBare(b, 16, C.BARE_ZI); }
   // Intervalul Wilson (95%) pentru k din n - acelasi ca in Directie.

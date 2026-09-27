@@ -70,8 +70,11 @@ var Alerte = (function () {
       var rg = ctx.regim, rmax = Math.max(rg.r4h, rg.r24h), inAlerta = fost("miscare") !== "ok";
       var misc = inAlerta ? rmax >= 1.5 : rmax > 2.0;
       var x = function (v) { return v.toFixed(1).replace(".", ","); };
-      out.miscare = misc
-        ? { nivel: "atentie", titlu: nume + ": mișcare mare — regimul în care gridul iese cel mai rău", mesaj: "Mișcarea pe 4 ore e " + x(rg.r4h) + "× cea obișnuită a monedei, pe 24 de ore " + x(rg.r24h) + "×. Dovedit: NU porni grid nou după mișcare. Dacă îl oprești pe ăsta, îți fixezi pierderea din direcție — hotărăști tu, uită-te la Tablou." }
+      var dB = String(b.directie || "").toLowerCase(), cuB = misc && rg.sens && (dB === "long" || dB === "short") && (dB === "long") === (rg.sens === "urca");
+      out.miscare = cuB
+        ? { nivel: "info", titlu: nume + ": mișcare mare CU botul — lasă-l să lucreze", mesaj: "Mișcarea pe 4 ore e " + x(rg.r4h) + "× cea obișnuită, pe 24 de ore " + x(rg.r24h) + "×, în direcția botului. Fără bani în plus; pune opritorul la prețul de zero și urmărește marginea gridului (Tabloul îți arată cât mai e)." }
+        : misc
+        ? { nivel: "atentie", titlu: nume + ": mișcare mare" + (rg.sens && (dB === "long" || dB === "short") ? " împotriva botului" : "") + " — regimul în care gridul iese cel mai rău", mesaj: "Mișcarea pe 4 ore e " + x(rg.r4h) + "× cea obișnuită a monedei, pe 24 de ore " + x(rg.r24h) + "×. Dovedit: NU porni grid nou după mișcare. Dacă îl oprești pe ăsta, îți fixezi pierderea din direcție — hotărăști tu, uită-te la Tablou." }
         : { nivel: "ok", titlu: nume + ": liniște din nou", mesaj: "Mișcarea a coborât la " + x(rmax) + "× obișnuitul." };
     }
 

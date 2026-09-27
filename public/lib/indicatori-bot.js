@@ -111,13 +111,15 @@ var IndicatoriBot = (function () {
   function mediu(o, botDir) {
     o = o || {};
     var out = [], rg = o.regim, r4 = rg ? nr(rg.r4h) : null, r24 = rg ? nr(rg.r24h) : null;
-    var titluMis = "Pragul e 1,5× mișcarea obișnuită a monedei (pe ultimele ~3 săptămâni). Singurul semnal DOVEDIT pentru grid în Radar: pornit sau ținut după mișcare, gridul iese cel mai rău; în liniște se descurcă.";
+    var titluMis = "Pragul e 1,5× mișcarea obișnuită a monedei (pe ultimele ~3 săptămâni). Contează sensul: pe 40 de monede (27.09), după o mișcare CU botul gridul a ieșit pe plus în 59% din ferestre, contra 50%, în liniște 56% — nimic dovedit; regula „nu porni grid nou după mișcare” rămâne pentru pornire.";
     if (r4 === null && r24 === null) out.push({ k: "miscare", eticheta: "Mișcarea", text: "n-am destule bare de 1 oră", ton: "neutru", titlu: titluMis });
     else {
-      var mis = !!rg.miscare, parti = [];
+      var mis = !!rg.miscare, parti = [], bd = String(botDir || "").toLowerCase();
+      var cu = mis && rg.sens && (bd === "long" || bd === "short") ? (bd === "long") === (rg.sens === "urca") : null;
       if (r4 !== null) parti.push("4h " + x1(r4)); if (r24 !== null) parti.push("24h " + x1(r24));
-      out.push({ k: "miscare", eticheta: "Mișcarea", text: (mis ? "mișcare" : "liniște") + " · " + parti.join(" · ") + " din obișnuit", ton: mis ? "rau" : "bine",
-        titlu: titluMis + (mis ? " Acum e mișcare: aș fi gata să opresc botul." : "") });
+      out.push({ k: "miscare", eticheta: "Mișcarea", text: (mis ? (cu === true ? "mișcare cu botul" : cu === false ? "mișcare contra botului" : "mișcare") : "liniște") + " · " + parti.join(" · ") + " din obișnuit",
+        ton: !mis || cu === true ? "bine" : "rau",
+        titlu: titluMis + (cu === true ? " Acum mișcarea e cu botul: l-aș lăsa să lucreze, cu opritorul la prețul de zero." : mis ? " Acum e mișcare" + (cu === false ? " împotriva botului" : "") + ": n-aș adăuga bani." : "") });
     }
     var f = o.funding, rate = f ? nr(f.rate) : null, ore = f && nr(f.intervalOre) ? f.intervalOre : 8;
     var titluF = "Funding-ul se plătește la fiecare " + ore + " ore între long și short. Mult peste obișnuit = mulți înghesuiți pe o parte; pe partea botului e și cost, și risc de descărcare bruscă a prețului.";
