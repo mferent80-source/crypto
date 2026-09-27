@@ -21,6 +21,9 @@ import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
+import { construiestePoza, costLeiDinLoturi } from "./lib/poza.mjs";
+import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
+const VERSIUNE_COLECTOR = "v98.0";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -248,8 +251,11 @@ function meta() { return stareAlerte[META] || (stareAlerte[META] = { citireRea: 
 async function anuntaColector(nivel, titlu, mesaj) { return trimiteAlerta({ nivel, titlu, mesaj }, null, "colector"); }
 
 let esecuri = 0;
+// v98: ce a vazut ultima tura (pentru poza): botii si ultimele 30 de preturi ale fiecaruia (o poza pe tura, la un minut)
+let ultimiiBoti = []; const pret30 = {}; let turaNr = 0;
 async function tura() {
   const acum = Date.now();
+  turaNr++;
   bate();
   let d;
   try { d = await cere("/api/bot-orders"); esecuri = 0; }
@@ -271,6 +277,8 @@ async function tura() {
   if (m.citireRea && m.anuntatRau) await anuntaColector("info", "Crypto Radar citește din nou botul", "Alertele merg din nou.");
   m.citireRea = 0; m.anuntatRau = 0;
   const boti = Array.isArray(d && d.bots) ? d.bots : [];
+  ultimiiBoti = boti;
+  for (const b of boti) if (b && b.id && Number.isFinite(Number(b.pretCurent))) { const r = pret30[b.id] || (pret30[b.id] = []); r.push(Number(b.pretCurent)); if (r.length > 30) r.shift(); }
   // un bot care mergea si a disparut din lista
   const acumIds = {}; for (const b of boti) if (b && b.id) acumIds[b.id] = true;
   for (const id of Object.keys(m.cunoscuti)) {
@@ -492,9 +500,76 @@ async function turaPaznic() {
   if (!PAZNIC_URL || !PAZNIC_TOKEN || Date.now() - paznicLa < 5 * 60000) return;
   paznicLa = Date.now();
   try {
-    const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/bataie", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ pid: process.pid, versiune: "v97" }), signal: AbortSignal.timeout(15000) });
+    const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/bataie", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ pid: process.pid, versiune: VERSIUNE_COLECTOR }), signal: AbortSignal.timeout(15000) });
     if (!r.ok) jurnal("paznic: bataia refuzata", r.status);
   } catch (e) { jurnal("paznic: bataia n-a plecat", e.message); paznicLa = Date.now() - 4 * 60000; }
+}
+
+// v98: poza pentru pagina alerts din Trading Tools - la 5 minute, prin paznic (POST /poza); lista de simboluri a paginii
+// vine tot de acolo (GET /simboluri). Datele externe (Yahoo) au cache pe disc; o poza care nu pleaca se reincearca la tura urmatoare.
+const POZA_MS = 5 * 60000, DUBLURI = { "1QZ.DE": "COIN", "MIGA.MU": "MSTR", "NFC.F": "NFLX" };
+const yahooExtra = creeazaYahooExtra({ fisier: path.join(DATA, "poza-ext.json"), jurnal });
+let pozaLa = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   // T212 limiteaza cererile: la o citire picata raman pozitiile de la poza anterioara
+function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
+async function pozitiiPentruPoza() {
+  const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) return [];
+  const pz = await cere("/api/t212?action=pozitii"), poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
+  let loturi = []; try { const h = await cere("/api/t212?action=istoric"); loturi = T212.perechi((h && h.umpleri) || []).deschise || []; } catch (e) { jurnal("poza: loturi", e.message); }
+  let cash = null; try { cash = (await cere("/api/t212?action=cont")).cash || null; } catch {}
+  let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
+  const inv = cash && cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
+  const out = [];
+  for (const x of poz) {
+    let bare = [], plan = null;
+    try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)); bare = GridCalcul.bareBursa(d && d.randuri || [], Date.now()); } catch (e) { jurnal("poza: bare", x.ticker, e.message); }
+    try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + x.ticker))); } catch {}
+    const de = Date.parse(x.initialFillDate || ""); let mx = null;
+    if (Number.isFinite(de)) for (const b of bare) if (b.t + 86400000 > de) mx = mx === null ? b.h : Math.max(mx, b.h);
+    if (mx !== null && x.currentPrice > mx) mx = x.currentPrice;
+    const p = { ticker: x.ticker, simbol: T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx };
+    const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
+    const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: 0.15 }) : null;
+    out.push({ ...p, prev: bare.length > 1 ? bare[bare.length - 2].c : null, la: bare.length ? bare[bare.length - 1].t : null, ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
+      niv: n && n.nivel === "ok" ? { stop: n.stop, tinta: n.tinta, trend: n.trend && n.trend.dir ? n.trend.dir : (typeof n.trend === "string" ? n.trend : null) } : null,
+      pondere: inv !== null && usd > 0 && cash.total > 0 ? x.quantity * x.currentPrice / usd * inv / cash.total : null });
+  }
+  return out;
+}
+async function botiPentruPoza() {
+  const out = [];
+  for (const b of ultimiiBoti) {
+    if (!b || !b.id || b.activ === false) continue;
+    let plan = null; try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id))); } catch {}
+    let zero = null; try { const z = TabloExtra.dacaInchizi(b); zero = z && z.pretZero > 0 ? z.pretZero : null; } catch {}
+    const x = semnaleUlt[b.id]; out.push({ ...b, plan, zero, pret30: pret30[b.id] || [], semafor: x && x.semafor ? x.semafor : null, la: Date.now() });
+  }
+  return out;
+}
+async function simboluriPentruPoza() {
+  const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/simboluri", { headers: { authorization: "Bearer " + PAZNIC_TOKEN }, signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error("paznic /simboluri " + r.status);
+  const out = [];
+  for (const s of ((await r.json()).simboluri || []).slice(0, 60)) {
+    const sursa = DUBLURI[s.s] || null; let c = null, e = null;
+    try { c = await yahooExtra.closes(s.s); } catch (err) { jurnal("poza: inchideri", s.s, err.message); }
+    try { e = await yahooExtra.extra(sursa || s.s); } catch (err) { jurnal("poza: extra", s.s, err.message); }
+    out.push({ s: s.s, nota: s.nota, sursa, moneda: c ? c.moneda : (/\.(DE|MU|F|PA|AS|MI|SW)$/.test(s.s) ? "€" : "$"), pret: c ? c.pret : null, prev: c ? c.prev : null, closes30: c ? c.closes30 : [], extra: e });
+  }
+  return out;
+}
+async function turaPoza() {
+  if (!PAZNIC_URL || !PAZNIC_TOKEN || pozaInLucru || Date.now() - pozaLa < POZA_MS) return;
+  pozaInLucru = true; pozaLa = Date.now();
+  try {
+    let t212Eroare = null;
+    const [t212, boti, simboluri] = await Promise.all([
+      pozitiiPentruPoza().then((l) => { ultimeleT212 = { lista: l, la: Date.now() }; return l; }).catch((e) => { t212Eroare = e.message; jurnal("poza: t212", e.message); return ultimeleT212.lista; }),
+      botiPentruPoza(), simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; })]);
+    const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri }), text = JSON.stringify(poza);
+    const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
+    if (!r.ok) jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120)); else jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", t212.length + " poziții", boti.length + " boți", simboluri.length + " simboluri");
+  } catch (e) { jurnal("poza: n-a plecat", e.message); pozaLa = Date.now() - POZA_MS + 60000; }
+  pozaInLucru = false;
 }
 
 function turaCopie() {
@@ -670,6 +745,7 @@ async function bucla() {
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message));
   turaCopie();
   turaPaznic().catch(() => {});
+  turaPoza().catch((e) => jurnal("poza", e.message));
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).catch((e) => jurnal("idei/dimineata", e.message));
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
