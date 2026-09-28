@@ -11,7 +11,9 @@ var GridCalcul = (function () {
 
   var C = {
     COMISION: 0.0005,          // pe umplere, Pionex futures
-    PAS_MIN: 0.0035,           // net >= 0,25% pe grila dupa ~0,10% dus-intors
+    PAS_MIN: 0.003,            // v99: 0,30% (net 0,20% dupa ~0,10% dus-intors) - experienta lui (28.09): cu grid de 0,30% a facut
+                               // mai multi bani in piata laterala decat cu 3%; gridurile rare sunt atinse rar. Era 0,35% (net 0,25%).
+    PAS_CANDIDATI: 4,          // v99: 4 candidati de pas (progresie geometrica de la PAS_MIN la maxim), nu 3
     PAS_MAX_MULT: 3,           // pasul maxim = mediana (high-low)/close pe 15M x 3
     PERCENTILE: [0.60, 0.75, 0.90],
     PERC_IMPLICIT: 1,
@@ -134,8 +136,10 @@ var GridCalcul = (function () {
     for (var i = 0; i < b.length; i++) r.push((b[i].h - b[i].l) / b[i].c);
     var med = mediana(r);
     if (med === null) return null;
-    var mx = Math.max(C.PAS_MIN, med * C.PAS_MAX_MULT);
-    return [C.PAS_MIN, Math.sqrt(C.PAS_MIN * mx), mx];
+    var mx = Math.max(C.PAS_MIN, med * C.PAS_MAX_MULT), n = C.PAS_CANDIDATI, out = [];
+    // v99: n candidati in progresie geometrica (primul = PAS_MIN, ultimul = mx); pe bare moarte toti = PAS_MIN
+    for (var k = 0; k < n; k++) out.push(k === n - 1 ? mx : C.PAS_MIN * Math.pow(mx / C.PAS_MIN, k / (n - 1)));
+    return out;
   }
 
   function plaseaza(pret, lat, dir) {
@@ -144,7 +148,7 @@ var GridCalcul = (function () {
     return { jos: jos, sus: sus };
   }
   function nrGrile(jos, sus, pas) {
-    // in jos, nu rotunjit: pasul efectiv nu scade niciodata sub cel cerut (garda de 0,35%)
+    // in jos, nu rotunjit: pasul efectiv nu scade niciodata sub cel cerut (garda de 0,30%)
     var n = Math.floor(Math.log(sus / jos) / Math.log(1 + pas));
     return Math.max(C.GRILE_MIN, Math.min(C.GRILE_MAX, n));
   }

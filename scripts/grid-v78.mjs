@@ -58,14 +58,15 @@ await test("nrGrile: jos 90, sus 110, pas 1% -> 20; strunit la 2..150", () => {
   assert.equal(GC.nrGrile(10, 1000, 0.0035), 150);
 });
 
-await test("pasi: culoarul pasului porneste de la 0,35% si urca pana la 3 x miscarea tipica pe 15M; pe bare linistite ramane 0,35%", () => {
+await test("pasi (v99): culoarul pasului porneste de la 0,30% si urca in 4 trepte geometrice pana la 3 x miscarea tipica pe 15M; pe bare linistite ramane 0,30%", () => {
   const vii = bareDin(aleator(500, 9, 0.02), 0.004);         // bare de ~0,8%+ -> pas maxim > minim
   const p = GC.pasi(vii);
-  aprox(p[0], 0.0035, 1e-12, "minimul");
-  assert.ok(p[2] > 0.0035 && p[1] > p[0] && p[1] < p[2], JSON.stringify(p));
-  aprox(p[1], Math.sqrt(p[0] * p[2]), 1e-12, "mijlocul geometric");
-  const moarte = bareDin(Array(300).fill(1), 0.0001);          // bare de 0,02% -> nimic sub 0,35%
-  assert.deepEqual(GC.pasi(moarte), [0.0035, 0.0035, 0.0035]);
+  assert.equal(p.length, 4, JSON.stringify(p));
+  aprox(p[0], 0.003, 1e-12, "minimul");
+  assert.ok(p[3] > 0.003 && p[0] < p[1] && p[1] < p[2] && p[2] < p[3], JSON.stringify(p));
+  aprox(p[1] / p[0], p[2] / p[1], 1e-9, "progresie geometrica"); aprox(p[2] / p[1], p[3] / p[2], 1e-9, "progresie geometrica");
+  const moarte = bareDin(Array(300).fill(1), 0.0001);          // bare de 0,02% -> nimic sub 0,30%
+  assert.deepEqual(GC.pasi(moarte), [0.003, 0.003, 0.003, 0.003]);
   assert.equal(GC.pasi([]), null);
 });
 
@@ -741,18 +742,25 @@ const ORA_ = 3600000, P0 = 1790185122575;
 const botMET = { id: "2382", baza: "MET.PERP", quote: "USDT", activ: true, directie: "long", levier: 5, investit: 88.98, profitNet: -4.8309, profitTotal: -5.4292, pnlNerealizat: -0.5984, comisioane: -0.7086, finantare: -0.0563, gridProfitBrut: 4.0787, pozitie: 702, pretDeschidere: 0.34115, pretCurent: 0.3403, gridJos: 0.3, gridSus: 0.4, pornitLa: P0,
   brut: { buOrderData: { row: 93, gridType: "arithmetic", gridProfit24h: "3.99005464", trx24h: 320, fundingFeePayment: "-0.05626315455384", initPrice: "0.3556" } } };
 await test("v80 modulul TabloExtra exista", () => assert.ok(TX, "tablou-extra.js lipseste"));
-await test("v80 geometrieBot: MET aritmetic 0,30-0,40 / 93 grile la 0,3403 -> pas 0,001075 = 0,316% brut, ~0,216% net; sub pragul fisei (0,25%) -> 'prea dese'", () => {
+await test("v80 geometrieBot: MET aritmetic 0,30-0,40 / 93 grile la 0,3403 -> pas 0,001075 = 0,316% brut, ~0,216% net; v99: peste pragul de 0,20% (0,30% brut) -> NU e 'prea des'; 200 de grile (0,047% net) -> prea dese", () => {
   const g = TX.geometrieBot(botMET);
   aprox(g.pasPret, 0.1 / 93, 1e-9); aprox(g.pasPct, (0.1 / 93) / 0.3403, 1e-6); aprox(g.netPct, (0.1 / 93) / 0.3403 - 0.001, 1e-6);
-  assert.equal(g.mod, "aritmetic"); assert.equal(g.grile, 93); assert.equal(g.preaDese, true);
+  assert.equal(g.mod, "aritmetic"); assert.equal(g.grile, 93); assert.equal(g.preaDese, false, "0,216% net e peste pragul nou de 0,20% (experienta lui: 0,30% brut merge lateral)");
+  const b200 = JSON.parse(JSON.stringify(botMET)); b200.brut.buOrderData.row = 200;
+  assert.equal(TX.geometrieBot(b200).preaDese, true, "0,047% net: comisionul mananca grila");
   assert.equal(TX.geometrieBot({ gridJos: 0.3, gridSus: 0.4, brut: { buOrderData: {} } }), null, "fara numar de grile -> null");
 });
 await test("v80 comparaCuFisa: randuri bot vs fisa (interval, grile, pas net, levier, directie, verdict) + semnale concrete", () => {
   const fisa = { dir: "long", verdict: { nivel: "porneste" }, setare: { jos: 0.315, sus: 0.389, grile: 10, levier: 3, levierSigur: 3, pas: 0.0213, profitGrila: 0.0203 } };
   const c = TX.comparaCuFisa(botMET, fisa);
   assert.ok(c.randuri.length >= 6);
-  assert.ok(c.semnale.some((x) => /prea dese/.test(x)), c.semnale.join(" | "));
+  assert.ok(!c.semnale.some((x) => /prea dese/.test(x)), "v99: 93 de grile (0,216% net) nu mai sunt prea dese: " + c.semnale.join(" | "));
   assert.ok(c.semnale.some((x) => /levier/.test(x)), "5x vs 3x sigur");
+  const b200 = JSON.parse(JSON.stringify(botMET)); b200.brut.buOrderData.row = 200;
+  assert.ok(TX.comparaCuFisa(b200, fisa).semnale.some((x) => /prea dese/.test(x)), "200 de grile: prea dese");
+  // v99: cand fisa PROPUNE gridul des, tabelul „fisa de azi" arata setarea propusa, nu platoul
+  const fd = { ...fisa, propusa: "deasa", deasa: { setare: { jos: 0.315, sus: 0.389, grile: 70, levier: 3, levierSigur: 3, pas: 0.003, profitGrila: 0.002 } } };
+  assert.equal(TX.comparaCuFisa(botMET, fd).randuri.find((r) => r.et === "Grile").fisa, "70 geometric");
   assert.equal(TX.comparaCuFisa(botMET, null).randuri.length, 0);
 });
 await test("v80 grileVsCosturi: grile 24h +3,99 vs comisioane/zi si funding/zi (din totalul de la pornire / zile)", () => {

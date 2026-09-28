@@ -79,9 +79,10 @@ var GridProba = (function () {
 
   function statistici(rez) {
     if (!rez || !rez.length) return null;
-    var net = [], ies = 0, lich = 0, opr = 0;
-    for (var i = 0; i < rez.length; i++) { net.push(rez[i].net); ies += rez[i].iesiri; if (rez[i].lichidat) lich++; if (rez[i].oprit) opr++; }
-    return { n: rez.length, mediana: G.mediana(net), ceaMaiProasta: Math.min.apply(null, net), iesiriMedii: ies / rez.length, lichidari: lich, opriri: opr };
+    var net = [], ies = 0, lich = 0, opr = 0, ump = 0;
+    for (var i = 0; i < rez.length; i++) { net.push(rez[i].net); ies += rez[i].iesiri; ump += rez[i].umpleri || 0; if (rez[i].lichidat) lich++; if (rez[i].oprit) opr++; }
+    // v99: umpleriMedii = cate treceri (umpleri) face setarea intr-o fereastra, in medie - "gridul e atins des sau rar?"
+    return { n: rez.length, mediana: G.mediana(net), ceaMaiProasta: Math.min.apply(null, net), iesiriMedii: ies / rez.length, lichidari: lich, opriri: opr, umpleriMedii: ump / rez.length };
   }
 
   // Platou, nu varf: scorul unei celule = media medianelor ei si a vecinilor
@@ -130,12 +131,14 @@ var GridProba = (function () {
         }
       }
       var ales = alegePlatou(mat.map(function (r) { return r.map(function (x) { return x.antren; }); }));
+      // v99: la latimea aleasa se pastreaza si celula cea mai DEASA (pasul minim, pi = 0) - "varianta deasa" din fisa
       if (ales) {
-        pe[dir] = { wi: ales.wi, pi: ales.pi, antren: mat[ales.wi][ales.pi].antren, test: mat[ales.wi][ales.pi].test, platou: ales.scor, faraVarianta: false };
+        pe[dir] = { wi: ales.wi, pi: ales.pi, antren: mat[ales.wi][ales.pi].antren, test: mat[ales.wi][ales.pi].test, platou: ales.scor, faraVarianta: false,
+          deasa: { pi: 0, antren: mat[ales.wi][0].antren, test: mat[ales.wi][0].test } };
         if (ales.scor > scorRec) { scorRec = ales.scor; recomandata = dir; }
       } else {
         var d = C.PERC_IMPLICIT;   // nicio varianta fara lichidare: arat varianta de mijloc, cu lichidarile ei
-        pe[dir] = { wi: d, pi: 1, antren: mat[d][1].antren, test: mat[d][1].test, platou: null, faraVarianta: true };
+        pe[dir] = { wi: d, pi: 1, antren: mat[d][1].antren, test: mat[d][1].test, platou: null, faraVarianta: true, deasa: { pi: 0, antren: mat[d][0].antren, test: mat[d][0].test } };
       }
     });
     return { H: H, zile: b15.length / C.BARE_ZI, ferestre: { antren: nAntren, test: nTest, independente: Math.floor(b15.length / W) },
@@ -173,28 +176,61 @@ var GridProba = (function () {
     var pr = proba(o.b15, o.H);
     if (!pr) return { eroare: "Prea puține lumânări ca să probez: trebuie cel puțin " + (2 * o.H + 1) + " zile de istoric pe 15 minute." };
     var dT = G.directie(o.b4h, o.b1d), dir = o.dir || dT.dir, ales = pr.pe[dir];
-    var lat = G.percentila(G.latimi(o.b15, o.H), C.PERCENTILE[ales.wi]), pas = G.pasi(o.b15)[ales.pi];
-    var st = G.construieste({ pret: o.pret, lat: lat, pas: pas, dir: dir, suma: o.suma, levier: o.levier });
+    var pasV = G.pasi(o.b15), lat = G.percentila(G.latimi(o.b15, o.H), C.PERCENTILE[ales.wi]), pas = pasV[ales.pi];
     // Minimul pe ordin: intai mai putine grile (spec 6.4); suma necesara doar daca nici 2 nu incap.
-    var mo = minOrdin(o, st.sus), sumaMinima = null;
-    if (mo !== null && st.perOrdin < mo) {
-      var N2 = Math.floor(st.suma * st.levier / mo);
-      if (N2 >= C.GRILE_MIN) {
-        var de = st.grile;
-        st = G.construieste({ pret: o.pret, lat: lat, pas: pas, dir: dir, suma: o.suma, levier: o.levier, grile: N2 });
-        st.redus = { de: de, la: st.grile, minOrdin: mo };
-      } else sumaMinima = mo * C.GRILE_MIN / st.levier;
+    function cuMinOrdin(pasX) {
+      var s = G.construieste({ pret: o.pret, lat: lat, pas: pasX, dir: dir, suma: o.suma, levier: o.levier });
+      var mo = minOrdin(o, s.sus), sm = null;
+      if (mo !== null && s.perOrdin < mo) {
+        var N2 = Math.floor(s.suma * s.levier / mo);
+        if (N2 >= C.GRILE_MIN) {
+          var de = s.grile;
+          s = G.construieste({ pret: o.pret, lat: lat, pas: pasX, dir: dir, suma: o.suma, levier: o.levier, grile: N2 });
+          s.redus = { de: de, la: s.grile, minOrdin: mo };
+        } else sm = mo * C.GRILE_MIN / s.levier;
+      }
+      return { st: s, sumaMinima: sm, mo: mo };
     }
+    var a = cuMinOrdin(pas), st = a.st, sumaMinima = a.sumaMinima, mo = a.mo;
     var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret), liniste = G.linisteTine(o.b15, o.H);
     var v = G.verdict({ regim: rg, stat: ales, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur });
     if (sumaMinima !== null) {
       v = { nivel: "nu", motive: ["suma e prea mică: Pionex cere cel puțin " + mo.toFixed(2) + " USDT pe ordin, deci pentru 2 grile la " + st.levier + "× îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
     }
-    return { simbol: o.simbol, pret: o.pret, H: o.H, directie: dT, dir: dir, manual: !!o.dir, setare: st, proba: pr, verdict: v,
+    // v99 (28.09, experienta lui): VARIANTA DEASA - pasul minim (0,30%) la aceeasi latime, cu statistica ei din proba si
+    // trecerile pe zi; e PROPUSA in locul setarii alese cand piata e linistita si proba n-o respinge (vezi propune/respinge)
+    var dst = ales.deasa || null, dd = cuMinOrdin(pasV[0]), rz = respinge(dst);
+    var deasa = { setare: dd.st, antren: dst ? dst.antren : null, test: dst ? dst.test : null, treceriZi: treceriPeZi(dst && dst.antren, o.H),
+      respinsa: rz.respinsa || dd.sumaMinima !== null, motiv: rz.respinsa ? rz.motiv : (dd.sumaMinima !== null ? "suma e prea mică pentru atâtea grile" : ""), aceeasi: ales.pi === 0 };
+    var f = { simbol: o.simbol, pret: o.pret, H: o.H, directie: dT, dir: dir, manual: !!o.dir, setare: st, proba: pr, verdict: v,
       regim: rg, pozitie: poz, liniste: liniste, sumaMinima: sumaMinima,
-      contra: contrazice(pr, dir) };
+      contra: contrazice(pr, dir), treceriZi: treceriPeZi(ales.antren, o.H), deasa: deasa };
+    f.propusa = propune({ regim: rg, deasa: deasa, setare: st });
+    return f;
   }
+  function treceriPeZi(stat, H) { return stat && typeof stat.umpleriMedii === "number" && H > 0 ? stat.umpleriMedii / H : null; }
+  // v99: proba respinge o setare cand pe istoric a fost lichidata sau a iesit pe minus (mediana), sau pe zilele nevazute
+  function respinge(stat) {
+    var a = stat && stat.antren, t = stat && stat.test;
+    if (!a || a.mediana === null || a.mediana === undefined) return { respinsa: true, motiv: "fără probă pe istoric" };
+    if (a.lichidari > 0) return { respinsa: true, motiv: "pe istoric a fost lichidată de " + a.lichidari + " ori" };
+    if (a.mediana < 0) return { respinsa: true, motiv: "pe istoric a ieșit pe minus (mediana " + G.procent(a.mediana) + ")" };
+    if (t && t.lichidari > 0) return { respinsa: true, motiv: "pe zilele nevăzute a fost lichidată" };
+    if (t && t.mediana !== null && t.mediana !== undefined && t.mediana < 0) return { respinsa: true, motiv: "pe zilele nevăzute a ieșit pe minus (" + G.procent(t.mediana) + ")" };
+    return { respinsa: false, motiv: "" };
+  }
+  // v99: ce propune fisa - "deasa" DOAR in liniste (dupa miscare gridul iese cel mai rau), cand proba n-a respins-o si e
+  // chiar mai deasa decat setarea aleasa; altfel "aleasa" (platoul probei). Regula lui, nu o dovada: se masoara in timp.
+  function propune(x) {
+    var rg = x && x.regim, d = x && x.deasa, s = x && x.setare;
+    if (!rg || rg.miscare) return "aleasa";
+    if (!d || d.respinsa || !d.setare) return "aleasa";
+    if (s && d.setare.grile === s.grile) return "aleasa";
+    return "deasa";
+  }
+  function setarePropusa(f) { return f && f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : (f ? f.setare : null); }
 
-  return { simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa };
+  return { simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+    respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

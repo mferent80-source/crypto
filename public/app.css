@@ -1461,6 +1461,8 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbSemComp{margin:8px 0 0;padding-left:18px}
 #tabloubot .tbMuta{margin-top:10px;padding-top:8px;border-top:1px solid var(--tb-linie)}
 #tabloubot .tbMuta h5{margin:0 0 6px;font-size:14px}
+#tabloubot .tbConcret p{margin:4px 0;font-size:13px;line-height:1.45}
+#tabloubot .tbSemNivel.neutral{color:var(--tb-mut,#9fb3c8)}
 #tabloubot .grRand{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--tb-linie)}
 #tabloubot .grCopy{padding:2px 8px;font-size:12px}
 #tabloubot .tbSoc{margin-top:10px}

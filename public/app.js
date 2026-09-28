@@ -5215,7 +5215,8 @@ function renderGrid(){
   // inainte, de ex. a botului) nu se arata sub numele celei alese; cat se calculeaza, se spune CARE moneda
   if(f&&ceScrie&&f.simbol!==ceScrie){box.innerHTML='<div class="emptyState">Calculez fișa pentru <b>'+escapeHtml(ceScrie.replace(/_USDT_PERP$/,""))+'</b>… (aduc ~30 de zile de lumânări)</div>';return}
   if(!f){box.innerHTML=grStare.inLucru&&ceScrie?'<div class="emptyState">Calculez fișa pentru <b>'+escapeHtml(ceScrie.replace(/_USDT_PERP$/,""))+'</b>… (aduc ~30 de zile de lumânări)</div>':'<div class="emptyState">Scrie o monedă (de exemplu MET) și suma. Fișa se recalculează singură la 5 minute cât stă deschisă.</div>';return}
-  var st=f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive;
+  // v99: setarile de pus = ce PROPUNE fisa (gridul des 0,3 % in liniste, cand proba n-o respinge; altfel platoul probei)
+  var st=GridProba.setarePropusa(f)||f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive,T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
   var h='<div class="grVerdict '+niv[1]+'"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>';
   h+=grPoartaHtml(f);
   if(typeof grBiletTu==="function")h+=grBiletTu(f);
@@ -5227,6 +5228,7 @@ function renderGrid(){
     +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
     +grRand("Număr de grile",st.grile+" · alege „Geometric” în Pionex (implicit e aritmetic)"+(st.redus?" · redus de la "+st.redus.de+", ca să încapă minimul pe ordin":""),String(st.grile))
     +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
+    +(f.deasa&&!f.deasa.aceeasi?grRand("Grid des (0,3 %)",f.propusa==="deasa"?"PROPUS · piață liniștită, proba n-a respins-o · ~"+T1(f.deasa.treceriZi)+" treceri/zi pe ultimele 30 z (proba alesese "+f.setare.grile+" grile la "+P(f.setare.pas)+", ~"+T1(f.treceriZi)+" treceri/zi)":f.deasa.setare.grile+" grile · ~"+T1(f.deasa.treceriZi)+" treceri/zi · nepropus: "+(f.deasa.respinsa?f.deasa.motiv:(f.regim&&f.regim.miscare?"piața e în mișcare (după mișcare gridul iese cel mai rău)":"proba a ales pasul mai rar")),null):"")
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
     +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
@@ -5497,7 +5499,7 @@ function tbDeseneazaSemafor(b){
   var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null},Date.now());
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f);
   var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:TabloExtra.dacaInchizi(b),plan:plan,costuri:TabloExtra.grileVsCosturi(b,Date.now()),btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
-  var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"]},n=N[sm.nivel];
+  var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"],asteapta:["⏳ SOCOTESC","neutral"]},n=N[sm.nivel]||N.asteapta;
   // v97.6: botul n-are plan -> sus, inaintea semaforului: propunerea si un singur buton
   var faraPlan=tbPlan.botId===b.id&&tbPlan.la&&!(tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre));
   if(faraPlan&&tbPropPlan.botId!==b.id)tbAduPropunerePlan(b);
@@ -5506,12 +5508,19 @@ function tbDeseneazaSemafor(b){
     +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
   h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(sm.motiv.charAt(0).toUpperCase()+sm.motiv.slice(1))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p></div></div>';
   if(sm.componente.length>1)h+='<ul class="tbSemComp">'+sm.componente.slice(1).map(function(c){return '<li class="'+(c.nivel==="iesi"?"bad":"tbWarn")+'">'+escapeHtml(c.motiv)+'</li>'}).join("")+'</ul>';
+  // v99 (cererea lui, 28.09): "Acum, concret" - stopul (unde e, unde l-as pune), gridul (al lui vs propus, treceri/zi, pozitia in interval), miscarea live
+  var acc=SemnaleBot.acumConcret({bot:b,fisa:f,zero:TabloExtra.dacaInchizi(b),costuri:TabloExtra.grileVsCosturi(b,Date.now()),acum:Date.now()});
+  h+='<div class="tbMuta tbConcret"><h5>Acum, concret</h5>'+acc.map(function(x){return '<p><b>'+escapeHtml(x.titlu)+':</b> '+escapeHtml(x.text)+'</p>'}).join("")+'</div>';
   if(!f)h+='<p class="tbSub">calculez fișa de azi pentru moneda botului (trendul, mișcarea, gridul propus)…</p>';
   if(!ac)h+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de acasă (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';
   if(iap)h+='<p class="tbSub">'+escapeHtml(iap.text)+'</p>';
   if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")h+='<p class="tbSub">'+escapeHtml(ac.aglomerare.text)+'</p>';
-  if(muta){var s=muta.setare,i=grStare.monede&&grStare.monede[TabloBot.simboluri(b.baza,b.quote).pionex];
-    h+='<div class="tbMuta"><h5>Gridul propus acum (din fișa de azi)</h5>'+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",s.grile+" geometric",String(s.grile))+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}
+  // v99: gridul propus apare si cand botul e mult mai RAR decat gridul des al fisei in liniste (gridMaiDes), nu doar la margine (muta)
+  var gmd=muta?null:SemnaleBot.gridMaiDes(b,f),T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
+  var prop=muta?{setare:muta.setare,titlu:"Gridul propus acum (din fișa de azi"+(muta.des?", grid des 0,3 % pentru piața liniștită":"")+")",sub:muta.treceriZi!=null?"~"+T1(muta.treceriZi)+" treceri pe zi pe ultimele 30 de zile":""}
+    :gmd?{setare:gmd.setare,titlu:"Grid mai des pentru piața liniștită de acum (0,3 %)",sub:gmd.motiv+". Nu e o dovadă, e regula ta (0,30 % lateral); proba pe 30 z n-a respins-o."}:null;
+  if(prop){var s=prop.setare,i=grStare.monede&&grStare.monede[TabloBot.simboluri(b.baza,b.quote).pionex];
+    h+='<div class="tbMuta"><h5>'+escapeHtml(prop.titlu)+'</h5>'+(prop.sub?'<p class="tbSub">'+escapeHtml(prop.sub)+'</p>':'')+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",s.grile+" geometric",String(s.grile))+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}
   // socoteala
   var soc=kv?SemnaleBot.socoteala(kv.log||[]):null,E={tine:"ține",lichidare:"lichidare",plan:"planul tău",trend:"trend contra",miscare:"mișcare mare","ia-profit":"ia profit",muta:"mută gridul",costuri:"costuri",btc:"BTC în mișcare",aglomerare:"aglomerare",podea:"ținta devine podea","cu-botul":"mișcare cu botul"};
   // v97.1: podeaua pe banii lui - daca iesea la prima "tinta atinsa" fata de ce are acum (nerealizat pana inchide)

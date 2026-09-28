@@ -75,7 +75,8 @@ function pozitieT212(x) {
 function semaforBot(sem) {
   if (!sem || !sem.nivel) return { niv: null, motive: [], sfat: "" };
   const motive = [sem.motiv].concat((Array.isArray(sem.componente) ? sem.componente : []).map((c) => c && c.motiv)).filter((m, i, l) => typeof m === "string" && m && l.indexOf(m) === i);
-  return { niv: String(sem.nivel), motive: motive.slice(0, 6), sfat: sem.faCe ? String(sem.faCe) : "" };
+  // v99: "asteapta" (fisa inca se socoteste) nu e un verdict pentru pagina alerts -> null; motivul ramane la vedere
+  return { niv: sem.nivel === "asteapta" ? null : String(sem.nivel), motive: motive.slice(0, 6), sfat: sem.faCe ? String(sem.faCe) : "" };
 }
 function botPoza(b) {
   const pret = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), total = nr(b.profitTotal), brut = nr(b.gridProfitBrut) || 0, com = nr(b.comisioane) || 0, sem = semaforBot(b.semafor);
