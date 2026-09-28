@@ -83,7 +83,7 @@ var SemnaleBot = (function () {
           : (sp && sp.stop && nr(sp.stop.jos) !== null ? sp.stop.jos : (jos !== null && g ? jos * (1 - 2 * g.pas) : null));
         out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Dacă vrei protecție, " + (dir === "short" ? "peste gridul de sus: " : "sub gridul de jos: ") + (protectie !== null ? fmtPret(protectie) : "două grile în afara marginii") + " — dar știi că se închide pe minus." });
       }
-    } else out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
+    } else out.push({ cod: "stop", titlu: "Stopul", text: neutru ? "acum " + opTxt + ". Botul e neutru (cumpără sub preț, vinde peste): n-are un preț de zero pe o singură parte, deci un stop „la zero” nu există; protecția stă la două grile în afara intervalului, pe ambele părți." : "acum " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
     // 2) gridul
     var poz = p !== null && jos !== null && sus !== null && sus > jos ? (p - jos) / (sus - jos) : null, c = x.costuri || {};
     var al = g ? "al tău: " + g.grile + " grile la " + P(g.pas) + " pas (net " + P(g.pas - 2 * G.C.COMISION) + ")" : "al tău: fără geometrie citită";
@@ -108,14 +108,19 @@ var SemnaleBot = (function () {
     var st0 = out[0], gr0 = out[1], mi0 = out[2];
     st0.mare = op !== null ? fmtPret(op) : "nepus";
     st0.mic = op !== null ? (p !== null ? "activ · " + S1(op / p - 1) + " de preț" : "activ") : "fără stop în Pionex";
-    if (p === null || pz === null) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = st0.text; }
-    else if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Botul e neutru: zero-ul (" + fmtPret(pz) + ") e doar reper; protecția stă la două grile în afara intervalului, pe ambele părți."; }
+    // revizia v100: neutrul primul (la el zero-ul nu se socoteste niciodata); pozitia stopului SE VERIFICA, nu se presupune
+    if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Botul e neutru (cumpără sub preț, vinde peste): protecția stă la două grile în afara intervalului, pe ambele părți."; }
+    else if (p === null || pz === null) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = st0.text; }
     else if (peProfit) {
-      st0.tag = dincolo ? { t: "la adăpost", c: "good" } : { t: "mută-l la zero", c: "warn" };
-      st0.act = dincolo ? "E deja dincolo de zero-ul botului (" + fmtPret(pz) + "): o întoarcere nu te mai duce pe minus." : "Mută-l la " + fmtPret(pz) + " (zero-ul botului, " + S1(pz / p - 1) + " de preț): de acolo câștigul nu se mai pierde.";
+      st0.tag = dincolo ? { t: "la adăpost", c: "good" } : { t: op === null ? "pune-l la zero" : "mută-l la zero", c: "warn" };
+      st0.act = dincolo ? "E deja dincolo de zero-ul botului (" + fmtPret(pz) + "): o întoarcere nu te mai duce pe minus." : (op === null ? "Pune-l" : "Mută-l") + " la " + fmtPret(pz) + " (zero-ul botului, " + S1(pz / p - 1) + " de preț): de acolo câștigul nu se mai pierde.";
     } else {
-      st0.tag = op !== null ? { t: "pus", c: "good" } : { t: "fără protecție", c: "bad" };
-      st0.act = "Ești pe minus: zero-ul botului (" + fmtPret(pz) + ") e la " + S1(pz / p - 1) + " de preț, acolo un stop n-are sens. " + (op !== null ? "Stopul tău stă " + (dir === "short" ? "peste gridul de sus" : "sub gridul de jos") + "." : "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "două grile în afara marginii") + ".");
+      var inAfara = op !== null && (dir === "short" ? sus !== null && op > sus : jos !== null && op < jos);
+      st0.tag = op === null ? { t: "fără protecție", c: "bad" } : inAfara ? { t: "pus", c: "good" } : { t: "stop în grid", c: "warn" };
+      st0.act = "Ești pe minus: zero-ul botului (" + fmtPret(pz) + ") e la " + S1(pz / p - 1) + " de preț, acolo un stop n-are sens. "
+        + (op === null ? "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "două grile în afara marginii") + "."
+          : inAfara ? "Stopul tău stă " + (dir === "short" ? "peste gridul de sus" : "sub gridul de jos") + "."
+          : "Stopul tău (" + fmtPret(op) + ") stă în grid: o mișcare mică îl atinge și închide botul pe minus.");
     }
     gr0.mare = poz === null ? "—" : poz < 0 ? S1(p / jos - 1) : poz > 1 ? S1(p / sus - 1) : Math.round(poz * 100) + "%";
     gr0.mic = poz === null ? "fără interval citit" : poz < 0 ? "sub gridul de jos" : poz > 1 ? "peste gridul de sus" : "din interval";
@@ -126,7 +131,7 @@ var SemnaleBot = (function () {
       var sf0 = sensFata(b, rg), r40 = nr(rg.r4h), r240 = nr(rg.r24h), li = nr(b.distantaLichidarePct);
       mi0.mare = r40 !== null ? X(r40) : X(r240); mi0.mic = r40 !== null ? "pe 4 h față de obișnuit" : "pe 24 h față de obișnuit";
       mi0.tag = rg.miscare ? (sf0 === "contra" ? { t: "împotriva botului", c: "bad" } : sf0 === "cu" ? { t: "cu botul", c: "good" } : { t: "mișcare mare", c: "warn" }) : { t: "liniște", c: "good" };
-      mi0.act = (r40 !== null && r240 !== null ? X(r240) + " pe 24 h. " : "") + (rg.miscare ? (sf0 === "contra" ? "Nu adaug bani; urmăresc lichidarea" + (li !== null ? " (" + Math.abs(li).toFixed(1).replace(".", ",") + "% până la ea)" : "") + "." : sf0 === "cu" ? "Grilele încasează, poziția se micșorează; nu adaug bani." : "N-aș îndesi gridul acum; aștept liniștea.") : "Gridul lucrează; nu adaug bani pe urcare și nu schimb nimic pe zgomot.");
+      mi0.act = (r40 !== null && r240 !== null ? X(r240) + " pe 24 h. " : "") + (rg.miscare ? (sf0 === "contra" ? "Nu adaug bani; urmăresc lichidarea" + (li !== null ? " (" + Math.abs(li).toFixed(1).replace(".", ",") + "% până la ea)" : "") + "." : sf0 === "cu" ? "Grilele încasează, poziția se micșorează; nu adaug bani." : "N-aș îndesi gridul acum; aștept liniștea.") : (poz !== null && (poz < 0 || poz > 1) ? "Prețul e în afara gridului: botul stă până revine sau muți gridul; nu adaug bani." : "Gridul lucrează; nu adaug bani pe urcare și nu schimb nimic pe zgomot."));
     } else { mi0.mare = "—"; mi0.mic = "o socotesc"; mi0.tag = { t: "socotesc", c: "mut" }; mi0.act = mi0.text; }
     return out;
   }

@@ -132,5 +132,55 @@ await test("app.js: graficul deseneaza cu GraficBot si DOAR alertele botului (Ta
   assert.match(a, /function tbComutaInd\(/);
 });
 
+// ---------- revizia v100 (28.09) ----------
+await test("revizie 🔴: moneda ieftina (0.00001234) - etichetele din grafic au cifre semnificative, nu „0.0000”; pretul plat nu da NaN", () => {
+  const k = klines().map((x) => ({ ...x, open: String(Number(x.open) / 50000), close: String(Number(x.close) / 50000), high: String(Number(x.high) / 50000), low: String(Number(x.low) / 50000) }));
+  const b = { ...BOT, gridJos: 0.5722 / 50000, gridSus: 0.6572 / 50000, pretDeschidere: 0.59176 / 50000, pretLichidare: 0.4712485 / 50000, opritorPierdere: 0.5455 / 50000 };
+  const d = GB.desen({ bare: GB.bare(k), W: 1000, ingust: false, st: ST, niv: GB.niveluriBot({ bot: b, zero: 0.59512 / 50000 }), grila: { jos: b.gridJos, sus: b.gridSus, n: 18 }, alerte: [], per: "24h" });
+  assert.doesNotMatch(d.svg, /0\.0000</, "etichete „0.0000”"); assert.match(d.svg, /zero-ul botului 0\.00001190/);
+  const plat = Array.from({ length: 40 }, (_, i) => ({ time: T0 + i * M5, open: "1", close: "1", high: "1", low: "1", volume: "5" }));
+  assert.doesNotMatch(GB.desen({ bare: GB.bare(plat), W: 800, ingust: false, st: ST, niv: [], grila: {}, alerte: [], per: "24h" }).svg, /NaN/);
+});
+await test("revizie: pe telefon etichetele din dreapta au un nume scurt (zero, stop, −14.9 …), nu doar cifre colorate", () => {
+  const d = GB.desen({ bare: GB.bare(klines()), W: 330, ingust: true, st: ST, niv: NIV(), grila: { jos: 0.5722, sus: 0.6572, n: 18 }, alerte: [], per: "24h" });
+  assert.match(d.svg, />zero 0\.5951</); assert.match(d.svg, />−14\.9 0\.5756</); assert.match(d.svg, />intrare 0\.5918</);
+});
+await test("revizie: cu RSI oprit, axa timpului ramane in SVG; legenda nu arata ce nu e desenat (fara zero / fara plan / o singura parte a planului)", () => {
+  const d = GB.desen({ bare: GB.bare(klines()), W: 1000, ingust: false, st: { bb: false, ema: false, rsi: false, vp: false }, niv: [], grila: {}, alerte: [], per: "24h" });
+  const ys = [...d.svg.matchAll(/<text x="[\d.]+" y="([\d.]+)"[^>]*text-anchor="(start|middle|end)"/g)].map((m) => Number(m[1]));
+  assert.ok(ys.length && ys.every((y) => y <= d.inaltime - 2), "axa timpului in afara SVG-ului: " + ys + " / " + d.inaltime);
+  assert.doesNotMatch(d.legenda, /zero-ul botului|planul, pe/);
+  const doarPlus = GB.desen({ bare: GB.bare(klines()), W: 1000, ingust: false, st: ST, niv: GB.niveluriBot({ bot: BOT, planPlus: { pret: 0.602, usdt: 5 } }), grila: {}, alerte: [], per: "24h" });
+  assert.match(doarPlus.legenda, /planul, pe plus/); assert.doesNotMatch(doarPlus.legenda, /planul, pe minus/);
+});
+await test("revizie: cartela Stop - „sub gridul de jos” doar daca stopul CHIAR e sub grid; un stop pus in grid se spune; stop nepus pe plus -> „pune-l la zero”, nu „muta-l”", () => {
+  const f = { dir: "long", regim: { r4h: 0.9, r24h: 1, miscare: false }, setare: { jos: 0.52, sus: 0.63, grile: 9, pas: 0.022, levier: 5, dir: "long", stop: { jos: 0.5, sus: 0.66 } }, propusa: "aleasa", deasa: null };
+  const inGrid = S.acumConcret({ bot: { ...BOT, opritorPierdere: 0.58, pretCurent: 0.59 }, fisa: f, zero: { pretZero: 0.5951 }, costuri: {}, acum: T0 }).find((x) => x.cod === "stop");
+  assert.doesNotMatch(inGrid.act, /sub gridul de jos/); assert.match(inGrid.act, /în grid/); assert.equal(inGrid.tag.c, "warn");
+  const sub = S.acumConcret({ bot: BOT, fisa: f, zero: { pretZero: 0.5951 }, costuri: {}, acum: T0 }).find((x) => x.cod === "stop");
+  assert.match(sub.act, /sub gridul de jos/);
+  const nepus = S.acumConcret({ bot: { ...BOT, opritorPierdereActiv: false, pretCurent: 0.62, profitTotal: 3 }, fisa: f, zero: { pretZero: 0.6012 }, costuri: {}, acum: T0 }).find((x) => x.cod === "stop");
+  assert.match(nepus.tag.t, /pune-l/); assert.match(nepus.act, /Pune-l la 0\.6012/);
+});
+await test("revizie: botul NEUTRU (zero-ul nu se socoteste niciodata) -> „reper”, nu „de socotit”; pretul in afara gridului -> Miscarea nu mai spune „gridul lucreaza”", () => {
+  const f = { dir: "neutru", regim: { r4h: 0.8, r24h: 0.9, miscare: false }, setare: { jos: 0.52, sus: 0.63, grile: 9, pas: 0.022, levier: 5, dir: "neutru", stop: { jos: 0.5, sus: 0.66 } }, propusa: "aleasa", deasa: null };
+  const n = S.acumConcret({ bot: { ...BOT, directie: "neutru" }, fisa: f, zero: null, costuri: {}, acum: T0 });
+  assert.equal(n.find((x) => x.cod === "stop").tag.t, "reper"); assert.doesNotMatch(n.find((x) => x.cod === "stop").text + n.find((x) => x.cod === "stop").act, /nu se poate socoti/);
+  const afara = S.acumConcret({ bot: BOT, fisa: { ...f, dir: "long" }, zero: { pretZero: 0.5951 }, costuri: {}, acum: T0 }).find((x) => x.cod === "miscare");
+  assert.doesNotMatch(afara.act, /[Gg]ridul lucrează/); assert.match(afara.act, /afara gridului|afara intervalului|în afara gridului/);
+});
+await test("revizie: aplicatia - #tbConcret ascuns chiar ascunde (CSS); fara bot se golesc cartelele, motivele si socoteala; graficul nu deseneaza lumanarile altei monede/perioade; „ia profit” nu se dubleaza; ultimele alerte si ca text; test:v100 e in npm test", () => {
+  const css = citeste("../public/app.css"), a = citeste("../public/app.js"), pkg = JSON.parse(citeste("../package.json"));
+  assert.match(css, /#tabloubot \.tbConcret\[hidden\]\{display:none\}/);
+  assert.doesNotMatch(css, /#tabloubot \.tbConcret p\{/, "regula veche din v99 bate actiunea din cartele");
+  const i = a.indexOf("function tbDeseneazaBanii("), ban = a.slice(i, a.indexOf("\n", a.indexOf("if(!b)", i)));
+  assert.match(ban, /tbDeseneazaSemafor\(null\)/, "fara bot: cartelele si motivele se ascund");
+  const j = a.indexOf("function tbDeseneazaSemafor("), sem = a.slice(j, a.indexOf("\nfunction ", j + 10));
+  assert.match(sem, /tbSocoteala/); assert.doesNotMatch(sem, /alte\.push\(\{c:"var\(--muted\)",m:iap\.text/, "ia profit apare deja ca motiv");
+  const k = a.indexOf("function renderTabloGrafic("), gr = a.slice(k, a.indexOf("\nfunction ", k + 10));
+  assert.match(gr, /g\.simbol!==|g\.simbol !==/, "verifica simbolul si perioada lumanarilor"); assert.match(gr, /typeof GraficBot/); assert.match(gr, /gbUlt/);
+  assert.match(pkg.scripts.test, /npm run test:v100/); assert.equal(pkg.scripts["test:v100"], "node scripts/proba-v100.mjs");
+});
+
 console.log(`\nV100 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste} probe trecute\n`);
 process.exit(picate ? 1 : 0);

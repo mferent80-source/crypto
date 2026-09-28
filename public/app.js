@@ -5473,7 +5473,8 @@ function tbMergiLaMotive(){var m=$("tbMotive");if(m&&!m.hidden&&m.scrollIntoView
 function tbDeseneazaSemafor(b){
   var el=$("tbSemafor");if(!el)return;
   var mot=$("tbMotive"),cc=$("tbConcret");
-  if(!b){tbPregatire(el);if(mot)mot.hidden=true;if(cc)cc.hidden=true;return}
+  // fara bot (sau ruta picata): cartelele, motivele si socoteala NU raman cu cifrele botului de dinainte (revizia v100)
+  if(!b){if(mot)mot.hidden=true;if(cc)cc.hidden=true;var s0=$("tbSocoteala");if(s0)s0.innerHTML='<p class="tbSub">Fără bot citit.</p>';if(tbStare.routeOk!==false)tbPregatire(el);return}
   var f=tbFisa.botId===b.id?tbFisa.fisa:null,kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
   var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null},Date.now());
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f),zero=TabloExtra.dacaInchizi(b),costuri=TabloExtra.grileVsCosturi(b,Date.now());
@@ -5487,8 +5488,8 @@ function tbDeseneazaSemafor(b){
   var h=faraPlan?'<div class="tbFaraPlan">📝 <b>'+escapeHtml(String(b.baza||"Botul").replace(/\.PERP$/,""))+' n-are plan.</b> Fără țintă și prag scrise la rece, panoul nu-ți poate spune când să încasezi sau să ieși (nici podeaua).'
     +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
   // celelalte motive + notele (ia profit, aglomerarea "info") - pe randul lor, nu in cartela
-  var alte=SemnaleBot.celelalteMotive(sm).map(function(x){return {c:CUL[x.nivel]||"var(--muted)",m:x.motiv,f:x.faCe}});
-  if(iap)alte.push({c:"var(--muted)",m:iap.text,f:""});
+  // "ia profit" e deja o componenta a verdictului: textul lui explicativ intra in randul lui, nu intr-un rand separat (revizia v100)
+  var alte=SemnaleBot.celelalteMotive(sm).map(function(x){return {c:CUL[x.nivel]||"var(--muted)",m:x.motiv,f:x.cod==="ia-profit"&&iap?iap.text+" "+x.faCe:x.faCe}});
   if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")alte.push({c:"var(--muted)",m:ac.aglomerare.text,f:""});
   h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(mare(sm.motiv))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p>'
     +(alte.length?'<button type="button" class="tbMaiMulte" data-action-click="tbMergiLaMotive()">și <b>încă '+alte.length+(alte.length===1?' motiv':' motive')+'</b> '+alte.map(function(x){return '<i class="tbPct" style="background:'+x.c+'"></i>'}).join("")+' · mai jos ↓</button>':'')+'</div></div>';
@@ -5564,7 +5565,7 @@ function tbDeseneazaExtra(b){
 // Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.
 function tbDeseneazaBanii(b){
   var el=$("tbBani"),av=$("tbAvertismente");if(!el)return;
-  if(!b){el.innerHTML='<div class="emptyState">—</div>';if(av)av.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
+  if(!b){el.innerHTML='<div class="emptyState">—</div>';if(av)av.innerHTML='<p class="tbSub">Fără bot citit.</p>';tbDeseneazaSemafor(null);return}
   // Lista, nu cutii: eticheta la stanga, cifra la dreapta, aliniata pe coloana.
   var rand=function(eticheta,valoare,cls,nota){return '<div class="tbLinie"><span>'+escapeHtml(eticheta)+(nota?' <span class="tbSub">'+escapeHtml(nota)+'</span>':'')+'</span><b class="'+(cls||"")+'">'+escapeHtml(valoare)+'</b></div>'};
   el.innerHTML=rand("Investit",botiBan(b.investit,2,false))+
@@ -5864,11 +5865,15 @@ function renderTabloGrafic(){
   var b=tbStare.routeOk===false?null:tbStare.bot,g=tbStare.grafic,brut=tbStare.botBrut;
   if(!b){el.innerHTML='<div class="emptyState">—</div>';return}
   if(!g||!g.randuri){el.innerHTML='<div class="emptyState">'+escapeHtml(g&&g.eroare?"Nu am prețurile: "+g.eroare:"Aștept prețurile…")+'</div>';return}
+  if(typeof GraficBot==="undefined"){el.innerHTML='<div class="emptyState">Nu s-a încărcat desenul graficului (lib/grafic-bot.js). Reîncarcă pagina.</div>';return}
+  // lumanarile trebuie sa fie ale botului si perioadei de ACUM (la schimbarea botului/perioadei, pana vin cele noi)
+  var cheieG=TabloBot.simboluri(b.baza,b.quote).pionex+"|"+(tbStare.graficInterval||"24h");
+  if(g.simbol!==cheieG){el.innerHTML='<div class="emptyState">Aștept prețurile…</div>';return}
   var bare=GraficBot.bare(g.randuri);
   if(bare.length<10){el.innerHTML='<div class="emptyState">Prea puține prețuri pentru grafic.</div>';return}
   tbSincInd();
-  if(!tbGrafRz){tbGrafRz=true;window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){if(tbPanouVizibil())renderTabloGrafic()},150)});tbGrafRz={t:null}}
-  var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;
+  if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
+  var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   var pl=tbPlan.botId===b.id?tbPlan.plan:null,z=TabloExtra.dacaInchizi(b),pPl=pl&&botiNr(pl.plus)>0?TabloExtra.pretPentruTotal(b,botiNr(pl.plus)):null,pMi=pl&&botiNr(pl.minus)>0?TabloExtra.pretPentruTotal(b,-botiNr(pl.minus)):null;
   var niv=GraficBot.niveluriBot({bot:b,zero:z&&z.pretZero,planPlus:pPl?{pret:pPl,usdt:botiNr(pl.plus)}:null,planMinus:pMi?{pret:pMi,usdt:botiNr(pl.minus)}:null});
   var xo=(brut&&brut.buOrderData)||{},gj=botiNr(xo.bottom),gs=botiNr(xo.top);
@@ -5876,7 +5881,10 @@ function renderTabloGrafic(){
   var d=GraficBot.desen({bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),n:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h"});
   var pAcum=bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
-  el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div><div class="gbLeg">'+d.legenda+'</div>';
+  // ultimele 3 alerte ale botului si ca text (pe telefon punctele de pe banda se citesc greu)
+  var ult=alerte.slice().sort(function(x,y){return y.t-x.t}).slice(0,3),Cn={critic:"bad",atentie:"neutral",info:"mutedInfo"};
+  var ultHtml=ult.length?'<div class="gbUlt">'+ult.map(function(a){var dt=new Date(a.t);return '<span><b class="'+(Cn[a.nivel]||"mutedInfo")+'">●</b> '+escapeHtml(String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0"))+' '+escapeHtml(String(a.titlu||"").replace(/^[A-Z0-9._-]+: /,""))+'</span>'}).join("")+'</div>':"";
+  el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+ultHtml+'<div class="gbLeg">'+d.legenda+'</div>';
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
   var ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none"};
   var arata=function(cx,cy){
@@ -5888,9 +5896,11 @@ function renderTabloGrafic(){
     var zr=zona.getBoundingClientRect(),tw=tip.offsetWidth,px=cx-zr.left+14;if(px+tw>zr.width)px=cx-zr.left-tw-14;
     tip.style.left=Math.max(0,px)+"px";tip.style.top=Math.max(0,Math.min(cy-zr.top-20,zr.height-tip.offsetHeight))+"px";
   };
-  zona.addEventListener("pointermove",function(e){arata(e.clientX,e.clientY)});
-  zona.addEventListener("pointerdown",function(e){arata(e.clientX,e.clientY)});
-  zona.addEventListener("pointerleave",ascunde);
+  // pe ecran tactil, eticheta ramane dupa ce ridici degetul (se muta la urmatoarea atingere)
+  var fixat=false;
+  zona.addEventListener("pointermove",function(e){if(e.pointerType==="mouse"||!fixat)arata(e.clientX,e.clientY)});
+  zona.addEventListener("pointerdown",function(e){fixat=e.pointerType!=="mouse";arata(e.clientX,e.clientY)});
+  zona.addEventListener("pointerleave",function(){if(!fixat)ascunde()});
   svg.addEventListener("focusin",function(e){var t=e.target&&e.target.closest?e.target.closest(".gbE"):null;if(!t)return;var c=t.querySelector("circle").getBoundingClientRect();arata(c.left+c.width/2,c.top)});
   svg.addEventListener("focusout",ascunde);
 }

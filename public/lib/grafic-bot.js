@@ -14,7 +14,8 @@ var GraficBot = (function () {
 
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v); return isFinite(x) ? x : null; }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function fmtP(v) { return v == null || !isFinite(v) ? "—" : v >= 100 ? v.toFixed(2) : v.toFixed(4); }
+  // sub 1: cel putin 4 zecimale si cel putin 4 cifre semnificative (0.5663, 0.001234, 0.00001234) - revizia v100: la monedele ieftine iesea "0.0000"
+  function fmtP(v) { if (v == null || !isFinite(v)) return "—"; if (v >= 100) return v.toFixed(2); if (v >= 1) return v.toFixed(4); if (v <= 0) return v.toFixed(4); return v.toFixed(Math.min(10, Math.max(4, 3 - Math.floor(Math.log10(v))))); }
   function pct(v) { return v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; }
   function ora(t, lung) { var d = new Date(t), h = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); return lung ? d.getDate() + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + h : h; }
 
@@ -52,15 +53,15 @@ var GraficBot = (function () {
 
   // liniile botului: {k, p, t (eticheta), c (culoare), st: fine|dash|solid|lich}
   function niveluriBot(o) {
-    var b = o && o.bot || {}, l = [], ad = function (k, p, t, c, st) { p = nr(p); if (p !== null && p > 0) l.push({ k: k, p: p, t: t, c: c, st: st }); };
-    ad("gridSus", b.gridSus, "grid sus", COL.accent, "fine");
-    if (o.planPlus && nr(o.planPlus.pret)) ad("planPlus", o.planPlus.pret, "plan +" + o.planPlus.usdt + " USDT", COL.good, "dash");
-    ad("zero", o.zero, "zero-ul botului", COL.warn, "dash");
-    ad("intrare", b.pretDeschidere, "intrarea medie", COL.intrare, "dash");
-    if (o.planMinus && nr(o.planMinus.pret)) ad("planMinus", o.planMinus.pret, "plan −" + o.planMinus.usdt + " USDT", COL.bad, "dash");
-    ad("gridJos", b.gridJos, "grid jos", COL.accent, "fine");
-    if (b.opritorPierdereActiv) ad("stop", b.opritorPierdere, "stopul tău", COL.bad, "solid");
-    ad("lich", b.pretLichidare, "lichidare", COL.bad, "lich");
+    var b = o && o.bot || {}, l = [], ad = function (k, p, t, c, st, s) { p = nr(p); if (p !== null && p > 0) l.push({ k: k, p: p, t: t, c: c, st: st, s: s }); };
+    ad("gridSus", b.gridSus, "grid sus", COL.accent, "fine", "grid↑");
+    if (o.planPlus && nr(o.planPlus.pret)) ad("planPlus", o.planPlus.pret, "plan +" + o.planPlus.usdt + " USDT", COL.good, "dash", "+" + o.planPlus.usdt);
+    ad("zero", o.zero, "zero-ul botului", COL.warn, "dash", "zero");
+    ad("intrare", b.pretDeschidere, "intrarea medie", COL.intrare, "dash", "intrare");
+    if (o.planMinus && nr(o.planMinus.pret)) ad("planMinus", o.planMinus.pret, "plan −" + o.planMinus.usdt + " USDT", COL.bad, "dash", "−" + o.planMinus.usdt);
+    ad("gridJos", b.gridJos, "grid jos", COL.accent, "fine", "grid↓");
+    if (b.opritorPierdereActiv) ad("stop", b.opritorPierdere, "stopul tău", COL.bad, "solid", "stop");
+    ad("lich", b.pretLichidare, "lichidare", COL.bad, "lich", "lich.");
     return l;
   }
 
@@ -78,7 +79,7 @@ var GraficBot = (function () {
   // o = { bare, W, ingust, st:{bb,ema,rsi,vp}, niv, grila:{jos,sus,n,geo}, alerte, per }
   function desen(o) {
     var raw = o.bare || [], st = o.st || {}, W = Math.max(300, o.W || 800), ingust = !!o.ingust;
-    var gut = ingust ? 88 : 132, plotW = W - gut, mainH = ingust ? 230 : 320, volH = ingust ? 34 : 46, laneH = 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, axH = 20, gap = 8;
+    var gut = ingust ? 96 : 132, plotW = W - gut, mainH = ingust ? 230 : 320, volH = ingust ? 34 : 46, laneH = 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, axH = 20, gap = 8;
     var cl = raw.map(function (b) { return b.c; }), S = { e20: ema(cl, 20), e50: ema(cl, 50), bb: bollinger(cl, 20, 2), rsi: rsi(cl, 14) };
     // lumanarile se strang cand sunt prea dese (cel mult ~1 la 3 px)
     var f = Math.max(1, Math.ceil(raw.length * 3 / plotW)), B = [];
@@ -89,9 +90,9 @@ var GraficBot = (function () {
     }
     var n = B.length, cw = plotW / n, pAcum = raw.length ? raw[raw.length - 1].c : null;
     var lo = Infinity, hi = -Infinity; B.forEach(function (b) { if (b.l < lo) lo = b.l; if (b.h > hi) hi = b.h; });
-    var span = hi - lo || hi * 0.01, niv = o.niv || [];
+    var span = hi - lo || Math.abs(hi) * 0.01 || 1, niv = o.niv || [];
     niv.forEach(function (x) { if (x.p > hi && x.p - hi < span * 0.12) hi = x.p; if (x.p < lo && lo - x.p < span * 0.12) lo = x.p; });
-    var pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+    var pad = (hi - lo || span) * 0.06; lo -= pad; hi += pad;
     var Y = function (p) { return (1 - (p - lo) / (hi - lo)) * mainH; }, X = function (bi) { return bi * cw + cw / 2; };
     var q = [], H = mainH + gap + volH + gap + laneH + (rsiH ? gap + rsiH : 0) + axH, f1 = function (x) { return x.toFixed(1); };
     q.push('<rect x="0" y="0" width="' + f1(plotW) + '" height="' + mainH + '" fill="' + COL.fond + '"/>');
@@ -138,7 +139,7 @@ var GraficBot = (function () {
       if (x.p >= lo && x.p <= hi) {
         var y = Y(x.p);
         if (x.st !== "fine") q.push('<line class="gbNiv" x1="0" x2="' + f1(plotW) + '" y1="' + f1(y) + '" y2="' + f1(y) + '" stroke="' + x.c + '" stroke-width="' + (x.st === "lich" ? 2 : 1.3) + '"' + (x.st === "dash" ? ' stroke-dasharray="6 4"' : x.st === "lich" ? ' stroke-dasharray="2 3"' : '') + '/>');
-        et.push({ y: y, t: x.t, p: x.p, c: x.c });
+        et.push({ y: y, t: x.t, s: x.s, p: x.p, c: x.c });
       } else afara.push(x);
     });
     if (pAcum !== null) et.push({ y: Y(pAcum), t: "acum", p: pAcum, c: COL.text, acum: true });
@@ -147,7 +148,7 @@ var GraficBot = (function () {
     var peste = et.length ? et[et.length - 1].y - (mainH - 6) : 0; if (peste > 0) et.forEach(function (e) { e.y -= peste; });
     et.forEach(function (e) {
       if (e.acum) q.push('<rect x="' + f1(plotW + 2) + '" y="' + f1(e.y - 9) + '" width="' + (gut - 4) + '" height="18" rx="4" fill="' + COL.text + '"/><text x="' + f1(plotW + 8) + '" y="' + f1(e.y + 4) + '" font-size="11.5" font-weight="700" fill="#071018">' + (ingust ? "" : "acum ") + fmtP(e.p) + '</text>');
-      else q.push('<text x="' + f1(plotW + 6) + '" y="' + f1(e.y + 4) + '" font-size="11" fill="' + e.c + '">' + (ingust ? "" : esc(e.t) + " ") + fmtP(e.p) + '</text>');
+      else q.push('<text x="' + f1(plotW + 6) + '" y="' + f1(e.y + 4) + '" font-size="11" fill="' + e.c + '">' + esc(ingust ? (e.s || "") : e.t) + " " + fmtP(e.p) + '</text>');
     });
     var ys = 14, yj = mainH - 8;
     afara.forEach(function (x) {
@@ -180,13 +181,16 @@ var GraficBot = (function () {
       var rl = S.rsi[raw.length - 1]; q.push('<text x="' + f1(plotW + 6) + '" y="' + (ry0 + 12) + '" font-size="10.5" fill="' + COL.intrare + '">RSI ' + (rl != null ? Math.round(rl) : "—") + '</text>');
     }
     // axa timpului
-    var ay = ry0 + (rsiH ? rsiH + 4 : 0) + 14, lung = o.per && o.per !== "24h";
+    var ay = (rsiH ? ry0 + rsiH : ly0 + laneH) + 16, lung = o.per && o.per !== "24h";
     [0, 0.25, 0.5, 0.75, 1].forEach(function (fr, ii) { if (ingust && (ii === 1 || ii === 3)) return; q.push('<text x="' + f1(fr * plotW) + '" y="' + ay + '" font-size="10.5" fill="' + COL.mut + '" text-anchor="' + (fr === 0 ? "start" : fr === 1 ? "end" : "middle") + '">' + ora(t0 + fr * (t1 - t0), lung) + '</text>'); });
     q.push('<line class="gbCruce" x1="0" x2="0" y1="0" y2="' + (ry0 + (rsiH || 0)) + '" stroke="' + COL.text + '" stroke-opacity=".35" stroke-width="1" style="display:none"/>');
     var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Prețul cu gridul, planul și alertele botului">' + q.join("") + '</svg>';
     // legenda: identitatea nu sta doar in culoare
-    var Lg = ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gn ? " (" + gn + ")" : "") + '</span>', '<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero-ul botului</span>'];
-    if (niv.some(function (x) { return x.k === "planPlus" || x.k === "planMinus"; })) Lg.push('<span><i class="gbDash" style="border-color:' + COL.good + '"></i>planul, pe plus</span><span><i class="gbDash" style="border-color:' + COL.bad + '"></i>planul, pe minus</span>');
+    var Lg = ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gn ? " (" + gn + ")" : "") + '</span>', ];
+    var are = function (k) { return niv.some(function (x) { return x.k === k; }); };
+    if (are("zero")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero-ul botului</span>');
+    if (are("planPlus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.good + '"></i>planul, pe plus</span>');
+    if (are("planMinus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>planul, pe minus</span>');
     if (niv.some(function (x) { return x.k === "stop"; })) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>stopul tău</span>');
     if (st.ema) Lg.push('<span><i style="border-color:' + COL.ema20 + '"></i>EMA 20</span><span><i style="border-color:' + COL.ema50 + '"></i>EMA 50</span>');
     if (st.bb) Lg.push('<span><i style="border-color:' + COL.bb + '"></i>Bollinger 20, 2</span>');

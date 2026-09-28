@@ -1461,7 +1461,7 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbSemComp{margin:8px 0 0;padding-left:18px}
 #tabloubot .tbMuta{margin-top:10px;padding-top:8px;border-top:1px solid var(--tb-linie)}
 #tabloubot .tbMuta h5{margin:0 0 6px;font-size:14px}
-#tabloubot .tbConcret p{margin:4px 0;font-size:13px;line-height:1.45}
+
 #tabloubot .tbSemNivel.neutral{color:var(--tb-mut,#9fb3c8)}
 #tabloubot .grRand{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--tb-linie)}
 #tabloubot .grCopy{padding:2px 8px;font-size:12px}
@@ -2000,3 +2000,8 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot #tbGrafic{min-width:0;max-width:100%}
 #tabloubot #tbGraficCard .tbIntBtn{width:auto;flex:0 0 auto}
 #tabloubot .tbGraficRand{align-items:start}
+#tabloubot .tbConcret[hidden]{display:none}
+#tabloubot .tbMotive[hidden]{display:none}
+#tabloubot .tbMaiMulte:focus-visible,#tabloubot .tbMotiveAlte:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#tabloubot .gbUlt{display:flex;flex-direction:column;gap:2px;margin-top:6px;font-size:12.5px;color:var(--muted)}
+#tabloubot .gbUlt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
