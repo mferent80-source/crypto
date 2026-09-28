@@ -1238,7 +1238,17 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 .tbTip{position:absolute;top:4px;font-size:14px;font-weight:800;background:var(--panel-3);border:1px solid var(--line);padding:4px 8px;border-radius:8px;pointer-events:none}
 .tbAxa{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:6px}
 @media(max-width:760px){.tbDirRand{grid-template-columns:1fr 1fr}.tbDirFata,.tbDirSch{grid-column:1/-1}.tbDirRand.tbCap{display:none}.tbErouCifra{font-size:32px}.tbGraficZona{height:200px}}
-.botStrip{font-weight:800;max-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+/* v100.6: banda nu mai e taiata la 520 px - ia locul liber din bara (dreapta se intinde), restul chip-urilor nu se strang */
+.topRight{flex:1 1 auto;justify-content:flex-end}.topRight>.statusChip:not(.botStrip){flex-shrink:0}
+.botStrip{display:block;width:auto;font-weight:800;min-width:0;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.botStrip .bsPret{color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}.botStrip .bsPret.viu{color:var(--text)}
+.botStrip .bsSep{opacity:.7}
+#tabloubot .tbPretViu{display:inline-flex;align-items:baseline;gap:6px;padding:3px 10px;border:1px solid var(--tb-linie);border-radius:999px;background:var(--tb-fond2)}
+#tabloubot .tbPretViu[hidden]{display:none}
+#tabloubot .tbPretViu b{font-size:18px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}#tabloubot .tbPretViu.viu b{color:var(--text)}
+#tabloubot .tbPretViu.sus b{color:var(--good)}#tabloubot .tbPretViu.jos b{color:var(--bad)}
+#tabloubot .tbPretViu .tbSub{font-size:12px}
+#tabloubot .tbViuPunct{width:7px;height:7px;border-radius:50%;background:var(--muted);align-self:center}#tabloubot .tbPretViu.viu .tbViuPunct{background:var(--good);box-shadow:0 0 8px rgba(85,216,155,.7)}
 .botStrip.bad{color:var(--bad);border-color:var(--bad)}.botStrip.tbWarn{color:var(--warn);border-color:var(--warn)}.botStrip.good{color:var(--good)}
 @media(max-width:760px){.botStrip{order:-1;flex-basis:100%;max-width:none;white-space:normal;text-align:left}}
 .botStrip[hidden]{display:none!important}

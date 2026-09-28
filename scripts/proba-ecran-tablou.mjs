@@ -113,7 +113,8 @@ const BOOTSTRAP = `(() => {
   }
   window.WebSocket = FereastraFalsa;
   window.__probaTrimiteTick = (pret) => {
-    const inst = window.__proba.wsInstante[window.__proba.wsInstante.length - 1];
+    // v100.6: pe pagina e si socketul pretului live (/api/pret-viu) - tick-ul spot merge DOAR in cel Binance
+    const inst = window.__proba.wsInstante.filter((w) => /stream\.binance\.com/.test(w.url)).pop();
     if (inst && inst.onmessage) { inst.onmessage({ data: JSON.stringify({ p: String(pret) }) }); return true; }
     return false;
   };
