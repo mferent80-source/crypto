@@ -21,9 +21,9 @@ import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { construiestePoza, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { construiestePoza, alerteSLTP, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v101.0";
+const VERSIUNE_COLECTOR = "v101.1";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -617,7 +617,8 @@ async function turaPoza() {
     // I-463: alertele pe simbolurile paginii (miscare > 2x ATR propriu, cumparare noua de insider) - o data pe zi per simbol
     const m = meta(), st = m.simAlerte || (m.simAlerte = {}), prag = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
     for (const k of Object.keys(st)) if (k.slice(-10) < prag) delete st[k];
-    for (const a of alerteSimboluri(poza.simboluri, ultimeleSimboluri, Date.now())) {
+    // v101.1 (el, 28.09: „alerte discord fă”): + SL/TP (aproape de stop, SL/TP sugerat atins fara plan, intrarea sugerata atinsa)
+    for (const a of alerteSimboluri(poza.simboluri, ultimeleSimboluri, Date.now()).concat(alerteSLTP(poza, Date.now()))) {
       if (st[a.cheie]) continue;
       if (await trimiteAlerta({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, null, a.cheie.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60))) st[a.cheie] = true;
     }

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { construiestePoza, sugestiePoza } from "./lib/poza.mjs";
+import { construiestePoza, sugestiePoza, alerteSLTP } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GC = new Function(fs.readFileSync(path.join(RAD, "public/lib/grid-calcul.js"), "utf8") + "; return GridCalcul;")();
@@ -59,6 +59,43 @@ await test("yahooExtra.bare: 1 an OHLC, bara cu null sarita; cache 6 h (a doua c
   const y2 = creeazaYahooExtra({ fisier: path.join(os.tmpdir(), "proba-sltp-e2-" + process.pid + ".json"), fisierBare: fisierBare + "2", pauzaMs: 0, f: async () => raspuns({ chart: { result: null, error: { code: "Not Found" } } }, 404) });
   assert.equal(await y2.bare("SATS"), null);
   for (const f of [fisierBare, fisierBare + "2"]) try { fs.unlinkSync(f); } catch {}
+});
+
+// v101.1 (el, 28.09: „alerte discord fă”): alertele SL/TP din poza - aproape de stop (ultimul sfert), SL / TP sugerat atins
+// (doar fara plan - cu plan le da deja alertePlan), intrarea sugerata atinsa la simbolurile urmarite; o data pe zi (cheia cu ziua)
+const ACUM_A = Date.UTC(2026, 8, 28, 19, 0), ZI_A = "2026-09-28";
+const pozaA = () => ({ t212: [
+  { s: "AVGO", pret: 350.8, plan: { stop: 350.63, tinta: 413.47 }, sugestie: { stop: 350.62, tinta: 412, k: 3, proba: { n: 105, pePlus: 0.41, medie: 0.02 } } },
+  { s: "UHS", pret: 179, plan: { stop: 157.15, tinta: 210.4 }, sugestie: null },
+  { s: "NOU", pret: 88, plan: null, sugestie: { stop: 90, tinta: 130, k: 2, proba: { n: 50, pePlus: 0.5, medie: 0.01 } } },
+  { s: "SUS", pret: 131, plan: null, sugestie: { stop: 90, tinta: 130, k: 2, proba: { n: 50, pePlus: 0.5, medie: 0.01 } } },
+  { s: "APLD", pret: 24.86, plan: { stop: 26.09, tinta: 34.44 }, sugestie: null }],
+  simboluri: [
+    { s: "INTC", moneda: "$", pret: 112.2, sugestie: { intrare: { pret: 111.99, motiv: "retragere" }, stop: 94.68, tinta: 146.61, k: 3, trend: "sus", proba: { n: 140, pePlus: 0.571, medie: 0.0703 } } },
+    { s: "WDC", moneda: "$", pret: 454, sugestie: { intrare: { pret: 413.3, motiv: "lateral" }, stop: 345.1, tinta: 549.7, k: 3, trend: "lateral", proba: { n: 171, pePlus: 0.66, medie: 0.125 } } },
+    { s: "RHM.DE", moneda: "€", pret: 900, sugestie: { intrare: null, stop: 917.3, tinta: 1064.29, k: 1.5, trend: "jos", proba: { n: 141, pePlus: 0.25, medie: -0.025 } } },
+    { s: "NOUX", moneda: "$", pret: 5, sugestie: { nivel: "fara-date", motiv: "prea puține zile" } }] });
+await test("alerteSLTP: AVGO aproape de stopul din plan (ultimul sfert) -> atentie, o cheie pe zi; UHS departe -> nimic", () => {
+  const l = alerteSLTP(pozaA(), ACUM_A), a = l.find((x) => x.cheie === "sltp-aproape-AVGO-" + ZI_A);
+  assert.ok(a, JSON.stringify(l.map((x) => x.cheie))); assert.equal(a.nivel, "atentie"); assert.match(a.titlu, /^AVGO: chiar la stopul din planul tău \(\$350\.63\)/, "sub 0,05% nu scrie „la 0,0%”");
+  const b = alerteSLTP({ t212: [{ s: "MPC", pret: 355, plan: { stop: 344, tinta: 481.72 } }], simboluri: [] }, ACUM_A)[0];
+  assert.match(b.titlu, /^MPC: la 3,1% de stopul din planul tău \(\$344\.00\)/);
+  assert.ok(!l.some((x) => x.cheie.includes("UHS")));
+});
+await test("alerteSLTP: fara plan -> SL / TP sugerat atins (critic / info); CU plan nu se dubleaza alertele existente (APLD sub stop)", () => {
+  const l = alerteSLTP(pozaA(), ACUM_A);
+  const sl = l.find((x) => x.cheie === "sltp-sl-NOU-" + ZI_A), tp = l.find((x) => x.cheie === "sltp-tp-SUS-" + ZI_A);
+  assert.equal(sl.nivel, "critic"); assert.match(sl.titlu, /NOU: a atins stopul sugerat \(\$90\.00\)/);
+  assert.equal(tp.nivel, "info"); assert.match(tp.titlu, /SUS: a atins ținta sugerată \(\$130\.00\)/);
+  assert.ok(!l.some((x) => x.cheie.includes("APLD")), "APLD are plan: „a atins stopul din plan” vine deja din alertePlan");
+  assert.ok(!l.some((x) => x.cheie === "sltp-aproape-NOU-" + ZI_A), "sub stop nu e „aproape”");
+});
+await test("alerteSLTP: simbol urmarit la intrarea sugerata -> info cu SL, TP si istoricul; departe / trend in jos / fara-date -> nimic", () => {
+  const l = alerteSLTP(pozaA(), ACUM_A), i = l.find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
+  assert.ok(i); assert.equal(i.nivel, "info"); assert.match(i.titlu, /INTC: a ajuns la intrarea sugerată \(\$111\.99\)/);
+  assert.match(i.mesaj, /SL \$94\.68/); assert.match(i.mesaj, /TP \$146\.61/); assert.match(i.mesaj, /\+7,0% pe trade/);
+  assert.ok(!l.some((x) => /WDC|RHM|NOUX/.test(x.cheie)));
+  assert.deepEqual(alerteSLTP({ t212: [], simboluri: [] }, ACUM_A), []); assert.deepEqual(alerteSLTP(null, ACUM_A), []);
 });
 
 console.log(`\nSLTP ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);

@@ -218,6 +218,41 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
   return out;
 }
 
+// v101.1 (el, 28.09: „alerte discord fă” — ideea 5 din SL/TP pe alerts): alertele din SL/TP-ul pozei, o data pe zi (cheia poarta ziua):
+//   - pozitie aproape de stop: ultimul sfert al drumului SL -> TP (stopul din plan sau cel sugerat), nivel „atentie”;
+//   - pozitie FARA plan: SL / TP sugerat atins (cu plan, „a atins stopul / tinta din plan” vine deja din ActiuniSemnale.alertePlan);
+//   - simbol urmarit: pretul a ajuns la intrarea sugerata (+0,5 %) - niciodata la trend in jos (intrare null) sau fara date.
+export function alerteSLTP(poza, acum) {
+  const out = []; if (!poza) return out;
+  const zi = new Date(acum).toISOString().slice(0, 10), pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4));
+  for (const p of Array.isArray(poza.t212) ? poza.t212 : []) {
+    if (!p || !p.s) continue;
+    const pl = p.plan && nr(p.plan.stop) !== null ? p.plan : null, sg = p.sugestie && nr(p.sugestie.stop) !== null && nr(p.sugestie.tinta) !== null ? p.sugestie : null;
+    const sl = pl ? pl.stop : sg ? sg.stop : null, tp = pl ? (nr(pl.tinta) !== null ? pl.tinta : sg ? sg.tinta : null) : sg ? sg.tinta : null, pret = nr(p.pret);
+    if (sl === null || tp === null || !pret || !(tp > sl)) continue;
+    const et = pl ? "stopul din planul tău" : "stopul sugerat", dist = 1 - sl / pret;
+    if (pret > sl && (pret - sl) / (tp - sl) < 0.25)
+      out.push({ cheie: "sltp-aproape-" + p.s + "-" + zi, nivel: "atentie", titlu: p.s + ": " + (dist < 0.0005 ? "chiar la " : "la " + pctTxt(dist) + " de ") + et + " ($" + pr(sl) + ")",
+        mesaj: "Prețul e $" + pr(pret) + ", în ultimul sfert al drumului spre SL (TP $" + pr(tp) + "). 👉 Ce aș face eu: nu adaug acum; dacă atinge stopul, ies cum am scris." });
+    if (!pl && sg) {
+      if (pret <= sl) out.push({ cheie: "sltp-sl-" + p.s + "-" + zi, nivel: "critic", titlu: p.s + ": a atins stopul sugerat ($" + pr(sl) + ")",
+        mesaj: "Prețul e $" + pr(pret) + ". Poziția n-are plan în Radar, stopul e cel sugerat (−15 % de la maxim). 👉 Ce aș face eu: ies, sau îmi scriu acum planul la rece." });
+      else if (pret >= tp) out.push({ cheie: "sltp-tp-" + p.s + "-" + zi, nivel: "info", titlu: p.s + ": a atins ținta sugerată ($" + pr(tp) + ")",
+        mesaj: "Prețul e $" + pr(pret) + ". 👉 Ce aș face eu: iau profit pe o parte și pun stopul la prețul de intrare; restul îl las să meargă." });
+    }
+  }
+  for (const s of Array.isArray(poza.simboluri) ? poza.simboluri : []) {
+    const g = s && s.sugestie, pret = s && nr(s.pret);
+    if (!g || g.nivel || !g.intrare || nr(g.intrare.pret) === null || !pret || pret > g.intrare.pret * 1.005) continue;
+    const m = s.moneda === "€" ? "€" : "$", q = g.proba || {};
+    out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
+      mesaj: "Prețul e " + m + pr(pret) + ". SL " + m + pr(g.stop) + " · TP " + m + pr(g.tinta)
+        + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + " % pe plus, " + q.n + " intrări)" : "")
+        + ". E un reper din istoricul lui, nu un semnal dovedit; decizia e a ta." });
+  }
+  return out;
+}
+
 export function construiestePoza(i) {
   const acum = nr(i.acum) || Date.now();
   const t212 = (i.t212 || []).filter((x) => x && x.qty > 0).map((x) => pozitieT212(x, acum)), boti = (i.boti || []).filter((b) => b && b.id).map(botPoza);
