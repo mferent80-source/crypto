@@ -88,6 +88,55 @@ test("app.js: „Prețul în grid”, linia de pe grafic și procentul zilei se 
   assert.match(APP, /interval=1D&limit=2/); assert.match(APP, /PretViu\.ziDinKlines\(/);
 });
 
+// v100.8 - parola adusă de pagina alerts în link (…/#parola=…&ecran=tabloubot): tunelul are adresă nouă la fiecare pornire
+test("Radarul ia parola din link, o ține minte, o scoate din bară și deschide ecranul cerut", () => {
+  const m = /const ecranDinLegatura=\(function\(\)\{[\s\S]*?\n\}\)\(\);/.exec(APP); assert.ok(m, "lipsește ecranDinLegatura în app.js");
+  const ruleaza = (hash, ss = {}) => {
+    const ls = {}, st = { url: null };
+    const loc = { hash, pathname: "/", search: "" };
+    const f = new Function("location", "localStorage", "sessionStorage", "history", "APP_API_TOKEN_SESSION_KEY", m[0] + "; return ecranDinLegatura;");
+    const e = f(loc, { setItem: (k, v) => { ls[k] = v; } }, { setItem: (k, v) => { ss[k] = v; }, getItem: (k) => ss[k] ?? null }, { replaceState: (a, b, u) => { st.url = u; } }, "K");
+    return { e, ls, st, ss };
+  };
+  const a = ruleaza("#parola=abc%2Fdef&ecran=tabloubot"); assert.equal(a.ls.K, "abc/def"); assert.equal(a.e, "tabloubot"); assert.equal(a.st.url, "/", "parola nu rămâne în bară");
+  assert.equal(ruleaza("", a.ss).e, "tabloubot", "după reîncărcarea făcută de service worker (linkul deja scos din bară) ecranul cerut tot se deschide");
+  assert.equal(ruleaza("", { crEcranDinLegatura: JSON.stringify({ e: "tabloubot", t: Date.now() - 120000 }) }).e, null, "peste un minut nu mai trage");
+  assert.equal(JSON.stringify(a.ss).includes("abc"), false, "parola NU ajunge în sesiune");
+  const b = ruleaza("#ecran=t212"); assert.equal(b.e, "t212"); assert.equal(b.ls.K, undefined);
+  const c = ruleaza("#ecran=javascript"); assert.equal(c.e, null, "doar ecranele știute");
+  const d = ruleaza(""); assert.equal(d.e, null); assert.equal(d.st.url, null, "fără link nu atinge adresa");
+  assert.ok(APP.indexOf("const ecranDinLegatura=") < APP.indexOf("// Boot only after every versioned module"), "parola se pune înainte de primele cereri");
+});
+
+test("„Ce ai de făcut acum”: cele mai NOI sus (nu cele vechi); la aceeași oră, cea mai urgentă prima", () => {
+  const TE = new Function(`${citeste("../public/lib/grid-calcul.js")}\n${citeste("../public/lib/tablou-extra.js")}; return TabloExtra;`)();
+  const H = 3600000, ACU = ACUM;
+  const l = TE.ceAiDeFacut({ acum: ACU, dateLa: ACU - 60000, planGol: false, avertismente: [],
+    alerte: [{ t: ACU - 5 * H, nivel: "critic", titlu: "JTO: Lichidarea la 2.7%", mesaj: "vechi" }, { t: ACU - 1 * H, nivel: "atentie", titlu: "JTO: Prețul a ieșit din grid", mesaj: "nou" }],
+    sfaturi: [{ ton: "atentie", titlu: "Mută gridul", text: "x" }, { ton: "critic", titlu: "Semaforul zice IEȘI", text: "y" }] });
+  assert.deepEqual(l.map((x) => x.titlu), ["Semaforul zice IEȘI", "Mută gridul", "Prețul a ieșit din grid", "Lichidarea la 2.7%"]);
+  const ore = l.map((x) => x.la); assert.deepEqual(ore, ore.slice().sort((a, b) => b - a));
+});
+
+test("codTVBot: rândul GRID-FISA din botul care rulează (formatul butonului din fișă, 10 câmpuri) + semnătura gridului", () => {
+  const TE = new Function(`${citeste("../public/lib/grid-calcul.js")}\n${citeste("../public/lib/tablou-extra.js")}; return TabloExtra;`)();
+  const jto = { id: "2386", directie: "long", levier: 5, gridJos: 0.555, gridSus: 0.57, pretCurent: 0.5619, opritorPierdere: 0.5455, opritorPierdereActiv: true, opritorProfit: null, opritorProfitActiv: false,
+    lichidareJos: 0.52034, lichidareSus: null, investit: 98.14, brut: { buOrderData: { row: 9 } } };
+  const c = TE.codTVBot(jto);
+  assert.equal(c.cod, "long;0.555;0.57;9;5;0.5455;0;0.52034;0;98.14"); assert.equal(c.cod.split(";").length, 10);
+  assert.equal(TE.codTVBot({ ...jto, lichidareJos: 0.51, investit: 120 }).sig, c.sig, "lichidarea și suma se mișcă singure: nu înseamnă alt grid");
+  assert.notEqual(TE.codTVBot({ ...jto, gridJos: 0.5722, gridSus: 0.6572, brut: { buOrderData: { row: 18 } } }).sig, c.sig, "alt interval = alt grid");
+  assert.equal(TE.codTVBot({ ...jto, opritorPierdereActiv: false }).cod.split(";")[5], "0", "opritorul stins nu se trimite");
+  const sh = TE.codTVBot({ ...jto, directie: "short", opritorPierdere: 0.59, opritorProfit: 0.54, opritorProfitActiv: true, lichidareJos: null, lichidareSus: 0.66 }).cod.split(";");
+  assert.deepEqual([sh[0], sh[5], sh[6], sh[8]], ["short", "0", "0.59", "0.66"], "la short, ca în fișă: jos 0, stopul de deasupra la sus");
+  assert.equal(TE.codTVBot({ ...jto, directie: "no_trend" }).dir, "neutru");
+  assert.equal(TE.codTVBot({ ...jto, brut: {} }), null, "fără numărul de grile nu inventăm");
+});
+test("Tabloul: banda „Ai schimbat gridul” + butonul permanent din cartela Gridul", () => {
+  assert.match(HTML, /id="tbGridNou"/); assert.match(APP, /function tbDeseneazaTvCod\(/); assert.match(APP, /tbDeseneazaTvCod\(\);tbPiataPeBot\(\)/);
+  assert.match(APP, /x\.cod==="grid"&&tbTvCod\(\)/); assert.match(CSS, /#tabloubot \.tbGridNou\[hidden\]\{display:none\}/);
+});
+
 // releul (functions/api/pret-viu.js), cu fetch / WebSocketPair / Response simulate
 class FalsWS { constructor() { this.l = {}; this.trimise = []; this.inchis = false; } accept() { this.acceptat = true; } addEventListener(t, f) { (this.l[t] ||= []).push(f); } send(x) { this.trimise.push(x); } close() { this.inchis = true; } da(t, d) { (this.l[t] || []).forEach((f) => f(d)); } }
 const vechi = { fetch: globalThis.fetch, Response: globalThis.Response, WebSocketPair: globalThis.WebSocketPair };

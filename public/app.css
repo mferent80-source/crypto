@@ -1246,6 +1246,15 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 .botStrip .bsParte.sus{color:var(--good)}.botStrip .bsParte.jos{color:var(--bad)}
 #tabloubot .tbPretViu{display:inline-flex;align-items:baseline;gap:6px;padding:3px 10px;border:1px solid var(--tb-linie);border-radius:999px;background:var(--tb-fond2)}
 #tabloubot .tbPretViu[hidden]{display:none}
+/* v100.8: codul gridului pentru TradingView (GRID-FISA) */
+#tabloubot .tbGridNou{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px;padding:12px 14px;border:1px solid var(--warn);border-radius:var(--tb-r);background:var(--tb-fond)}
+#tabloubot .tbGridNou[hidden]{display:none}
+#tabloubot .tbGnText{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 420px}
+#tabloubot .tbGnText b{color:var(--warn)}
+#tabloubot .tbGnCod{font:13px/1.4 ui-monospace,Consolas,monospace;color:var(--text);background:var(--tb-fond2);border:1px solid var(--tb-linie);border-radius:8px;padding:6px 8px;overflow-wrap:anywhere;user-select:all}
+#tabloubot .tbGnBtn{display:flex;gap:8px;flex-wrap:wrap}
+#tabloubot .tbGnBtn .actionGhost,#tabloubot .tbTvBtn{width:auto;flex:0 0 auto}
+#tabloubot .tbTvBtn{margin:6px 0 2px;font-size:13px}
 #tabloubot .tbPretViu b{font-size:18px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}#tabloubot .tbPretViu.viu b{color:var(--text)}
 #tabloubot .tbPretViu.sus b{color:var(--good)}#tabloubot .tbPretViu.jos b{color:var(--bad)}
 #tabloubot .tbPretViu .tbSub{font-size:12px}

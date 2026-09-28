@@ -3130,6 +3130,22 @@ const MARKET_BASES=[
   "https://api4.binance.com/api/v3"
 ];
 const APP_API_TOKEN_SESSION_KEY="cryptoRadarApiTokenV54";
+// v100.8 (el, 28.09: „când dau clic Deschide în Radar îmi dă erori”): tunelul are adresă NOUĂ la fiecare pornire a lansatorului,
+// deci browserul n-are parola acolo (401 la tot). Pagina alerts (Trading Tools) aduce parola în link, DUPĂ # (partea asta nu pleacă
+// la niciun server): …/#parola=…&ecran=tabloubot. Se ține minte o dată pe adresa asta și dispare din bară înainte de prima cerere.
+const ecranDinLegatura=(function(){
+  try{
+    const h=String(location.hash||""),m=/[#&]parola=([^&]+)/.exec(h),e=/[#&]ecran=(tabloubot|t212)(?:&|$)/.exec(h);
+    if(m){const v=decodeURIComponent(m[1]).trim();if(v)localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v)}
+    if(m||e)history.replaceState(null,"",location.pathname+location.search);
+    // prima vizita pe o adresa noua de tunel: service worker-ul se instaleaza si REINCARCA pagina (controllerchange), iar linkul e
+    // deja scos din bara -> ecranul cerut se tine minte un minut in sesiune, ca sa ajunga si dupa reincarcare
+    const K="crEcranDinLegatura";
+    if(e){try{sessionStorage.setItem(K,JSON.stringify({e:e[1],t:Date.now()}))}catch{}return e[1]}
+    try{const x=JSON.parse(sessionStorage.getItem(K)||"null");if(x&&(x.e==="tabloubot"||x.e==="t212")&&Date.now()-x.t<60000)return x.e}catch{}
+    return null;
+  }catch{return null}
+})();
 // Parola se tine acum pe DISPOZITIV (localStorage), nu pe sesiune: inainte se
 // stergea la inchiderea tabului, deci pe telefon o cerea de fiecare data.
 // sessionStorage ramane citit ca sa nu cada sesiunea deschisa in momentul livrarii.
@@ -5513,6 +5529,7 @@ function tbDeseneazaSemafor(b){
       var e=$("tbCc-"+x.cod);if(!e)return;var d0=e.querySelector("details"),deschis=!!(d0&&d0.open),tg=x.tag||{t:"",c:"mut"};
       e.innerHTML='<div class="tbCcCap"><h5>'+escapeHtml(x.titlu)+'</h5>'+(tg.t?'<span class="tbTag '+tg.c+'">'+escapeHtml(tg.t)+'</span>':'')+'</div>'
         +'<div class="tbCcMare">'+escapeHtml(x.mare||"—")+(x.mic?'<small>'+escapeHtml(x.mic)+'</small>':'')+'</div><p class="tbCcAct">'+escapeHtml(x.act||x.text)+'</p>'
+        +(x.cod==="grid"&&tbTvCod()?'<button type="button" class="actionGhost tbTvBtn" value="'+escapeHtml(tbTvCod().cod)+'" data-action-click="gridCopiaza(this.value)" title="Rândul pentru indicatorul GRID-FISA din TradingView, cu gridul de acum al botului">📺 Codul pentru TradingView · copiază</button>':'')
         +'<details class="tbCcDet"'+(deschis?' open':'')+'><summary>'+(x.cod==="grid"&&propHtml?"setările de copiat și detalii":"detalii")+'</summary><p>'+escapeHtml(x.text)+'</p>'+(x.cod==="grid"?propHtml:"")+'</details>';
     });
   }
@@ -5932,7 +5949,30 @@ function renderTabloDovada(){
     rand("Timp cu prețul în interval",f.timpInInterval,function(x){return Math.round(x.valoare)+"%"})+
     rand("Timp lângă o margine a gridului",f.desLaMargine,function(x){return Math.round(x.valoare)+"%"});
 }
-function tbDeseneazaTabloulUnic(){renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbPiataPeBot()}
+// v100.8 (el, 28.09: „dacă schimb gridul vreau să-mi apară undeva de copiat pentru TV cu gridul nou”): codul pentru indicatorul
+// GRID-FISA din TradingView, din botul care RULEAZA (TabloExtra.codTVBot). Banda #tbGridNou apare singura cand gridul difera de
+// cel pe care l-ai pus deja in TradingView (tii minte apasand „L-am pus”, pe bot); butonul din cartela Gridul il da oricand.
+var TB_TV_KEY="tbTvGrid:";
+function tbTvCitit(id){try{return JSON.parse(localStorage.getItem(TB_TV_KEY+id)||"null")}catch(_){return null}}
+function tbTvCod(){var b=tbStare.routeOk===false?null:tbStare.bot;return b&&b.id&&typeof TabloExtra!=="undefined"?TabloExtra.codTVBot(b):null}
+function tbDeseneazaTvCod(){
+  var el=$("tbGridNou");if(!el)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot,c=tbTvCod();
+  if(!c){el.hidden=true;el.innerHTML="";return}
+  var v=tbTvCitit(b.id);
+  if(v&&v.sig===c.sig){el.hidden=true;el.innerHTML="";return}
+  var P=function(x){return tbPretScurt(x)};
+  var titlu=v&&v.jos?"🔁 Ai schimbat gridul: "+P(v.jos)+" – "+P(v.sus)+" ("+v.grile+" grile) → "+P(c.jos)+" – "+P(c.sus)+" ("+c.grile+" grile)":"📺 Gridul de acum, pentru TradingView";
+  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA → „Codul din fișă”. Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
+    +'<div class="tbGnBtn"><button type="button" class="actionGhost" value="'+escapeHtml(c.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul</button><button type="button" class="actionGhost" data-action-click="tbTvAmPus()">L-am pus</button></div>';
+  el.hidden=false;
+}
+function tbTvAmPus(){
+  var b=tbStare.bot,c=tbTvCod();if(!c)return;
+  try{localStorage.setItem(TB_TV_KEY+b.id,JSON.stringify({sig:c.sig,jos:c.jos,sus:c.sus,grile:c.grile,la:Date.now()}))}catch(_){}
+  tbDeseneazaTvCod();toast("Ținut minte: la gridul următor îți arăt din nou codul","good");
+}
+function tbDeseneazaTabloulUnic(){renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbDeseneazaTvCod();tbPiataPeBot()}
 // Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
 // vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
 // v100.6: bucatile vin din PretViu.banda (pur); pretul botului sta imediat dupa nume, live din Pionex.
@@ -6310,3 +6350,5 @@ function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;
 
 // Boot only after every versioned module and its lexical state are initialized.
 applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
+// v100.8: linkul din pagina alerts cere un ecran anume (Tabloul botului / Trading 212) - dupa pornire, o singura data
+if(ecranDinLegatura)setTimeout(function(){try{navTo(ecranDinLegatura,true)}catch(e){}},0);

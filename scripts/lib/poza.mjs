@@ -63,13 +63,15 @@ function zileDinData(iso, acum) {
 function semaforT212(sem, niv) {
   return { niv: sem && sem.nivel && sem.nivel !== "fara-date" ? sem.nivel : null, motive: sem && Array.isArray(sem.motive) ? sem.motive.slice(0, 6) : [], sfat: sem && sem.ceAsFace ? String(sem.ceAsFace) : "", trend: niv && niv.trend ? String(niv.trend) : null };
 }
-function pozitieT212(x) {
+function pozitieT212(x, acum) {
   const pret = nr(x.pret), mediu = nr(x.pretMediu), sem = semaforT212(x.sem, x.niv);
   const plan = x.plan ? { trailPct: nr(x.plan.trailPct), tinta: nr(x.plan.tinta) ?? (x.niv ? nr(x.niv.tinta) : null), stop: x.niv ? nr(x.niv.stop) : null, max: nr(x.maxDupaCumparare), stopFix: nr(x.plan.stop) } : null;
   return { s: String(x.simbol || ""), t212: String(x.ticker || ""), buc: rot(x.qty, 6), mediu: rot(mediu, 4), costLei: rot(x.costLei, 2),
     pret: rot(pret, 4), prev: rot(x.prev, 4), la: nr(x.la), closes30: esantion((x.bare || []).map((b) => rot(b && b.c, 4)).filter((c) => c !== null).slice(-30), 30),
     pplLei: rot(x.ppl, 2), pctLei: nr(x.ppl) !== null && nr(x.costLei) ? rot(x.ppl / x.costLei, 6) : null, pctPret: pret && mediu ? rot(pret / mediu - 1, 6) : null,
-    plan, trend: sem.trend, pondere: rot(x.pondere, 4), niv: sem.niv, motive: sem.motive, sfat: sem.sfat };
+    plan, trend: sem.trend, pondere: rot(x.pondere, 4), niv: sem.niv, motive: sem.motive, sfat: sem.sfat,
+    // v100.8: insiderii pe 60 de zile si la pozitiile T212 (null = Yahoo n-a dat nimic inca; pagina spune „vine cu poza următoare”)
+    insideri: x.extra ? insideri(x.extra.tranzactii, nr(acum) || Date.now()) : null, sursa: x.sursa || null };
 }
 // SemnaleBot.semafor -> {nivel, cod, motiv, faCe, componente:[{nivel, cod, motiv, faCe}]}
 function semaforBot(sem) {
@@ -200,7 +202,7 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
 
 export function construiestePoza(i) {
   const acum = nr(i.acum) || Date.now();
-  const t212 = (i.t212 || []).filter((x) => x && x.qty > 0).map(pozitieT212), boti = (i.boti || []).filter((b) => b && b.id).map(botPoza);
+  const t212 = (i.t212 || []).filter((x) => x && x.qty > 0).map((x) => pozitieT212(x, acum)), boti = (i.boti || []).filter((b) => b && b.id).map(botPoza);
   // t212La = cand au fost citite pozitiile (la o limitare de cereri raman cele de la poza anterioara); t212Eroare = ce a spus T212
   const t212Eroare = i.t212Eroare ? String(i.t212Eroare) : null;
   return { la: acum, versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, radarUrl: i.radarUrl ? String(i.radarUrl) : null, t212, t212La: nr(i.t212La), t212Eroare, boti,

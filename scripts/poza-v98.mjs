@@ -120,5 +120,18 @@ await test("marimea: 12 boti x 30 poze + 60 simboluri x top 3 ramane sub 512 KB"
   assert.ok(JSON.stringify(p).length < 512 * 1024, "sub limita worker-ului");
 });
 
+// v100.8 (el, 28.09: „în alerts la Trading 212 de ce nu apar și aici insiderii”)
+await test("v100.8: pozițiile T212 poartă insiderii pe 60 de zile (aceeași regulă ca la simboluri); fără date = null, dubla germană = sursa din SUA", () => {
+  const baza = { qty: 1, pretMediu: 10, pret: 11, prev: 10.5, ppl: 4, costLei: 46, bare: [], plan: null, maxDupaCumparare: null, pondere: 0.1, sem: null, niv: null };
+  const p = construiestePoza({ acum: ACUM, versiune: "v100.8", boti: [], simboluri: [], t212: [
+    { ...baza, ticker: "INTC_US_EQ", simbol: "INTC", extra: { tranzactii: [{ startDate: { fmt: "2026-08-11" }, filerName: "TAN", filerRelation: "CEO", transactionText: "Purchase at 95", shares: { raw: 5 }, value: { raw: 475 } }] } },
+    { ...baza, ticker: "UHS_US_EQ", simbol: "UHS", extra: null },
+    { ...baza, ticker: "1QZd_EQ", simbol: "1QZ.DE", sursa: "COIN", extra: { tranzactii: [] } }] });
+  assert.equal(p.t212[0].insideri.verdict, "bull1"); assert.equal(p.t212[0].insideri.top[0].cine, "Tan");
+  assert.equal(p.t212[1].insideri, null, "Yahoo n-a dat nimic = null, nu „fără insideri”"); assert.equal(p.t212[1].sursa, null);
+  assert.equal(p.t212[2].sursa, "COIN"); assert.equal(p.t212[2].insideri.form4, false);
+  assert.equal(JSON.stringify(p).includes("undefined"), false);
+});
+
 console.log(`POZA_V98 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;
