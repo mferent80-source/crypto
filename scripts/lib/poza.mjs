@@ -259,6 +259,8 @@ export function alerteSLTP(poza, acum) {
     out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
       mesaj: "Prețul e " + m + pr(pret) + ". SL " + m + pr(g.stop) + " · TP " + m + pr(g.tinta)
         + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + " % pe plus, " + q.n + " intrări)" : "")
+        // v101.3 (el, 28.09): si cat cumpar, cand colectorul a calculat marimea (doar in $, cu contul T212 citit)
+        + (g.marime && g.marime.bucati > 0 ? ". Cât cumpăr: " + g.marime.bucati.toFixed(2).replace(".", ",") + " buc (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei), risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafonat la 20 % din cont" : " = 1 % din cont") : "")
         + ". E un reper din istoricul lui, nu un semnal dovedit; decizia e a ta." });
   }
   return out;

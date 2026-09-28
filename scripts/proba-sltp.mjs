@@ -115,5 +115,16 @@ await test("simbolPoza: sugestia urmaritului poarta marimea (bucati, suma si ris
   assert.equal(q.simboluri[0].sugestie.marime, undefined, "trend in jos (fara intrare): nu spunem cate bucati");
 });
 
+// v101.3 (el, 28.09: „da” - si cate bucati in mesajul de pe Discord)
+await test("alerteSLTP: mesajul intrarii spune si cat cumpar (bucati, suma, riscul in lei) cand colectorul a calculat marimea", () => {
+  const p = pozaA(); p.simboluri[0].sugestie.marime = { bucati: 3.6238, suma: 1870, risc: 289, plafonat: false };
+  const i = alerteSLTP(p, ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
+  assert.match(i.mesaj, /Cât cumpăr: 3,62 buc \(~1\.870 lei\), risc ~289 lei = 1 % din cont/);
+  p.simboluri[0].sugestie.marime.plafonat = true;
+  assert.match(alerteSLTP(p, ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A).mesaj, /plafonat la 20 % din cont/);
+  const fara = alerteSLTP(pozaA(), ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
+  assert.doesNotMatch(fara.mesaj, /Cât cumpăr/, "fara marime (€, cont necitit): nimic inventat");
+});
+
 console.log(`\nSLTP ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exitCode = picate ? 1 : 0;
