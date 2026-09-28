@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { construiestePoza, sugestiePoza } from "./lib/poza.mjs";
+import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GC = new Function(fs.readFileSync(path.join(RAD, "public/lib/grid-calcul.js"), "utf8") + "; return GridCalcul;")();
 const AS = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public/lib/actiuni-semnale.js"), "utf8") + "; return ActiuniSemnale;")(GC);
@@ -44,6 +45,20 @@ await test("construiestePoza: t212[].sugestie la FIECARE pozitie (si cu plan), s
   assert.ok(p.t212[1].sugestie.stop > 0); assert.equal(p.t212[2].sugestie, null);
   assert.ok(p.simboluri[0].sugestie && "intrare" in p.simboluri[0].sugestie); assert.equal(p.simboluri[1].sugestie, null);
   const t = JSON.stringify(p); assert.equal(t.includes("undefined"), false); assert.equal(t.includes("NaN"), false); assert.ok(t.length < 512 * 1024);
+});
+
+const raspuns = (corp, status = 200) => ({ ok: status < 400, status, json: async () => corp, text: async () => JSON.stringify(corp), headers: { get: () => null } });
+const chart1y = (n) => ({ chart: { result: [{ timestamp: Array.from({ length: n }, (_, i) => Math.floor((T0 + i * ZI) / 1000)), meta: { currency: "USD" },
+  indicators: { quote: [{ open: Array(n).fill(10), high: Array(n).fill(11), low: Array(n).fill(9), close: Array.from({ length: n }, (_, i) => (i === 3 ? null : 10 + i / 100)), volume: Array(n).fill(5) }] } }] } });
+await test("yahooExtra.bare: 1 an OHLC, bara cu null sarita; cache 6 h (a doua cerere nu suna); 404 -> null, fara exceptie", async () => {
+  const fisierBare = path.join(os.tmpdir(), "proba-sltp-" + process.pid + ".json"); let apeluri = 0, url = "";
+  const y = creeazaYahooExtra({ fisier: path.join(os.tmpdir(), "proba-sltp-e-" + process.pid + ".json"), fisierBare, pauzaMs: 0, f: async (u) => { apeluri++; url = u; return raspuns(chart1y(252)); } });
+  const b = await y.bare("AVGO");
+  assert.equal(b.length, 251); assert.deepEqual(Object.keys(b[0]).sort(), ["c", "h", "l", "o", "t", "v"]); assert.match(url, /range=1y&interval=1d/);
+  await y.bare("AVGO"); assert.equal(apeluri, 1, "din cache");
+  const y2 = creeazaYahooExtra({ fisier: path.join(os.tmpdir(), "proba-sltp-e2-" + process.pid + ".json"), fisierBare: fisierBare + "2", pauzaMs: 0, f: async () => raspuns({ chart: { result: null, error: { code: "Not Found" } } }, 404) });
+  assert.equal(await y2.bare("SATS"), null);
+  for (const f of [fisierBare, fisierBare + "2"]) try { fs.unlinkSync(f); } catch {}
 });
 
 console.log(`\nSLTP ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
