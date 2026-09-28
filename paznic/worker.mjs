@@ -81,8 +81,9 @@ export async function verifica(env, acum, f = fetch) {
   if (tace < TACE_MS) {
     // v98.2: cat poza curge, colectorul nu mai bate separat (scrieri KV) -> revenirea dupa o tacere anuntata o spune cronul, o singura data
     if (s.anuntatLa) {
-      await discord(env, "info", "Crypto Radar: colectorul a revenit", "Colectorul de acasă dă iar semn (poza curge; tăcuse de la " + ora(Number(s.la) || la) + "). Alertele botului merg iar.", f);
-      await scrie(env, { ...s, la, anuntatLa: undefined });
+      // de cand tacuse = ultimul semn dinaintea tacerii (tinut minte la anunt: poza sau bataie), nu ultima BATAIE de acum zile
+      await discord(env, "info", "Crypto Radar: colectorul a revenit", "Colectorul de acasă dă iar semn (poza curge; tăcuse de la " + ora(Number(s.tacutDeLa) || Number(s.la) || la) + "). Alertele botului merg iar.", f);
+      await scrie(env, { ...s, la, anuntatLa: undefined, tacutDeLa: undefined });
       return { stare: "revenit" };
     }
     return { stare: "bate" };
@@ -92,7 +93,7 @@ export async function verifica(env, acum, f = fetch) {
   const ok = await discord(env, "critic", "Crypto Radar: colectorul tace de " + minute(tace),
     "Ultimul semn de la PC-ul de acasă: " + ora(la) + ". Cât tace, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
     (prima ? " Verifică: e pornit PC-ul? merge internetul? rulează PORNESTE-CRYPTO-RADAR.bat?" : " Încă tace."), f);
-  if (ok) await scrie(env, { ...s, anuntatLa: acum });
+  if (ok) await scrie(env, { ...s, anuntatLa: acum, tacutDeLa: s.tacutDeLa || la });
   return { stare: ok ? "anuntat" : "discord-picat" };
 }
 

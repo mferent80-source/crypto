@@ -4815,6 +4815,7 @@ function opresteTabloBot(){
 // din porneTabloBot() a fost scos, ca sa nu bata Pionex de doua ori cat esti
 // pe panou (limita de ritm a bursei e a omului, nu a codului).
 var tbColector=null,tbColectorPas=0;
+function tbCadentaMs(){return tbColectorPas}   // masurata de proba de ecran (scripts/proba-ecran-tablou.mjs, testul 10) - nu e moarta
 // ===== v78: 🧮 Grid - ce setez acum? =====
 // Calculul e in lib/grid-calcul.js + lib/grid-proba.js (probate in scripts/grid-v78.mjs);
 // aici doar aduc lumanarile Pionex si desenez fisa. Merge intreg doar de acasa:
@@ -4939,7 +4940,7 @@ function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
 function grRandSumaMaxima(f){
   var v=grSoldCitit(),sold=grNumar($("grSold")&&$("grSold").value)||v.sold,pierdere=grNumar($("grPierdere")&&$("grPierdere").value);
-  var pe=f.proba.pe[f.dir]||{},a=pe.antren&&pe.antren.ceaMaiProasta,t=pe.test&&pe.test.ceaMaiProasta;
+  var pe=f.stat||f.proba.pe[f.dir]||{},a=pe.antren&&pe.antren.ceaMaiProasta,t=pe.test&&pe.test.ceaMaiProasta;
   var rea=a==null?(t==null?null:t):(t==null?a:Math.min(a,t));   // cea mai proasta din TOATE ferestrele
   if(!(sold>0))return grRand("Cât investesc?","scrie soldul contului mai sus și îți spun");
   if(!(pierdere>0))return grRand("Cât investesc?","scrie ce pierdere accepți, în % din cont (mai mare ca 0)");
@@ -5201,7 +5202,7 @@ function renderGrid(){
     +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
     +grRand("Număr de grile",st.grile+" · alege „Geometric” în Pionex (implicit e aritmetic)"+(st.redus?" · redus de la "+st.redus.de+", ca să încapă minimul pe ordin":""),String(st.grile))
     +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
-    +(f.deasa&&!f.deasa.aceeasi?grRand("Grid des (0,3 %)",f.propusa==="deasa"?"PROPUS · piață liniștită, proba n-a respins-o · ~"+T1(f.deasa.treceriZi)+" treceri/zi pe ultimele 30 z (proba alesese "+f.setare.grile+" grile la "+P(f.setare.pas)+", ~"+T1(f.treceriZi)+" treceri/zi)":f.deasa.setare.grile+" grile · ~"+T1(f.deasa.treceriZi)+" treceri/zi · nepropus: "+(f.deasa.respinsa?f.deasa.motiv:(f.regim&&f.regim.miscare?"piața e în mișcare (după mișcare gridul iese cel mai rău)":"proba a ales pasul mai rar")),null):"")
+    +(f.deasa&&!f.deasa.aceeasi?grRand("Grid des (0,3 %)",f.propusa==="deasa"&&f.aleasa?"PROPUS (setările de mai sus) · piață liniștită, proba n-a respins-o · ~"+T1(f.deasa.treceriZi)+" perechi încheiate/zi pe ultimele 30 z (platoul probei alesese "+f.aleasa.setare.grile+" grile la "+P(f.aleasa.setare.pas)+", ~"+T1(f.aleasa.treceriZi)+" perechi/zi)":f.deasa.setare.grile+" grile · ~"+T1(f.deasa.treceriZi)+" perechi/zi · nepropus: "+(f.deasa.respinsa?f.deasa.motiv:(f.regim&&f.regim.miscare?"piața e în mișcare (după mișcare gridul iese cel mai rău)":"proba a ales pasul mai rar")),null):"")
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
     +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
@@ -5489,7 +5490,7 @@ function tbDeseneazaSemafor(b){
   if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")h+='<p class="tbSub">'+escapeHtml(ac.aglomerare.text)+'</p>';
   // v99: gridul propus apare si cand botul e mult mai RAR decat gridul des al fisei in liniste (gridMaiDes), nu doar la margine (muta)
   var gmd=muta?null:SemnaleBot.gridMaiDes(b,f),T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
-  var prop=muta?{setare:muta.setare,titlu:"Gridul propus acum (din fișa de azi"+(muta.des?", grid des 0,3 % pentru piața liniștită":"")+")",sub:muta.treceriZi!=null?"~"+T1(muta.treceriZi)+" treceri pe zi pe ultimele 30 de zile":""}
+  var prop=muta?{setare:muta.setare,titlu:"Gridul propus acum (din fișa de azi"+(muta.des?", grid des 0,3 % pentru piața liniștită":"")+")",sub:muta.treceriZi!=null?"~"+T1(muta.treceriZi)+" perechi încheiate pe zi pe ultimele 30 de zile":""}
     :gmd?{setare:gmd.setare,titlu:"Grid mai des pentru piața liniștită de acum (0,3 %)",sub:gmd.motiv+". Nu e o dovadă, e regula ta (0,30 % lateral); proba pe 30 z n-a respins-o."}:null;
   if(prop){var s=prop.setare,i=grStare.monede&&grStare.monede[TabloBot.simboluri(b.baza,b.quote).pionex];
     h+='<div class="tbMuta"><h5>'+escapeHtml(prop.titlu)+'</h5>'+(prop.sub?'<p class="tbSub">'+escapeHtml(prop.sub)+'</p>':'')+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",s.grile+" geometric",String(s.grile))+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}

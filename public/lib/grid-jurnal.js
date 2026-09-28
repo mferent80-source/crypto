@@ -32,7 +32,8 @@ var GridJurnal = (function () {
 
   function adauga(lista, f, acum) {
     lista = Array.isArray(lista) ? lista.slice() : [];
-    var st = f.setare || {}, pe = f.proba && f.proba.pe && f.proba.pe[f.dir], a = pe && pe.antren, t = pe && pe.test;
+    // f.stat = statistica setarii PROPUSE (gridul des cand fisa il propune); platoul brut ramane rezerva pentru fise vechi
+    var st = f.setare || {}, pe = f.stat || (f.proba && f.proba.pe && f.proba.pe[f.dir]), a = pe && pe.antren, t = pe && pe.test;
     var e = {
       id: String(acum) + "-" + moneda(f.simbol).replace(/[^A-Z0-9]/g, ""), t: acum, simbol: f.simbol, dir: f.dir, H: f.H, pret: nr(f.pret),
       verdict: f.verdict && f.verdict.nivel || null, suma: nr(st.suma),

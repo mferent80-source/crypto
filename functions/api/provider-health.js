@@ -64,7 +64,8 @@ export async function onRequestGet({request,env}){
   // v98.2 (audit 28.09, #5): ACASA (127.0.0.1) randurile spun ce se INTAMPLA, nu doar ce chei exista. D1 nu e legat acasa
   // (istoricul botului sta in KV-ul ISTORIC) - nu e o cadere obligatorie; CoinGecko si Yahoo raspund de acasa fara cheie -
   // se PROBEAZA, nu se presupune "refuza / modulul e oprit" (Health arata rosu la lucruri care mergeau).
-  const acasa=/^(127\.0\.0\.1|localhost)$/.test(u.hostname),areKv=!!env.ISTORIC?.get,d1=!!env.DB?.prepare,localFaraD1=acasa&&areKv&&!d1;
+  // acasa = serverul de pe PC-ul lui: direct (127.0.0.1) sau prin tunelul de telefon (*.trycloudflare.com) - acelasi server
+  const acasa=/^(127\.0\.0\.1|localhost)$/.test(u.hostname)||/\.trycloudflare\.com$/.test(u.hostname),areKv=!!env.ISTORIC?.get,d1=!!env.DB?.prepare,localFaraD1=acasa&&areKv&&!d1;
   providers.push(rand("D1 · depozitul de istoric",d1?"CONFIGURED":(localFaraD1?"DEGRADED":"FAIL"),
     d1?"legatura DB exista":(localFaraD1?"nelegat acasă · istoricul botului stă în KV-ul de acasă (ISTORIC); rulările și snapshot-urile D1 nu se salvează":"DB nelegat · nu se salveaza rulari, snapshot-uri sau semnale"),!localFaraD1));
 

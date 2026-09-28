@@ -31,7 +31,7 @@ var TabloExtra = (function () {
     var out = { randuri: [], semnale: [] };
     if (!b || !f || !f.setare) return out;
     // v99: "fisa de azi" = ce PROPUNE fisa (gridul des in liniste, cand proba n-o respinge), altfel platoul probei
-    var g = geometrieBot(b), st = f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare, pr = G.procent, lev = nr(b.levier);
+    var g = geometrieBot(b), st = f.setare, pr = G.procent, lev = nr(b.levier);   // f.setare e deja setarea propusa (revizia 28.09)
     var dirBot = String(b.directie || "").toLowerCase();
     out.randuri.push({ et: "Direcția", bot: dirBot || "—", fisa: f.dir });
     out.randuri.push({ et: "Interval", bot: g ? g.jos + " – " + g.sus : "—", fisa: st.jos.toPrecision(4) + " – " + st.sus.toPrecision(4) });

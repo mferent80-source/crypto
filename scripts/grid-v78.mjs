@@ -758,8 +758,10 @@ await test("v80 comparaCuFisa: randuri bot vs fisa (interval, grile, pas net, le
   assert.ok(c.semnale.some((x) => /levier/.test(x)), "5x vs 3x sigur");
   const b200 = JSON.parse(JSON.stringify(botMET)); b200.brut.buOrderData.row = 200;
   assert.ok(TX.comparaCuFisa(b200, fisa).semnale.some((x) => /prea dese/.test(x)), "200 de grile: prea dese");
-  // v99: cand fisa PROPUNE gridul des, tabelul „fisa de azi" arata setarea propusa, nu platoul
-  const fd = { ...fisa, propusa: "deasa", deasa: { setare: { jos: 0.315, sus: 0.389, grile: 70, levier: 3, levierSigur: 3, pas: 0.003, profitGrila: 0.002 } } };
+  // v99 (dupa revizia 28.09): cand fisa PROPUNE gridul des, f.setare E gridul des (fisa() face schimbul), iar platoul sta in f.aleasa;
+  // tabelul „fisa de azi" citeste f.setare - deci arata setarea propusa
+  const des = { jos: 0.315, sus: 0.389, grile: 70, levier: 3, levierSigur: 3, pas: 0.003, profitGrila: 0.002 };
+  const fd = { ...fisa, propusa: "deasa", setare: des, aleasa: { setare: fisa.setare, verdict: fisa.verdict }, deasa: { setare: des } };
   assert.equal(TX.comparaCuFisa(botMET, fd).randuri.find((r) => r.et === "Grile").fisa, "70 geometric");
   assert.equal(TX.comparaCuFisa(botMET, null).randuri.length, 0);
 });

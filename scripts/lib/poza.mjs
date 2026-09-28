@@ -151,7 +151,9 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
     // ultimele 30 de zile (INTC a fost anuntat pe 27.09 pentru cumpararea CEO-ului din 11.08 - informatia nu era noua atunci)
     const i = s.insideri, v = i && i.verdict, ant = anterioare && anterioare[s.s] && anterioare[s.s].insideri, va = ant && ant.verdict;
     const t = i && i.ultimaCumparare, recenta = t && t.zi && acum - Date.parse(t.zi + "T00:00:00Z") <= 30 * ZI;
-    if (ant && recenta && (v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
+    // si o cumparare NOUA fata de poza anterioara (verdictul poate deveni bull si cand vanzarile vechi ies din fereastra de 60 z)
+    const noua = t && !(ant && ant.ultimaCumparare && ant.ultimaCumparare.zi && t.zi <= ant.ultimaCumparare.zi);
+    if (ant && recenta && noua && (v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
       out.push({ cheie: "sim-insider-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
         mesaj: t.cine + " (" + t.rol + ") a cumpărat " + miiTxt(t.act) + " acțiuni, ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + ". Cumpărările cu bani ale insiderilor contează, acțiunile primite gratis nu. E informație, nu îndemn." });
     }

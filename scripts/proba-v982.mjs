@@ -93,6 +93,20 @@ await test("worker verifica: dupa ce a anuntat tacerea, o poza proaspata (fara n
   const s = JSON.parse(kv.get("stare")); assert.equal(s.anuntatLa, undefined, "anuntatLa sters"); assert.equal(s.la, T0 - 1 * MIN, "ultimul semn = poza");
   assert.equal((await verifica(env, T0 + 2 * MIN, f)).stare, "bate"); assert.equal(trimise.length, 1, "revenirea nu se repeta");
 });
+await test("worker verifica: 'a revenit' spune de CAND tacuse (ultimul semn dinaintea tacerii, poza sau bataie), nu ultima bataie de acum zile", async () => {
+  const kv = new Map(), trimise = [];
+  const env = { PAZNIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } }, DISCORD_WEBHOOK: "https://discord.com/api/webhooks/123/abcDEF_-x", PAZNIC_TOKEN: "t".repeat(32) };
+  const f = async (u, o) => { trimise.push(JSON.parse(o.body)); return new Response("{}", { status: 200 }); };
+  const T0 = T("2026-09-28T03:00:00Z"), ultimaBataie = T0 - 3 * 24 * 60 * MIN, ultimaPoza = T0 - 50 * MIN;
+  kv.set("stare", JSON.stringify({ la: ultimaBataie, pid: 1, versiune: "v99" }));
+  kv.set("poza", JSON.stringify({ la: ultimaPoza, versiune: "v99", t212: [], boti: [], simboluri: [] }));
+  assert.equal((await verifica(env, T0, f)).stare, "anuntat"); assert.equal(JSON.parse(kv.get("stare")).tacutDeLa, ultimaPoza, "tine minte ultimul semn dinaintea tacerii");
+  kv.set("poza", JSON.stringify({ la: T0 + 1 * MIN, versiune: "v99", t212: [], boti: [], simboluri: [] }));
+  assert.equal((await verifica(env, T0 + 2 * MIN, f)).stare, "revenit");
+  const ora = (t) => new Date(t).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", weekday: "short", hour: "2-digit", minute: "2-digit" });
+  assert.ok(trimise[1].embeds[0].description.includes(ora(ultimaPoza)), trimise[1].embeds[0].description); assert.ok(!trimise[1].embeds[0].description.includes(ora(ultimaBataie)));
+  const s = JSON.parse(kv.get("stare")); assert.equal(s.tacutDeLa, undefined); assert.equal(s.anuntatLa, undefined);
+});
 
 // ---------- 4. insider "nou" ----------
 await test("alerteSimboluri: la PRIMA vedere a simbolului nu e stire; cu stare anterioara neut + cumparare din ultimele 30 de zile -> alerta; cumparare mai veche de 30 de zile -> nimic; deja bull -> nimic", () => {
@@ -108,6 +122,10 @@ await test("alerteSimboluri: la PRIMA vedere a simbolului nu e stire; cu stare a
   assert.equal(a.length, 1); assert.match(a[0].mesaj, /24\.09|09\.24/); assert.match(a[0].mesaj, /Tan Lip-Bu/);
   assert.equal(alerteSimboluri([nou], { INTC: { insideri: { verdict: "bull1" } } }, acum).filter((x) => /insider/.test(x.cheie)).length, 0, "deja bull1 in poza anterioara: nimic");
   assert.equal(nou.insideri.ultimaCumparare.zi, "2026-09-24", "insideri() spune ziua ultimei cumparari");
+  // revizie 🔵: verdictul poate deveni bull si cand vanzarile VECHI ies din fereastra de 60 z - fara o cumparare NOUA nu e stire
+  const antCuAceeasi = { INTC: { insideri: { verdict: "neut", ultimaCumparare: { zi: "2026-09-24" } } } };
+  assert.equal(alerteSimboluri([nou], antCuAceeasi, acum).filter((x) => /insider/.test(x.cheie)).length, 0, "aceeasi cumparare ca in poza anterioara: nu e noua");
+  assert.equal(alerteSimboluri([nou], { INTC: { insideri: { verdict: "neut", ultimaCumparare: { zi: "2026-09-10" } } } }, acum).filter((x) => /insider/.test(x.cheie)).length, 1, "cumparare mai noua decat cea stiuta: stire");
 });
 
 // ---------- 5. Health cinstit ----------
@@ -123,6 +141,9 @@ await test("provider-health de ACASA: CoinGecko si cotatiile se probeaza (OK can
   assert.ok(!p(/TWELVE DATA · cheie/), "randul vechi 'Twelve Data · cheie' (modulul de actiuni e oprit) a disparut");
   const db = p(/D1/); assert.equal(db.required, false, "acasa D1 nu e obligatoriu"); assert.notEqual(db.state, "FAIL"); assert.match(db.detail, /KV|acasă|acasa/);
   const push = p(/PUSH/); assert.match(push.detail, /Discord/);
+  // revizie 🔵: prin tunel (telefon) hostname-ul e *.trycloudflare.com, dar serverul e tot cel de acasa
+  const res2 = await m.onRequestGet({ request: new Request("https://dice-scholarships-screens-grab.trycloudflare.com/api/provider-health", { headers: { authorization: "Bearer " + TOKEN, "cf-connecting-ip": "10.1.1.2" } }), env });
+  const j2 = await res2.json(); assert.equal(j2.providers.find((x) => /COINGECKO/i.test(x.name)).state, "OK", "prin tunel tot acasa e"); assert.equal(j2.providers.find((x) => /D1/.test(x.name)).required, false);
 });
 await test("provider-health de pe Cloudflare (nu acasa): D1 nelegat ramane FAIL obligatoriu (regula veche, v69)", async () => {
   const m = await import(`../functions/api/provider-health.js?v982c_${Date.now()}`);

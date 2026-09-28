@@ -45,8 +45,11 @@ await test("1b. alertele planului T212 (stop, trail, tinta) scriu preturile cu 2
 });
 await test("2. functiile nechemate au disparut din app.js si fisierul ramane JS valid (node --check il inghite)", async () => {
   const app = citeste("../public/app.js");
-  for (const f of ["awaitPionexReady", "markAlertsRead", "marketLabelSymbol", "paperEntryFillFraction", "paperExit", "portfolioReturnsSeries", "safeUiToken", "tbCadentaMs", "trainRegimeModels", "v65BiasScore", "v66Pf"])
+  for (const f of ["awaitPionexReady", "markAlertsRead", "marketLabelSymbol", "paperEntryFillFraction", "paperExit", "portfolioReturnsSeries", "safeUiToken", "trainRegimeModels", "v65BiasScore", "v66Pf"])
     assert.ok(!new RegExp("^(async )?function " + f + "\\(", "m").test(app), f + " e inca definita");
+  // revizie: tbCadentaMs NU e moarta - o cheama proba de ecran (scripts/proba-ecran-tablou.mjs, testul 10) ca sa masoare cadenta colectorului
+  assert.match(app, /^function tbCadentaMs\(\)/m, "tbCadentaMs trebuie sa existe (proba de ecran o cheama)");
+  assert.match(citeste("../scripts/proba-ecran-tablou.mjs"), /tbCadentaMs\(\)/);
   const { execFileSync } = await import("node:child_process");
   execFileSync(process.execPath, ["--check", path.join(RAD.pathname.replace(/^\/([A-Za-z]:)/, "$1"), "public", "app.js")]);
 });

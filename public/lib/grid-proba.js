@@ -17,7 +17,7 @@ var GridProba = (function () {
   function simuleaza(b, start, lungime, st) {
     var N = st.grile, niv = G.niveluri(st.jos, st.sus, N), L = st.levier, com = C.COMISION;
     var P = b[start].o, tip = [], tine = [], intr = [], q = [];
-    var Ql = 0, Cl = 0, Qs = 0, Cs = 0, real = 0, fee = 0, umpleri = 0, iesiri = 0;
+    var Ql = 0, Cl = 0, Qs = 0, Cs = 0, real = 0, fee = 0, umpleri = 0, iesiri = 0, perechi = 0;   // perechi = grile INCASATE (o pereche = 2 umpleri; umplerile de pornire nu-s perechi)
     for (var k = 0; k < N; k++) {
       q[k] = L / N / niv[k]; tine[k] = false;
       if (st.dir === "long") tip[k] = "L";
@@ -33,14 +33,14 @@ var GridProba = (function () {
         for (j = primulPeste(niv, a) - 1; j >= 0 && niv[j] >= x; j--) {
           if (j >= N || !tip[j]) continue;
           if (tip[j] === "L" && !tine[j]) { tine[j] = true; intr[j] = niv[j]; Ql += q[j]; Cl += q[j] * niv[j]; umple(j, niv[j]); }
-          else if (tip[j] === "S" && tine[j]) { tine[j] = false; real += q[j] * (intr[j] - niv[j]); Qs -= q[j]; Cs -= q[j] * intr[j]; umple(j, niv[j]); }
+          else if (tip[j] === "S" && tine[j]) { tine[j] = false; real += q[j] * (intr[j] - niv[j]); Qs -= q[j]; Cs -= q[j] * intr[j]; umple(j, niv[j]); perechi++; }
         }
       } else if (x > a) {                       // in sus: niveluri j cu a < niv[j] <= x, celula j-1
         for (j = Math.max(1, primulPeste(niv, a)); j <= N && niv[j] <= x; j++) {
           if (niv[j] === a) continue;
           var c = j - 1;
           if (!tip[c]) continue;
-          if (tip[c] === "L" && tine[c]) { tine[c] = false; real += q[c] * (niv[j] - intr[c]); Ql -= q[c]; Cl -= q[c] * intr[c]; umple(c, niv[j]); }
+          if (tip[c] === "L" && tine[c]) { tine[c] = false; real += q[c] * (niv[j] - intr[c]); Ql -= q[c]; Cl -= q[c] * intr[c]; umple(c, niv[j]); perechi++; }
           else if (tip[c] === "S" && !tine[c]) { tine[c] = true; intr[c] = niv[j]; Qs += q[c]; Cs += q[c] * niv[j]; umple(c, niv[j]); }
         }
       }
@@ -48,7 +48,7 @@ var GridProba = (function () {
     function capital(p) { return 1 + real - fee + (Ql * p - Cl) + (Cs - Qs * p); }
     function lichidat(p) { return capital(p) <= C.MMR * (Ql + Qs) * p; }
     function rezultat(extra) {
-      var r = { net: 0, realizat: real, comisioane: fee, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri };
+      var r = { net: 0, realizat: real, comisioane: fee, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi };
       for (var e in extra) r[e] = extra[e];
       return r;
     }
@@ -79,10 +79,11 @@ var GridProba = (function () {
 
   function statistici(rez) {
     if (!rez || !rez.length) return null;
-    var net = [], ies = 0, lich = 0, opr = 0, ump = 0;
-    for (var i = 0; i < rez.length; i++) { net.push(rez[i].net); ies += rez[i].iesiri; ump += rez[i].umpleri || 0; if (rez[i].lichidat) lich++; if (rez[i].oprit) opr++; }
-    // v99: umpleriMedii = cate treceri (umpleri) face setarea intr-o fereastra, in medie - "gridul e atins des sau rar?"
-    return { n: rez.length, mediana: G.mediana(net), ceaMaiProasta: Math.min.apply(null, net), iesiriMedii: ies / rez.length, lichidari: lich, opriri: opr, umpleriMedii: ump / rez.length };
+    var net = [], ies = 0, lich = 0, opr = 0, ump = 0, per = 0;
+    for (var i = 0; i < rez.length; i++) { net.push(rez[i].net); ies += rez[i].iesiri; ump += rez[i].umpleri || 0; per += rez[i].perechi || 0; if (rez[i].lichidat) lich++; if (rez[i].oprit) opr++; }
+    // v99: perechiMedii = cate grile INCASEAZA setarea intr-o fereastra, in medie - "gridul e atins des sau rar?"
+    // (umpleriMedii numara si umplerile de pornire - un grid des cu N mare "umple" mult si pe o piata moarta; revizia 28.09)
+    return { n: rez.length, mediana: G.mediana(net), ceaMaiProasta: Math.min.apply(null, net), iesiriMedii: ies / rez.length, lichidari: lich, opriri: opr, umpleriMedii: ump / rez.length, perechiMedii: per / rez.length };
   }
 
   // Platou, nu varf: scorul unei celule = media medianelor ei si a vecinilor
@@ -200,15 +201,24 @@ var GridProba = (function () {
     // v99 (28.09, experienta lui): VARIANTA DEASA - pasul minim (0,30%) la aceeasi latime, cu statistica ei din proba si
     // trecerile pe zi; e PROPUSA in locul setarii alese cand piata e linistita si proba n-o respinge (vezi propune/respinge)
     var dst = ales.deasa || null, dd = cuMinOrdin(pasV[0]), rz = respinge(dst);
-    var deasa = { setare: dd.st, antren: dst ? dst.antren : null, test: dst ? dst.test : null, treceriZi: treceriPeZi(dst && dst.antren, o.H),
-      respinsa: rz.respinsa || dd.sumaMinima !== null, motiv: rz.respinsa ? rz.motiv : (dd.sumaMinima !== null ? "suma e prea mică pentru atâtea grile" : ""), aceeasi: ales.pi === 0 };
+    var motivDeasa = rz.respinsa ? rz.motiv : dd.sumaMinima !== null ? "suma e prea mică pentru atâtea grile" : !dd.st.sigur ? "nici la 1× lichidarea nu stă destul de departe" : dd.st.pesteSigur ? "levierul ales pune lichidarea prea aproape de grid" : "";
+    var deasa = { setare: dd.st, antren: dst ? dst.antren : null, test: dst ? dst.test : null, treceriZi: treceriPeZi(dst && dst.antren, o.H), respinsa: !!motivDeasa, motiv: motivDeasa, aceeasi: ales.pi === 0 };
     var f = { simbol: o.simbol, pret: o.pret, H: o.H, directie: dT, dir: dir, manual: !!o.dir, setare: st, proba: pr, verdict: v,
       regim: rg, pozitie: poz, liniste: liniste, sumaMinima: sumaMinima,
-      contra: contrazice(pr, dir), treceriZi: treceriPeZi(ales.antren, o.H), deasa: deasa };
+      contra: contrazice(pr, dir), treceriZi: treceriPeZi(ales.antren, o.H), deasa: deasa, aleasa: null, stat: { antren: ales.antren, test: ales.test } };
     f.propusa = propune({ regim: rg, deasa: deasa, setare: st });
+    // revizia 28.09: cand fisa PROPUNE gridul des, f.setare E gridul des - o singura sursa pentru Tablou, jurnal, hartie, poarta,
+    // suma - iar verdictul e pe statistica LUI; platoul probei ramane la vedere in f.aleasa (setare + verdict + perechi/zi)
+    if (f.propusa === "deasa") {
+      f.aleasa = { setare: st, verdict: v, treceriZi: f.treceriZi };
+      f.stat = { antren: deasa.antren, test: deasa.test };
+      f.setare = deasa.setare; f.treceriZi = deasa.treceriZi;
+      f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur });
+    }
     return f;
   }
-  function treceriPeZi(stat, H) { return stat && typeof stat.umpleriMedii === "number" && H > 0 ? stat.umpleriMedii / H : null; }
+  // pe zi = PERECHI incheiate pe fereastra / zilele ferestrei (nu umpleri: cele de pornire umflau cifra la gridurile dese)
+  function treceriPeZi(stat, H) { return stat && typeof stat.perechiMedii === "number" && H > 0 ? stat.perechiMedii / H : null; }
   // v99: proba respinge o setare cand pe istoric a fost lichidata sau a iesit pe minus (mediana), sau pe zilele nevazute
   function respinge(stat) {
     var a = stat && stat.antren, t = stat && stat.test;
@@ -225,10 +235,12 @@ var GridProba = (function () {
     var rg = x && x.regim, d = x && x.deasa, s = x && x.setare;
     if (!rg || rg.miscare) return "aleasa";
     if (!d || d.respinsa || !d.setare) return "aleasa";
+    if (d.setare.pesteSigur || d.setare.sigur === false) return "aleasa";   // lichidarea prea aproape la gridul des
     if (s && d.setare.grile === s.grile) return "aleasa";
     return "deasa";
   }
-  function setarePropusa(f) { return f && f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : (f ? f.setare : null); }
+  // dupa revizia 28.09 f.setare e deja setarea propusa; functia ramane pentru cine o cheama
+  function setarePropusa(f) { return f ? f.setare : null; }
 
   return { simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };

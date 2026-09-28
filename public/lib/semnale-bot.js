@@ -34,7 +34,7 @@ var SemnaleBot = (function () {
     } else if ((nr(afaraOre) || 0) >= 2) motiv = "prețul e în afara gridului de " + nr(afaraOre).toFixed(1).replace(".", ",") + " ore";
     if (!motiv) return null;
     // v99: setarea PROPUSA de fisa (deasa, 0,30%, in liniste - cand proba n-o respinge), altfel cea aleasa de platou
-    var s = f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare, des = s !== f.setare;
+    var s = f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare, des = f.propusa === "deasa";
     return { nivel: "atentie", motiv: motiv, des: des, treceriZi: nr(des ? f.deasa.treceriZi : f.treceriZi),
       setare: { dir: s.dir || f.dir, jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, stop: s.stop || null } };
   }
@@ -53,7 +53,7 @@ var SemnaleBot = (function () {
     var g = pasBot(b), s = f.deasa.setare;
     if (!g || !(s.pas > 0) || g.pas <= 1.5 * s.pas) return null;
     return { setare: s, pasBot: g.pas, pasDes: s.pas, grileBot: g.grile, treceriZi: nr(f.deasa.treceriZi),
-      motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; în piața liniștită de acum, gridul des de 0,3% (" + s.grile + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") făcea ~" + T(f.deasa.treceriZi) + " treceri pe zi pe ultimele 30 de zile" };
+      motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; în piața liniștită de acum, gridul des de 0,3% (" + s.grile + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
   }
   function fmtPret(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   // v99: "Acum, concret" - trei randuri cu cifre, pe Tablou, sub verdict: STOPUL (unde e, unde l-as pune), GRIDUL (al lui vs
@@ -65,17 +65,23 @@ var SemnaleBot = (function () {
     var sp = f ? (f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare) : null, g = pasBot(b), rg0 = f && f.regim;
     var dist = function (a, c) { return a !== null && c > 0 ? P(Math.abs(a / c - 1)) : "?"; };
     // 1) stopul
-    var opTxt = op !== null ? fmtPret(op) : "nepus";
+    var opTxt = op !== null ? fmtPret(op) : "nepus", neutru = dir !== "long" && dir !== "short";
     if (p !== null && pz !== null) {
-      var peProfit = dir === "long" ? pz < p : dir === "short" ? pz > p : false;
-      if (peProfit) {
+      var peProfit = dir === "long" ? pz < p : dir === "short" ? pz > p : (tot !== null && tot > 0);
+      if (neutru) {
+        // botul neutru cumpara sub si vinde peste: zero-ul nu e "o parte" - e doar reper (revizia 28.09)
+        out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Botul e neutru (cumpără sub preț, vinde peste), așa că zero-ul (" + fmtPret(pz) + ", la " + dist(pz, p) + " de preț) e doar reper: " + (peProfit ? "ești pe plus; un stop la două grile în afara intervalului, pe ambele părți, păstrează ce ai." : "ești pe minus; protecția stă la două grile în afara intervalului, pe ambele părți — dar se închide pe minus.") });
+      } else if (peProfit) {
         var dincolo = op !== null && (dir === "long" ? op >= pz : op <= pz);
         out.push({ cod: "stop", titlu: "Stopul", text: dincolo
-          ? "al tău e la " + opTxt + ", deja dincolo de zero-ul botului (" + fmtPret(pz) + "): o întoarcere nu te mai poate duce pe minus. L-aș lăsa; pe măsură ce urcă, îl ridic."
+          ? "al tău e la " + opTxt + ", deja dincolo de zero-ul botului (" + fmtPret(pz) + "): o întoarcere nu te mai poate duce pe minus. L-aș lăsa; pe măsură ce " + (dir === "short" ? "coboară" : "urcă") + ", îl " + (dir === "short" ? "cobor" : "ridic") + "."
           : "acum " + opTxt + " → l-aș muta la " + fmtPret(pz) + " (zero-ul botului, la " + dist(pz, p) + " de prețul de acum): de acolo încolo câștigul nu se mai pierde. În Pionex: botul → Edit → Stop loss price." });
       } else {
-        var protectie = sp && sp.stop && nr(sp.stop.jos) !== null && dir !== "short" ? sp.stop.jos : (jos !== null && g ? jos * (1 - 2 * g.pas) : null);
-        out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Dacă vrei protecție, sub gridul de jos: " + (protectie !== null ? fmtPret(protectie) : "două grile sub margine") + " — dar știi că se închide pe minus." });
+        // pe minus: LONG pierde in jos -> protectia sub gridul de jos; SHORT pierde in SUS -> protectia peste gridul de sus (revizia 28.09: era inversat la short)
+        var protectie = dir === "short"
+          ? (sp && sp.stop && nr(sp.stop.sus) !== null ? sp.stop.sus : (sus !== null && g ? sus * (1 + 2 * g.pas) : null))
+          : (sp && sp.stop && nr(sp.stop.jos) !== null ? sp.stop.jos : (jos !== null && g ? jos * (1 - 2 * g.pas) : null));
+        out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Dacă vrei protecție, " + (dir === "short" ? "peste gridul de sus: " : "sub gridul de jos: ") + (protectie !== null ? fmtPret(protectie) : "două grile în afara marginii") + " — dar știi că se închide pe minus." });
       }
     } else out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
     // 2) gridul
@@ -84,9 +90,10 @@ var SemnaleBot = (function () {
     var azi = c.umpleri24h !== null && c.umpleri24h !== undefined ? ", " + c.umpleri24h + " umpleri în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : "";
     var unde = poz === null ? "" : poz < 0 ? " Prețul e SUB gridul de jos cu " + dist(jos, p) + " (botul nu mai cumpără; " + dist(sus, p) + " până sus)." : poz > 1 ? " Prețul e PESTE gridul de sus cu " + dist(sus, p) + " (botul a rămas fără poziție; " + dist(jos, p) + " până jos)."
       : " Prețul e la " + P(poz) + " din interval: " + dist(jos, p) + " până jos, " + dist(sus, p) + " până sus.";
-    var prop = !f ? " Propunerea (gridul des sau cel rar) vine cu fișa — o socotesc." : sp ? " Propus acum (" + (f.propusa === "deasa" ? "piață liniștită: grid des 0,3%" : "din proba pe 30 z") + "): " + sp.grile + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + " la " + P(sp.pas) + " pas" + (nr(f.propusa === "deasa" ? f.deasa.treceriZi : f.treceriZi) !== null ? ", ~" + T(f.propusa === "deasa" ? f.deasa.treceriZi : f.treceriZi) + " treceri/zi pe ultimele 30 de zile" : "") + "." : "";
+    var pzi = nr(f && (f.propusa === "deasa" && f.deasa ? f.deasa.treceriZi : f.treceriZi));
+    var prop = !f ? " Propunerea (gridul des sau cel rar) vine cu fișa — o socotesc." : sp ? " Propus acum (" + (f.propusa === "deasa" ? "piață liniștită: grid des 0,3%" : "din proba pe 30 z") + "): " + sp.grile + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + " la " + P(sp.pas) + " pas" + (pzi !== null ? ", ~" + T(pzi) + " perechi încheiate/zi pe ultimele 30 de zile" : "") + "." : "";
     // cand gridul des NU e propus, spune de ce (regula lui vs. proba pe istoricul monedei) - nu-l lasa sa creada ca nu exista
-    var de = f && f.deasa && f.deasa.setare && f.propusa !== "deasa" && !f.deasa.aceeasi ? " Gridul des (0,3%, " + f.deasa.setare.grile + " grile" + (nr(f.deasa.treceriZi) !== null ? ", ~" + T(f.deasa.treceriZi) + " treceri/zi" : "") + ") nu-l propun acum: " + (f.deasa.respinsa ? f.deasa.motiv : (rg0 && rg0.miscare ? "piața e în mișcare, după mișcare gridul iese cel mai rău" : "proba a ales pasul mai rar")) + "." : "";
+    var de = f && f.deasa && f.deasa.setare && f.propusa !== "deasa" && !f.deasa.aceeasi ? " Gridul des (0,3%, " + f.deasa.setare.grile + " grile" + (nr(f.deasa.treceriZi) !== null ? ", ~" + T(f.deasa.treceriZi) + " perechi/zi" : "") + ") nu-l propun acum: " + (f.deasa.respinsa ? f.deasa.motiv : (rg0 && rg0.miscare ? "piața e în mișcare, după mișcare gridul iese cel mai rău" : "proba a ales pasul mai rar")) + "." : "";
     out.push({ cod: "grid", titlu: "Gridul", text: al + azi + "." + unde + prop + de });
     // 3) miscarea
     var rg = f && f.regim;
@@ -213,7 +220,7 @@ var SemnaleBot = (function () {
   // ---- socoteala: fiecare semnal se noteaza cand apare si se judeca dupa 24 h ----
   function noteaza(log, sem, total, acum) {
     log = Array.isArray(log) ? log.slice() : [];
-    if (!sem) return log;
+    if (!sem || sem.nivel === "asteapta") return log;   // "socotesc" nu e un semnal de judecat dupa 24 h (revizia 28.09)
     var ult = log[log.length - 1];
     if (ult && ult.cod === sem.cod && ult.nivel === sem.nivel) return log;
     log.push({ t: acum, cod: sem.cod, nivel: sem.nivel, motiv: sem.motiv || "", total: nr(total), dreptate: null });

@@ -52,9 +52,21 @@ await test("1. pasul minim e 0,30% si culoarul are 4 candidati, in progresie geo
   const st = GC.construieste({ pret: 100, lat: 0.08, pas: 0.003, dir: "long", suma: 100 });
   assert.ok(st.pas >= 0.003 - 1e-9 && st.profitGrila >= 0.002 - 1e-9, `pas ${st.pas} net ${st.profitGrila}`);
 });
-await test("2. statistici: trecerile (umplerile) medii pe fereastra intra in statistica probei", () => {
-  const s = GP.statistici([{ net: 0.01, iesiri: 0, lichidat: false, oprit: false, umpleri: 12 }, { net: 0.02, iesiri: 0, lichidat: false, oprit: false, umpleri: 20 }]);
-  assert.equal(s.umpleriMedii, 16);
+await test("2. statistici: umplerile si PERECHILE incheiate medii pe fereastra intra in statistica; 'treceri/zi' = perechi incheiate, nu umpleri (revizie: umplerile de pornire umflau cifra)", () => {
+  const s = GP.statistici([{ net: 0.01, iesiri: 0, lichidat: false, oprit: false, umpleri: 12, perechi: 3 }, { net: 0.02, iesiri: 0, lichidat: false, oprit: false, umpleri: 20, perechi: 5 }]);
+  assert.equal(s.umpleriMedii, 16); assert.equal(s.perechiMedii, 4);
+  assert.equal(GP.treceriPeZi({ umpleriMedii: 40, perechiMedii: 6 }, 2), 3, "pe zi = perechi / H");
+  // pret PERFECT constant: long-ul cumpara la pornire grilele de deasupra (umpleri > 0), dar nu INCHEIE nicio pereche -> 0/zi
+  const plat = bareDin(Array(3 * 96).fill(1), 0);
+  const s0 = GP.simuleaza(plat, 0, 2 * 96, GC.construieste({ pret: 1, lat: 0.03, pas: 0.003, dir: "long", suma: 100 }));
+  assert.ok(s0.umpleri > 0, "umplerile de pornire exista: " + s0.umpleri); assert.equal(s0.perechi, 0, "dar nu-s perechi");
+  assert.equal(GP.treceriPeZi(GP.statistici([s0, s0]), 2), 0, "pe piata moarta: 0 perechi/zi (inainte: " + (s0.umpleri / 2) + " 'treceri'/zi)");
+  const sim = GP.simuleaza(lateral, 0, 2 * 96, GC.construieste({ pret: lateral[0].o, lat: 0.03, pas: 0.003, dir: "long", suma: 100 }));
+  assert.ok(sim.perechi > 0 && sim.perechi * 2 <= sim.umpleri, "o pereche = 2 umpleri: " + JSON.stringify({ perechi: sim.perechi, umpleri: sim.umpleri }));
+  // in fisa, perechile pe zi nu pot depasi jumatate din umplerile pe zi (si la des, si la ales)
+  const f = fisaPe(lateral);
+  assert.ok(f.deasa.treceriZi * 2 <= f.deasa.antren.umpleriMedii / f.H + 1e-9, "deasa: perechi " + f.deasa.treceriZi + " vs umpleri/zi " + f.deasa.antren.umpleriMedii / f.H);
+  assert.ok(f.treceriZi * 2 <= f.stat.antren.umpleriMedii / f.H + 1e-9, "propusa: perechi vs umpleri");
 });
 await test("3. fisa pe piata laterala: are varianta DEASA (pas 0,30%, la latimea aleasa) cu treceri/zi din proba, mai multe decat setarea aleasa; propune 'deasa' cand e liniste si proba n-o respinge", () => {
   const f = fisaPe(lateral); assert.ok(!f.eroare, f.eroare);
@@ -66,8 +78,16 @@ await test("3. fisa pe piata laterala: are varianta DEASA (pas 0,30%, la latimea
   assert.ok(f.deasa.setare.grile >= f.setare.grile, "deasa are cel putin atatea grile");
   assert.ok(f.deasa.setare.grile === f.setare.grile || f.deasa.treceriZi > f.treceriZi, `deasa ${f.deasa.treceriZi}/zi vs aleasa ${f.treceriZi}/zi`);
   assert.ok(["deasa", "aleasa"].includes(f.propusa), "propusa: " + f.propusa);
-  assert.equal(f.propusa, GP.propune({ regim: f.regim, deasa: f.deasa, setare: f.setare }), "propusa vine din regula pura");
+  assert.equal(f.propusa, GP.propune({ regim: f.regim, deasa: f.deasa, setare: f.aleasa ? f.aleasa.setare : f.setare }), "propusa vine din regula pura");
   assert.equal(typeof f.deasa.respinsa, "boolean");
+  // revizie: cand fisa PROPUNE gridul des, f.setare E gridul des (o singura sursa pentru jurnal, hartie, poarta, suma, Tablou),
+  // verdictul e pe statistica LUI (nu a platoului), iar platoul ramane in f.aleasa; f.stat = statistica setarii de pus
+  if (f.propusa === "deasa") {
+    assert.equal(f.setare.grile, f.deasa.setare.grile); assert.ok(f.aleasa && f.aleasa.setare && f.aleasa.verdict, "aleasa lipseste");
+    assert.ok(f.aleasa.setare.grile < f.setare.grile); assert.deepEqual(f.stat, { antren: f.deasa.antren, test: f.deasa.test });
+    assert.deepEqual(f.verdict, GC.verdict({ regim: f.regim, stat: f.stat, zile: f.proba.zile, pozitie: f.pozitie, pesteSigur: f.setare.pesteSigur, nesigur: !f.setare.sigur }));
+  } else { assert.equal(f.aleasa, null); assert.deepEqual(f.stat, { antren: f.proba.pe[f.dir].antren, test: f.proba.pe[f.dir].test }); }
+  assert.equal(GP.setarePropusa(f), f.setare);
 });
 await test("3b. propune (regula pura): liniste + deasa nerespinsa -> 'deasa'; miscare -> 'aleasa'; deasa respinsa (mediana < 0 / lichidata / pe zilele nevazute pe minus) -> 'aleasa'; deasa = aleasa -> 'aleasa'", () => {
   const ok = { setare: { grile: 46 }, respinsa: false, antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.002, lichidari: 0 } };
@@ -76,6 +96,8 @@ await test("3b. propune (regula pura): liniste + deasa nerespinsa -> 'deasa'; mi
   assert.equal(GP.propune({ regim: { miscare: false }, deasa: { ...ok, respinsa: true }, setare: { grile: 6 } }), "aleasa");
   assert.equal(GP.propune({ regim: { miscare: false }, deasa: ok, setare: { grile: 46 } }), "aleasa", "aceeasi setare: nu e nimic 'mai des'");
   assert.equal(GP.propune({ regim: null, deasa: ok, setare: { grile: 6 } }), "aleasa", "fara regim nu stim daca e liniste");
+  assert.equal(GP.propune({ regim: { miscare: false }, deasa: { ...ok, setare: { grile: 46, pesteSigur: true } }, setare: { grile: 6 } }), "aleasa", "levierul pune lichidarea prea aproape la gridul des -> nu");
+  assert.equal(GP.propune({ regim: { miscare: false }, deasa: { ...ok, setare: { grile: 46, sigur: false } }, setare: { grile: 6 } }), "aleasa", "nici la 1x nu e sigur -> nu");
   const r = GP.respinge({ antren: { mediana: -0.01, lichidari: 0 }, test: null }); assert.equal(r.respinsa, true); assert.match(r.motiv, /minus|istoric/);
   assert.equal(GP.respinge({ antren: { mediana: 0.01, lichidari: 1 }, test: null }).respinsa, true);
   assert.equal(GP.respinge({ antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: -0.002, lichidari: 0 } }).respinsa, true);
@@ -86,9 +108,11 @@ await test("3c. fisa pe trend: tot are varianta deasa (cu respinsa/motiv), iar p
   assert.ok(f.deasa && typeof f.deasa.respinsa === "boolean");
   if (f.regim && f.regim.miscare) assert.equal(f.propusa, "aleasa");
 });
-await test("4. semafor FARA fisa si fara semnale tari -> 'asteapta' (socotesc), nu 'tine - nimic nu cere o miscare'; lichidarea < 8% ramane IESI si fara fisa; cu fisa ramane TINE", () => {
+await test("4. semafor FARA fisa si fara semnale tari -> 'asteapta' (socotesc), nu 'tine - nimic nu cere o miscare'; lichidarea < 8% ramane IESI si fara fisa; cu fisa ramane TINE; 'asteapta' NU intra in socoteala (noteaza il sare)", () => {
   const a = S.semafor({ bot: bot() });
   assert.equal(a.nivel, "asteapta"); assert.equal(a.cod, "fara-fisa"); assert.match(a.motiv, /fișa|socot/i); assert.ok(a.faCe && a.faCe.length > 15);
+  assert.deepEqual(S.noteaza([], a, -1.2, T0), [], "revizie: 'asteapta' nu e un semnal de judecat dupa 24 h");
+  assert.equal(S.noteaza([{ t: T0 - 1, cod: "tine", nivel: "tine", motiv: "", total: -1, dreptate: null }], a, -1.2, T0).length, 1);
   assert.equal(S.semafor({ bot: bot({ distantaLichidarePct: 6 }) }).nivel, "iesi");
   assert.equal(S.semafor({ bot: bot(), plan: { atins: ["minus"], minus: { prag: 10 } } }).nivel, "iesi");
   assert.equal(S.semafor({ bot: bot(), fisa: fisaStub({ propusa: "aleasa" }) }).nivel, "tine");
@@ -103,7 +127,7 @@ await test("5. mutaGridul foloseste setarea PROPUSA de fisa (deasa in liniste) s
 await test("5b. gridMaiDes: botul cu pas de ~2,4% fata de propunerea de 0,30% in liniste -> propunere cu motiv si cifre; bot deja des -> null; propusa 'aleasa' -> null; fara fisa -> null", () => {
   const g = S.gridMaiDes(bot(), fisaStub());
   assert.ok(g, "trebuia propunere"); assert.equal(g.setare.grile, 46); assert.ok(g.pasBot > 0.02 && g.pasBot < 0.03, "pasul botului " + g.pasBot); aprox(g.pasDes, 0.00305, 1e-9);
-  assert.match(g.motiv, /0,3/); assert.match(g.motiv, /treceri/); assert.equal(g.treceriZi, 18.5);
+  assert.match(g.motiv, /0,3/); assert.match(g.motiv, /perechi/); assert.doesNotMatch(g.motiv, /treceri/); assert.equal(g.treceriZi, 18.5);
   assert.equal(S.gridMaiDes(bot({ brut: { buOrderData: { row: 45, gridType: "geometric" } } }), fisaStub()), null, "botul e deja des");
   assert.equal(S.gridMaiDes(bot(), fisaStub({ propusa: "aleasa" })), null);
   assert.equal(S.gridMaiDes(bot(), null), null);
@@ -116,7 +140,14 @@ await test("6. acumConcret: stopul, gridul si miscarea, cu cifre - pe plus: stop
   assert.ok(stop && grid && mis, "lipseste un rand: " + l.map((x) => x.cod).join(","));
   // pe minus (-10,12): zero-ul 0,5984 e DEASUPRA pretului 0,5831 -> nu se pune stopul acolo; protectia e sub gridul de jos
   assert.match(stop.text, /0\.5984|0,5984/); assert.match(stop.text, /sub gridul de jos|0\.542|0,542/); assert.match(stop.text, /nepus|nu ai/i);
-  assert.match(grid.text, /6 grile/); assert.match(grid.text, /46 grile/); assert.match(grid.text, /18,5/); assert.match(grid.text, /din interval/); assert.match(grid.text, /5 treceri|5 tranzac|umpleri/);
+  assert.match(grid.text, /6 grile/); assert.match(grid.text, /46 grile/); assert.match(grid.text, /18,5 perechi/); assert.match(grid.text, /din interval/); assert.match(grid.text, /5 umpleri/);
+  assert.doesNotMatch(grid.text, /treceri/, "revizie: unitatea e 'perechi incheiate', nu 'treceri' (umpleri)");
+  // revizie 🔴: SHORT pe minus -> protectia e PESTE gridul de sus (pierderea shortului vine de sus), nu sub gridul de jos
+  const sh = S.acumConcret({ bot: bot({ directie: "short", gridJos: 0.55, gridSus: 0.65, pretCurent: 0.62, profitTotal: -3 }), fisa: fisaStub({ dir: "short", setare: { jos: 0.55, sus: 0.65, grile: 6, pas: 0.028, levier: 5, dir: "short", stop: { jos: 0.52, sus: 0.66 } }, deasa: { ...fisaStub().deasa, setare: { jos: 0.55, sus: 0.65, grile: 46, pas: 0.003, levier: 5, dir: "short", stop: { jos: 0.545, sus: 0.6555 } } } }), zero: { pretZero: 0.6 }, costuri, acum: T0 });
+  const ss = sh.find((x) => x.cod === "stop"); assert.match(ss.text, /peste gridul de sus/); assert.match(ss.text, /0\.6555/); assert.doesNotMatch(ss.text, /sub gridul de jos/);
+  // revizie 🔵: bot NEUTRU pe plus -> nu „cât ești pe minus"; pe plus zero-ul e reper, nu instructiune de parte
+  const ne = S.acumConcret({ bot: bot({ directie: "neutru", profitTotal: 3 }), fisa: fisaStub(), zero: { pretZero: 0.6 }, costuri, acum: T0 });
+  const ns = ne.find((x) => x.cod === "stop"); assert.doesNotMatch(ns.text, /cât ești pe minus/); assert.match(ns.text, /neutru|ambele|zero/i);
   assert.match(mis.text, /0,6×|0,8×/); assert.match(mis.text, /liniște/i);
   for (const x of l) assert.ok(x.titlu && x.text && x.text.length > 30, JSON.stringify(x));
   // pe plus, cu stopul lui sub zero: „muta stopul la zero"
