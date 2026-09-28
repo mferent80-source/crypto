@@ -52,11 +52,41 @@ test("CSP NU deschide ws.pionex.com (browserul e refuzat cu 403; merge prin rele
 test("app.js se leagă la releul de acasă /api/pret-viu și se reconectează", () => {
   assert.match(APP, /\/api\/pret-viu\?simbol="\+encodeURIComponent\(simbol\)/); assert.doesNotMatch(APP, /ws\.pionex\.com/); assert.match(APP, /pvStare\.timeout=setTimeout/);
 });
-test("banda de sus se compune din PretViu.banda și renunță întâi la „piața”, apoi la „grid” când nu încape", () => {
-  assert.match(APP, /PretViu\.banda\(/); assert.match(APP, /botStripPret/); assert.match(APP, /\["piata","grid"\]\.forEach/);
+test("banda de sus se compune din PretViu.banda și renunță întâi la „piața”, apoi la „azi”, apoi la „grid” când nu încape", () => {
+  assert.match(APP, /PretViu\.banda\(/); assert.match(APP, /botStripPret/); assert.match(APP, /\["piata","zi","grid"\]\.forEach/);
 });
 test("capul Tabloului are prețul live", () => { assert.match(HTML, /id="tbPretViu"/); assert.match(APP, /tbPretViuVal/); });
 test("banda nu mai e tăiată la 520 px", () => { assert.doesNotMatch(CSS, /\.botStrip\{[^}]*max-width:520px/); });
+
+// v100.7 - ideile de după v100.6 (el: „fă ideile”): (1) „Prețul în grid” pe prețul live, (2) linia „acum” live pe grafic,
+// (3) mișcarea de azi față de deschiderea zilei (lumânarea 1D Pionex, 00:00 UTC — aceeași regulă ca în colector / pagina alerts)
+const GB_SRC = citeste("../public/lib/grafic-bot.js");
+const GB = GB_SRC ? new Function(`${GB_SRC}; return GraficBot;`)() : null;
+const AZI = Math.floor(ACUM / 86400000) * 86400000;
+test("ziDinKlines: deschiderea lumânării de AZI (00:00 UTC), nu a celei de ieri", () => {
+  const k = [{ time: AZI - 86400000, open: "0.60" }, { time: AZI, open: "0.5750" }];
+  assert.deepEqual(PV.ziDinKlines(k, ACUM), { deschidere: 0.575, t: AZI }); assert.equal(PV.ziDinKlines([{ time: AZI - 86400000, open: "0.6" }], ACUM), null); assert.equal(PV.ziDinKlines(null, ACUM), null);
+});
+test("procentZi: prețul față de deschiderea zilei; lipsa rămâne null", () => {
+  assert.ok(Math.abs(PV.procentZi(0.5693, { deschidere: 0.575 }) - (-0.99130)) < 1e-3); assert.equal(PV.procentZi(0.57, null), null); assert.equal(PV.procentZi(null, { deschidere: 0.5 }), null);
+});
+test("banda: „azi ±x%” imediat după preț, când știm deschiderea zilei", () => {
+  const r = PV.banda({ bot: BOT, pretViu: { pret: 0.5693, text: "0.5693", primitLa: ACUM - 1000, dir: "jos" }, zi: { deschidere: 0.575 }, acum: ACUM });
+  assert.deepEqual(r.parti.map((p) => p.k).slice(0, 3), ["nume", "pret", "zi"]); assert.equal(r.parti[2].t, "azi -1.0%"); assert.equal(r.parti[2].ton, "jos");
+  assert.ok(!PV.banda({ bot: BOT, acum: ACUM }).parti.some((p) => p.k === "zi"), "fără deschiderea zilei nu inventăm procentul");
+});
+test("botLaPret: copia botului cu prețul live (pentru „Prețul în grid”), botul original neatins", () => {
+  const c = PV.botLaPret(BOT, 0.58); assert.equal(c.pretCurent, 0.58); assert.equal(BOT.pretCurent, 0.5702); assert.equal(PV.botLaPret(BOT, null), BOT);
+});
+test("graficul: cu pretViu, eticheta „acum” arată prețul live și apare linia live de la ultima lumânare", () => {
+  const bare = Array.from({ length: 60 }, (_, i) => ({ t: ACUM - (60 - i) * 300000, o: 0.57, h: 0.572, l: 0.568, c: 0.57, v: 10 }));
+  const cu = GB.desen({ bare, W: 900, st: {}, niv: [], alerte: [], pretViu: 0.5693 }), fara = GB.desen({ bare, W: 900, st: {}, niv: [], alerte: [] });
+  assert.match(cu.svg, /class="gbViu"/); assert.match(cu.svg, /acum 0\.5693/); assert.doesNotMatch(fara.svg, /class="gbViu"/); assert.match(fara.svg, /acum 0\.5700/);
+});
+test("app.js: „Prețul în grid”, linia de pe grafic și procentul zilei se hrănesc din prețul live", () => {
+  assert.match(APP, /function tbKpiPretDeseneaza\(/); assert.match(APP, /PretViu\.botLaPret\(/); assert.match(APP, /pretViu:/);
+  assert.match(APP, /interval=1D&limit=2/); assert.match(APP, /PretViu\.ziDinKlines\(/);
+});
 
 // releul (functions/api/pret-viu.js), cu fetch / WebSocketPair / Response simulate
 class FalsWS { constructor() { this.l = {}; this.trimise = []; this.inchis = false; } accept() { this.acceptat = true; } addEventListener(t, f) { (this.l[t] ||= []).push(f); } send(x) { this.trimise.push(x); } close() { this.inchis = true; } da(t, d) { (this.l[t] || []).forEach((f) => f(d)); } }

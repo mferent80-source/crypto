@@ -1243,6 +1243,7 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 .botStrip{display:block;width:auto;font-weight:800;min-width:0;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .botStrip .bsPret{color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}.botStrip .bsPret.viu{color:var(--text)}
 .botStrip .bsSep{opacity:.7}
+.botStrip .bsParte.sus{color:var(--good)}.botStrip .bsParte.jos{color:var(--bad)}
 #tabloubot .tbPretViu{display:inline-flex;align-items:baseline;gap:6px;padding:3px 10px;border:1px solid var(--tb-linie);border-radius:999px;background:var(--tb-fond2)}
 #tabloubot .tbPretViu[hidden]{display:none}
 #tabloubot .tbPretViu b{font-size:18px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}#tabloubot .tbPretViu.viu b{color:var(--text)}

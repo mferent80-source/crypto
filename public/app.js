@@ -5695,6 +5695,19 @@ function renderTabloAlerte(){
   el.innerHTML=h;
   tbRenderTodo();
 }
+// v100.7: „Pretul in grid” pe pretul LIVE (Pionex) cand e viu - altfel pe citirea botului; pvArata() il redeseneaza la fiecare tranzactie.
+function tbKpiPretDeseneaza(b0){
+  var pune=function(id,text,cls){var e=$(id);if(!e)return;e.textContent=text;if(cls!=null)e.className=(e.classList.contains("tbKpiVal")?"tbKpiVal ":"tbSub ")+cls};
+  var b=pvBotLive(b0);
+  var p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus);
+  pune("tbKpiPret",p===null?"—":tbPretScurt(p),"");
+  var poz=(p!==null&&jos!==null&&sus!==null&&sus>jos)?(p-jos)/(sus-jos):null;
+  var dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(b):null;
+  var pill=$("tbKpiPozPill");if(pill){if(dg){pill.hidden=false;pill.textContent=dg.pill;pill.className="tbPill tbPill-"+dg.ton}else pill.hidden=true}
+  pune("tbKpiPretSub",poz===null?"fără grid citit":(dg?dg.text:(poz<0?"sub grid":poz>1?"peste grid":Math.round(poz*100)+"% din interval"))+" · "+tbPretScurt(jos)+" - "+tbPretScurt(sus),poz!==null&&(poz<0||poz>1)?"bad":"");
+  var punct=$("tbKpiGridPunct");
+  if(punct){punct.hidden=poz===null;if(poz!==null){punct.style.left=(Math.min(1,Math.max(0,poz))*100).toFixed(1)+"%";punct.className="tbGaugePunct"+(poz<0||poz>1?" bad":"")}}
+}
 function tbDeseneazaKpi(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
   var pune=function(id,text,cls){var e=$(id);if(!e)return;e.textContent=text;if(cls!=null)e.className=(e.classList.contains("tbKpiVal")?"tbKpiVal ":"tbSub ")+cls};
@@ -5716,14 +5729,7 @@ function tbDeseneazaKpi(){
     (parte?"prețul trebuie să "+(parte==="jos"?"scadă":"crească")+" până la ":"lichidare la ")+(pl!==null?tbPretScurt(pl):"—"),"");
   var bara=$("tbKpiLichBara");
   if(bara){var f=dep?0:dist===null?0:Math.min(1,Math.abs(dist)/40);bara.style.width=(f*100).toFixed(1)+"%";bara.className="tbGaugeUmplut "+nivel}
-  var p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus);
-  pune("tbKpiPret",p===null?"—":tbPretScurt(p),"");
-  var poz=(p!==null&&jos!==null&&sus!==null&&sus>jos)?(p-jos)/(sus-jos):null;
-  var dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(b):null;
-  var pill=$("tbKpiPozPill");if(pill){if(dg){pill.hidden=false;pill.textContent=dg.pill;pill.className="tbPill tbPill-"+dg.ton}else pill.hidden=true}
-  pune("tbKpiPretSub",poz===null?"fără grid citit":(dg?dg.text:(poz<0?"sub grid":poz>1?"peste grid":Math.round(poz*100)+"% din interval"))+" · "+tbPretScurt(jos)+" - "+tbPretScurt(sus),poz!==null&&(poz<0||poz>1)?"bad":"");
-  var punct=$("tbKpiGridPunct");
-  if(punct){punct.hidden=poz===null;if(poz!==null){punct.style.left=(Math.min(1,Math.max(0,poz))*100).toFixed(1)+"%";punct.className="tbGaugePunct"+(poz<0||poz>1?" bad":"")}}
+  tbKpiPretDeseneaza(b);
   var d=tbStare.directie,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
   if(!z||z.ton==="nu-se-poate"){pune("tbKpiPiata","—","mutedInfo");pune("tbKpiPiataSub",z?z.text:"aștept lumânările","");return}
   pune("tbKpiPiata",z.ton==="rau"?"Împotrivă":z.ton==="bine"?"Cu botul":"Amestecat",tbTon(z.ton));
@@ -5885,8 +5891,8 @@ function renderTabloGrafic(){
   var niv=GraficBot.niveluriBot({bot:b,zero:z&&z.pretZero,planPlus:pPl?{pret:pPl,usdt:botiNr(pl.plus)}:null,planMinus:pMi?{pret:pMi,usdt:botiNr(pl.minus)}:null});
   var xo=(brut&&brut.buOrderData)||{},gj=botiNr(xo.bottom),gs=botiNr(xo.top);
   var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer||[],b.id,Date.now());
-  var d=GraficBot.desen({bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),n:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h"});
-  var pAcum=bare[bare.length-1].c;
+  var d=GraficBot.desen({bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),n:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h",pretViu:pvPretViuAcum(b)});
+  var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
   // ultimele 3 alerte ale botului si ca text (pe telefon punctele de pe banda se citesc greu)
   var ult=alerte.slice().sort(function(x,y){return y.t-x.t}).slice(0,3),Cn={critic:"bad",atentie:"neutral",info:"mutedInfo"};
@@ -5934,20 +5940,20 @@ function tbActualizeazaBanda(){
   var el=$("botStrip");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot;
   if(!b){el.hidden=true;pvOpreste();pvArata();return}
-  var s=TabloBot.simboluri(b.baza,b.quote);if(s&&s.pionex)pvPorneste(s.pionex);
+  var s=TabloBot.simboluri(b.baza,b.quote);if(s&&s.pionex){pvPorneste(s.pionex);pvAduZi(s.pionex)}
   var d=tbStare.directie,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
-  var r=typeof PretViu!=="undefined"?PretViu.banda({bot:b,pretViu:pvStare.simbol===(s&&s.pionex)?pvStare.pret:null,botLa:tbStare.botLa,acum:Date.now(),
-    distanteGrid:typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(b):null,piata:z}):null;
+  var r=typeof PretViu!=="undefined"?PretViu.banda({bot:b,pretViu:pvPretPentru(b),botLa:tbStare.botLa,acum:Date.now(),zi:pvZiPentru(b),
+    distanteGrid:typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null,piata:z}):null;
   if(!r){el.hidden=true;return}
   el.innerHTML=r.parti.map(function(p){
     if(p.k==="pret")return '<b class="bsPret'+(p.viu?' viu':'')+'" id="botStripPret" title="'+escapeHtml(p.title||"")+'">'+escapeHtml(p.t)+'</b>';
-    return '<span class="bsParte" data-k="'+p.k+'">'+escapeHtml(p.t)+'</span>';
+    return '<span class="bsParte'+(p.ton?' '+p.ton:'')+'" data-k="'+p.k+'"'+(p.title?' title="'+escapeHtml(p.title)+'"':'')+'>'+escapeHtml(p.t)+'</span>';
   }).join('<span class="bsSep" aria-hidden="true"> · </span>');
   el.title=r.parti.map(function(p){return p.t}).join(" · ")+" — deschide Tabloul botului";
   el.hidden=false;
   el.className="statusChip botStrip "+r.clasa;
-  // Nu incape (ecran mai ingust decat 1920)? Cad intai „piata”, apoi „grid”; numele, pretul, totalul si lichidarea raman.
-  ["piata","grid"].forEach(function(k){
+  // Nu incape (ecran mai ingust decat 1920)? Cad intai „piata”, apoi „azi”, apoi „grid” (distantele gridului conteaza cel mai mult la un bot de grid); numele, pretul, totalul si lichidarea raman.
+  ["piata","zi","grid"].forEach(function(k){
     if(el.scrollWidth<=el.clientWidth+1)return;
     var x=el.querySelector('.bsParte[data-k="'+k+'"]');if(!x)return;
     var sep=x.previousElementSibling;if(sep&&sep.classList.contains("bsSep"))sep.remove();x.remove();
@@ -5958,7 +5964,7 @@ function tbActualizeazaBanda(){
 // Prin releul de acasa /api/pret-viu (functions/api/pret-viu.js): Pionex refuza cu 403 orice socket cu Origin, adica orice browser.
 // Merge pe orice ecran cat exista un bot (banda de sus e peste tot); PING/PONG cu Pionex le face releul.
 // Reconectare cu pauza crescanda (max 30 s); fara niciun mesaj 90 s = socket mort, il inchidem ca sa se reconecteze.
-var pvStare={ws:null,simbol:null,pret:null,timeout:null,incercari:0,ultimMesaj:0};
+var pvStare={ws:null,simbol:null,pret:null,timeout:null,incercari:0,ultimMesaj:0,zi:null,ziInLucru:false,grafLa:0};
 function pvOpreste(){
   if(pvStare.timeout){clearTimeout(pvStare.timeout);pvStare.timeout=null}
   var w=pvStare.ws;pvStare.ws=null;
@@ -5998,21 +6004,52 @@ function pvDeschide(simbol){
     pvStare.timeout=setTimeout(function(){pvStare.timeout=null;if(pvStare.simbol===simbol)pvDeschide(simbol)},5000);
   }
 }
-// Doar pretul se rescrie la fiecare tranzactie (banda + capul Tabloului), nu tot ecranul.
+// v100.7: ajutoarele pretului live pentru celelalte locuri (Pretul in grid, graficul, distantele din banda).
+// Pretul live DOAR daca e al botului de acum si e viu (ceva in ultimul minut); altfel null si locurile raman pe citirea botului.
+function pvPretPentru(b){var s=b?TabloBot.simboluri(b.baza,b.quote):null;return s&&pvStare.simbol===s.pionex?pvStare.pret:null}
+function pvPretViuAcum(b){var pv=pvPretPentru(b);return typeof PretViu!=="undefined"&&PretViu.eViu(pv,Date.now())?pv.pret:null}
+function pvBotLive(b){return typeof PretViu!=="undefined"?PretViu.botLaPret(b,pvPretViuAcum(b)):b}
+// v100.7: deschiderea zilei (lumanarea 1D Pionex care incepe azi la 00:00 UTC) - o data la 10 min si din nou la ziua noua.
+function pvZiPentru(b){var s=b?TabloBot.simboluri(b.baza,b.quote):null,z=pvStare.zi;return s&&z&&z.simbol===s.pionex&&z.azi===Math.floor(Date.now()/86400000)*86400000?z.zi:null}
+function pvAduZi(simbol){
+  var acum=Date.now(),azi=Math.floor(acum/86400000)*86400000,z=pvStare.zi;
+  if(pvStare.ziInLucru||typeof PretViu==="undefined")return;
+  if(z&&z.simbol===simbol&&z.azi===azi&&acum-z.la<10*60000)return;
+  pvStare.ziInLucru=true;
+  getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(simbol)+"&interval=1D&limit=2").then(function(k){
+    pvStare.zi={simbol:simbol,azi:azi,la:Date.now(),zi:PretViu.ziDinKlines(k&&k.data&&k.data.klines,Date.now())};
+  }).catch(function(){
+    // pastram deschiderea veche daca e tot de azi; reincercam peste un minut, nu la fiecare pas
+    pvStare.zi=z&&z.simbol===simbol&&z.azi===azi?{simbol:simbol,azi:azi,la:acum-9*60000,zi:z.zi}:{simbol:simbol,azi:azi,la:acum-9*60000,zi:null};
+  }).then(function(){pvStare.ziInLucru=false;pvArata()});
+}
+// Doar pretul se rescrie la fiecare tranzactie (banda + capul Tabloului + „Pretul in grid”), nu tot ecranul;
+// graficul se redeseneaza cu pretul live cel mult o data la 5 s si niciodata cat tii mouse-ul pe el.
 function pvArata(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
-  var s=b?TabloBot.simboluri(b.baza,b.quote):null;
-  var pa=b&&typeof PretViu!=="undefined"?PretViu.pretDeAratat(b,pvStare.simbol===(s&&s.pionex)?pvStare.pret:null,tbStare.botLa,Date.now()):null;
+  var pa=b&&typeof PretViu!=="undefined"?PretViu.pretDeAratat(b,pvPretPentru(b),tbStare.botLa,Date.now()):null;
   var sag=pa&&pa.viu&&pa.dir==="sus"?" ▲":pa&&pa.viu&&pa.dir==="jos"?" ▼":"";
+  var zt=pa?PretViu.textZi(PretViu.procentZi(pa.pret,pvZiPentru(b))):null;
   var bp=$("botStripPret");
   if(bp&&pa){bp.textContent=pa.text+sag;bp.className="bsPret"+(pa.viu?" viu":"");bp.title="Prețul botului "+pa.sursa}
+  var el=$("botStrip");
+  if(el&&b){
+    var bz=el.querySelector('.bsParte[data-k="zi"]');if(bz&&zt){bz.textContent=zt.t;bz.className="bsParte "+zt.ton}
+    var bg=el.querySelector('.bsParte[data-k="grid"]'),dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null;
+    if(bg&&dg)bg.textContent=dg.inGrid?"grid ↓"+(dg.josPct*100).toFixed(1)+"% ↑"+(dg.susPct*100).toFixed(1)+"%":dg.text;
+  }
+  if(b&&tbPanouVizibil()){
+    tbKpiPretDeseneaza(b);
+    var g=$("tbGrafic");
+    if(pa&&pa.viu&&Date.now()-pvStare.grafLa>=5000&&!(g&&g.querySelector(".gbTip:not([hidden])"))){pvStare.grafLa=Date.now();renderTabloGrafic()}
+  }
   var cap=$("tbPretViu");if(!cap)return;
   if(!pa){cap.hidden=true;return}
   cap.hidden=false;
   cap.className="tbPretViu"+(pa.viu?" viu":"")+(pa.viu&&pa.dir?" "+pa.dir:"");
   cap.title="Prețul botului "+pa.sursa;
   if($("tbPretViuVal"))$("tbPretViuVal").textContent=pa.text+sag;
-  if($("tbPretViuSub"))$("tbPretViuSub").textContent=pa.viu?"live · Pionex":pa.sursa;
+  if($("tbPretViuSub"))$("tbPretViuSub").textContent=(pa.viu?"live · Pionex":pa.sursa)+(zt?" · "+zt.t:"");
 }
 // Indicatorii generali (Dashboard, Engine, Multi-TF...) pornesc pe moneda
 // botului, nu pe BTC - o singura data, si doar daca omul n-a ales el alta.

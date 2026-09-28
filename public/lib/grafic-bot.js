@@ -88,8 +88,9 @@ var GraficBot = (function () {
       g.forEach(function (x) { if (x.h > h) h = x.h; if (x.l < l) l = x.l; v += x.v; });
       B.push({ t: g[0].t, o: g[0].o, h: h, l: l, c: g[g.length - 1].c, v: v, k: i + g.length - 1 });
     }
-    var n = B.length, cw = plotW / n, pAcum = raw.length ? raw[raw.length - 1].c : null;
+    var n = B.length, cw = plotW / n, viu = nr(o.pretViu) > 0 ? nr(o.pretViu) : null, pAcum = viu !== null ? viu : raw.length ? raw[raw.length - 1].c : null;
     var lo = Infinity, hi = -Infinity; B.forEach(function (b) { if (b.l < lo) lo = b.l; if (b.h > hi) hi = b.h; });
+    if (viu !== null) { if (viu < lo) lo = viu; if (viu > hi) hi = viu; }
     var span = hi - lo || Math.abs(hi) * 0.01 || 1, niv = o.niv || [];
     niv.forEach(function (x) { if (x.p > hi && x.p - hi < span * 0.12) hi = x.p; if (x.p < lo && lo - x.p < span * 0.12) lo = x.p; });
     var pad = (hi - lo || span) * 0.06; lo -= pad; hi += pad;
@@ -142,6 +143,8 @@ var GraficBot = (function () {
         et.push({ y: y, t: x.t, s: x.s, p: x.p, c: x.c });
       } else afara.push(x);
     });
+    // v100.7: pretul LIVE (Pionex) - linie punctata de la ultima lumanare pana la eticheta „acum”
+    if (viu !== null) q.push('<line class="gbViu" x1="' + f1(X(n - 1)) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(viu)) + '" y2="' + f1(Y(viu)) + '" stroke="' + COL.text + '" stroke-width="1.2" stroke-dasharray="3 3"/>');
     if (pAcum !== null) et.push({ y: Y(pAcum), t: "acum", p: pAcum, c: COL.text, acum: true });
     et.sort(function (a, b) { return a.y - b.y; });
     var minD = ingust ? 14 : 16; for (var ei = 1; ei < et.length; ei++) if (et[ei].y - et[ei - 1].y < minD) et[ei].y = et[ei - 1].y + minD;

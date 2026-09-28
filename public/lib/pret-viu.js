@@ -42,12 +42,30 @@ var PretViu = (function () {
     return null;
   }
 
+  // v100.7: deschiderea zilei = open-ul lumanarii 1D Pionex care incepe AZI la 00:00 UTC (aceeasi regula ca
+  // scripts/lib/poza.mjs din colector, deci acelasi procent ca pe pagina alerts si in TradingView).
+  function ziDinKlines(klines, acum) {
+    var azi = Math.floor(acum / 86400000) * 86400000, l = Array.isArray(klines) ? klines : [];
+    for (var i = 0; i < l.length; i++) {
+      var k = l[i]; if (!k) continue;
+      var t = Number(Array.isArray(k) ? k[0] : k.time), o = Number(Array.isArray(k) ? k[1] : k.open);
+      if (t === azi && isFinite(o) && o > 0) return { deschidere: o, t: t };
+    }
+    return null;
+  }
+  function procentZi(pret, zi) { var p = nr(pret), d = zi && nr(zi.deschidere); return p > 0 && d > 0 ? (p / d - 1) * 100 : null; }
+  function textZi(pct) { return pct === null ? null : { t: "azi " + (pct > 0 ? "+" : "") + pct.toFixed(1) + "%", ton: pct > 0 ? "sus" : pct < 0 ? "jos" : "egal" }; }
+  // Copia botului cu pretul live - ca „Pretul in grid” si distantele pana la marginile gridului sa mearga pe pretul de ACUM.
+  function botLaPret(b, pret) { var p = nr(pret); if (!b || !(p > 0)) return b; var c = {}; for (var k in b) c[k] = b[k]; c.pretCurent = p; return c; }
+
   // Banda de sus: bucatile in ordine; pretul e a doua, imediat dupa nume.
   function banda(o) {
     var b = o.bot; if (!b) return null;
     var parti = [{ k: "nume", t: String(b.baza || "").replace(/\.PERP$/, "") + " " + (b.directie || "") + (b.levier != null ? " " + b.levier + "×" : "") }];
     var pa = pretDeAratat(b, o.pretViu, o.botLa, o.acum);
     if (pa) parti.push({ k: "pret", t: pa.text + (pa.viu && pa.dir === "sus" ? " ▲" : pa.viu && pa.dir === "jos" ? " ▼" : ""), viu: pa.viu, dir: pa.viu ? pa.dir : null, title: "Prețul botului " + pa.sursa });
+    var zt = pa ? textZi(procentZi(pa.pret, o.zi)) : null;
+    if (zt) parti.push({ k: "zi", t: zt.t, ton: zt.ton, title: "Mișcarea de azi, față de deschiderea zilei (00:00 UTC, lumânarea 1D Pionex)" });
     var tot = nr(b.profitTotal);
     parti.push({ k: "total", t: tot === null ? "total —" : "total " + (tot > 0 ? "+" : "") + tot.toFixed(2) + " USDT" });
     var dist = nr(b.distantaLichidarePct);
@@ -60,5 +78,5 @@ var PretViu = (function () {
     return { parti: parti, clasa: rau ? "bad" : (tot === null || dist === null || tot < 0) ? "tbWarn" : "good", pret: pa };
   }
 
-  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda };
+  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda, ziDinKlines: ziDinKlines, procentZi: procentZi, textZi: textZi, botLaPret: botLaPret };
 })();
