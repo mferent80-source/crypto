@@ -324,6 +324,9 @@ var TabloExtra = (function () {
       for (var i = 0; i < gr.length; i++) if (acelasi(gr[i].titlu, a)) { it.c = gr[i].c; it.n = gr[i].n; it.text = gr[i].text; it.la = gr[i].ultima; gr.splice(i, 1); break; }
       out.push(it);
     });
+    // v100.10 (el, 28.09: „ok” la „«Nu ai un plan» și alerta «Botul n-are plan» apar pe 2 rânduri”): alerta colectorului despre planul
+    // lipsa nu mai are rand propriu - daca planul lipseste, il spune randul „Nu ai un plan pentru bot” (cu butonul lui); daca e pus, alerta e depasita
+    gr = gr.filter(function (g) { return !/\bn are plan\b|\bfara plan\b/.test(fel(g.titlu)); });
     out = out.concat(gr.map(function (g) { g.la = g.ultima; return g; }));
     // 3) sfaturile
     var bine = null;

@@ -130,6 +130,14 @@ test("„Ce ai de făcut”: din alertele de același fel rămâne mereu CEA MAI
   const sem = l.filter((x) => /^Semaforul/.test(x.titlu)); assert.equal(sem.length, 1); assert.match(sem[0].titlu, /3\.1%/);
   assert.equal(l.filter((x) => /marginea/.test(x.titlu)).length, 2, "marginea de sus și cea de jos rămân lucruri diferite");
 });
+test("„Ce ai de făcut”: planul lipsă = UN singur rând (alerta „Botul n-are plan” nu se mai dublează); cu planul pus, alerta veche dispare", () => {
+  const TE = new Function(`${citeste("../public/lib/grid-calcul.js")}\n${citeste("../public/lib/tablou-extra.js")}; return TabloExtra;`)();
+  const al = [{ t: ACUM - 2 * 3600000, nivel: "atentie", titlu: "JTO: Botul n-are plan", mesaj: "Fără țintă și prag" }, { t: ACUM - 3600000, nivel: "critic", titlu: "JTO: Lichidarea la 7.0%", mesaj: "x" }];
+  const cu = TE.ceAiDeFacut({ acum: ACUM, dateLa: ACUM, planGol: true, sfaturi: [], avertismente: [], alerte: al });
+  assert.equal(cu.filter((x) => /plan/i.test(x.titlu)).length, 1); assert.equal(cu.find((x) => /plan/i.test(x.titlu)).actiune, "plan", "rămâne rândul cu butonul");
+  const fara = TE.ceAiDeFacut({ acum: ACUM, dateLa: ACUM, planGol: false, sfaturi: [], avertismente: [], alerte: al });
+  assert.equal(fara.filter((x) => /plan/i.test(x.titlu)).length, 0, "planul e pus: alerta veche nu mai are ce căuta"); assert.ok(fara.some((x) => /Lichidarea/.test(x.titlu)));
+});
 test("codTVBot: rândul GRID-FISA din botul care rulează (formatul butonului din fișă, 10 câmpuri) + semnătura gridului", () => {
   const TE = new Function(`${citeste("../public/lib/grid-calcul.js")}\n${citeste("../public/lib/tablou-extra.js")}; return TabloExtra;`)();
   const jto = { id: "2386", directie: "long", levier: 5, gridJos: 0.555, gridSus: 0.57, pretCurent: 0.5619, opritorPierdere: 0.5455, opritorPierdereActiv: true, opritorProfit: null, opritorProfitActiv: false,
