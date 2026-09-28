@@ -182,5 +182,20 @@ await test("revizie: aplicatia - #tbConcret ascuns chiar ascunde (CSS); fara bot
   assert.match(pkg.scripts.test, /npm run test:v100/); assert.equal(pkg.scripts["test:v100"], "node scripts/proba-v100.mjs");
 });
 
+await test("v100.2 (el: „pune Ce ai de facut acum sub grafic si incadreaza in pagina sa nu mai ramana goluri”): Ce ai de facut sta sub grafic in coloana stanga; jos „Daca pretul ajunge la” langa „Banii botului”, iar „Pe zi, la inchidere” pe toata latimea, pe doua coloane", () => {
+  const h = citeste("../public/index.html"), poz = (s) => { const i = h.indexOf(s); assert.ok(i >= 0, "lipseste " + s); return i; };
+  const rand = h.slice(poz('class="tbGraficRand"'), poz('id="tbIdei"'));
+  assert.ok(rand.includes('class="tbGrStanga"'), "coloana stanga a graficului");
+  const st = rand.slice(rand.indexOf('class="tbGrStanga"'), rand.indexOf('class="tbGrCol"'));
+  assert.ok(st.includes('id="tbGraficCard"') && st.includes('id="tbTodo"') && st.indexOf('id="tbGraficCard"') < st.indexOf('id="tbTodo"'), "Ce ai de facut sub grafic, in aceeasi coloana");
+  assert.equal(h.split('id="tbTodo"').length - 1, 1, "o singura sectiune Ce ai de facut");
+  const jos = h.slice(poz('class="tbGrilaNoua"'), poz('id="tbPl-plan"'));
+  const main = jos.slice(jos.indexOf('class="tbMain"'), jos.indexOf('class="tbSideNou"'));
+  assert.ok(main.includes('id="tbScenariiCard"') && !main.includes('id="tbAcumCard"'), "in stanga jos doar scenariile");
+  assert.ok(poz('id="tbAcumCard"') > poz('class="tbSideNou"') && poz('id="tbAcumCard"') < poz('id="tbPl-plan"'), "Pe zi, la inchidere dupa randul cu Banii, pe toata latimea");
+  const css = citeste("../public/app.css");
+  assert.match(css, /#tabloubot \.tbGrStanga\{[^}]*display:grid/); assert.match(css, /#tabloubot #tbAcum\{[^}]*columns:/); assert.match(css, /#tabloubot #tbAcum \.tbLinie\{[^}]*break-inside:avoid/);
+});
+
 console.log(`\nV100 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste} probe trecute\n`);
 process.exit(picate ? 1 : 0);

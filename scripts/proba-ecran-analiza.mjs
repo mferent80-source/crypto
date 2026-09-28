@@ -189,7 +189,8 @@ try {
     const r = await b.ev(`(()=>{const y=(id)=>{const e=document.getElementById(id);return e?Math.round(e.getBoundingClientRect().top):null};
       const c=document.querySelector("#tabloubot .tbCadru").getBoundingClientRect(),g=document.querySelector("#tabloubot .tbGraficRand").getBoundingClientRect();
       return {sus:y("tbSemaforCard"),grafic:y("tbGraficCard"),idei:y("tbIdei"),todo:y("tbTodo"),directie:y("tbDirectieCard"),lat:Math.round(g.width),cadru:Math.round(c.width)}})()`);
-    assert.ok(r.sus < r.grafic && r.grafic < r.idei && r.idei < r.todo, `ordinea: ${JSON.stringify(r)}`);
+    // v100.2 (el, 28.09): "Ce ai de facut acum" sta sub grafic, inaintea sugestiilor de monede
+    assert.ok(r.sus < r.grafic && r.grafic < r.todo && r.todo < r.idei, `ordinea: ${JSON.stringify(r)}`);
     // v100 (el, 28.09: "sub Ce spun indicatorii muta Directia pietei"): Directia sta langa grafic, sub indicatori - deci inaintea ideilor
     assert.ok(r.grafic <= r.directie && r.directie < r.idei, `Directia pietei trebuie sa stea sub indicatori, langa grafic: ${JSON.stringify(r)}`);
     assert.ok(r.lat >= r.cadru - 2, `graficul + indicatorii nu ocupa toata latimea: ${r.lat} din ${r.cadru}`);
