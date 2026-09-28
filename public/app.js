@@ -3135,17 +3135,20 @@ const APP_API_TOKEN_SESSION_KEY="cryptoRadarApiTokenV54";
 // la niciun server): …/#parola=…&ecran=tabloubot. Se ține minte o dată pe adresa asta și dispare din bară înainte de prima cerere.
 const ecranDinLegatura=(function(){
   try{
-    const h=String(location.hash||""),m=/[#&]parola=([^&]+)/.exec(h),e=/[#&]ecran=(tabloubot|t212)(?:&|$)/.exec(h);
+    const h=String(location.hash||""),m=/[#&]parola=([^&]+)/.exec(h),e=/[#&]ecran=(tabloubot|t212)(?:&|$)/.exec(h),pz=/[#&]poz=([A-Za-z0-9_.-]{1,40})(?:&|$)/.exec(h);
     if(m){const v=decodeURIComponent(m[1]).trim();if(v)localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v)}
     if(m||e)history.replaceState(null,"",location.pathname+location.search);
     // prima vizita pe o adresa noua de tunel: service worker-ul se instaleaza si REINCARCA pagina (controllerchange), iar linkul e
     // deja scos din bara -> ecranul cerut se tine minte un minut in sesiune, ca sa ajunga si dupa reincarcare
     const K="crEcranDinLegatura";
-    if(e){try{sessionStorage.setItem(K,JSON.stringify({e:e[1],t:Date.now()}))}catch{}return e[1]}
+    if(e){try{sessionStorage.setItem(K,JSON.stringify({e:e[1],poz:pz&&e[1]==="t212"?pz[1]:null,t:Date.now()}))}catch{}return e[1]}
     try{const x=JSON.parse(sessionStorage.getItem(K)||"null");if(x&&(x.e==="tabloubot"||x.e==="t212")&&Date.now()-x.t<60000)return x.e}catch{}
     return null;
   }catch{return null}
 })();
+// v100.12 (ideea 6 „Păstrează ca plan”): linkul din alerts cere si o POZITIE T212 (…&ecran=t212&poz=AVGO_US_EQ) - citita din aceeasi
+// inregistrare de sesiune (supravietuieste reincarcarii facute de service worker); pagina T212 o desface o data (t212Render)
+const pozDinLegatura=(function(){try{const x=JSON.parse(sessionStorage.getItem("crEcranDinLegatura")||"null");return x&&x.e==="t212"&&typeof x.poz==="string"&&/^[A-Za-z0-9_.-]{1,40}$/.test(x.poz)&&Date.now()-x.t<60000?x.poz:null}catch{return null}})();
 // Parola se tine acum pe DISPOZITIV (localStorage), nu pe sesiune: inainte se
 // stergea la inchiderea tabului, deci pe telefon o cerea de fiecare data.
 // sessionStorage ramane citit ca sa nu cada sesiunea deschisa in momentul livrarii.

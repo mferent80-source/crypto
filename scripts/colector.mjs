@@ -21,9 +21,9 @@ import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { construiestePoza, alerteSLTP, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v101.1";
+const VERSIUNE_COLECTOR = "v101.2";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -518,6 +518,7 @@ async function pozitiiPentruPoza() {
   const pz = await cere("/api/t212?action=pozitii"), poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
   let loturi = []; try { const h = await cere("/api/t212?action=istoric"); loturi = T212.perechi((h && h.umpleri) || []).deschise || []; } catch (e) { jurnal("poza: loturi", e.message); }
   let cash = null; try { cash = (await cere("/api/t212?action=cont")).cash || null; } catch {}
+  if (cash && cash.total > 0) contT212 = cash.total;   // v101.2: contul in lei, pentru „câte bucăți” la simbolurile urmarite
   let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
   const inv = cash && cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
   const out = [];
@@ -600,7 +601,7 @@ async function adresaRadarului() {
   } catch {}
   return tunelUrl;
 }
-let pozaOkLa = 0, ultimeleSimboluri = {};
+let pozaOkLa = 0, ultimeleSimboluri = {}, contT212 = null;
 async function turaPoza() {
   const botiActivi = ultimiiBoti.filter((b) => b && b.id && b.activ !== false).length;
   if (!PAZNIC_URL || !PAZNIC_TOKEN || pozaInLucru || Date.now() - pozaLa < cadentaPoza({ acum: Date.now(), botiActivi })) return;   // I-461: 2 min in piata / cu bot, 5 min in rest
@@ -610,6 +611,10 @@ async function turaPoza() {
     const [t212, boti, simboluri, radarUrl] = await Promise.all([
       pozitiiPentruPoza().then((l) => { ultimeleT212 = { lista: l, la: Date.now() }; return l; }).catch((e) => { t212Eroare = e.message; jurnal("poza: t212", e.message); return ultimeleT212.lista; }),
       botiPentruPoza(), simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; }), adresaRadarului()]);
+    // v101.2 (ideea 4 „câte bucăți”): la simbolurile urmarite in $ cu intrare sugerata - ActiuniSemnale.marime (1 % risc din contul T212,
+    // plafon 20 %), cursul $/leu din pozitii; in € nu avem cursul euro din pozitii -> nimic, nu cifre inventate
+    const fx = fxDinPozitii(t212);
+    for (const s of simboluri) { const n = s.niveluri; if (n && n.nivel === "ok" && n.intrare && s.moneda === "$" && contT212 && fx) { try { s.marime = ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: contT212, fx }); } catch (e) { jurnal("poza: marime", s.s, e.message); } } }
     const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri }), text = JSON.stringify(poza);
     const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
     if (!r.ok) jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));

@@ -194,6 +194,12 @@ function t212Render() {
       return '<div class="t212Bara"><span>' + escapeHtml(r.simbol) + '</span><div class="t212BaraFond"><div class="t212BaraPlin' + w + '" style="width:' + Math.max(1, Math.min(100, (r.pondere || 0) / 0.3 * 100)).toFixed(1) + '%"></div></div><b>' + Math.round((r.pondere || 0) * 100) + '%</b></div>';
     }).join("") + '<p class="tbSub t212PfNota">Bara plină = 30% din cont. Galben peste 15%, roșu peste 20%.</p><p class="t212Fac">' + escapeHtml(pf.ceAsFace) + '</p>';
   }
+  // v100.12 (ideea 6 „Păstrează ca plan”, din pagina alerts): pozitia ceruta in link se desface o singura data, cu planul completat din
+  // preturile calculate (formularul il are deja cand nu exista plan) - el apasa „Salvează planul”; nimic nu se scrie fara el
+  if (typeof pozDinLegatura !== "undefined" && pozDinLegatura && !t212.pozCerutaGata && poz.some(function (x) { return x.ticker === pozDinLegatura; })) {
+    t212.pozCerutaGata = true; t212Deschide(pozDinLegatura);
+    toast("Planul pentru " + pozDinLegatura.replace(/_US_EQ$/, "") + " e completat cu prețurile calculate · apasă „Salvează planul” ca să-l păstrezi", "good");
+  }
   t212RenderPoarta();
   t212IdeiRender();
   if (typeof contTotRender === "function") contTotRender();

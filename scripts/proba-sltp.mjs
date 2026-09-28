@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { construiestePoza, sugestiePoza, alerteSLTP } from "./lib/poza.mjs";
+import { construiestePoza, sugestiePoza, alerteSLTP, fxDinPozitii } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GC = new Function(fs.readFileSync(path.join(RAD, "public/lib/grid-calcul.js"), "utf8") + "; return GridCalcul;")();
@@ -96,6 +96,23 @@ await test("alerteSLTP: simbol urmarit la intrarea sugerata -> info cu SL, TP si
   assert.match(i.mesaj, /SL \$94\.68/); assert.match(i.mesaj, /TP \$146\.61/); assert.match(i.mesaj, /\+7,0% pe trade/);
   assert.ok(!l.some((x) => /WDC|RHM|NOUX/.test(x.cheie)));
   assert.deepEqual(alerteSLTP({ t212: [], simboluri: [] }, ACUM_A), []); assert.deepEqual(alerteSLTP(null, ACUM_A), []);
+});
+
+// v101.2 (el, 28.09: ideea 4 „câte bucăți”): cursul $/leu din pozitiile T212 + marimea (ActiuniSemnale.marime) in sugestia urmaritelor
+await test("fxDinPozitii: dolari pe leu din pozitiile T212 (Σ buc × pret mediu / Σ cost in lei); fara cost -> null", () => {
+  assert.ok(Math.abs(fxDinPozitii([{ qty: 2, pretMediu: 100, costLei: 920 }, { qty: 1, pretMediu: 50, costLei: 230 }]) - 250 / 1150) < 1e-9);
+  assert.equal(fxDinPozitii([{ qty: 2, pretMediu: 100, costLei: null }]), null); assert.equal(fxDinPozitii([]), null); assert.equal(fxDinPozitii(null), null);
+});
+await test("simbolPoza: sugestia urmaritului poarta marimea (bucati, suma si riscul in lei) doar cand are intrare", () => {
+  const b = bare(250, 3), pret = b[b.length - 1].c, n = AS.niveluri(b, pret, {});
+  const m = AS.marime({ intrare: n.intrare.pret, stop: n.stop, cont: 30000, fx: 0.22 });
+  const p = construiestePoza({ acum: Date.now(), versiune: "v101.2", boti: [], t212: [], simboluri: [{ s: "AAA", pret, closes30: [], niveluri: n, marime: m }, { s: "BBB", pret, closes30: [], niveluri: n }] });
+  const g = p.simboluri[0].sugestie.marime;
+  assert.ok(g.bucati > 0 && g.suma > 0 && g.risc > 0, JSON.stringify(g)); assert.ok(g.risc <= 301, "cel mult 1% din 30.000 lei"); assert.ok(g.plafonat ? g.suma <= 6000 : Math.abs(g.risc - 300) <= 1, "sub 1% doar cand e plafonat la 20% din cont (6.000 lei)"); assert.equal(typeof g.plafonat, "boolean");
+  assert.equal(p.simboluri[1].sugestie.marime, undefined, "fara marime calculata: nimic inventat");
+  const jos = bare(250, -3), pj = jos[jos.length - 1].c, nj = AS.niveluri(jos, pj, {});
+  const q = construiestePoza({ acum: Date.now(), boti: [], t212: [], simboluri: [{ s: "JOS", pret: pj, closes30: [], niveluri: nj, marime: m }] });
+  assert.equal(q.simboluri[0].sugestie.marime, undefined, "trend in jos (fara intrare): nu spunem cate bucati");
 });
 
 console.log(`\nSLTP ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);

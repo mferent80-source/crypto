@@ -173,6 +173,24 @@ test("Tabloul: banda „Ai schimbat gridul” + butonul permanent din cartela Gr
   assert.match(APP, /x\.cod==="grid"&&tbTvCod\(\)/); assert.match(CSS, /#tabloubot \.tbGridNou\[hidden\]\{display:none\}/);
 });
 
+// v100.12 (ideea 6 „Păstrează ca plan”): linkul din alerts cere si o POZITIE T212 - Radarul o desface, cu planul completat
+test("Radarul ia din link și poziția cerută (…&ecran=t212&poz=TICKER), doar la T212, doar un ticker curat; pagina T212 o desface o dată", () => {
+  const i = APP.indexOf("const ecranDinLegatura="), j = APP.indexOf("\n", APP.indexOf("const pozDinLegatura="));
+  assert.ok(i > 0 && j > i, "lipsește pozDinLegatura în app.js");
+  const bucata = APP.slice(i, j);
+  const ruleaza = (hash) => {
+    const ss = {};
+    const f = new Function("location", "localStorage", "sessionStorage", "history", "APP_API_TOKEN_SESSION_KEY", bucata + "; return [ecranDinLegatura, pozDinLegatura];");
+    return f({ hash, pathname: "/", search: "" }, { setItem() {} }, { setItem: (k, v) => { ss[k] = v; }, getItem: (k) => ss[k] ?? null }, { replaceState() {} }, "K");
+  };
+  assert.deepEqual(ruleaza("#parola=x&ecran=t212&poz=AVGO_US_EQ"), ["t212", "AVGO_US_EQ"]);
+  assert.deepEqual(ruleaza("#ecran=t212&poz=%3Cscript%3E"), ["t212", null], "doar litere, cifre, _ . -");
+  assert.deepEqual(ruleaza("#ecran=tabloubot&poz=AVGO_US_EQ"), ["tabloubot", null], "poziția contează doar la Trading 212");
+  assert.deepEqual(ruleaza("#ecran=t212"), ["t212", null]);
+  const T = citeste("../public/lib/t212-ecran.js");
+  assert.match(T, /typeof pozDinLegatura !== "undefined" && pozDinLegatura && !t212\.pozCerutaGata/); assert.match(T, /t212Deschide\(pozDinLegatura\)/);
+});
+
 // releul (functions/api/pret-viu.js), cu fetch / WebSocketPair / Response simulate
 class FalsWS { constructor() { this.l = {}; this.trimise = []; this.inchis = false; } accept() { this.acceptat = true; } addEventListener(t, f) { (this.l[t] ||= []).push(f); } send(x) { this.trimise.push(x); } close() { this.inchis = true; } da(t, d) { (this.l[t] || []).forEach((f) => f(d)); } }
 const vechi = { fetch: globalThis.fetch, Response: globalThis.Response, WebSocketPair: globalThis.WebSocketPair };

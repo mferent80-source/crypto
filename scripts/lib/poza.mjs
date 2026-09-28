@@ -65,6 +65,17 @@ function semaforT212(sem, niv) {
 }
 // v101 (spec 2026-09-28-sl-tp-pe-alerts): SL / TP pentru pagina alerts, din ActiuniSemnale.niveluri (functia Radarului).
 // fel "pozitie": stopul care urca (stopPozitie) si tinta de la pret; fel "urmarit": intrarea sugerata (null la trend in jos) + stop/tinta de la ea.
+// v101.2 (ideea 4 „câte bucăți”): marimea din ActiuniSemnale.marime (1 % risc din cont, plafon 20 %), doar la sugestia CU intrare
+function cuMarime(g, m) {
+  if (!g || !g.intrare || !m || nr(m.bucati) === null || !(m.bucati > 0)) return g;
+  return { ...g, marime: { bucati: rot(m.bucati, 4), suma: rot(m.suma, 0), risc: rot(m.risc, 0), plafonat: !!m.plafonat } };
+}
+// cursul in dolari pe leu din pozitiile T212 (Σ buc × pret mediu / Σ cost in lei) - cum il cere ActiuniSemnale.marime; fara cost -> null
+export function fxDinPozitii(t212) {
+  let usd = 0, lei = 0;
+  for (const x of Array.isArray(t212) ? t212 : []) { if (!x || !(nr(x.costLei) > 0) || !(nr(x.qty) > 0) || !(nr(x.pretMediu) > 0)) continue; usd += x.qty * x.pretMediu; lei += x.costLei; }
+  return lei > 0 && usd > 0 ? usd / lei : null;
+}
 export function sugestiePoza(n, pret, fel) {
   if (!n || typeof n !== "object") return null;
   if (n.nivel === "fara-date") return { nivel: "fara-date", motiv: String(n.motiv || "") };
@@ -120,7 +131,7 @@ function simbolPoza(x, acum) {
     insideri: e ? insideri(e.tranzactii, acum) : null,
     rezultate: e && e.rezultate && e.rezultate.data ? { data: e.rezultate.data, zile: zileDinData(e.rezultate.data, acum), eps: rot(e.rezultate.eps, 2) } : null,
     analisti: e && e.analisti ? { tinta: rot(e.analisti.tinta, 2), recom: e.analisti.recom || null, n: nr(e.analisti.n) } : null,
-    shortFloat: e ? rot(e.shortFloat, 4) : null, sugestie: sugestiePoza(x.niveluri, x.pret, "urmarit") };
+    shortFloat: e ? rot(e.shortFloat, 4) : null, sugestie: cuMarime(sugestiePoza(x.niveluri, x.pret, "urmarit"), x.marime) };
 }
 // ---- v98.1: ajutoare pentru colector (pure) ----
 const NY = "America/New_York";
