@@ -63,6 +63,24 @@ function zileDinData(iso, acum) {
 function semaforT212(sem, niv) {
   return { niv: sem && sem.nivel && sem.nivel !== "fara-date" ? sem.nivel : null, motive: sem && Array.isArray(sem.motive) ? sem.motive.slice(0, 6) : [], sfat: sem && sem.ceAsFace ? String(sem.ceAsFace) : "", trend: niv && niv.trend ? String(niv.trend) : null };
 }
+// v101 (spec 2026-09-28-sl-tp-pe-alerts): SL / TP pentru pagina alerts, din ActiuniSemnale.niveluri (functia Radarului).
+// fel "pozitie": stopul care urca (stopPozitie) si tinta de la pret; fel "urmarit": intrarea sugerata (null la trend in jos) + stop/tinta de la ea.
+export function sugestiePoza(n, pret, fel) {
+  if (!n || typeof n !== "object") return null;
+  if (n.nivel === "fara-date") return { nivel: "fara-date", motiv: String(n.motiv || "") };
+  if (n.nivel !== "ok") return null;
+  const p = nr(pret), pr = n.proba || {}, tr = n.trend && typeof n.trend === "object" ? n.trend.dir : n.trend;
+  const baza = { k: nr(n.k), trend: tr ? String(tr) : null, proba: { n: nr(pr.n), pePlus: rot(pr.pePlus, 3), medie: rot(pr.medie, 4) } };
+  if (fel === "pozitie") {
+    const stop = rot(n.stopPozitie, 4), tinta = rot(n.tintaPozitie, 4);
+    if (stop === null || tinta === null) return null;
+    return { stop, tinta, riscPct: p && nr(n.d) !== null ? rot(n.d / p, 4) : null, ...baza };
+  }
+  const stop = rot(n.stop, 4), tinta = rot(n.tinta, 4);
+  if (stop === null || tinta === null) return null;
+  const intrare = n.intrare && nr(n.intrare.pret) ? { pret: rot(n.intrare.pret, 4), motiv: String(n.intrare.motiv || "") } : null;
+  return { intrare, stop, tinta, riscPct: rot(n.riscPct, 4), ...baza };
+}
 function pozitieT212(x, acum) {
   const pret = nr(x.pret), mediu = nr(x.pretMediu), sem = semaforT212(x.sem, x.niv);
   const plan = x.plan ? { trailPct: nr(x.plan.trailPct), tinta: nr(x.plan.tinta) ?? (x.niv ? nr(x.niv.tinta) : null), stop: x.niv ? nr(x.niv.stop) : null, max: nr(x.maxDupaCumparare), stopFix: nr(x.plan.stop) } : null;
@@ -71,7 +89,7 @@ function pozitieT212(x, acum) {
     pplLei: rot(x.ppl, 2), pctLei: nr(x.ppl) !== null && nr(x.costLei) ? rot(x.ppl / x.costLei, 6) : null, pctPret: pret && mediu ? rot(pret / mediu - 1, 6) : null,
     plan, trend: sem.trend, pondere: rot(x.pondere, 4), niv: sem.niv, motive: sem.motive, sfat: sem.sfat,
     // v100.8: insiderii pe 60 de zile si la pozitiile T212 (null = Yahoo n-a dat nimic inca; pagina spune „vine cu poza următoare”)
-    insideri: x.extra ? insideri(x.extra.tranzactii, nr(acum) || Date.now()) : null, sursa: x.sursa || null };
+    insideri: x.extra ? insideri(x.extra.tranzactii, nr(acum) || Date.now()) : null, sursa: x.sursa || null, sugestie: sugestiePoza(x.niveluri, x.pret, "pozitie") };
 }
 // SemnaleBot.semafor -> {nivel, cod, motiv, faCe, componente:[{nivel, cod, motiv, faCe}]}
 function semaforBot(sem) {
@@ -102,7 +120,7 @@ function simbolPoza(x, acum) {
     insideri: e ? insideri(e.tranzactii, acum) : null,
     rezultate: e && e.rezultate && e.rezultate.data ? { data: e.rezultate.data, zile: zileDinData(e.rezultate.data, acum), eps: rot(e.rezultate.eps, 2) } : null,
     analisti: e && e.analisti ? { tinta: rot(e.analisti.tinta, 2), recom: e.analisti.recom || null, n: nr(e.analisti.n) } : null,
-    shortFloat: e ? rot(e.shortFloat, 4) : null };
+    shortFloat: e ? rot(e.shortFloat, 4) : null, sugestie: sugestiePoza(x.niveluri, x.pret, "urmarit") };
 }
 // ---- v98.1: ajutoare pentru colector (pure) ----
 const NY = "America/New_York";
