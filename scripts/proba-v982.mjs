@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { prevClose, prevSimbol, insideri, alerteSimboluri, bataieNecesara } from "./lib/poza.mjs";
+import { prevClose, prevSimbol, insideri, alerteSimboluri, bataieNecesara, pret30DinIstoric } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { verifica } from "../paznic/worker.mjs";
 
@@ -106,6 +106,19 @@ await test("worker verifica: 'a revenit' spune de CAND tacuse (ultimul semn dina
   const ora = (t) => new Date(t).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", weekday: "short", hour: "2-digit", minute: "2-digit" });
   assert.ok(trimise[1].embeds[0].description.includes(ora(ultimaPoza)), trimise[1].embeds[0].description); assert.ok(!trimise[1].embeds[0].description.includes(ora(ultimaBataie)));
   const s = JSON.parse(kv.get("stare")); assert.equal(s.tacutDeLa, undefined); assert.equal(s.anuntatLa, undefined);
+});
+
+// ---------- 3b. cele 30 de preturi ale botului (pagina alerts) supravietuiesc repornirii colectorului ----------
+await test("pret30DinIstoric: lista celor 30 de preturi se umple din istoricul botului din KV (pretPerp, minut cu minut), nu doar din memoria colectorului - dupa o repornire pagina arata iar 'cat s-a miscat', nu 'putine poze inca'", () => {
+  const T0 = T("2026-09-28T06:00:00Z");
+  const ist = Array.from({ length: 50 }, (_, i) => ({ t: T0 - (50 - i) * MIN, pretPerp: 0.57 + i * 0.0001, perechi: i }));
+  const r = pret30DinIstoric(ist, [0.5751, 0.5752]);
+  assert.equal(r.length, 30, "cel mult 30"); assert.equal(r[r.length - 1], 0.5752, "memoria (cea mai noua) e la coada"); assert.equal(r[r.length - 2], 0.5751);
+  assert.ok(r[0] < r[1] && r[27] < r[28], "cronologic: din istoric, cele mai noi 28, apoi memoria");
+  assert.deepEqual(pret30DinIstoric([], [0.57]), [0.57], "fara istoric ramane memoria");
+  assert.deepEqual(pret30DinIstoric([{ t: 1, pretPerp: null }, { t: 2, pretPerp: "x" }, { t: 3, pretPerp: 0.5 }], []), [0.5], "intrarile fara pret se sar");
+  const dez = pret30DinIstoric([{ t: 3, pretPerp: 3 }, { t: 1, pretPerp: 1 }, { t: 2, pretPerp: 2 }], []); assert.deepEqual(dez, [1, 2, 3], "sortate dupa timp");
+  assert.equal(pret30DinIstoric(null, null).length, 0);
 });
 
 // ---------- 4. insider "nou" ----------

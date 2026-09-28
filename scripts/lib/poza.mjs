@@ -121,6 +121,15 @@ export function bataieNecesara({ acum, pozaOkLa, paznicLa }) {
   if (acum - (nr(pozaOkLa) || 0) < 10 * 60000) return false;
   return acum - (nr(paznicLa) || 0) >= 5 * 60000;
 }
+// v99.5 (el, 28.09: „la JTO îmi arată doar prețul, nu și cât s-a mișcat"): cele 30 de prețuri ale botului (linia + procentul de pe
+// pagina alerts) stateau doar in memoria colectorului si dupa o repornire porneau de la zero (~30 min „puține poze încă").
+// Istoricul botului din KV are pretul minut cu minut (pretPerp) -> lista se umple de acolo; memoria (cele mai noi) ramane la coada.
+export function pret30DinIstoric(intrari, ring) {
+  const r = (Array.isArray(ring) ? ring : []).map(nr).filter((v) => v !== null);
+  const ist = (Array.isArray(intrari) ? intrari : []).filter((x) => x && nr(x.t) !== null && nr(x.pretPerp) !== null).sort((a, b) => a.t - b.t).map((x) => x.pretPerp);
+  const n = Math.max(0, 30 - r.length);
+  return ist.slice(ist.length - n).concat(r).slice(-30);
+}
 // cat de des pleaca poza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri), altfel 5 minute
 // (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: cu un bot activ zi si noapte = 720 de poze; bataia separata NU se mai
 // trimite cat poza curge - vezi bataieNecesara - deci ramane loc)
