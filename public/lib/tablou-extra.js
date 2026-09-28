@@ -257,11 +257,12 @@ var TabloExtra = (function () {
 
   // v100.8 (el, 28.09: „dacă schimb gridul vreau să-mi apară undeva de copiat pentru TV cu gridul nou”): randul pentru indicatorul
   // GRID-FISA din TradingView (pine-scripts/GRID-FISA), din botul care RULEAZA - acelasi format ca butonul din fisa „Grid: ce setez?”:
-  //   dir;jos;sus;grile;levier;stopJos;stopSus;lichJos;lichSus;suma  (lipsa = 0; dir = long / neutru / short)
+  //   dir;jos;sus;grile;levier;stopJos;stopSus;lichJos;lichSus;suma[;tip]  (lipsa = 0; dir = long / neutru / short;
+  //   tip = aritmetic / geometric, v100.9, pentru GRID-FISA v2.0 - v1.1 accepta doar 9-10 campuri; + ;planMinus;planPlus;planAfaraOre)
   // Opritoarele: doar cele PUSE; cel de sub pretul de acum merge la „jos”, cel de deasupra la „sus” (la long sus = take-profit,
   // cum il eticheteaza scriptul); la short, ca in fisa, jos ramane 0. `sig` = ce inseamna „alt grid” (fara lichidare si suma,
   // care se misca singure cu pozitia si marja).
-  function codTVBot(b) {
+  function codTVBot(b, plan) {
     if (!b) return null;
     var d = bu(b), jos = nr(b.gridJos), sus = nr(b.gridSus), grile = nr(d.row), lev = nr(b.levier);
     if (jos === null || sus === null || !(sus > jos) || !(grile >= 2)) return null;
@@ -275,7 +276,16 @@ var TabloExtra = (function () {
     var f = function (v) { v = nr(v); return v === null || !(v > 0) ? "0" : String(Number(v.toPrecision(6))); };
     var suma = nr(b.investit);
     var parti = [dir, f(jos), f(sus), String(Math.round(grile)), String(lev !== null && lev >= 1 ? Math.round(lev) : 1), f(sj), f(ss), f(b.lichidareJos), f(b.lichidareSus), suma > 0 ? String(Math.round(suma * 100) / 100) : "0"];
-    return { cod: parti.join(";"), sig: parti.slice(0, 7).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir };
+    // v100.9: GRID-FISA v2.0 primeste si tipul gridului (al 11-lea camp) - botul il stie, deci grilele se deseneaza exact ca in Pionex
+    var gt = String(d.gridType || "").toLowerCase(), tip = gt === "arithmetic" ? "aritmetic" : gt === "geometric" ? "geometric" : null;
+    if (tip) parti.push(tip);
+    // v100.9 (cerut de el prin sesiunea GRID-FISA v2.0): planul lui in acelasi cod - planMinus;planPlus;planAfaraOre (USDT, USDT, ore;
+    // 0 = fara), doar cand exista un plan adevarat (nu cel de proba); tipul necunoscut ramane gol ca pozitiile sa nu alunece.
+    // Planul NU intra in semnatura: alt plan nu e alt grid.
+    var pl = plan && !plan.proba ? plan : null, pv = function (v) { v = nr(v); return v !== null && Math.abs(v) > 0 ? String(Math.abs(v)) : "0"; };
+    var arePlan = pl && (pv(pl.minus) !== "0" || pv(pl.plus) !== "0" || pv(pl.afaraOre) !== "0");
+    if (arePlan) { if (!tip) parti.push(""); parti.push(pv(pl.minus), pv(pl.plus), pv(pl.afaraOre)); }
+    return { cod: parti.join(";"), sig: parti.slice(0, 7).concat(tip ? [tip] : []).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir, tip: tip };
   }
 
   // v86: "Ce ai de facut acum" pe Tabloul botului - fiecare lucru O SINGURA DATA (v100.8: cele mai noi sus, apoi urgenta).
@@ -295,12 +305,17 @@ var TabloExtra = (function () {
     }
     // 1) alertele stranse
     var gr = [];
-    (Array.isArray(o.alerte) ? o.alerte : []).forEach(function (a) {
+    // v100.9 (el, 28.09: „să rămână mereu ultima alertă”): alertele de ACELAȘI FEL se strâng chiar dacă cifrele din titlu diferă
+    // („Lichidarea la 2.7%” de la 13:00 și „Lichidarea la 14.8%” de la 15:41 = un singur rând): rămâne CEA MAI NOUĂ - titlul,
+    // textul și culoarea ei (starea de acum, nu cea mai gravă din trecut); câte au fost se vede în „×N”.
+    function fel(x) { return norm(x).replace(/[0-9]+/g, " ").replace(/\s+/g, " ").trim(); }
+    (Array.isArray(o.alerte) ? o.alerte : []).slice().sort(function (x, y) { return (x && x.t || 0) - (y && y.t || 0); }).forEach(function (a) {
       if (!a || !a.titlu || !(a.t > 0) || acum - a.t > 86400000 || (a.nivel !== "critic" && a.nivel !== "atentie")) return;
       var t = String(a.titlu).replace(/^[A-Z0-9._-]+: /, ""), g = null;
-      for (var i = 0; i < gr.length; i++) if (norm(gr[i].titlu) === norm(t)) { g = gr[i]; break; }
+      for (var i = 0; i < gr.length; i++) if (fel(gr[i].titlu) === fel(t)) { g = gr[i]; break; }
       if (!g) { g = { c: a.nivel === "critic" ? "r" : "g", titlu: t, text: String(a.mesaj || ""), n: 0, ultima: a.t }; gr.push(g); }
-      g.n++; if (a.nivel === "critic") g.c = "r"; if (a.t > g.ultima) { g.ultima = a.t; g.text = String(a.mesaj || g.text); }
+      g.n++;
+      if (a.t >= g.ultima) { g.ultima = a.t; g.titlu = t; g.text = String(a.mesaj || g.text); g.c = a.nivel === "critic" ? "r" : "g"; }
     });
     // 2) avertismentele serverului; cel care spune acelasi lucru ca o alerta o inghite (si ii ia numarul)
     (Array.isArray(o.avertismente) ? o.avertismente : []).forEach(function (a) {

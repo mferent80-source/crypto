@@ -5954,7 +5954,7 @@ function renderTabloDovada(){
 // cel pe care l-ai pus deja in TradingView (tii minte apasand „L-am pus”, pe bot); butonul din cartela Gridul il da oricand.
 var TB_TV_KEY="tbTvGrid:";
 function tbTvCitit(id){try{return JSON.parse(localStorage.getItem(TB_TV_KEY+id)||"null")}catch(_){return null}}
-function tbTvCod(){var b=tbStare.routeOk===false?null:tbStare.bot;return b&&b.id&&typeof TabloExtra!=="undefined"?TabloExtra.codTVBot(b):null}
+function tbTvCod(){var b=tbStare.routeOk===false?null:tbStare.bot;return b&&b.id&&typeof TabloExtra!=="undefined"?TabloExtra.codTVBot(b,tbPlan.botId===b.id?tbPlan.plan:null):null}
 function tbDeseneazaTvCod(){
   var el=$("tbGridNou");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot,c=tbTvCod();
@@ -5963,7 +5963,7 @@ function tbDeseneazaTvCod(){
   if(v&&v.sig===c.sig){el.hidden=true;el.innerHTML="";return}
   var P=function(x){return tbPretScurt(x)};
   var titlu=v&&v.jos?"🔁 Ai schimbat gridul: "+P(v.jos)+" – "+P(v.sus)+" ("+v.grile+" grile) → "+P(c.jos)+" – "+P(c.sus)+" ("+c.grile+" grile)":"📺 Gridul de acum, pentru TradingView";
-  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA → „Codul din fișă”. Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
+  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.0 → „Codul din fișă” (cu tipul gridului și planul tău; v1.1 nu le primește). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
     +'<div class="tbGnBtn"><button type="button" class="actionGhost" value="'+escapeHtml(c.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul</button><button type="button" class="actionGhost" data-action-click="tbTvAmPus()">L-am pus</button></div>';
   el.hidden=false;
 }

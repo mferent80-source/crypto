@@ -118,12 +118,27 @@ test("„Ce ai de făcut acum”: cele mai NOI sus (nu cele vechi); la aceeași 
   const ore = l.map((x) => x.la); assert.deepEqual(ore, ore.slice().sort((a, b) => b - a));
 });
 
+test("„Ce ai de făcut”: din alertele de același fel rămâne mereu CEA MAI NOUĂ (titlul, textul, culoarea ei), cu ×N", () => {
+  const TE = new Function(`${citeste("../public/lib/grid-calcul.js")}\n${citeste("../public/lib/tablou-extra.js")}; return TabloExtra;`)();
+  const H = 3600000, A = (h, nivel, titlu, mesaj) => ({ t: ACUM - h * H, nivel, titlu: "JTO: " + titlu, mesaj });
+  const l = TE.ceAiDeFacut({ acum: ACUM, dateLa: ACUM, planGol: false, sfaturi: [], avertismente: [], alerte: [
+    A(5, "critic", "Lichidarea la 2.7%", "sub 8%"), A(1, "atentie", "Lichidarea la 14.8%", "sub 15%"), A(3, "critic", "Lichidarea la 3.2%", "sub 8%"),
+    A(4, "critic", "Semaforul zice IEȘI — lichidare e la 4.2%", "x"), A(2, "critic", "Semaforul zice IEȘI — lichidare e la 3.1%", "y"),
+    A(2, "atentie", "Prețul e la 0,9% de marginea de sus (0.56500)", "sus"), A(1.5, "atentie", "Prețul e la 0,1% de marginea de jos (0.57220)", "jos")] });
+  const lich = l.filter((x) => /^Lichidarea/.test(x.titlu)); assert.equal(lich.length, 1, "un singur rând de lichidare");
+  assert.equal(lich[0].titlu, "Lichidarea la 14.8%"); assert.equal(lich[0].c, "g", "culoarea celei noi, nu a celei vechi"); assert.equal(lich[0].n, 3); assert.equal(lich[0].text, "sub 15%");
+  const sem = l.filter((x) => /^Semaforul/.test(x.titlu)); assert.equal(sem.length, 1); assert.match(sem[0].titlu, /3\.1%/);
+  assert.equal(l.filter((x) => /marginea/.test(x.titlu)).length, 2, "marginea de sus și cea de jos rămân lucruri diferite");
+});
 test("codTVBot: rândul GRID-FISA din botul care rulează (formatul butonului din fișă, 10 câmpuri) + semnătura gridului", () => {
   const TE = new Function(`${citeste("../public/lib/grid-calcul.js")}\n${citeste("../public/lib/tablou-extra.js")}; return TabloExtra;`)();
   const jto = { id: "2386", directie: "long", levier: 5, gridJos: 0.555, gridSus: 0.57, pretCurent: 0.5619, opritorPierdere: 0.5455, opritorPierdereActiv: true, opritorProfit: null, opritorProfitActiv: false,
-    lichidareJos: 0.52034, lichidareSus: null, investit: 98.14, brut: { buOrderData: { row: 9 } } };
+    lichidareJos: 0.52034, lichidareSus: null, investit: 98.14, brut: { buOrderData: { row: 9, gridType: "arithmetic" } } };
   const c = TE.codTVBot(jto);
-  assert.equal(c.cod, "long;0.555;0.57;9;5;0.5455;0;0.52034;0;98.14"); assert.equal(c.cod.split(";").length, 10);
+  assert.equal(c.cod, "long;0.555;0.57;9;5;0.5455;0;0.52034;0;98.14;aritmetic"); assert.equal(c.cod.split(";").length, 11, "GRID-FISA v2.0: al 11-lea câmp = tipul");
+  assert.equal(TE.codTVBot({ ...jto, brut: { buOrderData: { row: 9, gridType: "geometric" } } }).cod.split(";")[10], "geometric");
+  assert.equal(TE.codTVBot({ ...jto, brut: { buOrderData: { row: 9 } } }).cod.split(";").length, 10, "tip necunoscut: nu-l inventăm, rămân 10 câmpuri");
+  assert.notEqual(TE.codTVBot({ ...jto, brut: { buOrderData: { row: 9, gridType: "geometric" } } }).sig, c.sig, "alt tip = alt grid");
   assert.equal(TE.codTVBot({ ...jto, lichidareJos: 0.51, investit: 120 }).sig, c.sig, "lichidarea și suma se mișcă singure: nu înseamnă alt grid");
   assert.notEqual(TE.codTVBot({ ...jto, gridJos: 0.5722, gridSus: 0.6572, brut: { buOrderData: { row: 18 } } }).sig, c.sig, "alt interval = alt grid");
   assert.equal(TE.codTVBot({ ...jto, opritorPierdereActiv: false }).cod.split(";")[5], "0", "opritorul stins nu se trimite");
@@ -131,6 +146,11 @@ test("codTVBot: rândul GRID-FISA din botul care rulează (formatul butonului di
   assert.deepEqual([sh[0], sh[5], sh[6], sh[8]], ["short", "0", "0.59", "0.66"], "la short, ca în fișă: jos 0, stopul de deasupra la sus");
   assert.equal(TE.codTVBot({ ...jto, directie: "no_trend" }).dir, "neutru");
   assert.equal(TE.codTVBot({ ...jto, brut: {} }), null, "fără numărul de grile nu inventăm");
+  const cp = TE.codTVBot(jto, { plus: 5.2, minus: 14.9, afaraOre: 12 });
+  assert.equal(cp.cod, "long;0.555;0.57;9;5;0.5455;0;0.52034;0;98.14;aritmetic;14.9;5.2;12", "planul în câmpurile 12-14"); assert.equal(cp.sig, c.sig, "planul nu e alt grid");
+  assert.equal(TE.codTVBot({ ...jto, brut: { buOrderData: { row: 9 } } }, { plus: 5, minus: 0, afaraOre: 0 }).cod.split(";").slice(10).join("|"), "|0|5|0", "tipul necunoscut rămâne gol ca planul să nu alunece");
+  assert.equal(TE.codTVBot(jto, { plus: 5, minus: 10, afaraOre: 12, proba: true }).cod.split(";").length, 11, "planul de probă nu intră");
+  assert.equal(TE.codTVBot(jto, { plus: 0, minus: 0, afaraOre: 0 }).cod.split(";").length, 11, "plan gol = fără câmpuri de plan");
 });
 test("Tabloul: banda „Ai schimbat gridul” + butonul permanent din cartela Gridul", () => {
   assert.match(HTML, /id="tbGridNou"/); assert.match(APP, /function tbDeseneazaTvCod\(/); assert.match(APP, /tbDeseneazaTvCod\(\);tbPiataPeBot\(\)/);
