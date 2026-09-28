@@ -5465,42 +5465,68 @@ function tbPregatire(el){
     +(v&&v.nivel==="miscare"?'<p class="tbWarn">Piața e în mișcare: aș aștepta liniștea înainte de un grid nou.</p>':'')+'</div>';
   el.innerHTML=h+'</div>';
 }
+// v100 (demo-ul aprobat 28.09): verdictul SCURT (nivel + motivul principal + "ce as face" + "si inca N motive"), celelalte motive pe
+// randul lor (#tbMotive), "Acum, concret" in 3 cartele (#tbConcret), socoteala si podeaua pe bani in sectiunea pliata (#tbSocoteala).
+var tbMotiveDeschis=false;
+function tbMotiveComuta(){tbMotiveDeschis=!tbMotiveDeschis;if(tbStare.bot)tbDeseneazaSemafor(tbStare.bot)}
+function tbMergiLaMotive(){var m=$("tbMotive");if(m&&!m.hidden&&m.scrollIntoView)m.scrollIntoView({behavior:"smooth",block:"nearest"})}
 function tbDeseneazaSemafor(b){
   var el=$("tbSemafor");if(!el)return;
-  if(!b){tbPregatire(el);return}
+  var mot=$("tbMotive"),cc=$("tbConcret");
+  if(!b){tbPregatire(el);if(mot)mot.hidden=true;if(cc)cc.hidden=true;return}
   var f=tbFisa.botId===b.id?tbFisa.fisa:null,kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
   var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null},Date.now());
-  var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f);
-  var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:TabloExtra.dacaInchizi(b),plan:plan,costuri:TabloExtra.grileVsCosturi(b,Date.now()),btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
+  var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f),zero=TabloExtra.dacaInchizi(b),costuri=TabloExtra.grileVsCosturi(b,Date.now());
+  var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:zero,plan:plan,costuri:costuri,btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
   var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"],asteapta:["⏳ SOCOTESC","neutral"]},n=N[sm.nivel]||N.asteapta;
+  var CUL={iesi:"var(--bad)",atentie:"var(--warn)",podea:"var(--good)"},mare=function(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1)};
   // v97.6: botul n-are plan -> sus, inaintea semaforului: propunerea si un singur buton
   var faraPlan=tbPlan.botId===b.id&&tbPlan.la&&!(tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre));
   if(faraPlan&&tbPropPlan.botId!==b.id)tbAduPropunerePlan(b);
   var pp=faraPlan&&tbPropPlan.botId===b.id?tbPropPlan.p:null;
   var h=faraPlan?'<div class="tbFaraPlan">📝 <b>'+escapeHtml(String(b.baza||"Botul").replace(/\.PERP$/,""))+' n-are plan.</b> Fără țintă și prag scrise la rece, panoul nu-ți poate spune când să încasezi sau să ieși (nici podeaua).'
     +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
-  h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(sm.motiv.charAt(0).toUpperCase()+sm.motiv.slice(1))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p></div></div>';
-  if(sm.componente.length>1)h+='<ul class="tbSemComp">'+sm.componente.slice(1).map(function(c){return '<li class="'+(c.nivel==="iesi"?"bad":"tbWarn")+'">'+escapeHtml(c.motiv)+'</li>'}).join("")+'</ul>';
-  // v99 (cererea lui, 28.09): "Acum, concret" - stopul (unde e, unde l-as pune), gridul (al lui vs propus, treceri/zi, pozitia in interval), miscarea live
-  var acc=SemnaleBot.acumConcret({bot:b,fisa:f,zero:TabloExtra.dacaInchizi(b),costuri:TabloExtra.grileVsCosturi(b,Date.now()),acum:Date.now()});
-  h+='<div class="tbMuta tbConcret"><h5>Acum, concret</h5>'+acc.map(function(x){return '<p><b>'+escapeHtml(x.titlu)+':</b> '+escapeHtml(x.text)+'</p>'}).join("")+'</div>';
-  if(!f)h+='<p class="tbSub">calculez fișa de azi pentru moneda botului (trendul, mișcarea, gridul propus)…</p>';
-  if(!ac)h+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de acasă (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';
-  if(iap)h+='<p class="tbSub">'+escapeHtml(iap.text)+'</p>';
-  if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")h+='<p class="tbSub">'+escapeHtml(ac.aglomerare.text)+'</p>';
-  // v99: gridul propus apare si cand botul e mult mai RAR decat gridul des al fisei in liniste (gridMaiDes), nu doar la margine (muta)
+  // celelalte motive + notele (ia profit, aglomerarea "info") - pe randul lor, nu in cartela
+  var alte=SemnaleBot.celelalteMotive(sm).map(function(x){return {c:CUL[x.nivel]||"var(--muted)",m:x.motiv,f:x.faCe}});
+  if(iap)alte.push({c:"var(--muted)",m:iap.text,f:""});
+  if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")alte.push({c:"var(--muted)",m:ac.aglomerare.text,f:""});
+  h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(mare(sm.motiv))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p>'
+    +(alte.length?'<button type="button" class="tbMaiMulte" data-action-click="tbMergiLaMotive()">și <b>încă '+alte.length+(alte.length===1?' motiv':' motive')+'</b> '+alte.map(function(x){return '<i class="tbPct" style="background:'+x.c+'"></i>'}).join("")+' · mai jos ↓</button>':'')+'</div></div>';
+  el.innerHTML=h;
+  if(mot){
+    if(!alte.length)mot.hidden=true;
+    else{mot.hidden=false;$("tbMotiveTitlu").textContent="Celelalte motive · "+alte.length;
+      $("tbMotiveLista").innerHTML=(tbMotiveDeschis?alte:alte.slice(0,3)).map(function(x){return '<div class="tbMRand"><i style="background:'+x.c+'"></i><b>'+escapeHtml(mare(x.m))+'</b><span class="tbSub">'+(x.f?'👉 <b>Ce aș face:</b> '+escapeHtml(x.f):'')+'</span></div>'}).join("");
+      var bt=$("tbMotiveAlte"),rest=alte.length-3;bt.hidden=rest<=0;bt.textContent=tbMotiveDeschis?"arată doar primele 3":"încă "+rest+" ▾"}
+  }
+  // "Acum, concret": cifra mare + eticheta + actiunea; detaliile (si setarile de copiat ale gridului propus) sub "detalii"
   var gmd=muta?null:SemnaleBot.gridMaiDes(b,f),T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
   var prop=muta?{setare:muta.setare,titlu:"Gridul propus acum (din fișa de azi"+(muta.des?", grid des 0,3 % pentru piața liniștită":"")+")",sub:muta.treceriZi!=null?"~"+T1(muta.treceriZi)+" perechi încheiate pe zi pe ultimele 30 de zile":""}
     :gmd?{setare:gmd.setare,titlu:"Grid mai des pentru piața liniștită de acum (0,3 %)",sub:gmd.motiv+". Nu e o dovadă, e regula ta (0,30 % lateral); proba pe 30 z n-a respins-o."}:null;
+  var propHtml="";
   if(prop){var s=prop.setare,i=grStare.monede&&grStare.monede[TabloBot.simboluri(b.baza,b.quote).pionex];
-    h+='<div class="tbMuta"><h5>'+escapeHtml(prop.titlu)+'</h5>'+(prop.sub?'<p class="tbSub">'+escapeHtml(prop.sub)+'</p>':'')+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",s.grile+" geometric",String(s.grile))+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}
-  // socoteala
-  var soc=kv?SemnaleBot.socoteala(kv.log||[]):null,E={tine:"ține",lichidare:"lichidare",plan:"planul tău",trend:"trend contra",miscare:"mișcare mare","ia-profit":"ia profit",muta:"mută gridul",costuri:"costuri",btc:"BTC în mișcare",aglomerare:"aglomerare",podea:"ținta devine podea","cu-botul":"mișcare cu botul"};
-  // v97.1: podeaua pe banii lui - daca iesea la prima "tinta atinsa" fata de ce are acum (nerealizat pana inchide)
-  var pb=kv?SemnaleBot.podeaPeBani(kv.log||[],b.profitTotal):null,U2=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(2).replace(".",",")+" USDT"};
-  if(pb)h+='<p class="tbPodeaBani">🪜 <b>Ținta devine podea, pe banii tăi:</b> dacă ieșeai la prima „țintă atinsă” ('+escapeHtml(new Date(pb.la).toLocaleString("ro-RO",{weekday:"short",hour:"2-digit",minute:"2-digit"}))+') aveai <b>'+U2(pb.laIesire)+'</b>; acum botul are <b>'+U2(pb.acum)+'</b> — ținerea a adus <b class="'+(pb.dif>=0?"good":"bad")+'">'+U2(pb.dif)+'</b> până acum (nerealizat până închizi; opritorul hotărăște cât rămâne sigur).</p>';
-  if(soc&&Object.keys(soc).length){h+='<details class="tbSoc"><summary>Socoteala semnalelor: au avut dreptate după 24 h?</summary><div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Semnal</th><th>Date</th><th>Judecate</th><th>Au avut dreptate</th><th>Pe bani, urmat</th></tr></thead><tbody>'+Object.keys(soc).map(function(k){var x=soc[k];return '<tr><td>'+escapeHtml(E[k]||k)+'</td><td>'+x.n+'</td><td>'+x.judecate+'</td><td>'+(x.rata==null?"încă nu":GridCalcul.procent(x.rata)+" ("+x.corecte+" din "+x.judecate+")")+'</td><td class="'+(x.baniN?(x.bani>=0?"good":"bad"):"")+'">'+(x.baniN?U2(x.bani):"încă nu")+'</td></tr>'}).join("")+'</tbody></table></div><p class="tbSub">„Pe bani, urmat” = câți USDT ar fi adus semnalul dacă îl urmai, în 24 h (plus = a ajutat, minus = te-ar fi costat). „Ieși/atenție” au avut dreptate dacă în 24 h totalul botului a scăzut (ieșirea ar fi salvat bani); „ține” dacă n-a scăzut. Sub 10 judecate, e doar începutul.</p></details>'}
-  el.innerHTML=h;
+    propHtml='<div class="tbMuta"><h5>'+escapeHtml(prop.titlu)+'</h5>'+(prop.sub?'<p class="tbSub">'+escapeHtml(prop.sub)+'</p>':'')+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",s.grile+" geometric",String(s.grile))+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}
+  if(cc){
+    cc.hidden=false;
+    SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,acum:Date.now()}).forEach(function(x){
+      var e=$("tbCc-"+x.cod);if(!e)return;var d0=e.querySelector("details"),deschis=!!(d0&&d0.open),tg=x.tag||{t:"",c:"mut"};
+      e.innerHTML='<div class="tbCcCap"><h5>'+escapeHtml(x.titlu)+'</h5>'+(tg.t?'<span class="tbTag '+tg.c+'">'+escapeHtml(tg.t)+'</span>':'')+'</div>'
+        +'<div class="tbCcMare">'+escapeHtml(x.mare||"—")+(x.mic?'<small>'+escapeHtml(x.mic)+'</small>':'')+'</div><p class="tbCcAct">'+escapeHtml(x.act||x.text)+'</p>'
+        +'<details class="tbCcDet"'+(deschis?' open':'')+'><summary>'+(x.cod==="grid"&&propHtml?"setările de copiat și detalii":"detalii")+'</summary><p>'+escapeHtml(x.text)+'</p>'+(x.cod==="grid"?propHtml:"")+'</details>';
+    });
+  }
+  // socoteala semnalelor + "tinta devine podea, pe banii tai" + de unde vin BTC/aglomerarea -> sectiunea pliata de jos
+  var socEl=$("tbSocoteala");
+  if(socEl){
+    var soc=kv?SemnaleBot.socoteala(kv.log||[]):null,E={tine:"ține",lichidare:"lichidare",plan:"planul tău",trend:"trend contra",miscare:"mișcare mare","ia-profit":"ia profit",muta:"mută gridul",costuri:"costuri",btc:"BTC în mișcare",aglomerare:"aglomerare",podea:"ținta devine podea","cu-botul":"mișcare cu botul"};
+    // v97.1: podeaua pe banii lui - daca iesea la prima "tinta atinsa" fata de ce are acum (nerealizat pana inchide)
+    var pb=kv?SemnaleBot.podeaPeBani(kv.log||[],b.profitTotal):null,U2=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(2).replace(".",",")+" USDT"},sh="";
+    if(pb)sh+='<p class="tbPodeaBani">🪜 <b>Ținta devine podea, pe banii tăi:</b> dacă ieșeai la prima „țintă atinsă” ('+escapeHtml(new Date(pb.la).toLocaleString("ro-RO",{weekday:"short",hour:"2-digit",minute:"2-digit"}))+') aveai <b>'+U2(pb.laIesire)+'</b>; acum botul are <b>'+U2(pb.acum)+'</b> — ținerea a adus <b class="'+(pb.dif>=0?"good":"bad")+'">'+U2(pb.dif)+'</b> până acum (nerealizat până închizi; opritorul hotărăște cât rămâne sigur).</p>';
+    if(soc&&Object.keys(soc).length)sh+='<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Semnal</th><th>Date</th><th>Judecate</th><th>Au avut dreptate</th><th>Pe bani, urmat</th></tr></thead><tbody>'+Object.keys(soc).map(function(k){var x=soc[k];return '<tr><td>'+escapeHtml(E[k]||k)+'</td><td>'+x.n+'</td><td>'+x.judecate+'</td><td>'+(x.rata==null?"încă nu":GridCalcul.procent(x.rata)+" ("+x.corecte+" din "+x.judecate+")")+'</td><td class="'+(x.baniN?(x.bani>=0?"good":"bad"):"")+'">'+(x.baniN?U2(x.bani):"încă nu")+'</td></tr>'}).join("")+'</tbody></table></div><p class="tbSub">„Pe bani, urmat” = câți USDT ar fi adus semnalul dacă îl urmai, în 24 h (plus = a ajutat, minus = te-ar fi costat). „Ieși/atenție” au avut dreptate dacă în 24 h totalul botului a scăzut (ieșirea ar fi salvat bani); „ține” dacă n-a scăzut. Sub 10 judecate, e doar începutul.</p>';
+    if(!ac)sh+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de acasă (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';
+    socEl.innerHTML=sh||'<p class="tbSub">Încă nimic de socotit pentru botul ăsta.</p>';
+    var ps=$("tbPlSub-socoteala");if(ps)ps.textContent=soc&&Object.keys(soc).length?Object.keys(soc).length+" semnale urmărite · au avut dreptate după 24 h?":"au avut dreptate după 24 h?";
+  }
 }
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
@@ -5827,66 +5853,46 @@ function renderTabloDirectia(){
   tbDeseneazaKpi();tbActualizeazaBanda();
 }
 function tbPretScurt(v){if(v==null||!isFinite(v))return "—";var a=Math.abs(v);return v.toFixed(a>=100?2:a>=1?4:a>=0.01?5:8)}
+// v100 (demo-ul aprobat 28.09): graficul desenat de GraficBot (public/lib/grafic-bot.js, pur): lumanari + volum, planul, zero-ul,
+// gridul, stopul, lichidarea, alertele DOAR ale botului (TabloExtra.alerteleBotului), Bollinger / EMA 20·50 / RSI / profil de volum.
+var TB_IND_KEY="tbGraficInd",tbGrafRz=null;
+function tbIndStare(){var d={bb:true,ema:true,rsi:true,vp:true};try{var v=JSON.parse(localStorage.getItem(TB_IND_KEY)||"null");if(v&&typeof v==="object")for(var k in d)if(typeof v[k]==="boolean")d[k]=v[k]}catch(_){}return d}
+function tbSincInd(){var s=tbIndStare();["bb","ema","rsi","vp"].forEach(function(k){var e=$("tbInd-"+k);if(e)e.setAttribute("aria-pressed",String(!!s[k]))})}
+function tbComutaInd(k){var s=tbIndStare();if(!Object.prototype.hasOwnProperty.call(s,k))return;s[k]=!s[k];try{localStorage.setItem(TB_IND_KEY,JSON.stringify(s))}catch(_){}tbSincInd();renderTabloGrafic()}
 function renderTabloGrafic(){
   var el=$("tbGrafic");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot,g=tbStare.grafic,brut=tbStare.botBrut;
   if(!b){el.innerHTML='<div class="emptyState">—</div>';return}
   if(!g||!g.randuri){el.innerHTML='<div class="emptyState">'+escapeHtml(g&&g.eroare?"Nu am prețurile: "+g.eroare:"Aștept prețurile…")+'</div>';return}
-  var ist=g.randuri.map(function(r){return {t:Number(Array.isArray(r)?r[0]:r.time),pretPerp:Array.isArray(r)?r[4]:r.close}});
-  var per=TB_PERIOADE[tbStare.graficInterval||"24h"];
-  var geo=TabloBot.geometrieGrafic(ist,brut,Date.now(),per.gaura);
-  if(!geo.destul){el.innerHTML='<div class="emptyState">Prea puține prețuri pentru grafic.</div>';return}
-  var W=1000,H=240,Y=function(f){return (H*(1-f)).toFixed(1)},X=function(f){return (W*f).toFixed(1)};
-  var pret=function(p){return (p-geo.minPret)/(geo.maxPret-geo.minPret)};
-  var etich=[],svg='<svg class="tbGraficSvg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Prețul '+escapeHtml(b.simbol||"")+' în ultimele 24 de ore">';
-  if(geo.banda){
-    svg+='<rect x="0" y="'+Y(geo.banda.sus)+'" width="'+W+'" height="'+(H*(geo.banda.sus-geo.banda.jos)).toFixed(1)+'" class="tbBanda"/>';
-    etich.push({f:geo.banda.sus,t:"grid sus "+tbPretScurt(b.gridSus),c:"tbEtBanda"},{f:geo.banda.jos,t:"grid jos "+tbPretScurt(b.gridJos),c:"tbEtBanda"});
-  }
-  var intrare=b.pretDeschidere!=null?Number(b.pretDeschidere):null;
-  if(intrare!=null&&intrare>geo.minPret&&intrare<geo.maxPret){
-    svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(intrare))+'" y2="'+Y(pret(intrare))+'" class="tbLinieIntrare"/>';
-    etich.push({f:pret(intrare),t:"intrarea medie "+tbPretScurt(intrare),c:"tbEtIntrare"});
-  }
-  var lich=b.pretLichidare!=null?Number(b.pretLichidare):null;
-  if(lich!=null&&lich>geo.minPret&&lich<geo.maxPret){
-    svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(lich))+'" y2="'+Y(pret(lich))+'" class="tbLinieLich"/>';
-    etich.push({f:pret(lich),t:"lichidare "+tbPretScurt(lich),c:"tbEtLich"});
-  }
-  // Nivelurile gridului, subtiri: se vede pe ce trepte cumpara si vinde botul.
-  var xo=(brut&&brut.buOrderData)||{},gj=botiNr(xo.bottom),gs=botiNr(xo.top),gr=botiNr(xo.row);
-  if(gj!==null&&gs!==null&&gr>=1){var pas=(gs-gj)/gr,sare=Math.max(1,Math.ceil(gr/30));
-    for(var ni=0;ni<=gr;ni+=sare){var L=gj+ni*pas;if(L>geo.minPret&&L<geo.maxPret)svg+='<line x1="0" x2="'+W+'" y1="'+Y(pret(L))+'" y2="'+Y(pret(L))+'" class="tbNivelGrid"/>'}}
-  geo.segmente.forEach(function(seg){svg+='<polyline class="tbLiniePret" points="'+seg.map(function(p){return X(p.x)+","+Y(p.y)}).join(" ")+'"/>'});
-  // v81: evenimentele - iesiri/reveniri din grid si alertele colectorului
-  var ev=TabloExtra.evenimente(ist,tbStare.alerteServer||[],botiNr(b.gridJos),botiNr(b.gridSus),geo.deLa,geo.panaLa);
-  ev.forEach(function(e){var fx=(e.t-geo.deLa)/((geo.panaLa-geo.deLa)||1);svg+='<line class="tbEv tbEv-'+e.fel+'" x1="'+X(fx)+'" x2="'+X(fx)+'" y1="0" y2="'+H+'"><title>'+escapeHtml(e.text)+'</title></line>'});
-  svg+='<line class="tbCruce" x1="0" x2="0" y1="0" y2="'+H+'" style="display:none"/></svg>';
-  var ultim=ist.filter(function(h){return Number(h.pretPerp)>0}).sort(function(a,c){return a.t-c.t});
-  var pAcum=ultim.length?Number(ultim[ultim.length-1].pretPerp):null;
-  if($("tbGraficPret"))$("tbGraficPret").textContent=pAcum!=null?"acum "+tbPretScurt(pAcum):"—";
-  // Etichetele stau in HTML (nu in SVG), ca sa nu se deformeze cu latimea; cele prea apropiate se rarefiaza.
-  etich.sort(function(a,c){return c.f-a.f});var ult=-1;
-  var etHtml=etich.filter(function(e){var sus=(1-e.f)*100;if(ult>=0&&sus-ult<9)return false;ult=sus;return true})
-    .map(function(e){return '<span class="tbEt '+e.c+'" style="top:calc('+((1-e.f)*100).toFixed(1)+'% - 9px)">'+escapeHtml(e.t)+'</span>'}).join("");
-  var ora=function(t){var d=new Date(t),h=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");return (tbStare.graficInterval||"24h")==="24h"?h:(d.getDate()+"."+String(d.getMonth()+1).padStart(2,"0")+" "+h)};
-  var evTxt=ev.length?'<div class="tbEvLeg">'+ev.slice(-6).map(function(e){return '<span class="tbEvL tbEv-'+e.fel+'">'+escapeHtml(ora(e.t)+" "+e.text)+'</span>'}).join("")+'</div>':"";
-  el.innerHTML='<div class="tbGraficZona">'+svg+etHtml+'<div class="tbTip" hidden></div></div>'+evTxt+
-    '<div class="tbAxa"><span>'+ora(geo.deLa)+'</span><span>'+ora(geo.deLa+(geo.panaLa-geo.deLa)/2)+'</span><span>'+ora(geo.panaLa)+'</span></div>';
-  var zona=el.querySelector(".tbGraficZona"),cruce=el.querySelector(".tbCruce"),tip=el.querySelector(".tbTip");
-  var puncte=ultim;
-  var arata=function(ev){
-    var r=zona.getBoundingClientRect();var fx=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width));
-    var t=geo.deLa+fx*(geo.panaLa-geo.deLa),best=null;
-    for(var i=0;i<puncte.length;i++)if(!best||Math.abs(puncte[i].t-t)<Math.abs(best.t-t))best=puncte[i];
-    if(!best)return;
-    var x=(best.t-geo.deLa)/(geo.panaLa-geo.deLa||1);
-    cruce.setAttribute("x1",X(x));cruce.setAttribute("x2",X(x));cruce.style.display="";
-    tip.hidden=false;tip.textContent=ora(best.t)+" · "+tbPretScurt(Number(best.pretPerp));
-    tip.style.left=Math.min(r.width-140,Math.max(0,fx*r.width-60))+"px";
+  var bare=GraficBot.bare(g.randuri);
+  if(bare.length<10){el.innerHTML='<div class="emptyState">Prea puține prețuri pentru grafic.</div>';return}
+  tbSincInd();
+  if(!tbGrafRz){tbGrafRz=true;window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){if(tbPanouVizibil())renderTabloGrafic()},150)});tbGrafRz={t:null}}
+  var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;
+  var pl=tbPlan.botId===b.id?tbPlan.plan:null,z=TabloExtra.dacaInchizi(b),pPl=pl&&botiNr(pl.plus)>0?TabloExtra.pretPentruTotal(b,botiNr(pl.plus)):null,pMi=pl&&botiNr(pl.minus)>0?TabloExtra.pretPentruTotal(b,-botiNr(pl.minus)):null;
+  var niv=GraficBot.niveluriBot({bot:b,zero:z&&z.pretZero,planPlus:pPl?{pret:pPl,usdt:botiNr(pl.plus)}:null,planMinus:pMi?{pret:pMi,usdt:botiNr(pl.minus)}:null});
+  var xo=(brut&&brut.buOrderData)||{},gj=botiNr(xo.bottom),gs=botiNr(xo.top);
+  var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer||[],b.id,Date.now());
+  var d=GraficBot.desen({bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),n:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h"});
+  var pAcum=bare[bare.length-1].c;
+  if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
+  el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div><div class="gbLeg">'+d.legenda+'</div>';
+  var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
+  var ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none"};
+  var arata=function(cx,cy){
+    var r=svg.getBoundingClientRect(),sx=(cx-r.left)*(d.harta.W/(r.width||d.harta.W)),h=GraficBot.tip(d.harta,sx);
+    if(!h){ascunde();return}
+    var bi=Math.max(0,Math.min(d.harta.bare.length-1,Math.floor(sx/d.harta.cw))),x=(bi*d.harta.cw+d.harta.cw/2).toFixed(1);
+    if(cr){cr.setAttribute("x1",x);cr.setAttribute("x2",x);cr.style.display=""}
+    tip.innerHTML=h;tip.hidden=false;
+    var zr=zona.getBoundingClientRect(),tw=tip.offsetWidth,px=cx-zr.left+14;if(px+tw>zr.width)px=cx-zr.left-tw-14;
+    tip.style.left=Math.max(0,px)+"px";tip.style.top=Math.max(0,Math.min(cy-zr.top-20,zr.height-tip.offsetHeight))+"px";
   };
-  zona.addEventListener("pointermove",arata);zona.addEventListener("pointerdown",arata);
-  zona.addEventListener("pointerleave",function(){cruce.style.display="none";tip.hidden=true});
+  zona.addEventListener("pointermove",function(e){arata(e.clientX,e.clientY)});
+  zona.addEventListener("pointerdown",function(e){arata(e.clientX,e.clientY)});
+  zona.addEventListener("pointerleave",ascunde);
+  svg.addEventListener("focusin",function(e){var t=e.target&&e.target.closest?e.target.closest(".gbE"):null;if(!t)return;var c=t.querySelector("circle").getBoundingClientRect();arata(c.left+c.width/2,c.top)});
+  svg.addEventListener("focusout",ascunde);
 }
 function renderTabloDovada(){
   var el=$("tbDovada");if(!el)return;

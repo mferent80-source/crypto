@@ -103,7 +103,40 @@ var SemnaleBot = (function () {
         + (rg.miscare ? "mișcare mare" + (sf === "cu" ? ", cu botul: grilele încasează, poziția se micșorează" : sf === "contra" ? ", ÎMPOTRIVA botului: nu adăuga bani, urmărește lichidarea" : "") + ". N-aș îndesi gridul acum; după ce se liniștește, gridul des."
           : "liniște: gridul lucrează; nu adaug bani pe urcare, nu schimb nimic pe zgomot.") });
     } else out.push({ cod: "miscare", titlu: "Mișcarea", text: "o socotesc odată cu fișa (mișcarea pe 4 h și 24 h față de obișnuitul monedei)." });
+    // v100 (demo-ul aprobat 28.09): fiecare cartela are o CIFRA mare, o ETICHETA de stare si o ACTIUNE de un rand; textul intreg ramane in detalii
+    var S1 = function (v) { return v === null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + (Math.abs(v) * 100).toFixed(1).replace(".", ",") + "%"; };
+    var st0 = out[0], gr0 = out[1], mi0 = out[2];
+    st0.mare = op !== null ? fmtPret(op) : "nepus";
+    st0.mic = op !== null ? (p !== null ? "activ · " + S1(op / p - 1) + " de preț" : "activ") : "fără stop în Pionex";
+    if (p === null || pz === null) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = st0.text; }
+    else if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Botul e neutru: zero-ul (" + fmtPret(pz) + ") e doar reper; protecția stă la două grile în afara intervalului, pe ambele părți."; }
+    else if (peProfit) {
+      st0.tag = dincolo ? { t: "la adăpost", c: "good" } : { t: "mută-l la zero", c: "warn" };
+      st0.act = dincolo ? "E deja dincolo de zero-ul botului (" + fmtPret(pz) + "): o întoarcere nu te mai duce pe minus." : "Mută-l la " + fmtPret(pz) + " (zero-ul botului, " + S1(pz / p - 1) + " de preț): de acolo câștigul nu se mai pierde.";
+    } else {
+      st0.tag = op !== null ? { t: "pus", c: "good" } : { t: "fără protecție", c: "bad" };
+      st0.act = "Ești pe minus: zero-ul botului (" + fmtPret(pz) + ") e la " + S1(pz / p - 1) + " de preț, acolo un stop n-are sens. " + (op !== null ? "Stopul tău stă " + (dir === "short" ? "peste gridul de sus" : "sub gridul de jos") + "." : "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "două grile în afara marginii") + ".");
+    }
+    gr0.mare = poz === null ? "—" : poz < 0 ? S1(p / jos - 1) : poz > 1 ? S1(p / sus - 1) : Math.round(poz * 100) + "%";
+    gr0.mic = poz === null ? "fără interval citit" : poz < 0 ? "sub gridul de jos" : poz > 1 ? "peste gridul de sus" : "din interval";
+    gr0.tag = poz === null ? { t: "—", c: "mut" } : poz < 0 || poz > 1 ? { t: "botul nu tranzacționează", c: "bad" } : poz < 0.1 || poz > 0.9 ? { t: "la margine", c: "warn" } : { t: "în grid", c: "good" };
+    gr0.act = (g ? g.grile + " grile la " + P(g.pas) + " pas" : "Geometria gridului necitită") + (c.umpleri24h !== null && c.umpleri24h !== undefined ? ", " + c.umpleri24h + " umpleri în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : "") + "."
+      + (sp && f ? " Propus acum: " + sp.grile + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + ", la " + P(sp.pas) + " pas." : f ? "" : " Propunerea vine cu fișa.");
+    if (rg && (nr(rg.r4h) !== null || nr(rg.r24h) !== null)) {
+      var sf0 = sensFata(b, rg), r40 = nr(rg.r4h), r240 = nr(rg.r24h), li = nr(b.distantaLichidarePct);
+      mi0.mare = r40 !== null ? X(r40) : X(r240); mi0.mic = r40 !== null ? "pe 4 h față de obișnuit" : "pe 24 h față de obișnuit";
+      mi0.tag = rg.miscare ? (sf0 === "contra" ? { t: "împotriva botului", c: "bad" } : sf0 === "cu" ? { t: "cu botul", c: "good" } : { t: "mișcare mare", c: "warn" }) : { t: "liniște", c: "good" };
+      mi0.act = (r40 !== null && r240 !== null ? X(r240) + " pe 24 h. " : "") + (rg.miscare ? (sf0 === "contra" ? "Nu adaug bani; urmăresc lichidarea" + (li !== null ? " (" + Math.abs(li).toFixed(1).replace(".", ",") + "% până la ea)" : "") + "." : sf0 === "cu" ? "Grilele încasează, poziția se micșorează; nu adaug bani." : "N-aș îndesi gridul acum; aștept liniștea.") : "Gridul lucrează; nu adaug bani pe urcare și nu schimb nimic pe zgomot.");
+    } else { mi0.mare = "—"; mi0.mic = "o socotesc"; mi0.tag = { t: "socotesc", c: "mut" }; mi0.act = mi0.text; }
     return out;
+  }
+  // v100: celelalte motive ale verdictului (in afara celui principal), IESI inaintea ATENTIE - randul lor de sub cifre
+  function celelalteMotive(sm) {
+    if (!sm || !Array.isArray(sm.componente)) return [];
+    var R = { iesi: 0, atentie: 1, podea: 2 };
+    return sm.componente.filter(function (c) { return c && c.motiv && !(c.cod === sm.cod && c.motiv === sm.motiv); })
+      .map(function (c) { return { nivel: c.nivel, cod: c.cod, motiv: c.motiv, faCe: c.faCe || "" }; })
+      .sort(function (a, b) { return (R[a.nivel] === undefined ? 3 : R[a.nivel]) - (R[b.nivel] === undefined ? 3 : R[b.nivel]); });
   }
 
   function btcAvertizare(btc, moneda) {
@@ -265,6 +298,6 @@ var SemnaleBot = (function () {
   }
 
   return { podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
-    gridMaiDes: gridMaiDes, acumConcret: acumConcret, pasBot: pasBot };
+    gridMaiDes: gridMaiDes, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;
