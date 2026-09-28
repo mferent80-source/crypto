@@ -4697,7 +4697,7 @@ async function tbAduDate(){
     var alegere=TabloBot.alegeBot(d.bots,tbCiteste(TB_BOT_ALES));
     tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
     tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
-    tbStare.routeOk=true;
+    tbStare.routeOk=true;tbStare.botLa=Date.now();
   }catch(e){
     // Ruta a picat - nu stim daca exista bot sau nu. Golim botul curent ca sa
     // nu mai ceara lumanari si sa nu mai scrie in istoric cu date vechi -
@@ -5662,11 +5662,12 @@ function tbRenderTodo(){
   var pl=tbPlan.botId===b.id?tbPlan.plan:null,planGol=!(pl&&(pl.plus||pl.minus||pl.afaraOre));
   var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer,b.id,Date.now());
   var aver=tbStare.avertLista||(Array.isArray(b.avertismente)?b.avertismente:[]);
-  var l=TabloExtra.ceAiDeFacut({acum:Date.now(),sfaturi:tbStare.sfaturiLista||[],avertismente:aver,alerte:alerte,planGol:planGol});
+  var l=TabloExtra.ceAiDeFacut({acum:Date.now(),dateLa:tbStare.botLa||null,sfaturi:tbStare.sfaturiLista||[],avertismente:aver,alerte:alerte,planGol:planGol});
   // v89: consilierul - istoricul tau pe moneda, frica/lacomia crypto, stirile despre moneda
-  if(typeof consilierBot==="function"){var cb=consilierBot(b);if(cb.length){l=l.filter(function(x){return x.c!=="v"});cb.forEach(function(x){l.push({c:x.nivel,titlu:x.titlu,text:(x.text?x.text+" ":"")+(x.ceAsFace?"👉 "+x.ceAsFace:""),n:0,stiri:x.stiri})});var RO={r:0,g:1,n:2,v:3};l.sort(function(a,c){return RO[a.c]-RO[c.c]})}}
-  box.innerHTML=l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1);
-    return '<div class="tbTodoRand"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+(x.stiri&&typeof t212StiriHtml==="function"?t212StiriHtml(x.stiri,3):'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
+  if(typeof consilierBot==="function"){var cb=consilierBot(b);if(cb.length){l=l.filter(function(x){return x.c!=="v"});cb.forEach(function(x){l.push({c:x.nivel,titlu:x.titlu,text:(x.text?x.text+" ":"")+(x.ceAsFace?"👉 "+x.ceAsFace:""),n:0,stiri:x.stiri,la:tbStare.botLa||null})});var RO={r:0,g:1,n:2,v:3};l.sort(function(a,c){return RO[a.c]-RO[c.c]})}}
+  // v100.5 (el: „pune ora la fiecare sfat ca să știu dacă e de actualitate”): alerta = ora ei; restul = ora citirii botului
+  box.innerHTML=l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1),o=TabloExtra.oraSfat(x.la,Date.now());
+    return '<div class="tbTodoRand"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(o?'<span class="tbOra'+(o.vechi?' tbOraVeche':'')+'" title="'+(x.n?'ora ultimei alerte':'ora datelor din care e socotit')+'">🕒 '+escapeHtml(o.text)+'</span>':'')+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+(x.stiri&&typeof t212StiriHtml==="function"?t212StiriHtml(x.stiri,3):'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
   var azi=alerte.filter(function(a){return a.t>0&&Date.now()-a.t<86400000}).length,pune=function(id,t){var e=$(id);if(e)e.textContent=t};
   pune("tbPlSub-alerte",azi?azi+" în ultimele 24 h":"niciuna în ultimele 24 h");
   pune("tbPlSub-avert",aver.length?aver.length+(aver.length===1?" de la server":" de la server"):"niciunul");

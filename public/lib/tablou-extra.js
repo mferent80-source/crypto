@@ -259,9 +259,10 @@ var TabloExtra = (function () {
   // Surse: alertele colectorului din ultimele 24 h (critic/atentie, stranse pe titlu: 5 la fel = un rand "x5"),
   // avertismentele serverului (unite cu alerta care spune acelasi lucru), sfaturile (critic/atentie; info doar
   // daca are "ce as face eu"; "bine" nu) si planul lipsa. c: r = rosu, g = galben, n = gri, v = nimic urgent.
+  // v100.5: fiecare rand are ora lui (la): alerta = cea mai noua din grup; restul = o.dateLa (ultima citire a botului).
   function ceAiDeFacut(o) {
     o = o || {};
-    var acum = o.acum || Date.now(), out = [];
+    var acum = o.acum || Date.now(), out = [], dateLa = nr(o.dateLa);
     function norm(x) { return String(x || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
     function cuv(x) { return norm(x).split(" ").filter(function (w) { return w.length >= 4; }); }
     function acelasi(a, b) {
@@ -281,11 +282,11 @@ var TabloExtra = (function () {
     // 2) avertismentele serverului; cel care spune acelasi lucru ca o alerta o inghite (si ii ia numarul)
     (Array.isArray(o.avertismente) ? o.avertismente : []).forEach(function (a) {
       if (!a || !String(a).trim()) return;
-      var it = { c: "g", titlu: String(a), text: "", n: 0 };
-      for (var i = 0; i < gr.length; i++) if (acelasi(gr[i].titlu, a)) { it.c = gr[i].c; it.n = gr[i].n; it.text = gr[i].text; gr.splice(i, 1); break; }
+      var it = { c: "g", titlu: String(a), text: "", n: 0, la: dateLa };
+      for (var i = 0; i < gr.length; i++) if (acelasi(gr[i].titlu, a)) { it.c = gr[i].c; it.n = gr[i].n; it.text = gr[i].text; it.la = gr[i].ultima; gr.splice(i, 1); break; }
       out.push(it);
     });
-    out = out.concat(gr);
+    out = out.concat(gr.map(function (g) { g.la = g.ultima; return g; }));
     // 3) sfaturile
     var bine = null;
     (Array.isArray(o.sfaturi) ? o.sfaturi : []).forEach(function (x) {
@@ -293,13 +294,30 @@ var TabloExtra = (function () {
       if (x.ton === "bine") { if (/nimic urgent/i.test(x.titlu)) bine = x; return; }
       var c = x.ton === "critic" ? "r" : x.ton === "atentie" ? "g" : x.faCe ? "n" : null;
       if (!c || out.some(function (y) { return acelasi(y.titlu, x.titlu); })) return;
-      out.push({ c: c, titlu: x.titlu, text: String(x.text || "") + (x.faCe ? " 👉 " + x.faCe : ""), n: 0 });
+      out.push({ c: c, titlu: x.titlu, text: String(x.text || "") + (x.faCe ? " 👉 " + x.faCe : ""), n: 0, la: dateLa });
     });
-    if (o.planGol) out.push({ c: "n", titlu: "Nu ai un plan pentru bot", text: "Scrie-l la rece. Colectorul te anunță când se atinge un prag.", n: 0, actiune: "plan" });
+    if (o.planGol) out.push({ c: "n", titlu: "Nu ai un plan pentru bot", text: "Scrie-l la rece. Colectorul te anunță când se atinge un prag.", n: 0, actiune: "plan", la: dateLa });
     var R = { r: 0, g: 1, n: 2 };
     out.sort(function (a, b) { return R[a.c] - R[b.c]; });
-    if (!out.length) out.push({ c: "v", titlu: "Nimic urgent", text: bine ? String(bine.text || "") + (bine.faCe ? " 👉 " + bine.faCe : "") : "Nu văd nimic care să ceară o mișcare acum.", n: 0 });
+    if (!out.length) out.push({ c: "v", titlu: "Nimic urgent", text: bine ? String(bine.text || "") + (bine.faCe ? " 👉 " + bine.faCe : "") : "Nu văd nimic care să ceară o mișcare acum.", n: 0, la: dateLa });
     return out;
+  }
+
+  // v100.5: ora unui sfat, ca omul sa vada daca e de actualitate: "HH:MM · acum N min" ("ieri HH:MM" pentru ziua trecuta);
+  // vechi = peste o ora. Ora locala a browserului.
+  function oraSfat(la, acum) {
+    la = nr(la); if (la === null || !(la > 0)) return null;
+    acum = nr(acum) || Date.now();
+    var d = new Date(la), a = new Date(acum), doi = function (x) { return (x < 10 ? "0" : "") + x; };
+    var ora = doi(d.getHours()) + ":" + doi(d.getMinutes());
+    var ieri = new Date(a.getFullYear(), a.getMonth(), a.getDate() - 1);
+    if (d.getFullYear() === ieri.getFullYear() && d.getMonth() === ieri.getMonth() && d.getDate() === ieri.getDate()) ora = "ieri " + ora;
+    else if (d.toDateString() !== a.toDateString()) ora = doi(d.getDate()) + "." + doi(d.getMonth() + 1) + " " + ora;
+    var min = Math.floor((acum - la) / 60000), cat;
+    if (min < 1) cat = "chiar acum";
+    else if (min < 60) cat = "acum " + min + " min";
+    else { var h = Math.floor(min / 60), m = min % 60; cat = "acum " + h + " h" + (m && h < 6 ? " " + m + " min" : ""); }
+    return { text: ora + " · " + cat, vechi: min >= 60 };
   }
 
   // v87: in cate zile ajunge botul pe zero la ritmul de azi (grile - costuri pe zi), daca pretul sta pe loc
@@ -329,7 +347,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

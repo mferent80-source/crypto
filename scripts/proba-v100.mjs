@@ -257,5 +257,48 @@ await test("v100.4: Tabloul - profitul DOAR din grid la vedere: sub „Rezultat 
   assert.match(citeste("../public/app.css"), /#tabloubot \.tbKpiGrid\{/);
 });
 
+// ---------- v100.5 (el, 28.09: „la Ce ai de făcut acum pune ora la fiecare sfat ca să știu dacă e de actualitate sau nu”) ----------
+// Alerta poarta ora ei (ultima din grup); sfatul, avertismentul, planul si „Nimic urgent” poarta ora datelor din care s-au
+// socotit (ultima citire a botului). Ora se scrie „HH:MM · acum N min”; peste o ora randul e marcat vechi.
+await test("v100.5: ceAiDeFacut - fiecare rand are ora (la): alerta = ultima din grup, restul = ora datelor botului", () => {
+  const ACUM = Date.UTC(2026, 8, 28, 13, 0), DATE = ACUM - 2 * 60000;
+  const al = (min, titlu, nivel = "atentie") => ({ t: ACUM - min * 60000, titlu, nivel, mesaj: "" });
+  const l = TE.ceAiDeFacut({ acum: ACUM, dateLa: DATE, planGol: true, avertismente: ["Opritorul e stins"],
+    alerte: [al(300, "JTO: iese din grid pe jos"), al(90, "JTO: iese din grid pe jos")],
+    sfaturi: [{ ton: "atentie", titlu: "Pune stopul la zero", text: "x", faCe: "y" }] });
+  const dupa = (t) => l.find((x) => x.titlu === t);
+  assert.equal(dupa("iese din grid pe jos").la, ACUM - 90 * 60000, "alerta = cea mai noua din grup");
+  assert.equal(dupa("Opritorul e stins").la, DATE, "avertismentul = ora datelor");
+  assert.equal(dupa("Pune stopul la zero").la, DATE);
+  assert.equal(dupa("Nu ai un plan pentru bot").la, DATE);
+  assert.equal(TE.ceAiDeFacut({ acum: ACUM, dateLa: DATE, alerte: [], avertismente: [], sfaturi: [], planGol: false })[0].la, DATE, "Nimic urgent = ora datelor");
+  const lipsa = TE.ceAiDeFacut({ acum: ACUM, alerte: [], avertismente: [], sfaturi: [], planGol: true });
+  assert.equal(lipsa[0].la, null, "fara ora datelor nu se inventeaza una");
+});
+await test("v100.5: avertismentul care inghite o alerta ia ora alertei", () => {
+  const ACUM = Date.UTC(2026, 8, 28, 13, 0);
+  const l = TE.ceAiDeFacut({ acum: ACUM, dateLa: ACUM, sfaturi: [], planGol: false,
+    alerte: [{ t: ACUM - 40 * 60000, titlu: "JTO: opritorul pe pierdere e setat dar stins", nivel: "critic", mesaj: "" }],
+    avertismente: ["Opritorul pe pierdere e setat dar STINS — nu se va declanșa."] });
+  assert.equal(l.length, 1); assert.equal(l[0].la, ACUM - 40 * 60000);
+});
+await test("v100.5: TabloExtra.oraSfat - „HH:MM · acum N min”, ieri cu „ieri”, vechi peste o ora, fara ora -> null", () => {
+  assert.equal(typeof TE.oraSfat, "function", "TabloExtra.oraSfat exportat");
+  const ACUM = new Date(2026, 8, 28, 15, 40).getTime();
+  assert.deepEqual(TE.oraSfat(new Date(2026, 8, 28, 15, 38).getTime(), ACUM), { text: "15:38 · acum 2 min", vechi: false });
+  assert.deepEqual(TE.oraSfat(new Date(2026, 8, 28, 15, 40, 20).getTime(), ACUM), { text: "15:40 · chiar acum", vechi: false }, "ceasul putin inainte nu da minute negative");
+  assert.deepEqual(TE.oraSfat(new Date(2026, 8, 28, 12, 10).getTime(), ACUM), { text: "12:10 · acum 3 h 30 min", vechi: true });
+  assert.deepEqual(TE.oraSfat(new Date(2026, 8, 27, 22, 5).getTime(), ACUM), { text: "ieri 22:05 · acum 17 h", vechi: true });
+  assert.equal(TE.oraSfat(null, ACUM), null);
+});
+await test("v100.5: Tabloul scrie ora pe fiecare rand din „Ce ai de făcut acum” (dateLa = ultima citire a botului; consilierul ia aceeasi ora)", () => {
+  const app = citeste("../public/app.js");
+  assert.match(app, /tbStare\.botLa=Date\.now\(\)/, "ora citirii botului tinuta la citirea reusita");
+  assert.match(app, /ceAiDeFacut\(\{acum:Date\.now\(\),dateLa:tbStare\.botLa/);
+  assert.match(app, /TabloExtra\.oraSfat\(x\.la,Date\.now\(\)\)/);
+  assert.match(app, /class="tbOra'/);
+  assert.match(citeste("../public/app.css"), /#tabloubot \.tbOra\{/);
+});
+
 console.log(`\nV100 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste} probe trecute\n`);
 process.exit(picate ? 1 : 0);

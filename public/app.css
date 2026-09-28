@@ -1638,6 +1638,8 @@ body.peTablou main>.note{display:none}
 #tabloubot #tbTodoLista>.tbTodoRand:first-child{border-top:0}
 #tabloubot .tbTodoRand p{margin:1px 0 0;color:var(--muted);font-size:12px}
 #tabloubot .tbTodoGol{padding:4px 12px}
+#tabloubot .tbOra{display:inline-block;margin-left:8px;color:var(--muted);font-size:11.5px;font-weight:600;white-space:nowrap}
+#tabloubot .tbOraVeche{color:var(--warn)}
 #tabloubot .tbDunga{align-self:stretch;border-radius:4px;background:var(--muted)}#tabloubot .tbDunga.r{background:var(--bad)}#tabloubot .tbDunga.g{background:var(--warn)}#tabloubot .tbDunga.n{background:#6c7a8e}#tabloubot .tbDunga.v{background:var(--good)}
 #tabloubot .tbNr{display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--tb-fond2);color:var(--muted);font-size:11.5px}
 #tabloubot .tbBtnLinie{padding:5px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--text);font:inherit;cursor:pointer;white-space:nowrap}#tabloubot .tbBtnLinie:hover{border-color:var(--accent);color:var(--accent)}
