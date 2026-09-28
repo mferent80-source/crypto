@@ -153,6 +153,14 @@ test("codTVBot: rândul GRID-FISA din botul care rulează (formatul butonului di
   const sh = TE.codTVBot({ ...jto, directie: "short", opritorPierdere: 0.59, opritorProfit: 0.54, opritorProfitActiv: true, lichidareJos: null, lichidareSus: 0.66 }).cod.split(";");
   assert.deepEqual([sh[0], sh[5], sh[6], sh[8]], ["short", "0", "0.59", "0.66"], "la short, ca în fișă: jos 0, stopul de deasupra la sus");
   assert.equal(TE.codTVBot({ ...jto, directie: "no_trend" }).dir, "neutru");
+  const ieftin = TE.codTVBot({ ...jto, gridJos: 0.000000123456, gridSus: 0.000000234567, pretCurent: 0.0000002, opritorPierdereActiv: false, lichidareJos: null }).cod.split(";");
+  assert.deepEqual([ieftin[1], ieftin[2]], ["0.000000123456", "0.000000234567"], "fără exponent la monedele foarte ieftine");
+  // v100.11: dupa ROL, nu dupa partea pretului (auditul GRID-FISA v2.0)
+  const f5 = (x) => { const q = TE.codTVBot(x).cod.split(";"); return q[5] + "|" + q[6]; };
+  assert.equal(f5({ ...jto, opritorProfit: 0.6878, opritorProfitActiv: true }), "0.5455|0.6878", "long: pierderea jos, profitul (TP) sus");
+  assert.equal(f5({ ...jto, pretCurent: 0.53, opritorProfit: 0.6878, opritorProfitActiv: true }), "0.5455|0.6878", "long cu prețul învechit SUB stop: stopul rămâne jos");
+  assert.equal(f5({ ...jto, directie: "no_trend", opritorPierdere: 0.54, opritorProfit: 0.60, opritorProfitActiv: true }), "0.54|0", "neutru: TP-ul nu ajunge „stop-loss”, pierderea pe partea ei");
+  assert.equal(f5({ ...jto, directie: "no_trend", opritorPierdere: 0.59, opritorProfit: null, opritorProfitActiv: false }), "0|0.59", "neutru cu pierderea deasupra gridului: sus");
   assert.equal(TE.codTVBot({ ...jto, brut: {} }), null, "fără numărul de grile nu inventăm");
   const cp = TE.codTVBot(jto, { plus: 5.2, minus: 14.9, afaraOre: 12 });
   assert.equal(cp.cod, "long;0.555;0.57;9;5;0.5455;0;0.52034;0;98.14;aritmetic;14.9;5.2;12", "planul în câmpurile 12-14"); assert.equal(cp.sig, c.sig, "planul nu e alt grid");

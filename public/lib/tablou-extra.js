@@ -267,13 +267,16 @@ var TabloExtra = (function () {
     var d = bu(b), jos = nr(b.gridJos), sus = nr(b.gridSus), grile = nr(d.row), lev = nr(b.levier);
     if (jos === null || sus === null || !(sus > jos) || !(grile >= 2)) return null;
     var dr = String(b.directie || "").toLowerCase(), dir = dr === "long" ? "long" : dr === "short" ? "short" : "neutru";
-    var p = nr(b.pretCurent) || (jos + sus) / 2, sj = null, ss = null;
-    [[b.opritorPierdereActiv, b.opritorPierdere], [b.opritorProfitActiv, b.opritorProfit]].forEach(function (o) {
-      var v = nr(o[1]); if (!o[0] || !(v > 0)) return;
-      if (v < p) { if (sj === null) sj = v; } else if (ss === null) ss = v;
-    });
-    if (dir === "short") sj = null;
-    var f = function (v) { v = nr(v); return v === null || !(v > 0) ? "0" : String(Number(v.toPrecision(6))); };
+    // v100.11 (auditul GRID-FISA v2.0, 28.09): opritoarele dupa ROL, nu dupa partea pretului - Pine-ul citeste „sus” ca take-profit
+    // DOAR la long; la short si la neutru ambele campuri sunt stop-loss. Dupa partea pretului, la neutru TP-ul de deasupra ajungea
+    // „stop-loss atins”, iar la long cu pretul invechit sub stop, stopul ajungea sus. Long: pierderea jos, profitul sus.
+    // Short: pierderea sus, profitul NU (ar fi citit ca stop). Neutru: doar pierderea, pe partea ei fata de mijlocul gridului.
+    var sj = null, ss = null, pierd = b.opritorPierdereActiv && nr(b.opritorPierdere) > 0 ? nr(b.opritorPierdere) : null, prof = b.opritorProfitActiv && nr(b.opritorProfit) > 0 ? nr(b.opritorProfit) : null;
+    if (dir === "long") { sj = pierd; ss = prof; }
+    else if (dir === "short") ss = pierd;
+    else if (pierd !== null) { if (pierd < (jos + sus) / 2) sj = pierd; else ss = pierd; }
+    // fara exponent („1.2e-7”) la monedele foarte ieftine: 6 cifre semnificative scrise intreg
+    var f = function (v) { v = nr(v); if (v === null || !(v > 0)) return "0"; var s = String(Number(v.toPrecision(6))); return /e/i.test(s) ? Number(v.toPrecision(6)).toFixed(Math.min(20, 5 - Math.floor(Math.log10(v)))).replace(/\.?0+$/, "") : s; };
     var suma = nr(b.investit);
     var parti = [dir, f(jos), f(sus), String(Math.round(grile)), String(lev !== null && lev >= 1 ? Math.round(lev) : 1), f(sj), f(ss), f(b.lichidareJos), f(b.lichidareSus), suma > 0 ? String(Math.round(suma * 100) / 100) : "0"];
     // v100.9: GRID-FISA v2.0 primeste si tipul gridului (al 11-lea camp) - botul il stie, deci grilele se deseneaza exact ca in Pionex
