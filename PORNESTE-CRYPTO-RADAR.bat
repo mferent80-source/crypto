@@ -103,6 +103,11 @@ rem ei, colectorul). O inchid si pornesc una curata. Inchid DOAR ce e al acestui
 rem folder: ferestrele PORNESTE-*.bat din el, serverul de pe 8788 daca e pornit
 rem din el, si colectorul dupa data\colector.pid. Nimic strain.
 echo   Gasesc o sesiune veche a Radarului deschisa. O inchid si pornesc una noua...
+rem v99.2 (audit #8): un tunel vechi (fereastra inchisa brutal) ramanea pornit si se deschidea al doilea. Opresc DOAR
+rem cloudflared pornit cu --url http://127.0.0.1:8788 (al acestei aplicatii), nu alt cloudflared al tau - identitatea e linia
+rem de comanda, mai sigura decat un PID vechi din fisier (care poate fi intre timp al altui program). Cu taskkill, ca restul.
+rem [ps:tunel-vechi]
+powershell -NoProfile -Command "$v = Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'cloudflared.exe' -and ([string]$_.CommandLine) -match '--url\s+http://127\.0\.0\.1:8788' }; $n = 0; foreach ($p in $v) { taskkill /PID $p.ProcessId /T /F *> $null; $n++ }; if ($n -gt 0) { Start-Sleep -Milliseconds 800; Write-Host ('  [OK] Am oprit ' + $n + ' tunel(uri) vechi ramas(e) pornit(e).') }"
 rem [ps:inchide]
 powershell -NoProfile -Command "$port = 8788; $dir = (Get-Location).Path.TrimEnd('\').ToLower() + '\'; $eu = [int](Get-CimInstance Win32_Process -Filter ('ProcessId=' + $PID)).ParentProcessId; $inchise = 0; $vechi = Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'cmd.exe' -and $_.ProcessId -ne $eu -and ([string]$_.CommandLine).ToLower().Contains($dir) -and ([string]$_.CommandLine) -match 'PORNESTE-(CRYPTO-RADAR|SI-PE-TELEFON)\.bat' }; foreach ($p in $vechi) { taskkill /PID $p.ProcessId /T /F *> $null; $inchise++ }; $c = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($c) { $x = [int]$c.OwningProcess; $lant = @(); for ($i = 0; $i -lt 8 -and $x -gt 0; $i++) { $p = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $x) -ErrorAction SilentlyContinue; if (-not $p) { break }; $lant += $p; $x = [int]$p.ParentProcessId }; $txt = (($lant | ForEach-Object { [string]$_.CommandLine }) -join ' ').ToLower(); if ($txt.Contains('wrangler') -and $txt.Contains($dir)) { $sus = $lant | Where-Object { ([string]$_.CommandLine).ToLower() -match 'wrangler|workerd|npx' } | Select-Object -Last 1; if ($sus) { taskkill /PID $sus.ProcessId /T /F *> $null; $inchise++ } } }; $pf = Join-Path (Get-Location).Path 'data\colector.pid'; if (Test-Path -LiteralPath $pf) { $cp = [int](((Get-Content -LiteralPath $pf -Raw) -split '\s+')[0]); $cpp = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $cp) -ErrorAction SilentlyContinue; if ($cpp -and ([string]$cpp.CommandLine) -match 'colector\.mjs') { taskkill /PID $cp /T /F *> $null; $inchise++ } }; for ($i = 0; $i -lt 30; $i++) { if (-not (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)) { Write-Host ('  [OK] Am inchis sesiunea veche (' + $inchise + ' procese). Pornesc una noua.'); exit 0 }; Start-Sleep -Milliseconds 500 }; Write-Host '  [ATENTIE] Portul 8788 e tot ocupat dupa inchidere - nu pornesc a doua sesiune.'; exit 1"
 if errorlevel 1 goto :DEJAPORNIT
@@ -190,6 +195,11 @@ rem [ps:sanatate]
 set "RC=%ERRORLEVEL%"
 if defined DEJA goto :DEJAGATA
 
+rem v99.2 (audit #6): urmele locale ale lui wrangler (observability ~225 MB, cache ~150 MB in 6 zile) nu-s date de-ale tale
+rem si cresc la nesfarsit. Se sterg DOAR aici, cand serverul e oprit si urmeaza sa-l pornesc, DOAR aceste doua dosare din
+rem .wrangler\state\v3 (KV-ul cu istoricul botului, kv\, NU se atinge). Cai fixe, Join-Path + Test-Path, fara variabile de batch.
+rem [ps:curata-urme]
+powershell -NoProfile -Command "$st = Join-Path (Get-Location).Path '.wrangler\state\v3'; foreach ($d in 'observability','cache\default') { $p = Join-Path $st $d; if (Test-Path -LiteralPath $p -PathType Container) { try { Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction Stop; Write-Host ('  [OK] Curatat ' + $d + ' (urmele wrangler).') } catch { Write-Host ('  [ ] Nu am putut curata ' + $d + ' - merg mai departe.') } } }"
 rem --ip 127.0.0.1: serverul are cheile Pionex, deci asculta DOAR pe
 rem calculatorul asta. Telefonul intra prin tunel (PORNESTE-SI-PE-TELEFON.bat).
 rem --persist-to cu calea folderului: dupa ea recunoaste [ps:port] serverul nostru.

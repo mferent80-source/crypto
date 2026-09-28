@@ -186,6 +186,11 @@ if errorlevel 1 (
 )
 
 if defined REFOLOSIT goto :asteptare
+rem v99.2 (audit #6): urmele locale ale lui wrangler (observability ~225 MB, cache ~150 MB in 6 zile) nu-s date de-ale tale
+rem si cresc la nesfarsit. Se sterg DOAR aici, cand serverul e oprit si urmeaza sa-l pornesc, DOAR aceste doua dosare din
+rem .wrangler\state\v3 (KV-ul cu istoricul botului, kv\, NU se atinge). Cai fixe, Join-Path + Test-Path, fara variabile de batch.
+rem [ps:curata-urme]
+powershell -NoProfile -Command "$st = Join-Path (Get-Location).Path '.wrangler\state\v3'; foreach ($d in 'observability','cache\default') { $p = Join-Path $st $d; if (Test-Path -LiteralPath $p -PathType Container) { try { Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction Stop; Write-Host ('  [OK] Curatat ' + $d + ' (urmele wrangler).') } catch { Write-Host ('  [ ] Nu am putut curata ' + $d + ' - merg mai departe.') } } }"
 echo   Pornesc serverul pe http://127.0.0.1:8788 ...
 rem Retin PID-ul: oprirea dupa titlul ferestrei NU functioneaza (masurat -
 rem serverul ramanea pornit dupa inchiderea lansatorului). Cu PID-ul propriu
@@ -208,6 +213,11 @@ echo.
 if defined FARATUNEL goto :doarlocal
 
 echo   Ridic tunelul ...
+rem v99.2 (audit #8): un tunel vechi (fereastra inchisa brutal) ramanea pornit si se deschidea al doilea. Opresc DOAR
+rem cloudflared pornit cu --url http://127.0.0.1:8788 (al acestei aplicatii), nu alt cloudflared al tau - identitatea e linia
+rem de comanda, mai sigura decat un PID vechi din fisier (care poate fi intre timp al altui program). Cu taskkill, ca restul.
+rem [ps:tunel-vechi]
+powershell -NoProfile -Command "$v = Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'cloudflared.exe' -and ([string]$_.CommandLine) -match '--url\s+http://127\.0\.0\.1:8788' }; $n = 0; foreach ($p in $v) { taskkill /PID $p.ProcessId /T /F *> $null; $n++ }; if ($n -gt 0) { Start-Sleep -Milliseconds 800; Write-Host ('  [OK] Am oprit ' + $n + ' tunel(uri) vechi ramas(e) pornit(e).') }"
 powershell -NoProfile -Command "$d = $env:TEMP; if ($d -and (Test-Path -LiteralPath $d -PathType Container)) { foreach ($n in 'crypto-radar-tunel.log','crypto-radar-tunel.log.out') { $f = Join-Path $d $n; if (Test-Path -LiteralPath $f -PathType Leaf) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue } } }"
 rem Pornesc exe-ul DIRECT: prin cmd, din powershell, din batch, cu redirectare
 rem erau prea multe straturi de ghilimele si nu pornea deloc.
