@@ -23,7 +23,7 @@ import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { construiestePoza, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v100.8";
+const VERSIUNE_COLECTOR = "v101.0";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -510,7 +510,7 @@ async function turaPaznic() {
 // v98: poza pentru pagina alerts din Trading Tools - la 5 minute, prin paznic (POST /poza); lista de simboluri a paginii
 // vine tot de acolo (GET /simboluri). Datele externe (Yahoo) au cache pe disc; o poza care nu pleaca se reincearca la tura urmatoare.
 const DUBLURI = { "1QZ.DE": "COIN", "MIGA.MU": "MSTR", "NFC.F": "NFLX" };   // dublurile germane iau insiderii/rezultatele companiei din SUA
-const yahooExtra = creeazaYahooExtra({ fisier: path.join(DATA, "poza-ext.json"), jurnal });
+const yahooExtra = creeazaYahooExtra({ fisier: path.join(DATA, "poza-ext.json"), fisierBare: path.join(DATA, "poza-bare.json"), jurnal });
 let pozaLa = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   // T212 limiteaza cererile: la o citire picata raman pozitiile de la poza anterioara
 function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
 async function pozitiiPentruPoza() {
@@ -536,7 +536,7 @@ async function pozitiiPentruPoza() {
     const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
     const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: 0.15 }) : null;
     // v98.1: `la` = cand a fost citit pretul T212 (pagina il arata cu chip „T212" cat e proaspat); `prev` = inchiderea ultimei sesiuni incheiate (NY)
-    out.push({ ...p, sursa, extra, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
+    out.push({ ...p, sursa, extra, niveluri: n, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
       niv: nivDinNiveluri(n, plan),   // stopul POZITIEI (urca dupa maxim), ca in pagina T212 a Radarului - nu stopul de intrare
       pondere: inv !== null && usd > 0 && cash.total > 0 ? x.quantity * x.currentPrice / usd * inv / cash.total : null });
   }
@@ -581,8 +581,11 @@ async function simboluriPentruPoza() {
     const sursa = DUBLURI[s.s] || null; let c = null, e = null;
     try { c = await yahooExtra.closes(s.s); } catch (err) { jurnal("poza: inchideri", s.s, err.message); }
     try { e = await yahooExtra.extra(sursa || s.s); } catch (err) { jurnal("poza: extra", s.s, err.message); }
+    // v101 (SL/TP pe alerts): nivelurile Radarului din lumanarile simbolului LISTAT (la dublurile germane in €, nu ale companiei din SUA)
+    let niveluri = null;
+    try { const b = await yahooExtra.bare(s.s), pr = c && c.pret != null ? c.pret : (b && b.length ? b[b.length - 1].c : null); if (b && pr) niveluri = ActiuniSemnale.niveluri(b, pr, {}); } catch (err) { jurnal("poza: bare", s.s, err.message); }
     // v98.2: prev = ultima sesiune incheiata (ziua NY), ca la pozitii - nu penultima inchidere (duminica arata vineri drept "azi")
-    out.push({ s: s.s, nota: s.nota, sursa, moneda: c ? c.moneda : (/\.(DE|MU|F|PA|AS|MI|SW)$/.test(s.s) ? "€" : "$"), pret: c ? c.pret : null, prev: prevSimbol(c, Date.now()), closes30: c ? c.closes30 : [], extra: e });
+    out.push({ s: s.s, nota: s.nota, sursa, moneda: c ? c.moneda : (/\.(DE|MU|F|PA|AS|MI|SW)$/.test(s.s) ? "€" : "$"), pret: c ? c.pret : null, prev: prevSimbol(c, Date.now()), closes30: c ? c.closes30 : [], extra: e, niveluri });
   }
   return out;
 }
