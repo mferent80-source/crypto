@@ -383,6 +383,8 @@ function gardaVersiune() {
   surse["package.json version"] = normalizeaza(pkg.version);
   surse["BUILD_INFO.version"] = normalizeaza(bi.version);
   surse["BUILD_INFO.badge"] = normalizeaza((String(bi.badge || "").match(/^v[\d.]+/) || [])[0]);
+  // v98.2: versiunea raportata de /api/market?type=health (era "v56" scris de mana din 22.09 pana in 28.09)
+  surse["functions/_shared/versiune.js"] = normalizeaza((citeste("functions/_shared/versiune.js").match(/VERSIUNE\s*=\s*["'](v[\d.]+)["']/) || [])[1]);
   const c = (sw.match(/const\s+CACHE\s*=\s*["'`][^"'`]*?v(\d+)(?:-(\d+))?(?:-(\d+))?["'`]/) || []);
   surse["sw.js CACHE"] = c[1] ? normalizeaza([c[1], c[2], c[3]].filter(Boolean).join(".")) : null;
   const meta = [...html.matchAll(/<meta\b[^>]*>/g)].map((m) => m[0]).find((t) => /\bname="app-version"/.test(t));

@@ -78,7 +78,15 @@ export async function verifica(env, acum, f = fetch) {
   const la = Math.max(Number(s.la) || 0, laPoza);
   if (!la) return { stare: "fara-bataie" };
   const tace = acum - la;
-  if (tace < TACE_MS) return { stare: "bate" };
+  if (tace < TACE_MS) {
+    // v98.2: cat poza curge, colectorul nu mai bate separat (scrieri KV) -> revenirea dupa o tacere anuntata o spune cronul, o singura data
+    if (s.anuntatLa) {
+      await discord(env, "info", "Crypto Radar: colectorul a revenit", "Colectorul de acasă dă iar semn (poza curge; tăcuse de la " + ora(Number(s.la) || la) + "). Alertele botului merg iar.", f);
+      await scrie(env, { ...s, la, anuntatLa: undefined });
+      return { stare: "revenit" };
+    }
+    return { stare: "bate" };
+  }
   if (s.anuntatLa && acum - s.anuntatLa < AMINTIRE_MS) return { stare: "tace-anuntat" };
   const prima = !s.anuntatLa;
   const ok = await discord(env, "critic", "Crypto Radar: colectorul tace de " + minute(tace),

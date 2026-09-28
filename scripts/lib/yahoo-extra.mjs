@@ -23,8 +23,12 @@ export function creeazaYahooExtra({ fisier, pauzaMs = 400, f = fetch, acum = () 
     async closes(simbol) {
       const k = "c:" + simbol, c = cache[k]; if (c && acum() - c.la < CLOSES_MS) return c.v;
       const j = (await json("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(simbol) + "?range=2mo&interval=1d")).chart.result[0];
-      const cl = (j.indicators.quote[0].close || []).filter((x) => typeof x === "number"), ts = j.timestamp || [];
-      const v = { closes30: cl.slice(-30), pret: cl[cl.length - 1] ?? null, prev: cl[cl.length - 2] ?? null, la: ts.length ? ts[ts.length - 1] * 1000 : null, moneda: j.meta && j.meta.currency === "EUR" ? "€" : "$" };
+      // v98.2: barele cu timp (tc), aliniate - o inchidere lipsa se sare cu tot cu timpul ei; din ele colectorul ia `prev` = ultima
+      // sesiune INCHEIATA (prevSimbol), nu penultima inchidere orbeste (duminica arata mișcarea de vineri drept "azi")
+      const inch = j.indicators.quote[0].close || [], ts = j.timestamp || [], tc = [];
+      ts.forEach((t, i) => { if (typeof inch[i] === "number" && typeof t === "number") tc.push({ t: t * 1000, c: inch[i] }); });
+      const cl = tc.map((b) => b.c);
+      const v = { closes30: cl.slice(-30), pret: cl[cl.length - 1] ?? null, prev: cl[cl.length - 2] ?? null, tc: tc.slice(-31), la: ts.length ? ts[ts.length - 1] * 1000 : null, moneda: j.meta && j.meta.currency === "EUR" ? "€" : "$" };
       cache[k] = { la: acum(), v }; salveaza(); await pauza(pauzaMs); return v;
     },
     async extra(simbol) {

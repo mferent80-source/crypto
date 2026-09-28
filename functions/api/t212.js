@@ -19,6 +19,16 @@ const cache = new Map(); // cheie -> {pana, valoare} (in memoria serverului de a
 
 function dinCache(k) { const c = cache.get(k); return c && c.pana > Date.now() ? c.valoare : null; }
 function inCache(k, v, sec) { cache.set(k, { pana: Date.now() + sec * 1000, valoare: v }); if (cache.size > 300) cache.delete(cache.keys().next().value); }
+// v98.2 (audit 28.09, #1): cererile IDENTICE in zbor se leaga - trei ture ale colectorului care cer `pozitii` in aceeasi secunda
+// = UN apel la Trading 212 (limitele lor: 1 la 5 s pe portofoliu, 1 la 30 s pe account/info; 88 de 429 in 36 de ore inainte).
+// Toti chematorii primesc acelasi raspuns (sau aceeasi eroare); o eroare NU ramane in cache, urmatorul reincearca.
+const inZbor = new Map();
+function prinCache(k, sec, fn) {
+  const c = dinCache(k); if (c) return Promise.resolve(c);
+  if (inZbor.has(k)) return inZbor.get(k);
+  const p = Promise.resolve().then(fn).then((v) => { if (v !== null && v !== undefined) inCache(k, v, sec); return v; }).finally(() => inZbor.delete(k));
+  inZbor.set(k, p); return p;
+}
 
 async function t212(env, cale, actiune) {
   const r = await fetch(BAZA + cale, { headers: { Authorization: "Basic " + btoa(env.T212_API_KEY + ":" + env.T212_API_SECRET), accept: "application/json" } });
@@ -187,32 +197,36 @@ export async function onRequestGet({ request, env }) {
       const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), iv = u.searchParams.get("interval") === "1h" ? "1h" : "1d";
       const cand = candidati(tk);
       if (!cand.length) return json({ error: "Nu știu simbolul de bursă pentru " + tk + "." }, 404);
-      const k = "p:" + tk + ":" + iv, c = dinCache(k); if (c) return json(c);
-      for (const s of cand) {
-        let rows = null, sursa = null;
-        if (env.TWELVE_DATA_API_KEY) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }
-        if (!rows) { rows = await yahoo(s, iv); sursa = "yahoo"; }
-        if (rows) { const v = { ticker: tk, simbol: s, sursa, interval: iv, randuri: rows }; inCache(k, v, iv === "1h" ? 300 : 1800); return json(v); }
-      }
       const nume = String(u.searchParams.get("nume") || "").replace(/[^\p{L}\p{N} .,&'-]/gu, "").trim().slice(0, 60);
-      if (nume.length >= 3) {
-        for (const s of await dupaNume(nume)) {
-          if (cand.includes(s)) continue;
-          const rows = await yahoo(s, iv);
-          if (rows) { const v = { ticker: tk, simbol: s, sursa: "yahoo", interval: iv, randuri: rows, gasitDupaNume: true }; inCache(k, v, iv === "1h" ? 300 : 1800); return json(v); }
+      const v = await prinCache("p:" + tk + ":" + iv, iv === "1h" ? 300 : 1800, async () => {
+        for (const s of cand) {
+          let rows = null, sursa = null;
+          if (env.TWELVE_DATA_API_KEY) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }
+          if (!rows) { rows = await yahoo(s, iv); sursa = "yahoo"; }
+          if (rows) return { ticker: tk, simbol: s, sursa, interval: iv, randuri: rows };
         }
-      }
+        if (nume.length >= 3) {
+          for (const s of await dupaNume(nume)) {
+            if (cand.includes(s)) continue;
+            const rows = await yahoo(s, iv);
+            if (rows) return { ticker: tk, simbol: s, sursa: "yahoo", interval: iv, randuri: rows, gasitDupaNume: true };
+          }
+        }
+        return null;
+      });
+      if (v) return json(v);
       return json({ error: "Fără prețuri pentru " + tk + " (poate a fost delistată sau redenumită)." }, 404);
     }
     if (a === "rezultate") {
       const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = /_US_EQ$/.test(tk) ? candidati(tk) : [];
       if (!cand.length) return json({ error: "Data rezultatelor: doar acțiuni americane (_US_EQ)." }, 404);
-      const k = "rez:" + tk, c = dinCache(k); if (c) return json(c);
-      const r = await fetch("https://api.nasdaq.com/api/analyst/" + encodeURIComponent(cand[0]) + "/earnings-date", { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
-      let j = null; try { j = await r.json(); } catch {}
-      if (!r.ok && r.status !== 404) return json({ error: "Nasdaq: HTTP " + r.status }, 502);
-      const d = dataRezultate(j), v = { ticker: tk, simbol: cand[0], data: d ? d.data : null, sigur: d ? d.sigur : null };
-      inCache(k, v, 12 * 3600); return json(v);
+      return json(await prinCache("rez:" + tk, 12 * 3600, async () => {
+        const r = await fetch("https://api.nasdaq.com/api/analyst/" + encodeURIComponent(cand[0]) + "/earnings-date", { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+        let j = null; try { j = await r.json(); } catch {}
+        if (!r.ok && r.status !== 404) throw Object.assign(new Error("Nasdaq: HTTP " + r.status), { status: 502 });
+        const d = dataRezultate(j);
+        return { ticker: tk, simbol: cand[0], data: d ? d.data : null, sigur: d ? d.sigur : null };
+      }));
     }
     if (a === "sfaturi") {
       if (!env.ISTORIC?.get) return faraKv();
@@ -241,34 +255,35 @@ export async function onRequestGet({ request, env }) {
     }
     if (!(env.T212_API_KEY && env.T212_API_SECRET)) return json({ error: "Lipsesc T212_API_KEY / T212_API_SECRET în .dev.vars — pune-le cu PUNE-CHEILE-T212.bat și repornește Radarul." }, 503);
     if (a === "cont") {
-      const c = dinCache("cont"); if (c) return json(c);
-      const cash = await t212(env, "/equity/account/cash", "cont"), info = await t212(env, "/equity/account/info", "cont");
-      const v = { moneda: info && info.currencyCode || null, cash }; inCache("cont", v, 60); return json(v);
+      return json(await prinCache("cont", 60, async () => {
+        const cash = await t212(env, "/equity/account/cash", "cont"), info = await t212(env, "/equity/account/info", "cont");
+        return { moneda: info && info.currencyCode || null, cash };
+      }));
     }
     if (a === "pozitii") {
-      const c = dinCache("poz"); if (c) return json(c);
-      const p = await t212(env, "/equity/portfolio", "pozitii");
-      const v = { pozitii: Array.isArray(p) ? p : [] }; inCache("poz", v, 30); return json(v);
+      return json(await prinCache("poz", 30, async () => { const p = await t212(env, "/equity/portfolio", "pozitii"); return { pozitii: Array.isArray(p) ? p : [] }; }));
     }
     if (a === "dividende") {
-      const c = dinCache("div"); if (c) return json(c);
-      let cur = null, items = [];
-      for (let pag = 0; pag < 20; pag++) {
-        const d = await t212(env, "/history/dividends?limit=50" + (cur ? "&cursor=" + cur : ""), "dividende");
-        (Array.isArray(d && d.items) ? d.items : []).forEach((x) => { if (x && x.ticker) items.push({ ticker: String(x.ticker).slice(0, 40), amount: nr(x.amount), currency: txt(x.currency, 3) || null, paidOn: txt(x.paidOn, 40) || null }); });
-        const np = d && typeof d.nextPagePath === "string" ? d.nextPagePath : "", m = np.startsWith("/api/v0/history/dividends?") ? np.match(/[?&]cursor=([A-Za-z0-9_-]{1,40})/) : null;
-        if (!m) break; cur = m[1];
-      }
-      const v = { items }; inCache("div", v, 3600); return json(v);
+      return json(await prinCache("div", 3600, async () => {
+        let cur = null, items = [];
+        for (let pag = 0; pag < 20; pag++) {
+          const d = await t212(env, "/history/dividends?limit=50" + (cur ? "&cursor=" + cur : ""), "dividende");
+          (Array.isArray(d && d.items) ? d.items : []).forEach((x) => { if (x && x.ticker) items.push({ ticker: String(x.ticker).slice(0, 40), amount: nr(x.amount), currency: txt(x.currency, 3) || null, paidOn: txt(x.paidOn, 40) || null }); });
+          const np = d && typeof d.nextPagePath === "string" ? d.nextPagePath : "", m = np.startsWith("/api/v0/history/dividends?") ? np.match(/[?&]cursor=([A-Za-z0-9_-]{1,40})/) : null;
+          if (!m) break; cur = m[1];
+        }
+        return { items };
+      }));
     }
     if (a === "ordine") {
       const cur = u.searchParams.get("cursor");
       if (cur !== null && !/^\d{1,20}$/.test(cur)) return json({ error: "cursor invalid" }, 400);
-      const k = "o:" + (cur || ""), c = dinCache(k); if (c) return json(c);
-      const d = await t212(env, "/equity/history/orders?limit=50" + (cur ? "&cursor=" + cur : ""), "ordine");
-      const np = d && typeof d.nextPagePath === "string" ? d.nextPagePath : "";
-      const m = np.startsWith("/api/v0/equity/history/orders?") ? np.match(/[?&]cursor=(\d{1,20})/) : null;
-      const v = { items: Array.isArray(d && d.items) ? d.items : [], cursor: m ? m[1] : null }; inCache(k, v, 30); return json(v);
+      return json(await prinCache("o:" + (cur || ""), 30, async () => {
+        const d = await t212(env, "/equity/history/orders?limit=50" + (cur ? "&cursor=" + cur : ""), "ordine");
+        const np = d && typeof d.nextPagePath === "string" ? d.nextPagePath : "";
+        const m = np.startsWith("/api/v0/equity/history/orders?") ? np.match(/[?&]cursor=(\d{1,20})/) : null;
+        return { items: Array.isArray(d && d.items) ? d.items : [], cursor: m ? m[1] : null };
+      }));
     }
     return json({ error: "Acțiune necunoscută" }, 400);
   } catch (e) {

@@ -16,12 +16,13 @@ export function clasifica(text) {
 function nume(s) { return String(s || "").toLowerCase().replace(/(^|\s|-)\S/g, (c) => c.toUpperCase()); }
 // tranzactiile insiderilor (Yahoo quoteSummary.insiderTransactions.transactions) -> agregatul pe 60 de zile
 export function insideri(tranzactii, acum) {
-  if (!Array.isArray(tranzactii) || !tranzactii.length) return { form4: false, buys: 0, sells: 0, bp: 0, sp: 0, net: 0, verdict: "neut", top: [], n60: 0 };
+  if (!Array.isArray(tranzactii) || !tranzactii.length) return { form4: false, buys: 0, sells: 0, bp: 0, sp: 0, net: 0, verdict: "neut", top: [], n60: 0, ultimaCumparare: null };
   const tx = [];
   for (const x of tranzactii) {
     const d = Date.parse((x && x.startDate && x.startDate.fmt) || ""), f = clasifica(x && x.transactionText);
     if (!Number.isFinite(d) || !f || acum - d > FEREASTRA_INSIDERI || d > acum + ZI) continue;
-    tx.push({ d: new Date(d).toISOString().slice(5, 10), cine: nume(x.filerName), rol: String(x.filerRelation || ""), f, act: nr(x.shares && x.shares.raw) || 0, val: nr(x.value && x.value.raw) || 0 });
+    const zi = new Date(d).toISOString().slice(0, 10);
+    tx.push({ d: zi.slice(5), zi, cine: nume(x.filerName), rol: String(x.filerRelation || ""), f, act: nr(x.shares && x.shares.raw) || 0, val: nr(x.value && x.value.raw) || 0 });
   }
   const buys = tx.filter((t) => t.f === "buy"), sells = tx.filter((t) => t.f === "sell");
   const bp = new Set(buys.map((t) => t.cine)).size, sp = new Set(sells.map((t) => t.cine)).size;
@@ -29,7 +30,9 @@ export function insideri(tranzactii, acum) {
   let verdict = "neut";
   if (bp >= 2 && net > 0) verdict = "bull"; else if (bp === 1 && net > 0) verdict = "bull1"; else if (sells.length >= 2 && net < 0 && sells.length >= buys.length) verdict = "bear";
   const top = tx.slice().sort((a, b) => Math.abs(b.val) - Math.abs(a.val)).slice(0, 3);
-  return { form4: true, buys: buys.length, sells: sells.length, bp, sp, net, verdict, top, n60: tx.length };
+  // v98.2: ultima cumparare cu bani, cu ziua ei - alerta "cumparare de insider" o cere RECENTA, nu doar prezenta in fereastra de 60 de zile
+  const ultimaCumparare = buys.slice().sort((a, b) => (a.zi < b.zi ? 1 : a.zi > b.zi ? -1 : 0))[0] || null;
+  return { form4: true, buys: buys.length, sells: sells.length, bp, sp, net, verdict, top, n60: tx.length, ultimaCumparare };
 }
 // n puncte dintr-o lista lunga, cu primul si ultimul pastrate
 export function esantion(l, n) {
@@ -104,8 +107,22 @@ export function prevClose(bare, acum) {
   for (const b of bare) if (b && nr(b.c) !== null && nr(b.t) !== null && new Date(b.t).toISOString().slice(0, 10) < azi) v = b.c;
   return v;
 }
+// v98.2 (audit 28.09, #2): `prev` la un SIMBOL al paginii = aceeasi regula ca la pozitii (ultima sesiune incheiata, ziua NY),
+// din barele cu timp (`tc`) pe care le da yahoo-extra.closes(); un cache vechi fara `tc` ramane cu prev-ul lui (penultima inchidere)
+export function prevSimbol(c, acum) {
+  if (!c) return null;
+  const p = prevClose(c.tc, acum);
+  return p !== null ? p : nr(c.prev);
+}
+// v98.2 (audit 28.09, #3): cat poza a urcat in ultimele 10 minute, poza E pulsul (worker-ul citeste `la` din ea) - nicio bataie
+// separata, deci nicio scriere KV in plus (KV Free: 1.000 de scrieri pe zi; poza la 2 min = 720). Altfel bataia la 5 minute.
+export function bataieNecesara({ acum, pozaOkLa, paznicLa }) {
+  if (acum - (nr(pozaOkLa) || 0) < 10 * 60000) return false;
+  return acum - (nr(paznicLa) || 0) >= 5 * 60000;
+}
 // cat de des pleaca poza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri), altfel 5 minute
-// (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: 2 min x 16 h = 480 + noaptea 96 + bataia = sub limita)
+// (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: cu un bot activ zi si noapte = 720 de poze; bataia separata NU se mai
+// trimite cat poza curge - vezi bataieNecesara - deci ramane loc)
 export function cadentaPoza({ acum, botiActivi }) {
   if (botiActivi > 0) return 120000;
   const p = new Intl.DateTimeFormat("en-US", { timeZone: NY, weekday: "short", hour: "numeric", hour12: false }).formatToParts(new Date(acum));
@@ -129,11 +146,13 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
         titlu: s.s + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " azi, de " + (Math.abs(d) / atr).toFixed(1).replace(".", ",") + "× mișcarea lui obișnuită",
         mesaj: "Mișcarea zilei e peste 2× ATR-ul propriu (" + pctTxt(atr) + " pe zi, media ultimelor 14 zile). Pragul de 2× ATR e o ipoteză, nu un semnal dovedit: o dată pe zi per simbol, ca să vezi când i se întâmplă ceva NEOBIȘNUIT lui, nu la fiecare procent." });
     }
-    const i = s.insideri, v = i && i.verdict, va = anterioare && anterioare[s.s] && anterioare[s.s].insideri && anterioare[s.s].insideri.verdict;
-    if ((v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
-      const t = (i.top || []).find((x) => x && x.f === "buy");
+    // v98.2 (audit 28.09, #4): "noua" = a aparut fata de o poza ANTERIOARA a aceluiasi simbol (prima vedere nu e stire) si e din
+    // ultimele 30 de zile (INTC a fost anuntat pe 27.09 pentru cumpararea CEO-ului din 11.08 - informatia nu era noua atunci)
+    const i = s.insideri, v = i && i.verdict, ant = anterioare && anterioare[s.s] && anterioare[s.s].insideri, va = ant && ant.verdict;
+    const t = i && i.ultimaCumparare, recenta = t && t.zi && acum - Date.parse(t.zi + "T00:00:00Z") <= 30 * ZI;
+    if (ant && recenta && (v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
       out.push({ cheie: "sim-insider-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
-        mesaj: (t ? t.cine + " (" + t.rol + ") a cumpărat " + miiTxt(t.act) + " acțiuni, ~$" + miiTxt(t.val) + (t.d ? ", pe " + String(t.d).replace("-", ".") : "") + ". " : "") + "Cumpărările cu bani ale insiderilor contează, acțiunile primite gratis nu. E informație, nu îndemn." });
+        mesaj: t.cine + " (" + t.rol + ") a cumpărat " + miiTxt(t.act) + " acțiuni, ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + ". Cumpărările cu bani ale insiderilor contează, acțiunile primite gratis nu. E informație, nu îndemn." });
     }
   }
   return out;

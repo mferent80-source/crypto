@@ -1,3 +1,4 @@
+import { VERSIUNE } from "../_shared/versiune.js";
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 import {dupaCelDinFata} from "../_shared/poarta.js";
 const ENGINE_CONTRACT_VERSION="54.1";
@@ -62,7 +63,7 @@ async function pionexCached(url,ttl=30,env=null){
 }
 export async function onRequestGet({request,env}){
   const u=new URL(request.url),type=u.searchParams.get("type");
-  if(type==="health")return ok({ok:true,service:"crypto-radar",version:"v56"});
+  if(type==="health")return ok({ok:true,service:"crypto-radar",version:VERSIUNE});
   // v92: 45 -> 120/min. Limita se numara pe IP: acasa, colectorul (clasamentul: ~32/min, 3 min pe ora) si browserul
   // au ACELASI IP (127.0.0.1) - o pagina deschisa in timpul clasamentului primea RATE_LIMITED. Pionex e ferit oricum
   // de pionexGate (o cerere la 1,1 s) si de racirea la 429.

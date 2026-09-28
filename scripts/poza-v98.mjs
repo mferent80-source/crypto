@@ -99,7 +99,9 @@ await test("cadentaPoza: 2 minute cat e un bot activ sau bursa US e in ore extin
 });
 await test("alerteSimboluri: miscare peste 2x ATR-ul propriu (o data pe zi) si cumparare noua de insider (fata de poza anterioara)", () => {
   const c = Array.from({ length: 30 }, (_, i) => 100 + (i % 2 ? 0.5 : -0.5));   // ~1%/zi -> ATR ~1%
-  const ins = (verdict) => ({ form4: true, verdict, bp: verdict === "neut" ? 0 : 1, net: 5000, top: [{ d: "09-25", cine: "Ion Pop", rol: "Chief Executive Officer", f: "buy", act: 5000, val: 250000 }] });
+  // v98.2: alerta cere si ultimaCumparare RECENTA (sub 30 de zile) - forma pe care o da insideri()
+  const ins = (verdict) => ({ form4: true, verdict, bp: verdict === "neut" ? 0 : 1, net: 5000, top: [{ d: "09-25", zi: "2026-09-25", cine: "Ion Pop", rol: "Chief Executive Officer", f: "buy", act: 5000, val: 250000 }],
+    ultimaCumparare: verdict === "neut" ? null : { d: "09-25", zi: "2026-09-25", cine: "Ion Pop", rol: "Chief Executive Officer", f: "buy", act: 5000, val: 250000 } });
   const linistit = { s: "AAA", moneda: "$", pret: 100.4, prev: 100, closes30: c, insideri: ins("neut") };
   const miscat = { s: "BBB", moneda: "$", pret: 104, prev: 100, closes30: c, insideri: ins("neut") };
   const cumparat = { s: "CCC", moneda: "$", pret: 100, prev: 100, closes30: c, insideri: ins("bull1") };
@@ -108,7 +110,7 @@ await test("alerteSimboluri: miscare peste 2x ATR-ul propriu (o data pe zi) si c
   assert.match(a[0].titlu, /BBB/); assert.match(a[0].mesaj, /ATR/); assert.match(a[0].mesaj, /ipotez/i, "pragul e o ipoteza, se spune");
   assert.match(a[1].titlu, /CCC/); assert.match(a[1].mesaj, /Ion Pop/);
   assert.equal(alerteSimboluri([cumparat], { CCC: { insideri: { verdict: "bull1" } } }, ACUM).length, 0, "acelasi verdict ca la poza anterioara = nimic nou");
-  assert.equal(alerteSimboluri([cumparat], {}, ACUM).length, 1, "prima poza cu cumparare (fara anterior) = anunt");
+  assert.equal(alerteSimboluri([cumparat], {}, ACUM).length, 0, "v98.2: prima poza cu simbolul (fara anterior) NU e stire - INTC a fost anuntat pe 27.09 pentru o cumparare din 11.08");
   assert.equal(alerteSimboluri([{ ...miscat, closes30: c.slice(0, 5) }], {}, ACUM).length, 0, "sub 15 inchideri nu judecam miscarea");
 });
 await test("marimea: 12 boti x 30 poze + 60 simboluri x top 3 ramane sub 512 KB", () => {
