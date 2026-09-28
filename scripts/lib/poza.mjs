@@ -87,7 +87,9 @@ function botPoza(b) {
     niv: sem.niv, motive: sem.motive, sfat: sem.sfat,
     pret30: esantion((b.pret30 || []).map((v) => rot(v, 6)).filter((v) => v !== null), 30), la: nr(b.la),
     // v99.6: mișcarea pe ~24 h (pret24h din istoricul botului) - null cand lipseste, pagina nu inventeaza
-    d24: b.pret24h && nr(b.pret24h.pret) > 0 && pret !== null ? rot(pret / b.pret24h.pret - 1, 6) : null, d24Ore: b.pret24h ? nr(b.pret24h.ore) : null };
+    d24: b.pret24h && nr(b.pret24h.pret) > 0 && pret !== null ? rot(pret / b.pret24h.pret - 1, 6) : null, d24Ore: b.pret24h ? nr(b.pret24h.ore) : null,
+    // v100.3: procentul zilei ca in TradingView (fata de deschiderea lumanarii 1D Pionex = inchiderea de ieri) - rezerva paginii alerts
+    zi: b.ziPionex && nr(b.ziPionex.deschidere) > 0 && pret !== null ? { deschidere: rot(b.ziPionex.deschidere, 6), pct: rot(pret / b.ziPionex.deschidere - 1, 6) } : null };
 }
 function simbolPoza(x, acum) {
   const e = x.extra || null;
@@ -135,6 +137,18 @@ export function pret24hDinIstoric(intrari, acum) {
   let ales = ist[0];
   if (ist[0].t <= tinta) { let d = Infinity; for (const x of ist) { const dd = Math.abs(x.t - tinta); if (dd < d) { d = dd; ales = x; } } }
   return { pret: ales.pretPerp, t: ales.t, ore: Math.round((acum - ales.t) / 3600000) };
+}
+// v100.3 (el, 28.09: „procentul LIVE, acelasi cu cel din TradingView”): TradingView socoteste schimbarea zilei fata de inchiderea
+// de ieri = deschiderea lumanarii zilnice care a inceput azi la 00:00 UTC. Din lumanarile 1D Pionex (orice ordine, texte sau numere)
+// se ia doar bara de AZI; daca ziua noua inca nu are bara -> null (nu procentul de ieri).
+export function ziDinKlines(klines, acum) {
+  const azi = Math.floor(acum / ZI) * ZI;
+  for (const k of Array.isArray(klines) ? klines : []) {
+    if (!k) continue;
+    const t = Number(Array.isArray(k) ? k[0] : k.time), o = Number(Array.isArray(k) ? k[1] : k.open);
+    if (t === azi && Number.isFinite(o) && o > 0) return { deschidere: o, t };
+  }
+  return null;
 }
 export function pret30DinIstoric(intrari, ring) {
   const r = (Array.isArray(ring) ? ring : []).map(nr).filter((v) => v !== null);

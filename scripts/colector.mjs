@@ -21,9 +21,9 @@ import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { construiestePoza, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric } from "./lib/poza.mjs";
+import { construiestePoza, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v100.2";
+const VERSIUNE_COLECTOR = "v100.3";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -538,6 +538,18 @@ async function pozitiiPentruPoza() {
   }
   return out;
 }
+// v100.3 (el, 28.09: „procentul LIVE, acelasi cu cel din TradingView”): deschiderea zilei (00:00 UTC) din lumanarea 1D Pionex a
+// botului, o data la 10 min si din nou cand incepe ziua noua. Pagina alerts ia procentul live de la Binance; asta e rezerva ei.
+const ziCache = {};
+async function ziBot(b) {
+  const acum = Date.now(), azi = Math.floor(acum / 86400000) * 86400000, c = ziCache[b.id];
+  if (c && c.azi === azi && acum - c.la < 10 * 60000) return c.zi;
+  const sim = String(b.baza || "").replace(/\.PERP$/, "").toUpperCase() + "_USDT_PERP";
+  const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(sim) + "&interval=1D&limit=2");
+  const zi = ziDinKlines(k && k.data && k.data.klines, acum);
+  ziCache[b.id] = { la: acum, azi, zi };
+  return zi;
+}
 async function botiPentruPoza() {
   const out = [];
   for (const b of ultimiiBoti) {
@@ -551,8 +563,9 @@ async function botiPentruPoza() {
       pret24h = pret24hDinIstoric(h && h.intrari, Date.now());
     } catch (e) { jurnal("poza: istoricul botului", b.id, e.message); }
     let plan = null; try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id))); } catch {}
+    let ziPionex = null; try { ziPionex = await ziBot(b); } catch (e) { jurnal("poza: ziua botului", b.id, e.message); }
     let zero = null; try { const z = TabloExtra.dacaInchizi(b); zero = z && z.pretZero > 0 ? z.pretZero : null; } catch {}
-    const x = semnaleUlt[b.id]; out.push({ ...b, plan, zero, pret30: pret30[b.id] || [], pret24h, semafor: x && x.semafor ? x.semafor : null, la: Date.now() });
+    const x = semnaleUlt[b.id]; out.push({ ...b, plan, zero, pret30: pret30[b.id] || [], pret24h, ziPionex, semafor: x && x.semafor ? x.semafor : null, la: Date.now() });
   }
   return out;
 }

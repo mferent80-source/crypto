@@ -197,5 +197,32 @@ await test("v100.2 (el: „pune Ce ai de facut acum sub grafic si incadreaza in 
   assert.match(css, /#tabloubot \.tbGrStanga\{[^}]*display:grid/); assert.match(css, /#tabloubot #tbAcum\{[^}]*columns:/); assert.match(css, /#tabloubot #tbAcum \.tbLinie\{[^}]*break-inside:avoid/);
 });
 
+// ---------- v100.3 (el, 28.09: „procentul LIVE, acelasi cu cel din TradingView”) - rezerva din colector ----------
+// TradingView socoteste procentul fata de inchiderea de ieri = deschiderea lumanarii zilnice (00:00 UTC). Pagina alerts il ia live
+// de la Binance; pentru monedele care nu sunt pe Binance, colectorul pune in poza aceeasi socoteala pe lumanarea zilnica Pionex.
+await test("v100.3: ziDinKlines ia deschiderea zilei de AZI (00:00 UTC) din lumanarile 1D Pionex, in orice ordine; bara de ieri sau nimic -> null", async () => {
+  const { ziDinKlines } = await import("./lib/poza.mjs");
+  assert.equal(typeof ziDinKlines, "function", "ziDinKlines exportat din scripts/lib/poza.mjs");
+  const ZI = 86400000, acum = Date.UTC(2026, 8, 28, 13, 40), azi = Date.UTC(2026, 8, 28);
+  const k = [{ time: azi, open: "0.5960", close: "0.5582", high: "0.6", low: "0.55" }, { time: azi - ZI, open: "0.61", close: "0.5960", high: "0.62", low: "0.59" }];
+  assert.deepEqual(ziDinKlines(k, acum), { deschidere: 0.596, t: azi });
+  assert.deepEqual(ziDinKlines(k.slice().reverse(), acum), { deschidere: 0.596, t: azi }, "ordinea nu conteaza");
+  assert.equal(ziDinKlines([k[1]], acum), null, "doar bara de ieri (ziua noua inca nu a aparut) -> null, nu procentul de ieri");
+  assert.equal(ziDinKlines(null, acum), null); assert.equal(ziDinKlines([{ time: azi, open: "0" }], acum), null, "deschidere 0 -> null");
+});
+await test("v100.3: construiestePoza pune zi {deschidere, pct} pe bot din ziPionex; fara -> zi null (pagina cade pe d24)", async () => {
+  const { construiestePoza } = await import("./lib/poza.mjs");
+  const b = { id: "2386", baza: "JTO.PERP", directie: "long", pretCurent: 0.5702, gridJos: 0.5722, gridSus: 0.6572, profitTotal: -18.84, ziPionex: { deschidere: 0.596, t: Date.UTC(2026, 8, 28) } };
+  const p = construiestePoza({ acum: Date.UTC(2026, 8, 28, 13, 40), versiune: "v100.3", boti: [b], t212: [], simboluri: [] });
+  assert.ok(p.boti[0].zi, "zi in poza"); assert.equal(p.boti[0].zi.deschidere, 0.596); aprox(p.boti[0].zi.pct, 0.5702 / 0.596 - 1, 1e-6, "pct");
+  const p2 = construiestePoza({ acum: Date.UTC(2026, 8, 28, 13, 40), versiune: "v100.3", boti: [{ ...b, ziPionex: null }], t212: [], simboluri: [] });
+  assert.equal(p2.boti[0].zi, null);
+});
+await test("v100.3: colectorul cere lumanarea zilnica Pionex a botului (interval=1D) si o da pozei ca ziPionex", () => {
+  const c = citeste("./colector.mjs");
+  assert.match(c, /_USDT_PERP[\s\S]{0,200}interval=1D&limit=2/, "cererea 1D pe simbolul perpetual");
+  assert.match(c, /ziDinKlines\(/); assert.match(c, /ziPionex/);
+});
+
 console.log(`\nV100 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste} probe trecute\n`);
 process.exit(picate ? 1 : 0);
