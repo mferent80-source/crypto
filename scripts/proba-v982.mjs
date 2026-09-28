@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { prevClose, prevSimbol, insideri, alerteSimboluri, bataieNecesara, pret30DinIstoric } from "./lib/poza.mjs";
+import { prevClose, prevSimbol, insideri, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, construiestePoza } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { verifica } from "../paznic/worker.mjs";
 
@@ -119,6 +119,24 @@ await test("pret30DinIstoric: lista celor 30 de preturi se umple din istoricul b
   assert.deepEqual(pret30DinIstoric([{ t: 1, pretPerp: null }, { t: 2, pretPerp: "x" }, { t: 3, pretPerp: 0.5 }], []), [0.5], "intrarile fara pret se sar");
   const dez = pret30DinIstoric([{ t: 3, pretPerp: 3 }, { t: 1, pretPerp: 1 }, { t: 2, pretPerp: 2 }], []); assert.deepEqual(dez, [1, 2, 3], "sortate dupa timp");
   assert.equal(pret30DinIstoric(null, null).length, 0);
+});
+
+// ---------- 3c. mișcarea botului pe 24 h (pagina alerts: „unde vad procentul la JTO?") ----------
+await test("pret24hDinIstoric: pretul de acum ~24 h din istoricul botului (cea mai apropiata intrare de acum-24h); bot mai tanar -> cea mai veche intrare + orele reale; fara istoric -> null", () => {
+  const acum = T("2026-09-28T07:00:00Z");
+  const ist = Array.from({ length: 30 * 60 }, (_, i) => ({ t: acum - (30 * 60 - i) * MIN, pretPerp: 0.6 + i * 0.00001 }));   // 30 de ore, minut cu minut
+  const r = pret24hDinIstoric(ist, acum);
+  assert.equal(r.t, acum - 24 * 60 * MIN); assert.equal(r.ore, 24); assert.ok(Math.abs(r.pret - (0.6 + 6 * 60 * 0.00001)) < 1e-9);
+  const tanar = pret24hDinIstoric(ist.slice(-7 * 60), acum); assert.equal(tanar.ore, 7); assert.equal(tanar.t, acum - 7 * 60 * MIN);
+  assert.equal(pret24hDinIstoric([], acum), null); assert.equal(pret24hDinIstoric(null, acum), null);
+  assert.equal(pret24hDinIstoric([{ t: acum - 5 * MIN, pretPerp: null }], acum), null, "fara pret valid -> null");
+});
+await test("construiestePoza: botul cu pret24h din colector -> d24 (procent) si d24Ore in poza; fara -> null (pagina nu inventeaza)", () => {
+  const b = { id: "2386", baza: "JTO.PERP", directie: "long", pretCurent: 0.5702, gridJos: 0.5722, gridSus: 0.6572, profitTotal: -18.84, pret24h: { pret: 0.5886, ore: 24 } };
+  const p = construiestePoza({ acum: T("2026-09-28T07:00:00Z"), versiune: "v99.6", boti: [b], t212: [], simboluri: [] });
+  assert.ok(Math.abs(p.boti[0].d24 - (0.5702 / 0.5886 - 1)) < 1e-6, "d24 " + p.boti[0].d24); assert.equal(p.boti[0].d24Ore, 24);
+  const p2 = construiestePoza({ acum: T("2026-09-28T07:00:00Z"), versiune: "v99.6", boti: [{ ...b, pret24h: null }], t212: [], simboluri: [] });
+  assert.equal(p2.boti[0].d24, null); assert.equal(p2.boti[0].d24Ore, null);
 });
 
 // ---------- 4. insider "nou" ----------

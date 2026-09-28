@@ -85,7 +85,9 @@ function botPoza(b) {
     total: rot(total, 2), perechi: nr(b.ordinePerechi), gridBrut: rot(brut, 2), pozitie: total !== null ? rot(total - brut - com, 2) : null, comisioane: rot(com, 3),
     zero: rot(b.zero, 6), plan: b.plan ? { plus: nr(b.plan.plus), minus: nr(b.plan.minus), afaraOre: nr(b.plan.afaraOre) } : null,
     niv: sem.niv, motive: sem.motive, sfat: sem.sfat,
-    pret30: esantion((b.pret30 || []).map((v) => rot(v, 6)).filter((v) => v !== null), 30), la: nr(b.la) };
+    pret30: esantion((b.pret30 || []).map((v) => rot(v, 6)).filter((v) => v !== null), 30), la: nr(b.la),
+    // v99.6: mișcarea pe ~24 h (pret24h din istoricul botului) - null cand lipseste, pagina nu inventeaza
+    d24: b.pret24h && nr(b.pret24h.pret) > 0 && pret !== null ? rot(pret / b.pret24h.pret - 1, 6) : null, d24Ore: b.pret24h ? nr(b.pret24h.ore) : null };
 }
 function simbolPoza(x, acum) {
   const e = x.extra || null;
@@ -124,6 +126,16 @@ export function bataieNecesara({ acum, pozaOkLa, paznicLa }) {
 // v99.5 (el, 28.09: „la JTO îmi arată doar prețul, nu și cât s-a mișcat"): cele 30 de prețuri ale botului (linia + procentul de pe
 // pagina alerts) stateau doar in memoria colectorului si dupa o repornire porneau de la zero (~30 min „puține poze încă").
 // Istoricul botului din KV are pretul minut cu minut (pretPerp) -> lista se umple de acolo; memoria (cele mai noi) ramane la coada.
+// v99.6 (el, 28.09: „unde vad procentul la JTO?"): pretul botului de acum ~24 h, din istoricul minut cu minut - pagina alerts arata
+// mișcarea pe 24 h gros, sub pret, ca la actiuni. Bot mai tanar de 24 h -> cea mai veche intrare, cu orele reale. Fara istoric -> null.
+export function pret24hDinIstoric(intrari, acum) {
+  const ist = (Array.isArray(intrari) ? intrari : []).filter((x) => x && nr(x.t) !== null && nr(x.pretPerp) !== null && x.pretPerp > 0).sort((a, b) => a.t - b.t);
+  if (!ist.length) return null;
+  const tinta = acum - 24 * 3600000;
+  let ales = ist[0];
+  if (ist[0].t <= tinta) { let d = Infinity; for (const x of ist) { const dd = Math.abs(x.t - tinta); if (dd < d) { d = dd; ales = x; } } }
+  return { pret: ales.pretPerp, t: ales.t, ore: Math.round((acum - ales.t) / 3600000) };
+}
 export function pret30DinIstoric(intrari, ring) {
   const r = (Array.isArray(ring) ? ring : []).map(nr).filter((v) => v !== null);
   const ist = (Array.isArray(intrari) ? intrari : []).filter((x) => x && nr(x.t) !== null && nr(x.pretPerp) !== null).sort((a, b) => a.t - b.t).map((x) => x.pretPerp);

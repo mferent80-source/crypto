@@ -21,9 +21,9 @@ import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { construiestePoza, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric } from "./lib/poza.mjs";
+import { construiestePoza, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v99.5";
+const VERSIUNE_COLECTOR = "v99.6";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -543,13 +543,16 @@ async function botiPentruPoza() {
   for (const b of ultimiiBoti) {
     if (!b || !b.id || b.activ === false) continue;
     // v99.5: dupa o repornire lista celor 30 de preturi e goala ~30 min (pagina alerts arata doar pretul) -> se umple din istoricul din KV
-    if ((pret30[b.id] || []).length < 30) {
-      try { const h = await cere("/api/istoric-bot?action=citeste&bot=" + encodeURIComponent(b.id) + "&ore=2"); pret30[b.id] = pret30DinIstoric(h && h.intrari, pret30[b.id] || []); }
-      catch (e) { jurnal("poza: pret30 din istoric", b.id, e.message); }
-    }
+    // v99.6: din acelasi istoric (25 h) vine si pretul de acum ~24 h -> mișcarea pe 24 h, gros sub pret pe pagina alerts
+    let pret24h = null;
+    try {
+      const h = await cere("/api/istoric-bot?action=citeste&bot=" + encodeURIComponent(b.id) + "&ore=25");
+      if ((pret30[b.id] || []).length < 30) pret30[b.id] = pret30DinIstoric(h && h.intrari, pret30[b.id] || []);
+      pret24h = pret24hDinIstoric(h && h.intrari, Date.now());
+    } catch (e) { jurnal("poza: istoricul botului", b.id, e.message); }
     let plan = null; try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id))); } catch {}
     let zero = null; try { const z = TabloExtra.dacaInchizi(b); zero = z && z.pretZero > 0 ? z.pretZero : null; } catch {}
-    const x = semnaleUlt[b.id]; out.push({ ...b, plan, zero, pret30: pret30[b.id] || [], semafor: x && x.semafor ? x.semafor : null, la: Date.now() });
+    const x = semnaleUlt[b.id]; out.push({ ...b, plan, zero, pret30: pret30[b.id] || [], pret24h, semafor: x && x.semafor ? x.semafor : null, la: Date.now() });
   }
   return out;
 }
