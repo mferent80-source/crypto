@@ -63,7 +63,7 @@ setTimeout(function () { alCentruPorneste(false); }, 8000);
 function alDeseneaza() {
   var box = $("alCentru"); if (!box) return;
   var l = alSt.l;
-  var cap = '<div class="alCap"><div><h4>Alertele de acasă</h4><span class="alSub">boți, acțiuni și piață · de la colector (aceleași ca pe Discord) · ultimele 7 zile'
+  var cap = '<div class="alCap"><div><h4>Alertele de acasă</h4><span class="alSub">boți, acțiuni și piață · de la colector (aceleași ca pe Discord) · ultimele 100, cel mult 7 zile'
     + (alSt.la && l ? ' · actualizat ' + new Date(alSt.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : '') + '</span></div><button class="alBtn" type="button" data-alrefa="1">↻ Reîmprospătează</button></div>';
   if (!l) { box.innerHTML = cap + '<p class="alGol">' + (alSt.err ? 'Nu pot citi alertele: ' + escapeHtml(alSt.err) : 'Aduc alertele…') + '</p>'; return; }
   var c = AlCentru.numara(l);

@@ -368,9 +368,11 @@ var ActiuniSemnale = (function () {
     if (!pl || !(p.pret > 0)) return out;
     var zi = new Date(acum || Date.now()).toISOString().slice(0, 10), s = p.simbol || p.ticker;
     function ad(tip, nivel, titlu, mesaj) { out.push({ cheie: "t212-" + p.ticker + "-" + tip + "-" + zi, nivel: nivel, titlu: titlu, mesaj: mesaj }); }
-    if (pl.stop > 0 && p.pret <= pl.stop) ad("stop", "critic", s + ": a atins stopul din planul tău (" + pl.stop + ")", "Prețul e " + p.pret + ". 👉 Ce aș face eu: ies cum am scris înainte și nu recumpăr " + s + " azi.");
-    if (pl.trailPct > 0 && p.maxDupaCumparare > 0 && p.pret <= p.maxDupaCumparare * (1 - pl.trailPct / 100)) ad("trail", "critic", s + ": −" + pl.trailPct + "% de la maxim, cum ai scris în plan", "A scăzut " + P(p.pret / p.maxDupaCumparare - 1) + " de la maximul de după cumpărare (" + p.maxDupaCumparare + "). 👉 Ce aș face eu: ies, măcar jumătate.");
-    if (pl.tinta > 0 && p.pret >= pl.tinta) ad("tinta", "info", s + ": ținta din plan e atinsă (" + pl.tinta + ")", "Prețul e " + p.pret + ". 👉 Ce aș face eu: iau profit pe o parte și mut stopul la prețul de intrare pe rest.");
+    // v99.1 (audit #9): preturile ca preturi (2 zecimale peste 1, 4 sub), nu 30.690000534057617
+    var pr = function (v) { v = Number(v); return !isFinite(v) ? "?" : v >= 1 ? v.toFixed(2) : v.toFixed(4); };
+    if (pl.stop > 0 && p.pret <= pl.stop) ad("stop", "critic", s + ": a atins stopul din planul tău (" + pr(pl.stop) + ")", "Prețul e " + pr(p.pret) + ". 👉 Ce aș face eu: ies cum am scris înainte și nu recumpăr " + s + " azi.");
+    if (pl.trailPct > 0 && p.maxDupaCumparare > 0 && p.pret <= p.maxDupaCumparare * (1 - pl.trailPct / 100)) ad("trail", "critic", s + ": −" + pl.trailPct + "% de la maxim, cum ai scris în plan", "A scăzut " + P(p.pret / p.maxDupaCumparare - 1) + " de la maximul de după cumpărare (" + pr(p.maxDupaCumparare) + "). 👉 Ce aș face eu: ies, măcar jumătate.");
+    if (pl.tinta > 0 && p.pret >= pl.tinta) ad("tinta", "info", s + ": ținta din plan e atinsă (" + pr(pl.tinta) + ")", "Prețul e " + pr(p.pret) + ". 👉 Ce aș face eu: iau profit pe o parte și mut stopul la prețul de intrare pe rest.");
     return out;
   }
 

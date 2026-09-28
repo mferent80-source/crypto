@@ -340,7 +340,6 @@ function paperEntryOrderFillFraction(t,order,bar,history){
  const crossedOpen=dir>0?o<=limit:o>=limit;if(crossedOpen)fraction=Math.max(fraction,t.fillModel==="BALANCED"?.95:.78);fraction=clamp(fraction,.08,1);
  const price=dir>0?(o<=limit?Math.min(o,limit):limit):(o>=limit?Math.max(o,limit):limit);return {fraction,price,vr,penetration}
 }
-function paperEntryFillFraction(t,bar,history){return paperEntryOrderFillFraction(t,{price:+t.entryLimit,qtyTarget:+t.qtyTarget||0},bar,history)}
 function paperApplyEntryFill(t,price,qty,label,slipBps=0,barTs=Date.now()){
  qty=Math.min(Math.max(0,qty),Math.max(0,(+t.qtyTarget||0)-(+t.qtyFilled||0)));if(qty<=0)return;
  const prevQty=+t.qtyFilled||0,prevEntry=prevQty?(+t.entry||+t.plannedEntry):0,newQty=prevQty+qty,avg=(prevEntry*prevQty+price*qty)/newQty,notional=price*qty,fee=notional*(+appSettings().feeBps||0)/10000,dir=t.direction==="LONG"?1:-1,slip=dir*(price/(+t.plannedEntry||price)-1)*10000;
@@ -983,10 +982,6 @@ async function runRobustnessLab(){
    renderStrategyLifecycle()
  }catch(e){box.innerHTML=`<div class="emptyState">Robustness unavailable: ${escapeHtml(e.message)}</div>`;$("robState").textContent="N/A"}
 }
-function portfolioReturnsSeries(seriesMap,positions){
- const lengths=positions.map(p=>seriesMap[p.symbol]?.length||0).filter(Boolean);if(!lengths.length)return [];const n=Math.min(...lengths)-1;if(n<20)return [];
- const gross=positions.reduce((a,p)=>a+p.notional,0)||1,out=[];for(let k=n;k>=1;k--){let pr=0;for(const p of positions){const a=seriesMap[p.symbol],i=a.length-k-1,j=i+1;if(i<0||j>=a.length)continue;const r=(+a[j][4]/+a[i][4]-1),w=(p.notional/gross)*(p.direction==="SHORT"?-1:1);pr+=w*r}out.push(pr)}return out
-}
 function renderCorrMatrix(symbols,returns){
  let html='<table class="corrTable"><tr><th></th>'+symbols.map(x=>`<th>${coin(x)}</th>`).join("")+'</tr>';for(let i=0;i<symbols.length;i++){html+=`<tr><th>${coin(symbols[i])}</th>`;for(let j=0;j<symbols.length;j++){const c=i===j?1:corr(returns[i],returns[j]);html+=`<td>${Number.isFinite(c)?c.toFixed(2):"—"}</td>`}html+='</tr>'}html+='</table>';return html
 }
@@ -1290,9 +1285,6 @@ async function loadPortfolioRisk(force=false){
    renderStrategyFamilies();await assessCurrentSetupPortfolioRisk(false)
  }catch(e){$("portStatus").textContent="UNAVAILABLE";$("portfolioCorr").innerHTML=`<div class="emptyState">Portfolio risk unavailable: ${escapeHtml(e.message)}</div>`;renderPortfolioBudgets([]);renderStrategyFamilies()}
 }
-function paperExit(t,price,qty,label){
- paperMigrateTrade(t);return paperExitSim(t,price,qty,label,Math.max(1,+appSettings().slippageBps||0),true,Date.now())
-}
 function drawPaperEquity(){
  const cv=$("paperEquityCurve");if(!cv)return;const ctx=cv.getContext("2d"),st=paperAccountStats(),a=[...paperHistory(),{ts:Date.now(),equity:st.equity}],w=cv.width,h=cv.height,pad=18;ctx.clearRect(0,0,w,h);if(a.length<2)return;const vals=a.map(x=>x.equity),mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1,x=i=>pad+i/(a.length-1)*(w-2*pad),y=v=>h-pad-(v-mn)/rg*(h-2*pad);ctx.strokeStyle="#69a7ff";ctx.lineWidth=2;ctx.beginPath();a.forEach((v,i)=>i?ctx.lineTo(x(i),y(v.equity)):ctx.moveTo(x(i),y(v.equity)));ctx.stroke()
 }
@@ -1366,9 +1358,6 @@ function stockSymbol(s){
 }
 function marketSymbol(s){
   return assetClass()==="STOCKS"?stockSymbol(s):((s||"BTC").trim().toUpperCase().replace(/[^A-Z0-9]/g,"").endsWith("USDT")?(s||"BTC").trim().toUpperCase().replace(/[^A-Z0-9]/g,""):(s||"BTC").trim().toUpperCase().replace(/[^A-Z0-9]/g,"")+"USDT")
-}
-function marketLabelSymbol(sym){
-  return assetClass()==="STOCKS"?stockSymbol(sym):coin(sym)
 }
 function setAssetClass(v){
   const market=v==="STOCKS"?"STOCKS":"CRYPTO",prev=assetClass();
@@ -1902,7 +1891,6 @@ async function loadIntelNews(force=false){
   }catch(e){$("newsList").innerHTML=`<div class="emptyState">News unavailable: ${escapeHtml(e.message)}</div>`;$("newsRisk").textContent="N/A"}
 }
 function escapeHtml(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function safeUiToken(x,max=48){return String(x??"").replace(/[^A-Za-z0-9._:\-/ ]/g,"").slice(0,max)}
 function safeActionToken(x,max=32){return String(x??"").replace(/[^A-Za-z0-9._-]/g,"").slice(0,max)}
 
 function liqSelectedSymbol(){return norm($("symbol").value)}
@@ -2043,11 +2031,6 @@ async function trainTemporalModelAsync(data,l2=.02,split=.7,minTrain=40,minTest=
 }
 function regimeDataset(regime){
   return mlDataset().filter(x=>x.row.regime===regime)
-}
-function trainRegimeModels(l2=.02,split=.7){
-  const regimes=[...new Set(mlDataset().map(x=>x.row.regime).filter(Boolean))],models={};
-  for(const regime of regimes){const data=regimeDataset(regime),fit=trainTemporalModel(data,l2,split,40,20);if(fit)models[regime]=fit}
-  return models
 }
 async function trainRegimeModelsAsync(l2=.02,split=.7){const regimes=[...new Set(mlDataset().map(x=>x.row.regime).filter(Boolean))],models={};for(const regime of regimes){const data=regimeDataset(regime),fit=await trainTemporalModelAsync(data,l2,split,50,20);if(fit)models[regime]=fit}return models}
 function currentHierarchicalProbability(){
@@ -2982,7 +2965,6 @@ function updateAlertBadges(){
  const n=appAlerts().filter(x=>!x.read).length+(typeof alCentruNecitite==="function"?alCentruNecitite():0);for(const id of ["sideAlertCount","topAlertCount"]){const e=$(id);if(e){e.textContent=n;e.style.display=n?"inline-grid":"none"}}
 }
 function clearAlerts(){localStorage.removeItem("radarAlerts");renderAlerts();toast("Alerts cleared","warn")}
-function markAlertsRead(){let a=appAlerts();a.forEach(x=>x.read=true);putAlerts(a)}
 function checkAlerts(q,sm,deriv){
  const st=appSettings(),p=q.price,near=st.nearPct/100;
  if(st.alerts.sr){
@@ -3238,15 +3220,6 @@ function parseRetryMs(message,retryAfter=null){
   if(Number.isFinite(+retryAfter)&&+retryAfter>0)return Math.max(65000,+retryAfter*1000);
   const m=String(message||"").match(/retry(?:-after)?[^0-9]*(\d+)/i);
   return m?Math.max(65000,Number(m[1])*1000):65000
-}
-async function awaitPionexReady(label="Pionex"){
-  while(pionexCooldownRemaining()>0){
-    const sec=Math.ceil(pionexCooldownRemaining()/1000);
-    if($("pionexRateState"))$("pionexRateState").textContent=`${label} paused · ${sec}s`;
-    if($("healthPionexCooldown"))$("healthPionexCooldown").textContent=`${sec}s`;
-    await sleep(Math.min(1000,pionexCooldownRemaining()+50))
-  }
-  if($("healthPionexCooldown"))$("healthPionexCooldown").textContent="READY"
 }
 function pionexRateTask(fn,weight=1){
   const task=pionexQueue.then(async()=>{
@@ -5260,7 +5233,6 @@ function renderGrid(){
 function tbPanouVizibil(){return !!($("tabloubot")&&$("tabloubot").classList.contains("on"))}
 // Cadenta REALA cu care ruleaza colectorul acum (nu o recalculare pe hartie) -
 // masurabila din proba, ca sa nu ramana o garda oarba pe un camp sters.
-function tbCadentaMs(){return tbColectorPas}
 function tbColectorTick(){
   // tbAduDate NU scrie in istoric daca ruta a picat - purtarea aia ramane.
   return tbAduDate().then(function(){if(tbPanouVizibil())renderTabloBot()});
@@ -6104,7 +6076,6 @@ for(const [evt,attr] of [["click","data-action-click"],["change","data-action-ch
 // v65 · Decision Intelligence OS Pro
 const V65_VERSION="v65";
 function v65Clamp(x,a=0,b=100){return Math.max(a,Math.min(b,Number.isFinite(+x)?+x:0))}
-function v65BiasScore(x){return Number.isFinite(+x)?v65Clamp((+x+1)*50):50}
 function v65Module(key,label,state,score,bias,detail,action="",severity="INFO",meta={}){return {key,label,state:String(state||"N/A"),score:v65Clamp(score),bias:Number.isFinite(+bias)?Math.max(-1,Math.min(1,+bias)):0,detail:String(detail||""),action:String(action||""),severity,...meta}}
 function v65RegimeClass(q={}){const rv=+q.rvPercentile||50,ch=+q.chop||50,adx=+q.adx||0,score=+q.score||50,bo=String(q.breakout||"NONE"),sq=String(q.ttm?.state||"");if(rv>=90)return score>=55?"PANIC / HIGH-VOL UP":"PANIC / HIGH-VOL DOWN";if(sq.includes("SQUEEZE ON"))return "SQUEEZE";if(bo!=="NONE"&&(+q.vr||0)>=1.15)return bo==="UP"?"BREAKOUT UP":"BREAKOUT DOWN";if(ch>=61)return "RANGE";if(adx>=25)return score>=55?"TREND UP":"TREND DOWN";if(rv<=25)return "LOW VOL";return "TRANSITION"}
 function v65RegimeIntelligence(st=window.__radarState){if(!st?.q)return v65Module("regime","Regime Intelligence Pro","NO DATA",0,0,"Run analysis first.");const rows=(st.m||[]).map(x=>({tf:x.tf,state:v65RegimeClass(x),score:+x.score||50}));if(!rows.some(x=>x.tf===st.tf))rows.unshift({tf:st.tf,state:v65RegimeClass(st.q),score:+st.q.score||50});const up=rows.filter(x=>x.state.includes("UP")).length,down=rows.filter(x=>x.state.includes("DOWN")).length,range=rows.filter(x=>x.state==="RANGE"||x.state==="SQUEEZE").length,n=Math.max(1,rows.length),bias=(up-down)/n,agreement=Math.max(up,down,range)/n,state=v65RegimeClass(st.q),score=v65Clamp(45+agreement*35+Math.abs(bias)*20);return v65Module("regime","Regime Intelligence Pro",state,score,bias,rows.map(x=>`${x.tf}:${x.state}`).join(" · "),`Strategy weights adapt to ${state}.`,state.includes("PANIC")?"WARN":"INFO",{rows,agreement})}
@@ -6139,7 +6110,6 @@ const V66_FACTORS=[
 function v66Clamp(x,a=0,b=100){return Math.max(a,Math.min(b,Number.isFinite(+x)?+x:0))}
 function v66Rows(){const market=assetClass(),source=analysisSource();return chronologicalRows(researchJournalRows().filter(x=>Number.isFinite(metricR(x))&&prMarketOf(x)===market&&((x.source||"BINANCE")===source))).map(x=>({...x,_r:metricR(x)}))}
 function v66MeanCi(vals){const a=(vals||[]).filter(Number.isFinite),n=a.length;if(!n)return {n:0,mean:0,lo:NaN,hi:NaN,sd:NaN};const mean=a.reduce((x,y)=>x+y,0)/n;if(n<2)return {n,mean,lo:NaN,hi:NaN,sd:0};const sd=Math.sqrt(a.reduce((s,x)=>s+(x-mean)**2,0)/(n-1)),se=sd/Math.sqrt(n),z=n<10?2.262:n<20?2.101:n<30?2.045:1.96;return {n,mean,lo:mean-z*se,hi:mean+z*se,sd}}
-function v66Pf(vals){const gp=vals.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=-vals.filter(x=>x<0).reduce((a,b)=>a+b,0);return gl?gp/gl:gp?99:0}
 function v66OutcomeTracker(rows=v66Rows()){const vals=rows.map(x=>x._r),st=statPack(vals),correct=vals.filter(x=>x>.05).length,wrong=vals.filter(x=>x<-.05).length,neutral=vals.length-correct-wrong,last=rows.slice(-20),recent=statPack(last.map(x=>x._r)),state=st.n<20?"COLLECTING":st.avg>0&&st.pf>=1.15?"POSITIVE OBSERVED EDGE":st.avg<0||st.pf<.95?"NEGATIVE OBSERVED EDGE":"MIXED";return {state,score:st.n?Math.round(v66Clamp(50+st.avg*35+(st.pf-1)*15)):20,detail:`N${st.n} · ${st.avg.toFixed(2)}R · PF ${st.pf.toFixed(2)} · W/L/N ${correct}/${wrong}/${neutral}`,action:`Recent20 ${recent.n?recent.avg.toFixed(2)+"R · PF "+recent.pf.toFixed(2):"insufficient"}`,stats:st,recent,correct,wrong,neutral}}
 function v66Calibration(rows=v66Rows()){const defs=[[50,59],[60,64],[65,69],[70,74],[75,79],[80,89],[90,100]],buckets=[],all=[];let total=0,ece=0,brier=0;for(const [lo,hi] of defs){const z=rows.filter(x=>{const c=Math.max(+x.longConf||0,+x.shortConf||0);return c>=lo&&c<=hi}),n=z.length,w=z.filter(x=>x._r>0).length,pred=n?z.reduce((a,x)=>a+Math.max(+x.longConf||0,+x.shortConf||0),0)/n/100:NaN,obs=n?w/n:NaN,shrunk=n?(w+5)/(n+10):NaN,gap=n?Math.abs(pred-obs):NaN,avg=n?z.reduce((a,x)=>a+x._r,0)/n:NaN;if(n){total+=n;ece+=gap*n;for(const x of z){const p=Math.max(+x.longConf||0,+x.shortConf||0)/100,y=x._r>0?1:0;brier+=(p-y)**2;all.push({p,y})}}buckets.push({range:`${lo}-${hi}`,n,pred,obs,shrunk,gap,avg})}ece=total?ece/total*100:NaN;brier=total?brier/total:NaN;const state=total<30?"LOW SAMPLE":ece<=8?"WELL CALIBRATED":ece<=15?"WATCH":"MISCALIBRATED",score=total<10?20:v66Clamp(100-(Number.isFinite(ece)?ece*3:50))*Math.min(1,total/60);return {state,score,detail:`N${total} · ECE ${Number.isFinite(ece)?ece.toFixed(1)+"pp":"—"} · Brier ${Number.isFinite(brier)?brier.toFixed(3):"—"}`,action:state==="MISCALIBRATED"?"Do not treat raw confidence as probability.":"Use empirical bucket rates alongside raw confidence.",n:total,ece,brier,buckets}}
 function v66Dir(x){return x.direction==="SHORT"?-1:x.direction==="LONG"?1:0}
