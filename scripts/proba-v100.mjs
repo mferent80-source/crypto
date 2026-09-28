@@ -224,5 +224,38 @@ await test("v100.3: colectorul cere lumanarea zilnica Pionex a botului (interval
   assert.match(c, /ziDinKlines\(/); assert.match(c, /ziPionex/);
 });
 
+// ---------- v100.4 (el, 28.09: „atât în pagina alerts cât și în pagina botului lipsește profit per grilă, adică doar din grid”) ----------
+// Pionex arata doua cifre ale gridului: „Grid profit” (tot ce a adus gridul, fara pozitie) si „Profit/grid” (cat aduce O grila, dupa
+// comision). Amandoua trebuie la vedere, pe Tablou si pe pagina alerts.
+const BOT_G = () => ({ id: "2386", baza: "JTO.PERP", directie: "long", levier: 5, investit: 98.14, gridJos: 0.5455, gridSus: 0.565, pretCurent: 0.5603, gridProfitBrut: 12.31882676, ordinePerechi: 27, comisioane: -1.89, profitTotal: -20.76, brut: { buOrderData: { row: 12, gridType: "arithmetic" } } });
+await test("v100.4: TabloExtra.profitPeGrila - ce aduce O grila dupa comision: procentul (ca „Profit/grid” din Pionex) si banii (investit x levier / grile x procent); fara grile -> null", () => {
+  assert.equal(typeof TE.profitPeGrila, "function", "TabloExtra.profitPeGrila exportat");
+  const g = TE.geometrieBot(BOT_G()), r = TE.profitPeGrila(BOT_G());
+  aprox(r.pct, g.netPct, 1e-12, "pct = pasul net al botului"); assert.equal(r.grile, 12); assert.equal(r.mod, "aritmetic");
+  aprox(r.usdt, 98.14 * 5 / 12 * g.netPct, 1e-9, "usdt pe grila");
+  assert.equal(TE.profitPeGrila({ ...BOT_G(), brut: { buOrderData: {} } }), null, "fara numarul de grile -> null");
+  assert.equal(TE.profitPeGrila({ ...BOT_G(), investit: null }).usdt, null, "fara investit: procentul ramane, banii nu se inventeaza");
+});
+await test("v100.4: poza duce grila {pct, usdt, grile} pe bot; fara -> null", async () => {
+  const { construiestePoza } = await import("./lib/poza.mjs");
+  const b = { ...BOT_G(), grila: { pct: 0.00196, usdt: 0.0801, grile: 12, mod: "aritmetic" } };
+  const p = construiestePoza({ acum: Date.UTC(2026, 8, 28, 14), versiune: "v100.4", boti: [b], t212: [], simboluri: [] });
+  assert.deepEqual(p.boti[0].grila, { pct: 0.00196, usdt: 0.0801, grile: 12 });
+  const p2 = construiestePoza({ acum: Date.UTC(2026, 8, 28, 14), versiune: "v100.4", boti: [{ ...b, grila: null }], t212: [], simboluri: [] });
+  assert.equal(p2.boti[0].grila, null);
+});
+await test("v100.4: colectorul pune profitul pe grila in poza (TabloExtra.profitPeGrila)", () => {
+  assert.match(citeste("./colector.mjs"), /grila: TabloExtra\.profitPeGrila\(b\)/);
+});
+await test("v100.4: Tabloul - profitul DOAR din grid la vedere: sub „Rezultat total” (tbKpiGrid) si in Banii botului ca rand colorat, plus „Pe grilă, după comision”", () => {
+  const html = citeste("../public/index.html"), app = citeste("../public/app.js");
+  assert.match(html, /id="tbKpiTotal"[^>]*>[^<]*<\/b><span id="tbKpiGrid" class="tbKpiGrid">/, "randul din grid imediat sub rezultatul total");
+  assert.match(app, /pune\("tbKpiGrid",/);
+  assert.match(app, /rand\("Profit doar din grid",botiBan\(b\.gridProfitBrut\),botiClasa\(b\.gridProfitBrut\)/, "rand normal, colorat - nu gri");
+  assert.doesNotMatch(app, /rand\("Profit brut din grid"/);
+  assert.match(app, /rand\("Pe grilă, după comision"/);
+  assert.match(citeste("../public/app.css"), /#tabloubot \.tbKpiGrid\{/);
+});
+
 console.log(`\nV100 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste} probe trecute\n`);
 process.exit(picate ? 1 : 0);

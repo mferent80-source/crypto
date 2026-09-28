@@ -27,6 +27,14 @@ var TabloExtra = (function () {
     return { mod: mod, grile: N, jos: jos, sus: sus, pasPret: pasPret, pasPct: pasPct, netPct: net, preaDese: net < C.PAS_MIN - 2 * C.COMISION };
   }
 
+  // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): cat aduce O grila a botului care ruleaza, dupa comision -
+  // procentul (ce arata Pionex la „Profit/grid”) si banii: o grila misca investit x levier / grile. Fara investit, banii raman null.
+  function profitPeGrila(b) {
+    var g = geometrieBot(b), inv = nr(b && b.investit), lev = nr(b && b.levier) || 1;
+    if (!g) return null;
+    return { pct: g.netPct, usdt: inv !== null && inv > 0 ? inv * lev / g.grile * g.netPct : null, grile: g.grile, mod: g.mod };
+  }
+
   function comparaCuFisa(b, f) {
     var out = { randuri: [], semnale: [] };
     if (!b || !f || !f.setare) return out;
@@ -321,7 +329,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

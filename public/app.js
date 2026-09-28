@@ -5567,12 +5567,15 @@ function tbDeseneazaBanii(b){
   var el=$("tbBani"),av=$("tbAvertismente");if(!el)return;
   if(!b){el.innerHTML='<div class="emptyState">—</div>';if(av)av.innerHTML='<p class="tbSub">Fără bot citit.</p>';tbDeseneazaSemafor(null);return}
   // Lista, nu cutii: eticheta la stanga, cifra la dreapta, aliniata pe coloana.
+  var pg=typeof TabloExtra!=="undefined"?TabloExtra.profitPeGrila(b):null,per=botiNr(b.ordinePerechi);
   var rand=function(eticheta,valoare,cls,nota){return '<div class="tbLinie"><span>'+escapeHtml(eticheta)+(nota?' <span class="tbSub">'+escapeHtml(nota)+'</span>':'')+'</span><b class="'+(cls||"")+'">'+escapeHtml(valoare)+'</b></div>'};
   el.innerHTML=rand("Investit",botiBan(b.investit,2,false))+
     rand("Realizat, după comisioane",botiBan(b.profitNet),botiClasa(b.profitNet))+
     rand("Poziția deschisă",botiBan(b.pnlNerealizat)+(b.pnlNerealizatSigur===false?" (semn nesigur)":""),botiClasa(b.pnlNerealizat),"nerealizat")+
     '<div class="tbLinie tbLinieTotal"><span>Total</span><b class="'+botiClasa(b.profitTotal)+'">'+escapeHtml(botiBan(b.profitTotal))+'</b></div>'+
-    rand("Profit brut din grid",botiBan(b.gridProfitBrut),"tbSubVal")+
+    // v100.4: profitul DOAR din grid (Pionex „Grid profit”) la vedere, colorat, si cat aduce o grila dupa comision (Pionex „Profit/grid”)
+    rand("Profit doar din grid",botiBan(b.gridProfitBrut),botiClasa(b.gridProfitBrut),(per!==null?per+" perechi încheiate · ":"")+"brut, fără comisioane")+
+    (pg?rand("Pe grilă, după comision",GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+pg.usdt.toFixed(3)+" USDT":""),"",pg.grile+" grile "+pg.mod):"")+
     rand("Comisioane",botiBan(b.comisioane),"tbSubVal")+
     rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
     tbRandUmpleri(b);
@@ -5694,13 +5697,16 @@ function renderTabloAlerte(){
 function tbDeseneazaKpi(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
   var pune=function(id,text,cls){var e=$(id);if(!e)return;e.textContent=text;if(cls!=null)e.className=(e.classList.contains("tbKpiVal")?"tbKpiVal ":"tbSub ")+cls};
-  if(!b){["tbKpiTotal","tbKpiLich","tbKpiPret","tbKpiPiata"].forEach(function(id){pune(id,"—","")});
+  if(!b){["tbKpiTotal","tbKpiLich","tbKpiPret","tbKpiPiata"].forEach(function(id){pune(id,"—","")});pune("tbKpiGrid","—","tbKpiGrid");
     ["tbKpiTotalSub","tbKpiLichSub","tbKpiPretSub","tbKpiPiataSub"].forEach(function(id){pune(id,"—","")});return}
   var tot=botiNr(b.profitTotal),inv=botiNr(b.investit);
   pune("tbKpiTotal",tot===null?"—":(tot>0?"+":"")+tot.toFixed(2),botiClasa(b.profitTotal));
   // v87: ritmul de recuperare (grile - costuri pe zi) langa rezultat
   var rr=typeof TabloExtra!=="undefined"?TabloExtra.ritmRecuperare(tot,TabloExtra.grileVsCosturi(b,Date.now()).netZi):null;
   pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?tbFormateazaSemn(100*tot/inv,2)+"% din "+inv.toFixed(2)+" investiți":"cu tot cu poziția deschisă")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):""),"");
+  // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): ce a adus DOAR gridul (Pionex „Grid profit”) + cat aduce o grila
+  var gp=botiNr(b.gridProfitBrut),pg=typeof TabloExtra!=="undefined"?TabloExtra.profitPeGrila(b):null;
+  pune("tbKpiGrid","din grid "+(gp===null?"—":(gp>0?"+":"")+gp.toFixed(2)+" USDT")+(pg?" · pe grilă "+GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+pg.usdt.toFixed(3)+" USDT":""):""),"tbKpiGrid "+botiClasa(b.gridProfitBrut));
   var dist=botiNr(b.distantaLichidarePct),dep=!!b.lichidareDepasita,parte=b.lichidarePartea==="sus"?"sus":b.lichidarePartea==="jos"?"jos":null;
   var nivel=dep||(dist!==null&&Math.abs(dist)<8)?"bad":dist!==null&&Math.abs(dist)<15?"tbWarn":dist===null?"mutedInfo":"good";
   pune("tbKpiLich",dep?"DEPĂȘITĂ":dist===null?"—":Math.abs(dist).toFixed(1)+"%",nivel);

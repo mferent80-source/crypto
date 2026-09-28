@@ -89,6 +89,8 @@ function botPoza(b) {
     // v99.6: mișcarea pe ~24 h (pret24h din istoricul botului) - null cand lipseste, pagina nu inventeaza
     d24: b.pret24h && nr(b.pret24h.pret) > 0 && pret !== null ? rot(pret / b.pret24h.pret - 1, 6) : null, d24Ore: b.pret24h ? nr(b.pret24h.ore) : null,
     // v100.3: procentul zilei ca in TradingView (fata de deschiderea lumanarii 1D Pionex = inchiderea de ieri) - rezerva paginii alerts
+    // v100.4: cat aduce O grila, dupa comision (TabloExtra.profitPeGrila) - pagina alerts il arata langa profitul din grid
+    grila: b.grila && nr(b.grila.pct) !== null ? { pct: rot(b.grila.pct, 6), usdt: rot(b.grila.usdt, 4), grile: nr(b.grila.grile) } : null,
     zi: b.ziPionex && nr(b.ziPionex.deschidere) > 0 && pret !== null ? { deschidere: rot(b.ziPionex.deschidere, 6), pct: rot(pret / b.ziPionex.deschidere - 1, 6) } : null };
 }
 function simbolPoza(x, acum) {

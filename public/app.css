@@ -2012,3 +2012,6 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot #tbAcum{columns:2 360px;column-gap:32px}
 #tabloubot #tbAcum .tbLinie{break-inside:avoid;padding:3px 0}
 #tabloubot #tbAcum>p{column-span:all}
+/* v100.4: profitul doar din grid, sub rezultatul total (el: „lipsește profit per grilă, adică doar din grid”) */
+#tabloubot .tbKpiGrid{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
+#tabloubot .tbKpiGrid.good{color:var(--good)}#tabloubot .tbKpiGrid.bad{color:var(--bad)}
