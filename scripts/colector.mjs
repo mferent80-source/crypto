@@ -20,10 +20,12 @@ import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
 import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
+import { execFile } from "node:child_process";
+import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v101.5";
+const VERSIUNE_COLECTOR = "v101.6";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -591,13 +593,22 @@ async function simboluriPentruPoza() {
   return out;
 }
 // v98.1 (I-462): adresa tunelului (PORNESTE-SI-PE-TELEFON.bat scrie jurnalul in %TEMP%), doar daca raspunde ca Radar; o data la 5 minute
+// v101.6: INTAI adresa fixa prin Tailscale (`tailscale serve` catre BAZA) - nu se schimba la pornire; tunelul ramane rezerva
 let tunelLa = 0, tunelUrl = null;
+function serveTailscale() {
+  return new Promise((ok) => execFile(process.env.TAILSCALE_EXE || "C:/Program Files/Tailscale/tailscale.exe", ["serve", "status", "--json"], { timeout: 8000, windowsHide: true }, (e, out) => { try { ok(e ? null : JSON.parse(out)); } catch { ok(null); } }));
+}
+async function raspundeCaRadar(u, ms) {
+  try { const r = await fetch(u + "/api/market?type=health", { signal: AbortSignal.timeout(ms) }); const j = r.ok ? await r.json() : null; return !!(j && j.service === "crypto-radar"); } catch { return false; }
+}
 async function adresaRadarului() {
   if (Date.now() - tunelLa < 5 * 60000) return tunelUrl;
   tunelLa = Date.now(); tunelUrl = null;
+  const fix = adresaTailscale(await serveTailscale(), BAZA);
+  if (fix && await raspundeCaRadar(fix, 6000)) return (tunelUrl = fix);
   try {
     const u = Consilier.adresaTunel(fs.readFileSync(path.join(os.tmpdir(), "crypto-radar-tunel.log"), "utf8"));
-    if (u) { const r = await fetch(u + "/api/market?type=health", { signal: AbortSignal.timeout(6000) }); const j = r.ok ? await r.json() : null; if (j && j.service === "crypto-radar") tunelUrl = u; }
+    if (u && await raspundeCaRadar(u, 6000)) tunelUrl = u;
   } catch {}
   return tunelUrl;
 }
@@ -703,11 +714,8 @@ async function dateDimineata() {
       } catch (e) { jurnal("socoteala sfaturi", e.message); }
     } catch (e) { jurnal("dimineata t212", e.message); }
   }
-  // v91: linkul spre Radar de pe telefon (tunelul lui PORNESTE-SI-PE-TELEFON.bat), doar daca raspunde
-  try {
-    const u = Consilier.adresaTunel(fs.readFileSync(path.join(os.tmpdir(), "crypto-radar-tunel.log"), "latin1"));
-    if (u) { const r = await fetch(u + "/api/market?type=health", { signal: AbortSignal.timeout(8000) }); if (r.ok) out.link = u; }
-  } catch {}
+  // v91: linkul spre Radar de pe telefon, doar daca raspunde; v101.6: acelasi drum ca poza (Tailscale fix, apoi tunelul)
+  try { const u = await adresaRadarului(); if (u) out.link = u; } catch {}
   try { const id = await cere("/api/t212?action=idei"); out.idei = (id && id.idei && Array.isArray(id.idei.actiuni) ? id.idei.actiuni : []).slice(0, 5).map((x) => x.simbol); } catch {}
   try { const cl = await cere("/api/istoric-bot?action=clasament"); out.ideiBoti = Idei.ideiBoti(cl && cl.clasament, [], 3).map((x) => x.moneda); } catch {}
   try { const bo = await cere("/api/bot-orders"); out.boti = (bo && bo.bots || []).filter((b) => b.activ && Number.isFinite(Number(b.distantaLichidarePct)) && Math.abs(Number(b.distantaLichidarePct)) < 15).map((b) => ({ nume: String(b.baza || "").replace(/\.PERP$/, ""), lich: Math.abs(Number(b.distantaLichidarePct)) })); } catch {}
