@@ -26,6 +26,18 @@ await test("traduce simbolul botului pentru ambele burse", () => {
   assert.equal(s.binance, "COTIUSDT");
 });
 
+// v100.13 (29.09, botul PUMPFUN fara preturi): baza botului "PUMPFUN.PERP", tickerul real PUMP_USDT_PERP (vine de la /api/bot-orders
+// ca simbolPionex, din lista oficiala Pionex) -> lumanarile, pretul live si Binance merg dupa tickerul real
+await test("v100.13: cu simbolul real de la server (PUMPFUN.PERP -> PUMP_USDT_PERP), Pionex si Binance merg dupa el", () => {
+  const s = T.simboluri("PUMPFUN.PERP", "USDT", "PUMP_USDT_PERP");
+  assert.equal(s.pionex, "PUMP_USDT_PERP");
+  assert.equal(s.binance, "PUMPUSDT");
+  assert.equal(s.moneda, "PUMP");
+  const v = T.simboluri("COTI.PERP", "USDT", null);
+  assert.equal(v.pionex, "COTI_USDT_PERP", "fara simbol de la server: regula veche");
+  assert.equal(T.simboluri("COTI.PERP", "USDT", "<script>").pionex, "COTI_USDT_PERP", "simbolul ciudat nu intra in adrese");
+});
+
 await test("un simbol fara .PERP ramane pereche simpla", () => {
   const s = T.simboluri("COTI", "USDT");
   assert.equal(s.pionex, "COTI_USDT");

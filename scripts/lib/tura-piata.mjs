@@ -72,7 +72,7 @@ async function boti(d, st, acum) {
   st.miscari = st.miscari || {};
   for (const b of l.slice(0, 6)) {
     const nume = cheiaNume(b.baza); if (!nume) continue;
-    const k = await incearca(d, "bot " + nume, () => d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(nume + "_USDT_PERP") + "&interval=60M&limit=500"));
+    const k = await incearca(d, "bot " + nume, () => d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(b.simbolPionex || nume + "_USDT_PERP") + "&interval=60M&limit=500"));   // v100.13: tickerul real
     const c = k && k.data && Array.isArray(k.data.klines) ? k.data.klines.slice().sort((x, y) => Number(x.time) - Number(y.time)).map((x) => Number(x.close)).filter((v) => v > 0) : [];
     if (c.length < 60) continue;
     const ch = (c[c.length - 1] / c[c.length - 25] - 1) * 100, tip = d.Acasa.miscareTipica(c.slice(0, -1), 24), cheie = "bot-" + nume;

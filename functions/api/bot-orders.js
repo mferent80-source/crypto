@@ -62,9 +62,27 @@ async function preturiPerp(){
   return harta;
 }
 
-// "XYZ.PERP" + "USDT" -> "XYZ_USDT_PERP", cum se cheama la tickere
-function simbolTicker(base,quote){
-  const b=String(base||"");
+// v100.13 (el, 29.09: botul PUMPFUN fara preturi in Tablou): baza botului NU e mereu numele tickerului - Pionex numeste botul
+// "PUMPFUN.PERP", tickerul e PUMP_USDT_PERP (17 monede asa: 1INCH<-INCH, 0G<-ZEROG, NEIRO<-NEIROCTO...). Legatura oficiala =
+// baseCurrency din lista de simboluri PERP; tinuta 6 ore (lista se schimba rar). Picata -> regula veche, motivul in probleme.
+const SIMBOLURI_TTL=6*3600*1000;
+let simboluriTinute={la:0,harta:null};
+async function hartaSimboluri(){
+  if(simboluriTinute.harta&&Date.now()-simboluriTinute.la<SIMBOLURI_TTL)return simboluriTinute.harta;
+  const r=await fetch(`${PIONEX}/api/v1/common/symbols?type=PERP`,{headers:{accept:"application/json"},signal:AbortSignal.timeout(TIMEOUT_MS)});
+  if(!r.ok)throw Error(`simboluri PERP: HTTP ${r.status}`);
+  const d=await r.json();
+  if(!Array.isArray(d?.data?.symbols))throw Error("simboluri PERP: forma necunoscuta (data.symbols nu e o lista)");
+  const harta={};
+  for(const x of d.data.symbols)if(x&&x.symbol&&x.baseCurrency&&x.quoteCurrency)harta[`${x.baseCurrency}.PERP|${x.quoteCurrency}`]=String(x.symbol);
+  simboluriTinute={la:Date.now(),harta};
+  return harta;
+}
+
+// "XYZ.PERP" + "USDT" -> "XYZ_USDT_PERP", cum se cheama la tickere (daca lista Pionex nu spune altceva)
+function simbolTicker(base,quote,harta){
+  const b=String(base||""),real=harta&&harta[`${b}|${quote}`];
+  if(real)return real;
   return b.endsWith(".PERP")?`${b.slice(0,-5)}_${quote}_PERP`:`${b}_${quote}`;
 }
 const ban=v=>{const a=Math.abs(v);return a.toFixed(a>0&&a<0.01?4:2)};
@@ -87,10 +105,11 @@ function lichidare(pret,lichJos,lichSus,directie){
   return {pretLichidare:p.pret,lichidarePartea:p.partea,distantaLichidarePct:Math.round(p.dist*100)/100,lichidareDepasita:p.dist<0};
 }
 
-function normalizeaza(bot,preturi){
+function normalizeaza(bot,preturi,harta){
   const x=bot.buOrderData||{};
   const jos=nr(x.bottom),sus=nr(x.top);
-  const pret=preturi[simbolTicker(bot.base,bot.quote)]??null;
+  const simbolPionex=simbolTicker(bot.base,bot.quote,harta);
+  const pret=preturi[simbolPionex]??null;
   const lichJos=nr(x.estimateLiquidationPriceDown),lichSus=nr(x.estimateLiquidationPriceUp);
   const directie=x.trend||x.gridType||null,dir=String(directie||"").toLowerCase();
 
@@ -173,6 +192,8 @@ function normalizeaza(bot,preturi){
     pozitie,
     pretDeschidere,
     pretCurent:pret,
+    // v100.13: tickerul real (PUMP_USDT_PERP pentru baza PUMPFUN.PERP) - dupa el cer paginile lumanarile si pretul live
+    simbolPionex,
     gridJos:jos,gridSus:sus,
     lichidareJos:lichJos,lichidareSus:lichSus,
     ...lich,
@@ -216,11 +237,13 @@ export async function onRequestGet({request,env}){
     return json(corp,e.status||502,e.retryAfter?{"retry-after":String(e.retryAfter)}:{});
   }
 
-  let preturi={};
-  try{preturi=await preturiPerp()}
-  catch(e){probleme.preturi=String(e.message).slice(0,140)}
+  let preturi={},harta=null;
+  await Promise.all([
+    preturiPerp().then(p=>{preturi=p}).catch(e=>{probleme.preturi=String(e.message).slice(0,140)}),
+    hartaSimboluri().then(h=>{harta=h}).catch(e=>{probleme.simboluri=String(e.message).slice(0,140)}),
+  ]);
 
-  const bots=brute.map(b=>normalizeaza(b,preturi));
+  const bots=brute.map(b=>normalizeaza(b,preturi,harta));
   // Un total cu un termen lipsa e LIPSA, nu o suma mai mica: se spune ce lipseste.
   const incomplete=[];
   const suma=(camp,numeTotal)=>{

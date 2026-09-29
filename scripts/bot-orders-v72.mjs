@@ -498,5 +498,25 @@ await test("opritorul in procente (profit_ratio) devine PRETUL la care totalul a
   const vechi = await unBot([BOT]); assert.equal(vechi.opritorPierdere, 0.02, "fără tip (forma veche): ca înainte"); assert.equal(vechi.opritorPierdereTip, null);
 });
 
+// v100.13 (el, 29.09: „acum în Tabloul botului Pionex nu a dat prețurile, de ce?”): botul PUMPFUN - Pionex numește baza botului
+// "PUMPFUN.PERP", dar tickerul e PUMP_USDT_PERP (17 monede așa: 1INCH<-INCH, 0G<-ZEROG...). Legătura oficială = baseCurrency din
+// /api/v1/common/symbols. Fără ea prețul ieșea null și tot Tabloul (preț, PnL, distanțe, grafic, preț live) rămânea gol.
+const CU_SIMBOLURI = (boti, tickere, simboluri) => (u) => u.includes("/bot/orders") ? { corp: { result: true, data: { results: boti } } }
+  : u.includes("/common/symbols") ? (simboluri ? { corp: { result: true, data: { symbols: simboluri } } } : { status: 500, corp: { result: false } })
+  : { corp: { result: true, data: { tickers: tickere } } };
+await test("v100.13: baza botului cu alt nume decât tickerul (PUMPFUN -> PUMP_USDT_PERP) primește prețul și simbolul real din lista Pionex", async () => {
+  const bot = { ...BOT, base: "PUMPFUN.PERP" };
+  fetchStub(CU_SIMBOLURI([bot], [{ symbol: "PUMP_USDT_PERP", close: "0.0300" }, { symbol: "XYZ_USDT_PERP", close: "9" }],
+    [{ symbol: "PUMP_USDT_PERP", baseCurrency: "PUMPFUN", quoteCurrency: "USDT", type: "PERP" }, { symbol: "XYZ_USDT_PERP", baseCurrency: "XYZ", quoteCurrency: "USDT", type: "PERP" }]));
+  const b = (await cheama("", ENV, proaspat())).corp.bots[0];
+  assert.equal(b.simbolPionex, "PUMP_USDT_PERP"); assert.equal(b.pretCurent, 0.03, "prețul din tickerul real");
+  assert.ok(b.pnlNerealizat !== null, "cu prețul, PnL-ul se calculează");
+});
+await test("v100.13: lista de simboluri picată -> regula veche (XYZ.PERP -> XYZ_USDT_PERP), prețul rămâne", async () => {
+  fetchStub(CU_SIMBOLURI([BOT], [{ symbol: "XYZ_USDT_PERP", close: "0.0300" }], null));
+  const b = (await cheama("", ENV, proaspat())).corp.bots[0];
+  assert.equal(b.simbolPionex, "XYZ_USDT_PERP"); assert.equal(b.pretCurent, 0.03);
+});
+
 console.log(`\nV72_BOT_ORDERS ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

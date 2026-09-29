@@ -23,7 +23,7 @@ import os from "node:os";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v101.3";
+const VERSIUNE_COLECTOR = "v101.4";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -190,7 +190,7 @@ async function lumanari15M(s) {
 async function directiaBotului(b) {
   const d = directii[b.id];
   if (d && Date.now() - d.la < DIRECTIE_MS) return d;
-  const s = TabloBot.simboluri(b.baza, b.quote).pionex;
+  const s = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex;
   try {
     const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=4H&limit=500");
     const a = Directie.analizeaza(k && k.data && k.data.klines, 6, b.directie);
@@ -220,13 +220,13 @@ async function semnaleBot(b, ctx, acum) {
   const d = directii[b.id];
   if (!d || d.calculat) return semnaleUlt[b.id] || null;
   d.calculat = true;
-  const s = TabloBot.simboluri(b.baza, b.quote).pionex;
+  const s = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex;
   const r15 = await lumanari15M(s);
   const b4 = GridCalcul.bare(d.k4), b1 = GridCalcul.agrega(b4, 86400000);
   const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, H: 2, dir: null, levier: null, minNotional: null });
   const f = fisa && !fisa.eroare ? fisa : null;
   let regimBtc = null; try { regimBtc = GridCalcul.regim(GridCalcul.bare(await lumanari15M("BTC_USDT_PERP"))); } catch (e) { jurnal("regim BTC", e.message); }
-  let fut = null; try { fut = await cere("/api/market?type=futures&symbol=" + encodeURIComponent(String(b.baza || "").replace(/\.PERP$/, "") + "USDT")); } catch (e) { fut = null; }
+  let fut = null; try { fut = await cere("/api/market?type=futures&symbol=" + encodeURIComponent(TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).binance)); } catch (e) { fut = null; }
   const st = stareAlerte[b.id] || {};
   const afaraOre = st._afaraDe ? (acum - st._afaraDe) / 3600000 : 0;
   const dir = String(b.directie || "").toLowerCase();
@@ -549,7 +549,7 @@ const ziCache = {};
 async function ziBot(b) {
   const acum = Date.now(), azi = Math.floor(acum / 86400000) * 86400000, c = ziCache[b.id];
   if (c && c.azi === azi && acum - c.la < 10 * 60000) return c.zi;
-  const sim = String(b.baza || "").replace(/\.PERP$/, "").toUpperCase() + "_USDT_PERP";
+  const sim = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex;   // v100.13: tickerul real (PUMPFUN.PERP -> PUMP_USDT_PERP)
   const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(sim) + "&interval=1D&limit=2");
   const zi = ziDinKlines(k && k.data && k.data.klines, acum);
   ziCache[b.id] = { la: acum, azi, zi };

@@ -38,7 +38,7 @@ async function acasaPorneste(fortat) {
       var inCl = {}; ((d.clasament && d.clasament.monede) || []).forEach(function (x) { inCl[String(x.simbol).replace(/_USDT_PERP$/, "")] = true; });
       for (var i = 0; i < (boti || []).length && i < 4; i++) {
         var b = boti[i], nume = String(b && b.baza || "").replace(/\.PERP$/, ""); if (!b || !b.activ || !nume || inCl[nume]) continue;
-        try { var k = await getJSON("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(nume + "_USDT_PERP") + "&interval=60M&limit=500"); o[nume] = GridCalcul.regimPeBare(GridCalcul.bare(k && k.data && k.data.klines), 4, 24); } catch (e) { o[nume] = null; }
+        try { var k = await getJSON("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(b.simbolPionex || nume + "_USDT_PERP") + "&interval=60M&limit=500"); o[nume] = GridCalcul.regimPeBare(GridCalcul.bare(k && k.data && k.data.klines), 4, 24); } catch (e) { o[nume] = null; }
       }
       return o;
     });

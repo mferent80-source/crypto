@@ -2,13 +2,18 @@
 // Fara DOM, fara retea, fara localStorage - ca sa poata fi probat in Node.
 var TabloBot = (function () {
   // "COTI.PERP" + "USDT" -> Pionex "COTI_USDT_PERP", Binance "COTIUSDT"
-  function simboluri(base, quote) {
+  // v100.13 (29.09, botul PUMPFUN fara preturi): real = tickerul Pionex trimis de /api/bot-orders (simbolPionex, din lista oficiala) -
+  // baza botului nu e mereu numele tickerului (PUMPFUN.PERP -> PUMP_USDT_PERP). Fara el (sau ciudat) -> regula veche.
+  function simboluri(base, quote, real) {
     var b = String(base || ""), q = String(quote || "USDT");
+    var r = typeof real === "string" && /^[A-Z0-9]{1,24}_[A-Z0-9]{2,10}(_PERP)?$/.test(real) ? real : null;
+    if (r) { var m = r.split("_")[0]; return { pionex: r, binance: (m + r.split("_")[1]).toUpperCase(), moneda: m }; }
     var perp = b.slice(-5) === ".PERP";
     var moneda = perp ? b.slice(0, -5) : b;
     return {
       pionex: perp ? moneda + "_" + q + "_PERP" : moneda + "_" + q,
       binance: (moneda + q).toUpperCase(),
+      moneda: moneda,
     };
   }
   // Lipsa ramane LIPSA: Number(null) === 0, Number("") === 0, Number(false) === 0
