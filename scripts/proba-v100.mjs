@@ -300,5 +300,17 @@ await test("v100.5: Tabloul scrie ora pe fiecare rand din „Ce ai de făcut acu
   assert.match(citeste("../public/app.css"), /#tabloubot \.tbOra\{/);
 });
 
+// v101.5 (el, 29.09: „în pagina alerts PUMP arată greșit”): botul PUMPFUN.PERP are tickerul PUMP_USDT_PERP -> pagina alerts cerea
+// Binance PUMPFUNUSDT (400, nu exista) si ramanea fara pretul live; poza poarta acum si moneda reala a bursei (m)
+await test("v101.5: poza pune la bot moneda reala a bursei (m) din simbolPionex; fara el, moneda din baza", async () => {
+  const { construiestePoza } = await import("./lib/poza.mjs?t=" + Date.now());
+  const b = { id: "2388", baza: "PUMPFUN.PERP", quote: "USDT", simbolPionex: "PUMP_USDT_PERP", directie: "long", pretCurent: 0.004919, gridJos: 0.004598, gridSus: 0.005374, profitTotal: 3.27 };
+  const p = construiestePoza({ acum: Date.UTC(2026, 8, 29, 6, 20), versiune: "v101.5", boti: [b], t212: [], simboluri: [] });
+  assert.equal(p.boti[0].s, "PUMPFUN", "numele botului ramane cel din Pionex");
+  assert.equal(p.boti[0].m, "PUMP", "moneda reala pentru Binance");
+  const v = construiestePoza({ acum: Date.UTC(2026, 8, 29, 6, 20), versiune: "v101.5", boti: [{ ...b, baza: "JTO.PERP", simbolPionex: undefined }], t212: [], simboluri: [] });
+  assert.equal(v.boti[0].m, "JTO");
+});
+
 console.log(`\nV100 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste} probe trecute\n`);
 process.exit(picate ? 1 : 0);

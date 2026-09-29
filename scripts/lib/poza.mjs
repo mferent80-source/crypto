@@ -111,7 +111,9 @@ function semaforBot(sem) {
 }
 function botPoza(b) {
   const pret = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), total = nr(b.profitTotal), brut = nr(b.gridProfitBrut) || 0, com = nr(b.comisioane) || 0, sem = semaforBot(b.semafor);
-  return { id: String(b.id), s: String(b.baza || "").replace(/\.PERP$/, ""), dir: String(b.directie || "").toLowerCase(), lev: nr(b.levier), investit: rot(b.investit, 2), jos, sus,
+  // v101.5: m = moneda reala a bursei (PUMPFUN.PERP se tranzactioneaza ca PUMP_USDT_PERP) - pagina alerts cere Binance dupa ea
+  const tk = /^([A-Z0-9]{1,24})_[A-Z0-9]{2,10}(_PERP)?$/.exec(String(b.simbolPionex || ""));
+  return { id: String(b.id), s: String(b.baza || "").replace(/\.PERP$/, ""), m: tk ? tk[1] : String(b.baza || "").replace(/\.PERP$/, ""), dir: String(b.directie || "").toLowerCase(), lev: nr(b.levier), investit: rot(b.investit, 2), jos, sus,
     pret: rot(pret, 6), inGrid: pret !== null && jos !== null && sus !== null && sus > jos ? rot((pret - jos) / (sus - jos), 4) : null, lichidarePct: rot(b.distantaLichidarePct, 2),
     total: rot(total, 2), perechi: nr(b.ordinePerechi), gridBrut: rot(brut, 2), pozitie: total !== null ? rot(total - brut - com, 2) : null, comisioane: rot(com, 3),
     zero: rot(b.zero, 6), plan: b.plan ? { plus: nr(b.plan.plus), minus: nr(b.plan.minus), afaraOre: nr(b.plan.afaraOre) } : null,
