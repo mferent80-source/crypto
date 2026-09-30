@@ -27,7 +27,7 @@ import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.24";
+const VERSIUNE_COLECTOR = "v101.25";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -977,6 +977,7 @@ async function turaSocoteala() {
     const loguri = []; let judecati = 0;
     for (const x of inchisi) {
       const id = String(x.strategyId || x.buOrderId || ""); if (!id) continue;
+      await new Promise((r) => setTimeout(r, 700));   // serverul lasa 120 de citiri pe minut (pe 30.09 prima tura a luat RATE_LIMITED)
       const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)), s = v && v.semnale; let log = s && Array.isArray(s.log) ? s.log : [];
       if (!log.length) continue;
       if (log.some((e) => e.dreptate === null || e.dreptate === undefined)) {
@@ -985,7 +986,7 @@ async function turaSocoteala() {
       }
       loguri.push(log);
     }
-    for (const id of activi) { try { const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const l = v && v.semnale && v.semnale.log; if (Array.isArray(l) && l.length) loguri.push(l); } catch {} }
+    for (const id of activi) { try { await new Promise((r) => setTimeout(r, 700)); const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const l = v && v.semnale && v.semnale.log; if (Array.isArray(l) && l.length) loguri.push(l); } catch {} }
     const peCod = SemnaleBot.socotealaToti(loguri);
     socotealaTaci = SemnaleBot.tacute(peCod); socotealaUltima = peCod;
     await trimite("/api/istoric-bot?action=socoteala", { la: Date.now(), boti: loguri.length, peCod });
