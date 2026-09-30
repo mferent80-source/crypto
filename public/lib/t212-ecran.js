@@ -565,7 +565,18 @@ function t212DeclaratieBloc(l) {
     + (pxInc ? '<tr><td colspan="2" class="bad">' + escapeHtml(pxInc) + '</td></tr>' : '')
     + '</tbody></table></div>'
     + '<p class="tbSub">Sumele T212 sunt în lei, la cursul din ziua fiecărei tranzacții (așa le dă Trading 212), cu comisioanele de conversie scăzute. Pionex e în USDT, iar în lei l-am socotit eu la cursul BNR din ziua fiecărei închideri — verifică-l cu contabilul, ca și cotele de impozit și CASS. Eu îți dau cifrele.</p>'
-    + '<button type="button" class="t212BtnLinie" data-action-click="t212CopiazaDeclaratia()">Copiază pentru contabil</button></div>';
+    + '<button type="button" class="t212BtnLinie" data-action-click="t212CopiazaDeclaratia()">Copiază pentru contabil</button> '
+    + '<button type="button" class="t212BtnLinie" data-action-click="t212CsvPionex()">⬇ CSV Pionex pentru contabil</button></div>';
+}
+// v100.31 (30.09, el: „fa 1/2/3”): CSV-ul contabilului - fiecare bot Pionex din anul ales, cu ziua si cursul BNR folosit si suma in lei
+function t212CsvPionex() {
+  var j = t212Jurnal(); if (!j) return;
+  var r = t212RaportDecl(j.p.inchise);
+  if (!r.pionex.n) { toast("Niciun bot Pionex închis în " + r.an, "bad"); return; }
+  var b = new Blob(["﻿" + T212.csvPionex(r)], { type: "text/csv;charset=utf-8" }), a = document.createElement("a");
+  a.href = URL.createObjectURL(b); a.download = "pionex-" + r.an + "-pentru-contabil.csv"; document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast("CSV-ul e descărcat: " + r.pionex.n + " boți" + (r.pionex.lei === null ? " (fără lei: cursul BNR nu e încă adus)" : ""), r.pionex.lei === null ? "bad" : "good");
 }
 function t212AnDeclaratie(an) { t212.anDecl = an; if (typeof jtRenderActiuni === "function") jtRenderActiuni(); }
 function t212CopiazaDeclaratia() {

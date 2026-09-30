@@ -115,8 +115,8 @@ var T212 = (function () {
     // v100.28 (30.09, el: „fa idei”): Pionex si in LEI - fiecare bot la cursul BNR (USD) din ziua inchiderii dupa ora Romaniei
     // (weekend / sarbatoare -> ultimul curs publicat inainte); USDT socotit ca USD. Anul botului tot dupa ora Romaniei.
     var zileCurs = o.cursUsd && typeof o.cursUsd === "object" ? Object.keys(o.cursUsd).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k) && nr(o.cursUsd[k]) > 0; }).sort() : null;
-    function cursPe(zi) { var lo = 0, hi = zileCurs.length - 1, gasit = -1; while (lo <= hi) { var m = (lo + hi) >> 1; if (zileCurs[m] <= zi) { gasit = m; lo = m + 1; } else hi = m - 1; } return gasit < 0 ? null : nr(o.cursUsd[zileCurs[gasit]]); }
-    var t = { n: 0, castiguri: 0, pierderi: 0, net: 0, comisioane: 0, dividende: 0 }, px = { n: 0, net: 0, lei: zileCurs && zileCurs.length ? 0 : null, faraCurs: 0 };
+    function cursPe(zi) { var lo = 0, hi = zileCurs.length - 1, gasit = -1; while (lo <= hi) { var m = (lo + hi) >> 1; if (zileCurs[m] <= zi) { gasit = m; lo = m + 1; } else hi = m - 1; } return gasit < 0 ? null : { zi: zileCurs[gasit], curs: nr(o.cursUsd[zileCurs[gasit]]) }; }
+    var t = { n: 0, castiguri: 0, pierderi: 0, net: 0, comisioane: 0, dividende: 0 }, px = { n: 0, net: 0, lei: zileCurs && zileCurs.length ? 0 : null, faraCurs: 0, randuri: [] };
     (o.inchise || []).forEach(function (x) { if (!x || !(x.inchis > 0)) return; if (aniDin(x.inchis) !== an) return; t.n++; var r = x.rezultat || 0; if (r >= 0) t.castiguri += r; else t.pierderi += r; t.net += r; t.comisioane += x.comisioane || 0; });
     (o.dividende || []).forEach(function (x) { var z = Date.parse(x && x.paidOn || ""); if (!isFinite(z)) return; if (aniDin(z) !== an) return; var v = nr(x.amount); if (v !== null) t.dividende += v; });
     // v100.23 (revizie): NET = realizat + comisioane + funding (realizatul Pionex e fara costuri; banii primiti inapoi o dovedesc)
@@ -124,7 +124,10 @@ var T212 = (function () {
       if (!x || !(x.inchis > 0)) return;
       var zi = ziRo(x.inchis), y = Number(zi.slice(0, 4)); ani[y] = 1; if (y !== an) return;
       var v = (x.rezultat || 0) + (x.comisioane || 0) + (x.funding || 0); px.n++; px.net += v;
-      if (px.lei !== null) { var c = cursPe(zi); if (c) px.lei += v * c; else px.faraCurs++; }
+      // v100.31: si randul botului, pentru CSV-ul contabilului (ziua si cursul BNR folosit)
+      var c = px.lei !== null ? cursPe(zi) : null;
+      if (px.lei !== null) { if (c) px.lei += v * c.curs; else px.faraCurs++; }
+      px.randuri.push({ inchis: x.inchis, zi: zi, moneda: String(x.moneda || ""), tip: x.tip || "futures grid", net: v, ziCurs: c ? c.zi : null, curs: c ? c.curs : null, lei: c ? v * c.curs : null });
     });
     var r = { an: an, t212: t, pionex: px, ani: Object.keys(ani).map(Number).sort(function (a, b) { return b - a; }) };
     var L = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " lei"; };
@@ -134,6 +137,18 @@ var T212 = (function () {
     return r;
   }
 
-  return { raportAnual: raportAnual, umpleri: umpleri, perechi: perechi, candidati: candidati, simbol: simbol, dividende: dividende, dataRezultate: dataRezultate };
+  // v100.31 (30.09, el: „fa 1/2/3”): CSV pentru contabil - un rand pe bot Pionex din anul raportului (cel mai vechi primul), apoi TOTAL.
+  // Excel romanesc: separator ; si zecimale cu virgula; fara curs -> celule goale (nu 0).
+  function csvPionex(r) {
+    var p = r && r.pionex || {}, l = (p.randuri || []).slice().sort(function (a, b) { return a.inchis - b.inchis; });
+    var n = function (v, z) { return v === null || v === undefined || !isFinite(v) ? "" : v.toFixed(z).replace(".", ","); };
+    var q = function (v) { v = String(v == null ? "" : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var out = ["data_inchiderii;moneda;tip;rezultat_usdt;ziua_cursului_bnr;curs_bnr_usd;rezultat_lei"];
+    l.forEach(function (x) { out.push([x.zi, q(x.moneda), q(x.tip), n(x.net, 2), x.ziCurs || "", n(x.curs, 4), n(x.lei, 2)].join(";")); });
+    out.push(["TOTAL", "", "", n(p.net || 0, 2), "", "", p.lei === null || p.lei === undefined ? "" : n(p.lei, 2)].join(";"));
+    return out.join("\n") + "\n";
+  }
+
+  return { raportAnual: raportAnual, csvPionex: csvPionex, umpleri: umpleri, perechi: perechi, candidati: candidati, simbol: simbol, dividende: dividende, dataRezultate: dataRezultate };
 })();
 if (typeof globalThis !== "undefined") globalThis.T212 = T212;
