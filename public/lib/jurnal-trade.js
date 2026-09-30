@@ -37,7 +37,9 @@ var JurnalTrade = (function () {
       jos: jos, sus: sus, grileN: N, mod: mod, pasNet: pasNet, pretInit: init, pretInchidere: inch,
       stopJos: nr(d.lossStop), rezultat: rez, pct: inv > 0 ? rez / inv : null,
       grile: grile, comisioane: com, funding: fund,
-      pozitie: grile !== null && com !== null ? rez - grile - com - (fund || 0) : null,
+      // v100.23 (revizie): realizatul Pionex e FARA comisioane si funding (dovada pe toti botii reali: banii primiti inapoi =
+      // investit + realizat + comisioane + funding, la cent) => pozitia = realizat - grile; costurile stau pe randurile lor
+      pozitie: grile !== null ? rez - grile : null,
       greseli: []
     };
   }

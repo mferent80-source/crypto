@@ -111,7 +111,8 @@ var T212 = (function () {
     var t = { n: 0, castiguri: 0, pierderi: 0, net: 0, comisioane: 0, dividende: 0 }, px = { n: 0, net: 0 };
     (o.inchise || []).forEach(function (x) { if (!x || !(x.inchis > 0)) return; if (aniDin(x.inchis) !== an) return; t.n++; var r = x.rezultat || 0; if (r >= 0) t.castiguri += r; else t.pierderi += r; t.net += r; t.comisioane += x.comisioane || 0; });
     (o.dividende || []).forEach(function (x) { var z = Date.parse(x && x.paidOn || ""); if (!isFinite(z)) return; if (aniDin(z) !== an) return; var v = nr(x.amount); if (v !== null) t.dividende += v; });
-    (o.boti || []).forEach(function (x) { if (!x || !(x.inchis > 0)) return; if (aniDin(x.inchis) !== an) return; px.n++; px.net += x.rezultat || 0; });
+    // v100.23 (revizie): NET = realizat + comisioane + funding (realizatul Pionex e fara costuri; banii primiti inapoi o dovedesc)
+    (o.boti || []).forEach(function (x) { if (!x || !(x.inchis > 0)) return; if (aniDin(x.inchis) !== an) return; px.n++; px.net += (x.rezultat || 0) + (x.comisioane || 0) + (x.funding || 0); });
     var r = { an: an, t212: t, pionex: px, ani: Object.keys(ani).map(Number).sort(function (a, b) { return b - a; }) };
     var L = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " lei"; };
     r.text = "Anul " + an + "\nTrading 212 (acțiuni, în lei, după comisioanele de conversie): " + t.n + " vânzări · câștiguri " + L(t.castiguri) + " · pierderi " + L(t.pierderi) + " · NET " + L(t.net) + " · comisioane " + L(-t.comisioane).replace("+", "") + " · dividende " + L(t.dividende)

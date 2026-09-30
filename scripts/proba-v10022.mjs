@@ -132,11 +132,11 @@ await test("poza a prins (30.09): eticheta maximului nu se suprapune peste „0�
   assert.doesNotMatch(sectiune, /class="bad"/, "„Unde câștigi” are randuri pe minus");
 });
 
-await test("CSV: un rand pe trade, antet, zecimale cu punct, ghilimele unde trebuie", () => {
+await test("CSV: un rand pe trade, antet, zecimale cu VIRGULA (Excel romanesc, v100.23), ghilimele unde trebuie", () => {
   const csv = ST.csv([{ id: "1", eticheta: 'A,"B"', pornit: Date.UTC(2026, 0, 1), inchis: Date.UTC(2026, 0, 2), rezultat: -5.5, baza: 100, durataOre: 24, comisioane: 1 }], "lei");
   const r = csv.trim().split("\n");
-  assert.equal(r.length, 2); assert.match(r[0], /^inchis;eticheta;/);
-  assert.match(r[1], /"A,""B"""/); assert.match(r[1], /;-5\.5;/);
+  assert.equal(r.length, 2); assert.match(r[0], /^inchis_utc;eticheta;/);
+  assert.match(r[1], /"A,""B"""/); assert.match(r[1], /;-5,5;/);
 });
 
 await test("pagina: statistica sus pe fiecare fila (Crypto, Actiuni, Tot), scriptul inaintea app.js, in APP_SHELL", () => {

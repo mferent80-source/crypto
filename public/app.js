@@ -5278,7 +5278,8 @@ function jtStatDate(piata){
   }
   return null;
 }
-function jtStatNota(piata,d){return piata==="crypto"?"net, după comisioane și funding":piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212); boții apar cu „(bot)”"}
+// v100.23 (revizie): Pionex dă doar ULTIMII boți închiși (cerem 100, vin ~10) - se spune pe față, ca totalul să nu pară toată istoria
+function jtStatNota(piata,d){var nb=jtStat.cache.crypto?jtStat.cache.crypto.tr.length:0,px="doar ultimii "+nb+" boți închiși pe care îi dă Pionex";return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212), "+px+"; boții apar cu „(bot)”"}
 function jtStatRender(piata){
   var el=$(piata==="crypto"?"jtStatCrypto":piata==="actiuni"?"jtStatActiuni":"jtStatTot");if(!el)return;
   var d=null;try{d=jtStatDate(piata)}catch(e){console.error("statistica",piata,e);el.innerHTML='<p class="tbSub">Statistica nu s-a putut socoti: '+escapeHtml(e.message)+'</p>';return}

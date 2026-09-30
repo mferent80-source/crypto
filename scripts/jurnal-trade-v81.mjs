@@ -29,7 +29,8 @@ await test("din: 10 boti -> 10 trade-uri, cel mai nou primul; rezultat = realiza
   assert.ok(sh, "short-ul COTI de la 11:07");
   assert.equal(sh.dir, "short"); assert.equal(sh.levier, 5);
   aprox(sh.rezultat, -21.3431, 1e-3); aprox(sh.grile, 3.0984, 1e-3); aprox(sh.comisioane, -0.9704, 1e-3); aprox(sh.funding, -1.0704, 1e-3);
-  aprox(sh.pozitie, -21.3431 - 3.0984 + 0.9704 + 1.0704, 1e-3, "pozitia = rezultat - grile - comisioane - funding");
+  // v100.23: realizatul e fara costuri (banii primiti inapoi = investit + realizat + comisioane + funding) => pozitia = realizat - grile
+  aprox(sh.pozitie, -21.3431 - 3.0984, 1e-3, "pozitia = rezultat - grile");
   aprox(sh.pct, -21.3431 / 124.44, 1e-6);
   aprox(sh.durataOre, (Date.parse("2026-09-22T14:19Z") - Date.parse("2026-09-22T11:07Z")) / 3600000, 0.02);
 });

@@ -235,7 +235,8 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`(()=>{const d=document.getElementById("jtPl-crypto");if(!d.open)d.querySelector("summary").click()})()`);
       await panaCand(b, `/COTI/.test(document.getElementById("jtLista").innerText)`, 60000, "lista de trade-uri");
       const t = await b.ev(`document.getElementById("jurnaltrade").innerText`);
-      assert.match(t, /Rezultat total/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Poziția a mâncat grilele/);
+      // v100.23: cifra veche e „Rezultat realizat” (fara costuri); „Rezultat total” e acum placuta statisticii nete de deasupra
+      assert.match(t, /Rezultat realizat/); assert.match(t, /Statistica · Pionex/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Poziția a mâncat grilele/);
       assert.match(t, /Dacă ascultai de Radar/); assert.match(t, /Radarul ar fi zis/);
       assert.match(t, /Raportul de duminică/); assert.match(t, /mai trebuie 20/);
       FARA_GUNOI(t);
