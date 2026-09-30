@@ -130,7 +130,9 @@ var Sfaturi = (function () {
     if (z && z.pretZero != null && z.distantaZeroPct != null && tot !== null && tot < 0) {
       out.push({ ton: "info", titlu: "Botul iese pe zero la " + pret(z.pretZero) + " (" + proc(100 * z.distantaZeroPct) + " de aici)",
         text: "Acum, închis, ai lua " + (z.iei != null ? z.iei.toFixed(2) + " USDT" : "-") + (inv ? " din " + inv.toFixed(2) + " investiți" : "") + ".",
-        faCe: "Dacă vrei să ieși fără pierdere, pune în Pionex un take-profit / stop la " + pret(z.pretZero) + " pe bot și lasă-l să lucreze până acolo." });
+        // v100.40 (audit 30.09): pe minus, prețul de zero e DINCOLO de pretul de acum (deasupra la long, dedesubt la short) -> e un
+        // TAKE-PROFIT; un stop pus acolo s-ar executa pe loc (contrar cartelei „Stopul” de pe acelasi ecran)
+        faCe: "Dacă vrei să ieși fără pierdere, pune în Pionex take-profit-ul botului la " + pret(z.pretZero) + " (nu stop: prețul de zero e " + (z.distantaZeroPct > 0 ? "deasupra" : "sub") + " prețul de acum) și lasă-l să lucreze până acolo." });
     }
 
     // 5) Directia fata de bot, spusa ca stare masurata.

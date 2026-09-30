@@ -245,5 +245,18 @@ await test("🟡 copia KV si pe ALT disc (E:) - arhiva botilor nu mai sta doar p
   assert.match(f, /COLECTOR_COPIE_E \|\| "E:\/crypto-radar-backup\/kv-copii"/); assert.match(f, /pastreaza: 30/);
 });
 
+await test("🟡 sfaturi pe bani: zero-ul pe minus = TAKE-PROFIT (nu stop); lichidarea DEPASITA = IESI; „ai ajuns pe zero” nu in prima ora", () => {
+  const SF = new Function("GridCalcul", `${lib("sfaturi.js")}; return Sfaturi;`)(G);
+  assert.match(lib("sfaturi.js"), /pune în Pionex take-profit-ul botului la " \+ pret\(z\.pretZero\) \+ " \(nu stop:/);
+  assert.doesNotMatch(lib("sfaturi.js"), /take-profit \/ stop la/);
+  const SB2 = new Function("GridCalcul", `${lib("semnale-bot.js")}; return SemnaleBot;`)(G);
+  const s = SB2.semafor({ bot: { directie: "long", distantaLichidarePct: -20, lichidareDepasita: true }, fisa: { regim: { miscare: false } } });
+  assert.equal(s.nivel, "iesi", "lichidarea depasita cu 20%: " + s.nivel + " " + s.motiv);
+  const bot = (min) => ({ id: "9", baza: "CRV.PERP", directie: "long", pretCurent: 0.40, pornitLa: Date.now() - min * 60000, gridJos: 0.37, gridSus: 0.42 });
+  assert.equal(AL.reguli(bot(5), { pretZero: 0.399 }, {})["p-zero"], undefined, "la 5 min dupa pornire: nimic");
+  assert.equal(AL.reguli(bot(120), { pretZero: 0.399 }, {})["p-zero"].nivel, "atentie", "dupa o ora: da");
+  void SF;
+});
+
 console.log(`\nV100.40 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);

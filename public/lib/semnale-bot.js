@@ -224,7 +224,9 @@ var SemnaleBot = (function () {
   // intrare: { bot, fisa, plan (TabloExtra.planStare), costuri, btc, aglomerare, muta, iaProfit, zero? (TabloExtra.dacaInchizi) }
   function semafor(x) {
     var b = x.bot || {}, f = x.fisa || null, c = [], dist = nr(b.distantaLichidarePct), dir = String(b.directie || "").toLowerCase();
-    if (dist !== null && Math.abs(dist) < 8) c.push({ nivel: "iesi", cod: "lichidare", motiv: "lichidarea e la " + Math.abs(dist).toFixed(1) + "%", faCe: "Aș adăuga marjă sau aș închide acum; sub 8% nu mai e loc de răbdare." });
+    // v100.40 (audit 30.09): lichidarea DEPASITA (distanta negativa) e IESI oricat de departe ar fi trecut - |dist| o facea „ȚINE” peste 15%
+    if (b.lichidareDepasita === true || (dist !== null && dist < 0)) c.push({ nivel: "iesi", cod: "lichidare", motiv: "prețul a trecut de lichidarea estimată" + (dist !== null ? " (" + Math.abs(dist).toFixed(1) + "% dincolo)" : ""), faCe: "Verifică acum botul în Pionex: poziția poate fi deja lichidată sau pe marginea ei; aș închide ce a rămas." });
+    else if (dist !== null && Math.abs(dist) < 8) c.push({ nivel: "iesi", cod: "lichidare", motiv: "lichidarea e la " + Math.abs(dist).toFixed(1) + "%", faCe: "Aș adăuga marjă sau aș închide acum; sub 8% nu mai e loc de răbdare." });
     else if (dist !== null && Math.abs(dist) < 15) c.push({ nivel: "atentie", cod: "lichidare", motiv: "lichidarea s-a apropiat la " + Math.abs(dist).toFixed(1) + "%", faCe: "N-aș mai lăsa poziția să crească; aș pregăti marja (vezi „Dacă adaug marjă”)." });
     var pl = x.plan;
     if (pl && Array.isArray(pl.atins)) {

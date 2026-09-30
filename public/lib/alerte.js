@@ -210,7 +210,10 @@ var Alerte = (function () {
     // v91.11 (4): pragurile puse de Radar pe fiecare bot
     // - "iese pe zero": pretul la care, inchis acum, botul iese fara pierdere (TabloExtra.dacaInchizi)
     var pz = ctx ? nr(ctx.pretZero) : null, dirB = String(b.directie || "").toLowerCase();
-    if (pz !== null && p !== null && (dirB === "long" || dirB === "short")) {
+    // v100.40 (audit 30.09): nu in prima ora de viata - „ai ajuns pe zero, ieși fără pierdere” pleca la cateva secunde dupa fiecare pornire
+    // si impingea exact spre inchiderile repezi (botii inchisi in prima ora: −2.065 USDT in 2026)
+    var tanar = nr(b.pornitLa) > 0 && Date.now() - nr(b.pornitLa) < 3600000;
+    if (pz !== null && p !== null && (dirB === "long" || dirB === "short") && !tanar) {
       var peZero = fost("p-zero") !== "ok" ? (dirB === "long" ? p >= pz * 0.997 : p <= pz * 1.003) : (dirB === "long" ? p >= pz : p <= pz);
       out["p-zero"] = peZero
         ? { nivel: "atentie", titlu: nume + ": botul a ajuns pe zero (" + pret(pz) + ")", mesaj: "Prețul e " + pret(p) + ": dacă îl închizi acum, ieși fără pierdere (după comisionul de închidere). Hotărăști tu: îl lași să prindă grilele sau ieși." }
