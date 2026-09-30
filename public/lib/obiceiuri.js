@@ -23,6 +23,29 @@ var Obiceiuri = (function () {
     return g ? "în jurnalul tău: " + g.n + " boți, rezultat " + U(g.cost) : null;
   }
 
+  // v100.29 (30.09, el: „fa idei”): istoricul tau pe moneda, pe toata istoria (arhiva de acasa). Simetric: spune si unde castigi;
+  // avertizeaza - nu refuza - doar de la 3 boti inchisi cu net pe minus. Net = realizat + comisioane + funding.
+  function netDe(t) { return nr(t.rezultat) + (nr(t.comisioane) || 0) + (nr(t.funding) || 0); }
+  function ziua(t) { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "2-digit" }).format(new Date(t)); } catch (e) { return new Date(t).toISOString().slice(0, 10); } }
+  function istoricMoneda(trades, m) {
+    var l = (Array.isArray(trades) ? trades : []).filter(function (t) { return t && t.moneda === m && nr(t.rezultat) !== null; });
+    var net = 0, plus = 0, rau = null;
+    l.forEach(function (t) { var v = netDe(t); net += v; if (v > 0) plus++; if (!rau || v < rau.v) rau = { v: v, t: t.inchis }; });
+    var n = l.length, rata = n ? plus / n : null, avertizare = n >= 3 && net < 0, text;
+    if (!n) text = "N-ai mai avut boți închiși pe " + m + ".";
+    else if (avertizare) text = (rata >= 0.5 ? "Pe " + m + " câștigi des (" + P(rata) + "), dar pierderile mari mănâncă tot: " : "Pe " + m + " pierzi: ") + n + " boți, " + plus + " pe plus, net " + U(net) + (rau ? "; cel mai rău " + U(rau.v) + " pe " + ziua(rau.t) : "") + ".";
+    else text = "Pe " + m + ": " + n + (n === 1 ? " bot" : " boți") + ", " + plus + " pe plus (" + P(rata) + "), net " + U(net) + "." + (n < 3 ? " Prea puțini ca să spun ceva." : "");
+    return { n: n, plus: plus, rata: rata, net: net, avertizare: avertizare, text: text };
+  }
+  // inchiderile din prima ora (pe istoria lui, 30.09: 1469 de boti, net −2.065 USDT) - de la 10, doar cand pierd; cu comisioanele lor
+  function subOOra(trades) {
+    var l = (Array.isArray(trades) ? trades : []).filter(function (t) { return t && nr(t.rezultat) !== null && nr(t.durataOre) !== null && t.durataOre < 1; });
+    if (l.length < 10) return null;
+    var net = 0, plus = 0, com = 0;
+    l.forEach(function (t) { var v = netDe(t); net += v; if (v > 0) plus++; com += nr(t.comisioane) || 0; });
+    if (net >= 0) return null;
+    return { n: l.length, net: net, comisioane: com, text: "Boții închiși în prima oră: " + l.length + ", " + P(plus / l.length) + " pe plus, net " + U(net) + " (din care comisioane " + U(com) + "). Închiderile repezi costă mai ales în comisioane." };
+  }
   function poarta(o) {
     var f = o.fisa || {}, acum = o.acum || Date.now(), m = moneda(f.simbol), R = [];
     var v = f.verdict && f.verdict.nivel;
@@ -37,7 +60,10 @@ var Obiceiuri = (function () {
     R.push({ cod: "contra-trend", ok: !contra, text: contra ? "Botul " + dir + " ar fi contra trendului (" + d.dir + ", " + d.tarie + ")." : "Direcția nu e contra trendului.", cost: costDin(o.trades, "pozitia-a-mancat-grilele") });
     var pl = o.plan, plOk = !!(pl && (nr(pl.plus) > 0 || nr(pl.minus) > 0));
     R.push({ cod: "plan", ok: plOk, text: plOk ? "Ai planul de ieșire: " + [nr(pl.plus) > 0 ? "plus " + pl.plus : null, nr(pl.minus) > 0 ? "minus " + pl.minus : null, nr(pl.afaraOre) > 0 ? "afară " + pl.afaraOre + " h" : null].filter(Boolean).join(", ") + "." : "N-ai scris când ieși (pe plus / pe minus): hotărât la rece e mai ușor.", cost: null });
-    return { trecut: R.every(function (r) { return r.ok; }), reguli: R };
+    var im = istoricMoneda(o.trades, m);
+    R.push({ cod: "moneda", ok: !im.avertizare, text: im.text });
+    var so = subOOra(o.trades);
+    return { trecut: R.every(function (r) { return r.ok; }), reguli: R, sfaturi: so ? [so.text] : [] };
   }
 
   function portofoliu(boti, sold) {
@@ -106,6 +132,6 @@ var Obiceiuri = (function () {
     return { bare: b.length, net: r.net, usdt: r.net * (nr(s.suma) || 0), oprit: r.oprit, lichidat: r.lichidat, iesiri: r.iesiri, umpleri: r.umpleri, pretAcum: b[b.length - 1].c };
   }
 
-  return { poarta: poarta, portofoliu: portofoliu, raportDuminica: raportDuminica, reguliPersonale: reguliPersonale, hartie: hartie };
+  return { poarta: poarta, istoricMoneda: istoricMoneda, subOOra: subOOra, portofoliu: portofoliu, raportDuminica: raportDuminica, reguliPersonale: reguliPersonale, hartie: hartie };
 })();
 if (typeof globalThis !== "undefined") globalThis.Obiceiuri = Obiceiuri;

@@ -4989,7 +4989,10 @@ function grPoartaHtml(f){
   h+='<div class="grPoartaForm"><label><span class="tbEt2">Ies pe plus la, USDT</span><input id="grPlanPlus" inputmode="decimal" placeholder="ex. 5"'+vv("plus")+'></label><label><span class="tbEt2">Ies dacă pierd, USDT</span><input id="grPlanMinus" inputmode="decimal" placeholder="ex. 10"'+vv("minus")+'></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPlanAfara" inputmode="decimal" placeholder="ex. 12"'+vv("afaraOre")+'></label>'
     +'<button type="button" class="grCalc" data-action-click="gridPoarta()">Verifică poarta</button><button type="button" class="actionGhost" data-action-click="gridHartiePorneste()">🧾 Pornește pe hârtie</button></div>';
   if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+escapeHtml(r.text)+(!r.ok&&r.cost?' <span class="tbSub">('+escapeHtml(r.cost)+')</span>':'')+'</li>'}).join("")+'</ul>'
-    +(p.rez.trecut?'<p class="tbFac">👉 <b>Ce aș face eu:</b> toate regulile trec — pornește, iar eu îl notez în jurnal cu planul tău.</p>':'<p class="tbFac">👉 <b>Ce aș face eu:</b> aș aștepta. Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate.</p>')
+    // v100.29: sfaturile din istoria lui (inchiderile din prima ora) - informatie, nu regula
+    +(p.rez.sfaturi&&p.rez.sfaturi.length?p.rez.sfaturi.map(function(x){return '<p class="tbSub">💡 '+escapeHtml(x)+'</p>'}).join(""):"")
+    // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
+    +(p.rez.trecut?'<p class="tbFac">👉 <b>Ce aș face eu:</b> toate regulile trec — pornește, iar eu îl notez în jurnal cu planul tău.</p>':p.rez.reguli.filter(function(r){return !r.ok}).every(function(r){return r.cod==="moneda"})?'<p class="tbFac">👉 <b>Ce aș face eu:</b> fișa, planul și levierul sunt în regulă, dar pe moneda asta istoria ta e pe minus — aș porni cu o sumă mai mică și aș ține stopul la plan. Îl notez în jurnal.</p>':'<p class="tbFac">👉 <b>Ce aș face eu:</b> aș aștepta. Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate.</p>')
     +'<button type="button" class="actionGhost" data-action-click="gridJurnalAdauga()">📒 Am pornit botul în Pionex (notează-l)</button>'}
   return h+'</div>';
 }

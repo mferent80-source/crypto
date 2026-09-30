@@ -25,11 +25,15 @@ await test("modulul Obiceiuri exista", () => assert.ok(O, "obiceiuri.js lipseste
 await test("poarta: toate regulile trec -> trecut; fiecare regula picata spune cat te-a costat in jurnalul tau", () => {
   const ultimCOTI = TR.filter((t) => t.moneda === "COTI").sort((a, b) => b.inchis - a.inchis)[0];
   const ok = O.poarta({ fisa: fisa(), trades: TR, acum: ultimCOTI.inchis + 2 * ORA, dir: "long", levier: 3, plan: { plus: 5, minus: 10 } });
-  assert.equal(ok.trecut, true, JSON.stringify(ok.reguli.filter((r) => !r.ok)));
+  // v100.29: regula noua „moneda” (istoricul pe moneda) - pe istoria din proba COTI e pe minus (6 boti, −14,51 USDT), deci doar ea avertizeaza
+  assert.deepEqual(ok.reguli.filter((r) => !r.ok).map((r) => r.cod), ["moneda"], JSON.stringify(ok.reguli.filter((r) => !r.ok)));
+  // fara istorie pe moneda, toate trec -> trecut
+  const liber = O.poarta({ fisa: fisa(), trades: TR.filter((t) => t.moneda !== "COTI"), acum: ultimCOTI.inchis + 2 * ORA, dir: "long", levier: 3, plan: { plus: 5, minus: 10 } });
+  assert.equal(liber.trecut, true, JSON.stringify(liber.reguli.filter((r) => !r.ok)));
   const rau = O.poarta({ fisa: fisa({ verdict: { nivel: "nu", motive: ["mișcare"] }, directie: { dir: "short", tarie: "tare" } }), trades: TR, acum: ultimCOTI.inchis + 3 * 60000, dir: "long", levier: 5, plan: null });
   assert.equal(rau.trecut, false);
   const cod = rau.reguli.filter((r) => !r.ok).map((r) => r.cod).sort();
-  assert.deepEqual(cod, ["contra-trend", "levier", "plan", "reintrare", "verde"]);
+  assert.deepEqual(cod, ["contra-trend", "levier", "moneda", "plan", "reintrare", "verde"]);
   const re = rau.reguli.find((r) => r.cod === "reintrare");
   assert.match(re.cost, /6 boți/); assert.match(re.cost, /−?\d/);
   assert.ok(rau.reguli.every((r) => r.text && !/NaN|undefined|null/.test(r.text + (r.cost || ""))));
