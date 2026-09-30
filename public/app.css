@@ -2057,6 +2057,7 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .stStat{display:flex;flex-direction:column;gap:12px;margin:0 0 18px}
 .stStat .stCap{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
 .stStat .stCap h3{margin:0;font-size:20px;text-wrap:balance}
+.stStat .stCapSub{flex-basis:100%}
 .stStat .stSub{color:var(--muted);font-size:13px;line-height:1.4}
 .stStat .stTiles{display:flex;flex-wrap:wrap;gap:1px;background:var(--tb-linie);border:1px solid var(--tb-linie);border-radius:12px;overflow:hidden}
 .stStat .stTile{flex:1 1 170px;display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:var(--panel);min-width:0}

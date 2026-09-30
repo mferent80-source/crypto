@@ -5254,32 +5254,34 @@ async function jtPorneste(forta){
 }
 // v100.22 (30.09, el: „statistica trade-ului pe Pionex și pe Trade 212 … ce am făcut bine, ce am greșit …” -> „Sus pe fiecare filă”):
 // statistica trade-urilor sus pe fiecare fila a Jurnalului (lib/statistica-trade.js). Pionex NET (dupa comisioane si funding),
-// Trading 212 dupa comisioanele de conversie (FIFO), Tot in lei (USDT la cursul ultimei tranzactii T212). Calculul se tine minte
-// pana vin date noi; ordinea tabelului si CSV-ul nu-l refac.
-var jtStat={ord:{crypto:"noi",actiuni:"noi",tot:"noi"},deschis:{},cache:{}};
+// Trading 212 dupa comisioanele de conversie (FIFO), Tot in lei (USDT la cursul ultimei tranzactii T212). v100.24: perioada aleasa
+// (ultima luna / 3 luni / tot) pe fiecare fila. Listele intregi se tin minte pana vin date noi; perioada doar filtreaza din ele.
+var jtStat={ord:{crypto:"noi",actiuni:"noi",tot:"noi"},perioada:{crypto:"tot",actiuni:"tot",tot:"tot"},deschis:{},cache:{},toate:{}};
 var JT_DURATE_ZILE=[["sub o zi",0,24],["1–7 zile",24,168],["1–4 săptămâni",168,672],["peste o lună",672,Infinity]];
 var JT_STAT_TITLU={crypto:"Statistica · Pionex",actiuni:"Statistica · Trading 212",tot:"Statistica · tot, în lei"};
-function jtStatHtml(s,o){return StatisticaTrade.html(s,Object.assign({actiuneOrdine:"jtStatOrdine",actiuneCsv:"jtStatCsv",ordine:jtStat.ord[o.piata]||"noi",deschis:!!jtStat.deschis[o.piata]},o))}
-function jtStatDate(piata){
-  var C=jtStat.cache;
-  if(piata==="crypto"){
-    if(!jtStare.boti)return null;var k="c|"+jtStare.la+"|"+jtStare.boti.length;if(C.crypto&&C.crypto.k===k)return C.crypto;
-    var tr=StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti));return C.crypto={k:k,tr:tr,s:StatisticaTrade.calc(tr,{moneda:"USDT"}),m:"USDT"};
-  }
-  if(piata==="actiuni"){
-    var j=typeof t212Jurnal==="function"?t212Jurnal():null;if(!j)return null;var k2="a|"+j.u.length;if(C.actiuni&&C.actiuni.k===k2)return C.actiuni;
-    var tr2=StatisticaTrade.dinT212(j.p.inchise);return C.actiuni={k:k2,tr:tr2,s:StatisticaTrade.calc(tr2,{moneda:"lei",durate:JT_DURATE_ZILE}),m:"lei"};
-  }
+function jtStatHtml(s,o){return StatisticaTrade.html(s,Object.assign({actiuneOrdine:"jtStatOrdine",actiuneCsv:"jtStatCsv",actiunePerioada:"jtStatPerioada",ordine:jtStat.ord[o.piata]||"noi",perioada:jtStat.perioada[o.piata]||"tot",deschis:!!jtStat.deschis[o.piata]},o))}
+// lista intreaga a fiecarei piete (fara perioada), tinuta minte pe cheia datelor
+function jtStatToate(piata){
+  var T=jtStat.toate;
+  if(piata==="crypto"){if(!jtStare.boti)return null;var k="c|"+jtStare.la+"|"+jtStare.boti.length;if(T.crypto&&T.crypto.k===k)return T.crypto;return T.crypto={k:k,tr:StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti)),m:"USDT"}}
+  if(piata==="actiuni"){var j=typeof t212Jurnal==="function"?t212Jurnal():null;if(!j)return null;var k2="a|"+j.u.length;if(T.actiuni&&T.actiuni.k===k2)return T.actiuni;return T.actiuni={k:k2,tr:StatisticaTrade.dinT212(j.p.inchise),m:"lei"}}
   if(piata==="tot"){
-    var c=jtStatDate("crypto"),a=jtStatDate("actiuni"),fx=typeof t212Fx==="function"?t212Fx():null;if(!c||!a||!(fx>0))return null;
-    var k3=c.k+"|"+a.k+"|"+fx;if(C.tot&&C.tot.k===k3)return C.tot;
-    var lpu=1/fx,tr3=c.tr.map(function(x){return Object.assign({},x,{rezultat:x.rezultat!=null?x.rezultat*lpu:null,baza:x.baza!=null?x.baza*lpu:null,comisioane:x.comisioane!=null?x.comisioane*lpu:null,eticheta:x.eticheta+" (bot)"})}).concat(a.tr);
-    return C.tot={k:k3,tr:tr3,s:StatisticaTrade.calc(tr3,{moneda:"lei"}),m:"lei",lpu:lpu};
+    var c=jtStatToate("crypto"),a=jtStatToate("actiuni"),fx=typeof t212Fx==="function"?t212Fx():null;if(!c||!a||!(fx>0))return null;
+    var k3=c.k+"|"+a.k+"|"+fx;if(T.tot&&T.tot.k===k3)return T.tot;
+    var lpu=1/fx;return T.tot={k:k3,m:"lei",lpu:lpu,tr:c.tr.map(function(x){return Object.assign({},x,{rezultat:x.rezultat!=null?x.rezultat*lpu:null,baza:x.baza!=null?x.baza*lpu:null,comisioane:x.comisioane!=null?x.comisioane*lpu:null,eticheta:x.eticheta+" (bot)"})}).concat(a.tr)};
   }
   return null;
 }
+// ce se arata: lista din perioada aleasa + statistica ei (tinuta minte pe cheia datelor si a perioadei)
+function jtStatDate(piata){
+  var t=jtStatToate(piata);if(!t)return null;
+  var per=jtStat.perioada[piata]||"tot",k=t.k+"|"+per+"|"+(per==="tot"?"":new Date().toISOString().slice(0,13)),C=jtStat.cache;
+  if(C[piata]&&C[piata].k===k)return C[piata];
+  var tr=StatisticaTrade.dinPerioada(t.tr,per,Date.now());
+  return C[piata]={k:k,tr:tr,toate:t.tr,s:StatisticaTrade.calc(tr,piata==="actiuni"?{moneda:t.m,durate:JT_DURATE_ZILE}:{moneda:t.m}),m:t.m,lpu:t.lpu};
+}
 // v100.23 (revizie): Pionex dă doar ULTIMII boți închiși (cerem 100, vin ~10) - se spune pe față, ca totalul să nu pară toată istoria
-function jtStatNota(piata,d){var nb=jtStat.cache.crypto?jtStat.cache.crypto.tr.length:0,px="doar ultimii "+nb+" boți închiși pe care îi dă Pionex";return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212), "+px+"; boții apar cu „(bot)”"}
+function jtStatNota(piata,d){var c=jtStat.toate.crypto,nb=c?c.tr.length:0,px="doar ultimii "+nb+" boți închiși pe care îi dă Pionex";return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212), "+px+"; boții apar cu „(bot)”"}
 function jtStatRender(piata){
   var el=$(piata==="crypto"?"jtStatCrypto":piata==="actiuni"?"jtStatActiuni":"jtStatTot");if(!el)return;
   var d=null;try{d=jtStatDate(piata)}catch(e){console.error("statistica",piata,e);el.innerHTML='<p class="tbSub">Statistica nu s-a putut socoti: '+escapeHtml(e.message)+'</p>';return}
@@ -5287,10 +5289,11 @@ function jtStatRender(piata){
   el.innerHTML=jtStatHtml(d.s,{titlu:JT_STAT_TITLU[piata],piata:piata,nota:jtStatNota(piata,d)});
 }
 function jtStatOrdine(piata,k){jtStat.ord[piata]=k==="pierderi"||k==="castiguri"?k:"noi";jtStat.deschis[piata]=true;jtStatRender(piata)}
+function jtStatPerioada(piata,p){jtStat.perioada[piata]=p==="30"||p==="90"?p:"tot";jtStatRender(piata)}
 function jtStatCsv(piata){
   var d=jtStatDate(piata);if(!d){toast("Datele nu sunt încă citite","bad");return}
-  var b=new Blob(["﻿"+StatisticaTrade.csv(d.tr,d.m)],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");
-  a.href=URL.createObjectURL(b);a.download="trade-uri-"+piata+"-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();
+  var per=jtStat.perioada[piata]||"tot",b=new Blob(["﻿"+StatisticaTrade.csv(d.tr,d.m)],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download="trade-uri-"+piata+(per==="tot"?"":"-"+per+"z")+"-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500);toast("Raportul CSV e descărcat ("+d.tr.length+" trade-uri)","good");
 }
 function jtRender(){

@@ -117,7 +117,7 @@ await test("html: cifrele mari, bine / gresit (sau avertismentul), curba, pe lun
   assert.match(mic, /stAvert/); assert.doesNotMatch(mic, /Ce ai făcut bine/);
   assert.match(ST.html(ST.calc(TR, { moneda: "lei" }), { ordine: "pierderi" }), /<tbody><tr><td>[^<]*<\/td><td>B<\/td><td class="bad"><b>−30/, "ordinea: cea mai mare pierdere prima");
   assert.match(ST.html(ST.calc([{ id: "a", eticheta: "<script>", pornit: 1, inchis: 2, rezultat: 1, baza: 1, durataOre: 1 }], {}), {}), /&lt;script&gt;/);
-  assert.match(ST.html(ST.calc([], {}), { titlu: "Pionex" }), /niciun trade/);
+  assert.match(ST.html(ST.calc([], {}), { titlu: "Pionex" }), /niciun trade/i);
 });
 
 await test("poza a prins (30.09): eticheta maximului nu se suprapune peste „0”; „1 pierdere” la singular; „Unde câștigi” doar pe plus", () => {

@@ -155,12 +155,22 @@ var StatisticaTrade = (function () {
   function tabel(cap, randuri) { return '<div class="stTabelWrap"><table class="stTabel"><thead><tr>' + cap.map(function (c) { return "<th>" + c + "</th>"; }).join("") + "</tr></thead><tbody>" + randuri.join("") + "</tbody></table></div>"; }
   function cls(v) { return v === null || v === undefined || !isFinite(v) ? "" : v > 0 ? "good" : v < 0 ? "bad" : ""; }
   function randGrupa(nume, g, M) { return "<tr><td>" + esc(nume) + "</td><td>" + g.n + "</td><td>" + (g.n ? pr(g.rata) : "—") + '</td><td class="' + cls(g.total) + '"><b>' + esc(bani(g.total, M)) + '</b></td><td class="' + cls(g.medie) + '">' + esc(bani(g.medie, M)) + "</td></tr>"; }
+  // v100.24: perioada aleasa (ultima luna / ultimele 3 luni / tot), dupa ora inchiderii
+  var PERIOADE = [{ cheie: "30", zile: 30, et: "Ultima lună", sub: "în ultima lună" }, { cheie: "90", zile: 90, et: "Ultimele 3 luni", sub: "în ultimele 3 luni" }, { cheie: "tot", zile: null, et: "Tot", sub: "" }];
+  function perioada(k) { for (var i = 0; i < PERIOADE.length; i++) if (PERIOADE[i].cheie === k) return PERIOADE[i]; return PERIOADE[2]; }
+  function dinPerioada(lista, k, acum) {
+    var p = perioada(k), l = Array.isArray(lista) ? lista : [];
+    if (!p.zile) return l.slice();
+    var de = (acum || Date.now()) - p.zile * 86400000;
+    return l.filter(function (x) { return nr(x && x.inchis) !== null && nr(x.inchis) >= de; });
+  }
   function html(s, o) {
     o = o || {};
-    var M = s.moneda || o.moneda || "", piata = o.piata || "", ord = o.ordine || "noi";
-    if (!s.n) return '<div class="stStat"><p class="stSub">' + esc(o.titlu || "Statistica") + ": niciun trade închis încă.</p></div>";
+    var M = s.moneda || o.moneda || "", piata = o.piata || "", ord = o.ordine || "noi", per = perioada(o.perioada);
+    var butPer = o.actiunePerioada ? '<div class="stGrup" role="group" aria-label="Perioada">' + PERIOADE.map(function (p) { return '<button type="button" class="stBtn" aria-pressed="' + (p.cheie === per.cheie) + '" data-action-click="' + o.actiunePerioada + "(\'" + piata + "\',\'" + p.cheie + "\')\">" + p.et + "</button>"; }).join("") + "</div>" : "";
+    if (!s.n) return '<div class="stStat"><div class="stCap"><h3>📊 ' + esc(o.titlu || "Statistica") + "</h3>" + butPer + '</div><p class="stSub">' + (per.zile ? "Niciun trade închis " + per.sub + "." : "Niciun trade închis încă.") + "</p></div>";
     var tile = function (et, v, c, sub) { return '<div class="stTile"><span class="stEt">' + esc(et) + '</span><b class="stVal ' + (c || "") + '">' + esc(v) + "</b>" + (sub ? '<span class="stSub">' + esc(sub) + "</span>" : "") + "</div>"; };
-    var h = '<div class="stStat"><div class="stCap"><h3>📊 ' + esc(o.titlu || "Statistica") + '</h3><span class="stSub">' + s.n + " trade-uri închise · " + esc(data(s.curba[0].t)) + " – " + esc(data(s.curba[s.curba.length - 1].t)) + (o.nota ? " · " + esc(o.nota) : "") + "</span></div>";
+    var h = '<div class="stStat"><div class="stCap"><h3>📊 ' + esc(o.titlu || "Statistica") + "</h3>" + butPer + '<span class="stSub stCapSub">' + s.n + " trade-uri închise " + (per.zile ? per.sub : "") + " · " + esc(data(s.curba[0].t)) + " – " + esc(data(s.curba[s.curba.length - 1].t)) + (o.nota ? " · " + esc(o.nota) : "") + "</span></div>";
     h += '<div class="stTiles">'
       + tile("Rezultat total", bani(s.total, M), cls(s.total), s.pePlus + " pe plus, " + s.peMinus + " pe minus" + (s.comisioane !== null ? " · după comisioane" : ""))
       + tile("Pe trade, în medie", bani(s.asteptare, M), cls(s.asteptare), "cât aduce un trade oarecare")
@@ -227,6 +237,6 @@ var StatisticaTrade = (function () {
     });
   }
 
-  return { calc: calc, html: html, svgCurba: svgCurba, svgLuni: svgLuni, svgDistributie: svgDistributie, csv: csv, dinPionex: dinPionex, dinT212: dinT212, bani: bani, procent: pr, etInterval: etInterval, MIN: MIN };
+  return { calc: calc, html: html, dinPerioada: dinPerioada, PERIOADE: PERIOADE, svgCurba: svgCurba, svgLuni: svgLuni, svgDistributie: svgDistributie, csv: csv, dinPionex: dinPionex, dinT212: dinT212, bani: bani, procent: pr, etInterval: etInterval, MIN: MIN };
 })();
 if (typeof globalThis !== "undefined") globalThis.StatisticaTrade = StatisticaTrade;
