@@ -27,7 +27,7 @@ import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiv
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.16";
+const VERSIUNE_COLECTOR = "v101.17";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -299,7 +299,10 @@ async function tura() {
           let plan = null, atrPct = null;
           try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); plan = p && p.plan && !p.plan.proba ? p.plan : null; } catch {}
           try { const sc = await cere("/api/istoric-bot?action=scan"), sim = String(x.baza || "").replace(/\.PERP$/, ""), r = (sc && sc.crypto && sc.crypto.randuri || []).find((q) => q.s === sim); atrPct = r ? r.atrPct : null; } catch {}
-          fisa = TabloExtra.fisaInchidere(x, { plan, atrPct });
+          // v100.32: botul a tinut sub o ora -> cifra din istoria lui (arhiva de acasa), pentru fisa
+          let subOOra = null;
+          if (Number(x.inchisLa) - Number(x.pornitLa) < 3600000) { try { const a = await cere("/api/istoric-bot?action=botiInchisi"); subOOra = Obiceiuri.subOOra(JurnalTrade.din(a && Array.isArray(a.boti) ? a.boti : [])); } catch {} }
+          fisa = TabloExtra.fisaInchidere(x, { plan, atrPct, subOOra });
         }
       } catch (e) { jurnal("fisa de inchidere", id, e.message); }
       const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaColector("critic", (m.cunoscuti[id].nume || "Botul") + " nu mai apare în lista Pionex", "Poate a fost închis sau lichidat. Verifică în aplicația Pionex.");

@@ -80,7 +80,7 @@ await test("colectorul: tura legata in bucla principala, inainte ca botii sa fie
   assert.match(c, /import \{ avertizariPornire \} from "\.\/lib\/tura-pornire\.mjs";/);
   const i = c.indexOf("avertizariPornire({"), j = c.indexOf("for (const b of boti) if (b && b.id) m.cunoscuti[b.id] =");
   assert.ok(i > 0 && j > 0 && i < j, "avertizarea vede lista de cunoscuti de DINAINTE");
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.16";/);
+  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(1[6-9]|[2-9]\d)";/, "cel putin v101.16");
 });
 await test("pagina: poarta arata sfaturile (sub reguli)", () => {
   const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");

@@ -261,6 +261,11 @@ var TabloExtra = (function () {
     var pl = o.plan, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
     if (plus || minus) L.push("Planul tău: +" + (plus || "—") + " / −" + (minus || "—") + " USDT → " + (tot === null ? "—" : plus && tot >= plus ? "ținta atinsă" + (tot > plus ? ", ai ieșit peste ea" : "") : minus && tot <= -minus ? "pragul de minus atins" : tot < 0 ? "ai ieșit înainte de pragul tău de minus" : "ai ieșit înainte de țintă") + ".");
     else L.push("Planul tău: n-avea plan scris.");
+    // v100.32 (30.09, el: „fa 1/2/3”): inchis in PRIMA ORA -> cat l-au costat comisioanele (fata de grile) + cifra din istoria lui
+    var com = nr(b && b.comisioane), so = o.subOOra;
+    if (dur !== null && dur < 3600000 && com !== null) L.push("Închis în prima oră (" + durTxt + "): comisioanele lui " + U(-Math.abs(com))
+      + (grid !== null && grid > 0 ? " — " + Math.round(Math.abs(com) / grid * 100) + "% din ce au făcut grilele" : "")
+      + (so && nr(so.n) ? "; pe istoria ta: " + so.n + " de boți închiși în prima oră, net " + U(nr(so.net) || 0) + ", din care comisioane " + U(nr(so.comisioane) || 0) : "") + ".");
     // lectiile - doar din fapte
     var lec = [], atr = nr(o.atrPct), rap = nr(b.opritorPierdereRaport), lev = nr(b.levier) || 1;
     if (mot === "loss_stop" && atr !== null && rap !== null && Math.abs(rap * 100) / lev < atr) lec.push("opritorul (" + P(rap * 100, 2) + " din investiție, adică ~" + (Math.abs(rap * 100) / lev).toFixed(1).replace(".", ",") + "% din preț la levier " + lev + "×) era mai mic decât mișcarea unei zile obișnuite a " + nume + " (~" + atr.toFixed(1).replace(".", ",") + "%): o zi normală îl putea atinge");
