@@ -108,6 +108,14 @@ var SemnaleBot = (function () {
     var st0 = out[0], gr0 = out[1], mi0 = out[2];
     st0.mare = op !== null ? fmtPret(op) : "nepus";
     st0.mic = op !== null ? (p !== null ? "activ · " + S1(op / p - 1) + " de preț" : "activ") : "fără stop în Pionex";
+    // v101.8 (2): cu plan pe minus, cartela spune cat costa stopul ATINS (TabloExtra.planStare -> minus.laOpritor, cu grilele de
+    // pe drum) si il judeca dupa PLAN, nu dupa loc (la LIGHTER, 3,787 sub grid era „pus” verde si costa ≈ 60 fata de planul de 15,7)
+    var pm = x.plan && x.plan.minus && !(x.plan.atins && x.plan.atins.indexOf("minus") >= 0) ? x.plan.minus : null, laOp = pm ? nr(pm.laOpritor) : null, pgm = pm ? nr(pm.prag) : null;
+    var invB = nr(b.investit), opPl = pm ? nr(pm.opritorPlan) : null, pgmT = pgm !== null ? String(pgm).replace(".", ",") : "";
+    var procPl = pgm > 0 && invB > 0 ? "−" + (pgm / invB * 100).toFixed(1).replace(".", ",") + "% din investiție" : null;
+    var undePl = !(pgm > 0) ? null : opPl !== null ? fmtPret(opPl) + (procPl ? " sau în procente, la " + procPl : "") : procPl ? "în procente, la " + procPl : null;
+    var pestePlan = laOp !== null && pgm > 0 && -laOp > pgm * 1.2 && -laOp - pgm >= 2;
+    if (op !== null && laOp !== null) st0.mic += " · atins ≈ " + (laOp >= 0 ? "+" : "−") + Math.round(Math.abs(laOp)) + " USDT";
     // revizia v100: neutrul primul (la el zero-ul nu se socoteste niciodata); pozitia stopului SE VERIFICA, nu se presupune
     if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Botul e neutru (cumpără sub preț, vinde peste): protecția stă la două grile în afara intervalului, pe ambele părți."; }
     else if (p === null || pz === null) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = st0.text; }
@@ -121,6 +129,13 @@ var SemnaleBot = (function () {
         + (op === null ? "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "două grile în afara marginii") + "."
           : inAfara ? "Stopul tău stă " + (dir === "short" ? "peste gridul de sus" : "sub gridul de jos") + "."
           : "Stopul tău (" + fmtPret(op) + ") stă în grid: o mișcare mică îl atinge și închide botul pe minus.");
+      // v101.8 (2): planul hotaraste - fara stop: unde il pui; peste plan: rosu, cat costa si unde il muti; pe plan (si in grid): pus
+      if (pgm > 0) {
+        var capM = "Ești pe minus: zero-ul botului (" + fmtPret(pz) + ") e la " + S1(pz / p - 1) + " de preț, acolo un stop n-are sens. ";
+        if (op === null && undePl) st0.act = capM + "N-ai stop: pune-l la " + undePl + " (planul tău, −" + pgmT + " USDT).";
+        else if (pestePlan) { st0.tag = { t: "peste plan", c: "bad" }; st0.act = "Atins, te costă ≈ " + Math.round(-laOp) + " USDT — planul tău zice −" + pgmT + (undePl ? ": mută-l la " + undePl : "") + "."; }
+        else if (op !== null && laOp !== null && !inAfara) { st0.tag = { t: "pus", c: "good" }; st0.act = capM + "Stopul tău (" + fmtPret(op) + ") stă în grid, dar atins te costă cât planul (≈ −" + Math.round(-laOp) + " USDT)."; }
+      }
     }
     gr0.mare = poz === null ? "—" : poz < 0 ? S1(p / jos - 1) : poz > 1 ? S1(p / sus - 1) : Math.round(poz * 100) + "%";
     gr0.mic = poz === null ? "fără interval citit" : poz < 0 ? "sub gridul de jos" : poz > 1 ? "peste gridul de sus" : "din interval";

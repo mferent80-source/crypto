@@ -25,7 +25,7 @@ import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v101.7";
+const VERSIUNE_COLECTOR = "v101.8";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -210,7 +210,10 @@ async function directiaBotului(b) {
       let rb = null; try { rb = GridCalcul.regim(GridCalcul.bare(await lumanari15M("BTC_USDT_PERP"))); } catch (e) { rb = null; }
       btc = { dir: ab && ab.dir || null, regim: rb };
     } catch (e) { jurnal("BTC 4h", e.message); }
-    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim, k4: k && k.data && k.data.klines, calculat: false, funding, btc };
+    // v101.8: cat se misca moneda intr-o zi obisnuita (din aceleasi lumanari de 4 h) - pentru „incape gridul in plan?”
+    let ampZi = null;
+    try { ampZi = TabloExtra.miscareZi(GridCalcul.bare(k && k.data && k.data.klines)); } catch (e) { jurnal("miscare pe zi", b.id, e.message); }
+    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim, k4: k && k.data && k.data.klines, calculat: false, funding, btc, ampZi };
   } catch (e) { jurnal("direcție", b.id, e.message); directii[b.id] = { la: Date.now(), fata4h: null, dir4h: null, regim: null }; }
   return directii[b.id];
 }
@@ -316,7 +319,7 @@ async function tura() {
       const st = stareAlerte[b.id] || (stareAlerte[b.id] = {});
       const p = Number(b.pretCurent), afara = Number.isFinite(p) && b.gridJos != null && b.gridSus != null && (p < Number(b.gridJos) || p > Number(b.gridSus));
       st._afaraDe = afara ? (st._afaraDe || acum) : null;
-      if (pl && pl.plan && !pl.plan.proba) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe }, acum);   // v88: nu si planul unei probe
+      if (pl && pl.plan && !pl.plan.proba) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe, ampZi: ctx.ampZi }, acum);   // v88: nu si planul unei probe
       // v97.6: botul nou fara plan -> o data pe Discord, cu propunerea (dupa planul lui cel mai nou), la 10 min dupa pornire
       if (pl && !pl.plan && !st._faraPlan && Number(b.pornitLa) > 0 && acum - Number(b.pornitLa) > 10 * 60000) {
         let ult = null;

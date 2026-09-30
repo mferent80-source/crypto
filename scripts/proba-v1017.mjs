@@ -52,12 +52,12 @@ await test("fara row/perVolume -> doar pozitia de acum (mai putin, dar nu invent
   assert.equal(Math.round(TabloExtra.totalLaOpritor(b) * 1e6), Math.round(TabloExtra.totalLaPret(b, 3.787) * 1e6));
 });
 
-await test("opritorul in grid: se umplu doar grilele dintre pret si opritor; peste pret (podeaua) nu se umple nimic", () => {
+await test("opritorul in grid: se umplu doar grilele dintre pret si opritor; un stop long PESTE pret se declanseaza acum (v101.8)", () => {
   const inGrid = TabloExtra.totalLaOpritor(Object.assign(LIGHTER(), { opritorPierdere: 4.3 }));
   const plin = TabloExtra.totalLaOpritor(Object.assign(LIGHTER(), { opritorPierdere: 4.085 }));
   assert.ok(inGrid > plin && inGrid < TabloExtra.totalLaPret(LIGHTER(), 4.3), `${inGrid} / ${plin}`);
-  const podea = Object.assign(LIGHTER(), { opritorPierdere: 4.6 });
-  assert.equal(Math.round(TabloExtra.totalLaOpritor(podea) * 1e6), Math.round(TabloExtra.totalLaPret(podea, 4.6) * 1e6));
+  const peste = Object.assign(LIGHTER(), { opritorPierdere: 4.6 });
+  assert.equal(Math.round(TabloExtra.totalLaOpritor(peste) * 1e6), Math.round(TabloExtra.totalLaPret(peste, 4.473) * 1e6));
 });
 
 // Simetria: un SHORT oglindit in jurul lui A da exact acelasi total (fara comision)
