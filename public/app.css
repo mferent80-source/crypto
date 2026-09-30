@@ -1311,6 +1311,12 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 .grPlanProba{margin:6px 0 0;font-size:13px;line-height:1.45}
 .grPlanPornire{margin:0 0 10px;font-size:13px}
 .grPlanPornire p{margin:0 0 4px}
+/* v100.20: tabelul din laborator - comutator Long / Short langa titlu, randul botului care ruleaza evidentiat */
+.grLabPlanCapRand{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 4px}
+.grLabPlanCapRand .grLabPlanCap{margin:0}
+.grLabPlanCapRand .tbIntBtn{width:auto;flex:0 0 auto}
+.grLabBot{color:var(--accent);font-size:12px;margin-left:4px;white-space:nowrap}
+.grLabBotRand td{background:var(--tb-fond2)}
 #tabloubot .tbRandGrafic{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
 #tabloubot .tbBloc,#gridset .tbBloc{padding:14px 16px;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);min-width:0}
 #tabloubot .tbBlocCap,#gridset .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 10px}

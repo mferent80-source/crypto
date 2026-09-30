@@ -188,7 +188,7 @@ export async function onRequestPost({request,env}){
     const v2=x=>x&&typeof x==="object"?{levier:nr(x.levier),jos:nr(x.jos),sus:nr(x.sus),laStop:nr(x.laStop),laTinta:nr(x.laTinta),n:nr(x.n),stop:nr(x.stop),tinta:nr(x.tinta),inGrid:nr(x.inGrid),lichidari:nr(x.lichidari),mediaUsdt:nr(x.mediaUsdt),oreTipic:nr(x.oreTipic)}:null;
     const pm=corp&&corp.planMonede&&typeof corp.planMonede==="object"&&Array.isArray(corp.planMonede.monede)?corp.planMonede:null;
     const planMonede=pm?{dir:pm.dir==="short"?"short":"long",plan:{plus:nr(pm.plan&&pm.plan.plus),minus:nr(pm.plan&&pm.plan.minus)},suma:nr(pm.suma),levier:nr(pm.levier),nota:txt(pm.nota,200),
-      monede:pm.monede.map(x=>x&&typeof x==="object"?{simbol:txt(x.simbol,40).toUpperCase().replace(/[^A-Z0-9_]/g,""),ta:v2(x.ta),mea:v2(x.mea)}:null).filter(x=>x&&x.simbol).slice(0,30)}:null;
+      monede:pm.monede.map(x=>x&&typeof x==="object"?{simbol:txt(x.simbol,40).toUpperCase().replace(/[^A-Z0-9_]/g,""),botulTau:x.botulTau===true,ta:v2(x.ta),mea:v2(x.mea),taS:v2(x.taS),meaS:v2(x.meaS)}:null).filter(x=>x&&x.simbol).slice(0,30)}:null;
     await env.ISTORIC.put("laborator",JSON.stringify({la,H:nr(corp.H),monede:nr(corp.monede),ferestre:nr(corp.ferestre),intrebari:curate,planMonede}),{expirationTtl:3*24*3600});
     return json({ok:true,intrebari:curate.length});
   }

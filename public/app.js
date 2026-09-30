@@ -5177,17 +5177,23 @@ async function gridLaboratorAdu(){
   catch(e){grLaborator.eroare=e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)}
   grLaborator.la=Date.now();renderGridLaborator();
 }
-// v100.18 (ideea 3): „gridul dupa planul tau” pe monedele laboratorului (long, planul lui cel mai nou) - pe care a iesit pe plus
+// v100.18 (ideea 3): „gridul dupa planul tau” pe monedele laboratorului (planul lui cel mai nou) - pe care a iesit pe plus
+// v100.20: comutator Long / Short (taS, meaS) + randul botului care ruleaza primul, marcat „botul tău”, cu cat are acum
+var grLabDir="long";
+function grLabPlanDir(d){grLabDir=d==="short"?"short":"long";renderGridLaborator()}
 function grLabPlanHtml(pm){
   if(!pm||!Array.isArray(pm.monede)||!pm.monede.length)return "";
+  var sh=grLabDir==="short",kT=sh?"taS":"ta",kM=sh?"meaS":"mea";
   var U=function(v){return v==null?"—":(v>=0?"+":"−")+Math.abs(v).toFixed(1).replace(".",",")+" USDT"},V=function(v){return v==null?"?":String(v).replace(".",",")},med=function(x){return x&&x.mediaUsdt!=null?x.mediaUsdt:-1e9};
-  var rows=pm.monede.slice().sort(function(a,b){return med(b.mea)-med(a.mea)||med(b.ta)-med(a.ta)});
+  var rows=pm.monede.slice().sort(function(a,b){return (b.botulTau?1:0)-(a.botulTau?1:0)||med(b[kM])-med(a[kM])||med(b[kT])-med(a[kT])});
+  var botAcum=function(r){var b=typeof tbStare!=="undefined"&&tbStare.bot;if(!b||!r.botulTau)return "";try{if(TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex!==r.simbol)return ""}catch(e){return ""}var t=botiNr(b.profitTotal);return t==null?"":' <span class="tbSub">acum '+U(t)+'</span>'};
   var cel=function(x){if(!x||x.n==null)return '<td>—</td><td>—</td>';return '<td><span class="bad">'+x.stop+'</span> / <span class="good">'+x.tinta+'</span> / '+x.inGrid+(x.lichidari?' · <b class="bad">lichidat '+x.lichidari+'</b>':'')+'</td><td class="'+(x.mediaUsdt>=0?"good":"bad")+'">'+U(x.mediaUsdt)+'</td>'};
-  var pePlus=function(k){return rows.filter(function(r){return r[k]&&r[k].mediaUsdt!=null&&r[k].mediaUsdt>0}).length};
-  return '<h4 class="grLabPlanCap">Gridul după planul tău, pe cele '+rows.length+' monede</h4><p class="grNota">Long, '+V(pm.suma)+' USDT, planul +'+V(pm.plan&&pm.plan.plus)+' / −'+V(pm.plan&&pm.plan.minus)+' USDT'+(pm.nota?' ('+escapeHtml(pm.nota)+')':'')+'. A ta la '+V(pm.levier)+'×, banda cât planul; a mea cu banda cât o zi a monedei și levierul din plan. Stop și țintă la margini. Pe ultimele 30 de zile, o pornire la 6 h, fiecare urmărită 3 zile; media pe pornire e cu comisioane. Clic pe monedă = fișa ei.</p>'
+  var pePlus=function(k){return rows.filter(function(r){return r[k]&&r[k].mediaUsdt!=null&&r[k].mediaUsdt>0}).length},areS=rows.some(function(r){return r.taS});
+  return '<div class="grLabPlanCapRand"><h4 class="grLabPlanCap">Gridul după planul tău, pe cele '+rows.length+' monede</h4><div class="tbInterval" role="group" aria-label="Direcția în tabel"><button type="button" class="tbIntBtn" aria-pressed="'+!sh+'" data-action-click="grLabPlanDir(\'long\')">Long</button><button type="button" class="tbIntBtn" aria-pressed="'+sh+'" data-action-click="grLabPlanDir(\'short\')">Short</button></div></div>'
+    +'<p class="grNota">'+(sh?"Short":"Long")+', '+V(pm.suma)+' USDT, planul +'+V(pm.plan&&pm.plan.plus)+' / −'+V(pm.plan&&pm.plan.minus)+' USDT'+(pm.nota?' ('+escapeHtml(pm.nota)+')':'')+'. A ta la '+V(pm.levier)+'×, banda cât planul; a mea cu banda cât o zi a monedei și levierul din plan. Stop și țintă la margini. Pe ultimele 30 de zile, o pornire la 6 h, fiecare urmărită 3 zile; media pe pornire e cu comisioane. Clic pe monedă = fișa ei.'+(sh&&!areS?' <b>Short-ul apare de la următoarea tură a laboratorului (o dată pe zi).</b>':'')+'</p>'
     +'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Monedă</th><th>A ta: stop / țintă / în grid</th><th>media</th><th>A mea</th><th>stop / țintă / în grid</th><th>media</th></tr></thead><tbody>'
-    +rows.map(function(r){return '<tr><td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(r.simbol)+'" data-action-click="gridClasamentAlege(this.value)">'+escapeHtml(String(r.simbol).replace(/_USDT_PERP$/,""))+'</button></td>'+cel(r.ta)+'<td>'+(r.mea?r.mea.levier+'× · ±'+(Math.abs(r.mea.jos)*100).toFixed(1).replace(".",",")+'%':"—")+'</td>'+cel(r.mea)+'</tr>'}).join("")
-    +'</tbody></table></div><p class="grNota">Pe plus: a ta pe '+pePlus("ta")+' din '+rows.length+' monede, a mea pe '+pePlus("mea")+' din '+rows.length+'. O singură lună, porniri care se suprapun (~10 independente pe monedă): trecutul, nu o promisiune.</p>';
+    +rows.map(function(r){var m=r[kM];return '<tr'+(r.botulTau?' class="grLabBotRand"':'')+'><td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(r.simbol)+'" data-action-click="gridClasamentAlege(this.value)">'+escapeHtml(String(r.simbol).replace(/_USDT_PERP$/,""))+'</button>'+(r.botulTau?' <b class="grLabBot">botul tău</b>'+botAcum(r):'')+'</td>'+cel(r[kT])+'<td>'+(m?m.levier+'× · ±'+(Math.abs(sh?m.sus:m.jos)*100).toFixed(1).replace(".",",")+'%':"—")+'</td>'+cel(m)+'</tr>'}).join("")
+    +'</tbody></table></div><p class="grNota">Pe plus ('+(sh?"short":"long")+'): a ta pe '+pePlus(kT)+' din '+rows.length+' monede, a mea pe '+pePlus(kM)+' din '+rows.length+'. O singură lună, porniri care se suprapun (~10 independente pe monedă): trecutul, nu o promisiune.</p>';
 }
 function renderGridLaborator(){
   var box=$("grLaborator"),sub=$("grLaboratorSub");if(!box)return;
