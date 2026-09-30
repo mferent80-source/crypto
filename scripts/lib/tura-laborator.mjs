@@ -7,18 +7,19 @@
 // planul tau” pe fiecare moneda: cele doua variante cu proba pe 30 de zile, in rez.planMonede (fara ele: null).
 // v101.10: si SHORT langa long (taS, meaS) + extraSimboluri = monedele botilor care ruleaza: intra in tabel (botulTau), chiar daca
 // nu sunt in top; intrebarile laboratorului raman doar pe top.
+// v101.11: pagini (implicit 6 = ~31 zile) si zile (proba gridului dupa plan, implicit 30) - colectorul cere 12 / 60 (doua luni).
 export async function turaLaborator(d) {
-  const top = d.top || 20, H = d.H || 2, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, t0 = Date.now();
+  const top = d.top || 20, H = d.H || 2, pagini = d.pagini > 0 ? Math.floor(d.pagini) : 6, zile = d.zile > 0 ? Math.floor(d.zile) : 30, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, t0 = Date.now();
   const tk = await d.cere("tickers");
   const lista = d.GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, top);
   let rows = [], monede = 0, fara = 0;
   const cuPlan = !!(d.GridPlan && d.plan && d.plan.plus > 0 && d.plan.minus > 0), planMonede = [];
   const extra = (Array.isArray(d.extraSimboluri) ? d.extraSimboluri : []).map(String).filter(Boolean);
-  const scurt = (x, p) => x ? { levier: x.levier, jos: x.jos / p - 1, sus: x.sus / p - 1, laStop: x.laStop, laTinta: x.laTinta, n: x.proba ? x.proba.n : null, stop: x.proba ? x.proba.stop : null, tinta: x.proba ? x.proba.tinta : null, inGrid: x.proba ? x.proba.inGrid : null, lichidari: x.proba ? x.proba.lichidari : null, mediaUsdt: x.proba ? x.proba.mediaUsdt : null, oreTipic: x.proba ? x.proba.oreTipic : null } : null;
-  // ~31 de zile de 15M: pana la 6 pagini de 500, cea mai noua intai
+  const scurt = (x, p) => x ? { levier: x.levier, jos: x.jos / p - 1, sus: x.sus / p - 1, laStop: x.laStop, laTinta: x.laTinta, n: x.proba ? x.proba.n : null, stop: x.proba ? x.proba.stop : null, tinta: x.proba ? x.proba.tinta : null, inGrid: x.proba ? x.proba.inGrid : null, lichidari: x.proba ? x.proba.lichidari : null, mediaUsdt: x.proba ? x.proba.mediaUsdt : null, ceaMaiProastaUsdt: x.proba ? x.proba.ceaMaiProastaUsdt : null, oreTipic: x.proba ? x.proba.oreTipic : null } : null;
+  // ~31 de zile de 15M pe 6 pagini de 500 (12 pagini = ~62 de zile), cea mai noua intai
   async function aduce15(simbol) {
     let r15 = [], end = null;
-    for (let p = 0; p < 6; p++) {
+    for (let p = 0; p < pagini; p++) {
       const k = await d.cere("klines", simbol, end);
       const r = k && k.data && Array.isArray(k.data.klines) ? k.data.klines : null;
       if (!r) throw new Error((k && (k.error || k.message)) || "fara lumanari");
@@ -34,7 +35,7 @@ export async function turaLaborator(d) {
     if (!cuPlan || !b15.length) return;
     try {
       const p = b15[b15.length - 1].c, amp = d.miscareZi ? d.miscareZi(b15) : null;
-      const pe = (dir) => d.GridPlan.variante({ pret: p, dir, suma: d.suma || 100, levier: d.levier || 5, plan: d.plan, amp, pas: d.GridCalcul.C.PAS_MIN, b15 });
+      const pe = (dir) => d.GridPlan.variante({ pret: p, dir, suma: d.suma || 100, levier: d.levier || 5, plan: d.plan, amp, pas: d.GridCalcul.C.PAS_MIN, b15, zile });
       const L = pe("long"), S = pe("short");
       if (L.eroare && S.eroare) return;
       planMonede.push({ simbol, botulTau: extra.includes(simbol), ta: L.eroare ? null : scurt(L.ta, p), mea: L.eroare ? null : scurt(L.mea, p), taS: S.eroare ? null : scurt(S.ta, p), meaS: S.eroare ? null : scurt(S.mea, p) });
@@ -58,7 +59,7 @@ export async function turaLaborator(d) {
   }
   const intrebari = d.GridLaborator.intrebari(rows, H);
   const rez = { la: Date.now(), H, monede, fara, ferestre: rows.length, intrebari,
-    planMonede: cuPlan && planMonede.length ? { dir: "long", plan: { plus: d.plan.plus, minus: d.plan.minus }, suma: d.suma || 100, levier: d.levier || 5, nota: d.notaPlan || "", monede: planMonede } : null };
+    planMonede: cuPlan && planMonede.length ? { dir: "long", zile, plan: { plus: d.plan.plus, minus: d.plan.minus }, suma: d.suma || 100, levier: d.levier || 5, nota: d.notaPlan || "", monede: planMonede } : null };
   d.jurnal("laborator:", monede, "monede,", rows.length, "ferestre in", Math.round((Date.now() - t0) / 1000) + " s; " + intrebari.map((q) => q.id + "=" + q.verdict).join(" "));
   return rez;
 }

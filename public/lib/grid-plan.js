@@ -55,16 +55,18 @@ var GridPlan = (function () {
   // proba pe ultimele ZILE de lumanari de 15M: cate o pornire la 6 h, ferestre de FEREASTRA_ZILE zile intregi; setarea
   // se muta relativ pe pretul fiecarei porniri. Ce spune: de cate ori a iesit pe stop / pe tinta / a ramas in grid, dupa cat
   // timp, si media in USDT pe pornire (cu comisioanele; ce ramane deschis se socoteste la pretul de la capatul ferestrei).
-  function proba(b15, st) {
-    var W = FEREASTRA_ZILE * C.BARE_ZI, n0 = b15 ? b15.length - ZILE * C.BARE_ZI : -1;
+  // v100.21: zile (implicit ZILE) - laboratorul cere 60; ceaMaiProastaUsdt = pornirea cu cel mai prost rezultat (riscul, nu doar media)
+  function proba(b15, st, zile) {
+    var Z = zile > 0 ? Math.floor(zile) : ZILE, W = FEREASTRA_ZILE * C.BARE_ZI, n0 = b15 ? b15.length - Z * C.BARE_ZI : -1;
     if (!b15 || n0 < 0) return null;
-    var lung = st.dir === "long", out = { n: 0, stop: 0, tinta: 0, inGrid: 0, lichidari: 0, oreTipic: null, mediaUsdt: null, zile: ZILE, ferestreZile: FEREASTRA_ZILE, independente: Math.floor(ZILE / FEREASTRA_ZILE) };
+    var lung = st.dir === "long", out = { n: 0, stop: 0, tinta: 0, inGrid: 0, lichidari: 0, oreTipic: null, mediaUsdt: null, ceaMaiProastaUsdt: null, zile: Z, ferestreZile: FEREASTRA_ZILE, independente: Math.floor(Z / FEREASTRA_ZILE) };
     var ore = [], suma = 0;
     for (var s = n0; s + W <= b15.length; s += C.PAS_FERESTRE) {
       var P0 = b15[s].o, k = P0 / st.pret;
       if (!(P0 > 0)) continue;
       var r = GP.simuleaza(b15, s, W, { dir: st.dir, jos: st.jos * k, sus: st.sus * k, grile: st.grile, levier: st.levier, stop: { jos: st.stop.jos * k, sus: st.stop.sus * k } });
       out.n++; suma += r.net * st.suma;
+      if (out.ceaMaiProastaUsdt === null || r.net * st.suma < out.ceaMaiProastaUsdt) out.ceaMaiProastaUsdt = r.net * st.suma;
       if (r.lichidat) out.lichidari++;
       else if (r.iesit) { if ((r.iesit === "jos") === lung) out.stop++; else out.tinta++; ore.push(r.bare / 4); }
       else out.inGrid++;
@@ -83,7 +85,7 @@ var GridPlan = (function () {
     return setare(x, d, u, L);
   }
   function complet(o, st, extra) {
-    st.laStop = laMargine(st, "pierdere"); st.laTinta = laMargine(st, "castig"); st.proba = proba(o.b15, st);
+    st.laStop = laMargine(st, "pierdere"); st.laTinta = laMargine(st, "castig"); st.proba = proba(o.b15, st, o.zile);
     for (var k in extra) st[k] = extra[k];
     return st;
   }
@@ -96,7 +98,7 @@ var GridPlan = (function () {
     if (dir !== "long" && dir !== "short") return { eroare: "Gridul după plan are sens doar pentru long sau short (cel neutru pierde pe ambele părți)." };
     if (!(suma > 0)) return { eroare: "N-am suma investită." };
     if (!(plus > 0) || !(minus > 0)) return { eroare: "Îmi trebuie planul întreg: ținta pe plus și pragul pe minus, în USDT." };
-    var x = { pret: P, dir: dir, suma: suma, pas: nr(o.pas), minOrdin: o.minOrdin, b15: o.b15 };
+    var x = { pret: P, dir: dir, suma: suma, pas: nr(o.pas), minOrdin: o.minOrdin, b15: o.b15, zile: nr(o.zile) };
     // TA: levierul tau, banda cat planul
     var dT = dPentru(suma * Lt, minus, plus), ta = complet(x, potriveste(x, Lt, dT, uPentru(suma * Lt, dT, plus), false, minus, plus), { cum: "levierul tău, banda cât planul" });
     // MEA: banda cat o zi obisnuita, levierul cel mai mare (<= al tau) la care, pe simulator, marginea costa cel mult planul
