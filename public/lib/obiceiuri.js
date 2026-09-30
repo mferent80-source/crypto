@@ -47,7 +47,9 @@ var Obiceiuri = (function () {
     return { n: l.length, net: net, comisioane: com, text: "Boții închiși în prima oră: " + l.length + ", " + P(plus / l.length) + " pe plus, net " + U(net) + " (din care comisioane " + U(com) + "). Închiderile repezi costă mai ales în comisioane." };
   }
   function poarta(o) {
-    var f = o.fisa || {}, acum = o.acum || Date.now(), m = moneda(f.simbol), R = [];
+    // v100.30 (30.09, el: „fa 1/2/3”): istoricul si reintrarea dupa numele BOTULUI (o.numeBot = baseCurrency din lista oficiala Pionex):
+    // tickerul LIT_USDT_PERP are botul „LIGHTER.PERP” (la fel PUMP→PUMPFUN, 0G→ZEROG, NEIRO→NEIROCTO...)
+    var f = o.fisa || {}, acum = o.acum || Date.now(), tk = moneda(f.simbol), m = o.numeBot ? moneda(o.numeBot) : tk, R = [];
     var v = f.verdict && f.verdict.nivel;
     R.push({ cod: "verde", ok: v === "porneste", text: v === "porneste" ? "Fișa zice 🟢 PORNEȘTE." : "Fișa zice " + (v === "nu" ? "🔴 NU PORNI" : v === "asteapta" ? "🟡 AȘTEAPTĂ" : "că n-are date") + (f.verdict && f.verdict.motive && f.verdict.motive[0] ? ": " + f.verdict.motive[0] : "") + ".",
       cost: "pe boții tăi închiși: doar pe 🟢 ar fi fost −0,99 în loc de −21,45 USDT" });
@@ -61,7 +63,7 @@ var Obiceiuri = (function () {
     var pl = o.plan, plOk = !!(pl && (nr(pl.plus) > 0 || nr(pl.minus) > 0));
     R.push({ cod: "plan", ok: plOk, text: plOk ? "Ai planul de ieșire: " + [nr(pl.plus) > 0 ? "plus " + pl.plus : null, nr(pl.minus) > 0 ? "minus " + pl.minus : null, nr(pl.afaraOre) > 0 ? "afară " + pl.afaraOre + " h" : null].filter(Boolean).join(", ") + "." : "N-ai scris când ieși (pe plus / pe minus): hotărât la rece e mai ușor.", cost: null });
     var im = istoricMoneda(o.trades, m);
-    R.push({ cod: "moneda", ok: !im.avertizare, text: im.text });
+    R.push({ cod: "moneda", ok: !im.avertizare, text: im.text + (m !== tk ? " (" + tk + " se numește " + m + " la boții Pionex)" : "") });
     var so = subOOra(o.trades);
     return { trecut: R.every(function (r) { return r.ok; }), reguli: R, sfaturi: so ? [so.text] : [] };
   }

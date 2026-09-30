@@ -5068,7 +5068,8 @@ async function gridPoarta(){
   var plan=grPlanCitit();
   if(!jtStare.boti&&!jtStare.inLucru){try{await jtPorneste(true)}catch(e){}}
   var trades=JurnalTrade.din(jtStare.boti||[]),lev=grNumar($("grLevier")&&$("grLevier").value)||f.setare.levier;
-  grPoartaRez={simbol:f.simbol,plan:plan,rez:Obiceiuri.poarta({fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan})};
+  // v100.30: numele botului din lista oficiala Pionex (LIT -> LIGHTER), ca istoricul si reintrarea sa-l gaseasca
+  grPoartaRez={simbol:f.simbol,plan:plan,rez:Obiceiuri.poarta({fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
 }
