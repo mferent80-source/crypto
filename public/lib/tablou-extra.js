@@ -105,6 +105,54 @@ var TabloExtra = (function () {
     q = Math.abs(q);
     return dir === "long" ? net + q * (x - pd) - q * x * comision : dir === "short" ? net + q * (pd - x) - q * x * comision : null;
   }
+  // v101.7 (30.09, LIGHTER −59 USDT): totalul daca pretul ajunge la X, cu grilele umplute PE DRUM. Long: sub pret botul
+  // mai cumpara pana la marginea de jos, unde pozitia e plina = (randuri - 1) x cantitatea pe grila (masurat pe LIGHTER,
+  // JTO, BCH - inchisi sub grid: 105 = 15 x 7, 868 = 14 x 62, 0,435 = 29 x 0,015). Ordinele ramase se iau intinse uniform
+  // intre pret si margine, deci la pretul lor mediu. Short oglindit. Fara row/perVolume -> doar pozitia de acum.
+  function totalCuGridLa(b, X, comision) {
+    comision = comision == null ? C.COMISION : comision;
+    var net = nr(b && b.profitNet), q = nr(b && b.pozitie), pd = nr(b && b.pretDeschidere), p = nr(b && b.pretCurent), x = nr(X);
+    var jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase(), u = bu(b);
+    if (net === null || q === null || !(x > 0) || !(p > 0) || (b && b.pnlNerealizatSigur === false) || (dir !== "long" && dir !== "short")) return null;
+    q = Math.abs(q);
+    if (q > 0 && !(pd > 0)) return null;
+    var lung = dir === "long", tot = net + (q > 0 ? (lung ? q * (x - pd) : q * (pd - x)) : 0), qTot = q;
+    var rand = nr(u.row), pv = nr(u.perVolume), qMax = rand > 1 && pv > 0 ? (rand - 1) * pv : null;
+    if (qMax !== null && qMax > q && jos !== null && sus !== null && sus > jos) {
+      var cap = lung ? Math.min(p, sus) : Math.max(p, jos), margine = lung ? jos : sus;
+      var pana = lung ? Math.max(x, jos) : Math.min(x, sus), latime = Math.abs(cap - margine);
+      if (latime > 0 && (lung ? x < cap : x > cap)) {
+        var qn = (qMax - q) * Math.min(1, Math.abs(cap - pana) / latime), med = (cap + pana) / 2;
+        tot += lung ? qn * (x - med) : qn * (med - x); qTot += qn;
+      }
+    }
+    return tot - qTot * x * comision;
+  }
+  // v101.7: cat pierde (castiga) botul daca se atinge opritorul LUI din Pionex. In procente (profit_ratio) Pionex il opreste
+  // exact la raport x investit; pe pret, cu grilele de pe drum. Opritor stins / lipsa -> null.
+  function totalLaOpritor(b, comision) {
+    if (!b || !b.opritorPierdereActiv) return null;
+    var inv = nr(b.investit), r = nr(b.opritorPierdereRaport);
+    if (b.opritorPierdereTip === "raport" && r !== null && inv > 0) return r * inv;
+    var op = nr(b.opritorPierdere);
+    return op !== null && op > 0 ? totalCuGridLa(b, op, comision) : null;
+  }
+  // v101.7: pretul opritorului la care, atins, totalul e exact T (planul pe minus: T = −prag). Cautare prin injumatatire
+  // (totalul creste cu pretul la long, scade la short); planul deja atins la pretul de acum -> null.
+  function pretOpritorPentru(b, T, comision) {
+    var p = nr(b && b.pretCurent), t = nr(T), dir = String(b && b.directie || "").toLowerCase();
+    if (p === null || t === null || (dir !== "long" && dir !== "short")) return null;
+    var f = function (x) { return totalCuGridLa(b, x, comision); }, acum = f(p);
+    if (acum === null || acum <= t) return null;
+    var lo = dir === "long" ? p * 0.02 : p, hi = dir === "long" ? p : p * 50;
+    if (f(dir === "long" ? lo : hi) > t) return null;
+    for (var i = 0; i < 60; i++) {
+      var m = (lo + hi) / 2, v = f(m);
+      if (v === null) return null;
+      if ((v > t) === (dir === "long")) hi = m; else lo = m;
+    }
+    return (lo + hi) / 2;
+  }
   // v96.5 "opritorul care urca": dupa tinta, opritorul la PERNA sub pret (1,5%) - cat pastreaza; si cat pastreaza opritorul de acum
   var PERNA = 0.015;
   function podeaUrca(b, prag) {
@@ -219,7 +267,11 @@ var TabloExtra = (function () {
       var opA = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null;
       out.plus.opritorPastreaza = opA !== null ? totalLaPret(b, opA) : null;
     }
-    if (nr(plan.minus) > 0 && tot !== null) { out.minus = { prag: nr(plan.minus), lipsa: nr(plan.minus) + tot }; if (tot <= -nr(plan.minus)) out.atins.push("minus"); }
+    if (nr(plan.minus) > 0 && tot !== null) {
+      out.minus = { prag: nr(plan.minus), lipsa: nr(plan.minus) + tot }; if (tot <= -nr(plan.minus)) out.atins.push("minus");
+      // v101.7: planul pe minus e doar alerta; opritorul din Pionex e ce lucreaza si noaptea - cat costa el atins si unde ar sta planul
+      out.minus.laOpritor = totalLaOpritor(b); out.minus.opritorPlan = pretOpritorPentru(b, -nr(plan.minus));
+    }
     if (nr(plan.afaraOre) > 0) {
       var de = stare && nr(stare.afaraDe), ore = de ? ((acum || Date.now()) - de) / 3600000 : 0;
       out.afara = { prag: nr(plan.afaraOre), ore: ore, afara: !!de };
@@ -393,7 +445,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { codTVBot: codTVBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { codTVBot: codTVBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

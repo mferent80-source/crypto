@@ -11,7 +11,7 @@ var Alerte = (function () {
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
   var REPETA_CHEIE_MS = { "opritor:atentie": 24 * 3600000, miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000,
-    "m-btc": 12 * 3600000, "m-funding": 12 * 3600000, "p-zero": 12 * 3600000, "p-margine": 12 * 3600000 };   // semnalele se repeta rar
+    "m-btc": 12 * 3600000, "m-funding": 12 * 3600000, "p-zero": 12 * 3600000, "p-margine": 12 * 3600000, "plan-stop": 12 * 3600000 };   // semnalele se repeta rar
   // Histerezis: o alerta INTRA la un prag si IESE abia la unul mai larg, altfel
   // un bot care sta langa prag ar trimite un mesaj la fiecare minut (masurat:
   // 59/ora intre 14,9% si 15,1%). "A trecut" se spune doar dupa 10 minute stabile.
@@ -97,6 +97,29 @@ var Alerte = (function () {
       }
       else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — prețul e în afara gridului de peste " + (ctx.plan.afara ? ctx.plan.afara.prag : "?") + " ore", mesaj: "Ai hotărât să nu-l lași afară atât. Aș opri botul și aș face unul nou din fișă, pe unde e prețul." };
       else out.plan = { nivel: "ok", titlu: "", mesaj: "" };
+    }
+
+    // v101.7 (30.09, LIGHTER: planul zicea −15,7 USDT, opritorul din Pionex il costa ≈ 60 si a inchis la −59,04 la 2 noaptea):
+    // planul pe minus e doar o alerta; opritorul din Pionex e singurul care lucreaza cand dormi. Atins, cat te costa fata de plan?
+    // Intra peste 1,2x planul si cu cel putin 2 USDT (alunecarea, pasul de pret Pionex), iese sub 1,1x; de la 2x e CRITIC.
+    // Se avertizeaza, nu se refuza. Cu planul pe minus deja atins tace: acolo vorbeste "planul tau — iesi".
+    if (ctx && ctx.plan && ctx.plan.minus && (ctx.plan.atins || []).indexOf("minus") < 0) {
+      var mi = ctx.plan.minus, lo = nr(mi.laOpritor), pg = nr(mi.prag), inv = nr(b.investit);
+      if (lo === null || !(pg > 0)) out["plan-stop"] = null;
+      else {
+        var pierde = -lo, inPS = fost("plan-stop") !== "ok", departe = pierde > pg * (inPS ? 1.1 : 1.2) && pierde - pg >= (inPS ? 1 : 2);
+        var vg = function (v, z) { return Math.abs(v).toFixed(z).replace(".", ","); }, pgT = String(pg).replace(".", ",");
+        var procPlan = inv > 0 ? "−" + vg(pg / inv * 100, 1) + "% din investiție" : null;
+        var raport = b.opritorPierdereTip === "raport" && nr(b.opritorPierdereRaport) !== null, opS = nr(b.opritorPierdere), opPlan = nr(mi.opritorPlan);
+        var undeE = raport ? "Stopul e pus în procente, la −" + vg(nr(b.opritorPierdereRaport) * 100, 1) + "% din investiție."
+          : "Stopul e la " + pret(opS) + (p !== null && opS !== null ? " (" + (opS >= p ? "+" : "−") + vg((opS / p - 1) * 100, 1) + "% de prețul de acum)" : "") + ". Pe drum până acolo gridul mai " + (String(b.directie).toLowerCase() === "short" ? "vinde" : "cumpără") + ", iar la stop poziția e plină.";
+        var faCe = raport ? (procPlan ? "îl pun la " + procPlan : "îl apropii cât zice planul")
+          : (opPlan !== null ? "mut stopul în Pionex la " + pret(opPlan) + (procPlan ? " sau îl pun în procente, la " + procPlan : "") : procPlan ? "pun stopul în procente, la " + procPlan : "apropii stopul cât zice planul");
+        out["plan-stop"] = departe
+          ? { nivel: pierde >= 2 * pg ? "critic" : "atentie", titlu: nume + ": dacă se atinge stopul din Pionex, pierzi ≈ " + Math.round(pierde) + " USDT — planul tău zice −" + pgT,
+              mesaj: undeE + " Atins, te costă ≈ " + vg(pierde, 1) + " USDT" + (inv > 0 ? " (" + Math.round(pierde / inv * 100) + "% din investiție)" : "") + ". Planul tău de −" + pgT + " USDT e doar o alertă: noaptea nu-l execută nimeni. Ce aș face eu: " + faCe + "; așa planul devine ordin." }
+          : { nivel: "ok", titlu: nume + ": stopul din Pionex se potrivește acum cu planul tău", mesaj: "Atins, te costă ≈ " + vg(pierde, 1) + " USDT; planul zice −" + pgT + "." };
+      }
     }
 
     // v82: semnalele actionabile (calculate de SemnaleBot in colector)
