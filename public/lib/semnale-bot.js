@@ -149,6 +149,9 @@ var SemnaleBot = (function () {
         if (op === null && undePl) st0.act = capM + "N-ai stop: pune-l la " + undePl + " (planul tău, −" + pgmT + " USDT).";
         else if (pestePlan) { st0.tag = { t: "peste plan", c: "bad" }; st0.act = "Atins, te costă ≈ " + Math.round(-laOp) + " USDT — planul tău zice −" + pgmT + (undePl ? ": mută-l la " + undePl : "") + "."; }
         else if (op !== null && laOp !== null && !inAfara) { st0.tag = { t: "pus", c: "good" }; st0.act = capM + "Stopul tău (" + fmtPret(op) + ") stă în grid, dar atins te costă cât planul (≈ −" + Math.round(-laOp) + " USDT)."; }
+        // v100.43 (I-467): cand planul hotaraste unde stai stopul, banii se socotesc pe pretul PLANULUI (nu pe stopul fisei) - altfel
+        // cartela zicea „mută-l la 0,384” si randul cu bani „l-aș lăsa unde e” (prins pe poza, CRV)
+        if (opPl !== null && (op === null || pestePlan)) pretStop = opPl;
       }
     }
     gr0.mare = poz === null ? "—" : poz < 0 ? S1(p / jos - 1) : poz > 1 ? S1(p / sus - 1) : Math.round(poz * 100) + "%";
