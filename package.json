@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "100.17.0",
+  "version": "100.18.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,7 +11,7 @@
     "dev": "npx --yes wrangler@4.137.0 pages dev public --ip 127.0.0.1",
     "deploy": "npx --yes wrangler@4.137.0 pages deploy public --project-name crypto",
     "predeploy": "npm test",
-    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo && npm run test:directie && npm run test:colector && npm run test:scenarii && npm run test:grid && npm run test:jurnaltrade && npm run test:semnale && npm run test:obiceiuri && npm run test:t212 && npm run test:v982 && npm run test:v99 && npm run test:v991 && npm run test:v992 && npm run test:v100 && npm run test:pretviu && npm run test:poza && npm run test:sltp && npm run test:v1016 && npm run test:v1017 && npm run test:v1018 && npm run test:v10016 && npm run test:v10017",
+    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo && npm run test:directie && npm run test:colector && npm run test:scenarii && npm run test:grid && npm run test:jurnaltrade && npm run test:semnale && npm run test:obiceiuri && npm run test:t212 && npm run test:v982 && npm run test:v99 && npm run test:v991 && npm run test:v992 && npm run test:v100 && npm run test:pretviu && npm run test:poza && npm run test:sltp && npm run test:v1016 && npm run test:v1017 && npm run test:v1018 && npm run test:v10016 && npm run test:v10017 && npm run test:v10018",
     "test:v1016": "node scripts/proba-v1016.mjs",
     "test:v992": "node scripts/proba-v992.mjs",
     "test:v991": "node scripts/proba-v991.mjs",
@@ -46,6 +46,7 @@
     "test:v1017": "node scripts/proba-v1017.mjs",
     "test:v1018": "node scripts/proba-v1018.mjs",
     "test:v10016": "node scripts/proba-v10016.mjs",
-    "test:v10017": "node scripts/proba-v10017.mjs"
+    "test:v10017": "node scripts/proba-v10017.mjs",
+    "test:v10018": "node scripts/proba-v10018.mjs"
   }
 }

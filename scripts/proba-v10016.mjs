@@ -64,6 +64,13 @@ await test("lichidarea sta dincolo de stop in ambele variante (long: sub)", () =
   for (const x of [v.ta, v.mea]) assert.ok(x.lichidare.jos === null || x.lichidare.jos < x.stop.jos, `lichidare ${x.lichidare.jos} / stop ${x.stop.jos}`);
 });
 
+await test("moneda linistita (2%/zi, sub banda planului): varianta mea NU e mai ingusta decat a ta - e aceeasi (v100.18, prinsa pe BTC/XAU reale)", () => {
+  const v = GridPlan.variante(O({ amp: 0.02 }));
+  assert.equal(v.mea.egalaCuTa, true);
+  assert.equal(v.mea.levier, v.ta.levier); assert.equal(v.mea.jos, v.ta.jos); assert.equal(v.mea.sus, v.ta.sus);
+  assert.match(v.mea.cum, /la fel ca a ta/);
+});
+
 await test("moneda care se misca 30%/zi: nici la 1x banda de o zi nu incape -> 1x si banda strans cat planul", () => {
   const m = GridPlan.variante(O({ amp: 0.3 })).mea;
   assert.equal(m.levier, 1);

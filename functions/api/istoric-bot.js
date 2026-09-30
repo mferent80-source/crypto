@@ -184,7 +184,12 @@ export async function onRequestPost({request,env}){
     const g=x=>x&&typeof x==="object"?{n:nr(x.n),nEf:nr(x.nEf),pePlus:nr(x.pePlus),mediana:nr(x.mediana),ic:Array.isArray(x.ic)?[nr(x.ic[0]),nr(x.ic[1])]:null}:null;
     const txt=(v,m)=>typeof v==="string"?v.slice(0,m):"";
     const curate=q.slice(0,10).map(x=>x&&typeof x==="object"?{id:txt(x.id,32).replace(/[^a-z0-9-]/g,""),titlu:txt(x.titlu,160),eticheteA:txt(x.eticheteA,40),eticheteB:txt(x.eticheteB,40),verdict:["dovedit","contrazis","n-am-aflat"].includes(x.verdict)?x.verdict:"n-am-aflat",A:g(x.A),B:g(x.B),alegere:{A:g(x.alegere&&x.alegere.A),B:g(x.alegere&&x.alegere.B)},nevazut:{A:g(x.nevazut&&x.nevazut.A),B:g(x.nevazut&&x.nevazut.B)}}:null).filter(Boolean);
-    await env.ISTORIC.put("laborator",JSON.stringify({la,H:nr(corp.H),monede:nr(corp.monede),ferestre:nr(corp.ferestre),intrebari:curate}),{expirationTtl:3*24*3600});
+    // v101.9: „gridul dupa planul tau” pe monedele laboratorului - curatat: simbol A-Z0-9_, numere sau null, cel mult 30
+    const v2=x=>x&&typeof x==="object"?{levier:nr(x.levier),jos:nr(x.jos),sus:nr(x.sus),laStop:nr(x.laStop),laTinta:nr(x.laTinta),n:nr(x.n),stop:nr(x.stop),tinta:nr(x.tinta),inGrid:nr(x.inGrid),lichidari:nr(x.lichidari),mediaUsdt:nr(x.mediaUsdt),oreTipic:nr(x.oreTipic)}:null;
+    const pm=corp&&corp.planMonede&&typeof corp.planMonede==="object"&&Array.isArray(corp.planMonede.monede)?corp.planMonede:null;
+    const planMonede=pm?{dir:pm.dir==="short"?"short":"long",plan:{plus:nr(pm.plan&&pm.plan.plus),minus:nr(pm.plan&&pm.plan.minus)},suma:nr(pm.suma),levier:nr(pm.levier),nota:txt(pm.nota,200),
+      monede:pm.monede.map(x=>x&&typeof x==="object"?{simbol:txt(x.simbol,40).toUpperCase().replace(/[^A-Z0-9_]/g,""),ta:v2(x.ta),mea:v2(x.mea)}:null).filter(x=>x&&x.simbol).slice(0,30)}:null;
+    await env.ISTORIC.put("laborator",JSON.stringify({la,H:nr(corp.H),monede:nr(corp.monede),ferestre:nr(corp.ferestre),intrebari:curate,planMonede}),{expirationTtl:3*24*3600});
     return json({ok:true,intrebari:curate.length});
   }
   if(action==="alerte"){

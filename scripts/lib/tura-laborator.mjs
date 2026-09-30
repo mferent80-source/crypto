@@ -3,11 +3,15 @@
 // intrebari. Folosita de colector (o data pe zi) si de scripts/grid-laborator-real.mjs.
 // deps: { cere(cale) -> JSON cu forma Pionex {data:{...}}, trimite?, jurnal, pauza,
 //         GridCalcul, GridLaborator, GridClasament, top (20), H (2), pauzaMs (1600) }
+// v101.9 (optional): GridPlan, plan {plus, minus}, suma, levier, notaPlan, miscareZi(bare) -> pe aceleasi lumanari, „gridul dupa
+// planul tau” pe fiecare moneda (long): cele doua variante cu proba pe 30 de zile, in rez.planMonede (fara ele: null).
 export async function turaLaborator(d) {
   const top = d.top || 20, H = d.H || 2, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, t0 = Date.now();
   const tk = await d.cere("tickers");
   const lista = d.GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, top);
   let rows = [], monede = 0, fara = 0;
+  const cuPlan = !!(d.GridPlan && d.plan && d.plan.plus > 0 && d.plan.minus > 0), planMonede = [];
+  const scurt = (x, p) => x ? { levier: x.levier, jos: x.jos / p - 1, sus: x.sus / p - 1, laStop: x.laStop, laTinta: x.laTinta, n: x.proba ? x.proba.n : null, stop: x.proba ? x.proba.stop : null, tinta: x.proba ? x.proba.tinta : null, inGrid: x.proba ? x.proba.inGrid : null, lichidari: x.proba ? x.proba.lichidari : null, mediaUsdt: x.proba ? x.proba.mediaUsdt : null, oreTipic: x.proba ? x.proba.oreTipic : null } : null;
   for (const m of lista) {
     try {
       let r15 = [], end = null;
@@ -21,7 +25,13 @@ export async function turaLaborator(d) {
         end = Math.min(...t) - 1;
         if (pauzaMs) await d.pauza(pauzaMs);
       }
-      const f = d.GridLaborator.ferestre(d.GridCalcul.bare(r15), H);
+      const b15 = d.GridCalcul.bare(r15), f = d.GridLaborator.ferestre(b15, H);
+      if (cuPlan && b15.length) {
+        try {
+          const p = b15[b15.length - 1].c, pv = d.GridPlan.variante({ pret: p, dir: "long", suma: d.suma || 100, levier: d.levier || 5, plan: d.plan, amp: d.miscareZi ? d.miscareZi(b15) : null, pas: d.GridCalcul.C.PAS_MIN, b15 });
+          if (!pv.eroare) planMonede.push({ simbol: m.simbol, ta: scurt(pv.ta, p), mea: scurt(pv.mea, p) });
+        } catch (e) { d.jurnal("laborator plan", m.simbol, e.message); }
+      }
       if (!f.length) { fara++; continue; }
       rows = rows.concat(f.map((x) => Object.assign({ simbol: m.simbol }, x)));
       monede++;
@@ -29,7 +39,8 @@ export async function turaLaborator(d) {
     if (pauzaMs) await d.pauza(pauzaMs);
   }
   const intrebari = d.GridLaborator.intrebari(rows, H);
-  const rez = { la: Date.now(), H, monede, fara, ferestre: rows.length, intrebari };
+  const rez = { la: Date.now(), H, monede, fara, ferestre: rows.length, intrebari,
+    planMonede: cuPlan && planMonede.length ? { dir: "long", plan: { plus: d.plan.plus, minus: d.plan.minus }, suma: d.suma || 100, levier: d.levier || 5, nota: d.notaPlan || "", monede: planMonede } : null };
   d.jurnal("laborator:", monede, "monede,", rows.length, "ferestre in", Math.round((Date.now() - t0) / 1000) + " s; " + intrebari.map((q) => q.id + "=" + q.verdict).join(" "));
   return rez;
 }

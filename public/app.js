@@ -5177,6 +5177,18 @@ async function gridLaboratorAdu(){
   catch(e){grLaborator.eroare=e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)}
   grLaborator.la=Date.now();renderGridLaborator();
 }
+// v100.18 (ideea 3): „gridul dupa planul tau” pe monedele laboratorului (long, planul lui cel mai nou) - pe care a iesit pe plus
+function grLabPlanHtml(pm){
+  if(!pm||!Array.isArray(pm.monede)||!pm.monede.length)return "";
+  var U=function(v){return v==null?"—":(v>=0?"+":"−")+Math.abs(v).toFixed(1).replace(".",",")+" USDT"},V=function(v){return v==null?"?":String(v).replace(".",",")},med=function(x){return x&&x.mediaUsdt!=null?x.mediaUsdt:-1e9};
+  var rows=pm.monede.slice().sort(function(a,b){return med(b.mea)-med(a.mea)||med(b.ta)-med(a.ta)});
+  var cel=function(x){if(!x||x.n==null)return '<td>—</td><td>—</td>';return '<td><span class="bad">'+x.stop+'</span> / <span class="good">'+x.tinta+'</span> / '+x.inGrid+(x.lichidari?' · <b class="bad">lichidat '+x.lichidari+'</b>':'')+'</td><td class="'+(x.mediaUsdt>=0?"good":"bad")+'">'+U(x.mediaUsdt)+'</td>'};
+  var pePlus=function(k){return rows.filter(function(r){return r[k]&&r[k].mediaUsdt!=null&&r[k].mediaUsdt>0}).length};
+  return '<h4 class="grLabPlanCap">Gridul după planul tău, pe cele '+rows.length+' monede</h4><p class="grNota">Long, '+V(pm.suma)+' USDT, planul +'+V(pm.plan&&pm.plan.plus)+' / −'+V(pm.plan&&pm.plan.minus)+' USDT'+(pm.nota?' ('+escapeHtml(pm.nota)+')':'')+'. A ta la '+V(pm.levier)+'×, banda cât planul; a mea cu banda cât o zi a monedei și levierul din plan. Stop și țintă la margini. Pe ultimele 30 de zile, o pornire la 6 h, fiecare urmărită 3 zile; media pe pornire e cu comisioane. Clic pe monedă = fișa ei.</p>'
+    +'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Monedă</th><th>A ta: stop / țintă / în grid</th><th>media</th><th>A mea</th><th>stop / țintă / în grid</th><th>media</th></tr></thead><tbody>'
+    +rows.map(function(r){return '<tr><td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(r.simbol)+'" data-action-click="gridClasamentAlege(this.value)">'+escapeHtml(String(r.simbol).replace(/_USDT_PERP$/,""))+'</button></td>'+cel(r.ta)+'<td>'+(r.mea?r.mea.levier+'× · ±'+(Math.abs(r.mea.jos)*100).toFixed(1).replace(".",",")+'%':"—")+'</td>'+cel(r.mea)+'</tr>'}).join("")
+    +'</tbody></table></div><p class="grNota">Pe plus: a ta pe '+pePlus("ta")+' din '+rows.length+' monede, a mea pe '+pePlus("mea")+' din '+rows.length+'. O singură lună, porniri care se suprapun (~10 independente pe monedă): trecutul, nu o promisiune.</p>';
+}
 function renderGridLaborator(){
   var box=$("grLaborator"),sub=$("grLaboratorSub");if(!box)return;
   var L=grLaborator.date,P=GridCalcul.procent;
@@ -5187,6 +5199,7 @@ function renderGridLaborator(){
   var g=function(x){return x?P(x.pePlus)+' pe plus <span class="tbSub">(IC '+(x.ic?P(x.ic[0])+' – '+P(x.ic[1]):"—")+', mediana '+P(x.mediana)+', '+x.nEf+' ferestre independente)</span>':"—"};
   var pp=function(o,k){return P(o&&o[k]&&o[k].pePlus)};
   box.innerHTML='<p class="grNota">Un grid NEUTRU standard, simulat pe fiecare fereastră de 2 zile, cu condițiile știute la pornire. „Dovedit” = aceeași diferență pe primele 2/3 și pe ultima treime (nevăzută), iar intervalele nu se ating. Altfel: n-am aflat — nu înseamnă că nu există, ci că datele nu ajung.</p>'+L.intrebari.map(function(q){var v=V[q.verdict]||V["n-am-aflat"];return '<div class="grLab"><b>'+escapeHtml(q.titlu)+'</b> <span class="'+v[1]+'">'+v[0]+'</span><div>'+escapeHtml(q.eticheteA)+': '+g(q.A)+'</div><div>'+escapeHtml(q.eticheteB)+': '+g(q.B)+'</div><div class="tbSub">pe zilele de alegere: '+pp(q.alegere,"A")+' vs '+pp(q.alegere,"B")+' · pe cele nevăzute: '+pp(q.nevazut,"A")+' vs '+pp(q.nevazut,"B")+'</div></div>'}).join("");
+  box.innerHTML+=grLabPlanHtml(L.planMonede);   // v100.18 (ideea 3)
 }
 function gridClasamentAlege(simbol){if($("grMoneda"))$("grMoneda").value=String(simbol||"").replace(/_USDT_PERP$/,"");grStare.duLaFisa=grSimbol(simbol);gridCalculeaza('fortat');setTimeout(function(){if($("grFisa"))$("grFisa").scrollIntoView({behavior:"smooth",block:"start"})},150)}
 function renderGridClasament(){

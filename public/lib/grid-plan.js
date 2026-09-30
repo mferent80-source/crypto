@@ -102,6 +102,9 @@ var GridPlan = (function () {
     // MEA: banda cat o zi obisnuita, levierul cel mai mare (<= al tau) la care, pe simulator, marginea costa cel mult planul
     var mea = null, faraMea = null;
     if (amp === null || !(amp > 0)) faraMea = "N-am mișcarea monedei pe zi (îmi trebuie lumânările de 4 ore pe 30 de zile).";
+    // v100.18 (prinsa pe laboratorul real: BTC −1,8 vs +0,1, XAU −3,9 vs −1,6): moneda linistita, banda planului e deja cat o zi
+    // sau mai larga -> n-are rost s-o strang; varianta mea = a ta
+    else if (amp <= ta.d) mea = Object.assign({}, ta, { cum: "banda planului e deja cât o zi obișnuită sau mai largă: la fel ca a ta", egalaCuTa: true, stransaLaPlan: false });
     else {
       for (var L = Lt; L >= 1 && !mea; L--) {
         var st = potriveste(x, L, amp, uPentru(suma * L, amp, plus), true, minus, plus);

@@ -25,7 +25,7 @@ import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v101.8";
+const VERSIUNE_COLECTOR = "v101.9";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -110,6 +110,7 @@ const SemnaleBot = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "pu
 const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "tablou-extra.js"), "utf8") + "; return TabloExtra;")(GridCalcul);
 const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
 const GridLaborator = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba);
+const GridPlan = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-plan.js"), "utf8") + "; return GridPlan;")(GridCalcul, GridProba);   // v101.9
 const T212 = incarca("t212.js", "T212");
 const ActiuniSemnale = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "actiuni-semnale.js"), "utf8") + "; return ActiuniSemnale;")(GridCalcul);
 const Consilier = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "consilier.js"), "utf8") + "; return Consilier;")(ActiuniSemnale);
@@ -394,11 +395,27 @@ async function turaLaborator() {
   laboratorInLucru = true;
   try {
     const cerePionex = (tip, simbol, end) => cere(tip === "tickers" ? "/api/market?type=pionex_tickers&market=PERP" : "/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : ""));
-    const r = await turaLaboratorModul({ cere: cerePionex, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridLaborator, GridClasament, top: 20, H: 2 });
+    const pp = await planulPentruProbe();   // v101.9: „gridul dupa planul tau” pe monedele laboratorului
+    const r = await turaLaboratorModul({ cere: cerePionex, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridLaborator, GridClasament, top: 20, H: 2, GridPlan, plan: pp.plan, suma: pp.suma, levier: pp.levier, notaPlan: pp.nota, miscareZi: TabloExtra.miscareZi });
     if (r.monede >= 10) { await trimite("/api/istoric-bot?action=laborator", r); laboratorLa = Date.now(); }
     else { jurnal("laborator NEURCAT: doar", r.monede, "monede"); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   } catch (e) { jurnal("laborator ESEC", e.message); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   laboratorInLucru = false;
+}
+
+// v101.9: planul lui cel mai nou, cu suma si levierul botului de care tine, pentru proba „gridul dupa planul tau” din laborator;
+// fara el, propunerea (+3% / −15%) pe 100 USDT la 5x
+async function planulPentruProbe() {
+  let ult = null, levier = null;
+  try {
+    const u = await cere("/api/istoric-bot?action=ultimulPlan");
+    if (u && u.plan && u.plan.plus > 0 && u.plan.minus > 0) {
+      ult = { plus: u.plan.plus, minus: u.plan.minus };
+      try { const fb = await cere("/api/bot-orders?status=finished&limit=30"), fa = await cere("/api/bot-orders").catch(() => null); const x = (fb && fb.bots || []).concat(fa && fa.bots || []).find((y) => String(y.id) === String(u.bot)); if (x) { ult.investit = Number(x.investit) || null; ult.nume = String(x.baza || "").replace(/\.PERP$/, ""); levier = Number(x.levier) || null; } } catch {}
+    }
+  } catch (e) { jurnal("plan pentru laborator", e.message); }
+  const suma = ult && ult.investit > 0 ? ult.investit : 100, p = TabloExtra.propunePlan(ult, suma);
+  return { plan: { plus: p.plus, minus: p.minus }, suma, levier: levier || 5, nota: p.nota };
 }
 
 // v83: "daca ascultai de Radar" pentru botii inchisi - o data pe ora, cel mult 5 boti noi pe tura
