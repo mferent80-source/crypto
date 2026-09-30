@@ -1309,6 +1309,8 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 .grPlanDoua{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
 .grPlanBani{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 4px;font-size:13px}
 .grPlanProba{margin:6px 0 0;font-size:13px;line-height:1.45}
+.grPlanPornire{margin:0 0 10px;font-size:13px}
+.grPlanPornire p{margin:0 0 4px}
 #tabloubot .tbRandGrafic{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
 #tabloubot .tbBloc,#gridset .tbBloc{padding:14px 16px;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);min-width:0}
 #tabloubot .tbBlocCap,#gridset .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 10px}

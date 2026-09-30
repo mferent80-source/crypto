@@ -5018,7 +5018,7 @@ function grPlanVarCalc(loc,cheie,faO,nota){
   var v;try{v=GridPlan.variante(faO());v.nota=nota||""}catch(e){v={eroare:"n-am putut socoti ("+e.message+")."}}
   grPlanMemo[loc]={cheie:cheie,v:v};return v;
 }
-function grPlanVarHtml(pv,i){
+function grPlanVarHtml(pv,i,extra){
   if(!pv)return "";
   if(pv.eroare)return '<div class="grPlanVar"><p class="tbSub"><b>Gridul după planul tău:</b> '+escapeHtml(pv.eroare)+'</p></div>';
   var U=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(1).replace(".",",")+" USDT"},P1=function(v){return (v*100).toFixed(1).replace(".",",")+"%"},V=function(v){return String(v).replace(".",",")};
@@ -5035,7 +5035,7 @@ function grPlanVarHtml(pv,i){
       +'</div>';
   };
   var ta=pv.ta,mea=pv.mea,pr=ta.proba;
-  return '<div class="grPlanVar"><p class="grPlanCap"><b>Gridul după planul tău</b> · +'+V(pv.plan.plus)+' / −'+V(pv.plan.minus)+' USDT'+(pv.nota?' <span class="tbSub">('+escapeHtml(pv.nota)+')</span>':'')+'. Stopul și ținta stau la marginile gridului, cel mult ½ pas dincolo: gridul complet = ieșirea.</p>'
+  return '<div class="grPlanVar"><p class="grPlanCap"><b>Gridul după planul tău</b> · +'+V(pv.plan.plus)+' / −'+V(pv.plan.minus)+' USDT'+(pv.nota?' <span class="tbSub">('+escapeHtml(pv.nota)+')</span>':'')+'. Stopul și ținta stau la marginile gridului, cel mult ½ pas dincolo: gridul complet = ieșirea.</p>'+(extra||"")
     +'<div class="grPlanDoua">'+bloc(ta,"Varianta ta · "+ta.levier+"×")+(mea?bloc(mea,"Varianta mea · "+mea.levier+"×"+(pv.amp!=null?" · banda ±"+P1(pv.amp):"")):'<div class="tbBloc grPlanBloc"><p class="tbSub">'+escapeHtml(pv.faraMea||"")+'</p></div>')+'</div>'
     +'<p class="grNota">Proba: o pornire la 6 h pe ultimele 30 de zile, fiecare urmărită '+(pr?pr.ferestreZile:3)+' zile (se suprapun: ~'+(pr?pr.independente:10)+' independente); media e cu comisioane, iar ce rămâne deschis se socotește la capătul ferestrei. E trecutul, nu o promisiune, iar varianta mea își ia lățimea din aceleași 30 de zile. Sumele de la margini sunt pe drumul drept; alunecarea unui stop pe o cădere bruscă vine peste. Pasul e regula ta, 0,30 % (mai rar doar dacă suma nu ajunge la minimul Pionex pe ordin).</p></div>';
 }
@@ -5045,7 +5045,20 @@ function tbPlanVarHtml(b){
   var pl=bp?{plus:bp.plus,minus:bp.minus,nota:"planul botului"}:tbPropPlan.botId===b.id&&tbPropPlan.p?tbPropPlan.p:TabloExtra.propunePlan(null,b.investit);
   if(!pl)return "";
   var sim=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,i=grStare.monede&&grStare.monede[sim],dir=String(b.directie||"").toLowerCase(),suma=botiNr(b.investit)||100;
-  return grPlanVarHtml(grPlanVarCalc("tb",[b.id,tf.la,dir,suma,b.levier,pl.plus,pl.minus].join("|"),function(){return {pret:tf.pret,dir:dir,suma:suma,levier:botiNr(b.levier),plan:pl,amp:tf.amp,pas:GridCalcul.C.PAS_MIN,b15:tf.b15,minOrdin:i&&Number(i.minNotional)>0?Number(i.minNotional):null}},pl.nota),i);
+  var mo=i&&Number(i.minNotional)>0?Number(i.minNotional):null,cheie=[b.id,tf.la,dir,suma,b.levier,pl.plus,pl.minus].join("|");
+  var pv=grPlanVarCalc("tb",cheie,function(){return {pret:tf.pret,dir:dir,suma:suma,levier:botiNr(b.levier),plan:pl,amp:tf.amp,pas:GridCalcul.C.PAS_MIN,b15:tf.b15,minOrdin:mo}},pl.nota);
+  // v100.17 (ideea 2): „de la pornirea ta, pe drumul real” - aceleasi variante pornite odata cu botul
+  var dp=null,kp=cheie+"|"+b.pornitLa,mp=grPlanMemo.tbp;
+  if(Number(b.pornitLa)>0){if(mp&&mp.cheie===kp)dp=mp.v;else{try{dp=GridPlan.dePornire({b15:tf.b15,tStart:Number(b.pornitLa),dir:dir,suma:suma,levier:botiNr(b.levier),plan:pl,amp:tf.amp,pas:GridCalcul.C.PAS_MIN,minOrdin:mo})}catch(e){dp=null}grPlanMemo.tbp={cheie:kp,v:dp}}}
+  return grPlanVarHtml(pv,i,tbPornireHtml(b,dp));
+}
+function tbPornireHtml(b,dp){
+  if(!dp||dp.eroare)return "";
+  var U=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(1).replace(".",",")+" USDT"},ora=function(t){return new Date(t).toLocaleString("ro-RO",{weekday:"short",hour:"2-digit",minute:"2-digit"})};
+  var ore=(Date.now()-Number(b.pornitLa))/3600000,tot=botiNr(b.profitTotal);
+  var rand=function(x,nume){if(!x)return "";return '<li>'+nume+' ('+x.levier+'×): '+(x.iesit==="stop"?'ieșea pe <b class="bad">stop</b> pe la '+ora(x.la)+', cu <b class="bad">'+U(x.usdt)+'</b>':x.iesit==="tinta"?'ieșea pe <b class="good">țintă</b> pe la '+ora(x.la)+', cu <b class="good">'+U(x.usdt)+'</b>':x.iesit==="lichidat"?'<b class="bad">lichidat</b> pe la '+ora(x.la):'încă în grid, acum ≈ <b class="'+(x.usdt>=0?"good":"bad")+'">'+U(x.usdt)+'</b>')+'</li>'};
+  return '<div class="grPlanPornire"><p><b>De la pornirea botului</b> ('+ora(Number(b.pornitLa))+', acum '+(ore<48?Math.round(ore)+' h':(ore/24).toFixed(1).replace(".",",")+' zile')+'), pe drumul real al prețului:</p><ul class="grLista">'
+    +(tot!=null?'<li>botul tău: acum <b class="'+(tot>=0?"good":"bad")+'">'+U(tot)+'</b></li>':'')+rand(dp.ta,"varianta ta")+rand(dp.mea,"varianta mea")+'</ul></div>';
 }
 async function gridPoarta(){
   var f=grStare.fisa;if(!f)return;

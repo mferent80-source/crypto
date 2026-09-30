@@ -114,6 +114,27 @@ var GridPlan = (function () {
     return { ta: ta, mea: mea, faraMea: faraMea, plan: { plus: plus, minus: minus }, amp: amp };
   }
 
-  return { variante: variante, proba: proba, pierdere: pierdere, castig: castig };
+  // v100.17 (ideea 2): botul care RULEAZA - „de la pornirea ta, pe drumul real”: cele doua variante pornite in aceeasi lumanare
+  // si la pretul ei (prima lumanare de 15M de dupa pornire), simulate de atunci pana acum. Pe ce parte ar fi iesit, cand (inceputul
+  // lumanarii in care iese) si cu cat - sau cat ar avea acum (ce e deschis, la ultimul pret). Pornit inainte de lumanarile avute sau
+  // in ultima lumanare -> null.
+  function dePornire(o) {
+    var b = o && o.b15, t0 = nr(o && o.tStart);
+    if (!Array.isArray(b) || !b.length || t0 === null || b[0].t > t0) return null;
+    var s = -1;
+    for (var i = 0; i < b.length; i++) if (b[i].t >= t0) { s = i; break; }
+    if (s < 0 || s >= b.length - 1) return null;
+    var v = variante(Object.assign({}, o, { pret: b[s].o, b15: null }));
+    if (v.eroare) return { eroare: v.eroare };
+    var ruleaza = function (st) {
+      if (!st) return null;
+      var r = GP.simuleaza(b, s, b.length - s, st), lung = st.dir === "long";
+      return { iesit: r.lichidat ? "lichidat" : r.iesit ? ((r.iesit === "jos") === lung ? "stop" : "tinta") : null,
+        la: r.lichidat || r.iesit ? b[Math.min(b.length - 1, s + r.bare - 1)].t : null, usdt: r.lichidat ? -st.suma : r.net * st.suma, levier: st.levier };
+    };
+    return { t: b[s].t, pret: b[s].o, ta: ruleaza(v.ta), mea: ruleaza(v.mea), faraMea: v.faraMea };
+  }
+
+  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridPlan = GridPlan;
