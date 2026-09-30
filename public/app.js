@@ -5327,7 +5327,7 @@ function renderGrid(){
     +'</tbody></table></div><p class="grNota">⭐ = cea mai bună pe istoric (platou, nu vârf). Aleasă pe primele 2/3 din zile, verificată pe ultima 1/3.</p></div></div>';
   var rg=f.regim;
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Când îl oprești</h4></div><ul class="grLista">'
-    +'<li>Stop-urile de mai sus sunt la două grile dincolo de marginile gridului, înaintea lichidării.</li>'
+    +'<li>Stop-urile de mai sus sunt la o grilă dincolo de marginile gridului, înaintea lichidării (măsurat pe 12 monede: față de două grile, cazul prost −19,6 % → −16,3 %, câștigul tipic +2,5 % → +1,8 %).</li>'
     +grLinisteTine(f)
     +'<li>Când alertele Radarului anunță «gata liniștea», oprește-l: după mișcare gridul iese cel mai rău.</li>'
     +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")

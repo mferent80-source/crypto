@@ -183,9 +183,9 @@ var GridCalcul = (function () {
     }
     return { levier: 1, sigur: false, lichidare: lichidare(niv, pret, dir, 1) };
   }
-  // Doua grile dincolo de fiecare margine: mereu inaintea lichidarii sigure
-  // (care sta la o latime intreaga, iar latimea are cel putin doua grile).
-  function stopuri(jos, sus, pas) { return { jos: jos * (1 - 2 * pas), sus: sus * (1 + 2 * pas) }; }
+  // v100.19 (30.09, el: „1 grilă”): O grila dincolo de fiecare margine (era doua), mereu inaintea lichidarii sigure (care sta la o
+  // latime intreaga). Masurat pe 12 monede, mediana: 2 grile tipic +2,5% / cel mai prost −19,6%; 1 grila +1,8% / −16,3%.
+  function stopuri(jos, sus, pas) { return { jos: jos * (1 - pas), sus: sus * (1 + pas) }; }
 
   // o.grile (optional) forteaza numarul de grile - folosit cand minimul pe ordin
   // cere mai putine grile decat da pasul (spec 6.4).

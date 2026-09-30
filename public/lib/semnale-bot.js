@@ -70,7 +70,7 @@ var SemnaleBot = (function () {
       var peProfit = dir === "long" ? pz < p : dir === "short" ? pz > p : (tot !== null && tot > 0);
       if (neutru) {
         // botul neutru cumpara sub si vinde peste: zero-ul nu e "o parte" - e doar reper (revizia 28.09)
-        out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Botul e neutru (cumpără sub preț, vinde peste), așa că zero-ul (" + fmtPret(pz) + ", la " + dist(pz, p) + " de preț) e doar reper: " + (peProfit ? "ești pe plus; un stop la două grile în afara intervalului, pe ambele părți, păstrează ce ai." : "ești pe minus; protecția stă la două grile în afara intervalului, pe ambele părți — dar se închide pe minus.") });
+        out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Botul e neutru (cumpără sub preț, vinde peste), așa că zero-ul (" + fmtPret(pz) + ", la " + dist(pz, p) + " de preț) e doar reper: " + (peProfit ? "ești pe plus; un stop la o grilă în afara intervalului, pe ambele părți, păstrează ce ai." : "ești pe minus; protecția stă la o grilă în afara intervalului, pe ambele părți — dar se închide pe minus.") });
       } else if (peProfit) {
         var dincolo = op !== null && (dir === "long" ? op >= pz : op <= pz);
         out.push({ cod: "stop", titlu: "Stopul", text: dincolo
@@ -79,11 +79,11 @@ var SemnaleBot = (function () {
       } else {
         // pe minus: LONG pierde in jos -> protectia sub gridul de jos; SHORT pierde in SUS -> protectia peste gridul de sus (revizia 28.09: era inversat la short)
         var protectie = dir === "short"
-          ? (sp && sp.stop && nr(sp.stop.sus) !== null ? sp.stop.sus : (sus !== null && g ? sus * (1 + 2 * g.pas) : null))
-          : (sp && sp.stop && nr(sp.stop.jos) !== null ? sp.stop.jos : (jos !== null && g ? jos * (1 - 2 * g.pas) : null));
-        out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Dacă vrei protecție, " + (dir === "short" ? "peste gridul de sus: " : "sub gridul de jos: ") + (protectie !== null ? fmtPret(protectie) : "două grile în afara marginii") + " — dar știi că se închide pe minus." });
+          ? (sp && sp.stop && nr(sp.stop.sus) !== null ? sp.stop.sus : (sus !== null && g ? sus * (1 + g.pas) : null))
+          : (sp && sp.stop && nr(sp.stop.jos) !== null ? sp.stop.jos : (jos !== null && g ? jos * (1 - g.pas) : null));
+        out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Dacă vrei protecție, " + (dir === "short" ? "peste gridul de sus: " : "sub gridul de jos: ") + (protectie !== null ? fmtPret(protectie) : "o grilă în afara marginii") + " — dar știi că se închide pe minus." });
       }
-    } else out.push({ cod: "stop", titlu: "Stopul", text: neutru ? "acum " + opTxt + ". Botul e neutru (cumpără sub preț, vinde peste): n-are un preț de zero pe o singură parte, deci un stop „la zero” nu există; protecția stă la două grile în afara intervalului, pe ambele părți." : "acum " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
+    } else out.push({ cod: "stop", titlu: "Stopul", text: neutru ? "acum " + opTxt + ". Botul e neutru (cumpără sub preț, vinde peste): n-are un preț de zero pe o singură parte, deci un stop „la zero” nu există; protecția stă la o grilă în afara intervalului, pe ambele părți." : "acum " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
     // 2) gridul
     var poz = p !== null && jos !== null && sus !== null && sus > jos ? (p - jos) / (sus - jos) : null, c = x.costuri || {};
     var al = g ? "al tău: " + g.grile + " grile la " + P(g.pas) + " pas (net " + P(g.pas - 2 * G.C.COMISION) + ")" : "al tău: fără geometrie citită";
@@ -117,7 +117,7 @@ var SemnaleBot = (function () {
     var pestePlan = laOp !== null && pgm > 0 && -laOp > pgm * 1.2 && -laOp - pgm >= 2;
     if (op !== null && laOp !== null) st0.mic += " · atins ≈ " + (laOp >= 0 ? "+" : "−") + Math.round(Math.abs(laOp)) + " USDT";
     // revizia v100: neutrul primul (la el zero-ul nu se socoteste niciodata); pozitia stopului SE VERIFICA, nu se presupune
-    if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Botul e neutru (cumpără sub preț, vinde peste): protecția stă la două grile în afara intervalului, pe ambele părți."; }
+    if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Botul e neutru (cumpără sub preț, vinde peste): protecția stă la o grilă în afara intervalului, pe ambele părți."; }
     else if (p === null || pz === null) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = st0.text; }
     else if (peProfit) {
       st0.tag = dincolo ? { t: "la adăpost", c: "good" } : { t: op === null ? "pune-l la zero" : "mută-l la zero", c: "warn" };
@@ -126,7 +126,7 @@ var SemnaleBot = (function () {
       var inAfara = op !== null && (dir === "short" ? sus !== null && op > sus : jos !== null && op < jos);
       st0.tag = op === null ? { t: "fără protecție", c: "bad" } : inAfara ? { t: "pus", c: "good" } : { t: "stop în grid", c: "warn" };
       st0.act = "Ești pe minus: zero-ul botului (" + fmtPret(pz) + ") e la " + S1(pz / p - 1) + " de preț, acolo un stop n-are sens. "
-        + (op === null ? "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "două grile în afara marginii") + "."
+        + (op === null ? "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "o grilă în afara marginii") + "."
           : inAfara ? "Stopul tău stă " + (dir === "short" ? "peste gridul de sus" : "sub gridul de jos") + "."
           : "Stopul tău (" + fmtPret(op) + ") stă în grid: o mișcare mică îl atinge și închide botul pe minus.");
       // v101.8 (2): planul hotaraste - fara stop: unde il pui; peste plan: rosu, cat costa si unde il muti; pe plan (si in grid): pus
