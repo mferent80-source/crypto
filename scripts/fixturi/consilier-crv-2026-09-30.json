@@ -1,0 +1,243 @@
+{
+ "nota": "Tabloul botului CRV long 5x, 30.09.2026 ~23:10 RO (date reale, fara id-uri de cont) - ce spuneau cele 8 surse; Consiliu (I-465) le aduna.",
+ "bot": {
+  "id": "demo",
+  "baza": "CRV.PERP",
+  "directie": "long",
+  "levier": 5,
+  "investit": 49.67,
+  "profitTotal": -3.203246204379731,
+  "pretCurent": 0.3907,
+  "gridJos": 0.3841,
+  "gridSus": 0.4331,
+  "distantaLichidarePct": 17.48,
+  "opritorPierdere": 0.38,
+  "gridProfitBrut": 0.539662616,
+  "ordinePerechi": 11,
+  "pornitLa": 1790772451034
+ },
+ "semafor": {
+  "nivel": "tine",
+  "cod": "tine",
+  "motiv": "nimic nu cere o mișcare acum",
+  "faCe": "L-aș lăsa să lucreze și m-aș uita din nou diseară.",
+  "componente": []
+ },
+ "concret": [
+  {
+   "cod": "stop",
+   "titlu": "Stopul",
+   "mare": "0.38",
+   "mic": "activ · −2,7% de preț · atins ≈ −10 USDT",
+   "tag": {
+    "t": "peste plan",
+    "c": "bad"
+   },
+   "act": "Atins, te costă ≈ 10 USDT — planul tău zice −7,5: mută-l la 0.384 sau în procente, la −15,1% din investiție.",
+   "bani": "💰 pierderea maximă: −10,2 USDT cu opritorul de acum → −7,5 USDT cu stopul propus · ce cedezi: o zi obișnuită a monedei ajunge până acolo în 71% din zile",
+   "cifre": {
+    "laOpritor": -10.2,
+    "laPropus": -7.5,
+    "frecventa": 0.71,
+    "pretPropus": 0.3842
+   }
+  },
+  {
+   "cod": "grid",
+   "titlu": "Gridul",
+   "mare": "13%",
+   "mic": "din interval",
+   "tag": {
+    "t": "în grid",
+    "c": "good"
+   },
+   "act": "35 grile la 0,4% pas, 11 umpleri în 24 h (+0.54 USDT). Propus acum: 39 grile între 0.3717 și 0.4177, la 0,3% pas."
+  },
+  {
+   "cod": "miscare",
+   "titlu": "Mișcarea",
+   "mare": "0,2×",
+   "mic": "pe 4 h față de obișnuit",
+   "tag": {
+    "t": "liniște",
+    "c": "good"
+   },
+   "act": "0,1× pe 24 h. Gridul lucrează; nu adaug bani pe urcare și nu schimb nimic pe zgomot."
+  }
+ ],
+ "sfaturi": [
+  {
+   "cod": "margine",
+   "ton": "atentie",
+   "titlu": "Până la marginea de jos (0.3841) sunt 1.7%",
+   "text": "Acolo botul ar ține cam 685 CRV (acum 587), iar totalul ar fi în jur de −7.34 USDT. În trecutul CRV, prețul a coborât atât într-o zi în 63% din zile (52 din 83) și într-o săptămână în 82% din săptămâni (9 din 11, puține cazuri).",
+   "faCe": "Se întâmplă des pe moneda asta: n-aș crește levierul și n-aș pune bani în plus în botul ăsta."
+  },
+  {
+   "cod": "zero",
+   "ton": "info",
+   "titlu": "Botul iese pe zero la 0.3964 (+1.4% de aici)",
+   "text": "Acum, închis, ai lua 46.35 USDT din 49.67 investiți.",
+   "faCe": "Dacă vrei să ieși fără pierdere, pune în Pionex take-profit-ul botului la 0.3964 (nu stop: prețul de zero e deasupra prețul de acum) și lasă-l să lucreze până acolo."
+  },
+  {
+   "cod": "funding",
+   "ton": "info",
+   "titlu": "Finanțarea e 0.010% la 8 ore",
+   "text": "Poziția ta o plătește. Până acum botul a plătit 0.02 USDT.",
+   "faCe": null
+  },
+  {
+   "cod": "trend",
+   "ton": "bine",
+   "titlu": "Trendul e cu botul (long, tare)",
+   "text": "4h: EMA20 peste EMA50, EMA50 urcă; 1z: EMA20 peste EMA50, EMA50 urcă; structura 4h: maxime și minime tot mai sus.",
+   "faCe": "Aș lăsa botul să lucreze; trendul e de partea lui."
+  },
+  {
+   "cod": "liniste",
+   "ton": "bine",
+   "titlu": "Liniște de 1,0 zile",
+   "text": "Din 7 perioade de liniște ale monedei care au ajuns aici, 3 din 7 au mai ținut încă 2 zile (42,86%).",
+   "faCe": "Liniștea tinde să țină aici: aș lăsa botul să lucreze."
+  },
+  {
+   "cod": "directie",
+   "ton": "bine",
+   "titlu": "Piața nu lucrează împotriva botului",
+   "text": "Piața e laterală (4 ore e laterală, 1 zi e laterală) - regimul potrivit unui grid.",
+   "faCe": null
+  }
+ ],
+ "consilier": [
+  {
+   "nivel": "n",
+   "titlu": "Istoricul tău pe CRV: 3 boți, 3 pe plus, total +5.66 USDT",
+   "text": "puține cazuri — un semn, nu o regulă",
+   "ceAsFace": null
+  }
+ ],
+ "socoteala": {
+  "costuri": {
+   "n": 19,
+   "judecate": 16,
+   "corecte": 6,
+   "bani": 48.72915016204495,
+   "baniN": 16,
+   "ic": [
+    0.18480982554752803,
+    0.6135935290206519
+   ],
+   "stare": "nesigur",
+   "nume": "„Costurile mănâncă grilele”"
+  },
+  "podea": {
+   "n": 9,
+   "judecate": 9,
+   "corecte": 6,
+   "bani": -57.96502656958914,
+   "baniN": 9,
+   "ic": [
+    0.35419734749908977,
+    0.8794184013172571
+   ],
+   "stare": "necunoscut",
+   "nume": "„Ținta devine podea”"
+  },
+  "btc": {
+   "n": 13,
+   "judecate": 13,
+   "corecte": 8,
+   "bani": 57.54594921559135,
+   "baniN": 13,
+   "ic": [
+    0.3552248097226855,
+    0.8229055341876319
+   ],
+   "stare": "nesigur",
+   "nume": "„BTC în mișcare”"
+  },
+  "tine": {
+   "n": 22,
+   "judecate": 21,
+   "corecte": 10,
+   "bani": -126.21512718543369,
+   "baniN": 21,
+   "ic": [
+    0.28343712296762946,
+    0.6763078209973326
+   ],
+   "stare": "nesigur",
+   "nume": "„Ține-l”"
+  },
+  "plan": {
+   "n": 13,
+   "judecate": 9,
+   "corecte": 1,
+   "bani": 25.30308851383151,
+   "baniN": 9,
+   "ic": [
+    0.019890371327130518,
+    0.4350062147680602
+   ],
+   "stare": "necunoscut",
+   "nume": "Planul tău"
+  },
+  "miscare": {
+   "n": 9,
+   "judecate": 5,
+   "corecte": 3,
+   "bani": 4.7832684118702264,
+   "baniN": 5,
+   "ic": [
+    0.23071993220883702,
+    0.8823817688407467
+   ],
+   "stare": "necunoscut",
+   "nume": "Mișcare mare"
+  },
+  "muta": {
+   "n": 18,
+   "judecate": 10,
+   "corecte": 7,
+   "bani": 21.25060826122187,
+   "baniN": 10,
+   "ic": [
+    0.3967732199795652,
+    0.892210712513788
+   ],
+   "stare": "nesigur",
+   "nume": "„Mută gridul”"
+  },
+  "lichidare": {
+   "n": 5,
+   "judecate": 5,
+   "corecte": 3,
+   "bani": -8.391145285252309,
+   "baniN": 5,
+   "ic": [
+    0.23071993220883702,
+    0.8823817688407467
+   ],
+   "stare": "necunoscut",
+   "nume": "Lichidarea aproape"
+  },
+  "ia-profit": {
+   "n": 5,
+   "judecate": 5,
+   "corecte": 0,
+   "bani": -8.143624040260702,
+   "baniN": 5,
+   "ic": [
+    0,
+    0.43449149475208104
+   ],
+   "stare": "necunoscut",
+   "nume": "„Încasează acum”"
+  }
+ },
+ "laJos": -7.34,
+ "opritor": 0.38,
+ "indicatori": "Indicatorii: 4 ore ↑81, 1 zi ↑81, 15 min ↔48 — estimarea pe 16 ore e fără semn (în zgomot)",
+ "btc": "BTC lateral pe 4 ore, liniștit"
+}

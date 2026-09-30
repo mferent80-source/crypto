@@ -170,7 +170,7 @@ var SemnaleBot = (function () {
     if (cs) {
       cs.pretPropus = pretStop;
       var bani = x.bani || (typeof x.cifre === "function" && pretStop !== null ? x.cifre(pretStop) : null);   // x.cifre = TabloExtra.cifreActiuni legat in Tablou
-      if (bani && bani.stop) cs.bani = textBaniStop(bani.stop) || null;
+      if (bani && bani.stop) { cs.bani = textBaniStop(bani.stop) || null; cs.cifre = bani.stop; }   // v100.44: cifrele si ca numere (Consiliu)
     }
     return out;
   }

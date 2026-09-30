@@ -5586,6 +5586,20 @@ var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botI
 // v100.43 (I-466): increderea fiecarui sfat, masurata pe toti botii lui (KV „socoteala”, colectorul o reface o data pe ora)
 var tbSoc={la:0,peCod:null,inLucru:false};
 function tbAduSocoteala(){if(tbSoc.inLucru||Date.now()-tbSoc.la<10*60000)return;tbSoc.inLucru=true;getJSON("/api/istoric-bot?action=socoteala").then(function(d){tbSoc.peCod=d&&d.socoteala&&d.socoteala.peCod||null;tbSoc.boti=d&&d.socoteala&&d.socoteala.boti||null}).catch(function(){}).then(function(){tbSoc.la=Date.now();tbSoc.inLucru=false})}
+// v100.44 (I-465): desenul Consilierului (Consiliu.alcatuieste), ca in demo
+function tbConsHtml(c){
+  var cip=function(x){return x?'<span class="tbConsCip '+escapeHtml(x.cls||"")+'" title="'+escapeHtml(x.titlu||"")+'">'+escapeHtml(x.t)+'</span>':''};
+  return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'
+    +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+'</div>'
+    +(c.incredere?'<p class="tbConsInc">'+escapeHtml(c.incredere)+'</p>':'')+'</div>'
+    +'<div class="tbConsDr"><h4>De ce'+(c.motive.length?' · '+c.motive.length+(c.motive.length===1?' motiv':' motive')+', după banii în joc':'')+'</h4>'
+    +(c.motive.length?c.motive.map(function(m){return '<div class="tbConsMotiv"><i class="'+escapeHtml(m.c)+'"></i><div><b>'+escapeHtml(m.titlu)+'</b>'+(m.text?'<p>'+escapeHtml(m.text)+'</p>':'')
+      +((m.cip||m.extra)?'<div class="tbConsL">'+cip(m.cip)+(m.extra?'<span>'+escapeHtml(m.extra)+'</span>':'')+'</div>':'')+'</div></div>'}).join(""):'<p class="tbSub">Nimic nu cere o mișcare acum.</p>')
+    +'</div></div>'
+    +(c.rest.length?'<details class="tbConsRest"'+(tbConsRestDeschis?' open':'')+'><summary>Restul, pliat · <b>'+c.rest.length+(c.rest.length===1?' notă':' note')+'</b> fără urgență</summary><ul>'
+      +c.rest.map(function(r){return '<li>'+escapeHtml(r.titlu)+(r.text?' <span>— '+escapeHtml(r.text)+'</span>':'')+'</li>'}).join("")+'</ul></details>':'');
+}
+var tbConsRestDeschis=false;
 function tbIncredere(cod){tbAduSocoteala();if(!tbSoc.peCod||!cod||cod==="fara-fisa")return "";var x=tbSoc.peCod[cod];return '<p class="tbSub tbIncredere">🎯 '+escapeHtml((x&&x.nume?x.nume+": ":"")+SemnaleBot.textIncredere(x||null))+(x&&x.stare==="ajuta"?' <b class="good">merită ascultat</b>':'')+'</p>'}   // v100.39: pragul de minus atins, pe bot (histerezis)
 async function tbAduSaptamana(b){
   if(!b||!b.id||tbSapt.inLucru||(tbSapt.botId===b.id&&Date.now()-tbSapt.la<10*60000))return;
@@ -5726,21 +5740,22 @@ function tbDeseneazaSemafor(b){
   var faraPlan=tbPlan.botId===b.id&&tbPlan.la&&!(tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre));
   if(faraPlan&&tbPropPlan.botId!==b.id)tbAduPropunerePlan(b);
   var pp=faraPlan&&tbPropPlan.botId===b.id?tbPropPlan.p:null;
+  var conc=SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,plan:plan,acum:Date.now(),cifre:function(pr){return TabloExtra.cifreActiuni(b,{protectie:pr,b15:tbFisa.botId===b.id?tbFisa.b15:null})}});
   var h=faraPlan?'<div class="tbFaraPlan">📝 <b>'+escapeHtml(String(b.baza||"Botul").replace(/\.PERP$/,""))+' n-are plan.</b> Fără țintă și prag scrise la rece, panoul nu-ți poate spune când să încasezi sau să ieși (nici podeaua).'
     +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
   // celelalte motive + notele (ia profit, aglomerarea "info") - pe randul lor, nu in cartela
   // "ia profit" e deja o componenta a verdictului: textul lui explicativ intra in randul lui, nu intr-un rand separat (revizia v100)
   var alte=SemnaleBot.celelalteMotive(sm).map(function(x){return {c:CUL[x.nivel]||"var(--muted)",m:x.motiv,k:x.cod,f:x.cod==="ia-profit"&&iap?iap.text+" "+x.faCe:x.faCe}});
   if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")alte.push({c:"var(--muted)",m:ac.aglomerare.text,f:""});
-  h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(mare(sm.motiv))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p>'+tbIncredere(sm.cod)
-    +(alte.length?'<button type="button" class="tbMaiMulte" data-action-click="tbMergiLaMotive()">și <b>încă '+alte.length+(alte.length===1?' motiv':' motive')+'</b> '+alte.map(function(x){return '<i class="tbPct" style="background:'+x.c+'"></i>'}).join("")+' · mai jos ↓</button>':'')+'</div></div>';
-  el.innerHTML=h;
-  if(mot){
-    if(!alte.length)mot.hidden=true;
-    else{mot.hidden=false;$("tbMotiveTitlu").textContent="Celelalte motive · "+alte.length;
-      $("tbMotiveLista").innerHTML=(tbMotiveDeschis?alte:alte.slice(0,3)).map(function(x){return '<div class="tbMRand"><i style="background:'+x.c+'"></i><b>'+escapeHtml(mare(x.m))+'</b><span class="tbSub">'+(x.f?'👉 <b>Ce aș face:</b> '+escapeHtml(x.f):'')+'</span>'+(x.k?tbIncredere(x.k):'')+'</div>'}).join("");
-      var bt=$("tbMotiveAlte"),rest=alte.length-3;bt.hidden=rest<=0;bt.textContent=tbMotiveDeschis?"arată doar primele 3":"încă "+rest+" ▾"}
-  }
+  // v100.44 (I-465, demo aprobat 01.10): UN singur Consilier - toate sursele intr-un verdict, o actiune cu bani, 3 motive, restul pliat
+  var vv=tbStare.verdictVechi,ind=$("tbIndicatoriRezumat");
+  var cons=Consiliu.alcatuieste({sm:sm,concret:conc,sfaturi:tbStare.sfaturiLista||[],consilier:typeof consilierBot==="function"?consilierBot(b):[],socoteala:(tbAduSocoteala(),tbSoc.peCod),
+    laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,
+    indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
+    note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
+  var r0=el.querySelector(".tbConsRest");if(r0)tbConsRestDeschis=!!r0.open;   // „Restul” ramane deschis la reimprospatare
+  el.innerHTML=h+tbConsHtml(cons);$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;
+  if(mot)mot.hidden=true;
   // "Acum, concret": cifra mare + eticheta + actiunea; detaliile (si setarile de copiat ale gridului propus) sub "detalii"
   var gmd=muta?null:SemnaleBot.gridMaiDes(b,f),T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
   var prop=muta?{setare:muta.setare,titlu:"Gridul propus acum (din fișa de azi"+(muta.des?", grid des 0,3 %":"")+")",sub:muta.treceriZi!=null?"~"+T1(muta.treceriZi)+" perechi încheiate pe zi pe ultimele 30 de zile":""}
@@ -5751,7 +5766,7 @@ function tbDeseneazaSemafor(b){
   propHtml+=tbPlanVarHtml(b);   // v100.16: gridul dupa planul tau (al botului; fara el, propunerea)
   if(cc){
     cc.hidden=false;
-    SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,plan:plan,acum:Date.now(),cifre:function(pr){return TabloExtra.cifreActiuni(b,{protectie:pr,b15:tbFisa.botId===b.id?tbFisa.b15:null})}}).forEach(function(x){
+    conc.forEach(function(x){
       var e=$("tbCc-"+x.cod);if(!e)return;var d0=e.querySelector("details"),deschis=!!(d0&&d0.open),tg=x.tag||{t:"",c:"mut"};
       e.innerHTML='<div class="tbCcCap"><h5>'+escapeHtml(x.titlu)+'</h5>'+(tg.t?'<span class="tbTag '+tg.c+'">'+escapeHtml(tg.t)+'</span>':'')+'</div>'
         +'<div class="tbCcMare">'+escapeHtml(x.mare||"—")+(x.mic?'<small>'+escapeHtml(x.mic)+'</small>':'')+'</div><p class="tbCcAct">'+escapeHtml(x.act||x.text)+'</p>'+(x.bani?'<p class="tbCcBani">'+escapeHtml(x.bani)+'</p>':'')   /* v100.43 (I-467) */
@@ -5892,6 +5907,7 @@ function renderTabloSfaturi(){
     funding:e.funding,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,
     fisa:tbFisa.botId===b.id?tbFisa.fisa:null,costuri:TabloExtra.grileVsCosturi(b,Date.now()),zero:TabloExtra.dacaInchizi(b),geom:TabloExtra.geometrieBot(b),ritm:ritm});
   tbStare.sfaturiLista=lista;
+  if($("tbSfaturiCard"))$("tbSfaturiCard").hidden=true;   // v100.44 (I-465): sfaturile intra in Consilier (motive sau „Restul”)
   el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(s.faCe)+'</p>':'')+(s.deCe?'<p class="tbSub">'+escapeHtml(s.deCe)+'</p>':'')+'</div>'}).join("");
   tbRenderTodo();
 }
@@ -6361,6 +6377,7 @@ function renderTabloBot(){
   }else{
     v=TabloBot.verdict(m,mod.mod,{faraBot:faraBot});
   }
+  tbStare.verdictVechi=v;   // v100.44 (I-465): singurul loc care judeca marginStatus/riskStatus Pionex (OPRESTE) -> intra in Consilier
   var note=[];
   tbDeseneazaSelectorul();
   if(!eroareActiva&&tbStare.probleme&&tbStare.probleme.preturi)
