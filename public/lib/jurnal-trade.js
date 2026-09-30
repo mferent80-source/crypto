@@ -36,6 +36,10 @@ var JurnalTrade = (function () {
       pornit: pornit, inchis: inchis, durataOre: (inchis - pornit) / 3600000,
       jos: jos, sus: sus, grileN: N, mod: mod, pasNet: pasNet, pretInit: init, pretInchidere: inch,
       stopJos: nr(d.lossStop), rezultat: rez, pct: inv > 0 ? rez / inv : null,
+      // v100.26: suma pusa REALA - usdtInvestment e doar suma de pornire; pe drum se adauga marja (extraMargin, care o cuprinde si pe
+      // cea de la pornire) si profitul mutat in investitie creste quoteInvestment (profitExited). Dovada pe botii reali (30.09): banii
+      // primiti inapoi = quoteInvestment + extraMargin − profitExited + net, la cent pe 1784 din 2184 (restul: pozitie ramasa la stop)
+      pus: nr(d.quoteInvestment) !== null ? nr(d.quoteInvestment) + (nr(d.extraMargin) || 0) - (nr(d.profitExited) || 0) : inv,
       grile: grile, comisioane: com, funding: fund,
       // v100.23 (revizie): realizatul Pionex e FARA comisioane si funding (dovada pe toti botii reali: banii primiti inapoi =
       // investit + realizat + comisioane + funding, la cent) => pozitia = realizat - grile; costurile stau pe randurile lor

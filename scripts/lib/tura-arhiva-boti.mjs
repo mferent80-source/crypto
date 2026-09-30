@@ -3,11 +3,14 @@
 // Prima data: TOATA istoria, pagina cu pagina (la 30.09: ~226 de pagini), cu pauza intre ele - ruta si Pionex au limite.
 // Dupa ce arhiva e completa: doar botii noi - se opreste la prima pagina care are un bot deja stiut.
 // Picata la jumatate: ce s-a strans se trimite, arhiva ramane „incompleta”, tura urmatoare reia de la inceput (sare peste cei stiuti).
-import { compactBot, idArhiva } from "../../functions/_shared/boti-arhiva.js";
+import { compactBot, idArhiva, FORMA_ARHIVA } from "../../functions/_shared/boti-arhiva.js";
 
 export async function strangeBoti({ cere, trimite, pauza = (ms) => new Promise((r) => setTimeout(r, ms)), pauzaMs = 2000, bucata = 400, maxPagini = 600 }) {
   const arh = await cere("/api/istoric-bot?action=botiInchisi");
-  const stiute = new Set((arh && Array.isArray(arh.boti) ? arh.boti : []).map(idArhiva)), complet = !!(arh && arh.complet);
+  // v100.26: „stiut” = deja pe forma de acum; botii de forma veche (fara campurile noi) se retrimit, iar arhiva de forma veche
+  // nu e completa pana nu trece tura prin toata istoria
+  const stiute = new Set((arh && Array.isArray(arh.boti) ? arh.boti : []).filter((b) => b && Number(b.forma) === FORMA_ARHIVA).map(idArhiva));
+  const complet = !!(arh && arh.complet && Number(arh.forma || 1) === FORMA_ARHIVA);
   let tampon = [], noi = 0, pagini = 0, tok = null, gata = false, atinsStiut = false, spusComplet = false;
   const trimiteTampon = async (ultima) => {
     while (tampon.length >= bucata || (ultima && tampon.length)) {

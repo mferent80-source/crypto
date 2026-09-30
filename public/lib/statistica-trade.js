@@ -166,6 +166,35 @@ var StatisticaTrade = (function () {
   function tabel(cap, randuri) { return '<div class="stTabelWrap"><table class="stTabel"><thead><tr>' + cap.map(function (c) { return "<th>" + c + "</th>"; }).join("") + "</tr></thead><tbody>" + randuri.join("") + "</tbody></table></div>"; }
   function cls(v) { return v === null || v === undefined || !isFinite(v) ? "" : v > 0 ? "good" : v < 0 ? "bad" : ""; }
   function randGrupa(nume, g, M) { return "<tr><td>" + esc(nume) + "</td><td>" + g.n + "</td><td>" + (g.n ? pr(g.rata) : "—") + '</td><td class="' + cls(g.total) + '"><b>' + esc(bani(g.total, M)) + '</b></td><td class="' + cls(g.medie) + '">' + esc(bani(g.medie, M)) + "</td></tr>"; }
+  // v100.26 (30.09, el: „FA IDEILE” - ideea 3): „Înainte / după” regulile noi. Botii se impart dupa ora PORNIRII (un bot pornit inainte
+  // si inchis dupa a fost pornit fara reguli). Aceleasi masuri pe ambele parti; verdict doar cu macar MIN (10) de fiecare parte.
+  var REGULI_NOI = { de: Date.UTC(2026, 8, 30, 2, 10), et: "30.09", ce: "alerta de stop la plan, gridul după plan, stopul la o grilă" };
+  var PIERDERE_MARE = -0.10;
+  function masuri(l) {
+    var s = calc(l, {}), p = l.filter(function (x) { return x.baza > 0 && x.rezultat < 0; }).map(function (x) { return x.rezultat / x.baza; });
+    var mari = p.filter(function (v) { return v <= PIERDERE_MARE; }).length;
+    return { n: s.n, rata: s.n ? s.rataCastig : null, peTrade: s.n ? s.asteptare : null, pierdereMediePct: p.length ? p.reduce(function (a, v) { return a + v; }, 0) / p.length : null,
+      ceaMaiMarePct: p.length ? Math.min.apply(null, p) : (s.n ? 0 : null), mari: mari, mariPondere: s.n ? mari / s.n : null, factor: s.factorProfit };
+  }
+  function compara(lista, de) {
+    var l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && nr(x.rezultat) !== null && nr(x.pornit) !== null; });
+    var a = masuri(l.filter(function (x) { return x.pornit < de; })), b = masuri(l.filter(function (x) { return x.pornit >= de; })), destul = a.n >= MIN && b.n >= MIN;
+    var R = [["n", "Trade-uri", 0], ["rata", "Rata de câștig", 1], ["peTrade", "Pe trade, în medie", 1], ["pierdereMediePct", "Pierderea medie (din suma pusă)", 1],
+      ["ceaMaiMarePct", "Cea mai mare pierdere (din suma pusă)", 1], ["mariPondere", "Pierderi mari (peste 10% din suma pusă)", -1], ["factor", "Factor de profit", 1]];
+    return { de: de, a: a, b: b, destul: destul, randuri: R.map(function (r) { var va = a[r[0]], vb = b[r[0]], v = null;
+      if (destul && r[2] && va !== null && vb !== null && isFinite(va) && isFinite(vb) && Math.abs(vb - va) > 1e-9) v = (vb - va) * r[2] > 0 ? "mai-bine" : "mai-rau";
+      return { cheie: r[0], et: r[1], a: va, b: vb, verdict: v }; }) };
+  }
+  function htmlCompara(c, M) {
+    var f = function (k, v, parte) { if (v === null || v === undefined || !isFinite(v)) return "—"; if (k === "n") return String(v); if (k === "peTrade") return bani(v, M); if (k === "factor") return v.toFixed(2).replace(".", ","); if (k === "mariPondere") return pr(v) + " (" + c[parte].mari + ")"; return pr(v, k === "rata" ? 0 : 1).replace(/^-/, "−"); };
+    var rand = c.randuri.map(function (r) { return "<tr><td>" + esc(r.et) + "</td><td>" + esc(f(r.cheie, r.a, "a")) + "</td><td><b>" + esc(f(r.cheie, r.b, "b")) + '</b></td><td class="' + (r.verdict === "mai-bine" ? "good" : r.verdict === "mai-rau" ? "bad" : "") + '">' + (r.verdict === "mai-bine" ? '▲<span class="stVerdTxt"> mai bine</span>' : r.verdict === "mai-rau" ? '▼<span class="stVerdTxt"> mai rău</span>' : "") + "</td></tr>"; });
+    var bine = c.randuri.filter(function (r) { return r.verdict === "mai-bine"; }).length, rau = c.randuri.filter(function (r) { return r.verdict === "mai-rau"; }).length;
+    var nota = !c.b.n ? "Încă niciun bot pornit după regulile noi nu s-a închis. Comparația se umple singură; de la " + MIN + " boți îți spun dacă regulile ajută."
+      : !c.destul ? "Doar " + c.b.n + (c.b.n === 1 ? " bot" : " boți") + " după regulile noi — prea puțini ca să tragem o concluzie (de la " + MIN + " de fiecare parte)."
+      : "Pe " + c.b.n + " boți după și " + c.a.n + " înainte: " + bine + (bine === 1 ? " măsură arată mai bine" : " măsuri arată mai bine") + ", " + rau + " mai rău. E un semn, nu o dovadă: piața nu e aceeași în cele două perioade.";
+    return '<div class="stBloc stCompara"><div class="stBlocCap"><h4>Înainte / după regulile din ' + esc(REGULI_NOI.et) + '</h4><span class="stSub">' + esc(REGULI_NOI.ce) + " · după ora pornirii botului</span></div>"
+      + tabel(["", "Înainte", "După", ""], rand) + '<p class="stSub">' + esc(nota) + "</p></div>";
+  }
   // v100.24: perioada aleasa (ultima luna / ultimele 3 luni / tot), dupa ora inchiderii
   var PERIOADE = [{ cheie: "30", zile: 30, et: "Ultima lună", sub: "în ultima lună" }, { cheie: "90", zile: 90, et: "Ultimele 3 luni", sub: "în ultimele 3 luni" }, { cheie: "tot", zile: null, et: "Tot", sub: "" }];
   function perioada(k) { for (var i = 0; i < PERIOADE.length; i++) if (PERIOADE[i].cheie === k) return PERIOADE[i]; return PERIOADE[2]; }
@@ -196,6 +225,7 @@ var StatisticaTrade = (function () {
     if (!s.suficient) h += '<p class="stAvert">' + esc(s.avertisment) + "</p>";
     else h += '<div class="stDoua"><div class="stBloc stBine"><h4>✅ Ce ai făcut bine</h4>' + (s.bine.length ? "<ul>" + s.bine.map(function (x) { return "<li>" + esc(x.text) + "</li>"; }).join("") + "</ul>" : '<p class="stSub">Nimic ieșit în evidență pe plus.</p>')
       + '</div><div class="stBloc stGresit"><h4>⚠️ Ce ai greșit</h4>' + (s.gresit.length ? "<ul>" + s.gresit.map(function (x) { return "<li>" + esc(x.text) + "</li>"; }).join("") + "</ul>" : '<p class="stSub">Nimic ieșit în evidență pe minus.</p>') + "</div></div>";
+    if (o.comparatie) h += htmlCompara(o.comparatie, M);   // v100.26: doar pe Pionex
     h += '<div class="stBloc"><div class="stBlocCap"><h4>Curba banilor</h4><span class="stSub">rezultatul adunat, trade după trade' + (s.drawdown.max > 0 ? " · cea mai mare cădere " + esc(bani(-s.drawdown.max, M)) : "") + "</span></div>" + svgCurba(s.curba, { moneda: M }) + "</div>";
     h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Pe lună</h4><span class="stSub">după ora României</span></div>' + svgLuni(s.perLuna, { moneda: M })
       + tabel(["Luna", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perLuna.slice().reverse().map(function (g) { return randGrupa(g.nume, g, M); })) + "</div>"
@@ -238,7 +268,7 @@ var StatisticaTrade = (function () {
     return (Array.isArray(l) ? l : []).map(function (t) {
       // NET: rezultatul realizat al Pionex e INAINTE de comisioane si funding (LIGHTER: −58,52 realizat, −59,04 net) - aici dupa ele
       var net = nr(t.rezultat) !== null ? nr(t.rezultat) + (nr(t.comisioane) || 0) + (nr(t.funding) || 0) : null;
-      return { id: t.id, eticheta: t.moneda, pornit: t.pornit, inchis: t.inchis, rezultat: net, baza: t.investit, durataOre: t.durataOre,
+      return { id: t.id, eticheta: t.moneda, pornit: t.pornit, inchis: t.inchis, rezultat: net, baza: nr(t.pus) !== null ? nr(t.pus) : t.investit, durataOre: t.durataOre,   // v100.26: suma pusa reala (cu marja adaugata)
         comisioane: nr(t.comisioane) !== null ? Math.abs(nr(t.comisioane)) : null, dir: t.dir || null, levier: nr(t.levier), greseli: (t.greseli || []).map(function (g) { return g.cod; }) };
     });
   }
@@ -248,6 +278,6 @@ var StatisticaTrade = (function () {
     });
   }
 
-  return { calc: calc, html: html, dinPerioada: dinPerioada, PERIOADE: PERIOADE, svgCurba: svgCurba, svgLuni: svgLuni, svgDistributie: svgDistributie, csv: csv, dinPionex: dinPionex, dinT212: dinT212, bani: bani, procent: pr, etInterval: etInterval, MIN: MIN };
+  return { calc: calc, html: html, compara: compara, REGULI_NOI: REGULI_NOI, dinPerioada: dinPerioada, PERIOADE: PERIOADE, svgCurba: svgCurba, svgLuni: svgLuni, svgDistributie: svgDistributie, csv: csv, dinPionex: dinPionex, dinT212: dinT212, bani: bani, procent: pr, etInterval: etInterval, MIN: MIN };
 })();
 if (typeof globalThis !== "undefined") globalThis.StatisticaTrade = StatisticaTrade;

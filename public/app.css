@@ -2091,6 +2091,9 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .stStat .stTabel td.good{color:var(--good)}
 .stStat .stTabel td.bad{color:var(--bad)}
 .stStat .stTabel th:first-child,.stStat .stTabel td:first-child{text-align:left}
+/* v100.26: comparatia Înainte / După incape pe telefon - eticheta se rupe pe randuri, verdictul ramane sageata (textul doar pentru cititorul de ecran) */
+.stStat .stCompara .stTabel td:first-child{white-space:normal;min-width:8em}
+@media (max-width:560px){.stStat .stCompara .stTabel th,.stStat .stCompara .stTabel td{padding:6px 4px}.stStat .stCompara .stVerdTxt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 .stStat .stToate summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .stStat .stUnelte{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin:10px 0}
 .stStat .stGrup{display:flex;flex-wrap:wrap;gap:6px}

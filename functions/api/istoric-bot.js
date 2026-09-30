@@ -5,7 +5,7 @@
 // Pe pagina publicata (Cloudflare) nu exista ISTORIC -> 503 cu motiv, iar
 // Tabloul ramane pe istoricul din browser.
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
-import {uneste} from "../_shared/boti-arhiva.js";
+import {uneste,FORMA_ARHIVA} from "../_shared/boti-arhiva.js";
 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(o,s=200)=>new Response(JSON.stringify(o),{status:s,headers:H});
@@ -33,9 +33,10 @@ export async function onRequestGet({request,env}){
   if(action==="config")return json({config:await citesteConfig(env)});
   // v100.25: arhiva botilor inchisi (toata istoria Pionex), stransa de colector; ?la=<ultima vazuta> -> fara lista daca nu s-a schimbat
   if(action==="botiInchisi"){let a=null;try{a=JSON.parse(await env.ISTORIC.get("botiInchisi")||"null")}catch{a=null}
-    const boti=a&&Array.isArray(a.boti)?a.boti:[],la=a&&nr(a.la)||null,complet=!!(a&&a.complet);
-    if(la&&nr(u.searchParams.get("la"))===la)return json({la,complet,n:boti.length,neschimbat:true});
-    return json({la,complet,n:boti.length,boti})}
+    // v100.26: „completa” doar pe forma de acum (una veche are toti botii, dar fara suma pusa reala - se reface)
+    const boti=a&&Array.isArray(a.boti)?a.boti:[],la=a&&nr(a.la)||null,forma=a&&nr(a.forma)||1,complet=!!(a&&a.complet)&&forma===FORMA_ARHIVA;
+    if(la&&nr(u.searchParams.get("la"))===la)return json({la,complet,forma,n:boti.length,neschimbat:true});
+    return json({la,complet,forma,n:boti.length,boti})}
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
   if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
@@ -74,9 +75,10 @@ export async function onRequestPost({request,env}){
   if(action==="botiInchisi"){
     if(!corp||!Array.isArray(corp.boti))return json({error:"Lipseste lista boti"},400);
     let a=null;try{a=JSON.parse(await env.ISTORIC.get("botiInchisi")||"null")}catch{a=null}
-    const boti=uneste(a&&a.boti,corp.boti),complet=!!(a&&a.complet)||corp.complet===true,la=Date.now();
-    await env.ISTORIC.put("botiInchisi",JSON.stringify({la,complet,boti}));
-    return json({ok:true,n:boti.length,complet,la});
+    // v100.26: o arhiva de forma veche nu mai e „completa” pana nu o reface colectorul pe forma de acum
+    const deAcum=!!(a&&nr(a.forma)===FORMA_ARHIVA),boti=uneste(a&&a.boti,corp.boti),complet=!!(deAcum&&a.complet)||corp.complet===true,la=Date.now(),forma=complet?FORMA_ARHIVA:(a&&nr(a.forma))||1;
+    await env.ISTORIC.put("botiInchisi",JSON.stringify({la,complet,forma,boti}));
+    return json({ok:true,n:boti.length,complet,forma,la});
   }
   if(action==="piata"){
     const txt=(v,k)=>typeof v==="string"?v.slice(0,k):"",sim=v=>txt(v,16).toUpperCase().replace(/[^A-Z0-9]/g,"");

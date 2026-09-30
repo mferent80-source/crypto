@@ -5290,7 +5290,8 @@ function jtStatDate(piata){
   var per=jtStat.perioada[piata]||"tot",k=t.k+"|"+per+"|"+(per==="tot"?"":new Date().toISOString().slice(0,13)),C=jtStat.cache;
   if(C[piata]&&C[piata].k===k)return C[piata];
   var tr=StatisticaTrade.dinPerioada(t.tr,per,Date.now());
-  return C[piata]={k:k,tr:tr,toate:t.tr,s:StatisticaTrade.calc(tr,piata==="actiuni"?{moneda:t.m,durate:JT_DURATE_ZILE}:{moneda:t.m}),m:t.m,lpu:t.lpu};
+  // v100.26: pe Pionex, „Înainte / după” regulile din 30.09, pe aceeasi perioada aleasa
+  return C[piata]={k:k,tr:tr,toate:t.tr,s:StatisticaTrade.calc(tr,piata==="actiuni"?{moneda:t.m,durate:JT_DURATE_ZILE}:{moneda:t.m}),m:t.m,lpu:t.lpu,comp:piata==="crypto"?StatisticaTrade.compara(tr,StatisticaTrade.REGULI_NOI.de):null};
 }
 // v100.25: de unde vin botii, spus pe fata - toata istoria (arhiva de acasa completa), inca in lucru, sau doar prima pagina Pionex
 // (v100.23 scria „doar ultimii ~10” - gresit: Pionex da istoria pe pagini de cate 10); + botii spot grid / smart copy lasati deoparte
@@ -5301,7 +5302,7 @@ function jtStatRender(piata){
   var el=$(piata==="crypto"?"jtStatCrypto":piata==="actiuni"?"jtStatActiuni":"jtStatTot");if(!el)return;
   var d=null;try{d=jtStatDate(piata)}catch(e){console.error("statistica",piata,e);el.innerHTML='<p class="tbSub">Statistica nu s-a putut socoti: '+escapeHtml(e.message)+'</p>';return}
   if(!d){el.innerHTML=piata==="tot"?'<p class="tbSub">Statistica pe tot apare după ce sunt citite și boții Pionex, și istoricul Trading 212.</p>':"";return}
-  el.innerHTML=jtStatHtml(d.s,{titlu:JT_STAT_TITLU[piata],piata:piata,nota:jtStatNota(piata,d)});
+  el.innerHTML=jtStatHtml(d.s,{titlu:JT_STAT_TITLU[piata],piata:piata,nota:jtStatNota(piata,d),comparatie:d.comp});
 }
 function jtStatOrdine(piata,k){jtStat.ord[piata]=k==="pierderi"||k==="castiguri"?k:"noi";jtStat.deschis[piata]=true;jtStatRender(piata)}
 function jtStatPerioada(piata,p){jtStat.perioada[piata]=p==="30"||p==="90"?p:"tot";jtStatRender(piata)}

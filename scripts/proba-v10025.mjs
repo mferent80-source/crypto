@@ -27,7 +27,8 @@ const bot = (i, o = {}) => ({
   strategyId: "s" + i, buOrderId: "b" + i, base: "M" + (i % 4) + ".PERP", quote: "USDT", buOrderType: "futures_grid", status: "canceled",
   createTime: T0 + i * H, closeTime: T0 + i * H + 1800000, closeNote: null, userId: "nu-trebuie-pastrat", keyId: "nici-asta",
   buOrderData: { totalRealizedProfit: String(i % 3 ? 1.5 : -2.25), gridProfit: "0.8", totalFee: "-0.12", totalFundingFee: "-0.01", usdtInvestment: "100", leverage: "5", trend: "long",
-    bottom: "1.0", top: "1.2", row: 10, gridType: "geometric", initPrice: "1.1", closedPrice: "1.12", lossStop: "0.95", nickname: "x", riskRate: "0.1", quoteNeed: "3" },
+    bottom: "1.0", top: "1.2", row: 10, gridType: "geometric", initPrice: "1.1", closedPrice: "1.12", lossStop: "0.95", nickname: "x", riskRate: "0.1", quoteNeed: "3",
+    quoteInvestment: "100", extraMargin: "0", profitExited: "0", unlockQuoteAmount: "101.37" },
   ...o,
 });
 
@@ -60,8 +61,9 @@ function serverFals(arhiva) {
   let a = arhiva || { boti: [], complet: false, la: null };
   return {
     trimise, get arhiva() { return a; },
-    cere: async (p) => { if (p.startsWith("/api/istoric-bot?action=botiInchisi")) return { boti: a.boti, complet: a.complet, la: a.la, n: a.boti.length }; throw new Error("cale neasteptata " + p); },
-    trimite: async (p, corp) => { assert.equal(p, "/api/istoric-bot?action=botiInchisi"); trimise.push(corp); a = { boti: uneste(a.boti, corp.boti), complet: a.complet || corp.complet === true, la: Date.now() }; return { ok: true }; },
+    // acelasi contract ca serverul real (v100.26: si „forma” arhivei - una veche nu e completa pana nu e refacuta)
+    cere: async (p) => { if (p.startsWith("/api/istoric-bot?action=botiInchisi")) return { boti: a.boti, complet: a.complet, forma: a.forma || 1, la: a.la, n: a.boti.length }; throw new Error("cale neasteptata " + p); },
+    trimite: async (p, corp) => { assert.equal(p, "/api/istoric-bot?action=botiInchisi"); trimise.push(corp); const complet = (a.forma === 2 && a.complet) || corp.complet === true; a = { boti: uneste(a.boti, corp.boti), complet, forma: complet ? 2 : a.forma || 1, la: Date.now() }; return { ok: true }; },
   };
 }
 const cereCu = (px, srv) => async (p) => {
@@ -160,7 +162,7 @@ await test("colectorul: tura arhivei porneste din bucla, singura (nu se suprapun
   assert.match(c, /async function turaArhivaBoti\(\)/); assert.match(c, /arhivaInLucru/); assert.match(c, /ARHIVA_MS = 10 \* 60000/);
   const b = c.slice(c.indexOf("async function bucla()"));
   assert.match(b, /turaArhivaBoti\(\)\.catch/);
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.13";/);
+  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(1[3-9]|[2-9]\d)";/, "cel putin v101.13");
 });
 
 // ---- pagina ----
