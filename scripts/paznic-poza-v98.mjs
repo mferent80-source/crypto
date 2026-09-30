@@ -51,7 +51,9 @@ await test("simboluri: pagina scrie cu cheia (curatate, fara dubluri, max 60), c
   const g = await (await w.cere("/simboluri", "GET", { authorization: "Bearer " + TOK })).json();
   assert.deepEqual(g.simboluri.map((x) => x.s), ["AVGO", "RHM.DE", "1QZ.DE"]); assert.equal(g.simboluri[1].nota, "Rheinmetall");
   const multe = { simboluri: Array.from({ length: 80 }, (_, i) => ({ s: "S" + i })) };
-  assert.equal((await (await w.cere("/simboluri", "POST", { authorization: "Bearer " + CHEIE }, JSON.stringify(multe))).json()).n, 60);
+  // v100.42: a doua schimbare imediat dupa prima -> 429 (cel mult o scriere la 5 s); peste 5 s trece, taiata la 60
+  assert.equal((await w.cere("/simboluri", "POST", { authorization: "Bearer " + CHEIE }, JSON.stringify(multe))).status, 429);
+  assert.equal((await simboluriScrie(w.env, JSON.stringify(multe), Date.now() + 6000)).corp.n, 60);
 });
 await test("CORS: originea suitei primeste antetele, alta origine nu; OPTIONS = 204", async () => {
   const w = lume();

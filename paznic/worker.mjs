@@ -6,6 +6,10 @@
 // CHEIE_CITIRE (wrangler secret put), CORS doar pentru originea suitei.
 const TACE_MS = 30 * 60000, AMINTIRE_MS = 6 * 3600000;
 const POZA_MAX = 512 * 1024, SIMBOLURI_MAX = 60;
+// v100.42 (audit 30.09): lista se scrie cu cheia de CITIRE a paginii - deci nu are voie sa goleasca cota KV (1.000 de scrieri pe zi pe
+// tot contul; o cota golita face paznicul sa tipe pe Discord la 10 minute): lista identica = nicio scriere; cel mult o scriere la 5 s
+// si 200 pe zi. Pagina trimite doar la schimbare (cu 1,5 s de pauza), deci folosirea normala nu atinge limitele.
+const SIMBOLURI_PAUZA_MS = 5000, SIMBOLURI_PE_ZI = 200, SIMBOLURI_CORP_MAX = 16 * 1024;
 const ORIGINI = [/^https:\/\/mferent80-source\.github\.io$/, /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/];
 export function origineOk(o) { return !!o && ORIGINI.some((r) => r.test(String(o))); }
 function cors(request) {
@@ -14,7 +18,9 @@ function cors(request) {
   return { "access-control-allow-origin": o, "access-control-allow-headers": "authorization, content-type, if-none-match", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-expose-headers": "etag", "vary": "origin" };
 }
 const J = (o, s = 200, h = {}) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", "cache-control": "no-store", ...h } });
-function autorizat(request, secret) { const s = String(secret || ""); return s.length >= 20 && request.headers.get("authorization") === "Bearer " + s; }
+// v100.42 (audit 30.09): comparare in timp CONSTANT (=== se opreste la primul caracter diferit - timpul spune cat din cheie e ghicit)
+function egalConstant(a, b) { a = String(a); b = String(b); let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
+function autorizat(request, secret) { const s = String(secret || ""); return s.length >= 20 && egalConstant(request.headers.get("authorization") || "", "Bearer " + s); }
 
 // poza colectorului: scrisa de acasa cu tokenul, citita de pagina cu cheia de citire
 export async function pozaScrie(env, text) {
@@ -34,7 +40,8 @@ export async function pozaCiteste(env, ifNoneMatch) {
   return { status: 200, text, etag };
 }
 // lista de simboluri a paginii, pentru colector (max 60, curatate, fara dubluri)
-export async function simboluriScrie(env, text) {
+export async function simboluriScrie(env, text, acum = Date.now()) {
+  if (String(text || "").length > SIMBOLURI_CORP_MAX) return { status: 413, corp: { error: "lista prea mare" } };
   let c; try { c = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
   const l = c && Array.isArray(c.simboluri) ? c.simboluri : null; if (!l) return { status: 400, corp: { error: "lipseste 'simboluri'" } };
   const out = [], vazut = new Set();
@@ -43,7 +50,12 @@ export async function simboluriScrie(env, text) {
     if (!s || vazut.has(s)) continue; vazut.add(s); out.push({ s, nota: String(x && x.nota || "").slice(0, 80) });
     if (out.length >= SIMBOLURI_MAX) break;
   }
-  await env.PAZNIC.put("simboluri", JSON.stringify({ simboluri: out, la: Date.now() }));
+  const vechi = await simboluriCiteste(env), zi = new Date(acum).toISOString().slice(0, 10);
+  if (JSON.stringify(vechi.simboluri) === JSON.stringify(out)) return { status: 200, corp: { ok: true, n: out.length, neschimbat: true } };
+  if (vechi.la && acum - vechi.la < SIMBOLURI_PAUZA_MS) return { status: 429, corp: { error: "prea des: mai încearcă peste câteva secunde" } };
+  const scrieri = vechi.zi === zi ? (Number(vechi.scrieriZi) || 0) : 0;
+  if (scrieri >= SIMBOLURI_PE_ZI) return { status: 429, corp: { error: "prea multe schimbări azi (" + SIMBOLURI_PE_ZI + "); mâine se poate din nou" } };
+  await env.PAZNIC.put("simboluri", JSON.stringify({ simboluri: out, la: acum, zi, scrieriZi: scrieri + 1 }));
   return { status: 200, corp: { ok: true, n: out.length } };
 }
 export async function simboluriCiteste(env) { let o = null; try { o = JSON.parse(await env.PAZNIC.get("simboluri") || "null"); } catch { o = null; } return o && Array.isArray(o.simboluri) ? o : { simboluri: [], la: null }; }
