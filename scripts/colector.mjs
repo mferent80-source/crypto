@@ -27,7 +27,7 @@ import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.23";
+const VERSIUNE_COLECTOR = "v101.24";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -331,6 +331,7 @@ async function tura() {
           let subOOra = null;
           if (Number(x.inchisLa) - Number(x.pornitLa) < 3600000) { try { const a = await cere("/api/istoric-bot?action=botiInchisi"); subOOra = Obiceiuri.subOOra(JurnalTrade.din(a && Array.isArray(a.boti) ? a.boti : [])); } catch {} }
           fisa = TabloExtra.fisaInchidere(x, { plan, atrPct, subOOra });
+          await judecaLaInchidere(id, x);   // v100.43 (I-466)
         }
       } catch (e) { jurnal("fisa de inchidere", id, e.message); }
       const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaColector("critic", (m.cunoscuti[id].nume || "Botul") + " nu mai apare în lista Pionex", "Poate a fost închis sau lichidat. Verifică în aplicația Pionex.");
@@ -383,6 +384,7 @@ async function tura() {
       const z = TabloExtra.dacaInchizi(b); if (z && z.pretZero > 0) ctx.pretZero = z.pretZero;
     } catch (e) { jurnal("mediu", b.id, e.message); }
     const inainte = stareAlerte[b.id] || {};
+    ctx.taci = socotealaTaci;   // v100.43 (I-466): sfaturile care nu bat hazardul raman doar in Radar
     const r = Alerte.evalueaza(b, ctx, inainte, acum);
     stareAlerte[b.id] = r.stare;
     // v91.11 (4): grila atinsa / pereche incheiata - contorii se muta abia dupa ce mesajul a plecat
@@ -895,7 +897,8 @@ async function turaRaport(acum) {
   try {
     const trades = JurnalTrade.din(await botiInchisiToti());   // v100.40: toata saptamana, nu ultimii 10
     let soc = {};
-    for (const id of Object.keys(m.cunoscuti || {})) {
+    if (socotealaUltima) soc = socotealaUltima;   // v100.43: pe toti botii (turaSocoteala), nu doar pe cei cunoscuti acum
+    else for (const id of Object.keys(m.cunoscuti || {})) {
       try { const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const s = SemnaleBot.socoteala((v && v.semnale && v.semnale.log) || []); for (const k of Object.keys(s)) { const x = soc[k] || (soc[k] = { judecate: 0, corecte: 0 }); x.judecate += s[k].judecate; x.corecte += s[k].corecte; } } catch (e) {}
     }
     let lab = null; try { const v = await cere("/api/istoric-bot?action=laborator"); lab = v && v.laborator; } catch (e) {}
@@ -950,6 +953,61 @@ async function turaPerechiOra() {
   scrieStare();
 }
 
+// v100.43 (I-466, el: „judecata la închidere sau la 24 h”): la inchiderea unui bot, semnalele lui inca nejudecate se judeca pe
+// rezultatul final (net = realizat + comisioane + funding; acelasi temei ca totalul notat la semnal: echitate − investit)
+async function judecaLaInchidere(id, x) {
+  try {
+    const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)), s = v && v.semnale, log = s && Array.isArray(s.log) ? s.log : [];
+    if (!log.length || !log.some((e) => e.dreptate === null || e.dreptate === undefined)) return;
+    const t = JurnalTrade.din([x.brut || x])[0], final = t && t.net !== undefined && t.net !== null ? t.net : Number(x.profitTotal);
+    if (!Number.isFinite(final)) return;
+    const nou = SemnaleBot.judecaLaInchidere(log, final, Number(x.investit) || (t && t.investit) || 0, Number(x.inchisLa) || (t && t.inchis) || Date.now());
+    await trimite("/api/istoric-bot?action=semnale", { bot: id, log: nou, acum: s.acum || null });
+  } catch (e) { jurnal("judecata la inchidere", id, e.message); }
+}
+// I-466: o data pe ora - (a) botii inchisi in ultimele 30 de zile cu semnale inca nejudecate se judeca pe rezultatul lor (arhiva);
+// (b) socoteala TUTUROR (inchisi + activi) -> KV „socoteala” (Tablou, raport) si lista sfaturilor TACUTE pentru Discord
+let socotealaLa = Date.now() - 3600000 + 3 * 60000, socotealaInLucru = false, socotealaTaci = {}, socotealaUltima = null;
+async function turaSocoteala() {
+  if (socotealaInLucru || Date.now() - socotealaLa < 3600000) return;
+  socotealaInLucru = true;
+  try {
+    const inchisi = (await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 30 * 86400000);
+    const act = await cere("/api/bot-orders"), activi = (act && Array.isArray(act.bots) ? act.bots : []).map((b) => String(b.id));
+    const loguri = []; let judecati = 0;
+    for (const x of inchisi) {
+      const id = String(x.strategyId || x.buOrderId || ""); if (!id) continue;
+      const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)), s = v && v.semnale; let log = s && Array.isArray(s.log) ? s.log : [];
+      if (!log.length) continue;
+      if (log.some((e) => e.dreptate === null || e.dreptate === undefined)) {
+        const t = JurnalTrade.din([x])[0];
+        if (t && Number.isFinite(t.net)) { const nou = SemnaleBot.judecaLaInchidere(log, t.net, t.investit || 0, t.inchis); if (JSON.stringify(nou) !== JSON.stringify(log)) { await trimite("/api/istoric-bot?action=semnale", { bot: id, log: nou, acum: s.acum || null }); log = nou; judecati++; } }
+      }
+      loguri.push(log);
+    }
+    for (const id of activi) { try { const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const l = v && v.semnale && v.semnale.log; if (Array.isArray(l) && l.length) loguri.push(l); } catch {} }
+    const peCod = SemnaleBot.socotealaToti(loguri);
+    socotealaTaci = SemnaleBot.tacute(peCod); socotealaUltima = peCod;
+    await trimite("/api/istoric-bot?action=socoteala", { la: Date.now(), boti: loguri.length, peCod });
+    jurnal("socoteala:", loguri.length, "boti,", Object.keys(peCod).length, "sfaturi,", judecati, "judecati la inchidere, tacute:", Object.keys(socotealaTaci).join(",") || "niciunul");
+    socotealaLa = Date.now();
+  } catch (e) { jurnal("socoteala ESEC", e.message); socotealaLa = Date.now() - 3600000 + 10 * 60000; }
+  socotealaInLucru = false;
+}
+// v100.43 (I-468): frana contului - la 5 minute; peste prag, o alerta critica O DATA pe zi (ziua Romaniei). Pragurile din configurare.
+let franaLa = 0;
+async function turaFrana() {
+  if (Date.now() - franaLa < 5 * 60000) return;
+  franaLa = Date.now();
+  const cfg = await cere("/api/istoric-bot?action=config").catch(() => null), praguri = cfg && cfg.config && cfg.config.frana || null;
+  const trades = JurnalTrade.din((await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 8 * 86400000));
+  const act = await cere("/api/bot-orders"), f = Obiceiuri.frana({ trades, deschise: act && act.bots || [], acum: Date.now(), praguri });
+  const m = meta(), zi = new Date(Obiceiuri.inceputZiRo(Date.now()) + 12 * 3600000).toISOString().slice(0, 10);
+  if (f.activa && m.franaZi !== zi) {
+    if (await trimiteAlerta({ nivel: "critic", titlu: "🛑 Frâna contului: gata pe azi", mesaj: f.text + " Pragurile le schimbi în Radar → Grid → Poarta de pornire." }, null, "frana")) { m.franaZi = zi; scrieStare(); }
+  }
+}
+
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
   // v98.2 (audit 28.09, #1): planurile si poza cer amandoua pozitiile T212 - una dupa alta, nu deodata (serverul leaga oricum
@@ -958,6 +1016,8 @@ async function bucla() {
   turaCopie();
   golesteCoada().catch((e) => jurnal("coada discord", e.message));   // v100.40
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
+  turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
+  turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
   turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));

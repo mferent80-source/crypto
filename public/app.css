@@ -1707,6 +1707,10 @@ body.peT212 .toolbar,body.peT212 .heroStrip,body.peT212 .tabs{display:none}
 .contTotSep{color:var(--line)}
 /* v88: Jurnalul de trade ca celelalte pagini - pagina proprie, latimea demo-ului, 14px, listele lungi pliate */
 body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none}
+/* v100.43: increderea sfatului (I-466), banii de langa actiune (I-467), frana contului in poarta (I-468) */
+.tbIncredere{margin:4px 0 0;font-size:12px}
+.tbCcBani{margin:6px 0 0;font-size:12.5px;font-weight:600;color:var(--text)}
+.grFrana{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 /* v100.40 (audit 30.09): si fereastra Grid - pe telefon unealta incepea la 772 px, sub antetul vechi gol */
 body.peGrid .toolbar,body.peGrid .heroStrip,body.peGrid .tabs{display:none}
 #jurnaltrade>*{max-width:1180px;margin-left:auto;margin-right:auto}

@@ -5022,6 +5022,12 @@ function grPoartaHtml(f){
     // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
     +(p.rez.trecut?'<p class="tbFac">👉 <b>Ce aș face eu:</b> toate regulile trec — pornește, iar eu îl notez în jurnal cu planul tău.</p>':p.rez.reguli.filter(function(r){return !r.ok}).every(function(r){return r.cod==="moneda"})?'<p class="tbFac">👉 <b>Ce aș face eu:</b> fișa, planul și levierul sunt în regulă, dar pe moneda asta istoria ta e pe minus — aș porni cu o sumă mai mică și aș ține stopul la plan. Îl notez în jurnal.</p>':'<p class="tbFac">👉 <b>Ce aș face eu:</b> aș aștepta. Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate.</p>')
     +'<button type="button" class="actionGhost" data-action-click="gridJurnalAdauga()">📒 Am pornit botul în Pionex (notează-l)</button>'}
+  // v100.43 (I-468): pragurile franei contului, la vedere si schimbabile (o setare fara buton nu exista)
+  var gfr=typeof grFrana!=="undefined"?grFrana:{},fp=gfr.praguri||(typeof Obiceiuri!=="undefined"?Obiceiuri.praguriFrana(null):{zi:20,sapt:60,rand:3});
+  h+='<div class="grFrana"><span class="tbEt2">🛑 Frâna contului — sună când pierzi azi / pe 7 zile / boți pe minus la rând</span><div class="grPoartaForm">'
+    +'<label><span class="tbEt2">pe zi, USDT</span><input id="grFranaZi" inputmode="decimal" value="'+fp.zi+'"></label><label><span class="tbEt2">pe 7 zile, USDT</span><input id="grFranaSapt" inputmode="decimal" value="'+fp.sapt+'"></label><label><span class="tbEt2">la rând</span><input id="grFranaRand" inputmode="numeric" value="'+fp.rand+'"></label>'
+    +'<button type="button" class="actionGhost" data-action-click="grFranaSalveaza()">Salvează pragurile</button></div>'
+    +(gfr.istoric?'<p class="tbSub">'+escapeHtml(gfr.istoric.text)+' (în '+new Date().getUTCFullYear()+')</p>':'')+'</div>';
   return h+'</div>';
 }
 function grPlanCitit(){return {plus:grNumar($("grPlanPlus")&&$("grPlanPlus").value),minus:grNumar($("grPlanMinus")&&$("grPlanMinus").value),afaraOre:grNumar($("grPlanAfara")&&$("grPlanAfara").value)}}
@@ -5100,13 +5106,26 @@ function grDinLegatura(m){
     if(grStare.fisa&&grStare.fisa.simbol===sim&&!grStare.inLucru){clearInterval(iv);gridPoarta().then(function(){var p=document.querySelector(".grPoarta");if(p)p.scrollIntoView({block:"start"});toast("Poarta pentru "+m+" — deschisă din alerta de pornire","good")},function(){})}
   },1000);
 }
+// v100.43 (I-468): pragurile franei - pe server (istoric-bot?action=config), ca sa le foloseasca si colectorul pentru alerta
+var grFrana={praguri:null,la:0,istoric:null};
+async function grFranaAdu(){if(grFrana.la&&Date.now()-grFrana.la<5*60000)return;try{var c=await getJSON("/api/istoric-bot?action=config");grFrana.praguri=Obiceiuri.praguriFrana(c&&c.config&&c.config.frana);grFrana.la=Date.now()}catch(e){grFrana.praguri=grFrana.praguri||Obiceiuri.praguriFrana(null)}}
+async function grFranaSalveaza(){
+  var v=function(id){var x=$(id);return x?Number(String(x.value).replace(",",".")):NaN},p={zi:v("grFranaZi"),sapt:v("grFranaSapt"),rand:Math.round(v("grFranaRand"))};
+  if(!(p.zi>0&&p.sapt>0&&p.rand>0)){toast("Scrie trei numere pozitive: pe zi, pe 7 zile, câți la rând","bad");return}
+  try{var r=await apiFetch("/api/istoric-bot?action=config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({frana:p})});if(!r.ok)throw Error("HTTP "+r.status);grFrana.la=0;toast("Pragurile frânei sunt salvate (le folosește și colectorul pentru alertă)","good");gridPoarta()}catch(e){toast("Nu s-au salvat pragurile: "+textEroare(e),"bad")}
+}
 async function gridPoarta(){
   var f=grStare.fisa;if(!f)return;
   var plan=grPlanCitit();
   if(!jtStare.boti&&!jtStare.inLucru){try{await jtPorneste(true)}catch(e){}}
   var trades=JurnalTrade.din(jtStare.boti||[]),lev=grNumar($("grLevier")&&$("grLevier").value)||f.setare.levier;
   // v100.30: numele botului din lista oficiala Pionex (LIT -> LIGHTER), ca istoricul si reintrarea sa-l gaseasca
-  grPoartaRez={simbol:f.simbol,plan:plan,rez:Obiceiuri.poarta({fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
+  // v100.43 (I-468): frana contului - netul de azi / 7 zile / seria pe minus, cu pragurile lui (configurarea de pe server)
+  await grFranaAdu();
+  var act=(typeof tbStare!=="undefined"&&tbStare.boti&&tbStare.boti.length?tbStare.boti:null)||(typeof contTot!=="undefined"&&contTot.boti)||[];
+  var fr=Obiceiuri.frana({trades:trades,deschise:act,acum:Date.now(),praguri:grFrana.praguri});
+  grFrana.istoric=Obiceiuri.franaIstoric(trades.filter(function(t){return t.inchis>Date.UTC(new Date().getUTCFullYear(),0,1)}),grFrana.praguri);
+  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
 }
@@ -5563,7 +5582,11 @@ async function tbAduFisaBot(b){
   if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaExtra(tbStare.bot);tbDeseneazaSemafor(tbStare.bot);if(typeof renderTabloSfaturi==="function")renderTabloSfaturi()}
 }
 // ===== v81: saptamana, planul, marja, vs pozitie, evenimente =====
-var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botId:null,plan:null,la:0},tbMinusAtins={};   // v100.39: pragul de minus atins, pe bot (histerezis)
+var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botId:null,plan:null,la:0},tbMinusAtins={};
+// v100.43 (I-466): increderea fiecarui sfat, masurata pe toti botii lui (KV „socoteala”, colectorul o reface o data pe ora)
+var tbSoc={la:0,peCod:null,inLucru:false};
+function tbAduSocoteala(){if(tbSoc.inLucru||Date.now()-tbSoc.la<10*60000)return;tbSoc.inLucru=true;getJSON("/api/istoric-bot?action=socoteala").then(function(d){tbSoc.peCod=d&&d.socoteala&&d.socoteala.peCod||null;tbSoc.boti=d&&d.socoteala&&d.socoteala.boti||null}).catch(function(){}).then(function(){tbSoc.la=Date.now();tbSoc.inLucru=false})}
+function tbIncredere(cod){tbAduSocoteala();if(!tbSoc.peCod||!cod||cod==="fara-fisa")return "";var x=tbSoc.peCod[cod];return '<p class="tbSub tbIncredere">🎯 '+escapeHtml((x&&x.nume?x.nume+": ":"")+SemnaleBot.textIncredere(x||null))+(x&&x.stare==="ajuta"?' <b class="good">merită ascultat</b>':'')+'</p>'}   // v100.39: pragul de minus atins, pe bot (histerezis)
 async function tbAduSaptamana(b){
   if(!b||!b.id||tbSapt.inLucru||(tbSapt.botId===b.id&&Date.now()-tbSapt.la<10*60000))return;
   tbSapt.inLucru=true;
@@ -5707,15 +5730,15 @@ function tbDeseneazaSemafor(b){
     +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
   // celelalte motive + notele (ia profit, aglomerarea "info") - pe randul lor, nu in cartela
   // "ia profit" e deja o componenta a verdictului: textul lui explicativ intra in randul lui, nu intr-un rand separat (revizia v100)
-  var alte=SemnaleBot.celelalteMotive(sm).map(function(x){return {c:CUL[x.nivel]||"var(--muted)",m:x.motiv,f:x.cod==="ia-profit"&&iap?iap.text+" "+x.faCe:x.faCe}});
+  var alte=SemnaleBot.celelalteMotive(sm).map(function(x){return {c:CUL[x.nivel]||"var(--muted)",m:x.motiv,k:x.cod,f:x.cod==="ia-profit"&&iap?iap.text+" "+x.faCe:x.faCe}});
   if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")alte.push({c:"var(--muted)",m:ac.aglomerare.text,f:""});
-  h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(mare(sm.motiv))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p>'
+  h+='<div class="tbSemCap"><span class="tbSemNivel '+n[1]+'">'+n[0]+'</span><div><b>'+escapeHtml(mare(sm.motiv))+'</b><p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(sm.faCe)+'</p>'+tbIncredere(sm.cod)
     +(alte.length?'<button type="button" class="tbMaiMulte" data-action-click="tbMergiLaMotive()">și <b>încă '+alte.length+(alte.length===1?' motiv':' motive')+'</b> '+alte.map(function(x){return '<i class="tbPct" style="background:'+x.c+'"></i>'}).join("")+' · mai jos ↓</button>':'')+'</div></div>';
   el.innerHTML=h;
   if(mot){
     if(!alte.length)mot.hidden=true;
     else{mot.hidden=false;$("tbMotiveTitlu").textContent="Celelalte motive · "+alte.length;
-      $("tbMotiveLista").innerHTML=(tbMotiveDeschis?alte:alte.slice(0,3)).map(function(x){return '<div class="tbMRand"><i style="background:'+x.c+'"></i><b>'+escapeHtml(mare(x.m))+'</b><span class="tbSub">'+(x.f?'👉 <b>Ce aș face:</b> '+escapeHtml(x.f):'')+'</span></div>'}).join("");
+      $("tbMotiveLista").innerHTML=(tbMotiveDeschis?alte:alte.slice(0,3)).map(function(x){return '<div class="tbMRand"><i style="background:'+x.c+'"></i><b>'+escapeHtml(mare(x.m))+'</b><span class="tbSub">'+(x.f?'👉 <b>Ce aș face:</b> '+escapeHtml(x.f):'')+'</span>'+(x.k?tbIncredere(x.k):'')+'</div>'}).join("");
       var bt=$("tbMotiveAlte"),rest=alte.length-3;bt.hidden=rest<=0;bt.textContent=tbMotiveDeschis?"arată doar primele 3":"încă "+rest+" ▾"}
   }
   // "Acum, concret": cifra mare + eticheta + actiunea; detaliile (si setarile de copiat ale gridului propus) sub "detalii"
@@ -5728,10 +5751,10 @@ function tbDeseneazaSemafor(b){
   propHtml+=tbPlanVarHtml(b);   // v100.16: gridul dupa planul tau (al botului; fara el, propunerea)
   if(cc){
     cc.hidden=false;
-    SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,plan:plan,acum:Date.now()}).forEach(function(x){
+    SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,plan:plan,acum:Date.now(),cifre:function(pr){return TabloExtra.cifreActiuni(b,{protectie:pr,b15:tbFisa.botId===b.id?tbFisa.b15:null})}}).forEach(function(x){
       var e=$("tbCc-"+x.cod);if(!e)return;var d0=e.querySelector("details"),deschis=!!(d0&&d0.open),tg=x.tag||{t:"",c:"mut"};
       e.innerHTML='<div class="tbCcCap"><h5>'+escapeHtml(x.titlu)+'</h5>'+(tg.t?'<span class="tbTag '+tg.c+'">'+escapeHtml(tg.t)+'</span>':'')+'</div>'
-        +'<div class="tbCcMare">'+escapeHtml(x.mare||"—")+(x.mic?'<small>'+escapeHtml(x.mic)+'</small>':'')+'</div><p class="tbCcAct">'+escapeHtml(x.act||x.text)+'</p>'
+        +'<div class="tbCcMare">'+escapeHtml(x.mare||"—")+(x.mic?'<small>'+escapeHtml(x.mic)+'</small>':'')+'</div><p class="tbCcAct">'+escapeHtml(x.act||x.text)+'</p>'+(x.bani?'<p class="tbCcBani">'+escapeHtml(x.bani)+'</p>':'')   /* v100.43 (I-467) */
         +(x.cod==="grid"&&tbTvCod()?'<button type="button" class="actionGhost tbTvBtn" value="'+escapeHtml(tbTvCod().cod)+'" data-action-click="gridCopiaza(this.value)" title="Rândul pentru indicatorul GRID-FISA din TradingView, cu gridul de acum al botului">📺 Codul pentru TradingView · copiază</button>':'')
         +'<details class="tbCcDet"'+(deschis?' open':'')+'><summary>'+(x.cod==="grid"&&propHtml?"setările de copiat și detalii":"detalii")+'</summary><p>'+escapeHtml(x.text)+'</p>'+(x.cod==="grid"?propHtml:"")+'</details>';
     });

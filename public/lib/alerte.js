@@ -243,6 +243,10 @@ var Alerte = (function () {
   }
 
   // stare: { <cheie>: { nivel, la } } de data trecuta (sau {}).
+  // v100.43 (I-466): sfaturile TACUTE (dupa >=30 de cazuri n-au batut hazardul si n-au salvat bani - SemnaleBot.socotealaToti) raman
+  // doar in Radar; pe Discord nu mai pleaca. Cheia alertei -> codul sfatului din socoteala. Lichidarea si planul lui nu sunt aici.
+  var CHEIE_SFAT = { "s-muta": "muta", "s-btc": "btc", "s-aglomerare": "aglomerare", "s-ia-profit": "ia-profit" };
+  function tacuta(cheie, ctx) { var c = CHEIE_SFAT[cheie]; return !!(c && ctx && ctx.taci && ctx.taci[c]); }
   function evalueaza(b, ctx, stare, acum) {
     stare = stare || {}; acum = acum || Date.now();
     // Cheile pe care nu le putem judeca acum (date lipsa, lumanari picate) isi
@@ -256,7 +260,7 @@ var Alerte = (function () {
         // a trecut: se spune doar dupa STABIL_MS la rand fara alerta
         var de = v.okDe || acum;
         if (acum - de >= STABIL_MS) {
-          if (a.titlu) mesaje.push({ cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj });
+          if (a.titlu) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj });
           nou[cheie] = { nivel: "ok", la: acum };
         } else nou[cheie] = { nivel: v.nivel, la: v.la, okDe: de };
         return;
@@ -264,7 +268,7 @@ var Alerte = (function () {
       var trimite = false;
       if (RANG[a.nivel] > RANG[v.nivel]) trimite = true;                       // s-a agravat
       else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= (REPETA_CHEIE_MS[cheie + ":" + a.nivel] || REPETA_CHEIE_MS[cheie] || REPETA_MS[a.nivel])) trimite = true; // persista
-      if (trimite) mesaje.push({ cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
+      if (trimite) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj + " (Sfat tăcut pe Discord: pe boții tăi n-a bătut hazardul.)", doarRadar: true } : { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
       // coborarea critic -> atentie NU reseteaza ceasul: o revenire rapida in critic nu e o agravare noua
       nou[cheie] = { nivel: a.nivel, la: trimite ? acum : (RANG[a.nivel] <= RANG[v.nivel] ? v.la : acum) };
     });

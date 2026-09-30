@@ -45,6 +45,8 @@ export async function onRequestGet({request,env}){
   if(action==="semnale"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("semnale:"+bot)||"null")}catch{v=null}return json({bot,semnale:v})}
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
+  // v100.43 (I-466): increderea fiecarui sfat, adunata de colector pe toti botii
+  if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
   // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
   if(action==="ultimulPlan"){let bun=null;try{const l=await env.ISTORIC.list({prefix:"plan:"});for(const k of (l&&l.keys)||[]){const id=k.name.slice(5);if(/^t212-/.test(id))continue;
@@ -177,7 +179,7 @@ export async function onRequestPost({request,env}){
     const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);
     const txt=(v,m)=>typeof v==="string"?v.slice(0,m):"";
     const NIV=["tine","atentie","iesi","info"];
-    const log=(Array.isArray(corp.log)?corp.log:[]).slice(-200).map(e=>e&&typeof e==="object"?{t:nr(e.t),cod:txt(e.cod,24).replace(/[^a-z0-9-]/g,""),nivel:NIV.includes(e.nivel)?e.nivel:"info",motiv:txt(e.motiv,200),total:nr(e.total),dreptate:e.dreptate===true?true:e.dreptate===false?false:null,totalDupa:nr(e.totalDupa)}:null).filter(e=>e&&e.t!==null);
+    const log=(Array.isArray(corp.log)?corp.log:[]).slice(-200).map(e=>e&&typeof e==="object"?{t:nr(e.t),cod:txt(e.cod,24).replace(/[^a-z0-9-]/g,""),nivel:NIV.includes(e.nivel)?e.nivel:"info",motiv:txt(e.motiv,200),total:nr(e.total),dreptate:e.dreptate===true?true:e.dreptate===false?false:null,totalDupa:nr(e.totalDupa),judecatLa:nr(e.judecatLa),laInchidere:e.laInchidere===true?true:undefined}:null).filter(e=>e&&e.t!==null);   // v100.43: judecata la inchiderea botului (I-466)
     const a=corp.acum&&typeof corp.acum==="object"?corp.acum:null;
     const acum=a?{la:nr(a.la),btc:a.btc&&typeof a.btc==="object"?{nivel:txt(a.btc.nivel,10),text:txt(a.btc.text,300)}:null,aglomerare:a.aglomerare&&typeof a.aglomerare==="object"?{nivel:txt(a.aglomerare.nivel,10),text:txt(a.aglomerare.text,400)}:null,afaraOre:nr(a.afaraOre),regimBtc:a.regimBtc&&typeof a.regimBtc==="object"?{r4h:nr(a.regimBtc.r4h),r24h:nr(a.regimBtc.r24h),miscare:!!a.regimBtc.miscare}:null}:null;
     await env.ISTORIC.put("semnale:"+bot,JSON.stringify({log,acum}));
@@ -195,6 +197,15 @@ export async function onRequestPost({request,env}){
     if(p&&p.proba===true)plan.proba=true;
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
     return json({ok:true,plan});
+  }
+  // v100.43 (I-466): socoteala sfaturilor pe toti botii (colectorul, o data pe ora) - {la, boti, peCod:{cod:{n,judecate,corecte,bani,baniN,ic,stare,nume}}}
+  if(action==="socoteala"){
+    const pc=corp&&corp.peCod&&typeof corp.peCod==="object"?corp.peCod:null;if(!pc)return json({error:"lipseste peCod"},400);
+    const STARI=["necunoscut","ajuta","nesigur","tace"],out={};
+    Object.keys(pc).slice(0,40).forEach(k=>{const x=pc[k],c=String(k).replace(/[^a-z0-9-]/g,"").slice(0,24);if(!c||!x||typeof x!=="object")return;
+      out[c]={n:nr(x.n),judecate:nr(x.judecate),corecte:nr(x.corecte),bani:nr(x.bani),baniN:nr(x.baniN),ic:Array.isArray(x.ic)?x.ic.slice(0,2).map(nr):null,stare:STARI.includes(x.stare)?x.stare:"necunoscut",nume:typeof x.nume==="string"?x.nume.slice(0,60):c}});
+    await env.ISTORIC.put("socoteala",JSON.stringify({la:nr(corp.la)||Date.now(),boti:nr(corp.boti),peCod:out}));
+    return json({ok:true,coduri:Object.keys(out).length});
   }
   if(action==="laborator"){
     const la=nr(corp&&corp.la),q=corp&&Array.isArray(corp.intrebari)?corp.intrebari:null;
@@ -228,6 +239,8 @@ export async function onRequestPost({request,env}){
     if(corp&&corp.canal!=null){const c=String(corp.canal);if(!["radar","ntfy","telegram","discord"].includes(c))return json({error:"canal invalid"},400);nou.canal=c}
     if(corp&&corp.ntfyTopic!=null){if(!/^[A-Za-z0-9_-]{8,64}$/.test(String(corp.ntfyTopic)))return json({error:"ntfyTopic invalid"},400);nou.ntfyTopic=String(corp.ntfyTopic)}
     const la=nr(corp&&corp.colectorLa);if(la!==null)nou.colectorLa=la;
+    // v100.43 (I-468): pragurile franei contului (USDT pe zi, USDT pe 7 zile, cati boti pe minus la rand) - puse de el din pagina
+    if(corp&&corp.frana&&typeof corp.frana==="object"){const p=v=>{const x=nr(v);return x!==null&&x>0&&x<1e6?x:null};const fr={zi:p(corp.frana.zi),sapt:p(corp.frana.sapt),rand:p(corp.frana.rand)};if(fr.zi===null||fr.sapt===null||fr.rand===null)return json({error:"frana: trei numere pozitive (zi, sapt, rand)"},400);nou.frana={zi:fr.zi,sapt:fr.sapt,rand:Math.round(fr.rand)}}
     await env.ISTORIC.put("config",JSON.stringify(nou));
     return json({ok:true,config:nou});
   }

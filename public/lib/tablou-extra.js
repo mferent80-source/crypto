@@ -158,6 +158,36 @@ var TabloExtra = (function () {
     if (p !== null && (dir === "long" ? op > p : dir === "short" ? op < p : false)) op = p;
     return totalCuGridLa(b, op, comision);
   }
+  // v100.43 (I-467, el: „ce aș face eu” cu banii pe masă): cifrele de langa actiunile propuse in „Acum, concret”.
+  //   stop.laOpritor - totalul daca se atinge opritorul LUI de acum (null = n-are opritor activ)
+  //   stop.laPropus  - totalul cu stopul propus (o.protectie), cu grilele umplute pe drum (modelul care a prins LIGHTER)
+  //   stop.frecventa - in cate din ferestrele de 24 h ale monedei (lumanari 15M, una la 6 h) pretul a ajuns, de la deschidere,
+  //                    la distanta stopului propus - „ce cedezi”: cat de des te-ar scoate o zi obisnuita
+  //   inchide        - ce iei daca il inchizi acum (TabloExtra.dacaInchizi)
+  function frecventaAtingere(bare, dist, dir) {
+    if (!Array.isArray(bare) || bare.length < 96 * 3 || !(dist > 0) || (dir !== "long" && dir !== "short")) return null;
+    var n = 0, k = 0;
+    for (var s = 0; s + 96 <= bare.length; s += 24) {
+      var o = bare[s].o, atins = false;
+      for (var i = s; i < s + 96 && !atins; i++) atins = dir === "long" ? bare[i].l <= o * (1 - dist) : bare[i].h >= o * (1 + dist);
+      n++; if (atins) k++;
+    }
+    return n ? k / n : null;
+  }
+  function cifreActiuni(b, o) {
+    o = o || {}; var dir = String(b && b.directie || "").toLowerCase(), p = nr(b && b.pretCurent), pr = nr(o.protectie);
+    var stop = { laOpritor: totalLaOpritor(b), laPropus: pr !== null ? totalCuGridLa(b, pr) : null, pretPropus: pr, frecventa: null, opritor: b && b.opritorPierdereActiv ? nr(b.opritorPierdere) : null };
+    if (pr !== null && p !== null && p > 0) stop.frecventa = frecventaAtingere(o.b15, Math.abs(p - pr) / p, dir);
+    var z = dacaInchizi(b);
+    return { stop: stop, inchide: { iei: z.iei, total: nr(b && b.profitTotal), comision: z.comisionInchidere } };
+  }
+  function textBani(st) {
+    if (!st) return "";
+    var U2 = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + " USDT"; }, t = [];
+    if (st.laPropus !== null && st.laPropus !== undefined) t.push("pierderea maximă: " + (st.laOpritor !== null && st.laOpritor !== undefined ? U2(st.laOpritor) + " (opritorul de acum)" : "fără margine (n-ai opritor activ)") + " → " + U2(st.laPropus) + " cu stopul propus");
+    if (st.frecventa !== null && st.frecventa !== undefined) t.push("ce cedezi: o zi obișnuită a monedei ajunge până acolo în " + Math.round(st.frecventa * 100) + "% din zile (ultimele 30)");
+    return t.join(" · ");
+  }
   // v101.8: cat are botul daca se atinge tinta LUI din Pionex (in procente: raport x investit). Stinsa / lipsa -> null.
   function totalLaTinta(b, comision) {
     if (!b || !b.opritorProfitActiv) return null;
@@ -540,7 +570,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;
