@@ -70,6 +70,21 @@ var StatisticaTrade = (function () {
     s.perEticheta = grupeaza(l, function (x) { return x.eticheta; }).map(function (g) { g.eticheta = g.cheie; return g; }).sort(function (a, b) { return b.total - a.total; });
     var dur = o.durate || [["sub o oră", 0, 1], ["1–6 ore", 1, 6], ["6–24 ore", 6, 24], ["1–3 zile", 24, 72], ["peste 3 zile", 72, Infinity]];
     s.perDurata = dur.map(function (d) { var g = grupa(l.filter(function (x) { return x.durataOre !== null && x.durataOre >= d[1] && x.durataOre < d[2]; })); g.et = d[0]; return g; });
+    // v100.35 (30.09, el: „fa idei”): „Dacă țineai măcar o oră” - trade-urile inchise in prima ora fata de cele tinute peste o ora, spus
+    // cinstit in AMBELE sensuri (pe istoria lui tinerea NU e mai buna in medie: −1,40/trade sub o ora, dar −20…−25 peste o zi); de la MIN in fiecare grupa
+    s.primaOra = null;
+    var cuCom = function (a) { var g = grupa(a), c = a.filter(function (x) { return x.comisioane !== null; }); g.comisioane = suma(c, function (x) { return x.comisioane; }); g.comMedie = c.length ? g.comisioane / c.length : null; return g; };
+    var subO = l.filter(function (x) { return x.durataOre !== null && x.durataOre < 1; }), pesteO = l.filter(function (x) { return x.durataOre !== null && x.durataOre >= 1; });
+    if (subO.length >= MIN && pesteO.length >= MIN) {
+      var A = cuCom(subO), B = cuCom(pesteO), maiBine = B.medie > A.medie, dif = maiBine ? (B.medie - A.medie) * A.n : null;
+      var fer = dur.map(function (d) { var g = cuCom(l.filter(function (x) { return x.durataOre !== null && x.durataOre >= d[1] && x.durataOre < d[2]; })); g.et = d[0]; return g; })
+        .filter(function (g) { return g.n >= MIN; }).sort(function (a, b) { return b.medie - a.medie; })[0] || null;
+      var txt = maiBine
+        ? "Trade-urile ținute peste o oră au adus în medie " + bani(B.medie, M) + " pe trade, față de " + bani(A.medie, M) + " la cele închise în prima oră. Dacă cele " + A.n + " din prima oră ar fi mers ca ele: ≈ " + bani(dif, M) + ". E o comparație, nu o dovadă: pe unele le-ai închis repede tocmai pentru că mergeau prost."
+        : "Ținerea mai lungă NU a mers mai bine în medie: " + bani(B.medie, M) + " pe trade peste o oră, față de " + bani(A.medie, M) + " în prima oră." + (A.comisioane > 0 && A.total < 0 ? " Închiderile din prima oră au costat mai ales în comisioane: comisioane " + bani(-A.comisioane, M) + " din " + bani(A.total, M) + "." : "");
+      if (fer) txt += " Cea mai bună fereastră: " + fer.et + " (" + bani(fer.medie, M) + " pe trade, " + pr(fer.rata) + " pe plus).";
+      s.primaOra = { sub: A, peste: B, maiBine: maiBine, diferenta: dif, fereastra: fer, text: txt };
+    }
     if (l.length && l.every(function (x) { return x.dir; })) s.perDir = grupeaza(l, function (x) { return x.dir || null; }).map(function (g) { g.dir = g.cheie; return g; }).sort(function (a, b) { return b.total - a.total; });
     // v100.25: pe toata istoria Pionex sunt ~29 de levieri diferiti (1×…100×) - peste 8 valori se strang pe trepte
     // v100.27: cei cu levier necunoscut (smart copy, marcati faraLevier) nu intra in tabel, dar se spune cati sunt
@@ -237,9 +252,18 @@ var StatisticaTrade = (function () {
     var et = s.perEticheta, buni = et.filter(function (g) { return g.total > 0; }).slice(0, 10), rai = et.filter(function (g) { return g.total < 0; }).slice(-10).reverse();
     h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Unde câștigi</h4><span class="stSub">cele mai bune ' + buni.length + " din " + et.length + "</span></div>" + (buni.length ? tabel(["", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], buni.map(function (g) { return randGrupa(g.eticheta, g, M); })) : '<p class="stSub">Nicio monedă pe plus pe total.</p>') + "</div>"
       + '<div class="stBloc"><div class="stBlocCap"><h4>Unde pierzi</h4><span class="stSub">cele mai proaste ' + rai.length + "</span></div>" + (rai.length ? tabel(["", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], rai.map(function (g) { return randGrupa(g.eticheta, g, M); })) : '<p class="stSub">Nicio pierdere pe total.</p>') + "</div></div>";
+    // v100.35: „Dacă țineai măcar o oră” (doar cand ambele grupe au macar MIN trade-uri)
+    var blocPrimaOra = "";
+    if (s.primaOra) {
+      var po = s.primaOra, rp = function (et, g) { return "<tr><td>" + esc(et) + "</td><td>" + g.n + "</td><td>" + pr(g.rata) + '</td><td class="' + cls(g.medie) + '"><b>' + esc(bani(g.medie, M)) + "</b></td><td>" + (g.comMedie !== null ? esc(bani(-g.comMedie, M)) : "—") + "</td></tr>"; };
+      blocPrimaOra = '<div class="stBloc stPrimaOra"><div class="stBlocCap"><h4>Dacă țineai măcar o oră</h4><span class="stSub">comparație pe istoria ta, nu o proiecție</span></div>'
+        + tabel(["", "Trade-uri", "Pe plus", "Pe trade", "Comisioane pe trade"], [rp("Închise în prima oră", po.sub), rp("Ținute peste o oră", po.peste)].concat(po.fereastra ? [rp("Cea mai bună fereastră: " + po.fereastra.et, po.fereastra)] : []))
+        + '<p class="stSub">' + esc(po.text) + "</p></div>";
+    }
     // v100.23 (revizie): „Cele mai mari 5 pierderi” mereu, langa „Cât ai ținut”; directia si levierul pe randul lor, cand exista
     var top5 = '<div class="stBloc"><div class="stBlocCap"><h4>Cele mai mari 5 pierderi</h4><span class="stSub">' + (s.top5Pierderi.pondere !== null ? pr(s.top5Pierderi.pondere) + " din tot ce ai pierdut" : "") + "</span></div>" + (s.top5Pierderi.lista.length ? tabel(["", "Închis", "Rezultat"], s.top5Pierderi.lista.map(function (x) { return "<tr><td>" + esc(x.eticheta) + "</td><td>" + esc(data(x.inchis)) + '</td><td class="bad"><b>' + esc(bani(x.rezultat, M)) + "</b></td></tr>"; })) : '<p class="stSub">Nicio pierdere.</p>') + "</div>";
     h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Cât ai ținut</h4></div>' + tabel(["Ținut", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perDurata.map(function (g) { return randGrupa(g.et, g, M); })) + "</div>" + top5 + "</div>";
+    h += blocPrimaOra;
     if (s.perDir.length || s.perLevier.length) h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Pe direcție și pe levier</h4></div>' + (s.perDir.length ? tabel(["Direcție", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perDir.map(function (g) { return randGrupa(g.dir, g, M); })) : "") + (s.perLevier.length ? tabel(["Levier", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perLevier.map(function (g) { return randGrupa(g.levier, g, M); })) : "") + (s.perLevier.length && s.faraLevier ? '<p class="stSub">Levierul: fără ' + s.faraLevier + " smart copy (levier necunoscut).</p>" : "") + "</div></div>";
     var toate = s.curba.map(function (p, i) { return { i: i, t: p.t, eticheta: p.eticheta, rezultat: p.rezultat }; });
     toate.sort(ord === "pierderi" ? function (a, b) { return a.rezultat - b.rezultat; } : ord === "castiguri" ? function (a, b) { return b.rezultat - a.rezultat; } : function (a, b) { return b.t - a.t; });
