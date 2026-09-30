@@ -279,13 +279,14 @@ var StatisticaTrade = (function () {
   // ---- CSV: un rand pe trade (separator ;, zecimale cu virgula) ----
   function csv(lista, moneda) {
     // v100.23 (revizie): Excel pe setari romanesti citeste ; ca separator si VIRGULA ca zecimala („12.5” devenea 12 mai); orele sunt UTC
-    var q = function (v) { v = v === null || v === undefined ? "" : String(v); return /[;"\n,]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-    var n = function (v, z) { v = nr(v); return v === null ? "" : String(z == null ? v : Number(v.toFixed(z))).replace(".", ","); };
+    var q = function (v) { v = v === null || v === undefined ? "" : String(v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[;"\n,]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };   // v100.40: fara formule
+    // v100.40: numerele rotunjite (fara 16 zecimale si fara exponent „1e-7”)
+    var n = function (v, z) { v = nr(v); return v === null ? "" : v.toFixed(z == null ? 4 : z).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "").replace(".", ","); };
     var z = function (t) { return t ? new Date(t).toISOString().replace("T", " ").slice(0, 16) : ""; };
     var r = ["inchis_utc;eticheta;pornit_utc;tinut_ore;baza_" + moneda + ";rezultat_" + moneda + ";randament;comisioane_" + moneda + ";directie;levier"];
     (Array.isArray(lista) ? lista : []).slice().sort(function (a, b) { return (a.inchis || 0) - (b.inchis || 0); }).forEach(function (x) {
       var b = nr(x.baza), rz = nr(x.rezultat);
-      r.push([z(x.inchis), q(x.eticheta), z(x.pornit), n(x.durataOre, 1), n(b), n(rz), b > 0 && rz !== null ? n(rz / b, 4) : "", n(x.comisioane), q(x.dir || ""), n(x.levier)].join(";"));
+      r.push([z(x.inchis), q(x.eticheta), z(x.pornit), n(x.durataOre, 1), n(b, 2), n(rz, 4), b > 0 && rz !== null ? n(rz / b, 4) : "", n(x.comisioane, 4), q(x.dir || ""), n(x.levier, 0)].join(";"));
     });
     return r.join("\n") + "\n";
   }

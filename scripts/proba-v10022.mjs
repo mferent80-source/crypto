@@ -151,7 +151,8 @@ await test("pagina: statistica sus pe fiecare fila (Crypto, Actiuni, Tot), scrip
   assert.ok(t2.includes('jtStatRender("actiuni")'), "fila Actiuni deseneaza statistica T212"); assert.match(t2, /jtStatTot/); assert.ok(t2.includes('id="jtStatActiuni"'), "locul statisticii T212");
   assert.match(app, /function jtStatOrdine\(/); assert.match(app, /function jtStatCsv\(/); assert.match(app, /new Blob\(/);
   // cifra veche de sus (realizatul Pionex, fara comisioane si funding) nu mai contrazice statistica neta de deasupra
-  assert.ok(app.includes('cel("Rezultat realizat"'), "eticheta noua"); assert.ok(app.includes("înainte de comisioane și funding"), "explicatia");
+  // v100.40: cifra de sus a jurnalului crypto e acum NETUL (ca statistica), cu brutul Pionex alaturi
+  assert.ok(app.includes('cel("Rezultat net",U(r.net)'), "eticheta noua"); assert.ok(app.includes("după comisioane și funding"), "explicatia");
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

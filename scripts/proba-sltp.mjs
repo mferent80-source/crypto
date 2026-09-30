@@ -19,7 +19,10 @@ console.log("\nSL/TP pe alerts · proba\n");
 await test("sugestiePoza: pozitie -> stopul care urca si tinta de la pret, riscPct, k, proba", () => {
   const b = bare(250, 2), pret = b[b.length - 1].c, n = AS.niveluri(b, pret, { pretMediu: pret * 0.9, maxDupaCumparare: pret, minTrail: 0.15 });
   const s = sugestiePoza(n, pret, "pozitie");
-  assert.ok(s.stop < pret && s.tinta > pret, JSON.stringify(s)); assert.ok(s.stop <= pret * 0.85 + 1e-4, "cel putin -15% de la maxim (rotunjit la 4 zecimale)");
+  assert.ok(s.stop < pret, JSON.stringify(s)); assert.ok(s.stop <= pret * 0.85 + 1e-4, "cel putin -15% de la maxim (rotunjit la 4 zecimale)");
+  // v100.40 (audit 30.09): tinta pozitiei e FIXA, de la pretul mediu (+2×risc) - aici pozitia e +11% si tinta (+9,4%) e deja atinsa;
+  // inainte era pretul de ACUM + 2×risc, deci „fugea” cu pretul si alerta „a atins ținta” nu pleca niciodata
+  assert.ok(Math.abs(s.tinta - (pret * 0.9 + 2 * n.d)) < 0.006, "tinta = pretMediu + 2×risc: " + s.tinta);
   assert.ok([1.5, 2, 2.5, 3].includes(s.k)); assert.ok(s.proba.n > 0 && s.proba.pePlus >= 0 && s.proba.pePlus <= 1); assert.equal("intrare" in s, false);
 });
 await test("sugestiePoza: urmarit cu trend sus -> intrare sub pret; trend jos -> intrare null (orientativ)", () => {

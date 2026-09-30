@@ -72,7 +72,11 @@ await test("rezumat: total, cate pe plus, grile vs pozitie, si greselile ordonat
   aprox(r.grile, BOTI.reduce((s, b) => s + Number(b.buOrderData.gridProfit), 0), 1e-6);
   const g0 = r.greseli[0];
   assert.equal(g0.cod, "pozitia-a-mancat-grilele", JSON.stringify(r.greseli.map((g) => g.cod + ":" + g.cost.toFixed(2))));
-  aprox(g0.cost, -11.56122 - 2.2724 - 0.98624 - 21.34312, 0.01);
+  // v100.40: costul greselii e pe NET (cu comisioanele si funding-ul botilor cu ea), nu pe realizatul brut (−36,16)
+  const cuEa = l.filter((t) => t.greseli.some((x) => x.cod === "pozitia-a-mancat-grilele"));
+  aprox(g0.cost, cuEa.reduce((s, t) => s + t.rezultat + (t.comisioane || 0) + (t.funding || 0), 0), 1e-9);
+  assert.ok(g0.cost < -11.56122 - 2.2724 - 0.98624 - 21.34312, "netul e mai jos decat brutul");
+  const net = l.reduce((s, t) => s + t.rezultat + (t.comisioane || 0) + (t.funding || 0), 0); aprox(r.net, net, 1e-9);
   assert.equal(g0.n, 4);
   assert.ok(r.greseli.every((g, i) => i === 0 || g.cost >= r.greseli[i - 1].cost), "ordonate de la cea mai scumpa");
 });

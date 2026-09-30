@@ -2022,10 +2022,6 @@ function modelEval(model,test){
   const pred=test.map(r=>({p:model.predict(r.vals),y:r.label,utility:Number.isFinite(r.utility)?r.utility:metricR(r.row)})),brier=pred.length?pred.reduce((a,x)=>a+(x.p-x.y)**2,0)/pred.length:NaN,base=Number.isFinite(+model?.baseRate)?+model.baseRate:NaN,baseB=pred.length&&Number.isFinite(base)?pred.reduce((a,x)=>a+(base-x.y)**2,0)/pred.length:NaN,auc=aucMetric(pred),acc=pred.length?pred.filter(x=>(x.p>=.5?1:0)===x.y).length/pred.length:NaN,skill=Number.isFinite(baseB)&&baseB?1-brier/baseB:NaN,trade=pred.filter(x=>x.p>=.55&&Number.isFinite(x.utility)),expectancy=trade.length?trade.reduce((a,x)=>a+x.utility,0)/trade.length:NaN;
   return {n:test.length,auc,brier,skill,acc,expectancy,tradeN:trade.length,state:test.length>=20&&auc>=.55&&skill>0&&trade.length>=8&&expectancy>0?"USABLE":"WEAK"}
 }
-function trainTemporalModel(data,l2=.02,split=.7,minTrain=40,minTest=20){
-  if(data.length<minTrain+minTest)return null;const cut=Math.max(minTrain,Math.min(data.length-minTest,Math.floor(data.length*split))),train=data.slice(0,cut),test=data.slice(cut),model=trainLogistic(train,l2),metrics=modelEval(model,test);
-  return {model,trainN:train.length,testN:test.length,metrics}
-}
 async function trainTemporalModelAsync(data,l2=.02,split=.7,minTrain=40,minTest=20){
   if(data.length<minTrain+minTest)return null;const cut=Math.max(minTrain,Math.min(data.length-minTest,Math.floor(data.length*split))),train=data.slice(0,cut),test=data.slice(cut),model=await trainLogisticOffMain(train,l2),metrics=modelEval(model,test);return {model,trainN:train.length,testN:test.length,metrics}
 }
@@ -2700,6 +2696,7 @@ function updateDecisionCoreAfterAnalysis(){
 }
 
 const COMMANDS=[
+  ["Tabloul botului","tabloubot"],["Grid: ce setez acum?","gridset"],["Jurnal de trade","jurnaltrade"],["Trading 212","t212"],["Alerte","alerts"],   // v100.40: ecranele zilnice
   ["Dashboard","dash"],["Edge Validation Pro","edgepro"],["Scanner","scan"],["Replay & Historical Scanner","replaylab"],["Decision Core","decisioncore"],["Profit Readiness","profitready"],["Volatility Intelligence","volatilitylab"],["Local Data & Reports","localdata"],["Research ML","researchml"],["Portfolio Intelligence","portfolio"],["Market Profile","profilelab"],["Structure & Sessions","structurelab"],["Context Intelligence","intel"],["Paper Trading v3","paper"],["Health","health"],["Settings","settings"]
 ];
 function toggleCommandPalette(force){const p=$("commandPalette"),on=force==null?!p.classList.contains("on"):!!force;p.classList.toggle("on",on);if(on){dialogReturnFocus=document.activeElement;$("commandInput").value="";renderCommandPalette();setTimeout(()=>$("commandInput").focus(),0)}else restoreDialogFocus()}
@@ -3003,6 +3000,7 @@ function renderMarketOverview(){
 function toast(msg,type=""){
  const host=$("toastHost");if(!host)return;const d=document.createElement("div");d.className="toast "+type;d.textContent=msg;host.appendChild(d);setTimeout(()=>d.remove(),3200)
 }
+const NAV_CU_LOAD=new Set(["mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
 function navTo(id,load=false){
  show(id);
  // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
@@ -3035,7 +3033,10 @@ function navTo(id,load=false){
    else if(id==="volatilitylab")renderVolatilityIntelligence(false);
    else if(id==="structurelab")renderStructureSession();
    else if(id==="intel"){loadContextIntel(true);loadIntelNews(false);loadExternalIntelligence(false).catch(()=>{})}
- } else {
+ }
+ // v100.40 (audit 30.09): ecranele de mai jos se desenau DOAR fara load - revenirea dupa reincarcare si linkurile din notificari
+ // (navTo(id,true)) le deschideau goale; acum se deseneaza si atunci, daca ramura de sus nu le-a pornit deja
+ if(!load||!NAV_CU_LOAD.has(id)){
    if(id==="alerts"){renderAlerts();if(typeof alCentruPorneste==="function")alCentruPorneste(true)}   // v97.4: si alertele de acasa (boti, actiuni, piata)
    if(id==="desk")renderDailyDesk();
    if(id==="opportunity")renderOpportunity();
@@ -3117,7 +3118,7 @@ function loadPionexUniverseCache(){
 
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
-function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peAcasa",id==="dash");document.body.classList.toggle("peScan",id==="scan");document.body.classList.toggle("peAlerte",id==="alerts");if(typeof acasaBara==="function")acasaBara();document.body.classList.toggle("peT212",id==="t212");document.body.classList.toggle("peJurnal",id==="jurnaltrade");var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
+function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peAcasa",id==="dash");document.body.classList.toggle("peScan",id==="scan");document.body.classList.toggle("peAlerte",id==="alerts");if(typeof acasaBara==="function")acasaBara();document.body.classList.toggle("peT212",id==="t212");document.body.classList.toggle("peJurnal",id==="jurnaltrade");document.body.classList.toggle("peGrid",id==="gridset")/* v100.40: fara antetul vechi gol („WAIT”, „—”) deasupra ferestrei Grid */;var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 const MARKET_BASES=[
@@ -3183,7 +3184,7 @@ function renderApiAuthStatus(){const t=apiSessionToken();
 // minut (cat tine blocarea serverului): apoi mai incearca o data, ca o
 // retea cazuta sau un server repornit sa nu para "parola gresita" la nesfarsit.
 let apiTokenRespins=null,apiTokenRespinsLa=0;const API_TOKEN_RESPINS_MS=60000;
-function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins&&Date.now()-apiTokenRespinsLa<API_TOKEN_RESPINS_MS)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials}).then(r=>{if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID"){apiTokenRespins=token;apiTokenRespinsLa=Date.now()}return r},()=>r);return r})}
+function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins&&Date.now()-apiTokenRespinsLa<API_TOKEN_RESPINS_MS)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials,signal:opt.signal||(typeof AbortSignal!=="undefined"&&AbortSignal.timeout?AbortSignal.timeout(opt.timeoutMs||60000):undefined)}).catch(e=>{if(e&&(e.name==="TimeoutError"||e.name==="AbortError"))throw Error("serverul n-a răspuns în "+Math.round((opt.timeoutMs||60000)/1000)+" s");throw e}).then(r=>{if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID"){apiTokenRespins=token;apiTokenRespinsLa=Date.now()}return r},()=>r);return r})}
 async function getJSON(url){
   const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
   const raw=await r.text();
@@ -3760,11 +3761,13 @@ function calc(j,mode="auto"){
  }
 }
 function marketStoreKey(base){return assetClass()==="STOCKS"?base+"Stocks":base}
-function remember(s){let c=coin(s),key=marketStoreKey("recent"),a=JSON.parse(localStorage.getItem(key)||"[]");a=[c,...a.filter(x=>x!==c)].slice(0,8);localStorage.setItem(key,JSON.stringify(a));if(assetClass()==="STOCKS")localStorage.setItem("lastStock",c);else{localStorage.setItem("lastCrypto",c);localStorage.setItem("last",c)}renderLists()}
-function favs(){const key=marketStoreKey("favs"),def=assetClass()==="STOCKS"?'["AAPL","MSFT","NVDA"]':'["BTC","ETH","SOL"]';return JSON.parse(localStorage.getItem(key)||def)}
+function remember(s){let c=coin(s),key=marketStoreKey("recent"),a=jsonLS(key,"[]");a=[c,...a.filter(x=>x!==c)].slice(0,8);localStorage.setItem(key,JSON.stringify(a));if(assetClass()==="STOCKS")localStorage.setItem("lastStock",c);else{localStorage.setItem("lastCrypto",c);localStorage.setItem("last",c)}renderLists()}
+// v100.40 (audit 30.09): o valoare stricata in localStorage (favorite/recente) nu mai opreste toata aplicatia la pornire
+function jsonLS(key,def){try{const v=JSON.parse(localStorage.getItem(key)||def);return Array.isArray(v)?v:JSON.parse(def)}catch{return JSON.parse(def)}}
+function favs(){const key=marketStoreKey("favs"),def=assetClass()==="STOCKS"?'["AAPL","MSFT","NVDA"]':'["BTC","ETH","SOL"]';return jsonLS(key,def)}
 function toggleFav(){let c=coin(norm($("symbol").value)),key=marketStoreKey("favs"),a=favs();a=a.includes(c)?a.filter(x=>x!==c):[c,...a].slice(0,15);localStorage.setItem(key,JSON.stringify(a));renderLists()}
 function pick(c){$("symbol").value=c;if(assetClass()==="STOCKS")localStorage.setItem("lastStock",c);else localStorage.setItem("lastCrypto",c);show("dash");analyze(true)}
-function renderLists(){let f=favs(),key=marketStoreKey("recent"),def=assetClass()==="STOCKS"?'["AAPL","MSFT","NVDA"]':'["BTC","ETH","SOL"]',r=JSON.parse(localStorage.getItem(key)||def);$("favorites").innerHTML=f.map(x=>`<button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">★ ${x}</button>`).join("");$("recent").innerHTML=r.map(x=>`<button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">${x}</button>`).join("");$("watchout").innerHTML=f.length?f.map(x=>`<div class="row"><b>${x}</b><button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">Analiză</button></div>`).join(""):`<div class="emptyState">No favorites yet.</div>`}
+function renderLists(){let f=favs(),key=marketStoreKey("recent"),def=assetClass()==="STOCKS"?'["AAPL","MSFT","NVDA"]':'["BTC","ETH","SOL"]',r=jsonLS(key,def);$("favorites").innerHTML=f.map(x=>`<button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">★ ${x}</button>`).join("");$("recent").innerHTML=r.map(x=>`<button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">${x}</button>`).join("");$("watchout").innerHTML=f.length?f.map(x=>`<div class="row"><b>${x}</b><button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">Analiză</button></div>`).join(""):`<div class="emptyState">No favorites yet.</div>`}
 
 let chartBars=100;
 function setChartBars(n){chartBars=n;if(window.__radarState&&window.__radarState.q)draw(window.__radarState.q)}
@@ -4041,7 +4044,7 @@ function exportJournal(){
   const a=journal();if(!a.length){alert("Jurnalul este gol.");return}
   const cols=["date","market","symbol","source","tf","mode","direction","entry","entryActivated","activationTs","stop","tp1","tp2","tp3","longConf","shortConf","status","grossR","costR","netR","feeBps","slippageBps","executionPolicy","trendScore","momScore","volScore","structureScore","adx","atrPct","histUp","mtf","session","sweepScore","sweepType","nearestFvgStatus","nearestFvgType","premiumDiscount","frictionBps","contextScore","newsRisk","newsHigh","liqLong5","liqShort5"];
   const rows=[cols.join(",")].concat(a.map(x=>[new Date(x.ts).toISOString(),x.market||((x.source||"BINANCE")==="TWELVEDATA"?"STOCKS":"CRYPTO"),x.symbol,x.source||"BINANCE",x.tf,x.mode,x.direction,x.entry,x.entryActivated||false,x.activationTs?new Date(x.activationTs).toISOString():"",x.stop,x.tp1,x.tp2,x.tp3,x.longConf,x.shortConf,x.status,x.grossR??"",x.costR??"",x.netR??"",x.feeBps??"",x.slippageBps??"",x.executionPolicy??"",x.trendScore??"",x.momScore??"",x.volScore??"",x.structureScore??"",x.adx??"",x.atrPct??"",x.histUp??"",x.mtf??"",x.session??"",x.sweepScore??"",x.sweepType??"",x.nearestFvgStatus??"",x.nearestFvgType??"",x.premiumDiscount??"",x.frictionBps??"",x.contextScore??"",x.newsRisk??"",x.newsHigh??"",x.liqLong5??"",x.liqShort5??""].join(",")));
-  const blob=new Blob([rows.join("\\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v57-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+  const blob=new Blob([rows.join("\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),ael=document.createElement("a");ael.href=url;ael.download="crypto-radar-v57-signal-journal.csv";ael.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 function clearJournal(){if(confirm("Ștergi tot jurnalul de semnale?")){localStorage.removeItem("signalJournal");renderSignals();toast("Jurnal șters","warn")}}
 function drawValidationCurve(vals){
@@ -4714,9 +4717,13 @@ function tbSchimbaModul(){
   toast("Mod: "+alegeri[sid],"good");renderTabloBot();
 }
 async function tbAduDate(){
+  // v100.40 (audit 30.09): o citire mai noua (alt bot ales intre timp) o anuleaza pe cea veche - altfel ecranul arata botul nou
+  // cu lumanarile si WebSocket-ul celui vechi, cand raspunsul vechi vine al doilea
+  var gen=tbStare.gen=(tbStare.gen||0)+1;
   tbStare.eroare=null;
   try{
     var d=await getJSON("/api/bot-orders");
+    if(gen!==tbStare.gen)return;
     if(!d||!Array.isArray(d.bots))throw new Error("Raspuns nevalid de la /api/bot-orders - lipseste lista de boti.");
     tbStare.probleme=d.probleme||null;
     tbStare.boti=d.bots;
@@ -4739,6 +4746,7 @@ async function tbAduDate(){
     var s=TabloBot.simboluri(tbStare.bot.baza,tbStare.bot.quote,tbStare.bot.simbolPionex);
     try{
       var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s.pionex)+"&interval=5M&limit=100");
+      if(gen!==tbStare.gen)return;   // v100.40: alt bot ales cat astepta lumanarile
       // Sortam dupa timp, nu presupunem ordinea - la fel ca pionexKlines() mai
       // sus in fisier. `.reverse()` presupune "cel mai nou primul"; daca
       // Pionex ar intoarce vreodata crescator, seria s-ar inversa tacut si
@@ -5369,7 +5377,7 @@ function jtRender(){
   var rg=$("jtReguli");if(rg){var rp2=Obiceiuri.reguliPersonale(l,"Europe/Bucharest");
     rg.innerHTML=!rp2.suficient?'<p class="tbSub">'+rp2.n+' boți în jurnal: mai trebuie '+rp2.lipsa+' ca să-ți spun unde pierzi TU (ore, monede, durate, direcție). Sub 30, orice „regulă” ar fi noroc.</p>'
       :rp2.reguli.length?'<ul class="grLista">'+rp2.reguli.slice(0,5).map(function(r){return '<li class="bad">'+escapeHtml(r.text)+'</li>'}).join("")+'</ul><p class="tbFac">👉 <b>Ce aș face eu:</b> aș evita boții '+escapeHtml(rp2.reguli[0].grupa)+' până nu se schimbă cifra.</p>':'<p class="good">Pe '+rp2.n+' boți nu văd o grupă care să piardă clar mai des decât restul.</p>'}
-  box.innerHTML=cirea+'<div class="tbKpi jtKpi">'+cel("Rezultat realizat",U(r.total),cls(r.total),"înainte de comisioane și funding · "+r.n+" boți, "+r.pePlus+" pe plus ("+P(r.pePlus/r.n)+")")+cel("Din grile",U(r.grile),cls(r.grile),"ce a făcut gridul")+cel("Din poziție",U(r.pozitie),cls(r.pozitie),"direcția prețului")+cel("Comisioane + funding",U(r.comisioane+r.funding),"bad","investit mediu "+(r.investitMediu!=null?r.investitMediu.toFixed(0):"—")+" USDT")+'</div>';
+  box.innerHTML=cirea+'<div class="tbKpi jtKpi">'+cel("Rezultat net",U(r.net),cls(r.net),"după comisioane și funding · "+r.n+" boți, "+r.pePlusNet+" pe plus ("+P(r.pePlusNet/r.n)+") · înainte de costuri "+U(r.total))+cel("Din grile",U(r.grile),cls(r.grile),"ce a făcut gridul")+cel("Din poziție",U(r.pozitie),cls(r.pozitie),"direcția prețului")+cel("Comisioane + funding",U(r.comisioane+r.funding),"bad","investit mediu "+(r.investitMediu!=null?r.investitMediu.toFixed(0):"—")+" USDT")+'</div>';
   gr.innerHTML=r.greseli.length?'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Greșeala</th><th>De câte ori</th><th>Rezultatul boților cu ea</th><th>Ce aș face data viitoare</th></tr></thead><tbody>'+r.greseli.map(function(g){return '<tr><td><b>'+escapeHtml(g.titlu)+'</b></td><td>'+g.n+'</td><td class="'+cls(g.cost)+'">'+U(g.cost)+'</td><td class="jtSfat">'+escapeHtml(g.dataViitoare)+'</td></tr>'}).join("")+'</tbody></table></div>'+(r.greseli[0]&&r.greseli[0].cost<0?'<p class="tbFac">👉 <b>Ce aș face eu:</b> încep cu „'+escapeHtml(r.greseli[0].titlu)+'” — a costat '+U(r.greseli[0].cost)+' pe '+r.greseli[0].n+' boți.</p>':''):'<p class="good">Nicio greșeală găsită automat.</p>';
   var note=jtNote(),data=function(t){return new Date(t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})};
   // v100.25: cu toata istoria (~2200 de boti) lista vine pe bucati de cate 30
@@ -5875,7 +5883,7 @@ function tbRenderTodo(){
   var aver=tbStare.avertLista||(Array.isArray(b.avertismente)?b.avertismente:[]);
   var l=TabloExtra.ceAiDeFacut({acum:Date.now(),dateLa:tbStare.botLa||null,sfaturi:tbStare.sfaturiLista||[],avertismente:aver,alerte:alerte,planGol:planGol});
   // v89: consilierul - istoricul tau pe moneda, frica/lacomia crypto, stirile despre moneda
-  if(typeof consilierBot==="function"){var cb=consilierBot(b);if(cb.length){l=l.filter(function(x){return x.c!=="v"});cb.forEach(function(x){l.push({c:x.nivel,titlu:x.titlu,text:(x.text?x.text+" ":"")+(x.ceAsFace?"👉 "+x.ceAsFace:""),n:0,stiri:x.stiri,la:tbStare.botLa||null})});var RO={r:0,g:1,n:2,v:3};l.sort(function(a,c){return RO[a.c]-RO[c.c]})}}
+  if(typeof consilierBot==="function"){var cb=consilierBot(b);if(cb.length){l=l.filter(function(x){return x.c!=="v"});cb.forEach(function(x){l.push({c:x.nivel,titlu:x.titlu,text:(x.text?x.text+" ":"")+(x.ceAsFace?"👉 "+x.ceAsFace:""),n:0,stiri:x.stiri,la:tbStare.botLa||null})});var RO={r:0,g:1,n:2,v:3};l.sort(function(a,c){var x=Number(a.la)||null,y=Number(c.la)||null;if(x!==y)return x===null?1:y===null?-1:y-x;return RO[a.c]-RO[c.c]})}}   // v100.40 (audit 30.09): ca in ceAiDeFacut - cele mai NOI sus (cererea lui din 28.09), la aceeasi ora cea mai urgenta
   // v100.5 (el: „pune ora la fiecare sfat ca să știu dacă e de actualitate”): alerta = ora ei; restul = ora citirii botului
   box.innerHTML=l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1),o=TabloExtra.oraSfat(x.la,Date.now());
     return '<div class="tbTodoRand"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(o?'<span class="tbOra'+(o.vechi?' tbOraVeche':'')+'" title="'+(x.n?'ora ultimei alerte':'ora datelor din care e socotit')+'">🕒 '+escapeHtml(o.text)+'</span>':'')+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+(x.stiri&&typeof t212StiriHtml==="function"?t212StiriHtml(x.stiri,3):'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
@@ -5927,8 +5935,9 @@ function tbDeseneazaKpi(){
   var tot=botiNr(b.profitTotal),inv=botiNr(b.investit);
   pune("tbKpiTotal",tot===null?"—":(tot>0?"+":"")+tot.toFixed(2),botiClasa(b.profitTotal));
   // v87: ritmul de recuperare (grile - costuri pe zi) langa rezultat
-  var rr=typeof TabloExtra!=="undefined"?TabloExtra.ritmRecuperare(tot,TabloExtra.grileVsCosturi(b,Date.now()).netZi):null;
-  pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?tbFormateazaSemn(100*tot/inv,2)+"% din "+inv.toFixed(2)+" investiți":"cu tot cu poziția deschisă")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):""),"");
+  var gvc=typeof TabloExtra!=="undefined"?TabloExtra.grileVsCosturi(b,Date.now()):null,rr=gvc?TabloExtra.ritmRecuperare(tot,gvc.netZi):null;
+  // v100.40: sub o zi de viata ritmul nu se socoteste (taxa de pornire nu e un cost zilnic) - se spune, nu dispare fara explicatie
+  pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?tbFormateazaSemn(100*tot/inv,2)+"% din "+inv.toFixed(2)+" investiți":"cu tot cu poziția deschisă")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):tot!==null&&tot<0&&gvc&&gvc.preaTanar?" · ritmul de recuperare se socotește după o zi de viață":""),"");
   // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): ce a adus DOAR gridul (Pionex „Grid profit”) + cat aduce o grila
   var gp=botiNr(b.gridProfitBrut),pg=typeof TabloExtra!=="undefined"?TabloExtra.profitPeGrila(b):null;
   pune("tbKpiGrid","din grid "+(gp===null?"—":(gp>0?"+":"")+gp.toFixed(2)+" USDT")+(pg?" · pe grilă "+GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+pg.usdt.toFixed(3)+" USDT":""):""),"tbKpiGrid "+botiClasa(b.gridProfitBrut));
@@ -6424,7 +6433,7 @@ document.addEventListener("keydown",e=>{
  if(e.key==="Escape"){$("commandPalette")?.classList.remove("on");closeMoreDrawer();return}
  if(e.target&&["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
  if(e.key==="/"){e.preventDefault();$("symbol").focus()}
- else if(e.key.toLowerCase()==="a")analyze(true);
+ else if(e.key.toLowerCase()==="a"&&!/\b(peTablou|peGrid|peJurnal|peT212|peAlerte|peScan)\b/.test(document.body.className))analyze(true);   // v100.40: nu de pe ecranele zilnice (o analiza completa pornita din greseala)
  else if(e.key.toLowerCase()==="s")navTo("scan",true);
 });
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(pwaHandleRegistration).catch(()=>{})}

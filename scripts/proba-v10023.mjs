@@ -92,7 +92,7 @@ await test("🔴 alaturi · Declaratia Unica: Pionex NET = realizat + comisioane
   const boti = JT.din([{ strategyId: "1", base: "LIGHTER.PERP", createTime: Date.UTC(2026, 8, 29), closeTime: Date.UTC(2026, 8, 30), buOrderData: { totalRealizedProfit: "-58.52", gridProfit: "4.34", totalFee: "-0.500948", totalFundingFee: "-0.02330681675", usdtInvestment: "103.38" } }]);
   const r = T212.raportAnual({ inchise: [], dividende: [], boti, an: 2026 });
   assert.ok(Math.abs(r.pionex.net - (-58.52 - 0.500948 - 0.02330681675)) < 1e-9, `net ${r.pionex.net}`);
-  assert.match(r.text, /NET −59,04 USDT|NET −59\.04 USDT/);
+  assert.match(r.text, /NET [−-]59[,.]04 USDT/);   // v100.40: textul pentru contabil are minus ASCII
 });
 
 await test("proba de ecran a Jurnalului cauta cifra veche dupa noul ei nume (nu mai trece pe placuta statisticii)", () => {

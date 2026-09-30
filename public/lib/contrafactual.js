@@ -40,7 +40,7 @@ var Contrafactual = (function () {
   function rezumat(l) {
     var r = { n: 0, judecate: 0, faraDate: 0, real: 0, realJudecate: 0, doarVerde: 0, verdeGalben: 0, blocateSalvat: 0, blocateRatat: 0, nBlocate: 0, nVerde: 0, nGalben: 0 };
     (Array.isArray(l) ? l : []).forEach(function (x) {
-      var v = nr(x.t && x.t.rezultat); if (v === null) return;
+      var v = nr(x.t && (x.t.net !== undefined && x.t.net !== null ? x.t.net : x.t.rezultat)); if (v === null) return;   // v100.40: pe net
       r.n++; r.real += v;
       var n = x.z && x.z.nivel;
       if (n === "fara-date" || !n) { r.faraDate++; return; }

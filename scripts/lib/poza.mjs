@@ -191,6 +191,18 @@ export function pret30DinIstoric(intrari, ring) {
   const n = Math.max(0, 30 - r.length);
   return ist.slice(ist.length - n).concat(r).slice(-30);
 }
+// v100.40 (audit 30.09): ziua SESIUNII bursei americane (New York): inainte de 09:30 NY - si sambata/duminica - e sesiunea precedenta
+// (vinerea). Cheile „o dată pe zi” ale alertelor pe actiuni erau pe ziua UTC -> la 03:00 ora Romaniei (miezul noptii UTC) toate
+// se retrimiteau, cu informatia sesiunii de ieri, pe bursa inchisa.
+export function ziSesiune(acum) {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: NY, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(acum));
+  const v = (t) => (p.find((x) => x.type === t) || {}).value;
+  let d = new Date(Date.UTC(Number(v("year")), Number(v("month")) - 1, Number(v("day"))));
+  const min = (Number(v("hour")) % 24) * 60 + Number(v("minute"));
+  if (min < 570) d = new Date(d.getTime() - ZI);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d = new Date(d.getTime() - ZI);
+  return d.toISOString().slice(0, 10);
+}
 // cat de des pleaca poza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri), altfel 5 minute
 // (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: cu un bot activ zi si noapte = 720 de poze; bataia separata NU se mai
 // trimite cat poza curge - vezi bataieNecesara - deci ramane loc)
@@ -205,7 +217,7 @@ function miiTxt(v) { v = nr(v) || 0; return Math.abs(v) >= 1e6 ? (v / 1e6).toFix
 // alertele pe simbolurile paginii (I-463): miscarea zilei peste 2x ATR-ul propriu (media |Δ zi| pe 14 zile) si o cumparare
 // de insider aparuta fata de poza anterioara. Cheile contin ziua: colectorul le dedupeaza (o alerta pe zi per simbol).
 export function alerteSimboluri(simboluri, anterioare, acum) {
-  const zi = new Date(acum).toISOString().slice(0, 10), out = [];
+  const zi = ziSesiune(acum), out = [];   // v100.40: ziua sesiunii NY, nu ziua UTC
   for (const s of Array.isArray(simboluri) ? simboluri : []) {
     if (!s || !s.s) continue;
     const c = Array.isArray(s.closes30) ? s.closes30 : [];
@@ -237,7 +249,7 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
 //   - simbol urmarit: pretul a ajuns la intrarea sugerata (+0,5 %) - niciodata la trend in jos (intrare null) sau fara date.
 export function alerteSLTP(poza, acum) {
   const out = []; if (!poza) return out;
-  const zi = new Date(acum).toISOString().slice(0, 10), pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4));
+  const zi = ziSesiune(acum), pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4));   // v100.40: ziua sesiunii NY
   for (const p of Array.isArray(poza.t212) ? poza.t212 : []) {
     if (!p || !p.s) continue;
     const pl = p.plan && nr(p.plan.stop) !== null ? p.plan : null, sg = p.sugestie && nr(p.sugestie.stop) !== null && nr(p.sugestie.tinta) !== null ? p.sugestie : null;

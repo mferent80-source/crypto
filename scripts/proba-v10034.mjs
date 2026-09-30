@@ -37,8 +37,9 @@ await test("csvDeclaratie: antet, vanzari T212 (cele mai vechi primele), dividen
   const c = T212.csvDeclaratie(T212.raportAnual({ inchise, dividende, boti, an: 2026, cursUsd: CURS }));
   const r = c.trim().split("\n");
   assert.equal(r[0], "sursa;tip;data;instrument;cantitate;cost_lei;incasat_lei;rezultat;moneda;ziua_cursului_bnr;curs_bnr_usd;rezultat_lei");
-  assert.match(r[1], /^Trading 212;vânzare;2026-02-10;NVDA;1,5;700,00;650,00;-52,10;lei;;;-52,10$/);
-  assert.match(r[2], /^Trading 212;vânzare;2026-03-02;AAPL;2;1000,00;1100,50;95,25;lei;;;95,25$/);
+  // v100.40 (audit 30.09): costul din CSV SE LEAGA cu rezultatul (incasat − rezultat); inainte 700 + (−52,10) ≠ 650
+  assert.match(r[1], /^Trading 212;vânzare;2026-02-10;NVDA;1,5;702,10;650,00;-52,10;lei;;;-52,10$/);
+  assert.match(r[2], /^Trading 212;vânzare;2026-03-02;AAPL;2;1005,25;1100,50;95,25;lei;;;95,25$/);
   assert.match(r[3], /^Trading 212;dividend;2026-04-01;KO;;;;1,25;lei;;;1,25$/);
   assert.match(r[4], /^Trading 212;dividend;2026-05-15;AAPL;;;;4,50;lei;;;4,50$/);
   assert.match(r[5], /^Pionex;futures grid;2026-09-29;LIGHTER;;;;-59,04;USDT;2026-09-29;4,6568;-274,94$/);

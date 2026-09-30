@@ -249,15 +249,16 @@ function acasaDeseneaza() {
   if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>';
   // v95: ziua ta - fata de poza de ieri dimineata (colectorul, dupa ora 9)
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
-  var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz);
-  if (zt && zt.boti !== null && act.length) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(2) + ' USDT</b></div>';
+  var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
+  var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
+  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(2) + ' USDT</b></div>';
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 
-  var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = document.querySelectorAll("#t212Continut .t212Pill-iesi").length, rz = d.rezultate && d.rezultate.l || [];
+  var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = typeof t212 !== "undefined" ? t212.nrIesi : null, rz = d.rezultate && d.rezultate.l || [];
   var azi = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z").getTime(), zile = function (z) { return Math.round((Date.parse(z + "T00:00:00Z") - azi) / 86400000); };
   $("acT212").innerHTML = '<div class="acCap"><h4>Acțiunile tale</h4><span class="acSub">Trading 212 · ' + (deschis ? "bursa e deschisă" : "bursa e închisă") + '</span></div>'
     + (c ? '<div class="acLin"><span>Contul</span><b>' + escapeHtml(acLei(c.total)) + '</b></div><div class="acLin"><span>Pozițiile deschise</span><b class="' + (Number(c.ppl) >= 0 ? "good" : "bad") + '">' + escapeHtml(typeof t212Lei === "function" ? t212Lei(c.ppl) : String(c.ppl)) + '</b></div>'
-      + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi ? "bad" : "good") + '">' + (iesi ? iesi + " de ieșit" : "nimic roșu") + '</b></div>'
+      + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi == null ? "acMut" : iesi ? "bad" : "good") + '">' + (iesi == null ? "aduc prețurile…" : iesi ? iesi + " de ieșit" : "nimic roșu") + '</b></div>'   /* v100.40: null = inca nu stiu, nu „nimic roșu” */
       + (zt && zt.t212 !== null ? '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.t212 >= 0 ? "good" : "bad") + '">' + (zt.t212 >= 0 ? "+" : "−") + escapeHtml(acLei(Math.abs(zt.t212))) + '</b></div>' : '') : '<p class="acMut">Aduc contul…</p>')
     + (rz.length ? '<div class="acEt" style="margin-top:4px">Următoarele rezultate financiare' + (rz.some(function (x) { return !x.sigur; }) ? " (estimate)" : "") + ':</div><div class="acRez">' + rz.slice(0, 3).map(function (x) { var z = zile(x.data); return '<b>' + escapeHtml(x.simbol) + '</b><span>' + escapeHtml(acZiRo(x.data)) + '</span><b class="' + (z <= 14 ? "warn" : "acMut") + '">' + (z <= 0 ? "azi" : z === 1 ? "mâine" : "peste " + z + " zile") + '</b>'; }).join("") + '</div>' : '')
     + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>';

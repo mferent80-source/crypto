@@ -23,11 +23,11 @@ import os from "node:os";
 import { execFile } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.20";
+const VERSIUNE_COLECTOR = "v101.21";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -40,7 +40,9 @@ fs.mkdirSync(DATA, { recursive: true });
 const LOG = path.join(DATA, "colector.log");
 function jurnal(...a) {
   const linie = new Date().toISOString() + " " + a.join(" ") + "\n";
-  try { if (fs.existsSync(LOG) && fs.statSync(LOG).size > 1_000_000) fs.renameSync(LOG, LOG + ".vechi"); fs.appendFileSync(LOG, linie); } catch {}
+  // v100.40: rotirea si scrierea separat - o rotire picata (fisier tinut deschis de `tail -f`) nu mai lasa jurnalul mut
+  try { if (fs.existsSync(LOG) && fs.statSync(LOG).size > 1_000_000) fs.renameSync(LOG, LOG + ".vechi"); } catch {}
+  try { fs.appendFileSync(LOG, linie); } catch {}
   if (process.env.COLECTOR_CONSOLA) process.stdout.write(linie);
 }
 
@@ -141,8 +143,25 @@ async function cere(cale, opt = {}) {
 }
 const trimite = (cale, corp) => cere(cale, { method: "POST", body: JSON.stringify(corp), headers: { "content-type": "application/json", origin: BAZA } });
 
+// v100.40 (audit 30.09): Discord refuzat (429/5xx/fara retea) -> alerta intra in COADA pe disc (data/de-trimis.json) si se
+// reincearca la fiecare tura, cel mult 12 ore; inainte se pierdea (era „trimisa” daca ajunsese doar in KV).
+const COADA_FIS = path.join(DATA, "de-trimis.json");
+let coadaDiscord = []; try { coadaDiscord = JSON.parse(fs.readFileSync(COADA_FIS, "utf8")); if (!Array.isArray(coadaDiscord)) coadaDiscord = []; } catch { coadaDiscord = []; }
+function scrieAtomic(fis, obj) { const tmp = fis + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, fis); }
+function salveazaCoada() { try { scrieAtomic(COADA_FIS, coadaDiscord.slice(-80)); } catch (e) { jurnal("coada discord nescrisa", e.message); } }
+async function golesteCoada() {
+  if (CANAL !== "discord" || !coadaDiscord.length) return;
+  const acum = Date.now(), ramase = [];
+  for (const x of coadaDiscord) {
+    if (acum - x.t > 12 * 3600000) { jurnal("coada discord: renunt (peste 12 h)", x.m.titlu); continue; }
+    if (ramase.length) { ramase.push(x); continue; }   // in ordine: dupa primul esec, restul asteapta tura urmatoare
+    const ok = await trimiteDiscord({ ...x.m, titlu: x.m.titlu + " (întârziat " + Math.round((acum - x.t) / 60000) + " min)" }, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
+    if (!ok) ramase.push(x);
+  }
+  if (ramase.length !== coadaDiscord.length) { coadaDiscord = ramase; salveazaCoada(); }
+}
 // Alerta pleaca INTAI in KV (se vede in Radar, pe orice dispozitiv de acasa); apoi, daca e
-// cerut, pe canalul extern. "Trimisa" = a ajuns macar in KV.
+// cerut, pe canalul extern. "Trimisa" = a ajuns macar in KV (v100.40: iar Discord refuzat -> coada, reincercata).
 async function trimiteAlerta(m, bot, cheie) {
   let inKv = false;
   try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null } }); inKv = !!(r && r.ok); }
@@ -150,7 +169,11 @@ async function trimiteAlerta(m, bot, cheie) {
   // v97.9: unele alerte (grila atinsa) raman doar in Radar - pagina Alerts le arata, canalul extern nu le primeste
   if (m.doarRadar) { jurnal("alerta (doar în Radar)", m.nivel, m.titlu); return inKv; }
   if (CANAL === "ntfy") { const ok = await ntfy(m); return inKv || ok; }
-  if (CANAL === "discord") { const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal }); return inKv || ok; }
+  if (CANAL === "discord") {
+    const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
+    if (!ok) { coadaDiscord.push({ t: Date.now(), m: { nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "" } }); salveazaCoada(); }
+    return inKv || ok;
+  }
   if (!inKv) jurnal("alerta NETRIMISA", m.nivel, m.titlu);
   else jurnal("alerta", m.nivel, m.titlu);
   return inKv;
@@ -169,6 +192,8 @@ async function ntfy(m) {
 
 const STARE_FIS = path.join(DATA, "alerte-stare.json");
 let stareAlerte = {}; try { stareAlerte = JSON.parse(fs.readFileSync(STARE_FIS, "utf8")); } catch {}
+// v100.40: scris atomic (tmp + rename) - 5 ture scriu starea; un fisier taiat la jumatate retrimitea toate alertele
+function scrieStare() { try { scrieAtomic(STARE_FIS, stareAlerte); } catch (e) { jurnal("starea alertelor nescrisa", e.message); } }
 const directii = {}; // bot -> { la, fata4h, dir4h, regim }
 // v79.1: regimul "miscare" pe ACELEASI lumanari ca fisa: 15M, ~30 de zile. La prima tura se
 // aduc 6 pagini (cu pauza), apoi doar pagina cea mai noua se imbina peste cele vechi.
@@ -260,7 +285,7 @@ async function anuntaColector(nivel, titlu, mesaj) { return trimiteAlerta({ nive
 
 let esecuri = 0;
 // v98: ce a vazut ultima tura (pentru poza): botii si ultimele 30 de preturi ale fiecaruia (o poza pe tura, la un minut)
-let ultimiiBoti = []; const pret30 = {}; let turaNr = 0;
+let ultimiiBoti = [], ultimiiBotiLa = 0; const pret30 = {}; let turaNr = 0;
 async function tura() {
   const acum = Date.now();
   turaNr++;
@@ -269,7 +294,10 @@ async function tura() {
   try { d = await cere("/api/bot-orders"); esecuri = 0; }
   catch (e) {
     // Serverul oprit = fereastra Radarului inchisa. Dupa 15 minute ne oprim.
-    if (!e.status) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + "/" + MAX_ESECURI + "):", e.message); if (esecuri >= MAX_ESECURI) { jurnal("ies: serverul nu mai răspunde"); process.exit(0); } }
+    if (!e.status) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + "/" + MAX_ESECURI + "):", e.message); if (esecuri >= MAX_ESECURI) { jurnal("ies: serverul nu mai răspunde");
+      // v100.40 (audit 30.09): inainte iesea tacut - alertele se opreau fara niciun semn pana la paznic (~30-55 min)
+      if (CANAL === "discord") await trimiteDiscord({ nivel: "critic", titlu: "Crypto Radar s-a oprit: serverul de acasă nu mai răspunde", mesaj: "De ~" + MAX_ESECURI + " minute serverul Radarului (fereastra neagră, :8788) nu răspunde, așa că și colectorul se oprește: alertele boților și ale acțiunilor NU mai vin. 👉 Pornește din nou PORNESTE-CRYPTO-RADAR.bat (sau PORNESTE-SI-PE-TELEFON.bat). Stopurile din Pionex lucrează și fără Radar." }, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
+      process.exit(0); } }
     else {
       jurnal("bot-orders", e.status, e.message);
       const m = meta(); m.citireRea = m.citireRea || acum;
@@ -277,7 +305,7 @@ async function tura() {
       if (acum - m.citireRea >= 10 * 60000 && acum - (m.anuntatRau || 0) >= 3 * 3600000) {
         if (await anuntaColector("critic", "Crypto Radar nu mai poate citi botul", "De " + Math.round((acum - m.citireRea) / 60000) + " minute: " + e.message + ". Alertele nu mai sunt de încredere până se rezolvă.")) m.anuntatRau = acum;
       }
-      try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
+      try { scrieStare(); } catch {}
     }
     return;
   }
@@ -285,7 +313,7 @@ async function tura() {
   if (m.citireRea && m.anuntatRau) await anuntaColector("info", "Crypto Radar citește din nou botul", "Alertele merg din nou.");
   m.citireRea = 0; m.anuntatRau = 0;
   const boti = Array.isArray(d && d.bots) ? d.bots : [];
-  ultimiiBoti = boti;
+  ultimiiBoti = boti; ultimiiBotiLa = Date.now();   // v100.40: ora citirii - poza nu mai stampileaza boti vechi cu „acum”
   for (const b of boti) if (b && b.id && Number.isFinite(Number(b.pretCurent))) { const r = pret30[b.id] || (pret30[b.id] = []); r.push(Number(b.pretCurent)); if (r.length > 30) r.shift(); }
   // un bot care mergea si a disparut din lista
   const acumIds = {}; for (const b of boti) if (b && b.id) acumIds[b.id] = true;
@@ -361,7 +389,12 @@ async function tura() {
     try {
       const g = Alerte.grila(b, stareAlerte[b.id]._grila || null);
       let plecat = true;
-      for (const msg of g.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) plecat = false;
+      for (const msg of g.mesaje) {
+        // v100.40 (audit 30.09: 185 de mesaje pe 28.09, alerta critica se ineca printre „pereche încheiată”; cu gridul des vin zeci pe
+        // zi): fiecare pereche ramane in Radar, pe Discord pleaca un REZUMAT pe ora (perechiOra), nu un mesaj pe pereche
+        if (msg.perechi > 0 && CANAL === "discord") { const po = meta().perechiOra || (meta().perechiOra = {}), x = po[b.id] || (po[b.id] = { de: Date.now(), n: 0, usdt: 0, nume: String(b.baza || "").replace(/\.PERP$/, "") }); x.n += msg.perechi; x.usdt += msg.usdt || 0; msg.doarRadar = true; }
+        if (!(await trimiteAlerta(msg, b.id, msg.cheie))) plecat = false;
+      }
       if (plecat) stareAlerte[b.id]._grila = g.contori;
     } catch (e) { jurnal("grila", b.id, e.message); }
     // v96.5 opritorul care urca: dupa tinta, o data pe treapta; treapta se tine minte abia dupa ce mesajul a plecat
@@ -380,7 +413,7 @@ async function tura() {
   try { await turaPreturi(acum); } catch (e) { jurnal("preturi", e.message); }
   try { await turaMediu(acum); } catch (e) { jurnal("raport 3h", e.message); }
   try { await turaRaport(acum); } catch (e) { jurnal("raport", e.message); }
-  try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
+  try { scrieStare(); } catch {}
   try { await trimite("/api/istoric-bot?action=config", Object.assign({ colectorLa: acum, canal: CANAL === "ntfy" ? "ntfy" : CANAL === "discord" ? "discord" : "radar" }, NTFY.topic ? { ntfyTopic: NTFY.topic } : {})); } catch (e) { jurnal("config", e.message); }
 }
 
@@ -388,13 +421,19 @@ async function tura() {
 // cu lumanari de 4h (o cerere pe moneda, cu pauza - serverul are si el poarta de ritm).
 // Rezultatul merge in KV (istoric-bot?action=clasament); fereastra Grid il arata.
 const CLASAMENT_MS = Number(process.env.COLECTOR_CLASAMENT_MS) || 3600000, CLASAMENT_TOP = 100;
-let clasamentLa = 0, clasamentInLucru = false;
+// v100.40 (audit 30.09): ritmurile turelor scumpe (clasament, laborator) tinute minte peste reporniri - pe 30.09 laboratorul
+// „o dată pe zi” a rulat de 5 ori (13 reporniri, ~44 de minute de cereri Pionex)
+const RITM_FIS = path.join(DATA, "ritmuri.json");
+let ritm = {}; try { ritm = JSON.parse(fs.readFileSync(RITM_FIS, "utf8")) || {}; } catch { ritm = {}; }
+function tineRitm(k, v) { ritm[k] = v; try { scrieAtomic(RITM_FIS, ritm); } catch {} }
+let clasamentLa = Number(ritm.clasament) || 0, clasamentInLucru = false;
 async function turaClasament() {
   if (clasamentInLucru || Date.now() - clasamentLa < CLASAMENT_MS) return;
   clasamentInLucru = true;
   try {
     const r = await turaClasamentModul({ cere, trimite, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridClasament, top: CLASAMENT_TOP });
     clasamentLa = r.urcat ? Date.now() : Date.now() - CLASAMENT_MS + 10 * 60000;   // neurcat -> reincearca in 10 min
+    if (r.urcat) tineRitm("clasament", clasamentLa);
   } catch (e) { jurnal("clasament ESEC", e.message); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; }
   clasamentInLucru = false;
 }
@@ -403,7 +442,7 @@ if (CANAL === "discord" && !/^https:\/\/(discord\.com|discordapp\.com)\/api\/web
 // v79.5: laboratorul de grid, o data pe zi (prima data la 30 de minute dupa pornire), niciodata
 // peste clasament. ~20 monede x 6 pagini x 1,6 s ~ 4 minute; v101.11: 12 pagini (doua luni) ~ 7 minute.
 const LABORATOR_MS = 24 * 3600000;
-let laboratorLa = Date.now() - LABORATOR_MS + 30 * 60000, laboratorInLucru = false;
+let laboratorLa = Math.max(Date.now() - LABORATOR_MS + 30 * 60000, Number(ritm.laborator) || 0), laboratorInLucru = false;
 async function turaLaborator() {
   if (process.env.COLECTOR_FARA_LABORATOR || laboratorInLucru || clasamentInLucru || Date.now() - laboratorLa < LABORATOR_MS) return;
   laboratorInLucru = true;
@@ -414,7 +453,7 @@ async function turaLaborator() {
     let extra = [];
     try { const act = await cere("/api/bot-orders"); extra = [...new Set((act && act.bots || []).filter((b) => b && b.activ !== false && b.simbolPionex).map((b) => String(b.simbolPionex)))]; } catch (e) { jurnal("laborator botii care ruleaza", e.message); }
     const r = await turaLaboratorModul({ cere: cerePionex, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridLaborator, GridClasament, top: 20, H: 2, pagini: 12, zile: 60, GridPlan, plan: pp.plan, suma: pp.suma, levier: pp.levier, notaPlan: pp.nota, miscareZi: TabloExtra.miscareZi, extraSimboluri: extra });
-    if (r.monede >= 10) { await trimite("/api/istoric-bot?action=laborator", r); laboratorLa = Date.now(); }
+    if (r.monede >= 10) { await trimite("/api/istoric-bot?action=laborator", r); laboratorLa = Date.now(); tineRitm("laborator", laboratorLa); }
     else { jurnal("laborator NEURCAT: doar", r.monede, "monede"); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   } catch (e) { jurnal("laborator ESEC", e.message); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   laboratorInLucru = false;
@@ -450,16 +489,38 @@ async function turaArhivaBoti() {
   arhivaInLucru = false;
 }
 
+// v100.40 (audit 30.09, CRITIC): Pionex da istoria botilor pe PAGINI de 10 si ignora limit -> raportul de duminica si „Dacă ascultai”
+// vedeau doar ultimii 10 boti (27.09: raportul a zis „10 boti, −18,39 USDT”; saptamana reala: 26 boti, +24,51 brut / +8,48 net).
+// Toti botii inchisi = arhiva de acasa (action=botiInchisi, toata istoria) + prima pagina Pionex (cei inchisi dupa ultima tura
+// de arhiva), unificati pe strategyId.
+async function botiInchisiToti() {
+  const out = new Map();
+  try { const a = await cere("/api/istoric-bot?action=botiInchisi"); for (const x of (a && Array.isArray(a.boti) ? a.boti : [])) { const id = String(x && (x.strategyId || x.buOrderId) || ""); if (id) out.set(id, x); } } catch (e) { jurnal("arhiva botilor", e.message); }
+  try { const d = await cere("/api/bot-orders?status=finished&limit=100"); for (const y of (d && Array.isArray(d.bots) ? d.bots : [])) { const x = y.brut || y, id = String(x && (x.strategyId || x.buOrderId) || y.id || ""); if (id && !out.has(id)) out.set(id, x); } } catch (e) { jurnal("botii inchisi (Pionex)", e.message); }
+  return [...out.values()];
+}
+// v100.40: tickerul Pionex al monedei unui bot (LIGHTER -> LIT_USDT_PERP, PUMPFUN -> PUMP_USDT_PERP), din lista de simboluri
+let simboluriPerp = null, simboluriLa = 0;
+async function simbolPerp(moneda) {
+  if (!simboluriPerp || Date.now() - simboluriLa > 6 * 3600000) {
+    try { const d = await cere("/api/market?type=pionex_symbols&market=PERP"), m = {}; for (const x of (d && d.data && d.data.symbols || [])) if (x && x.baseCurrency && /_USDT_PERP$/.test(x.symbol)) m[String(x.baseCurrency).toUpperCase()] = x.symbol; simboluriPerp = m; simboluriLa = Date.now(); } catch (e) { jurnal("simbolurile PERP", e.message); }
+  }
+  const b = String(moneda || "").toUpperCase();
+  return (simboluriPerp && simboluriPerp[b]) || b + "_USDT_PERP";
+}
+
 // v83: "daca ascultai de Radar" pentru botii inchisi - o data pe ora, cel mult 5 boti noi pe tura
 let cfLa = Date.now() - 3600000 + 10 * 60000, cfInLucru = false;
+const cfEsuat = {};   // v100.40: botii la care n-au venit lumanarile - se reincearca abia dupa o zi (nu ocupa locurile turei din ora in ora)
 async function turaCf() {
   if (process.env.COLECTOR_FARA_CLASAMENT || cfInLucru || clasamentInLucru || laboratorInLucru || Date.now() - cfLa < 3600000) return;
   cfInLucru = true;
   try {
     const v = await cere("/api/istoric-bot?action=contrafactual");
     const gata = {}; Object.keys((v && v.contrafactual) || {}).forEach((k) => { gata[k] = true; });
+    for (const k of Object.keys(cfEsuat)) if (Date.now() - cfEsuat[k] < 86400000) gata[k] = true;
     const rez = await turaContrafactual({
-      cereBoti: async () => { const d = await cere("/api/bot-orders?status=finished&limit=100"); return (d && Array.isArray(d.bots) ? d.bots : []).map((x) => x.brut || x); },
+      cereBoti: botiInchisiToti, simbol: simbolPerp, esuat: (id) => { cfEsuat[id] = Date.now(); },
       cereKlines: async (s, iv, lim, end) => { const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=" + iv + "&limit=" + lim + "&endTime=" + end); await new Promise((r) => setTimeout(r, 1600)); if (!k || !k.data || !Array.isArray(k.data.klines)) throw new Error((k && (k.error || k.message)) || "fara lumanari"); return k.data.klines; },
       gata, GridCalcul, GridProba, JurnalTrade, Contrafactual, jurnal, max: 5 });
     if (rez.length) await trimite("/api/istoric-bot?action=contrafactual", { boti: rez });
@@ -489,6 +550,18 @@ async function turaT212() {
 // v85: alertele planurilor scrise de el pe pozitiile T212 (stop / tinta / -X% de la maxim) - la 5 minute,
 // separat de clasament (acela poate tine 3 minute). O alerta o data pe prag pe zi (cheile raman 3 zile).
 let planT212La = 0, planT212InLucru = false;
+// v100.40 (audit 30.09): Trading 212 nu mai raspunde (cheie revocata/expirata, 401/403, serverul fara chei) -> dupa 30 de minute
+// o alerta critica (repetata cel mult la 6 ore), iar la revenire una de informare. Inainte: doar jurnal - alertele de stop pe
+// pozitiile T212 se opreau in liniste. 429 (limita de ritm) nu e cadere.
+async function t212Sanatate(e) {
+  const m = meta(), acum = Date.now();
+  if (!e) { if (m.t212AnuntatRau) await anuntaColector("info", "Trading 212 răspunde din nou", "Alertele de stop și țintă pe acțiuni merg din nou."); m.t212RauDe = 0; m.t212AnuntatRau = 0; return; }
+  if (e.status === 429) return;
+  m.t212RauDe = m.t212RauDe || acum;
+  if (acum - m.t212RauDe >= 30 * 60000 && acum - (m.t212AnuntatRau || 0) >= 6 * 3600000) {
+    if (await anuntaColector("critic", "Trading 212 nu mai răspunde de " + Math.round((acum - m.t212RauDe) / 60000) + " min", (e.status === 401 || e.status === 403 ? "Cheia API pare expirată sau revocată (" + e.status + "). " : "") + e.message + ". Alertele de stop și țintă pe pozițiile Trading 212 NU mai vin până se rezolvă. 👉 Verifică cheia în Trading 212 (Settings → API) și pune-o din nou cu PUNE-CHEILE-T212.bat; stopurile puse direct în Trading 212 lucrează și fără Radar.")) m.t212AnuntatRau = acum;
+  }
+}
 async function turaPlanuriT212() {
   if (process.env.COLECTOR_FARA_T212 || planT212InLucru || Date.now() - planT212La < 5 * 60000) return;
   const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) { planT212La = Date.now(); return; }
@@ -497,14 +570,17 @@ async function turaPlanuriT212() {
   for (const k of Object.keys(st)) if (k.slice(-10) < prag) delete st[k];
   try {
     await turaPlanuriModul({
-      cerePozitii: async () => { const d = await cere("/api/t212?action=pozitii"); return d && d.pozitii || []; },
+      cerePozitii: async () => {
+        try { const d = await cere("/api/t212?action=pozitii"); await t212Sanatate(null); return d && d.pozitii || []; }
+        catch (e) { await t212Sanatate(e); throw e; }
+      },
       cerePlan: async (tk) => { const d = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + tk)); return d && d.plan || null; },
       cereBare: async (tk) => { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)); return GridCalcul.bareBursa(d && d.randuri || [], Date.now()); },
       trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "")), stare: st, ActiuniSemnale, T212, jurnal });
   } catch (e) { jurnal("planuri t212 ESEC", e.message); }
   // v87: frana de "cumparat in jos" (NPA: 4 cumparari pe minus, -8.165 lei) + plafonul de 20% din cont
   try {
-    const zi = new Date().toISOString().slice(0, 10), h = await cere("/api/t212?action=istoric");
+    const zi = ziSesiune(Date.now()), h = await cere("/api/t212?action=istoric");   // v100.40: ziua sesiunii NY (plafonul de 20% o data pe sesiune)
     for (const x of ActiuniSemnale.cumparariInJos((h && h.umpleri) || []).filter((y) => Date.now() - y.t < 24 * 3600000)) {
       const k = "t212-injos-" + x.id + "-" + new Date(x.t).toISOString().slice(0, 10);
       if (st[k]) continue;
@@ -580,9 +656,7 @@ async function pozitiiPentruPoza() {
     let bare = [], plan = null;
     try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)); bare = GridCalcul.bareBursa(d && d.randuri || [], Date.now()); } catch (e) { jurnal("poza: bare", x.ticker, e.message); }
     try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + x.ticker))); } catch {}
-    const de = Date.parse(x.initialFillDate || ""); let mx = null;
-    if (Number.isFinite(de)) for (const b of bare) if (b.t + 86400000 > de) mx = mx === null ? b.h : Math.max(mx, b.h);
-    if (mx !== null && x.currentPrice > mx) mx = x.currentPrice;
+    const mx = ActiuniSemnale.maxDupaCumparare(bare, x.initialFillDate, x.currentPrice);   // v100.40: de la ziua de dupa cumparare
     const p = { ticker: x.ticker, simbol: T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx };
     // v100.8 (el, 28.09: „în alerts la Trading 212 de ce nu apar și aici insiderii”): aceeași sursă ca la simbolurile paginii
     // (Yahoo quoteSummary, cache 6 h în data/poza-ext.json); dublurile germane iau insiderii companiei din SUA
@@ -624,7 +698,7 @@ async function botiPentruPoza() {
     let plan = null; try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id))); } catch {}
     let ziPionex = null; try { ziPionex = await ziBot(b); } catch (e) { jurnal("poza: ziua botului", b.id, e.message); }
     let zero = null; try { const z = TabloExtra.dacaInchizi(b); zero = z && z.pretZero > 0 ? z.pretZero : null; } catch {}
-    const x = semnaleUlt[b.id]; out.push({ ...b, plan, zero, pret30: pret30[b.id] || [], pret24h, ziPionex, grila: TabloExtra.profitPeGrila(b), semafor: x && x.semafor ? x.semafor : null, la: Date.now() });
+    const x = semnaleUlt[b.id]; out.push({ ...b, plan, zero, pret30: pret30[b.id] || [], pret24h, ziPionex, grila: TabloExtra.profitPeGrila(b), semafor: x && x.semafor ? x.semafor : null, la: ultimiiBotiLa || Date.now() });   // v100.40: cand a fost citit botul
   }
   return out;
 }
@@ -691,13 +765,18 @@ async function turaPoza() {
       if (await trimiteAlerta({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, null, a.cheie.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60))) st[a.cheie] = true;
     }
     if (poza.simboluri.length) { ultimeleSimboluri = {}; for (const s of poza.simboluri) ultimeleSimboluri[s.s] = s; }
-    try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
+    try { scrieStare(); } catch {}
   } catch (e) { jurnal("poza: n-a plecat", e.message); pozaLa = Date.now() - 4 * 60000; }
   pozaInLucru = false;
 }
 
 function turaCopie() {
   try { const r = faCopie({ sursa: path.join(RAD, ".wrangler", "state", "v3", "kv"), dest: path.join(DATA, "copii"), zi: new Date().toISOString().slice(0, 10), pastreaza: 14 }); if (r.facut) jurnal("copie de siguranta: " + r.tinta); }
+  catch (e) { jurnal("copie de siguranta ESEC", e.message); }
+  // v100.40 (audit 30.09): si pe ALT disc (E:, discul de copii al PC-ului) - arhiva celor ~2.200 de boti, planurile si alertele
+  // stateau doar pe C:; un disc mort le lua pe toate. Lipsa discului E: nu opreste nimic (doar jurnal).
+  const DEST_E = process.env.COLECTOR_COPIE_E || "E:/crypto-radar-backup/kv-copii";
+  try { if (fs.existsSync(path.parse(DEST_E).root)) { const r2 = faCopie({ sursa: path.join(RAD, ".wrangler", "state", "v3", "kv"), dest: DEST_E, zi: new Date().toISOString().slice(0, 10), pastreaza: 30 }); if (r2.facut) jurnal("copie de siguranta pe alt disc: " + r2.tinta); } }
   catch (e) { jurnal("copie ESEC", e.message); }
 }
 
@@ -814,8 +893,7 @@ async function turaRaport(acum) {
   const m = meta();
   if (m.raportTrimis === r.data) return;
   try {
-    const d = await cere("/api/bot-orders?status=finished&limit=100");
-    const trades = JurnalTrade.din((d && Array.isArray(d.bots) ? d.bots : []).map((x) => x.brut || x));
+    const trades = JurnalTrade.din(await botiInchisiToti());   // v100.40: toata saptamana, nu ultimii 10
     let soc = {};
     for (const id of Object.keys(m.cunoscuti || {})) {
       try { const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const s = SemnaleBot.socoteala((v && v.semnale && v.semnale.log) || []); for (const k of Object.keys(s)) { const x = soc[k] || (soc[k] = { judecate: 0, corecte: 0 }); x.judecate += s[k].judecate; x.corecte += s[k].corecte; } } catch (e) {}
@@ -841,7 +919,7 @@ async function turaPiataColector() {
   try {
     const m = meta(); m.piata = m.piata || {};
     await turaPiataModul({ cere, trimite, trimiteAlerta, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Acasa, Alerte, GridCalcul, GridClasament, Directie, NDX }, m.piata, Date.now());
-    try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
+    try { scrieStare(); } catch {}
   } catch (e) { jurnal("piata ESEC", e.message); }
   piataInLucru = false;
 }
@@ -856,9 +934,20 @@ async function turaScanColector() {
     const m = meta(); m.scan = m.scan || {};
     const afara = async (u) => { const r = await fetch(u, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" }, signal: AbortSignal.timeout(20000) }); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); };
     await turaScanModul({ cere, trimite, trimiteAlerta, afara, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Scan, GridCalcul, NDX }, m.scan, Date.now());
-    try { fs.writeFileSync(STARE_FIS, JSON.stringify(stareAlerte)); } catch {}
+    try { scrieStare(); } catch {}
   } catch (e) { jurnal("scan ESEC", e.message); }
   scanInLucru = false;
+}
+
+// v100.40: rezumatul perechilor incheiate, o data pe ora pe bot (Discord); fiecare pereche ramane in Radar
+async function turaPerechiOra() {
+  const po = meta().perechiOra; if (!po) return;
+  for (const id of Object.keys(po)) {
+    const x = po[id]; if (!x || Date.now() - x.de < 3600000) continue;
+    const U = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT";
+    if (await trimiteAlerta({ nivel: "info", titlu: "✅ " + x.nume + ": " + (x.n === 1 ? "o pereche încheiată" : x.n + " perechi încheiate") + " în ultima oră, " + U(x.usdt) + " din grile", mesaj: "Fiecare pereche se vede în Radar (Alerte). Pe Discord vine un rezumat pe oră, ca alertele importante să nu se piardă printre ele." }, id, "perechi-ora")) delete po[id];
+  }
+  scrieStare();
 }
 
 async function bucla() {
@@ -867,6 +956,8 @@ async function bucla() {
   // cererile identice in zbor; asa nici cele diferite nu se calca in aceeasi secunda)
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message)).then(() => turaPoza()).catch((e) => jurnal("poza", e.message));
   turaCopie();
+  golesteCoada().catch((e) => jurnal("coada discord", e.message));   // v100.40
+  turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));

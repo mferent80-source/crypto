@@ -236,7 +236,10 @@ var ActiuniSemnale = (function () {
     // (25.09) -15% care urca a iesit +1.001 lei fata de fara stop, iar variantele mai stranse, mai rau
     var dT = o.minTrail > 0 ? Math.max(d, ref * o.minTrail) : d, stopPoz = ref - dT;
     return { nivel: "ok", trend: dir, atr: A_, k: pr.k, d: d, riscPct: d / baza, proba: pr, intrare: intrare, intrareMotiv: motivI,
-      stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: dT / ref * 100, trailMinim: dT > d, stopAtins: stopPoz >= pret, tintaPozitie: r2(pret + 2 * d) };
+      stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: dT / ref * 100, trailMinim: dT > d, stopAtins: stopPoz >= pret,
+      // v100.40 (audit 30.09): tinta pozitiei e FIXA, de la pretul mediu de cumparare (+2×risc) - socotita din pretul de ACUM „fugea”
+      // odata cu el, deci alerta „a atins ținta sugerată” si „aproape de țintă” din consilier nu se puteau declansa niciodata
+      tintaPozitie: r2((o.pretMediu > 0 ? o.pretMediu : pret) + 2 * d) };
   }
   // Cate bucati ca atingerea stopului sa coste cel mult 1% din cont, plafon 20% din cont pe o actiune.
   // intrare/stop in dolari; cont in lei; fx = dolari pe leu (din umplerile T212); lipsa fx -> aceeasi moneda
@@ -387,6 +390,17 @@ var ActiuniSemnale = (function () {
     return linii;
   }
 
-  return { cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  // v100.40 (audit 30.09): maximul de DUPA cumparare - de la ziua de dupa cumparare (pe bare zilnice nu stim daca maximul zilei
+  // cumpararii a fost inainte sau dupa ea; proba cuStopUrcator o exclude). Inainte: ziua cumpararii intra -> trail-ul de 15%
+  // putea porni de la un maxim de DINAINTEA cumpararii. Una singura, folosita de pagina T212, colector (poza + planuri).
+  function maxDupaCumparare(bare, deLa, pretAcum) {
+    var b = Array.isArray(bare) ? bare : [], de = typeof deLa === "number" ? deLa : Date.parse(deLa || ""), mx = null;
+    if (!b.length || !isFinite(de)) return null;
+    var z0 = Math.floor(de / ZI);
+    for (var i = 0; i < b.length; i++) if (b[i] && Math.floor(b[i].t / ZI) > z0 && b[i].h > 0) mx = mx === null ? b[i].h : Math.max(mx, b[i].h);
+    if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
+    return mx;
+  }
+  return { maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

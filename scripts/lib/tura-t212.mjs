@@ -56,10 +56,8 @@ export async function turaPlanuri(d) {
       if (!x || !(x.quantity > 0)) continue;
       const plan = await d.cerePlan(x.ticker);
       if (!plan || plan.proba) continue;   // v88: planul unei probe de ecran nu da alerte
-      const bare = (await d.cereBare(x.ticker)) || [], de = Date.parse(x.initialFillDate || "");
-      let mx = null;
-      if (Number.isFinite(de)) for (const b of bare) if (b.t + 86400000 > de) mx = mx === null ? b.h : Math.max(mx, b.h);
-      if (mx !== null && x.currentPrice > mx) mx = x.currentPrice;
+      const bare = (await d.cereBare(x.ticker)) || [];
+      const mx = d.ActiuniSemnale.maxDupaCumparare(bare, x.initialFillDate, x.currentPrice);   // v100.40: de la ziua de dupa cumparare
       const p = { ticker: x.ticker, simbol: d.T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx };
       for (const a of d.ActiuniSemnale.alertePlan(p, d.acum || Date.now())) {
         if (d.stare[a.cheie]) continue;

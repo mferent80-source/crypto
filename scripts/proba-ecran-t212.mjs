@@ -298,7 +298,7 @@ await scenariu(390, 844, "telefon");
       await panaCand(b, `/Pe ce aș porni un bot/i.test(document.getElementById("tbIdei").innerText)`, 30000, "ideile de boti");
       FARA_GUNOI(await b.ev(`document.getElementById("tbIdei").innerText`));
       const sub = await b.ev(`document.getElementById("tbKpiTotalSub").textContent`), tot = await b.ev(`tbStare.bot&&+tbStare.bot.profitTotal`);
-      if (tot < 0) assert.match(sub, /zile până pe zero|nu se recuperează/, "ritmul de recuperare: " + sub);
+      if (tot < 0) assert.match(sub, /zile până pe zero|nu se recuperează|după o zi de viață/, "ritmul de recuperare: " + sub);   // v100.40: botul sub o zi -> se spune
     });
     await test("monitor 1920 · dupa clic pe Trading 212, cifrele contului se vad (nu sunt sub bara de sus)", async () => {
       await b.ev(`document.querySelector('.sideBtn[data-nav="t212"]').click()`); await asteapta(1500);

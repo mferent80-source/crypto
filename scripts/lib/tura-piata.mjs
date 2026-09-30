@@ -107,7 +107,8 @@ async function poza(d, st, acum) {
   // v95: si botii (suma totalurilor) + contul T212 -> Home: "ziua ta" (castig / pierdere fata de ieri dimineata)
   const bo = await incearca(d, "boti poza", () => d.cere("/api/bot-orders")), co = await incearca(d, "cont poza", () => d.cere("/api/t212?action=cont"));
   const act = (bo && Array.isArray(bo.bots) ? bo.bots : []).filter((b) => b && b.activ !== false && Number.isFinite(Number(b.profitTotal)));
-  const ca = co && co.cash, eu = { botiTotal: act.length ? Math.round(act.reduce((s, b) => s + Number(b.profitTotal), 0) * 100) / 100 : null, t212Total: ca && Number.isFinite(Number(ca.total)) ? Number(ca.total) : null, t212Ppl: ca && Number.isFinite(Number(ca.ppl)) ? Number(ca.ppl) : null };
+  const ca = co && co.cash, eu = { botiTotal: act.length ? Math.round(act.reduce((s, b) => s + Number(b.profitTotal), 0) * 100) / 100 : null, t212Total: ca && Number.isFinite(Number(ca.total)) ? Number(ca.total) : null, t212Ppl: ca && Number.isFinite(Number(ca.ppl)) ? Number(ca.ppl) : null,
+    botiPeId: Object.fromEntries(act.map((b) => [String(b.id), Math.round(Number(b.profitTotal) * 100) / 100])) };   // v100.40: pe bot, pentru „față de ieri dimineață”
   await d.trimite("/api/istoric-bot?action=piata", { la: acum, instantaneu: Object.assign({ zi: r.zi, fundingMed: st.funding ? st.funding.mediana : null }, st.ult, eu) });
   st.pozaZi = r.zi;
 }

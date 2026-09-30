@@ -23,7 +23,7 @@ await test("fiecare bot la cursul zilei inchiderii; weekend -> vineri; 1-4 ianua
   const lei = 10 * 4.6568 + -21 * 4.62 + 5 * 4.3417;
   assert.ok(Math.abs(r.pionex.lei - lei) < 1e-9, r.pionex.lei + " vs " + lei);
   assert.equal(r.pionex.faraCurs, 0);
-  assert.match(r.text, /≈ −/); assert.match(r.text, /curs BNR/); assert.match(r.text, /USDT socotit ca USD/);
+  assert.match(r.text, /≈ [−-]/); assert.match(r.text, /curs BNR/); assert.match(r.text, /USDT socotit ca USD/);
 });
 
 await test("anul si ziua dupa ora ROMANIEI: inchis la 00:30 pe 1 ianuarie (22:30 UTC pe 31 decembrie) tine de anul nou", () => {

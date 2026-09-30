@@ -5,7 +5,7 @@
 var Idei = (function () {
   "use strict";
   var AS = typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale : globalThis.ActiuniSemnale;
-  var ZI = 86400000, COST_CONV = 0.003, TRAIL = 0.15;
+  var ZI = 86400000, COST_CONV = 0.003;
   function stat(l) { var n = l.length, p = 0, t = 0; l.forEach(function (x) { t += x.rezultat || 0; if (x.rezultat > 0) p++; }); return { n: n, pePlus: p, total: t }; }
   function ziScurta(iso) { var x = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return x ? x[3] + "." + x[2] : "—"; }
   function P(x) { return (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; }
@@ -23,7 +23,10 @@ var Idei = (function () {
     var z = o.rezultate ? Math.ceil((Date.parse(o.rezultate + "T12:00:00Z") - (o.acum || Date.now())) / ZI) : null;
     if (z !== null && z >= 0 && z <= 10) return { trece: false, scor: null, motive: ["își anunță rezultatele pe " + ziScurta(o.rezultate) + " (peste " + z + " zile): prețul poate sări"] };
     var intrare = n.intrare.pret;
-    return { trece: true, scor: n.proba.medie, pret: pret, intrare: intrare, stop: intrare * (1 - TRAIL), tinta: n.tinta,
+    // v100.40 (audit 30.09): stopul ideii = stopul PROBAT (k×ATR, cel cu care proba a iesit pe plus si cu care Biletul socoteste
+    // cate bucati), nu −15%: la COKE tabelul arata −15% si Biletul socotea pe −4,5% -> cine punea stopul din tabel risca 3% din
+    // cont in loc de 1%. Acelasi stop ca pagina alerts si Discord („a ajuns la intrarea sugerată”).
+    return { trece: true, scor: n.proba.medie, pret: pret, intrare: intrare, stop: n.stop, riscPct: intrare > 0 ? (intrare - n.stop) / intrare : null, tinta: n.tinta,
       pePlusProba: n.proba.pePlus, nProba: n.proba.n, rezultate: o.rezultate || null,
       motive: ["trend în sus pe zilnice (" + st.trend.tarie + ")", "fără mișcare mare, " + P(st.distMax7z) + " față de maximul pe 7 zile",
         "pe istoricul ei, intrările în starea asta: " + Math.round(n.proba.pePlus * 100) + "% pe plus, " + P(n.proba.medie) + " în medie (" + n.proba.n + " zile)"] };

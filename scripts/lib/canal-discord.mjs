@@ -15,6 +15,7 @@ export function mesajDiscord(m) {
   const text = String((m && m.mesaj) || "").slice(0, 2000);
   return {
     username: "Crypto Radar",
+    allowed_mentions: { parse: [] },   // v100.40: niciun @everyone / @here / rol din textele alertelor
     // textul simplu apare si in notificarea de pe telefon (embed-ul singur nu se vede in preview)
     content: (nivel === "critic" ? "🔴 " : nivel === "atentie" ? "🟠 " : "🟢 ") + titlu,
     embeds: [{ title: titlu, description: text || undefined, color: CULOARE[nivel], timestamp: new Date(m && m.t > 0 ? m.t : Date.now()).toISOString(), footer: { text: "Crypto Radar · colectorul de acasă" } }],

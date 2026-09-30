@@ -20,10 +20,13 @@ const coboara = zilnice(300, (i) => 100 * Math.pow(0.998, i));
 console.log("\nV90 · idei de cumparare · proba\n");
 await test("modulul exista", () => assert.ok(I, "public/lib/idei.js lipseste"));
 
-await test("actiune: trend sus, fara miscare, proba pe plus -> trece, cu intrare, stop -15% care urca, tinta, motive; trend jos -> nu trece, cu motivul", () => {
+await test("actiune: trend sus, fara miscare, proba pe plus -> trece, cu intrare, stopul PROBAT (k×ATR, v100.40 - nu −15%), tinta, motive; trend jos -> nu trece, cu motivul", () => {
   const r = I.judecaActiune(buna, buna.at(-1).c, { acum: ACUM });
   assert.equal(r.trece, true, JSON.stringify(r.motive)); assert.ok(r.intrare > 0 && r.stop < r.intrare && r.tinta > r.intrare);
-  ((a, e) => assert.ok(Math.abs(a - e) < 1e-9))(r.stop, r.intrare * 0.85);
+  // v100.40 (audit 30.09): stopul ideii = cel cu care proba a iesit pe plus si cu care Biletul socoteste bucatile (ActiuniSemnale.niveluri)
+  const AS = globalThis.ActiuniSemnale, n = AS.niveluri(buna, buna.at(-1).c, {});
+  ((a, e) => assert.ok(Math.abs(a - e) < 1e-9, a + " vs " + e))(r.stop, n.stop);
+  ((a, e) => assert.ok(Math.abs(a - e) < 1e-9))(r.riscPct, (r.intrare - n.stop) / r.intrare);
   assert.ok(r.motive.length > 0 && r.scor !== null);
   const j = I.judecaActiune(coboara, coboara.at(-1).c, { acum: ACUM }); assert.equal(j.trece, false); assert.match(j.motive.join(" "), /jos/);
   assert.equal(I.judecaActiune(buna.slice(0, 50), 100, { acum: ACUM }).trece, false);

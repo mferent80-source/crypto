@@ -1707,6 +1707,8 @@ body.peT212 .toolbar,body.peT212 .heroStrip,body.peT212 .tabs{display:none}
 .contTotSep{color:var(--line)}
 /* v88: Jurnalul de trade ca celelalte pagini - pagina proprie, latimea demo-ului, 14px, listele lungi pliate */
 body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none}
+/* v100.40 (audit 30.09): si fereastra Grid - pe telefon unealta incepea la 772 px, sub antetul vechi gol */
+body.peGrid .toolbar,body.peGrid .heroStrip,body.peGrid .tabs{display:none}
 #jurnaltrade>*{max-width:1180px;margin-left:auto;margin-right:auto}
 #jurnaltrade{font-size:14px;line-height:1.4}
 #jurnaltrade #jtCrypto,#jurnaltrade #jtActiuni{display:flex;flex-direction:column;gap:8px}

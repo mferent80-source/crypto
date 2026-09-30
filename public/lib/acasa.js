@@ -204,12 +204,25 @@ var Acasa = (function () {
     return Object.keys(g).map(function (k) { var o = g[k]; return { nume: o.nume, n: o.n, ch: Math.round(o.sch / o.n * 100) / 100, ch5: o.n5 ? Math.round(o.sch5 / o.n5 * 100) / 100 : null, urca: o.urca }; })
       .sort(function (a, b) { return (b.ch5 == null ? -1e9 : b.ch5) - (a.ch5 == null ? -1e9 : a.ch5); });
   }
-  // ziua ta: boti (suma totalurilor) si contul T212 fata de poza de ieri dimineata
-  function ziuaTa(azi, lista, ziAzi) {
+  // ziua ta: boti si contul T212 fata de poza de ieri dimineata.
+  // v100.40 (audit 30.09): la boti NU mai scade sumele a doua seturi diferite de boti (29.09 -> 30.09 arata −3,23 USDT intr-o zi cu
+  // LIGHTER inchis pe −59). Acum, pe bot (azi.botiPeId / ier.botiPeId): cei din ambele poze -> diferenta; cei inchisi intre timp ->
+  // rezultatul lor net final (inchise: [{id, net|rezultat}]) minus cat aveau ieri; cei porniti de atunci -> totalul lor de acum.
+  // Fara totalurile pe bot in poza de ieri (pozele vechi) si cu alt set de boti -> null (randul nu se arata), nu o cifra falsa.
+  function ziuaTa(azi, lista, ziAzi, inchise) {
     var ier = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.zi && x.zi < ziAzi; }).sort(function (a, b) { return a.zi < b.zi ? -1 : 1; }).pop();
     if (!ier || !azi) return null;
     var d = function (k) { var a = nr(azi[k]), b = nr(ier[k]); return a !== null && b !== null ? Math.round((a - b) * 100) / 100 : null; };
-    var o = { boti: d("botiTotal"), t212: d("t212Total"), de: ier.zi };
+    var boti = null, A = azi.botiPeId, B = ier.botiPeId;
+    if (A && B && typeof A === "object" && typeof B === "object") {
+      var inc = {}; (Array.isArray(inchise) ? inchise : []).forEach(function (t) { if (t && t.id) inc[String(t.id)] = nr(t.net !== undefined && t.net !== null ? t.net : t.rezultat); });
+      var s = 0, ok = true;
+      Object.keys(A).forEach(function (id) { var a = nr(A[id]), b = nr(B[id]); if (a === null) ok = false; else s += a - (b === null ? 0 : b); });
+      Object.keys(B).forEach(function (id) { if (A[id] !== undefined) return; var f = inc[id], b = nr(B[id]); if (f === null || f === undefined || b === null) ok = false; else s += f - b; });
+      boti = ok ? Math.round(s * 100) / 100 : null;
+    } else if (azi.botiPeId && ier.botiPeId === undefined) boti = null;
+    else boti = d("botiTotal");
+    var o = { boti: boti, t212: d("t212Total"), de: ier.zi };
     return o.boti === null && o.t212 === null ? null : o;
   }
   // raportul de duminica seara (Discord): saptamana care a trecut + ce vine + ce as face

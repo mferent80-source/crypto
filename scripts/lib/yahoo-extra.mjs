@@ -20,11 +20,14 @@ export function creeazaYahooExtra({ fisier, fisierBare = null, pauzaMs = 400, f 
     const t = await r2.text(); if (!r2.ok || !t || t.includes("<")) throw new Error("crumb Yahoo: " + r2.status);
     crumb = t.trim(); crumbLa = acum();
   }
-  async function json(u) { const r = await f(u, { headers: { ...UA, cookie }, signal: AbortSignal.timeout(20000) }); if (!r.ok) throw new Error("Yahoo HTTP " + r.status); return r.json(); }
+  async function json(u) { const r = await f(u, { headers: { ...UA, cookie }, signal: AbortSignal.timeout(20000) }); if (!r.ok) throw Object.assign(new Error("Yahoo HTTP " + r.status), { status: r.status }); return r.json(); }
   return {
     async closes(simbol) {
-      const k = "c:" + simbol, c = cache[k]; if (c && acum() - c.la < CLOSES_MS) return c.v;
-      const j = (await json("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(simbol) + "?range=2mo&interval=1d")).chart.result[0];
+      const k = "c:" + simbol, c = cache[k]; if (c && acum() - c.la < (c.v === null ? BARE_MS : CLOSES_MS)) return c.v;
+      // v100.40 (audit 30.09): simbolul pe care Yahoo nu-l are (COTIUSDT: 2 × 404 la fiecare poza, ~1.400 de linii de jurnal pe zi) ->
+      // tinut minte 6 ore ca „nu exista” (null), nu cerut din nou la 2 minute
+      let jj; try { jj = await json("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(simbol) + "?range=2mo&interval=1d"); } catch (e) { if (e.status === 404) { cache[k] = { la: acum(), v: null }; salveaza(); return null; } throw e; }
+      const j = jj.chart.result[0];
       // v98.2: barele cu timp (tc), aliniate - o inchidere lipsa se sare cu tot cu timpul ei; din ele colectorul ia `prev` = ultima
       // sesiune INCHEIATA (prevSimbol), nu penultima inchidere orbeste (duminica arata mișcarea de vineri drept "azi")
       const inch = j.indicators.quote[0].close || [], ts = j.timestamp || [], tc = [];
@@ -49,8 +52,16 @@ export function creeazaYahooExtra({ fisier, fisierBare = null, pauzaMs = 400, f 
     },
     async extra(simbol) {
       const k = "e:" + simbol, c = cache[k]; if (c && acum() - c.la < EXTRA_MS) return c.v;
-      await iaCrumb();
-      const j = (await json("https://query2.finance.yahoo.com/v10/finance/quoteSummary/" + encodeURIComponent(simbol) + "?modules=calendarEvents%2CinsiderTransactions%2CdefaultKeyStatistics%2CfinancialData&crumb=" + encodeURIComponent(crumb))).quoteSummary.result[0] || {};
+      // v100.40 (audit 30.09): la 401/403 crumb-ul se reface o data pe loc (era tinut 24 h -> insiderii, rezultatele si analistii mureau
+      // pana la repornire); daca tot nu merge, ramane ultima valoare stiuta (veche, dar nu goala)
+      const cereExtra = async () => { await iaCrumb(); return json("https://query2.finance.yahoo.com/v10/finance/quoteSummary/" + encodeURIComponent(simbol) + "?modules=calendarEvents%2CinsiderTransactions%2CdefaultKeyStatistics%2CfinancialData&crumb=" + encodeURIComponent(crumb)); };
+      let jr;
+      try { jr = await cereExtra(); }
+      catch (e) {
+        if (e.status === 401 || e.status === 403) { crumb = null; crumbLa = 0; try { jr = await cereExtra(); } catch (e2) { if (c) return c.v; throw e2; } }
+        else { if (c) return c.v; throw e; }
+      }
+      const j = jr.quoteSummary.result[0] || {};
       const ce = (j.calendarEvents || {}).earnings || {}, fd = j.financialData || {}, ks = j.defaultKeyStatistics || {};
       const v = { tranzactii: ((j.insiderTransactions || {}).transactions || []).slice(0, 60),
         rezultate: { data: ((ce.earningsDate || [])[0] || {}).fmt || null, eps: (ce.earningsAverage || {}).raw ?? null },

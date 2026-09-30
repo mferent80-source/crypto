@@ -132,9 +132,9 @@ var T212 = (function () {
       px.randuri.push({ inchis: x.inchis, zi: zi, moneda: String(x.moneda || ""), tip: x.tip || "futures grid", net: v, ziCurs: c ? c.zi : null, curs: c ? c.curs : null, lei: c ? v * c.curs : null });
     });
     var r = { an: an, t212: t, pionex: px, ani: Object.keys(ani).map(Number).sort(function (a, b) { return b - a; }) };
-    var L = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " lei"; };
+    var L = function (v) { return (v >= 0 ? "+" : "-") + Math.abs(v).toFixed(2).replace(".", ",") + " lei"; };   // v100.40: minus ASCII (Excel nu ia „−” drept numar)
     r.text = "Anul " + an + "\nTrading 212 (acțiuni, în lei, după comisioanele de conversie): " + t.n + " vânzări · câștiguri " + L(t.castiguri) + " · pierderi " + L(t.pierderi) + " · NET " + L(t.net) + " · comisioane " + L(-t.comisioane).replace("+", "") + " · dividende " + L(t.dividende)
-      + "\nPionex (boți, în USDT): " + px.n + " boți închiși · NET " + (px.net >= 0 ? "+" : "−") + Math.abs(px.net).toFixed(2) + " USDT"
+      + "\nPionex (boți, în USDT): " + px.n + " boți închiși · NET " + (px.net >= 0 ? "+" : "-") + Math.abs(px.net).toFixed(2) + " USDT"
       + (px.lei !== null ? " ≈ " + L(px.lei) + " (curs BNR USD din ziua fiecărei închideri, ora României; USDT socotit ca USD" + (px.faraCurs ? "; " + px.faraCurs + (px.faraCurs === 1 ? " bot fără curs" : " boți fără curs") + ", lăsați afară din lei" : "") + ")" : "");
     return r;
   }
@@ -144,7 +144,7 @@ var T212 = (function () {
   function csvPionex(r) {
     var p = r && r.pionex || {}, l = (p.randuri || []).slice().sort(function (a, b) { return a.inchis - b.inchis; });
     var n = function (v, z) { return v === null || v === undefined || !isFinite(v) ? "" : v.toFixed(z).replace(".", ","); };
-    var q = function (v) { v = String(v == null ? "" : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var q = function (v) { v = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };   // v100.40: fara formule (=, +, -, @) in Excel
     var out = ["data_inchiderii;moneda;tip;rezultat_usdt;ziua_cursului_bnr;curs_bnr_usd;rezultat_lei"];
     l.forEach(function (x) { out.push([x.zi, q(x.moneda), q(x.tip), n(x.net, 2), x.ziCurs || "", n(x.curs, 4), n(x.lei, 2)].join(";")); });
     out.push(["TOTAL", "", "", n(p.net || 0, 2), "", "", p.lei === null || p.lei === undefined ? "" : n(p.lei, 2)].join(";"));
@@ -156,11 +156,14 @@ var T212 = (function () {
   function csvDeclaratie(r) {
     var t = r && r.t212 || {}, p = r && r.pionex || {}, dupaData = function (a, b) { return a.inchis - b.inchis; };
     var n = function (v, z) { return v === null || v === undefined || !isFinite(v) ? "" : (z == null ? String(v) : v.toFixed(z)).replace(".", ","); };
-    var q = function (v) { v = String(v == null ? "" : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var q = function (v) { v = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };   // v100.40: fara formule (=, +, -, @) in Excel
     var out = ["sursa;tip;data;instrument;cantitate;cost_lei;incasat_lei;rezultat;moneda;ziua_cursului_bnr;curs_bnr_usd;rezultat_lei"];
     var tr = (t.randuri || []).slice().sort(dupaData);
     tr.filter(function (x) { return x.tip === "vânzare"; }).concat(tr.filter(function (x) { return x.tip === "dividend"; })).forEach(function (x) {
-      out.push(["Trading 212", x.tip, x.zi, q(x.instrument), n(x.cantitate), n(x.cost, 2), n(x.incasat, 2), n(x.rezultat, 2), "lei", "", "", n(x.rezultat, 2)].join(";"));
+      // v100.40 (audit 30.09): costul din CSV e cel care SE LEAGA cu rezultatul (incasat − rezultat) - rezultatul e cel oficial T212 minus
+      // comisioanele, iar costul FIFO al loturilor nu avea aceleasi ajustari -> cost + rezultat ≠ incasat la multe vanzari
+      var costLeg = x.tip === "vânzare" && x.incasat !== null && x.incasat !== undefined && isFinite(x.incasat) ? x.incasat - x.rezultat : x.cost;
+      out.push(["Trading 212", x.tip, x.zi, q(x.instrument), n(x.cantitate), n(costLeg, 2), n(x.incasat, 2), n(x.rezultat, 2), "lei", "", "", n(x.rezultat, 2)].join(";"));
     });
     (p.randuri || []).slice().sort(dupaData).forEach(function (x) {
       out.push(["Pionex", q(x.tip), x.zi, q(x.moneda), "", "", "", n(x.net, 2), "USDT", x.ziCurs || "", n(x.curs, 4), n(x.lei, 2)].join(";"));

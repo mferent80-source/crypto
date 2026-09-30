@@ -106,7 +106,8 @@ await test("alerteSimboluri: miscare peste 2x ATR-ul propriu (o data pe zi) si c
   const miscat = { s: "BBB", moneda: "$", pret: 104, prev: 100, closes30: c, insideri: ins("neut") };
   const cumparat = { s: "CCC", moneda: "$", pret: 100, prev: 100, closes30: c, insideri: ins("bull1") };
   const a = alerteSimboluri([linistit, miscat, cumparat], { CCC: { insideri: { verdict: "neut" } } }, ACUM);
-  assert.deepEqual(a.map((x) => x.cheie), ["sim-miscare-BBB-2026-09-27", "sim-insider-CCC-2026-09-27"]);
+  // v100.40: cheia poarta ziua SESIUNII NY (duminica 27.09 -> sesiunea de vineri 25.09), nu ziua UTC
+  assert.deepEqual(a.map((x) => x.cheie), ["sim-miscare-BBB-2026-09-25", "sim-insider-CCC-2026-09-25"]);
   assert.match(a[0].titlu, /BBB/); assert.match(a[0].mesaj, /ATR/); assert.match(a[0].mesaj, /ipotez/i, "pragul e o ipoteza, se spune");
   assert.match(a[1].titlu, /CCC/); assert.match(a[1].mesaj, /Ion Pop/);
   assert.equal(alerteSimboluri([cumparat], { CCC: { insideri: { verdict: "bull1" } } }, ACUM).length, 0, "acelasi verdict ca la poza anterioara = nimic nou");

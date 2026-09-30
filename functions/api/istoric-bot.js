@@ -92,6 +92,8 @@ export async function onRequestPost({request,env}){
     if(z&&typeof z==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(z.zi))){
       let l=[];try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
       const o={zi:z.zi};["fg","inMiscare","vix","ndxE50","btc","largime","fundingMed","botiTotal","t212Total","t212Ppl"].forEach(k=>{const v=nr(z[k]);if(v!==null)o[k]=v});
+      // v100.40: totalul FIECARUI bot activ (id -> USDT) - „față de ieri dimineață” compara doar botii prezenti in ambele poze
+      if(z.botiPeId&&typeof z.botiPeId==="object"){const m={};Object.keys(z.botiPeId).slice(0,30).forEach(k=>{const v=nr(z.botiPeId[k]);if(/^[\w-]{1,40}$/.test(k)&&v!==null)m[k]=v});o.botiPeId=m}
       l=l.filter(x=>x&&x.zi!==z.zi);l.push(o);l.sort((a,b)=>a.zi<b.zi?-1:1);
       await env.ISTORIC.put("piata:instantanee",JSON.stringify(l.slice(-14)));
     }

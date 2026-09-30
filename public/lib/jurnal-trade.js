@@ -45,6 +45,9 @@ var JurnalTrade = (function () {
       // v100.23 (revizie): realizatul Pionex e FARA comisioane si funding (dovada pe toti botii reali: banii primiti inapoi =
       // investit + realizat + comisioane + funding, la cent) => pozitia = realizat - grile; costurile stau pe randurile lor
       pozitie: grile !== null ? rez - grile : null,
+      // v100.40 (audit 30.09): NETUL - ce ramane dupa comisioane si funding (realizatul Pionex e fara ele). Judecata (pe plus / pe minus,
+      // costul greselilor, raportul de duminica, „Dacă ascultai”) se face pe net, ca statistica si Declaratia.
+      net: rez + (com || 0) + (fund || 0),
       greseli: []
     };
   }
@@ -87,11 +90,14 @@ var JurnalTrade = (function () {
 
   function rezumat(l) {
     l = Array.isArray(l) ? l : [];
-    var r = { n: l.length, pePlus: 0, total: 0, grile: 0, pozitie: 0, comisioane: 0, funding: 0, investitMediu: null, greseli: [] }, inv = 0, pe = {};
+    var r = { n: l.length, pePlus: 0, total: 0, net: 0, pePlusNet: 0, grile: 0, pozitie: 0, comisioane: 0, funding: 0, investitMediu: null, greseli: [] }, inv = 0, pe = {};
     l.forEach(function (t) {
+      var net = t.net !== undefined && t.net !== null ? t.net : t.rezultat;
       if (t.rezultat > 0) r.pePlus++;
+      if (net > 0) r.pePlusNet++;
+      r.net += net;
       r.total += t.rezultat; r.grile += t.grile || 0; r.pozitie += t.pozitie || 0; r.comisioane += t.comisioane || 0; r.funding += t.funding || 0; inv += t.investit || 0;
-      t.greseli.forEach(function (g) { var x = pe[g.cod] || (pe[g.cod] = { cod: g.cod, titlu: g.titlu.replace(/ și a atins stopul$/, ""), n: 0, cost: 0, dataViitoare: g.dataViitoare }); x.n++; x.cost += t.rezultat; });
+      t.greseli.forEach(function (g) { var x = pe[g.cod] || (pe[g.cod] = { cod: g.cod, titlu: g.titlu.replace(/ și a atins stopul$/, ""), n: 0, cost: 0, dataViitoare: g.dataViitoare }); x.n++; x.cost += net; });   // v100.40: costul greselii pe net
     });
     r.investitMediu = l.length ? inv / l.length : null;
     r.greseli = Object.keys(pe).map(function (k) { return pe[k]; }).sort(function (a, b) { return a.cost - b.cost; });

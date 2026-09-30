@@ -184,7 +184,9 @@ var Alerte = (function () {
     // v82: semnalele actionabile (calculate de SemnaleBot in colector)
     if (ctx && ctx.semnale) {
       var sm = ctx.semnale;
-      out["s-iesi"] = sm.semafor && sm.semafor.nivel === "iesi" ? { nivel: "critic", titlu: nume + ": semaforul zice IEȘI — " + sm.semafor.motiv, mesaj: "Ce aș face eu: " + sm.semafor.faCe } : { nivel: "ok", titlu: "", mesaj: "" };
+      // v100.40 (audit 30.09: JTO 18 critice intr-o zi pe acelasi fapt): cand IESI-ul vine din PLANUL lui, alerta „planul tău — ieși”
+      // l-a spus deja - semaforul nu-l mai repeta (ramane doar in Radar)
+      out["s-iesi"] = sm.semafor && sm.semafor.nivel === "iesi" && !(sm.semafor.cod === "plan" && out.plan && out.plan.nivel === "critic") ? { nivel: "critic", titlu: nume + ": semaforul zice IEȘI — " + sm.semafor.motiv, mesaj: "Ce aș face eu: " + sm.semafor.faCe } : { nivel: "ok", titlu: "", mesaj: "" };
       out["s-ia-profit"] = sm.iaProfit ? { nivel: "atentie", titlu: nume + ": moment bun să încasezi", mesaj: sm.iaProfit.text + " Ce aș face eu: aș închide pe plus acum." } : { nivel: "ok", titlu: "", mesaj: "" };
       out["s-muta"] = sm.muta ? { nivel: "atentie", titlu: nume + ": mută gridul — " + sm.muta.motiv, mesaj: "Gridul propus acum" + (sm.muta.des ? " (grid des, 0,3%)" : "") + ": " + pret(nr(sm.muta.setare.jos)) + " – " + pret(nr(sm.muta.setare.sus)) + ", " + (sm.muta.setare.grile + 1) + " grile în Pionex, " + sm.muta.setare.levier + "×" + (nr(sm.muta.treceriZi) !== null ? ", ~" + nr(sm.muta.treceriZi).toFixed(1).replace(".", ",") + " perechi încheiate/zi pe ultimele 30 de zile" : "") + ". Setările de copiat sunt în Tablou." } : { nivel: "ok", titlu: "", mesaj: "" };
       out["s-btc"] = sm.btc ? { nivel: "atentie", titlu: nume + ": BTC a intrat în mișcare", mesaj: sm.btc.text + " Ce aș face eu: n-aș adăuga bani până nu vedem încotro trage BTC." } : { nivel: "ok", titlu: "", mesaj: "" };
@@ -293,7 +295,7 @@ var Alerte = (function () {
     var noiPer = c.per !== null && vechi.per !== null ? c.per - vechi.per : 0, noiU = c.u - vechi.u, p = nr(b.pretCurent);
     if (noiPer > 0) {
       var dg = c.g !== null && vechi.g !== null ? c.g - vechi.g : null, U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
-      mesaje.push({ cheie: "grila", nivel: "info", titlu: "✅ " + nume + ": " + (noiPer === 1 ? "pereche încheiată" : noiPer + " perechi încheiate") + (dg !== null ? " " + U(dg) : ""),
+      mesaje.push({ cheie: "grila", nivel: "info", perechi: noiPer, usdt: dg, titlu: "✅ " + nume + ": " + (noiPer === 1 ? "pereche încheiată" : noiPer + " perechi încheiate") + (dg !== null ? " " + U(dg) : ""),
         mesaj: "Grilele au adus " + (c.g !== null ? U(c.g) : "?") + " de la pornire (" + c.per + " perechi)." + (p !== null ? " Prețul " + pret(p) + "." : "") });
     } else if (noiU > 0) {
       var dir = String(b.directie || "").toLowerCase(), crescut = c.poz !== null && vechi.poz !== null ? Math.abs(c.poz) > Math.abs(vechi.poz) : null;

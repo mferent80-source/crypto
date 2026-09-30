@@ -91,9 +91,10 @@ var Obiceiuri = (function () {
   function raportDuminica(o) {
     var acum = o.acum || Date.now(), sapt = (o.trades || []).filter(function (t) { return t.inchis > acum - 7 * ZI && t.inchis <= acum; });
     var r = JurnalTrade.rezumat(sapt), linii = [];
-    var out = { n: r.n, total: r.total, pePlus: r.pePlus, regula: null, linii: linii };
+    var out = { n: r.n, total: r.total, net: r.net, pePlus: r.pePlusNet, regula: null, linii: linii };
     if (!r.n) { linii.push("Săptămâna asta niciun bot închis."); return out; }
-    linii.push("Săptămâna: " + r.n + " boți închiși, total " + U(r.total) + ", " + r.pePlus + " pe plus (" + P(r.pePlus / r.n) + ").");
+    // v100.40: totalul NET (dupa comisioane si funding) si cati au iesit pe plus NET; brutul Pionex in paranteza
+    linii.push("Săptămâna: " + r.n + " boți închiși, net " + U(r.net) + " (înainte de comisioane și funding " + U(r.total) + "), " + r.pePlusNet + " pe plus (" + P(r.pePlusNet / r.n) + ").");
     linii.push("Din grile " + U(r.grile) + ", din poziție " + U(r.pozitie) + ", comisioane și funding " + U(r.comisioane + r.funding) + ".");
     var g = r.greseli[0];
     if (g) linii.push("Greșeala cea mai scumpă: „" + g.titlu + "” — " + g.n + " boți, " + U(g.cost) + ".");
