@@ -53,9 +53,10 @@ await test("csvPionex fara cursuri: coloanele de curs si lei goale (nu 0), total
 
 await test("pagina: butonul din Declaratie descarca CSV-ul anului ales (cu BOM pentru Excel)", () => {
   const t2 = fs.readFileSync(new URL("../public/lib/t212-ecran.js", import.meta.url), "utf8");
-  assert.match(t2, /data-action-click="t212CsvPionex\(\)"/);
-  const i = t2.indexOf("function t212CsvPionex("), corp = t2.slice(i, t2.indexOf("\n}", i));
-  assert.match(corp, /T212\.csvPionex\(/); assert.match(corp, /new Blob/); assert.match(corp, /\\ufeff|﻿/); assert.match(corp, /pionex-/);
+  // v100.34: butonul doar-Pionex a fost inlocuit de CSV-ul comun (T212 + Pionex) - randurile Pionex sunt aceleasi (probate in v10034)
+  assert.match(t2, /data-action-click="t212CsvDeclaratie\(\)"/);
+  const i = t2.indexOf("function t212CsvDeclaratie("), corp = t2.slice(i, t2.indexOf("\n}", i));
+  assert.match(corp, /T212\.csvDeclaratie\(/); assert.match(corp, /new Blob/); assert.match(corp, /\\ufeff|﻿/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);
