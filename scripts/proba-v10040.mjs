@@ -196,6 +196,7 @@ await test("🟡 Yahoo: la 401 crumb-ul se reface pe loc; simbolul inexistent (4
     cereri.push(u);
     if (u.startsWith("https://fc.yahoo.com")) return { headers: { get: () => "A=1; path=/" } };
     if (u.includes("getcrumb")) { crumbN++; return { ok: true, status: 200, text: async () => "crumb" + crumbN }; }
+    if (u.includes("COTIUSDT")) return { ok: false, status: 404, json: async () => ({}) };
     if (u.includes("quoteSummary")) return u.includes("crumb1") ? { ok: false, status: 401, json: async () => ({}) } : { ok: true, status: 200, json: async () => ({ quoteSummary: { result: [{}] } }) };
     if (u.includes("COTIUSDT")) return { ok: false, status: 404, json: async () => ({}) };
     return { ok: false, status: 500 };
@@ -204,6 +205,7 @@ await test("🟡 Yahoo: la 401 crumb-ul se reface pe loc; simbolul inexistent (4
   const y = creeazaYahooExtra({ fisier: fis, pauzaMs: 0, f });
   const e = await y.extra("AAPL"); assert.ok(e && e.analisti, "a mers dupa refacerea crumb-ului"); assert.equal(crumbN, 2);
   assert.equal(await y.closes("COTIUSDT"), null); const n = cereri.length; assert.equal(await y.closes("COTIUSDT"), null); assert.equal(cereri.length, n, "a doua oara din cache");
+  assert.equal(await y.extra("COTIUSDT"), null); const n2 = cereri.length; assert.equal(await y.extra("COTIUSDT"), null); assert.equal(cereri.length, n2, "insiderii: 404 tinut minte");
   try { fs.unlinkSync(fis); } catch {}
 });
 

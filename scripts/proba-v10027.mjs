@@ -92,7 +92,7 @@ await test("pagina: statistica Pionex (si Tot) ia si spot/copy; nota spune cati 
 });
 
 await test("colectorul v101.15 (reface arhiva pe forma 3)", () => {
-  assert.match(fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), /const VERSIUNE_COLECTOR = "v101\.(1[5-9]|[2-9]\d)";/, "cel putin v101.15");
+  assert.match(fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), /const VERSIUNE_COLECTOR = "v(?:101\.(?:1[5-9]|[2-9]\d|\d{3,})|10[2-9]\.\d+|1[1-9]\d\.\d+)";/, "cel putin v101.15");
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

@@ -59,6 +59,7 @@ export function creeazaYahooExtra({ fisier, fisierBare = null, pauzaMs = 400, f 
       try { jr = await cereExtra(); }
       catch (e) {
         if (e.status === 401 || e.status === 403) { crumb = null; crumbLa = 0; try { jr = await cereExtra(); } catch (e2) { if (c) return c.v; throw e2; } }
+        else if (e.status === 404) { cache[k] = { la: acum(), v: null }; salveaza(); return null; }   // simbolul n-are fisa la Yahoo: tinut minte 6 h
         else { if (c) return c.v; throw e; }
       }
       const j = jr.quoteSummary.result[0] || {};

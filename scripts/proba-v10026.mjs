@@ -144,7 +144,7 @@ await test("arhiva de forma veche se reface singura: tura o ia de la capat (retr
 });
 
 await test("colectorul cel putin v101.14 (tura arhivei stie de forma botilor)", () => {
-  assert.match(fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), /const VERSIUNE_COLECTOR = "v101\.(1[4-9]|[2-9]\d)";/);
+  assert.match(fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), /const VERSIUNE_COLECTOR = "v(?:101\.(?:1[4-9]|[2-9]\d|\d{3,})|10[2-9]\.\d+|1[1-9]\d\.\d+)";/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

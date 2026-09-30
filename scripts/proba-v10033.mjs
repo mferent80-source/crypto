@@ -59,7 +59,7 @@ await test("pagina: la deschiderea din link, fereastra Grid pe moneda ceruta, ca
 await test("colectorul da adresa Radarului alertei de pornire; versiunea v101.18", () => {
   const c = fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8");
   assert.match(c, /avertizariPornire\(\{[^)]*adresa: adresaRadarului/);
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(1[8-9]|[2-9]\d)";/, "cel putin v101.18");
+  assert.match(c, /const VERSIUNE_COLECTOR = "v(?:101\.(?:1[8-9]|[2-9]\d|\d{3,})|10[2-9]\.\d+|1[1-9]\d\.\d+)";/, "cel putin v101.18");
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

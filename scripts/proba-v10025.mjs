@@ -163,7 +163,7 @@ await test("colectorul: tura arhivei porneste din bucla, singura (nu se suprapun
   assert.match(c, /async function turaArhivaBoti\(\)/); assert.match(c, /arhivaInLucru/); assert.match(c, /ARHIVA_MS = 10 \* 60000/);
   const b = c.slice(c.indexOf("async function bucla()"));
   assert.match(b, /turaArhivaBoti\(\)\.catch/);
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(1[3-9]|[2-9]\d)";/, "cel putin v101.13");
+  assert.match(c, /const VERSIUNE_COLECTOR = "v(?:101\.(?:1[3-9]|[2-9]\d|\d{3,})|10[2-9]\.\d+|1[1-9]\d\.\d+)";/, "cel putin v101.13");
 });
 
 // ---- pagina ----
