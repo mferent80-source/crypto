@@ -7,6 +7,8 @@
 var StatisticaTrade = (function () {
   "use strict";
   var MIN = 10, TZ = "Europe/Bucharest";
+  var LEVIER_TREPTE = [[1, "1×"], [2, "2×"], [3, "3×"], [5, "4–5×"], [10, "6–10×"], [20, "11–20×"], [50, "21–50×"], [Infinity, "peste 50×"]], LEVIER_ORD = {};
+  LEVIER_TREPTE.forEach(function (t, i) { LEVIER_ORD[t[1]] = i; });
   var DISTRIBUTIE = [-Infinity, -0.2, -0.1, -0.05, 0, 0.05, 0.1, 0.2, Infinity];
 
   function nr(v) {
@@ -69,7 +71,13 @@ var StatisticaTrade = (function () {
     var dur = o.durate || [["sub o oră", 0, 1], ["1–6 ore", 1, 6], ["6–24 ore", 6, 24], ["1–3 zile", 24, 72], ["peste 3 zile", 72, Infinity]];
     s.perDurata = dur.map(function (d) { var g = grupa(l.filter(function (x) { return x.durataOre !== null && x.durataOre >= d[1] && x.durataOre < d[2]; })); g.et = d[0]; return g; });
     if (l.length && l.every(function (x) { return x.dir; })) s.perDir = grupeaza(l, function (x) { return x.dir || null; }).map(function (g) { g.dir = g.cheie; return g; }).sort(function (a, b) { return b.total - a.total; });
-    if (l.length && l.every(function (x) { return nr(x.levier) !== null; })) s.perLevier = grupeaza(l, function (x) { return nr(x.levier) !== null ? nr(x.levier) + "×" : null; }).map(function (g) { g.levier = g.cheie; return g; }).sort(function (a, b) { return parseFloat(a.levier) - parseFloat(b.levier); });
+    // v100.25: pe toata istoria Pionex sunt ~29 de levieri diferiti (1×…100×) - peste 8 valori se strang pe trepte
+    if (l.length && l.every(function (x) { return nr(x.levier) !== null; })) {
+      var difLev = {}; l.forEach(function (x) { difLev[nr(x.levier)] = 1; });
+      var peTrepte = Object.keys(difLev).length > 8, treapta = function (v) { for (var i = 0; i < LEVIER_TREPTE.length; i++) if (v <= LEVIER_TREPTE[i][0]) return i; return LEVIER_TREPTE.length - 1; };
+      s.perLevier = grupeaza(l, function (x) { var v = nr(x.levier); return peTrepte ? LEVIER_TREPTE[treapta(v)][1] : v + "×"; }).map(function (g) { g.levier = g.cheie; return g; })
+        .sort(function (a, b) { return peTrepte ? LEVIER_ORD[a.levier] - LEVIER_ORD[b.levier] : parseFloat(a.levier) - parseFloat(b.levier); });
+    }
     s.faraBaza = l.filter(function (x) { return !(x.baza > 0); }).length;
     for (var i = 0; i + 1 < DISTRIBUTIE.length; i++) {
       var de = DISTRIBUTIE[i], pana = DISTRIBUTIE[i + 1];
@@ -119,7 +127,10 @@ var StatisticaTrade = (function () {
     var M = (o && o.moneda) || "", v = curba.map(function (x) { return x.cumul; }), mn = Math.min(0, Math.min.apply(null, v)), mx = Math.max(0, Math.max.apply(null, v)), y = scala(mn, mx);
     var x = function (i) { return ST + (curba.length === 1 ? 0.5 : i / (curba.length - 1)) * (LAT - ST - DR); };
     var d = curba.map(function (p, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.cumul).toFixed(1); }).join(" ");
-    var pct = curba.map(function (p, i) { return '<circle class="stPunct" cx="' + x(i).toFixed(1) + '" cy="' + y(p.cumul).toFixed(1) + '" r="5"><title>' + esc(data(p.t) + " · " + (p.eticheta || "") + " " + bani(p.rezultat, M) + " · cumulat " + bani(p.cumul, M)) + "</title></circle>"; }).join("");
+    // v100.25: cu toata istoria (~2200 de trade-uri) linia pastreaza toate punctele, dar punctele de atins (cu eticheta) sunt
+    // cel mult ~300 - la latimea graficului oricum se suprapun; ultimul trade are mereu punctul lui
+    var pas = Math.max(1, Math.ceil(curba.length / 300));
+    var pct = curba.map(function (p, i) { if (i % pas && i !== curba.length - 1) return ""; return '<circle class="stPunct" cx="' + x(i).toFixed(1) + '" cy="' + y(p.cumul).toFixed(1) + '" r="5"><title>' + esc(data(p.t) + " · " + (p.eticheta || "") + " " + bani(p.rezultat, M) + " · cumulat " + bani(p.cumul, M)) + "</title></circle>"; }).join("");
     var ult = curba[curba.length - 1];
     return '<svg class="stSvg" viewBox="0 0 ' + LAT + " " + INA + '" role="img" aria-label="' + esc("Curba banilor: " + bani(ult.cumul, M) + " după " + curba.length + " trade-uri") + '">'
       + '<line class="stZero" x1="' + ST + '" x2="' + (LAT - DR) + '" y1="' + y(0).toFixed(1) + '" y2="' + y(0).toFixed(1) + '"></line>'

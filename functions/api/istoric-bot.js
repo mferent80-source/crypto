@@ -5,6 +5,7 @@
 // Pe pagina publicata (Cloudflare) nu exista ISTORIC -> 503 cu motiv, iar
 // Tabloul ramane pe istoricul din browser.
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
+import {uneste} from "../_shared/boti-arhiva.js";
 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(o,s=200)=>new Response(JSON.stringify(o),{status:s,headers:H});
@@ -30,6 +31,11 @@ export async function onRequestGet({request,env}){
   if(!env.ISTORIC?.get)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action")||"citeste";
   if(action==="config")return json({config:await citesteConfig(env)});
+  // v100.25: arhiva botilor inchisi (toata istoria Pionex), stransa de colector; ?la=<ultima vazuta> -> fara lista daca nu s-a schimbat
+  if(action==="botiInchisi"){let a=null;try{a=JSON.parse(await env.ISTORIC.get("botiInchisi")||"null")}catch{a=null}
+    const boti=a&&Array.isArray(a.boti)?a.boti:[],la=a&&nr(a.la)||null,complet=!!(a&&a.complet);
+    if(la&&nr(u.searchParams.get("la"))===la)return json({la,complet,n:boti.length,neschimbat:true});
+    return json({la,complet,n:boti.length,boti})}
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
   if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
@@ -62,8 +68,16 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="scan"?393216:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="scan"||action==="botiInchisi"?393216:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
+  // v100.25: colectorul trimite botii inchisi pe bucati; se unesc cu arhiva (compact, fara dubluri); „completa” nu se mai pierde
+  if(action==="botiInchisi"){
+    if(!corp||!Array.isArray(corp.boti))return json({error:"Lipseste lista boti"},400);
+    let a=null;try{a=JSON.parse(await env.ISTORIC.get("botiInchisi")||"null")}catch{a=null}
+    const boti=uneste(a&&a.boti,corp.boti),complet=!!(a&&a.complet)||corp.complet===true,la=Date.now();
+    await env.ISTORIC.put("botiInchisi",JSON.stringify({la,complet,boti}));
+    return json({ok:true,n:boti.length,complet,la});
+  }
   if(action==="piata"){
     const txt=(v,k)=>typeof v==="string"?v.slice(0,k):"",sim=v=>txt(v,16).toUpperCase().replace(/[^A-Z0-9]/g,"");
     const f=corp&&corp.funding;

@@ -2097,4 +2097,6 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .stStat .stBtn{width:auto;flex:0 0 auto;padding:5px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
 .stStat .stBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
 .stStat .stBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#jurnaltrade .jtMai{display:block;width:100%;margin:10px 0 0;padding:10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--text);font:inherit;cursor:pointer}
+#jurnaltrade .jtMai:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 /* stStat end */

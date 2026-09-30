@@ -43,9 +43,11 @@ async function citesteBoti(env,params={}){
   if(d.result!==true)throw Object.assign(Error("Pionex bot API: raspuns fara result:true"),{status:502,motiv:"fara-result-true"});
   // v90: cand n-ai niciun bot pornit, Pionex raspunde result:true + results:null (vazut 25.09, dupa inchiderea lui
   // MET) - asta e "zero boti", nu o forma stricata. Orice alt ne-sir ramane eroare.
-  if(d.data&&d.data.results===null)return [];
+  // v100.25: Pionex da istoria pe PAGINI de cate 10 (limit e ignorat); cursorul paginii urmatoare vine in nextPageToken
+  const next=d.data&&typeof d.data.nextPageToken==="string"&&/^[A-Za-z0-9]{1,64}$/.test(d.data.nextPageToken)?d.data.nextPageToken:null;
+  if(d.data&&d.data.results===null)return {results:[],next};
   if(!Array.isArray(d.data?.results))throw Object.assign(Error("Pionex bot API: data.results nu e o lista"),{status:502,motiv:"forma-necunoscuta"});
-  return d.data.results;
+  return {results:d.data.results,next};
 }
 
 // Preturile perpetuelor, ca sa putem spune cat mai e pana la lichidare.
@@ -214,7 +216,9 @@ function normalizeaza(bot,preturi,harta){
 }
 
 export async function onRequestGet({request,env}){
-  const auth=await requireApiAuth(request,env,"bot-orders",30);
+  // v100.25: brut=1 (colectorul, pagina cu pagina prin istorie) are limita lui, ca sa nu manance din cea a paginii
+  const brutCerut=new URL(request.url).searchParams.get("brut")==="1";
+  const auth=await requireApiAuth(request,env,brutCerut?"bot-orders-arhiva":"bot-orders",brutCerut?40:30);
   if(!auth.ok)return authErrorResponse(auth,H);
   if(!(env.PIONEX_API_KEY&&env.PIONEX_API_SECRET))
     return json({error:"Cheile PIONEX_API_KEY / PIONEX_API_SECRET nu sunt configurate."},503);
@@ -225,10 +229,11 @@ export async function onRequestGet({request,env}){
   // Pionex vrea starea cu litere MICI pentru istoric (verificat 24.09: status=finished da botii inchisi;
   // CLOSED/FINISHED cu majuscule sunt ignorate tacut si vine doar botul care ruleaza).
   if(stare&&/^[A-Za-z_]{3,20}$/.test(stare))params.status=stare.toLowerCase();
+  const tok=u.searchParams.get("pageToken");if(tok&&/^[A-Za-z0-9]{1,64}$/.test(tok))params.pageToken=tok;
 
   const probleme={};
-  let brute;
-  try{brute=await citesteBoti(env,params)}
+  let brute,next=null;
+  try{({results:brute,next}=await citesteBoti(env,params))}
   catch(e){
     const corp={error:e.message};
     if(e.motiv)corp.motiv=e.motiv;
@@ -236,6 +241,8 @@ export async function onRequestGet({request,env}){
     if(e.retryAfter)corp.retryAfter=e.retryAfter;
     return json(corp,e.status||502,e.retryAfter?{"retry-after":String(e.retryAfter)}:{});
   }
+
+  if(brutCerut)return json({citit:Date.now(),bots:brute,nextPageToken:next});
 
   let preturi={},harta=null;
   await Promise.all([
@@ -253,6 +260,7 @@ export async function onRequestGet({request,env}){
   const raspuns={
     citit:Date.now(),
     bots,
+    nextPageToken:next,
     sumar:{
       numar:bots.length,
       active:bots.filter(b=>b.activ).length,

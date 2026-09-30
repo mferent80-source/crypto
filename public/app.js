@@ -5239,14 +5239,26 @@ function jtNotaSalveaza(id,text){var n=jtNote();if(String(text||"").trim())n[id]
 function jtNota(el){if(!el)return;jtNotaSalveaza(el.getAttribute("data-id"),el.value);toast("Notița e salvată","good")}
 // dispecerul data-action-* nu primeste elementul (doar this.value) - notita are nevoie si de id
 document.addEventListener("change",function(e){var t=e.target;if(t&&t.classList&&t.classList.contains("jtNota"))jtNota(t)});
+// v100.25 (30.09, el: „FA IDEILE” - ideea 2): botii inchisi = prima pagina Pionex (cei mai noi, proaspeti) + arhiva de acasa
+// (toata istoria, stransa de colector). Pe pagina publicata arhiva lipseste (503) -> doar prima pagina, spus pe fata (jtNotaPionex).
+var jtArhiva={la:null,boti:null,complet:false,sursa:null};
+async function jtAduBoti(){
+  var d=await getJSON("/api/bot-orders?status=finished&limit=100"),p=d&&Array.isArray(d.bots)?d.bots.map(function(b){return b.brut||b}):null;
+  if(!p)return null;
+  try{var a=await getJSON("/api/istoric-bot?action=botiInchisi"+(jtArhiva.la?"&la="+encodeURIComponent(jtArhiva.la):""));
+    if(a&&!a.neschimbat&&Array.isArray(a.boti)){jtArhiva.boti=a.boti;jtArhiva.la=a.la;jtArhiva.complet=!!a.complet}else if(a&&a.neschimbat)jtArhiva.complet=!!a.complet}catch(e){}
+  jtArhiva.sursa=jtArhiva.boti?"acasa":"pagina";
+  var id=function(b){return String(b&&(b.strategyId||b.buOrderId)||"")},vazut={};p.forEach(function(b){vazut[id(b)]=1});
+  return p.concat((jtArhiva.boti||[]).filter(function(b){return !vazut[id(b)]}));
+}
+function jtArataMai(){jtStare.arata=(jtStare.arata||30)+30;jtRender()}
 async function jtPorneste(forta){
   if(jtStare.inLucru)return;
   if(!forta&&jtStare.boti&&Date.now()-jtStare.la<5*60000){jtRender();return}
   jtStare.inLucru=true;if($("jtStare"))$("jtStare").textContent="aduc boții închiși din Pionex…";
   try{
-    var d=await getJSON("/api/bot-orders?status=finished&limit=100");
-    // ruta intoarce botii normalizati, cu forma bruta a Pionex in .brut
-    jtStare.boti=d&&Array.isArray(d.bots)?d.bots.map(function(b){return b.brut||b}):null;jtStare.eroare=jtStare.boti?null:"Pionex nu a dat lista";
+    // ruta intoarce botii normalizati, cu forma bruta a Pionex in .brut; v100.25: + arhiva de acasa (jtAduBoti)
+    jtStare.boti=await jtAduBoti();jtStare.eroare=jtStare.boti?null:"Pionex nu a dat lista";
     try{var cf=await getJSON("/api/istoric-bot?action=contrafactual");jtStare.cf=cf&&cf.contrafactual||{}}catch(e){jtStare.cf=null}
     try{var rp=await getJSON("/api/istoric-bot?action=raport");jtStare.raport=rp&&rp.raport||null}catch(e){jtStare.raport=undefined}
   }catch(e){jtStare.eroare=grTextEroare(e)}
@@ -5280,8 +5292,11 @@ function jtStatDate(piata){
   var tr=StatisticaTrade.dinPerioada(t.tr,per,Date.now());
   return C[piata]={k:k,tr:tr,toate:t.tr,s:StatisticaTrade.calc(tr,piata==="actiuni"?{moneda:t.m,durate:JT_DURATE_ZILE}:{moneda:t.m}),m:t.m,lpu:t.lpu};
 }
-// v100.23 (revizie): Pionex dă doar ULTIMII boți închiși (cerem 100, vin ~10) - se spune pe față, ca totalul să nu pară toată istoria
-function jtStatNota(piata,d){var c=jtStat.toate.crypto,nb=c?c.tr.length:0,px="doar ultimii "+nb+" boți închiși pe care îi dă Pionex";return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212), "+px+"; boții apar cu „(bot)”"}
+// v100.25: de unde vin botii, spus pe fata - toata istoria (arhiva de acasa completa), inca in lucru, sau doar prima pagina Pionex
+// (v100.23 scria „doar ultimii ~10” - gresit: Pionex da istoria pe pagini de cate 10); + botii spot grid / smart copy lasati deoparte
+function jtNotaPionex(){var c=jtStat.toate.crypto,nb=c?c.tr.length:0,A=jtArhiva||{},alt=(jtStare.boti||[]).filter(function(b){return b&&b.buOrderType&&b.buOrderType!=="futures_grid"}).length;
+  return (A.sursa==="acasa"?(A.complet?"toată istoria Pionex ("+nb+" boți)":nb+" boți până acum — colectorul încă strânge istoria"):"doar ultimii "+nb+" boți (prima pagină Pionex) — toată istoria se vede de acasă")+(alt?" · "+alt+" boți spot grid / smart copy lăsați deoparte":"")}
+function jtStatNota(piata,d){var px=jtNotaPionex();return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212); Pionex: "+px+"; boții apar cu „(bot)”"}
 function jtStatRender(piata){
   var el=$(piata==="crypto"?"jtStatCrypto":piata==="actiuni"?"jtStatActiuni":"jtStatTot");if(!el)return;
   var d=null;try{d=jtStatDate(piata)}catch(e){console.error("statistica",piata,e);el.innerHTML='<p class="tbSub">Statistica nu s-a putut socoti: '+escapeHtml(e.message)+'</p>';return}
@@ -5322,14 +5337,16 @@ function jtRender(){
   box.innerHTML=cirea+'<div class="tbKpi jtKpi">'+cel("Rezultat realizat",U(r.total),cls(r.total),"înainte de comisioane și funding · "+r.n+" boți, "+r.pePlus+" pe plus ("+P(r.pePlus/r.n)+")")+cel("Din grile",U(r.grile),cls(r.grile),"ce a făcut gridul")+cel("Din poziție",U(r.pozitie),cls(r.pozitie),"direcția prețului")+cel("Comisioane + funding",U(r.comisioane+r.funding),"bad","investit mediu "+(r.investitMediu!=null?r.investitMediu.toFixed(0):"—")+" USDT")+'</div>';
   gr.innerHTML=r.greseli.length?'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Greșeala</th><th>De câte ori</th><th>Rezultatul boților cu ea</th><th>Ce aș face data viitoare</th></tr></thead><tbody>'+r.greseli.map(function(g){return '<tr><td><b>'+escapeHtml(g.titlu)+'</b></td><td>'+g.n+'</td><td class="'+cls(g.cost)+'">'+U(g.cost)+'</td><td class="jtSfat">'+escapeHtml(g.dataViitoare)+'</td></tr>'}).join("")+'</tbody></table></div>'+(r.greseli[0]&&r.greseli[0].cost<0?'<p class="tbFac">👉 <b>Ce aș face eu:</b> încep cu „'+escapeHtml(r.greseli[0].titlu)+'” — a costat '+U(r.greseli[0].cost)+' pe '+r.greseli[0].n+' boți.</p>':''):'<p class="good">Nicio greșeală găsită automat.</p>';
   var note=jtNote(),data=function(t){return new Date(t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})};
-  li.innerHTML=l.map(function(t){
+  // v100.25: cu toata istoria (~2200 de boti) lista vine pe bucati de cate 30
+  var arata=jtStare.arata||30;
+  li.innerHTML=l.slice(0,arata).map(function(t){
     var dur=t.durataOre<1?Math.round(t.durataOre*60)+" min":t.durataOre.toFixed(1).replace(".",",")+" h";
     return '<div class="jtTrade"><div class="jtCap"><b>'+escapeHtml(t.moneda)+'</b> <span class="tbSub">'+escapeHtml(t.dir+" "+(t.levier||"?")+"× · "+(t.investit!=null?t.investit.toFixed(0):"?")+" USDT · "+data(t.pornit)+" → "+data(t.inchis)+" ("+dur+")")+'</span><b class="jtRez '+cls(t.rezultat)+'">'+U(t.rezultat)+(t.pct!=null?' <span class="tbSub">'+P(t.pct)+'</span>':'')+'</b></div>'
       +'<div class="tbSub">grile '+U(t.grile)+' · poziție '+U(t.pozitie)+' · comisioane '+U(t.comisioane)+' · funding '+U(t.funding)+' · interval '+escapeHtml(t.jos+" – "+t.sus+", "+t.grileN+" grile "+t.mod)+(t.pasNet!=null?", "+P(t.pasNet)+" net/grilă":"")+'</div>'
       +(cfm[t.id]?'<p class="jtCf">Radarul ar fi zis: <b class="'+(cfm[t.id].nivel==="nu"?"bad":cfm[t.id].nivel==="porneste"?"good":"tbWarn")+'">'+escapeHtml((GR_NIVEL[cfm[t.id].nivel]||[cfm[t.id].nivel])[0])+'</b>'+(cfm[t.id].motive&&cfm[t.id].motive.length?' <span class="tbSub">— '+escapeHtml(cfm[t.id].motive.join("; "))+'</span>':"")+'</p>':"")
       +(t.greseli.length?'<ul class="jtGreseli">'+t.greseli.map(function(g){return '<li><b>'+escapeHtml(g.titlu)+':</b> '+escapeHtml(g.text)+'</li>'}).join("")+'</ul>':'<p class="tbSub good">fără greșeli găsite automat</p>')
       +'<textarea class="jtNota" data-id="'+escapeHtml(t.id)+'" rows="2" placeholder="De ce am intrat, ce am simțit, ce aș face altfel…">'+escapeHtml(note[t.id]||"")+'</textarea></div>';
-  }).join("");
+  }).join("")+(l.length>arata?'<button type="button" class="stBtn jtMai" data-action-click="jtArataMai()">Arată încă '+Math.min(30,l.length-arata)+' (ai văzut '+arata+' din '+l.length+')</button>':"");
 }
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;

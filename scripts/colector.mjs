@@ -25,7 +25,8 @@ import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
-const VERSIUNE_COLECTOR = "v101.12";
+import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
+const VERSIUNE_COLECTOR = "v101.13";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -419,6 +420,21 @@ async function planulPentruProbe() {
   } catch (e) { jurnal("plan pentru laborator", e.message); }
   const suma = ult && ult.investit > 0 ? ult.investit : 100, p = TabloExtra.propunePlan(ult, suma);
   return { plan: { plus: p.plus, minus: p.minus }, suma, levier: levier || 5, nota: p.nota };
+}
+
+// v100.25 (30.09, el: „FA IDEILE”): arhiva botilor inchisi - Pionex da istoria pe pagini de cate 10; prima tura o strange
+// pe toata (~226 de pagini, cu 2 s intre ele), apoi o data la 10 minute doar botii noi (scripts/lib/tura-arhiva-boti.mjs)
+const ARHIVA_MS = 10 * 60000;
+let arhivaLa = Date.now() - ARHIVA_MS + 60000, arhivaInLucru = false;
+async function turaArhivaBoti() {
+  if (arhivaInLucru || Date.now() - arhivaLa < ARHIVA_MS) return;
+  arhivaInLucru = true;
+  try {
+    const r = await strangeBoti({ cere, trimite });
+    arhivaLa = Date.now();
+    if (r.noi || r.pagini > 1) jurnal("arhiva boti inchisi:", r.noi, "noi,", r.total, "in total,", r.pagini, "pagini,", r.complet ? "completa" : "INCOMPLETA");
+  } catch (e) { jurnal("arhiva boti inchisi", e.message); arhivaLa = Date.now() - ARHIVA_MS + 3 * 60000; }
+  arhivaInLucru = false;
 }
 
 // v83: "daca ascultai de Radar" pentru botii inchisi - o data pe ora, cel mult 5 boti noi pe tura
@@ -838,6 +854,7 @@ async function bucla() {
   // cererile identice in zbor; asa nici cele diferite nu se calca in aceeasi secunda)
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message)).then(() => turaPoza()).catch((e) => jurnal("poza", e.message));
   turaCopie();
+  turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).catch((e) => jurnal("idei/dimineata", e.message));

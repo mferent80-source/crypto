@@ -79,10 +79,13 @@ await test("mici · un trade pe zero rupe seria; trade-urile fara suma pusa sunt
   assert.equal(f.faraBaza, 1); assert.match(ST.html(f, {}), /1 fără suma pusă/);
 });
 
-await test("7 · pagina spune ca Pionex da doar ultimii boti inchisi (nota statisticii Pionex si Tot)", () => {
+await test("7 · pagina spune de unde vin botii Pionex (nota statisticii Pionex si Tot)", () => {
+  // v100.25: „doar ultimii” era o premisa gresita (Pionex da istoria pe pagini de cate 10); textul sta acum in jtNotaPionex si
+  // apare doar cand chiar lipseste istoria (pagina publicata) - cazurile sunt probate in proba-v10025
   const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
   const i = app.indexOf("function jtStatNota("), corp = app.slice(i, app.indexOf("\n", i));
-  assert.match(corp, /ultimii/); assert.match(corp, /Pionex/);
+  assert.match(corp, /jtNotaPionex\(\)/); assert.match(corp, /Pionex/);
+  const j = app.indexOf("function jtNotaPionex("); assert.ok(j >= 0); assert.match(app.slice(j, j + 900), /ultimii/);
 });
 
 await test("🔴 alaturi · Declaratia Unica: Pionex NET = realizat + comisioane + funding (nu realizatul de dinainte de costuri)", () => {

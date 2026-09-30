@@ -522,8 +522,14 @@ function t212RaportDecl(l) {
   var an = t212.anDecl || new Date().getUTCFullYear();
   return T212.raportAnual({ inchise: l, dividende: t212.dividendeItems || [], boti: t212BotiInchisi(), an: an });
 }
+// v100.25: Pionex da istoria pe pagini; anul intreg vine doar din arhiva de acasa (colectorul), completa. Altfel se spune.
+function t212PionexIncomplet() {
+  var A = typeof jtArhiva !== "undefined" ? jtArhiva : null;
+  if (A && A.sursa === "acasa" && A.complet) return "";
+  return "⚠️ Pionex: nu e anul întreg — " + (A && A.sursa === "acasa" ? "colectorul de acasă încă strânge istoria boților" : "aici se văd doar ultimii boți (prima pagină Pionex); toată istoria se vede pe pagina de acasă") + ".";
+}
 function t212DeclaratieBloc(l) {
-  var r = t212RaportDecl(l), t = r.t212, px = r.pionex, L = function (v) { return t212Lei(v, 2); };
+  var r = t212RaportDecl(l), t = r.t212, px = r.pionex, L = function (v) { return t212Lei(v, 2); }, pxInc = t212PionexIncomplet();
   var ani = r.ani.length ? r.ani : [r.an];
   return '<div class="tbBloc" id="t212Decl"><div class="tbBlocCap"><h4>🧾 Pentru Declarația Unică</h4><span class="tbSub">pe anul vânzării · ' + ani.map(function (a) { return '<button type="button" class="t212BtnLinie' + (a === r.an ? " t212BtnAles" : "") + '" data-action-click="t212AnDeclaratie(' + a + ')">' + a + '</button>'; }).join(" ") + '</span></div>'
     + '<div class="grTabelWrap"><table class="grTabel"><tbody>'
@@ -534,6 +540,7 @@ function t212DeclaratieBloc(l) {
     + '<tr><td>Din care comisioane de conversie (deja scăzute)</td><td>' + L(-t.comisioane) + '</td></tr>'
     + '<tr><td>Dividende încasate în ' + r.an + '</td><td>' + L(t.dividende) + '</td></tr>'
     + '<tr><td>Pionex · boți închiși în ' + r.an + '</td><td><b>' + px.n + '</b> · NET <b class="' + t212Cls(px.net) + '">' + (px.net >= 0 ? "+" : "−") + Math.abs(px.net).toFixed(2) + ' USDT</b></td></tr>'
+    + (pxInc ? '<tr><td colspan="2" class="bad">' + escapeHtml(pxInc) + '</td></tr>' : '')
     + '</tbody></table></div>'
     + '<p class="tbSub">Sumele T212 sunt în lei, la cursul din ziua fiecărei tranzacții (așa le dă Trading 212), cu comisioanele de conversie scăzute. Pionex e în USDT: conversia în lei se face cu cursul BNR din ziua fiecărei închideri. Cotele de impozit și CASS le verifici cu contabilul — eu îți dau cifrele.</p>'
     + '<button type="button" class="t212BtnLinie" data-action-click="t212CopiazaDeclaratia()">Copiază pentru contabil</button></div>';
@@ -541,7 +548,8 @@ function t212DeclaratieBloc(l) {
 function t212AnDeclaratie(an) { t212.anDecl = an; if (typeof jtRenderActiuni === "function") jtRenderActiuni(); }
 function t212CopiazaDeclaratia() {
   var j = t212Jurnal(); if (!j) return;
-  var txt = t212RaportDecl(j.p.inchise).text;
+  var txt = t212RaportDecl(j.p.inchise).text, pxInc = t212PionexIncomplet();
+  if (pxInc) txt += "\n" + pxInc;
   var ok = function () { toast("Copiat — lipește-l în mesajul către contabil", "good"); };
   try { navigator.clipboard.writeText(txt).then(ok, function () { window.prompt("Copiază textul:", txt); }); } catch (e) { window.prompt("Copiază textul:", txt); }
 }
@@ -606,7 +614,8 @@ async function contTotAsigura() {
     if (!t212.istoric) { try { t212.istoric = await getJSON("/api/t212?action=istoric"); } catch (e) {} }
     if (!t212.piata) { try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) {} }
     // v89: botii inchisi (istoricul lui pe monede) si stirile despre moneda botului de pe Tablou
-    if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { var fb = await getJSON("/api/bot-orders?status=finished&limit=100"); contTot.inchise = JurnalTrade.din((fb && fb.bots || []).map(function (x) { return x.brut || x; })); } catch (e) { contTot.inchise = []; } }
+    // v100.25: toata istoria (arhiva de acasa + prima pagina Pionex), nu doar primii 10
+    if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { contTot.inchise = JurnalTrade.din((typeof jtAduBoti === "function" ? await jtAduBoti() : null) || []); } catch (e) { contTot.inchise = []; } }
     if (Date.now() - contTot.clasamentLa > 10 * 60000) { try { var cl = await getJSON("/api/istoric-bot?action=clasament"); contTot.clasament = cl && cl.clasament || null; contTot.clasamentLa = Date.now(); } catch (e) {} }
     var bb = typeof tbStare !== "undefined" && tbStare.bot; if (bb) await contTotStiriCrypto(String(bb.baza || "").replace(/\.PERP$/, ""));
   } finally { contTot.inLucru = false; }
