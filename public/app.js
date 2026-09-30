@@ -5252,10 +5252,51 @@ async function jtPorneste(forta){
   }catch(e){jtStare.eroare=grTextEroare(e)}
   jtStare.inLucru=false;jtStare.la=Date.now();jtRender();
 }
+// v100.22 (30.09, el: „statistica trade-ului pe Pionex și pe Trade 212 … ce am făcut bine, ce am greșit …” -> „Sus pe fiecare filă”):
+// statistica trade-urilor sus pe fiecare fila a Jurnalului (lib/statistica-trade.js). Pionex NET (dupa comisioane si funding),
+// Trading 212 dupa comisioanele de conversie (FIFO), Tot in lei (USDT la cursul ultimei tranzactii T212). Calculul se tine minte
+// pana vin date noi; ordinea tabelului si CSV-ul nu-l refac.
+var jtStat={ord:{crypto:"noi",actiuni:"noi",tot:"noi"},deschis:{},cache:{}};
+var JT_DURATE_ZILE=[["sub o zi",0,24],["1–7 zile",24,168],["1–4 săptămâni",168,672],["peste o lună",672,Infinity]];
+var JT_STAT_TITLU={crypto:"Statistica · Pionex",actiuni:"Statistica · Trading 212",tot:"Statistica · tot, în lei"};
+function jtStatHtml(s,o){return StatisticaTrade.html(s,Object.assign({actiuneOrdine:"jtStatOrdine",actiuneCsv:"jtStatCsv",ordine:jtStat.ord[o.piata]||"noi",deschis:!!jtStat.deschis[o.piata]},o))}
+function jtStatDate(piata){
+  var C=jtStat.cache;
+  if(piata==="crypto"){
+    if(!jtStare.boti)return null;var k="c|"+jtStare.la+"|"+jtStare.boti.length;if(C.crypto&&C.crypto.k===k)return C.crypto;
+    var tr=StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti));return C.crypto={k:k,tr:tr,s:StatisticaTrade.calc(tr,{moneda:"USDT"}),m:"USDT"};
+  }
+  if(piata==="actiuni"){
+    var j=typeof t212Jurnal==="function"?t212Jurnal():null;if(!j)return null;var k2="a|"+j.u.length;if(C.actiuni&&C.actiuni.k===k2)return C.actiuni;
+    var tr2=StatisticaTrade.dinT212(j.p.inchise);return C.actiuni={k:k2,tr:tr2,s:StatisticaTrade.calc(tr2,{moneda:"lei",durate:JT_DURATE_ZILE}),m:"lei"};
+  }
+  if(piata==="tot"){
+    var c=jtStatDate("crypto"),a=jtStatDate("actiuni"),fx=typeof t212Fx==="function"?t212Fx():null;if(!c||!a||!(fx>0))return null;
+    var k3=c.k+"|"+a.k+"|"+fx;if(C.tot&&C.tot.k===k3)return C.tot;
+    var lpu=1/fx,tr3=c.tr.map(function(x){return Object.assign({},x,{rezultat:x.rezultat!=null?x.rezultat*lpu:null,baza:x.baza!=null?x.baza*lpu:null,comisioane:x.comisioane!=null?x.comisioane*lpu:null,eticheta:x.eticheta+" (bot)"})}).concat(a.tr);
+    return C.tot={k:k3,tr:tr3,s:StatisticaTrade.calc(tr3,{moneda:"lei"}),m:"lei",lpu:lpu};
+  }
+  return null;
+}
+function jtStatNota(piata,d){return piata==="crypto"?"net, după comisioane și funding":piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212); boții apar cu „(bot)”"}
+function jtStatRender(piata){
+  var el=$(piata==="crypto"?"jtStatCrypto":piata==="actiuni"?"jtStatActiuni":"jtStatTot");if(!el)return;
+  var d=null;try{d=jtStatDate(piata)}catch(e){console.error("statistica",piata,e);el.innerHTML='<p class="tbSub">Statistica nu s-a putut socoti: '+escapeHtml(e.message)+'</p>';return}
+  if(!d){el.innerHTML=piata==="tot"?'<p class="tbSub">Statistica pe tot apare după ce sunt citite și boții Pionex, și istoricul Trading 212.</p>':"";return}
+  el.innerHTML=jtStatHtml(d.s,{titlu:JT_STAT_TITLU[piata],piata:piata,nota:jtStatNota(piata,d)});
+}
+function jtStatOrdine(piata,k){jtStat.ord[piata]=k==="pierderi"||k==="castiguri"?k:"noi";jtStat.deschis[piata]=true;jtStatRender(piata)}
+function jtStatCsv(piata){
+  var d=jtStatDate(piata);if(!d){toast("Datele nu sunt încă citite","bad");return}
+  var b=new Blob(["﻿"+StatisticaTrade.csv(d.tr,d.m)],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download="trade-uri-"+piata+"-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500);toast("Raportul CSV e descărcat ("+d.tr.length+" trade-uri)","good");
+}
 function jtRender(){
   var box=$("jtRezumat"),gr=$("jtGreseli"),li=$("jtLista"),st=$("jtStare");if(!box)return;
   if(jtStare.eroare){box.innerHTML='<div class="tbBloc"><p class="bad">'+escapeHtml(jtStare.eroare)+'</p></div>';return}
   var l=JurnalTrade.din(jtStare.boti||[]),r=JurnalTrade.rezumat(l),P=GridCalcul.procent;
+  jtStatRender("crypto");if(typeof jtFiltru!=="undefined"&&jtFiltru==="tot")jtStatRender("tot");   // v100.22
   var U=function(v){return v==null?"—":(v>=0?"+":"−")+Math.abs(v).toFixed(2)+" USDT"},cls=function(v){return v==null?"":v>=0?"good":"bad"};
   if($("jtListaSub"))$("jtListaSub").textContent=l.length+" boți · cel mai nou primul · notițele rămân pe dispozitiv";
   if(st)st.textContent=l.length+" boți închiși · citit la "+new Date(jtStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"});
@@ -5274,7 +5315,7 @@ function jtRender(){
   var rg=$("jtReguli");if(rg){var rp2=Obiceiuri.reguliPersonale(l,"Europe/Bucharest");
     rg.innerHTML=!rp2.suficient?'<p class="tbSub">'+rp2.n+' boți în jurnal: mai trebuie '+rp2.lipsa+' ca să-ți spun unde pierzi TU (ore, monede, durate, direcție). Sub 30, orice „regulă” ar fi noroc.</p>'
       :rp2.reguli.length?'<ul class="grLista">'+rp2.reguli.slice(0,5).map(function(r){return '<li class="bad">'+escapeHtml(r.text)+'</li>'}).join("")+'</ul><p class="tbFac">👉 <b>Ce aș face eu:</b> aș evita boții '+escapeHtml(rp2.reguli[0].grupa)+' până nu se schimbă cifra.</p>':'<p class="good">Pe '+rp2.n+' boți nu văd o grupă care să piardă clar mai des decât restul.</p>'}
-  box.innerHTML=cirea+'<div class="tbKpi jtKpi">'+cel("Rezultat total",U(r.total),cls(r.total),r.n+" boți, "+r.pePlus+" pe plus ("+P(r.pePlus/r.n)+")")+cel("Din grile",U(r.grile),cls(r.grile),"ce a făcut gridul")+cel("Din poziție",U(r.pozitie),cls(r.pozitie),"direcția prețului")+cel("Comisioane + funding",U(r.comisioane+r.funding),"bad","investit mediu "+(r.investitMediu!=null?r.investitMediu.toFixed(0):"—")+" USDT")+'</div>';
+  box.innerHTML=cirea+'<div class="tbKpi jtKpi">'+cel("Rezultat realizat",U(r.total),cls(r.total),"înainte de comisioane și funding · "+r.n+" boți, "+r.pePlus+" pe plus ("+P(r.pePlus/r.n)+")")+cel("Din grile",U(r.grile),cls(r.grile),"ce a făcut gridul")+cel("Din poziție",U(r.pozitie),cls(r.pozitie),"direcția prețului")+cel("Comisioane + funding",U(r.comisioane+r.funding),"bad","investit mediu "+(r.investitMediu!=null?r.investitMediu.toFixed(0):"—")+" USDT")+'</div>';
   gr.innerHTML=r.greseli.length?'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Greșeala</th><th>De câte ori</th><th>Rezultatul boților cu ea</th><th>Ce aș face data viitoare</th></tr></thead><tbody>'+r.greseli.map(function(g){return '<tr><td><b>'+escapeHtml(g.titlu)+'</b></td><td>'+g.n+'</td><td class="'+cls(g.cost)+'">'+U(g.cost)+'</td><td class="jtSfat">'+escapeHtml(g.dataViitoare)+'</td></tr>'}).join("")+'</tbody></table></div>'+(r.greseli[0]&&r.greseli[0].cost<0?'<p class="tbFac">👉 <b>Ce aș face eu:</b> încep cu „'+escapeHtml(r.greseli[0].titlu)+'” — a costat '+U(r.greseli[0].cost)+' pe '+r.greseli[0].n+' boți.</p>':''):'<p class="good">Nicio greșeală găsită automat.</p>';
   var note=jtNote(),data=function(t){return new Date(t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})};
   li.innerHTML=l.map(function(t){

@@ -427,6 +427,11 @@ function jtAplicaFiltru() {
   var a = $("jtCrypto"), b = $("jtActiuni");
   if (a) a.hidden = jtFiltru === "actiuni";
   if (b) b.hidden = jtFiltru === "crypto";
+  // v100.22: pe „Tot” statistica comuna, in lei, deasupra; cea a fiecarei piete ramane pe fila ei
+  var st = $("jtStatTot"), sc = $("jtStatCrypto");
+  if (st) st.hidden = jtFiltru !== "tot";
+  if (sc) sc.hidden = jtFiltru === "tot";
+  if (jtFiltru === "tot" && typeof jtStatRender === "function") jtStatRender("tot");
   ["crypto", "actiuni", "tot"].forEach(function (k) { var e = $("jtF-" + k); if (e) e.setAttribute("aria-pressed", String(jtFiltru === k)); });
   if (jtFiltru !== "crypto") jtRenderActiuni();
 }
@@ -436,7 +441,7 @@ function jtRenderActiuni() {
   if (!j) { box.innerHTML = '<div class="tbBloc"><p class="tbSub">' + escapeHtml(t212.inLucru ? "citesc istoricul Trading 212…" : t212.istoricEroare || "Istoricul Trading 212 nu e încă strâns: colectorul de acasă îl coboară (o pagină la 11 s), apoi apare aici.") + '</p></div>'; return; }
   var r = j.r, l = j.p.inchise, P = t212Pct, L = function (v) { return t212Lei(v); }, cls = t212Cls;
   var cel = function (et, v, c, sub) { return '<div class="tbKpiCel"><span class="tbEt2">' + escapeHtml(et) + '</span><b class="tbKpiVal ' + (c || "") + '">' + escapeHtml(v) + '</b>' + (sub ? '<span class="tbSub">' + escapeHtml(sub) + '</span>' : "") + '</div>'; };
-  var st = t212.istoric.stare || {}, h = '<h3 class="jtTitluPiata">📈 Acțiuni · Trading 212</h3>';
+  var st = t212.istoric.stare || {}, h = '<h3 class="jtTitluPiata">📈 Acțiuni · Trading 212</h3>' + (jtFiltru === "actiuni" ? '<div id="jtStatActiuni"></div>' : "");   // v100.22: statistica T212 sus pe fila ei
   h += '<div class="tbKpi jtKpi">' + cel("Câștigat REAL", L(r.total), cls(r.total), r.n + " trade-uri, " + r.pePlus + " pe plus (" + P(r.n ? r.pePlus / r.n : null).replace("+", "") + ")" + (t212.dividende && t212.dividende.n ? " · + dividende " + t212Lei(t212.dividende.total, 2) : ""))
     + cel("T212 îți arată", L(r.totalOficial), "", "fără comisioane") + cel("Comisioane de conversie", L(-r.comisioane), "bad", "0,15% la fiecare schimb lei↔dolari")
     + cel("Vândute în afara orelor", L(r.ext.total), cls(r.ext.total), r.ext.n + " trade-uri") + '</div>';
@@ -471,6 +476,7 @@ function jtRenderActiuni() {
       + '<textarea class="jtNota" data-id="' + escapeHtml(id) + '" rows="1" placeholder="De ce am cumpărat, ce aș face altfel…">' + escapeHtml(note[id] || "") + '</textarea></div>';
   }).join("") + '</details>';
   box.innerHTML = h;
+  if (typeof jtStatRender === "function") { if (jtFiltru === "actiuni") jtStatRender("actiuni"); else if (jtFiltru === "tot") jtStatRender("tot"); }   // v100.22
 }
 // v87: "cat te-ar fi salvat stopul" - rejucat pe preturile reale (zilnice), din verdictele colectorului
 // v88: toate variantele de stop, rejucate pe trade-urile lui: fix (-8/-10/-15%) si care URCA dupa maxim (planul

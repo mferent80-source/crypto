@@ -2051,3 +2051,49 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 /* v100.4: profitul doar din grid, sub rezultatul total (el: „lipsește profit per grilă, adică doar din grid”) */
 #tabloubot .tbKpiGrid{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
 #tabloubot .tbKpiGrid.good{color:var(--good)}#tabloubot .tbKpiGrid.bad{color:var(--bad)}
+/* stStat start - v100.22: statistica trade-urilor (Jurnal de trade, sus pe fiecare fila); acelasi bloc in pagina si in demo.
+   Culorile graficelor trecute prin validatorul dataviz pe panoul #0d1722: plus #199e70 / minus #e66767 (CVD 6,5 = a doua codare:
+   deasupra / dedesubt de zero + semnul + tabelul), curba #3987e5. */
+.stStat{display:flex;flex-direction:column;gap:12px;margin:0 0 18px}
+.stStat .stCap{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
+.stStat .stCap h3{margin:0;font-size:20px;text-wrap:balance}
+.stStat .stSub{color:var(--muted);font-size:13px;line-height:1.4}
+.stStat .stTiles{display:flex;flex-wrap:wrap;gap:1px;background:var(--tb-linie);border:1px solid var(--tb-linie);border-radius:12px;overflow:hidden}
+.stStat .stTile{flex:1 1 170px;display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:var(--panel);min-width:0}
+.stStat .stEt{color:var(--muted);font-size:13px}
+.stStat .stVal{font-size:22px;font-weight:800;line-height:1.15;color:var(--text);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stStat .good{color:var(--good)}
+.stStat .bad{color:var(--bad)}
+.stStat .stDoua{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
+.stStat .stBloc{padding:14px 16px;border-radius:12px;background:var(--panel);border:1px solid var(--tb-linie);min-width:0}
+.stStat .stBloc h4{margin:0 0 8px;font-size:16px}
+.stStat .stBlocCap{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px;margin:0 0 6px}
+.stStat .stBlocCap h4{margin:0}
+.stStat .stBine{border-left:3px solid var(--good)}
+.stStat .stGresit{border-left:3px solid var(--bad)}
+.stStat .stBine ul,.stStat .stGresit ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.45;color:var(--text)}
+.stStat .stAvert{margin:0;padding:10px 14px;border-radius:12px;border:1px solid var(--warn);color:var(--text);line-height:1.45}
+.stStat .stSvg{display:block;width:100%;height:auto;margin:4px 0 10px}
+.stStat .stCurba{fill:none;stroke:#3987e5;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.stStat .stPunct{fill:#3987e5;fill-opacity:0;stroke:none;cursor:pointer}
+.stStat .stPunct:hover{fill-opacity:1}
+.stStat .stZero{stroke:var(--muted);stroke-opacity:.45;stroke-width:1}
+.stStat .stPlus{fill:#199e70}
+.stStat .stMinus{fill:#e66767}
+.stStat .stBara{stroke:var(--panel);stroke-width:2;paint-order:stroke}
+.stStat .stBara:hover{opacity:.82}
+.stStat .stAx{fill:var(--muted);font-size:11px}
+.stStat .stTabelWrap{overflow-x:auto}
+.stStat .stTabel{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.stStat .stTabel th{color:var(--muted);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--tb-linie);white-space:nowrap}
+.stStat .stTabel td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--tb-linie);white-space:nowrap;color:var(--text)}
+.stStat .stTabel td.good{color:var(--good)}
+.stStat .stTabel td.bad{color:var(--bad)}
+.stStat .stTabel th:first-child,.stStat .stTabel td:first-child{text-align:left}
+.stStat .stToate summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.stStat .stUnelte{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin:10px 0}
+.stStat .stGrup{display:flex;flex-wrap:wrap;gap:6px}
+.stStat .stBtn{width:auto;flex:0 0 auto;padding:5px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.stStat .stBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
+.stStat .stBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* stStat end */
