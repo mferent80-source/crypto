@@ -4,8 +4,10 @@
 // ~3,6 KB brut; fara userId/keyId) si unirea fara dubluri. O folosesc si serverul (istoric-bot), si colectorul.
 // v100.26: + suma pusa reala (quoteInvestment, extraMargin, profitExited) si banii primiti inapoi (unlockQuoteAmount) => FORMA 2:
 // o arhiva de forma veche se reface singura (colectorul o ia de la capat)
-export const CAMPURI_ARHIVA=["totalRealizedProfit","gridProfit","totalFee","totalFundingFee","usdtInvestment","leverage","trend","bottom","top","row","gridType","initPrice","closedPrice","lossStop","quoteInvestment","extraMargin","profitExited","unlockQuoteAmount"];
-export const FORMA_ARHIVA=2;
+export const CAMPURI_ARHIVA=["totalRealizedProfit","gridProfit","totalFee","totalFundingFee","usdtInvestment","leverage","trend","bottom","top","row","gridType","initPrice","closedPrice","lossStop","quoteInvestment","extraMargin","profitExited","unlockQuoteAmount",
+  // v100.27: spot grid si smart copy (JurnalTrade.alte) => FORMA 3
+  "unlockUsdtAmount","baseAmount","profitWithdrawn","quoteTotalInvestment","profit","currentQuoteAmount","quoteOriginalInvestment","signalName"];
+export const FORMA_ARHIVA=3;
 export const ARHIVA_MAX=20000;
 // numerele Pionex vin ca siruri: se pastreaza asa (Jurnalul le citeste cu nr()); orice altceva cade
 const val=v=>typeof v==="string"?v.slice(0,40):typeof v==="number"&&Number.isFinite(v)?v:null;

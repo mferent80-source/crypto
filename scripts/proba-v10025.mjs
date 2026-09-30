@@ -10,7 +10,7 @@ const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url
 const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 const JT = new Function("GridCalcul", `${lib("jurnal-trade.js")}; return JurnalTrade;`)(G);
 const ST = new Function(`${lib("statistica-trade.js")}; return StatisticaTrade;`)();
-const { compactBot, uneste, idArhiva, CAMPURI_ARHIVA } = await import("../functions/_shared/boti-arhiva.js");
+const { compactBot, uneste, idArhiva, CAMPURI_ARHIVA, FORMA_ARHIVA } = await import("../functions/_shared/boti-arhiva.js");
 const { strangeBoti } = await import("./lib/tura-arhiva-boti.mjs");
 const { reseteazaRitmPionex } = await import("../functions/_shared/pionex.js");
 
@@ -36,7 +36,8 @@ await test("compactBot: doar campurile citite de Jurnal (fara userId/keyId), id-
   const b = bot(1), c = compactBot(b);
   assert.equal(c.strategyId, "s1"); assert.equal(c.createTime, b.createTime); assert.equal(c.closeTime, b.closeTime); assert.equal(c.buOrderType, "futures_grid");
   assert.equal(c.userId, undefined); assert.equal(c.keyId, undefined); assert.equal(c.buOrderData.nickname, undefined); assert.equal(c.buOrderData.riskRate, undefined);
-  assert.deepEqual(Object.keys(c.buOrderData).sort(), CAMPURI_ARHIVA.slice().sort());
+  // v100.27: arhiva are si campuri de spot grid / smart copy - aici, exact cele din lista pe care botul le are
+  assert.deepEqual(Object.keys(c.buOrderData).sort(), CAMPURI_ARHIVA.filter((k) => k in b.buOrderData).sort());
   assert.equal(compactBot({ ...b, closeTime: null }), null); assert.equal(compactBot({ ...b, strategyId: "", buOrderId: "" }), null); assert.equal(compactBot(null), null);
   assert.equal(idArhiva({ buOrderId: "b9" }), "b9"); assert.equal(idArhiva({ strategyId: "a<b>c" }), "abc");
   const brut = Array.from({ length: 30 }, (_, i) => bot(i)), f = (l) => JT.din(l).map((t) => [t.id, t.rezultat, t.pozitie, t.greseli.map((g) => g.cod).join()]);
@@ -63,7 +64,7 @@ function serverFals(arhiva) {
     trimise, get arhiva() { return a; },
     // acelasi contract ca serverul real (v100.26: si „forma” arhivei - una veche nu e completa pana nu e refacuta)
     cere: async (p) => { if (p.startsWith("/api/istoric-bot?action=botiInchisi")) return { boti: a.boti, complet: a.complet, forma: a.forma || 1, la: a.la, n: a.boti.length }; throw new Error("cale neasteptata " + p); },
-    trimite: async (p, corp) => { assert.equal(p, "/api/istoric-bot?action=botiInchisi"); trimise.push(corp); const complet = (a.forma === 2 && a.complet) || corp.complet === true; a = { boti: uneste(a.boti, corp.boti), complet, forma: complet ? 2 : a.forma || 1, la: Date.now() }; return { ok: true }; },
+    trimite: async (p, corp) => { assert.equal(p, "/api/istoric-bot?action=botiInchisi"); trimise.push(corp); const complet = (a.forma === FORMA_ARHIVA && a.complet) || corp.complet === true; a = { boti: uneste(a.boti, corp.boti), complet, forma: complet ? FORMA_ARHIVA : a.forma || 1, la: Date.now() }; return { ok: true }; },
   };
 }
 const cereCu = (px, srv) => async (p) => {
@@ -191,7 +192,7 @@ await test("pagina: botii inchisi = prima pagina Pionex (cei mai noi) + arhiva d
 await test("nota statisticii spune de unde vin botii: toata istoria / colectorul inca strange / doar prima pagina; si cati spot grid / smart copy raman deoparte", () => {
   const ctx = { jtStat: { toate: { crypto: { tr: new Array(2200) } } }, jtArhiva: { sursa: "acasa", complet: true }, jtStare: { boti: [{ buOrderType: "futures_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "smart_copy" }] } };
   vm.createContext(ctx); vm.runInContext(functia(app, "jtNotaPionex") + functia(app, "jtStatNota") + ";this.n=jtStatNota;", ctx);
-  let t = ctx.n("crypto", {}); assert.match(t, /toată istoria Pionex/); assert.match(t, /2 boți spot grid \/ smart copy lăsați deoparte/); assert.doesNotMatch(t, /doar ultimii/);
+  let t = ctx.n("crypto", {}); assert.match(t, /toată istoria Pionex/); assert.match(t, /inclusiv 1 spot grid și 1 smart copy/);   // v100.27: intra in socoteala assert.doesNotMatch(t, /doar ultimii/);
   ctx.jtArhiva = { sursa: "acasa", complet: false }; t = ctx.n("crypto", {}); assert.match(t, /colectorul încă strânge istoria/);
   ctx.jtArhiva = { sursa: "pagina", complet: false }; t = ctx.n("crypto", {}); assert.match(t, /doar ultimii 2200 boți/); assert.match(t, /de acasă/);
   t = ctx.n("tot", { lpu: 4.65 }); assert.match(t, /4,65 lei/); assert.match(t, /doar ultimii 2200 boți/);

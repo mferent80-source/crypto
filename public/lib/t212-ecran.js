@@ -514,9 +514,10 @@ function t212SfatStop(l) {
     : "Un stop strâns nu te-ar fi ajutat (vezi „Cât te-ar fi salvat stopul”, mai jos). Ce te-ar fi ajutat: să nu cumperi în plus pe minus și să nu pui mult pe o singură acțiune — de aici au venit pierderile mari (NPA).";
 }
 // v91: raportul pentru Declaratia Unica (anul inchiderii), cu butonul de copiat pentru contabil
+// v100.27: si botii spot grid / smart copy (JurnalTrade.alte) - si ei sunt venit de declarat
 function t212BotiInchisi() {
-  if (typeof jtStare !== "undefined" && jtStare.boti && typeof JurnalTrade !== "undefined") return JurnalTrade.din(jtStare.boti);
-  return typeof contTot !== "undefined" && contTot.inchise ? contTot.inchise : [];
+  if (typeof jtStare !== "undefined" && jtStare.boti && typeof JurnalTrade !== "undefined") return JurnalTrade.din(jtStare.boti).concat(JurnalTrade.alte(jtStare.boti));
+  return typeof contTot !== "undefined" && contTot.inchise ? contTot.inchise.concat(contTot.alteInchise || []) : [];
 }
 function t212RaportDecl(l) {
   var an = t212.anDecl || new Date().getUTCFullYear();
@@ -615,7 +616,7 @@ async function contTotAsigura() {
     if (!t212.piata) { try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) {} }
     // v89: botii inchisi (istoricul lui pe monede) si stirile despre moneda botului de pe Tablou
     // v100.25: toata istoria (arhiva de acasa + prima pagina Pionex), nu doar primii 10
-    if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { contTot.inchise = JurnalTrade.din((typeof jtAduBoti === "function" ? await jtAduBoti() : null) || []); } catch (e) { contTot.inchise = []; } }
+    if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { var bi = (typeof jtAduBoti === "function" ? await jtAduBoti() : null) || []; contTot.inchise = JurnalTrade.din(bi); contTot.alteInchise = JurnalTrade.alte(bi); } catch (e) { contTot.inchise = []; contTot.alteInchise = []; } }
     if (Date.now() - contTot.clasamentLa > 10 * 60000) { try { var cl = await getJSON("/api/istoric-bot?action=clasament"); contTot.clasament = cl && cl.clasament || null; contTot.clasamentLa = Date.now(); } catch (e) {} }
     var bb = typeof tbStare !== "undefined" && tbStare.bot; if (bb) await contTotStiriCrypto(String(bb.baza || "").replace(/\.PERP$/, ""));
   } finally { contTot.inLucru = false; }

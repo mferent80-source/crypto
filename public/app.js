@@ -5275,7 +5275,7 @@ function jtStatHtml(s,o){return StatisticaTrade.html(s,Object.assign({actiuneOrd
 // lista intreaga a fiecarei piete (fara perioada), tinuta minte pe cheia datelor
 function jtStatToate(piata){
   var T=jtStat.toate;
-  if(piata==="crypto"){if(!jtStare.boti)return null;var k="c|"+jtStare.la+"|"+jtStare.boti.length;if(T.crypto&&T.crypto.k===k)return T.crypto;return T.crypto={k:k,tr:StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti)),m:"USDT"}}
+  if(piata==="crypto"){if(!jtStare.boti)return null;var k="c|"+jtStare.la+"|"+jtStare.boti.length;if(T.crypto&&T.crypto.k===k)return T.crypto;return T.crypto={k:k,tr:StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti)).concat(StatisticaTrade.dinPionexAlte(JurnalTrade.alte(jtStare.boti))),m:"USDT"}}   // v100.27: + spot grid si smart copy
   if(piata==="actiuni"){var j=typeof t212Jurnal==="function"?t212Jurnal():null;if(!j)return null;var k2="a|"+j.u.length;if(T.actiuni&&T.actiuni.k===k2)return T.actiuni;return T.actiuni={k:k2,tr:StatisticaTrade.dinT212(j.p.inchise),m:"lei"}}
   if(piata==="tot"){
     var c=jtStatToate("crypto"),a=jtStatToate("actiuni"),fx=typeof t212Fx==="function"?t212Fx():null;if(!c||!a||!(fx>0))return null;
@@ -5295,8 +5295,9 @@ function jtStatDate(piata){
 }
 // v100.25: de unde vin botii, spus pe fata - toata istoria (arhiva de acasa completa), inca in lucru, sau doar prima pagina Pionex
 // (v100.23 scria „doar ultimii ~10” - gresit: Pionex da istoria pe pagini de cate 10); + botii spot grid / smart copy lasati deoparte
-function jtNotaPionex(){var c=jtStat.toate.crypto,nb=c?c.tr.length:0,A=jtArhiva||{},alt=(jtStare.boti||[]).filter(function(b){return b&&b.buOrderType&&b.buOrderType!=="futures_grid"}).length;
-  return (A.sursa==="acasa"?(A.complet?"toată istoria Pionex ("+nb+" boți)":nb+" boți până acum — colectorul încă strânge istoria"):"doar ultimii "+nb+" boți (prima pagină Pionex) — toată istoria se vede de acasă")+(alt?" · "+alt+" boți spot grid / smart copy lăsați deoparte":"")}
+// v100.27: spot grid si smart copy intra in socoteala - nota spune cati sunt inclusi
+function jtNotaPionex(){var c=jtStat.toate.crypto,nb=c?c.tr.length:0,A=jtArhiva||{},B=jtStare.boti||[],nr2=function(t){return B.filter(function(b){return b&&b.buOrderType===t}).length},sp=nr2("spot_grid"),sc=nr2("smart_copy");
+  return (A.sursa==="acasa"?(A.complet?"toată istoria Pionex ("+nb+" boți)":nb+" boți până acum — colectorul încă strânge istoria"):"doar ultimii "+nb+" boți (prima pagină Pionex) — toată istoria se vede de acasă")+(sp||sc?" · inclusiv "+sp+" spot grid și "+sc+" smart copy":"")}
 function jtStatNota(piata,d){var px=jtNotaPionex();return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212); Pionex: "+px+"; boții apar cu „(bot)”"}
 function jtStatRender(piata){
   var el=$(piata==="crypto"?"jtStatCrypto":piata==="actiuni"?"jtStatActiuni":"jtStatTot");if(!el)return;

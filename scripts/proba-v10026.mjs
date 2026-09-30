@@ -109,7 +109,7 @@ const { compactBot, CAMPURI_ARHIVA, FORMA_ARHIVA } = await import("../functions/
 const { strangeBoti } = await import("./lib/tura-arhiva-boti.mjs");
 await test("arhiva pastreaza campurile sumei puse (si banii primiti inapoi); forma 2", () => {
   for (const k of ["quoteInvestment", "extraMargin", "profitExited", "unlockQuoteAmount"]) assert.ok(CAMPURI_ARHIVA.includes(k), k);
-  assert.equal(FORMA_ARHIVA, 2);
+  assert.ok(FORMA_ARHIVA >= 2);
   const c = compactBot(botP({ usdtInvestment: "50", quoteInvestment: "50", extraMargin: "57.08", unlockQuoteAmount: "0" }));
   assert.equal(c.buOrderData.extraMargin, "57.08"); assert.equal(c.buOrderData.unlockQuoteAmount, "0");
 });
@@ -128,12 +128,12 @@ await test("arhiva de forma veche se reface singura: tura o ia de la capat (retr
   const cere = async (p) => p.startsWith("/api/bot-orders?") ? pagina(new URLSearchParams(p.split("?")[1]).get("pageToken")) : cereSrv(p);
   const vazute = [];
   const vechiRamase = [];
-  const r = await strangeBoti({ cere, trimite: async (p, c) => { vazute.push(c.complet); const g = await cereSrv("/api/istoric-bot?action=botiInchisi"); vazute.push(g.complet); const x = await trimite(p, c); const g2 = await cereSrv("/api/istoric-bot?action=botiInchisi"); vechiRamase.push(g2.boti.filter((b) => b.forma !== 2).length); return x; }, pauza: async () => {}, bucata: 10 });
+  const r = await strangeBoti({ cere, trimite: async (p, c) => { vazute.push(c.complet); const g = await cereSrv("/api/istoric-bot?action=botiInchisi"); vazute.push(g.complet); const x = await trimite(p, c); const g2 = await cereSrv("/api/istoric-bot?action=botiInchisi"); vechiRamase.push(g2.boti.filter((b) => b.forma !== FORMA_ARHIVA).length); return x; }, pauza: async () => {}, bucata: 10 });
   // boti vechi, inca neretrimisi, raman pe forma veche (altfel o tura intrerupta i-ar lasa fara campurile noi, „stiuti”)
   assert.deepEqual(vechiRamase, [15, 5, 0]);
   assert.equal(r.noi, 25, "toti retrimisi"); assert.equal(r.pagini, 3);
   const g = await cereSrv("/api/istoric-bot?action=botiInchisi");
-  assert.equal(g.forma, 2); assert.equal(g.complet, true); assert.equal(g.n, 25);
+  assert.equal(g.forma, FORMA_ARHIVA); assert.equal(g.complet, true); assert.equal(g.n, 25);
   assert.equal(g.boti.find((b) => b.strategyId === "z7").buOrderData.extraMargin, "7", "campurile noi au intrat");
   // cat timp se reface, arhiva NU se da drept completa (dupa prima bucata trimisa)
   // vazute = [steagul bucatii 1, arhiva inainte de 1, steagul bucatii 2, arhiva DUPA bucata 1, ...]
@@ -143,8 +143,8 @@ await test("arhiva de forma veche se reface singura: tura o ia de la capat (retr
   assert.equal(r2.noi, 0); assert.equal(r2.pagini, 1);
 });
 
-await test("colectorul v101.14 (tura arhivei stie de forma botilor)", () => {
-  assert.match(fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), /const VERSIUNE_COLECTOR = "v101\.14";/);
+await test("colectorul cel putin v101.14 (tura arhivei stie de forma botilor)", () => {
+  assert.match(fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), /const VERSIUNE_COLECTOR = "v101\.(1[4-9]|[2-9]\d)";/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

@@ -97,6 +97,29 @@ var JurnalTrade = (function () {
     return r;
   }
 
-  return { din: din, rezumat: rezumat, moneda: moneda };
+  // v100.27 (30.09, el: „fa idei”): botii spot grid si smart copy - Pionex le da alte campuri. Rezultatul lor = BANII, dovedit pe
+  // botii lui reali (30.09): spot grid = USDT primiti inapoi + monedele ramase la pretul inchiderii + profitul retras − toata suma
+  // pusa (quoteTotalInvestment; usdtInvestment e doar pornirea - la un bot ETH 54,43 fata de 104,43 dupa o adaugare de 50);
+  // smart copy = campul profit (= suma de acum − suma pusa, la 23 din 23). Fara banii primiti inapoi nu se ghiceste.
+  function alta(x) {
+    var d = x && x.buOrderData || {}, tip = String(x && x.buOrderType || ""), pornit = nr(x && x.createTime), inchis = nr(x && x.closeTime);
+    if (pornit === null || inchis === null) return null;
+    var pus = null, rez = null, et = moneda(x.base);
+    if (tip === "spot_grid") {
+      var u = nr(d.unlockUsdtAmount); pus = nr(d.quoteTotalInvestment) !== null ? nr(d.quoteTotalInvestment) : nr(d.usdtInvestment);
+      if (u === null || pus === null) return null;
+      rez = u + (nr(d.baseAmount) || 0) * (nr(d.closedPrice) || 0) + (nr(d.profitWithdrawn) || 0) - pus;
+    } else if (tip === "smart_copy") {
+      pus = nr(d.quoteOriginalInvestment) !== null ? nr(d.quoteOriginalInvestment) : nr(d.quoteTotalInvestment);
+      rez = nr(d.profit); if (rez === null && nr(d.currentQuoteAmount) !== null && pus !== null) rez = nr(d.currentQuoteAmount) - pus;
+      if (rez === null) return null;
+      et = String(d.signalName || "copy").toUpperCase();
+    } else return null;
+    return { id: String(x.strategyId || x.buOrderId || pornit), moneda: et, tip: tip === "spot_grid" ? "spot grid" : "smart copy", pornit: pornit, inchis: inchis,
+      durataOre: (inchis - pornit) / 3600000, investit: pus, pus: pus, rezultat: rez, comisioane: null, funding: null, levier: tip === "spot_grid" ? 1 : null, dir: null };
+  }
+  function alte(boti) { return Array.isArray(boti) ? boti.map(alta).filter(Boolean).sort(function (a, b) { return b.inchis - a.inchis; }) : []; }
+
+  return { din: din, alte: alte, rezumat: rezumat, moneda: moneda };
 })();
 if (typeof globalThis !== "undefined") globalThis.JurnalTrade = JurnalTrade;

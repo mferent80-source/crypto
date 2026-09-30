@@ -72,10 +72,13 @@ var StatisticaTrade = (function () {
     s.perDurata = dur.map(function (d) { var g = grupa(l.filter(function (x) { return x.durataOre !== null && x.durataOre >= d[1] && x.durataOre < d[2]; })); g.et = d[0]; return g; });
     if (l.length && l.every(function (x) { return x.dir; })) s.perDir = grupeaza(l, function (x) { return x.dir || null; }).map(function (g) { g.dir = g.cheie; return g; }).sort(function (a, b) { return b.total - a.total; });
     // v100.25: pe toata istoria Pionex sunt ~29 de levieri diferiti (1×…100×) - peste 8 valori se strang pe trepte
-    if (l.length && l.every(function (x) { return nr(x.levier) !== null; })) {
-      var difLev = {}; l.forEach(function (x) { difLev[nr(x.levier)] = 1; });
+    // v100.27: cei cu levier necunoscut (smart copy, marcati faraLevier) nu intra in tabel, dar se spune cati sunt
+    var cuLev = l.filter(function (x) { return nr(x.levier) !== null; });
+    if (cuLev.length && l.every(function (x) { return nr(x.levier) !== null || x.faraLevier; })) {
+      s.faraLevier = l.length - cuLev.length;
+      var difLev = {}; cuLev.forEach(function (x) { difLev[nr(x.levier)] = 1; });
       var peTrepte = Object.keys(difLev).length > 8, treapta = function (v) { for (var i = 0; i < LEVIER_TREPTE.length; i++) if (v <= LEVIER_TREPTE[i][0]) return i; return LEVIER_TREPTE.length - 1; };
-      s.perLevier = grupeaza(l, function (x) { var v = nr(x.levier); return peTrepte ? LEVIER_TREPTE[treapta(v)][1] : v + "×"; }).map(function (g) { g.levier = g.cheie; return g; })
+      s.perLevier = grupeaza(cuLev, function (x) { var v = nr(x.levier); return peTrepte ? LEVIER_TREPTE[treapta(v)][1] : v + "×"; }).map(function (g) { g.levier = g.cheie; return g; })
         .sort(function (a, b) { return peTrepte ? LEVIER_ORD[a.levier] - LEVIER_ORD[b.levier] : parseFloat(a.levier) - parseFloat(b.levier); });
     }
     s.faraBaza = l.filter(function (x) { return !(x.baza > 0); }).length;
@@ -237,7 +240,7 @@ var StatisticaTrade = (function () {
     // v100.23 (revizie): „Cele mai mari 5 pierderi” mereu, langa „Cât ai ținut”; directia si levierul pe randul lor, cand exista
     var top5 = '<div class="stBloc"><div class="stBlocCap"><h4>Cele mai mari 5 pierderi</h4><span class="stSub">' + (s.top5Pierderi.pondere !== null ? pr(s.top5Pierderi.pondere) + " din tot ce ai pierdut" : "") + "</span></div>" + (s.top5Pierderi.lista.length ? tabel(["", "Închis", "Rezultat"], s.top5Pierderi.lista.map(function (x) { return "<tr><td>" + esc(x.eticheta) + "</td><td>" + esc(data(x.inchis)) + '</td><td class="bad"><b>' + esc(bani(x.rezultat, M)) + "</b></td></tr>"; })) : '<p class="stSub">Nicio pierdere.</p>') + "</div>";
     h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Cât ai ținut</h4></div>' + tabel(["Ținut", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perDurata.map(function (g) { return randGrupa(g.et, g, M); })) + "</div>" + top5 + "</div>";
-    if (s.perDir.length || s.perLevier.length) h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Pe direcție și pe levier</h4></div>' + (s.perDir.length ? tabel(["Direcție", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perDir.map(function (g) { return randGrupa(g.dir, g, M); })) : "") + (s.perLevier.length ? tabel(["Levier", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perLevier.map(function (g) { return randGrupa(g.levier, g, M); })) : "") + "</div></div>";
+    if (s.perDir.length || s.perLevier.length) h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Pe direcție și pe levier</h4></div>' + (s.perDir.length ? tabel(["Direcție", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perDir.map(function (g) { return randGrupa(g.dir, g, M); })) : "") + (s.perLevier.length ? tabel(["Levier", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perLevier.map(function (g) { return randGrupa(g.levier, g, M); })) : "") + (s.perLevier.length && s.faraLevier ? '<p class="stSub">Levierul: fără ' + s.faraLevier + " smart copy (levier necunoscut).</p>" : "") + "</div></div>";
     var toate = s.curba.map(function (p, i) { return { i: i, t: p.t, eticheta: p.eticheta, rezultat: p.rezultat }; });
     toate.sort(ord === "pierderi" ? function (a, b) { return a.rezultat - b.rezultat; } : ord === "castiguri" ? function (a, b) { return b.rezultat - a.rezultat; } : function (a, b) { return b.t - a.t; });
     var MAX = 200, btn = function (k, et2) { return '<button type="button" class="stBtn" aria-pressed="' + (ord === k) + '"' + (o.actiuneOrdine ? ' data-action-click="' + o.actiuneOrdine + "(\'" + piata + "\',\'" + k + "\')\"" : "") + ">" + et2 + "</button>"; };
@@ -272,12 +275,19 @@ var StatisticaTrade = (function () {
         comisioane: nr(t.comisioane) !== null ? Math.abs(nr(t.comisioane)) : null, dir: t.dir || null, levier: nr(t.levier), greseli: (t.greseli || []).map(function (g) { return g.cod; }) };
     });
   }
+  // v100.27: spot grid si smart copy (JurnalTrade.alte) - rezultatul lor e deja NET (banii); „direcția” = felul botului
+  function dinPionexAlte(l) {
+    return (Array.isArray(l) ? l : []).map(function (t) {
+      return { id: t.id, eticheta: t.moneda + (t.tip === "spot grid" ? " (spot)" : " (copy)"), pornit: t.pornit, inchis: t.inchis, rezultat: nr(t.rezultat), baza: nr(t.pus), durataOre: t.durataOre,
+        comisioane: null, dir: t.tip, levier: nr(t.levier), faraLevier: nr(t.levier) === null, greseli: [] };
+    });
+  }
   function dinT212(l) {
     return (Array.isArray(l) ? l : []).map(function (t) {
       return { id: t.id, eticheta: t.simbol || t.ticker, pornit: t.pornit, inchis: t.inchis, rezultat: t.rezultat, baza: t.cost, durataOre: t.durataOre, comisioane: nr(t.comisioane) };
     });
   }
 
-  return { calc: calc, html: html, compara: compara, REGULI_NOI: REGULI_NOI, dinPerioada: dinPerioada, PERIOADE: PERIOADE, svgCurba: svgCurba, svgLuni: svgLuni, svgDistributie: svgDistributie, csv: csv, dinPionex: dinPionex, dinT212: dinT212, bani: bani, procent: pr, etInterval: etInterval, MIN: MIN };
+  return { calc: calc, html: html, dinPionexAlte: dinPionexAlte, compara: compara, REGULI_NOI: REGULI_NOI, dinPerioada: dinPerioada, PERIOADE: PERIOADE, svgCurba: svgCurba, svgLuni: svgLuni, svgDistributie: svgDistributie, csv: csv, dinPionex: dinPionex, dinT212: dinT212, bani: bani, procent: pr, etInterval: etInterval, MIN: MIN };
 })();
 if (typeof globalThis !== "undefined") globalThis.StatisticaTrade = StatisticaTrade;
