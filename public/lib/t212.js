@@ -104,19 +104,33 @@ var T212 = (function () {
   // v91: raportul pentru Declaratia Unica - pe anul INCHIDERII (vanzarii). T212: castiguri / pierderi / net in lei,
   // dupa comisioanele de conversie (costuri), + dividendele anului. Pionex separat, in USDT (conversia in lei se face
   // cu cursul BNR din ziua fiecarei inchideri - de verificat cu contabilul, ca si cotele de impozit).
+  function ziRo(t) {
+    try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); }
+    catch (e) { return new Date(t + 3 * 3600000).toISOString().slice(0, 10); }
+  }
   function raportAnual(o) {
     o = o || {};
     var an = o.an, ani = {};
     function aniDin(t) { var y = new Date(t).getUTCFullYear(); if (isFinite(y)) ani[y] = 1; return y; }
-    var t = { n: 0, castiguri: 0, pierderi: 0, net: 0, comisioane: 0, dividende: 0 }, px = { n: 0, net: 0 };
+    // v100.28 (30.09, el: „fa idei”): Pionex si in LEI - fiecare bot la cursul BNR (USD) din ziua inchiderii dupa ora Romaniei
+    // (weekend / sarbatoare -> ultimul curs publicat inainte); USDT socotit ca USD. Anul botului tot dupa ora Romaniei.
+    var zileCurs = o.cursUsd && typeof o.cursUsd === "object" ? Object.keys(o.cursUsd).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k) && nr(o.cursUsd[k]) > 0; }).sort() : null;
+    function cursPe(zi) { var lo = 0, hi = zileCurs.length - 1, gasit = -1; while (lo <= hi) { var m = (lo + hi) >> 1; if (zileCurs[m] <= zi) { gasit = m; lo = m + 1; } else hi = m - 1; } return gasit < 0 ? null : nr(o.cursUsd[zileCurs[gasit]]); }
+    var t = { n: 0, castiguri: 0, pierderi: 0, net: 0, comisioane: 0, dividende: 0 }, px = { n: 0, net: 0, lei: zileCurs && zileCurs.length ? 0 : null, faraCurs: 0 };
     (o.inchise || []).forEach(function (x) { if (!x || !(x.inchis > 0)) return; if (aniDin(x.inchis) !== an) return; t.n++; var r = x.rezultat || 0; if (r >= 0) t.castiguri += r; else t.pierderi += r; t.net += r; t.comisioane += x.comisioane || 0; });
     (o.dividende || []).forEach(function (x) { var z = Date.parse(x && x.paidOn || ""); if (!isFinite(z)) return; if (aniDin(z) !== an) return; var v = nr(x.amount); if (v !== null) t.dividende += v; });
     // v100.23 (revizie): NET = realizat + comisioane + funding (realizatul Pionex e fara costuri; banii primiti inapoi o dovedesc)
-    (o.boti || []).forEach(function (x) { if (!x || !(x.inchis > 0)) return; if (aniDin(x.inchis) !== an) return; px.n++; px.net += (x.rezultat || 0) + (x.comisioane || 0) + (x.funding || 0); });
+    (o.boti || []).forEach(function (x) {
+      if (!x || !(x.inchis > 0)) return;
+      var zi = ziRo(x.inchis), y = Number(zi.slice(0, 4)); ani[y] = 1; if (y !== an) return;
+      var v = (x.rezultat || 0) + (x.comisioane || 0) + (x.funding || 0); px.n++; px.net += v;
+      if (px.lei !== null) { var c = cursPe(zi); if (c) px.lei += v * c; else px.faraCurs++; }
+    });
     var r = { an: an, t212: t, pionex: px, ani: Object.keys(ani).map(Number).sort(function (a, b) { return b - a; }) };
     var L = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " lei"; };
     r.text = "Anul " + an + "\nTrading 212 (acțiuni, în lei, după comisioanele de conversie): " + t.n + " vânzări · câștiguri " + L(t.castiguri) + " · pierderi " + L(t.pierderi) + " · NET " + L(t.net) + " · comisioane " + L(-t.comisioane).replace("+", "") + " · dividende " + L(t.dividende)
-      + "\nPionex (boți, în USDT): " + px.n + " boți închiși · NET " + (px.net >= 0 ? "+" : "−") + Math.abs(px.net).toFixed(2) + " USDT";
+      + "\nPionex (boți, în USDT): " + px.n + " boți închiși · NET " + (px.net >= 0 ? "+" : "−") + Math.abs(px.net).toFixed(2) + " USDT"
+      + (px.lei !== null ? " ≈ " + L(px.lei) + " (curs BNR USD din ziua fiecărei închideri, ora României; USDT socotit ca USD" + (px.faraCurs ? "; " + px.faraCurs + (px.faraCurs === 1 ? " bot fără curs" : " boți fără curs") + ", lăsați afară din lei" : "") + ")" : "");
     return r;
   }
 

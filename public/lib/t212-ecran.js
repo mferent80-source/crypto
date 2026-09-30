@@ -519,9 +519,26 @@ function t212BotiInchisi() {
   if (typeof jtStare !== "undefined" && jtStare.boti && typeof JurnalTrade !== "undefined") return JurnalTrade.din(jtStare.boti).concat(JurnalTrade.alte(jtStare.boti));
   return typeof contTot !== "undefined" && contTot.inchise ? contTot.inchise.concat(contTot.alteInchise || []) : [];
 }
+// v100.28: cursul BNR (USD) pe zile pentru Declaratie - anul ales si cel dinainte (1-4 ianuarie iau cursul din decembrie).
+// null cat timp anul ales nu e adus (sau n-a putut fi adus) - atunci raportul ramane doar in USDT, iar blocul spune de ce.
+function t212CursPentru(an) {
+  var C = t212.cursBnr || (t212.cursBnr = {}), gata = true, tot = {};
+  [an - 1, an].forEach(function (a) {
+    var x = C[a];
+    if (!x) {
+      C[a] = { stare: "vine" }; gata = false;
+      getJSON("/api/curs-bnr?an=" + a).then(function (d) { C[a] = { stare: "ok", curs: d && d.curs || {} }; }, function (e) { C[a] = { stare: "eroare", motiv: String(e && e.message || e).slice(0, 140) }; })
+        .then(function () { if (typeof jtRenderActiuni === "function") jtRenderActiuni(); });
+      return;
+    }
+    if (x.stare === "vine") { gata = false; return; }
+    if (x.stare === "ok") Object.assign(tot, x.curs);
+  });
+  return gata && C[an] && C[an].stare === "ok" ? tot : null;
+}
 function t212RaportDecl(l) {
   var an = t212.anDecl || new Date().getUTCFullYear();
-  return T212.raportAnual({ inchise: l, dividende: t212.dividendeItems || [], boti: t212BotiInchisi(), an: an });
+  return T212.raportAnual({ inchise: l, dividende: t212.dividendeItems || [], boti: t212BotiInchisi(), an: an, cursUsd: t212CursPentru(an) });
 }
 // v100.25: Pionex da istoria pe pagini; anul intreg vine doar din arhiva de acasa (colectorul), completa. Altfel se spune.
 function t212PionexIncomplet() {
@@ -540,10 +557,14 @@ function t212DeclaratieBloc(l) {
     + '<tr><td><b>Câștig NET din acțiuni</b></td><td class="' + t212Cls(t.net) + '"><b>' + L(t.net) + '</b></td></tr>'
     + '<tr><td>Din care comisioane de conversie (deja scăzute)</td><td>' + L(-t.comisioane) + '</td></tr>'
     + '<tr><td>Dividende încasate în ' + r.an + '</td><td>' + L(t.dividende) + '</td></tr>'
-    + '<tr><td>Pionex · boți închiși în ' + r.an + '</td><td><b>' + px.n + '</b> · NET <b class="' + t212Cls(px.net) + '">' + (px.net >= 0 ? "+" : "−") + Math.abs(px.net).toFixed(2) + ' USDT</b></td></tr>'
+    + '<tr><td>Pionex · boți închiși în ' + r.an + '</td><td><b>' + px.n + '</b> · NET <b class="' + t212Cls(px.net) + '">' + (px.net >= 0 ? "+" : "−") + Math.abs(px.net).toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT</b>'
+    + (px.lei !== null ? ' ≈ <b class="' + t212Cls(px.lei) + '">' + L(px.lei) + '</b>' : '') + '</td></tr>'
+    // v100.28: Pionex in lei, bot cu bot, la cursul BNR din ziua inchiderii - sau de ce inca nu
+    + '<tr><td colspan="2" class="tbSub">' + escapeHtml(px.lei !== null ? "Pionex în lei: fiecare bot la cursul BNR (USD) din ziua închiderii, după ora României; USDT socotit ca USD" + (px.faraCurs ? "; " + px.faraCurs + (px.faraCurs === 1 ? " bot fără curs, lăsat afară" : " boți fără curs, lăsați afară") : "") + "."
+      : t212.cursBnr && t212.cursBnr[r.an] && t212.cursBnr[r.an].stare === "eroare" ? "Cursul BNR nu s-a putut aduce (" + t212.cursBnr[r.an].motiv + "): Pionex rămâne doar în USDT." : "Se aduce cursul BNR, ca să arăt Pionex și în lei…") + '</td></tr>'
     + (pxInc ? '<tr><td colspan="2" class="bad">' + escapeHtml(pxInc) + '</td></tr>' : '')
     + '</tbody></table></div>'
-    + '<p class="tbSub">Sumele T212 sunt în lei, la cursul din ziua fiecărei tranzacții (așa le dă Trading 212), cu comisioanele de conversie scăzute. Pionex e în USDT: conversia în lei se face cu cursul BNR din ziua fiecărei închideri. Cotele de impozit și CASS le verifici cu contabilul — eu îți dau cifrele.</p>'
+    + '<p class="tbSub">Sumele T212 sunt în lei, la cursul din ziua fiecărei tranzacții (așa le dă Trading 212), cu comisioanele de conversie scăzute. Pionex e în USDT, iar în lei l-am socotit eu la cursul BNR din ziua fiecărei închideri — verifică-l cu contabilul, ca și cotele de impozit și CASS. Eu îți dau cifrele.</p>'
     + '<button type="button" class="t212BtnLinie" data-action-click="t212CopiazaDeclaratia()">Copiază pentru contabil</button></div>';
 }
 function t212AnDeclaratie(an) { t212.anDecl = an; if (typeof jtRenderActiuni === "function") jtRenderActiuni(); }
