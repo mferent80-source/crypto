@@ -42,7 +42,7 @@ var GridPlan = (function () {
     var g = Math.pow(sus / jos, 1 / N) - 1;
     return { dir: o.dir, pret: P, jos: jos, sus: sus, grile: N, pas: g, levier: L, suma: o.suma, d: d, u: u,
       stop: { jos: jos * (1 - g / 2), sus: sus * (1 + g / 2) },   // la margini, 1/2 pas dincolo (long: jos = stop, sus = tinta)
-      lichidare: G.lichidare(G.niveluri(jos, sus, N), P, o.dir, L), perOrdin: o.suma * L / N, profitGrila: g - 2 * C.COMISION };
+      lichidare: G.lichidare(G.niveluri(jos, sus, N), P, o.dir, L), perOrdin: o.suma * L / N, profitGrila: g - 2 * C.COMISION_GRILA };
   }
   // totalul in USDT daca pretul merge DREPT de la pornire pana la stop (parte = "pierdere") sau pana la tinta
   function laMargine(st, parte) {

@@ -68,7 +68,7 @@ await test("conversiile: fisa (N intervale) -> „Număr de grile” si codul pe
   const p = SB.pasBot(CRV); assert.ok(Math.abs(p.pas - (Math.pow(0.423 / 0.3755, 1 / 7) - 1)) < 1e-12); assert.equal(p.grile, 8);
   // Jurnalul: pasul net al botului inchis pe row − 1
   const t = JT.din([{ strategyId: "1", base: "CRV.PERP", createTime: 1, closeTime: 3600001, buOrderData: { totalRealizedProfit: "1", gridProfit: "1", totalFee: "0", totalFundingFee: "0", usdtInvestment: "50", leverage: "5", trend: "long", bottom: "0.3755", top: "0.423", row: 8, gridType: "geometric" } }])[0];
-  assert.ok(Math.abs(t.pasNet - (Math.pow(0.423 / 0.3755, 1 / 7) - 1 - 2 * G.C.COMISION)) < 1e-12, t.pasNet); assert.equal(t.grileN, 8);
+  assert.ok(Math.abs(t.pasNet - (Math.pow(0.423 / 0.3755, 1 / 7) - 1 - 2 * G.C.COMISION_GRILA)) < 1e-12, t.pasNet); assert.equal(t.grileN, 8);
 });
 await test("comparatia cu botul: propunerea de 7 intervale = botul cu 8 grile Pionex (acelasi grid)", () => {
   assert.equal(TE.gridDiferitDeBot({ jos: 0.3755, sus: 0.423, grile: 7 }, CRV).acelasi, true);
@@ -76,12 +76,13 @@ await test("comparatia cu botul: propunerea de 7 intervale = botul cu 8 grile Pi
 });
 await test("graficul Tabloului: treptele pe liniile Pionex (row linii), umplerile si legenda „perechi pe grafic: N · Pionex: M”", () => {
   const i = app.indexOf("var d=GraficBot.desen({"), corp = app.slice(i - 200, i + 900);
-  assert.match(corp, /linii:botiNr\(xo\.row\)/); assert.match(corp, /GraficBot\.umpleri\(bare,/); assert.match(corp, /perechiPionex:botiNr\(b\.ordinePerechi\)/); assert.match(corp, /dir:String\(b\.directie/);
+  assert.match(corp, /linii:botiNr\(xo\.row\)[,}]/);   // v100.39: cu [,}] - `linii:botiNr(xo.row)-1` nu mai trece assert.match(corp, /GraficBot\.umpleri\(bare,/); assert.match(corp, /perechiPionex:botiNr\(b\.ordinePerechi\)/); assert.match(corp, /dir:String\(b\.directie/);
   const T0 = CRV.pornitLa, bare = [{ t: T0, o: 0.3997, h: 0.4097, l: 0.3990, c: 0.4080, v: 1 }, { t: T0 + 60000, o: 0.4080, h: 0.4085, l: 0.4014, c: 0.4021, v: 1 }];
   const GR = { jos: 0.3755, sus: 0.423, linii: 8, geo: true };
   const d = GB.desen({ bare, W: 800, st: {}, niv: [], grila: GR, alerte: [], per: "24h", umpleri: GB.umpleri(bare, Object.assign({ p0: 0.3997, pornit: T0, dir: "long" }, GR)), perechiPionex: 1 });
   assert.equal((d.svg.match(/class="gbTreapta"/g) || []).length > 0, true);
-  assert.match(d.svg, /vânzare la 0\.408[89][^<]*pereche închisă/);   // linia exacta 0,408849… (Pionex o rotunjeste la pasul de pret) assert.match(d.legenda, /perechi pe grafic: 1 · Pionex: 1/); assert.match(d.legenda, /8 linii/);
+  assert.match(d.svg, /vânzare la 0\.408[89][^<]*pereche închisă/);   // linia exacta 0,408849… (Pionex o rotunjeste la pasul de pret)
+  assert.match(d.legenda, /perechi pe grafic: 1 · Pionex: 1/); assert.match(d.legenda, /8 linii/);
 });
 await test("GRID-FISA v2.1 (pe disc): numarul din cod = linii Pionex, intervalele = numarul − 1", () => {
   const p = "C:/Users/Cimin/pine-scripts/GRID-FISA/Grid_Fisa_v2_1.pine";

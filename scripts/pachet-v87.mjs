@@ -104,8 +104,8 @@ await test("ritmul de recuperare: pe minus cu grile peste costuri -> cate zile p
   assert.strictEqual(X.ritmRecuperare(null, 1), null); assert.strictEqual(X.ritmRecuperare(-3, null), null);
 });
 // ---------------- botul · 3) cat te costa setarea ----------------
-await test("comisionul din fiecare umplere: 0,22% net pe grila -> comisionul (0,10% dus-intors) ia ~31%; 0,80% net -> ~11%", () => {
-  aprox(X.comisionDinUmplere(0.0022), 0.001 / 0.0032, 1e-12); aprox(X.comisionDinUmplere(0.008), 0.001 / 0.009, 1e-12);
+await test("comisionul din fiecare umplere: 0,22% net pe grila -> comisionul de grila (0,04% dus-intors, maker - v100.39) ia ~15%; 0,80% net -> ~5%", () => {
+  aprox(X.comisionDinUmplere(0.0022), 0.0004 / 0.0026, 1e-12); aprox(X.comisionDinUmplere(0.008), 0.0004 / 0.0084, 1e-12);
   assert.strictEqual(X.comisionDinUmplere(null), null);
 });
 // ---------------- botul · 2) alerta opritorului care urca ----------------

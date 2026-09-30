@@ -31,7 +31,7 @@ await test("1a. alerta „muta gridul” scrie preturile ca preturi (5 zecimale 
   assert.match(m.mesaj, /0\.54747 – 0\.62979/, m.mesaj); assert.doesNotMatch(m.mesaj, /\d\.\d{7,}/, "16 zecimale: " + m.mesaj);
   assert.match(m.mesaj, /des|0,3/, "spune ca e gridul des: " + m.mesaj); assert.match(m.mesaj, /18,5/, "trecerile pe zi");
   const rar = A.reguli(b, { semnale: { semafor: { nivel: "tine" }, muta: { ...muta, des: false, treceriZi: 6.2, setare: { ...muta.setare, grile: 6 } } } }, {})["s-muta"];
-  assert.doesNotMatch(rar.mesaj, /grid des/); assert.match(rar.mesaj, /6 grile/);
+  assert.doesNotMatch(rar.mesaj, /grid des/); assert.match(rar.mesaj, /7 grile în Pionex/, "v100.39: 6 intervale = 7 linii in Pionex (era „6 grile” - o linie mai putin)");
 });
 await test("1b. alertele planului T212 (stop, trail, tinta) scriu preturile cu 2 zecimale (peste 1) - nu 30.690000534057617", () => {
   const p = { ticker: "APLD_US_EQ", simbol: "APLD", pret: 26.08, pretMediu: 28, maxDupaCumparare: 30.690000534057617, plan: { trailPct: 15, stop: 25.661500453948975, tinta: 31.219000000000001 } };

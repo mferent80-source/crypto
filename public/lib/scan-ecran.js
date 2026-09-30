@@ -227,7 +227,7 @@ function scDetaliu(x) {
     var fu = scanSt.funding[x.s];
     if (fu === undefined) { scanSt.funding[x.s] = null; scAduFunding(x.s); }
     plan += '<h5 class="scH5b">Pentru un bot grid</h5>'
-      + (x.stare === "candidat" && !x.miscare ? '<div class="scLin"><span>Grile · pas</span><b>' + scNf(x.grile, 0) + ' · ' + scNf(x.pas * 100, 2) + '%</b></div><div class="scLin"><span>Treceri prin grile / zi</span><b>~' + scNf(x.traversari, 1) + '</b></div><div class="scLin"><span>Lățimea zonei</span><b>' + scNf(x.latime * 100, 1) + '%</b></div>'
+      + (x.stare === "candidat" && !x.miscare ? '<div class="scLin"><span>Grile (în Pionex) · pas</span><b>' + scNf(x.grile + 1, 0) + ' · ' + scNf(x.pas * 100, 2) + '%</b></div><div class="scLin"><span>Treceri prin grile / zi</span><b>~' + scNf(x.traversari, 1) + '</b></div><div class="scLin"><span>Lățimea zonei</span><b>' + scNf(x.latime * 100, 1) + '%</b></div>'
         : '<p class="scNota">Acum e în mișcare: nu e bună de grid.</p>')
       + '<div class="scLin"><span>Funding (la 4 ore)</span><b class="' + (fu && fu.scump ? "warn" : "") + '">' + (fu ? scNf(fu.ult * 100, 4) + "% · " + (fu.scump ? "scump, long plătește mult" : fu.ult < 0 ? "negativ, short plătește" : "ca de obicei") : "aduc…") + '</b></div>';
   } else if (x.rez) plan += '<div class="scLin scH5b"><span>Rezultate financiare</span><b class="' + (x.rezZile <= 7 ? "warn" : "") + '">' + new Date(x.rez + "T12:00:00Z").toLocaleDateString("ro-RO", { day: "numeric", month: "short" }) + (x.rezZile >= 0 ? ' (peste ' + x.rezZile + ' zile)' : '') + '</b></div>';

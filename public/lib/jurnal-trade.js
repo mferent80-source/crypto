@@ -30,7 +30,7 @@ var JurnalTrade = (function () {
     // v100.38: row = LINII Pionex -> intervalele sunt N − 1 (inainte: N)
     if (jos > 0 && sus > jos && N >= 2) {
       var pasPct = mod === "aritmetic" ? (sus - jos) / (N - 1) / ((jos + sus) / 2) : Math.pow(sus / jos, 1 / (N - 1)) - 1;
-      pasNet = pasPct - 2 * C.COMISION;
+      pasNet = pasPct - 2 * C.COMISION_GRILA;
     }
     return {
       id: String(x.strategyId || x.buOrderId || pornit), moneda: moneda(x.base), dir: dir, levier: lev, investit: inv,
@@ -59,15 +59,15 @@ var JurnalTrade = (function () {
     if (t.grile !== null && t.grile > 0 && t.rezultat < 0) g.push({ cod: "pozitia-a-mancat-grilele", titlu: "Poziția a mâncat grilele",
       text: "Grilele au făcut " + U(t.grile) + ", dar poziția " + (t.pozitie !== null ? U(t.pozitie) : "a pierdut mai mult") + ": prețul a mers împotriva direcției botului.",
       dataViitoare: t.dir === "neutru" ? "Aș lărgi intervalul sau aș pune stop mai aproape." : "Aș verifica trendul pe 4h și 1z înainte (în fișă) și n-aș porni " + t.dir + " contra lui; sau aș porni neutru." });
-    if (t.pasNet !== null && t.pasNet < C.PAS_MIN - 2 * C.COMISION) g.push({ cod: "grile-prea-dese", titlu: "Grile prea dese",
-      text: t.grileN + " grile " + t.mod + " lăsau " + P(t.pasNet) + " pe umplere după comision (fișa cere cel puțin " + P(C.PAS_MIN - 2 * C.COMISION) + ").",
+    if (t.pasNet !== null && t.pasNet < C.PAS_MIN - 2 * C.COMISION_GRILA) g.push({ cod: "grile-prea-dese", titlu: "Grile prea dese",
+      text: t.grileN + " grile " + t.mod + " lăsau " + P(t.pasNet) + " pe umplere după comision (fișa cere cel puțin " + P(C.PAS_MIN - 2 * C.COMISION_GRILA) + ").",
       dataViitoare: "Aș pune mai puține grile (pasul din fișă), ca fiecare umplere să rămână clar peste comision." });
     var afara = t.pretInchidere !== null && t.jos !== null && t.sus !== null && (t.pretInchidere < t.jos || t.pretInchidere > t.sus);
     if (afara) g.push({ cod: "stop-atins", titlu: "A ieșit din grid" + (t.stopJos !== null && t.dir !== "short" && t.pretInchidere <= t.stopJos ? " și a atins stopul" : ""),
       text: "Închis la " + t.pretInchidere + ", în afara intervalului " + t.jos + " – " + t.sus + ".",
       dataViitoare: "Aș alege intervalul din fișă (lățimea obișnuită pe 2 zile a monedei), nu mai îngust; un interval strâmt iese la prima mișcare." });
     if (t.levier !== null && t.jos > 0 && t.sus > t.jos && t.grileN >= 2 && t.pretInit > 0) {
-      var sig = G.levierSigur(t.jos, t.sus, t.pretInit, t.dir, Math.min(150, t.grileN));
+      var sig = G.levierSigur(t.jos, t.sus, t.pretInit, t.dir, Math.min(150, t.grileN - 1));   // v100.39: grileN = linii Pionex, levierSigur vrea intervale
       if (t.levier > sig.levier) g.push({ cod: "levier-peste-sigur", titlu: "Levier peste cel sigur",
         text: t.levier + "× pe un interval de " + P((t.sus - t.jos) / t.pretInit) + ": sigur ar fi fost " + sig.levier + "× (lichidarea la o lățime de interval dincolo de margine).",
         dataViitoare: "Aș lua levierul propus de fișă (" + sig.levier + "× pentru intervalul ăsta)." });

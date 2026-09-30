@@ -15,18 +15,24 @@ var GridProba = (function () {
   function primulPeste(niv, x) { var lo = 0, hi = niv.length; while (lo < hi) { var m = (lo + hi) >> 1; if (niv[m] >= x) hi = m; else lo = m + 1; } return lo; }
 
   function simuleaza(b, start, lungime, st) {
-    var N = st.grile, niv = G.niveluri(st.jos, st.sus, N), L = st.levier, com = C.COMISION;
+    // v100.39: com = TAKER (pornire, inchidere, stop), comG = MAKER pe ordinele limita ale grilelor (masurat pe CRV: 0,02%)
+    var N = st.grile, niv = G.niveluri(st.jos, st.sus, N), L = st.levier, com = C.COMISION, comG = C.COMISION_GRILA;
     var P = b[start].o, tip = [], tine = [], intr = [], q = [];
     var Ql = 0, Cl = 0, Qs = 0, Cs = 0, real = 0, fee = 0, umpleri = 0, iesiri = 0, perechi = 0;   // perechi = grile INCASATE (o pereche = 2 umpleri; umplerile de pornire nu-s perechi)
+    // v100.39 (regula dovedita in v100.38): la pornire, linia cea mai apropiata de pret ramane FARA ordin - la long celula de sub
+    // ea nu se cumpara la pornire (se cumpara abia cand pretul coboara la linia ei), la short oglindit
+    var ki = 0; for (var kk = 1; kk <= N; kk++) if (Math.abs(niv[kk] - P) < Math.abs(niv[ki] - P)) ki = kk;
+    var farOrdin = st.dir === "long" && niv[ki] > P && ki >= 1 ? ki - 1 : st.dir === "short" && niv[ki] < P && ki < N ? ki : -1;
     for (var k = 0; k < N; k++) {
       q[k] = L / N / niv[k]; tine[k] = false;
       if (st.dir === "long") tip[k] = "L";
       else if (st.dir === "short") tip[k] = "S";
       else tip[k] = niv[k + 1] <= P ? "L" : niv[k] >= P ? "S" : null;
+      if (k === farOrdin) continue;
       if (st.dir === "long" && niv[k + 1] > P) { tine[k] = true; intr[k] = P; Ql += q[k]; Cl += q[k] * P; fee += q[k] * P * com; umpleri++; }
       if (st.dir === "short" && niv[k] < P) { tine[k] = true; intr[k] = P; Qs += q[k]; Cs += q[k] * P; fee += q[k] * P * com; umpleri++; }
     }
-    function umple(k, p) { fee += q[k] * p * com; umpleri++; }
+    function umple(k, p) { fee += q[k] * p * comG; umpleri++; }
     function misca(a, x) {
       var j;
       if (x < a) {                              // in jos: niveluri j cu x <= niv[j] < a, celula j
@@ -178,7 +184,10 @@ var GridProba = (function () {
     var pr = proba(o.b15, o.H);
     if (!pr) return { eroare: "Prea puține lumânări ca să probez: trebuie cel puțin " + (2 * o.H + 1) + " zile de istoric pe 15 minute." };
     var dT = G.directie(o.b4h, o.b1d), dir = o.dir || dT.dir, ales = pr.pe[dir];
-    var pasV = G.pasi(o.b15), lat = G.percentila(G.latimi(o.b15, o.H), C.PERCENTILE[ales.wi]), pas = pasV[ales.pi];
+    // v100.39 (audit 30.09): O SINGURA SURSA - setarea afisata e exact cea probata (latimea si pasul din proba, pe primele 2/3 din
+    // istoric). Inainte latimea/pasul se refaceau pe TOT istoricul la aceiasi indici, deci verdictul, mediana si „Cât investesc?”
+    // vorbeau despre alta setare decat cea de copiat (CRV neutru: probat 8 intervale pe 15,97%, afisat 9 pe 20,84%).
+    var pasV = pr.pasi, lat = pr.latimi[ales.wi], pas = pasV[ales.pi];
     // Minimul pe ordin: intai mai putine grile (spec 6.4); suma necesara doar daca nici 2 nu incap.
     function cuMinOrdin(pasX) {
       var s = G.construieste({ pret: o.pret, lat: lat, pas: pasX, dir: dir, suma: o.suma, levier: o.levier });
@@ -230,11 +239,11 @@ var GridProba = (function () {
     if (t && t.mediana !== null && t.mediana !== undefined && t.mediana < 0) return { respinsa: true, motiv: "pe zilele nevăzute a ieșit pe minus (" + G.procent(t.mediana) + ")" };
     return { respinsa: false, motiv: "" };
   }
-  // v99: ce propune fisa - "deasa" DOAR in liniste (dupa miscare gridul iese cel mai rau), cand proba n-a respins-o si e
-  // chiar mai deasa decat setarea aleasa; altfel "aleasa" (platoul probei). Regula lui, nu o dovada: se masoara in timp.
+  // v99: ce propune fisa. v100.39 (30.09, el: „gridurile dese sunt mult prea rare” -> a ales „gridul des MEREU, rarul alături”):
+  // "deasa" oricand proba n-a respins-o (nu doar in liniste - in miscare verdictul zice oricum NU PORNI, dar setarile raman cele
+  // dese) si e chiar mai deasa decat platoul; altfel "aleasa" (platoul probei, gridul rar). Regula lui, nu o dovada.
   function propune(x) {
-    var rg = x && x.regim, d = x && x.deasa, s = x && x.setare;
-    if (!rg || rg.miscare) return "aleasa";
+    var d = x && x.deasa, s = x && x.setare;
     if (!d || d.respinsa || !d.setare) return "aleasa";
     if (d.setare.pesteSigur || d.setare.sigur === false) return "aleasa";   // lichidarea prea aproape la gridul des
     if (s && d.setare.grile === s.grile) return "aleasa";

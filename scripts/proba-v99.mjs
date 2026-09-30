@@ -89,13 +89,13 @@ await test("3. fisa pe piata laterala: are varianta DEASA (pas 0,30%, la latimea
   } else { assert.equal(f.aleasa, null); assert.deepEqual(f.stat, { antren: f.proba.pe[f.dir].antren, test: f.proba.pe[f.dir].test }); }
   assert.equal(GP.setarePropusa(f), f.setare);
 });
-await test("3b. propune (regula pura): liniste + deasa nerespinsa -> 'deasa'; miscare -> 'aleasa'; deasa respinsa (mediana < 0 / lichidata / pe zilele nevazute pe minus) -> 'aleasa'; deasa = aleasa -> 'aleasa'", () => {
+await test("3b. propune (regula pura): deasa nerespinsa -> 'deasa' (v100.39, el: „gridul des mereu” - si in miscare, unde verdictul zice oricum NU PORNI); deasa respinsa (mediana < 0 / lichidata / pe zilele nevazute pe minus) -> 'aleasa'; deasa = aleasa -> 'aleasa'", () => {
   const ok = { setare: { grile: 46 }, respinsa: false, antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.002, lichidari: 0 } };
   assert.equal(GP.propune({ regim: { miscare: false }, deasa: ok, setare: { grile: 6 } }), "deasa");
-  assert.equal(GP.propune({ regim: { miscare: true }, deasa: ok, setare: { grile: 6 } }), "aleasa", "dupa miscare gridul iese cel mai rau - nu indesim");
+  assert.equal(GP.propune({ regim: { miscare: true }, deasa: ok, setare: { grile: 6 } }), "deasa", "v100.39: gridul des mereu (verdictul in miscare ramane NU PORNI)");
   assert.equal(GP.propune({ regim: { miscare: false }, deasa: { ...ok, respinsa: true }, setare: { grile: 6 } }), "aleasa");
   assert.equal(GP.propune({ regim: { miscare: false }, deasa: ok, setare: { grile: 46 } }), "aleasa", "aceeasi setare: nu e nimic 'mai des'");
-  assert.equal(GP.propune({ regim: null, deasa: ok, setare: { grile: 6 } }), "aleasa", "fara regim nu stim daca e liniste");
+  assert.equal(GP.propune({ regim: null, deasa: ok, setare: { grile: 6 } }), "deasa", "v100.39: regimul nu mai decide propunerea");
   assert.equal(GP.propune({ regim: { miscare: false }, deasa: { ...ok, setare: { grile: 46, pesteSigur: true } }, setare: { grile: 6 } }), "aleasa", "levierul pune lichidarea prea aproape la gridul des -> nu");
   assert.equal(GP.propune({ regim: { miscare: false }, deasa: { ...ok, setare: { grile: 46, sigur: false } }, setare: { grile: 6 } }), "aleasa", "nici la 1x nu e sigur -> nu");
   const r = GP.respinge({ antren: { mediana: -0.01, lichidari: 0 }, test: null }); assert.equal(r.respinsa, true); assert.match(r.motiv, /minus|istoric/);
@@ -140,7 +140,8 @@ await test("6. acumConcret: stopul, gridul si miscarea, cu cifre - pe plus: stop
   assert.ok(stop && grid && mis, "lipseste un rand: " + l.map((x) => x.cod).join(","));
   // pe minus (-10,12): zero-ul 0,5984 e DEASUPRA pretului 0,5831 -> nu se pune stopul acolo; protectia e sub gridul de jos
   assert.match(stop.text, /0\.5984|0,5984/); assert.match(stop.text, /sub gridul de jos|0\.542|0,542/); assert.match(stop.text, /nepus|nu ai/i);
-  assert.match(grid.text, /6 grile/); assert.match(grid.text, /47 grile/);   // v100.38: propunerea de 46 intervale = 47 grile Pionex (linii) assert.match(grid.text, /18,5 perechi/); assert.match(grid.text, /din interval/); assert.match(grid.text, /5 umpleri/);
+  assert.match(grid.text, /6 grile/); assert.match(grid.text, /47 grile/);   // v100.38: propunerea de 46 intervale = 47 grile Pionex (linii)
+  assert.match(grid.text, /18,5 perechi/); assert.match(grid.text, /din interval/); assert.match(grid.text, /5 umpleri/);
   assert.doesNotMatch(grid.text, /treceri/, "revizie: unitatea e 'perechi incheiate', nu 'treceri' (umpleri)");
   // revizie 🔴: SHORT pe minus -> protectia e PESTE gridul de sus (pierderea shortului vine de sus), nu sub gridul de jos
   const sh = S.acumConcret({ bot: bot({ directie: "short", gridJos: 0.55, gridSus: 0.65, pretCurent: 0.62, profitTotal: -3 }), fisa: fisaStub({ dir: "short", setare: { jos: 0.55, sus: 0.65, grile: 6, pas: 0.028, levier: 5, dir: "short", stop: { jos: 0.52, sus: 0.66 } }, deasa: { ...fisaStub().deasa, setare: { jos: 0.55, sus: 0.65, grile: 46, pas: 0.003, levier: 5, dir: "short", stop: { jos: 0.545, sus: 0.6555 } } } }), zero: { pretZero: 0.6 }, costuri, acum: T0 });

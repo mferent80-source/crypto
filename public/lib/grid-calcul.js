@@ -10,8 +10,11 @@ var GridCalcul = (function () {
   "use strict";
 
   var C = {
-    COMISION: 0.0005,          // pe umplere, Pionex futures
-    PAS_MIN: 0.003,            // v99: 0,30% (net 0,20% dupa ~0,10% dus-intors) - experienta lui (28.09): cu grid de 0,30% a facut
+    COMISION: 0.0005,          // TAKER (piata): cumpararea de la pornire, inchiderea, stopul - Pionex futures
+    COMISION_GRILA: 0.0002,    // v100.39 (audit 30.09): MAKER - ordinele limita ale grilelor. Masurat pe umplerile reale CRV 2393/2394:
+                               // 0,0200% / 0,0224% pe volum; doar prima cumparare (la piata) e 0,05%. Inainte toate erau 0,05% ->
+                               // proba scadea din fiecare pereche 0,06% in plus si respingea tocmai gridurile dese.
+    PAS_MIN: 0.003,            // v99: 0,30% (net 0,26% dupa 0,04% dus-intors pe grila) - experienta lui (28.09): cu grid de 0,30% a facut
                                // mai multi bani in piata laterala decat cu 3%; gridurile rare sunt atinse rar. Era 0,35% (net 0,25%).
     PAS_CANDIDATI: 4,          // v99: 4 candidati de pas (progresie geometrica de la PAS_MIN la maxim), nu 3
     PAS_MAX_MULT: 3,           // pasul maxim = mediana (high-low)/close pe 15M x 3
@@ -28,6 +31,18 @@ var GridCalcul = (function () {
     PAS_FERESTRE: 24,          // o fereastra noua la fiecare 6h
     ZILE_PLINE: 29
   };
+
+  // v100.39 (audit 30.09): perpetuele Pionex care NU sunt crypto - actiuni tokenizate (xStocks: TSLAX, NVDAX...), marfuri
+  // (aur, argint, petrol, gaz, cupru) si pre-IPO. Erau 17 din primele 60 pe harta „Crypto”, in regimul crypto si in Scan.
+  // Lista din pionex_symbols (30.09): baza terminata in X cu pas 0,01 si 2 zecimale (fara GMX, care e crypto) + marfuri/pre-IPO
+  // numite. Pionex nu marcheaza tipul in API; o actiune listata dupa 30.09 nu e aici pana nu se adauga.
+  var NU_CRYPTO = {};
+  ("AAOIX AAPLX AAX ALABX AMATX AMDX AMZNX ANTHROPIC APPX ARMX ASMLX ASTSX AVGOX AXTIX BABAX BEX BMNRX BNCX BNOX BOTX BRENTOIL BSPX CARX CBRS CEGX CIFRX " +
+   "COHRX COINX COPPER CPERX CRCLX CRDOX CRMX CRWVX CSCOX CVXX CXMTX DELLX DRAMX EWJX EWYX FLNCX FUTUX GEVX GLWX GOOGLX GSGX HIMSX HOODX HPEX HYUNDAI " +
+   "IBMX INTCX IRENX KLACX KORUX LITEX LLYX LMTX LNGX LRCXX METAX MOSX MPX MRNAX MRVLX MSFTX MSTRX MUX NATGAS NBISX NETX NFLXX NIOX NKEX NOKX NOWX NTRX " +
+   "NVDAX NVDLX OKLOX ONDSX ONX OPENAI ORCLX PANWX PAXG PAYPX PLTRX QCOMX QNTX QQQX RGTIX RKLBX RTXX SHAZX SITMX SLVX SMCIX SMHX SNDKX SNXXX SOXLX SOXSX " +
+   "SOXXX SPCX SPYX STXX TQQQX TSLAX TSMX TTEX TXNX UNGX UNHX UNITREEX URAX USARX USOX VGKX VSHX WDCX WTI XAG XAU XAUT XLPX XLVX XYZX").split(" ").forEach(function (s) { NU_CRYPTO[s] = 1; });
+  function eCrypto(simbol) { return !NU_CRYPTO[String(simbol || "").toUpperCase().replace(/_USDT_PERP$/, "").replace(/\.PERP$/, "")]; }
 
   function nr(v) {
     if (typeof v === "number") return isFinite(v) ? v : null;
@@ -185,7 +200,10 @@ var GridCalcul = (function () {
   }
   // v100.19 (30.09, el: „1 grilă”): O grila dincolo de fiecare margine (era doua), mereu inaintea lichidarii sigure (care sta la o
   // latime intreaga). Masurat pe 12 monede, mediana: 2 grile tipic +2,5% / cel mai prost −19,6%; 1 grila +1,8% / −16,3%.
-  function stopuri(jos, sus, pas) { return { jos: jos * (1 - pas), sus: sus * (1 + pas) }; }
+  // v100.39 (30.09, el: „gridurile dese sunt mult prea rare” + a ales „stop la ~1/8 din lățime”): la gridul des „o grilă”
+  // inseamna 0,30% - proba il scotea pe stop la prima fluctuatie si respingea gridul des (9/24 pe plus pe 8 monede x 3 directii;
+  // cu stopul la 1/8 din latime + comisionul maker, 21/24). Stopul sta la max(un pas, 1/8 din latimea intervalului).
+  function stopuri(jos, sus, pas) { var d = Math.max(pas, (sus / jos - 1) / 8); return { jos: jos * (1 - d), sus: sus * (1 + d) }; }
 
   // o.grile (optional) forteaza numarul de grile - folosit cand minimul pe ordin
   // cere mai putine grile decat da pasul (spec 6.4).
@@ -200,7 +218,7 @@ var GridCalcul = (function () {
       dir: o.dir, pret: o.pret, jos: loc.jos, sus: loc.sus, grile: N, pas: g,
       levier: L, levierSigur: sig.levier, sigur: sig.sigur, pesteSigur: L > sig.levier || !sig.sigur,
       lichidare: lq, stop: stopuri(loc.jos, loc.sus, g),
-      profitGrila: g - 2 * C.COMISION, perOrdin: suma * L / N, suma: suma
+      profitGrila: g - 2 * C.COMISION_GRILA, perOrdin: suma * L / N, suma: suma
     };
   }
 
@@ -347,6 +365,6 @@ var GridCalcul = (function () {
   return { C: C, bare: bare, bareToate: bareToate, bareBursa: bareBursa, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
-    regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine };
+    regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine, eCrypto: eCrypto };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridCalcul = GridCalcul;

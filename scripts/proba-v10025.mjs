@@ -192,7 +192,8 @@ await test("pagina: botii inchisi = prima pagina Pionex (cei mai noi) + arhiva d
 await test("nota statisticii spune de unde vin botii: toata istoria / colectorul inca strange / doar prima pagina; si cati spot grid / smart copy raman deoparte", () => {
   const ctx = { jtStat: { toate: { crypto: { tr: new Array(2200) } } }, jtArhiva: { sursa: "acasa", complet: true }, jtStare: { boti: [{ buOrderType: "futures_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "smart_copy" }] } };
   vm.createContext(ctx); vm.runInContext(functia(app, "jtNotaPionex") + functia(app, "jtStatNota") + ";this.n=jtStatNota;", ctx);
-  let t = ctx.n("crypto", {}); assert.match(t, /toată istoria Pionex/); assert.match(t, /inclusiv 1 spot grid și 1 smart copy/);   // v100.27: intra in socoteala assert.doesNotMatch(t, /doar ultimii/);
+  let t = ctx.n("crypto", {}); assert.match(t, /toată istoria Pionex/); assert.match(t, /inclusiv 1 spot grid și 1 smart copy/);   // v100.27: intra in socoteala
+  assert.doesNotMatch(t, /doar ultimii/);
   ctx.jtArhiva = { sursa: "acasa", complet: false }; t = ctx.n("crypto", {}); assert.match(t, /colectorul încă strânge istoria/);
   ctx.jtArhiva = { sursa: "pagina", complet: false }; t = ctx.n("crypto", {}); assert.match(t, /doar ultimii 2200 boți/); assert.match(t, /de acasă/);
   t = ctx.n("tot", { lpu: 4.65 }); assert.match(t, /4,65 lei/); assert.match(t, /doar ultimii 2200 boți/);

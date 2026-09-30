@@ -48,11 +48,11 @@ await test("greseli: pozitia a mancat grilele (grile pe plus, rezultat pe minus)
   assert.deepEqual(cu, ["AAVE 06:41", "BCH 10:18", "COTI 11:07", "SUI 03:22"]);
 });
 
-await test("greseli: grile prea dese (net < 0,25% dupa comision) si stop/iesire din grid la BCH 10:18", () => {
+await test("greseli: grile prea dese (net < 0,26% dupa comision) si stop/iesire din grid la BCH 10:18", () => {
   const l = JT.din(BOTI), b = gaseste(l, "BCH", "10:18");
   const g = b.greseli.map((x) => x.cod);
   assert.ok(g.includes("grile-prea-dese"), g.join(","));
-  aprox(b.pasNet, (25 / 30) / 352.5 - 0.001, 1e-4);
+  aprox(b.pasNet, (25 / 29) / 352.5 - 0.0004, 1e-6);   // v100.38: 30 linii = 29 intervale; v100.39: comisionul de grila 0,02% x 2 (toleranta stransa)
   assert.ok(g.includes("stop-atins"), g.join(","));
   assert.ok(!gaseste(l, "SUI", "03:22").greseli.some((x) => x.cod === "stop-atins"), "SUI s-a inchis in interval");
 });

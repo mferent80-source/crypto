@@ -17,13 +17,15 @@ async function test(nume, fn) {
 }
 console.log("\nV100.19 · stopul setarilor propuse la o grila · proba\n");
 
-await test("GridCalcul.stopuri: o grila dincolo de fiecare margine", () => {
-  const s = GridCalcul.stopuri(100, 120, 0.02);
-  assert.ok(Math.abs(s.jos - 98) < 1e-9, `jos ${s.jos}`); assert.ok(Math.abs(s.sus - 122.4) < 1e-9, `sus ${s.sus}`);
+await test("GridCalcul.stopuri: o grila dincolo de fiecare margine (gridul rar: pasul > 1/8 din latime); v100.39: la gridul des 1/8 din latime", () => {
+  const s = GridCalcul.stopuri(100, 120, 0.03);   // 1/8 din 20% = 2,5% < 3% -> o grila
+  assert.ok(Math.abs(s.jos - 97) < 1e-9, `jos ${s.jos}`); assert.ok(Math.abs(s.sus - 123.6) < 1e-9, `sus ${s.sus}`);
+  const d = GridCalcul.stopuri(100, 120, 0.003);  // gridul des: 1/8 din 20% = 2,5% (el, 30.09: „stop la ~1/8 din lățime”)
+  assert.ok(Math.abs(d.jos - 97.5) < 1e-9, `jos des ${d.jos}`); assert.ok(Math.abs(d.sus - 123) < 1e-9, `sus des ${d.sus}`);
 });
 
 await test("construieste (deci fisa si proba ei) pune stopul la o grila, iar lichidarea ramane dincolo de el", () => {
-  const st = GridCalcul.construieste({ pret: 100, lat: 0.1, pas: 0.01, dir: "long", suma: 100 });
+  const st = GridCalcul.construieste({ pret: 100, lat: 0.06, pas: 0.01, dir: "long", suma: 100 });   // v100.39: 1/8 din 6% < 1% -> o grila
   assert.ok(Math.abs(st.stop.jos - st.jos * (1 - st.pas)) < 1e-9, `stop ${st.stop.jos} jos ${st.jos} pas ${st.pas}`);
   assert.ok(Math.abs(st.stop.sus - st.sus * (1 + st.pas)) < 1e-9);
   assert.ok(st.lichidare.jos === null || st.lichidare.jos < st.stop.jos, `lichidare ${st.lichidare.jos}`);

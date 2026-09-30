@@ -18,29 +18,32 @@ var Scenariu = (function () {
   // Datele gridului din buOrderData (brut Pionex) + campurile rutei.
   function grid(brut, bot) {
     var x = (brut && brut.buOrderData) || {};
-    var jos = nr(x.bottom), sus = nr(x.top), randuri = nr(x.row), q = nr(x.perVolume);
+    // v100.39 (audit 30.09): PIONEX NUMARA LINIILE - row = linii (jos si sus incluse), intervalele = row - 1; gridul geometric
+    // are liniile in progresie geometrica. Inainte: row intervale, mereu aritmetic -> alt numar de loturi pana la X (31% din preturi).
+    var jos = nr(x.bottom), sus = nr(x.top), randuri = nr(x.row), q = nr(x.perVolume), geo = String(x.gridType || "").toLowerCase() === "geometric";
     var poz = nr(x.position), mediu = nr(x.positionOpenPrice), marja = nr(x.marginBalance);
     var inv = bot ? nr(bot.investit) : null, pret = bot ? nr(bot.pretCurent) : null;
     var trend = String(x.trend || (bot && bot.directie) || "").toLowerCase();
     var lipsa = [];
     if (!(jos > 0) || !(sus > jos)) lipsa.push("intervalul gridului");
-    if (!(randuri >= 1)) lipsa.push("numărul de niveluri");
+    if (!(randuri >= 2)) lipsa.push("numărul de niveluri");
     if (!(q > 0)) lipsa.push("cantitatea pe nivel");
     if (poz === null || mediu === null) lipsa.push("poziția");
     if (marja === null) lipsa.push("marja botului");
     if (inv === null) lipsa.push("suma investită");
     if (!(pret > 0)) lipsa.push("prețul de acum");
     if (trend !== "long" && trend !== "short") lipsa.push("direcția botului (merge doar pentru long/short)");
-    return { jos: jos, sus: sus, pas: (jos > 0 && sus > jos && randuri >= 1) ? (sus - jos) / randuri : null,
-      randuri: randuri, q: q, poz: poz === null ? null : Math.abs(poz), mediu: mediu, marja: marja, inv: inv,
+    var intervale = randuri >= 2 ? randuri - 1 : null;
+    return { jos: jos, sus: sus, pas: (jos > 0 && sus > jos && intervale) ? (sus - jos) / intervale : null, geo: geo,
+      randuri: randuri, intervale: intervale, q: q, poz: poz === null ? null : Math.abs(poz), mediu: mediu, marja: marja, inv: inv,
       pret: pret, semn: trend === "short" ? -1 : 1, lipsa: lipsa };
   }
 
   // Starea botului daca pretul ajunge la X (mers intr-un singur sens, de la pretul de acum).
   function la(g, X) {
-    var N = g.poz, A = g.mediu, realizat = 0, s = g.semn, n = g.randuri;
+    var N = g.poz, A = g.mediu, realizat = 0, s = g.semn, n = g.intervale != null ? g.intervale : g.randuri;
     for (var i = 0; i <= n; i++) {
-      var L = g.jos + i * g.pas;
+      var L = g.geo ? g.jos * Math.pow(g.sus / g.jos, i / n) : g.jos + i * g.pas;
       // long: cumpara pe niveluri SUB pretul de acum pana la X; vinde pe cele de DEASUPRA.
       // short: invers (vinde in urcare = creste pozitia short; cumpara in coborare = o reduce).
       var inCrestere = s > 0 ? (L < g.pret && L >= X) : (L > g.pret && L <= X);

@@ -27,7 +27,7 @@ import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiv
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.19";
+const VERSIUNE_COLECTOR = "v101.20";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -331,7 +331,10 @@ async function tura() {
       const st = stareAlerte[b.id] || (stareAlerte[b.id] = {});
       const p = Number(b.pretCurent), afara = Number.isFinite(p) && b.gridJos != null && b.gridSus != null && (p < Number(b.gridJos) || p > Number(b.gridSus));
       st._afaraDe = afara ? (st._afaraDe || acum) : null;
-      if (pl && pl.plan && !pl.plan.proba) ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe, ampZi: ctx.ampZi }, acum);   // v88: nu si planul unei probe
+      if (pl && pl.plan && !pl.plan.proba) {   // v88: nu si planul unei probe
+        ctx.plan = TabloExtra.planStare(b, pl.plan, { afaraDe: st._afaraDe, ampZi: ctx.ampZi, minusAtins: !!st._minusAtins }, acum);
+        st._minusAtins = ctx.plan.atins.indexOf("minus") >= 0;   // v100.39: histerezis - atins ramane atins pana revine peste 80% din prag
+      }
       // v97.6: botul nou fara plan -> o data pe Discord, cu propunerea (dupa planul lui cel mai nou), la 10 min dupa pornire
       if (pl && !pl.plan && !st._faraPlan && Number(b.pornitLa) > 0 && acum - Number(b.pornitLa) > 10 * 60000) {
         let ult = null;

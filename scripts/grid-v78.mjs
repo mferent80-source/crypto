@@ -151,12 +151,13 @@ await test("simuleaza: canal neutru socotit de mana - doua cicluri pe celula 1 -
   // 90-110, 4 grile, levier 1: niveluri 90 / 94,630 / 99,499 / 104,618 / 110 (verificate in Python)
   // neutru la 100: celulele 0 si 1 cumpara la 90 si 94,630; celula 2 contine pretul (inactiva); celula 3 vinde la 110
   // fiecare bara (verde, drum O->L->H->C): 100 -> 94 (cumpara la 94,630) -> 100 (vinde la 99,499)
-  // q1 = 1/4/94,630 = 0,00264186; castig = q1 * 4,8687 = 0,0128618; comision = q1*0,0005*(94,630+99,499) = 0,00025643
-  // net pe ciclu 0,0126054; doua bare = 0,0252108
+  // q1 = 1/4/94,630 = 0,00264186; castig = q1 * 4,8687 = 0,0128618; comision = q1*0,0002*(94,630+99,499) = 0,00010257
+  // (v100.39: umplerile de grila sunt ordine limita -> maker 0,02%, masurat pe CRV; inainte 0,05% -> 0,0252108)
+  // net pe ciclu 0,0127592; doua bare = 0,0255185
   const b = [0, 1].map((i) => ({ t: i * Q, o: 100, h: 100, l: 94, c: 100 }));
   const st = { dir: "neutru", jos: 90, sus: 110, grile: 4, levier: 1 };
   const r = GP.simuleaza(b, 0, 2, st);
-  aprox(r.net, 0.0252108, 0.00002, "net");
+  aprox(r.net, 0.0255185, 0.00002, "net");
   assert.equal(r.umpleri, 4);
   assert.equal(r.lichidat, false);
 });
@@ -562,7 +563,8 @@ await test("F3 judeca: pe bare de 4h - regim, latimea p75 pe 2 zile, directia, p
   assert.ok(j.regim && j.regim.miscare === false, JSON.stringify(j.regim));
   assert.ok(j.latime > 0 && j.latime < 1, "latimea " + j.latime);
   assert.ok(["long", "neutru", "short"].includes(j.dir));
-  assert.ok(j.grile >= 2 && j.pas >= 0.0035, JSON.stringify({ g: j.grile, p: j.pas }));
+  // v100.39 (el: „gridul des mereu”): Scan-ul propune gridul des - pasul ~PAS_MIN (0,30%; efectiv putin peste, grilele se rotunjesc in jos)
+  assert.ok(j.grile >= 2 && j.pas >= GC.C.PAS_MIN && j.pas < GC.C.PAS_MIN * 1.2, JSON.stringify({ g: j.grile, p: j.pas }));
   assert.equal(j.stare, "candidat");
   aprox(j.scor, j.profitGrila * j.traversariZi / j.grile, 1e-12, "scorul e pe investitie (impartit la grile)");
   assert.ok(j.scor < 0.02, "un grid nu aduce peste 2%/zi pe investitie in liniste: " + j.scor);
@@ -742,13 +744,13 @@ const ORA_ = 3600000, P0 = 1790185122575;
 const botMET = { id: "2382", baza: "MET.PERP", quote: "USDT", activ: true, directie: "long", levier: 5, investit: 88.98, profitNet: -4.8309, profitTotal: -5.4292, pnlNerealizat: -0.5984, comisioane: -0.7086, finantare: -0.0563, gridProfitBrut: 4.0787, pozitie: 702, pretDeschidere: 0.34115, pretCurent: 0.3403, gridJos: 0.3, gridSus: 0.4, pornitLa: P0,
   brut: { buOrderData: { row: 93, gridType: "arithmetic", gridProfit24h: "3.99005464", trx24h: 320, fundingFeePayment: "-0.05626315455384", initPrice: "0.3556" } } };
 await test("v80 modulul TabloExtra exista", () => assert.ok(TX, "tablou-extra.js lipseste"));
-await test("v80 geometrieBot: MET aritmetic 0,30-0,40 / 93 grile la 0,3403 -> pas 0,001075 = 0,316% brut, ~0,216% net; v99: peste pragul de 0,20% (0,30% brut) -> NU e 'prea des'; 200 de grile (0,047% net) -> prea dese", () => {
+await test("v80 geometrieBot: MET aritmetic 0,30-0,40 / 93 grile la 0,3403 -> pas 0,001075 = 0,316% brut, ~0,276% net (v100.39: 0,02% x 2 pe grila); v99: peste pragul de 0,26% net (0,30% brut) -> NU e 'prea des'; 200 de grile (0,047% net) -> prea dese", () => {
   const g = TX.geometrieBot(botMET);
   // v100.38: 93 de grile Pionex = 93 de linii = 92 de intervale
-  aprox(g.pasPret, 0.1 / 92, 1e-9); aprox(g.pasPct, (0.1 / 92) / 0.3403, 1e-6); aprox(g.netPct, (0.1 / 92) / 0.3403 - 0.001, 1e-6);
-  assert.equal(g.mod, "aritmetic"); assert.equal(g.grile, 93); assert.equal(g.preaDese, false, "0,216% net e peste pragul nou de 0,20% (experienta lui: 0,30% brut merge lateral)");
+  aprox(g.pasPret, 0.1 / 92, 1e-9); aprox(g.pasPct, (0.1 / 92) / 0.3403, 1e-6); aprox(g.netPct, (0.1 / 92) / 0.3403 - 0.0004, 1e-6);
+  assert.equal(g.mod, "aritmetic"); assert.equal(g.grile, 93); assert.equal(g.preaDese, false, "0,276% net e peste pragul de 0,26% (experienta lui: 0,30% brut merge lateral)");
   const b200 = JSON.parse(JSON.stringify(botMET)); b200.brut.buOrderData.row = 200;
-  assert.equal(TX.geometrieBot(b200).preaDese, true, "0,047% net: comisionul mananca grila");
+  assert.equal(TX.geometrieBot(b200).preaDese, true, "0,108% net: sub pragul de 0,26% al fisei");
   assert.equal(TX.geometrieBot({ gridJos: 0.3, gridSus: 0.4, brut: { buOrderData: {} } }), null, "fara numar de grile -> null");
 });
 await test("v80 comparaCuFisa: randuri bot vs fisa (interval, grile, pas net, levier, directie, verdict) + semnale concrete", () => {

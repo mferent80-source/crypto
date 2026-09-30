@@ -34,7 +34,7 @@ var Acasa = (function () {
   function miscari(tickers, o) {
     o = o || {};
     var mis = {}; (o.inMiscare || []).forEach(function (s) { mis[String(s).replace(/_USDT_PERP$/, "")] = true; });
-    var l = (Array.isArray(tickers) ? tickers : []).filter(function (x) { return x && /_USDT_PERP$/.test(String(x.symbol)); })
+    var l = (Array.isArray(tickers) ? tickers : []).filter(function (x) { return x && /_USDT_PERP$/.test(String(x.symbol)) && (typeof GridCalcul === "undefined" || GridCalcul.eCrypto(x.symbol)); })   // v100.39: fara actiuni/marfuri tokenizate
       .map(function (x) { var op = nr(x.open), cl = nr(x.close), v = nr(x.amount), s = String(x.symbol).replace(/_USDT_PERP$/, ""); return { s: s, v: v, p: cl, ch: op > 0 && cl > 0 ? (cl / op - 1) * 100 : null, miscare: !!mis[s] }; })
       .filter(function (x) { return x.v > 0 && x.ch !== null; }).sort(function (a, b) { return b.v - a.v; }).slice(0, o.top || 60);
     var s = l.slice().sort(function (a, b) { return b.ch - a.ch; });

@@ -76,7 +76,7 @@ await test("hartie: botul de hartie simuleaza setarea din fisa pe lumanarile de 
   const Q = 15 * 60000, t0 = 1_790_000_000_000;
   const bare = [0, 1].map((i) => ({ t: t0 + i * Q, o: 100, h: 100, l: 94, c: 100 }));
   const r = O.hartie({ setare: { dir: "neutru", jos: 90, sus: 110, grile: 4, levier: 1, suma: 100 }, pornit: t0 }, bare);
-  aprox(r.net, 0.0252108, 0.00002, "acelasi canal socotit de mana ca in grid-v78"); aprox(r.usdt, 2.52108, 0.002);
+  aprox(r.net, 0.0255185, 0.00002, "acelasi canal socotit de mana ca in grid-v78 (v100.39: grilele pe 0,02%)"); aprox(r.usdt, 2.55185, 0.002);
   assert.equal(r.bare, 2);
   assert.equal(O.hartie({ setare: { dir: "neutru", jos: 90, sus: 110, grile: 4, levier: 1, suma: 100 }, pornit: t0 + 10 * Q }, bare).bare, 0, "lumanarile de dinainte de pornire nu se socotesc");
 });

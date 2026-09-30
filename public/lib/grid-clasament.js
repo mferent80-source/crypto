@@ -26,16 +26,15 @@ var GridClasament = (function () {
     var d = G.directie(b4h, G.agrega(b4h, 86400000));
     out.dir = d.dir; out.tarie = d.tarie; out.motive = d.motive;
     // pasul: miscarea tipica pe 15 min ~ cea pe 4h / 4 (radacina din 16 bare); pas max = x3
-    var hl = [];
-    for (var j = 0; j < b4h.length; j++) hl.push((b4h[j].h - b4h[j].l) / b4h[j].c);
-    var tip15 = (G.mediana(hl) || 0) / 4, pasMax = Math.max(C.PAS_MIN, tip15 * C.PAS_MAX_MULT);
-    out.pas = Math.sqrt(C.PAS_MIN * pasMax);
+    // v100.39 (el, 30.09: „gridurile dese sunt mult prea rare” -> gridul des mereu): Scan-ul propune gridul des (PAS_MIN, 0,30%),
+    // ca fisa; inainte sqrt(PAS_MIN x pasMax) - un pas de mijloc care se muta tacut cu PAS_MIN
+    out.pas = C.PAS_MIN;
     if (!(out.latime > 0) || !out.regim) return out;
     var loc = G.plaseaza(out.pret, out.latime, out.dir);
     out.grile = G.nrGrile(loc.jos, loc.sus, out.pas);
     var g = Math.pow(loc.sus / loc.jos, 1 / out.grile) - 1;
     out.pas = g;
-    out.profitGrila = g - 2 * C.COMISION;
+    out.profitGrila = g - 2 * C.COMISION_GRILA;
     // traversari pe zi estimate: miscarea mediana pe 4h / pas, x 6 bare pe zi
     var m4 = [];
     for (var k = 1; k < b4h.length; k++) m4.push(Math.abs(b4h[k].c - b4h[k - 1].c) / b4h[k - 1].c);
@@ -63,7 +62,7 @@ var GridClasament = (function () {
   // tickere Pionex -> top n PERP dupa volumul in USDT (amount); volum lipsa = afara, nu 0
   function topDupaVolum(tickers, n) {
     return (Array.isArray(tickers) ? tickers : [])
-      .filter(function (x) { return x && /_USDT_PERP$/.test(String(x.symbol)); })
+      .filter(function (x) { return x && /_USDT_PERP$/.test(String(x.symbol)) && G.eCrypto(x.symbol); })   // v100.39: fara actiuni/marfuri tokenizate
       .map(function (x) { var v = x.amount == null || x.amount === "" ? NaN : Number(x.amount); return { simbol: String(x.symbol), volum: v }; })
       .filter(function (x) { return isFinite(x.volum) && x.volum > 0; })
       .sort(function (a, b) { return b.volum - a.volum; }).slice(0, n || 100);

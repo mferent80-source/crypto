@@ -25,8 +25,8 @@ var TabloExtra = (function () {
     var ref = p > 0 ? p : (jos + sus) / 2;
     var pasPret = mod === "aritmetic" ? (sus - jos) / N : null;
     var pasPct = mod === "aritmetic" ? pasPret / ref : Math.pow(sus / jos, 1 / N) - 1;
-    var net = pasPct - 2 * C.COMISION;
-    return { mod: mod, grile: linii, intervale: N, jos: jos, sus: sus, pasPret: pasPret, pasPct: pasPct, netPct: net, preaDese: net < C.PAS_MIN - 2 * C.COMISION };
+    var net = pasPct - 2 * C.COMISION_GRILA;
+    return { mod: mod, grile: linii, intervale: N, jos: jos, sus: sus, pasPret: pasPret, pasPct: pasPct, netPct: net, preaDese: net < C.PAS_MIN - 2 * C.COMISION_GRILA };
   }
 
   // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): cat aduce O grila a botului care ruleaza, dupa comision -
@@ -51,7 +51,7 @@ var TabloExtra = (function () {
     var cb = g ? comisionDinUmplere(g.netPct) : null, cf = comisionDinUmplere(st.profitGrila);
     out.randuri.push({ et: "Comisionul ia din fiecare umplere", bot: cb !== null ? Math.round(cb * 100) + "%" : "—", fisa: cf !== null ? Math.round(cf * 100) + "%" : "—" });
     out.randuri.push({ et: "Verdictul de azi", bot: "", fisa: f.verdict && f.verdict.nivel || "—" });
-    if (g && g.preaDese) out.semnale.push("grile prea dese: fiecare umplere lasă " + pr(g.netPct) + " după comision (fișa cere cel puțin " + pr(C.PAS_MIN - 2 * C.COMISION) + ")");
+    if (g && g.preaDese) out.semnale.push("grile prea dese: fiecare umplere lasă " + pr(g.netPct) + " după comision (fișa cere cel puțin " + pr(C.PAS_MIN - 2 * C.COMISION_GRILA) + ")");
     if (lev !== null && st.levierSigur > 0 && lev > st.levierSigur) out.semnale.push("levier " + lev + "× peste cel sigur azi (" + st.levierSigur + "×): lichidarea stă mai aproape decât o lățime de interval");
     if (dirBot && f.dir && dirBot !== f.dir && !(dirBot === "neutral" && f.dir === "neutru")) out.semnale.push("direcția botului (" + dirBot + ") diferă de cea din trend azi (" + f.dir + ")");
     if (g && (g.jos > st.sus || g.sus < st.jos)) out.semnale.push("intervalul botului nu se mai suprapune cu cel propus azi");
@@ -63,7 +63,11 @@ var TabloExtra = (function () {
     var d = bu(b), p = nr(b && b.pornitLa), zile = p > 0 ? Math.max(1 / 24, ((acum || Date.now()) - p) / ZI) : null;
     var fund = nr(b && b.finantare), com = nr(b && b.comisioane), g24 = nr(d.gridProfit24h);
     var out = { grile24h: g24, umpleri24h: nr(d.trx24h), zile: zile, fundingZi: fund !== null && zile ? fund / zile : null, comisionZi: com !== null && zile ? com / zile : null, netZi: null, fundingMananca: null };
-    if (g24 !== null && out.fundingZi !== null && out.comisionZi !== null) {
+    // v100.39 (audit 30.09): sub o zi de viata comisionul e aproape numai taxa de CUMPARARE de la pornire (platita o data) -
+    // impartita la 3 ore devenea „−0,68 USDT pe zi” si orice bot nou iesea ATENTIE „costurile depasesc grilele” de la secunda 27.
+    // Costurile pe zi se judeca doar de la o zi de viata (grilele pe 24 h fata de costurile pe zi, ferestre egale).
+    if (zile !== null && zile < 1) out.preaTanar = true;
+    else if (g24 !== null && out.fundingZi !== null && out.comisionZi !== null) {
       out.netZi = g24 + out.comisionZi + out.fundingZi;
       out.fundingMananca = out.fundingZi < 0 && -out.fundingZi >= g24;
     }
@@ -327,6 +331,8 @@ var TabloExtra = (function () {
 
   // v81 (3) Planul lui: {plus: USDT, minus: USDT, afaraOre: ore}. stare.afaraDe = de cand e
   // pretul in afara gridului (il tine colectorul/tabloul). Intoarce distantele si ce s-a atins.
+  // v100.39 (audit 30.09): pragul pe minus are HISTEREZIS - odata atins (stare.minusAtins), ramane atins pana cand totalul revine
+  // peste 80% din prag. Inainte, cu totalul oscilind in jurul pragului, semaforul sarea IESI <-> ATENTIE la cateva minute.
   function planStare(b, plan, stare, acum) {
     if (!plan || !b) return null;
     var tot = nr(b.profitTotal), out = { plus: null, minus: null, afara: null, atins: [] };
@@ -342,7 +348,8 @@ var TabloExtra = (function () {
       out.plus.laTinta = totalLaTinta(b); out.plus.tintaPlan = pretTintaPentru(b, nr(plan.plus));
     }
     if (nr(plan.minus) > 0 && tot !== null) {
-      out.minus = { prag: nr(plan.minus), lipsa: nr(plan.minus) + tot }; if (tot <= -nr(plan.minus)) out.atins.push("minus");
+      out.minus = { prag: nr(plan.minus), lipsa: nr(plan.minus) + tot };
+      if (tot <= -nr(plan.minus) || (stare && stare.minusAtins && tot <= -0.8 * nr(plan.minus))) out.atins.push("minus");
       // v101.7: planul pe minus e doar alerta; opritorul din Pionex e ce lucreaza si noaptea - cat costa el atins si unde ar sta planul
       out.minus.laOpritor = totalLaOpritor(b); out.minus.opritorPlan = pretOpritorPentru(b, -nr(plan.minus));
       // v101.8: incape gridul in plan? (totalul la marginea de pierdere, iesirea fata de miscarea obisnuita, levierul potrivit)
@@ -514,10 +521,10 @@ var TabloExtra = (function () {
     var z = -total / netZi;
     return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") : Math.round(z)) + " zile până pe zero, la ritmul de azi (" + (netZi >= 0 ? "+" : "") + netZi.toFixed(2) + " USDT/zi), dacă prețul stă pe loc" };
   }
-  // v87: cat din castigul unei umpleri ia comisionul (0,05% la intrare + 0,05% la iesire)
+  // v87: cat din castigul unei umpleri ia comisionul; v100.39: pe grile Pionex ia 0,02% (maker) la intrare + 0,02% la iesire
   function comisionDinUmplere(netPct) {
     if (netPct === null || netPct === undefined || !isFinite(netPct)) return null;
-    var c = 2 * C.COMISION; return c / (netPct + c);
+    var c = 2 * C.COMISION_GRILA; return c / (netPct + c);
   }
 
   // v90: pe Tabloul unui bot intra doar alertele LUI si, din cele fara bot, doar ale colectorului din ultimele 2 ore

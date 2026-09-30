@@ -33,7 +33,7 @@ var SemnaleBot = (function () {
       else if (poz > 0.9) motiv = "prețul stă la marginea de sus a gridului (" + P(poz) + " din interval)";
     } else if ((nr(afaraOre) || 0) >= 2) motiv = "prețul e în afara gridului de " + nr(afaraOre).toFixed(1).replace(".", ",") + " ore";
     if (!motiv) return null;
-    // v99: setarea PROPUSA de fisa (deasa, 0,30%, in liniste - cand proba n-o respinge), altfel cea aleasa de platou
+    // v99: setarea PROPUSA de fisa (deasa, 0,30% - v100.39: oricand proba n-o respinge), altfel cea aleasa de platou
     var s = f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare, des = f.propusa === "deasa";
     return { nivel: "atentie", motiv: motiv, des: des, treceriZi: nr(des ? f.deasa.treceriZi : f.treceriZi),
       setare: { dir: s.dir || f.dir, jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, stop: s.stop || null } };
@@ -55,7 +55,7 @@ var SemnaleBot = (function () {
     var g = pasBot(b), s = f.deasa.setare;
     if (!g || !(s.pas > 0) || g.pas <= 1.5 * s.pas) return null;
     return { setare: s, pasBot: g.pas, pasDes: s.pas, grileBot: g.grile, treceriZi: nr(f.deasa.treceriZi),
-      motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; în piața liniștită de acum, gridul des de 0,3% (" + (s.grile + 1) + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
+      motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; gridul des de 0,3% (" + (s.grile + 1) + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
   }
   function fmtPret(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   // v99: "Acum, concret" - trei randuri cu cifre, pe Tablou, sub verdict: STOPUL (unde e, unde l-as pune), GRIDUL (al lui vs
@@ -88,7 +88,7 @@ var SemnaleBot = (function () {
     } else out.push({ cod: "stop", titlu: "Stopul", text: neutru ? "acum " + opTxt + ". Botul e neutru (cumpără sub preț, vinde peste): n-are un preț de zero pe o singură parte, deci un stop „la zero” nu există; protecția stă la o grilă în afara intervalului, pe ambele părți." : "acum " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
     // 2) gridul
     var poz = p !== null && jos !== null && sus !== null && sus > jos ? (p - jos) / (sus - jos) : null, c = x.costuri || {};
-    var al = g ? "al tău: " + g.grile + " grile la " + P(g.pas) + " pas (net " + P(g.pas - 2 * G.C.COMISION) + ")" : "al tău: fără geometrie citită";
+    var al = g ? "al tău: " + g.grile + " grile la " + P(g.pas) + " pas (net " + P(g.pas - 2 * G.C.COMISION_GRILA) + ")" : "al tău: fără geometrie citită";
     var azi = c.umpleri24h !== null && c.umpleri24h !== undefined ? ", " + c.umpleri24h + " umpleri în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : "";
     var unde = poz === null ? "" : poz < 0 ? " Prețul e SUB gridul de jos cu " + dist(jos, p) + " (botul nu mai cumpără; " + dist(sus, p) + " până sus)." : poz > 1 ? " Prețul e PESTE gridul de sus cu " + dist(sus, p) + " (botul a rămas fără poziție; " + dist(jos, p) + " până jos)."
       : " Prețul e la " + P(poz) + " din interval: " + dist(jos, p) + " până jos, " + dist(sus, p) + " până sus.";
