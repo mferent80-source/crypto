@@ -4963,7 +4963,7 @@ function grPret(x,info){var s=grFmt(x,grZec(info));return s==null?"—":s}
 function grCodTV(st,info){
   var zec=grZec(info),p=function(x){var s=grFmt(x,zec);return s==null?"0":s};
   var stopJos=st.dir==="short"?null:(st.stop&&st.stop.jos);
-  return [st.dir,p(st.jos),p(st.sus),String(st.grile),String(st.levier),p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0"].join(";");
+  return [st.dir,p(st.jos),p(st.sus),String(st.grile),String(st.levier),p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0","geometric"].join(";");   // v100.36: + tipul (fisa socoteste geometric; fara el, GRID-FISA v2.0 il lua din setarea indicatorului)
 }
 var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
 var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};
