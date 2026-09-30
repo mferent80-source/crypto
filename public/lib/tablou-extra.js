@@ -418,6 +418,16 @@ var TabloExtra = (function () {
     return { cod: parti.join(";"), sig: parti.slice(0, 7).concat(tip ? [tip] : []).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir, tip: tip };
   }
 
+  // v100.37 (30.09, el: „fa idei”): fisa propune un grid, dar pe moneda aceea poate rula un bot cu ALTUL (CRV: fisa 0,3822–0,4307 / 5 grile,
+  // botul 0,3755–0,423 / 8 grile) - codul fisei lipit in GRID-FISA nu da atunci liniile botului. null = fara bot activ; acelasi = acelasi grid (0,2%)
+  function gridDiferitDeBot(setare, b) {
+    if (!b || b.activ === false || !setare) return null;
+    var c = codTVBot(b, null); if (!c) return null;
+    var aproape = function (a, x) { a = nr(a); return a !== null && x > 0 && Math.abs(a - x) / x <= 0.002; };
+    var acelasi = aproape(setare.jos, c.jos) && aproape(setare.sus, c.sus) && Math.round(nr(setare.grile) || 0) === c.grile;
+    return { acelasi: acelasi, jos: c.jos, sus: c.sus, grile: c.grile, tip: c.tip, cod: c.cod };
+  }
+
   // v86: "Ce ai de facut acum" pe Tabloul botului - fiecare lucru O SINGURA DATA (v100.8: cele mai noi sus, apoi urgenta).
   // Surse: alertele colectorului din ultimele 24 h (critic/atentie, stranse pe titlu: 5 la fel = un rand "x5"),
   // avertismentele serverului (unite cu alerta care spune acelasi lucru), sfaturile (critic/atentie; info doar
@@ -520,7 +530,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { codTVBot: codTVBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

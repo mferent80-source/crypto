@@ -4960,6 +4960,14 @@ function grPret(x,info){var s=grFmt(x,grZec(info));return s==null?"—":s}
 // dir;jos;sus;grile;levier;stopJos;stopSus;lichJos;lichSus;suma - lipsa se scrie 0, pretul la precizia monedei.
 // v78.2: 10 campuri (+suma); stop-ul se trimite DOAR unde il arata fisa (la short nu exista stop jos;
 // la long, sus e take-profit - Pine il eticheteaza asa); precizia prin grZec/grFmt.
+// v100.37: botul care RULEAZA pe moneda fisei (din lista Tabloului) si avertismentul de sub codul fisei pentru TradingView
+function grBotPeMoneda(simbol){var l=(tbStare.boti||[]).filter(function(b){return b&&b.activ!==false&&TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex===simbol});return l[0]||null}
+function grTvAvertHtml(simbol,st){
+  var b=grBotPeMoneda(simbol),d=b?TabloExtra.gridDiferitDeBot(st,b):null;if(!d)return "";
+  if(d.acelasi)return '<p class="tbSub good">✓ Rândul „Pentru TradingView” e chiar gridul botului care rulează pe această monedă.</p>';
+  return '<div class="grTvAvert"><p class="bad"><b>⚠️ Pe această monedă rulează botul tău cu alt grid: '+escapeHtml(tbPretScurt(d.jos)+" – "+tbPretScurt(d.sus)+", "+d.grile+" grile"+(d.tip?" ("+d.tip+")":""))+'.</b> Rândul „Pentru TradingView” e PROPUNEREA fișei: lipit în GRID-FISA, liniile din TV nu vor fi ale botului.</p>'
+    +'<button type="button" class="actionGhost" value="'+escapeHtml(d.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul botului</button></div>';
+}
 function grCodTV(st,info){
   var zec=grZec(info),p=function(x){var s=grFmt(x,zec);return s==null?"0":s};
   var stopJos=st.dir==="short"?null:(st.stop&&st.stop.jos);
@@ -5401,7 +5409,7 @@ function renderGrid(){
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
     +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
     +grRand("Pentru TradingView (GRID-FISA)","liniile din fișă, pe grafic",grCodTV(st,i))
-    +'</div></div>';
+    +'</div></div>'+grTvAvertHtml(f.simbol,st);   // v100.37
   // v100.16: gridul dupa planul tau - doua variante una langa alta + proba pe 30 de zile
   var dG=grStare.date&&grStare.simbol===f.simbol?grStare.date:null,sumG=grNumar($("grSuma")&&$("grSuma").value)||st.suma,levG=grNumar($("grLevier")&&$("grLevier").value),plG=grPlanPentruVariante(f,sumG);
   // fisa zice neutru -> pentru long, directia botilor lui (10 din 10 long pana acum), spus pe fata; short doar daca il alege el
