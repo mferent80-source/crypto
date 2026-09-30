@@ -42,7 +42,7 @@ await test("colectorul da fisei cifra din istorie (arhiva de acasa), cerut doar 
   assert.ok(i > 0, "apelul fisei");
   assert.match(corp, /Obiceiuri\.subOOra\(JurnalTrade\.din\(/); assert.match(corp, /action=botiInchisi/); assert.match(corp, /3600000/);
   assert.match(c, /fisa = TabloExtra\.fisaInchidere\(x, \{ plan, atrPct, subOOra \}\)/);
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.17";/);
+  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(1[7-9]|[2-9]\d)";/, "cel putin v101.17");
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

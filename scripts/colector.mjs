@@ -27,7 +27,7 @@ import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiv
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.17";
+const VERSIUNE_COLECTOR = "v101.18";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -311,7 +311,7 @@ async function tura() {
   }
   // v100.29: bot nou pornit din Pionex pe o moneda unde pierzi (pe toata istoria, din arhiva) -> o alerta, inainte sa intre la „cunoscuti”
   try {
-    const av = await avertizariPornire({ boti, cunoscuti: m.cunoscuti, acum, Obiceiuri,
+    const av = await avertizariPornire({ boti, cunoscuti: m.cunoscuti, acum, Obiceiuri, adresa: adresaRadarului,   // v100.33: + linkul spre poarta
       trades: async () => { const a = await cere("/api/istoric-bot?action=botiInchisi"); return JurnalTrade.din(a && Array.isArray(a.boti) ? a.boti : []); } });
     for (const x of av) await trimiteAlerta({ nivel: x.nivel, titlu: x.titlu, mesaj: x.mesaj }, x.bot, "pornire-moneda");
   } catch (e) { jurnal("avertizare la pornire", e.message); }

@@ -3134,20 +3134,31 @@ const APP_API_TOKEN_SESSION_KEY="cryptoRadarApiTokenV54";
 // deci browserul n-are parola acolo (401 la tot). Pagina alerts (Trading Tools) aduce parola în link, DUPĂ # (partea asta nu pleacă
 // la niciun server): …/#parola=…&ecran=tabloubot. Se ține minte o dată pe adresa asta și dispare din bară înainte de prima cerere.
 const ecranDinLegatura=(function(){
+  // v100.33 (30.09, el: „fa idei”): desfacerea linkului intr-o functie (probata) - parola, ecranul (tabloubot / t212 / gridset),
+  // pozitia T212 (doar la t212) si moneda gridului (doar la gridset; doar litere si cifre)
+  function crLegaturaDin(h){
+    h=String(h||"");
+    const m=/[#&]parola=([^&]+)/.exec(h),e=/[#&]ecran=(tabloubot|t212|gridset)(?:&|$)/.exec(h),pz=/[#&]poz=([A-Za-z0-9_.-]{1,40})(?:&|$)/.exec(h),mo=/[#&]moneda=([A-Za-z0-9]{1,20})(?:&|$)/.exec(h);
+    let parola=null;if(m){try{parola=decodeURIComponent(m[1]).trim()||null}catch(x){parola=null}}
+    const ecran=e?e[1]:null;
+    return {parola:parola,ecran:ecran,poz:pz&&ecran==="t212"?pz[1]:null,moneda:mo&&ecran==="gridset"?mo[1].toUpperCase():null};
+  }
   try{
-    const h=String(location.hash||""),m=/[#&]parola=([^&]+)/.exec(h),e=/[#&]ecran=(tabloubot|t212)(?:&|$)/.exec(h),pz=/[#&]poz=([A-Za-z0-9_.-]{1,40})(?:&|$)/.exec(h);
-    if(m){const v=decodeURIComponent(m[1]).trim();if(v)localStorage.setItem(APP_API_TOKEN_SESSION_KEY,v)}
-    if(m||e)history.replaceState(null,"",location.pathname+location.search);
+    const L=crLegaturaDin(location.hash);
+    if(L.parola)localStorage.setItem(APP_API_TOKEN_SESSION_KEY,L.parola);
+    if(L.parola||L.ecran)history.replaceState(null,"",location.pathname+location.search);
     // prima vizita pe o adresa noua de tunel: service worker-ul se instaleaza si REINCARCA pagina (controllerchange), iar linkul e
     // deja scos din bara -> ecranul cerut se tine minte un minut in sesiune, ca sa ajunga si dupa reincarcare
     const K="crEcranDinLegatura";
-    if(e){try{sessionStorage.setItem(K,JSON.stringify({e:e[1],poz:pz&&e[1]==="t212"?pz[1]:null,t:Date.now()}))}catch{}return e[1]}
-    try{const x=JSON.parse(sessionStorage.getItem(K)||"null");if(x&&(x.e==="tabloubot"||x.e==="t212")&&Date.now()-x.t<60000)return x.e}catch{}
+    if(L.ecran){try{sessionStorage.setItem(K,JSON.stringify({e:L.ecran,poz:L.poz,moneda:L.moneda,t:Date.now()}))}catch{}return L.ecran}
+    try{const x=JSON.parse(sessionStorage.getItem(K)||"null");if(x&&(x.e==="tabloubot"||x.e==="t212"||x.e==="gridset")&&Date.now()-x.t<60000)return x.e}catch{}
     return null;
   }catch{return null}
 })();
 // v100.12 (ideea 6 „Păstrează ca plan”): linkul din alerts cere si o POZITIE T212 (…&ecran=t212&poz=AVGO_US_EQ) - citita din aceeasi
 // inregistrare de sesiune (supravietuieste reincarcarii facute de service worker); pagina T212 o desface o data (t212Render)
+// v100.33: moneda din linkul alertei de pornire (…&ecran=gridset&moneda=LIT), din aceeasi inregistrare de sesiune
+const monedaDinLegatura=(function(){try{const x=JSON.parse(sessionStorage.getItem("crEcranDinLegatura")||"null");return x&&x.e==="gridset"&&typeof x.moneda==="string"&&/^[A-Z0-9]{1,20}$/.test(x.moneda)&&Date.now()-x.t<60000?x.moneda:null}catch{return null}})();
 const pozDinLegatura=(function(){try{const x=JSON.parse(sessionStorage.getItem("crEcranDinLegatura")||"null");return x&&x.e==="t212"&&typeof x.poz==="string"&&/^[A-Za-z0-9_.-]{1,40}$/.test(x.poz)&&Date.now()-x.t<60000?x.poz:null}catch{return null}})();
 // Parola se tine acum pe DISPOZITIV (localStorage), nu pe sesiune: inainte se
 // stergea la inchiderea tabului, deci pe telefon o cerea de fiecare data.
@@ -5063,6 +5074,15 @@ function tbPornireHtml(b,dp){
   return '<div class="grPlanPornire"><p><b>De la pornirea botului</b> ('+ora(Number(b.pornitLa))+', acum '+(ore<48?Math.round(ore)+' h':(ore/24).toFixed(1).replace(".",",")+' zile')+'), pe drumul real al prețului:</p><ul class="grLista">'
     +(tot!=null?'<li>botul tău: acum <b class="'+(tot>=0?"good":"bad")+'">'+U(tot)+'</b></li>':'')+rand(dp.ta,"varianta ta")+rand(dp.mea,"varianta mea")+'</ul></div>';
 }
+// v100.33: deschis din alerta de pornire (…#ecran=gridset&moneda=LIT): fisa pe moneda ceruta, apoi poarta singura
+function grDinLegatura(m){
+  var el=$("grMoneda");if(!el||!m)return;
+  el.value=m;gridCalculeaza(true);
+  var sim=grSimbol(m),t0=Date.now(),iv=setInterval(function(){
+    if(Date.now()-t0>180000){clearInterval(iv);return}
+    if(grStare.fisa&&grStare.fisa.simbol===sim&&!grStare.inLucru){clearInterval(iv);gridPoarta().then(function(){var p=document.querySelector(".grPoarta");if(p)p.scrollIntoView({block:"start"});toast("Poarta pentru "+m+" — deschisă din alerta de pornire","good")},function(){})}
+  },1000);
+}
 async function gridPoarta(){
   var f=grStare.fisa;if(!f)return;
   var plan=grPlanCitit();
@@ -6516,3 +6536,4 @@ function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;
 applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
 // v100.8: linkul din pagina alerts cere un ecran anume (Tabloul botului / Trading 212) - dupa pornire, o singura data
 if(ecranDinLegatura)setTimeout(function(){try{navTo(ecranDinLegatura,true)}catch(e){}},0);
+if(ecranDinLegatura==="gridset"&&monedaDinLegatura)setTimeout(function(){try{grDinLegatura(monedaDinLegatura)}catch(e){}},300);   // v100.33
