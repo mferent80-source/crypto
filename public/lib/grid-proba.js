@@ -48,15 +48,16 @@ var GridProba = (function () {
     function capital(p) { return 1 + real - fee + (Ql * p - Cl) + (Cs - Qs * p); }
     function lichidat(p) { return capital(p) <= C.MMR * (Ql + Qs) * p; }
     function rezultat(extra) {
-      var r = { net: 0, realizat: real, comisioane: fee, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi };
+      // v100.16: iesit = pe ce parte l-a inchis stopul/tinta ("jos"/"sus", null = n-a iesit), bare = dupa cate lumanari
+      var r = { net: 0, realizat: real, comisioane: fee, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi, iesit: null, bare: null };
       for (var e in extra) r[e] = extra[e];
       return r;
     }
-    function inchide(p) {
-      if (lichidat(p)) return rezultat({ net: -1, lichidat: true });
+    function inchide(p, parte, nb) {
+      if (lichidat(p)) return rezultat({ net: -1, lichidat: true, bare: nb });
       real += (Ql * p - Cl) + (Cs - Qs * p); fee += (Ql + Qs) * p * com;
       Ql = Cl = Qs = Cs = 0;
-      return rezultat({ net: real - fee, oprit: true });
+      return rezultat({ net: real - fee, oprit: true, iesit: parte, bare: nb });
     }
     var pret = P, inauntru = true, sj = st.stop ? st.stop.jos : -Infinity, ss = st.stop ? st.stop.sus : Infinity;
     var fin = Math.min(b.length, start + lungime);
@@ -64,17 +65,17 @@ var GridProba = (function () {
       var x = b[i], drum = x.c >= x.o ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
       for (var d = 0; d < 4; d++) {
         var p = drum[d];
-        if (p <= sj) { misca(pret, sj); if (inauntru) iesiri++; return inchide(sj); }
-        if (p >= ss) { misca(pret, ss); if (inauntru) iesiri++; return inchide(ss); }
+        if (p <= sj) { misca(pret, sj); if (inauntru) iesiri++; return inchide(sj, "jos", i - start + 1); }
+        if (p >= ss) { misca(pret, ss); if (inauntru) iesiri++; return inchide(ss, "sus", i - start + 1); }
         misca(pret, p); pret = p;
         var acum = p >= st.jos && p <= st.sus;
         if (inauntru && !acum) iesiri++;
         inauntru = acum;
-        if (lichidat(p)) return rezultat({ net: -1, lichidat: true });
+        if (lichidat(p)) return rezultat({ net: -1, lichidat: true, bare: i - start + 1 });
       }
     }
     var fee2 = (Ql + Qs) * pret * com;   // comisionul de inchidere la final
-    return rezultat({ net: real - fee - fee2 + (Ql * pret - Cl) + (Cs - Qs * pret) });
+    return rezultat({ net: real - fee - fee2 + (Ql * pret - Cl) + (Cs - Qs * pret), bare: fin - start });
   }
 
   function statistici(rez) {
