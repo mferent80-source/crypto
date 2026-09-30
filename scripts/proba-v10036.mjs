@@ -27,7 +27,7 @@ await test("grCodTV: 11 campuri, ultimul „geometric” (dupa suma), ca GRID-FI
   vm.createContext(ctx); vm.runInContext(functia(app, "grCodTV") + ";this.f=grCodTV;", ctx);
   const c = ctx.f({ dir: "long", jos: 0.38221507, sus: 0.43067739, grile: 5, levier: 5, stop: { jos: 0.373, sus: 0.4411 }, lichidare: { jos: 0.3185 }, suma: 100 }, {});
   const p = c.split(";");
-  assert.equal(p.length, 11, c); assert.equal(p[10], "geometric"); assert.equal(p[0], "long"); assert.equal(p[3], "5"); assert.equal(p[9], "100");
+  assert.equal(p.length, 11, c); assert.equal(p[10], "geometric"); assert.equal(p[0], "long"); assert.equal(p[3], "6", "v100.38: 5 intervale -> 6 grile Pionex (linii)"); assert.equal(p[9], "100");
 });
 await test("GRID-FISA v2.0 (pe disc) citeste al 11-lea camp ca tip si deseneaza geometric jos·g^k", () => {
   assert.ok(pine, "Grid_Fisa_v2_0.pine lipseste din pine-scripts/GRID-FISA");

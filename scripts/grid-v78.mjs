@@ -331,11 +331,11 @@ await test("v78.1 grCodTV: randul pentru GRID-FISA (Pine) = dir;jos;sus;grile;le
   const src = scoateFunctia("grCodTV"); assert.ok(src, "grCodTV lipseste din app.js");
   const f = new Function(`${src}; return grCodTV;`)();
   const st = { dir: "long", jos: 0.311573, sus: 0.369651, grile: 8, levier: 4, stop: { jos: 0.298111, sus: 0.385609 }, lichidare: { jos: 0.246893, sus: null } };
-  assert.equal(f(st, { quotePrecision: 4 }), "long;0.3116;0.3697;8;4;0.2981;0.3856;0.2469;0;0;geometric", "fara suma -> al 10-lea camp 0 (v100.36: + tipul, al 11-lea)");
+  assert.equal(f(st, { quotePrecision: 4 }), "long;0.3116;0.3697;9;4;0.2981;0.3856;0.2469;0;0;geometric", "fara suma -> al 10-lea camp 0 (v100.36: + tipul, al 11-lea) (v100.38: numarul din cod = grile Pionex = linii = intervale + 1)");
   const c = f({ dir: "short", jos: 82139.4, sus: 85969.2, grile: 7, levier: 5, stop: { jos: 81066.1, sus: 87092.9 }, lichidare: { jos: null, sus: 101234.5 } }, { quotePrecision: 1 });
-  assert.equal(c, "short;82139.4;85969.2;7;5;0;87092.9;0;101234.5;0;geometric", "short: stopJos = 0");
+  assert.equal(c, "short;82139.4;85969.2;8;5;0;87092.9;0;101234.5;0;geometric", "short: stopJos = 0 (v100.38: numarul din cod = grile Pionex = linii = intervale + 1)");
   assert.equal(c.split(";").length, 11, "exact 11 campuri (v100.36: + tipul gridului)");
-  assert.equal(f(st, null), "long;0.311573;0.369651;8;4;0.298111;0.385609;0.246893;0;0;geometric", "fara info: 6 zecimale sub 1");
+  assert.equal(f(st, null), "long;0.311573;0.369651;9;4;0.298111;0.385609;0.246893;0;0;geometric", "fara info: 6 zecimale sub 1");
 });
 
 await test("v78.2 grCodTV: precizia lipsa (null/\"\") NU inseamna 0 zecimale; preturi < 0,0001 pastreaza cifrele; short trimite stopJos=0; suma e al 10-lea camp", () => {
@@ -353,7 +353,7 @@ await test("v78.2 grCodTV: precizia lipsa (null/\"\") NU inseamna 0 zecimale; pr
   assert.ok(Math.abs(Number(c[1]) - 0.00001234) < 1e-9, "jos pastreaza cifrele: " + c[1]);
   assert.ok(!/e/i.test(mic.replace(/;geometric$/, "")), "fara notatie stiintifica (in numere; v100.36: tipul „geometric” e la coada)");
   const sh = f({ dir: "short", jos: 90, sus: 110, grile: 4, levier: 3, suma: 100, stop: { jos: 85, sus: 115 }, lichidare: { jos: null, sus: 140 } }, { quotePrecision: 2 });
-  assert.equal(sh, "short;90.00;110.00;4;3;0;115.00;0;140.00;100;geometric", "short: stopJos = 0 (fisa nu-l arata)");
+  assert.equal(sh, "short;90.00;110.00;5;3;0;115.00;0;140.00;100;geometric", "short: stopJos = 0 (fisa nu-l arata) (v100.38: numarul din cod = grile Pionex = linii = intervale + 1)");
 });
 
 await test("v78.2 grPret: precizia null/\"\" -> zecimale dupa marime, nu 0", () => {
@@ -744,7 +744,8 @@ const botMET = { id: "2382", baza: "MET.PERP", quote: "USDT", activ: true, direc
 await test("v80 modulul TabloExtra exista", () => assert.ok(TX, "tablou-extra.js lipseste"));
 await test("v80 geometrieBot: MET aritmetic 0,30-0,40 / 93 grile la 0,3403 -> pas 0,001075 = 0,316% brut, ~0,216% net; v99: peste pragul de 0,20% (0,30% brut) -> NU e 'prea des'; 200 de grile (0,047% net) -> prea dese", () => {
   const g = TX.geometrieBot(botMET);
-  aprox(g.pasPret, 0.1 / 93, 1e-9); aprox(g.pasPct, (0.1 / 93) / 0.3403, 1e-6); aprox(g.netPct, (0.1 / 93) / 0.3403 - 0.001, 1e-6);
+  // v100.38: 93 de grile Pionex = 93 de linii = 92 de intervale
+  aprox(g.pasPret, 0.1 / 92, 1e-9); aprox(g.pasPct, (0.1 / 92) / 0.3403, 1e-6); aprox(g.netPct, (0.1 / 92) / 0.3403 - 0.001, 1e-6);
   assert.equal(g.mod, "aritmetic"); assert.equal(g.grile, 93); assert.equal(g.preaDese, false, "0,216% net e peste pragul nou de 0,20% (experienta lui: 0,30% brut merge lateral)");
   const b200 = JSON.parse(JSON.stringify(botMET)); b200.brut.buOrderData.row = 200;
   assert.equal(TX.geometrieBot(b200).preaDese, true, "0,047% net: comisionul mananca grila");
@@ -762,7 +763,7 @@ await test("v80 comparaCuFisa: randuri bot vs fisa (interval, grile, pas net, le
   // tabelul „fisa de azi" citeste f.setare - deci arata setarea propusa
   const des = { jos: 0.315, sus: 0.389, grile: 70, levier: 3, levierSigur: 3, pas: 0.003, profitGrila: 0.002 };
   const fd = { ...fisa, propusa: "deasa", setare: des, aleasa: { setare: fisa.setare, verdict: fisa.verdict }, deasa: { setare: des } };
-  assert.equal(TX.comparaCuFisa(botMET, fd).randuri.find((r) => r.et === "Grile").fisa, "70 geometric");
+  assert.equal(TX.comparaCuFisa(botMET, fd).randuri.find((r) => r.et === "Grile (în Pionex)").fisa, "71 geometric");   // v100.38: 70 intervale = 71 grile Pionex
   assert.equal(TX.comparaCuFisa(botMET, null).randuri.length, 0);
 });
 await test("v80 grileVsCosturi: grile 24h +3,99 vs comisioane/zi si funding/zi (din totalul de la pornire / zile)", () => {

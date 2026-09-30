@@ -27,8 +27,9 @@ var JurnalTrade = (function () {
     dir = dir === "long" || dir === "short" ? dir : "neutru";
     var grile = nr(d.gridProfit), com = nr(d.totalFee), fund = nr(d.totalFundingFee);
     var pasNet = null;
+    // v100.38: row = LINII Pionex -> intervalele sunt N − 1 (inainte: N)
     if (jos > 0 && sus > jos && N >= 2) {
-      var pasPct = mod === "aritmetic" ? (sus - jos) / N / ((jos + sus) / 2) : Math.pow(sus / jos, 1 / N) - 1;
+      var pasPct = mod === "aritmetic" ? (sus - jos) / (N - 1) / ((jos + sus) / 2) : Math.pow(sus / jos, 1 / (N - 1)) - 1;
       pasNet = pasPct - 2 * C.COMISION;
     }
     return {

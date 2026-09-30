@@ -4971,7 +4971,8 @@ function grTvAvertHtml(simbol,st){
 function grCodTV(st,info){
   var zec=grZec(info),p=function(x){var s=grFmt(x,zec);return s==null?"0":s};
   var stopJos=st.dir==="short"?null:(st.stop&&st.stop.jos);
-  return [st.dir,p(st.jos),p(st.sus),String(st.grile),String(st.levier),p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0","geometric"].join(";");   // v100.36: + tipul (fisa socoteste geometric; fara el, GRID-FISA v2.0 il lua din setarea indicatorului)
+  return [st.dir,p(st.jos),p(st.sus),String(st.grile+1),String(st.levier),   // v100.38: N intervale -> N + 1 linii Pionex
+    p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0","geometric"].join(";");   // v100.36: + tipul (fisa socoteste geometric; fara el, GRID-FISA v2.0 il lua din setarea indicatorului)
 }
 var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
 var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};
@@ -5049,7 +5050,7 @@ function grPlanVarHtml(pv,i,extra){
     var ore=p&&p.oreTipic!=null?(p.oreTipic<48?Math.round(p.oreTipic)+" h":(p.oreTipic/24).toFixed(1).replace(".",",")+" zile"):null;
     return '<div class="tbBloc grPlanBloc"><div class="tbBlocCap"><h4>'+escapeHtml(titlu)+'</h4><span class="tbSub">'+escapeHtml(x.cum)+'</span></div>'
       +grRand("Preț de jos",grPret(x.jos,i),grPret(x.jos,i))+grRand("Preț de sus",grPret(x.sus,i),grPret(x.sus,i))
-      +grRand("Număr de grile",x.grile+" geometric · pas "+P1(x.pas),String(x.grile))+grRand("Levier",x.levier+"×",String(x.levier))
+      +grRand("Număr de grile",(x.grile+1)+" geometric · pas "+P1(x.pas)+" ("+x.grile+" intervale)",String(x.grile+1))   /* v100.38: in Pionex = linii */+grRand("Levier",x.levier+"×",String(x.levier))
       +grRand(lung?"Stop-loss, la marginea de jos":"Stop-loss, la marginea de sus",grPret(stopP,i),grPret(stopP,i))
       +grRand(lung?"Take-profit, la marginea de sus":"Take-profit, la marginea de jos",grPret(tintaP,i),grPret(tintaP,i))
       +'<p class="grPlanBani"><span>atins stopul <b class="bad">'+U(x.laStop)+'</b></span><span>atinsă ținta <b class="good">'+U(x.laTinta)+'</b> + grilele încasate</span><span>lichidare '+(lq!=null?grPret(lq,i)+' <span class="tbSub">('+P1(Math.abs(lq/stopP-1))+' dincolo de stop)</span>':"—")+'</span></p>'
@@ -5402,7 +5403,7 @@ function renderGrid(){
     +grRand("Direcție",GR_DIR_PIONEX[f.dir],GR_DIR_PIONEX[f.dir])
     +grRand("Preț de jos",grPret(st.jos,i),grPret(st.jos,i))
     +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
-    +grRand("Număr de grile",st.grile+" · alege „Geometric” în Pionex (implicit e aritmetic)"+(st.redus?" · redus de la "+st.redus.de+", ca să încapă minimul pe ordin":""),String(st.grile))
+    +grRand("Număr de grile",(st.grile+1)+" · alege „Geometric” în Pionex (implicit e aritmetic) · Pionex numără liniile, cu cea de jos și cea de sus: "+(st.grile+1)+" linii = "+st.grile+" intervale"+(st.redus?" · redus de la "+(st.redus.de+1)+", ca să încapă minimul pe ordin":""),String(st.grile+1))   // v100.38
     +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
     +(f.deasa&&!f.deasa.aceeasi?grRand("Grid des (0,3 %)",f.propusa==="deasa"&&f.aleasa?"PROPUS (setările de mai sus) · piață liniștită, proba n-a respins-o · ~"+T1(f.deasa.treceriZi)+" perechi încheiate/zi pe ultimele 30 z (platoul probei alesese "+f.aleasa.setare.grile+" grile la "+P(f.aleasa.setare.pas)+", ~"+T1(f.aleasa.treceriZi)+" perechi/zi)":f.deasa.setare.grile+" grile · ~"+T1(f.deasa.treceriZi)+" perechi/zi · nepropus: "+(f.deasa.respinsa?f.deasa.motiv:(f.regim&&f.regim.miscare?"piața e în mișcare (după mișcare gridul iese cel mai rău)":"proba a ales pasul mai rar")),null):"")
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
@@ -5714,7 +5715,7 @@ function tbDeseneazaSemafor(b){
     :gmd?{setare:gmd.setare,titlu:"Grid mai des pentru piața liniștită de acum (0,3 %)",sub:gmd.motiv+". Nu e o dovadă, e regula ta (0,30 % lateral); proba pe 30 z n-a respins-o."}:null;
   var propHtml="";
   if(prop){var s=prop.setare,i=grStare.monede&&grStare.monede[TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex];
-    propHtml='<div class="tbMuta"><h5>'+escapeHtml(prop.titlu)+'</h5>'+(prop.sub?'<p class="tbSub">'+escapeHtml(prop.sub)+'</p>':'')+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",s.grile+" geometric",String(s.grile))+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}
+    propHtml='<div class="tbMuta"><h5>'+escapeHtml(prop.titlu)+'</h5>'+(prop.sub?'<p class="tbSub">'+escapeHtml(prop.sub)+'</p>':'')+grRand("Direcție",GR_DIR_PIONEX[s.dir]||s.dir,GR_DIR_PIONEX[s.dir]||s.dir)+grRand("Preț de jos",grPret(s.jos,i),grPret(s.jos,i))+grRand("Preț de sus",grPret(s.sus,i),grPret(s.sus,i))+grRand("Număr de grile",(s.grile+1)+" geometric",String(s.grile+1))   /* v100.38: in Pionex = linii */+grRand("Levier",s.levier+"×",String(s.levier))+(s.stop&&s.dir!=="short"?grRand("Stop-loss jos",grPret(s.stop.jos,i),grPret(s.stop.jos,i)):"")+'</div>'}
   propHtml+=tbPlanVarHtml(b);   // v100.16: gridul dupa planul tau (al botului; fara el, propunerea)
   if(cc){
     cc.hidden=false;
@@ -6100,7 +6101,9 @@ function renderTabloGrafic(){
   var niv=GraficBot.niveluriBot({bot:b,zero:z&&z.pretZero,planPlus:pPl?{pret:pPl,usdt:botiNr(pl.plus)}:null,planMinus:pMi?{pret:pMi,usdt:botiNr(pl.minus)}:null});
   var xo=(brut&&brut.buOrderData)||{},gj=botiNr(xo.bottom),gs=botiNr(xo.top);
   var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer||[],b.id,Date.now());
-  var d=GraficBot.desen({bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),n:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h",pretViu:pvPretViuAcum(b)});
+  var d=GraficBot.desen({bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),linii:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h",pretViu:pvPretViuAcum(b),
+    // v100.38: umplerile si perechile gridului, deduse din lumanari de la pornire, langa numarul de perechi al Pionex
+    umpleri:GraficBot.umpleri(bare,{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),linii:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric",p0:botiNr(xo.initPrice),pornit:botiNr(b.pornitLa),dir:String(b.directie||"").toLowerCase()}),perechiPionex:botiNr(b.ordinePerechi)});
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
   // ultimele 3 alerte ale botului si ca text (pe telefon punctele de pe banda se citesc greu)

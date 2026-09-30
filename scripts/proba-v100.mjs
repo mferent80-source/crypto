@@ -105,7 +105,7 @@ await test("acumConcret: fiecare cartela are cifra mare, eticheta de stare si ac
   const l = S.acumConcret({ bot: BOT, fisa: f, zero: { pretZero: 0.59512 }, costuri: { grile24h: 2.15, umpleri24h: 10 }, acum: T0 });
   const c = Object.fromEntries(l.map((x) => [x.cod, x]));
   assert.equal(c.stop.mare, "0.5455"); assert.match(c.stop.mic, /activ/); assert.ok(c.stop.tag && c.stop.tag.t && ["good", "warn", "bad", "mut"].includes(c.stop.tag.c));
-  assert.match(c.grid.mare, /−1,1%/); assert.equal(c.grid.tag.c, "bad"); assert.match(c.grid.tag.t, /nu tranzacționează/); assert.match(c.grid.act, /9 grile/);
+  assert.match(c.grid.mare, /−1,1%/); assert.equal(c.grid.tag.c, "bad"); assert.match(c.grid.tag.t, /nu tranzacționează/); assert.match(c.grid.act, /10 grile/);   // v100.38: propunerea de 9 intervale = 10 grile Pionex
   assert.equal(c.miscare.mare, "1,7×"); assert.equal(c.miscare.tag.c, "bad"); assert.match(c.miscare.tag.t, /împotriva botului/);
   for (const x of l) { assert.ok(x.act && x.act.length < x.text.length + 1, "actiunea e mai scurta decat detaliile"); assert.ok(x.text.length > 30); }
   const ff = S.acumConcret({ bot: BOT, fisa: null, zero: { pretZero: 0.59512 }, costuri: {}, acum: T0 });
@@ -232,7 +232,7 @@ await test("v100.4: TabloExtra.profitPeGrila - ce aduce O grila dupa comision: p
   assert.equal(typeof TE.profitPeGrila, "function", "TabloExtra.profitPeGrila exportat");
   const g = TE.geometrieBot(BOT_G()), r = TE.profitPeGrila(BOT_G());
   aprox(r.pct, g.netPct, 1e-12, "pct = pasul net al botului"); assert.equal(r.grile, 12); assert.equal(r.mod, "aritmetic");
-  aprox(r.usdt, 98.14 * 5 / 12 * g.netPct, 1e-9, "usdt pe grila");
+  aprox(r.usdt, 98.14 * 5 / 11 * g.netPct, 1e-9, "usdt pe grila (v100.38: row 12 = 12 linii = 11 intervale / loturi)");
   assert.equal(TE.profitPeGrila({ ...BOT_G(), brut: { buOrderData: {} } }), null, "fara numarul de grile -> null");
   assert.equal(TE.profitPeGrila({ ...BOT_G(), investit: null }).usdt, null, "fara investit: procentul ramane, banii nu se inventeaza");
 });

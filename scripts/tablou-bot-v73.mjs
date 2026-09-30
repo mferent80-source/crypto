@@ -117,12 +117,12 @@ await test("zigzagul da eficienta mica, trendul o da mare", () => {
 
 await test("amplitudinea se raporteaza la treapta grilei (ATR adevarat, cu mustati)", () => {
   const m = T.masoara(INTRARI);
-  // treapta = (0.0158 - 0.0153) / 25 = 0.00002
+  // v100.38: row = LINII Pionex -> 25 linii = 24 intervale: treapta = (0.0158 - 0.0153) / 24 = 0.000020833
   // ZIGZAG alterneaza 0.0154/0.0156 (delta close 0.0002) cu mustati de 0.00003
   // in fiecare parte => true range pe fiecare pas = 0.0002 + 0.00003 = 0.00023
-  // => amplitudine medie ATR = 0.00023 => raport = 0.00023 / 0.00002 = 11.5
-  assert.ok(Math.abs(m.amplitudine.valoare - 11.5) < 0.01,
-    `amplitudine gresita: ${m.amplitudine.valoare}, asteptat ~11.5`);
+  // => amplitudine medie ATR = 0.00023 => raport = 0.00023 / 0.000020833 = 11.04
+  assert.ok(Math.abs(m.amplitudine.valoare - 11.04) < 0.01,
+    `amplitudine gresita: ${m.amplitudine.valoare}, asteptat ~11.04`);
 });
 
 await test("[revizie] amplitudinea foloseste high/low, nu doar |delta close|", () => {
@@ -132,8 +132,8 @@ await test("[revizie] amplitudinea foloseste high/low, nu doar |delta close|", (
   // media |delta close| 0.004 (rau) vs ATR adevarat 0.011 (bine).
   const plate = Array.from({ length: 20 }, () => ({ close: 0.0155, high: 0.01553, low: 0.01547 }));
   const m = T.masoara({ ...INTRARI, klinePerp: plate });
-  // treapta = 0.00002; ATR = max(h-l, |h-prevClose|, |l-prevClose|) = 0.00006 => raport 3.0
-  assert.ok(Math.abs(m.amplitudine.valoare - 3.0) < 0.01,
+  // treapta = 0.000020833 (v100.38: 24 intervale); ATR = max(h-l, |h-prevClose|, |l-prevClose|) = 0.00006 => raport 2.88
+  assert.ok(Math.abs(m.amplitudine.valoare - 2.88) < 0.01,
     `amplitudine gresita: ${m.amplitudine.valoare}, asteptat ~3.0 (nu 0)`);
   assert.equal(m.amplitudine.stare, "bine", "vechea formula ar fi dat rau (amplitudine 0)");
 });

@@ -40,10 +40,12 @@ var SemnaleBot = (function () {
   }
   // v99: geometria gridului botului (pasul lui in procente), fara TabloExtra: N grile din Pionex (row), geometric sau aritmetic
   function pasBot(b) {
-    var d = b && b.brut && b.brut.buOrderData || {}, N = nr(d.row), jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), p = nr(b && b.pretCurent);
-    if (!(N >= 2) || !(jos > 0) || !(sus > jos)) return null;
+    // v100.38 (30.09): PIONEX NUMARA LINIILE - „Număr de grile” / row = linii (jos si sus incluse), intervalele = row − 1 (dovedit pe ~2.000
+    // de boti inchisi, loturile de la pornire, si pe botul CRV viu). Inainte se socotea pe row intervale - o linie in plus, toate decalate.
+    var d = b && b.brut && b.brut.buOrderData || {}, linii = nr(d.row), N = linii !== null ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), p = nr(b && b.pretCurent);
+    if (!(N >= 1) || !(jos > 0) || !(sus > jos)) return null;
     var geo = String(d.gridType || "").toLowerCase() === "geometric", ref = p > 0 ? p : (jos + sus) / 2;
-    return { grile: N, pas: geo ? Math.pow(sus / jos, 1 / N) - 1 : (sus - jos) / N / ref, mod: geo ? "geometric" : "aritmetic" };
+    return { grile: linii, pas: geo ? Math.pow(sus / jos, 1 / N) - 1 : (sus - jos) / N / ref, mod: geo ? "geometric" : "aritmetic" };
   }
   var T = function (v) { return v === null || v === undefined ? "?" : (Math.round(v * 10) / 10).toFixed(1).replace(".", ","); };
   // v99 (cererea lui, 28.09): botul e mult mai RAR decat gridul des propus de fisa in liniste -> propunere cu cifre.
@@ -53,7 +55,7 @@ var SemnaleBot = (function () {
     var g = pasBot(b), s = f.deasa.setare;
     if (!g || !(s.pas > 0) || g.pas <= 1.5 * s.pas) return null;
     return { setare: s, pasBot: g.pas, pasDes: s.pas, grileBot: g.grile, treceriZi: nr(f.deasa.treceriZi),
-      motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; în piața liniștită de acum, gridul des de 0,3% (" + s.grile + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
+      motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; în piața liniștită de acum, gridul des de 0,3% (" + (s.grile + 1) + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
   }
   function fmtPret(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   // v99: "Acum, concret" - trei randuri cu cifre, pe Tablou, sub verdict: STOPUL (unde e, unde l-as pune), GRIDUL (al lui vs
@@ -91,9 +93,9 @@ var SemnaleBot = (function () {
     var unde = poz === null ? "" : poz < 0 ? " Prețul e SUB gridul de jos cu " + dist(jos, p) + " (botul nu mai cumpără; " + dist(sus, p) + " până sus)." : poz > 1 ? " Prețul e PESTE gridul de sus cu " + dist(sus, p) + " (botul a rămas fără poziție; " + dist(jos, p) + " până jos)."
       : " Prețul e la " + P(poz) + " din interval: " + dist(jos, p) + " până jos, " + dist(sus, p) + " până sus.";
     var pzi = nr(f && (f.propusa === "deasa" && f.deasa ? f.deasa.treceriZi : f.treceriZi));
-    var prop = !f ? " Propunerea (gridul des sau cel rar) vine cu fișa — o socotesc." : sp ? " Propus acum (" + (f.propusa === "deasa" ? "piață liniștită: grid des 0,3%" : "din proba pe 30 z") + "): " + sp.grile + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + " la " + P(sp.pas) + " pas" + (pzi !== null ? ", ~" + T(pzi) + " perechi încheiate/zi pe ultimele 30 de zile" : "") + "." : "";
+    var prop = !f ? " Propunerea (gridul des sau cel rar) vine cu fișa — o socotesc." : sp ? " Propus acum (" + (f.propusa === "deasa" ? "piață liniștită: grid des 0,3%" : "din proba pe 30 z") + "): " + (sp.grile + 1) + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + " la " + P(sp.pas) + " pas" + (pzi !== null ? ", ~" + T(pzi) + " perechi încheiate/zi pe ultimele 30 de zile" : "") + "." : "";
     // cand gridul des NU e propus, spune de ce (regula lui vs. proba pe istoricul monedei) - nu-l lasa sa creada ca nu exista
-    var de = f && f.deasa && f.deasa.setare && f.propusa !== "deasa" && !f.deasa.aceeasi ? " Gridul des (0,3%, " + f.deasa.setare.grile + " grile" + (nr(f.deasa.treceriZi) !== null ? ", ~" + T(f.deasa.treceriZi) + " perechi/zi" : "") + ") nu-l propun acum: " + (f.deasa.respinsa ? f.deasa.motiv : (rg0 && rg0.miscare ? "piața e în mișcare, după mișcare gridul iese cel mai rău" : "proba a ales pasul mai rar")) + "." : "";
+    var de = f && f.deasa && f.deasa.setare && f.propusa !== "deasa" && !f.deasa.aceeasi ? " Gridul des (0,3%, " + (f.deasa.setare.grile + 1) + " grile" + (nr(f.deasa.treceriZi) !== null ? ", ~" + T(f.deasa.treceriZi) + " perechi/zi" : "") + ") nu-l propun acum: " + (f.deasa.respinsa ? f.deasa.motiv : (rg0 && rg0.miscare ? "piața e în mișcare, după mișcare gridul iese cel mai rău" : "proba a ales pasul mai rar")) + "." : "";
     out.push({ cod: "grid", titlu: "Gridul", text: al + azi + "." + unde + prop + de });
     // 3) miscarea
     var rg = f && f.regim;
@@ -141,7 +143,7 @@ var SemnaleBot = (function () {
     gr0.mic = poz === null ? "fără interval citit" : poz < 0 ? "sub gridul de jos" : poz > 1 ? "peste gridul de sus" : "din interval";
     gr0.tag = poz === null ? { t: "—", c: "mut" } : poz < 0 || poz > 1 ? { t: "botul nu tranzacționează", c: "bad" } : poz < 0.1 || poz > 0.9 ? { t: "la margine", c: "warn" } : { t: "în grid", c: "good" };
     gr0.act = (g ? g.grile + " grile la " + P(g.pas) + " pas" : "Geometria gridului necitită") + (c.umpleri24h !== null && c.umpleri24h !== undefined ? ", " + c.umpleri24h + " umpleri în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : "") + "."
-      + (sp && f ? " Propus acum: " + sp.grile + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + ", la " + P(sp.pas) + " pas." : f ? "" : " Propunerea vine cu fișa.");
+      + (sp && f ? " Propus acum: " + (sp.grile + 1) + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + ", la " + P(sp.pas) + " pas." : f ? "" : " Propunerea vine cu fișa.");
     if (rg && (nr(rg.r4h) !== null || nr(rg.r24h) !== null)) {
       var sf0 = sensFata(b, rg), r40 = nr(rg.r4h), r240 = nr(rg.r24h), li = nr(b.distantaLichidarePct);
       mi0.mare = r40 !== null ? X(r40) : X(r240); mi0.mic = r40 !== null ? "pe 4 h față de obișnuit" : "pe 24 h față de obișnuit";

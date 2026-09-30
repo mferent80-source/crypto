@@ -140,7 +140,7 @@ await test("6. acumConcret: stopul, gridul si miscarea, cu cifre - pe plus: stop
   assert.ok(stop && grid && mis, "lipseste un rand: " + l.map((x) => x.cod).join(","));
   // pe minus (-10,12): zero-ul 0,5984 e DEASUPRA pretului 0,5831 -> nu se pune stopul acolo; protectia e sub gridul de jos
   assert.match(stop.text, /0\.5984|0,5984/); assert.match(stop.text, /sub gridul de jos|0\.542|0,542/); assert.match(stop.text, /nepus|nu ai/i);
-  assert.match(grid.text, /6 grile/); assert.match(grid.text, /46 grile/); assert.match(grid.text, /18,5 perechi/); assert.match(grid.text, /din interval/); assert.match(grid.text, /5 umpleri/);
+  assert.match(grid.text, /6 grile/); assert.match(grid.text, /47 grile/);   // v100.38: propunerea de 46 intervale = 47 grile Pionex (linii) assert.match(grid.text, /18,5 perechi/); assert.match(grid.text, /din interval/); assert.match(grid.text, /5 umpleri/);
   assert.doesNotMatch(grid.text, /treceri/, "revizie: unitatea e 'perechi incheiate', nu 'treceri' (umpleri)");
   // revizie 🔴: SHORT pe minus -> protectia e PESTE gridul de sus (pierderea shortului vine de sus), nu sub gridul de jos
   const sh = S.acumConcret({ bot: bot({ directie: "short", gridJos: 0.55, gridSus: 0.65, pretCurent: 0.62, profitTotal: -3 }), fisa: fisaStub({ dir: "short", setare: { jos: 0.55, sus: 0.65, grile: 6, pas: 0.028, levier: 5, dir: "short", stop: { jos: 0.52, sus: 0.66 } }, deasa: { ...fisaStub().deasa, setare: { jos: 0.55, sus: 0.65, grile: 46, pas: 0.003, levier: 5, dir: "short", stop: { jos: 0.545, sus: 0.6555 } } } }), zero: { pretZero: 0.6 }, costuri, acum: T0 });

@@ -27,7 +27,7 @@ import { construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiv
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.18";
+const VERSIUNE_COLECTOR = "v101.19";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");

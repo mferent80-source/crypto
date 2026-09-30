@@ -65,6 +65,43 @@ var GraficBot = (function () {
     return l;
   }
 
+  // v100.38 (30.09): PIONEX NUMARA LINIILE - „Număr de grile” / row = linii (jos si sus incluse), intervalele = row − 1 (dovedit pe ~2.000
+  // de boti inchisi, loturile de la pornire, si pe botul CRV viu). Inainte se socotea pe row intervale - o linie in plus, toate decalate.
+  function liniiPionex(jos, sus, linii, geo) {
+    jos = nr(jos); sus = nr(sus); var N = Math.round(nr(linii) || 0) - 1, L = [];
+    if (!(jos > 0) || !(sus > jos) || !(N >= 1)) return L;
+    for (var k = 0; k <= N; k++) L.push(geo ? jos * Math.pow(sus / jos, k / N) : jos + k * (sus - jos) / N);
+    return L;
+  }
+  // v100.38 (30.09, el: „fa idei”): umplerile gridului DEDUSE din lumanari, pe modelul Pionex - cartea de ordine de la pornire (deasupra
+  // pretului vanzari, dedesubt cumparari; linia cea mai apropiata de pretul de pornire FARA ordin), fiecare lumanare pe drumul ei (verde: intai
+  // jos apoi sus; rosie: invers). O cumparare umpluta pune vanzarea pe linia de deasupra, o vanzare pune cumpararea dedesubt. Perechea, ca la
+  // Pionex: la long fiecare VANZARE (si a loturilor de la pornire), la short fiecare CUMPARARE; la neutru, umplerea care inchide una opusa.
+  // E o reconstituire: Pionex are ultimul cuvant (numarul lui de perechi se arata alaturi, in legenda).
+  function umpleri(barele, o) {
+    o = o || {};
+    var L = liniiPionex(o.jos, o.sus, o.linii, o.geo), p0 = nr(o.p0), t0 = nr(o.pornit) || 0, dir = String(o.dir || "").toLowerCase(), out = { umpleri: [], perechi: 0 };
+    if (!L.length || !(p0 > 0)) return out;
+    var N = L.length - 1, ki = 0, ord = [], k;
+    for (k = 0; k <= N; k++) if (Math.abs(L[k] - p0) < Math.abs(L[ki] - p0)) ki = k;
+    for (k = 0; k <= N; k++) ord.push(k === ki ? null : L[k] > p0 ? { tip: "S", din: "start" } : { tip: "B", din: "start" });
+    var umple = function (k, t, ri) {
+      var x = ord[k]; if (!x) return;
+      var per = dir === "long" ? x.tip === "S" : dir === "short" ? x.tip === "B" : x.din === (x.tip === "S" ? "B" : "S");
+      ord[k] = null; if (per) out.perechi++;
+      out.umpleri.push({ t: t, ri: ri, k: k, p: L[k], tip: x.tip, pereche: per });
+      if (x.tip === "B" && k + 1 <= N) ord[k + 1] = { tip: "S", din: "B" };
+      if (x.tip === "S" && k - 1 >= 0) ord[k - 1] = { tip: "B", din: "S" };
+    };
+    var coboara = function (pana, t, ri) { for (var k = N; k >= 0; k--) if (ord[k] && ord[k].tip === "B" && L[k] >= pana) umple(k, t, ri); };
+    var urca = function (pana, t, ri) { for (var k = 0; k <= N; k++) if (ord[k] && ord[k].tip === "S" && L[k] <= pana) umple(k, t, ri); };
+    (Array.isArray(barele) ? barele : []).forEach(function (b, ri) {
+      if (!b || b.t < t0) return;
+      if (b.c >= b.o) { coboara(b.l, b.t, ri); urca(b.h, b.t, ri); } else { urca(b.h, b.t, ri); coboara(b.l, b.t, ri); }
+    });
+    return out;
+  }
+
   // alertele apropiate (sub `prag` px) se strang intr-un punct; culoarea = cea mai grava
   function grupeaza(alerte, tx, prag) {
     var g = [];
@@ -99,7 +136,8 @@ var GraficBot = (function () {
     q.push('<rect x="0" y="0" width="' + f1(plotW) + '" height="' + mainH + '" fill="' + COL.fond + '"/>');
     for (var gi = 1; gi < 5; gi++) q.push('<line x1="0" x2="' + f1(plotW) + '" y1="' + f1(mainH * gi / 5) + '" y2="' + f1(mainH * gi / 5) + '" stroke="' + COL.grila + '" stroke-width="1"/>');
     // banda gridului + treptele
-    var gr = o.grila || {}, gj = nr(gr.jos), gs = nr(gr.sus), gn = nr(gr.n);
+    // v100.38: treptele pe LINIILE Pionex (grila.linii = row); grila.n (intervale) ramane pentru chematorii vechi
+    var gr = o.grila || {}, gj = nr(gr.jos), gs = nr(gr.sus), gl = nr(gr.linii) !== null ? nr(gr.linii) : nr(gr.n) !== null ? nr(gr.n) + 1 : null, gn = gl !== null ? gl - 1 : null;
     if (gj !== null && gs !== null && gs > gj) {
       var bj = Math.max(lo, gj), bs = Math.min(hi, gs);
       if (bs > bj) q.push('<rect class="gbBanda" x="0" y="' + f1(Y(bs)) + '" width="' + f1(plotW) + '" height="' + f1(Y(bj) - Y(bs)) + '" fill="rgba(79,209,197,.07)"/>');
@@ -134,6 +172,16 @@ var GraficBot = (function () {
       q.push('<g class="gbC"><line x1="' + f1(x) + '" x2="' + f1(x) + '" y1="' + f1(Y(b.h)) + '" y2="' + f1(Y(b.l)) + '" stroke="' + c + '" stroke-width="1"/><rect x="' + f1(x - bw / 2) + '" y="' + f1(y1) + '" width="' + f1(bw) + '" height="' + f1(Math.max(1, y2 - y1)) + '" fill="' + c + '"/></g>');
     });
     if (st.ema) q.push(linie(S.e20, "gbEma20", COL.ema20, 2), linie(S.e50, "gbEma50", COL.ema50, 2));
+    // v100.38: umplerile gridului (▲ cumparare / ▼ vanzare; inel = pereche inchisa), la lumanarea lor
+    var U = o.umpleri && Array.isArray(o.umpleri.umpleri) ? o.umpleri.umpleri : [];
+    U.forEach(function (u) {
+      if (!(u.p >= lo && u.p <= hi)) return;
+      var bi = 0; while (bi < n - 1 && B[bi].k < u.ri) bi++;
+      var x = X(bi), y = Y(u.p), cum = u.tip === "B", cul = cum ? COL.accent : COL.warn;
+      var tri = cum ? f1(x - 4.5) + "," + f1(y + 10) + " " + f1(x + 4.5) + "," + f1(y + 10) + " " + f1(x) + "," + f1(y + 2) : f1(x - 4.5) + "," + f1(y - 10) + " " + f1(x + 4.5) + "," + f1(y - 10) + " " + f1(x) + "," + f1(y - 2);
+      q.push('<g class="gbUmplere' + (u.pereche ? " gbPereche" : "") + '"><title>' + esc((cum ? "cumpărare la " : "vânzare la ") + fmtP(u.p) + " · " + ora(u.t, true) + (u.pereche ? " · pereche închisă" : "")) + '</title>'
+        + '<polygon points="' + tri + '" fill="' + cul + '" stroke="' + COL.fond + '" stroke-width="1"/>' + (u.pereche ? '<circle cx="' + f1(x) + '" cy="' + f1(y) + '" r="6" fill="none" stroke="' + COL.text + '" stroke-width="1.4"/>' : "") + "</g>");
+    });
     // liniile + etichetele din dreapta (se imping ca sa nu se suprapuna); ce e in afara cadrului -> sageata la margine
     var et = [], afara = [];
     niv.forEach(function (x) {
@@ -189,7 +237,7 @@ var GraficBot = (function () {
     q.push('<line class="gbCruce" x1="0" x2="0" y1="0" y2="' + (ry0 + (rsiH || 0)) + '" stroke="' + COL.text + '" stroke-opacity=".35" stroke-width="1" style="display:none"/>');
     var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Prețul cu gridul, planul și alertele botului">' + q.join("") + '</svg>';
     // legenda: identitatea nu sta doar in culoare
-    var Lg = ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gn ? " (" + gn + ")" : "") + '</span>', ];
+    var Lg = ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gl ? " (" + gl + " linii)" : "") + '</span>', ];
     var are = function (k) { return niv.some(function (x) { return x.k === k; }); };
     if (are("zero")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero-ul botului</span>');
     if (are("planPlus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.good + '"></i>planul, pe plus</span>');
@@ -197,6 +245,7 @@ var GraficBot = (function () {
     if (niv.some(function (x) { return x.k === "stop"; })) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>stopul tău</span>');
     if (st.ema) Lg.push('<span><i style="border-color:' + COL.ema20 + '"></i>EMA 20</span><span><i style="border-color:' + COL.ema50 + '"></i>EMA 50</span>');
     if (st.bb) Lg.push('<span><i style="border-color:' + COL.bb + '"></i>Bollinger 20, 2</span>');
+    if (o.umpleri) Lg.push('<span>▲ cumpărare · ▼ vânzare pe grilă (deduse din lumânări) · perechi pe grafic: ' + o.umpleri.perechi + (nr(o.perechiPionex) !== null ? " · Pionex: " + nr(o.perechiPionex) : "") + '</span>');
     Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
     Lg.push('<span class="mutedInfo">' + evs.length + (evs.length === 1 ? " alertă" : " alerte") + ' ale botului în perioadă' + (f > 1 ? " · o lumânare = " + f + " bare" : "") + '</span>');
     return { svg: svg, inaltime: H, legenda: Lg.join(""), harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: H } };
@@ -216,6 +265,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, bare: bare, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc };
+  return { COL: COL, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;

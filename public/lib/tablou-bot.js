@@ -204,8 +204,9 @@ var TabloBot = (function () {
         minuteLaMargine: minuteContinuuLaMargine(istoric, jos, sus, acum),
       };
       var linii = nr(x.row);
-      if (linii && linii > 0) {
-        var treapta = (sus - jos) / linii, amp = atr(lumanari, 14);
+      if (linii && linii > 1) {
+        // v100.38: row = linii Pionex -> linii − 1 intervale
+        var treapta = (sus - jos) / (linii - 1), amp = atr(lumanari, 14);
         if (amp !== null) m.amplitudine = { valoare: amp / treapta, prag: 1.0,
           stare: amp / treapta < 1.0 ? "rau" : "bine" };
       }

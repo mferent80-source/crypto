@@ -16,15 +16,17 @@ var TabloExtra = (function () {
   function bu(b) { return (b && b.brut && b.brut.buOrderData) || {}; }
 
   // Pasul botului care RULEAZA: aritmetic = (sus-jos)/grile in pret; geometric = (sus/jos)^(1/N)-1
+  // v100.38 (30.09): PIONEX NUMARA LINIILE - „Număr de grile” / row = linii (jos si sus incluse), intervalele = row − 1 (dovedit pe ~2.000
+  // de boti inchisi, loturile de la pornire, si pe botul CRV viu). Inainte se socotea pe row intervale - o linie in plus, toate decalate.
   function geometrieBot(b) {
-    var d = bu(b), N = nr(d.row), jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), p = nr(b && b.pretCurent);
-    if (!(N >= 2) || !(jos > 0) || !(sus > jos)) return null;
+    var d = bu(b), linii = nr(d.row), N = linii !== null ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), p = nr(b && b.pretCurent);
+    if (!(N >= 1) || !(jos > 0) || !(sus > jos)) return null;
     var mod = String(d.gridType || "").toLowerCase() === "geometric" ? "geometric" : "aritmetic";
     var ref = p > 0 ? p : (jos + sus) / 2;
     var pasPret = mod === "aritmetic" ? (sus - jos) / N : null;
     var pasPct = mod === "aritmetic" ? pasPret / ref : Math.pow(sus / jos, 1 / N) - 1;
     var net = pasPct - 2 * C.COMISION;
-    return { mod: mod, grile: N, jos: jos, sus: sus, pasPret: pasPret, pasPct: pasPct, netPct: net, preaDese: net < C.PAS_MIN - 2 * C.COMISION };
+    return { mod: mod, grile: linii, intervale: N, jos: jos, sus: sus, pasPret: pasPret, pasPct: pasPct, netPct: net, preaDese: net < C.PAS_MIN - 2 * C.COMISION };
   }
 
   // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): cat aduce O grila a botului care ruleaza, dupa comision -
@@ -32,7 +34,7 @@ var TabloExtra = (function () {
   function profitPeGrila(b) {
     var g = geometrieBot(b), inv = nr(b && b.investit), lev = nr(b && b.levier) || 1;
     if (!g) return null;
-    return { pct: g.netPct, usdt: inv !== null && inv > 0 ? inv * lev / g.grile * g.netPct : null, grile: g.grile, mod: g.mod };
+    return { pct: g.netPct, usdt: inv !== null && inv > 0 ? inv * lev / g.intervale * g.netPct : null, grile: g.grile, mod: g.mod };
   }
 
   function comparaCuFisa(b, f) {
@@ -43,7 +45,7 @@ var TabloExtra = (function () {
     var dirBot = String(b.directie || "").toLowerCase();
     out.randuri.push({ et: "Direcția", bot: dirBot || "—", fisa: f.dir });
     out.randuri.push({ et: "Interval", bot: g ? g.jos + " – " + g.sus : "—", fisa: st.jos.toPrecision(4) + " – " + st.sus.toPrecision(4) });
-    out.randuri.push({ et: "Grile", bot: g ? g.grile + " " + g.mod : "—", fisa: st.grile + " geometric" });
+    out.randuri.push({ et: "Grile (în Pionex)", bot: g ? g.grile + " " + g.mod : "—", fisa: (st.grile + 1) + " geometric" });
     out.randuri.push({ et: "Pas net pe grilă", bot: g ? pr(g.netPct) : "—", fisa: pr(st.profitGrila) });
     out.randuri.push({ et: "Levier", bot: lev !== null ? lev + "×" : "—", fisa: st.levier + "× (sigur " + st.levierSigur + "×)" });
     var cb = g ? comisionDinUmplere(g.netPct) : null, cf = comisionDinUmplere(st.profitGrila);
@@ -424,7 +426,8 @@ var TabloExtra = (function () {
     if (!b || b.activ === false || !setare) return null;
     var c = codTVBot(b, null); if (!c) return null;
     var aproape = function (a, x) { a = nr(a); return a !== null && x > 0 && Math.abs(a - x) / x <= 0.002; };
-    var acelasi = aproape(setare.jos, c.jos) && aproape(setare.sus, c.sus) && Math.round(nr(setare.grile) || 0) === c.grile;
+    // v100.38: setarea (N intervale) e acelasi grid cu botul daca N + 1 = numarul de grile Pionex (linii) al botului
+    var acelasi = aproape(setare.jos, c.jos) && aproape(setare.sus, c.sus) && Math.round(nr(setare.grile) || 0) + 1 === c.grile;
     return { acelasi: acelasi, jos: c.jos, sus: c.sus, grile: c.grile, tip: c.tip, cod: c.cod };
   }
 

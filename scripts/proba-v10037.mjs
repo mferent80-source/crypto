@@ -27,10 +27,11 @@ await test("gridDiferitDeBot: alt interval sau alt numar de grile -> gridul botu
   assert.match(d.cod, /^long;0\.3755;0\.423;8;5;/); assert.equal(d.cod.split(";")[10], "geometric");
 });
 await test("gridDiferitDeBot: acelasi grid (in 0,2%) -> {acelasi: true}; fara bot / bot oprit -> null", () => {
-  assert.deepEqual(TE.gridDiferitDeBot({ jos: 0.37555, sus: 0.4231, grile: 8 }, bot).acelasi, true);
-  assert.notEqual(TE.gridDiferitDeBot({ jos: 0.3755, sus: 0.423, grile: 9 }, bot).acelasi, true);
+  // v100.38: setarea are N intervale; botul cu row 8 (linii Pionex) are 7 intervale
+  assert.deepEqual(TE.gridDiferitDeBot({ jos: 0.37555, sus: 0.4231, grile: 7 }, bot).acelasi, true);
+  assert.notEqual(TE.gridDiferitDeBot({ jos: 0.3755, sus: 0.423, grile: 8 }, bot).acelasi, true);
   // aceleasi grile, dar intervalul mutat cu ~1% -> alte linii (peste pragul de 0,2%)
-  assert.equal(TE.gridDiferitDeBot({ jos: 0.3793, sus: 0.4272, grile: 8 }, bot).acelasi, false);
+  assert.equal(TE.gridDiferitDeBot({ jos: 0.3793, sus: 0.4272, grile: 7 }, bot).acelasi, false);
   assert.equal(TE.gridDiferitDeBot(propunere, null), null);
   assert.equal(TE.gridDiferitDeBot(propunere, Object.assign({}, bot, { activ: false })), null);
 });
@@ -41,7 +42,7 @@ await test("pagina: sub codul fisei, pentru moneda cu bot care ruleaza - avertis
   const h = ctx.f("CRV_USDT_PERP", propunere);
   assert.match(h, /rulează botul tău cu alt grid/); assert.match(h, /0\.3755 – 0\.423, 8 grile/); assert.match(h, /nu vor fi ale botului/);
   assert.match(h, /data-action-click="gridCopiaza\(this\.value\)">Copiază codul botului/); assert.match(h, /value="long;0\.3755;0\.423;8;5;/);
-  assert.match(ctx.f("CRV_USDT_PERP", { jos: 0.3755, sus: 0.423, grile: 8 }), /e chiar gridul botului/);
+  assert.match(ctx.f("CRV_USDT_PERP", { jos: 0.3755, sus: 0.423, grile: 7 }), /e chiar gridul botului/);   // v100.38: 7 intervale = 8 grile Pionex
   assert.equal(ctx.f("BTC_USDT_PERP", propunere), "", "fara bot pe moneda: nimic");
   assert.match(functia(app, "renderGrid"), /grTvAvertHtml\(f\.simbol,st\)/);
 });
