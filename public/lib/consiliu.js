@@ -22,7 +22,7 @@ var Consiliu = (function () {
   var SOC = { margine: "muta", muta: "muta", liniste: "tine", directie: "tine", tine: "tine", "miscare-cu": "cu-botul", miscare: "miscare", costuri: "costuri",
     trend: "trend", plan: "plan", stop: "plan", lichidare: "lichidare", btc: "btc", aglomerare: "aglomerare", "ia-profit": "ia-profit", podea: "podea" };
   // ordinea in care cantaresc motivele de acelasi nivel (banii in joc: lichidarea si pierderea maxima intai)
-  var PRIO = ["opreste", "lichidare", "stop", "plan", "pericol", "margine", "costuri", "trend", "miscare", "btc", "aglomerare", "ia-profit", "liniste"];
+  var PRIO = ["opreste", "lichidare", "stop", "plan", "pericol", "margine", "muta", "costuri", "trend", "miscare", "btc", "aglomerare", "ia-profit", "liniste"];
   // „Până la marginea de jos (0.3841) sunt 1.7%” -> „1,7% până la marginea de jos (0.3841)” (ca in demo: cifra intai)
   function titluMargine(t) {
     var m = /^Până la marginea de (jos|sus) \(([^)]*)\) sunt ([0-9.,]+)%$/.exec(String(t || ""));
@@ -30,9 +30,11 @@ var Consiliu = (function () {
   }
   function prio(cod) { var i = PRIO.indexOf(cod); return i < 0 ? PRIO.length : i; }
   // v100.50 (I-479): siguranta nu se negociaza - acestea raman primele la acelasi nivel, oricat ar fi adus altele
-  var FIX = { opreste: 1, lichidare: 1, plan: 1, stop: 1 };
-  // banii masurati ai sfatului (socoteala pe botii lui), doar de la 10 cazuri judecate - altfel null (ordinea fixa)
-  function baniMasurati(soc, cod) { var x = soc && soc[SOC[cod] || cod]; return x && x.judecate >= 10 && nr(x.bani) !== null ? nr(x.bani) : null; }
+  // revizia 01.10 (I4): si „pericol” (pretul afara din grid, margin call pe ton de atentie) e siguranta
+  var FIX = { opreste: 1, lichidare: 1, plan: 1, stop: 1, pericol: 1 };
+  // banii masurati ai sfatului (socoteala pe botii lui) PE CAZ - `bani` din socoteala e o SUMA (un sfat care suna des ar castiga din
+  // volum) - si doar de la 10 cazuri judecate CU bani; altfel null (ordinea fixa)
+  function baniMasurati(soc, cod) { var x = soc && soc[SOC[cod] || cod]; return x && x.judecate >= 10 && nr(x.baniN) >= 10 && nr(x.bani) !== null ? nr(x.bani) / nr(x.baniN) : null; }
   function cip(soc, cod) {
     var k = SOC[cod]; if (!k || !soc) return null;
     var x = soc[k];
@@ -84,14 +86,11 @@ var Consiliu = (function () {
     }
     cand.forEach(function (m) { m.cip = cip(soc, m.cod); });
     var rang = { iesi: 0, atentie: 1, bine: 2 };
-    // v100.50 (I-479): la acelasi nivel, intai siguranta (ordinea fixa), apoi - cand amandoua sunt masurate (≥ 10 judecate) - cel care a
-    // adus mai multi bani urmat; altfel ordinea fixa de pana acum
-    cand.sort(function (a, b) {
-      var d = rang[a.nivel] - rang[b.nivel]; if (d) return d;
-      var fa = FIX[a.cod] ? 1 : 0, fb = FIX[b.cod] ? 1 : 0; if (fa !== fb) return fb - fa;
-      if (!fa) { var ba = baniMasurati(soc, a.cod), bb = baniMasurati(soc, b.cod); if (ba !== null && bb !== null && ba !== bb) return bb - ba; }
-      return prio(a.cod) - prio(b.cod);
-    });
+    // v100.50 (I-479): la acelasi nivel, intai siguranta (ordinea fixa), apoi cele masurate (≥ 10 cazuri cu bani) dupa banii pe caz,
+    // apoi cele nemasurate in ordinea fixa. Revizia 01.10 (I4): cheie precalculata - ordinea e TOTALA (inainte comparatorul amesteca
+    // perechi masurate cu perechi dupa prio si iesea alta ordine - alt „Ce aș face eu” - dupa ordinea de intrare)
+    cand.forEach(function (m, i) { var f = FIX[m.cod] ? 0 : 1, bm = f ? baniMasurati(soc, m.cod) : null; m._k = [rang[m.nivel], f, bm === null ? 1 : 0, bm === null ? 0 : -bm, prio(m.cod), i]; });
+    cand.sort(function (a, b) { for (var i = 0; i < a._k.length; i++) if (a._k[i] !== b._k[i]) return a._k[i] - b._k[i]; return 0; });
     var motive = cand.slice(0, 3), avert = motive.filter(function (m) { return m.nivel !== "bine"; });
 
     // verdictul: cel mai grav dintre semafor si motive
@@ -152,18 +151,44 @@ var Consiliu = (function () {
   }
   // v100.50 (I-474 + I-473): schimbarea verdictului, cu anti-pâlpâire - un nivel nou trebuie sa tina DOUA ture la rand; prima vedere nu
   // alerteaza. Alerta poarta actiunea, banii si „de ce”; intoarcerea la ȚINE ramane doar in Radar. stare = {acum, inainte, schimbatLa, deCe, nou}
-  function schimbare(st, c, acum, nume) {
-    st = st || {};
+  // revizia 01.10 (I1): motivul -> cheile Alerte care il anunta deja imediat (lichidarea, planul, mută gridul...). Cand motivul de sus are
+  // alerta lui activa, alerta Consilierului ar fi al doilea mesaj pe Discord pentru acelasi fapt -> ramane doar in Radar.
+  var CHEI = { opreste: ["status"], lichidare: ["lich"], pericol: ["lich", "status", "grid", "activ"], plan: ["plan"], stop: ["plan-stop", "opritor"],
+    muta: ["s-muta", "grid", "p-margine"], margine: ["s-muta", "grid", "p-margine"], btc: ["s-btc", "m-btc"], aglomerare: ["s-aglomerare"],
+    "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie"] };
+  var PAUZA = 2 * 3600000;   // acelasi nivel pe Discord cel mult o data la 2 h pe bot (un nivel care oscileaza nu mai suna la fiecare ciclu)
+  // opt = { activ: {cheieAlerta: nivel} (starea alertelor botului), taci: {codSfat: true} (I-466: sfaturile care n-au batut hazardul) }
+  function schimbare(st, c, acum, nume, opt) {
+    st = st || {}; opt = opt || {};
     if (!c || !c.nivel || c.nivel === "asteapta") return { stare: st, alerta: null };
     var lite = { nivel: c.nivel, eticheta: c.eticheta || ETICHETA[c.nivel], titlu: c.titlu || "", faCe: c.faCe || "", bani: c.bani || null, la: acum,
-      motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return { cod: m && m.cod, titlu: m && m.titlu }; }) };
-    if (!st.acum) return { stare: { acum: lite }, alerta: null };
-    if (st.acum.nivel === lite.nivel) return { stare: { acum: lite, inainte: st.inainte || null, schimbatLa: st.schimbatLa || null, deCe: st.deCe || null }, alerta: null };
-    if (!st.nou || st.nou.nivel !== lite.nivel) return { stare: { acum: st.acum, inainte: st.inainte || null, schimbatLa: st.schimbatLa || null, deCe: st.deCe || null, nou: lite }, alerta: null };
+      motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return { cod: m && m.cod, c: m && m.c, titlu: m && m.titlu }; }) };
+    var cu = function (o) { if (st.trimis) o.trimis = st.trimis; return o; };
+    if (!st.acum) return { stare: cu({ acum: lite }), alerta: null };
+    if (st.acum.nivel === lite.nivel) return { stare: cu({ acum: lite, inainte: st.inainte || null, schimbatLa: st.schimbatLa || null, deCe: st.deCe || null }), alerta: null };
+    if (!st.nou || st.nou.nivel !== lite.nivel) return { stare: cu({ acum: st.acum, inainte: st.inainte || null, schimbatLa: st.schimbatLa || null, deCe: st.deCe || null, nou: lite }), alerta: null };
     var d = deCe(st.acum, lite), N = nume || "Botul";
+    var sus = lite.motive.filter(function (m) { return m.c !== "v"; })[0] || null, activ = opt.activ || {}, taci = opt.taci || {};
+    var areAlerta = !!sus && (CHEI[sus.cod] || []).some(function (k) { return activ[k] && activ[k] !== "ok"; });
+    var tacut = !!sus && !!taci[SOC[sus.cod] || sus.cod];
+    var trimis = Object.assign({}, st.trimis || {}), pauza = nr(trimis[lite.nivel]) !== null && acum - trimis[lite.nivel] < PAUZA;
+    var doar = lite.nivel === "tine" || areAlerta || tacut || pauza;
+    if (!doar) trimis[lite.nivel] = acum;
     var al = { nivel: lite.nivel === "iesi" ? "critic" : lite.nivel === "atentie" ? "atentie" : "info", titlu: N + ": Consilierul — " + lite.eticheta + " · " + lite.titlu,
-      mesaj: "Ce aș face eu: " + (lite.faCe || "—") + (lite.bani ? " · 💰 " + lite.bani : "") + (d ? " · De ce: " + d.text : ""), doarRadar: lite.nivel === "tine" };
-    return { stare: { acum: lite, inainte: st.acum, schimbatLa: acum, deCe: d ? d.text : null }, alerta: al };
+      mesaj: "Ce aș face eu: " + (lite.faCe || "—") + (lite.bani ? " · 💰 " + lite.bani : "") + (d ? " · De ce: " + d.text : ""), doarRadar: doar };
+    return { stare: { acum: lite, inainte: st.acum, schimbatLa: acum, deCe: d ? d.text : null, trimis: trimis }, alerta: al };
+  }
+  // revizia 01.10 (I3): cheia unei decizii = nivelul + motivele (fara cele verzi), NU titlul - titlul poarta cifre vii („12,3%” -> „12,1%”)
+  // si la fiecare redesenare ar fi fost alt verdict: „notat” disparea si aceeasi hotarare se numara de mai multe ori
+  function cheieDecizie(c) {
+    if (!c || !c.nivel) return "";
+    return String(c.nivel) + "|" + (Array.isArray(c.motive) ? c.motive : []).filter(function (m) { return m && m.cod && m.c !== "v"; }).map(function (m) { return m.cod; }).sort().join(",");
+  }
+  // revizia 01.10 (I2): colectorul (Discord, pagina alerts) nu vede directia pe mai multe intervale si merge la cateva minute - cand
+  // verdictul lui difera de al Tabloului, Tabloul o spune pe fata (o singura voce, iar unde nu se poate, diferenta e la vedere)
+  function altaVoce(kv, c) {
+    var a = kv && kv.acum; if (!a || !a.nivel || !c || !c.nivel || a.nivel === c.nivel || c.nivel === "asteapta") return null;
+    return "Pe Discord și pe pagina alerts: " + (a.eticheta || ETICHETA[a.nivel] || a.nivel) + " — colectorul nu vede direcția pe mai multe intervale și se reface la câteva minute; verdictul de aici e cel complet.";
   }
   // v100.50 (I-472): jurnalul deciziilor - fiecare „am făcut / n-am făcut” se judeca la 24 h pe totalul botului (istoricul ist:<bot>,
   // cea mai apropiata intrare de t + 24 h, la cel mult 2 h); botul inchis inainte = rezultatul final - totalul de atunci. Ziua netrecuta -> nejudecat.
@@ -189,6 +214,6 @@ var Consiliu = (function () {
       : "Când ai urmat Consilierul (" + u.length + "): median " + (o.urmat.median === null ? "—" : U(o.urmat.median)) + " la 24 h; când nu (" + n.length + "): " + (o.neurmat.median === null ? "—" : U(o.neurmat.median)) + ". O comparație, nu o dovadă.";
     return o;
   }
-  return { judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  return { cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

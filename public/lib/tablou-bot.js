@@ -832,7 +832,12 @@ var TabloBot = (function () {
     return out;
   }
 
-  return { simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte,
+  // revizia 01.10 (I2): starile de pericol raportate de Pionex (OPRESTE) si pentru colector - acelasi verdict ca pe Tablou, fara istoric
+  function opreste(brut, acum, pretViu) {
+    var v = trepte(masoara({ bot: brut || null, klinePerp: [], pretSpot: null, istoric: [], acum: acum, pretPerpViu: pretViu }), modBot(brut || null, {}), { faraBot: false });
+    return v && v.nivel === "OPRESTE" ? { titlu: v.titlu, ceFac: v.ceFac } : null;
+  }
+  return { opreste: opreste, simboluri: simboluri, masoara: masoara, modBot: modBot, verdict: trepte,
     istoricAdauga: istoricAdauga, alegeBot: alegeBot, explicaEroarea: explicaEroarea,
     frecvente: frecvente, geometrieGrafic: geometrieGrafic, imbinaIstoric: imbinaIstoric };
 })();

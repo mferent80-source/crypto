@@ -5706,7 +5706,7 @@ function tbConsKvPt(b){
       .then(function(){tbConsKv.botId=b.id;tbConsKv.la=Date.now();tbConsKv.inLucru=false})}
   return tbConsKv.botId===b.id?tbConsKv:null;
 }
-function tbConsCheie(c){return c?String(c.nivel)+"|"+String(c.titlu):""}
+function tbConsCheie(c){return Consiliu.cheieDecizie(c)}   // revizia 01.10 (I3): nivelul + motivele, nu titlul cu cifre vii
 async function tbDecizie(urmat){
   var b=tbStare.bot,c=tbStare.consUlt;if(!b||!c)return;
   var corp={bot:b.id,t:Date.now(),cheie:tbConsCheie(c),nivel:c.nivel,titlu:c.titlu,faCe:c.faCe||"",urmat:!!urmat,total:botiNr(b.profitTotal)};
@@ -5720,7 +5720,7 @@ function tbDecStareText(c){var k=tbConsCheie(c),e=(tbConsKv.decizii||[]).filter(
 function tbConsHtml(c){
   var cip=function(x){return x?'<span class="tbConsCip '+escapeHtml(x.cls||"")+'" title="'+escapeHtml(x.titlu||"")+'">'+escapeHtml(x.t)+'</span>':''};
   return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'
-    +(c.deCeText?'<p class="tbConsDeCe tbSub">🔁 '+escapeHtml(c.deCeText)+'</p>':'')
+    +(c.deCeText?'<p class="tbConsDeCe tbSub">🔁 '+escapeHtml(c.deCeText)+'</p>':'')+(c.altaVoce?'<p class="tbConsDeCe tbSub">📣 '+escapeHtml(c.altaVoce)+'</p>':'')
     +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')
     +(c.nivel&&c.nivel!=="asteapta"?'<div class="tbDecizii"><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(true)" aria-label="Am făcut ce zice Consilierul">✅ am făcut</button><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(false)" aria-label="N-am făcut ce zice Consilierul">✋ n-am făcut</button><span class="tbSub" id="tbDecStare">'+escapeHtml(tbDecStareText(c))+'</span></div>'+(c.decSoc?'<p class="tbSub tbDecSoc">'+escapeHtml(c.decSoc)+'</p>':''):'')+'</div>'
     +(c.incredere?'<p class="tbConsInc">'+escapeHtml(c.incredere)+'</p>':'')+'</div>'
@@ -5894,6 +5894,7 @@ function tbDeseneazaSemafor(b){
   var ck=tbConsKvPt(b);tbStare.consUlt=cons;
   if(ck&&ck.cons&&ck.cons.deCe&&ck.cons.acum&&ck.cons.acum.nivel===cons.nivel&&ck.cons.schimbatLa){var mn=Math.round((Date.now()-ck.cons.schimbatLa)/60000);cons.deCeText="schimbat acum "+(mn<60?mn+" min":Math.round(mn/60)+" h")+": "+ck.cons.deCe}
   cons.decSoc=ck&&ck.soc&&ck.soc.text?ck.soc.text:null;
+  cons.altaVoce=Consiliu.altaVoce(ck&&ck.cons,cons);   // revizia 01.10 (I2): cand Discord / pagina alerts spun altceva, se vede aici
   var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol&&!tbProbVechi(tp.rez)?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
   var r0=el.querySelector(".tbConsRest");if(r0)tbConsRestDeschis=!!r0.open;   // „Restul” ramane deschis la reimprospatare
   el.innerHTML=h+tbConsHtml(cons);$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;
@@ -6039,15 +6040,9 @@ function renderTabloSfaturi(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
   if(!b||typeof Sfaturi==="undefined"||typeof Scenariu==="undefined"){el.innerHTML='<p class="tbSub">Aștept botul…</p>';return}
   var d=tbStare.directie,r4=d&&d.rez?d.rez.filter(function(x){return x.tf==="4H"})[0]:null,e=tbStare.extra||{};
-  var scen=Scenariu.scenarii(tbStare.botBrut,b,[{eticheta:"jos",pret:botiNr(b.gridJos)}]);
-  var k4=d&&d.randuri4h,p=botiNr(b.pretCurent),jos=botiNr(b.gridJos);
-  var sanse=k4&&p!==null&&jos!==null?{josZi:Scenariu.sansaAtingere(k4,p,jos,6),josSapt:Scenariu.sansaAtingere(k4,p,jos,42)}:{};
-  // v80.1: ritmul botului (24 h vs media pe zi de la pornire) + fisa/costuri/zero/setare din tablou-extra
-  var bu=b.brut&&b.brut.buOrderData||{},zile=botiNr(b.pornitLa)?(Date.now()-botiNr(b.pornitLa))/86400000:null;
-  var ritm={grile24h:botiNr(bu.gridProfit24h),medieZi:zile&&botiNr(b.gridProfitBrut)!=null?botiNr(b.gridProfitBrut)/zile:null,tranz24h:botiNr(bu.trx24h),tranzMedieZi:zile&&botiNr(bu.closedExchangeOrderCount)!=null?botiNr(bu.closedExchangeOrderCount)/zile:null,zile:zile};
-  var lista=Sfaturi.sfaturi({bot:b,scen:scen,sanse:sanse,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,
-    funding:e.funding,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,
-    fisa:tbFisa.botId===b.id?tbFisa.fisa:null,costuri:TabloExtra.grileVsCosturi(b,Date.now()),zero:TabloExtra.dacaInchizi(b),geom:TabloExtra.geometrieBot(b),ritm:ritm});
+  // v80.1: scenariul, sansele, ritmul, fisa/costuri/zero/setare - revizia 01.10 (I2): din Sfaturi.intrare, ACELEASI ca in colector (o singura voce)
+  var lista=Sfaturi.sfaturi(Sfaturi.intrare({bot:b,k4:d&&d.randuri4h,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,funding:e.funding,
+    fisa:tbFisa.botId===b.id?tbFisa.fisa:null,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,acum:Date.now()}));
   tbStare.sfaturiLista=lista;
   if($("tbSfaturiCard"))$("tbSfaturiCard").hidden=true;   // v100.44 (I-465): sfaturile intra in Consilier (motive sau „Restul”)
   el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(s.faCe)+'</p>':'')+(s.deCe?'<p class="tbSub">'+escapeHtml(s.deCe)+'</p>':'')+'</div>'}).join("");

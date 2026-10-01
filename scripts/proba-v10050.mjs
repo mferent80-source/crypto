@@ -111,5 +111,91 @@ await test("server: o decizie pe verdict (a doua o inlocuieste), socoteala deciz
   assert.match(col, /Consiliu\.judecaDecizii\(/); assert.match(col, /action=deciziiSocoteala/);
 });
 
+// ---- revizia finala (Opus, 01.10): C1, I1-I5 - fiecare cu testul care a picat intai ----
+const AL = new Function(`${lib("alerte.js")}; return Alerte;`)(); globalThis.Alerte = AL;
+const TE = new Function("GridCalcul", `${lib("tablou-extra.js")}; return TabloExtra;`)(G); globalThis.TabloExtra = TE;
+const SC = new Function(`${lib("scenariu.js")}; return Scenariu;`)(); globalThis.Scenariu = SC;
+const SF = new Function("Alerte", "Scenariu", "TabloExtra", `${lib("sfaturi.js")}; return Sfaturi;`)(AL, SC, TE);
+const TB = new Function(`${lib("tablou-bot.js")}; return TabloBot;`)();
+await test("C1: „s-iesi” ajunge in mesajele lui evalueaza CU doarRadar (inainte cheia se pierdea si pleca pe Discord)", () => {
+  const r = AL.evalueaza({ baza: "CRV.PERP" }, { semnale: { semafor: { nivel: "iesi", cod: "lichidare", motiv: "lichidarea la 6%", faCe: "închid" } } }, {}, 1e12);
+  const m = r.mesaje.filter((x) => x.cheie === "s-iesi")[0];
+  assert.ok(m, "lipseste mesajul s-iesi"); assert.equal(m.doarRadar, true);
+});
+await test("I1: alerta Consilierului doar in Radar cand motivul de sus are deja alerta lui activa, cand sfatul e tacut, sau la acelasi nivel in 2 h", () => {
+  const T = consDe("tine", [{ cod: "liniste", c: "v", titlu: "Piața e liniștită" }]);
+  const L = consDe("iesi", [{ cod: "lichidare", c: "r", titlu: "Lichidarea la 6%" }]), M = consDe("atentie", [{ cod: "margine", c: "g", titlu: "1,7% până la margine" }]);
+  const doua = (st, c, t, opt) => CS.schimbare(CS.schimbare(st, c, t, "CRV", opt).stare, c, t + 1, "CRV", opt);
+  let r = doua(CS.schimbare(null, T, 0, "CRV").stare, L, 1, { activ: { lich: "critic" } });
+  assert.ok(r.alerta && r.alerta.doarRadar === true, "lichidarea are deja alerta „lich” imediata");
+  r = doua(CS.schimbare(null, T, 0, "CRV").stare, L, 1, { activ: { lich: "ok" } });
+  assert.ok(r.alerta && !r.alerta.doarRadar, "fara alerta activa: pe Discord");
+  r = doua(CS.schimbare(null, T, 0, "CRV").stare, M, 1, { taci: { muta: true } });
+  assert.ok(r.alerta && r.alerta.doarRadar === true, "sfatul „muta” e tacut (I-466): nu ajunge pe Discord prin Consilier");
+  let s = doua(CS.schimbare(null, T, 0, "CRV").stare, M, 1000, {}); assert.ok(s.alerta && !s.alerta.doarRadar);
+  s = doua(s.stare, T, 2000, {}); s = doua(s.stare, M, 3000, {});
+  assert.ok(s.alerta && s.alerta.doarRadar === true, "acelasi nivel pe Discord de doua ori in 2 h: a doua oara doar in Radar");
+  s = doua(s.stare, T, 4000, {}); s = doua(s.stare, M, 1000 + 2 * 3600000 + 1, {});
+  assert.ok(s.alerta && !s.alerta.doarRadar, "dupa 2 h: iar pe Discord");
+});
+await test("I2: sfaturile se fac din ACELEASI intrari pe Tablou si in colector (Sfaturi.intrare) - funding-ul platit intra in Consilier si in colector", () => {
+  assert.ok(typeof SF.intrare === "function", "lipseste Sfaturi.intrare");
+  const b = { id: "1", baza: "CRV.PERP", directie: "long", pornitLa: 1e12 - 10 * 86400000, gridProfitBrut: 10, brut: { buOrderData: { gridProfit24h: 0.5, trx24h: 4, closedExchangeOrderCount: 100 } } };
+  const x = SF.intrare({ bot: b, funding: 0.001, acum: 1e12 });
+  assert.ok(Math.abs(x.ritm.medieZi - 1) < 1e-9, "ritmul: media pe zi de la pornire"); assert.equal(x.funding, 0.001);
+  const sf = SF.sfaturi(x); assert.ok(sf.some((s) => s.cod === "funding" && s.ton === "atentie"), JSON.stringify(sf.map((s) => s.cod + ":" + s.ton)));
+  const c = CS.alcatuieste({ sm: { nivel: "tine", cod: "tine", motiv: "nimic", faCe: "", componente: [] }, sfaturi: sf });
+  assert.equal(c.nivel, "atentie");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  assert.match(col, /new Function\("Alerte", "Scenariu", "TabloExtra"[^\n]*sfaturi\.js/, "colectorul incarca Sfaturi cu Alerte (altfel „pericol” dispare tacut)");
+  assert.match(col, /Sfaturi\.sfaturi\(Sfaturi\.intrare\(/); assert.match(col, /sfaturi: x\.sfaturi/); assert.match(col, /opreste: TabloBot\.opreste\(/);
+  assert.match(app, /Sfaturi\.sfaturi\(Sfaturi\.intrare\(/);
+});
+await test("I2: TabloBot.opreste - margin call / risc raportat de Pionex -> {titlu, ceFac}; altfel null", () => {
+  assert.ok(typeof TB.opreste === "function", "lipseste TabloBot.opreste");
+  const o = TB.opreste({ status: "running", buOrderData: { marginStatus: "MARGIN_CALL", riskStatus: "TRADING", status: "running" } }, 1e12, null);
+  assert.ok(o && /MARGIN_CALL/.test(o.ceFac), JSON.stringify(o));
+  assert.equal(TB.opreste({ status: "running", buOrderData: { marginStatus: "NORMAL", riskStatus: "TRADING", status: "running" } }, 1e12, null), null);
+});
+await test("I2: cand vocea colectorului (Discord, pagina alerts) difera de Tablou, Tabloul o spune pe fata", () => {
+  assert.ok(typeof CS.altaVoce === "function", "lipseste Consiliu.altaVoce");
+  assert.match(CS.altaVoce({ acum: { nivel: "tine", eticheta: "🟢 Ține" } }, { nivel: "atentie" }), /Pe Discord și pe pagina alerts: 🟢 Ține/);
+  assert.equal(CS.altaVoce({ acum: { nivel: "atentie" } }, { nivel: "atentie" }), null);
+  assert.equal(CS.altaVoce(null, { nivel: "atentie" }), null);
+  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /Consiliu\.altaVoce\(/);
+});
+await test("I3: cheia deciziei nu se schimba cand titlul are cifre vii (12,3% -> 12,1%) - doar nivelul si motivele", () => {
+  assert.ok(typeof CS.cheieDecizie === "function", "lipseste Consiliu.cheieDecizie");
+  const a = { nivel: "atentie", titlu: "Lichidarea s-a apropiat la 12.3%", motive: [{ cod: "lichidare", c: "g" }, { cod: "trend", c: "g" }, { cod: "liniste", c: "v" }] };
+  const b = { nivel: "atentie", titlu: "Lichidarea s-a apropiat la 12.1%", motive: [{ cod: "trend", c: "g" }, { cod: "lichidare", c: "g" }, { cod: "liniste", c: "v" }] };
+  assert.equal(CS.cheieDecizie(a), CS.cheieDecizie(b));
+  assert.notEqual(CS.cheieDecizie(a), CS.cheieDecizie({ nivel: "atentie", titlu: "x", motive: [{ cod: "stop", c: "g" }] }));
+  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /function tbConsCheie\(c\)\{return Consiliu\.cheieDecizie\(c\)\}/);
+});
+await test("I4: ordinea e TOTALA - aceleasi trei motive in orice ordine de intrare dau aceeasi ordine si acelasi „Ce aș face eu”", () => {
+  const k = [comp("costuri", "atentie", "costurile"), comp("muta", "atentie", "mută gridul"), comp("trend", "atentie", "trendul")];
+  const S = soc({ costuri: [15, -20], muta: [12, 30] });
+  const ord = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]].map((p) => { const c = CS.alcatuieste({ sm: sm(p.map((i) => k[i])), socoteala: S }); return c.motive.map((m) => m.cod).join(",") + "|" + c.faCe; });
+  assert.equal(new Set(ord).size, 1, ord.join("  /  "));
+  assert.equal(ord[0].split("|")[0], "muta,costuri,trend");
+});
+await test("I4: banii pe CAZ (media, nu suma) si doar de la 10 cazuri cu bani; „pericol” e siguranta (FIX)", () => {
+  const S = { costuri: { judecate: 100, corecte: 50, bani: 100, baniN: 100, stare: "nesigur" }, trend: { judecate: 10, corecte: 5, bani: 30, baniN: 10, stare: "nesigur" } };
+  let c = CS.alcatuieste({ sm: sm([comp("costuri", "atentie", "costurile"), comp("trend", "atentie", "trendul")]), socoteala: S });
+  assert.deepEqual(c.motive.map((m) => m.cod), ["trend", "costuri"], "media: trend +3/caz bate costuri +1/caz (suma ar fi pus costurile intai)");
+  c = CS.alcatuieste({ sm: sm([comp("costuri", "atentie", "costurile"), comp("trend", "atentie", "trendul")]), socoteala: { costuri: S.costuri, trend: { judecate: 15, corecte: 8, bani: 300, baniN: 5 } } });
+  assert.deepEqual(c.motive.map((m) => m.cod), ["costuri", "trend"], "trend are doar 5 cazuri cu bani: nemasurat");
+  c = CS.alcatuieste({ sm: sm([comp("trend", "atentie", "trendul")]), sfaturi: [{ cod: "pericol", ton: "atentie", titlu: "Prețul e afară din grid", text: "", faCe: "aștept" }], socoteala: { trend: { judecate: 50, corecte: 40, bani: 5000, baniN: 50 } } });
+  assert.deepEqual(c.motive.map((m) => m.cod), ["pericol", "trend"]);
+});
+await test("I5: socoteala deciziilor ia TOTI botii cu decizii (ruta deciziiBoti, din KV), nu doar activii + inchisii de 7 zile", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map([["decizii:111", "[]"], ["decizii:222", "[]"], ["decizii-socoteala", "{}"], ["cons:111", "{}"]]);
+  const env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); }, list: async ({ prefix, cursor }) => ({ keys: [...kv.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }) } };
+  const r = await mod.onRequestGet({ request: new Request("http://127.0.0.1:8788/api/istoric-bot?action=deciziiBoti", { headers: { authorization: "Bearer t", origin: "http://127.0.0.1:8788" } }), env });
+  assert.equal(r.status, 200, await r.clone().text()); assert.deepEqual((await r.json()).boti.sort(), ["111", "222"]);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /action=deciziiBoti/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

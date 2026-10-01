@@ -128,11 +128,13 @@ const ProfilMoneda = incarca("profil-moneda.js", "ProfilMoneda");
 const Probabilitati = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "probabilitati.js"), "utf8") + "; return Probabilitati;")(GridCalcul);   // v101.27 (pachetul 2a)
 const GraficBot = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "grafic-bot.js"), "utf8") + "; return GraficBot;")();   // v101.28 (pachetul 2b): RSI/EMA/Bollinger pentru Dovada
 const Dovada = new Function("GridCalcul", "GraficBot", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "dovada.js"), "utf8") + "; return Dovada;")(GridCalcul, GraficBot, Probabilitati);   // v101.28 (I-471)
+const Scenariu = incarca("scenariu.js", "Scenariu");   // revizia 01.10 (I2): sfaturile si in colector, din aceleasi intrari ca Tabloul
+const Sfaturi = new Function("Alerte", "Scenariu", "TabloExtra", fs.readFileSync(path.join(RAD, "public", "lib", "sfaturi.js"), "utf8") + "; return Sfaturi;")(Alerte, Scenariu, TabloExtra);   // Alerte ca parametru: altfel „pericol” dispare tacut
 const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "consiliu.js"), "utf8") + "; return Consiliu;")(SemnaleBot);   // v101.29 (I-474): o singura voce
 const Asemanatoare = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati);   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu].every(Boolean) && NDX.length > 90); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi].every(Boolean) && NDX.length > 90); process.exit(0); }
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 // v91.11 (1): pe tura, cate cereri de PRETURI Pionex au mers / au picat (26.09: 1 ora de preturi moarte fara nicio alerta)
 let preturiTura = { ok: 0, rau: 0, eroare: null };
@@ -276,15 +278,19 @@ async function semnaleBot(b, ctx, acum) {
     muta: SemnaleBot.mutaGridul(b, f, afaraOre, ProfilMoneda.praguriMargine(profileMoneda.get(s) || null)), iaProfit: SemnaleBot.iaProfit(b, f) };
   x.semafor = SemnaleBot.semafor(x);
   // v101.29 (I-474): Consilierul alcatuit si aici, pe ce are colectorul (semaforul, „Acum, concret” cu lumanarile de 15M, socoteala,
-  // banii la margine) - poza si Discord spun ce spune Tabloul. Sfaturile si consilierul de pagina cer date doar de pagina: le spune Tabloul.
+  // banii la margine) - poza si Discord spun ce spune Tabloul. Revizia 01.10 (I2): si SFATURILE (aceleasi intrari, Sfaturi.intrare) si
+  // OPRESTE de la Pionex. Ramane doar pe Tablou directia pe mai multe intervale - acolo, cand verdictele difera, se spune pe fata.
   try {
     const prof = profileMoneda.get(s) || null, b15 = GridCalcul.bare(r15), dirC = String(b.directie || "").toLowerCase();
     x.concret = SemnaleBot.acumConcret({ bot: b, fisa: f, zero: TabloExtra.dacaInchizi(b), costuri: x.costuri, plan: ctx.plan || null, pragMargine: ProfilMoneda.praguriMargine(prof), pragStop: ProfilMoneda.pragStop(prof, dirC), acum,
       cifre: (pr) => TabloExtra.cifreActiuni(b, { protectie: pr, b15 }) });
-    x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, socoteala: socotealaUltima, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
-      opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, btc: x.btc && x.btc.text ? x.btc.text : null });
+    x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fisa: f, rezumat: null, acum }));
+    x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
+      opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null });
     const stA = stareAlerte[b.id] || (stareAlerte[b.id] = {});
-    const ch = Consiliu.schimbare(stA._cons, x.cons, acum, String(b.baza || "").replace(/\.PERP$/, ""));
+    // revizia 01.10 (I1): starea alertelor botului (ce s-a anuntat deja imediat) si sfaturile tacute (I-466) - ca alerta Consilierului sa nu dubleze
+    const activ = Object.fromEntries(Object.entries(stA).filter(([k, v]) => k.charAt(0) !== "_" && v && v.nivel).map(([k, v]) => [k, v.nivel]));
+    const ch = Consiliu.schimbare(stA._cons, x.cons, acum, String(b.baza || "").replace(/\.PERP$/, ""), { activ, taci: socotealaTaci || {} });
     stA._cons = ch.stare; scrieStare();
     if (ch.alerta) await trimiteAlerta(ch.alerta, b.id, "consilier");
     await trimite("/api/istoric-bot?action=cons", { bot: b.id, acum: ch.stare.acum, inainte: ch.stare.inainte || null, schimbatLa: ch.stare.schimbatLa || null, deCe: ch.stare.deCe || null });
@@ -1114,6 +1120,8 @@ async function turaDecizii() {
     const act = await cere("/api/bot-orders"), ids = new Set(((act && act.bots) || []).map((b) => String(b.id)));
     const inchisi = JurnalTrade.din((await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 7 * 86400000));
     const finale = {}; for (const t of inchisi) { ids.add(String(t.id)); finale[String(t.id)] = { total: Number.isFinite(t.net) ? t.net : t.rezultat, la: t.inchis }; }
+    // revizia 01.10 (I5): si botii inchisi de mult - deciziile lor raman in socoteala (altfel „încă N din 30” scadea)
+    try { const kb = await cere("/api/istoric-bot?action=deciziiBoti"); for (const id of (kb && kb.boti) || []) ids.add(String(id)); } catch (e) { jurnal("decizii: lista botilor", e.message); }
     const toate = [];
     for (const id of ids) {
       await new Promise((r) => setTimeout(r, 700));

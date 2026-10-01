@@ -162,6 +162,20 @@ var Sfaturi = (function () {
     out.sort(function (a, c) { return RANG[a.ton] - RANG[c.ton]; });
     return out;
   }
-  return { sfaturi: sfaturi };
+  // revizia 01.10 (I2, o singura voce): intrarile sfaturilor, ACELEASI pe Tablou si in colector - scenariul la marginea de jos, cat de
+  // des a ajuns pretul acolo (lumanarile de 4 h), ritmul botului, costurile, punctul de zero, geometria. Cer Scenariu si TabloExtra.
+  // o = { bot, k4 (lumanarile de 4 h), fata4h, dir4h, funding (rata Binance), fisa, rezumat (directia pe mai multe intervale - doar Tabloul), acum }
+  function intrare(o) {
+    o = o || {}; var b = o.bot || {}, acum = nr(o.acum) || Date.now(), jos = nr(b.gridJos), p = nr(b.pretCurent);
+    var S = typeof Scenariu !== "undefined" ? Scenariu : null, TE = typeof TabloExtra !== "undefined" ? TabloExtra : null;
+    var scen = S ? S.scenarii(b.brut || null, b, [{ eticheta: "jos", pret: jos }]) : null;
+    var sanse = S && o.k4 && p !== null && jos !== null ? { josZi: S.sansaAtingere(o.k4, p, jos, 6), josSapt: S.sansaAtingere(o.k4, p, jos, 42) } : {};
+    var bu = b.brut && b.brut.buOrderData || {}, zile = nr(b.pornitLa) ? (acum - nr(b.pornitLa)) / 86400000 : null;
+    var ritm = { grile24h: nr(bu.gridProfit24h), medieZi: zile && nr(b.gridProfitBrut) != null ? nr(b.gridProfitBrut) / zile : null, tranz24h: nr(bu.trx24h),
+      tranzMedieZi: zile && nr(bu.closedExchangeOrderCount) != null ? nr(bu.closedExchangeOrderCount) / zile : null, zile: zile };
+    return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
+      costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm };
+  }
+  return { sfaturi: sfaturi, intrare: intrare };
 })();
 if (typeof globalThis !== "undefined") globalThis.Sfaturi = Sfaturi;

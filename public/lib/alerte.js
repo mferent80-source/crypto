@@ -260,7 +260,8 @@ var Alerte = (function () {
         // a trecut: se spune doar dupa STABIL_MS la rand fara alerta
         var de = v.okDe || acum;
         if (acum - de >= STABIL_MS) {
-          if (a.titlu) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj });
+          // revizia 01.10 (C1): o regula cu doarRadar (ex. „s-iesi”) ramane doar in Radar - inainte cheia se pierdea aici si pleca pe Discord
+          if (a.titlu) mesaje.push(tacuta(cheie, ctx) || a.doarRadar ? { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj });
           nou[cheie] = { nivel: "ok", la: acum };
         } else nou[cheie] = { nivel: v.nivel, la: v.la, okDe: de };
         return;
@@ -268,7 +269,7 @@ var Alerte = (function () {
       var trimite = false;
       if (RANG[a.nivel] > RANG[v.nivel]) trimite = true;                       // s-a agravat
       else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= (REPETA_CHEIE_MS[cheie + ":" + a.nivel] || REPETA_CHEIE_MS[cheie] || REPETA_MS[a.nivel])) trimite = true; // persista
-      if (trimite) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj + " (Sfat tăcut pe Discord: pe boții tăi n-a bătut hazardul.)", doarRadar: true } : { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
+      if (trimite) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj + " (Sfat tăcut pe Discord: pe boții tăi n-a bătut hazardul.)", doarRadar: true } : a.doarRadar ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
       // coborarea critic -> atentie NU reseteaza ceasul: o revenire rapida in critic nu e o agravare noua
       nou[cheie] = { nivel: a.nivel, la: trimite ? acum : (RANG[a.nivel] <= RANG[v.nivel] ? v.la : acum) };
     });
