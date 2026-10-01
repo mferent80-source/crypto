@@ -57,5 +57,14 @@ await test("limita: colectorul (antetul lui, DUPA token valid) are galeata lui -
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /"x-radar-client": "colector"/);
 });
 
+await test("limita paginii la citire: 300/min (T212 citeste ~45 la o deschidere - PC + telefon in acelasi minut treceau de 120)", async () => {
+  const src = fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8");
+  assert.ok(src.includes('requireApiAuth(request,env,"istoric-read",300)'), "istoric-read 300");
+  const { requireApiAuth } = await import(pathToFileURL(path.join(RAD, "functions", "_shared", "auth.js")).href);
+  const env = { APP_API_TOKEN: "t" }, cer = () => new Request("http://127.0.0.1:8788/api/istoric-bot?action=x", { headers: { authorization: "Bearer t", "x-forwarded-for": "10.8.8.8" } });
+  let ok = 0; for (let i = 0; i < 250; i++) if ((await requireApiAuth(cer(), env, "proba-v10060-pagina", 300)).ok) ok++;
+  assert.equal(ok, 250);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
