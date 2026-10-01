@@ -2,7 +2,7 @@
 // Jurnal de trade (filtrul Crypto / Actiuni / Tot). Doar CITIRE: cheia T212 e doar de citire si sta acasa.
 // Foloseste din app.js: $, getJSON, apiFetch, escapeHtml, toast; din lib: GridCalcul, T212, ActiuniSemnale.
 // Calculele stau in lib (probate in scripts/t212-v85.mjs si scripts/actiuni-v85.mjs); aici doar se arata.
-var t212 = { sfaturiIst: null, anDecl: null, idei: null, stiri: {}, piata: null, dividende: null, rezultate: {}, niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
+var t212 = { profil: {}, sfaturiIst: null, anDecl: null, idei: null, stiri: {}, piata: null, dividende: null, rezultate: {}, niveluri: {}, simbolPret: {}, cont: null, poz: null, istoric: null, istoricEroare: null, bare: {}, planuri: {}, beta: {}, la: 0, inLucru: false, eroare: null, poarta: null };
 var T212_NIVEL = { tine: ["ȚINE", "t212Pill-tine"], atentie: ["ATENȚIE", "t212Pill-atentie"], iesi: ["IEȘI", "t212Pill-iesi"], "fara-date": ["FĂRĂ DATE", "t212Pill-fara"] };
 var T212_POARTA = { cumpara: ["🟢 CUMPĂR", "good"], asteapta: ["🟡 AȘTEAPTĂ", "tbWarn"], nu: ["🔴 NU ACUM", "bad"], "fara-date": ["⚪ FĂRĂ DATE", ""] };
 
@@ -107,11 +107,25 @@ function t212CostLei(tk, qty) {
   if (!(q > 0) || Math.abs(q - qty) / qty > 0.02) return null;
   return cost * qty / q;
 }
+// v100.52 (actiunile T212, pachetul 1): profilul actiunii (colectorul, noaptea) si stopul ales pe trade-urile tale (varianta „prof” vs −15%)
+function t212ProfilPt(tk) {
+  if (!(tk in t212.profil)) { t212.profil[tk] = null; getJSON("/api/istoric-bot?action=profil&simbol=" + encodeURIComponent(tk)).then(function (d) { t212.profil[tk] = d && d.profil || false; if (t212.profil[tk]) t212Render(); }).catch(function () { t212.profil[tk] = false; }); }
+  return t212.profil[tk] || null;
+}
+var t212TrailMemo = { cf: null, n: -1, v: null };
+function t212TrailAles() {
+  var jj = t212Jurnal(), n = jj ? jj.p.inchise.length : 0;
+  if (t212TrailMemo.cf === t212.cf && t212TrailMemo.n === n && t212TrailMemo.v) return t212TrailMemo.v;
+  var v = jj && t212.cf ? ActiuniSemnale.alegeTrail(ActiuniSemnale.rezumatStop(jj.p.inchise, t212.cf, ["plan", "u15", "u25", "prof"], "stopU")) : { cheie: "u15", motiv: "" };
+  t212TrailMemo = { cf: t212.cf, n: n, v: v }; return v;
+}
 function t212PregatesteP(x, pond) {
   var p = t212Pozitie(x), b = t212.bare[p.ticker] || [];
   p.st = ActiuniSemnale.stare(b, p.pret); p.sem = ActiuniSemnale.semafor(p, p.st);
   // v88: stopul care urca pentru pozitii e cel putin -15% de la maxim (proba pe trade-urile lui, "Cat te-ar fi salvat stopul")
-  var n = b.length ? ActiuniSemnale.niveluri(b, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: p.maxDupaCumparare, minTrail: 0.15 }) : null;
+  // v100.52: sau coborarea obisnuita pe 5 zile din profilul actiunii, DOAR daca pe trade-urile tale a iesit cel putin la fel
+  var pf = t212ProfilPt(p.ticker), tp = ActiuniSemnale.trailPozitie(t212TrailAles(), pf && typeof ProfilMoneda !== "undefined" ? ProfilMoneda.pragStopActiune(pf) : null);
+  var n = b.length ? ActiuniSemnale.niveluri(b, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: p.maxDupaCumparare, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail }) : null;
   p.niv = n && n.nivel === "ok" ? n : null; if (p.niv) t212.niveluri[p.ticker] = p.niv;
   p.nivMotiv = n && n.nivel !== "ok" ? n.motiv : null;
   p.cost = t212CostLei(p.ticker, p.qty); p.pctLei = p.cost ? p.ppl / p.cost : null; p.fxPpl = x.fxPpl;
@@ -297,7 +311,7 @@ function t212RandPozitie(p) {
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="t212PlanSalveaza(\'' + tk + '\')">Salvează planul</button>'
     + (p.plan ? '<button type="button" class="t212BtnLinie" data-action-click="t212PlanSterge(\'' + tk + '\')">Șterge</button>' : '') + '</div>'
     + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212Usd(n.tintaPozitie) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
-      + (n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
+      + (n.sursaTrail ? '<p class="tbSub">Stopul care urcă: ' + escapeHtml(n.sursaTrail) + ' (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
       + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
       : '<p class="tbSub">' + escapeHtml(p.nivMotiv || "Prețurile calculate apar după ce vin prețurile zilnice.") + '</p>') + '</div>';
   return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="8"><div class="t212DetGrila">' + stanga + dreapta + '</div></td></tr>';

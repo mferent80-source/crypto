@@ -86,5 +86,22 @@ await test("ruta cf pastreaza varianta prof (altfel tabelul n-o vede si verdicte
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8"), /Object\.keys\(gata\[t\.id\]\.stopU \|\| \{\}\)\.length && !\("prof" in gata\[t\.id\]\.stopU\)/, "proba goala nu se reface la nesfarsit");
 });
 
+// ---- pasul 4: stopul pozitiei din profil, cand a castigat pe trade-urile lui ----
+await test("niveluri: cu trailProfil (cand a castigat prof) stopul pozitiei urca la −P75 pe 5 zile, cu sursa; fara el, −15% ca azi", () => {
+  const b = Array.from({ length: 200 }, (_, i) => ({ t: i * 864e5, o: 100 + i * 0.1, h: 101 + i * 0.1, l: 99 + i * 0.1, c: 100 + i * 0.1 }));
+  const azi = AS.niveluri(b, 120, { minTrail: 0.15, maxDupaCumparare: 125 }), cu = AS.niveluri(b, 120, { minTrail: 0.15, trailProfil: 0.08, sursaTrail: "profilul INTC: 500 zile de bursă", maxDupaCumparare: 125 });
+  assert.ok(Math.abs(azi.trailPct - 15) < 0.5, String(azi.trailPct)); assert.ok(cu.trailPct >= 7.9 && cu.trailPct < 15, String(cu.trailPct)); assert.match(cu.sursaTrail, /profilul INTC/);
+  assert.match(azi.sursaTrail, /−15% de la maxim/);
+});
+await test("trailPozitie: prof castigat + profil -> trailProfil cu sursa si motivul; altfel −15% cu motivul", () => {
+  assert.ok(typeof AS.trailPozitie === "function", "lipseste ActiuniSemnale.trailPozitie");
+  const p = AS.trailPozitie({ cheie: "prof", motiv: "pe 40 de trade-uri ale tale, stopul din profil a ieșit +12 lei față de −15%" }, { dist: 0.062, sursa: "profilul INTC: 501 zile de bursă (bare zilnice)" });
+  assert.equal(p.trailProfil, 0.062); assert.match(p.sursaTrail, /profilul INTC.*40 de trade-uri/);
+  const u = AS.trailPozitie({ cheie: "u15", motiv: "se probează: 12 din 30" }, { dist: 0.062, sursa: "x" }); assert.equal(u.trailProfil, undefined); assert.equal(u.minTrail, 0.15); assert.match(u.sursaTrail, /12 din 30/);
+  assert.equal(AS.trailPozitie({ cheie: "prof", motiv: "m" }, null).minTrail, 0.15, "fara profilul actiunii ramane −15%");
+  const ecr = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(ecr, /ActiuniSemnale\.trailPozitie\(/); assert.match(ecr, /n\.sursaTrail/); assert.match(col, /ActiuniSemnale\.trailPozitie\(/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

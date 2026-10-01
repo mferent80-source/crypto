@@ -29,7 +29,7 @@ import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
-const VERSIUNE_COLECTOR = "v101.30";
+const VERSIUNE_COLECTOR = "v101.31";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -677,10 +677,25 @@ const DUBLURI = { "1QZ.DE": "COIN", "MIGA.MU": "MSTR", "NFC.F": "NFLX" };   // d
 const yahooExtra = creeazaYahooExtra({ fisier: path.join(DATA, "poza-ext.json"), fisierBare: path.join(DATA, "poza-bare.json"), jurnal });
 let pozaLa = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   // T212 limiteaza cererile: la o citire picata raman pozitiile de la poza anterioara
 function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
+// v101.31 (actiunile T212, pachetul 1): stopul care urca ales pe trade-urile lui (varianta „prof” vs −15%, o data pe ora) si profilul
+// actiunii (KV profil:<TICKER>, la 6 h) - acelasi calcul ca pagina T212
+let trailAlesT212 = { la: 0, v: null }; const profilActCache = {};
+async function trailAlesPt(inchise) {
+  if (trailAlesT212.v && Date.now() - trailAlesT212.la < 3600000) return trailAlesT212.v;
+  try { const c = await cere("/api/t212?action=cf"); trailAlesT212 = { la: Date.now(), v: ActiuniSemnale.alegeTrail(ActiuniSemnale.rezumatStop(inchise, (c && c.cf) || {}, ["plan", "u15", "u25", "prof"], "stopU")) }; }
+  catch (e) { jurnal("poza: stopul ales", e.message); }
+  return trailAlesT212.v;
+}
+async function pragProfilActiune(tk) {
+  const c = profilActCache[tk]; if (c && Date.now() - c.la < 6 * 3600000) return c.ps;
+  let ps = null; try { const d = await cere("/api/istoric-bot?action=profil&simbol=" + encodeURIComponent(tk)); ps = d && d.profil ? ProfilMoneda.pragStopActiune(d.profil) : null; } catch { ps = null; }
+  profilActCache[tk] = { la: Date.now(), ps }; return ps;
+}
 async function pozitiiPentruPoza() {
   const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) return [];
   const pz = await cere("/api/t212?action=pozitii"), poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
-  let loturi = []; try { const h = await cere("/api/t212?action=istoric"); loturi = T212.perechi((h && h.umpleri) || []).deschise || []; } catch (e) { jurnal("poza: loturi", e.message); }
+  let loturi = [], inchiseT = []; try { const h = await cere("/api/t212?action=istoric"), pp = T212.perechi((h && h.umpleri) || []); loturi = pp.deschise || []; inchiseT = pp.inchise || []; } catch (e) { jurnal("poza: loturi", e.message); }
+  const alesT = await trailAlesPt(inchiseT);
   let cash = null; try { cash = (await cere("/api/t212?action=cont")).cash || null; } catch {}
   if (cash && cash.total > 0) contT212 = cash.total;   // v101.2: contul in lei, pentru „câte bucăți” la simbolurile urmarite
   let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
@@ -697,7 +712,8 @@ async function pozitiiPentruPoza() {
     const sursa = DUBLURI[p.simbol] || null; let extra = null;
     try { extra = await yahooExtra.extra(sursa || p.simbol); } catch (e) { jurnal("poza: extra t212", p.simbol, e.message); }
     const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
-    const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: 0.15 }) : null;
+    const tp = ActiuniSemnale.trailPozitie(alesT, await pragProfilActiune(x.ticker));   // v101.31: stopul din profil doar daca a castigat
+    const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail }) : null;
     // v98.1: `la` = cand a fost citit pretul T212 (pagina il arata cu chip „T212" cat e proaspat); `prev` = inchiderea ultimei sesiuni incheiate (NY)
     out.push({ ...p, sursa, extra, niveluri: n, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
       niv: nivDinNiveluri(n, plan),   // stopul POZITIEI (urca dupa maxim), ca in pagina T212 a Radarului - nu stopul de intrare

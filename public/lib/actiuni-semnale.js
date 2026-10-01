@@ -234,9 +234,12 @@ var ActiuniSemnale = (function () {
     var baza = intrare ? intrare.pret : pret, ref = o.maxDupaCumparare > 0 ? Math.max(o.maxDupaCumparare, pret) : pret;
     // o.minTrail (v88): pentru pozitiile deschise, stopul care urca e cel putin -X% de la maxim - pe trade-urile lui
     // (25.09) -15% care urca a iesit +1.001 lei fata de fara stop, iar variantele mai stranse, mai rau
-    var dT = o.minTrail > 0 ? Math.max(d, ref * o.minTrail) : d, stopPoz = ref - dT;
+    // v100.52 (actiunile T212): o.trailProfil = coborarea obisnuita pe 5 zile (profilul actiunii), doar cand a castigat pe trade-urile lui
+    var mt = o.trailProfil > 0 ? o.trailProfil : o.minTrail;
+    var dT = mt > 0 ? Math.max(d, ref * mt) : d, stopPoz = ref - dT;
+    var sursaTrail = o.trailProfil > 0 ? (o.sursaTrail || "profilul acțiunii") : o.minTrail > 0 ? (o.sursaTrail || "−" + Math.round(o.minTrail * 100) + "% de la maxim (măsurat pe trade-urile tale)") : null;
     return { nivel: "ok", trend: dir, atr: A_, k: pr.k, d: d, riscPct: d / baza, proba: pr, intrare: intrare, intrareMotiv: motivI,
-      stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: dT / ref * 100, trailMinim: dT > d, stopAtins: stopPoz >= pret,
+      stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: dT / ref * 100, trailMinim: dT > d, stopAtins: stopPoz >= pret, sursaTrail: sursaTrail,
       // v100.40 (audit 30.09): tinta pozitiei e FIXA, de la pretul mediu de cumparare (+2×risc) - socotita din pretul de ACUM „fugea”
       // odata cu el, deci alerta „a atins ținta sugerată” si „aproape de țintă” din consilier nu se puteau declansa niciodata
       tintaPozitie: r2((o.pretMediu > 0 ? o.pretMediu : pret) + 2 * d) };
@@ -350,6 +353,14 @@ var ActiuniSemnale = (function () {
       : { cheie: "u15", judecate: j, dif: dif, motiv: "pe " + j + " trade-uri ale tale, −15% de la maxim a ieșit " + L(-dif) + " față de stopul din profil — rămâne −15%" };
   }
 
+  // v100.52: optiunile stopului care urca pentru niveluri - din alegerea pe trade-urile lui (alegeTrail) si pragul din profil
+  // (ProfilMoneda.pragStopActiune: {dist, sursa}); fara profil sau fara castig -> −15% ca pana acum. Motivul ramane langa stop.
+  function trailPozitie(alegere, ps) {
+    var m = alegere && alegere.motiv ? alegere.motiv : "";
+    if (alegere && alegere.cheie === "prof" && ps && ps.dist > 0) return { minTrail: 0.15, trailProfil: ps.dist, sursaTrail: "−" + (ps.dist * 100).toFixed(1).replace(".", ",") + "% de la maxim, coborârea obișnuită pe 5 zile (" + ps.sursa + ")" + (m ? " · " + m : "") };
+    return { minTrail: 0.15, sursaTrail: "−15% de la maxim (măsurat pe trade-urile tale)" + (m ? " · " + m : "") };
+  }
+
   // ---------------- v87: regulile tale (din jurnalul de actiuni) ----------------
   function oraRo(t, tz) {
     try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz || "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t))); } catch (e) { return new Date(t).getUTCHours() + 3; }
@@ -413,6 +424,6 @@ var ActiuniSemnale = (function () {
     if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
     return mx;
   }
-  return { alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;
