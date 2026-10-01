@@ -77,5 +77,39 @@ await test("ruta cf pastreaza sit (valid sau null - null ramane null, altfel s-a
   assert.match(tura, /stop: \{\}, stopU: \{\}, sit: null \}/, "fara preturi: sit null (altfel se reface la fiecare tura)");
 });
 
+// ---- pasul 3: poarta - in situatii ca asta, profilul si probabilitatile actiunii propuse ----
+const PM = new Function(`${lib("profil-moneda.js")}; return ProfilMoneda;`)();
+const PB = new Function("GridCalcul", "ActiuniSemnale", `${lib("probabilitati.js")}; return Probabilitati;`)(G, AS);
+const bareAct = (n, f) => Array.from({ length: n }, (_, i) => { const c = 100 * (1 + 0.002 * i) * (1 + 0.03 * Math.sin(i / 3)); return { t: i * Z, o: c * (f ? 0.995 : 1), h: c * 1.02, l: c * 0.98, c }; });
+await test("profilul la poarta: stopul propus fata de coborarea obisnuita pe 5 zile; saltul mare; sub 120 de zile -> null", () => {
+  are(PM.comparaStopActiune, "ProfilMoneda.comparaStopActiune"); are(PM.textSarituri, "ProfilMoneda.textSarituri");
+  const pf = PM.calculeaza(bareAct(300), { piata: "actiuni", simbol: "INTC_US_EQ", acum: 400 * Z });
+  const d = PM.pragStopActiune(pf).dist;
+  const strans = PM.comparaStopActiune(pf, d / 2), larg = PM.comparaStopActiune(pf, d * 2);
+  assert.equal(strans.strans, true); assert.match(strans.text, /mai strâns/);
+  assert.equal(larg.strans, false); assert.ok(!/mai strâns/.test(larg.text));
+  assert.equal(PM.comparaStopActiune(null, 0.05), null);
+  assert.equal(PM.calculeaza(bareAct(80), { piata: "actiuni", acum: 400 * Z }), null, "IPO recent: fara profil");
+  assert.equal(typeof PM.textSarituri(pf), "string");
+  assert.equal(PM.textSarituri(null), "");
+});
+await test("pagina: poarta arata in situatii ca asta + profilul + probabilitatile; fara stop/niveluri -> fara randuri; randarea comuna cu pozitia", () => {
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.match(e, /function t212ProbListaHtml\(/);
+  assert.match(e, /ActiuniSemnale\.situatiiCaAsta\(/);
+  assert.match(e, /ProfilMoneda\.comparaStopActiune\(/);
+  assert.match(e, /t212\.poarta\.prob = /);
+  assert.match(e, /p\.niv && p\.niv\.nivel === "ok"/, "probabilitatile doar cu niveluri calculate");
+  assert.ok((e.match(/t212ProbListaHtml\(/g) || []).length >= 3, "definita + folosita la pozitie + la poarta");
+  assert.match(e, /t212ProfilPoarta\(p\)/, "chemata in t212RenderPoarta");
+});
+await test("probabilitatile actiunii propuse: cu stopul si tinta portii, de la pretul de intrare; stopul peste pret -> motiv, nu cifre", () => {
+  const b = bareAct(300), pret = b[299].c;
+  const r = PB.randActiune(PB.pentruActiune(b, { pret, stop: pret * 0.95, tinta: pret * 1.1, acum: 400 * Z }), null, {});
+  assert.ok(r.some((x) => /stopul mâine/.test(x.titlu)), JSON.stringify(r.map((x) => x.titlu)));
+  const r2 = PB.randActiune(PB.pentruActiune(b, { pret, stop: pret * 1.01, tinta: pret * 1.1, acum: 400 * Z }), null, {});
+  assert.equal(r2.length, 1); assert.equal(r2[0].p, null);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

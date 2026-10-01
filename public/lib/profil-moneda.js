@@ -109,6 +109,18 @@ var ProfilMoneda = (function () {
     var d = prag(p, "z5", "jos", 0.75);
     return d === null ? null : { dist: d, sursa: sursa(p) };
   }
+  // v100.55 (actiuni, pachetul 4): stopul propus la poarta fata de coborarea obisnuita a actiunii pe 5 zile (3 din 4 saptamani raman deasupra)
+  function comparaStopActiune(p, riscPct) {
+    var ps = pragStopActiune(p); if (!ps || !(riscPct > 0)) return null;
+    var Pc = function (x) { return Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; }, strans = riscPct < ps.dist;
+    return { dist: ps.dist, strans: strans, text: "Coborârea obișnuită a acțiunii pe 5 zile: −" + Pc(ps.dist) + " (3 din 4 săptămâni rămân deasupra; " + ps.sursa + "). Stopul propus e la −" + Pc(riscPct)
+      + (strans ? " — mai strâns decât coborârea obișnuită: te poate scoate pe o mișcare normală." : " — în afara coborârii obișnuite.") };
+  }
+  // saltaturile mari la deschidere (peste 98% din celelalte, de obicei la rezultate) - stopul nu apara de ele
+  function textSarituri(p) {
+    var e = p && p.evenimente; if (!e || !e.n || e.mediana === null || e.mediana === undefined) return "";
+    return "Săriturile mari la deschidere (de obicei la rezultate): " + e.n + " în ultimele " + p.zile + " zile de bursă, de obicei ~" + Math.round(e.mediana * 100) + "%, cea mai mare " + Math.round(e.max * 100) + "% — stopul nu te apără de ele.";
+  }
   function praguriMargine(p) {
     var j = prag(p, "z12", "jos", 0.75), s = prag(p, "z12", "sus", 0.75);
     // revizia 01.10: si frecventa(parte, dist) - in cate jumatati de zi moneda a ajuns atat de departe (textul spune cifra adevarata)
@@ -134,5 +146,5 @@ var ProfilMoneda = (function () {
       + " (" + sursa(p) + ").";
     return { frecventa: f, dist: d, distPropusa: dp, sumaPropusa: suma, avertizare: f > 0.5, maiStrans: d < dp, sursa: sursa(p), text: text };
   }
-  return { pragStopActiune: pragStopActiune, calculeaza: calculeaza, frecventa: frecventa, prag: prag, sursa: sursa, moneda: moneda, praguriMargine: praguriMargine, pragStop: pragStop, planPeMoneda: planPeMoneda };
+  return { comparaStopActiune: comparaStopActiune, textSarituri: textSarituri, pragStopActiune: pragStopActiune, calculeaza: calculeaza, frecventa: frecventa, prag: prag, sursa: sursa, moneda: moneda, praguriMargine: praguriMargine, pragStop: pragStop, planPeMoneda: planPeMoneda };
 })();
