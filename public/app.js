@@ -4997,9 +4997,10 @@ var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tb
 var grIngust={};
 function grIngustPt(s){var c=grIngust[s];if(!c||(!c.inLucru&&Date.now()-c.la>10*60000)){grIngust[s]={la:Date.now(),v:c?c.v:null,inLucru:true};getJSON("/api/istoric-bot?action=ingust&simbol="+encodeURIComponent(s)).then(function(d){grIngust[s]={la:Date.now(),v:d&&d.ingust||null,inLucru:false};renderGrid()}).catch(function(){grIngust[s].inLucru=false})}return grIngust[s]&&grIngust[s].v}
 function grIngustHtml(f){
-  var g=grIngustPt(f.simbol),loc=!g,r=g||f.ingustLocal;if(!r)return "";
+  // revizia 01.10 (I3): rezultatul colectorului doar proaspat, pe aceeasi directie ca fisa si fara miscare acum - altfel calculul de aici
+  var g0=grIngustPt(f.simbol),vg=g0?GridProba.varstaIngust(g0,Date.now()):null,g=g0&&!vg.vechi&&g0.dir===f.dir&&!(f.regim&&f.regim.miscare)?g0:null,loc=!g,r=g||f.ingustLocal;if(!r)return "";
   var i=f.info,v=GridProba.varstaIngust(r,Date.now()),st=r.setare,P=function(x){return (x>=0?"+":"−")+Math.abs(x*100).toFixed(1).replace(".",",")+" %"};
-  var h='<div class="tbBloc"><div class="tbBlocCap"><h4>⚡ Varianta îngustă</h4><span class="tbSub">'+escapeHtml(loc?"pe 31 de zile — mai puține ferestre":v.text)+'</span></div>';
+  var h='<div class="tbBloc"><div class="tbBlocCap"><h4>⚡ Varianta îngustă</h4><span class="tbSub">'+escapeHtml(loc?"pe "+r.zile+" de zile — mai puține ferestre":v.text)+'</span></div>';
   if(!r.propus||!st)return h+'<p class="tbSub">Nu o propun: '+escapeHtml(r.motiv||"nedovedită")+'.'+(/rămâi/i.test(r.motiv||"")?"":" Rămâi la setările de mai sus.")+'</p></div>';
   // setarea se reconstruieste pe pretul de ACUM (colectorul a calculat-o pe pretul de atunci)
   var s2=GridCalcul.construieste({pret:f.pret,lat:r.latime,pas:r.pas,dir:r.dir,suma:st.suma||(f.setare&&f.setare.suma)});
@@ -5007,7 +5008,7 @@ function grIngustHtml(f){
     +grRand("Număr de grile",(s2.grile+1)+" linii (Pionex numără liniile) · Geometric",String(s2.grile+1))+grRand("Levier",s2.levierSigur+"× (sigur)",String(s2.levierSigur))
     +(r.dir!=="short"?grRand("Stop-loss jos",grPret(s2.stop.jos,i),grPret(s2.stop.jos,i)):"")+(r.dir!=="long"?grRand("Stop-loss sus",grPret(s2.stop.sus,i),grPret(s2.stop.sus,i)):"")
     +'<p class="tbSub">⏱️ Închide-l după '+r.ore+' h dacă n-a atins stopul — așa a fost probat.</p>'
-    +'<p class="tbSub">Pe test ('+r.test.nIndep+' ferestre independente, nevăzute la alegere): median '+P(r.test.mediana)+' din sumă, '+Math.round(r.test.pePlus*100)+' % pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+Math.round(r.test.perechiZi)+' perechi/zi. Ce s-a întâmplat, nu o promisiune.</p></div>';
+    +'<p class="tbSub">Pe test ('+r.test.nIndep+' ferestre independente, nevăzute la alegere): median '+P(r.test.mediana)+' din sumă (medie '+P(r.test.medie||0)+'), '+Math.round(r.test.pePlus*100)+' % pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+Math.round(r.test.perechiZi)+' perechi/zi. Ce s-a întâmplat, nu o promisiune.</p></div>';
 }
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
@@ -5474,7 +5475,7 @@ function renderGrid(){
     +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
     +grRand("Pentru TradingView (GRID-FISA)","liniile din fișă, pe grafic",grCodTV(st,i,{verdict:f.verdict&&f.verdict.nivel||"",copiatLa:Date.now(),marg:grProb.profil&&grProb.simbol===f.simbol?ProfilMoneda.praguriMargine(grProb.profil):null}))+grTvNotaVerdict(f)
     +'</div></div>'+grTvAvertHtml(f.simbol,st);   // v100.37
-  h+=grIngustHtml(f);   // v100.58
+  try{h+=grIngustHtml(f)}catch(e){}   // v100.58; revizia 01.10: o eroare aici nu strica fisa
   // v100.16: gridul dupa planul tau - doua variante una langa alta + proba pe 30 de zile
   var dG=grStare.date&&grStare.simbol===f.simbol?grStare.date:null,sumG=grNumar($("grSuma")&&$("grSuma").value)||st.suma,levG=grNumar($("grLevier")&&$("grLevier").value),plG=grPlanPentruVariante(f,sumG);
   // fisa zice neutru -> pentru long, directia botilor lui (10 din 10 long pana acum), spus pe fata; short doar daca il alege el

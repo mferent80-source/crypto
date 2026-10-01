@@ -502,8 +502,10 @@ async function turaIngust() {
   ingustInLucru = true;
   try {
     const cl = await cere("/api/istoric-bot?action=clasament");
-    await turaIngustModul({ clasament: cl && cl.clasament, Idei, GridProba, GridCalcul, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+    // revizia 01.10: 0 monede (server oprit, fara clasament) = esec -> reincearca in 30 min, nu peste 6 h
+    const r = await turaIngustModul({ clasament: cl && cl.clasament, Idei, GridProba, GridCalcul, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       cere: (simbol, end) => cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")), trimite });
+    if (!r || !r.monede) throw new Error("nicio monedă sugerată calculată");
     ingustLa = Date.now(); tineRitm("ingust", ingustLa);
   } catch (e) { jurnal("ingust ESEC", e.message); ingustLa = Date.now() - INGUST_MS + 30 * 60000; }
   ingustInLucru = false;

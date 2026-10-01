@@ -257,6 +257,22 @@ var GridProba = (function () {
   // (platou), raportata pe test; propusa doar cu >= 30 ferestre independente, mediana > 0 si Wilson 95 % „pe plus” > 50 %.
   // Iesirea: stopul sau capatul duratei (simuleaza inchide la final, cu taker) - aceeasi socoteala ca gridul de acum
   var ING = { H: [0.25, 0.5, 1], PERC: [0.30, 0.45, 0.60], MIN_INDEP: 30 };
+  // revizia 01.10 (I1): directia pietei LA pornirea unei ferestre, doar din barele de DINAINTEA ei (ultimele 30 de zile, 4 h + 1 zi, ca fisa)
+  function directiaLa(b15, s) {
+    var x = b15.slice(Math.max(0, s - 30 * C.BARE_ZI), s); if (x.length < 2 * C.BARE_ZI) return null;
+    var b4 = G.agrega(x, 4 * 3600000), d = G.directie(b4, G.agrega(b4, 86400000));
+    return d && d.dir || null;
+  }
+  // revizia 01.10 (I2): verdictul pe test - si MEDIA pe plus (un grid castiga des putin si pierde rar mult: mediana singura mintea)
+  function verdictIngust(t, ore) {
+    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + " %"; };
+    if (!(t.nIndep >= ING.MIN_INDEP)) return "prea puține ferestre independente pe partea de test (" + (t.nIndep || 0) + " din " + ING.MIN_INDEP + " la " + ore + " h)";
+    if (t.lichidari > 0) return "pe partea de test s-a lichidat de " + t.lichidari + " ori";
+    if (!(t.mediana > 0)) return "pe ultimele zile (test), după comisioane, n-a ieșit pe plus — rămâi la gridul lat";
+    if (!(t.medie > 0)) return "pe test, media e pe minus (" + P(t.medie) + "): câștigă des puțin și pierde rar mult — rămâi la gridul lat";
+    if (!(t.ic && t.ic[0] > 0.5)) return "pe test, ferestrele pe plus nu sunt clar peste jumătate (" + Math.round((t.pePlus || 0) * 100) + " %)";
+    return "";
+  }
   function ingust(b15, o) {
     o = o || {};
     if (o.miscare) return { propus: false, motiv: "piața e în mișcare mare — nu porni un grid îngust acum" };
@@ -265,9 +281,12 @@ var GridProba = (function () {
     var nA = Math.round(b15.length * 2 / 3), A = b15.slice(0, nA), pasV = G.pasi(A);
     if (!pasV) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)" };
     var best = null, Hs = Array.isArray(o.doarH) && o.doarH.length ? o.doarH : ING.H;
+    // revizia 01.10 (I1): pe test intra doar ferestrele in care directia de LA pornirea lor (din barele de dinainte) e cea ceruta -
+    // directia de azi vine din zilele care stau chiar in treimea de test
+    var dirOk = {}; for (var s0 = 0; s0 < b15.length; s0 += C.PAS_FERESTRE) if (s0 >= nA) dirOk[s0] = directiaLa(b15, s0) === o.dir;
     // doar duratele care POT avea >= 30 de ferestre independente pe test (numarul se stie din lungimea istoricului, nu din rezultate -
     // nu e privit in viitor); daca niciuna nu poate, raman toate si motivul o spune
-    var poate = Hs.filter(function (H) { var W = Math.round(H * C.BARE_ZI), nT = 0; for (var s = 0; s + W <= b15.length; s += C.PAS_FERESTRE) if (s >= nA) nT++; return Math.floor(nT * C.PAS_FERESTRE / W) >= ING.MIN_INDEP; });
+    var poate = Hs.filter(function (H) { var W = Math.round(H * C.BARE_ZI), nT = 0; for (var s = 0; s + W <= b15.length; s += C.PAS_FERESTRE) if (s >= nA) nT++;   /* toate pornirile (nu dirOk: alegerea nu are voie sa depinda de test) */ return Math.floor(nT * C.PAS_FERESTRE / W) >= ING.MIN_INDEP; });
     if (poate.length) Hs = poate;
     Hs.forEach(function (H) {
       var W = Math.round(H * C.BARE_ZI), lats = G.latimi(A, H);
@@ -279,7 +298,7 @@ var GridProba = (function () {
           var ra = [], rt = [];
           for (var s = 0; s + W <= b15.length; s += C.PAS_FERESTRE) {
             if (s + W <= nA) ra.push(simuleaza(b15, s, W, G.construieste({ pret: b15[s].o, lat: lat, pas: pas, dir: o.dir })));
-            else if (s >= nA) rt.push(simuleaza(b15, s, W, G.construieste({ pret: b15[s].o, lat: lat, pas: pas, dir: o.dir })));
+            else if (s >= nA && dirOk[s]) rt.push(simuleaza(b15, s, W, G.construieste({ pret: b15[s].o, lat: lat, pas: pas, dir: o.dir })));
           }
           rA.push(statistici(ra)); rC.push({ lat: lat, pas: pas, rt: rt });
         });
@@ -292,21 +311,17 @@ var GridProba = (function () {
     if (!best) return { propus: false, motiv: "pe istoric, toate variantele înguste s-au lichidat sau n-au avut ferestre — rămâi la gridul lat" };
     var rt = best.c.rt, net = rt.map(function (r) { return r.net; }), st = statistici(rt), plus = net.filter(function (v) { return v > 0; }).length;
     var nIndep = Math.floor(rt.length * C.PAS_FERESTRE / best.W), ic = nIndep > 0 ? G.wilson(Math.round(plus / Math.max(1, rt.length) * nIndep), nIndep) : [0, 1];
-    var test = { n: rt.length, nIndep: nIndep, mediana: st ? st.mediana : null, pePlus: rt.length ? plus / rt.length : null, ic: ic, celMaiRau: st ? st.ceaMaiProasta : null, perechiZi: st ? st.perechiMedii / best.H : null, lichidari: st ? st.lichidari : 0 };
+    var test = { n: rt.length, nIndep: nIndep, mediana: st ? st.mediana : null, medie: net.length ? net.reduce(function (a, v) { return a + v; }, 0) / net.length : null, pePlus: rt.length ? plus / rt.length : null, ic: ic, celMaiRau: st ? st.ceaMaiProasta : null, perechiZi: st ? st.perechiMedii / best.H : null, lichidari: st ? st.lichidari : 0 };
     var setare = G.construieste({ pret: o.pret > 0 ? o.pret : b15[b15.length - 1].c, lat: best.c.lat, pas: best.c.pas, dir: o.dir, suma: o.suma, levier: o.levier });
-    var ore = Math.round(best.H * 24), motiv = "";
-    if (nIndep < ING.MIN_INDEP) motiv = "prea puține ferestre independente pe partea de test (" + nIndep + " din " + ING.MIN_INDEP + " la " + ore + " h)";
-    else if (test.lichidari > 0) motiv = "pe partea de test s-a lichidat de " + test.lichidari + " ori";
-    else if (!(test.mediana > 0)) motiv = "pe ultimele zile (test), după comisioane, n-a ieșit pe plus — rămâi la gridul lat";
-    else if (!(ic[0] > 0.5)) motiv = "pe test, ferestrele pe plus nu sunt clar peste jumătate (" + Math.round(test.pePlus * 100) + " %)";
+    var ore = Math.round(best.H * 24), motiv = verdictIngust(test, ore);
     return { propus: !motiv, motiv: motiv, dir: o.dir, H: best.H, ore: ore, latime: best.c.lat, pas: best.c.pas, setare: setare, antren: best.antren, test: test, zile: Math.round(b15.length / C.BARE_ZI) };
   }
   // un rand pentru ideile de boti
   function rezumatIngust(r) {
     if (!r) return "";
-    if (!r.propus) return "⚡ grid îngust: nu — " + (r.motiv || "nedovedit");
+    if (!r.propus || !r.setare || !r.test) return "⚡ grid îngust: nu — " + (r.motiv || "nedovedit");
     var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + " %"; }, D = { long: "long", short: "short", neutru: "neutru" };
-    return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + " % lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana)
+    return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + " % lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana) + ", medie " + P(r.test.medie || 0)
       + ", " + Math.round(r.test.pePlus * 100) + " % pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + r.test.nIndep + " ferestre independente)";
   }
   // cat de vechi e rezultatul colectorului (refacut la 6 h): peste 12 h se spune „vechi”
@@ -314,7 +329,7 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

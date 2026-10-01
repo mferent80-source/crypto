@@ -89,7 +89,7 @@ await test("pagina: rândul ⚡ în idei, blocul „Varianta îngustă” în fi
   const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.match(a, /function grIngustHtml\(/); assert.match(a, /h\+=grIngustHtml\(f\)/); assert.match(a, /ingustLocal=GridProba\.ingust\(/);
   assert.match(a, /Varianta îngustă/);
-  assert.ok(a.includes('/rămâi/i.test(r.motiv'), "poza: fara „rămâi la gridul lat. Rămâi la setările de mai sus” (dublat)"); assert.match(a, /închide-l după/i); assert.match(a, /pe 31 de zile — mai puține ferestre/);
+  assert.ok(a.includes('/rămâi/i.test(r.motiv'), "poza: fara „rămâi la gridul lat. Rămâi la setările de mai sus” (dublat)"); assert.match(a, /închide-l după/i); assert.match(a, /de zile — mai puține ferestre/);
 });
 
 await test("o singura cerere pentru toate ideile (limita de 120 de citiri/min e comuna cu colectorul): ruta ingustLista + pagina o foloseste", async () => {
@@ -102,6 +102,31 @@ await test("o singura cerere pentru toate ideile (limita de 120 de citiri/min e 
   assert.equal(g.ingust.A_USDT_PERP.motiv, "x"); assert.equal(g.ingust.B_USDT_PERP, null);
   const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
   assert.match(e, /action=ingustLista&simboluri=/); assert.ok(!/action=ingust&simbol=/.test(e), "nu cate o cerere pe moneda");
+});
+
+// ---- revizia finala (Opus, 01.10) gridul ingust ----
+await test("I1: pe test intra doar ferestrele in care DIRECTIA (socotita din barele de dinaintea lor) e cea ceruta - nu directia de azi", () => {
+  are(GP.directiaLa, "GridProba.directiaLa");
+  const b = osc(40), r = GP.ingust(b, { dir: "long", pret: 100, suma: 100 }), nA = Math.round(b.length * 2 / 3), W = Math.round(r.H * 96);
+  let k = 0; for (let s = 0; s + W <= b.length; s += 24) if (s >= nA && GP.directiaLa(b, s) === "long") k++;
+  assert.equal(r.test.n, k, "ferestrele de test = cele cu directia long la pornire");
+});
+await test("I2: verdictul cere si MEDIA pe plus (gridul castiga des putin si pierde rar mult); media se arata", () => {
+  are(GP.verdictIngust, "GridProba.verdictIngust");
+  assert.match(GP.verdictIngust({ nIndep: 40, mediana: 0.02, medie: -0.01, ic: [0.6, 0.8], lichidari: 0, pePlus: 0.7 }, 6), /media/);
+  assert.equal(GP.verdictIngust({ nIndep: 40, mediana: 0.02, medie: 0.01, ic: [0.6, 0.8], lichidari: 0, pePlus: 0.7 }, 6), "");
+  const r = GP.ingust(osc(40), { dir: "neutru", pret: 100, suma: 100 });
+  assert.ok(typeof r.test.medie === "number"); assert.match(GP.rezumatIngust(r), /medie/);
+});
+await test("I3 + mici: fisa foloseste rezultatul colectorului doar proaspat, pe aceeasi directie, fara miscare; KV expira; o eroare nu strica fisa/ideile; 0 monede = reincercare; zilele reale in eticheta", () => {
+  const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  assert.ok(a.includes("!vg.vechi&&g0.dir===f.dir&&!(f.regim&&f.regim.miscare)"), "colectorul doar daca se potriveste");
+  assert.ok(a.includes("try{h+=grIngustHtml(f)}catch(e){}"), "o eroare nu strica fisa");
+  assert.ok(a.includes('"pe "+r.zile+" de zile'), "zilele reale");
+  assert.ok(fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8").includes('put("ingust:"+s,JSON.stringify(out),{expirationTtl:86400})'));
+  assert.doesNotThrow(() => GP.rezumatIngust({ propus: true, setare: null, motiv: "" }));
+  assert.ok(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8").includes("try { var g = typeof GridProba"), "o eroare nu strica ideile");
+  assert.ok(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8").includes("if (!r || !r.monede) throw new Error"), "0 monede = esec");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);
