@@ -9,9 +9,11 @@
 // comparatia se face separat pe primele 2/3 si pe ultima treime; ferestrele se suprapun
 // (2 zile, una la 6 h), deci intervalele de incredere folosesc ferestre INDEPENDENTE (n / 8).
 // "dovedit" = acelasi semn in ambele parti SI intervalele (Wilson 95%) nu se ating.
+// v100.51 (I-470, ipoteza): cand pretul de la pornire e in zona de valoare a celor 7 zile de dinainte (Valoare.zona, doar trecut), acelasi
+// pas pe un grid ANCORAT pe VAL-VAH fata de gridul standard - pe aceleasi ferestre. Cere valoare.js (Valoare); fara el, intrebarea lipseste.
 var GridLaborator = (function () {
   "use strict";
-  var G = GridCalcul, P = GridProba, C = G.C;
+  var G = GridCalcul, P = GridProba, C = G.C, VA = typeof Valoare !== "undefined" ? Valoare : null;
 
   function ferestre(b, H) {
     var W = H * C.BARE_ZI, n = b ? b.length : 0, out = [];
@@ -44,7 +46,14 @@ var GridLaborator = (function () {
       for (i = s - 7 * C.BARE_ZI; i < s; i++) { if (b[i].h > mx) mx = b[i].h; if (b[i].l < mn) mn = b[i].l; }
       var poz = mx > mn ? (b[u].c - mn) / (mx - mn) : 0.5;
       var st = G.construieste({ pret: b[s].o, lat: lat, pas: pas, dir: "neutru" });
-      out.push({
+      // zona de valoare din cele 7 zile de DINAINTEA ferestrei (nicio bara din fereastra sau de dupa ea)
+      var z = VA ? VA.zona(b.slice(s - 7 * C.BARE_ZI, s), {}) : null, inV = z ? b[u].c >= z.val && b[u].c <= z.vah : null, netVa = null;
+      if (inV && z.vah > z.val) {
+        var Nv = Math.max(C.GRILE_MIN, Math.min(C.GRILE_MAX, Math.floor(Math.log(z.vah / z.val) / Math.log(1 + pas)))), gv = Math.pow(z.vah / z.val, 1 / Nv) - 1;
+        var stVa = { dir: "neutru", jos: z.val, sus: z.vah, grile: Nv, levier: G.levierSigur(z.val, z.vah, b[s].o, "neutru", Nv).levier, stop: G.stopuri(z.val, z.vah, gv) };
+        netVa = P.simuleaza(b, s, W, stVa).net;
+      }
+      out.push({ inValoare: inV, netVa: netVa,
         s: s, parte: parte, net: P.simuleaza(b, s, W, st).net,
         miscare: (m4[u] !== null && m4[u] > C.PRAG_MISCARE * o4) || (m24[u] !== null && m24[u] > C.PRAG_MISCARE * o24),
         linisteZile: run[u] / C.BARE_ZI,
@@ -84,6 +93,11 @@ var GridLaborator = (function () {
       { id: "margine", titlu: "Prețul la marginea range-ului pe 7 zile vs la mijloc", eticheteA: "la margine", eticheteB: "la mijloc",
         c: compara(rows, fara(function (r) { return r.margine; }), fara(function (r) { return !r.margine; }), H) }
     ];
+    // v100.51 (I-470): grid ancorat pe zona de valoare vs standard, doar cand pretul e in zona - aceleasi ferestre, doua variante
+    var dub = [];
+    rows.forEach(function (r) { if (r.inValoare && typeof r.netVa === "number") { dub.push({ parte: r.parte, net: r.netVa, varianta: "va" }); dub.push({ parte: r.parte, net: r.net, varianta: "std" }); } });
+    if (VA) q.push({ id: "valoare", titlu: "Grid ancorat pe zona de valoare (7 zile) vs gridul standard, când prețul e în zonă (ipoteză)", eticheteA: "ancorat pe zonă", eticheteB: "standard",
+      c: compara(dub, function (r) { return r.varianta === "va"; }, function (r) { return r.varianta === "std"; }, H) });
     return q.map(function (x) { return { id: x.id, titlu: x.titlu, eticheteA: x.eticheteA, eticheteB: x.eticheteB, A: x.c.A, B: x.c.B, alegere: x.c.alegere, nevazut: x.c.nevazut, verdict: x.c.verdict }; });
   }
 

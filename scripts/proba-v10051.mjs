@@ -78,5 +78,16 @@ await test("Tabloul: comutatoarele „Ziua obișnuită” si „Zona de valoare�
   assert.match(app, /tbStare\.consLinii=/); assert.match(app, /Valoare\.fataDeGrid\(/);
 });
 
+// ---- pasul 3: laboratorul (I-470, ipoteza) ----
+await test("I-470 laboratorul: intrebarea „valoare” - acelasi pret, grid ancorat VAL–VAH vs standard, doar cu informatia de la pornire", () => {
+  are(LAB, "grid-laborator.js");
+  const n = 30 * 96, b = Array.from({ length: n }, (_, i) => { const c = 1 + 0.03 * Math.sin(i / 40) + 0.01 * Math.sin(i / 7); return { t: i * 9e5, o: c, h: c * 1.002, l: c * 0.998, c, v: 50 + (i % 13) }; });
+  const rows = LAB.ferestre(b, 2); assert.ok(rows.length && rows.some((r) => r.inValoare === true && typeof r.netVa === "number"), "niciun rand cu inValoare/netVa");
+  const q = LAB.intrebari(rows, 2).filter((x) => x.id === "valoare")[0]; assert.ok(q, "lipseste intrebarea valoare"); assert.match(q.titlu, /zona de valoare/);
+  const b2 = b.map((x) => ({ ...x })); b2[n - 1] = { ...b2[n - 1], h: 9, c: 9 };   // o bara din viitor schimbata nu are voie sa schimbe zona ferestrelor de dinainte
+  assert.deepEqual(LAB.ferestre(b2, 2).slice(0, 5).map((r) => r.netVa), rows.slice(0, 5).map((r) => r.netVa));
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /new Function\("GridCalcul", "GridProba", "Valoare"[^\n]*grid-laborator\.js/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
