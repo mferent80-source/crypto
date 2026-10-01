@@ -120,7 +120,7 @@ function t212TrailAles() {
   t212TrailMemo = { cf: t212.cf, n: n, v: v }; return v;
 }
 // v100.53 (actiunile T212, pachetul 2): probabilitatile pe pozitie (barele zilnice) + calibrarea pe cumpararile tale; memo pe ticker
-var t212ProbMemo = {}, t212CalMemo = { cf: null, n: -1, v: null };
+var t212ProbMemo = {}, t212StareMemo = {}, t212CalMemo = { cf: null, n: -1, v: null };
 function t212Calibrare() {
   var jj = t212Jurnal(), n = jj ? jj.p.inchise.length : 0;
   if (t212CalMemo.cf === t212.cf && t212CalMemo.n === n && t212CalMemo.v) return t212CalMemo.v;
@@ -129,8 +129,10 @@ function t212Calibrare() {
 }
 function t212ProbPt(p, b, n) {
   if (!n || typeof Probabilitati === "undefined" || !b || b.length < 120) return null;
-  var tinta = p.plan && p.plan.tinta > 0 ? p.plan.tinta : n.tintaPozitie, cheie = p.ticker + "|" + b[b.length - 1].t + "|" + Math.round(n.stopPozitie * 100) + "|" + Math.round(tinta * 100);
-  if (!t212ProbMemo[p.ticker] || t212ProbMemo[p.ticker].cheie !== cheie) t212ProbMemo[p.ticker] = { cheie: cheie, v: Probabilitati.pentruActiune(b, { pret: p.pret, stop: n.stopPozitie, tinta: tinta, acum: Date.now() }) };
+  // revizia 01.10 (I1): pretul de acum intra in cheie (distanta pana la stop se schimba cu el); starile zilelor se tin pe ticker|ultima bara
+  var tinta = p.plan && p.plan.tinta > 0 ? p.plan.tinta : n.tintaPozitie, ub = b[b.length - 1].t, cheie = p.ticker + "|" + ub + "|" + Math.round(p.pret * 1000) + "|" + Math.round(n.stopPozitie * 100) + "|" + Math.round(tinta * 100);
+  var sm = t212StareMemo[p.ticker]; if (!sm || sm.ub !== ub) sm = t212StareMemo[p.ticker] = { ub: ub, m: {} };
+  if (!t212ProbMemo[p.ticker] || t212ProbMemo[p.ticker].cheie !== cheie) t212ProbMemo[p.ticker] = { cheie: cheie, v: Probabilitati.pentruActiune(b, { pret: p.pret, stop: n.stopPozitie, tinta: tinta, acum: Date.now(), memo: sm.m }) };
   var r = t212.rezultate[p.ticker], zc = r && r.data ? Math.ceil((Date.parse(r.data + "T12:00:00Z") - Date.now()) / 86400000) : null, pf = t212ProfilPt(p.ticker);
   return Probabilitati.randActiune(t212ProbMemo[p.ticker].v, t212Calibrare(), { rezultateZile: zc !== null && zc >= 0 ? Math.round(zc * 5 / 7) : null, evenimente: pf && pf.evenimente });
 }

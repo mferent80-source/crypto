@@ -97,14 +97,11 @@ export async function turaCfActiuni(d) {
         // exact ce face pozitia pe viu (altfel un „neatins” ar insemna si „fara profil”)
         const pp = d.ProfilMoneda ? d.ProfilMoneda.calculeaza(inainte, { piata: "actiuni", simbol: tk, acum: t.pornit }) : null, ps = pp ? d.ProfilMoneda.pragStopActiune(pp) : null;
         stopU = d.ActiuniSemnale.cuStopUrcator(t, bare, [{ cheie: "plan", trailPct: n && n.nivel === "ok" ? n.trailPct : null }, { cheie: "u15", pct: 15 }, { cheie: "u25", pct: 25 }, { cheie: "prof", trailPct: ps ? Math.round(ps.dist * 1000) / 10 : 15 }]);
-        // v100.53 (calibrarea): cifra de ATUNCI (doar barele de dinainte) - tinta (+2×risc) inaintea stopului (−risc) in 5 zile - si ce a urmat
-        if (d.Probabilitati && n && n.nivel === "ok" && n.d > 0) {
-          const sp = t.pretCumparare - n.d, tp = t.pretCumparare + 2 * n.d, pa = d.Probabilitati.pentruActiune(inainte, { pret: t.pretCumparare, stop: sp, tinta: tp, acum: t.pornit });
-          const p = pa && pa.cursa5 && pa.cursa5.tinta ? pa.cursa5.tinta.p : null, r = d.Probabilitati.rezultatCumparare(bare, t.pornit, sp, tp);
-          prob = p !== null && r !== null ? { p: Math.round(p * 1000) / 1000, r, zi: Math.floor(t.pornit / 86400000) } : null;
-        }
+        // v100.53 (calibrarea): cifra de ATUNCI (doar barele de dinainte) si ce a urmat. Revizia 01.10: undefined = inca nu (sub 5 zile dupa,
+        // se reface data viitoare - altfel trade-urile noi n-ar intra niciodata); pretul nepotrivit (split) -> null, ca la stopuri
+        if (d.Probabilitati) prob = d.Probabilitati.probLaCumparare(inainte, bare, t, n, d.ActiuniSemnale.laCumparare(t, bare, inchise).nivel !== "fara-date");
       }
-      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU, prob: prob }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {} };
+      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }, prob === undefined ? {} : { prob }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {} };
       judecate++;
     }
     if (Object.keys(strans).length >= 200) await scrie();

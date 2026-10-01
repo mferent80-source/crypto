@@ -88,7 +88,8 @@ var Probabilitati = (function () {
     var a = nr(o.acum) || Date.now(), p = nr(o.pret);
     var b = (Array.isArray(bare) ? bare : []).filter(function (x) { return x && nr(x.t) !== null && nr(x.o) > 0 && nr(x.l) > 0 && nr(x.h) >= nr(x.l) && nr(x.c) > 0 && x.t < a; }).sort(function (x, y) { return x.t - y.t; });
     if (b.length < 120 || !(p > 0)) return null;
-    var stare = stareActiuneLa(b, b.length - 1), memo = {}, op = { memo: memo, cfg: CFG_ACT };
+    // revizia 01.10 (I1): o.memo = starile zilelor, refolosite cat raman aceleasi bare (pagina recalculeaza la fiecare pret, ieftin)
+    var memo = o.memo || {}, stare = (b.length - 1) in memo ? memo[b.length - 1] : (memo[b.length - 1] = stareActiuneLa(b, b.length - 1)), op = { memo: memo, cfg: CFG_ACT };
     var out = { la: a, pret: p, stare: stare, bare: b.length, stop1: null, sare1: null, cursa5: null, motiv: null };
     var stop = nr(o.stop), tinta = nr(o.tinta);
     if (stop === null || !(stop > 0)) { out.motiv = "fără stop"; return out; }
@@ -107,15 +108,28 @@ var Probabilitati = (function () {
     for (var i = 0; i < 5; i++) { if (f[i].l <= stop) return 0; if (f[i].h >= tinta) return 1; }
     return 0;
   }
+  // revizia 01.10 (I2 + I4): cifra de la cumparare si ce a urmat. undefined = INCA nu se poate judeca (sub 5 zile de bursa dupa) - se
+  // reface la tura urmatoare; null = niciodata (sub 120 de zile inainte, niveluri fara risc, pret nepotrivit cu barele - split)
+  function probLaCumparare(inainte, bare, t, nv, potrivit) {
+    if (!potrivit || !t || !(t.pretCumparare > 0) || !nv || nv.nivel !== "ok" || !(nv.d > 0) || !Array.isArray(inainte) || inainte.length < 120) return null;
+    var sp = t.pretCumparare - nv.d, tp = t.pretCumparare + 2 * nv.d;
+    var pa = pentruActiune(inainte, { pret: t.pretCumparare, stop: sp, tinta: tp, acum: t.pornit }), p = pa && pa.cursa5 && pa.cursa5.tinta ? pa.cursa5.tinta.p : null;
+    if (p === null) return null;
+    var r = rezultatCumparare(bare, t.pornit, sp, tp);
+    return r === null ? undefined : { p: Math.round(p * 1000) / 1000, r: r, zi: Math.floor(t.pornit / 864e5) };
+  }
   // calibrarea pe cumpararile lui: un caz pe ticker la cel putin 7 zile calendaristice (~5 de bursa) de ultimul caz al tickerului (cumpararile
   // din aceeasi zi = un caz); cutiile ca la crypto (calibreaza / corecteaza). cf[id].prob = {p, r}
   function calibrareActiuni(inchise, cf) {
-    var out = { "act-cursa5": { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0 }; }) } }, ultim = {};
+    var out = { "act-cursa5": { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0 }; }) } }, ultim = {}, sp = 0, sr = 0, n = 0, sapt = {};
     (Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && nr(t.pornit) !== null; }).sort(function (a, b) { return a.pornit - b.pornit; }).forEach(function (t) {
       var pr = cf && cf[t.id] && cf[t.id].prob; if (!pr || (pr.r !== 0 && pr.r !== 1) || nr(pr.p) === null) return;
       var k = t.ticker || t.simbol || t.id; if (k in ultim && t.pornit - ultim[k] < 7 * 864e5) return; ultim[k] = t.pornit;
       var c = out["act-cursa5"].cutii[Math.min(4, Math.floor(pr.p * 5))]; c.n++; c.k += pr.r;
+      n++; sp += nr(pr.p); sr += pr.r; sapt[Math.floor(t.pornit / (7 * 864e5))] = 1;
     });
+    // revizia 01.10 (I3): rezumatul - ce am zis in medie si ce s-a intamplat, si in cate saptamani (cazurile dintr-o saptamana se misca impreuna)
+    out.rezumat = { n: n, pMed: n ? sp / n : null, rata: n ? sr / n : null, saptamani: Object.keys(sapt).length };
     return out;
   }
   // v100.53: randurile pentru pagina T212 (forma tbProbRandHtml: {titlu, p, ic, text, avertizare}); o = {rezultateZile, evenimente}
@@ -134,15 +148,18 @@ var Probabilitati = (function () {
       out.push({ titlu: "Atinge stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: ki + " din " + a.n + " " + unde(a) + " · din care prin săritură la deschidere: " + PCt(s.p) + putine(a), avertizare: pt >= 0.25 });
     }
     if (rez.cursa5 && rez.cursa5.tinta) {
-      var x = rez.cursa5.tinta, c = corecteaza(x.p, "act-cursa5", cal), icc = c.calibrat ? G.wilson(c.k, c.n) : x.ic;
-      out.push({ titlu: "În 5 zile de bursă: ținta înaintea stopului", p: c.p, ic: icc, text: x.k + " din " + x.n + " " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + c.text, avertizare: c.avertizare });
+      // revizia 01.10 (I3): cifra ACTIUNII ramane; calibrarea (alt stop / alta tinta - ale Radarului la cumparare - si cutii late) e doar nota
+      var x = rez.cursa5.tinta, rz = cal && cal.rezumat;
+      var nota = rz && rz.n >= 20 ? "pe cumpărările tale (cu stopul și ținta Radarului la cumpărare): am zis în medie " + PCt(rz.pMed) + ", s-a întâmplat în " + PCt(rz.rata) + ", din " + rz.n + " cazuri în " + rz.saptamani + " săptămâni"
+        : "pe cumpărările tale: " + (rz ? rz.n : 0) + " cazuri judecate — sub 20 nu spun nimic";
+      out.push({ titlu: "În 5 zile de bursă: ținta înaintea stopului", p: x.p, ic: x.ic, text: x.k + " din " + x.n + " " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
     }
     if (s) out.push({ titlu: "Deschiderea sare peste stop", p: s.p, ic: s.ic, text: s.k + " din " + s.n + " " + unde(s) + " — stopul se execută atunci sub prețul lui" + ic(s), avertizare: s.p >= 0.05 });
     var z = nr(o.rezultateZile);
     if (z !== null && z >= 0 && z <= 5) {
       var ev = o.evenimente || {};
       out.push({ titlu: "Rezultatele vin în " + z + (z === 1 ? " zi" : " zile"), p: null, ic: null, avertizare: true,
-        text: (nr(ev.max) !== null ? "Săriturile mari ale acțiunii (de obicei la rezultate): ~" + PCt(nr(ev.mediana) || 0) + ", cea mai mare " + PCt(ev.max) + ". " : "") + "Cifrele de mai sus NU cuprind zilele de rezultate — atunci stopul poate fi sărit." });
+        text: (nr(ev.max) !== null ? "Săriturile mari ale acțiunii (de obicei la rezultate): ~" + PCt(nr(ev.mediana) || 0) + ", cea mai mare " + PCt(ev.max) + ". " : "") + "Cifrele de mai sus nu țin cont că rezultatele cad în zilele astea — atunci stopul poate fi sărit la deschidere." });
     }
     return out;
   }
@@ -262,5 +279,5 @@ var Probabilitati = (function () {
     var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
     return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
   }
-  return { randActiune: randActiune, rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
+  return { probLaCumparare: probLaCumparare, randActiune: randActiune, rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();

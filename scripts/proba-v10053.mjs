@@ -62,7 +62,7 @@ await test("calibrareActiuni: un caz pe ticker la >= 5 zile de bursa; cumpararil
 });
 await test("rejucarea noteaza prob doar cu barele de dinainte si ruta cf o pastreaza; colectorul da ActiuniSemnale lui Probabilitati", async () => {
   const t = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
-  assert.match(t, /pentruActiune\(inainte/); assert.match(t, /prob: /); assert.match(t, /!\("prob" in gata\[t\.id\]\)/);
+  assert.match(t, /probLaCumparare\(inainte/); assert.match(t, /{ prob }/); assert.match(t, /!\("prob" in gata\[t\.id\]\)/);
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(col, /new Function\("GridCalcul", "ActiuniSemnale", fs\.readFileSync\(path\.join\(RAD, "public", "lib", "probabilitati\.js"\)/); assert.match(col, /ActiuniSemnale, ProfilMoneda, Probabilitati, pauza/);
   const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "t212.js")).href);
@@ -86,11 +86,49 @@ await test("randActiune: stopul maine (cu saritura alaturi), tinta inaintea stop
   const rez = PR.pentruActiune(b, { pret, stop: pret * 0.97, tinta: pret * 1.05, acum: b[399].t + 864e5 });
   const r = PR.randActiune(rez, {}, { rezultateZile: 3, evenimente: { mediana: 0.06, max: 0.18 } });
   assert.ok(r.length === 4, JSON.stringify(r.map((x) => x.titlu)));
-  assert.match(r[0].titlu, /stopul.*mâine/i); assert.match(r[0].text, /din care prin săritură/); assert.match(r[1].text, /necalibrat încă/);
+  assert.match(r[0].titlu, /stopul.*mâine/i); assert.match(r[0].text, /din care prin săritură/); assert.match(r[1].text, /pe cumpărările tale: 0 cazuri judecate/);
   assert.match(r[3].titlu, /Rezultatele vin în 3 zile/); assert.match(r[3].text, /18%/);
   assert.equal(PR.randActiune(rez, {}, { rezultateZile: 12 }).length, 3, "rezultatele departe: fara rand");
   assert.match(PR.randActiune(PR.pentruActiune(b, { pret, stop: pret * 1.01, tinta: pret * 1.05, acum: b[399].t + 864e5 }), {}, {})[0].titlu, /deja depășit/);
   assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), /Probabilitati\.randActiune\(/);
+});
+
+// ---- revizia finala (Opus, 01.10): I1, I2, I3, I4, M1 ----
+await test("I1: cifrele urmeaza pretul de acum (aceleasi bare, acelasi stop, pret mai jos -> atingerea mai probabila; sub stop -> „deja depășit”); memo-ul starilor se refoloseste", () => {
+  const b = zi(400, (i) => 100 * (1 + 0.03 * Math.sin(i / 5))), acum = b[399].t + 864e5, memo = {};
+  const sus = PR.pentruActiune(b, { pret: 100, stop: 97, tinta: 120, acum, memo }), jos = PR.pentruActiune(b, { pret: 98, stop: 97, tinta: 120, acum, memo });
+  assert.ok(jos.stop1.p + jos.sare1.p > sus.stop1.p + sus.sare1.p, (sus.stop1.p + sus.sare1.p) + " vs " + (jos.stop1.p + jos.sare1.p));
+  assert.match(PR.pentruActiune(b, { pret: 96, stop: 97, tinta: 120, acum, memo }).motiv, /deja depășit/);
+  assert.ok(Object.keys(memo).length > 100, "starile zilelor tinute in memo-ul dat");
+  const ecr = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.match(ecr, /Math\.round\(p\.pret \* 1000\)/, "pretul in cheie"); assert.match(ecr, /t212StareMemo\[p\.ticker\]/);
+});
+await test("I2 + I4: probLaCumparare - „încă nu” (sub 5 zile dupa) -> undefined, se reface; „niciodata” (sub 120 inainte / pret nepotrivit) -> null", () => {
+  are(PR.probLaCumparare, "Probabilitati.probLaCumparare");
+  const b = zi(400, (i) => 100 * (1 + 0.03 * Math.sin(i / 5))), nv = { nivel: "ok", d: 3 };
+  const t = { pornit: b[396].t + 15 * 3600000, pretCumparare: b[396].c };
+  const ina = b.filter((x) => x.t + 8 * 3600000 <= t.pornit);
+  assert.equal(PR.probLaCumparare(ina, b, t, nv, true), undefined, "doar 3 zile dupa: inca nu se poate judeca");
+  const t2 = { pornit: b[350].t + 15 * 3600000, pretCumparare: b[350].c }, ina2 = b.filter((x) => x.t + 8 * 3600000 <= t2.pornit);
+  const p2 = PR.probLaCumparare(ina2, b, t2, nv, true); assert.ok(p2 && (p2.r === 0 || p2.r === 1) && p2.p >= 0, JSON.stringify(p2));
+  assert.equal(PR.probLaCumparare(ina2, b, t2, nv, false), null, "pret nepotrivit (split): niciodata");
+  assert.equal(PR.probLaCumparare(ina2.slice(0, 50), b, t2, nv, true), null, "sub 120 de zile inainte: niciodata");
+  const tu = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
+  assert.match(tu, /probLaCumparare\(/); assert.match(tu, /prob === undefined \? \{\} : \{ prob \}/);
+});
+await test("I3: cifra actiunii NU se inlocuieste cu media cutiei; calibrarea apare ca nota (ce am zis in medie, ce s-a intamplat, cazuri, saptamani)", () => {
+  const b = zi(400, (i) => 100 * (1 + 0.03 * Math.sin(i / 5))), pret = b[399].c;
+  const rez = PR.pentruActiune(b, { pret, stop: pret * 0.97, tinta: pret * 1.05, acum: b[399].t + 864e5 });
+  const Z = 864e5, inch = Array.from({ length: 60 }, (_, i) => ({ id: "x" + i, ticker: "T" + (i % 6), pornit: i * 8 * Z }));
+  const cf = Object.fromEntries(inch.map((t, i) => [t.id, { prob: { p: 0.05, r: i % 10 === 0 ? 1 : 0 } }]));
+  const cal = PR.calibrareActiuni(inch, cf); assert.ok(cal.rezumat && cal.rezumat.n === 60 && cal.rezumat.saptamani > 0, JSON.stringify(cal.rezumat));
+  const r = PR.randActiune(rez, cal, {});
+  assert.equal(r[1].p, rez.cursa5.tinta.p, "cifra bruta a actiunii ramane"); assert.match(r[1].text, /pe cumpărările tale/); assert.match(r[1].text, /săptămâni/);
+});
+await test("M1: textul rezultatelor spune adevarul (ferestrele istorice includ si zilele de rezultate)", () => {
+  const b = zi(400, (i) => 100 * (1 + 0.03 * Math.sin(i / 5))), pret = b[399].c;
+  const r = PR.randActiune(PR.pentruActiune(b, { pret, stop: pret * 0.97, tinta: pret * 1.05, acum: b[399].t + 864e5 }), {}, { rezultateZile: 2, evenimente: { mediana: 0.06, max: 0.18 } });
+  const t = r[r.length - 1].text; assert.ok(!/NU cuprind/.test(t)); assert.match(t, /nu țin cont că rezultatele cad/);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);
