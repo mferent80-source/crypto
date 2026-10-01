@@ -48,21 +48,23 @@ var ActiuniSemnale = (function () {
   function semafor(p, st) {
     var s = p && p.simbol || "acțiunea";
     if (!p || !(p.pret > 0) || !(p.pretMediu > 0)) return { nivel: "fara-date", motive: ["lipsește prețul poziției"], ceAsFace: "👉 Reîncarcă pozițiile; fără preț nu judec." };
-    var pct = p.pret / p.pretMediu - 1, plan = p.plan || {}, iesi = [], atentie = [], bine = [];
-    if (plan.stop > 0 && p.pret <= plan.stop) iesi.push("prețul a atins stopul din planul tău (" + plan.stop + ")");
+    var pct = p.pret / p.pretMediu - 1, plan = p.plan || {}, iesi = [], atentie = [], bine = [], comp = [];
+    // v100.54 (actiunile T212, pachetul 3): fiecare motiv si cu codul lui - pentru Consilierul pozitiei (aditiv; motive/ceAsFace raman)
+    var ad = function (lista, cod, nivel, motiv) { lista.push(motiv); comp.push({ cod: cod, nivel: nivel, motiv: motiv }); };
+    if (plan.stop > 0 && p.pret <= plan.stop) ad(iesi, "stop-plan", "iesi", "prețul a atins stopul din planul tău (" + plan.stop + ")");
     var ref = p.maxDupaCumparare > 0 ? p.maxDupaCumparare : st && st.max7z > 0 ? Math.max(st.max7z, p.pret) : null;
-    if (plan.trailPct > 0 && ref && p.pret <= ref * (1 - plan.trailPct / 100)) iesi.push("a scăzut " + P(p.pret / ref - 1) + " de la maxim — planul tău zicea ieși la −" + plan.trailPct + "%");
-    if (plan.tinta > 0 && p.pret >= plan.tinta) atentie.push("ținta din plan (" + plan.tinta + ") e atinsă");
+    if (plan.trailPct > 0 && ref && p.pret <= ref * (1 - plan.trailPct / 100)) ad(iesi, "trail-plan", "iesi", "a scăzut " + P(p.pret / ref - 1) + " de la maxim — planul tău zicea ieși la −" + plan.trailPct + "%");
+    if (plan.tinta > 0 && p.pret >= plan.tinta) ad(atentie, "tinta-plan", "atentie", "ținta din plan (" + plan.tinta + ") e atinsă");
     var areDate = st && st.trend && st.trend.dir !== "fara-date";
     if (!areDate && !iesi.length && !atentie.length) return { nivel: "fara-date", pct: pct, motive: ["n-am prețuri zilnice pentru " + s], ceAsFace: "👉 Fără prețuri nu-ți dau semnal; uită-te la plan, nu la culoare." };
     if (areDate) {
-      if (st.trend.dir === "jos" && pct < -0.10) iesi.push("trend în jos și ești pe minus " + P(pct));
-      else if (st.trend.dir === "jos") atentie.push("trendul pe zilnice e în jos (" + st.trend.motive[0] + ")");
-      else if (st.trend.dir === "sus") bine.push("trend în sus pe zilnice");
-      if (st.miscare && st.miscare.mare && st.miscare.sens === "jos") atentie.push("mișcare mare în jos, peste cea obișnuită");
+      if (st.trend.dir === "jos" && pct < -0.10) ad(iesi, "trend-jos-minus", "iesi", "trend în jos și ești pe minus " + P(pct));
+      else if (st.trend.dir === "jos") ad(atentie, "trend-jos", "atentie", "trendul pe zilnice e în jos (" + st.trend.motive[0] + ")");
+      else if (st.trend.dir === "sus") ad(bine, "trend-sus", "bine", "trend în sus pe zilnice");
+      if (st.miscare && st.miscare.mare && st.miscare.sens === "jos") ad(atentie, "miscare-jos", "atentie", "mișcare mare în jos, peste cea obișnuită");
     }
     var arePlan = plan.stop > 0 || plan.trailPct > 0 || plan.tinta > 0;
-    if (pct <= -0.20 && !arePlan) atentie.push("pe minus " + P(pct) + " fără plan scris");
+    if (pct <= -0.20 && !arePlan) ad(atentie, "fara-plan-minus", "atentie", "pe minus " + P(pct) + " fără plan scris");
     var nivel = iesi.length ? "iesi" : atentie.length ? "atentie" : "tine", sfat;
     // "ce am scris" doar cand PLANUL a cerut iesirea (stop / -X% atins), nu cand iesirea vine din trend
     var planAtins = (plan.stop > 0 && p.pret <= plan.stop) || (plan.trailPct > 0 && ref && p.pret <= ref * (1 - plan.trailPct / 100));
@@ -72,7 +74,7 @@ var ActiuniSemnale = (function () {
     else if (nivel === "atentie" && areDate && st.trend.dir === "jos") sfat = "👉 Ce aș face eu: nu cumpăr în plus pe " + s + " până nu se întoarce trendul; dacă n-am stop, îl pun.";
     else if (nivel === "atentie") sfat = "👉 Ce aș face eu: trendul e încă bun, dar nu cumpăr în plus pe " + s + " cât se mișcă așa — aștept să se liniștească; dacă n-am stop, îl pun.";
     else sfat = "👉 Ce aș face eu: o las să meargă" + (arePlan ? " cu planul pus." : " și îmi scriu un stop, ca profitul să nu se întoarcă în minus.");
-    return { nivel: nivel, pct: pct, motive: iesi.concat(atentie, bine), ceAsFace: sfat };
+    return { nivel: nivel, pct: pct, motive: iesi.concat(atentie, bine), ceAsFace: sfat, componente: comp };
   }
 
   var TEXT = {

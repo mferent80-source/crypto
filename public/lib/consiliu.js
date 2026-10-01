@@ -42,6 +42,14 @@ var Consiliu = (function () {
     return { t: (x.nume || k) + " " + x.corecte + " din " + x.judecate + (x.baniN ? " · " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(0) + " USDT" : ""), cls: x.stare, titlu: SemnaleBot.textIncredere(x) };
   }
 
+  // v100.54 (actiunile T212, pachetul 3): sortarea comuna - acelasi nivel: intai siguranta (fix), apoi cele masurate dupa banii pe caz,
+  // apoi cele nemasurate dupa prio; cheie precalculata (ordine totala)
+  function ordoneaza(cand, soc, fix, prioF) {
+    var rg = { iesi: 0, atentie: 1, bine: 2 }; fix = fix || FIX; prioF = prioF || prio;
+    cand.forEach(function (m, i) { var f = fix[m.cod] ? 0 : 1, bm = f ? baniMasurati(soc, m.cod) : null; m._k = [rg[m.nivel], f, bm === null ? 1 : 0, bm === null ? 0 : -bm, prioF(m.cod), i]; });
+    cand.sort(function (a, b) { for (var i = 0; i < a._k.length; i++) if (a._k[i] !== b._k[i]) return a._k[i] - b._k[i]; return 0; });
+    return cand;
+  }
   function alcatuieste(x) {
     x = x || {}; var sm = x.sm || { nivel: "asteapta", cod: "fara-fisa", motiv: "încă socotesc", faCe: "", componente: [] }, soc = x.socoteala || null;
     var cand = [], folosite = {}, sf = Array.isArray(x.sfaturi) ? x.sfaturi : [];
@@ -98,8 +106,7 @@ var Consiliu = (function () {
     // v100.50 (I-479): la acelasi nivel, intai siguranta (ordinea fixa), apoi cele masurate (≥ 10 cazuri cu bani) dupa banii pe caz,
     // apoi cele nemasurate in ordinea fixa. Revizia 01.10 (I4): cheie precalculata - ordinea e TOTALA (inainte comparatorul amesteca
     // perechi masurate cu perechi dupa prio si iesea alta ordine - alt „Ce aș face eu” - dupa ordinea de intrare)
-    cand.forEach(function (m, i) { var f = FIX[m.cod] ? 0 : 1, bm = f ? baniMasurati(soc, m.cod) : null; m._k = [rang[m.nivel], f, bm === null ? 1 : 0, bm === null ? 0 : -bm, prio(m.cod), i]; });
-    cand.sort(function (a, b) { for (var i = 0; i < a._k.length; i++) if (a._k[i] !== b._k[i]) return a._k[i] - b._k[i]; return 0; });
+    ordoneaza(cand, soc, FIX, prio);   // v100.54: sortarea comuna (boti si actiuni)
     var motive = cand.slice(0, 3), avert = motive.filter(function (m) { return m.nivel !== "bine"; });
 
     // verdictul: cel mai grav dintre semafor si motive
@@ -225,6 +232,54 @@ var Consiliu = (function () {
       : "Când ai urmat Consilierul (" + u.length + "): median " + (o.urmat.median === null ? "—" : U(o.urmat.median)) + " la 24 h; când nu (" + n.length + "): " + (o.neurmat.median === null ? "—" : U(o.neurmat.median)) + ". O comparație, nu o dovadă.";
     return o;
   }
-  return { cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  // ---- v100.54 (actiunile T212, pachetul 3): Consilierul POZITIEI - semaforul cu coduri, stopul care urca, probabilitatile (pachetul 2),
+  // sfaturile Consilierului actiunilor; acelasi verdict pe pagina T212, in poza (pagina alerts) si pe Discord. Nimic nu se pierde: ce nu e
+  // motiv ajunge in „Restul”. Siguranta (stopul planului, −X% din plan, stopul care urca atins) ramane prima.
+  var FIX_ACT = { "stop-plan": 1, "trail-plan": 1, "stop-urcator": 1 };
+  var PRIO_ACT = ["stop-plan", "trail-plan", "stop-urcator", "trend-jos-minus", "rezultate", "stop-maine", "fara-plan-minus", "trend-jos", "miscare-jos", "tinta-plan", "sf-istoric", "sf-pozitie", "trend-sus"];
+  function prioAct(cod) { var i = PRIO_ACT.indexOf(cod); return i < 0 ? PRIO_ACT.length : i; }
+  var USD = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + " $"; }, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
+  function alcatuiesteActiune(x) {
+    x = x || {}; var sem = x.sem || {};
+    if (!sem.nivel || sem.nivel === "fara-date") return { nivel: "asteapta", eticheta: ETICHETA.asteapta, titlu: mare((Array.isArray(sem.motive) && sem.motive[0]) || "încă socotesc"), faCe: "", bani: null, motive: [], rest: [] };
+    var cand = [], rest = [], niv = x.niv || null, faCeSem = String(sem.ceAsFace || "").replace(/^👉\s*Ce aș face eu:\s*/, "");
+    (Array.isArray(sem.componente) ? sem.componente : []).forEach(function (k) {
+      if (!k || !k.cod) return;
+      cand.push({ cod: k.cod, nivel: k.nivel === "iesi" || k.nivel === "atentie" ? k.nivel : "bine", c: k.nivel === "iesi" ? "r" : k.nivel === "atentie" ? "g" : "v", titlu: mare(k.motiv), text: "", faCe: "", scurt: mic(k.motiv) });
+    });
+    if (niv && niv.stopAtins && !cand.some(function (m) { return m.cod === "stop-plan" || m.cod === "trail-plan"; }))
+      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + fp(niv.stopPozitie) + ")", text: niv.sursaTrail || "", faCe: "Ies (tot sau jumătate): stopul care urcă e atins.", scurt: "stopul care urcă e atins" });
+    (Array.isArray(x.prob) ? x.prob : []).forEach(function (r) {
+      if (!r || !r.titlu) return;
+      if (/Atinge stopul mâine/.test(r.titlu) && nr(r.p) !== null && r.p >= 0.25) cand.push({ cod: "stop-maine", nivel: "atentie", c: "g", titlu: r.titlu + ": " + Math.round(r.p * 100) + "%", text: r.text || "", faCe: "Stopul e în mișcarea obișnuită a unei zile: n-aș adăuga; dacă țin, accept că poate fi atins mâine.", scurt: "stopul poate fi atins mâine (" + Math.round(r.p * 100) + "%)" });
+      else if (/Rezultatele vin/.test(r.titlu)) cand.push({ cod: "rezultate", nivel: "atentie", c: "g", titlu: r.titlu, text: r.text || "", faCe: "Înainte de rezultate n-aș adăuga și aș hotărî dinainte dacă țin peste ele.", scurt: mic(r.titlu) });
+      else rest.push({ titlu: r.titlu + (nr(r.p) !== null ? ": " + Math.round(r.p * 100) + "%" : ""), text: r.text || "" });
+    });
+    (Array.isArray(x.sfaturi) ? x.sfaturi : []).forEach(function (f) {
+      if (!f || !f.titlu) return;
+      if (f.nivel === "g") cand.push({ cod: "sf-" + (f.sursa || "sfat"), nivel: "atentie", c: "g", titlu: f.titlu, text: f.text || "", faCe: f.ceAsFace || "", scurt: mic(f.titlu) });
+      else rest.push({ titlu: f.titlu, text: [f.text, f.ceAsFace ? "👉 " + f.ceAsFace : ""].filter(Boolean).join(" ") });
+    });
+    ordoneaza(cand, x.socoteala || null, FIX_ACT, prioAct);
+    var motive = cand.slice(0, 3), avert = motive.filter(function (m) { return m.nivel !== "bine"; });
+    cand.slice(3).forEach(function (m) { rest.unshift({ titlu: m.titlu, text: m.text }); });
+    var nivel = sem.nivel === "iesi" || motive.some(function (m) { return m.nivel === "iesi"; }) ? "iesi" : avert.length || sem.nivel === "atentie" ? "atentie" : "tine";
+    var titlu = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + avert[1].scurt : avert.length === 1 ? mare(avert[0].scurt) : "Nimic nu cere o mișcare acum";
+    var faCe = avert[0] && avert[0].faCe ? avert[0].faCe : faCeSem;
+    // banii: unde e pozitia acum si cat ar fi la stopul care urca (dolari; lei doar cu costul in lei - fara curs inventat)
+    var pret = nr(x.pret), pm = nr(x.pretMediu), q = nr(x.qty), cl = nr(x.costLei), fx = cl > 0 && q > 0 && pm > 0 ? cl / (q * pm) : null, bani = [];
+    var cuLei = function (usd) { return USD(usd) + (fx ? " ≈ " + LEI(usd * fx) : ""); };
+    if (pret > 0 && pm > 0 && q > 0) bani.push("acum: " + cuLei((pret - pm) * q));
+    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "la stopul care urcă (" + fp(niv.stopPozitie) + " $): " + cuLei((niv.stopPozitie - pm) * q) : "stopul care urcă (" + fp(niv.stopPozitie) + " $) e deja depășit");
+    return { nivel: nivel, eticheta: ETICHETA[nivel], titlu: titlu, faCe: faCe, bani: bani.length ? bani.join(" · ") : null,
+      motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: null, extra: null }; }), rest: rest };
+  }
+  // forma semaforului actiunilor (poza -> pagina alerts, fara schimbare acolo): {nivel, motive: [titluri], ceAsFace}
+  function pentruPozaActiune(c) {
+    if (!c || !c.nivel || c.nivel === "asteapta") return { nivel: "fara-date", motive: [c && c.titlu ? String(c.titlu) : "încă socotesc"], ceAsFace: "" };
+    return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
+      ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
+  }
+  return { ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;
