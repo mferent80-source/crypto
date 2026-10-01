@@ -41,7 +41,7 @@ var Sfaturi = (function () {
         var a = r[k]; if (!a || a.nivel === "ok") return;
         var fc = k === "lich" ? (a.nivel === "critic" ? "Aș acționa acum, nu aș aștepta: adaug marjă din Pionex sau închid botul. Sub 8% nu mai e loc de răbdare." : "Aș urmări de aproape și n-aș mai adăuga poziție; dacă trece sub 8%, adaug marjă sau închid.")
           : k === "grid" ? "Aș lăsa o zi să vedem dacă revine în interval; dacă nu, aș opri botul și aș face unul nou din fișă, pe unde stă prețul acum." : null;
-        out.push({ cod: "pericol", ton: a.nivel, titlu: a.titlu.replace(nume + ": ", ""), text: a.mesaj, faCe: fc });
+        out.push({ cod: "pericol", tip: k, ton: a.nivel, titlu: a.titlu.replace(nume + ": ", ""), text: a.mesaj, faCe: fc });
       });
     }
 

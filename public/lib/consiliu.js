@@ -77,6 +77,8 @@ var Consiliu = (function () {
     // 3) sfaturile de atentie / critice care n-au intrat deja
     sf.forEach(function (s) {
       if (!s || folosite[s.cod] || (s.ton !== "atentie" && s.ton !== "critic")) return;
+      // v100.60: „pericol” din regulile alertelor despre lichidare spune acelasi lucru ca semaforul - un singur motiv (titlul era „…, iar lichidarea la …”)
+      if (s.cod === "pericol" && s.tip === "lich" && cand.some(function (m) { return m.cod === "lichidare"; })) return;
       if (cand.some(function (m) { return m.cod === s.cod; })) { folosite[s.cod] = 1; return; }
       folosite[s.cod] = 1;
       cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.cod === "margine" ? titluMargine(s.titlu) : s.titlu, text: s.text || "", faCe: s.faCe || "",

@@ -275,12 +275,24 @@ var SemnaleBot = (function () {
   function distPodea(x, p) { return (Math.abs(x / p - 1) * 100).toFixed(1).replace(".", ",") + "%"; }
 
   // intrare: { bot, fisa, plan (TabloExtra.planStare), costuri, btc, aglomerare, muta, iaProfit, zero? (TabloExtra.dacaInchizi) }
+  // v100.60: distanta pana la lichidare de acum ~„inapoi” ms, din istoric [{t, distantaLichidarePct}] (±20 min); altfel null
+  function distantaLaOra(l, acum, inapoi) {
+    var tinta = nr(acum) - nr(inapoi), best = null;
+    (Array.isArray(l) ? l : []).forEach(function (e) { var t = e && nr(e.t), d = e && nr(e.distantaLichidarePct); if (t === null || d === null || Math.abs(t - tinta) > 20 * 60000) return; if (!best || Math.abs(t - tinta) < Math.abs(best.t - tinta)) best = { t: t, d: d }; });
+    return best ? best.d : null;
+  }
   function semafor(x) {
     var b = x.bot || {}, f = x.fisa || null, c = [], dist = nr(b.distantaLichidarePct), dir = String(b.directie || "").toLowerCase();
     // v100.40 (audit 30.09): lichidarea DEPASITA (distanta negativa) e IESI oricat de departe ar fi trecut - |dist| o facea „ȚINE” peste 15%
     if (b.lichidareDepasita === true || (dist !== null && dist < 0)) c.push({ nivel: "iesi", cod: "lichidare", motiv: "prețul a trecut de lichidarea estimată" + (dist !== null ? " (" + Math.abs(dist).toFixed(1) + "% dincolo)" : ""), faCe: "Verifică acum botul în Pionex: poziția poate fi deja lichidată sau pe marginea ei; aș închide ce a rămas." });
     else if (dist !== null && Math.abs(dist) < 8) c.push({ nivel: "iesi", cod: "lichidare", motiv: "lichidarea e la " + Math.abs(dist).toFixed(1) + "%", faCe: "Aș adăuga marjă sau aș închide acum; sub 8% nu mai e loc de răbdare." });
-    else if (dist !== null && Math.abs(dist) < 15) c.push({ nivel: "atentie", cod: "lichidare", motiv: "lichidarea s-a apropiat la " + Math.abs(dist).toFixed(1) + "%", faCe: "N-aș mai lăsa poziția să crească; aș pregăti marja (vezi „Dacă adaug marjă”)." });
+    else if (dist !== null && Math.abs(dist) < 15) {
+      // v100.60 (el, 01.10: „botul e pe creștere de minute bune și uite ce spune”): directia distantei fata de acum ~o ora (x.distInainte).
+      // Se indeparteaza (+0,5 puncte) -> spus pe fata, nimic de facut acum; se apropie -> „s-a apropiat”; fara istoric -> „e la”
+      var dIn = nr(x.distInainte), dv = dIn !== null ? Math.abs(dist) - Math.abs(dIn) : null, dep = dv !== null && dv >= 0.5, apr = dv !== null && dv <= -0.5;
+      c.push({ nivel: "atentie", cod: "lichidare", motiv: (apr ? "lichidarea s-a apropiat la " : "lichidarea e la ") + Math.abs(dist).toFixed(1) + "%" + (dep ? " și se îndepărtează (era " + Math.abs(dIn).toFixed(1) + "% acum o oră)" : apr ? " (era " + Math.abs(dIn).toFixed(1) + "% acum o oră)" : ""),
+        faCe: dep ? "Prețul se îndepărtează de lichidare: nimic de făcut acum; doar n-aș adăuga poziție până trece de 15%." : "N-aș mai lăsa poziția să crească; aș pregăti marja (vezi „Dacă adaug marjă”)." });
+    }
     var pl = x.plan;
     if (pl && Array.isArray(pl.atins)) {
       if (pl.atins.indexOf("minus") >= 0) c.push({ nivel: "iesi", cod: "plan", motiv: "planul tău: pierderea a atins pragul de " + (pl.minus ? pl.minus.prag : "?") + " USDT", faCe: "Ieși acum, cum ai hotărât la rece." });
@@ -420,7 +432,7 @@ var SemnaleBot = (function () {
     return { la: prima.t, laIesire: prima.total, acum: t, dif: t - prima.total };
   }
 
-  return { laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
+  return { distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
     gridMaiDes: gridMaiDes, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;

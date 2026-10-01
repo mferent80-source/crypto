@@ -5895,7 +5895,7 @@ function tbDeseneazaSemafor(b){
   if(plan)tbMinusAtins[b.id]=plan.atins.indexOf("minus")>=0;   // v100.39: histerezis pe pragul de minus (ca in colector)
   var prT=tbProfilPt(b),pmT=ProfilMoneda.praguriMargine(prT),psT=ProfilMoneda.pragStop(prT,String(b.directie||"").toLowerCase());   // v100.45 (pachetul 1)
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0,pmT),iap=SemnaleBot.iaProfit(b,f),zero=TabloExtra.dacaInchizi(b),costuri=TabloExtra.grileVsCosturi(b,Date.now());
-  var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:zero,plan:plan,costuri:costuri,btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
+  var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:zero,plan:plan,costuri:costuri,btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap,distInainte:SemnaleBot.distantaLaOra(tbSapt.botId===b.id?tbSapt.intrari:null,Date.now(),3600000)});   /* v100.60: lichidarea se apropie sau se indeparteaza */
   var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"],asteapta:["⏳ SOCOTESC","neutral"]},n=N[sm.nivel]||N.asteapta;
   var CUL={iesi:"var(--bad)",atentie:"var(--warn)",podea:"var(--good)"},mare=function(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1)};
   // v97.6: botul n-are plan -> sus, inaintea semaforului: propunerea si un singur buton

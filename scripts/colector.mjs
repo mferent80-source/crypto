@@ -30,7 +30,7 @@ import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
-const VERSIUNE_COLECTOR = "v101.39";
+const VERSIUNE_COLECTOR = "v101.40";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -138,7 +138,9 @@ const Asemanatoare = new Function("Probabilitati", fs.readFileSync(path.join(RAD
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
 if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare, Perechi].every(Boolean) && NDX.length > 90); process.exit(0); }
-const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
+// v101.40 (el, 01.10: „rezolvă colectorul și limita”): colectorul se prezinta - dupa tokenul valid are galeata lui (pagina nu mai primeste
+// RATE_LIMITED cand colectorul citeste mult, de ex. dupa o repornire)
+const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json", "x-radar-client": "colector" };
 // v91.11 (1): pe tura, cate cereri de PRETURI Pionex au mers / au picat (26.09: 1 ora de preturi moarte fara nicio alerta)
 let preturiTura = { ok: 0, rau: 0, eroare: null };
 async function cere(cale, opt = {}) {
@@ -278,7 +280,8 @@ async function semnaleBot(b, ctx, acum) {
   const dir = String(b.directie || "").toLowerCase();
   const x = { bot: b, fisa: f, plan: ctx.plan || null, costuri: TabloExtra.grileVsCosturi(b, acum),
     btc: SemnaleBot.btcAvertizare(regimBtc, f && f.regim), aglomerare: SemnaleBot.aglomerare(fut, dir),
-    muta: SemnaleBot.mutaGridul(b, f, afaraOre, ProfilMoneda.praguriMargine(profileMoneda.get(s) || null)), iaProfit: SemnaleBot.iaProfit(b, f) };
+    muta: SemnaleBot.mutaGridul(b, f, afaraOre, ProfilMoneda.praguriMargine(profileMoneda.get(s) || null)), iaProfit: SemnaleBot.iaProfit(b, f),
+    distInainte: SemnaleBot.distantaLaOra(st._distIst, acum, 3600000) };   // v101.40: directia distantei pana la lichidare
   x.semafor = SemnaleBot.semafor(x);
   // v101.29 (I-474): Consilierul alcatuit si aici, pe ce are colectorul (semaforul, „Acum, concret” cu lumanarile de 15M, socoteala,
   // banii la margine) - poza si Discord spun ce spune Tabloul. Revizia 01.10 (I2): si SFATURILE (aceleasi intrari, Sfaturi.intrare) si
@@ -391,6 +394,8 @@ async function tura() {
     try {
       const pl = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id));
       const st = stareAlerte[b.id] || (stareAlerte[b.id] = {});
+      // v101.40: istoricul distantei pana la lichidare (3 h), ca semaforul sa stie daca pretul se apropie sau se indeparteaza
+      if (Number.isFinite(Number(b.distantaLichidarePct))) st._distIst = (st._distIst || []).filter((e) => acum - e.t < 3 * 3600000).concat([{ t: acum, distantaLichidarePct: Number(b.distantaLichidarePct) }]);
       const p = Number(b.pretCurent), afara = Number.isFinite(p) && b.gridJos != null && b.gridSus != null && (p < Number(b.gridJos) || p > Number(b.gridSus));
       st._afaraDe = afara ? (st._afaraDe || acum) : null;
       if (pl && pl.plan && !pl.plan.proba) {   // v88: nu si planul unei probe

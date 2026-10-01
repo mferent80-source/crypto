@@ -51,6 +51,8 @@ export async function requireApiAuth(request,env,scope='api',limit=90){
   if(kv){const m=Number(await kv.get(key)||0);if(m>=AUTH_FAIL_MAX)return blocat;if(token&&!bun)await kv.put(key,String(m+1),{expirationTtl:AUTH_FAIL_FEREASTRA+15})}
   if(!token)return {ok:false,status:401,error:'AUTH_REQUIRED'};
   if(!bun)return {ok:false,status:401,error:'AUTH_INVALID'};
-  const rl=await rateLimit(request,env,scope,limit,60);if(!rl.ok)return {ok:false,status:429,error:'RATE_LIMITED',retryAfter:rl.retryAfter};return {ok:true}
+  // v100.60 (el, 01.10): colectorul (antetul lui, verificat DUPA token) are galeata lui, de 4x - pagina si colectorul nu-si mai fura limita
+  const col=request.headers.get('x-radar-client')==='colector';
+  const rl=await rateLimit(request,env,col?scope+':colector':scope,col?limit*4:limit,60);if(!rl.ok)return {ok:false,status:429,error:'RATE_LIMITED',retryAfter:rl.retryAfter};return {ok:true}
 }
 export function authErrorResponse(result,headers={'content-type':'application/json','cache-control':'no-store'}){const h={...headers};if(result.retryAfter)h['retry-after']=String(result.retryAfter);return new Response(JSON.stringify({error:result.error,authenticated:false}),{status:result.status||401,headers:h})}
