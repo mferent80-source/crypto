@@ -90,12 +90,12 @@ await test("prevClose: inchiderea ultimei sesiuni INCHEIATE (ziua New York), nu 
   assert.equal(prevClose(cuLuni, Date.UTC(2026, 8, 29, 10)), 360, "marti pre-market: luni");
   assert.equal(prevClose([], ACUM), null); assert.equal(prevClose(null, ACUM), null);
 });
-await test("cadentaPoza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri); altfel 5 minute", () => {
-  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 18, 0), botiActivi: 0 }), 120000, "luni 14:00 NY");
-  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 9, 0), botiActivi: 0 }), 120000, "luni 5:00 NY = pre-market");
-  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 29, 1, 0), botiActivi: 0 }), 300000, "luni 21:00 NY = noapte");
-  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 0 }), 300000, "duminica");
-  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 1 }), 120000, "bot activ = 2 minute oricand");
+await test("cadentaPoza (el, 01.10): ritmul pe ore - 08–16 la 3 min, 16–17 la 30 s, 17–23 la 1,5 min, noaptea nimic (botii nu mai schimba ritmul)", () => {
+  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 18, 0), botiActivi: 0 }), 90000, "luni 14:00 NY = 21:00 RO");
+  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 9, 0), botiActivi: 0 }), 180000, "luni 5:00 NY = 12:00 RO");
+  assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 29, 1, 0), botiActivi: 0 }), null, "luni 21:00 NY = 04:00 RO: noaptea nicio poza");
+  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 0 }), 30000, "duminica 16:20 RO");
+  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 1 }), 30000, "bot activ: acelasi ritm");
 });
 await test("alerteSimboluri: miscare peste 2x ATR-ul propriu (o data pe zi) si cumparare noua de insider (fata de poza anterioara)", () => {
   const c = Array.from({ length: 30 }, (_, i) => 100 + (i % 2 ? 0.5 : -0.5));   // ~1%/zi -> ATR ~1%

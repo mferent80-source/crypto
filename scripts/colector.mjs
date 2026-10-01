@@ -679,7 +679,7 @@ let pozaLa = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   /
 function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
 // v101.31 (actiunile T212, pachetul 1): stopul care urca ales pe trade-urile lui (varianta „prof” vs −15%, o data pe ora) si profilul
 // actiunii (KV profil:<TICKER>, la 6 h) - acelasi calcul ca pagina T212
-let trailAlesT212 = { la: 0, v: null }; const profilActCache = {}, stariActiuni = {};   // v101.33: starile zilelor pe ticker|ultima bara (probabilitatile)
+let trailAlesT212 = { la: 0, v: null }; const profilActCache = {}, stariActiuni = {}, consTrimis = {}, jurnaleAct = {};   // v101.33: starile zilelor pe ticker|ultima bara (probabilitatile)
 async function trailAlesPt(inchise) {
   if (trailAlesT212.v && Date.now() - trailAlesT212.la < 3600000) return trailAlesT212.v;
   try { const c = await cere("/api/t212?action=cf"), v = ActiuniSemnale.alegeTrail(inchise, (c && c.cf) || {}); trailAlesT212 = { la: Date.now(), v };
@@ -731,12 +731,15 @@ async function pozitiiPentruPoza() {
       const ch = Consiliu.schimbare(stA._cons, cons, Date.now(), p.simbol, { activ, taci: {} });
       stA._cons = ch.stare; scrieStare();
       if (ch.alerta) await trimiteAlerta(ch.alerta, null, "consilier-" + x.ticker.replace(/[^A-Za-z0-9_-]/g, ""));
-      await trimite("/api/istoric-bot?action=cons", { bot: k, acum: ch.stare.acum || null, inainte: ch.stare.inainte || null, schimbatLa: ch.stare.schimbatLa || null, deCe: ch.stare.deCe || null });
+      // v101.34: poza poate pleca la 30 s - verdictul se scrie doar cand se schimba (ruta de scriere lasa 30 pe minut)
+      const corpCons = { bot: k, acum: ch.stare.acum || null, inainte: ch.stare.inainte || null, schimbatLa: ch.stare.schimbatLa || null, deCe: ch.stare.deCe || null };
+      const semnCons = JSON.stringify({ ...corpCons, acum: corpCons.acum ? { ...corpCons.acum, la: 0 } : null });
+      if (consTrimis[k] !== semnCons) { await trimite("/api/istoric-bot?action=cons", corpCons); consTrimis[k] = semnCons; }
       // socoteala pe motiv si lei: verdictul notat o data pe schimbare (judecat la 5 zile de turaSocotealaActiuni)
       const fx = costLei > 0 && p.qty > 0 && p.pretMediu > 0 ? costLei / (p.qty * p.pretMediu) : null;
-      const jv = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(x.ticker)).catch(() => null), j0 = jv && Array.isArray(jv.log) ? jv.log : [];
-      const j1 = Consiliu.noteazaActiune(j0, cons, p.pret, p.qty, fx, Date.now());
-      if (j1.length !== j0.length) await trimite("/api/istoric-bot?action=semneAct", { bot: x.ticker, log: j1 });
+      if (!(x.ticker in jurnaleAct)) { const jv = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(x.ticker)).catch(() => null); jurnaleAct[x.ticker] = jv && Array.isArray(jv.log) ? jv.log : []; }
+      const j0 = jurnaleAct[x.ticker], j1 = Consiliu.noteazaActiune(j0, cons, p.pret, p.qty, fx, Date.now());
+      if (j1.length !== j0.length) { await trimite("/api/istoric-bot?action=semneAct", { bot: x.ticker, log: j1 }); jurnaleAct[x.ticker] = j1; }
     } catch (e) { jurnal("consilier actiune", x.ticker, e.message); }
     // v98.1: `la` = cand a fost citit pretul T212 (pagina il arata cu chip „T212" cat e proaspat); `prev` = inchiderea ultimei sesiuni incheiate (NY)
     out.push({ ...p, sursa, extra, niveluri: n, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei, bare, sem: semC,
@@ -818,7 +821,8 @@ async function adresaRadarului() {
 let pozaOkLa = 0, ultimeleSimboluri = {}, contT212 = null;
 async function turaPoza() {
   const botiActivi = ultimiiBoti.filter((b) => b && b.id && b.activ !== false).length;
-  if (!PAZNIC_URL || !PAZNIC_TOKEN || pozaInLucru || Date.now() - pozaLa < cadentaPoza({ acum: Date.now(), botiActivi })) return;   // I-461: 2 min in piata / cu bot, 5 min in rest
+  const cad = cadentaPoza({ acum: Date.now(), botiActivi });   // v101.34 (el, 01.10): 08–16 la 3 min, 16–17 la 30 s, 17–23 la 1,5 min, noaptea nimic
+  if (!PAZNIC_URL || !PAZNIC_TOKEN || pozaInLucru || cad === null || Date.now() - pozaLa < cad) return;
   pozaInLucru = true; pozaLa = Date.now();
   try {
     let t212Eroare = null;
@@ -1117,7 +1121,7 @@ async function turaSocotealaActiuni() {
       const v = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(tk)).catch(() => null); let j = v && Array.isArray(v.log) ? v.log : [];
       if (j.some((e) => e && e.r !== 0 && e.r !== 1)) {
         try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)), nou = Consiliu.judecaActiune(j, GridCalcul.bareBursa(d && d.randuri || [], Date.now()), Date.now());
-          if (JSON.stringify(nou) !== JSON.stringify(j)) { await trimite("/api/istoric-bot?action=semneAct", { bot: tk, log: nou }); j = nou; } } catch (e) { jurnal("socoteala actiuni", tk, e.message); }
+          if (JSON.stringify(nou) !== JSON.stringify(j)) { await trimite("/api/istoric-bot?action=semneAct", { bot: tk, log: nou }); j = nou; if (tk in jurnaleAct) jurnaleAct[tk] = nou; } } catch (e) { jurnal("socoteala actiuni", tk, e.message); }   // memoria pozei ia judecatile (altfel urmatoarea notare le-ar suprascrie)
       }
       jurnale.push(j);
     }
@@ -1305,5 +1309,7 @@ async function bucla() {
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
+  // v101.34: bucla e la 60 s - poza are ceasul ei (16–17 la 30 s); turaPoza se pazeste singura (ritmul, pozaInLucru)
+  if (!globalThis.__ceasPoza) globalThis.__ceasPoza = setInterval(() => { turaPoza().catch((e) => jurnal("poza", e.message)); }, 10000);
 }
 bucla();

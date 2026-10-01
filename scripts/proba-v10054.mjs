@@ -104,5 +104,30 @@ await test("pagina T212: Consilierul pozitiei (un verdict), de ce s-a schimbat, 
   assert.match(col, /Consiliu\.judecaDecizieActiune\(/);
 });
 
+// ---- el, 01.10: „între 16:30–23 mai dese, la 1 min” + „după ora 23 să nu mai citească deloc până la 8” (ora Romaniei) ----
+const PZ = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "poza.mjs")).href);
+await test("ritmul pozei (el, 01.10): 08–16 la 3 min, 16–17 la 30 s, 17–23 la 1,5 min, 23–08 nimic (ora Romaniei, si iarna)", () => {
+  const T = (s) => Date.parse(s);
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T09:00:00Z"), botiActivi: 1 }), 180000, "12:00 RO");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T13:00:00Z"), botiActivi: 0 }), 30000, "16:00 RO fix");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T13:59:00Z"), botiActivi: 0 }), 30000, "16:59 RO");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T14:00:00Z"), botiActivi: 1 }), 90000, "17:00 RO");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-04T18:00:00Z"), botiActivi: 0 }), 90000, "duminica 21:00 RO - si in weekend");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T20:00:00Z"), botiActivi: 1 }), null, "23:00 RO fix: gata");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-02T04:59:00Z"), botiActivi: 1 }), null, "07:59 RO");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-02T05:00:00Z"), botiActivi: 1 }), 180000, "08:00 RO");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-12-01T14:30:00Z"), botiActivi: 0 }), 30000, "iarna (UTC+2): 16:30 RO");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-12-01T21:30:00Z"), botiActivi: 1 }), null, "iarna: 23:30 RO");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /setInterval\(\(\) => \{ turaPoza\(\)/, "un ceas separat pentru poza (bucla e la 60 s)");
+});
+await test("noaptea (fara poze) colectorul bate la paznic la 20 de minute - sub pragul lui de 30, fara scrieri in plus", () => {
+  const acum = Date.parse("2026-10-02T00:00:00Z"), MIN = 60000;   // 03:00 RO
+  assert.equal(PZ.bataieNecesara({ acum, pozaOkLa: acum - 4 * 3600000, paznicLa: acum - 6 * MIN }), false, "noaptea: 6 min nu ajung");
+  assert.equal(PZ.bataieNecesara({ acum, pozaOkLa: acum - 4 * 3600000, paznicLa: acum - 21 * MIN }), true, "noaptea: dupa 20 min bate");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /cad === null/, "colectorul sare poza cand ritmul e null");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

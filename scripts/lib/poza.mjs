@@ -156,9 +156,16 @@ export function prevSimbol(c, acum) {
 }
 // v98.2 (audit 28.09, #3): cat poza a urcat in ultimele 10 minute, poza E pulsul (worker-ul citeste `la` din ea) - nicio bataie
 // separata, deci nicio scriere KV in plus (KV Free: 1.000 de scrieri pe zi; poza la 2 min = 720). Altfel bataia la 5 minute.
+// v101.33 (el, 01.10): „după ora 23 să nu mai citească deloc până la 8” - noaptea nu pleaca nicio poza (cota KV de pe Cloudflare: o
+// scriere pe poza, 1.000 pe zi pe tot contul); colectorul bate la paznic la 20 de minute (sub pragul lui de 30), nu la 5
+function minutRo(acum) {
+  const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(acum));
+  return Number((p.find((x) => x.type === "hour") || {}).value) * 60 + Number((p.find((x) => x.type === "minute") || {}).value);
+}
+export function noapteRo(acum) { const m = minutRo(acum); return m >= 23 * 60 || m < 8 * 60; }
 export function bataieNecesara({ acum, pozaOkLa, paznicLa }) {
   if (acum - (nr(pozaOkLa) || 0) < 10 * 60000) return false;
-  return acum - (nr(paznicLa) || 0) >= 5 * 60000;
+  return acum - (nr(paznicLa) || 0) >= (noapteRo(acum) ? 20 : 5) * 60000;
 }
 // v99.5 (el, 28.09: „la JTO îmi arată doar prețul, nu și cât s-a mișcat"): cele 30 de prețuri ale botului (linia + procentul de pe
 // pagina alerts) stateau doar in memoria colectorului si dupa o repornire porneau de la zero (~30 min „puține poze încă").
@@ -206,11 +213,14 @@ export function ziSesiune(acum) {
 // cat de des pleaca poza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri), altfel 5 minute
 // (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: cu un bot activ zi si noapte = 720 de poze; bataia separata NU se mai
 // trimite cat poza curge - vezi bataieNecesara - deci ramane loc)
-export function cadentaPoza({ acum, botiActivi }) {
-  if (botiActivi > 0) return 120000;
-  const p = new Intl.DateTimeFormat("en-US", { timeZone: NY, weekday: "short", hour: "numeric", hour12: false }).formatToParts(new Date(acum));
-  const zi = (p.find((x) => x.type === "weekday") || {}).value, ora = Number((p.find((x) => x.type === "hour") || {}).value) % 24;
-  return zi !== "Sat" && zi !== "Sun" && ora >= 4 && ora < 20 ? 120000 : 300000;
+// v101.34 (el, 01.10): ritmul pozei pe ore, ora Romaniei, in fiecare zi: 08–16 la 3 min, 16–17 la 30 s (deschiderea bursei SUA),
+// 17–23 la 1,5 min, 23–08 NIMIC (null). ~550 de scrieri KV pe zi pe Cloudflare (o scriere pe poza; cota e 1.000 pe tot contul).
+export function cadentaPoza({ acum }) {
+  const mr = minutRo(acum);
+  if (mr >= 23 * 60 || mr < 8 * 60) return null;
+  if (mr < 16 * 60) return 180000;
+  if (mr < 17 * 60) return 30000;
+  return 90000;
 }
 function pctTxt(v, z = 1) { return (Math.abs(v) * 100).toFixed(z).replace(".", ",") + "%"; }
 function miiTxt(v) { v = nr(v) || 0; return Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1).replace(".", ",") + " mil." : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + " k" : String(Math.round(v)); }
