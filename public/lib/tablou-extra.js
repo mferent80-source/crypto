@@ -428,7 +428,7 @@ var TabloExtra = (function () {
   // Opritoarele: doar cele PUSE; cel de sub pretul de acum merge la „jos”, cel de deasupra la „sus” (la long sus = take-profit,
   // cum il eticheteaza scriptul); la short, ca in fisa, jos ramane 0. `sig` = ce inseamna „alt grid” (fara lichidare si suma,
   // care se misca singure cu pozitia si marja).
-  function codTVBot(b, plan) {
+  function codTVBot(b, plan, extra) {
     if (!b) return null;
     var d = bu(b), jos = nr(b.gridJos), sus = nr(b.gridSus), grile = nr(d.row), lev = nr(b.levier);
     if (jos === null || sus === null || !(sus > jos) || !(grile >= 2)) return null;
@@ -454,6 +454,16 @@ var TabloExtra = (function () {
     var pl = plan && !plan.proba ? plan : null, pv = function (v) { v = nr(v); return v !== null && Math.abs(v) > 0 ? String(Math.abs(v)) : "0"; };
     var arePlan = pl && (pv(pl.minus) !== "0" || pv(pl.plus) !== "0" || pv(pl.afaraOre) !== "0");
     if (arePlan) { if (!tip) parti.push(""); parti.push(pv(pl.minus), pv(pl.plus), pv(pl.afaraOre)); }
+    // v100.48 (auditul GRID-FISA v2.1, 01.10): campurile 15-18 pentru GRID-FISA v2.2 - verdictul fisei (gol: botul ruleaza deja),
+    // momentul generarii codului (Pine spune cat de veche e lichidarea copiata - Pionex o muta singur) si pragurile marginii din profilul
+    // monedei (P75 pe 12 h, fractii de pret; 0 = fara profil -> Pine ramane pe 10% din interval). Pozitiile 11-14 se completeaza ca
+    // sa nu alunece. Nu intra in semnatura: alt moment nu e alt grid.
+    if (extra) {
+      if (parti.length === 10) parti.push(tip || "");
+      if (parti.length === 11) parti.push("0", "0", "0");
+      var fr = function (v) { v = nr(v); return v !== null && v > 0 ? v.toFixed(5) : "0"; };
+      parti.push(String(extra.verdict || ""), nr(extra.copiatLa) !== null ? String(Math.round(extra.copiatLa)) : "", fr(extra.margJos), fr(extra.margSus));
+    }
     return { cod: parti.join(";"), sig: parti.slice(0, 7).concat(tip ? [tip] : []).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir, tip: tip };
   }
 

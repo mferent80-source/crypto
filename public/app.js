@@ -4976,12 +4976,19 @@ function grTvAvertHtml(simbol,st){
   return '<div class="grTvAvert"><p class="bad"><b>⚠️ Pe această monedă rulează botul tău cu alt grid: '+escapeHtml(tbPretScurt(d.jos)+" – "+tbPretScurt(d.sus)+", "+d.grile+" grile"+(d.tip?" ("+d.tip+")":""))+'.</b> Rândul „Pentru TradingView” e PROPUNEREA fișei: lipit în GRID-FISA, liniile din TV nu vor fi ale botului.</p>'
     +'<button type="button" class="actionGhost" value="'+escapeHtml(d.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul botului</button></div>';
 }
-function grCodTV(st,info){
+function grCodTV(st,info,extra){
   var zec=grZec(info),p=function(x){var s=grFmt(x,zec);return s==null?"0":s};
   var stopJos=st.dir==="short"?null:(st.stop&&st.stop.jos);
-  return [st.dir,p(st.jos),p(st.sus),String(st.grile+1),String(st.levier),   // v100.38: N intervale -> N + 1 linii Pionex
-    p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0","geometric"].join(";");   // v100.36: + tipul (fisa socoteste geometric; fara el, GRID-FISA v2.0 il lua din setarea indicatorului)
+  var parti=[st.dir,p(st.jos),p(st.sus),String(st.grile+1),String(st.levier),   // v100.38: N intervale -> N + 1 linii Pionex
+    p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0","geometric"];   // v100.36: + tipul (fisa socoteste geometric; fara el, GRID-FISA v2.0 il lua din setarea indicatorului)
+  // v100.48 (auditul GRID-FISA v2.1): + planul gol (0;0;0 - planul il pui in poarta / Tablou), verdictul FISEI (GRID-FISA v2.2 nu mai zice
+  // „POȚI PORNI” cand fisa zice NU), momentul generarii si marginea din profilul monedei
+  if(extra){var fr=function(v){v=Number(v);return isFinite(v)&&v>0?v.toFixed(5):"0"};parti.push("0","0","0",String(extra.verdict||""),String(Math.round(extra.copiatLa||Date.now())),fr(extra.marg&&extra.marg.jos),fr(extra.marg&&extra.marg.sus))}
+  return parti.join(";");
 }
+// v100.48: langa codul fisei, cand fisa NU zice PORNESTE - codul e ca sa vezi liniile (GRID-FISA v2.2 primeste verdictul si spune la fel)
+function grTvNotaVerdict(f){var n=f&&f.verdict&&f.verdict.nivel;if(!n||n==="porneste")return "";var t=GR_NIVEL[n]?GR_NIVEL[n][0]:n;
+  return '<p class="tbSub grTvNota">⚠ Fișa zice '+escapeHtml(t)+': codul e ca să vezi liniile pe grafic. GRID-FISA v2.2 primește verdictul fișei și spune la fel; v2.0/v2.1 nu-l știu și pot zice „poți porni”.</p>'}
 var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
 var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
@@ -5446,7 +5453,7 @@ function renderGrid(){
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
     +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
-    +grRand("Pentru TradingView (GRID-FISA)","liniile din fișă, pe grafic",grCodTV(st,i))
+    +grRand("Pentru TradingView (GRID-FISA)","liniile din fișă, pe grafic",grCodTV(st,i,{verdict:f.verdict&&f.verdict.nivel||"",copiatLa:Date.now(),marg:grProb.profil&&grProb.simbol===f.simbol?ProfilMoneda.praguriMargine(grProb.profil):null}))+grTvNotaVerdict(f)
     +'</div></div>'+grTvAvertHtml(f.simbol,st);   // v100.37
   // v100.16: gridul dupa planul tau - doua variante una langa alta + proba pe 30 de zile
   var dG=grStare.date&&grStare.simbol===f.simbol?grStare.date:null,sumG=grNumar($("grSuma")&&$("grSuma").value)||st.suma,levG=grNumar($("grLevier")&&$("grLevier").value),plG=grPlanPentruVariante(f,sumG);
@@ -5649,9 +5656,10 @@ function grProbSetare(f){return f&&(f.propusa==="deasa"&&f.deasa&&f.deasa.setare
 function grProbDeseneaza(f){
   var el=$("grProb");if(!el||!f)return;
   if((grProb.simbol!==f.simbol||Date.now()-grProb.la>30*60000)&&!grProb.inLucru){grProb.inLucru=true;var s=f.simbol;
-    Promise.all([getJSON("/api/istoric-bot?action=ore&simbol="+encodeURIComponent(s)),getJSON("/api/istoric-bot?action=calibrare").catch(function(){return null})])
-      .then(function(r){grProb.ore=r[0]&&r[0].ore&&Array.isArray(r[0].ore.b)?r[0].ore.b:null;grProb.cal=r[1]&&r[1].calibrare&&r[1].calibrare.cal||null}).catch(function(){grProb.ore=null})
-      .then(function(){grProb.simbol=s;grProb.la=Date.now();grProb.inLucru=false;grProb.cheie=null;if(grStare.fisa&&grStare.fisa.simbol===s)grProbDeseneaza(grStare.fisa)})}
+    Promise.all([getJSON("/api/istoric-bot?action=ore&simbol="+encodeURIComponent(s)),getJSON("/api/istoric-bot?action=calibrare").catch(function(){return null}),getJSON("/api/istoric-bot?action=profil&simbol="+encodeURIComponent(s)).catch(function(){return null})])
+      .then(function(r){grProb.ore=r[0]&&r[0].ore&&Array.isArray(r[0].ore.b)?r[0].ore.b:null;grProb.cal=r[1]&&r[1].calibrare&&r[1].calibrare.cal||null;grProb.profil=r[2]&&r[2].profil||null}).catch(function(){grProb.ore=null;grProb.profil=null})
+      // v100.48: la sosire se redeseneaza toata fisa - si randul codului pentru TV ia marginea din profil
+      .then(function(){grProb.simbol=s;grProb.la=Date.now();grProb.inLucru=false;grProb.cheie=null;if(grStare.fisa&&grStare.fisa.simbol===s)renderGrid()})}
   if(grProb.simbol!==f.simbol||!grProb.ore){el.innerHTML="";grProb.rez=null;return}
   var st=grProbSetare(f);if(!st){el.innerHTML="";return}
   var dir=f.dir==="short"?"short":f.dir==="long"?"long":"neutru",ch=[f.simbol,grStare.la,dir,st.jos,st.sus,JSON.stringify(st.lichidare||null),JSON.stringify(st.stop||null)].join("|");   // revizia 01.10: si lichidarea/stopurile (levierul schimbat)
@@ -6305,7 +6313,8 @@ function renderTabloDovada(){
 // cel pe care l-ai pus deja in TradingView (tii minte apasand „L-am pus”, pe bot); butonul din cartela Gridul il da oricand.
 var TB_TV_KEY="tbTvGrid:";
 function tbTvCitit(id){try{return JSON.parse(localStorage.getItem(TB_TV_KEY+id)||"null")}catch(_){return null}}
-function tbTvCod(){var b=tbStare.routeOk===false?null:tbStare.bot;return b&&b.id&&typeof TabloExtra!=="undefined"?TabloExtra.codTVBot(b,tbPlan.botId===b.id?tbPlan.plan:null):null}
+function tbTvCod(){var b=tbStare.routeOk===false?null:tbStare.bot;if(!(b&&b.id&&typeof TabloExtra!=="undefined"))return null;var pm=ProfilMoneda.praguriMargine(tbProfilPt(b));   // v100.48: + momentul + marginea din profil (GRID-FISA v2.2)
+  return TabloExtra.codTVBot(b,tbPlan.botId===b.id?tbPlan.plan:null,{copiatLa:Date.now(),margJos:pm&&pm.jos,margSus:pm&&pm.sus})}
 function tbDeseneazaTvCod(){
   var el=$("tbGridNou");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot,c=tbTvCod();
@@ -6314,7 +6323,7 @@ function tbDeseneazaTvCod(){
   if(v&&v.sig===c.sig){el.hidden=true;el.innerHTML="";return}
   var P=function(x){return tbPretScurt(x)};
   var titlu=v&&v.jos?"🔁 Ai schimbat gridul: "+P(v.jos)+" – "+P(v.sus)+" ("+v.grile+" grile) → "+P(c.jos)+" – "+P(c.sus)+" ("+c.grile+" grile)":"📺 Gridul de acum, pentru TradingView";
-  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.0 → „Codul din fișă” (cu tipul gridului și planul tău; v1.1 nu le primește). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
+  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.2 → „Codul din fișă” (cu tipul gridului, planul tău, vârsta lichidării și marginea din profilul monedei; v2.0 desenează o linie în plus). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
     +'<div class="tbGnBtn"><button type="button" class="actionGhost" value="'+escapeHtml(c.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul</button><button type="button" class="actionGhost" data-action-click="tbTvAmPus()">L-am pus</button></div>';
   el.hidden=false;
 }
