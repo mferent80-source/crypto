@@ -1017,6 +1017,8 @@ const ORE_DIR = path.join(DATA, "istoric-1h"); fs.mkdirSync(ORE_DIR, { recursive
 const PROFIL_STARE = path.join(DATA, "profil-stare.json");
 let profilStare = {}; try { profilStare = JSON.parse(fs.readFileSync(PROFIL_STARE, "utf8")) || {}; } catch { profilStare = {}; }
 const profileMoneda = new Map();
+// revizia 01.10: la pornire, profilele de ieri (din profil-stare.json) - primele ture nu mai cad pe pragul fix
+for (const [s, f] of Object.entries(profilStare.facute || {})) if (f && f.profil) profileMoneda.set(s, f.profil);
 const fisOre = (s) => path.join(ORE_DIR, String(s).replace(/[^A-Z0-9_]/gi, "") + ".json");
 async function simboluriProfil() {
   const act = await cere("/api/bot-orders"), m = new Map();

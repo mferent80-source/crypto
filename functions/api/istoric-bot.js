@@ -16,7 +16,7 @@ const nr=v=>{if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v
 const idBot=v=>String(v||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,64);
 const simbolKv=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,40);
 // v100.45 (pachetul 1): profilul monedei - 21 de cuantile pe 24 h si 12 h (jos/sus), toate si pe ultimele 30 de zile
-const q21=a=>Array.isArray(a)&&a.length===21&&a.every(x=>typeof x==="number"&&Number.isFinite(x)&&x>=0&&x<=5)?a.slice():null;
+const q21=a=>Array.isArray(a)&&a.length===21&&a.every(x=>typeof x==="number"&&Number.isFinite(x)&&x>=0&&x<=100)?a.slice():null;   // revizia 01.10: BR avea 231% pe 24 h; un pump nu blocheaza profilul
 function curataDistributie(d){if(!d||typeof d!=="object")return null;const jos=q21(d.jos),sus=q21(d.sus);return jos&&sus?{jos,sus,n:nr(d.n),nIndep:nr(d.nIndep)}:null}
 
 function curata(x){

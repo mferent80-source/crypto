@@ -172,5 +172,71 @@ await test("app: Tabloul cere profilul si il da la margine, stop si plan; poarta
   assert.match(html, /<script src="\/lib\/profil-moneda\.js"><\/script>/); assert.match(sw, /"\/lib\/profil-moneda\.js"/);
 });
 
+// ---- revizia finala (01.10): reparatiile, fiecare cu testul ei vazut picand intai ----
+const profilCRV = PM.calculeaza(bareZile([0.01, 0.02, 0.03, 0.04], 60), { acum: T0 + 60 * 24 * ORA, simbol: "CRV_USDT_PERP" });
+await test("R1: marginea spune frecventa ADEVARATA (in cate jumatati de zi ajunge acolo), nu „3 din 4” pe dos", () => {
+  const pm = PM.praguriMargine(profilCRV); assert.ok(pm && typeof pm.frecventa === "function", "praguriMargine trebuie sa dea si frecventa(parte, dist)");
+  const p = 0.40 / (1 - 0.6 * pm.jos);   // la 60% din pragul P75 pana jos
+  const m = SB.mutaGridul(botL(p, 0.40, 0.60), fisaF, 0, pm);
+  assert.ok(m, "la 60% din P75 trebuie sa fie la margine");
+  const n = Math.round(pm.frecventa("jos", 1 - 0.40 / p) * 100);
+  assert.ok(!/3 din 4/.test(m.motiv), m.motiv); assert.match(m.motiv, new RegExp("în " + n + "% din jumătățile de zi"), m.motiv);
+});
+await test("R2: plafonul e 15% din interval (nu 25%): la 20% din interval, pe un grid ingust, nu e „la margine”", () => {
+  assert.equal(SB.mutaGridul(botL(0.42), fisaF, 0, { jos: 0.08, sus: 0.08, sursa: "profilul X" }), null);
+});
+await test("R3: sursa stopului se vede pe cartela; cand stopul vine din PLAN, sursa nu mai zice „profilul”", () => {
+  const pS = { dist: 0.12, sursa: "profilul CRV" };
+  const c = SB.acumConcret({ bot: { ...botL(0.47, 0.40, 0.50, "short"), profitTotal: -3 }, fisa: fisaF, zero: { pretZero: 0.45 }, costuri: {}, pragStop: pS, acum: T0 });
+  const st = c.find((x) => x.cod === "stop"); assert.match(st.act, /profilul CRV/, st.act);
+  const c2 = SB.acumConcret({ bot: { ...botL(0.47, 0.40, 0.50, "short"), profitTotal: -3 }, fisa: fisaF, zero: { pretZero: 0.45 }, costuri: {}, pragStop: pS, acum: T0,
+    plan: { minus: { prag: 5, laOpritor: null, opritorPlan: 0.52 }, atins: [] } });
+  const st2 = c2.find((x) => x.cod === "stop"); assert.equal(st2.pretPropus, 0.52); assert.equal(st2.sursaStop, null); assert.ok(!/profilul/.test(st2.act), st2.act);
+});
+await test("R4: botul short la marginea de SUS -> Consilierul nu lipeste sfatul „marginea de jos” peste „mută gridul”", () => {
+  globalThis.SemnaleBot = SB; const CS = new Function(`${lib("consiliu.js")}; return Consiliu;`)();
+  const sm = SB.semafor({ bot: botL(0.49, 0.40, 0.50, "short"), fisa: fisaF, muta: { motiv: "prețul stă la marginea de sus a gridului", parte: "sus", setare: fisaF.setare } });
+  const k = sm.componente.find((x) => x.cod === "muta"); assert.equal(k && k.parte, "sus");
+  const c = CS.alcatuieste({ sm, concret: [], sfaturi: [{ cod: "margine", ton: "warn", titlu: "Până la marginea de jos (0.40) sunt 18.4%", text: "jos" }], consilier: [] });
+  assert.ok(!c.motive.some((m) => /marginea de jos/.test(m.titlu)) || c.motive.some((m) => /marginea de sus/.test(m.titlu)), JSON.stringify(c.motive.map((m) => m.titlu)));
+  assert.ok(c.motive.some((m) => /marginea de sus/.test(m.titlu)), JSON.stringify(c.motive.map((m) => m.titlu)));
+});
+await test("R5: colectorul - arhiva o data pe tura, lista monedelor tinuta o ora, pauza intre ORICE monede, moneda care pica se amana", async () => {
+  const acum = Date.UTC(2026, 9, 1, 10), stare = { facute: {} }; let nTrades = 0, nSimb = 0; const pauze = [], cereri = [];
+  const mk = (t) => ({ GridCalcul: G, ProfilMoneda: PM, acum: t, pauza: async (ms) => { pauze.push(ms); },
+    cere: async (cale) => { cereri.push(cale); if (/BAD_/.test(cale)) throw new Error("Pionex 500"); return pionexFals(t, t - 60 * 24 * ORA).cere(cale); },
+    trimite: async () => ({ ok: true }), simboluri: async () => { nSimb++; return [{ simbol: "A_USDT_PERP", moneda: "A" }, { simbol: "BAD_USDT_PERP", moneda: "BAD" }, { simbol: "C_USDT_PERP", moneda: "C" }]; },
+    trades: async () => { nTrades++; return []; }, citesteBare: () => [], scrieBare: () => {}, stare, scrieStare: () => {}, jurnal: () => {}, profile: new Map() });
+  await TP.turaProfil(mk(acum));
+  assert.equal(nTrades, 1, "arhiva botilor o data pe tura, nu pe moneda"); assert.ok(pauze.filter((ms) => ms >= 1600).length >= 2 + 2 * 2, "pauza si intre monedele noi: " + pauze.length);
+  const bad0 = cereri.filter((c) => /BAD_/.test(c)).length;
+  await TP.turaProfil(mk(acum + 15 * 60000));
+  assert.equal(nSimb, 1, "lista monedelor tinuta o ora"); assert.equal(cereri.filter((c) => /BAD_/.test(c)).length, bad0, "moneda care a picat se amana (nu la fiecare 10 min)");
+  await TP.turaProfil(mk(acum + 25 * 60000)); assert.ok(cereri.filter((c) => /BAD_/.test(c)).length > bad0, "dupa amanare se reincearca");
+});
+await test("R6: fara fisa si fara geometrie, stopul din profil NU se pune in interiorul gridului", () => {
+  const c = SB.acumConcret({ bot: { pretCurent: 0.45, gridJos: 0.40, gridSus: 0.50, directie: "long", profitTotal: -2 }, fisa: null, zero: { pretZero: 0.47 }, costuri: {}, pragStop: { dist: 0.04, sursa: "profilul X" }, acum: T0 });
+  const st = c.find((x) => x.cod === "stop"); assert.ok(st.pretPropus === null || st.pretPropus < 0.40, "0,432 e in grid: " + st.pretPropus);
+});
+await test("R7/R9/R10: poarta verifica moneda+directia+levierul variantei; pe pagina fara server randul nu promite nimic; colectorul porneste cu profilele de ieri", () => {
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(app, /grPlanMemo\.grid\.cheie\.indexOf\(f\.simbol\+"\|"\)===0/); assert.match(app, /taG\.dir===f\.dir/);
+  assert.match(app, /tbProfil\.faraServer/);
+  assert.match(col, /profilStare\.facute[\s\S]{0,200}profileMoneda\.set/);
+});
+await test("R14: un pump de peste 500% pe 24 h nu blocheaza profilul (cuantile pana la 100x)", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const p = JSON.parse(JSON.stringify(profilCRV)); p.z24.sus[20] = 7.2;
+  const r = await mod.onRequestPost({ request: new Request("http://127.0.0.1:8788/api/istoric-bot?action=profil", { method: "POST", headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: JSON.stringify({ simbol: "BR_USDT_PERP", profil: p }) }), env });
+  assert.equal(r.status, 200, await r.clone().text());
+});
+await test("R15: doar ce se stia atunci - zilele de DUPA `acum` (cu caderi de 50%) nu schimba profilul", () => {
+  const vechi = bareZile([0.01, 0.02, 0.03, 0.04], 40), viitor = bareZile([0.5], 20).map((b) => ({ ...b, t: b.t + 40 * 24 * ORA }));
+  const a = PM.calculeaza(vechi, { acum: T0 + 40 * 24 * ORA }), b = PM.calculeaza(vechi.concat(viitor), { acum: T0 + 40 * 24 * ORA });
+  assert.deepEqual(b.z24, a.z24); assert.deepEqual(b.z12, a.z12);
+  const c = PM.calculeaza(vechi.concat(viitor), { acum: T0 + 60 * 24 * ORA }); assert.notDeepEqual(c.z24, a.z24, "cu acum mai tarziu, caderile intra (testul are dinti)");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

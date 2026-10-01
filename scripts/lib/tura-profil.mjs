@@ -29,22 +29,32 @@ export async function aduOre(simbol, vechi, d) {
   }
   return randuri;
 }
+// revizia 01.10: serverul are buget (120 de citiri pe minut, deja RATE_LIMITED pe 30.09) - lista monedelor tinuta o ora, arhiva
+// botilor o data pe tura (nu pe moneda), pauza intre ORICE doua monede, moneda care pica se amana (20 min, 40, ... cel mult o zi)
 export async function turaProfil(d) {
   const noapte = eNoapte(d.acum), azi = ziRo(d.acum), st = d.stare;
-  st.facute = st.facute || {};
-  for (const { simbol, moneda } of await d.simboluri()) {
-    const f = st.facute[simbol];
+  st.facute = st.facute || {}; st.esuat = st.esuat || {};
+  if (!st.lista || !(d.acum - st.lista.la < ORA)) st.lista = { la: d.acum, v: await d.simboluri() };
+  let tr = null, facute = 0;
+  const toateTrades = async () => tr || (tr = await d.trades());
+  for (const { simbol, moneda } of st.lista.v) {
+    const f = st.facute[simbol], e = st.esuat[simbol];
     if (f && !(noapte && f.zi !== azi)) { if (f.profil && !d.profile.has(simbol)) d.profile.set(simbol, f.profil); continue; }
+    if (e && d.acum - e.la < Math.min(24 * ORA, 10 * 60000 * Math.pow(2, e.n))) continue;
     try {
-      if (f) await d.pauza(PAS_MS);
+      if (facute++) await d.pauza(PAS_MS);
       const randuri = await aduOre(simbol, d.citesteBare(simbol), d);
       d.scrieBare(simbol, randuri);
-      const trades = (await d.trades()).filter((t) => t.moneda === moneda);
+      const trades = (await toateTrades()).filter((t) => t.moneda === moneda);
       const profil = d.ProfilMoneda.calculeaza(d.GridCalcul.bare(randuri), { acum: d.acum, simbol, trades });
       if (profil) { await d.trimite("/api/istoric-bot?action=profil", { simbol, profil }); d.profile.set(simbol, profil); }
       st.facute[simbol] = { zi: azi, la: d.acum, profil: profil ? { simbol, zile: profil.zile, z12: profil.z12, z24: profil.z24 } : null };
+      delete st.esuat[simbol];
       d.scrieStare(st);
       d.jurnal("profil", simbol, profil ? profil.zile + " zile, " + randuri.length + " bare" : "prea putine bare (" + randuri.length + ")");
-    } catch (e) { d.jurnal("profil ESEC", simbol, e.message); }
+    } catch (x) {
+      st.esuat[simbol] = { la: d.acum, n: Math.min(8, (e ? e.n : 0) + 1) }; d.scrieStare(st);
+      d.jurnal("profil ESEC", simbol, x.message);
+    }
   }
 }

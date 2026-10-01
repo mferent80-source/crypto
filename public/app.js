@@ -5127,7 +5127,9 @@ async function gridPoarta(){
   grFrana.istoric=Obiceiuri.franaIstoric(trades.filter(function(t){return t.inchis>Date.UTC(new Date().getUTCFullYear(),0,1)}),grFrana.praguri);
   // v100.45 (I-475): planul potrivit monedei - pe banda „cât planul” la levierul tau (varianta TA a gridului dupa plan, deja socotita)
   var prG=null;try{var dPr=await getJSON("/api/istoric-bot?action=profil&simbol="+encodeURIComponent(f.simbol));prG=dPr&&dPr.profil||null}catch(e){prG=null}
-  var gvG=grPlanMemo.grid&&grPlanMemo.grid.v,taG=gvG&&gvG.ta&&gvG.plan&&gvG.plan.minus===plan.minus?gvG.ta:null,pmG=null;
+  // revizia 01.10: varianta din memorie trebuie sa fie a ACESTEI monede, pe aceeasi directie si la acelasi levier (altfel nimic)
+  var mG=grPlanMemo.grid,gvG=mG&&mG.cheie&&grPlanMemo.grid.cheie.indexOf(f.simbol+"|")===0?mG.v:null,taG=gvG&&gvG.ta&&gvG.plan&&gvG.plan.minus===plan.minus?gvG.ta:null,pmG=null;
+  if(taG&&!(taG.dir===f.dir&&taG.levier===Math.max(1,Math.floor(lev))))taG=null;
   if(prG&&taG&&(f.dir==="long"||f.dir==="short")){var EG=(taG.suma||0)*(taG.levier||1);pmG=ProfilMoneda.planPeMoneda({profil:prG,dir:f.dir,dist:taG.d,laDist:function(dd){return -GridPlan.pierdere(EG,dd,taG.u)}})}
   grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({planMoneda:pmG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   renderGrid();
@@ -5591,11 +5593,11 @@ var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botI
 var tbSoc={la:0,peCod:null,inLucru:false};
 // v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
 // Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.
-var tbProfil={simbol:null,la:0,p:null,inLucru:false};
+var tbProfil={simbol:null,la:0,p:null,inLucru:false,faraServer:false};   // faraServer: pagina publicata (fara KV) - nimic de promis
 function tbProfilPt(b){
   var s=b?TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex:null;if(!s)return null;
   if(!tbProfil.inLucru&&(tbProfil.simbol!==s||Date.now()-tbProfil.la>30*60000)){tbProfil.inLucru=true;
-    getJSON("/api/istoric-bot?action=profil&simbol="+encodeURIComponent(s)).then(function(d){tbProfil.p=d&&d.profil||null}).catch(function(){tbProfil.p=null}).then(function(){tbProfil.simbol=s;tbProfil.la=Date.now();tbProfil.inLucru=false})}
+    getJSON("/api/istoric-bot?action=profil&simbol="+encodeURIComponent(s)).then(function(d){tbProfil.p=d&&d.profil||null;tbProfil.faraServer=false}).catch(function(){tbProfil.p=null;tbProfil.faraServer=true}).then(function(){tbProfil.simbol=s;tbProfil.la=Date.now();tbProfil.inLucru=false})}
   return tbProfil.simbol===s?tbProfil.p:null;
 }
 function tbAduSocoteala(){if(tbSoc.inLucru||Date.now()-tbSoc.la<10*60000)return;tbSoc.inLucru=true;getJSON("/api/istoric-bot?action=socoteala").then(function(d){tbSoc.peCod=d&&d.socoteala&&d.socoteala.peCod||null;tbSoc.boti=d&&d.socoteala&&d.socoteala.boti||null}).catch(function(){}).then(function(){tbSoc.la=Date.now();tbSoc.inLucru=false})}
@@ -5677,7 +5679,7 @@ function tbDeseneazaSaptPlan(b){
   // v100.45 (I-475): cat de des o zi obisnuita a monedei ajunge la planul pe minus, si pragul atins in cel mult 1 zi din 4
   var prP=tbProfilPt(b),dP=String(b.directie||"").toLowerCase(),pP=botiNr(b.pretCurent);
   if(st.minus&&st.minus.opritorPlan!=null&&pP>0){var pmP=ProfilMoneda.planPeMoneda({profil:prP,dir:dP,dist:Math.abs(st.minus.opritorPlan/pP-1),laDist:function(dd){return TabloExtra.totalCuGridLa(b,dP==="short"?pP*(1+dd):pP*(1-dd))}});
-    h+=pmP?'<p class="'+(pmP.avertizare?"tbFac tbWarn":"tbSub")+'">📏 '+escapeHtml(pmP.text)+'</p>':'<p class="tbSub">📏 Cât de des e atins planul pe moneda asta: profilul monedei vine de la colector (noaptea).</p>'}
+    h+=pmP?'<p class="'+(pmP.avertizare?"tbFac tbWarn":"tbSub")+'">📏 '+escapeHtml(pmP.text)+'</p>':tbProfil.faraServer?'':'<p class="tbSub">📏 Cât de des e atins planul pe moneda asta: profilul monedei vine de la colector (noaptea).</p>'}
   if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+st.afara.prag+' ore</span><b>colectorul numără orele</b></div>';
   ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> exact ce ți-ai propus — ieși acum, fără să renegociezi.</p>':'');
 }

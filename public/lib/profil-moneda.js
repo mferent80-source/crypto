@@ -67,7 +67,8 @@ var ProfilMoneda = (function () {
   function sursa(p) { return p ? "profilul " + (moneda(p.simbol) || "monedei") + ": " + p.zile + " de zile de bare de 1 h" : "prag fix (profilul monedei n-a venit încă de la colector)"; }
   function praguriMargine(p) {
     var j = prag(p, "z12", "jos", 0.75), s = prag(p, "z12", "sus", 0.75);
-    return j === null || s === null ? null : { jos: j, sus: s, sursa: sursa(p) };
+    // revizia 01.10: si frecventa(parte, dist) - in cate jumatati de zi moneda a ajuns atat de departe (textul spune cifra adevarata)
+    return j === null || s === null ? null : { jos: j, sus: s, sursa: sursa(p), frecventa: function (parte, d) { return frecventa(p.z12 && p.z12[parte], d); } };
   }
   function pragStop(p, dir) {
     if (dir !== "long" && dir !== "short") return null;

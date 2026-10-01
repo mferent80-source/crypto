@@ -22,19 +22,21 @@ var SemnaleBot = (function () {
   var P = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; };
   var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + " USDT"; };
 
-  // v100.45 (pachetul 1): „lângă margine” din PROFILUL monedei - distanta pana la margine sub cat se misca moneda in 12 h in 3 din
-  // 4 jumatati de zi (P75, pm = ProfilMoneda.praguriMargine, socotit de chemator), plafonat la 25% din interval (gridul ingust ar
-  // sta altfel „la margine” mereu). Fara profil: pragul fix de azi, 10% din interval. Intoarce si de unde vine pragul.
+  // v100.45 (pachetul 1): „lângă margine” din PROFILUL monedei - distanta pana la margine sub P75 al miscarii pe 12 h (moneda trece
+  // de el in 1 din 4 jumatati de zi; pm = ProfilMoneda.praguriMargine, socotit de chemator), plafonat la 15% din interval (revizia
+  // 01.10: cu 25%, pe gridurile inguste jumatate din interval era „la margine”). Fara profil: pragul fix de azi, 10% din interval.
+  // Intoarce si frecventa adevarata (fr: in cate jumatati de zi moneda a ajuns atat de departe) si de unde vine pragul.
   function laMargine(b, pm) {
     var p = nr(b && b.pretCurent), jos = nr(b && b.gridJos), sus = nr(b && b.gridSus);
     if (p === null || jos === null || sus === null || !(sus > jos) || p < jos || p > sus) return null;
     var poz = (p - jos) / (sus - jos), dj = 1 - jos / p, ds = sus / p - 1;
     if (pm && nr(pm.jos) !== null && nr(pm.sus) !== null) {
-      var cap = 0.25 * (sus - jos) / p, pj = Math.min(nr(pm.jos), cap), ps = Math.min(nr(pm.sus), cap);
-      var parte = dj < pj && (ds >= ps || dj / pj <= ds / ps) ? "jos" : ds < ps ? "sus" : null;
-      return { parte: parte, poz: poz, dist: parte === "sus" ? ds : parte === "jos" ? dj : Math.min(dj, ds), prag: parte === "sus" ? ps : pj, profil: true, sursa: pm.sursa || "profilul monedei" };
+      var cap = 0.15 * (sus - jos) / p, pj = Math.min(nr(pm.jos), cap), ps = Math.min(nr(pm.sus), cap);
+      var parte = dj < pj && (ds >= ps || dj / pj <= ds / ps) ? "jos" : ds < ps ? "sus" : null, dist = parte === "sus" ? ds : parte === "jos" ? dj : Math.min(dj, ds);
+      var fr = parte && typeof pm.frecventa === "function" ? nr(pm.frecventa(parte, dist)) : null;
+      return { parte: parte, poz: poz, dist: dist, prag: parte === "sus" ? ps : pj, p75: parte === "sus" ? nr(pm.sus) : nr(pm.jos), plafonat: parte === "sus" ? ps < nr(pm.sus) : pj < nr(pm.jos), fr: fr, profil: true, sursa: pm.sursa || "profilul monedei" };
     }
-    return { parte: poz < 0.1 ? "jos" : poz > 0.9 ? "sus" : null, poz: poz, dist: poz < 0.5 ? dj : ds, prag: null, profil: false, sursa: "prag fix: 10% din interval (profilul monedei n-a venit încă)" };
+    return { parte: poz < 0.1 ? "jos" : poz > 0.9 ? "sus" : null, poz: poz, dist: poz < 0.5 ? dj : ds, prag: null, profil: false, sursa: "prag fix: 10% din interval" };
   }
   function mutaGridul(b, f, afaraOre, pm) {
     if (!b || !f || !f.setare) return null;
@@ -44,12 +46,14 @@ var SemnaleBot = (function () {
     if (p >= jos && p <= sus) {
       var lm = laMargine(b, pm);
       if (lm && lm.parte) motiv = "prețul stă la marginea de " + lm.parte + " a gridului (" + P(lm.dist) + " până la ea, " + P(lm.poz) + " din interval"
-        + (lm.profil ? "; moneda se mișcă atât în 12 h în 3 din 4 cazuri — " + lm.sursa : "; " + lm.sursa) + ")";
+        + (!lm.profil ? "; " + lm.sursa + ")"
+          : ")" + (lm.fr !== null ? "; în 12 h moneda a ajuns atât de departe în " + Math.round(lm.fr * 100) + "% din jumătățile de zi" : "")
+            + " (pragul: " + P(lm.prag) + (lm.plafonat ? ", plafonat la 15% din interval" : ", cât trece moneda în 12 h în 1 din 4 cazuri") + " — " + lm.sursa + ")");
     } else if ((nr(afaraOre) || 0) >= 2) motiv = "prețul e în afara gridului de " + nr(afaraOre).toFixed(1).replace(".", ",") + " ore";
     if (!motiv) return null;
     // v99: setarea PROPUSA de fisa (deasa, 0,30% - v100.39: oricand proba n-o respinge), altfel cea aleasa de platou
     var s = f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare, des = f.propusa === "deasa";
-    return { nivel: "atentie", motiv: motiv, des: des, treceriZi: nr(des ? f.deasa.treceriZi : f.treceriZi),
+    return { nivel: "atentie", motiv: motiv, parte: lm ? lm.parte : null, des: des, treceriZi: nr(des ? f.deasa.treceriZi : f.treceriZi),
       setare: { dir: s.dir || f.dir, jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, stop: s.stop || null } };
   }
   // v99: geometria gridului botului (pasul lui in procente), fara TabloExtra: N grile din Pionex (row), geometric sau aritmetic
@@ -113,8 +117,10 @@ var SemnaleBot = (function () {
         var psD = x.pragStop ? nr(x.pragStop.dist) : null;
         if (psD !== null && psD > 0 && p !== null) {
           var dinProfil = dir === "short" ? p * (1 + psD) : p * (1 - psD);
-          if (protectie === null || (dir === "short" ? dinProfil > protectie : dinProfil < protectie)) { protectie = dinProfil; sursaStop = "dincolo de cât " + (dir === "short" ? "urcă" : "coboară") + " moneda într-o zi, în 3 din 4 zile (" + x.pragStop.sursa + ")"; }
-          else sursaStop = "stopul fișei e deja dincolo de o zi obișnuită (" + x.pragStop.sursa + ")";
+          // revizia 01.10: doar DINCOLO de marginea de pierdere (fara fisa si fara geometrie, o zi obisnuita poate cadea in grid)
+          var dincoloMg = dir === "short" ? sus !== null && dinProfil > sus : jos !== null && dinProfil < jos;
+          if (dincoloMg && (protectie === null || (dir === "short" ? dinProfil > protectie : dinProfil < protectie))) { protectie = dinProfil; sursaStop = "dincolo de cât " + (dir === "short" ? "urcă" : "coboară") + " moneda într-o zi, în 3 din 4 zile (" + x.pragStop.sursa + ")"; }
+          else if (protectie !== null) sursaStop = "stopul fișei e deja dincolo de o zi obișnuită (" + x.pragStop.sursa + ")";
         }
         pretStop = protectie;   // v100.43 (I-467)
         out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Dacă vrei protecție, " + (dir === "short" ? "peste gridul de sus: " : "sub gridul de jos: ") + (protectie !== null ? fmtPret(protectie) : "o grilă în afara marginii") + " — dar știi că se închide pe minus." });
@@ -173,9 +179,11 @@ var SemnaleBot = (function () {
         else if (op !== null && laOp !== null && !inAfara) { st0.tag = { t: "pus", c: "good" }; st0.act = capM + "Stopul tău (" + fmtPret(op) + ") stă în grid, dar atins te costă cât planul (≈ −" + Math.round(-laOp) + " USDT)."; }
         // v100.43 (I-467): cand planul hotaraste unde stai stopul, banii se socotesc pe pretul PLANULUI (nu pe stopul fisei) - altfel
         // cartela zicea „mută-l la 0,384” si randul cu bani „l-aș lăsa unde e” (prins pe poza, CRV)
-        if (opPl !== null && (op === null || pestePlan)) pretStop = opPl;
+        if (opPl !== null && (op === null || pestePlan)) { pretStop = opPl; sursaStop = null; }   // revizia 01.10: pretul vine din plan, nu din profil
       }
     }
+    // revizia 01.10: de unde vine stopul propus se vede pe cartela (lângă sfat, cum cere specul)
+    if (sursaStop && pretStop !== null) { st0.act += " Stopul propus: " + sursaStop + "."; st0.text += " Stopul propus: " + sursaStop + "."; }
     gr0.mare = poz === null ? "—" : poz < 0 ? S1(p / jos - 1) : poz > 1 ? S1(p / sus - 1) : Math.round(poz * 100) + "%";
     gr0.mic = poz === null ? "fără interval citit" : poz < 0 ? "sub gridul de jos" : poz > 1 ? "peste gridul de sus" : "din interval";
     var lm0 = laMargine(b, x.pragMargine);   // v100.45: „la margine” din profilul monedei (fara profil: 10% din interval, ca inainte)
@@ -286,7 +294,7 @@ var SemnaleBot = (function () {
     var sf = f && f.regim ? sensFata(b, f.regim) : null, xMis = f && f.regim ? X(Math.max(f.regim.r4h || 0, f.regim.r24h || 0)) : "";
     if (f && f.regim && f.regim.miscare && sf !== "cu") c.push({ nivel: "atentie", cod: "miscare", motiv: "mișcare mare acum" + (sf === "contra" ? " împotriva botului" : "") + " (" + xMis + " față de obișnuit)", faCe: "Nu adăuga bani acum; lasă-l cât lichidarea e departe." });
     if (x.iaProfit) c.push({ nivel: "atentie", cod: "ia-profit", motiv: "e un moment bun să încasezi", faCe: "Aș închide pe plus acum și aș reporni doar când fișa zice iar 🟢." });
-    if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, faCe: "Aș muta gridul: opresc și pornesc cu setările propuse mai jos." });
+    if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, parte: x.muta.parte || null, faCe: "Aș muta gridul: opresc și pornesc cu setările propuse mai jos." });
     if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc ce aduc grilele", faCe: "La următorul bot: levier mai mic sau grile mai rare." });
     if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC a intrat în mișcare, moneda încă nu", faCe: "Aș fi pregătit: n-aș adăuga bani până nu vedem încotro trage BTC." });
     if (x.aglomerare && x.aglomerare.nivel === "atentie") c.push({ nivel: "atentie", cod: "aglomerare", motiv: "mulțimea e înghesuită pe partea botului", faCe: "Aș strânge riscul: marjă în plus sau o parte închisă, înainte de o curățare." });
