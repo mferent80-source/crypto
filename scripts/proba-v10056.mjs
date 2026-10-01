@@ -56,5 +56,20 @@ await test("desen: banda de 5 zile doar cu comutatorul, etichetele actiunii (20 
   assert.match(bot.svg, />zi obișnuită</); assert.match(bot.svg, /POC 7 z/); assert.match(bot.legenda, /zona de valoare, 7 zile/); assert.match(bot.legenda, /stopul planului \(Consilierul\)/);
 });
 
+// ---- pasul 2: graficul in detaliul pozitiei T212 ----
+await test("pagina T212: graficul in detaliul pozitiei - comutatoare proprii (t212Ind), 120 de bare zilnice, zona pe 20 de zile, stopul de acum vs propus; desenat si la deschiderea cu clic", () => {
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  const corp = (nume) => { const i = e.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipseste " + nume); const j = e.indexOf("\nfunction ", i + 10); return e.slice(i, j < 0 ? e.length : j); };
+  for (const f of ["t212IndStare", "t212ComutaInd", "t212GraficHtml", "t212GraficeDeseneaza"]) assert.ok(new RegExp("function " + f + "\\(").test(e), "lipseste " + f);
+  assert.ok(/localStorage\.getItem\("t212Ind"\)/.test(e), "starea comutatoarelor separata de boti");
+  assert.ok(/slice\(-120\)/.test(e) && /slice\(-20\)/.test(e) && /minBare: 15/.test(e), "120 de bare pe grafic, zona pe ultimele 20");
+  assert.ok(/ziObisnuitaActiune\([^)]*, 1\)/.test(e) && /ziObisnuitaActiune\([^)]*, 5\)/.test(e));
+  assert.ok(/stopPlan: [^,]*stopPozitie/.test(e), "stopul propus = stopul care urca calculat");
+  assert.ok(/id="t212Graf-' \+ tk \+ '"/.test(e), "locul graficului in detaliu");
+  assert.ok(/t212GraficeDeseneaza\(\)/.test(corp("t212Comuta")), "desenat si la deschiderea cu clic");
+  assert.ok(/t212GraficeDeseneaza\(\)/.test(corp("t212Render")), "desenat la randare");
+  assert.ok(/profilul vine de la colector/.test(e), "fara profil: spune de ce lipsesc benzile");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

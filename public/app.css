@@ -2173,3 +2173,6 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .tbDecBtn{min-height:36px;padding:4px 12px;font-size:13px}
 @media (max-width:550px){.tbDecBtn{min-height:44px}}
 .tbDecSoc{margin:4px 0 0}
+
+/* v100.56 (actiunile T212, pachetul 5): graficul actiunii in detaliu - stilurile graficului botilor */
+.t212Graf{margin-top:12px;width:100%}.t212Graf .tbGrInd{margin-bottom:6px;flex-wrap:wrap}

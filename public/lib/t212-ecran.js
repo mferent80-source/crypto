@@ -200,7 +200,7 @@ function t212PregatesteP(x, pond) {
   }
   return p;
 }
-function t212Comuta(tk) { t212.deschis[tk] = !t212.deschis[tk]; var d = $("t212Det-" + tk), r = $("t212R-" + tk); if (d) d.hidden = !t212.deschis[tk]; if (r) r.setAttribute("aria-expanded", String(!!t212.deschis[tk])); }
+function t212Comuta(tk) { t212.deschis[tk] = !t212.deschis[tk]; var d = $("t212Det-" + tk), r = $("t212R-" + tk); if (d) d.hidden = !t212.deschis[tk]; if (r) r.setAttribute("aria-expanded", String(!!t212.deschis[tk])); if (t212.deschis[tk]) t212GraficeDeseneaza(); }
 function t212Deschide(tk) {
   t212.deschis[tk] = true; var d = $("t212Det-" + tk), r = $("t212R-" + tk); if (d) d.hidden = false;
   if (r) { r.setAttribute("aria-expanded", "true"); if (r.scrollIntoView) r.scrollIntoView({ block: "center", behavior: "smooth" }); }
@@ -267,6 +267,7 @@ function t212Render() {
   if (!poz.length) box.innerHTML = '<p class="tbSub t212Gol">N-ai poziții deschise în Trading 212.</p>';
   else box.innerHTML = '<div class="t212TabWrap"><table class="t212Tab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Rezultat</th><th>Stop calculat</th><th>Țintă</th><th>Trend</th><th>Din cont</th><th>Plan</th></tr></thead><tbody>'
     + poz.map(t212RandPozitie).join("") + '</tbody></table></div>';
+  t212GraficeDeseneaza();   // v100.56: graficele detaliilor deschise (latimea reala, dupa randare)
 
   // 4) portofoliul, in coloana din dreapta
   if (pfBox) {
@@ -386,7 +387,7 @@ function t212RandPozitie(p) {
       + (n.sursaTrail ? '<p class="tbSub">Stopul care urcă: ' + escapeHtml(n.sursaTrail) + ' (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
       + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
       : '<p class="tbSub">' + escapeHtml(p.nivMotiv || "Prețurile calculate apar după ce vin prețurile zilnice.") + '</p>') + '</div>';
-  return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="8"><div class="t212DetGrila">' + stanga + dreapta + '</div></td></tr>';
+  return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="8"><div class="t212DetGrila">' + stanga + dreapta + '</div><div class="t212Graf" id="t212Graf-' + tk + '"></div></td></tr>';
 }
 
 function t212PuneNiveluri(tk) {
@@ -451,6 +452,41 @@ function p4ok(p) { return !!(p.niv && p.niv.nivel === "ok" && p.stopP && p.stopP
 function t212ProbListaHtml(l) {
   if (!l || !l.length || typeof tbProbRandHtml !== "function") return "";
   return l.map(function (x) { return x.p === null ? '<p class="tbSub' + (x.avertizare ? ' tbWarn' : '') + '"><b>' + escapeHtml(x.titlu) + '</b>' + (x.text ? ' — ' + escapeHtml(x.text) : '') + '</p>' : tbProbRandHtml(x); }).join("");
+}
+// v100.56 (actiunile T212, pachetul 5): graficul actiunii in detaliul pozitiei - desenul botilor pe bare zilnice; comutatoarele au starea lor
+var T212_IND = [["zi", "Ziua obișnuită", "Cât coboară și cât urcă acțiunea într-o zi obișnuită, de la prețul de acum (profilul ei)"], ["zi5", "5 zile", "Cât se mișcă într-o săptămână de bursă obișnuită"],
+  ["val", "Zona de valoare", "Unde s-a tranzacționat 70% din volum în ultimele 20 de zile de bursă + suporturi/rezistențe confirmate"], ["ema", "EMA", "EMA 20 și 50"], ["bb", "Bollinger", "Bollinger 20, 2"], ["vp", "Volum la preț", "Profilul de volum"], ["rsi", "RSI", "RSI 14"]];
+function t212IndStare() {
+  var d = { bb: false, ema: true, rsi: false, vp: false, zi: true, zi5: true, val: true };
+  try { var v = JSON.parse(localStorage.getItem("t212Ind") || "null"); if (v && typeof v === "object") for (var k in d) if (typeof v[k] === "boolean") d[k] = v[k]; } catch (e) {}
+  return d;
+}
+function t212ComutaInd(k) {
+  var s = t212IndStare(); if (!Object.prototype.hasOwnProperty.call(s, k)) return; s[k] = !s[k];
+  try { localStorage.setItem("t212Ind", JSON.stringify(s)); } catch (e) {}
+  t212GraficeDeseneaza();
+}
+function t212GraficHtml(p, W) {
+  var b = (t212.bare[p.ticker] || []).slice(-120); if (b.length < 10 || typeof GraficBot === "undefined") return null;
+  var pf = t212ProfilPt(p.ticker), n = p.niv, pl = p.plan || {}, VA = typeof Valoare !== "undefined" ? Valoare : null;
+  var stopAcum = pl.stop > 0 ? pl.stop : pl.trailPct > 0 && p.maxDupaCumparare ? p.maxDupaCumparare * (1 - pl.trailPct / 100) : null;
+  return GraficBot.desen({ bare: b, W: W, ingust: W < 560, st: t212IndStare(),
+    niv: GraficBot.niveluriActiune({ pretMediu: p.pretMediu, stop: stopAcum, tinta: pl.tinta > 0 ? pl.tinta : n ? n.tintaPozitie : null }),
+    zi: GraficBot.ziObisnuitaActiune(p.pret, pf, 1), zi5: GraficBot.ziObisnuitaActiune(p.pret, pf, 5),
+    val: VA ? { zona: VA.zona(b.slice(-20), { minBare: 15, bins: 24 }), pivoti: VA.pivoti(b, 3), et: "20 z", etLung: "20 de zile de bursă", etPivoti: "zilnic" } : null,
+    consLinii: n ? { stopAcum: stopAcum, stopPlan: n.stopPozitie, et: "stopul propus", etLung: "stopul propus (" + (n.sursaTrail ? "din profilul acțiunii" : "−" + n.trailPct.toFixed(1).replace(".", ",") + "% de la maxim") + ")" } : null });
+}
+function t212GraficeDeseneaza() {
+  (t212.pozPregatite || []).forEach(function (p) {
+    var el = $("t212Graf-" + p.ticker); if (!el || !t212.deschis[p.ticker]) return;
+    var W = Math.round(el.getBoundingClientRect().width || el.clientWidth || 700), d = t212GraficHtml(p, Math.max(300, W)), s = t212IndStare();
+    if (!d) { el.innerHTML = '<p class="tbSub">Graficul apare după ce vin prețurile zilnice (cel puțin 10 zile).</p>'; return; }
+    var faraProfil = !t212ProfilPt(p.ticker);
+    el.innerHTML = '<div class="tbInterval tbGrInd" role="group" aria-label="Indicatorii graficului ' + escapeHtml(p.simbol) + '">' + T212_IND.map(function (x) { return '<button type="button" class="tbIntBtn" aria-pressed="' + !!s[x[0]] + '" title="' + escapeHtml(x[2]) + '" data-action-click="t212ComutaInd(\'' + x[0] + '\')">' + escapeHtml(x[1]) + '</button>'; }).join("") + '</div>'
+      + '<div class="gbZona">' + d.svg + '</div>'
+      + (faraProfil && (s.zi || s.zi5) ? '<p class="tbSub">Ziua și cele 5 zile obișnuite apar când profilul vine de la colector (îl face noaptea).</p>' : '')
+      + '<div class="gbLeg">' + d.legenda + '</div>';
+  });
 }
 // v100.55: profilul + probabilitatile actiunii propuse (avertizeaza, nu schimba verdictul portii)
 function t212ProfilPoarta(p) {
