@@ -74,7 +74,7 @@ await test("ruta ingust: POST + GET pastreaza rezultatul (curatat); colectorul i
   const Idei = { ideiBoti: (c, t, n) => c.monede.slice(0, n).map((x) => ({ ...x, moneda: x.simbol.split("_")[0], istoric: { n: 0 } })) };
   const r = await turaIngust({ clasament: cl, Idei, GridProba: GP, GridCalcul: G, pauza: async () => {}, jurnal: () => {},
     cere: async (simbol, end) => { cerute.push(simbol); return { data: { klines: end ? [] : klines } }; }, trimite: async (u, corp) => { scrise.push(corp); return { ok: true }; } });
-  assert.equal(r.monede, 5); assert.equal(scrise.length, 5); assert.ok(scrise[0].ingust && "propus" in scrise[0].ingust);
+  assert.equal(r.monede, 5); assert.equal(scrise.filter((c) => c && c.simbol).length, 5, "o scriere pe moneda (v100.59: plus lista urmaririi)"); assert.ok(scrise[0].ingust && "propus" in scrise[0].ingust);
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(col, /INGUST_MS = 6 \* 3600000/); assert.match(col, /turaIngustModul\(/);
 });

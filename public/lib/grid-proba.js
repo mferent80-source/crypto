@@ -324,12 +324,46 @@ var GridProba = (function () {
     return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + " % lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana) + (r.test.medie != null ? ", medie " + P(r.test.medie) : "")
       + ", " + Math.round(r.test.pePlus * 100) + " % pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + r.test.nIndep + " ferestre independente)";
   }
+  // v100.59 (I-481): botul pornit cu setarile variantei ingusta - aceeasi directie, latimea +-35 %, pornit in 12 h de la propunere
+  // -> {ingust, ore, inchideLa}; altfel null. Directia Pionex: long / short / orice altceva = neutru (ca in restul colectorului)
+  function potrivireIngust(b, r) {
+    if (!b || !r || !r.propus || !(r.latime > 0) || !(r.ore > 0)) return null;
+    var d = String(b.directie || "").toLowerCase(), dir = d === "long" ? "long" : d === "short" ? "short" : "neutru";
+    var jos = Number(b.jos), sus = Number(b.sus), t = Number(b.pornitLa);
+    if (!(jos > 0) || !(sus > jos) || !(t > 0) || dir !== r.dir) return null;
+    if (Math.abs((sus / jos - 1) / r.latime - 1) > 0.35) return null;
+    if (r.la > 0 && Math.abs(t - r.la) > 12 * 3600000) return null;
+    return { ingust: true, ore: r.ore, inchideLa: t + r.ore * 3600000 };
+  }
+  // v100.59 (I-480): urmarirea INAINTE - o nota {la, dir, ore, latime, pas} se judeca pe barele de DUPA ea, cu acelasi simulator;
+  // sub H ore de bare dupa nota -> null (inca nu)
+  function judecaUrmarire(rec, b15) {
+    if (!rec || !(rec.ore > 0) || !(rec.latime > 0) || !(rec.pas > 0) || DIRECTII.indexOf(rec.dir) < 0 || !Array.isArray(b15)) return null;
+    var i = 0; while (i < b15.length && b15[i].t < rec.la) i++;
+    var W = Math.round(rec.ore / 24 * C.BARE_ZI); if (i + W > b15.length) return null;
+    var r = simuleaza(b15, i, W, G.construieste({ pret: b15[i].o, lat: rec.latime, pas: rec.pas, dir: rec.dir }));
+    return { net: r.net, oprit: !!r.oprit, lichidat: !!r.lichidat };
+  }
+  function socotealaUrmarire(l) {
+    l = Array.isArray(l) ? l : [];
+    var gr = function (f) {
+      var v = l.filter(function (e) { return e && e.r && typeof e.r.net === "number" && f(e); }).map(function (e) { return e.r.net; }), s = 0;
+      v.forEach(function (x) { s += x; });
+      return { n: v.length, pePlus: v.length ? v.filter(function (x) { return x > 0; }).length / v.length : null, mediana: v.length ? G.mediana(v) : null, medie: v.length ? s / v.length : null };
+    };
+    var p = gr(function (e) { return e.propus; }), np = gr(function (e) { return !e.propus; }), nej = l.filter(function (e) { return e && !e.r; }).length;
+    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + " %"; };
+    var t = function (g) { return g.n ? Math.round(g.pePlus * 100) + " % pe plus, medie " + P(g.medie) : "—"; };
+    var text = !p.n && !np.n ? "Urmărirea înainte începe: " + nej + (nej === 1 ? " notă așteaptă" : " note așteaptă") + " să treacă durata."
+      : "Urmărit înainte (după comisioane): propuse " + p.n + " (" + t(p) + ") · nepropuse " + np.n + " (" + t(np) + ")" + (Math.min(p.n, np.n) < 30 ? " — prea puține încă, zgomot" : "");
+    return { propuse: p, nepropuse: np, nejudecate: nej, text: text };
+  }
   // cat de vechi e rezultatul colectorului (refacut la 6 h): peste 12 h se spune „vechi”
   function varstaIngust(r, acum) {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

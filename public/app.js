@@ -4996,19 +4996,23 @@ var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tb
 // v100.58 (el, 01.10): varianta INGUSTA - din colector (60 de zile, monedele sugerate), altfel calculata aici pe ~31 de zile
 var grIngust={};
 function grIngustPt(s){var c=grIngust[s];if(!c||(!c.inLucru&&Date.now()-c.la>10*60000)){grIngust[s]={la:Date.now(),v:c?c.v:null,inLucru:true};getJSON("/api/istoric-bot?action=ingust&simbol="+encodeURIComponent(s)).then(function(d){grIngust[s]={la:Date.now(),v:d&&d.ingust||null,inLucru:false};renderGrid()}).catch(function(){grIngust[s].inLucru=false})}return grIngust[s]&&grIngust[s].v}
+// v100.59 (I-480): urmarirea inainte a gridului ingust (toate monedele), o data la 10 min
+var grUrm={la:0,v:null,inLucru:false};
+function grUrmHtml(){if(!grUrm.inLucru&&Date.now()-grUrm.la>10*60000){grUrm.inLucru=true;getJSON("/api/istoric-bot?action=ingustUrmarire").then(function(d){grUrm={la:Date.now(),v:d&&d.lista||[],inLucru:false};renderGrid()}).catch(function(){grUrm.inLucru=false;grUrm.la=Date.now()})}
+  return grUrm.v?'<p class="tbSub">📈 '+escapeHtml(GridProba.socotealaUrmarire(grUrm.v).text)+'</p>':""}
 function grIngustHtml(f){
   // revizia 01.10 (I3): rezultatul colectorului doar proaspat, pe aceeasi directie ca fisa si fara miscare acum - altfel calculul de aici
   var g0=grIngustPt(f.simbol),vg=g0?GridProba.varstaIngust(g0,Date.now()):null,g=g0&&!vg.vechi&&g0.dir===f.dir&&!(f.regim&&f.regim.miscare)?g0:null,loc=!g,r=g||f.ingustLocal;if(!r)return "";
   var i=f.info,v=GridProba.varstaIngust(r,Date.now()),st=r.setare,P=function(x){return (x>=0?"+":"−")+Math.abs(x*100).toFixed(1).replace(".",",")+" %"};
   var h='<div class="tbBloc"><div class="tbBlocCap"><h4>⚡ Varianta îngustă</h4><span class="tbSub">'+escapeHtml(loc?"pe "+r.zile+" de zile — mai puține ferestre":v.text)+'</span></div>';
-  if(!r.propus||!st)return h+'<p class="tbSub">Nu o propun: '+escapeHtml(r.motiv||"nedovedită")+'.'+(/rămâi/i.test(r.motiv||"")?"":" Rămâi la setările de mai sus.")+'</p></div>';
+  if(!r.propus||!st)return h+'<p class="tbSub">Nu o propun: '+escapeHtml(r.motiv||"nedovedită")+'.'+(/rămâi/i.test(r.motiv||"")?"":" Rămâi la setările de mai sus.")+'</p>'+grUrmHtml()+'</div>';
   // setarea se reconstruieste pe pretul de ACUM (colectorul a calculat-o pe pretul de atunci)
   var s2=GridCalcul.construieste({pret:f.pret,lat:r.latime,pas:r.pas,dir:r.dir,suma:st.suma||(f.setare&&f.setare.suma)});
   return h+grRand("Direcție",GR_DIR_PIONEX[r.dir],GR_DIR_PIONEX[r.dir])+grRand("Preț de jos",grPret(s2.jos,i),grPret(s2.jos,i))+grRand("Preț de sus",grPret(s2.sus,i),grPret(s2.sus,i))
     +grRand("Număr de grile",(s2.grile+1)+" linii (Pionex numără liniile) · Geometric",String(s2.grile+1))+grRand("Levier",s2.levierSigur+"× (sigur)",String(s2.levierSigur))
     +(r.dir!=="short"?grRand("Stop-loss jos",grPret(s2.stop.jos,i),grPret(s2.stop.jos,i)):"")+(r.dir!=="long"?grRand("Stop-loss sus",grPret(s2.stop.sus,i),grPret(s2.stop.sus,i)):"")
     +'<p class="tbSub">⏱️ Închide-l după '+r.ore+' h dacă n-a atins stopul — așa a fost probat.</p>'
-    +'<p class="tbSub">Pe test ('+r.test.nIndep+' ferestre independente, nevăzute la alegere): median '+P(r.test.mediana)+' din sumă'+(r.test.medie!=null?' (medie '+P(r.test.medie)+')':'')+', '+Math.round(r.test.pePlus*100)+' % pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+Math.round(r.test.perechiZi)+' perechi/zi. Ce s-a întâmplat, nu o promisiune.</p></div>';
+    +'<p class="tbSub">Pe test ('+r.test.nIndep+' ferestre independente, nevăzute la alegere): median '+P(r.test.mediana)+' din sumă'+(r.test.medie!=null?' (medie '+P(r.test.medie)+')':'')+', '+Math.round(r.test.pePlus*100)+' % pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+Math.round(r.test.perechiZi)+' perechi/zi. Ce s-a întâmplat, nu o promisiune.</p>'+grUrmHtml()+'</div>';
 }
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
@@ -6409,6 +6413,9 @@ function tbDeseneazaTabloulUnic(){renderTabloDirectia();renderTabloIndicatori();
 // Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
 // vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
 // v100.6: bucatile vin din PretViu.banda (pur); pretul botului sta imediat dupa nume, live din Pionex.
+// v100.59 (I-481): rezultatul gridului ingust pe moneda botului din Tablou, o data la 10 min
+var tbIngB={};
+function tbIngustBot(s){var c=tbIngB[s];if(!c||(!c.inLucru&&Date.now()-c.la>10*60000)){tbIngB[s]={la:Date.now(),v:c?c.v:null,inLucru:true};getJSON("/api/istoric-bot?action=ingust&simbol="+encodeURIComponent(s)).then(function(d){tbIngB[s]={la:Date.now(),v:d&&d.ingust||null,inLucru:false};tbActualizeazaBanda()}).catch(function(){tbIngB[s].inLucru=false})}return tbIngB[s]&&tbIngB[s].v}
 function tbActualizeazaBanda(){
   var el=$("botStrip");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot;
@@ -6418,6 +6425,9 @@ function tbActualizeazaBanda(){
   var r=typeof PretViu!=="undefined"?PretViu.banda({bot:b,pretViu:pvPretPentru(b),botLa:tbStare.botLa,acum:Date.now(),zi:pvZiPentru(b),
     distanteGrid:typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null,piata:z}):null;
   if(!r){el.hidden=true;return}
+  // v100.59 (I-481): botul pornit cu setarile variantei ingusta -> ora de inchidere in banda (asa a fost probat)
+  try{var gi=s&&s.pionex?tbIngustBot(s.pionex):null,pc=gi?GridProba.potrivireIngust({jos:Number(b.gridJos),sus:Number(b.gridSus),directie:b.directie,pornitLa:Number(b.pornitLa)},gi):null;
+    if(pc){var dc=new Date(pc.inchideLa);r.parti.push({k:"ingust",t:"⚡ grid îngust · închide-l la "+String(dc.getHours()).padStart(2,"0")+":"+String(dc.getMinutes()).padStart(2,"0")+(Date.now()>=pc.inchideLa?" (a trecut)":""),ton:Date.now()>=pc.inchideLa?"jos":"",title:"Probat cu închidere după "+pc.ore+" h"})}}catch(e){}
   el.innerHTML=r.parti.map(function(p){
     if(p.k==="pret")return '<b class="bsPret'+(p.viu?' viu':'')+'" id="botStripPret" title="'+escapeHtml(p.title||"")+'">'+escapeHtml(p.t)+'</b>';
     return '<span class="bsParte'+(p.ton?' '+p.ton:'')+'" data-k="'+p.k+'"'+(p.title?' title="'+escapeHtml(p.title)+'"':'')+'>'+escapeHtml(p.t)+'</span>';

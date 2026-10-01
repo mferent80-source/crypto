@@ -347,6 +347,13 @@ function tbIngustAdu(simboluri) {
     .catch(function () { tbIngust.inLucru = false; tbIngust.la = Date.now(); tbIngust.cheie = cheie; });
 }
 function tbIngustPt(simbol) { return tbIngust.v[simbol] || null; }
+// v100.59 (I-480): urmarirea inainte - adusa o data la 10 min
+var tbUrm = { la: 0, v: null, inLucru: false };
+function tbUrmAdu() {
+  if (tbUrm.inLucru || Date.now() - tbUrm.la < 10 * 60000) return;
+  tbUrm.inLucru = true;
+  getJSON("/api/istoric-bot?action=ingustUrmarire").then(function (d) { tbUrm = { la: Date.now(), v: d && d.lista || [], inLucru: false }; tbIdeiRender(); }).catch(function () { tbUrm.inLucru = false; tbUrm.la = Date.now(); });
+}
 function tbIdeiRender() {
   var box = $("tbIdei"); if (!box || typeof Idei === "undefined") return;
   var cl = contTot.clasament, l = Idei.ideiBoti(cl, contTot.inchise || [], 5);
@@ -358,6 +365,8 @@ function tbIdeiRender() {
     var det = [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ");
     return '<div class="tbTodoRand"><span class="tbDunga ' + (x.istoric.n >= 3 && x.istoric.total < 0 ? "g" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist) + '</p>' + (function () { try { var g = typeof GridProba !== "undefined" && x.simbol ? tbIngustPt(x.simbol) : null; if (!g) return ''; var v = GridProba.varstaIngust(g, Date.now()); return '<p class="tbSub' + (g.propus ? '' : ' t212Estompat') + '">' + escapeHtml(GridProba.rezumatIngust(g)) + (v.text ? ' · ' + escapeHtml(v.text) : '') + '</p>'; } catch (e) { return ''; } })() + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + escapeHtml(x.moneda) + '\')">Fișa</button></div>';
   }).join("");
+  tbUrmAdu();
+  if (tbUrm.v && typeof GridProba !== "undefined") { try { h += '<p class="tbSub">⚡ ' + escapeHtml(GridProba.socotealaUrmarire(tbUrm.v).text) + '</p>'; } catch (e) {} }
   box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>';
 }
 // v97.3: acelasi drum ca din clasament / Scan: moneda aleasa, calculul ei, pagina dusa la fisa (nu lasata sus)

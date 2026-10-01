@@ -30,7 +30,7 @@ import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
-const VERSIUNE_COLECTOR = "v101.38";
+const VERSIUNE_COLECTOR = "v101.39";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -406,6 +406,15 @@ async function tura() {
         const m = { nivel: "atentie", cheie: "fara-plan", titlu: nume + ": botul n-are plan", mesaj: "Fără țintă și prag scrise la rece nu te pot anunța când să încasezi sau să ieși." + (pp ? " Propun: plus +" + pp.plus + " USDT, minus −" + pp.minus + " USDT, " + pp.afaraOre + " h afară din grid (" + pp.nota + "). Îl pui din Tablou → „Pune planul propus”." : " Scrie-l în Tablou → „Planul tău”.") };
         if (await trimiteAlerta(m, b.id, m.cheie)) st._faraPlan = true;
       }
+      // v101.39 (I-481): ceasul gridului ingust - botul pornit cu setarile variantei ingusta: un singur mesaj cand trece durata probata.
+      // Potrivirea se tine minte (KV-ul ingust se rescrie la 6 h si poate sa nu mai propuna)
+      try {
+        if (!st._ceas) { const gi = await ingustPentruBot(b); const p = gi ? GridProba.potrivireIngust({ jos: Number(b.gridJos), sus: Number(b.gridSus), directie: b.directie, pornitLa: Number(b.pornitLa) }, gi) : null; if (p) st._ceas = p; }
+        if (st._ceas && !st._ceasTrimis && acum >= st._ceas.inchideLa) {
+          const nume = String(b.baza || "botul").replace(/\.PERP$/, "");
+          if (await trimiteAlerta({ nivel: "atentie", titlu: nume + ": gridul îngust a ajuns la " + st._ceas.ore + " h", mesaj: "Așa a fost probat: închide-l acum. Ținut mai mult, nu mai seamănă cu proba (un interval îngust iese repede din preț)." }, b.id, "ingust-ceas")) st._ceasTrimis = true;
+        }
+      } catch (e) { jurnal("ceas ingust", b.id, e.message); }
     } catch (e) { jurnal("plan", b.id, e.message); }
     // v82: semnalele (o data la ~5 min, cand vin lumanari noi) - notate si judecate dupa 24 h
     try { const sm = await semnaleBot(b, ctx, acum); if (sm) ctx.semnale = sm; } catch (e) { jurnal("semnale", b.id, e.message); }
@@ -494,6 +503,14 @@ async function turaLaborator() {
   laboratorInLucru = false;
 }
 
+// v101.39 (I-481): rezultatul gridului ingust pe moneda unui bot, o data la 10 min pe moneda
+const ingustBoti = {};
+async function ingustPentruBot(b) {
+  const s = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex; if (!s) return null;
+  const c = ingustBoti[s]; if (c && Date.now() - c.la < 10 * 60000) return c.v;
+  let v = null; try { const d = await cere("/api/istoric-bot?action=ingust&simbol=" + encodeURIComponent(s)); v = d && d.ingust || null; } catch { v = c ? c.v : null; }
+  ingustBoti[s] = { la: Date.now(), v }; return v;
+}
 // v101.38 (el, 01.10): gridul ingust pe <= 5 monede sugerate, cu 60 de zile de 15M - la 6 h, niciodata peste clasament/laborator
 const INGUST_MS = 6 * 3600000;
 let ingustLa = Number(ritm.ingust) || 0, ingustInLucru = false;
@@ -502,8 +519,9 @@ async function turaIngust() {
   ingustInLucru = true;
   try {
     const cl = await cere("/api/istoric-bot?action=clasament");
+    let urm = []; try { const u = await cere("/api/istoric-bot?action=ingustUrmarire"); urm = u && Array.isArray(u.lista) ? u.lista : []; } catch (e) { jurnal("ingust urmarire", e.message); }   // v101.39 (I-480)
     // revizia 01.10: 0 monede (server oprit, fara clasament) = esec -> reincearca in 30 min, nu peste 6 h
-    const r = await turaIngustModul({ clasament: cl && cl.clasament, Idei, GridProba, GridCalcul, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+    const r = await turaIngustModul({ urmarire: urm, clasament: cl && cl.clasament, Idei, GridProba, GridCalcul, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       cere: (simbol, end) => cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")), trimite });
     if (!r || !r.monede) throw new Error("nicio monedă sugerată calculată");
     ingustLa = Date.now(); tineRitm("ingust", ingustLa);
