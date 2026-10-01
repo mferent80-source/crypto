@@ -485,10 +485,11 @@ function jtRenderActiuni() {
 // Radarului, -15%, -25%). Sfatul se ia din cea mai buna varianta, oricare ar fi ea - inclusiv "fara stop".
 var T212_VARIANTE_STOP = [
   { camp: "stop", k: 8, et: "fix, −8% de la cumpărare" }, { camp: "stop", k: 10, et: "fix, −10%" }, { camp: "stop", k: 15, et: "fix, −15%" },
-  { camp: "stopU", k: "plan", et: "urcă după maxim — planul Radarului (k×ATR, 3–15%)" }, { camp: "stopU", k: "u15", et: "urcă, −15% de la maxim" }, { camp: "stopU", k: "u25", et: "urcă, −25% de la maxim" }];
+  { camp: "stopU", k: "plan", et: "urcă după maxim — planul Radarului (k×ATR, 3–15%)" }, { camp: "stopU", k: "u15", et: "urcă, −15% de la maxim" }, { camp: "stopU", k: "u25", et: "urcă, −25% de la maxim" },
+  { camp: "stopU", k: "prof", et: "urcă — coborârea obișnuită a acțiunii pe 5 zile (profil, P75)" }];   // v100.52
 function t212Variante(l) {
   var cfm = t212.cf; if (!cfm) return null;
-  var rs = ActiuniSemnale.rezumatStop(l, cfm, [8, 10, 15], "stop"), ru = ActiuniSemnale.rezumatStop(l, cfm, ["plan", "u15", "u25"], "stopU");
+  var rs = ActiuniSemnale.rezumatStop(l, cfm, [8, 10, 15], "stop"), ru = ActiuniSemnale.rezumatStop(l, cfm, ["plan", "u15", "u25", "prof"], "stopU");
   var v = T212_VARIANTE_STOP.map(function (x) { var r = x.camp === "stop" ? rs : ru, g = r.praguri[x.k]; return { et: x.et, camp: x.camp, k: x.k, judecate: r.judecate, real: r.real, total: g.total, dif: g.dif, atinse: g.atinse, taiate: g.castigatoareTaiate }; });
   return { rs: rs, ru: ru, v: v, best: v.slice().sort(function (a, b) { return b.dif - a.dif; })[0] };
 }

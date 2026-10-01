@@ -54,5 +54,37 @@ await test("ruta profil: primeste si intoarce forma actiunii (z1/z5/sar/evenimen
   assert.match(col, /async function turaProfilActiuni/); assert.match(col, /piata: "actiuni"/); assert.match(col, /turaProfilActiuni\(\)/);
 });
 
+// ---- pasul 3: varianta de stop „prof” pe trade-urile lui ----
+await test("varianta prof: profilul din barele de DINAINTEA cumpararii; alegeTrail - prof doar daca iese >= u15 pe cel putin 30 de trade-uri", () => {
+  assert.ok(typeof AS.alegeTrail === "function", "lipseste ActiuniSemnale.alegeTrail");
+  const ru = (p, u, j) => ({ judecate: j, real: 0, praguri: { prof: { total: p, dif: p }, u15: { total: u, dif: u }, plan: { total: 0, dif: 0 }, u25: { total: 0, dif: 0 } } });
+  assert.equal(AS.alegeTrail(ru(120, 100, 40)).cheie, "prof");
+  assert.equal(AS.alegeTrail(ru(90, 100, 40)).cheie, "u15");
+  const m = AS.alegeTrail(ru(500, 100, 20)); assert.equal(m.cheie, "u15"); assert.match(m.motiv, /20 din 30/);
+  const t = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
+  assert.match(t, /cheie: "prof"/); assert.match(t, /pragStopActiune\(/); assert.match(t, /b\.t \+ 8 \* 3600000 <= t\.pornit/);
+  assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), /k: "prof"/);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /T212, ActiuniSemnale, ProfilMoneda, pauza/);
+});
+await test("varianta prof pe un trade: stopul urca la −P75(5 zile) din profilul de dinainte si iese pe bara care il atinge", () => {
+  const PMa = PM, bare = []; let c = 100;
+  for (let i = 0; i < 400; i++) { const o = c, h = o * 1.01, l = o * 0.99; c = o * (1 + 0.003 * Math.sin(i / 3)); bare.push({ t: Date.UTC(2025, 0, 1) + i * 864e5, o, h, l, c }); }
+  const pornit = bare[380].t + 15 * 3600000, inainte = bare.filter((b) => b.t + 8 * 3600000 <= pornit), pp = PMa.calculeaza(inainte, { piata: "actiuni", simbol: "X_US_EQ", acum: pornit });
+  const tr = Math.round(PMa.pragStopActiune(pp).dist * 1000) / 10; assert.ok(tr > 0 && tr < 10, String(tr));
+  for (let i = 385; i < 400; i++) bare[i] = { ...bare[i], l: bare[i].o * 0.85 };   // cadere dupa cumparare
+  const r = AS.cuStopUrcator({ pretCumparare: bare[381].o, pornit, inchis: bare[399].t + 864e5 }, bare, [{ cheie: "prof", trailPct: tr }]);
+  assert.ok(r.prof && r.prof.pct < 0 && r.prof.trail === tr, JSON.stringify(r));
+});
+
+await test("ruta cf pastreaza varianta prof (altfel tabelul n-o vede si verdictele se refac la nesfarsit); proba goala ramane goala", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "t212.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/t212?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const v = { a1: { nivel: "cumpara", motive: [], greseli: [], stop: {}, stopU: { plan: null, u15: { pct: -0.1, zi: 5, trail: 15 }, u25: null, prof: { pct: -0.05, zi: 4, trail: 6.2 } } }, a2: { nivel: "fara-date", motive: [], greseli: [], stop: {}, stopU: {} } };
+  const r = await mod.onRequestPost({ request: cer("POST", "action=cf", { verdicte: v }), env }); assert.equal(r.status, 200, await r.clone().text());
+  const m = JSON.parse(kv.get("t212:cf")); assert.deepEqual(m.a1.stopU.prof, { pct: -0.05, zi: 4, trail: 6.2 }); assert.deepEqual(m.a2.stopU, {});
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8"), /Object\.keys\(gata\[t\.id\]\.stopU \|\| \{\}\)\.length && !\("prof" in gata\[t\.id\]\.stopU\)/, "proba goala nu se reface la nesfarsit");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

@@ -338,6 +338,18 @@ var ActiuniSemnale = (function () {
     return r;
   }
 
+  // v100.52 (actiunile T212, pachetul 1): stopul care urca - din profilul actiunii („prof”) sau −15% („u15”, masurat pe trade-urile lui
+  // la 25.09). Profilul il inlocuieste DOAR daca pe trade-urile lui iese cel putin la fel, pe cel putin 30 de trade-uri judecate.
+  // ru = rezumatStop(inchise, cf, ["plan", "u15", "u25", "prof"], "stopU")
+  function alegeTrail(ru) {
+    var j = ru && ru.judecate || 0, p = ru && ru.praguri && ru.praguri.prof, u = ru && ru.praguri && ru.praguri.u15;
+    if (j < 30 || !p || !u) return { cheie: "u15", judecate: j, dif: null, motiv: "stopul din profilul acțiunii se probează pe trade-urile tale: " + j + " din 30 — până atunci rămâne −15% de la maxim" };
+    var dif = p.total - u.total;
+    return dif >= 0
+      ? { cheie: "prof", judecate: j, dif: dif, motiv: "pe " + j + " trade-uri ale tale, stopul din profilul acțiunii a ieșit " + L(dif) + " față de −15% de la maxim" }
+      : { cheie: "u15", judecate: j, dif: dif, motiv: "pe " + j + " trade-uri ale tale, −15% de la maxim a ieșit " + L(-dif) + " față de stopul din profil — rămâne −15%" };
+  }
+
   // ---------------- v87: regulile tale (din jurnalul de actiuni) ----------------
   function oraRo(t, tz) {
     try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz || "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t))); } catch (e) { return new Date(t).getUTCHours() + 3; }
@@ -401,6 +413,6 @@ var ActiuniSemnale = (function () {
     if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
     return mx;
   }
-  return { maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

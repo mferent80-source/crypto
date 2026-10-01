@@ -649,7 +649,7 @@ async function turaCfActiuni() {
         catch (e) { if (e.status === 404) return null; throw e; }   // 404 = fara preturi (delistata); altceva se reincearca
       },
       salveaza: (m) => trimite("/api/t212?action=cf", { verdicte: m }),
-      T212, ActiuniSemnale, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 40 });
+      T212, ActiuniSemnale, ProfilMoneda, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 40 });   // v101.31: + varianta „prof”
     cfActLa = r.ramase ? Date.now() - 3600000 + 10 * 60000 : Date.now();
   } catch (e) { jurnal("cf actiuni ESEC", e.message); cfActLa = Date.now() - 3600000 + 20 * 60000; }
   cfActInLucru = false;
