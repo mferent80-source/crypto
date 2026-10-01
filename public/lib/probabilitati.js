@@ -67,12 +67,13 @@ var Probabilitati = (function () {
     var memo = {}, op = { memo: memo }, rel = function (x) { x = nr(x); return x !== null && x > 0 ? x / p - 1 : null; };
     var jos = rel(o.jos), sus = rel(o.sus), lich = rel(o.lichidare), tinta = rel(o.tinta), stop = rel(o.stop);
     var F = function (H, r) { return r === null || r === 0 ? null : frecventa(b, H, atinge(r), "da", stare, op); };
-    var out = { la: nr(o.acum) || Date.now(), stare: stare, bare: b.length, niveluri: { jos: nr(o.jos), sus: nr(o.sus), lichidare: nr(o.lichidare), tinta: nr(o.tinta), stop: nr(o.stop) },
+    var out = { la: nr(o.acum) || Date.now(), pret: p, stare: stare, bare: b.length, niveluri: { jos: nr(o.jos), sus: nr(o.sus), lichidare: nr(o.lichidare), tinta: nr(o.tinta), stop: nr(o.stop) },
       iese: { jos24: jos !== null && jos < 0 ? F(24, jos) : null, sus24: sus !== null && sus > 0 ? F(24, sus) : null, jos72: jos !== null && jos < 0 ? F(72, jos) : null, sus72: sus !== null && sus > 0 ? F(72, sus) : null },
       lichidare7: null, cursa: null, liniste: null };
     var lung = dir === "long", scurt = dir === "short";
     if ((lung && lich !== null && lich < 0) || (scurt && lich !== null && lich > 0)) out.lichidare7 = F(168, lich);
-    var cursaOk = tinta !== null && stop !== null && (lung ? tinta > 0 && stop < 0 : scurt ? tinta < 0 && stop > 0 : false);
+    // revizia 01.10: stopul dincolo de lichidare n-ar fi atins niciodata (lichidarea vine intai) -> fara cursa
+    var cursaOk = tinta !== null && stop !== null && (lung ? tinta > 0 && stop < 0 && (lich === null || stop > lich) : scurt ? tinta < 0 && stop > 0 && (lich === null || stop < lich) : false);
     if (cursaOk) { var ev = cursa(tinta, stop); out.cursa = { tinta: frecventa(b, 168, ev, "tinta", stare, op), stop: frecventa(b, 168, ev, "stop", stare, op) }; }
     if (stare === "liniste") {
       var ramane = function () { return function (bb, i, h, st) { var s = st(i + h); return s === null ? null : s === "liniste" ? "da" : "nu"; }; };
@@ -86,11 +87,13 @@ var Probabilitati = (function () {
   function ia(rez, cale) { var x = rez; for (var i = 0; i < cale.length && x; i++) x = x[cale[i]]; return x && nr(x.p) !== null ? x : null; }
   function intrari(rez, c) {
     if (!rez || !c) return [];
-    var nv = rez.niveluri || {}, out = [];
+    var nv = rez.niveluri || {}, out = [], pr = nr(rez.pret);
+    // sensul (sus/jos) din pretul de la notare - fara el, un gridJos lipsa ar fi intors lichidarea unui long pe SUS (revizia 01.10)
+    var susDe = function (niv) { return pr !== null ? nr(niv) > pr : nr(niv) > nr(nv.jos); };
     Object.keys(TIPURI).forEach(function (tip) {
       var x = ia(rez, TIPURI[tip]); if (!x) return;
       var ev = /^iese-jos/.test(tip) ? { fel: "atinge", nivel: nv.jos, sus: false } : /^iese-sus/.test(tip) ? { fel: "atinge", nivel: nv.sus, sus: true }
-        : tip === "lichidare-7" ? { fel: "atinge", nivel: nv.lichidare, sus: nr(nv.lichidare) > nr(nv.jos) } : tip === "cursa-tinta" ? { fel: "cursa", tinta: nv.tinta, stop: nv.stop } : { fel: "liniste" };
+        : tip === "lichidare-7" ? { fel: "atinge", nivel: nv.lichidare, sus: susDe(nv.lichidare) } : tip === "cursa-tinta" ? { fel: "cursa", tinta: nv.tinta, stop: nv.stop } : { fel: "liniste" };
       out.push({ t: c.t, bot: String(c.bot), simbol: String(c.simbol), tip: tip, p: Math.round(x.p * 1000) / 1000, H: x.orizontOre, ev: ev });
     });
     return out;
@@ -107,10 +110,12 @@ var Probabilitati = (function () {
     if (v.fel === "liniste") { var k = -1; for (var j = 0; j < bare.length; j++) if (bare[j].t === t0 + (e.H - 1) * ORA) { k = j; break; } var s = k >= 0 ? stareLa(bare, k) : null; return s === null ? null : s === "liniste" ? 1 : 0; }
     return null;
   }
+  // revizia 01.10 (critic): notarile unui bot la 4 h pe 7 zile se suprapun aproape complet - 20 de intrari ar fi un singur episod de
+  // piata. Se numara doar cazurile INDEPENDENTE: pe bot si tip, intrarile la cel putin H una de alta (intrarile fara t/bot/H - fiecare).
   function calibreaza(l) {
-    var out = {};
-    (Array.isArray(l) ? l : []).forEach(function (e) {
-      if (!e || (e.r !== 0 && e.r !== 1) || nr(e.p) === null) return;
+    var out = {}, ultim = {};
+    (Array.isArray(l) ? l : []).filter(function (e) { return e && (e.r === 0 || e.r === 1) && nr(e.p) !== null; }).sort(function (a, b) { return (nr(a.t) || 0) - (nr(b.t) || 0); }).forEach(function (e) {
+      if (nr(e.t) !== null && e.bot !== undefined && nr(e.H) > 0) { var cheie = e.bot + "|" + e.tip; if (cheie in ultim && e.t - ultim[cheie] < e.H * ORA) return; ultim[cheie] = e.t; }
       var c = out[e.tip] || (out[e.tip] = { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0 }; }) }), i = Math.min(4, Math.floor(e.p * 5));
       c.cutii[i].n++; c.cutii[i].k += e.r;
     });
@@ -120,22 +125,26 @@ var Probabilitati = (function () {
   // pragurile calibrarii (20 de cazuri pe cutie, 15 puncte) sunt ipoteze de casa - spuse in nota sectiunii
   function corecteaza(p, tip, cal) {
     var c = cal && cal[tip] && cal[tip].cutii && cal[tip].cutii[Math.min(4, Math.floor(p * 5))];
-    if (!c || c.n < 20) return { p: p, brut: p, calibrat: false, n: c ? c.n : 0, avertizare: false, text: "necalibrat încă" + (c && c.n ? " (" + c.n + " judecate)" : "") };
-    var q = Math.round(c.k / c.n * 1000) / 1000, mij = Math.min(4, Math.floor(p * 5)) * 20 + 10;
-    return { p: q, brut: p, calibrat: true, n: c.n, avertizare: Math.abs(q - p) > 0.15, text: "calibrat: când am zis ~" + mij + "%, s-a întâmplat în " + PC(q) + " din " + c.n + " cazuri" };
+    if (!c || c.n < 20) return { p: p, brut: p, calibrat: false, n: c ? c.n : 0, k: c ? c.k : 0, avertizare: false, text: "necalibrat încă" + (c && c.n ? " (" + c.n + " cazuri independente judecate)" : "") };
+    var q = Math.round(c.k / c.n * 1000) / 1000, mij = Math.min(4, Math.floor(p * 5)) * 20 + 10, txt = "calibrat: când am zis ~" + mij + "%, s-a întâmplat în " + PC(q) + " din " + c.n + " cazuri independente";
+    // lichidarea nu se coboara niciodata sub cifra bruta (principiul 5: lichidarea nu tace) - corectarea se spune alaturi
+    if (tip === "lichidare-7" && q < p) return { p: p, brut: p, calibrat: false, n: c.n, k: c.k, avertizare: false, text: txt + " (la lichidare țin cifra brută, cea mai prudentă)" };
+    return { p: q, brut: p, calibrat: true, n: c.n, k: c.k, avertizare: Math.abs(q - p) > 0.15, text: txt };
   }
   function fr(x, tip, cal) {
     var c = corecteaza(x.p, tip, cal);
-    var t = x.k + " din " + x.n + " " + (x.conditionat ? "situații ca acum" : "zile (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente, IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%)"
+    // cifra corectata vine cu intervalul EI (Wilson pe cutie, pe cazurile independente), nu cu al cifrei brute (revizia 01.10)
+    var ic = c.calibrat ? G.wilson(c.k, c.n) : x.ic;
+    var t = x.k + " din " + x.n + " " + (x.conditionat ? "situații ca acum" : "de porniri la 4 h (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente" + (c.calibrat ? "" : ", IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%") + ")"
       + (x.nIndep < 10 ? " · puține cazuri independente — un semn, nu o regulă" : "")   // trader.md §1: sub 10 pe grupa = zgomot
-      + " · " + c.text + (c.calibrat && c.avertizare ? " — ⚠ cifra brută era " + PC(c.brut) : "");
-    return { p: c.p, avertizare: c.avertizare, text: t };
+      + " · " + c.text + (c.calibrat ? ", IC " + Math.round(ic[0] * 100) + "–" + Math.round(ic[1] * 100) + "%" + (c.avertizare ? " — ⚠ cifra brută era " + PC(c.brut) : "") : "");
+    return { p: c.p, ic: ic, avertizare: c.avertizare, text: t };
   }
   // preturile ca pe Tablou (SemnaleBot.fmtPret)
   function fp(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   function randuri(rez, cal) {
     if (!rez) return [];
-    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: x.ic, avertizare: y.avertizare, text: y.text }); } };
+    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, avertizare: y.avertizare, text: y.text }); } };   // sub 3 independente: nu spune nimic
     add("cursa", "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
     add("iese-jos-24", "Atinge marginea de jos (" + fp(nv.jos) + ") în 24 h", rez.iese && rez.iese.jos24, "iese-jos-24");
     add("iese-sus-24", "Atinge marginea de sus (" + fp(nv.sus) + ") în 24 h", rez.iese && rez.iese.sus24, "iese-sus-24");

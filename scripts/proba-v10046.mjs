@@ -146,5 +146,63 @@ await test("Tablou: sectiunea probabilitatilor (ascunsa fara server) cu banda IC
   assert.deepEqual(PB.randuri({ niveluri: { jos: 1 }, iese: { jos24: x } }, null)[0].ic, [0.25, 0.55], "banda are nevoie de intervalul fiecarui rand");
 });
 
+// ---- revizia finala 2a (01.10): reparatiile, fiecare cu testul ei vazut picand intai ----
+await test("C1: calibrarea numara cazuri INDEPENDENTE (la cel putin H una de alta, pe bot si tip): 25 de notari la 4 h pe 7 zile = 1 caz -> necalibrat", () => {
+  const l = Array.from({ length: 25 }, (_, i) => ({ t: T0 + i * 4 * ORA, bot: "1", tip: "cursa-tinta", H: 168, p: 0.72, r: 0 }));
+  assert.equal(PB.corecteaza(0.72, "cursa-tinta", PB.calibreaza(l)).calibrat, false, "o singura saptamana de piata nu calibreaza nimic");
+  const indep = Array.from({ length: 25 }, (_, i) => ({ t: T0 + i * 24 * ORA, bot: "1", tip: "iese-jos-24", H: 24, p: 0.7, r: i < 10 ? 1 : 0 }));
+  assert.equal(PB.corecteaza(0.7, "iese-jos-24", PB.calibreaza(indep)).calibrat, true, "25 de zile distincte = 25 de cazuri");
+});
+await test("C1: lichidarea nu e coborata niciodata sub cifra bruta (corectarea se spune alaturi)", () => {
+  const l = Array.from({ length: 25 }, (_, i) => ({ t: T0 + i * 168 * ORA, bot: "1", tip: "lichidare-7", H: 168, p: 0.12, r: 0 }));
+  const c = PB.corecteaza(0.12, "lichidare-7", PB.calibreaza(l)); assert.equal(c.p, 0.12); assert.match(c.text, /0%/);
+});
+await test("I1: cifra corectata vine cu intervalul EI (Wilson pe cutie), nu cu al cifrei brute", () => {
+  const l = Array.from({ length: 25 }, (_, i) => ({ t: T0 + i * 24 * ORA, bot: "1", tip: "iese-jos-24", H: 24, p: 0.7, r: i < 10 ? 1 : 0 }));
+  const x = { p: 0.7, n: 300, k: 210, nIndep: 50, ic: [0.56, 0.81], orizontOre: 24, conditionat: true, stare: "liniste" };
+  const r = PB.randuri({ niveluri: { jos: 1 }, iese: { jos24: x } }, PB.calibreaza(l))[0];
+  assert.equal(r.p, 0.4); assert.ok(r.ic[0] < 0.4 && r.ic[1] > 0.4, "IC-ul cuprinde cifra aratata: " + r.ic); assert.match(r.text, /IC/);
+});
+await test("I2: stopul dincolo de lichidare -> cursa nu se socoteste (lichidarea vine intai)", () => {
+  const b = mers(120 * 24, 0.006, 5), p = b[b.length - 1].c, acum = b[b.length - 1].t + ORA;
+  const l = PB.pentruBot(b, { acum, pret: p, dir: "long", jos: p * 0.95, sus: p * 1.05, lichidare: p * 0.9, tinta: p * 1.03, stop: p * 0.85 });
+  assert.equal(l.cursa, null); assert.ok(l.lichidare7);
+  const s = PB.pentruBot(b, { acum, pret: p, dir: "short", jos: p * 0.95, sus: p * 1.05, lichidare: p * 1.1, tinta: p * 0.97, stop: p * 1.15 });
+  assert.equal(s.cursa, null);
+});
+await test("I3: textul spune „porniri la 4 h”, nu „zile”, cand nu e conditionat", () => {
+  const x = { p: 0.5, n: 888, k: 450, nIndep: 148, ic: [0.4, 0.6], orizontOre: 24, conditionat: false, stare: null };
+  const t = PB.randuri({ niveluri: { jos: 1 }, iese: { jos24: x } }, null)[0].text;
+  assert.ok(!/888 zile/.test(t), t); assert.match(t, /888 de porniri la 4 h/);
+});
+await test("M1 (Important): lichidarea long se judeca pe JOS chiar fara gridJos - sensul din pretul de la notare", () => {
+  const b = mers(120 * 24, 0.006, 5), p = b[b.length - 1].c, acum = b[b.length - 1].t + ORA;
+  const rez = PB.pentruBot(b, { acum, pret: p, dir: "long", sus: p * 1.05, lichidare: p * 0.7 });
+  const e = PB.intrari(rez, { t: acum, bot: "1", simbol: "X" }).find((x) => x.tip === "lichidare-7"); assert.ok(e); assert.equal(e.ev.sus, false);
+});
+await test("M2 (Important): rand cu sub 3 cazuri independente nu se arata (n-ar spune nimic)", () => {
+  const x = { p: 0, n: 6, k: 0, nIndep: 1, ic: [0, 0.79], orizontOre: 168, conditionat: false, stare: null };
+  assert.equal(PB.randuri({ niveluri: { lichidare: 1 }, lichidare7: x }, null).length, 0);
+});
+await test("I6: colectorul rescrie jurnalul doar cand s-a schimbat ceva", async () => {
+  const TE = new Function("GridCalcul", `${lib("tablou-extra.js")}; return TabloExtra;`)(G);
+  let scrieri = 0; const stare = { jurnal: [], la: { 1: Date.UTC(2026, 9, 1) } };
+  await TPR.turaProbabilitati({ acum: Date.UTC(2026, 9, 1) + 10 * 60000, boti: [{ id: "1" }], simbolDe: () => "X", planDe: async () => null, cere: async () => ({}), trimite: async () => ({}), citesteBare: () => [], scrieBare: () => {},
+    GridCalcul: G, Probabilitati: PB, TabloExtra: TE, stare, scrieStare: () => { scrieri++; }, pauza: async () => {}, jurnal: () => {} });
+  assert.equal(scrieri, 0);
+});
+await test("M4 (Important): tura orara nu re-descarca de la zero o moneda mai noua de 6 luni (doar pagina noua; umplerea e a noptii)", async () => {
+  const TP = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-profil.mjs")).href);
+  const acum = T0 + 200 * 24 * ORA, vechi = Array.from({ length: 90 * 24 }, (_, i) => ({ time: acum - (90 * 24 - i) * ORA, open: "1", high: "1", low: "1", close: "1" }));
+  let cereri = 0; const d = { acum, GridCalcul: G, pauza: async () => {}, cere: async () => { cereri++; return { data: { klines: [] } }; } };
+  const r = await TP.aduOre("NOU_USDT_PERP", vechi, d); assert.equal(cereri, 1); assert.equal(r.length, vechi.length);
+  cereri = 0; await TP.aduOre("NOU_USDT_PERP", vechi, { ...d, umple: true }); assert.equal(cereri, 1, "goala la prima pagina -> gata");
+});
+await test("I4/I5/M3: Tabloul arata vechimea (peste 3 h) si ascunde randul; nu deseneaza datele altui bot; mesajul „gol” nu promite noaptea", () => {
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), tp = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-probabilitati.mjs"), "utf8");
+  assert.match(app, /tbProbVechi\(/); assert.match(app, /tbStare\.bot&&tbStare\.bot\.id===b\.id/); assert.match(app, /\$\("tbPl-prob"\)\.hidden=true/);
+  assert.ok(!/le aduce noaptea/.test(app)); assert.ok(!/puțin istoric de 1 h pe moneda asta/.test(tp));
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

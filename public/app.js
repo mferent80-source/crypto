@@ -5599,17 +5599,21 @@ function tbProbPt(b){
   if(!tbProb.inLucru&&(tbProb.botId!==b.id||Date.now()-tbProb.la>10*60000)){tbProb.inLucru=true;
     Promise.all([getJSON("/api/istoric-bot?action=prob&bot="+encodeURIComponent(b.id)),getJSON("/api/istoric-bot?action=calibrare").catch(function(){return null})])
       .then(function(r){tbProb.rez=r[0]&&r[0].prob||null;tbProb.cal=r[1]&&r[1].calibrare&&r[1].calibrare.cal||null}).catch(function(){tbProb.rez=null;tbProb.cal=null})
-      .then(function(){tbProb.botId=b.id;tbProb.la=Date.now();tbProb.inLucru=false;tbDeseneazaProb(b)})}
+      // revizia 01.10: desenez doar daca botul de pe ecran e tot acesta; dupa sosire redesenez semaforul (randul din Consilier)
+      .then(function(){tbProb.botId=b.id;tbProb.la=Date.now();tbProb.inLucru=false;if(tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaProb(b);if(typeof tbDeseneazaSemafor==="function")tbDeseneazaSemafor(tbStare.bot)}})}
   return tbProb.botId===b.id?tbProb:null;
 }
+// cifrele mai vechi de 3 h (colectorul oprit) se spun ca atare, iar randul din Consilier nu le mai arata ca „acum”
+function tbProbVechi(rez){var la=rez&&Number(rez.la);return la>0&&Date.now()-la>3*3600000?Math.round((Date.now()-la)/3600000):null}
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
   var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;
   if(!rez){card.hidden=true;return}
   card.hidden=false;
-  if(rez.gol){if(sub)sub.textContent="puțin istoric";el.innerHTML='<p class="tbSub">Pe moneda asta sunt prea puține bare de 1 oră ('+escapeHtml(rez.gol)+'). Colectorul le aduce noaptea; cifrele apar după.</p>';return}
+  if(rez.gol){if(sub)sub.textContent="încă nu se pot socoti";el.innerHTML='<p class="tbSub">'+escapeHtml(rez.gol)+'.</p>';return}
   var l=Probabilitati.randuri(rez,t.cal),P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))};
-  if(sub)sub.textContent="acum: "+({liniste:"liniște","miscare-sus":"mișcare în sus","miscare-jos":"mișcare în jos"}[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
+  var vh=tbProbVechi(rez);
+  if(sub)sub.textContent=(vh?"⚠ cifre de acum "+vh+" h (colectorul nu le-a mai reînnoit) · stare: ":"acum: ")+({liniste:"liniște","miscare-sus":"mișcare în sus","miscare-jos":"mișcare în jos"}[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
   el.innerHTML=(l.length?l.map(function(x){var lo=x.ic?P(x.ic[0]):null,hi=x.ic?P(x.ic[1]):null;
       return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+P(x.p)+'%</b>'
         +'<div class="tbProbBanda" role="img" aria-label="'+P(x.p)+'%, interval de încredere '+lo+'–'+hi+'%">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b></div>'
@@ -5772,7 +5776,7 @@ function tbDeseneazaSemafor(b){
   var el=$("tbSemafor");if(!el)return;
   var mot=$("tbMotive"),cc=$("tbConcret");
   // fara bot (sau ruta picata): cartelele, motivele si socoteala NU raman cu cifrele botului de dinainte (revizia v100)
-  if(!b){if(mot)mot.hidden=true;if(cc)cc.hidden=true;var s0=$("tbSocoteala");if(s0)s0.innerHTML='<p class="tbSub">Fără bot citit.</p>';if(tbStare.routeOk!==false)tbPregatire(el);return}
+  if(!b){if(mot)mot.hidden=true;if(cc)cc.hidden=true;if($("tbPl-prob"))$("tbPl-prob").hidden=true;var s0=$("tbSocoteala");if(s0)s0.innerHTML='<p class="tbSub">Fără bot citit.</p>';if(tbStare.routeOk!==false)tbPregatire(el);return}
   var f=tbFisa.botId===b.id?tbFisa.fisa:null,kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
   var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null,minusAtins:tbMinusAtins[b.id]===true},Date.now());
   if(plan)tbMinusAtins[b.id]=plan.atins.indexOf("minus")>=0;   // v100.39: histerezis pe pragul de minus (ca in colector)
@@ -5798,7 +5802,7 @@ function tbDeseneazaSemafor(b){
     laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,
     indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
     note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
-  var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
+  var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol&&!tbProbVechi(tp.rez)?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
   var r0=el.querySelector(".tbConsRest");if(r0)tbConsRestDeschis=!!r0.open;   // „Restul” ramane deschis la reimprospatare
   el.innerHTML=h+tbConsHtml(cons);$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;
   if(mot)mot.hidden=true;

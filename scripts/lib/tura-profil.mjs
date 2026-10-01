@@ -11,8 +11,11 @@ export function eNoapte(t) {
 const ziRo = (t) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date(t));
 export async function aduOre(simbol, vechi, d) {
   const deLa = d.acum - ZILE * 24 * ORA;
-  // ce e pe disc se pastreaza doar daca ajunge inapoi pana la 6 luni (altfel o umplere intrerupta ar ramane cu gaura)
-  let randuri = Array.isArray(vechi) && vechi.length && tBara(vechi[0]) <= deLa + 24 * ORA ? vechi : [];
+  // ce e pe disc se pastreaza daca ajunge inapoi pana la 6 luni; altfel, doar tura de NOAPTE (d.umple) reface umplerea (o umplere
+  // intrerupta ar ramane cu gaura) - tura orara a probabilitatilor ia doar pagina noua (revizia 01.10: o moneda mai noua de 6 luni
+  // se re-descarca altfel de la zero la fiecare ora)
+  const vechiOk = Array.isArray(vechi) && vechi.length > 0;
+  let randuri = vechiOk && (tBara(vechi[0]) <= deLa + 24 * ORA || !d.umple) ? vechi : [];
   const ultima = randuri.length ? tBara(randuri[randuri.length - 1]) : null;
   let end = null;
   for (let p = 0; p < 12; p++) {
@@ -43,7 +46,7 @@ export async function turaProfil(d) {
     if (e && d.acum - e.la < Math.min(24 * ORA, 10 * 60000 * Math.pow(2, e.n))) continue;
     try {
       if (facute++) await d.pauza(PAS_MS);
-      const randuri = await aduOre(simbol, d.citesteBare(simbol), d);
+      const randuri = await aduOre(simbol, d.citesteBare(simbol), { ...d, umple: true });
       d.scrieBare(simbol, randuri);
       const trades = (await toateTrades()).filter((t) => t.moneda === moneda);
       const profil = d.ProfilMoneda.calculeaza(d.GridCalcul.bare(randuri), { acum: d.acum, simbol, trades });

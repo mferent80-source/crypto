@@ -7,7 +7,7 @@ const ORA = 3600000, PASTRARE = 90 * 24 * ORA, NOTARE = 4 * ORA;
 const nr = (v) => { const x = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(x) ? null : x; };
 export async function turaProbabilitati(d) {
   const st = d.stare; st.la = st.la || {}; st.notat = st.notat || {}; st.jurnal = Array.isArray(st.jurnal) ? st.jurnal : [];
-  let facute = 0;
+  let facute = 0, schimbat = false;
   for (const b of d.boti || []) {
     if (!b || !b.id || d.acum - (st.la[b.id] || 0) < ORA) continue;
     try {
@@ -18,8 +18,8 @@ export async function turaProbabilitati(d) {
       const tinta = plan && nr(plan.plus) > 0 ? d.TabloExtra.pretTintaPentru(b, nr(plan.plus)) : null;
       const stop = b.opritorPierdereActiv && nr(b.opritorPierdere) > 0 ? nr(b.opritorPierdere) : plan && nr(plan.minus) > 0 ? d.TabloExtra.pretOpritorPentru(b, -nr(plan.minus)) : null;
       const rez = d.Probabilitati.pentruBot(bare, { acum: d.acum, pret: nr(b.pretCurent), dir, jos: nr(b.gridJos), sus: nr(b.gridSus), lichidare: dir === "short" ? nr(b.lichidareSus) : nr(b.lichidareJos), tinta, stop });
-      await d.trimite("/api/istoric-bot?action=prob", { bot: b.id, rez: rez || { la: d.acum, gol: "puțin istoric de 1 h pe moneda asta" } });
-      st.la[b.id] = d.acum;
+      await d.trimite("/api/istoric-bot?action=prob", { bot: b.id, rez: rez || { la: d.acum, gol: bare.length < 37 * 24 ? "moneda are doar " + Math.floor(bare.length / 24) + " zile de bare de 1 h; cifrele apar de la 37 de zile" : "lipsește prețul botului sau starea pieței" } });
+      st.la[b.id] = d.acum; schimbat = true;
       if (rez && d.acum - (st.notat[b.id] || 0) >= NOTARE) { st.jurnal.push(...d.Probabilitati.intrari(rez, { t: d.acum, bot: b.id, simbol })); st.notat[b.id] = d.acum; }
     } catch (e) { d.jurnal("probabilitati ESEC", b.id, e.message); }
   }
@@ -28,9 +28,11 @@ export async function turaProbabilitati(d) {
   for (const e of st.jurnal) {
     if (e.r === 0 || e.r === 1 || d.acum < e.t + e.H * ORA) continue;
     const bare = peSimbol[e.simbol] || (peSimbol[e.simbol] = d.GridCalcul.bare(d.citesteBare(e.simbol)));
-    const r = d.Probabilitati.judeca(e, bare); if (r === 0 || r === 1) e.r = r;
+    const r = d.Probabilitati.judeca(e, bare); if (r === 0 || r === 1) { e.r = r; schimbat = true; }
   }
+  const inainte = st.jurnal.length;
   st.jurnal = st.jurnal.filter((e) => d.acum - e.t < PASTRARE);
-  d.scrieStare(st);
+  // revizia 01.10: jurnalul (pana la ~1 MB pe bot) se rescrie doar cand s-a schimbat ceva, nu la fiecare 5 minute
+  if (schimbat || st.jurnal.length !== inainte) d.scrieStare(st);
   if (facute) await d.trimite("/api/istoric-bot?action=calibrare", { la: d.acum, cal: d.Probabilitati.calibreaza(st.jurnal) });
 }
