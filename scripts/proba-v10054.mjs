@@ -34,6 +34,7 @@ await test("alcatuiesteActiune: siguranta intai, un singur IESI in varf, banii p
   const c = CS.alcatuiesteActiune({ sem, niv, sfaturi: sf, plan: p.plan, pret: 18, pretMediu: 20, qty: 10, costLei: 900, simbol: "INTC" });
   assert.equal(c.nivel, "iesi"); assert.equal(c.motive[0].cod, "stop-plan"); assert.match(c.faCe, /ies/i);
   assert.match(c.bani, /\$/); assert.match(c.bani, /lei/);
+  const c4 = CS.alcatuiesteActiune({ sem, niv: { stopPozitie: 24.7605, trailPct: 15 }, pret: 26, pretMediu: 20, qty: 10, costLei: 900, simbol: "INTC" }); assert.match(c4.bani, /24\.76 \$/, "pretul stopului cu 2 zecimale la actiuni: " + c4.bani);
   assert.ok(c.rest.some((r) => /Piața întreagă/.test(r.titlu)) || c.motive.some((m) => /Piața/.test(m.titlu)), "nimic nu se pierde");
   const pp = CS.pentruPozaActiune(c); assert.equal(pp.nivel, "iesi"); assert.ok(pp.motive.length >= 1 && pp.ceAsFace);
 });
@@ -83,6 +84,24 @@ await test("schimbarea pe actiuni: motivul de sus cu alerta planului activa azi 
   assert.ok(!doua({ activ: {} }).alerta.doarRadar, "fara alerta planului: pe Discord");
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(col, /Consiliu\.alcatuiesteActiune\(/); assert.match(col, /Consiliu\.pentruPozaActiune\(/); assert.match(col, /"t212-" \+ x\.ticker/); assert.match(col, /delete stareAlerte\[k\]\._cons/);
+});
+
+// ---- pasul 4: pagina T212 + deciziile ----
+await test("decizia pe actiune: judecata la 5 zile de bursa pe pretul actiunii (si daca a vandut intre timp); ruta pastreaza pret/qty/fx", async () => {
+  are(CS.judecaDecizieActiune, "Consiliu.judecaDecizieActiune");
+  const Z = 864e5, bare = Array.from({ length: 10 }, (_, i) => ({ t: i * Z, o: 100 + i, h: 101 + i, l: 99 + i, c: 100 + i }));
+  const r = CS.judecaDecizieActiune([{ t: 0.5 * Z, pret: 100, qty: 2, fx: 4.5, urmat: true, cheie: "x" }], bare, 9 * Z);
+  assert.ok(Math.abs(r[0].r - 5 * 2 * 4.5) < 1e-9, String(r[0].r)); assert.match(r[0].cum, /5 zile/);
+  assert.equal(CS.judecaDecizieActiune([{ t: 6.5 * Z, pret: 100, qty: 2, urmat: true }], bare, 9 * Z)[0].r, undefined, "ziua n-a trecut");
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const rq = new Request("http://127.0.0.1:8788/api/istoric-bot?action=decizie", { method: "POST", headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: JSON.stringify({ bot: "t212-INTC_US_EQ", t: 1, cheie: "iesi|stop-plan", nivel: "iesi", titlu: "x", faCe: "y", urmat: true, total: 900, pret: 20, qty: 10, fx: 4.5 }) });
+  assert.equal((await mod.onRequestPost({ request: rq, env })).status, 200); const d = JSON.parse(kv.get("decizii:t212-INTC_US_EQ"))[0]; assert.equal(d.pret, 20); assert.equal(d.qty, 10); assert.equal(d.fx, 4.5);
+});
+await test("pagina T212: Consilierul pozitiei (un verdict), de ce s-a schimbat, am facut / n-am facut; colectorul judeca deciziile t212-* pe pret", () => {
+  const ecr = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(ecr, /Consiliu\.alcatuiesteActiune\(/); assert.match(ecr, /t212Decizie\(/); assert.match(ecr, /action=cons&bot=t212-/); assert.match(ecr, /Consiliu\.pentruPozaActiune\(p\.cons\)/);
+  assert.match(col, /Consiliu\.judecaDecizieActiune\(/);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);

@@ -29,7 +29,7 @@ import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
-const VERSIUNE_COLECTOR = "v101.32";
+const VERSIUNE_COLECTOR = "v101.33";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1266,8 +1266,14 @@ async function turaDecizii() {
       await new Promise((r) => setTimeout(r, 700));
       const v = await cere("/api/istoric-bot?action=decizie&bot=" + encodeURIComponent(id)).catch(() => null), l = v && Array.isArray(v.decizii) ? v.decizii : [];
       if (!l.length) continue;
-      const ist = l.some((e) => e.r === undefined || e.r === null) ? ((await cere("/api/istoric-bot?bot=" + encodeURIComponent(id) + "&ore=168").catch(() => null)) || {}).intrari || [] : [];
-      const nou = Consiliu.judecaDecizii(l, ist, finale[id] || null, Date.now());
+      let nou;
+      if (/^t212-/.test(id)) {   // v101.33: deciziile pe actiuni - la 5 zile de bursa pe pretul actiunii
+        const d = l.some((e) => e.r === undefined || e.r === null) ? await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(id.slice(5))).catch(() => null) : null;
+        nou = Consiliu.judecaDecizieActiune(l, d ? GridCalcul.bareBursa(d.randuri || [], Date.now()) : [], Date.now());
+      } else {
+        const ist = l.some((e) => e.r === undefined || e.r === null) ? ((await cere("/api/istoric-bot?bot=" + encodeURIComponent(id) + "&ore=168").catch(() => null)) || {}).intrari || [] : [];
+        nou = Consiliu.judecaDecizii(l, ist, finale[id] || null, Date.now());
+      }
       if (JSON.stringify(nou) !== JSON.stringify(l)) await trimite("/api/istoric-bot?action=decizie", { bot: id, lista: nou });
       toate.push(...nou);
     }

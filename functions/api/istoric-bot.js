@@ -234,7 +234,7 @@ export async function onRequestPost({request,env}){
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("decizii:"+bot)||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
     if(Array.isArray(corp.lista))l=corp.lista.slice(-500);
     else{const cheie=String(corp.cheie||"").slice(0,200),t=nr(corp.t),total=nr(corp.total);if(!cheie||t===null||typeof corp.urmat!=="boolean")return json({error:"decizie nevalida"},400);
-      l=l.filter(e=>e&&e.cheie!==cheie);l.push({cheie,t,nivel:String(corp.nivel||"").slice(0,12),titlu:String(corp.titlu||"").slice(0,200),faCe:String(corp.faCe||"").slice(0,400),urmat:corp.urmat,total});l=l.slice(-500)}
+      l=l.filter(e=>e&&e.cheie!==cheie);l.push({cheie,t,nivel:String(corp.nivel||"").slice(0,12),titlu:String(corp.titlu||"").slice(0,200),faCe:String(corp.faCe||"").slice(0,400),urmat:corp.urmat,total,pret:nr(corp.pret),qty:nr(corp.qty),fx:nr(corp.fx)});l=l.slice(-500)}
     await env.ISTORIC.put("decizii:"+bot,JSON.stringify(l));return json({ok:true,n:l.length});
   }
   if(action==="semneAct"){

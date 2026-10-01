@@ -1538,6 +1538,13 @@ body.peTablou main>.note{display:none}
 .t212Cel{display:flex;flex-direction:column;gap:4px;padding:12px 14px;min-width:0}.t212Cel+.t212Cel{border-left:1px solid var(--tb-linie)}
 .t212Val{font-size:22px;font-weight:900}.t212Val.good,.t212Card .good{color:var(--good)}.t212Val.bad,.t212Card .bad{color:var(--bad)}.t212Card .tbWarn{color:var(--warn)}.t212Muted{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 .t212Fac{margin:8px 0;padding:6px 10px;border-left:3px solid var(--accent);background:rgba(79,209,197,.08);border-radius:4px}
+/* v100.54 (actiunile T212, pachetul 3): Consilierul pozitiei - un verdict, decizii, restul pliat (stilurile paginii, fara culori noi) */
+.t212Cons h5{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t212Decizii{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
+.t212DecBtn{min-height:36px}
+@media (max-width:550px){.t212DecBtn{min-height:44px}}
+.t212Rest{margin-top:6px}
+.t212Rest>summary{cursor:pointer;color:var(--muted);font-size:13px;padding:6px 0}
 .t212Rand{padding:12px 14px;margin-bottom:8px;border:1px solid var(--tb-linie);border-radius:12px;background:var(--tb-fond)}
 .t212Cap{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.t212Sim{font-size:18px}.t212Rez{margin-left:auto;font-size:17px}
 .t212Pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:900;color:#fff;white-space:nowrap}.t212Pill-tine{background:#00aa5a}.t212Pill-atentie{background:#c89600}.t212Pill-iesi{background:#dc283c}.t212Pill-fara{background:#4a5566}

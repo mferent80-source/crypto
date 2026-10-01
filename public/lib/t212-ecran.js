@@ -136,6 +136,46 @@ function t212ProbPt(p, b, n) {
   var r = t212.rezultate[p.ticker], zc = r && r.data ? Math.ceil((Date.parse(r.data + "T12:00:00Z") - Date.now()) / 86400000) : null, pf = t212ProfilPt(p.ticker);
   return Probabilitati.randActiune(t212ProbMemo[p.ticker].v, t212Calibrare(), { rezultateZile: zc !== null && zc >= 0 ? Math.round(zc * 5 / 7) : null, evenimente: pf && pf.evenimente });
 }
+// v100.54: socoteala Consilierului pe actiuni (KV, de la colector, la 10 min), verdictul colectorului si deciziile pe ticker (la 2 min)
+var t212SocActC = { la: 0, v: {}, inLucru: false }, t212ConsKv = {};
+function t212SocAct() {
+  if (!t212SocActC.inLucru && Date.now() - t212SocActC.la > 10 * 60000) { t212SocActC.inLucru = true; getJSON("/api/istoric-bot?action=socotealaAct").then(function (d) { t212SocActC.v = d && d.peCod || {}; }).catch(function () {}).then(function () { t212SocActC.la = Date.now(); t212SocActC.inLucru = false; }); }
+  return t212SocActC.v;
+}
+function t212ConsKvPt(tk) {
+  var c = t212ConsKv[tk] || (t212ConsKv[tk] = { la: 0, cons: null, decizii: [], inLucru: false });
+  if (!c.inLucru && Date.now() - c.la > 2 * 60000) {
+    c.inLucru = true;
+    Promise.all([getJSON("/api/istoric-bot?action=cons&bot=t212-" + encodeURIComponent(tk)).catch(function () { return null; }), getJSON("/api/istoric-bot?action=decizie&bot=t212-" + encodeURIComponent(tk)).catch(function () { return null; })])
+      .then(function (r) { var vechi = JSON.stringify([c.cons, c.decizii]); c.cons = r[0] && r[0].cons || null; c.decizii = r[1] && Array.isArray(r[1].decizii) ? r[1].decizii : []; c.la = Date.now(); c.inLucru = false; if (JSON.stringify([c.cons, c.decizii]) !== vechi) t212Render(); });
+  }
+  return c;
+}
+function t212DecText(tk, c) {
+  var k = Consiliu.cheieDecizie(c), e = (t212ConsKvPt(tk).decizii || []).filter(function (x) { return x.cheie === k; }).pop();
+  return e ? "notat: " + (e.urmat ? "am făcut" : "n-am făcut") + " (" + new Date(e.t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ")" + (e.r != null ? " · după 5 zile de bursă: " + (e.r >= 0 ? "+" : "−") + Math.abs(e.r).toFixed(2) + (e.fx ? " lei" : " $") : "") : "ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers";
+}
+async function t212Decizie(tk, da) {
+  var p = (t212.pozPregatite || []).filter(function (x) { return x.ticker === tk; })[0], c = p && p.cons; if (!c) return;
+  var fx = p.cost > 0 && p.qty > 0 && p.pretMediu > 0 ? p.cost / (p.qty * p.pretMediu) : null;
+  var corp = { bot: "t212-" + tk, t: Date.now(), cheie: Consiliu.cheieDecizie(c), nivel: c.nivel, titlu: c.titlu, faCe: c.faCe || "", urmat: da === "da", total: p.pret * p.qty * (fx || 1), pret: p.pret, qty: p.qty, fx: fx };
+  try { var r = await apiFetch("/api/istoric-bot?action=decizie", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(corp) }); if (!r.ok) throw new Error("HTTP " + r.status);
+    var kv = t212ConsKvPt(tk); kv.decizii = (kv.decizii || []).filter(function (e) { return e.cheie !== corp.cheie; }).concat([corp]); var el = $("t212Dec-" + tk); if (el) el.textContent = t212DecText(tk, c);
+  } catch (e) { var el2 = $("t212Dec-" + tk); if (el2) el2.textContent = "nu s-a notat (" + e.message + ") — încearcă din nou"; }
+}
+function t212ConsHtml(p) {
+  var c = p.cons, tk = escapeHtml(p.ticker), niv = T212_NIVEL[p.sem.nivel] || T212_NIVEL["fara-date"]; if (!c) return "";
+  var kv = t212ConsKvPt(p.ticker), kc = kv.cons, deCe = "";
+  if (kc && kc.acum && kc.acum.nivel === c.nivel && kc.deCe && kc.schimbatLa) { var mn = Math.max(1, Math.round((Date.now() - kc.schimbatLa) / 60000)); deCe = "🔁 schimbat acum " + (mn < 60 ? mn + " min" : Math.round(mn / 60) + " h") + ": " + kc.deCe; }
+  var alta = Consiliu.altaVoce(kc, c), restA = (c.rest || []).filter(function (r) { return r.din !== "sfat"; }), sfN = (p.sfaturi || []).filter(function (f) { return f && f.nivel !== "g"; });
+  return '<div class="t212Cons"><h5><span class="t212Pill ' + niv[1] + '">' + escapeHtml(c.eticheta) + '</span> ' + escapeHtml(c.titlu) + '</h5>'
+    + (deCe ? '<p class="tbSub">' + escapeHtml(deCe) + '</p>' : '') + (alta ? '<p class="tbSub">📣 ' + escapeHtml(alta) + '</p>' : '')
+    + (c.faCe ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + escapeHtml(c.faCe) + '</p>' : '') + (c.bani ? '<p class="tbSub">💰 ' + escapeHtml(c.bani) + '</p>' : '')
+    + (c.motive.length ? '<ul class="t212Motive">' + c.motive.map(function (m) { return '<li>' + escapeHtml(m.titlu) + (m.text ? ' <span class="t212Mic">' + escapeHtml(m.text) + '</span>' : '') + '</li>'; }).join("") + '</ul>' : '')
+    + (c.nivel !== "asteapta" ? '<div class="t212Decizii"><button type="button" class="actionGhost t212DecBtn" data-action-click="t212Decizie(\'' + tk + '\',\'da\')" aria-label="Am făcut ce zice Consilierul pentru ' + escapeHtml(p.simbol) + '">✅ am făcut</button><button type="button" class="actionGhost t212DecBtn" data-action-click="t212Decizie(\'' + tk + '\',\'nu\')" aria-label="N-am făcut ce zice Consilierul pentru ' + escapeHtml(p.simbol) + '">✋ n-am făcut</button><span class="tbSub" id="t212Dec-' + tk + '" aria-live="polite">' + escapeHtml(t212DecText(p.ticker, c)) + '</span></div>' : '')
+    + (restA.length || sfN.length ? '<details class="t212Rest"><summary>Restul (' + (restA.length + sfN.length) + ') — tot ce mai văd, pliat</summary>' + (restA.length ? '<ul class="t212Motive">' + restA.map(function (r) { return '<li>' + escapeHtml(r.titlu) + (r.text ? ' <span class="t212Mic">' + escapeHtml(r.text) + '</span>' : '') + '</li>'; }).join("") + '</ul>' : '') + t212SfaturiHtml(sfN) + '</details>' : '')
+    + '</div>';
+}
 function t212PregatesteP(x, pond) {
   var p = t212Pozitie(x), b = t212.bare[p.ticker] || [];
   p.st = ActiuniSemnale.stare(b, p.pret); p.sem = ActiuniSemnale.semafor(p, p.st);
@@ -151,6 +191,13 @@ function t212PregatesteP(x, pond) {
   // v89: consilierul - istoricul LUI, cifrele pozitiei, piata, stirile
   var jj = t212Jurnal();
   p.sfaturi = typeof Consilier !== "undefined" ? Consilier.sfaturiPozitie(p, { inchise: jj ? jj.p.inchise : [], piata: t212.piata, stiri: t212.stiri[p.ticker], acum: Date.now() }) : [];
+  // v100.54 (actiunile T212, pachetul 3): O SINGURA VOCE - Consilierul pozitiei (aceleasi intrari ca in colector: semaforul, stopul care urca,
+  // probabilitatile, sfaturile); pastila, motivele si „ce aș face eu” vin din el (p.semVechi ramane pentru restul paginii)
+  p.semVechi = p.sem;
+  if (typeof Consiliu !== "undefined" && Consiliu.alcatuiesteActiune) {
+    p.cons = Consiliu.alcatuiesteActiune({ sem: p.sem, niv: p.niv, prob: p.prob || [], sfaturi: p.sfaturi, plan: p.plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei: p.cost, simbol: p.simbol, socoteala: t212SocAct() });
+    p.sem = Consiliu.pentruPozaActiune(p.cons);
+  }
   return p;
 }
 function t212Comuta(tk) { t212.deschis[tk] = !t212.deschis[tk]; var d = $("t212Det-" + tk), r = $("t212R-" + tk); if (d) d.hidden = !t212.deschis[tk]; if (r) r.setAttribute("aria-expanded", String(!!t212.deschis[tk])); }
@@ -173,6 +220,7 @@ function t212Render() {
   pf.pozitii.forEach(function (r, i) { pond[r.simbol] = r.pondere; });
   brute.forEach(function (x) { pond[x.ticker] = pond[T212.simbol(x.ticker)]; });
   var poz = brute.map(function (x) { return t212PregatesteP(x, pond); }).sort(function (a, b) { return (T212_ORDINE[a.sem.nivel] - T212_ORDINE[b.sem.nivel]) || (a.ppl - b.ppl); });
+  t212.pozPregatite = poz;   // v100.54: butoanele „am făcut / n-am făcut” găsesc poziția
   // v100.40 (audit 30.09, CRITIC): cate pozitii sunt pe IESI, din DATE (Acasa si banda de cont le citeau din DOM-ul paginii T212 -
   // „nimic roșu” pana deschideai T212). null cat preturile nu sunt aduse pentru toate (semaforul ar fi „fără date”, nu „țin”).
   t212.nrIesi = brute.length && brute.every(function (x) { return t212.bare[x.ticker]; }) ? poz.filter(function (p) { return p.sem.nivel === "iesi"; }).length : brute.length ? null : 0;
@@ -315,10 +363,10 @@ function t212RandPozitie(p) {
     + '</tr>';
   // detaliul
   var info = [tr !== "fara-date" ? "trend " + tr + " (" + p.st.trend.tarie + ")" : "", p.st.distMax52 !== null ? "față de maximul pe 52 săpt. " + t212Pct(p.st.distMax52) : "", p.maxDupaCumparare ? "de la maximul de după cumpărare " + t212Pct(p.pret / p.maxDupaCumparare - 1) : "", t212.beta[p.ticker] ? "beta " + t212.beta[p.ticker].toFixed(2).replace(".", ",") : "", p.fxPpl && Math.abs(p.fxPpl) >= 1 ? "din rezultat, cursul dolar/leu: " + t212Lei(p.fxPpl) : ""].filter(Boolean).join(" · ");
-  var stanga = '<div><h5>De ce ' + niv[0] + '</h5>' + (p.sem.motive.length ? '<ul class="t212Motive">' + p.sem.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '')
-    + '<p class="t212Fac">' + escapeHtml(p.sem.ceAsFace) + '</p>'
-    + t212SfaturiHtml(p.sfaturi)
-    + (n && n.stopAtins ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> după regula asta, ' + escapeHtml(p.simbol) + ' a coborât deja sub stopul calculat — aș ieși (măcar jumătate), nu aș aștepta să „își revină”.</p>' : '')
+  // v100.54: o singura voce - Consilierul pozitiei (verdict, ce as face, bani, 3 motive, de ce, decizii, restul pliat); fara el, ca inainte
+  var stanga = '<div>' + (p.cons ? t212ConsHtml(p) : '<h5>De ce ' + niv[0] + '</h5>' + (p.sem.motive.length ? '<ul class="t212Motive">' + p.sem.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '')
+    + '<p class="t212Fac">' + escapeHtml(p.sem.ceAsFace) + '</p>' + t212SfaturiHtml(p.sfaturi))
+    + (!p.cons && n && n.stopAtins ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> după regula asta, ' + escapeHtml(p.simbol) + ' a coborât deja sub stopul calculat — aș ieși (măcar jumătate), nu aș aștepta să „își revină”.</p>' : '')
     + '<p class="tbSub">' + escapeHtml(info || (t212.inLucru ? "aduc prețurile zilnice…" : "fără prețuri zilnice pentru " + p.simbol)) + '</p>'
     + (n ? '<p class="tbSub"><b>Adaug doar la:</b> ' + (n.intrare && p.pret >= p.pretMediu ? t212Usd(n.intrare.pret) + " — " + escapeHtml(n.intrare.motiv) : escapeHtml(p.pret < p.pretMediu ? "— ești pe minus: nu adaug (așa a crescut NPA la 33.000 de lei)" : "— " + n.intrareMotiv)) + '</p>' : '') + '</div>';
   var v = function (camp, calc) { return pl[camp] != null ? pl[camp] : calc != null ? calc : ""; };

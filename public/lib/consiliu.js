@@ -240,6 +240,7 @@ var Consiliu = (function () {
   var FIX_ACT = { "stop-plan": 1, "trail-plan": 1, "stop-urcator": 1 };
   var PRIO_ACT = ["stop-plan", "trail-plan", "stop-urcator", "trend-jos-minus", "rezultate", "stop-maine", "fara-plan-minus", "trend-jos", "miscare-jos", "tinta-plan", "sf-istoric", "sf-pozitie", "trend-sus"];
   function prioAct(cod) { var i = PRIO_ACT.indexOf(cod); return i < 0 ? PRIO_ACT.length : i; }
+  var PA = function (v) { v = nr(v); return v === null ? "?" : v >= 1 ? v.toFixed(2) : v.toPrecision(3); };   // pretul unei actiuni: 2 zecimale
   var USD = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + " $"; }, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
   function alcatuiesteActiune(x) {
     x = x || {}; var sem = x.sem || {};
@@ -250,7 +251,7 @@ var Consiliu = (function () {
       cand.push({ cod: k.cod, nivel: k.nivel === "iesi" || k.nivel === "atentie" ? k.nivel : "bine", c: k.nivel === "iesi" ? "r" : k.nivel === "atentie" ? "g" : "v", titlu: mare(k.motiv), text: "", faCe: "", scurt: mic(k.motiv) });
     });
     if (niv && niv.stopAtins && !cand.some(function (m) { return m.cod === "stop-plan" || m.cod === "trail-plan"; }))
-      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + fp(niv.stopPozitie) + ")", text: niv.sursaTrail || "", faCe: "Ies (tot sau jumătate): stopul care urcă e atins.", scurt: "stopul care urcă e atins" });
+      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + PA(niv.stopPozitie) + " $)", text: niv.sursaTrail || "", faCe: "Ies (tot sau jumătate): stopul care urcă e atins.", scurt: "stopul care urcă e atins" });
     (Array.isArray(x.prob) ? x.prob : []).forEach(function (r) {
       if (!r || !r.titlu) return;
       if (/Atinge stopul mâine/.test(r.titlu) && nr(r.p) !== null && r.p >= 0.25) cand.push({ cod: "stop-maine", nivel: "atentie", c: "g", titlu: r.titlu + ": " + Math.round(r.p * 100) + "%", text: r.text || "", faCe: "Stopul e în mișcarea obișnuită a unei zile: n-aș adăuga; dacă țin, accept că poate fi atins mâine.", scurt: "stopul poate fi atins mâine (" + Math.round(r.p * 100) + "%)" });
@@ -260,7 +261,7 @@ var Consiliu = (function () {
     (Array.isArray(x.sfaturi) ? x.sfaturi : []).forEach(function (f) {
       if (!f || !f.titlu) return;
       if (f.nivel === "g") cand.push({ cod: "sf-" + (f.sursa || "sfat"), nivel: "atentie", c: "g", titlu: f.titlu, text: f.text || "", faCe: f.ceAsFace || "", scurt: mic(f.titlu) });
-      else rest.push({ titlu: f.titlu, text: [f.text, f.ceAsFace ? "👉 " + f.ceAsFace : ""].filter(Boolean).join(" ") });
+      else rest.push({ titlu: f.titlu, text: [f.text, f.ceAsFace ? "👉 " + f.ceAsFace : ""].filter(Boolean).join(" "), din: "sfat" });   // pagina le arata cu stirile lor
     });
     ordoneaza(cand, x.socoteala || null, FIX_ACT, prioAct);
     var motive = cand.slice(0, 3), avert = motive.filter(function (m) { return m.nivel !== "bine"; });
@@ -272,7 +273,7 @@ var Consiliu = (function () {
     var pret = nr(x.pret), pm = nr(x.pretMediu), q = nr(x.qty), cl = nr(x.costLei), fx = cl > 0 && q > 0 && pm > 0 ? cl / (q * pm) : null, bani = [];
     var cuLei = function (usd) { return USD(usd) + (fx ? " ≈ " + LEI(usd * fx) : ""); };
     if (pret > 0 && pm > 0 && q > 0) bani.push("acum: " + cuLei((pret - pm) * q));
-    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "la stopul care urcă (" + fp(niv.stopPozitie) + " $): " + cuLei((niv.stopPozitie - pm) * q) : "stopul care urcă (" + fp(niv.stopPozitie) + " $) e deja depășit");
+    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "la stopul care urcă (" + PA(niv.stopPozitie) + " $): " + cuLei((niv.stopPozitie - pm) * q) : "stopul care urcă (" + PA(niv.stopPozitie) + " $) e deja depășit");
     return { nivel: nivel, eticheta: ETICHETA[nivel], titlu: titlu, faCe: faCe, bani: bani.length ? bani.join(" · ") : null,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: null, extra: null }; }), rest: rest };
   }
@@ -308,12 +309,25 @@ var Consiliu = (function () {
     Object.keys(r).forEach(function (k) { var x = r[k], ic = typeof GridCalcul !== "undefined" ? GridCalcul.wilson(x.corecte, x.judecate) : [0, 1]; x.bani = Math.round(x.bani * 100) / 100; x.stare = x.judecate < 10 ? "necunoscut" : ic[0] > 0.5 ? "ajuta" : "nesigur"; });
     return r;
   }
+  // decizia pe actiune („am făcut / n-am făcut”): judecata la 5 zile de bursa pe PRETUL actiunii (si daca a vandut intre timp - se spune):
+  // r = (inchiderea a 5-a zi de dupa − pretul de atunci) × bucati × curs (fara curs: dolari)
+  function judecaDecizieActiune(lista, bare, acum) {
+    var a = nr(acum) !== null ? nr(acum) : Date.now();
+    return (Array.isArray(lista) ? lista : []).map(function (e) {
+      if (!e || nr(e.r) !== null || !(nr(e.pret) > 0) || !(nr(e.qty) > 0) || nr(e.t) === null) return e;
+      var z0 = Math.floor(e.t / 864e5), f = (Array.isArray(bare) ? bare : []).filter(function (x) { return x && Math.floor(x.t / 864e5) > z0 && x.t <= a; }).sort(function (x, y) { return x.t - y.t; });
+      if (f.length < 5) return e;
+      var o = {}; for (var k in e) o[k] = e[k];
+      o.r = Math.round((f[4].c - e.pret) * e.qty * (nr(e.fx) > 0 ? e.fx : 1) * 100) / 100; o.cum = "la 5 zile de bursă (pe prețul acțiunii)";
+      return o;
+    });
+  }
   // forma semaforului actiunilor (poza -> pagina alerts, fara schimbare acolo): {nivel, motive: [titluri], ceAsFace}
   function pentruPozaActiune(c) {
     if (!c || !c.nivel || c.nivel === "asteapta") return { nivel: "fara-date", motive: [c && c.titlu ? String(c.titlu) : "încă socotesc"], ceAsFace: "" };
     return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
       ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
   }
-  return { noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  return { judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

@@ -181,7 +181,8 @@ async function scenariu(lat, inal, nume) {
       assert.match(t, /Stop care urcă după maxim/); assert.match(t, /Țintă/);
       // v89: sfaturile consilierului in detaliu + "Piata azi" sus
       const tDet = await b.ev(`document.getElementById("t212Det-${tk0}").innerText`);
-      assert.match(tDet, /Sfaturi/i, "blocul de sfaturi din detaliu"); FARA_GUNOI(tDet);
+      // v100.54 (o singura voce): sfaturile sunt motive ale Consilierului (la vedere) sau in „Restul” pliat - nimic pierdut
+      assert.match(tDet, /Ce aș face eu/i, "Consilierul pozitiei in detaliu"); assert.match(tDet, /Restul|Sfaturi/i, "sfaturile: motive sau Restul"); FARA_GUNOI(tDet);
       await panaCand(b, `/Nasdaq/.test(document.querySelector("#t212Card [data-piata-azi]").innerText)`, 30000, "Piata azi");
       // v90: ideile de cumparare - randuri cu "Biletul", nota cinstita (filtru, nu predictie)
       const ti = await b.ev(`document.getElementById("t212Idei").innerText`);
