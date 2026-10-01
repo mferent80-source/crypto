@@ -69,7 +69,11 @@ var Obiceiuri = (function () {
     // v100.45 (I-475): planul potrivit monedei - cat de des o zi obisnuita ajunge la stopul planului (din profilul monedei)
     if (o.planMoneda && o.planMoneda.text) R.push({ cod: "plan-moneda", ok: !o.planMoneda.avertizare, text: o.planMoneda.text });
     var so = subOOra(o.trades);
-    return { trecut: R.every(function (r) { return r.ok; }), reguli: R, sfaturi: so ? [so.text] : [] };
+    // v100.47 (I-469 + pachetul 2b): situatiile asemanatoare pe botii lui si probabilitatile pe gridul propus - informatie, nu reguli
+    var sf = so ? [so.text] : [];
+    if (o.asemanatoare && o.asemanatoare.text) sf.push("👥 " + o.asemanatoare.text);
+    if (o.sansa) sf.push(String(o.sansa));
+    return { trecut: R.every(function (r) { return r.ok; }), reguli: R, sfaturi: sf };
   }
 
   // ---- v100.43 (I-468): FRANA CONTULUI pe botii reali. Pragurile lui (implicit −20 USDT pe zi, −60 pe 7 zile, 3 inchisi pe minus la

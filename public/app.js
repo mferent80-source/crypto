@@ -5131,7 +5131,10 @@ async function gridPoarta(){
   var mG=grPlanMemo.grid,gvG=mG&&mG.cheie&&grPlanMemo.grid.cheie.indexOf(f.simbol+"|")===0?mG.v:null,taG=gvG&&gvG.ta&&gvG.plan&&gvG.plan.minus===plan.minus?gvG.ta:null,pmG=null;
   if(taG&&!(taG.dir===f.dir&&taG.levier===Math.max(1,Math.floor(lev))))taG=null;
   if(prG&&taG&&(f.dir==="long"||f.dir==="short")){var EG=(taG.suma||0)*(taG.levier||1);pmG=ProfilMoneda.planPeMoneda({profil:prG,dir:f.dir,dist:taG.d,laDist:function(dd){return -GridPlan.pierdere(EG,dd,taG.u)}})}
-  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({planMoneda:pmG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
+  // v100.47 (I-469): boții lui in situatii asemanatoare cu gridul propus (aceeasi directie, latime/pas/levier apropiate, starea pietei din fisa)
+  var asG=null;try{var dCz=await getJSON("/api/istoric-bot?action=cazuri"),stP=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare;
+    if(dCz&&dCz.cazuri&&dCz.cazuri.cazuri&&stP&&f.pret>0)asG=Asemanatoare.vecini(dCz.cazuri.cazuri,{dir:f.dir,lev:Math.max(1,Math.floor(lev)),lat:(stP.sus-stP.jos)/f.pret,pas:stP.pas-2*GridCalcul.C.COMISION_GRILA,stare:Probabilitati.stareDinRegim(f.regim),investit:grNumar($("grSuma")&&$("grSuma").value)||stP.suma})}catch(e){asG=null}
+  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({planMoneda:pmG,asemanatoare:asG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
 }
@@ -5618,6 +5621,15 @@ function tbIndicatoriHtml(rez){
     +(cu.length?cu.map(rnd).join(""):'<p class="tbSub">Niciun indicator aprins acum nu schimbă, dovedit, cât de des e atinsă marginea — citește-i ca pe vreme, nu ca pe semnal.</p>')
     +(fara.length?'<details class="tbProbFara"><summary>Fără semn · '+fara.length+'</summary>'+fara.map(rnd).join("")+'</details>':'');
 }
+// v100.47 (I-469): boții LUI in situatii asemanatoare (KV cazuri, colectorul o data pe zi); vecinii se aleg aici
+var tbCazuri={la:0,l:null,inLucru:false};
+function tbCazuriAdu(){if(tbCazuri.inLucru||Date.now()-tbCazuri.la<30*60000)return;tbCazuri.inLucru=true;getJSON("/api/istoric-bot?action=cazuri").then(function(d){tbCazuri.l=d&&d.cazuri&&d.cazuri.cazuri||null}).catch(function(){tbCazuri.l=null}).then(function(){tbCazuri.la=Date.now();tbCazuri.inLucru=false;if(tbStare.bot)tbDeseneazaProb(tbStare.bot)})}
+function tbAsemanatoareHtml(b,rez){
+  tbCazuriAdu();var p=botiNr(b&&b.pretCurent),jos=botiNr(b&&b.gridJos),sus=botiNr(b&&b.gridSus);
+  if(!tbCazuri.l||!(p>0)||!(sus>jos))return "";
+  var g=TabloExtra.geometrieBot(b),v=Asemanatoare.vecini(tbCazuri.l,{dir:String(b.directie||"").toLowerCase(),lev:botiNr(b.levier)||1,lat:(sus-jos)/p,pas:g?g.netPct:null,stare:rez&&rez.stare||null,investit:botiNr(b.investit)});
+  return '<h4 class="tbProbH">👥 Boții tăi în situații asemănătoare</h4><p class="tbSub">'+escapeHtml(v.text)+'</p>';
+}
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
   var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;
@@ -5631,7 +5643,7 @@ function tbDeseneazaProb(b){
       return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+P(x.p)+'%</b>'
         +'<div class="tbProbBanda" role="img" aria-label="'+P(x.p)+'%, interval de încredere '+lo+'–'+hi+'%">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b></div>'
         +'<p class="tbSub">'+escapeHtml(x.text)+'</p></div>'}).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
-    +tbIndicatoriHtml(rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
+    +tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
 }
 // v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
 // Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.

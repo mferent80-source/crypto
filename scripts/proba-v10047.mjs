@@ -86,5 +86,34 @@ await test("pagina + colector: blocul indicatorilor in sectiune (cu semn la vede
   assert.match(tp, /Dovada\.peBot\(/); assert.match(col, /dovada\.js/);
 });
 
+let AS = null; try { AS = new Function("Probabilitati", `${lib("asemanatoare.js")}; return Asemanatoare;`)(PB); } catch { AS = null; }
+await test("cazuri: doar ce se stia la pornire - starea din barele de DINAINTE de pornire; fara bare -> stare null", () => {
+  assert.ok(AS && typeof AS.cazuri === "function", "lipseste Asemanatoare.cazuri");
+  const b = mers(120 * 24, 0.006, 2), pornit = b[1000].t + 30 * 60000;
+  const tr = [{ id: "a", moneda: "X", dir: "long", levier: 3, investit: 50, pornit, jos: 90, sus: 110, pretInit: 100, pasNet: 0.004, pct: -0.02, durataOre: 10 }];
+  const c = AS.cazuri(tr, () => b)[0];
+  assert.equal(c.stare, PB.stareLa(b.filter((x) => x.t + ORA <= pornit), 999)); assert.ok(Math.abs(c.lat - 0.2) < 1e-9); assert.equal(c.ora, new Date(pornit).getUTCHours());
+  assert.equal(AS.cazuri(tr, () => null)[0].stare, null);
+});
+await test("vecini: aceeasi directie, latime/pas/levier apropiate, aceeasi stare -> median, % pe plus, cel mai rau; sub 10 -> „prea puține”", () => {
+  const baza = (i, o) => ({ id: "c" + i, moneda: "X", dir: "long", lev: 3, lat: 0.1, pas: 0.004, ora: 10, stare: "liniste-lateral", pct: (i % 4 === 0 ? -0.05 : 0.02), ore: 12, ...o });
+  const cz = Array.from({ length: 30 }, (_, i) => baza(i)).concat(Array.from({ length: 30 }, (_, i) => baza(100 + i, { dir: "short", pct: -0.5 })));
+  const v = AS.vecini(cz, { dir: "long", lev: 3, lat: 0.11, pas: 0.0045, stare: "liniste-lateral", investit: 100 });
+  assert.equal(v.n, 30); assert.ok(v.pePlus > 0.7 && v.pePlus < 0.8); assert.equal(v.ceaMaiReaPct, -0.05); assert.match(v.text, /30 de situații/); assert.match(v.text, /USDT/);
+  const p = AS.vecini(cz.slice(0, 6), { dir: "long", lev: 3, lat: 0.1, pas: 0.004, stare: "liniste-lateral", investit: 100 });
+  assert.match(p.text, /prea puține/i); assert.equal(p.medianaPct, null);
+  assert.match(AS.vecini(cz, { dir: "neutru", lev: 3, lat: 0.1, pas: 0.004, stare: null, investit: 100 }).text, /prea puține/i, "neutru cere neutru");
+});
+await test("server + pagina: cazurile in KV (pana la 384 KB), Tabloul si poarta le folosesc", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const cz = Array.from({ length: 2300 }, (_, i) => ({ id: "c" + i, moneda: "XYZ", dir: "long", lev: 3, lat: 0.1234, pas: 0.0041, ora: 10, stare: "liniste-lateral", pct: -0.0123, ore: 12.5 }));
+  const r = await mod.onRequestPost({ request: cer("POST", "action=cazuri", { la: 1, cazuri: cz }), env }); assert.equal(r.status, 200, await r.clone().text());
+  assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=cazuri"), env })).json()).cazuri.cazuri.length, 2300);
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"); assert.match(app, /Asemanatoare\.vecini\(/); assert.match(app, /asemanatoare:/);
+  const ob = fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8"); assert.match(ob, /o\.asemanatoare/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
