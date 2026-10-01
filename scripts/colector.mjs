@@ -749,7 +749,7 @@ async function pozitiiPentruPoza() {
       const fx = costLei > 0 && p.qty > 0 && p.pretMediu > 0 ? costLei / (p.qty * p.pretMediu) : null;
       if (!(x.ticker in jurnaleAct)) { const jv = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(x.ticker)).catch(() => null); jurnaleAct[x.ticker] = jv && Array.isArray(jv.log) ? jv.log : []; }
       // revizia 01.10 (I2): doar verdictul CONFIRMAT (ch.stare.acum - 2 ture la rand), nu fiecare pâlpâire a pozei
-      const j0 = jurnaleAct[x.ticker], j1 = Consiliu.noteazaActiune(j0, ch.stare.acum, p.pret, p.qty, fx, Date.now());
+      const j0 = jurnaleAct[x.ticker], j1 = Consiliu.noteazaActiune(j0, ch.stare.acum, p.pret, p.qty, fx, Date.now(), { stare: ActiuniSemnale.cheieSituatie(st) });
       if (j1.length !== j0.length) { await trimite("/api/istoric-bot?action=semneAct", { bot: x.ticker, log: j1 }); jurnaleAct[x.ticker] = j1; }
     } catch (e) { jurnal("consilier actiune", x.ticker, e.message); }
     // v98.1: `la` = cand a fost citit pretul T212 (pagina il arata cu chip „T212" cat e proaspat); `prev` = inchiderea ultimei sesiuni incheiate (NY)
@@ -994,7 +994,7 @@ async function turaRaport(acum) {
     let lab = null; try { const v = await cere("/api/istoric-bot?action=laborator"); lab = v && v.laborator; } catch (e) {}
     const rap = Obiceiuri.raportDuminica({ trades, acum, socoteala: soc, laborator: lab, autopsie: Obiceiuri.autopsie(socotealaLoguri, acum) });   // v101.30 (I-478)
     // v85: si actiunile (Trading 212), din istoricul strans acasa
-    try { const h = await cere("/api/t212?action=istoric"); if (h && Array.isArray(h.umpleri) && h.umpleri.length) rap.linii = rap.linii.concat(ActiuniSemnale.raportSaptamana(T212.perechi(h.umpleri).inchise, acum)); } catch (e) { jurnal("raport t212", e.message); }
+    try { const h = await cere("/api/t212?action=istoric"); if (h && Array.isArray(h.umpleri) && h.umpleri.length) rap.linii = rap.linii.concat(ActiuniSemnale.raportSaptamana(T212.perechi(h.umpleri).inchise, acum)); rap.linii = rap.linii.concat(Consiliu.autopsieActiuni(jurnaleActLoguri, acum).linii);   /* v101.36 */ } catch (e) { jurnal("raport t212", e.message); }
     await trimite("/api/istoric-bot?action=raport", { la: acum, linii: rap.linii, saptamana: r.data });
     if (await trimiteAlerta({ nivel: "info", titlu: "Raportul de duminică (" + r.data + ")", mesaj: rap.linii.join("\n") }, null, "raport")) m.raportTrimis = r.data;
   } catch (e) { jurnal("raport ESEC", e.message); }
@@ -1121,12 +1121,13 @@ async function simboluriProfil() {
 // v101.33 (actiunile T212, pachetul 3): socoteala Consilierului pe actiuni - o data pe zi (ora Romaniei): jurnalele tickerelor, judecate la 5
 // zile de bursa pe barele zilnice, scrise inapoi, adunate pe motiv si lei -> KV socoteala-actiuni (Consilierul ordoneaza motivele dupa ea)
 let socActZi = null, socActInLucru = false, socotealaAct = null;
+let jurnaleActLoguri = [];   // v101.36: jurnalele Consilierului pe actiuni, pentru autopsia din raportul de duminica
 async function turaSocotealaActiuni() {
   const zi = saptamanaRo(Date.now()).data;
   if (process.env.COLECTOR_FARA_T212 || socActInLucru || socActZi === zi) return;
   socActInLucru = true;
   try {
-    const l = await cere("/api/istoric-bot?action=semneActLista"), jurnale = [];
+    const l = await cere("/api/istoric-bot?action=semneActLista"), jurnale = [], logActNou = [];
     for (const tk of (l && l.tickere) || []) {
       await new Promise((r) => setTimeout(r, 700));
       const v = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(tk)).catch(() => null); let j = v && Array.isArray(v.log) ? v.log : [];
@@ -1134,9 +1135,9 @@ async function turaSocotealaActiuni() {
         try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)), nou = Consiliu.judecaActiune(j, GridCalcul.bareBursa(d && d.randuri || [], Date.now()), Date.now());
           if (JSON.stringify(nou) !== JSON.stringify(j)) { await trimite("/api/istoric-bot?action=semneAct", { bot: tk, log: nou }); j = nou; if (tk in jurnaleAct) jurnaleAct[tk] = nou; } } catch (e) { jurnal("socoteala actiuni", tk, e.message); }   // memoria pozei ia judecatile (altfel urmatoarea notare le-ar suprascrie)
       }
-      jurnale.push(j);
+      jurnale.push(j); logActNou.push({ ticker: tk, log: j });
     }
-    socotealaAct = Consiliu.socotealaActiuni(jurnale);
+    socotealaAct = Consiliu.socotealaActiuni(jurnale); jurnaleActLoguri = logActNou;
     await trimite("/api/istoric-bot?action=socotealaAct", { la: Date.now(), peCod: socotealaAct });
     socActZi = zi; jurnal("socoteala actiuni:", jurnale.length, "tickere,", Object.keys(socotealaAct).length, "motive");
   } catch (e) { jurnal("socoteala actiuni ESEC", e.message); }

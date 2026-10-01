@@ -71,5 +71,34 @@ await test("pagina T212: graficul in detaliul pozitiei - comutatoare proprii (t2
   assert.ok(/profilul vine de la colector/.test(e), "fara profil: spune de ce lipsesc benzile");
 });
 
+// ---- pasul 3: autopsia sfaturilor gresite pe actiuni ----
+const CS = new Function(`${lib("consiliu.js")}; return Consiliu;`)();
+await test("noteazaActiune pastreaza starea de atunci; jurnalele vechi raman fara ea", () => {
+  const c = { nivel: "iesi", motive: [{ cod: "trend-jos" }] };
+  assert.equal(CS.noteazaActiune([], c, 10, 1, null, 1000, { stare: "jos|calm|departe" })[0].stare, "jos|calm|departe");
+  assert.ok(!("stare" in CS.noteazaActiune([], c, 10, 1, null, 1000)[0]));
+});
+await test("autopsia pe actiuni: cele mai scumpe 3 sfaturi gresite ale saptamanii (starea de atunci, ce a urmat); tiparul pe ZILE distincte, Wilson 99% > 50%, ipoteza", () => {
+  are(CS.autopsieActiuni, "Consiliu.autopsieActiuni");
+  const acum = 60 * Z, e = (zi, nivel, cod, bani, stare, r = 0) => ({ t: acum - zi * Z, coduri: [cod], nivel, pret: 10, qty: 10, fx: 4.5, r, bani, inLei: true, c5: 11, ...(stare ? { stare } : {}) });
+  const intc = [e(2, "iesi", "trend-jos", -45, "jos|calm|departe"), e(3, "tine", "trend-sus", -20), e(4, "atentie", "miscare-jos", -5, "lateral|dupa-miscare|departe"), e(5, "iesi", "trend-jos", 30, "jos|calm|departe", 1)];
+  const tip = []; for (let d = 15; d < 27; d++) tip.push(e(d, "iesi", "trend-jos", -10, "sus|calm|departe"));   // 12 zile distincte, toate gresite, in afara saptamanii
+  const amd = tip.concat(tip.map((x) => ({ ...x })));   // aceleasi zile pe a doua actiune: tot 12 zile, nu 24
+  const a = CS.autopsieActiuni([{ ticker: "INTC_US_EQ", log: intc }, { ticker: "AMD_US_EQ", log: amd }], acum);
+  assert.deepEqual(a.scumpe.map((x) => x.cost), [-45, -20, -5]);
+  const tx = a.linii.join("\n");
+  assert.match(tx, /INTC/); assert.match(tx, /starea de atunci: nenotată/); assert.match(tx, /trend în jos/); assert.match(tx, /45,00 lei/);
+  assert.ok(a.tipar, "tiparul trebuie gasit"); assert.equal(a.tipar.judecate, 12, "zile distincte, nu intrari"); assert.equal(a.tipar.gresite, 12);
+  assert.match(a.tipar.text, /ipoteză/); assert.match(a.tipar.text, /n-am schimbat nimic/);
+  const putin = CS.autopsieActiuni([{ ticker: "X_US_EQ", log: tip.slice(0, 9) }], acum);
+  assert.equal(putin.tipar, null, "sub 10 zile: nicio regula"); assert.match(putin.linii.join("\n"), /Niciun tipar repetat sigur/);
+  assert.match(CS.autopsieActiuni([], acum).linii.join("\n"), /Niciun sfat greșit judecat/);
+});
+await test("colectorul: noteaza starea, tine jurnalele pentru raport si pune autopsia in raportul de duminica", () => {
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.ok(/noteazaActiune\(j0, ch\.stare\.acum, [^;]*\{ stare: ActiuniSemnale\.cheieSituatie\(st\) \}/.test(col), "noteaza starea");
+  assert.ok(/jurnaleActLoguri/.test(col) && /Consiliu\.autopsieActiuni\(jurnaleActLoguri, acum\)/.test(col), "autopsia in raport");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

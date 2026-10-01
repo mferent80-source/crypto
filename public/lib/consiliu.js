@@ -283,12 +283,14 @@ var Consiliu = (function () {
   }
   // ---- socoteala Consilierului actiunilor, pe motiv si in lei: verdictul notat o data pe schimbare, judecat la 5 zile de bursa pe
   // pret × bucati × curs. IESI/ATENTIE au dreptate daca pretul a scazut (iesind salvai diferenta); TINE, daca a crescut.
-  function noteazaActiune(j, c, pret, qty, fx, acum) {
+  function noteazaActiune(j, c, pret, qty, fx, acum, extra) {
     j = Array.isArray(j) ? j.slice() : [];
     if (!c || (c.nivel !== "iesi" && c.nivel !== "atentie" && c.nivel !== "tine") || !(nr(pret) > 0) || !(nr(qty) > 0)) return j;
     var coduri = (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return m && m.cod; }).filter(Boolean).sort(), u = j[j.length - 1];
     if (u && u.nivel === c.nivel && (u.coduri || []).join(",") === coduri.join(",")) return j;
-    j.push({ t: nr(acum) !== null ? nr(acum) : Date.now(), coduri: coduri, nivel: c.nivel, pret: nr(pret), qty: nr(qty), fx: nr(fx) > 0 ? nr(fx) : null });
+    var e = { t: nr(acum) !== null ? nr(acum) : Date.now(), coduri: coduri, nivel: c.nivel, pret: nr(pret), qty: nr(qty), fx: nr(fx) > 0 ? nr(fx) : null };
+    if (extra && extra.stare) e.stare = String(extra.stare);   // v100.56: starea de atunci (trend|miscare|maxim), pentru autopsie
+    j.push(e);
     return j.slice(-200);
   }
   function judecaActiune(j, bare, acum) {
@@ -301,6 +303,44 @@ var Consiliu = (function () {
       o.bani = Math.round((stai ? c5 - e.pret : e.pret - c5) * e.qty * (e.fx || 1) * 100) / 100; o.inLei = !!e.fx; o.c5 = c5;
       return o;
     });
+  }
+  // v100.56 (actiunile T212, pachetul 5): autopsia - cele mai scumpe sfaturi gresite ale saptamanii (ce a urmat in 5 zile de bursa) si tiparul
+  // repetat (motiv x stare) ca regula PROPUSA: zile distincte >= 10, marginea de jos Wilson 99% a greselilor > 50%, cost < 0 - ipoteza, nimic schimbat
+  var ET_ST = { sus: "trend în sus", lateral: "trend neclar", jos: "trend în jos", calm: "fără mișcare mare", "dupa-miscare": "după o mișcare mare", departe: "departe de maximul pe 7 zile", "langa-max": "lângă maximul pe 7 zile" };
+  var NV_ACT = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
+  function etStare(s) { return s ? String(s).split("|").map(function (k) { return ET_ST[k] || k; }).join(", ") : "nenotată (sfat dinainte de 01.10)"; }
+  function autopsieActiuni(loguri, acum) {
+    acum = nr(acum) !== null ? nr(acum) : Date.now(); var ZI = 864e5, toate = [];
+    (Array.isArray(loguri) ? loguri : []).forEach(function (L) {
+      (L && Array.isArray(L.log) ? L.log : []).forEach(function (e) {
+        if (!e || (e.r !== 0 && e.r !== 1) || nr(e.bani) === null || nr(e.t) === null) return;
+        toate.push({ ticker: L.ticker || "?", nivel: e.nivel, coduri: e.coduri || [], t: e.t, stare: e.stare || null, pret: e.pret, c5: e.c5, cost: e.bani, inLei: !!e.inLei, gresit: e.r === 0 });
+      });
+    });
+    var Ban = function (x) { return Math.abs(x.cost).toFixed(2).replace(".", ",") + (x.inLei ? " lei" : " $"); };
+    // un sfat se judeca la 5 zile de bursa (~7 calendaristice) dupa el: „saptamana” = sfaturile din ultimele 14 zile, deja judecate
+    var scumpe = toate.filter(function (x) { return x.gresit && x.cost < 0 && x.t > acum - 14 * ZI && x.t <= acum; }).sort(function (a, b) { return a.cost - b.cost; }).slice(0, 3);
+    var linii = scumpe.length ? scumpe.map(function (x) {
+      return (NV_ACT[x.nivel] || x.nivel) + " pe " + String(x.ticker).split("_")[0] + " (" + new Date(x.t).toISOString().slice(5, 10).split("-").reverse().join(".") + ", motive: " + x.coduri.join(", ") + "): starea de atunci: " + etStare(x.stare)
+        + "; în 5 zile de bursă prețul a mers de la $" + x.pret + " la $" + x.c5 + " — urmat, te-ar fi costat " + Ban(x) + ".";
+    }) : ["Niciun sfat greșit judecat pe acțiuni săptămâna asta."];
+    var gr = {};
+    toate.forEach(function (x) {
+      if (!x.stare || !(x.t > acum - 30 * ZI && x.t <= acum)) return;
+      x.coduri.forEach(function (cod) {
+        var k = cod + "|" + x.stare, g = gr[k] || (gr[k] = { cod: cod, stare: x.stare, zile: {}, cost: 0, inLei: x.inLei }), d = Math.floor(x.t / ZI), z = g.zile[d] || (g.zile[d] = { g: 0, b: 0 });
+        if (x.gresit) { z.g++; g.cost += x.cost; } else z.b++;
+      });
+    });
+    var wJos = function (k, n, zz) { var p = k / n, a = zz * zz; return (p + a / (2 * n) - zz * Math.sqrt(p * (1 - p) / n + a / (4 * n * n))) / (1 + a / n); };
+    var tip = Object.keys(gr).map(function (k) { var g = gr[k], z = Object.keys(g.zile).map(function (d) { return g.zile[d]; }); return { cod: g.cod, stare: g.stare, judecate: z.length, gresite: z.filter(function (q) { return q.g > q.b; }).length, cost: Math.round(g.cost * 100) / 100, inLei: g.inLei }; })
+      .filter(function (g) { return g.judecate >= 10 && wJos(g.gresite, g.judecate, 2.576) > 0.5 && g.cost < 0; })
+      .sort(function (a, b) { return a.cost - b.cost; })[0] || null;
+    if (tip) {
+      tip.text = "Regulă propusă pe acțiuni (ipoteză, n-am schimbat nimic): motivul „" + tip.cod + "” în starea „" + etStare(tip.stare) + "” a greșit în " + tip.gresite + " din " + tip.judecate + " zile, în ultimele 30 (" + Ban(tip) + " dacă-l urmai) — l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";
+      linii.push(tip.text);
+    } else linii.push("Niciun tipar repetat sigur încă pe acțiuni (trebuie cel puțin 10 zile judecate ale aceluiași motiv în aceeași stare, cu greșeala clar peste jumătate).");
+    return { scumpe: scumpe, tipar: tip, linii: ["Autopsia săptămânii pe acțiuni — sfaturile Consilierului care te-ar fi costat cel mai mult:"].concat(linii) };
   }
   function socotealaActiuni(jurnale) {
     var r = {};
@@ -345,6 +385,6 @@ var Consiliu = (function () {
     return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
       ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
   }
-  return { activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  return { autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;
