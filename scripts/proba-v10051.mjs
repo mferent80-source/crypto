@@ -123,5 +123,29 @@ await test("I-477 rutele: estimarile pe bot si corectia pe moneda in KV; colecto
   assert.equal(JT.din([{ strategyId: "9", base: "CRV", createTime: 1, closeTime: 2, buOrderType: "futures_grid", buOrderData: { exchangeOrderPairedCount: 7, totalRealizedProfit: 1 } }])[0]?.perechi ?? "fara-trade", 7);
 });
 
+// ---- pasul 5: autopsia sfaturilor gresite (I-478) ----
+await test("I-478 noteaza pastreaza starea de atunci (jurnalele vechi raman fara ea)", () => {
+  const l = SB.noteaza([], { nivel: "iesi", cod: "lichidare", motiv: "x" }, -3, 1000, { stare: "liniste-jos" }); assert.equal(l[0].stare, "liniste-jos");
+  const v = SB.noteaza([], { nivel: "iesi", cod: "lichidare", motiv: "x" }, -3, 1000); assert.equal(v.length, 1); assert.equal(v[0].stare, undefined);
+});
+await test("I-478 autopsia: cele mai scumpe 3 sfaturi gresite ale saptamanii, cu starea si ce a urmat; tiparul repetat -> regula PROPUSA (ipoteza)", () => {
+  are(OB && OB.autopsie, "Obiceiuri.autopsie");
+  const Z = 86400000, acum = 40 * Z, e = (cod, nivel, total, dupa, zi, stare) => ({ t: acum - zi * Z - Z, cod, nivel, motiv: cod + " zice", total, totalDupa: dupa, dreptate: false, judecatLa: acum - zi * Z, stare });
+  const log = [e("lichidare", "iesi", -3, 2.5, 1, "liniste-jos"), e("muta", "atentie", 1, 4, 2, "liniste-lateral"), e("tine", "tine", 2, -6, 3), e("muta", "atentie", 0, 1, 4, "liniste-lateral"), e("muta", "atentie", 0, 0.5, 12, "liniste-lateral"), { ...e("btc", "atentie", 0, -1, 2), dreptate: true },
+    { ...e("muta", "atentie", 0, -1, 5, "liniste-lateral"), dreptate: true }, { ...e("muta", "atentie", 0, -2, 6, "liniste-lateral"), dreptate: true }];   // muta in liniste-lateral: 3 gresite din 5 (0,6)
+  const a = OB.autopsie([{ id: "1", moneda: "CRV", log }], acum);
+  assert.deepEqual(a.scumpe.map((x) => x.cod), ["tine", "lichidare", "muta"]); assert.equal(a.scumpe[0].cost, -8);
+  assert.match(a.linii.join("\n"), /starea de atunci: nenotată/); assert.match(a.linii.join("\n"), /liniște, coboară încet/);
+  assert.ok(a.tipar && a.tipar.cod === "muta" && a.tipar.gresite === 3, JSON.stringify(a.tipar)); assert.match(a.tipar.text, /ipoteză/); assert.match(a.tipar.text, /n-am schimbat nimic/);
+  const r = OB.raportDuminica({ trades: [{ inchis: acum - Z, rezultat: 1, net: 1, grile: 1, pozitie: 0, comisioane: 0, funding: 0, greseli: [] }], acum, socoteala: {}, autopsie: a });
+  assert.match(r.linii.join("\n"), /Autopsia săptămânii/);
+  assert.equal(OB.autopsie([], acum).scumpe.length, 0);
+});
+await test("I-478 colectorul: noteaza cu starea fisei, pastreaza jurnalele pe moneda si da autopsia raportului de duminica", () => {
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /SemnaleBot\.noteaza\(log, x\.semafor, b\.profitTotal, acum, \{ stare: Probabilitati\.stareDinRegim\(/);
+  assert.match(col, /socotealaLoguri/); assert.match(col, /autopsie: Obiceiuri\.autopsie\(socotealaLoguri, acum\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

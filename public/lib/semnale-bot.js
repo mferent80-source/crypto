@@ -328,12 +328,15 @@ var SemnaleBot = (function () {
   }
 
   // ---- socoteala: fiecare semnal se noteaza cand apare si se judeca dupa 24 h ----
-  function noteaza(log, sem, total, acum) {
+  // v100.51 (I-478): extra.stare = starea pietei de atunci (regimul fisei x directia), pentru autopsia de duminica
+  function noteaza(log, sem, total, acum, extra) {
     log = Array.isArray(log) ? log.slice() : [];
     if (!sem || sem.nivel === "asteapta") return log;   // "socotesc" nu e un semnal de judecat dupa 24 h (revizia 28.09)
     var ult = log[log.length - 1];
     if (ult && ult.cod === sem.cod && ult.nivel === sem.nivel) return log;
-    log.push({ t: acum, cod: sem.cod, nivel: sem.nivel, motiv: sem.motiv || "", total: nr(total), dreptate: null });
+    var e = { t: acum, cod: sem.cod, nivel: sem.nivel, motiv: sem.motiv || "", total: nr(total), dreptate: null };
+    if (extra && extra.stare) e.stare = String(extra.stare);
+    log.push(e);
     return log.slice(-200);
   }
   // "atentie"/"iesi" au avut dreptate daca in 24 h totalul a scazut (iesirea ar fi salvat bani);

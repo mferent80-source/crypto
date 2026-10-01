@@ -124,9 +124,9 @@ const Consilier = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, 
 const Idei = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "idei.js"), "utf8") + "; return Idei;")(ActiuniSemnale);
 // Nasdaq-100 din aplicatie (o singura sursa: public/app.js, NDX_UNIVERSE)
 const NDX = (() => { try { const m = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").match(/const NDX_UNIVERSE=(\[[^\]]*\])/); return m ? JSON.parse(m[1]) : []; } catch { return []; } })();
-const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade);
 const ProfilMoneda = incarca("profil-moneda.js", "ProfilMoneda");
 const Probabilitati = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "probabilitati.js"), "utf8") + "; return Probabilitati;")(GridCalcul);   // v101.27 (pachetul 2a)
+const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", "Probabilitati", "SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade, Probabilitati, SemnaleBot);   // v101.30 (I-478): dupa Probabilitati - autopsia ia etichetele starilor
 const GraficBot = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "grafic-bot.js"), "utf8") + "; return GraficBot;")();   // v101.28 (pachetul 2b): RSI/EMA/Bollinger pentru Dovada
 const Dovada = new Function("GridCalcul", "GraficBot", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "dovada.js"), "utf8") + "; return Dovada;")(GridCalcul, GraficBot, Probabilitati);   // v101.28 (I-471)
 const Scenariu = incarca("scenariu.js", "Scenariu");   // revizia 01.10 (I2): sfaturile si in colector, din aceleasi intrari ca Tabloul
@@ -301,7 +301,8 @@ async function semnaleBot(b, ctx, acum) {
   // socoteala in KV
   let v = null; try { v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(b.id)); } catch (e) { v = null; }
   let log = v && v.semnale && Array.isArray(v.semnale.log) ? v.semnale.log : [];
-  log = SemnaleBot.judeca(SemnaleBot.noteaza(log, x.semafor, b.profitTotal, acum), b.profitTotal, b.investit, acum);
+  // v101.30 (I-478): si starea pietei de atunci (regimul fisei x directia), pentru autopsia de duminica
+  log = SemnaleBot.judeca(SemnaleBot.noteaza(log, x.semafor, b.profitTotal, acum, { stare: Probabilitati.stareDinRegim(f && f.regim) }), b.profitTotal, b.investit, acum);
   try { await trimite("/api/istoric-bot?action=semnale", { bot: b.id, log, acum: { la: acum, btc: x.btc, aglomerare: x.aglomerare, afaraOre, regimBtc } }); } catch (e) { jurnal("semnale KV", e.message); }
   semnaleUlt[b.id] = x;
   return x;
@@ -933,7 +934,7 @@ async function turaRaport(acum) {
       try { const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const s = SemnaleBot.socoteala((v && v.semnale && v.semnale.log) || []); for (const k of Object.keys(s)) { const x = soc[k] || (soc[k] = { judecate: 0, corecte: 0 }); x.judecate += s[k].judecate; x.corecte += s[k].corecte; } } catch (e) {}
     }
     let lab = null; try { const v = await cere("/api/istoric-bot?action=laborator"); lab = v && v.laborator; } catch (e) {}
-    const rap = Obiceiuri.raportDuminica({ trades, acum, socoteala: soc, laborator: lab });
+    const rap = Obiceiuri.raportDuminica({ trades, acum, socoteala: soc, laborator: lab, autopsie: Obiceiuri.autopsie(socotealaLoguri, acum) });   // v101.30 (I-478)
     // v85: si actiunile (Trading 212), din istoricul strans acasa
     try { const h = await cere("/api/t212?action=istoric"); if (h && Array.isArray(h.umpleri) && h.umpleri.length) rap.linii = rap.linii.concat(ActiuniSemnale.raportSaptamana(T212.perechi(h.umpleri).inchise, acum)); } catch (e) { jurnal("raport t212", e.message); }
     await trimite("/api/istoric-bot?action=raport", { la: acum, linii: rap.linii, saptamana: r.data });
@@ -998,14 +999,14 @@ async function judecaLaInchidere(id, x) {
 }
 // I-466: o data pe ora - (a) botii inchisi in ultimele 30 de zile cu semnale inca nejudecate se judeca pe rezultatul lor (arhiva);
 // (b) socoteala TUTUROR (inchisi + activi) -> KV „socoteala” (Tablou, raport) si lista sfaturilor TACUTE pentru Discord
-let socotealaLa = Date.now() - 3600000 + 3 * 60000, socotealaInLucru = false, socotealaTaci = {}, socotealaUltima = null;
+let socotealaLa = Date.now() - 3600000 + 3 * 60000, socotealaInLucru = false, socotealaTaci = {}, socotealaUltima = null, socotealaLoguri = [];   // v101.30 (I-478): jurnalele pe moneda, pentru autopsie
 async function turaSocoteala() {
   if (socotealaInLucru || Date.now() - socotealaLa < 3600000) return;
   socotealaInLucru = true;
   try {
     const inchisi = (await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 30 * 86400000);
     const act = await cere("/api/bot-orders"), activi = (act && Array.isArray(act.bots) ? act.bots : []).map((b) => String(b.id));
-    const loguri = []; let judecati = 0;
+    const loguri = [], peMoneda = []; let judecati = 0;
     for (const x of inchisi) {
       const id = String(x.strategyId || x.buOrderId || ""); if (!id) continue;
       await new Promise((r) => setTimeout(r, 700));   // serverul lasa 120 de citiri pe minut (pe 30.09 prima tura a luat RATE_LIMITED)
@@ -1015,9 +1016,11 @@ async function turaSocoteala() {
         const t = JurnalTrade.din([x])[0];
         if (t && Number.isFinite(t.net)) { const nou = SemnaleBot.judecaLaInchidere(log, t.net, t.investit || 0, t.inchis); if (JSON.stringify(nou) !== JSON.stringify(log)) { await trimite("/api/istoric-bot?action=semnale", { bot: id, log: nou, acum: s.acum || null }); log = nou; judecati++; } }
       }
-      loguri.push(log);
+      loguri.push(log); peMoneda.push({ id, moneda: JurnalTrade.moneda(x.base), log });
     }
-    for (const id of activi) { try { await new Promise((r) => setTimeout(r, 700)); const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const l = v && v.semnale && v.semnale.log; if (Array.isArray(l) && l.length) loguri.push(l); } catch {} }
+    const monedaAct = {}; for (const b of (act && Array.isArray(act.bots) ? act.bots : [])) monedaAct[String(b.id)] = JurnalTrade.moneda(b.baza);
+    for (const id of activi) { try { await new Promise((r) => setTimeout(r, 700)); const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)); const l = v && v.semnale && v.semnale.log; if (Array.isArray(l) && l.length) { loguri.push(l); peMoneda.push({ id, moneda: monedaAct[id] || "?", log: l }); } } catch {} }
+    socotealaLoguri = peMoneda;
     const peCod = SemnaleBot.socotealaToti(loguri);
     socotealaTaci = SemnaleBot.tacute(peCod); socotealaUltima = peCod;
     await trimite("/api/istoric-bot?action=socoteala", { la: Date.now(), boti: loguri.length, peCod });

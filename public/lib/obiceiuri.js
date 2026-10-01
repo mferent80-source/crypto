@@ -154,6 +154,8 @@ var Obiceiuri = (function () {
     // v100.43 (I-466): cel mai util si cel mai inutil sfat, pe bani (doar cele cu cel putin 10 cazuri judecate)
     var cuBani = sk.filter(function (k) { return s[k].judecate >= 10 && s[k].baniN > 0; }).sort(function (a, b) { return s[b].bani - s[a].bani; });
     if (cuBani.length) linii.push("Cel mai util sfat: " + (s[cuBani[0]].nume || cuBani[0]) + " (" + U(s[cuBani[0]].bani) + " dacă-l urmai)" + (cuBani.length > 1 && s[cuBani[cuBani.length - 1]].bani < 0 ? "; cel mai inutil: " + (s[cuBani[cuBani.length - 1]].nume || cuBani[cuBani.length - 1]) + " (" + U(s[cuBani[cuBani.length - 1]].bani) + ")" : "") + ".");
+    // v100.51 (I-478): autopsia sfaturilor gresite + tiparul repetat (regula propusa, ipoteza)
+    if (o.autopsie && Array.isArray(o.autopsie.linii) && o.autopsie.linii.length) { linii.push("Autopsia săptămânii — sfaturile care te-ar fi costat cel mai mult:"); o.autopsie.linii.forEach(function (l) { linii.push("• " + l); }); }
     if (o.laborator && Array.isArray(o.laborator.intrebari)) {
       var dov = o.laborator.intrebari.filter(function (q) { return q.verdict === "dovedit"; });
       linii.push(dov.length ? "Laboratorul a DOVEDIT: " + dov.map(function (q) { return q.titlu; }).join("; ") + "." : "Laboratorul: nimic dovedit încă.");
@@ -162,6 +164,42 @@ var Obiceiuri = (function () {
     else out.regula = "Regula săptămânii: pornește doar pe 🟢 și scrie-ți planul de ieșire înainte.";
     linii.push(out.regula);
     return out;
+  }
+
+  // v100.51 (I-478): autopsia - cele mai scumpe 3 sfaturi gresite ale saptamanii (judecate in ultimele 7 zile), cu starea pietei de atunci si
+  // ce a urmat; pe 30 de zile, tiparul repetat (acelasi sfat in aceeasi stare: ≥ 5 judecate, ≥ 3 gresite, ≥ 60% gresite, pe minus) devine o
+  // regula PROPUSA - ipoteza, nicio regula schimbata fara cererea lui. cost < 0 = cat te-ar fi costat daca-l urmai.
+  // loguri = [{ id, moneda, log: jurnalul de semnale al botului }]
+  function autopsie(loguri, acum) {
+    acum = acum || Date.now();
+    var ET = typeof Probabilitati !== "undefined" && Probabilitati.ETICHETE || {}, NS = typeof SemnaleBot !== "undefined" && SemnaleBot.NUME_SFAT || {};
+    var stai = function (e) { return e.nivel === "tine" || e.cod === "podea" || e.cod === "cu-botul"; }, toate = [];
+    (Array.isArray(loguri) ? loguri : []).forEach(function (L) {
+      (L && Array.isArray(L.log) ? L.log : []).forEach(function (e) {
+        if (!e || (e.dreptate !== true && e.dreptate !== false)) return;
+        var a = nr(e.total), d = nr(e.totalDupa); if (a === null || d === null) return;
+        toate.push({ moneda: L.moneda || "?", cod: e.cod, nivel: e.nivel, motiv: e.motiv || e.cod, t: e.t, la: nr(e.judecatLa) || e.t, stare: e.stare || null,
+          total: a, totalDupa: d, gresit: e.dreptate === false, cost: Math.round((stai(e) ? d - a : a - d) * 100) / 100 });
+      });
+    });
+    var f; try { f = new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }); } catch (x) { f = null; }
+    var cand = function (t) { return f ? f.format(new Date(t)) : new Date(t).toISOString().slice(5, 16).replace("T", " "); };
+    var scumpe = toate.filter(function (x) { return x.gresit && x.cost < 0 && x.la > acum - 7 * ZI && x.la <= acum; }).sort(function (a, b) { return a.cost - b.cost; }).slice(0, 3);
+    var linii = scumpe.length ? scumpe.map(function (x) {
+      return "„" + x.motiv + "” pe " + x.moneda + " (" + cand(x.t) + "): starea de atunci: " + (x.stare ? (ET[x.stare] || x.stare) : "nenotată (sfat dinainte de 01.10)") +
+        "; după: totalul de la " + U(x.total) + " la " + U(x.totalDupa) + " — urmat, te-ar fi costat " + Math.abs(x.cost).toFixed(2) + " USDT.";
+    }) : ["Niciun sfat greșit judecat săptămâna asta."];
+    var gr = {};
+    toate.forEach(function (x) { if (!x.stare || !(x.la > acum - 30 * ZI && x.la <= acum)) return; var k = x.cod + "|" + x.stare, g = gr[k] || (gr[k] = { cod: x.cod, stare: x.stare, judecate: 0, gresite: 0, cost: 0 }); g.judecate++; if (x.gresit) { g.gresite++; g.cost += x.cost; } });
+    var tip = Object.keys(gr).map(function (k) { return gr[k]; }).filter(function (g) { return g.judecate >= 5 && g.gresite >= 3 && g.gresite / g.judecate >= 0.6 && g.cost < 0; })
+      .sort(function (a, b) { return a.cost - b.cost; })[0] || null;
+    if (tip) {
+      tip.cost = Math.round(tip.cost * 100) / 100;
+      tip.text = "Regulă propusă (ipoteză, n-am schimbat nimic): " + (NS[tip.cod] || "„" + tip.cod + "”") + " în starea „" + (ET[tip.stare] || tip.stare) + "” a greșit de " + tip.gresite + " din " + tip.judecate +
+        " ori în 30 de zile (" + U(tip.cost) + " dacă-l urmai) — l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";
+      linii.push(tip.text);
+    } else linii.push("Niciun tipar repetat încă (trebuie cel puțin 5 cazuri judecate ale aceluiași sfat în aceeași stare).");
+    return { scumpe: scumpe, tipar: tip, linii: linii };
   }
 
   function reguliPersonale(trades, tz) {
@@ -189,6 +227,6 @@ var Obiceiuri = (function () {
     return { bare: b.length, net: r.net, usdt: r.net * (nr(s.suma) || 0), oprit: r.oprit, lichidat: r.lichidat, iesiri: r.iesiri, umpleri: r.umpleri, pretAcum: b[b.length - 1].c };
   }
 
-  return { frana: frana, franaIstoric: franaIstoric, praguriFrana: praguriFrana, inceputZiRo: inceputZiRo, poarta: poarta, istoricMoneda: istoricMoneda, subOOra: subOOra, portofoliu: portofoliu, raportDuminica: raportDuminica, reguliPersonale: reguliPersonale, hartie: hartie };
+  return { frana: frana, franaIstoric: franaIstoric, praguriFrana: praguriFrana, inceputZiRo: inceputZiRo, poarta: poarta, istoricMoneda: istoricMoneda, subOOra: subOOra, portofoliu: portofoliu, raportDuminica: raportDuminica, autopsie: autopsie, reguliPersonale: reguliPersonale, hartie: hartie };
 })();
 if (typeof globalThis !== "undefined") globalThis.Obiceiuri = Obiceiuri;
