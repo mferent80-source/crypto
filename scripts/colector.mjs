@@ -16,6 +16,7 @@ import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
 import { turaDimineata as turaDimineataModul } from "./lib/tura-dimineata.mjs";
 import { turaIdei as turaIdeiModul } from "./lib/tura-idei.mjs";
+import { turaIngust as turaIngustModul } from "./lib/tura-ingust.mjs";
 import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
 import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
@@ -491,6 +492,21 @@ async function turaLaborator() {
     else { jurnal("laborator NEURCAT: doar", r.monede, "monede"); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   } catch (e) { jurnal("laborator ESEC", e.message); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   laboratorInLucru = false;
+}
+
+// v101.38 (el, 01.10): gridul ingust pe <= 5 monede sugerate, cu 60 de zile de 15M - la 6 h, niciodata peste clasament/laborator
+const INGUST_MS = 6 * 3600000;
+let ingustLa = Number(ritm.ingust) || 0, ingustInLucru = false;
+async function turaIngust() {
+  if (process.env.COLECTOR_FARA_INGUST || ingustInLucru || clasamentInLucru || laboratorInLucru || Date.now() - ingustLa < INGUST_MS) return;
+  ingustInLucru = true;
+  try {
+    const cl = await cere("/api/istoric-bot?action=clasament");
+    await turaIngustModul({ clasament: cl && cl.clasament, Idei, GridProba, GridCalcul, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+      cere: (simbol, end) => cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")), trimite });
+    ingustLa = Date.now(); tineRitm("ingust", ingustLa);
+  } catch (e) { jurnal("ingust ESEC", e.message); ingustLa = Date.now() - INGUST_MS + 30 * 60000; }
+  ingustInLucru = false;
 }
 
 // v101.9: planul lui cel mai nou, cu suma si levierul botului de care tine, pentru proba „gridul dupa planul tau” din laborator;
@@ -1324,7 +1340,7 @@ async function bucla() {
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).catch((e) => jurnal("idei/dimineata", e.message));
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
   // v101.34: bucla e la 60 s - poza are ceasul ei (16–17 la 30 s); turaPoza se pazeste singura (ritmul, pozaInLucru)

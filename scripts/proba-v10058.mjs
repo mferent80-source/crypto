@@ -56,5 +56,28 @@ await test("rezumatul pentru idei: directie, interval, linii N+1, durata, cifrel
   assert.match(GP.rezumatIngust({ propus: false, motiv: "ceva anume" }), /ceva anume/);
 });
 
+await test("ruta ingust: POST + GET pastreaza rezultatul (curatat); colectorul il calculeaza pe <= 5 monede sugerate, 12 pagini, la 6 h", async () => {
+  const { pathToFileURL } = await import("node:url");
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); }, list: async ({ prefix }) => ({ keys: [...kv.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }) } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const ing = GP.ingust(osc(40), { dir: "neutru", pret: 100, suma: 100 });
+  const p = await mod.onRequestPost({ request: cer("POST", "action=ingust", { simbol: "CRV_USDT_PERP", ingust: { ...ing, la: 5, zile: 40, rau: "<script>" } }), env });
+  assert.equal(p.status, 200);
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=ingust&simbol=CRV_USDT_PERP"), env })).json();
+  assert.equal(g.ingust.propus, ing.propus); assert.equal(g.ingust.ore, ing.ore); assert.equal(g.ingust.setare.grile, ing.setare.grile); assert.equal(g.ingust.la, 5);
+  assert.ok(!("rau" in g.ingust), "doar campurile cunoscute");
+  const { turaIngust } = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-ingust.mjs")).href);
+  const cerute = [], scrise = [];
+  const bare = osc(40), klines = bare.map((b) => ({ time: b.t, open: b.o, high: b.h, low: b.l, close: b.c, volume: 1 }));
+  const cl = { monede: Array.from({ length: 8 }, (_, i) => ({ simbol: "M" + i + "_USDT_PERP", stare: "candidat", scor: 8 - i, dir: "neutru", regim: { miscare: false }, pret: 100 })) };
+  const Idei = { ideiBoti: (c, t, n) => c.monede.slice(0, n).map((x) => ({ ...x, moneda: x.simbol.split("_")[0], istoric: { n: 0 } })) };
+  const r = await turaIngust({ clasament: cl, Idei, GridProba: GP, GridCalcul: G, pauza: async () => {}, jurnal: () => {},
+    cere: async (simbol, end) => { cerute.push(simbol); return { data: { klines: end ? [] : klines } }; }, trimite: async (u, corp) => { scrise.push(corp); return { ok: true }; } });
+  assert.equal(r.monede, 5); assert.equal(scrise.length, 5); assert.ok(scrise[0].ingust && "propus" in scrise[0].ingust);
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /INGUST_MS = 6 \* 3600000/); assert.match(col, /turaIngustModul\(/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

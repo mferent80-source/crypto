@@ -66,6 +66,7 @@ export async function onRequestGet({request,env}){
   if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
+  if(action==="ingust"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}return json({simbol:s,ingust:v})}   // v100.58
   if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
@@ -277,6 +278,15 @@ export async function onRequestPost({request,env}){
     await env.ISTORIC.put("calibrare",JSON.stringify({la:nr(corp.la)||Date.now(),cal:out}));return json({ok:true});
   }
   // v100.45 (pachetul 1): profilul monedei (colectorul, noaptea) -> KV profil:<SIMBOL>
+  // v100.58: gridul ingust al unei monede sugerate (colectorul, la 6 h) - doar campurile cunoscute
+  if(action==="ingust"){
+    const s=simbolKv(corp&&corp.simbol),x=corp&&corp.ingust;if(!s||!x||typeof x!=="object")return json({error:"Lipseste simbol sau ingust"},400);
+    const st=x.setare&&typeof x.setare==="object"?x.setare:null,t=x.test&&typeof x.test==="object"?x.test:{},DIR=["long","short","neutru"];
+    const out={propus:x.propus===true,motiv:String(x.motiv||"").slice(0,240),dir:DIR.includes(x.dir)?x.dir:null,H:nr(x.H),ore:nr(x.ore),latime:nr(x.latime),pas:nr(x.pas),la:nr(x.la)||Date.now(),zile:nr(x.zile),
+      setare:st?{dir:DIR.includes(st.dir)?st.dir:null,pret:nr(st.pret),jos:nr(st.jos),sus:nr(st.sus),grile:nr(st.grile),pas:nr(st.pas),levier:nr(st.levier),levierSigur:nr(st.levierSigur),pesteSigur:st.pesteSigur===true,lichidare:nr(st.lichidare),stop:st.stop&&typeof st.stop==="object"?{jos:nr(st.stop.jos),sus:nr(st.stop.sus)}:null,suma:nr(st.suma)}:null,
+      test:{n:nr(t.n),nIndep:nr(t.nIndep),mediana:nr(t.mediana),pePlus:nr(t.pePlus),ic:Array.isArray(t.ic)?t.ic.slice(0,2).map(nr):null,celMaiRau:nr(t.celMaiRau),perechiZi:nr(t.perechiZi),lichidari:nr(t.lichidari)}};
+    await env.ISTORIC.put("ingust:"+s,JSON.stringify(out));return json({ok:true});
+  }
   if(action==="profil"){
     const s=simbolKv(corp&&corp.simbol),p=corp&&corp.profil;if(!s||!p||typeof p!=="object")return json({error:"Lipseste simbol sau profil"},400);
     // v100.52 (actiunile T212): forma actiunii - 1 si 5 zile de bursa, saritura la deschidere, zilele-eveniment
