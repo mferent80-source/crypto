@@ -79,5 +79,17 @@ await test("ruta ingust: POST + GET pastreaza rezultatul (curatat); colectorul i
   assert.match(col, /INGUST_MS = 6 \* 3600000/); assert.match(col, /turaIngustModul\(/);
 });
 
+await test("pagina: rândul ⚡ în idei, blocul „Varianta îngustă” în fișă (din colector, altfel calcul local pe ~31 de zile), eticheta de vârstă", () => {
+  are(GP.varstaIngust, "GridProba.varstaIngust");
+  const H = 3600000;
+  assert.equal(GP.varstaIngust({ la: 0 }, 2 * H).vechi, false); assert.match(GP.varstaIngust({ la: 0 }, 2 * H).text, /acum 2 h/);
+  assert.equal(GP.varstaIngust({ la: 0 }, 13 * H).vechi, true); assert.match(GP.varstaIngust({ la: 0 }, 13 * H).text, /vechi/);
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.match(e, /function tbIngustPt\(/); assert.match(e, /GridProba\.rezumatIngust\(/); assert.match(e, /action=ingust&simbol=/);
+  const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  assert.match(a, /function grIngustHtml\(/); assert.match(a, /h\+=grIngustHtml\(f\)/); assert.match(a, /ingustLocal=GridProba\.ingust\(/);
+  assert.match(a, /Varianta îngustă/); assert.match(a, /închide-l după/i); assert.match(a, /pe 31 de zile — mai puține ferestre/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

@@ -336,6 +336,17 @@ async function t212ListaSalveaza() {
   } catch (x) { toast("Lista nu s-a salvat: " + t212Eroare(x), "bad"); }
 }
 // v90: ideile de boti - candidatii din clasamentul colectorului, cu istoricul tau pe moneda
+// v100.58: gridul ingust al monedelor sugerate (colectorul, la 6 h) - adus o data la 10 min pe moneda
+var tbIngust = {};
+function tbIngustPt(simbol) {
+  var c = tbIngust[simbol];
+  if (!c || (!c.inLucru && Date.now() - c.la > 10 * 60000)) {
+    tbIngust[simbol] = { la: Date.now(), v: c ? c.v : null, inLucru: true };
+    getJSON("/api/istoric-bot?action=ingust&simbol=" + encodeURIComponent(simbol)).then(function (d) { tbIngust[simbol] = { la: Date.now(), v: d && d.ingust || null, inLucru: false }; tbIdeiRender(); })
+      .catch(function () { tbIngust[simbol].inLucru = false; });
+  }
+  return tbIngust[simbol] && tbIngust[simbol].v;
+}
 function tbIdeiRender() {
   var box = $("tbIdei"); if (!box || typeof Idei === "undefined") return;
   var cl = contTot.clasament, l = Idei.ideiBoti(cl, contTot.inchise || [], 5);
@@ -344,7 +355,7 @@ function tbIdeiRender() {
   else h += l.map(function (x) {
     var ist = x.istoric.n ? "istoricul tău: " + x.istoric.n + (x.istoric.n === 1 ? " bot" : " boți") + ", " + x.istoric.pePlus + " pe plus, " + (x.istoric.total >= 0 ? "+" : "−") + Math.abs(x.istoric.total).toFixed(2) + " USDT" : "n-ai mai avut boți pe ea";
     var det = [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ");
-    return '<div class="tbTodoRand"><span class="tbDunga ' + (x.istoric.n >= 3 && x.istoric.total < 0 ? "g" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist) + '</p></div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + escapeHtml(x.moneda) + '\')">Fișa</button></div>';
+    return '<div class="tbTodoRand"><span class="tbDunga ' + (x.istoric.n >= 3 && x.istoric.total < 0 ? "g" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist) + '</p>' + (function () { var g = typeof GridProba !== "undefined" && x.simbol ? tbIngustPt(x.simbol) : null; if (!g) return ''; var v = GridProba.varstaIngust(g, Date.now()); return '<p class="tbSub' + (g.propus ? '' : ' t212Estompat') + '">' + escapeHtml(GridProba.rezumatIngust(g)) + (v.text ? ' · ' + escapeHtml(v.text) : '') + '</p>'; })() + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + escapeHtml(x.moneda) + '\')">Fișa</button></div>';
   }).join("");
   box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>';
 }

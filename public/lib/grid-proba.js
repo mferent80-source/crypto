@@ -309,7 +309,12 @@ var GridProba = (function () {
     return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + " % lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana)
       + ", " + Math.round(r.test.pePlus * 100) + " % pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + r.test.nIndep + " ferestre independente)";
   }
-  return { ingust: ingust, rezumatIngust: rezumatIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  // cat de vechi e rezultatul colectorului (refacut la 6 h): peste 12 h se spune „vechi”
+  function varstaIngust(r, acum) {
+    var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
+    return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
+  }
+  return { ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;
