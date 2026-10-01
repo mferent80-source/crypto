@@ -165,16 +165,42 @@ var ActiuniSemnale = (function () {
 
   // "Daca ascultai de Radar" pe o cumparare: poarta refacuta DOAR cu zilele inchise inainte de cumparare.
   // Planul nu intra (atunci nu-l stim). inchise = T212.perechi().inchise (pentru recumpararea dupa pierdere).
+  // v100.55 (actiunile T212, pachetul 4): starea de la cumparare intr-o cheie - aceeasi stare ca poarta (trend | dupa miscare | langa maxim)
+  function cheieSituatie(s) {
+    if (!s || !s.trend || !/^(sus|lateral|jos)$/.test(s.trend.dir)) return null;
+    return s.trend.dir + "|" + (s.miscare && s.miscare.mare ? "dupa-miscare" : "calm") + "|" + (s.distMax7z !== null && s.distMax7z !== undefined && s.distMax7z > -0.02 ? "langa-max" : "departe");
+  }
+  var ET_SIT = { sus: "trend în sus", lateral: "trend neclar", jos: "trend în jos", calm: "fără mișcare mare", "dupa-miscare": "după o mișcare mare", departe: "departe de maximul pe 7 zile", "langa-max": "lângă maximul pe 7 zile" };
+  function grupSit(l) {
+    var pc = l.map(function (t) { return { pct: t.rezultat / t.cost, lei: t.rezultat }; }).sort(function (a, b) { return a.pct - b.pct; }), n = pc.length, tot = 0, plus = 0;
+    pc.forEach(function (x) { tot += x.lei; if (x.lei > 0) plus++; });
+    return { n: n, median: n ? (n % 2 ? pc[(n - 1) / 2].pct : (pc[n / 2 - 1].pct + pc[n / 2].pct) / 2) : null, pePlus: n ? plus / n : null,
+      celMaiRau: n ? { pct: Math.round(pc[0].pct * 10000) / 10000, lei: pc[0].lei } : null, total: Math.round(tot * 100) / 100, putine: n < 10 };
+  }
+  // „in situatii ca asta, din trade-urile tale”: inchise = T212.perechi().inchise; cf = t212:cf (cf[id].sit); doar costul > 0.
+  // Fara sector (n-avem sectorul actiunilor): in locul lui, aceeasi actiune in aceeasi stare
+  function situatiiCaAsta(inchise, cf, sit, ticker) {
+    var c = cf || {}, l = sit ? (Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && t.cost > 0 && isFinite(t.rezultat) && c[t.id] && c[t.id].sit === sit; }) : [];
+    return { sit: sit || null, ticker: ticker || null, eticheta: sit ? sit.split("|").map(function (k) { return ET_SIT[k] || k; }).join(", ") : "",
+      toate: grupSit(l), actiune: ticker ? grupSit(l.filter(function (t) { return t.ticker === ticker; })) : null };
+  }
+  function textSituatie(r) {
+    if (!r || !r.toate || !r.toate.n) return "În situații ca asta" + (r && r.eticheta ? " (" + r.eticheta + ")" : "") + ": niciun trade al tău judecat încă.";
+    var g = r.toate, Pc = function (x) { return (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };
+    var s = "În situații ca asta (" + r.eticheta + "), din trade-urile tale: " + g.n + " cazuri, median " + Pc(g.median) + ", " + Math.round(g.pePlus * 100) + "% pe plus, cel mai rău " + Pc(g.celMaiRau.pct) + (g.putine ? " — prea puține, un semn, nu o regulă" : "") + ".";
+    if (r.actiune && r.actiune.n) s += " Pe " + (String(r.ticker || "").split("_")[0] || "acțiunea asta") + " în aceeași stare: " + r.actiune.n + (r.actiune.n === 1 ? " caz" : " cazuri") + ", median " + Pc(r.actiune.median) + (r.actiune.putine ? " (prea puține)" : "") + ".";
+    return s;
+  }
   function laCumparare(t, bare, inchise) {
     var b = Array.isArray(bare) ? bare.filter(function (x) { return x.t + 8 * 3600000 <= t.pornit; }) : [];
-    if (b.length < 60) return { nivel: "fara-date", motive: ["prea puține zile de prețuri înainte de cumpărare"], greseli: [] };
-    if (!pretPotrivit(t, bare)) return { nivel: "fara-date", motive: ["prețurile găsite nu se potrivesc cu ale tale (split sau alt simbol)"], greseli: [] };
+    if (b.length < 60) return { nivel: "fara-date", motive: ["prea puține zile de prețuri înainte de cumpărare"], greseli: [], sit: null };
+    if (!pretPotrivit(t, bare)) return { nivel: "fara-date", motive: ["prețurile găsite nu se potrivesc cu ale tale (split sau alt simbol)"], greseli: [], sit: null };
     var st = stare(b, t.pretCumparare), ore = null;
     (Array.isArray(inchise) ? inchise : []).forEach(function (x) { if (x.ticker === t.ticker && x.rezultat < 0 && x.inchis <= t.pornit) { var o = (t.pornit - x.inchis) / 3600000; if (ore === null || o < ore) ore = o; } });
     var v = poarta({ stare: st, plan: null, faraPlan: true, vandutPeMinusAcumOre: ore }), g = [];
     if (st.miscare && st.miscare.mare) g.push("dupa-miscare");
     if (st.max7z && t.pretCumparare >= st.max7z * 0.98) g.push("langa-max7z");
-    return { nivel: v.nivel, motive: v.motive.slice(0, 4), greseli: g };
+    return { nivel: v.nivel, motive: v.motive.slice(0, 4), greseli: g, sit: cheieSituatie(st) };
   }
 
   // ---------------- preturile: intrare, stop, tinta, marime ----------------
@@ -446,6 +472,6 @@ var ActiuniSemnale = (function () {
     if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
     return mx;
   }
-  return { trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;
