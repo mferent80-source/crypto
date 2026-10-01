@@ -39,8 +39,43 @@ var ProfilMoneda = (function () {
     var ore = l.map(function (x) { return x.ore; }).filter(function (x) { return x !== null; }).sort(function (a, b) { return a - b; });
     return { n: l.length, pePlus: l.filter(function (x) { return x.v > 0; }).length, net: Math.round(l.reduce(function (s, x) { return s + x.v; }, 0) * 100) / 100, oreMediana: ore.length ? ore[Math.floor(ore.length / 2)] : null };
   }
+  // v100.52 (actiunile T212, pachetul 1): adaptorul de piata - bare ZILNICE, doar zilele de bursa; ferestre de 1 si 5 zile pornind
+  // la fiecare zi; saritura la deschidere (deschiderea vs inchiderea de ieri) e o distributie SEPARATA; zilele-eveniment (saritura
+  // strict peste P98, de obicei rezultatele) si split-urile (|saritura| > 40%) scot ferestrele care le contin din ziua obisnuita.
+  function calculeazaActiuni(bare, o) {
+    var acum = nr(o.acum) || Date.now();
+    var b = (Array.isArray(bare) ? bare : []).filter(function (x) { return x && nr(x.t) !== null && nr(x.o) > 0 && nr(x.l) > 0 && nr(x.h) >= nr(x.l) && nr(x.c) > 0 && x.t < acum; })
+      .sort(function (a, c) { return a.t - c.t; });
+    if (b.length < 120) return null;
+    var n = b.length, gap = [null], split = [false], i, j;
+    for (i = 1; i < n; i++) { var g = b[i].o / b[i - 1].c - 1; gap.push(g); split.push(Math.abs(g) > 0.4); }
+    var absG = []; for (i = 1; i < n; i++) if (!split[i]) absG.push(Math.abs(gap[i]));
+    absG.sort(function (a, c) { return a - c; });
+    var x98 = (absG.length - 1) * 0.98, lo98 = Math.floor(x98), p98 = absG.length ? absG[lo98] + ((absG[Math.min(absG.length - 1, lo98 + 1)] - absG[lo98]) * (x98 - lo98)) : 0;
+    var ev = gap.map(function (g, k) { return k > 0 && !split[k] && Math.abs(g) > p98 + 1e-9; });
+    function distr(k) {
+      var jos = [], sus = [];
+      for (var s = 1; s + k <= n; s++) {
+        var rau = false; for (j = s; j < s + k; j++) if (split[j] || ev[j]) { rau = true; break; }
+        if (rau) continue;
+        var o0 = b[s].o, mn = Infinity, mx = -Infinity;
+        for (j = s; j < s + k; j++) { if (b[j].l < mn) mn = b[j].l; if (b[j].h > mx) mx = b[j].h; }
+        jos.push(Math.max(0, 1 - mn / o0)); sus.push(Math.max(0, mx / o0 - 1));
+      }
+      return jos.length ? { jos: cuantile(jos), sus: cuantile(sus), n: jos.length, nIndep: Math.floor(jos.length / k) } : null;
+    }
+    var sar = [], evG = [], evT = [];
+    for (i = 1; i < n; i++) { if (split[i]) continue; if (ev[i]) { evG.push(Math.abs(gap[i])); evT.push(b[i].t); } else sar.push(Math.max(0, -gap[i])); }
+    evG.sort(function (a, c) { return a - c; });
+    var z1 = distr(1), z5 = distr(5);
+    if (!z1 || !z5 || !sar.length) return null;
+    return { v: 1, piata: "actiuni", simbol: String(o.simbol || ""), la: acum, deLa: b[0].t, panaLa: b[n - 1].t, zile: n, z1: z1, z5: z5,
+      sar: { jos: cuantile(sar), n: sar.length },
+      evenimente: { n: evG.length, zile: evT.slice(-20), mediana: evG.length ? evG[Math.floor(evG.length / 2)] : null, max: evG.length ? evG[evG.length - 1] : null } };
+  }
   function calculeaza(bare, o) {
     o = o || {};
+    if (o.piata === "actiuni") return calculeazaActiuni(bare, o);
     var acum = nr(o.acum) || Date.now();
     var b = (Array.isArray(bare) ? bare : []).filter(function (x) { return x && nr(x.t) !== null && nr(x.o) > 0 && nr(x.l) > 0 && nr(x.h) >= nr(x.l) && x.t + ORA <= acum; }).sort(function (a, c) { return a.t - c.t; });
     if (b.length < MIN_ZILE * 24) return null;
@@ -63,8 +98,17 @@ var ProfilMoneda = (function () {
     var x = Math.max(0, Math.min(1, nr(cu) === null ? 0.75 : cu)) * 20, i = Math.floor(x);
     return i >= 20 ? q[20] : q[i] + (q[i + 1] - q[i]) * (x - i);
   }
-  function moneda(s) { return String(s || "").toUpperCase().replace(/_USDT(_PERP)?$/, "").replace(/\.PERP$/, ""); }
-  function sursa(p) { return p ? "profilul " + (moneda(p.simbol) || "monedei") + ": " + p.zile + " de zile de bare de 1 h" : "prag fix (profilul monedei n-a venit încă de la colector)"; }
+  function moneda(s) { return String(s || "").toUpperCase().replace(/_USDT(_PERP)?$/, "").replace(/\.PERP$/, "").replace(/_US_EQ$|_EQ$/, ""); }
+  function sursa(p) {
+    if (p && p.piata === "actiuni") return "profilul " + (moneda(p.simbol) || "acțiunii") + ": " + p.zile + " zile de bursă (bare zilnice)";   // v100.52
+    return p ? "profilul " + (moneda(p.simbol) || "monedei") + ": " + p.zile + " de zile de bare de 1 h" : "prag fix (profilul monedei n-a venit încă de la colector)";
+  }
+  // v100.52 (actiunile T212): stopul care urca al pozitiei - coborarea obisnuita pe 5 zile de bursa (P75)
+  function pragStopActiune(p) {
+    if (!p || p.piata !== "actiuni") return null;
+    var d = prag(p, "z5", "jos", 0.75);
+    return d === null ? null : { dist: d, sursa: sursa(p) };
+  }
   function praguriMargine(p) {
     var j = prag(p, "z12", "jos", 0.75), s = prag(p, "z12", "sus", 0.75);
     // revizia 01.10: si frecventa(parte, dist) - in cate jumatati de zi moneda a ajuns atat de departe (textul spune cifra adevarata)
@@ -90,5 +134,5 @@ var ProfilMoneda = (function () {
       + " (" + sursa(p) + ").";
     return { frecventa: f, dist: d, distPropusa: dp, sumaPropusa: suma, avertizare: f > 0.5, maiStrans: d < dp, sursa: sursa(p), text: text };
   }
-  return { calculeaza: calculeaza, frecventa: frecventa, prag: prag, sursa: sursa, moneda: moneda, praguriMargine: praguriMargine, pragStop: pragStop, planPeMoneda: planPeMoneda };
+  return { pragStopActiune: pragStopActiune, calculeaza: calculeaza, frecventa: frecventa, prag: prag, sursa: sursa, moneda: moneda, praguriMargine: praguriMargine, pragStop: pragStop, planPeMoneda: planPeMoneda };
 })();
