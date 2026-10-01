@@ -287,8 +287,9 @@ await scenariu(390, 844, "telefon");
     await b.ev(`setAssetClass("CRYPTO");document.querySelector('.sideBtn[data-nav="t212"]').click()`);
     await panaCand(b, `!!document.querySelector("#t212Sus .t212Kpi")`, 40000, "cifrele contului");
     await asteapta(1500);
-    await test("monitor 1920 · cardul T212 are cel mult 1.180 px (ca demo-ul), nu tot ecranul", async () => {
-      assert.ok((await b.ev(`document.getElementById("t212Card").getBoundingClientRect().width`)) <= 1181);
+    // el, 01.10: „lățește puțin toată pagina” - 1.600 px (era 1.180, ca demo-ul; la 1920 ramaneau ~450 px goi), tot nu tot ecranul
+    await test("monitor 1920 · cardul T212 are 1.400–1.600 px (lat, dar nu tot ecranul)", async () => {
+      const w = await b.ev(`document.getElementById("t212Card").getBoundingClientRect().width`); assert.ok(w > 1400 && w <= 1601, "latimea " + w);
     });
     await test("monitor 1920 · Trading 212 e pagina lui: fara bara de cautare / blocul pietei / file deasupra", async () => {
       assert.equal(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none");
@@ -298,7 +299,7 @@ await scenariu(390, 844, "telefon");
       await b.ev(`navTo('tabloubot',true)`);
       await panaCand(b, `document.querySelectorAll("#tbTodoLista .tbTodoRand").length>0`, 60000, "lista 'ce ai de facut'");
       await asteapta(4000);
-      assert.ok((await b.ev(`document.querySelector("#tabloubot .tbCadru").getBoundingClientRect().width`)) <= 1181);
+      const wt = await b.ev(`document.querySelector("#tabloubot .tbCadru").getBoundingClientRect().width`); assert.ok(wt > 1400 && wt <= 1601, "latimea tabloului " + wt);
       assert.equal(await b.ev(`getComputedStyle(document.querySelector(".heroStrip")).display`), "none");
       const titluri = await b.ev(`[...document.querySelectorAll("#tbTodoLista .tbTodoRand b")].map(x=>x.textContent.toLowerCase())`);
       assert.equal(new Set(titluri).size, titluri.length, "randuri dublate: " + titluri.join(" | "));

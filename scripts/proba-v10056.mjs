@@ -127,5 +127,22 @@ await test("poza: la actiuni fara banda „alertele botului”; stopul tau egal 
   assert.match(b.svg, /alertele botului/); assert.match(b.svg, /stopul tău = al planului/);
 });
 
+// ---- el, 01.10: „lățește puțin toată pagina în toată app și graficul să fie mai mare peste tot” (1.600 px, graficul crește cu lățimea) ----
+await test("paginile refacute folosesc o singura latime comuna (--latime-pagina: 1600px), nu 1180", () => {
+  const css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
+  assert.match(css, /--latime-pagina:1600px/);
+  for (const sel of [".t212Card{", "#tabloubot .tbCadru{", "#jurnaltrade>*{", "#dash .acasa,#dash .acGrupuri{", "#scan .scNou,#scan .scVechi{", "#alerts .alCentru{"]) {
+    assert.ok(css.includes(sel + "max-width:var(--latime-pagina)"), sel + " fara latimea comuna");
+  }
+  assert.ok(!/max-width:1180px;margin/.test(css), "a ramas o limita de 1180px");
+});
+await test("graficul (boti si actiuni) creste cu latimea: pe PC 340–520 px de pret, pe telefon 270", () => {
+  const bare = bareZ(60, true), h = (W, ingust) => GB.desen({ bare, W, ingust, niv: [], st: {} }).inaltime;
+  assert.ok(h(1300, false) - h(800, false) >= 120, "la 1300 px graficul e mai inalt decat la 800: " + h(1300, false) + " vs " + h(800, false));
+  assert.ok(h(800, false) >= 340 + 8 + 46 + 8 + 26 + 20, "la 800 px cel putin 340 de pret: " + h(800, false));
+  assert.ok(h(2400, false) <= 520 + 8 + 46 + 8 + 26 + 20, "plafonat la 520");
+  assert.ok(h(390, true) >= 270 + 8 + 34 + 8 + 26 + 20, "pe telefon 270 de pret: " + h(390, true));
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

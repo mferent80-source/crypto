@@ -1658,10 +1658,12 @@ body.peTablou main>.note{display:none}
 @media (max-width:1100px){.t212Grila{grid-template-columns:1fr}}
 /* v85.6: pe ecrane late cardul se intindea pe 1.700 px ("mai labartat decat demo-ul") - latimea demo-ului, centrat;
    si bara de sus lipita nu mai acopera cifrele cand "Trading 212" coboara la card */
-.t212Card{max-width:1180px;margin-inline:auto;scroll-margin-top:84px}
+/* el, 01.10: „lățește puțin toată pagina” - o singura latime pentru paginile refacute (era 1180; la 1920 ramaneau ~450 px goi) */
+:root{--latime-pagina:1600px}
+.t212Card{max-width:var(--latime-pagina);margin-inline:auto;scroll-margin-top:84px}
 /* v86: Tabloul botului reasezat ca demo-ul (toata pagina): latimea demo-ului, scris 14px, verdictul + cifrele pe
    un rand, "Ce ai de facut acum", graficul + scenariile langa directie/bani/pe zi, restul pliat */
-#tabloubot .tbCadru{max-width:1180px;margin-inline:auto;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.4}
+#tabloubot .tbCadru{max-width:var(--latime-pagina);margin-inline:auto;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.4}
 #tabloubot .tbCadru>.sectionHead{margin:0}
 #tabloubot .tbBloc{padding:10px 12px}
 #tabloubot .tbBlocCap{margin:0 0 6px}
@@ -1755,7 +1757,7 @@ body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none
 .grFrana{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 /* v100.40 (audit 30.09): si fereastra Grid - pe telefon unealta incepea la 772 px, sub antetul vechi gol */
 body.peGrid .toolbar,body.peGrid .heroStrip,body.peGrid .tabs{display:none}
-#jurnaltrade>*{max-width:1180px;margin-left:auto;margin-right:auto}
+#jurnaltrade>*{max-width:var(--latime-pagina);margin-left:auto;margin-right:auto}
 #jurnaltrade{font-size:14px;line-height:1.4}
 #jurnaltrade #jtCrypto,#jurnaltrade #jtActiuni{display:flex;flex-direction:column;gap:8px}
 #jurnaltrade #jtCrypto[hidden],#jurnaltrade #jtActiuni[hidden]{display:none}
@@ -1815,7 +1817,7 @@ body.peGrid .toolbar,body.peGrid .heroStrip,body.peGrid .tabs{display:none}
 /* v92: Home "Piata azi" - acelasi limbaj ca Tabloul botului (demo aprobat 26.09) */
 body.peAcasa .heroStrip,body.peAcasa .tabs{display:none}
 body.peAcasa:not(.acMonedaDeschisa) .toolbar{display:none}
-#dash .acasa,#dash .acGrupuri{max-width:1180px;margin-inline:auto;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.4}
+#dash .acasa,#dash .acGrupuri{max-width:var(--latime-pagina);margin-inline:auto;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.4}
 #dash .acGrupuri{margin-top:8px}
 #dash .acasa .good{color:var(--good)}#dash .acasa .bad{color:var(--bad)}#dash .acasa .warn{color:var(--warn)}#dash .acMut{color:var(--muted)}
 #dash .acAntet{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -1906,7 +1908,7 @@ body.peAcasa:not(.acMonedaDeschisa) .toolbar{display:none}
 /* v96: pagina Scan mixta (crypto + actiuni), in stilul Home - demo aprobat 27.09 */
 body.peScan .heroStrip,body.peScan .tabs,body.peScan .toolbar{display:none}
 #scan{--tb-r:12px;--tb-linie:rgba(144,160,182,.16);--tb-fond:#0c1621;font-variant-numeric:tabular-nums}
-#scan .scNou,#scan .scVechi{max-width:1180px;margin-inline:auto;font-size:14px;line-height:1.4}
+#scan .scNou,#scan .scVechi{max-width:var(--latime-pagina);margin-inline:auto;font-size:14px;line-height:1.4}
 #scan .scNou{display:flex;flex-direction:column;gap:10px}
 #scan .scSub{font-size:12.5px;color:var(--muted)}#scan .scMut{color:var(--muted)}
 #scan .good{color:var(--good)}#scan .bad{color:var(--bad)}#scan .warn{color:var(--warn)}
@@ -2002,7 +2004,7 @@ body.peScan .heroStrip,body.peScan .tabs,body.peScan .toolbar{display:none}
 #grFisa{scroll-margin-top:90px}
 @media (max-width:760px){#grFisa{scroll-margin-top:150px}}
 /* v97.4: pagina Alerts - alertele de acasa (boti, actiuni, piata), in stilul Home */
-#alerts .alCentru{max-width:1180px;margin:0 auto 12px;background:#0c1621;border:1px solid rgba(144,160,182,.16);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.4}
+#alerts .alCentru{max-width:var(--latime-pagina);margin:0 auto 12px;background:#0c1621;border:1px solid rgba(144,160,182,.16);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.4}
 #alerts .alCap{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}#alerts .alCap h4{margin:0;font-size:16px}
 #alerts .alSub,#alerts .alMut{color:var(--muted);font-size:12.5px}
 #alerts .alBtn{width:auto;margin:0;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
