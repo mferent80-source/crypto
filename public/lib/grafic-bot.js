@@ -19,6 +19,8 @@ var GraficBot = (function () {
   // sub 1: cel putin 4 zecimale si cel putin 4 cifre semnificative (0.5663, 0.001234, 0.00001234) - revizia v100: la monedele ieftine iesea "0.0000"
   function fmtP(v) { if (v == null || !isFinite(v)) return "—"; if (v >= 100) return v.toFixed(2); if (v >= 1) return v.toFixed(4); if (v <= 0) return v.toFixed(4); return v.toFixed(Math.min(10, Math.max(4, 3 - Math.floor(Math.log10(v))))); }
   function pct(v) { return v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; }
+  // v100.56: bare zilnice (actiuni) - pe axa doar ziua.luna
+  function ziLuna(t) { var d = new Date(t); return d.getDate() + "." + String(d.getMonth() + 1).padStart(2, "0"); }
   function ora(t, lung) { var d = new Date(t), h = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); return lung ? d.getDate() + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + h : h; }
 
   // randurile Pionex ({time, open, high, low, close, volume} ca texte, sau [t,o,h,l,c,v]) -> crescator dupa timp
@@ -141,7 +143,7 @@ var GraficBot = (function () {
   // o = { bare, W, ingust, st:{bb,ema,rsi,vp}, niv, grila:{jos,sus,n,geo}, alerte, per }
   function desen(o) {
     var raw = o.bare || [], st = o.st || {}, W = Math.max(300, o.W || 800), ingust = !!o.ingust;
-    var gut = ingust ? 96 : 132, plotW = W - gut, mainH = ingust ? 230 : 320, volH = ingust ? 34 : 46, laneH = 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, axH = 20, gap = 8;
+    var gut = ingust ? 96 : 132, plotW = W - gut, mainH = ingust ? 230 : 320, volH = ingust ? 34 : 46, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, axH = 20, gap = 8;
     var cl = raw.map(function (b) { return b.c; }), S = { e20: ema(cl, 20), e50: ema(cl, 50), bb: bollinger(cl, 20, 2), rsi: rsi(cl, 14) };
     // lumanarile se strang cand sunt prea dese (cel mult ~1 la 3 px)
     var f = Math.max(1, Math.ceil(raw.length * 3 / plotW)), B = [];
@@ -247,7 +249,7 @@ var GraficBot = (function () {
     // v100.51 (I-476): stopul planului (Consilierul) langa stopul tau - mereu, nu e indicator; aproape identice -> o singura eticheta
     var cl = o.consLinii || {}, spP = nr(cl.stopPlan), spA = nr(cl.stopAcum), etP = cl.et || "stopul planului";   // v100.56: la actiuni „stopul propus”
     if (spP !== null && spP > 0) {
-      if (spA !== null && Math.abs(spP - spA) / spA < 0.0005) et.forEach(function (e) { if (e.t === "stopul tău") { e.t = "stopul tău = al planului"; e.s = "stop=plan"; } });
+      if (spA !== null && Math.abs(spP - spA) / spA < 0.0005) et.forEach(function (e) { if (e.t === "stopul tău") { e.t = cl.et ? "stopul tău = " + cl.et : "stopul tău = al planului"; e.s = cl.et ? "stop=propus" : "stop=plan"; } });
       else if (spP >= lo && spP <= hi) { q.push('<line class="gbStopPlan" x1="0" x2="' + f1(plotW) + '" y1="' + f1(Y(spP)) + '" y2="' + f1(Y(spP)) + '" stroke="' + COL.bad + '" stroke-width="1.3" stroke-dasharray="2 4"/>'); et.push({ y: Y(spP), t: etP, s: "stop plan", p: spP, c: COL.bad }); }
       else { q.push('<g class="gbStopPlan"></g>'); afara.push({ p: spP, t: etP, c: COL.bad }); }
     }
@@ -274,8 +276,10 @@ var GraficBot = (function () {
     // banda de alerte - doar ale botului (le filtreaza chematorul), stranse cand sunt apropiate
     var ly0 = vy0 + volH + gap, t0 = B.length ? B[0].t : 0, pas = raw.length > 1 ? raw[1].t - raw[0].t : 0, t1 = raw.length ? raw[raw.length - 1].t + pas : 1;
     var TX = function (t) { return (t - t0) / ((t1 - t0) || 1) * plotW; };
-    q.push('<rect x="0" y="' + ly0 + '" width="' + f1(plotW) + '" height="' + laneH + '" rx="6" fill="' + COL.fond + '"/>');
-    q.push('<text x="' + f1(plotW + 6) + '" y="' + (ly0 + 16) + '" font-size="10.5" fill="' + COL.mut + '">alertele botului</text>');
+    if (!o.actiune) {   // v100.56: actiunile n-au banda alertelor botului
+      q.push('<rect x="0" y="' + ly0 + '" width="' + f1(plotW) + '" height="' + laneH + '" rx="6" fill="' + COL.fond + '"/>');
+      q.push('<text x="' + f1(plotW + 6) + '" y="' + (ly0 + 16) + '" font-size="10.5" fill="' + COL.mut + '">alertele botului</text>');
+    }
     var evs = (o.alerte || []).filter(function (a) { return a && nr(a.t) !== null && a.t >= t0 && a.t <= t1; }), gr2 = grupeaza(evs, TX, 16), CUL = { critic: COL.bad, atentie: COL.warn, info: COL.info };
     gr2.forEach(function (u, ui) {
       var r = u.l.length > 1 ? 8 : 5;
@@ -293,11 +297,12 @@ var GraficBot = (function () {
     }
     // axa timpului
     var ay = (rsiH ? ry0 + rsiH : ly0 + laneH) + 16, lung = o.per && o.per !== "24h";
-    [0, 0.25, 0.5, 0.75, 1].forEach(function (fr, ii) { if (ingust && (ii === 1 || ii === 3)) return; q.push('<text x="' + f1(fr * plotW) + '" y="' + ay + '" font-size="10.5" fill="' + COL.mut + '" text-anchor="' + (fr === 0 ? "start" : fr === 1 ? "end" : "middle") + '">' + ora(t0 + fr * (t1 - t0), lung) + '</text>'); });
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (fr, ii) { if (ingust && (ii === 1 || ii === 3)) return; q.push('<text x="' + f1(fr * plotW) + '" y="' + ay + '" font-size="10.5" fill="' + COL.mut + '" text-anchor="' + (fr === 0 ? "start" : fr === 1 ? "end" : "middle") + '">' + (o.actiune ? ziLuna(t0 + fr * (t1 - t0)) : ora(t0 + fr * (t1 - t0), lung)) + '</text>'); });
     q.push('<line class="gbCruce" x1="0" x2="0" y1="0" y2="' + (ry0 + (rsiH || 0)) + '" stroke="' + COL.text + '" stroke-opacity=".35" stroke-width="1" style="display:none"/>');
-    var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Prețul cu gridul, planul și alertele botului">' + q.join("") + '</svg>';
+    var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="' + (o.actiune ? "Prețul acțiunii (zilnic) cu stopul, ținta și zona de valoare" : "Prețul cu gridul, planul și alertele botului") + '">' + q.join("") + '</svg>';
     // legenda: identitatea nu sta doar in culoare
-    var Lg = ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gl ? " (" + gl + " linii)" : "") + '</span>', ];
+    // v100.56: la actiuni (o.actiune) nu exista grid si nici alertele botului - legenda nu le pomeneste
+    var Lg = o.actiune ? [] : ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gl ? " (" + gl + " linii)" : "") + '</span>', ];
     var are = function (k) { return niv.some(function (x) { return x.k === k; }); };
     if (are("zero")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero-ul botului</span>');
     if (are("planPlus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.good + '"></i>planul, pe plus</span>');
@@ -311,8 +316,9 @@ var GraficBot = (function () {
     if (st.ema) Lg.push('<span><i style="border-color:' + COL.ema20 + '"></i>EMA 20</span><span><i style="border-color:' + COL.ema50 + '"></i>EMA 50</span>');
     if (st.bb) Lg.push('<span><i style="border-color:' + COL.bb + '"></i>Bollinger 20, 2</span>');
     if (o.umpleri) Lg.push('<span>▲ cumpărare · ▼ vânzare pe grilă (deduse din lumânări) · perechi pe grafic: ' + o.umpleri.perechi + (nr(o.perechiPionex) !== null ? " · Pionex: " + nr(o.perechiPionex) : "") + '</span>');
-    Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
-    Lg.push('<span class="mutedInfo">' + evs.length + (evs.length === 1 ? " alertă" : " alerte") + ' ale botului în perioadă' + (f > 1 ? " · o lumânare = " + f + " bare" : "") + '</span>');
+    if (!o.actiune) Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
+    if (o.actiune) { if (f > 1) Lg.push('<span class="mutedInfo">o lumânare = ' + f + ' zile de bursă</span>'); }
+    else Lg.push('<span class="mutedInfo">' + evs.length + (evs.length === 1 ? " alertă" : " alerte") + ' ale botului în perioadă' + (f > 1 ? " · o lumânare = " + f + " bare" : "") + '</span>');
     return { svg: svg, inaltime: H, legenda: Lg.join(""), harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: H } };
   }
 

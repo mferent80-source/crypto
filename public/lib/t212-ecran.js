@@ -470,7 +470,7 @@ function t212GraficHtml(p, W) {
   var b = (t212.bare[p.ticker] || []).slice(-120); if (b.length < 10 || typeof GraficBot === "undefined") return null;
   var pf = t212ProfilPt(p.ticker), n = p.niv, pl = p.plan || {}, VA = typeof Valoare !== "undefined" ? Valoare : null;
   var stopAcum = pl.stop > 0 ? pl.stop : pl.trailPct > 0 && p.maxDupaCumparare ? p.maxDupaCumparare * (1 - pl.trailPct / 100) : null;
-  return GraficBot.desen({ bare: b, W: W, ingust: W < 560, st: t212IndStare(),
+  return GraficBot.desen({ bare: b, W: W, ingust: W < 560, st: t212IndStare(), actiune: true,
     niv: GraficBot.niveluriActiune({ pretMediu: p.pretMediu, stop: stopAcum, tinta: pl.tinta > 0 ? pl.tinta : n ? n.tintaPozitie : null }),
     zi: GraficBot.ziObisnuitaActiune(p.pret, pf, 1), zi5: GraficBot.ziObisnuitaActiune(p.pret, pf, 5),
     val: VA ? { zona: VA.zona(b.slice(-20), { minBare: 15, bins: 24 }), pivoti: VA.pivoti(b, 3), et: "20 z", etLung: "20 de zile de bursă", etPivoti: "zilnic" } : null,
@@ -479,7 +479,9 @@ function t212GraficHtml(p, W) {
 function t212GraficeDeseneaza() {
   (t212.pozPregatite || []).forEach(function (p) {
     var el = $("t212Graf-" + p.ticker); if (!el || !t212.deschis[p.ticker]) return;
-    var W = Math.round(el.getBoundingClientRect().width || el.clientWidth || 700), d = t212GraficHtml(p, Math.max(300, W)), s = t212IndStare();
+    // poza 01.10: tabelul pozitiilor poate fi mai lat decat panoul (defileaza) - graficul ia latimea VIZIBILA, nu pe a randului
+    var wr = el.closest(".t212TabWrap"), vis = wr ? wr.clientWidth - 28 : 0; el.style.maxWidth = vis > 200 ? vis + "px" : "";
+    var W = Math.round(Math.min(el.getBoundingClientRect().width || el.clientWidth || 700, vis > 200 ? vis : 1e9)), d = t212GraficHtml(p, Math.max(300, W)), s = t212IndStare();
     if (!d) { el.innerHTML = '<p class="tbSub">Graficul apare după ce vin prețurile zilnice (cel puțin 10 zile).</p>'; return; }
     var faraProfil = !t212ProfilPt(p.ticker);
     el.innerHTML = '<div class="tbInterval tbGrInd" role="group" aria-label="Indicatorii graficului ' + escapeHtml(p.simbol) + '">' + T212_IND.map(function (x) { return '<button type="button" class="tbIntBtn" aria-pressed="' + !!s[x[0]] + '" title="' + escapeHtml(x[2]) + '" data-action-click="t212ComutaInd(\'' + x[0] + '\')">' + escapeHtml(x[1]) + '</button>'; }).join("") + '</div>'

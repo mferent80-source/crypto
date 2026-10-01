@@ -100,5 +100,32 @@ await test("colectorul: noteaza starea, tine jurnalele pentru raport si pune aut
   assert.ok(/jurnaleActLoguri/.test(col) && /Consiliu\.autopsieActiuni\(jurnaleActLoguri, acum\)/.test(col), "autopsia in raport");
 });
 
+// ---- poza 01.10 (grafic-actiune-pc): butoane pe toata latimea, graficul taiat, legenda cu gridul/alertele botului, axa in ore ----
+await test("poza: la actiuni legenda fara „gridul” si „alertele botului”, axa cu DATE (bare zilnice); botii neschimbati", () => {
+  const bare = bareZ(60, true);
+  const a = GB.desen({ bare, W: 800, niv: [], st: { ema: true }, actiune: true });
+  assert.ok(!/gridului/.test(a.legenda), "fara banda gridului la actiuni"); assert.ok(!/alerte ale botului/.test(a.legenda), "fara alertele botului la actiuni");
+  assert.ok(/>\d{1,2}\.\d{2}</.test(a.svg), "axa: zi.luna"); assert.ok(!/>\d{2}:\d{2}</.test(a.svg), "axa fara ore la bare zilnice");
+  const b = GB.desen({ bare, W: 800, niv: [], st: { ema: true } });
+  assert.match(b.legenda, /gridului/); assert.match(b.legenda, /alerte ale botului/);
+});
+await test("poza: comutatoarele si legenda graficului actiunii au stilurile graficului (nu butoane pe toata latimea); latimea = partea VIZIBILA a tabelului", () => {
+  const css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
+  assert.ok(/\.t212Graf \.tbIntBtn\{/.test(css) && /\.t212Graf \.gbLeg\{/.test(css) && /\.t212Graf \.gbLeg i\{/.test(css), "stilurile comutatoarelor si ale legendei");
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.ok(/closest\("\.t212TabWrap"\)/.test(e), "latimea din partea vizibila a tabelului");
+  assert.ok(/actiune: true/.test(e), "desenul stie ca e actiune");
+});
+
+await test("poza: la actiuni fara banda „alertele botului”; stopul tau egal cu cel propus -> „stopul tău = stopul propus” (nu „al planului”)", () => {
+  const bare = bareZ(60, true), niv = GB.niveluriActiune({ pretMediu: 101, stop: 97 });
+  const a = GB.desen({ bare, W: 800, niv, st: {}, actiune: true, consLinii: { stopAcum: 97, stopPlan: 97, et: "stopul propus" } });
+  assert.ok(!/alertele botului/.test(a.svg)); assert.match(a.svg, /stopul tău = stopul propus/); assert.ok(!/al planului/.test(a.svg));
+  const ai = GB.desen({ bare, W: 390, ingust: true, niv, st: {}, actiune: true, consLinii: { stopAcum: 97, stopPlan: 97, et: "stopul propus" } });
+  assert.match(ai.svg, /stop=propus/); assert.ok(!/stop=plan/.test(ai.svg), "pe telefon: eticheta scurta");
+  const b = GB.desen({ bare, W: 800, niv: [{ k: "stop", p: 97, t: "stopul tău", c: "#f00", st: "solid", s: "stop" }], st: {}, consLinii: { stopAcum: 97, stopPlan: 97 } });
+  assert.match(b.svg, /alertele botului/); assert.match(b.svg, /stopul tău = al planului/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

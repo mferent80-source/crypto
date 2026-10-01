@@ -189,6 +189,16 @@ async function scenariu(lat, inal, nume) {
       assert.match(ti, /Idei de cumpărare/i); assert.match(ti, /nu o predicție/); FARA_GUNOI(ti);
       assert.match(ti, /Socoteala sfaturilor/i, "v91: socoteala sfaturilor");
       assert.ok((await b.ev(`document.querySelectorAll("#t212Idei .t212IdeiTab tbody tr").length`)) > 0 || /nicio acțiune nu trece/.test(ti), "nici idei, nici mesajul de zi fara idei"); assert.match(t, /probat pe \d+ zile/); FARA_GUNOI(t);
+      // v100.56 (pachetul 5): graficul actiunii in detaliu - desenat la deschiderea cu clic, legenda cu zona pe 20 de zile, comutatorul „5 zile” lucreaza
+      await panaCand(b, `!!document.querySelector("#t212Graf-${tk0} svg")`, 15000, "graficul actiunii in detaliu");
+      const leg = await b.ev(`document.querySelector("#t212Graf-${tk0} .gbLeg").innerText`); FARA_GUNOI(leg);
+      assert.match(leg, /20 de zile de bursă|stopul propus|EMA/, "legenda graficului actiunii");
+      const are5 = await b.ev(`!!document.querySelector("#t212Graf-${tk0} .gbZi5")`), btn5 = `[...document.querySelectorAll("#t212Graf-${tk0} .tbIntBtn")].find(x=>x.textContent.trim()==="5 zile")`;
+      assert.ok(await b.ev(`!!${btn5}`), "comutatorul 5 zile");
+      await b.ev(`${btn5}.click()`); await asteapta(200);
+      assert.equal(await b.ev(`!!document.querySelector("#t212Graf-${tk0} .gbZi5")`), are5 ? false : await b.ev(`!!t212ProfilPt("${tk0}")`), "comutatorul 5 zile schimba banda");
+      await b.ev(`${btn5}.click()`); await asteapta(200);
+      await b.ev(`document.getElementById("t212Graf-${tk0}").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, `grafic-actiune-${nume}.png`));
       await b.poza(path.join(DOSAR_POZE, `t212-deschis-${nume}.png`));
       await b.ev(`document.getElementById("t212R-${tk0}").click()`);
       assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), true, "al doilea clic il inchide");

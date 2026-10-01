@@ -2176,3 +2176,17 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 
 /* v100.56 (actiunile T212, pachetul 5): graficul actiunii in detaliu - stilurile graficului botilor */
 .t212Graf{margin-top:12px;width:100%}.t212Graf .tbGrInd{margin-bottom:6px;flex-wrap:wrap}
+/* poza 01.10: comutatoarele si legenda graficului actiunii - aceleasi stiluri ca graficul botului (erau scoase doar pe #tabloubot) */
+.t212Graf .tbInterval{display:flex;gap:4px}
+.t212Graf .tbIntBtn{width:auto;flex:0 0 auto;white-space:nowrap;padding:4px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.t212Graf .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
+.t212Graf .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.t212Graf .gbZona{position:relative}
+.t212Graf .gbSvg{display:block;width:100%;height:auto;overflow:visible}
+.t212Graf .gbSvg text{font-family:inherit}
+.t212Graf .gbLeg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.t212Graf .gbLeg span{display:inline-flex;align-items:center;gap:6px}
+.t212Graf .gbLeg i{display:inline-block;width:16px;height:0;border-top:2px solid}
+.t212Graf .gbLeg i.gbDash{border-top-style:dashed}
+.t212Graf .gbLeg i.gbPct{width:9px;height:9px;border:0;border-radius:50%}
+@media (max-width:550px){.t212Graf .tbIntBtn{min-height:44px}}
