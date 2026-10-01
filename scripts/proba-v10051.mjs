@@ -55,5 +55,28 @@ await test("I-470 lumanarile pastreaza volumul (GridCalcul.bare), null cand lips
   assert.equal(b[0].v, 42); assert.equal(b[1].v, null);
 });
 
+// ---- pasul 2: graficul botului (I-476 + I-470) ----
+await test("I-476 ziua obisnuita: banda P50/P75 pe 24 h de la pretul de acum, din profil; fara profil -> null", () => {
+  are(GB.ziObisnuita, "GraficBot.ziObisnuita");
+  const q = (a) => Array.from({ length: 21 }, (_, k) => a * k / 20);
+  const z = GB.ziObisnuita(1, { z24: { jos: q(0.08), sus: q(0.06) }, simbol: "CRV_USDT_PERP", zile: 185 });
+  assert.ok(Math.abs(z.p50Jos - 0.96) < 1e-9 && Math.abs(z.p75Jos - 0.94) < 1e-9 && Math.abs(z.p75Sus - 1.045) < 1e-9, JSON.stringify(z)); assert.match(z.sursa, /185 de zile/);
+  assert.equal(GB.ziObisnuita(1, null), null);
+});
+await test("I-476/I-470 desen: banda zilei, zona de valoare, POC, pivotii DOAR cu comutatorul pornit; stopul planului mereu (e linie de Consilier)", () => {
+  const bare = Array.from({ length: 60 }, (_, i) => ({ t: i * 9e5, o: 1, h: 1.01, l: 0.99, c: 1 + (i % 5) / 500, v: 10 }));
+  const baza = { bare, W: 900, niv: [], grila: { jos: 0.95, sus: 1.05, linii: 11 }, zi: { p50Jos: 0.97, p75Jos: 0.95, p50Sus: 1.02, p75Sus: 1.04, sursa: "x" },
+    val: { zona: { poc: 1, vah: 1.01, val: 0.99, dupa: "volum" }, pivoti: [{ p: 1.008, tip: "sus", atingeri: 2 }] }, consLinii: { stopAcum: 0.93, stopPlan: 0.945 } };
+  const cu = GB.desen({ ...baza, st: { zi: true, val: true } }).svg, fara = GB.desen({ ...baza, st: { zi: false, val: false } }).svg;
+  for (const c of ["gbZi", "gbVa", "gbPoc", "gbPivot"]) { assert.match(cu, new RegExp('class="' + c)); assert.ok(!new RegExp('class="' + c).test(fara), c + " fara comutator"); }
+  assert.match(cu, /class="gbStopPlan/); assert.match(fara, /class="gbStopPlan/, "stopul planului e linie de Consilier, nu indicator");
+});
+await test("Tabloul: comutatoarele „Ziua obișnuită” si „Zona de valoare” in sistemul existent (aria-pressed, TB_IND_KEY)", () => {
+  const html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  assert.match(html, /id="tbInd-zi"[^>]*aria-pressed/); assert.match(html, /id="tbInd-val"[^>]*aria-pressed/);
+  assert.match(app, /var d=\{bb:true,ema:true,rsi:true,vp:true,zi:true,val:true\}/); assert.match(app, /GraficBot\.ziObisnuita\(/); assert.match(app, /Valoare\.zona\(/);
+  assert.match(app, /tbStare\.consLinii=/); assert.match(app, /Valoare\.fataDeGrid\(/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

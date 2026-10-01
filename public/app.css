@@ -2082,6 +2082,7 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot .tbMaiMulte:focus-visible,#tabloubot .tbMotiveAlte:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #tabloubot .gbUlt{display:flex;flex-direction:column;gap:2px;margin-top:6px;font-size:12.5px;color:var(--muted)}
 #tabloubot .gbUlt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tabloubot .gbValGrid{margin:6px 0 0;font-size:12.5px}
 /* v100.2: Ce ai de facut sub grafic (coloana stanga); Pe zi, la inchidere pe toata latimea, pe doua coloane - fara goluri */
 #tabloubot .tbGrStanga{display:grid;gap:8px;align-content:start;min-width:0}
 #tabloubot .tbGrStanga>.tbBloc,#tabloubot .tbGrStanga>.tbTodo{min-width:0;margin:0}
