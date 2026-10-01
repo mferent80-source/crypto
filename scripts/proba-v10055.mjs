@@ -132,5 +132,35 @@ await test("ideile: sit si probabilitatile (tinta inaintea stopului in 5 zile, a
   assert.ok(/t212IdeiSit\(/.test(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8")), "pagina: linia 📊 la idei");
 });
 
+// ---- revizia finala (Opus, 01.10): I1 tranșele = un caz; I2 stopul LUI la poarta; codul nou nu blocheaza poarta/ideile ----
+await test("I1: aceeasi actiune cumparata in aceeasi zi si vanduta in transe = UN caz (rezultat si cost adunate) - altfel N umflat ascundea „prea puține”", () => {
+  const inch = [], cf = {};
+  for (let i = 0; i < 10; i++) { const id = "t" + i; inch.push({ id, ticker: "NPA_US_EQ", pornit: 5 * Z + i * 60000, cost: 100, rezultat: i < 9 ? -5 : 20 }); cf[id] = { sit: "sus|calm|departe" }; }
+  inch.push({ id: "alta", ticker: "NPA_US_EQ", pornit: 9 * Z, cost: 200, rezultat: 10 }); cf.alta = { sit: "sus|calm|departe" };
+  const r = AS.situatiiCaAsta(inch, cf, "sus|calm|departe", "NPA_US_EQ");
+  assert.equal(r.toate.n, 2, JSON.stringify(r.toate)); assert.equal(r.toate.putine, true);
+  assert.deepEqual(r.toate.celMaiRau, { pct: -0.025, lei: -25 });
+  assert.equal(r.toate.total, -15);
+});
+await test("I2: stopul de la poarta e al LUI cand l-a scris (stop sau −X% de la maxim), altfel cel calculat", () => {
+  are(AS.stopPoarta, "ActiuniSemnale.stopPoarta");
+  const niv = { nivel: "ok", stop: 90 };
+  assert.deepEqual(AS.stopPoarta({ stop: 97 }, niv, 100), { stop: 97, alTau: true });
+  assert.deepEqual(AS.stopPoarta({ trailPct: 4 }, niv, 100), { stop: 96, alTau: true });
+  assert.deepEqual(AS.stopPoarta({}, niv, 100), { stop: 90, alTau: false });
+  assert.equal(AS.stopPoarta({}, { nivel: "fara-date" }, 100), null);
+  assert.equal(AS.stopPoarta({ stop: 120 }, niv, 100).stop, 90, "un stop peste pret nu e stop: ramane cel calculat");
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.ok(/ActiuniSemnale\.stopPoarta\(plan, n4, baza4\)/.test(e), "t212Poarta foloseste stopul lui");
+  assert.ok(/stopul tău/.test(e), "antetul spune al cui e stopul");
+});
+await test("codul nou nu blocheaza: probabilitatile care arunca -> ideea trece cu prob null; la poarta, blocul nou are try/catch-ul lui", () => {
+  const b = bareIdee(250), pret = b[249].c;
+  const r = ID.judecaActiune(b, pret, { acum: 251 * Z, Probabilitati: { pentruActiune() { throw new Error("bum"); } } });
+  assert.ok(r.trece); assert.equal(r.prob, null);
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.ok(/\} catch \(e4\) \{ t212\.poarta\.prof = null; t212\.poarta\.prob = \[\]; t212\.poarta\.sit = null;/.test(e), "blocul nou al portii in try propriu (verdictul ramane)");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

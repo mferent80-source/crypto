@@ -35,7 +35,8 @@ var Idei = (function () {
   // (si prin saritura la deschidere); avertizeaza, nu schimba filtrul. Fara o.Probabilitati -> null
   function probIdee(b, intrare, n, o) {
     var PB = o && o.Probabilitati; if (!PB || !(intrare > 0) || !(n.stop > 0)) return null;
-    var r = PB.pentruActiune(b, { pret: intrare, stop: n.stop, tinta: n.tinta, acum: o.acum || Date.now() }); if (!r || !r.stop1) return null;
+    // revizia 01.10: o eroare aici nu strica ideea (si nici tura ideilor) - fara probabilitati, ca inainte
+    var r; try { r = PB.pentruActiune(b, { pret: intrare, stop: n.stop, tinta: n.tinta, acum: o.acum || Date.now() }); } catch (e) { return null; } if (!r || !r.stop1) return null;
     var r3 = function (x) { return Math.round(x * 1000) / 1000; };
     return { tinta5: r.cursa5 && r.cursa5.tinta ? r3(r.cursa5.tinta.p) : null, stop1: r.sare1 ? r3(r.stop1.p + r.sare1.p) : r3(r.stop1.p) };
   }

@@ -177,12 +177,29 @@ var ActiuniSemnale = (function () {
     return { n: n, median: n ? (n % 2 ? pc[(n - 1) / 2].pct : (pc[n / 2 - 1].pct + pc[n / 2].pct) / 2) : null, pePlus: n ? plus / n : null,
       celMaiRau: n ? { pct: Math.round(pc[0].pct * 10000) / 10000, lei: pc[0].lei } : null, total: Math.round(tot * 100) / 100, putine: n < 10 };
   }
+  // revizia 01.10 (I1): un CAZ = aceeasi actiune cumparata in aceeasi zi (vanzarile in transe / cumpararile repetate din zi se aduna) -
+  // altfel o pozitie vanduta in 10 transe facea 10 cazuri si ascundea „prea puține”; randurile fara data raman cazuri separate
+  function cazuri(l) {
+    var m = {}, o = [];
+    l.forEach(function (t) { var k = isFinite(t.pornit) && t.pornit !== null ? t.ticker + "|" + Math.floor(t.pornit / 864e5) : "id|" + t.id; if (!m[k]) { m[k] = { ticker: t.ticker, rezultat: 0, cost: 0 }; o.push(m[k]); } m[k].rezultat += t.rezultat; m[k].cost += t.cost; });
+    o.forEach(function (x) { x.rezultat = Math.round(x.rezultat * 100) / 100; });
+    return o;
+  }
   // „in situatii ca asta, din trade-urile tale”: inchise = T212.perechi().inchise; cf = t212:cf (cf[id].sit); doar costul > 0.
   // Fara sector (n-avem sectorul actiunilor): in locul lui, aceeasi actiune in aceeasi stare
   function situatiiCaAsta(inchise, cf, sit, ticker) {
-    var c = cf || {}, l = sit ? (Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && t.cost > 0 && isFinite(t.rezultat) && c[t.id] && c[t.id].sit === sit; }) : [];
+    var c = cf || {}, l = sit ? cazuri((Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && t.cost > 0 && isFinite(t.rezultat) && c[t.id] && c[t.id].sit === sit; })) : [];
     return { sit: sit || null, ticker: ticker || null, eticheta: sit ? sit.split("|").map(function (k) { return ET_SIT[k] || k; }).join(", ") : "",
       toate: grupSit(l), actiune: ticker ? grupSit(l.filter(function (t) { return t.ticker === ticker; })) : null };
+  }
+  // revizia 01.10 (I2): stopul cu care se socotesc profilul si probabilitatile la poarta - al LUI cand l-a scris (stop sub pret sau −X% de
+  // la maxim, socotit de la baza), altfel cel calculat; null fara niveluri
+  function stopPoarta(plan, niv, baza) {
+    if (!niv || niv.nivel !== "ok" || !(baza > 0)) return null;
+    var p = plan || {};
+    if (p.stop > 0 && p.stop < baza) return { stop: p.stop, alTau: true };
+    if (p.trailPct > 0 && p.trailPct < 100) return { stop: Math.round(baza * (1 - p.trailPct / 100) * 1e6) / 1e6, alTau: true };
+    return niv.stop > 0 && niv.stop < baza ? { stop: niv.stop, alTau: false } : null;
   }
   function textSituatie(r) {
     if (!r || !r.toate || !r.toate.n) return "În situații ca asta" + (r && r.eticheta ? " (" + r.eticheta + ")" : "") + ": niciun trade al tău judecat încă.";
@@ -472,6 +489,6 @@ var ActiuniSemnale = (function () {
     if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
     return mx;
   }
-  return { cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;
