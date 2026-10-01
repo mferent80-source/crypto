@@ -65,7 +65,7 @@ await test("ruta ingust: POST + GET pastreaza rezultatul (curatat); colectorul i
   const p = await mod.onRequestPost({ request: cer("POST", "action=ingust", { simbol: "CRV_USDT_PERP", ingust: { ...ing, la: 5, zile: 40, rau: "<script>" } }), env });
   assert.equal(p.status, 200);
   const g = await (await mod.onRequestGet({ request: cer("GET", "action=ingust&simbol=CRV_USDT_PERP"), env })).json();
-  assert.equal(g.ingust.propus, ing.propus); assert.equal(g.ingust.ore, ing.ore); assert.equal(g.ingust.setare.grile, ing.setare.grile); assert.equal(g.ingust.la, 5);
+  assert.equal(g.ingust.propus, ing.propus); assert.equal(g.ingust.ore, ing.ore); assert.equal(g.ingust.test.medie, ing.test.medie, "ruta pastreaza media (altfel pagina scria medie +0,0 %)"); assert.equal(g.ingust.setare.grile, ing.setare.grile); assert.equal(g.ingust.la, 5);
   assert.ok(!("rau" in g.ingust), "doar campurile cunoscute");
   const { turaIngust } = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-ingust.mjs")).href);
   const cerute = [], scrise = [];

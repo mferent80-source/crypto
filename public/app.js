@@ -5008,7 +5008,7 @@ function grIngustHtml(f){
     +grRand("Număr de grile",(s2.grile+1)+" linii (Pionex numără liniile) · Geometric",String(s2.grile+1))+grRand("Levier",s2.levierSigur+"× (sigur)",String(s2.levierSigur))
     +(r.dir!=="short"?grRand("Stop-loss jos",grPret(s2.stop.jos,i),grPret(s2.stop.jos,i)):"")+(r.dir!=="long"?grRand("Stop-loss sus",grPret(s2.stop.sus,i),grPret(s2.stop.sus,i)):"")
     +'<p class="tbSub">⏱️ Închide-l după '+r.ore+' h dacă n-a atins stopul — așa a fost probat.</p>'
-    +'<p class="tbSub">Pe test ('+r.test.nIndep+' ferestre independente, nevăzute la alegere): median '+P(r.test.mediana)+' din sumă (medie '+P(r.test.medie||0)+'), '+Math.round(r.test.pePlus*100)+' % pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+Math.round(r.test.perechiZi)+' perechi/zi. Ce s-a întâmplat, nu o promisiune.</p></div>';
+    +'<p class="tbSub">Pe test ('+r.test.nIndep+' ferestre independente, nevăzute la alegere): median '+P(r.test.mediana)+' din sumă'+(r.test.medie!=null?' (medie '+P(r.test.medie)+')':'')+', '+Math.round(r.test.pePlus*100)+' % pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+Math.round(r.test.perechiZi)+' perechi/zi. Ce s-a întâmplat, nu o promisiune.</p></div>';
 }
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese

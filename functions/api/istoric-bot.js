@@ -286,7 +286,7 @@ export async function onRequestPost({request,env}){
     const st=x.setare&&typeof x.setare==="object"?x.setare:null,t=x.test&&typeof x.test==="object"?x.test:{},DIR=["long","short","neutru"];
     const out={propus:x.propus===true,motiv:String(x.motiv||"").slice(0,240),dir:DIR.includes(x.dir)?x.dir:null,H:nr(x.H),ore:nr(x.ore),latime:nr(x.latime),pas:nr(x.pas),la:nr(x.la)||Date.now(),zile:nr(x.zile),
       setare:st?{dir:DIR.includes(st.dir)?st.dir:null,pret:nr(st.pret),jos:nr(st.jos),sus:nr(st.sus),grile:nr(st.grile),pas:nr(st.pas),levier:nr(st.levier),levierSigur:nr(st.levierSigur),pesteSigur:st.pesteSigur===true,lichidare:nr(st.lichidare),stop:st.stop&&typeof st.stop==="object"?{jos:nr(st.stop.jos),sus:nr(st.stop.sus)}:null,suma:nr(st.suma)}:null,
-      test:{n:nr(t.n),nIndep:nr(t.nIndep),mediana:nr(t.mediana),pePlus:nr(t.pePlus),ic:Array.isArray(t.ic)?t.ic.slice(0,2).map(nr):null,celMaiRau:nr(t.celMaiRau),perechiZi:nr(t.perechiZi),lichidari:nr(t.lichidari)}};
+      test:{n:nr(t.n),nIndep:nr(t.nIndep),mediana:nr(t.mediana),medie:nr(t.medie),pePlus:nr(t.pePlus),ic:Array.isArray(t.ic)?t.ic.slice(0,2).map(nr):null,celMaiRau:nr(t.celMaiRau),perechiZi:nr(t.perechiZi),lichidari:nr(t.lichidari)}};
     await env.ISTORIC.put("ingust:"+s,JSON.stringify(out),{expirationTtl:86400});return json({ok:true});   // revizia 01.10: expira dupa 24 h
   }
   if(action==="profil"){
