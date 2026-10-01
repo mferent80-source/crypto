@@ -165,6 +165,30 @@ var Consiliu = (function () {
       mesaj: "Ce aș face eu: " + (lite.faCe || "—") + (lite.bani ? " · 💰 " + lite.bani : "") + (d ? " · De ce: " + d.text : ""), doarRadar: lite.nivel === "tine" };
     return { stare: { acum: lite, inainte: st.acum, schimbatLa: acum, deCe: d ? d.text : null }, alerta: al };
   }
-  return { pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  // v100.50 (I-472): jurnalul deciziilor - fiecare „am făcut / n-am făcut” se judeca la 24 h pe totalul botului (istoricul ist:<bot>,
+  // cea mai apropiata intrare de t + 24 h, la cel mult 2 h); botul inchis inainte = rezultatul final - totalul de atunci. Ziua netrecuta -> nejudecat.
+  var ZI = 24 * 3600000;
+  function judecaDecizii(lista, ist, final, acum) {
+    var l = Array.isArray(ist) ? ist.filter(function (x) { return x && nr(x.t) !== null && nr(x.profitTotal) !== null; }) : [];
+    return (Array.isArray(lista) ? lista : []).map(function (e) {
+      if (!e || nr(e.t) === null || nr(e.total) === null || nr(e.r) !== null) return e;
+      var tinta = e.t + ZI;
+      if (final && nr(final.total) !== null && nr(final.la) !== null && final.la < tinta) return Object.assign({}, e, { r: Math.round((final.total - e.total) * 100) / 100, cum: "la închidere" });
+      if ((nr(acum) || 0) < tinta) return e;
+      var best = null; l.forEach(function (x) { var d = Math.abs(x.t - tinta); if (d <= 2 * 3600000 && (!best || d < Math.abs(best.t - tinta))) best = x; });
+      return best ? Object.assign({}, e, { r: Math.round((best.profitTotal - e.total) * 100) / 100, cum: "la 24 h" }) : e;
+    });
+  }
+  function median(v) { var a = v.slice().sort(function (x, y) { return x - y; }); return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : null; }
+  // socoteala: urmat vs neurmat (mediana totalului la 24 h) - de la 30 de decizii judecate; o comparatie, nu o dovada
+  function socotealaDecizii(toate) {
+    var j = (Array.isArray(toate) ? toate : []).filter(function (e) { return e && nr(e.r) !== null; });
+    var u = j.filter(function (e) { return e.urmat === true; }).map(function (e) { return e.r; }), n = j.filter(function (e) { return e.urmat === false; }).map(function (e) { return e.r; });
+    var o = { n: j.length, urmat: { n: u.length, median: median(u) }, neurmat: { n: n.length, median: median(n) } };
+    o.text = j.length < 30 ? "Deciziile tale: încă " + j.length + " din 30 judecate (la 24 h) — sub 30 n-ar spune nimic."
+      : "Când ai urmat Consilierul (" + u.length + "): median " + (o.urmat.median === null ? "—" : U(o.urmat.median)) + " la 24 h; când nu (" + n.length + "): " + (o.neurmat.median === null ? "—" : U(o.neurmat.median)) + ". O comparație, nu o dovadă.";
+    return o;
+  }
+  return { judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

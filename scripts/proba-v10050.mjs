@@ -79,5 +79,37 @@ await test("colectorul: alcatuieste Consilierul, il pune in poza, trimite schimb
   const g = await (await mod.onRequestGet({ request: cer("GET", "action=cons&bot=2394"), env })).json(); assert.equal(g.cons.deCe, st.deCe); assert.equal(g.cons.acum.nivel, "atentie");
 });
 
+// ---- pasul 3: jurnalul deciziilor (I-472) + „de ce” pe Tablou (I-473) ----
+const ORA = 3600000;
+await test("judecaDecizii: la 24 h din istoricul botului; botul inchis inainte -> pe rezultatul final; ziua netrecuta -> nejudecat", () => {
+  assert.ok(typeof CS.judecaDecizii === "function", "lipseste Consiliu.judecaDecizii");
+  const ist = Array.from({ length: 30 }, (_, i) => ({ t: i * ORA, profitTotal: i * 0.1 }));
+  const d = [{ t: 2 * ORA, total: 0.2, urmat: true }, { t: 20 * ORA, total: 2, urmat: false }];
+  const r = CS.judecaDecizii(d, ist, null, 29 * ORA);
+  assert.ok(Math.abs(r[0].r - 2.4) < 1e-9, String(r[0].r)); assert.equal(r[1].r, undefined, "ziua n-a trecut");
+  const f = CS.judecaDecizii([{ t: 20 * ORA, total: 2, urmat: false }], ist, { total: -5, la: 25 * ORA }, 30 * ORA);
+  assert.equal(f[0].r, -7, "botul inchis la 25 h: final − atunci");
+});
+await test("socotealaDecizii: urmat vs neurmat cu mediana; sub 30 judecate -> „încă N din 30”", () => {
+  const l = Array.from({ length: 40 }, (_, i) => ({ urmat: i % 2 === 0, r: i % 2 === 0 ? 1 : -1 }));
+  const s = CS.socotealaDecizii(l); assert.equal(s.urmat.n, 20); assert.equal(s.urmat.median, 1); assert.equal(s.neurmat.median, -1); assert.match(s.text, /Când ai urmat/);
+  assert.match(CS.socotealaDecizii(l.slice(0, 10)).text, /10 din 30/);
+});
+await test("server: o decizie pe verdict (a doua o inlocuieste), socoteala deciziilor; Tabloul: „de ce” si butoanele", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const dec = (urmat) => ({ bot: "2394", t: Date.now(), cheie: "atentie|Stopul e peste plan", nivel: "atentie", titlu: "Stopul e peste plan", faCe: "mută stopul", urmat, total: -3.2 });
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=decizie", dec(true)), env })).status, 200);
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=decizie", dec(false)), env })).status, 200);
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=decizie&bot=2394"), env })).json();
+  assert.equal(g.decizii.length, 1); assert.equal(g.decizii[0].urmat, false);
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=deciziiSocoteala", { la: 1, urmat: { n: 3, median: 1 }, neurmat: { n: 2, median: -1 }, text: "x" }), env })).status, 200);
+  assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=deciziiSocoteala"), env })).json()).socoteala.urmat.n, 3);
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(app, /tbConsDeCe/); assert.match(app, /tbDecizie\(true\)/); assert.match(app, /tbDecizie\(false\)/); assert.match(app, /action=cons&bot=/);
+  assert.match(col, /Consiliu\.judecaDecizii\(/); assert.match(col, /action=deciziiSocoteala/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

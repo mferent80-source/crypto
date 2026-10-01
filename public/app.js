@@ -5696,10 +5696,33 @@ function tbProfilPt(b){
 }
 function tbAduSocoteala(){if(tbSoc.inLucru||Date.now()-tbSoc.la<10*60000)return;tbSoc.inLucru=true;getJSON("/api/istoric-bot?action=socoteala").then(function(d){tbSoc.peCod=d&&d.socoteala&&d.socoteala.peCod||null;tbSoc.boti=d&&d.socoteala&&d.socoteala.boti||null}).catch(function(){}).then(function(){tbSoc.la=Date.now();tbSoc.inLucru=false})}
 // v100.44 (I-465): desenul Consilierului (Consiliu.alcatuieste), ca in demo
+// v100.50 (I-473 + I-472): verdictul colectorului (de ce s-a schimbat) + jurnalul deciziilor tale, adus la 2 min
+var tbConsKv={botId:null,la:0,cons:null,decizii:[],soc:null,inLucru:false};
+function tbConsKvPt(b){
+  if(!b||!b.id)return null;
+  if(!tbConsKv.inLucru&&(tbConsKv.botId!==b.id||Date.now()-tbConsKv.la>2*60000)){tbConsKv.inLucru=true;
+    Promise.all([getJSON("/api/istoric-bot?action=cons&bot="+encodeURIComponent(b.id)).catch(function(){return null}),getJSON("/api/istoric-bot?action=decizie&bot="+encodeURIComponent(b.id)).catch(function(){return null}),getJSON("/api/istoric-bot?action=deciziiSocoteala").catch(function(){return null})])
+      .then(function(r){tbConsKv.cons=r[0]&&r[0].cons||null;tbConsKv.decizii=r[1]&&r[1].decizii||[];tbConsKv.soc=r[2]&&r[2].socoteala||null})
+      .then(function(){tbConsKv.botId=b.id;tbConsKv.la=Date.now();tbConsKv.inLucru=false})}
+  return tbConsKv.botId===b.id?tbConsKv:null;
+}
+function tbConsCheie(c){return c?String(c.nivel)+"|"+String(c.titlu):""}
+async function tbDecizie(urmat){
+  var b=tbStare.bot,c=tbStare.consUlt;if(!b||!c)return;
+  var corp={bot:b.id,t:Date.now(),cheie:tbConsCheie(c),nivel:c.nivel,titlu:c.titlu,faCe:c.faCe||"",urmat:!!urmat,total:botiNr(b.profitTotal)};
+  try{var r=await apiFetch("/api/istoric-bot?action=decizie",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(corp)});if(!r.ok)throw Object.assign(new Error("HTTP "+r.status),{status:r.status});
+    tbConsKv.decizii=(tbConsKv.decizii||[]).filter(function(e){return e.cheie!==corp.cheie}).concat([corp]);var el=$("tbDecStare");if(el)el.textContent=tbDecStareText(c);
+    toast(urmat?"Notat: ai făcut ce zice Consilierul — îl judec la 24 h":"Notat: n-ai făcut — îl judec la 24 h","good")}
+  catch(e){toast("Nu am putut nota decizia: "+(e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)),"bad")}
+}
+function tbDecStareText(c){var k=tbConsCheie(c),e=(tbConsKv.decizii||[]).filter(function(x){return x.cheie===k}).pop();
+  return e?"notat: "+(e.urmat?"am făcut":"n-am făcut")+" ("+new Date(e.t).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+")"+(e.r!=null?" · după 24 h: "+(e.r>=0?"+":"−")+Math.abs(e.r).toFixed(2)+" USDT":""):"ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers"}
 function tbConsHtml(c){
   var cip=function(x){return x?'<span class="tbConsCip '+escapeHtml(x.cls||"")+'" title="'+escapeHtml(x.titlu||"")+'">'+escapeHtml(x.t)+'</span>':''};
   return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'
-    +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')+'</div>'
+    +(c.deCeText?'<p class="tbConsDeCe tbSub">🔁 '+escapeHtml(c.deCeText)+'</p>':'')
+    +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')
+    +(c.nivel&&c.nivel!=="asteapta"?'<div class="tbDecizii"><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(true)" aria-label="Am făcut ce zice Consilierul">✅ am făcut</button><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(false)" aria-label="N-am făcut ce zice Consilierul">✋ n-am făcut</button><span class="tbSub" id="tbDecStare">'+escapeHtml(tbDecStareText(c))+'</span></div>'+(c.decSoc?'<p class="tbSub tbDecSoc">'+escapeHtml(c.decSoc)+'</p>':''):'')+'</div>'
     +(c.incredere?'<p class="tbConsInc">'+escapeHtml(c.incredere)+'</p>':'')+'</div>'
     +'<div class="tbConsDr"><h4>De ce'+(c.motive.length?' · '+c.motive.length+(c.motive.length===1?' motiv':' motive')+', după banii în joc':'')+'</h4>'
     +(c.motive.length?c.motive.map(function(m){return '<div class="tbConsMotiv"><i class="'+escapeHtml(m.c)+'"></i><div><b>'+escapeHtml(m.titlu)+'</b>'+(m.text?'<p>'+escapeHtml(m.text)+'</p>':'')
@@ -5867,6 +5890,10 @@ function tbDeseneazaSemafor(b){
     laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,
     indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
     note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
+  // v100.50 (I-473/I-472): „de ce s-a schimbat” (din verdictul colectorului, daca e acelasi nivel) + socoteala deciziilor
+  var ck=tbConsKvPt(b);tbStare.consUlt=cons;
+  if(ck&&ck.cons&&ck.cons.deCe&&ck.cons.acum&&ck.cons.acum.nivel===cons.nivel&&ck.cons.schimbatLa){var mn=Math.round((Date.now()-ck.cons.schimbatLa)/60000);cons.deCeText="schimbat acum "+(mn<60?mn+" min":Math.round(mn/60)+" h")+": "+ck.cons.deCe}
+  cons.decSoc=ck&&ck.soc&&ck.soc.text?ck.soc.text:null;
   var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol&&!tbProbVechi(tp.rez)?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
   var r0=el.querySelector(".tbConsRest");if(r0)tbConsRestDeschis=!!r0.open;   // „Restul” ramane deschis la reimprospatare
   el.innerHTML=h+tbConsHtml(cons);$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;

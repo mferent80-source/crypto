@@ -50,6 +50,8 @@ export async function onRequestGet({request,env}){
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   // v100.43 (I-466): increderea fiecarui sfat, adunata de colector pe toti botii
+  if(action==="decizie"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let l=[];try{l=JSON.parse(await env.ISTORIC.get("decizii:"+bot)||"[]")}catch{l=[]}return json({bot,decizii:Array.isArray(l)?l:[]})}
+  if(action==="deciziiSocoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("decizii-socoteala")||"null")}catch{c=null}return json({socoteala:c})}
   if(action==="cons"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let c=null;try{c=JSON.parse(await env.ISTORIC.get("cons:"+bot)||"null")}catch{c=null}return json({bot,cons:c})}
   if(action==="prob"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("prob:"+bot)||"null")}catch{p=null}return json({bot,prob:p})}
   if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
@@ -216,6 +218,20 @@ export async function onRequestPost({request,env}){
   }
   // v100.47 (I-469): situatiile asemanatoare - cazurile din arhiva cu ce se stia la pornire (colectorul, o data pe noapte)
   if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l}));return json({ok:true,n:l.length})}
+  // v100.50 (I-472): jurnalul deciziilor - „am făcut / n-am făcut” langa actiunea Consilierului; o decizie pe verdict (cheia), ultima ramane.
+  // Colectorul scrie inapoi lista cu judecata (r) - atunci corpul are „lista”.
+  if(action==="decizie"){
+    const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);
+    let l=[];try{l=JSON.parse(await env.ISTORIC.get("decizii:"+bot)||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
+    if(Array.isArray(corp.lista))l=corp.lista.slice(-500);
+    else{const cheie=String(corp.cheie||"").slice(0,200),t=nr(corp.t),total=nr(corp.total);if(!cheie||t===null||typeof corp.urmat!=="boolean")return json({error:"decizie nevalida"},400);
+      l=l.filter(e=>e&&e.cheie!==cheie);l.push({cheie,t,nivel:String(corp.nivel||"").slice(0,12),titlu:String(corp.titlu||"").slice(0,200),faCe:String(corp.faCe||"").slice(0,400),urmat:corp.urmat,total});l=l.slice(-500)}
+    await env.ISTORIC.put("decizii:"+bot,JSON.stringify(l));return json({ok:true,n:l.length});
+  }
+  if(action==="deciziiSocoteala"){
+    if(!corp||typeof corp!=="object")return json({error:"Lipseste socoteala"},400);
+    await env.ISTORIC.put("decizii-socoteala",JSON.stringify({la:nr(corp.la)||Date.now(),n:nr(corp.n),urmat:corp.urmat||null,neurmat:corp.neurmat||null,text:typeof corp.text==="string"?corp.text.slice(0,400):""}));return json({ok:true});
+  }
   // v100.50 (I-474/I-473): verdictul Consilierului alcatuit de colector - acum, cel de dinainte, cand s-a schimbat si de ce
   if(action==="cons"){
     const bot=idBot(corp&&corp.bot);if(!bot||!corp.acum||typeof corp.acum!=="object")return json({error:"Lipseste bot sau acum"},400);

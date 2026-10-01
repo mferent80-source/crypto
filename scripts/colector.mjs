@@ -1104,6 +1104,31 @@ async function turaCazuri() {
   } catch (e) { cazuriEsec = Date.now(); jurnal("cazuri ESEC (reincerc peste o ora)", e.message); }
   cazuriInLucru = false;
 }
+// v101.29 (I-472): jurnalul deciziilor - o data pe ora: botii activi + inchisii din ultimele 7 zile cu decizii; fiecare decizie se judeca
+// la 24 h pe totalul din istoricul botului (sau pe rezultatul final, daca s-a inchis inainte); toate -> KV decizii-socoteala
+let deciziiLa = 0, deciziiInLucru = false;
+async function turaDecizii() {
+  if (deciziiInLucru || Date.now() - deciziiLa < 3600000) return;
+  deciziiInLucru = true; deciziiLa = Date.now();
+  try {
+    const act = await cere("/api/bot-orders"), ids = new Set(((act && act.bots) || []).map((b) => String(b.id)));
+    const inchisi = JurnalTrade.din((await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 7 * 86400000));
+    const finale = {}; for (const t of inchisi) { ids.add(String(t.id)); finale[String(t.id)] = { total: Number.isFinite(t.net) ? t.net : t.rezultat, la: t.inchis }; }
+    const toate = [];
+    for (const id of ids) {
+      await new Promise((r) => setTimeout(r, 700));
+      const v = await cere("/api/istoric-bot?action=decizie&bot=" + encodeURIComponent(id)).catch(() => null), l = v && Array.isArray(v.decizii) ? v.decizii : [];
+      if (!l.length) continue;
+      const ist = l.some((e) => e.r === undefined || e.r === null) ? ((await cere("/api/istoric-bot?bot=" + encodeURIComponent(id) + "&ore=168").catch(() => null)) || {}).intrari || [] : [];
+      const nou = Consiliu.judecaDecizii(l, ist, finale[id] || null, Date.now());
+      if (JSON.stringify(nou) !== JSON.stringify(l)) await trimite("/api/istoric-bot?action=decizie", { bot: id, lista: nou });
+      toate.push(...nou);
+    }
+    const s = Consiliu.socotealaDecizii(toate);
+    await trimite("/api/istoric-bot?action=deciziiSocoteala", { la: Date.now(), ...s });
+  } catch (e) { jurnal("decizii ESEC", e.message); }
+  deciziiInLucru = false;
+}
 
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
@@ -1117,6 +1142,7 @@ async function bucla() {
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
   turaProfil().then(() => turaCazuri()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
+  turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
   turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));

@@ -2159,3 +2159,9 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .tbProbBanda em{position:absolute;top:-2px;width:1px;height:12px;background:var(--muted)}
 .tbProbH{margin:14px 0 4px;font-size:13px}
 .tbProbFara summary{cursor:pointer;color:var(--muted);padding:6px 0}
+/* v100.50 (I-473/I-472): de ce s-a schimbat verdictul + jurnalul deciziilor, langa „Ce aș face eu” */
+.tbConsDeCe{margin:4px 0 8px}
+.tbDecizii{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.tbDecBtn{min-height:36px;padding:4px 12px;font-size:13px}
+@media (max-width:550px){.tbDecBtn{min-height:44px}}
+.tbDecSoc{margin:4px 0 0}
