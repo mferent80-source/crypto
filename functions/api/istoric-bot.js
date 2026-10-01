@@ -54,6 +54,10 @@ export async function onRequestGet({request,env}){
   // revizia 01.10 (I5): toti botii care au decizii (si cei inchisi de mult) - socoteala nu mai uita deciziile vechi
   if(action==="deciziiBoti"){const boti=[];let cursor=null;try{do{const l=await env.ISTORIC.list(cursor?{prefix:"decizii:",cursor}:{prefix:"decizii:"});for(const k of (l&&l.keys)||[])boti.push(k.name.slice(8));cursor=l&&!l.list_complete&&l.cursor?l.cursor:null}while(cursor)}catch{}return json({boti})}
   if(action==="deciziiSocoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("decizii-socoteala")||"null")}catch{c=null}return json({socoteala:c})}
+  // v100.54 (actiunile T212, pachetul 3): jurnalul Consilierului pe ticker, lista tickerelor cu jurnal, socoteala pe motiv si lei
+  if(action==="semneAct"){const tk=idBot(u.searchParams.get("bot"));if(!tk)return json({error:"Lipseste bot"},400);let l=[];try{l=JSON.parse(await env.ISTORIC.get("semnale-act:"+tk)||"[]")}catch{l=[]}return json({bot:tk,log:Array.isArray(l)?l:[]})}
+  if(action==="semneActLista"){const t=[];let cursor=null;try{do{const l=await env.ISTORIC.list(cursor?{prefix:"semnale-act:",cursor}:{prefix:"semnale-act:"});for(const k of (l&&l.keys)||[])t.push(k.name.slice(12));cursor=l&&!l.list_complete&&l.cursor?l.cursor:null}while(cursor)}catch{}return json({tickere:t})}
+  if(action==="socotealaAct"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala-actiuni")||"null")}catch{c=null}return json({la:c&&c.la||null,peCod:c&&c.peCod||{}})}
   // v100.51 (I-477): estimarile de perechi pe bot (colectorul, o data pe bot) si corectia pe moneda (de la 10 boti)
   if(action==="perechiEst"){let e={};try{e=JSON.parse(await env.ISTORIC.get("perechi-est")||"{}")}catch{e={}}return json({est:e&&typeof e==="object"?e:{}})}
   if(action==="perechiCorectie"){let c={};try{c=JSON.parse(await env.ISTORIC.get("perechi-corectie")||"{}")}catch{c={}}return json({corectie:c&&typeof c==="object"?c:{}})}
@@ -232,6 +236,16 @@ export async function onRequestPost({request,env}){
     else{const cheie=String(corp.cheie||"").slice(0,200),t=nr(corp.t),total=nr(corp.total);if(!cheie||t===null||typeof corp.urmat!=="boolean")return json({error:"decizie nevalida"},400);
       l=l.filter(e=>e&&e.cheie!==cheie);l.push({cheie,t,nivel:String(corp.nivel||"").slice(0,12),titlu:String(corp.titlu||"").slice(0,200),faCe:String(corp.faCe||"").slice(0,400),urmat:corp.urmat,total});l=l.slice(-500)}
     await env.ISTORIC.put("decizii:"+bot,JSON.stringify(l));return json({ok:true,n:l.length});
+  }
+  if(action==="semneAct"){
+    const tk=idBot(corp&&corp.bot);if(!tk||!Array.isArray(corp.log))return json({error:"Lipseste bot sau log"},400);
+    const NV=["iesi","atentie","tine"],log=corp.log.slice(-200).filter(e=>e&&typeof e==="object"&&NV.includes(e.nivel)&&nr(e.t)!==null).map(e=>({t:nr(e.t),coduri:(Array.isArray(e.coduri)?e.coduri:[]).slice(0,8).map(c=>String(c).slice(0,40)),nivel:e.nivel,pret:nr(e.pret),qty:nr(e.qty),fx:nr(e.fx),r:e.r===0||e.r===1?e.r:undefined,bani:nr(e.bani),inLei:e.inLei===true,c5:nr(e.c5)}));
+    await env.ISTORIC.put("semnale-act:"+tk,JSON.stringify(log));return json({ok:true,n:log.length});
+  }
+  if(action==="socotealaAct"){
+    const p=corp&&corp.peCod;if(!p||typeof p!=="object"||Array.isArray(p))return json({error:"Lipseste peCod"},400);
+    const s=JSON.stringify({la:nr(corp.la)||Date.now(),peCod:p});if(s.length>262144)return json({error:"prea mare"},413);
+    await env.ISTORIC.put("socoteala-actiuni",s);return json({ok:true});
   }
   if(action==="perechiEst"||action==="perechiCorectie"){
     const o=action==="perechiEst"?corp&&corp.est:corp&&corp.corectie;if(!o||typeof o!=="object"||Array.isArray(o))return json({error:"Lipsesc estimarile"},400);

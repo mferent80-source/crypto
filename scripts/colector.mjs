@@ -1077,6 +1077,30 @@ async function simboluriProfil() {
   }
   return [...m].map(([simbol, moneda]) => ({ simbol, moneda }));
 }
+// v101.33 (actiunile T212, pachetul 3): socoteala Consilierului pe actiuni - o data pe zi (ora Romaniei): jurnalele tickerelor, judecate la 5
+// zile de bursa pe barele zilnice, scrise inapoi, adunate pe motiv si lei -> KV socoteala-actiuni (Consilierul ordoneaza motivele dupa ea)
+let socActZi = null, socActInLucru = false, socotealaAct = null;
+async function turaSocotealaActiuni() {
+  const zi = saptamanaRo(Date.now()).data;
+  if (process.env.COLECTOR_FARA_T212 || socActInLucru || socActZi === zi) return;
+  socActInLucru = true;
+  try {
+    const l = await cere("/api/istoric-bot?action=semneActLista"), jurnale = [];
+    for (const tk of (l && l.tickere) || []) {
+      await new Promise((r) => setTimeout(r, 700));
+      const v = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(tk)).catch(() => null); let j = v && Array.isArray(v.log) ? v.log : [];
+      if (j.some((e) => e && e.r !== 0 && e.r !== 1)) {
+        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)), nou = Consiliu.judecaActiune(j, GridCalcul.bareBursa(d && d.randuri || [], Date.now()), Date.now());
+          if (JSON.stringify(nou) !== JSON.stringify(j)) { await trimite("/api/istoric-bot?action=semneAct", { bot: tk, log: nou }); j = nou; } } catch (e) { jurnal("socoteala actiuni", tk, e.message); }
+      }
+      jurnale.push(j);
+    }
+    socotealaAct = Consiliu.socotealaActiuni(jurnale);
+    await trimite("/api/istoric-bot?action=socotealaAct", { la: Date.now(), peCod: socotealaAct });
+    socActZi = zi; jurnal("socoteala actiuni:", jurnale.length, "tickere,", Object.keys(socotealaAct).length, "motive");
+  } catch (e) { jurnal("socoteala actiuni ESEC", e.message); }
+  socActInLucru = false;
+}
 // v101.31 (actiunile T212, pachetul 1): profilul actiunii - noaptea (23:00-07:00 ora Romaniei, dupa inchiderea bursei SUA), o data pe zi pe
 // ticker, doar pozitiile deschise + actiunile din idei (Yahoo limiteaza cererile); 2 ani de bare zilnice -> KV profil:<TICKER>
 let profilActInLucru = false, profilActLa = 0;
@@ -1241,6 +1265,7 @@ async function bucla() {
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
   turaPerechi().catch((e) => jurnal("perechi", e.message));   // v101.30 (I-477)
+  turaSocotealaActiuni().catch((e) => jurnal("socoteala actiuni", e.message));   // v101.33
   turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));

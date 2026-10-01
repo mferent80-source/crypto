@@ -52,5 +52,28 @@ await test("crypto neschimbat: alcatuieste (boti) trece prin ordoneaza si da ord
   assert.deepEqual(c.motive.map((m) => m.cod), ["muta", "costuri", "trend"]);
 });
 
+// ---- pasul 2: socoteala pe motiv si lei ----
+await test("socoteala actiunilor: verdictul notat o data pe schimbare, judecat la 5 zile de bursa pe pret × bucati × curs; IESI/ATENTIE au dreptate daca pretul a scazut", () => {
+  are(CS.noteazaActiune, "Consiliu.noteazaActiune");
+  const Z = 864e5; let j = CS.noteazaActiune([], { nivel: "atentie", motive: [{ cod: "trend-jos" }] }, 100, 10, 4.6, 0);
+  j = CS.noteazaActiune(j, { nivel: "atentie", motive: [{ cod: "trend-jos" }] }, 99, 10, 4.6, Z); assert.equal(j.length, 1, "acelasi verdict nu se renoteaza");
+  const bare = Array.from({ length: 10 }, (_, i) => ({ t: i * Z, o: 100 - i, h: 101 - i, l: 99 - i, c: 100 - i }));
+  j = CS.judecaActiune(j, bare, 9 * Z); assert.equal(j[0].r, 1); assert.ok(Math.abs(j[0].bani - 5 * 10 * 4.6) < 1e-6, String(j[0].bani));
+  const s = CS.socotealaActiuni([j]); assert.equal(s["trend-jos"].judecate, 1); assert.ok(s["trend-jos"].bani > 0); assert.equal(s["trend-jos"].stare, "necunoscut");
+  const t = CS.noteazaActiune([], { nivel: "tine", motive: [{ cod: "trend-sus", c: "v" }] }, 100, 1, null, 0);
+  assert.equal(CS.judecaActiune(t, bare, 9 * Z)[0].r, 0, "ȚINE pe o scadere: n-a avut dreptate"); assert.ok(CS.judecaActiune(t, bare, 9 * Z)[0].bani < 0, "fara curs: banii in dolari");
+});
+await test("rutele: jurnalul pe ticker si socoteala actiunilor in KV; lista tickerelor cu jurnal", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); }, list: async ({ prefix }) => ({ keys: [...kv.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }) } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=semneAct", { bot: "INTC_US_EQ", log: [{ t: 1, coduri: ["trend-jos"], nivel: "atentie", pret: 20, qty: 2, fx: 4.5 }] }), env })).status, 200);
+  assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=semneAct&bot=INTC_US_EQ"), env })).json()).log[0].coduri[0], "trend-jos");
+  assert.deepEqual((await (await mod.onRequestGet({ request: cer("GET", "action=semneActLista"), env })).json()).tickere, ["INTC_US_EQ"]);
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=socotealaAct", { la: 1, peCod: { "trend-jos": { judecate: 1, corecte: 1, bani: 46, baniN: 1 } } }), env })).status, 200);
+  assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=socotealaAct"), env })).json()).peCod["trend-jos"].bani, 46);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /async function turaSocotealaActiuni/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

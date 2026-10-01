@@ -274,12 +274,44 @@ var Consiliu = (function () {
     return { nivel: nivel, eticheta: ETICHETA[nivel], titlu: titlu, faCe: faCe, bani: bani.length ? bani.join(" · ") : null,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: null, extra: null }; }), rest: rest };
   }
+  // ---- socoteala Consilierului actiunilor, pe motiv si in lei: verdictul notat o data pe schimbare, judecat la 5 zile de bursa pe
+  // pret × bucati × curs. IESI/ATENTIE au dreptate daca pretul a scazut (iesind salvai diferenta); TINE, daca a crescut.
+  function noteazaActiune(j, c, pret, qty, fx, acum) {
+    j = Array.isArray(j) ? j.slice() : [];
+    if (!c || (c.nivel !== "iesi" && c.nivel !== "atentie" && c.nivel !== "tine") || !(nr(pret) > 0) || !(nr(qty) > 0)) return j;
+    var coduri = (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return m && m.cod; }).filter(Boolean).sort(), u = j[j.length - 1];
+    if (u && u.nivel === c.nivel && (u.coduri || []).join(",") === coduri.join(",")) return j;
+    j.push({ t: nr(acum) !== null ? nr(acum) : Date.now(), coduri: coduri, nivel: c.nivel, pret: nr(pret), qty: nr(qty), fx: nr(fx) > 0 ? nr(fx) : null });
+    return j.slice(-200);
+  }
+  function judecaActiune(j, bare, acum) {
+    return (Array.isArray(j) ? j : []).map(function (e) {
+      if (!e || e.r === 0 || e.r === 1 || !(e.pret > 0)) return e;
+      var z0 = Math.floor(e.t / 864e5), f = (Array.isArray(bare) ? bare : []).filter(function (x) { return x && Math.floor(x.t / 864e5) > z0 && x.t <= (nr(acum) !== null ? nr(acum) : Date.now()); }).sort(function (a, b) { return a.t - b.t; });
+      if (f.length < 5) return e;
+      var c5 = f[4].c, stai = e.nivel === "tine", o = {}; for (var k in e) o[k] = e[k];
+      o.r = stai ? (c5 >= e.pret ? 1 : 0) : (c5 < e.pret ? 1 : 0);
+      o.bani = Math.round((stai ? c5 - e.pret : e.pret - c5) * e.qty * (e.fx || 1) * 100) / 100; o.inLei = !!e.fx; o.c5 = c5;
+      return o;
+    });
+  }
+  function socotealaActiuni(jurnale) {
+    var r = {};
+    (Array.isArray(jurnale) ? jurnale : []).forEach(function (j) {
+      (Array.isArray(j) ? j : []).forEach(function (e) {
+        if (!e || (e.r !== 0 && e.r !== 1)) return;
+        (e.coduri || []).forEach(function (cod) { var x = r[cod] || (r[cod] = { judecate: 0, corecte: 0, bani: 0, baniN: 0, nume: cod }); x.judecate++; x.corecte += e.r; if (nr(e.bani) !== null) { x.bani += e.bani; x.baniN++; } });
+      });
+    });
+    Object.keys(r).forEach(function (k) { var x = r[k], ic = typeof GridCalcul !== "undefined" ? GridCalcul.wilson(x.corecte, x.judecate) : [0, 1]; x.bani = Math.round(x.bani * 100) / 100; x.stare = x.judecate < 10 ? "necunoscut" : ic[0] > 0.5 ? "ajuta" : "nesigur"; });
+    return r;
+  }
   // forma semaforului actiunilor (poza -> pagina alerts, fara schimbare acolo): {nivel, motive: [titluri], ceAsFace}
   function pentruPozaActiune(c) {
     if (!c || !c.nivel || c.nivel === "asteapta") return { nivel: "fara-date", motive: [c && c.titlu ? String(c.titlu) : "încă socotesc"], ceAsFace: "" };
     return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
       ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
   }
-  return { ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  return { noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;
