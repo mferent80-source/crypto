@@ -131,11 +131,12 @@ const GraficBot = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "
 const Dovada = new Function("GridCalcul", "GraficBot", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "dovada.js"), "utf8") + "; return Dovada;")(GridCalcul, GraficBot, Probabilitati);   // v101.28 (I-471)
 const Scenariu = incarca("scenariu.js", "Scenariu");   // revizia 01.10 (I2): sfaturile si in colector, din aceleasi intrari ca Tabloul
 const Sfaturi = new Function("Alerte", "Scenariu", "TabloExtra", fs.readFileSync(path.join(RAD, "public", "lib", "sfaturi.js"), "utf8") + "; return Sfaturi;")(Alerte, Scenariu, TabloExtra);   // Alerte ca parametru: altfel „pericol” dispare tacut
+const Perechi = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "perechi.js"), "utf8") + "; return Perechi;")(GridCalcul, GridProba);   // v101.30 (I-477)
 const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "consiliu.js"), "utf8") + "; return Consiliu;")(SemnaleBot);   // v101.29 (I-474): o singura voce
 const Asemanatoare = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati);   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare].every(Boolean) && NDX.length > 90); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare, Perechi].every(Boolean) && NDX.length > 90); process.exit(0); }
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 // v91.11 (1): pe tura, cate cereri de PRETURI Pionex au mers / au picat (26.09: 1 ora de preturi moarte fara nicio alerta)
 let preturiTura = { ok: 0, rau: 0, eroare: null };
@@ -287,7 +288,8 @@ async function semnaleBot(b, ctx, acum) {
       cifre: (pr) => TabloExtra.cifreActiuni(b, { protectie: pr, b15 }) });
     x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fisa: f, rezumat: null, acum }));
     x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
-      opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null });
+      opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null,
+      perechi: Perechi.raport(b.ordinePerechi, b.pornitLa, acum, perechiEst && perechiEst[b.id] || null) });   // v101.30 (I-477)
     const stA = stareAlerte[b.id] || (stareAlerte[b.id] = {});
     // revizia 01.10 (I1): starea alertelor botului (ce s-a anuntat deja imediat) si sfaturile tacute (I-466) - ca alerta Consilierului sa nu dubleze
     const activ = Object.fromEntries(Object.entries(stA).filter(([k, v]) => k.charAt(0) !== "_" && v && v.nivel).map(([k, v]) => [k, v.nivel]));
@@ -1092,6 +1094,47 @@ async function turaProbabilitati() {
 }
 // v101.28 (I-469): cazurile din arhiva (ce se stia la pornire + cum s-a terminat) -> KV cazuri, o data pe zi (ziua Romaniei).
 // Starea de la pornire din barele de 1 h de pe disc (doar monedele cu profil; LIT->LIGHTER si alti tickeri redenumiti raman fara stare).
+// moneda -> simbolul Pionex, din profilurile facute (v101.30: comun cazurilor si perechilor)
+function simbolPeMoneda() {
+  const harta = {};
+  for (const s of Object.keys(profilStare.facute || {})) harta[JurnalTrade.moneda(s.replace(/_USDT_PERP$/, ""))] = s;
+  // perechea reala simbol -> moneda din lista profilului (LIT_USDT_PERP = LIGHTER, PUMP = PUMPFUN) bate numele fisierului
+  for (const x of (profilStare.lista && profilStare.lista.v) || []) if (x && x.simbol && x.moneda) harta[x.moneda] = x.simbol;
+  return harta;
+}
+// v101.30 (I-477): perechile reale vs estimarea fisei - o data pe ora: fiecare bot activ fara estimare (15M de dinaintea pornirii), cel mult 15
+// boti inchisi din ultimele 24 de zile (au 7 zile de 15M inainte de pornire in cele ~31 aduse), apoi factorul pe moneda din botii inchisi
+// tinuti cel putin 6 h -> KV perechi-est (pe bot) si perechi-corectie (pe moneda, de la 10 boti)
+let perechiLa = 0, perechiInLucru = false, perechiEst = null;
+async function turaPerechi() {
+  if (perechiInLucru || Date.now() - perechiLa < 3600000) return;
+  perechiInLucru = true; perechiLa = Date.now();
+  try {
+    if (!perechiEst) { const v = await cere("/api/istoric-bot?action=perechiEst").catch(() => null); perechiEst = (v && v.est) || {}; }
+    let noi = 0;
+    const estDe = async (id, simbol, o) => { const e = Perechi.estimare(GridCalcul.bare(await lumanari15M(simbol)), o); perechiEst[id] = { simbol, peZi: e.peZi ?? null, zile: e.zile ?? null, eroare: e.eroare || null, la: Date.now() }; noi++; };
+    const act = await cere("/api/bot-orders");
+    for (const b of (act && act.bots) || []) {
+      if (perechiEst[b.id]) continue;
+      const x = (b.brut && b.brut.buOrderData) || {};
+      try { await estDe(String(b.id), TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex, { pornit: Number(b.pornitLa), jos: Number(x.bottom ?? b.gridJos), sus: Number(x.top ?? b.gridSus), linii: Number(x.row), dir: String(b.directie || "").toLowerCase(), levier: Number(b.levier) || 1, pretPornire: Number(x.initPrice) }); }
+      catch (e) { jurnal("perechi", b.id, e.message); }
+    }
+    const harta = simbolPeMoneda(), tr = JurnalTrade.din(await botiInchisiToti());
+    for (const t of tr.filter((t) => t.pornit > Date.now() - 24 * 86400000 && !perechiEst[t.id] && harta[t.moneda]).slice(0, 15)) {
+      await new Promise((r) => setTimeout(r, 700));
+      try { await estDe(t.id, harta[t.moneda], { pornit: t.pornit, jos: t.jos, sus: t.sus, linii: t.grileN, dir: t.dir, levier: t.levier || 1, pretPornire: t.pretInit }); } catch (e) { jurnal("perechi", t.id, e.message); }
+    }
+    const ids = Object.keys(perechiEst); if (ids.length > 6000) ids.sort((a, b) => perechiEst[a].la - perechiEst[b].la).slice(0, ids.length - 6000).forEach((k) => delete perechiEst[k]);
+    const pe = {};
+    for (const t of tr) { const e = perechiEst[t.id]; if (!e || !(e.peZi >= 0.5) || !(t.perechi >= 0) || !(t.durataOre >= 6)) continue; (pe[e.simbol] = pe[e.simbol] || []).push({ raport: t.perechi / (t.durataOre / 24) / e.peZi }); }
+    const corectie = {}; for (const s of Object.keys(pe)) corectie[s] = { ...Perechi.factor(pe[s]), la: Date.now() };
+    if (noi) await trimite("/api/istoric-bot?action=perechiEst", { est: perechiEst });
+    await trimite("/api/istoric-bot?action=perechiCorectie", { corectie });
+    jurnal("perechi:", noi, "estimari noi,", Object.keys(corectie).filter((s) => corectie[s].factor).length, "monede cu factor din", Object.keys(corectie).length);
+  } catch (e) { jurnal("perechi ESEC", e.message); }
+  perechiInLucru = false;
+}
 // revizia 01.10: dupa un esec (413, server oprit) se asteapta o ora, nu se reia la fiecare minut; cele mai noi 6.000 de cazuri
 let cazuriInLucru = false, cazuriEsec = 0;
 async function turaCazuri() {
@@ -1099,10 +1142,7 @@ async function turaCazuri() {
   if (cazuriInLucru || profilStare.cazuriZi === zi || Date.now() - cazuriEsec < 3600000) return;
   cazuriInLucru = true;
   try {
-    const tr = JurnalTrade.din(await botiInchisiToti()).sort((a, b) => (b.pornit || 0) - (a.pornit || 0)).slice(0, 6000), harta = {};
-    for (const s of Object.keys(profilStare.facute || {})) harta[JurnalTrade.moneda(s.replace(/_USDT_PERP$/, ""))] = s;
-    // perechea reala simbol -> moneda din lista profilului (LIT_USDT_PERP = LIGHTER, PUMP = PUMPFUN) bate numele fisierului
-    for (const x of (profilStare.lista && profilStare.lista.v) || []) if (x && x.simbol && x.moneda) harta[x.moneda] = x.simbol;
+    const tr = JurnalTrade.din(await botiInchisiToti()).sort((a, b) => (b.pornit || 0) - (a.pornit || 0)).slice(0, 6000), harta = simbolPeMoneda();
     const bareDe = (m) => { if (!harta[m]) return null; try { return GridCalcul.bare(JSON.parse(fs.readFileSync(fisOre(harta[m]), "utf8"))); } catch { return null; } };
     const cz = Asemanatoare.cazuri(tr, bareDe);
     await trimite("/api/istoric-bot?action=cazuri", { la: Date.now(), cazuri: cz });
@@ -1152,6 +1192,7 @@ async function bucla() {
   turaProfil().then(() => turaCazuri()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
+  turaPerechi().catch((e) => jurnal("perechi", e.message));   // v101.30 (I-477)
   turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));

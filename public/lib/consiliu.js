@@ -22,7 +22,7 @@ var Consiliu = (function () {
   var SOC = { margine: "muta", muta: "muta", liniste: "tine", directie: "tine", tine: "tine", "miscare-cu": "cu-botul", miscare: "miscare", costuri: "costuri",
     trend: "trend", plan: "plan", stop: "plan", lichidare: "lichidare", btc: "btc", aglomerare: "aglomerare", "ia-profit": "ia-profit", podea: "podea" };
   // ordinea in care cantaresc motivele de acelasi nivel (banii in joc: lichidarea si pierderea maxima intai)
-  var PRIO = ["opreste", "lichidare", "stop", "plan", "pericol", "margine", "muta", "costuri", "trend", "miscare", "btc", "aglomerare", "ia-profit", "liniste"];
+  var PRIO = ["opreste", "lichidare", "stop", "plan", "pericol", "margine", "muta", "costuri", "perechi", "trend", "miscare", "btc", "aglomerare", "ia-profit", "liniste"];
   // „Până la marginea de jos (0.3841) sunt 1.7%” -> „1,7% până la marginea de jos (0.3841)” (ca in demo: cifra intai)
   function titluMargine(t) {
     var m = /^Până la marginea de (jos|sus) \(([^)]*)\) sunt ([0-9.,]+)%$/.exec(String(t || ""));
@@ -73,6 +73,14 @@ var Consiliu = (function () {
       cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.cod === "margine" ? titluMargine(s.titlu) : s.titlu, text: s.text || "", faCe: s.faCe || "",
         scurt: s.cod === "margine" ? "prețul stă lângă marginea de jos" : mic(s.titlu) });
     });
+    // 3b) v100.51 (I-477): gridul incheie sub jumatate din perechile pe care le astepta fisa pe istoricul de dinaintea pornirii
+    var pe = x.perechi;
+    if (pe && nr(pe.raport) !== null && pe.raport < 0.5 && nr(pe.real) !== null && nr(pe.est) !== null) {
+      var z1 = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace(".", ","); };
+      cand.push({ cod: "perechi", nivel: "atentie", c: "g", titlu: "Gridul încheie " + z1(pe.real) + " perechi pe zi; fișa aștepta " + z1(pe.est),
+        text: "Pe cele 30 de zile de dinaintea pornirii, gridul tău ar fi încheiat ~" + z1(pe.est) + " perechi pe zi; acum face " + Math.round(pe.raport * 100) + "% din asta. O frecvență din trecut, nu o promisiune.",
+        faCe: "Aș muta gridul pe unde stă prețul acum (setările din fișă): cu atât de puține perechi nu-și acoperă costurile pe zi.", scurt: "gridul încheie sub jumătate din perechile așteptate" });
+    }
     // 4) motivul verde: piata, cu UN singur trend (directia pietei; fisa - media EMA - devine „structura”)
     var li = sfCod("liniste"), di = sfCod("directie"), tr = sfCod("trend");
     if (li || di) {
@@ -155,7 +163,7 @@ var Consiliu = (function () {
   // alerta lui activa, alerta Consilierului ar fi al doilea mesaj pe Discord pentru acelasi fapt -> ramane doar in Radar.
   var CHEI = { opreste: ["status"], lichidare: ["lich"], pericol: ["lich", "status", "grid", "activ"], plan: ["plan"], stop: ["plan-stop", "opritor"],
     muta: ["s-muta", "grid", "p-margine"], margine: ["s-muta", "grid", "p-margine"], btc: ["s-btc", "m-btc"], aglomerare: ["s-aglomerare"],
-    "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie"] };
+    "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie"], perechi: [] };
   var PAUZA = 2 * 3600000;   // acelasi nivel pe Discord cel mult o data la 2 h pe bot (un nivel care oscileaza nu mai suna la fiecare ciclu)
   // opt = { activ: {cheieAlerta: nivel} (starea alertelor botului), taci: {codSfat: true} (I-466: sfaturile care n-au batut hazardul) }
   function schimbare(st, c, acum, nume, opt) {

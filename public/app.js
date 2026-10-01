@@ -5449,6 +5449,7 @@ function renderGrid(){
     +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
     +grRand("Număr de grile",(st.grile+1)+" · alege „Geometric” în Pionex (implicit e aritmetic) · Pionex numără liniile, cu cea de jos și cea de sus: "+(st.grile+1)+" linii = "+st.grile+" intervale"+(st.redus?" · redus de la "+(st.redus.de+1)+", ca să încapă minimul pe ordin":""),String(st.grile+1))   // v100.38
     +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
+    +(grPerechiText(f)?grRand("Perechi încheiate pe zi",grPerechiText(f),null):"")   // v100.51 (I-477)
     +(f.deasa&&!f.deasa.aceeasi?grRand("Grid des (0,3 %)",f.propusa==="deasa"&&f.aleasa?"PROPUS (setările de mai sus) · proba n-a respins-o · ~"+T1(f.deasa.treceriZi)+" perechi încheiate/zi pe ultimele 30 z (gridul rar al probei: "+(f.aleasa.setare.grile+1)+" grile la "+P(f.aleasa.setare.pas)+", ~"+T1(f.aleasa.treceriZi)+" perechi/zi)":(f.deasa.setare.grile+1)+" grile · ~"+T1(f.deasa.treceriZi)+" perechi/zi · nepropus: "+(f.deasa.respinsa?f.deasa.motiv:"nu e mai des decât gridul de mai sus"),null):"")
     +grRand("Investiție",st.suma+" USDT",String(st.suma))
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
@@ -5890,7 +5891,7 @@ function tbDeseneazaSemafor(b){
   // v100.44 (I-465, demo aprobat 01.10): UN singur Consilier - toate sursele intr-un verdict, o actiune cu bani, 3 motive, restul pliat
   var vv=tbStare.verdictVechi,ind=$("tbIndicatoriRezumat");
   var cons=Consiliu.alcatuieste({sm:sm,concret:conc,sfaturi:tbStare.sfaturiLista||[],consilier:typeof consilierBot==="function"?consilierBot(b):[],socoteala:(tbAduSocoteala(),tbSoc.peCod),
-    laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,
+    laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,perechi:tbPerechiPt(b),
     indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
     note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
   // v100.50 (I-473/I-472): „de ce s-a schimbat” (din verdictul colectorului, daca e acelasi nivel) + socoteala deciziilor
@@ -6272,6 +6273,19 @@ var TB_IND_KEY="tbGraficInd",tbGrafRz=null;
 function tbIndStare(){var d={bb:true,ema:true,rsi:true,vp:true,zi:true,val:true};try{var v=JSON.parse(localStorage.getItem(TB_IND_KEY)||"null");if(v&&typeof v==="object")for(var k in d)if(typeof v[k]==="boolean")d[k]=v[k]}catch(_){}return d}
 function tbSincInd(){var s=tbIndStare();["bb","ema","rsi","vp","zi","val"].forEach(function(k){var e=$("tbInd-"+k);if(e)e.setAttribute("aria-pressed",String(!!s[k]))})}
 function tbComutaInd(k){var s=tbIndStare();if(!Object.prototype.hasOwnProperty.call(s,k))return;s[k]=!s[k];try{localStorage.setItem(TB_IND_KEY,JSON.stringify(s))}catch(_){}tbSincInd();renderTabloGrafic()}
+// v100.51 (I-477): perechile reale vs estimarea fisei (KV perechi-est, de la colector) + corectia pe moneda; adus la 10 min
+var tbPerechi={la:0,est:{},cor:{},inLucru:false};
+function tbPerechiAdu(){
+  if(tbPerechi.inLucru||Date.now()-tbPerechi.la<10*60000)return;tbPerechi.inLucru=true;
+  Promise.all([getJSON("/api/istoric-bot?action=perechiEst").catch(function(){return null}),getJSON("/api/istoric-bot?action=perechiCorectie").catch(function(){return null})])
+    .then(function(r){tbPerechi.est=r[0]&&r[0].est||{};tbPerechi.cor=r[1]&&r[1].corectie||{}}).then(function(){tbPerechi.la=Date.now();tbPerechi.inLucru=false;if(typeof renderGrid==="function")renderGrid()})}
+function tbPerechiPt(b){tbPerechiAdu();return b&&typeof Perechi!=="undefined"?Perechi.raport(b.ordinePerechi,b.pornitLa,Date.now(),tbPerechi.est[b.id]||null):null}
+// fisa Grid: estimarea perechilor pe zi, corectata dupa botii tai pe moneda (de la 10)
+function grPerechiText(f){
+  tbPerechiAdu();var tz=f&&(f.propusa==="deasa"&&f.deasa?f.deasa.treceriZi:f.treceriZi);if(tz==null||!isFinite(tz))return null;
+  var c=tbPerechi.cor[f.simbol],m=String(f.simbol||"").replace(/_USDT(_PERP)?$/,""),T=function(v){return (Math.round(v*10)/10).toFixed(1).replace(".",",")};
+  return "~"+T(tz)+" pe istoric (30 z)"+(c&&c.factor?" · după boții tăi pe "+m+": ~"+T(tz*c.factor)+" (×"+T(c.factor)+", "+c.n+" boți, de obicei ×"+T(c.p25)+"–"+T(c.p75)+")":c&&c.lipsa?" · corecția din boții tăi pe "+m+": încă "+c.lipsa+" din 10 boți":"");
+}
 // v100.51 (I-470): zona de valoare pe 7 zile (bare de 1 h, aduse o data la 30 min pe moneda) + pivotii confirmati pe 4 h (din Directia pietei)
 var tbValoare={simbol:null,la:0,zona:null,inLucru:false};
 function tbValoarePt(b){

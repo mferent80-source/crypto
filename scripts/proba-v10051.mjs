@@ -89,5 +89,39 @@ await test("I-470 laboratorul: intrebarea „valoare” - acelasi pret, grid anc
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /new Function\("GridCalcul", "GridProba", "Valoare"[^\n]*grid-laborator\.js/);
 });
 
+// ---- pasul 4: perechile reale vs estimarea fisei (I-477) ----
+await test("I-477 estimarea: gridul botului mutat relativ pe ferestrele de DINAINTEA pornirii; sub 7 zile -> eroare", () => {
+  are(PER, "perechi.js");
+  const n = 20 * 96, b = Array.from({ length: n }, (_, i) => { const c = 1 + 0.01 * Math.sin(i / 3); return { t: i * 9e5, o: c, h: c * 1.001, l: c * 0.999, c }; });
+  const o = { pornit: b[n - 1].t + 9e5, jos: 0.98, sus: 1.02, linii: 11, dir: "neutru", levier: 2, pretPornire: 1, H: 2 };
+  const e = PER.estimare(b, o); assert.ok(e.peZi > 1 && e.zile >= 7, JSON.stringify(e));
+  assert.match(PER.estimare(b, { ...o, pornit: b[5 * 96].t }).eroare, /7 zile/);
+  assert.equal(PER.estimare(b.concat([{ t: o.pornit + 9e5, o: 5, h: 5, l: 5, c: 5 }]), o).peZi, e.peZi, "barele de dupa pornire nu intra");
+});
+await test("I-477 raportul real/estimat: sub o zi -> null; factorul pe moneda de la 10 boti, cu P25–P75", () => {
+  are(PER, "perechi.js");
+  assert.equal(PER.raport(0, 0, 12 * 3600000, { peZi: 4 }), null);
+  const r = PER.raport(6, 0, 3 * 86400000, { peZi: 4 }); assert.equal(r.real, 2); assert.equal(r.raport, 0.5);
+  assert.equal(PER.factor(Array.from({ length: 9 }, () => ({ raport: 0.6 }))).lipsa, 1);
+  const f = PER.factor([0.2, 0.4, 0.5, 0.6, 0.6, 0.7, 0.8, 0.9, 1, 1.2].map((raport) => ({ raport }))); assert.equal(f.n, 10); assert.ok(Math.abs(f.factor - 0.65) < 1e-9, String(f.factor));
+});
+await test("I-477 Consilierul: sub jumatate din perechile asteptate -> motiv „perechi” (atentie); peste -> nimic", () => {
+  const s = { nivel: "tine", cod: "tine", motiv: "nimic", faCe: "", componente: [] };
+  const c = CS.alcatuieste({ sm: s, perechi: { real: 1.2, est: 4, raport: 0.3 } }); assert.equal(c.nivel, "atentie"); assert.equal(c.motive[0].cod, "perechi"); assert.match(c.motive[0].titlu, /1,2 perechi pe zi.*4/);
+  assert.equal(CS.alcatuieste({ sm: s, perechi: { real: 3, est: 4, raport: 0.75 } }).nivel, "tine");
+});
+await test("I-477 rutele: estimarile pe bot si corectia pe moneda in KV; colectorul le face (turaPerechi), Tabloul le citeste", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=perechiEst", { est: { "2394": { simbol: "CRV_USDT_PERP", peZi: 4, la: 1 } } }), env })).status, 200);
+  assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=perechiEst"), env })).json()).est["2394"].peZi, 4);
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=perechiCorectie", { corectie: { CRV_USDT_PERP: { factor: 0.65, n: 10 } } }), env })).status, 200);
+  assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=perechiCorectie"), env })).json()).corectie.CRV_USDT_PERP.factor, 0.65);
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  assert.match(col, /async function turaPerechi/); assert.match(col, /perechi: Perechi\.raport\(/); assert.match(app, /action=perechiCorectie/); assert.match(app, /perechi:tbPerechiPt\(b\)/);
+  assert.equal(JT.din([{ strategyId: "9", base: "CRV", createTime: 1, closeTime: 2, buOrderType: "futures_grid", buOrderData: { exchangeOrderPairedCount: 7, totalRealizedProfit: 1 } }])[0]?.perechi ?? "fara-trade", 7);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
