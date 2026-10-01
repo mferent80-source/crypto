@@ -61,5 +61,42 @@ await test("pentruBot: putin istoric -> null; neutru -> fara cursa si fara lichi
   assert.equal(l.cursa, null, "tinta sub pret la long = deja atinsa"); assert.ok(l.lichidare7);
 });
 
+await test("jurnal: intrarile poarta preturi ABSOLUTE; judeca dupa orizont, null pana sunt bare complete", () => {
+  assert.ok(typeof PB.intrari === "function", "lipseste Probabilitati.intrari");
+  const b = mers(120 * 24, 0.006, 5), p = b[b.length - 1].c, acum = b[b.length - 1].t + ORA;
+  const rez = PB.pentruBot(b, { acum, pret: p, dir: "long", jos: p * 0.95, sus: p * 1.05, lichidare: p * 0.7, tinta: p * 1.03, stop: p * 0.96 });
+  const l = PB.intrari(rez, { t: acum, bot: "1", simbol: "X_USDT_PERP" });
+  const j = l.find((e) => e.tip === "iese-jos-24"); assert.ok(j && Math.abs(j.ev.nivel - p * 0.95) < 1e-9 && j.ev.sus === false && j.H === 24);
+  assert.ok(l.some((e) => e.tip === "cursa-tinta" && e.ev.tinta > p && e.ev.stop < p));
+  assert.equal(PB.judeca(j, b), null, "inca n-a trecut orizontul");
+  const dupa = Array.from({ length: 30 }, (_, i) => ({ t: acum + i * ORA, o: p, h: p, l: p * 0.94, c: p }));
+  assert.equal(PB.judeca(j, b.concat(dupa)), 1);
+  const linistit = Array.from({ length: 30 }, (_, i) => ({ t: acum + i * ORA, o: p, h: p * 1.001, l: p * 0.999, c: p }));
+  assert.equal(PB.judeca(j, b.concat(linistit)), 0);
+  assert.equal(PB.judeca(j, b.concat(linistit.slice(0, 10))), null, "bare incomplete -> nejudecat (colectorul oprit nu inventeaza)");
+  assert.equal(PB.judeca({ ...j, t: acum - 25 * 60000 }, b.concat(dupa)), 1, "notarea nu cade pe ora fixa: fereastra incepe la ora intreaga urmatoare");
+});
+await test("calibrarea: zise 70%, intamplate 40% (25 de cazuri) -> cifra corectata 40% cu avertisment; sub 20 -> necalibrat", () => {
+  const l = Array.from({ length: 25 }, (_, i) => ({ tip: "iese-jos-24", p: 0.7, r: i < 10 ? 1 : 0 }));
+  const cal = PB.calibreaza(l), c = PB.corecteaza(0.72, "iese-jos-24", cal);
+  assert.equal(c.calibrat, true); assert.equal(c.p, 0.4); assert.equal(c.brut, 0.72); assert.equal(c.avertizare, true); assert.match(c.text, /40% din 25/);
+  const c2 = PB.corecteaza(0.3, "iese-jos-24", cal); assert.equal(c2.calibrat, false); assert.match(c2.text, /necalibrat/);
+  assert.equal(PB.calibreaza(l.concat([{ tip: "iese-jos-24", p: 0.7, r: null }]))["iese-jos-24"].cutii[3].n, 25, "nejudecatele nu se numara");
+});
+await test("textele: rand pentru Consilier (cursa daca exista, altfel iesirea pe partea de pierdere) cu n, independente si IC", () => {
+  const b = mers(120 * 24, 0.006, 5), p = b[b.length - 1].c, acum = b[b.length - 1].t + ORA;
+  const rez = PB.pentruBot(b, { acum, pret: p, dir: "long", jos: p * 0.95, sus: p * 1.05, lichidare: p * 0.7, tinta: p * 1.03, stop: p * 0.96 });
+  const r = PB.rand(rez, null, "long"); assert.match(r, /ținta/); assert.match(r, /din \d+/); assert.match(r, /IC \d+–\d+%/); assert.match(r, /necalibrat/);
+  const fara = PB.rand({ ...rez, cursa: null }, null, "long"); assert.match(fara, /marginea de jos/);
+  const rr = PB.randuri(rez, null, "long"); assert.ok(rr.length >= 5 && rr.every((x) => x.titlu && x.text));
+});
+await test("trader.md §1 / backtest-expert: sub 10 cazuri independente textul spune „un semn, nu o regulă”; de la 10, nu", () => {
+  const x = { p: 0.4, n: 30, k: 12, nIndep: 5, ic: [0.1, 0.8], orizontOre: 168, conditionat: true, stare: "liniste" };
+  const rez = { stare: "liniste", bare: 4000, niveluri: { jos: 1, sus: 2 }, iese: { jos24: x, sus24: { ...x, nIndep: 12 } } };
+  const rr = PB.randuri(rez, null, "long");
+  assert.match(rr.find((r) => r.cod === "iese-jos-24").text, /puține cazuri independente — un semn, nu o regulă/);
+  assert.ok(!/un semn, nu o regulă/.test(rr.find((r) => r.cod === "iese-sus-24").text));
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

@@ -80,5 +80,76 @@ var Probabilitati = (function () {
     }
     return out;
   }
-  return { pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, ORA: ORA };
+  // ---- jurnalul si calibrarea: fiecare cifra aratata se noteaza (colectorul, la 4 h pe bot) si se judeca dupa orizontul ei ----
+  // Calibrarea e out-of-sample prin constructie: se judeca doar ce s-a notat INAINTE sa se stie rezultatul.
+  var TIPURI = { "iese-jos-24": ["iese", "jos24"], "iese-sus-24": ["iese", "sus24"], "iese-jos-72": ["iese", "jos72"], "iese-sus-72": ["iese", "sus72"], "lichidare-7": ["lichidare7"], "cursa-tinta": ["cursa", "tinta"], "liniste-24": ["liniste", "z1"], "liniste-48": ["liniste", "z2"] };
+  function ia(rez, cale) { var x = rez; for (var i = 0; i < cale.length && x; i++) x = x[cale[i]]; return x && nr(x.p) !== null ? x : null; }
+  function intrari(rez, c) {
+    if (!rez || !c) return [];
+    var nv = rez.niveluri || {}, out = [];
+    Object.keys(TIPURI).forEach(function (tip) {
+      var x = ia(rez, TIPURI[tip]); if (!x) return;
+      var ev = /^iese-jos/.test(tip) ? { fel: "atinge", nivel: nv.jos, sus: false } : /^iese-sus/.test(tip) ? { fel: "atinge", nivel: nv.sus, sus: true }
+        : tip === "lichidare-7" ? { fel: "atinge", nivel: nv.lichidare, sus: nr(nv.lichidare) > nr(nv.jos) } : tip === "cursa-tinta" ? { fel: "cursa", tinta: nv.tinta, stop: nv.stop } : { fel: "liniste" };
+      out.push({ t: c.t, bot: String(c.bot), simbol: String(c.simbol), tip: tip, p: Math.round(x.p * 1000) / 1000, H: x.orizontOre, ev: ev });
+    });
+    return out;
+  }
+  // 1 = s-a intamplat, 0 = nu, null = orizontul n-are inca bare complete (colectorul oprit nu inventeaza)
+  function judeca(e, bare) {
+    if (!e || !Array.isArray(bare) || !(e.H > 0)) return null;
+    // fereastra incepe la prima ora intreaga de dupa notare (acum-ul colectorului nu cade pe ora fixa)
+    var t0 = Math.ceil(e.t / ORA) * ORA, f = bare.filter(function (b) { return b.t >= t0 && b.t < t0 + e.H * ORA; });
+    if (f.length < e.H || f[f.length - 1].t !== t0 + (e.H - 1) * ORA) return null;
+    var v = e.ev || {};
+    if (v.fel === "atinge") return f.some(function (b) { return v.sus ? b.h >= v.nivel : b.l <= v.nivel; }) ? 1 : 0;
+    if (v.fel === "cursa") { var sus = v.tinta > v.stop; for (var i = 0; i < f.length; i++) { if (sus ? f[i].l <= v.stop : f[i].h >= v.stop) return 0; if (sus ? f[i].h >= v.tinta : f[i].l <= v.tinta) return 1; } return 0; }
+    if (v.fel === "liniste") { var k = -1; for (var j = 0; j < bare.length; j++) if (bare[j].t === t0 + (e.H - 1) * ORA) { k = j; break; } var s = k >= 0 ? stareLa(bare, k) : null; return s === null ? null : s === "liniste" ? 1 : 0; }
+    return null;
+  }
+  function calibreaza(l) {
+    var out = {};
+    (Array.isArray(l) ? l : []).forEach(function (e) {
+      if (!e || (e.r !== 0 && e.r !== 1) || nr(e.p) === null) return;
+      var c = out[e.tip] || (out[e.tip] = { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0 }; }) }), i = Math.min(4, Math.floor(e.p * 5));
+      c.cutii[i].n++; c.cutii[i].k += e.r;
+    });
+    return out;
+  }
+  var PC = function (v) { return Math.round(v * 100) + "%"; };
+  // pragurile calibrarii (20 de cazuri pe cutie, 15 puncte) sunt ipoteze de casa - spuse in nota sectiunii
+  function corecteaza(p, tip, cal) {
+    var c = cal && cal[tip] && cal[tip].cutii && cal[tip].cutii[Math.min(4, Math.floor(p * 5))];
+    if (!c || c.n < 20) return { p: p, brut: p, calibrat: false, n: c ? c.n : 0, avertizare: false, text: "necalibrat încă" + (c && c.n ? " (" + c.n + " judecate)" : "") };
+    var q = Math.round(c.k / c.n * 1000) / 1000, mij = Math.min(4, Math.floor(p * 5)) * 20 + 10;
+    return { p: q, brut: p, calibrat: true, n: c.n, avertizare: Math.abs(q - p) > 0.15, text: "calibrat: când am zis ~" + mij + "%, s-a întâmplat în " + PC(q) + " din " + c.n + " cazuri" };
+  }
+  function fr(x, tip, cal) {
+    var c = corecteaza(x.p, tip, cal);
+    var t = x.k + " din " + x.n + " " + (x.conditionat ? "situații ca acum" : "zile (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente, IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%)"
+      + (x.nIndep < 10 ? " · puține cazuri independente — un semn, nu o regulă" : "")   // trader.md §1: sub 10 pe grupa = zgomot
+      + " · " + c.text + (c.calibrat && c.avertizare ? " — ⚠ cifra brută era " + PC(c.brut) : "");
+    return { p: c.p, avertizare: c.avertizare, text: t };
+  }
+  // preturile ca pe Tablou (SemnaleBot.fmtPret)
+  function fp(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
+  function randuri(rez, cal) {
+    if (!rez) return [];
+    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, avertizare: y.avertizare, text: y.text }); } };
+    add("cursa", "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
+    add("iese-jos-24", "Atinge marginea de jos (" + fp(nv.jos) + ") în 24 h", rez.iese && rez.iese.jos24, "iese-jos-24");
+    add("iese-sus-24", "Atinge marginea de sus (" + fp(nv.sus) + ") în 24 h", rez.iese && rez.iese.sus24, "iese-sus-24");
+    add("iese-jos-72", "Atinge marginea de jos în 3 zile", rez.iese && rez.iese.jos72, "iese-jos-72");
+    add("iese-sus-72", "Atinge marginea de sus în 3 zile", rez.iese && rez.iese.sus72, "iese-sus-72");
+    add("lichidare", "Atinge lichidarea (" + fp(nv.lichidare) + ") în 7 zile", rez.lichidare7, "lichidare-7");
+    add("liniste-24", "Liniștea mai ține o zi", rez.liniste && rez.liniste.z1, "liniste-24");
+    add("liniste-48", "Liniștea mai ține două zile", rez.liniste && rez.liniste.z2, "liniste-48");
+    return out;
+  }
+  // randul din Consilier: cursa, daca exista; altfel iesirea pe partea de pierdere in 24 h
+  function rand(rez, cal, dir) {
+    var l = randuri(rez, cal), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
+    return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
+  }
+  return { pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();
