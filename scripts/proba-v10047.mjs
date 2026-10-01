@@ -138,5 +138,29 @@ await test("server: ore:<SIMBOL> pana la 512 KB; pagina: fisa cere ore si arata 
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-profil.mjs"), "utf8"), /d\.trimiteOre/); assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /action=ore/);
 });
 
+// ---- revizia finala 2b (01.10): reparatiile, fiecare cu testul ei vazut picand intai ----
+await test("I1: situatiile asemanatoare se judeca pe NET (comisioane + funding), pe suma reala pusa", () => {
+  const tr = [{ id: "a", moneda: "X", dir: "long", levier: 3, investit: 50, pus: 40, pornit: T0, jos: 90, sus: 110, pretInit: 100, pasNet: 0.004, pct: 0.02, rezultat: 1, net: -0.4, durataOre: 10 }];
+  assert.equal(AS.cazuri(tr, () => null)[0].pct, -0.01, "net −0,4 pe 40 pusi = −1%, nu realizatul brut +2%");
+});
+await test("I2: botul neutru de pe Tablou (directie „no_trend”) isi gaseste vecinii neutri", () => {
+  const cz = Array.from({ length: 15 }, (_, i) => ({ id: "n" + i, moneda: "X", dir: "neutru", lev: 3, lat: 0.1, pas: 0.004, ora: 1, stare: null, pct: 0.01, ore: 5 }));
+  const v = AS.vecini(cz, { dir: "no_trend", lev: 3, lat: 0.1, pas: 0.004, stare: null, investit: 50 }); assert.equal(v.n, 15, v.text);
+  assert.equal(AS.cazuri([{ id: "b", moneda: "X", dir: "no_trend", levier: 2, investit: 10, pornit: T0, jos: 1, sus: 2, pretInit: 1.5, pasNet: 0.003, net: 0.1, durataOre: 1 }], () => null)[0].dir, "neutru");
+});
+await test("I4: „piață la fel” doar cu acoperire - spune la cati din N vecini se stie starea si e aceeasi", () => {
+  const baza = (i, st) => ({ id: "c" + i, moneda: "X", dir: "long", lev: 3, lat: 0.1, pas: 0.004, ora: 1, stare: st, pct: 0.01, ore: 5 });
+  const cz = Array.from({ length: 9 }, (_, i) => baza(i, "liniste-lateral")).concat(Array.from({ length: 21 }, (_, i) => baza(100 + i, null)));
+  const v = AS.vecini(cz, { dir: "long", lev: 3, lat: 0.1, pas: 0.004, stare: "liniste-lateral", investit: 50 });
+  assert.equal(v.laFel, 9); assert.match(v.text, /piață la fel la 9 din 30/); assert.ok(!/, piață la fel\)/.test(v.text));
+});
+await test("I3/I5/I6/I7: cheia fisei cuprinde lichidarea si stopurile; cazurile cu amanare si limita; poarta ia starea din blocul 🎲; titlul cursei cu preturile fisei", () => {
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), srv = fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8");
+  assert.match(app, /ch=\[f\.simbol,grStare\.la,dir,st\.jos,st\.sus,JSON\.stringify\(st\.lichidare\|\|null\),JSON\.stringify\(st\.stop\|\|null\)\]/);
+  assert.match(col, /cazuriEsec/); assert.match(col, /profilStare\.lista/); assert.match(srv, /action==="cazuri"\?1048576/);
+  assert.match(app, /grProb\.rez&&grProb\.simbol===f\.simbol\?grProb\.rez\.stare:Probabilitati\.stareDinRegim\(f\.regim\)/);
+  assert.match(app, /Prețul de câștig al fișei \("\+/); assert.ok(!/Marginea de câștig înaintea stopului fișei/.test(app));
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

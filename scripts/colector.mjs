@@ -1070,20 +1070,23 @@ async function turaProbabilitati() {
 }
 // v101.28 (I-469): cazurile din arhiva (ce se stia la pornire + cum s-a terminat) -> KV cazuri, o data pe zi (ziua Romaniei).
 // Starea de la pornire din barele de 1 h de pe disc (doar monedele cu profil; LIT->LIGHTER si alti tickeri redenumiti raman fara stare).
-let cazuriInLucru = false;
+// revizia 01.10: dupa un esec (413, server oprit) se asteapta o ora, nu se reia la fiecare minut; cele mai noi 6.000 de cazuri
+let cazuriInLucru = false, cazuriEsec = 0;
 async function turaCazuri() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
-  if (cazuriInLucru || profilStare.cazuriZi === zi) return;
+  if (cazuriInLucru || profilStare.cazuriZi === zi || Date.now() - cazuriEsec < 3600000) return;
   cazuriInLucru = true;
   try {
-    const tr = JurnalTrade.din(await botiInchisiToti()), harta = {};
+    const tr = JurnalTrade.din(await botiInchisiToti()).sort((a, b) => (b.pornit || 0) - (a.pornit || 0)).slice(0, 6000), harta = {};
     for (const s of Object.keys(profilStare.facute || {})) harta[JurnalTrade.moneda(s.replace(/_USDT_PERP$/, ""))] = s;
+    // perechea reala simbol -> moneda din lista profilului (LIT_USDT_PERP = LIGHTER, PUMP = PUMPFUN) bate numele fisierului
+    for (const x of (profilStare.lista && profilStare.lista.v) || []) if (x && x.simbol && x.moneda) harta[x.moneda] = x.simbol;
     const bareDe = (m) => { if (!harta[m]) return null; try { return GridCalcul.bare(JSON.parse(fs.readFileSync(fisOre(harta[m]), "utf8"))); } catch { return null; } };
     const cz = Asemanatoare.cazuri(tr, bareDe);
     await trimite("/api/istoric-bot?action=cazuri", { la: Date.now(), cazuri: cz });
     profilStare.cazuriZi = zi; try { scrieAtomic(PROFIL_STARE, profilStare); } catch {}
     jurnal("cazuri:", cz.length, "cu starea de la pornire:", cz.filter((c) => c.stare).length);
-  } catch (e) { jurnal("cazuri ESEC", e.message); }
+  } catch (e) { cazuriEsec = Date.now(); jurnal("cazuri ESEC (reincerc peste o ora)", e.message); }
   cazuriInLucru = false;
 }
 

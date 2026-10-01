@@ -5133,8 +5133,8 @@ async function gridPoarta(){
   if(prG&&taG&&(f.dir==="long"||f.dir==="short")){var EG=(taG.suma||0)*(taG.levier||1);pmG=ProfilMoneda.planPeMoneda({profil:prG,dir:f.dir,dist:taG.d,laDist:function(dd){return -GridPlan.pierdere(EG,dd,taG.u)}})}
   // v100.47 (I-469): boții lui in situatii asemanatoare cu gridul propus (aceeasi directie, latime/pas/levier apropiate, starea pietei din fisa)
   var asG=null;try{var dCz=await getJSON("/api/istoric-bot?action=cazuri"),stP=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare;
-    if(dCz&&dCz.cazuri&&dCz.cazuri.cazuri&&stP&&f.pret>0)asG=Asemanatoare.vecini(dCz.cazuri.cazuri,{dir:f.dir,lev:Math.max(1,Math.floor(lev)),lat:(stP.sus-stP.jos)/f.pret,pas:stP.pas-2*GridCalcul.C.COMISION_GRILA,stare:Probabilitati.stareDinRegim(f.regim),investit:grNumar($("grSuma")&&$("grSuma").value)||stP.suma})}catch(e){asG=null}
-  var sansaG=grProb.rez&&grProb.simbol===f.simbol?Probabilitati.rand(grProb.rez,grProb.cal,f.dir,{titluCursa:GR_TITLU_CURSA}):null;   // v100.47
+    if(dCz&&dCz.cazuri&&dCz.cazuri.cazuri&&stP&&f.pret>0)asG=Asemanatoare.vecini(dCz.cazuri.cazuri,{dir:f.dir,lev:Math.max(1,Math.floor(lev)),lat:(stP.sus-stP.jos)/f.pret,pas:stP.pas-2*GridCalcul.C.COMISION_GRILA,stare:grProb.rez&&grProb.simbol===f.simbol?grProb.rez.stare:Probabilitati.stareDinRegim(f.regim),investit:grNumar($("grSuma")&&$("grSuma").value)||stP.suma})}catch(e){asG=null}
+  var sansaG=grProb.rez&&grProb.simbol===f.simbol?Probabilitati.rand(grProb.rez,grProb.cal,f.dir,{titluCursa:grTitluCursa(grProb.rez)}):null;   // v100.47
   grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({planMoneda:pmG,asemanatoare:asG,sansa:sansaG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
@@ -5643,7 +5643,8 @@ function tbProbRandHtml(x){
 // v100.47 (pachetul 2b): probabilitatile din istoric pe GRIDUL PROPUS din fisa - barele de 1 h din KV (colectorul, noaptea) + orele de azi
 // din 15M; fara bare (moneda fara profil, pagina publicata) blocul lipseste
 var grProb={simbol:null,la:0,ore:null,cal:null,inLucru:false,rez:null,cheie:null};
-var GR_TITLU_CURSA="Marginea de câștig înaintea stopului fișei, în 7 zile";
+// titlul cursei din fisa: tinta e PRETUL de castig al fisei (dincolo de margine), cu preturile scrise (la short nu se vad altfel) - revizia 01.10
+function grTitluCursa(rez){var nv=rez&&rez.niveluri||{},f=function(v){return v==null?"?":String(Number(Number(v).toPrecision(5)))};return "Prețul de câștig al fișei ("+f(nv.tinta)+") înaintea stopului fișei ("+f(nv.stop)+"), în 7 zile"}
 function grProbSetare(f){return f&&(f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare)||null}
 function grProbDeseneaza(f){
   var el=$("grProb");if(!el||!f)return;
@@ -5653,7 +5654,7 @@ function grProbDeseneaza(f){
       .then(function(){grProb.simbol=s;grProb.la=Date.now();grProb.inLucru=false;grProb.cheie=null;if(grStare.fisa&&grStare.fisa.simbol===s)grProbDeseneaza(grStare.fisa)})}
   if(grProb.simbol!==f.simbol||!grProb.ore){el.innerHTML="";grProb.rez=null;return}
   var st=grProbSetare(f);if(!st){el.innerHTML="";return}
-  var dir=f.dir==="short"?"short":f.dir==="long"?"long":"neutru",ch=[f.simbol,grStare.la,dir,st.jos,st.sus].join("|");
+  var dir=f.dir==="short"?"short":f.dir==="long"?"long":"neutru",ch=[f.simbol,grStare.la,dir,st.jos,st.sus,JSON.stringify(st.lichidare||null),JSON.stringify(st.stop||null)].join("|");   // revizia 01.10: si lichidarea/stopurile (levierul schimbat)
   if(grProb.cheie!==ch){
     var b1=grProb.ore.map(function(r){return {t:r[0],o:r[1],h:r[2],l:r[3],c:r[4]}}),b15=grStare.date&&grStare.simbol===f.simbol?GridCalcul.bare(grStare.date.r15):[];
     grProb.rez=Probabilitati.pentruBot(Probabilitati.imbina(b1,b15,Date.now()),{acum:Date.now(),pret:f.pret,dir:dir,jos:st.jos,sus:st.sus,
@@ -5661,7 +5662,7 @@ function grProbDeseneaza(f){
     grProb.cheie=ch}
   var rez=grProb.rez;if(!rez){el.innerHTML="";return}
   el.innerHTML='<div class="tbBloc grProbBloc"><h4>🎲 Ce s-a întâmplat în trecut, cu gridul propus</h4><p class="tbSub">acum: '+escapeHtml(Probabilitati.ETICHETE[rez.stare]||rez.stare)+' · '+Math.round(rez.bare/24)+' de zile de bare de 1 h</p>'
-    +Probabilitati.randuri(rez,grProb.cal,{titluCursa:GR_TITLU_CURSA}).map(tbProbRandHtml).join("")
+    +Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}).map(tbProbRandHtml).join("")
     +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei, în situații ca acum — nu predicții. Banda: zona e intervalul de încredere, semnul e cifra.</p></div>';
 }
 function tbDeseneazaProb(b){
