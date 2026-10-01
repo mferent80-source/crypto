@@ -2144,3 +2144,14 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #jurnaltrade .jtMai{display:block;width:100%;margin:10px 0 0;padding:10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--text);font:inherit;cursor:pointer}
 #jurnaltrade .jtMai:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 /* stStat end */
+/* v100.46 (pachetul 2a): Probabilitatile din istoric - rand: titlu, procent, banda 0-100% cu intervalul de incredere (zona) si cifra (semnul) */
+.tbProbRand{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.tbProbRand>.tbSub{grid-column:1/-1;margin:0}
+.tbProbP{font-variant-numeric:tabular-nums;font-size:16px}
+.tbProbRand.tbWarn .tbProbP{color:var(--warn)}
+.tbProbBanda{grid-column:1/-1;position:relative;height:8px;border-radius:4px;background:var(--line-soft)}
+.tbProbBanda i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--accent-2);opacity:.35}
+.tbProbBanda b{position:absolute;top:-3px;width:3px;height:14px;margin-left:-1px;border-radius:2px;background:var(--accent-2)}
+.tbProbRand.tbWarn .tbProbBanda b,.tbProbRand.tbWarn .tbProbBanda i{background:var(--warn)}
+.tbProbNota{margin-top:8px}
+.tbConsSansa{margin:6px 0 0}

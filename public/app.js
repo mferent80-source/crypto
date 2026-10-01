@@ -5591,6 +5591,31 @@ async function tbAduFisaBot(b){
 var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botId:null,plan:null,la:0},tbMinusAtins={};
 // v100.43 (I-466): increderea fiecarui sfat, masurata pe toti botii lui (KV „socoteala”, colectorul o reface o data pe ora)
 var tbSoc={la:0,peCod:null,inLucru:false};
+// v100.46 (pachetul 2a): probabilitatile botului (colectorul, o data pe ora) + calibrarea lor; fara server (pagina publicata) -> ascuns.
+// Fiecare rand: titlul, procentul si o banda 0-100% cu intervalul de incredere (zona) si cifra (semnul) - nesiguranta se vede, nu doar se citeste.
+var tbProb={botId:null,la:0,rez:null,cal:null,inLucru:false};
+function tbProbPt(b){
+  if(!b||!b.id)return null;
+  if(!tbProb.inLucru&&(tbProb.botId!==b.id||Date.now()-tbProb.la>10*60000)){tbProb.inLucru=true;
+    Promise.all([getJSON("/api/istoric-bot?action=prob&bot="+encodeURIComponent(b.id)),getJSON("/api/istoric-bot?action=calibrare").catch(function(){return null})])
+      .then(function(r){tbProb.rez=r[0]&&r[0].prob||null;tbProb.cal=r[1]&&r[1].calibrare&&r[1].calibrare.cal||null}).catch(function(){tbProb.rez=null;tbProb.cal=null})
+      .then(function(){tbProb.botId=b.id;tbProb.la=Date.now();tbProb.inLucru=false;tbDeseneazaProb(b)})}
+  return tbProb.botId===b.id?tbProb:null;
+}
+function tbDeseneazaProb(b){
+  var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
+  var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;
+  if(!rez){card.hidden=true;return}
+  card.hidden=false;
+  if(rez.gol){if(sub)sub.textContent="puțin istoric";el.innerHTML='<p class="tbSub">Pe moneda asta sunt prea puține bare de 1 oră ('+escapeHtml(rez.gol)+'). Colectorul le aduce noaptea; cifrele apar după.</p>';return}
+  var l=Probabilitati.randuri(rez,t.cal),P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))};
+  if(sub)sub.textContent="acum: "+({liniste:"liniște","miscare-sus":"mișcare în sus","miscare-jos":"mișcare în jos"}[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
+  el.innerHTML=(l.length?l.map(function(x){var lo=x.ic?P(x.ic[0]):null,hi=x.ic?P(x.ic[1]):null;
+      return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+P(x.p)+'%</b>'
+        +'<div class="tbProbBanda" role="img" aria-label="'+P(x.p)+'%, interval de încredere '+lo+'–'+hi+'%">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b></div>'
+        +'<p class="tbSub">'+escapeHtml(x.text)+'</p></div>'}).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
+    +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
+}
 // v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
 // Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.
 var tbProfil={simbol:null,la:0,p:null,inLucru:false,faraServer:false};   // faraServer: pagina publicata (fara KV) - nimic de promis
@@ -5605,7 +5630,7 @@ function tbAduSocoteala(){if(tbSoc.inLucru||Date.now()-tbSoc.la<10*60000)return;
 function tbConsHtml(c){
   var cip=function(x){return x?'<span class="tbConsCip '+escapeHtml(x.cls||"")+'" title="'+escapeHtml(x.titlu||"")+'">'+escapeHtml(x.t)+'</span>':''};
   return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'
-    +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+'</div>'
+    +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')+'</div>'
     +(c.incredere?'<p class="tbConsInc">'+escapeHtml(c.incredere)+'</p>':'')+'</div>'
     +'<div class="tbConsDr"><h4>De ce'+(c.motive.length?' · '+c.motive.length+(c.motive.length===1?' motiv':' motive')+', după banii în joc':'')+'</h4>'
     +(c.motive.length?c.motive.map(function(m){return '<div class="tbConsMotiv"><i class="'+escapeHtml(m.c)+'"></i><div><b>'+escapeHtml(m.titlu)+'</b>'+(m.text?'<p>'+escapeHtml(m.text)+'</p>':'')
@@ -5773,6 +5798,7 @@ function tbDeseneazaSemafor(b){
     laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,
     indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
     note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
+  var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
   var r0=el.querySelector(".tbConsRest");if(r0)tbConsRestDeschis=!!r0.open;   // „Restul” ramane deschis la reimprospatare
   el.innerHTML=h+tbConsHtml(cons);$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;
   if(mot)mot.hidden=true;

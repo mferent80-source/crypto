@@ -135,7 +135,7 @@ var Probabilitati = (function () {
   function fp(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   function randuri(rez, cal) {
     if (!rez) return [];
-    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, avertizare: y.avertizare, text: y.text }); } };
+    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: x.ic, avertizare: y.avertizare, text: y.text }); } };
     add("cursa", "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
     add("iese-jos-24", "Atinge marginea de jos (" + fp(nv.jos) + ") în 24 h", rez.iese && rez.iese.jos24, "iese-jos-24");
     add("iese-sus-24", "Atinge marginea de sus (" + fp(nv.sus) + ") în 24 h", rez.iese && rez.iese.sus24, "iese-sus-24");
