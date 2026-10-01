@@ -57,10 +57,6 @@ await test("ruta profil: primeste si intoarce forma actiunii (z1/z5/sar/evenimen
 // ---- pasul 3: varianta de stop „prof” pe trade-urile lui ----
 await test("varianta prof: profilul din barele de DINAINTEA cumpararii; alegeTrail - prof doar daca iese >= u15 pe cel putin 30 de trade-uri", () => {
   assert.ok(typeof AS.alegeTrail === "function", "lipseste ActiuniSemnale.alegeTrail");
-  const ru = (p, u, j) => ({ judecate: j, real: 0, praguri: { prof: { total: p, dif: p }, u15: { total: u, dif: u }, plan: { total: 0, dif: 0 }, u25: { total: 0, dif: 0 } } });
-  assert.equal(AS.alegeTrail(ru(120, 100, 40)).cheie, "prof");
-  assert.equal(AS.alegeTrail(ru(90, 100, 40)).cheie, "u15");
-  const m = AS.alegeTrail(ru(500, 100, 20)); assert.equal(m.cheie, "u15"); assert.match(m.motiv, /20 din 30/);
   const t = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
   assert.match(t, /cheie: "prof"/); assert.match(t, /pragStopActiune\(/); assert.match(t, /b\.t \+ 8 \* 3600000 <= t\.pornit/);
   // poza 01.10: randul „prof” in tabel ar fi fost socotit pe TOATE trade-urile (neprobat = fara stop) -> in tabel nu intra; sub el, comparatia corecta
@@ -109,9 +105,42 @@ await test("trailPozitie: prof castigat + profil -> trailProfil cu sursa si moti
 await test("alegeTrail compara doar pe trade-urile unde „prof” a fost rejucat (aceleasi trade-uri pentru ambele variante)", () => {
   const inchise = Array.from({ length: 40 }, (_, i) => ({ id: "t" + i, cost: 100, rezultat: i % 2 ? 10 : -20 }));
   const fara = Object.fromEntries(inchise.map((t) => [t.id, { nivel: "cumpara", stopU: { plan: null, u15: { pct: -0.05 }, u25: null } }]));
-  const a = AS.alegeTrail(inchise, fara); assert.equal(a.cheie, "u15"); assert.match(a.motiv, /0 din 30/, a.motiv);
-  const cu = Object.fromEntries(inchise.map((t, i) => [t.id, { nivel: "cumpara", stopU: i < 35 ? { plan: null, u15: { pct: -0.05 }, u25: null, prof: { pct: -0.02 } } : { plan: null, u15: { pct: -0.05 }, u25: null } }]));
-  const b = AS.alegeTrail(inchise, cu); assert.equal(b.cheie, "prof", b.motiv); assert.match(b.motiv, /35 de trade-uri|pe 35 /);
+  const a = AS.alegeTrail(inchise, fara); assert.equal(a.cheie, "u15"); assert.match(a.motiv, /rejucarea e în curs: 0 din 40/, a.motiv);
+  const cu = Object.fromEntries(inchise.map((t, i) => [t.id, { nivel: "cumpara", stopU: { plan: null, u15: { pct: -0.05 }, u25: null, prof: { pct: -0.02 } } }]));   // revizia C1: toate rejucate (in curs -> −15%)
+  const b = AS.alegeTrail(inchise, cu); assert.equal(b.cheie, "prof", b.motiv); assert.match(b.motiv, /pe 40 de trade-uri/);
+});
+
+// ---- revizia finala (Opus, 01.10): C1, I1, I2, I3 ----
+const tr = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+await test("C1: la EGALITATE (trade-uri de o zi, niciun stop atins) ramane −15%", () => {
+  const inch = tr(60, (i) => ({ id: "t" + i, cost: 100, rezultat: 5 })), cf = Object.fromEntries(inch.map((t) => [t.id, { nivel: "cumpara", stopU: { plan: null, u15: null, u25: null, prof: null } }]));
+  const a = AS.alegeTrail(inch, cf); assert.equal(a.cheie, "u15", a.motiv); assert.match(a.motiv, /0 din 30/);
+});
+await test("C1: cat timp rejucarea e in curs (trade-uri fara „prof”) ramane −15%", () => {
+  const inch = tr(80, (i) => ({ id: "t" + i, cost: 100, rezultat: -20 }));
+  const cf = Object.fromEntries(inch.map((t, i) => [t.id, { nivel: "cumpara", stopU: i < 50 ? { plan: null, u15: { pct: -0.15 }, u25: null, prof: { pct: -0.04 } } : { plan: null, u15: { pct: -0.15 }, u25: null } }]));
+  const a = AS.alegeTrail(inch, cf); assert.equal(a.cheie, "u15"); assert.match(a.motiv, /rejucarea e în curs: 50 din 80/);
+});
+await test("C1: castiga doar STRICT mai bun, cu marja (≥ 1% din cost) si fara sa depinda de un singur trade; pe ≥ 30 de trade-uri unde difera", () => {
+  const inch = tr(40, (i) => ({ id: "t" + i, cost: 100, rezultat: -20 }));
+  const cfP = Object.fromEntries(inch.map((t) => [t.id, { nivel: "cumpara", stopU: { plan: null, u15: { pct: -0.15 }, u25: null, prof: { pct: -0.05 } } }]));
+  const p = AS.alegeTrail(inch, cfP); assert.equal(p.cheie, "prof", p.motiv); assert.match(p.motiv, /40 de trade-uri/);
+  // un singur trade urias face tot castigul -> nu ajunge
+  const cfU = Object.fromEntries(inch.map((t, i) => [t.id, { nivel: "cumpara", stopU: { plan: null, u15: { pct: -0.15 }, u25: null, prof: i === 0 ? { pct: 0.9 } : { pct: -0.1501 } } }]));
+  assert.equal(AS.alegeTrail(inch, cfU).cheie, "u15");
+  // diferenta mai mica de 1% din cost -> nu ajunge
+  const cfM = Object.fromEntries(inch.map((t) => [t.id, { nivel: "cumpara", stopU: { plan: null, u15: { pct: -0.15 }, u25: null, prof: { pct: -0.1495 } } }]));
+  assert.equal(AS.alegeTrail(inch, cfM).cheie, "u15");
+});
+await test("I1 + I2: stopul aplicat = cel probat (exact −P75 de la maxim) si eticheta spune cinstit ce masoara", () => {
+  const b = Array.from({ length: 200 }, (_, i) => ({ t: i * 864e5, o: 100, h: 106, l: 94, c: 100 }));   // actiune agitata: ATR mare
+  const tp = AS.trailPozitie({ cheie: "prof", motiv: "m" }, { dist: 0.033, sursa: "profilul X: 500 zile de bursă (bare zilnice)" });
+  const n = AS.niveluri(b, 100, { pretMediu: 100, maxDupaCumparare: 100, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail });
+  assert.ok(Math.abs(n.trailPct - 3.3) < 0.05, "probat 3,3%, aplicat " + n.trailPct);
+  assert.match(tp.sursaTrail, /−3,3% de la maxim/); assert.match(tp.sursaTrail, /1 din 4 săptămâni/); assert.match(tp.sursaTrail, /rezultate/);
+});
+await test("I3: colectorul noteaza in jurnal alegerea stopului (u15 vs profil, pe cate trade-uri)", () => {
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /jurnal\("stopul care urca:"/);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);

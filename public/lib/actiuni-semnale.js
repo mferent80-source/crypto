@@ -235,8 +235,9 @@ var ActiuniSemnale = (function () {
     // o.minTrail (v88): pentru pozitiile deschise, stopul care urca e cel putin -X% de la maxim - pe trade-urile lui
     // (25.09) -15% care urca a iesit +1.001 lei fata de fara stop, iar variantele mai stranse, mai rau
     // v100.52 (actiunile T212): o.trailProfil = coborarea obisnuita pe 5 zile (profilul actiunii), doar cand a castigat pe trade-urile lui
-    var mt = o.trailProfil > 0 ? o.trailProfil : o.minTrail;
-    var dT = mt > 0 ? Math.max(d, ref * mt) : d, stopPoz = ref - dT;
+    // revizia 01.10 (I1): stopul din profil se aplica EXACT cum a fost probat (−P75 de la maxim), nu max(ATR, P75) - altfel pagina zicea
+    // „−11,8% de la maxim” sus si „−3,3%” jos
+    var dT = o.trailProfil > 0 ? ref * o.trailProfil : o.minTrail > 0 ? Math.max(d, ref * o.minTrail) : d, stopPoz = ref - dT;
     var sursaTrail = o.trailProfil > 0 ? (o.sursaTrail || "profilul acțiunii") : o.minTrail > 0 ? (o.sursaTrail || "−" + Math.round(o.minTrail * 100) + "% de la maxim (măsurat pe trade-urile tale)") : null;
     return { nivel: "ok", trend: dir, atr: A_, k: pr.k, d: d, riscPct: d / baza, proba: pr, intrare: intrare, intrareMotiv: motivI,
       stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: dT / ref * 100, trailMinim: dT > d, stopAtins: stopPoz >= pret, sursaTrail: sursaTrail,
@@ -346,25 +347,37 @@ var ActiuniSemnale = (function () {
   // alegeTrail(inchise, cf): comparatia se face DOAR pe trade-urile unde „prof” a fost rejucat, aceleasi pentru ambele variante (poza 01.10:
   // inainte, „prof” lipsa era numarat ca „neatins” = fara stop, si pagina zicea „−15% a ieșit +1.001 lei față de profil” pe 0 trade-uri probate).
   // alegeTrail(ru) ramane pentru un rezumat facut deja pe acelasi subset.
-  function alegeTrail(a, cf) {
-    var ru = a;
-    if (Array.isArray(a)) {
-      var sub = a.filter(function (t) { var v = cf && t && cf[t.id], s = v && v.stopU; return s && Object.prototype.hasOwnProperty.call(s, "prof"); });
-      ru = rezumatStop(sub, cf, ["plan", "u15", "u25", "prof"], "stopU");
-    }
-    var j = ru && ru.judecate || 0, p = ru && ru.praguri && ru.praguri.prof, u = ru && ru.praguri && ru.praguri.u15;
-    if (j < 30 || !p || !u) return { cheie: "u15", judecate: j, dif: null, motiv: "stopul din profilul acțiunii se probează pe trade-urile tale: " + j + " din 30 — până atunci rămâne −15% de la maxim" };
-    var dif = p.total - u.total;
-    return dif >= 0
-      ? { cheie: "prof", judecate: j, dif: dif, motiv: "pe " + j + " trade-uri ale tale, stopul din profilul acțiunii a ieșit " + L(dif) + " față de −15% de la maxim" }
-      : { cheie: "u15", judecate: j, dif: dif, motiv: "pe " + j + " trade-uri ale tale, −15% de la maxim a ieșit " + L(-dif) + " față de stopul din profil — rămâne −15%" };
+  function alegeTrail(inchise, cf) {
+    // revizia 01.10 (C1): pe trade-urile lui, ~jumatate n-au nicio zi de bursa intre cumparare si vanzare -> acolo variantele ies IDENTIC;
+    // la egalitate („a ieșit 0 lei”) stopul ar fi trecut pe 3–15% fara nicio dovada. Acum: (1) cat timp rejucarea e in curs, ramane −15%;
+    // (2) se numara doar trade-urile unde rezultatele DIFERA - cel putin 30; (3) profilul castiga doar STRICT mai bine, cu o marja de 1% din
+    // costul acelor trade-uri, si ramane mai bun si fara trade-ul cu cel mai mare castig (nu decide o singura pozitie mare).
+    var l = Array.isArray(inchise) ? inchise : [], cu = [], fara = 0;
+    l.forEach(function (t) {
+      var v = cf && t && cf[t.id], s = v && v.stopU; if (!s || !Object.keys(s).length || v.nivel === "fara-date" || !(t.cost > 0)) return;
+      if (!Object.prototype.hasOwnProperty.call(s, "prof")) { fara++; return; }
+      cu.push(t);
+    });
+    var tot = cu.length + fara;
+    if (fara) return { cheie: "u15", judecate: 0, dif: null, motiv: "stopul din profilul acțiunii se rejoacă pe trade-urile tale (rejucarea e în curs: " + cu.length + " din " + tot + ") — până atunci rămâne −15% de la maxim" };
+    var difs = [], cost = 0;
+    cu.forEach(function (t) {
+      var s = cf[t.id].stopU, val = function (x) { return x && x.pct !== null && x.pct !== undefined ? t.cost * x.pct : t.rezultat; };
+      var d = val(s.prof) - val(s.u15); if (Math.abs(d) > 1e-9) { difs.push(d); cost += t.cost; }
+    });
+    var n = difs.length;
+    if (n < 30) return { cheie: "u15", judecate: n, dif: null, motiv: "stopul din profilul acțiunii se probează pe trade-urile tale unde ar fi schimbat ceva: " + n + " din 30 — până atunci rămâne −15% de la maxim" };
+    var dif = difs.reduce(function (x, y) { return x + y; }, 0), max = Math.max.apply(null, difs), fara1 = dif - Math.max(0, max);
+    return dif > 0.01 * cost && fara1 > 0
+      ? { cheie: "prof", judecate: n, dif: dif, motiv: "pe " + n + " de trade-uri ale tale unde ar fi schimbat ceva, stopul din profilul acțiunii a ieșit " + L(dif) + " față de −15% de la maxim" }
+      : { cheie: "u15", judecate: n, dif: dif, motiv: "pe " + n + " de trade-uri ale tale unde ar fi schimbat ceva, stopul din profil " + (dif > 0 ? "a ieșit doar " + L(dif) + " (prea puțin ca să fie sigur)" : "a ieșit " + L(dif)) + " față de −15% — rămâne −15%" };
   }
 
   // v100.52: optiunile stopului care urca pentru niveluri - din alegerea pe trade-urile lui (alegeTrail) si pragul din profil
   // (ProfilMoneda.pragStopActiune: {dist, sursa}); fara profil sau fara castig -> −15% ca pana acum. Motivul ramane langa stop.
   function trailPozitie(alegere, ps) {
     var m = alegere && alegere.motiv ? alegere.motiv : "";
-    if (alegere && alegere.cheie === "prof" && ps && ps.dist > 0) return { minTrail: 0.15, trailProfil: ps.dist, sursaTrail: "−" + (ps.dist * 100).toFixed(1).replace(".", ",") + "% de la maxim, coborârea obișnuită pe 5 zile (" + ps.sursa + ")" + (m ? " · " + m : "") };
+    if (alegere && alegere.cheie === "prof" && ps && ps.dist > 0) return { minTrail: 0.15, trailProfil: ps.dist, sursaTrail: "−" + (ps.dist * 100).toFixed(1).replace(".", ",") + "% de la maxim — cât coboară acțiunea de la deschidere în ~1 din 4 săptămâni (fără zilele de rezultate, când coboară mai mult; " + ps.sursa + ")" + (m ? " · " + m : "") };
     return { minTrail: 0.15, sursaTrail: "−15% de la maxim (măsurat pe trade-urile tale)" + (m ? " · " + m : "") };
   }
 

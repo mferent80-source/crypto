@@ -682,7 +682,8 @@ function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
 let trailAlesT212 = { la: 0, v: null }; const profilActCache = {};
 async function trailAlesPt(inchise) {
   if (trailAlesT212.v && Date.now() - trailAlesT212.la < 3600000) return trailAlesT212.v;
-  try { const c = await cere("/api/t212?action=cf"); trailAlesT212 = { la: Date.now(), v: ActiuniSemnale.alegeTrail(inchise, (c && c.cf) || {}) }; }
+  try { const c = await cere("/api/t212?action=cf"), v = ActiuniSemnale.alegeTrail(inchise, (c && c.cf) || {}); trailAlesT212 = { la: Date.now(), v };
+    jurnal("stopul care urca:", v.cheie, "·", v.motiv); }   // revizia 01.10 (I3): alegerea si comparatia raman in jurnal
   catch (e) { jurnal("poza: stopul ales", e.message); }
   return trailAlesT212.v;
 }
