@@ -50,6 +50,7 @@ var Perechi = (function () {
     (Array.isArray(activi) ? activi : []).forEach(function (a) {
       var e = a && est[String(a.id)], n = a && nr(a.perechi); if (!e || n === null) return;
       e.perechi = n; e.vazut = t;
+      if (nr(e.pornit) === null && nr(a.pornit) !== null) e.pornit = nr(a.pornit);   // estimarile facute inainte de 01.10 n-aveau pornit
       var u = (Array.isArray(e.urme) ? e.urme : []).filter(function (p) { return p && p.t >= t - 72 * 3600000; });
       if (!u.length || t - u[u.length - 1].t >= 50 * 60000) u.push({ t: t, n: n });
       e.urme = u;

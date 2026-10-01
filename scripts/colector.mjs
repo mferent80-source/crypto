@@ -1126,7 +1126,7 @@ async function turaPerechi() {
     }
     // constatarea de pe viu: arhiva botilor inchisi n-are numarul de perechi -> il notam la fiecare vedere a botului activ; la inchidere
     // ramane ultima vedere. Factorul pe moneda se face din botii care nu mai sunt activi (estimarile pe inchisii vechi n-ar avea perechi).
-    const activi = ((act && act.bots) || []).map((b) => ({ id: String(b.id), perechi: Number(b.ordinePerechi) }));
+    const activi = ((act && act.bots) || []).map((b) => ({ id: String(b.id), perechi: Number(b.ordinePerechi), pornit: Number(b.pornitLa) }));
     Perechi.noteaza(perechiEst, activi, Date.now());
     const ids = Object.keys(perechiEst); if (ids.length > 6000) ids.sort((a, b) => perechiEst[a].la - perechiEst[b].la).slice(0, ids.length - 6000).forEach((k) => delete perechiEst[k]);
     const corectie = {}, fct = Perechi.factori(perechiEst, new Set(activi.map((a) => a.id)));

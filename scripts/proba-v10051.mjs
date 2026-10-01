@@ -189,6 +189,11 @@ await test("I3: regula propusa din autopsie - zile DISTINCTE (nu intrari), cel p
   // 7 din 10 zile: nu trece pragul (marginea de jos < 0,5)
   assert.equal(OB.autopsie([{ id: "1", moneda: "CRV", log: Array.from({ length: 10 }, (_, i) => e(i + 1, i < 7)) }], acum).tipar, null);
 });
+await test("pe viu: estimarile vechi fara „pornit” il primesc de la botul activ (altfel nu intra in factor la inchidere)", () => {
+  const n = PER.noteaza({ x: { simbol: "S", peZi: 3 } }, [{ id: "x", perechi: 4, pornit: 123 }], 1e9);
+  assert.equal(n.x.pornit, 123);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /perechi: Number\(b\.ordinePerechi\), pornit: Number\(b\.pornitLa\)/);
+});
 
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
