@@ -370,7 +370,7 @@ await test("colector: o data pe ora pe bot, jurnalul la 4 h, judecata dupa orizo
   const TE = new Function("GridCalcul", `${lib("tablou-extra.js")}; return TabloExtra;`)(G);
   const b = mers(200 * 24, 0.006, 5), u = b[b.length - 1], acum = u.t + ORA, rand = (x) => ({ time: x.t, open: x.o, high: x.h, low: x.l, close: x.c });
   let disc = b.map(rand); const scrise = [], stare = { jurnal: [
-    { t: acum - 30 * ORA, bot: "9", simbol: "X_USDT_PERP", tip: "iese-jos-24", p: 0.4, H: 24, ev: { fel: "atinge", nivel: 1e-9, sus: false } },
+    { t: acum - 30 * ORA, bot: "9", simbol: "X_USDT_PERP", tip: "iese-jos-24", p: 0.4, H: 24, ev: { fel: "atinge", nivel: 1e9, sus: false } },   // orice bara e sub 1e9 -> atins
     { t: acum - 2 * ORA, bot: "9", simbol: "X_USDT_PERP", tip: "iese-jos-24", p: 0.4, H: 24, ev: { fel: "atinge", nivel: 1e-9, sus: false } },
     { t: acum - 100 * 24 * ORA, bot: "9", simbol: "X_USDT_PERP", tip: "iese-jos-24", p: 0.4, H: 24, ev: { fel: "atinge", nivel: 1e-9, sus: false } }] };
   const bot = { id: "1", baza: "X", directie: "long", pretCurent: u.c, gridJos: u.c * 0.95, gridSus: u.c * 1.05, lichidareJos: u.c * 0.7, opritorPierdereActiv: false, investit: 50, levier: 3, pozitie: 1, profitNet: 0, profitTotal: 0, brut: { buOrderData: { row: 11, gridType: "geometric" } } };
