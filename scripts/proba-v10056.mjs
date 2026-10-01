@@ -144,5 +144,39 @@ await test("graficul (boti si actiuni) creste cu latimea: pe PC 340–520 px de 
   assert.ok(h(390, true) >= 270 + 8 + 34 + 8 + 26 + 20, "pe telefon 270 de pret: " + h(390, true));
 });
 
+// ---- revizia finala pachetul 5 (Opus, 01.10) ----
+await test("C1: ruta semneAct PASTREAZA starea de atunci (altfel autopsia zicea mereu „nenotată” si regula nu pornea niciodata)", async () => {
+  const { pathToFileURL } = await import("node:url");
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); }, list: async ({ prefix }) => ({ keys: [...kv.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }) } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  await mod.onRequestPost({ request: cer("POST", "action=semneAct", { bot: "INTC_US_EQ", log: [{ t: 1, coduri: ["trend-jos"], nivel: "iesi", pret: 20, qty: 2, fx: 4.5, stare: "jos|calm|departe" }, { t: 2, coduri: ["x"], nivel: "tine", pret: 20, qty: 2, stare: "<b>" }] }), env });
+  const l = (await (await mod.onRequestGet({ request: cer("GET", "action=semneAct&bot=INTC_US_EQ"), env })).json()).log;
+  assert.equal(l[0].stare, "jos|calm|departe"); assert.ok(!l[1].stare, "o stare nevalida nu se pastreaza");
+});
+await test("I1: „Vezi X” si legatura din Alerte (t212Deschide) deseneaza graficul; I2: „acum” pe grafic = pretul viu, nu inchiderea de ieri", () => {
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  const corp = (nume) => { const i = e.indexOf("function " + nume + "("); const j = e.indexOf("\nfunction ", i + 10); return e.slice(i, j < 0 ? e.length : j); };
+  assert.ok(/t212GraficeDeseneaza\(\)/.test(corp("t212Deschide")));
+  assert.ok(/pretViu: p\.pret/.test(corp("t212GraficHtml")));
+});
+await test("I3 + I5: raportul de duminica - jurnalele actiunilor citite inainte (dupa o repornire) si autopsia trimisa SEPARAT pe Discord (limita de 2000 de caractere)", () => {
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  const i = col.indexOf("async function turaRaport"), r = col.slice(i, col.indexOf("\n}\n", i));
+  assert.ok(/if \(socActZi === null\) await turaSocotealaActiuni\(\)/.test(r), "jurnalele inainte de raport");
+  assert.ok(/titlu: "Autopsia acțiunilor \(/.test(r), "alerta separata");
+  assert.ok(/mesaj: rap\.linii\.join\("\\n"\)/.test(r), "raportul principal fara autopsie in mesaj");
+});
+await test("I4: lei si $ nu se amesteca - clasamentul pe echivalent in lei (cursul din jurnal), tiparul pe valute separate; preturile cu 2 zecimale; „ale acțiunii”", () => {
+  const acum = 60 * Z, e = (zi, cod, bani, inLei, stare, fx) => ({ t: acum - zi * Z, coduri: [cod], nivel: "iesi", pret: 192.42999267578125, qty: 1, fx, r: 0, bani, inLei, c5: 195.1, stare });
+  const a = CS.autopsieActiuni([{ ticker: "A_US_EQ", log: [e(2, "x", -30, true, "jos|calm|departe", 4.5), e(3, "y", -10, false, "jos|calm|departe", null)] }], acum);
+  assert.deepEqual(a.scumpe.map((x) => x.cost), [-10, -30], "−10 $ (≈ −45 lei) e mai scump decat −30 lei");
+  const tx = a.linii.join("\n"); assert.match(tx, /\$192\.43/); assert.ok(!/192\.4299/.test(tx));
+  const log = []; for (let d = 15; d < 27; d++) log.push(e(d, "z", d % 2 ? -1000 : -10, d % 2 === 0, "sus|calm|departe", d % 2 === 0 ? 4.5 : null));
+  const t = CS.autopsieActiuni([{ ticker: "B_US_EQ", log }], acum).tipar;
+  assert.ok(t, "tiparul"); assert.match(t.text, /6\.000,00 \$/); assert.match(t.text, /60,00 lei/);
+  assert.match(GB.ziObisnuitaActiune(100, { zile: 500, z1: { jos: q(0.02), sus: q(0.03) }, z5: { jos: q(0.05), sus: q(0.06) } }, 5).sursa, /ale acțiunii/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

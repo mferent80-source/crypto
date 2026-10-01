@@ -239,7 +239,7 @@ export async function onRequestPost({request,env}){
   }
   if(action==="semneAct"){
     const tk=idBot(corp&&corp.bot);if(!tk||!Array.isArray(corp.log))return json({error:"Lipseste bot sau log"},400);
-    const NV=["iesi","atentie","tine"],log=corp.log.slice(-200).filter(e=>e&&typeof e==="object"&&NV.includes(e.nivel)&&nr(e.t)!==null).map(e=>({t:nr(e.t),coduri:(Array.isArray(e.coduri)?e.coduri:[]).slice(0,8).map(c=>String(c).slice(0,40)),nivel:e.nivel,pret:nr(e.pret),qty:nr(e.qty),fx:nr(e.fx),r:e.r===0||e.r===1?e.r:undefined,bani:nr(e.bani),inLei:e.inLei===true,c5:nr(e.c5)}));
+    const NV=["iesi","atentie","tine"],log=corp.log.slice(-200).filter(e=>e&&typeof e==="object"&&NV.includes(e.nivel)&&nr(e.t)!==null).map(e=>({t:nr(e.t),coduri:(Array.isArray(e.coduri)?e.coduri:[]).slice(0,8).map(c=>String(c).slice(0,40)),nivel:e.nivel,pret:nr(e.pret),qty:nr(e.qty),fx:nr(e.fx),r:e.r===0||e.r===1?e.r:undefined,bani:nr(e.bani),inLei:e.inLei===true,c5:nr(e.c5),stare:typeof e.stare==="string"&&/^(sus|lateral|jos)\|(calm|dupa-miscare)\|(departe|langa-max)$/.test(e.stare)?e.stare:undefined}));   // v100.56 (revizia 01.10, C1): starea de atunci, pentru autopsie
     await env.ISTORIC.put("semnale-act:"+tk,JSON.stringify(log));return json({ok:true,n:log.length});
   }
   if(action==="socotealaAct"){

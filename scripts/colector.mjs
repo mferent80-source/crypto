@@ -993,10 +993,16 @@ async function turaRaport(acum) {
     }
     let lab = null; try { const v = await cere("/api/istoric-bot?action=laborator"); lab = v && v.laborator; } catch (e) {}
     const rap = Obiceiuri.raportDuminica({ trades, acum, socoteala: soc, laborator: lab, autopsie: Obiceiuri.autopsie(socotealaLoguri, acum) });   // v101.30 (I-478)
+    // revizia 01.10 (I3): dupa o repornire, jurnalele Consilierului pe actiuni se citesc INAINTE de raport (altfel autopsia ar fi zis „niciun sfat greșit”)
+    if (socActZi === null) await turaSocotealaActiuni();
+    let autAct = null;
     // v85: si actiunile (Trading 212), din istoricul strans acasa
-    try { const h = await cere("/api/t212?action=istoric"); if (h && Array.isArray(h.umpleri) && h.umpleri.length) rap.linii = rap.linii.concat(ActiuniSemnale.raportSaptamana(T212.perechi(h.umpleri).inchise, acum)); rap.linii = rap.linii.concat(Consiliu.autopsieActiuni(jurnaleActLoguri, acum).linii);   /* v101.36 */ } catch (e) { jurnal("raport t212", e.message); }
-    await trimite("/api/istoric-bot?action=raport", { la: acum, linii: rap.linii, saptamana: r.data });
-    if (await trimiteAlerta({ nivel: "info", titlu: "Raportul de duminică (" + r.data + ")", mesaj: rap.linii.join("\n") }, null, "raport")) m.raportTrimis = r.data;
+    try { const h = await cere("/api/t212?action=istoric"); if (h && Array.isArray(h.umpleri) && h.umpleri.length) rap.linii = rap.linii.concat(ActiuniSemnale.raportSaptamana(T212.perechi(h.umpleri).inchise, acum)); autAct = Consiliu.autopsieActiuni(jurnaleActLoguri, acum);   /* v101.36; revizia 01.10 (I5): pe Discord separat - limita de 2000 de caractere */ } catch (e) { jurnal("raport t212", e.message); }
+    await trimite("/api/istoric-bot?action=raport", { la: acum, linii: autAct ? rap.linii.concat(autAct.linii) : rap.linii, saptamana: r.data });
+    if (await trimiteAlerta({ nivel: "info", titlu: "Raportul de duminică (" + r.data + ")", mesaj: rap.linii.join("\n") }, null, "raport")) {
+      m.raportTrimis = r.data;
+      if (autAct) await trimiteAlerta({ nivel: "info", titlu: "Autopsia acțiunilor (" + r.data + ")", mesaj: autAct.linii.join("\n") }, null, "raport-actiuni");
+    }
   } catch (e) { jurnal("raport ESEC", e.message); }
 }
 

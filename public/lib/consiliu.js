@@ -314,30 +314,34 @@ var Consiliu = (function () {
     (Array.isArray(loguri) ? loguri : []).forEach(function (L) {
       (L && Array.isArray(L.log) ? L.log : []).forEach(function (e) {
         if (!e || (e.r !== 0 && e.r !== 1) || nr(e.bani) === null || nr(e.t) === null) return;
-        toate.push({ ticker: L.ticker || "?", nivel: e.nivel, coduri: e.coduri || [], t: e.t, stare: e.stare || null, pret: e.pret, c5: e.c5, cost: e.bani, inLei: !!e.inLei, gresit: e.r === 0 });
+        toate.push({ ticker: L.ticker || "?", nivel: e.nivel, coduri: e.coduri || [], t: e.t, stare: e.stare || null, pret: e.pret, c5: e.c5, cost: e.bani, inLei: !!e.inLei, fx: nr(e.fx), gresit: e.r === 0 });
       });
     });
-    var Ban = function (x) { return Math.abs(x.cost).toFixed(2).replace(".", ",") + (x.inLei ? " lei" : " $"); };
+    // revizia 01.10 (I4): lei si $ nu se amesteca - clasamentul pe echivalent in lei (cursul median din jurnal), tiparul pe valute separate
+    var F2 = function (v) { return Math.abs(v).toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var Ban = function (x) { return F2(x.cost) + (x.inLei ? " lei" : " $"); };
+    var fxL = toate.map(function (x) { return x.fx; }).filter(function (v) { return v > 0; }).sort(function (a, b) { return a - b; }), fxMed = fxL.length ? fxL[Math.floor(fxL.length / 2)] : 1;
+    var echiv = function (x) { return x.inLei ? x.cost : x.cost * fxMed; };
     // un sfat se judeca la 5 zile de bursa (~7 calendaristice) dupa el: „saptamana” = sfaturile din ultimele 14 zile, deja judecate
-    var scumpe = toate.filter(function (x) { return x.gresit && x.cost < 0 && x.t > acum - 14 * ZI && x.t <= acum; }).sort(function (a, b) { return a.cost - b.cost; }).slice(0, 3);
+    var scumpe = toate.filter(function (x) { return x.gresit && x.cost < 0 && x.t > acum - 14 * ZI && x.t <= acum; }).sort(function (a, b) { return echiv(a) - echiv(b); }).slice(0, 3);
     var linii = scumpe.length ? scumpe.map(function (x) {
       return (NV_ACT[x.nivel] || x.nivel) + " pe " + String(x.ticker).split("_")[0] + " (" + new Date(x.t).toISOString().slice(5, 10).split("-").reverse().join(".") + ", motive: " + x.coduri.join(", ") + "): starea de atunci: " + etStare(x.stare)
-        + "; în 5 zile de bursă prețul a mers de la $" + x.pret + " la $" + x.c5 + " — urmat, te-ar fi costat " + Ban(x) + ".";
+        + "; în 5 zile de bursă prețul a mers de la $" + (nr(x.pret) !== null ? nr(x.pret).toFixed(2) : "—") + " la $" + (nr(x.c5) !== null ? nr(x.c5).toFixed(2) : "—") + " — urmat, te-ar fi costat " + Ban(x) + ".";
     }) : ["Niciun sfat greșit judecat pe acțiuni săptămâna asta."];
     var gr = {};
     toate.forEach(function (x) {
       if (!x.stare || !(x.t > acum - 30 * ZI && x.t <= acum)) return;
       x.coduri.forEach(function (cod) {
-        var k = cod + "|" + x.stare, g = gr[k] || (gr[k] = { cod: cod, stare: x.stare, zile: {}, cost: 0, inLei: x.inLei }), d = Math.floor(x.t / ZI), z = g.zile[d] || (g.zile[d] = { g: 0, b: 0 });
-        if (x.gresit) { z.g++; g.cost += x.cost; } else z.b++;
+        var k = cod + "|" + x.stare, g = gr[k] || (gr[k] = { cod: cod, stare: x.stare, zile: {}, cost: 0, costLei: 0, costUsd: 0 }), d = Math.floor(x.t / ZI), z = g.zile[d] || (g.zile[d] = { g: 0, b: 0 });
+        if (x.gresit) { z.g++; g.cost += echiv(x); if (x.inLei) g.costLei += x.cost; else g.costUsd += x.cost; } else z.b++;
       });
     });
     var wJos = function (k, n, zz) { var p = k / n, a = zz * zz; return (p + a / (2 * n) - zz * Math.sqrt(p * (1 - p) / n + a / (4 * n * n))) / (1 + a / n); };
-    var tip = Object.keys(gr).map(function (k) { var g = gr[k], z = Object.keys(g.zile).map(function (d) { return g.zile[d]; }); return { cod: g.cod, stare: g.stare, judecate: z.length, gresite: z.filter(function (q) { return q.g > q.b; }).length, cost: Math.round(g.cost * 100) / 100, inLei: g.inLei }; })
+    var tip = Object.keys(gr).map(function (k) { var g = gr[k], z = Object.keys(g.zile).map(function (d) { return g.zile[d]; }); return { cod: g.cod, stare: g.stare, judecate: z.length, gresite: z.filter(function (q) { return q.g > q.b; }).length, cost: Math.round(g.cost * 100) / 100, costLei: Math.round(g.costLei * 100) / 100, costUsd: Math.round(g.costUsd * 100) / 100 }; })
       .filter(function (g) { return g.judecate >= 10 && wJos(g.gresite, g.judecate, 2.576) > 0.5 && g.cost < 0; })
       .sort(function (a, b) { return a.cost - b.cost; })[0] || null;
     if (tip) {
-      tip.text = "Regulă propusă pe acțiuni (ipoteză, n-am schimbat nimic): motivul „" + tip.cod + "” în starea „" + etStare(tip.stare) + "” a greșit în " + tip.gresite + " din " + tip.judecate + " zile, în ultimele 30 (" + Ban(tip) + " dacă-l urmai) — l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";
+      tip.text = "Regulă propusă pe acțiuni (ipoteză, n-am schimbat nimic): motivul „" + tip.cod + "” în starea „" + etStare(tip.stare) + "” a greșit în " + tip.gresite + " din " + tip.judecate + " zile, în ultimele 30 (" + [tip.costUsd ? F2(tip.costUsd) + " $" : "", tip.costLei ? F2(tip.costLei) + " lei" : ""].filter(Boolean).join(" și ") + " dacă-l urmai) — l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";
       linii.push(tip.text);
     } else linii.push("Niciun tipar repetat sigur încă pe acțiuni (trebuie cel puțin 10 zile judecate ale aceluiași motiv în aceeași stare, cu greșeala clar peste jumătate).");
     return { scumpe: scumpe, tipar: tip, linii: ["Autopsia săptămânii pe acțiuni — sfaturile Consilierului care te-ar fi costat cel mai mult:"].concat(linii) };

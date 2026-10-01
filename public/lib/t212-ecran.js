@@ -204,6 +204,7 @@ function t212Comuta(tk) { t212.deschis[tk] = !t212.deschis[tk]; var d = $("t212D
 function t212Deschide(tk) {
   t212.deschis[tk] = true; var d = $("t212Det-" + tk), r = $("t212R-" + tk); if (d) d.hidden = false;
   if (r) { r.setAttribute("aria-expanded", "true"); if (r.scrollIntoView) r.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  t212GraficeDeseneaza();   // revizia 01.10 (I1): „Vezi X” si legatura din Alerte deschid detaliul fara randare - graficul se deseneaza aici
 }
 
 function t212Render() {
@@ -470,7 +471,7 @@ function t212GraficHtml(p, W) {
   var b = (t212.bare[p.ticker] || []).slice(-120); if (b.length < 10 || typeof GraficBot === "undefined") return null;
   var pf = t212ProfilPt(p.ticker), n = p.niv, pl = p.plan || {}, VA = typeof Valoare !== "undefined" ? Valoare : null;
   var stopAcum = pl.stop > 0 ? pl.stop : pl.trailPct > 0 && p.maxDupaCumparare ? p.maxDupaCumparare * (1 - pl.trailPct / 100) : null;
-  return GraficBot.desen({ bare: b, W: W, ingust: W < 560, st: t212IndStare(), actiune: true,
+  return GraficBot.desen({ bare: b, W: W, ingust: W < 560, st: t212IndStare(), actiune: true, pretViu: p.pret,   /* revizia 01.10 (I2): in orele bursei bara de azi lipseste - „acum” = pretul viu */
     niv: GraficBot.niveluriActiune({ pretMediu: p.pretMediu, stop: stopAcum, tinta: pl.tinta > 0 ? pl.tinta : n ? n.tintaPozitie : null }),
     zi: GraficBot.ziObisnuitaActiune(p.pret, pf, 1), zi5: GraficBot.ziObisnuitaActiune(p.pret, pf, 5),
     val: VA ? { zona: VA.zona(b.slice(-20), { minBare: 15, bins: 24 }), pivoti: VA.pivoti(b, 3), et: "20 z", etLung: "20 de zile de bursă", etPivoti: "zilnic" } : null,

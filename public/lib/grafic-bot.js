@@ -69,7 +69,7 @@ var GraficBot = (function () {
     pret = nr(pret); var z = p && (zile === 5 ? p.z5 : p.z1), j = z && z.jos, s = z && z.sus;
     if (pret === null || !(pret > 0) || !Array.isArray(j) || j.length !== 21 || !Array.isArray(s) || s.length !== 21) return null;
     return { p50Jos: pret * (1 - j[10]), p75Jos: pret * (1 - j[15]), p50Sus: pret * (1 + s[10]), p75Sus: pret * (1 + s[15]), et: zile === 5 ? "5 zile obișnuite" : "zi obișnuită",
-      sursa: (zile === 5 ? "5 zile de bursă obișnuite" : "ziua obișnuită") + " a acțiunii: " + (nr(p.zile) !== null ? p.zile + " de zile de bursă" : "profilul") + " (bare zilnice)" };
+      sursa: (zile === 5 ? "5 zile de bursă obișnuite ale acțiunii: " : "ziua obișnuită a acțiunii: ") + (nr(p.zile) !== null ? p.zile + " de zile de bursă" : "profilul") + " (bare zilnice)" };
   }
   // nivelurile pozitiei pe grafic: tinta, pretul tau mediu, stopul tau (doar daca l-ai scris)
   function niveluriActiune(o) {
