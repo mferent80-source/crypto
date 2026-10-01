@@ -289,7 +289,7 @@ async function semnaleBot(b, ctx, acum) {
     x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fisa: f, rezumat: null, acum }));
     x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
       opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null,
-      perechi: Perechi.raport(b.ordinePerechi, b.pornitLa, acum, perechiEst && perechiEst[b.id] || null) });   // v101.30 (I-477)
+      perechi: Perechi.raport(b.ordinePerechi, b.pornitLa, acum, perechiEst && perechiEst[b.id] || null, { urme: perechiEst && perechiEst[b.id] && perechiEst[b.id].urme, factor: perechiCor[s] && perechiCor[s].factor, inGrid: Number(b.pretCurent) >= Number(b.gridJos) && Number(b.pretCurent) <= Number(b.gridSus) }) });   // v101.30 (I-477)
     const stA = stareAlerte[b.id] || (stareAlerte[b.id] = {});
     // revizia 01.10 (I1): starea alertelor botului (ce s-a anuntat deja imediat) si sfaturile tacute (I-466) - ca alerta Consilierului sa nu dubleze
     const activ = Object.fromEntries(Object.entries(stA).filter(([k, v]) => k.charAt(0) !== "_" && v && v.nivel).map(([k, v]) => [k, v.nivel]));
@@ -1108,14 +1108,15 @@ function simbolPeMoneda() {
 // v101.30 (I-477): perechile reale vs estimarea fisei - o data pe ora: fiecare bot activ fara estimare (15M de dinaintea pornirii), cel mult 15
 // boti inchisi din ultimele 24 de zile (au 7 zile de 15M inainte de pornire in cele ~31 aduse), apoi factorul pe moneda din botii inchisi
 // tinuti cel putin 6 h -> KV perechi-est (pe bot) si perechi-corectie (pe moneda, de la 10 boti)
-let perechiLa = 0, perechiInLucru = false, perechiEst = null;
+let perechiLa = 0, perechiInLucru = false, perechiEst = null, perechiCor = {};
 async function turaPerechi() {
   if (perechiInLucru || Date.now() - perechiLa < 3600000) return;
   perechiInLucru = true; perechiLa = Date.now();
   try {
-    if (!perechiEst) { const v = await cere("/api/istoric-bot?action=perechiEst").catch(() => null); perechiEst = (v && v.est) || {}; }
+    // revizia 01.10 (I2): o citire picata NU porneste de la {} - altfel primul POST ar sterge estimarile adunate in saptamani
+    if (!perechiEst) { const v = await cere("/api/istoric-bot?action=perechiEst"); if (!v || !v.est || typeof v.est !== "object") throw new Error("perechi-est necitit - nu pornesc de la zero"); perechiEst = v.est; }
     let noi = 0;
-    const estDe = async (id, simbol, o) => { const e = Perechi.estimare(GridCalcul.bare(await lumanari15M(simbol)), o); perechiEst[id] = { simbol, peZi: e.peZi ?? null, zile: e.zile ?? null, eroare: e.eroare || null, la: Date.now() }; noi++; };
+    const estDe = async (id, simbol, o) => { const e = Perechi.estimare(GridCalcul.bare(await lumanari15M(simbol)), o); perechiEst[id] = { simbol, peZi: e.peZi ?? null, zile: e.zile ?? null, eroare: e.eroare || null, la: Date.now(), pornit: Number(o.pornit) || null }; noi++; };
     const act = await cere("/api/bot-orders");
     for (const b of (act && act.bots) || []) {
       if (perechiEst[b.id]) continue;
@@ -1123,19 +1124,18 @@ async function turaPerechi() {
       try { await estDe(String(b.id), TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex, { pornit: Number(b.pornitLa), jos: Number(x.bottom ?? b.gridJos), sus: Number(x.top ?? b.gridSus), linii: Number(x.row), dir: String(b.directie || "").toLowerCase(), levier: Number(b.levier) || 1, pretPornire: Number(x.initPrice) }); }
       catch (e) { jurnal("perechi", b.id, e.message); }
     }
-    const harta = simbolPeMoneda(), tr = JurnalTrade.din(await botiInchisiToti());
-    for (const t of tr.filter((t) => t.pornit > Date.now() - 24 * 86400000 && !perechiEst[t.id] && harta[t.moneda]).slice(0, 15)) {
-      await new Promise((r) => setTimeout(r, 700));
-      try { await estDe(t.id, harta[t.moneda], { pornit: t.pornit, jos: t.jos, sus: t.sus, linii: t.grileN, dir: t.dir, levier: t.levier || 1, pretPornire: t.pretInit }); } catch (e) { jurnal("perechi", t.id, e.message); }
-    }
+    // constatarea de pe viu: arhiva botilor inchisi n-are numarul de perechi -> il notam la fiecare vedere a botului activ; la inchidere
+    // ramane ultima vedere. Factorul pe moneda se face din botii care nu mai sunt activi (estimarile pe inchisii vechi n-ar avea perechi).
+    const activi = ((act && act.bots) || []).map((b) => ({ id: String(b.id), perechi: Number(b.ordinePerechi) }));
+    Perechi.noteaza(perechiEst, activi, Date.now());
     const ids = Object.keys(perechiEst); if (ids.length > 6000) ids.sort((a, b) => perechiEst[a].la - perechiEst[b].la).slice(0, ids.length - 6000).forEach((k) => delete perechiEst[k]);
-    const pe = {};
-    for (const t of tr) { const e = perechiEst[t.id]; if (!e || !(e.peZi >= 0.5) || !(t.perechi >= 0) || !(t.durataOre >= 6)) continue; (pe[e.simbol] = pe[e.simbol] || []).push({ raport: t.perechi / (t.durataOre / 24) / e.peZi }); }
-    const corectie = {}; for (const s of Object.keys(pe)) corectie[s] = { ...Perechi.factor(pe[s]), la: Date.now() };
-    if (noi) await trimite("/api/istoric-bot?action=perechiEst", { est: perechiEst });
+    const corectie = {}, fct = Perechi.factori(perechiEst, new Set(activi.map((a) => a.id)));
+    for (const s of Object.keys(fct)) corectie[s] = { ...fct[s], la: Date.now() };
+    perechiCor = corectie;
+    await trimite("/api/istoric-bot?action=perechiEst", { est: perechiEst });
     await trimite("/api/istoric-bot?action=perechiCorectie", { corectie });
     jurnal("perechi:", noi, "estimari noi,", Object.keys(corectie).filter((s) => corectie[s].factor).length, "monede cu factor din", Object.keys(corectie).length);
-  } catch (e) { jurnal("perechi ESEC", e.message); }
+  } catch (e) { jurnal("perechi ESEC", e.message); perechiLa = Date.now() - 50 * 60000; }   // reincerc peste ~10 min
   perechiInLucru = false;
 }
 // revizia 01.10: dupa un esec (413, server oprit) se asteapta o ora, nu se reia la fiecare minut; cele mai noi 6.000 de cazuri

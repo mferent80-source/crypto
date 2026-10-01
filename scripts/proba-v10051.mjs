@@ -136,7 +136,7 @@ await test("I-478 autopsia: cele mai scumpe 3 sfaturi gresite ale saptamanii, cu
   const a = OB.autopsie([{ id: "1", moneda: "CRV", log }], acum);
   assert.deepEqual(a.scumpe.map((x) => x.cod), ["tine", "lichidare", "muta"]); assert.equal(a.scumpe[0].cost, -8);
   assert.match(a.linii.join("\n"), /starea de atunci: nenotată/); assert.match(a.linii.join("\n"), /liniște, coboară încet/);
-  assert.ok(a.tipar && a.tipar.cod === "muta" && a.tipar.gresite === 3, JSON.stringify(a.tipar)); assert.match(a.tipar.text, /ipoteză/); assert.match(a.tipar.text, /n-am schimbat nimic/);
+  assert.equal(a.tipar, null, "revizia I3: 5 zile nu ajung pentru o regula propusa (cel putin 10 zile distincte)");
   const r = OB.raportDuminica({ trades: [{ inchis: acum - Z, rezultat: 1, net: 1, grile: 1, pozitie: 0, comisioane: 0, funding: 0, greseli: [] }], acum, socoteala: {}, autopsie: a });
   assert.match(r.linii.join("\n"), /Autopsia săptămânii/);
   assert.equal(OB.autopsie([], acum).scumpe.length, 0);
@@ -145,6 +145,49 @@ await test("I-478 colectorul: noteaza cu starea fisei, pastreaza jurnalele pe mo
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(col, /SemnaleBot\.noteaza\(log, x\.semafor, b\.profitTotal, acum, \{ stare: Probabilitati\.stareDinRegim\(/);
   assert.match(col, /socotealaLoguri/); assert.match(col, /autopsie: Obiceiuri\.autopsie\(socotealaLoguri, acum\)/);
+});
+
+// ---- revizia finala (Opus, 01.10) + constatarea mea: I1, I2, I3, factorul care nu se forma ----
+await test("I1: raportul perechilor - pe ultimele 24-48 h din urme (nu pe toata viata), cel putin 8 perechi asteptate, factorul pe moneda aplicat; pe toata viata abia de la 2 zile", () => {
+  const Z = 86400000, acum = 10 * Z;
+  assert.equal(PER.raport(30, 8.5 * Z, acum, { peZi: 20 }), null, "1,5 zile pe toata viata: prea devreme");
+  assert.equal(PER.raport(4, 7 * Z, acum, { peZi: 2 }), null, "3 zile x 2/zi = 6 asteptate < 8");
+  const u = [{ t: acum - 30 * 3600000, n: 100 }, { t: acum - 20 * 3600000, n: 110 }];
+  const r = PER.raport(120, 2 * Z, acum, { peZi: 40 }, { urme: u }); assert.equal(r.fereastra, "ultimele 30 h"); assert.ok(Math.abs(r.real - 16) < 1e-9, String(r.real)); assert.ok(Math.abs(r.raport - 0.4) < 1e-9);
+  const f = PER.raport(120, 2 * Z, acum, { peZi: 40 }, { urme: u, factor: 0.5 }); assert.ok(Math.abs(f.est - 20) < 1e-9 && Math.abs(f.raport - 0.8) < 1e-9 && f.corectat === true);
+});
+await test("I1: motivul „perechi” doar cu pretul IN grid si doar in Radar (n-are socoteala proprie: nu suna pe Discord „aș muta gridul”)", () => {
+  const s = { nivel: "tine", cod: "tine", motiv: "nimic", faCe: "", componente: [] }, pe = { real: 1.2, est: 4, raport: 0.3, zile: 3, fereastra: "ultimele 30 h" };
+  assert.equal(CS.alcatuieste({ sm: s, perechi: { ...pe, inGrid: false } }).nivel, "tine", "afara din grid vorbesc margine/pericol");
+  const c = CS.alcatuieste({ sm: s, perechi: { ...pe, inGrid: true } }); assert.equal(c.motive[0].cod, "perechi"); assert.match(c.motive[0].text, /ultimele 30 h/);
+  const T = { nivel: "tine", eticheta: "🟢 Ține", titlu: "x", motive: [] };
+  let r = CS.schimbare(CS.schimbare(null, T, 0, "CRV").stare, c, 1, "CRV"); r = CS.schimbare(r.stare, c, 2, "CRV");
+  assert.ok(r.alerta && r.alerta.doarRadar === true, "perechi in varf -> doar in Radar");
+});
+await test("I2 + factorul: perechile notate la ultima vedere (urme), factorul pe moneda din botii care s-au inchis; o citire picata a KV nu sterge estimarile", () => {
+  const Z = 86400000, est = {}, acum = 20 * Z;
+  for (let i = 0; i < 10; i++) est["b" + i] = { simbol: "CRV_USDT_PERP", peZi: 10, pornit: Z, perechi: 5 * (i + 1), vazut: 2 * Z, urme: [] };
+  est.activ = { simbol: "CRV_USDT_PERP", peZi: 10, pornit: Z, perechi: 1, vazut: 2 * Z };
+  est.scurt = { simbol: "CRV_USDT_PERP", peZi: 10, pornit: Z, perechi: 1, vazut: Z + 3600000 };
+  const n = PER.noteaza({ x: { simbol: "S", peZi: 3, pornit: 0, urme: [{ t: acum - 80 * 3600000, n: 1 }] } }, [{ id: "x", perechi: 9 }], acum);
+  assert.equal(n.x.perechi, 9); assert.equal(n.x.vazut, acum); assert.deepEqual(n.x.urme.map((u) => u.n), [9], "urmele mai vechi de 72 h ies");
+  const f = PER.factori(est, new Set(["activ"]));
+  assert.equal(f.CRV_USDT_PERP.n, 10, "activul si cel tinut sub 6 h nu intra"); assert.ok(Math.abs(f.CRV_USDT_PERP.factor - 2.75) < 1e-9, String(f.CRV_USDT_PERP.factor));
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.ok(!/action=perechiEst"\)\.catch\(\(\) => null\); perechiEst = \(v && v\.est\) \|\| \{\}/.test(col), "o citire picata nu mai porneste de la {}");
+  assert.match(col, /if \(!v \|\| !v\.est \|\| typeof v\.est !== "object"\) throw new Error/); assert.match(col, /Perechi\.noteaza\(/); assert.match(col, /Perechi\.factori\(/);
+});
+await test("I3: regula propusa din autopsie - zile DISTINCTE (nu intrari), cel putin 10, si marginea de jos Wilson 99% a greselilor peste 50%", () => {
+  const Z = 86400000, acum = 40 * Z, e = (zi, gresit, h) => ({ t: acum - zi * Z - (h || 0), cod: "muta", nivel: "atentie", motiv: "muta", total: 0, totalDupa: gresit ? 1 : -1, dreptate: !gresit, judecatLa: acum - zi * Z + 1, stare: "liniste-lateral" });
+  // 3 gresite din 5 pe 5 boti in ACEEASI zi = un singur eveniment -> fara regula
+  const oZi = [1, 2, 3, 4, 5].map((i) => e(2, i <= 3, i * 1000));
+  assert.equal(OB.autopsie([{ id: "1", moneda: "CRV", log: oZi }], acum).tipar, null);
+  // 12 zile, 11 gresite: marginea de jos Wilson 99% ~0,62 > 0,5 -> regula propusa
+  const zile = Array.from({ length: 12 }, (_, i) => e(i + 1, i !== 0));
+  const t = OB.autopsie([{ id: "1", moneda: "CRV", log: zile }], acum).tipar; assert.ok(t && t.gresite === 11 && t.judecate === 12, JSON.stringify(t)); assert.match(t.text, /zile/);
+  assert.match(t.text, /ipoteză/); assert.match(t.text, /n-am schimbat nimic/);
+  // 7 din 10 zile: nu trece pragul (marginea de jos < 0,5)
+  assert.equal(OB.autopsie([{ id: "1", moneda: "CRV", log: Array.from({ length: 10 }, (_, i) => e(i + 1, i < 7)) }], acum).tipar, null);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);

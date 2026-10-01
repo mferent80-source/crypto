@@ -189,16 +189,25 @@ var Obiceiuri = (function () {
       return "„" + x.motiv + "” pe " + x.moneda + " (" + cand(x.t) + "): starea de atunci: " + (x.stare ? (ET[x.stare] || x.stare) : "nenotată (sfat dinainte de 01.10)") +
         "; după: totalul de la " + U(x.total) + " la " + U(x.totalDupa) + " — urmat, te-ar fi costat " + Math.abs(x.cost).toFixed(2) + " USDT.";
     }) : ["Niciun sfat greșit judecat săptămâna asta."];
+    // revizia 01.10 (I3): ZILE distincte, nu intrari (acelasi semnal pe 5 boti in aceeasi ora e un singur caz); o zi e „gresita” cand au
+    // fost mai multe gresite decat corecte; regula se propune abia de la 10 zile si cand marginea de jos Wilson 99% a greselilor trece de 50%
+    // (cele ~13 sfaturi x 6 stari sunt multe comparatii - 99% in loc de 95% e frana pentru cel mai rau dintre ele)
     var gr = {};
-    toate.forEach(function (x) { if (!x.stare || !(x.la > acum - 30 * ZI && x.la <= acum)) return; var k = x.cod + "|" + x.stare, g = gr[k] || (gr[k] = { cod: x.cod, stare: x.stare, judecate: 0, gresite: 0, cost: 0 }); g.judecate++; if (x.gresit) { g.gresite++; g.cost += x.cost; } });
-    var tip = Object.keys(gr).map(function (k) { return gr[k]; }).filter(function (g) { return g.judecate >= 5 && g.gresite >= 3 && g.gresite / g.judecate >= 0.6 && g.cost < 0; })
+    toate.forEach(function (x) {
+      if (!x.stare || !(x.la > acum - 30 * ZI && x.la <= acum)) return;
+      var k = x.cod + "|" + x.stare, g = gr[k] || (gr[k] = { cod: x.cod, stare: x.stare, zile: {}, cost: 0 }), d = Math.floor(x.t / ZI), z = g.zile[d] || (g.zile[d] = { g: 0, b: 0 });
+      if (x.gresit) { z.g++; g.cost += x.cost; } else z.b++;
+    });
+    var wJos = function (k, n, zz) { var p = k / n, a = zz * zz; return (p + a / (2 * n) - zz * Math.sqrt(p * (1 - p) / n + a / (4 * n * n))) / (1 + a / n); };
+    var tip = Object.keys(gr).map(function (k) { var g = gr[k], z = Object.keys(g.zile).map(function (d) { return g.zile[d]; }); return { cod: g.cod, stare: g.stare, judecate: z.length, gresite: z.filter(function (q) { return q.g > q.b; }).length, cost: g.cost }; })
+      .filter(function (g) { return g.judecate >= 10 && wJos(g.gresite, g.judecate, 2.576) > 0.5 && g.cost < 0; })
       .sort(function (a, b) { return a.cost - b.cost; })[0] || null;
     if (tip) {
       tip.cost = Math.round(tip.cost * 100) / 100;
-      tip.text = "Regulă propusă (ipoteză, n-am schimbat nimic): " + (NS[tip.cod] || "„" + tip.cod + "”") + " în starea „" + (ET[tip.stare] || tip.stare) + "” a greșit de " + tip.gresite + " din " + tip.judecate +
-        " ori în 30 de zile (" + U(tip.cost) + " dacă-l urmai) — l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";
+      tip.text = "Regulă propusă (ipoteză, n-am schimbat nimic): " + (NS[tip.cod] || "„" + tip.cod + "”") + " în starea „" + (ET[tip.stare] || tip.stare) + "” a greșit în " + tip.gresite + " din " + tip.judecate +
+        " zile, în ultimele 30 (" + U(tip.cost) + " dacă-l urmai) — l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";
       linii.push(tip.text);
-    } else linii.push("Niciun tipar repetat încă (trebuie cel puțin 5 cazuri judecate ale aceluiași sfat în aceeași stare).");
+    } else linii.push("Niciun tipar repetat sigur încă (trebuie cel puțin 10 zile judecate ale aceluiași sfat în aceeași stare, cu greșeala clar peste jumătate).");
     return { scumpe: scumpe, tipar: tip, linii: linii };
   }
 

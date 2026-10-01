@@ -27,13 +27,45 @@ var Perechi = (function () {
     if (!per.length) return { eroare: "nicio fereastră de " + H + " zile înainte de pornire" };
     return { peZi: per.reduce(function (a, v) { return a + v; }, 0) / per.length / H, ferestre: per.length, zile: zile };
   }
-  // perechile reale pe zi fata de estimare; sub o zi de bot sau estimare sub 0,5 perechi/zi -> null (n-ar spune nimic)
-  function raport(perechi, pornit, acum, est) {
-    var n = nr(perechi), t0 = nr(pornit), t = nr(acum) || Date.now(), e = est && nr(est.peZi);
-    if (n === null || t0 === null || e === null || !(e >= 0.5)) return null;
-    var zile = (t - t0) / ZI; if (zile < 1) return null;
-    var real = n / zile;
-    return { real: real, est: e, raport: real / e, zile: zile };
+  // perechile reale pe zi fata de estimare. Revizia 01.10 (I1): pe ultimele 24-48 h din urme (un bot care a stat zile afara din grid si a
+  // revenit nu ramane „lent” pe toata viata), altfel de la pornire dar abia de la 2 zile; cel putin 8 perechi asteptate in fereastra (sub
+  // atat, 0 sau 2 perechi sunt zgomot); estimarea corectata cu factorul monedei cand exista.
+  // o = { urme: [{t, n}], factor, inGrid } -> { real, est, raport, zile, fereastra, corectat, inGrid } sau null
+  function raport(perechi, pornit, acum, est, o) {
+    o = o || {}; var n = nr(perechi), t0 = nr(pornit), t = nr(acum) || Date.now(), e = est && nr(est.peZi);
+    if (n === null || t0 === null || e === null || !(e > 0)) return null;
+    var f = nr(o.factor) > 0 ? nr(o.factor) : null, eA = e * (f || 1);
+    var u = (Array.isArray(o.urme) ? o.urme : []).filter(function (p) { return p && nr(p.t) !== null && nr(p.n) !== null && p.t <= t - ZI && p.t >= t - 2 * ZI && p.n <= n; })
+      .sort(function (a, c) { return a.t - c.t; })[0];
+    var zile, real, fer;
+    if (u) { zile = (t - u.t) / ZI; real = (n - u.n) / zile; fer = "ultimele " + Math.round(zile * 24) + " h"; }
+    else { zile = (t - t0) / ZI; if (zile < 2) return null; real = n / zile; fer = "de la pornire"; }
+    if (eA * zile < 8) return null;
+    return { real: real, est: eA, raport: real / eA, zile: zile, fereastra: fer, corectat: !!f, inGrid: o.inGrid === undefined || o.inGrid === null ? null : !!o.inGrid };
+  }
+  // constatarea de pe viu (01.10): arhiva botilor inchisi NU are numarul de perechi -> il notam la fiecare vedere a botului activ (ultima
+  // vedere = cat a facut pana la inchidere) + urmele pe ore (72 h) pentru fereastra raportului. activi = [{id, perechi}]
+  function noteaza(est, activi, acum) {
+    est = est || {}; var t = nr(acum) || Date.now();
+    (Array.isArray(activi) ? activi : []).forEach(function (a) {
+      var e = a && est[String(a.id)], n = a && nr(a.perechi); if (!e || n === null) return;
+      e.perechi = n; e.vazut = t;
+      var u = (Array.isArray(e.urme) ? e.urme : []).filter(function (p) { return p && p.t >= t - 72 * 3600000; });
+      if (!u.length || t - u[u.length - 1].t >= 50 * 60000) u.push({ t: t, n: n });
+      e.urme = u;
+    });
+    return est;
+  }
+  // factorul pe moneda din botii care nu mai sunt activi (inchisi), tinuti cel putin 6 h: raport = perechi pe zi / estimare
+  function factori(est, activi) {
+    var pe = {}, act = activi instanceof Set ? activi : new Set(activi || []);
+    Object.keys(est || {}).forEach(function (id) {
+      var e = est[id]; if (!e || act.has(id) || !e.simbol || !(nr(e.peZi) >= 0.5) || nr(e.perechi) === null || nr(e.pornit) === null || nr(e.vazut) === null) return;
+      var zile = (e.vazut - e.pornit) / ZI; if (zile < 0.25) return;
+      (pe[e.simbol] = pe[e.simbol] || []).push({ raport: e.perechi / zile / e.peZi });
+    });
+    var out = {}; Object.keys(pe).forEach(function (s) { out[s] = factor(pe[s]); });
+    return out;
   }
   function median(a) { return a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2; }
   // factorul pe moneda din botii inchisi: [{raport}] -> { factor, p25, p75, n } sau { lipsa, n } sub 10
@@ -42,6 +74,6 @@ var Perechi = (function () {
     if (v.length < 10) return { lipsa: 10 - v.length, n: v.length };
     return { factor: median(v), p25: G.percentila(v, 0.25), p75: G.percentila(v, 0.75), n: v.length };
   }
-  return { estimare: estimare, raport: raport, factor: factor };
+  return { estimare: estimare, raport: raport, factor: factor, noteaza: noteaza, factori: factori };
 })();
 if (typeof globalThis !== "undefined") globalThis.Perechi = Perechi;

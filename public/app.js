@@ -6279,7 +6279,8 @@ function tbPerechiAdu(){
   if(tbPerechi.inLucru||Date.now()-tbPerechi.la<10*60000)return;tbPerechi.inLucru=true;
   Promise.all([getJSON("/api/istoric-bot?action=perechiEst").catch(function(){return null}),getJSON("/api/istoric-bot?action=perechiCorectie").catch(function(){return null})])
     .then(function(r){tbPerechi.est=r[0]&&r[0].est||{};tbPerechi.cor=r[1]&&r[1].corectie||{}}).then(function(){tbPerechi.la=Date.now();tbPerechi.inLucru=false;if(typeof renderGrid==="function")renderGrid()})}
-function tbPerechiPt(b){tbPerechiAdu();return b&&typeof Perechi!=="undefined"?Perechi.raport(b.ordinePerechi,b.pornitLa,Date.now(),tbPerechi.est[b.id]||null):null}
+function tbPerechiPt(b){tbPerechiAdu();if(!b||typeof Perechi==="undefined")return null;var e=tbPerechi.est[b.id]||null,s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,c=tbPerechi.cor[s],p=botiNr(b.pretCurent);   // revizia 01.10 (I1): fereastra din urme, factorul monedei, pretul in grid
+  return Perechi.raport(b.ordinePerechi,b.pornitLa,Date.now(),e,{urme:e&&e.urme,factor:c&&c.factor,inGrid:p!==null&&p>=botiNr(b.gridJos)&&p<=botiNr(b.gridSus)})}
 // fisa Grid: estimarea perechilor pe zi, corectata dupa botii tai pe moneda (de la 10)
 function grPerechiText(f){
   tbPerechiAdu();var tz=f&&(f.propusa==="deasa"&&f.deasa?f.deasa.treceriZi:f.treceriZi);if(tz==null||!isFinite(tz))return null;

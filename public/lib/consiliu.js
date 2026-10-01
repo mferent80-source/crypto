@@ -75,10 +75,11 @@ var Consiliu = (function () {
     });
     // 3b) v100.51 (I-477): gridul incheie sub jumatate din perechile pe care le astepta fisa pe istoricul de dinaintea pornirii
     var pe = x.perechi;
-    if (pe && nr(pe.raport) !== null && pe.raport < 0.5 && nr(pe.real) !== null && nr(pe.est) !== null) {
+    // revizia 01.10 (I1): doar cu pretul IN grid (afara vorbesc margine/pericol) - si raportul pe fereastra lui (Perechi.raport)
+    if (pe && pe.inGrid !== false && nr(pe.raport) !== null && pe.raport < 0.5 && nr(pe.real) !== null && nr(pe.est) !== null) {
       var z1 = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace(".", ","); };
       cand.push({ cod: "perechi", nivel: "atentie", c: "g", titlu: "Gridul încheie " + z1(pe.real) + " perechi pe zi; fișa aștepta " + z1(pe.est),
-        text: "Pe cele 30 de zile de dinaintea pornirii, gridul tău ar fi încheiat ~" + z1(pe.est) + " perechi pe zi; acum face " + Math.round(pe.raport * 100) + "% din asta. O frecvență din trecut, nu o promisiune.",
+        text: "Pe cele 30 de zile de dinaintea pornirii, gridul tău ar fi încheiat ~" + z1(pe.est) + " perechi pe zi" + (pe.corectat ? " (corectat după boții tăi pe monedă)" : "") + "; " + (pe.fereastra || "de la pornire") + " a făcut " + Math.round(pe.raport * 100) + "% din asta. O frecvență din trecut, nu o promisiune.",
         faCe: "Aș muta gridul pe unde stă prețul acum (setările din fișă): cu atât de puține perechi nu-și acoperă costurile pe zi.", scurt: "gridul încheie sub jumătate din perechile așteptate" });
     }
     // 4) motivul verde: piata, cu UN singur trend (directia pietei; fisa - media EMA - devine „structura”)
@@ -164,6 +165,8 @@ var Consiliu = (function () {
   var CHEI = { opreste: ["status"], lichidare: ["lich"], pericol: ["lich", "status", "grid", "activ"], plan: ["plan"], stop: ["plan-stop", "opritor"],
     muta: ["s-muta", "grid", "p-margine"], margine: ["s-muta", "grid", "p-margine"], btc: ["s-btc", "m-btc"], aglomerare: ["s-aglomerare"],
     "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie"], perechi: [] };
+  // revizia 01.10 (I1): motivele fara socoteala proprie (nu pot „tacea” ca in I-466) nu suna pe Discord cand sunt in varf - raman in Radar
+  var FARA_DISCORD = { perechi: 1 };
   var PAUZA = 2 * 3600000;   // acelasi nivel pe Discord cel mult o data la 2 h pe bot (un nivel care oscileaza nu mai suna la fiecare ciclu)
   // opt = { activ: {cheieAlerta: nivel} (starea alertelor botului), taci: {codSfat: true} (I-466: sfaturile care n-au batut hazardul) }
   function schimbare(st, c, acum, nume, opt) {
@@ -180,7 +183,7 @@ var Consiliu = (function () {
     var areAlerta = !!sus && (CHEI[sus.cod] || []).some(function (k) { return activ[k] && activ[k] !== "ok"; });
     var tacut = !!sus && !!taci[SOC[sus.cod] || sus.cod];
     var trimis = Object.assign({}, st.trimis || {}), pauza = nr(trimis[lite.nivel]) !== null && acum - trimis[lite.nivel] < PAUZA;
-    var doar = lite.nivel === "tine" || areAlerta || tacut || pauza;
+    var doar = lite.nivel === "tine" || areAlerta || tacut || pauza || (!!sus && !!FARA_DISCORD[sus.cod]);
     if (!doar) trimis[lite.nivel] = acum;
     var al = { nivel: lite.nivel === "iesi" ? "critic" : lite.nivel === "atentie" ? "atentie" : "info", titlu: N + ": Consilierul — " + lite.eticheta + " · " + lite.titlu,
       mesaj: "Ce aș face eu: " + (lite.faCe || "—") + (lite.bani ? " · 💰 " + lite.bani : "") + (d ? " · De ce: " + d.text : ""), doarRadar: doar };
