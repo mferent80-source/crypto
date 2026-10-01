@@ -213,6 +213,9 @@ async function scenariu(lat, inal, nume) {
       assert.match(t, /Prețurile calculate pentru ASTS/); assert.match(t, /Cât cumperi/);
       if (!/NU ACUM/.test(t)) assert.match(t, /comision dus-întors/);
       assert.match(t, /Ce spune istoricul tău/i, "v89: biletul la intrare");
+      // v100.55 (pachetul 4): profilul + probabilitatile actiunii propuse (cand sunt preturi calculate) si „in situatii ca asta” (cand e jurnalul)
+      if (await b.ev(`!!(t212.poarta && t212.poarta.niv && t212.poarta.niv.nivel === "ok")`)) { assert.match(t, /📐/, "profilul la poarta"); assert.match(t, /Probabilitățile din istoric/, "probabilitatile la poarta"); }
+      if (await b.ev(`!!t212Jurnal()`)) assert.match(t, /📊 În situații ca asta/, "in situatii ca asta");
       // verdictul si marimea nu se contrazic: pe "NU ACUM" nu se da un numar de bucati
       if (/NU ACUM/.test(t)) assert.match(t, /nu cumpăr acum — vezi verdictul/); else assert.match(t, /1% din cont|citește întâi contul/);
       await b.ev(`document.getElementById("t212PoartaRez").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, `poarta-${nume}.png`));
