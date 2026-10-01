@@ -29,6 +29,10 @@ var Consiliu = (function () {
     return m ? m[3].replace(".", ",") + "% până la marginea de " + m[1] + " (" + m[2] + ")" : t;
   }
   function prio(cod) { var i = PRIO.indexOf(cod); return i < 0 ? PRIO.length : i; }
+  // v100.50 (I-479): siguranta nu se negociaza - acestea raman primele la acelasi nivel, oricat ar fi adus altele
+  var FIX = { opreste: 1, lichidare: 1, plan: 1, stop: 1 };
+  // banii masurati ai sfatului (socoteala pe botii lui), doar de la 10 cazuri judecate - altfel null (ordinea fixa)
+  function baniMasurati(soc, cod) { var x = soc && soc[SOC[cod] || cod]; return x && x.judecate >= 10 && nr(x.bani) !== null ? nr(x.bani) : null; }
   function cip(soc, cod) {
     var k = SOC[cod]; if (!k || !soc) return null;
     var x = soc[k];
@@ -80,7 +84,14 @@ var Consiliu = (function () {
     }
     cand.forEach(function (m) { m.cip = cip(soc, m.cod); });
     var rang = { iesi: 0, atentie: 1, bine: 2 };
-    cand.sort(function (a, b) { return (rang[a.nivel] - rang[b.nivel]) || (prio(a.cod) - prio(b.cod)); });
+    // v100.50 (I-479): la acelasi nivel, intai siguranta (ordinea fixa), apoi - cand amandoua sunt masurate (≥ 10 judecate) - cel care a
+    // adus mai multi bani urmat; altfel ordinea fixa de pana acum
+    cand.sort(function (a, b) {
+      var d = rang[a.nivel] - rang[b.nivel]; if (d) return d;
+      var fa = FIX[a.cod] ? 1 : 0, fb = FIX[b.cod] ? 1 : 0; if (fa !== fb) return fb - fa;
+      if (!fa) { var ba = baniMasurati(soc, a.cod), bb = baniMasurati(soc, b.cod); if (ba !== null && bb !== null && ba !== bb) return bb - ba; }
+      return prio(a.cod) - prio(b.cod);
+    });
     var motive = cand.slice(0, 3), avert = motive.filter(function (m) { return m.nivel !== "bine"; });
 
     // verdictul: cel mai grav dintre semafor si motive
@@ -122,6 +133,17 @@ var Consiliu = (function () {
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: m.cip, extra: m.extra || null }; }), rest: rest };
   }
 
-  return { alcatuieste: alcatuieste };
+  // v100.50 (I-473): de ce s-a schimbat verdictul - din ce nivel in care, motivele aparute (+) si disparute (−); nimic schimbat -> null
+  function deCe(a, b) {
+    if (!a || !b) return null;
+    var ca = {}, cb = {}; (a.motive || []).forEach(function (m) { if (m && m.cod) ca[m.cod] = m; }); (b.motive || []).forEach(function (m) { if (m && m.cod) cb[m.cod] = m; });
+    var plus = Object.keys(cb).filter(function (k) { return !ca[k]; }).map(function (k) { return cb[k].titlu; });
+    var minus = Object.keys(ca).filter(function (k) { return !cb[k]; }).map(function (k) { return ca[k].titlu; });
+    if (a.nivel === b.nivel && !plus.length && !minus.length) return null;
+    var t = (a.nivel !== b.nivel ? "din " + (ETICHETA[a.nivel] || a.nivel) + " în " + (ETICHETA[b.nivel] || b.nivel) : "același verdict, alte motive")
+      + (plus.length ? " · + " + plus.join(" · + ") : "") + (minus.length ? " · − " + minus.join(" · − ") : "");
+    return { text: t, plus: plus, minus: minus };
+  }
+  return { deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;
