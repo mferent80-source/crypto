@@ -17,7 +17,8 @@ o probabilitate prost calibrată se arată cu avertisment ȘI se corectează · 
 
 1. **Doar ce se știa atunci.** Orice probabilitate se socotește din bare ÎNCHISE dinaintea momentului; profilul se reface noaptea, nu din viitor.
 2. **Frecvență, nu predicție.** „În 38 din 61 de cazuri asemănătoare…”, cu numărul de cazuri și intervalul Wilson. Direcția viitoare nu se promite.
-3. **Cazuri independente.** Pornirile se iau la cel puțin 4 h una de alta; numărul afișat e numărul de zile distincte, nu de bare.
+3. **Cazuri independente.** Pornirile se iau la cel puțin 4 h una de alta, dar intervalul de încredere se socotește pe numărul de ferestre
+   care NU se suprapun (pentru orizontul de 24 h: zile distincte; pentru 7 zile: săptămâni) — ca să nu pară mai sigur decât e.
 4. **Calibrare vizibilă.** Fiecare probabilitate arătată se notează și se judecă după orizontul ei; lângă cifră, cât de bine s-a adeverit tipul ei.
 5. **Nimic nu se pierde, nimic nu blochează.** Sfaturile avertizează; lichidarea și planul lui nu tac niciodată.
 
