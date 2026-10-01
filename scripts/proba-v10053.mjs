@@ -52,5 +52,32 @@ await test("stopul deja depasit -> fara probabilitati de stop, cu motivul", () =
   assert.equal(r.stop1, null); assert.match(r.motiv, /deja depășit/);
 });
 
+// ---- pasul 2: calibrarea pe cumpararile lui ----
+await test("calibrareActiuni: un caz pe ticker la >= 5 zile de bursa; cumpararile din aceeasi zi = un caz; cutiile ca la crypto", () => {
+  are(PR.calibrareActiuni, "Probabilitati.calibrareActiuni");
+  const Z = 864e5, inch = [{ id: "a", ticker: "X", pornit: 0 }, { id: "b", ticker: "X", pornit: 2 * Z }, { id: "c", ticker: "X", pornit: 9 * Z }, { id: "d", ticker: "Y", pornit: 0 }, { id: "e", ticker: "Y", pornit: 3600000 }];
+  const cf = { a: { prob: { p: 0.55, r: 1 } }, b: { prob: { p: 0.55, r: 0 } }, c: { prob: { p: 0.45, r: 0 } }, d: { prob: { p: 0.9, r: 1 } }, e: { prob: { p: 0.9, r: 1 } } };
+  const cal = PR.calibrareActiuni(inch, cf), c = cal["act-cursa5"].cutii;
+  assert.equal(c[2].n, 2, "X: a si c (b e la 2 zile de a)"); assert.equal(c[4].n, 1, "Y: d si e in aceeasi zi = un caz");
+});
+await test("rejucarea noteaza prob doar cu barele de dinainte si ruta cf o pastreaza; colectorul da ActiuniSemnale lui Probabilitati", async () => {
+  const t = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
+  assert.match(t, /pentruActiune\(inainte/); assert.match(t, /prob: /); assert.match(t, /!\("prob" in gata\[t\.id\]\)/);
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /new Function\("GridCalcul", "ActiuniSemnale", fs\.readFileSync\(path\.join\(RAD, "public", "lib", "probabilitati\.js"\)/); assert.match(col, /ActiuniSemnale, ProfilMoneda, Probabilitati, pauza/);
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "t212.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const r = await mod.onRequestPost({ request: new Request("http://127.0.0.1:8788/api/t212?action=cf", { method: "POST", headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: JSON.stringify({ verdicte: { a1: { nivel: "cumpara", motive: [], greseli: [], prob: { p: 0.62, r: 1, zi: 5 } }, a2: { nivel: "cumpara", motive: [], greseli: [], prob: null } } }) }), env });
+  assert.equal(r.status, 200); const m = JSON.parse(kv.get("t212:cf")); assert.deepEqual(m.a1.prob, { p: 0.62, r: 1, zi: 5 }); assert.ok("prob" in m.a2 && m.a2.prob === null, "prob: null se pastreaza (altfel s-ar reface la nesfarsit)");
+});
+await test("rezultatul cumpararii (r): primele 5 zile DUPA ziua cumpararii; tinta inaintea stopului -> 1; amandoua in aceeasi zi -> 0", () => {
+  are(PR.rezultatCumparare, "Probabilitati.rezultatCumparare");
+  const Z = 864e5, b = Array.from({ length: 10 }, (_, i) => ({ t: i * Z, o: 100, h: 101, l: 99, c: 100 }));
+  b[2] = { ...b[2], h: 106 }; assert.equal(PR.rezultatCumparare(b, 0.5 * Z, 95, 105), 1);
+  const b2 = b.map((x) => ({ ...x })); b2[2] = { ...b2[2], h: 106, l: 94 }; assert.equal(PR.rezultatCumparare(b2, 0.5 * Z, 95, 105), 0, "pesimist");
+  const b3 = Array.from({ length: 10 }, (_, i) => ({ t: i * Z, o: 100, h: i === 0 ? 120 : 101, l: 99, c: 100 })); assert.equal(PR.rezultatCumparare(b3, 0.5 * Z, 95, 105), 0, "ziua cumpararii nu intra");
+  assert.equal(PR.rezultatCumparare(b.slice(0, 4), 0.5 * Z, 95, 105), null, "sub 5 zile dupa");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

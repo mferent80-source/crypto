@@ -62,7 +62,7 @@ await test("varianta prof: profilul din barele de DINAINTEA cumpararii; alegeTra
   // poza 01.10: randul „prof” in tabel ar fi fost socotit pe TOATE trade-urile (neprobat = fara stop) -> in tabel nu intra; sub el, comparatia corecta
   const ecr0 = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
   assert.ok(!/k: "prof"/.test(ecr0), "prof nu e rand in tabel"); assert.match(ecr0, /ActiuniSemnale\.alegeTrail\(l, cfm\)/);
-  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /T212, ActiuniSemnale, ProfilMoneda, pauza/);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /T212, ActiuniSemnale, ProfilMoneda, (Probabilitati, )?pauza/);
 });
 await test("varianta prof pe un trade: stopul urca la −P75(5 zile) din profilul de dinainte si iese pe bara care il atinge", () => {
   const PMa = PM, bare = []; let c = 100;

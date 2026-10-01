@@ -78,7 +78,7 @@ export async function turaCfActiuni(d) {
   const inchise = d.T212.perechi(u).inchise, peTicker = new Map();
   // v87: verdictele vechi, fara proba cu stop, se refac o data (cu aceleasi preturi)
   // v100.52: si verdictele fara varianta „prof” (stopul din profilul actiunii) se refac O DATA - test de prezenta, un prof: null ramane null
-  for (const t of inchise) if (!gata[t.id] || !gata[t.id].stop || !gata[t.id].stopU || (d.ProfilMoneda && Object.keys(gata[t.id].stopU || {}).length && !("prof" in gata[t.id].stopU))) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
+  for (const t of inchise) if (!gata[t.id] || !gata[t.id].stop || !gata[t.id].stopU || (d.ProfilMoneda && Object.keys(gata[t.id].stopU || {}).length && !("prof" in gata[t.id].stopU)) || (d.Probabilitati && Object.keys(gata[t.id].stopU || {}).length && !("prob" in gata[t.id]))) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
   const nume = {}; for (const x of u) if (x.nume && x.nume !== x.ticker) nume[x.ticker] = x.nume;
   let judecate = 0, actiuni = 0, strans = {};
   // scrierile se strang cate 200 (ruta de scriere lasa 30 pe minut; una pe actiune ar lovi limita)
@@ -89,7 +89,7 @@ export async function turaCfActiuni(d) {
     actiuni++;
     let bare = null; try { bare = await d.cereBare(tk, nume[tk] || ""); } catch (e) { d.jurnal("cf actiuni", tk, e.message); continue; }
     for (const t of lista) {
-      let stopU = {};
+      let stopU = {}, prob = null;
       if (bare && bare.length) {
         // planul Radarului: -X% de la maxim, cu X din pretul calculat la ora cumpararii (doar zilele de dinainte)
         const inainte = bare.filter((b) => b.t + 8 * 3600000 <= t.pornit), n = inainte.length >= 120 ? d.ActiuniSemnale.niveluri(inainte, t.pretCumparare, {}) : null;
@@ -97,8 +97,14 @@ export async function turaCfActiuni(d) {
         // exact ce face pozitia pe viu (altfel un „neatins” ar insemna si „fara profil”)
         const pp = d.ProfilMoneda ? d.ProfilMoneda.calculeaza(inainte, { piata: "actiuni", simbol: tk, acum: t.pornit }) : null, ps = pp ? d.ProfilMoneda.pragStopActiune(pp) : null;
         stopU = d.ActiuniSemnale.cuStopUrcator(t, bare, [{ cheie: "plan", trailPct: n && n.nivel === "ok" ? n.trailPct : null }, { cheie: "u15", pct: 15 }, { cheie: "u25", pct: 25 }, { cheie: "prof", trailPct: ps ? Math.round(ps.dist * 1000) / 10 : 15 }]);
+        // v100.53 (calibrarea): cifra de ATUNCI (doar barele de dinainte) - tinta (+2×risc) inaintea stopului (−risc) in 5 zile - si ce a urmat
+        if (d.Probabilitati && n && n.nivel === "ok" && n.d > 0) {
+          const sp = t.pretCumparare - n.d, tp = t.pretCumparare + 2 * n.d, pa = d.Probabilitati.pentruActiune(inainte, { pret: t.pretCumparare, stop: sp, tinta: tp, acum: t.pornit });
+          const p = pa && pa.cursa5 && pa.cursa5.tinta ? pa.cursa5.tinta.p : null, r = d.Probabilitati.rezultatCumparare(bare, t.pornit, sp, tp);
+          prob = p !== null && r !== null ? { p: Math.round(p * 1000) / 1000, r, zi: Math.floor(t.pornit / 86400000) } : null;
+        }
       }
-      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {} };
+      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU, prob: prob }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {} };
       judecate++;
     }
     if (Object.keys(strans).length >= 200) await scrie();

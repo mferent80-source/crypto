@@ -99,6 +99,25 @@ var Probabilitati = (function () {
     if (relT !== null) { var ev = cursa(relT, relS); out.cursa5 = { tinta: frecventa(b, 5, ev, "tinta", stare, op), stop: frecventa(b, 5, ev, "stop", stare, op) }; }
     return out;
   }
+  // v100.53: ce a urmat dupa o cumparare - primele 5 zile de bursa DUPA ziua cumpararii (ziua ei nu intra: nu stim ora fata de min/max);
+  // tinta inaintea stopului -> 1, altfel 0 (amandoua in aceeasi zi -> 0, pesimist); sub 5 zile dupa -> null
+  function rezultatCumparare(bare, pornit, stop, tinta) {
+    var z0 = Math.floor(nr(pornit) / 864e5), f = (Array.isArray(bare) ? bare : []).filter(function (x) { return x && Math.floor(x.t / 864e5) > z0; }).sort(function (x, y) { return x.t - y.t; });
+    if (f.length < 5 || !(stop > 0) || !(tinta > 0)) return null;
+    for (var i = 0; i < 5; i++) { if (f[i].l <= stop) return 0; if (f[i].h >= tinta) return 1; }
+    return 0;
+  }
+  // calibrarea pe cumpararile lui: un caz pe ticker la cel putin 7 zile calendaristice (~5 de bursa) de ultimul caz al tickerului (cumpararile
+  // din aceeasi zi = un caz); cutiile ca la crypto (calibreaza / corecteaza). cf[id].prob = {p, r}
+  function calibrareActiuni(inchise, cf) {
+    var out = { "act-cursa5": { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0 }; }) } }, ultim = {};
+    (Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && nr(t.pornit) !== null; }).sort(function (a, b) { return a.pornit - b.pornit; }).forEach(function (t) {
+      var pr = cf && cf[t.id] && cf[t.id].prob; if (!pr || (pr.r !== 0 && pr.r !== 1) || nr(pr.p) === null) return;
+      var k = t.ticker || t.simbol || t.id; if (k in ultim && t.pornit - ultim[k] < 7 * 864e5) return; ultim[k] = t.pornit;
+      var c = out["act-cursa5"].cutii[Math.min(4, Math.floor(pr.p * 5))]; c.n++; c.k += pr.r;
+    });
+    return out;
+  }
   function pentruBot(bare, o) {
     o = o || {};
     var b = pregateste(bare, o.acum), p = nr(o.pret), dir = String(o.dir || "").toLowerCase();
@@ -215,5 +234,5 @@ var Probabilitati = (function () {
     var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
     return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
   }
-  return { pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
+  return { rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();

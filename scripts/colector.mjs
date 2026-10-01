@@ -125,7 +125,7 @@ const Idei = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "publ
 // Nasdaq-100 din aplicatie (o singura sursa: public/app.js, NDX_UNIVERSE)
 const NDX = (() => { try { const m = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").match(/const NDX_UNIVERSE=(\[[^\]]*\])/); return m ? JSON.parse(m[1]) : []; } catch { return []; } })();
 const ProfilMoneda = incarca("profil-moneda.js", "ProfilMoneda");
-const Probabilitati = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "probabilitati.js"), "utf8") + "; return Probabilitati;")(GridCalcul);   // v101.27 (pachetul 2a)
+const Probabilitati = new Function("GridCalcul", "ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "probabilitati.js"), "utf8") + "; return Probabilitati;")(GridCalcul, ActiuniSemnale);   // v101.32: + starea actiunilor   // v101.27 (pachetul 2a)
 const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", "Probabilitati", "SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade, Probabilitati, SemnaleBot);   // v101.30 (I-478): dupa Probabilitati - autopsia ia etichetele starilor
 const GraficBot = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "grafic-bot.js"), "utf8") + "; return GraficBot;")();   // v101.28 (pachetul 2b): RSI/EMA/Bollinger pentru Dovada
 const Dovada = new Function("GridCalcul", "GraficBot", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "dovada.js"), "utf8") + "; return Dovada;")(GridCalcul, GraficBot, Probabilitati);   // v101.28 (I-471)
@@ -649,7 +649,7 @@ async function turaCfActiuni() {
         catch (e) { if (e.status === 404) return null; throw e; }   // 404 = fara preturi (delistata); altceva se reincearca
       },
       salveaza: (m) => trimite("/api/t212?action=cf", { verdicte: m }),
-      T212, ActiuniSemnale, ProfilMoneda, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 40 });   // v101.31: + varianta „prof”
+      T212, ActiuniSemnale, ProfilMoneda, Probabilitati, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 40 });   // v101.31: + varianta „prof”
     cfActLa = r.ramase ? Date.now() - 3600000 + 10 * 60000 : Date.now();
   } catch (e) { jurnal("cf actiuni ESEC", e.message); cfActLa = Date.now() - 3600000 + 20 * 60000; }
   cfActInLucru = false;
