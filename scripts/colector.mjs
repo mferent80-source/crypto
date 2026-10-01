@@ -1060,6 +1060,34 @@ async function simboluriProfil() {
   }
   return [...m].map(([simbol, moneda]) => ({ simbol, moneda }));
 }
+// v101.31 (actiunile T212, pachetul 1): profilul actiunii - noaptea (23:00-07:00 ora Romaniei, dupa inchiderea bursei SUA), o data pe zi pe
+// ticker, doar pozitiile deschise + actiunile din idei (Yahoo limiteaza cererile); 2 ani de bare zilnice -> KV profil:<TICKER>
+let profilActInLucru = false, profilActLa = 0;
+async function turaProfilActiuni() {
+  if (process.env.COLECTOR_FARA_T212 || profilActInLucru || Date.now() - profilActLa < 30 * 60000) return;
+  const r = saptamanaRo(Date.now()); if (!(r.ora >= 23 || r.ora < 7)) return;
+  profilActInLucru = true; profilActLa = Date.now();
+  try {
+    const tk = new Set();
+    try { const p = await cere("/api/t212?action=pozitii"); for (const x of (p && p.pozitii) || []) if (x && x.ticker) tk.add(String(x.ticker)); } catch (e) { jurnal("profil actiuni: pozitii", e.message); }
+    try { const i = await cere("/api/t212?action=idei"); for (const x of (i && i.idei && Array.isArray(i.idei.actiuni) ? i.idei.actiuni : [])) if (x && x.ticker) tk.add(String(x.ticker)); } catch (e) { jurnal("profil actiuni: idei", e.message); }
+    const st = profilStare.actiuni || (profilStare.actiuni = {});
+    let facute = 0;
+    for (const t of tk) {
+      if (st[t] === r.data) continue;
+      await new Promise((rs) => setTimeout(rs, 1200));
+      try {
+        const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(t));
+        const p = ProfilMoneda.calculeaza(GridCalcul.bareBursa(d && d.randuri || [], Date.now()), { piata: "actiuni", simbol: t, acum: Date.now() });
+        if (p) { await trimite("/api/istoric-bot?action=profil", { simbol: t, profil: p }); facute++; }
+        st[t] = r.data;
+      } catch (e) { jurnal("profil actiuni", t, e.status === 404 ? "fara preturi (404)" : e.message); if (e.status === 404) st[t] = r.data; }
+    }
+    try { scrieAtomic(PROFIL_STARE, profilStare); } catch (e) { jurnal("profil-stare nescris", e.message); }
+    if (facute) jurnal("profil actiuni:", facute, "din", tk.size);
+  } catch (e) { jurnal("profil actiuni ESEC", e.message); }
+  profilActInLucru = false;
+}
 let profilInLucru = false, profilLa = 0;
 async function turaProfil() {
   if (profilInLucru || Date.now() - profilLa < 10 * 60000) return;
@@ -1192,7 +1220,7 @@ async function bucla() {
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
-  turaProfil().then(() => turaCazuri()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.26 (pachetul 1) + v101.28 (I-469)
+  turaProfil().then(() => turaCazuri()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
   turaPerechi().catch((e) => jurnal("perechi", e.message));   // v101.30 (I-477)

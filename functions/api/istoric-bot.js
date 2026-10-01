@@ -265,6 +265,14 @@ export async function onRequestPost({request,env}){
   // v100.45 (pachetul 1): profilul monedei (colectorul, noaptea) -> KV profil:<SIMBOL>
   if(action==="profil"){
     const s=simbolKv(corp&&corp.simbol),p=corp&&corp.profil;if(!s||!p||typeof p!=="object")return json({error:"Lipseste simbol sau profil"},400);
+    // v100.52 (actiunile T212): forma actiunii - 1 si 5 zile de bursa, saritura la deschidere, zilele-eveniment
+    if(p.piata==="actiuni"){
+      const z1=curataDistributie(p.z1),z5=curataDistributie(p.z5),sj=p.sar&&q21(p.sar.jos);if(!z1||!z5||!sj)return json({error:"profil de actiune fara distributii valide"},400);
+      const e=p.evenimente&&typeof p.evenimente==="object"?p.evenimente:{};
+      const out={v:1,piata:"actiuni",simbol:typeof p.simbol==="string"?p.simbol.slice(0,40):s,la:nr(p.la)||Date.now(),deLa:nr(p.deLa),panaLa:nr(p.panaLa),zile:nr(p.zile),z1,z5,sar:{jos:sj,n:nr(p.sar.n)},
+        evenimente:{n:nr(e.n)||0,zile:Array.isArray(e.zile)?e.zile.map(nr).filter(x=>x!==null).slice(-20):[],mediana:nr(e.mediana),max:nr(e.max)}};
+      await env.ISTORIC.put("profil:"+s,JSON.stringify(out));return json({ok:true});
+    }
     const z24=curataDistributie(p.z24),z12=curataDistributie(p.z12);if(!z24||!z12)return json({error:"profil fara distributii valide"},400);
     const r30=p.r30&&typeof p.r30==="object"?{z24:curataDistributie(p.r30.z24),z12:curataDistributie(p.r30.z12)}:null;
     const bo=p.boti&&typeof p.boti==="object"?{n:nr(p.boti.n),pePlus:nr(p.boti.pePlus),net:nr(p.boti.net),oreMediana:nr(p.boti.oreMediana)}:null;

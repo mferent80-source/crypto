@@ -38,5 +38,21 @@ await test("split (|saritura| > 40%) nu intra in nicio distributie", () => {
   const p = PM.calculeaza(bare, { piata: "actiuni", simbol: "X_US_EQ", acum: 201 * 864e5 }); assert.ok(p && p.sar.jos[20] < 0.4 && p.z5.jos[20] < 0.4, p ? JSON.stringify(p.sar.jos.slice(-2)) : "null");
 });
 
+// ---- pasul 2: ruta si profilurile noaptea ----
+await test("ruta profil: primeste si intoarce forma actiunii (z1/z5/sar/evenimente); forma crypto merge ca inainte", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const q = Array.from({ length: 21 }, (_, k) => k / 200), d = { jos: q, sus: q, n: 300, nIndep: 60 };
+  const prof = { v: 1, piata: "actiuni", simbol: "INTC_US_EQ", la: 1, deLa: 0, panaLa: 1, zile: 300, z1: d, z5: d, sar: { jos: q, n: 290 }, evenimente: { n: 6, zile: [1, 2], mediana: 0.05, max: 0.18 } };
+  const r = await mod.onRequestPost({ request: cer("POST", "action=profil", { simbol: "INTC_US_EQ", profil: prof }), env }); assert.equal(r.status, 200, await r.clone().text());
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=profil&simbol=INTC_US_EQ"), env })).json();
+  assert.equal(g.profil.piata, "actiuni"); assert.equal(g.profil.z5.jos.length, 21); assert.equal(g.profil.evenimente.n, 6); assert.equal(g.profil.sar.n, 290);
+  const cr = { v: 1, simbol: "CRV_USDT_PERP", la: 1, zile: 180, z24: d, z12: d };
+  assert.equal((await mod.onRequestPost({ request: cer("POST", "action=profil", { simbol: "CRV_USDT_PERP", profil: cr }), env })).status, 200, "crypto ca inainte");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /async function turaProfilActiuni/); assert.match(col, /piata: "actiuni"/); assert.match(col, /turaProfilActiuni\(\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
