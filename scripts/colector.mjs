@@ -679,7 +679,7 @@ let pozaLa = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   /
 function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
 // v101.31 (actiunile T212, pachetul 1): stopul care urca ales pe trade-urile lui (varianta „prof” vs −15%, o data pe ora) si profilul
 // actiunii (KV profil:<TICKER>, la 6 h) - acelasi calcul ca pagina T212
-let trailAlesT212 = { la: 0, v: null }; const profilActCache = {};
+let trailAlesT212 = { la: 0, v: null }; const profilActCache = {}, stariActiuni = {};   // v101.33: starile zilelor pe ticker|ultima bara (probabilitatile)
 async function trailAlesPt(inchise) {
   if (trailAlesT212.v && Date.now() - trailAlesT212.la < 3600000) return trailAlesT212.v;
   try { const c = await cere("/api/t212?action=cf"), v = ActiuniSemnale.alegeTrail(inchise, (c && c.cf) || {}); trailAlesT212 = { la: Date.now(), v };
@@ -715,11 +715,37 @@ async function pozitiiPentruPoza() {
     const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
     const tp = ActiuniSemnale.trailPozitie(alesT, await pragProfilActiune(x.ticker));   // v101.31: stopul din profil doar daca a castigat
     const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail }) : null;
+    // v101.33 (actiunile T212, pachetul 3): O SINGURA VOCE pe pozitie - Consilierul din semafor + stopul care urca + probabilitati + sfaturi;
+    // in poza forma semaforului (pagina alerts neschimbata), KV cons:t212-<TICKER>, alerta la schimbare fara dubluri cu alertele planului
+    const costLei = costLeiDinLoturi(loturi, x.ticker, x.quantity), nOk = n && n.nivel === "ok" ? n : null;
+    let semC = sem;
+    try {
+      const tinta = plan && plan.tinta > 0 ? plan.tinta : nOk ? nOk.tintaPozitie : null, ub = bare.length ? bare[bare.length - 1].t : 0;
+      const sm = stariActiuni[x.ticker] && stariActiuni[x.ticker].ub === ub ? stariActiuni[x.ticker] : (stariActiuni[x.ticker] = { ub, m: {} });
+      const prob = nOk && bare.length >= 120 ? Probabilitati.randActiune(Probabilitati.pentruActiune(bare, { pret: p.pret, stop: nOk.stopPozitie, tinta, acum: Date.now(), memo: sm.m }), {}, {}) : [];
+      const sf = Consilier.sfaturiPozitie({ ...p, niv: nOk, pctLei: costLei ? x.ppl / costLei : null, de: Date.parse(x.initialFillDate || "") || null }, { inchise: inchiseT, acum: Date.now() });
+      const cons = Consiliu.alcatuiesteActiune({ sem, niv: nOk, prob, sfaturi: sf, plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei, simbol: p.simbol, socoteala: socotealaAct || {} });
+      semC = Consiliu.pentruPozaActiune(cons);
+      const k = "t212-" + x.ticker, stA = stareAlerte[k] || (stareAlerte[k] = {}), ziU = new Date().toISOString().slice(0, 10), pa = meta().t212Alerte || {};
+      const activ = { "t212-stop": pa[k + "-stop-" + ziU] ? "critic" : "ok", "t212-trail": pa[k + "-trail-" + ziU] ? "critic" : "ok", "t212-tinta": pa[k + "-tinta-" + ziU] ? "info" : "ok" };
+      const ch = Consiliu.schimbare(stA._cons, cons, Date.now(), p.simbol, { activ, taci: {} });
+      stA._cons = ch.stare; scrieStare();
+      if (ch.alerta) await trimiteAlerta(ch.alerta, null, "consilier-" + x.ticker.replace(/[^A-Za-z0-9_-]/g, ""));
+      await trimite("/api/istoric-bot?action=cons", { bot: k, acum: ch.stare.acum || null, inainte: ch.stare.inainte || null, schimbatLa: ch.stare.schimbatLa || null, deCe: ch.stare.deCe || null });
+      // socoteala pe motiv si lei: verdictul notat o data pe schimbare (judecat la 5 zile de turaSocotealaActiuni)
+      const fx = costLei > 0 && p.qty > 0 && p.pretMediu > 0 ? costLei / (p.qty * p.pretMediu) : null;
+      const jv = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(x.ticker)).catch(() => null), j0 = jv && Array.isArray(jv.log) ? jv.log : [];
+      const j1 = Consiliu.noteazaActiune(j0, cons, p.pret, p.qty, fx, Date.now());
+      if (j1.length !== j0.length) await trimite("/api/istoric-bot?action=semneAct", { bot: x.ticker, log: j1 });
+    } catch (e) { jurnal("consilier actiune", x.ticker, e.message); }
     // v98.1: `la` = cand a fost citit pretul T212 (pagina il arata cu chip „T212" cat e proaspat); `prev` = inchiderea ultimei sesiuni incheiate (NY)
-    out.push({ ...p, sursa, extra, niveluri: n, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei: costLeiDinLoturi(loturi, x.ticker, x.quantity), bare, sem,
+    out.push({ ...p, sursa, extra, niveluri: n, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei, bare, sem: semC,
       niv: nivDinNiveluri(n, plan),   // stopul POZITIEI (urca dupa maxim), ca in pagina T212 a Radarului - nu stopul de intrare
       pondere: inv !== null && usd > 0 && cash.total > 0 ? x.quantity * x.currentPrice / usd * inv / cash.total : null });
   }
+  // pozitiile vandute: Consilierul lor nu mai alerteaza (nicio „schimbare” pe o pozitie inchisa)
+  const tine = new Set(poz.map((x) => "t212-" + x.ticker));
+  for (const k of Object.keys(stareAlerte)) if (/^t212-/.test(k) && !tine.has(k) && stareAlerte[k] && stareAlerte[k]._cons) { delete stareAlerte[k]._cons; scrieStare(); }
   return out;
 }
 // v100.3 (el, 28.09: „procentul LIVE, acelasi cu cel din TradingView”): deschiderea zilei (00:00 UTC) din lumanarea 1D Pionex a

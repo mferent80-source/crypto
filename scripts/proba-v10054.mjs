@@ -75,5 +75,15 @@ await test("rutele: jurnalul pe ticker si socoteala actiunilor in KV; lista tick
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /async function turaSocotealaActiuni/);
 });
 
+// ---- pasul 3: colectorul ----
+await test("schimbarea pe actiuni: motivul de sus cu alerta planului activa azi -> doar in Radar; fara ea -> pe Discord", () => {
+  const T = { nivel: "tine", eticheta: "🟢 Ține", titlu: "x", motive: [] }, I = { nivel: "iesi", eticheta: "🔴 Ieși", titlu: "Stopul din plan", faCe: "ies", motive: [{ cod: "stop-plan", c: "r", titlu: "Stopul din plan" }] };
+  const doua = (opt) => { let r = CS.schimbare(CS.schimbare(null, T, 0, "INTC").stare, I, 1, "INTC", opt); return CS.schimbare(r.stare, I, 2, "INTC", opt); };
+  assert.ok(doua({ activ: { "t212-stop": "critic" } }).alerta.doarRadar === true, "alerta planului a sunat deja azi");
+  assert.ok(!doua({ activ: {} }).alerta.doarRadar, "fara alerta planului: pe Discord");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /Consiliu\.alcatuiesteActiune\(/); assert.match(col, /Consiliu\.pentruPozaActiune\(/); assert.match(col, /"t212-" \+ x\.ticker/); assert.match(col, /delete stareAlerte\[k\]\._cons/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
