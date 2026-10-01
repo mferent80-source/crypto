@@ -27,7 +27,7 @@ var Idei = (function () {
     // cate bucati), nu −15%: la COKE tabelul arata −15% si Biletul socotea pe −4,5% -> cine punea stopul din tabel risca 3% din
     // cont in loc de 1%. Acelasi stop ca pagina alerts si Discord („a ajuns la intrarea sugerată”).
     return { trece: true, scor: n.proba.medie, pret: pret, intrare: intrare, stop: n.stop, riscPct: intrare > 0 ? (intrare - n.stop) / intrare : null, tinta: n.tinta,
-      pePlusProba: n.proba.pePlus, nProba: n.proba.n, rezultate: o.rezultate || null, sit: AS.cheieSituatie(st), prob: probIdee(b, intrare, n, o),
+      pePlusProba: n.proba.pePlus, nProba: n.proba.n, rezultate: o.rezultate || null, sit: AS.cheieSituatie(st), prob: probIdee(b, intrare, n, o), prof: profIdee(b, intrare, n, o),
       motive: ["trend în sus pe zilnice (" + st.trend.tarie + ")", "fără mișcare mare, " + P(st.distMax7z) + " față de maximul pe 7 zile",
         "pe istoricul ei, intrările în starea asta: " + Math.round(n.proba.pePlus * 100) + "% pe plus, " + P(n.proba.medie) + " în medie (" + n.proba.n + " zile)"] };
   }
@@ -39,6 +39,16 @@ var Idei = (function () {
     var r; try { r = PB.pentruActiune(b, { pret: intrare, stop: n.stop, tinta: n.tinta, acum: o.acum || Date.now() }); } catch (e) { return null; } if (!r || !r.stop1) return null;
     var r3 = function (x) { return Math.round(x * 1000) / 1000; };
     return { tinta5: r.cursa5 && r.cursa5.tinta ? r3(r.cursa5.tinta.p) : null, stop1: r.sare1 ? r3(r.stop1.p + r.sare1.p) : r3(r.stop1.p) };
+  }
+  // v100.57 (el, 01.10): profilul actiunii pe idee - coborarea obisnuita pe 5 zile fata de stopul ideii si sariturile mari la deschidere;
+  // avertizeaza, nu schimba filtrul. Fara o.ProfilMoneda sau la o eroare -> null
+  function profIdee(b, intrare, n, o) {
+    var PMo = o && o.ProfilMoneda; if (!PMo || !(intrare > 0) || !(n.stop > 0)) return null;
+    try {
+      var p = PMo.calculeaza(b, { piata: "actiuni", simbol: o.simbol || "", acum: o.acum || Date.now() }); if (!p) return null;
+      var c = PMo.comparaStopActiune(p, (intrare - n.stop) / intrare), e = p.evenimente, r4 = function (x) { return Math.round(x * 10000) / 10000; };
+      return c ? { dist: r4(c.dist), strans: c.strans, zile: p.zile, sar: e && e.n && e.mediana !== null ? { n: e.n, med: r4(e.mediana), max: r4(e.max) } : null } : null;
+    } catch (x) { return null; }
   }
   // l: [{ticker, simbol?, r: judecaActiune(...)}]; inchise: T212.perechi().inchise (istoricul lui pe fiecare)
   function alegeActiuni(l, n, inchise) {
