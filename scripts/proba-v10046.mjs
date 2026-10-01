@@ -112,5 +112,29 @@ await test("server: prob:<bot> si calibrarea se scriu si se citesc; cutii strica
   r = await mod.onRequestPost({ request: cer("POST", "action=prob", { bot: "2394", rez: { x: "a".repeat(20000) } }), env }); assert.ok(r.status === 413 || r.status === 400, String(r.status));
 });
 
+let TPR = null; try { TPR = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-probabilitati.mjs")).href); } catch { TPR = null; }
+await test("colector: o data pe ora pe bot, jurnalul la 4 h, judecata dupa orizont (fara bare -> nejudecat), curatenia la 90 de zile", async () => {
+  assert.ok(TPR && typeof TPR.turaProbabilitati === "function", "lipseste scripts/lib/tura-probabilitati.mjs");
+  const TE = new Function("GridCalcul", `${lib("tablou-extra.js")}; return TabloExtra;`)(G);
+  const b = mers(200 * 24, 0.006, 5), u = b[b.length - 1], acum = u.t + ORA, rand = (x) => ({ time: x.t, open: x.o, high: x.h, low: x.l, close: x.c });
+  let disc = b.map(rand); const scrise = [], stare = { jurnal: [
+    { t: acum - 30 * ORA, bot: "9", simbol: "X_USDT_PERP", tip: "iese-jos-24", p: 0.4, H: 24, ev: { fel: "atinge", nivel: 1e9, sus: false } },   // orice bara e sub 1e9 -> atins
+    { t: acum - 2 * ORA, bot: "9", simbol: "X_USDT_PERP", tip: "iese-jos-24", p: 0.4, H: 24, ev: { fel: "atinge", nivel: 1e-9, sus: false } },
+    { t: acum - 100 * 24 * ORA, bot: "9", simbol: "X_USDT_PERP", tip: "iese-jos-24", p: 0.4, H: 24, ev: { fel: "atinge", nivel: 1e-9, sus: false } }] };
+  const bot = { id: "1", baza: "X", directie: "long", pretCurent: u.c, gridJos: u.c * 0.95, gridSus: u.c * 1.05, lichidareJos: u.c * 0.7, opritorPierdereActiv: false, investit: 50, levier: 3, pozitie: 1, profitNet: 0, profitTotal: 0, brut: { buOrderData: { row: 11, gridType: "geometric" } } };
+  const mk = (t) => ({ acum: t, boti: [bot], simbolDe: () => "X_USDT_PERP", planDe: async () => ({ plus: 5, minus: 10 }), cere: async () => ({ data: { klines: [] } }),
+    trimite: async (cale, corp) => { scrise.push([cale, corp]); return { ok: true }; }, citesteBare: () => disc, scrieBare: (s, r) => { disc = r; },
+    GridCalcul: G, Probabilitati: PB, TabloExtra: TE, stare, scrieStare: () => {}, pauza: async () => {}, jurnal: () => {} });
+  await TPR.turaProbabilitati(mk(acum));
+  const p1 = scrise.find(([c]) => /action=prob$/.test(c)); assert.ok(p1 && p1[1].rez && p1[1].rez.iese && p1[1].rez.iese.jos24, "prob cu iese.jos24: " + JSON.stringify(p1 && p1[1]).slice(0, 200));
+  assert.ok(scrise.some(([c]) => /action=calibrare/.test(c))); assert.ok(stare.jurnal.some((e) => e.t === acum), "intrarile noi");
+  assert.equal(stare.jurnal[0].r, 1, "intrarea de acum 30 h, cu barele ei pe disc, e judecata"); assert.equal(stare.jurnal[1].r, undefined, "orizont neincheiat");
+  assert.ok(!stare.jurnal.some((e) => e.t === acum - 100 * 24 * ORA), "peste 90 de zile: sters");
+  const j1 = stare.jurnal.length;
+  await TPR.turaProbabilitati(mk(acum + 30 * 60000)); assert.equal(scrise.filter(([c]) => /action=prob$/.test(c)).length, 1, "o data pe ora");
+  await TPR.turaProbabilitati(mk(acum + 2 * ORA)); assert.equal(scrise.filter(([c]) => /action=prob$/.test(c)).length, 2); assert.equal(stare.jurnal.length, j1, "jurnalul doar la 4 h");
+  await TPR.turaProbabilitati(mk(acum + 4 * ORA)); assert.ok(stare.jurnal.length > j1);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
