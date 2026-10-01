@@ -154,5 +154,23 @@ await test("short: marginea de pierdere e SUS; stopul propus din profil e PESTE 
   assert.equal(c0.find((x) => x.cod === "stop").pretPropus, 0.505, "fara profil: stopul fisei, ca azi");
 });
 
+await test("poarta: planul atins de o zi obisnuita in peste jumatate din zile -> regula „plan-moneda” rosie (avertizare, nu blocare)", () => {
+  const JT = new Function("GridCalcul", `${lib("jurnal-trade.js")}; return JurnalTrade;`)(G);
+  const GP = new Function("GridCalcul", `${lib("grid-proba.js")}; return GridProba;`)(G);
+  const OB = new Function("GridCalcul", "GridProba", "JurnalTrade", `${lib("obiceiuri.js")}; return Obiceiuri;`)(G, GP, JT);
+  const pm = { avertizare: true, text: "O zi obișnuită a monedei ajunge la planul tău (−1,2% de preț) în 70% din zile." };
+  const r = OB.poarta({ fisa: { simbol: "CRV_USDT_PERP", verdict: { nivel: "porneste" }, setare: {} }, trades: [], acum: T0, dir: "long", levier: 3, plan: { plus: 5, minus: 10 }, planMoneda: pm });
+  const rg = r.reguli.find((x) => x.cod === "plan-moneda");
+  assert.ok(rg && rg.ok === false && /70% din zile/.test(rg.text), JSON.stringify(rg)); assert.equal(r.trecut, false);
+  const r2 = OB.poarta({ fisa: { simbol: "CRV_USDT_PERP", verdict: { nivel: "porneste" }, setare: {} }, trades: [], acum: T0, dir: "long", levier: 3, plan: { plus: 5, minus: 10 } });
+  assert.ok(!r2.reguli.some((x) => x.cod === "plan-moneda"), "fara profil: regula nu apare");
+});
+await test("app: Tabloul cere profilul si il da la margine, stop si plan; poarta il foloseste; modulul e incarcat si pus in cache", () => {
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8");
+  assert.match(app, /action=profil&simbol=/); assert.match(app, /SemnaleBot\.mutaGridul\(b,f,ac\?ac\.afaraOre:0,pmT\)/);
+  assert.match(app, /pragMargine:pmT,pragStop:psT/); assert.match(app, /ProfilMoneda\.planPeMoneda\(/); assert.match(app, /planMoneda:pmG/);
+  assert.match(html, /<script src="\/lib\/profil-moneda\.js"><\/script>/); assert.match(sw, /"\/lib\/profil-moneda\.js"/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

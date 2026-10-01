@@ -66,6 +66,8 @@ var Obiceiuri = (function () {
     R.push({ cod: "moneda", ok: !im.avertizare, text: im.text + (m !== tk ? " (" + tk + " se numește " + m + " la boții Pionex)" : "") });
     // v100.43 (I-468): frana contului - rand in poarta (avertizare, nu blocare: pornirea pe hartie ramane)
     if (o.frana) R.push({ cod: "frana", ok: !o.frana.activa, text: o.frana.text });
+    // v100.45 (I-475): planul potrivit monedei - cat de des o zi obisnuita ajunge la stopul planului (din profilul monedei)
+    if (o.planMoneda && o.planMoneda.text) R.push({ cod: "plan-moneda", ok: !o.planMoneda.avertizare, text: o.planMoneda.text });
     var so = subOOra(o.trades);
     return { trecut: R.every(function (r) { return r.ok; }), reguli: R, sfaturi: so ? [so.text] : [] };
   }

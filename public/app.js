@@ -5125,7 +5125,11 @@ async function gridPoarta(){
   var act=(typeof tbStare!=="undefined"&&tbStare.boti&&tbStare.boti.length?tbStare.boti:null)||(typeof contTot!=="undefined"&&contTot.boti)||[];
   var fr=Obiceiuri.frana({trades:trades,deschise:act,acum:Date.now(),praguri:grFrana.praguri});
   grFrana.istoric=Obiceiuri.franaIstoric(trades.filter(function(t){return t.inchis>Date.UTC(new Date().getUTCFullYear(),0,1)}),grFrana.praguri);
-  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
+  // v100.45 (I-475): planul potrivit monedei - pe banda „cât planul” la levierul tau (varianta TA a gridului dupa plan, deja socotita)
+  var prG=null;try{var dPr=await getJSON("/api/istoric-bot?action=profil&simbol="+encodeURIComponent(f.simbol));prG=dPr&&dPr.profil||null}catch(e){prG=null}
+  var gvG=grPlanMemo.grid&&grPlanMemo.grid.v,taG=gvG&&gvG.ta&&gvG.plan&&gvG.plan.minus===plan.minus?gvG.ta:null,pmG=null;
+  if(prG&&taG&&(f.dir==="long"||f.dir==="short")){var EG=(taG.suma||0)*(taG.levier||1);pmG=ProfilMoneda.planPeMoneda({profil:prG,dir:f.dir,dist:taG.d,laDist:function(dd){return -GridPlan.pierdere(EG,dd,taG.u)}})}
+  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({planMoneda:pmG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
 }
@@ -5585,6 +5589,15 @@ async function tbAduFisaBot(b){
 var tbSapt={botId:null,la:0,intrari:null,eroare:null,inLucru:false},tbPlan={botId:null,plan:null,la:0},tbMinusAtins={};
 // v100.43 (I-466): increderea fiecarui sfat, masurata pe toti botii lui (KV „socoteala”, colectorul o reface o data pe ora)
 var tbSoc={la:0,peCod:null,inLucru:false};
+// v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
+// Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.
+var tbProfil={simbol:null,la:0,p:null,inLucru:false};
+function tbProfilPt(b){
+  var s=b?TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex:null;if(!s)return null;
+  if(!tbProfil.inLucru&&(tbProfil.simbol!==s||Date.now()-tbProfil.la>30*60000)){tbProfil.inLucru=true;
+    getJSON("/api/istoric-bot?action=profil&simbol="+encodeURIComponent(s)).then(function(d){tbProfil.p=d&&d.profil||null}).catch(function(){tbProfil.p=null}).then(function(){tbProfil.simbol=s;tbProfil.la=Date.now();tbProfil.inLucru=false})}
+  return tbProfil.simbol===s?tbProfil.p:null;
+}
 function tbAduSocoteala(){if(tbSoc.inLucru||Date.now()-tbSoc.la<10*60000)return;tbSoc.inLucru=true;getJSON("/api/istoric-bot?action=socoteala").then(function(d){tbSoc.peCod=d&&d.socoteala&&d.socoteala.peCod||null;tbSoc.boti=d&&d.socoteala&&d.socoteala.boti||null}).catch(function(){}).then(function(){tbSoc.la=Date.now();tbSoc.inLucru=false})}
 // v100.44 (I-465): desenul Consilierului (Consiliu.alcatuieste), ca in demo
 function tbConsHtml(c){
@@ -5661,6 +5674,10 @@ function tbDeseneazaSaptPlan(b){
   var U=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(2)+" USDT"},h="";
   if(st.plus)h+='<div class="tbLinie"><span>Țintă pe plus: '+U(st.plus.prag)+'</span><b class="'+(st.plus.lipsa<=0?"good":"")+'">'+(st.plus.lipsa<=0?"ATINSĂ — ieși":"mai sunt "+st.plus.lipsa.toFixed(2)+" USDT")+'</b></div>';
   if(st.minus)h+='<div class="tbLinie"><span>Ies dacă pierd '+st.minus.prag.toFixed(2)+' USDT</span><b class="'+(st.minus.lipsa<=0?"bad":st.minus.lipsa<st.minus.prag*0.25?"tbWarn":"")+'">'+(st.minus.lipsa<=0?"ATINS — ieși":"mai sunt "+st.minus.lipsa.toFixed(2)+" USDT")+'</b></div>';
+  // v100.45 (I-475): cat de des o zi obisnuita a monedei ajunge la planul pe minus, si pragul atins in cel mult 1 zi din 4
+  var prP=tbProfilPt(b),dP=String(b.directie||"").toLowerCase(),pP=botiNr(b.pretCurent);
+  if(st.minus&&st.minus.opritorPlan!=null&&pP>0){var pmP=ProfilMoneda.planPeMoneda({profil:prP,dir:dP,dist:Math.abs(st.minus.opritorPlan/pP-1),laDist:function(dd){return TabloExtra.totalCuGridLa(b,dP==="short"?pP*(1+dd):pP*(1-dd))}});
+    h+=pmP?'<p class="'+(pmP.avertizare?"tbFac tbWarn":"tbSub")+'">📏 '+escapeHtml(pmP.text)+'</p>':'<p class="tbSub">📏 Cât de des e atins planul pe moneda asta: profilul monedei vine de la colector (noaptea).</p>'}
   if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+st.afara.prag+' ore</span><b>colectorul numără orele</b></div>';
   ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> exact ce ți-ai propus — ieși acum, fără să renegociezi.</p>':'');
 }
@@ -5732,7 +5749,8 @@ function tbDeseneazaSemafor(b){
   var f=tbFisa.botId===b.id?tbFisa.fisa:null,kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
   var plan=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null,minusAtins:tbMinusAtins[b.id]===true},Date.now());
   if(plan)tbMinusAtins[b.id]=plan.atins.indexOf("minus")>=0;   // v100.39: histerezis pe pragul de minus (ca in colector)
-  var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0),iap=SemnaleBot.iaProfit(b,f),zero=TabloExtra.dacaInchizi(b),costuri=TabloExtra.grileVsCosturi(b,Date.now());
+  var prT=tbProfilPt(b),pmT=ProfilMoneda.praguriMargine(prT),psT=ProfilMoneda.pragStop(prT,String(b.directie||"").toLowerCase());   // v100.45 (pachetul 1)
+  var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0,pmT),iap=SemnaleBot.iaProfit(b,f),zero=TabloExtra.dacaInchizi(b),costuri=TabloExtra.grileVsCosturi(b,Date.now());
   var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:zero,plan:plan,costuri:costuri,btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap});
   var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"],asteapta:["⏳ SOCOTESC","neutral"]},n=N[sm.nivel]||N.asteapta;
   var CUL={iesi:"var(--bad)",atentie:"var(--warn)",podea:"var(--good)"},mare=function(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1)};
@@ -5740,7 +5758,7 @@ function tbDeseneazaSemafor(b){
   var faraPlan=tbPlan.botId===b.id&&tbPlan.la&&!(tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre));
   if(faraPlan&&tbPropPlan.botId!==b.id)tbAduPropunerePlan(b);
   var pp=faraPlan&&tbPropPlan.botId===b.id?tbPropPlan.p:null;
-  var conc=SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,plan:plan,acum:Date.now(),cifre:function(pr){return TabloExtra.cifreActiuni(b,{protectie:pr,b15:tbFisa.botId===b.id?tbFisa.b15:null})}});
+  var conc=SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,plan:plan,pragMargine:pmT,pragStop:psT,acum:Date.now(),cifre:function(pr){return TabloExtra.cifreActiuni(b,{protectie:pr,b15:tbFisa.botId===b.id?tbFisa.b15:null})}});
   var h=faraPlan?'<div class="tbFaraPlan">📝 <b>'+escapeHtml(String(b.baza||"Botul").replace(/\.PERP$/,""))+' n-are plan.</b> Fără țintă și prag scrise la rece, panoul nu-ți poate spune când să încasezi sau să ieși (nici podeaua).'
     +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
   // celelalte motive + notele (ia profit, aglomerarea "info") - pe randul lor, nu in cartela
