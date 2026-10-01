@@ -76,5 +76,19 @@ await test("praguriMargine / pragStop: P75 pe 12 h si pe 24 h; fara profil -> nu
   assert.equal(PM.praguriMargine(null), null); assert.equal(PM.pragStop(p, "neutru"), null);
 });
 
+await test("server: profilul se scrie si se citeste in KV „profil:<SIMBOL>”; forma stricata -> 400; simbolul curatat", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.has(k) ? kv.get(k) : null, put: async (k, v) => { kv.set(k, v); }, list: async () => ({ keys: [] }) } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const p = PM.calculeaza(bareZile([0.01, 0.02, 0.03, 0.04], 60), { acum: T0 + 60 * 24 * ORA, simbol: "CRV_USDT_PERP" });
+  const r = await mod.onRequestPost({ request: cer("POST", "action=profil", { simbol: "crv_usdt_perp<x>", profil: p }), env });
+  assert.equal(r.status, 200, await r.clone().text());
+  assert.ok(kv.has("profil:CRV_USDT_PERPX"), [...kv.keys()].join(","));
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=profil&simbol=CRV_USDT_PERPX"), env })).json();
+  assert.deepEqual(g.profil.z24.jos, p.z24.jos); assert.equal(g.profil.zile, p.zile);
+  const rau = await mod.onRequestPost({ request: cer("POST", "action=profil", { simbol: "CRV_USDT_PERP", profil: { z24: { jos: [1, 2] } } }), env });
+  assert.equal(rau.status, 400);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

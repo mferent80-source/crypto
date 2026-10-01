@@ -14,6 +14,10 @@ const CAMPURI=["perechi","pretPerp","profitNet","comisioane","gridProfitBrut","i
 // Lipsa ramane null (Number(null) ar da 0, iar un 0 in istoric ar minti).
 const nr=v=>{if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v!=="string"||!v.trim())return null;const x=Number(v);return Number.isFinite(x)?x:null};
 const idBot=v=>String(v||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,64);
+const simbolKv=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,40);
+// v100.45 (pachetul 1): profilul monedei - 21 de cuantile pe 24 h si 12 h (jos/sus), toate si pe ultimele 30 de zile
+const q21=a=>Array.isArray(a)&&a.length===21&&a.every(x=>typeof x==="number"&&Number.isFinite(x)&&x>=0&&x<=5)?a.slice():null;
+function curataDistributie(d){if(!d||typeof d!=="object")return null;const jos=q21(d.jos),sus=q21(d.sus);return jos&&sus?{jos,sus,n:nr(d.n),nIndep:nr(d.nIndep)}:null}
 
 function curata(x){
   if(!x||typeof x!=="object")return null;
@@ -46,6 +50,7 @@ export async function onRequestGet({request,env}){
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   // v100.43 (I-466): increderea fiecarui sfat, adunata de colector pe toti botii
+  if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
   // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
@@ -197,6 +202,16 @@ export async function onRequestPost({request,env}){
     if(p&&p.proba===true)plan.proba=true;
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
     return json({ok:true,plan});
+  }
+  // v100.45 (pachetul 1): profilul monedei (colectorul, noaptea) -> KV profil:<SIMBOL>
+  if(action==="profil"){
+    const s=simbolKv(corp&&corp.simbol),p=corp&&corp.profil;if(!s||!p||typeof p!=="object")return json({error:"Lipseste simbol sau profil"},400);
+    const z24=curataDistributie(p.z24),z12=curataDistributie(p.z12);if(!z24||!z12)return json({error:"profil fara distributii valide"},400);
+    const r30=p.r30&&typeof p.r30==="object"?{z24:curataDistributie(p.r30.z24),z12:curataDistributie(p.r30.z12)}:null;
+    const bo=p.boti&&typeof p.boti==="object"?{n:nr(p.boti.n),pePlus:nr(p.boti.pePlus),net:nr(p.boti.net),oreMediana:nr(p.boti.oreMediana)}:null;
+    const out={v:1,simbol:typeof p.simbol==="string"?p.simbol.slice(0,40):s,la:nr(p.la)||Date.now(),deLa:nr(p.deLa),panaLa:nr(p.panaLa),zile:nr(p.zile),z24,z12,r30:r30&&r30.z24&&r30.z12?r30:null,boti:bo};
+    await env.ISTORIC.put("profil:"+s,JSON.stringify(out));
+    return json({ok:true});
   }
   // v100.43 (I-466): socoteala sfaturilor pe toti botii (colectorul, o data pe ora) - {la, boti, peCod:{cod:{n,judecate,corecte,bani,baniN,ic,stare,nume}}}
   if(action==="socoteala"){
