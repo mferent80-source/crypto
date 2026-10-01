@@ -48,6 +48,7 @@ export async function turaProfil(d) {
       if (facute++) await d.pauza(PAS_MS);
       const randuri = await aduOre(simbol, d.citesteBare(simbol), { ...d, umple: true });
       d.scrieBare(simbol, randuri);
+      if (d.trimiteOre) { try { await d.trimiteOre(simbol, randuri); } catch (e) { d.jurnal("ore in KV ESEC", simbol, e.message); } }   // v101.28: pentru fisa Grid
       const trades = (await toateTrades()).filter((t) => t.moneda === moneda);
       const profil = d.ProfilMoneda.calculeaza(d.GridCalcul.bare(randuri), { acum: d.acum, simbol, trades });
       if (profil) { await d.trimite("/api/istoric-bot?action=profil", { simbol, profil }); d.profile.set(simbol, profil); }

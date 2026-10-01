@@ -1043,6 +1043,8 @@ async function turaProfil() {
       trades: async () => JurnalTrade.din(await botiInchisiToti()),
       citesteBare: (s) => { try { return JSON.parse(fs.readFileSync(fisOre(s), "utf8")); } catch { return []; } },
       scrieBare: (s, r) => { try { scrieAtomic(fisOre(s), r); } catch (e) { jurnal("bare 1h nescrise", s, e.message); } },
+      // v101.28 (pachetul 2b): barele si in KV (ore:<SIMBOL>), compacte, pentru probabilitatile din fisa Grid
+      trimiteOre: (s, r) => trimite("/api/istoric-bot?action=ore", { simbol: s, b: GridCalcul.bare(r).map((x) => [x.t, +x.o.toPrecision(6), +x.h.toPrecision(6), +x.l.toPrecision(6), +x.c.toPrecision(6)]) }),
       scrieStare: (st) => { try { scrieAtomic(PROFIL_STARE, st); } catch (e) { jurnal("profil-stare nescris", e.message); } } });
   } catch (e) { jurnal("profil ESEC", e.message); }
   profilInLucru = false;

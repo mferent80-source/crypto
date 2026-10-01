@@ -115,5 +115,28 @@ await test("server + pagina: cazurile in KV (pana la 384 KB), Tabloul si poarta 
   const ob = fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8"); assert.match(ob, /o\.asemanatoare/);
 });
 
+await test("imbina: orele noi din 15M (doar cele complete) dupa ultima bara de 1 h", () => {
+  assert.ok(typeof PB.imbina === "function", "lipseste Probabilitati.imbina");
+  const b1 = Array.from({ length: 48 }, (_, i) => ({ t: T0 + i * ORA, o: 1, h: 1, l: 1, c: 1 }));
+  const b15 = Array.from({ length: 4 * 5 + 2 }, (_, i) => ({ t: T0 + 48 * ORA + i * 15 * 60000, o: 2, h: 3, l: 1, c: 2 }));
+  const r = PB.imbina(b1, b15, T0 + 48 * ORA + 22 * 15 * 60000);
+  assert.equal(r.length, 48 + 5, "5 ore complete, a 6-a incompleta nu"); assert.equal(r[48].h, 3);
+});
+await test("randuri: titlul cursei se poate schimba (fisa: „Marginea de câștig înaintea stopului fișei”)", () => {
+  const x = { p: 0.6, n: 300, k: 180, nIndep: 12, ic: [0.4, 0.75], orizontOre: 168, nivel: "exact", conditionat: true, stare: "liniste-lateral" };
+  assert.match(PB.randuri({ niveluri: {}, cursa: { tinta: x } }, null, { titluCursa: "Marginea de câștig înaintea stopului fișei" })[0].titlu, /^Marginea de câștig/);
+});
+await test("server: ore:<SIMBOL> pana la 512 KB; pagina: fisa cere ore si arata blocul doar cu bare; colectorul le trimite", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const b = Array.from({ length: 4440 }, (_, i) => [T0 + i * ORA, 0.398123, 0.401234, 0.395432, 0.399876]);
+  const r = await mod.onRequestPost({ request: new Request("http://127.0.0.1:8788/api/istoric-bot?action=ore", { method: "POST", headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: JSON.stringify({ simbol: "CRV_USDT_PERP", b }) }), env });
+  assert.equal(r.status, 200, await r.clone().text()); assert.ok(kv.has("ore:CRV_USDT_PERP"));
+  const g = await (await mod.onRequestGet({ request: new Request("http://127.0.0.1:8788/api/istoric-bot?action=ore&simbol=CRV_USDT_PERP", { headers: { authorization: "Bearer t" } }), env })).json();
+  assert.equal(g.ore.b.length, 4440);
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"); assert.match(app, /action=ore&simbol=/); assert.match(app, /id="grProb"/); assert.match(app, /Probabilitati\.imbina\(/);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-profil.mjs"), "utf8"), /d\.trimiteOre/); assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /action=ore/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

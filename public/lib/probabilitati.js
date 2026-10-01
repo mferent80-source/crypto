@@ -153,10 +153,24 @@ var Probabilitati = (function () {
   }
   // preturile ca pe Tablou (SemnaleBot.fmtPret)
   function fp(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
-  function randuri(rez, cal) {
+  // v100.47: orele incheiate din 15M de dupa ultima bara de 1 h (fisa: barele de 1 h din KV sunt de azi-noapte) - doar orele COMPLETE
+  function imbina(b1, b15, acum) {
+    var a = pregateste(b1, acum), u = a.length ? a[a.length - 1].t : -Infinity, lim = nr(acum) || Date.now(), gr = {};
+    (Array.isArray(b15) ? b15 : []).forEach(function (x) {
+      if (!x || nr(x.t) === null) return;
+      var h = Math.floor(x.t / ORA) * ORA; if (h <= u || h + ORA > lim) return;
+      (gr[h] = gr[h] || []).push(x);
+    });
+    var noi = Object.keys(gr).map(Number).sort(function (x, y) { return x - y; }).filter(function (h) { return gr[h].length === 4; }).map(function (h) {
+      var g = gr[h].sort(function (x, y) { return x.t - y.t; });
+      return { t: h, o: g[0].o, h: Math.max.apply(null, g.map(function (x) { return x.h; })), l: Math.min.apply(null, g.map(function (x) { return x.l; })), c: g[3].c };
+    });
+    return a.concat(noi);
+  }
+  function randuri(rez, cal, o) {
     if (!rez) return [];
     var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, avertizare: y.avertizare, text: y.text }); } };   // sub 3 independente: nu spune nimic
-    add("cursa", "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
+    add("cursa", o && o.titluCursa ? String(o.titluCursa) : "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
     add("iese-jos-24", "Atinge marginea de jos (" + fp(nv.jos) + ") în 24 h", rez.iese && rez.iese.jos24, "iese-jos-24");
     add("iese-sus-24", "Atinge marginea de sus (" + fp(nv.sus) + ") în 24 h", rez.iese && rez.iese.sus24, "iese-sus-24");
     add("iese-jos-72", "Atinge marginea de jos în 3 zile", rez.iese && rez.iese.jos72, "iese-jos-72");
@@ -167,9 +181,9 @@ var Probabilitati = (function () {
     return out;
   }
   // randul din Consilier: cursa, daca exista; altfel iesirea pe partea de pierdere in 24 h
-  function rand(rez, cal, dir) {
-    var l = randuri(rez, cal), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
+  function rand(rez, cal, dir, o) {
+    var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
     return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
   }
-  return { stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
+  return { imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();

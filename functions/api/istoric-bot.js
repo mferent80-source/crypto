@@ -53,6 +53,7 @@ export async function onRequestGet({request,env}){
   if(action==="prob"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("prob:"+bot)||"null")}catch{p=null}return json({bot,prob:p})}
   if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
+  if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
@@ -79,7 +80,7 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="scan"||action==="botiInchisi"||action==="cazuri"?393216:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="ore"?524288:action==="scan"||action==="botiInchisi"||action==="cazuri"?393216:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.25: colectorul trimite botii inchisi pe bucati; se unesc cu arhiva (compact, fara dubluri); „completa” nu se mai pierde
   if(action==="botiInchisi"){
@@ -205,6 +206,12 @@ export async function onRequestPost({request,env}){
     if(p&&p.proba===true)plan.proba=true;
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
     return json({ok:true,plan});
+  }
+  // v100.47 (pachetul 2b): barele de 1 h ale monedei (colectorul, noaptea) - fisa Grid socoteste pe ele probabilitatile gridului propus
+  if(action==="ore"){
+    const s=simbolKv(corp&&corp.simbol),b=corp&&Array.isArray(corp.b)?corp.b:null;
+    if(!s||!b||b.length>5000||!b.every(r=>Array.isArray(r)&&r.length===5&&r.every(x=>typeof x==="number"&&Number.isFinite(x))))return json({error:"ore nevalide"},400);
+    await env.ISTORIC.put("ore:"+s,JSON.stringify({la:Date.now(),simbol:s,b}));return json({ok:true,n:b.length});
   }
   // v100.47 (I-469): situatiile asemanatoare - cazurile din arhiva cu ce se stia la pornire (colectorul, o data pe noapte)
   if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,4000):null;if(!l)return json({error:"Lipseste cazuri"},400);await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l}));return json({ok:true,n:l.length})}
