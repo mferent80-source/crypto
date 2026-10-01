@@ -48,9 +48,10 @@ await test("doar ce se stia atunci: barele de DUPA acum (un crah de 50%) nu schi
 });
 await test("starea: din regimul fisei pe 1 h; conditionat doar cu >= 5 cazuri independente, altfel toate zilele (spus)", () => {
   const b = mers(120 * 24, 0.006, 11), s = PB.stareLa(b, b.length - 1);
-  assert.ok(["liniste", "miscare-sus", "miscare-jos"].includes(s), s); assert.equal(PB.stareLa(b, 100), null, "sub 30 de zile de istoric: fara stare");
+  // v100.47 (pachetul 2b): 6 stari (regim x directie) si cadere in trepte exact -> regim -> toate
+  assert.ok(/^(liniste|miscare)-(sus|jos|lateral)$/.test(s), s); assert.equal(PB.stareLa(b, 100), null, "sub 30 de zile de istoric: fara stare");
   const f = PB.frecventa(b, 24, PB.atinge(-0.01), "da", s);
-  assert.ok(f.conditionat ? f.stare === s && f.nIndep >= 5 : f.stare === null);
+  assert.ok(f.nivel === "exact" ? f.stare === s && f.nIndep >= 5 : f.nivel === "regim" ? f.stare === s.split("-")[0] : f.stare === null);
 });
 await test("pentruBot: putin istoric -> null; neutru -> fara cursa si fara lichidare; tinta deja atinsa -> fara cursa", () => {
   assert.equal(PB.pentruBot(mers(20 * 24, 0.006, 1), { acum: T0 + 21 * 24 * ORA, pret: 100, dir: "long", jos: 95, sus: 105 }), null);

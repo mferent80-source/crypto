@@ -16,29 +16,39 @@ var Probabilitati = (function () {
     var a = nr(acum) || Date.now();
     return (Array.isArray(bare) ? bare : []).filter(function (x) { return x && nr(x.t) !== null && nr(x.o) > 0 && nr(x.l) > 0 && nr(x.h) >= nr(x.l) && x.t + ORA <= a; }).sort(function (x, y) { return x.t - y.t; });
   }
+  // v100.47 (pachetul 2b): starea = regimul fisei SI directia pe 24 h fata de obisnuitul monedei (r24h >= 0,5 -> dupa semn). Pe date
+  // reale „liniste” singura acoperea ~78% din ferestre; asa se imparte in laterala / urca incet / coboara incet.
+  function stareDinRegim(r) {
+    if (!r) return null;
+    var dir = nr(r.r24h) !== null && r.r24h >= 0.5 ? (nr(r.s24h) > 0 ? "sus" : "jos") : "lateral";
+    return (r.miscare ? "miscare" : "liniste") + "-" + dir;
+  }
+  var ETICHETE = { "liniste-lateral": "liniște, laterală", "liniste-sus": "liniște, urcă încet", "liniste-jos": "liniște, coboară încet", "miscare-sus": "mișcare în sus", "miscare-jos": "mișcare în jos", "miscare-lateral": "mișcare fără direcție" };
+  function regimDin(s) { return s ? String(s).split("-")[0] : null; }
   function stareLa(bare, i) {
     if (!Array.isArray(bare) || i < ISTORIE || i >= bare.length) return null;
-    var r = G.regimPeBare(bare.slice(i - ISTORIE, i + 1), 4, 24);
-    return !r ? null : r.miscare ? (r.sens === "coboara" ? "miscare-jos" : "miscare-sus") : "liniste";
+    return stareDinRegim(G.regimPeBare(bare.slice(i - ISTORIE, i + 1), 4, 24));
   }
   function indep(n, H) { return Math.max(1, Math.min(n, Math.floor(n * PAS / H))); }
   // ev(bare, i, H, st) -> rezultatul ferestrei care incepe la inchiderea barei i (sir); se numara cele egale cu `asteptat`
   function frecventa(bare, H, ev, asteptat, stareAcum, opt) {
     if (!Array.isArray(bare) || !(H > 0)) return null;
-    var tot = { n: 0, k: 0 }, sel = { n: 0, k: 0 }, memo = (opt && opt.memo) || {};
+    var tot = { n: 0, k: 0 }, sel = { n: 0, k: 0 }, rg = { n: 0, k: 0 }, memo = (opt && opt.memo) || {}, regAcum = regimDin(stareAcum);
     var st = function (i) { if (!(i in memo)) memo[i] = stareLa(bare, i); return memo[i]; };
     for (var i = bare.length - 1 - H; i >= ISTORIE; i -= PAS) {
       if (bare[i + H].t - bare[i].t !== H * ORA) continue;   // fereastra cu gaura nu se numara
       var r = ev(bare, i, H, st); if (r === null || r === undefined) continue;
       tot.n++; if (r === asteptat) tot.k++;
-      if (stareAcum && st(i) === stareAcum) { sel.n++; if (r === asteptat) sel.k++; }
+      if (stareAcum) { var si = st(i); if (si === stareAcum) { sel.n++; if (r === asteptat) sel.k++; } if (regimDin(si) === regAcum) { rg.n++; if (r === asteptat) rg.k++; } }
     }
-    var cond = !!stareAcum && sel.n > 0 && indep(sel.n, H) >= MIN_INDEP;
-    if (opt && opt.doarConditionat && !cond) return null;
-    var x = cond ? sel : tot;
+    // caderea in trepte: starea exacta -> acelasi regim -> toate (fiecare treapta cere >= 5 cazuri independente)
+    var ok = function (q) { return q.n > 0 && indep(q.n, H) >= MIN_INDEP; };
+    var nivel = stareAcum && ok(sel) ? "exact" : stareAcum && ok(rg) ? "regim" : "toate";
+    if (opt && opt.doarConditionat && nivel === "toate") return null;
+    var x = nivel === "exact" ? sel : nivel === "regim" ? rg : tot;
     if (!x.n) return null;
     var ni = indep(x.n, H), ki = Math.round(x.k / x.n * ni);
-    return { p: x.k / x.n, n: x.n, k: x.k, nIndep: ni, ic: G.wilson(ki, ni), orizontOre: H, conditionat: cond, stare: cond ? stareAcum : null };
+    return { p: x.k / x.n, n: x.n, k: x.k, nIndep: ni, ic: G.wilson(ki, ni), orizontOre: H, conditionat: nivel !== "toate", nivel: nivel, stare: nivel === "exact" ? stareAcum : nivel === "regim" ? regAcum : null };
   }
   function atinge(rel) {
     return function (b, i, H) {
@@ -75,9 +85,10 @@ var Probabilitati = (function () {
     // revizia 01.10: stopul dincolo de lichidare n-ar fi atins niciodata (lichidarea vine intai) -> fara cursa
     var cursaOk = tinta !== null && stop !== null && (lung ? tinta > 0 && stop < 0 && (lich === null || stop > lich) : scurt ? tinta < 0 && stop > 0 && (lich === null || stop < lich) : false);
     if (cursaOk) { var ev = cursa(tinta, stop); out.cursa = { tinta: frecventa(b, 168, ev, "tinta", stare, op), stop: frecventa(b, 168, ev, "stop", stare, op) }; }
-    if (stare === "liniste") {
-      var ramane = function () { return function (bb, i, h, st) { var s = st(i + h); return s === null ? null : s === "liniste" ? "da" : "nu"; }; };
-      out.liniste = { z1: frecventa(b, 24, ramane(), "da", "liniste", { memo: memo, doarConditionat: true }), z2: frecventa(b, 48, ramane(), "da", "liniste", { memo: memo, doarConditionat: true }) };
+    if (regimDin(stare) === "liniste") {
+      // liniștea „mai ține” = oricare stare de liniste (directia poate sa se schimbe)
+      var ramane = function () { return function (bb, i, h, st) { var s = st(i + h); return s === null ? null : regimDin(s) === "liniste" ? "da" : "nu"; }; };
+      out.liniste = { z1: frecventa(b, 24, ramane(), "da", stare, { memo: memo, doarConditionat: true }), z2: frecventa(b, 48, ramane(), "da", stare, { memo: memo, doarConditionat: true }) };
     }
     return out;
   }
@@ -107,7 +118,7 @@ var Probabilitati = (function () {
     var v = e.ev || {};
     if (v.fel === "atinge") return f.some(function (b) { return v.sus ? b.h >= v.nivel : b.l <= v.nivel; }) ? 1 : 0;
     if (v.fel === "cursa") { var sus = v.tinta > v.stop; for (var i = 0; i < f.length; i++) { if (sus ? f[i].l <= v.stop : f[i].h >= v.stop) return 0; if (sus ? f[i].h >= v.tinta : f[i].l <= v.tinta) return 1; } return 0; }
-    if (v.fel === "liniste") { var k = -1; for (var j = 0; j < bare.length; j++) if (bare[j].t === t0 + (e.H - 1) * ORA) { k = j; break; } var s = k >= 0 ? stareLa(bare, k) : null; return s === null ? null : s === "liniste" ? 1 : 0; }
+    if (v.fel === "liniste") { var k = -1; for (var j = 0; j < bare.length; j++) if (bare[j].t === t0 + (e.H - 1) * ORA) { k = j; break; } var s = k >= 0 ? stareLa(bare, k) : null; return s === null ? null : regimDin(s) === "liniste" ? 1 : 0; }
     return null;
   }
   // revizia 01.10 (critic): notarile unui bot la 4 h pe 7 zile se suprapun aproape complet - 20 de intrari ar fi un singur episod de
@@ -135,7 +146,7 @@ var Probabilitati = (function () {
     var c = corecteaza(x.p, tip, cal);
     // cifra corectata vine cu intervalul EI (Wilson pe cutie, pe cazurile independente), nu cu al cifrei brute (revizia 01.10)
     var ic = c.calibrat ? G.wilson(c.k, c.n) : x.ic;
-    var t = x.k + " din " + x.n + " " + (x.conditionat ? "situații ca acum" : "de porniri la 4 h (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente" + (c.calibrat ? "" : ", IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%") + ")"
+    var t = x.k + " din " + x.n + " " + (x.nivel === "regim" ? "situații cu același regim (" + (x.stare === "liniste" ? "liniște" : "mișcare") + "; cu direcția de acum: prea puține)" : x.conditionat ? "situații ca acum" : "de porniri la 4 h (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente" + (c.calibrat ? "" : ", IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%") + ")"
       + (x.nIndep < 10 ? " · puține cazuri independente — un semn, nu o regulă" : "")   // trader.md §1: sub 10 pe grupa = zgomot
       + " · " + c.text + (c.calibrat ? ", IC " + Math.round(ic[0] * 100) + "–" + Math.round(ic[1] * 100) + "%" + (c.avertizare ? " — ⚠ cifra brută era " + PC(c.brut) : "") : "");
     return { p: c.p, ic: ic, avertizare: c.avertizare, text: t };
@@ -160,5 +171,5 @@ var Probabilitati = (function () {
     var l = randuri(rez, cal), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
     return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
   }
-  return { pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
+  return { stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();

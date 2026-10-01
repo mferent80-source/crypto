@@ -5613,7 +5613,7 @@ function tbDeseneazaProb(b){
   if(rez.gol){if(sub)sub.textContent="încă nu se pot socoti";el.innerHTML='<p class="tbSub">'+escapeHtml(rez.gol)+'.</p>';return}
   var l=Probabilitati.randuri(rez,t.cal),P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))};
   var vh=tbProbVechi(rez);
-  if(sub)sub.textContent=(vh?"⚠ cifre de acum "+vh+" h (colectorul nu le-a mai reînnoit) · stare: ":"acum: ")+({liniste:"liniște","miscare-sus":"mișcare în sus","miscare-jos":"mișcare în jos"}[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
+  if(sub)sub.textContent=(vh?"⚠ cifre de acum "+vh+" h (colectorul nu le-a mai reînnoit) · stare: ":"acum: ")+(Probabilitati.ETICHETE[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
   el.innerHTML=(l.length?l.map(function(x){var lo=x.ic?P(x.ic[0]):null,hi=x.ic?P(x.ic[1]):null;
       return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+P(x.p)+'%</b>'
         +'<div class="tbProbBanda" role="img" aria-label="'+P(x.p)+'%, interval de încredere '+lo+'–'+hi+'%">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b></div>'
