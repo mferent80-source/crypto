@@ -83,6 +83,25 @@ async function twelve(env, simbol, interval) {
 // colectorului sa stie unde se suprapune) si starea coborarii prin pagini.
 const nr = (v) => { if (typeof v === "number") return Number.isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; const x = Number(v); return Number.isFinite(x) ? x : null; };
 const txt = (v, m) => (typeof v === "string" ? v.slice(0, m) : "");
+// "daca ascultai de Radar" pe actiuni: curatarea unui verdict {nivel, motive, greseli, stop, stopU, prob, sit} scris de colector
+// (v100.55: scoasa din ruta ca s-o probeze proba-v10055 direct)
+const NIV_CF = ["cumpara", "asteapta", "nu", "fara-date"], GR_CF = ["dupa-miscare", "langa-max7z"];
+function curataCf(x) {
+  const o = { nivel: NIV_CF.includes(x.nivel) ? x.nivel : "fara-date", motive: (Array.isArray(x.motive) ? x.motive : []).slice(0, 4).map((z) => txt(z, 200)).filter(Boolean), greseli: (Array.isArray(x.greseli) ? x.greseli : []).filter((z) => GR_CF.includes(z)) };
+  // v87: proba cu stop (-8/-10/-15%): {pct, zi} sau null (neatins)
+  // v88: stopul care URCA (planul Radarului, -15%, -25% de la maxim)
+  // v89: proba GOALA se pastreaza goala ({}), altfel colectorul crede ca lipseste si o reface la fiecare tura
+  if (x.stopU && typeof x.stopU === "object" && !Object.keys(x.stopU).length) o.stopU = {};
+  else if (x.stopU && typeof x.stopU === "object") { const su = {}; ["plan", "u15", "u25", "prof"].forEach((p) => { const y = x.stopU[p]; const pc = y && nr(y.pct); su[p] = pc !== null && pc > -1 && pc < 5 ? { pct: pc, zi: nr(y.zi), trail: nr(y.trail) } : null; }); o.stopU = su; }
+  // v100.53: calibrarea probabilitatilor - cifra de atunci si ce a urmat; null se pastreaza (altfel s-ar reface la nesfarsit)
+  if ("prob" in x) { const pb = x.prob, pp = pb && nr(pb.p), rr = pb && nr(pb.r); o.prob = pp !== null && pp >= 0 && pp <= 1 && (rr === 0 || rr === 1) ? { p: pp, r: rr, zi: nr(pb.zi) } : null; }
+  if (x.stop && typeof x.stop === "object" && !Object.keys(x.stop).length) o.stop = {};
+  else if (x.stop && typeof x.stop === "object") { const st = {}; ["8", "10", "15"].forEach((p) => { const y = x.stop[p]; const pc = y && nr(y.pct); st[p] = pc !== null && pc > -1 && pc < 1 ? { pct: pc, zi: nr(y.zi) } : null; }); o.stop = st; }
+  // v100.55: starea de la cumparare (trend|miscare|maxim); null se pastreaza (fara preturi) - altfel colectorul ar reface la nesfarsit
+  if ("sit" in x) o.sit = typeof x.sit === "string" && /^(sus|lateral|jos)\|(calm|dupa-miscare)\|(departe|langa-max)$/.test(x.sit) ? x.sit : null;
+  return o;
+}
+export const __cfPentruProba = curataCf;
 function curataUmplere(x) {
   if (!x || typeof x !== "object") return null;
   const id = txt(x.id, 40).replace(/[^A-Za-z0-9_-]/g, ""), t = nr(x.t), side = x.side === "BUY" || x.side === "SELL" ? x.side : null;
@@ -156,20 +175,10 @@ export async function onRequestPost({ request, env }) {
   }
   if (act === "cf") {
     // "daca ascultai de Radar" pe actiuni: {id trade: {nivel, motive, greseli}}, scris de colector
-    const NIV = ["cumpara", "asteapta", "nu", "fara-date"], GR = ["dupa-miscare", "langa-max7z"];
     const m = await citesteKv(env, "t212:cf", {}), v = corp && corp.verdicte && typeof corp.verdicte === "object" ? corp.verdicte : {};
     Object.keys(v).slice(0, 300).forEach((k) => {
       const id = txt(k, 40).replace(/[^A-Za-z0-9_-]/g, ""), x = v[k]; if (!id || !x || typeof x !== "object") return;
-      m[id] = { nivel: NIV.includes(x.nivel) ? x.nivel : "fara-date", motive: (Array.isArray(x.motive) ? x.motive : []).slice(0, 4).map((z) => txt(z, 200)).filter(Boolean), greseli: (Array.isArray(x.greseli) ? x.greseli : []).filter((z) => GR.includes(z)) };
-      // v87: proba cu stop (-8/-10/-15%): {pct, zi} sau null (neatins)
-      // v88: stopul care URCA (planul Radarului, -15%, -25% de la maxim)
-      // v89: proba GOALA se pastreaza goala ({}), altfel colectorul crede ca lipseste si o reface la fiecare tura
-      if (x.stopU && typeof x.stopU === "object" && !Object.keys(x.stopU).length) m[id].stopU = {};
-      else if (x.stopU && typeof x.stopU === "object") { const su = {}; ["plan", "u15", "u25", "prof"].forEach((p) => { const y = x.stopU[p]; const pc = y && nr(y.pct); su[p] = pc !== null && pc > -1 && pc < 5 ? { pct: pc, zi: nr(y.zi), trail: nr(y.trail) } : null; }); m[id].stopU = su; }
-      // v100.53: calibrarea probabilitatilor - cifra de atunci si ce a urmat; null se pastreaza (altfel s-ar reface la nesfarsit)
-      if ("prob" in x) { const pb = x.prob, pp = pb && nr(pb.p), rr = pb && nr(pb.r); m[id].prob = pp !== null && pp >= 0 && pp <= 1 && (rr === 0 || rr === 1) ? { p: pp, r: rr, zi: nr(pb.zi) } : null; }
-      if (x.stop && typeof x.stop === "object" && !Object.keys(x.stop).length) m[id].stop = {};
-      else if (x.stop && typeof x.stop === "object") { const st = {}; ["8", "10", "15"].forEach((p) => { const y = x.stop[p]; const pc = y && nr(y.pct); st[p] = pc !== null && pc > -1 && pc < 1 ? { pct: pc, zi: nr(y.zi) } : null; }); m[id].stop = st; }
+      m[id] = curataCf(x);
     });
     const ids = Object.keys(m); if (ids.length > 6000) ids.slice(0, ids.length - 6000).forEach((k) => delete m[k]);
     await env.ISTORIC.put("t212:cf", JSON.stringify(m));

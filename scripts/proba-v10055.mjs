@@ -60,5 +60,22 @@ await test("situatiiCaAsta: nicio potrivire / fara sit -> n 0 si text care o spu
   assert.equal(AS.situatiiCaAsta([], {}, null).toate.n, 0);
 });
 
+// ---- pasul 2: cheia starii ajunge in t212:cf ----
+await test("ruta cf pastreaza sit (valid sau null - null ramane null, altfel s-ar reface la nesfarsit); colectorul reface O DATA verdictele fara sit", async () => {
+  const src = fs.readFileSync(path.join(RAD, "functions", "api", "t212.js"), "utf8");
+  assert.match(src, /"sit" in x/, "ruta cf: test de prezenta pentru sit");
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "t212.js")).href);
+  are(mod.__cfPentruProba, "t212.js __cfPentruProba (curatarea unui verdict cf, exportata pentru proba)");
+  assert.equal(mod.__cfPentruProba({ nivel: "cumpara", sit: "sus|calm|departe" }).sit, "sus|calm|departe");
+  assert.equal(mod.__cfPentruProba({ nivel: "fara-date", sit: null }).sit, null);
+  assert.equal(mod.__cfPentruProba({ nivel: "cumpara", sit: "<script>" }).sit, null);
+  assert.ok(!("sit" in mod.__cfPentruProba({ nivel: "cumpara" })), "fara sit in corp -> nu inventez unul");
+  const v = mod.__cfPentruProba({ nivel: "nu", motive: ["a"], greseli: ["dupa-miscare", "x"], stopU: {}, prob: null, stop: { 8: { pct: -0.08, zi: 3 } } });
+  assert.deepEqual(v.greseli, ["dupa-miscare"]); assert.deepEqual(v.stopU, {}); assert.equal(v.prob, null); assert.equal(v.stop["8"].pct, -0.08);
+  const tura = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
+  assert.match(tura, /!\("sit" in gata\[t\.id\]\)/);
+  assert.match(tura, /stop: \{\}, stopU: \{\}, sit: null \}/, "fara preturi: sit null (altfel se reface la fiecare tura)");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

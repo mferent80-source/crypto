@@ -78,7 +78,8 @@ export async function turaCfActiuni(d) {
   const inchise = d.T212.perechi(u).inchise, peTicker = new Map();
   // v87: verdictele vechi, fara proba cu stop, se refac o data (cu aceleasi preturi)
   // v100.52: si verdictele fara varianta „prof” (stopul din profilul actiunii) se refac O DATA - test de prezenta, un prof: null ramane null
-  for (const t of inchise) if (!gata[t.id] || !gata[t.id].stop || !gata[t.id].stopU || (d.ProfilMoneda && Object.keys(gata[t.id].stopU || {}).length && !("prof" in gata[t.id].stopU)) || (d.Probabilitati && Object.keys(gata[t.id].stopU || {}).length && !("prob" in gata[t.id]))) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
+  // v100.55: si verdictele fara starea de la cumparare (sit) se refac O DATA - un sit: null ramane null
+  for (const t of inchise) if (!gata[t.id] || !gata[t.id].stop || !gata[t.id].stopU || (d.ProfilMoneda && Object.keys(gata[t.id].stopU || {}).length && !("prof" in gata[t.id].stopU)) || (d.Probabilitati && Object.keys(gata[t.id].stopU || {}).length && !("prob" in gata[t.id])) || !("sit" in gata[t.id])) { if (!peTicker.has(t.ticker)) peTicker.set(t.ticker, []); peTicker.get(t.ticker).push(t); }
   const nume = {}; for (const x of u) if (x.nume && x.nume !== x.ticker) nume[x.ticker] = x.nume;
   let judecate = 0, actiuni = 0, strans = {};
   // scrierile se strang cate 200 (ruta de scriere lasa 30 pe minut; una pe actiune ar lovi limita)
@@ -101,7 +102,7 @@ export async function turaCfActiuni(d) {
         // se reface data viitoare - altfel trade-urile noi n-ar intra niciodata); pretul nepotrivit (split) -> null, ca la stopuri
         if (d.Probabilitati) prob = d.Probabilitati.probLaCumparare(inainte, bare, t, n, d.ActiuniSemnale.laCumparare(t, bare, inchise).nivel !== "fara-date");
       }
-      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }, prob === undefined ? {} : { prob }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {} };
+      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }, prob === undefined ? {} : { prob }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {}, sit: null };
       judecate++;
     }
     if (Object.keys(strans).length >= 200) await scrie();
