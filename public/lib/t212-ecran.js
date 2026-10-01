@@ -293,10 +293,10 @@ function t212IdeiRender() {
   var h = '<div class="t212PanouCap"><h4>💡 Idei de cumpărare</h4><span class="tbSub">' + (id ? escapeHtml("din " + (id.judecate || 0) + " acțiuni judecate pe " + t212ZiScurta(id.zi) + ", " + (id.trecute || 0) + " trec de poartă") : "colectorul le caută în fiecare dimineață de la 8:00") + '</span></div>';
   h += '<p class="tbSub t212IdeiNota">Un filtru care te ține departe de situațiile proaste (trend în jos, după mișcare, lângă maxim, rezultate în 10 zile), nu o predicție: pe trade-urile tale, „doar pe 🟢” a adus mai puțin decât ai făcut singur. ' + escapeHtml(id && id.urmarire ? id.urmarire.text : "Ideile se urmăresc: după ~30 se poate spune dacă merită urmate.") + '</p>';
   if (!l.length) h += '<p class="tbSub t212Gol">' + (id ? "Azi nicio acțiune nu trece de poartă — și asta e un răspuns: n-aș cumpăra nimic nou azi." : "Primele idei apar după prima trecere a colectorului.") + '</p>';
-  else h += '<div class="t212TabWrap"><table class="t212Tab t212IdeiTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Intrare</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>'
+  else h += t212IdeiSit(l) + '<div class="t212TabWrap"><table class="t212Tab t212IdeiTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Intrare</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>'
     + l.map(function (x) {
       var ist = x.istoric && x.istoric.n ? x.istoric.n + " trade-uri, " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
-      return '<tr><td><b>' + escapeHtml(x.simbol) + '</b><span class="t212Mic">' + escapeHtml((x.motive || [])[2] || "") + '</span></td><td>' + t212Usd(x.pret) + '</td><td>' + t212Usd(x.intrare) + '</td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">' + (x.riscPct != null ? "−" + (x.riscPct * 100).toFixed(1).replace(".", ",") + "%, " : "") + 'din probă</span></td><td class="good">' + t212Usd(x.tinta) + '</td><td><span class="t212Mic ' + (x.istoric && x.istoric.total < 0 ? "bad" : "") + '">' + escapeHtml(ist) + '</span></td><td><button type="button" class="t212BtnLinie" data-action-click="t212BiletPentru(\'' + escapeHtml(x.simbol) + '\')">Biletul</button></td></tr>';
+      return '<tr><td><b>' + escapeHtml(x.simbol) + '</b><span class="t212Mic">' + escapeHtml((x.motive || [])[2] || "") + '</span></td><td>' + t212Usd(x.pret) + '</td><td>' + t212Usd(x.intrare) + '</td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">' + (x.riscPct != null ? "−" + (x.riscPct * 100).toFixed(1).replace(".", ",") + "%, " : "") + 'din probă</span></td><td class="good">' + t212Usd(x.tinta) + '</td><td><span class="t212Mic ' + (x.istoric && x.istoric.total < 0 ? "bad" : "") + '">' + escapeHtml(ist) + '</span>' + (x.prob && x.prob.tinta5 !== null && x.prob.stop1 !== null ? '<span class="t212Mic">🎲 ținta înaintea stopului în 5 zile: ' + Math.round(x.prob.tinta5 * 100) + '% · stopul mâine: ' + Math.round(x.prob.stop1 * 100) + '%</span>' : '') + '</td><td><button type="button" class="t212BtnLinie" data-action-click="t212BiletPentru(\'' + escapeHtml(x.simbol) + '\')">Biletul</button></td></tr>';
     }).join("") + '</tbody></table></div>';
   // v91: socoteala sfaturilor - au avut dreptate semafoarele? (dupa 5 / 10 / 20 de zile)
   if (t212.sfaturiIst && typeof Consilier !== "undefined") {
@@ -310,6 +310,11 @@ function t212IdeiRender() {
   var lista = d && Array.isArray(d.lista) ? d.lista : [];
   h += '<div class="t212Lista"><label for="t212ListaIn" class="tbSub">Urmăresc și (simboluri, despărțite prin virgulă):</label><input id="t212ListaIn" value="' + escapeHtml(lista.join(", ")) + '" placeholder="ex. ASTS, MSFT, NVDA" autocomplete="off"><button type="button" class="t212BtnLinie" data-action-click="t212ListaSalveaza()">Salvează</button></div>';
   box.innerHTML = h;
+}
+// v100.55: „in situatii ca asta” pentru idei (toate au trecut de poarta: aceeasi stare) - o linie deasupra tabelului
+function t212IdeiSit(l) {
+  var j = t212Jurnal(), sit = l.length && l[0].sit; if (!j || !sit) return "";
+  return '<p class="tbSub">📊 ' + escapeHtml(ActiuniSemnale.textSituatie(ActiuniSemnale.situatiiCaAsta(j.p.inchise, t212.cf || {}, sit, null))) + '</p>';
 }
 function t212BiletPentru(sim) {
   var e = $("t212PSimbol"); if (e) e.value = sim;

@@ -15,9 +15,9 @@ export async function turaIdei(d) {
     if (!bare || !bare.length) continue;
     judecate++; preturi[tk] = bare[bare.length - 1].c;
     if (d.ndx && d.rezumat && d.ndx.has(s)) { const z = d.rezumat(bare); if (z) ndx.push({ s, ...z }); }
-    let r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum });
+    let r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, Probabilitati: d.Probabilitati });
     // data rezultatelor doar pentru cele care trec (o cerere in plus pe fiecare)
-    if (r.trece) { let rz = null; try { rz = await d.cereRezultate(tk); } catch {} if (rz) r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, rezultate: rz }); }
+    if (r.trece) { let rz = null; try { rz = await d.cereRezultate(tk); } catch {} if (rz) r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, rezultate: rz, Probabilitati: d.Probabilitati }); }
     l.push({ ticker: tk, simbol: s, r });
   }
   const trecute = l.filter((x) => x.r.trece).length, actiuni = d.Idei.alegeActiuni(l, 5, d.inchise);

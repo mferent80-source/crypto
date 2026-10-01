@@ -27,9 +27,17 @@ var Idei = (function () {
     // cate bucati), nu −15%: la COKE tabelul arata −15% si Biletul socotea pe −4,5% -> cine punea stopul din tabel risca 3% din
     // cont in loc de 1%. Acelasi stop ca pagina alerts si Discord („a ajuns la intrarea sugerată”).
     return { trece: true, scor: n.proba.medie, pret: pret, intrare: intrare, stop: n.stop, riscPct: intrare > 0 ? (intrare - n.stop) / intrare : null, tinta: n.tinta,
-      pePlusProba: n.proba.pePlus, nProba: n.proba.n, rezultate: o.rezultate || null,
+      pePlusProba: n.proba.pePlus, nProba: n.proba.n, rezultate: o.rezultate || null, sit: AS.cheieSituatie(st), prob: probIdee(b, intrare, n, o),
       motive: ["trend în sus pe zilnice (" + st.trend.tarie + ")", "fără mișcare mare, " + P(st.distMax7z) + " față de maximul pe 7 zile",
         "pe istoricul ei, intrările în starea asta: " + Math.round(n.proba.pePlus * 100) + "% pe plus, " + P(n.proba.medie) + " în medie (" + n.proba.n + " zile)"] };
+  }
+  // v100.55 (actiuni, pachetul 4): cat de des, pe actiunea asta in zile ca acum - tinta inaintea stopului in 5 zile, stopul atins maine
+  // (si prin saritura la deschidere); avertizeaza, nu schimba filtrul. Fara o.Probabilitati -> null
+  function probIdee(b, intrare, n, o) {
+    var PB = o && o.Probabilitati; if (!PB || !(intrare > 0) || !(n.stop > 0)) return null;
+    var r = PB.pentruActiune(b, { pret: intrare, stop: n.stop, tinta: n.tinta, acum: o.acum || Date.now() }); if (!r || !r.stop1) return null;
+    var r3 = function (x) { return Math.round(x * 1000) / 1000; };
+    return { tinta5: r.cursa5 && r.cursa5.tinta ? r3(r.cursa5.tinta.p) : null, stop1: r.sare1 ? r3(r.stop1.p + r.sare1.p) : r3(r.stop1.p) };
   }
   // l: [{ticker, simbol?, r: judecaActiune(...)}]; inchise: T212.perechi().inchise (istoricul lui pe fiecare)
   function alegeActiuni(l, n, inchise) {

@@ -134,7 +134,9 @@ export async function onRequestPost({ request, env }) {
     // v90: ideile de cumparare ale zilei (colectorul) + istoricul lor, ca sa se poata URMARI cum ies (o data pe zi pe simbol)
     const sim = (v) => txt(v, 16).replace(/[^A-Za-z0-9.-]/g, ""), tk = (v) => txt(v, 40).replace(/[^A-Za-z0-9._]/g, "");
     const act2 = (Array.isArray(corp && corp.actiuni) ? corp.actiuni : []).slice(0, 10).map((x) => ({ ticker: tk(x && x.ticker), simbol: sim(x && x.simbol), pret: nr(x && x.pret), intrare: nr(x && x.intrare), stop: nr(x && x.stop), tinta: nr(x && x.tinta), scor: nr(x && x.scor), pePlusProba: nr(x && x.pePlusProba), nProba: nr(x && x.nProba), rezultate: txt(x && x.rezultate, 10) || null,
-      motive: (Array.isArray(x && x.motive) ? x.motive : []).slice(0, 5).map((z) => txt(z, 200)), istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null })).filter((x) => x.ticker && x.pret > 0);
+      motive: (Array.isArray(x && x.motive) ? x.motive : []).slice(0, 5).map((z) => txt(z, 200)), istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null,
+      // v100.55: starea ideii (aceeasi cheie ca t212:cf) si probabilitatile actiunii
+      sit: /^(sus|lateral|jos)\|(calm|dupa-miscare)\|(departe|langa-max)$/.test(String(x && x.sit)) ? x.sit : null, prob: x && x.prob && typeof x.prob === "object" ? { tinta5: nr(x.prob.tinta5), stop1: nr(x.prob.stop1) } : null })).filter((x) => x.ticker && x.pret > 0);
     const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
     const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;
     await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, urmarire: urm }));

@@ -111,5 +111,26 @@ await test("probabilitatile actiunii propuse: cu stopul si tinta portii, de la p
   assert.equal(r2.length, 1); assert.equal(r2[0].p, null);
 });
 
+// ---- pasul 4: ideile - cheia starii si probabilitatile, de la colector ----
+const ID = new Function("ActiuniSemnale", `${lib("idei.js")}; return Idei;`)(AS);
+const bareIdee = (n) => Array.from({ length: n }, (_, i) => { const c = 100 * 1.003 ** i * (1 + 0.04 * Math.sin(i * 2 * Math.PI / 5)); return { t: i * Z, o: c * 0.999, h: c * 1.01, l: c * 0.99, c }; });
+await test("ideile: sit si probabilitatile (tinta inaintea stopului in 5 zile, atinge stopul maine) cand vine Probabilitati; fara el, ca azi", () => {
+  const b = bareIdee(250), pret = b[249].c;
+  const fara = ID.judecaActiune(b, pret, { acum: 251 * Z });
+  const cu = ID.judecaActiune(b, pret, { acum: 251 * Z, Probabilitati: PB });
+  assert.ok(cu.trece, "fixture-ul trebuie sa treaca de poarta");
+  assert.equal(cu.trece, fara.trece, "probabilitatile nu schimba filtrul (avertizeaza, nu blocheaza)");
+  assert.equal(cu.sit, "sus|calm|departe");
+  assert.ok(cu.prob && "tinta5" in cu.prob && "stop1" in cu.prob, JSON.stringify(cu.prob));
+  assert.ok(cu.prob.stop1 >= 0 && cu.prob.stop1 <= 1, JSON.stringify(cu.prob));
+  assert.equal(fara.prob, null, "fara Probabilitati: prob null");
+  const src = fs.readFileSync(path.join(RAD, "functions", "api", "t212.js"), "utf8");
+  assert.ok(/sit: .*x\.sit/.test(src), "ruta idei pastreaza sit");
+  assert.ok(/tinta5/.test(src), "ruta idei pastreaza probabilitatile");
+  assert.ok(/turaIdeiModul\(\{[^)]*Probabilitati/.test(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8")), "colectorul da Probabilitati ideilor");
+  assert.ok(/Probabilitati: d\.Probabilitati/.test(fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-idei.mjs"), "utf8")), "tura ideilor le trece mai departe");
+  assert.ok(/t212IdeiSit\(/.test(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8")), "pagina: linia 📊 la idei");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
