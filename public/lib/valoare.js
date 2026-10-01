@@ -17,7 +17,7 @@ var Valoare = (function () {
   // o = { bins: 40, procent: 0.7 } -> { poc, vah, val, n, dupa: "volum"|"timp", acoperire } sau null (sub 24 de bare)
   function zona(bare, o) {
     o = o || {}; var b = valide(bare), NB = Math.max(10, Math.floor(nr(o.bins) || 40)), proc = nr(o.procent) || 0.7;
-    if (b.length < 24) return null;
+    if (b.length < (nr(o.minBare) > 0 ? nr(o.minBare) : 24)) return null;   // v100.56: actiunile - zona pe 20 de zile de bursa (bare zilnice)
     var lo = Infinity, hi = -Infinity; b.forEach(function (x) { if (x.l < lo) lo = x.l; if (x.h > hi) hi = x.h; });
     if (!(hi > lo)) return null;
     var cuVol = b.some(function (x) { return nr(x.v) > 0; }), step = (hi - lo) / NB, bins = [], i;

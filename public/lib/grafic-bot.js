@@ -62,6 +62,21 @@ var GraficBot = (function () {
     return { p50Jos: pret * (1 - j[10]), p75Jos: pret * (1 - j[15]), p50Sus: pret * (1 + s[10]), p75Sus: pret * (1 + s[15]),
       sursa: "ziua obișnuită a monedei: " + (nr(p.zile) !== null ? p.zile + " de zile" : "profilul") + " de bare de 1 h" };
   }
+  // v100.56 (actiunile T212, pachetul 5): ziua obisnuita a ACTIUNII - 1 zi (z1) sau 5 zile de bursa (z5), din profilul ei (bare zilnice)
+  function ziObisnuitaActiune(pret, p, zile) {
+    pret = nr(pret); var z = p && (zile === 5 ? p.z5 : p.z1), j = z && z.jos, s = z && z.sus;
+    if (pret === null || !(pret > 0) || !Array.isArray(j) || j.length !== 21 || !Array.isArray(s) || s.length !== 21) return null;
+    return { p50Jos: pret * (1 - j[10]), p75Jos: pret * (1 - j[15]), p50Sus: pret * (1 + s[10]), p75Sus: pret * (1 + s[15]), et: zile === 5 ? "5 zile obișnuite" : "zi obișnuită",
+      sursa: (zile === 5 ? "5 zile de bursă obișnuite" : "ziua obișnuită") + " a acțiunii: " + (nr(p.zile) !== null ? p.zile + " de zile de bursă" : "profilul") + " (bare zilnice)" };
+  }
+  // nivelurile pozitiei pe grafic: tinta, pretul tau mediu, stopul tau (doar daca l-ai scris)
+  function niveluriActiune(o) {
+    var l = [], ad = function (k, p, t, c, st, s) { p = nr(p); if (p !== null && p > 0) l.push({ k: k, p: p, t: t, c: c, st: st, s: s }); };
+    ad("tinta", o && o.tinta, "ținta", COL.good, "dash", "țintă");
+    ad("intrare", o && o.pretMediu, "prețul tău mediu", COL.intrare, "dash", "mediu");
+    ad("stop", o && o.stop, "stopul tău", COL.bad, "solid", "stop");
+    return l;
+  }
   function niveluriBot(o) {
     var b = o && o.bot || {}, l = [], ad = function (k, p, t, c, st, s) { p = nr(p); if (p !== null && p > 0) l.push({ k: k, p: p, t: t, c: c, st: st, s: s }); };
     ad("gridSus", b.gridSus, "grid sus", COL.accent, "fine", "grid↑");
@@ -162,7 +177,7 @@ var GraficBot = (function () {
       var vs = Math.min(hi, va.vah), vj = Math.max(lo, va.val);
       if (vs > vj) q.push('<rect class="gbVa" x="0" y="' + f1(Y(vs)) + '" width="' + f1(plotW) + '" height="' + f1(Y(vj) - Y(vs)) + '" fill="rgba(105,167,255,.06)" stroke="rgba(105,167,255,.30)" stroke-dasharray="2 4"/>');
       if (va.poc > lo && va.poc < hi) q.push('<line class="gbPoc" x1="0" x2="' + f1(plotW) + '" y1="' + f1(Y(va.poc)) + '" y2="' + f1(Y(va.poc)) + '" stroke="#9fc3ff" stroke-opacity=".55" stroke-width="1" stroke-dasharray="3 3"/>'
-        + '<text x="6" y="' + f1(Y(va.poc) - 3) + '" font-size="10" fill="#9fc3ff" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">POC 7 z ' + fmtP(va.poc) + '</text>');
+        + '<text x="6" y="' + f1(Y(va.poc) - 3) + '" font-size="10" fill="#9fc3ff" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">POC ' + esc(o.val.et || "7 z") + ' ' + fmtP(va.poc) + '</text>');
     }
     if (st.val && o.val && Array.isArray(o.val.pivoti)) o.val.pivoti.forEach(function (pv) {
       if (!(pv && pv.p > lo && pv.p < hi)) return;
@@ -176,7 +191,13 @@ var GraficBot = (function () {
       var a5 = Math.min(hi, nr(o.zi.p50Sus)), c5 = Math.max(lo, nr(o.zi.p50Jos));
       if (a5 > c5) q.push('<rect class="gbZi" x="' + f1(zx) + '" y="' + f1(Y(a5)) + '" width="' + f1(zw) + '" height="' + f1(Y(c5) - Y(a5)) + '" fill="rgba(245,196,81,.09)" stroke="rgba(245,196,81,.35)" stroke-width="1"/>');
       ["p75Sus", "p75Jos"].forEach(function (k) { var v = nr(o.zi[k]); if (v !== null && v > lo && v < hi) q.push('<line class="gbZi" x1="' + f1(zx) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(v)) + '" y2="' + f1(Y(v)) + '" stroke="' + COL.warn + '" stroke-opacity=".6" stroke-dasharray="4 3"/>'); });
-      if (a5 > c5) q.push('<text class="gbZi" x="' + f1(zx + 4) + '" y="' + f1(Math.max(11, Y(a5) - 4)) + '" font-size="10" fill="' + COL.warn + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">zi obișnuită</text>');
+      if (a5 > c5) q.push('<text class="gbZi" x="' + f1(zx + 4) + '" y="' + f1(Math.max(11, Y(a5) - 4)) + '" font-size="10" fill="' + COL.warn + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">' + esc(o.zi.et || "zi obișnuită") + '</text>');
+    }
+    // v100.56: 5 zile obisnuite (actiuni) - doar liniile P50 (plin) si P75 (punctat), alta nuanta decat ziua
+    if (st.zi5 && o.zi5) {
+      var zx5 = plotW * (1 - (ingust ? 0.25 : 0.18));
+      [["p50Sus", ""], ["p50Jos", ""], ["p75Sus", "2 3"], ["p75Jos", "2 3"]].forEach(function (k) { var v = nr(o.zi5[k[0]]); if (v !== null && v > lo && v < hi) q.push('<line class="gbZi5" x1="' + f1(zx5) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(v)) + '" y2="' + f1(Y(v)) + '" stroke="' + COL.info + '" stroke-opacity=".7"' + (k[1] ? ' stroke-dasharray="' + k[1] + '"' : '') + '/>'); });
+      var s5 = nr(o.zi5.p50Sus); if (s5 !== null && s5 > lo && s5 < hi) q.push('<text class="gbZi5" x="' + f1(zx5 + 4) + '" y="' + f1(Math.max(11, Y(s5) - 4)) + '" font-size="10" fill="' + COL.info + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">5 zile</text>');
     }
     // profilul de volum
     if (st.vp) {
@@ -224,11 +245,11 @@ var GraficBot = (function () {
       } else afara.push(x);
     });
     // v100.51 (I-476): stopul planului (Consilierul) langa stopul tau - mereu, nu e indicator; aproape identice -> o singura eticheta
-    var cl = o.consLinii || {}, spP = nr(cl.stopPlan), spA = nr(cl.stopAcum);
+    var cl = o.consLinii || {}, spP = nr(cl.stopPlan), spA = nr(cl.stopAcum), etP = cl.et || "stopul planului";   // v100.56: la actiuni „stopul propus”
     if (spP !== null && spP > 0) {
       if (spA !== null && Math.abs(spP - spA) / spA < 0.0005) et.forEach(function (e) { if (e.t === "stopul tău") { e.t = "stopul tău = al planului"; e.s = "stop=plan"; } });
-      else if (spP >= lo && spP <= hi) { q.push('<line class="gbStopPlan" x1="0" x2="' + f1(plotW) + '" y1="' + f1(Y(spP)) + '" y2="' + f1(Y(spP)) + '" stroke="' + COL.bad + '" stroke-width="1.3" stroke-dasharray="2 4"/>'); et.push({ y: Y(spP), t: "stopul planului", s: "stop plan", p: spP, c: COL.bad }); }
-      else { q.push('<g class="gbStopPlan"></g>'); afara.push({ p: spP, t: "stopul planului", c: COL.bad }); }
+      else if (spP >= lo && spP <= hi) { q.push('<line class="gbStopPlan" x1="0" x2="' + f1(plotW) + '" y1="' + f1(Y(spP)) + '" y2="' + f1(Y(spP)) + '" stroke="' + COL.bad + '" stroke-width="1.3" stroke-dasharray="2 4"/>'); et.push({ y: Y(spP), t: etP, s: "stop plan", p: spP, c: COL.bad }); }
+      else { q.push('<g class="gbStopPlan"></g>'); afara.push({ p: spP, t: etP, c: COL.bad }); }
     }
     // v100.7: pretul LIVE (Pionex) - linie punctata de la ultima lumanare pana la eticheta „acum”
     if (viu !== null) q.push('<line class="gbViu" x1="' + f1(X(n - 1)) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(viu)) + '" y2="' + f1(Y(viu)) + '" stroke="' + COL.text + '" stroke-width="1.2" stroke-dasharray="3 3"/>');
@@ -282,10 +303,11 @@ var GraficBot = (function () {
     if (are("planPlus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.good + '"></i>planul, pe plus</span>');
     if (are("planMinus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>planul, pe minus</span>');
     if (niv.some(function (x) { return x.k === "stop"; })) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>stopul tău</span>');
-    if (spP !== null && spP > 0 && !(spA !== null && Math.abs(spP - spA) / spA < 0.0005)) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>stopul planului (Consilierul)</span>');
+    if (spP !== null && spP > 0 && !(spA !== null && Math.abs(spP - spA) / spA < 0.0005)) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>' + esc(cl.etLung || "stopul planului (Consilierul)") + '</span>');
+    if (st.zi5 && o.zi5) Lg.push('<span><i style="border-color:' + COL.info + '"></i>' + esc(o.zi5.sursa || "5 zile obișnuite") + ': jumătate din săptămâni (plin) / trei sferturi (punctat)</span>');
     if (st.zi && o.zi) Lg.push('<span><i class="gbPct" style="background:rgba(245,196,81,.45)"></i>ziua obișnuită de la prețul de acum: jumătate din zile (plin) / trei sferturi (punctat) · ' + esc(o.zi.sursa || "") + '</span>');
-    if (va) Lg.push('<span><i class="gbPct" style="background:rgba(105,167,255,.35)"></i>zona de valoare, 7 zile: 70% din ' + (va.dupa === "timp" ? "timp (lumânările n-au volum)" : "volum") + ' · POC punctat</span>');
-    if (st.val && o.val && Array.isArray(o.val.pivoti) && o.val.pivoti.length) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>rezistență / <i style="border-color:' + COL.good + '"></i>suport din pivoți confirmați (4 h)</span>');
+    if (va) Lg.push('<span><i class="gbPct" style="background:rgba(105,167,255,.35)"></i>zona de valoare, ' + esc(o.val.etLung || "7 zile") + ': 70% din ' + (va.dupa === "timp" ? "timp (lumânările n-au volum)" : "volum") + ' · POC punctat</span>');
+    if (st.val && o.val && Array.isArray(o.val.pivoti) && o.val.pivoti.length) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>rezistență / <i style="border-color:' + COL.good + '"></i>suport din pivoți confirmați (' + esc(o.val.etPivoti || "4 h") + ')</span>');
     if (st.ema) Lg.push('<span><i style="border-color:' + COL.ema20 + '"></i>EMA 20</span><span><i style="border-color:' + COL.ema50 + '"></i>EMA 50</span>');
     if (st.bb) Lg.push('<span><i style="border-color:' + COL.bb + '"></i>Bollinger 20, 2</span>');
     if (o.umpleri) Lg.push('<span>▲ cumpărare · ▼ vânzare pe grilă (deduse din lumânări) · perechi pe grafic: ' + o.umpleri.perechi + (nr(o.perechiPionex) !== null ? " · Pionex: " + nr(o.perechiPionex) : "") + '</span>');
@@ -308,6 +330,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, ziObisnuita: ziObisnuita, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc };
+  return { COL: COL, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;
