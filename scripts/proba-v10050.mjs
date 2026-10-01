@@ -44,5 +44,40 @@ await test("I-473: deCe - din ce verdict in care, ce motive au aparut si ce au d
   assert.equal(CS.deCe(b, b), null);
 });
 
+// ---- pasul 2: Consilierul in colector (I-474) ----
+const consDe = (nivel, motive) => ({ nivel, eticheta: { tine: "🟢 Ține", atentie: "🟡 Atenție", iesi: "🔴 Ieși" }[nivel], titlu: motive[0] ? motive[0].titlu : "nimic", faCe: "fa " + nivel, bani: nivel === "iesi" ? "pierderea maximă: −10" : null, motive });
+await test("pentruPoza: forma semaforului (nivel, motiv, faCe cu banii, componente) - pagina alerts o citeste fara schimbare; „asteapta” ramane asteapta", () => {
+  assert.ok(typeof CS.pentruPoza === "function", "lipseste Consiliu.pentruPoza");
+  const p = CS.pentruPoza(consDe("iesi", [{ cod: "lichidare", titlu: "Lichidarea e la 6%" }, { cod: "trend", titlu: "Trendul e contra" }]));
+  assert.equal(p.nivel, "iesi"); assert.equal(p.motiv, "Lichidarea e la 6%"); assert.match(p.faCe, /fa iesi.*pierderea maximă/);
+  assert.deepEqual(p.componente.map((c) => c.motiv), ["Lichidarea e la 6%", "Trendul e contra"]);
+  assert.equal(CS.pentruPoza({ nivel: "asteapta", titlu: "încă socotesc" }).nivel, "asteapta");
+});
+await test("schimbare: prima vedere fara alerta; nivel nou confirmat la a doua tura -> alerta cu actiunea, banii si de ce; pâlpâirea -> nimic", () => {
+  assert.ok(typeof CS.schimbare === "function", "lipseste Consiliu.schimbare");
+  const T = consDe("tine", [{ cod: "liniste", titlu: "Piața e liniștită" }]), A = consDe("atentie", [{ cod: "stop", titlu: "Stopul e peste plan" }]);
+  let r = CS.schimbare(null, T, 1, "CRV"); assert.equal(r.alerta, null);
+  r = CS.schimbare(r.stare, A, 2, "CRV"); assert.equal(r.alerta, null, "prima tura cu nivel nou: doar asteapta confirmarea");
+  r = CS.schimbare(r.stare, T, 3, "CRV"); assert.equal(r.alerta, null);
+  r = CS.schimbare(r.stare, A, 4, "CRV"); assert.equal(r.alerta, null, "pâlpâire: confirmarea o ia de la capat");
+  r = CS.schimbare(r.stare, A, 5, "CRV");
+  assert.ok(r.alerta && r.alerta.nivel === "atentie" && !r.alerta.doarRadar); assert.match(r.alerta.titlu, /CRV: Consilierul — 🟡 Atenție/);
+  assert.match(r.alerta.mesaj, /Ce aș face eu: fa atentie/); assert.match(r.alerta.mesaj, /De ce: din 🟢 Ține în 🟡 Atenție · \+ Stopul e peste plan/);
+  assert.equal(r.stare.inainte.nivel, "tine"); assert.equal(r.stare.schimbatLa, 5);
+  r = CS.schimbare(r.stare, T, 6, "CRV"); r = CS.schimbare(r.stare, T, 7, "CRV"); assert.ok(r.alerta && r.alerta.doarRadar, "inapoi la ȚINE: doar in Radar");
+  assert.equal(CS.schimbare(r.stare, { nivel: "asteapta" }, 8, "CRV").alerta, null);
+});
+await test("colectorul: alcatuieste Consilierul, il pune in poza, trimite schimbarea si KV cons; „s-iesi” al semaforului doar in Radar (o singura voce pe Discord); ruta cons", async () => {
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), al = fs.readFileSync(path.join(RAD, "public", "lib", "alerte.js"), "utf8");
+  assert.match(col, /consiliu\.js/); assert.match(col, /Consiliu\.alcatuieste\(/); assert.match(col, /Consiliu\.pentruPoza\(x\.cons\)/); assert.match(col, /Consiliu\.schimbare\(/); assert.match(col, /action=cons"/);
+  assert.match(al, /out\["s-iesi"\][^\n]*doarRadar: true/);
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const st = { acum: { nivel: "atentie", titlu: "x", motive: [] }, inainte: { nivel: "tine", motive: [] }, schimbatLa: 5, deCe: "din 🟢 Ține în 🟡 Atenție" };
+  const r = await mod.onRequestPost({ request: cer("POST", "action=cons", { bot: "2394", ...st }), env }); assert.equal(r.status, 200, await r.clone().text());
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=cons&bot=2394"), env })).json(); assert.equal(g.cons.deCe, st.deCe); assert.equal(g.cons.acum.nivel, "atentie");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

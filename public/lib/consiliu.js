@@ -144,6 +144,27 @@ var Consiliu = (function () {
       + (plus.length ? " · + " + plus.join(" · + ") : "") + (minus.length ? " · − " + minus.join(" · − ") : "");
     return { text: t, plus: plus, minus: minus };
   }
-  return { deCe: deCe, alcatuieste: alcatuieste };
+  // v100.50 (I-474): Consilierul in forma semaforului, pentru poza (pagina alerts o citeste fara nicio schimbare: niv / motive / sfat)
+  function pentruPoza(c) {
+    if (!c || !c.nivel || c.nivel === "asteapta") return { nivel: "asteapta", motiv: c && c.titlu ? String(c.titlu) : "încă socotesc", faCe: "", componente: [] };
+    return { nivel: c.nivel, motiv: String(c.titlu || ""), faCe: String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : ""),
+      componente: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return { motiv: String(m && m.titlu || "") }; }) };
+  }
+  // v100.50 (I-474 + I-473): schimbarea verdictului, cu anti-pâlpâire - un nivel nou trebuie sa tina DOUA ture la rand; prima vedere nu
+  // alerteaza. Alerta poarta actiunea, banii si „de ce”; intoarcerea la ȚINE ramane doar in Radar. stare = {acum, inainte, schimbatLa, deCe, nou}
+  function schimbare(st, c, acum, nume) {
+    st = st || {};
+    if (!c || !c.nivel || c.nivel === "asteapta") return { stare: st, alerta: null };
+    var lite = { nivel: c.nivel, eticheta: c.eticheta || ETICHETA[c.nivel], titlu: c.titlu || "", faCe: c.faCe || "", bani: c.bani || null, la: acum,
+      motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return { cod: m && m.cod, titlu: m && m.titlu }; }) };
+    if (!st.acum) return { stare: { acum: lite }, alerta: null };
+    if (st.acum.nivel === lite.nivel) return { stare: { acum: lite, inainte: st.inainte || null, schimbatLa: st.schimbatLa || null, deCe: st.deCe || null }, alerta: null };
+    if (!st.nou || st.nou.nivel !== lite.nivel) return { stare: { acum: st.acum, inainte: st.inainte || null, schimbatLa: st.schimbatLa || null, deCe: st.deCe || null, nou: lite }, alerta: null };
+    var d = deCe(st.acum, lite), N = nume || "Botul";
+    var al = { nivel: lite.nivel === "iesi" ? "critic" : lite.nivel === "atentie" ? "atentie" : "info", titlu: N + ": Consilierul — " + lite.eticheta + " · " + lite.titlu,
+      mesaj: "Ce aș face eu: " + (lite.faCe || "—") + (lite.bani ? " · 💰 " + lite.bani : "") + (d ? " · De ce: " + d.text : ""), doarRadar: lite.nivel === "tine" };
+    return { stare: { acum: lite, inainte: st.acum, schimbatLa: acum, deCe: d ? d.text : null }, alerta: al };
+  }
+  return { pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

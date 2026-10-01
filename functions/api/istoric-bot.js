@@ -50,6 +50,7 @@ export async function onRequestGet({request,env}){
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   // v100.43 (I-466): increderea fiecarui sfat, adunata de colector pe toti botii
+  if(action==="cons"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let c=null;try{c=JSON.parse(await env.ISTORIC.get("cons:"+bot)||"null")}catch{c=null}return json({bot,cons:c})}
   if(action==="prob"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("prob:"+bot)||"null")}catch{p=null}return json({bot,prob:p})}
   if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
@@ -215,6 +216,13 @@ export async function onRequestPost({request,env}){
   }
   // v100.47 (I-469): situatiile asemanatoare - cazurile din arhiva cu ce se stia la pornire (colectorul, o data pe noapte)
   if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l}));return json({ok:true,n:l.length})}
+  // v100.50 (I-474/I-473): verdictul Consilierului alcatuit de colector - acum, cel de dinainte, cand s-a schimbat si de ce
+  if(action==="cons"){
+    const bot=idBot(corp&&corp.bot);if(!bot||!corp.acum||typeof corp.acum!=="object")return json({error:"Lipseste bot sau acum"},400);
+    const s=JSON.stringify({acum:corp.acum,inainte:corp.inainte||null,schimbatLa:nr(corp.schimbatLa),deCe:typeof corp.deCe==="string"?corp.deCe.slice(0,600):null,la:Date.now()});
+    if(s.length>16384)return json({error:"cons prea mare"},413);
+    await env.ISTORIC.put("cons:"+bot,s);return json({ok:true});
+  }
   // v100.46 (pachetul 2a): probabilitatile botului (colectorul, o data pe ora) si calibrarea lor
   if(action==="prob"){
     const bot=idBot(corp&&corp.bot),rez=corp&&corp.rez;if(!bot||!rez||typeof rez!=="object")return json({error:"Lipseste bot sau rez"},400);
