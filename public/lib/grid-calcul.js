@@ -54,6 +54,7 @@ var GridCalcul = (function () {
     var a = Array.isArray(r);
     var b = { t: nr(a ? r[0] : r.time), o: nr(a ? r[1] : r.open), h: nr(a ? r[2] : r.high), l: nr(a ? r[3] : r.low), c: nr(a ? r[4] : r.close) };
     if (b.t === null || !(b.o > 0) || !(b.h > 0) || !(b.l > 0) || !(b.c > 0) || b.h < b.l) return null;
+    b.v = nr(a ? r[5] : (r.volume != null ? r.volume : r.v));   // v100.51 (I-470): volumul, pentru zona de valoare (null cand lipseste)
     return b;
   }
   function crescator(x, y) { return x - y; }
