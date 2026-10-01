@@ -6415,7 +6415,7 @@ function tbDeseneazaTabloulUnic(){renderTabloDirectia();renderTabloIndicatori();
 // v100.6: bucatile vin din PretViu.banda (pur); pretul botului sta imediat dupa nume, live din Pionex.
 // v100.59 (I-481): rezultatul gridului ingust pe moneda botului din Tablou, o data la 10 min
 var tbIngB={};
-function tbIngustBot(s){var c=tbIngB[s];if(!c||(!c.inLucru&&Date.now()-c.la>10*60000)){tbIngB[s]={la:Date.now(),v:c?c.v:null,inLucru:true};getJSON("/api/istoric-bot?action=ingust&simbol="+encodeURIComponent(s)).then(function(d){tbIngB[s]={la:Date.now(),v:d&&d.ingust||null,inLucru:false};tbActualizeazaBanda()}).catch(function(){tbIngB[s].inLucru=false})}return tbIngB[s]&&tbIngB[s].v}
+function tbCeasBot(id){var c=tbIngB[id];if(!c||(!c.inLucru&&Date.now()-c.la>10*60000)){tbIngB[id]={la:Date.now(),v:c?c.v:null,inLucru:true};getJSON("/api/istoric-bot?action=ingustCeas&bot="+encodeURIComponent(id)).then(function(d){tbIngB[id]={la:Date.now(),v:d&&d.ceas||null,inLucru:false};tbActualizeazaBanda()}).catch(function(){tbIngB[id].inLucru=false})}return tbIngB[id]&&tbIngB[id].v}
 function tbActualizeazaBanda(){
   var el=$("botStrip");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot;
@@ -6426,7 +6426,7 @@ function tbActualizeazaBanda(){
     distanteGrid:typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null,piata:z}):null;
   if(!r){el.hidden=true;return}
   // v100.59 (I-481): botul pornit cu setarile variantei ingusta -> ora de inchidere in banda (asa a fost probat)
-  try{var gi=s&&s.pionex?tbIngustBot(s.pionex):null,pc=gi?GridProba.potrivireIngust({jos:Number(b.gridJos),sus:Number(b.gridSus),directie:b.directie,pornitLa:Number(b.pornitLa)},gi):null;
+  try{var pc=b.id?tbCeasBot(String(b.id)):null;   /* revizia 01.10 (I6): ceasul tinut minte de colector, nu recalculat din rezultatul rescris la 6 h */
     if(pc){var dc=new Date(pc.inchideLa);r.parti.push({k:"ingust",t:"⚡ grid îngust · închide-l la "+String(dc.getHours()).padStart(2,"0")+":"+String(dc.getMinutes()).padStart(2,"0")+(Date.now()>=pc.inchideLa?" (a trecut)":""),ton:Date.now()>=pc.inchideLa?"jos":"",title:"Probat cu închidere după "+pc.ore+" h"})}}catch(e){}
   el.innerHTML=r.parti.map(function(p){
     if(p.k==="pret")return '<b class="bsPret'+(p.viu?' viu':'')+'" id="botStripPret" title="'+escapeHtml(p.title||"")+'">'+escapeHtml(p.t)+'</b>';

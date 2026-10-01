@@ -68,6 +68,7 @@ export async function onRequestGet({request,env}){
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
   if(action==="ingustLista"){const l=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(simbolKv).filter(Boolean))].slice(0,10),out={};for(const s of l){let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}out[s]=v}return json({ingust:out})}
+  if(action==="ingustCeas"){const b=idBot(u.searchParams.get("bot"));if(!b)return json({error:"Lipseste bot"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust-ceas:"+b)||"null")}catch{v=null}return json({bot:b,ceas:v})}   // revizia 01.10 (I6)
   if(action==="ingustUrmarire"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust-urmarire")||"null")}catch{v=null}return json({lista:Array.isArray(v)?v:[]})}   // v100.59 (I-480)
   if(action==="ingust"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}return json({simbol:s,ingust:v})}   // v100.58
   if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
@@ -96,7 +97,7 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.25: colectorul trimite botii inchisi pe bucati; se unesc cu arhiva (compact, fara dubluri); „completa” nu se mai pierde
   if(action==="botiInchisi"){
@@ -281,10 +282,15 @@ export async function onRequestPost({request,env}){
     await env.ISTORIC.put("calibrare",JSON.stringify({la:nr(corp.la)||Date.now(),cal:out}));return json({ok:true});
   }
   // v100.45 (pachetul 1): profilul monedei (colectorul, noaptea) -> KV profil:<SIMBOL>
+  // revizia 01.10 (I6): ceasul gridului ingust tinut minte de colector pe bot (banda Tabloului il citeste, nu-l recalculeaza)
+  if(action==="ingustCeas"){
+    const b=idBot(corp&&corp.bot),c=corp&&corp.ceas;if(!b||!c||typeof c!=="object"||!(nr(c.inchideLa)>0)||!(nr(c.ore)>0))return json({error:"Lipseste bot sau ceas"},400);
+    await env.ISTORIC.put("ingust-ceas:"+b,JSON.stringify({ingust:true,ore:nr(c.ore),inchideLa:nr(c.inchideLa)}),{expirationTtl:3*86400});return json({ok:true});
+  }
   // v100.59 (I-480): urmarirea inainte a gridului ingust - lista notelor (cel mult 2000), doar campurile cunoscute
   if(action==="ingustUrmarire"){
     const DIR=["long","short","neutru"],l=(Array.isArray(corp&&corp.lista)?corp.lista:[]).slice(-2000).map(e=>{if(!e||typeof e!=="object")return null;const s=simbolKv(e.simbol),la=nr(e.la),ore=nr(e.ore),lat=nr(e.latime),pas=nr(e.pas);
-      if(!s||!(la>0)||!DIR.includes(e.dir)||!(ore>0)||!(lat>0)||!(pas>0))return null;const r=e.r&&typeof e.r==="object"&&nr(e.r.net)!==null?{net:nr(e.r.net),oprit:e.r.oprit===true,lichidat:e.r.lichidat===true}:undefined;
+      if(!s||!(la>0)||!DIR.includes(e.dir)||!(ore>0)||!(lat>0)||!(pas>0))return null;const r=e.r&&typeof e.r==="object"&&e.r.lipsa===true?{lipsa:true}:e.r&&typeof e.r==="object"&&nr(e.r.net)!==null?{net:nr(e.r.net),oprit:e.r.oprit===true,lichidat:e.r.lichidat===true}:undefined;
       return {simbol:s,la,dir:e.dir,ore,latime:lat,pas,propus:e.propus===true,...(r?{r}:{})}}).filter(Boolean);
     await env.ISTORIC.put("ingust-urmarire",JSON.stringify(l));return json({ok:true,n:l.length});
   }

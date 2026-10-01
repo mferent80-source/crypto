@@ -332,7 +332,8 @@ var GridProba = (function () {
     var jos = Number(b.jos), sus = Number(b.sus), t = Number(b.pornitLa);
     if (!(jos > 0) || !(sus > jos) || !(t > 0) || dir !== r.dir) return null;
     if (Math.abs((sus / jos - 1) / r.latime - 1) > 0.35) return null;
-    if (r.la > 0 && Math.abs(t - r.la) > 12 * 3600000) return null;
+    // revizia 01.10 (I5): fereastra intr-o singura parte - pornit cel mult cu 15 min inainte de propunere si cel mult 12 h dupa; fara „la” -> null
+    if (!(r.la > 0) || t - r.la < -15 * 60000 || t - r.la > 12 * 3600000) return null;
     return { ingust: true, ore: r.ore, inchideLa: t + r.ore * 3600000 };
   }
   // v100.59 (I-480): urmarirea INAINTE - o nota {la, dir, ore, latime, pas} se judeca pe barele de DUPA ea, cu acelasi simulator;
@@ -340,14 +341,19 @@ var GridProba = (function () {
   function judecaUrmarire(rec, b15) {
     if (!rec || !(rec.ore > 0) || !(rec.latime > 0) || !(rec.pas > 0) || DIRECTII.indexOf(rec.dir) < 0 || !Array.isArray(b15)) return null;
     var i = 0; while (i < b15.length && b15[i].t < rec.la) i++;
+    if (i < b15.length && b15[i].t - rec.la > 900000) return null;   /* revizia 01.10 (I3): nota de dinaintea barelor aduse - nu se judeca pe alte zile */
     var W = Math.round(rec.ore / 24 * C.BARE_ZI); if (i + W > b15.length) return null;
     var r = simuleaza(b15, i, W, G.construieste({ pret: b15[i].o, lat: rec.latime, pas: rec.pas, dir: rec.dir }));
     return { net: r.net, oprit: !!r.oprit, lichidat: !!r.lichidat };
   }
   function socotealaUrmarire(l) {
     l = Array.isArray(l) ? l : [];
+    // revizia 01.10 (I4): ferestre INDEPENDENTE pe moneda - o nota intra doar daca incepe dupa ce s-a terminat ultima pastrata (nota la 6 h cu
+    // durata de 24 h = 4 note suprapuse = un singur caz); notele fara moneda/ora raman fiecare un caz
     var gr = function (f) {
-      var v = l.filter(function (e) { return e && e.r && typeof e.r.net === "number" && f(e); }).map(function (e) { return e.r.net; }), s = 0;
+      var ult = {}, ind = l.filter(function (e) { return e && e.r && typeof e.r.net === "number" && f(e); }).slice().sort(function (a, b) { return (a.la || 0) - (b.la || 0); })
+        .filter(function (e) { if (!e.simbol || !(e.la >= 0) || !(e.ore > 0)) return true; var u = ult[e.simbol]; if (u !== undefined && e.la < u) return false; ult[e.simbol] = e.la + e.ore * 3600000; return true; });
+      var v = ind.map(function (e) { return e.r.net; }), s = 0;
       v.forEach(function (x) { s += x; });
       return { n: v.length, pePlus: v.length ? v.filter(function (x) { return x > 0; }).length / v.length : null, mediana: v.length ? G.mediana(v) : null, medie: v.length ? s / v.length : null };
     };

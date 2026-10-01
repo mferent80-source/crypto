@@ -17,7 +17,8 @@ async function aduce(d, simbol, pagini, pauzaMs) {
 }
 export async function turaIngust(d) {
   const pagini = d.pagini > 0 ? d.pagini : 12, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, acum = d.acum || Date.now();
-  const l = d.Idei.ideiBoti(d.clasament, [], 5), lista = Array.isArray(d.urmarire) ? d.urmarire.slice() : [];
+  // revizia 01.10 (C1): fara lista citita (eroare la citire) tura NU scrie urmarirea - altfel ar sterge tot istoricul
+  const urmOk = Array.isArray(d.urmarire), l = d.Idei.ideiBoti(d.clasament, [], 5), lista = urmOk ? d.urmarire.slice() : [];
   const judeca = (simbol, b) => { for (const e of lista) if (e && e.simbol === simbol && !e.r) { const j = d.GridProba.judecaUrmarire(e, b); if (j) e.r = j; } };
   let monede = 0, propuse = 0;
   for (const x of l) {
@@ -33,7 +34,9 @@ export async function turaIngust(d) {
   // notele ramase pe monede care nu mai sunt sugerate: 2 pagini (~10 zile) ajung pentru H <= 24 h
   const ramase = [...new Set(lista.filter((e) => e && !e.r && e.la + e.ore * 3600000 <= acum && !l.some((x) => x.simbol === e.simbol)).map((e) => e.simbol))].slice(0, 5);
   for (const s of ramase) { try { judeca(s, await aduce(d, s, 2, pauzaMs)); } catch (e) { d.jurnal("ingust urmarire " + s, e.message); } }
-  try { await d.trimite("/api/istoric-bot?action=ingustUrmarire", { lista: lista.slice(-2000) }); } catch (e) { d.jurnal("ingust urmarire", e.message); }
+  // revizia 01.10 (I7): notele fara date de peste 7 zile (moneda scoasa, redenumita) ies din asteptare - nu mai tin locul celor 5 monede
+  for (const e of lista) if (e && !e.r && acum - e.la > 7 * 864e5) e.r = { lipsa: true };
+  if (urmOk) { try { await d.trimite("/api/istoric-bot?action=ingustUrmarire", { lista: lista.slice(-2000) }); } catch (e) { d.jurnal("ingust urmarire", e.message); } }
   d.jurnal("ingust: " + monede + " monede sugerate, " + propuse + " cu grid ingust propus · urmarite: " + lista.length + " note, " + lista.filter((e) => e && e.r).length + " judecate");
   return { monede, propuse };
 }

@@ -409,10 +409,12 @@ async function tura() {
       // v101.39 (I-481): ceasul gridului ingust - botul pornit cu setarile variantei ingusta: un singur mesaj cand trece durata probata.
       // Potrivirea se tine minte (KV-ul ingust se rescrie la 6 h si poate sa nu mai propuna)
       try {
-        if (!st._ceas) { const gi = await ingustPentruBot(b); const p = gi ? GridProba.potrivireIngust({ jos: Number(b.gridJos), sus: Number(b.gridSus), directie: b.directie, pornitLa: Number(b.pornitLa) }, gi) : null; if (p) st._ceas = p; }
+        // revizia 01.10: botii porniti de peste 18 h nu se mai pot potrivi - nu se mai cere nimic pentru ei; potrivirea se publica pentru banda Tabloului
+        if (!st._ceas && acum - Number(b.pornitLa) < 18 * 3600000) { const gi = await ingustPentruBot(b); const p = gi ? GridProba.potrivireIngust({ jos: Number(b.gridJos), sus: Number(b.gridSus), directie: b.directie, pornitLa: Number(b.pornitLa) }, gi) : null; if (p) { st._ceas = p; scrieStare(); try { await trimite("/api/istoric-bot?action=ingustCeas", { bot: b.id, ceas: p }); } catch (e) { jurnal("ceas ingust publicat", e.message); } } }
         if (st._ceas && !st._ceasTrimis && acum >= st._ceas.inchideLa) {
           const nume = String(b.baza || "botul").replace(/\.PERP$/, "");
-          if (await trimiteAlerta({ nivel: "atentie", titlu: nume + ": gridul îngust a ajuns la " + st._ceas.ore + " h", mesaj: "Așa a fost probat: închide-l acum. Ținut mai mult, nu mai seamănă cu proba (un interval îngust iese repede din preț)." }, b.id, "ingust-ceas")) st._ceasTrimis = true;
+          const dc = new Date(st._ceas.inchideLa), hm = String(dc.getHours()).padStart(2, "0") + ":" + String(dc.getMinutes()).padStart(2, "0"), tarziu = acum - st._ceas.inchideLa > 30 * 60000;
+          if (await trimiteAlerta({ nivel: "atentie", titlu: nume + ": gridul îngust a ajuns la " + st._ceas.ore + " h", mesaj: "Așa a fost probat: închide-l acum (închiderea era la " + hm + (tarziu ? " — mesajul vine întârziat, colectorul a fost oprit" : "") + "). Ținut mai mult, nu mai seamănă cu proba (un interval îngust iese repede din preț)." }, b.id, "ingust-ceas")) { st._ceasTrimis = true; scrieStare(); }
         }
       } catch (e) { jurnal("ceas ingust", b.id, e.message); }
     } catch (e) { jurnal("plan", b.id, e.message); }
@@ -519,7 +521,8 @@ async function turaIngust() {
   ingustInLucru = true;
   try {
     const cl = await cere("/api/istoric-bot?action=clasament");
-    let urm = []; try { const u = await cere("/api/istoric-bot?action=ingustUrmarire"); urm = u && Array.isArray(u.lista) ? u.lista : []; } catch (e) { jurnal("ingust urmarire", e.message); }   // v101.39 (I-480)
+    // revizia 01.10 (C1): la o eroare de citire, null - tura nu scrie peste istoric
+    let urm = null; try { const u = await cere("/api/istoric-bot?action=ingustUrmarire"); urm = u && Array.isArray(u.lista) ? u.lista : null; } catch (e) { jurnal("ingust urmarire", e.message); }   // v101.39 (I-480)
     // revizia 01.10: 0 monede (server oprit, fara clasament) = esec -> reincearca in 30 min, nu peste 6 h
     const r = await turaIngustModul({ urmarire: urm, clasament: cl && cl.clasament, Idei, GridProba, GridCalcul, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       cere: (simbol, end) => cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")), trimite });
