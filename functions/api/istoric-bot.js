@@ -31,7 +31,7 @@ async function citesteConfig(env){try{return JSON.parse(await env.ISTORIC.get("c
 const faraKv=()=>json({error:"ISTORIC_DOAR_ACASA",detail:"Istoricul de pe server merge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat)."},503);
 
 export async function onRequestGet({request,env}){
-  const auth=await requireApiAuth(request,env,"istoric-read",300);if(!auth.ok)return authErrorResponse(auth,H);
+  const auth=await requireApiAuth(request,env,"istoric-read",300,1200);if(!auth.ok)return authErrorResponse(auth,H);
   if(!env.ISTORIC?.get)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action")||"citeste";
   if(action==="config")return json({config:await citesteConfig(env)});

@@ -60,7 +60,7 @@ var Consiliu = (function () {
     // 1) componentele semaforului (IEȘI / ATENȚIE)
     (Array.isArray(sm.componente) ? sm.componente : []).forEach(function (k) {
       if (!k || (k.nivel !== "iesi" && k.nivel !== "atentie")) return;
-      var m = { cod: k.cod, nivel: k.nivel, c: k.nivel === "iesi" ? "r" : "g", titlu: mare(k.motiv), text: "", faCe: k.faCe || "", scurt: mic(k.motiv) };
+      var m = { cod: k.cod, nivel: k.nivel, c: k.nivel === "iesi" ? "r" : "g", titlu: mare(k.motiv), text: "", faCe: k.faCe || "", faCeSlab: k.faCeSlab || "", scurt: mic(k.motiv) };
       // „mută gridul” si sfatul „Până la marginea de jos” spun acelasi lucru: un singur motiv, cu cifrele sfatului
       // revizia 01.10: sfatul „margine” e mereu despre marginea de JOS - nu se lipeste peste „mută gridul” de la marginea de sus (short)
       if (k.cod === "muta" && k.parte !== "sus" && sfCod("margine")) { var s = sfCod("margine"); m.cod = "margine"; m.titlu = titluMargine(s.titlu); m.text = s.text; m.faCe = s.faCe || m.faCe; m.extra = k.motiv; folosite.margine = 1; }
@@ -118,7 +118,8 @@ var Consiliu = (function () {
     var titlu = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + avert[1].scurt : avert.length === 1 ? mare(avert[0].scurt) : mare(sm.motiv);
 
     // ce as face eu: actiunea motivului de sus; la stopul peste plan pe care o zi obisnuita l-ar atinge des -> las stopul, ajustez planul
-    var sus = avert[0] || null, faCe = sus ? sus.faCe : (sm.faCe || "");
+    // revizia 01.10 (I2): actiunea primului motiv care ARE una (lichidarea care se indeparteaza n-are) - altfel textul linistitor al celui de sus
+    var sus = avert[0] || null, cuFace = avert.filter(function (m) { return m.faCe; })[0] || null, faCe = cuFace ? cuFace.faCe : sus ? (sus.faCeSlab || sus.faCe) : (sm.faCe || "");
     var st = cand.filter(function (m) { return m.cod === "stop"; })[0], cf = st && st.cifre;
     if (sus && sus.cod === "stop" && cf && nr(cf.frecventa) >= 0.5 && nr(cf.laOpritor) !== null && nr(x.opritor) !== null) {
       faCe = "Aș lăsa stopul la " + fp(x.opritor) + " și aș trece planul la −" + Math.round(Math.abs(nr(cf.laOpritor))) + " USDT: stopul planului" + (nr(cf.pretPropus) !== null ? " (" + fp(cf.pretPropus) + ")" : "") +

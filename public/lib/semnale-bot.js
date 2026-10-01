@@ -289,9 +289,12 @@ var SemnaleBot = (function () {
     else if (dist !== null && Math.abs(dist) < 15) {
       // v100.60 (el, 01.10: „botul e pe creștere de minute bune și uite ce spune”): directia distantei fata de acum ~o ora (x.distInainte).
       // Se indeparteaza (+0,5 puncte) -> spus pe fata, nimic de facut acum; se apropie -> „s-a apropiat”; fara istoric -> „e la”
-      var dIn = nr(x.distInainte), dv = dIn !== null ? Math.abs(dist) - Math.abs(dIn) : null, dep = dv !== null && dv >= 0.5, apr = dv !== null && dv <= -0.5;
+      // revizia 01.10: cu semn - o distanta negativa acum o ora (lichidarea depasita) nu se compara (nu „era 13 %”)
+      var dIn = nr(x.distInainte), dv = dIn !== null && dIn >= 0 ? dist - dIn : null, dep = dv !== null && dv >= 0.5, apr = dv !== null && dv <= -0.5;
       c.push({ nivel: "atentie", cod: "lichidare", motiv: (apr ? "lichidarea s-a apropiat la " : "lichidarea e la ") + Math.abs(dist).toFixed(1) + "%" + (dep ? " și se îndepărtează (era " + Math.abs(dIn).toFixed(1) + "% acum o oră)" : apr ? " (era " + Math.abs(dIn).toFixed(1) + "% acum o oră)" : ""),
-        faCe: dep ? "Prețul se îndepărtează de lichidare: nimic de făcut acum; doar n-aș adăuga poziție până trece de 15%." : "N-aș mai lăsa poziția să crească; aș pregăti marja (vezi „Dacă adaug marjă”)." });
+        // revizia 01.10 (I2): cand se indeparteaza nu are actiune proprie - „Ce aș face eu” vine de la urmatorul motiv (ex. pretul sub grid);
+        // textul linistitor (faCeSlab) doar cand nu exista altul
+        faCe: dep ? "" : "N-aș mai lăsa poziția să crească; aș pregăti marja (vezi „Dacă adaug marjă”).", faCeSlab: dep ? "Prețul se îndepărtează de lichidare: nimic de făcut acum; doar n-aș adăuga poziție până trece de 15%." : "" });
     }
     var pl = x.plan;
     if (pl && Array.isArray(pl.atins)) {

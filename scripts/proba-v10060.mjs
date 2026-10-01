@@ -21,7 +21,7 @@ await test("semaforul: distanta CRESTE (pretul se indeparteaza) -> „se îndep�
   const k = lich(SB.semafor({ bot: { distantaLichidarePct: 12.41, directie: "long" }, distInainte: 11.18 }));
   are(k, "componenta lichidare"); assert.equal(k.nivel, "atentie");
   assert.ok(!/s-a apropiat/.test(k.motiv), k.motiv); assert.match(k.motiv, /se îndepărtează/); assert.match(k.motiv, /11[.,]2/);
-  assert.match(k.faCe, /nimic de făcut acum/); assert.ok(!/N-aș mai lăsa poziția să crească/.test(k.faCe));
+  assert.match(k.faCeSlab, /nimic de făcut acum/); assert.ok(!/N-aș mai lăsa poziția să crească/.test(k.faCe + k.faCeSlab));   // revizia: textul linistitor e „slab”
 });
 await test("semaforul: distanta SCADE -> „s-a apropiat” (cu cat era) si sfatul vechi; fara istoric -> „lichidarea e la”", () => {
   const a = lich(SB.semafor({ bot: { distantaLichidarePct: 12.4, directie: "long" }, distInainte: 13.6 }));
@@ -50,8 +50,8 @@ await test("colectorul si pagina dau semaforului distanta de acum o ora", () => 
 await test("limita: colectorul (antetul lui, DUPA token valid) are galeata lui - pagina nu mai primeste RATE_LIMITED din cauza lui; fara token antetul nu ajuta", async () => {
   const { requireApiAuth } = await import(pathToFileURL(path.join(RAD, "functions", "_shared", "auth.js")).href);
   const env = { APP_API_TOKEN: "t" }, cer = (cl, tok) => new Request("http://127.0.0.1:8788/api/istoric-bot?action=x", { headers: { authorization: "Bearer " + (tok || "t"), "x-forwarded-for": "10.9.9.9", ...(cl ? { "x-radar-client": "colector" } : {}) } });
-  let ok = 0; for (let i = 0; i < 300; i++) if ((await requireApiAuth(cer(true), env, "proba-v10060", 120)).ok) ok++;
-  assert.equal(ok, 300, "colectorul: 300 de citiri intr-un minut trec (galeata lui e de 4x)");
+  let ok = 0; for (let i = 0; i < 300; i++) if ((await requireApiAuth(cer(true), env, "proba-v10060", 120, 480)).ok) ok++;
+  assert.equal(ok, 300, "colectorul: 300 de citiri intr-un minut trec (galeata lui, unde ruta o cere)");
   assert.equal((await requireApiAuth(cer(false), env, "proba-v10060", 120)).ok, true, "pagina, dupa 300 de cereri ale colectorului: tot trece");
   const r = await requireApiAuth(cer(true, "gresit"), env, "proba-v10060", 120); assert.equal(r.ok, false, "fara token valid antetul nu deschide nimic");
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /"x-radar-client": "colector"/);
@@ -59,11 +59,44 @@ await test("limita: colectorul (antetul lui, DUPA token valid) are galeata lui -
 
 await test("limita paginii la citire: 300/min (T212 citeste ~45 la o deschidere - PC + telefon in acelasi minut treceau de 120)", async () => {
   const src = fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8");
-  assert.ok(src.includes('requireApiAuth(request,env,"istoric-read",300)'), "istoric-read 300");
+  assert.ok(src.includes('requireApiAuth(request,env,"istoric-read",300,'), "istoric-read 300");
   const { requireApiAuth } = await import(pathToFileURL(path.join(RAD, "functions", "_shared", "auth.js")).href);
   const env = { APP_API_TOKEN: "t" }, cer = () => new Request("http://127.0.0.1:8788/api/istoric-bot?action=x", { headers: { authorization: "Bearer t", "x-forwarded-for": "10.8.8.8" } });
   let ok = 0; for (let i = 0; i < 250; i++) if ((await requireApiAuth(cer(), env, "proba-v10060-pagina", 300)).ok) ok++;
   assert.equal(ok, 250);
+});
+
+// ---- revizia Opus 01.10 (v100.60) ----
+await test("I1: distanta lipsa (pret mort, Pionex null) NU intra in istoric ca 0 % - altfel „se îndepărtează (era 0.0%)” linistea fals", () => {
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.ok(col.includes('typeof b.distantaLichidarePct === "number" && Number.isFinite(b.distantaLichidarePct)'), "verificare null-sigura");
+  assert.ok(!col.includes("st._distIst = (st._distIst || [])"), "vechea notare (Number(null) = 0) a disparut");
+});
+await test("I2: cand lichidarea se indeparteaza, „Ce aș face eu” vine de la urmatorul motiv (ex. pretul sub grid), nu „nimic de făcut”", () => {
+  const sm = SB.semafor({ bot: { distantaLichidarePct: 12.4, directie: "long" }, distInainte: 11.2 }), k = lich(sm);
+  assert.equal(k.faCe, "", "fara actiune proprie cand se indeparteaza");
+  sm.componente.push({ cod: "muta", nivel: "atentie", motiv: "prețul e sub grid", faCe: "Aș opri botul și aș face unul nou din fișă." });
+  const c = CS.alcatuieste({ sm, sfaturi: [] });
+  assert.match(c.faCe, /opri botul/, c.faCe); assert.match(c.titlu, /se îndepărtează/);
+  const singur = CS.alcatuieste({ sm: SB.semafor({ bot: { distantaLichidarePct: 12.4, directie: "long" }, distInainte: 11.2 }), sfaturi: [] });
+  assert.match(singur.faCe, /nimic de făcut/i, "singur: tot spune ca n-ai nimic de facut");
+});
+await test("I3: galeata colectorului e x4 DOAR unde ruta o cere (citirile istoricului), in rest x1 - Pionex/T212/Binance raman franate", async () => {
+  const { requireApiAuth } = await import(pathToFileURL(path.join(RAD, "functions", "_shared", "auth.js")).href);
+  const env = { APP_API_TOKEN: "t" }, cer = () => new Request("http://127.0.0.1:8788/api/x", { headers: { authorization: "Bearer t", "x-forwarded-for": "10.7.7.7", "x-radar-client": "colector" } });
+  let ok = 0; for (let i = 0; i < 40; i++) if ((await requireApiAuth(cer(), env, "proba-v10060-botorders", 30)).ok) ok++;
+  assert.equal(ok, 30, "fara limita proprie a colectorului: tot 30");
+  ok = 0; for (let i = 0; i < 300; i++) if ((await requireApiAuth(cer(), env, "proba-v10060-istoric", 300, 1200)).ok) ok++;
+  assert.equal(ok, 300);
+  assert.ok(fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8").includes('requireApiAuth(request,env,"istoric-read",300,1200)'));
+});
+await test("mici: semnul distantei (lichidarea depasita acum o ora nu e „era 13 %”); istoricul notat si cand planul pica; un punct la 5 min", () => {
+  const k = lich(SB.semafor({ bot: { distantaLichidarePct: 12, directie: "long" }, distInainte: -13 }));
+  assert.ok(!/era 13/.test(k.motiv), k.motiv);
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  const iIst = col.indexOf("st0._distIst"), iPlan = col.indexOf('const pl = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id));');
+  assert.ok(iIst > 0 && iIst < iPlan, "istoricul inaintea citirii planului");
+  assert.ok(col.includes("4.5 * 60000"), "un punct la ~5 min");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);

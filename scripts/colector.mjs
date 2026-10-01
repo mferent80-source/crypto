@@ -390,12 +390,15 @@ async function tura() {
     } catch (e) { jurnal("istoric", b.id, e.status || "", e.message); }
     if (b.activ === false && !(stareAlerte[b.id] && stareAlerte[b.id].activ && stareAlerte[b.id].activ.nivel === "ok")) continue;
     const ctx = Object.assign({}, await directiaBotului(b));
+    // v101.40: istoricul distantei pana la lichidare (3 h, un punct la ~5 min), ca semaforul sa stie daca pretul se apropie sau se indeparteaza.
+    // Revizia 01.10: inaintea citirii planului (o eroare acolo nu lasa gauri) si null-sigur (Number(null) = 0 dadea „era 0.0%”)
+    { const st0 = stareAlerte[b.id] || (stareAlerte[b.id] = {}), dl = typeof b.distantaLichidarePct === "number" && Number.isFinite(b.distantaLichidarePct) ? b.distantaLichidarePct : null;
+      const ist = (st0._distIst || []).filter((e) => acum - e.t < 3 * 3600000), u = ist[ist.length - 1];
+      st0._distIst = dl !== null && (!u || acum - u.t >= 4.5 * 60000) ? ist.concat([{ t: acum, distantaLichidarePct: dl }]) : ist; }
     // v81: planul lui pentru bot (tinut pe server) + de cand e pretul in afara gridului
     try {
       const pl = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id));
       const st = stareAlerte[b.id] || (stareAlerte[b.id] = {});
-      // v101.40: istoricul distantei pana la lichidare (3 h), ca semaforul sa stie daca pretul se apropie sau se indeparteaza
-      if (Number.isFinite(Number(b.distantaLichidarePct))) st._distIst = (st._distIst || []).filter((e) => acum - e.t < 3 * 3600000).concat([{ t: acum, distantaLichidarePct: Number(b.distantaLichidarePct) }]);
       const p = Number(b.pretCurent), afara = Number.isFinite(p) && b.gridJos != null && b.gridSus != null && (p < Number(b.gridJos) || p > Number(b.gridSus));
       st._afaraDe = afara ? (st._afaraDe || acum) : null;
       if (pl && pl.plan && !pl.plan.proba) {   // v88: nu si planul unei probe

@@ -38,7 +38,7 @@ export async function rateLimit(request,env,scope='api',limit=90,windowSec=60){
 const AUTH_FAIL_MAX=10,AUTH_FAIL_FEREASTRA=60;
 function tokenDin(request){const h=request.headers.get('authorization')||'';return h.startsWith('Bearer ')?h.slice(7).trim():request.headers.get('x-app-token')||''}
 function egalInTimpConstant(a,b){const x=enc.encode(String(a)),y=enc.encode(String(b)),n=Math.max(x.length,y.length);let d=x.length^y.length;for(let i=0;i<n;i++)d|=(x[i]??0)^(y[i]??0);return d===0}
-export async function requireApiAuth(request,env,scope='api',limit=90){
+export async function requireApiAuth(request,env,scope='api',limit=90,colectorLimit=0){
   const expected=String(env.APP_API_TOKEN||'');if(!expected)return {ok:false,status:503,error:'APP_API_TOKEN_NOT_CONFIGURED'};
   const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/AUTH_FAIL_FEREASTRA),key=`auth-fail:${ipOf(request)}:${bucket}`,retryAfter=(bucket+1)*AUTH_FAIL_FEREASTRA-now;
   const blocat={ok:false,status:429,error:'AUTH_RATE_LIMITED',retryAfter};
@@ -51,8 +51,9 @@ export async function requireApiAuth(request,env,scope='api',limit=90){
   if(kv){const m=Number(await kv.get(key)||0);if(m>=AUTH_FAIL_MAX)return blocat;if(token&&!bun)await kv.put(key,String(m+1),{expirationTtl:AUTH_FAIL_FEREASTRA+15})}
   if(!token)return {ok:false,status:401,error:'AUTH_REQUIRED'};
   if(!bun)return {ok:false,status:401,error:'AUTH_INVALID'};
-  // v100.60 (el, 01.10): colectorul (antetul lui, verificat DUPA token) are galeata lui, de 4x - pagina si colectorul nu-si mai fura limita
+  // v100.60 (el, 01.10): colectorul (antetul lui, verificat DUPA token) are galeata lui - pagina si colectorul nu-si mai fura limita.
+  // Revizia 01.10 (I3): mai mare DOAR unde ruta o cere (colectorLimit, ex. citirile istoricului); Pionex/T212/Binance raman cu frana lor
   const col=request.headers.get('x-radar-client')==='colector';
-  const rl=await rateLimit(request,env,col?scope+':colector':scope,col?limit*4:limit,60);if(!rl.ok)return {ok:false,status:429,error:'RATE_LIMITED',retryAfter:rl.retryAfter};return {ok:true}
+  const rl=await rateLimit(request,env,col?scope+':colector':scope,col&&colectorLimit>0?colectorLimit:limit,60);if(!rl.ok)return {ok:false,status:429,error:'RATE_LIMITED',retryAfter:rl.retryAfter};return {ok:true}
 }
 export function authErrorResponse(result,headers={'content-type':'application/json','cache-control':'no-store'}){const h={...headers};if(result.retryAfter)h['retry-after']=String(result.retryAfter);return new Response(JSON.stringify({error:result.error,authenticated:false}),{status:result.status||401,headers:h})}
