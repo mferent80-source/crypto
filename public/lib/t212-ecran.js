@@ -153,7 +153,7 @@ function t212ConsKvPt(tk) {
 }
 function t212DecText(tk, c) {
   var k = Consiliu.cheieDecizie(c), e = (t212ConsKvPt(tk).decizii || []).filter(function (x) { return x.cheie === k; }).pop();
-  return e ? "notat: " + (e.urmat ? "am făcut" : "n-am făcut") + " (" + new Date(e.t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ")" + (e.r != null ? " · după 5 zile de bursă: " + (e.r >= 0 ? "+" : "−") + Math.abs(e.r).toFixed(2) + (e.fx ? " lei" : " $") : "") : "ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers";
+  return e ? "notat: " + (e.urmat ? "am făcut" : "n-am făcut") + " (" + new Date(e.t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ")" + (e.r != null ? " · în 5 zile de bursă de la decizie, acțiunea a mers " + (e.r >= 0 ? "+" : "−") + Math.abs(e.r).toFixed(2) + (e.fx ? " lei" : " $") + " pe poziție (pe preț, și dacă ai vândut)" : "") : "ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers";
 }
 async function t212Decizie(tk, da) {
   var p = (t212.pozPregatite || []).filter(function (x) { return x.ticker === tk; })[0], c = p && p.cons; if (!c) return;

@@ -129,5 +129,41 @@ await test("noaptea (fara poze) colectorul bate la paznic la 20 de minute - sub 
   assert.match(col, /cad === null/, "colectorul sare poza cand ritmul e null");
 });
 
+// ---- revizia finala pachetul 3 actiuni (Opus, 01.10): I1–I5 + re-gradate („eCHO”, faCe contra verdictului, sf-istoric dublu) ----
+await test("I1: activ din CONDITII (nu din cheile deja trimise) - stopul planului atins acum e „activ” chiar inainte ca tura planurilor sa trimita; stopul care urca atins fara plan = sltp-sl", () => {
+  are(CS.activPozitie, "Consiliu.activPozitie");
+  const a = CS.activPozitie({ plan: { stop: 18.5 }, pret: 18, maxDupaCumparare: 22 }, { stopAtins: false });
+  assert.equal(a["t212-stop"], "critic");
+  const b = CS.activPozitie({ plan: null, pret: 18 }, { stopAtins: true }); assert.equal(b["sltp-sl"], "critic");
+  const T = { nivel: "tine", eticheta: "🟢 Ține", titlu: "x", motive: [] }, I = { nivel: "iesi", eticheta: "🔴 Ieși", titlu: "Stopul care urcă e atins", faCe: "ies", motive: [{ cod: "stop-urcator", c: "r", titlu: "x" }] };
+  let r = CS.schimbare(CS.schimbare(null, T, 0, "X").stare, I, 1, "X", { activ: b }); r = CS.schimbare(r.stare, I, 2, "X", { activ: b });
+  assert.ok(r.alerta && r.alerta.doarRadar === true, "stopul care urca are deja alerta SL/TP");
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /Consiliu\.activPozitie\(/);
+});
+await test("I2: socoteala numara o data pe (ticker, zi de bursa, cod) - pâlpâirile dintr-o zi nu fac 20 de cazuri; colectorul noteaza doar verdictul confirmat", () => {
+  const Z = 864e5, bare = Array.from({ length: 20 }, (_, i) => ({ t: i * Z, o: 100 - i, h: 101 - i, l: 99 - i, c: 100 - i }));
+  let j = [];
+  for (let k = 0; k < 20; k++) j = CS.noteazaActiune(j, { nivel: k % 2 ? "atentie" : "tine", motive: [{ cod: k % 2 ? "stop-maine" : "trend-sus" }] }, 100, 1, null, k * 60000);
+  j = CS.judecaActiune(j, bare, 19 * Z);
+  const s = CS.socotealaActiuni([j]); assert.equal(s["stop-maine"].judecate, 1, JSON.stringify(s["stop-maine"])); assert.equal(s["trend-sus"].judecate, 1);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /noteazaActiune\(j0, ch\.stare\.acum/, "doar verdictul confirmat");
+});
+await test("I3: deciziile pe actiuni NU intra in socoteala botilor; textul spune cat a mers actiunea, pe pret", () => {
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /if \(!\/\^t212-\/\.test\(id\)\) toate\.push\(\.\.\.nou\)/);
+  assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), /acțiunea a mers/);
+});
+await test("I4 + I5: colectorul da Consilierului rezultatele in N zile si evenimentele (o singura voce cu pagina) si pastreaza ultimul plan cunoscut la o eroare", () => {
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  assert.match(col, /rezultateZile: /); assert.match(col, /planUltim\[x\.ticker\]/);
+});
+await test("re-gradate: „ECHO” ramane ECHO (nu eCHO); faCe cu majuscula si niciodata „o las sa mearga” sub ATENTIE; sf-istoric o singura data", () => {
+  const sem = { nivel: "atentie", motive: ["x"], ceAsFace: "👉 Ce aș face eu: o las să meargă cu planul pus.", componente: [] };
+  const sf = [{ nivel: "g", sursa: "istoric", titlu: "ECHO e în a 7-a zi, pe minus", text: "", ceAsFace: null }, { nivel: "g", sursa: "istoric", titlu: "Istoricul tău pe ECHO: 2 trade-uri", text: "", ceAsFace: null }];
+  const c = CS.alcatuiesteActiune({ sem, sfaturi: sf, pret: 10, pretMediu: 11, qty: 1, simbol: "ECHO" });
+  assert.ok(!/eCHO/.test(c.titlu), c.titlu); assert.ok(/^[A-ZĂÂÎȘȚ]/.test(c.faCe), c.faCe); assert.ok(!/las să meargă/.test(c.faCe), c.faCe);
+  assert.equal(c.motive.filter((m) => m.cod === "sf-istoric").length, 1);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
