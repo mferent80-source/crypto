@@ -79,5 +79,19 @@ await test("rezultatul cumpararii (r): primele 5 zile DUPA ziua cumpararii; tint
   assert.equal(PR.rezultatCumparare(b.slice(0, 4), 0.5 * Z, 95, 105), null, "sub 5 zile dupa");
 });
 
+// ---- pasul 3: randurile pentru pagina T212 ----
+await test("randActiune: stopul maine (cu saritura alaturi), tinta inaintea stopului in 5 zile (calibrata), saritura + rezultatele in N zile", () => {
+  are(PR.randActiune, "Probabilitati.randActiune");
+  const b = zi(400, (i) => 100 * (1 + 0.03 * Math.sin(i / 5))), pret = b[399].c;
+  const rez = PR.pentruActiune(b, { pret, stop: pret * 0.97, tinta: pret * 1.05, acum: b[399].t + 864e5 });
+  const r = PR.randActiune(rez, {}, { rezultateZile: 3, evenimente: { mediana: 0.06, max: 0.18 } });
+  assert.ok(r.length === 4, JSON.stringify(r.map((x) => x.titlu)));
+  assert.match(r[0].titlu, /stopul.*mâine/i); assert.match(r[0].text, /din care prin săritură/); assert.match(r[1].text, /necalibrat încă/);
+  assert.match(r[3].titlu, /Rezultatele vin în 3 zile/); assert.match(r[3].text, /18%/);
+  assert.equal(PR.randActiune(rez, {}, { rezultateZile: 12 }).length, 3, "rezultatele departe: fara rand");
+  assert.match(PR.randActiune(PR.pentruActiune(b, { pret, stop: pret * 1.01, tinta: pret * 1.05, acum: b[399].t + 864e5 }), {}, {})[0].titlu, /deja depășit/);
+  assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), /Probabilitati\.randActiune\(/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

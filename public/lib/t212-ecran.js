@@ -119,6 +119,21 @@ function t212TrailAles() {
   var v = jj && t212.cf ? ActiuniSemnale.alegeTrail(jj.p.inchise, t212.cf) : { cheie: "u15", motiv: "" };
   t212TrailMemo = { cf: t212.cf, n: n, v: v }; return v;
 }
+// v100.53 (actiunile T212, pachetul 2): probabilitatile pe pozitie (barele zilnice) + calibrarea pe cumpararile tale; memo pe ticker
+var t212ProbMemo = {}, t212CalMemo = { cf: null, n: -1, v: null };
+function t212Calibrare() {
+  var jj = t212Jurnal(), n = jj ? jj.p.inchise.length : 0;
+  if (t212CalMemo.cf === t212.cf && t212CalMemo.n === n && t212CalMemo.v) return t212CalMemo.v;
+  var v = jj && t212.cf && typeof Probabilitati !== "undefined" ? Probabilitati.calibrareActiuni(jj.p.inchise, t212.cf) : {};
+  t212CalMemo = { cf: t212.cf, n: n, v: v }; return v;
+}
+function t212ProbPt(p, b, n) {
+  if (!n || typeof Probabilitati === "undefined" || !b || b.length < 120) return null;
+  var tinta = p.plan && p.plan.tinta > 0 ? p.plan.tinta : n.tintaPozitie, cheie = p.ticker + "|" + b[b.length - 1].t + "|" + Math.round(n.stopPozitie * 100) + "|" + Math.round(tinta * 100);
+  if (!t212ProbMemo[p.ticker] || t212ProbMemo[p.ticker].cheie !== cheie) t212ProbMemo[p.ticker] = { cheie: cheie, v: Probabilitati.pentruActiune(b, { pret: p.pret, stop: n.stopPozitie, tinta: tinta, acum: Date.now() }) };
+  var r = t212.rezultate[p.ticker], zc = r && r.data ? Math.ceil((Date.parse(r.data + "T12:00:00Z") - Date.now()) / 86400000) : null, pf = t212ProfilPt(p.ticker);
+  return Probabilitati.randActiune(t212ProbMemo[p.ticker].v, t212Calibrare(), { rezultateZile: zc !== null && zc >= 0 ? Math.round(zc * 5 / 7) : null, evenimente: pf && pf.evenimente });
+}
 function t212PregatesteP(x, pond) {
   var p = t212Pozitie(x), b = t212.bare[p.ticker] || [];
   p.st = ActiuniSemnale.stare(b, p.pret); p.sem = ActiuniSemnale.semafor(p, p.st);
@@ -128,6 +143,7 @@ function t212PregatesteP(x, pond) {
   var n = b.length ? ActiuniSemnale.niveluri(b, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: p.maxDupaCumparare, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail }) : null;
   p.niv = n && n.nivel === "ok" ? n : null; if (p.niv) t212.niveluri[p.ticker] = p.niv;
   p.nivMotiv = n && n.nivel !== "ok" ? n.motiv : null;
+  p.prob = t212ProbPt(p, b, p.niv);   // v100.53
   p.cost = t212CostLei(p.ticker, p.qty); p.pctLei = p.cost ? p.ppl / p.cost : null; p.fxPpl = x.fxPpl;
   p.pond = pond[p.ticker] || null;
   // v89: consilierul - istoricul LUI, cifrele pozitiei, piata, stirile
@@ -311,6 +327,7 @@ function t212RandPozitie(p) {
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="t212PlanSalveaza(\'' + tk + '\')">Salvează planul</button>'
     + (p.plan ? '<button type="button" class="t212BtnLinie" data-action-click="t212PlanSterge(\'' + tk + '\')">Șterge</button>' : '') + '</div>'
     + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212Usd(n.tintaPozitie) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
+      + (p.prob && p.prob.length && typeof tbProbRandHtml === "function" ? '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · cât de des s-a întâmplat pe acțiunea asta, în zile ca acum — nu o prognoză</p>' + p.prob.map(function (x) { return x.p === null ? '<p class="tbSub' + (x.avertizare ? ' tbWarn' : '') + '"><b>' + escapeHtml(x.titlu) + '</b>' + (x.text ? ' — ' + escapeHtml(x.text) : '') + '</p>' : tbProbRandHtml(x); }).join("") + '</div>' : '')
       + (n.sursaTrail ? '<p class="tbSub">Stopul care urcă: ' + escapeHtml(n.sursaTrail) + ' (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (vezi Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
       + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
       : '<p class="tbSub">' + escapeHtml(p.nivMotiv || "Prețurile calculate apar după ce vin prețurile zilnice.") + '</p>') + '</div>';

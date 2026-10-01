@@ -118,6 +118,34 @@ var Probabilitati = (function () {
     });
     return out;
   }
+  // v100.53: randurile pentru pagina T212 (forma tbProbRandHtml: {titlu, p, ic, text, avertizare}); o = {rezultateZile, evenimente}
+  var ET_ACT = { sus: "trend în sus", lateral: "lateral", jos: "trend în jos" };
+  function etActiune(s) { if (!s) return ""; var p = String(s).split("-"); return (ET_ACT[p[0]] || p[0]) + (p[1] === "miscare" ? ", în mișcare" : ", liniștit"); }
+  function randActiune(rez, cal, o) {
+    o = o || {}; var out = [], PCt = function (v) { return Math.round(v * 100) + "%"; };
+    if (!rez) return out;
+    if (rez.motiv && !rez.stop1) return [{ titlu: "Probabilitățile stopului: " + rez.motiv, p: null, ic: null, text: "" }];
+    var unde = function (x) { return x.nivel === "exact" ? "zile ca acum (" + etActiune(x.stare) + ")" : x.nivel === "regim" ? "zile cu același trend (" + (ET_ACT[x.stare] || x.stare) + "; cu mișcarea de acum: prea puține)" : "din toate zilele (ca acum: prea puține)"; };
+    var ic = function (x) { return x && x.ic ? " · IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%" : ""; };
+    var putine = function (x) { return x.nIndep < 10 ? " · puține cazuri independente — un semn, nu o regulă" : ""; };
+    var a = rez.stop1, s = rez.sare1, relS = rez.niv && rez.niv.relS;
+    if (a && s) {
+      var pt = a.p + s.p, ki = a.k + s.k;
+      out.push({ titlu: "Atinge stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: ki + " din " + a.n + " " + unde(a) + " · din care prin săritură la deschidere: " + PCt(s.p) + putine(a), avertizare: pt >= 0.25 });
+    }
+    if (rez.cursa5 && rez.cursa5.tinta) {
+      var x = rez.cursa5.tinta, c = corecteaza(x.p, "act-cursa5", cal), icc = c.calibrat ? G.wilson(c.k, c.n) : x.ic;
+      out.push({ titlu: "În 5 zile de bursă: ținta înaintea stopului", p: c.p, ic: icc, text: x.k + " din " + x.n + " " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + c.text, avertizare: c.avertizare });
+    }
+    if (s) out.push({ titlu: "Deschiderea sare peste stop", p: s.p, ic: s.ic, text: s.k + " din " + s.n + " " + unde(s) + " — stopul se execută atunci sub prețul lui" + ic(s), avertizare: s.p >= 0.05 });
+    var z = nr(o.rezultateZile);
+    if (z !== null && z >= 0 && z <= 5) {
+      var ev = o.evenimente || {};
+      out.push({ titlu: "Rezultatele vin în " + z + (z === 1 ? " zi" : " zile"), p: null, ic: null, avertizare: true,
+        text: (nr(ev.max) !== null ? "Săriturile mari ale acțiunii (de obicei la rezultate): ~" + PCt(nr(ev.mediana) || 0) + ", cea mai mare " + PCt(ev.max) + ". " : "") + "Cifrele de mai sus NU cuprind zilele de rezultate — atunci stopul poate fi sărit." });
+    }
+    return out;
+  }
   function pentruBot(bare, o) {
     o = o || {};
     var b = pregateste(bare, o.acum), p = nr(o.pret), dir = String(o.dir || "").toLowerCase();
@@ -234,5 +262,5 @@ var Probabilitati = (function () {
     var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
     return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
   }
-  return { rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
+  return { randActiune: randActiune, rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();
