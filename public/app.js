@@ -4988,7 +4988,7 @@ function grCodTV(st,info,extra){
 }
 // v100.48: langa codul fisei, cand fisa NU zice PORNESTE - codul e ca sa vezi liniile (GRID-FISA v2.2 primeste verdictul si spune la fel)
 function grTvNotaVerdict(f){var n=f&&f.verdict&&f.verdict.nivel;if(!n||n==="porneste")return "";var t=GR_NIVEL[n]?GR_NIVEL[n][0]:n;
-  return '<p class="tbSub grTvNota">⚠ Fișa zice '+escapeHtml(t)+': codul e ca să vezi liniile pe grafic. GRID-FISA v2.2 primește verdictul fișei și spune la fel; v2.0/v2.1 nu-l știu și pot zice „poți porni”.</p>'}
+  return '<p class="tbSub grTvNota">⚠ Fișa zice '+escapeHtml(t)+': codul e ca să vezi liniile pe grafic. GRID-FISA v2.2 primește verdictul fișei și spune la fel (v2.0 și v2.1 refuză codul de 18 câmpuri: lipește întâi v2.2 în TradingView).</p>'}
 var GR_DIR={long:"📈 LONG",neutru:"↔️ NEUTRU",short:"📉 SHORT"},GR_DIR_PIONEX={long:"Long",neutru:"Neutral",short:"Short"};
 var GR_NIVEL={porneste:["🟢 PORNEȘTE","good"],asteapta:["🟡 AȘTEAPTĂ","tbWarn"],nu:["🔴 NU PORNI","bad"],"fara-date":["⚪ FĂRĂ DATE","mutedInfo"]};
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
@@ -6323,7 +6323,7 @@ function tbDeseneazaTvCod(){
   if(v&&v.sig===c.sig){el.hidden=true;el.innerHTML="";return}
   var P=function(x){return tbPretScurt(x)};
   var titlu=v&&v.jos?"🔁 Ai schimbat gridul: "+P(v.jos)+" – "+P(v.sus)+" ("+v.grile+" grile) → "+P(c.jos)+" – "+P(c.sus)+" ("+c.grile+" grile)":"📺 Gridul de acum, pentru TradingView";
-  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.2 → „Codul din fișă” (cu tipul gridului, planul tău, vârsta lichidării și marginea din profilul monedei; v2.0 desenează o linie în plus). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
+  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.2 → „Codul din fișă” (cu tipul gridului, planul tău, vârsta lichidării și marginea din profilul monedei; v2.0 și v2.1 refuză codul de 18 câmpuri — lipește întâi v2.2). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
     +'<div class="tbGnBtn"><button type="button" class="actionGhost" value="'+escapeHtml(c.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul</button><button type="button" class="actionGhost" data-action-click="tbTvAmPus()">L-am pus</button></div>';
   el.hidden=false;
 }

@@ -19,7 +19,7 @@ console.log("\nV100.48 · Codul pentru GRID-FISA v2.2 (verdictul fisei, varsta l
 
 const bot = (o) => ({ id: "1", directie: "long", gridJos: 0.3841, gridSus: 0.4331, levier: 5, investit: 49.67, opritorPierdereActiv: true, opritorPierdere: 0.38, lichidareJos: 0.32154, lichidareSus: null, brut: { buOrderData: { row: 35, gridType: "geometric" } }, ...o });
 
-await test("botul: fara „extra” codul ramane ca inainte (v2.0/v2.1 il citesc la fel)", () => {
+await test("botul: fara „extra” codul ramane ca inainte (14 campuri, formatul v2.0/v2.1)", () => {
   const c = TE.codTVBot(bot(), { minus: 7.5, plus: 2.6, afaraOre: 12 });
   assert.equal(c.cod.split(";").length, 14); assert.equal(c.cod.split(";")[3], "35");
 });
@@ -40,6 +40,8 @@ await test("pagina: fisa trimite verdictul ei + momentul + marginea; nota langa 
   assert.match(app, /function grCodTV\(st,info,extra\)/); assert.match(app, /grCodTV\(st,i,\{verdict:/);
   assert.match(app, /TabloExtra\.codTVBot\(b,tbPlan\.botId===b\.id\?tbPlan\.plan:null,\{copiatLa:/);
   assert.match(app, /grTvNotaVerdict/); assert.ok(!/GRID-FISA v2\.0 →/.test(app)); assert.match(app, /GRID-FISA v2\.2/);
+  // revizia 01.10: v2.0/v2.1 REFUZA codul de 18 campuri (cer 9-14) - nota nu are voie sa spuna ca „pot zice poți porni”
+  assert.ok(!/v2\.0\/v2\.1 nu-l știu și pot zice/.test(app)); assert.match(app, /v2\.0 și v2\.1 refuză codul de 18 câmpuri/);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);
