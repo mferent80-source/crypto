@@ -98,5 +98,19 @@ await test("trader.md §1 / backtest-expert: sub 10 cazuri independente textul s
   assert.ok(!/un semn, nu o regulă/.test(rr.find((r) => r.cod === "iese-sus-24").text));
 });
 
+await test("server: prob:<bot> si calibrarea se scriu si se citesc; cutii stricate -> 400; prob prea mare -> 413", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.has(k) ? kv.get(k) : null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const rez = { la: 1, stare: "liniste", bare: 4000, niveluri: { jos: 0.38 }, iese: { jos24: { p: 0.3, n: 50, k: 15, nIndep: 8, ic: [0.1, 0.6], orizontOre: 24, conditionat: true, stare: "liniste" } } };
+  let r = await mod.onRequestPost({ request: cer("POST", "action=prob", { bot: "2394", rez }), env }); assert.equal(r.status, 200, await r.clone().text());
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=prob&bot=2394"), env })).json(); assert.deepEqual(g.prob, rez);
+  const cal = { "iese-jos-24": { cutii: [{ n: 1, k: 0 }, { n: 0, k: 0 }, { n: 0, k: 0 }, { n: 25, k: 10 }, { n: 0, k: 0 }] } };
+  r = await mod.onRequestPost({ request: cer("POST", "action=calibrare", { la: 5, cal }), env }); assert.equal(r.status, 200, await r.clone().text());
+  const gc = await (await mod.onRequestGet({ request: cer("GET", "action=calibrare"), env })).json(); assert.deepEqual(gc.calibrare.cal, cal); assert.equal(gc.calibrare.la, 5);
+  r = await mod.onRequestPost({ request: cer("POST", "action=calibrare", { la: 5, cal: { x: { cutii: [{ n: 1, k: 0 }] } } }), env }); assert.equal(r.status, 400);
+  r = await mod.onRequestPost({ request: cer("POST", "action=prob", { bot: "2394", rez: { x: "a".repeat(20000) } }), env }); assert.ok(r.status === 413 || r.status === 400, String(r.status));
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

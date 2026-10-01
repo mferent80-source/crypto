@@ -50,6 +50,8 @@ export async function onRequestGet({request,env}){
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}
   // v100.43 (I-466): increderea fiecarui sfat, adunata de colector pe toti botii
+  if(action==="prob"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("prob:"+bot)||"null")}catch{p=null}return json({bot,prob:p})}
+  if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
   if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
@@ -202,6 +204,19 @@ export async function onRequestPost({request,env}){
     if(p&&p.proba===true)plan.proba=true;
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
     return json({ok:true,plan});
+  }
+  // v100.46 (pachetul 2a): probabilitatile botului (colectorul, o data pe ora) si calibrarea lor
+  if(action==="prob"){
+    const bot=idBot(corp&&corp.bot),rez=corp&&corp.rez;if(!bot||!rez||typeof rez!=="object")return json({error:"Lipseste bot sau rez"},400);
+    const s=JSON.stringify(rez);if(s.length>16384)return json({error:"rez prea mare"},413);
+    await env.ISTORIC.put("prob:"+bot,s);return json({ok:true});
+  }
+  if(action==="calibrare"){
+    const c=corp&&corp.cal;if(!c||typeof c!=="object")return json({error:"Lipseste cal"},400);
+    const out={};for(const k of Object.keys(c).slice(0,40)){const t=String(k).replace(/[^a-z0-9-]/g,"").slice(0,24),x=c[k];
+      if(!t||!x||!Array.isArray(x.cutii)||x.cutii.length!==5||!x.cutii.every(q=>q&&nr(q.n)>=0&&nr(q.k)>=0&&nr(q.k)<=nr(q.n)))return json({error:"cutii nevalide: "+t},400);
+      out[t]={cutii:x.cutii.map(q=>({n:nr(q.n),k:nr(q.k)}))}}
+    await env.ISTORIC.put("calibrare",JSON.stringify({la:nr(corp.la)||Date.now(),cal:out}));return json({ok:true});
   }
   // v100.45 (pachetul 1): profilul monedei (colectorul, noaptea) -> KV profil:<SIMBOL>
   if(action==="profil"){
