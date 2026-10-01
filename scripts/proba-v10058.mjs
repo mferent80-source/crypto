@@ -85,10 +85,23 @@ await test("pagina: rândul ⚡ în idei, blocul „Varianta îngustă” în fi
   assert.equal(GP.varstaIngust({ la: 0 }, 2 * H).vechi, false); assert.match(GP.varstaIngust({ la: 0 }, 2 * H).text, /acum 2 h/);
   assert.equal(GP.varstaIngust({ la: 0 }, 13 * H).vechi, true); assert.match(GP.varstaIngust({ la: 0 }, 13 * H).text, /vechi/);
   const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
-  assert.match(e, /function tbIngustPt\(/); assert.match(e, /GridProba\.rezumatIngust\(/); assert.match(e, /action=ingust&simbol=/);
+  assert.match(e, /function tbIngustPt\(/); assert.match(e, /GridProba\.rezumatIngust\(/); assert.match(e, /action=ingustLista&simboluri=/);
   const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.match(a, /function grIngustHtml\(/); assert.match(a, /h\+=grIngustHtml\(f\)/); assert.match(a, /ingustLocal=GridProba\.ingust\(/);
-  assert.match(a, /Varianta îngustă/); assert.match(a, /închide-l după/i); assert.match(a, /pe 31 de zile — mai puține ferestre/);
+  assert.match(a, /Varianta îngustă/);
+  assert.ok(a.includes('/rămâi/i.test(r.motiv'), "poza: fara „rămâi la gridul lat. Rămâi la setările de mai sus” (dublat)"); assert.match(a, /închide-l după/i); assert.match(a, /pe 31 de zile — mai puține ferestre/);
+});
+
+await test("o singura cerere pentru toate ideile (limita de 120 de citiri/min e comuna cu colectorul): ruta ingustLista + pagina o foloseste", async () => {
+  const { pathToFileURL } = await import("node:url");
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); }, list: async ({ prefix }) => ({ keys: [...kv.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }) } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  await mod.onRequestPost({ request: cer("POST", "action=ingust", { simbol: "A_USDT_PERP", ingust: { propus: false, motiv: "x", la: 1 } }), env });
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=ingustLista&simboluri=A_USDT_PERP,B_USDT_PERP"), env })).json();
+  assert.equal(g.ingust.A_USDT_PERP.motiv, "x"); assert.equal(g.ingust.B_USDT_PERP, null);
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.match(e, /action=ingustLista&simboluri=/); assert.ok(!/action=ingust&simbol=/.test(e), "nu cate o cerere pe moneda");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);

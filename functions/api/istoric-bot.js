@@ -66,6 +66,8 @@ export async function onRequestGet({request,env}){
   if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
+  // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
+  if(action==="ingustLista"){const l=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(simbolKv).filter(Boolean))].slice(0,10),out={};for(const s of l){let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}out[s]=v}return json({ingust:out})}
   if(action==="ingust"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}return json({simbol:s,ingust:v})}   // v100.58
   if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}

@@ -262,6 +262,15 @@ async function scenariu(lat, inal, nume) {
       if (lat < 600) assert.equal(r.subAlta, true, "pe telefon poarta si portofoliul vin SUB pozitii");
     });
 
+    // v100.58 (el, 01.10): gridul ingust al monedelor sugerate - un rand „⚡ grid îngust” sub fiecare idee de bot (din colector)
+    await test(`${nume} · Tabloul: „Pe ce aș porni un bot acum” arata gridul ingust (propus sau de ce nu) sub monedele sugerate`, async () => {
+      await b.ev(`navTo('tabloubot',true)`);
+      await panaCand(b, `/grid îngust/.test((document.getElementById("tbIdei")||{}).innerText||"")`, 45000, "randul gridului ingust in idei");
+      const ti = await b.ev(`document.getElementById("tbIdei").innerText`); FARA_GUNOI(ti);
+      assert.match(ti, /grid îngust: nu —|grid îngust (long|short|neutru)/);
+      await b.ev(`document.getElementById("tbIdei").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, `idei-ingust-${nume}.png`));
+      await b.ev(`openStocksDesk&&0`);
+    });
     await test(`${nume} · consola curata si fara defilare orizontala`, async () => {
       assert.deepEqual(b.exceptii, []); assert.deepEqual(b.consola, []);
       await b.ev(`openStocksDesk()`);

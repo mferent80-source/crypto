@@ -336,23 +336,24 @@ async function t212ListaSalveaza() {
   } catch (x) { toast("Lista nu s-a salvat: " + t212Eroare(x), "bad"); }
 }
 // v90: ideile de boti - candidatii din clasamentul colectorului, cu istoricul tau pe moneda
-// v100.58: gridul ingust al monedelor sugerate (colectorul, la 6 h) - adus o data la 10 min pe moneda
-var tbIngust = {};
-function tbIngustPt(simbol) {
-  var c = tbIngust[simbol];
-  if (!c || (!c.inLucru && Date.now() - c.la > 10 * 60000)) {
-    tbIngust[simbol] = { la: Date.now(), v: c ? c.v : null, inLucru: true };
-    getJSON("/api/istoric-bot?action=ingust&simbol=" + encodeURIComponent(simbol)).then(function (d) { tbIngust[simbol] = { la: Date.now(), v: d && d.ingust || null, inLucru: false }; tbIdeiRender(); })
-      .catch(function () { tbIngust[simbol].inLucru = false; });
-  }
-  return tbIngust[simbol] && tbIngust[simbol].v;
+// v100.58: gridul ingust al monedelor sugerate (colectorul, la 6 h) - TOATE intr-o singura cerere, o data la 10 min
+// (limita de 120 de citiri/min e comuna cu colectorul - o cerere pe moneda dadea RATE_LIMITED altor ecrane)
+var tbIngust = { la: 0, cheie: "", v: {}, inLucru: false };
+function tbIngustAdu(simboluri) {
+  var cheie = simboluri.slice().sort().join(",");
+  if (!cheie || tbIngust.inLucru || (tbIngust.cheie === cheie && Date.now() - tbIngust.la < 10 * 60000)) return;
+  tbIngust.inLucru = true;
+  getJSON("/api/istoric-bot?action=ingustLista&simboluri=" + encodeURIComponent(cheie)).then(function (d) { tbIngust = { la: Date.now(), cheie: cheie, v: d && d.ingust || {}, inLucru: false }; tbIdeiRender(); })
+    .catch(function () { tbIngust.inLucru = false; tbIngust.la = Date.now(); tbIngust.cheie = cheie; });
 }
+function tbIngustPt(simbol) { return tbIngust.v[simbol] || null; }
 function tbIdeiRender() {
   var box = $("tbIdei"); if (!box || typeof Idei === "undefined") return;
   var cl = contTot.clasament, l = Idei.ideiBoti(cl, contTot.inchise || [], 5);
   var h = '<div class="tbTodoCap"><h4>💡 Pe ce aș porni un bot acum</h4><span class="tbSub">' + (cl && cl.la ? "clasamentul de la " + escapeHtml(new Date(cl.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })) + ", top 100 PERP" : "colectorul face clasamentul o dată pe oră") + '</span></div>';
   if (!l.length) h += '<p class="tbSub tbTodoGol">' + (cl ? "Acum nicio monedă nu e candidată." : "Aștept clasamentul…") + '</p>';
-  else h += l.map(function (x) {
+  else { tbIngustAdu(l.map(function (x) { return x.simbol; }).filter(Boolean)); }
+  if (l.length) h += l.map(function (x) {
     var ist = x.istoric.n ? "istoricul tău: " + x.istoric.n + (x.istoric.n === 1 ? " bot" : " boți") + ", " + x.istoric.pePlus + " pe plus, " + (x.istoric.total >= 0 ? "+" : "−") + Math.abs(x.istoric.total).toFixed(2) + " USDT" : "n-ai mai avut boți pe ea";
     var det = [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ");
     return '<div class="tbTodoRand"><span class="tbDunga ' + (x.istoric.n >= 3 && x.istoric.total < 0 ? "g" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist) + '</p>' + (function () { var g = typeof GridProba !== "undefined" && x.simbol ? tbIngustPt(x.simbol) : null; if (!g) return ''; var v = GridProba.varstaIngust(g, Date.now()); return '<p class="tbSub' + (g.propus ? '' : ' t212Estompat') + '">' + escapeHtml(GridProba.rezumatIngust(g)) + (v.text ? ' · ' + escapeHtml(v.text) : '') + '</p>'; })() + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + escapeHtml(x.moneda) + '\')">Fișa</button></div>';

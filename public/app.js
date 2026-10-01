@@ -5000,7 +5000,7 @@ function grIngustHtml(f){
   var g=grIngustPt(f.simbol),loc=!g,r=g||f.ingustLocal;if(!r)return "";
   var i=f.info,v=GridProba.varstaIngust(r,Date.now()),st=r.setare,P=function(x){return (x>=0?"+":"−")+Math.abs(x*100).toFixed(1).replace(".",",")+" %"};
   var h='<div class="tbBloc"><div class="tbBlocCap"><h4>⚡ Varianta îngustă</h4><span class="tbSub">'+escapeHtml(loc?"pe 31 de zile — mai puține ferestre":v.text)+'</span></div>';
-  if(!r.propus||!st)return h+'<p class="tbSub">Nu o propun: '+escapeHtml(r.motiv||"nedovedită")+'. Rămâi la setările de mai sus.</p></div>';
+  if(!r.propus||!st)return h+'<p class="tbSub">Nu o propun: '+escapeHtml(r.motiv||"nedovedită")+'.'+(/rămâi/i.test(r.motiv||"")?"":" Rămâi la setările de mai sus.")+'</p></div>';
   // setarea se reconstruieste pe pretul de ACUM (colectorul a calculat-o pe pretul de atunci)
   var s2=GridCalcul.construieste({pret:f.pret,lat:r.latime,pas:r.pas,dir:r.dir,suma:st.suma||(f.setare&&f.setare.suma)});
   return h+grRand("Direcție",GR_DIR_PIONEX[r.dir],GR_DIR_PIONEX[r.dir])+grRand("Preț de jos",grPret(s2.jos,i),grPret(s2.jos,i))+grRand("Preț de sus",grPret(s2.sus,i),grPret(s2.sus,i))
