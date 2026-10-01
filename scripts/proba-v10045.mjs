@@ -125,5 +125,34 @@ await test("colector: noaptea (02-05 ora Romaniei) o data pe zi; moneda fara pro
   await TP.turaProfil(mk(noapte + 25 * ORA)); assert.equal(scrise.length, 2, "o singura data pe noapte");
 });
 
+const SB = new Function("GridCalcul", `${lib("semnale-bot.js")}; return SemnaleBot;`)(G);
+const fisaF = { setare: { dir: "long", jos: 0.40, sus: 0.50, grile: 20, pas: 0.0112, levier: 3, stop: { jos: 0.395, sus: 0.505 } }, propusa: "rara", treceriZi: 3 };
+const botL = (pret, jos = 0.40, sus = 0.50, dir = "long") => ({ pretCurent: pret, gridJos: jos, gridSus: sus, directie: dir, brut: { buOrderData: { row: 21, gridType: "geometric" } } });
+await test("marginea din profil: 2,4% pana jos cand moneda coboara 3% in 12 h (P75) -> la margine, cu sursa; 6% pana jos -> nu", () => {
+  assert.ok(typeof SB.laMargine === "function", "lipseste SemnaleBot.laMargine");
+  const pm = { jos: 0.03, sus: 0.03, sursa: "profilul CRV: 183 de zile de bare de 1 h" };
+  const m = SB.mutaGridul(botL(0.41), fisaF, 0, pm);   // 0,41: 2,4% pana jos, 10% din interval (pragul fix n-ar fi sunat: nu e sub 10%)
+  assert.ok(m && /marginea de jos/.test(m.motiv) && /profilul CRV/.test(m.motiv), m && m.motiv);
+  assert.equal(SB.mutaGridul(botL(0.4255), fisaF, 0, pm), null, "6% pana jos > 3% (P75 pe 12 h): nu e la margine");
+  const m2 = SB.mutaGridul(botL(0.4048), fisaF, 0, null);   // fara profil: pragul fix, 4,8% din interval
+  assert.ok(m2 && /marginea de jos/.test(m2.motiv) && /prag fix/.test(m2.motiv), m2 && m2.motiv);
+});
+await test("marginea din profil e plafonata la 25% din interval: gridul ingust nu sta „la margine” mereu", () => {
+  const pm = { jos: 0.08, sus: 0.08, sursa: "profilul X" };
+  assert.equal(SB.mutaGridul(botL(0.45), fisaF, 0, pm), null, "pretul la mijloc, interval de 22%: nu e la margine");
+  const l = SB.laMargine(botL(0.45), pm); assert.ok(l.prag <= 0.25 * (0.50 - 0.40) / 0.45 + 1e-12);
+});
+await test("short: marginea de pierdere e SUS; stopul propus din profil e PESTE pret, mai departe decat al fisei", () => {
+  const pm = { jos: 0.03, sus: 0.03, sursa: "profilul CRV" };
+  const m = SB.mutaGridul(botL(0.49, 0.40, 0.50, "short"), { ...fisaF, setare: { ...fisaF.setare, dir: "short" } }, 0, pm);
+  assert.ok(m && /marginea de sus/.test(m.motiv), m && m.motiv);
+  const c = SB.acumConcret({ bot: { ...botL(0.47, 0.40, 0.50, "short"), profitTotal: -3 }, fisa: fisaF, zero: { pretZero: 0.45 }, costuri: {}, pragMargine: pm, pragStop: { dist: 0.12, sursa: "profilul CRV" }, acum: T0 });
+  const st = c.find((x) => x.cod === "stop");
+  assert.ok(st.pretPropus > 0.505 && Math.abs(st.pretPropus - 0.47 * 1.12) < 1e-9, "dincolo de P75 pe 24 h: " + st.pretPropus);
+  assert.match(st.sursaStop || "", /profilul CRV/);
+  const c0 = SB.acumConcret({ bot: { ...botL(0.47, 0.40, 0.50, "short"), profitTotal: -3 }, fisa: fisaF, zero: { pretZero: 0.45 }, costuri: {}, acum: T0 });
+  assert.equal(c0.find((x) => x.cod === "stop").pretPropus, 0.505, "fara profil: stopul fisei, ca azi");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);

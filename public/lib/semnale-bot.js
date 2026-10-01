@@ -22,15 +22,29 @@ var SemnaleBot = (function () {
   var P = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; };
   var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + " USDT"; };
 
-  function mutaGridul(b, f, afaraOre) {
+  // v100.45 (pachetul 1): „lângă margine” din PROFILUL monedei - distanta pana la margine sub cat se misca moneda in 12 h in 3 din
+  // 4 jumatati de zi (P75, pm = ProfilMoneda.praguriMargine, socotit de chemator), plafonat la 25% din interval (gridul ingust ar
+  // sta altfel „la margine” mereu). Fara profil: pragul fix de azi, 10% din interval. Intoarce si de unde vine pragul.
+  function laMargine(b, pm) {
+    var p = nr(b && b.pretCurent), jos = nr(b && b.gridJos), sus = nr(b && b.gridSus);
+    if (p === null || jos === null || sus === null || !(sus > jos) || p < jos || p > sus) return null;
+    var poz = (p - jos) / (sus - jos), dj = 1 - jos / p, ds = sus / p - 1;
+    if (pm && nr(pm.jos) !== null && nr(pm.sus) !== null) {
+      var cap = 0.25 * (sus - jos) / p, pj = Math.min(nr(pm.jos), cap), ps = Math.min(nr(pm.sus), cap);
+      var parte = dj < pj && (ds >= ps || dj / pj <= ds / ps) ? "jos" : ds < ps ? "sus" : null;
+      return { parte: parte, poz: poz, dist: parte === "sus" ? ds : parte === "jos" ? dj : Math.min(dj, ds), prag: parte === "sus" ? ps : pj, profil: true, sursa: pm.sursa || "profilul monedei" };
+    }
+    return { parte: poz < 0.1 ? "jos" : poz > 0.9 ? "sus" : null, poz: poz, dist: poz < 0.5 ? dj : ds, prag: null, profil: false, sursa: "prag fix: 10% din interval (profilul monedei n-a venit încă)" };
+  }
+  function mutaGridul(b, f, afaraOre, pm) {
     if (!b || !f || !f.setare) return null;
     var p = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus);
     if (p === null || jos === null || sus === null || !(sus > jos)) return null;
     var motiv = null;
     if (p >= jos && p <= sus) {
-      var poz = (p - jos) / (sus - jos);
-      if (poz < 0.1) motiv = "prețul stă la marginea de jos a gridului (" + P(poz) + " din interval)";
-      else if (poz > 0.9) motiv = "prețul stă la marginea de sus a gridului (" + P(poz) + " din interval)";
+      var lm = laMargine(b, pm);
+      if (lm && lm.parte) motiv = "prețul stă la marginea de " + lm.parte + " a gridului (" + P(lm.dist) + " până la ea, " + P(lm.poz) + " din interval"
+        + (lm.profil ? "; moneda se mișcă atât în 12 h în 3 din 4 cazuri — " + lm.sursa : "; " + lm.sursa) + ")";
     } else if ((nr(afaraOre) || 0) >= 2) motiv = "prețul e în afara gridului de " + nr(afaraOre).toFixed(1).replace(".", ",") + " ore";
     if (!motiv) return null;
     // v99: setarea PROPUSA de fisa (deasa, 0,30% - v100.39: oricand proba n-o respinge), altfel cea aleasa de platou
@@ -77,7 +91,7 @@ var SemnaleBot = (function () {
     var sp = f ? (f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare) : null, g = pasBot(b), rg0 = f && f.regim;
     var dist = function (a, c) { return a !== null && c > 0 ? P(Math.abs(a / c - 1)) : "?"; };
     // 1) stopul
-    var pretStop = null, opTxt = op !== null ? fmtPret(op) : "nepus", neutru = dir !== "long" && dir !== "short";
+    var pretStop = null, sursaStop = null, opTxt = op !== null ? fmtPret(op) : "nepus", neutru = dir !== "long" && dir !== "short";
     if (p !== null && pz !== null) {
       var peProfit = dir === "long" ? pz < p : dir === "short" ? pz > p : (tot !== null && tot > 0);
       if (neutru) {
@@ -94,6 +108,14 @@ var SemnaleBot = (function () {
         var protectie = dir === "short"
           ? (sp && sp.stop && nr(sp.stop.sus) !== null ? sp.stop.sus : (sus !== null && g ? sus * (1 + g.pas) : null))
           : (sp && sp.stop && nr(sp.stop.jos) !== null ? sp.stop.jos : (jos !== null && g ? jos * (1 - g.pas) : null));
+        // v100.45 (pachetul 1): stopul dincolo de cat merge moneda impotriva botului intr-o zi, in 3 din 4 zile (x.pragStop din
+        // profil), daca asta e mai departe decat protectia fisei; altfel ramane a fisei
+        var psD = x.pragStop ? nr(x.pragStop.dist) : null;
+        if (psD !== null && psD > 0 && p !== null) {
+          var dinProfil = dir === "short" ? p * (1 + psD) : p * (1 - psD);
+          if (protectie === null || (dir === "short" ? dinProfil > protectie : dinProfil < protectie)) { protectie = dinProfil; sursaStop = "dincolo de cât " + (dir === "short" ? "urcă" : "coboară") + " moneda într-o zi, în 3 din 4 zile (" + x.pragStop.sursa + ")"; }
+          else sursaStop = "stopul fișei e deja dincolo de o zi obișnuită (" + x.pragStop.sursa + ")";
+        }
         pretStop = protectie;   // v100.43 (I-467)
         out.push({ cod: "stop", titlu: "Stopul", text: "acum " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Dacă vrei protecție, " + (dir === "short" ? "peste gridul de sus: " : "sub gridul de jos: ") + (protectie !== null ? fmtPret(protectie) : "o grilă în afara marginii") + " — dar știi că se închide pe minus." });
       }
@@ -156,7 +178,8 @@ var SemnaleBot = (function () {
     }
     gr0.mare = poz === null ? "—" : poz < 0 ? S1(p / jos - 1) : poz > 1 ? S1(p / sus - 1) : Math.round(poz * 100) + "%";
     gr0.mic = poz === null ? "fără interval citit" : poz < 0 ? "sub gridul de jos" : poz > 1 ? "peste gridul de sus" : "din interval";
-    gr0.tag = poz === null ? { t: "—", c: "mut" } : poz < 0 || poz > 1 ? { t: "botul nu tranzacționează", c: "bad" } : poz < 0.1 || poz > 0.9 ? { t: "la margine", c: "warn" } : { t: "în grid", c: "good" };
+    var lm0 = laMargine(b, x.pragMargine);   // v100.45: „la margine” din profilul monedei (fara profil: 10% din interval, ca inainte)
+    gr0.tag = poz === null ? { t: "—", c: "mut" } : poz < 0 || poz > 1 ? { t: "botul nu tranzacționează", c: "bad" } : lm0 && lm0.parte ? { t: "la margine", c: "warn" } : { t: "în grid", c: "good" };
     gr0.act = (g ? g.grile + " grile la " + P(g.pas) + " pas" : "Geometria gridului necitită") + (c.umpleri24h !== null && c.umpleri24h !== undefined ? ", " + c.umpleri24h + " umpleri în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : "") + "."
       + (sp && f ? " Propus acum: " + (sp.grile + 1) + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + ", la " + P(sp.pas) + " pas." : f ? "" : " Propunerea vine cu fișa.");
     if (rg && (nr(rg.r4h) !== null || nr(rg.r24h) !== null)) {
@@ -168,7 +191,7 @@ var SemnaleBot = (function () {
     // v100.43 (I-467): banii pe masa langa stop - cel mai rau caz inainte/dupa si ce cedezi
     var cs = out.filter(function (c) { return c.cod === "stop"; })[0];
     if (cs) {
-      cs.pretPropus = pretStop;
+      cs.pretPropus = pretStop; cs.sursaStop = sursaStop;   // v100.45: de unde vine stopul propus (profilul monedei sau fisa)
       var bani = x.bani || (typeof x.cifre === "function" && pretStop !== null ? x.cifre(pretStop) : null);   // x.cifre = TabloExtra.cifreActiuni legat in Tablou
       if (bani && bani.stop) { cs.bani = textBaniStop(bani.stop) || null; cs.cifre = bani.stop; }   // v100.44: cifrele si ca numere (Consiliu)
     }
@@ -386,7 +409,7 @@ var SemnaleBot = (function () {
     return { la: prima.t, laIesire: prima.total, acum: t, dif: t - prima.total };
   }
 
-  return { judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
+  return { laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
     gridMaiDes: gridMaiDes, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;
