@@ -116,7 +116,7 @@ var t212TrailMemo = { cf: null, n: -1, v: null };
 function t212TrailAles() {
   var jj = t212Jurnal(), n = jj ? jj.p.inchise.length : 0;
   if (t212TrailMemo.cf === t212.cf && t212TrailMemo.n === n && t212TrailMemo.v) return t212TrailMemo.v;
-  var v = jj && t212.cf ? ActiuniSemnale.alegeTrail(ActiuniSemnale.rezumatStop(jj.p.inchise, t212.cf, ["plan", "u15", "u25", "prof"], "stopU")) : { cheie: "u15", motiv: "" };
+  var v = jj && t212.cf ? ActiuniSemnale.alegeTrail(jj.p.inchise, t212.cf) : { cheie: "u15", motiv: "" };
   t212TrailMemo = { cf: t212.cf, n: n, v: v }; return v;
 }
 function t212PregatesteP(x, pond) {
@@ -499,13 +499,13 @@ function jtRenderActiuni() {
 // Radarului, -15%, -25%). Sfatul se ia din cea mai buna varianta, oricare ar fi ea - inclusiv "fara stop".
 var T212_VARIANTE_STOP = [
   { camp: "stop", k: 8, et: "fix, −8% de la cumpărare" }, { camp: "stop", k: 10, et: "fix, −10%" }, { camp: "stop", k: 15, et: "fix, −15%" },
-  { camp: "stopU", k: "plan", et: "urcă după maxim — planul Radarului (k×ATR, 3–15%)" }, { camp: "stopU", k: "u15", et: "urcă, −15% de la maxim" }, { camp: "stopU", k: "u25", et: "urcă, −25% de la maxim" },
-  { camp: "stopU", k: "prof", et: "urcă — coborârea obișnuită a acțiunii pe 5 zile (profil, P75)" }];   // v100.52
+  { camp: "stopU", k: "plan", et: "urcă după maxim — planul Radarului (k×ATR, 3–15%)" }, { camp: "stopU", k: "u15", et: "urcă, −15% de la maxim" }, { camp: "stopU", k: "u25", et: "urcă, −25% de la maxim" }];
 function t212Variante(l) {
   var cfm = t212.cf; if (!cfm) return null;
-  var rs = ActiuniSemnale.rezumatStop(l, cfm, [8, 10, 15], "stop"), ru = ActiuniSemnale.rezumatStop(l, cfm, ["plan", "u15", "u25", "prof"], "stopU");
+  var rs = ActiuniSemnale.rezumatStop(l, cfm, [8, 10, 15], "stop"), ru = ActiuniSemnale.rezumatStop(l, cfm, ["plan", "u15", "u25"], "stopU");
   var v = T212_VARIANTE_STOP.map(function (x) { var r = x.camp === "stop" ? rs : ru, g = r.praguri[x.k]; return { et: x.et, camp: x.camp, k: x.k, judecate: r.judecate, real: r.real, total: g.total, dif: g.dif, atinse: g.atinse, taiate: g.castigatoareTaiate }; });
-  return { rs: rs, ru: ru, v: v, best: v.slice().sort(function (a, b) { return b.dif - a.dif; })[0] };
+  // v100.52: stopul din profilul actiunii - comparat cu −15% DOAR pe trade-urile unde a fost rejucat (aceleasi pentru amandoua), nu rand in tabel
+  return { rs: rs, ru: ru, v: v, best: v.slice().sort(function (a, b) { return b.dif - a.dif; })[0], prof: ActiuniSemnale.alegeTrail(l, cfm) };
 }
 function t212StopBloc(l) {
   var x = t212Variante(l), L = function (v) { return t212Lei(v); };
@@ -517,6 +517,7 @@ function t212StopBloc(l) {
     + '<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Stopul</th><th>Totalul ar fi fost</th><th>Față de ce ai făcut</th><th>Trade-uri oprite</th><th>Din care câștigătoare tăiate</th></tr></thead><tbody>'
     + '<tr><td>fără stop (ce ai făcut)</td><td class="' + t212Cls(x.rs.real) + '"><b>' + L(x.rs.real) + '</b></td><td>—</td><td>—</td><td>—</td></tr>'
     + x.v.map(rand).join("") + '</tbody></table></div>'
+    + (x.prof && x.prof.motiv ? '<p class="tbSub">📐 Stopul din profilul acțiunii (coborârea obișnuită pe 5 zile): ' + escapeHtml(x.prof.motiv) + '.</p>' : '')
     + '<p class="tbFac">👉 <b>Ce aș face eu:</b> ' + (fara ? 'pe trade-urile tale niciun stop — nici fix, nici care urcă — n-ar fi ajutat în total: tăia prea multe care își reveneau. Pierderile mari au venit din cumpărările în plus pe minus și din pozițiile prea mari (NPA): acolo aș pune frâna, nu un stop strâns.'
       : 'varianta care ar fi ajutat cel mai mult e „' + escapeHtml(b.et) + '”: ' + L(b.dif) + ' față de ce ai făcut, deși ar fi tăiat și ' + b.taiate + ' trade-uri care până la urmă au ieșit pe plus.') + '</p>'
     + '<p class="tbSub">Pe barele zilnice: ziua cumpărării și a vânzării nu intră (nu știm ordinea din zi); la stopul care urcă, maximul vine din zilele de dinainte. Rezultatul = prețul de ieșire față de cel de cumpărare, minus 0,30% comisionul; cursul dolar/leu nu intră. Trade-urile la care prețul găsit nu se potrivește cu al tău (split, alt simbol) nu sunt judecate.</p></div>';

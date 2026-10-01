@@ -63,7 +63,9 @@ await test("varianta prof: profilul din barele de DINAINTEA cumpararii; alegeTra
   const m = AS.alegeTrail(ru(500, 100, 20)); assert.equal(m.cheie, "u15"); assert.match(m.motiv, /20 din 30/);
   const t = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
   assert.match(t, /cheie: "prof"/); assert.match(t, /pragStopActiune\(/); assert.match(t, /b\.t \+ 8 \* 3600000 <= t\.pornit/);
-  assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), /k: "prof"/);
+  // poza 01.10: randul „prof” in tabel ar fi fost socotit pe TOATE trade-urile (neprobat = fara stop) -> in tabel nu intra; sub el, comparatia corecta
+  const ecr0 = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
+  assert.ok(!/k: "prof"/.test(ecr0), "prof nu e rand in tabel"); assert.match(ecr0, /ActiuniSemnale\.alegeTrail\(l, cfm\)/);
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /T212, ActiuniSemnale, ProfilMoneda, pauza/);
 });
 await test("varianta prof pe un trade: stopul urca la −P75(5 zile) din profilul de dinainte si iese pe bara care il atinge", () => {
@@ -101,6 +103,15 @@ await test("trailPozitie: prof castigat + profil -> trailProfil cu sursa si moti
   assert.equal(AS.trailPozitie({ cheie: "prof", motiv: "m" }, null).minTrail, 0.15, "fara profilul actiunii ramane −15%");
   const ecr = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(ecr, /ActiuniSemnale\.trailPozitie\(/); assert.match(ecr, /n\.sursaTrail/); assert.match(col, /ActiuniSemnale\.trailPozitie\(/);
+});
+
+// ---- pe viu (poza 01.10): „pe 966 de trade-uri, −15% a ieșit +1.001 lei față de profil” cand „prof” nu era rejucat pe NICIUNUL ----
+await test("alegeTrail compara doar pe trade-urile unde „prof” a fost rejucat (aceleasi trade-uri pentru ambele variante)", () => {
+  const inchise = Array.from({ length: 40 }, (_, i) => ({ id: "t" + i, cost: 100, rezultat: i % 2 ? 10 : -20 }));
+  const fara = Object.fromEntries(inchise.map((t) => [t.id, { nivel: "cumpara", stopU: { plan: null, u15: { pct: -0.05 }, u25: null } }]));
+  const a = AS.alegeTrail(inchise, fara); assert.equal(a.cheie, "u15"); assert.match(a.motiv, /0 din 30/, a.motiv);
+  const cu = Object.fromEntries(inchise.map((t, i) => [t.id, { nivel: "cumpara", stopU: i < 35 ? { plan: null, u15: { pct: -0.05 }, u25: null, prof: { pct: -0.02 } } : { plan: null, u15: { pct: -0.05 }, u25: null } }]));
+  const b = AS.alegeTrail(inchise, cu); assert.equal(b.cheie, "prof", b.motiv); assert.match(b.motiv, /35 de trade-uri|pe 35 /);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);

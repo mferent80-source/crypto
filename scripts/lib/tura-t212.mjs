@@ -93,9 +93,10 @@ export async function turaCfActiuni(d) {
       if (bare && bare.length) {
         // planul Radarului: -X% de la maxim, cu X din pretul calculat la ora cumpararii (doar zilele de dinainte)
         const inainte = bare.filter((b) => b.t + 8 * 3600000 <= t.pornit), n = inainte.length >= 120 ? d.ActiuniSemnale.niveluri(inainte, t.pretCumparare, {}) : null;
-        // v100.52: stopul din profilul actiunii, socotit DOAR pe barele de dinaintea cumpararii (ca „plan”)
+        // v100.52: stopul din profilul actiunii, socotit DOAR pe barele de dinaintea cumpararii (ca „plan”); fara profil atunci -> −15%,
+        // exact ce face pozitia pe viu (altfel un „neatins” ar insemna si „fara profil”)
         const pp = d.ProfilMoneda ? d.ProfilMoneda.calculeaza(inainte, { piata: "actiuni", simbol: tk, acum: t.pornit }) : null, ps = pp ? d.ProfilMoneda.pragStopActiune(pp) : null;
-        stopU = d.ActiuniSemnale.cuStopUrcator(t, bare, [{ cheie: "plan", trailPct: n && n.nivel === "ok" ? n.trailPct : null }, { cheie: "u15", pct: 15 }, { cheie: "u25", pct: 25 }, { cheie: "prof", trailPct: ps ? Math.round(ps.dist * 1000) / 10 : null }]);
+        stopU = d.ActiuniSemnale.cuStopUrcator(t, bare, [{ cheie: "plan", trailPct: n && n.nivel === "ok" ? n.trailPct : null }, { cheie: "u15", pct: 15 }, { cheie: "u25", pct: 25 }, { cheie: "prof", trailPct: ps ? Math.round(ps.dist * 1000) / 10 : 15 }]);
       }
       strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {} };
       judecate++;

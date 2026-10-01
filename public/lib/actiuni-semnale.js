@@ -343,8 +343,15 @@ var ActiuniSemnale = (function () {
 
   // v100.52 (actiunile T212, pachetul 1): stopul care urca - din profilul actiunii („prof”) sau −15% („u15”, masurat pe trade-urile lui
   // la 25.09). Profilul il inlocuieste DOAR daca pe trade-urile lui iese cel putin la fel, pe cel putin 30 de trade-uri judecate.
-  // ru = rezumatStop(inchise, cf, ["plan", "u15", "u25", "prof"], "stopU")
-  function alegeTrail(ru) {
+  // alegeTrail(inchise, cf): comparatia se face DOAR pe trade-urile unde „prof” a fost rejucat, aceleasi pentru ambele variante (poza 01.10:
+  // inainte, „prof” lipsa era numarat ca „neatins” = fara stop, si pagina zicea „−15% a ieșit +1.001 lei față de profil” pe 0 trade-uri probate).
+  // alegeTrail(ru) ramane pentru un rezumat facut deja pe acelasi subset.
+  function alegeTrail(a, cf) {
+    var ru = a;
+    if (Array.isArray(a)) {
+      var sub = a.filter(function (t) { var v = cf && t && cf[t.id], s = v && v.stopU; return s && Object.prototype.hasOwnProperty.call(s, "prof"); });
+      ru = rezumatStop(sub, cf, ["plan", "u15", "u25", "prof"], "stopU");
+    }
     var j = ru && ru.judecate || 0, p = ru && ru.praguri && ru.praguri.prof, u = ru && ru.praguri && ru.praguri.u15;
     if (j < 30 || !p || !u) return { cheie: "u15", judecate: j, dif: null, motiv: "stopul din profilul acțiunii se probează pe trade-urile tale: " + j + " din 30 — până atunci rămâne −15% de la maxim" };
     var dif = p.total - u.total;
