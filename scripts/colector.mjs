@@ -125,10 +125,12 @@ const Idei = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "publ
 const NDX = (() => { try { const m = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").match(/const NDX_UNIVERSE=(\[[^\]]*\])/); return m ? JSON.parse(m[1]) : []; } catch { return []; } })();
 const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade);
 const ProfilMoneda = incarca("profil-moneda.js", "ProfilMoneda");
-const Probabilitati = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "probabilitati.js"), "utf8") + "; return Probabilitati;")(GridCalcul);   // v101.27 (pachetul 2a)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
+const Probabilitati = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "probabilitati.js"), "utf8") + "; return Probabilitati;")(GridCalcul);   // v101.27 (pachetul 2a)
+const GraficBot = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "grafic-bot.js"), "utf8") + "; return GraficBot;")();   // v101.28 (pachetul 2b): RSI/EMA/Bollinger pentru Dovada
+const Dovada = new Function("GridCalcul", "GraficBot", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "dovada.js"), "utf8") + "; return Dovada;")(GridCalcul, GraficBot, Probabilitati);   // v101.28 (I-471)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati].every(Boolean) && NDX.length > 90); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada].every(Boolean) && NDX.length > 90); process.exit(0); }
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 // v91.11 (1): pe tura, cate cereri de PRETURI Pionex au mers / au picat (26.09: 1 ora de preturi moarte fara nicio alerta)
 let preturiTura = { ok: 0, rau: 0, eroare: null };
@@ -1053,7 +1055,7 @@ async function turaProbabilitati() {
   probInLucru = true; probLa = Date.now();
   try {
     const act = await cere("/api/bot-orders");
-    await turaProbabilitatiModul({ acum: Date.now(), boti: ((act && act.bots) || []).filter((b) => b && b.activ !== false), GridCalcul, Probabilitati, TabloExtra, cere, trimite, jurnal, stare: probStare,
+    await turaProbabilitatiModul({ acum: Date.now(), boti: ((act && act.bots) || []).filter((b) => b && b.activ !== false), GridCalcul, Probabilitati, Dovada, TabloExtra, cere, trimite, jurnal, stare: probStare,
       simbolDe: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
       planDe: async (id) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
       citesteBare: (s) => { try { return JSON.parse(fs.readFileSync(fisOre(s), "utf8")); } catch { return []; } },

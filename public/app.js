@@ -5605,6 +5605,19 @@ function tbProbPt(b){
 }
 // cifrele mai vechi de 3 h (colectorul oprit) se spun ca atare, iar randul din Consilier nu le mai arata ca „acum”
 function tbProbVechi(rez){var la=rez&&Number(rez.la);return la>0&&Date.now()-la>3*3600000?Math.round((Date.now()-la)/3600000):null}
+// v100.47 (I-471): indicatorii aprinsi acum, cu dovada - cei „cu semn” la vedere, restul pliati (nu ascunsi); banda are si un semn
+// subtire la „de obicei”, ca sa se vada fata de ce e mai des / mai rar
+function tbIndicatoriHtml(rez){
+  var di=rez&&rez.indicatori&&rez.indicatori.randuri||[];if(!di.length)return "";
+  var P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))},rnd=function(x){var lo=P(x.ic[0]),hi=P(x.ic[1]);
+    return '<div class="tbProbRand'+(x.semn==="mai des"?' tbWarn':'')+'"><span>'+escapeHtml(x.et.charAt(0).toUpperCase()+x.et.slice(1))+' · '+(x.ev==="jos"?"marginea de jos":"marginea de sus")+'</span><b class="tbProbP">'+P(x.p)+'%</b>'
+      +'<div class="tbProbBanda" role="img" aria-label="'+P(x.p)+'%, de obicei '+P(x.baza)+'%, interval '+lo+'–'+hi+'%"><i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i><em style="left:'+P(x.baza)+'%"></em><b style="left:'+P(x.p)+'%"></b></div>'
+      +'<p class="tbSub">'+escapeHtml(x.text)+'</p></div>'};
+  var cu=di.filter(function(x){return x.semn}),fara=di.filter(function(x){return !x.semn});
+  return '<h4 class="tbProbH">Indicatorii aprinși acum, cu dovada din trecutul monedei</h4>'
+    +(cu.length?cu.map(rnd).join(""):'<p class="tbSub">Niciun indicator aprins acum nu schimbă, dovedit, cât de des e atinsă marginea — citește-i ca pe vreme, nu ca pe semnal.</p>')
+    +(fara.length?'<details class="tbProbFara"><summary>Fără semn · '+fara.length+'</summary>'+fara.map(rnd).join("")+'</details>':'');
+}
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
   var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;
@@ -5618,7 +5631,7 @@ function tbDeseneazaProb(b){
       return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+P(x.p)+'%</b>'
         +'<div class="tbProbBanda" role="img" aria-label="'+P(x.p)+'%, interval de încredere '+lo+'–'+hi+'%">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b></div>'
         +'<p class="tbSub">'+escapeHtml(x.text)+'</p></div>'}).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
-    +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
+    +tbIndicatoriHtml(rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
 }
 // v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
 // Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.

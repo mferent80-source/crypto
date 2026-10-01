@@ -2155,3 +2155,7 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .tbProbRand.tbWarn .tbProbBanda b,.tbProbRand.tbWarn .tbProbBanda i{background:var(--warn)}
 .tbProbNota{margin-top:8px}
 .tbConsSansa{margin:6px 0 0}
+/* v100.47 (I-471): indicatorii cu dovada - semnul subtire „de obicei” pe banda, titlul blocului, „fara semn” pliat */
+.tbProbBanda em{position:absolute;top:-2px;width:1px;height:12px;background:var(--muted)}
+.tbProbH{margin:14px 0 4px;font-size:13px}
+.tbProbFara summary{cursor:pointer;color:var(--muted);padding:6px 0}
