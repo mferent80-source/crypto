@@ -27,7 +27,8 @@ import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-const VERSIUNE_COLECTOR = "v101.25";
+import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
+const VERSIUNE_COLECTOR = "v101.26";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -122,9 +123,10 @@ const Idei = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "publ
 // Nasdaq-100 din aplicatie (o singura sursa: public/app.js, NDX_UNIVERSE)
 const NDX = (() => { try { const m = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").match(/const NDX_UNIVERSE=(\[[^\]]*\])/); return m ? JSON.parse(m[1]) : []; } catch { return []; } })();
 const Obiceiuri = new Function("GridCalcul", "GridProba", "JurnalTrade", fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8") + "; return Obiceiuri;")(GridCalcul, GridProba, JurnalTrade);
+const ProfilMoneda = incarca("profil-moneda.js", "ProfilMoneda");   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei].every(Boolean) && NDX.length > 90); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda].every(Boolean) && NDX.length > 90); process.exit(0); }
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json" };
 // v91.11 (1): pe tura, cate cereri de PRETURI Pionex au mers / au picat (26.09: 1 ora de preturi moarte fara nicio alerta)
 let preturiTura = { ok: 0, rau: 0, eroare: null };
@@ -265,7 +267,7 @@ async function semnaleBot(b, ctx, acum) {
   const dir = String(b.directie || "").toLowerCase();
   const x = { bot: b, fisa: f, plan: ctx.plan || null, costuri: TabloExtra.grileVsCosturi(b, acum),
     btc: SemnaleBot.btcAvertizare(regimBtc, f && f.regim), aglomerare: SemnaleBot.aglomerare(fut, dir),
-    muta: SemnaleBot.mutaGridul(b, f, afaraOre), iaProfit: SemnaleBot.iaProfit(b, f) };
+    muta: SemnaleBot.mutaGridul(b, f, afaraOre, ProfilMoneda.praguriMargine(profileMoneda.get(s) || null)), iaProfit: SemnaleBot.iaProfit(b, f) };
   x.semafor = SemnaleBot.semafor(x);
   // socoteala in KV
   let v = null; try { v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(b.id)); } catch (e) { v = null; }
@@ -1009,6 +1011,36 @@ async function turaFrana() {
   }
 }
 
+// v101.26 (pachetul 1): profilul monedei - barele de 1 h pe disc (data/istoric-1h), profilul in KV; profileMoneda il tin si aici
+// (mutaGridul din tura il cere). Monedele: botii activi + inchisii din ultimele 60 de zile.
+const ORE_DIR = path.join(DATA, "istoric-1h"); fs.mkdirSync(ORE_DIR, { recursive: true });
+const PROFIL_STARE = path.join(DATA, "profil-stare.json");
+let profilStare = {}; try { profilStare = JSON.parse(fs.readFileSync(PROFIL_STARE, "utf8")) || {}; } catch { profilStare = {}; }
+const profileMoneda = new Map();
+const fisOre = (s) => path.join(ORE_DIR, String(s).replace(/[^A-Z0-9_]/gi, "") + ".json");
+async function simboluriProfil() {
+  const act = await cere("/api/bot-orders"), m = new Map();
+  for (const b of (act && act.bots) || []) { const s = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex; if (s && /_PERP$/.test(s)) m.set(s, JurnalTrade.moneda(b.baza)); }
+  for (const x of (await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 60 * 86400000)) {
+    const mo = JurnalTrade.moneda(x.base), s = await simbolPerp(mo); if (s && !m.has(s)) m.set(s, mo);
+  }
+  return [...m].map(([simbol, moneda]) => ({ simbol, moneda }));
+}
+let profilInLucru = false, profilLa = 0;
+async function turaProfil() {
+  if (profilInLucru || Date.now() - profilLa < 10 * 60000) return;
+  profilInLucru = true; profilLa = Date.now();
+  try {
+    await turaProfilModul({ GridCalcul, ProfilMoneda, acum: Date.now(), cere, trimite, jurnal, profile: profileMoneda, stare: profilStare,
+      pauza: (ms) => new Promise((r) => setTimeout(r, ms)), simboluri: simboluriProfil,
+      trades: async () => JurnalTrade.din(await botiInchisiToti()),
+      citesteBare: (s) => { try { return JSON.parse(fs.readFileSync(fisOre(s), "utf8")); } catch { return []; } },
+      scrieBare: (s, r) => { try { scrieAtomic(fisOre(s), r); } catch (e) { jurnal("bare 1h nescrise", s, e.message); } },
+      scrieStare: (st) => { try { scrieAtomic(PROFIL_STARE, st); } catch (e) { jurnal("profil-stare nescris", e.message); } } });
+  } catch (e) { jurnal("profil ESEC", e.message); }
+  profilInLucru = false;
+}
+
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
   // v98.2 (audit 28.09, #1): planurile si poza cer amandoua pozitiile T212 - una dupa alta, nu deodata (serverul leaga oricum
@@ -1019,6 +1051,7 @@ async function bucla() {
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
+  turaProfil().catch((e) => jurnal("profil", e.message));   // v101.26 (pachetul 1)
   turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
   turaPiataColector().catch((e) => jurnal("piata", e.message));

@@ -90,5 +90,40 @@ await test("server: profilul se scrie si se citeste in KV „profil:<SIMBOL>”;
   assert.equal(rau.status, 400);
 });
 
+let TP = null; try { TP = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-profil.mjs")).href); } catch { TP = null; }
+const kline = (t) => ({ time: t, open: "100", high: "101", low: "99", close: "100", volume: "1" });
+function pionexFals(pana, de) {   // raspunde ca Pionex: cele mai noi 500 de bare de 1 h <= endTime, de la `de` incoace
+  const cereri = [];
+  return { cereri, cere: async (cale) => {
+    cereri.push(cale); const m = /endTime=(\d+)/.exec(cale), end = m ? Number(m[1]) : pana, out = [];
+    for (let t = Math.floor(end / ORA) * ORA; t >= de && out.length < 500; t -= ORA) out.push(kline(t));
+    return { result: true, data: { klines: out } };
+  } };
+}
+await test("colector: prima data aduce 6 luni pe pagini (cu pauza), a doua oara doar ce lipseste", async () => {
+  assert.ok(TP && typeof TP.aduOre === "function", "lipseste scripts/lib/tura-profil.mjs");
+  const acum = T0 + 200 * 24 * ORA, p = pionexFals(acum, T0), pauze = [];
+  const d = { cere: p.cere, GridCalcul: G, acum, pauza: async (ms) => { pauze.push(ms); } };
+  const r = await TP.aduOre("CRV_USDT_PERP", [], d);
+  assert.ok(r.length >= 183 * 24 && p.cereri.length >= 9 && p.cereri.length <= 10, r.length + " bare, " + p.cereri.length + " cereri");
+  assert.ok(p.cereri.every((c) => /interval=60M/.test(c))); assert.ok(pauze.length >= 8 && pauze.every((ms) => ms >= 1600));
+  const p2 = pionexFals(acum + 5 * ORA, T0);
+  const r2 = await TP.aduOre("CRV_USDT_PERP", r, { ...d, cere: p2.cere, acum: acum + 5 * ORA });
+  assert.equal(p2.cereri.length, 1, "doar pagina cea noua"); assert.ok(r2.length >= r.length);
+});
+await test("colector: noaptea (02-05 ora Romaniei) o data pe zi; moneda fara profil se face oricand", async () => {
+  assert.ok(TP && typeof TP.turaProfil === "function", "lipseste turaProfil");
+  const zi = Date.UTC(2026, 9, 1), noapte = zi + 30 * 60000, amiaza = zi + 10 * ORA;   // 03:30 si 13:00 ora Romaniei (UTC+3)
+  assert.equal(TP.eNoapte(noapte), true); assert.equal(TP.eNoapte(amiaza), false);
+  const scrise = [], stare = { facute: {} }, mk = (acum) => ({ GridCalcul: G, ProfilMoneda: PM, acum, pauza: async () => {},
+    cere: pionexFals(acum, acum - 60 * 24 * ORA).cere, trimite: async (cale, corp) => { scrise.push(corp.simbol); return { ok: true }; },
+    simboluri: async () => [{ simbol: "CRV_USDT_PERP", moneda: "CRV" }], trades: async () => [], citesteBare: () => [], scrieBare: () => {},
+    stare, scrieStare: () => {}, jurnal: () => {}, profile: new Map() });
+  await TP.turaProfil(mk(amiaza)); assert.deepEqual(scrise, ["CRV_USDT_PERP"], "fara profil: se face si la amiaza");
+  await TP.turaProfil(mk(amiaza + ORA)); assert.equal(scrise.length, 1, "are profil: asteapta noaptea");
+  await TP.turaProfil(mk(noapte + 24 * ORA)); assert.equal(scrise.length, 2, "noaptea urmatoare: se reface");
+  await TP.turaProfil(mk(noapte + 25 * ORA)); assert.equal(scrise.length, 2, "o singura data pe noapte");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute`);
 if (picate) process.exit(1);
