@@ -200,7 +200,7 @@ async function scenariu(lat, inal, nume) {
       // v82: semaforul sus, cu nivel + motiv + "ce as face eu"
       await panaCand(b, `/ȚINE|ATENȚIE|IEȘI/.test(document.getElementById("tbSemafor").innerText)`, 30000, "semaforul");
       const ts = await b.ev(`document.getElementById("tbSemafor").innerText`);
-      assert.match(ts, /Ce aș face eu/); FARA_GUNOI(ts);
+      assert.match(ts, /Ce aș face eu/i); FARA_GUNOI(ts);   // v100.44: eticheta Consilierului e cu majuscule din CSS („CE AȘ FACE EU”)
       // v86: fisa, sfaturile, saptamana, planul stau in sectiuni pliate - le deschid cum ar face el (clic pe titlu)
       await b.ev(`document.querySelectorAll("#tabloubot details.tbPl").forEach(d=>{if(!d.open)d.querySelector("summary").click()})`);
       const t1 = await b.ev(`document.getElementById("tbFisaBot").innerText`), t2 = await b.ev(`document.getElementById("tbAcum").innerText`);
@@ -211,8 +211,9 @@ async function scenariu(lat, inal, nume) {
       assert.match(t2, /Grile, ultimele 24 h/); assert.match(t2, /Dacă îl închizi acum, iei[\s\S]{0,10}\d/); assert.match(t2, /Prețul la care botul e pe zero/);
       FARA_GUNOI(t1); FARA_GUNOI(t2);
       // v80.1: sfaturile au "Ce as face eu" si nu mai vorbesc de opritor / USDT liberi
-      await panaCand(b, `/Ce aș face eu/.test(document.getElementById("tbSfaturi").innerText)`, 30000, "sfaturile cu 'ce as face eu'");
-      const t3 = await b.ev(`document.getElementById("tbSfaturi").innerText`);
+      // v100.44 (I-465): cartela sfaturilor e ascunsa (sfaturile intra in Consilier) - se citeste textul ei, nu cel vizibil
+      await panaCand(b, `/Ce aș face eu/.test(document.getElementById("tbSfaturi").textContent)`, 30000, "sfaturile cu 'ce as face eu'");
+      const t3 = await b.ev(`document.getElementById("tbSfaturi").textContent`);
       assert.ok(!/[Oo]pritorul|USDT liberi/.test(t3), "au ramas sfaturile scoase: " + t3.slice(0, 200)); FARA_GUNOI(t3);
       // v81: saptamana, planul (salvat pe server si citit inapoi), marja, vs pozitie
       await panaCand(b, `/Bara = cât au adus grilele|n-a strâns încă/.test(document.getElementById("tbSapt").innerText)`, 30000, "saptamana");
@@ -235,10 +236,11 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`(()=>{const d=document.getElementById("jtPl-crypto");if(!d.open)d.querySelector("summary").click()})()`);
       await panaCand(b, `/COTI/.test(document.getElementById("jtLista").innerText)`, 60000, "lista de trade-uri");
       const t = await b.ev(`document.getElementById("jurnaltrade").innerText`);
-      // v100.23: cifra veche e „Rezultat realizat” (fara costuri); „Rezultat total” e acum placuta statisticii nete de deasupra
-      assert.match(t, /Rezultat realizat/); assert.match(t, /Statistica · Pionex/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Poziția a mâncat grilele/);
+      // v100.23: cifra veche e „Rezultat realizat” (fara costuri); v100.40 (auditul 30.09): placuta e „Rezultat net” (dupa comisioane si funding)
+      assert.match(t, /Rezultat net/); assert.match(t, /Statistica · Pionex/); assert.match(t, /Greșelile care te-au costat/); assert.match(t, /Poziția a mâncat grilele/);
       assert.match(t, /Dacă ascultai de Radar/); assert.match(t, /Radarul ar fi zis/);
-      assert.match(t, /Raportul de duminică/); assert.match(t, /mai trebuie 20/);
+      // „mai trebuie 20” presupunea un jurnal de ~10 boti; pe datele reale (2.000+) raportul e suficient: regulile lui SAU „nu văd o grupă”
+      assert.match(t, /Raportul de duminică/); assert.match(t, /mai trebuie \d+ ca să-ți spun|aș evita boții|nu văd o grupă care să piardă/i);
       FARA_GUNOI(t);
       await b.ev(`(function(){var e=document.querySelector(".jtNota");e.value="proba";e.dispatchEvent(new Event("change",{bubbles:true}))})()`);
       assert.match(await b.ev(`localStorage.getItem("jtNote")||""`), /proba/);
