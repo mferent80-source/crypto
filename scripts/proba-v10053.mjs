@@ -1,0 +1,56 @@
+// Proba v100.53 (01.10, el: actiunile T212 - pachetul 2: probabilitatile pe iesire,
+// docs/superpowers/plans/2026-10-01-actiuni-pachetul-2-probabilitatile.md).
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const RAD = process.env.RAD || path.resolve(new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
+const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)(); globalThis.GridCalcul = G;
+const AS = new Function(`${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)(); globalThis.ActiuniSemnale = AS;
+const PR = new Function("GridCalcul", "ActiuniSemnale", `${lib("probabilitati.js")}; return Probabilitati;`)(G, AS);
+
+let teste = 0, picate = 0;
+async function test(nume, fn) {
+  teste++;
+  await Promise.resolve().then(fn).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e.message}`); });
+}
+console.log("\nV100.53 · Actiunile T212: probabilitatile pe iesire · proba\n");
+const are = (x, n) => assert.ok(x, "lipseste " + n);
+
+// ---- pasul 1: adaptorul pentru actiuni ----
+const zi = (n, f) => Array.from({ length: n }, (_, i) => { const c = f(i); return { t: Date.UTC(2024, 0, 1) + i * 864e5, o: c, h: c * 1.01, l: c * 0.99, c }; });
+await test("pentruActiune: atinge stopul mâine, ținta înaintea stopului în 5 zile, săritura separat; cazuri independente si IC", () => {
+  are(PR.pentruActiune, "Probabilitati.pentruActiune");
+  const b = zi(400, (i) => 100 * (1 + 0.03 * Math.sin(i / 5)));
+  const r = PR.pentruActiune(b, { pret: b[399].c, stop: b[399].c * 0.97, tinta: b[399].c * 1.05, acum: b[399].t + 864e5 });
+  assert.ok(r && r.stop1 && r.cursa5 && r.sare1, JSON.stringify(r && Object.keys(r)));
+  assert.ok(r.stop1.n > 100 && r.stop1.nIndep === r.stop1.n, "fereastra de 1 zi la pas 1: toate independente " + r.stop1.n + "/" + r.stop1.nIndep);
+  assert.ok(r.cursa5.tinta.nIndep <= Math.floor(r.cursa5.tinta.n / 5) + 1, "5 zile: n/5 independente"); assert.ok(r.stare);
+  assert.equal(PR.pentruActiune(b.slice(0, 100), { pret: 100, stop: 97, tinta: 105, acum: b[99].t + 864e5 }), null);
+});
+await test("saritura peste stop se numara in sare1, NU in stop1", () => {
+  are(PR.pentruActiune, "Probabilitati.pentruActiune");
+  const b = zi(300, () => 100); for (let i = 120; i < 300; i += 10) { b[i] = { ...b[i], o: 95, l: 94.5, h: 96, c: 100 }; }   // deschideri cu -5%
+  const r = PR.pentruActiune(b, { pret: 100, stop: 97, tinta: 110, acum: b[299].t + 864e5 });
+  assert.ok(r.sare1.k > 0, "sariturile peste stop numarate"); assert.equal(r.stop1.k, 0, "nicio atingere in zi fara saritura");
+});
+await test("doar ce se stia atunci: o bara din trecut schimbata schimba rezultatul; weekendul nu arunca ferestrele", () => {
+  are(PR.pentruActiune, "Probabilitati.pentruActiune");
+  const b = zi(300, (i) => 100 + (i % 7)), acum = b[299].t + 864e5;
+  const r1 = PR.pentruActiune(b, { pret: 100, stop: 97, tinta: 105, acum });
+  const b2 = b.map((x) => ({ ...x })); b2[150] = { ...b2[150], l: 50 };   // o cadere mare in trecut
+  const r2 = PR.pentruActiune(b2, { pret: 100, stop: 97, tinta: 105, acum });
+  assert.notDeepEqual([r1.stop1, r1.cursa5], [r2.stop1, r2.cursa5], "o bara din trecut schimbata trebuie sa schimbe frecventele");
+  const cuGol = b.map((x, i) => ({ ...x, t: x.t + Math.floor(i / 5) * 2 * 864e5 }));   // 2 zile libere la fiecare 5
+  assert.ok(PR.pentruActiune(cuGol, { pret: 100, stop: 97, tinta: 105, acum: cuGol[299].t + 864e5 }).stop1.n > 100);
+});
+await test("stopul deja depasit -> fara probabilitati de stop, cu motivul", () => {
+  are(PR.pentruActiune, "Probabilitati.pentruActiune");
+  const b = zi(300, (i) => 100 + (i % 7)), r = PR.pentruActiune(b, { pret: 100, stop: 101, tinta: 110, acum: b[299].t + 864e5 });
+  assert.equal(r.stop1, null); assert.match(r.motiv, /deja depășit/);
+});
+
+console.log(`\n${teste - picate}/${teste} trecute`);
+if (picate) process.exit(1);

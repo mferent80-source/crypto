@@ -29,25 +29,27 @@ var Probabilitati = (function () {
     if (!Array.isArray(bare) || i < ISTORIE || i >= bare.length) return null;
     return stareDinRegim(G.regimPeBare(bare.slice(i - ISTORIE, i + 1), 4, 24));
   }
-  function indep(n, H) { return Math.max(1, Math.min(n, Math.floor(n * PAS / H))); }
+  function indep(n, H, pas) { return Math.max(1, Math.min(n, Math.floor(n * (pas || PAS) / H))); }
   // ev(bare, i, H, st) -> rezultatul ferestrei care incepe la inchiderea barei i (sir); se numara cele egale cu `asteptat`
+  // v100.53 (actiunile T212): opt.cfg = adaptorul de piata {istorie, pas, continuu, stareLa, regimDin}; fara cfg - crypto, ca pana acum
   function frecventa(bare, H, ev, asteptat, stareAcum, opt) {
     if (!Array.isArray(bare) || !(H > 0)) return null;
-    var tot = { n: 0, k: 0 }, sel = { n: 0, k: 0 }, rg = { n: 0, k: 0 }, memo = (opt && opt.memo) || {}, regAcum = regimDin(stareAcum);
-    var st = function (i) { if (!(i in memo)) memo[i] = stareLa(bare, i); return memo[i]; };
-    for (var i = bare.length - 1 - H; i >= ISTORIE; i -= PAS) {
-      if (bare[i + H].t - bare[i].t !== H * ORA) continue;   // fereastra cu gaura nu se numara
+    var cfg = (opt && opt.cfg) || {}, IST = cfg.istorie || ISTORIE, PS = cfg.pas || PAS, SL = cfg.stareLa || stareLa, RD = cfg.regimDin || regimDin;
+    var tot = { n: 0, k: 0 }, sel = { n: 0, k: 0 }, rg = { n: 0, k: 0 }, memo = (opt && opt.memo) || {}, regAcum = RD(stareAcum);
+    var st = function (i) { if (!(i in memo)) memo[i] = SL(bare, i); return memo[i]; };
+    for (var i = bare.length - 1 - H; i >= IST; i -= PS) {
+      if (cfg.continuu !== false && bare[i + H].t - bare[i].t !== H * ORA) continue;   // fereastra cu gaura nu se numara (la actiuni: zilele de bursa sunt la rand)
       var r = ev(bare, i, H, st); if (r === null || r === undefined) continue;
       tot.n++; if (r === asteptat) tot.k++;
-      if (stareAcum) { var si = st(i); if (si === stareAcum) { sel.n++; if (r === asteptat) sel.k++; } if (regimDin(si) === regAcum) { rg.n++; if (r === asteptat) rg.k++; } }
+      if (stareAcum) { var si = st(i); if (si === stareAcum) { sel.n++; if (r === asteptat) sel.k++; } if (RD(si) === regAcum) { rg.n++; if (r === asteptat) rg.k++; } }
     }
     // caderea in trepte: starea exacta -> acelasi regim -> toate (fiecare treapta cere >= 5 cazuri independente)
-    var ok = function (q) { return q.n > 0 && indep(q.n, H) >= MIN_INDEP; };
+    var ok = function (q) { return q.n > 0 && indep(q.n, H, PS) >= MIN_INDEP; };
     var nivel = stareAcum && ok(sel) ? "exact" : stareAcum && ok(rg) ? "regim" : "toate";
     if (opt && opt.doarConditionat && nivel === "toate") return null;
     var x = nivel === "exact" ? sel : nivel === "regim" ? rg : tot;
     if (!x.n) return null;
-    var ni = indep(x.n, H), ki = Math.round(x.k / x.n * ni);
+    var ni = indep(x.n, H, PS), ki = Math.round(x.k / x.n * ni);
     return { p: x.k / x.n, n: x.n, k: x.k, nIndep: ni, ic: G.wilson(ki, ni), orizontOre: H, conditionat: nivel !== "toate", nivel: nivel, stare: nivel === "exact" ? stareAcum : nivel === "regim" ? regAcum : null };
   }
   function atinge(rel) {
@@ -68,6 +70,34 @@ var Probabilitati = (function () {
       }
       return "niciuna";
     };
+  }
+  // ---- v100.53 (actiunile T212, pachetul 2): adaptorul pe bare ZILNICE ----
+  // starea = trendul pe zilnice (ActiuniSemnale.stare: sus / lateral / jos) x miscare / liniste; „regimul” pentru caderea in trepte = trendul
+  function stareActiuneLa(b, i) {
+    if (!Array.isArray(b) || i < 60 || i >= b.length || typeof ActiuniSemnale === "undefined") return null;
+    var s = ActiuniSemnale.stare(b.slice(0, i + 1), b[i].c), d = s && s.trend && s.trend.dir;
+    if (!d || d === "fara-date") return null;
+    return d + "-" + (s.miscare && s.miscare.mare ? "miscare" : "liniste");
+  }
+  function trendDin(s) { return s ? String(s).split("-")[0] : null; }
+  var CFG_ACT = { istorie: 60, pas: 1, continuu: false, stareLa: stareActiuneLa, regimDin: trendDin };
+  // o = { pret, stop, tinta, acum } -> stopul maine (atins in zi, FARA saritura), saritura peste stop la deschidere (separat), tinta inaintea
+  // stopului in 5 zile de bursa. Barele: doar zilele incheiate (bara zilei in curs o scoate bareBursa; aici t < acum).
+  function pentruActiune(bare, o) {
+    o = o || {};
+    var a = nr(o.acum) || Date.now(), p = nr(o.pret);
+    var b = (Array.isArray(bare) ? bare : []).filter(function (x) { return x && nr(x.t) !== null && nr(x.o) > 0 && nr(x.l) > 0 && nr(x.h) >= nr(x.l) && nr(x.c) > 0 && x.t < a; }).sort(function (x, y) { return x.t - y.t; });
+    if (b.length < 120 || !(p > 0)) return null;
+    var stare = stareActiuneLa(b, b.length - 1), memo = {}, op = { memo: memo, cfg: CFG_ACT };
+    var out = { la: a, pret: p, stare: stare, bare: b.length, stop1: null, sare1: null, cursa5: null, motiv: null };
+    var stop = nr(o.stop), tinta = nr(o.tinta);
+    if (stop === null || !(stop > 0)) { out.motiv = "fără stop"; return out; }
+    if (stop >= p) { out.motiv = "stopul e deja depășit (prețul e sub el)"; return out; }
+    var relS = stop / p - 1, relT = tinta !== null && tinta > p ? tinta / p - 1 : null;
+    out.stop1 = frecventa(b, 1, function (bb, i) { var niv = bb[i].c * (1 + relS); return bb[i + 1].o > niv && bb[i + 1].l <= niv ? "da" : "nu"; }, "da", stare, op);
+    out.sare1 = frecventa(b, 1, function (bb, i) { return bb[i + 1].o <= bb[i].c * (1 + relS) ? "da" : "nu"; }, "da", stare, op);
+    if (relT !== null) { var ev = cursa(relT, relS); out.cursa5 = { tinta: frecventa(b, 5, ev, "tinta", stare, op), stop: frecventa(b, 5, ev, "stop", stare, op) }; }
+    return out;
   }
   function pentruBot(bare, o) {
     o = o || {};
@@ -185,5 +215,5 @@ var Probabilitati = (function () {
     var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
     return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
   }
-  return { imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
+  return { pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();
