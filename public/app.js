@@ -5047,6 +5047,8 @@ function grPoartaHtml(f){
   h+='<div class="grPoartaForm"><label><span class="tbEt2">Ies pe plus la, USDT</span><input id="grPlanPlus" inputmode="decimal" placeholder="ex. 5"'+vv("plus")+'></label><label><span class="tbEt2">Ies dacă pierd, USDT</span><input id="grPlanMinus" inputmode="decimal" placeholder="ex. 10"'+vv("minus")+'></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPlanAfara" inputmode="decimal" placeholder="ex. 12"'+vv("afaraOre")+'></label>'
     +'<button type="button" class="grCalc" data-action-click="gridPoarta()">Verifică poarta</button><button type="button" class="actionGhost" data-action-click="gridHartiePorneste()">🧾 Pornește pe hârtie</button></div>';
   if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+(function(t,c){return c?escapeHtml(t.replace(/\.$/,""))+' <span class="tbSub">('+escapeHtml(c)+')</span>'+(/\.$/.test(t)?".":""):escapeHtml(t)})(String(r.text),!r.ok&&r.cost?r.cost:null)+(r.nota?'<br><span class="tbSub">'+escapeHtml(r.nota)+'</span>':'')+'</li>'}).join("")+'</ul>'
+    // v100.80 (rețeaua neuronală): rândul gri 🧠, după regulile porții (poarta nu se schimbă)
+    +grReteaPoartaHtml(f,p)
     // v100.29: sfaturile din istoria lui (inchiderile din prima ora) - informatie, nu regula
     +(p.rez.sfaturi&&p.rez.sfaturi.length?p.rez.sfaturi.map(function(x){return '<p class="tbSub">💡 '+escapeHtml(x)+'</p>'}).join(""):"")
     // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
@@ -5165,7 +5167,7 @@ async function gridPoarta(){
   var asG=null;try{var dCz=await getJSON("/api/istoric-bot?action=cazuri"),stP=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare;
     if(dCz&&dCz.cazuri&&dCz.cazuri.cazuri&&stP&&f.pret>0)asG=Asemanatoare.vecini(dCz.cazuri.cazuri,{dir:f.dir,lev:Math.max(1,Math.floor(lev)),lat:(stP.sus-stP.jos)/f.pret,pas:stP.pas-2*GridCalcul.C.COMISION_GRILA,stare:grProb.rez&&grProb.simbol===f.simbol?grProb.rez.stare:Probabilitati.stareDinRegim(f.regim),investit:grNumar($("grSuma")&&$("grSuma").value)||stP.suma})}catch(e){asG=null}
   var sansaG=grProb.rez&&grProb.simbol===f.simbol?Probabilitati.rand(grProb.rez,grProb.cal,f.dir,{titluCursa:grTitluCursa(grProb.rez)}):null;   // v100.47
-  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:Obiceiuri.poarta({planMoneda:pmG,asemanatoare:asG,sansa:sansaG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
+  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,trades:trades,lev:lev,rez:Obiceiuri.poarta({planMoneda:pmG,asemanatoare:asG,sansa:sansaG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
 }
@@ -5700,14 +5702,28 @@ function grProbDeseneaza(f){
   var dir=f.dir==="short"?"short":f.dir==="long"?"long":"neutru",ch=[f.simbol,grStare.la,dir,st.jos,st.sus,JSON.stringify(st.lichidare||null),JSON.stringify(st.stop||null)].join("|");   // revizia 01.10: si lichidarea/stopurile (levierul schimbat)
   if(grProb.cheie!==ch){
     var b1=grProb.ore.map(function(r){return {t:r[0],o:r[1],h:r[2],l:r[3],c:r[4]}}),b15=grStare.date&&grStare.simbol===f.simbol?GridCalcul.bare(grStare.date.r15):[];
-    grProb.rez=Probabilitati.pentruBot(Probabilitati.imbina(b1,b15,Date.now()),{acum:Date.now(),pret:f.pret,dir:dir,jos:st.jos,sus:st.sus,
-      lichidare:st.lichidare?(dir==="short"?st.lichidare.sus:st.lichidare.jos):null,tinta:st.stop?(dir==="short"?st.stop.jos:st.stop.sus):null,stop:st.stop?(dir==="short"?st.stop.sus:st.stop.jos):null});
+    // v100.80 (rețeaua): barele unite și intrările se păstrează - 🧠 le folosește pe ACELEAȘI (fără diferență față de 🎲)
+    grProb.bare=Probabilitati.imbina(b1,b15,Date.now());
+    grProb.o={acum:Date.now(),pret:f.pret,dir:dir,jos:st.jos,sus:st.sus,lichidare:st.lichidare?(dir==="short"?st.lichidare.sus:st.lichidare.jos):null,tinta:st.stop?(dir==="short"?st.stop.jos:st.stop.sus):null,stop:st.stop?(dir==="short"?st.stop.sus:st.stop.jos):null};
+    grProb.rez=Probabilitati.pentruBot(grProb.bare,grProb.o);
     grProb.cheie=ch}
   var rez=grProb.rez;if(!rez){el.innerHTML="";return}
+  // v100.80 (rețeaua neuronală): 🧠 pe gridul propus - în browser, cu modelele din KV și BTC din Pionex
+  reteaAdu(function(){if(grStare.fisa)renderGrid()});grReteaBtc();
+  var zar=Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}),rt=reteaM.m&&grProb.bare?Retea.pentruBot(reteaM.m,grProb.bare,grProb.o,grRetea.btc):null;
   el.innerHTML='<div class="tbBloc grProbBloc"><h4>🎲 Ce s-a întâmplat în trecut, cu gridul propus</h4><p class="tbSub">acum: '+escapeHtml(Probabilitati.ETICHETE[rez.stare]||rez.stare)+' · '+Math.round(rez.bare/24)+' de zile de bare de 1 h</p>'
-    +Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}).map(tbProbRandHtml).join("")
+    +zar.map(tbProbRandHtml).join("")+reteaHtml(rt,zar,{acum:Date.now()})
     +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei, în situații ca acum — nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra.</p></div>';   /* v100.71 (I2) */
 }
+// v100.80 (rețeaua neuronală): BTC pentru trăsăturile 🧠 ale fișei (ultimele 500 de ore din Pionex), o dată la 30 de minute
+var grRetea={btc:null,la:0,inLucru:false};
+function grReteaBtc(){if(typeof Retea==="undefined"||!reteaM.m||grRetea.inLucru||Date.now()-grRetea.la<30*60000)return;grRetea.inLucru=true;getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500").then(function(k){grRetea.btc=GridCalcul.bare(k&&k.data&&k.data.klines||[])}).catch(function(){grRetea.btc=null}).then(function(){grRetea.la=Date.now();grRetea.inLucru=false;if(grStare.fisa)renderGrid()})}
+// la poartă, rândul gri: „un bot ca ăsta ar ieși pe plus” din istoria lui și piața de acum - informație, poarta rămâne a ei
+function grReteaPoartaHtml(f,p){var m=reteaM.m,st=grProbSetare(f);if(typeof Retea==="undefined"||!m||!m.rezultat||!st||!grProb.bare||!p)return "";
+  var g=TabloExtra.geometrieBot({gridJos:st.jos,gridSus:st.sus,pretCurent:f.pret,brut:{buOrderData:{row:(Number(st.grile)||0)+1,gridType:"arithmetic"}}});
+  var pz=Retea.pentruPornire(m,{moneda:JurnalTrade.moneda(String(f.simbol).replace(/_USDT_PERP$/,"")),dir:f.dir,levier:p.lev,jos:st.jos,sus:st.sus,pasNet:g?g.netPct:null,pus:st.suma,pornit:Date.now()},grProb.bare,grRetea.btc,p.trades||[]);
+  var vd=pz&&Retea.verdict(m.rezultat,Date.now());if(!pz||!vd)return "";
+  return '<p class="tbSub grRetea">🧠 '+escapeHtml(Retea.textPornire(pz,vd))+'</p>'}
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
   var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;

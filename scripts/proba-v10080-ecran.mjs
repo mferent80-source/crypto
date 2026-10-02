@@ -68,5 +68,21 @@ await test("(8) garda: grupul „retea” e STRICT și n-are abateri (toate form
   assert.equal(rele.length, 0, rele.map((q) => q.ab.join("; ") + " — " + q.x.text).join("\n"));
 });
 
+await test("(9) fișa: 🧠 pe aceleași bare și niveluri ca 🎲 (grProb.bare / grProb.o), cu BTC din Pionex; rândurile sub cele 🎲", () => {
+  const f = fn("grProbDeseneaza");
+  assert.match(f, /grProb\.bare=Probabilitati\.imbina\(b1,b15,Date\.now\(\)\)/); assert.match(f, /grProb\.rez=Probabilitati\.pentruBot\(grProb\.bare,grProb\.o\)/);
+  assert.match(f, /Retea\.pentruBot\(reteaM\.m,grProb\.bare,grProb\.o,grRetea\.btc\)/); assert.match(f, /zar\.map\(tbProbRandHtml\)\.join\(""\)\+reteaHtml\(rt,zar,\{acum:Date\.now\(\)\}\)/);
+});
+await test("(9) poarta: rândul gri „🧠 Un bot ca ăsta ar ieși pe plus: …” din istoria ta; fără modele / fără bare -> nimic; poarta neschimbată", () => {
+  const ctx = { Retea: R, escapeHtml: (x) => String(x), reteaM: { m: null }, grProb: { bare: null }, grRetea: { btc: null }, grProbSetare: (f) => f.setare, Date,
+    TabloExtra: { geometrieBot: () => ({ netPct: 0.004 }) }, JurnalTrade: { moneda: (s) => s } };
+  vm.createContext(ctx); vm.runInContext(fn("grReteaPoartaHtml") + ";this.f=grReteaPoartaHtml;", ctx);
+  const f = { simbol: "LIT_USDT_PERP", dir: "long", pret: 1, setare: { jos: 0.9, sus: 1.1, grile: 20, suma: 50 } }, p = { trades: [], lev: 3 };
+  assert.equal(ctx.f(f, p), "");
+  const ret = { rezultat: { tinta: "rezultat", versiune: R.VERSIUNE, la: Date.now(), verificare: null } };
+  ctx.reteaM.m = ret; ctx.grProb.bare = []; ctx.Retea = { ...R, pentruPornire: () => ({ p: 0.41, rata: 0.524, n: 431 }) };
+  assert.equal(ctx.f(f, p), '<p class="tbSub grRetea">🧠 Un bot ca ăsta ar ieși pe plus: 41% · rata ta: 52% · nedovedită: neverificată încă.</p>');
+  assert.match(fn("grPoartaHtml"), /\+grReteaPoartaHtml\(f,p\)/); assert.match(fn("gridPoarta"), /trades:trades,lev:lev/);
+});
 console.log("\n" + (pica ? "V100.80 ECRAN PICA · " + pica + " din " + (ok + pica) : "V100.80 ECRAN PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
