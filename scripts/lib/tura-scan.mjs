@@ -90,7 +90,7 @@ export async function scanNume(d, cr, ac, vechi) {
 export function mesajReteta(x, numeReteta, fel, intrat, id, k) {
   const pret = (fel === "a" ? "$" : "") + x.p, ch = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
   return intrat
-    ? { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + numeReteta, mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + ". Pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k }
+    ? { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + numeReteta, mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + "; pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k }
     : { nivel: "info", titlu: "🔕 " + x.s + " a ieșit din " + numeReteta, mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + ".", cheie: "reteta-iesit-" + id + "-" + k };
 }
 

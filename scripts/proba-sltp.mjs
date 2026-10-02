@@ -96,7 +96,7 @@ await test("alerteSLTP: fara plan -> SL / TP sugerat atins (critic / info); CU p
 await test("alerteSLTP: simbol urmarit la intrarea sugerata -> info cu SL, TP si istoricul; departe / trend in jos / fara-date -> nimic", () => {
   const l = alerteSLTP(pozaA(), ACUM_A), i = l.find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
   assert.ok(i); assert.equal(i.nivel, "info"); assert.match(i.titlu, /INTC: a ajuns la intrarea sugerată \(\$111\.99\)/);
-  assert.match(i.mesaj, /SL \$94\.68/); assert.match(i.mesaj, /TP \$146\.61/); assert.match(i.mesaj, /\+7,0% pe trade/);
+  assert.match(i.mesaj, /stop \$94\.68/); assert.match(i.mesaj, /țintă \$146\.61/); assert.match(i.mesaj, /\+7,0% pe trade/);   /* v100.68: vocabularul „stop / țintă” */
   assert.ok(!l.some((x) => /WDC|RHM|NOUX/.test(x.cheie)));
   assert.deepEqual(alerteSLTP({ t212: [], simboluri: [] }, ACUM_A), []); assert.deepEqual(alerteSLTP(null, ACUM_A), []);
 });
@@ -122,9 +122,9 @@ await test("simbolPoza: sugestia urmaritului poarta marimea (bucati, suma si ris
 await test("alerteSLTP: mesajul intrarii spune si cat cumpar (bucati, suma, riscul in lei) cand colectorul a calculat marimea", () => {
   const p = pozaA(); p.simboluri[0].sugestie.marime = { bucati: 3.6238, suma: 1870, risc: 289, plafonat: false };
   const i = alerteSLTP(p, ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
-  assert.match(i.mesaj, /Cât cumpăr: 3,62 buc \(~1\.870 lei\), risc ~289 lei = 1 % din cont/);
+  assert.match(i.mesaj, /\n👉 Aș cumpăra cel mult 3,62 buc \(~1\.870 lei, risc ~289 lei = 1% din cont\)/);   /* v100.68: acțiunea pe rândul „👉” */
   p.simboluri[0].sugestie.marime.plafonat = true;
-  assert.match(alerteSLTP(p, ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A).mesaj, /plafonat la 20 % din cont/);
+  assert.match(alerteSLTP(p, ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A).mesaj, /plafon 20% din cont/);
   const fara = alerteSLTP(pozaA(), ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
   assert.doesNotMatch(fara.mesaj, /Cât cumpăr/, "fara marime (€, cont necitit): nimic inventat");
 });

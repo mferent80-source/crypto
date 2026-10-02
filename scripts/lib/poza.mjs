@@ -237,7 +237,8 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
       const atr = n ? suma / n : null, d = s.pret / s.prev - 1;
       if (atr && Math.abs(d) > 2 * atr) out.push({ cheie: "sim-miscare-" + s.s + "-" + zi, nivel: "atentie",
         titlu: s.s + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " azi, de " + (Math.abs(d) / atr).toFixed(1).replace(".", ",") + "× mișcarea lui obișnuită",
-        mesaj: "Mișcarea zilei e peste 2× ATR-ul propriu (" + pctTxt(atr) + " pe zi, media ultimelor 14 zile). Pragul de 2× ATR e o ipoteză, nu un semnal dovedit: o dată pe zi per simbol, ca să vezi când i se întâmplă ceva NEOBIȘNUIT lui, nu la fiecare procent." });
+        // v100.68 (sfaturile concise, pachetul 3): faptul + „👉 ” actiunea; pragul ramane spus ca ipoteza
+        mesaj: "Peste 2× ATR-ul lui (" + pctTxt(atr) + " pe zi, media pe 14 zile); pragul e o ipoteză, nu un semnal dovedit.\n👉 M-aș uita la știrile lui înainte să fac ceva: o mișcare mare nu cere singură o decizie." });
     }
     // v98.2 (audit 28.09, #4): "noua" = a aparut fata de o poza ANTERIOARA a aceluiasi simbol (prima vedere nu e stire) si e din
     // ultimele 30 de zile (INTC a fost anuntat pe 27.09 pentru cumpararea CEO-ului din 11.08 - informatia nu era noua atunci)
@@ -247,7 +248,7 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
     const noua = t && !(ant && ant.ultimaCumparare && ant.ultimaCumparare.zi && t.zi <= ant.ultimaCumparare.zi);
     if (ant && recenta && noua && (v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
       out.push({ cheie: "sim-insider-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
-        mesaj: t.cine + " (" + t.rol + ") a cumpărat " + miiTxt(t.act) + " acțiuni, ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + ". Cumpărările cu bani ale insiderilor contează, acțiunile primite gratis nu. E informație, nu îndemn." });
+        mesaj: t.cine + " (" + String(t.rol || "").slice(0, 30) + ") a cumpărat " + miiTxt(t.act) + " acțiuni, ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + "; cumpărările cu bani contează, cele primite gratis nu.\n👉 Aș trece-o pe lista de urmărit, fără să cumpăr doar pentru asta." });
     }
   }
   return out;
@@ -268,12 +269,12 @@ export function alerteSLTP(poza, acum) {
     const et = pl ? "stopul din planul tău" : "stopul sugerat", dist = 1 - sl / pret;
     if (pret > sl && (pret - sl) / (tp - sl) < 0.25)
       out.push({ cheie: "sltp-aproape-" + p.s + "-" + zi, nivel: "atentie", titlu: p.s + ": " + (dist < 0.0005 ? "chiar la " : "la " + pctTxt(dist) + " de ") + et + " ($" + pr(sl) + ")",
-        mesaj: "Prețul e $" + pr(pret) + ", în ultimul sfert al drumului spre SL (TP $" + pr(tp) + "). 👉 Ce aș face eu: nu adaug acum; dacă atinge stopul, ies cum am scris." });
+        mesaj: "Prețul e $" + pr(pret) + ", în ultimul sfert al drumului spre stop (ținta $" + pr(tp) + ").\n👉 N-aș adăuga acum; dacă atinge stopul, aș ieși cum am scris." });
     if (!pl && sg) {
       if (pret <= sl) out.push({ cheie: "sltp-sl-" + p.s + "-" + zi, nivel: "critic", titlu: p.s + ": a atins stopul sugerat ($" + pr(sl) + ")",
-        mesaj: "Prețul e $" + pr(pret) + ". Poziția n-are plan în Radar, stopul e cel sugerat (−15 % de la maxim). 👉 Ce aș face eu: ies, sau îmi scriu acum planul la rece." });
+        mesaj: "Prețul e $" + pr(pret) + "; poziția n-are plan în Radar, stopul e cel sugerat (−15% de la maxim).\n👉 Aș ieși sau mi-aș scrie acum planul la rece." });
       else if (pret >= tp) out.push({ cheie: "sltp-tp-" + p.s + "-" + zi, nivel: "info", titlu: p.s + ": a atins ținta sugerată ($" + pr(tp) + ")",
-        mesaj: "Prețul e $" + pr(pret) + ". 👉 Ce aș face eu: iau profit pe o parte și pun stopul la prețul de intrare; restul îl las să meargă." });
+        mesaj: "Prețul e $" + pr(pret) + ".\n👉 Aș lua profit pe o parte și aș pune stopul la prețul de intrare; restul l-aș lăsa să meargă." });
     }
   }
   for (const s of Array.isArray(poza.simboluri) ? poza.simboluri : []) {
@@ -281,11 +282,12 @@ export function alerteSLTP(poza, acum) {
     if (!g || g.nivel || !g.intrare || nr(g.intrare.pret) === null || !pret || pret > g.intrare.pret * 1.005) continue;
     const m = s.moneda === "€" ? "€" : "$", q = g.proba || {};
     out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
-      mesaj: "Prețul e " + m + pr(pret) + ". SL " + m + pr(g.stop) + " · TP " + m + pr(g.tinta)
-        + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + " % pe plus, " + q.n + " intrări)" : "")
+      // v100.68 (pachetul 3): randul 1 = pretul, stopul, tinta si istoricul; randul 2 = cat as cumpara (reper, nu semnal)
+      mesaj: "Prețul e " + m + pr(pret) + " · stop " + m + pr(g.stop) + " · țintă " + m + pr(g.tinta)
+        + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + "% pe plus, " + q.n + (q.n >= 20 ? " de" : "") + " intrări)" : "") + ".\n👉 "
         // v101.3 (el, 28.09): si cat cumpar, cand colectorul a calculat marimea (doar in $, cu contul T212 citit)
-        + (g.marime && g.marime.bucati > 0 ? ". Cât cumpăr: " + g.marime.bucati.toFixed(2).replace(".", ",") + " buc (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei), risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafonat la 20 % din cont" : " = 1 % din cont") : "")
-        + ". E un reper din istoricul lui, nu un semnal dovedit; decizia e a ta." });
+        + (g.marime && g.marime.bucati > 0 ? "Aș cumpăra cel mult " + g.marime.bucati.toFixed(2).replace(".", ",") + " buc (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei, risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafon 20% din cont" : " = 1% din cont") + "); e un reper, nu un semnal."
+          : "Aș intra doar cu stopul pus; e un reper din istoricul lui, nu un semnal.") });
   }
   return out;
 }

@@ -20,7 +20,7 @@ const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, D
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
 // pachetul 2: sfaturi = sfaturi.js, consiliu-2 = Consilierul cu sfaturile reale, todo = „Ce ai de făcut acum”, server = avertismentele;
 // „alerte” = titlurile/textele din regulile alertelor (alerte.js), strict la pachetul 3)
-export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo", "server"]);
+export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo", "server", "alerte"]);   // v100.68: + alerte (pachetul 3)
 
 // ---- regulile ----
 export const REGULI = {
@@ -38,7 +38,8 @@ export const REGULI = {
 };
 const PERSOANA = /^(Aș|N-aș|L-aș|Le-aș|O-aș|M-aș|Nu m-aș)\s/;
 export const INTERZIS = [
-  [/\d\.\d+\s?(%|×|h\b|min\b|USDT\b|lei\b)/, "zecimală cu punct (vrea virgulă)"],
+  // v100.68: „2.610 lei” (separatorul de mii, ca TextRo.lei) nu e zecimala; „12.4%”, „0.060%” da
+  [/(?:\b0\.\d+|\d\.(?!\d{3}(?!\d))\d+)\s?(%|×|h\b|min\b|USDT\b|lei\b)/, "zecimală cu punct (vrea virgulă)"],
   [/(^|[\s(·:])-\d/, "minus ASCII (vrea „−”)"],
   [/NaN|undefined|null|Infinity|\[object/, "gunoi în text"],
   [/!(?!=)/, "semn de exclamare"],

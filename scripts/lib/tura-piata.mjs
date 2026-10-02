@@ -8,7 +8,7 @@ const MIN = 60000, ORA = 3600000;
 const RITM = { vreme: 10 * MIN, funding: ORA, boti: 30 * MIN, bursa: ORA };
 
 // v100.66 (pachetul 3): alerta funding-ului pe toata piata, intr-o functie - garda textelor o genereaza; f = Acasa.fundingPiata(...)
-export const mesajFundingPiata = (f) => ({ cheie: "funding-piata", nivel: "atentie", titlu: "Funding-ul pe piață e mult peste obicei", mesaj: f.text + " Ce aș face eu: n-aș porni boți long noi până nu se descarcă." });
+export const mesajFundingPiata = (f) => ({ cheie: "funding-piata", nivel: "atentie", titlu: "Funding-ul pe piață e mult peste obicei", mesaj: f.text + "\n👉 N-aș porni boți long noi până nu se descarcă." });
 
 function ceas(acum, tz) {
   const o = {};

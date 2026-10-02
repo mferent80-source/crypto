@@ -338,8 +338,9 @@ var Alerte = (function () {
     var treapta = Math.max(1, pl.prag / 4), baza = Math.max(pl.prag, vechi && nr(vechi.anuntat) !== null ? vechi.anuntat : -Infinity, u.opritorPastreaza !== null ? u.opritorPastreaza : -Infinity);
     if (u.pastrezi < baza + treapta) return { mesaje: [], stare: vechi || null };
     var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
-    return { stare: { anuntat: u.pastrezi }, mesaje: [{ cheie: "podea-urca", nivel: "info", titlu: "🪜 " + nume + ": poți urca opritorul — păstrezi " + U(u.pastrezi),
-      mesaj: "Opritorul de pierdere la " + pret(u.pret) + " (" + (u.perna * 100).toFixed(1).replace(".", ",") + "% de prețul de acum) îți păstrează " + U(u.pastrezi) + " dacă piața se întoarce" + (u.opritorPastreaza !== null ? "; cel de acum (" + pret(u.opritor) + ") păstrează " + U(u.opritorPastreaza) : "") + ". Îl muți în Pionex; botul merge mai departe." }] };
+    return { stare: { anuntat: u.pastrezi }, mesaje: [{ cheie: "podea-urca", nivel: "info", titlu: "🪜 " + nume + ": poți urca stopul — păstrezi " + U(u.pastrezi),
+      mesaj: msg("Stopul la " + pret(u.pret) + " (" + vg(u.perna * 100) + "% de preț) îți păstrează " + U(u.pastrezi) + " dacă piața se întoarce" + (u.opritorPastreaza !== null ? ", cel de acum (" + pret(u.opritor) + ") " + U(u.opritorPastreaza) : "") + ".",
+        "Aș muta stopul în Pionex la " + pret(u.pret) + "; botul merge mai departe.") }] };
   }
 
   function grila(b, vechi) {
@@ -349,14 +350,14 @@ var Alerte = (function () {
     if (noiPer > 0) {
       var dg = c.g !== null && vechi.g !== null ? c.g - vechi.g : null, U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
       mesaje.push({ cheie: "grila", nivel: "info", perechi: noiPer, usdt: dg, titlu: "✅ " + nume + ": " + (noiPer === 1 ? "pereche încheiată" : noiPer + " perechi încheiate") + (dg !== null ? " " + U(dg) : ""),
-        mesaj: "Grilele au adus " + (c.g !== null ? U(c.g) : "?") + " de la pornire (" + c.per + " perechi)." + (p !== null ? " Prețul " + pret(p) + "." : "") });
+        mesaj: "Grilele au adus " + (c.g !== null ? U(c.g) : "—") + " de la pornire (" + c.per + (c.per >= 20 ? " de" : "") + " perechi)" + (p !== null ? "; prețul " + pret(p) : "") + "." });
     } else if (noiU > 0) {
       var dir = String(b.directie || "").toLowerCase(), crescut = c.poz !== null && vechi.poz !== null ? Math.abs(c.poz) > Math.abs(vechi.poz) : null;
       var fapta = crescut === null ? "" : dir === "short" ? (crescut ? " — a vândut" : " — a cumpărat") : (crescut ? " — a cumpărat" : " — a vândut");
       // v97.9 (27.09: 18 din 62 de alerte erau "grila atinsa"): cumpararea / vanzarea simpla ramane in Radar (pagina Alerts),
       // nu mai pleaca pe Discord; perechea incheiata (banii) pleaca in continuare
       mesaje.push({ cheie: "grila", nivel: "info", doarRadar: true, titlu: nume + ": " + (noiU === 1 ? "grilă atinsă" : noiU + " grile atinse") + fapta + (p !== null ? " la ~" + pret(p) : ""),
-        mesaj: "Poziția e acum " + (c.poz !== null ? c.poz : "?") + ". Perechea se încheie când prețul ajunge la linia următoare în sens invers." });
+        mesaj: "Poziția e acum " + (c.poz !== null ? c.poz : "—") + "; perechea se încheie când prețul ajunge la linia următoare în sens invers." });
     }
     return { mesaje: mesaje, contori: c };
   }
@@ -373,7 +374,9 @@ var Alerte = (function () {
     n.reaDe = n.reaDe || acum; n.eroare = String(rez && rez.eroare || "eroare necunoscută").slice(0, 200);
     var de = acum - n.reaDe;
     if (de >= PRETURI_MS && (!n.anuntatLa || acum - n.anuntatLa >= PRETURI_REPETA_MS))
-      return { stare: n, mesaj: { nivel: "critic", titlu: "Crypto Radar nu mai primește prețurile de la Pionex", mesaj: "De " + Math.round(de / 60000) + " minute: " + n.eroare + ". Graficul, indicatorii, direcția pieței și clasamentul sunt goale, iar alertele de piață nu mai sunt de încredere. De obicei trece singur; dacă ține, repornește Radarul." } };
+      return { stare: n, mesaj: { nivel: "critic", titlu: "Crypto Radar nu mai primește prețurile de la Pionex",
+        mesaj: msg("De " + Math.round(de / 60000) + " minute (" + taie(n.eroare, 40) + ") graficul, indicatorii, direcția și clasamentul sunt goale, iar alertele de piață nu sunt de încredere.",
+          "Aș aștepta să treacă singur; dacă ține, aș reporni Radarul.") } };
     return { stare: n, mesaj: null };
   }
   // se cheama DOAR dupa ce mesajul a plecat (altfel tura urmatoare il reincearca)
@@ -419,8 +422,8 @@ var Alerte = (function () {
     var ea = o.fel === "monedă" ? "ei" : "ei", fer = o.fel === "monedă" ? "pe 24 h" : "pe zi";
     return { stare: s, mesaj: { cheie: "miscare-" + (o.cheie || o.nume), nivel: "atentie",
       titlu: (o.nume || "?") + ": " + (ch > 0 ? "urcă" : "scade") + " " + (ch > 0 ? "+" : "−") + V1(a) + "% " + (o.fel === "monedă" ? "în 24 h" : "azi"),
-      mesaj: (tip !== null ? "E " + V1(a / tip) + "× mișcarea " + ea + " obișnuită (" + V1(tip) + "% " + fer + ")." : "Peste pragul de 3%.") + (nr(o.pret) !== null ? " Prețul " + pret(nr(o.pret)) + "." : "")
-        + " Ce aș face eu: mă uit " + (o.fel === "monedă" ? "în Tabloul botului" : "în Trading 212") + " înainte să fac ceva; o mișcare mare nu cere singură o decizie." } };
+      mesaj: msg((tip !== null ? "E " + V1(a / tip) + "× mișcarea " + ea + " obișnuită (" + V1(tip) + "% " + fer + ")" : "Peste pragul de 3%") + (nr(o.pret) !== null ? "; prețul " + pret(nr(o.pret)) : "") + ".",
+        "M-aș uita " + (o.fel === "monedă" ? "în Tabloul botului" : "în Trading 212") + " înainte să fac ceva: o mișcare mare nu cere singură o decizie.") } };
   }
   // Schimbarea "vremii pietei" (Home): crypto (liniste/amestecat/miscare), Nasdaq (larga/ingusta/lateral/scade/frica)
   // si legatura BTC - bursa (urmeaza >= 0,5 / separat < 0,3). O schimbare se anunta abia cand se confirma de 2 ori la rand.
@@ -433,7 +436,7 @@ var Alerte = (function () {
       if (init || !c) { n[p[0]] = { nivel: niv, cand: null }; return; }
       if (niv === c.nivel) { c.cand = null; return; }
       if (c.cand === niv) {
-        mesaje.push({ cheie: "vreme-" + p[0], nivel: RAU[niv] ? "critic" : "info", titlu: p[1] + ": " + (v.eticheta || niv), mesaj: (v.titlu ? v.titlu + " " : "") + (v.faCe ? "Ce aș face eu: " + v.faCe : "") });
+        mesaje.push({ cheie: "vreme-" + p[0], nivel: RAU[niv] ? "critic" : "info", titlu: p[1] + ": " + (v.eticheta || niv), mesaj: msg(v.titlu || "", v.faCe ? mare(v.faCe) : null) });
         n[p[0]] = { nivel: niv, cand: null };
       } else c.cand = niv;
     });
@@ -444,7 +447,7 @@ var Alerte = (function () {
       else if (tinta === n.cor.stare) n.cor.cand = null;
       else if (n.cor.cand === tinta) {
         mesaje.push({ cheie: "vreme-corelatie", nivel: "info", titlu: tinta === "urmeaza" ? "BTC urmează bursa acum (" + r.toFixed(2).replace(".", ",") + ")" : "BTC merge din nou pe drumul lui (" + r.toFixed(2).replace(".", ",") + ")",
-          mesaj: tinta === "urmeaza" ? "Pe ultimele 30 de zile de bursă BTC se mișcă odată cu Nasdaq: o scădere a bursei trage și crypto. Ce aș face eu: mă uit la VIX și la Nasdaq înainte să pornesc boți long." : "Bursa nu mai trage BTC după ea: crypto se judecă din nou pe datele lui." });
+          mesaj: tinta === "urmeaza" ? msg("Pe ultimele 30 de zile de bursă BTC se mișcă odată cu Nasdaq: o scădere a bursei trage și crypto.", "M-aș uita la VIX și la Nasdaq înainte să pornesc boți long.") : "Bursa nu mai trage BTC după ea: crypto se judecă din nou pe datele lui." });
         n.cor = { stare: tinta, cand: null };
       } else n.cor.cand = tinta;
     }

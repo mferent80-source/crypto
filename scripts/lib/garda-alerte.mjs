@@ -135,7 +135,7 @@ export function situatiiAlerte(pune) {
 
   // avertizarea la pornire (textul de baza vine din Obiceiuri - pachetul 5), retetele scanului, funding-ul pietei
   pune("bot nou pe o monedă unde pierzi", "alerte", "pornire.mesaj", mesajPornire({ id: "b1" }, "LIGHTER", { text: "Pe LIGHTER ai închis 12 boți, net −57,30 USDT." },
-    { text: "Boții închiși în prima oră: 34, net −21,40 USDT." }, " Poarta pe LIT: https://mau.tail9144fe.ts.net:8443/#ecran=gridset&moneda=LIT"), AL);
+    { text: "Boții închiși în prima oră: 34, net −21,40 USDT." }, "LIT", "https://mau.tail9144fe.ts.net:8443/#ecran=gridset&moneda=LIT"), AL);
   const xr = { s: "AMD", p: 141.2, ch: 2.31, ch7: -4.12, rsi: 38.6 };
   pune("rețetă: AMD a intrat", "alerte", "reteta.intrat", mesajReteta(xr, "Revenire după scădere", "a", true, "aAMD", "rev"), AL);
   pune("rețetă: AMD a ieșit", "alerte", "reteta.iesit", mesajReteta(xr, "Revenire după scădere", "a", false, "aAMD", "rev"), AL);

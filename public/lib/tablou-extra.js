@@ -280,7 +280,8 @@ var TabloExtra = (function () {
   // v97.7 "fisa de inchidere" (27.09: ICP inchis de opritor dupa 1,5 h, VVV incasat peste tinta): cat a tinut, cu cat a
   // iesit si DE CE, cat au adus grilele si cat pozitia, ce spunea planul lui si lectia - doar din fapte.
   // b = botul inchis (bot-orders?status=finished), o = { plan?: {plus, minus}, atrPct?: miscarea zilnica a monedei (Scan) }
-  var MOTIV = { user_cancel: "l-ai închis tu", loss_stop: "opritorul de pierdere", profit_stop: "opritorul de profit (ținta)", liquidation: "LICHIDAT", liquidated: "LICHIDAT", system_cancel: "închis de Pionex" };
+  // v100.68 (pachetul 3): vocabularul unic („stopul”, nu „opritorul”), fara majuscule de strigat
+  var MOTIV = { user_cancel: "l-ai închis tu", loss_stop: "stopul de pierdere", profit_stop: "ținta (take-profit-ul)", liquidation: "lichidat", liquidated: "lichidat", system_cancel: "închis de Pionex" };
   function fisaInchidere(b, o) {
     o = o || {};
     var nume = String(b && b.baza || "Botul").replace(/\.PERP$/, ""), tot = nr(b && b.profitTotal), inv = nr(b && b.investit), grid = nr(b && b.gridProfitBrut);
@@ -293,23 +294,26 @@ var TabloExtra = (function () {
     var mt = MOTIV[mot] || (mot ? mot.replace(/_/g, " ") : "necunoscut");
     if (mot === "loss_stop" && b.opritorPierdereTip === "raport" && nr(b.opritorPierdereRaport) !== null) mt += " (" + P(nr(b.opritorPierdereRaport) * 100, 2) + " din investiție)";
     L.push("De ce: " + mt + ".");
-    if (grid !== null && tot !== null) L.push("Grilele au adus " + U(grid) + (nr(b.ordinePerechi) !== null ? " în " + b.ordinePerechi + " perechi" : "") + "; poziția și costurile au dus restul (" + U(tot - grid) + ").");
-    var pl = o.plan, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
-    if (plus || minus) L.push("Planul tău: +" + (plus || "—") + " / −" + (minus || "—") + " USDT → " + (tot === null ? "—" : plus && tot >= plus ? "ținta atinsă" + (tot > plus ? ", ai ieșit peste ea" : "") : minus && tot <= -minus ? "pragul de minus atins" : tot < 0 ? "ai ieșit înainte de pragul tău de minus" : "ai ieșit înainte de țintă") + ".");
+    if (grid !== null && tot !== null) L.push("Grilele au adus " + U(grid) + (nr(b.ordinePerechi) !== null ? " în " + b.ordinePerechi + (nr(b.ordinePerechi) >= 20 ? " de" : "") + " perechi" : "") + "; poziția și costurile au dus restul (" + U(tot - grid) + ").");
+    var pl = o.plan, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null, V = function (v) { return v ? String(Math.round(v * 100) / 100).replace(".", ",") : "—"; };
+    if (plus || minus) L.push("Planul tău: +" + V(plus) + " / −" + V(minus) + " USDT → " + (tot === null ? "—" : plus && tot >= plus ? "ținta atinsă" + (tot > plus ? ", ai ieșit peste ea" : "") : minus && tot <= -minus ? "pragul de minus atins" : tot < 0 ? "ai ieșit înainte de pragul tău de minus" : "ai ieșit înainte de țintă") + ".");
     else L.push("Planul tău: n-avea plan scris.");
     // v100.32 (30.09, el: „fa 1/2/3”): inchis in PRIMA ORA -> cat l-au costat comisioanele (fata de grile) + cifra din istoria lui
     var com = nr(b && b.comisioane), so = o.subOOra;
-    if (dur !== null && dur < 3600000 && com !== null) L.push("Închis în prima oră (" + durTxt + "): comisioanele lui " + U(-Math.abs(com))
-      + (grid !== null && grid > 0 ? " — " + Math.round(Math.abs(com) / grid * 100) + "% din ce au făcut grilele" : "")
-      + (so && nr(so.n) ? "; pe istoria ta: " + so.n + " de boți închiși în prima oră, net " + U(nr(so.net) || 0) + ", din care comisioane " + U(nr(so.comisioane) || 0) : "") + ".");
+    // v100.68: doua randuri (fiecare ≤ 160) - comisioanele lui, apoi istoria ta
+    if (dur !== null && dur < 3600000 && com !== null) {
+      L.push("Închis în prima oră (" + durTxt + "): comisioanele lui " + U(-Math.abs(com)) + (grid !== null && grid > 0 ? ", " + Math.round(Math.abs(com) / grid * 100) + "% din ce au făcut grilele" : "") + ".");
+      if (so && nr(so.n)) L.push("Pe istoria ta: " + so.n + " de boți închiși în prima oră, net " + U(nr(so.net) || 0) + ", din care comisioane " + U(nr(so.comisioane) || 0) + ".");
+    }
     // lectiile - doar din fapte
     var lec = [], atr = nr(o.atrPct), rap = nr(b.opritorPierdereRaport), lev = nr(b.levier) || 1;
-    if (mot === "loss_stop" && atr !== null && rap !== null && Math.abs(rap * 100) / lev < atr) lec.push("opritorul (" + P(rap * 100, 2) + " din investiție, adică ~" + (Math.abs(rap * 100) / lev).toFixed(1).replace(".", ",") + "% din preț la levier " + lev + "×) era mai mic decât mișcarea unei zile obișnuite a " + nume + " (~" + atr.toFixed(1).replace(".", ",") + "%): o zi normală îl putea atinge");
+    if (mot === "loss_stop" && atr !== null && rap !== null && Math.abs(rap * 100) / lev < atr) lec.push("stopul (" + P(rap * 100, 2) + " din investiție, ~" + (Math.abs(rap * 100) / lev).toFixed(1).replace(".", ",") + "% din preț la " + lev + "×) era sub o zi obișnuită a " + nume + " (~" + atr.toFixed(1).replace(".", ",") + "%): o zi normală îl putea atinge");
     if (tot !== null && tot < 0 && dur !== null && dur < 3 * 3600000) lec.push("a ținut sub 3 ore: gridul n-a apucat să facă perechi");
     if (plus && tot !== null && tot > plus && mot === "user_cancel") lec.push("ai ieșit peste ținta ta: ținerea după țintă a adus " + U(tot - plus));
     if (grid !== null && tot !== null && grid > 0 && tot < 0) lec.push("grilele au câștigat, dar poziția a pierdut mai mult: greșeala nr. 1 din jurnalul tău");
     else if (grid !== null && tot !== null && grid > 0 && tot >= 0 && tot < grid * 0.7) lec.push("poziția a mâncat " + U(grid - tot).replace("+", "") + " din ce au făcut grilele (greșeala nr. 1 din jurnalul tău, dar tot pe plus)");
-    if (lec.length) L.push("Lecția: " + lec.join("; ") + ".");
+    // v100.68: o lectie pe rand (fiecare ≤ 160; lipite ajungeau la 255 de caractere)
+    lec.forEach(function (x, i) { L.push((i ? "Încă o lecție: " : "Lecția: ") + x + "."); });
     return { nivel: lichidat ? "critic" : tot !== null && tot < 0 ? "atentie" : "info", titlu: titlu, mesaj: L.join("\n"), lichidat: lichidat, tot: tot, pct: pct, durata: dur, motiv: mot };
   }
 

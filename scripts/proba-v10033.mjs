@@ -39,7 +39,7 @@ await test("alerta de pornire are linkul spre poarta, cu TICKERUL (LIGHTER -> LI
   let adrese = 0;
   const boti = [{ id: "1", baza: "LIGHTER.PERP", simbolPionex: "LIT_USDT_PERP", activ: true, pornitLa: acum - 60000 }];
   const r = await avertizariPornire({ boti, cunoscuti: {}, acum, trades: async () => trades, Obiceiuri: OB, adresa: async () => { adrese++; return "https://mau.tail9144fe.ts.net:8443"; } });
-  assert.equal(r.length, 1); assert.match(r[0].mesaj, /Poarta pe LIT: https:\/\/mau\.tail9144fe\.ts\.net:8443\/#ecran=gridset&moneda=LIT/);
+  assert.equal(r.length, 1); assert.match(r[0].mesaj, /\n👉 Aș verifica întâi poarta pe LIT: https:\/\/mau\.tail9144fe\.ts\.net:8443\/#ecran=gridset&moneda=LIT/);   /* v100.68: linkul e în acțiune */
   assert.equal(adrese, 1);
   // fara adresa (Radarul nu raspunde) -> alerta fara link; fara simbolPionex -> tickerul din numele botului
   const r2 = await avertizariPornire({ boti, cunoscuti: {}, acum, trades: async () => trades, Obiceiuri: OB, adresa: async () => null });

@@ -85,5 +85,23 @@ await test("sfatul „pericol” ia din alertă doar faptul (rândul 1), fără 
   }
 });
 
+// ---- sarcinile 3-5: restul alertelor (grila, stopul care urca, preturile, miscarea neobisnuita, vremea pietei), mesajele colectorului,
+// pornirea, simbolurile si SL/TP, retetele, funding-ul pietei, fisa de inchidere ----
+await test("TOT grupul „alerte” din gardă trece regulile (fiecare familie: titlul ≤ 60, faptul + „👉 ” acțiunea; rapoartele cu rânduri ≤ 160)", async () => {
+  const G = await modul("scripts", "garda-texte.mjs"), rele = [];
+  for (const x of G.situatii().filter((y) => y.mod === "alerte")) { const ab = G.verifica(x.text, x.tip, x.frate); if (ab.length) rele.push(x.sursa + " (" + x.sit + "): " + ab.join("; ") + " ⏎ " + x.text.replace(/\n/g, " ⏎ ")); }
+  assert.equal(rele.length, 0, rele.length + " abateri, de ex.:\n" + rele.slice(0, 8).join("\n"));
+});
+await test("garda: separatorul de mii al sumelor în lei („2.610 lei”, ca TextRo.lei) nu e luat drept zecimală cu punct; „12.4%” și „0.060%” da", async () => {
+  const G = await modul("scripts", "garda-texte.mjs"), z = (t) => G.verifica(t, "deCe").some((a) => /zecimală cu punct/.test(a));
+  assert.ok(!z("Cât cumpăr: 1,42 buc (~2.610 lei), risc ~98 lei."), "2.610 lei");
+  assert.ok(z("Lichidarea la 12.4% de preț.") && z("Funding 0.060% la 8 ore."));
+});
+await test("cuvintele de care depinde codul rămân: „n-are plan” (Ce ai de făcut acum), „nu mai poate citi” / „citește din nou” (alerta rezolvată)", async () => {
+  const MC = await modul("scripts", "lib", "mesaje-colector.mjs");
+  assert.match(MC.faraPlan("CRV", null).titlu, /n-are plan/);
+  assert.match(MC.citireRea(12, "HTTP 502").titlu, /nu mai poate citi/i); assert.match(MC.citireDinNou().titlu, /citește din nou/i);
+});
+
 console.log(`\nV100.66 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;
