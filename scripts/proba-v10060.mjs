@@ -22,13 +22,13 @@ await test("semaforul: distanta CRESTE (pretul se indeparteaza) -> „se îndep�
   const k = lich(SB.semafor({ bot: { distantaLichidarePct: 12.41, directie: "long" }, distInainte: 11.18 }));
   are(k, "componenta lichidare"); assert.equal(k.nivel, "atentie");
   assert.ok(!/s-a apropiat/.test(k.motiv), k.motiv); assert.match(k.motiv, /se îndepărtează/); assert.match(k.motiv, /11[.,]2/);
-  assert.match(k.faCeSlab, /nimic de făcut acum/); assert.ok(!/N-aș mai lăsa poziția să crească/.test(k.faCe + k.faCeSlab));   // revizia: textul linistitor e „slab”
+  assert.match(k.faCeSlab, /N-aș face nimic acum/); assert.ok(!/N-aș mări poziția/.test(k.faCe + k.faCeSlab));   // v100.61: persoana I   // revizia: textul linistitor e „slab”
 });
 await test("semaforul: distanta SCADE -> „s-a apropiat” (cu cat era) si sfatul vechi; fara istoric -> „lichidarea e la”", () => {
   const a = lich(SB.semafor({ bot: { distantaLichidarePct: 12.4, directie: "long" }, distInainte: 13.6 }));
-  assert.match(a.motiv, /s-a apropiat/); assert.match(a.motiv, /13[.,]6/); assert.match(a.faCe, /N-aș mai lăsa poziția să crească/);
+  assert.match(a.motiv, /se apropie/); assert.match(a.motiv, /13,6/); assert.match(a.faCe, /N-aș mări poziția/);   // v100.61: „se apropie”, fara „s-a apropiat”
   const f = lich(SB.semafor({ bot: { distantaLichidarePct: 12.4, directie: "long" } }));
-  assert.match(f.motiv, /^lichidarea e la 12/); assert.ok(!/s-a apropiat/.test(f.motiv));
+  assert.match(f.motiv, /^lichidarea la 12,4%$/); assert.ok(!/s-a apropiat/.test(f.motiv));
 });
 await test("distantaLaOra: distanta de acum ~o ora din istoric (±20 min); fara date -> null", () => {
   are(SB.distantaLaOra, "SemnaleBot.distantaLaOra");
@@ -80,7 +80,7 @@ await test("I2: cand lichidarea se indeparteaza, „Ce aș face eu” vine de la
   const c = CS.alcatuieste({ sm, sfaturi: [] });
   assert.match(c.faCe, /opri botul/, c.faCe); assert.match(c.titlu, /se îndepărtează/);
   const singur = CS.alcatuieste({ sm: SB.semafor({ bot: { distantaLichidarePct: 12.4, directie: "long" }, distInainte: 11.2 }), sfaturi: [] });
-  assert.match(singur.faCe, /nimic de făcut/i, "singur: tot spune ca n-ai nimic de facut");
+  assert.match(singur.faCe, /N-aș face nimic acum/, "singur: tot spune ca n-ai nimic de facut");
 });
 await test("I3: galeata colectorului e x4 DOAR unde ruta o cere (citirile istoricului), in rest x1 - Pionex/T212/Binance raman franate", async () => {
   const { requireApiAuth } = await import(pathToFileURL(path.join(RAD, "functions", "_shared", "auth.js")).href);

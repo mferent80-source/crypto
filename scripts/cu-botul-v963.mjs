@@ -28,8 +28,8 @@ await test("regimul: saltul in sus = miscare cu sensul 'urca', in jos = 'coboara
 });
 await test("semafor: long + miscare in sus = 🟢 'lucreaza pentru tine' cu pasii (zero, marginea de sus); nu 'nu adauga' / 'incaseaza'", async () => {
   const r = S.semafor({ bot: bot(), fisa: { regim: SUS }, zero: { pretZero: 28.5 }, iaProfit: S.iaProfit(bot({ profitTotal: 5 }), { regim: SUS }) });
-  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "cu-botul"); assert.match(r.motiv, /^mișcarea e cu botul .*lucrează pentru tine$/);
-  assert.match(r.faCe, /fără bani în plus/); assert.match(r.faCe, /opritorul de pierdere la prețul de zero \(28\.5000\)/); assert.match(r.faCe, /marginea de sus \(33\.0000\) mai sunt 10,0%/);
+  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "cu-botul"); assert.match(r.motiv, /^mișcarea e cu botul: \d+,\d× față de obișnuit$/);   // v100.61: titlul = faptul cu cifra
+  assert.match(r.faCe, /fără bani în plus/); assert.match(r.faCe, /stopul la zero-ul botului \(28\.5\)/); assert.match(r.deCe, /marginea de sus \(33\) mai sunt 10,0%/);   // v100.61: distanta in „de ce”
   assert.equal(S.iaProfit(bot({ profitTotal: 5 }), { regim: SUS }), null, "profitul nu se încasează doar pentru că piața merge cu botul");
 });
 await test("semafor: long + miscare in jos = 🟡 'miscare mare impotriva botului'; si 'ia profit' ramane pe miscarea contra", async () => {
@@ -40,16 +40,16 @@ await test("semafor: long + miscare in jos = 🟡 'miscare mare impotriva botulu
 });
 await test("semafor cu botul: opritorul deja peste zero e laudat; pretul trecut de margine -> incasezi sau grid nou; short oglindit", async () => {
   const a = S.semafor({ bot: bot({ opritorPierdereActiv: true, opritorPierdere: 29 }), fisa: { regim: SUS }, zero: { pretZero: 28.5 } });
-  assert.match(a.faCe, /Opritorul tău \(29\.0000\) e deja dincolo de prețul de zero/);
+  assert.match(a.faCe, /stopul \(29\) e deja dincolo de zero/);
   const b = S.semafor({ bot: bot({ pretCurent: 34 }), fisa: { regim: SUS }, zero: { pretZero: 28.5 } }); assert.match(b.faCe, /a trecut de marginea de sus/);
   const s = S.semafor({ bot: bot({ directie: "short", pretCurent: 30, gridJos: 27, gridSus: 35 }), fisa: { regim: JOS }, zero: { pretZero: 31 } });
-  assert.equal(s.cod, "cu-botul"); assert.match(s.faCe, /grilele de jos/); assert.match(s.faCe, /marginea de jos \(27\.0000\) mai sunt 10,0%/);
-  const pierdere = S.semafor({ bot: bot(), fisa: { regim: SUS }, zero: { pretZero: 31 } }); assert.doesNotMatch(pierdere.faCe, /prețul de zero/, "pe minus nu se propune opritor la zero");
+  assert.equal(s.cod, "cu-botul"); assert.match(s.deCe, /grilele de jos/); assert.match(s.deCe, /marginea de jos \(27\) mai sunt 10,0%/);
+  const pierdere = S.semafor({ bot: bot(), fisa: { regim: SUS }, zero: { pretZero: 31 } }); assert.doesNotMatch(pierdere.faCe, /zero-ul botului/, "pe minus nu se propune stop la zero");
 });
 await test("semafor: tinta LUI atinsa cu piata cu botul -> ramane 🔴 (planul lui), dar spune 'sau muti tinta, constient'", async () => {
   const r = S.semafor({ bot: bot(), fisa: { regim: SUS }, plan: { atins: ["plus"], plus: { prag: 5 } } });
-  assert.equal(r.nivel, "iesi"); assert.match(r.faCe, /muți ținta mai sus/);
-  assert.equal(S.semafor({ bot: bot(), fisa: { regim: JOS }, plan: { atins: ["plus"], plus: { prag: 5 } } }).faCe, "Încasează acum, cum ți-ai propus.");
+  assert.equal(r.nivel, "iesi"); assert.match(r.faCe, /aș muta ținta mai sus/);
+  assert.equal(S.semafor({ bot: bot(), fisa: { regim: JOS }, plan: { atins: ["plus"], plus: { prag: 5 } } }).faCe, "Aș închide botul pe plus acum, cum ți-ai propus.");
 });
 await test("avertismentele reale bat 🟢: lichidare aproape + miscare cu botul = tot 🔴 lichidare", async () => {
   const r = S.semafor({ bot: bot({ distantaLichidarePct: 6 }), fisa: { regim: SUS } }); assert.equal(r.nivel, "iesi"); assert.equal(r.cod, "lichidare");
@@ -89,7 +89,7 @@ const plan = (b) => T.planStare(b, { plus: 3, minus: 14 }, {}, 0);
 await test("semafor: tinta atinsa + conditii bune = 🟡 'pastreaz-o' cu pretul-podea, distanta si avertismentul ca e aproape (nu 🔴)", async () => {
   const b = vvv({ opritorPierdere: 26.633 }), r = S.semafor({ bot: b, fisa: { regim: LIN }, plan: plan(b) });
   assert.equal(r.nivel, "atentie"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /ținta ta de \+3 USDT e atinsă — păstreaz-o/);
-  assert.match(r.faCe, /opritorul de pierdere din Pionex la 30\.55\d\d \(0,7% de prețul de acum/); assert.match(r.faCe, /E aproape/);
+  assert.match(r.faCe, /stopul la 30\.55\d\d \(0,7% de preț\)/); assert.match(r.deCe, /E aproape/);
   assert.equal(r.componente.some((c) => c.nivel === "iesi"), false);
   const cu = S.semafor({ bot: b, fisa: { regim: SUS }, plan: plan(b) }); assert.equal(cu.cod, "podea", "și cu mișcarea cu botul");
 });
@@ -113,7 +113,7 @@ await test("opritorul la podeaua rotunjita in jos (30,511 vs 30,5111) = 🟢 'la
   const b0 = vvv(), pod = T.pretPentruTotal(b0, 3), b = vvv({ opritorPierdere: Math.floor(pod * 1000) / 1000 });
   assert.ok(b.opritorPierdere < pod, "chiar e sub podea, la a 4-a zecimală");
   const r = S.semafor({ bot: b, fisa: { regim: LIN }, plan: plan(b) });
-  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /la adăpost: opritorul tău \(30\.5\d+\) îți păstrează \+3,00 USDT/);
+  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /la adăpost/); assert.match(r.faCe, /stopul \(30\.5\d*\) păstrează \+3,00 USDT/);
   const departe = vvv({ opritorPierdere: pod * 0.99 }); assert.equal(S.semafor({ bot: departe, fisa: { regim: LIN }, plan: plan(departe) }).nivel, "atentie", "1% sub podea = nu e la adăpost");
   const a = { ...b, id: "2383", baza: "VVV.PERP", activ: true }; assert.equal(A.reguli(a, { plan: plan(a), regim: { ...LIN, r4h: 1, r24h: 1 } }).plan.nivel, "info", "și alerta îl vede la adăpost");
 });
@@ -122,7 +122,7 @@ await test("totalLaPret e inversa lui pretPentruTotal; podeaUrca: la 1,5% sub pr
   assert.equal(T.podeaUrca(b, 3), null, "la VVV acum 1,5% sub preț păstrezi sub +3 -> nimic de urcat");
   const sus = vvv({ pretCurent: 31.5 }), u = T.podeaUrca(sus, 3);
   assert.ok(Math.abs(u.pret - 31.5 * 0.985) < 1e-9); assert.ok(u.pastrezi > 3); assert.ok(Math.abs(u.pastrezi - T.totalLaPret(sus, u.pret)) < 1e-12);
-  const r = S.semafor({ bot: sus, fisa: { regim: LIN }, plan: plan(sus) }); assert.match(r.faCe, /Cu 1,5% loc de respirație, opritorul la 31\.0275 îți păstrează \+\d+,\d\d USDT \(cel de acum păstrează −/);
+  const r = S.semafor({ bot: sus, fisa: { regim: LIN }, plan: plan(sus) }); assert.match(r.deCe, /Cu 1,5% loc de respirație, stopul la 31\.0275 ar păstra \+\d+,\d\d USDT \(cel de acum: −/);
 });
 await test("Discord 'poti urca opritorul': o data pe treapta (max 1 USDT, 1/4 din tinta), nu sub opritorul de acum, nu pe miscarea contra", async () => {
   const bb = (p, op) => ({ ...vvv({ pretCurent: p, opritorPierdere: op }), id: "2383", baza: "VVV.PERP", activ: true });

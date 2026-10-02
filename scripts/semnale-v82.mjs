@@ -52,7 +52,7 @@ await test("aglomerare: bot long + funding mare + OI in crestere + multi pe long
 
 await test("iaProfit: total >= 2% din investitie si (miscare sau liniste rara) -> semnal cu suma; pe minus sau fara motiv -> null", () => {
   const r = S.iaProfit(bot({ profitTotal: 3 }), fisa({ regim: { r4h: 2, r24h: 1, miscare: true } }));
-  assert.ok(r); assert.match(r.text, /\+3\.00 USDT/);
+  assert.ok(r); assert.match(r.text, /\+3,00 USDT/);   // v100.61: virgula zecimala (TextRo)
   assert.ok(S.iaProfit(bot({ profitTotal: 3 }), fisa({ liniste: { linisteAcum: true, suficient: true, p: 0.2, n: 10, k: 2 } })));
   assert.equal(S.iaProfit(bot({ profitTotal: 3 }), fisa()), null, "liniste care tine des, fara miscare");
   assert.equal(S.iaProfit(bot({ profitTotal: -4.7 }), fisa({ regim: { r4h: 2, r24h: 1, miscare: true } })), null);

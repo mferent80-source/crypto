@@ -133,10 +133,10 @@ await test("marginea din profil: 2,4% pana jos cand moneda coboara 3% in 12 h (P
   assert.ok(typeof SB.laMargine === "function", "lipseste SemnaleBot.laMargine");
   const pm = { jos: 0.03, sus: 0.03, sursa: "profilul CRV: 183 de zile de bare de 1 h" };
   const m = SB.mutaGridul(botL(0.41), fisaF, 0, pm);   // 0,41: 2,4% pana jos, 10% din interval (pragul fix n-ar fi sunat: nu e sub 10%)
-  assert.ok(m && /marginea de jos/.test(m.motiv) && /profilul CRV/.test(m.motiv), m && m.motiv);
+  assert.ok(m && /marginea de jos/.test(m.motiv) && /profilul CRV/.test(m.sursa), m && m.motiv);   // v100.61: sursa pe randul ei
   assert.equal(SB.mutaGridul(botL(0.4255), fisaF, 0, pm), null, "6% pana jos > 3% (P75 pe 12 h): nu e la margine");
   const m2 = SB.mutaGridul(botL(0.4048), fisaF, 0, null);   // fara profil: pragul fix, 4,8% din interval
-  assert.ok(m2 && /marginea de jos/.test(m2.motiv) && /prag fix/.test(m2.motiv), m2 && m2.motiv);
+  assert.ok(m2 && /marginea de jos/.test(m2.motiv) && /Prag fix/.test(m2.deCe), m2 && m2.motiv);
 });
 await test("marginea din profil e plafonata la 25% din interval: gridul ingust nu sta „la margine” mereu", () => {
   const pm = { jos: 0.08, sus: 0.08, sursa: "profilul X" };
@@ -181,7 +181,7 @@ await test("R1: marginea spune frecventa ADEVARATA (in cate jumatati de zi ajung
   const m = SB.mutaGridul(botL(p, 0.40, 0.60), fisaF, 0, pm);
   assert.ok(m, "la 60% din P75 trebuie sa fie la margine");
   const n = Math.round(pm.frecventa("jos", 1 - 0.40 / p) * 100);
-  assert.ok(!/3 din 4/.test(m.motiv), m.motiv); assert.match(m.motiv, new RegExp("în " + n + "% din jumătățile de zi"), m.motiv);
+  assert.ok(!/3 din 4/.test(m.motiv + m.deCe), m.deCe); assert.match(m.deCe, new RegExp("în " + n + "% din jumătățile de zi"), m.deCe);
 });
 await test("R2: plafonul e 15% din interval (nu 25%): la 20% din interval, pe un grid ingust, nu e „la margine”", () => {
   assert.equal(SB.mutaGridul(botL(0.42), fisaF, 0, { jos: 0.08, sus: 0.08, sursa: "profilul X" }), null);

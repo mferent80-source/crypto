@@ -15,7 +15,7 @@ for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "semnale-bot
 const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C } = globalThis;
 
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js)
-export const STRICT = new Set([]);
+export const STRICT = new Set(["semafor"]);
 
 // ---- regulile ----
 export const REGULI = {
