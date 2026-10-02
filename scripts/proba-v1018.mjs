@@ -109,7 +109,7 @@ await test("3 · LIGHTER: tinta din Pionex (5,112) departe de plan -> ATENTIE: u
   assert.match(m.mesaj, /4\.6\d{3}/, "pretul planului");
   assert.match(m.mesaj, /\+5,3% din investiție/);
   assert.match(m.mesaj, /peste gridul de sus/);
-  assert.match(m.mesaj, /Ce aș face eu:/);
+  assert.match(m.mesaj, /\n👉 Aș /);   /* v100.68 (pachetul 3): acțiunea pe rândul „👉” */
 });
 
 await test("3 · fara tinta in Pionex + plan pe plus -> ATENTIE „n-ai tinta”; tinta pe masura planului -> tace", () => {
@@ -156,7 +156,7 @@ await test("4 · grid ingust cat planul, la 5x, pe o moneda de 10%/zi -> ATENTIE
   assert.ok(-TabloExtra.totalCuGridLa(b, 4.27) < 17 * 1.3, "gridul nu mai e mai larg decat planul");
   const m = msg(Alerte.evalueaza(b, ctxDin(b, pl, { ampZi: 0.10 }), {}, T0), "grid-plan");
   assert.ok(m, "nu s-a trimis");
-  assert.match(m.titlu, /o mișcare mai mică decât o zi obișnuită/);
+  assert.match(m.titlu, /planul se atinge sub o zi obișnuită/);   /* v100.68 (pachetul 3): titlul ≤ 60 (era 72) */
   assert.match(m.mesaj, /levier [1-4]×/);
 });
 

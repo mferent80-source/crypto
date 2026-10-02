@@ -120,7 +120,7 @@ await test("opritorul STINS: sub 20% -> atentie, se repeta cel mult o data pe zi
   r = AL.evalueaza(b(19.8), {}, st, t0 + 4 * 3600000); assert.equal(op(r).length, 0, "nu la 4 ore");
   r = AL.evalueaza(b(20.4), {}, r.stare, t0 + 5 * 3600000); r = AL.evalueaza(b(19.9), {}, r.stare, t0 + 6 * 3600000);
   assert.equal(op(r).length, 0, "20,4% nu e 'a trecut': histerezis pana la 23%");
-  r = AL.evalueaza(b(9.5), {}, r.stare, t0 + 7 * 3600000); assert.equal(op(r).length, 1); assert.equal(op(r)[0].nivel, "critic"); assert.match(op(r)[0].titlu, /STINS/);
+  r = AL.evalueaza(b(9.5), {}, r.stare, t0 + 7 * 3600000); assert.equal(op(r).length, 1); assert.equal(op(r)[0].nivel, "critic"); assert.match(op(r)[0].titlu, /stopul e stins/);   /* v100.68 (pachetul 3): „stopul”, fără majuscule de strigat */
   r = AL.evalueaza(b(19.9), {}, {}, t0 + 30 * 3600000); st = r.stare;
   r = AL.evalueaza(b(19.9), {}, st, t0 + 55 * 3600000); assert.equal(op(r).length, 1, "dupa o zi se repeta");
 });

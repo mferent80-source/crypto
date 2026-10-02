@@ -48,7 +48,10 @@ var Sfaturi = (function () {
         // v100.62: aceleasi actiuni ca semaforul (o singura voce); titlul si textul vin din regulile alertelor (pachetul 3)
         var fc = k === "lich" ? (a.nivel === "critic" ? "Aș adăuga marjă sau aș închide botul acum." : "N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă.")
           : k === "grid" ? "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum." : null;
-        out.push({ cod: "pericol", tip: k, ton: a.nivel, titlu: a.titlu.replace(nume + ": ", ""), text: a.mesaj, faCe: fc });
+        // v100.67 (pachetul 3): mesajul alertei e pe 2 randuri (faptul + „👉 ” actiunea) - sfatul ia faptul; actiunea ramane a semaforului,
+        // iar unde semaforul n-are una (starea Pionex, botul oprit) vine din alerta
+        var l12 = String(a.mesaj || "").split("\n"), actA = l12[1] ? l12[1].replace(/^👉\s*/, "") : null;
+        out.push({ cod: "pericol", tip: k, ton: a.nivel, titlu: a.titlu.replace(nume + ": ", ""), text: l12[0], faCe: fc || actA });
       });
     }
 

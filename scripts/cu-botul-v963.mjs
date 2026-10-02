@@ -72,8 +72,8 @@ await test("alerta pe Discord: miscarea cu botul pleaca 'info' (lasa-l sa lucrez
   const b = { id: "1", baza: "VVV.PERP", directie: "long", activ: true, pretCurent: 30, gridJos: 25, gridSus: 33, distantaLichidarePct: 30 };
   const up = { regim: { ...SUS, r4h: 3, r24h: 3 } }, dn = { regim: { ...JOS, r4h: 3, r24h: 3 } };
   const cu = A.reguli(b, up).miscare, co = A.reguli(b, dn).miscare;
-  assert.equal(cu.nivel, "info"); assert.match(cu.titlu, /CU botul — lasă-l să lucreze/); assert.doesNotMatch(cu.mesaj, /oprești/);
-  assert.equal(co.nivel, "atentie"); assert.match(co.titlu, /împotriva botului/);
+  assert.equal(cu.nivel, "info"); assert.match(cu.titlu, /mișcare mare cu botul, 3,0× pe 4 h/);   /* v100.68 (pachetul 3): fără majuscule, cu cifra */ assert.doesNotMatch(cu.mesaj, /oprești/);
+  assert.equal(co.nivel, "atentie"); assert.match(co.titlu, /mișcare mare contra botului/);   /* v100.68: ca sfatul (un rând în „Ce ai de făcut acum”) */
 });
 
 // ---- v96.4: "tinta devine podea" (alegerea lui, 27.09: tinta atinsa, conditii bune -> nu "ieși", ci pastreaz-o) ----
@@ -108,7 +108,7 @@ await test("alerta pe Discord: tinta atinsa + conditii bune -> 'pastreaz-o' cu p
   const r = A.reguli(b, { plan: plan(b), regim: { ...LIN, r4h: 1, r24h: 1 } }).plan;
   assert.equal(r.nivel, "atentie"); assert.match(r.titlu, /păstreaz-o/); assert.match(r.mesaj, /0,7% de prețul de acum, aproape/);
   const ad = { ...b, opritorPierdere: 30.6 }; assert.equal(A.reguli(ad, { plan: plan(ad), regim: { ...LIN, r4h: 1, r24h: 1 } }).plan.nivel, "info");
-  assert.match(A.reguli(b, { plan: plan(b), regim: { ...JOS, r4h: 3, r24h: 3 } }).plan.titlu, /ieși pe plus/);
+  assert.match(A.reguli(b, { plan: plan(b), regim: { ...JOS, r4h: 3, r24h: 3 } }).plan.titlu, /planul tău — ținta de \+3 USDT e atinsă/);   /* v100.68: vocabularul „închide botul”, cifra în titlu */
 });
 
 // ---- v96.5: opritorul pus la podeaua ROTUNJITA la pasul Pionex (cazul lui, 27.09) + opritorul care urca ----

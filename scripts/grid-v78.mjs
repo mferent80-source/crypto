@@ -393,7 +393,7 @@ await test("F1 Alerte: miscare mare (>2x) -> atentie o data, text despre INTRARE
   let r = AL.evalueaza(bot, { regim: { r4h: 2.2, r24h: 1.1, miscare: true } }, {}, T0);
   assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1);
   const m0 = r.mesaje.find((m) => m.cheie === "miscare");
-  assert.match(m0.titlu, /mișcare mare/); assert.match(m0.mesaj, /NU porni grid nou/); assert.ok(!/oprește gridul/.test(m0.titlu));
+  assert.match(m0.titlu, /mișcare mare/); assert.match(m0.mesaj, /n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa/); assert.ok(!/oprește gridul/.test(m0.titlu));   /* v100.68: intrarea, la persoana I, fără majuscule */
   // 1,7x: intre praguri -> ramane in alerta, fara mesaj nou; la 3h tot nimic (se repeta doar la 24h)
   r = AL.evalueaza(bot, { regim: { r4h: 1.7, r24h: 1.0, miscare: false } }, r.stare, T0 + 60000);
   assert.equal(r.mesaje.length, 0); assert.equal(r.stare.miscare.nivel, "atentie");

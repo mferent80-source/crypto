@@ -24,7 +24,7 @@ const mesaj = (r, cheie) => r.mesaje.find((m) => m.cheie === cheie);
 // ---------------- (2) alertele noi din "Mediul botului" ----------------
 await test("BTC pe 4h coboara impotriva botului long -> alerta o data; se repeta abia dupa 12 h; cand trece -> 'nu mai merge impotriva'", () => {
   let r = A.evalueaza(BOT(), { mediu: MED({ btc: { dir: "coboara", regim: { r4h: 0.4, r24h: 0.5, miscare: false } } }) }, {}, T0);
-  const m = mesaj(r, "m-btc"); assert.ok(m, "n-a plecat alerta BTC"); assert.equal(m.nivel, "atentie"); assert.match(m.titlu, /BTC/); assert.match(m.titlu, /împotriva/); assert.match(m.mesaj, /Ce aș face eu/);
+  const m = mesaj(r, "m-btc"); assert.ok(m, "n-a plecat alerta BTC"); assert.equal(m.nivel, "atentie"); assert.match(m.titlu, /BTC/); assert.match(m.titlu, /împotriva/); assert.match(m.mesaj, /\n👉 N-aș adăuga bani/);   /* v100.68 (pachetul 3): acțiunea pe rândul „👉” */
   r = A.evalueaza(BOT(), { mediu: MED({ btc: { dir: "coboara", regim: null } }) }, r.stare, T0 + 3 * ORA); assert.ok(!mesaj(r, "m-btc"), "s-a repetat dupa 3 h");
   r = A.evalueaza(BOT(), { mediu: MED({ btc: { dir: "coboara", regim: null } }) }, r.stare, T0 + 13 * ORA); assert.ok(mesaj(r, "m-btc"), "nu s-a repetat dupa 12 h");
   r = A.evalueaza(BOT(), { mediu: MED({ btc: { dir: "urca", regim: null } }) }, r.stare, T0 + 14 * ORA);

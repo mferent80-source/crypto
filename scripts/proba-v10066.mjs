@@ -39,5 +39,51 @@ await test("garda generează toate alertele (≥ 70 de texte în grupul „alert
     assert.ok(surse.has(s), "lipsește familia " + s + " (sunt: " + [...surse].slice(0, 12).join(", ") + " …)");
 });
 
+// ---- sarcina 2: Alerte.reguli - titlul ≤ 60, mesajul pe 2 randuri (faptul + „👉 ” actiunea), o singura voce ----
+import("node:vm").then(() => {});
+const vm = await import("node:vm");
+for (const f of ["grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
+const { Alerte: A, TabloExtra: TE, Sfaturi: SF } = globalThis;
+await test("Alerte.reguli: fiecare text (toate ramurile din gardă) trece regulile - titlul ≤ 60, faptul + „👉 ” acțiunea la persoana I, fără „opritor”, fără majuscule de strigat", async () => {
+  const G = await modul("scripts", "garda-texte.mjs"), rele = [];
+  for (const x of G.situatii().filter((y) => y.mod === "alerte" && /^alerta\./.test(y.sursa))) { const ab = G.verifica(x.text, x.tip, x.frate); if (ab.length) rele.push(x.sursa + " (" + x.sit + "): " + ab.join("; ") + " ⏎ " + x.text.replace(/\n/g, " ⏎ ")); }
+  assert.equal(rele.length, 0, rele.length + " abateri, de ex.:\n" + rele.slice(0, 6).join("\n"));
+});
+const T0 = Date.UTC(2026, 9, 2, 6, 0), ORA = 3600000;
+const CRV = (o) => Object.assign({ baza: "CRV.PERP", directie: "long", levier: 5, investit: 49.67, profitTotal: -3.2, pretCurent: 0.3858, gridJos: 0.3841, gridSus: 0.4331, distantaLichidarePct: 30,
+  pretLichidare: 0.3382876201448984, gridProfitBrut: 3.2, pornitLa: T0 - 4 * 86400000 }, o || {});
+// „Ce ai de făcut acum” cu alerta GENERATA de Alerte.reguli (nu scrisa de mana), avertismentul serverului si sfatul de acum
+const randuri = (bot, ctx, avert) => {
+  const r = A.reguli(bot, ctx || null, {}), al = Object.keys(r).filter((k) => r[k] && r[k].titlu && r[k].nivel !== "ok" && r[k].nivel !== "info").map((k) => ({ t: T0 - 5 * 60000, nivel: r[k].nivel, titlu: r[k].titlu, mesaj: r[k].mesaj }));
+  const sf = SF.sfaturi(Object.assign(SF.intrare({ bot, k4: null, fisa: ctx && ctx.regim ? { dir: bot.directie, regim: ctx.regim, liniste: { linisteAcum: false } } : null, acum: T0 }), {}));
+  return TE.ceAiDeFacut({ acum: T0, dateLa: T0, sfaturi: sf, avertismente: avert || [], alerte: al, planGol: false });
+};
+await test("unirea rândurilor cu alertele NOI: lichidarea la 6,2% și la 12,4% (alerta + avertismentul + sfatul) = un rând, cu acțiunea", async () => {
+  const { avertismenteBot } = await modul("functions", "_shared", "avertismente.js");
+  for (const d of [6.2, 12.4]) {
+    const b = CRV({ distantaLichidarePct: d });
+    const av = avertismenteBot({ x: { lossStop: "0.36" }, pret: b.pretCurent, jos: b.gridJos, sus: b.gridSus, lich: { pretLichidare: b.pretLichidare, lichidarePartea: "jos", distantaLichidarePct: d, lichidareDepasita: false }, comisioane: null, gridProfitBrut: null, profitNet: null });
+    const l = randuri(b, null, av).filter((x) => /lichidare/i.test(x.titlu));
+    assert.equal(l.length, 1, d + ": " + l.map((x) => x.titlu).join(" | "));
+    assert.ok(/👉/.test(l[0].text), d + ": " + l[0].text);
+  }
+});
+await test("unirea rândurilor cu alertele NOI: prețul ieșit din grid și mișcarea mare (contra și la botul neutru) = câte un rând", async () => {
+  const { avertismenteBot } = await modul("functions", "_shared", "avertismente.js");
+  const b = CRV({ pretCurent: 0.3801 }), av = avertismenteBot({ x: { lossStop: "0.36" }, pret: 0.3801, jos: b.gridJos, sus: b.gridSus, lich: { pretLichidare: b.pretLichidare, lichidarePartea: "jos", distantaLichidarePct: 30, lichidareDepasita: false }, comisioane: null, gridProfitBrut: null, profitNet: null });
+  assert.equal(randuri(b, null, av).filter((x) => /grid/i.test(x.titlu)).length, 1, randuri(b, null, av).map((x) => x.titlu).join(" | "));
+  for (const bot of [CRV(), CRV({ directie: "no_trend" })]) {
+    const l = randuri(bot, { regim: { r4h: 2.4, r24h: 1.2, sens: "coboara", miscare: true } }).filter((x) => /mișcare/i.test(x.titlu));
+    assert.equal(l.length, 1, bot.directie + ": " + l.map((x) => x.titlu).join(" | "));
+  }
+});
+await test("sfatul „pericol” ia din alertă doar faptul (rândul 1), fără „👉”; acțiunea rămâne a semaforului, iar unde semaforul n-are, vine din alertă", () => {
+  for (const b of [CRV({ distantaLichidarePct: 6.2 }), CRV({ pretCurent: 0.3801 }), CRV({ stareMargine: "MARGIN_CALL", stareRisc: "TRADING" }), CRV({ activ: false, stareInterna: "paused" })]) {
+    const p = SF.sfaturi(SF.intrare({ bot: b, k4: null, fisa: null, acum: T0 })).filter((s) => s.cod === "pericol");
+    assert.ok(p.length, JSON.stringify(b));
+    for (const s of p) { assert.ok(!/👉|\n/.test(s.text), s.text); assert.ok(s.faCe && /^(Aș|N-aș|L-aș)\s/.test(s.faCe), s.tip + ": " + s.faCe); }
+  }
+});
+
 console.log(`\nV100.66 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 process.exitCode = picate ? 1 : 0;

@@ -99,7 +99,7 @@ await test("alerta LIGHTER: CRITIC (≈ 4x planul), spune cat, planul, unde sa-l
   assert.match(m.mesaj, /3\.7870/);
   assert.match(m.mesaj, /4\.2\d{3}/, "pretul propus");
   assert.match(m.mesaj, /−15,2% din investiție/);
-  assert.match(m.mesaj, /Ce aș face eu:/);
+  assert.match(m.mesaj, /\n👉 Aș /);   /* v100.68 (pachetul 3): acțiunea pe rândul „👉” */
 });
 
 await test("opritorul sub grid ca la JTO/BCH (plan pe masura) -> fara alerta; 1,08x planul -> fara alerta (rotunjiri, alunecare)", () => {
