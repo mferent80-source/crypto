@@ -242,7 +242,7 @@ var Alerte = (function () {
       var mT = !sm.muta ? "" : sm.muta.dist && sm.muta.parte ? nume + ": mută gridul, la " + sm.muta.dist + " de marginea de " + sm.muta.parte : nume + ": mută gridul — " + sm.muta.motiv;
       out["s-muta"] = sm.muta ? { nivel: "atentie", titlu: taie(mT, 60),
         mesaj: msg(sm.muta.poz ? "Prețul e la " + sm.muta.poz + " din interval" + (sm.muta.deCe ? "; " + mic(sm.muta.deCe) : ".") : sm.muta.deCe || "Fișa propune un grid nou, pe unde e prețul acum.",
-          "Aș muta gridul" + (sm.muta.des ? " des (0,3%)" : "") + " la " + pret(nr(sm.muta.setare.jos)) + " – " + pret(nr(sm.muta.setare.sus)) + ", " + (sm.muta.setare.grile + 1) + " grile în Pionex, " + sm.muta.setare.levier + "×" + (nr(sm.muta.treceriZi) !== null ? ", ~" + vg(nr(sm.muta.treceriZi)) + " perechi/zi" : "") + " (setările în Tablou).") } : { nivel: "ok", titlu: "", mesaj: "" };
+          "Aș muta gridul" + (sm.muta.des ? " des (0,3%)" : "") + " la " + pret(nr(sm.muta.setare.jos)) + " – " + pret(nr(sm.muta.setare.sus)) + ", " + cate(sm.muta.setare.grile + 1, "grilă", "grile") + " în Pionex, " + sm.muta.setare.levier + "×" + (nr(sm.muta.treceriZi) !== null ? ", ~" + vg(nr(sm.muta.treceriZi)) + " perechi/zi" : "") + " (setările în Tablou).") } : { nivel: "ok", titlu: "", mesaj: "" };
       out["s-btc"] = sm.btc ? { nivel: "atentie", titlu: nume + ": BTC a intrat în mișcare", mesaj: msg(sm.btc.text, "N-aș adăuga bani până nu se vede încotro trage BTC.") } : { nivel: "ok", titlu: "", mesaj: "" };
       // v100.70 (revizia pachetului 3, I2): randul 1 = semnele (ca „de ce”-ul semaforului, ≤ 160), actiunea = a semaforului (o voce)
       out["s-aglomerare"] = sm.aglomerare && sm.aglomerare.nivel === "atentie" ? { nivel: "atentie", titlu: nume + ": mulțimea e înghesuită pe partea botului",
@@ -369,14 +369,14 @@ var Alerte = (function () {
     var noiPer = c.per !== null && vechi.per !== null ? c.per - vechi.per : 0, noiU = c.u - vechi.u, p = nr(b.pretCurent);
     if (noiPer > 0) {
       var dg = c.g !== null && vechi.g !== null ? c.g - vechi.g : null, U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
-      mesaje.push({ cheie: "grila", nivel: "info", perechi: noiPer, usdt: dg, titlu: "✅ " + nume + ": " + (noiPer === 1 ? "pereche încheiată" : noiPer + " perechi încheiate") + (dg !== null ? " " + U(dg) : ""),
-        mesaj: "Grilele au adus " + (c.g !== null ? U(c.g) : "—") + " de la pornire (" + c.per + (c.per >= 20 ? " de" : "") + " perechi)" + (p !== null ? "; prețul " + pret(p) : "") + "." });
+      mesaje.push({ cheie: "grila", nivel: "info", perechi: noiPer, usdt: dg, titlu: "✅ " + nume + ": " + (noiPer === 1 ? "pereche încheiată" : cate(noiPer, "pereche încheiată", "perechi încheiate")) + (dg !== null ? " " + U(dg) : ""),
+        mesaj: "Grilele au adus " + (c.g !== null ? U(c.g) : "—") + " de la pornire (" + cate(c.per, "pereche", "perechi") + ")" + (p !== null ? "; prețul " + pret(p) : "") + "." });
     } else if (noiU > 0) {
       var dir = String(b.directie || "").toLowerCase(), crescut = c.poz !== null && vechi.poz !== null ? Math.abs(c.poz) > Math.abs(vechi.poz) : null;
       var fapta = crescut === null ? "" : dir === "short" ? (crescut ? " — a vândut" : " — a cumpărat") : (crescut ? " — a cumpărat" : " — a vândut");
       // v97.9 (27.09: 18 din 62 de alerte erau "grila atinsa"): cumpararea / vanzarea simpla ramane in Radar (pagina Alerts),
       // nu mai pleaca pe Discord; perechea incheiata (banii) pleaca in continuare
-      mesaje.push({ cheie: "grila", nivel: "info", doarRadar: true, titlu: nume + ": " + (noiU === 1 ? "grilă atinsă" : noiU + " grile atinse") + fapta + (p !== null ? " la ~" + pret(p) : ""),
+      mesaje.push({ cheie: "grila", nivel: "info", doarRadar: true, titlu: nume + ": " + (noiU === 1 ? "grilă atinsă" : cate(noiU, "grilă atinsă", "grile atinse")) + fapta + (p !== null ? " la ~" + pret(p) : ""),
         mesaj: "Poziția e acum " + (c.poz !== null ? c.poz : "—") + "; perechea se încheie când prețul ajunge la linia următoare în sens invers." });
     }
     return { mesaje: mesaje, contori: c };

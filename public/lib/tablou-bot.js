@@ -424,7 +424,7 @@ var TabloBot = (function () {
     if (m.lumanari < 48) {
       return { nivel: "NEDOVEDIT",
         titlu: "Nu știu încă",
-        ceFac: "Am doar " + m.lumanari + " lumânări. Îmi trebuie cel puțin 48 ca să măsor eficiența.",
+        ceFac: "Am doar " + cate(m.lumanari, "lumânare", "lumânări") + ". Îmi trebuie cel puțin 48 ca să măsor eficiența.",
         declansator: d("lumanari", m.lumanari, 48) };
     }
     if (m.istoricMin == null) {
@@ -478,7 +478,7 @@ var TabloBot = (function () {
     }
     if (mod !== "DIRECTIONAL" && m.ritmPerechi.stare === "rau") {
       return { nivel: "REGLEAZA", titlu: "Ritmul a căzut",
-        ceFac: (Math.round(m.ritmPerechi.valoare * 10) / 10) + " perechi pe oră în ultima oră, față de " + (Math.round(m.ritmPerechi.baza * 10) / 10) + " obișnuit.",
+        ceFac: (Math.round(m.ritmPerechi.valoare * 10) / 10).toFixed(1).replace(".", ",") + " perechi pe oră în ultima oră, față de " + (Math.round(m.ritmPerechi.baza * 10) / 10) + " obișnuit.",
         declansator: d("ritmPerechi", m.ritmPerechi.valoare, m.ritmPerechi.baza * 0.40) };
     }
     // O atingere trecatoare a marginii nu cere mutarea intervalului - doar o

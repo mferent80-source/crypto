@@ -3,6 +3,8 @@
 // jurnalul de pe disc (data/prob-jurnal.json); ce si-a incheiat orizontul se judeca din bare -> calibrarea -> KV calibrare.
 // Probat in scripts/proba-v10046.mjs.
 import { aduOre } from "./tura-profil.mjs";
+// v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const ORA = 3600000, PASTRARE = 90 * 24 * ORA, NOTARE = 4 * ORA;
 const nr = (v) => { const x = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(x) ? null : x; };
 export async function turaProbabilitati(d) {
@@ -20,7 +22,7 @@ export async function turaProbabilitati(d) {
       const rez = d.Probabilitati.pentruBot(bare, { acum: d.acum, pret: nr(b.pretCurent), dir, jos: nr(b.gridJos), sus: nr(b.gridSus), lichidare: dir === "short" ? nr(b.lichidareSus) : nr(b.lichidareJos), tinta, stop });
       // v101.28 (I-471): indicatorii aprinsi acum, cu dovada din trecutul monedei (Bonferroni)
       if (rez && d.Dovada) { try { rez.indicatori = d.Dovada.peBot(bare, { acum: d.acum, pret: nr(b.pretCurent), dir, jos: nr(b.gridJos), sus: nr(b.gridSus) }); } catch (e) { d.jurnal("dovada ESEC", b.id, e.message); } }
-      await d.trimite("/api/istoric-bot?action=prob", { bot: b.id, rez: rez || { la: d.acum, gol: bare.length < 37 * 24 ? "moneda are doar " + Math.floor(bare.length / 24) + " zile de bare de 1 h; cifrele apar de la 37 de zile" : "lipsește prețul botului sau starea pieței" } });
+      await d.trimite("/api/istoric-bot?action=prob", { bot: b.id, rez: rez || { la: d.acum, gol: bare.length < 37 * 24 ? "moneda are doar " + cate(Math.floor(bare.length / 24), "zi", "zile") + " de bare de 1 h; cifrele apar de la 37 de zile" : "lipsește prețul botului sau starea pieței" } });
       st.la[b.id] = d.acum; schimbat = true;
       if (rez && d.acum - (st.notat[b.id] || 0) >= NOTARE) { st.jurnal.push(...d.Probabilitati.intrari(rez, { t: d.acum, bot: b.id, simbol })); st.notat[b.id] = d.acum; }
     } catch (e) { d.jurnal("probabilitati ESEC", b.id, e.message); }

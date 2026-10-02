@@ -326,7 +326,7 @@ var GridProba = (function () {
     if (!r.propus || !r.setare || !r.test) return "⚡ grid îngust: nu — " + (r.motiv || "nedovedit");
     var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; }, D = { long: "long", short: "short", neutru: "neutru" };
     var nI = cate(r.test.nIndep, "fereastră independentă", "ferestre independente");   // v100.72: „31 de ferestre”, „%” lipit
-    return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + "% lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana) + (r.test.medie != null ? ", medie " + P(r.test.medie) : "")
+    return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + "% lățime, " + cate(r.setare.grile + 1, "linie", "linii") + ", ~" + cate(Math.round(r.test.perechiZi), "pereche", "perechi") + "/zi · pe test: median " + P(r.test.mediana) + (r.test.medie != null ? ", medie " + P(r.test.medie) : "")
       + ", " + Math.round(r.test.pePlus * 100) + "% pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + nI + ")";
   }
   // v100.59 (I-481): botul pornit cu setarile variantei ingusta - aceeasi directie, latimea +-35 %, pornit in 12 h de la propunere
@@ -365,7 +365,7 @@ var GridProba = (function () {
     var p = gr(function (e) { return e.propus; }), np = gr(function (e) { return !e.propus; }), nej = l.filter(function (e) { return e && !e.r; }).length;
     var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };   // v100.72: „%” lipit
     var t = function (g) { return g.n ? Math.round(g.pePlus * 100) + "% pe plus, medie " + P(g.medie) : "—"; };
-    var text = !p.n && !np.n ? "Urmărirea înainte începe: " + nej + (nej === 1 ? " notă așteaptă" : " note așteaptă") + " să treacă durata."
+    var text = !p.n && !np.n ? "Urmărirea înainte începe: " + cate(nej, "notă", "note") + " așteaptă" + " să treacă durata."
       : "Urmărit înainte (după comisioane): propuse " + p.n + " (" + t(p) + ") · nepropuse " + np.n + " (" + t(np) + ")" + (Math.min(p.n, np.n) < 30 ? " — puține cazuri încă" : "");
     return { propuse: p, nepropuse: np, nejudecate: nej, text: text };
   }

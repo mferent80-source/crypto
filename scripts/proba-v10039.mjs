@@ -139,10 +139,11 @@ await test("Scan si harta Acasa: fara actiuni/marfuri tokenizate (TSLAX, NVDAX, 
 
 await test("afisarile de grile din pagina sunt in numarul Pionex (N+1): Scan, „Pe ce aș porni”, boti de hartie, jurnalul gridurilor, platoul", () => {
   assert.ok(/scNf\(x\.grile \+ 1, 0\)/.test(scanEcran), "Scan");
-  assert.ok(/\(q\.grile\+1\)\+" grile · pas "/.test(app), "Pe ce as porni");
-  assert.ok(/\(s\.grile\+1\)\+" grile · "\+grPret\(s\.jos,null\)/.test(app), "boti de hartie");
-  assert.ok(/\(e\.grile\?e\.grile\+1:"\?"\)\+" grile · "/.test(app), "jurnalul gridurilor");
-  assert.ok(/gridul rar al probei: "\+\(f\.aleasa\.setare\.grile\+1\)/.test(app), "platoul");
+  /* v100.76: tot N+1, acum prin TextRo.cate („47 de grile”) */
+  assert.ok(/TextRo\.cate\(q\.grile\+1,"grilă","grile"\)\+" · pas "/.test(app), "Pe ce as porni");
+  assert.ok(/TextRo\.cate\(s\.grile\+1,"grilă","grile"\)\+" · "\+grPret\(s\.jos,null\)/.test(app), "boti de hartie");
+  assert.ok(/\(e\.grile\?TextRo\.cate\(e\.grile\+1,"grilă","grile"\):"\? grile"\)\+" · "/.test(app), "jurnalul gridurilor");
+  assert.ok(/gridul rar al probei: "\+TextRo\.cate\(f\.aleasa\.setare\.grile\+1,/.test(app), "platoul");
   assert.ok(/grile:Number\(bu\.row\)>1\?Number\(bu\.row\)-1:0/.test(app), "GridUmpleri primeste intervale (row − 1)");
   assert.ok(/levierSigur\(t\.jos, t\.sus, t\.pretInit, t\.dir, Math\.min\(150, t\.grileN - 1\)\)/.test(jurnal), "jurnalul: levierSigur pe intervale");
 });

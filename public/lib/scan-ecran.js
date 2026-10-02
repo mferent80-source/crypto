@@ -160,7 +160,7 @@ function scIstoricHtml(k) {
     var t = Scan.textIstoric(ist[m[0]], k), o = ist[m[0]];
     if (!t) { if (o) l.push('<span class="scIst"><b>' + m[1] + ':</b> nicio intrare în rețeta asta în istoricul adus.</span>'); return; }
     var cmp = t.mai === null ? "" : t.mai >= 3 ? ' <span class="good">(mai des pe plus decât o zi oarecare)</span>' : t.mai <= -3 ? ' <span class="bad">(mai rar pe plus decât o zi oarecare)</span>' : ' <span class="scMut">(cam ca o zi oarecare)</span>';
-    l.push('<span class="scIst"><b>' + m[1] + '</b> · ' + t.n + ' intrări' + (t.putine ? ' <span class="warn">— puține cazuri, cifrele sunt orientative</span>' : '') + ': ' + t.text + cmp + '. <span class="scMut">' + t.baza + '</span></span>');
+    l.push('<span class="scIst"><b>' + m[1] + '</b> · ' + scCate(t.n, "intrare", "intrări") + (t.putine ? ' <span class="warn">— puține cazuri, cifrele sunt orientative</span>' : '') + ': ' + t.text + cmp + '. <span class="scMut">' + t.baza + '</span></span>');
   });
   if (!l.length) return '<span class="scIst scMut">📏 Cât a mers rețeta în trecut apare după prima tură de noapte a colectorului.</span>';
   return '<span class="scIst">📏 <b>În trecut</b> <span class="scMut">(ultimul an pe monedele de azi din top 100 și 2 ani pe acțiunile de azi: cele care au rezistat, deci cifrele sunt puțin prea bune; nu e o promisiune)</span></span>' + l.join("");

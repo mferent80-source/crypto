@@ -1,6 +1,8 @@
 // Poza colectorului (v98): ce vede pagina `alerts` din Trading Tools, de oriunde. Functie PURA: primeste datele deja
 // adunate de colector (boti, pozitii T212, simbolurile paginii cu extra-urile de la Yahoo) si intoarce JSON-ul din
 // contractul spec-ului (docs/superpowers/specs/2026-09-27-alerts-trading-tools-din-radar-design.md, §4).
+// v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const ZI = 86400000, FEREASTRA_INSIDERI = 60 * ZI;
 const nr = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 const rot = (x, z = 4) => (nr(x) === null ? null : Math.round(x * 10 ** z) / 10 ** z);
@@ -248,7 +250,7 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
     const noua = t && !(ant && ant.ultimaCumparare && ant.ultimaCumparare.zi && t.zi <= ant.ultimaCumparare.zi);
     if (ant && recenta && noua && (v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
       out.push({ cheie: "sim-insider-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
-        mesaj: t.cine + " (" + String(t.rol || "").slice(0, 30) + ") a cumpărat " + miiTxt(t.act) + " acțiuni, ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + "; cumpărările cu bani contează, cele primite gratis nu.\n👉 Aș trece-o pe lista de urmărit, fără să cumpăr doar pentru asta." });
+        mesaj: t.cine + " (" + String(t.rol || "").slice(0, 30) + ") a cumpărat " + cate(t.act, "acțiune", "acțiuni").replace(/^\d+/, miiTxt(t.act)) + ", ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + "; cumpărările cu bani contează, cele primite gratis nu.\n👉 Aș trece-o pe lista de urmărit, fără să cumpăr doar pentru asta." });
     }
   }
   return out;
@@ -284,7 +286,7 @@ export function alerteSLTP(poza, acum) {
     out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
       // v100.68 (pachetul 3): randul 1 = pretul, stopul, tinta si istoricul; randul 2 = cat as cumpara (reper, nu semnal)
       mesaj: "Prețul e " + m + pr(pret) + " · stop " + m + pr(g.stop) + " · țintă " + m + pr(g.tinta)
-        + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + "% pe plus, " + q.n + (q.n >= 20 ? " de" : "") + " intrări)" : "") + ".\n👉 "
+        + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + "% pe plus, " + cate(q.n, "intrare", "intrări") + ")" : "") + ".\n👉 "
         // v101.3 (el, 28.09): si cat cumpar, cand colectorul a calculat marimea (doar in $, cu contul T212 citit)
         // v100.70 (revizia pachetului 3, I7): marimea e conditionala („dacă intru”), nu o recomandare de cumparare; „decizia e a ta” revine
         + (g.marime && g.marime.bucati > 0 ? "Aș lua cel mult " + g.marime.bucati.toFixed(2).replace(".", ",") + " buc, dacă intru (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei, risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafon 20% din cont" : " = 1% din cont") + "); e un reper, decizia e a ta."

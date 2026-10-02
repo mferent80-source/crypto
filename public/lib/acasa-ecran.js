@@ -239,7 +239,7 @@ function acasaDeseneaza() {
   // 4. ce inseamna pentru tine
   var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : (typeof contTot !== "undefined" ? contTot.boti : null);
   var act = (boti || []).filter(function (b) { return b && b.activ; });
-  var hb = '<div class="acCap"><h4>Boții tăi</h4><span class="acSub">' + (boti ? act.length + (act.length === 1 ? " activ" : " activi") + " · Pionex" : "aduc boții…") + '</span></div>';
+  var hb = '<div class="acCap"><h4>Boții tăi</h4><span class="acSub">' + (boti ? acCate(act.length, "activ", "activi") + " · Pionex" : "aduc boții…") + '</span></div>';
   act.slice(0, 4).forEach(function (b) {
     var nume = String(b.baza || "").replace(/\.PERP$/, ""), tot = Number(b.profitTotal), pr = Number(b.pretCurent), jo = Number(b.gridJos), su = Number(b.gridSus);
     var inGrid = su > jo && isFinite(pr) ? Math.round((pr - jo) / (su - jo) * 100) : null, panaJos = jo > 0 && pr > 0 ? (pr / jo - 1) * 100 : null;

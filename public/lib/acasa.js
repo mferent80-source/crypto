@@ -152,7 +152,7 @@ var Acasa = (function () {
       .filter(function (x) { return isFinite(x.t) && x.t > acum; }).sort(function (a, b) { return a.t - b.t; }).slice(0, 8);
     var mari = u.filter(function (x) { return x.mare; }).length;
     var text = !u.length ? "Nimic important de aici până la sfârșitul săptămânii. Calendarul săptămânii viitoare apare duminică seara."
-      : mari ? mari + (mari === 1 ? " eveniment mare" : " evenimente mari") + " în SUA de aici până la sfârșitul săptămânii: în ziua lor piețele se mișcă mai tare, n-aș porni boți noi chiar înainte." : "Doar evenimente de impact mediu în SUA săptămâna asta.";
+      : mari ? cate(mari, "eveniment mare", "evenimente mari") + " în SUA de aici până la sfârșitul săptămânii: în ziua lor piețele se mișcă mai tare, n-aș porni boți noi chiar înainte." : "Doar evenimente de impact mediu în SUA săptămâna asta.";
     u.forEach(function (x) { var d = new Date(x.t); x.cand = ZILE[d.getDay()] + " " + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }); });
     return { urmatoare: u, text: text };
   }

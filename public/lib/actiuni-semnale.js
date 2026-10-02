@@ -211,7 +211,7 @@ var ActiuniSemnale = (function () {
     return niv.stop > 0 && niv.stop < baza ? { stop: niv.stop, alTau: false } : null;
   }
   // „1 caz”, „4 cazuri”, „45 de cazuri”, „101 cazuri” - v100.71: TextRo.cate (o singura regula), cu rezerva cand TextRo nu e incarcat
-  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.76: rezerva cu regula întreagă
   function nrCazuri(n) { return cate(n, "caz", "cazuri"); }
   function textSituatie(r) {
     if (!r || !r.toate || !r.toate.n) return "În situații ca asta" + (r && r.eticheta ? " (" + r.eticheta + ")" : "") + ": niciun trade al tău judecat încă.";

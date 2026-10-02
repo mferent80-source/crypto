@@ -296,7 +296,7 @@ var TabloExtra = (function () {
     var mt = MOTIV[mot] || (mot ? mot.replace(/_/g, " ") : "necunoscut");
     if (mot === "loss_stop" && b.opritorPierdereTip === "raport" && nr(b.opritorPierdereRaport) !== null) mt += " (" + P(nr(b.opritorPierdereRaport) * 100, 2) + " din investiție)";
     L.push("De ce: " + mt + ".");
-    if (grid !== null && tot !== null) L.push("Grilele au adus " + U(grid) + (nr(b.ordinePerechi) !== null ? " în " + b.ordinePerechi + (nr(b.ordinePerechi) >= 20 ? " de" : "") + " perechi" : "") + "; poziția și costurile au dus restul (" + U(tot - grid) + ").");
+    if (grid !== null && tot !== null) L.push("Grilele au adus " + U(grid) + (nr(b.ordinePerechi) !== null ? " în " + cate(b.ordinePerechi, "pereche", "perechi") : "") + "; poziția și costurile au dus restul (" + U(tot - grid) + ").");
     var pl = o.plan, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null, V = function (v) { return v ? String(Math.round(v * 100) / 100).replace(".", ",") : "—"; };
     if (plus || minus) L.push("Planul tău: +" + V(plus) + " / −" + V(minus) + " USDT → " + (tot === null ? "—" : plus && tot >= plus ? "ținta atinsă" + (tot > plus ? ", ai ieșit peste ea" : "") : minus && tot <= -minus ? "pragul de minus atins" : tot < 0 ? "ai ieșit înainte de pragul tău de minus" : "ai ieșit înainte de țintă") + ".");
     else L.push("Planul tău: n-avea plan scris.");

@@ -11,6 +11,8 @@
 // Doar bare INCHISE: ultima bara de la bursa e in formare si se scoate.
 var Directie = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 
   function nr(v) {
     if (typeof v === "number") return isFinite(v) ? v : null;
@@ -140,7 +142,7 @@ var Directie = (function () {
     var c = inchideri(randuri);
     var st = stari(c);
     var acum = st.length ? st[st.length - 1] : null;
-    if (!acum) return { dir: null, stare: "nu-se-poate", motiv: "sub " + MIN_BARE + " bare inchise", bare: c.length, formare: formare };
+    if (!acum) return { dir: null, stare: "nu-se-poate", motiv: "sub " + cate(MIN_BARE, "bară închisă", "bare închise"), bare: c.length, formare: formare };
     return { formare: formare, dir: acum.dir, er: acum.er, panta: acum.panta, vechime: vechime(st), bare: c.length,
       fata: fataDeBot(acum.dir, directieBot), schimbare: schimbare(st, orizont), stare: "ok" };
   }

@@ -163,7 +163,7 @@ var Probabilitati = (function () {
       // v100.69: o fraza ≤ 160 - e si explicatia motivului „Rezultatele vin” din Consilierul pozitiei, unde „de mai sus” n-ar avea sens.
       // Sensul ramane cel din M1 (v100.53): ferestrele istorice INCLUD zilele de rezultate; cifrele nu tin cont ca rezultatele cad ACUM
       var ev = o.evenimente || {}, nuTin = "nu țin cont că rezultatele cad în zilele astea, iar stopul poate fi sărit la deschidere.";
-      out.push({ titlu: "Rezultatele vin în " + z + (z === 1 ? " zi" : " zile"), p: null, ic: null, avertizare: true,
+      out.push({ titlu: "Rezultatele vin în " + cate(z, "zi", "zile"), p: null, ic: null, avertizare: true,
         text: nr(ev.max) !== null ? "Săriturile mari (de obicei la rezultate): ~" + PCt(nr(ev.mediana) || 0) + ", maxim " + PCt(ev.max) + "; cifrele 🎲 " + nuTin : "Cifrele 🎲 " + nuTin });
     }
     return out;

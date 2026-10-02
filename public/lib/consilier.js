@@ -76,7 +76,7 @@ var Consilier = (function () {
     if (ctx.piata && ctx.piata.ton === "rau") out.push({ nivel: "n", sursa: "piata", titlu: "Piața întreagă e în jos", text: ctx.piata.text || "", ceAsFace: "N-aș adăuga nimic azi, pe nicio acțiune." });
     // 6) stirile din ultimele 48 h - aratate, nu interpretate
     var s = stiriRecente(ctx.stiri, acum);
-    if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: s.length + (s.length === 1 ? " știre" : " știri") + " despre " + p.simbol + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });
+    if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: cate(s.length, "știre", "știri") + " despre " + p.simbol + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });
     return ordoneaza(out);
   }
 
@@ -108,7 +108,7 @@ var Consilier = (function () {
     if (fg && isFinite(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (FG[fg.clasa] || fg.clasa) + ")",
       text: "Piața e la o extremă: mișcările mari vin mai des în astfel de zile.", ceAsFace: "N-aș pune bani în plus azi și aș ține stopul pornit." });
     var s = stiriRecente(ctx.stiri, acum);
-    if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: s.length + (s.length === 1 ? " știre" : " știri") + " despre " + m + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });
+    if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: cate(s.length, "știre", "știri") + " despre " + m + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });
     return ordoneaza(out);
   }
 

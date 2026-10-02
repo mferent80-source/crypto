@@ -33,7 +33,7 @@ await test("fara numele botului (sau acelasi nume): ca inainte - dupa ticker, fa
   const r = OB.poarta({ fisa: fisa("LIT_USDT_PERP"), trades: TR, acum: ultim + 5 * 60000, dir: "long", levier: 3, plan: { plus: 5 } });
   assert.match(r.reguli.find((x) => x.cod === "moneda").text, /N-ai mai avut boți închiși pe LIT/);
   const r2 = OB.poarta({ fisa: fisa("LIGHTER_USDT_PERP"), numeBot: "LIGHTER", trades: TR, acum: ultim + 5 * 60000, dir: "long", levier: 3, plan: { plus: 5 } });
-  assert.doesNotMatch(r2.reguli.find((x) => x.cod === "moneda").text, /se numește/);
+  assert.equal(r2.reguli.find((x) => x.cod === "moneda").nota, null);   /* v100.76 (revizia ideilor, M6): același nume ⇒ fără notă (vechiul /se numește/ nu mai putea pica) */
 });
 await test("pagina: poarta primeste numele botului din lista oficiala Pionex (baseCurrency), pentru moneda aleasa", () => {
   const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");

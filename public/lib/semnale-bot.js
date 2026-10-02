@@ -11,6 +11,8 @@
 // Nimic de aici nu prezice directia; spune stari masurate si ce as face eu (decizia e a lui).
 var SemnaleBot = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var G = GridCalcul, ORA = 3600000;
 
   function nr(v) {
@@ -83,7 +85,7 @@ var SemnaleBot = (function () {
     var g = pasBot(b), s = f.deasa.setare;
     if (!g || !(s.pas > 0) || g.pas <= 1.5 * s.pas) return null;
     return { setare: s, pasBot: g.pas, pasDes: s.pas, grileBot: g.grile, treceriZi: nr(f.deasa.treceriZi),
-      motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; gridul des de 0,3% (" + (s.grile + 1) + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
+      motiv: "gridul tău are " + cate(g.grile, "grilă", "grile") + " la " + P(g.pas) + " pas; gridul des de 0,3% (" + cate(s.grile + 1, "grilă", "grile") + " între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
   }
   function fmtPret(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   // v99: "Acum, concret" - trei randuri cu cifre, pe Tablou, sub verdict: STOPUL (unde e, unde l-as pune), GRIDUL (al lui vs
@@ -140,14 +142,14 @@ var SemnaleBot = (function () {
     } else out.push({ cod: "stop", titlu: "Stopul", text: neutru ? "Stopul tău: " + opTxt + ". Botul neutru cumpără sub preț și vinde peste: n-are un zero pe o singură parte, deci protecția stă la o grilă în afara intervalului, pe ambele părți." : "Stopul tău: " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
     // 2) gridul
     var poz = p !== null && jos !== null && sus !== null && sus > jos ? (p - jos) / (sus - jos) : null, c = x.costuri || {};
-    var al = g ? "Al tău: " + g.grile + " grile la " + P(g.pas) + " pas (net " + P(g.pas - 2 * G.C.COMISION_GRILA) + ")" : "Al tău: fără geometrie citită";
-    var azi = c.umpleri24h !== null && c.umpleri24h !== undefined ? ", " + c.umpleri24h + " umpleri în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : "";
+    var al = g ? "Al tău: " + cate(g.grile, "grilă", "grile") + " la " + P(g.pas) + " pas (net " + P(g.pas - 2 * G.C.COMISION_GRILA) + ")" : "Al tău: fără geometrie citită";
+    var azi = c.umpleri24h !== null && c.umpleri24h !== undefined ? ", " + cate(c.umpleri24h, "umplere", "umpleri") + " în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : "";
     var unde = poz === null ? "" : poz < 0 ? " Prețul e sub gridul de jos cu " + dist(jos, p) + " (botul nu mai cumpără; " + dist(sus, p) + " până sus)." : poz > 1 ? " Prețul e peste gridul de sus cu " + dist(sus, p) + " (botul a rămas fără poziție; " + dist(jos, p) + " până jos)."
       : " Prețul e la " + P(poz) + " din interval: " + dist(jos, p) + " până jos, " + dist(sus, p) + " până sus.";
     var pzi = nr(f && (f.propusa === "deasa" && f.deasa ? f.deasa.treceriZi : f.treceriZi));
-    var prop = !f ? " Propunerea (gridul des sau cel rar) vine cu fișa." : sp ? " Propus acum (" + (f.propusa === "deasa" ? "grid des 0,3%" : "din proba pe 30 de zile, gridul des respins") + "): " + (sp.grile + 1) + " grile între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + " la " + P(sp.pas) + " pas" + (pzi !== null ? ", ~" + T(pzi) + " perechi încheiate pe zi pe ultimele 30 de zile" : "") + "." : "";
+    var prop = !f ? " Propunerea (gridul des sau cel rar) vine cu fișa." : sp ? " Propus acum (" + (f.propusa === "deasa" ? "grid des 0,3%" : "din proba pe 30 de zile, gridul des respins") + "): " + cate(sp.grile + 1, "grilă", "grile") + " între " + fmtPret(sp.jos) + " și " + fmtPret(sp.sus) + " la " + P(sp.pas) + " pas" + (pzi !== null ? ", ~" + T(pzi) + " perechi încheiate pe zi pe ultimele 30 de zile" : "") + "." : "";
     // cand gridul des NU e propus, spune de ce (regula lui vs. proba pe istoricul monedei) - nu-l lasa sa creada ca nu exista
-    var de = f && f.deasa && f.deasa.setare && f.propusa !== "deasa" && !f.deasa.aceeasi ? " Gridul des (0,3%, " + (f.deasa.setare.grile + 1) + " grile" + (nr(f.deasa.treceriZi) !== null ? ", ~" + T(f.deasa.treceriZi) + " perechi/zi" : "") + ") nu-l propun acum: " + (f.deasa.respinsa ? f.deasa.motiv : (rg0 && rg0.miscare ? "piața e în mișcare, după mișcare gridul iese cel mai rău" : "proba a ales pasul mai rar")) + "." : "";
+    var de = f && f.deasa && f.deasa.setare && f.propusa !== "deasa" && !f.deasa.aceeasi ? " Gridul des (0,3%, " + cate(f.deasa.setare.grile + 1, "grilă", "grile") + (nr(f.deasa.treceriZi) !== null ? ", ~" + T(f.deasa.treceriZi) + " perechi/zi" : "") + ") nu-l propun acum: " + (f.deasa.respinsa ? f.deasa.motiv : (rg0 && rg0.miscare ? "piața e în mișcare, după mișcare gridul iese cel mai rău" : "proba a ales pasul mai rar")) + "." : "";
     out.push({ cod: "grid", titlu: "Gridul", text: al + azi + "." + unde + prop + de });
     // 3) miscarea
     var rg = f && f.regim;
@@ -202,9 +204,9 @@ var SemnaleBot = (function () {
     var lm0 = laMargine(b, x.pragMargine);   // v100.45: „la margine” din profilul monedei (fara profil: 10% din interval, ca inainte)
     gr0.tag = poz === null ? { t: "—", c: "mut" } : poz < 0 || poz > 1 ? { t: "botul nu tranzacționează", c: "bad" } : lm0 && lm0.parte ? { t: "la margine", c: "warn" } : { t: "în grid", c: "good" };
     // v100.61: un rand (faptele, cu „·”); intervalul propus si setarile de copiat raman in detalii
-    gr0.act = [g ? g.grile + " grile la " + P(g.pas) + " pas" : "Geometria gridului necitită",
-      c.umpleri24h !== null && c.umpleri24h !== undefined ? c.umpleri24h + " umpleri în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : null,
-      sp && f ? "propus: " + (sp.grile + 1) + " grile la " + P(sp.pas) + " pas" : f ? null : "propunerea vine cu fișa"].filter(Boolean).join(" · ") + ".";
+    gr0.act = [g ? cate(g.grile, "grilă", "grile") + " la " + P(g.pas) + " pas" : "Geometria gridului necitită",
+      c.umpleri24h !== null && c.umpleri24h !== undefined ? cate(c.umpleri24h, "umplere", "umpleri") + " în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : null,
+      sp && f ? "propus: " + cate(sp.grile + 1, "grilă", "grile") + " la " + P(sp.pas) + " pas" : f ? null : "propunerea vine cu fișa"].filter(Boolean).join(" · ") + ".";
     if (rg && (nr(rg.r4h) !== null || nr(rg.r24h) !== null)) {
       var sf0 = sensFata(b, rg), r40 = nr(rg.r4h), r240 = nr(rg.r24h), li = nr(b.distantaLichidarePct);
       mi0.mare = r40 !== null ? X(r40) : X(r240); mi0.mic = r40 !== null ? "pe 4 h față de obișnuit" : "pe 24 h față de obișnuit";
@@ -452,7 +454,7 @@ var SemnaleBot = (function () {
   function tacute(soc) { var o = {}; Object.keys(soc || {}).forEach(function (k) { if (soc[k] && soc[k].stare === "tace") o[k] = true; }); return o; }
   function textIncredere(x) {
     if (!x) return "încă nu știm (niciun caz)";
-    if (x.stare === "necunoscut") return "încă nu știm (" + x.judecate + (x.judecate === 1 ? " judecat" : " judecate") + ")";
+    if (x.stare === "necunoscut") return "încă nu știm (" + cate(x.judecate, "judecat", "judecate") + ")";
     var s = "a avut dreptate " + x.corecte + " din " + x.judecate + " (" + Math.round(100 * x.corecte / x.judecate) + "%)";
     if (x.baniN) s += ", " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(1).replace(".", ",") + " USDT dacă-l urmai";
     if (x.stare === "tace") s += " · tăcut pe Discord (nu bate hazardul)";

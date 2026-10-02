@@ -80,7 +80,7 @@ export function situatiiAcasa(pune) {
     ["fișa zice nu, levier peste, contra trendului, fără plan, repornire", { fisa: fisa("nu", ["pe istoric, setarea asta a fost lichidată de 2 ori"], { directie: { dir: "short", tarie: "tare" } }), levier: 6, dir: "long", plan: null,
       trades: [tr("LIGHTER", -4, { inchis: T0 - 4 * 60000 })].concat(istT(7, 5, -40.12)), numeBot: "LIGHTER.PERP", acum: T0, frana: frT([tr("A", -12.05, { inchis: T0 - 2 * ORA }), tr("B", -12.05, { inchis: T0 - 3 * ORA })]) }],
     ["fișa zice așteaptă", { fisa: fisa("asteapta", ["prețul stă lângă minimul ultimelor 7 zile"]), levier: 4, dir: "long", plan: { minus: 10 }, trades: sub }],
-    ["113 de boți pe LIGHTER (LIT)", { fisa: fisa("porneste", []), levier: 3, dir: "long", plan: { plus: 5.5, minus: 15.7, afaraOre: 12 }, trades: Array.from({ length: 113 }, (_, i) => tr("LIGHTER", i % 3 ? -12.35 : 4.2, { inchis: T0 - (i + 2) * 6 * ORA, pornit: T0 - (i + 3) * 6 * ORA })), numeBot: "LIGHTER.PERP" }]]) {
+    ["113 boți pe LIGHTER (LIT)", { fisa: fisa("porneste", []), levier: 3, dir: "long", plan: { plus: 5.5, minus: 15.7, afaraOre: 12 }, trades: Array.from({ length: 113 }, (_, i) => tr("LIGHTER", i % 3 ? -12.35 : 4.2, { inchis: T0 - (i + 2) * 6 * ORA, pornit: T0 - (i + 3) * 6 * ORA })), numeBot: "LIGHTER.PERP" }]]) {
     const r = OB.poarta(Object.assign({ acum: T0 }, o));
     r.reguli.forEach((x) => pune("poarta de pornire: " + sit + " · " + x.cod, "acasa", "poarta." + x.cod, { t: x.text }, [["t", "deCe"]]));   // randurile portii = explicatii (≤ 160)
     const fp = OB.facPoarta(r); pune("poarta de pornire: " + sit + " · ce aș face", "acasa", "facPoarta", { t: fp.fac, n: fp.nota }, [["t", "faCe"], ["n", "deCe"]]);

@@ -112,7 +112,7 @@ var StatisticaTrade = (function () {
 
   // Ce ai facut bine / ce ai gresit - din cifre, fiecare cu suma lui; doar de la 10 trade-uri, iar grupele sub 5 trade-uri nu conteaza
   function concluzii(s, M) {
-    if (!s.suficient) { s.avertisment = "Ai doar " + cate(s.n, "trade", "trade-uri") + ": prea puține ca să spun ce faci bine sau rău (îmi trebuie cel puțin " + MIN + "). Cifrele de mai jos spun doar ce s-a întâmplat."; return; }
+    if (!s.suficient) { s.avertisment = "Ai doar " + cate(s.n, "trade", "trade-uri") + ": prea " + (s.n === 1 ? "puțin" : "puține") + " ca să spun ce faci bine sau rău (îmi trebuie cel puțin " + MIN + "). Cifrele de mai jos spun doar ce s-a întâmplat."; return; }
     var B = s.bine, G = s.gresit, mari = function (l) { return l.filter(function (g) { return g.n >= 5; }); };
     if (s.total > 0) B.push({ text: "Pe total ești pe plus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + (s.factorProfit !== null ? " — fiecare 1 " + M + " pierdut a adus " + s.factorProfit.toFixed(2).replace(".", ",") + " câștigat" : "") + ".", suma: s.total });
     else G.push({ text: "Pe total ești pe minus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + ".", suma: s.total });
@@ -210,8 +210,8 @@ var StatisticaTrade = (function () {
     var rand = c.randuri.map(function (r) { return "<tr><td>" + esc(r.et) + "</td><td>" + esc(f(r.cheie, r.a, "a")) + "</td><td><b>" + esc(f(r.cheie, r.b, "b")) + '</b></td><td class="' + (r.verdict === "mai-bine" ? "good" : r.verdict === "mai-rau" ? "bad" : "") + '">' + (r.verdict === "mai-bine" ? '▲<span class="stVerdTxt"> mai bine</span>' : r.verdict === "mai-rau" ? '▼<span class="stVerdTxt"> mai rău</span>' : "") + "</td></tr>"; });
     var bine = c.randuri.filter(function (r) { return r.verdict === "mai-bine"; }).length, rau = c.randuri.filter(function (r) { return r.verdict === "mai-rau"; }).length;
     var nota = !c.b.n ? "Încă niciun bot pornit după regulile noi nu s-a închis. Comparația se umple singură; de la " + cate(MIN, "bot", "boți") + " îți spun dacă regulile ajută."
-      : !c.destul ? "Doar " + c.b.n + (c.b.n === 1 ? " bot" : " boți") + " după regulile noi — prea puțini ca să tragem o concluzie (de la " + MIN + " de fiecare parte)."
-      : "Pe " + cate(c.b.n, "bot", "boți") + " după și " + c.a.n + " înainte: " + bine + (bine === 1 ? " măsură arată mai bine" : " măsuri arată mai bine") + ", " + rau + " mai rău. E un semn, nu o dovadă: piața nu e aceeași în cele două perioade.";
+      : !c.destul ? "Doar " + cate(c.b.n, "bot", "boți") + " după regulile noi — prea puțini ca să tragem o concluzie (de la " + MIN + " de fiecare parte)."
+      : "Pe " + cate(c.b.n, "bot", "boți") + " după și " + c.a.n + " înainte: " + cate(bine, "măsură", "măsuri") + " arată mai bine" + ", " + rau + " mai rău. E un semn, nu o dovadă: piața nu e aceeași în cele două perioade.";
     return '<div class="stBloc stCompara"><div class="stBlocCap"><h4>Înainte / după regulile din ' + esc(REGULI_NOI.et) + '</h4><span class="stSub">' + esc(REGULI_NOI.ce) + " · după ora pornirii botului</span></div>"
       + tabel(["", "Înainte", "După", ""], rand) + '<p class="stSub">' + esc(nota) + "</p></div>";
   }
@@ -239,7 +239,7 @@ var StatisticaTrade = (function () {
       + tile("Factor de profit", s.factorProfit !== null ? s.factorProfit.toFixed(2).replace(".", ",") : "—", s.factorProfit === null ? "" : s.factorProfit >= 1 ? "good" : "bad", "câștiguri ÷ pierderi (peste 1 = pe plus)")
       + tile("Cea mai mare cădere", bani(-s.drawdown.max, M), s.drawdown.max > 0 ? "bad" : "", s.drawdown.max > 0 ? (s.drawdown.dinStart ? "de la început" : data(s.drawdown.dela)) + " → " + data(s.drawdown.panaLa) : "fără cădere")
       + tile("Cel mai bun / cel mai prost trade", bani(s.celMaiMare && s.celMaiMare.rezultat, M) + " / " + bani(s.ceaMaiMare && s.ceaMaiMare.rezultat, M), "", (s.celMaiMare ? s.celMaiMare.eticheta : "") + " / " + (s.ceaMaiMare ? s.ceaMaiMare.eticheta : ""))
-      + tile("Cea mai lungă serie", s.serii.castiguri + (s.serii.castiguri === 1 ? " câștig / " : " câștiguri / ") + s.serii.pierderi + (s.serii.pierderi === 1 ? " pierdere" : " pierderi"), "", "la rând")
+      + tile("Cea mai lungă serie", cate(s.serii.castiguri, "câștig", "câștiguri") + " / " + cate(s.serii.pierderi, "pierdere", "pierderi"), "", "la rând")
       + (s.comisioane !== null ? tile("Comisioane plătite", bani(-s.comisioane, M), "bad", s.castigBrut > 0 ? pr(s.comisioane / s.castigBrut) + " din câștiguri" : "") : "")
       + "</div>";
     if (!s.suficient) h += '<p class="stAvert">' + esc(s.avertisment) + "</p>";

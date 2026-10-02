@@ -135,9 +135,9 @@ var T212 = (function () {
     });
     var r = { an: an, t212: t, pionex: px, ani: Object.keys(ani).map(Number).sort(function (a, b) { return b - a; }) };
     var L = function (v) { return (v >= 0 ? "+" : "-") + Math.abs(v).toFixed(2).replace(".", ",") + " lei"; };   // v100.40: minus ASCII (Excel nu ia „−” drept numar)
-    r.text = "Anul " + an + "\nTrading 212 (acțiuni, în lei, după comisioanele de conversie): " + t.n + " vânzări · câștiguri " + L(t.castiguri) + " · pierderi " + L(t.pierderi) + " · NET " + L(t.net) + " · comisioane " + L(-t.comisioane).replace("+", "") + " · dividende " + L(t.dividende)
+    r.text = "Anul " + an + "\nTrading 212 (acțiuni, în lei, după comisioanele de conversie): " + cate(t.n, "vânzare", "vânzări") + " · câștiguri " + L(t.castiguri) + " · pierderi " + L(t.pierderi) + " · NET " + L(t.net) + " · comisioane " + L(-t.comisioane).replace("+", "") + " · dividende " + L(t.dividende)
       + "\nPionex (boți, în USDT): " + cate(px.n, "bot închis", "boți închiși") + " · NET " + (px.net >= 0 ? "+" : "-") + Math.abs(px.net).toFixed(2) + " USDT"
-      + (px.lei !== null ? " ≈ " + L(px.lei) + " (curs BNR USD din ziua fiecărei închideri, ora României; USDT socotit ca USD" + (px.faraCurs ? "; " + px.faraCurs + (px.faraCurs === 1 ? " bot fără curs" : " boți fără curs") + ", lăsați afară din lei" : "") + ")" : "");
+      + (px.lei !== null ? " ≈ " + L(px.lei) + " (curs BNR USD din ziua fiecărei închideri, ora României; USDT socotit ca USD" + (px.faraCurs ? "; " + cate(px.faraCurs, "bot", "boți") + " fără curs, " + (px.faraCurs === 1 ? "lăsat" : "lăsați") + " afară din lei" : "") + ")" : "");
     return r;
   }
 

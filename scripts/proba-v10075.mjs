@@ -45,22 +45,39 @@ await test("(2) pagina Alerts păstrează rândurile mesajelor (faptul pe un râ
 
 // (3) „de” / singularul pe sursă: un număr întreg nu se lipește direct de un substantiv numărat - trece prin TextRo.cate / cate(...).
 // Zecimalele („1,5 zile”) nu iau „de” și rămân (toFixed(…) / TextRo.num(…) / z(…) chiar înainte).
-const NUMARATE = "boți|cazuri|monede|zile|ore|alerte|mișcări|porniri|trade-uri|ferestre|perioade|acțiuni|poziții|situații|minute|tranzacții|decizii|semnale|tickere|rânduri";
+// revizia ideilor (I1): + substantivele gridului (grile, linii, perechi, umpleri, niveluri…), formele „n + (n === 1 ? …)”, regulile
+// „>= 20 ? " de"” scrise de mână și textele colectorului (Discord); liniile de jurnal intern (d.jurnal / jurnal(…)) nu sunt texte pentru el
+const NUMARATE = "boți|cazuri|monede|zile|ore|alerte|mișcări|porniri|trade-uri|ferestre|perioade|acțiuni|poziții|situații|minute|tranzacții|decizii|semnale|tickere|rânduri|grile|linii|perechi|umpleri|bare|niveluri|intrări|vânzări|ordine|lumânări|săptămâni|intervale";
+// zecimalele nu iau „de”: toFixed(1+) [.replace(…)] / TextRo.num(…) / helperele cu o zecimală z(…), nz(…), T(…), T1(…), vg(…), z1(…)
+const ZECIMAL = /(toFixed\([1-9]\)(\.replace\([^()]*\))?|TextRo\.num\((?:[^()]|\([^()]*\))*\)|\b(z|nz|T|T1|vg|z1)\((?:[^()]|\([^()]*\))*\))\s*\)?\s*$/;   // un nivel de paranteze în argument: vg(nr(x))
 function lipite(src) {
-  const out = [], re = new RegExp("\\+\\s*([\"'])\\s(" + NUMARATE + ")(?![\\p{L}\\-])", "gu");
+  const out = [], re = new RegExp("\\+\\s*([\"'])\\s(" + NUMARATE + ")(?![\\p{L}\\-])", "gu"), linie = (i) => src.slice(src.lastIndexOf("\n", i) + 1, src.indexOf("\n", i) < 0 ? undefined : src.indexOf("\n", i));
   for (const m of src.matchAll(re)) {
+    if (/\bjurnal\(/.test(linie(m.index))) continue;
     const inainte = src.slice(Math.max(0, m.index - 90), m.index);
-    if (/(toFixed\(\d\)(\.replace\([^()]*\))?|TextRo\.num\([^()]*\)|\bz\([^()]*\)|\bnz\([^()]*\))\s*\)?\s*$/.test(inainte)) continue;   // nz = sumele planului din alerte.js, aici doar pe ramura zecimală
+    if (ZECIMAL.test(inainte)) continue;
     out.push(inainte.slice(-55).replace(/\s+/g, " ") + m[0]);
   }
+  for (const m of src.matchAll(/([\w$.\[\]]+)\s*\+\s*\(\s*\1\s*===\s*1\s*\?/g)) if (!/\bjurnal\(/.test(linie(m.index))) out.push("ternar: " + linie(m.index).slice(Math.max(0, m.index - src.lastIndexOf("\n", m.index) - 50)).slice(0, 110));
+  for (const m of src.matchAll(/>=\s*20\s*\?\s*["'] de/g)) out.push("„de” scris de mână: " + linie(m.index).trim().slice(0, 110));
   return out;
 }
-await test("(3) „de” de la 20 și singularul la 1 în tot softul: niciun număr întreg lipit direct de „boți / cazuri / zile / trade-uri …” (app.js + public/lib)", () => {
+await test("(3) „de” de la 20 și singularul la 1 în tot softul: niciun număr întreg lipit de un substantiv numărat, nicio formă „n + (n === 1 ? …)”, niciun „>= 20 ? de” (pagina + colectorul)", () => {
+  const fis = ["public/app.js"].concat(fs.readdirSync(path.join(RAD, "public", "lib")).filter((x) => x.endsWith(".js")).map((x) => "public/lib/" + x),
+    ["scripts/colector.mjs"], fs.readdirSync(path.join(RAD, "scripts", "lib")).filter((x) => x.endsWith(".mjs") && !/^garda-/.test(x)).map((x) => "scripts/lib/" + x));
   const rele = [];
-  for (const f of ["app.js"].concat(fs.readdirSync(path.join(RAD, "public", "lib")).filter((x) => x.endsWith(".js")).map((x) => "lib/" + x))) {
-    for (const l of lipite(fs.readFileSync(path.join(RAD, "public", f), "utf8"))) rele.push(f + ": …" + l);
-  }
+  for (const f of fis) for (const l of lipite(fs.readFileSync(path.join(RAD, f), "utf8"))) rele.push(f + ": …" + l);
   assert.equal(rele.length, 0, rele.length + " locuri:\n" + rele.slice(0, 40).join("\n"));
+});
+
+await test("(3) pe textul real: alerta perechii „(1 pereche)” / „(105 perechi)” (101–119 fără „de”), pornirea pe Discord „25 de boți” ca pe fișă", async () => {
+  const AL = globalThis.Alerte; assert.ok(AL && AL.grila, "Alerte.grila lipsește");
+  const b = (per) => ({ baza: "CRV.PERP", brut: { buOrderData: { closedExchangeOrderCount: 10 } }, ordinePerechi: per, gridProfitBrut: 0.05, pretCurent: 0.38 });
+  const m1 = AL.grila(b(1), { u: 9, per: 0, g: 0 }).mesaje.map((x) => x.mesaj).join(" "), m105 = AL.grila(b(105), { u: 9, per: 104, g: 0 }).mesaje.map((x) => x.mesaj).join(" ");
+  assert.match(m1, /\(1 pereche\)/, m1); assert.match(m105, /\(105 perechi\)/, m105);
+  const { mesajPornire } = await import("./lib/tura-pornire.mjs");
+  const p = mesajPornire({ id: "1", baza: "LIGHTER.PERP" }, "LIGHTER", { n: 25, net: -40.5, plus: 6, rata: 0.24, text: "x" }, null, "LIT", "https://x");
+  assert.match(JSON.stringify(p), /25 de boți/, JSON.stringify(p).slice(0, 300));
 });
 
 await test("(4a) autopsia pe datele lungi: fiecare rând ≤ 160 (motivul real de 60 pe MARSCOIN și cel vechi de 120), nimic pierdut", () => {

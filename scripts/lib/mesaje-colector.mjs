@@ -4,6 +4,8 @@
 // (faptul · „👉 ” actiunea la persoana I), virgula zecimala, fara majuscule de strigat.
 // Cuvinte de care depinde codul: „nu mai poate citi” / „citește din nou” (TabloExtra.alertaRezolvata), „n-are plan” („Ce ai de făcut acum”).
 
+// v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const U2 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT";
 const V = (v) => String(Math.round(Math.abs(Number(v)) * 100) / 100).replace(".", ",");
 const scurt = (s, n) => { s = String(s || ""); return s.length <= n ? s : s.slice(0, n - 1).replace(/\s+\S*$/, "") + "…"; };
@@ -13,11 +15,11 @@ const msg = (fapt, act) => fapt + (act ? "\n👉 " + act : "");
 export const intarziat = (titlu, minute) => titlu + " (întârziat " + minute + " min)";
 
 export const serverOprit = (minute) => ({ nivel: "critic", titlu: "Crypto Radar oprit: serverul de acasă nu mai răspunde",
-  mesaj: msg("De ~" + minute + " minute serverul Radarului (fereastra neagră, :8788) nu răspunde, deci și colectorul s-a oprit: alertele boților și ale acțiunilor nu mai vin.",
+  mesaj: msg("De ~" + cate(minute, "minut", "minute") + " serverul Radarului (fereastra neagră, :8788) nu răspunde, deci și colectorul s-a oprit: alertele boților și ale acțiunilor nu mai vin.",
     "Aș porni PORNESTE-CRYPTO-RADAR.bat sau PORNESTE-SI-PE-TELEFON.bat; stopurile din Pionex merg și fără Radar.") });
 
 export const citireRea = (minute, eroare) => ({ nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul",
-  mesaj: "De " + minute + " minute (" + scurt(eroare, 60) + ") alertele nu mai sunt de încredere până se rezolvă." });
+  mesaj: "De " + cate(minute, "minut", "minute") + " (" + scurt(eroare, 60) + ") alertele nu mai sunt de încredere până se rezolvă." });
 export const citireDinNou = () => ({ nivel: "info", titlu: "Crypto Radar citește din nou botul", mesaj: "Alertele merg din nou." });
 
 export const lipsaPionex = (nume) => ({ nivel: "critic", titlu: (nume || "Botul") + " nu mai apare în lista Pionex", mesaj: msg("Poate a fost închis sau lichidat.", "Aș verifica în aplicația Pionex.") });
@@ -51,14 +53,14 @@ export const autopsie = (data, linii) => ({ nivel: "info", titlu: "Autopsia acț
 export const legat = () => ({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate",
   mesaj: "De aici vin alertele botului: lichidarea aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore contra botului, mișcarea mare." });
 
-export const perechiOra = (nume, n, usdt) => ({ nivel: "info", titlu: "✅ " + nume + ": " + (n === 1 ? "o pereche" : n + (n >= 20 ? " de" : "") + " perechi") + " în ultima oră, " + U2(usdt) + " din grile",
+export const perechiOra = (nume, n, usdt) => ({ nivel: "info", titlu: "✅ " + nume + ": " + (n === 1 ? "o pereche" : cate(n, "pereche", "perechi")) + " în ultima oră, " + U2(usdt) + " din grile",
   mesaj: "Fiecare pereche e în Radar (Alerte); pe Discord vine un rezumat pe oră, ca alertele importante să nu se piardă printre ele." });
 
 // f = Obiceiuri.frana(...) (obiectul: depasit, netZi, netSapt, rand, praguri)
 // v100.70 (revizia pachetului 3, I3): din OBIECTUL Obiceiuri.frana - textul lui are deja titlul, actiunea si sumele cu punct (pe Discord
 // ieseau de doua ori); aici: pragurile depasite, cu virgula, intr-o fraza. Un text vechi (string) ramane primit, fara titlu si actiune.
 const DEP = { zi: (f) => "azi " + U2(f.netZi) + " (pragul tău: −" + V(f.praguri.zi) + ")", sapt: (f) => "pe 7 zile " + U2(f.netSapt) + " (pragul: −" + V(f.praguri.sapt) + ")",
-  rand: (f) => f.rand + " boți închiși pe minus la rând (pragul: " + f.praguri.rand + ")" };
+  rand: (f) => cate(f.rand, "bot închis", "boți închiși") + " pe minus la rând (pragul: " + f.praguri.rand + ")" };
 export const frana = (f) => {
   const parti = f && typeof f === "object" && Array.isArray(f.depasit) && f.praguri ? f.depasit.map((d) => (DEP[d.cod] ? DEP[d.cod](f) : d.text)).filter(Boolean) : [];
   const fapt = parti.length ? parti.join(", ") : String(f && typeof f === "object" ? f.text || "" : f || "").replace(/^Frâna contului: gata pe azi\s*—\s*/, "").replace(/\s*N-aș mai porni boți azi;.*$/, "");

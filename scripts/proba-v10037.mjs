@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import "./lib/text-ro-global.mjs";   // v100.76: fișa scrie grilele prin TextRo.cate („8 grile”, „47 de grile”), ca în pagină
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
 const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
@@ -37,7 +38,7 @@ await test("gridDiferitDeBot: acelasi grid (in 0,2%) -> {acelasi: true}; fara bo
 });
 
 await test("pagina: sub codul fisei, pentru moneda cu bot care ruleaza - avertismentul + „Copiază codul botului”; acelasi grid -> „e chiar gridul botului”", () => {
-  const ctx = { TabloExtra: TE, TabloBot: { simboluri: (b, q, s) => ({ pionex: s }) }, escapeHtml: (s) => String(s), tbPretScurt: (x) => String(x), tbStare: { boti: [bot] } };
+  const ctx = { TextRo: globalThis.TextRo, TabloExtra: TE, TabloBot: { simboluri: (b, q, s) => ({ pionex: s }) }, escapeHtml: (s) => String(s), tbPretScurt: (x) => String(x), tbStare: { boti: [bot] } };
   vm.createContext(ctx); vm.runInContext(functia(app, "grBotPeMoneda") + functia(app, "grTvAvertHtml") + ";this.f=grTvAvertHtml;", ctx);
   const h = ctx.f("CRV_USDT_PERP", propunere);
   assert.match(h, /rulează botul tău cu alt grid/); assert.match(h, /0\.3755 – 0\.423, 8 grile/); assert.match(h, /nu vor fi ale botului/);
