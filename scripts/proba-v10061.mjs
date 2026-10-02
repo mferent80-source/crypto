@@ -87,5 +87,22 @@ await test("RF1: „ținta” ramane in motivul planului atins pe plus - podeaPe
   assert.ok(p && Math.abs(p.dif - 0.7) < 1e-9, JSON.stringify(p));
 });
 
+// ---- sarcina 4: cartelele „Acum, concret” ----
+const LIGHTER = (o) => ({ id: "2390", baza: "LIGHTER.PERP", directie: "long", levier: 5, investit: 103.38, activ: true, pozitie: 56, pretDeschidere: 4.484, pretCurent: 4.473, profitNet: -0.126, profitTotal: -0.74, pnlNerealizatSigur: true,
+  gridJos: 4.085, gridSus: 4.837, pretLichidare: 3.49, distantaLichidarePct: 22.56, opritorPierdere: 3.787, opritorPierdereActiv: true, opritorPierdereTip: "pret", opritorPierdereRaport: null,
+  brut: { buOrderData: { row: 16, perVolume: "7", gridType: "geometric" } }, ...o });
+const T0 = Date.UTC(2026, 8, 29, 13, 34), PLAN_L = () => T.planStare(LIGHTER(), { plus: 5.5, minus: 15.7, afaraOre: 12 }, {}, T0);
+const conL = () => S.acumConcret({ bot: LIGHTER(), fisa: null, zero: T.dacaInchizi(LIGHTER()), costuri: null, plan: PLAN_L(), acum: T0, bani: { stop: { laOpritor: -63.5, laPropus: -15.7, frecventa: 0.71, pretPropus: 4.2601 } } });
+await test("LIGHTER (stopul peste plan): cartela Stopul spune actiunea si costul intr-un rand, „de ce” separat", () => {
+  assert.ok(G.STRICT.has("cartele"), "cartelele trec pe strict");
+  const st = conL().find((x) => x.cod === "stop");
+  assert.equal(st.act, "Aș muta stopul la 4.2601 (în procente: −15,2% din investiție): atins acum, te costă ≈ 63 USDT, nu 15,7.");
+  assert.equal(st.deCe, "Planul tău zice −15,7 USDT; stopul de la 3.787 stă mult mai departe."); assert.equal(st.atins < -60, true);
+});
+await test("pagina: cartela Stopul arata „de ce” si sursa stopului propus, fiecare pe randul lui", () => {
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  assert.match(app, /x\.deCe\?'<p class="tbSub tbCcDeCe">'/); assert.match(app, /x\.sursa\?'<p class="tbSub tbCcSursa">'/);
+});
+
 console.log(`\nV100.61 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);

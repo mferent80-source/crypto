@@ -189,10 +189,10 @@ await test("R2: plafonul e 15% din interval (nu 25%): la 20% din interval, pe un
 await test("R3: sursa stopului se vede pe cartela; cand stopul vine din PLAN, sursa nu mai zice „profilul”", () => {
   const pS = { dist: 0.12, sursa: "profilul CRV" };
   const c = SB.acumConcret({ bot: { ...botL(0.47, 0.40, 0.50, "short"), profitTotal: -3 }, fisa: fisaF, zero: { pretZero: 0.45 }, costuri: {}, pragStop: pS, acum: T0 });
-  const st = c.find((x) => x.cod === "stop"); assert.match(st.act, /profilul CRV/, st.act);
+  const st = c.find((x) => x.cod === "stop"); assert.match(st.sursa, /profilul CRV/, st.sursa);   // v100.61: pe randul ei, nu in actiune
   const c2 = SB.acumConcret({ bot: { ...botL(0.47, 0.40, 0.50, "short"), profitTotal: -3 }, fisa: fisaF, zero: { pretZero: 0.45 }, costuri: {}, pragStop: pS, acum: T0,
     plan: { minus: { prag: 5, laOpritor: null, opritorPlan: 0.52 }, atins: [] } });
-  const st2 = c2.find((x) => x.cod === "stop"); assert.equal(st2.pretPropus, 0.52); assert.equal(st2.sursaStop, null); assert.ok(!/profilul/.test(st2.act), st2.act);
+  const st2 = c2.find((x) => x.cod === "stop"); assert.equal(st2.pretPropus, 0.52); assert.equal(st2.sursaStop, null); assert.ok(!/profilul/.test(st2.act + (st2.sursa || "")), st2.act);
 });
 await test("R4: botul short la marginea de SUS -> Consilierul nu lipeste sfatul „marginea de jos” peste „mută gridul”", () => {
   globalThis.SemnaleBot = SB; const CS = new Function(`${lib("consiliu.js")}; return Consiliu;`)();

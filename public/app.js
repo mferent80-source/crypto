@@ -5940,7 +5940,7 @@ function tbDeseneazaSemafor(b){
     conc.forEach(function(x){
       var e=$("tbCc-"+x.cod);if(!e)return;var d0=e.querySelector("details"),deschis=!!(d0&&d0.open),tg=x.tag||{t:"",c:"mut"};
       e.innerHTML='<div class="tbCcCap"><h5>'+escapeHtml(x.titlu)+'</h5>'+(tg.t?'<span class="tbTag '+tg.c+'">'+escapeHtml(tg.t)+'</span>':'')+'</div>'
-        +'<div class="tbCcMare">'+escapeHtml(x.mare||"—")+(x.mic?'<small>'+escapeHtml(x.mic)+'</small>':'')+'</div><p class="tbCcAct">'+escapeHtml(x.act||x.text)+'</p>'+(x.bani?'<p class="tbCcBani">'+escapeHtml(x.bani)+'</p>':'')   /* v100.43 (I-467) */
+        +'<div class="tbCcMare">'+escapeHtml(x.mare||"—")+(x.mic?'<small>'+escapeHtml(x.mic)+'</small>':'')+'</div><p class="tbCcAct">'+escapeHtml(x.act||x.text)+'</p>'+(x.deCe?'<p class="tbSub tbCcDeCe">'+escapeHtml(x.deCe)+'</p>':'')+(x.sursa?'<p class="tbSub tbCcSursa">'+escapeHtml(x.sursa)+'</p>':'')+(x.bani?'<p class="tbCcBani">'+escapeHtml(x.bani)+'</p>':'')   /* v100.43 (I-467) */
         +(x.cod==="grid"&&tbTvCod()?'<button type="button" class="actionGhost tbTvBtn" value="'+escapeHtml(tbTvCod().cod)+'" data-action-click="gridCopiaza(this.value)" title="Rândul pentru indicatorul GRID-FISA din TradingView, cu gridul de acum al botului">📺 Codul pentru TradingView · copiază</button>':'')
         +'<details class="tbCcDet"'+(deschis?' open':'')+'><summary>'+(x.cod==="grid"&&propHtml?"setările de copiat și detalii":"detalii")+'</summary><p>'+escapeHtml(x.text)+'</p>'+(x.cod==="grid"?propHtml:"")+'</details>';
     });

@@ -152,8 +152,8 @@ await test("I-467 cand PLANUL hotaraste unde stai stopul („peste plan: mută-l
   const plan = { atins: [], minus: { prag: 7.5, laOpritor: -10.1, opritorPlan: 0.3842 } };
   const r = SB.acumConcret({ bot: b, fisa: null, zero: { pretZero: 0.3961 }, plan, cifre: (pr) => { pretCerut = pr; return { stop: { laOpritor: -10.1, laPropus: -7.4, frecventa: 0.2 } }; } });
   const st = r.find((x) => x.cod === "stop");
-  assert.match(st.act || "", /mută-l la 0\.3842/, st.act); aprox(pretCerut, 0.3842, 1e-9, "pretul planului");
-  assert.match(st.bani, /−10,1 USDT cu opritorul de acum → −7,4 USDT/);
+  assert.match(st.act || "", /Aș muta stopul la 0\.3842/, st.act); aprox(pretCerut, 0.3842, 1e-9, "pretul planului");
+  assert.match(st.bani, /−10,1 USDT cu stopul de acum → −7,4 USDT/);
 });
 
 console.log(`\nV100.43 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);

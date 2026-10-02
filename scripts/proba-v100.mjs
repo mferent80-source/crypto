@@ -161,7 +161,7 @@ await test("revizie: cartela Stop - „sub gridul de jos” doar daca stopul CHI
   const sub = S.acumConcret({ bot: BOT, fisa: f, zero: { pretZero: 0.5951 }, costuri: {}, acum: T0 }).find((x) => x.cod === "stop");
   assert.match(sub.act, /sub gridul de jos/);
   const nepus = S.acumConcret({ bot: { ...BOT, opritorPierdereActiv: false, pretCurent: 0.62, profitTotal: 3 }, fisa: f, zero: { pretZero: 0.6012 }, costuri: {}, acum: T0 }).find((x) => x.cod === "stop");
-  assert.match(nepus.tag.t, /pune-l/); assert.match(nepus.act, /Pune-l la 0\.6012/);
+  assert.match(nepus.tag.t, /de pus la zero/); assert.match(nepus.act, /Aș pune stopul la 0\.6012/);   // v100.61: persoana I
 });
 await test("revizie: botul NEUTRU (zero-ul nu se socoteste niciodata) -> „reper”, nu „de socotit”; pretul in afara gridului -> Miscarea nu mai spune „gridul lucreaza”", () => {
   const f = { dir: "neutru", regim: { r4h: 0.8, r24h: 0.9, miscare: false }, setare: { jos: 0.52, sus: 0.63, grile: 9, pas: 0.022, levier: 5, dir: "neutru", stop: { jos: 0.5, sus: 0.66 } }, propusa: "aleasa", deasa: null };

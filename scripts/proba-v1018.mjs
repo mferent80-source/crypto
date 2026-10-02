@@ -189,7 +189,7 @@ await test("2 · LIGHTER: eticheta nu mai e verde „pus” — „peste plan”
   assert.equal(s.tag.t, "peste plan");
   assert.equal(s.tag.c, "bad");
   assert.match(s.mic, /atins ≈ −6\d USDT/);
-  assert.match(s.act, /planul tău zice −15,7/);
+  assert.match(s.deCe, /Planul tău zice −15,7/);   // v100.61: planul in „de ce”, actiunea in act
   assert.match(s.act, /4\.2601/);
   assert.match(s.act, /−15,2% din investiție/);
 });

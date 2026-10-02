@@ -160,7 +160,7 @@ await test("6. acumConcret: stopul, gridul si miscarea, cu cifre - pe plus: stop
   assert.match(mm.find((x) => x.cod === "miscare").text, /1,9×/); assert.match(mm.find((x) => x.cod === "miscare").text, /mișcare/i);
   // pretul SUB gridul de jos: nu „-1,6% din interval", ci „sub gridul de jos cu X%"
   const sub = S.acumConcret({ bot: bot({ pretCurent: 0.571 }), fisa: fisaStub(), zero, costuri, geom: TE.geometrieBot(bot()), acum: T0 });
-  assert.match(sub.find((x) => x.cod === "grid").text, /SUB gridul de jos cu 0,2%/); assert.doesNotMatch(sub.find((x) => x.cod === "grid").text, /-\d,\d% din interval/);
+  assert.match(sub.find((x) => x.cod === "grid").text, /sub gridul de jos cu 0,2%/);   // v100.61: fara majuscule de strigat assert.doesNotMatch(sub.find((x) => x.cod === "grid").text, /-\d,\d% din interval/);
   // gridul des NU e propus -> se spune DE CE (proba l-a respins pe istoricul monedei), nu dispare
   const resp = S.acumConcret({ bot: bot(), fisa: fisaStub({ propusa: "aleasa", deasa: { ...fisaStub().deasa, respinsa: true, motiv: "pe istoric a ieșit pe minus (mediana −1,20%)" } }), zero, costuri, geom: TE.geometrieBot(bot()), acum: T0 });
   assert.match(resp.find((x) => x.cod === "grid").text, /nu-l propun acum: pe istoric a ieșit pe minus/);
