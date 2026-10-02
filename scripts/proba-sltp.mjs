@@ -122,11 +122,11 @@ await test("simbolPoza: sugestia urmaritului poarta marimea (bucati, suma si ris
 await test("alerteSLTP: mesajul intrarii spune si cat cumpar (bucati, suma, riscul in lei) cand colectorul a calculat marimea", () => {
   const p = pozaA(); p.simboluri[0].sugestie.marime = { bucati: 3.6238, suma: 1870, risc: 289, plafonat: false };
   const i = alerteSLTP(p, ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
-  assert.match(i.mesaj, /\n👉 Aș cumpăra cel mult 3,62 buc \(~1\.870 lei, risc ~289 lei = 1% din cont\)/);   /* v100.68: acțiunea pe rândul „👉” */
+  assert.match(i.mesaj, /\n👉 Aș lua cel mult 3,62 buc, dacă intru \(~1\.870 lei, risc ~289 lei = 1% din cont\); e un reper, decizia e a ta\./);   /* v100.68: acțiunea pe rândul „👉”; v100.70: condițională („dacă intru”), „decizia e a ta” */
   p.simboluri[0].sugestie.marime.plafonat = true;
   assert.match(alerteSLTP(p, ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A).mesaj, /plafon 20% din cont/);
   const fara = alerteSLTP(pozaA(), ACUM_A).find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
-  assert.doesNotMatch(fara.mesaj, /Cât cumpăr/, "fara marime (€, cont necitit): nimic inventat");
+  assert.doesNotMatch(fara.mesaj, /Aș lua cel mult|buc/, "fara marime (€, cont necitit): nimic inventat");   /* v100.70: forma noua (verificarea pe „Cât cumpăr” nu mai prindea nimic) */
 });
 
 console.log(`\nSLTP ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);

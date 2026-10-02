@@ -60,7 +60,10 @@ var SemnaleBot = (function () {
     if (!motiv) return null;
     // v99: setarea PROPUSA de fisa (deasa, 0,30% - v100.39: oricand proba n-o respinge), altfel cea aleasa de platou
     var s = f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare, des = f.propusa === "deasa";
-    return { nivel: "atentie", motiv: motiv, deCe: deCe, sursa: sursa, parte: lm ? lm.parte : null, des: des, treceriZi: nr(des ? f.deasa.treceriZi : f.treceriZi),
+    // v100.70 (revizia pachetului 3, I4): si cifrele separat (dist = cat mai e pana la margine, poz = unde e in interval) - titlul alertei
+    // ia distanta (≤ 60), randul 1 pozitia (inainte motivul intreg era taiat in titlu la „…(12%…”)
+    return { nivel: "atentie", motiv: motiv, deCe: deCe, sursa: sursa, parte: lm ? lm.parte : null, dist: lm && lm.parte ? P(lm.dist) : null, poz: lm && lm.parte ? P(lm.poz) : null,
+      des: des, treceriZi: nr(des ? f.deasa.treceriZi : f.treceriZi),
       setare: { dir: s.dir || f.dir, jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, stop: s.stop || null } };
   }
   // v99: geometria gridului botului (pasul lui in procente), fara TabloExtra: N grile din Pionex (row), geometric sau aritmetic

@@ -46,7 +46,8 @@ var Sfaturi = (function () {
       ["lich", "status", "grid", "activ"].forEach(function (k) {
         var a = r[k]; if (!a || a.nivel === "ok") return;
         // v100.62: aceleasi actiuni ca semaforul (o singura voce); titlul si textul vin din regulile alertelor (pachetul 3)
-        var fc = k === "lich" ? (a.nivel === "critic" ? "Aș adăuga marjă sau aș închide botul acum." : "N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă.")
+        // v100.70 (revizia pachetului 3, I1): lichidarea depasita = actiunea semaforului (marja nu mai ajuta), nu „aș adăuga marjă”
+        var fc = k === "lich" ? (b.lichidareDepasita === true ? "Aș închide ce a rămas, după ce verific botul în Pionex." : a.nivel === "critic" ? "Aș adăuga marjă sau aș închide botul acum." : "N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă.")
           : k === "grid" ? "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum." : null;
         // v100.67 (pachetul 3): mesajul alertei e pe 2 randuri (faptul + „👉 ” actiunea) - sfatul ia faptul; actiunea ramane a semaforului,
         // iar unde semaforul n-are una (starea Pionex, botul oprit) vine din alerta
@@ -101,8 +102,10 @@ var Sfaturi = (function () {
     } else if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
       // revizia Opus (I1, 02.10): „Mișcare mare …” ca alerta colectorului („mișcare mare împotriva botului”) - in „Ce ai de făcut acum”
       // se recunosc ca acelasi lucru (un rand, nu doua); multiplul pe 24 h trece in text, ca titlul sa ramana ≤ 60 si la 10×
-      out.push({ cod: "miscare", ton: "atentie", titlu: "Mișcare mare" + (rg.sens && (dirBot === "long" || dirBot === "short") ? " contra botului" : "") + ": " + X(rg.r4h) + " obișnuitul pe 4 h",
-        text: "Pe 24 h e " + X(rg.r24h) + " obișnuitul; până se liniștește, gridul nu face perechi, doar strânge poziție pe direcția prețului.",
+      // v100.70 (revizia pachetului 3, I6): cifra care a declansat (maximul, cu fereastra lui), ca alerta; cealalta fereastra in text
+      var m4 = rg.r4h >= rg.r24h;
+      out.push({ cod: "miscare", ton: "atentie", titlu: "Mișcare mare" + (rg.sens && (dirBot === "long" || dirBot === "short") ? " contra botului" : "") + ": " + (m4 ? X(rg.r4h) + " obișnuitul pe 4 h" : X(rg.r24h) + " obișnuitul pe 24 h"),
+        text: (m4 ? "Pe 24 h e " + X(rg.r24h) : "Pe 4 h e " + X(rg.r4h)) + " obișnuitul; până se liniștește, gridul nu face perechi, doar strânge poziție pe direcția prețului.",
         sursa: "„Obișnuitul” = percentila 75 a mișcărilor monedei pe 30 de zile.",
         faCe: "N-aș adăuga bani și n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa cât lichidarea e peste 15%." });
     }

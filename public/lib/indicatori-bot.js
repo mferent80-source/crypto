@@ -131,7 +131,8 @@ var IndicatoriBot = (function () {
       var fata = raport === null ? "" : raport >= 2 ? " · " + Math.round(raport) + "× față de obicei" : raport <= 0.5 ? " · sub obicei" : " · ca de obicei";
       var fz = nr(o.fundingZi), cost = fz !== null ? " · botul: " + (fz >= 0 ? "+" : "−") + Math.abs(fz).toFixed(2).replace(".", ",") + " USDT pe zi" : "";
       var cine = plateste ? "plătesc " + plateste + (botPlateste ? " (tu plătești)" : botIncaseaza ? " (tu încasezi)" : "") : "zero";
-      out.push({ k: "funding", eticheta: "Funding", text: (rate * 100).toFixed(3).replace(".", ",") + "% la " + ore + "h · " + cine + fata + cost,
+      // v100.70 (revizia pachetului 3, garda pe producatorii reali): minusul tipografic („−0,060%”), nu cratima din toFixed
+      out.push({ k: "funding", eticheta: "Funding", text: (rate < 0 ? "−" : "") + Math.abs(rate * 100).toFixed(3).replace(".", ",") + "% la " + ore + "h · " + cine + fata + cost,
         ton: botPlateste && raport !== null && raport >= 2 && Math.abs(rate) >= 0.0001 ? "atentie" : botIncaseaza ? "bine" : "neutru", titlu: titluF });
     }
     var b = o.btc, bd = b && b.dir, br = b && b.regim, bm = br ? nr(br.r4h) : null;

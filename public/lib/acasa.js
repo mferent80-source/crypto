@@ -15,17 +15,21 @@ var Acasa = (function () {
     var d = c.dir || {}, lo = nr(d.long) || 0, sh = nr(d.short) || 0, tot = lo + sh + (nr(d.neutru) || 0);
     var sens = tot > 0 && lo / tot >= 0.6 ? "urca" : tot > 0 && sh / tot >= 0.6 ? "coboara" : "imp";
     var sensTxt = sens === "urca" ? "Piața urcă în general" : sens === "coboara" ? "Piața coboară în general" : "Piața e împărțită";
-    var fgTxt = fg === null ? "" : fg >= 70 ? ", cu lăcomie mare" : fg <= 30 ? ", cu frică mare" : "";
+    // v100.70 (revizia pachetului 3, I4): lacomia / frica intra in actiune (o fraza ≤ 110 - inainte a doua fraza facea alerta de 207 caractere);
+    // cate monede urca / coboara si „de acolo piața a revenit des” trec in text
+    var lac = fg !== null && fg >= 70 && sens === "urca", fri = fg !== null && fg <= 30 && sens === "coboara", fgR = fg !== null ? Math.round(fg) : null;
+    if (lac) sensTxt += " (" + lo + " din " + tot + " de monede)"; else if (fri) sensTxt += " (" + sh + " din " + tot + " de monede)";
+    var fgTxt = fg === null ? "" : fg >= 70 ? ", cu lăcomie mare" : fg <= 30 ? ", cu frică mare" + (fri ? ", de la care piața a revenit des" : "") : "";
+    var adaos = lac ? ", fără pariuri mari pe urcare (lăcomia e la " + fgR + ")." : fri ? ", fără vânzări în panică (frica e la " + fgR + ")." : null;
     var text = sensTxt + fgTxt + ". " + ev + " din cele " + n + " de monede mari sunt în mișcare, regimul în care gridul iese cel mai rău.";
     var r;
     if (btcMis || cota >= 0.5) r = { nivel: "miscare", eticheta: "🔴 MIȘCARE", titlu: btcMis ? "BTC a intrat în mișcare: toată piața e agitată." : "Jumătate din piață e în mișcare.",
-      faCe: "N-aș porni boți grid noi până nu se liniștește; pe cei porniți îi urmăresc, alerta de mișcare îmi spune dacă e cazul." };
+      faCe: lac ? "N-aș porni boți grid noi și n-aș mări pariurile pe urcare (lăcomia e la " + fgR + ")." : fri ? "N-aș porni boți grid noi și n-aș vinde în panică (frica e la " + fgR + ")."
+        : "N-aș porni boți grid noi până nu se liniștește; pe cei porniți i-aș urmări cu alerta de mișcare." };
     else if (cota >= 0.25) r = { nivel: "amestecat", eticheta: "🟡 AMESTECAT", titlu: "BTC e liniștit, dar monedele mici sunt agitate.",
-      faCe: "Boți grid doar pe monedele liniștite, nu pe cele din lista de mișcare." };
+      faCe: "Aș porni boți grid doar pe monedele liniștite" + (adaos || ", nu pe cele din lista de mișcare.") };
     else r = { nivel: "liniste", eticheta: "🟢 LINIȘTE", titlu: "Piața e liniștită: mediul bun pentru grid.",
-      faCe: "E un moment bun pentru boți grid pe monedele din lista de mai jos." };
-    if (fg !== null && fg >= 70 && sens === "urca") r.faCe += " N-aș mări pariurile pe urcare acum: lăcomia e la " + Math.round(fg) + " și " + lo + " din " + tot + " de monede urcă deja.";
-    else if (fg !== null && fg <= 30 && sens === "coboara") r.faCe += " N-aș vinde în panică: frica e la " + Math.round(fg) + ", iar de acolo piața a revenit des.";
+      faCe: "Aș porni boți grid pe monedele liniștite din clasament" + (adaos || ": e un moment bun.") };
     r.text = text; r.inMiscare = ev; r.total = n;
     return r;
   }
@@ -113,11 +117,11 @@ var Acasa = (function () {
     var u = c[c.length - 1], e50 = ema(c.slice(-200), 50), e200 = ema(c, 200), sens = u > e50 && e50 > e200 ? "sus" : u < e50 && e50 < e200 ? "jos" : "lateral";
     var cota = nd && nd.n ? nd.e50 / nd.n : null, vx = vix !== null ? "VIX " + vix.toFixed(1).replace(".", ",") : "";
     var partNd = nd && nd.n ? " Doar " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile." : "";
-    if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aștept ca VIX să coboare sub 25." };
-    if (sens === "jos") return { nivel: "scade", eticheta: "🔴 BURSA SCADE", titlu: "Nasdaq e în trend de coborâre.", text: "Prețul e sub mediile de 50 și 200 de zile" + (vx ? ", " + vx : "") + "." + (partNd ? partNd.replace("Doar ", "") : ""), faCe: "N-aș cumpăra contra trendului; țin doar ce are stopul pus." };
-    if (sens === "lateral") return { nivel: "lateral", eticheta: "🟡 LATERAL", titlu: "Nasdaq n-are o direcție clară.", text: (vx ? vx + ". " : "") + partNd.trim(), faCe: "Cumpăr doar ce e deja pe trend, cu stop; restul aștept." };
-    if (cota !== null && cota < 0.6) return { nivel: "ingusta", eticheta: "🟡 URCARE ÎNGUSTĂ", titlu: "Indicele urcă" + (vix !== null && vix < 20 ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile.", faCe: "Cumpăr doar ce e deja pe trend, cum sunt ideile de azi. N-aș încerca să prind acțiunile de sub media de 200." };
-    return { nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile." : ""), faCe: "Mediu bun pentru ideile pe trend; stopul rămâne obligatoriu." };
+    if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aș aștepta ca VIX să coboare sub 25." };
+    if (sens === "jos") return { nivel: "scade", eticheta: "🔴 BURSA SCADE", titlu: "Nasdaq e în trend de coborâre.", text: "Prețul e sub mediile de 50 și 200 de zile" + (vx ? ", " + vx : "") + "." + (partNd ? partNd.replace("Doar ", "") : ""), faCe: "N-aș cumpăra contra trendului; aș ține doar ce are stopul pus." };
+    if (sens === "lateral") return { nivel: "lateral", eticheta: "🟡 LATERAL", titlu: "Nasdaq n-are o direcție clară.", text: (vx ? vx + ". " : "") + partNd.trim(), faCe: "Aș cumpăra doar ce e deja pe trend, cu stop; restul aș aștepta." };
+    if (cota !== null && cota < 0.6) return { nivel: "ingusta", eticheta: "🟡 URCARE ÎNGUSTĂ", titlu: "Indicele urcă" + (vix !== null && vix < 20 ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile.", faCe: "Aș cumpăra doar ce e deja pe trend, ca ideile de azi; n-aș prinde acțiunile de sub media de 200." };
+    return { nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile." : ""), faCe: "Aș cumpăra ideile pe trend, mereu cu stop: mediul e bun." };
   }
   // corelatia randamentelor zilnice BTC - Nasdaq pe ultimele n zile COMUNE (bursa n-are weekend)
   function corelatie(btc, qqq, n) {

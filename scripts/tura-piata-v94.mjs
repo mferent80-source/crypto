@@ -67,7 +67,7 @@ await test("vremea se schimba (70 din 100 in miscare) -> alerta CRITIC dupa conf
   await turaPiata(w.d, st, SAMBATA);
   const w2 = lume({ evita: 70 }); w2.d.trimiteAlerta = w.d.trimiteAlerta;
   await turaPiata(w2.d, st, SAMBATA + 11 * MIN); await turaPiata(w2.d, st, SAMBATA + 22 * MIN); await turaPiata(w2.d, st, SAMBATA + 33 * MIN);
-  const m = w.alerte.filter((x) => /Crypto/.test(x.titlu)); assert.equal(m.length, 1); assert.equal(m[0].nivel, "critic"); assert.match(m[0].titlu, /MIȘCARE/);
+  const m = w.alerte.filter((x) => /Crypto/.test(x.titlu)); assert.equal(m.length, 1); assert.equal(m[0].nivel, "critic"); assert.match(m[0].titlu, /Crypto: mișcare/);   /* v100.70 (revizia pachetului 3): eticheta fără emoji și majuscule de strigat - nivelul îl dă culoarea */
 });
 await test("botul VVV scade neobisnuit in 24 h (-13%) -> alerta pe moneda lui, o data", async () => {
   const w = lume({ vvvScade: true }), st = {};

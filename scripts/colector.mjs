@@ -31,7 +31,7 @@ import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
-const VERSIUNE_COLECTOR = "v101.47";
+const VERSIUNE_COLECTOR = "v101.48";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1153,7 +1153,7 @@ async function turaFrana() {
   const act = await cere("/api/bot-orders"), f = Obiceiuri.frana({ trades, deschise: act && act.bots || [], acum: Date.now(), praguri });
   const m = meta(), zi = new Date(Obiceiuri.inceputZiRo(Date.now()) + 12 * 3600000).toISOString().slice(0, 10);
   if (f.activa && m.franaZi !== zi) {
-    if (await trimiteAlerta(MesajeColector.frana(f.text), null, "frana")) { m.franaZi = zi; scrieStare(); }
+    if (await trimiteAlerta(MesajeColector.frana(f), null, "frana")) { m.franaZi = zi; scrieStare(); }
   }
 }
 

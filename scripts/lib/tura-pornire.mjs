@@ -20,8 +20,16 @@ export async function avertizariPornire({ boti, cunoscuti, acum, trades, Obiceiu
 }
 // v100.66 (pachetul 3): textul avertizarii, intr-o functie - garda textelor il genereaza; im = Obiceiuri.istoricMoneda, sub = Obiceiuri.subOOra
 // v100.68: faptul (istoria monedei, o fraza) + „👉 ” actiunea cu linkul spre poarta - avertizeaza, nu opreste nimic (pragul e un privilegiu)
+// v100.70 (revizia pachetului 3, I4): faptul din CIFRELE istoricului - im.text + sub.text aveau 3 fraze, 235 de caractere si sume cu punct;
+// comisioanele primei ore si sfatul ei raman pe poarta de pornire (linkul de pe randul 2)
+const U2 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",");
+const ziua = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }).format(new Date(t)); } catch { return ""; } };
 export function mesajPornire(b, m, im, sub, tk, url) {
-  const t = (s) => String(s || "").replace(/\.\s*$/, ""), fapt = t(im.text) + (sub && sub.text ? "; " + t(sub.text).charAt(0).toLowerCase() + t(sub.text).slice(1) : "") + ".";
+  const t = (s) => String(s || "").replace(/\.\s*$/, ""), n = Number(im && im.n);
+  const baza = n > 0 && Number.isFinite(Number(im.net)) ? (im.rata >= 0.5 ? "Pe " + m + " pierderile mari mănâncă tot: " : "Pe " + m + " pierzi: ") + n + " boți, " + im.plus + " pe plus, net " + U2(im.net) + " USDT"
+      + (im.rau && im.rau.v < 0 ? ", cel mai rău " + U2(im.rau.v) + (ziua(im.rau.t) ? " (" + ziua(im.rau.t) + ")" : "") : "")
+    : t(im && im.text);
+  const fapt = baza + (sub && Number(sub.n) > 0 && Number.isFinite(Number(sub.net)) ? "; în prima oră, boții tăi: " + U2(sub.net) + " USDT pe " + sub.n : "") + ".";
   return { bot: b.id, nivel: "atentie", titlu: m + ": bot nou pe o monedă unde pierzi",
     mesaj: fapt + "\n👉 " + (url ? "Aș verifica întâi poarta pe " + tk + ": " + url : "Aș verifica întâi poarta de pornire pe " + m + ", în Radar.") };
 }

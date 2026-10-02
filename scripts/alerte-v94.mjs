@@ -52,7 +52,7 @@ await test("vremea: prima citire doar tine minte; schimbarea se anunta abia cand
   r = Al.schimbareVreme(r.stare, V("amestecat", "ingusta", 0.4), T0 + 20 * MIN); assert.deepEqual(r.mesaje, [], "palpaiala");
   r = Al.schimbareVreme(r.stare, V("miscare", "ingusta", 0.4), T0 + 30 * MIN);
   r = Al.schimbareVreme(r.stare, V("miscare", "ingusta", 0.4), T0 + 40 * MIN);
-  assert.equal(r.mesaje.length, 1); assert.match(r.mesaje[0].titlu, /Crypto/); assert.match(r.mesaje[0].titlu, /MIȘCARE/); assert.match(r.mesaje[0].mesaj, /\n👉 fac ceva/i); assert.equal(r.mesaje[0].nivel, "critic");   /* v100.68: acțiunea pe rândul „👉” */
+  assert.equal(r.mesaje.length, 1); assert.match(r.mesaje[0].titlu, /Crypto/); assert.match(r.mesaje[0].titlu, /Crypto: mișcare/);   /* v100.70 (revizia pachetului 3): eticheta fără emoji și fără majuscule de strigat - nivelul îl dă culoarea */ assert.match(r.mesaje[0].mesaj, /\n👉 fac ceva/i); assert.equal(r.mesaje[0].nivel, "critic");   /* v100.68: acțiunea pe rândul „👉” */
   r = Al.schimbareVreme(r.stare, V("miscare", "ingusta", 0.4), T0 + 50 * MIN); assert.deepEqual(r.mesaje, [], "a repetat");
 });
 await test("vremea: bursa in FRICA -> critic; revenirea -> info; BTC incepe sa urmeze bursa (r >= 0,5) / nu mai urmeaza (< 0,3) -> info", () => {

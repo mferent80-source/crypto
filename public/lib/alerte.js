@@ -48,8 +48,9 @@ var Alerte = (function () {
     var dist = nr(b.distantaLichidarePct), dep = !!b.lichidareDepasita, pl = nr(b.pretLichidare), pc = nr(b.pretCurent);
     // v100.67: titlurile pastreaza „lichidarea la” / „lichidarea estimată … depășită” - pe ele se unesc randurile din „Ce ai de făcut acum”
     // (avertismentul serverului, sfatul „pericol”); actiunea = a semaforului (o singura voce)
+    // v100.70 (revizia pachetului 3, I1): depasita = actiunea si „de ce”-ul semaforului (marja nu mai ajuta: pozitia poate fi deja lichidata)
     if (dep) out.lich = { nivel: "critic", titlu: nume + ": lichidarea estimată e depășită",
-      mesaj: msg((pc !== null ? "Prețul " + pret(pc) + " a trecut" : "Prețul a trecut") + " de lichidarea estimată (" + pret(pl) + "); în Pionex se vede dacă botul mai e deschis.", "Aș adăuga marjă sau aș închide botul acum.") };
+      mesaj: msg((pc !== null ? "Prețul " + pret(pc) + " a trecut" : "Prețul a trecut") + " de lichidarea estimată (" + pret(pl) + "): poziția poate fi deja lichidată sau pe marginea ei.", "Aș închide ce a rămas, după ce verific botul în Pionex.") };
     else if (dist !== null && Math.abs(dist) < (fost("lich") === "critic" ? IESIRE.lichCritic : 8)) out.lich = { nivel: "critic", titlu: nume + ": lichidarea la " + vg(dist) + "%",
       mesaj: msg("Mai sunt " + vg(dist) + "% până la lichidare (" + pret(pl) + "); sub 8% e zona de ieșire.", "Aș adăuga marjă sau aș închide botul acum.") };
     else if (dist !== null && Math.abs(dist) < (fost("lich") !== "ok" ? IESIRE.lichAtentie : 15)) out.lich = { nivel: "atentie", titlu: nume + ": lichidarea la " + vg(dist) + "%",
@@ -96,13 +97,15 @@ var Alerte = (function () {
       var misc = inAlerta ? rmax >= 1.5 : rmax > 2.0;
       var x = function (v) { return v.toFixed(1).replace(".", ","); };
       var dB = String(b.directie || "").toLowerCase(), cuB = misc && rg.sens && (dB === "long" || dB === "short") && (dB === "long") === (rg.sens === "urca");
+      // v100.70 (revizia pachetului 3, I6): in titlu cifra care a declansat (maximul, cu fereastra lui); cealalta fereastra pe randul 1
+      var m4 = rg.r4h >= rg.r24h, xT = m4 ? x(rg.r4h) + "× pe 4 h" : x(rg.r24h) + "× pe 24 h", xA = m4 ? "Pe 24 h e " + x(rg.r24h) + "×" : "Pe 4 h e " + x(rg.r4h) + "×";
       // v100.67: titlul ca sfatul („mișcare mare contra botului”) - un rand in „Ce ai de făcut acum”, si la botul neutru; actiunea = a sfatului
       out.miscare = cuB
-        ? { nivel: "info", titlu: nume + ": mișcare mare cu botul, " + x(rg.r4h) + "× pe 4 h",
-            mesaj: msg("Pe 24 h e " + x(rg.r24h) + "× obișnuitul, în direcția botului: grilele încasează pe drum.", actiuneCuBotul(b, dB, ctx ? nr(ctx.pretZero) : null)) }
+        ? { nivel: "info", titlu: nume + ": mișcare mare cu botul, " + xT,
+            mesaj: msg(xA + " obișnuitul, în direcția botului: grilele încasează pe drum.", actiuneCuBotul(b, dB, ctx ? nr(ctx.pretZero) : null)) }
         : misc
-        ? { nivel: "atentie", titlu: nume + ": mișcare mare" + (rg.sens && (dB === "long" || dB === "short") ? " contra botului" : "") + ", " + x(rg.r4h) + "× pe 4 h",
-            mesaj: msg("Pe 24 h e " + x(rg.r24h) + "× obișnuitul; dovedit: un grid pornit după o mișcare iese cel mai rău, iar închis acum îți fixezi pierderea din direcție.",
+        ? { nivel: "atentie", titlu: nume + ": mișcare mare" + (rg.sens && (dB === "long" || dB === "short") ? " contra botului" : "") + ", " + xT,
+            mesaj: msg(xA + " obișnuitul; dovedit: un grid pornit după o mișcare iese cel mai rău, iar închis acum îți fixezi pierderea din direcție.",
               "N-aș adăuga bani și n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa cât lichidarea e peste 15%.") }
         : { nivel: "ok", titlu: nume + ": liniște din nou (" + x(rmax) + "× obișnuitul)", mesaj: "" };
     }
@@ -141,7 +144,8 @@ var Alerte = (function () {
     // v101.8 (1): fara stop ACTIV (lipsa sau stins) -> CRITIC, pana la lichidare poti pierde toata marja; tace cat vorbeste
     // regula veche "opritorul e STINS si lichidarea e la X%" (mai jos), ca sa nu primeasca acelasi lucru de doua ori.
     var inv = nr(b.investit), dirPl = String(b.directie || "").toLowerCase();
-    var distP = function (x) { return p !== null && x !== null ? (x >= p ? "+" : "−") + vg((x / p - 1) * 100, 1) + "%" : "?"; };
+    // v100.70 (revizia pachetului 3, I7): „de preț” - in aceleasi alerte apare si „% din investiție” (doua procente cu baze diferite)
+    var distP = function (x) { return p !== null && x !== null ? (x >= p ? "+" : "−") + vg((x / p - 1) * 100, 1) + "% de preț" : "?"; };
     var faraStop = false, atinsPl = ctx && ctx.plan && Array.isArray(ctx.plan.atins) ? ctx.plan.atins : [];
     if (ctx && ctx.plan && ctx.plan.minus && atinsPl.indexOf("minus") < 0) {
       var mi = ctx.plan.minus, lo = nr(mi.laOpritor), pg = nr(mi.prag);
@@ -153,7 +157,8 @@ var Alerte = (function () {
         faraStop = true;
         var plL = nr(b.pretLichidare);
         out["plan-stop"] = { nivel: "critic", titlu: nume + ": n-ai stop activ în Pionex (planul: −" + pgT + " USDT)",
-          mesaj: msg((opS > 0 ? "Stopul e setat la " + pret(opS) + ", dar e stins; fără el" : "Fără stop") + ", o cădere bruscă merge până la lichidare" + (plL !== null && plL > 0 ? " (" + pret(plL) + ", " + distP(plL) + ")" : "") + " și poți pierde toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
+          // v100.70 (revizia pachetului 3, I8): miscarea care duce la lichidare dupa partea botului (short -> urcare)
+          mesaj: msg((opS > 0 ? "Stopul e setat la " + pret(opS) + ", dar e stins; fără el" : "Fără stop") + ", o " + (dirPl === "short" ? "urcare" : dirPl === "long" ? "cădere" : "mișcare") + " bruscă merge până la lichidare" + (plL !== null && plL > 0 ? " (" + pret(plL) + ", " + distP(plL) + ")" : "") + " și poți pierde toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
             (opPlan !== null ? "Aș pune stopul la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : procPlan ? "Aș pune stopul în procente, la " + procPlan : "Aș pune stopul cât zice planul") + ": planul devine ordin, nu doar alertă.") };
       } else if (lo === null) out["plan-stop"] = null;
       else {
@@ -179,12 +184,16 @@ var Alerte = (function () {
         var larg = -lm > pg * (inG ? 1.15 : 1.3), aproape = amp !== null && ie !== null && ie < amp * (inG ? 0.6 : 0.5), lv = mi.levierPotrivit;
         // v100.67: titlul ≤ 60 (cifrele trec in mesaj); remediul = o actiune pentru botul urmator
         var parteG = dirPl === "short" ? "sus" : "jos";
+        // v100.70 (revizia pachetului 3, I7): remediul cu conditia lui („pe același grid și bani”, ca inainte de pachetul 3) si „nici la levier
+        // mai mic” (cel vechi excludea levierul mai mic; „la levierul de acum” il invita sa-l coboare). Pierderea la margine cu levierul nou
+        // nu mai incape in 110 - e de prisos: fie planul iese inainte (planul la −Z%), fie gridul incape tot in plan
         var remediu = lv && lv.levier < nr(b.levier)
-          ? "Aș lua la botul următor levier " + lv.levier + "×" + (nr(lv.laMargine) !== null ? ": la margine ≈ −" + vg(-lv.laMargine, 1) + " USDT" : "") + (nr(lv.iesire) !== null ? ", planul abia la " + (dirPl === "short" ? "+" : "−") + vg(lv.iesire * 100, 1) + "%" : ", planul încape tot") + ", câștig pe grilă mai mic."
-          : "Aș strânge gridul sau aș mări planul la botul următor: la levierul de acum gridul nu încape.";
+          ? "Aș lua levier " + lv.levier + "× la botul următor, pe același grid și bani: " + (nr(lv.iesire) !== null ? "planul la " + (dirPl === "short" ? "+" : "−") + vg(lv.iesire * 100, 1) + "% de preț" : "planul încape tot") + ", câștig pe grilă mai mic."
+          : "Aș strânge gridul sau aș mări planul la botul următor: nici la levier mai mic gridul nu încape.";
         out["grid-plan"] = larg
           ? { nivel: "atentie", titlu: nume + ": gridul e mai larg decât planul tău (−" + pgT + " USDT)",
-              mesaj: msg("Planul (" + pret(opPlan) + ", " + distP(opPlan) + ") vine înaintea marginii de " + parteG + " (" + pret(mgPl) + ", ≈ −" + vg(-lm, 1) + " USDT)" + (amp !== null ? "; " + nume + " se mișcă de obicei " + vg(amp * 100, 1) + "% pe zi" + (aproape ? ", deci o zi obișnuită te poate scoate" : "") : "") + ".", remediu) }
+              mesaj: msg("Planul (" + pret(opPlan) + ", " + distP(opPlan) + ") e înaintea marginii de " + parteG + " (" + pret(mgPl) + ", ≈ −" + vg(-lm, 1) + " USDT): gridul de dincolo nu lucrează"
+                + (amp !== null ? (aproape ? "; o zi obișnuită (" + vg(amp * 100, 1) + "%) te poate scoate" : "; " + nume + " se mișcă ~" + vg(amp * 100, 1) + "% pe zi") : "") + ".", remediu) }
           : aproape
           ? { nivel: "atentie", titlu: nume + ": planul se atinge sub o zi obișnuită",
               mesaj: msg("Planul (−" + pgT + " USDT) se atinge la " + pret(opPlan) + " (" + distP(opPlan) + "), iar " + nume + " se mișcă de obicei " + vg(amp * 100, 1) + "% pe zi.", remediu) }
@@ -222,15 +231,20 @@ var Alerte = (function () {
       // v100.40 (audit 30.09: JTO 18 critice intr-o zi pe acelasi fapt): cand IESI-ul vine din PLANUL lui, alerta „planul tău — ieși”
       // l-a spus deja - semaforul nu-l mai repeta (ramane doar in Radar)
       // v100.67: textele vin gata (scrise concis) din SemnaleBot - aici doar faptul + „👉 ” actiunea; „de ce”-ul lung ramane in Radar (regula 8)
-      out["s-iesi"] = sm.semafor && sm.semafor.nivel === "iesi" && !(sm.semafor.cod === "plan" && out.plan && out.plan.nivel === "critic") ? { nivel: "critic", doarRadar: true, titlu: taie(nume + " · semafor roșu: " + mic(sm.semafor.motiv), 60),
+      out["s-iesi"] = sm.semafor && sm.semafor.nivel === "iesi" && !(sm.semafor.cod === "plan" && out.plan && out.plan.nivel === "critic") ? { nivel: "critic", doarRadar: true, titlu: taie(nume + ": semafor roșu — " + mic(sm.semafor.motiv), 60),
         mesaj: msg(sm.semafor.deCe || mare(sm.semafor.motiv) + ".", sm.semafor.faCe) } : { nivel: "ok", titlu: "", mesaj: "" };
       out["s-ia-profit"] = sm.iaProfit ? { nivel: "atentie", titlu: nume + ": moment bun să încasezi", mesaj: msg(sm.iaProfit.text, "Aș închide botul pe plus acum.") } : { nivel: "ok", titlu: "", mesaj: "" };
       // „de ce”-ul ajunge si pe Discord / pagina alerts (revizia pachetului 1, R2): randul 1; gridul nou e actiunea (randul 2)
-      out["s-muta"] = sm.muta ? { nivel: "atentie", titlu: taie(nume + ": mută gridul — " + sm.muta.motiv, 60),
-        mesaj: msg(sm.muta.deCe || "Fișa propune un grid nou, pe unde e prețul acum.",
+      // v100.70 (revizia pachetului 3, I4): titlul cu distanta pana la margine (motivul intreg era taiat la 60, „…(12%…”), pozitia in
+      // interval si pragul pe randul 1; fara cifre (pretul afara din grid) - motivul ca inainte
+      var mT = !sm.muta ? "" : sm.muta.dist && sm.muta.parte ? nume + ": mută gridul, la " + sm.muta.dist + " de marginea de " + sm.muta.parte : nume + ": mută gridul — " + sm.muta.motiv;
+      out["s-muta"] = sm.muta ? { nivel: "atentie", titlu: taie(mT, 60),
+        mesaj: msg(sm.muta.poz ? "Prețul e la " + sm.muta.poz + " din interval" + (sm.muta.deCe ? "; " + mic(sm.muta.deCe) : ".") : sm.muta.deCe || "Fișa propune un grid nou, pe unde e prețul acum.",
           "Aș muta gridul" + (sm.muta.des ? " des (0,3%)" : "") + " la " + pret(nr(sm.muta.setare.jos)) + " – " + pret(nr(sm.muta.setare.sus)) + ", " + (sm.muta.setare.grile + 1) + " grile în Pionex, " + sm.muta.setare.levier + "×" + (nr(sm.muta.treceriZi) !== null ? ", ~" + vg(nr(sm.muta.treceriZi)) + " perechi/zi" : "") + " (setările în Tablou).") } : { nivel: "ok", titlu: "", mesaj: "" };
       out["s-btc"] = sm.btc ? { nivel: "atentie", titlu: nume + ": BTC a intrat în mișcare", mesaj: msg(sm.btc.text, "N-aș adăuga bani până nu se vede încotro trage BTC.") } : { nivel: "ok", titlu: "", mesaj: "" };
-      out["s-aglomerare"] = sm.aglomerare && sm.aglomerare.nivel === "atentie" ? { nivel: "atentie", titlu: nume + ": mulțimea e înghesuită pe partea botului", mesaj: msg(sm.aglomerare.text, "N-aș mări botul acum.") } : { nivel: "ok", titlu: "", mesaj: "" };
+      // v100.70 (revizia pachetului 3, I2): randul 1 = semnele (ca „de ce”-ul semaforului, ≤ 160), actiunea = a semaforului (o voce)
+      out["s-aglomerare"] = sm.aglomerare && sm.aglomerare.nivel === "atentie" ? { nivel: "atentie", titlu: nume + ": mulțimea e înghesuită pe partea botului",
+        mesaj: msg(sm.aglomerare.dovezi ? "Semnele: " + sm.aglomerare.dovezi + "; risc de curățare bruscă în sens opus." : sm.aglomerare.text, "Aș strânge riscul: aș adăuga marjă sau aș închide o parte.") } : { nivel: "ok", titlu: "", mesaj: "" };
     }
 
     // v91.11 (2): din "Mediul botului" (IndicatoriBot.mediu) - BTC pe 4h impotriva botului si funding-ul
@@ -241,11 +255,14 @@ var Alerte = (function () {
       var mb = gaseste("btc"), mf = gaseste("funding"), fara = function (m) { return !m || /^n-am/.test(String(m.text || "")); };
       out["m-btc"] = fara(mb) ? null : (mb.ton === "rau" || mb.ton === "atentie")
         ? { nivel: "atentie", titlu: nume + ": BTC pe 4 ore merge împotriva botului",
-          mesaj: msg("BTC " + mb.text + "; monedele mici îl urmează de obicei.", "N-aș adăuga bani cât BTC trage împotrivă; la o mișcare mare a lui aș închide botul.") }
+          // v100.70 (revizia pachetului 3, I2): sensul vechi („fii gata să-l oprești”) - pregatit, nu inchis acum
+          mesaj: msg("BTC " + mb.text + "; monedele mici îl urmează de obicei.", "N-aș adăuga bani cât BTC trage împotrivă; dacă intră în mișcare mare, aș fi gata să închid botul.") }
         : { nivel: "ok", titlu: nume + ": BTC nu mai merge împotriva botului", mesaj: "BTC " + mb.text + "." };
       out["m-funding"] = fara(mf) ? null : mf.ton === "atentie"
         ? { nivel: "atentie", titlu: nume + ": funding-ul e mult peste obicei, pe partea botului",
-          mesaj: msg("Funding " + mf.text + ": mulți stau pe aceeași parte, te costă mai mult și crește riscul unei căderi bruște.", "N-aș mări botul acum.") }
+          // v100.70 (revizia pachetului 3, I4/I8): o fraza ≤ 160 (costul pe zi e deja in textul funding-ului); riscul dupa partea botului -
+          // la short inghesuiala se curata printr-o urcare, nu printr-o cadere
+          mesaj: msg("Funding " + mf.text + ": mulți stau pe partea botului, risc de " + (String(b.directie || "").toLowerCase() === "short" ? "urcare" : "cădere") + " bruscă.", "N-aș mări botul acum.") }
         : { nivel: "ok", titlu: nume + ": funding-ul a revenit la normal", mesaj: "Funding " + mf.text + "." };
     }
 
@@ -264,11 +281,12 @@ var Alerte = (function () {
     }
     // - la 1% de o margine a gridului (inauntru); iese abia peste 1,5%. Afara din grid e regula "grid".
     if (p !== null && jos !== null && sus !== null) {
-      var lim = fost("p-margine") !== "ok" ? 0.015 : 0.01, dj = (p - jos) / p, ds = (sus - p) / p;
+      var lim = fost("p-margine") !== "ok" ? 0.015 : 0.01, dj = (p - jos) / p, ds = (sus - p) / p, dirMg = String(b.directie || "").toLowerCase();
       var langa = p >= jos && p <= sus && (dj < lim || ds < lim);
       out["p-margine"] = langa
         ? { nivel: "atentie", titlu: nume + ": prețul e la " + vg(Math.min(dj, ds) * 100) + "% de marginea de " + (dj <= ds ? "jos (" + pret(jos) + ")" : "sus (" + pret(sus) + ")"),
-          mesaj: msg("Ieșit din grid, botul nu mai face perechi" + (dj <= ds ? " și poziția rămâne plină pe scădere." : "."), "N-aș pune bani în plus cât stă lângă margine.") }
+          // v100.70 (revizia pachetului 3, I8): „plină” doar pe partea pe care pierde botul - long/neutru jos (scădere), short/neutru sus (creștere)
+          mesaj: msg("Ieșit din grid, botul nu mai face perechi" + (dj <= ds ? (dirMg !== "short" ? " și poziția rămâne plină pe scădere" : "") : (dirMg !== "long" ? " și poziția rămâne plină pe creștere" : "")) + ".", "N-aș pune bani în plus cât stă lângă margine.") }
         : { nivel: "ok", titlu: "", mesaj: "" };
     }
 
@@ -436,7 +454,8 @@ var Alerte = (function () {
       if (init || !c) { n[p[0]] = { nivel: niv, cand: null }; return; }
       if (niv === c.nivel) { c.cand = null; return; }
       if (c.cand === niv) {
-        mesaje.push({ cheie: "vreme-" + p[0], nivel: RAU[niv] ? "critic" : "info", titlu: p[1] + ": " + (v.eticheta || niv), mesaj: msg(v.titlu || "", v.faCe ? mare(v.faCe) : null) });
+        // v100.70 (revizia pachetului 3, I4): eticheta fara emoji si fara majuscule de strigat - nivelul il da culoarea alertei
+        mesaje.push({ cheie: "vreme-" + p[0], nivel: RAU[niv] ? "critic" : "info", titlu: p[1] + ": " + String(v.eticheta || niv).replace(/^[^\p{L}]+/u, "").toLowerCase(), mesaj: msg(v.titlu || "", v.faCe ? mare(v.faCe) : null) });
         n[p[0]] = { nivel: niv, cand: null };
       } else c.cand = niv;
     });

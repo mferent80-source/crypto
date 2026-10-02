@@ -23,8 +23,11 @@ export const citireDinNou = () => ({ nivel: "info", titlu: "Crypto Radar citeșt
 export const lipsaPionex = (nume) => ({ nivel: "critic", titlu: (nume || "Botul") + " nu mai apare în lista Pionex", mesaj: msg("Poate a fost închis sau lichidat.", "Aș verifica în aplicația Pionex.") });
 
 // pp = TabloExtra.propunePlan(...) = { plus, minus, afaraOre, nota } sau null
+// v100.70 (revizia pachetului 3, I4): nota implicita a lui TabloExtra.propunePlan („propunerea mea: +3% / −15% din investiție / 12 h afară
+// din grid”) repeta „Propun” si orele - ramane doar baza procentelor; nota „după planul tău de la …” ramane intreaga
+const notaPlan = (n) => { n = String(n || ""); const m = n.match(/^propunerea mea:\s*(.+?)(?:\s*\/\s*\d+ h afară din grid)?$/); return m ? " (" + m[1] + ")" : n ? ", " + n : ""; };
 export const faraPlan = (nume, pp) => ({ nivel: "atentie", cheie: "fara-plan", titlu: nume + ": botul n-are plan",
-  mesaj: pp ? msg("Propun +" + V(pp.plus) + " / −" + V(pp.minus) + " USDT și " + pp.afaraOre + " h afară din grid, " + pp.nota + ".", "Aș pune planul propus din Tablou: fără el nu te pot anunța când să încasezi sau să închizi.")
+  mesaj: pp ? msg("Propun +" + V(pp.plus) + " / −" + V(pp.minus) + " USDT și " + pp.afaraOre + " h afară din grid" + notaPlan(pp.nota) + ".","Aș pune planul propus din Tablou: fără el nu te pot anunța când să încasezi sau să închizi.")
     : msg("Fără țintă și prag scrise la rece nu te pot anunța când să încasezi sau să închizi botul.", "Aș scrie planul în Tablou → „Planul tău”.") });
 
 // ceasul gridului ingust (I-481): ore = durata probata, hm = ora inchiderii „HH:MM”, tarziu = colectorul a fost oprit
@@ -51,5 +54,13 @@ export const legat = () => ({ nivel: "info", titlu: "Crypto Radar: alertele sunt
 export const perechiOra = (nume, n, usdt) => ({ nivel: "info", titlu: "✅ " + nume + ": " + (n === 1 ? "o pereche" : n + (n >= 20 ? " de" : "") + " perechi") + " în ultima oră, " + U2(usdt) + " din grile",
   mesaj: "Fiecare pereche e în Radar (Alerte); pe Discord vine un rezumat pe oră, ca alertele importante să nu se piardă printre ele." });
 
-// text = Obiceiuri.frana(...).text (pachetul 5)
-export const frana = (text) => ({ nivel: "critic", titlu: "🛑 Frâna contului: gata pe azi", mesaj: msg(text, "N-aș mai porni boți azi; pragurile se schimbă în Radar → Grid → Poarta de pornire.") });
+// f = Obiceiuri.frana(...) (obiectul: depasit, netZi, netSapt, rand, praguri)
+// v100.70 (revizia pachetului 3, I3): din OBIECTUL Obiceiuri.frana - textul lui are deja titlul, actiunea si sumele cu punct (pe Discord
+// ieseau de doua ori); aici: pragurile depasite, cu virgula, intr-o fraza. Un text vechi (string) ramane primit, fara titlu si actiune.
+const DEP = { zi: (f) => "azi " + U2(f.netZi) + " (pragul tău: −" + V(f.praguri.zi) + ")", sapt: (f) => "pe 7 zile " + U2(f.netSapt) + " (pragul: −" + V(f.praguri.sapt) + ")",
+  rand: (f) => f.rand + " boți închiși pe minus la rând (pragul: " + f.praguri.rand + ")" };
+export const frana = (f) => {
+  const parti = f && typeof f === "object" && Array.isArray(f.depasit) && f.praguri ? f.depasit.map((d) => (DEP[d.cod] ? DEP[d.cod](f) : d.text)).filter(Boolean) : [];
+  const fapt = parti.length ? parti.join(", ") : String(f && typeof f === "object" ? f.text || "" : f || "").replace(/^Frâna contului: gata pe azi\s*—\s*/, "").replace(/\s*N-aș mai porni boți azi;.*$/, "");
+  return { nivel: "critic", titlu: "🛑 Frâna contului: gata pe azi", mesaj: msg(fapt.charAt(0).toUpperCase() + fapt.slice(1).replace(/\.?\s*$/, "."), "N-aș mai porni boți azi (mâine, cu capul limpede); pragurile se schimbă în Radar → Grid → Poarta de pornire.") };
+};

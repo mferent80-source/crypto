@@ -1,7 +1,8 @@
 // Garda textelor, grupul „alerte” (v100.66, specul „sfaturi concise”, pachetul 3): genereaza TOATE alertele, pe fiecare ramura,
 // cu modulele adevarate - Alerte (public/lib/alerte.js, din garda-texte.mjs), TabloExtra.fisaInchidere, mesajele colectorului
 // (scripts/lib/mesaje-colector.mjs), avertizarea la pornire, alertele simbolurilor si SL/TP (poza.mjs), retetele, funding-ul pietei.
-// Textele de baza care vin din pachetele 4 si 5 (istoricul monedei, funding-ul pietei, raportul) sunt fixturi: aici se verifica invelisul.
+// v100.70 (revizia pachetului 3): textele de baza vin din producatorii REALI (SemnaleBot, IndicatoriBot.mediu, Acasa.vreme/vremeBursa,
+// Obiceiuri.istoricMoneda/subOOra/frana, TabloExtra.propunePlan) - fixturile inventate ascundeau abateri reale.
 import * as MC from "./mesaje-colector.mjs";
 import { alerteSimboluri, alerteSLTP } from "./poza.mjs";
 import { mesajReteta } from "./tura-scan.mjs";
@@ -75,13 +76,21 @@ export function situatiiAlerte(pune) {
   al("ținta în procente departe de plan", CRV({ opritorProfitActiv: true, opritorProfitTip: "raport", opritorProfitRaport: 0.12 }), { plan: { atins: [], plus: plus({ laTinta: 6.1 }) } }, null, ["plan-tinta"]);
   al("ținta se potrivește din nou", CRV({ opritorProfit: 0.394, opritorProfitActiv: true }), { plan: { atins: [], plus: plus({ laTinta: 2.7 }) } }, in2("plan-tinta"), ["plan-tinta"]);
   // semnalele (SemnaleBot, in colector)
-  const sem = { semafor: { nivel: "iesi", cod: "lichidare", motiv: "Lichidarea la 6,2%", faCe: "Aș adăuga marjă sau aș închide botul acum.", deCe: "Sub 8% e zona de ieșire." },
-    iaProfit: { text: "Botul e pe plus cu +4,20 USDT, iar mișcarea contra a început." }, muta: { motiv: "prețul stă lângă marginea de jos", deCe: "De 2 zile prețul e sub mijlocul gridului.", des: true,
-      setare: { jos: 0.37, sus: 0.40, grile: 6, levier: 4 }, treceriZi: 3.4 }, btc: { text: "BTC în mișcare (1,9× obișnuitul lui), moneda botului încă liniștită." },
-    aglomerare: { nivel: "atentie", text: "Funding +0,060% și 2,1 long la 1 short: mulțimea e pe partea botului." } };
+  // v100.70 (revizia pachetului 3, I4): semnalele din SemnaleBot REAL (semaforul IEȘI pe lichidare, încasează, mută gridul cu motivul lui,
+  // BTC, aglomerarea cu semnele) - textele inventate de aici ascundeau randul 1 de 169 de caractere si titlul taiat al mutarii
+  const SB = globalThis.SemnaleBot, FM = { setare: { jos: 0.37, sus: 0.40, grile: 6, levier: 4 }, treceriZi: 3.4, regim: { r4h: 2.4, r24h: 1.6, miscare: true, sens: "coboara" }, liniste: { linisteAcum: false } };
+  const sem = { semafor: SB.semafor({ bot: CRV({ distantaLichidarePct: 6.2, pretLichidare: 0.362 }), fisa: null }), iaProfit: SB.iaProfit(CRV({ profitTotal: 4.2 }), FM),
+    muta: SB.mutaGridul(CRV({ pretCurent: 0.3846 }), FM, 0, null), btc: SB.btcAvertizare({ miscare: true, r4h: 2.3, r24h: 1.9 }, { miscare: false }),
+    aglomerare: SB.aglomerare({ funding: 0.0006, longShort: 2.15, oiHist5m: [{ sumOpenInterest: 1000 }, { sumOpenInterest: 1182 }] }, "long") };
+  for (const k of Object.keys(sem)) if (!sem[k]) throw new Error("garda-alerte: semnalul " + k + " n-a ieșit din producătorul real");
+  al("mută gridul, prețul afară din grid de 14 h", CRV({ pretCurent: 0.3790 }), { semnale: { semafor: { nivel: "atentie" }, muta: SB.mutaGridul(CRV({ pretCurent: 0.3790 }), FM, 14, null) } }, null, ["s-muta"]);
   al("semnalele: IEȘI, încasează, mută gridul, BTC, aglomerare", CRV(), { semnale: sem }, null, ["s-iesi", "s-ia-profit", "s-muta", "s-btc", "s-aglomerare"]);
-  al("mediul: BTC contra și funding mare", CRV(), { mediu: [{ k: "btc", ton: "rau", text: "pe 4 ore coboară (−2,1%), iar botul e long" }, { k: "funding", ton: "atentie", text: "+0,060% la 8 ore, de 4× obișnuitul" }] }, null, ["m-btc", "m-funding"]);
-  al("mediul: din nou normal", CRV(), { mediu: [{ k: "btc", ton: "bine", text: "pe 4 ore urcă (+1,2%)" }, { k: "funding", ton: "bine", text: "+0,010% la 8 ore" }] }, null, ["m-btc", "m-funding"]);
+  // v100.70 (revizia pachetului 3, I4/I8): mediul din IndicatoriBot.mediu REAL (textul funding-ului are ~85 de caractere), pe long si pe short
+  const med = (dir, rate, bdir, mis, ori = 6) => globalThis.IndicatoriBot.mediu({ regim: { r4h: 0.8, r24h: 0.9, miscare: false }, funding: { rate, intervalOre: 8, hist: Array.from({ length: 20 }, () => rate / ori) },
+    fundingZi: -0.85, btc: { dir: bdir, regim: { r4h: 2.3, miscare: mis } } }, dir);
+  al("mediul: BTC contra și funding mare (long)", CRV(), { mediu: med("long", 0.0006, "coboara", true) }, null, ["m-btc", "m-funding"]);
+  al("mediul: BTC contra și funding mare (short)", LIT(), { mediu: med("short", -0.0006, "urca", true) }, null, ["m-btc", "m-funding"]);
+  al("mediul: din nou normal", CRV(), { mediu: med("long", 0.0001, "urca", false, 1) }, null, ["m-btc", "m-funding"]);
   // pragurile puse de Radar: pe zero, langa margine; stopul stins
   al("botul a ajuns pe zero (long)", CRV({ pretCurent: 0.3926, pornitLa: T0 - 3 * ZI }), { pretZero: 0.3925 }, null, ["p-zero"]);
   al("prețul la 0,4% de marginea de jos", CRV({ pretCurent: 0.3856 }), null, null, ["p-margine"]);
@@ -112,10 +121,19 @@ export function situatiiAlerte(pune) {
   if (mn1) pune("mișcare neobișnuită pe o monedă", "alerte", "miscareNeobisnuita.moneda", mn1, AL);
   const mn2 = A.miscareNeobisnuita({ cheie: "NVDA", nume: "NVDA", fel: "acțiune", ch: -6.2, tipic: null, pret: 118.42 }, null, T0).mesaj;
   if (mn2) pune("mișcare neobișnuită pe o acțiune (fără obișnuit)", "alerte", "miscareNeobisnuita.actiune", mn2, AL);
-  let sv = A.schimbareVreme(null, { crypto: { nivel: "liniste" }, bursa: { nivel: "larga" }, corelatie: { r: 0.2 } }, T0).stare;
-  const v1 = { crypto: { nivel: "miscare", eticheta: "mișcare", titlu: "Crypto a intrat în mișcare: BTC 1,9× obișnuitul pe 4 h.", faCe: "n-aș porni boți noi azi." }, bursa: { nivel: "scade", eticheta: "scade", titlu: "Nasdaq scade: −1,8% azi.", faCe: "aș aștepta închiderea." }, corelatie: { r: 0.62 } };
-  sv = A.schimbareVreme(sv, v1, T0 + 600000).stare;
-  for (const m of A.schimbareVreme(sv, v1, T0 + 1200000).mesaje) pune("vremea pieței: " + m.cheie, "alerte", m.cheie === "vreme-corelatie" ? "schimbareVreme.corelatie" : "schimbareVreme.crypto", m, AL);
+  // v100.70 (revizia pachetului 3, I4): vremea din Acasa.vreme / vremeBursa REALE (inainte: o fixtura inventata ascundea titlul „🔴 MIȘCARE”
+  // si actiunea de 207 caractere cu lacomia); fiecare ramura, confirmata de doua ori ca in colector
+  const AC = globalThis.Acasa, cr = (evita, dir, fg, btc) => AC.vreme({ clasament: { evita, candidati: 100 - evita, dir }, btc: { miscare: !!btc }, fg });
+  const serie = (f) => Array.from({ length: 260 }, (_, i) => ({ c: f(i) })), bv = (q, vix, e50) => AC.vremeBursa({ qqq: serie(q), vix, ndx: { e50, n: 100 } });
+  const SUS = (i) => 100 + i * 0.2, JOS = (i) => 200 - i * 0.3, LAT = (i) => 100 + 3 * Math.sin(i / 9);
+  const V0 = { crypto: cr(10, { long: 45, short: 45, neutru: 10 }, 50), bursa: bv(SUS, 15, 75), corelatie: { r: 0.2 } };
+  const vr = (sit, v1) => { let st = A.schimbareVreme(null, V0, T0).stare; st = A.schimbareVreme(st, v1, T0 + 600000).stare;
+    for (const m of A.schimbareVreme(st, v1, T0 + 1200000).mesaje) pune("vremea pieței (" + sit + "): " + m.cheie, "alerte", "schimbareVreme." + m.cheie.replace("vreme-", ""), m, AL); };
+  vr("mișcare + lăcomie, VIX 31, BTC urmează bursa", { crypto: cr(60, { long: 70, short: 20, neutru: 10 }, 78), bursa: bv(JOS, 31, 30), corelatie: { r: 0.62 } });
+  vr("amestecat + lăcomie, bursa scade", { crypto: cr(30, { long: 70, short: 20, neutru: 10 }, 74), bursa: bv(JOS, 22, 30), corelatie: { r: 0.2 } });
+  vr("mișcare BTC + frică, bursa laterală", { crypto: cr(20, { long: 15, short: 75, neutru: 10 }, 18, true), bursa: bv(LAT, 21, 50), corelatie: { r: 0.2 } });
+  vr("liniște + frică, urcare îngustă", { crypto: cr(10, { long: 15, short: 75, neutru: 10 }, 22), bursa: bv(SUS, 18, 40), corelatie: { r: 0.2 } });
+  vr("amestecat, urcare largă", { crypto: cr(30, { long: 45, short: 45, neutru: 10 }, 55), bursa: bv(SUS, 14, 70), corelatie: { r: 0.2 } });
 
   // fisa de inchidere (TabloExtra.fisaInchidere)
   const fi = (sit, f, b, o) => { const x = TE.fisaInchidere(Object.assign({ baza: "CRV.PERP", investit: 49.67, levier: 5, pornitLa: T0 - 30 * ORA, inchisLa: T0 }, b), o || {}); pune(sit, "alerte", "fisaInchidere." + f, x, RAP); };
@@ -134,8 +152,12 @@ export function situatiiAlerte(pune) {
   for (const a of alerteSLTP(poza, T0)) pune("SL/TP: " + a.cheie.split("-").slice(0, 2).join("-"), "alerte", "alerteSLTP." + a.cheie.split("-")[1], a, AL);
 
   // avertizarea la pornire (textul de baza vine din Obiceiuri - pachetul 5), retetele scanului, funding-ul pietei
-  pune("bot nou pe o monedă unde pierzi", "alerte", "pornire.mesaj", mesajPornire({ id: "b1" }, "LIGHTER", { text: "Pe LIGHTER ai închis 12 boți, net −57,30 USDT." },
-    { text: "Boții închiși în prima oră: 34, net −21,40 USDT." }, "LIT", "https://mau.tail9144fe.ts.net:8443/#ecran=gridset&moneda=LIT"), AL);
+  // v100.70 (revizia pachetului 3, I4): istoria monedei si prima ora din Obiceiuri REAL (textele lor aveau 3 fraze si sume cu punct)
+  const OB = globalThis.Obiceiuri, url = "https://mau.tail9144fe.ts.net:8443/#ecran=gridset&moneda=LIT";
+  const trP = (plus) => Array.from({ length: 12 }, (_, i) => ({ moneda: "LIGHTER", rezultat: i < plus ? 1.5 : i === plus ? -40.12 : -6.1, net: i < plus ? 1.5 : i === plus ? -40.12 : -6.1, inchis: T0 - (20 - i) * ZI, durataOre: 30 }))
+    .concat(Array.from({ length: 48 }, (_, i) => ({ moneda: "X" + (i % 5), rezultat: i % 3 ? -0.4 : 0.2, net: i % 3 ? -0.4 : 0.2, comisioane: -0.17, inchis: T0 - (30 - i % 30) * ZI, durataOre: 0.5 })));
+  pune("bot nou pe o monedă unde pierzi (câștigi des, dar pierderile mari)", "alerte", "pornire.mesaj", mesajPornire({ id: "b1" }, "LIGHTER", OB.istoricMoneda(trP(7), "LIGHTER"), OB.subOOra(trP(7)), "LIT", url), AL);
+  pune("bot nou pe o monedă unde pierzi (rar pe plus, fără link)", "alerte", "pornire.mesaj", mesajPornire({ id: "b2" }, "LIGHTER", OB.istoricMoneda(trP(3), "LIGHTER"), null, "LIT", null), AL);
   const xr = { s: "AMD", p: 141.2, ch: 2.31, ch7: -4.12, rsi: 38.6 };
   pune("rețetă: AMD a intrat", "alerte", "reteta.intrat", mesajReteta(xr, "Revenire după scădere", "a", true, "aAMD", "rev"), AL);
   pune("rețetă: AMD a ieșit", "alerte", "reteta.iesit", mesajReteta(xr, "Revenire după scădere", "a", false, "aAMD", "rev"), AL);
@@ -147,7 +169,9 @@ export function situatiiAlerte(pune) {
   co("colectorul nu mai poate citi botul", "citireRea", MC.citireRea(12, "HTTP 502"));
   co("colectorul citește din nou", "citireDinNou", MC.citireDinNou());
   co("botul nu mai apare în Pionex", "lipsaPionex", MC.lipsaPionex("CRV"));
-  co("botul n-are plan, cu propunere", "faraPlan", MC.faraPlan("CRV", { plus: 2.6, minus: 7.6, afaraOre: 12, nota: "după planul tău de la CRV" }));
+  // v100.70 (revizia pachetului 3, I4): propunerea din TabloExtra.propunePlan REAL (nota implicita repeta „Propun” si orele)
+  co("botul n-are plan, propunerea mea (implicită)", "faraPlan", MC.faraPlan("CRV", TE.propunePlan(null, 49.67)));
+  co("botul n-are plan, după planul de dinainte", "faraPlan", MC.faraPlan("CRV", TE.propunePlan({ plus: 5.5, minus: 15.7, afaraOre: 12, nume: "LIGHTER", investit: 103.38 }, 49.67)));
   co("botul n-are plan, fără propunere", "faraPlan", MC.faraPlan("CRV", null));
   co("gridul îngust a ajuns la durata probată", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", false));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));
@@ -155,7 +179,10 @@ export function situatiiAlerte(pune) {
   co("Trading 212 răspunde din nou", "t212DinNou", MC.t212DinNou());
   co("o acțiune peste 20% din cont", "pondereT212", MC.pondereT212("NVDA", 0.236));
   co("perechile pe oră", "perechiOra", MC.perechiOra("CRV", 3, 0.42));
-  co("frâna contului", "frana", MC.frana("Azi ai închis 3 boți pe minus, −24,10 USDT, peste pragul de −20."));
+  // v100.70 (revizia pachetului 3, I3): frana din Obiceiuri.frana REAL - textul ei repeta titlul si actiunea; mesajul se face din cifre
+  const OBf = globalThis.Obiceiuri;
+  co("frâna contului: pragul pe zi", "frana", MC.frana(OBf.frana({ trades: [{ inchis: T0 - 2 * ORA, net: -12.05 }, { inchis: T0 - 3 * ORA, net: -12.05 }], acum: T0 })));
+  co("frâna contului: zi + 7 zile + 3 la rând", "frana", MC.frana(OBf.frana({ trades: [{ inchis: T0 - 1 * ORA, net: -9 }, { inchis: T0 - 2 * ORA, net: -8 }, { inchis: T0 - 3 * ORA, net: -7.5 }, { inchis: T0 - 3 * ZI, net: -40 }], acum: T0 })));
   co("alertele sunt legate", "legat", MC.legat());
   co("raportul de duminică (titlul)", "raport", { titlu: MC.raport("2026-09-27", ["—"]).titlu });
   co("autopsia acțiunilor (titlul)", "autopsie", { titlu: MC.autopsie("2026-09-27", ["—"]).titlu });

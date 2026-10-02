@@ -35,7 +35,7 @@ var Obiceiuri = (function () {
     if (!n) text = "N-ai mai avut boți închiși pe " + m + ".";
     else if (avertizare) text = (rata >= 0.5 ? "Pe " + m + " câștigi des (" + P(rata) + "), dar pierderile mari mănâncă tot: " : "Pe " + m + " pierzi: ") + n + " boți, " + plus + " pe plus, net " + U(net) + (rau ? "; cel mai rău " + U(rau.v) + " pe " + ziua(rau.t) : "") + ".";
     else text = "Pe " + m + ": " + n + (n === 1 ? " bot" : " boți") + ", " + plus + " pe plus (" + P(rata) + "), net " + U(net) + "." + (n < 3 ? " Prea puțini ca să spun ceva." : "");
-    return { n: n, plus: plus, rata: rata, net: net, avertizare: avertizare, text: text };
+    return { n: n, plus: plus, rata: rata, net: net, avertizare: avertizare, text: text, rau: rau };   // v100.70: + rau {v, t} (avertizarea la pornire il scrie singura)
   }
   // inchiderile din prima ora (pe istoria lui, 30.09: 1469 de boti, net −2.065 USDT) - de la 10, doar cand pierd; cu comisioanele lor
   function subOOra(trades) {

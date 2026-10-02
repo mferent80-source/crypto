@@ -146,7 +146,7 @@ await test("4 · LIGHTER: gridul e mai larg decat planul -> ATENTIE: unde se ati
   assert.match(m.mesaj, /4\.2601/);
   assert.match(m.mesaj, /4\.0850/);
   assert.match(m.mesaj, /levier 2×/);
-  assert.match(m.mesaj, /10,0% pe zi/);
+  assert.match(m.mesaj, /o zi obișnuită \(10,0%\)|10,0% pe zi/);   /* v100.70 (revizia pachetului 3): mișcarea zilnică pe rândul 1, „o zi obișnuită (10,0%) te poate scoate” */
 });
 
 // acelasi LIGHTER, grid ingust cat planul (propunerea lui: jos acolo unde se atinge −17), levier 5x

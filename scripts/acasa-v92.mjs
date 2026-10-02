@@ -44,7 +44,8 @@ await test("vremea: BTC linistit, 36 din 99 in miscare -> AMESTECAT, cu motivul 
   assert.match(v.titlu, /BTC e liniștit/); assert.match(v.text, /36 din cele 99/); assert.match(v.faCe, /monedele liniștite/);
 });
 await test("vremea: lacomie >= 70 si majoritatea urca -> nu mari pariurile pe urcare; frica <= 30 si majoritatea coboara -> nu vinde in panica", () => {
-  assert.match(A.vreme({ clasament: CL(), btc: { miscare: false }, fg: 74 }).faCe, /N-aș mări pariurile pe urcare/);
+  // v100.70 (revizia pachetului 3): lacomia intra in actiune - „fără pariuri mari pe urcare (lăcomia e la 74)”; acelasi sfat, o fraza ≤ 110
+  assert.match(A.vreme({ clasament: CL(), btc: { miscare: false }, fg: 74 }).faCe, /fără pariuri mari pe urcare \(lăcomia e la 74\)|n-aș mări pariurile pe urcare/i);
   assert.match(A.vreme({ clasament: CL(), btc: { miscare: false }, fg: 74 }).text, /urcă în general/);
   const f = A.vreme({ clasament: CL({ dir: { long: 5, neutru: 10, short: 84 } }), btc: { miscare: false }, fg: 22 });
   assert.match(f.text, /coboară în general/); assert.match(f.faCe, /panică/);

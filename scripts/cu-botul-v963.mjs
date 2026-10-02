@@ -72,7 +72,7 @@ await test("alerta pe Discord: miscarea cu botul pleaca 'info' (lasa-l sa lucrez
   const b = { id: "1", baza: "VVV.PERP", directie: "long", activ: true, pretCurent: 30, gridJos: 25, gridSus: 33, distantaLichidarePct: 30 };
   const up = { regim: { ...SUS, r4h: 3, r24h: 3 } }, dn = { regim: { ...JOS, r4h: 3, r24h: 3 } };
   const cu = A.reguli(b, up).miscare, co = A.reguli(b, dn).miscare;
-  assert.equal(cu.nivel, "info"); assert.match(cu.titlu, /mișcare mare cu botul, 3,0× pe 4 h/);   /* v100.68 (pachetul 3): fără majuscule, cu cifra */ assert.doesNotMatch(cu.mesaj, /oprești/);
+  assert.equal(cu.nivel, "info"); assert.match(cu.titlu, /mișcare mare cu botul, 3,0× pe 4 h/);   /* v100.68 (pachetul 3): fără majuscule, cu cifra */ assert.doesNotMatch(cu.mesaj, /oprești|închid/);   /* v100.70: vocabularul nou („închide botul”) - mișcarea cu botul nu cere închiderea */
   assert.equal(co.nivel, "atentie"); assert.match(co.titlu, /mișcare mare contra botului/);   /* v100.68: ca sfatul (un rând în „Ce ai de făcut acum”) */
 });
 

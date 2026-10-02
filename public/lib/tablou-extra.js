@@ -511,6 +511,14 @@ var TabloExtra = (function () {
       g.n++;
       if (a.t >= g.ultima) { g.ultima = a.t; g.titlu = t; g.text = String(a.mesaj || g.text); g.c = a.nivel === "critic" ? "r" : "g"; }
     });
+    // v100.70 (revizia pachetului 3, I5): „semafor roșu — <motiv>” (alerta s-iesi, doar in Radar) spune acelasi fapt ca alerta motivului
+    // (ex. „lichidarea la 6,2%”) - un rand, nu doua: se uneste cu ea (×N, rosu); fara alerta pereche ramane randul ei
+    for (var js = gr.length - 1; js >= 0; js--) {
+      var mS = /^semafor roșu — (.+)$/.exec(gr[js].titlu); if (!mS) continue;
+      for (var q = 0; q < gr.length; q++) if (q !== js && (fel(gr[q].titlu) === fel(mS[1]) || acelasi(gr[q].titlu, mS[1]))) {
+        gr[q].n += gr[js].n; gr[q].c = "r"; if (gr[js].ultima > gr[q].ultima) gr[q].ultima = gr[js].ultima; gr.splice(js, 1); break;
+      }
+    }
     // 2) avertismentele serverului; cel care spune acelasi lucru ca o alerta o inghite (si ii ia numarul)
     (Array.isArray(o.avertismente) ? o.avertismente : []).forEach(function (a) {
       if (!a || !String(a).trim()) return;

@@ -15,7 +15,7 @@ import { situatiiAlerte } from "./lib/garda-alerte.mjs";
 import { situatiiActiuni } from "./lib/garda-actiuni.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
+for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
 const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, Directie: DR } = globalThis;
 
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
@@ -72,7 +72,8 @@ export function verifica(text, tip, frate) {
     if (l2 !== undefined) { if (!/^👉 /.test(l2)) ab.push("rândul 2 nu începe cu „👉 ”"); else for (const a of verifica(l2.slice(3), "faCe")) ab.push("rândul 2: " + a); }
   }
   if (r.rand) t.split("\n").forEach((l, i) => { if (l.length > r.rand) ab.push("rândul " + (i + 1) + " lung: " + l.length + " > " + r.rand); });
-  if (r.strigat && /\b(DEPĂȘITĂ|STINS|IEȘI|CU|NU|NEOBIȘNUIT|ATENȚIE)\b/.test(t)) ab.push("majuscule de strigat");
+  // v100.70 (revizia pachetului 3, I4): granitele cu litere Unicode - \b e doar ASCII si „DEPĂȘITĂ” scapa; + etichetele vremii pietei
+  if (r.strigat && /(?<![\p{L}\p{N}])(DEPĂȘITĂ|STINS|IEȘI|CU|NU|NEOBIȘNUIT|ATENȚIE|MIȘCARE|FRICĂ|LĂCOMIE|PANICĂ|LATERAL|URCARE|SCADE|LINIȘTE|AMESTECAT)(?![\p{L}\p{N}])/u.test(t)) ab.push("majuscule de strigat");
   // v100.65 (M2 din revizia pachetului 2): o frecvență „(k din n)” cu n sub 30 poartă „puține cazuri” (pragul scenariului: 30)
   // revizia Opus a 2b (10): marcajul se cauta in ACEEASI paranteza (altfel il „imprumuta” de la alta frecventa), iar „(k din n, …)” nu mai scapa
   for (const m of t.matchAll(/\((\d+) din (\d+)(?!\d|[.,]\d)([^)]*)\)/g)) if (Number(m[2]) < 30 && !/puține cazuri/.test(m[3])) { ab.push("frecvență pe " + m[2] + " cazuri fără „puține cazuri”"); break; }
