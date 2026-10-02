@@ -104,5 +104,35 @@ await test("pagina: cartela Stopul arata „de ce” si sursa stopului propus, f
   assert.match(app, /x\.deCe\?'<p class="tbSub tbCcDeCe">'/); assert.match(app, /x\.sursa\?'<p class="tbSub tbCcSursa">'/);
 });
 
+// ---- sarcina 5: Consilierul ----
+await test("LIGHTER: Consilierul - titlul scurt, o singura actiune, „de ce” sub ea, motivul stopului cu cifra", () => {
+  const c = C.alcatuieste({ sm: S.semafor({ bot: LIGHTER(), fisa: { regim: { r4h: 0.5, r24h: 0.5, miscare: false } }, plan: PLAN_L() }), concret: conL(), sfaturi: [], opritor: 3.787 });
+  assert.equal(c.titlu, "Stopul costă peste plan"); assert.equal(c.faCe, "Aș lăsa stopul la 3.787 și aș trece planul la −64 USDT.");
+  assert.equal(c.explica, "Stopul planului (4.2601) e prea aproape: o zi obișnuită a monedei ajunge acolo în 71% din zile.");
+  assert.match(c.motive[0].titlu, /^Stopul e peste plan: atins, ≈ −6\d USDT$/); assert.equal(c.motive[0].text, "Planul tău zice −15,7 USDT; stopul de la 3.787 stă mult mai departe.");
+});
+await test("RF2: titlul Consilierului din doua motive lungi nu trece de 60 - ramane primul (al doilea e chiar dedesubt)", () => {
+  const sm = { nivel: "atentie", cod: "lichidare", motiv: "lichidarea la 12,4% · se apropie (13,6% acum 1 h)", faCe: "N-aș mări poziția.", componente: [
+    { nivel: "atentie", cod: "lichidare", motiv: "lichidarea la 12,4% · se apropie (13,6% acum 1 h)", faCe: "N-aș mări poziția." },
+    { nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (short, tare)", faCe: "N-aș adăuga bani." }] };
+  const c = C.alcatuieste({ sm, concret: [], sfaturi: [] });
+  assert.ok(c.titlu.length <= 60, c.titlu); assert.equal(c.titlu, "Lichidarea la 12,4% · se apropie (13,6% acum 1 h)");
+  assert.equal(c.motive[1].titlu, "Trendul e împotriva botului (short, tare)");
+});
+await test("RF5: Discord - titlul ≤ 60 si cu o moneda lunga si un titlu lung (rezerva: motivul pe scurt, apoi taiat la cuvant); mesajul pe cel mult 2 randuri", () => {
+  const lung = { nivel: "atentie", eticheta: "🟡 Atenție", titlu: "Lichidarea la 12,4% · se apropie (13,6% acum 1 h), iar trendul", faCe: "N-aș mări poziția.", bani: null,
+    motive: [{ cod: "lichidare", c: "g", titlu: "Lichidarea la 12,4% · se apropie (13,6% acum 1 h)", scurt: "lichidarea la 12,4%" }] };
+  let st = C.schimbare({}, { ...lung, nivel: "tine", eticheta: "🟢 Ține", motive: [] }, 1, "1000BONK").stare;
+  st = C.schimbare(st, lung, 2, "1000BONK").stare; const al = C.schimbare(st, lung, 3, "1000BONK").alerta;
+  assert.ok(al && al.titlu.length <= 60, al && al.titlu); assert.equal(al.titlu, "1000BONK · Atenție: lichidarea la 12,4%");
+  assert.ok(al.mesaj.split("\n").length <= 2, al.mesaj); assert.match(al.mesaj, /^👉 N-aș mări poziția\./);
+});
+await test("pagina: „de ce” sub „Ce aș face eu”, legenda comuna (avertizarile, o data) sub Consilier; pachetul 1 e strict intreg", () => {
+  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  assert.match(app, /c\.explica\?'<p class="tbSub tbConsExplica">'/); assert.match(app, /Consiliu\.LEGENDA\?'<p class="tbSub tbConsLeg">'/);
+  assert.match(C.LEGENDA, /nu sunt promisiuni/); assert.match(C.LEGENDA, /puține cazuri/); assert.match(C.LEGENDA, /cumpără înapoi la fiecare grilă/);
+  for (const m of ["semafor", "cartele", "consiliu"]) assert.ok(G.STRICT.has(m), "nestrict: " + m);
+});
+
 console.log(`\nV100.61 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);

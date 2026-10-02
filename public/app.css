@@ -1730,7 +1730,9 @@ body.peJurnal .toolbar,body.peJurnal .heroStrip,body.peJurnal .tabs{display:none
 #tabloubot .tbConsEt.asteapta{background:var(--panel-3);color:var(--muted)}
 #tabloubot .tbConsSt h3{margin:0;font-size:19px;line-height:1.3;text-wrap:balance}
 #tabloubot .tbConsFac{border-radius:10px;background:var(--panel-2);padding:11px 13px;display:grid;gap:7px}
-#tabloubot .tbConsFac p{margin:0}#tabloubot .tbConsFac .tbEt2{letter-spacing:.05em;text-transform:uppercase}
+#tabloubot .tbConsFac p{margin:0}
+.tbConsExplica{font-size:13px}
+.tbConsLeg{margin:10px 2px 0;font-size:12px;line-height:1.45}#tabloubot .tbConsFac .tbEt2{letter-spacing:.05em;text-transform:uppercase}
 #tabloubot .tbConsBani{font-size:13.5px}
 #tabloubot .tbConsSuma{font-family:ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;color:var(--bad)}
 #tabloubot .tbConsInc{font-size:12.5px;color:var(--muted);margin:0}

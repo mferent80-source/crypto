@@ -5746,7 +5746,7 @@ function tbConsHtml(c){
   var cip=function(x){return x?'<span class="tbConsCip '+escapeHtml(x.cls||"")+'" title="'+escapeHtml(x.titlu||"")+'">'+escapeHtml(x.t)+'</span>':''};
   return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'
     +(c.deCeText?'<p class="tbConsDeCe tbSub">🔁 '+escapeHtml(c.deCeText)+'</p>':'')+(c.altaVoce?'<p class="tbConsDeCe tbSub">📣 '+escapeHtml(c.altaVoce)+'</p>':'')
-    +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')
+    +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.explica?'<p class="tbSub tbConsExplica">'+escapeHtml(c.explica)+'</p>':'')+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')
     +(c.nivel&&c.nivel!=="asteapta"?'<div class="tbDecizii"><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(true)" aria-label="Am făcut ce zice Consilierul">✅ am făcut</button><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(false)" aria-label="N-am făcut ce zice Consilierul">✋ n-am făcut</button><span class="tbSub" id="tbDecStare">'+escapeHtml(tbDecStareText(c))+'</span></div>'+(c.decSoc?'<p class="tbSub tbDecSoc">'+escapeHtml(c.decSoc)+'</p>':''):'')+'</div>'
     +(c.incredere?'<p class="tbConsInc">'+escapeHtml(c.incredere)+'</p>':'')+'</div>'
     +'<div class="tbConsDr"><h4>De ce'+(c.motive.length?' · '+c.motive.length+(c.motive.length===1?' motiv':' motive')+', după banii în joc':'')+'</h4>'
@@ -5754,7 +5754,8 @@ function tbConsHtml(c){
       +((m.cip||m.extra)?'<div class="tbConsL">'+cip(m.cip)+(m.extra?'<span>'+escapeHtml(m.extra)+'</span>':'')+'</div>':'')+'</div></div>'}).join(""):'<p class="tbSub">Nimic nu cere o mișcare acum.</p>')
     +'</div></div>'
     +(c.rest.length?'<details class="tbConsRest"'+(tbConsRestDeschis?' open':'')+'><summary>Restul, pliat · <b>'+c.rest.length+(c.rest.length===1?' notă':' note')+'</b> fără urgență</summary><ul>'
-      +c.rest.map(function(r){return '<li>'+escapeHtml(r.titlu)+(r.text?' <span>— '+escapeHtml(r.text)+'</span>':'')+'</li>'}).join("")+'</ul></details>':'');
+      +c.rest.map(function(r){return '<li>'+escapeHtml(r.titlu)+(r.text?' <span>— '+escapeHtml(r.text)+'</span>':'')+'</li>'}).join("")+'</ul></details>':'')
+    +(Consiliu.LEGENDA?'<p class="tbSub tbConsLeg">'+escapeHtml(Consiliu.LEGENDA)+'</p>':'');   /* v100.61: avertizarile comune, o data */
 }
 var tbConsRestDeschis=false;
 function tbIncredere(cod){tbAduSocoteala();if(!tbSoc.peCod||!cod||cod==="fara-fisa")return "";var x=tbSoc.peCod[cod];return '<p class="tbSub tbIncredere">🎯 '+escapeHtml((x&&x.nume?x.nume+": ":"")+SemnaleBot.textIncredere(x||null))+(x&&x.stare==="ajuta"?' <b class="good">merită ascultat</b>':'')+'</p>'}   // v100.39: pragul de minus atins, pe bot (histerezis)

@@ -27,7 +27,7 @@ await test("CRV real: verdictul ia in seama TOATE sursele - 🟡 ATENȚIE (nu �
   assert.ok(CS && typeof CS.alcatuieste === "function", "lipseste Consiliu.alcatuieste");
   const c = CS.alcatuieste(intrare());
   assert.equal(c.nivel, "atentie"); assert.match(c.eticheta, /Atenție/);
-  assert.match(c.titlu, /^Stopul te costă mai mult decât planul, iar prețul stă lângă marginea de jos$/, c.titlu);
+  assert.match(c.titlu, /^Stopul costă peste plan, iar prețul e lângă marginea de jos$/, c.titlu);   // v100.61: titlul ≤ 60
 });
 
 await test("CRV real: 3 motive dupa banii in joc - stopul (rosu), marginea de jos (galben, cu „Mută gridul” 7 din 10), piata linistita si laterala (verde, UN singur trend)", () => {
@@ -43,7 +43,7 @@ await test("CRV real: 3 motive dupa banii in joc - stopul (rosu), marginea de jo
 await test("„Ce aș face eu” cu bani: stopul planului e atins intr-o zi obisnuita in ~3 din 4 zile -> las stopul si trec planul la cat costa stopul", () => {
   const c = CS.alcatuieste(intrare());
   assert.match(c.faCe, /Aș lăsa stopul la 0\.38 și aș trece planul la −10 USDT/, c.faCe);
-  assert.match(c.faCe, /în 71% din zile/); assert.match(c.faCe, /\(0\.3842\)/); assert.doesNotMatch(c.faCe, /\d\.\d{6,}/, "pret neformatat"); assert.match(c.faCe, /n-aș pune bani în plus/);
+  assert.match(c.explica, /în 71% din zile/); assert.match(c.explica, /\(0\.3842\)/); assert.doesNotMatch(c.faCe + c.explica, /\d\.\d{6,}/, "pret neformatat"); assert.match(c.faCe, /n-aș pune bani în plus/);   // v100.61: de ce, separat
   assert.match(c.bani, /−10,2/); assert.match(c.bani, /−7,5/); assert.match(c.bani, /marginea de jos: −7,3/);
   assert.match(c.incredere, /Semaforul singur zicea „ȚINE”/); assert.match(c.incredere, /10 din 21/);
 });
