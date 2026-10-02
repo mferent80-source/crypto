@@ -14,15 +14,16 @@ import { avertismenteBot } from "../functions/_shared/avertismente.js";
 import { situatiiAlerte } from "./lib/garda-alerte.mjs";
 import { situatiiActiuni } from "./lib/garda-actiuni.mjs";
 import { situatiiAcasa } from "./lib/garda-acasa.mjs";
+import { situatiiRetea } from "./lib/garda-retea.mjs";   // v100.80 (rețeaua neuronală)
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
+for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
 const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, Directie: DR } = globalThis;
 
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
 // pachetul 2: sfaturi = sfaturi.js, consiliu-2 = Consilierul cu sfaturile reale, todo = „Ce ai de făcut acum”, server = avertismentele;
 // „alerte” = titlurile/textele din regulile alertelor (alerte.js), strict la pachetul 3)
-export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo", "server", "alerte", "actiuni", "acasa"]);   // v100.68: + alerte (pachetul 3); v100.69: + actiuni (pachetul 4); v100.72: + acasa (pachetul 5)
+export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo", "server", "alerte", "actiuni", "acasa", "retea"]);   // v100.68: + alerte (pachetul 3); v100.69: + actiuni (pachetul 4); v100.72: + acasa (pachetul 5); v100.80: + retea (rețeaua neuronală)
 
 // ---- regulile ----
 export const REGULI = {
@@ -322,6 +323,7 @@ export function situatii() {
   situatiiActiuni(pune);
   // v100.72 (pachetul 5): Acasă, obiceiurile (raportul de duminică, autopsia, frâna, poarta), fișa (verdictul, gridul îngust) - scripts/lib/garda-acasa.mjs
   situatiiAcasa(pune);
+  situatiiRetea(pune);   // v100.80 (rețeaua neuronală, livrarea 1)
   return out;
 }
 

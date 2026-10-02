@@ -2195,3 +2195,5 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .t212Graf .gbLeg i.gbDash{border-top-style:dashed}
 .t212Graf .gbLeg i.gbPct{width:9px;height:9px;border:0;border-radius:50%}
 @media (max-width:550px){.t212Graf .tbIntBtn{min-height:44px}}
+/* v100.80 (rețeaua neuronală): sub-blocul 🧠 sub 🎲 - despărțit cu o linie punctată, aceleași rânduri ca 🎲 */
+.tbRetea{margin-top:12px;padding-top:8px;border-top:1px dashed rgba(148,163,184,.35)}

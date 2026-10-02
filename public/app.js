@@ -5669,6 +5669,12 @@ function tbAsemanatoareHtml(b,rez){
   var g=TabloExtra.geometrieBot(b),v=Asemanatoare.vecini(tbCazuri.l,{dir:String(b.directie||"").toLowerCase(),lev:botiNr(b.levier)||1,lat:(sus-jos)/p,pas:g?g.netPct:null,stare:rez&&rez.stare||null,investit:botiNr(b.investit)});
   return '<h4 class="tbProbH">👥 Boții tăi în situații asemănătoare</h4><p class="tbSub">'+escapeHtml(v.text)+'</p>';
 }
+// v100.80 (rețeaua neuronală, livrarea 1): modelele (KV retea, antrenate acasă noaptea), o dată la 30 de minute; fără server -> nimic
+var reteaM={la:0,m:null,inLucru:false};
+function reteaAdu(dupa){if(typeof Retea==="undefined"||reteaM.inLucru||Date.now()-reteaM.la<30*60000)return;reteaM.inLucru=true;getJSON("/api/istoric-bot?action=retea").then(function(d){reteaM.m=d&&d.retea&&d.retea.versiune===Retea.VERSIUNE?d.retea.modele:null}).catch(function(){reteaM.m=null}).then(function(){reteaM.la=Date.now();reteaM.inLucru=false;if(reteaM.m&&typeof dupa==="function")dupa()})}
+// sub-blocul 🧠 sub 🎲 (Tablou și fișă): capul, rândurile (forma tbProbRandHtml), „Cum s-a verificat” pliat; fără modele -> nimic
+function reteaHtml(rt,zar,o){var m=reteaM.m;if(typeof Retea==="undefined"||!m||!rt)return "";var l=Retea.randuri(m,rt,zar,o);if(!l.length)return "";var an=Retea.antet(m,o&&o.acum||Date.now());
+  return '<div class="tbRetea"><h4 class="tbProbH">'+escapeHtml(an.titlu)+'</h4><p class="tbSub">'+escapeHtml(an.sub)+'</p>'+l.map(tbProbRandHtml).join("")+'<details class="tbProbFara"><summary>Cum s-a verificat</summary>'+Retea.subsol(m).map(function(x){return '<p class="tbSub">'+escapeHtml(x)+'</p>'}).join("")+'</details></div>'}
 // un rand de probabilitate: titlul, procentul si banda 0-100% (zona = intervalul de incredere, semnul = cifra) - Tablou si fisa Grid
 function tbProbRandHtml(x){
   var P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))},lo=x.ic?P(x.ic[0]):null,hi=x.ic?P(x.ic[1]):null;
@@ -5706,13 +5712,14 @@ function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
   var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;
   if(!rez){card.hidden=true;return}
+  reteaAdu(function(){if(tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaProb(tbStare.bot)});   /* v100.80 (rețeaua neuronală) */
   card.hidden=false;
   if(rez.gol){if(sub)sub.textContent="încă nu se pot socoti";el.innerHTML='<p class="tbSub">'+escapeHtml(rez.gol)+'.</p>';return}
   var l=Probabilitati.randuri(rez,t.cal),P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))};
   var vh=tbProbVechi(rez);
   if(sub)sub.textContent=(vh?"⚠ cifre de acum "+vh+" h (colectorul nu le-a mai reînnoit) · stare: ":"acum: ")+(Probabilitati.ETICHETE[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
   el.innerHTML=(l.length?l.map(tbProbRandHtml).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
-    +tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
+    +reteaHtml(rez.retea,l,{acum:Date.now(),pornire:rez.retea&&rez.retea.pornire})+tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
 }
 // v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
 // Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.

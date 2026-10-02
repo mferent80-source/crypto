@@ -126,6 +126,43 @@ var Retea = (function () {
     var f = trasaturiBot(t, Probabilitati.pregateste(bare, por), btc ? Probabilitati.pregateste(btc, por) : null, ist); if (!f) return null;
     var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n };
   }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire };
+  // ---- rândurile 🧠 (Tablou, fișă) ----
+  var NUME = { "atinge-24": "Atinge un nivel în 24 h", "atinge-72": "Atinge un nivel în 3 zile", "atinge-168": "Atinge lichidarea în 7 zile", cursa: "Ținta înaintea stopului, în 7 zile", liniste: "Liniștea mai ține", directie: "Prețul mai sus peste 24 h", rezultat: "Rezultatul tău" };
+  var UNIT = { 24: ["zi independentă", "zile independente"], 48: ["bloc de 2 zile", "blocuri de 2 zile"], 72: ["bloc de 3 zile", "blocuri de 3 zile"], 168: ["săptămână", "săptămâni"] };
+  var TINTA_DE = { cursa: "cursa", "iese-jos-24": "atinge-24", "iese-sus-24": "atinge-24", "iese-jos-72": "atinge-72", "iese-sus-72": "atinge-72", lichidare: "atinge-168", "liniste-24": "liniste", "liniste-48": "liniste", "directie-24": "directie" };
+  function PC(v) { return Math.round(v * 100) + "%"; }
+  function eticheta(vd) { var u = UNIT[vd.bloc] || UNIT[24]; return vd.dovedita ? "dovedită pe " + cate(vd.nIndep, u[0], u[1]) : "nedovedită: " + vd.motiv; }
+  // forma tbProbRandHtml ({cod, titlu, p, ic, avertizare, text}): titlul rândului 🎲, cifra rețelei, cifra 🎲 alături și starea;
+  // direcția cu „cât dat cu banul” până e dovedită; rezultatul tău lângă rata ta. zar = Probabilitati.randuri(...); o = {acum, pornire}
+  function randuri(modele, rt, zar, o) {
+    o = o || {}; var out = [], p = rt && rt.p || {}, acum = nr(o.acum) || Date.now();
+    if (!modele || !rt || (rt.v && rt.v !== VERSIUNE)) return out;
+    (Array.isArray(zar) ? zar : []).forEach(function (z) {
+      var q = nr(p[z.cod]), vd = verdict(modele[TINTA_DE[z.cod]], acum); if (q === null || !vd || nr(z.p) === null) return;
+      out.push({ cod: z.cod, titlu: z.titlu, p: q, ic: null, avertizare: false, text: "🎲 " + PC(z.p) + " · " + eticheta(vd) });
+    });
+    var qd = nr(p["directie-24"]), vdd = verdict(modele.directie, acum);
+    if (qd !== null && vdd) out.push({ cod: "directie-24", titlu: NUME.directie, p: qd, ic: null, avertizare: false, text: vdd.dovedita ? eticheta(vdd) : "cât dat cu banul — " + eticheta(vdd) });
+    var pz = o.pornire, vdr = verdict(modele.rezultat, acum);
+    if (pz && nr(pz.p) !== null && nr(pz.rata) !== null && vdr) out.push({ cod: "rezultat", titlu: "La pornire, un bot ca ăsta ieșea pe plus", p: pz.p, ic: null, avertizare: false, text: "rata ta: " + PC(pz.rata) + " · " + eticheta(vdr) });
+    return out;
+  }
+  // capul sub-blocului; modelul mai vechi de 2 zile se spune (antrenarea n-a mers de atunci)
+  function antet(modele, acum) {
+    var la = 0; Object.keys(modele || {}).forEach(function (k) { var x = nr(modele[k] && modele[k].la); if (x !== null && x > la) la = x; });
+    var z = la ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
+    return { titlu: "🧠 Rețeaua neuronală — a doua părere", sub: z !== null && z >= 2 ? "Model de acum " + cate(z, "zi", "zile") + " — antrenarea n-a mers de atunci." : "Nu schimbă semaforul, verdictul sau alertele; o cifră contează doar când e „dovedită”." };
+  }
+  // „Cum s-a verificat”: un rând pe țintă - cazurile independente, Brier rețea / reper / formula simplă, IC față de reper
+  function subsol(modele) {
+    return Object.keys(NUME).filter(function (k) { return modele && modele[k] && modele[k].versiune === VERSIUNE; }).map(function (k) {
+      var v = modele[k].verificare, u = UNIT[(TINTE[k] || { bloc: 24 }).bloc] || UNIT[24];
+      if (!v) return NUME[k] + ": neverificată încă.";
+      return NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "") + ".";
+    });
+  }
+  // rândul gri de la poarta fișei
+  function textPornire(pz, vd) { return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + "."; }
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;
