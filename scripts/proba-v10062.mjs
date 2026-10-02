@@ -281,7 +281,7 @@ await test("I3: costurile - comisioanele și funding-ul plătit fără minus dub
 await test("M1: motivul pieței din Consilier păstrează concluzia direcției („piața merge cu botul”), nu doar dovezile", () => {
   const R = [{ tf: "4H", eticheta: "4 ore", dir: "urca", fata: { ton: "bine" } }, { tf: "1D", eticheta: "1 zi", dir: "urca", fata: { ton: "bine" } }];
   const b = CRV({ pretCurent: 0.41 }), c = C.alcatuieste({ sm: S.semafor({ bot: b, fisa: FISA() }), concret: [], sfaturi: sfaturi(b, { rezumat: globalThis.Directie.rezumat(R, "long") }) });
-  const m = c.motive.concat(c.rest).find((x) => /Trendul, o singură măsură/.test(x.text || ""));
+  const m = c.motive.concat(c.rest).map((x) => ({ ...x, text: (x.text || "") + " " + (x.extra || "") })).find((x) => /Trendul, o singură măsură/.test(x.text));   /* revizia 2b: cu liniștea, direcția e pe rândul de dedesubt (extra) */
   assert.ok(m, "fără motivul pieței: " + c.motive.map((x) => x.cod).join(","));
   assert.match(m.text, /piața merge cu botul \(4 ore urcă, 1 zi urcă\)/);
 });

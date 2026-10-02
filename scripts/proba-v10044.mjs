@@ -35,8 +35,8 @@ await test("CRV real: 3 motive dupa banii in joc - stopul (rosu), marginea de jo
   assert.deepEqual(c.motive.map((m) => m.c), ["r", "g", "v"]);
   assert.match(c.motive[0].titlu, /Stopul e peste plan/); assert.match(c.motive[0].text, /10/);
   assert.match(c.motive[1].titlu, /până la marginea de jos/i); assert.match(c.motive[1].cip.t, /„Mută gridul” 7 din 10/);   /* v100.62: titlul vine gata din sfaturi.js */
-  assert.match(c.motive[2].titlu, /Piața e liniștită și laterală/); assert.match(c.motive[2].text, /o singură măsură/);
-  assert.match(c.motive[2].text, /structura pe medii: long, tare/, "fisa nu mai e un trend separat, e structura");
+  assert.match(c.motive[2].titlu, /Piața e liniștită și laterală/); assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /o singură măsură/);   /* revizia 2b: cu liniștea, direcția e pe rândul de dedesubt */
+  assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /structura pe medii: long, tare/, "fisa nu mai e un trend separat, e structura");   /* revizia 2b: lângă direcție, pe rândul de dedesubt */
   assert.equal(c.motive[0].cip.t, "încă nu știm", "„Planul tău”: 9 judecate, sub 10");
 });
 

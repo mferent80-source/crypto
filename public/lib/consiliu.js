@@ -91,6 +91,12 @@ var Consiliu = (function () {
       cand.push({ cod: "stop", nivel: "atentie", c: "r", titlu: pp ? "Stopul e peste plan" + (cost !== null ? ": atins, ≈ −" + Math.round(Math.abs(cost)) + " USDT" : "") : "Botul n-are stop activ în Pionex", text: cs.deCe || cs.act || "", faCe: cs.act || "",
         scurt: pp ? "stopul costă peste plan" : "botul n-are stop", cifre: cs.cifre || null, bani: cs.bani || null });
     }
+    // revizia Opus a 2b (2): trendul pe medii (sfatul „trend”), cand nu e un avertisment, se spune LANGA directia pietei, ca „structura pe
+    // medii” - nu ca sfat separat cu actiunea lui („L-aș lăsa să lucreze” sub „Piața merge împotriva botului” erau doua voci)
+    var tr = sfCod("trend"), di0 = sfCod("directie"), trM = tr ? /\(([^)]*)\)\s*$/.exec(String(tr.titlu)) : null, trTxt = trM ? trM[1] : "";   // „Trendul e cu botul (long, tare)” -> „long, tare”
+    var trPliat = !!(di0 && tr && trTxt && tr.ton !== "atentie" && tr.ton !== "critic");
+    var structura = function (t) { t = String(t || ""); return trPliat ? t.replace(/\.?\s*$/, "") + " (structura pe medii: " + trTxt + ")." : t; };
+    if (trPliat) folosite.trend = 1;
     // 3) sfaturile de atentie / critice care n-au intrat deja
     sf.forEach(function (s) {
       if (!s || folosite[s.cod] || (s.ton !== "atentie" && s.ton !== "critic")) return;
@@ -98,7 +104,7 @@ var Consiliu = (function () {
       if (s.cod === "pericol" && s.tip === "lich" && cand.some(function (m) { return m.cod === "lichidare"; })) return;
       if (cand.some(function (m) { return m.cod === s.cod; })) { folosite[s.cod] = 1; return; }
       folosite[s.cod] = 1;
-      cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.titlu, text: s.text || "", faCe: s.faCe || "",
+      cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.titlu, text: s.cod === "directie" ? structura(s.text) : s.text || "", faCe: s.faCe || "",
         scurt: s.cod === "margine" ? "prețul e lângă marginea de jos" : mic(s.titlu) });
     });
     // 3b) v100.51 (I-477): gridul incheie sub jumatate din perechile pe care le astepta fisa pe istoricul de dinaintea pornirii
@@ -114,16 +120,18 @@ var Consiliu = (function () {
     // v100.65 (el, 02.10: „FA TOT” pe problema (a) din raportul reviziei): motivul VERDE spune doar ce e adevarat - piata linistita,
     // laterala sau cu botul. Directia contra are motivul ei galben (pasul 3), cea amestecata ramane in „Restul” cu titlul ei
     // („Piața dă semnale amestecate”); inainte intrau amandoua aici, sub „Piața e cu botul”. Verdictul nu se schimba (motivul verde nu-l atinge).
-    var li = sfCod("liniste"), di0 = sfCod("directie"), tr = sfCod("trend");
-    var di = di0 && (di0.ton === "bine" || /lateral/i.test(di0.text || "")) ? di0 : null;
+    // revizia Opus a 2b (I1): directia intra in verde DOAR cu tonul „bine” (laterala sau cu botul); „laterală” se citeste din concluzie,
+    // nu din dovezi - amestecata cu un interval lateral iesea verde „Piața e laterală”
+    var li = sfCod("liniste"), di = di0 && di0.ton === "bine" ? di0 : null;
     if (li || di) {
-      var lateral = di && /lateral/i.test(di.text || "");
-      var trM = tr ? /\(([^)]*)\)\s*$/.exec(String(tr.titlu)) : null, trTxt = trM ? trM[1] : "";   // „Trendul e cu botul (long, tare)” -> „long, tare”
+      var lateral = di && /^Piața e laterală/.test(di.rezumat || di.text || "");   // sfaturile vechi (fara „rezumat”) aveau concluzia in text
+      var frDi = di ? structura("Trendul, o singură măsură: " + mic(di.rezumat || di.text || di.titlu)) : "";
       cand.push({ cod: li ? "liniste" : "directie", nivel: "bine", c: "v",
         titlu: "Piața e " + [li ? "liniștită" : null, lateral ? "laterală" : null].filter(Boolean).join(" și ") .replace(/^$/, "cu botul"),
-        text: (li ? li.text + " " : "") + (di ? "Trendul, o singură măsură: " + mic(di.rezumat || di.text || di.titlu) + (trTxt ? " (structura pe medii: " + trTxt + ")" : "") : ""),
+        // revizia Opus a 2b (10): o fraza in text (liniștea SAU directia); cu amandoua, directia pe randul de dedesubt (extra) - ajungea la 249 de caractere
+        text: li ? li.text : frDi, extra: li && di ? frDi : null,
         faCe: (li && li.faCe) || (di && di.faCe) || "" });
-      folosite.liniste = 1; if (di) folosite.directie = folosite.trend = 1;   // v100.65: directia nefolosita aici merge in „Restul”
+      folosite.liniste = 1; if (di) folosite.directie = 1;   // v100.65: directia nefolosita aici merge in „Restul”
     }
     cand.forEach(function (m) { m.cip = cip(soc, m.cod); });
     var rang = { iesi: 0, atentie: 1, bine: 2 };
@@ -155,10 +163,11 @@ var Consiliu = (function () {
     // revizia 02.10: nu se lipeste de o iesire sau de „aș adăuga marjă” (s-ar citi pe dos)
     // v100.65 (minorele amanate): „N-aș închide …” nu e o iesire (pachetul 2, M3); fara al doilea „;” in actiune; cand nu incape, fraza
     // merge la sfarsitul lui „de ce”, si cand acesta e deja ocupat (pachetul 1, M3 - inainte se pierdea fara urma)
-    if (avert.some(function (m) { return m.cod === "margine"; }) && !/n-aș (pune|adăuga|mări)|marjă|(?<!n-aș )închide/i.test(faCe)) {
+    // revizia Opus a 2b (6): fara lookbehind (Safari sub 16.4 nu parseaza tot fisierul) - „n-aș închide” se scoate inainte de test
+    if (avert.some(function (m) { return m.cod === "margine"; }) && !/n-aș (pune|adăuga|mări)|marjă|închide/i.test(String(faCe || "").replace(/n-aș închide/gi, ""))) {
       var cuAdaos = faCe ? faCe.replace(/\.$/, "") + "; " + adaos + "." : mare(adaos) + ".";
       if (cuAdaos.length <= 110 && String(faCe || "").indexOf(";") < 0) faCe = cuAdaos;
-      else explica = (explica ? explica.replace(/\.?\s*$/, ". ") : "") + mare(adaos) + ".";
+      else explica = explica ? explica.replace(/\.?\s*$/, "; ") + adaos + "." : mare(adaos) + ".";   // revizia Opus a 2b (8): o fraza, cu „;”
     }
 
     // banii: pierderea maxima (cartela Stopul) + totalul la marginea de jos
@@ -177,7 +186,7 @@ var Consiliu = (function () {
     var inMotive = {}; motive.forEach(function (m) { inMotive[m.cod] = 1; });
     var rest = [];
     cand.slice(3).forEach(function (m) { rest.push({ titlu: m.titlu, text: m.text }); });
-    sf.forEach(function (s) { if (!s || folosite[s.cod] || inMotive[s.cod] || s.cod === "nimic") return; rest.push({ titlu: s.titlu, text: [s.text, s.faCe ? "👉 " + s.faCe : ""].filter(Boolean).join(" ") }); });
+    sf.forEach(function (s) { if (!s || folosite[s.cod] || inMotive[s.cod] || s.cod === "nimic") return; rest.push({ titlu: s.titlu, text: [s.cod === "directie" ? structura(s.text) : s.text, s.faCe ? "👉 " + s.faCe : ""].filter(Boolean).join(" ") }); });
     (Array.isArray(x.consilier) ? x.consilier : []).forEach(function (k) { if (k && k.titlu) rest.push({ titlu: k.titlu, text: [k.text, k.ceAsFace ? "👉 " + k.ceAsFace : ""].filter(Boolean).join(" ") }); });
     if (x.indicatori) rest.push({ titlu: String(x.indicatori), text: "" });
     if (x.btc) rest.push({ titlu: String(x.btc), text: "" });

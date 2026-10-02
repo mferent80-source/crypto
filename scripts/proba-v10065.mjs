@@ -32,7 +32,8 @@ const sfaturi = (bot, o = {}) => {
   return SF.sfaturi(x);
 };
 const cod = (l, c) => l.find((s) => s.cod === c);
-const R = (d4, d1) => [d4, d1].map((d, i) => ({ tf: i ? "1D" : "4H", eticheta: i ? "1 zi" : "4 ore", dir: d, fata: { ton: d === "coboara" ? "rau" : d === "urca" ? "bine" : "neutru" } }));
+// revizia Opus a 2b (I1): fata de bot din modulul real (lateralul are ton „bine”, nu „neutru” cum il dadea fixtura)
+const R = (d4, d1, dirBot) => [d4, d1].map((d, i) => ({ tf: i ? "1D" : "4H", eticheta: i ? "1 zi" : "4 ore", dir: d, fata: D.fataDeBot(d, dirBot || "long") }));
 
 // ---- sarcina 1: (a) motivul verde al pietei spune doar ce e adevarat ----
 const piata = (d4, d1, fisa) => {
@@ -67,19 +68,20 @@ await test("(a) piața LINIȘTITĂ și contra: verdele spune „Piața e linișt
 // ---- sarcina 2: (b) miscarea cu botul - stopul la zero doar cand zero-ul e de partea care protejeaza ----
 const cuBotul = (bot, zero) => cod(sfaturi(bot, { fisa: FISA({ dir: bot.directie, regim: { r4h: 2.4, r24h: 1.2, miscare: true, sens: bot.directie === "long" ? "urca" : "coboara" }, liniste: FARA_LINISTE }),
   peste: { zero } }), "miscare-cu");
-await test("(b) long pe plus (zero-ul sub preț): stopul la zero", () => {
+// revizia Opus a 2b (4): o singura voce cu semaforul (SemnaleBot.pasiCuBotul) - textele de mai jos sunt ale lui
+await test("(b) long pe plus (zero-ul sub preț), fără stop: stopul la zero", () => {
   const s = cuBotul(CRV({ profitTotal: 2.1 }), { pretZero: 0.38, distantaZeroPct: -0.015 });
-  assert.equal(s && s.faCe, "L-aș lăsa fără bani în plus, cu stopul mutat la zero-ul botului, și aș urmări marginea de sus.");
+  assert.equal(s && s.faCe, "Aș muta stopul la zero-ul botului (0.38), fără bani în plus.");
 });
-await test("(b) long pe minus (zero-ul peste preț): take-profit-ul la zero, nu stopul", () => {
+await test("(b) long pe minus (zero-ul peste preț): fără stop la zero (s-ar executa pe loc)", () => {
   const s = cuBotul(CRV(), { pretZero: 0.3925, distantaZeroPct: 0.0174 });
-  assert.equal(s && s.faCe, "L-aș lăsa fără bani în plus, cu take-profit-ul la zero-ul botului, și aș urmări marginea de sus.");
+  assert.equal(s && s.faCe, "L-aș lăsa să lucreze, fără bani în plus.");
 });
-await test("(b) short pe minus (zero-ul sub preț): take-profit-ul la zero; short pe plus: stopul; fără zero: fără stop", () => {
+await test("(b) short pe minus (zero-ul sub preț): fără stop; short pe plus: stopul la zero; fără zero: fără stop", () => {
   const sh = CRV({ directie: "short" });
-  assert.equal(cuBotul(sh, { pretZero: 0.38, distantaZeroPct: -0.015 }).faCe, "L-aș lăsa fără bani în plus, cu take-profit-ul la zero-ul botului, și aș urmări marginea de jos.");
-  assert.equal(cuBotul(sh, { pretZero: 0.3925, distantaZeroPct: 0.0174 }).faCe, "L-aș lăsa fără bani în plus, cu stopul mutat la zero-ul botului, și aș urmări marginea de jos.");
-  assert.equal(cuBotul(CRV(), null).faCe, "L-aș lăsa fără bani în plus și aș urmări marginea de sus.");
+  assert.equal(cuBotul(sh, { pretZero: 0.38, distantaZeroPct: -0.015 }).faCe, "L-aș lăsa să lucreze, fără bani în plus.");
+  assert.equal(cuBotul(sh, { pretZero: 0.3925, distantaZeroPct: 0.0174 }).faCe, "Aș muta stopul la zero-ul botului (0.3925), fără bani în plus.");
+  assert.equal(cuBotul(CRV(), null).faCe, "L-aș lăsa să lucreze, fără bani în plus.");
 });
 
 // ---- sarcina 3: funding-ul - intervalul real si botul neutru ----
@@ -145,10 +147,86 @@ await test("(pachetul 1, M4) banii stopului cu stopul PE PLUS: semnul nu se pier
     bani: { stop: { laPropus: -21, laOpritor: 2.4, frecventa: 0.3 } } }).find((x) => x.cod === "stop");
   assert.equal(k && k.bani, "💰 Stopul tău închide pe plus (+2,4 USDT), mai bine decât cel propus (−21,0 USDT): l-aș lăsa unde e.");
 });
-await test("(pachetul 2, M4) acțiunea trendului contra: condiția măsurabilă de dinainte („tare” și pe 1 zi)", () => {
+await test("(pachetul 2, M4) acțiunea trendului contra: condiția măsurabilă (tăria trendului; revizia 2b: nu „tare pe 1 zi”)", () => {
   const s = cod(sfaturi(CRV(), { fisa: FISA({ directie: { dir: "short", tarie: "mediu", motive: ["4h: EMA20 sub EMA50"] }, liniste: FARA_LINISTE }) }), "trend");
-  assert.equal(s && s.faCe, "N-aș adăuga bani; dacă e „tare” și pe 1 zi, aș închide botul lângă zero și aș porni din fișă unul pe trend.");
+  assert.equal(s && s.faCe, "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.");
   assert.ok(s.faCe.length <= 110, s.faCe.length);
+});
+
+// ---- revizia Opus a 2b (02.10): reparatiile ----
+const verzi = (c) => c.motive.filter((m) => m.c === "v").map((m) => m.titlu);
+await test("revizia 2b (I1): piața amestecată cu un interval lateral nu mai e verde („Piața e laterală”); lateral + coboară și coboară + lateral merg în „Restul”", () => {
+  for (const [a, b2] of [["lateral", "coboara"], ["coboara", "lateral"]]) {
+    const c = piata(a, b2);
+    assert.deepEqual(verzi(c), [], a + "+" + b2 + ": " + verzi(c).join(" | "));
+    assert.ok(c.rest.some((x) => x.titlu === "Piața dă semnale amestecate"), a + "+" + b2 + ": " + c.rest.map((x) => x.titlu).join(" | "));
+  }
+});
+await test("revizia 2b (I1): „laterală” vine din concluzie - urcă + lateral = „Piața e cu botul”, lateral + lateral = „Piața e laterală”", () => {
+  assert.deepEqual(verzi(piata("urca", "lateral")), ["Piața e cu botul"]);
+  assert.deepEqual(verzi(piata("lateral", "lateral")), ["Piața e laterală"]);
+});
+await test("revizia 2b (2): pe piața contra, trendul „cu botul” nu mai apare singur în „Restul” cu „L-aș lăsa să lucreze”; structura stă lângă direcție", () => {
+  const c = piata("coboara", "coboara");
+  assert.ok(!c.rest.some((x) => /^Trendul e cu botul/.test(x.titlu)), c.rest.map((x) => x.titlu).join(" | "));
+  const m = c.motive.find((x) => x.titlu === "Piața merge împotriva botului");
+  assert.ok(m && /\(structura pe medii: long, mediu\)\.$/.test(m.text), m && m.text);
+});
+await test("revizia 2b (10): motivul verde cu liniștea și direcția - o frază ≤ 160 în text, direcția pe rândul de dedesubt", () => {
+  const c = piata("lateral", "lateral", FISA()), m = c.motive.find((x) => x.c === "v");
+  assert.ok(m, verzi(c).join(" | "));
+  assert.ok(m.text.length <= 160 && !/\.\s+[A-ZĂÂÎȘȚ]/.test(m.text), m.text.length + ": " + m.text);
+  assert.match(m.extra || "", /^Trendul, o singură măsură: piața e laterală/);
+});
+await test("revizia 2b (3): intervalul funding-ului urmează schimbarea (ultimele două la 1 oră ⇒ „la o oră”); 16 h din două rate ⇒ 8 ore", () => {
+  const h = ist(8, 20).concat([1, 2, 3].map((k) => ({ fundingTime: T0 + k * ORA, fundingRate: "0.0008" })));
+  assert.equal(cod(sfaturi(CRV(), { funding: 0.0008, fundingHist: h }), "funding").titlu, "Funding-ul: 0,080% la o oră, îl plătești");
+  assert.equal(cod(sfaturi(CRV(), { funding: 0.0008, fundingHist: [{ fundingTime: T0 - 16 * ORA }, { fundingTime: T0 }] }), "funding").titlu, "Funding-ul: 0,080% la 8 ore, îl plătești");
+});
+await test("revizia 2b (4): mișcarea cu botul - o singură voce cu semaforul (pasiCuBotul): stopul deja dincolo de zero nu mai e „mutat la zero”", () => {
+  const f = FISA({ regim: { r4h: 2.4, r24h: 1.2, miscare: true, sens: "urca" }, liniste: FARA_LINISTE }), z = { pretZero: 0.38, distantaZeroPct: -0.015 };
+  for (const b of [CRV({ profitTotal: 2.1 }), CRV({ profitTotal: 2.1, opritorPierdereActiv: true, opritorPierdere: 0.381 }), CRV()]) {
+    const zz = b.profitTotal > 0 ? z : { pretZero: 0.3925, distantaZeroPct: 0.0174 };
+    assert.equal(cod(sfaturi(b, { fisa: f, peste: { zero: zz } }), "miscare-cu").faCe, S.pasiCuBotul(b, "long", zz).faCe);
+  }
+  assert.match(cod(sfaturi(CRV({ profitTotal: 2.1, opritorPierdereActiv: true, opritorPierdere: 0.381 }), { fisa: f, peste: { zero: z } }), "miscare-cu").faCe, /e deja dincolo de zero/);
+});
+await test("revizia 2b (5): prețurile între 0,01 și 0,1 cu 4 cifre semnificative (0.01235); avertismentele serverului fără exponent; garda prinde exponentul", async () => {
+  assert.equal(cod(sfaturi(CRV(), { peste: { zero: { pretZero: 0.012347, distantaZeroPct: 0.02 } } }), "zero").titlu, "Botul iese pe zero la 0.01235 (+2,0% de aici)");
+  const { avertismenteBot } = await import(new URL("../functions/_shared/avertismente.js", import.meta.url).href);
+  const t = avertismenteBot({ x: {}, pret: 1.234e-7, jos: 1e-7, sus: 1.2e-7, lich: { pretLichidare: 9.87e-8, lichidarePartea: "jos", distantaLichidarePct: 11, lichidareDepasita: false }, comisioane: null, gridProfitBrut: null, profitNet: null }).join(" | ");
+  assert.ok(!/\de[-+]?\d/.test(t), t);
+  const G = await import(new URL("./garda-texte.mjs", import.meta.url).href);
+  assert.ok(G.verifica("Prețul 1.234e-7 a ieșit din grid.", "rand").some((a) => /exponent/.test(a)));
+});
+await test("revizia 2b (6): niciun lookbehind (?<…) în codul încărcat de browser (Safari vechi nu-l parsează)", () => {
+  for (const f of fs.readdirSync(path.join(RAD, "public", "lib")).filter((x) => x.endsWith(".js")).map((x) => path.join("public", "lib", x)).concat([path.join("public", "app.js")]))
+    assert.ok(!/\(\?<[!=]/.test(citeste(f)), f);
+});
+await test("revizia 2b (7): acțiunea trendului contra după tăria lui (nu „tare pe 1 zi”), aceeași în sfat și în semafor", () => {
+  const tr = (t) => cod(sfaturi(CRV(), { fisa: FISA({ directie: { dir: "short", tarie: t, motive: ["4h: EMA20 sub EMA50"] }, liniste: FARA_LINISTE }) }), "trend").faCe;
+  assert.equal(tr("mediu"), "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.");
+  assert.equal(tr("tare"), "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend.");
+  const k = (t) => (S.semafor({ bot: CRV(), fisa: FISA({ directie: { dir: "short", tarie: t, motive: [] }, liniste: FARA_LINISTE }) }).componente || []).find((x) => x.cod === "trend");
+  assert.equal(k("mediu") && k("mediu").faCe, tr("mediu")); assert.equal(k("tare") && k("tare").faCe, tr("tare"));
+});
+await test("revizia 2b (8, 9): „n-aș pune bani” lipit cu „;” (o frază); stopul exact pe zero = „fără pierdere”, nu „pe plus (0,0)”", () => {
+  const stop = { cod: "stop", tag: { c: "bad", t: "peste plan" }, atins: -123456789, cifre: { frecventa: 0.6, laOpritor: -123456789, pretPropus: 12000, laPropus: -7.6 }, deCe: "Stopul e prea departe.", act: "Aș muta stopul." };
+  const c = C.alcatuieste({ sm: { nivel: "atentie", cod: "x", motiv: "Stopul", faCe: "", componente: [] }, concret: [stop], sfaturi: [margine], opritor: 12345.68 });
+  assert.ok(/; n-aș pune bani în plus cât stă lângă margine\.$/.test(c.explica || "") && !/\.\s+[A-ZĂÂÎȘȚ]/.test(c.explica), c.explica);
+  const k = S.acumConcret({ bot: CRV({ opritorPierdereActiv: true, opritorPierdere: 0.36 }), fisa: FISA(), zero: null, costuri: null, plan: null, acum: T0,
+    bani: { stop: { laPropus: -21, laOpritor: 0, frecventa: 0.3 } } }).find((x) => x.cod === "stop");
+  assert.equal(k && k.bani, "💰 Stopul tău închide fără pierdere, mai bine decât cel propus (−21,0 USDT): l-aș lăsa unde e.");
+});
+await test("revizia 2b (10): regula „(k din n)” - fiecare frecvență cu marcajul ei, și „(k din n, …)” nu mai scapă", async () => {
+  const G = await import(new URL("./garda-texte.mjs", import.meta.url).href), are = (t) => G.verifica(t, "deCe").some((a) => /puține cazuri/.test(a));
+  assert.ok(are("A: 19% (3 din 13, puține cazuri); B: 23% (2 din 11)."), "B n-are marcajul lui");
+  assert.ok(are("Liniștea a ținut în 23% din cazuri (3 din 13, ultimele 30 de zile)."), "„(k din n, …)” scăpa");
+  assert.ok(!are("Atinge marginea în 19% din situații (78 din 406, ca acum)."));
+});
+await test("revizia 2b (10): garda verifică și motivul verde al pieței (Consilierul cu direcția)", async () => {
+  const G = await import(new URL("./garda-texte.mjs", import.meta.url).href);
+  assert.ok(G.situatii().some((x) => x.mod === "consiliu-2" && /^consiliu\.motiv\d\.(liniste|directie)\.(text|extra)$/.test(x.sursa) && /Trendul, o singură măsură/.test(x.text)), "lipsește motivul verde CU direcția în garda consiliu-2");
 });
 
 // ---- sarcina 6: garda pe forme reale (ideea 4, M2 din revizia pachetului 2) ----

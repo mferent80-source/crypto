@@ -92,7 +92,7 @@ var SemnaleBot = (function () {
     var U2 = function (v) { return TextRo.usdt(v, 1); }, t = [];
     // opritorul LUI e deja mai strans decat propunerea -> nu-l impinge spre un stop mai larg (prins pe viu pe CRV: −10,2 vs −21,0)
     // v100.65 (pachetul 1, M4): stopul PE PLUS nu „pierde cel mult” - semnul ramane la vedere
-    if (nr(st.laPropus) !== null && nr(st.laOpritor) !== null && nr(st.laOpritor) >= 0 && nr(st.laOpritor) > nr(st.laPropus)) return "💰 Stopul tău închide pe plus (" + U2(nr(st.laOpritor)) + "), mai bine decât cel propus (" + U2(nr(st.laPropus)) + "): l-aș lăsa unde e.";
+    if (nr(st.laPropus) !== null && nr(st.laOpritor) !== null && nr(st.laOpritor) >= 0 && nr(st.laOpritor) > nr(st.laPropus)) return "💰 Stopul tău închide " + (nr(st.laOpritor) > 0 ? "pe plus (" + U2(nr(st.laOpritor)) + ")" : "fără pierdere") + ", mai bine decât cel propus (" + U2(nr(st.laPropus)) + "): l-aș lăsa unde e.";   // revizia 2b (9): exact pe zero
     if (nr(st.laPropus) !== null && nr(st.laOpritor) !== null && nr(st.laOpritor) > nr(st.laPropus)) return "💰 Stopul tău pierde cel mult " + TextRo.num(Math.abs(nr(st.laOpritor)), 1) + " USDT, mai puțin decât cel propus (" + TextRo.num(Math.abs(nr(st.laPropus)), 1) + " USDT): l-aș lăsa unde e.";
     if (nr(st.laPropus) !== null) t.push("💰 Pierderea maximă: " + (nr(st.laOpritor) !== null ? U2(nr(st.laOpritor)) + " cu stopul de acum" : "fără margine (n-ai stop activ)") + " → " + U2(nr(st.laPropus)) + " cu cel propus");
     if (nr(st.frecventa) !== null) t.push("ce cedezi: o zi obișnuită a monedei ajunge acolo în " + Math.round(nr(st.frecventa) * 100) + "% din zile");
@@ -324,7 +324,8 @@ var SemnaleBot = (function () {
     }
     var d = f && f.directie;
     if (d && (dir === "long" || dir === "short") && (d.tarie === "tare" || d.tarie === "mediu") && ((dir === "long" && d.dir === "short") || (dir === "short" && d.dir === "long")))
-      c.push({ nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (" + d.dir + ", " + d.tarie + ")", faCe: "N-aș adăuga bani; dacă e „tare” și pe 1 zi, aș închide botul lângă zero și aș porni din fișă unul pe trend." });   // v100.65: aceeasi voce cu sfatul (conditia masurabila)
+      c.push({ nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (" + d.dir + ", " + d.tarie + ")", faCe: d.tarie === "tare" ? "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend."
+        : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend." });   // revizia Opus a 2b (7): aceeasi voce cu sfatul, dupa tarie
     var sf = f && f.regim ? sensFata(b, f.regim) : null, xMis = f && f.regim ? X(Math.max(f.regim.r4h || 0, f.regim.r24h || 0)) : "";
     if (f && f.regim && f.regim.miscare && sf !== "cu") c.push({ nivel: "atentie", cod: "miscare", motiv: "mișcare mare" + (sf === "contra" ? " împotriva botului" : "") + " (" + xMis + " față de obișnuit)", faCe: "N-aș adăuga bani acum; l-aș lăsa cât lichidarea e departe." });
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";

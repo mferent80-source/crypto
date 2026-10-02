@@ -10,8 +10,10 @@ const toate=(...a)=>a.every(x=>x!==null);
 const virgula=s=>String(s).replace(".",",");
 // suma cu semn si virgula („+10,91”, „−0,0040”), ca TextRo.usdt (TextRo e doar in pagina si in colector)
 const usdt=v=>{const a=Math.abs(v),s=a.toFixed(a>0&&a<0.01?4:2);return (Number(s)===0?"":v<0?"−":"+")+virgula(s)};
+// revizia Opus a 2b (5): fara exponent („1.234e-7”) - sub 0,000001 cu toFixed, ~5 cifre semnificative, fara zerourile de la coada
+const faraExp=v=>{if(typeof v!=="number"||!Number.isFinite(v))return String(v);const s=String(v);if(!/e/i.test(s))return s;const a=Math.abs(v);return a===0?"0":v.toFixed(Math.min(20,4-Math.floor(Math.log10(a)))).replace(/0+$/,"").replace(/\.$/,"")};
 // pretul calculat (lichidarea estimata): ~5 cifre semnificative, ca preturile Pionex; peste 1000, 2 zecimale
-const pretScurt=v=>v===null||v===undefined||!Number.isFinite(v)?"—":Math.abs(v)>=1000?v.toFixed(2):String(Number(v.toPrecision(5)));
+const pretScurt=v=>v===null||v===undefined||!Number.isFinite(v)?"—":Math.abs(v)>=1000?v.toFixed(2):faraExp(Number(v.toPrecision(5)));
 
 export function avertismenteBot(o){
   const {x,pret,jos,sus,lich,comisioane,gridProfitBrut,profitNet}=o;
@@ -22,9 +24,9 @@ export function avertismenteBot(o){
   if(!nr(x.profitStop)&&!nr(x.lossStop))avertismente.push("Botul n-are nici stop, nici țintă în Pionex.");
   if(pret&&jos&&sus&&(pret<jos||pret>sus))
     // revizia Opus (I1, 02.10): „a ieșit din grid” ca alerta colectorului si sfatul „pericol” - in „Ce ai de făcut acum” un singur rand
-    avertismente.push(`Prețul ${pret} a ieșit din grid pe ${pret<jos?"jos":"sus"} (${jos}–${sus}): botul nu mai face perechi cât stă afară.`);
+    avertismente.push(`Prețul ${faraExp(pret)} a ieșit din grid pe ${pret<jos?"jos":"sus"} (${faraExp(jos)}–${faraExp(sus)}): botul nu mai face perechi cât stă afară.`);
   if(lich.lichidareDepasita)
-    avertismente.push(`Lichidarea estimată (${pretScurt(lich.pretLichidare)}, partea de ${lich.lichidarePartea}) e depășită la prețul ${pret}: aș verifica botul în Pionex.`);
+    avertismente.push(`Lichidarea estimată (${pretScurt(lich.pretLichidare)}, partea de ${lich.lichidarePartea}) e depășită la prețul ${faraExp(pret)}: aș verifica botul în Pionex.`);
   else if(lich.distantaLichidarePct!==null&&lich.distantaLichidarePct<15)
     avertismente.push(`Lichidarea la ${virgula(lich.distantaLichidarePct.toFixed(1))}% (${pretScurt(lich.pretLichidare)}, partea de ${lich.lichidarePartea}).`);
   // Comisioanele sunt de vina DOAR cand chiar depasesc castigul din grid.

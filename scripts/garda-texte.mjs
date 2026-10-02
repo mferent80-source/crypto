@@ -48,6 +48,7 @@ export const INTERZIS = [
   [/s-a apropiat|a ajuns să/, "umplutură („s-a apropiat”, „a ajuns să”)"],
   [/frecvență din trecut|nu o promisiune|un semn, nu o regulă|nu o dovadă/i, "avertizarea comună (locul ei e în legendă)"],
   [/ÎMPOTRIVA|\bSUB gridul|\bPESTE gridul/, "majuscule de strigat"],
+  [/\d(\.\d+)?e[-+]?\d/, "număr cu exponent"],   // revizia Opus a 2b (5): „1.234e-7”
 ];
 const norm = (s) => String(s || "").toLowerCase().replace(/[0-9.,%×−+()·:;—"„”≈~]/g, " ").replace(/\s+/g, " ").trim();
 // abaterile unui text; frate = titlul aceluiasi sfat (explicatia / actiunea nu-l repeta)
@@ -71,7 +72,8 @@ export function verifica(text, tip, frate) {
   if (r.rand) t.split("\n").forEach((l, i) => { if (l.length > r.rand) ab.push("rândul " + (i + 1) + " lung: " + l.length + " > " + r.rand); });
   if (r.strigat && /\b(DEPĂȘITĂ|STINS|IEȘI|CU|NU|NEOBIȘNUIT|ATENȚIE)\b/.test(t)) ab.push("majuscule de strigat");
   // v100.65 (M2 din revizia pachetului 2): o frecvență „(k din n)” cu n sub 30 poartă „puține cazuri” (pragul scenariului: 30)
-  for (const m of t.matchAll(/\((\d+) din (\d+)(?![\d.,])/g)) if (Number(m[2]) < 30 && !/puține cazuri/.test(t)) { ab.push("frecvență pe " + m[2] + " cazuri fără „puține cazuri”"); break; }
+  // revizia Opus a 2b (10): marcajul se cauta in ACEEASI paranteza (altfel il „imprumuta” de la alta frecventa), iar „(k din n, …)” nu mai scapa
+  for (const m of t.matchAll(/\((\d+) din (\d+)(?!\d|[.,]\d)([^)]*)\)/g)) if (Number(m[2]) < 30 && !/puține cazuri/.test(m[3])) { ab.push("frecvență pe " + m[2] + " cazuri fără „puține cazuri”"); break; }
   return ab;
 }
 
@@ -272,6 +274,12 @@ export function situatii() {
   cons2("CRV lângă marginea de jos + mută gridul (sfatul real)", { sm: S.semafor({ bot: crvM, fisa: fisa(), muta: S.mutaGridul(crvM, fisa(), 0, PM) }), concret: [], sfaturi: sf("(pentru Consilier) CRV lângă margine", crvM) });
   cons2("primul motiv vine din sfaturi (ritmul + funding-ul)", { sm: S.semafor({ bot: jtoR, fisa: fisa() }), concret: [],
     sfaturi: sf("(pentru Consilier) ritmul + funding-ul", cuBrut(JTO({ distantaLichidarePct: 30, finantare: -0.04 })), { funding: 0.0008, peste: { ritm: { grile24h: 0.1, medieZi: 1.2, tranz24h: 2, tranzMedieZi: 14, zile: 4 } } }) });
+  // revizia Opus a 2b (10): Consilierul CU directia pietei (rezumatul real din Directie) - motivul verde, cel galben, „Restul”
+  const RZ = (d4, d1) => DR.rezumat([d4, d1].map((d, i) => ({ tf: i ? "1D" : "4H", eticheta: i ? "1 zi" : "4 ore", dir: d, fata: DR.fataDeBot(d, "long") })), "long");
+  const crvP = CRV({ distantaLichidarePct: 30, pretCurent: 0.41 });
+  for (const [sit, d4, d1] of [["piața liniștită și laterală (motivul verde cu direcția)", "lateral", "lateral"], ["piața cu botul", "urca", "urca"],
+    ["piața contra botului (motivul galben, cu structura pe medii)", "coboara", "coboara"], ["piața amestecată, un interval lateral (în „Restul”)", "lateral", "coboara"]])
+    cons2(sit, { sm: S.semafor({ bot: crvP, fisa: fisa() }), concret: [], sfaturi: sf("(pentru Consilier) " + sit, crvP, { rezumat: RZ(d4, d1) }) });
   cons2("verdictul vechi: lichidarea depășită", { sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa: fisa() }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Prețul a trecut deja de pragul de lichidare cu 1.2%." } });
   cons2("verdictul vechi: Pionex MARGIN_CALL", { sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa: fisa() }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Pionex raportează marginea contului ca MARGIN_CALL, nu NORMAL." } });
   // avertismentele serverului (functions/_shared/avertismente.js): randurile de sus din „Ce ai de făcut acum” si lista botilor

@@ -19,7 +19,8 @@ var Sfaturi = (function () {
   // v100.62: cifrele prin TextRo (virgula, minusul „−”); preturile raman cu zecimalele lor
   function usdt(v) { return v === null || v === undefined ? "—" : TextRo.usdt(v); }
   // v100.65 (ideea 3): sub 0,01 - 4 cifre semnificative (PUMP 0.004123, nu 0.0041), fara exponent; peste 0,01 - ca inainte
-  function pret(v) { if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 0.01 || a === 0 ? 4 : Math.min(12, 3 - Math.floor(Math.log10(a)))); }
+  // revizia Opus a 2b (5): de la 0,1 in jos (nu 0,01) - intre 0,01 si 0,1 pierdea o cifra fata de Consilier („0.0123” vs „0.01235”)
+  function pret(v) { if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 0.1 || a === 0 ? 4 : Math.min(12, 3 - Math.floor(Math.log10(a)))); }
   function proc(v, z) { return TextRo.pctSemn(v, z == null ? 1 : z); }
   function mare(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
   function frecventa(s, ce) {
@@ -76,23 +77,24 @@ var Sfaturi = (function () {
         // v100.62: textul = masuratoarea; ce face gridul contra trendului si „nu spune încotro merge” stau in legenda Consilierului
         text: d.motive && d.motive.length ? d.motive.join(" · ") + "." : "",
         sursa: "EMA20/EMA50 și structura pe 4 h, EMA pe 1 zi, pe bare închise.",
-        // v100.65 (pachetul 2, M4): conditia masurabila de dinainte de v100.62 („Dacă se face și «tare» pe 1z”), nu „dacă se întărește”
-        faCe: contra ? "N-aș adăuga bani; dacă e „tare” și pe 1 zi, aș închide botul lângă zero și aș porni din fișă unul pe trend."
+        // v100.65 (pachetul 2, M4) + revizia Opus a 2b (7): conditia dupa taria trendului („tare” e scorul comun 4 h + 1 zi + structura,
+        // nu exista „tare pe 1 zi”); aceeasi in semafor (o singura voce)
+        faCe: contra ? (d.tarie === "tare" ? "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend."
+            : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.")
           : cu ? "L-aș lăsa să lucreze." : "L-aș lăsa să facă perechi: lateral e bine pentru un grid." });
     }
 
     // B) Regimul acum: miscare mare vs liniste (cu frecventa "cat mai tine").
     var rg = fisa && fisa.regim;
     var cuB = rg && rg.miscare && rg.sens && (dirBot === "long" || dirBot === "short") && (dirBot === "long") === (rg.sens === "urca");
-    var dzMc = x.zero && x.zero.distantaZeroPct != null ? nr(x.zero.distantaZeroPct) : null, zeroMc = dzMc === null ? null : dirBot === "long" ? dzMc < 0 : dzMc > 0;
     if (cuB && rg.r4h != null && rg.r24h != null) {
       out.push({ cod: "miscare-cu", ton: "bine", titlu: "Mișcare cu botul: " + X(rg.r4h) + " obișnuitul (4 h), " + X(rg.r24h) + " (24 h)",
         text: "Prețul merge în direcția botului: grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum și poziția scade.",
         sursa: "Pe 40 de monede (27.09), după o mișcare cu botul, 59% din ferestre au ieșit pe plus (contra 50%, în liniște 56%).",
-        // v100.65 (el, 02.10: „FA TOT” pe problema (b)): stopul la zero doar cand zero-ul e de partea care protejeaza (long: sub pret,
-        // short: peste); pe minus zero-ul e dincolo de pret si un stop acolo s-ar executa pe loc (clasa v100.40) -> take-profit-ul la zero
-        faCe: "L-aș lăsa fără bani în plus" + (zeroMc === null ? " și" : zeroMc ? ", cu stopul mutat la zero-ul botului, și" : ", cu take-profit-ul la zero-ul botului, și") +
-          " aș urmări marginea " + (dirBot === "long" ? "de sus" : "de jos") + "." });
+        // v100.65 (problema b) + revizia Opus a 2b (4): O SINGURA VOCE cu semaforul (SemnaleBot.pasiCuBotul) - stopul la zero doar pe plus
+        // si doar daca stopul de acum nu e deja dincolo de zero (altfel l-ar fi slabit); pe minus fara stop (take-profit-ul il spune sfatul „zero”)
+        faCe: typeof SemnaleBot !== "undefined" && SemnaleBot.pasiCuBotul ? SemnaleBot.pasiCuBotul(b, dirBot, x.zero).faCe
+          : "L-aș lăsa să lucreze, fără bani în plus, și aș urmări marginea " + (dirBot === "long" ? "de sus" : "de jos") + "." });
     } else if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
       // revizia Opus (I1, 02.10): „Mișcare mare …” ca alerta colectorului („mișcare mare împotriva botului”) - in „Ce ai de făcut acum”
       // se recunosc ca acelasi lucru (un rand, nu doua); multiplul pe 24 h trece in text, ca titlul sa ramana ≤ 60 si la 10×
@@ -174,7 +176,7 @@ var Sfaturi = (function () {
       var dirF = String(b.directie || "").toLowerCase(), neutru = dirF !== "long" && dirF !== "short";
       var platesti = (dirF === "long" && f > 0) || (dirF === "short" && f < 0);
       out.push({ cod: "funding", ton: platesti && Math.abs(f) >= 0.0005 ? "atentie" : "info",
-        titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + (nr(x.fundingOre) || 8) + " ore, " + (neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi"),
+        titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + ((nr(x.fundingOre) || 8) === 1 ? "o oră" : (nr(x.fundingOre) || 8) + " ore") + ", " + (neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi"),
         text: mare((nr(b.finantare) === null ? "" : "până acum botul a " + (nr(b.finantare) < 0 ? "plătit " : "primit ") + TextRo.num(Math.abs(nr(b.finantare)), 2) + " USDT; ") +
           (neutru ? "botul neutru îl plătește cât e net " + (f > 0 ? "long și îl încasează cât e net short." : "short și îl încasează cât e net long.")
             : platesti ? "la rata asta plătești din câștigul grilelor." : "la rata asta încasezi peste câștigul grilelor.")),
@@ -194,14 +196,18 @@ var Sfaturi = (function () {
   // o = { bot, k4 (lumanarile de 4 h), fata4h, dir4h, funding (rata Binance), fisa, rezumat (directia pe mai multe intervale - doar Tabloul), acum }
   // v100.65 (ideea 2 din raportul reviziei): intervalul funding-ului din istoria ratelor Binance (fundingTime) - diferenta cea mai
   // des intalnita, rotunjita la ora, intre 1 si 24 (o istorie neordonata sau cu un gol nu da 0 sau 16 h); fara istorie -> null (titlul zice 8)
+  // revizia Opus a 2b (3): ULTIMA diferenta, daca o confirma penultima (Binance scurteaza intervalul tocmai cand rata e extrema - moda
+  // ramanea pe „8 ore” inca ~60 h), altfel cea mai des intalnita; doar intervalele Binance (1, 2, 4, 8 h) - doua rate la 16 h nu dau „16”
+  var ORE_FUNDING = { 1: 1, 2: 1, 4: 1, 8: 1 };
   function oreFunding(h) {
     if (!Array.isArray(h) || h.length < 2) return null;
     var t = h.map(function (r) { return nr(r && r.fundingTime); }).filter(function (v) { return v !== null; }).sort(function (a, c) { return a - c; });
+    var d = [];
+    for (var i = 1; i < t.length; i++) { var o = Math.round((t[i] - t[i - 1]) / 3600000); d.push(ORE_FUNDING[o] ? o : null); }
+    var k = d.length;
+    if (k >= 2 && d[k - 1] !== null && d[k - 1] === d[k - 2]) return d[k - 1];
     var n = {}, best = null;
-    for (var i = 1; i < t.length; i++) {
-      var o = Math.round((t[i] - t[i - 1]) / 3600000);
-      if (o >= 1 && o <= 24) { n[o] = (n[o] || 0) + 1; if (best === null || n[o] > n[best]) best = o; }
-    }
+    d.forEach(function (x) { if (x !== null) { n[x] = (n[x] || 0) + 1; if (best === null || n[x] > n[best]) best = x; } });
     return best;
   }
   function intrare(o) {
