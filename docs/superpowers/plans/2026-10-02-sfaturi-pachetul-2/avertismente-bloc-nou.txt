@@ -1,0 +1,19 @@
+  const avertismente=[];
+  // v100.62 (specul „sfaturi concise”, pachetul 2): aceleasi conditii, scrise concis - „stop / țintă”, virgula, fara majuscule de
+  // strigat, pretul lichidarii rotunjit (venea cu 16 zecimale); avertismentul lichidarii incepe ca alerta colectorului („Lichidarea la …”),
+  // ca in „Ce ai de făcut acum” s-o inghita pe ea (un rand, nu doua)
+  if(!nr(x.profitStop)&&!nr(x.lossStop))avertismente.push("Botul n-are nici stop, nici țintă în Pionex.");
+  if(pret&&jos&&sus&&(pret<jos||pret>sus))
+    avertismente.push(`Prețul ${pret} e ${pret<jos?"sub":"peste"} grid (${jos}–${sus}): botul nu mai face perechi cât stă afară.`);
+  if(lich.lichidareDepasita)
+    avertismente.push(`Lichidarea estimată (${pretScurt(lich.pretLichidare)}, partea de ${lich.lichidarePartea}) e depășită la prețul ${pret}: aș verifica botul în Pionex.`);
+  else if(lich.distantaLichidarePct!==null&&lich.distantaLichidarePct<15)
+    avertismente.push(`Lichidarea la ${virgula(lich.distantaLichidarePct.toFixed(1))}% (${pretScurt(lich.pretLichidare)}, partea de ${lich.lichidarePartea}).`);
+  // Comisioanele sunt de vina DOAR cand chiar depasesc castigul din grid.
+  if(toate(comisioane,gridProfitBrut)&&comisioane!==0&&Math.abs(comisioane)>gridProfitBrut)
+    avertismente.push(`Comisioanele (${usdt(comisioane)} USDT) depășesc câștigul grilelor (${usdt(gridProfitBrut)} USDT).`);
+  else if(profitNet!==null&&profitNet<0&&gridProfitBrut!==null&&gridProfitBrut>0){
+    const rest=comisioane!==null?profitNet-gridProfitBrut-comisioane:null;
+    avertismente.push(rest!==null?`Grilele câștigă (${usdt(gridProfitBrut)} USDT), dar poziția și funding-ul (${usdt(rest)}) și comisioanele (${usdt(comisioane)}) duc botul pe minus.`
+      :`Grilele câștigă (${usdt(gridProfitBrut)} USDT), dar botul e pe minus (comisioanele nu se știu).`);
+  }

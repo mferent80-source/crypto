@@ -1,0 +1,2 @@
+const ban=v=>{const a=Math.abs(v);return a.toFixed(a>0&&a<0.01?4:2)};
+const semn=v=>(v<0?"−":"+")+ban(v);
