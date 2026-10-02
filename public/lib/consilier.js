@@ -9,7 +9,9 @@ var Consilier = (function () {
   var ZI = 86400000, COST_CONV = 0.003, ORDINE = { r: 0, g: 1, n: 2, v: 3 };
   function P(x, z) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(z === undefined ? 1 : z).replace(".", ",") + "%"; }
   function L(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x)).toLocaleString("ro-RO") + " lei"; }
-  function U(x) { return x === null || x === undefined || !isFinite(x) ? "—" : "$" + x.toFixed(2).replace(".", ","); }
+  function U(x) { return AS.usd(x); }   // v100.69: pretul ca pe pagina T212 („$33.00”), nu „$33,00”
+  // v100.69: „6 trade-uri”, „60 de trade-uri” (de: ultimele doua cifre 20–99 sau 00)
+  function nde(n, cuv) { var r = n % 100; return n + (r >= 20 || (r === 0 && n >= 100) ? " de " : " ") + cuv; }
   function ultima(b) { return Array.isArray(b) && b.length ? b[b.length - 1] : null; }
   function stat(l) {
     var n = l.length, plus = 0, tot = 0; l.forEach(function (t) { tot += t.rezultat || 0; if (t.rezultat > 0) plus++; });
@@ -46,9 +48,11 @@ var Consilier = (function () {
     var acum = ctx.acum || Date.now(), out = [], inch = Array.isArray(ctx.inchise) ? ctx.inchise : [];
     // 1) istoricul lui pe acelasi simbol
     var ist = stat(inch.filter(function (t) { return t.ticker === p.ticker; }));
+    // v100.69 (sfaturile concise, pachetul 4): titlul ≤ 60 (sursa „istoricul tău” e eticheta lui pe pagina), „(puține cazuri)” in locul
+    // avertizarii comune (ea sta in legenda), actiunea la persoana I
     if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric",
-      titlu: "Istoricul tău pe " + p.simbol + ": " + ist.n + " trade-uri, " + ist.pePlus + " pe plus, total " + L(ist.total),
-      text: ist.n < 10 ? "puține cazuri — un semn, nu o regulă" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "Pe " + p.simbol + " ai pierdut de obicei: n-aș adăuga." : null });
+      titlu: "Pe " + p.simbol + ": " + nde(ist.n, "trade-uri") + ", " + ist.pePlus + " pe plus, total " + L(ist.total),
+      text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș adăuga pe " + p.simbol + ": de obicei ai pierdut pe ea." : null });
     // 2) zona de tinut in care pierde (1-4 saptamani), cand pozitia e pe minus si a intrat in ea
     var zile = p.de > 0 ? (acum - p.de) / ZI : null;
     if (p.pctLei !== null && p.pctLei < 0 && zile !== null && zile >= 7 && zile <= 28) {
@@ -61,11 +65,11 @@ var Consilier = (function () {
     var n = p.niv;
     if (p.pret > 0 && p.pretMediu > 0 && ((n && n.tintaPozitie > 0 && p.pret >= n.tintaPozitie * 0.97) || (p.pctLei !== null && p.pctLei >= 0.15)))
       out.push({ nivel: "v", sursa: "pozitie", titlu: p.simbol + " e pe " + P(p.pctLei !== null ? p.pctLei : p.pret / p.pretMediu - 1) + (n && n.tintaPozitie ? ", ținta e " + U(n.tintaPozitie) : ""), text: "",
-        ceAsFace: "Aș lua jumătate" + (n && n.tintaPozitie ? " la " + U(Math.max(p.pret, n.tintaPozitie)) : " acum") + " și aș muta stopul pe rest la prețul de intrare (" + U(p.pretMediu) + "): de acolo nu mai poți pierde pe ea." });
-    // 4) plusul care nu acopera comisionul
+        ceAsFace: "Aș lua jumătate" + (n && n.tintaPozitie ? " la " + U(Math.max(p.pret, n.tintaPozitie)) : " acum") + " și aș muta stopul pe rest la intrare (" + U(p.pretMediu) + "): de acolo nu mai pierzi pe ea." });
+    // 4) plusul care nu acopera comisionul - un fapt, nu o actiune („Dacă ieși acum, ieși de fapt pe minus” intra in explicatie, v100.69)
     var pp = p.pret > 0 && p.pretMediu > 0 ? p.pret / p.pretMediu - 1 : null;
     if (pp !== null && pp >= 0 && pp < COST_CONV) out.push({ nivel: "n", sursa: "pozitie", titlu: "Încă nu acoperă comisionul de 0,30%",
-      text: "Prețul e la " + P(pp, 2) + " peste intrare, iar schimbul lei↔dolari costă ~0,15% la intrare și ~0,15% la ieșire.", ceAsFace: "Dacă ieși acum, ieși de fapt pe minus." });
+      text: "Prețul e la " + P(pp, 2) + " peste intrare, iar schimbul lei↔dolari costă ~0,15% la intrare și ~0,15% la ieșire: ieșind acum, ieși de fapt pe minus.", ceAsFace: null });
     // 5) piata
     if (ctx.piata && ctx.piata.ton === "rau") out.push({ nivel: "n", sursa: "piata", titlu: "Piața întreagă e în jos", text: ctx.piata.text || "", ceAsFace: "N-aș adăuga nimic azi, pe nicio acțiune." });
     // 6) stirile din ultimele 48 h - aratate, nu interpretate
@@ -95,11 +99,12 @@ var Consilier = (function () {
     ctx = ctx || {};
     var acum = ctx.acum || Date.now(), out = [], m = String(b.baza || b.moneda || "").replace(/\.PERP$/, "").replace(/_USDT.*$/, "");
     var ist = stat((Array.isArray(ctx.trades) ? ctx.trades : []).filter(function (t) { return t && t.moneda === m; }));
-    if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Istoricul tău pe " + m + ": " + ist.n + (ist.n === 1 ? " bot" : " boți") + ", " + ist.pePlus + " pe plus, total " + (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2) + " USDT",
-      text: ist.n < 10 ? "puține cazuri — un semn, nu o regulă" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "Pe " + m + " boții tăi au pierdut de obicei: n-aș mări botul." : null });
+    // v100.69 (pachetul 4): USDT cu virgula, titlul ≤ 60, „(puține cazuri)”, „stopul” (vocabularul unic), actiunea la persoana I
+    if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Pe " + m + ": " + (ist.n === 1 ? "1 bot" : nde(ist.n, "boți")) + ", " + ist.pePlus + " pe plus, total " + (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2).replace(".", ",") + " USDT",
+      text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș mări botul: pe " + m + " boții tăi au pierdut de obicei." : null });
     var fg = ctx.fg;
     if (fg && isFinite(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (FG[fg.clasa] || fg.clasa) + ")",
-      text: "Piața e la o extremă: mișcările mari vin mai des în astfel de zile.", ceAsFace: "N-aș pune bani în plus azi și aș avea opritorul pornit." });
+      text: "Piața e la o extremă: mișcările mari vin mai des în astfel de zile.", ceAsFace: "N-aș pune bani în plus azi și aș ține stopul pornit." });
     var s = stiriRecente(ctx.stiri, acum);
     if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: s.length + (s.length === 1 ? " știre" : " știri") + " despre " + m + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });
     return ordoneaza(out);

@@ -37,11 +37,12 @@ await test("1b. alertele planului T212 (stop, trail, tinta) scriu preturile cu 2
   const p = { ticker: "APLD_US_EQ", simbol: "APLD", pret: 26.08, pretMediu: 28, maxDupaCumparare: 30.690000534057617, plan: { trailPct: 15, stop: 25.661500453948975, tinta: 31.219000000000001 } };
   const a = AS.alertePlan({ ...p, plan: { trailPct: 15 } }, T0);
   const tr = a.find((x) => /trail/.test(x.cheie)); assert.ok(tr, JSON.stringify(a));
-  assert.match(tr.mesaj, /\(30\.69\)/, tr.mesaj); assert.doesNotMatch(tr.mesaj, /\d\.\d{5,}/, tr.mesaj);
+  // v100.69 (sfaturile concise, pachetul 4): pretul ca pe pagina T212 - „$30.69” (tot 2 zecimale)
+  assert.match(tr.mesaj, /\(\$30\.69\)/, tr.mesaj); assert.doesNotMatch(tr.mesaj, /\d\.\d{5,}/, tr.mesaj);
   const st = AS.alertePlan({ ...p, pret: 25.5, plan: { stop: 25.661500453948975 } }, T0).find((x) => /stop/.test(x.cheie));
-  assert.match(st.titlu, /\(25\.66\)/, st.titlu); assert.match(st.mesaj, /25\.5\b|25\.50/, st.mesaj);
+  assert.match(st.titlu, /\(\$25\.66\)/, st.titlu); assert.match(st.mesaj, /\$25\.50/, st.mesaj);
   const ti = AS.alertePlan({ ...p, pret: 31.3, plan: { tinta: 31.219000000000001 } }, T0).find((x) => /tinta/.test(x.cheie));
-  assert.match(ti.titlu, /\(31\.22\)/, ti.titlu);
+  assert.match(ti.titlu, /\(\$31\.22\)/, ti.titlu);
 });
 await test("2. functiile nechemate au disparut din app.js si fisierul ramane JS valid (node --check il inghite)", async () => {
   const app = citeste("../public/app.js");

@@ -33,9 +33,10 @@ await test("alcatuiesteActiune: siguranta intai, un singur IESI in varf, banii p
   const p = poz({ plan: { stop: 18.5 } }), sem = AS.semafor(p, stJos), niv = { stopPozitie: 18.7, trailPct: 15, stopAtins: true, sursaTrail: "−15% de la maxim" };
   const sf = [{ nivel: "g", sursa: "istoric", titlu: "Istoricul tău pe INTC: 33 trade-uri", text: "", ceAsFace: "N-aș adăuga." }, { nivel: "n", sursa: "piata", titlu: "Piața întreagă e în jos", text: "", ceAsFace: null }];
   const c = CS.alcatuiesteActiune({ sem, niv, sfaturi: sf, plan: p.plan, pret: 18, pretMediu: 20, qty: 10, costLei: 900, simbol: "INTC" });
-  assert.equal(c.nivel, "iesi"); assert.equal(c.motive[0].cod, "stop-plan"); assert.match(c.faCe, /ies/i);
+  // v100.69 (sfaturile concise, pachetul 4): „Aș ieși …” (cu „ș”, nu „Ies …”); pretul actiunii ca pe pagina T212: „$24.76”, sumele cu virgula
+  assert.equal(c.nivel, "iesi"); assert.equal(c.motive[0].cod, "stop-plan"); assert.match(c.faCe, /ieși|ies/i);
   assert.match(c.bani, /\$/); assert.match(c.bani, /lei/);
-  const c4 = CS.alcatuiesteActiune({ sem, niv: { stopPozitie: 24.7605, trailPct: 15 }, pret: 26, pretMediu: 20, qty: 10, costLei: 900, simbol: "INTC" }); assert.match(c4.bani, /24\.76 \$/, "pretul stopului cu 2 zecimale la actiuni: " + c4.bani);
+  const c4 = CS.alcatuiesteActiune({ sem, niv: { stopPozitie: 24.7605, trailPct: 15 }, pret: 26, pretMediu: 20, qty: 10, costLei: 900, simbol: "INTC" }); assert.match(c4.bani, /\$24\.76/, "pretul stopului cu 2 zecimale la actiuni: " + c4.bani);
   assert.ok(c.rest.some((r) => /Piața întreagă/.test(r.titlu)) || c.motive.some((m) => /Piața/.test(m.titlu)), "nimic nu se pierde");
   const pp = CS.pentruPozaActiune(c); assert.equal(pp.nivel, "iesi"); assert.ok(pp.motive.length >= 1 && pp.ceAsFace);
 });

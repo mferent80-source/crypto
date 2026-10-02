@@ -238,7 +238,10 @@ await test("🔵 curatenie: trainTemporalModel (nechemata) scoasa; Ctrl+K are ec
   assert.match(app, /\["Tabloul botului","tabloubot"\],\["Grid: ce setez acum\?","gridset"\]/);
   assert.match(app, /e\.key\.toLowerCase\(\)==="a"&&!\/\\b\(peTablou\|peGrid/);
   const usd = new Function(functia(t212Ecran, "t212Usd") + "; return t212Usd;")();
-  assert.equal(usd(26.0871), "$26.09"); assert.equal(usd(5.123), "$5.123"); assert.equal(usd(250.5), "$250.50");
+  // v100.69 (pachetul 4): 2 zecimale de la $1 (nu de la $10): a treia nu se poate cota peste $1, iar „$4.900” langa „2.100 lei” se citea ca mii;
+  // t212Usd cheama ActiuniSemnale.usd (aceeasi forma in pagina, Consilier si alerte)
+  globalThis.ActiuniSemnale = globalThis.ActiuniSemnale || new Function(`${lib("actiuni-semnale.js")}; return ActiuniSemnale;`).call(globalThis);
+  assert.equal(usd(26.0871), "$26.09"); assert.equal(usd(5.123), "$5.12"); assert.equal(usd(250.5), "$250.50");
 });
 
 await test("🟡 copia KV si pe ALT disc (E:) - arhiva botilor nu mai sta doar pe C:", () => {

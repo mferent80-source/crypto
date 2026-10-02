@@ -95,8 +95,9 @@ await test("trader.md §1 / backtest-expert: sub 10 cazuri independente textul s
   const x = { p: 0.4, n: 30, k: 12, nIndep: 5, ic: [0.1, 0.8], orizontOre: 168, conditionat: true, stare: "liniste" };
   const rez = { stare: "liniste", bare: 4000, niveluri: { jos: 1, sus: 2 }, iese: { jos24: x, sus24: { ...x, nIndep: 12 } } };
   const rr = PB.randuri(rez, null, "long");
-  assert.match(rr.find((r) => r.cod === "iese-jos-24").text, /puține cazuri independente — un semn, nu o regulă/);
-  assert.ok(!/un semn, nu o regulă/.test(rr.find((r) => r.cod === "iese-sus-24").text));
+  // v100.69 (sfaturile concise, pachetul 4): marcajul scurt ramane; avertizarea comuna („un semn, nu o regulă”) sta o data, in legenda
+  assert.match(rr.find((r) => r.cod === "iese-jos-24").text, /puține cazuri independente/); assert.doesNotMatch(rr.find((r) => r.cod === "iese-jos-24").text, /un semn, nu o regulă/);
+  assert.ok(!/puține cazuri/.test(rr.find((r) => r.cod === "iese-sus-24").text));
 });
 
 await test("server: prob:<bot> si calibrarea se scriu si se citesc; cutii stricate -> 400; prob prea mare -> 413", async () => {

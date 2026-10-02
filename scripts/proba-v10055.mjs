@@ -52,7 +52,8 @@ await test("situatiiCaAsta: doar aceeasi stare, median/pe plus/cel mai rau pe % 
   assert.equal(r.actiune.n, 3); assert.equal(r.actiune.putine, true);
   const tx = AS.textSituatie(r);
   assert.match(tx, /12 cazuri/); assert.match(tx, /median \+5,0%/); assert.match(tx, /67% pe plus/); assert.match(tx, /cel mai rău −10,0%/);
-  assert.match(tx, /INTC.*3.*prea puține/); assert.ok(!/sector/.test(tx), "nu pomeni sectorul: n-avem date");
+  // v100.69 (sfaturile concise, pachetul 4): marcajul scurt „(puține cazuri)” in locul lui „prea puține” (avertizarea comuna sta in legenda)
+  assert.match(tx, /INTC.*3 cazuri \(puține cazuri\)/); assert.ok(!/sector/.test(tx), "nu pomeni sectorul: n-avem date");
 });
 await test("situatiiCaAsta: nicio potrivire / fara sit -> n 0 si text care o spune", () => {
   const r = AS.situatiiCaAsta([], {}, "sus|calm|departe", null);

@@ -230,7 +230,8 @@ await test("sfaturile nu contrazic restul ecranului: IESI fara plan nu zice 'ce 
   assert.equal(r.nivel, "iesi"); assert.doesNotMatch(r.ceAsFace, /scris/);
   const cu = A.semafor(poz({ pret: 85, plan: { stop: 90 } }), A.stare(coboara)); assert.match(cu.ceAsFace, /scris/);
   const q = A.portofoliu([{ simbol: "APLD", valoare: 23 }, { simbol: "X", valoare: 19 }, { simbol: "Y", valoare: 19 }, { simbol: "Z", valoare: 19 }, { simbol: "W", valoare: 20 }], 0);
-  assert.match(q.ceAsFace, /APLD e 23% din cont/); assert.doesNotMatch(q.ceAsFace, /ok/);
+  // v100.69 (sfaturile concise, pachetul 4): „Aș ține APLD sub 20% din cont (acum 23%) …” - aceeasi cifra si acelasi plafon, la persoana I
+  assert.match(q.ceAsFace, /APLD sub 20% din cont \(acum 23%\)/); assert.doesNotMatch(q.ceAsFace, /ok|\+/);
 });
 await test("v88: un plan salvat de o PROBA de ecran (proba: true) nu declanseaza alerte (25.09: o proba a pus un plan pe APLD si a venit o alerta falsa)", async () => {
   const { turaPlanuri } = await import("./lib/tura-t212.mjs");
@@ -241,9 +242,10 @@ await test("v88: un plan salvat de o PROBA de ecran (proba: true) nu declanseaza
 });
 await test("v90 semafor: IESI din TREND cu un plan pus, dar neatins -> nu zice 'ce am scris' (planul nu cere iesirea); IESI din PLAN -> zice", () => {
   const t = A.semafor(poz({ pret: 85, plan: { trailPct: 15 }, maxDupaCumparare: 90 }), A.stare(coboara));
-  assert.equal(t.nivel, "iesi"); assert.doesNotMatch(t.ceAsFace, /ce am scris/);
+  // v100.69 (pachetul 4): „ce am scris înainte” a devenit „Aș ieși cum am scris în plan” - aceeasi deosebire, pe „am scris”
+  assert.equal(t.nivel, "iesi"); assert.doesNotMatch(t.ceAsFace, /am scris/);
   const p = A.semafor(poz({ pret: 85, plan: { stop: 90 } }), A.stare(urca));
-  assert.equal(p.nivel, "iesi"); assert.match(p.ceAsFace, /ce am scris/);
+  assert.equal(p.nivel, "iesi"); assert.match(p.ceAsFace, /am scris în plan/);
 });
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

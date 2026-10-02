@@ -19,7 +19,10 @@ var Consiliu = (function () {
   function fp(v) { v = nr(v); if (v === null) return "?"; var t = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return t.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   var U = function (v) { return TextRo.usdt(v, 1); };
   // v100.61 (specul „sfaturi concise”): avertizarile comune se spun O DATA, aici - pagina le arata sub Consilier, nu in fiecare sfat
-  var LEGENDA = "Frecvențele („în N% din zile”) vin din trecut și nu sunt promisiuni, iar comparațiile (deciziile tale) nu sunt dovezi; „(puține cazuri)” înseamnă prea puține date: un semn, nu o regulă. "
+  var LEG_COMUNA = "Frecvențele („în N% din zile”) vin din trecut și nu sunt promisiuni, iar comparațiile (deciziile tale) nu sunt dovezi; „(puține cazuri)” înseamnă prea puține date: un semn, nu o regulă.";
+  // v100.69 (sfaturile concise, pachetul 4): legenda paginii T212 - partea comuna + trendul pe zilnice (fara gridul si preturile botului)
+  var LEGENDA_ACTIUNI = LEG_COMUNA + " Trendul se măsoară pe bare zilnice închise: arată starea de acum, nu încotro merge prețul.";
+  var LEGENDA = LEG_COMUNA + " "
     // v100.62 (pachetul 2): avertizarile scoase din sfaturile vechi (trendul, directia, ce face gridul contra pietei) stau tot aici, o data
     + "Trendul și direcția se măsoară pe bare închise: arată starea de acum, nu încotro merge prețul; contra botului, gridul adaugă poziție la fiecare grilă și pierderea pe ea crește. "
     + "Prețurile propuse (zero-ul, stopul, podeaua) se recalculează la fiecare umplere; la întoarcere gridul cumpără înapoi la fiecare grilă, de aceea contează stopul.";
@@ -290,8 +293,9 @@ var Consiliu = (function () {
   var FIX_ACT = { "stop-plan": 1, "trail-plan": 1, "stop-urcator": 1 };
   var PRIO_ACT = ["stop-plan", "trail-plan", "stop-urcator", "trend-jos-minus", "rezultate", "stop-maine", "fara-plan-minus", "trend-jos", "miscare-jos", "tinta-plan", "sf-istoric", "sf-pozitie", "trend-sus"];
   function prioAct(cod) { var i = PRIO_ACT.indexOf(cod); return i < 0 ? PRIO_ACT.length : i; }
-  var PA = function (v) { v = nr(v); return v === null ? "?" : v >= 1 ? v.toFixed(2) : v.toPrecision(3); };   // pretul unei actiuni: 2 zecimale
-  var USD = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + " $"; }, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
+  // v100.69 (sfaturile concise, pachetul 4): pretul unei actiuni ca pe pagina T212 („$30.12”, ActiuniSemnale.usd), sumele in dolari cu virgula
+  var PA = function (v) { v = nr(v); return v === null ? "?" : typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale.usd(v) : "$" + v.toFixed(2); };
+  var USD = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " $"; }, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
   function alcatuiesteActiune(x) {
     x = x || {}; var sem = x.sem || {};
     if (!sem.nivel || sem.nivel === "fara-date") return { nivel: "asteapta", eticheta: ETICHETA.asteapta, titlu: mare((Array.isArray(sem.motive) && sem.motive[0]) || "încă socotesc"), faCe: "", bani: null, motive: [], rest: [] };
@@ -301,11 +305,12 @@ var Consiliu = (function () {
       cand.push({ cod: k.cod, nivel: k.nivel === "iesi" || k.nivel === "atentie" ? k.nivel : "bine", c: k.nivel === "iesi" ? "r" : k.nivel === "atentie" ? "g" : "v", titlu: mare(k.motiv), text: "", faCe: "", scurt: mic(k.motiv), dinSem: true });
     });
     if (niv && niv.stopAtins && !cand.some(function (m) { return m.cod === "stop-plan" || m.cod === "trail-plan"; }))
-      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + PA(niv.stopPozitie) + " $)", text: niv.sursaTrail || "", faCe: "Ies (tot sau jumătate): stopul care urcă e atins.", scurt: "stopul care urcă e atins" });
+      // v100.69: explicatia = sursa stopului, fara socoteala alegerii (aceea ramane intreaga langa preturi, pe pagina)
+      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + PA(niv.stopPozitie) + ")", text: String(niv.sursaTrail || "").split(" · ")[0], faCe: "Aș ieși, tot sau jumătate, cum cere stopul care urcă.", scurt: "stopul care urcă e atins" });
     (Array.isArray(x.prob) ? x.prob : []).forEach(function (r) {
       if (!r || !r.titlu) return;
-      if (/Atinge stopul mâine/.test(r.titlu) && nr(r.p) !== null && r.p >= 0.25) cand.push({ cod: "stop-maine", nivel: "atentie", c: "g", titlu: r.titlu + ": " + Math.round(r.p * 100) + "%", text: r.text || "", faCe: "Stopul e în mișcarea obișnuită a unei zile: n-aș adăuga; dacă țin, accept că poate fi atins mâine.", scurt: "stopul poate fi atins mâine (" + Math.round(r.p * 100) + "%)" });
-      else if (/Rezultatele vin/.test(r.titlu)) cand.push({ cod: "rezultate", nivel: "atentie", c: "g", titlu: r.titlu, text: r.text || "", faCe: "Înainte de rezultate n-aș adăuga și aș hotărî dinainte dacă țin peste ele.", scurt: mic(r.titlu) });
+      if (/Atinge stopul mâine/.test(r.titlu) && nr(r.p) !== null && r.p >= 0.25) cand.push({ cod: "stop-maine", nivel: "atentie", c: "g", titlu: r.titlu + ": " + Math.round(r.p * 100) + "%", text: r.text || "", faCe: "N-aș adăuga: stopul e în mișcarea obișnuită a unei zile și poate fi atins mâine.", scurt: "stopul poate fi atins mâine (" + Math.round(r.p * 100) + "%)" });
+      else if (/Rezultatele vin/.test(r.titlu)) cand.push({ cod: "rezultate", nivel: "atentie", c: "g", titlu: r.titlu, text: r.text || "", faCe: "N-aș adăuga înainte de rezultate și aș hotărî dinainte dacă țin peste ele.", scurt: mic(r.titlu) });
       else rest.push({ titlu: r.titlu + (nr(r.p) !== null ? ": " + Math.round(r.p * 100) + "%" : ""), text: r.text || "" });
     });
     (Array.isArray(x.sfaturi) ? x.sfaturi : []).forEach(function (f) {
@@ -319,14 +324,16 @@ var Consiliu = (function () {
     var motive = cand.slice(0, 3), avert = motive.filter(function (m) { return m.nivel !== "bine"; });
     cand.slice(3).forEach(function (m) { rest.unshift({ titlu: m.titlu, text: m.text }); });
     var nivel = sem.nivel === "iesi" || motive.some(function (m) { return m.nivel === "iesi"; }) ? "iesi" : avert.length || sem.nivel === "atentie" ? "atentie" : "tine";
-    var titlu = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + avert[1].scurt : avert.length === 1 ? mare(avert[0].scurt) : "Nimic nu cere o mișcare acum";
+    // v100.69 (pachetul 4): titlul compus ≤ 60, ca la boti (pachetul 1, M7) - prea lung -> doar primul motiv (al doilea ramane in lista)
+    var doi = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + avert[1].scurt : "";
+    var titlu = taie(doi && doi.length <= MAX_TITLU ? doi : avert.length ? mare(avert[0].scurt) : "Nimic nu cere o mișcare acum", MAX_TITLU);
     // revizia 01.10: un motiv de sus fara actiune proprie nu mai ia „o las să meargă” din semafor (contrazicea verdictul)
     var faCe = mare(avert[0] && avert[0].faCe ? avert[0].faCe : avert[0] && !avert[0].dinSem ? (nivel === "iesi" ? "Aș ieși (tot sau jumătate): " : "N-aș adăuga până nu se lămurește: ") + avert[0].scurt + "." : faCeSem);
     // banii: unde e pozitia acum si cat ar fi la stopul care urca (dolari; lei doar cu costul in lei - fara curs inventat)
     var pret = nr(x.pret), pm = nr(x.pretMediu), q = nr(x.qty), cl = nr(x.costLei), fx = cl > 0 && q > 0 && pm > 0 ? cl / (q * pm) : null, bani = [];
     var cuLei = function (usd) { return USD(usd) + (fx ? " ≈ " + LEI(usd * fx) : ""); };
     if (pret > 0 && pm > 0 && q > 0) bani.push("acum: " + cuLei((pret - pm) * q));
-    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "la stopul care urcă (" + PA(niv.stopPozitie) + " $): " + cuLei((niv.stopPozitie - pm) * q) : "stopul care urcă (" + PA(niv.stopPozitie) + " $) e deja depășit");
+    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "la stopul care urcă (" + PA(niv.stopPozitie) + "): " + cuLei((niv.stopPozitie - pm) * q) : "stopul care urcă (" + PA(niv.stopPozitie) + ") e deja depășit");
     return { nivel: nivel, eticheta: ETICHETA[nivel], titlu: titlu, faCe: faCe, bani: bani.length ? bani.join(" · ") : null,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: null, extra: null }; }), rest: rest };
   }
@@ -438,6 +445,6 @@ var Consiliu = (function () {
     return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
       ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
   }
-  return { LEGENDA: LEGENDA, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  return { LEGENDA: LEGENDA, LEGENDA_ACTIUNI: LEGENDA_ACTIUNI, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

@@ -14,6 +14,11 @@ var ActiuniSemnale = (function () {
   var ZI = 86400000, ZILE_52 = 252, ZILE_7 = 5, PRAG_MISCARE = 1.5;
   function P(x, z) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(z === undefined ? 1 : z).replace(".", ",") + "%"; }
   function L(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x)).toLocaleString("ro-RO") + " lei"; }
+  // v100.69 (sfaturile concise, pachetul 4): pretul unei actiuni, o singura forma (si pagina T212 o foloseste, prin t212Usd) - „$29.50”,
+  // „$4.12”, „$0.0123”. Inainte: „$33,00” (consilier), „29.50 $” (Consilierul pozitiei), „26.00” (alerte), „$4.120” (pagina) - a treia
+  // zecimala nu se poate cota peste 1 $ si, langa „2.100 lei” (punctul = mii), „$4.900” se citea ca patru mii noua sute
+  function usd(v) { return v === null || v === undefined || !isFinite(v) ? "—" : "$" + (v >= 1 ? v.toFixed(2) : v.toPrecision(3)); }
+  function vg(x) { return String(x).replace(".", ","); }   // un prag scris de el (12.5 -> „12,5”)
   function maxH(b, k) { var m = -Infinity; for (var i = Math.max(0, b.length - k); i < b.length; i++) m = Math.max(m, b[i].h); return isFinite(m) ? m : null; }
   function minL(b, k) { var m = Infinity; for (var i = Math.max(0, b.length - k); i < b.length; i++) m = Math.min(m, b[i].l); return isFinite(m) ? m : null; }
 
@@ -47,33 +52,35 @@ var ActiuniSemnale = (function () {
   // pozitie: {simbol, qty, pretMediu, pret, plan:{tinta, stop, trailPct}, maxDupaCumparare}
   function semafor(p, st) {
     var s = p && p.simbol || "acțiunea";
-    if (!p || !(p.pret > 0) || !(p.pretMediu > 0)) return { nivel: "fara-date", motive: ["lipsește prețul poziției"], ceAsFace: "👉 Reîncarcă pozițiile; fără preț nu judec." };
+    // v100.69 (pachetul 4): „Ce aș face eu” = o actiune la persoana I dupa eticheta (eticheta o taie consiliu.js si lista „Ce ai de făcut”)
+    if (!p || !(p.pret > 0) || !(p.pretMediu > 0)) return { nivel: "fara-date", motive: ["lipsește prețul poziției"], ceAsFace: "👉 Ce aș face eu: Aș reîncărca pozițiile; fără preț nu pot judeca." };
     var pct = p.pret / p.pretMediu - 1, plan = p.plan || {}, iesi = [], atentie = [], bine = [], comp = [];
     // v100.54 (actiunile T212, pachetul 3): fiecare motiv si cu codul lui - pentru Consilierul pozitiei (aditiv; motive/ceAsFace raman)
     var ad = function (lista, cod, nivel, motiv) { lista.push(motiv); comp.push({ cod: cod, nivel: nivel, motiv: motiv }); };
-    if (plan.stop > 0 && p.pret <= plan.stop) ad(iesi, "stop-plan", "iesi", "prețul a atins stopul din planul tău (" + plan.stop + ")");
+    if (plan.stop > 0 && p.pret <= plan.stop) ad(iesi, "stop-plan", "iesi", "prețul a atins stopul din planul tău (" + usd(plan.stop) + ")");
     var ref = p.maxDupaCumparare > 0 ? p.maxDupaCumparare : st && st.max7z > 0 ? Math.max(st.max7z, p.pret) : null;
-    if (plan.trailPct > 0 && ref && p.pret <= ref * (1 - plan.trailPct / 100)) ad(iesi, "trail-plan", "iesi", "a scăzut " + P(p.pret / ref - 1) + " de la maxim — planul tău zicea ieși la −" + plan.trailPct + "%");
-    if (plan.tinta > 0 && p.pret >= plan.tinta) ad(atentie, "tinta-plan", "atentie", "ținta din plan (" + plan.tinta + ") e atinsă");
+    if (plan.trailPct > 0 && ref && p.pret <= ref * (1 - plan.trailPct / 100)) ad(iesi, "trail-plan", "iesi", P(p.pret / ref - 1) + " de la maxim: pragul de −" + vg(plan.trailPct) + "% din planul tău e atins");
+    if (plan.tinta > 0 && p.pret >= plan.tinta) ad(atentie, "tinta-plan", "atentie", "ținta din plan e atinsă (" + usd(plan.tinta) + ")");
     var areDate = st && st.trend && st.trend.dir !== "fara-date";
-    if (!areDate && !iesi.length && !atentie.length) return { nivel: "fara-date", pct: pct, motive: ["n-am prețuri zilnice pentru " + s], ceAsFace: "👉 Fără prețuri nu-ți dau semnal; uită-te la plan, nu la culoare." };
+    if (!areDate && !iesi.length && !atentie.length) return { nivel: "fara-date", pct: pct, motive: ["n-am prețuri zilnice pentru " + s], ceAsFace: "👉 Ce aș face eu: Aș judeca după planul tău, nu după culoare: fără prețuri zilnice n-am semnal." };
     if (areDate) {
-      if (st.trend.dir === "jos" && pct < -0.10) ad(iesi, "trend-jos-minus", "iesi", "trend în jos și ești pe minus " + P(pct));
+      if (st.trend.dir === "jos" && pct < -0.10) ad(iesi, "trend-jos-minus", "iesi", "trend în jos, iar poziția e pe " + P(pct));
       else if (st.trend.dir === "jos") ad(atentie, "trend-jos", "atentie", "trendul pe zilnice e în jos (" + st.trend.motive[0] + ")");
       else if (st.trend.dir === "sus") ad(bine, "trend-sus", "bine", "trend în sus pe zilnice");
       if (st.miscare && st.miscare.mare && st.miscare.sens === "jos") ad(atentie, "miscare-jos", "atentie", "mișcare mare în jos, peste cea obișnuită");
     }
     var arePlan = plan.stop > 0 || plan.trailPct > 0 || plan.tinta > 0;
-    if (pct <= -0.20 && !arePlan) ad(atentie, "fara-plan-minus", "atentie", "pe minus " + P(pct) + " fără plan scris");
+    if (pct <= -0.20 && !arePlan) ad(atentie, "fara-plan-minus", "atentie", "poziția e pe " + P(pct) + " fără plan scris");
     var nivel = iesi.length ? "iesi" : atentie.length ? "atentie" : "tine", sfat;
     // "ce am scris" doar cand PLANUL a cerut iesirea (stop / -X% atins), nu cand iesirea vine din trend
     var planAtins = (plan.stop > 0 && p.pret <= plan.stop) || (plan.trailPct > 0 && ref && p.pret <= ref * (1 - plan.trailPct / 100));
-    if (nivel === "iesi") sfat = planAtins ? "👉 Ce aș face eu: aș respecta ce am scris înainte — ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi." : "👉 Ce aș face eu: ies (tot sau jumătate) și nu recumpăr " + s + " în aceeași zi.";
-    else if (plan.tinta > 0 && p.pret >= plan.tinta) sfat = "👉 Ce aș face eu: iau profit pe o parte și mut stopul la prețul de intrare (" + p.pretMediu.toFixed(2) + ") pe rest.";
-    else if (pct <= -0.20 && !arePlan) sfat = "👉 Ce aș face eu: scriu ACUM un plan (stop sau „ies la −X% de la maxim”); fără el, minusul doar crește în liniște.";
-    else if (nivel === "atentie" && areDate && st.trend.dir === "jos") sfat = "👉 Ce aș face eu: nu cumpăr în plus pe " + s + " până nu se întoarce trendul; dacă n-am stop, îl pun.";
-    else if (nivel === "atentie") sfat = "👉 Ce aș face eu: trendul e încă bun, dar nu cumpăr în plus pe " + s + " cât se mișcă așa — aștept să se liniștească; dacă n-am stop, îl pun.";
-    else sfat = "👉 Ce aș face eu: o las să meargă" + (arePlan ? " cu planul pus." : " și îmi scriu un stop, ca profitul să nu se întoarcă în minus.");
+    if (nivel === "iesi") sfat = planAtins ? "👉 Ce aș face eu: Aș ieși cum am scris în plan (tot sau jumătate) și n-aș recumpăra " + s + " în aceeași zi." : "👉 Ce aș face eu: Aș ieși (tot sau jumătate) și n-aș recumpăra " + s + " în aceeași zi.";
+    else if (plan.tinta > 0 && p.pret >= plan.tinta) sfat = "👉 Ce aș face eu: Aș lua profit pe o parte și aș muta stopul pe rest la prețul de intrare (" + usd(p.pretMediu) + ").";
+    else if (pct <= -0.20 && !arePlan) sfat = "👉 Ce aș face eu: Aș scrie acum un plan (stop sau „ies la −X% de la maxim”): fără el, minusul doar crește în liniște.";
+    else if (nivel === "atentie" && areDate && st.trend.dir === "jos") sfat = "👉 Ce aș face eu: N-aș cumpăra în plus pe " + s + " până nu se întoarce trendul; dacă n-am stop, l-aș pune.";
+    // „trendul e încă bun” doar cand chiar e in sus (ramura e si pentru trendul lateral cu miscare mare in jos)
+    else if (nivel === "atentie") sfat = "👉 Ce aș face eu: N-aș cumpăra în plus pe " + s + " până nu se liniștește" + (areDate && st.trend.dir === "sus" ? " (trendul e încă în sus)" : "") + "; dacă n-am stop, l-aș pune.";
+    else sfat = "👉 Ce aș face eu: Aș lăsa-o să meargă" + (arePlan ? " cu planul pus." : " și mi-aș scrie un stop, ca profitul să nu se întoarcă în minus.");
     return { nivel: nivel, pct: pct, motive: iesi.concat(atentie, bine), ceAsFace: sfat, componente: comp };
   }
 
@@ -127,7 +134,7 @@ var ActiuniSemnale = (function () {
     var rosu = [], galben = [];
     if (s.trend.dir === "jos") rosu.push("trendul pe zilnice e în jos — pentru acțiuni cumperi doar long, deci aștepți întoarcerea");
     else if (s.trend.dir === "lateral") galben.push("trendul pe zilnice nu e clar în sus");
-    if (s.miscare && s.miscare.mare) galben.push("azi / săptămâna asta s-a mișcat mult peste obișnuit — nu cumpăra după mișcare");
+    if (s.miscare && s.miscare.mare) galben.push("mișcare mult peste cea obișnuită azi sau săptămâna asta: nu cumpăra după ea");
     if (s.distMax7z !== null && s.distMax7z > -0.02) galben.push("prețul e lângă maximul pe 7 zile (" + P(s.distMax7z) + ")");
     var p = o.plan || {};
     if (!o.faraPlan && !(p.stop > 0 || p.trailPct > 0)) galben.push("n-ai scris un plan de ieșire (stop sau −X% de la maxim)");
@@ -146,10 +153,12 @@ var ActiuniSemnale = (function () {
     }).sort(function (a, b) { return b.valoare - a.valoare; });
     // plafonul: 20% din cont pe o actiune (acelasi prag ca "Ce ai de facut acum" si marimea pozitiei)
     var pc = function (x) { return P(x, 0).replace("+", ""); };
-    var sfat = !rows.length ? "👉 N-ai poziții deschise." : cea.pondere > 0.20
-      ? "👉 Ce aș face eu: " + cea.simbol + " e " + pc(cea.pondere) + " din cont — aș ține o singură acțiune sub 20%, ca o zi proastă a ei să nu fie ziua proastă a contului. La o scădere de 10% a Nasdaq-ului contul ar pierde cam " + L(soc) + "."
-      : "👉 Ce aș face eu: împărțirea e ok (cea mai mare, " + cea.simbol + ", e " + pc(cea.pondere) + "). La o scădere de 10% a Nasdaq-ului contul ar pierde cam " + L(soc) + ".";
-    return { total: total, investit: inv, cash: total > 0 ? (cash > 0 ? cash : 0) / total : null, pozitii: rows, cea: cea, soc: soc, ceAsFace: sfat };
+    // v100.69 (pachetul 4): o actiune ≤ 110; socul Nasdaq −10% (o cifra, nu o actiune) trece in socText, sub ea
+    var sfat = !rows.length ? "N-ai poziții deschise." : cea.pondere > 0.20
+      ? "👉 Ce aș face eu: Aș ține " + cea.simbol + " sub 20% din cont (acum " + pc(cea.pondere) + "), ca o zi proastă a ei să nu fie ziua proastă a contului."
+      : "👉 Ce aș face eu: Aș păstra împărțirea: cea mai mare poziție, " + cea.simbol + ", e " + pc(cea.pondere) + " din cont.";
+    var socText = rows.length ? "La o scădere de 10% a Nasdaq-ului, contul ar pierde cam " + L(soc) + "." : "";
+    return { total: total, investit: inv, cash: total > 0 ? (cash > 0 ? cash : 0) / total : null, pozitii: rows, cea: cea, soc: soc, ceAsFace: sfat, socText: socText };
   }
 
   function beta(b, q) {
@@ -201,11 +210,15 @@ var ActiuniSemnale = (function () {
     if (p.trailPct > 0 && p.trailPct < 100) return { stop: Math.round(baza * (1 - p.trailPct / 100) * 1e6) / 1e6, alTau: true };
     return niv.stop > 0 && niv.stop < baza ? { stop: niv.stop, alTau: false } : null;
   }
+  // „1 caz”, „4 cazuri”, „45 de cazuri”, „101 cazuri” (de: ultimele doua cifre 20–99 sau 00)
+  function nrCazuri(n) { var r = n % 100; return n === 1 ? "1 caz" : n + (r >= 20 || (r === 0 && n >= 100) ? " de cazuri" : " cazuri"); }
   function textSituatie(r) {
     if (!r || !r.toate || !r.toate.n) return "În situații ca asta" + (r && r.eticheta ? " (" + r.eticheta + ")" : "") + ": niciun trade al tău judecat încă.";
     var g = r.toate, Pc = function (x) { return (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };
-    var s = "În situații ca asta (" + r.eticheta + "), din trade-urile tale: " + g.n + " cazuri, median " + Pc(g.median) + ", " + Math.round(g.pePlus * 100) + "% pe plus, cel mai rău " + Pc(g.celMaiRau.pct) + (g.putine ? " — prea puține, un semn, nu o regulă" : "") + ".";
-    if (r.actiune && r.actiune.n) s += " Pe " + (String(r.ticker || "").split("_")[0] || "acțiunea asta") + " în aceeași stare: " + r.actiune.n + (r.actiune.n === 1 ? " caz" : " cazuri") + ", median " + Pc(r.actiune.median) + (r.actiune.putine ? " (prea puține)" : "") + ".";
+    // v100.69 (pachetul 4): un rand de date, intr-o fraza; „(puține cazuri)” in locul avertizarii comune (ea sta in legenda); „1 caz”, „45 de cazuri”
+    var s = "În situații ca asta (" + r.eticheta + "), din trade-urile tale: " + nrCazuri(g.n) + (g.putine ? " (puține cazuri)" : "") + ", median " + Pc(g.median) + ", " + Math.round(g.pePlus * 100) + "% pe plus, cel mai rău " + Pc(g.celMaiRau.pct);
+    if (r.actiune && r.actiune.n) s += "; pe " + (String(r.ticker || "").split("_")[0] || "acțiunea asta") + " în aceeași stare: " + nrCazuri(r.actiune.n) + (r.actiune.putine ? " (puține cazuri)" : "") + ", median " + Pc(r.actiune.median);
+    s += ".";
     return s;
   }
   function laCumparare(t, bare, inchise) {
@@ -272,7 +285,7 @@ var ActiuniSemnale = (function () {
     var a = atr(b), A_ = a[b.length - 1], st = stare(b, pret), dir = st.trend.dir, pr = proba(b, a, dir);
     var d = Math.min(0.15 * pret, Math.max(0.03 * pret, pr.k * A_));
     var c = b.map(function (x) { return x.c; }), e20 = G.ema(c, 20)[b.length - 1], intrare = null, motivI = "";
-    if (dir === "jos") motivI = "trend în jos pe zilnice — la acțiuni cumperi doar long, deci aștept întoarcerea";
+    if (dir === "jos") motivI = "trend în jos pe zilnice: la acțiuni doar long, deci aștept întoarcerea";
     else if (dir === "fara-date") motivI = "trendul nu se poate judeca";
     else if (dir === "sus") { var pi = Math.min(pret, Math.max(e20, pret - 0.5 * A_)); intrare = { pret: r2(pi), motiv: pi < pret ? "retragere spre media pe 20 de zile (ordin limită), nu după mișcare" : "prețul e deja la media pe 20 de zile" }; }
     else { var mn = minL(b, 20), pl = Math.min(pret, mn + 0.25 * A_); intrare = { pret: r2(pl), motiv: "lateral: aproape de minimul pe 20 de zile" }; }
@@ -321,8 +334,9 @@ var ActiuniSemnale = (function () {
   }
   function alertaFrana(x, simbol) {
     var s = simbol || x.ticker, a2 = x.nr >= 2;
+    // v100.69 (pachetul 4): Discord pe 2 randuri - faptul cu sumele, apoi „👉 ” actiunea (cu lectia NPA); preturile ca pe pagina
     return { nivel: a2 ? "critic" : "atentie", titlu: s + ": ai cumpărat în plus pe minus" + (a2 ? " (a " + x.nr + "-a oară la rând)" : ""),
-      mesaj: "Ai cumpărat la $" + x.pret.toFixed(2) + ", cu " + P(x.sub) + " sub prețul tău mediu ($" + x.mediu.toFixed(2) + ")" + (x.suma > 0 ? ", " + Math.round(x.suma).toLocaleString("ro-RO") + " lei" : "") + ". 👉 Ce aș face eu: nu mai adaug pe minus — așa a crescut NPA la 33.000 de lei și a pierdut 8.165." };
+      mesaj: "Ai cumpărat la " + usd(x.pret) + ", cu " + P(Math.abs(x.sub)).replace("+", "") + " sub prețul tău mediu (" + usd(x.mediu) + ")" + (x.suma > 0 ? ": " + Math.round(x.suma).toLocaleString("ro-RO") + " lei" : "") + ".\n👉 N-aș mai adăuga pe minus: așa a crescut NPA la 33.000 de lei și a pierdut 8.165 lei." };
   }
 
   // ---------------- v87: cat te-ar fi salvat stopul ----------------
@@ -459,11 +473,12 @@ var ActiuniSemnale = (function () {
     if (!pl || !(p.pret > 0)) return out;
     var zi = new Date(acum || Date.now()).toISOString().slice(0, 10), s = p.simbol || p.ticker;
     function ad(tip, nivel, titlu, mesaj) { out.push({ cheie: "t212-" + p.ticker + "-" + tip + "-" + zi, nivel: nivel, titlu: titlu, mesaj: mesaj }); }
-    // v99.1 (audit #9): preturile ca preturi (2 zecimale peste 1, 4 sub), nu 30.690000534057617
-    var pr = function (v) { v = Number(v); return !isFinite(v) ? "?" : v >= 1 ? v.toFixed(2) : v.toFixed(4); };
-    if (pl.stop > 0 && p.pret <= pl.stop) ad("stop", "critic", s + ": a atins stopul din planul tău (" + pr(pl.stop) + ")", "Prețul e " + pr(p.pret) + ". 👉 Ce aș face eu: ies cum am scris înainte și nu recumpăr " + s + " azi.");
-    if (pl.trailPct > 0 && p.maxDupaCumparare > 0 && p.pret <= p.maxDupaCumparare * (1 - pl.trailPct / 100)) ad("trail", "critic", s + ": −" + pl.trailPct + "% de la maxim, cum ai scris în plan", "A scăzut " + P(p.pret / p.maxDupaCumparare - 1) + " de la maximul de după cumpărare (" + pr(p.maxDupaCumparare) + "). 👉 Ce aș face eu: ies, măcar jumătate.");
-    if (pl.tinta > 0 && p.pret >= pl.tinta) ad("tinta", "info", s + ": ținta din plan e atinsă (" + pr(pl.tinta) + ")", "Prețul e " + pr(p.pret) + ". 👉 Ce aș face eu: iau profit pe o parte și mut stopul la prețul de intrare pe rest.");
+    // v99.1 (audit #9): preturile ca preturi, nu 30.690000534057617 - v100.69: scrise ca pe pagina T212 (usd = t212Usd)
+    // v100.69 (pachetul 4): Discord pe 2 randuri - faptul cu pretul, apoi „👉 ” actiunea la persoana I; cheile raman
+    var pr = function (v) { v = Number(v); return !isFinite(v) ? "?" : usd(v); };
+    if (pl.stop > 0 && p.pret <= pl.stop) ad("stop", "critic", s + ": stopul din planul tău e atins (" + pr(pl.stop) + ")", "Prețul e " + pr(p.pret) + ".\n👉 Aș ieși cum am scris în plan și n-aș recumpăra " + s + " azi.");
+    if (pl.trailPct > 0 && p.maxDupaCumparare > 0 && p.pret <= p.maxDupaCumparare * (1 - pl.trailPct / 100)) ad("trail", "critic", s + ": −" + vg(pl.trailPct) + "% de la maxim, pragul din planul tău", "A coborât " + P(1 - p.pret / p.maxDupaCumparare).replace("+", "") + " de la maximul de după cumpărare (" + pr(p.maxDupaCumparare) + ").\n👉 Aș ieși, măcar cu jumătate.");
+    if (pl.tinta > 0 && p.pret >= pl.tinta) ad("tinta", "info", s + ": ținta din plan e atinsă (" + pr(pl.tinta) + ")", "Prețul e " + pr(p.pret) + ".\n👉 Aș lua profit pe o parte și aș muta stopul pe rest la prețul de intrare.");
     return out;
   }
 
@@ -474,7 +489,7 @@ var ActiuniSemnale = (function () {
     var tot = 0, com = 0, plus = 0, rau = null;
     l.forEach(function (t) { tot += t.rezultat || 0; com += t.comisioane || 0; if (t.rezultat > 0) plus++; if (!rau || t.rezultat < rau.rezultat) rau = t; });
     var linii = ["Acțiuni (Trading 212): " + l.length + " trade-uri, " + plus + " pe plus, rezultat real " + L(tot) + " (comisioane de conversie " + Math.round(com).toLocaleString("ro-RO") + " lei)."];
-    if (rau && rau.rezultat < 0) linii.push("Cea mai mare pierdere: " + (rau.simbol || rau.ticker) + " " + L(rau.rezultat) + " (" + P(rau.pct) + ")" + (rau.pct !== null && rau.pct <= -0.2 ? " — a trecut de −20%: pune stopul scris la cumpărare." : "."));
+    if (rau && rau.rezultat < 0) linii.push("Cea mai mare pierdere: " + (rau.simbol || rau.ticker) + " " + L(rau.rezultat) + " (" + P(rau.pct) + ")" + (rau.pct !== null && rau.pct <= -0.2 ? ", peste −20%: aș scrie stopul încă de la cumpărare." : "."));
     return linii;
   }
 
@@ -489,6 +504,6 @@ var ActiuniSemnale = (function () {
     if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
     return mx;
   }
-  return { stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { usd: usd, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;
