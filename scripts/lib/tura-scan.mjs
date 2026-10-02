@@ -6,6 +6,8 @@
 // v96.2: o data pe zi, pe fiecare piata, "cat a mers reteta in trecut" (Scan.istoricRetete pe barele deja aduse) si,
 // dupa fiecare scan, alerta pe Discord cand un simbol URMARIT de el intra intr-o reteta sau iese din ea.
 // d = { cere, trimite, trimiteAlerta?, afara(url) -> JSON, jurnal, pauza, Scan, GridCalcul, NDX, pauzaMs? }
+// v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const ORA = 3600000;
 function ceas(acum, tz) {
   const o = {};
@@ -137,13 +139,13 @@ export async function turaScan(d, st, acum) {
     if (!l || !l.bare || st["ist" + fel] === zi) continue;
     const ist = d.Scan.istoricRetete(l.bare, fel);
     const r = await incearca(d, "istoric " + fel, () => d.trimite("/api/istoric-bot?action=scan", { istoric: { fel, la: acum, ...ist } }));
-    if (r) { st["ist" + fel] = zi; d.jurnal("scan istoric " + fel + ":", ist.instr, "instrumente,", ist.trend.s.n, "intrari in trend"); }
+    if (r) { st["ist" + fel] = zi; d.jurnal("scan istoric " + fel + ":", cate(ist.instr, "instrument", "instrumente") + ",", cate(ist.trend.s.n, "intrare în trend", "intrări în trend")); }
   }
   if ((cr || ac) && st.numeZi !== zi) {
     const v = await incearca(d, "citesc numele", () => d.cere("/api/istoric-bot?action=scan"));
     const n = await incearca(d, "numele", () => scanNume(d, cr || (v && v.crypto && v.crypto.randuri) || [], ac || (v && v.actiuni && v.actiuni.randuri) || [], v && v.nume));
     if (n) st.numeZi = zi;
   }
-  if (cr || ac) d.jurnal("scan:", cr ? cr.length + " monede" : "", ac ? ac.length + " actiuni" : "");
+  if (cr || ac) d.jurnal("scan:", cr ? cate(cr.length, "monedă", "monede") : "", ac ? cate(ac.length, "acțiune", "acțiuni") : "");
   return st;
 }

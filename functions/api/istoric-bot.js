@@ -185,7 +185,9 @@ export async function onRequestPost({request,env}){
     return json({ok:true,monede:curate.length});
   }
   if(action==="raport"){
-    const la=nr(corp&&corp.la),linii=corp&&Array.isArray(corp.linii)?corp.linii.slice(0,16).map(x=>typeof x==="string"?x.slice(0,400):"").filter(Boolean):null;
+    // v100.78 (revizia ideilor): 40 de randuri x 1000 de caractere - colectorul trimite pana la 19 (duminica 12 + T212 2 + autopsia
+    // actiunilor 5), iar un rand rupt de TextRo.rupe are pana la 3 randuri; cu 16 x 400, Jurnalul pierdea autopsia actiunilor
+    const la=nr(corp&&corp.la),linii=corp&&Array.isArray(corp.linii)?corp.linii.slice(0,40).map(x=>typeof x==="string"?x.slice(0,1000):"").filter(Boolean):null;
     if(la===null||!linii)return json({error:"Lipseste la sau linii"},400);
     await env.ISTORIC.put("raport",JSON.stringify({la,linii,saptamana:typeof corp.saptamana==="string"?corp.saptamana.slice(0,12):null}));
     return json({ok:true});

@@ -31,7 +31,7 @@ import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
-const VERSIUNE_COLECTOR = "v101.54";
+const VERSIUNE_COLECTOR = "v101.55";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -49,6 +49,8 @@ function jurnal(...a) {
   try { fs.appendFileSync(LOG, linie); } catch {}
   if (process.env.COLECTOR_CONSOLA) process.stdout.write(linie);
 }
+// v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 
 // O singura instanta. Fisierul pid are si o "bataie de inima" (ora ultimei ture):
 // un pid ramas dupa o oprire brusca a PC-ului poate fi refolosit de Windows pentru
@@ -512,7 +514,7 @@ async function turaLaborator() {
     try { const act = await cere("/api/bot-orders"); extra = [...new Set((act && act.bots || []).filter((b) => b && b.activ !== false && b.simbolPionex).map((b) => String(b.simbolPionex)))]; } catch (e) { jurnal("laborator botii care ruleaza", e.message); }
     const r = await turaLaboratorModul({ cere: cerePionex, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridLaborator, GridClasament, top: 20, H: 2, pagini: 12, zile: 60, GridPlan, plan: pp.plan, suma: pp.suma, levier: pp.levier, notaPlan: pp.nota, miscareZi: TabloExtra.miscareZi, extraSimboluri: extra });
     if (r.monede >= 10) { await trimite("/api/istoric-bot?action=laborator", r); laboratorLa = Date.now(); tineRitm("laborator", laboratorLa); }
-    else { jurnal("laborator NEURCAT: doar", r.monede, "monede"); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
+    else { jurnal("laborator NEURCAT: doar", cate(r.monede, "monedă", "monede")); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   } catch (e) { jurnal("laborator ESEC", e.message); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   laboratorInLucru = false;
 }
@@ -569,7 +571,7 @@ async function turaArhivaBoti() {
   try {
     const r = await strangeBoti({ cere, trimite });
     arhivaLa = Date.now();
-    if (r.noi || r.pagini > 1) jurnal("arhiva boti inchisi:", r.noi, "noi,", r.total, "in total,", r.pagini, "pagini,", r.complet ? "completa" : "INCOMPLETA");
+    if (r.noi || r.pagini > 1) jurnal("arhiva boti inchisi:", cate(r.noi, "bot nou", "boți noi") + ",", r.total, "in total,", cate(r.pagini, "pagină", "pagini") + ",", r.complet ? "completa" : "INCOMPLETA");
   } catch (e) { jurnal("arhiva boti inchisi", e.message); arhivaLa = Date.now() - ARHIVA_MS + 3 * 60000; }
   arhivaInLucru = false;
 }
@@ -898,7 +900,7 @@ async function turaPoza() {
     const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri }), text = JSON.stringify(poza);
     const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
     if (!r.ok) jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));
-    else { pozaOkLa = Date.now(); jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", t212.length + " poziții", boti.length + " boți", simboluri.length + " simboluri", radarUrl ? "tunel" : ""); }
+    else { pozaOkLa = Date.now(); jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", cate(t212.length, "poziție", "poziții"), cate(boti.length, "bot", "boți"), cate(simboluri.length, "simbol", "simboluri"), radarUrl ? "tunel" : ""); }
     // I-463: alertele pe simbolurile paginii (miscare > 2x ATR propriu, cumparare noua de insider) - o data pe zi per simbol
     const m = meta(), st = m.simAlerte || (m.simAlerte = {}), prag = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
     for (const k of Object.keys(st)) if (k.slice(-10) < prag) delete st[k];
@@ -1138,7 +1140,7 @@ async function turaSocoteala() {
     const peCod = SemnaleBot.socotealaToti(loguri);
     socotealaTaci = SemnaleBot.tacute(peCod); socotealaUltima = peCod;
     await trimite("/api/istoric-bot?action=socoteala", { la: Date.now(), boti: loguri.length, peCod });
-    jurnal("socoteala:", loguri.length, "boti,", Object.keys(peCod).length, "sfaturi,", judecati, "judecati la inchidere, tacute:", Object.keys(socotealaTaci).join(",") || "niciunul");
+    jurnal("socoteala:", cate(loguri.length, "bot", "boți") + ",", cate(Object.keys(peCod).length, "sfat", "sfaturi") + ",", cate(judecati, "judecată", "judecăți"), "la inchidere, tacute:", Object.keys(socotealaTaci).join(",") || "niciunul");
     socotealaLa = Date.now();
   } catch (e) { jurnal("socoteala ESEC", e.message); socotealaLa = Date.now() - 3600000 + 10 * 60000; }
   socotealaInLucru = false;
@@ -1195,7 +1197,7 @@ async function turaSocotealaActiuni() {
     }
     socotealaAct = Consiliu.socotealaActiuni(jurnale); jurnaleActLoguri = logActNou;
     await trimite("/api/istoric-bot?action=socotealaAct", { la: Date.now(), peCod: socotealaAct });
-    socActZi = zi; jurnal("socoteala actiuni:", jurnale.length, "tickere,", Object.keys(socotealaAct).length, "motive");
+    socActZi = zi; jurnal("socoteala actiuni:", cate(jurnale.length, "ticker", "tickere") + ",", cate(Object.keys(socotealaAct).length, "motiv", "motive"));
   } catch (e) { jurnal("socoteala actiuni ESEC", e.message); }
   socActInLucru = false;
 }
@@ -1301,7 +1303,7 @@ async function turaPerechi() {
     perechiCor = corectie;
     await trimite("/api/istoric-bot?action=perechiEst", { est: perechiEst });
     await trimite("/api/istoric-bot?action=perechiCorectie", { corectie });
-    jurnal("perechi:", noi, "estimari noi,", Object.keys(corectie).filter((s) => corectie[s].factor).length, "monede cu factor din", Object.keys(corectie).length);
+    jurnal("perechi:", cate(noi, "estimare nouă", "estimări noi") + ",", cate(Object.keys(corectie).filter((s) => corectie[s].factor).length, "monedă", "monede"), "cu factor din", Object.keys(corectie).length);
   } catch (e) { jurnal("perechi ESEC", e.message); perechiLa = Date.now() - 50 * 60000; }   // reincerc peste ~10 min
   perechiInLucru = false;
 }

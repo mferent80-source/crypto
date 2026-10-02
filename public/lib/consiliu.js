@@ -371,14 +371,9 @@ var Consiliu = (function () {
   var ET_ST = { sus: "trend în sus", lateral: "trend neclar", jos: "trend în jos", calm: "fără mișcare mare", "dupa-miscare": "după o mișcare mare", departe: "departe de maximul pe 7 zile", "langa-max": "lângă maximul pe 7 zile" };
   var NV_ACT = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
   function etStare(s) { return s ? String(s).split("|").map(function (k) { return ET_ST[k] || k; }).join(", ") : "nenotată (sfat dinainte de 01.10)"; }
-  // v100.77 (ideea 3): un rând de raport ≤ 160 - se rupe la granița de sens („; ”, „: ”, „ — ”), altfel pe cuvinte; nimic tăiat
-  function rupe160(t) {
-    t = String(t); if (t.length <= 160) return t;
-    var bun = -1;
-    ["; ", ": ", " — "].forEach(function (sep) { var i = t.lastIndexOf(sep, 158); if (i >= 40) { var c = sep === " — " ? i : i + sep.length - 1; if (c > bun) bun = c; } });
-    if (bun < 0) { var sp = t.lastIndexOf(" ", 160); bun = sp > 0 ? sp : 160; }
-    return t.slice(0, bun).replace(/\s+$/, "") + "\n" + rupe160(t.slice(bun).replace(/^\s+/, ""));
-  }
+  // v100.77 (ideea 3): un rând de raport ≤ 160, rupt la granița de sens; v100.78: ruperea stă într-un singur loc - TextRo.rupe
+  // (fără TextRo, rândul rămâne întreg: nimic tăiat)
+  function rupe(t, max) { return typeof TextRo !== "undefined" && TextRo.rupe ? TextRo.rupe(t, max) : String(t); }
   function autopsieActiuni(loguri, acum) {
     acum = nr(acum) !== null ? nr(acum) : Date.now(); var ZI = 864e5, toate = [];
     (Array.isArray(loguri) ? loguri : []).forEach(function (L) {
@@ -415,7 +410,7 @@ var Consiliu = (function () {
         + "\nDacă-l urmai, te-ar fi costat " + [tip.costUsd ? F2(tip.costUsd) + " $" : "", tip.costLei ? F2(tip.costLei) + " lei" : ""].filter(Boolean).join(" și ") + "; l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";   // v100.77: două rânduri
       linii.push(tip.text);
     } else linii.push("Niciun tipar repetat sigur încă pe acțiuni (trebuie cel puțin 10 zile judecate ale aceluiași motiv în aceeași stare, cu greșeala clar peste jumătate).");
-    linii = linii.map(function (l) { return String(l).split("\n").map(rupe160).join("\n"); });   // v100.77 (ideea 3)
+    linii = linii.map(function (l) { return rupe(l, 160); });   // v100.77 (ideea 3)
     return { scumpe: scumpe, tipar: tip, linii: ["Autopsia săptămânii pe acțiuni — sfaturile Consilierului care te-ar fi costat cel mai mult:"].concat(linii) };
   }
   function socotealaActiuni(jurnale) {

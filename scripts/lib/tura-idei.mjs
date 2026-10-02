@@ -3,6 +3,8 @@
 // deps: { tickere: ["AAPL_US_EQ"...], cereBare(ticker) -> bare, cereRezultate(ticker) -> "YYYY-MM-DD"|null,
 //         Idei, inchise, pauza, jurnal, acum, ndx?: Set(simboluri Nasdaq 100), rezumat?: Acasa.rezumatActiune }
 // v93: pentru actiunile din Nasdaq 100 pune si rezumatul zilei (Home: largimea, cine se misca, cele 7 mari).
+// v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 export async function turaIdei(d) {
   const l = [], preturi = {}, vazute = new Set(), sim = d.simbol || ((tk) => tk.split("_")[0]), ndx = [];
   let judecate = 0, i = 0;
@@ -21,6 +23,6 @@ export async function turaIdei(d) {
     l.push({ ticker: tk, simbol: s, r });
   }
   const trecute = l.filter((x) => x.r.trece).length, actiuni = d.Idei.alegeActiuni(l, 5, d.inchise);
-  d.jurnal("idei: " + judecate + " actiuni judecate, " + trecute + " trec de poarta" + (actiuni.length ? ": " + actiuni.map((x) => x.simbol).join(", ") : ""));
+  d.jurnal("idei: " + cate(judecate, "acțiune judecată", "acțiuni judecate") + ", " + (trecute === 1 ? "una trece" : trecute + " trec") + " de poarta" + (actiuni.length ? ": " + actiuni.map((x) => x.simbol).join(", ") : ""));
   return { judecate, trecute, actiuni, preturi, ndx };
 }

@@ -5430,8 +5430,9 @@ function jtRender(){
       +'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+(cr.doarVerde>cr.realJudecate?"Aș porni doar pe 🟢 și n-aș reporni pe aceeași monedă în primele 10 minute.</p><p class='tbSub'>Pe boții tăi, asta ar fi însemnat "+U(cr.doarVerde-cr.realJudecate)+" în plus.":"Aș nota mai departe și aș reverifica la 30 de boți: pe cei de până acum, fișa n-ar fi ajutat.")+'</p>'
       +'<p class="tbSub">Radarul a văzut doar lumânările închise înainte de ora fiecărei porniri. Pe '+TextRo.cate(cr.judecate,"bot","boți")+' e un semn, nu o dovadă: la 30 se poate spune mai sigur.</p></div>';
   // v84: raportul de duminica (ultimul, de pe server) si regulile tale
+  // v100.78 (ideea 1): raportul SALVAT inainte de v100.61 („−36.16 USDT”) se afiseaza cu cifrele in forma noua; cuvintele lui raman
   var rap=$("jtRaport");if(rap){var R=jtStare.raport;
-    if(R&&Array.isArray(R.linii)){rap.innerHTML='<ul class="grLista">'+R.linii.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>';if($("jtRaportSub"))$("jtRaportSub").textContent="săptămâna "+(R.saptamana||"")+" · trimis duminică seara"}
+    if(R&&Array.isArray(R.linii)){rap.innerHTML='<ul class="grLista">'+R.linii.map(function(x){return '<li>'+escapeHtml(TextRo.cifreNoi(x))+'</li>'}).join("")+'</ul>';if($("jtRaportSub"))$("jtRaportSub").textContent="săptămâna "+(R.saptamana||"")+" · trimis duminică seara"}
     else{var pr=Obiceiuri.raportDuminica({trades:l,acum:Date.now()});rap.innerHTML='<p class="tbSub">Primul raport vine duminică după ora 20. Cum ar arăta acum, pe ultimele 7 zile:</p><ul class="grLista">'+pr.linii.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>'}}
   var rg=$("jtReguli");if(rg){var rp2=Obiceiuri.reguliPersonale(l,"Europe/Bucharest");
     rg.innerHTML=!rp2.suficient?'<p class="tbSub">'+TextRo.cate(rp2.n,"bot","boți")+' în jurnal: mai trebuie '+rp2.lipsa+' ca să-ți spun unde pierzi TU (ore, monede, durate, direcție). Sub 30, orice „regulă” ar fi noroc.</p>'

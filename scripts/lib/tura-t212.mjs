@@ -7,6 +7,8 @@
 // deps: { cereStare() -> {complet, cursorVechi}, cerePagina(cursor|null) -> {items, cursor},
 //         salveaza({ordine:[id], umpleri:[...], stare|null}) -> {noi}, umpleri(items) -> [...],
 //         pauza(ms), jurnal, max (12), pasMs (11000) }
+// v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 export async function turaT212(d) {
   const max = d.max || 12, pas = d.pasMs == null ? 11000 : d.pasMs;
   const st = Object.assign({ complet: false, cursorVechi: null }, await d.cereStare());
@@ -40,7 +42,7 @@ export async function turaT212(d) {
       cur = p.next;
     }
   }
-  if (noi || !st.complet) d.jurnal("t212: " + pagini + " pagini, " + noi + " ordine noi" + (st.complet ? "" : " · istoricul inca se coboara"));
+  if (noi || !st.complet) d.jurnal("t212: " + cate(pagini, "pagină", "pagini") + ", " + cate(noi, "ordin nou", "ordine noi") + (st.complet ? "" : " · istoricul inca se coboara"));
   return { pagini, noi, complet: st.complet };
 }
 
@@ -108,6 +110,6 @@ export async function turaCfActiuni(d) {
     if (Object.keys(strans).length >= 200) await scrie();
   }
   await scrie();
-  if (judecate) d.jurnal("cf actiuni: " + judecate + " trade-uri judecate pe " + actiuni + " actiuni" + (peTicker.size > actiuni ? " · mai sunt " + (peTicker.size - actiuni) : ""));
+  if (judecate) d.jurnal("cf actiuni: " + cate(judecate, "trade judecat", "trade-uri judecate") + " pe " + cate(actiuni, "acțiune", "acțiuni") + (peTicker.size > actiuni ? " · mai sunt " + (peTicker.size - actiuni) : ""));
   return { judecate, actiuni, ramase: Math.max(0, peTicker.size - actiuni) };
 }

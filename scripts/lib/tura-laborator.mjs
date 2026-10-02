@@ -8,6 +8,8 @@
 // v101.10: si SHORT langa long (taS, meaS) + extraSimboluri = monedele botilor care ruleaza: intra in tabel (botulTau), chiar daca
 // nu sunt in top; intrebarile laboratorului raman doar pe top.
 // v101.11: pagini (implicit 6 = ~31 zile) si zile (proba gridului dupa plan, implicit 30) - colectorul cere 12 / 60 (doua luni).
+// v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 export async function turaLaborator(d) {
   const top = d.top || 20, H = d.H || 2, pagini = d.pagini > 0 ? Math.floor(d.pagini) : 6, zile = d.zile > 0 ? Math.floor(d.zile) : 30, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, t0 = Date.now();
   const tk = await d.cere("tickers");
@@ -60,6 +62,6 @@ export async function turaLaborator(d) {
   const intrebari = d.GridLaborator.intrebari(rows, H);
   const rez = { la: Date.now(), H, monede, fara, ferestre: rows.length, intrebari,
     planMonede: cuPlan && planMonede.length ? { dir: "long", zile, plan: { plus: d.plan.plus, minus: d.plan.minus }, suma: d.suma || 100, levier: d.levier || 5, nota: d.notaPlan || "", monede: planMonede } : null };
-  d.jurnal("laborator:", monede, "monede,", rows.length, "ferestre in", Math.round((Date.now() - t0) / 1000) + " s; " + intrebari.map((q) => q.id + "=" + q.verdict).join(" "));
+  d.jurnal("laborator:", cate(monede, "monedă", "monede") + ",", cate(rows.length, "fereastră", "ferestre"), "in", Math.round((Date.now() - t0) / 1000) + " s; " + intrebari.map((q) => q.id + "=" + q.verdict).join(" "));
   return rez;
 }

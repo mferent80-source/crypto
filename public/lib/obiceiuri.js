@@ -17,8 +17,9 @@ var Obiceiuri = (function () {
   }
   // v100.72 (sfaturile concise, pachetul 5): sumele cu virgula („−52,50 USDT”, nu „−52.50 USDT”); „1 bot”, „20 de boți” prin TextRo.cate
   var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
-  // v100.75 (ideea 4): un text mai lung decât max se rupe pe cuvinte în rânduri ≤ max (nimic tăiat)
-  function rupe(t, max) { var out = [], cur = ""; String(t).split(" ").forEach(function (w) { if (cur && (cur + " " + w).length > max) { out.push(cur); cur = w; } else cur = cur ? cur + " " + w : w; }); if (cur) out.push(cur); return out.join("\n"); }
+  // v100.75 (ideea 4): un text mai lung decât max se rupe în rânduri ≤ max (nimic tăiat); v100.78: ruperea stă într-un singur loc -
+  // TextRo.rupe (la granița de sens, altfel pe cuvinte); fără TextRo, rândul rămâne întreg
+  function rupe(t, max) { return typeof TextRo !== "undefined" && TextRo.rupe ? TextRo.rupe(t, max) : String(t); }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
   var P = function (v) { return (v * 100).toFixed(0) + "%"; };
   function moneda(s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$/, "").replace(/\.PERP$/, ""); }
@@ -176,6 +177,8 @@ var Obiceiuri = (function () {
     if (g && g.cost < 0) out.regula = "Regula săptămânii: " + g.dataViitoare;
     else out.regula = "Regula săptămânii: Aș porni doar pe 🟢, cu planul de ieșire scris înainte.";
     linii.push(out.regula);
+    // v100.78 (ideea 3): orice rând al raportului ≤ 160 (Discord le pune pe rânduri) - și laboratorul cu trei întrebări lungi dovedite
+    for (var i = 0; i < linii.length; i++) linii[i] = rupe(linii[i], 160);
     return out;
   }
 

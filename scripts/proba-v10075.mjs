@@ -46,19 +46,19 @@ await test("(2) pagina Alerts păstrează rândurile mesajelor (faptul pe un râ
 // (3) „de” / singularul pe sursă: un număr întreg nu se lipește direct de un substantiv numărat - trece prin TextRo.cate / cate(...).
 // Zecimalele („1,5 zile”) nu iau „de” și rămân (toFixed(…) / TextRo.num(…) / z(…) chiar înainte).
 // revizia ideilor (I1): + substantivele gridului (grile, linii, perechi, umpleri, niveluri…), formele „n + (n === 1 ? …)”, regulile
-// „>= 20 ? " de"” scrise de mână și textele colectorului (Discord); liniile de jurnal intern (d.jurnal / jurnal(…)) nu sunt texte pentru el
+// „>= 20 ? " de"” scrise de mână și textele colectorului (Discord); v100.78 (ideea 2): și liniile de jurnal intern (d.jurnal / jurnal(…)) -
+// numărătorile lor trec și ele prin cate (forma cu virgulă „jurnal(…, n, "monede")” o păzește proba v100.78)
 const NUMARATE = "boți|cazuri|monede|zile|ore|alerte|mișcări|porniri|trade-uri|ferestre|perioade|acțiuni|poziții|situații|minute|tranzacții|decizii|semnale|tickere|rânduri|grile|linii|perechi|umpleri|bare|niveluri|intrări|vânzări|ordine|lumânări|săptămâni|intervale";
 // zecimalele nu iau „de”: toFixed(1+) [.replace(…)] / TextRo.num(…) / helperele cu o zecimală z(…), nz(…), T(…), T1(…), vg(…), z1(…)
 const ZECIMAL = /(toFixed\([1-9]\)(\.replace\([^()]*\))?|TextRo\.num\((?:[^()]|\([^()]*\))*\)|\b(z|nz|T|T1|vg|z1)\((?:[^()]|\([^()]*\))*\))\s*\)?\s*$/;   // un nivel de paranteze în argument: vg(nr(x))
 function lipite(src) {
   const out = [], re = new RegExp("\\+\\s*([\"'])\\s(" + NUMARATE + ")(?![\\p{L}\\-])", "gu"), linie = (i) => src.slice(src.lastIndexOf("\n", i) + 1, src.indexOf("\n", i) < 0 ? undefined : src.indexOf("\n", i));
   for (const m of src.matchAll(re)) {
-    if (/\bjurnal\(/.test(linie(m.index))) continue;
     const inainte = src.slice(Math.max(0, m.index - 90), m.index);
     if (ZECIMAL.test(inainte)) continue;
     out.push(inainte.slice(-55).replace(/\s+/g, " ") + m[0]);
   }
-  for (const m of src.matchAll(/([\w$.\[\]]+)\s*\+\s*\(\s*\1\s*===\s*1\s*\?/g)) if (!/\bjurnal\(/.test(linie(m.index))) out.push("ternar: " + linie(m.index).slice(Math.max(0, m.index - src.lastIndexOf("\n", m.index) - 50)).slice(0, 110));
+  for (const m of src.matchAll(/([\w$.\[\]]+)\s*\+\s*\(\s*\1\s*===\s*1\s*\?/g)) out.push("ternar: " + linie(m.index).slice(Math.max(0, m.index - src.lastIndexOf("\n", m.index) - 50)).slice(0, 110));
   for (const m of src.matchAll(/>=\s*20\s*\?\s*["'] de/g)) out.push("„de” scris de mână: " + linie(m.index).trim().slice(0, 110));
   return out;
 }

@@ -2,6 +2,8 @@
 // ultimele 60 de zile + cei activi, barele de 1 ORA pe 6 luni (prima data ~9 pagini de 500, apoi doar pagina noua) pe disc,
 // profilul (ProfilMoneda.calculeaza) in KV profil:<SIMBOL>. Moneda fara profil (bot nou) nu asteapta noaptea: se face la prima
 // tura. Pauza 1,6 s intre cereri (serverul lasa 120 de citiri pe minut). Probat in scripts/proba-v10045.mjs.
+// v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 export const ZILE = 183, PAS_MS = 1600, PAGINA = 500, ORA = 3600000;
 const tBara = (r) => Number(Array.isArray(r) ? r[0] : r && r.time);
 export function eNoapte(t) {
@@ -55,7 +57,7 @@ export async function turaProfil(d) {
       st.facute[simbol] = { zi: azi, la: d.acum, profil: profil ? { simbol, zile: profil.zile, z12: profil.z12, z24: profil.z24 } : null };
       delete st.esuat[simbol];
       d.scrieStare(st);
-      d.jurnal("profil", simbol, profil ? profil.zile + " zile, " + randuri.length + " bare" : "prea putine bare (" + randuri.length + ")");
+      d.jurnal("profil", simbol, profil ? cate(profil.zile, "zi", "zile") + ", " + cate(randuri.length, "bară", "bare") : "prea putine bare (" + randuri.length + ")");
     } catch (x) {
       st.esuat[simbol] = { la: d.acum, n: Math.min(8, (e ? e.n : 0) + 1) }; d.scrieStare(st);
       d.jurnal("profil ESEC", simbol, x.message);

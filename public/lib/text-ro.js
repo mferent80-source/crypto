@@ -40,6 +40,25 @@ var TextRo = (function () {
   function cate(n, sg, pl) { var k = Math.round(Number(n)); if (!isFinite(k)) return "— " + pl; var r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   // v100.77 (ideea 1): orele unui prag - „1 oră”, „2 ore”, „24 de ore”, „2,25 ore” (cel mult 2 zecimale) - aceeași formă pe Tablou și în alertă
   function oreN(h) { var v = Number(h); if (!isFinite(v)) return "— ore"; v = Math.round(Math.abs(v) * 100) / 100; return Number.isInteger(v) ? cate(v, "oră", "ore") : String(v).replace(".", ",") + " ore"; }
-  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore, cate: cate, oreN: oreN };
+  // v100.78 (ideea 1): un text SALVAT înainte de v100.61 (raportul de duminică de pe server) se afișează cu cifrele în forma nouă:
+  // „−36.16 USDT” -> „−36,16 USDT”, „-8.17 USDT” -> „−8,17 USDT”, „33.3%” -> „33,3%”. Doar cifrele urmate de USDT / %; cuvintele rămân,
+  // leii („+1.052 lei” = mii cu punct) și prețurile nu se ating, iar un text deja nou iese neschimbat.
+  function cifreNoi(t) {
+    return String(t == null ? "" : t).replace(/(^|[^\w.,])([+−-]?)(\d+)\.(\d+)(\s?(?:USDT|%))/g, function (m, pre, s, a, b, u) { return pre + (s === "-" ? "−" : s) + a + "," + b + u; });
+  }
+  // v100.78 (ideea 3): ruperea rândurilor lungi, într-un singur loc (autopsiile, raportul de duminică). Un rând peste max (160 implicit)
+  // se rupe la granița de sens - după „; ” / „: ”, înainte de „ — ” (cel mai târziu loc, nu în primele 40 de caractere) -, altfel pe
+  // cuvinte; rândurile deja rupte („\n”) se iau pe rând. Nimic tăiat.
+  function rupe(t, max) {
+    max = typeof max === "number" && max >= 60 ? Math.floor(max) : 160;
+    return String(t == null ? "" : t).split("\n").map(function un(s) {
+      if (s.length <= max) return s;
+      var bun = -1;
+      ["; ", ": ", " — "].forEach(function (sep) { var i = s.lastIndexOf(sep, max - 2); if (i >= 40) { var c = sep === " — " ? i : i + sep.length - 1; if (c > bun) bun = c; } });
+      if (bun < 0) { var sp = s.lastIndexOf(" ", max); bun = sp > 0 ? sp : max; }
+      return s.slice(0, bun).replace(/\s+$/, "") + "\n" + un(s.slice(bun).replace(/^\s+/, ""));
+    }).join("\n");
+  }
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe };
 })();
 if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

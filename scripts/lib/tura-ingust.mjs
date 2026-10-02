@@ -3,6 +3,8 @@
 // urmarire? (v100.59, I-480: notele de pana acum), acum? }
 // v100.59 (I-480): urmarirea INAINTE - fiecare rezultat (cu o setare) se noteaza; notele mai vechi decat durata lor se judeca pe barele
 // reale de DUPA ele, cu acelasi simulator - si pe monedele care intre timp nu mai sunt sugerate (2 pagini, cel mult 5 monede)
+// v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 async function aduce(d, simbol, pagini, pauzaMs) {
   let r15 = [], end = null;
   for (let p = 0; p < pagini; p++) {
@@ -37,6 +39,6 @@ export async function turaIngust(d) {
   // revizia 01.10 (I7): notele fara date de peste 7 zile (moneda scoasa, redenumita) ies din asteptare - nu mai tin locul celor 5 monede
   for (const e of lista) if (e && !e.r && acum - e.la > 7 * 864e5) e.r = { lipsa: true };
   if (urmOk) { try { await d.trimite("/api/istoric-bot?action=ingustUrmarire", { lista: lista.slice(-2000) }); } catch (e) { d.jurnal("ingust urmarire", e.message); } }
-  d.jurnal("ingust: " + monede + " monede sugerate, " + propuse + " cu grid ingust propus · urmarite: " + lista.length + " note, " + lista.filter((e) => e && e.r).length + " judecate");
+  d.jurnal("ingust: " + cate(monede, "monedă sugerată", "monede sugerate") + ", " + propuse + " cu grid ingust propus · urmarite: " + cate(lista.length, "notă", "note") + ", " + cate(lista.filter((e) => e && e.r).length, "judecată", "judecate"));
   return { monede, propuse };
 }
