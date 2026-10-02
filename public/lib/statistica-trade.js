@@ -6,6 +6,8 @@
 // Regula de trader: sub 10 trade-uri nu se trag concluzii (bine / gresit goale, cu avertisment). Lipsa ramane lipsa, nu 0.
 var StatisticaTrade = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var MIN = 10, TZ = "Europe/Bucharest";
   var LEVIER_TREPTE = [[1, "1×"], [2, "2×"], [3, "3×"], [5, "4–5×"], [10, "6–10×"], [20, "11–20×"], [50, "21–50×"], [Infinity, "peste 50×"]], LEVIER_ORD = {};
   LEVIER_TREPTE.forEach(function (t, i) { LEVIER_ORD[t[1]] = i; });
@@ -110,10 +112,10 @@ var StatisticaTrade = (function () {
 
   // Ce ai facut bine / ce ai gresit - din cifre, fiecare cu suma lui; doar de la 10 trade-uri, iar grupele sub 5 trade-uri nu conteaza
   function concluzii(s, M) {
-    if (!s.suficient) { s.avertisment = "Ai doar " + s.n + " trade-uri: prea puține ca să spun ce faci bine sau rău (îmi trebuie cel puțin " + MIN + "). Cifrele de mai jos spun doar ce s-a întâmplat."; return; }
+    if (!s.suficient) { s.avertisment = "Ai doar " + cate(s.n, "trade", "trade-uri") + ": prea puține ca să spun ce faci bine sau rău (îmi trebuie cel puțin " + MIN + "). Cifrele de mai jos spun doar ce s-a întâmplat."; return; }
     var B = s.bine, G = s.gresit, mari = function (l) { return l.filter(function (g) { return g.n >= 5; }); };
-    if (s.total > 0) B.push({ text: "Pe total ești pe plus: " + bani(s.total, M) + " din " + s.n + " trade-uri" + (s.factorProfit !== null ? " — fiecare 1 " + M + " pierdut a adus " + s.factorProfit.toFixed(2).replace(".", ",") + " câștigat" : "") + ".", suma: s.total });
-    else G.push({ text: "Pe total ești pe minus: " + bani(s.total, M) + " din " + s.n + " trade-uri.", suma: s.total });
+    if (s.total > 0) B.push({ text: "Pe total ești pe plus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + (s.factorProfit !== null ? " — fiecare 1 " + M + " pierdut a adus " + s.factorProfit.toFixed(2).replace(".", ",") + " câștigat" : "") + ".", suma: s.total });
+    else G.push({ text: "Pe total ești pe minus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + ".", suma: s.total });
     if (s.rataCastig >= 0.5) B.push({ text: "Câștigi la " + pr(s.rataCastig) + " din trade-uri (" + s.pePlus + " din " + s.n + ").", suma: s.castigBrut });
     if (s.raport !== null && s.raport < 1) G.push({ text: "Pierderea medie (" + bani(s.pierdereMedie, M) + ") e mai mare decât câștigul mediu (" + bani(s.castigMediu, M) + "): o pierdere mănâncă " + (1 / s.raport).toFixed(1).replace(".", ",") + " câștiguri. Stopul mai aproape sau ieșirea mai devreme de pe minus schimbă asta.", suma: s.pierdereBruta });
     else if (s.raport !== null) B.push({ text: "Câștigul mediu (" + bani(s.castigMediu, M) + ") e mai mare decât pierderea medie (" + bani(s.pierdereMedie, M) + ").", suma: s.castigBrut });
@@ -127,7 +129,7 @@ var StatisticaTrade = (function () {
     if (luni.length >= 2) {
       var lb = luni.slice().sort(function (a, b) { return b.total - a.total; }), celMaiBun = lb[0], celMaiProst = lb[lb.length - 1];
       if (celMaiBun.total > 0) B.push({ text: lPlus + " din " + luni.length + " luni pe plus; cea mai bună: " + celMaiBun.nume + " (" + bani(celMaiBun.total, M) + ").", suma: celMaiBun.total });
-      if (celMaiProst.total < 0) G.push({ text: "Cea mai proastă lună: " + celMaiProst.nume + " (" + bani(celMaiProst.total, M) + " din " + celMaiProst.n + " trade-uri).", suma: celMaiProst.total });
+      if (celMaiProst.total < 0) G.push({ text: "Cea mai proastă lună: " + celMaiProst.nume + " (" + bani(celMaiProst.total, M) + " din " + cate(celMaiProst.n, "trade", "trade-uri") + ").", suma: celMaiProst.total });
     }
     var d = mari(s.perDurata).slice().sort(function (a, b) { return b.total - a.total; });
     if (d.length && d[0].total > 0) B.push({ text: "Trade-urile ținute " + d[0].et + " aduc cel mai mult: " + bani(d[0].total, M) + " din " + d[0].n + ".", suma: d[0].total });
@@ -150,7 +152,7 @@ var StatisticaTrade = (function () {
     var pas = Math.max(1, Math.ceil(curba.length / 300));
     var pct = curba.map(function (p, i) { if (i % pas && i !== curba.length - 1) return ""; return '<circle class="stPunct" cx="' + x(i).toFixed(1) + '" cy="' + y(p.cumul).toFixed(1) + '" r="5"><title>' + esc(data(p.t) + " · " + (p.eticheta || "") + " " + bani(p.rezultat, M) + " · cumulat " + bani(p.cumul, M)) + "</title></circle>"; }).join("");
     var ult = curba[curba.length - 1];
-    return '<svg class="stSvg" viewBox="0 0 ' + LAT + " " + INA + '" role="img" aria-label="' + esc("Curba banilor: " + bani(ult.cumul, M) + " după " + curba.length + " trade-uri") + '">'
+    return '<svg class="stSvg" viewBox="0 0 ' + LAT + " " + INA + '" role="img" aria-label="' + esc("Curba banilor: " + bani(ult.cumul, M) + " după " + cate(curba.length, "trade", "trade-uri")) + '">'
       + '<line class="stZero" x1="' + ST + '" x2="' + (LAT - DR) + '" y1="' + y(0).toFixed(1) + '" y2="' + y(0).toFixed(1) + '"></line>'
       + '<text class="stAx" x="' + (LAT - DR + 6) + '" y="' + (y(0) + 4).toFixed(1) + '">0</text>'
       + (Math.abs(y(mx) - y(0)) >= 14 ? '<text class="stAx" x="' + (LAT - DR + 6) + '" y="' + (y(mx) + 4).toFixed(1) + '">' + esc(bani(mx, "").trim()) + '</text>' : "")
@@ -172,11 +174,11 @@ var StatisticaTrade = (function () {
   }
   function svgLuni(perLuna, o) {
     var M = (o && o.moneda) || "";
-    return bare(perLuna || [], function (g) { return g.nume || g.luna; }, function (g) { return g.total; }, function (g) { return (g.nume || g.luna) + ": " + bani(g.total, M) + " din " + g.n + " trade-uri, " + pr(g.rata) + " pe plus"; }, "Rezultatul pe lună");
+    return bare(perLuna || [], function (g) { return g.nume || g.luna; }, function (g) { return g.total; }, function (g) { return (g.nume || g.luna) + ": " + bani(g.total, M) + " din " + cate(g.n, "trade", "trade-uri") + ", " + pr(g.rata) + " pe plus"; }, "Rezultatul pe lună");
   }
   function etInterval(g) { var f = function (v) { return (v < 0 ? "−" : "") + Math.abs(v * 100).toFixed(0) + "%"; }; return g.de === -Infinity ? "sub " + f(g.pana) : g.pana === Infinity ? "peste " + f(g.de) : f(g.de) + "…" + f(g.pana); }
   function svgDistributie(dist) {
-    return bare(dist || [], etInterval, function (g) { return g.de < 0 ? -g.n : g.n; }, function (g) { return etInterval(g) + " din bani: " + g.n + " trade-uri"; }, "Câte trade-uri au ieșit în fiecare interval de câștig sau pierdere");
+    return bare(dist || [], etInterval, function (g) { return g.de < 0 ? -g.n : g.n; }, function (g) { return etInterval(g) + " din bani: " + cate(g.n, "trade", "trade-uri"); }, "Câte trade-uri au ieșit în fiecare interval de câștig sau pierdere");
   }
 
   // ---- tot blocul statisticii, ca HTML (acelasi in pagina si in demo). o: { moneda, titlu, piata, ordine ("noi"|"pierderi"|"castiguri"),
@@ -207,9 +209,9 @@ var StatisticaTrade = (function () {
     var f = function (k, v, parte) { if (v === null || v === undefined || !isFinite(v)) return "—"; if (k === "n") return String(v); if (k === "peTrade") return bani(v, M); if (k === "factor") return v.toFixed(2).replace(".", ","); if (k === "mariPondere") return pr(v) + " (" + c[parte].mari + ")"; return pr(v, k === "rata" ? 0 : 1).replace(/^-/, "−"); };
     var rand = c.randuri.map(function (r) { return "<tr><td>" + esc(r.et) + "</td><td>" + esc(f(r.cheie, r.a, "a")) + "</td><td><b>" + esc(f(r.cheie, r.b, "b")) + '</b></td><td class="' + (r.verdict === "mai-bine" ? "good" : r.verdict === "mai-rau" ? "bad" : "") + '">' + (r.verdict === "mai-bine" ? '▲<span class="stVerdTxt"> mai bine</span>' : r.verdict === "mai-rau" ? '▼<span class="stVerdTxt"> mai rău</span>' : "") + "</td></tr>"; });
     var bine = c.randuri.filter(function (r) { return r.verdict === "mai-bine"; }).length, rau = c.randuri.filter(function (r) { return r.verdict === "mai-rau"; }).length;
-    var nota = !c.b.n ? "Încă niciun bot pornit după regulile noi nu s-a închis. Comparația se umple singură; de la " + MIN + " boți îți spun dacă regulile ajută."
+    var nota = !c.b.n ? "Încă niciun bot pornit după regulile noi nu s-a închis. Comparația se umple singură; de la " + cate(MIN, "bot", "boți") + " îți spun dacă regulile ajută."
       : !c.destul ? "Doar " + c.b.n + (c.b.n === 1 ? " bot" : " boți") + " după regulile noi — prea puțini ca să tragem o concluzie (de la " + MIN + " de fiecare parte)."
-      : "Pe " + c.b.n + " boți după și " + c.a.n + " înainte: " + bine + (bine === 1 ? " măsură arată mai bine" : " măsuri arată mai bine") + ", " + rau + " mai rău. E un semn, nu o dovadă: piața nu e aceeași în cele două perioade.";
+      : "Pe " + cate(c.b.n, "bot", "boți") + " după și " + c.a.n + " înainte: " + bine + (bine === 1 ? " măsură arată mai bine" : " măsuri arată mai bine") + ", " + rau + " mai rău. E un semn, nu o dovadă: piața nu e aceeași în cele două perioade.";
     return '<div class="stBloc stCompara"><div class="stBlocCap"><h4>Înainte / după regulile din ' + esc(REGULI_NOI.et) + '</h4><span class="stSub">' + esc(REGULI_NOI.ce) + " · după ora pornirii botului</span></div>"
       + tabel(["", "Înainte", "După", ""], rand) + '<p class="stSub">' + esc(nota) + "</p></div>";
   }
@@ -228,7 +230,7 @@ var StatisticaTrade = (function () {
     var butPer = o.actiunePerioada ? '<div class="stGrup" role="group" aria-label="Perioada">' + PERIOADE.map(function (p) { return '<button type="button" class="stBtn" aria-pressed="' + (p.cheie === per.cheie) + '" data-action-click="' + o.actiunePerioada + "(\'" + piata + "\',\'" + p.cheie + "\')\">" + p.et + "</button>"; }).join("") + "</div>" : "";
     if (!s.n) return '<div class="stStat"><div class="stCap"><h3>📊 ' + esc(o.titlu || "Statistica") + "</h3>" + butPer + '</div><p class="stSub">' + (per.zile ? "Niciun trade închis " + per.sub + "." : "Niciun trade închis încă.") + "</p></div>";
     var tile = function (et, v, c, sub) { return '<div class="stTile"><span class="stEt">' + esc(et) + '</span><b class="stVal ' + (c || "") + '">' + esc(v) + "</b>" + (sub ? '<span class="stSub">' + esc(sub) + "</span>" : "") + "</div>"; };
-    var h = '<div class="stStat"><div class="stCap"><h3>📊 ' + esc(o.titlu || "Statistica") + "</h3>" + butPer + '<span class="stSub stCapSub">' + s.n + " trade-uri închise " + (per.zile ? per.sub : "") + " · " + esc(data(s.curba[0].t)) + " – " + esc(data(s.curba[s.curba.length - 1].t)) + (o.nota ? " · " + esc(o.nota) : "") + "</span></div>";
+    var h = '<div class="stStat"><div class="stCap"><h3>📊 ' + esc(o.titlu || "Statistica") + "</h3>" + butPer + '<span class="stSub stCapSub">' + cate(s.n, "trade închis", "trade-uri închise") + " " + (per.zile ? per.sub : "") + " · " + esc(data(s.curba[0].t)) + " – " + esc(data(s.curba[s.curba.length - 1].t)) + (o.nota ? " · " + esc(o.nota) : "") + "</span></div>";
     h += '<div class="stTiles">'
       + tile("Rezultat total", bani(s.total, M), cls(s.total), s.pePlus + " pe plus, " + s.peMinus + " pe minus" + (s.comisioane !== null ? " · după comisioane" : ""))
       + tile("Pe trade, în medie", bani(s.asteptare, M), cls(s.asteptare), "cât aduce un trade oarecare")

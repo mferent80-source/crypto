@@ -11,7 +11,7 @@ var Consilier = (function () {
   function L(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x)).toLocaleString("ro-RO") + " lei"; }
   function U(x) { return AS.usd(x); }   // v100.69: pretul ca pe pagina T212 („$33.00”), nu „$33,00”
   // v100.69: „6 trade-uri”, „60 de trade-uri” - v100.71 (revizia pachetului 4, I1): si singularul („1 trade”, „1 bot”), prin TextRo.cate
-  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
   function ultima(b) { return Array.isArray(b) && b.length ? b[b.length - 1] : null; }
   function stat(l) {
     var n = l.length, plus = 0, tot = 0; l.forEach(function (t) { tot += t.rezultat || 0; if (t.rezultat > 0) plus++; });
@@ -119,7 +119,7 @@ var Consilier = (function () {
     var acum = o.acum || Date.now(), linii = [], deFacut = 0;
     if (o.piata && o.piata.text) linii.push("📈 Piața: " + o.piata.text);
     (o.deIesit || []).forEach(function (x) { deFacut++; linii.push("🔴 De ieșit: " + x.simbol + (x.pctLei !== null && x.pctLei !== undefined ? " (" + P(x.pctLei) + ")" : "")); });
-    (o.rezultate || []).forEach(function (x) { var z = Math.ceil((Date.parse(x.data + "T12:00:00Z") - acum) / ZI); if (z >= 0 && z <= 7) { deFacut++; linii.push("🗓️ " + x.simbol + " își anunță rezultatele pe " + ziScurta(x.data) + (z === 0 ? " (azi)" : z === 1 ? " (mâine)" : " (peste " + z + " zile)")); } });
+    (o.rezultate || []).forEach(function (x) { var z = Math.ceil((Date.parse(x.data + "T12:00:00Z") - acum) / ZI); if (z >= 0 && z <= 7) { deFacut++; linii.push("🗓️ " + x.simbol + " își anunță rezultatele pe " + ziScurta(x.data) + (z === 0 ? " (azi)" : z === 1 ? " (mâine)" : " (peste " + cate(z, "zi", "zile") + ")")); } });
     (o.plafon || []).forEach(function (x) { deFacut++; linii.push("⚖️ " + x.simbol + " e " + Math.round(x.pond * 100) + "% din cont (plafonul e 20%)"); });
     (o.boti || []).forEach(function (x) { deFacut++; linii.push("⚠️ Botul " + x.nume + ": lichidarea la " + x.lich.toFixed(1).replace(".", ",") + "%"); });
     (o.stiri || []).slice(0, 3).forEach(function (x) { linii.push("📰 " + x.simbol + ": " + x.titlu); });
@@ -144,7 +144,7 @@ var Consilier = (function () {
         r[nv][h] = { n: v.length, dreptate: d, medie: v.length ? s / v.length : null };
       });
     });
-    var parti = Object.keys(NIV).map(function (nv) { var x = r[nv][10].n ? r[nv][10] : r[nv][5]; var h = r[nv][10].n ? 10 : 5; return x.n ? NIV[nv] + ": după " + h + " zile a avut dreptate în " + x.dreptate + " din " + x.n + " (prețul " + P(x.medie) + " în medie)" : null; }).filter(Boolean);
+    var parti = Object.keys(NIV).map(function (nv) { var x = r[nv][10].n ? r[nv][10] : r[nv][5]; var h = r[nv][10].n ? 10 : 5; return x.n ? NIV[nv] + ": după " + cate(h, "zi", "zile") + " a avut dreptate în " + x.dreptate + " din " + x.n + " (prețul " + P(x.medie) + " în medie)" : null; }).filter(Boolean);
     r.text = parti.length ? parti.join(" · ") + (lista.length < 30 ? " — puține cazuri încă." : ".") : "Încă nimic evaluat: fiecare sfat se judecă după 5, 10 și 20 de zile.";
     return r;
   }

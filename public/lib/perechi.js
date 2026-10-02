@@ -8,6 +8,8 @@
 // cu P25-P75 langa ea. E o corectie a probei pe moneda, nu o dovada: botii pe aceeasi moneda in aceleasi zile nu sunt independenti.
 var Perechi = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var G = GridCalcul, P = GridProba, C = G.C, ZI = 86400000, B15 = 15 * 60000;
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v); return isFinite(x) ? x : null; }
 
@@ -24,7 +26,7 @@ var Perechi = (function () {
       var k = b[s].o / p0, st = { dir: dir, jos: jos * k, sus: sus * k, grile: Math.max(1, Math.round(linii) - 1), levier: nr(o.levier) > 0 ? nr(o.levier) : 1, stop: null };
       per.push(P.simuleaza(b, s, W, st).perechi || 0);
     }
-    if (!per.length) return { eroare: "nicio fereastră de " + H + " zile înainte de pornire" };
+    if (!per.length) return { eroare: "nicio fereastră de " + cate(H, "zi", "zile") + " înainte de pornire" };
     return { peZi: per.reduce(function (a, v) { return a + v; }, 0) / per.length / H, ferestre: per.length, zile: zile };
   }
   // perechile reale pe zi fata de estimare. Revizia 01.10 (I1): pe ultimele 24-48 h din urme (un bot care a stat zile afara din grid si a

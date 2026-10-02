@@ -6,6 +6,8 @@
 // futures pe care n-o are se spune pe față („n-a măsurat”), nu se ghicește.
 var Busola = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var URL_REZUMAT = "https://busola.mferent80.workers.dev/api/rezumat.json";
   var CACHE_MS = 30 * 60 * 1000, VECHI_MS = 6 * 3600 * 1000;
   var stare = { rez: null, la: 0, inLucru: null };
@@ -18,7 +20,7 @@ var Busola = (function () {
   function randGrid(rez, simbol, acum) {
     if (!rez || !rez.monede || !rez.grid) return null;
     var cheie = simbolBusola(simbol), m = rez.monede[cheie], g = rez.grid;
-    var v = acum - Number(rez.la), varsta = v > VECHI_MS ? "măsurat acum " + Math.round(v / 3600000) + " ore" : null;
+    var v = acum - Number(rez.la), varsta = v > VECHI_MS ? "măsurat acum " + cate(Math.round(v / 3600000), "oră", "ore") : null;
     if (!m) return { nivel: "nemasurat", text: "Busola n-a măsurat " + cheie + ": urmărește topul spot Pionex, nu futures.", varsta: varsta };
     // v100.67 (revizia): „nu-stiu” = măsurat, nimic neobișnuit; „nemasurat” sau lipsă pe 4h = Busola n-a putut măsura —
     // înainte, amândouă ieșeau „nimic neobișnuit”. Se ia prima valoare MĂSURATĂ (filtrul de grid, apoi harta).

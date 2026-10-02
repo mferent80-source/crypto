@@ -6,6 +6,8 @@
 // Lipsa ramane null, nu 0 (Number(null) === 0 ar minti).
 var TabloExtra = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var G = GridCalcul, C = G.C, ZI = 86400000;
 
   function nr(v) {
@@ -585,7 +587,7 @@ var TabloExtra = (function () {
     if (total >= 0) return { zile: 0, text: "botul e pe plus: nimic de recuperat" };
     if (netZi <= 0) return { zile: null, text: "la ritmul de azi nu se recuperează: grilele nu acoperă costurile" };
     var z = -total / netZi;
-    return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") : Math.round(z)) + " zile până pe zero la ritmul de azi (" + TextRo.usdt(netZi) + "/zi), dacă prețul stă pe loc" };   // v100.62: virgula prin TextRo
+    return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") + " zile" : cate(Math.round(z), "zi", "zile")) + " până pe zero la ritmul de azi (" + TextRo.usdt(netZi) + "/zi), dacă prețul stă pe loc" };   // v100.62: virgula prin TextRo
   }
   // v87: cat din castigul unei umpleri ia comisionul; v100.39: pe grile Pionex ia 0,02% (maker) la intrare + 0,02% la iesire
   function comisionDinUmplere(netPct) {

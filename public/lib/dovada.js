@@ -5,6 +5,8 @@
 // Bonferroni pentru m comparatii (backtest-expert: data mining bias) - „cu semn” doar daca nu-l cuprinde pe „de obicei”.
 var Dovada = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var G = GridCalcul, GB = GraficBot, PB = Probabilitati, ORA = 3600000, H4 = 4 * ORA, ISTORIE = 720, PAS = 4, H = 24;
   function nr(v) { return typeof v === "number" && isFinite(v) ? v : null; }
   // ADX Wilder (n = 14): tr, +DM, -DM netezite, DX, ADX = media netezita a DX
@@ -74,7 +76,7 @@ var Dovada = (function () {
         var semn = ni < 10 ? null : ic[0] > pb ? "mai des" : ic[1] < pb ? "mai rar" : null;
         var marg = E.ev === "jos" ? "marginea de jos" : "marginea de sus";
         out.push({ cod: x.cod, et: x.et, ev: E.ev, p: pp, n: q.n, k: q.k, nIndep: ni, ic: ic, baza: pb, semn: semn,
-          text: "Cu " + x.et + ", " + marg + " a fost atinsă în 24 h în " + Math.round(pp * 100) + "% din " + q.n + " porniri (≈ " + ni + " independente), față de " + Math.round(pb * 100) + "% de obicei: "
+          text: "Cu " + x.et + ", " + marg + " a fost atinsă în 24 h în " + Math.round(pp * 100) + "% din " + cate(q.n, "pornire", "porniri") + " (≈ " + ni + " independente), față de " + Math.round(pb * 100) + "% de obicei: "
             + (semn ? semn + " decât de obicei" : ni < 10 ? "prea puține cazuri ca să spună ceva" : "fără semn (diferența intră în zgomot)") + " (interval corectat pentru " + m + " comparații: " + Math.round(ic[0] * 100) + "–" + Math.round(ic[1] * 100) + "%)." });
       });
     });

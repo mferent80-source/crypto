@@ -4,6 +4,8 @@
 // fata de directia botului. Descrie ce e acum pe grafic; NU e o predictie.
 var IndicatoriBot = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var LIPSA = { t: "—", c: "lipsa", titlu: "" };
   function nr(x) { return typeof x === "number" && isFinite(x) ? x : null; }
 
@@ -88,7 +90,7 @@ var IndicatoriBot = (function () {
     if (up === null) return { t: "—", c: "lipsa", titlu: "prea puține bare pentru estimare (îi trebuie cel puțin 260)" };
     var sus = up >= 50, pct = Math.round(sus ? up : 100 - up), b = nr(hp.banda);
     return { t: (sus ? "↑" : "↓") + pct + "%", c: hp.inBanda ? "neutral" : sus ? "good" : "bad",
-      titlu: "în " + (hp.k || "?") + " situații asemănătoare din istoricul monedei, după " + orizont + " prețul a " + (sus ? "urcat" : "coborât") + " în " + pct + "% din cazuri" +
+      titlu: "în " + (hp.k ? cate(hp.k, "situație", "situații") : "? situații") + " asemănătoare din istoricul monedei, după " + orizont + " prețul a " + (sus ? "urcat" : "coborât") + " în " + pct + "% din cazuri" +
         (b !== null ? " (zgomotul e ±" + Math.round(b) + (hp.inBanda ? ": e în zgomot, fără semn" : "") + ")" : "") + ". " + CINSTIT };
   }
   // predictia pe orizontul botului: bara de 4 ore (16 ore inainte); botul tine zile
@@ -122,7 +124,7 @@ var IndicatoriBot = (function () {
         titlu: titluMis + (cu === true ? " Acum mișcarea e cu botul: l-aș lăsa să lucreze, cu opritorul la prețul de zero." : mis ? " Acum e mișcare" + (cu === false ? " împotriva botului" : "") + ": n-aș adăuga bani." : "") });
     }
     var f = o.funding, rate = f ? nr(f.rate) : null, ore = f && nr(f.intervalOre) ? f.intervalOre : 8;
-    var titluF = "Funding-ul se plătește la fiecare " + ore + " ore între long și short. Mult peste obișnuit = mulți înghesuiți pe o parte; pe partea botului e și cost, și risc de descărcare bruscă a prețului.";
+    var titluF = "Funding-ul se plătește la fiecare " + (ore === 1 ? "oră" : cate(ore, "oră", "ore")) + " între long și short. Mult peste obișnuit = mulți înghesuiți pe o parte; pe partea botului e și cost, și risc de descărcare bruscă a prețului.";
     if (rate === null) out.push({ k: "funding", eticheta: "Funding", text: "n-am rata de la Pionex", ton: "neutru", titlu: titluF });
     else {
       var med = median((f.hist || []).map(Number)), plateste = rate > 0 ? "long" : rate < 0 ? "short" : null;

@@ -26,7 +26,7 @@ const ultim = TR[TR.length - 1].inchis;
 await test("cu numele botului: istoricul si reintrarea se cauta pe LIGHTER, iar textul spune ca LIT se numeste LIGHTER la boti", () => {
   const r = OB.poarta({ fisa: fisa("LIT_USDT_PERP"), numeBot: "LIGHTER", trades: TR, acum: ultim + 5 * 60000, dir: "long", levier: 3, plan: { plus: 5, minus: 10 } });
   const m = r.reguli.find((x) => x.cod === "moneda"), re = r.reguli.find((x) => x.cod === "reintrare");
-  assert.equal(m.ok, false); assert.match(m.text, /Pe LIGHTER pierzi: 5 boți/); assert.match(m.text, /LIT = LIGHTER/);   /* v100.72: numele botului în aceeași frază, „(LIT = LIGHTER la boții Pionex)” */
+  assert.equal(m.ok, false); assert.match(m.text, /Pe LIGHTER pierzi: 5 boți/); assert.equal(m.nota, "LIT = LIGHTER la boții Pionex");   /* v100.75: numele botului e notă (fișa o arată în paranteză), fraza rămâne ≤ 160 */
   assert.equal(re.ok, false, "botul pe LIGHTER s-a inchis acum 5 minute"); assert.match(re.text, /LIGHTER/);
 });
 await test("fara numele botului (sau acelasi nume): ca inainte - dupa ticker, fara nota", () => {

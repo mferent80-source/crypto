@@ -37,7 +37,7 @@ test("banda: prețul live stă imediat după nume, cu săgeata", () => {
   const r = PV.banda({ bot: BOT, pretViu: { pret: 0.5708, text: "0.5708", primitLa: ACUM - 1000, dir: "sus" }, acum: ACUM, distanteGrid: { inGrid: true, josPct: 0.009, susPct: 0.017 }, piata: { ton: "bine" } });
   assert.deepEqual(r.parti.map((p) => p.k), ["nume", "pret", "total", "lich", "grid", "piata"]);
   assert.equal(r.parti[1].t, "0.5708 \u25b2"); assert.equal(r.parti[1].viu, true);
-  assert.equal(r.parti.map((p) => p.t).join(" · "), "JTO long 5× · 0.5708 ▲ · total -12.04 USDT · lichidare 20.5% · grid ↓0.9% ↑1.7% · piața: cu botul");
+  assert.equal(r.parti.map((p) => p.t).join(" · "), "JTO long 5× · 0.5708 ▲ · total −12,04 USDT · lichidare 20,5% · grid ↓0,9% ↑1,7% · piața: cu botul");   /* v100.75: virgula și „−” (prețul rămâne cu zecimalele Pionex) */
   assert.equal(r.clasa, "tbWarn");
 });
 test("banda fără live: prețul din citirea botului, fără săgeată, spus pe față", () => {
@@ -72,7 +72,7 @@ test("procentZi: prețul față de deschiderea zilei; lipsa rămâne null", () =
 });
 test("banda: „azi ±x%” imediat după preț, când știm deschiderea zilei", () => {
   const r = PV.banda({ bot: BOT, pretViu: { pret: 0.5693, text: "0.5693", primitLa: ACUM - 1000, dir: "jos" }, zi: { deschidere: 0.575 }, acum: ACUM });
-  assert.deepEqual(r.parti.map((p) => p.k).slice(0, 3), ["nume", "pret", "zi"]); assert.equal(r.parti[2].t, "azi -1.0%"); assert.equal(r.parti[2].ton, "jos");
+  assert.deepEqual(r.parti.map((p) => p.k).slice(0, 3), ["nume", "pret", "zi"]); assert.equal(r.parti[2].t, "azi −1,0%"); assert.equal(r.parti[2].ton, "jos");   /* v100.75: „azi −1,0%” */
   assert.ok(!PV.banda({ bot: BOT, acum: ACUM }).parti.some((p) => p.k === "zi"), "fără deschiderea zilei nu inventăm procentul");
 });
 test("botLaPret: copia botului cu prețul live (pentru „Prețul în grid”), botul original neatins", () => {

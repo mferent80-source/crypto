@@ -1,6 +1,8 @@
 // Modul PUR: primeste cifre, intoarce masuri si verdict.
 // Fara DOM, fara retea, fara localStorage - ca sa poata fi probat in Node.
 var TabloBot = (function () {
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   // "COTI.PERP" + "USDT" -> Pionex "COTI_USDT_PERP", Binance "COTIUSDT"
   // v100.13 (29.09, botul PUMPFUN fara preturi): real = tickerul Pionex trimis de /api/bot-orders (simbolPionex, din lista oficiala) -
   // baza botului nu e mereu numele tickerului (PUMPFUN.PERP -> PUMP_USDT_PERP). Fara el (sau ciudat) -> regula veche.
@@ -434,7 +436,7 @@ var TabloBot = (function () {
     if (m.istoricMin < 30) {
       return { nivel: "NEDOVEDIT",
         titlu: "Nu știu încă",
-        ceFac: "Am doar " + Math.round(m.istoricMin) + " minute de istoric. Îmi trebuie cel puțin 30 ca să văd un ritm.",
+        ceFac: "Am doar " + cate(Math.round(m.istoricMin), "minut", "minute") + " de istoric. Îmi trebuie cel puțin 30 ca să văd un ritm.",
         declansator: d("istoric", Math.round(m.istoricMin), 30) };
     }
     // Pionex poate trimite un raspuns partial - fara aceste doua masuri nu
@@ -488,7 +490,7 @@ var TabloBot = (function () {
       var pragMargine = m.pozitieInterval.valoare < 15 ? 15 : 85;
       var minuteMargine = Math.round(m.pozitieInterval.minuteLaMargine);
       return { nivel: "REGLEAZA", titlu: "Stai lipit de o margine",
-        ceFac: "Cântărește mutarea intervalului - stai acolo de " + minuteMargine + " minute.",
+        ceFac: "Cântărește mutarea intervalului - stai acolo de " + cate(minuteMargine, "minut", "minute") + ".",
         declansator: d("pozitieInterval", m.pozitieInterval.valoare, pragMargine) };
     }
     if (m.basis.stare === "rau") {

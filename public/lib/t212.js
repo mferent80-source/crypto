@@ -7,6 +7,8 @@
 // Doar long (regula lui pentru actiuni). Lipsa ramane lipsa, nu 0.
 var T212 = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   function nr(v) {
     if (typeof v === "number") return isFinite(v) ? v : null;
     if (typeof v !== "string" || !v.trim()) return null;
@@ -134,7 +136,7 @@ var T212 = (function () {
     var r = { an: an, t212: t, pionex: px, ani: Object.keys(ani).map(Number).sort(function (a, b) { return b - a; }) };
     var L = function (v) { return (v >= 0 ? "+" : "-") + Math.abs(v).toFixed(2).replace(".", ",") + " lei"; };   // v100.40: minus ASCII (Excel nu ia „−” drept numar)
     r.text = "Anul " + an + "\nTrading 212 (acțiuni, în lei, după comisioanele de conversie): " + t.n + " vânzări · câștiguri " + L(t.castiguri) + " · pierderi " + L(t.pierderi) + " · NET " + L(t.net) + " · comisioane " + L(-t.comisioane).replace("+", "") + " · dividende " + L(t.dividende)
-      + "\nPionex (boți, în USDT): " + px.n + " boți închiși · NET " + (px.net >= 0 ? "+" : "-") + Math.abs(px.net).toFixed(2) + " USDT"
+      + "\nPionex (boți, în USDT): " + cate(px.n, "bot închis", "boți închiși") + " · NET " + (px.net >= 0 ? "+" : "-") + Math.abs(px.net).toFixed(2) + " USDT"
       + (px.lei !== null ? " ≈ " + L(px.lei) + " (curs BNR USD din ziua fiecărei închideri, ora României; USDT socotit ca USD" + (px.faraCurs ? "; " + px.faraCurs + (px.faraCurs === 1 ? " bot fără curs" : " boți fără curs") + ", lăsați afară din lei" : "") + ")" : "");
     return r;
   }

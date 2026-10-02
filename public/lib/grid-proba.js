@@ -9,6 +9,8 @@
 // Drumul in lumanare: verde O->L->H->C, rosie O->H->L->C.
 var GridProba = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var G = GridCalcul, C = G.C, DIRECTII = ["long", "neutru", "short"];
 
   // primul index k cu niv[k] >= x
@@ -180,9 +182,9 @@ var GridProba = (function () {
 
   function fisa(o) {
     if (!(o.pret > 0)) return { eroare: "N-am prețul de acum al monedei." };
-    if (!o.b15 || o.b15.length < 7 * C.BARE_ZI) return { eroare: "Prea puține lumânări ca să probez: moneda are " + (o.b15 ? (o.b15.length / C.BARE_ZI).toFixed(1) : "0") + " zile de istoric pe 15 minute, iar proba cere cel puțin 7 zile." };
+    if (!o.b15 || o.b15.length < 7 * C.BARE_ZI) return { eroare: "Prea puține lumânări ca să probez: moneda are " + (o.b15 ? o.b15.length / C.BARE_ZI : 0).toFixed(1).replace(".", ",") + " zile de istoric pe 15 minute, iar proba cere cel puțin 7 zile." };
     var pr = proba(o.b15, o.H);
-    if (!pr) return { eroare: "Prea puține lumânări ca să probez: trebuie cel puțin " + (2 * o.H + 1) + " zile de istoric pe 15 minute." };
+    if (!pr) return { eroare: "Prea puține lumânări ca să probez: trebuie cel puțin " + cate(2 * o.H + 1, "zi", "zile") + " de istoric pe 15 minute." };
     var dT = G.directie(o.b4h, o.b1d), dir = o.dir || dT.dir, ales = pr.pe[dir];
     // v100.39 (audit 30.09): O SINGURA SURSA - setarea afisata e exact cea probata (latimea si pasul din proba, pe primele 2/3 din
     // istoric). Inainte latimea/pasul se refaceau pe TOT istoricul la aceiasi indici, deci verdictul, mediana si „Cât investesc?”
@@ -323,7 +325,7 @@ var GridProba = (function () {
     if (!r) return "";
     if (!r.propus || !r.setare || !r.test) return "⚡ grid îngust: nu — " + (r.motiv || "nedovedit");
     var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; }, D = { long: "long", short: "short", neutru: "neutru" };
-    var nI = typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(r.test.nIndep, "fereastră independentă", "ferestre independente") : r.test.nIndep + " ferestre independente";   // v100.72: „31 de ferestre”, „%” lipit
+    var nI = cate(r.test.nIndep, "fereastră independentă", "ferestre independente");   // v100.72: „31 de ferestre”, „%” lipit
     return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + "% lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana) + (r.test.medie != null ? ", medie " + P(r.test.medie) : "")
       + ", " + Math.round(r.test.pePlus * 100) + "% pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + nI + ")";
   }

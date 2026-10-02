@@ -54,7 +54,10 @@ var PretViu = (function () {
     return null;
   }
   function procentZi(pret, zi) { var p = nr(pret), d = zi && nr(zi.deschidere); return p > 0 && d > 0 ? (p / d - 1) * 100 : null; }
-  function textZi(pct) { return pct === null ? null : { t: "azi " + (pct > 0 ? "+" : "") + pct.toFixed(1) + "%", ton: pct > 0 ? "sus" : pct < 0 ? "jos" : "egal" }; }
+  // v100.75 (ideea 1): virgula zecimală și „−”, ca în restul softului (semnul după valoarea rotunjită: fără „−0,0%”)
+  function textZi(pct) { if (pct === null) return null; var r = Math.round(pct * 10) / 10; return { t: "azi " + (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r).toFixed(1).replace(".", ",") + "%", ton: pct > 0 ? "sus" : pct < 0 ? "jos" : "egal" }; }
+  // distanțele până la marginile gridului - o singură formă pentru bandă și pentru reîmprospătarea live din app.js
+  function textGrid(dg) { var f = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; }; return !dg ? "" : dg.inGrid ? "grid ↓" + f(dg.josPct) + " ↑" + f(dg.susPct) : dg.text; }
   // Copia botului cu pretul live - ca „Pretul in grid” si distantele pana la marginile gridului sa mearga pe pretul de ACUM.
   function botLaPret(b, pret) { var p = nr(pret); if (!b || !(p > 0)) return b; var c = {}; for (var k in b) c[k] = b[k]; c.pretCurent = p; return c; }
 
@@ -67,16 +70,17 @@ var PretViu = (function () {
     var zt = pa ? textZi(procentZi(pa.pret, o.zi)) : null;
     if (zt) parti.push({ k: "zi", t: zt.t, ton: zt.ton, title: "Mișcarea de azi, față de deschiderea zilei (00:00 UTC, lumânarea 1D Pionex)" });
     var tot = nr(b.profitTotal);
-    parti.push({ k: "total", t: tot === null ? "total —" : "total " + (tot > 0 ? "+" : "") + tot.toFixed(2) + " USDT" });
+    var tr2 = tot === null ? null : Math.round(tot * 100) / 100;
+    parti.push({ k: "total", t: tr2 === null ? "total —" : "total " + (tr2 > 0 ? "+" : tr2 < 0 ? "−" : "") + Math.abs(tr2).toFixed(2).replace(".", ",") + " USDT" });
     var dist = nr(b.distantaLichidarePct);
-    parti.push({ k: "lich", t: b.lichidareDepasita ? "LICHIDARE DEPĂȘITĂ" : dist === null ? "lichidare —" : "lichidare " + Math.abs(dist).toFixed(1) + "%" });
+    parti.push({ k: "lich", t: b.lichidareDepasita ? "LICHIDARE DEPĂȘITĂ" : dist === null ? "lichidare —" : "lichidare " + Math.abs(dist).toFixed(1).replace(".", ",") + "%" });
     var dg = o.distanteGrid;
-    if (dg) parti.push({ k: "grid", t: dg.inGrid ? "grid ↓" + (dg.josPct * 100).toFixed(1) + "% ↑" + (dg.susPct * 100).toFixed(1) + "%" : dg.text });
+    if (dg) parti.push({ k: "grid", t: textGrid(dg) });
     var z = o.piata;
     if (z && z.ton !== "nu-se-poate") parti.push({ k: "piata", t: z.ton === "rau" ? "piața: împotrivă" : z.ton === "bine" ? "piața: cu botul" : "piața: amestecat" });
     var rau = (dist !== null && (b.lichidareDepasita || Math.abs(dist) < 15)) || (z && z.ton === "rau");
     return { parti: parti, clasa: rau ? "bad" : (tot === null || dist === null || tot < 0) ? "tbWarn" : "good", pret: pa };
   }
 
-  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda, ziDinKlines: ziDinKlines, procentZi: procentZi, textZi: textZi, botLaPret: botLaPret };
+  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda, ziDinKlines: ziDinKlines, procentZi: procentZi, textZi: textZi, textGrid: textGrid, botLaPret: botLaPret };
 })();

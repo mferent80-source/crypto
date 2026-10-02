@@ -8,6 +8,8 @@
 // verifica pe istoricul fiecarei monede.
 var GridCalcul = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 
   var C = {
     COMISION: 0.0005,          // TAKER (piata): cumpararea de la pornire, inchiderea, stopul - Pionex futures
@@ -361,7 +363,7 @@ var GridCalcul = (function () {
     if (!o.stat.test) galben.push("n-am avut zile nevăzute pe care s-o verific");
     else if (o.stat.test.mediana < 0) galben.push("pe ultimele zile, nevăzute la alegere, a ieșit pe minus (" + procent(o.stat.test.mediana) + ")");
     if (o.pozitie !== null && o.pozitie !== undefined && (o.pozitie < C.MARGINE_RANGE || o.pozitie > 1 - C.MARGINE_RANGE)) galben.push("prețul stă lângă " + (o.pozitie < C.MARGINE_RANGE ? "minimul" : "maximul") + " ultimelor 7 zile");
-    if (o.zile < C.ZILE_PLINE) galben.push("moneda are doar " + Math.floor(o.zile) + " zile de istoric aici");
+    if (o.zile < C.ZILE_PLINE) galben.push("moneda are doar " + cate(Math.floor(o.zile), "zi", "zile") + " de istoric aici");
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };
   }
 

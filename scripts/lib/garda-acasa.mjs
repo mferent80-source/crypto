@@ -53,6 +53,9 @@ export function situatiiAcasa(pune) {
   };
   raport("tot", { btc7: -4.2, qqq5: -1.8, vix: 22.4, vreme: vr, vremeBursa: vb, sus: [{ s: "NVDA", ch5: 6.1 }], jos: [{ s: "INTC", ch5: -7.4 }], botiTotal: -12.4, t212Ppl: 312,
     calendar: [{ mare: true, cand: "mar 15:30", titlu: "CPI m/m" }, { mare: true, cand: "mie 21:00", titlu: "FOMC Statement" }], rezultate: [{ simbol: "NVDA", data: "08.10" }] });
+  // v100.75 (ideea 4): săptămâna cu 5 evenimente mari (titluri reale din calendar) - rândurile ≤ 160
+  const rs5 = AC.raportSaptamana({ btc7: 1.2, qqq5: 0.4, calendar: [["mar 15:30", "Core PCE Price Index m/m"], ["mie 21:00", "Federal Funds Rate"], ["mie 21:00", "FOMC Statement"], ["vin 15:30", "Non-Farm Employment Change"], ["vin 15:30", "Average Hourly Earnings m/m"]].map(([cand, titlu]) => ({ mare: true, cand, titlu })) });
+  pune("raportul pieței: 5 evenimente mari", "acasa", "raportSaptamana5", { t: rs5.mesaj }, [["t", "raport"]]);
   raport("fără date", {});
   // ---- obiceiurile: istoricul monedei, prima ora, frana, poarta, raportul de duminica, autopsia, regulile tale
   const REALE = globalThis.JurnalTrade.din(BOTI), TPL = REALE[0];
@@ -76,7 +79,8 @@ export function situatiiAcasa(pune) {
   for (const [sit, o] of [["totul trece", { fisa: fisa("porneste", []), levier: 3, dir: "long", plan: { plus: 5.5, minus: 15.7, afaraOre: 12 } }],
     ["fișa zice nu, levier peste, contra trendului, fără plan, repornire", { fisa: fisa("nu", ["pe istoric, setarea asta a fost lichidată de 2 ori"], { directie: { dir: "short", tarie: "tare" } }), levier: 6, dir: "long", plan: null,
       trades: [tr("LIGHTER", -4, { inchis: T0 - 4 * 60000 })].concat(istT(7, 5, -40.12)), numeBot: "LIGHTER.PERP", acum: T0, frana: frT([tr("A", -12.05, { inchis: T0 - 2 * ORA }), tr("B", -12.05, { inchis: T0 - 3 * ORA })]) }],
-    ["fișa zice așteaptă", { fisa: fisa("asteapta", ["prețul stă lângă minimul ultimelor 7 zile"]), levier: 4, dir: "long", plan: { minus: 10 }, trades: sub }]]) {
+    ["fișa zice așteaptă", { fisa: fisa("asteapta", ["prețul stă lângă minimul ultimelor 7 zile"]), levier: 4, dir: "long", plan: { minus: 10 }, trades: sub }],
+    ["113 de boți pe LIGHTER (LIT)", { fisa: fisa("porneste", []), levier: 3, dir: "long", plan: { plus: 5.5, minus: 15.7, afaraOre: 12 }, trades: Array.from({ length: 113 }, (_, i) => tr("LIGHTER", i % 3 ? -12.35 : 4.2, { inchis: T0 - (i + 2) * 6 * ORA, pornit: T0 - (i + 3) * 6 * ORA })), numeBot: "LIGHTER.PERP" }]]) {
     const r = OB.poarta(Object.assign({ acum: T0 }, o));
     r.reguli.forEach((x) => pune("poarta de pornire: " + sit + " · " + x.cod, "acasa", "poarta." + x.cod, { t: x.text }, [["t", "deCe"]]));   // randurile portii = explicatii (≤ 160)
     const fp = OB.facPoarta(r); pune("poarta de pornire: " + sit + " · ce aș face", "acasa", "facPoarta", { t: fp.fac, n: fp.nota }, [["t", "faCe"], ["n", "deCe"]]);
@@ -89,7 +93,7 @@ export function situatiiAcasa(pune) {
   const log = (cod, motiv, total, dupa, stare) => ({ dreptate: false, cod, nivel: "atentie", motiv, t: T0 - 3 * ZI, judecatLa: T0 - 2 * ZI, total, totalDupa: dupa, stare });
   // un avertisment GRESIT = totalul s-a imbunatatit dupa (urmat, il inchideai mai jos); 25 de zile distincte cu acelasi sfat in aceeasi stare,
   // 23 gresite -> tiparul propus (regula, ipoteza); motivele reale ale semaforului (cu cifre, lungi)
-  const aut = OB.autopsie([{ moneda: "CRV", log: [log("btc", "BTC în mișcare (2,3× față de obișnuit), moneda încă nu", -6.4, -1.2, "liniste-jos"), log("muta", "prețul la 0,1% de marginea de jos (1,0% din interval)", -3.3, 2.1, null)] },
+  const aut = OB.autopsie([{ moneda: "MARSCOIN", log: [log("muta", "prețul stă la marginea de jos a gridului (9,6% din interval)", -6.4, 2.2, "liniste-jos")] }, { moneda: "CRV", log: [log("btc", "BTC în mișcare (2,3× față de obișnuit), moneda încă nu", -6.4, -1.2, "liniste-jos"), log("muta", "prețul la 0,1% de marginea de jos (1,0% din interval)", -3.3, 2.1, null)] },
     { moneda: "LIGHTER", log: Array.from({ length: 25 }, (_, i) => Object.assign(log("btc", "BTC în mișcare (1,9× față de obișnuit), moneda încă nu", -2.4, i % 12 ? -0.6 : -3.1, "liniste-jos"), { t: T0 - (i + 2) * ZI, judecatLa: T0 - (i + 1) * ZI, dreptate: !!(i % 12 === 0) })) }], T0);
   if (!(aut.tipar && aut.scumpe && aut.scumpe.length)) throw new Error("garda-acasa: autopsia n-a dat sfaturi scumpe si tipar");
   (aut.linii || []).forEach((l, i) => pune("autopsia săptămânii", "acasa", "autopsie.l" + (i + 1), { t: l }, [["t", "raport"]]));

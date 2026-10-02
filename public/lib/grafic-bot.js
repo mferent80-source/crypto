@@ -10,6 +10,8 @@
 // Paleta liniilor (EMA 20 #1fa99c, EMA 50 #d9772f, Bollinger #8b74f0) a trecut validatorul dataviz pe fundalul #0d1722.
 var GraficBot = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var COL = { good: "#55d89b", bad: "#ff6b78", warn: "#f5c451", accent: "#4fd1c5", text: "#e9eef6", mut: "#6d7d93", info: "#8a9ab0",
     ema20: "#1fa99c", ema50: "#d9772f", bb: "#8b74f0", fond: "#0a1520", grila: "#16263a", intrare: "#c9d4e3" };
   var RANG = { critic: 2, atentie: 1, info: 0 };
@@ -317,7 +319,7 @@ var GraficBot = (function () {
     if (st.bb) Lg.push('<span><i style="border-color:' + COL.bb + '"></i>Bollinger 20, 2</span>');
     if (o.umpleri) Lg.push('<span>▲ cumpărare · ▼ vânzare pe grilă (deduse din lumânări) · perechi pe grafic: ' + o.umpleri.perechi + (nr(o.perechiPionex) !== null ? " · Pionex: " + nr(o.perechiPionex) : "") + '</span>');
     if (!o.actiune) Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
-    if (o.actiune) { if (f > 1) Lg.push('<span class="mutedInfo">o lumânare = ' + f + ' zile de bursă</span>'); }
+    if (o.actiune) { if (f > 1) Lg.push('<span class="mutedInfo">o lumânare = ' + cate(f, "zi", "zile") + ' de bursă</span>'); }
     else Lg.push('<span class="mutedInfo">' + evs.length + (evs.length === 1 ? " alertă" : " alerte") + ' ale botului în perioadă' + (f > 1 ? " · o lumânare = " + f + " bare" : "") + '</span>');
     return { svg: svg, inaltime: H, legenda: Lg.join(""), harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: H } };
   }

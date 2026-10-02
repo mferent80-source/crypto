@@ -6,7 +6,9 @@ var Acasa = (function () {
   "use strict";
   function nr(x) { var v = typeof x === "string" && x.trim() ? Number(x) : x; return typeof v === "number" && isFinite(v) ? v : null; }
   // v100.72: „99 de acțiuni” (de la 20 în sus cu „de”)
-  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
+  // v100.75 (ideea 4): un rând de raport ≤ max - bucățile care nu mai încap trec pe rândul următor, cu „   ” în față (nimic tăiat)
+  function randuri(prefix, bucati, sep, max) { var out = [], cur = prefix, gol = true; bucati.forEach(function (b) { if (!gol && (cur + sep + b).length > max) { out.push(cur); cur = "   " + b; } else { cur += (gol ? "" : sep) + b; gol = false; } }); out.push(cur); return out; }
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
 
   // o = { clasament: {evita, candidati, faraDate, dir: {long, neutru, short}}, btc: {miscare}, fg: numar }
   function vreme(o) {
@@ -243,7 +245,8 @@ var Acasa = (function () {
     var bt = nr(o.botiTotal), tp = nr(o.t212Ppl);
     if (bt !== null || tp !== null) L.push("💼 Tu: boți " + (bt === null ? "—" : (bt >= 0 ? "+" : "−") + Math.abs(bt).toFixed(2).replace(".", ",") + " USDT") + " · acțiuni deschise " + (tp === null ? "—" : (tp >= 0 ? "+" : "−") + Math.abs(Math.round(tp)).toLocaleString("ro-RO") + " lei"));
     var cal = (o.calendar || []).filter(function (x) { return x && x.mare; }).slice(0, 5);
-    L.push("📅 Săptămâna asta: " + (cal.length ? cal.map(function (x) { return x.cand + " " + x.titlu; }).join(" · ") : "nimic mare anunțat încă în SUA"));
+    if (cal.length) randuri("📅 Săptămâna asta: ", cal.map(function (x) { return x.cand + " " + x.titlu; }), " · ", 160).forEach(function (l) { L.push(l); });
+    else L.push("📅 Săptămâna asta: nimic mare anunțat încă în SUA");
     var rz = (o.rezultate || []).slice(0, 4);
     if (rz.length) L.push("🧾 Rezultate la acțiunile tale: " + rz.map(function (x) { return x.simbol + " " + x.data; }).join(" · "));
     var n0 = L.length;

@@ -10,6 +10,8 @@
 // la persoana I (≤ 110) · sursa = de unde vin cifrele (inainte „deCe”). Avertizarile comune stau o data, in legenda Consilierului.
 var Sfaturi = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var RANG = { critic: 0, atentie: 1, info: 2, bine: 3 };
   function nr(v) {
     if (typeof v === "number") return isFinite(v) ? v : null;
@@ -113,7 +115,7 @@ var Sfaturi = (function () {
     if (L && L.linisteAcum && L.suficient && L.p != null) {
       var rar = L.p < 0.35;
       out.push({ cod: "liniste", ton: rar ? "info" : "bine", titlu: "Liniște de " + TextRo.num(L.zileLiniste, 1) + " zile",
-        text: "Pe moneda asta, liniștea care a ajuns aici a mai ținut " + L.H + " zile în " + Math.round(L.p * 100) + "% din cazuri (" + L.k + " din " + L.n + (L.n < 30 ? ", puține cazuri" : "") + ").",   /* v100.65: pragul scenariului (30) */
+        text: "Pe moneda asta, liniștea care a ajuns aici a mai ținut " + cate(L.H, "zi", "zile") + " în " + Math.round(L.p * 100) + "% din cazuri (" + L.k + " din " + L.n + (L.n < 30 ? ", puține cazuri" : "") + ").",   /* v100.65: pragul scenariului (30) */
         sursa: "Ultimele 30 de zile; interval de încredere " + TextRo.pct(L.ic[0] * 100, 0) + "–" + TextRo.pct(L.ic[1] * 100, 0) + ".",
         faCe: rar ? "N-aș pune bani în plus; aș încasa ce face și aș închide botul la prima mișcare mare." : "L-aș lăsa să lucreze: liniștea tinde să țină aici." });
     }
@@ -126,7 +128,7 @@ var Sfaturi = (function () {
         var sc = raport <= 0.5;
         out.push({ cod: "ritm", ton: sc ? "atentie" : "info",
           titlu: "Ritmul a " + (sc ? "scăzut" : "crescut") + ": grilele " + TextRo.num(rt.grile24h, 2) + " USDT în 24 h, media " + TextRo.num(rt.medieZi, 2) + "/zi",
-          text: mare((rt.tranz24h != null && rt.tranzMedieZi > 0 ? rt.tranz24h + " tranzacții în 24 h față de " + Math.round(rt.tranzMedieZi) + " pe zi: " : "") +
+          text: mare((rt.tranz24h != null && rt.tranzMedieZi > 0 ? cate(rt.tranz24h, "tranzacție", "tranzacții") + " în 24 h față de " + Math.round(rt.tranzMedieZi) + " pe zi: " : "") +
             (sc ? "de obicei prețul a ieșit din zona perechilor sau piața a înghețat." : "piața se mișcă mai mult, bine pentru grile cât prețul stă în interval.")),
           faCe: sc ? "Aș închide botul și aș porni din fișă unul la prețul de acum, dacă ritmul rămâne jos încă o zi." : "Aș verifica lichidarea: ritmul mare vine des cu mișcare mare." });
       }
@@ -182,7 +184,7 @@ var Sfaturi = (function () {
       var dirF = String(b.directie || "").toLowerCase(), neutru = dirF !== "long" && dirF !== "short";
       var platesti = (dirF === "long" && f > 0) || (dirF === "short" && f < 0);
       out.push({ cod: "funding", ton: platesti && Math.abs(f) >= 0.0005 ? "atentie" : "info",
-        titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + ((nr(x.fundingOre) || 8) === 1 ? "o oră" : (nr(x.fundingOre) || 8) + " ore") + ", " + (neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi"),
+        titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + ((nr(x.fundingOre) || 8) === 1 ? "o oră" : cate(nr(x.fundingOre) || 8, "oră", "ore")) + ", " + (neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi"),
         text: mare((nr(b.finantare) === null ? "" : "până acum botul a " + (nr(b.finantare) < 0 ? "plătit " : "primit ") + TextRo.num(Math.abs(nr(b.finantare)), 2) + " USDT; ") +
           (neutru ? "botul neutru îl plătește cât e net " + (f > 0 ? "long și îl încasează cât e net short." : "short și îl încasează cât e net long.")
             : platesti ? "la rata asta plătești din câștigul grilelor." : "la rata asta încasezi peste câștigul grilelor.")),

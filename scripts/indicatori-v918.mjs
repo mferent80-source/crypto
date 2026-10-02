@@ -71,7 +71,7 @@ await test("rezumat fara directie de bot (neutru) sau fara date -> descrie, nu j
 const HP = (o) => ({ up: 64, down: 36, avg: 1.2, k: 40, banda: 11, nEff: 30, inBanda: false, ...o });
 await test("estimarea pe interval: '↑64%' / '↓61%', gri cand e in zgomot, explicatia cu orizontul si 'nedovedit' in titlu", () => {
   const e = I.estimare(HP(), "16 ore");
-  assert.deepEqual([e.t, e.c], ["↑64%", "good"]); assert.match(e.titlu, /16 ore/); assert.match(e.titlu, /40 situații/); assert.match(e.titlu, /nedovedit/i);
+  assert.deepEqual([e.t, e.c], ["↑64%", "good"]); assert.match(e.titlu, /16 ore/); assert.match(e.titlu, /40 de situații/); assert.match(e.titlu, /nedovedit/i);   /* v100.75: „40 de situații” (TextRo.cate) */
   const d = I.estimare(HP({ up: 39, down: 61 }), "4 ore"); assert.deepEqual([d.t, d.c], ["↓61%", "bad"]);
   const z = I.estimare(HP({ up: 55, down: 45, inBanda: true }), "1 oră"); assert.equal(z.c, "neutral"); assert.match(z.titlu, /zgomot/);
   assert.equal(I.estimare(null, "4 zile").t, "—"); assert.equal(I.estimare({ up: NaN }, "4 zile").t, "—");

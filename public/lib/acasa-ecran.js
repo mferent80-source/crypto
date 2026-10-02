@@ -2,6 +2,8 @@
 // Datele: clasamentul colectorului (miscarea pe top 100 PERP), tickerele Pionex, BTC (4h/1z/1h), frica/lacomia +
 // bursele (/api/stiri?action=piata), largimea pietei (refreshMarketBreadthV64), dominanta (intel crypto_global),
 // botii / contul T212 / clasamentul din contTotAsigura (aceleasi ca pe celelalte pagini, zero cereri in plus).
+// v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+function acCate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 var acasa = { la: 0, inLucru: false, d: {} };
 var ACASA_MS = 5 * 60000;
 
@@ -133,7 +135,7 @@ function acasaDeseneaza() {
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");
   // legatura dintre ele: corelatia BTC - Nasdaq pe 30 de zile
   var co = d.btc1d && qqq ? Acasa.corelatie(GridCalcul.bareToate(d.btc1d), qqq, 30) : null;
-  if ($("acLegatura")) { $("acLegatura").hidden = !co; if (co) $("acLegatura").innerHTML = '🔗 <b>BTC și bursa:</b> ' + escapeHtml(co.text) + ' <span class="acMut">corelația pe ultimele ' + (typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(co.n, "zi", "zile") : co.n + " zile") + ' de bursă</span>'; }
+  if ($("acLegatura")) { $("acLegatura").hidden = !co; if (co) $("acLegatura").innerHTML = '🔗 <b>BTC și bursa:</b> ' + escapeHtml(co.text) + ' <span class="acMut">corelația pe ultimele ' + acCate(co.n, "zi", "zile") + ' de bursă</span>'; }
 
   // 2a. pulsul crypto: BTC
   var tb = mis.gasit("BTC"), te = mis.gasit("ETH"), dom = d.glob && Number(d.glob.btcDominance);
@@ -260,7 +262,7 @@ function acasaDeseneaza() {
     + (c ? '<div class="acLin"><span>Contul</span><b>' + escapeHtml(acLei(c.total)) + '</b></div><div class="acLin"><span>Pozițiile deschise</span><b class="' + (Number(c.ppl) >= 0 ? "good" : "bad") + '">' + escapeHtml(typeof t212Lei === "function" ? t212Lei(c.ppl) : String(c.ppl)) + '</b></div>'
       + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi == null ? "acMut" : iesi ? "bad" : "good") + '">' + (iesi == null ? "aduc prețurile…" : iesi ? iesi + " de ieșit" : "nimic roșu") + '</b></div>'   /* v100.40: null = inca nu stiu, nu „nimic roșu” */
       + (zt && zt.t212 !== null ? '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.t212 >= 0 ? "good" : "bad") + '">' + (zt.t212 >= 0 ? "+" : "−") + escapeHtml(acLei(Math.abs(zt.t212))) + '</b></div>' : '') : '<p class="acMut">Aduc contul…</p>')
-    + (rz.length ? '<div class="acEt" style="margin-top:4px">Următoarele rezultate financiare' + (rz.some(function (x) { return !x.sigur; }) ? " (estimate)" : "") + ':</div><div class="acRez">' + rz.slice(0, 3).map(function (x) { var z = zile(x.data); return '<b>' + escapeHtml(x.simbol) + '</b><span>' + escapeHtml(acZiRo(x.data)) + '</span><b class="' + (z <= 14 ? "warn" : "acMut") + '">' + (z <= 0 ? "azi" : z === 1 ? "mâine" : "peste " + z + " zile") + '</b>'; }).join("") + '</div>' : '')
+    + (rz.length ? '<div class="acEt" style="margin-top:4px">Următoarele rezultate financiare' + (rz.some(function (x) { return !x.sigur; }) ? " (estimate)" : "") + ':</div><div class="acRez">' + rz.slice(0, 3).map(function (x) { var z = zile(x.data); return '<b>' + escapeHtml(x.simbol) + '</b><span>' + escapeHtml(acZiRo(x.data)) + '</span><b class="' + (z <= 14 ? "warn" : "acMut") + '">' + (z <= 0 ? "azi" : z === 1 ? "mâine" : "peste " + acCate(z, "zi", "zile")) + '</b>'; }).join("") + '</div>' : '')
     + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>';
 
   var ideiL = d.idei && d.idei.idei && Array.isArray(d.idei.idei.actiuni) ? d.idei.idei.actiuni : [], ii = d.idei && d.idei.idei;

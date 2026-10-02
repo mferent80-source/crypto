@@ -8,6 +8,8 @@
 // sa le mai citeasca - si atunci nu mai folosesc la nimic.
 var Alerte = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
   var REPETA_CHEIE_MS = { "opritor:atentie": 24 * 3600000, miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000,
@@ -132,7 +134,7 @@ var Alerte = (function () {
         } else out.plan = { nivel: "atentie", titlu: nume + ": planul tău — ținta de " + (ctx.plan.plus ? "+" + nz(ctx.plan.plus.prag) + " USDT" : "plus") + " e atinsă",
           mesaj: msg("Ai atins ținta pe care ți-ai pus-o.", "Aș încasa acum: aș închide botul pe plus.") };
       }
-      else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — afară din grid de peste " + (ctx.plan.afara ? nz(ctx.plan.afara.prag) + " ore" : "pragul tău"),
+      else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — afară din grid de peste " + (ctx.plan.afara ? (Number.isInteger(Number(ctx.plan.afara.prag)) ? cate(Number(ctx.plan.afara.prag), "oră", "ore") : nz(ctx.plan.afara.prag) + " ore") : "pragul tău"),
         mesaj: msg("Ai hotărât să nu-l lași afară atât.", "Aș închide botul și aș porni din fișă unul nou, pe unde e prețul.") };
       else out.plan = { nivel: "ok", titlu: "", mesaj: "" };
     }
@@ -393,7 +395,7 @@ var Alerte = (function () {
     var de = acum - n.reaDe;
     if (de >= PRETURI_MS && (!n.anuntatLa || acum - n.anuntatLa >= PRETURI_REPETA_MS))
       return { stare: n, mesaj: { nivel: "critic", titlu: "Crypto Radar nu mai primește prețurile de la Pionex",
-        mesaj: msg("De " + Math.round(de / 60000) + " minute (" + taie(n.eroare, 40) + ") graficul, indicatorii, direcția și clasamentul sunt goale, iar alertele de piață nu sunt de încredere.",
+        mesaj: msg("De " + cate(Math.round(de / 60000), "minut", "minute") + " (" + taie(n.eroare, 40) + ") graficul, indicatorii, direcția și clasamentul sunt goale, iar alertele de piață nu sunt de încredere.",
           "Aș aștepta să treacă singur; dacă ține, aș reporni Radarul.") } };
     return { stare: n, mesaj: null };
   }

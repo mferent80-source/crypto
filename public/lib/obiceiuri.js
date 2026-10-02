@@ -17,7 +17,9 @@ var Obiceiuri = (function () {
   }
   // v100.72 (sfaturile concise, pachetul 5): sumele cu virgula („−52,50 USDT”, nu „−52.50 USDT”); „1 bot”, „20 de boți” prin TextRo.cate
   var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
-  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
+  // v100.75 (ideea 4): un text mai lung decât max se rupe pe cuvinte în rânduri ≤ max (nimic tăiat)
+  function rupe(t, max) { var out = [], cur = ""; String(t).split(" ").forEach(function (w) { if (cur && (cur + " " + w).length > max) { out.push(cur); cur = w; } else cur = cur ? cur + " " + w : w; }); if (cur) out.push(cur); return out.join("\n"); }
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
   var P = function (v) { return (v * 100).toFixed(0) + "%"; };
   function moneda(s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$/, "").replace(/\.PERP$/, ""); }
   function costDin(trades, cod) {
@@ -71,7 +73,8 @@ var Obiceiuri = (function () {
     var pl = o.plan, plOk = !!(pl && (nr(pl.plus) > 0 || nr(pl.minus) > 0));
     R.push({ cod: "plan", ok: plOk, text: plOk ? "Ai planul de ieșire: " + [nr(pl.plus) > 0 ? "plus " + pl.plus : null, nr(pl.minus) > 0 ? "minus " + pl.minus : null, nr(pl.afaraOre) > 0 ? "afară " + pl.afaraOre + " h" : null].filter(Boolean).join(", ") + "." : "N-ai scris când ieși (pe plus / pe minus): hotărât la rece e mai ușor.", cost: null });
     var im = istoricMoneda(o.trades, m);
-    R.push({ cod: "moneda", ok: !im.avertizare, text: m !== tk ? im.text.replace(/\.$/, "") + " (" + tk + " = " + m + " la boții Pionex)." : im.text });   // v100.72: numele de bot in aceeasi fraza
+    // v100.75 (ideea 4): numele botului e notă (fișa o arată în paranteză), ca fraza să rămână ≤ 160 și la peste 100 de boți
+    R.push({ cod: "moneda", ok: !im.avertizare, text: im.text, nota: m !== tk ? tk + " = " + m + " la boții Pionex" : null });
     // v100.43 (I-468): frana contului - rand in poarta (avertizare, nu blocare: pornirea pe hartie ramane)
     if (o.frana) R.push({ cod: "frana", ok: !o.frana.activa, text: o.frana.text });
     // v100.45 (I-475): planul potrivit monedei - cat de des o zi obisnuita ajunge la stopul planului (din profilul monedei)
@@ -197,8 +200,10 @@ var Obiceiuri = (function () {
     var scumpe = toate.filter(function (x) { return x.gresit && x.cost < 0 && x.la > acum - 7 * ZI && x.la <= acum; }).sort(function (a, b) { return a.cost - b.cost; }).slice(0, 3);
     var linii = scumpe.length ? scumpe.map(function (x) {
       // v100.72: un rand ≤ 160 - starea de atunci in paranteza, totalul „de la → la”, costul cu virgula
-      return "„" + x.motiv + "” pe " + x.moneda + " (" + cand(x.t) + ", " + (x.stare ? (ET[x.stare] || x.stare) : "nenotată înainte de 01.10") +
+      // v100.75 (ideea 4): raportul pune „• ” în față - peste 158, motivul (citat întreg) rămâne pe primul rând, faptele trec pe al doilea
+      var cap = "„" + x.motiv + "”", rest = "pe " + x.moneda + " (" + cand(x.t) + ", " + (x.stare ? (ET[x.stare] || x.stare) : "nenotată înainte de 01.10") +
         "): " + U(x.total).replace(" USDT", "") + " → " + U(x.totalDupa) + "; urmat, ar fi costat " + Math.abs(x.cost).toFixed(2).replace(".", ",") + " USDT.";
+      return (cap + " " + rest).length <= 158 ? cap + " " + rest : rupe(cap, 158) + "\n" + rest;
     }) : ["Niciun sfat greșit judecat săptămâna asta."];
     // revizia 01.10 (I3): ZILE distincte, nu intrari (acelasi semnal pe 5 boti in aceeasi ora e un singur caz); o zi e „gresita” cand au
     // fost mai multe gresite decat corecte; regula se propune abia de la 10 zile si cand marginea de jos Wilson 99% a greselilor trece de 50%

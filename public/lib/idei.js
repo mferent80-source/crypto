@@ -4,6 +4,8 @@
 // De aceea ideile se si URMARESC (urmarire): dupa ~30 se poate spune cu cifre daca merita urmate.
 var Idei = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var AS = typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale : globalThis.ActiuniSemnale;
   var ZI = 86400000, COST_CONV = 0.003;
   function stat(l) { var n = l.length, p = 0, t = 0; l.forEach(function (x) { t += x.rezultat || 0; if (x.rezultat > 0) p++; }); return { n: n, pePlus: p, total: t }; }
@@ -21,7 +23,7 @@ var Idei = (function () {
     if (n.nivel !== "ok" || !n.intrare) return { trece: false, scor: null, motive: [n.motiv || n.intrareMotiv || "fără preț de intrare"] };
     if (n.proba.medie === null || n.proba.medie <= 0) return { trece: false, scor: null, motive: ["pe istoricul ei, în starea de acum, intrările n-au ieșit pe plus în medie"] };
     var z = o.rezultate ? Math.ceil((Date.parse(o.rezultate + "T12:00:00Z") - (o.acum || Date.now())) / ZI) : null;
-    if (z !== null && z >= 0 && z <= 10) return { trece: false, scor: null, motive: ["își anunță rezultatele pe " + ziScurta(o.rezultate) + " (peste " + z + " zile): prețul poate sări"] };
+    if (z !== null && z >= 0 && z <= 10) return { trece: false, scor: null, motive: ["își anunță rezultatele pe " + ziScurta(o.rezultate) + " (peste " + cate(z, "zi", "zile") + "): prețul poate sări"] };
     var intrare = n.intrare.pret;
     // v100.40 (audit 30.09): stopul ideii = stopul PROBAT (k×ATR, cel cu care proba a iesit pe plus si cu care Biletul socoteste
     // cate bucati), nu −15%: la COKE tabelul arata −15% si Biletul socotea pe −4,5% -> cine punea stopul din tabel risca 3% din
@@ -29,7 +31,7 @@ var Idei = (function () {
     return { trece: true, scor: n.proba.medie, pret: pret, intrare: intrare, stop: n.stop, riscPct: intrare > 0 ? (intrare - n.stop) / intrare : null, tinta: n.tinta,
       pePlusProba: n.proba.pePlus, nProba: n.proba.n, rezultate: o.rezultate || null, sit: AS.cheieSituatie(st), prob: probIdee(b, intrare, n, o), prof: profIdee(b, intrare, n, o),
       motive: ["trend în sus pe zilnice (" + st.trend.tarie + ")", "fără mișcare mare, " + P(st.distMax7z) + " față de maximul pe 7 zile",
-        "pe istoricul ei, intrările în starea asta: " + Math.round(n.proba.pePlus * 100) + "% pe plus, " + P(n.proba.medie) + " în medie (" + n.proba.n + " zile)"] };
+        "pe istoricul ei, intrările în starea asta: " + Math.round(n.proba.pePlus * 100) + "% pe plus, " + P(n.proba.medie) + " în medie (" + cate(n.proba.n, "zi", "zile") + ")"] };
   }
   // v100.55 (actiuni, pachetul 4): cat de des, pe actiunea asta in zile ca acum - tinta inaintea stopului in 5 zile, stopul atins maine
   // (si prin saritura la deschidere); avertizeaza, nu schimba filtrul. Fara o.Probabilitati -> null

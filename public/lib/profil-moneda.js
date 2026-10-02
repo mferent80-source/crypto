@@ -6,6 +6,8 @@
 // Pragurile sfaturilor (marginea, stopul, planul) se citesc din distributie; langa fiecare sfat se scrie de unde vine pragul.
 var ProfilMoneda = (function () {
   "use strict";
+  // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var ORA = 3600000, MIN_ZILE = 30, PAS_ORE = 6;
   function nr(v) {
     if (typeof v === "number") return isFinite(v) ? v : null;
@@ -100,7 +102,7 @@ var ProfilMoneda = (function () {
   }
   function moneda(s) { return String(s || "").toUpperCase().replace(/_USDT(_PERP)?$/, "").replace(/\.PERP$/, "").replace(/_US_EQ$|_EQ$/, ""); }
   function sursa(p) {
-    if (p && p.piata === "actiuni") return "profilul " + (moneda(p.simbol) || "acțiunii") + ": " + p.zile + " zile de bursă (bare zilnice)";   // v100.52
+    if (p && p.piata === "actiuni") return "profilul " + (moneda(p.simbol) || "acțiunii") + ": " + cate(p.zile, "zi", "zile") + " de bursă (bare zilnice)";   // v100.52
     return p ? "profilul " + (moneda(p.simbol) || "monedei") + ": " + p.zile + " de zile de bare de 1 h" : "prag fix (profilul monedei n-a venit încă de la colector)";
   }
   // v100.52 (actiunile T212): stopul care urca al pozitiei - coborarea obisnuita pe 5 zile de bursa (P75)
@@ -119,7 +121,7 @@ var ProfilMoneda = (function () {
   // saltaturile mari la deschidere (peste 98% din celelalte, de obicei la rezultate) - stopul nu apara de ele
   function textSarituri(p) {
     var e = p && p.evenimente; if (!e || !e.n || e.mediana === null || e.mediana === undefined) return "";
-    return "Săriturile mari la deschidere (de obicei la rezultate): " + e.n + " în ultimele " + p.zile + " zile de bursă, de obicei ~" + Math.round(e.mediana * 100) + "%, cea mai mare " + Math.round(e.max * 100) + "% — stopul nu te apără de ele.";
+    return "Săriturile mari la deschidere (de obicei la rezultate): " + e.n + " în ultimele " + cate(p.zile, "zi", "zile") + " de bursă, de obicei ~" + Math.round(e.mediana * 100) + "%, cea mai mare " + Math.round(e.max * 100) + "% — stopul nu te apără de ele.";
   }
   function praguriMargine(p) {
     var j = prag(p, "z12", "jos", 0.75), s = prag(p, "z12", "sus", 0.75);
