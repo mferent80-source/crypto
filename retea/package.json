@@ -1,0 +1,10 @@
+{
+  "name": "crypto-radar-retea",
+  "private": true,
+  "type": "module",
+  "description": "Antrenorul rețelei neuronale (TensorFlow.js pe WebAssembly). Rulează doar acasă, noaptea, pornit de colector; rădăcina proiectului rămâne fără dependențe.",
+  "dependencies": {
+    "@tensorflow/tfjs": "4.22.0",
+    "@tensorflow/tfjs-backend-wasm": "4.22.0"
+  }
+}
