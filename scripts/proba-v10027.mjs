@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import "./lib/text-ro-global.mjs";   // v100.74: jtNotaPionex scrie „2253 de boți” prin TextRo.cate, ca în pagină
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
 const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
@@ -84,9 +85,9 @@ function functia(src, nume) { let i = src.indexOf("function " + nume + "("); ass
 
 await test("pagina: statistica Pionex (si Tot) ia si spot/copy; nota spune cati sunt INCLUSI; Declaratia ii numara", () => {
   assert.match(functia(app, "jtStatToate"), /StatisticaTrade\.dinPionexAlte\(JurnalTrade\.alte\(jtStare\.boti\)\)/);
-  const ctx = { jtStat: { toate: { crypto: { tr: new Array(2253) } } }, jtArhiva: { sursa: "acasa", complet: true }, jtStare: { boti: [{ buOrderType: "futures_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "smart_copy" }] } };
+  const ctx = { TextRo: globalThis.TextRo, jtStat: { toate: { crypto: { tr: new Array(2253) } } }, jtArhiva: { sursa: "acasa", complet: true }, jtStare: { boti: [{ buOrderType: "futures_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "smart_copy" }] } };
   vm.createContext(ctx); vm.runInContext(functia(app, "jtNotaPionex") + ";this.n=jtNotaPionex;", ctx);
-  const t = ctx.n(); assert.match(t, /toată istoria Pionex \(2253 boți/); assert.match(t, /inclusiv 2 spot grid și 1 smart copy/); assert.doesNotMatch(t, /lăsați deoparte/);
+  const t = ctx.n(); assert.match(t, /toată istoria Pionex \(2253 de boți/);   /* v100.74: „2253 de boți” (TextRo.cate) */ assert.match(t, /inclusiv 2 spot grid și 1 smart copy/); assert.doesNotMatch(t, /lăsați deoparte/);
   const d = functia(t2, "t212BotiInchisi"); assert.match(d, /JurnalTrade\.alte\(jtStare\.boti\)/); assert.match(d, /alteInchise/);
   assert.match(t2, /contTot\.alteInchise = JurnalTrade\.alte\(/);
 });

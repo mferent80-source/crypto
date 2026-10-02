@@ -64,6 +64,14 @@ await test("I2 fișa și jurnalul din app.js: „Aș începe cu greșeala „X�
   assert.doesNotMatch(s, /rp2\.n\+' boți|'Pe '\+rp2\.n\+' boți|· "\+r\.n\+" boți, "/, "„N boți” fără TextRo.cate în jurnal");
 });
 
+await test("I2 fișa și jurnalul din app.js, tot: niciun „N boți / monede / ferestre / porniri” lipit fără TextRo.cate (poza 390: „Pe 259 boți e un semn”)", () => {
+  const s = app(), corp = (nume) => { const i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, nume + " lipsește"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+  const lipit = /\+\s*["'] (boți|monede|ferestre|porniri)\b/;
+  for (const f of ["grPlanVarHtml", "grCalibrareHtml", "grLabPlanHtml", "renderGridLaborator", "jtNotaPionex", "jtRender", "grIngustHtml", "grLinisteTine", "grPoartaHtml"]) {
+    const m = corp(f).match(lipit); assert.ok(!m, f + ": „…" + (m ? corp(f).slice(Math.max(0, m.index - 60), m.index + 30) : "") + "…”");
+  }
+});
+
 await test("M3 istoricul monedei: data celui mai rău bot păstrează anul când nu e anul de acum („28.12.25”), fără an în anul curent", () => {
   const an = new Date().getUTCFullYear(), vechi = Date.UTC(an - 1, 11, 28, 12), nou = Date.UTC(an, 0, 5, 12);
   const t1 = OB.istoricMoneda([tr("ABC", -40, { inchis: vechi }), tr("ABC", -2), tr("ABC", -3), tr("ABC", 1)], "ABC").text;
