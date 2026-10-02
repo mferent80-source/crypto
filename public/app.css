@@ -1679,7 +1679,7 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbTodoCap h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 #tabloubot .tbTodoRand{display:grid;grid-template-columns:6px 1fr auto;gap:10px;align-items:center;padding:5px 12px;border-top:1px solid var(--tb-linie)}
 #tabloubot #tbTodoLista>.tbTodoRand:first-child{border-top:0}
-#tabloubot .tbTodoRand p{margin:1px 0 0;color:var(--muted);font-size:12px}
+#tabloubot .tbTodoRand p{margin:1px 0 0;color:var(--muted);font-size:12px;white-space:pre-line}
 #tabloubot .tbTodoGol{padding:4px 12px}
 #tabloubot .tbOra{display:inline-block;margin-left:8px;color:var(--muted);font-size:11.5px;font-weight:600;white-space:nowrap}
 #tabloubot .tbOraVeche{color:var(--warn)}

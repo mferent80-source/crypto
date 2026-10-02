@@ -166,5 +166,26 @@ await test("legenda Consilierului primește avertizările scoase din sfaturi, f�
   assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("consiliu-2"));
 });
 
+// ---- sarcina 4: „Ce ai de făcut acum”, ritmul de recuperare, panoul planului, portofoliul ----
+await test("„Ce ai de făcut acum”: rândul planului lipsă are o frază de ce", () => {
+  const r = T.ceAiDeFacut({ acum: T0, dateLa: T0, sfaturi: [], avertismente: [], alerte: [], planGol: true }).find((x) => x.actiune === "plan");
+  assert.equal(r.text, "Cu planul scris la rece, colectorul te anunță când se atinge un prag.");
+});
+await test("ritmul de recuperare: USDT/zi cu virgulă", () => {
+  assert.equal(T.ritmRecuperare(-10, 0.8).text, "~13 zile până pe zero la ritmul de azi (+0,80 USDT/zi), dacă prețul stă pe loc");
+  assert.equal(T.ritmRecuperare(-3.2, 7.99).text, "~0,4 zile până pe zero la ritmul de azi (+7,99 USDT/zi), dacă prețul stă pe loc");
+});
+await test("fiecare probă care cheamă ritmRecuperare încarcă întâi TextRo", () => {
+  assert.deepEqual(faraTextRo(/ritmRecuperare\(/), [], "probe fără TextRo");
+});
+await test("panoul planului și portofoliul (app.js): „închide botul”, o acțiune la persoana I, cifre cu virgulă; mesajele pe două rânduri rămân pe două rânduri", async () => {
+  const app = citeste("public", "app.js"), css = citeste("public", "app.css");
+  for (const s of ['"atinsă: închide botul"', '"atins: închide botul"', "Aș închide botul acum, cum ai hotărât la rece.", "Niciun plan încă: scrie-l acum, la rece, nu când prețul fuge.",
+    "N-aș mai porni unul pe partea asta, ci unul neutru sau pe partea cealaltă.", "var U=function(v){return TextRo.usdt(v)}"]) assert.ok(app.includes(s), "lipsește: " + s);
+  for (const s of ["ATINSĂ — ieși", "ATINS — ieși", "exact ce ți-ai propus — ieși acum"]) assert.ok(!app.includes(s), "a rămas: " + s);
+  assert.match(css, /#tabloubot \.tbTodoRand p\{[^}]*white-space:pre-line/);
+  assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("todo"));
+});
+
 console.log(`\nV100.62 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);

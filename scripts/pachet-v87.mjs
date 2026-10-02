@@ -1,6 +1,7 @@
 // Probele v87 ("fa toate", 25.09): frana de "cumparat in jos", "cat te-ar fi salvat stopul", regulile tale din
 // jurnalul de actiuni, comisionul dus-intors in poarta, dividendele, data rezultatelor (Nasdaq), ritmul de
 // recuperare al botului, comisionul din fiecare umplere (bot vs fisa), alerta opritorului care urca.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 

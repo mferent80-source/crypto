@@ -527,7 +527,7 @@ var TabloExtra = (function () {
       if (!c || out.some(function (y) { return acelasi(y.titlu, x.titlu); })) return;
       out.push({ c: c, titlu: x.titlu, text: String(x.text || "") + (x.faCe ? " 👉 " + x.faCe : ""), n: 0, la: dateLa });
     });
-    if (o.planGol) out.push({ c: "n", titlu: "Nu ai un plan pentru bot", text: "Scrie-l la rece. Colectorul te anunță când se atinge un prag.", n: 0, actiune: "plan", la: dateLa });
+    if (o.planGol) out.push({ c: "n", titlu: "Nu ai un plan pentru bot", text: "Cu planul scris la rece, colectorul te anunță când se atinge un prag.", n: 0, actiune: "plan", la: dateLa });
     var R = { r: 0, g: 1, n: 2 };
     // v100.8 (el, 28.09: „alertele se arată cele mai vechi sus și alea noi în coadă, ceea ce nu e normal”): cele mai NOI sus;
     // la aceeasi ora (sfaturile de acum au toate ora citirii), cea mai urgenta prima; fara ora - la coada
@@ -559,7 +559,7 @@ var TabloExtra = (function () {
     if (total >= 0) return { zile: 0, text: "botul e pe plus: nimic de recuperat" };
     if (netZi <= 0) return { zile: null, text: "la ritmul de azi nu se recuperează: grilele nu acoperă costurile" };
     var z = -total / netZi;
-    return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") : Math.round(z)) + " zile până pe zero, la ritmul de azi (" + (netZi >= 0 ? "+" : "") + netZi.toFixed(2) + " USDT/zi), dacă prețul stă pe loc" };
+    return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") : Math.round(z)) + " zile până pe zero la ritmul de azi (" + TextRo.usdt(netZi) + "/zi), dacă prețul stă pe loc" };   // v100.62: virgula prin TextRo
   }
   // v87: cat din castigul unei umpleri ia comisionul; v100.39: pe grile Pionex ia 0,02% (maker) la intrare + 0,02% la iesire
   function comisionDinUmplere(netPct) {

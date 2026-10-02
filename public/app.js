@@ -5815,16 +5815,16 @@ function tbDeseneazaSaptPlan(b){
   }
   // (3) planul
   var st=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:null},Date.now());
-  if(!st||(!st.plus&&!st.minus&&!st.afara)){ps.innerHTML='<p class="tbSub">Niciun plan încă. Scrie-l acum, la rece: e mai ușor decât să hotărăști când prețul fuge.</p>';return}
-  var U=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(2)+" USDT"},h="";
-  if(st.plus)h+='<div class="tbLinie"><span>Țintă pe plus: '+U(st.plus.prag)+'</span><b class="'+(st.plus.lipsa<=0?"good":"")+'">'+(st.plus.lipsa<=0?"ATINSĂ — ieși":"mai sunt "+st.plus.lipsa.toFixed(2)+" USDT")+'</b></div>';
-  if(st.minus)h+='<div class="tbLinie"><span>Ies dacă pierd '+st.minus.prag.toFixed(2)+' USDT</span><b class="'+(st.minus.lipsa<=0?"bad":st.minus.lipsa<st.minus.prag*0.25?"tbWarn":"")+'">'+(st.minus.lipsa<=0?"ATINS — ieși":"mai sunt "+st.minus.lipsa.toFixed(2)+" USDT")+'</b></div>';
+  if(!st||(!st.plus&&!st.minus&&!st.afara)){ps.innerHTML='<p class="tbSub">Niciun plan încă: scrie-l acum, la rece, nu când prețul fuge.</p>';return}
+  var U=function(v){return TextRo.usdt(v)},h="";   // v100.62: cifrele cu virgula, „închide botul” (vocabularul unic)
+  if(st.plus)h+='<div class="tbLinie"><span>Țintă pe plus: '+U(st.plus.prag)+'</span><b class="'+(st.plus.lipsa<=0?"good":"")+'">'+(st.plus.lipsa<=0?"atinsă: închide botul":"mai sunt "+TextRo.num(st.plus.lipsa,2)+" USDT")+'</b></div>';
+  if(st.minus)h+='<div class="tbLinie"><span>Ies dacă pierd '+TextRo.num(st.minus.prag,2)+' USDT</span><b class="'+(st.minus.lipsa<=0?"bad":st.minus.lipsa<st.minus.prag*0.25?"tbWarn":"")+'">'+(st.minus.lipsa<=0?"atins: închide botul":"mai sunt "+TextRo.num(st.minus.lipsa,2)+" USDT")+'</b></div>';
   // v100.45 (I-475): cat de des o zi obisnuita a monedei ajunge la planul pe minus, si pragul atins in cel mult 1 zi din 4
   var prP=tbProfilPt(b),dP=String(b.directie||"").toLowerCase(),pP=botiNr(b.pretCurent);
   if(st.minus&&st.minus.opritorPlan!=null&&pP>0){var pmP=ProfilMoneda.planPeMoneda({profil:prP,dir:dP,dist:Math.abs(st.minus.opritorPlan/pP-1),laDist:function(dd){return TabloExtra.totalCuGridLa(b,dP==="short"?pP*(1+dd):pP*(1-dd))}});
     h+=pmP?'<p class="'+(pmP.avertizare?"tbFac tbWarn":"tbSub")+'">📏 '+escapeHtml(pmP.text)+'</p>':tbProfil.faraServer?'':'<p class="tbSub">📏 Cât de des e atins planul pe moneda asta: profilul monedei vine de la colector (noaptea).</p>'}
   if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+st.afara.prag+' ore</span><b>colectorul numără orele</b></div>';
-  ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> exact ce ți-ai propus — ieși acum, fără să renegociezi.</p>':'');
+  ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> Aș închide botul acum, cum ai hotărât la rece.</p>':'');
 }
 // ===== v82: semaforul botului + muta gridul + socoteala semnalelor =====
 var tbSem={botId:null,la:0,v:null,inLucru:false};
@@ -5847,7 +5847,7 @@ function tbDeseneazaPortofoliu(){
     +'<div class="tbLinie"><span>Expunerea (sumă × levier)</span><b>'+p.expunere.toFixed(0)+' USDT'+(p.expunerePeSold!=null?' · '+p.expunerePeSold.toFixed(1).replace(".",",")+'× soldul':'')+'</b></div>'
     +'<div class="tbLinie"><span>Dacă toată piața scade 10%</span><b class="'+(p.soc10<0?"bad":"good")+'">'+U(p.soc10)+'</b></div>'
     +(p.lichidatiLaSoc.length?'<div class="tbLinie"><span>S-ar lichida la −10%</span><b class="bad">'+escapeHtml(p.lichidatiLaSoc.join(", "))+'</b></div>':'')
-    +(p.acelasiPariu?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+Math.max(p.peParte.long,p.peParte.short)+' boți pe aceeași parte sunt un singur pariu, nu mai multe. N-aș mai porni unul pe partea asta; aș lua următorul neutru sau pe partea cealaltă.</p>':'');
+    +(p.acelasiPariu?'<p class="tbSub">'+Math.max(p.peParte.long,p.peParte.short)+' boți pe aceeași parte sunt un singur pariu, nu mai multe.</p><p class="tbFac">👉 <b>Ce aș face eu:</b> N-aș mai porni unul pe partea asta, ci unul neutru sau pe partea cealaltă.</p>':'');
 }
 // v97.8 (27.09, fara niciun bot pornit): in locul semaforului, pregatirea urmatorului bot - fisa de inchidere a ultimului,
 // vremea pietei (ca pe Home) si primele 3 monede "Bun pentru grid" din Scan, fiecare cu fisa ei
