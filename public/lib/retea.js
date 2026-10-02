@@ -9,6 +9,8 @@ var Retea = (function () {
   var TRASATURI = ["z1", "z4", "z24", "z168", "volRel", "dMax7", "dMin7", "panta4", "panta24", "miscare", "dirStare", "oraSin", "oraCos", "ziSin", "ziCos", "btcZ24", "btcVolRel"];
   // ținta -> orele blocului independent: zilele (24 h), 3 zile (72 h), săptămânile (7 zile), 2 zile (liniștea 24/48 h)
   var TINTE = { "atinge-24": { bloc: 24 }, "atinge-72": { bloc: 72 }, "atinge-168": { bloc: 168 }, cursa: { bloc: 168 }, liniste: { bloc: 48 }, directie: { bloc: 24 }, rezultat: { bloc: 24 } };
+  // revizia finală (M1): distanțele pe care rețeaua a învățat - aceleași cu grila din retea/date.mjs (proba le compară); în afara lor nu dă cifră
+  var INTERVAL = { 24: [0.01, 0.12], 72: [0.01, 0.12], 168: [0.1, 0.4], cursaT: [0.02, 0.08], cursaS: [0.02, 0.05] };
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v); return isFinite(x) ? x : null; }
   function taie(v) { return !isFinite(v) ? 0 : v > LIM ? LIM : v < -LIM ? -LIM : v; }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -19,9 +21,10 @@ var Retea = (function () {
   function panta(b, i, n) { var sx = 0, sy = 0, sxx = 0, sxy = 0; for (var k = 0; k < n; k++) { var y = Math.log(b[i - n + 1 + k].c); sx += k; sy += y; sxx += k * k; sxy += k * y; } var d = n * sxx - sx * sx; return d > 0 ? (n * sxy - sx * sy) / d * (n - 1) : 0; }
   // ultima bară ÎNCHEIATĂ la momentul t (b[i].t + ORA <= t); -1 dacă nu e niciuna
   function indexLa(b, t) { var lo = 0, hi = (Array.isArray(b) ? b.length : 0) - 1, i = -1; while (lo <= hi) { var m = (lo + hi) >> 1; if (b[m].t + ORA <= t) { i = m; lo = m + 1; } else hi = m - 1; } return i; }
-  // BTC la același moment: randamentul pe 24 h și volatilitatea pe 24 h față de 7 zile (ajung 169 de bare - fișa le ia din Pionex)
+  // BTC la același moment: randamentul pe 24 h și volatilitatea pe 24 h față de 7 zile (ajung 169 de bare - fișa le ia din Pionex).
+  // Revizia finală (I3): fără bara BTC încheiată în ultimele 2 ore de la t -> null - rețeaua n-a învățat cu BTC lipsă, deci nicio cifră.
   function btcLa(btc, t) {
-    var j = indexLa(btc, t); if (j < 169) return [0, 0];
+    var j = indexLa(btc, t); if (j < 169 || t - (btc[j].t + ORA) > 2 * ORA) return null;
     var s24 = sigma(btc, j, 24), s168 = sigma(btc, j, 168);
     return s24 > 0 ? [Math.log(btc[j].c / btc[j - 24].c) / (s24 * Math.sqrt(24)), s168 > 0 ? Math.log(s24 / s168) : 0] : [0, 0];
   }
@@ -34,6 +37,7 @@ var Retea = (function () {
     var mx = -Infinity, mn = Infinity; for (var j = i - 167; j <= i; j++) { if (b[j].h > mx) mx = b[j].h; if (b[j].l < mn) mn = b[j].l; }
     var r = function (k) { return Math.log(c / b[i - k].c); }, d24 = s168 * Math.sqrt(24), t = b[i].t + ORA;
     var st = typeof stare === "function" ? stare(i) : Probabilitati.stareLa(b, i), ora = new Date(t).getUTCHours(), zi = new Date(t).getUTCDay(), bt = btcLa(btc, t);
+    if (!bt) return null;
     var x = [r(1) / s1, r(4) / (2 * s1), r(24) / (s1 * Math.sqrt(24)), r(168) / (s168 * Math.sqrt(168)), s720 > 0 ? Math.log(s1 / s720) : 0,
       Math.log(mx / c) / d24, Math.log(c / mn) / d24, panta(b, i, 4) / (2 * s1), panta(b, i, 24) / (s1 * Math.sqrt(24)),
       st && st.indexOf("miscare") === 0 ? 1 : 0, st && /-sus$/.test(st) ? 1 : st && /-jos$/.test(st) ? -1 : 0,
@@ -59,7 +63,7 @@ var Retea = (function () {
     var inainte = (Array.isArray(ist) ? ist : []).filter(function (x) { return x && nr(x.inchis) !== null && x.inchis <= por && nr(x.net) !== null; });
     var n = inainte.length, glob = n ? inainte.filter(function (x) { return x.net > 0; }).length / n : 0.5;
     var peM = inainte.filter(function (x) { return x.moneda === t.moneda; }), plusM = peM.filter(function (x) { return x.net > 0; }).length;
-    var rata = (plusM + 10 * glob) / (peM.length + 10), inv = nr(t.pus) > 0 ? nr(t.pus) : nr(t.investit) > 0 ? nr(t.investit) : 0, pas = nr(t.pasNet);
+    var rata = (plusM + 10 * glob) / (peM.length + 10), inv = nr(t.investit) > 0 ? nr(t.investit) : 0, pas = nr(t.pasNet);   // revizia finală (C1): suma de PORNIRE, nu „pus” (de la închidere)
     var dir = String(t.dir || "").toLowerCase(), lev = nr(t.levier) > 0 ? nr(t.levier) : 1;
     var x = [dir === "long" ? 1 : dir === "short" ? -1 : 0, Math.log(lev), Math.log((sus - jos) / f.c), pas > 0 ? Math.log(pas) : 0, pas > 0 ? 0 : 1,
       Math.min(1, Math.max(0, (f.c - jos) / (sus - jos))), Math.log(1 + inv), rata, Math.log(1 + peM.length)].map(taie);
@@ -108,7 +112,8 @@ var Retea = (function () {
     var acum = nr(o.acum) || Date.now(), b = Probabilitati.pregateste(bare, acum), f = trasaturiBare(b, b.length - 1, btc ? Probabilitati.pregateste(btc, acum) : null), pr = nr(o.pret);
     if (!f || !(pr > 0)) return null;
     var rel = function (x) { x = nr(x); return x !== null && x > 0 ? x / pr - 1 : null; }, dir = String(o.dir || "").toLowerCase(), p = {}, k = 0;
-    var pune = function (cod, tinta, e) { var m = modele[tinta]; if (!m || m.versiune !== VERSIUNE) return; var x = intrare(tinta, f, e), q = x ? prezice(m, x) : null; if (q !== null) { p[cod] = Math.round(q * 1000) / 1000; k++; } };
+    var inInterval = function (v, iv) { var a = Math.abs(v); return a >= iv[0] - 1e-9 && a <= iv[1] + 1e-9; };
+    var pune = function (cod, tinta, e) { if (/^atinge-/.test(tinta) && !inInterval(e.rel, INTERVAL[e.H])) return; if (tinta === "cursa" && !(inInterval(e.relT, INTERVAL.cursaT) && inInterval(e.relS, INTERVAL.cursaS))) return; var m = modele[tinta]; if (!m || m.versiune !== VERSIUNE) return; var x = intrare(tinta, f, e), q = x ? prezice(m, x) : null; if (q !== null) { p[cod] = Math.round(q * 1000) / 1000; k++; } };
     var jos = rel(o.jos), sus = rel(o.sus), lich = rel(o.lichidare), tinta = rel(o.tinta), stop = rel(o.stop);
     if (jos !== null && jos < 0) { pune("iese-jos-24", "atinge-24", { rel: jos, H: 24 }); pune("iese-jos-72", "atinge-72", { rel: jos, H: 72 }); }
     if (sus !== null && sus > 0) { pune("iese-sus-24", "atinge-24", { rel: sus, H: 24 }); pune("iese-sus-72", "atinge-72", { rel: sus, H: 72 }); }
@@ -123,6 +128,7 @@ var Retea = (function () {
   function pentruPornire(modele, t, bare, btc, ist) {
     var m = modele && modele.rezultat; if (!m || m.versiune !== VERSIUNE) return null;
     var por = nr(t && t.pornit); if (por === null) return null;
+    if (nr(m.la) !== null && m.la > por) return null;   // revizia finală (I7): modelul de după pornire ar fi văzut ce a urmat
     var f = trasaturiBot(t, Probabilitati.pregateste(bare, por), btc ? Probabilitati.pregateste(btc, por) : null, ist); if (!f) return null;
     var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n };
   }
@@ -163,6 +169,6 @@ var Retea = (function () {
   }
   // rândul gri de la poarta fișei
   function textPornire(pz, vd) { return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + "."; }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;

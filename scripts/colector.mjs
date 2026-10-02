@@ -1286,12 +1286,14 @@ async function bareBtc() {
   btcViu = { la: Date.now(), b: GridCalcul.bare(viu.concat(citesteJson(reteaFis("BTC_USDT_PERP"), []))) };   // pagina vie întâi: bara ei închisă bate bara în curs din depozit
   return btcViu.b;
 }
+// revizia finală (I7): rezultatul „la pornire” se socotește doar cu un model antrenat ÎNAINTE de pornire și rămâne înghețat pe bot (modelele
+// de mai târziu au văzut ce a urmat); (C1) cu suma de PORNIRE (investit), nu cu cea de la închidere
 function pornireDe(modele, btc) {
-  const cheie = Retea.VERSIUNE + "|" + (modele.rezultat ? modele.rezultat.la : 0);
   return (b, bare) => {
-    const cache = reteaStare.pornire || (reteaStare.pornire = {}), c = cache[b.id]; if (c && c.cheie === cheie) return c.r;
-    const g = TabloExtra.geometrieBot(b), r = Retea.pentruPornire(modele, { moneda: JurnalTrade.moneda(b.baza), dir: String(b.directie || "").toLowerCase(), levier: b.levier, jos: b.gridJos, sus: b.gridSus, pasNet: g ? g.netPct : null, pus: b.investit, pornit: b.pornitLa }, bare, btc, dinDisc(path.join(RETEA_DIR, "boti.json")) || []);
-    cache[b.id] = { cheie, r }; return r;
+    const cache = reteaStare.pornire || (reteaStare.pornire = {}); if (cache[b.id] && typeof cache[b.id].p === "number") return cache[b.id];
+    const g = TabloExtra.geometrieBot(b), r = Retea.pentruPornire(modele, { moneda: JurnalTrade.moneda(b.baza), dir: String(b.directie || "").toLowerCase(), levier: b.levier, jos: b.gridJos, sus: b.gridSus, pasNet: g ? g.netPct : null, investit: b.investit, pornit: b.pornitLa }, bare, btc, dinDisc(path.join(RETEA_DIR, "boti.json")) || []);
+    if (r) { cache[b.id] = r; try { scrieAtomic(RETEA_STARE, reteaStare); } catch {} }
+    return r;
   };
 }
 function pornesteAntrenorul() {
@@ -1313,7 +1315,7 @@ async function turaReteaColector() {
     pauza: (ms) => new Promise((r) => setTimeout(r, ms)),
     citesteOre: (s) => citesteJson(reteaFis(s), []).concat(citesteJson(fisOre(s), [])),
     scrieOre: (s, r) => { try { scrieAtomic(reteaFis(s), r); } catch (e) { jurnal("retea: ore nescrise", s, e.message); } },
-    boti: async () => { const h = simbolPeMoneda(); return JurnalTrade.din(await botiInchisiToti()).map((t) => ({ id: t.id, moneda: t.moneda, simbol: h[t.moneda] || null, dir: t.dir, levier: t.levier, jos: t.jos, sus: t.sus, pasNet: t.pasNet, pus: t.pus, investit: t.investit, net: t.net, pornit: t.pornit, inchis: t.inchis })).filter((t) => t.simbol); },
+    boti: async () => { const h = simbolPeMoneda(); return JurnalTrade.din(await botiInchisiToti()).map((t) => ({ id: t.id, moneda: t.moneda, simbol: h[t.moneda] || null, dir: t.dir, levier: t.levier, jos: t.jos, sus: t.sus, pasNet: t.pasNet, pus: t.pus, investit: t.investit, net: t.net, pornit: t.pornit, inchis: t.inchis })); },   // revizia finală (I6): toți boții (rata ta e pe toți)
     scrieBoti: (l) => scrieAtomic(path.join(RETEA_DIR, "boti.json"), l),
     porneste: pornesteAntrenorul, citesteModele: () => citesteJson(path.join(RETEA_DIR, "modele.json"), null), trimite, jurnal,
     scrieStare: (st) => { try { scrieAtomic(RETEA_STARE, st); } catch {} } });

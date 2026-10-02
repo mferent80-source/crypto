@@ -24,6 +24,9 @@ export function luniDeTest(randuri, o) {
   }
   return out;
 }
+// revizia finală (I1): o lună de pe bare se judecă abia când și ultimele ei rânduri au eticheta (orizontul + o zi după sfârșitul ei) -
+// altfel ultima săptămână lipsea pentru totdeauna din cache; „rezultatul tău”: 200 de cazuri știute, 30 de zile (boții încă deschiși)
+export function optiuniLuni(tinta, orizontOre, acum) { return tinta === "rezultat" ? { minCazuri: 200, asteaptaZile: 30, acum } : { minZile: 60, asteaptaZile: Math.ceil((orizontOre || 24) / 24) + 1, acum }; }
 export function impartire(randuri, l) {
   const start = inceputLuna(l), fin = inceputLuna(lunaUrmatoare(l));
   return { antrenare: randuri.filter((r) => r.tEt <= start), test: randuri.filter((r) => r.t >= start && r.t < fin) };

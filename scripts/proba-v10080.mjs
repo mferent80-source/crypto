@@ -31,16 +31,16 @@ await test("(1) trăsăturile la bara i nu văd nimic de după: aceleași cu și
   assert.deepEqual(Retea.trasaturiBare(b, 1500, viitor).x, cu.x);
 });
 
-await test("(1) fără BTC (fișa fără Pionex): trăsăturile BTC sunt 0, restul rămân aceleași", () => {
-  const cu = Retea.trasaturiBare(b, 1500, btc), f0 = Retea.trasaturiBare(b, 1500, null);
-  assert.deepEqual(f0.x.slice(0, 15), cu.x.slice(0, 15)); assert.deepEqual(f0.x.slice(15), [0, 0]);
+await test("(1) revizia finală (I3): fără BTC proaspăt - lipsă sau ultima bară BTC încheiată cu peste 2 h înainte de t - nicio trăsătură (rețeaua n-a învățat cu BTC lipsă)", () => {
+  assert.equal(Retea.trasaturiBare(b, 1500, null), null);
+  assert.equal(Retea.trasaturiBare(b, 1500, btc.slice(0, 1498)), null, "BTC vechi de 3 h");
+  assert.ok(Retea.trasaturiBare(b, 1500, btc.slice(0, 1500)), "BTC de acum o oră e bun");
 });
-
 await test("(1) trăsăturile sunt tăiate la ±10 (o urcare bruscă după liniște nu strică rețeaua); o serie fără mișcare -> null, nu NaN", () => {
   const plat = Array.from({ length: 900 }, (_, i) => ({ t: Date.UTC(2025, 0, 1) + i * ORA, o: 100, h: 100.0001, l: 99.9999, c: 100 * (1 + (i % 2 ? 1e-6 : -1e-6)) }));
   let pret = 100;   // urcarea alternează 3% și 1% (pași egali ar da volatilitate zero -> null)
   const urca = plat.concat(Array.from({ length: 30 }, (_, k) => { const o1 = pret; pret = o1 * (k % 2 ? 1.01 : 1.03); return { t: plat[899].t + (k + 1) * ORA, o: o1, h: pret, l: o1, c: pret }; }));
-  const f = Retea.trasaturiBare(urca, urca.length - 1, null);
+  const f = Retea.trasaturiBare(urca, urca.length - 1, bare(urca.length, { seed: 5, t0: urca[0].t, p0: 60000 }));
   assert.ok(f.x.every((v) => v >= -10 && v <= 10), JSON.stringify(f.x));
   assert.ok(f.x.some((v) => Math.abs(v) === 10), "nicio trăsătură tăiată: " + JSON.stringify(f.x));
   const mort = Array.from({ length: 900 }, (_, i) => ({ t: Date.UTC(2025, 0, 1) + i * ORA, o: 100, h: 100, l: 100, c: 100 }));
@@ -71,6 +71,11 @@ await test("(1) rezultatul tău: rata ta doar din boții închiși ÎNAINTE de p
   assert.equal(Retea.trasaturiBot({ ...t, sus: 80 }, b, btc, ist), null, "gridul întors -> null");
 });
 
+await test("(1) revizia finală (C1): rezultatul tău ia suma de PORNIRE (investit), nu „pus” (suma de la închidere, cu marja adăugată pe drum)", () => {
+  const por = b[1500].t + ORA + 1800000, t = { moneda: "AAVE", dir: "long", levier: 5, jos: 90, sus: 110, pasNet: 0.004, investit: 50, pus: 80, pornit: por };
+  const a = Retea.trasaturiBot(t, b, btc, []), c = Retea.trasaturiBot({ ...t, pus: 500, extraMargin: 400 }, b, btc, []);
+  assert.deepEqual(a.x, c.x, "suma de la închidere / marja de pe drum au intrat în trăsături"); assert.equal(a.x[6], Math.log(51));
+});
 await test("(1) trecerea înainte = socoteala de mână (normalizarea, relu, sigmoid, media ansamblului); intrare greșită -> null", () => {
   const m = { versiune: Retea.VERSIUNE, norm: { m: [1, 0], s: [2, 0] }, ansamblu: [
     [{ W: [[1, -1], [0.5, 2]], b: [0, 0.1], act: "relu" }, { W: [[1], [-1]], b: [0.2], act: "sigmoid" }],

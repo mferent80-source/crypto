@@ -73,16 +73,26 @@ await test("(9) fișa: 🧠 pe aceleași bare și niveluri ca 🎲 (grProb.bare 
   assert.match(f, /grProb\.bare=Probabilitati\.imbina\(b1,b15,Date\.now\(\)\)/); assert.match(f, /grProb\.rez=Probabilitati\.pentruBot\(grProb\.bare,grProb\.o\)/);
   assert.match(f, /Retea\.pentruBot\(reteaM\.m,grProb\.bare,grProb\.o,grRetea\.btc\)/); assert.match(f, /zar\.map\(tbProbRandHtml\)\.join\(""\)\+reteaHtml\(rt,zar,\{acum:Date\.now\(\)\}\)/);
 });
-await test("(9) poarta: rândul gri „🧠 Un bot ca ăsta ar ieși pe plus: …” din istoria ta; fără modele / fără bare -> nimic; poarta neschimbată", () => {
-  const ctx = { Retea: R, escapeHtml: (x) => String(x), reteaM: { m: null }, grProb: { bare: null }, grRetea: { btc: null }, grProbSetare: (f) => f.setare, Date,
-    TabloExtra: { geometrieBot: () => ({ netPct: 0.004 }) }, JurnalTrade: { moneda: (s) => s } };
+await test("(9) poarta: rândul gri „🧠 Un bot ca ăsta ar ieși pe plus: …” din istoria ta; fără modele / bare / istoric, barele altei monede sau o eroare -> nimic; poarta neschimbată", () => {
+  const ctx = { Retea: R, escapeHtml: (x) => String(x), reteaM: { m: null }, grProb: { bare: null, simbol: null }, grRetea: { btc: null }, grProbSetare: (f) => f.setare, Date,
+    TabloExtra: { geometrieBot: () => ({ netPct: 0.004 }) }, JurnalTrade: { moneda: (x) => String(x).toUpperCase() }, grStare: { monede: { LIT_USDT_PERP: { baseCurrency: "LIGHTER" } } } };
   vm.createContext(ctx); vm.runInContext(fn("grReteaPoartaHtml") + ";this.f=grReteaPoartaHtml;", ctx);
-  const f = { simbol: "LIT_USDT_PERP", dir: "long", pret: 1, setare: { jos: 0.9, sus: 1.1, grile: 20, suma: 50 } }, p = { trades: [], lev: 3 };
+  const f = { simbol: "LIT_USDT_PERP", dir: "long", pret: 1, setare: { jos: 0.9, sus: 1.1, grile: 20, suma: 50 } }, p = { trades: [{ moneda: "LIGHTER", net: 1, inchis: 1 }], lev: 3 };
   assert.equal(ctx.f(f, p), "");
-  const ret = { rezultat: { tinta: "rezultat", versiune: R.VERSIUNE, la: Date.now(), verificare: null } };
-  ctx.reteaM.m = ret; ctx.grProb.bare = []; ctx.Retea = { ...R, pentruPornire: () => ({ p: 0.41, rata: 0.524, n: 431 }) };
+  let primit = null; ctx.reteaM.m = { rezultat: { tinta: "rezultat", versiune: R.VERSIUNE, la: Date.now() - 1000, verificare: null } }; ctx.grProb.bare = []; ctx.grProb.simbol = "LIT_USDT_PERP";
+  ctx.Retea = { ...R, pentruPornire: (m, t) => { primit = t; return { p: 0.41, rata: 0.524, n: 431 }; } };
   assert.equal(ctx.f(f, p), '<p class="tbSub grRetea">🧠 Un bot ca ăsta ar ieși pe plus: 41% · rata ta: 52% · nedovedită: neverificată încă.</p>');
+  assert.equal(primit.moneda, "LIGHTER", "numele botului din lista Pionex (LIT = LIGHTER), ca la poartă"); assert.equal(primit.investit, 50); assert.ok(!("pus" in primit));
+  assert.equal(ctx.f(f, { ...p, trades: [] }), "", "fără istoric nu se scrie „rata ta: 50%”");
+  ctx.grProb.simbol = "BBB_USDT_PERP"; assert.equal(ctx.f(f, p), "", "barele altei monede");
+  ctx.grProb.simbol = "LIT_USDT_PERP"; ctx.Retea = { ...R, pentruPornire: () => { throw new Error("x"); } }; assert.equal(ctx.f(f, p), "", "o eroare în rețea nu strică poarta");
   assert.match(fn("grPoartaHtml"), /\+grReteaPoartaHtml\(f,p\)/); assert.match(fn("gridPoarta"), /trades:trades,lev:lev/);
+});
+await test("(9) revizia finală (M5): o eroare în rețea nu oprește desenul fișei / Tabloului (reteaHtml -> nimic; pentruBot în try)", () => {
+  const ctx = { Retea: { ...R, randuri: () => { throw new Error("x"); } }, escapeHtml: (x) => String(x), reteaM: { m: { x: 1 } }, Date };
+  vm.createContext(ctx); vm.runInContext(fn("tbProbRandHtml") + "\n" + fn("reteaHtml") + ";this.f=reteaHtml;", ctx);
+  assert.equal(ctx.f({ p: {} }, [], { acum: 1 }), "");
+  assert.match(fn("grProbDeseneaza"), /try\{rt=reteaM\.m&&grProb\.bare\?Retea\.pentruBot\(/);
 });
 console.log("\n" + (pica ? "V100.80 ECRAN PICA · " + pica + " din " + (ok + pica) : "V100.80 ECRAN PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

@@ -9,7 +9,8 @@ export { tf };
 
 export const HIPER = Object.freeze({ ascunse: [16, 8], l2: 1e-3, dropout: 0.2, lr: 1e-3, lot: 256, epoci: 60, rabdare: 5, validare: 0.2, seminte: 5 });
 let gata = false;
-export async function porneste() { if (!gata) { await tf.setBackend("wasm"); await tf.ready(); gata = true; } return tf.getBackend(); }
+// RETEA_BACKEND: doar pentru probă (revizia finală, M6) - antrenorul refuză orice altceva decât WebAssembly
+export async function porneste() { if (!gata) { try { await tf.setBackend(process.env.RETEA_BACKEND || "wasm"); } catch {} await tf.ready(); gata = true; } return tf.getBackend(); }
 // mulberry32: aceeași sămânță -> același șir
 export function cuSamanta(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 export function construieste(nIn, ascunse, rata) {

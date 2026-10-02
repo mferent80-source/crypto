@@ -65,5 +65,18 @@ await test("(3) rezultatul tău: rândul la pornire, y = net > 0, tEt = închide
   assert.equal(r[2].r1, 0.5, "al treilea: unul pe plus, unul pe minus închiși înainte");
 });
 
+await test("(3) revizia finală (I6): rata ta se socotește pe TOȚI boții închiși, și pe cei fără bare (monede fără profil)", () => {
+  const t0 = b[900].t + ORA + 600000, bot = (o) => ({ moneda: "AAA", simbol: "AAA_USDT_PERP", dir: "long", levier: 3, jos: 95, sus: 105, pasNet: 0.003, investit: 40, ...o });
+  const boti = [bot({ moneda: "ZZZ", simbol: null, pornit: t0 - 50 * ORA, inchis: t0 - 10 * ORA, net: 5 }), bot({ pornit: t0, inchis: t0 + 5 * ORA, net: -1 })];
+  const r = D.randuriBoti(boti, (x) => (x === "AAA_USDT_PERP" ? b : null), btc, M);
+  assert.equal(r.length, 1); assert.equal(r[0].r1, 1, "botul fără bare (pe plus) trebuia să intre în rata ta");
+});
+await test("(3) revizia finală (M1): intervalele în care rețeaua dă cifră = grila pe care a învățat (retea.js ↔ date.mjs)", () => {
+  assert.ok(R.INTERVAL, "Retea.INTERVAL lipsește");
+  for (const H of [24, 72, 168]) { const a = D.GRILA[H].map(Math.abs); assert.deepEqual(R.INTERVAL[H], [Math.min(...a), Math.max(...a)], "H " + H); }
+  const T = D.CURSA.map((p) => Math.abs(p[0])), S = D.CURSA.map((p) => Math.abs(p[1]));
+  assert.deepEqual(R.INTERVAL.cursaT, [Math.min(...T), Math.max(...T)]); assert.deepEqual(R.INTERVAL.cursaS, [Math.min(...S), Math.max(...S)]);
+});
+
 console.log("\n" + (pica ? "V100.80 DATE PICA · " + pica + " din " + (ok + pica) : "V100.80 DATE PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

@@ -24,14 +24,14 @@ let ok = 0, pica = 0;
 async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }
 // un model care zice mereu 50% (W zero, bias 0), cu numărul potrivit de intrări pe țintă
 const N_IN = { "atinge-24": 20, "atinge-72": 20, "atinge-168": 20, cursa: 21, liniste: 18, directie: 17, rezultat: 26 };
-const model = (t, v) => ({ tinta: t, versiune: v || Retea.VERSIUNE, la: Date.now(), norm: { m: Array(N_IN[t]).fill(0), s: Array(N_IN[t]).fill(1) }, ansamblu: [[{ W: Array.from({ length: N_IN[t] }, () => [0]), b: [0], act: "sigmoid" }]], verificare: null });
+const model = (t, v) => ({ tinta: t, versiune: v || Retea.VERSIUNE, la: Date.UTC(2026, 8, 1), norm: { m: Array(N_IN[t]).fill(0), s: Array(N_IN[t]).fill(1) }, ansamblu: [[{ W: Array.from({ length: N_IN[t] }, () => [0]), b: [0], act: "sigmoid" }]], verificare: null });
 const MODELE = Object.fromEntries(Object.keys(N_IN).map((t) => [t, model(t)]));
 console.log("Proba v100.80 (colectorul) · pentruBot, istoria, tura de noapte, rez.retea, ruta");
-const acum = Date.UTC(2026, 9, 4, 12), b = bare(1400, { seed: 41, t0: acum - 1400 * ORA }), c = b[b.length - 1].c;
+const acum = Date.UTC(2026, 9, 4, 12), b = bare(1400, { seed: 41, t0: acum - 1400 * ORA }), c = b[b.length - 1].c, btcB = bare(1400, { seed: 42, t0: acum - 1400 * ORA, p0: 60000 });
 
 await test("(7) pentruBot pe un long: codurile 🎲 (marginile 24/72 h, lichidarea JOS, cursa) + direcția; fără modele -> null; altă versiune -> null", () => {
-  const o = { acum, pret: c, dir: "long", jos: c * 0.95, sus: c * 1.05, lichidare: c * 0.7, tinta: c * 1.08, stop: c * 0.92 };
-  const r = Retea.pentruBot(MODELE, b, o, null);
+  const o = { acum, pret: c, dir: "long", jos: c * 0.95, sus: c * 1.05, lichidare: c * 0.7, tinta: c * 1.08, stop: c * 0.95 };
+  const r = Retea.pentruBot(MODELE, b, o, btcB);
   for (const k of ["iese-jos-24", "iese-sus-24", "iese-jos-72", "iese-sus-72", "lichidare", "cursa", "directie-24"]) assert.equal(r.p[k], 0.5, k);
   assert.equal(r.v, Retea.VERSIUNE); assert.equal(r.la, acum);
   assert.equal(Retea.pentruBot(null, b, o, null), null);
@@ -39,17 +39,17 @@ await test("(7) pentruBot pe un long: codurile 🎲 (marginile 24/72 h, lichidar
 });
 
 await test("(7) pe un short: lichidarea e SUS (apare); o lichidare JOS la short nu dă cod; cursa cu ținta JOS și stopul SUS", () => {
-  const sh = Retea.pentruBot(MODELE, b, { acum, pret: c, dir: "short", jos: c * 0.95, sus: c * 1.05, lichidare: c * 1.3, tinta: c * 0.92, stop: c * 1.08 }, null);
+  const sh = Retea.pentruBot(MODELE, b, { acum, pret: c, dir: "short", jos: c * 0.95, sus: c * 1.05, lichidare: c * 1.3, tinta: c * 0.92, stop: c * 1.05 }, btcB);
   assert.equal(sh.p.lichidare, 0.5); assert.equal(sh.p.cursa, 0.5);
-  const rau = Retea.pentruBot(MODELE, b, { acum, pret: c, dir: "short", jos: c * 0.95, sus: c * 1.05, lichidare: c * 0.7 }, null);
+  const rau = Retea.pentruBot(MODELE, b, { acum, pret: c, dir: "short", jos: c * 0.95, sus: c * 1.05, lichidare: c * 0.7 }, btcB);
   assert.ok(!("lichidare" in rau.p) && !("cursa" in rau.p));
 });
 
 await test("(7) pentruPornire: rezultatul tău la pornire (prețul = închiderea barei de dinainte), cu rata ta; fără modelul „rezultat” -> null", () => {
-  const t = { moneda: "AAA", dir: "long", levier: 3, jos: c * 0.9, sus: c * 1.1, pasNet: 0.004, pus: 40, pornit: acum - 48 * ORA };
-  const r = Retea.pentruPornire(MODELE, t, b, null, [{ moneda: "AAA", net: 1, inchis: acum - 100 * ORA }]);
+  const t = { moneda: "AAA", dir: "long", levier: 3, jos: c * 0.9, sus: c * 1.1, pasNet: 0.004, investit: 40, pornit: acum - 48 * ORA };
+  const r = Retea.pentruPornire(MODELE, t, b, btcB, [{ moneda: "AAA", net: 1, inchis: acum - 100 * ORA }]);
   assert.deepEqual(r, { p: 0.5, rata: Math.round((1 + 10 * 1) / 11 * 1000) / 1000, n: 1 });
-  assert.equal(Retea.pentruPornire({ directie: MODELE.directie }, t, b, null, []), null);
+  assert.equal(Retea.pentruPornire({ directie: MODELE.directie }, t, b, btcB, []), null);
 });
 
 // ---- istoria de 400 de zile: o serie Pionex de 450 de zile; Pionex refuză endTime mai vechi de 420 de zile
@@ -92,11 +92,26 @@ await test("(7) antrenorul care pică: nimic urcat, modelele de ieri rămân, ju
   const p = deps({ forta: true, cod: 1 }); assert.deepEqual(await turaRetea(p.d), { cod: 1 });
   assert.equal(p.urcat.length, 0); assert.ok(p.j.some((l) => /nimic urcat, modelele de ieri rămân/.test(l)), p.j.join("\n"));
 });
-await test("(7) monedele complete nu se mai cer (doar BTC, care nu e în istoric-1h, se ține la zi)", async () => {
-  const k = deps({ noapte: true, stare: { complete: { AAA_USDT_PERP: true } } }); await turaRetea(k.d);
-  assert.deepEqual(Object.keys(k.scrise), ["BTC_USDT_PERP"]);
+await test("(7) revizia finală (I4): moneda completă se scrie în fiecare noapte din ce e pe disc (istoric-1h + depozit), fără cereri - fără gaură peste 6 luni", async () => {
+  const k = deps({ noapte: true, stare: { complete: { AAA_USDT_PERP: true } } }), cerute = [], vechi = k.d.cereKlines; k.d.cereKlines = async (x, end) => { cerute.push(x); return vechi(x, end); };
+  await turaRetea(k.d); assert.ok(!cerute.includes("AAA_USDT_PERP"), "moneda completă nu se mai cere"); assert.equal(k.scrise.AAA_USDT_PERP, 185 * 24);
 });
-
+await test("(7) revizia finală (I2): BTC se aduce primul (bugetul nopții nu-l mai lasă la urmă)", async () => {
+  const k = deps({ noapte: true }), ordine = [], vechi = k.d.cereKlines; k.d.simboluri = ["AAA_USDT_PERP", "BBB_USDT_PERP", "BTC_USDT_PERP"];
+  k.d.cereKlines = async (x, end) => { if (!ordine.includes(x)) ordine.push(x); return vechi(x, end); };
+  await turaRetea(k.d); assert.equal(ordine[0], "BTC_USDT_PERP", ordine.join(","));
+});
+await test("(7) revizia finală (M1): cifră doar pe distanțele învățate - lichidarea la 5% (levier mare) și marginea la 0,5% nu primesc cifră", () => {
+  const o = { acum, pret: c, dir: "long", jos: c * 0.95, sus: c * 1.05 };
+  assert.ok(!("lichidare" in Retea.pentruBot(MODELE, b, { ...o, lichidare: c * 0.95 }, btcB).p));
+  assert.equal(Retea.pentruBot(MODELE, b, { ...o, lichidare: c * 0.8 }, btcB).p.lichidare, 0.5);
+  assert.ok(!("iese-jos-24" in Retea.pentruBot(MODELE, b, { ...o, jos: c * 0.995 }, btcB).p), "marginea la 0,5% (sub grila de 1%)");
+});
+await test("(7) revizia finală (I7): rezultatul „la pornire” nu se socotește cu un model antrenat DUPĂ pornire (ar vedea ce a urmat)", () => {
+  const t = { moneda: "AAA", dir: "long", levier: 3, jos: c * 0.9, sus: c * 1.1, pasNet: 0.004, investit: 40, pornit: acum - 48 * ORA };
+  assert.equal(Retea.pentruPornire({ rezultat: { ...MODELE.rezultat, la: acum } }, t, b, btcB, []), null);
+  assert.ok(Retea.pentruPornire({ rezultat: { ...MODELE.rezultat, la: acum - 72 * ORA } }, t, b, btcB, []));
+});
 // ---- rez.retea în pachetul 🎲 (tura-probabilitati), cu dependențe false
 const RANDURI = b.map((q) => ({ time: q.t, open: String(q.o), close: String(q.c), high: String(q.h), low: String(q.l), volume: "1" }));
 async function prob(extra) {
@@ -106,7 +121,7 @@ async function prob(extra) {
   return trimise.find((x) => x && x.bot === "b1");
 }
 await test("(7) tura 🎲: cu modele, rez.retea are codurile și rezultatul la pornire; fără modele, nicio cheie retea (pagina publicată, prima noapte)", async () => {
-  const cu = await prob({ Retea, modele: MODELE, btc: null, pornireDe: () => ({ p: 0.41, rata: 0.52, n: 431 }) });
+  const cu = await prob({ Retea, modele: MODELE, btc: btcB, pornireDe: () => ({ p: 0.41, rata: 0.52, n: 431 }) });
   assert.ok(cu && cu.rez.retea && cu.rez.retea.p["iese-jos-24"] === 0.5 && cu.rez.retea.p["directie-24"] === 0.5, JSON.stringify(cu && cu.rez.retea));
   assert.deepEqual(cu.rez.retea.pornire, { p: 0.41, rata: 0.52, n: 431 });
   const fara = await prob({ Retea, modele: null });

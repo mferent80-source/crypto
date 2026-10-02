@@ -52,6 +52,17 @@ await test("(6) ținta fără date (rezultatul tău fără boti.json) nu face mo
   assert.match(r.stdout, /rezultat: prea puține rânduri \(0\)/); assert.ok(modele().modele.directie, "modelul directie a dispărut");
 });
 
+await test("(6) revizia finală (I2): istoria mai lungă a unei monede (umplerea de 400 de zile) reface lunile - nu rămân judecate pe date parțiale", () => {
+  const f = path.join(ORE, "AAA_USDT_PERP.json"), l = JSON.parse(fs.readFileSync(f, "utf8")), t0v = l[0].time - 600 * 3600000;
+  const vechi = bare(600, { seed: 77, t0: t0v, p0: Number(l[0].open) }).map((q) => ({ time: q.t, open: String(q.o), close: String(q.c), high: String(q.h), low: String(q.l), volume: "1" }));
+  fs.writeFileSync(f, JSON.stringify(vechi.concat(l)));
+  const r = ruleaza("--tinta", "directie"); assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /directie: 0 luni din cache, \d+ noi/, r.stdout);
+});
+await test("(6) revizia finală (M6): fără WebAssembly antrenorul nu pornește (pe CPU ar fi oprit la 35 de minute în fiecare noapte)", () => {
+  const r = spawnSync(process.execPath, [path.join(RAD, "retea", "antreneaza.mjs"), "--rad", TMP, "--tinta", "directie"], { encoding: "utf8", timeout: 120000, env: { ...process.env, RETEA_BACKEND: "cpu" } });
+  assert.equal(r.status, 2, r.stdout + r.stderr); assert.match(r.stdout, /nu rulează pe WebAssembly/);
+});
+
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log("\n" + (pica ? "V100.80 ANTRENOR PICA · " + pica + " din " + (ok + pica) : "V100.80 ANTRENOR PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

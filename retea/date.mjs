@@ -66,10 +66,11 @@ export function reperRand(tinta, b, r, M, memo) {
 // „rezultatul tău”: un rând pe bot închis (la pornire), y = net > 0, tEt = închiderea (rezultatul se știe abia atunci);
 // r1 = rata ta de până atunci, r2 = rata pe monedă trasă spre medie (reperele; verificarea îl ia pe cel mai greu)
 export function randuriBoti(boti, bareDe, btc, M) {
-  const l = (Array.isArray(boti) ? boti : []).filter((t) => t && Number.isFinite(t.pornit) && Number.isFinite(t.inchis) && Number.isFinite(t.net) && t.simbol).sort((a, b) => a.pornit - b.pornit), out = [];
-  for (const t of l) {
-    const b = bareDe(t.simbol); if (!b) continue;
-    const f = M.R.trasaturiBot(t, b, btc, l); if (!f) continue;
+  // revizia finală (I6): rata ta se socotește pe TOȚI boții închiși (și pe monedele fără bare), ca pe fișă; doar rândurile cer bare
+  const toti = (Array.isArray(boti) ? boti : []).filter((t) => t && Number.isFinite(t.pornit) && Number.isFinite(t.inchis) && Number.isFinite(t.net)).sort((a, b) => a.pornit - b.pornit), out = [];
+  for (const t of toti) {
+    const b = t.simbol ? bareDe(t.simbol) : null; if (!b) continue;
+    const f = M.R.trasaturiBot(t, b, btc, toti); if (!f) continue;
     out.push({ t: t.pornit, s: t.moneda, y: t.net > 0 ? 1 : 0, x: f.x, tEt: t.inchis, r1: f.glob, r2: f.rata });
   }
   return out;

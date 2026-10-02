@@ -92,5 +92,16 @@ await test("(5) judecaLuna ia formula simplă din Newton (nu trece prin antrenor
   assert.equal(apeluri.length, 2); assert.ok(apeluri.every((x) => x.length === 2), "doar rețelele trec prin antrenor");
   assert.ok(a.logist && a.logist.length === 1 && a.logist[0].W.length === 2, JSON.stringify(a.logist));
 });
+await test("(4) revizia finală (I1): o lună de pe bare se judecă abia după orizont + o zi (ultimele ei rânduri au eticheta); rezultatul tău: 200 de cazuri, 30 de zile", () => {
+  assert.equal(typeof V.optiuniLuni, "function", "V.optiuniLuni lipsește");
+  assert.deepEqual(V.optiuniLuni("atinge-168", 168, 5), { minZile: 60, asteaptaZile: 8, acum: 5 });
+  assert.deepEqual(V.optiuniLuni("directie", 24, 5), { minZile: 60, asteaptaZile: 2, acum: 5 });
+  assert.deepEqual(V.optiuniLuni("rezultat", null, 5), { minCazuri: 200, asteaptaZile: 30, acum: 5 });
+  const R = []; for (let t = Date.UTC(2025, 6, 1); t < Date.UTC(2025, 9, 28); t += 4 * 3600000) R.push({ t, tEt: t + 168 * 3600000 });
+  const acum = Date.UTC(2025, 9, 4), mai = Date.UTC(2025, 9, 10);   // septembrie încheiat de 3 zile: ultima lui săptămână n-are încă eticheta
+  assert.ok(!V.luniDeTest(R.filter((r) => r.tEt <= acum), V.optiuniLuni("atinge-168", 168, acum)).includes("2025-09"));
+  assert.ok(V.luniDeTest(R.filter((r) => r.tEt <= mai), V.optiuniLuni("atinge-168", 168, mai)).includes("2025-09"));
+});
+
 console.log("\n" + (pica ? "V100.80 VER PICA · " + pica + " din " + (ok + pica) : "V100.80 VER PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

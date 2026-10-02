@@ -7,6 +7,13 @@
 const ORA = 3600000, ZILE = 400, PAGINI = 300;
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const tBara = (r) => Number(r && r.time);
+// rândurile de pe disc (depozitul de 400 de zile + istoric-1h): fără dubluri (cel de mai târziu în listă câștigă - istoric-1h e mai proaspăt),
+// în ordinea timpului, cel mult ZILE + 30 de zile (revizia finală, I4)
+export function uneste(randuri, acum) {
+  const h = new Map(), de = acum - (ZILE + 30) * 24 * ORA;
+  for (const r of Array.isArray(randuri) ? randuri : []) { const t = tBara(r); if (Number.isFinite(t) && t >= de) h.set(t, r); }
+  return [...h.values()].sort((a, b) => tBara(a) - tBara(b));
+}
 // paginile mai vechi până la ~400 de zile (sau până spune Pionex că nu mai are: MARKET_INVALID_TIME / pagină goală), plus pagina cea
 // mai nouă; ce era pe disc rămâne; buget.pagini scade cu fiecare cerere
 export async function aduInapoi(simbol, vechi, d, buget) {
@@ -26,7 +33,7 @@ export async function aduInapoi(simbol, vechi, d, buget) {
     const inainte = cea, r = await ia(cea - 1); pagini++;
     if (!r.length || cea >= inainte) { complet = true; break; }
   }
-  return { randuri: [...h.values()].sort((a, b) => tBara(a) - tBara(b)), complet, pagini };
+  return { randuri: uneste([...h.values()], d.acum), complet, pagini };
 }
 export async function turaRetea(d) {
   const st = d.stare, azi = d.ziRo(d.acum);
@@ -36,9 +43,12 @@ export async function turaRetea(d) {
   try {
     st.complete = st.complete || {};
     const buget = { pagini: PAGINI };
-    for (const s of d.simboluri) {
-      if (buget.pagini <= 0) break;
-      if (st.complete[s] && s !== "BTC_USDT_PERP") continue;   // BTC nu e în istoric-1h: se ține la zi în fiecare noapte
+    // revizia finală (I2): BTC întâi - fără el antrenorul n-are piața; (I4): moneda completă se scrie în fiecare noapte din ce e pe disc
+    // (istoric-1h + depozit, fără cereri) - altfel, după ~6 luni, s-ar deschide o gaură între depozit și istoric-1h
+    const lista = ["BTC_USDT_PERP"].concat(d.simboluri.filter((s) => s !== "BTC_USDT_PERP"));
+    for (const s of lista) {
+      if (st.complete[s] && s !== "BTC_USDT_PERP") { try { d.scrieOre(s, uneste(d.citesteOre(s), d.acum)); } catch (e) { d.jurnal("retea: istoria " + s, e.message); } continue; }
+      if (buget.pagini <= 0) continue;
       try { const r = await aduInapoi(s, d.citesteOre(s), d, buget); d.scrieOre(s, r.randuri); if (r.complet) st.complete[s] = true; }
       catch (e) { d.jurnal("retea: istoria " + s, e.message); }
     }

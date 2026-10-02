@@ -5,11 +5,12 @@
 // colectorul (scripts/lib/tura-retea.mjs), cu prioritate scăzută.
 //   node retea/antreneaza.mjs [--buget-min 30] [--tinta directie] [--rad <dosarul cu data/>] [--seminte 5] [--max-randuri 40000]
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { incarcaModulele, simboluri, citesteBare, randuriMoneda, reperRand, randuriBoti } from "./date.mjs";
-import { luniDeTest, judecaLuna, modelFinal, verificare } from "./verifica.mjs";
-import { antreneaza, HIPER } from "./model.mjs";
+import { incarcaModulele, simboluri, citesteBare, randuriMoneda, reperRand, randuriBoti, ORIZONT } from "./date.mjs";
+import { luniDeTest, judecaLuna, modelFinal, verificare, optiuniLuni, luna } from "./verifica.mjs";
+import { antreneaza, HIPER, porneste } from "./model.mjs";
 
 const COD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ARG = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 && process.argv[i + 1] !== undefined ? process.argv[i + 1] : d; };
@@ -21,19 +22,26 @@ const citeste = (f) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } 
 
 if (!(BUGET > 0)) { spune("buget 0: nimic de antrenat, modelele rămân"); process.exit(0); }
 fs.mkdirSync(DATA, { recursive: true });
-const M = incarcaModulele(COD), CHEIE = M.R.VERSIUNE + "|" + JSON.stringify(HIPER), acum = Date.now();
+// revizia finală (M6): pe CPU (JS pur) antrenarea ar fi de sute de ori mai lentă și colectorul ar opri-o la 35 de minute în fiecare noapte
+const BACKEND = await porneste();
+if (BACKEND !== "wasm") { spune("TensorFlow nu rulează pe WebAssembly (" + BACKEND + "): nu antrenez, modelele de ieri rămân"); process.exit(2); }
+// revizia finală (I2, M8): cheia CODULUI (versiunea, hiperparametrii și fișierele rețelei) păstrează modelele de ieri; lunile judecate mai
+// cer și AMPRENTA DATELOR (luna primei bare a fiecărei monede și a BTC) - cât se umple istoria de 400 de zile, lunile se refac
+const COD_HASH = crypto.createHash("sha1").update(["public/lib/retea.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs"].map((f) => fs.readFileSync(path.join(COD, f), "utf8")).join("\n")).digest("hex").slice(0, 12);
+const M = incarcaModulele(COD), CHEIE = M.R.VERSIUNE + "|" + JSON.stringify(HIPER) + "|" + COD_HASH, acum = Date.now();
 const OPT = { antreneaza, prezice: M.R.prezice, versiune: M.R.VERSIUNE, ascunse: HIPER.ascunse, seminte: Number(ARG("seminte", HIPER.seminte)), maxRanduri: Number(ARG("max-randuri", 40000)) };
 const vechi = citeste(path.join(DATA, "modele.json")), modele = vechi && vechi.cheie === CHEIE && vechi.modele ? vechi.modele : {};
 const btc = citesteBare(RAD, "BTC_USDT_PERP", M.G), bareDe = new Map(), memo = new Map();
 for (const s of simboluri(RAD)) { if (s === "BTC_USDT_PERP") continue; const b = citesteBare(RAD, s, M.G); if (b.length > 800) { bareDe.set(s, b); memo.set(s, {}); } }
-spune("pornit: " + bareDe.size + " monede, BTC " + btc.length + " bare, buget " + Math.round(BUGET / 60000) + " min");
+const AMPRENTA = crypto.createHash("sha1").update([...bareDe.entries()].map(([s, b]) => s + ":" + luna(b[0].t)).sort().join(",") + "|BTC:" + (btc.length ? luna(btc[0].t) : "-")).digest("hex").slice(0, 12), CHEIE_LUNI = CHEIE + "|" + AMPRENTA;
+spune("pornit: " + bareDe.size + " monede, BTC " + btc.length + " bare, buget " + Math.round(BUGET / 60000) + " min, " + BACKEND);
 const tinte = Object.keys(M.R.TINTE).filter((t) => !DOAR || t === DOAR);
 function randuri(t) {
   if (t === "rezultat") return randuriBoti(citeste(path.join(DATA, "boti.json")) || [], (s) => bareDe.get(s) || null, btc, M);
   const out = []; for (const [s, b] of bareDe) for (const r of randuriMoneda(t, s, b, btc, M, memo.get(s))) out.push(r);
   return out.sort((a, b) => a.t - b.t);
 }
-const OPT_LUNI = (t) => (t === "rezultat" ? { minCazuri: 200, asteaptaZile: 30, acum } : { minZile: 60, acum });
+const OPT_LUNI = (t) => optiuniLuni(t, ORIZONT[t], acum);   // revizia finală (I1)
 const NUME_REPER = (t) => (t === "rezultat" ? ["rata ta", "rata pe monedă"] : t === "directie" ? ["🎲", "50%"] : ["🎲"]);
 // (1) modelele de azi
 for (const t of tinte) {
@@ -48,7 +56,7 @@ for (const t of tinte) {
 for (const t of tinte) {
   if (!modele[t]) continue;
   const R = randuri(t), luni = luniDeTest(R, OPT_LUNI(t)), fis = path.join(DATA, "luni-" + t + ".json");
-  let cache = citeste(fis); if (!cache || cache.cheie !== CHEIE || !cache.luni) cache = { cheie: CHEIE, luni: {} };
+  let cache = citeste(fis); if (!cache || cache.cheie !== CHEIE_LUNI || !cache.luni) cache = { cheie: CHEIE_LUNI, luni: {} };
   let noi = 0;
   for (const l of luni) {
     if (cache.luni[l] || Date.now() >= PANA) continue;
