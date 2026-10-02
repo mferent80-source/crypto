@@ -371,6 +371,14 @@ var Consiliu = (function () {
   var ET_ST = { sus: "trend în sus", lateral: "trend neclar", jos: "trend în jos", calm: "fără mișcare mare", "dupa-miscare": "după o mișcare mare", departe: "departe de maximul pe 7 zile", "langa-max": "lângă maximul pe 7 zile" };
   var NV_ACT = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
   function etStare(s) { return s ? String(s).split("|").map(function (k) { return ET_ST[k] || k; }).join(", ") : "nenotată (sfat dinainte de 01.10)"; }
+  // v100.77 (ideea 3): un rând de raport ≤ 160 - se rupe la granița de sens („; ”, „: ”, „ — ”), altfel pe cuvinte; nimic tăiat
+  function rupe160(t) {
+    t = String(t); if (t.length <= 160) return t;
+    var bun = -1;
+    ["; ", ": ", " — "].forEach(function (sep) { var i = t.lastIndexOf(sep, 158); if (i >= 40) { var c = sep === " — " ? i : i + sep.length - 1; if (c > bun) bun = c; } });
+    if (bun < 0) { var sp = t.lastIndexOf(" ", 160); bun = sp > 0 ? sp : 160; }
+    return t.slice(0, bun).replace(/\s+$/, "") + "\n" + rupe160(t.slice(bun).replace(/^\s+/, ""));
+  }
   function autopsieActiuni(loguri, acum) {
     acum = nr(acum) !== null ? nr(acum) : Date.now(); var ZI = 864e5, toate = [];
     (Array.isArray(loguri) ? loguri : []).forEach(function (L) {
@@ -403,9 +411,11 @@ var Consiliu = (function () {
       .filter(function (g) { return g.judecate >= 10 && wJos(g.gresite, g.judecate, 2.576) > 0.5 && g.cost < 0; })
       .sort(function (a, b) { return a.cost - b.cost; })[0] || null;
     if (tip) {
-      tip.text = "Regulă propusă pe acțiuni (ipoteză, n-am schimbat nimic): motivul „" + tip.cod + "” în starea „" + etStare(tip.stare) + "” a greșit în " + tip.gresite + " din " + cate(tip.judecate, "zi", "zile") + ", în ultimele 30 (" + [tip.costUsd ? F2(tip.costUsd) + " $" : "", tip.costLei ? F2(tip.costLei) + " lei" : ""].filter(Boolean).join(" și ") + " dacă-l urmai) — l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";
+      tip.text = "Regulă propusă pe acțiuni (ipoteză, n-am schimbat nimic): motivul „" + tip.cod + "” în starea „" + etStare(tip.stare) + "” a greșit în " + tip.gresite + " din " + cate(tip.judecate, "zi", "zile") + ", în ultimele 30."
+        + "\nDacă-l urmai, te-ar fi costat " + [tip.costUsd ? F2(tip.costUsd) + " $" : "", tip.costLei ? F2(tip.costLei) + " lei" : ""].filter(Boolean).join(" și ") + "; l-aș trata ca „încă nu știm” în starea asta. Spune-mi dacă vrei regula.";   // v100.77: două rânduri
       linii.push(tip.text);
     } else linii.push("Niciun tipar repetat sigur încă pe acțiuni (trebuie cel puțin 10 zile judecate ale aceluiași motiv în aceeași stare, cu greșeala clar peste jumătate).");
+    linii = linii.map(function (l) { return String(l).split("\n").map(rupe160).join("\n"); });   // v100.77 (ideea 3)
     return { scumpe: scumpe, tipar: tip, linii: ["Autopsia săptămânii pe acțiuni — sfaturile Consilierului care te-ar fi costat cel mai mult:"].concat(linii) };
   }
   function socotealaActiuni(jurnale) {

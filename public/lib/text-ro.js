@@ -38,6 +38,8 @@ var TextRo = (function () {
   // v100.71 (revizia pachetului 4, I1): numarul cu substantivul lui - „1 caz”, „4 cazuri”, „45 de cazuri”, „101 cazuri”
   // („de” cand ultimele doua cifre sunt 20–99, sau 00 de la 100 in sus)
   function cate(n, sg, pl) { var k = Math.round(Number(n)); if (!isFinite(k)) return "— " + pl; var r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
-  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore, cate: cate };
+  // v100.77 (ideea 1): orele unui prag - „1 oră”, „2 ore”, „24 de ore”, „2,25 ore” (cel mult 2 zecimale) - aceeași formă pe Tablou și în alertă
+  function oreN(h) { var v = Number(h); if (!isFinite(v)) return "— ore"; v = Math.round(Math.abs(v) * 100) / 100; return Number.isInteger(v) ? cate(v, "oră", "ore") : String(v).replace(".", ",") + " ore"; }
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore, cate: cate, oreN: oreN };
 })();
 if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

@@ -63,7 +63,7 @@ function lipite(src) {
   return out;
 }
 await test("(3) „de” de la 20 și singularul la 1 în tot softul: niciun număr întreg lipit de un substantiv numărat, nicio formă „n + (n === 1 ? …)”, niciun „>= 20 ? de” (pagina + colectorul)", () => {
-  const fis = ["public/app.js"].concat(fs.readdirSync(path.join(RAD, "public", "lib")).filter((x) => x.endsWith(".js")).map((x) => "public/lib/" + x),
+  const fis = ["public/app.js"].concat(fs.readdirSync(path.join(RAD, "public", "lib")).filter((x) => x.endsWith(".js") && x !== "text-ro.js").map((x) => "public/lib/" + x),   // v100.77: text-ro.js = formatorul (oreN compune „N ore”)
     ["scripts/colector.mjs"], fs.readdirSync(path.join(RAD, "scripts", "lib")).filter((x) => x.endsWith(".mjs") && !/^garda-/.test(x)).map((x) => "scripts/lib/" + x));
   const rele = [];
   for (const f of fis) for (const l of lipite(fs.readFileSync(path.join(RAD, f), "utf8"))) rele.push(f + ": …" + l);
@@ -103,7 +103,7 @@ await test("(4b) poarta: rândul „moneda” ≤ 160 și la peste 100 de boți;
   const s = app(), i = s.indexOf("function grPoartaHtml("), corp = s.slice(i, s.indexOf("\nfunction ", i + 10));
   const ctx = { Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (x) => String(x), grPoartaRez: { simbol: "LIT_USDT_PERP", rez: r } };
   vm.createContext(ctx); vm.runInContext(corp + ";this.f=grPoartaHtml;", ctx);
-  assert.match(ctx.f({ simbol: "LIT_USDT_PERP" }), /<span class="tbSub">\(LIT = LIGHTER la boții Pionex\)<\/span>/, "fișa nu arată nota");
+  assert.match(ctx.f({ simbol: "LIT_USDT_PERP" }), /<br><span class="tbSub">LIT = LIGHTER la boții Pionex<\/span>/, "fișa nu arată nota (v100.77: pe rândul ei)");
 });
 
 await test("(4c) raportul săptămânii pieței: „📅 Săptămâna asta” cu 5 evenimente mari - rânduri ≤ 160, toate evenimentele rămân", () => {

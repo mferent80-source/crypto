@@ -9,6 +9,8 @@
 var Alerte = (function () {
   "use strict";
   // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  // v100.77 (ideea 1): orele pragului ca pe Tablou (TextRo.oreN); rezerva dă aceeași formă
+  function oreN(h) { if (typeof TextRo !== "undefined" && TextRo.oreN) return TextRo.oreN(h); var v = Math.round(Math.abs(Number(h)) * 100) / 100; return Number.isInteger(v) ? cate(v, "oră", "ore") : nz(v) + " ore"; }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
@@ -134,7 +136,7 @@ var Alerte = (function () {
         } else out.plan = { nivel: "atentie", titlu: nume + ": planul tău — ținta de " + (ctx.plan.plus ? "+" + nz(ctx.plan.plus.prag) + " USDT" : "plus") + " e atinsă",
           mesaj: msg("Ai atins ținta pe care ți-ai pus-o.", "Aș încasa acum: aș închide botul pe plus.") };
       }
-      else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — afară din grid de peste " + (ctx.plan.afara ? (Number.isInteger(Number(ctx.plan.afara.prag)) ? cate(Number(ctx.plan.afara.prag), "oră", "ore") : nz(ctx.plan.afara.prag) + " ore") : "pragul tău"),
+      else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — afară din grid de peste " + (ctx.plan.afara ? oreN(ctx.plan.afara.prag) : "pragul tău"),
         mesaj: msg("Ai hotărât să nu-l lași afară atât.", "Aș închide botul și aș porni din fișă unul nou, pe unde e prețul.") };
       else out.plan = { nivel: "ok", titlu: "", mesaj: "" };
     }

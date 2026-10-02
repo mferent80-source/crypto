@@ -5046,7 +5046,7 @@ function grPoartaHtml(f){
   if(ds)h+='<p class="tbFac grDinScan">📝 <b>Venit din Scan:</b> planul e completat '+escapeHtml(ds.nota)+'. Când ținta e atinsă, panoul botului îți spune unde muți opritorul (ținta devine podea). Schimbă cifrele dacă vrei, apoi „Verifică poarta”.</p>';
   h+='<div class="grPoartaForm"><label><span class="tbEt2">Ies pe plus la, USDT</span><input id="grPlanPlus" inputmode="decimal" placeholder="ex. 5"'+vv("plus")+'></label><label><span class="tbEt2">Ies dacă pierd, USDT</span><input id="grPlanMinus" inputmode="decimal" placeholder="ex. 10"'+vv("minus")+'></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPlanAfara" inputmode="decimal" placeholder="ex. 12"'+vv("afaraOre")+'></label>'
     +'<button type="button" class="grCalc" data-action-click="gridPoarta()">Verifică poarta</button><button type="button" class="actionGhost" data-action-click="gridHartiePorneste()">🧾 Pornește pe hârtie</button></div>';
-  if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+(function(t,ex){return ex.length?escapeHtml(t.replace(/\.$/,""))+ex.map(function(x){return ' <span class="tbSub">('+escapeHtml(x)+')</span>'}).join("")+(/\.$/.test(t)?".":""):escapeHtml(t)})(String(r.text),[r.nota,!r.ok&&r.cost?r.cost:null].filter(Boolean))+'</li>'}).join("")+'</ul>'
+  if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+(function(t,c){return c?escapeHtml(t.replace(/\.$/,""))+' <span class="tbSub">('+escapeHtml(c)+')</span>'+(/\.$/.test(t)?".":""):escapeHtml(t)})(String(r.text),!r.ok&&r.cost?r.cost:null)+(r.nota?'<br><span class="tbSub">'+escapeHtml(r.nota)+'</span>':'')+'</li>'}).join("")+'</ul>'
     // v100.29: sfaturile din istoria lui (inchiderile din prima ora) - informatie, nu regula
     +(p.rez.sfaturi&&p.rez.sfaturi.length?p.rez.sfaturi.map(function(x){return '<p class="tbSub">💡 '+escapeHtml(x)+'</p>'}).join(""):"")
     // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
@@ -5826,7 +5826,7 @@ function tbDeseneazaSaptPlan(b){
   var prP=tbProfilPt(b),dP=String(b.directie||"").toLowerCase(),pP=botiNr(b.pretCurent);
   if(st.minus&&st.minus.opritorPlan!=null&&pP>0){var pmP=ProfilMoneda.planPeMoneda({profil:prP,dir:dP,dist:Math.abs(st.minus.opritorPlan/pP-1),laDist:function(dd){return TabloExtra.totalCuGridLa(b,dP==="short"?pP*(1+dd):pP*(1-dd))}});
     h+=pmP?'<p class="'+(pmP.avertizare?"tbFac tbWarn":"tbSub")+'">📏 '+escapeHtml(pmP.text)+'</p>':tbProfil.faraServer?'':'<p class="tbSub">📏 Cât de des e atins planul pe moneda asta: profilul monedei vine de la colector (noaptea).</p>'}
-  if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+(Number.isInteger(Number(st.afara.prag))?TextRo.cate(st.afara.prag,"oră","ore"):TextRo.num(st.afara.prag,1)+" ore")+'</span><b>colectorul numără orele</b></div>';
+  if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+TextRo.oreN(st.afara.prag)+'</span><b>colectorul numără orele</b></div>';
   ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> Aș închide botul acum, cum ai hotărât la rece.</p>':'');
 }
 // ===== v82: semaforul botului + muta gridul + socoteala semnalelor =====

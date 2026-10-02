@@ -37,6 +37,7 @@ export const REGULI = {
   alertaTitlu: { max: 60, strigat: true },
   alertaMesaj: { randuri: 2, alerta: true, strigat: true },
   raport: { rand: 160, strigat: true },
+  raportEticheta: { rand: 160 },   // v100.77: rândurile de raport care încep cu eticheta nivelului (IEȘI / ATENȚIE / ȚINE - nu se schimbă, specul)
 };
 const PERSOANA = /^(Aș|N-aș|L-aș|Le-aș|O-aș|M-aș|Nu m-aș)\s/;
 export const INTERZIS = [

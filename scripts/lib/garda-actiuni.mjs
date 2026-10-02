@@ -169,4 +169,9 @@ export function situatiiActiuni(pune) {
   ca("Consilierul poziției: trend în jos, pe minus în a 12-a zi", P({ pretMediu: 28, pret: 26.5 }), coboara, { sfaturi: CS.sfaturiPozitie(pz({ pret: 26.5, pretMediu: 28 }), ctx) });
   ca("Consilierul poziției: totul bine", P({ pretMediu: 22, pret: 36, plan: { trailPct: 15 } }), urca);
   ca("Consilierul poziției: fără prețuri", P({ pretMediu: 29, pret: 28 }), zilnice(20, () => 28));
+  // v100.77 (ideea 3): autopsia acțiunilor pe datele lungi - trei motive, starea lungă, sume în mii de lei, tiparul (forma jurnalelor reale, ca în proba v100.56)
+  const acA = 60 * ZI, ev = (zi, nivel, cod, bani, stare, r = 0) => Object.assign({ t: acA - zi * ZI, coduri: cod.split(","), nivel, pret: 1234.56, qty: 10, fx: 4.5, r, bani, inLei: true, c5: 1310.25 }, stare ? { stare } : {});
+  const tipA = []; for (let d = 15; d < 27; d++) tipA.push(ev(d, "iesi", "trend-jos,stop-atins", -310.5, "lateral|dupa-miscare|departe"));
+  const autA = globalThis.Consiliu.autopsieActiuni([{ ticker: "SUPERMICRO_US_EQ", log: [ev(2, "iesi", "trend-jos,stop-atins,miscare-jos", -1234.56, "lateral|dupa-miscare|departe"), ev(3, "atentie", "trend-jos,rezultate-curand", -420.5, "jos|calm|departe"), ev(4, "iesi", "trend-jos", -55, null)] }, { ticker: "AMD_US_EQ", log: tipA }], acA);
+  autA.linii.forEach((l, i) => pune("autopsia acțiunilor (date lungi)", "actiuni", "autopsie.l" + (i + 1), { t: l }, [["t", "raportEticheta"]]));
 }
