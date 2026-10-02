@@ -6,6 +6,7 @@ import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const RAD = process.env.RAD || path.resolve(new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
 const TR = globalThis.TextRo;
@@ -200,6 +201,18 @@ await test("R8 (Opus M5): nicio informatie pierduta - fereastra open interest, �
 await test("R9 (Opus M8): costurile de sub un cent pe zi nu ies „0,00 USDT net/zi”", () => {
   const k = S.semafor({ bot: CRV({ distantaLichidarePct: 40 }), fisa, costuri: { netZi: -0.004 } }).componente.find((x) => x.cod === "costuri");
   assert.equal(k.motiv, "costurile pe zi depășesc grilele: −0,004 USDT net/zi");
+});
+await test("R10 (poza 390 px): serverul pastreaza din semnalele colectorului si cifrele BTC / aglomerare - Tabloul scrie titlul cu cifra, ca Discord-ul", async () => {
+  const mod = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href);
+  const kv = new Map(), env = { APP_API_TOKEN: "t", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
+  const btc = S.btcAvertizare({ miscare: true, r4h: 3.6, r24h: 1.2 }, { miscare: false }), ag = S.aglomerare({ funding: 0.0006, longShort: 2.1, oiHist5m: [{ sumOpenInterest: 100 }, { sumOpenInterest: 120 }] }, "long");
+  const r = await mod.onRequestPost({ request: cer("POST", "action=semnale", { bot: "2394", log: [], acum: { la: T0, btc, aglomerare: ag, afaraOre: 0 } }), env });
+  assert.equal(r.status, 200, await r.clone().text());
+  const g = await (await mod.onRequestGet({ request: cer("GET", "action=semnale&bot=2394"), env })).json(), a = g.semnale.acum;
+  assert.equal(a.btc.r, 3.6); assert.equal(a.aglomerare.semne, 3); assert.match(a.aglomerare.dovezi, /open interest \+20,0% în ultimele ore/);
+  const k = S.semafor({ bot: CRV({ distantaLichidarePct: 40 }), fisa, btc: a.btc }).componente.find((x) => x.cod === "btc");
+  assert.equal(k.motiv, "BTC în mișcare (3,6× față de obișnuit), moneda încă nu");
 });
 await test("F2 (proba de ecran, piata in miscare): varianta ingusta respinsa devreme spune tot pe cate zile - fisa nu mai scrie „pe undefined de zile”", () => {
   const GP = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(globalThis.GridCalcul);

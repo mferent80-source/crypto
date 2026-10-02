@@ -207,7 +207,7 @@ export async function onRequestPost({request,env}){
     const NIV=["tine","atentie","iesi","info"];
     const log=(Array.isArray(corp.log)?corp.log:[]).slice(-200).map(e=>e&&typeof e==="object"?{t:nr(e.t),cod:txt(e.cod,24).replace(/[^a-z0-9-]/g,""),nivel:NIV.includes(e.nivel)?e.nivel:"info",motiv:txt(e.motiv,200),total:nr(e.total),dreptate:e.dreptate===true?true:e.dreptate===false?false:null,totalDupa:nr(e.totalDupa),judecatLa:nr(e.judecatLa),laInchidere:e.laInchidere===true?true:undefined}:null).filter(e=>e&&e.t!==null);   // v100.43: judecata la inchiderea botului (I-466)
     const a=corp.acum&&typeof corp.acum==="object"?corp.acum:null;
-    const acum=a?{la:nr(a.la),btc:a.btc&&typeof a.btc==="object"?{nivel:txt(a.btc.nivel,10),text:txt(a.btc.text,300)}:null,aglomerare:a.aglomerare&&typeof a.aglomerare==="object"?{nivel:txt(a.aglomerare.nivel,10),text:txt(a.aglomerare.text,400)}:null,afaraOre:nr(a.afaraOre),regimBtc:a.regimBtc&&typeof a.regimBtc==="object"?{r4h:nr(a.regimBtc.r4h),r24h:nr(a.regimBtc.r24h),miscare:!!a.regimBtc.miscare}:null}:null;
+    const acum=a?{la:nr(a.la),btc:a.btc&&typeof a.btc==="object"?{nivel:txt(a.btc.nivel,10),text:txt(a.btc.text,300),r:nr(a.btc.r)}:null,aglomerare:a.aglomerare&&typeof a.aglomerare==="object"?{nivel:txt(a.aglomerare.nivel,10),text:txt(a.aglomerare.text,400),semne:nr(a.aglomerare.semne),dovezi:txt(a.aglomerare.dovezi,300)}:null,afaraOre:nr(a.afaraOre),regimBtc:a.regimBtc&&typeof a.regimBtc==="object"?{r4h:nr(a.regimBtc.r4h),r24h:nr(a.regimBtc.r24h),miscare:!!a.regimBtc.miscare}:null}:null;
     await env.ISTORIC.put("semnale:"+bot,JSON.stringify({log,acum}));
     return json({ok:true,log:log.length});
   }
