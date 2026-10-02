@@ -53,5 +53,26 @@ await test("(2) aceeași sămânță -> aceleași greutăți (inițializarea, dr
   assert.ok(a.epoci >= 1 && a.pierdere < 0.5, JSON.stringify({ epoci: a.epoci, pierdere: a.pierdere }));
 });
 
+// ---- onestitatea (specul): zgomot -> nedovedită; semnal liniar -> bate 🎲, dar nu formula simplă -> nedovedită; neliniar (o interacțiune
+// pe care formula nu o vede) -> dovedită. 20 de „monede” × 240 de zile, un rând pe zi; „🎲” = 30% (rata de bază de la zgomot)
+const V = await import(pathToFileURL(path.join(RAD, "retea", "verifica.mjs")).href);
+function scenariu(fel, seed) {
+  const r = MOD.cuSamanta(seed), rows = [], t0 = Date.UTC(2025, 0, 1), n01 = () => { let u = 0; for (let q = 0; q < 6; q++) u += r(); return (u - 3) * Math.SQRT2; };
+  for (let z = 0; z < 240; z++) for (let c = 0; c < 20; c++) {
+    const x = [n01(), n01(), n01(), n01()], p = fel === "zgomot" ? 0.3 : fel === "liniar" ? 1 / (1 + Math.exp(-(-0.85 + 1.5 * x[0]))) : (x[0] * x[1] > 0 ? 0.85 : 0.1), t = t0 + z * 864e5 + c * 3600000;
+    rows.push({ t, s: "M" + c, x, y: r() < p ? 1 : 0, tEt: t + 864e5, r1: 0.3 });
+  }
+  return rows;
+}
+async function onestitate(fel) {
+  const R = scenariu(fel, 5), luni = V.luniDeTest(R, { minZile: 60, acum: Date.UTC(2026, 0, 1) }), test = [];
+  for (const l of luni) for (const x of await V.judecaLuna(R, l, { antreneaza: MOD.antreneaza, prezice: Retea.prezice, seminte: 2, maxRanduri: 3000, versiune: Retea.VERSIUNE })) test.push(x);
+  const v = V.verificare(test, { oreBloc: 24, numeReper: ["🎲"], luni: luni.length, luniGata: luni.length }), d = Retea.decide(v);
+  console.log("      " + fel + ": " + luni.length + " luni, " + v.nIndep + " zile, Brier " + v.brier + " · 🎲 " + v.brierReper + " · formula " + v.brierLog + " · IC " + JSON.stringify(v.ic) + " / " + JSON.stringify(v.icLog) + " -> " + (d.dovedita ? "DOVEDITĂ" : d.motiv));
+  return { v, d };
+}
+await test("(5) zgomot pur -> nedovedită: nu bate 🎲", async () => { const { d } = await onestitate("zgomot"); assert.equal(d.dovedita, false); assert.match(d.motiv, /^nu bate 🎲/); });
+await test("(5) semnal liniar -> bate 🎲, dar nu formula simplă -> nedovedită", async () => { const { v, d } = await onestitate("liniar"); assert.ok(v.ic[0] > 0, "trebuia să bată 🎲: " + JSON.stringify(v.ic)); assert.equal(d.dovedita, false); assert.equal(d.motiv, "nu face mai mult decât o formulă simplă"); });
+await test("(5) semnal neliniar (interacțiune) -> dovedită", async () => { const { v, d } = await onestitate("neliniar"); assert.ok(v.nIndep >= 100, String(v.nIndep)); assert.equal(d.dovedita, true, d.motiv); });
 console.log("\n" + (pica ? "V100.80 TF PICA · " + pica + " din " + (ok + pica) : "V100.80 TF PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

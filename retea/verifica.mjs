@@ -47,10 +47,57 @@ export function esantion(rows, max, seed) {
   for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const q = idx[i]; idx[i] = idx[j]; idx[j] = q; }
   return idx.slice(0, max).sort((a, b) => a - b).map((i) => l[i]);
 }
+// formula simplă = regresia logistică pe aceleași intrări (normalizate), dusă până la OPTIM prin Newton (IRLS), cu același L2 ca rețeaua
+// (λ·Σw², fără bias). Revizia onestității (Task 5): antrenată „ca rețeaua” (Adam, 60 de epoci, pornire aleatoare) rămânea neconvergentă -
+// pe zgomot ieșea mai rea decât o constantă chiar pe datele ei - și rețeaua o bătea pe nedrept; bara se pune cât mai sus, nu mai jos.
+// -> { straturi: [{W: [intrare][1], b: [1], act: "sigmoid"}] }, forma citită de Retea.prezice
+export function logistica(X, y, nIn, l2 = 1e-3) {
+  const n = y.length, k = nIn + 1; let rata = 0; for (let i = 0; i < n; i++) rata += y[i];
+  rata = Math.min(0.99, Math.max(0.01, rata / Math.max(1, n)));
+  let th = new Float64Array(k); th[0] = Math.log(rata / (1 - rata));
+  const pierdere = (t) => {
+    let s = 0;
+    for (let i = 0; i < n; i++) { let z = t[0]; for (let j = 0; j < nIn; j++) z += t[j + 1] * X[i * nIn + j]; const p = 1 / (1 + Math.exp(-z)); s -= y[i] ? Math.log(Math.max(p, 1e-12)) : Math.log(Math.max(1 - p, 1e-12)); }
+    let r = 0; for (let j = 1; j < k; j++) r += t[j] * t[j];
+    return s / n + l2 * r;
+  };
+  let L = pierdere(th);
+  for (let it = 0; it < 50; it++) {
+    const g = new Float64Array(k), H = Array.from({ length: k }, () => new Float64Array(k));
+    for (let i = 0; i < n; i++) {
+      let z = th[0]; for (let j = 0; j < nIn; j++) z += th[j + 1] * X[i * nIn + j];
+      const p = 1 / (1 + Math.exp(-z)), w = p * (1 - p), e = p - y[i];
+      g[0] += e; H[0][0] += w;
+      for (let a = 0; a < nIn; a++) { const xa = X[i * nIn + a]; g[a + 1] += e * xa; H[0][a + 1] += w * xa; for (let b = a; b < nIn; b++) H[a + 1][b + 1] += w * xa * X[i * nIn + b]; }
+    }
+    for (let a = 0; a < k; a++) { g[a] /= n; for (let b = a; b < k; b++) { H[a][b] /= n; H[b][a] = H[a][b]; } }
+    for (let j = 1; j < k; j++) { g[j] += 2 * l2 * th[j]; H[j][j] += 2 * l2; }
+    const d = rezolva(H, g); if (!d) break;
+    let nou = null;
+    for (let pas = 1, q = 0; q < 30; q++, pas /= 2) { const t = th.map((v, j) => v - pas * d[j]), Ln = pierdere(t); if (Ln <= L + 1e-12) { nou = t; L = Ln; break; } }
+    if (!nou) break;
+    let max = 0; for (let j = 0; j < k; j++) max = Math.max(max, Math.abs(nou[j] - th[j]));
+    th = nou; if (max < 1e-9) break;
+  }
+  return { straturi: [{ W: Array.from({ length: nIn }, (_, j) => [p7(th[j + 1])]), b: [p7(th[0])], act: "sigmoid" }] };
+}
+// H·d = g, Gauss cu pivot parțial (H e simetrică și pozitiv definită datorită L2); null dacă e singulară
+function rezolva(H, g) {
+  const k = g.length, A = H.map((r, i) => [...r, g[i]]);
+  for (let c = 0; c < k; c++) {
+    let p = c; for (let r = c + 1; r < k; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    if (Math.abs(A[p][c]) < 1e-15) return null;
+    const tmp = A[c]; A[c] = A[p]; A[p] = tmp;
+    for (let r = c + 1; r < k; r++) { const f = A[r][c] / A[c][c]; for (let q = c; q <= k; q++) A[r][q] -= f * A[c][q]; }
+  }
+  const x = new Array(k).fill(0);
+  for (let r = k - 1; r >= 0; r--) { let s = A[r][k]; for (let q = r + 1; q < k; q++) s -= A[r][q] * x[q]; x[r] = s / A[r][r]; }
+  return x;
+}
 export async function antreneazaAnsamblu(rows, o, cuLogistic) {
   const tr = esantion(rows, o.maxRanduri || 40000, 11), norm = normalizare(tr), nIn = norm.m.length, X = matrice(tr, norm), y = Float32Array.from(tr, (r) => r.y);
   const ansamblu = []; for (let k = 0; k < (o.seminte || 5); k++) ansamblu.push((await o.antreneaza(X, y, nIn, o.ascunse || [16, 8], 1000 + k)).straturi);
-  const logist = cuLogistic ? (await o.antreneaza(X, y, nIn, [], 999)).straturi : null;
+  const logist = cuLogistic ? logistica(X, y, nIn).straturi : null;   // formula simplă la optim (Newton), nu prin antrenorul rețelei
   return { norm, ansamblu, logist, n: tr.length };
 }
 // o lună: antrenarea pe ce se știa la începutul ei, apoi rețeaua și formula simplă pe rândurile lunii (aceleași cazuri)

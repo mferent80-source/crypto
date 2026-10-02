@@ -59,7 +59,7 @@ await test("(4) normalizarea doar din antrenare; judecaLuna: 5 rețele + formula
   assert.ok(a.norm.m[0] < 5, "media a văzut testul: " + a.norm.m[0]);
   apeluri.length = 0;
   const rows = await V.judecaLuna(R, "2025-12", o);
-  assert.equal(apeluri.filter((c) => c.asc.length === 2).length, 5); assert.equal(apeluri.filter((c) => c.asc.length === 0).length, 1);
+  assert.equal(apeluri.filter((c) => c.asc.length === 2).length, 5); assert.equal(apeluri.filter((c) => c.asc.length === 0).length, 0, "formula simplă vine din Newton, nu din antrenor (revizia onestității)");
   assert.ok(rows.length > 20 && rows.every((r) => r.p === 0.5 && r.pLog === 0.5 && r.r1 === 0.5));
 });
 
@@ -71,5 +71,26 @@ await test("(4) verificarea: ia reperul cel mai greu (Brier mai mic), scorul pe 
   assert.equal(V.verificare(l, { oreBloc: 24, numeReper: ["🎲"], luni: 6, luniGata: 6 }).reper, "🎲");
 });
 
+// revizia onestității (Task 5): formula simplă dusă până la optim (Newton / IRLS, același L2) - antrenată ca rețeaua rămânea neconvergentă
+// (pornire aleatoare, 60 de epoci) și rețeaua o bătea pe nedrept pe un adevăr liniar
+await test("(5) formula simplă la optim: pe liniar găsește coeficientul adevărat (~1,5 pe x0, ~0 în rest); pe zgomot nu e mai rea decât constanta pe datele ei", () => {
+  assert.equal(typeof V.logistica, "function", "V.logistica lipsește");
+  const r = V.cuSamanta(3), n = 4000, X = new Float32Array(n * 4), yl = new Float32Array(n), yz = new Float32Array(n), n01 = () => { let u = 0; for (let q = 0; q < 6; q++) u += r(); return (u - 3) * Math.SQRT2; };
+  for (let i = 0; i < n; i++) { for (let k = 0; k < 4; k++) X[i * 4 + k] = n01(); yl[i] = r() < 1 / (1 + Math.exp(-(-0.85 + 1.5 * X[i * 4]))) ? 1 : 0; yz[i] = r() < 0.3 ? 1 : 0; }
+  const L = V.logistica(X, yl, 4).straturi[0];
+  assert.ok(Math.abs(L.W[0][0] - 1.5) < 0.2 && L.W.slice(1).every((w) => Math.abs(w[0]) < 0.15) && Math.abs(L.b[0] + 0.85) < 0.15, JSON.stringify(L));
+  assert.equal(L.act, "sigmoid"); assert.equal(L.W.length, 4);
+  const Z = V.logistica(X, yz, 4).straturi[0], p = (i) => 1 / (1 + Math.exp(-(Z.b[0] + Z.W.reduce((s, w, k) => s + w[0] * X[i * 4 + k], 0))));
+  let rata = 0; for (let i = 0; i < n; i++) rata += yz[i] / n;
+  let br = 0, brK = 0; for (let i = 0; i < n; i++) { br += (p(i) - yz[i]) ** 2 / n; brK += (rata - yz[i]) ** 2 / n; }
+  assert.ok(br <= brK + 1e-4, "pe zgomot, formula " + br.toFixed(5) + " > constanta " + brK.toFixed(5));
+});
+await test("(5) judecaLuna ia formula simplă din Newton (nu trece prin antrenorul rețelei)", async () => {
+  const R = []; for (let d = 0; d < 120; d++) R.push({ t: Date.UTC(2025, 8, 1) + d * ZI, s: "A", tEt: Date.UTC(2025, 8, 1) + (d + 1) * ZI, y: d % 2, x: [d % 5, d % 3], r1: 0.5 });
+  const apeluri = [], o = { seminte: 2, maxRanduri: 1000, versiune: "r1", prezice: () => 0.5, antreneaza: async (X, y, nIn, asc) => { apeluri.push(asc); return { straturi: [{ W: [[0], [0]], b: [0], act: "sigmoid" }] }; } };
+  const a = await V.antreneazaAnsamblu(V.impartire(R, "2025-12").antrenare, o, true);
+  assert.equal(apeluri.length, 2); assert.ok(apeluri.every((x) => x.length === 2), "doar rețelele trec prin antrenor");
+  assert.ok(a.logist && a.logist.length === 1 && a.logist[0].W.length === 2, JSON.stringify(a.logist));
+});
 console.log("\n" + (pica ? "V100.80 VER PICA · " + pica + " din " + (ok + pica) : "V100.80 VER PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

@@ -113,7 +113,8 @@ colector (tura-retea) ── data/retea/date-<tinta>.json ──► retea/antren
 - **Mostrele (crypto):**
   - una la 4 ore pe monedă (ferestrele se suprapun oricum);
   - pe fiecare mostră, distanțele din aceeași grilă cu 🎲: ±1, 2, 3, 5, 8, 12% pentru 24 h și 72 h, ±10–40% pentru lichidare.
-- **Formula simplă:** regresia logistică, cu aceleași trăsături, fără strat ascuns, antrenată la fel. E **prag**: rețeaua trebuie să facă mai mult decât ea.
+- **Formula simplă:** regresia logistică, cu aceleași trăsături, fără strat ascuns, dusă până la **optim** (metoda Newton), cu același L2. E **prag**: rețeaua trebuie să facă mai mult decât ea.
+  - *Revizuit la execuție (02.10):* antrenată „la fel” ca rețeaua (pornire aleatoare, 60 de epoci), formula rămânea neconvergentă. Pe zgomot era mai rea decât o constantă, iar rețeaua o bătea pe nedrept pe un adevăr liniar. Proba de onestitate a prins-o. Bara se pune cât mai sus, nu mai jos.
 
 ## Verificarea (walk-forward) și eticheta „dovedită”
 
