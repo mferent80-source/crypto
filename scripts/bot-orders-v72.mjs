@@ -322,7 +322,7 @@ await test("comisioane mici + net negativ: NU da vina pe comisioane, spune cauza
   const b = await unBot([BOT]);
   const a = b.avertismente.join(" | ");
   assert.ok(!/depășesc câștigul grilelor/.test(a), /* v100.62: textul nou al aceluiasi avertisment */ `acuza comisioanele (0.64 < grid 2.80): ${a}`);
-  assert.match(a, /Grilele câștigă \(\+2,80 USDT\), dar poziția și funding-ul \(−4,11\) și comisioanele \(−0,64\) duc botul pe minus/, /* v100.62: virgula, fara „NET” */ `mesajul nou lipseste: ${a}`);
+  assert.match(a, /Grilele \+2,80 USDT; poziția și funding-ul −4,11, comisioanele −0,64: botul e pe minus/, /* v100.65: aceleasi cifre, mai scurt (≤ 110 si la sume in mii) */ `mesajul nou lipseste: ${a}`);
 });
 
 await test("comisioane mai mari decat gridul: avertismentul vechi se aprinde", async () => {

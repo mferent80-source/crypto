@@ -82,7 +82,7 @@ var SemnaleBot = (function () {
     return { setare: s, pasBot: g.pas, pasDes: s.pas, grileBot: g.grile, treceriZi: nr(f.deasa.treceriZi),
       motiv: "gridul tău are " + g.grile + " grile la " + P(g.pas) + " pas; gridul des de 0,3% (" + (s.grile + 1) + " grile între " + fmtPret(s.jos) + " și " + fmtPret(s.sus) + ") încheia ~" + T(f.deasa.treceriZi) + " perechi pe zi pe ultimele 30 de zile" };
   }
-  function fmtPret(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
+  function fmtPret(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   // v99: "Acum, concret" - trei randuri cu cifre, pe Tablou, sub verdict: STOPUL (unde e, unde l-as pune), GRIDUL (al lui vs
   // propus, treceri/zi, pozitia in interval), MISCAREA (x fata de obisnuit). Fara fisa spune ca o socoteste, nu inventeaza.
   // intrare: { bot, fisa, zero (TabloExtra.dacaInchizi), costuri (grileVsCosturi), geom (optional), acum }
@@ -91,6 +91,8 @@ var SemnaleBot = (function () {
     if (!st) return "";
     var U2 = function (v) { return TextRo.usdt(v, 1); }, t = [];
     // opritorul LUI e deja mai strans decat propunerea -> nu-l impinge spre un stop mai larg (prins pe viu pe CRV: −10,2 vs −21,0)
+    // v100.65 (pachetul 1, M4): stopul PE PLUS nu „pierde cel mult” - semnul ramane la vedere
+    if (nr(st.laPropus) !== null && nr(st.laOpritor) !== null && nr(st.laOpritor) >= 0 && nr(st.laOpritor) > nr(st.laPropus)) return "💰 Stopul tău închide pe plus (" + U2(nr(st.laOpritor)) + "), mai bine decât cel propus (" + U2(nr(st.laPropus)) + "): l-aș lăsa unde e.";
     if (nr(st.laPropus) !== null && nr(st.laOpritor) !== null && nr(st.laOpritor) > nr(st.laPropus)) return "💰 Stopul tău pierde cel mult " + TextRo.num(Math.abs(nr(st.laOpritor)), 1) + " USDT, mai puțin decât cel propus (" + TextRo.num(Math.abs(nr(st.laPropus)), 1) + " USDT): l-aș lăsa unde e.";
     if (nr(st.laPropus) !== null) t.push("💰 Pierderea maximă: " + (nr(st.laOpritor) !== null ? U2(nr(st.laOpritor)) + " cu stopul de acum" : "fără margine (n-ai stop activ)") + " → " + U2(nr(st.laPropus)) + " cu cel propus");
     if (nr(st.frecventa) !== null) t.push("ce cedezi: o zi obișnuită a monedei ajunge acolo în " + Math.round(nr(st.frecventa) * 100) + "% din zile");
@@ -322,7 +324,7 @@ var SemnaleBot = (function () {
     }
     var d = f && f.directie;
     if (d && (dir === "long" || dir === "short") && (d.tarie === "tare" || d.tarie === "mediu") && ((dir === "long" && d.dir === "short") || (dir === "short" && d.dir === "long")))
-      c.push({ nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (" + d.dir + ", " + d.tarie + ")", faCe: "N-aș adăuga bani; dacă se întărește, aș închide botul lângă zero și aș porni pe trend." });
+      c.push({ nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (" + d.dir + ", " + d.tarie + ")", faCe: "N-aș adăuga bani; dacă e „tare” și pe 1 zi, aș închide botul lângă zero și aș porni din fișă unul pe trend." });   // v100.65: aceeasi voce cu sfatul (conditia masurabila)
     var sf = f && f.regim ? sensFata(b, f.regim) : null, xMis = f && f.regim ? X(Math.max(f.regim.r4h || 0, f.regim.r24h || 0)) : "";
     if (f && f.regim && f.regim.miscare && sf !== "cu") c.push({ nivel: "atentie", cod: "miscare", motiv: "mișcare mare" + (sf === "contra" ? " împotriva botului" : "") + " (" + xMis + " față de obișnuit)", faCe: "N-aș adăuga bani acum; l-aș lăsa cât lichidarea e departe." });
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";

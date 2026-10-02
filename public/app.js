@@ -6038,8 +6038,8 @@ async function tbAduExtra(){
     catch(x){e.istoricEroare=x.status===503?"doar-acasa":textEroare(x)}
     try{var f=await getJSON("/api/pionex-account?action=futures");e.futures=f&&f.usdt?f.usdt:null;e.futuresEroare=null}
     catch(x){e.futures=null;e.futuresEroare=textEroare(x)}
-    try{var fu=await getJSON("/api/market?type=futures&symbol="+encodeURIComponent(TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).binance));e.funding=fu&&fu.funding!=null?Number(fu.funding):null}
-    catch(x){e.funding=null}
+    try{var fu=await getJSON("/api/market?type=futures&symbol="+encodeURIComponent(TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).binance));e.funding=fu&&fu.funding!=null?Number(fu.funding):null;e.fundingHist=fu&&Array.isArray(fu.fundingHist)?fu.fundingHist:null}   /* v100.65: istoria ratelor -> intervalul funding-ului */
+    catch(x){e.funding=null;e.fundingHist=null}
     e.bot=b.id;e.la=Date.now();
   }finally{e.inLucru=false}
   renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();
@@ -6073,7 +6073,7 @@ function renderTabloSfaturi(){
   if(!b||typeof Sfaturi==="undefined"||typeof Scenariu==="undefined"){el.innerHTML='<p class="tbSub">Aștept botul…</p>';return}
   var d=tbStare.directie,r4=d&&d.rez?d.rez.filter(function(x){return x.tf==="4H"})[0]:null,e=tbStare.extra||{};
   // v80.1: scenariul, sansele, ritmul, fisa/costuri/zero/setare - revizia 01.10 (I2): din Sfaturi.intrare, ACELEASI ca in colector (o singura voce)
-  var lista=Sfaturi.sfaturi(Sfaturi.intrare({bot:b,k4:d&&d.randuri4h,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,funding:e.funding,
+  var lista=Sfaturi.sfaturi(Sfaturi.intrare({bot:b,k4:d&&d.randuri4h,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,funding:e.funding,fundingHist:e.fundingHist,
     fisa:tbFisa.botId===b.id?tbFisa.fisa:null,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,acum:Date.now()}));
   tbStare.sfaturiLista=lista;
   if($("tbSfaturiCard"))$("tbSfaturiCard").hidden=true;   // v100.44 (I-465): sfaturile intra in Consilier (motive sau „Restul”)

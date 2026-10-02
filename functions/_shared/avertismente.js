@@ -32,8 +32,9 @@ export function avertismenteBot(o){
     avertismente.push(`Comisioanele (${usdt(comisioane)} USDT) depășesc câștigul grilelor (${usdt(gridProfitBrut)} USDT).`);
   else if(profitNet!==null&&profitNet<0&&gridProfitBrut!==null&&gridProfitBrut>0){
     const rest=comisioane!==null?profitNet-gridProfitBrut-comisioane:null;
-    avertismente.push(rest!==null?`Grilele câștigă (${usdt(gridProfitBrut)} USDT), dar poziția și funding-ul (${usdt(rest)}) și comisioanele (${usdt(comisioane)}) duc botul pe minus.`
-      :`Grilele câștigă (${usdt(gridProfitBrut)} USDT), dar botul e pe minus (comisioanele nu se știu).`);
+    // v100.65 (M2 din revizia pachetului 2): cu sume in mii fraza veche trecea de 110 (116 pe BTC) - aceleasi trei cifre, mai scurt
+    avertismente.push(rest!==null?`Grilele ${usdt(gridProfitBrut)} USDT; poziția și funding-ul ${usdt(rest)}, comisioanele ${usdt(comisioane)}: botul e pe minus.`
+      :`Grilele câștigă ${usdt(gridProfitBrut)} USDT, dar botul e pe minus (comisioanele nu se știu).`);
   }
   return avertismente;
 }

@@ -57,6 +57,8 @@ export function verifica(text, tip, frate) {
   if (r.randuri && t.split("\n").length > r.randuri) ab.push("peste " + r.randuri + " rânduri");
   for (const [re, ce] of INTERZIS) if (re.test(t)) ab.push(ce);
   if (frate && norm(frate).length >= 15 && norm(t).includes(norm(frate))) ab.push("repetă titlul");
+  // v100.65 (M2 din revizia pachetului 2): o frecvență „(k din n)” cu n sub 30 poartă „puține cazuri” (pragul scenariului: 30)
+  for (const m of t.matchAll(/\((\d+) din (\d+)(?![\d.,])/g)) if (Number(m[2]) < 30 && !/puține cazuri/.test(t)) { ab.push("frecvență pe " + m[2] + " cazuri fără „puține cazuri”"); break; }
   return ab;
 }
 
@@ -87,7 +89,7 @@ const PLAN_L = { plus: 5.5, minus: 15.7, afaraOre: 12 };
 const cuBrut = (b, o) => ({ ...b, gridProfitBrut: 3.2, pornitLa: T0 - 4 * 86400000, pretLichidare: b.pretLichidare ?? +(b.pretCurent * 0.8).toFixed(4),
   brut: { buOrderData: Object.assign({ bottom: String(b.gridJos), top: String(b.gridSus), row: 7, perVolume: "40", position: "160", positionOpenPrice: String(+(b.pretCurent * 1.03).toFixed(4)),
     marginBalance: String(+(b.investit * 0.9).toFixed(2)), trend: b.directie, gridProfit24h: "0.80", trx24h: 30, closedExchangeOrderCount: 120 }, o || {}) } });
-const K4 = (p, amp) => Array.from({ length: 300 }, (_, i) => { const c = p * (1 + amp * Math.sin(i / 5)); return { time: T0 - (300 - i) * 4 * ORA, open: c, high: c * 1.01, low: c * 0.99, close: c }; });
+const K4 = (p, amp) => Array.from({ length: 500 }, (_, i) => { const c = p * (1 + amp * Math.sin(i / 5)); return { time: T0 - (500 - i) * 4 * ORA, open: c, high: c * 1.01, low: c * 0.99, close: c }; });
 // fisa cu linistea intreaga (cum o da GridProba.fisa: zilele de liniste, cazurile, intervalul de incredere)
 const fisaS = (o) => fisa(Object.assign({ liniste: { linisteAcum: true, zileLiniste: 0.4, n: 13, k: 3, p: 3 / 13, ic: [0.08, 0.5], suficient: true, H: 2 } }, o || {}));
 // directia pe 4 ore si 1 zi, ca Directie.analizeaza (formare = bara de 4 ore care se face acum)
@@ -267,6 +269,13 @@ export function situatii() {
     lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: -2.4, lichidareDepasita: true }, comisioane: -2.5, gridProfitBrut: 1.2, profitNet: -9 });
   av("comisioanele necunoscute", { x: { profitStop: "5" }, pret: 0.375, jos: 0.37, sus: 0.38,
     lich: { pretLichidare: null, lichidarePartea: null, distantaLichidarePct: null, lichidareDepasita: false }, comisioane: null, gridProfitBrut: 3, profitNet: -2 });
+  // v100.65 (M2 din revizia pachetului 2): formele reale - prețuri BTC cu 5 cifre și sume în mii; o monedă sub 0,01 (PUMP)
+  av("BTC: fără stop, sub grid, lichidarea la 9,2%, pe minus deși grilele câștigă", { x: {}, pret: 64123.45, jos: 66000, sus: 72000,
+    lich: { pretLichidare: 58234.123456, lichidarePartea: "jos", distantaLichidarePct: 9.18, lichidareDepasita: false }, comisioane: -1234.56, gridProfitBrut: 2345.67, profitNet: -3456.78 });
+  av("BTC: lichidarea depășită, comisioanele peste grile", { x: { lossStop: "60000" }, pret: 57123.45, jos: 60000, sus: 72000,
+    lich: { pretLichidare: 58234.123456, lichidarePartea: "jos", distantaLichidarePct: -1.9, lichidareDepasita: true }, comisioane: -1234.56, gridProfitBrut: 987.65, profitNet: -4321.09 });
+  av("monedă sub 0,01: peste grid, lichidarea la 14,8%", { x: {}, pret: 0.0051234, jos: 0.0042, sus: 0.0051,
+    lich: { pretLichidare: 0.00436512, lichidarePartea: "jos", distantaLichidarePct: 14.8, lichidareDepasita: false }, comisioane: -12.3456, gridProfitBrut: 9.87, profitNet: -32.1 });
   return out;
 }
 

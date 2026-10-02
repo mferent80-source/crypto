@@ -9,7 +9,7 @@
 var Valoare = (function () {
   "use strict";
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v); return isFinite(x) ? x : null; }
-  function fp(v) { if (v === null || !isFinite(v)) return "?"; var t = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return t.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
+  function fp(v) { if (v === null || !isFinite(v)) return "?"; var t = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return t.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   function valide(bare) {
     return (Array.isArray(bare) ? bare : []).filter(function (b) { return b && nr(b.h) !== null && nr(b.l) !== null && b.l > 0 && b.h >= b.l; });
   }

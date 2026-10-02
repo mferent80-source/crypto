@@ -18,7 +18,8 @@ var Sfaturi = (function () {
   }
   // v100.62: cifrele prin TextRo (virgula, minusul „−”); preturile raman cu zecimalele lor
   function usdt(v) { return v === null || v === undefined ? "—" : TextRo.usdt(v); }
-  function pret(v) { if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : 4); }
+  // v100.65 (ideea 3): sub 0,01 - 4 cifre semnificative (PUMP 0.004123, nu 0.0041), fara exponent; peste 0,01 - ca inainte
+  function pret(v) { if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 0.01 || a === 0 ? 4 : Math.min(12, 3 - Math.floor(Math.log10(a)))); }
   function proc(v, z) { return TextRo.pctSemn(v, z == null ? 1 : z); }
   function mare(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
   function frecventa(s, ce) {
@@ -75,18 +76,23 @@ var Sfaturi = (function () {
         // v100.62: textul = masuratoarea; ce face gridul contra trendului si „nu spune încotro merge” stau in legenda Consilierului
         text: d.motive && d.motive.length ? d.motive.join(" · ") + "." : "",
         sursa: "EMA20/EMA50 și structura pe 4 h, EMA pe 1 zi, pe bare închise.",
-        faCe: contra ? "N-aș adăuga bani; dacă se întărește, aș închide botul lângă zero și aș porni pe trend."
+        // v100.65 (pachetul 2, M4): conditia masurabila de dinainte de v100.62 („Dacă se face și «tare» pe 1z”), nu „dacă se întărește”
+        faCe: contra ? "N-aș adăuga bani; dacă e „tare” și pe 1 zi, aș închide botul lângă zero și aș porni din fișă unul pe trend."
           : cu ? "L-aș lăsa să lucreze." : "L-aș lăsa să facă perechi: lateral e bine pentru un grid." });
     }
 
     // B) Regimul acum: miscare mare vs liniste (cu frecventa "cat mai tine").
     var rg = fisa && fisa.regim;
     var cuB = rg && rg.miscare && rg.sens && (dirBot === "long" || dirBot === "short") && (dirBot === "long") === (rg.sens === "urca");
+    var dzMc = x.zero && x.zero.distantaZeroPct != null ? nr(x.zero.distantaZeroPct) : null, zeroMc = dzMc === null ? null : dirBot === "long" ? dzMc < 0 : dzMc > 0;
     if (cuB && rg.r4h != null && rg.r24h != null) {
       out.push({ cod: "miscare-cu", ton: "bine", titlu: "Mișcare cu botul: " + X(rg.r4h) + " obișnuitul (4 h), " + X(rg.r24h) + " (24 h)",
         text: "Prețul merge în direcția botului: grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum și poziția scade.",
         sursa: "Pe 40 de monede (27.09), după o mișcare cu botul, 59% din ferestre au ieșit pe plus (contra 50%, în liniște 56%).",
-        faCe: "L-aș lăsa fără bani în plus, cu stopul mutat la zero-ul botului, și aș urmări marginea " + (dirBot === "long" ? "de sus" : "de jos") + "." });
+        // v100.65 (el, 02.10: „FA TOT” pe problema (b)): stopul la zero doar cand zero-ul e de partea care protejeaza (long: sub pret,
+        // short: peste); pe minus zero-ul e dincolo de pret si un stop acolo s-ar executa pe loc (clasa v100.40) -> take-profit-ul la zero
+        faCe: "L-aș lăsa fără bani în plus" + (zeroMc === null ? " și" : zeroMc ? ", cu stopul mutat la zero-ul botului, și" : ", cu take-profit-ul la zero-ul botului, și") +
+          " aș urmări marginea " + (dirBot === "long" ? "de sus" : "de jos") + "." });
     } else if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
       // revizia Opus (I1, 02.10): „Mișcare mare …” ca alerta colectorului („mișcare mare împotriva botului”) - in „Ce ai de făcut acum”
       // se recunosc ca acelasi lucru (un rand, nu doua); multiplul pe 24 h trece in text, ca titlul sa ramana ≤ 60 si la 10×
@@ -99,7 +105,7 @@ var Sfaturi = (function () {
     if (L && L.linisteAcum && L.suficient && L.p != null) {
       var rar = L.p < 0.35;
       out.push({ cod: "liniste", ton: rar ? "info" : "bine", titlu: "Liniște de " + TextRo.num(L.zileLiniste, 1) + " zile",
-        text: "Pe moneda asta, liniștea care a ajuns aici a mai ținut " + L.H + " zile în " + Math.round(L.p * 100) + "% din cazuri (" + L.k + " din " + L.n + ").",
+        text: "Pe moneda asta, liniștea care a ajuns aici a mai ținut " + L.H + " zile în " + Math.round(L.p * 100) + "% din cazuri (" + L.k + " din " + L.n + (L.n < 30 ? ", puține cazuri" : "") + ").",   /* v100.65: pragul scenariului (30) */
         sursa: "Ultimele 30 de zile; interval de încredere " + TextRo.pct(L.ic[0] * 100, 0) + "–" + TextRo.pct(L.ic[1] * 100, 0) + ".",
         faCe: rar ? "N-aș pune bani în plus; aș încasa ce face și aș închide botul la prima mișcare mare." : "L-aș lăsa să lucreze: liniștea tinde să țină aici." });
     }
@@ -163,11 +169,15 @@ var Sfaturi = (function () {
     // 6) Finantarea (rata Binance, orientativa - Pionex nu o publica).
     var f = nr(x.funding);
     if (f !== null && Math.abs(f) >= 0.0001) {
-      var platesti = (b.directie === "long" && f > 0) || (b.directie === "short" && f < 0);
+      // v100.65 (ideea 2): intervalul real (istoria ratelor; 8 ore fara ea) si botul NEUTRU - semnul pozitiei lui nu e sigur
+      // (bot-orders: pnlNerealizatSigur false la neutru), deci se spune doar cine plateste rata, nu „îl plătești / îl încasezi”
+      var dirF = String(b.directie || "").toLowerCase(), neutru = dirF !== "long" && dirF !== "short";
+      var platesti = (dirF === "long" && f > 0) || (dirF === "short" && f < 0);
       out.push({ cod: "funding", ton: platesti && Math.abs(f) >= 0.0005 ? "atentie" : "info",
-        titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la 8 ore, " + (platesti ? "îl plătești" : "îl încasezi"),
+        titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + (nr(x.fundingOre) || 8) + " ore, " + (neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi"),
         text: mare((nr(b.finantare) === null ? "" : "până acum botul a " + (nr(b.finantare) < 0 ? "plătit " : "primit ") + TextRo.num(Math.abs(nr(b.finantare)), 2) + " USDT; ") +
-          (platesti ? "la rata asta plătești din câștigul grilelor." : "la rata asta încasezi peste câștigul grilelor.")),
+          (neutru ? "botul neutru îl plătește cât e net " + (f > 0 ? "long și îl încasează cât e net short." : "short și îl încasează cât e net long.")
+            : platesti ? "la rata asta plătești din câștigul grilelor." : "la rata asta încasezi peste câștigul grilelor.")),
         sursa: "Rata e de la Binance, pentru orientare; Pionex poate avea alta.",
         faCe: platesti && Math.abs(f) >= 0.0005 ? "N-aș ține botul mult pe direcția asta cu funding-ul atât de mare." : null });
     }
@@ -182,6 +192,18 @@ var Sfaturi = (function () {
   // revizia 01.10 (I2, o singura voce): intrarile sfaturilor, ACELEASI pe Tablou si in colector - scenariul la marginea de jos, cat de
   // des a ajuns pretul acolo (lumanarile de 4 h), ritmul botului, costurile, punctul de zero, geometria. Cer Scenariu si TabloExtra.
   // o = { bot, k4 (lumanarile de 4 h), fata4h, dir4h, funding (rata Binance), fisa, rezumat (directia pe mai multe intervale - doar Tabloul), acum }
+  // v100.65 (ideea 2 din raportul reviziei): intervalul funding-ului din istoria ratelor Binance (fundingTime) - diferenta cea mai
+  // des intalnita, rotunjita la ora, intre 1 si 24 (o istorie neordonata sau cu un gol nu da 0 sau 16 h); fara istorie -> null (titlul zice 8)
+  function oreFunding(h) {
+    if (!Array.isArray(h) || h.length < 2) return null;
+    var t = h.map(function (r) { return nr(r && r.fundingTime); }).filter(function (v) { return v !== null; }).sort(function (a, c) { return a - c; });
+    var n = {}, best = null;
+    for (var i = 1; i < t.length; i++) {
+      var o = Math.round((t[i] - t[i - 1]) / 3600000);
+      if (o >= 1 && o <= 24) { n[o] = (n[o] || 0) + 1; if (best === null || n[o] > n[best]) best = o; }
+    }
+    return best;
+  }
   function intrare(o) {
     o = o || {}; var b = o.bot || {}, acum = nr(o.acum) || Date.now(), jos = nr(b.gridJos), p = nr(b.pretCurent);
     var S = typeof Scenariu !== "undefined" ? Scenariu : null, TE = typeof TabloExtra !== "undefined" ? TabloExtra : null;
@@ -190,7 +212,7 @@ var Sfaturi = (function () {
     var bu = b.brut && b.brut.buOrderData || {}, zile = nr(b.pornitLa) ? (acum - nr(b.pornitLa)) / 86400000 : null;
     var ritm = { grile24h: nr(bu.gridProfit24h), medieZi: zile && nr(b.gridProfitBrut) != null ? nr(b.gridProfitBrut) / zile : null, tranz24h: nr(bu.trx24h),
       tranzMedieZi: zile && nr(bu.closedExchangeOrderCount) != null ? nr(bu.closedExchangeOrderCount) / zile : null, zile: zile };
-    return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
+    return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fundingOre: oreFunding(o.fundingHist), fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
       costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm };
   }
   return { sfaturi: sfaturi, intrare: intrare };

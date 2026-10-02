@@ -16,7 +16,7 @@ var Consiliu = (function () {
   function mare(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
   // revizia 01.10 (actiuni): un simbol in capul frazei („ECHO e în…”) nu se micsoreaza - inainte ajungea „eCHO” pe Discord
   function mic(s) { s = String(s || ""); var b = s.charAt(1); return b && b === b.toUpperCase() && b !== b.toLowerCase() ? s : s.charAt(0).toLowerCase() + s.slice(1); }
-  function fp(v) { v = nr(v); if (v === null) return "?"; var t = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return t.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
+  function fp(v) { v = nr(v); if (v === null) return "?"; var t = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return t.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   var U = function (v) { return TextRo.usdt(v, 1); };
   // v100.61 (specul „sfaturi concise”): avertizarile comune se spun O DATA, aici - pagina le arata sub Consilier, nu in fiecare sfat
   var LEGENDA = "Frecvențele („în N% din zile”) vin din trecut și nu sunt promisiuni, iar comparațiile (deciziile tale) nu sunt dovezi; „(puține cazuri)” înseamnă prea puține date: un semn, nu o regulă. "
@@ -111,7 +111,11 @@ var Consiliu = (function () {
         faCe: "Aș muta gridul pe unde stă prețul acum, cu setările din fișă.", scurt: "gridul încheie sub jumătate din perechi" });
     }
     // 4) motivul verde: piata, cu UN singur trend (directia pietei; fisa - media EMA - devine „structura”)
-    var li = sfCod("liniste"), di = sfCod("directie"), tr = sfCod("trend");
+    // v100.65 (el, 02.10: „FA TOT” pe problema (a) din raportul reviziei): motivul VERDE spune doar ce e adevarat - piata linistita,
+    // laterala sau cu botul. Directia contra are motivul ei galben (pasul 3), cea amestecata ramane in „Restul” cu titlul ei
+    // („Piața dă semnale amestecate”); inainte intrau amandoua aici, sub „Piața e cu botul”. Verdictul nu se schimba (motivul verde nu-l atinge).
+    var li = sfCod("liniste"), di0 = sfCod("directie"), tr = sfCod("trend");
+    var di = di0 && (di0.ton === "bine" || /lateral/i.test(di0.text || "")) ? di0 : null;
     if (li || di) {
       var lateral = di && /lateral/i.test(di.text || "");
       var trM = tr ? /\(([^)]*)\)\s*$/.exec(String(tr.titlu)) : null, trTxt = trM ? trM[1] : "";   // „Trendul e cu botul (long, tare)” -> „long, tare”
@@ -119,7 +123,7 @@ var Consiliu = (function () {
         titlu: "Piața e " + [li ? "liniștită" : null, lateral ? "laterală" : null].filter(Boolean).join(" și ") .replace(/^$/, "cu botul"),
         text: (li ? li.text + " " : "") + (di ? "Trendul, o singură măsură: " + mic(di.rezumat || di.text || di.titlu) + (trTxt ? " (structura pe medii: " + trTxt + ")" : "") : ""),
         faCe: (li && li.faCe) || (di && di.faCe) || "" });
-      folosite.liniste = folosite.directie = folosite.trend = 1;
+      folosite.liniste = 1; if (di) folosite.directie = folosite.trend = 1;   // v100.65: directia nefolosita aici merge in „Restul”
     }
     cand.forEach(function (m) { m.cip = cip(soc, m.cod); });
     var rang = { iesi: 0, atentie: 1, bine: 2 };
@@ -134,7 +138,7 @@ var Consiliu = (function () {
       : avert.length || sm.nivel === "atentie" ? "atentie" : "tine";
     // v100.61: titlul ≤ 60 - doua motive doar daca incap; altfel primul (al doilea e chiar dedesubt, in „De ce”)
     var doi = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + avert[1].scurt : "";
-    var titlu = doi && doi.length <= MAX_TITLU ? doi : avert.length ? mare(avert[0].scurt) : mare(sm.motiv);
+    var titlu = taie(doi && doi.length <= MAX_TITLU ? doi : avert.length ? mare(avert[0].scurt) : mare(sm.motiv), MAX_TITLU);   // v100.65 (pachetul 1, M7): plafonul si in pagina
 
     // ce as face eu: actiunea motivului de sus; la stopul peste plan pe care o zi obisnuita l-ar atinge des -> las stopul, ajustez planul
     // revizia 01.10 (I2): actiunea primului motiv care ARE una (lichidarea care se indeparteaza n-are) - altfel textul linistitor al celui de sus
@@ -149,9 +153,12 @@ var Consiliu = (function () {
     // langa margine: „n-aș pune bani în plus” intra in aceeasi fraza, daca nu e deja spus si daca incape (≤ 110)
     var adaos = "n-aș pune bani în plus cât stă lângă margine";
     // revizia 02.10: nu se lipeste de o iesire sau de „aș adăuga marjă” (s-ar citi pe dos)
-    if (avert.some(function (m) { return m.cod === "margine"; }) && !/n-aș (pune|adăuga|mări)|marjă|închide/i.test(faCe)) {
+    // v100.65 (minorele amanate): „N-aș închide …” nu e o iesire (pachetul 2, M3); fara al doilea „;” in actiune; cand nu incape, fraza
+    // merge la sfarsitul lui „de ce”, si cand acesta e deja ocupat (pachetul 1, M3 - inainte se pierdea fara urma)
+    if (avert.some(function (m) { return m.cod === "margine"; }) && !/n-aș (pune|adăuga|mări)|marjă|(?<!n-aș )închide/i.test(faCe)) {
       var cuAdaos = faCe ? faCe.replace(/\.$/, "") + "; " + adaos + "." : mare(adaos) + ".";
-      if (cuAdaos.length <= 110) faCe = cuAdaos; else if (!explica) explica = mare(adaos) + ".";
+      if (cuAdaos.length <= 110 && String(faCe || "").indexOf(";") < 0) faCe = cuAdaos;
+      else explica = (explica ? explica.replace(/\.?\s*$/, ". ") : "") + mare(adaos) + ".";
     }
 
     // banii: pierderea maxima (cartela Stopul) + totalul la marginea de jos

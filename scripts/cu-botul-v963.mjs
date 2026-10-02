@@ -56,7 +56,10 @@ await test("avertismentele reale bat 🟢: lichidare aproape + miscare cu botul 
 });
 await test("sfaturile din Tablou: cu botul = ton 'bine' si ce faci; contra = 'atentie' cu 'impotriva botului'", async () => {
   const cu = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: SUS } }).find((x) => /^Mișcare /.test(x.titlu));   /* v100.62: titlul cu cifra */
-  assert.equal(cu.ton, "bine"); assert.match(cu.titlu, /^Mișcare cu botul: /); assert.match(cu.faCe, /stopul mutat la zero-ul botului/);
+  assert.equal(cu.ton, "bine"); assert.match(cu.titlu, /^Mișcare cu botul: /); assert.match(cu.faCe, /^L-aș lăsa fără bani în plus/);
+  /* v100.65 (problema b): stopul la zero doar cand zero-ul e sub pret (long pe plus); fara pretul de zero, fara stop */
+  const cuZ = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: SUS }, zero: { pretZero: 1, distantaZeroPct: -0.01 } }).find((x) => /^Mișcare /.test(x.titlu));
+  assert.match(cuZ.faCe, /stopul mutat la zero-ul botului/);
   const co = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: JOS } }).find((x) => /^Mișcare /.test(x.titlu));
   assert.equal(co.ton, "atentie"); assert.match(co.titlu, /^Mișcare mare contra botului: /);
 });

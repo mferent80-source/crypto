@@ -121,7 +121,7 @@ await test("direcția (directie.js): o frază, fără „ÎMPOTRIVA”, virgulă
 });
 await test("liniștea: câte cazuri și cât la sută, la vedere; intervalul de încredere în sursă", () => {
   const l = cod(sfaturi(CRV()), "liniste");
-  assert.equal(l.text, "Pe moneda asta, liniștea care a ajuns aici a mai ținut 2 zile în 23% din cazuri (3 din 13).");
+  assert.equal(l.text, "Pe moneda asta, liniștea care a ajuns aici a mai ținut 2 zile în 23% din cazuri (3 din 13, puține cazuri).");   /* v100.65: sub 30 de cazuri */
   assert.equal(l.sursa, "Ultimele 30 de zile; interval de încredere 8%–50%.");
 });
 await test("M7 (revizia pachetului 1): când primul motiv al Consilierului vine din sfaturi.js, titlul lui rămâne ≤ 60", () => {
@@ -194,7 +194,7 @@ await test("avertismentele: prețul lichidării rotunjit (nu 16 zecimale), virgu
   const l = avertismenteBot({ x: {}, pret: 0.3806, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: 10.93, lichidareDepasita: false },
     comisioane: -1.21, gridProfitBrut: 10.91, profitNet: -1.6 });
   assert.deepEqual(l, ["Botul n-are nici stop, nici țintă în Pionex.", "Prețul 0.3806 a ieșit din grid pe sus (0.37–0.38): botul nu mai face perechi cât stă afară.",
-    "Lichidarea la 10,9% (0.33829, partea de jos).", "Grilele câștigă (+10,91 USDT), dar poziția și funding-ul (−11,30) și comisioanele (−1,21) duc botul pe minus."]);
+    "Lichidarea la 10,9% (0.33829, partea de jos).", "Grilele +10,91 USDT; poziția și funding-ul −11,30, comisioanele −1,21: botul e pe minus."]);   /* v100.65: mai scurt (BTC: 116 > 110) */
   const d = avertismenteBot({ x: { lossStop: "0.36" }, pret: 0.3301, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: -2.4, lichidareDepasita: true },
     comisioane: -2.5, gridProfitBrut: 1.2, profitNet: -9 });
   assert.ok(d.includes("Lichidarea estimată (0.33829, partea de jos) e depășită la prețul 0.3301: aș verifica botul în Pionex."), d.join(" | "));

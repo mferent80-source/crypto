@@ -246,7 +246,7 @@ var Probabilitati = (function () {
     return { p: c.p, ic: ic, avertizare: c.avertizare, text: t };
   }
   // preturile ca pe Tablou (SemnaleBot.fmtPret)
-  function fp(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
+  function fp(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
   // v100.47: orele incheiate din 15M de dupa ultima bara de 1 h (fisa: barele de 1 h din KV sunt de azi-noapte) - doar orele COMPLETE
   function imbina(b1, b15, acum) {
     var a = pregateste(b1, acum), u = a.length ? a[a.length - 1].t : -Infinity, lim = nr(acum) || Date.now(), gr = {};
