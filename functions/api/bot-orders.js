@@ -1,5 +1,6 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 import {PIONEX,TIMEOUT_MS,pionexPrivatGet} from "../_shared/pionex.js";
+import {avertismenteBot} from "../_shared/avertismente.js";
 
 // Cititul botilor de grid Pionex. STRICT READ-ONLY: singura ruta atinsa e
 // GET /api/v1/bot/orders. Nimic din API-ul de boti care schimba ceva nu apare aici.
@@ -87,8 +88,6 @@ function simbolTicker(base,quote,harta){
   if(real)return real;
   return b.endsWith(".PERP")?`${b.slice(0,-5)}_${quote}_PERP`:`${b}_${quote}`;
 }
-const ban=v=>{const a=Math.abs(v);return a.toFixed(a>0&&a<0.01?4:2)};
-const semn=v=>(v<0?"−":"+")+ban(v);
 
 // Lichidarea relevanta: distanta SEMNATA cea mai mica dintre partile existente (>0).
 // "0" de la Pionex inseamna "nu exista". Negativa = depasita.
@@ -144,22 +143,8 @@ function normalizeaza(bot,preturi,harta){
     const X=pretDeschidere+(esteLong?1:-1)*(r*investit-profitNet)/Math.abs(pozitie);return X>0?X:null};
   const tipPierdere=x.lossStopType==="profit_ratio"?"raport":x.lossStopType==="price"?"pret":null,tipProfit=x.profitStopType==="profit_ratio"?"raport":x.profitStopType==="price"?"pret":null;
   const opPierdere=tipPierdere==="raport"?pretDinRaport(nr(x.lossStop)):nr(x.lossStop),opProfit=tipProfit==="raport"?pretDinRaport(nr(x.profitStop)):nr(x.profitStop);
-  const avertismente=[];
-  if(!nr(x.profitStop)&&!nr(x.lossStop))avertismente.push("Botul nu are niciun opritor configurat.");
-  if(pret&&jos&&sus&&(pret<jos||pret>sus))
-    avertismente.push(`Prețul ${pret} a ieșit din intervalul grid (${jos}…${sus}) — botul nu mai câștigă din oscilații.`);
-  if(lich.lichidareDepasita)
-    avertismente.push(`Lichidarea DEPĂȘITĂ: prețul ${pret} a trecut de lichidarea estimată ${lich.pretLichidare} (partea de ${lich.lichidarePartea}) — verifică botul în Pionex.`);
-  else if(lich.distantaLichidarePct!==null&&lich.distantaLichidarePct<15)
-    avertismente.push(`Până la lichidare (${lich.lichidarePartea}, la ${lich.pretLichidare}) mai sunt ${lich.distantaLichidarePct.toFixed(1)}%.`);
-  // Comisioanele sunt de vina DOAR cand chiar depasesc castigul din grid.
-  if(toate(comisioane,gridProfitBrut)&&comisioane!==0&&Math.abs(comisioane)>gridProfitBrut)
-    avertismente.push(`Gridul a câștigat ${semn(gridProfitBrut)}, comisioanele au luat ${semn(comisioane)} — comisioanele mănâncă mai mult decât câștigă botul.`);
-  else if(profitNet!==null&&profitNet<0&&gridProfitBrut!==null&&gridProfitBrut>0){
-    const rest=comisioane!==null?profitNet-gridProfitBrut-comisioane:null;
-    avertismente.push(`Profitul NET e negativ deși gridul câștigă: grid ${semn(gridProfitBrut)}, comisioane ${comisioane!==null?semn(comisioane):"necunoscute"}`+
-      (rest!==null?`, restul ${semn(rest)} din poziție/finanțare.`:"."));
-  }
+  // v100.62: avertismentele intr-o functie pura (functions/_shared/avertismente.js) - le verifica garda textelor
+  const avertismente=avertismenteBot({x,pret,jos,sus,lich,comisioane,gridProfitBrut,profitNet});
 
   return {
     id:String(bot.strategyId??bot.buOrderId??""),
