@@ -233,7 +233,7 @@ var GridProba = (function () {
   function respinge(stat) {
     var a = stat && stat.antren, t = stat && stat.test;
     if (!a || a.mediana === null || a.mediana === undefined) return { respinsa: true, motiv: "fără probă pe istoric" };
-    if (a.lichidari > 0) return { respinsa: true, motiv: "pe istoric a fost lichidată de " + a.lichidari + " ori" };
+    if (a.lichidari > 0) return { respinsa: true, motiv: "pe istoric a fost lichidată " + G.oriDe(a.lichidari) };
     if (a.mediana < 0) return { respinsa: true, motiv: "pe istoric a ieșit pe minus (mediana " + G.procent(a.mediana) + ")" };
     if (t && t.lichidari > 0) return { respinsa: true, motiv: "pe zilele nevăzute a fost lichidată" };
     if (t && t.mediana !== null && t.mediana !== undefined && t.mediana < 0) return { respinsa: true, motiv: "pe zilele nevăzute a ieșit pe minus (" + G.procent(t.mediana) + ")" };
@@ -265,19 +265,19 @@ var GridProba = (function () {
   }
   // revizia 01.10 (I2): verdictul pe test - si MEDIA pe plus (un grid castiga des putin si pierde rar mult: mediana singura mintea)
   function verdictIngust(t, ore) {
-    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + " %"; };
+    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };   // v100.72: „%” lipit, ca in rest
     if (!(t.nIndep >= ING.MIN_INDEP)) return "prea puține ferestre independente pe partea de test (" + (t.nIndep || 0) + " din " + ING.MIN_INDEP + " la " + ore + " h)";
-    if (t.lichidari > 0) return "pe partea de test s-a lichidat de " + t.lichidari + " ori";
-    if (!(t.mediana > 0)) return "pe ultimele zile (test), după comisioane, n-a ieșit pe plus — rămâi la gridul lat";
-    if (!(t.medie > 0)) return "pe test, media e pe minus (" + P(t.medie) + "): câștigă des puțin și pierde rar mult — rămâi la gridul lat";
-    if (!(t.ic && t.ic[0] > 0.5)) return "pe test, ferestrele pe plus nu sunt clar peste jumătate (" + Math.round((t.pePlus || 0) * 100) + " %)";
+    if (t.lichidari > 0) return "pe partea de test s-a lichidat " + G.oriDe(t.lichidari);
+    if (!(t.mediana > 0)) return "pe ultimele zile (test), după comisioane, n-a ieșit pe plus: gridul lat rămâne mai bun";
+    if (!(t.medie > 0)) return "pe test, media e pe minus (" + P(t.medie) + "): câștigă des puțin și pierde rar mult, deci gridul lat rămâne mai bun";
+    if (!(t.ic && t.ic[0] > 0.5)) return "pe test, ferestrele pe plus nu sunt clar peste jumătate (" + Math.round((t.pePlus || 0) * 100) + "%)";
     return "";
   }
   function ingust(b15, o) {
     o = o || {};
     // v100.61 (proba de ecran, 02.10): si respingerile de la inceput spun pe cate zile s-a uitat (fisa scria „pe undefined de zile”)
     var zile = Array.isArray(b15) && b15.length ? Math.round(b15.length / C.BARE_ZI) : null;
-    if (o.miscare) return { propus: false, motiv: "piața e în mișcare mare — nu porni un grid îngust acum", zile: zile };
+    if (o.miscare) return { propus: false, motiv: "piața e în mișcare mare: nu e momentul pentru un grid îngust", zile: zile };   // v100.72: faptul, nu imperativul
     if (DIRECTII.indexOf(o.dir) < 0) return { propus: false, motiv: "fără direcția pieței pentru monedă", zile: zile };
     if (!b15 || b15.length < 9 * C.BARE_ZI) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)", zile: zile };
     var nA = Math.round(b15.length * 2 / 3), A = b15.slice(0, nA), pasV = G.pasi(A);
@@ -310,7 +310,7 @@ var GridProba = (function () {
       // intre durate se compara PE ZI (o fereastra de 24 h aduna mai mult decat una de 6 h doar fiindca tine mai mult)
       if (a && (!best || a.scor / H > best.scor / best.H)) best = { scor: a.scor, H: H, W: W, c: cel[a.wi][a.pi], antren: mat[a.wi][a.pi] };
     });
-    if (!best) return { propus: false, motiv: "pe istoric, toate variantele înguste s-au lichidat sau n-au avut ferestre — rămâi la gridul lat" };
+    if (!best) return { propus: false, motiv: "pe istoric, toate variantele înguste s-au lichidat sau n-au avut ferestre: gridul lat rămâne mai bun" };
     var rt = best.c.rt, net = rt.map(function (r) { return r.net; }), st = statistici(rt), plus = net.filter(function (v) { return v > 0; }).length;
     var nIndep = Math.floor(rt.length * C.PAS_FERESTRE / best.W), ic = nIndep > 0 ? G.wilson(Math.round(plus / Math.max(1, rt.length) * nIndep), nIndep) : [0, 1];
     var test = { n: rt.length, nIndep: nIndep, mediana: st ? st.mediana : null, medie: net.length ? net.reduce(function (a, v) { return a + v; }, 0) / net.length : null, pePlus: rt.length ? plus / rt.length : null, ic: ic, celMaiRau: st ? st.ceaMaiProasta : null, perechiZi: st ? st.perechiMedii / best.H : null, lichidari: st ? st.lichidari : 0 };
@@ -322,9 +322,10 @@ var GridProba = (function () {
   function rezumatIngust(r) {
     if (!r) return "";
     if (!r.propus || !r.setare || !r.test) return "⚡ grid îngust: nu — " + (r.motiv || "nedovedit");
-    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + " %"; }, D = { long: "long", short: "short", neutru: "neutru" };
-    return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + " % lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana) + (r.test.medie != null ? ", medie " + P(r.test.medie) : "")
-      + ", " + Math.round(r.test.pePlus * 100) + " % pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + r.test.nIndep + " ferestre independente)";
+    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; }, D = { long: "long", short: "short", neutru: "neutru" };
+    var nI = typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(r.test.nIndep, "fereastră independentă", "ferestre independente") : r.test.nIndep + " ferestre independente";   // v100.72: „31 de ferestre”, „%” lipit
+    return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + "% lățime, " + (r.setare.grile + 1) + " linii, ~" + Math.round(r.test.perechiZi) + " perechi/zi · pe test: median " + P(r.test.mediana) + (r.test.medie != null ? ", medie " + P(r.test.medie) : "")
+      + ", " + Math.round(r.test.pePlus * 100) + "% pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + nI + ")";
   }
   // v100.59 (I-481): botul pornit cu setarile variantei ingusta - aceeasi directie, latimea +-35 %, pornit in 12 h de la propunere
   // -> {ingust, ore, inchideLa}; altfel null. Directia Pionex: long / short / orice altceva = neutru (ca in restul colectorului)
@@ -360,10 +361,10 @@ var GridProba = (function () {
       return { n: v.length, pePlus: v.length ? v.filter(function (x) { return x > 0; }).length / v.length : null, mediana: v.length ? G.mediana(v) : null, medie: v.length ? s / v.length : null };
     };
     var p = gr(function (e) { return e.propus; }), np = gr(function (e) { return !e.propus; }), nej = l.filter(function (e) { return e && !e.r; }).length;
-    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + " %"; };
-    var t = function (g) { return g.n ? Math.round(g.pePlus * 100) + " % pe plus, medie " + P(g.medie) : "—"; };
+    var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };   // v100.72: „%” lipit
+    var t = function (g) { return g.n ? Math.round(g.pePlus * 100) + "% pe plus, medie " + P(g.medie) : "—"; };
     var text = !p.n && !np.n ? "Urmărirea înainte începe: " + nej + (nej === 1 ? " notă așteaptă" : " note așteaptă") + " să treacă durata."
-      : "Urmărit înainte (după comisioane): propuse " + p.n + " (" + t(p) + ") · nepropuse " + np.n + " (" + t(np) + ")" + (Math.min(p.n, np.n) < 30 ? " — prea puține încă, zgomot" : "");
+      : "Urmărit înainte (după comisioane): propuse " + p.n + " (" + t(p) + ") · nepropuse " + np.n + " (" + t(np) + ")" + (Math.min(p.n, np.n) < 30 ? " — puține cazuri încă" : "");
     return { propuse: p, nepropuse: np, nejudecate: nej, text: text };
   }
   // cat de vechi e rezultatul colectorului (refacut la 6 h): peste 12 h se spune „vechi”

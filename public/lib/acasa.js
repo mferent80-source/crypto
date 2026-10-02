@@ -5,6 +5,8 @@
 var Acasa = (function () {
   "use strict";
   function nr(x) { var v = typeof x === "string" && x.trim() ? Number(x) : x; return typeof v === "number" && isFinite(v) ? v : null; }
+  // v100.72: „99 de acțiuni” (de la 20 în sus cu „de”)
+  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
 
   // o = { clasament: {evita, candidati, faraDate, dir: {long, neutru, short}}, btc: {miscare}, fg: numar }
   function vreme(o) {
@@ -116,12 +118,12 @@ var Acasa = (function () {
     if (c.length < 200) return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: "Bursele n-au venit încă.", text: "", faCe: "" };
     var u = c[c.length - 1], e50 = ema(c.slice(-200), 50), e200 = ema(c, 200), sens = u > e50 && e50 > e200 ? "sus" : u < e50 && e50 < e200 ? "jos" : "lateral";
     var cota = nd && nd.n ? nd.e50 / nd.n : null, vx = vix !== null ? "VIX " + vix.toFixed(1).replace(".", ",") : "";
-    var partNd = nd && nd.n ? " Doar " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile." : "";
+    var partNd = nd && nd.n ? " Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : "";
     if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aș aștepta ca VIX să coboare sub 25." };
     if (sens === "jos") return { nivel: "scade", eticheta: "🔴 BURSA SCADE", titlu: "Nasdaq e în trend de coborâre.", text: "Prețul e sub mediile de 50 și 200 de zile" + (vx ? ", " + vx : "") + "." + (partNd ? partNd.replace("Doar ", "") : ""), faCe: "N-aș cumpăra contra trendului; aș ține doar ce are stopul pus." };
     if (sens === "lateral") return { nivel: "lateral", eticheta: "🟡 LATERAL", titlu: "Nasdaq n-are o direcție clară.", text: (vx ? vx + ". " : "") + partNd.trim(), faCe: "Aș cumpăra doar ce e deja pe trend, cu stop; restul aș aștepta." };
-    if (cota !== null && cota < 0.6) return { nivel: "ingusta", eticheta: "🟡 URCARE ÎNGUSTĂ", titlu: "Indicele urcă" + (vix !== null && vix < 20 ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile.", faCe: "Aș cumpăra doar ce e deja pe trend, ca ideile de azi; n-aș prinde acțiunile de sub media de 200." };
-    return { nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + nd.n + " acțiuni sunt peste media de 50 de zile." : ""), faCe: "Aș cumpăra ideile pe trend, mereu cu stop: mediul e bun." };
+    if (cota !== null && cota < 0.6) return { nivel: "ingusta", eticheta: "🟡 URCARE ÎNGUSTĂ", titlu: "Indicele urcă" + (vix !== null && vix < 20 ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile.", faCe: "Aș cumpăra doar ce e deja pe trend, ca ideile de azi; n-aș prinde acțiunile de sub media de 200." };
+    return { nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : ""), faCe: "Aș cumpăra ideile pe trend, mereu cu stop: mediul e bun." };
   }
   // corelatia randamentelor zilnice BTC - Nasdaq pe ultimele n zile COMUNE (bursa n-are weekend)
   function corelatie(btc, qqq, n) {
@@ -135,7 +137,7 @@ var Acasa = (function () {
     if (rb.length < 15) return null;
     var m = function (l) { var s = 0; l.forEach(function (v) { s += v; }); return s / l.length; }, mbv = m(rb), mqv = m(rq), sx = 0, sy = 0, sxy = 0;
     for (var j = 0; j < rb.length; j++) { var dx = rb[j] - mbv, dy = rq[j] - mqv; sx += dx * dx; sy += dy * dy; sxy += dx * dy; }
-    var r = sx > 0 && sy > 0 ? sxy / Math.sqrt(sx * sy) : 0, rt = r.toFixed(2).replace(".", ",");
+    var r = sx > 0 && sy > 0 ? sxy / Math.sqrt(sx * sy) : 0, rt = (r < -0.005 ? "−" : "") + Math.abs(r).toFixed(2).replace(".", ",");   // v100.72: minusul „−”
     var text = r >= 0.5 ? "BTC urmează bursa acum (" + rt + "): o scădere a Nasdaq trage și crypto." : r <= -0.3 ? "BTC merge invers față de bursă acum (" + rt + ")." : "BTC merge pe drumul lui acum (" + rt + "): bursa nu-l trage după ea.";
     return { r: r, n: rb.length, text: text };
   }
@@ -233,8 +235,9 @@ var Acasa = (function () {
   function semn(v, z) { return v === null || v === undefined || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; }
   function raportSaptamana(o) {
     o = o || {}; var L = [];
-    L.push("₿ Crypto: BTC " + semn(nr(o.btc7)) + " pe 7 zile" + (o.vreme && o.vreme.eticheta ? " · acum " + o.vreme.eticheta : ""));
-    L.push("📈 Nasdaq " + semn(nr(o.qqq5)) + " pe săptămână" + (nr(o.vix) !== null ? " · VIX " + nr(o.vix).toFixed(1).replace(".", ",") : "") + (o.vremeBursa && o.vremeBursa.eticheta ? " · " + o.vremeBursa.eticheta : ""));
+    // v100.72 (pachetul 5): etichetele vremii fara majuscule de strigat; actiunile pe randuri separate (inainte, trei intr-un rand de 208)
+    L.push("₿ Crypto: BTC " + semn(nr(o.btc7)) + " pe 7 zile" + (o.vreme && o.vreme.eticheta ? " · acum " + o.vreme.eticheta.toLowerCase() : ""));
+    L.push("📈 Nasdaq " + semn(nr(o.qqq5)) + " pe săptămână" + (nr(o.vix) !== null ? " · VIX " + nr(o.vix).toFixed(1).replace(".", ",") : "") + (o.vremeBursa && o.vremeBursa.eticheta ? " · " + o.vremeBursa.eticheta.toLowerCase() : ""));
     var mm = function (l) { return (l || []).slice(0, 3).map(function (x) { return x.s + " " + semn(nr(x.ch5)); }).join(", "); };
     if ((o.sus || []).length || (o.jos || []).length) L.push("↕ Nasdaq 100 pe săptămână: sus " + (mm(o.sus) || "—") + " · jos " + (mm(o.jos) || "—"));
     var bt = nr(o.botiTotal), tp = nr(o.t212Ppl);
@@ -243,11 +246,11 @@ var Acasa = (function () {
     L.push("📅 Săptămâna asta: " + (cal.length ? cal.map(function (x) { return x.cand + " " + x.titlu; }).join(" · ") : "nimic mare anunțat încă în SUA"));
     var rz = (o.rezultate || []).slice(0, 4);
     if (rz.length) L.push("🧾 Rezultate la acțiunile tale: " + rz.map(function (x) { return x.simbol + " " + x.data; }).join(" · "));
-    var fac = [];
-    if (o.vreme && o.vreme.faCe) fac.push("crypto: " + o.vreme.faCe);
-    if (o.vremeBursa && o.vremeBursa.faCe) fac.push("bursă: " + o.vremeBursa.faCe);
-    if (cal.length) fac.push("n-aș porni boți noi și n-aș cumpăra chiar înainte de " + cal[0].titlu + ".");
-    L.push("👉 Ce aș face eu: " + (fac.length ? fac.join(" ") : "aștept datele de luni dimineață."));
+    var n0 = L.length;
+    if (o.vreme && o.vreme.faCe) L.push("👉 Crypto: " + o.vreme.faCe);
+    if (o.vremeBursa && o.vremeBursa.faCe) L.push("👉 Bursă: " + o.vremeBursa.faCe);
+    if (cal.length) L.push("👉 N-aș porni boți noi și n-aș cumpăra chiar înainte de " + cal[0].titlu + ".");
+    if (L.length === n0) L.push("👉 Aș aștepta datele de luni dimineață.");
     return { nivel: "info", titlu: "📊 Săptămâna pieței", mesaj: L.join("\n") };
   }
   // socoteala alertelor: miscarile neobisnuite au continuat? (dupa 24 h si 3 zile) + dupa "MISCARE" cat s-a mai miscat BTC

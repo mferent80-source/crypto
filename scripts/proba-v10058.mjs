@@ -89,7 +89,7 @@ await test("pagina: rândul ⚡ în idei, blocul „Varianta îngustă” în fi
   const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.match(a, /function grIngustHtml\(/); assert.match(a, /h\+=grIngustHtml\(f\)/); assert.match(a, /ingustLocal=GridProba\.ingust\(/);
   assert.match(a, /Varianta îngustă/);
-  assert.ok(a.includes('/rămâi/i.test(r.motiv'), "poza: fara „rămâi la gridul lat. Rămâi la setările de mai sus” (dublat)"); assert.match(a, /închide-l după/i); assert.match(a, /de zile — mai puține ferestre/);
+  assert.ok(a.includes('/rămâ/i.test(r.motiv'), "poza: fara „gridul lat rămâne mai bun. Aș rămâne la setările de mai sus” (dublat)"); assert.match(a, /L-aș închide după/);   /* v100.72: /rămâi/ → /rămâ/ (motivul nou „rămâne”); „Închide-l după” → „L-aș închide după” */ assert.match(a, /de zile — mai puține ferestre/);
 });
 
 await test("o singura cerere pentru toate ideile (limita de 120 de citiri/min e comuna cu colectorul): ruta ingustLista + pagina o foloseste", async () => {

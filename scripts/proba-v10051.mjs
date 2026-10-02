@@ -136,7 +136,7 @@ await test("I-478 autopsia: cele mai scumpe 3 sfaturi gresite ale saptamanii, cu
     { ...e("muta", "atentie", 0, -1, 5, "liniste-lateral"), dreptate: true }, { ...e("muta", "atentie", 0, -2, 6, "liniste-lateral"), dreptate: true }];   // muta in liniste-lateral: 3 gresite din 5 (0,6)
   const a = OB.autopsie([{ id: "1", moneda: "CRV", log }], acum);
   assert.deepEqual(a.scumpe.map((x) => x.cod), ["tine", "lichidare", "muta"]); assert.equal(a.scumpe[0].cost, -8);
-  assert.match(a.linii.join("\n"), /starea de atunci: nenotată/); assert.match(a.linii.join("\n"), /liniște, coboară încet/);
+  assert.match(a.linii.join("\n"), /nenotată înainte de 01\.10/);   /* v100.72: starea în paranteză, „(…, nenotată înainte de 01.10)” */ assert.match(a.linii.join("\n"), /liniște, coboară încet/);
   assert.equal(a.tipar, null, "revizia I3: 5 zile nu ajung pentru o regula propusa (cel putin 10 zile distincte)");
   const r = OB.raportDuminica({ trades: [{ inchis: acum - Z, rezultat: 1, net: 1, grile: 1, pozitie: 0, comisioane: 0, funding: 0, greseli: [] }], acum, socoteala: {}, autopsie: a });
   assert.match(r.linii.join("\n"), /Autopsia săptămânii/);

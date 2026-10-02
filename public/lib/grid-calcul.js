@@ -132,7 +132,9 @@ var GridCalcul = (function () {
     var s = a.slice().sort(crescator), i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i);
     return s[lo] + (s[hi] - s[lo]) * (i - lo);
   }
-  function procent(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x * 100).toFixed(2).replace(".", ",") + "%"; }
+  // v100.72 (pachetul 5): „o dată”, „de 2 ori”, „de 21 de ori” (nu „de 1 ori”)
+  function oriDe(n) { var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "o dată" : "de " + k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de" : "") + " ori"; }
+  function procent(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x < 0 && x * 100 <= -0.005 ? "−" : "") + Math.abs(x * 100).toFixed(2).replace(".", ",") + "%"; }   // v100.72: minusul „−”
 
   // Cat s-a plimbat pretul (max high - min low, raportat la deschidere) in fiecare
   // fereastra de H zile, cu o fereastra noua la fiecare 6h.
@@ -350,8 +352,8 @@ var GridCalcul = (function () {
       var r = Math.max(rg.r4h || 0, rg.r24h || 0);
       rosu.push("prețul abia a făcut o mișcare de " + r.toFixed(1).replace(".", ",") + "× față de obișnuit — după mișcare gridul iese cel mai rău");
     }
-    if (a.lichidari > 0) rosu.push("pe istoric, setarea asta a fost lichidată de " + a.lichidari + " ori");
-    if (o.stat.test && o.stat.test.lichidari > 0) rosu.push("pe zilele nevăzute, setarea asta a fost lichidată de " + o.stat.test.lichidari + " ori");
+    if (a.lichidari > 0) rosu.push("pe istoric, setarea asta a fost lichidată " + oriDe(a.lichidari));
+    if (o.stat.test && o.stat.test.lichidari > 0) rosu.push("pe zilele nevăzute, setarea asta a fost lichidată " + oriDe(o.stat.test.lichidari));
     if (a.mediana < 0) rosu.push("pe istoric, setarea asta a ieșit pe minus (mediana " + procent(a.mediana) + ")");
     if (o.nesigur) rosu.push("nici la 1× lichidarea nu stă destul de departe: intervalul e prea larg pentru marja izolată");
     else if (o.pesteSigur) rosu.push("levierul ales pune lichidarea prea aproape de grid");
@@ -363,7 +365,7 @@ var GridCalcul = (function () {
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };
   }
 
-  return { C: C, bare: bare, bareToate: bareToate, bareBursa: bareBursa, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent,
+  return { C: C, bare: bare, bareToate: bareToate, bareBursa: bareBursa, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent, oriDe: oriDe,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
     regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine, eCrypto: eCrypto };

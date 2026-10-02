@@ -86,7 +86,7 @@ await test("I-468 frana: −20/zi pe ziua Romaniei (inchisi + pierderea celor de
   const ok = OB.frana({ trades: [tr(-5, acum - 2 * ORA), tr(3, acum - 3 * ORA)], deschise: [{ profitTotal: -4, activ: true }], acum, praguri: P });
   aprox(ok.netZi, -6, 1e-9, "−5 + 3 − 4 deschis"); assert.equal(ok.activa, false);
   const zi = OB.frana({ trades: [tr(-15, acum - 2 * ORA), tr(-2, acum - 3 * ORA)], deschise: [{ profitTotal: -5, activ: true }], acum, praguri: P });
-  assert.equal(zi.activa, true); assert.ok(zi.depasit.some((d) => d.cod === "zi")); assert.match(zi.text, /gata pe azi/i);
+  assert.equal(zi.activa, true); assert.ok(zi.depasit.some((d) => d.cod === "zi")); assert.match(zi.text, /Frâna e trasă/);   /* v100.72: „Frâna e trasă: …; n-aș mai porni boți azi.” (era „gata pe azi — …”) */
   // ieri 23:30 RO nu intra in azi (ziua Romaniei, nu UTC)
   const ieri = OB.frana({ trades: [tr(-25, Date.UTC(2026, 8, 29, 20, 30))], deschise: [], acum, praguri: P });
   assert.equal(ieri.depasit.some((d) => d.cod === "zi"), false);

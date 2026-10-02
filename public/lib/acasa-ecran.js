@@ -133,7 +133,7 @@ function acasaDeseneaza() {
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");
   // legatura dintre ele: corelatia BTC - Nasdaq pe 30 de zile
   var co = d.btc1d && qqq ? Acasa.corelatie(GridCalcul.bareToate(d.btc1d), qqq, 30) : null;
-  if ($("acLegatura")) { $("acLegatura").hidden = !co; if (co) $("acLegatura").innerHTML = '🔗 <b>BTC și bursa:</b> ' + escapeHtml(co.text) + ' <span class="acMut">corelația pe ultimele ' + co.n + ' zile de bursă</span>'; }
+  if ($("acLegatura")) { $("acLegatura").hidden = !co; if (co) $("acLegatura").innerHTML = '🔗 <b>BTC și bursa:</b> ' + escapeHtml(co.text) + ' <span class="acMut">corelația pe ultimele ' + (typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(co.n, "zi", "zile") : co.n + " zile") + ' de bursă</span>'; }
 
   // 2a. pulsul crypto: BTC
   var tb = mis.gasit("BTC"), te = mis.gasit("ETH"), dom = d.glob && Number(d.glob.btcDominance);
@@ -242,7 +242,7 @@ function acasaDeseneaza() {
     var nume = String(b.baza || "").replace(/\.PERP$/, ""), tot = Number(b.profitTotal), pr = Number(b.pretCurent), jo = Number(b.gridJos), su = Number(b.gridSus);
     var inGrid = su > jo && isFinite(pr) ? Math.round((pr - jo) / (su - jo) * 100) : null, panaJos = jo > 0 && pr > 0 ? (pr / jo - 1) * 100 : null;
     var ent = d.clasament ? (d.clasament.monede || []).filter(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, "") === nume; })[0] : null, rg = !ent && d.regimBoti ? d.regimBoti[nume] : null, m2 = ent ? ent.stare === "evita" : rg ? !!rg.miscare : null;
-    hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(2) + " USDT" : "—") + '</b></div>'
+    hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(2).replace(".", ",") + " USDT" : "—") + '</b></div>'
       + '<div class="acLin"><span>Prețul în grid</span><b>' + (inGrid == null ? "—" : inGrid + "%" + (panaJos != null && panaJos >= 0 ? " · " + panaJos.toFixed(1).replace(".", ",") + "% până jos" : " · sub grid")) + '</b></div>'
       + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + Math.max(rg.r4h || 0, rg.r24h || 0).toFixed(1).replace(".", ",") + "×" : "")) + '</b></div>';
   });
@@ -251,7 +251,7 @@ function acasaDeseneaza() {
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
   var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
-  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(2) + ' USDT</b></div>';
+  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(2).replace(".", ",") + ' USDT</b></div>';
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 
   var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = typeof t212 !== "undefined" ? t212.nrIesi : null, rz = d.rezultate && d.rezultate.l || [];

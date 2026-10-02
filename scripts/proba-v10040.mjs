@@ -56,7 +56,7 @@ await test("🟡 jurnalul: fiecare bot are NETUL (realizat + comisioane + fundin
   aprox(l[0].net, 0.7, 1e-9, "net"); aprox(r.net, 26 * 0.7, 1e-9, "suma neta");
   assert.equal(r.pePlusNet, 26);
   const rap = OB.raportDuminica({ trades: l, acum: ACUM });
-  assert.match(rap.linii[0], /26 boți închiși, net \+18\.20 USDT/, rap.linii[0]);
+  assert.match(rap.linii[0], /26 de boți închiși, net \+18,20 USDT/, rap.linii[0]);   /* v100.72: virgula zecimală; „26 de boți” */
   assert.equal(rap.n, 26);
   // un bot pe plus brut dar pe minus net
   const b2 = JT.din([{ ...boti[0], buOrderData: { ...boti[0].buOrderData, totalRealizedProfit: "0.1", totalFee: "-0.3" } }]);

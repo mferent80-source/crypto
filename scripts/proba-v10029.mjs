@@ -36,7 +36,7 @@ await test("istoricMoneda: simetric - unde castigi o spune (fara avertizare); su
   const b = OB.istoricMoneda(tr("ONG", [5.5, 5.5, -2, 5.5]), "ONG");
   assert.equal(b.avertizare, false); assert.match(b.text, /Pe ONG: 4 boți, 3 pe plus \(75%\), net \+/);
   const p = OB.istoricMoneda(tr("ABC", [-50, -50]), "ABC");
-  assert.equal(p.avertizare, false); assert.match(p.text, /Prea puțini/);
+  assert.equal(p.avertizare, false); assert.match(p.text, /prea puțini/i);   /* v100.72: „(prea puțini ca să spun ceva)” în aceeași frază */
   assert.match(OB.istoricMoneda([], "XYZ").text, /N-ai mai avut boți închiși pe XYZ/);
 });
 await test("subOOra: inchiderile din prima ora - de la 10, doar cand pierd; cu comisioanele lor", () => {
@@ -87,14 +87,14 @@ await test("pagina: poarta arata sfaturile (sub reguli)", () => {
   const i = app.indexOf("function grPoartaHtml("), corp = app.slice(i, app.indexOf("\nfunction ", i + 10));
   assert.match(corp, /p\.rez\.sfaturi/);
   // si chiar il deseneaza (nu doar il pomeneste)
-  const ctx = { $: () => null, grPlanDinScan: () => null, escapeHtml: (s) => String(s), grPoartaRez: { simbol: "KAITO_USDT_PERP", rez: { reguli: [{ cod: "moneda", ok: false, text: "Pe KAITO pierzi" }], trecut: false, sfaturi: ["Boții închiși în prima oră: 12"] } } };
+  const ctx = { Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (s) => String(s), grPoartaRez: { simbol: "KAITO_USDT_PERP", rez: { reguli: [{ cod: "moneda", ok: false, text: "Pe KAITO pierzi" }], trecut: false, sfaturi: ["Boții închiși în prima oră: 12"] } } };
   vm.createContext(ctx); vm.runInContext(corp + ";this.f=grPoartaHtml;", ctx);
   const h = ctx.f({ simbol: "KAITO_USDT_PERP" });
   assert.match(h, /💡 Boții închiși în prima oră: 12/); assert.match(h, /✗ Pe KAITO pierzi/);
   // cand pica DOAR istoricul monedei (fisa, planul, levierul in regula): nu „aș aștepta”, ci suma mai mica si stopul la plan
-  assert.match(h, /sumă mai mică/); assert.doesNotMatch(h, /aș aștepta/);
+  assert.match(h, /sumă mai mică/); assert.doesNotMatch(h, /aș aștepta/i);   /* v100.72: acțiunea începe cu majusculă („Aș aștepta …”) */
   ctx.grPoartaRez.rez.reguli.push({ cod: "verde", ok: false, text: "Fișa zice 🔴 NU PORNI" });
-  assert.match(ctx.f({ simbol: "KAITO_USDT_PERP" }), /aș aștepta/);
+  assert.match(ctx.f({ simbol: "KAITO_USDT_PERP" }), /aș aștepta/i);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

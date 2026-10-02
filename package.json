@@ -1,6 +1,6 @@
 {
   "name": "crypto-radar-webapp",
-  "version": "100.71.0",
+  "version": "100.72.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,7 +11,7 @@
     "dev": "npx --yes wrangler@4.137.0 pages dev public --ip 127.0.0.1",
     "deploy": "npx --yes wrangler@4.137.0 pages deploy public --project-name crypto",
     "predeploy": "npm test",
-    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo && npm run test:directie && npm run test:colector && npm run test:scenarii && npm run test:grid && npm run test:jurnaltrade && npm run test:semnale && npm run test:obiceiuri && npm run test:t212 && npm run test:v982 && npm run test:v99 && npm run test:v991 && npm run test:v992 && npm run test:v100 && npm run test:pretviu && npm run test:poza && npm run test:sltp && npm run test:v1016 && npm run test:v1017 && npm run test:v1018 && npm run test:v10016 && npm run test:v10017 && npm run test:v10018 && npm run test:v10019 && npm run test:v10020 && npm run test:v10021 && npm run test:v10022 && npm run test:v10023 && npm run test:v10024 && npm run test:v10025 && npm run test:v10026 && npm run test:v10027 && npm run test:v10028 && npm run test:v10029 && npm run test:v10030 && npm run test:v10031 && npm run test:v10032 && npm run test:v10033 && npm run test:v10034 && npm run test:v10035 && npm run test:v10036 && npm run test:v10037 && npm run test:v10038 && npm run test:v10039 && npm run test:v10040 && npm run test:v10042 && npm run test:research && npm run test:v10043 && npm run test:v10044 && npm run test:v10045 && npm run test:v10046 && npm run test:v10047 && npm run test:v10048 && npm run test:v10050 && npm run test:v10051 && npm run test:v10052 && npm run test:v10053 && npm run test:v10054 && npm run test:v10055 && npm run test:v10056 && npm run test:v10057 && npm run test:v10058 && npm run test:v10059 && npm run test:v10060 && npm run test:garda-texte && npm run test:v10061 && npm run test:garda-comentarii && npm run test:v10062 && npm run test:busola && npm run test:v10065 && npm run test:v10066 && npm run test:v10069 && npm run test:v10070 && npm run test:v10071",
+    "test": "npm run test:syntax && npm run test:garzi && npm run test:security && npm run test:server && npm run test:pionexjournal && npm run test:providers && npm run test:market && npm run test:bots && npm run test:tablou && npm run test:fifo && npm run test:directie && npm run test:colector && npm run test:scenarii && npm run test:grid && npm run test:jurnaltrade && npm run test:semnale && npm run test:obiceiuri && npm run test:t212 && npm run test:v982 && npm run test:v99 && npm run test:v991 && npm run test:v992 && npm run test:v100 && npm run test:pretviu && npm run test:poza && npm run test:sltp && npm run test:v1016 && npm run test:v1017 && npm run test:v1018 && npm run test:v10016 && npm run test:v10017 && npm run test:v10018 && npm run test:v10019 && npm run test:v10020 && npm run test:v10021 && npm run test:v10022 && npm run test:v10023 && npm run test:v10024 && npm run test:v10025 && npm run test:v10026 && npm run test:v10027 && npm run test:v10028 && npm run test:v10029 && npm run test:v10030 && npm run test:v10031 && npm run test:v10032 && npm run test:v10033 && npm run test:v10034 && npm run test:v10035 && npm run test:v10036 && npm run test:v10037 && npm run test:v10038 && npm run test:v10039 && npm run test:v10040 && npm run test:v10042 && npm run test:research && npm run test:v10043 && npm run test:v10044 && npm run test:v10045 && npm run test:v10046 && npm run test:v10047 && npm run test:v10048 && npm run test:v10050 && npm run test:v10051 && npm run test:v10052 && npm run test:v10053 && npm run test:v10054 && npm run test:v10055 && npm run test:v10056 && npm run test:v10057 && npm run test:v10058 && npm run test:v10059 && npm run test:v10060 && npm run test:garda-texte && npm run test:v10061 && npm run test:garda-comentarii && npm run test:v10062 && npm run test:busola && npm run test:v10065 && npm run test:v10066 && npm run test:v10069 && npm run test:v10070 && npm run test:v10071 && npm run test:v10072",
     "test:v1016": "node scripts/proba-v1016.mjs",
     "test:v992": "node scripts/proba-v992.mjs",
     "test:v991": "node scripts/proba-v991.mjs",
@@ -98,6 +98,7 @@
     "test:v10066": "node scripts/proba-v10066.mjs",
     "test:v10069": "node scripts/proba-v10069.mjs",
     "test:v10070": "node scripts/proba-v10070.mjs",
-    "test:v10071": "node scripts/proba-v10071.mjs"
+    "test:v10071": "node scripts/proba-v10071.mjs",
+    "test:v10072": "node scripts/proba-v10072.mjs"
   }
 }

@@ -109,7 +109,7 @@ await test("v95 raportul de duminica: dupa ora 20 (Bucuresti), o singura data, c
   await turaPiata(w.d, st, SAMBATA); assert.ok(!w.alerte.some((x) => /Săptămâna/.test(x.titlu)), "a trimis sambata");
   await turaPiata(w.d, st, DUMINICA); await turaPiata(w.d, st, DUMINICA + 2 * ORA);
   const r = w.alerte.filter((x) => /Săptămâna pieței/.test(x.titlu)); assert.equal(r.length, 1);
-  assert.match(r[0].mesaj, /FOMC Statement/); assert.match(r[0].mesaj, /Ce aș face eu/); assert.match(r[0].mesaj, /−7,75 USDT/);
+  assert.match(r[0].mesaj, /FOMC Statement/); assert.match(r[0].mesaj, /\n👉 (Crypto|Bursă|N-aș|Aș) /);   /* v100.72: acțiunile pe rânduri „👉 ” (era „Ce aș face eu:” cu trei lipite) */ assert.match(r[0].mesaj, /−7,75 USDT/);
 });
 await test("v95 socoteala: alerta de miscare se tine minte cu pretul; dupa 24 h i se pune pretul de atunci si se trimite socoteala", async () => {
   const w = lume({ vvvScade: true }), st = {};

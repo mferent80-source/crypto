@@ -58,7 +58,7 @@ await test("socotealaUrmarire: propuse si nepropuse separat (n, % pe plus, media
   l.push({ propus: true });   // nejudecata inca
   const s = GP.socotealaUrmarire(l);
   assert.equal(s.propuse.n, 40); assert.equal(Math.round(s.propuse.pePlus * 100), 75); assert.equal(s.nepropuse.n, 5); assert.equal(s.nejudecate, 1);
-  assert.match(s.text, /propuse 40/); assert.match(s.text, /nepropuse 5/); assert.match(s.text, /prea puține/);
+  assert.match(s.text, /propuse 40/); assert.match(s.text, /nepropuse 5/); assert.match(s.text, /puține cazuri/);   /* v100.72: „— puține cazuri încă” (era „— prea puține încă, zgomot”) */
   assert.match(GP.socotealaUrmarire([]).text, /începe/);
 });
 await test("tura: noteaza fiecare moneda si judeca notele vechi (si pe monedele care nu mai sunt sugerate); ruta pastreaza lista", async () => {
