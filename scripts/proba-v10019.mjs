@@ -1,6 +1,7 @@
 // Proba v100.19 (30.09, el: „1 grilă”): stopul din setarile propuse de fisa (si din proba ei) sta la O GRILA dincolo de marginile
 // gridului, nu la doua. Masurat inainte pe 12 monede (aceleasi lumanari, mediana pe monede): 2 grile tipic +2,5% / cea mai proasta
 // −19,6% / nevazute +5,9%; 1 grila +1,8% / −16,3% / +5,1%; 1/2 grila +1,7% / −14,4% / +2,4%. Gridul dupa plan ramane la 1/2 pas.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 

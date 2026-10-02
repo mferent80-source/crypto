@@ -7,6 +7,7 @@
 // jurnal), fisa = setarea probata, linia de langa pret fara ordin in simulator, costurile la bot tanar, histerezis pe planul de minus,
 // stop-loss la gridul propus SHORT, Scan-ul fara actiuni/marfuri tokenizate si pe gridul des.
 // LIB=<dosar> ruleaza proba pe alt cod (ex. versiunea veche scoasa din git) - asa s-a vazut picand inainte de reparatie.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

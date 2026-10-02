@@ -1,6 +1,7 @@
 // Proba v100.60 (01.10, el: „CE SFAT E ASTA, BOTUL E PE CREȘTERE DE MINUTE BUNE … PLUS REZOLVĂ COLECTORUL ȘI LIMITA”).
 // CRV long, 16:50 -> 18:09 UTC: distanta pana la lichidare 11,2 % -> 12,4 % (pretul urca), iar Consilierul scria
 // „Lichidarea s-a apropiat la 12.5%, iar lichidarea la 12.5%” + „N-aș mai lăsa poziția să crească”.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

@@ -2,6 +2,7 @@
 // Regimul spune sensul miscarii; semaforul, sfaturile, fereastra indicatorilor si alerta pe Discord tin cont de el.
 // Masuratoarea care sta in spate: scripts/grid-directie-real.mjs (40 monede, 6480 ferestre: cu 59%, contra 50%, liniste 56%).
 // Rulare: node scripts/cu-botul-v963.mjs
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";

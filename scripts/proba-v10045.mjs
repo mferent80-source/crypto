@@ -1,5 +1,6 @@
 // Proba v100.45 (01.10, el: „sfaturile să fie adaptate și personalizate pentru fiecare monedă” + specul aprobat
 // docs/superpowers/specs/2026-10-01-consiliere-personalizata-design.md, pachetul 1: profilul monedei + planul potrivit monedei).
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

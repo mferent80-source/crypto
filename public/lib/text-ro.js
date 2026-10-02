@@ -1,0 +1,40 @@
+// Cifrele din textele sfaturilor (v100.61, specul „sfaturi concise”, 02.10): un singur loc pentru virgula zecimala, minusul
+// tipografic („−”) si unitati - folosit de pagina si de colector. Preturile NU trec pe aici: raman cu zecimalele Pionex (fmtPret / grPret).
+// Orice valoare lipsa sau stricata (null, NaN, Infinity) iese „—”, niciodata „NaN%” sau „null USDT”.
+var TextRo = (function () {
+  "use strict";
+  function nr(v) {
+    if (typeof v === "number") return isFinite(v) ? v : null;
+    if (typeof v !== "string" || !v.trim()) return null;
+    var x = Number(v); return isFinite(x) ? x : null;
+  }
+  function zec(z, implicit) { return typeof z === "number" && z >= 0 && z <= 6 ? Math.floor(z) : implicit; }
+  // „12,4” / „−0,8”; un zero rotunjit nu poarta semn („0,0”, nu „−0,0”)
+  function num(x, z) {
+    x = nr(x); if (x === null) return "—";
+    var s = Math.abs(x).toFixed(zec(z, 1));
+    return (x < 0 && Number(s) !== 0 ? "−" : "") + s.replace(".", ",");
+  }
+  // x e deja in procente: pct(12.4) -> „12,4%”
+  function pct(x, z) { return nr(x) === null ? "—" : num(x, z) + "%"; }
+  function cuPlus(x, z, implicit) { x = nr(x); return x !== null && x > 0 && Number(Math.abs(x).toFixed(zec(z, implicit))) !== 0 ? "+" : ""; }
+  function pctSemn(x, z) { return nr(x) === null ? "—" : cuPlus(x, z, 1) + num(x, z) + "%"; }
+  function ori(x, z) { return nr(x) === null ? "—" : num(x, z) + "×"; }
+  function usdt(x, z) { z = zec(z, 2); return nr(x) === null ? "—" : cuPlus(x, z, 2) + num(x, z) + " USDT"; }
+  // „1.234 lei” (rotunjit la leu, mii cu punct); cuSemn -> „+1.234 lei”
+  function lei(x, cuSemn) {
+    x = nr(x); if (x === null) return "—";
+    var r = Math.round(Math.abs(x)), s = String(r).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return (x < 0 && r !== 0 ? "−" : cuSemn && x > 0 && r !== 0 ? "+" : "") + s + " lei";
+  }
+  // durata in ms: sub o ora „45 min”, altfel „1 h” / „5,3 h”
+  function ore(ms) {
+    ms = nr(ms); if (ms === null || ms < 0) return "—";
+    var m = Math.round(ms / 60000);
+    if (m < 60) return Math.max(1, m) + " min";
+    var h = Math.round(ms / 360000) / 10;
+    return (h % 1 === 0 ? String(h) : num(h, 1)) + " h";
+  }
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore };
+})();
+if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

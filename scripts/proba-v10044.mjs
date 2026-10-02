@@ -2,6 +2,7 @@
 // Pe datele reale (CRV, 30.09 ~23:10) Tabloul zicea „🟢 ȚINE — nimic nu cere o mișcare” peste cartela Stopul rosie „peste plan”,
 // iar fisa zicea „trend long, tare” langa „Direcția pieței: laterală”. Consiliu.alcatuieste aduna TOATE sursele intr-un verdict,
 // o actiune cu bani, 3 motive dupa banii in joc (cu increderea masurata) si restul pliat - fara sa se piarda vreun sfat.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

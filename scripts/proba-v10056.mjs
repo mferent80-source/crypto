@@ -1,5 +1,6 @@
 // Proba v100.56 (01.10, el: actiunile T212 - pachetul 5: graficul actiunii si autopsia,
 // docs/superpowers/plans/2026-10-01-actiuni-pachetul-5-graficul-si-autopsia.md).
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

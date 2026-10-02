@@ -103,6 +103,7 @@ function incarca(fisier, nume) {
   const src = fs.readFileSync(path.join(RAD, "public", "lib", fisier), "utf8");
   return new Function(src + "; return " + nume + ";")();
 }
+incarca("text-ro.js", "TextRo");   // v101.41 (sfaturi concise): cifrele textelor (globalThis.TextRo), inaintea modulelor care scriu sfaturi
 const Alerte = incarca("alerte.js", "Alerte");
 const IndicatoriBot = incarca("indicatori-bot.js", "IndicatoriBot");
 const Acasa = incarca("acasa.js", "Acasa");   // v93: rezumatul zilnic al actiunilor Nasdaq 100 (Home)   // v91.11: "Mediul botului" (acelasi ca in Tablou)

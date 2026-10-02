@@ -8,6 +8,7 @@
 //    stopul −15% dar Biletul pe k×ATR (COKE: 3% risc in loc de 1%) · tinta pozitiei „fugea” cu pretul · maximul de dupa cumparare
 //    includea ziua cumpararii · contrafactualul cerea lumanari pe tickerul gresit (LIGHTER_USDT_PERP) din ora in ora.
 // LIB=<dosar> / RAD=<dosar> ruleaza proba pe alt cod (versiunea veche scoasa din git) - asa s-a vazut picand.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

@@ -5,6 +5,7 @@
 //   - verdictul scurt + „celelalte motive" pe randul lor; „Acum, concret" in 3 cartele (Stopul, Gridul, Miscarea)
 //   - Directia pietei sub „Ce spun indicatorii"
 // Rulare: node scripts/proba-v100.mjs
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 

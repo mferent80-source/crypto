@@ -1,6 +1,7 @@
 // Proba v100.50 (01.10, el: „fă tot” - pachetul 3: o singura voce, docs/superpowers/plans/2026-10-01-pachetul-3-o-singura-voce.md).
 // I-479 motivele de acelasi nivel dupa banii MASURATI; I-473 de ce s-a schimbat verdictul; I-474 Consilierul in colector (poza, alerta,
 // KV cons); I-472 jurnalul deciziilor.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

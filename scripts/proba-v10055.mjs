@@ -1,5 +1,6 @@
 // Proba v100.55 (01.10, el: actiunile T212 - pachetul 4: intrarea - poarta si ideile,
 // docs/superpowers/plans/2026-10-01-actiuni-pachetul-4-intrarea.md).
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

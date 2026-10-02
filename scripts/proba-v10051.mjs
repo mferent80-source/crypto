@@ -1,6 +1,7 @@
 // Proba v100.51 (01.10, el: „fă tot” - pachetul 4: graficul si autopsia, docs/superpowers/plans/2026-10-01-pachetul-4-graficul-si-autopsia.md).
 // I-470 zona de valoare + pivotii confirmati (+ intrebarea din laborator); I-476 ziua obisnuita + liniile Consilierului pe grafic;
 // I-477 perechile reale vs estimarea fisei + factorul pe moneda; I-478 autopsia sfaturilor gresite.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

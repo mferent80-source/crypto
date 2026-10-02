@@ -1,5 +1,6 @@
 // Proba v100.54 (01.10, el: actiunile T212 - pachetul 3: o singura voce pe pozitie,
 // docs/superpowers/plans/2026-10-01-actiuni-pachetul-3-o-singura-voce.md).
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

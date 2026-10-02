@@ -5,6 +5,7 @@
 // pret ramane fara ordin; la long, perechea se numara la fiecare VANZARE (si a loturilor de la pornire), la short la fiecare CUMPARARE.
 // Radarul si GRID-FISA tratau numarul ca intervale -> o linie in plus, toate decalate. Conventia de acum: in calculele Radarului N =
 // intervale; in Pionex se scrie N + 1; „row” citit din Pionex = linii.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";

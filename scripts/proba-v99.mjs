@@ -10,6 +10,7 @@
 //      miscarea live (x fata de obisnuit) - cu cifre, nu cu „ce as face" general
 //   6. poza: nivelul „asteapta" al botului nu ajunge pe pagina alerts ca nivel (null = fara verdict)
 // Fara retea. Rulare: node scripts/proba-v99.mjs
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { construiestePoza } from "./lib/poza.mjs";

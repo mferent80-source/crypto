@@ -3,6 +3,7 @@
 //   2) Tabloul, cartela „Stopul”: cat te costa stopul atins fata de plan (la LIGHTER eticheta era verde „pus”)
 //   3) tinta din Pionex fata de planul pe plus (la LIGHTER: 5,112, peste grid; planul +5,5 atins la 02:07, neincasat)
 //   4) gridul fata de plan si fata de miscarea obisnuita a monedei, cu levierul care se potriveste
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 

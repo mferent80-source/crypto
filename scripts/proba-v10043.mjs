@@ -5,6 +5,7 @@
 // I-468 frana contului: −20 USDT/zi (ora Romaniei), −60 pe 7 zile, 3 inchise pe minus la rand (pragurile lui, schimbabile din pagina);
 //       netul inchisilor + pierderea celor deschisi; avertizeaza (alerta o data pe zi + rand in poarta), nu blocheaza.
 // I-467 „ce as face eu” cu banii pe masa: cartelele Stopul / Gridul primesc cel mai rau caz in USDT si ce cedezi.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

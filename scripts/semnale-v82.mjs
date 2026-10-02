@@ -1,5 +1,6 @@
 // Probele v82: semnalele botului (public/lib/semnale-bot.js) - semafor, muta gridul,
 // avertizarea BTC, aglomerarea, ia profit, si socoteala semnalelor.
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
