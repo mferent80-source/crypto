@@ -19,7 +19,7 @@ const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, D
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
 // pachetul 2: sfaturi = sfaturi.js, consiliu-2 = Consilierul cu sfaturile reale, todo = „Ce ai de făcut acum”, server = avertismentele;
 // „alerte” = titlurile/textele din regulile alertelor (alerte.js), strict la pachetul 3)
-export const STRICT = new Set(["semafor", "cartele", "consiliu"]);
+export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi"]);
 
 // ---- regulile ----
 export const REGULI = {
@@ -39,7 +39,7 @@ export const INTERZIS = [
   [/!(?!=)/, "semn de exclamare"],
   [/[Oo]pritor/, "„opritor” (vocabular: „stopul”)"],
   [/\bOprește botul\b|\bIeși acum\b|\bopresc\b/, "„oprește / ieși” (vocabular: „închide botul”)"],
-  [/\bvezi\b|mai jos/i, "trimitere „vezi … / mai jos”"],
+  [/\bvezi\b|(?<!\btot )\bmai jos\b/i, "trimitere „vezi … / mai jos”"],
   [/s-a apropiat|a ajuns să/, "umplutură („s-a apropiat”, „a ajuns să”)"],
   [/frecvență din trecut|nu o promisiune|un semn, nu o regulă|nu o dovadă/i, "avertizarea comună (locul ei e în legendă)"],
   [/ÎMPOTRIVA|\bSUB gridul|\bPESTE gridul/, "majuscule de strigat"],

@@ -6074,7 +6074,7 @@ function renderTabloSfaturi(){
     fisa:tbFisa.botId===b.id?tbFisa.fisa:null,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,acum:Date.now()}));
   tbStare.sfaturiLista=lista;
   if($("tbSfaturiCard"))$("tbSfaturiCard").hidden=true;   // v100.44 (I-465): sfaturile intra in Consilier (motive sau „Restul”)
-  el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(s.faCe)+'</p>':'')+(s.deCe?'<p class="tbSub">'+escapeHtml(s.deCe)+'</p>':'')+'</div>'}).join("");
+  el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(s.faCe)+'</p>':'')+(s.sursa?'<p class="tbSub">'+escapeHtml(s.sursa)+'</p>':'')+'</div>'}).join("");
   tbRenderTodo();
 }
 // v86: "Ce ai de facut acum" - sfaturile, avertismentele serverului, alertele colectorului (stranse) si planul

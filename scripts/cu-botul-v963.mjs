@@ -55,10 +55,10 @@ await test("avertismentele reale bat 🟢: lichidare aproape + miscare cu botul 
   const r = S.semafor({ bot: bot({ distantaLichidarePct: 6 }), fisa: { regim: SUS } }); assert.equal(r.nivel, "iesi"); assert.equal(r.cod, "lichidare");
 });
 await test("sfaturile din Tablou: cu botul = ton 'bine' si ce faci; contra = 'atentie' cu 'impotriva botului'", async () => {
-  const cu = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: SUS } }).find((x) => /Mișcare mare/.test(x.titlu));
-  assert.equal(cu.ton, "bine"); assert.match(cu.titlu, /CU botul/); assert.match(cu.faCe, /opritorul la prețul de zero/);
-  const co = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: JOS } }).find((x) => /Mișcare mare/.test(x.titlu));
-  assert.equal(co.ton, "atentie"); assert.match(co.titlu, /împotriva botului/);
+  const cu = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: SUS } }).find((x) => /^Mișcare /.test(x.titlu));   /* v100.62: titlul cu cifra */
+  assert.equal(cu.ton, "bine"); assert.match(cu.titlu, /^Mișcare cu botul: /); assert.match(cu.faCe, /stopul mutat la zero-ul botului/);
+  const co = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: JOS } }).find((x) => /^Mișcare /.test(x.titlu));
+  assert.equal(co.ton, "atentie"); assert.match(co.titlu, /^Mișcare contra botului: /);
 });
 await test("fereastra indicatorilor: randul Miscarea e verde 'miscare cu botul', rosu 'contra botului'", async () => {
   const cu = I.mediu({ regim: SUS }, "long").find((x) => x.k === "miscare"), co = I.mediu({ regim: JOS }, "long").find((x) => x.k === "miscare");

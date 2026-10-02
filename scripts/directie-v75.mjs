@@ -103,7 +103,7 @@ await test("rezumat: 4H si 1D amandoua impotriva unui bot long -> spune IMPOTRIV
   ];
   const z = D.rezumat(r, "long");
   assert.equal(z.ton, "rau");
-  assert.match(z.text, /ÎMPOTRIVA/);
+  assert.match(z.text, /^Piața merge împotriva botului \(/); /* v100.62: fara „ÎMPOTRIVA” cu majuscule */
 });
 
 await test("rezumat: fara intervale mari -> spune ca nu stie, nu inventeaza", () => {

@@ -248,7 +248,7 @@ await test("🟡 copia KV si pe ALT disc (E:) - arhiva botilor nu mai sta doar p
 
 await test("🟡 sfaturi pe bani: zero-ul pe minus = TAKE-PROFIT (nu stop); lichidarea DEPASITA = IESI; „ai ajuns pe zero” nu in prima ora", () => {
   const SF = new Function("GridCalcul", `${lib("sfaturi.js")}; return Sfaturi;`)(G);
-  assert.match(lib("sfaturi.js"), /pune în Pionex take-profit-ul botului la " \+ pret\(z\.pretZero\) \+ " \(nu stop:/);
+  assert.match(lib("sfaturi.js"), /Aș pune take-profit-ul botului la " \+ pret\(z\.pretZero\) \+ " ca să ies fără pierdere \(nu stop:/); /* v100.62: la persoana I */
   assert.doesNotMatch(lib("sfaturi.js"), /take-profit \/ stop la/);
   const SB2 = new Function("GridCalcul", `${lib("semnale-bot.js")}; return SemnaleBot;`)(G);
   const s = SB2.semafor({ bot: { directie: "long", distantaLichidarePct: -20, lichidareDepasita: true }, fisa: { regim: { miscare: false } } });

@@ -1,5 +1,6 @@
 // Probele pentru scenariile de pret (public/lib/scenariu.js) si pentru
 // sfaturile "ce ti-as spune eu" (public/lib/sfaturi.js).
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
@@ -105,13 +106,13 @@ const fisaF = (o) => Object.assign({ dir: "long", directie: { dir: "long", tarie
   verdict: { nivel: "porneste", motive: [] }, setare: { levierSigur: 4 } }, o || {});
 await test("v80.1 trend: trendul contra botului long -> atentie, cu ce face gridul pe scadere; cu botul -> bine", () => {
   const contra = sfaturiPentru({ bot: { directie: "long" }, fisa: fisaF({ directie: { dir: "short", tarie: "tare", motive: ["4h: EMA20 sub EMA50, EMA50 coboară"] } }) }).find((x) => /[Tt]rendul/.test(x.titlu));
-  assert.ok(contra, "lipseste sfatul de trend"); assert.equal(contra.ton, "atentie"); assert.match(contra.text, /cumpără la fiecare nivel/);
+  assert.ok(contra, "lipseste sfatul de trend"); assert.equal(contra.ton, "atentie"); assert.equal(contra.text, "4h: EMA20 sub EMA50, EMA50 coboară."); /* v100.62: textul = masuratoarea; „cumpără la fiecare grilă” e in legenda Consilierului */
   const cu = sfaturiPentru({ bot: { directie: "long" }, fisa: fisaF() }).find((x) => /[Tt]rendul/.test(x.titlu));
   assert.equal(cu.ton, "bine");
 });
 await test("v80.1 regim: miscare mare -> atentie 'nu adauga bani acum'; liniste -> frecventa cu n", () => {
   const m = sfaturiPentru({ fisa: fisaF({ regim: { r4h: 2.4, r24h: 1.2, miscare: true }, liniste: { linisteAcum: false } }) }).find((x) => /[Mm]ișcare/.test(x.titlu));
-  assert.ok(m); assert.equal(m.ton, "atentie"); assert.match(m.faCe, /nu adăuga/i, "indemnul sta in 'ce as face eu'");
+  assert.ok(m); assert.equal(m.ton, "atentie"); assert.match(m.faCe, /^N-aș adăuga bani/, "indemnul sta in 'ce as face eu'"); /* v100.62: la persoana I */
   const l = sfaturiPentru({ fisa: fisaF() }).find((x) => /[Ll]iniște/.test(x.titlu));
   assert.ok(l); assert.match(l.text, /3 din 13/);
 });
@@ -128,7 +129,7 @@ await test("v80.1 costuri, setare, zero: funding care mananca grilele -> atentie
     geom: { netPct: 0.0022, preaDese: true, grile: 93, mod: "aritmetic" }, bot: { levier: 5, directie: "long" }, fisa: fisaF(), zero: { pretZero: 0.3481, distantaZeroPct: 0.0234, iei: 83.3 } });
   const c = s.find((x) => /[Cc]osturile/.test(x.titlu)); assert.ok(c); assert.equal(c.ton, "atentie");
   const st = s.find((x) => /[Ss]etarea/.test(x.titlu)); assert.ok(st); assert.match(st.text, /0,22%/); assert.match(st.text, /5×/);
-  const z = s.find((x) => /zero/.test(x.titlu)); assert.ok(z); assert.match(z.titlu, /0\.3481/); assert.match(z.text, /83\.30 USDT/);
+  const z = s.find((x) => /zero/.test(x.titlu)); assert.ok(z); assert.match(z.titlu, /0\.3481/); assert.match(z.text, /83,30 USDT/); /* v100.62: virgula zecimala */
 });
 
 await test("lichidare la 5% -> primul sfat e critic; totul in regula -> 'Nimic urgent'", () => {
@@ -158,7 +159,7 @@ await test("niciun sfat nu contine NaN, undefined sau null scris ca text", () =>
     { bot: { profitTotal: null, finantare: null }, funding: 0.001 }, { brut: { perVolume: null } },
     { fisa: { dir: null, directie: null, regim: null, liniste: null, verdict: null, setare: null }, costuri: { grile24h: null, fundingZi: null, comisionZi: null, netZi: null }, zero: { pretZero: null, iei: null }, geom: null, ritm: { grile24h: null, medieZi: null, zile: 3 } }];
   for (const v of variante) for (const s of sfaturiPentru(v)) {
-    const t = s.titlu + " " + s.text + " " + (s.deCe || "") + " " + (s.faCe || "");
+    const t = s.titlu + " " + s.text + " " + (s.sursa || "") + " " + (s.faCe || "");
     assert.ok(!/NaN|undefined|null/.test(t), `sfat stricat: ${t}`);
   }
 });
