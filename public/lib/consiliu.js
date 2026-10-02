@@ -304,9 +304,13 @@ var Consiliu = (function () {
       if (!k || !k.cod) return;
       cand.push({ cod: k.cod, nivel: k.nivel === "iesi" || k.nivel === "atentie" ? k.nivel : "bine", c: k.nivel === "iesi" ? "r" : k.nivel === "atentie" ? "g" : "v", titlu: mare(k.motiv), text: "", faCe: "", scurt: mic(k.motiv), dinSem: true });
     });
-    if (niv && niv.stopAtins && !cand.some(function (m) { return m.cod === "stop-plan" || m.cod === "trail-plan"; }))
+    if (niv && niv.stopAtins && !cand.some(function (m) { return m.cod === "stop-plan" || m.cod === "trail-plan"; })) {
       // v100.69: explicatia = sursa stopului, fara socoteala alegerii (aceea ramane intreaga langa preturi, pe pagina)
-      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + PA(niv.stopPozitie) + ")", text: String(niv.sursaTrail || "").split(" · ")[0], faCe: "Aș ieși, tot sau jumătate, cum cere stopul care urcă.", scurt: "stopul care urcă e atins" });
+      // v100.71 (revizia pachetului 4, I3): sursa din profil, pe date reale, avea 179 de caractere (paranteze in paranteze) - aici, scurta
+      var srs = String(niv.sursaTrail || "").split(" · ")[0];
+      if (/cât coboară acțiunea/.test(srs)) srs = srs.split(" — ")[0] + ": coborârea obișnuită a acțiunii pe 5 zile, din profilul ei";
+      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + PA(niv.stopPozitie) + ")", text: srs, faCe: "Aș ieși, tot sau jumătate, cum cere stopul care urcă.", scurt: "stopul care urcă e atins" });
+    }
     (Array.isArray(x.prob) ? x.prob : []).forEach(function (r) {
       if (!r || !r.titlu) return;
       if (/Atinge stopul mâine/.test(r.titlu) && nr(r.p) !== null && r.p >= 0.25) cand.push({ cod: "stop-maine", nivel: "atentie", c: "g", titlu: r.titlu + ": " + Math.round(r.p * 100) + "%", text: r.text || "", faCe: "N-aș adăuga: stopul e în mișcarea obișnuită a unei zile și poate fi atins mâine.", scurt: "stopul poate fi atins mâine (" + Math.round(r.p * 100) + "%)" });
@@ -445,6 +449,6 @@ var Consiliu = (function () {
     return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
       ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
   }
-  return { LEGENDA: LEGENDA, LEGENDA_ACTIUNI: LEGENDA_ACTIUNI, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  return { LEGENDA: LEGENDA, LEGENDA_ACTIUNI: LEGENDA_ACTIUNI, LEGENDA_COMUNA: LEG_COMUNA, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

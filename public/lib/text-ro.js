@@ -35,6 +35,9 @@ var TextRo = (function () {
     var h = Math.round(ms / 360000) / 10;
     return (h % 1 === 0 ? String(h) : num(h, 1)) + " h";
   }
-  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore };
+  // v100.71 (revizia pachetului 4, I1): numarul cu substantivul lui - „1 caz”, „4 cazuri”, „45 de cazuri”, „101 cazuri”
+  // („de” cand ultimele doua cifre sunt 20–99, sau 00 de la 100 in sus)
+  function cate(n, sg, pl) { var k = Math.round(Number(n)); if (!isFinite(k)) return "— " + pl; var r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore, cate: cate };
 })();
 if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

@@ -210,8 +210,9 @@ var ActiuniSemnale = (function () {
     if (p.trailPct > 0 && p.trailPct < 100) return { stop: Math.round(baza * (1 - p.trailPct / 100) * 1e6) / 1e6, alTau: true };
     return niv.stop > 0 && niv.stop < baza ? { stop: niv.stop, alTau: false } : null;
   }
-  // „1 caz”, „4 cazuri”, „45 de cazuri”, „101 cazuri” (de: ultimele doua cifre 20–99 sau 00)
-  function nrCazuri(n) { var r = n % 100; return n === 1 ? "1 caz" : n + (r >= 20 || (r === 0 && n >= 100) ? " de cazuri" : " cazuri"); }
+  // „1 caz”, „4 cazuri”, „45 de cazuri”, „101 cazuri” - v100.71: TextRo.cate (o singura regula), cu rezerva cand TextRo nu e incarcat
+  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
+  function nrCazuri(n) { return cate(n, "caz", "cazuri"); }
   function textSituatie(r) {
     if (!r || !r.toate || !r.toate.n) return "În situații ca asta" + (r && r.eticheta ? " (" + r.eticheta + ")" : "") + ": niciun trade al tău judecat încă.";
     var g = r.toate, Pc = function (x) { return (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };
@@ -488,7 +489,7 @@ var ActiuniSemnale = (function () {
     if (!l.length) return ["Acțiuni (Trading 212): niciun trade închis săptămâna asta."];
     var tot = 0, com = 0, plus = 0, rau = null;
     l.forEach(function (t) { tot += t.rezultat || 0; com += t.comisioane || 0; if (t.rezultat > 0) plus++; if (!rau || t.rezultat < rau.rezultat) rau = t; });
-    var linii = ["Acțiuni (Trading 212): " + l.length + " trade-uri, " + plus + " pe plus, rezultat real " + L(tot) + " (comisioane de conversie " + Math.round(com).toLocaleString("ro-RO") + " lei)."];
+    var linii = ["Acțiuni (Trading 212): " + cate(l.length, "trade", "trade-uri") + ", " + plus + " pe plus, rezultat real " + L(tot) + " (comisioane de conversie " + Math.round(com).toLocaleString("ro-RO") + " lei)."];
     if (rau && rau.rezultat < 0) linii.push("Cea mai mare pierdere: " + (rau.simbol || rau.ticker) + " " + L(rau.rezultat) + " (" + P(rau.pct) + ")" + (rau.pct !== null && rau.pct <= -0.2 ? ", peste −20%: aș scrie stopul încă de la cumpărare." : "."));
     return linii;
   }
@@ -504,6 +505,36 @@ var ActiuniSemnale = (function () {
     if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
     return mx;
   }
-  return { usd: usd, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  // ---------------- v100.71 (revizia pachetului 4, I4): „Ce aș face eu” de pe pagina T212, ca functii pure ----------------
+  // (inainte erau scrise in t212-ecran.js, unde nici garda, nici proba nu le vedeau: 3 treceau de 110)
+  // poarta de cumparare: nivel = cumpara | nu | asteapta | fara-date; tot = contul in lei (plafonul 20%)
+  function facPoarta(nivel, tot) {
+    var cat = tot > 0 ? Math.round(tot * 0.2).toLocaleString("ro-RO") + " lei (20% din cont)" : "20% din cont";
+    return nivel === "cumpara" ? "Aș cumpăra cel mult " + cat + " și aș pune stopul scris imediat după."
+      : nivel === "nu" ? "N-aș cumpăra acum: la acțiuni doar long, deci aș aștepta să se întoarcă trendul."
+      : nivel === "asteapta" ? "Aș aștepta până se rezolvă motivele de mai sus, mai ales planul." : "Aș aștepta prețurile zilnice: fără ele nu judec.";
+  }
+  // „Cât te-ar fi salvat stopul”: fara = niciun stop n-ar fi ajutat; b = varianta cea mai buna {et, dif, taiate} -> {fac, nota}
+  function facStop(fara, b) {
+    if (fara) return { fac: "N-aș pune un stop strâns: aș pune frâna pe cumpărările în plus pe minus și pe pozițiile prea mari (NPA).",
+      nota: "Pe trade-urile tale niciun stop, nici fix, nici care urcă, n-ar fi ajutat în total: tăia prea multe care își reveneau." };   // de unde au venit pierderile mari o spune actiunea
+    var t = Math.round(Number(b && b.taiate) || 0);
+    return { fac: "Aș folosi stopul „" + (b && b.et || "") + "” la fiecare cumpărare.",
+      nota: "Pe trade-urile tale ar fi ieșit " + L(b && b.dif) + " față de ce ai făcut; ar fi tăiat și " + cate(t, "trade", "trade-uri") + " care până la urmă " + (t === 1 ? "a ieșit" : "au ieșit") + " pe plus." };
+  }
+  // „Cât ai ținut”: sfatul din proba cu stop - judecat = sunt trade-uri rejucate; b = varianta cea mai buna -> {fac, nota}
+  function sfatStop(judecat, b) {
+    if (!judecat || !b) return { fac: "Aș avea un plan de ieșire scris la fiecare cumpărare.", nota: "" };
+    return b.dif > 0 ? { fac: "Aș pune stopul „" + b.et + "” la fiecare cumpărare.", nota: "Pe trade-urile tale ar fi adus " + L(b.dif) + "." }
+      : { fac: "N-aș cumpăra în plus pe minus și n-aș pune mult pe o singură acțiune: de acolo au venit pierderile mari (NPA).", nota: "" };
+  }
+  // „Dacă ascultai de poartă”: bine = doar pe 🟢 ar fi iesit mai bine; dif = cu cat (lei)
+  function facPoartaIstoric(bine, dif) {
+    return bine ? "Aș cumpăra doar când poarta zice 🟢: pe trade-urile tale ar fi însemnat " + L(dif) + " față de ce ai făcut."
+      : "Aș folosi poarta doar ca frână (după mișcare, recumpărat imediat): în total n-ar fi ajutat.";
+  }
+  // „Regulile tale”: grupa cea mai scumpa
+  function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
+  return { usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

@@ -26,7 +26,12 @@ export function situatiiActiuni(pune) {
   sem("semafor: trend în jos", P({ pretMediu: 28, pret: 29 }), coboara);
   sem("semafor: trend în sus, fără plan", P({ pretMediu: 22, pret: 36 }), urca);
   sem("semafor: trend în sus, cu plan", P({ pretMediu: 22, pret: 36, plan: { trailPct: 15 } }), urca);
-  sem("semafor: mișcare mare în jos", P({ pretMediu: 25, pret: 24 }), miscareJos);
+  // v100.71 (revizia pachetului 4, I4): ramura ATENȚIE „mișcare mare în jos” pe trend in sus (inainte fixtura cadea pe „trend în jos”);
+  // situatia isi verifica ramura (codul componentei), altfel garda se opreste
+  const misJos = urca.slice(0, 299).concat([Object.assign({}, urca[299], { c: urca[299].c * 0.93, l: urca[299].c * 0.92 })]);
+  const rMis = sem("semafor: mișcare mare în jos", P({ pretMediu: misJos[299].c * 1.01, pret: misJos[299].c }), misJos);
+  if (!(rMis.componente || []).some((c) => c.cod === "miscare-jos") || (rMis.componente || []).some((c) => /^trend-jos/.test(c.cod))) throw new Error("garda-actiuni: „mișcare mare în jos” nu e pe ramura ei");
+  sem("semafor: mișcare mare în jos, trend lateral", P({ pretMediu: 25, pret: 24 }), miscareJos);
   sem("semafor: −24% fără plan", P({ pretMediu: 29, pret: 22 }), lateral);
   sem("semafor: fără prețuri zilnice", P({ pretMediu: 29, pret: 28 }), zilnice(20, () => 28));
   sem("semafor: fără prețul poziției", P({ pret: 0 }), null);
@@ -46,10 +51,12 @@ export function situatiiActiuni(pune) {
   const tr = (i, o) => Object.assign({ id: "t" + i, ticker: i % 3 ? "APLD_US_EQ" : "NVDA_US_EQ", simbol: i % 3 ? "APLD" : "NVDA", cost: 1000 + 100 * (i % 7), rezultat: (i % 5 ? 1 : -1) * (20 + i), pct: (i % 5 ? 0.02 : -0.03),
     pornit: T0 - (200 - i) * ZI + (i % 4) * 5 * ORA, inchis: T0 - (195 - i) * ZI, durataOre: 120, comisioane: 3, extCumparare: i % 9 === 0 }, o || {});
   const inchise = Array.from({ length: 90 }, (_, i) => tr(i));
-  const cf = {}; inchise.forEach((t, i) => { cf[t.id] = { sit: i % 2 ? "sus|calm|departe" : "jos|dupa-miscare|langa-max", nivel: i % 4 ? "cumpara" : "nu", greseli: i % 5 ? [] : ["dupa-miscare"] }; });
+  // v100.71 (I4): „lateral|dupa-miscare|departe” are 6 cazuri (sub 10 -> „(puține cazuri)”); celelalte doua stari, cate ~40
+  const cf = {}; inchise.forEach((t, i) => { cf[t.id] = { sit: i < 12 && i % 2 === 0 ? "lateral|dupa-miscare|departe" : i % 2 ? "sus|calm|departe" : "jos|dupa-miscare|langa-max", nivel: i % 4 ? "cumpara" : "nu", greseli: i % 5 ? [] : ["dupa-miscare"] }; });
   const ts = (sit, s, tk) => pune(sit, "actiuni", "textSituatie", { t: AS.textSituatie(AS.situatiiCaAsta(inchise, cf, s, tk)) }, [["t", "detalii"]]);   // un rand de date („📊”), ca randurile 🎲
   ts("situații ca asta: multe, cu acțiunea", "sus|calm|departe", "APLD_US_EQ");
-  ts("situații ca asta: puține", "jos|dupa-miscare|langa-max", "NVDA_US_EQ");
+  ts("situații ca asta: puține", "lateral|dupa-miscare|departe", "NVDA_US_EQ");
+  ts("situații ca asta: lângă maxim, după mișcare", "jos|dupa-miscare|langa-max", "NVDA_US_EQ");
   ts("situații ca asta: niciunul", "lateral|calm|departe", null);
   Object.keys(AS.TEXT).forEach((k) => pune("greșeala: " + k, "actiuni", "greseli." + k, { t: AS.TEXT[k] }, [["t", "titlu"]]));
   const rp = AS.reguliPersonale(inchise.map((t, i) => Object.assign({}, t, { rezultat: i % 4 === 0 ? -80 : 30 })), "Europe/Bucharest");
@@ -83,7 +90,10 @@ export function situatiiActiuni(pune) {
   pune("stopul care urcă: sub 30 de trade-uri", "actiuni", "alegeTrail.putine", { t: AS.alegeTrail(inU(12), cfU(12, -0.05)).motiv }, [["t", "deCe"]]);
   pune("stopul care urcă: profilul câștigă", "actiuni", "alegeTrail.prof", { t: AS.alegeTrail(inU(40), cfU(40, -0.02)).motiv }, [["t", "deCe"]]);
   pune("stopul care urcă: −15% rămâne", "actiuni", "alegeTrail.u15", { t: AS.alegeTrail(inU(40), cfU(40, -0.12)).motiv }, [["t", "deCe"]]);
-  pune("stopul care urcă: sursa din profil", "actiuni", "trailPozitie.prof", { t: AS.trailPozitie({ cheie: "prof", motiv: "" }, { dist: 0.118, sursa: "profilul NVDA pe 2 ani" }).sursaTrail }, [["t", "detalii"]]);
+  // v100.71 (I3): sursa din ProfilMoneda.sursa REAL („profilul NVDA: 502 zile de bursă (bare zilnice)”), cu motivul alegerii lipit dupa „ · ”
+  const PSR = { dist: 0.118, sursa: globalThis.ProfilMoneda.sursa({ piata: "actiuni", simbol: "NVDA_US_EQ", zile: 502 }) };
+  const TPR = AS.trailPozitie(AS.alegeTrail(inU(40), cfU(40, -0.02)), PSR);
+  pune("stopul care urcă: sursa din profil", "actiuni", "trailPozitie.prof", { t: TPR.sursaTrail }, [["t", "detalii"]]);
 
   // consilierul: piata, sfaturile pe pozitie si pe bot, situatiile, rezumatul de dimineata, socoteala
   const qqq = urca.slice(-60), vix = zilnice(30, () => 27), spy = urca.slice(-2);
@@ -135,6 +145,26 @@ export function situatiiActiuni(pune) {
   };
   ca("Consilierul poziției: stopul din plan atins", P({ pret: 25.2, plan: { stop: 26 } }), urca, { prob: probA, sfaturi: CS.sfaturiPozitie(pz({ pret: 25.2, pctLei: -0.15 }), ctx) });
   ca("Consilierul poziției: stopul care urcă atins", P({ pretMediu: 22, pret: 29 }), urca, { niv: NIV({ stopAtins: true, stopPozitie: 30.12 }) });
+  ca("Consilierul poziției: stopul care urcă din profil (sursa reală)", P({ pretMediu: 22, pret: 29 }), urca, { niv: NIV({ stopAtins: true, stopPozitie: 30.12, trailPct: 11.8, sursaTrail: TPR.sursaTrail }) });
+  // v100.71 (I1): istoricul pe actiune cu 1 si 2 trade-uri (singularul; la 2 pe minus actiunea proprie, nu titlul repetat)
+  const tr1 = (i) => ({ id: "s" + i, ticker: "APLD_US_EQ", simbol: "APLD", cost: 1000, rezultat: -40, durataOre: 200, pornit: T0 - 90 * ZI, inchis: T0 - 80 * ZI });
+  for (const [sit, n] of [["un singur trade pe APLD", 1], ["două trade-uri pe minus pe APLD", 2]]) {
+    const sf = CS.sfaturiPozitie(pz({ pret: 29, pctLei: -0.01, de: T0 - 2 * ZI }), { inchise: Array.from({ length: n }, (_, i) => tr1(i)), acum: T0 });
+    sf.forEach((s) => pune("consilierul: " + sit + " · " + s.sursa, "actiuni", "consilier.pozitie." + s.sursa, s, [["titlu", "titlu"], ["text", "deCe"], ["ceAsFace", "faCe"]]));
+    ca("Consilierul poziției: " + sit, P({ pretMediu: 29.5, pret: 29 }), urca, { sfaturi: sf });
+  }
+  // v100.71 (I1): calibrarea la un singur caz („1 caz independent judecat”)
+  pune("🎲 calibrarea la un caz", "actiuni", "probabilitati.calibrare1", { t: PB.corecteaza(0.31, "iese-jos-24", { "iese-jos-24": { cutii: [{ n: 0, k: 0 }, { n: 1, k: 0 }, { n: 0, k: 0 }, { n: 0, k: 0 }, { n: 0, k: 0 }] } }).text }, [["t", "detalii"]]);
+  PB.randActiune(rezA, { rezumat: { n: 1, pMed: 0.4, rata: 0, saptamani: 1 } }, {}).forEach((r, i) => pune("🎲 acțiunea, un caz judecat", "actiuni", "probabilitati.unCaz" + i, r, [["text", "detalii"]]));
+  // v100.71 (I4): actiunile paginii T212 (poarta, stopul, jurnalul, regulile) - functii pure, cu numele lungi de stop
+  for (const n of ["cumpara", "nu", "asteapta", "fara-date"]) pune("poarta T212: " + n, "actiuni", "facPoarta." + n, { t: AS.facPoarta(n, 21000) }, [["t", "faCe"]]);
+  const BL = { et: "urcă după maxim — planul Radarului (k×ATR, 3–15%)", dif: 1001.4, taiate: 46 };
+  for (const [sit, r] of [["jurnal T212: stopul ar fi ajutat (nume lung)", AS.facStop(false, BL)], ["jurnal T212: niciun stop n-ar fi ajutat", AS.facStop(true, BL)],
+    ["jurnal T212: un singur trade tăiat", AS.facStop(false, Object.assign({}, BL, { taiate: 1 }))], ["jurnal T212: sfatul stopului (ar fi ajutat)", AS.sfatStop(true, BL)],
+    ["jurnal T212: sfatul stopului (n-ar fi ajutat)", AS.sfatStop(true, Object.assign({}, BL, { dif: -350 }))], ["jurnal T212: fără trade-uri rejucate", AS.sfatStop(false, null)]])
+    pune(sit, "actiuni", "jurnal.stop", r, [["fac", "faCe"], ["nota", "deCe"]]);
+  for (const b of [true, false]) pune("jurnal T212: poarta în trecut (" + (b ? "ar fi ajutat" : "n-ar fi ajutat") + ")", "actiuni", "facPoartaIstoric", { t: AS.facPoartaIstoric(b, 1234) }, [["t", "faCe"]]);
+  pune("jurnal T212: regulile tale (grupa cea mai lungă)", "actiuni", "facReguli", { t: AS.facReguli("cumpărate noaptea (după 23 sau înainte de 11), în afara orelor") }, [["t", "faCe"]]);
   ca("Consilierul poziției: stopul mâine 31% și rezultatele", P({ pretMediu: 28, pret: 29 }), lateral, { prob: probMaine });
   ca("Consilierul poziției: trend în jos, pe minus în a 12-a zi", P({ pretMediu: 28, pret: 26.5 }), coboara, { sfaturi: CS.sfaturiPozitie(pz({ pret: 26.5, pretMediu: 28 }), ctx) });
   ca("Consilierul poziției: totul bine", P({ pretMediu: 22, pret: 36, plan: { trailPct: 15 } }), urca);

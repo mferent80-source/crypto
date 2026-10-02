@@ -15,7 +15,7 @@ import { situatiiAlerte } from "./lib/garda-alerte.mjs";
 import { situatiiActiuni } from "./lib/garda-actiuni.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
+for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
 const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, Directie: DR } = globalThis;
 
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
@@ -51,6 +51,7 @@ export const INTERZIS = [
   [/frecvență din trecut|nu o promisiune|un semn, nu o regulă|nu o dovadă/i, "avertizarea comună (locul ei e în legendă)"],
   [/ÎMPOTRIVA|\bSUB gridul|\bPESTE gridul/, "majuscule de strigat"],
   [/\d(\.\d+)?e[-+]?\d/, "număr cu exponent"],   // revizia Opus a 2b (5): „1.234e-7”
+  [/(?<![\d.,])1 (cazuri|trade-uri|boți)\b/, "„1 cazuri” (vrea singularul)"],   // v100.71 (revizia pachetului 4, I1)
 ];
 const norm = (s) => String(s || "").toLowerCase().replace(/[0-9.,%×−+()·:;—"„”≈~]/g, " ").replace(/\s+/g, " ").trim();
 // abaterile unui text; frate = titlul aceluiasi sfat (explicatia / actiunea nu-l repeta)

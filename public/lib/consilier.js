@@ -10,8 +10,8 @@ var Consilier = (function () {
   function P(x, z) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(z === undefined ? 1 : z).replace(".", ",") + "%"; }
   function L(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x)).toLocaleString("ro-RO") + " lei"; }
   function U(x) { return AS.usd(x); }   // v100.69: pretul ca pe pagina T212 („$33.00”), nu „$33,00”
-  // v100.69: „6 trade-uri”, „60 de trade-uri” (de: ultimele doua cifre 20–99 sau 00)
-  function nde(n, cuv) { var r = n % 100; return n + (r >= 20 || (r === 0 && n >= 100) ? " de " : " ") + cuv; }
+  // v100.69: „6 trade-uri”, „60 de trade-uri” - v100.71 (revizia pachetului 4, I1): si singularul („1 trade”, „1 bot”), prin TextRo.cate
+  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
   function ultima(b) { return Array.isArray(b) && b.length ? b[b.length - 1] : null; }
   function stat(l) {
     var n = l.length, plus = 0, tot = 0; l.forEach(function (t) { tot += t.rezultat || 0; if (t.rezultat > 0) plus++; });
@@ -51,8 +51,10 @@ var Consilier = (function () {
     // v100.69 (sfaturile concise, pachetul 4): titlul ≤ 60 (sursa „istoricul tău” e eticheta lui pe pagina), „(puține cazuri)” in locul
     // avertizarii comune (ea sta in legenda), actiunea la persoana I
     if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric",
-      titlu: "Pe " + p.simbol + ": " + nde(ist.n, "trade-uri") + ", " + ist.pePlus + " pe plus, total " + L(ist.total),
-      text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș adăuga pe " + p.simbol + ": de obicei ai pierdut pe ea." : null });
+      titlu: "Pe " + p.simbol + ": " + cate(ist.n, "trade", "trade-uri") + ", " + ist.pePlus + " pe plus, total " + L(ist.total),
+      // v100.71 (I1): la 2 trade-uri pe minus sfatul e deja ATENȚIE (pragul ramane) - acum are si actiunea lui (Consilierul nu mai repeta titlul)
+      text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș adăuga pe " + p.simbol + ": de obicei ai pierdut pe ea."
+        : ist.total < 0 && ist.n === 2 ? "N-aș adăuga pe " + p.simbol + ": " + (ist.pePlus === 0 ? "ambele trade-uri de până acum au ieșit pe minus." : "cele două trade-uri de până acum dau minus.") : null });
     // 2) zona de tinut in care pierde (1-4 saptamani), cand pozitia e pe minus si a intrat in ea
     var zile = p.de > 0 ? (acum - p.de) / ZI : null;
     if (p.pctLei !== null && p.pctLei < 0 && zile !== null && zile >= 7 && zile <= 28) {
@@ -100,7 +102,7 @@ var Consilier = (function () {
     var acum = ctx.acum || Date.now(), out = [], m = String(b.baza || b.moneda || "").replace(/\.PERP$/, "").replace(/_USDT.*$/, "");
     var ist = stat((Array.isArray(ctx.trades) ? ctx.trades : []).filter(function (t) { return t && t.moneda === m; }));
     // v100.69 (pachetul 4): USDT cu virgula, titlul ≤ 60, „(puține cazuri)”, „stopul” (vocabularul unic), actiunea la persoana I
-    if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Pe " + m + ": " + (ist.n === 1 ? "1 bot" : nde(ist.n, "boți")) + ", " + ist.pePlus + " pe plus, total " + (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2).replace(".", ",") + " USDT",
+    if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Pe " + m + ": " + cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, total " + (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2).replace(".", ",") + " USDT",
       text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș mări botul: pe " + m + " boții tăi au pierdut de obicei." : null });
     var fg = ctx.fg;
     if (fg && isFinite(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (FG[fg.clasa] || fg.clasa) + ")",

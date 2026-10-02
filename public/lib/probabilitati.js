@@ -151,8 +151,8 @@ var Probabilitati = (function () {
     if (rez.cursa5 && rez.cursa5.tinta) {
       // revizia 01.10 (I3): cifra ACTIUNII ramane; calibrarea (alt stop / alta tinta - ale Radarului la cumparare - si cutii late) e doar nota
       var x = rez.cursa5.tinta, rz = cal && cal.rezumat;
-      var nota = rz && rz.n >= 20 ? "pe cumpărările tale (cu stopul și ținta Radarului la cumpărare): am zis în medie " + PCt(rz.pMed) + ", s-a întâmplat în " + PCt(rz.rata) + ", din " + rz.n + " cazuri în " + rz.saptamani + " săptămâni"
-        : "pe cumpărările tale: " + (rz ? rz.n : 0) + " cazuri judecate — sub 20 nu spun nimic";
+      var nota = rz && rz.n >= 20 ? "pe cumpărările tale (cu stopul și ținta Radarului la cumpărare): am zis în medie " + PCt(rz.pMed) + ", s-a întâmplat în " + PCt(rz.rata) + ", din " + cate(rz.n, "caz", "cazuri") + " în " + cate(rz.saptamani, "săptămână", "săptămâni")
+        : "pe cumpărările tale: " + cate(rz ? rz.n : 0, "caz judecat", "cazuri judecate") + " — sub 20 nu spun nimic";
       out.push({ titlu: "În 5 zile de bursă: ținta înaintea stopului", p: x.p, ic: x.ic, text: x.k + " din " + x.n + " " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
     }
     // v100.69: si saritura poarta marcajul pe esantion mic (il avea doar „Atinge stopul mâine”)
@@ -231,11 +231,13 @@ var Probabilitati = (function () {
     return out;
   }
   var PC = function (v) { return Math.round(v * 100) + "%"; };
+  // v100.71 (revizia pachetului 4, I1): „1 caz”, „45 de cazuri” - TextRo.cate; rezerva simpla unde TextRo nu e incarcat (probele vechi)
+  function cate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + (Number(n) === 1 ? sg : pl); }
   // pragurile calibrarii (20 de cazuri pe cutie, 15 puncte) sunt ipoteze de casa - spuse in nota sectiunii
   function corecteaza(p, tip, cal) {
     var c = cal && cal[tip] && cal[tip].cutii && cal[tip].cutii[Math.min(4, Math.floor(p * 5))];
-    if (!c || c.n < 20) return { p: p, brut: p, calibrat: false, n: c ? c.n : 0, k: c ? c.k : 0, avertizare: false, text: "necalibrat încă" + (c && c.n ? " (" + c.n + " cazuri independente judecate)" : "") };
-    var q = Math.round(c.k / c.n * 1000) / 1000, mij = Math.min(4, Math.floor(p * 5)) * 20 + 10, txt = "calibrat: când am zis ~" + mij + "%, s-a întâmplat în " + PC(q) + " din " + c.n + " cazuri independente";
+    if (!c || c.n < 20) return { p: p, brut: p, calibrat: false, n: c ? c.n : 0, k: c ? c.k : 0, avertizare: false, text: "necalibrat încă" + (c && c.n ? " (" + cate(c.n, "caz independent judecat", "cazuri independente judecate") + ")" : "") };
+    var q = Math.round(c.k / c.n * 1000) / 1000, mij = Math.min(4, Math.floor(p * 5)) * 20 + 10, txt = "calibrat: când am zis ~" + mij + "%, s-a întâmplat în " + PC(q) + " din " + cate(c.n, "caz independent", "cazuri independente");
     // lichidarea nu se coboara niciodata sub cifra bruta (principiul 5: lichidarea nu tace) - corectarea se spune alaturi
     if (tip === "lichidare-7" && q < p) return { p: p, brut: p, calibrat: false, n: c.n, k: c.k, avertizare: false, text: txt + " (la lichidare țin cifra brută, cea mai prudentă)" };
     return { p: q, brut: p, calibrat: true, n: c.n, k: c.k, avertizare: Math.abs(q - p) > 0.15, text: txt };

@@ -5699,7 +5699,7 @@ function grProbDeseneaza(f){
   var rez=grProb.rez;if(!rez){el.innerHTML="";return}
   el.innerHTML='<div class="tbBloc grProbBloc"><h4>🎲 Ce s-a întâmplat în trecut, cu gridul propus</h4><p class="tbSub">acum: '+escapeHtml(Probabilitati.ETICHETE[rez.stare]||rez.stare)+' · '+Math.round(rez.bare/24)+' de zile de bare de 1 h</p>'
     +Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}).map(tbProbRandHtml).join("")
-    +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei, în situații ca acum — nu predicții. Banda: zona e intervalul de încredere, semnul e cifra.</p></div>';
+    +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei, în situații ca acum — nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra.</p></div>';   /* v100.71 (I2) */
 }
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
@@ -5711,7 +5711,7 @@ function tbDeseneazaProb(b){
   var vh=tbProbVechi(rez);
   if(sub)sub.textContent=(vh?"⚠ cifre de acum "+vh+" h (colectorul nu le-a mai reînnoit) · stare: ":"acum: ")+(Probabilitati.ETICHETE[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
   el.innerHTML=(l.length?l.map(tbProbRandHtml).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
-    +tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
+    +tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>';
 }
 // v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
 // Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.
