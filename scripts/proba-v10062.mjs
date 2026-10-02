@@ -210,5 +210,18 @@ await test("„Ce ai de făcut acum”: avertismentul lichidării înghite alert
   assert.equal(lich.length, 1, l.map((x) => x.titlu).join(" | ")); assert.equal(lich[0].n, 2);
 });
 
+// ---- sarcina 6: versiunile si inventarul ----
+await test("versiunea v100.62 peste tot (BUILD_INFO, versiune.js, package.json, sw.js, index.html) și colectorul v101.42", () => {
+  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.62"/); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.62"/);
+  assert.match(citeste("package.json"), /"version": "100\.62\.0"/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-62";/);
+  assert.equal((citeste("public", "index.html").match(/v100\.62/g) || []).length, 4, "index.html");
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.42";/);
+});
+await test("inventarul pachetului 2: înainte și după, cu harta informațiilor", () => {
+  const i = citeste("docs", "superpowers", "inventar-sfaturi", "2-sfaturi-boti-inainte.md"), d = citeste("docs", "superpowers", "inventar-sfaturi", "2-sfaturi-boti-dupa.md");
+  for (const s of ["sfat.margine.titlu", "avertisment1.t", "todo.plan.text", "consiliu.motiv1."]) { assert.ok(i.includes(s), "înainte: " + s); assert.ok(d.includes(s), "după: " + s); }
+  assert.match(d, /## Harta informațiilor/); assert.match(i, /tablou-bot\.js/);
+});
+
 console.log(`\nV100.62 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);
