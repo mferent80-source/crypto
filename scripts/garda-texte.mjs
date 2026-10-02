@@ -11,6 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mesajDiscord } from "./lib/canal-discord.mjs";
 import { avertismenteBot } from "../functions/_shared/avertismente.js";
+import { situatiiAlerte } from "./lib/garda-alerte.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
@@ -30,6 +31,10 @@ export const REGULI = {
   detalii: {},
   discordTitlu: { max: 60 },
   discordMesaj: { randuri: 2 },
+  // v100.66 (pachetul 3): alertele - titlul ≤ 60; mesajul pe 2 randuri: faptul (ca „de ce”) + „👉 ” si o actiune; rapoartele - randuri ≤ 160
+  alertaTitlu: { max: 60, strigat: true },
+  alertaMesaj: { randuri: 2, alerta: true, strigat: true },
+  raport: { rand: 160, strigat: true },
 };
 const PERSOANA = /^(Aș|N-aș|L-aș|Le-aș|O-aș|M-aș|Nu m-aș)\s/;
 export const INTERZIS = [
@@ -57,6 +62,14 @@ export function verifica(text, tip, frate) {
   if (r.randuri && t.split("\n").length > r.randuri) ab.push("peste " + r.randuri + " rânduri");
   for (const [re, ce] of INTERZIS) if (re.test(t)) ab.push(ce);
   if (frate && norm(frate).length >= 15 && norm(t).includes(norm(frate))) ab.push("repetă titlul");
+  // v100.66 (pachetul 3): alerta - randul 1 = faptul, randul 2 = „👉 ” + o actiune la persoana I; raportul - fiecare rand ≤ 160
+  if (r.alerta) {
+    const [l1, l2] = t.split("\n");
+    for (const a of verifica(l1, "deCe")) ab.push("rândul 1: " + a);
+    if (l2 !== undefined) { if (!/^👉 /.test(l2)) ab.push("rândul 2 nu începe cu „👉 ”"); else for (const a of verifica(l2.slice(3), "faCe")) ab.push("rândul 2: " + a); }
+  }
+  if (r.rand) t.split("\n").forEach((l, i) => { if (l.length > r.rand) ab.push("rândul " + (i + 1) + " lung: " + l.length + " > " + r.rand); });
+  if (r.strigat && /\b(DEPĂȘITĂ|STINS|IEȘI|CU|NU|NEOBIȘNUIT|ATENȚIE)\b/.test(t)) ab.push("majuscule de strigat");
   // v100.65 (M2 din revizia pachetului 2): o frecvență „(k din n)” cu n sub 30 poartă „puține cazuri” (pragul scenariului: 30)
   for (const m of t.matchAll(/\((\d+) din (\d+)(?![\d.,])/g)) if (Number(m[2]) < 30 && !/puține cazuri/.test(t)) { ab.push("frecvență pe " + m[2] + " cazuri fără „puține cazuri”"); break; }
   return ab;
@@ -276,6 +289,8 @@ export function situatii() {
     lich: { pretLichidare: 58234.123456, lichidarePartea: "jos", distantaLichidarePct: -1.9, lichidareDepasita: true }, comisioane: -1234.56, gridProfitBrut: 987.65, profitNet: -4321.09 });
   av("monedă sub 0,01: peste grid, lichidarea la 14,8%", { x: {}, pret: 0.0051234, jos: 0.0042, sus: 0.0051,
     lich: { pretLichidare: 0.00436512, lichidarePartea: "jos", distantaLichidarePct: 14.8, lichidareDepasita: false }, comisioane: -12.3456, gridProfitBrut: 9.87, profitNet: -32.1 });
+  // v100.66 (pachetul 3): toate alertele, pe fiecare ramura (scripts/lib/garda-alerte.mjs)
+  situatiiAlerte(pune);
   return out;
 }
 

@@ -86,6 +86,14 @@ export async function scanNume(d, cr, ac, vechi) {
   return nume;
 }
 
+// v100.66 (pachetul 3): textul alertei de reteta, intr-o functie - garda textelor il genereaza; intrat = true (🔔) / false (🔕)
+export function mesajReteta(x, numeReteta, fel, intrat, id, k) {
+  const pret = (fel === "a" ? "$" : "") + x.p, ch = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
+  return intrat
+    ? { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + numeReteta, mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + ". Pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k }
+    : { nivel: "info", titlu: "🔕 " + x.s + " a ieșit din " + numeReteta, mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + ".", cheie: "reteta-iesit-" + id + "-" + k };
+}
+
 // alerta pentru simbolurile urmarite: intrare / iesire din reteta fata de scanul trecut (primul scan doar tine minte)
 export async function anuntaUrmarite(d, st, fel, randuri, urmarite) {
   st.urm = st.urm || {};
@@ -95,14 +103,13 @@ export async function anuntaUrmarite(d, st, fel, randuri, urmarite) {
     const acum = d.Scan.retete({ ...x, fel }), vechi = st.urm[id];
     st.urm[id] = acum;
     if (!vechi) continue;
-    const nume = (k) => (R.find((r) => r.k === k) || {}).t || k, pret = (fel === "a" ? "$" : "") + x.p;
-    const ch = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
+    const nume = (k) => (R.find((r) => r.k === k) || {}).t || k;
     for (const k of acum.filter((k) => !vechi.includes(k))) {
-      const m = { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + nume(k), mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + ". Pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k };
+      const m = mesajReteta(x, nume(k), fel, true, id, k);
       if (d.trimiteAlerta) await d.trimiteAlerta(m, null, m.cheie);
     }
     for (const k of vechi.filter((k) => !acum.includes(k))) {
-      const m = { nivel: "info", titlu: "🔕 " + x.s + " a ieșit din " + nume(k), mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + ".", cheie: "reteta-iesit-" + id + "-" + k };
+      const m = mesajReteta(x, nume(k), fel, false, id, k);
       if (d.trimiteAlerta) await d.trimiteAlerta(m, null, m.cheie);
     }
   }

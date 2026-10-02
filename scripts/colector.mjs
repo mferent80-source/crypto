@@ -12,6 +12,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 import { trimiteDiscord } from "./lib/canal-discord.mjs";
+import * as MesajeColector from "./lib/mesaje-colector.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
 import { turaDimineata as turaDimineataModul } from "./lib/tura-dimineata.mjs";
@@ -171,7 +172,7 @@ async function golesteCoada() {
   for (const x of coadaDiscord) {
     if (acum - x.t > 12 * 3600000) { jurnal("coada discord: renunt (peste 12 h)", x.m.titlu); continue; }
     if (ramase.length) { ramase.push(x); continue; }   // in ordine: dupa primul esec, restul asteapta tura urmatoare
-    const ok = await trimiteDiscord({ ...x.m, titlu: x.m.titlu + " (întârziat " + Math.round((acum - x.t) / 60000) + " min)" }, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
+    const ok = await trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
     if (!ok) ramase.push(x);
   }
   if (ramase.length !== coadaDiscord.length) { coadaDiscord = ramase; salveazaCoada(); }
@@ -319,6 +320,8 @@ async function semnaleBot(b, ctx, acum) {
 const META = "_colector";
 function meta() { return stareAlerte[META] || (stareAlerte[META] = { citireRea: 0, anuntatRau: 0, cunoscuti: {} }); }
 async function anuntaColector(nivel, titlu, mesaj) { return trimiteAlerta({ nivel, titlu, mesaj }, null, "colector"); }
+// v100.66: mesajele colectorului vin gata din scripts/lib/mesaje-colector.mjs ({ nivel, titlu, mesaj })
+function anuntaMesaj(x) { return anuntaColector(x.nivel, x.titlu, x.mesaj); }
 
 let esecuri = 0;
 // v98: ce a vazut ultima tura (pentru poza): botii si ultimele 30 de preturi ale fiecaruia (o poza pe tura, la un minut)
@@ -333,21 +336,21 @@ async function tura() {
     // Serverul oprit = fereastra Radarului inchisa. Dupa 15 minute ne oprim.
     if (!e.status) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + "/" + MAX_ESECURI + "):", e.message); if (esecuri >= MAX_ESECURI) { jurnal("ies: serverul nu mai răspunde");
       // v100.40 (audit 30.09): inainte iesea tacut - alertele se opreau fara niciun semn pana la paznic (~30-55 min)
-      if (CANAL === "discord") await trimiteDiscord({ nivel: "critic", titlu: "Crypto Radar s-a oprit: serverul de acasă nu mai răspunde", mesaj: "De ~" + MAX_ESECURI + " minute serverul Radarului (fereastra neagră, :8788) nu răspunde, așa că și colectorul se oprește: alertele boților și ale acțiunilor NU mai vin. 👉 Pornește din nou PORNESTE-CRYPTO-RADAR.bat (sau PORNESTE-SI-PE-TELEFON.bat). Stopurile din Pionex lucrează și fără Radar." }, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
+      if (CANAL === "discord") await trimiteDiscord(MesajeColector.serverOprit(MAX_ESECURI), { fetch, webhook: DISCORD_WEBHOOK, jurnal });
       process.exit(0); } }
     else {
       jurnal("bot-orders", e.status, e.message);
       const m = meta(); m.citireRea = m.citireRea || acum;
       // 10 minute la rand fara citire -> o alerta; se repeta cel mult la 3 ore
       if (acum - m.citireRea >= 10 * 60000 && acum - (m.anuntatRau || 0) >= 3 * 3600000) {
-        if (await anuntaColector("critic", "Crypto Radar nu mai poate citi botul", "De " + Math.round((acum - m.citireRea) / 60000) + " minute: " + e.message + ". Alertele nu mai sunt de încredere până se rezolvă.")) m.anuntatRau = acum;
+        if (await anuntaMesaj(MesajeColector.citireRea(Math.round((acum - m.citireRea) / 60000), e.message))) m.anuntatRau = acum;
       }
       try { scrieStare(); } catch {}
     }
     return;
   }
   const m = meta();
-  if (m.citireRea && m.anuntatRau) await anuntaColector("info", "Crypto Radar citește din nou botul", "Alertele merg din nou.");
+  if (m.citireRea && m.anuntatRau) await anuntaMesaj(MesajeColector.citireDinNou());
   m.citireRea = 0; m.anuntatRau = 0;
   const boti = Array.isArray(d && d.bots) ? d.bots : [];
   ultimiiBoti = boti; ultimiiBotiLa = Date.now();   // v100.40: ora citirii - poza nu mai stampileaza boti vechi cu „acum”
@@ -371,7 +374,7 @@ async function tura() {
           await judecaLaInchidere(id, x);   // v100.43 (I-466)
         }
       } catch (e) { jurnal("fisa de inchidere", id, e.message); }
-      const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaColector("critic", (m.cunoscuti[id].nume || "Botul") + " nu mai apare în lista Pionex", "Poate a fost închis sau lichidat. Verifică în aplicația Pionex.");
+      const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaMesaj(MesajeColector.lipsaPionex(m.cunoscuti[id].nume));
       if (trimis) m.cunoscuti[id].activ = false;
     }
   }
@@ -412,7 +415,7 @@ async function tura() {
         try { const u = await cere("/api/istoric-bot?action=ultimulPlan"); if (u && u.plan) { ult = { plus: u.plan.plus, minus: u.plan.minus, afaraOre: u.plan.afaraOre };
           try { const fb = await cere("/api/bot-orders?status=finished&limit=30"), fa = await cere("/api/bot-orders").catch(() => null); const x = (fb && fb.bots || []).concat(fa && fa.bots || []).find((y) => String(y.id) === String(u.bot)); if (x) { ult.investit = Number(x.investit) || null; ult.nume = String(x.baza || "").replace(/\.PERP$/, ""); } } catch {} } } catch {}
         const pp = TabloExtra.propunePlan(ult, b.investit), nume = String(b.baza || "botul").replace(/\.PERP$/, "");
-        const m = { nivel: "atentie", cheie: "fara-plan", titlu: nume + ": botul n-are plan", mesaj: "Fără țintă și prag scrise la rece nu te pot anunța când să încasezi sau să ieși." + (pp ? " Propun: plus +" + pp.plus + " USDT, minus −" + pp.minus + " USDT, " + pp.afaraOre + " h afară din grid (" + pp.nota + "). Îl pui din Tablou → „Pune planul propus”." : " Scrie-l în Tablou → „Planul tău”.") };
+        const m = MesajeColector.faraPlan(nume, pp);
         if (await trimiteAlerta(m, b.id, m.cheie)) st._faraPlan = true;
       }
       // v101.39 (I-481): ceasul gridului ingust - botul pornit cu setarile variantei ingusta: un singur mesaj cand trece durata probata.
@@ -423,7 +426,7 @@ async function tura() {
         if (st._ceas && !st._ceasTrimis && acum >= st._ceas.inchideLa) {
           const nume = String(b.baza || "botul").replace(/\.PERP$/, "");
           const dc = new Date(st._ceas.inchideLa), hm = String(dc.getHours()).padStart(2, "0") + ":" + String(dc.getMinutes()).padStart(2, "0"), tarziu = acum - st._ceas.inchideLa > 30 * 60000;
-          if (await trimiteAlerta({ nivel: "atentie", titlu: nume + ": gridul îngust a ajuns la " + st._ceas.ore + " h", mesaj: "Așa a fost probat: închide-l acum (închiderea era la " + hm + (tarziu ? " — mesajul vine întârziat, colectorul a fost oprit" : "") + "). Ținut mai mult, nu mai seamănă cu proba (un interval îngust iese repede din preț)." }, b.id, "ingust-ceas")) { st._ceasTrimis = true; scrieStare(); }
+          if (await trimiteAlerta(MesajeColector.ceasIngust(nume, st._ceas.ore, hm, tarziu), b.id, "ingust-ceas")) { st._ceasTrimis = true; scrieStare(); }
         }
       } catch (e) { jurnal("ceas ingust", b.id, e.message); }
     } catch (e) { jurnal("plan", b.id, e.message); }
@@ -637,11 +640,11 @@ let planT212La = 0, planT212InLucru = false;
 // pozitiile T212 se opreau in liniste. 429 (limita de ritm) nu e cadere.
 async function t212Sanatate(e) {
   const m = meta(), acum = Date.now();
-  if (!e) { if (m.t212AnuntatRau) await anuntaColector("info", "Trading 212 răspunde din nou", "Alertele de stop și țintă pe acțiuni merg din nou."); m.t212RauDe = 0; m.t212AnuntatRau = 0; return; }
+  if (!e) { if (m.t212AnuntatRau) await anuntaMesaj(MesajeColector.t212DinNou()); m.t212RauDe = 0; m.t212AnuntatRau = 0; return; }
   if (e.status === 429) return;
   m.t212RauDe = m.t212RauDe || acum;
   if (acum - m.t212RauDe >= 30 * 60000 && acum - (m.t212AnuntatRau || 0) >= 6 * 3600000) {
-    if (await anuntaColector("critic", "Trading 212 nu mai răspunde de " + Math.round((acum - m.t212RauDe) / 60000) + " min", (e.status === 401 || e.status === 403 ? "Cheia API pare expirată sau revocată (" + e.status + "). " : "") + e.message + ". Alertele de stop și țintă pe pozițiile Trading 212 NU mai vin până se rezolvă. 👉 Verifică cheia în Trading 212 (Settings → API) și pune-o din nou cu PUNE-CHEILE-T212.bat; stopurile puse direct în Trading 212 lucrează și fără Radar.")) m.t212AnuntatRau = acum;
+    if (await anuntaMesaj(MesajeColector.t212Rau(Math.round((acum - m.t212RauDe) / 60000), e.status, e.message))) m.t212AnuntatRau = acum;
   }
 }
 async function turaPlanuriT212() {
@@ -676,7 +679,7 @@ async function turaPlanuriT212() {
       const pond = x.quantity * x.currentPrice / usd * inv / cash.total, k = "t212-conc-" + x.ticker + "-" + zi;
       if (pond <= 0.2 || st[k]) continue;
       const s = T212.simbol(x.ticker);
-      if (await trimiteAlerta({ nivel: "atentie", titlu: s + " e " + Math.round(pond * 100) + "% din contul Trading 212", mesaj: "Peste plafonul de 20%: o zi proastă a ei e ziua proastă a contului. 👉 Ce aș face eu: n-aș mai adăuga la " + s + "; la următoarea creștere aș vinde o parte." }, null, k.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60))) st[k] = true;
+      if (await trimiteAlerta(MesajeColector.pondereT212(s, pond), null, k.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60))) st[k] = true;
     }
   } catch (e) { jurnal("frana t212", e.message); }
   planT212InLucru = false;
@@ -1047,15 +1050,15 @@ async function turaRaport(acum) {
     // v85: si actiunile (Trading 212), din istoricul strans acasa
     try { const h = await cere("/api/t212?action=istoric"); if (h && Array.isArray(h.umpleri) && h.umpleri.length) rap.linii = rap.linii.concat(ActiuniSemnale.raportSaptamana(T212.perechi(h.umpleri).inchise, acum)); autAct = Consiliu.autopsieActiuni(jurnaleActLoguri, acum);   /* v101.36; revizia 01.10 (I5): pe Discord separat - limita de 2000 de caractere */ } catch (e) { jurnal("raport t212", e.message); }
     await trimite("/api/istoric-bot?action=raport", { la: acum, linii: autAct ? rap.linii.concat(autAct.linii) : rap.linii, saptamana: r.data });
-    if (await trimiteAlerta({ nivel: "info", titlu: "Raportul de duminică (" + r.data + ")", mesaj: rap.linii.join("\n") }, null, "raport")) {
+    if (await trimiteAlerta(MesajeColector.raport(r.data, rap.linii), null, "raport")) {
       m.raportTrimis = r.data;
-      if (autAct) await trimiteAlerta({ nivel: "info", titlu: "Autopsia acțiunilor (" + r.data + ")", mesaj: autAct.linii.join("\n") }, null, "raport-actiuni");
+      if (autAct) await trimiteAlerta(MesajeColector.autopsie(r.data, autAct.linii), null, "raport-actiuni");
     }
   } catch (e) { jurnal("raport ESEC", e.message); }
 }
 
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal alerte: " + CANAL + (NTFY.topic ? " (" + NTFY.topic + (NTFY.nou ? ", NOU" : "") + ")" : ""));
-if (NTFY.nou) await ntfy({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate", mesaj: "De aici vin alertele botului: lichidare aproape, Pionex în stare anormală, prețul ieșit din grid, piața pe 4 ore împotriva botului, gata liniștea (oprește gridul)." });
+if (NTFY.nou) await ntfy(MesajeColector.legat());
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 // v94: vremea pietei (alerta la schimbare), funding-ul pe piata, miscarea neobisnuita pe botii si actiunile lui,
 // Nasdaq la zi cat e bursa deschisa, poza zilnica - modulul isi tine singur ritmul (scripts/lib/tura-piata.mjs)
@@ -1091,8 +1094,7 @@ async function turaPerechiOra() {
   const po = meta().perechiOra; if (!po) return;
   for (const id of Object.keys(po)) {
     const x = po[id]; if (!x || Date.now() - x.de < 3600000) continue;
-    const U = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT";
-    if (await trimiteAlerta({ nivel: "info", titlu: "✅ " + x.nume + ": " + (x.n === 1 ? "o pereche încheiată" : x.n + " perechi încheiate") + " în ultima oră, " + U(x.usdt) + " din grile", mesaj: "Fiecare pereche se vede în Radar (Alerte). Pe Discord vine un rezumat pe oră, ca alertele importante să nu se piardă printre ele." }, id, "perechi-ora")) delete po[id];
+    if (await trimiteAlerta(MesajeColector.perechiOra(x.nume, x.n, x.usdt), id, "perechi-ora")) delete po[id];
   }
   scrieStare();
 }
@@ -1151,7 +1153,7 @@ async function turaFrana() {
   const act = await cere("/api/bot-orders"), f = Obiceiuri.frana({ trades, deschise: act && act.bots || [], acum: Date.now(), praguri });
   const m = meta(), zi = new Date(Obiceiuri.inceputZiRo(Date.now()) + 12 * 3600000).toISOString().slice(0, 10);
   if (f.activa && m.franaZi !== zi) {
-    if (await trimiteAlerta({ nivel: "critic", titlu: "🛑 Frâna contului: gata pe azi", mesaj: f.text + " Pragurile le schimbi în Radar → Grid → Poarta de pornire." }, null, "frana")) { m.franaZi = zi; scrieStare(); }
+    if (await trimiteAlerta(MesajeColector.frana(f.text), null, "frana")) { m.franaZi = zi; scrieStare(); }
   }
 }
 

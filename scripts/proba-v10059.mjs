@@ -31,9 +31,12 @@ await test("potrivireIngust: botul pornit cu setarile ingustei (aceeasi directie
   assert.equal(GP.potrivireIngust({ jos: 99, sus: 101, directie: "neutral", pornitLa: 98 * H1 }, ing), null, "pornit cu 2 h inainte de propunere");
   assert.equal(GP.potrivireIngust({ jos: 99, sus: 101, directie: "neutral", pornitLa: 101 * H1 }, { ...ing, la: undefined }), null, "fara ora propunerii");
 });
-await test("colectorul: ceasul pe fiecare bot activ, un singur mesaj la H ore; banda Tabloului arata ora de inchidere", () => {
+await test("colectorul: ceasul pe fiecare bot activ, un singur mesaj la H ore; banda Tabloului arata ora de inchidere", async () => {
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
-  assert.ok(col.includes("GridProba.potrivireIngust(") && col.includes("gridul îngust a ajuns la") && col.includes("st._ceasTrimis"), "colector");
+  /* v100.66: mesajul vine din scripts/lib/mesaje-colector.mjs - se verifica ce spune, nu unde e scris */
+  const MC = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "mesaje-colector.mjs")).href);
+  assert.ok(col.includes("GridProba.potrivireIngust(") && col.includes("MesajeColector.ceasIngust(") && col.includes("st._ceasTrimis"), "colector");
+  assert.match(MC.ceasIngust("CRV", 6, "14:30", false).titlu, /6 h/);
   const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.ok(a.includes("action=ingustCeas&bot=") && a.includes("închide-l la "), "banda Tabloului (din ceasul colectorului)");
 });
@@ -127,7 +130,9 @@ await test("I6 + mici: banda Tabloului citeste ceasul tinut minte de colector (n
   const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.ok(a.includes("action=ingustCeas&bot=") && !a.includes("GridProba.potrivireIngust("), "banda citeste ceasul colectorului");
   assert.ok(col.includes('trimite("/api/istoric-bot?action=ingustCeas"') && col.includes("st._ceasTrimis = true; scrieStare();"), "colectorul publica ceasul si scrie starea imediat");
-  assert.ok(col.includes("închiderea era la "), "mesajul spune ora inchiderii (si daca a intarziat)");
+  /* v100.66: mesajul vine din scripts/lib/mesaje-colector.mjs */
+  const MC = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "mesaje-colector.mjs")).href), mi = MC.ceasIngust("CRV", 6, "14:30", true).mesaj;
+  assert.ok(col.includes("MesajeColector.ceasIngust(nume, st._ceas.ore, hm, tarziu)") && mi.includes("14:30") && /întârziat/.test(mi), "mesajul spune ora inchiderii (si daca a intarziat)");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute`);

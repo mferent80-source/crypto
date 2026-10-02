@@ -7,6 +7,9 @@
 const MIN = 60000, ORA = 3600000;
 const RITM = { vreme: 10 * MIN, funding: ORA, boti: 30 * MIN, bursa: ORA };
 
+// v100.66 (pachetul 3): alerta funding-ului pe toata piata, intr-o functie - garda textelor o genereaza; f = Acasa.fundingPiata(...)
+export const mesajFundingPiata = (f) => ({ cheie: "funding-piata", nivel: "atentie", titlu: "Funding-ul pe piață e mult peste obicei", mesaj: f.text + " Ce aș face eu: n-aș porni boți long noi până nu se descarcă." });
+
 function ceas(acum, tz) {
   const o = {};
   new Intl.DateTimeFormat("en-GB", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(acum)).forEach((x) => { o[x.type] = x.value; });
@@ -63,7 +66,7 @@ async function funding(d, st, acum) {
   await d.trimite("/api/istoric-bot?action=piata", { la: acum, funding: f });
   // o singura alerta pe zi cand funding-ul pe piata iese din obicei (multi inghesuiti pe long)
   const zi = ceas(acum, "Europe/Bucharest").zi;
-  if (f.ton === "atentie" && st.fundingAlertZi !== zi && await d.trimiteAlerta({ cheie: "funding-piata", nivel: "atentie", titlu: "Funding-ul pe piață e mult peste obicei", mesaj: f.text + " Ce aș face eu: n-aș porni boți long noi până nu se descarcă." }, null, "funding-piata")) st.fundingAlertZi = zi;
+  if (f.ton === "atentie" && st.fundingAlertZi !== zi && await d.trimiteAlerta(mesajFundingPiata(f), null, "funding-piata")) st.fundingAlertZi = zi;
 }
 
 // ---- 3. miscarea neobisnuita pe monedele botilor, la 30 de minute ----

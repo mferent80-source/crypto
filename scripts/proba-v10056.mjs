@@ -165,8 +165,8 @@ await test("I3 + I5: raportul de duminica - jurnalele actiunilor citite inainte 
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   const i = col.indexOf("async function turaRaport"), r = col.slice(i, col.indexOf("\n}\n", i));
   assert.ok(/if \(socActZi === null\) await turaSocotealaActiuni\(\)/.test(r), "jurnalele inainte de raport");
-  assert.ok(/titlu: "Autopsia acțiunilor \(/.test(r), "alerta separata");
-  assert.ok(/mesaj: rap\.linii\.join\("\\n"\)/.test(r), "raportul principal fara autopsie in mesaj");
+  assert.ok(/MesajeColector\.autopsie\(r\.data, autAct\.linii\)/.test(r), "alerta separata");   /* v100.66: mesajele din scripts/lib/mesaje-colector.mjs */
+  assert.ok(/MesajeColector\.raport\(r\.data, rap\.linii\)/.test(r), "raportul principal fara autopsie in mesaj");
 });
 await test("I4: lei si $ nu se amesteca - clasamentul pe echivalent in lei (cursul din jurnal), tiparul pe valute separate; preturile cu 2 zecimale; „ale acțiunii”", () => {
   const acum = 60 * Z, e = (zi, cod, bani, inLei, stare, fx) => ({ t: acum - zi * Z, coduri: [cod], nivel: "iesi", pret: 192.42999267578125, qty: 1, fx, r: 0, bani, inLei, c5: 195.1, stare });
