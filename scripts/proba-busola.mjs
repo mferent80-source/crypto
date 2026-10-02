@@ -111,5 +111,36 @@ await test("cererea are limită de timp (o Busolă agățată nu blochează reî
   assert.ok(opt && opt.signal, "fetch fără signal");
 });
 
+// v100.79 (Busola 1.32, cerere de la el prin sesiunea Busolei): rezumatul spune pe ce canal e gridul (grid.canal) și dacă
+// „după liniște pierde mai puțin decât oricând” e dovedit (grid.dovedit) - rândul le spune și el; rezumatul vechi rămâne cum era
+const NOU = { ...REZ, versiune: "1.32.0", grid: { interval: "4h", canal: "±2×ATR", dovedit: true, liniste: -0.0081260081, oricand: -0.0094456786, miscare: -0.011341049 } };
+await test("rezumatul nou, liniștea dovedită ⇒ fraza de până acum, iar nota gri spune „grid pe ±2×ATR, dovedit”", () => {
+  const r = B.randGrid(NOU, "NEAR_USDT_PERP", ACUM);
+  assert.equal(r.text, "Busola, pe 4h: moneda e mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (−0,813%), tot pe minus.");
+  assert.equal(r.nota, "grid pe ±2×ATR, dovedit"); curat(r.text);
+});
+await test("liniștea NEdovedită ⇒ fraza nu mai spune „cel mai puțin” („ceva mai puțin decât oricând”), nota spune „nedovedit”", () => {
+  const r = B.randGrid({ ...NOU, grid: { ...NOU.grid, dovedit: false } }, "NEAR_USDT_PERP", ACUM);
+  assert.equal(r.nivel, "info"); assert.doesNotMatch(r.text, /cel mai puțin/);
+  assert.equal(r.text, "Busola, pe 4h: moneda e mai calmă ca de obicei — gridul a pierdut ceva mai puțin decât oricând (−0,813%).");
+  assert.equal(r.nota, "grid pe ±2×ATR, nedovedit"); curat(r.text);
+});
+await test("agitată / nimic neobișnuit ⇒ doar canalul în notă („dovedit” privește doar liniștea), frazele neschimbate", () => {
+  const a = B.randGrid(NOU, "BTC_USDT_PERP", ACUM), n = B.randGrid(NOU, "ETH_USDT_PERP", ACUM);
+  assert.equal(a.nota, "grid pe ±2×ATR"); assert.match(a.text, /aici gridul a pierdut cel mai mult \(−1,134% pe episod\)\.$/);
+  assert.equal(n.nota, "grid pe ±2×ATR"); assert.match(n.text, /un grid oarecare a ieșit pe minus \(−0,945% pe episod\)\.$/);
+});
+await test("rezumatul vechi (fără canal și fără dovedit) ⇒ fără notă, textele exact ca până acum", () => {
+  const r = B.randGrid(REZ, "NEAR_USDT_PERP", ACUM);
+  assert.equal(r.nota, null); assert.equal(r.text, "Busola, pe 4h: moneda e mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (−0,075%), tot pe minus.");
+  assert.equal(B.randGrid(REZ, "BTC_USDT_PERP", ACUM).nota, null);
+});
+await test("HTML-ul: nota și vârsta, gri, după frază (· grid pe ±2×ATR, dovedit · măsurat acum 7 ore); doar vârsta ⇒ ca înainte", () => {
+  const esc = (s) => String(s).replace(/</g, "&lt;");
+  assert.match(B.htmlRand({ nivel: "info", text: "x", nota: "grid pe ±2×ATR, dovedit", varsta: "măsurat acum 7 ore" }, esc), /x <span class="tbSub">· grid pe ±2×ATR, dovedit · măsurat acum 7 ore<\/span><\/p>/);
+  assert.match(B.htmlRand({ nivel: "info", text: "x", varsta: "măsurat acum 7 ore" }, esc), /x <span class="tbSub">· măsurat acum 7 ore<\/span><\/p>/);
+  assert.match(B.htmlRand({ nivel: "info", text: "x", nota: null, varsta: null }, esc), /<p class="tbSub">x<\/p>/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exit(picate ? 1 : 0);

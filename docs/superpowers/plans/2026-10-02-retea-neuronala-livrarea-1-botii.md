@@ -48,7 +48,7 @@
 
 **Textele și livrarea:**
 - Textele: ≤ 160 de caractere pe rând, cifrele prin `TextRo`, „de” prin `cate`. Garda textelor primește un grup nou, STRICT, `retea`.
-- Versiunile: pagina v100.79 (BUILD_INFO, `functions/_shared/versiune.js`, `package.json`, `public/sw.js` CACHE, `public/index.html` în 4 locuri), colectorul v101.56.
+- Versiunile: pagina v100.80 (BUILD_INFO, `functions/_shared/versiune.js`, `package.json`, `public/sw.js` CACHE, `public/index.html` în 4 locuri), colectorul v101.56.
 - Livrarea: `npm test && git commit && git push`, niciodată cu `;`.
 - Pe PC-ul lui: `python` nu, se folosește `node`. Scripturile cu backslash se scriu cu Write/Edit, nu prin Bash. Niciun `//` lipit la mijlocul rândului într-o înlocuire. Fără `git pull` în `crypto`.
 
@@ -95,7 +95,7 @@
 | `public/app.js` | `reteaAdu`, `reteaHtml` (Tablou), sub-blocul din fișă, rândul de la poartă |
 | `public/index.html`, `public/sw.js` | `retea.js` încărcat și pus în cache |
 | `scripts/lib/garda-retea.mjs` (nou) + `scripts/garda-texte.mjs` | grupul STRICT `retea` |
-| `scripts/proba-v10079*.mjs` (noi) | probele; legate în `npm test` |
+| `scripts/proba-v10080*.mjs` (noi) | probele; legate în `npm test` |
 
 ---
 
@@ -104,8 +104,8 @@
 **Files:**
 - Create: `public/lib/retea.js`
 - Create: `scripts/lib/bare-proba.mjs` (generatorul de bare al probelor rețelei, comun)
-- Create: `scripts/proba-v10079.mjs`
-- Modify: `package.json` (scriptul `test:v10079` + lanțul `test`)
+- Create: `scripts/proba-v10080.mjs`
+- Modify: `package.json` (scriptul `test:v10080` + lanțul `test`)
 
 **Interfaces:**
 - Consumes: `Probabilitati.stareLa(b, i)`, `Probabilitati.pregateste(bare, acum)` (din `public/lib/probabilitati.js`); `TextRo.num`, `TextRo.cate`.
@@ -134,12 +134,12 @@ export function bare(n, o = {}) {
 }
 ```
 
-apoi `scripts/proba-v10079.mjs`:
+apoi `scripts/proba-v10080.mjs`:
 
 ```js
-// Proba v100.79 - rețeaua neuronală, livrarea 1 (specul docs/superpowers/specs/2026-10-02-retea-neuronala-design.md): modulul pur
+// Proba v100.80 - rețeaua neuronală, livrarea 1 (specul docs/superpowers/specs/2026-10-02-retea-neuronala-design.md): modulul pur
 // public/lib/retea.js - trăsăturile fără privire în viitor, intrările pe țintă, trecerea înainte, pragul „dovedită”.
-//   node scripts/proba-v10079.mjs
+//   node scripts/proba-v10080.mjs
 import "./lib/text-ro-global.mjs";   // TextRo înaintea modulelor
 import fs from "node:fs";
 import path from "node:path";
@@ -157,7 +157,7 @@ let ok = 0, pica = 0;
 async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }
 const ORA = 3600000;
 
-console.log("Proba v100.79 · rețeaua: trăsăturile, intrările, trecerea înainte, pragul");
+console.log("Proba v100.80 · rețeaua: trăsăturile, intrările, trecerea înainte, pragul");
 const b = bare(2000, { seed: 7 }), btc = bare(2000, { seed: 11, p0: 60000 });
 
 await test("(1) trăsăturile la bara i nu văd nimic de după: aceleași cu și fără barele (și BTC-ul) de după i; null sub 30 de zile (720 de bare)", () => {
@@ -245,19 +245,19 @@ await test("(1) verdictul pe model: vechimea peste 2 zile se spune; altă versiu
   assert.equal(Retea.verdict({ ...mod, verificare: null }, Date.UTC(2026, 9, 2)).motiv, "neverificată încă");
 });
 
-console.log("\n" + (pica ? "V100.79 PICA · " + pica + " din " + (ok + pica) : "V100.79 PASS · " + ok + "/" + ok));
+console.log("\n" + (pica ? "V100.80 PICA · " + pica + " din " + (ok + pica) : "V100.80 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
 ```
 
 - [ ] **Step 2: Rulează proba — trebuie să pice**
 
-Run: `node scripts/proba-v10079.mjs`
+Run: `node scripts/proba-v10080.mjs`
 Expected: eroare la încărcare (`ENOENT … public/lib/retea.js`). Fișierul nu există încă.
 
 - [ ] **Step 3: Scrie `public/lib/retea.js`** (cu Write; are regex-uri cu backslash):
 
 ```js
-// Rețeaua neuronală (specul docs/superpowers/specs/2026-10-02-retea-neuronala-design.md, livrarea 1 - boții, v100.79): trăsăturile
+// Rețeaua neuronală (specul docs/superpowers/specs/2026-10-02-retea-neuronala-design.md, livrarea 1 - boții, v100.80): trăsăturile
 // (O SINGURĂ funcție pentru istoric și pentru „acum” - antrenarea și folosirea văd aceleași cifre), intrările pe țintă, trecerea
 // înainte (fără TensorFlow: greutățile vin din retea/antreneaza.mjs) și pragul „dovedită”. Modul pur: îl folosesc colectorul, fișa
 // (în browser) și antrenorul. Se încarcă DUPĂ text-ro.js, grid-calcul.js și probabilitati.js. A doua părere: nu schimbă semaforul,
@@ -371,18 +371,18 @@ Note pentru executor:
 
 - [ ] **Step 4: Rulează proba — trebuie să treacă**
 
-Run: `node scripts/proba-v10079.mjs`
-Expected: `V100.79 PASS · 8/8`
+Run: `node scripts/proba-v10080.mjs`
+Expected: `V100.80 PASS · 8/8`
 
-- [ ] **Step 5: Leagă proba în `npm test`** — în `package.json`, după `"test:v10078": "node scripts/proba-v10078.mjs"` adaugă `"test:v10079": "node scripts/proba-v10079.mjs"`, iar lanțul `test` primește la coadă `&& npm run test:v10079`. Folosește Edit pe textul exact `&& npm run test:v10078",`.
+- [ ] **Step 5: Leagă proba în `npm test`** — în `package.json`, după `"test:v10078": "node scripts/proba-v10078.mjs"` adaugă `"test:v10080": "node scripts/proba-v10080.mjs"`, iar lanțul `test` primește la coadă `&& npm run test:v10080`. Folosește Edit pe textul exact `&& npm run test:v10078",`.
 
-Run: `node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))" && npm run test:v10079`
-Expected: `V100.79 PASS · 8/8`
+Run: `node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))" && npm run test:v10080`
+Expected: `V100.80 PASS · 8/8`
 
 - [ ] **Step 6: Commit** (lanțul casei, fără `;`):
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-1.log" 2>&1 && git add public/lib/retea.js scripts/lib/bare-proba.mjs scripts/proba-v10079.mjs package.json && git commit -q -m "feat(retea): modulul pur retea.js — trăsăturile fără privire în viitor, intrările, trecerea înainte, pragul (livrarea 1, task 1)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-1.log" 2>&1 && git add public/lib/retea.js scripts/lib/bare-proba.mjs scripts/proba-v10080.mjs package.json && git commit -q -m "feat(retea): modulul pur retea.js — trăsăturile fără privire în viitor, intrările, trecerea înainte, pragul (livrarea 1, task 1)" && echo GATA
 ```
 
 ---
@@ -392,8 +392,8 @@ npm test > "$SCRATCH/npm-test-79-1.log" 2>&1 && git add public/lib/retea.js scri
 **Files:**
 - Create: `retea/package.json`, `retea/package-lock.json` (din `npm install`)
 - Create: `retea/model.mjs`
-- Create: `scripts/proba-v10079-tf.mjs`
-- Modify: `package.json` (`test:v10079tf` + lanțul `test`)
+- Create: `scripts/proba-v10080-tf.mjs`
+- Modify: `package.json` (`test:v10080tf` + lanțul `test`)
 
 **Interfaces:**
 - Consumes: `Retea.prezice(model, x)` (Task 1).
@@ -405,12 +405,12 @@ npm test > "$SCRATCH/npm-test-79-1.log" 2>&1 && git add public/lib/retea.js scri
   - `exporta(m) -> [{W, b, act}]`;
   - `antreneaza(X: Float32Array, y: Float32Array, nIn, ascunse: number[], seed) -> Promise<{straturi, epoci, pierdere}>`.
 
-- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10079-tf.mjs`:
+- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10080-tf.mjs`:
 
 ```js
-// Proba v100.79 (TF) - rețeaua neuronală, livrarea 1: retea/model.mjs - TensorFlow.js pe WebAssembly (nu JS pur: de câteva sute de ori
+// Proba v100.80 (TF) - rețeaua neuronală, livrarea 1: retea/model.mjs - TensorFlow.js pe WebAssembly (nu JS pur: de câteva sute de ori
 // mai lent, lecția Busolei), ieșirea pornită de la rata de bază, aceeași predicție ca Retea.prezice pe greutățile exportate, semințele.
-//   node scripts/proba-v10079-tf.mjs      (cere `npm --prefix retea install`)
+//   node scripts/proba-v10080-tf.mjs      (cere `npm --prefix retea install`)
 import "./lib/text-ro-global.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -430,7 +430,7 @@ async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + n
 // date sintetice: n rânduri × nIn, y = 1 când x0 + x1 > 0 (cu sămânță)
 function date(n, nIn, seed) { const r = MOD.cuSamanta(seed), X = new Float32Array(n * nIn), y = new Float32Array(n); for (let i = 0; i < n; i++) { for (let k = 0; k < nIn; k++) X[i * nIn + k] = r() * 2 - 1; y[i] = X[i * nIn] + X[i * nIn + 1] > 0 ? 1 : 0; } return { X, y }; }
 
-console.log("Proba v100.79 (TF) · TensorFlow.js pe WebAssembly, exportul, semințele");
+console.log("Proba v100.80 (TF) · TensorFlow.js pe WebAssembly, exportul, semințele");
 
 await test("(2) backend-ul e WebAssembly și o epocă pe 50.000 de rânduri × 20 ține sub 10 s (Busola: ~1,1 s)", async () => {
   assert.equal(await MOD.porneste(), "wasm");
@@ -463,7 +463,7 @@ await test("(2) aceeași sămânță -> aceleași greutăți (inițializarea, dr
   assert.ok(a.epoci >= 1 && a.pierdere < 0.5, JSON.stringify({ epoci: a.epoci, pierdere: a.pierdere }));
 });
 
-console.log("\n" + (pica ? "V100.79 TF PICA · " + pica + " din " + (ok + pica) : "V100.79 TF PASS · " + ok + "/" + ok));
+console.log("\n" + (pica ? "V100.80 TF PICA · " + pica + " din " + (ok + pica) : "V100.80 TF PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
 ```
 
@@ -471,7 +471,7 @@ Notă pentru executor: proba folosește `tf` exportat de `retea/model.mjs` (`exp
 
 - [ ] **Step 2: Rulează proba — trebuie să pice**
 
-Run: `node scripts/proba-v10079-tf.mjs`
+Run: `node scripts/proba-v10080-tf.mjs`
 Expected: `✗ lipsește TensorFlow.js: rulează npm --prefix retea install` (exit 1).
 
 - [ ] **Step 3: `retea/package.json` + instalarea**
@@ -559,21 +559,21 @@ export async function antreneaza(X, y, nIn, ascunse, seed) {
 
 - [ ] **Step 5: Rulează proba — trebuie să treacă**
 
-Run: `node scripts/proba-v10079-tf.mjs`
-Expected: `V100.79 TF PASS · 4/4`. Rândul „o epocă: X s” arată X sub 10.
+Run: `node scripts/proba-v10080-tf.mjs`
+Expected: `V100.80 TF PASS · 4/4`. Rândul „o epocă: X s” arată X sub 10.
 Dacă X ≥ 10: oprește-te. Specul cere WebAssembly; verifică `tf.getBackend()` înainte de orice altă schimbare.
 
 - [ ] **Step 6: Leagă proba în `npm test`:**
-- adaugă scriptul `"test:v10079tf": "node scripts/proba-v10079-tf.mjs"`;
-- adaugă la coada lanțului `&& npm run test:v10079tf`.
+- adaugă scriptul `"test:v10080tf": "node scripts/proba-v10080-tf.mjs"`;
+- adaugă la coada lanțului `&& npm run test:v10080tf`.
 
-Run: `npm run test:v10079tf`
-Expected: `V100.79 TF PASS · 4/4`
+Run: `npm run test:v10080tf`
+Expected: `V100.80 TF PASS · 4/4`
 
 - [ ] **Step 7: Commit:**
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-2.log" 2>&1 && git add retea/package.json retea/package-lock.json retea/model.mjs scripts/proba-v10079-tf.mjs package.json && git commit -q -m "feat(retea): antrenorul TF.js pe WebAssembly — modelul, exportul, semințele (livrarea 1, task 2)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-2.log" 2>&1 && git add retea/package.json retea/package-lock.json retea/model.mjs scripts/proba-v10080-tf.mjs package.json && git commit -q -m "feat(retea): antrenorul TF.js pe WebAssembly — modelul, exportul, semințele (livrarea 1, task 2)" && echo GATA
 ```
 
 ---
@@ -582,8 +582,8 @@ npm test > "$SCRATCH/npm-test-79-2.log" 2>&1 && git add retea/package.json retea
 
 **Files:**
 - Create: `retea/date.mjs`
-- Create: `scripts/proba-v10079-date.mjs`
-- Modify: `package.json` (`test:v10079date` + lanțul)
+- Create: `scripts/proba-v10080-date.mjs`
+- Modify: `package.json` (`test:v10080date` + lanțul)
 
 **Interfaces:**
 - Consumes:
@@ -599,13 +599,13 @@ npm test > "$SCRATCH/npm-test-79-2.log" 2>&1 && git add retea/package.json retea
   - `reperRand(tinta, b, r, M, memo) -> number | null`;
   - `randuriBoti(boti, bareDe, btc, M) -> [{t, s, y, x, tEt, r1, r2}]`.
 
-- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10079-date.mjs`:
+- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10080-date.mjs`:
 
 ```js
-// Proba v100.79 (date) - rețeaua neuronală, livrarea 1: retea/date.mjs - rândurile pe țintă: trăsăturile = Retea.trasaturiBare la i,
+// Proba v100.80 (date) - rețeaua neuronală, livrarea 1: retea/date.mjs - rândurile pe țintă: trăsăturile = Retea.trasaturiBare la i,
 // etichetele DOAR din barele de după t (în orizont), fereastra cu gaură nu dă rând, reperul 🎲 = Probabilitati.frecventa pe barele
 // de până la t, „rezultatul tău” fără boții închiși după pornire.
-//   node scripts/proba-v10079-date.mjs
+//   node scripts/proba-v10080-date.mjs
 import "./lib/text-ro-global.mjs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -617,7 +617,7 @@ const D = await import(pathToFileURL(path.join(RAD, "retea", "date.mjs")).href);
 const M = D.incarcaModulele(RAD), { P, R } = M, ORA = 3600000;
 let ok = 0, pica = 0;
 async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }
-console.log("Proba v100.79 (date) · rândurile, etichetele, reperul 🎲");
+console.log("Proba v100.80 (date) · rândurile, etichetele, reperul 🎲");
 const b = bare(1400, { seed: 21 }), btc = bare(1400, { seed: 22, p0: 60000 });
 
 await test("(3) rândurile atinge-24: la fiecare 4 h de la bara 720, trăsăturile = Retea.trasaturiBare(b, i), tEt = t + 24 h", () => {
@@ -669,7 +669,7 @@ await test("(3) rezultatul tău: rândul la pornire, y = net > 0, tEt = închide
   assert.equal(r[2].r1, 0.5, "al treilea: unul pe plus, unul pe minus închiși înainte");
 });
 
-console.log("\n" + (pica ? "V100.79 DATE PICA · " + pica + " din " + (ok + pica) : "V100.79 DATE PASS · " + ok + "/" + ok));
+console.log("\n" + (pica ? "V100.80 DATE PICA · " + pica + " din " + (ok + pica) : "V100.80 DATE PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
 ```
 
@@ -677,7 +677,7 @@ Notă pentru executor: al doilea bot din test pornește la `t0 + 2 h`, înainte 
 
 - [ ] **Step 2: Rulează proba — trebuie să pice**
 
-Run: `node scripts/proba-v10079-date.mjs`
+Run: `node scripts/proba-v10080-date.mjs`
 Expected: eroare la încărcare (`Cannot find module … retea/date.mjs`).
 
 - [ ] **Step 3: Scrie `retea/date.mjs`:**
@@ -765,20 +765,20 @@ Notă: `reperRand` cu `{ memo }` dă aceeași stare ca `P.stareLa(felie, k)`. `s
 
 - [ ] **Step 4: Rulează proba — trebuie să treacă**
 
-Run: `node scripts/proba-v10079-date.mjs`
-Expected: `V100.79 DATE PASS · 6/6`
+Run: `node scripts/proba-v10080-date.mjs`
+Expected: `V100.80 DATE PASS · 6/6`
 
 - [ ] **Step 5: Leagă proba:**
-- adaugă scriptul `"test:v10079date": "node scripts/proba-v10079-date.mjs"`;
-- pune `&& npm run test:v10079date` în lanțul `test`, după `test:v10079`.
+- adaugă scriptul `"test:v10080date": "node scripts/proba-v10080-date.mjs"`;
+- pune `&& npm run test:v10080date` în lanțul `test`, după `test:v10080`.
 
-Run: `npm run test:v10079date && npm run test:v10079`
+Run: `npm run test:v10080date && npm run test:v10080`
 Expected: ambele PASS.
 
 - [ ] **Step 6: Commit:**
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-3.log" 2>&1 && git add retea/date.mjs scripts/proba-v10079-date.mjs package.json && git commit -q -m "feat(retea): datele — rândurile pe țintă, etichetele doar de după t, reperul 🎲 la momentul rândului (livrarea 1, task 3)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-3.log" 2>&1 && git add retea/date.mjs scripts/proba-v10080-date.mjs package.json && git commit -q -m "feat(retea): datele — rândurile pe țintă, etichetele doar de după t, reperul 🎲 la momentul rândului (livrarea 1, task 3)" && echo GATA
 ```
 
 ---
@@ -787,8 +787,8 @@ npm test > "$SCRATCH/npm-test-79-3.log" 2>&1 && git add retea/date.mjs scripts/p
 
 **Files:**
 - Create: `retea/verifica.mjs`
-- Create: `scripts/proba-v10079-verifica.mjs`
-- Modify: `package.json` (`test:v10079ver` + lanțul)
+- Create: `scripts/proba-v10080-verifica.mjs`
+- Modify: `package.json` (`test:v10080ver` + lanțul)
 
 **Interfaces:**
 - Consumes: rândurile `{t, s, y, x, tEt, i?, e?, r1?, r2?}` (Task 3); `o.antreneaza(X, y, nIn, ascunse, seed)` (forma din Task 2); `o.prezice(model, x)` (`Retea.prezice`, Task 1).
@@ -799,13 +799,13 @@ npm test > "$SCRATCH/npm-test-79-3.log" 2>&1 && git add retea/date.mjs scripts/p
   - măsurile: `brier(l, k)`, `logloss(l, k)`, `bss(l, k, kRef)`, `blocuri(l, oreBloc)`, `bootstrap2(l, k, kRef, n=1000, seed=7) -> [lo, hi]`;
   - `verificare(l, {oreBloc, numeReper: [n1, n2?], luni, luniGata}) -> {n, nIndep, oreBloc, luni, luniGata, reper, brier, brierReper, brierLog, logloss, loglossReper, loglossLog, bss, ic, bssLog, icLog, bss3}`, adică exact forma citită de `Retea.decide`.
 
-- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10079-verifica.mjs`:
+- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10080-verifica.mjs`:
 
 ```js
-// Proba v100.79 (verificarea) - rețeaua neuronală, livrarea 1: retea/verifica.mjs - măsurile pe cifre știute, bootstrap-ul pe două trepte
+// Proba v100.80 (verificarea) - rețeaua neuronală, livrarea 1: retea/verifica.mjs - măsurile pe cifre știute, bootstrap-ul pe două trepte
 // (mai larg când monedele se mișcă împreună într-o lună), blocurile independente, lunile de test, pauza cât orizontul, normalizarea
 // doar din antrenare, judecarea unei luni cu un antrenor fals, reperul cel mai greu.
-//   node scripts/proba-v10079-verifica.mjs
+//   node scripts/proba-v10080-verifica.mjs
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import assert from "node:assert/strict";
@@ -816,7 +816,7 @@ const ORA = 3600000, ZI = 864e5;
 let ok = 0, pica = 0;
 async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }
 const aprox = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, a + " ≠ " + b);
-console.log("Proba v100.79 (verificarea) · măsurile, bootstrap-ul, lunile, pauza");
+console.log("Proba v100.80 (verificarea) · măsurile, bootstrap-ul, lunile, pauza");
 
 await test("(4) Brier, log-loss și scorul față de reper pe cifre știute", () => {
   const l = [{ y: 1, p: 0.8, r1: 0.5 }, { y: 0, p: 0.3, r1: 0.5 }];
@@ -875,13 +875,13 @@ await test("(4) verificarea: ia reperul cel mai greu (Brier mai mic), scorul pe 
   assert.equal(V.verificare(l, { oreBloc: 24, numeReper: ["🎲"], luni: 6, luniGata: 6 }).reper, "🎲");
 });
 
-console.log("\n" + (pica ? "V100.79 VER PICA · " + pica + " din " + (ok + pica) : "V100.79 VER PASS · " + ok + "/" + ok));
+console.log("\n" + (pica ? "V100.80 VER PICA · " + pica + " din " + (ok + pica) : "V100.80 VER PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
 ```
 
 - [ ] **Step 2: Rulează proba — trebuie să pice**
 
-Run: `node scripts/proba-v10079-verifica.mjs`
+Run: `node scripts/proba-v10080-verifica.mjs`
 Expected: `Cannot find module … retea/verifica.mjs`.
 
 - [ ] **Step 3: Scrie `retea/verifica.mjs`:**
@@ -987,13 +987,13 @@ export function verificare(l, o) {
 
 - [ ] **Step 4: Rulează proba — trebuie să treacă**
 
-Run: `node scripts/proba-v10079-verifica.mjs`
-Expected: `V100.79 VER PASS · 7/7`
+Run: `node scripts/proba-v10080-verifica.mjs`
+Expected: `V100.80 VER PASS · 7/7`
 
-- [ ] **Step 5: Leagă proba** (`"test:v10079ver": "node scripts/proba-v10079-verifica.mjs"` + `&& npm run test:v10079ver` în lanț), apoi commit:
+- [ ] **Step 5: Leagă proba** (`"test:v10080ver": "node scripts/proba-v10080-verifica.mjs"` + `&& npm run test:v10080ver` în lanț), apoi commit:
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-4.log" 2>&1 && git add retea/verifica.mjs scripts/proba-v10079-verifica.mjs package.json && git commit -q -m "feat(retea): verificarea walk-forward — pauza cât orizontul, bootstrap pe luni și monede, reperul cel mai greu (livrarea 1, task 4)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-4.log" 2>&1 && git add retea/verifica.mjs scripts/proba-v10080-verifica.mjs package.json && git commit -q -m "feat(retea): verificarea walk-forward — pauza cât orizontul, bootstrap pe luni și monede, reperul cel mai greu (livrarea 1, task 4)" && echo GATA
 ```
 
 ---
@@ -1001,13 +1001,13 @@ npm test > "$SCRATCH/npm-test-79-4.log" 2>&1 && git add retea/verifica.mjs scrip
 ### Task 5: Onestitatea, cu TensorFlow adevărat — zgomot, semnal liniar, semnal neliniar
 
 **Files:**
-- Modify: `scripts/proba-v10079-tf.mjs` (trei teste noi, înaintea rândului de final)
+- Modify: `scripts/proba-v10080-tf.mjs` (trei teste noi, înaintea rândului de final)
 
 **Interfaces:**
 - Consumes: `luniDeTest`, `judecaLuna`, `verificare` (Task 4); `antreneaza` (Task 2); `Retea.prezice`, `Retea.decide` (Task 1).
 - Produces: nimic nou. E proba cea mai importantă a specului.
 
-- [ ] **Step 1: Adaugă testele** în `scripts/proba-v10079-tf.mjs`, chiar înainte de `console.log("\n" + (pica ? …`:
+- [ ] **Step 1: Adaugă testele** în `scripts/proba-v10080-tf.mjs`, chiar înainte de `console.log("\n" + (pica ? …`:
 
 ```js
 // ---- onestitatea (specul): zgomot -> nedovedită; semnal liniar -> bate 🎲, dar nu formula simplă -> nedovedită; neliniar (o interacțiune
@@ -1035,8 +1035,8 @@ await test("(5) semnal neliniar (interacțiune) -> dovedită", async () => { con
 
 - [ ] **Step 2: Rulează proba**
 
-Run: `node scripts/proba-v10079-tf.mjs`
-Expected: `V100.79 TF PASS · 7/7`, cu cele trei rânduri de cifre afișate (zgomot / liniar / neliniar). Durata e de cel mult ~2 minute.
+Run: `node scripts/proba-v10080-tf.mjs`
+Expected: `V100.80 TF PASS · 7/7`, cu cele trei rânduri de cifre afișate (zgomot / liniar / neliniar). Durata e de cel mult ~2 minute.
 
 Testul (5) e scris după ce `verifica.mjs` există deja. Ca să-l vezi ROȘU, strică pe rând două lucruri:
 - în `Retea.decide`, comentează condiția `icLog`. Testul „liniar” trebuie să pice cu „dovedită”.
@@ -1049,7 +1049,7 @@ Dacă „liniar” iese uneori dovedit (rețeaua bate formula liniară din înt�
 - [ ] **Step 3: Commit:**
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-5.log" 2>&1 && git add scripts/proba-v10079-tf.mjs && git commit -q -m "test(retea): onestitatea cu TensorFlow — zgomot și liniar nedovedite, neliniar dovedit (livrarea 1, task 5)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-5.log" 2>&1 && git add scripts/proba-v10080-tf.mjs && git commit -q -m "test(retea): onestitatea cu TensorFlow — zgomot și liniar nedovedite, neliniar dovedit (livrarea 1, task 5)" && echo GATA
 ```
 
 ---
@@ -1058,8 +1058,8 @@ npm test > "$SCRATCH/npm-test-79-5.log" 2>&1 && git add scripts/proba-v10079-tf.
 
 **Files:**
 - Create: `retea/antreneaza.mjs`
-- Create: `scripts/proba-v10079-antrenor.mjs`
-- Modify: `package.json` (`test:v10079ant` + lanțul)
+- Create: `scripts/proba-v10080-antrenor.mjs`
+- Modify: `package.json` (`test:v10080ant` + lanțul)
 
 **Interfaces:**
 - Consumes:
@@ -1071,12 +1071,12 @@ npm test > "$SCRATCH/npm-test-79-5.log" 2>&1 && git add scripts/proba-v10079-tf.
   - `data/retea/luni-<tinta>.json = { cheie, luni: { "AAAA-LL": [[t, s, y, p, pLog, r1, r2], …] } }`;
   - argumentele `--buget-min`, `--tinta`, `--rad`, `--seminte`, `--max-randuri`.
 
-- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10079-antrenor.mjs`:
+- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10080-antrenor.mjs`:
 
 ```js
-// Proba v100.79 (antrenorul) - retea/antreneaza.mjs pe un dosar de date mic (2 monede + BTC, ~150 de zile): modelul de azi, lunile
+// Proba v100.80 (antrenorul) - retea/antreneaza.mjs pe un dosar de date mic (2 monede + BTC, ~150 de zile): modelul de azi, lunile
 // păstrate (a doua rulare le ia din cache), bugetul 0 nu atinge nimic, cheia schimbată reface lunile, ținta fără date nu strică restul.
-//   node scripts/proba-v10079-antrenor.mjs
+//   node scripts/proba-v10080-antrenor.mjs
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -1097,7 +1097,7 @@ const ruleaza = (...a) => spawnSync(process.execPath, [path.join(RAD, "retea", "
 const modele = () => JSON.parse(fs.readFileSync(path.join(DATA, "modele.json"), "utf8"));
 let ok = 0, pica = 0;
 async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }
-console.log("Proba v100.79 (antrenorul) · modelele, lunile, bugetul");
+console.log("Proba v100.80 (antrenorul) · modelele, lunile, bugetul");
 
 await test("(6) prima rulare: modelul de azi (17 intrări, 1 sămânță) și lunile de verificare scrise; verificarea are forma citită de Retea.decide", () => {
   const r = ruleaza("--tinta", "directie"); assert.equal(r.status, 0, r.stdout + r.stderr);
@@ -1129,13 +1129,13 @@ await test("(6) ținta fără date (rezultatul tău fără boti.json) nu face mo
 });
 
 fs.rmSync(TMP, { recursive: true, force: true });
-console.log("\n" + (pica ? "V100.79 ANTRENOR PICA · " + pica + " din " + (ok + pica) : "V100.79 ANTRENOR PASS · " + ok + "/" + ok));
+console.log("\n" + (pica ? "V100.80 ANTRENOR PICA · " + pica + " din " + (ok + pica) : "V100.80 ANTRENOR PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
 ```
 
 - [ ] **Step 2: Rulează proba — trebuie să pice**
 
-Run: `node scripts/proba-v10079-antrenor.mjs`
+Run: `node scripts/proba-v10080-antrenor.mjs`
 Expected: testul 1 pică (`status` ≠ 0: `Cannot find module …antreneaza.mjs`).
 
 - [ ] **Step 3: Scrie `retea/antreneaza.mjs`:**
@@ -1213,8 +1213,8 @@ spune("gata: " + Object.keys(modele).length + " modele");
 
 - [ ] **Step 4: Rulează proba — trebuie să treacă**
 
-Run: `node scripts/proba-v10079-antrenor.mjs`
-Expected: `V100.79 ANTRENOR PASS · 5/5`
+Run: `node scripts/proba-v10080-antrenor.mjs`
+Expected: `V100.80 ANTRENOR PASS · 5/5`
 
 - [ ] **Step 5: Măsoară pe datele LUI, fără să scrie în data/ reale**
 
@@ -1228,10 +1228,10 @@ Expected: „modelul de azi pe N rânduri” și câteva luni judecate în ≤ 1
 - **Peste 3 minute pe lună:** `Ruling` în ledger — `--max-randuri 20000` din colector, adică mai puține rânduri de antrenare. Bugetul și verificarea nu se schimbă.
 - **Peste 6 minute:** oprește-te și raportează.
 
-- [ ] **Step 6: Leagă proba** (`"test:v10079ant": "node scripts/proba-v10079-antrenor.mjs"` + lanțul), apoi commit:
+- [ ] **Step 6: Leagă proba** (`"test:v10080ant": "node scripts/proba-v10080-antrenor.mjs"` + lanțul), apoi commit:
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-6.log" 2>&1 && git add retea/antreneaza.mjs scripts/proba-v10079-antrenor.mjs package.json && git commit -q -m "feat(retea): antrenorul de noapte — modelele de azi întâi, lunile păstrate, bugetul (livrarea 1, task 6)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-6.log" 2>&1 && git add retea/antreneaza.mjs scripts/proba-v10080-antrenor.mjs package.json && git commit -q -m "feat(retea): antrenorul de noapte — modelele de azi întâi, lunile păstrate, bugetul (livrarea 1, task 6)" && echo GATA
 ```
 
 ---
@@ -1244,8 +1244,8 @@ npm test > "$SCRATCH/npm-test-79-6.log" 2>&1 && git add retea/antreneaza.mjs scr
 - Modify: `scripts/lib/tura-probabilitati.mjs` (`rez.retea`)
 - Modify: `scripts/colector.mjs`: importurile, `Retea`, lista INCARCAT, blocul rețelei, `turaProbabilitati`, `bucla`
 - Modify: `functions/api/istoric-bot.js` (`action=retea` GET / POST, limita corpului)
-- Create: `scripts/proba-v10079-colector.mjs`
-- Modify: `package.json` (`test:v10079col` + lanțul)
+- Create: `scripts/proba-v10080-colector.mjs`
+- Modify: `package.json` (`test:v10080col` + lanțul)
 
 **Interfaces:**
 - Consumes:
@@ -1259,13 +1259,13 @@ npm test > "$SCRATCH/npm-test-79-6.log" 2>&1 && git add retea/antreneaza.mjs scr
   - `rez.retea = {la, v, p, pornire?}` în `prob:<bot>`;
   - fișierul-steag `data/retea/porneste-acum`: o tură acum, oricând.
 
-- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10079-colector.mjs`:
+- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10080-colector.mjs`:
 
 ```js
-// Proba v100.79 (colectorul) - rețeaua neuronală, livrarea 1: Retea.pentruBot / pentruPornire (codurile 🎲, semnele la short, fără
+// Proba v100.80 (colectorul) - rețeaua neuronală, livrarea 1: Retea.pentruBot / pentruPornire (codurile 🎲, semnele la short, fără
 // modele -> nimic), istoria de 400 de zile (paginile, bugetul, „Pionex nu mai are”), tura de noapte (antrenorul care pică lasă modelele de
 // ieri), rez.retea în pachetul 🎲, ruta `retea`, colectorul se încarcă întreg.
-//   node scripts/proba-v10079-colector.mjs
+//   node scripts/proba-v10080-colector.mjs
 import "./lib/text-ro-global.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -1290,7 +1290,7 @@ async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + n
 const N_IN = { "atinge-24": 20, "atinge-72": 20, "atinge-168": 20, cursa: 21, liniste: 18, directie: 17, rezultat: 26 };
 const model = (t, v) => ({ tinta: t, versiune: v || Retea.VERSIUNE, la: Date.now(), norm: { m: Array(N_IN[t]).fill(0), s: Array(N_IN[t]).fill(1) }, ansamblu: [[{ W: Array.from({ length: N_IN[t] }, () => [0]), b: [0], act: "sigmoid" }]], verificare: null });
 const MODELE = Object.fromEntries(Object.keys(N_IN).map((t) => [t, model(t)]));
-console.log("Proba v100.79 (colectorul) · pentruBot, istoria, tura de noapte, rez.retea, ruta");
+console.log("Proba v100.80 (colectorul) · pentruBot, istoria, tura de noapte, rez.retea, ruta");
 const acum = Date.UTC(2026, 9, 4, 12), b = bare(1400, { seed: 41, t0: acum - 1400 * ORA }), c = b[b.length - 1].c;
 
 await test("(7) pentruBot pe un long: codurile 🎲 (marginile 24/72 h, lichidarea JOS, cursa) + direcția; fără modele -> null; altă versiune -> null", () => {
@@ -1379,7 +1379,7 @@ await test("(7) tura 🎲: cu modele, rez.retea are codurile și rezultatul la p
 
 // ---- ruta `retea` (KV fals)
 function kvFals() { const m = new Map(); return { get: async (k) => (m.has(k) ? m.get(k) : null), put: async (k, v) => { m.set(k, v); } }; }
-const TOKEN = "token-de-proba-v10079";
+const TOKEN = "token-de-proba-v10080";
 async function cheama(metoda, qs, env, corp) {
   const m = await import(pathToFileURL(path.join(RAD, "functions", "api", "istoric-bot.js")).href + "?t=" + Date.now() + "_" + Math.random());
   const h = { "cf-connecting-ip": "10.0.0.79", authorization: "Bearer " + TOKEN }; if (corp) { h["content-type"] = "application/json"; h.origin = "https://exemplu.test"; }
@@ -1402,7 +1402,7 @@ await test("(7) colectorul se încarcă întreg (cu Retea și tura de noapte)", 
   assert.equal(r.status, 0, (r.stderr || "").slice(0, 400)); assert.match(r.stdout, /INCARCAT true/);
 });
 
-console.log("\n" + (pica ? "V100.79 COLECTOR PICA · " + pica + " din " + (ok + pica) : "V100.79 COLECTOR PASS · " + ok + "/" + ok));
+console.log("\n" + (pica ? "V100.80 COLECTOR PICA · " + pica + " din " + (ok + pica) : "V100.80 COLECTOR PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
 ```
 
@@ -1413,7 +1413,7 @@ Note pentru executor:
 
 - [ ] **Step 2: Rulează proba — trebuie să pice**
 
-Run: `node scripts/proba-v10079-colector.mjs`
+Run: `node scripts/proba-v10080-colector.mjs`
 Expected: `Cannot find module … tura-retea.mjs`.
 
 - [ ] **Step 3: `public/lib/retea.js`** — adaugă înainte de `return { VERSIUNE: …`:
@@ -1614,7 +1614,7 @@ Notă: `reteaStare` e scris de `turaRetea` prin `scrieStare` în `finally`, incl
 - **limita corpului:** în POST, `action==="cazuri"?1048576:` devine `action==="cazuri"?1048576:action==="retea"?524288:`.
 - **POST:** înainte de `if(action==="prob"){` adaugă:
   ```js
-  // v100.79 (rețeaua neuronală, livrarea 1): modelele de azi-noapte (antrenorul de acasă, prin colector); forma o citește Retea.prezice
+  // v100.80 (rețeaua neuronală, livrarea 1): modelele de azi-noapte (antrenorul de acasă, prin colector); forma o citește Retea.prezice
   if(action==="retea"){
     const m=corp&&corp.modele,v=corp&&typeof corp.versiune==="string"?corp.versiune.slice(0,16):null;
     if(!m||typeof m!=="object"||!v)return json({error:"Lipseste modele sau versiune"},400);
@@ -1626,13 +1626,13 @@ Notă: `reteaStare` e scris de `turaRetea` prin `scrieStare` în `finally`, incl
 
 - [ ] **Step 8: Rulează proba — trebuie să treacă**
 
-Run: `node scripts/proba-v10079-colector.mjs && node scripts/colector-v77.mjs | tail -1`
-Expected: `V100.79 COLECTOR PASS · 11/11` și `V77_COLECTOR PASS · 32/32`.
+Run: `node scripts/proba-v10080-colector.mjs && node scripts/colector-v77.mjs | tail -1`
+Expected: `V100.80 COLECTOR PASS · 11/11` și `V77_COLECTOR PASS · 32/32`.
 
-- [ ] **Step 9: Leagă proba** (`"test:v10079col": "node scripts/proba-v10079-colector.mjs"` + lanțul), apoi commit:
+- [ ] **Step 9: Leagă proba** (`"test:v10080col": "node scripts/proba-v10080-colector.mjs"` + lanțul), apoi commit:
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-7.log" 2>&1 && git add public/lib/retea.js scripts/lib/tura-retea.mjs scripts/lib/tura-probabilitati.mjs scripts/colector.mjs functions/api/istoric-bot.js scripts/proba-v10079-colector.mjs package.json && git commit -q -m "feat(retea): colectorul — istoria de 400 de zile, antrenorul de noapte, rez.retea, ruta retea (livrarea 1, task 7)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-7.log" 2>&1 && git add public/lib/retea.js scripts/lib/tura-retea.mjs scripts/lib/tura-probabilitati.mjs scripts/colector.mjs functions/api/istoric-bot.js scripts/proba-v10080-colector.mjs package.json && git commit -q -m "feat(retea): colectorul — istoria de 400 de zile, antrenorul de noapte, rez.retea, ruta retea (livrarea 1, task 7)" && echo GATA
 ```
 
 ---
@@ -1646,8 +1646,8 @@ npm test > "$SCRATCH/npm-test-79-7.log" 2>&1 && git add public/lib/retea.js scri
 - Modify: `public/index.html` (`<script src="/lib/retea.js">`), `public/sw.js` (APP_SHELL)
 - Create: `scripts/lib/garda-retea.mjs`
 - Modify: `scripts/garda-texte.mjs` (modulul, generatorul, STRICT)
-- Create: `scripts/proba-v10079-ecran.mjs`
-- Modify: `package.json` (`test:v10079ecr` + lanțul)
+- Create: `scripts/proba-v10080-ecran.mjs`
+- Modify: `package.json` (`test:v10080ecr` + lanțul)
 
 **Interfaces:**
 - Consumes:
@@ -1661,13 +1661,13 @@ npm test > "$SCRATCH/npm-test-79-7.log" 2>&1 && git add public/lib/retea.js scri
   - `Retea.textPornire(pz, vd) -> string`;
   - pagina: `reteaM = {la, m, inLucru}`, `reteaAdu(dupa)`, `reteaHtml(rt, zar, o) -> string`.
 
-- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10079-ecran.mjs`:
+- [ ] **Step 1: Scrie proba (roșie)** — `scripts/proba-v10080-ecran.mjs`:
 
 ```js
-// Proba v100.79 (ecranul) - rețeaua neuronală, livrarea 1: rândurile 🧠 (aceleași titluri ca 🎲, cifra rețelei, 🎲 alături, starea),
+// Proba v100.80 (ecranul) - rețeaua neuronală, livrarea 1: rândurile 🧠 (aceleași titluri ca 🎲, cifra rețelei, 🎲 alături, starea),
 // direcția „cât dat cu banul” până e dovedită, rezultatul tău lângă rata ta, capul (modelul vechi), „Cum s-a verificat”; sub-blocul pe
 // Tablou (fără modele - nimic), retea.js încărcat și pus în cache, garda STRICTĂ „retea” fără abateri.
-//   node scripts/proba-v10079-ecran.mjs
+//   node scripts/proba-v10080-ecran.mjs
 import "./lib/text-ro-global.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -1686,7 +1686,7 @@ const ACUM = Date.UTC(2026, 9, 4, 12), V = { luni: 11, luniGata: 11, nIndep: 312
 const MOD = Object.fromEntries(Object.keys(R.TINTE).map((t) => [t, { tinta: t, versiune: R.VERSIUNE, la: ACUM - 3600000, verificare: { ...V, reper: t === "rezultat" ? "rata pe monedă" : V.reper } }]));
 const ZAR = [{ cod: "iese-jos-24", titlu: "Atinge marginea de jos (0.3605) în 24 h", p: 0.18 }, { cod: "lichidare", titlu: "Atinge lichidarea (0.2104) în 7 zile", p: 0.02 }];
 const RT = { la: ACUM, v: R.VERSIUNE, p: { "iese-jos-24": 0.21, lichidare: 0.03, "directie-24": 0.51 } };
-console.log("Proba v100.79 (ecranul) · rândurile 🧠, Tabloul, garda");
+console.log("Proba v100.80 (ecranul) · rândurile 🧠, Tabloul, garda");
 
 await test("(8) rândurile: titlul 🎲, cifra rețelei, „🎲 18% · nedovedită: nu bate 🎲 (Brier 0,183 față de 0,180)”; direcția; rezultatul tău", () => {
   const l = R.randuri(MOD, RT, ZAR, { acum: ACUM, pornire: { p: 0.41, rata: 0.524, n: 431 } });
@@ -1734,13 +1734,13 @@ await test("(8) garda: grupul „retea” e STRICT și n-are abateri (toate form
   assert.equal(rele.length, 0, rele.map((q) => q.ab.join("; ") + " — " + q.x.text).join("\n"));
 });
 
-console.log("\n" + (pica ? "V100.79 ECRAN PICA · " + pica + " din " + (ok + pica) : "V100.79 ECRAN PASS · " + ok + "/" + ok));
+console.log("\n" + (pica ? "V100.80 ECRAN PICA · " + pica + " din " + (ok + pica) : "V100.80 ECRAN PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
 ```
 
 - [ ] **Step 2: Rulează proba — trebuie să pice**
 
-Run: `node scripts/proba-v10079-ecran.mjs`
+Run: `node scripts/proba-v10080-ecran.mjs`
 Expected: testele pică pe rând: `R.randuri is not a function`, „lipsește reteaHtml”, garda fără `retea`.
 
 - [ ] **Step 3: `public/lib/retea.js`** — adaugă înainte de `return { VERSIUNE: …`:
@@ -1790,7 +1790,7 @@ Expected: testele pică pe rând: `R.randuri is not a function`, „lipsește re
 - [ ] **Step 4: `public/app.js`** — imediat înainte de `function tbProbRandHtml(x){`, adaugă:
 
 ```js
-// v100.79 (rețeaua neuronală, livrarea 1): modelele (KV retea, antrenate acasă noaptea), o dată la 30 de minute; fără server -> nimic
+// v100.80 (rețeaua neuronală, livrarea 1): modelele (KV retea, antrenate acasă noaptea), o dată la 30 de minute; fără server -> nimic
 var reteaM={la:0,m:null,inLucru:false};
 function reteaAdu(dupa){if(typeof Retea==="undefined"||reteaM.inLucru||Date.now()-reteaM.la<30*60000)return;reteaM.inLucru=true;getJSON("/api/istoric-bot?action=retea").then(function(d){reteaM.m=d&&d.retea&&d.retea.versiune===Retea.VERSIUNE?d.retea.modele:null}).catch(function(){reteaM.m=null}).then(function(){reteaM.la=Date.now();reteaM.inLucru=false;if(reteaM.m&&typeof dupa==="function")dupa()})}
 // sub-blocul 🧠 sub 🎲 (Tablou și fișă): capul, rândurile (forma tbProbRandHtml), „Cum s-a verificat” pliat; fără modele -> nimic
@@ -1805,7 +1805,7 @@ function reteaHtml(rt,zar,o){var m=reteaM.m;if(typeof Retea==="undefined"||!m||!
 - [ ] **Step 5: `public/app.css`** — la sfârșit:
 
 ```css
-/* v100.79 (rețeaua neuronală): sub-blocul 🧠 sub 🎲 - despărțit cu o linie punctată, aceleași rânduri ca 🎲 */
+/* v100.80 (rețeaua neuronală): sub-blocul 🧠 sub 🎲 - despărțit cu o linie punctată, aceleași rânduri ca 🎲 */
 .tbRetea{margin-top:12px;padding-top:8px;border-top:1px dashed rgba(148,163,184,.35)}
 ```
 
@@ -1844,22 +1844,22 @@ export function situatiiRetea(pune) {
 ```
 
 În `scripts/garda-texte.mjs`:
-- **importul:** după `import { situatiiAcasa } from "./lib/garda-acasa.mjs";` adaugă `import { situatiiRetea } from "./lib/garda-retea.mjs";   // v100.79 (rețeaua neuronală)`;
+- **importul:** după `import { situatiiAcasa } from "./lib/garda-acasa.mjs";` adaugă `import { situatiiRetea } from "./lib/garda-retea.mjs";   // v100.80 (rețeaua neuronală)`;
 - **modulul încărcat:** în lista de la `for (const f of ["text-ro.js", …`, `"probabilitati.js", ` devine `"probabilitati.js", "retea.js", `;
-- **STRICT:** `"acasa"]);` devine `"acasa", "retea"]);`. Comentariul de pe rând primește `; v100.79: + retea (rețeaua neuronală)` la sfârșit, nu la mijloc;
-- **generatorul:** după `situatiiAcasa(pune);` adaugă rândul `  situatiiRetea(pune);   // v100.79 (rețeaua neuronală, livrarea 1)`.
+- **STRICT:** `"acasa"]);` devine `"acasa", "retea"]);`. Comentariul de pe rând primește `; v100.80: + retea (rețeaua neuronală)` la sfârșit, nu la mijloc;
+- **generatorul:** după `situatiiAcasa(pune);` adaugă rândul `  situatiiRetea(pune);   // v100.80 (rețeaua neuronală, livrarea 1)`.
 
 - [ ] **Step 8: Rulează proba — trebuie să treacă; apoi garda întreagă**
 
-Run: `node scripts/proba-v10079-ecran.mjs && node scripts/garda-texte.mjs | grep -E "STRICT (retea|acasa)"`
-Expected: `V100.79 ECRAN PASS · 6/6` și `STRICT retea … 0 cu abateri`.
+Run: `node scripts/proba-v10080-ecran.mjs && node scripts/garda-texte.mjs | grep -E "STRICT (retea|acasa)"`
+Expected: `V100.80 ECRAN PASS · 6/6` și `STRICT retea … 0 cu abateri`.
 
 Dacă garda găsește abateri, se repară **textul** din `retea.js`, nu regula.
 
-- [ ] **Step 9: Leagă proba** (`"test:v10079ecr": "node scripts/proba-v10079-ecran.mjs"` + lanțul), apoi commit:
+- [ ] **Step 9: Leagă proba** (`"test:v10080ecr": "node scripts/proba-v10080-ecran.mjs"` + lanțul), apoi commit:
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-8.log" 2>&1 && git add public/lib/retea.js public/app.js public/app.css public/index.html public/sw.js scripts/lib/garda-retea.mjs scripts/garda-texte.mjs scripts/proba-v10079-ecran.mjs package.json && git commit -q -m "feat(retea): Tabloul — sub-blocul 🧠 sub 🎲, textele și garda STRICTĂ retea (livrarea 1, task 8)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-8.log" 2>&1 && git add public/lib/retea.js public/app.js public/app.css public/index.html public/sw.js scripts/lib/garda-retea.mjs scripts/garda-texte.mjs scripts/proba-v10080-ecran.mjs package.json && git commit -q -m "feat(retea): Tabloul — sub-blocul 🧠 sub 🎲, textele și garda STRICTĂ retea (livrarea 1, task 8)" && echo GATA
 ```
 
 ---
@@ -1868,7 +1868,7 @@ npm test > "$SCRATCH/npm-test-79-8.log" 2>&1 && git add public/lib/retea.js publ
 
 **Files:**
 - Modify: `public/app.js` (`grProbDeseneaza`, `grRetea`/`grReteaBtc`, `grReteaPoartaHtml`, `grPoartaHtml`, `gridPoarta`)
-- Modify: `scripts/proba-v10079-ecran.mjs` (două teste noi)
+- Modify: `scripts/proba-v10080-ecran.mjs` (două teste noi)
 
 **Interfaces:**
 - Consumes:
@@ -1877,7 +1877,7 @@ npm test > "$SCRATCH/npm-test-79-8.log" 2>&1 && git add public/lib/retea.js publ
   - pagina: `TabloExtra.geometrieBot(b)` (pasul net din `{gridJos, gridSus, pretCurent, brut: {buOrderData: {row, gridType}}}`) și `JurnalTrade.moneda`.
 - Produces: `grProb.bare` (barele unite, 1 h + 15M) și `grProb.o` (intrările lui `Probabilitati.pentruBot`); `grPoartaRez.trades` / `grPoartaRez.lev`.
 
-- [ ] **Step 1: Teste noi (roșii)** — în `scripts/proba-v10079-ecran.mjs`, înainte de `console.log("\n" + …`:
+- [ ] **Step 1: Teste noi (roșii)** — în `scripts/proba-v10080-ecran.mjs`, înainte de `console.log("\n" + …`:
 
 ```js
 await test("(9) fișa: 🧠 pe aceleași bare și niveluri ca 🎲 (grProb.bare / grProb.o), cu BTC din Pionex; rândurile sub cele 🎲", () => {
@@ -1898,7 +1898,7 @@ await test("(9) poarta: rândul gri „🧠 Un bot ca ăsta ar ieși pe plus: �
 });
 ```
 
-Run: `node scripts/proba-v10079-ecran.mjs`
+Run: `node scripts/proba-v10080-ecran.mjs`
 Expected: cele două teste noi pică (`lipsește grReteaPoartaHtml` / regex-urile din `grProbDeseneaza`).
 
 - [ ] **Step 2: `public/app.js` — `grProbDeseneaza`.** Înlocuiește blocul `if(grProb.cheie!==ch){ … grProb.cheie=ch}` cu:
@@ -1906,7 +1906,7 @@ Expected: cele două teste noi pică (`lipsește grReteaPoartaHtml` / regex-uril
 ```js
   if(grProb.cheie!==ch){
     var b1=grProb.ore.map(function(r){return {t:r[0],o:r[1],h:r[2],l:r[3],c:r[4]}}),b15=grStare.date&&grStare.simbol===f.simbol?GridCalcul.bare(grStare.date.r15):[];
-    // v100.79 (rețeaua): barele unite și intrările se păstrează - 🧠 le folosește pe ACELEAȘI (fără diferență față de 🎲)
+    // v100.80 (rețeaua): barele unite și intrările se păstrează - 🧠 le folosește pe ACELEAȘI (fără diferență față de 🎲)
     grProb.bare=Probabilitati.imbina(b1,b15,Date.now());
     grProb.o={acum:Date.now(),pret:f.pret,dir:dir,jos:st.jos,sus:st.sus,lichidare:st.lichidare?(dir==="short"?st.lichidare.sus:st.lichidare.jos):null,tinta:st.stop?(dir==="short"?st.stop.jos:st.stop.sus):null,stop:st.stop?(dir==="short"?st.stop.sus:st.stop.jos):null};
     grProb.rez=Probabilitati.pentruBot(grProb.bare,grProb.o);
@@ -1916,7 +1916,7 @@ Expected: cele două teste noi pică (`lipsește grReteaPoartaHtml` / regex-uril
 Apoi `el.innerHTML='<div class="tbBloc grProbBloc">…'` se rescrie așa: rândurile 🎲 trec printr-o variabilă, iar sub ele apare 🧠. Rândul `+Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}).map(tbProbRandHtml).join("")` devine `+zar.map(tbProbRandHtml).join("")+reteaHtml(rt,zar,{acum:Date.now()})`. Înaintea lui `el.innerHTML=`, pune:
 
 ```js
-  // v100.79 (rețeaua neuronală): 🧠 pe gridul propus - în browser, cu modelele din KV și BTC din Pionex
+  // v100.80 (rețeaua neuronală): 🧠 pe gridul propus - în browser, cu modelele din KV și BTC din Pionex
   reteaAdu(function(){if(grStare.fisa)renderGrid()});grReteaBtc();
   var zar=Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}),rt=reteaM.m&&grProb.bare?Retea.pentruBot(reteaM.m,grProb.bare,grProb.o,grRetea.btc):null;
 ```
@@ -1924,7 +1924,7 @@ Apoi `el.innerHTML='<div class="tbBloc grProbBloc">…'` se rescrie așa: rându
 - [ ] **Step 3: `public/app.js`** — după funcția `grProbDeseneaza`, adaugă:
 
 ```js
-// v100.79 (rețeaua neuronală): BTC pentru trăsăturile 🧠 ale fișei (ultimele 500 de ore din Pionex), o dată la 30 de minute
+// v100.80 (rețeaua neuronală): BTC pentru trăsăturile 🧠 ale fișei (ultimele 500 de ore din Pionex), o dată la 30 de minute
 var grRetea={btc:null,la:0,inLucru:false};
 function grReteaBtc(){if(typeof Retea==="undefined"||!reteaM.m||grRetea.inLucru||Date.now()-grRetea.la<30*60000)return;grRetea.inLucru=true;getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500").then(function(k){grRetea.btc=GridCalcul.bare(k&&k.data&&k.data.klines||[])}).catch(function(){grRetea.btc=null}).then(function(){grRetea.la=Date.now();grRetea.inLucru=false;if(grStare.fisa)renderGrid()})}
 // la poartă, rândul gri: „un bot ca ăsta ar ieși pe plus” din istoria lui și piața de acum - informație, poarta rămâne a ei
@@ -1938,20 +1938,20 @@ function grReteaPoartaHtml(f,p){var m=reteaM.m,st=grProbSetare(f);if(typeof Rete
 - [ ] **Step 4: `grPoartaHtml` și `gridPoarta`:**
 - în `grPoartaHtml`, înaintea rândului `    // v100.29: sfaturile din istoria lui (inchiderile din prima ora) - informatie, nu regula`, inserează două rânduri:
   ```js
-      // v100.79 (rețeaua neuronală): rândul gri 🧠, după regulile porții (poarta nu se schimbă)
+      // v100.80 (rețeaua neuronală): rândul gri 🧠, după regulile porții (poarta nu se schimbă)
       +grReteaPoartaHtml(f,p)
   ```
 - în `gridPoarta`, `grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,rez:` devine `grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,trades:trades,lev:lev,rez:`.
 
 - [ ] **Step 5: Rulează proba — trebuie să treacă**
 
-Run: `node scripts/proba-v10079-ecran.mjs && node scripts/proba-v10077.mjs | tail -1`
-Expected: `V100.79 ECRAN PASS · 8/8`. Proba v100.77 (poarta) rămâne PASS.
+Run: `node scripts/proba-v10080-ecran.mjs && node scripts/proba-v10077.mjs | tail -1`
+Expected: `V100.80 ECRAN PASS · 8/8`. Proba v100.77 (poarta) rămâne PASS.
 
 - [ ] **Step 6: Commit:**
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-9.log" 2>&1 && git add public/app.js scripts/proba-v10079-ecran.mjs && git commit -q -m "feat(retea): fișa — 🧠 pe gridul propus și rândul gri de la poartă (livrarea 1, task 9)" && echo GATA
+npm test > "$SCRATCH/npm-test-80-9.log" 2>&1 && git add public/app.js scripts/proba-v10080-ecran.mjs && git commit -q -m "feat(retea): fișa — 🧠 pe gridul propus și rândul gri de la poartă (livrarea 1, task 9)" && echo GATA
 ```
 
 ---
@@ -1959,40 +1959,40 @@ npm test > "$SCRATCH/npm-test-79-9.log" 2>&1 && git add public/app.js scripts/pr
 ### Task 10: Livrarea — versiunea, revizia, pozele, prima antrenare, memoria
 
 **Files:**
-- Modify: `BUILD_INFO.json`, `functions/_shared/versiune.js`, `package.json`, `public/sw.js`, `public/index.html` (v100.79), `scripts/colector.mjs` (v101.56)
+- Modify: `BUILD_INFO.json`, `functions/_shared/versiune.js`, `package.json`, `public/sw.js`, `public/index.html` (v100.80), `scripts/colector.mjs` (v101.56)
 - Memorie: `project_crypto_radar_audit_30_09.md`, `MEMORY.md`
 
-- [ ] **Step 1: Versiunile** — `$SCRATCH/versiuni-79.mjs`. Fiecare „vechi” trebuie să apară exact o dată; `ed.mjs` refuză altfel.
+- [ ] **Step 1: Versiunile** — `$SCRATCH/versiuni-80.mjs`. Fiecare „vechi” trebuie să apară exact o dată; `ed.mjs` refuză altfel.
 
 ```js
-// rețeaua neuronală, livrarea 1 (boții): v100.79 și colectorul v101.56
-export const build = [[`"version": "v100.78",`, `"version": "v100.79",`], [`"badge": "v100.78 · RAPORTUL VECHI, JURNALUL, RUPEREA",`, `"badge": "v100.79 · REȚEAUA NEURONALĂ (A DOUA PĂRERE)",`]];
-export const versiune = [[`export const VERSIUNE = "v100.78";`, `export const VERSIUNE = "v100.79";`]];
-export const pkg = [[`"version": "100.78.0",`, `"version": "100.79.0",`]];
-export const sw = [[`const CACHE="crypto-radar-v100-78";`, `const CACHE="crypto-radar-v100-79";`]];
-export const html = [[`content="v100.78" name="app-version"`, `content="v100.79" name="app-version"`], [`>v100.78 · RAPORTUL VECHI, JURNALUL, RUPEREA<`, `>v100.79 · REȚEAUA NEURONALĂ (A DOUA PĂRERE)<`],
-  [`>v100.78 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE<`, `>v100.79 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE<`], [`<b id="healthAppVersion">v100.78</b>`, `<b id="healthAppVersion">v100.79</b>`]];
+// rețeaua neuronală, livrarea 1 (boții): v100.80 și colectorul v101.56
+export const build = [[`"version": "v100.79",`, `"version": "v100.80",`], [`"badge": "v100.79 · BUSOLA: CANALUL ȘI DOVADA",`, `"badge": "v100.80 · REȚEAUA NEURONALĂ (A DOUA PĂRERE)",`]];
+export const versiune = [[`export const VERSIUNE = "v100.79";`, `export const VERSIUNE = "v100.80";`]];
+export const pkg = [[`"version": "100.79.0",`, `"version": "100.80.0",`]];
+export const sw = [[`const CACHE="crypto-radar-v100-79";`, `const CACHE="crypto-radar-v100-80";`]];
+export const html = [[`content="v100.79" name="app-version"`, `content="v100.80" name="app-version"`], [`>v100.79 · BUSOLA: CANALUL ȘI DOVADA<`, `>v100.80 · REȚEAUA NEURONALĂ (A DOUA PĂRERE)<`],
+  [`>v100.79 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE<`, `>v100.80 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE<`], [`<b id="healthAppVersion">v100.79</b>`, `<b id="healthAppVersion">v100.80</b>`]];
 export const colector = [[`const VERSIUNE_COLECTOR = "v101.55";`, `const VERSIUNE_COLECTOR = "v101.56";`]];
 ```
 
-Run (cu `E=docs/superpowers/plans/2026-10-02-sfaturi-pachetul-2/ed.mjs`, `V=$SCRATCH/versiuni-79.mjs`):
+Run (cu `E=docs/superpowers/plans/2026-10-02-sfaturi-pachetul-2/ed.mjs`, `V=$SCRATCH/versiuni-80.mjs`):
 `node $E BUILD_INFO.json $V build && node $E functions/_shared/versiune.js $V versiune && node $E package.json $V pkg && node $E public/sw.js $V sw && node $E public/index.html $V html && node $E scripts/colector.mjs $V colector`
 Expected: șase rânduri `ok …`.
 
 - [ ] **Step 2: Suita întreagă și garda**
 
-Run: `npm test > "$SCRATCH/npm-test-79.log" 2>&1; echo EXIT=$?; grep -E "STRICT|PICA|✗" "$SCRATCH/npm-test-79.log" | head -20`
+Run: `npm test > "$SCRATCH/npm-test-80.log" 2>&1; echo EXIT=$?; grep -E "STRICT|PICA|✗" "$SCRATCH/npm-test-80.log" | head -20`
 Expected: `EXIT=0`, toate grupurile STRICT cu „0 cu abateri”, inclusiv `retea`. Niciun `PICA`.
 
 - [ ] **Step 3: Revizia Opus a întregii ramuri** (superpowers:requesting-code-review, un singur agent, model Opus).
-- Pachetul: `git diff a17ce20..HEAD` plus fișierele noi. Revizorul primește specul, planul și Review Focus de aici.
+- Pachetul: `git diff <BASE>..HEAD` plus fișierele noi. BASE e commitul de dinaintea Task 1, notat în ledger la pornire. Revizorul primește specul, planul și Review Focus de aici.
 - Constatările Critice și Importante intră într-o singură trecere de reparații, fiecare cu testul văzut ROȘU, apoi suita.
 - Minorele se notează, nereparate.
 
 - [ ] **Step 4: Commit + push** (lanțul casei):
 
 ```bash
-npm test > "$SCRATCH/npm-test-79-final.log" 2>&1 && git add -u && git add retea/ scripts/ && git commit -q -F "$SCRATCH/commit-79.txt" && git push origin HEAD:main > "$SCRATCH/push-79.log" 2>&1 && echo "LANT=0 $(git rev-parse --short HEAD)"
+npm test > "$SCRATCH/npm-test-80-final.log" 2>&1 && git add -u && git add retea/ scripts/ && git commit -q -F "$SCRATCH/commit-80.txt" && git push origin HEAD:main > "$SCRATCH/push-80.log" 2>&1 && echo "LANT=0 $(git rev-parse --short HEAD)"
 ```
 
 Înainte de `git add retea/ scripts/`, rulează `git status --short`. Nimic din `data/` și niciun `node_modules` nu trebuie să apară.
