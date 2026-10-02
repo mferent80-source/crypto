@@ -101,6 +101,31 @@ var Retea = (function () {
     var d = decide(m.verificare || null), v = m.verificare || {}, la = nr(m.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
     return { dovedita: d.dovedita, motiv: d.motiv, nIndep: nr(v.nIndep) || 0, bloc: (TINTE[m.tinta] || { bloc: 24 }).bloc, vechi: z !== null && z >= 2 ? z : null };
   }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict };
+  // aceleași intrări ca Probabilitati.pentruBot (o = {acum, pret, dir, jos, sus, lichidare, tinta, stop}); modele = {tinta: model}.
+  // -> { la, v, p: {cod: probabilitate} } pe codurile rândurilor 🎲 + „directie-24”; null fără modele, fără 30 de zile de bare sau fără nicio cifră
+  function pentruBot(modele, bare, o, btc) {
+    o = o || {}; if (!modele || typeof modele !== "object") return null;
+    var acum = nr(o.acum) || Date.now(), b = Probabilitati.pregateste(bare, acum), f = trasaturiBare(b, b.length - 1, btc ? Probabilitati.pregateste(btc, acum) : null), pr = nr(o.pret);
+    if (!f || !(pr > 0)) return null;
+    var rel = function (x) { x = nr(x); return x !== null && x > 0 ? x / pr - 1 : null; }, dir = String(o.dir || "").toLowerCase(), p = {}, k = 0;
+    var pune = function (cod, tinta, e) { var m = modele[tinta]; if (!m || m.versiune !== VERSIUNE) return; var x = intrare(tinta, f, e), q = x ? prezice(m, x) : null; if (q !== null) { p[cod] = Math.round(q * 1000) / 1000; k++; } };
+    var jos = rel(o.jos), sus = rel(o.sus), lich = rel(o.lichidare), tinta = rel(o.tinta), stop = rel(o.stop);
+    if (jos !== null && jos < 0) { pune("iese-jos-24", "atinge-24", { rel: jos, H: 24 }); pune("iese-jos-72", "atinge-72", { rel: jos, H: 72 }); }
+    if (sus !== null && sus > 0) { pune("iese-sus-24", "atinge-24", { rel: sus, H: 24 }); pune("iese-sus-72", "atinge-72", { rel: sus, H: 72 }); }
+    if ((dir === "long" && lich !== null && lich < 0) || (dir === "short" && lich !== null && lich > 0)) pune("lichidare", "atinge-168", { rel: lich, H: 168 });
+    var cursaOk = tinta !== null && stop !== null && (dir === "long" ? tinta > 0 && stop < 0 && (lich === null || stop > lich) : dir === "short" ? tinta < 0 && stop > 0 && (lich === null || stop < lich) : false);
+    if (cursaOk) pune("cursa", "cursa", { relT: tinta, relS: stop });
+    if (f.stare && f.stare.indexOf("liniste") === 0) { pune("liniste-24", "liniste", { H: 24 }); pune("liniste-48", "liniste", { H: 48 }); }
+    pune("directie-24", "directie", {});
+    return k ? { la: acum, v: VERSIUNE, p: p } : null;
+  }
+  // „Rezultatul tău” la pornire: botul care rulează (pornit = pornitLa) sau fișa (pornit = acum); ist = boții închiși (forma JurnalTrade)
+  function pentruPornire(modele, t, bare, btc, ist) {
+    var m = modele && modele.rezultat; if (!m || m.versiune !== VERSIUNE) return null;
+    var por = nr(t && t.pornit); if (por === null) return null;
+    var f = trasaturiBot(t, Probabilitati.pregateste(bare, por), btc ? Probabilitati.pregateste(btc, por) : null, ist); if (!f) return null;
+    var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n };
+  }
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;

@@ -65,6 +65,7 @@ export async function onRequestGet({request,env}){
   if(action==="prob"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("prob:"+bot)||"null")}catch{p=null}return json({bot,prob:p})}
   if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
+  if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
   if(action==="ingustLista"){const l=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(simbolKv).filter(Boolean))].slice(0,10),out={};for(const s of l){let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}out[s]=v}return json({ingust:out})}
@@ -97,7 +98,7 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.25: colectorul trimite botii inchisi pe bucati; se unesc cu arhiva (compact, fara dubluri); „completa” nu se mai pierde
   if(action==="botiInchisi"){
@@ -271,6 +272,14 @@ export async function onRequestPost({request,env}){
     await env.ISTORIC.put("cons:"+bot,s);return json({ok:true});
   }
   // v100.46 (pachetul 2a): probabilitatile botului (colectorul, o data pe ora) si calibrarea lor
+  // v100.80 (rețeaua neuronală, livrarea 1): modelele de azi-noapte (antrenorul de acasă, prin colector); forma o citește Retea.prezice
+  if(action==="retea"){
+    const m=corp&&corp.modele,v=corp&&typeof corp.versiune==="string"?corp.versiune.slice(0,16):null;
+    if(!m||typeof m!=="object"||!v)return json({error:"Lipseste modele sau versiune"},400);
+    const bun=x=>x&&typeof x==="object"&&x.norm&&Array.isArray(x.norm.m)&&x.norm.m.length<=64&&Array.isArray(x.ansamblu)&&x.ansamblu.length>=1&&x.ansamblu.length<=5;
+    if(Object.keys(m).length>12||!Object.values(m).every(bun))return json({error:"Modele nevalide"},400);
+    await env.ISTORIC.put("retea",JSON.stringify({la:nr(corp.la)||Date.now(),versiune:v,modele:m}));return json({ok:true,n:Object.keys(m).length});
+  }
   if(action==="prob"){
     const bot=idBot(corp&&corp.bot),rez=corp&&corp.rez;if(!bot||!rez||typeof rez!=="object")return json({error:"Lipseste bot sau rez"},400);
     const s=JSON.stringify(rez);if(s.length>16384)return json({error:"rez prea mare"},413);

@@ -22,15 +22,16 @@ import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
 import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
 import os from "node:os";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
-import { turaProfil as turaProfilModul } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
+import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
+import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 const VERSIUNE_COLECTOR = "v101.55";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -140,8 +141,10 @@ const Perechi = new Function("GridCalcul", "GridProba", fs.readFileSync(path.joi
 const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "consiliu.js"), "utf8") + "; return Consiliu;")(SemnaleBot);   // v101.29 (I-474): o singura voce
 const Asemanatoare = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati);   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 
+const Retea = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "retea.js"), "utf8") + "; return Retea;")(Probabilitati);   // v101.56 (rețeaua neuronală, livrarea 1)
+
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare, Perechi].every(Boolean) && NDX.length > 90); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare, Perechi, Retea].every(Boolean) && NDX.length > 90); process.exit(0); }
 // v101.40 (el, 01.10: „rezolvă colectorul și limita”): colectorul se prezinta - dupa tokenul valid are galeata lui (pagina nu mai primeste
 // RATE_LIMITED cand colectorul citeste mult, de ex. dupa o repornire)
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json", "x-radar-client": "colector" };
@@ -1254,7 +1257,8 @@ async function turaProbabilitati() {
   probInLucru = true; probLa = Date.now();
   try {
     const act = await cere("/api/bot-orders");
-    await turaProbabilitatiModul({ acum: Date.now(), boti: ((act && act.bots) || []).filter((b) => b && b.activ !== false), GridCalcul, Probabilitati, Dovada, TabloExtra, cere, trimite, jurnal, stare: probStare,
+    const modele = modeleRetea(), btc = modele ? await bareBtc() : null;   // v101.56 (rețeaua neuronală)
+    await turaProbabilitatiModul({ acum: Date.now(), boti: ((act && act.bots) || []).filter((b) => b && b.activ !== false), GridCalcul, Probabilitati, Dovada, TabloExtra, cere, trimite, jurnal, stare: probStare, Retea, modele, btc, pornireDe: modele ? pornireDe(modele, btc) : null,
       simbolDe: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
       planDe: async (id) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
       citesteBare: (s) => { try { return JSON.parse(fs.readFileSync(fisOre(s), "utf8")); } catch { return []; } },
@@ -1263,6 +1267,56 @@ async function turaProbabilitati() {
       pauza: (ms) => new Promise((r) => setTimeout(r, ms)) });
   } catch (e) { jurnal("probabilitati ESEC", e.message); }
   probInLucru = false;
+}
+// v101.56 (rețeaua neuronală, livrarea 1): antrenorul de noapte (retea/antreneaza.mjs, proces separat), modelele de pe disc pentru 🧠,
+// BTC pentru „acum” (pagina nouă din Pionex + depozitul de 400 de zile), rezultatul tău la pornire (o dată pe bot și pe model)
+const RETEA_DIR = path.join(DATA, "retea"), RETEA_ORE = path.join(RETEA_DIR, "ore"), RETEA_STARE = path.join(RETEA_DIR, "stare.json"), RETEA_ACUM = path.join(RETEA_DIR, "porneste-acum");
+fs.mkdirSync(RETEA_ORE, { recursive: true });
+let reteaStare = {}; try { reteaStare = JSON.parse(fs.readFileSync(RETEA_STARE, "utf8")) || {}; } catch { reteaStare = {}; }
+reteaStare.inLucru = false;
+const reteaFis = (s) => path.join(RETEA_ORE, String(s).replace(/[^A-Z0-9_]/gi, "") + ".json");
+const citesteJson = (f, impl) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return impl; } };
+const peDisc = {};
+function dinDisc(f) { try { const m = fs.statSync(f).mtimeMs; if (!peDisc[f] || peDisc[f].m !== m) peDisc[f] = { m, v: JSON.parse(fs.readFileSync(f, "utf8")) }; return peDisc[f].v; } catch { return null; } }
+function modeleRetea() { const x = dinDisc(path.join(RETEA_DIR, "modele.json")); return x && x.versiune === Retea.VERSIUNE && x.modele && Object.keys(x.modele).length ? x.modele : null; }
+let btcViu = { la: 0, b: null };
+async function bareBtc() {
+  if (btcViu.b && Date.now() - btcViu.la < 50 * 60000) return btcViu.b;
+  let viu = []; try { const k = await cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500"); viu = k && k.data && Array.isArray(k.data.klines) ? k.data.klines : []; } catch {}
+  btcViu = { la: Date.now(), b: GridCalcul.bare(viu.concat(citesteJson(reteaFis("BTC_USDT_PERP"), []))) };   // pagina vie întâi: bara ei închisă bate bara în curs din depozit
+  return btcViu.b;
+}
+function pornireDe(modele, btc) {
+  const cheie = Retea.VERSIUNE + "|" + (modele.rezultat ? modele.rezultat.la : 0);
+  return (b, bare) => {
+    const cache = reteaStare.pornire || (reteaStare.pornire = {}), c = cache[b.id]; if (c && c.cheie === cheie) return c.r;
+    const g = TabloExtra.geometrieBot(b), r = Retea.pentruPornire(modele, { moneda: JurnalTrade.moneda(b.baza), dir: String(b.directie || "").toLowerCase(), levier: b.levier, jos: b.gridJos, sus: b.gridSus, pasNet: g ? g.netPct : null, pus: b.investit, pornit: b.pornitLa }, bare, btc, dinDisc(path.join(RETEA_DIR, "boti.json")) || []);
+    cache[b.id] = { cheie, r }; return r;
+  };
+}
+function pornesteAntrenorul() {
+  return new Promise((gata) => {
+    const t0 = Date.now(), c = spawn(process.execPath, [path.join(RAD, "retea", "antreneaza.mjs"), "--buget-min", "30"], { cwd: RAD, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    try { os.setPriority(c.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch {}
+    const rand = (x) => String(x).split(/\r?\n/).filter(Boolean).forEach((l) => jurnal("retea:", l.slice(0, 300)));
+    c.stdout.on("data", rand); c.stderr.on("data", rand);
+    const ceas = setTimeout(() => { jurnal("retea: antrenorul oprit după 35 de minute"); try { c.kill(); } catch {} }, 35 * 60000);
+    c.on("error", (e) => { clearTimeout(ceas); jurnal("retea: antrenorul nu pornește", e.message); gata({ cod: -1, minute: 0 }); });
+    c.on("exit", (cod) => { clearTimeout(ceas); gata({ cod: cod === null ? -1 : cod, minute: Math.round((Date.now() - t0) / 60000) }); });
+  });
+}
+async function turaReteaColector() {
+  const forta = fs.existsSync(RETEA_ACUM); if (forta) { try { fs.unlinkSync(RETEA_ACUM); } catch {} }
+  await turaReteaModul({ acum: Date.now(), stare: reteaStare, forta, eNoapte, ziRo: (t) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date(t)),
+    simboluri: [...new Set(Object.values(simbolPeMoneda()).concat(["BTC_USDT_PERP"]))],
+    cereKlines: (s, end) => cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=60M&limit=500" + (end ? "&endTime=" + end : "")),
+    pauza: (ms) => new Promise((r) => setTimeout(r, ms)),
+    citesteOre: (s) => citesteJson(reteaFis(s), []).concat(citesteJson(fisOre(s), [])),
+    scrieOre: (s, r) => { try { scrieAtomic(reteaFis(s), r); } catch (e) { jurnal("retea: ore nescrise", s, e.message); } },
+    boti: async () => { const h = simbolPeMoneda(); return JurnalTrade.din(await botiInchisiToti()).map((t) => ({ id: t.id, moneda: t.moneda, simbol: h[t.moneda] || null, dir: t.dir, levier: t.levier, jos: t.jos, sus: t.sus, pasNet: t.pasNet, pus: t.pus, investit: t.investit, net: t.net, pornit: t.pornit, inchis: t.inchis })).filter((t) => t.simbol); },
+    scrieBoti: (l) => scrieAtomic(path.join(RETEA_DIR, "boti.json"), l),
+    porneste: pornesteAntrenorul, citesteModele: () => citesteJson(path.join(RETEA_DIR, "modele.json"), null), trimite, jurnal,
+    scrieStare: (st) => { try { scrieAtomic(RETEA_STARE, st); } catch {} } });
 }
 // v101.28 (I-469): cazurile din arhiva (ce se stia la pornire + cum s-a terminat) -> KV cazuri, o data pe zi (ziua Romaniei).
 // Starea de la pornire din barele de 1 h de pe disc (doar monedele cu profil; LIT->LIGHTER si alti tickeri redenumiti raman fara stare).
@@ -1369,6 +1423,7 @@ async function bucla() {
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
   turaProfil().then(() => turaCazuri()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
+  turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
   turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
   turaPerechi().catch((e) => jurnal("perechi", e.message));   // v101.30 (I-477)
   turaSocotealaActiuni().catch((e) => jurnal("socoteala actiuni", e.message));   // v101.33
