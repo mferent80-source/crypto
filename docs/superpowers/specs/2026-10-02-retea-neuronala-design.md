@@ -2,6 +2,11 @@
 
 **Data:** 02.10.2026 · **Cerut de el:** „o rețea neuronală (TensorFlow) POȚI INTEGRA ÎN PAGINA BOTULUI ȘI ÎN TRADE 212?” · țintele: **toate trei** („Rezultatul tău”, „Aceleași ținte ca 🎲”, „Direcția prețului”) · designul prezentat în chat și aprobat („Da, scrie specul”).
 **Înrudit:** `2026-10-01-consiliere-personalizata-design.md` (🎲 pe boți), `2026-10-01-actiuni-t212-creier-design.md` (🎲 pe acțiuni).
+**Schimbat după aprobare (02.10, cu acordul lui, după lecțiile rețelei Busolei):**
+1. Formula simplă (regresia logistică pe aceleași trăsături) devine **prag**: „dovedită” numai dacă rețeaua bate și reperul, și formula.
+2. Intervalul de încredere se socotește **pe două trepte**: întâi lunile, apoi monedele din ele.
+3. TensorFlow.js rulează pe **WebAssembly**. Varianta JavaScript pură e de câteva sute de ori mai lentă: la Busola, 89 s pentru 4.096 de rânduri, față de ~1,1 s pentru 50.000 pe WebAssembly.
+4. Pionex dă lumânări de 1 h până la **~400 de zile** în urmă (verificat pe 02.10: 400 de zile merge, 420 nu).
 
 ## Ce vrea el (și ce am presupus)
 
@@ -51,8 +56,9 @@ colector (tura-retea) ── data/retea/date-<tinta>.json ──► retea/antren
    - `randuri(...)` — rândurile 🧠 pentru pagini, cu textele prin TextRo.
 
    Îl folosesc colectorul, fișa (în browser) și antrenorul. Aceleași trăsături peste tot înseamnă că nu există diferență între antrenare și folosire.
-2. **`retea/antreneaza.mjs` + `retea/package.json`** — singurul loc cu `@tensorflow/tfjs`.
-   - Pachetul e doar JavaScript, fără compilare pe Windows. `retea/node_modules` stă în `.gitignore`. Rădăcina proiectului rămâne fără dependențe npm.
+2. **`retea/antreneaza.mjs` + `retea/package.json`** — singurul loc cu TensorFlow.js.
+   - Pachetele: `@tensorflow/tfjs` 4.22.0 și `@tensorflow/tfjs-backend-wasm` 4.22.0, pe WebAssembly. Nu cer compilare pe Windows. `tfjs-node` nu se instalează pe Node 24 de pe PC-ul lui.
+   - `retea/node_modules` stă în `.gitignore`. Rădăcina proiectului rămâne fără dependențe npm.
    - Pagina publică și Functions nu-l încarcă.
    - Intrarea: `data/retea/date-<tinta>.json`. Ieșirea: `data/retea/model-<tinta>.json`.
    - Nu cere nimic din rețea și nu are token.
@@ -100,12 +106,14 @@ colector (tura-retea) ── data/retea/date-<tinta>.json ──► retea/antren
   - Adam 1e-3, loturi de 256, cel mult 60 de epoci.
   - Oprire timpurie pe ultimii 20% din fereastra de antrenare, în ordinea timpului, cu răbdare 5.
   - 5 semințe; predicția e media lor.
+  - Ieșirea pornește de la rata de bază a antrenării: bias-ul ultimului strat e logit(rata). Altfel calibrarea pornește strâmbă (lecția Busolei).
+  - Semințele: în procesul antrenorului, `Math.random` e înlocuit cu un generator cu sămânță înaintea fiecărui model, ca inițializarea și dropout-ul să fie reproductibile. Dropout-ul nu primește sămânță fixă: una fixă ar repeta aceeași mască la fiecare lot.
 - **Hiperparametrii sunt fixați aici.** Nu se caută pe datele de verificare; dacă s-ar căuta, verificarea ar minți.
 - **Standardizarea:** mediile și abaterile vin doar din fereastra de antrenare.
 - **Mostrele (crypto):**
   - una la 4 ore pe monedă (ferestrele se suprapun oricum);
   - pe fiecare mostră, distanțele din aceeași grilă cu 🎲: ±1, 2, 3, 5, 8, 12% pentru 24 h și 72 h, ±10–40% pentru lichidare.
-- **Reperul intern:** regresia logistică (aceleași trăsături, fără strat ascuns). Apare doar în rândul de verificare, ca să se vadă dacă rețeaua face mai mult decât o formulă simplă.
+- **Formula simplă:** regresia logistică, cu aceleași trăsături, fără strat ascuns, antrenată la fel. E **prag**: rețeaua trebuie să facă mai mult decât ea.
 
 ## Verificarea (walk-forward) și eticheta „dovedită”
 
@@ -118,21 +126,22 @@ colector (tura-retea) ── data/retea/date-<tinta>.json ──► retea/antren
   - blocurile de 3 zile, pentru 72 h;
   - săptămânile, pentru 7 zile sau 5 zile de bursă;
   - la rezultatul tău, zilele de pornire sau de cumpărare.
-- **Intervalul de încredere:** IC 95% pentru scorul Brier (1 − Brier rețea / Brier reper), prin bootstrap pe blocuri întregi: zilele sau săptămânile cu toate monedele din ele, pentru că piața se mișcă împreună. 1.000 de reeșantionări.
+- **Intervalul de încredere:** IC 95% pentru scorul Brier (1 − Brier rețea / Brier reper), prin bootstrap **pe două trepte**: întâi lunile, cu înlocuire, apoi, în fiecare lună aleasă, monedele ei (la rezultatul tău, boții), tot cu înlocuire. Așa, săptămânile în care toată piața se mișcă împreună nu se mai socotesc drept cazuri separate. 1.000 de reeșantionări.
 - **„Dovedită”** cere toate patru:
   1. cel puțin 100 de cazuri independente;
-  2. marginea de jos a IC 95% peste 0;
-  3. pe ultimele 3 luni, luate singure, scorul cel puțin 0;
-  4. log-loss-ul nu mai rău decât al reperului.
-- Altfel e **„nedovedită”**, cu motivul la vedere. Forma motivelor (cifrele de aici sunt doar exemple): „prea puține cazuri: 17 din 100”, „nu bate 🎲: Brier 0,183 față de 0,180” sau „pică pe ultimele 3 luni”.
-- **Se reface în fiecare noapte.** Eticheta poate cădea înapoi la „nedovedită”, iar pagina spune asta.
-- **Istoria barelor:** dacă Pionex dă bare de 1 h mai vechi de 185 de zile, primul pas al planului le aduce, până la 2 ani. Asta înseamnă mai multe cazuri independente, mai ales la 7 zile.
+  2. marginea de jos a IC 95% peste 0 **și față de reper** (🎲, rata ta sau 50%), **și față de formula simplă**;
+  3. pe ultimele 3 luni, luate singure, scorul față de reper cel puțin 0;
+  4. log-loss-ul nu mai rău nici decât al reperului, nici decât al formulei simple.
+- Altfel e **„nedovedită”**, cu motivul la vedere. Forma motivelor (cifrele de aici sunt doar exemple): „prea puține cazuri: 17 din 100”, „nu bate 🎲: Brier 0,183 față de 0,180”, „nu face mai mult decât o formulă simplă” sau „pică pe ultimele 3 luni”.
+- **Se reface în fiecare noapte.** Predicțiile lunilor deja judecate se păstrează pe disc: datele dinaintea lor nu se mai schimbă. Fiecare noapte adaugă doar luna nou încheiată și modelul final. Totul se reface de la zero numai când se schimbă codul trăsăturilor sau al rețelei. Eticheta poate cădea înapoi la „nedovedită”, iar pagina spune asta.
+- **Istoria barelor:** Pionex dă lumânări de 1 h până la ~400 de zile în urmă, iar livrarea 1 le aduce într-un depozit separat (`data/retea/ore/`). Profilul monedei rămâne pe cele 185 de zile de azi, ca sfaturile să nu se schimbe. Rezultă mai multe cazuri independente, mai ales la 7 zile.
 
 ### Ce aștept, cinstit
 
 - **B la 24 h și 72 h:** cele mai multe cazuri, deci cea mai bună șansă.
-- **B la 7 zile:** pe 185 de zile, dintre care 60 pentru prima antrenare, rămân ~17 săptămâni. Rămâne „nedovedită” până vine mai multă istorie.
-- **A-bot:** ~431 de cazuri cu stare. Probabil nedovedită o vreme.
+- **B la 7 zile:** pe ~400 de zile, dintre care 60 pentru prima antrenare, rămân ~48 de săptămâni, sub pragul de 100. Rămâne „nedovedită” până se strânge istorie.
+- **A-bot:** ~431 de cazuri cu stare pe 185 de zile; cu ~400 de zile de lumânări, mai multe. Probabil nedovedită o vreme.
+- **Formula simplă ca prag:** la Busola, rețeaua n-a bătut-o. Mă aștept ca și aici cele mai multe ținte să rămână „nedovedite” din acest motiv. Ăsta e un rezultat cinstit, nu un eșec.
 - **C:** aproape sigur „cât dat cu banul”.
 
 Rețeaua își spune singură scorul.
@@ -150,7 +159,7 @@ Rețeaua își spune singură scorul.
 - **Starea:**
   - „nedovedită” (gri) sau „dovedită pe N cazuri”;
   - modelul mai vechi de 2 zile apare ca „🧠 model de acum N zile — antrenarea n-a mers”.
-- **Ultimul rând al sub-blocului:** pe câte cazuri independente s-a verificat și cu ce rezultat (Brier rețea / reper, IC), plus reperul logistic.
+- **Ultimul rând al sub-blocului:** pe câte cazuri independente s-a verificat și cu ce rezultat (Brier rețea / reper / formula simplă, IC).
 - **Textele:** cel mult 160 de caractere pe rând, cifrele prin TextRo, „de” prin `cate`. Garda textelor primește un grup nou, STRICT, `retea`.
 - **Fără rețea** (pagina publicată, KV gol, model lipsă): sub-blocul lipsește și nimic altceva nu se schimbă.
 
@@ -181,7 +190,8 @@ Fiecare livrare are planul ei, probele văzute întâi roșu, revizia Opus, poze
   - predictorul perfect dă scorul 1;
   - reperul însuși dă 0.
 - **Onestitatea** (cea mai importantă probă), pe date sintetice:
-  - cu un semnal plantat, rețeaua iese „dovedită”;
+  - cu un semnal neliniar plantat (o interacțiune pe care formula liniară n-o vede), rețeaua iese „dovedită”;
+  - cu un semnal liniar, rețeaua bate reperul, dar nu și formula simplă, deci iese „nedovedită: nu face mai mult decât o formulă simplă”;
   - pe zgomot pur rămâne „nedovedită”.
 - **Trecerea înainte** din `retea.js` dă aceeași predicție ca TF.js pe aceleași greutăți (toleranță 1e-6).
 - **Colectorul și antrenorul:**
@@ -194,5 +204,7 @@ Fiecare livrare are planul ei, probele văzute întâi roșu, revizia Opus, poze
 
 - **Puține cazuri independente:** cele mai multe ținte pot rămâne „nedovedite” mult timp. Ăsta e un **rezultat**, nu un eșec.
 - **Piața se schimbă:** ce a mers 6 luni poate să nu meargă mâine. De aceea există verificarea pe ultimele 3 luni și refacerea zilnică.
-- **JavaScript pur e lent la antrenare:** dacă trece de 30 de minute, se rărește eșantionarea (mostre la 8 ore). Verificarea nu se scurtează.
+- **Antrenarea poate trece de buget:** pe WebAssembly, o epocă de 50.000 de rânduri ia ~1,1 s.
+  - Dacă o noapte tot trece de 30 de minute, lunile rămase se fac în nopțile următoare; pagina spune „verificarea în lucru: 6 din 11 luni”.
+  - Dacă nici așa nu ajunge, se rărește eșantionarea (mostre la 8 ore). Verificarea nu se scurtează.
 - **Costul de calcul:** noaptea, cel mult 30 de minute pe PC-ul de acasă, cu prioritate scăzută, așa că alertele nu întârzie (colectorul rămâne liber, antrenorul e alt proces).
