@@ -97,9 +97,9 @@ export function situatii() {
   const btc = S.btcAvertizare({ miscare: true, r4h: 2.1, r24h: 1.4 }, { miscare: false });
   pune("btc", "semafor", "btcAvertizare", btc, [["text", "deCe"]]);
   const ag = S.aglomerare({ funding: 0.0006, longShort: 2.1, oiHist5m: [{ sumOpenInterest: 100 }, { sumOpenInterest: 120 }] }, "long");
-  pune("aglomerare", "semafor", "aglomerare", ag, [["text", "deCe"]]);
+  pune("aglomerare", "semafor", "aglomerare", ag, [["text", "discordMesaj"], ["dovezi", "detalii"]]);
   const agS = S.aglomerare({ funding: -0.0005, longShort: 0.5, oiHist5m: [] }, "short");
-  pune("aglomerare short", "semafor", "aglomerare", agS, [["text", "deCe"]]);
+  pune("aglomerare short", "semafor", "aglomerare", agS, [["text", "discordMesaj"], ["dovezi", "detalii"]]);
   const iap = S.iaProfit(JTO({ profitTotal: 5 }), { ...fisa(), regim: JOS });
   pune("ia profit", "semafor", "iaProfit", iap, [["text", "deCe"]]);
   const crv = CRV();
@@ -159,6 +159,16 @@ export function situatii() {
   cons("gridul incheie putine perechi", { sm: S.semafor({ bot: JTO(), fisa: fisa() }), concret: [], sfaturi: [], perechi: { real: 1.2, est: 4, raport: 0.3, fereastra: "în ultimele 30 h", corectat: true } });
   cons("cu botul (verdict ȚINE cu explicatie)", { sm: S.semafor({ bot: VVV({ pretCurent: 30, profitTotal: 1 }), fisa: { regim: SUS }, zero: { pretZero: 28.5 } }), concret: [], sfaturi: [] });
   cons("fara fisa", { sm: S.semafor({ bot: JTO() }), concret: [], sfaturi: [] });
+  // revizia 02.10 (pozele pe CRV + revizia Opus): situatiile care lipseau
+  cons("lichidarea 4,5% + verdictul vechi „Ieși”", { sm: S.semafor({ bot: CRV({ distantaLichidarePct: 4.5 }), fisa: fisa() }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Mai sunt 4.5% până la lichidare." } });
+  cons("Pionex: marginea MARGIN_CALL", { sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa: fisa() }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Pionex raportează marginea contului ca MARGIN_CALL, nu NORMAL." } });
+  cons("Pionex: starea de risc", { sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa: fisa() }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Pionex raportează starea de risc ca REDUCE_ONLY, nu TRADING." } });
+  const mutaJ = S.mutaGridul(JTO({ pretCurent: 0.575 }), fisa(), 0, PM);
+  cons("mută gridul contopit cu sfatul „margine”", { sm: S.semafor({ bot: JTO({ pretCurent: 0.575, distantaLichidarePct: 30 }), fisa: fisa(), muta: mutaJ }), concret: [], sfaturi: [{ cod: "margine", ton: "atentie", titlu: "Până la marginea de jos (0.5722) sunt 0.5%", text: "Acolo totalul ar fi în jur de −7,34 USDT.", faCe: "" }] });
+  sem("planul: minus fractionar (−7,5)", { bot: JTO(), fisa: fisa(), plan: { atins: ["minus"], minus: { prag: 7.5 } } });
+  sem("planul: plus fractionar (+5,5)", { bot: JTO(), fisa: { ...fisa(), regim: JOS }, plan: { atins: ["plus"], plus: { prag: 5.5 } } });
+  card("stopul atins costa ~0", { bot: LIGHTER({ opritorPierdere: 4.4 }), fisa: null, zero: T.dacaInchizi(LIGHTER()), costuri: null, acum: T0, plan: { atins: [], minus: { prag: 0.3, laOpritor: -0.3, opritorPlan: 4.39 } } });
+  sem("costuri sub un cent pe zi", { bot: JTO(), fisa: fisa(), costuri: { netZi: -0.004 } });
   // Discord: schimbarea verdictului (a doua tura la rand), cu un nume lung de moneda
   for (const nume of ["LIGHTER", "1000BONK"]) {
     let st = {}; const v1 = { ...cL, nivel: "tine", eticheta: "🟢 Ține", motive: [] };

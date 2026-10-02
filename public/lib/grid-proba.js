@@ -275,11 +275,13 @@ var GridProba = (function () {
   }
   function ingust(b15, o) {
     o = o || {};
-    if (o.miscare) return { propus: false, motiv: "piața e în mișcare mare — nu porni un grid îngust acum" };
-    if (DIRECTII.indexOf(o.dir) < 0) return { propus: false, motiv: "fără direcția pieței pentru monedă" };
-    if (!b15 || b15.length < 9 * C.BARE_ZI) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)" };
+    // v100.61 (proba de ecran, 02.10): si respingerile de la inceput spun pe cate zile s-a uitat (fisa scria „pe undefined de zile”)
+    var zile = Array.isArray(b15) && b15.length ? Math.round(b15.length / C.BARE_ZI) : null;
+    if (o.miscare) return { propus: false, motiv: "piața e în mișcare mare — nu porni un grid îngust acum", zile: zile };
+    if (DIRECTII.indexOf(o.dir) < 0) return { propus: false, motiv: "fără direcția pieței pentru monedă", zile: zile };
+    if (!b15 || b15.length < 9 * C.BARE_ZI) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)", zile: zile };
     var nA = Math.round(b15.length * 2 / 3), A = b15.slice(0, nA), pasV = G.pasi(A);
-    if (!pasV) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)" };
+    if (!pasV) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)", zile: zile };
     var best = null, Hs = Array.isArray(o.doarH) && o.doarH.length ? o.doarH : ING.H;
     // revizia 01.10 (I1): pe test intra doar ferestrele in care directia de LA pornirea lor (din barele de dinainte) e cea ceruta -
     // directia de azi vine din zilele care stau chiar in treimea de test

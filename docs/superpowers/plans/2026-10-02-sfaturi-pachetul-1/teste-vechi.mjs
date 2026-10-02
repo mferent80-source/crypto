@@ -61,5 +61,5 @@ export const s3_v10060 = [
   [`assert.match(singur.faCe, /nimic de făcut/i, "singur: tot spune ca n-ai nimic de facut");`,
    `assert.match(singur.faCe, /N-aș face nimic acum/, "singur: tot spune ca n-ai nimic de facut");`],
 ];
-export const s4_v99 = [[`assert.match(sub.find((x) => x.cod === "grid").text, /SUB gridul de jos cu 0,2%/);`, `assert.match(sub.find((x) => x.cod === "grid").text, /sub gridul de jos cu 0,2%/);   // v100.61: fara majuscule de strigat`]];
+export const s4_v99 = [[`assert.match(sub.find((x) => x.cod === "grid").text, /SUB gridul de jos cu 0,2%/);`, `assert.match(sub.find((x) => x.cod === "grid").text, /sub gridul de jos cu 0,2%/);   /* v100.61: fara majuscule de strigat */`]];   // revizia Opus I3: cu „//” comentariul inghitea asertiunea care urma pe rand
 export const s4_v100 = [[`assert.match(nepus.tag.t, /pune-l/); assert.match(nepus.act, /Pune-l la 0\\.6012/);`, `assert.match(nepus.tag.t, /de pus la zero/); assert.match(nepus.act, /Aș pune stopul la 0\\.6012/);   // v100.61: persoana I`]];

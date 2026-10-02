@@ -5004,7 +5004,7 @@ function grIngustHtml(f){
   // revizia 01.10 (I3): rezultatul colectorului doar proaspat, pe aceeasi directie ca fisa si fara miscare acum - altfel calculul de aici
   var g0=grIngustPt(f.simbol),vg=g0?GridProba.varstaIngust(g0,Date.now()):null,g=g0&&!vg.vechi&&g0.dir===f.dir&&!(f.regim&&f.regim.miscare)?g0:null,loc=!g,r=g||f.ingustLocal;if(!r)return "";
   var i=f.info,v=GridProba.varstaIngust(r,Date.now()),st=r.setare,P=function(x){return (x>=0?"+":"−")+Math.abs(x*100).toFixed(1).replace(".",",")+" %"};
-  var h='<div class="tbBloc"><div class="tbBlocCap"><h4>⚡ Varianta îngustă</h4><span class="tbSub">'+escapeHtml(loc?"pe "+r.zile+" de zile — mai puține ferestre":v.text)+'</span></div>';
+  var h='<div class="tbBloc"><div class="tbBlocCap"><h4>⚡ Varianta îngustă</h4><span class="tbSub">'+escapeHtml(loc?(r.zile?"pe "+r.zile+" de zile — mai puține ferestre":"calculată aici, pe istoricul fișei"):v.text)+'</span></div>';
   if(!r.propus||!st)return h+'<p class="tbSub">Nu o propun: '+escapeHtml(r.motiv||"nedovedită")+'.'+(/rămâi/i.test(r.motiv||"")?"":" Rămâi la setările de mai sus.")+'</p>'+grUrmHtml()+'</div>';
   // setarea se reconstruieste pe pretul de ACUM (colectorul a calculat-o pe pretul de atunci)
   var s2=GridCalcul.construieste({pret:f.pret,lat:r.latime,pas:r.pas,dir:r.dir,suma:st.suma||(f.setare&&f.setare.suma)});
@@ -5797,7 +5797,7 @@ async function tbPlanSalveaza(){
 function tbMarjaCalc(v){
   var b=tbStare.bot,el=$("tbMarjaRez");if(!el)return;var P=GridCalcul.procent;
   var r=b?TabloExtra.marjaNoua(b,grNumar(v)):null;
-  if(!r){el.innerHTML='<p class="tbSub">'+(b&&b.directie!=="long"&&b.directie!=="short"?"La grid neutru lichidarea are două părți; nu socotesc.":"Scrie o sumă mai mare ca 0.")+'</p>';return}
+  if(!r){el.innerHTML='<p class="tbSub">'+(b&&b.directie!=="long"&&b.directie!=="short"?"La grid neutru lichidarea are două părți; nu socotesc.":!(grNumar(v)>0)?"Scrie o sumă mai mare ca 0.":"Acum botul n-are poziție (sau Pionex n-a dat prețul de lichidare): marja nu are ce muta.")+'</p>';return}
   el.innerHTML='<div class="tbLinie"><span>Lichidarea acum</span><b>'+escapeHtml(grPret(r.inainte,null))+'</b></div><div class="tbLinie"><span>Cu +'+escapeHtml(String(grNumar(v)))+' USDT marjă</span><b class="good">'+escapeHtml(grPret(r.lichidare,null))+(r.distantaPct!=null?' <span class="tbSub">('+P(r.distantaPct)+' de preț)</span>':'')+'</b></div><p class="tbSub">Aproximare: marja izolată în plus împinge lichidarea cu suma / poziție. Pionex poate rotunji puțin altfel.</p>';
 }
 function tbDeseneazaSaptPlan(b){

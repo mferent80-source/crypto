@@ -134,5 +134,85 @@ await test("pagina: „de ce” sub „Ce aș face eu”, legenda comuna (averti
   for (const m of ["semafor", "cartele", "consiliu"]) assert.ok(G.STRICT.has(m), "nestrict: " + m);
 });
 
+// ---- revizia (pozele pe datele lui + revizia Opus, 02.10) ----
+await test("F1 (poza 1440/1920, CRV la 4,5%): verdictul vechi „Ieși” pentru lichidare nu dubleaza semaforul - un motiv, actiunea semaforului, fara „n-aș pune bani” lipit de „aș adăuga marjă”; starea Pionex: faptul in titlu, actiunea la persoana I", () => {
+  const c = C.alcatuieste({ sm: S.semafor({ bot: CRV({ distantaLichidarePct: 4.5 }), fisa }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Mai sunt 4.5% până la lichidare." } });
+  assert.equal(c.nivel, "iesi"); assert.ok(!c.motive.some((m) => m.cod === "opreste"), JSON.stringify(c.motive.map((m) => m.titlu)));
+  assert.equal(c.titlu, "Lichidarea la 4,5%"); assert.equal(c.faCe, "Aș adăuga marjă sau aș închide botul acum.");
+  const lm = C.alcatuieste({ sm: S.semafor({ bot: CRV({ distantaLichidarePct: 4.5 }), fisa }), concret: [], opreste: { titlu: "Ieși", ceFac: "Mai sunt 4.5% până la lichidare." },
+    sfaturi: [{ cod: "margine", ton: "atentie", titlu: "Până la marginea de jos (0.3841) sunt 1.7%", text: "Acolo totalul ar fi în jur de −7,34 USDT.", faCe: "" }] });
+  assert.equal(lm.faCe, "Aș adăuga marjă sau aș închide botul acum.", "langa margine: nu se lipeste „n-aș pune bani în plus” de o iesire");
+  const p = C.alcatuieste({ sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Pionex raportează marginea contului ca MARGIN_CALL, nu NORMAL." } });
+  assert.equal(p.nivel, "iesi"); assert.equal(p.motive[0].cod, "opreste"); assert.equal(p.motive[0].titlu, "Pionex: marginea contului e MARGIN_CALL"); assert.equal(p.faCe, "Aș adăuga marjă sau aș închide botul acum.");
+  const r = C.alcatuieste({ sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Pionex raportează starea de risc ca REDUCE_ONLY, nu TRADING." } });
+  assert.equal(r.motive[0].titlu, "Pionex: starea de risc e REDUCE_ONLY"); assert.equal(r.faCe, "Aș închide botul acum, după ce verific starea lui în Pionex.");
+});
+await test("R1 (Opus I1): „mută gridul” contopit cu sfatul „margine” isi pastreaza „de ce”-ul (frecventa, pragul) si sursa", () => {
+  const pm = { jos: 0.03, sus: 0.03, sursa: "profilul CRV: 183 de zile de bare de 1 h", frecventa: () => 0.27 };
+  const b = { directie: "long", pretCurent: 0.575, gridJos: 0.5722, gridSus: 0.6572, distantaLichidarePct: 30 };
+  const m = S.mutaGridul(b, fisa, 0, pm);
+  const c = C.alcatuieste({ sm: S.semafor({ bot: b, fisa, muta: m }), concret: [], sfaturi: [{ cod: "margine", ton: "atentie", titlu: "Până la marginea de jos (0.5722) sunt 0.5%", text: "Acolo totalul ar fi în jur de −7,34 USDT.", faCe: "" }] });
+  const mg = c.motive.find((x) => x.cod === "margine");
+  assert.ok(mg, JSON.stringify(c.motive.map((x) => x.cod)));
+  assert.ok((mg.extra || "").includes(m.deCe), "lipseste de ce-ul: " + mg.extra); assert.ok((mg.extra || "").includes("profilul CRV"), mg.extra);
+});
+await test("R2 (Opus I2): „de ce”-ul ajunge si in afara Tabloului - poza pentru pagina alerts (Consilierul si semaforul), alertele „semaforul zice IEȘI” si „mută gridul”", async () => {
+  const p = C.pentruPoza({ nivel: "atentie", titlu: "Stopul costă peste plan", faCe: "Aș lăsa stopul la 0.38 și aș trece planul la −10 USDT.", explica: "Stopul planului (0.3842) e prea aproape: o zi obișnuită a monedei ajunge acolo în 71% din zile.", bani: "pierderea maximă: −10,2 USDT", motive: [] });
+  assert.match(p.faCe, /în 71% din zile/); assert.match(p.faCe, /💰 pierderea maximă/);
+  const { construiestePoza } = await import(new URL("./lib/poza.mjs", import.meta.url).href);
+  const z = construiestePoza({ acum: T0, versiune: "t", boti: [{ id: "1", baza: "CRV.PERP", directie: "long", semafor: { nivel: "iesi", cod: "lichidare", motiv: "lichidarea la 6,0%", faCe: "Aș adăuga marjă sau aș închide botul acum.", deCe: "Sub 8% nu mai e loc de răbdare.", componente: [] } }] });
+  assert.match(z.boti[0].sfat, /Sub 8% nu mai e loc de răbdare/);
+  const A = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "alerte.js"), "utf8") + "; return Alerte;")();
+  const bot = { id: "1", baza: "CRV.PERP", directie: "long", activ: true, pretCurent: 0.39, gridJos: 0.38, gridSus: 0.43, investit: 50, profitTotal: -1 };
+  const muta = { motiv: "prețul la 0,5% de marginea de jos (3,3% din interval)", deCe: "În 12 h moneda a ajuns atât de departe în 27% din jumătățile de zi (prag 2,2%).", setare: { jos: 0.37, sus: 0.42, grile: 9, levier: 5 }, des: false, treceriZi: 3 };
+  const out = A.reguli(bot, { semnale: { semafor: { nivel: "iesi", cod: "lichidare", motiv: "lichidarea la 6,0%", faCe: "Aș adăuga marjă sau aș închide botul acum.", deCe: "Sub 8% nu mai e loc de răbdare.", componente: [] }, muta } }, {});
+  assert.match(out["s-iesi"].mesaj, /Sub 8% nu mai e loc de răbdare/); assert.match(out["s-muta"].mesaj, /în 27% din jumătățile de zi/);
+});
+await test("R4 (Opus I4): valorile planului cu virgula (−7,5 / +5,5) in motive, in podea si pe cartela; „≈ 0 USDT”, nu „≈ −0 USDT”", () => {
+  assert.equal(S.semafor({ bot: CRV({ distantaLichidarePct: 40 }), fisa, plan: { atins: ["minus"], minus: { prag: 7.5 } } }).motiv, "planul tău: pragul de −7,5 USDT e atins");
+  assert.equal(S.semafor({ bot: CRV({ distantaLichidarePct: 40 }), fisa: { ...fisa, regim: { r4h: 2, r24h: 2, miscare: true, sens: "coboara" } }, plan: { atins: ["plus"], plus: { prag: 5.5 } } }).motiv, "planul tău: ținta de +5,5 USDT e atinsă");
+  const vvv = (o) => ({ directie: "long", pretCurent: 30.77, gridJos: 25, gridSus: 33, investit: 96.6, profitTotal: 6.2, profitNet: 3.2, pozitie: 5.9, pretDeschidere: 30.1, pnlNerealizatSigur: true, distantaLichidarePct: 30, opritorPierdereActiv: true, opritorPierdere: 26.633, ...o });
+  const pd = S.semafor({ bot: vvv(), fisa: { regim: { r4h: 0.5, r24h: 0.5, miscare: false } }, plan: T.planStare(vvv(), { plus: 5.5, minus: 14 }, {}, 0) });
+  assert.equal(pd.cod, "podea"); assert.match(pd.motiv, /\+5,5 USDT/); assert.ok(!/5\.5/.test(pd.motiv + pd.faCe + pd.deCe), pd.motiv + " | " + pd.faCe);
+  const c = S.acumConcret({ bot: { ...LIGHTER(), opritorPierdere: 4.4, opritorPierdereActiv: true }, fisa: null, zero: T.dacaInchizi(LIGHTER()), costuri: null, acum: T0,
+    plan: { atins: [], minus: { prag: 0.3, laOpritor: -0.3, opritorPlan: 4.39 } } }).find((x) => x.cod === "stop");
+  assert.ok(!/−0 USDT/.test(c.mic + " " + c.act), c.mic + " | " + c.act); assert.match(c.mic, /atins ≈ 0 USDT/);
+});
+await test("R6 (Opus M1): randurile noi de pe ecran castiga in fata lui #tabloubot .tbSub (14px) - „de ce” mai mic decat actiunea, legenda la 12px si departe de chenar", () => {
+  const css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
+  assert.match(css, /#tabloubot \.tbCcDeCe,#tabloubot \.tbCcSursa\{margin:4px 0 0;font-size:12\.5px\}/);
+  assert.match(css, /#tabloubot \.tbConsExplica\{font-size:13px\}/);
+  assert.match(css, /#tabloubot \.tbConsLeg\{margin:0;padding:10px 18px 14px;font-size:12px;line-height:1\.45\}/);
+});
+await test("R7 (Opus M2): legenda nu spune un prag gresit pentru „(puține cazuri)” (sfaturile il pun sub 30, altele sub 10)", () => {
+  assert.ok(!/sub 10/.test(C.LEGENDA), C.LEGENDA); assert.match(C.LEGENDA, /„\(puține cazuri\)” înseamnă prea puține date: un semn, nu o regulă/);
+});
+await test("R8 (Opus M5): nicio informatie pierduta - fereastra open interest, „doar”, stopul dincolo de zero dupa margine, „sub jumătate”", () => {
+  const ag = S.aglomerare({ funding: 0.0006, longShort: 2.1, oiHist5m: [{ sumOpenInterest: 100 }, { sumOpenInterest: 120 }] }, "long");
+  assert.match(ag.dovezi, /open interest \+20,0% în ultimele ore/); assert.match(ag.text, /open interest \+20,0% în ultimele ore/);
+  const ip = S.semafor({ bot: CRV({ distantaLichidarePct: 40, profitTotal: 5 }), fisa, iaProfit: { nivel: "atentie", total: 5, proc: 0.1, deCe: "x", text: "x" } }).componente.find((k) => k.cod === "ia-profit");
+  assert.equal(ip.faCe, "Aș închide botul pe plus și aș reporni doar când fișa zice iar 🟢.");
+  const cb = S.semafor({ bot: { directie: "long", pretCurent: 34, gridJos: 25, gridSus: 33, profitTotal: 1, investit: 100, distantaLichidarePct: 30, opritorPierdereActiv: true, opritorPierdere: 29 }, fisa: { regim: { r4h: 3, r24h: 3, miscare: true, sens: "urca" } }, zero: { pretZero: 28.5 } });
+  assert.equal(cb.cod, "cu-botul"); assert.match(cb.deCe, /stopul \(29\) e deja dincolo de zero/);
+  const pe = C.alcatuieste({ sm: S.semafor({ bot: CRV({ distantaLichidarePct: 40 }), fisa }), concret: [], sfaturi: [], perechi: { real: 1.2, est: 4, raport: 0.3, fereastra: "în ultimele 30 h" } });
+  assert.equal(pe.titlu, "Gridul încheie sub jumătate din perechi");
+});
+await test("R9 (Opus M8): costurile de sub un cent pe zi nu ies „0,00 USDT net/zi”", () => {
+  const k = S.semafor({ bot: CRV({ distantaLichidarePct: 40 }), fisa, costuri: { netZi: -0.004 } }).componente.find((x) => x.cod === "costuri");
+  assert.equal(k.motiv, "costurile pe zi depășesc grilele: −0,004 USDT net/zi");
+});
+await test("F2 (proba de ecran, piata in miscare): varianta ingusta respinsa devreme spune tot pe cate zile - fisa nu mai scrie „pe undefined de zile”", () => {
+  const GP = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(globalThis.GridCalcul);
+  const bare = (zile) => Array.from({ length: zile * 96 }, (_, i) => ({ t: i * 900000, o: 100, h: 100.5, l: 99.5, c: 100 }));
+  assert.equal(GP.ingust(bare(30), { miscare: true, dir: "long" }).zile, 30);
+  assert.equal(GP.ingust(bare(30), { dir: "nicio" }).zile, 30);
+  assert.equal(GP.ingust(bare(5), { dir: "long" }).zile, 5);
+  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /r\.zile\?"pe "\+r\.zile\+" de zile — mai puține ferestre"/);
+});
+await test("F3 (proba de ecran pe telefon, CRV iesit din grid): botul fara pozitie - calculatorul de marja spune asta, nu „Scrie o sumă mai mare ca 0.”", () => {
+  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /!\(grNumar\(v\)>0\)\?"Scrie o sumă mai mare ca 0\.":"Acum botul n-are poziție/);
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "proba-ecran-grid.mjs"), "utf8"), /Cu \\\+20 USDT marjă\|n-are poziție/);
+});
+
 console.log(`\nV100.61 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);

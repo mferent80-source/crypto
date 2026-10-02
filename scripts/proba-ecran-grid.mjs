@@ -221,7 +221,7 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`document.getElementById("tbPlanPlus").value="5";document.getElementById("tbPlanMinus").value="10";tbPlanSalveaza()`);
       await panaCand(b, `/Țintă pe plus/.test(document.getElementById("tbPlanStare").innerText)`, 20000, "planul salvat");
       await b.ev(`tbMarjaCalc("20")`);
-      assert.match(await b.ev(`document.getElementById("tbMarjaRez").innerText`), /Cu \+20 USDT marjă/);
+      assert.match(await b.ev(`document.getElementById("tbMarjaRez").innerText`), /Cu \+20 USDT marjă|n-are poziție/);   // revizia 02.10: fara pozitie (pretul iesit din grid) calculatorul spune asta
       FARA_GUNOI(await b.ev(`document.getElementById("tbPlanCard").innerText + document.getElementById("tbSaptCard").innerText`));
       await b.poza(path.join(DOSAR_POZE, `tablou-${nume}.png`));
       // curata planul de proba de pe server

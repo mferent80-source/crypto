@@ -22,6 +22,8 @@ var SemnaleBot = (function () {
   var X = function (v) { return TextRo.ori(v); };
   var P = function (v) { return TextRo.pct(v * 100); };
   var U = function (v) { return TextRo.usdt(v); };
+  // revizia Opus I4: valorile planului cum le-a scris el, dar cu virgula („7,5”, „15”, „15,75”)
+  var Pl = function (v) { v = nr(v); return v === null ? "?" : TextRo.num(Math.abs(v), 2).replace(/,?0+$/, ""); };
 
   // v100.45 (pachetul 1): „lângă margine” din PROFILUL monedei - distanta pana la margine sub P75 al miscarii pe 12 h (moneda trece
   // de el in 1 din 4 jumatati de zi; pm = ProfilMoneda.praguriMargine, socotit de chemator), plafonat la 15% din interval (revizia
@@ -158,11 +160,11 @@ var SemnaleBot = (function () {
     // v101.8 (2): cu plan pe minus, cartela spune cat costa stopul ATINS (TabloExtra.planStare -> minus.laOpritor, cu grilele de
     // pe drum) si il judeca dupa PLAN, nu dupa loc (la LIGHTER, 3,787 sub grid era „pus” verde si costa ≈ 60 fata de planul de 15,7)
     var pm = x.plan && x.plan.minus && !(x.plan.atins && x.plan.atins.indexOf("minus") >= 0) ? x.plan.minus : null, laOp = pm ? nr(pm.laOpritor) : null, pgm = pm ? nr(pm.prag) : null;
-    var invB = nr(b.investit), opPl = pm ? nr(pm.opritorPlan) : null, pgmT = pgm !== null ? String(pgm).replace(".", ",") : "";
+    var invB = nr(b.investit), opPl = pm ? nr(pm.opritorPlan) : null, pgmT = pgm !== null ? Pl(pgm) : "";
     var procPl = pgm > 0 && invB > 0 ? "−" + TextRo.num(pgm / invB * 100, 1) + "% din investiție" : null;
     var undePl = !(pgm > 0) ? null : opPl !== null ? fmtPret(opPl) + (procPl ? " (în procente: " + procPl + ")" : "") : procPl ? "în procente: " + procPl : null;
     var pestePlan = laOp !== null && pgm > 0 && -laOp > pgm * 1.2 && -laOp - pgm >= 2;
-    if (op !== null && laOp !== null) { st0.mic += " · atins ≈ " + (laOp >= 0 ? "+" : "−") + Math.round(Math.abs(laOp)) + " USDT"; st0.atins = laOp; }
+    if (op !== null && laOp !== null) { st0.mic += " · atins ≈ " + TextRo.usdt(laOp, 0); st0.atins = laOp; }   /* revizia Opus I4: „≈ 0 USDT”, nu „≈ −0” */
     // revizia v100: neutrul primul (la el zero-ul nu se socoteste niciodata); pozitia stopului SE VERIFICA, nu se presupune
     // v100.61 (specul „sfaturi concise”): act = un rand ≤ 110 (actiunea, la persoana I), deCe = de ce (≤ 160), detaliile raman in text
     if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Aș pune protecția la o grilă în afara intervalului, pe ambele părți (botul e neutru)."; }
@@ -182,7 +184,7 @@ var SemnaleBot = (function () {
       if (pgm > 0) {
         if (op === null && undePl) st0.act = "Aș pune stopul la " + undePl + ", cât zice planul (−" + pgmT + " USDT).";
         else if (pestePlan) { st0.tag = { t: "peste plan", c: "bad" }; st0.act = "Aș muta stopul la " + (undePl || "pragul planului") + ": atins acum, te costă ≈ " + Math.round(-laOp) + " USDT, nu " + pgmT + "."; st0.deCe = "Planul tău zice −" + pgmT + " USDT; stopul de la " + fmtPret(op) + " stă mult mai departe."; }
-        else if (op !== null && laOp !== null && !inAfara) { st0.tag = { t: "pus", c: "good" }; st0.act = "L-aș lăsa: stă în grid (" + fmtPret(op) + "), dar atins costă cât planul (≈ −" + Math.round(-laOp) + " USDT)."; }
+        else if (op !== null && laOp !== null && !inAfara) { st0.tag = { t: "pus", c: "good" }; st0.act = "L-aș lăsa: stă în grid (" + fmtPret(op) + "), dar atins costă cât planul (≈ " + TextRo.usdt(laOp, 0) + ")."; }
         // v100.43 (I-467): cand planul hotaraste unde stai stopul, banii se socotesc pe pretul PLANULUI (nu pe stopul fisei) - altfel
         // cartela zicea „mută-l la 0,384” si randul cu bani „l-aș lăsa unde e” (prins pe poza, CRV)
         if (opPl !== null && (op === null || pestePlan)) { pretStop = opPl; sursaStop = null; }   // revizia 01.10: pretul vine din plan, nu din profil
@@ -239,7 +241,7 @@ var SemnaleBot = (function () {
     }
     var semn = dir === "long" ? 1 : -1, c = [];
     if (f !== null && semn * f >= 0.0003) c.push("funding " + TextRo.pct(f * 100, 3) + "/8 h (" + TextRo.num(Math.abs(f) / 0.0001, 0) + "× obișnuitul)");
-    if (oi !== null && oi >= 0.15) c.push("open interest +" + P(oi));
+    if (oi !== null && oi >= 0.15) c.push("open interest +" + P(oi) + " în ultimele ore");   /* revizia Opus M5: fereastra ramane */
     if (ls !== null && (dir === "long" ? ls >= 1.5 : ls <= 1 / 1.5)) c.push("long/short " + TextRo.num(ls, 2));
     if (c.length < 2) return null;
     return { nivel: c.length >= 3 ? "atentie" : "info", oiSchimb: oi, semne: c.length, dovezi: c.join(", "), text: "Mulțimea e înghesuită pe " + dir + ", ca botul: " + c.join(", ") + "; risc de curățare bruscă în sens opus." };
@@ -275,7 +277,7 @@ var SemnaleBot = (function () {
       : peProfit && !ok ? "Aș muta stopul la zero-ul botului (" + fmtPret(pz) + "), fără bani în plus."
       : ok ? "L-aș lăsa să lucreze, fără bani în plus: stopul (" + numeOp(b, op, fmtPret) + ") e deja dincolo de zero."
       : "L-aș lăsa să lucreze, fără bani în plus.";
-    var deCe = dupa ? "Botul nu mai are poziție și nu mai câștigă" + (peProfit && !ok ? "; stopul la zero-ul botului (" + fmtPret(pz) + ") păstrează ce ai" : "") + "."
+    var deCe = dupa ? "Botul nu mai are poziție și nu mai câștigă" + (peProfit && !ok ? "; stopul la zero-ul botului (" + fmtPret(pz) + ") păstrează ce ai" : ok ? "; stopul (" + numeOp(b, op, fmtPret) + ") e deja dincolo de zero" : "") + "."
       : "Pe drum grilele " + parte + " încasează și poziția scade" + (areMarg ? "; până la marginea " + parte + " (" + fmtPret(marg) + ") mai sunt " + TextRo.pct(Math.abs(marg / p - 1) * 100) + ", după ea botul rămâne fără poziție" : "") + ".";
     return { faCe: faCe, deCe: deCe };
   }
@@ -310,10 +312,10 @@ var SemnaleBot = (function () {
     }
     var pl = x.plan;
     if (pl && Array.isArray(pl.atins)) {
-      if (pl.atins.indexOf("minus") >= 0) c.push({ nivel: "iesi", cod: "plan", motiv: "planul tău: pragul de −" + (pl.minus ? pl.minus.prag : "?") + " USDT e atins", faCe: "Aș închide botul acum, cum ai hotărât la rece." });
+      if (pl.atins.indexOf("minus") >= 0) c.push({ nivel: "iesi", cod: "plan", motiv: "planul tău: pragul de −" + (pl.minus ? Pl(pl.minus.prag) : "?") + " USDT e atins", faCe: "Aș închide botul acum, cum ai hotărât la rece." });
       // „ținta” ramane in motiv: podeaPeBani gaseste prima „țintă atinsă” dupa el
       var cuB = f && sensFata(b, f.regim) === "cu";
-      if (pl.atins.indexOf("plus") >= 0) c.push({ nivel: "iesi", cod: "plan", motiv: "planul tău: ținta de +" + (pl.plus ? pl.plus.prag : "?") + " USDT e atinsă",
+      if (pl.atins.indexOf("plus") >= 0) c.push({ nivel: "iesi", cod: "plan", motiv: "planul tău: ținta de +" + (pl.plus ? Pl(pl.plus.prag) : "?") + " USDT e atinsă",
         faCe: cuB ? "Aș încasa acum sau aș muta ținta mai sus în „Planul tău”, conștient." : "Aș închide botul pe plus acum, cum ți-ai propus.",
         deCe: cuB ? "Piața încă merge cu botul, dar ținta nu trebuie să treacă neobservată." : "" });
       if (pl.atins.indexOf("afara") >= 0) c.push({ nivel: "atentie", cod: "plan", motiv: "planul tău: în afara gridului peste pragul de ore", faCe: "Aș închide botul și aș porni unul nou din fișă, pe unde e prețul." });
@@ -324,9 +326,9 @@ var SemnaleBot = (function () {
     var sf = f && f.regim ? sensFata(b, f.regim) : null, xMis = f && f.regim ? X(Math.max(f.regim.r4h || 0, f.regim.r24h || 0)) : "";
     if (f && f.regim && f.regim.miscare && sf !== "cu") c.push({ nivel: "atentie", cod: "miscare", motiv: "mișcare mare" + (sf === "contra" ? " împotriva botului" : "") + " (" + xMis + " față de obișnuit)", faCe: "N-aș adăuga bani acum; l-aș lăsa cât lichidarea e departe." });
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";
-    if (ip) c.push({ nivel: "atentie", cod: "ia-profit", motiv: "moment bun de încasat" + ipT, faCe: "Aș închide botul pe plus și aș reporni când fișa zice iar 🟢.", deCe: ip.deCe || "" });
+    if (ip) c.push({ nivel: "atentie", cod: "ia-profit", motiv: "moment bun de încasat" + ipT, faCe: "Aș închide botul pe plus și aș reporni doar când fișa zice iar 🟢.", deCe: ip.deCe || "" });
     if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, parte: x.muta.parte || null, faCe: "Aș muta gridul: închid botul și pornesc cu setările din cartela Gridul.", deCe: x.muta.deCe || "", sursa: x.muta.sursa || null });
-    if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc grilele: " + U(x.costuri.netZi) + " net/zi", faCe: "Aș lua levier mai mic sau grile mai rare la următorul bot." });
+    if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc grilele: " + TextRo.usdt(x.costuri.netZi, Math.abs(x.costuri.netZi) < 0.01 ? 3 : 2) + " net/zi", faCe: "Aș lua levier mai mic sau grile mai rare la următorul bot." });
     var rB = x.btc ? nr(x.btc.r) : null;
     if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC în mișcare" + (rB !== null ? " (" + X(rB) + " față de obișnuit)" : "") + ", moneda încă nu", faCe: "N-aș adăuga bani până nu se vede încotro trage BTC.", deCe: "Altcoinii urmează des BTC." });
     var ag = x.aglomerare, nS = ag ? nr(ag.semne) : null;
@@ -337,10 +339,10 @@ var SemnaleBot = (function () {
     var podea = pl && pl.plus && nr(pl.plus.podea), p0 = nr(b.pretCurent), op = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null;
     var altIesi = c.some(function (y) { return y.nivel === "iesi" && y.cod !== "plan"; }) || (pl && Array.isArray(pl.atins) && pl.atins.indexOf("minus") >= 0);
     if (pl && Array.isArray(pl.atins) && pl.atins.indexOf("plus") >= 0 && !altIesi && sf !== "contra" && podea !== null && p0 !== null && (dir === "long" ? podea < p0 : dir === "short" ? podea > p0 : false)) {
-      var tinta = pl.plus.prag;
+      var tinta = Pl(pl.plus.prag);   /* revizia Opus I4: in text cu virgula; calculele de mai jos folosesc pl.plus.prag */
       // la adapost = opritorul lui pastreaza tinta (toleranta: 1% din tinta, min 5 centi - rotunjirea la pasul de pret Pionex)
-      var opPast = nr(pl.plus.opritorPastreaza), tol = Math.max(0.05, tinta * 0.01);
-      var laAdapost = op !== null && (opPast !== null ? opPast >= tinta - tol : (dir === "long" ? op >= podea : op <= podea)), ur = pl.plus.urca;
+      var opPast = nr(pl.plus.opritorPastreaza), tol = Math.max(0.05, pl.plus.prag * 0.01);
+      var laAdapost = op !== null && (opPast !== null ? opPast >= pl.plus.prag - tol : (dir === "long" ? op >= podea : op <= podea)), ur = pl.plus.urca;
       // v96.5 opritorul care urca: la 1,5% de pret pastrezi mai mult decat tinta -> spune cat (v100.61: in „de ce”, langa actiune)
       var urcaTxt = ur && (ur.opritorPastreaza === null || ur.opritorPastreaza < ur.pastrezi - 0.5) ? "cu " + TextRo.pct(ur.perna * 100) + " loc de respirație, stopul la " + fmtPret(ur.pret) + " ar păstra " + U(ur.pastrezi) + (ur.opritorPastreaza !== null ? " (cel de acum: " + U(ur.opritorPastreaza) + ")" : "") : "";
       var aproape = Math.abs(podea / p0 - 1) < 0.02, mare1 = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
