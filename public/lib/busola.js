@@ -20,9 +20,13 @@ var Busola = (function () {
     var cheie = simbolBusola(simbol), m = rez.monede[cheie], g = rez.grid;
     var v = acum - Number(rez.la), varsta = v > VECHI_MS ? "măsurat acum " + Math.round(v / 3600000) + " ore" : null;
     if (!m) return { nivel: "nemasurat", text: "Busola n-a măsurat " + cheie + ": urmărește topul spot Pionex, nu futures.", varsta: varsta };
-    var s = m.grid4h || m["4h"];
-    if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta };
-    if (s === "liniste") return { nivel: "info", text: "Busola, pe 4h: mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (" + proc(g.liniste) + "), tot pe minus.", varsta: varsta };
+    // v100.67 (revizia): „nu-stiu” = măsurat, nimic neobișnuit; „nemasurat” sau lipsă pe 4h = Busola n-a putut măsura —
+    // înainte, amândouă ieșeau „nimic neobișnuit”. Se ia prima valoare MĂSURATĂ (filtrul de grid, apoi harta).
+    var masurat = function (v) { return v === "miscare" || v === "liniste" || v === "nu-stiu"; };
+    var s = masurat(m.grid4h) ? m.grid4h : masurat(m["4h"]) ? m["4h"] : null;
+    if (!s) return { nivel: "nemasurat", text: "Busola n-a putut măsura " + cheie + " pe 4h acum (eroare sau prea puține cazuri).", varsta: varsta };
+    if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta };
+    if (s === "liniste") return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (" + proc(g.liniste) + "), tot pe minus.", varsta: varsta };
     return { nivel: "neutru", text: "Busola, pe 4h: nimic neobișnuit — un grid oarecare a ieșit pe minus (" + proc(g.oricand) + " pe episod).", varsta: varsta };
   }
 
@@ -32,11 +36,13 @@ var Busola = (function () {
   }
 
   // true = au venit date noi (fișa se redesenează o dată); false = din cache sau Busola n-a răspuns (fără buclă)
+  // v100.67 (revizia): cât cererea e în curs, ceilalți chemători primesc false — altfel fiecare desen adăuga încă o
+  // redesenare la sosire. Cererea are limită de timp: o Busolă agățată nu mai blochează reîmprospătarea.
   function incarca(fetchFn, acum) {
-    if (stare.inLucru) return stare.inLucru;
+    if (stare.inLucru) return stare.inLucru.then(function () { return false; });
     if (stare.la && acum - stare.la < CACHE_MS) return Promise.resolve(false);
     stare.inLucru = Promise.resolve()
-      .then(function () { return fetchFn(URL_REZUMAT); })
+      .then(function () { return fetchFn(URL_REZUMAT, { signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined }); })
       .then(function (r) { if (!r || !r.ok) throw new Error("HTTP " + (r && r.status)); return r.json(); })
       .then(function (j) { stare.rez = j; return true; }, function () { return false; })
       .then(function (nou) { stare.la = acum; stare.inLucru = null; return nou; });

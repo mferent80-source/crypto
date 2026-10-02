@@ -13,12 +13,12 @@ async function test(nume, fn) {
   teste++;
   await Promise.resolve().then(fn).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e.message}`); });
 }
-console.log("\nV100.64 · Busola în fișa gridului (I-491) · proba\n");
+console.log("\nV100.64 + v100.67 · Busola în fișa gridului (I-491) + revizia · proba\n");
 
 const ACUM = Date.UTC(2026, 9, 2, 10, 0);
 const REZ = {
   la: ACUM - 2 * 3600000, versiune: "1.27.0",
-  monede: { BTC: { "4h": "miscare", grid4h: "miscare" }, NEAR: { "4h": "liniste" }, ETH: { grid4h: "nu-stiu" }, BONK: { grid4h: "liniste" } },
+  monede: { BTC: { "4h": "miscare", grid4h: "miscare" }, NEAR: { "4h": "liniste" }, ETH: { grid4h: "nu-stiu" }, BONK: { grid4h: "liniste" }, SOL: { grid4h: "nemasurat", "4h": "nemasurat" }, XRP: { "1h": "miscare" } },
   grid: { interval: "4h", liniste: -0.00074962531, oricand: -0.0014935975, miscare: -0.0021398053 },
 };
 const REGULI = [[/\d\.\d/, "zecimală cu punct"], [/(^|[\s(·:])-\d/, "minus ASCII"], [/!/, "semn de exclamare"], [/NaN|undefined|null/, "gunoi"]];
@@ -33,13 +33,13 @@ await test("simbolul Radarului → al Busolei: JTO_USDT_PERP → JTO, 1000BONK �
 await test("mai agitată ⇒ ATENȚIE, cu cifra gridului măsurat (−0,214%), fără „NU PORNI” (avertizează, nu refuză)", () => {
   const r = B.randGrid(REZ, "BTC_USDT_PERP", ACUM);
   assert.equal(r.nivel, "atentie");
-  assert.match(r.text, /mai agitată ca de obicei/); assert.match(r.text, /−0,214%/); assert.match(r.text, /cel mai mult/);
+  assert.match(r.text, /moneda e mai agitată ca de obicei/); assert.match(r.text, /−0,214%/); assert.match(r.text, /cel mai mult/);
   assert.doesNotMatch(r.text, /NU PORNI|nu porni/);
   curat(r.text);
 });
 await test("mai calmă ⇒ INFO, pierde cel mai puțin, dar spune că tot e pe minus (−0,075%)", () => {
   const r = B.randGrid(REZ, "NEAR_USDT_PERP", ACUM);
-  assert.equal(r.nivel, "info"); assert.match(r.text, /mai calmă/); assert.match(r.text, /−0,075%/); assert.match(r.text, /pe minus/);
+  assert.equal(r.nivel, "info"); assert.match(r.text, /moneda e mai calmă/); assert.match(r.text, /−0,075%/); assert.match(r.text, /pe minus/);
   curat(r.text);
 });
 await test("nimic neobișnuit ⇒ NEUTRU, cu gridul oarecare (−0,149%)", () => {
@@ -92,7 +92,23 @@ await test("două desene în același timp ⇒ o singură cerere", async () => {
   let cereri = 0;
   const f = async () => { cereri++; await new Promise((r) => setTimeout(r, 20)); return { ok: true, json: async () => REZ }; };
   const [a, b] = await Promise.all([B.incarca(f, ACUM), B.incarca(f, ACUM)]);
-  assert.equal(cereri, 1); assert.ok(a === true && b === true);
+  assert.equal(cereri, 1);
+  assert.ok(a === true && b === false, "doar primul desen află că au venit date noi ⇒ fișa se redesenează O dată (revizia)");
+});
+
+await test("🔑 revizia: celula pe care Busola n-a putut-o măsura ⇒ „n-a putut măsura”, NU „nimic neobișnuit”", () => {
+  const r = B.randGrid(REZ, "SOL_USDT_PERP", ACUM);
+  assert.equal(r.nivel, "nemasurat"); assert.match(r.text, /n-a putut măsura SOL/); assert.doesNotMatch(r.text, /nimic neobișnuit/); curat(r.text);
+});
+await test("moneda știută doar pe alt interval (fără 4h) ⇒ tot „n-a putut măsura pe 4h”, nu „nimic neobișnuit”", () => {
+  const r = B.randGrid(REZ, "XRP_USDT_PERP", ACUM);
+  assert.equal(r.nivel, "nemasurat"); assert.doesNotMatch(r.text, /nimic neobișnuit/);
+});
+await test("cererea are limită de timp (o Busolă agățată nu blochează reîmprospătarea)", async () => {
+  B._reset();
+  let opt = null;
+  await B.incarca(async (url, o) => { opt = o; return { ok: true, json: async () => REZ }; }, ACUM);
+  assert.ok(opt && opt.signal, "fetch fără signal");
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
