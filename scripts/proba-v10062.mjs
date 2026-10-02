@@ -106,7 +106,8 @@ await test("ritmul, costurile, setarea, mișcarea: cifrele cu virgulă; titlul �
   assert.equal(s.titlu, "Setarea botului: grile prea dese și levier prea mare");
   assert.equal(s.text, "Grilele (93, aritmetice) lasă 0,12% pe umplere după comision; levierul 8× e peste cel sigur azi (4×).");
   const m = cod(sfaturi(CRV(), { fisa: FISA({ regim: { r4h: 10.4, r24h: 10.2, miscare: true, sens: "coboara" }, liniste: { linisteAcum: false } }) }), "miscare");
-  assert.equal(m.titlu, "Mișcare contra botului: 10,4× obișnuitul (4 h), 10,2× (24 h)"); assert.ok(m.titlu.length <= 60, m.titlu.length);
+  assert.equal(m.titlu, "Mișcare mare contra botului: 10,4× obișnuitul pe 4 h"); assert.ok(m.titlu.length <= 60, m.titlu.length);   /* revizia Opus I1: „Mișcare mare …”, ca alerta */
+  assert.match(m.text, /^Pe 24 h e 10,2× obișnuitul; /);
 });
 await test("direcția (directie.js): o frază, fără „ÎMPOTRIVA”, virgulă în nota barei de 4 ore; sfatul are concluzia în titlu și dovezile în text", () => {
   const D = globalThis.Directie, R = (d4, d1, formare) => [{ tf: "4H", eticheta: "4 ore", dir: d4, fata: { ton: d4 === "coboara" ? "rau" : "bine" }, formare: formare || null }, { tf: "1D", eticheta: "1 zi", dir: d1, fata: { ton: d1 === "coboara" ? "rau" : "bine" } }];
@@ -192,7 +193,7 @@ await test("avertismentele: prețul lichidării rotunjit (nu 16 zecimale), virgu
   const { avertismenteBot } = await modul("functions", "_shared", "avertismente.js");
   const l = avertismenteBot({ x: {}, pret: 0.3806, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: 10.93, lichidareDepasita: false },
     comisioane: -1.21, gridProfitBrut: 10.91, profitNet: -1.6 });
-  assert.deepEqual(l, ["Botul n-are nici stop, nici țintă în Pionex.", "Prețul 0.3806 e peste grid (0.37–0.38): botul nu mai face perechi cât stă afară.",
+  assert.deepEqual(l, ["Botul n-are nici stop, nici țintă în Pionex.", "Prețul 0.3806 a ieșit din grid pe sus (0.37–0.38): botul nu mai face perechi cât stă afară.",
     "Lichidarea la 10,9% (0.33829, partea de jos).", "Grilele câștigă (+10,91 USDT), dar poziția și funding-ul (−11,30) și comisioanele (−1,21) duc botul pe minus."]);
   const d = avertismenteBot({ x: { lossStop: "0.36" }, pret: 0.3301, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: -2.4, lichidareDepasita: true },
     comisioane: -2.5, gridProfitBrut: 1.2, profitNet: -9 });
@@ -211,16 +212,78 @@ await test("„Ce ai de făcut acum”: avertismentul lichidării înghite alert
 });
 
 // ---- sarcina 6: versiunile si inventarul ----
-await test("versiunea v100.62 peste tot (BUILD_INFO, versiune.js, package.json, sw.js, index.html) și colectorul v101.42", () => {
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.62"/); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.62"/);
-  assert.match(citeste("package.json"), /"version": "100\.62\.0"/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-62";/);
-  assert.equal((citeste("public", "index.html").match(/v100\.62/g) || []).length, 4, "index.html");
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.42";/);
+// revizia Opus (02.10): reparatiile ies ca v100.63 / colectorul v101.43; testul cere ACEEASI versiune in toate locurile si cel putin
+// aceasta - urmatoarea crestere (v100.64, Busola) nu-l mai strica, iar o crestere pe jumatate tot pica
+await test("versiunea: aceeași peste tot (BUILD_INFO, versiune.js, package.json, sw.js, index.html), cel puțin v100.63; colectorul cel puțin v101.43", () => {
+  const cel = (a, b) => { const x = a.split(".").map(Number), y = b.split(".").map(Number); return x[0] !== y[0] ? x[0] > y[0] : x[1] >= y[1]; };
+  const bi = /"version": "v(\d+\.\d+)"/.exec(citeste("BUILD_INFO.json"))[1], e = bi.replace(".", "\\.");
+  assert.ok(cel(bi, "100.63"), "BUILD_INFO " + bi);
+  assert.match(citeste("BUILD_INFO.json"), new RegExp('"badge": "v' + e + " · "));
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v' + e + '"'));
+  assert.match(citeste("package.json"), new RegExp('"version": "' + e + '\\.0"'));
+  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v' + bi.replace(".", "-") + '";'), "sw.js");
+  assert.equal((citeste("public", "index.html").match(new RegExp("v" + e + "(?!\\d)", "g")) || []).length, 4, "index.html");
+  const col = /const VERSIUNE_COLECTOR = "v(\d+\.\d+)";/.exec(citeste("scripts", "colector.mjs"))[1];
+  assert.ok(cel(col, "101.43"), "colectorul " + col);
 });
 await test("inventarul pachetului 2: înainte și după, cu harta informațiilor", () => {
   const i = citeste("docs", "superpowers", "inventar-sfaturi", "2-sfaturi-boti-inainte.md"), d = citeste("docs", "superpowers", "inventar-sfaturi", "2-sfaturi-boti-dupa.md");
   for (const s of ["sfat.margine.titlu", "avertisment1.t", "todo.plan.text", "consiliu.motiv1."]) { assert.ok(i.includes(s), "înainte: " + s); assert.ok(d.includes(s), "după: " + s); }
   assert.match(d, /## Harta informațiilor/); assert.match(i, /tablou-bot\.js/);
+});
+
+// ---- revizia Opus (02.10): „Ce ai de făcut acum” unește corect rândurile; costurile și piața în Consilier ----
+const avBot = async (o) => (await modul("functions", "_shared", "avertismente.js")).avertismenteBot(Object.assign({ x: { lossStop: "0.36" }, pret: 0.3858, jos: 0.3841, sus: 0.4331,
+  lich: { pretLichidare: 0.3383, lichidarePartea: "jos", distantaLichidarePct: 30, lichidareDepasita: false }, comisioane: null, gridProfitBrut: null, profitNet: null }, o));
+const randuri = (o) => T.ceAiDeFacut(Object.assign({ acum: T0, dateLa: T0, sfaturi: [], avertismente: [], alerte: [], planGol: false }, o));
+const lichLa = (d) => ({ pretLichidare: 0.3383, lichidarePartea: "jos", distantaLichidarePct: d, lichidareDepasita: false });
+await test("C1: lichidarea sub 8% rămâne ROȘIE, cu acțiunea ei, când avertismentul serverului spune același lucru (fără alerte - site-ul public, primele minute)", async () => {
+  const l = randuri({ sfaturi: sfaturi(CRV({ distantaLichidarePct: 6 })), avertismente: await avBot({ lich: lichLa(6) }) }).filter((x) => /lichidare/i.test(x.titlu));
+  assert.equal(l.length, 1, l.map((x) => x.titlu).join(" | ")); assert.equal(l[0].c, "r", "culoarea");
+  assert.ok(l[0].text.includes("Aș adăuga marjă sau aș închide botul acum."), l[0].text);
+});
+await test("C1: între 8% și 15% acțiunea sfatului nu se pierde când avertismentul spune același lucru", async () => {
+  const l = randuri({ sfaturi: sfaturi(CRV({ distantaLichidarePct: 12.4 })), avertismente: await avBot({ lich: lichLa(12.4) }) }).filter((x) => /lichidare/i.test(x.titlu));
+  assert.equal(l.length, 1, l.map((x) => x.titlu).join(" | "));
+  assert.ok(l[0].text.includes("N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă."), l[0].text);
+});
+await test("I1: prețul ieșit din grid - avertismentul cu alerta colectorului, apoi cu sfatul „pericol”, fac câte UN rând (cu acțiunea)", async () => {
+  const cuAlerta = randuri({ avertismente: await avBot({ pret: 0.3806, jos: 0.37, sus: 0.38 }),
+    alerte: [{ t: T0 - 60000, nivel: "atentie", titlu: "CRV.PERP: prețul a ieșit din grid", mesaj: "Prețul 0.38060 e peste interval (0.37000 - 0.38000). Botul nu mai tranzacționează cât stă afară." }] }).filter((x) => /grid/i.test(x.titlu));
+  assert.equal(cuAlerta.length, 1, cuAlerta.map((x) => x.titlu).join(" | "));
+  const cuSfat = randuri({ sfaturi: sfaturi(CRV({ pretCurent: 0.375 })), avertismente: await avBot({ pret: 0.375 }) }).filter((x) => /grid/i.test(x.titlu));
+  assert.equal(cuSfat.length, 1, cuSfat.map((x) => x.titlu).join(" | "));
+  assert.ok(cuSfat[0].text.includes("Aș aștepta o zi"), cuSfat[0].text);
+});
+await test("I1: mișcarea mare contra botului - sfatul și alerta colectorului fac UN rând", () => {
+  const f = FISA({ regim: { r4h: 2.4, r24h: 1.2, miscare: true, sens: "coboara" }, liniste: { linisteAcum: false } });
+  const l = randuri({ sfaturi: sfaturi(CRV(), { fisa: f }),
+    alerte: [{ t: T0 - 60000, nivel: "atentie", titlu: "CRV.PERP: mișcare mare împotriva botului — regimul în care gridul iese cel mai rău", mesaj: "Mișcarea pe 4 ore e 2,4× cea obișnuită." }] }).filter((x) => /mișcare/i.test(x.titlu));
+  assert.equal(l.length, 1, l.map((x) => x.titlu).join(" | "));
+});
+await test("I2: avertismentul de acum (10,9%) înghite alerta mai veche și mai gravă (6,2%, roșie, 13:00), dar rămâne starea de acum - cifra, culoarea, ora, textul; de la alertă doar ×N", async () => {
+  const l = randuri({ sfaturi: sfaturi(CRV({ distantaLichidarePct: 10.9 })), avertismente: await avBot({ lich: lichLa(10.9) }),
+    alerte: [{ t: T0 - 3 * ORA, nivel: "critic", titlu: "CRV.PERP: lichidarea la 6.2%", mesaj: "Mai sunt 6.2% până la lichidare (0.36). Sub 8% e zona de ieșire." }] }).filter((x) => /lichidare/i.test(x.titlu));
+  assert.equal(l.length, 1, l.map((x) => x.titlu).join(" | "));
+  const r = l[0];
+  assert.match(r.titlu, /10,9%/); assert.equal(r.c, "g", "culoarea"); assert.equal(r.la, T0, "ora"); assert.equal(r.n, 1, "×N");
+  assert.ok(!/6[.,]2/.test(r.text), r.text);
+  assert.ok(r.text.includes("N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă."), r.text);
+});
+await test("I3: costurile - comisioanele și funding-ul plătit fără minus dublu; funding-ul încasat nu e citit ca un cost", () => {
+  const p = cod(sfaturi(CRV(), { peste: { costuri: { netZi: -0.42, grile24h: 0.3, comisionZi: -0.12, fundingZi: -0.6, fundingMananca: true } } }), "costuri");
+  assert.equal(p.text, "Grilele aduc 0,30 USDT în 24 h; comisioanele iau 0,12 și funding-ul ia 0,60 pe zi.");
+  const i = cod(sfaturi(CRV(), { peste: { costuri: { netZi: -0.07, grile24h: 0.05, comisionZi: -0.17, fundingZi: 0.05, fundingMananca: false } } }), "costuri");
+  assert.equal(i.text, "Grilele aduc 0,05 USDT în 24 h; comisioanele iau 0,17 și funding-ul aduce 0,05 pe zi.");
+  const z = cod(sfaturi(CRV(), { peste: { costuri: { netZi: -0.12, grile24h: 0.05, comisionZi: -0.17, fundingZi: 0, fundingMananca: false } } }), "costuri");
+  assert.equal(z.text, "Grilele aduc 0,05 USDT în 24 h; comisioanele iau 0,17 pe zi.");   /* fara funding (spot) nu „aduce 0,00” */
+});
+await test("M1: motivul pieței din Consilier păstrează concluzia direcției („piața merge cu botul”), nu doar dovezile", () => {
+  const R = [{ tf: "4H", eticheta: "4 ore", dir: "urca", fata: { ton: "bine" } }, { tf: "1D", eticheta: "1 zi", dir: "urca", fata: { ton: "bine" } }];
+  const b = CRV({ pretCurent: 0.41 }), c = C.alcatuieste({ sm: S.semafor({ bot: b, fisa: FISA() }), concret: [], sfaturi: sfaturi(b, { rezumat: globalThis.Directie.rezumat(R, "long") }) });
+  const m = c.motive.concat(c.rest).find((x) => /Trendul, o singură măsură/.test(x.text || ""));
+  assert.ok(m, "fără motivul pieței: " + c.motive.map((x) => x.cod).join(","));
+  assert.match(m.text, /piața merge cu botul \(4 ore urcă, 1 zi urcă\)/);
 });
 
 console.log(`\nV100.62 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);

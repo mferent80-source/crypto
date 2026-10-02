@@ -117,7 +117,7 @@ var Consiliu = (function () {
       var trM = tr ? /\(([^)]*)\)\s*$/.exec(String(tr.titlu)) : null, trTxt = trM ? trM[1] : "";   // „Trendul e cu botul (long, tare)” -> „long, tare”
       cand.push({ cod: li ? "liniste" : "directie", nivel: "bine", c: "v",
         titlu: "Piața e " + [li ? "liniștită" : null, lateral ? "laterală" : null].filter(Boolean).join(" și ") .replace(/^$/, "cu botul"),
-        text: (li ? li.text + " " : "") + (di ? "Trendul, o singură măsură: " + mic(di.text || di.titlu) + (trTxt ? " (structura pe medii: " + trTxt + ")" : "") : ""),
+        text: (li ? li.text + " " : "") + (di ? "Trendul, o singură măsură: " + mic(di.rezumat || di.text || di.titlu) + (trTxt ? " (structura pe medii: " + trTxt + ")" : "") : ""),
         faCe: (li && li.faCe) || (di && di.faCe) || "" });
       folosite.liniste = folosite.directie = folosite.trend = 1;
     }

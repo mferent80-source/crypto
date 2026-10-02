@@ -88,8 +88,10 @@ var Sfaturi = (function () {
         sursa: "Pe 40 de monede (27.09), după o mișcare cu botul, 59% din ferestre au ieșit pe plus (contra 50%, în liniște 56%).",
         faCe: "L-aș lăsa fără bani în plus, cu stopul mutat la zero-ul botului, și aș urmări marginea " + (dirBot === "long" ? "de sus" : "de jos") + "." });
     } else if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
-      out.push({ cod: "miscare", ton: "atentie", titlu: "Mișcare " + (rg.sens && (dirBot === "long" || dirBot === "short") ? "contra botului" : "mare") + ": " + X(rg.r4h) + " obișnuitul (4 h), " + X(rg.r24h) + " (24 h)",
-        text: "În mișcare gridul nu face perechi, doar strânge poziție pe direcția prețului; le reia când se liniștește.",
+      // revizia Opus (I1, 02.10): „Mișcare mare …” ca alerta colectorului („mișcare mare împotriva botului”) - in „Ce ai de făcut acum”
+      // se recunosc ca acelasi lucru (un rand, nu doua); multiplul pe 24 h trece in text, ca titlul sa ramana ≤ 60 si la 10×
+      out.push({ cod: "miscare", ton: "atentie", titlu: "Mișcare mare" + (rg.sens && (dirBot === "long" || dirBot === "short") ? " contra botului" : "") + ": " + X(rg.r4h) + " obișnuitul pe 4 h",
+        text: "Pe 24 h e " + X(rg.r24h) + " obișnuitul; până se liniștește, gridul nu face perechi, doar strânge poziție pe direcția prețului.",
         sursa: "„Obișnuitul” = percentila 75 a mișcărilor monedei pe 30 de zile.",
         faCe: "N-aș adăuga bani și n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa cât lichidarea e peste 15%." });
     }
@@ -120,7 +122,10 @@ var Sfaturi = (function () {
     var co = x.costuri;
     if (co && co.netZi != null && (co.fundingMananca || co.netZi < 0)) {
       out.push({ cod: "costuri", ton: "atentie", titlu: "Costurile mănâncă grilele: " + TextRo.usdt(co.netZi, Math.abs(co.netZi) < 0.01 ? 3 : 2) + " pe zi, net",
-        text: "Grilele aduc " + (co.grile24h != null ? TextRo.num(co.grile24h, 2) : "—") + " USDT în 24 h; comisioanele iau " + (co.comisionZi != null ? TextRo.num(co.comisionZi, 2) : "—") + " și funding-ul " + (co.fundingZi != null ? TextRo.num(co.fundingZi, 2) : "—") + " pe zi.",
+        // revizia Opus (I3, 02.10): comisioanele pe zi vin negative, funding-ul negativ cand il platesti si pozitiv cand il incasezi -
+        // sumele fara semn, verbul dupa sens (inainte: „comisioanele iau −0,12”, iar funding-ul incasat se citea ca un cost)
+        text: "Grilele aduc " + (co.grile24h != null ? TextRo.num(co.grile24h, 2) : "—") + " USDT în 24 h; comisioanele iau " + (co.comisionZi != null ? TextRo.num(Math.abs(co.comisionZi), 2) : "—") +
+          (co.fundingZi == null ? " și funding-ul —" : TextRo.num(Math.abs(co.fundingZi), 2) === "0,00" ? "" : co.fundingZi < 0 ? " și funding-ul ia " + TextRo.num(-co.fundingZi, 2) : " și funding-ul aduce " + TextRo.num(co.fundingZi, 2)) + " pe zi.",
         faCe: co.fundingMananca ? "Aș lua levier mai mic sau direcția care încasează funding-ul, la următorul bot." : "Aș rări grilele (pas mai mare) ca să rămână mai mult după comision." });
     }
 
@@ -150,7 +155,8 @@ var Sfaturi = (function () {
       out.push({ cod: "directie", ton: x.rezumat.ton === "rau" ? "atentie" : x.rezumat.ton === "bine" ? "bine" : "info",
         titlu: x.rezumat.ton === "rau" ? "Piața merge împotriva botului" : x.rezumat.ton === "bine" ? "Piața nu lucrează împotriva botului" : "Piața dă semnale amestecate",
         // v100.62: textul = dovezile (concluzia e in titlu); ce face gridul contra pietei si „bare închise, nu prognoză” stau in legenda Consilierului
-        text: x.rezumat.dovezi || x.rezumat.text,
+        // revizia Opus (M1, 02.10): si fraza intreaga (concluzie + dovezi), pentru motivul pietei din Consilier, unde titlul sfatului nu se vede
+        text: x.rezumat.dovezi || x.rezumat.text, rezumat: x.rezumat.text,
         faCe: x.rezumat.ton === "rau" ? "N-aș adăuga bani până nu se întoarce pe 4 h." : null });
     }
 

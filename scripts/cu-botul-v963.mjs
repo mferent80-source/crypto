@@ -58,7 +58,7 @@ await test("sfaturile din Tablou: cu botul = ton 'bine' si ce faci; contra = 'at
   const cu = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: SUS } }).find((x) => /^Mișcare /.test(x.titlu));   /* v100.62: titlul cu cifra */
   assert.equal(cu.ton, "bine"); assert.match(cu.titlu, /^Mișcare cu botul: /); assert.match(cu.faCe, /stopul mutat la zero-ul botului/);
   const co = Sfaturi.sfaturi({ bot: bot(), fisa: { regim: JOS } }).find((x) => /^Mișcare /.test(x.titlu));
-  assert.equal(co.ton, "atentie"); assert.match(co.titlu, /^Mișcare contra botului: /);
+  assert.equal(co.ton, "atentie"); assert.match(co.titlu, /^Mișcare mare contra botului: /);
 });
 await test("fereastra indicatorilor: randul Miscarea e verde 'miscare cu botul', rosu 'contra botului'", async () => {
   const cu = I.mediu({ regim: SUS }, "long").find((x) => x.k === "miscare"), co = I.mediu({ regim: JOS }, "long").find((x) => x.k === "miscare");

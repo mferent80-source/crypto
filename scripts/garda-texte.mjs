@@ -218,8 +218,10 @@ export function situatii() {
   sf("JTO: liniște rară", jtoR, { fisa: fisaS({ liniste: { linisteAcum: true, zileLiniste: 1.6, n: 20, k: 4, p: 0.2, ic: [0.08, 0.42], suficient: true, H: 2 } }) });
   sf("CRV: ritmul a scăzut", crvM, { peste: { ritm: { grile24h: 0.1, medieZi: 1.2, tranz24h: 2, tranzMedieZi: 14, zile: 4 } } });
   sf("CRV: ritmul a crescut, fără tranzacții", crvM, { peste: { ritm: { grile24h: 3.1, medieZi: 1.2, tranz24h: null, tranzMedieZi: null, zile: 4 } } });
-  sf("LIGHTER: funding-ul mănâncă grilele", cuBrut(LIGHTER()), { peste: { costuri: { netZi: -0.42, grile24h: 0.3, comisionZi: 0.12, fundingZi: 0.6, fundingMananca: true } } });
-  sf("JTO: costuri sub un cent pe zi", jtoR, { peste: { costuri: { netZi: -0.004, grile24h: 0.01, comisionZi: 0.004, fundingZi: 0.01, fundingMananca: false } } });
+  // revizia Opus (I3, 02.10): semnele reale ale grileVsCosturi - comisioanele negative, funding-ul negativ platit / pozitiv incasat
+  sf("LIGHTER: funding-ul mănâncă grilele", cuBrut(LIGHTER()), { peste: { costuri: { netZi: -0.42, grile24h: 0.3, comisionZi: -0.12, fundingZi: -0.6, fundingMananca: true } } });
+  sf("JTO: costuri sub un cent pe zi", jtoR, { peste: { costuri: { netZi: -0.004, grile24h: 0.01, comisionZi: -0.004, fundingZi: -0.01, fundingMananca: false } } });
+  sf("JTO: costurile peste grile, funding încasat", jtoR, { peste: { costuri: { netZi: -0.07, grile24h: 0.05, comisionZi: -0.17, fundingZi: 0.05, fundingMananca: false } } });
   sf("JTO: grile dese și levier peste cel sigur", cuBrut(JTO({ levier: 8, distantaLichidarePct: 30 })), { fisa: fisaSig, peste: { geom: { netPct: 0.0012, preaDese: true, grile: 93, mod: "aritmetic" } } });
   sf("JTO: doar levierul peste cel sigur", cuBrut(JTO({ levier: 8, distantaLichidarePct: 30 })), { fisa: fisaSig, peste: { geom: null } });
   sf("CRV pe minus: zero-ul botului", crvM, { peste: { zero: { pretZero: 0.4012, distantaZeroPct: 0.0399, iei: 46.4 } } });

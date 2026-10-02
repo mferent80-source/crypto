@@ -276,12 +276,14 @@ await test("v100.5: ceAiDeFacut - fiecare rand are ora (la): alerta = ultima din
   const lipsa = TE.ceAiDeFacut({ acum: ACUM, alerte: [], avertismente: [], sfaturi: [], planGol: true });
   assert.equal(lipsa[0].la, null, "fara ora datelor nu se inventeaza una");
 });
-await test("v100.5: avertismentul care inghite o alerta ia ora alertei", () => {
+// v100.63 (revizia Opus I2, 02.10): randul unit arata starea de ACUM (titlul avertismentului, textul sfatului de acum, culoarea lui) -
+// ora lui e ora citirii botului, ca sa raspunda la ce a cerut el la v100.5 („ca să știu dacă e de actualitate”); de la alerta ramane ×N
+await test("v100.5 → v100.63: avertismentul care înghite o alertă e starea de acum - ora citirii botului, ×N de la alertă", () => {
   const ACUM = Date.UTC(2026, 8, 28, 13, 0);
   const l = TE.ceAiDeFacut({ acum: ACUM, dateLa: ACUM, sfaturi: [], planGol: false,
     alerte: [{ t: ACUM - 40 * 60000, titlu: "JTO: opritorul pe pierdere e setat dar stins", nivel: "critic", mesaj: "" }],
     avertismente: ["Opritorul pe pierdere e setat dar STINS — nu se va declanșa."] });
-  assert.equal(l.length, 1); assert.equal(l[0].la, ACUM - 40 * 60000);
+  assert.equal(l.length, 1); assert.equal(l[0].la, ACUM); assert.equal(l[0].n, 1);
 });
 await test("v100.5: TabloExtra.oraSfat - „HH:MM · acum N min”, ieri cu „ieri”, vechi peste o ora, fara ora -> null", () => {
   assert.equal(typeof TE.oraSfat, "function", "TabloExtra.oraSfat exportat");

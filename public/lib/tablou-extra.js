@@ -511,7 +511,10 @@ var TabloExtra = (function () {
     (Array.isArray(o.avertismente) ? o.avertismente : []).forEach(function (a) {
       if (!a || !String(a).trim()) return;
       var it = { c: "g", titlu: String(a), text: "", n: 0, la: dateLa };
-      for (var i = 0; i < gr.length; i++) if (acelasi(gr[i].titlu, a)) { it.c = gr[i].c; it.n = gr[i].n; it.text = gr[i].text; it.la = gr[i].ultima; gr.splice(i, 1); break; }
+      // revizia Opus (I2, 02.10): avertismentul e starea de ACUM - isi pastreaza culoarea, ora si textul (textul de acum il aduce sfatul,
+      // la pasul 3); de la alerta ia doar numarul (×N). Inainte lua culoarea, textul si ora alertei: sub titlul „Lichidarea la 10,9%”
+      // aparea rosul si „Mai sunt 6.2%” de la 13:00 (regula lui de la v100.9: starea de acum, nu cea mai grava din trecut)
+      for (var i = 0; i < gr.length; i++) if (acelasi(gr[i].titlu, a)) { it.n = gr[i].n; gr.splice(i, 1); break; }
       out.push(it);
     });
     // v100.10 (el, 28.09: „ok” la „«Nu ai un plan» și alerta «Botul n-are plan» apar pe 2 rânduri”): alerta colectorului despre planul
@@ -519,12 +522,23 @@ var TabloExtra = (function () {
     gr = gr.filter(function (g) { return !/\bn are plan\b|\bfara plan\b/.test(fel(g.titlu)); });
     out = out.concat(gr.map(function (g) { g.la = g.ultima; return g; }));
     // 3) sfaturile
-    var bine = null;
+    var bine = null, GRAV = { r: 0, g: 1, n: 2 };
     (Array.isArray(o.sfaturi) ? o.sfaturi : []).forEach(function (x) {
       if (!x || !x.titlu) return;
       if (x.ton === "bine") { if (/nimic urgent/i.test(x.titlu)) bine = x; return; }
       var c = x.ton === "critic" ? "r" : x.ton === "atentie" ? "g" : x.faCe ? "n" : null;
-      if (!c || out.some(function (y) { return acelasi(y.titlu, x.titlu); })) return;
+      if (!c) return;
+      // revizia Opus (C1, 02.10): sfatul care spune acelasi lucru ca un rand pus deja (avertismentul serverului, alerta) nu se mai pierde -
+      // ridica randul la culoarea mai grava si ii aduce „ce aș face eu” (si textul, daca randul n-are). Inainte, lichidarea sub 8% ramanea
+      // galbena si fara actiune ori de cate ori avertismentul serverului ajungea primul (site-ul public, primele minute ale unei caderi)
+      var y = out.filter(function (z) { return acelasi(z.titlu, x.titlu); })[0];
+      if (y) {
+        if (GRAV[c] < GRAV[y.c]) y.c = c;
+        var t0 = String(y.text || "").trim(), tx = String(x.text || "").trim();
+        if (!t0) y.text = tx + (x.faCe ? (tx ? " " : "") + "👉 " + x.faCe : "");
+        else if (x.faCe && t0.indexOf("👉") < 0 && !/Ce aș face eu/i.test(t0)) y.text = t0 + " 👉 " + x.faCe;
+        return;
+      }
       out.push({ c: c, titlu: x.titlu, text: String(x.text || "") + (x.faCe ? " 👉 " + x.faCe : ""), n: 0, la: dateLa });
     });
     if (o.planGol) out.push({ c: "n", titlu: "Nu ai un plan pentru bot", text: "Cu planul scris la rece, colectorul te anunță când se atinge un prag.", n: 0, actiune: "plan", la: dateLa });

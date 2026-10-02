@@ -84,6 +84,20 @@ Fiecare informație din „înainte” și unde stă acum. „Legenda” = legen
 
 ## Textele (generate de gardă)
 
+
+## Revizia Opus (02.10, v100.63): ce s-a schimbat față de harta de mai sus
+
+Revizia pe tot pachetul a găsit patru locuri unde textele noi pierdeau ceva sau dublau un rând. Tabelul generat de mai jos e deja cel de la v100.63.
+
+| Unde | v100.62 | v100.63 | De ce |
+|---|---|---|---|
+| „Ce ai de făcut acum”: sfatul cu același subiect ca un rând pus deja | era sărit | ridică rândul la culoarea mai gravă și îi aduce textul și „Aș …” (dacă rândul nu le are) | lichidarea sub 8% ieșea galbenă și fără acțiune când avertismentul serverului ajungea primul (site-ul public mereu, acasă în primele minute ale unei căderi) |
+| „Ce ai de făcut acum”: avertismentul care înghite o alertă | lua culoarea, textul și ora alertei | își păstrează culoarea, ora și textul (starea de acum); de la alertă ia doar ×N | sub „Lichidarea la 10,9%” apăreau roșul și „Mai sunt 6.2%” de la 13:00 (regula de la v100.9: starea de acum, nu cea mai gravă din trecut) |
+| avertismentul serverului, prețul afară | „Prețul 0.3806 e peste grid (0.37–0.38): …” | „Prețul 0.3806 a ieșit din grid pe sus (0.37–0.38): …” | ca alerta colectorului și sfatul „pericol” („prețul a ieșit din grid”): un rând, nu două |
+| sfatul „miscare”, titlul | „Mișcare contra botului: 2,4× obișnuitul (4 h), 1,2× (24 h)” | „Mișcare mare contra botului: 2,4× obișnuitul pe 4 h”; textul începe cu „Pe 24 h e 1,2× obișnuitul; …” | ca alerta („mișcare mare împotriva botului”): un rând, nu două; multiplul pe 24 h trece în text, titlul rămâne ≤ 60 și la 10× |
+| sfatul „costuri”, textul | „… comisioanele iau −0,12 și funding-ul −0,60 pe zi.” | „… comisioanele iau 0,12 și funding-ul ia 0,60 pe zi.” · încasat: „funding-ul aduce 0,05” · fără funding: fără bucata cu funding-ul | minusul dublu; funding-ul încasat se citea ca un cost |
+| Consilierul, motivul pieței | „Trendul, o singură măsură: 4 ore urcă, 1 zi urcă.” | „Trendul, o singură măsură: piața merge cu botul (4 ore urcă, 1 zi urcă).” | concluzia direcției se pierduse (în Consilier titlul sfatului nu se vede) |
+
 | Situația | Sursa | Lung. | Text |
 |---|---|---|---|
 | CRV lângă marginea de jos | sfat.margine.titlu | 37 | 0,4% până la marginea de jos (0.3841) |
@@ -115,8 +129,8 @@ Fiecare informație din „înainte” și unde stă acum. „Legenda” = legen
 | JTO: mișcare mare contra | sfat.margine.text | 93 | ~200 JTO la margine (acum 160), total ~−14,35 USDT; coboară atât în 47% din zile (23 din 49). |
 | JTO: mișcare mare contra | sfat.margine.faCe | 59 | N-aș mări levierul și n-aș pune bani în plus în botul ăsta. |
 | JTO: mișcare mare contra | sfat.margine.sursa | 72 | Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere. |
-| JTO: mișcare mare contra | sfat.miscare.titlu | 58 | Mișcare contra botului: 2,4× obișnuitul (4 h), 1,2× (24 h) |
-| JTO: mișcare mare contra | sfat.miscare.text | 105 | În mișcare gridul nu face perechi, doar strânge poziție pe direcția prețului; le reia când se liniștește. |
+| JTO: mișcare mare contra | sfat.miscare.titlu | 51 | Mișcare mare contra botului: 2,4× obișnuitul pe 4 h |
+| JTO: mișcare mare contra | sfat.miscare.text | 113 | Pe 24 h e 1,2× obișnuitul; până se liniștește, gridul nu face perechi, doar strânge poziție pe direcția prețului. |
 | JTO: mișcare mare contra | sfat.miscare.faCe | 107 | N-aș adăuga bani și n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa cât lichidarea e peste 15%. |
 | JTO: mișcare mare contra | sfat.miscare.sursa | 64 | „Obișnuitul” = percentila 75 a mișcărilor monedei pe 30 de zile. |
 | JTO: mișcare mare contra | sfat.trend.titlu | 32 | Trendul e cu botul (long, mediu) |
@@ -186,7 +200,7 @@ Fiecare informație din „înainte” și unde stă acum. „Legenda” = legen
 | CRV: ritmul a crescut, fără tranzacții | sfat.trend.faCe | 21 | L-aș lăsa să lucreze. |
 | CRV: ritmul a crescut, fără tranzacții | sfat.trend.sursa | 62 | EMA20/EMA50 și structura pe 4 h, EMA pe 1 zi, pe bare închise. |
 | LIGHTER: funding-ul mănâncă grilele | sfat.costuri.titlu | 48 | Costurile mănâncă grilele: −0,42 USDT pe zi, net |
-| LIGHTER: funding-ul mănâncă grilele | sfat.costuri.text | 79 | Grilele aduc 0,30 USDT în 24 h; comisioanele iau 0,12 și funding-ul 0,60 pe zi. |
+| LIGHTER: funding-ul mănâncă grilele | sfat.costuri.text | 82 | Grilele aduc 0,30 USDT în 24 h; comisioanele iau 0,12 și funding-ul ia 0,60 pe zi. |
 | LIGHTER: funding-ul mănâncă grilele | sfat.costuri.faCe | 79 | Aș lua levier mai mic sau direcția care încasează funding-ul, la următorul bot. |
 | LIGHTER: funding-ul mănâncă grilele | sfat.margine.titlu | 37 | 8,7% până la marginea de jos (4.0850) |
 | LIGHTER: funding-ul mănâncă grilele | sfat.margine.text | 96 | ~320 LIGHTER la margine (acum 160), total ~−123,97 USDT; coboară atât în 0% din zile (0 din 49). |
@@ -206,7 +220,7 @@ Fiecare informație din „înainte” și unde stă acum. „Legenda” = legen
 | JTO: costuri sub un cent pe zi | sfat.margine.faCe | 59 | N-aș mări levierul și n-aș pune bani în plus în botul ăsta. |
 | JTO: costuri sub un cent pe zi | sfat.margine.sursa | 72 | Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere. |
 | JTO: costuri sub un cent pe zi | sfat.costuri.titlu | 49 | Costurile mănâncă grilele: −0,004 USDT pe zi, net |
-| JTO: costuri sub un cent pe zi | sfat.costuri.text | 79 | Grilele aduc 0,01 USDT în 24 h; comisioanele iau 0,00 și funding-ul 0,01 pe zi. |
+| JTO: costuri sub un cent pe zi | sfat.costuri.text | 82 | Grilele aduc 0,01 USDT în 24 h; comisioanele iau 0,00 și funding-ul ia 0,01 pe zi. |
 | JTO: costuri sub un cent pe zi | sfat.costuri.faCe | 67 | Aș rări grilele (pas mai mare) ca să rămână mai mult după comision. |
 | JTO: costuri sub un cent pe zi | sfat.liniste.titlu | 19 | Liniște de 0,4 zile |
 | JTO: costuri sub un cent pe zi | sfat.liniste.text | 91 | Pe moneda asta, liniștea care a ajuns aici a mai ținut 2 zile în 23% din cazuri (3 din 13). |
@@ -215,6 +229,20 @@ Fiecare informație din „înainte” și unde stă acum. „Legenda” = legen
 | JTO: costuri sub un cent pe zi | sfat.trend.titlu | 32 | Trendul e cu botul (long, mediu) |
 | JTO: costuri sub un cent pe zi | sfat.trend.faCe | 21 | L-aș lăsa să lucreze. |
 | JTO: costuri sub un cent pe zi | sfat.trend.sursa | 62 | EMA20/EMA50 și structura pe 4 h, EMA pe 1 zi, pe bare închise. |
+| JTO: costurile peste grile, funding încasat | sfat.margine.titlu | 37 | 1,9% până la marginea de jos (0.5722) |
+| JTO: costurile peste grile, funding încasat | sfat.margine.text | 93 | ~200 JTO la margine (acum 160), total ~−14,35 USDT; coboară atât în 47% din zile (23 din 49). |
+| JTO: costurile peste grile, funding încasat | sfat.margine.faCe | 59 | N-aș mări levierul și n-aș pune bani în plus în botul ăsta. |
+| JTO: costurile peste grile, funding încasat | sfat.margine.sursa | 72 | Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere. |
+| JTO: costurile peste grile, funding încasat | sfat.costuri.titlu | 48 | Costurile mănâncă grilele: −0,07 USDT pe zi, net |
+| JTO: costurile peste grile, funding încasat | sfat.costuri.text | 85 | Grilele aduc 0,05 USDT în 24 h; comisioanele iau 0,17 și funding-ul aduce 0,05 pe zi. |
+| JTO: costurile peste grile, funding încasat | sfat.costuri.faCe | 67 | Aș rări grilele (pas mai mare) ca să rămână mai mult după comision. |
+| JTO: costurile peste grile, funding încasat | sfat.liniste.titlu | 19 | Liniște de 0,4 zile |
+| JTO: costurile peste grile, funding încasat | sfat.liniste.text | 91 | Pe moneda asta, liniștea care a ajuns aici a mai ținut 2 zile în 23% din cazuri (3 din 13). |
+| JTO: costurile peste grile, funding încasat | sfat.liniste.faCe | 84 | N-aș pune bani în plus; aș încasa ce face și aș închide botul la prima mișcare mare. |
+| JTO: costurile peste grile, funding încasat | sfat.liniste.sursa | 50 | Ultimele 30 de zile; interval de încredere 8%–50%. |
+| JTO: costurile peste grile, funding încasat | sfat.trend.titlu | 32 | Trendul e cu botul (long, mediu) |
+| JTO: costurile peste grile, funding încasat | sfat.trend.faCe | 21 | L-aș lăsa să lucreze. |
+| JTO: costurile peste grile, funding încasat | sfat.trend.sursa | 62 | EMA20/EMA50 și structura pe 4 h, EMA pe 1 zi, pe bare închise. |
 | JTO: grile dese și levier peste cel sigur | sfat.margine.titlu | 37 | 1,9% până la marginea de jos (0.5722) |
 | JTO: grile dese și levier peste cel sigur | sfat.margine.text | 93 | ~200 JTO la margine (acum 160), total ~−14,35 USDT; coboară atât în 47% din zile (23 din 49). |
 | JTO: grile dese și levier peste cel sigur | sfat.margine.faCe | 59 | N-aș mări levierul și n-aș pune bani în plus în botul ăsta. |
@@ -457,10 +485,10 @@ Fiecare informație din „înainte” și unde stă acum. „Legenda” = legen
 | verdictul vechi: Pionex MARGIN_CALL | consiliu.motiv1.opreste.titlu | 39 | Pionex: marginea contului e MARGIN_CALL |
 | verdictul vechi: Pionex MARGIN_CALL | consiliu.motiv1.opreste.text | 86 | Pionex o dă altfel decât NORMAL, iar starea bursei bate calculul nostru al lichidării. |
 | CRV: fără stop, peste grid, lichidarea la 10,9%, pe minus deși grilele câștigă | avertisment1.t | 44 | Botul n-are nici stop, nici țintă în Pionex. |
-| CRV: fără stop, peste grid, lichidarea la 10,9%, pe minus deși grilele câștigă | avertisment2.t | 80 | Prețul 0.3806 e peste grid (0.37–0.38): botul nu mai face perechi cât stă afară. |
+| CRV: fără stop, peste grid, lichidarea la 10,9%, pe minus deși grilele câștigă | avertisment2.t | 91 | Prețul 0.3806 a ieșit din grid pe sus (0.37–0.38): botul nu mai face perechi cât stă afară. |
 | CRV: fără stop, peste grid, lichidarea la 10,9%, pe minus deși grilele câștigă | avertisment3.t | 45 | Lichidarea la 10,9% (0.33829, partea de jos). |
 | CRV: fără stop, peste grid, lichidarea la 10,9%, pe minus deși grilele câștigă | avertisment4.t | 109 | Grilele câștigă (+10,91 USDT), dar poziția și funding-ul (−11,30) și comisioanele (−1,21) duc botul pe minus. |
-| lichidarea depășită, sub grid, comisioanele peste grile | avertisment1.t | 78 | Prețul 0.3301 e sub grid (0.37–0.38): botul nu mai face perechi cât stă afară. |
+| lichidarea depășită, sub grid, comisioanele peste grile | avertisment1.t | 91 | Prețul 0.3301 a ieșit din grid pe jos (0.37–0.38): botul nu mai face perechi cât stă afară. |
 | lichidarea depășită, sub grid, comisioanele peste grile | avertisment2.t | 102 | Lichidarea estimată (0.33829, partea de jos) e depășită la prețul 0.3301: aș verifica botul în Pionex. |
 | lichidarea depășită, sub grid, comisioanele peste grile | avertisment3.t | 66 | Comisioanele (−2,50 USDT) depășesc câștigul grilelor (+1,20 USDT). |
 | comisioanele necunoscute | avertisment1.t | 77 | Grilele câștigă (+3,00 USDT), dar botul e pe minus (comisioanele nu se știu). |

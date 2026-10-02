@@ -21,7 +21,8 @@ export function avertismenteBot(o){
   // ca in „Ce ai de făcut acum” s-o inghita pe ea (un rand, nu doua)
   if(!nr(x.profitStop)&&!nr(x.lossStop))avertismente.push("Botul n-are nici stop, nici țintă în Pionex.");
   if(pret&&jos&&sus&&(pret<jos||pret>sus))
-    avertismente.push(`Prețul ${pret} e ${pret<jos?"sub":"peste"} grid (${jos}–${sus}): botul nu mai face perechi cât stă afară.`);
+    // revizia Opus (I1, 02.10): „a ieșit din grid” ca alerta colectorului si sfatul „pericol” - in „Ce ai de făcut acum” un singur rand
+    avertismente.push(`Prețul ${pret} a ieșit din grid pe ${pret<jos?"jos":"sus"} (${jos}–${sus}): botul nu mai face perechi cât stă afară.`);
   if(lich.lichidareDepasita)
     avertismente.push(`Lichidarea estimată (${pretScurt(lich.pretLichidare)}, partea de ${lich.lichidarePartea}) e depășită la prețul ${pret}: aș verifica botul în Pionex.`);
   else if(lich.distantaLichidarePct!==null&&lich.distantaLichidarePct<15)
