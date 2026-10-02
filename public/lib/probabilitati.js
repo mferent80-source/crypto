@@ -139,24 +139,25 @@ var Probabilitati = (function () {
     o = o || {}; var out = [], PCt = function (v) { return Math.round(v * 100) + "%"; };
     if (!rez) return out;
     if (rez.motiv && !rez.stop1) return [{ titlu: "Probabilitățile stopului: " + rez.motiv, p: null, ic: null, text: "" }];
-    var unde = function (x) { return x.nivel === "exact" ? "zile ca acum (" + etActiune(x.stare) + ")" : x.nivel === "regim" ? "zile cu același trend (" + (ET_ACT[x.stare] || x.stare) + "; cu mișcarea de acum: prea puține)" : "din toate zilele (ca acum: prea puține)"; };
+    // v100.73 (revizia pachetului 5, I2): numarul intra aici, cu „de” de la 20 („11 din 100 de zile ca acum”)
+    var unde = function (x) { return x.nivel === "exact" ? cate(x.n, "zi", "zile") + " ca acum (" + etActiune(x.stare) + ")" : x.nivel === "regim" ? cate(x.n, "zi", "zile") + " cu același trend (" + (ET_ACT[x.stare] || x.stare) + "; cu mișcarea de acum: prea puține)" : x.n + " din toate zilele (ca acum: prea puține)"; };
     var ic = function (x) { return x && x.ic ? " · IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%" : ""; };
     // v100.69 (sfaturile concise, pachetul 4): marcajul scurt; avertizarea comuna („un semn, nu o regulă”) sta in legenda
     var putine = function (x) { return x.nIndep < 10 ? " · puține cazuri independente" : ""; };
     var a = rez.stop1, s = rez.sare1, relS = rez.niv && rez.niv.relS;
     if (a && s) {
       var pt = a.p + s.p, ki = a.k + s.k;
-      out.push({ titlu: "Atinge stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: ki + " din " + a.n + " " + unde(a) + " · din care prin săritură la deschidere: " + PCt(s.p) + putine(a), avertizare: pt >= 0.25 });
+      out.push({ titlu: "Atinge stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: ki + " din " + unde(a) + " · din care prin săritură la deschidere: " + PCt(s.p) + putine(a), avertizare: pt >= 0.25 });
     }
     if (rez.cursa5 && rez.cursa5.tinta) {
       // revizia 01.10 (I3): cifra ACTIUNII ramane; calibrarea (alt stop / alta tinta - ale Radarului la cumparare - si cutii late) e doar nota
       var x = rez.cursa5.tinta, rz = cal && cal.rezumat;
       var nota = rz && rz.n >= 20 ? "pe cumpărările tale (cu stopul și ținta Radarului la cumpărare): am zis în medie " + PCt(rz.pMed) + ", s-a întâmplat în " + PCt(rz.rata) + ", din " + cate(rz.n, "caz", "cazuri") + " în " + cate(rz.saptamani, "săptămână", "săptămâni")
         : "pe cumpărările tale: " + cate(rz ? rz.n : 0, "caz judecat", "cazuri judecate") + " — sub 20 nu spun nimic";
-      out.push({ titlu: "În 5 zile de bursă: ținta înaintea stopului", p: x.p, ic: x.ic, text: x.k + " din " + x.n + " " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
+      out.push({ titlu: "În 5 zile de bursă: ținta înaintea stopului", p: x.p, ic: x.ic, text: x.k + " din " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
     }
     // v100.69: si saritura poarta marcajul pe esantion mic (il avea doar „Atinge stopul mâine”)
-    if (s) out.push({ titlu: "Deschiderea sare peste stop", p: s.p, ic: s.ic, text: s.k + " din " + s.n + " " + unde(s) + " — stopul se execută atunci sub prețul lui" + ic(s) + putine(s), avertizare: s.p >= 0.05 });
+    if (s) out.push({ titlu: "Deschiderea sare peste stop", p: s.p, ic: s.ic, text: s.k + " din " + unde(s) + " — stopul se execută atunci sub prețul lui" + ic(s) + putine(s), avertizare: s.p >= 0.05 });
     var z = nr(o.rezultateZile);
     if (z !== null && z >= 0 && z <= 5) {
       // v100.69: o fraza ≤ 160 - e si explicatia motivului „Rezultatele vin” din Consilierul pozitiei, unde „de mai sus” n-ar avea sens.
@@ -246,7 +247,7 @@ var Probabilitati = (function () {
     var c = corecteaza(x.p, tip, cal);
     // cifra corectata vine cu intervalul EI (Wilson pe cutie, pe cazurile independente), nu cu al cifrei brute (revizia 01.10)
     var ic = c.calibrat ? G.wilson(c.k, c.n) : x.ic;
-    var t = x.k + " din " + x.n + " " + (x.nivel === "regim" ? "situații cu același regim (" + (x.stare === "liniste" ? "liniște" : "mișcare") + "; cu direcția de acum: prea puține)" : x.conditionat ? "situații ca acum" : "de porniri la 4 h (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente" + (c.calibrat ? "" : ", IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%") + ")"
+    var t = x.k + " din " + (x.nivel === "regim" ? cate(x.n, "situație", "situații") + " cu același regim (" + (x.stare === "liniste" ? "liniște" : "mișcare") + "; cu direcția de acum: prea puține)" : x.conditionat ? cate(x.n, "situație", "situații") + " ca acum" : cate(x.n, "pornire", "porniri") + " la 4 h (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente" + (c.calibrat ? "" : ", IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%") + ")"
       + (x.nIndep < 10 ? " · puține cazuri independente" : "")   // trader.md §1: sub 10 pe grupa = zgomot; v100.69: avertizarea comuna sta in legenda
       + " · " + c.text + (c.calibrat ? ", IC " + Math.round(ic[0] * 100) + "–" + Math.round(ic[1] * 100) + "%" + (c.avertizare ? " — ⚠ cifra brută era " + PC(c.brut) : "") : "");
     return { p: c.p, ic: ic, avertizare: c.avertizare, text: t };

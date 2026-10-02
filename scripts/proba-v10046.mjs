@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import "./lib/text-ro-global.mjs";   // v100.73 (RF4): probabilitati.js scrie „888 de porniri” prin TextRo.cate (rezerva fara TextRo nu stie „de”)
 
 const RAD = process.env.RAD || path.resolve(new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");

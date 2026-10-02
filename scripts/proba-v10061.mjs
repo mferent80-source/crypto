@@ -220,7 +220,7 @@ await test("F2 (proba de ecran, piata in miscare): varianta ingusta respinsa dev
   assert.equal(GP.ingust(bare(30), { miscare: true, dir: "long" }).zile, 30);
   assert.equal(GP.ingust(bare(30), { dir: "nicio" }).zile, 30);
   assert.equal(GP.ingust(bare(5), { dir: "long" }).zile, 5);
-  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /r\.zile\?"pe "\+r\.zile\+" de zile — mai puține ferestre"/);
+  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /r\.zile\?"pe "\+TextRo\.cate\(r\.zile,"zi","zile"\)\+" — mai puține ferestre"/);   /* v100.73: „de” doar de la 20 (TextRo.cate) */
 });
 await test("F3 (proba de ecran pe telefon, CRV iesit din grid): botul fara pozitie - calculatorul de marja spune asta, nu „Scrie o sumă mai mare ca 0.”", () => {
   assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /!\(grNumar\(v\)>0\)\?"Scrie o sumă mai mare ca 0\.":"Acum botul n-are poziție/);

@@ -28,7 +28,12 @@ var Obiceiuri = (function () {
   // v100.29 (30.09, el: „fa idei”): istoricul tau pe moneda, pe toata istoria (arhiva de acasa). Simetric: spune si unde castigi;
   // avertizeaza - nu refuza - doar de la 3 boti inchisi cu net pe minus. Net = realizat + comisioane + funding.
   function netDe(t) { return nr(t.rezultat) + (nr(t.comisioane) || 0) + (nr(t.funding) || 0); }
-  function ziua(t) { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }).format(new Date(t)); } catch (e) { return new Date(t).toISOString().slice(5, 10); } }   // v100.72: zi.lună (anul e cel curent)
+  // v100.72: zi.lună; v100.73 (revizia pachetului 5, M3): + anul când data nu e din anul de acum („28.12.25”) - o parte din boții lui sunt din 2025
+  function ziua(t) {
+    var an = function (x) { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", year: "numeric" }).format(new Date(x)); } catch (e) { return String(new Date(x).getUTCFullYear()); } };
+    var o = { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }; if (an(t) !== an(Date.now())) o.year = "2-digit";
+    try { return new Intl.DateTimeFormat("ro-RO", o).format(new Date(t)); } catch (e) { return new Date(t).toISOString().slice(o.year ? 0 : 5, 10); }
+  }
   function istoricMoneda(trades, m) {
     var l = (Array.isArray(trades) ? trades : []).filter(function (t) { return t && t.moneda === m && nr(t.rezultat) !== null; });
     var net = 0, plus = 0, rau = null;
@@ -103,7 +108,7 @@ var Obiceiuri = (function () {
     var dep = [];
     if (netZi <= -P0.zi) dep.push({ cod: "zi", text: "azi " + U(netZi) + " (pragul tău: −" + P0.zi + ")" });
     if (netSapt <= -P0.sapt) dep.push({ cod: "sapt", text: "pe 7 zile " + U(netSapt) + " (pragul: −" + P0.sapt + ")" });
-    if (rand >= P0.rand && ord.length && acum - ord[0].inchis < ZI) dep.push({ cod: "rand", text: rand + " boți pe minus la rând (pragul: " + P0.rand + ")" });
+    if (rand >= P0.rand && ord.length && acum - ord[0].inchis < ZI) dep.push({ cod: "rand", text: cate(rand, "bot", "boți") + " pe minus la rând (pragul: " + P0.rand + ")" });
     // v100.72: o fraza ≤ 160 cu actiunea o data („mâine, cu capul limpede” e in alerta de pe Discord, MesajeColector.frana)
     var text = dep.length ? "Frâna e trasă: " + dep.map(function (d) { return d.text; }).join(", ") + "; n-aș mai porni boți azi."
       : "Frâna contului: azi " + U(netZi) + " din −" + P0.zi + ", pe 7 zile " + U(netSapt) + " din −" + P0.sapt + (rand ? ", " + rand + " pe minus la rând" : "") + ".";
@@ -120,7 +125,7 @@ var Obiceiuri = (function () {
       if (f.activa) { sarite++; economisit += -netT(t); if (netT(t) > 0) cedat += netT(t); }
     });
     return { sarite: sarite, economisit: economisit, cedat: cedat, n: l.length, praguri: P0,
-      text: sarite ? "Pe istoria ta, frâna ar fi oprit " + sarite + " din " + cate(l.length, "pornire", "porniri") + ": " + U(economisit) + " economisiți, dar și " + U(cedat).replace("+", "") + " câștiguri pierdute (o ipoteză pe trecut)." : "Pe istoria ta, frâna n-ar fi oprit nicio pornire." };   // v100.72: o fraza
+      text: sarite ? "Pe istoria ta, frâna ar fi oprit " + sarite + " din " + cate(l.length, "pornire", "porniri") + ": net " + U(economisit) + " (pierderi evitate " + Math.abs(economisit + cedat).toFixed(2).replace(".", ",") + " − câștiguri pierdute " + Math.abs(cedat).toFixed(2).replace(".", ",") + "), o ipoteză pe trecut." : "Pe istoria ta, frâna n-ar fi oprit nicio pornire." };   // v100.72: o fraza; v100.73 (I1): cifra e netul, nu „economisiți”
   }
 
   function portofoliu(boti, sold) {
@@ -152,7 +157,7 @@ var Obiceiuri = (function () {
     linii.push("Săptămâna: " + cate(r.n, "bot închis", "boți închiși") + ", net " + U(r.net) + " (înainte de comisioane și funding " + U(r.total) + "), " + r.pePlusNet + " pe plus (" + P(r.pePlusNet / r.n) + ").");
     linii.push("Din grile " + U(r.grile) + ", din poziție " + U(r.pozitie) + ", comisioane și funding " + U(r.comisioane + r.funding) + ".");
     var g = r.greseli[0];
-    if (g) linii.push("Greșeala cea mai scumpă: „" + g.titlu + "” — " + g.n + " boți, " + U(g.cost) + ".");
+    if (g) linii.push("Greșeala cea mai scumpă: „" + g.titlu + "” — " + cate(g.n, "bot", "boți") + ", " + U(g.cost) + ".");
     var s = o.socoteala || {}, sk = Object.keys(s).filter(function (k) { return s[k] && s[k].judecate > 0; });
     linii.push(sk.length ? "Semnalele: " + sk.map(function (k) { return (s[k].nume || k) + " " + s[k].corecte + "/" + s[k].judecate; }).join(", ") + " au avut dreptate." : "Semnalele: încă nimic judecat.");
     // v100.43 (I-466): cel mai util si cel mai inutil sfat, pe bani (doar cele cu cel putin 10 cazuri judecate)

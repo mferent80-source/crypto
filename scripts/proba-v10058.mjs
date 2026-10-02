@@ -89,7 +89,7 @@ await test("pagina: rândul ⚡ în idei, blocul „Varianta îngustă” în fi
   const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.match(a, /function grIngustHtml\(/); assert.match(a, /h\+=grIngustHtml\(f\)/); assert.match(a, /ingustLocal=GridProba\.ingust\(/);
   assert.match(a, /Varianta îngustă/);
-  assert.ok(a.includes('/rămâ/i.test(r.motiv'), "poza: fara „gridul lat rămâne mai bun. Aș rămâne la setările de mai sus” (dublat)"); assert.match(a, /L-aș închide după/);   /* v100.72: /rămâi/ → /rămâ/ (motivul nou „rămâne”); „Închide-l după” → „L-aș închide după” */ assert.match(a, /de zile — mai puține ferestre/);
+  assert.ok(a.includes('/rămâ/i.test(r.motiv'), "poza: fara „gridul lat rămâne mai bun. Aș rămâne la setările de mai sus” (dublat)"); assert.match(a, /L-aș închide după/);   /* v100.72: /rămâi/ → /rămâ/ (motivul nou „rămâne”); „Închide-l după” → „L-aș închide după” */ assert.match(a, /TextRo\.cate\(r\.zile,"zi","zile"\)\+" — mai puține ferestre"/);   /* v100.73: „pe 12 zile” / „pe 31 de zile” prin TextRo.cate (era „de zile” mereu) */
 });
 
 await test("o singura cerere pentru toate ideile (limita de 120 de citiri/min e comuna cu colectorul): ruta ingustLista + pagina o foloseste", async () => {
@@ -122,7 +122,7 @@ await test("I3 + mici: fisa foloseste rezultatul colectorului doar proaspat, pe 
   const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.ok(a.includes("!vg.vechi&&g0.dir===f.dir&&!(f.regim&&f.regim.miscare)"), "colectorul doar daca se potriveste");
   assert.ok(a.includes("try{h+=grIngustHtml(f)}catch(e){}"), "o eroare nu strica fisa");
-  assert.ok(a.includes('"pe "+r.zile+" de zile'), "zilele reale");
+  assert.ok(a.includes('"pe "+TextRo.cate(r.zile,"zi","zile")+" — mai puține ferestre"'), "zilele reale");   /* v100.73: zilele reale, cu „de” doar de la 20 */
   assert.ok(fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8").includes('put("ingust:"+s,JSON.stringify(out),{expirationTtl:86400})'));
   assert.doesNotThrow(() => GP.rezumatIngust({ propus: true, setare: null, motiv: "" }));
   assert.ok(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8").includes("try { var g = typeof GridProba"), "o eroare nu strica ideile");

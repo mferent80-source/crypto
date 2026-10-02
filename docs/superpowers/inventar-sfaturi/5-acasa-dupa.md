@@ -48,13 +48,13 @@
 | calendarul: nimic | calendar.t | 106 | Nimic important de aici până la sfârșitul săptămânii. Calendarul săptămânii viitoare apare duminică seara. |
 | calendarul: două mari | calendar.t | 136 | 2 evenimente mari în SUA de aici până la sfârșitul săptămânii: în ziua lor piețele se mișcă mai tare, n-aș porni boți noi chiar înainte. |
 | calendarul: doar medii | calendar.t | 54 | Doar evenimente de impact mediu în SUA săptămâna asta. |
-| funding-ul pieței: înghesuiți pe long | fundingPiata.t | 154 | 30 din 40 monede: plătesc long · funding median 0,060% (6× față de obicei). Mulți s-au înghesuit pe long: urcările țin mai greu și căderile vin mai brusc. |
-| funding-ul pieței: ca de obicei | fundingPiata.t | 70 | 30 din 40 monede: plătesc long · funding median 0,010% (ca de obicei). |
+| funding-ul pieței: înghesuiți pe long | fundingPiata.t | 157 | 30 din 40 de monede: plătesc long · funding median 0,060% (6× față de obicei). Mulți s-au înghesuit pe long: urcările țin mai greu și căderile vin mai brusc. |
+| funding-ul pieței: ca de obicei | fundingPiata.t | 73 | 30 din 40 de monede: plătesc long · funding median 0,010% (ca de obicei). |
 | socoteala alertelor: nimic | socotealaAlerte.t | 36 | Nicio alertă încă: se adună de acum. |
-| socoteala alertelor: fără socoteli | socotealaAlerte.t | 50 | 1 alerte trimise; primele socoteli după 24 de ore. |
+| socoteala alertelor: fără socoteli | socotealaAlerte.t | 50 | 1 alertă trimisă; primele socoteli după 24 de ore. |
 | socoteala alertelor: 8 judecate | socotealaAlerte.t | 121 | Din 6 mișcări neobișnuite, 4 din 6 au continuat în aceeași direcție după 24 h și 4 din 6 după 3 zile. Puține cazuri încă. |
 | socoteala alertelor: 8 judecate | socotealaAlerte.v | 76 | După alertele de vreme, BTC s-a mai mișcat în medie 3,5% în 24 h (2 cazuri). |
-| socoteala alertelor: 30 judecate | socotealaAlerte.t | 106 | Din 25 mișcări neobișnuite, 12 din 25 au continuat în aceeași direcție după 24 h și 12 din 25 după 3 zile. |
+| socoteala alertelor: 30 judecate | socotealaAlerte.t | 109 | Din 25 de mișcări neobișnuite, 12 din 25 au continuat în aceeași direcție după 24 h și 12 din 25 după 3 zile. |
 | socoteala alertelor: 30 judecate | socotealaAlerte.v | 76 | După alertele de vreme, BTC s-a mai mișcat în medie 3,4% în 24 h (5 cazuri). |
 | raportul pieței: tot | raportSaptamana.titlu | 19 | 📊 Săptămâna pieței |
 | raportul pieței: tot | raportSaptamana.mesaj | 548 | ₿ Crypto: BTC −4,2% pe 7 zile · acum 🔴 mișcare ⏎ 📈 Nasdaq −1,8% pe săptămână · VIX 22,4 · 🔴 bursa scade ⏎ ↕ Nasdaq 100 pe săptămână: sus NVDA +6,1% · jos INTC −7,4% ⏎ 💼 Tu: boți −12,40 USDT · acțiuni deschise +312 lei ⏎ 📅 Săptămâna asta: mar 15:30 CPI m/m · mie 21:00 FOMC Statement ⏎ 🧾 Rezultate la acțiunile tale: NVDA 08.10 ⏎ 👉 Crypto: N-aș porni boți grid noi și n-aș mări pariurile pe urcare (lăcomia e la 78). ⏎ 👉 Bursă: N-aș cumpăra contra trendului; aș ține doar ce are stopul pus. ⏎ 👉 N-aș porni boți noi și n-aș cumpăra chiar înainte de CPI m/m. |
@@ -75,7 +75,7 @@
 | frâna contului: trasă azi | frana.t | 74 | Frâna e trasă: azi −24,10 USDT (pragul tău: −20); n-aș mai porni boți azi. |
 | frâna contului: trasă pe 7 zile și la rând | frana.t | 148 | Frâna e trasă: azi −24,50 USDT (pragul tău: −20), pe 7 zile −64,50 USDT (pragul: −60), 4 boți pe minus la rând (pragul: 3); n-aș mai porni boți azi. |
 | frâna contului: liberă | frana.t | 89 | Frâna contului: azi −2,00 USDT din −20, pe 7 zile +1,00 USDT din −60, 1 pe minus la rând. |
-| frâna pe istoria ta | franaIstoric.t | 139 | Pe istoria ta, frâna ar fi oprit 16 din 40 de porniri: +36,00 USDT economisiți, dar și 24,00 USDT câștiguri pierdute (o ipoteză pe trecut). |
+| frâna pe istoria ta | franaIstoric.t | 144 | Pe istoria ta, frâna ar fi oprit 16 din 40 de porniri: net +36,00 USDT (pierderi evitate 60,00 − câștiguri pierdute 24,00), o ipoteză pe trecut. |
 | poarta de pornire: totul trece · verde | poarta.verde.t | 22 | Fișa zice 🟢 PORNEȘTE. |
 | poarta de pornire: totul trece · reintrare | poarta.reintrare.t | 25 | N-ai mai avut bot pe LIT. |
 | poarta de pornire: totul trece · levier | poarta.levier.t | 30 | Levier 3×, sub cel sigur (4×). |
@@ -140,7 +140,9 @@
 | gridul îngust: piața în mișcare | ingust.t | 60 | piața e în mișcare mare: nu e momentul pentru un grid îngust |
 | gridul îngust: fără direcție | ingust.t | 34 | fără direcția pieței pentru monedă |
 | gridul îngust: istoric scurt | ingust.t | 44 | prea puțin istoric de 15 minute (sub 9 zile) |
-| gridul îngust (rândul ideilor): nu | rezumatIngust.t | 93 | ⚡ grid îngust: nu — pe istoric, toate variantele înguste s-au lichidat sau n-au avut ferestre |
+| gridul îngust (rândul ideilor): nu · test cu puține ferestre | rezumatIngust.t | 90 | ⚡ grid îngust: nu — prea puține ferestre independente pe partea de test (12 din 30 la 6 h) |
+| gridul îngust (rândul ideilor): nu · piața în mișcare | rezumatIngust.t | 80 | ⚡ grid îngust: nu — piața e în mișcare mare: nu e momentul pentru un grid îngust |
+| gridul îngust (rândul ideilor): nu · toate variantele căzute | rezumatIngust.t | 120 | ⚡ grid îngust: nu — pe istoric, toate variantele înguste s-au lichidat sau n-au avut ferestre: gridul lat rămâne mai bun |
 | gridul îngust (rândul ideilor): propus | rezumatIngust.t | 162 | ⚡ grid îngust long, 12 h: 2,4% lățime, 10 linii, ~18 perechi/zi · pe test: median +0,4%, medie +0,5%, 64% pe plus, cel mai rău −2,1% (31 de ferestre independente) |
 
 ## Discord (de probă, netrimis)
@@ -164,11 +166,11 @@ Nicio cifră, condiție sau acțiune nu s-a pierdut; unde un text s-a scurtat, b
 
 | Înainte | După |
 |---|---|
-| istoricul monedei: „… net −14.51 USDT; cel mai rău −23.38 USDT pe 22.09.26.” | „…, net −14,51 USDT, cel mai rău −23,38 pe 22.09.” (virgulă; anul e cel curent) |
+| istoricul monedei: „… net −14.51 USDT; cel mai rău −23.38 USDT pe 22.09.26.” | „…, net −14,51 USDT, cel mai rău −23,38 pe 22.09.” (virgulă; anul se scrie doar când data nu e din anul de acum: „pe 28.12.25” — v100.73, revizia M3) |
 | istoricul monedei: „… net +2.60 USDT. Prea puțini ca să spun ceva.” (două fraze) | „… net +2,60 USDT (prea puțini ca să spun ceva).” |
 | prima oră: „… (din care comisioane −8.16 USDT). Închiderile repezi costă mai ales în comisioane.” | „…, din care comisioane −8,16 USDT: închiderile repezi costă mai ales în comisioane.” (o frază) |
 | frâna (rândul porții): „Frâna contului: gata pe azi — … . N-aș mai porni boți azi; mâine, cu capul limpede.” | „Frâna e trasă: …; n-aș mai porni boți azi.” — „mâine, cu capul limpede” rămâne în alerta de pe Discord (`MesajeColector.frana`) |
-| frâna pe istoria ta: „… (ai fi pierdut și 24.00 USDT câștiguri). Ipoteză pe trecut, nu promisiune.” | „…: +36,00 USDT economisiți, dar și 24,00 USDT câștiguri pierdute (o ipoteză pe trecut).” |
+| frâna pe istoria ta: „…: +36.00 USDT (ai fi pierdut și 24.00 USDT câștiguri). Ipoteză pe trecut, nu promisiune.” | „…: net +36,00 USDT (pierderi evitate 60,00 − câștiguri pierdute 24,00), o ipoteză pe trecut.” — cifra e NETUL; bucățile care o dau sunt scrise (v100.73, revizia I1; în v100.72 scria greșit „economisiți” pe net) |
 | poarta, moneda: „… (LIT se numește LIGHTER la boții Pionex)” (a doua frază) | în aceeași frază: „… (LIT = LIGHTER la boții Pionex).” |
 | poarta fișei (`app.js`): „toate regulile trec — pornește, iar eu îl notez …” / „fișa, planul și levierul sunt în regulă, dar … — aș porni cu o sumă mai mică …” / „aș aștepta. Dacă pornești totuși, …” | `Obiceiuri.facPoarta` (păzită de gardă): acțiunea la persoana I („Aș porni: …”, „Aș porni cu o sumă mai mică și aș ține stopul la plan.”, „Aș aștepta până trec regulile de mai sus.”) · constatarea pe rândul de sub ea |
 | raportul de duminică: „Laboratorul a DOVEDIT: …” | „Laboratorul a dovedit: …” |
@@ -184,7 +186,7 @@ Nicio cifră, condiție sau acțiune nu s-a pierdut; unde un text s-a scurtat, b
 | fișa: „lichidată de 1 ori” | „lichidată o dată” (`GridCalcul.oriDe`: „de 2 ori”, „de 21 de ori”) |
 | gridul îngust: „— rămâi la gridul lat”, „nu porni un grid îngust acum”, „−1,2 %” (spațiu), „(31 ferestre independente)” | „: gridul lat rămâne mai bun”, „nu e momentul pentru un grid îngust”, „−1,2%”, „(31 de ferestre independente)” |
 | fișa (`app.js`): „· LICHIDAT”, „+1.23 USDT” (pe hârtie, calibrarea, jurnalul crypto, „Pe fiecare ordin”, „Profit pe grilă”) | „· lichidat”, „+1,23 USDT” |
-| jurnalul crypto (`app.js`): „Ce aș face eu: aș porni doar când fișa zice 🟢 și n-aș reporni pe aceeași monedă în primele 10 minute: …” / „aș evita boții X până nu se schimbă cifra.” | „Aș porni doar pe 🟢, fără repornire în primele 10 minute: …” / „Aș evita deocamdată boții X.” |
+| jurnalul crypto (`app.js`): „Ce aș face eu: aș porni doar când fișa zice 🟢 și n-aș reporni pe aceeași monedă în primele 10 minute: pe boții tăi, asta ar fi însemnat X în plus.” / „aș evita boții X până nu se schimbă cifra.” | „Aș porni doar pe 🟢 și n-aș reporni pe aceeași monedă în primele 10 minute.” + rândul de sub ea „Pe boții tăi, asta ar fi însemnat X în plus.” (v100.73, revizia M4: „pe aceeași monedă” căzuse în v100.72) / „Aș evita deocamdată boții X.” |
 | **A doua trecere (după poza fișei LIT și a Acasei, 1920):** | |
 | gridul îngust, „Nu o propun: … . Rămâi la setările de mai sus.” — se adăuga și după motivul nou „gridul lat rămâne mai bun” (garda anti-repetiție căuta „rămâi”) | „… Aș rămâne la setările de mai sus.”, adăugat doar când motivul nu spune deja „rămâne” (`/rămâ/`) |
 | gridul îngust propus: „⏱️ Închide-l după 12 h dacă n-a atins stopul — așa a fost probat.” | „⏱️ L-aș închide după 12 h dacă n-a atins stopul: așa a fost probat.” |
@@ -202,5 +204,15 @@ Nicio cifră, condiție sau acțiune nu s-a pierdut; unde un text s-a scurtat, b
 | Acasă, cardul „Boții tăi”: „−1.43 USDT”, „Față de ieri dimineață +0.18 USDT” | „−1,43 USDT”, „+0,18 USDT” |
 | Acasă, BTC și bursa: „corelația pe ultimele 30 zile de bursă” | „… 30 de zile de bursă” |
 | Tabloul (rest din pachetul 2, aceeași regulă a cifrelor): „grid des 0,3 %”, „Grid mai des (0,3 %)”, „e regula ta (0,30 %)” | „0,3%”, „(0,3%)”, „(0,30%)” |
+
+| **Revizia Opus a pachetului 5 (v100.73), regula „de” / singularul (TextRo.cate) — acum și în gardă:** | |
+| raportul de duminică: „Greșeala cea mai scumpă: „X” — 1 boți / — 62 boți” | „— 1 bot” / „— 62 de boți” |
+| frâna: „20 boți pe minus la rând (pragul: 3)” | „20 de boți pe minus la rând (pragul: 3)” |
+| Acasă, funding-ul pieței: „20 din 30 monede: plătesc long” | „20 din 30 de monede: plătesc long” |
+| Acasă, socoteala alertelor: „1 alerte trimise”, „Din 25 mișcări neobișnuite, 1 din 25 au continuat”, „(1 cazuri)” | „1 alertă trimisă”, „Din 25 de mișcări neobișnuite, 1 din 25 a continuat”, „(1 caz)” |
+| jurnalul crypto: „Ce aș face eu: încep cu „X” — a costat … pe 572 boți.” · „N boți în jurnal”, „Pe N boți nu văd”, „· N boți,” | „Ce aș face eu: Aș începe cu greșeala „X”: a costat … pe 572 de boți.” · aceleași cu „de” de la 20 |
+| gridul îngust calculat aici: „pe 12 de zile — mai puține ferestre” | „pe 12 zile — mai puține ferestre” („de” doar de la 20) |
+| 🎲 frecvențele (`probabilitati.js`, pe pagina T212 și pe fișă): „11 din 100 zile ca acum”, „127 din 390 situații ca acum”, „5 din 12 de porniri la 4 h” | „11 din 100 de zile ca acum”, „127 din 390 de situații ca acum”, „5 din 12 porniri la 4 h” (închide și minorul M7 amânat la pachetul 4) |
+| garda: situația „gridul îngust (rândul ideilor): nu” avea motivul scris de mână, în forma veche | 3 situații din producătorii REALI: `GridProba.ingust` pe bare, ramura timpurie, ramura „!best” citită din sursă (revizia M7) |
 
 **Rămân cum sunt (hotărâri):** prețurile fișei („3.328”, „lichidare 2.113”) — zecimalele Pionex, regula 5 a specului; instrucțiunile de folosire la imperativ („alege „Geometric” în Pionex”, „alege Short sus”, „scrie soldul contului mai sus”, „lipește întâi v2.2 în TradingView”) — sunt pași de urmat în aplicație, nu sfaturi de trading; eticheta verdictului „🟡 AȘTEAPTĂ” — etichetă; banda contului din capul paginii („CRV long 5× · 0.3801 · total -1.74 USDT”) — nu e pe Acasă și nu e sfat, idee pentru altă dată; calendarul („estimat 0.3%”) — textul sursei, netradus.

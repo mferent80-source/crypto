@@ -112,7 +112,14 @@ export function situatiiAcasa(pune) {
   for (const [sit, o] of [["piața în mișcare", { miscare: true, dir: "long" }], ["fără direcție", { miscare: false, dir: "?" }], ["istoric scurt", { miscare: false, dir: "long" }]]) {
     const r = GP.ingust([], o); if (r && r.motiv) pune("gridul îngust: " + sit, "acasa", "ingust", { t: r.motiv }, [["t", "rand"]]);
   }
-  for (const [sit, r] of [["nu", { propus: false, motiv: "pe istoric, toate variantele înguste s-au lichidat sau n-au avut ferestre" }],
+  // v100.73 (revizia pachetului 5, M7): rândul „nu” din motivele REALE - GridProba.ingust pe bare (urcare pe 12 zile ⇒ „prea puține ferestre …”),
+  // ramura timpurie (piața în mișcare) și ramura „!best” citită din sursa grid-proba.js (nu scrisă de mână); „propus” = forma rezultatului real
+  const BZ = G.C.BARE_ZI, M15 = 15 * 60000, n15 = 12 * BZ;
+  const bareU = Array.from({ length: n15 }, (_, i) => { const c = 1 + 0.8 * i / n15; return { t: T0 - (n15 - i) * M15, o: c, h: c * 1.0005, l: c * 0.9995, c }; });
+  const mBest = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public", "lib", "grid-proba.js"), "utf8").match(/if \(!best\) return \{ propus: false, motiv: "([^"]+)" \}/);
+  if (!mBest) throw new Error("garda-acasa: ramura „!best” din grid-proba.js nu mai are forma așteptată");
+  for (const [sit, r] of [["nu · test cu puține ferestre", GP.ingust(bareU, { miscare: false, dir: "long" })], ["nu · piața în mișcare", GP.ingust([], { miscare: true, dir: "long" })],
+    ["nu · toate variantele căzute", { propus: false, motiv: mBest[1] }],
     ["propus", { propus: true, dir: "long", ore: 12, latime: 0.024, setare: { grile: 9 }, test: { perechiZi: 18.4, mediana: 0.0042, medie: 0.0051, pePlus: 0.64, celMaiRau: -0.021, nIndep: 31 } }]])
     pune("gridul îngust (rândul ideilor): " + sit, "acasa", "rezumatIngust", { t: GP.rezumatIngust(r) }, [["t", "detalii"]]);
 }

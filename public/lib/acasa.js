@@ -174,7 +174,7 @@ var Acasa = (function () {
     var ingh = l.slice().sort(function (a, b) { return b.rate - a.rate; }).slice(0, 3).map(function (x) { return { s: x.s, rate: x.rate }; });
     var pct = function (v) { return (v * 100).toFixed(3).replace(".", ",") + "%"; };
     var ton = raport !== null && raport >= 3 && med > 0.0001 ? "atentie" : raport !== null && raport >= 3 && med < 0 ? "atentie" : "neutru";
-    var text = lng + " din " + l.length + " monede: plătesc long · funding median " + pct(med) + (raport !== null ? " (" + (raport >= 2 ? Math.round(raport) + "× față de obicei" : raport <= 0.5 ? "sub obicei" : "ca de obicei") + ")" : "")
+    var text = lng + " din " + cate(l.length, "monedă", "monede") + ": plătesc long · funding median " + pct(med) + (raport !== null ? " (" + (raport >= 2 ? Math.round(raport) + "× față de obicei" : raport <= 0.5 ? "sub obicei" : "ca de obicei") + ")" : "")
       + (ton === "atentie" ? ". Mulți s-au înghesuit pe long: urcările țin mai greu și căderile vin mai brusc." : ".");
     return { n: l.length, long: lng, mediana: med, uzual: uz, raport: raport, inghesuiti: ingh, ton: ton, text: text };
   }
@@ -260,10 +260,10 @@ var Acasa = (function () {
     var cont = function (x, k) { var r = x[k] / x.pret - 1; return x.dir === "sus" ? r > 0 : r < 0; };
     var c1 = mi.filter(function (x) { return nr(x.p1) > 0; }), c3 = mi.filter(function (x) { return nr(x.p3) > 0; }), v1 = ve.filter(function (x) { return nr(x.p1) > 0; });
     var o = { n: l.length, n1: c1.length, continua1: c1.filter(function (x) { return cont(x, "p1"); }).length, n3: c3.length, continua3: c3.filter(function (x) { return cont(x, "p3"); }).length };
-    o.text = !l.length ? "Nicio alertă încă: se adună de acum." : !o.n1 ? l.length + " alerte trimise; primele socoteli după 24 de ore." :
-      "Din " + o.n1 + " mișcări neobișnuite, " + o.continua1 + " din " + o.n1 + " au continuat în aceeași direcție după 24 h" + (o.n3 ? " și " + o.continua3 + " din " + o.n3 + " după 3 zile" : "") + "." + (o.n1 < 20 ? " Puține cazuri încă." : "");
+    o.text = !l.length ? "Nicio alertă încă: se adună de acum." : !o.n1 ? cate(l.length, "alertă trimisă", "alerte trimise") + "; primele socoteli după 24 de ore." :
+      "Din " + cate(o.n1, "mișcare neobișnuită", "mișcări neobișnuite") + ", " + o.continua1 + " din " + o.n1 + (o.continua1 === 1 ? " a continuat" : " au continuat") + " în aceeași direcție după 24 h" + (o.n3 ? " și " + o.continua3 + " din " + o.n3 + " după 3 zile" : "") + "." + (o.n1 < 20 ? " Puține cazuri încă." : "");
     var mv = v1.length ? v1.reduce(function (s, x) { return s + Math.abs(x.p1 / x.pret - 1); }, 0) / v1.length * 100 : null;
-    o.textVreme = mv === null ? "" : "După alertele de vreme, BTC s-a mai mișcat în medie " + mv.toFixed(1).replace(".", ",") + "% în 24 h (" + v1.length + " cazuri).";
+    o.textVreme = mv === null ? "" : "După alertele de vreme, BTC s-a mai mișcat în medie " + mv.toFixed(1).replace(".", ",") + "% în 24 h (" + cate(v1.length, "caz", "cazuri") + ").";
     return o;
   }
 

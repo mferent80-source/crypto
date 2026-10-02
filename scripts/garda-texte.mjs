@@ -52,8 +52,20 @@ export const INTERZIS = [
   [/frecvență din trecut|nu o promisiune|un semn, nu o regulă|nu o dovadă/i, "avertizarea comună (locul ei e în legendă)"],
   [/ÎMPOTRIVA|\bSUB gridul|\bPESTE gridul/, "majuscule de strigat"],
   [/\d(\.\d+)?e[-+]?\d/, "număr cu exponent"],   // revizia Opus a 2b (5): „1.234e-7”
-  [/(?<![\d.,])1 (cazuri|trade-uri|boți)\b/, "„1 cazuri” (vrea singularul)"],   // v100.71 (revizia pachetului 4, I1)
+  // v100.71 (revizia pachetului 4, I1): „1 cazuri”; v100.73 (revizia pachetului 5, I2): regula intreaga e mai jos, in NUMARATE (si „de” de la 20)
 ];
+// v100.73 (revizia pachetului 5, I2): regula TextRo.cate - singularul la 1 („1 bot”), „de” de la 20 în sus („62 de boți”, „1723 de porniri”),
+// fără „de” sub 20 și la 101–119 („12 zile”, „101 cazuri”); doar pe substantivele numărate din sfaturi (nu prinde „1,6 zile” sau „1.000”)
+const NUMARATE = /(?<![\d.,−+-])(\d+) (de )?(boți|cazuri|monede|zile|ore|minute|alerte|mișcări|porniri|trade-uri|ferestre|perioade|acțiuni|poziții|note|situații)(?![\p{L}])/gu;
+function deNumarate(t) {
+  for (const m of t.matchAll(NUMARATE)) {
+    const k = Number(m[1]), rest = k % 100, vreaDe = rest >= 20 || (rest === 0 && k >= 100);
+    if (k === 1) return "„1 " + m[3] + "” (vrea singularul)";
+    if (vreaDe && !m[2]) return "„" + k + " " + m[3] + "” fără „de” (de la 20 în sus)";
+    if (!vreaDe && m[2]) return "„" + k + " de " + m[3] + "” cu „de” în plus (sub 20)";
+  }
+  return null;
+}
 const norm = (s) => String(s || "").toLowerCase().replace(/[0-9.,%×−+()·:;—"„”≈~]/g, " ").replace(/\s+/g, " ").trim();
 // abaterile unui text; frate = titlul aceluiasi sfat (explicatia / actiunea nu-l repeta)
 export function verifica(text, tip, frate) {
@@ -66,6 +78,7 @@ export function verifica(text, tip, frate) {
   }
   if (r.randuri && t.split("\n").length > r.randuri) ab.push("peste " + r.randuri + " rânduri");
   for (const [re, ce] of INTERZIS) if (re.test(t)) ab.push(ce);
+  const dn = deNumarate(t); if (dn) ab.push(dn);
   if (frate && norm(frate).length >= 15 && norm(t).includes(norm(frate))) ab.push("repetă titlul");
   // v100.66 (pachetul 3): alerta - randul 1 = faptul, randul 2 = „👉 ” + o actiune la persoana I; raportul - fiecare rand ≤ 160
   if (r.alerta) {
