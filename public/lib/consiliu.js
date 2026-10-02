@@ -20,6 +20,8 @@ var Consiliu = (function () {
   var U = function (v) { return TextRo.usdt(v, 1); };
   // v100.61 (specul „sfaturi concise”): avertizarile comune se spun O DATA, aici - pagina le arata sub Consilier, nu in fiecare sfat
   var LEGENDA = "Frecvențele („în N% din zile”) vin din trecut și nu sunt promisiuni, iar comparațiile (deciziile tale) nu sunt dovezi; „(puține cazuri)” înseamnă prea puține date: un semn, nu o regulă. "
+    // v100.62 (pachetul 2): avertizarile scoase din sfaturile vechi (trendul, directia, ce face gridul contra pietei) stau tot aici, o data
+    + "Trendul și direcția se măsoară pe bare închise: arată starea de acum, nu încotro merge prețul; contra botului, gridul adaugă poziție la fiecare grilă și pierderea pe ea crește. "
     + "Prețurile propuse (zero-ul, stopul, podeaua) se recalculează la fiecare umplere; la întoarcere gridul cumpără înapoi la fiecare grilă, de aceea contează stopul.";
   var MAX_TITLU = 60;
   // taie la ultimul spatiu de dinainte de n, cu „…” (ultima rezerva - titlurile vin deja scurte)
@@ -30,11 +32,6 @@ var Consiliu = (function () {
     trend: "trend", plan: "plan", stop: "plan", lichidare: "lichidare", btc: "btc", aglomerare: "aglomerare", "ia-profit": "ia-profit", podea: "podea" };
   // ordinea in care cantaresc motivele de acelasi nivel (banii in joc: lichidarea si pierderea maxima intai)
   var PRIO = ["opreste", "lichidare", "stop", "plan", "pericol", "margine", "muta", "costuri", "perechi", "trend", "miscare", "btc", "aglomerare", "ia-profit", "liniste"];
-  // „Până la marginea de jos (0.3841) sunt 1.7%” -> „1,7% până la marginea de jos (0.3841)” (ca in demo: cifra intai)
-  function titluMargine(t) {
-    var m = /^Până la marginea de (jos|sus) \(([^)]*)\) sunt ([0-9.,]+)%$/.exec(String(t || ""));
-    return m ? m[3].replace(".", ",") + "% până la marginea de " + m[1] + " (" + m[2] + ")" : t;
-  }
   function prio(cod) { var i = PRIO.indexOf(cod); return i < 0 ? PRIO.length : i; }
   // v100.50 (I-479): siguranta nu se negociaza - acestea raman primele la acelasi nivel, oricat ar fi adus altele
   // revizia 01.10 (I4): si „pericol” (pretul afara din grid, margin call pe ton de atentie) e siguranta
@@ -67,8 +64,12 @@ var Consiliu = (function () {
     var op = x.opreste, opTxt = op ? String(op.ceFac || "") : "", smLich = (Array.isArray(sm.componente) ? sm.componente : []).some(function (k) { return k && k.cod === "lichidare"; });
     if (op && op.titlu && !(/lichidare/i.test(opTxt) && smLich)) {
       var mM = /marginea contului ca ([^,\s]+)/.exec(opTxt), mR = /starea de risc ca ([^,\s]+)/.exec(opTxt), mL = /([0-9.]+)% până la lichidare/.exec(opTxt);
-      var tO = mM ? "Pionex: marginea contului e " + mM[1] : mR ? "Pionex: starea de risc e " + mR[1] : mL ? "Lichidarea la " + TextRo.pct(Number(mL[1])) : op.titlu !== "Ieși" ? mare(op.titlu) : mare(opTxt.replace(/\.$/, ""));
-      cand.push({ cod: "opreste", nivel: "iesi", c: "r", titlu: tO, text: mL ? "" : opTxt, faCe: mR ? "Aș închide botul acum, după ce verific starea lui în Pionex." : "Aș adăuga marjă sau aș închide botul acum.", scurt: mic(tO) });
+      var mN = /trecut deja de pragul de lichidare cu ([0-9.]+)%/.exec(opTxt);
+      var tO = mM ? "Pionex: marginea contului e " + mM[1] : mR ? "Pionex: starea de risc e " + mR[1] : mL ? "Lichidarea la " + TextRo.pct(Number(mL[1])) : mN ? "Prețul e dincolo de lichidare cu " + TextRo.pct(Number(mN[1]))
+        : op.titlu !== "Ieși" ? mare(op.titlu) : mare(opTxt.replace(/\.$/, ""));
+      // v100.62 (ideea 3 din pachetul 1): textul = de ce (starea bursei bate calculul nostru), nu titlul spus a doua oara
+      var dO = mM || mR ? "Pionex o dă altfel decât " + (mM ? "NORMAL" : "TRADING") + ", iar starea bursei bate calculul nostru al lichidării." : mL || mN ? "" : opTxt;
+      cand.push({ cod: "opreste", nivel: "iesi", c: "r", titlu: tO, text: dO, faCe: mR ? "Aș închide botul acum, după ce verific starea lui în Pionex." : "Aș adăuga marjă sau aș închide botul acum.", scurt: mic(tO) });
     }
     // 1) componentele semaforului (IEȘI / ATENȚIE)
     (Array.isArray(sm.componente) ? sm.componente : []).forEach(function (k) {
@@ -77,7 +78,7 @@ var Consiliu = (function () {
       var m = { cod: k.cod, nivel: k.nivel, c: k.nivel === "iesi" ? "r" : "g", titlu: mare(k.motiv), text: k.deCe || "", faCe: k.faCe || "", faCeSlab: k.faCeSlab || "", scurt: mic(k.motiv), extra: k.sursa || null };
       // „mută gridul” si sfatul „Până la marginea de jos” spun acelasi lucru: un singur motiv, cu cifrele sfatului
       // revizia 01.10: sfatul „margine” e mereu despre marginea de JOS - nu se lipeste peste „mută gridul” de la marginea de sus (short)
-      if (k.cod === "muta" && k.parte !== "sus" && sfCod("margine")) { var s = sfCod("margine"); m.cod = "margine"; m.titlu = titluMargine(s.titlu); m.text = s.text; m.faCe = s.faCe || m.faCe; m.extra = [mare(k.motiv), k.deCe, k.sursa].filter(Boolean).join(" · "); folosite.margine = 1; }   /* revizia Opus I1: si „de ce”-ul (frecventa, pragul) */
+      if (k.cod === "muta" && k.parte !== "sus" && sfCod("margine")) { var s = sfCod("margine"); m.cod = "margine"; m.titlu = s.titlu; m.text = s.text; m.faCe = s.faCe || m.faCe; m.extra = [mare(k.motiv), k.deCe, k.sursa].filter(Boolean).join(" · "); folosite.margine = 1; }   /* revizia Opus I1: si „de ce”-ul (frecventa, pragul) */
       else if (k.cod === "costuri" && sfCod("costuri")) { m.text = sfCod("costuri").text; folosite.costuri = 1; }
       else if (k.cod === "miscare" && sfCod("miscare")) { m.text = sfCod("miscare").text; folosite.miscare = 1; }
       cand.push(m);
@@ -97,7 +98,7 @@ var Consiliu = (function () {
       if (s.cod === "pericol" && s.tip === "lich" && cand.some(function (m) { return m.cod === "lichidare"; })) return;
       if (cand.some(function (m) { return m.cod === s.cod; })) { folosite[s.cod] = 1; return; }
       folosite[s.cod] = 1;
-      cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.cod === "margine" ? titluMargine(s.titlu) : s.titlu, text: s.text || "", faCe: s.faCe || "",
+      cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.titlu, text: s.text || "", faCe: s.faCe || "",
         scurt: s.cod === "margine" ? "prețul e lângă marginea de jos" : mic(s.titlu) });
     });
     // 3b) v100.51 (I-477): gridul incheie sub jumatate din perechile pe care le astepta fisa pe istoricul de dinaintea pornirii

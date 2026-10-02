@@ -34,7 +34,7 @@ await test("CRV real: 3 motive dupa banii in joc - stopul (rosu), marginea de jo
   const c = CS.alcatuieste(intrare());
   assert.deepEqual(c.motive.map((m) => m.c), ["r", "g", "v"]);
   assert.match(c.motive[0].titlu, /Stopul e peste plan/); assert.match(c.motive[0].text, /10/);
-  assert.match(c.motive[1].titlu, /până la marginea de jos/); assert.match(c.motive[1].cip.t, /„Mută gridul” 7 din 10/);
+  assert.match(c.motive[1].titlu, /până la marginea de jos/i); assert.match(c.motive[1].cip.t, /„Mută gridul” 7 din 10/);   /* v100.62: titlul vine gata din sfaturi.js */
   assert.match(c.motive[2].titlu, /Piața e liniștită și laterală/); assert.match(c.motive[2].text, /o singură măsură/);
   assert.match(c.motive[2].text, /structura pe medii: long, tare/, "fisa nu mai e un trend separat, e structura");
   assert.equal(c.motive[0].cip.t, "încă nu știm", "„Planul tău”: 9 judecate, sub 10");
@@ -52,7 +52,7 @@ await test("nimic pierdut: fiecare sfat de azi (in afara de trend, contopit) e i
   const c = CS.alcatuieste(intrare()), tot = c.motive.map((m) => m.titlu + " " + m.text).concat(c.rest.map((r) => r.titlu + " " + (r.text || ""))).join(" | ");
   for (const s of FX.sfaturi) {
     if (s.cod === "trend" || s.cod === "directie" || s.cod === "liniste") continue;   // contopite in motivul „Piața” (verificat mai sus)
-    if (s.cod === "margine") { assert.ok(tot.includes("până la marginea de jos (0.3841)") && tot.includes(s.text), "lipseste marginea"); continue; }   // titlul rescris cu cifra intai
+    if (s.cod === "margine") { assert.ok(tot.includes(s.titlu) && tot.includes(s.text), "lipseste marginea"); continue; }   /* v100.62: titlul sfatului trece neschimbat */
     assert.ok(tot.includes(s.titlu), "lipseste: " + s.titlu);
   }
   for (const k of FX.consilier) assert.ok(tot.includes(k.titlu), "lipseste consilierul: " + k.titlu);

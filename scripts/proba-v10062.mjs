@@ -141,5 +141,30 @@ await test("cardul ascuns al sfaturilor (app.js) arată sursa, nu „deCe”; ga
   assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("sfaturi"));
 });
 
+// ---- sarcina 3: Consilierul (consiliu.js) ----
+await test("„mută gridul” contopit cu sfatul „margine”: titlul și textul sfatului trec neschimbate (titluMargine nu mai există)", () => {
+  const b = CRV(), l = sfaturi(b), m = cod(l, "margine");
+  const c = C.alcatuieste({ sm: S.semafor({ bot: b, fisa: FISA(), muta: S.mutaGridul(b, FISA(), 0, null) }), concret: [], sfaturi: l });
+  const mot = c.motive.find((x) => x.cod === "margine");
+  assert.ok(mot, "fără motivul „margine”: " + c.motive.map((x) => x.cod));
+  assert.equal(mot.titlu, m.titlu); assert.equal(mot.text, m.text);
+  assert.ok(!citeste("public", "lib", "consiliu.js").includes("titluMargine"));
+});
+await test("verdictul vechi al Tabloului (ideea 3): starea Pionex are „de ce”-ul ei, nu titlul repetat; lichidarea depășită are titlu cu virgulă", () => {
+  const sm = S.semafor({ bot: CRV(), fisa: FISA() }), op = (ceFac) => C.alcatuieste({ sm, concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac } }).motive.find((x) => x.cod === "opreste");
+  const a = op("Pionex raportează marginea contului ca MARGIN_CALL, nu NORMAL.");
+  assert.equal(a.titlu, "Pionex: marginea contului e MARGIN_CALL");
+  assert.equal(a.text, "Pionex o dă altfel decât NORMAL, iar starea bursei bate calculul nostru al lichidării.");
+  assert.match(op("Pionex raportează starea de risc ca REDUCE_ONLY, nu TRADING.").text, /altfel decât TRADING/);
+  const d = op("Prețul a trecut deja de pragul de lichidare cu 1.2%.");
+  assert.equal(d.titlu, "Prețul e dincolo de lichidare cu 1,2%"); assert.equal(d.text, "");
+});
+await test("legenda Consilierului primește avertizările scoase din sfaturi, fără să le piardă pe cele vechi; garda e strictă pe „consiliu-2”", async () => {
+  assert.match(C.LEGENDA, /bare închise: arată starea de acum, nu încotro merge prețul/);
+  assert.match(C.LEGENDA, /gridul adaugă poziție la fiecare grilă/);
+  assert.match(C.LEGENDA, /cumpără înapoi la fiecare grilă/); assert.match(C.LEGENDA, /nu sunt promisiuni/);
+  assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("consiliu-2"));
+});
+
 console.log(`\nV100.62 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);

@@ -19,7 +19,7 @@ const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, D
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
 // pachetul 2: sfaturi = sfaturi.js, consiliu-2 = Consilierul cu sfaturile reale, todo = „Ce ai de făcut acum”, server = avertismentele;
 // „alerte” = titlurile/textele din regulile alertelor (alerte.js), strict la pachetul 3)
-export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi"]);
+export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2"]);
 
 // ---- regulile ----
 export const REGULI = {
@@ -178,7 +178,7 @@ export function situatii() {
   cons("Pionex: marginea MARGIN_CALL", { sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa: fisa() }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Pionex raportează marginea contului ca MARGIN_CALL, nu NORMAL." } });
   cons("Pionex: starea de risc", { sm: S.semafor({ bot: CRV({ distantaLichidarePct: 30 }), fisa: fisa() }), concret: [], sfaturi: [], opreste: { titlu: "Ieși", ceFac: "Pionex raportează starea de risc ca REDUCE_ONLY, nu TRADING." } });
   const mutaJ = S.mutaGridul(JTO({ pretCurent: 0.575 }), fisa(), 0, PM);
-  cons("mută gridul contopit cu sfatul „margine”", { sm: S.semafor({ bot: JTO({ pretCurent: 0.575, distantaLichidarePct: 30 }), fisa: fisa(), muta: mutaJ }), concret: [], sfaturi: [{ cod: "margine", ton: "atentie", titlu: "Până la marginea de jos (0.5722) sunt 0.5%", text: "Acolo totalul ar fi în jur de −7,34 USDT.", faCe: "" }] });
+  cons("mută gridul contopit cu sfatul „margine”", { sm: S.semafor({ bot: JTO({ pretCurent: 0.575, distantaLichidarePct: 30 }), fisa: fisa(), muta: mutaJ }), concret: [], sfaturi: [{ cod: "margine", ton: "atentie", titlu: "0,5% până la marginea de jos (0.5722)", text: "~170 JTO la margine (acum 160), total ~−7,34 USDT; coboară atât în 64% din zile (31 din 49).", faCe: "" }] });
   sem("planul: minus fractionar (−7,5)", { bot: JTO(), fisa: fisa(), plan: { atins: ["minus"], minus: { prag: 7.5 } } });
   sem("planul: plus fractionar (+5,5)", { bot: JTO(), fisa: { ...fisa(), regim: JOS }, plan: { atins: ["plus"], plus: { prag: 5.5 } } });
   card("stopul atins costa ~0", { bot: LIGHTER({ opritorPierdere: 4.4 }), fisa: null, zero: T.dacaInchizi(LIGHTER()), costuri: null, acum: T0, plan: { atins: [], minus: { prag: 0.3, laOpritor: -0.3, opritorPlan: 4.39 } } });
