@@ -34,5 +34,28 @@ await test("RF4: fiecare proba care incarca semnale-bot.js / consiliu.js incarca
   const j = col.indexOf('incarca("text-ro.js", "TextRo")'); assert.ok(j > 0 && j < col.indexOf('"semnale-bot.js"') && j < col.indexOf('"consiliu.js"'), "colectorul: text-ro.js primul");
 });
 
+// ---- sarcina 2: garda textelor ----
+const G = await import("./garda-texte.mjs");
+await test("garda: prinde fiecare abatere de la reguli (zecimala cu punct, minus ASCII, lungimi, persoana I, doua fraze, avertizarea comuna, vocabularul, titlul repetat)", () => {
+  const are = (t, tip, ce, frate) => assert.ok(G.verifica(t, tip, frate).some((x) => x.includes(ce)), JSON.stringify([t, G.verifica(t, tip, frate)]));
+  are("lichidarea e la 12.4%", "titlu", "zecimală cu punct");
+  are("pierderea: -3,0 USDT", "detalii", "minus ASCII");
+  are("x".repeat(61), "titlu", "lung");
+  are("Aș " + "x".repeat(110), "faCe", "lung");
+  are("Ieși acum, cum ai hotărât.", "faCe", "persoana I");
+  are("Aș închide botul. Apoi aș porni altul.", "faCe", "o frază");
+  are("Pe 30 de zile a făcut 30%. O frecvență din trecut, nu o promisiune.", "deCe", "avertizarea comună");
+  are("Aș muta opritorul la 0.38.", "faCe", "opritor");
+  are("Aș muta gridul cu setările propuse mai jos.", "faCe", "trimitere");
+  are("Lichidarea e la 12,4% și se îndepărtează de preț", "deCe", "repetă titlul", "lichidarea e la 12,4% și se îndepărtează");
+  are("a\nb\nc", "discordMesaj", "rânduri");
+  assert.deepEqual(G.verifica("Aș muta stopul la 0.3842 (zero-ul botului, +1,2% de preț): câștigul nu se mai pierde.", "faCe"), []);
+  assert.deepEqual(G.verifica("lichidarea la 12,4% · se îndepărtează (11,2% acum 1 h)", "titlu"), []);
+});
+await test("garda: textele pachetelor STRICTE trec toate regulile (pe situatiile lui)", () => {
+  const rele = G.situatii().filter((x) => G.STRICT.has(x.mod)).map((x) => ({ ...x, ab: G.verifica(x.text, x.tip, x.frate) })).filter((x) => x.ab.length);
+  assert.equal(rele.length, 0, rele.slice(0, 5).map((x) => x.sit + " · " + x.sursa + ": " + x.ab.join("; ") + " — " + x.text).join("\n"));
+});
+
 console.log(`\nV100.61 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);
