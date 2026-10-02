@@ -71,7 +71,7 @@ await test("(8) garda: grupul „retea” e STRICT și n-are abateri (toate form
 await test("(9) fișa: 🧠 pe aceleași bare și niveluri ca 🎲 (grProb.bare / grProb.o), cu BTC din Pionex; rândurile sub cele 🎲", () => {
   const f = fn("grProbDeseneaza");
   assert.match(f, /grProb\.bare=Probabilitati\.imbina\(b1,b15,Date\.now\(\)\)/); assert.match(f, /grProb\.rez=Probabilitati\.pentruBot\(grProb\.bare,grProb\.o\)/);
-  assert.match(f, /Retea\.pentruBot\(reteaM\.m,grProb\.bare,grProb\.o,grRetea\.btc\)/); assert.match(f, /zar\.map\(tbProbRandHtml\)\.join\(""\)\+reteaHtml\(rt,zar,\{acum:Date\.now\(\)\}\)/);
+  assert.match(f, /Retea\.pentruBot\(reteaM\.m,grProb\.bare,grProb\.o,grRetea\.btc\)/); assert.match(f, /semnul e cifra\.<\/p>'\+reteaHtml\(rt,zar,\{acum:Date\.now\(\)\}\)\+'<\/div>'/);
 });
 await test("(9) poarta: rândul gri „🧠 Un bot ca ăsta ar ieși pe plus: …” din istoria ta; fără modele / bare / istoric, barele altei monede sau o eroare -> nimic; poarta neschimbată", () => {
   const ctx = { Retea: R, escapeHtml: (x) => String(x), reteaM: { m: null }, grProb: { bare: null, simbol: null }, grRetea: { btc: null }, grProbSetare: (f) => f.setare, Date,
@@ -87,6 +87,9 @@ await test("(9) poarta: rândul gri „🧠 Un bot ca ăsta ar ieși pe plus: �
   ctx.grProb.simbol = "BBB_USDT_PERP"; assert.equal(ctx.f(f, p), "", "barele altei monede");
   ctx.grProb.simbol = "LIT_USDT_PERP"; ctx.Retea = { ...R, pentruPornire: () => { throw new Error("x"); } }; assert.equal(ctx.f(f, p), "", "o eroare în rețea nu strică poarta");
   assert.match(fn("grPoartaHtml"), /\+grReteaPoartaHtml\(f,p\)/); assert.match(fn("gridPoarta"), /trades:trades,lev:lev/);
+});
+await test("(9) pe poză: nota 🎲 stă deasupra blocului 🧠 („Frecvențe din trecutul monedei… nu predicții” e despre 🎲, nu despre rețea) - pe fișă și pe Tablou", () => {
+  for (const nume of ["grProbDeseneaza", "tbDeseneazaProb"]) { const f = fn(nume), nota = f.indexOf("tbProbNota"), creier = f.indexOf("+reteaHtml("); assert.ok(nota > 0 && creier > nota, nume + ": nota la " + nota + ", 🧠 la " + creier); }
 });
 await test("(9) revizia finală (M5): o eroare în rețea nu oprește desenul fișei / Tabloului (reteaHtml -> nimic; pentruBot în try)", () => {
   const ctx = { Retea: { ...R, randuri: () => { throw new Error("x"); } }, escapeHtml: (x) => String(x), reteaM: { m: { x: 1 } }, Date };
