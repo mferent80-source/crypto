@@ -187,5 +187,28 @@ await test("panoul planului și portofoliul (app.js): „închide botul”, o ac
   assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("todo"));
 });
 
+// ---- sarcina 5: avertismentele serverului ----
+await test("avertismentele: prețul lichidării rotunjit (nu 16 zecimale), virgulă, „stop / țintă”, fără majuscule de strigat; garda e strictă pe „server”", async () => {
+  const { avertismenteBot } = await modul("functions", "_shared", "avertismente.js");
+  const l = avertismenteBot({ x: {}, pret: 0.3806, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: 10.93, lichidareDepasita: false },
+    comisioane: -1.21, gridProfitBrut: 10.91, profitNet: -1.6 });
+  assert.deepEqual(l, ["Botul n-are nici stop, nici țintă în Pionex.", "Prețul 0.3806 e peste grid (0.37–0.38): botul nu mai face perechi cât stă afară.",
+    "Lichidarea la 10,9% (0.33829, partea de jos).", "Grilele câștigă (+10,91 USDT), dar poziția și funding-ul (−11,30) și comisioanele (−1,21) duc botul pe minus."]);
+  const d = avertismenteBot({ x: { lossStop: "0.36" }, pret: 0.3301, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: -2.4, lichidareDepasita: true },
+    comisioane: -2.5, gridProfitBrut: 1.2, profitNet: -9 });
+  assert.ok(d.includes("Lichidarea estimată (0.33829, partea de jos) e depășită la prețul 0.3301: aș verifica botul în Pionex."), d.join(" | "));
+  assert.ok(d.includes("Comisioanele (−2,50 USDT) depășesc câștigul grilelor (+1,20 USDT)."), d.join(" | "));
+  assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("server"));
+});
+await test("„Ce ai de făcut acum”: avertismentul lichidării înghite alertele „Lichidarea la …” (un rând, cu numărul lor), nu două rânduri", async () => {
+  const { avertismenteBot } = await modul("functions", "_shared", "avertismente.js");
+  const av = avertismenteBot({ x: { lossStop: "0.36" }, pret: 0.3806, jos: 0.37, sus: 0.40, lich: { pretLichidare: 0.3383, lichidarePartea: "jos", distantaLichidarePct: 10.9, lichidareDepasita: false },
+    comisioane: null, gridProfitBrut: null, profitNet: null });
+  const l = T.ceAiDeFacut({ acum: T0, dateLa: T0, sfaturi: [], avertismente: av, planGol: false,
+    alerte: [{ t: T0 - 60000, nivel: "atentie", titlu: "CRV.PERP: Lichidarea la 10.9%", mesaj: "Sub 15% merită urmărit." }, { t: T0 - 120000, nivel: "atentie", titlu: "CRV.PERP: Lichidarea la 11.2%", mesaj: "x" }] });
+  const lich = l.filter((x) => /lichidare/i.test(x.titlu));   /* „lichidare” prinde si avertismentul vechi („Până la lichidare …”) - randul dublu */
+  assert.equal(lich.length, 1, l.map((x) => x.titlu).join(" | ")); assert.equal(lich[0].n, 2);
+});
+
 console.log(`\nV100.62 ${picate ? "PICA" : "PASS"} · ${teste - picate}/${teste}`);
 if (picate) process.exit(1);

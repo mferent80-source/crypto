@@ -294,14 +294,14 @@ await test("lichidarea DEPASITA: distanta negativa + avertisment", async () => {
   // (0.023 − 0.024)/0.023 = −4.35%
   assert.ok(b.distantaLichidarePct < 0, `distanta trebuie negativa: ${b.distantaLichidarePct}`);
   assert.equal(b.lichidareDepasita, true);
-  assert.match(b.avertismente.join(" | "), /lichidarea DEPĂȘITĂ/i, `lipseste avertismentul: ${b.avertismente.join(" | ")}`);
+  assert.match(b.avertismente.join(" | "), /Lichidarea estimată \([^)]*\) e depășită/, /* v100.62: fara majuscule de strigat */ `lipseste avertismentul: ${b.avertismente.join(" | ")}`);
 });
 
 await test("sub 15% pe partea corecta: avertisment", async () => {
   const b = await unBot([BOT], "0.0265");
   // (0.0265−0.024)/0.0265 = 9.43%
   assert.ok(aprox(b.distantaLichidarePct, 9.43, 0.01), `distanta: ${b.distantaLichidarePct}`);
-  assert.match(b.avertismente.join(" | "), /lichidare.*9\.4/i, `lipseste avertismentul <15%: ${b.avertismente.join(" | ")}`);
+  assert.match(b.avertismente.join(" | "), /Lichidarea la 9,4%/, /* v100.62: virgula */ `lipseste avertismentul <15%: ${b.avertismente.join(" | ")}`);
 });
 
 await test("fara pret: distanta null + motivFaraDistanta 'fara-pret'", async () => {
@@ -321,13 +321,13 @@ await test("lichidarea \"0\" pe ambele parti inseamna 'nu exista'", async () => 
 await test("comisioane mici + net negativ: NU da vina pe comisioane, spune cauza", async () => {
   const b = await unBot([BOT]);
   const a = b.avertismente.join(" | ");
-  assert.ok(!/comisioanele mănâncă mai mult/.test(a), `acuza comisioanele (0.64 < grid 2.80): ${a}`);
-  assert.match(a, /grid \+2\.80.*comisioane −0\.64.*restul −4\.11 din poziție\/finanțare/, `mesajul nou lipseste: ${a}`);
+  assert.ok(!/depășesc câștigul grilelor/.test(a), /* v100.62: textul nou al aceluiasi avertisment */ `acuza comisioanele (0.64 < grid 2.80): ${a}`);
+  assert.match(a, /Grilele câștigă \(\+2,80 USDT\), dar poziția și funding-ul \(−4,11\) și comisioanele \(−0,64\) duc botul pe minus/, /* v100.62: virgula, fara „NET” */ `mesajul nou lipseste: ${a}`);
 });
 
 await test("comisioane mai mari decat gridul: avertismentul vechi se aprinde", async () => {
   const b = await unBot([cuDate({ gridProfit: "0.5000" })]);
-  assert.match(b.avertismente.join(" | "), /comisioanele mănâncă mai mult decât câștigă botul/);
+  assert.match(b.avertismente.join(" | "), /Comisioanele \([−+]?[0-9,]+ USDT\) depășesc câștigul grilelor/); /* v100.62 */
 });
 
 // v91.1: Pionex trimite stopLossEnabled=false si cand SL/TP SUNT puse si active (dovada: botul VVV, 25.09 -
@@ -342,7 +342,7 @@ await test("pretul de SL/TP pus = opritor ACTIV, chiar daca Pionex trimite stopL
 });
 await test("fara pret de SL si TP -> 'niciun opritor' si inactiv", async () => {
   const b = await unBot([cuDate({ lossStop: "", profitStop: "" })]);
-  assert.match(b.avertismente.join(" | "), /niciun opritor/i);
+  assert.match(b.avertismente.join(" | "), /n-are nici stop, nici țintă/); /* v100.62: vocabularul „stop / țintă” */
   assert.equal(b.opritorPierdereActiv, false);
 });
 

@@ -19,7 +19,7 @@ const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, D
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
 // pachetul 2: sfaturi = sfaturi.js, consiliu-2 = Consilierul cu sfaturile reale, todo = „Ce ai de făcut acum”, server = avertismentele;
 // „alerte” = titlurile/textele din regulile alertelor (alerte.js), strict la pachetul 3)
-export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo"]);
+export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo", "server"]);
 
 // ---- regulile ----
 export const REGULI = {
