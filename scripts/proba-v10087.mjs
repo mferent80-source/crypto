@@ -53,6 +53,11 @@ await test("(1) fără monedă comună ⇒ nicio notă (listele de până acum, 
 await test("(2) cele două fraze trec regulile gărzii pentru o acțiune („faCe”: persoana I, o frază, ≤ 110)", () => {
   for (const t of [PE_REV, PE_SH]) assert.deepEqual(verifica(t, "faCe"), [], t);
 });
+await test("(3) nota iese în culoarea de avertisment: regula `#tabloubot .tbTodoRand p.tbWarn` bate gri-ul rândului (`#tabloubot .tbTodoRand p`; măsurat pe pagină: gri înainte, galben după)", () => {
+  const css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
+  assert.ok(css.includes("#tabloubot .tbTodoRand p{") && css.includes("#tabloubot .tbTodoRand p.tbWarn{color:var(--warn)}"));
+  assert.ok(css.indexOf("#tabloubot .tbTodoRand p.tbWarn{") > css.indexOf("#tabloubot .tbTodoRand p{"), "după regula gri (aceeași specificitate + clasa ⇒ câștigă oricum, dar ordinea o face evidentă)");
+});
 
 console.log("\n" + (pica ? "V100.87 PICA · " + pica + " din " + (ok + pica) : "V100.87 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
