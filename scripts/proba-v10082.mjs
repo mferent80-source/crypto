@@ -120,11 +120,12 @@ await test("(2) Acasă: rândul stă sub cele două verdicte, înaintea legătur
   assert.ok(v > 0 && c > v && c < l, "locul: " + [v, c, l].join(","));
   assert.match(fnDin("acasa-ecran.js", "acasaDeseneaza"), /if \(\$\("acCumpar"\)\) \$\("acCumpar"\)\.innerHTML = acasaCumpar\(d\);/);
 });
-await test("(2) butonul deschide pagina și aduce panoul sus (fără animație)", () => {
+await test("(2) butonul deschide pagina și aduce panoul sus (fără animație), SUB bara de sus lipită (pe poză titlul stătea sub ea: 56 px pe calculator, 156 pe telefon)", () => {
   const apeluri = [], el = { scrollIntoView: (o) => apeluri.push(["scroll", o]) };
-  const ctx = { navTo: (a, b) => apeluri.push(["navTo", a, b]), $: (k) => (k === "t212Idei" ? el : null), setTimeout: (f) => f() }; vm.createContext(ctx);
+  const ctx = { navTo: (a, b) => apeluri.push(["navTo", a, b]), $: (k) => (k === "t212Idei" ? el : null), setTimeout: (f) => f(),
+    document: { querySelector: (s) => (s === "header.topStatus" ? { getBoundingClientRect: () => ({ bottom: 56 }) } : null) }, window: { scrollBy: (x, y) => apeluri.push(["scrollBy", x, y]) } }; vm.createContext(ctx);
   vm.runInContext(fnDin("acasa-ecran.js", "acasaMergiLa") + "\n;acasaMergiLa('t212','t212Idei');", ctx);
-  assert.deepEqual(JSON.parse(JSON.stringify(apeluri)), [["navTo", "t212", true], ["scroll", { block: "start" }]]);   // obiectele din vm au alt prototip
+  assert.deepEqual(JSON.parse(JSON.stringify(apeluri)), [["navTo", "t212", true], ["scroll", { block: "start" }], ["scrollBy", 0, -64]]);   // obiectele din vm au alt prototip
 });
 
 console.log("\n" + (pica ? "V100.82 PICA · " + pica + " din " + (ok + pica) : "V100.82 PASS · " + ok + "/" + ok));

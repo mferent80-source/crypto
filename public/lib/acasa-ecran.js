@@ -130,7 +130,13 @@ function acasaCumpar(d) {
 // v100.82: butoanele din „Ce aș cumpăra azi” - deschid pagina și aduc panoul sus (fără animație)
 function acasaMergiLa(ecran, id) {
   if (typeof navTo === "function") navTo(ecran, true);
-  setTimeout(function () { var e = $(id); if (e && e.scrollIntoView) e.scrollIntoView({ block: "start" }); }, 400);
+  setTimeout(function () {
+    var e = $(id); if (!e || !e.scrollIntoView) return;
+    e.scrollIntoView({ block: "start" });
+    // bara de sus e lipită (header.topStatus: ~56 px pe calculator, ~156 pe telefon) - panoul coboară sub ea, să i se vadă titlul
+    var bara = document.querySelector("header.topStatus"), h = bara ? bara.getBoundingClientRect().bottom : 0;
+    if (h > 0 && window.scrollBy) window.scrollBy(0, -(h + 8));
+  }, 400);
 }
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
