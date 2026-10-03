@@ -30,7 +30,8 @@ var Busola = (function () {
     // v100.67 (revizia): „nu-stiu” = măsurat, nimic neobișnuit; „nemasurat” sau lipsă pe 4h = Busola n-a putut măsura —
     // înainte, amândouă ieșeau „nimic neobișnuit”. Se ia prima valoare MĂSURATĂ (filtrul de grid, apoi harta).
     var masurat = function (v) { return v === "miscare" || v === "liniste" || v === "nu-stiu"; };
-    var s = masurat(m.grid4h) ? m.grid4h : masurat(m["4h"]) ? m["4h"] : null;
+    // v100.85 (Busola 1.36, paza boților): futures-ul lichid are perp4h (doar monedele din afara hărții / topului spot) - citit întâi
+    var s = masurat(m.perp4h) ? m.perp4h : masurat(m.grid4h) ? m.grid4h : masurat(m["4h"]) ? m["4h"] : null;
     if (!s) return { nivel: "nemasurat", text: "Busola n-a putut măsura " + cheie + " pe 4h acum (eroare sau prea puține cazuri).", varsta: varsta };
     if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta, nota: nota(null) };
     if (s === "liniste" && g.dovedit === false) return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — gridul a pierdut ceva mai puțin decât oricând (" + proc(g.liniste) + ").", varsta: varsta, nota: nota("nedovedit") };

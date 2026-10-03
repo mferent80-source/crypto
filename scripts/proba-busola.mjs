@@ -142,5 +142,13 @@ await test("HTML-ul: nota și vârsta, gri, după frază (· grid pe ±2×ATR, d
   assert.match(B.htmlRand({ nivel: "info", text: "x", nota: null, varsta: null }, esc), /<p class="tbSub">x<\/p>/);
 });
 
+// Busola 1.36 (03.10, paza boților): futures-ul lichid are `perp4h` (doar monedele care nu sunt în hartă / topul spot) - fișa îl citește întâi;
+// fără el, de la rularea de la 12:05 fișa ar fi spus „n-a putut măsura … (eroare sau prea puține cazuri)” pe ~150 de monede măsurate
+await test("Busola 1.36: moneda futures cu `perp4h` (JTO, LIT) primește verdictul măsurat, nu „n-a putut măsura”; `perp4h: nemasurat` rămâne „n-a putut măsura”", () => {
+  const rez = { ...REZ, monede: { ...REZ.monede, JTO: { perp4h: "miscare" }, LIT: { perp4h: "liniste" }, AAA: { perp4h: "nemasurat" } } };
+  const j = B.randGrid(rez, "JTO_USDT_PERP", ACUM); assert.equal(j.nivel, "atentie", JSON.stringify(j)); assert.match(j.text, /mai agitată ca de obicei/); curat(j.text);
+  const l = B.randGrid(rez, "LIT_USDT_PERP", ACUM); assert.equal(l.nivel, "info", JSON.stringify(l)); curat(l.text);
+  const a = B.randGrid(rez, "AAA_USDT_PERP", ACUM); assert.equal(a.nivel, "nemasurat"); assert.match(a.text, /n-a putut măsura AAA pe 4h/);
+});
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exit(picate ? 1 : 0);
