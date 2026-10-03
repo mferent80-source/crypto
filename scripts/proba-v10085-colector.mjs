@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { turaClasament } from "./lib/tura-clasament.mjs";
 
 import { turaIdei } from "./lib/tura-idei.mjs";
+import { turaSugestii } from "./lib/tura-sugestii.mjs";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
@@ -98,6 +99,53 @@ await test("(5) colectorul: dă Reveniri turei, socotește urmărirea pe `ticker
   assert.match(s, /turaIdeiModul\(\{ tickere, inchise, Idei, Reveniri,/);
   assert.match(s, /const urmRev = Reveniri\.urmarire\(id && Array\.isArray\(id\.istoricReveniri\) \? id\.istoricReveniri : \[\], r\.preturi, Date\.now\(\), \{ zile: 14, cost: 0\.003, cheie: "ticker" \}\);/);
   assert.match(s, /reveniri: r\.reveniri, dovadaReveniri: r\.dovadaReveniri, urmarireReveniri: urmRev,/);
+});
+// ---- (6) tura sugestiilor de monede
+const ORA = 3600000;
+// 2.400 de bare de 1 h (100 de zile), un val lent: destule pentru fereastra clasamentului (500 de bare de 4h) și ieșirea la 7 zile
+const ore = (n, f) => Array.from({ length: n }, (_, i) => { const c = f(i); return { t: T0 + i * ORA, o: c, h: c * 1.003, l: c * 0.997, c }; });
+const val = (i) => 100 * (1 + 0.2 * Math.sin(i / 300));
+function depsSugestii(o) {
+  const trimise = [], st = o.stare || { zi: null };
+  const CL = { la: 5, monede: [{ simbol: "AAA_USDT_PERP", volum: 10, stare: "evita", dir: "long", scor: 1, revenire: { cadere: 0.3, deLaMin: 0.1, zileDeLaMin: 4, revine: true } },
+    { simbol: "BBB_USDT_PERP", volum: 5, stare: "candidat", dir: "short", scor: 2, revenire: null }] };
+  return { trimise, stare: st, d: { acum: Date.UTC(2026, 9, 3, 9), zi: "2026-10-03", ora: o.ora === undefined ? 9 : o.ora, stare: st, Reveniri: R, Idei: ID, G,
+    simboluriDepozit: () => ["AAA_USDT_PERP", "BBB_USDT_PERP"], bare1h: () => ore(2400, val),
+    boti: async () => [{ simbol: "AAA_USDT_PERP", dir: "long", pornit: T0 + 2000 * ORA, net: 2 }, { simbol: "BBB_USDT_PERP", dir: "short", pornit: T0 + 2000 * ORA, net: -1 }],
+    cere: async (u) => (/action=clasament/.test(u) ? { clasament: CL } : /pionex_tickers/.test(u) ? { data: { tickers: [{ symbol: "AAA_USDT_PERP", close: "1.1" }, { symbol: "BBB_USDT_PERP", close: "1.9" }] } }
+      : /action=sugestii/.test(u) ? { istoric: [{ zi: "2026-09-20", simbol: "AAA_USDT_PERP", pret: 1, lista: "revenire" }, { zi: "2026-09-20", simbol: "BBB_USDT_PERP", pret: 2, lista: "short" }] } : null),
+    trimite: async (u, c) => { trimise.push([u, c]); return { ok: true }; }, jurnal: () => {}, scrieStare: () => {} } };
+}
+await test("(6) tura sugestiilor: o dată pe zi, de la 8:00; istoricul pieței și al boților lui; urmărirea; notările zilei din clasament, cu prețul din tickere", async () => {
+  const devreme = depsSugestii({ ora: 7 }); assert.equal(await turaSugestii(devreme.d), null); assert.equal(devreme.trimise.length, 0);
+  const azi = depsSugestii({ stare: { zi: "2026-10-03" } }); assert.equal(await turaSugestii(azi.d), null);
+  const k = depsSugestii({}), r = await turaSugestii(k.d);
+  assert.equal(k.stare.zi, "2026-10-03"); assert.equal(k.trimise.length, 1); const [u, c] = k.trimise[0];
+  assert.equal(u, "/api/istoric-bot?action=sugestii"); assert.equal(c.zi, "2026-10-03");
+  assert.ok(c.dovada.revenire.piata && c.dovada.revenire.piata.baza.n > 0 && c.dovada.short.piata && c.dovada.short.piata.baza.n > 0, JSON.stringify(c.dovada).slice(0, 300));
+  assert.ok(c.dovada.revenire.boti && c.dovada.revenire.boti.reper.n === 2 && c.dovada.short.boti.reper.n === 1);
+  assert.equal(c.urmarire.revenire.n, 1); assert.equal(c.urmarire.revenire.pePlus, 1); assert.equal(c.urmarire.short.n, 1); assert.equal(c.urmarire.short.pePlus, 1);
+  assert.deepEqual(c.noi, [{ simbol: "AAA_USDT_PERP", pret: 1.1, lista: "revenire" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "short" }]);
+  assert.ok(r && r.noi.length === 2);
+});
+await test("(6) ruta sugestii: se scrie și se citește înapoi, curățată; notările fără dubluri (zi + simbol + listă), cel mult 20 pe trimitere", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, dv = { n: 407, saptamani: 44, pePlus: 0.42, medie: -0.012, mediana: -0.021, baza: { n: 15119, pePlus: 0.45, medie: 0.01 }, eticheta: "mai slab", putine: false, rau: 1 };
+  const corp = { la: 7, zi: "2026-10-03", dovada: { revenire: { piata: dv, boti: { n: 66, pePlus: 0.53, mediana: 0.32, reper: { n: 832, pePlus: 0.59, mediana: 1.23 } } }, short: { piata: { ...dv, eticheta: "bomba" }, boti: null } },
+    urmarire: { revenire: { n: 2, pePlus: 1, medie: 0.01, text: "Din 2 sugestii…" }, short: null },
+    noi: [{ simbol: "aaa_usdt_perp", pret: 1.1, lista: "revenire" }, { simbol: "AAA_USDT_PERP", pret: 1.1, lista: "revenire" }, { simbol: "BBB_USDT_PERP", pret: 2, lista: "altceva" }, ...Array.from({ length: 30 }, (_, i) => ({ simbol: "X" + i + "_USDT_PERP", pret: 1, lista: "short" }))] };
+  assert.equal((await cheama("istoric-bot.js", "POST", "action=sugestii", env, corp)).status, 200);
+  const g = (await cheama("istoric-bot.js", "GET", "action=sugestii", env)).d;
+  assert.ok(!("rau" in g.sugestii.dovada.revenire.piata)); assert.equal(g.sugestii.dovada.revenire.piata.eticheta, "mai slab"); assert.equal(g.sugestii.dovada.short.piata.eticheta, null);
+  assert.equal(g.sugestii.dovada.revenire.boti.reper.n, 832); assert.equal(g.sugestii.dovada.short.boti, null); assert.equal(g.sugestii.urmarire.revenire.n, 2);
+  assert.equal(g.istoric.filter((x) => x.simbol === "AAA_USDT_PERP").length, 1, "fără dubluri"); assert.ok(!g.istoric.some((x) => x.lista === "altceva"));
+  assert.equal(g.istoric.length, 18, "cel mult 20 de rânduri citite pe trimitere: unul dublură și unul cu lista greșită ies");
+  assert.deepEqual((await cheama("istoric-bot.js", "GET", "action=sugestii", { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() })).d, { sugestii: null, istoric: [] });
+});
+await test("(6) colectorul: tura sugestiilor legată în buclă și colectorul se încarcă întreg", () => {
+  const s = citeste("scripts", "colector.mjs");
+  assert.match(s, /import \{ turaSugestii as turaSugestiiModul \} from "\.\/lib\/tura-sugestii\.mjs";/); assert.match(s, /turaSugestiiColector\(\)\.catch\(\(e\) => jurnal\("sugestii", e\.message\)\);/);
+  const r = spawnSync(process.execPath, [path.join(RAD, "scripts", "colector.mjs")], { env: { ...process.env, COLECTOR_DOAR_INCARCA: "1" }, encoding: "utf8", timeout: 30000 });
+  assert.equal(r.status, 0, (r.stderr || "").slice(0, 400)); assert.match(r.stdout, /INCARCAT true/);
 });
 console.log("\n" + (pica ? "V100.85 COLECTOR PICA · " + pica + " din " + (ok + pica) : "V100.85 COLECTOR PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

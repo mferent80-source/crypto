@@ -32,6 +32,7 @@ import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
+import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 const VERSIUNE_COLECTOR = "v101.57";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1323,6 +1324,24 @@ async function turaReteaColector() {
     porneste: pornesteAntrenorul, citesteModele: () => citesteJson(path.join(RETEA_DIR, "modele.json"), null), trimite, jurnal,
     scrieStare: (st) => { try { scrieAtomic(RETEA_STARE, st); } catch {} } });
 }
+// v101.58 (reveniri + short, 03.10): o dată pe zi, de la 8:00 ora României - istoricul listelor de monede (depozitul de 1 h + boții lui)
+// și urmărirea lor; starea (ziua făcută) în data/sugestii-stare.json
+const SUG_STARE = path.join(DATA, "sugestii-stare.json");
+let sugStare = {}; try { sugStare = JSON.parse(fs.readFileSync(SUG_STARE, "utf8")) || {}; } catch { sugStare = {}; }
+let sugInLucru = false;
+async function turaSugestiiColector() {
+  if (sugInLucru) return;
+  sugInLucru = true;
+  try {
+    const z = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+    const g = (k) => (z.find((x) => x.type === k) || {}).value;
+    await turaSugestiiModul({ acum: Date.now(), zi: g("year") + "-" + g("month") + "-" + g("day"), ora: Number(g("hour")), stare: sugStare, Reveniri, Idei, G: GridCalcul,
+      simboluriDepozit: () => { try { return [...new Set(fs.readdirSync(RETEA_ORE).concat(fs.readdirSync(ORE_DIR)).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")))].filter((s) => s !== "BTC_USDT_PERP"); } catch { return []; } },
+      bare1h: (s) => { const m = new Map(); for (const r of citesteJson(reteaFis(s), []).concat(citesteJson(fisOre(s), []))) { const t = Number(r && r.time); if (Number.isFinite(t)) m.set(t, { t, o: +r.open, h: +r.high, l: +r.low, c: +r.close }); } return [...m.values()].sort((a, b) => a.t - b.t); },
+      boti: async () => citesteJson(path.join(RETEA_DIR, "boti.json"), []), cere, trimite, jurnal, scrieStare: (st) => { try { scrieAtomic(SUG_STARE, st); } catch {} } });
+  } catch (e) { jurnal("sugestii ESEC", e.message); }
+  sugInLucru = false;
+}
 // v101.28 (I-469): cazurile din arhiva (ce se stia la pornire + cum s-a terminat) -> KV cazuri, o data pe zi (ziua Romaniei).
 // Starea de la pornire din barele de 1 h de pe disc (doar monedele cu profil; LIT->LIGHTER si alti tickeri redenumiti raman fara stare).
 // moneda -> simbolul Pionex, din profilurile facute (v101.30: comun cazurilor si perechilor)
@@ -1429,6 +1448,7 @@ async function bucla() {
   turaProfil().then(() => turaCazuri()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
+  turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00
   turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
   turaPerechi().catch((e) => jurnal("perechi", e.message));   // v101.30 (I-477)
   turaSocotealaActiuni().catch((e) => jurnal("socoteala actiuni", e.message));   // v101.33

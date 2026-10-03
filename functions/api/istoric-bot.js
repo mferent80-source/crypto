@@ -67,6 +67,8 @@ export async function onRequestGet({request,env}){
   if(action==="prob"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("prob:"+bot)||"null")}catch{p=null}return json({bot,prob:p})}
   if(action==="calibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("calibrare")||"null")}catch{c=null}return json({calibrare:c})}
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
+  // v100.85 (reveniri + short): istoricul listelor de monede, urmărirea lor și notările (le scrie tura sugestiilor, o dată pe zi)
+  if(action==="sugestii"){let s=null,l=[];try{s=JSON.parse(await env.ISTORIC.get("sugestii")||"null")}catch{s=null}try{l=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{l=[]}return json({sugestii:s,istoric:Array.isArray(l)?l:[]})}
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
@@ -275,6 +277,19 @@ export async function onRequestPost({request,env}){
   }
   // v100.46 (pachetul 2a): probabilitatile botului (colectorul, o data pe ora) si calibrarea lor
   // v100.80 (rețeaua neuronală, livrarea 1): modelele de azi-noapte (antrenorul de acasă, prin colector); forma o citește Retea.prezice
+  if(action==="sugestii"){
+    // v100.85 (reveniri + short): istoricul (piața + boții lui), urmărirea și notările zilei - curățate; notările fără dubluri, 150 de zile
+    const dv=x=>x&&typeof x==="object"?{n:nr(x.n),saptamani:nr(x.saptamani),pePlus:nr(x.pePlus),medie:nr(x.medie),mediana:nr(x.mediana),baza:x.baza&&typeof x.baza==="object"?{n:nr(x.baza.n),pePlus:nr(x.baza.pePlus),medie:nr(x.baza.medie)}:null,eticheta:["mai bine","mai slab","cam la fel"].includes(x.eticheta)?x.eticheta:null,putine:x.putine===true}:null;
+    const bt=x=>x&&typeof x==="object"?{n:nr(x.n),pePlus:nr(x.pePlus),mediana:nr(x.mediana),reper:x.reper&&typeof x.reper==="object"?{n:nr(x.reper.n),pePlus:nr(x.reper.pePlus),mediana:nr(x.reper.mediana)}:null}:null;
+    const ur=x=>x&&typeof x==="object"?{n:nr(x.n),pePlus:nr(x.pePlus),medie:nr(x.medie),text:typeof x.text==="string"?x.text.slice(0,300):null}:null;
+    const d=corp&&corp.dovada||{},w=corp&&corp.urmarire||{},zi=/^\d{4}-\d{2}-\d{2}$/.test(String(corp&&corp.zi))?corp.zi:new Date().toISOString().slice(0,10);
+    await env.ISTORIC.put("sugestii",JSON.stringify({la:nr(corp&&corp.la)||Date.now(),zi,dovada:{revenire:{piata:dv(d.revenire&&d.revenire.piata),boti:bt(d.revenire&&d.revenire.boti)},short:{piata:dv(d.short&&d.short.piata),boti:bt(d.short&&d.short.boti)}},urmarire:{revenire:ur(w.revenire),short:ur(w.short)}}));
+    let ist=[];try{ist=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{ist=[]}if(!Array.isArray(ist))ist=[];
+    for(const x of (Array.isArray(corp&&corp.noi)?corp.noi:[]).slice(0,20)){const s=simbolKv(x&&x.simbol),p=nr(x&&x.pret),l=x&&x.lista==="short"?"short":x&&x.lista==="revenire"?"revenire":null;if(!s||!(p>0)||!l)continue;if(!ist.some(y=>y.zi===zi&&y.simbol===s&&y.lista===l))ist.push({zi,simbol:s,pret:p,lista:l})}
+    const de=new Date(Date.now()-150*86400000).toISOString().slice(0,10);
+    await env.ISTORIC.put("sugestii-istoric",JSON.stringify(ist.filter(y=>y.zi>=de).slice(-4000)));
+    return json({ok:true,istoric:ist.length});
+  }
   if(action==="retea"){
     const m=corp&&corp.modele,v=corp&&typeof corp.versiune==="string"?corp.versiune.slice(0,16):null;
     if(!m||typeof m!=="object"||!v)return json({error:"Lipseste modele sau versiune"},400);
