@@ -395,7 +395,7 @@ function tbIdeiRender() {
   if (!l.length) h += '<p class="tbSub tbTodoGol">' + (cl ? "Acum nicio monedă nu e candidată." : "Aștept clasamentul…") + '</p>';
   else { tbIngustAdu(l.map(function (x) { return x.simbol; }).filter(Boolean)); }
   if (l.length) h += l.map(function (x) {
-    var ist = x.istoric.n ? "istoricul tău: " + t212Cate(x.istoric.n, "bot", "boți") + ", " + x.istoric.pePlus + " pe plus, " + (x.istoric.total >= 0 ? "+" : "−") + Math.abs(x.istoric.total).toFixed(2) + " USDT" : "n-ai mai avut boți pe ea";
+    var ist = tbIstoricBoti(x.istoric);
     var det = [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ");
     return '<div class="tbTodoRand"><span class="tbDunga ' + (x.istoric.n >= 3 && x.istoric.total < 0 ? "g" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist) + '</p>' + (function () { try { var g = typeof GridProba !== "undefined" && x.simbol ? tbIngustPt(x.simbol) : null; if (!g) return ''; var v = GridProba.varstaIngust(g, Date.now()); return '<p class="tbSub' + (g.propus ? '' : ' t212Estompat') + '">' + escapeHtml(GridProba.rezumatIngust(g)) + (v.text ? ' · ' + escapeHtml(v.text) : '') + '</p>'; } catch (e) { return ''; } })() + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + escapeHtml(x.moneda) + '\')">Fișa</button></div>';
   }).join("");
@@ -404,13 +404,20 @@ function tbIdeiRender() {
   box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>' + tbSugestiiHtml(cl, contTot.sugestii, contTot.inchise);   /* v100.85 (reveniri + short): sub nota listei de candidați */
 }
 // v100.85 (reveniri + short, 03.10): sub „Pe ce aș porni un bot acum” - două liste cu istoricul pe față și urmărirea (filtre, nu predicții)
+// v100.89 (ideea 2): istoricul boților tăi pe o monedă, pe rândurile Tabloului (candidații + revenire / short) - un singur loc,
+// cu virgulă zecimală ca restul paginii (TextRo.usdt: „−7,22 USDT”; înainte „−7.22 USDT”)
+function tbIstoricBoti(ist) {
+  if (!ist || !ist.n) return "n-ai mai avut boți pe ea";
+  var bani = typeof TextRo !== "undefined" && TextRo.usdt ? TextRo.usdt(ist.total) : (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2).replace(".", ",") + " USDT";
+  return "istoricul tău: " + t212Cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, " + bani;
+}
 function tbSugestiiHtml(cl, sg, inchise) {
   if (typeof Reveniri === "undefined" || typeof Idei === "undefined" || !Idei.reveniriBoti) return "";
   try { return tbSugestiiCorp(cl, sg, inchise); } catch (e) { return ""; }   /* o eroare în date nu strică lista de candidați de deasupra */
 }
 function tbSugestiiCorp(cl, sg, inchise) {
   var rev = Idei.reveniriBoti(cl, inchise || [], 5), sh = Idei.shortBoti(cl, inchise || [], 5), s = sg && sg.sugestii, dv = s && s.dovada || {}, u = s && s.urmarire || {};
-  var ist = function (x) { return x.istoric.n ? "istoricul tău: " + t212Cate(x.istoric.n, "bot", "boți") + ", " + x.istoric.pePlus + " pe plus, " + (x.istoric.total >= 0 ? "+" : "−") + Math.abs(x.istoric.total).toFixed(2) + " USDT" : "n-ai mai avut boți pe ea"; };
+  var ist = function (x) { return tbIstoricBoti(x.istoric); };
   var dov = function (d, cum) { var b = d && d.boti ? Reveniri.textBoti(d.boti, cum) : ""; return '<p class="tbSub">' + escapeHtml(Reveniri.textDovada(d && d.piata, cum)) + (b ? ' ' + escapeHtml(b) : '') + '</p>'; };
   var urm = function (x) { return x && x.text ? '<p class="tbSub">📏 ' + escapeHtml(x.text) + '</p>' : ''; };
   var dunga = function (d) { return d && d.piata && d.piata.eticheta === "mai slab" ? "g" : "v"; };

@@ -141,9 +141,16 @@ function acasaCumpar2Corp(d) {
   var et = function (x) { return x && x.eticheta ? " (" + x.eticheta + ")" : ""; };
   var nume = function (l, f) { return !l ? "—" : l.length ? l.slice(0, 3).map(f).join(", ") : "nimic azi"; };
   var mo = function (x) { return String(x.simbol || x.moneda || "").replace(/_USDT_PERP$/, ""); }, ac = function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; };
+  // v100.89 (ideea 1, ca pe Tablou din v100.87): moneda aflată în AMBELE liste ale Tabloului (listele de 5, nu doar primele 3 de aici)
+  // - semnalele se bat cap în cap; fără starea de revenire (rm null) nu se poate spune nimic
+  var ambele = function (rm, rs) {
+    if (!rm || !rs) return "";
+    var r5 = I.reveniriBoti(d.clasament, [], 5).map(mo), a = I.shortBoti(d.clasament, [], 5).map(mo).filter(function (m) { return r5.indexOf(m) >= 0; });
+    return a.length ? ' · <span class="tbWarn">' + escapeHtml("⚠ " + a.join(", ") + (a.length === 1 ? " e și pe revenire, și la short: aș sări peste ea" : " sunt și pe revenire, și la short: aș sări peste ele")) + '</span>' : "";
+  };
   return '<span class="acCumpar2">↩️ pe revenire: acțiunile <b>' + escapeHtml(nume(ra, ac)) + '</b>' + escapeHtml(ra && ra.length ? et(ii && ii.dovadaReveniri) : "")
     + ' · monedele <b>' + escapeHtml(nume(rm, mo)) + '</b>' + escapeHtml(rm && rm.length ? et(dv.revenire && dv.revenire.piata) : "")
-    + ' · 📉 short: <b>' + escapeHtml(nume(rs, mo)) + '</b>' + escapeHtml(rs && rs.length ? et(dv.short && dv.short.piata) : "") + '</span>';
+    + ' · 📉 short: <b>' + escapeHtml(nume(rs, mo)) + '</b>' + escapeHtml(rs && rs.length ? et(dv.short && dv.short.piata) : "") + ambele(rm, rs) + '</span>';
 }
 // v100.82: butoanele din „Ce aș cumpăra azi” - deschid pagina și aduc panoul sus (fără animație)
 function acasaMergiLa(ecran, id) {

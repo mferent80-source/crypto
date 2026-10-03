@@ -34,14 +34,15 @@ const SG = { sugestii: { la: 5, zi: "2026-10-03", dovada: { revenire: { piata: S
   urmarire: { revenire: { n: 0, pePlus: 0, medie: null, text: "Sugestiile se urmăresc de azi: după ~30 se poate spune cu cifre dacă merită." }, short: null } }, istoric: [] };
 function tablou(cl, sg) {
   const ctx = { Reveniri: R, Idei: ID, GridCalcul: G, escapeHtml: esc, TextRo: globalThis.TextRo }; vm.createContext(ctx);
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbSugestiiHtml") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiHtml;", ctx);
+  // v100.89: + tbIstoricBoti (istoricul cu virgulă, comun candidaților și listelor noi) - fără el tbSugestiiCorp aruncă, iar try/catch-ul dă ""
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiHtml") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiHtml;", ctx);
   return ctx.f(cl, sg, [{ moneda: "AAA", rezultat: 2 }]);
 }
 await test("(7) Tabloul: „↩️ Pe revenire (bot long)” și „📉 Pentru short”, cu istoricul pe față, rândurile și „Fișa (long/short)”", () => {
   const h = tablou(CL, SG), t = text(h);
   assert.ok(t.includes("↩️ Pe revenire (bot long)") && t.includes("📉 Pentru short"));
   assert.ok(t.includes(R.textDovada(SLAB, "monede")) && t.includes("Boții tăi porniți așa: 53% pe plus din 66, față de 59% la toți boții tăi."), t);
-  assert.ok(t.includes("AAA căzută −32% de la maximul pe 30 de zile · +11% de la minim (acum 4 zile)") && t.includes("istoricul tău: 1 bot, 1 pe plus, +2.00 USDT"), t);
+  assert.ok(t.includes("AAA căzută −32% de la maximul pe 30 de zile · +11% de la minim (acum 4 zile)") && t.includes("istoricul tău: 1 bot, 1 pe plus, +2,00 USDT"), t);   /* v100.89 (ideea 2): virgulă zecimală */
   assert.match(h, /data-action-click="gridDeschideMonedaDir\('AAA','long'\)">Fișa \(long\)<\/button>/); assert.match(h, /data-action-click="gridDeschideMonedaDir\('DDD','short'\)">Fișa \(short\)<\/button>/);
   assert.ok(t.includes("DDD interval 12,00% · 0,26% net pe grilă · ~21 treceri pe zi · direcția short (puternic)") && t.includes("n-ai mai avut boți pe ea"), t);
   assert.ok(t.includes("Boții tăi short pe monede cu direcția short: 49% pe plus din 83, față de 56% la toți boții tăi short.") && t.includes("📏 Sugestiile se urmăresc de azi"));
