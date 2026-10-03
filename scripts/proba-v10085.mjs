@@ -11,6 +11,8 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 let R0 = null; const R = () => R0 || (R0 = new Function(`${lib("reveniri.js")}; return Reveniri;`)());
+const AS = new Function(`${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)();
+const ID = new Function("ActiuniSemnale", `${lib("idei.js")}; return Idei;`)(AS);
 let ok = 0, pica = 0;
 async function test(nume, f) { try { await f(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }
 console.log("Proba v100.85 · reveniri.js (regulile, istoricul, urmărirea) + idei.js (listele de monede)");
@@ -129,6 +131,21 @@ await test("(2) urmărirea: doar notările destul de vechi, prețul lipsă sări
   const s = U([{ zi: "2026-10-01", simbol: "B", pret: 2 }], { B: 1.8 }, acum, { zile: 7, cost: 0.001, short: true }); assert.equal(s.pePlus, 1); assert.ok(Math.abs(s.medie - (0.1 - 0.001)) < 1e-12);
   const t = U([{ zi: "2026-09-01", ticker: "AAPL_US_EQ", simbol: "AAPL", pret: 100 }], { AAPL_US_EQ: 110 }, acum, { zile: 14, cost: 0.003, cheie: "ticker" }); assert.equal(t.n, 1);
   assert.equal(U([], {}, acum, { zile: 7 }).text, "Sugestiile se urmăresc de azi: după ~30 se poate spune cu cifre dacă merită.");
+});
+const CL = { la: 5, monede: [
+  { simbol: "AAA_USDT_PERP", volum: 10, stare: "evita", dir: "long", scor: 9, revenire: { cadere: 0.3, deLaMin: 0.1, zileDeLaMin: 4, revine: true } },
+  { simbol: "BBB_USDT_PERP", volum: 30, stare: "candidat", dir: "neutru", scor: 5, revenire: { cadere: 0.28, deLaMin: 0.09, zileDeLaMin: 3, revine: true } },
+  { simbol: "CCC_USDT_PERP", volum: 20, stare: "candidat", dir: "short", scor: 2, revenire: { cadere: 0.1, deLaMin: 0.02, zileDeLaMin: 1, revine: false } },
+  { simbol: "DDD_USDT_PERP", volum: 50, stare: "candidat", dir: "short", scor: 7, revenire: null },
+  { simbol: "EEE_USDT_PERP", volum: 60, stare: "evita", dir: "short", scor: 8 } ] };
+await test("(3) pe revenire: doar `revenire.revine`, cele mai lichide întâi, cu istoricul lui pe monedă; clasament vechi (fără `revenire`) ⇒ nimic", () => {
+  const l = ID.reveniriBoti(CL, [{ moneda: "AAA", rezultat: 2 }, { moneda: "AAA", rezultat: -1 }], 5);
+  assert.deepEqual(l.map((x) => x.moneda), ["BBB", "AAA"]); assert.deepEqual(l[1].istoric, { n: 2, pePlus: 1, total: 1 }); assert.equal(l[0].revenire.cadere, 0.28);
+  assert.deepEqual(ID.reveniriBoti({ monede: [{ simbol: "X_USDT_PERP", stare: "candidat" }] }, [], 5), []); assert.deepEqual(ID.reveniriBoti(null, [], 5), []);
+  assert.equal(ID.reveniriBoti(CL, [], 1).length, 1);
+});
+await test("(3) pentru short: liniștite (candidat) cu direcția short, după scor; „evită” nu intră", () => {
+  assert.deepEqual(ID.shortBoti(CL, [], 5).map((x) => x.moneda), ["DDD", "CCC"]); assert.deepEqual(ID.shortBoti(null, [], 5), []);
 });
 console.log("\n" + (pica ? "V100.85 PICA · " + pica + " din " + (ok + pica) : "V100.85 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

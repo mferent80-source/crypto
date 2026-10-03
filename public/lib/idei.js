@@ -65,6 +65,16 @@ var Idei = (function () {
     return m.filter(function (x) { return x && x.stare === "candidat"; }).sort(function (a, b) { return (b.scor || 0) - (a.scor || 0); }).slice(0, n || 5)
       .map(function (x) { var mo = String(x.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, ""); return Object.assign({ moneda: mo, istoric: stat(tr.filter(function (t) { return t && t.moneda === mo; })) }, x); });
   }
+  // v100.85 (reveniri + short, 03.10): din același clasament, cu istoricul LUI pe monedă (aceeași formă ca ideiBoti)
+  function cuIstoric(tr) { return function (x) { var mo = String(x.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, ""); return Object.assign({ moneda: mo, istoric: stat(tr.filter(function (t) { return t && t.moneda === mo; })) }, x); }; }
+  function reveniriBoti(cl, trades, n) {
+    var m = cl && Array.isArray(cl.monede) ? cl.monede : [], tr = Array.isArray(trades) ? trades : [];
+    return m.filter(function (x) { return x && x.revenire && x.revenire.revine === true; }).sort(function (a, b) { return (b.volum || 0) - (a.volum || 0); }).slice(0, n || 5).map(cuIstoric(tr));
+  }
+  function shortBoti(cl, trades, n) {
+    var m = cl && Array.isArray(cl.monede) ? cl.monede : [], tr = Array.isArray(trades) ? trades : [];
+    return m.filter(function (x) { return x && x.stare === "candidat" && x.dir === "short"; }).sort(function (a, b) { return (b.scor || 0) - (a.scor || 0); }).slice(0, n || 5).map(cuIstoric(tr));
+  }
   // istoricul ideilor [{zi, ticker, pret}] + preturile de acum {ticker: pret}: cat au facut de la pretul ideii
   function urmarire(ist, preturi, acum) {
     var l = (Array.isArray(ist) ? ist : []).filter(function (x) { return x && x.pret > 0 && preturi && preturi[x.ticker] > 0 && (acum || Date.now()) - Date.parse(x.zi + "T12:00:00Z") >= 5 * ZI; });
@@ -74,6 +84,6 @@ var Idei = (function () {
     o.text = !o.n ? "Ideile se urmăresc de azi: după ~30 se poate spune dacă merită urmate." : "Din " + o.n + " idei de cel puțin 5 zile: " + p + " pe plus, " + P(o.medie) + " în medie de la prețul ideii, după comision" + (o.n < 30 ? " (puține — mai așteaptă)" : "") + ".";
     return o;
   }
-  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, urmarire: urmarire };
+  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, reveniriBoti: reveniriBoti, shortBoti: shortBoti, urmarire: urmarire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Idei = Idei;
