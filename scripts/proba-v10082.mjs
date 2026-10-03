@@ -73,7 +73,7 @@ await test("(1) colectorul trimite `restul` serverului (și urmărirea rămâne 
 function deseneazaIdei(id) {
   const box = { innerHTML: "" };
   const ctx = { $: (k) => (k === "t212Idei" ? box : null), t212: { idei: { idei: id } }, escapeHtml: esc, TextRo: globalThis.TextRo, t212ZiScurta: (z) => String(z).slice(8, 10) + "." + String(z).slice(5, 7),
-    t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", t212Pct: (v) => v + "%", t212IdeiSit: () => "" };
+    t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", t212Pct: (v) => v + "%", t212IdeiSit: () => "", t212ReveniriHtml: () => "" };
   vm.createContext(ctx);
   // t212Cate e pe un singur rând (dedesubt e `var t212 = {…}`, care ar acoperi datele probei)
   vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212IdeiRand") + "\n" + fnDin("t212-ecran.js", "t212IdeiRender") + "\n;t212IdeiRender();", ctx);

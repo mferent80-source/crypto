@@ -2202,3 +2202,5 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .t212IdeiRest{margin-top:4px}.t212IdeiRest summary{cursor:pointer;color:var(--muted);padding:6px 12px}
 /* v100.85 (03.10): listele „Pe revenire” / „Pentru short” sub candidații Tabloului */
 .tbSugestii h4{margin:12px 0 4px}
+.t212Reveniri{padding:8px 12px}.t212Reveniri h5{margin:0 0 6px}
+#dash .acCumpar .acCumpar2{display:block;margin-top:6px}

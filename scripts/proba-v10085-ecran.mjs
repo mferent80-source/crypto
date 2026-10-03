@@ -63,5 +63,41 @@ await test("(7) o eroare în date nu strică Tabloul: lista nouă iese goală, c
   assert.equal(tablou({ get monede() { throw new Error("x"); } }, SG), "");
 });
 
+function t212Rev(id) {
+  const ctx = { Reveniri: R, escapeHtml: esc, TextRo: globalThis.TextRo, t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei" }; vm.createContext(ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212ReveniriHtml") + "\n" + fnDin("t212-ecran.js", "t212ReveniriCorp") + "\n;this.f=t212ReveniriHtml;", ctx);
+  return ctx.f(id);
+}
+const BINE = { n: 393, saptamani: 72, pePlus: 0.59, medie: 0.026, mediana: 0.02, baza: { n: 41457, pePlus: 0.54, medie: 0.013 }, eticheta: "mai bine", putine: false };
+const RV = { ticker: "INTC_US_EQ", simbol: "INTC", pret: 72, cadere: 0.2686, deLaMin: 0.1099, zileDeLaMin: 19, stop: 64.22, tinta: 98.45, istoric: { n: 33, pePlus: 24, total: 3401 } };
+await test("(8) Trading 212: „↩️ Pe revenire” - istoricul pe față (+ supraviețuitorii), tabelul cu căderea, minimul, stopul, ținta, istoricul lui și „Biletul”; urmărirea", () => {
+  const h = t212Rev({ reveniri: [RV], dovadaReveniri: BINE, urmarireReveniri: { n: 2, text: "Din 2 sugestii de cel puțin 14 zile: 1 pe plus, +0,5% în medie de la prețul sugestiei, după comision (puține — mai așteaptă)." } }), t = text(h);
+  assert.ok(t.includes("↩️ Pe revenire") && t.includes(R.textDovada(BINE, "actiuni")) && t.includes(R.TEXT_SUPRAVIETUITORI), t);
+  assert.match(h, /<th>Acțiune<\/th><th>Acum<\/th><th>Căderea<\/th><th>De la minim<\/th><th>Stop<\/th><th>Țintă<\/th><th>Istoricul tău<\/th>/);
+  assert.ok(t.includes("INTC $72 −27% de la maximul pe 60 de zile +11% minimul acum 19 zile de bursă $64.22 sub minim $98.45 maximul 33 de trade-uri, 24 pe plus, 3401 lei"), t);
+  assert.match(h, /data-action-click="t212BiletPentru\('INTC'\)">Biletul<\/button>/); assert.ok(t.includes("📏 Din 2 sugestii de cel puțin 14 zile"));
+});
+await test("(8) Trading 212: fără acțiuni pe revenire ⇒ „Azi nicio acțiune nu e pe revenire.”; fără istoric ⇒ fraza „se socotește”, fără supraviețuitori; fără idei ⇒ nimic", () => {
+  const t = text(t212Rev({ reveniri: [], dovadaReveniri: null })); assert.ok(t.includes("Azi nicio acțiune nu e pe revenire.") && t.includes("Istoricul se socotește azi de la 8:00.") && !t.includes("supraviețuitori") && !t.includes(R.TEXT_SUPRAVIETUITORI), t);
+  assert.equal(t212Rev(null), ""); assert.equal(t212Rev({ get reveniri() { throw new Error("x"); } }), "", "o eroare în date nu strică panoul ideilor");
+  assert.match(fnDin("t212-ecran.js", "t212IdeiRender"), /tabel\(rest\) \+ '<\/details>';\r?\n  h \+= t212ReveniriHtml\(id\);/);
+});
+function acasa2(d) {
+  const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
+  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);
+  return { tot: ctx.f(d), doi: ctx.g(d) };
+}
+await test("(8) Acasă: al doilea rând din „Ce aș cumpăra azi” - primele nume din fiecare listă, cu eticheta istoricului; liste goale ⇒ „nimic azi”; fără date ⇒ lipsește", () => {
+  const d = { idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 23, actiuni: [{ simbol: "SNDK" }], reveniri: [RV, { ...RV, simbol: "MU" }], dovadaReveniri: BINE } }, clasament: CL, sugestii: SG };
+  const r = acasa2(d);
+  assert.equal(text(r.doi), "↩️ pe revenire: acțiunile INTC, MU (mai bine) · monedele AAA (mai slab) · 📉 short: DDD (cam la fel)");
+  assert.ok(text(r.tot).startsWith("💡 Ce aș cumpăra azi: acțiunea SNDK (23 din 202 trec de poartă pe 03.10)") && text(r.tot).endsWith(text(r.doi)), text(r.tot));
+  assert.equal(text(acasa2({ idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [], reveniri: [] } }, clasament: { la: 5, monede: [] }, sugestii: null }).doi), "↩️ pe revenire: acțiunile nimic azi · monedele nimic azi · 📉 short: nimic azi");
+  assert.equal(acasa2({}).doi, "");
+  assert.equal(acasa2({ get sugestii() { throw new Error("x"); }, clasament: CL }).doi, "", "o eroare în date nu strică rândul întâi");
+});
+await test("(8) Acasă: sugestiile se aduc cu celelalte date ale paginii", () => {
+  assert.match(lib("acasa-ecran.js"), /pas\("sugestii", function \(\) \{ return getJSON\("\/api\/istoric-bot\?action=sugestii"\); \}\),/);
+});
 console.log("\n" + (pica ? "V100.85 ECRAN PICA · " + pica + " din " + (ok + pica) : "V100.85 ECRAN PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

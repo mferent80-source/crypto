@@ -17,6 +17,7 @@ async function acasaPorneste(fortat) {
   try {
     await Promise.all([
       pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); return c && c.clasament || null; }),
+      pas("sugestii", function () { return getJSON("/api/istoric-bot?action=sugestii"); }),   // v100.85 (reveniri + short)
       pas("piata", function () { return getJSON("/api/stiri?action=piata"); }),
       pas("tickers", async function () { var t = await getJSON("/api/market?type=pionex_tickers&market=PERP"); return t && t.data && t.data.tickers || null; }),
       pas("glob", function () { return intelApi("crypto_global"); }),
@@ -125,7 +126,22 @@ function acasaCumpar(d) {
   var bh = !cl ? escapeHtml("boți: aștept clasamentul") : !m.length ? escapeHtml("boți: acum nicio monedă nu e candidată")
     : 'un bot pe <b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
   return '💡 <b>Ce aș cumpăra azi:</b> ' + ah + ' · ' + bh + ' <span class="acCumparBtn"><button class="acBtn" type="button" data-action-click="acasaMergiLa(\'t212\',\'t212Idei\')">Idei de cumpărare</button>'
-    + '<button class="acBtn" type="button" data-action-click="acasaMergiLa(\'tabloubot\',\'tbIdei\')">Pe ce aș porni un bot</button></span>';
+    + '<button class="acBtn" type="button" data-action-click="acasaMergiLa(\'tabloubot\',\'tbIdei\')">Pe ce aș porni un bot</button></span>' + (typeof acasaCumpar2 === "function" ? acasaCumpar2(d) : "");
+}
+// v100.85 (reveniri + short, 03.10): al doilea rând din „Ce aș cumpăra azi” - listele noi, fiecare cu eticheta istoricului ei
+function acasaCumpar2(d) {
+  try { return acasaCumpar2Corp(d); } catch (e) { return ""; }   /* o eroare în date nu strică rândul întâi */
+}
+function acasaCumpar2Corp(d) {
+  var ii = d && d.idei && d.idei.idei, sg = d && d.sugestii && d.sugestii.sugestii, dv = sg && sg.dovada || {}, I = typeof Idei !== "undefined" && Idei.reveniriBoti ? Idei : null;
+  var ra = ii && Array.isArray(ii.reveniri) ? ii.reveniri : null, rm = I && d && d.clasament ? I.reveniriBoti(d.clasament, [], 3) : null, rs = I && d && d.clasament ? I.shortBoti(d.clasament, [], 3) : null;
+  if (!ra && !rm && !rs) return "";
+  var et = function (x) { return x && x.eticheta ? " (" + x.eticheta + ")" : ""; };
+  var nume = function (l, f) { return !l ? "—" : l.length ? l.slice(0, 3).map(f).join(", ") : "nimic azi"; };
+  var mo = function (x) { return String(x.simbol || x.moneda || "").replace(/_USDT_PERP$/, ""); }, ac = function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; };
+  return '<span class="acCumpar2">↩️ pe revenire: acțiunile <b>' + escapeHtml(nume(ra, ac)) + '</b>' + escapeHtml(ra && ra.length ? et(ii && ii.dovadaReveniri) : "")
+    + ' · monedele <b>' + escapeHtml(nume(rm, mo)) + '</b>' + escapeHtml(rm && rm.length ? et(dv.revenire && dv.revenire.piata) : "")
+    + ' · 📉 short: <b>' + escapeHtml(nume(rs, mo)) + '</b>' + escapeHtml(rs && rs.length ? et(dv.short && dv.short.piata) : "") + '</span>';
 }
 // v100.82: butoanele din „Ce aș cumpăra azi” - deschid pagina și aduc panoul sus (fără animație)
 function acasaMergiLa(ecran, id) {

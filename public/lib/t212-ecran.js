@@ -291,6 +291,24 @@ function t212Render() {
   t212IdeiRender();
   if (typeof contTotRender === "function") contTotRender();
 }
+// v100.85 (reveniri, 03.10): acțiunile care au scăzut puternic și acum revin - doar long; istoricul regulii pe față (+ supraviețuitorii) și urmărirea
+function t212ReveniriHtml(id) {
+  if (!id || typeof Reveniri === "undefined") return "";
+  try { return t212ReveniriCorp(id); } catch (e) { return ""; }   /* o eroare în date nu strică panoul ideilor */
+}
+function t212ReveniriCorp(id) {
+  var l = Array.isArray(id.reveniri) ? id.reveniri : [];
+  var h = '<div class="t212Reveniri"><h5>↩️ Pe revenire <span class="t212Estompat">· au scăzut puternic și acum revin (doar long)</span></h5><p class="tbSub">' + escapeHtml(Reveniri.textDovada(id.dovadaReveniri, "actiuni")) + '</p>'
+    + (id.dovadaReveniri ? '<p class="tbSub">⚠ ' + escapeHtml(Reveniri.TEXT_SUPRAVIETUITORI) + '</p>' : '');
+  if (!l.length) h += '<p class="tbSub t212Gol">Azi nicio acțiune nu e pe revenire.</p>';
+  else h += '<div class="t212TabWrap"><table class="t212Tab t212RevTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Căderea</th><th>De la minim</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>'
+    + l.map(function (x) {
+      var ist = x.istoric && x.istoric.n ? t212Cate(x.istoric.n, "trade", "trade-uri") + ", " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
+      return '<tr><td><b>' + escapeHtml(x.simbol) + '</b></td><td>' + t212Usd(x.pret) + '</td><td class="bad">−' + Math.round(x.cadere * 100) + '%<span class="t212Mic">de la maximul pe 60 de zile</span></td><td class="good">+' + Math.round(x.deLaMin * 100) + '%<span class="t212Mic">' + escapeHtml("minimul acum " + t212Cate(Math.round(x.zileDeLaMin), "zi de bursă", "zile de bursă")) + '</span></td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">sub minim</span></td><td class="good">' + t212Usd(x.tinta) + '<span class="t212Mic">maximul</span></td><td><span class="t212Mic' + (x.istoric && x.istoric.total < 0 ? " bad" : "") + '">' + escapeHtml(ist) + '</span></td><td><button type="button" class="t212BtnLinie" data-action-click="t212BiletPentru(\'' + escapeHtml(x.simbol) + '\')">Biletul</button></td></tr>';
+    }).join("") + '</tbody></table></div>';
+  if (id.urmarireReveniri && id.urmarireReveniri.text) h += '<p class="tbSub">📏 ' + escapeHtml(id.urmarireReveniri.text) + '</p>';
+  return h + '</div>';
+}
 // v100.82: un rând din tabelul ideilor (primele 5 și, pliate, celelalte) - mutat neschimbat din t212IdeiRender
 function t212IdeiRand(x) {
   var ist = x.istoric && x.istoric.n ? t212Cate(x.istoric.n, "trade", "trade-uri") + ", " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
@@ -311,6 +329,7 @@ function t212IdeiRender() {
   // v100.82 (03.10, ideea 1): și celelalte care trec de poartă, pliate sub tabel - primele 5 rămân sus
   var rest = id && Array.isArray(id.restul) ? id.restul : [];
   if (l.length && rest.length) h += '<details class="t212IdeiRest"><summary>' + (rest.length === 1 ? "Vezi și cealaltă acțiune care trece de poartă" : "Vezi și celelalte " + t212Cate(rest.length, "acțiune care trece", "acțiuni care trec") + " de poartă") + '</summary>' + tabel(rest) + '</details>';
+  h += t212ReveniriHtml(id);
   // v91: socoteala sfaturilor - au avut dreptate semafoarele? (dupa 5 / 10 / 20 de zile)
   if (t212.sfaturiIst && typeof Consilier !== "undefined") {
     var sc = Consilier.socotealaSfaturi(t212.sfaturiIst), NV = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
