@@ -33,7 +33,7 @@ import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs"; 
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
-const VERSIUNE_COLECTOR = "v101.57";
+const VERSIUNE_COLECTOR = "v101.58";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
