@@ -2197,3 +2197,6 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 @media (max-width:550px){.t212Graf .tbIntBtn{min-height:44px}}
 /* v100.80 (rețeaua neuronală): sub-blocul 🧠 sub 🎲 - despărțit cu o linie punctată, aceleași rânduri ca 🎲 */
 .tbRetea{margin-top:12px;padding-top:8px;border-top:1px dashed rgba(148,163,184,.35)}
+/* v100.82 (03.10): „💡 Ce aș cumpăra azi” sub verdicte (ascuns cât e gol) + celelalte idei de acțiuni, pliate sub tabel */
+#dash .acCumpar:empty{display:none}#dash .acCumpar .acCumparBtn{display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:8px;vertical-align:middle}
+.t212IdeiRest{margin-top:4px}.t212IdeiRest summary{cursor:pointer;color:var(--muted);padding:6px 12px}

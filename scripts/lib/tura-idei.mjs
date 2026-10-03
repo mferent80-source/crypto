@@ -22,7 +22,8 @@ export async function turaIdei(d) {
     if (r.trece) { let rz = null; try { rz = await d.cereRezultate(tk); } catch {} if (rz) r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, rezultate: rz, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: tk }); }
     l.push({ ticker: tk, simbol: s, r });
   }
-  const trecute = l.filter((x) => x.r.trece).length, actiuni = d.Idei.alegeActiuni(l, 5, d.inchise);
+  // v101.57 (03.10, ideea 1): și celelalte care trec de poartă (după scor, cel mult 40) - pagina le arată pliate; primele 5 rămân exact ca înainte
+  const trecute = l.filter((x) => x.r.trece).length, toate = d.Idei.alegeActiuni(l, Math.min(Math.max(trecute, 5), 45), d.inchise), actiuni = toate.slice(0, 5), restul = toate.slice(5);
   d.jurnal("idei: " + cate(judecate, "acțiune judecată", "acțiuni judecate") + ", " + (trecute === 1 ? "una trece" : trecute + " trec") + " de poarta" + (actiuni.length ? ": " + actiuni.map((x) => x.simbol).join(", ") : ""));
-  return { judecate, trecute, actiuni, preturi, ndx };
+  return { judecate, trecute, actiuni, restul, preturi, ndx };
 }

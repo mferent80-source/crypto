@@ -113,6 +113,25 @@ function acIeri(sc, k, z, invers) {
 }
 function acZiRo(z) { var d = new Date(z + "T12:00:00Z"); return isFinite(d) ? d.toLocaleDateString("ro-RO", { weekday: "short", day: "numeric", month: "short" }) : z; }
 
+// v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” sus, sub cele două verdicte - ideile stăteau doar în Trading 212 și pe Tablou (și jos, în
+// „Idei de azi”), iar el nu le găsea. Aceleași liste ca panourile la care duc butoanele: primele acțiuni care trec de poartă, monedele candidate.
+function acasaCumpar(d) {
+  var ii = d && d.idei && d.idei.idei, act = ii && Array.isArray(ii.actiuni) ? ii.actiuni : [], cl = acClasamentSumar(d && d.clasament), m = cl ? cl.buni.slice(0, 3) : [];
+  var zi = ii && /^\d{4}-\d{2}-\d{2}/.test(String(ii.zi)) ? String(ii.zi).slice(8, 10) + "." + String(ii.zi).slice(5, 7) : "—", tr = ii ? Number(ii.trecute) || act.length : 0;
+  var lista = function (l, sau) { return l.length < 2 ? l.join("") : l.slice(0, -1).join(", ") + " " + sau + " " + l[l.length - 1]; };
+  var ah = !ii ? escapeHtml("acțiuni: aștept ideile") : !act.length ? escapeHtml("acțiuni: pe " + zi + " niciuna nu trece de poartă")
+    : (act.length === 1 ? "acțiunea " : "acțiunile ") + '<b>' + escapeHtml(act.slice(0, 3).map(function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; }).join(", ")) + '</b> <span class="acMut">('
+      + escapeHtml(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi) + ')</span>';
+  var bh = !cl ? escapeHtml("boți: aștept clasamentul") : !m.length ? escapeHtml("boți: acum nicio monedă nu e candidată")
+    : 'un bot pe <b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
+  return '💡 <b>Ce aș cumpăra azi:</b> ' + ah + ' · ' + bh + ' <span class="acCumparBtn"><button class="acBtn" type="button" data-action-click="acasaMergiLa(\'t212\',\'t212Idei\')">Idei de cumpărare</button>'
+    + '<button class="acBtn" type="button" data-action-click="acasaMergiLa(\'tabloubot\',\'tbIdei\')">Pe ce aș porni un bot</button></span>';
+}
+// v100.82: butoanele din „Ce aș cumpăra azi” - deschid pagina și aduc panoul sus (fără animație)
+function acasaMergiLa(ecran, id) {
+  if (typeof navTo === "function") navTo(ecran, true);
+  setTimeout(function () { var e = $(id); if (e && e.scrollIntoView) e.scrollIntoView({ block: "start" }); }, 400);
+}
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
   var d = acasa.d, cl = acClasamentSumar(d.clasament), mis = Acasa.miscari(d.tickers, { top: 60, inMiscare: cl ? cl.deEvitat.map(function (x) { return x.simbol; }) : [] });
@@ -133,6 +152,8 @@ function acasaDeseneaza() {
   var vb = Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL });
   acasaVerd($("acVremeBursa"), "Nasdaq", vb, ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");
+  // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” - primele idei de acțiuni și monedele pentru un bot, cu drumul la cele două panouri
+  if ($("acCumpar")) $("acCumpar").innerHTML = acasaCumpar(d);
   // legatura dintre ele: corelatia BTC - Nasdaq pe 30 de zile
   var co = d.btc1d && qqq ? Acasa.corelatie(GridCalcul.bareToate(d.btc1d), qqq, 30) : null;
   if ($("acLegatura")) { $("acLegatura").hidden = !co; if (co) $("acLegatura").innerHTML = '🔗 <b>BTC și bursa:</b> ' + escapeHtml(co.text) + ' <span class="acMut">corelația pe ultimele ' + acCate(co.n, "zi", "zile") + ' de bursă</span>'; }
