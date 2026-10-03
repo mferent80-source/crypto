@@ -298,14 +298,19 @@ function t212ReveniriHtml(id) {
 }
 function t212ReveniriCorp(id) {
   var l = Array.isArray(id.reveniri) ? id.reveniri : [];
+  // revizia (I1): mărimea pe rând, ca în bilet (1% din cont), pe stopul de sub minim - „Biletul” trece acțiunea prin poarta ideilor (trend în sus), care la o revenire spune NU
+  var cont = typeof t212 !== "undefined" && t212.cont && t212.cont.cash && t212.cont.cash.total, AS = typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale : null;
   var h = '<div class="t212Reveniri"><h5>↩️ Pe revenire <span class="t212Estompat">· au scăzut puternic și acum revin (doar long)</span></h5><p class="tbSub">' + escapeHtml(Reveniri.textDovada(id.dovadaReveniri, "actiuni")) + '</p>'
     + (id.dovadaReveniri ? '<p class="tbSub">⚠ ' + escapeHtml(Reveniri.TEXT_SUPRAVIETUITORI) + '</p>' : '');
-  if (!l.length) h += '<p class="tbSub t212Gol">Azi nicio acțiune nu e pe revenire.</p>';
-  else h += '<div class="t212TabWrap"><table class="t212Tab t212RevTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Căderea</th><th>De la minim</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>'
+  if (!Array.isArray(id.reveniri)) h += '<p class="tbSub t212Gol">Lista apare la următoarea tură a ideilor, de la 8:00.</p>';
+  else if (!l.length) h += '<p class="tbSub t212Gol">Azi nicio acțiune nu e pe revenire.</p>';
+  else h += '<div class="t212TabWrap"><table class="t212Tab t212RevTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Căderea</th><th>De la minim</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th>Cât cumperi</th></tr></thead><tbody>'
     + l.map(function (x) {
+      var m = cont > 0 && AS ? AS.marime({ intrare: x.pret, stop: x.stop, cont: cont, fx: t212Fx() }) : null;
+      var cat = m ? '<b>' + (+m.bucati.toFixed(3)).toLocaleString("ro-RO") + ' buc</b><span class="t212Mic">≈ ' + t212Suma(m.suma) + ' · la stop pierzi ~' + t212Suma(m.risc) + ' (1% din cont)' + (m.plafonat ? ' · tăiat la 20% din cont' : '') + '</span>' : '—' + (cont > 0 ? '' : '<span class="t212Mic">citește întâi contul</span>');
       var ist = x.istoric && x.istoric.n ? t212Cate(x.istoric.n, "trade", "trade-uri") + ", " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
-      return '<tr><td><b>' + escapeHtml(x.simbol) + '</b></td><td>' + t212Usd(x.pret) + '</td><td class="bad">−' + Math.round(x.cadere * 100) + '%<span class="t212Mic">de la maximul pe 60 de zile</span></td><td class="good">+' + Math.round(x.deLaMin * 100) + '%<span class="t212Mic">' + escapeHtml("minimul acum " + t212Cate(Math.round(x.zileDeLaMin), "zi de bursă", "zile de bursă")) + '</span></td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">sub minim</span></td><td class="good">' + t212Usd(x.tinta) + '<span class="t212Mic">maximul</span></td><td><span class="t212Mic' + (x.istoric && x.istoric.total < 0 ? " bad" : "") + '">' + escapeHtml(ist) + '</span></td><td><button type="button" class="t212BtnLinie" data-action-click="t212BiletPentru(\'' + escapeHtml(x.simbol) + '\')">Biletul</button></td></tr>';
-    }).join("") + '</tbody></table></div>';
+      return '<tr><td><b>' + escapeHtml(x.simbol) + '</b></td><td>' + t212Usd(x.pret) + '</td><td class="bad">−' + Math.round(x.cadere * 100) + '%<span class="t212Mic">de la maximul pe 60 de zile</span></td><td class="good">+' + Math.round(x.deLaMin * 100) + '%<span class="t212Mic">' + escapeHtml("minimul acum " + t212Cate(Math.round(x.zileDeLaMin), "zi de bursă", "zile de bursă")) + '</span></td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">sub minim</span></td><td class="good">' + t212Usd(x.tinta) + '<span class="t212Mic">maximul</span></td><td><span class="t212Mic' + (x.istoric && x.istoric.total < 0 ? " bad" : "") + '">' + escapeHtml(ist) + '</span></td><td>' + cat + '</td></tr>';
+    }).join("") + '</tbody></table></div><p class="tbSub">Fără „Biletul”: poarta lui cere trend în sus, deci la o revenire ar spune NU; mărimea de aici e pe stopul de sub minim, cu 1% din cont.</p>';
   if (id.urmarireReveniri && id.urmarireReveniri.text) h += '<p class="tbSub">📏 ' + escapeHtml(id.urmarireReveniri.text) + '</p>';
   return h + '</div>';
 }
@@ -411,16 +416,23 @@ function tbSugestiiCorp(cl, sg, inchise) {
   var dunga = function (d) { return d && d.piata && d.piata.eticheta === "mai slab" ? "g" : "v"; };
   var rand = function (x, det, dir, d) { return '<div class="tbTodoRand"><span class="tbDunga ' + dunga(d) + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist(x)) + '</p></div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMonedaDir(\'' + escapeHtml(x.moneda) + '\',\'' + dir + '\')">Fișa (' + dir + ')</button></div>'; };
   var gol = function (t) { return '<p class="tbSub tbTodoGol">' + (cl ? t : "Aștept clasamentul…") + '</p>'; };
+  // revizia (I7): un clasament făcut înainte de colectorul nou n-are starea de revenire (lipsește sau e null peste tot, după ruta curățată)
+  var faraStare = !!(cl && Array.isArray(cl.monede) && cl.monede.length && !cl.monede.some(function (m) { return m && m.revenire; }));
   var h = '<div class="tbSugestii"><h4>↩️ Pe revenire (bot long)</h4>' + dov(dv.revenire, "monede");
-  h += rev.length ? rev.map(function (x) { var r = x.revenire; return rand(x, "căzută −" + Math.round(r.cadere * 100) + "% de la maximul pe 30 de zile · +" + Math.round(r.deLaMin * 100) + "% de la minim (acum " + t212Cate(Math.round(r.zileDeLaMin), "zi", "zile") + ")", "long", dv.revenire); }).join("") : gol("Acum nicio monedă nu e pe revenire.");
+  h += rev.length ? rev.map(function (x) { var r = x.revenire; return rand(x, "căzută −" + Math.round(r.cadere * 100) + "% de la maximul pe 30 de zile · +" + Math.round(r.deLaMin * 100) + "% de la minim (acum " + t212Cate(Math.round(r.zileDeLaMin), "zi", "zile") + ")", "long", dv.revenire); }).join("") : gol(faraStare ? "Starea de revenire apare la următorul clasament (o dată pe oră)." : "Acum nicio monedă nu e pe revenire.");
   h += urm(u.revenire) + '<h4>📉 Pentru short</h4>' + dov(dv.short, "short");
   h += sh.length ? sh.map(function (x) { return rand(x, [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : "", "direcția short" + (x.tarie && x.tarie !== "fara-date" ? " (" + x.tarie + ")" : "")].filter(Boolean).join(" · "), "short", dv.short); }).join("") : gol("Acum nicio monedă liniștită nu are direcția short.");
   return h + urm(u.short) + '</div>';
 }
-// v100.85: „Fișa (long/short)” din listele de sugestii - aceeași fișă, cu direcția aleasă (comutatorul fișei; rămâne aleasă, ca atunci când o alegi de mână)
+// v100.85: „Fișa (long/short)” din listele de sugestii - aceeași fișă, cu direcția aleasă DOAR pentru moneda ei (revizia: pusă înainte de calcul, deci
+// un singur calcul; la altă monedă gridDirTemporara întoarce direcția de dinainte, iar o alegere de mână o face permanentă)
 function gridDeschideMonedaDir(m, dir) {
+  if ((dir === "long" || dir === "short") && typeof grStare === "object" && grStare) {
+    grStare.dirTemp = { simbol: String(m).replace(/_USDT_PERP$/, ""), inainte: grStare.dirTemp ? grStare.dirTemp.inainte : grStare.dir };
+    grStare.dir = dir;
+    if (typeof gridDirButoane === "function") gridDirButoane();
+  }
   gridDeschideMoneda(m);
-  if (typeof gridDirectie === "function" && (dir === "long" || dir === "short")) gridDirectie(dir);
 }
 // v97.3: acelasi drum ca din clasament / Scan: moneda aleasa, calculul ei, pagina dusa la fisa (nu lasata sus)
 function gridDeschideMoneda(m) {

@@ -4910,6 +4910,7 @@ function grTextEroare(e){
 }
 async function gridCalculeaza(fortat){
   var simbol=grSimbol($("grMoneda")&&$("grMoneda").value),suma=grNumar($("grSuma")&&$("grSuma").value),lev=grNumar($("grLevier")&&$("grLevier").value);
+  gridDirTemporara(simbol);
   if(!simbol){grStare.fisa=null;grStare.eroare="Scrie o monedă, de exemplu MET.";renderGrid();return}
   if(!suma){grStare.fisa=null;grStare.eroare="Scrie suma în USDT, de exemplu 100.";renderGrid();return}
   if(grStare.monede&&!grStare.monede[simbol]){grStare.fisa=null;grStare.eroare=simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.";renderGrid();return}
@@ -4943,7 +4944,10 @@ function gridSold(){
 }
 function grSoldInPagina(){var v=grSoldCitit();if($("grSold")&&v.sold>0&&!$("grSold").value)$("grSold").value=String(v.sold);if($("grPierdere")&&v.pierdere>0)$("grPierdere").value=String(v.pierdere)}
 function gridOrizont(h){grStare.H=Number(h)||2;[1,2,3].forEach(function(x){var b=$("grH"+x);if(b)b.setAttribute("aria-pressed",String(x===grStare.H))});if(grStare.date)gridCalculeaza()}
-function gridDirectie(d){grStare.dir=d==="auto"?null:d;["auto","long","neutru","short"].forEach(function(x){var b=$("grD"+x);if(b)b.setAttribute("aria-pressed",String((grStare.dir||"auto")===x))});if(grStare.date)gridCalculeaza()}
+function gridDirectie(d){grStare.dirTemp=null;grStare.dir=d==="auto"?null:d;gridDirButoane();if(grStare.date)gridCalculeaza()}
+function gridDirButoane(){["auto","long","neutru","short"].forEach(function(x){var b=$("grD"+x);if(b)b.setAttribute("aria-pressed",String((grStare.dir||"auto")===x))})}
+// v100.85 (revizia): direcția pusă de „Fișa (long/short)” din sugestiile Tabloului ține doar pentru moneda ei - la altă monedă revine cea de dinainte (din trend sau aleasă de mână)
+function gridDirTemporara(simbol){var t=grStare.dirTemp;if(!t||String(simbol||"").replace(/_USDT_PERP$/,"")===t.simbol)return;grStare.dir=t.inainte;grStare.dirTemp=null;gridDirButoane()}
 function gridCopiaza(v){
   v=String(v==null?"":v);if(!v)return;
   var gata=function(){toast("Copiat: "+v,"good")};

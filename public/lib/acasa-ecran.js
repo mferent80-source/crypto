@@ -134,7 +134,9 @@ function acasaCumpar2(d) {
 }
 function acasaCumpar2Corp(d) {
   var ii = d && d.idei && d.idei.idei, sg = d && d.sugestii && d.sugestii.sugestii, dv = sg && sg.dovada || {}, I = typeof Idei !== "undefined" && Idei.reveniriBoti ? Idei : null;
-  var ra = ii && Array.isArray(ii.reveniri) ? ii.reveniri : null, rm = I && d && d.clasament ? I.reveniriBoti(d.clasament, [], 3) : null, rs = I && d && d.clasament ? I.shortBoti(d.clasament, [], 3) : null;
+  // revizia (I7): un clasament făcut înainte de colectorul nou n-are starea de revenire (lipsește sau e null peste tot) ⇒ „—”, ca acțiunile fără listă, nu „nimic azi”
+  var cm = d && d.clasament && d.clasament.monede, faraStare = Array.isArray(cm) && cm.length > 0 && !cm.some(function (m) { return m && m.revenire; });
+  var ra = ii && Array.isArray(ii.reveniri) ? ii.reveniri : null, rm = I && d && d.clasament && !faraStare ? I.reveniriBoti(d.clasament, [], 3) : null, rs = I && d && d.clasament ? I.shortBoti(d.clasament, [], 3) : null;
   if (!ra && !rm && !rs) return "";
   var et = function (x) { return x && x.eticheta ? " (" + x.eticheta + ")" : ""; };
   var nume = function (l, f) { return !l ? "—" : l.length ? l.slice(0, 3).map(f).join(", ") : "nimic azi"; };
