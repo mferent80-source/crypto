@@ -8,6 +8,7 @@ import { alerteSimboluri, alerteSLTP } from "./poza.mjs";
 import { mesajReteta } from "./tura-scan.mjs";
 import { mesajFundingPiata } from "./tura-piata.mjs";
 import { mesajPornire } from "./tura-pornire.mjs";
+import { pazaBot, notaVeche } from "./paza-boti.mjs";
 
 const T0 = Date.UTC(2026, 9, 1, 16, 0), ORA = 3600000, ZI = 86400000;
 const AL = [["titlu", "alertaTitlu"], ["mesaj", "alertaMesaj"]], RAP = [["titlu", "alertaTitlu"], ["mesaj", "raport"]];
@@ -173,6 +174,20 @@ export function situatiiAlerte(pune) {
   co("botul n-are plan, propunerea mea (implicită)", "faraPlan", MC.faraPlan("CRV", TE.propunePlan(null, 49.67)));
   co("botul n-are plan, după planul de dinainte", "faraPlan", MC.faraPlan("CRV", TE.propunePlan({ plus: 5.5, minus: 15.7, afaraOre: 12, nume: "LIGHTER", investit: 103.38 }, 49.67)));
   co("botul n-are plan, fără propunere", "faraPlan", MC.faraPlan("CRV", null));
+  // v100.86 (§2 „paza boților”): mesajele pazei din producătorul REAL (pazaBot cu Busola și Alerte.pret, nota din notaVeche) -
+  // CRV long 5×, LIGHTER short 4×, BTC (prețuri de 5 cifre), PUMP (sub 0,01), bot nou, neutru fără levier, nedovedit, fără cifră
+  const BU = globalThis.Busola, GR = { canal: "±2×ATR", miscare: -0.0021398053, miscareDovedita: true };
+  const REZB = (g) => ({ la: T0 - 2 * ORA, monede: { CRV: { perp4h: "miscare" }, LIGHTER: { perp4h: "miscare" }, BTC: { grid4h: "miscare" }, PUMP: { perp4h: "miscare" } }, grid: g || GR, perp: { prag: 200000 } });
+  const paz = (sit, b, g, prim) => co(sit, "busolaMiscare", pazaBot({ Busola: BU, rez: REZB(g), bot: b, inainte: prim ? undefined : { stare: "liniste", la: 1 }, acum: T0, pret: A.pret }).mesaj);
+  paz("Busola: mai agitată (CRV long 5×, dovedit)", CRV());
+  paz("Busola: mai agitată (LIGHTER short 4×)", LIT());
+  paz("Busola: mai agitată (BTC, prețuri de 5 cifre)", BTC());
+  paz("Busola: mai agitată (PUMP, sub 0,01)", PUMP());
+  paz("Busola: bot nou pe monedă agitată (CRV)", CRV({ pornitLa: T0 - 10 * 60000 }), null, true);
+  paz("Busola: mai agitată, bot neutru fără levier", CRV({ directie: "no_trend", levier: null }));
+  paz("Busola: mai agitată, nedovedit (LIGHTER)", LIT(), Object.assign({}, GR, { miscareDovedita: false }));
+  paz("Busola: mai agitată, rezumat fără cifră și fără canal", CRV(), {});
+  co("Busola: rezumatul vechi (6 ore)", "busolaVeche", notaVeche({ Busola: BU, rez: REZB(), acum: T0 + 4 * ORA + 1, anuntat: null }));
   co("gridul îngust a ajuns la durata probată", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", false));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));
   co("Trading 212 nu mai răspunde (cheia)", "t212Rau", MC.t212Rau(18, 401, "HTTP 401"));

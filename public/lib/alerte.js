@@ -477,6 +477,7 @@ var Alerte = (function () {
     return { mesaje: mesaje, stare: n };
   }
 
-  return { miscareNeobisnuita: miscareNeobisnuita, schimbareVreme: schimbareVreme, evalueaza: evalueaza, reguli: reguli, grila: grila, podeaUrca: podeaUrca, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti };
+  // v100.86 (§2 „paza boților”): + pret - intervalul botului din mesajul colectorului, cu aceleași zecimale ca alertele
+  return { miscareNeobisnuita: miscareNeobisnuita, schimbareVreme: schimbareVreme, evalueaza: evalueaza, reguli: reguli, grila: grila, podeaUrca: podeaUrca, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti, pret: pret };
 })();
 if (typeof globalThis !== "undefined") globalThis.Alerte = Alerte;

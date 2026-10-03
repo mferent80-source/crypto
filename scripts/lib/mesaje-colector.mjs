@@ -37,6 +37,18 @@ export const ceasIngust = (nume, ore, hm, tarziu) => ({ nivel: "atentie", titlu:
   mesaj: msg("Așa a fost probat (închiderea era la " + hm + (tarziu ? "; mesajul vine întârziat, colectorul a fost oprit" : "") + "): ținut mai mult, nu mai seamănă cu proba.",
     "Aș închide botul acum: un interval îngust iese repede din preț.") });
 
+// v101.59 (Busola 1.36, §2 „paza boților”, aprobat de el 03.10): moneda botului a trecut în „mai agitată ca de obicei” pe 4h - un mesaj,
+// până iese; botul NOU pe o monedă deja agitată - același fapt, titlul spune „bot nou”. Cifra e a Busolei (gridurile măsurate de ea),
+// nu a monedei botului; intervalul vine gata scris (Alerte.pret, zecimalele Pionex).
+const DIR_BOT = { long: "long", short: "short" };
+export const busolaMiscare = (o) => ({ nivel: "atentie", cheie: "busola-miscare",
+  titlu: o.nume + " " + (DIR_BOT[o.directie] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · Busola: " + (o.nou ? "bot nou pe monedă agitată" : "mai agitată ca de obicei"),
+  mesaj: msg("Pe 4h, " + o.nume + " e mai agitată ca de obicei: după asta, gridurile măsurate de Busola au pierdut cel mai mult" + (o.cifra ? " (" + o.cifra + ")" : "") + ".",
+    "Aș verifica stopul botului" + (o.interval ? " (gridul " + o.interval + ")" : "") + " și n-aș adăuga bani cât ține.") });
+// rezumatul Busolei e vechi: paza tace - o notă doar în Radar, o dată pe rezumat
+export const busolaVeche = (ore) => ({ nivel: "info", cheie: "busola-veche", doarRadar: true, titlu: "Busola: rezumatul are " + cate(ore, "oră", "ore"),
+  mesaj: "Paza boților tace până vine un rezumat nou: pe date vechi nu anunț mișcarea." });
+
 export const t212DinNou = () => ({ nivel: "info", titlu: "Trading 212 răspunde din nou", mesaj: "Alertele de stop și țintă pe acțiuni merg din nou." });
 export const t212Rau = (minute, status, eroare) => ({ nivel: "critic", titlu: "Trading 212 nu mai răspunde de " + minute + " min",
   mesaj: msg((status === 401 || status === 403 ? "Cheia API pare expirată sau revocată (" + status + ")" : scurt(eroare, 60)) + ": alertele de stop și țintă nu mai vin; stopurile puse în Trading 212 merg și fără Radar.",

@@ -18,7 +18,7 @@ import { situatiiRetea } from "./lib/garda-retea.mjs";   // v100.80 (rețeaua ne
 import { situatiiSugestii } from "./lib/garda-sugestii.mjs";   // v100.85 (reveniri + short)
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js", "reveniri.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
+for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js", "reveniri.js", "busola.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
 const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, Directie: DR } = globalThis;
 
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;

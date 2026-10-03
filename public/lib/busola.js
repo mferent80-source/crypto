@@ -10,11 +10,19 @@ var Busola = (function () {
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var URL_REZUMAT = "https://busola.mferent80.workers.dev/api/rezumat.json";
   var CACHE_MS = 30 * 60 * 1000, VECHI_MS = 6 * 3600 * 1000;
+  // v100.86 (§2 „paza boților”): peste 4,5 h (Busola rulează la 4 h) colectorul nu mai anunță nimic din rezumat
+  var PAZA_VECHI_MS = 4.5 * 3600 * 1000;
   var stare = { rez: null, la: 0, inLucru: null };
 
   // JTO_USDT_PERP -> JTO; 1000BONK_USDT_PERP -> BONK (pe spot nu există „1000”); ethusdt -> ETH
   function simbolBusola(s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$/, "").replace(/^1000+/, ""); }
   function proc(x) { return typeof x === "number" && isFinite(x) ? (x < 0 ? "−" : "+") + Math.abs(x * 100).toFixed(3).replace(".", ",") + "%" : "?"; }
+  // v100.86 (Busola 1.36, §2 „paza boților”): prima stare MĂSURATĂ pe 4h - futures-ul lichid (perp4h, doar monedele din afara
+  // hărții / topului spot), filtrul de grid, harta; „nemasurat” sau lipsă -> null. Aceeași alegere în fișă și în colector.
+  function masurat(v) { return v === "miscare" || v === "liniste" || v === "nu-stiu"; }
+  function stare4h(m) { return !m ? null : masurat(m.perp4h) ? m.perp4h : masurat(m.grid4h) ? m.grid4h : masurat(m["4h"]) ? m["4h"] : null; }
+  // „200.000” (mii cu punct)
+  function mii(x) { return String(Math.round(Number(x))).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
 
   // {nivel, text, varsta, nota} sau null cand rezumatul inca lipseste
   function randGrid(rez, simbol, acum) {
@@ -26,17 +34,30 @@ var Busola = (function () {
     // spune „cel mai puțin”. Rezumatul vechi (fără câmpuri) -> textele de până acum, fără notă.
     var canal = typeof g.canal === "string" && g.canal.trim() ? "grid pe " + g.canal.trim() : null;
     var nota = function (d) { return [canal, d].filter(Boolean).join(", ") || null; };
-    if (!m) return { nivel: "nemasurat", text: "Busola n-a măsurat " + cheie + ": urmărește topul spot Pionex, nu futures.", varsta: varsta };
+    // v100.86 (paza boților): de la Busola 1.36 (blocul `perp`) măsoară și futures-ul lichid - o monedă lipsă e sub pragul de USDT pe zi
+    if (!m) return { nivel: "nemasurat", text: rez.perp && Number(rez.perp.prag) > 0 ? "Busola nu măsoară " + cheie + ": pe futures urmărește doar monedele cu peste " + mii(rez.perp.prag) + " USDT pe zi." : "Busola n-a măsurat " + cheie + ": urmărește topul spot Pionex, nu futures.", varsta: varsta };
     // v100.67 (revizia): „nu-stiu” = măsurat, nimic neobișnuit; „nemasurat” sau lipsă pe 4h = Busola n-a putut măsura —
-    // înainte, amândouă ieșeau „nimic neobișnuit”. Se ia prima valoare MĂSURATĂ (filtrul de grid, apoi harta).
-    var masurat = function (v) { return v === "miscare" || v === "liniste" || v === "nu-stiu"; };
-    // v100.85 (Busola 1.36, paza boților): futures-ul lichid are perp4h (doar monedele din afara hărții / topului spot) - citit întâi
-    var s = masurat(m.perp4h) ? m.perp4h : masurat(m.grid4h) ? m.grid4h : masurat(m["4h"]) ? m["4h"] : null;
+    // înainte, amândouă ieșeau „nimic neobișnuit”. Se ia prima valoare MĂSURATĂ (futures, filtrul de grid, apoi harta - stare4h).
+    var s = stare4h(m);
     if (!s) return { nivel: "nemasurat", text: "Busola n-a putut măsura " + cheie + " pe 4h acum (eroare sau prea puține cazuri).", varsta: varsta };
     if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta, nota: nota(null) };
     if (s === "liniste" && g.dovedit === false) return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — gridul a pierdut ceva mai puțin decât oricând (" + proc(g.liniste) + ").", varsta: varsta, nota: nota("nedovedit") };
     if (s === "liniste") return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (" + proc(g.liniste) + "), tot pe minus.", varsta: varsta, nota: nota(g.dovedit === true ? "dovedit" : null) };
     return { nivel: "neutru", text: "Busola, pe 4h: nimic neobișnuit — un grid oarecare a ieșit pe minus (" + proc(g.oricand) + " pe episod).", varsta: varsta, nota: nota(null) };
+  }
+
+  // v100.86 (§2 „paza boților”, colectorul): starea monedei botului și dacă rezumatul e prea vechi ca să anunțe ceva
+  // (peste 4,5 h sau fără `la` -> vechi: nicio alertă). null cât rezumatul lipsește (ca fișa).
+  function pazaStare(rez, simbol, acum) {
+    if (!rez || !rez.monede || !rez.grid) return null;
+    var cheie = simbolBusola(simbol), v = acum - Number(rez.la);
+    return { cheie: cheie, stare: stare4h(rez.monede[cheie]), vechi: !(v <= PAZA_VECHI_MS), la: Number(rez.la) };
+  }
+  // cifra din mesajul de mișcare: „−0,214% pe episod, grid pe ±2×ATR, dovedit”. Dovada DOAR din grid.miscareDovedita
+  // (Busola 1.34, I-506; grid.dovedit privește liniștea); ce lipsește (rezumat vechi) se lasă afară, nimic inventat.
+  function cifraMiscare(rez) {
+    var g = rez && rez.grid || {}, d = g.miscareDovedita === true ? "dovedit" : g.miscareDovedita === false ? "nedovedit" : null;
+    return [typeof g.miscare === "number" && isFinite(g.miscare) ? proc(g.miscare) + " pe episod" : null, typeof g.canal === "string" && g.canal.trim() ? "grid pe " + g.canal.trim() : null, d].filter(Boolean).join(", ");
   }
 
   // v100.79: nota (canalul, dovedit / nedovedit) și vârsta, gri, după frază
@@ -62,6 +83,7 @@ var Busola = (function () {
   function rezumat() { return stare.rez; }
   function _reset() { stare = { rez: null, la: 0, inLucru: null }; }
 
-  return { URL_REZUMAT: URL_REZUMAT, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, incarca: incarca, rezumat: rezumat, _reset: _reset };
+  return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, cifraMiscare: cifraMiscare,
+    incarca: incarca, rezumat: rezumat, _reset: _reset };
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

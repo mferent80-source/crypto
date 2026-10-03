@@ -33,7 +33,8 @@ import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs"; 
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
-const VERSIUNE_COLECTOR = "v101.58";
+import { pazaPas, notaVeche } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”)
+const VERSIUNE_COLECTOR = "v101.59";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -130,6 +131,7 @@ const ActiuniSemnale = new Function("GridCalcul", fs.readFileSync(path.join(RAD,
 const Consilier = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "consilier.js"), "utf8") + "; return Consilier;")(ActiuniSemnale);
 const Idei = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "idei.js"), "utf8") + "; return Idei;")(ActiuniSemnale);
 const Reveniri = incarca("reveniri.js", "Reveniri");   // v101.58 (reveniri + short): regulile, istoricul, urmărirea
+const Busola = incarca("busola.js", "Busola");   // v101.59 (§2 „paza boților”): rezumatul Busolei și starea pe 4h a monedei fiecărui bot
 // Nasdaq-100 din aplicatie (o singura sursa: public/app.js, NDX_UNIVERSE)
 const NDX = (() => { try { const m = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").match(/const NDX_UNIVERSE=(\[[^\]]*\])/); return m ? JSON.parse(m[1]) : []; } catch { return []; } })();
 const ProfilMoneda = incarca("profil-moneda.js", "ProfilMoneda");
@@ -146,7 +148,7 @@ const Asemanatoare = new Function("Probabilitati", fs.readFileSync(path.join(RAD
 const Retea = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "retea.js"), "utf8") + "; return Retea;")(Probabilitati);   // v101.56 (rețeaua neuronală, livrarea 1)
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
-if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare, Perechi, Retea].every(Boolean) && NDX.length > 90); process.exit(0); }
+if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare, Perechi, Retea, Busola].every(Boolean) && NDX.length > 90); process.exit(0); }
 // v101.40 (el, 01.10: „rezolvă colectorul și limita”): colectorul se prezinta - dupa tokenul valid are galeata lui (pagina nu mai primeste
 // RATE_LIMITED cand colectorul citeste mult, de ex. dupa o repornire)
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json", "x-radar-client": "colector" };
@@ -392,6 +394,12 @@ async function tura() {
     for (const x of av) await trimiteAlerta({ nivel: x.nivel, titlu: x.titlu, mesaj: x.mesaj }, x.bot, "pornire-moneda");
   } catch (e) { jurnal("avertizare la pornire", e.message); }
   for (const b of boti) if (b && b.id) m.cunoscuti[b.id] = { activ: b.activ !== false, nume: String(b.baza || "").replace(/\.PERP$/, "") };
+  // v101.59 (Busola 1.36, §2 „paza boților”): rezumatul Busolei o dată la 30 min (ca fișa); vechi ⇒ o notă doar în Radar, o dată pe rezumat
+  try {
+    await Busola.incarca(fetch, acum);
+    const n = notaVeche({ Busola, rez: Busola.rezumat(), acum, anuntat: meta().busolaVeche });
+    if (n && (await trimiteAlerta(n, null, n.cheie))) meta().busolaVeche = n.la;
+  } catch (e) { jurnal("busola", e.message); }
   for (const b of boti) {
     if (!b || !b.id) continue;
     try {
@@ -469,6 +477,9 @@ async function tura() {
       for (const msg of pu.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) plecat = false;
       if (plecat) { if (pu.stare) stareAlerte[b.id]._podea = pu.stare; else delete stareAlerte[b.id]._podea; }
     } catch (e) { jurnal("podea", b.id, e.message); }
+    // v101.59 (§2 „paza boților”): moneda botului trece în „mai agitată ca de obicei” pe 4h (Busola) ⇒ un mesaj, nerepetat până iese.
+    // După `stareAlerte[b.id] = r.stare`: _busola se scrie pe starea nouă (evalueaza o copiază la tura următoare)
+    try { await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie) }); } catch (e) { jurnal("paza busola", b.id, e.message); }
     // o alerta care n-a plecat (ntfy picat, fara internet) nu se trece ca trimisa:
     // starea ei revine la cea de dinainte, ca tura urmatoare s-o reincerce
     for (const msg of r.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) {
