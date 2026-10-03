@@ -8,6 +8,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
+import { situatii, verifica, STRICT } from "./garda-texte.mjs";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
@@ -98,6 +99,16 @@ await test("(8) Acasă: al doilea rând din „Ce aș cumpăra azi” - primele 
 });
 await test("(8) Acasă: sugestiile se aduc cu celelalte date ale paginii", () => {
   assert.match(lib("acasa-ecran.js"), /pas\("sugestii", function \(\) \{ return getJSON\("\/api\/istoric-bot\?action=sugestii"\); \}\),/);
+});
+await test("(9) garda: grupul „sugestii” e STRICT și n-are abateri (toate etichetele, puține, fără istoric, boții, supraviețuitorii, urmărirea)", () => {
+  assert.ok(STRICT.has("sugestii"));
+  const s = situatii().filter((x) => x.mod === "sugestii"); assert.ok(s.length >= 20, String(s.length));
+  const rele = s.map((x) => ({ x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length);
+  assert.equal(rele.length, 0, rele.map((q) => q.x.sit + ": " + q.ab.join("; ") + " ⇐ " + q.x.text).join("\n"));
+});
+await test("(9) reveniri.js se încarcă pe pagină înaintea lui idei.js și e în cache-ul aplicației", () => {
+  const h = citeste("public", "index.html"); assert.ok(h.includes('<script src="/lib/reveniri.js"></script><script src="/lib/idei.js"></script>'));
+  assert.ok(citeste("public", "sw.js").includes('"/lib/reveniri.js","/lib/idei.js"'));
 });
 console.log("\n" + (pica ? "V100.85 ECRAN PICA · " + pica + " din " + (ok + pica) : "V100.85 ECRAN PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
