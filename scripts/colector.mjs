@@ -944,13 +944,15 @@ async function turaIdeiZi() {
     const castig = {}; inchise.forEach((t) => { if (/_US_EQ$/.test(t.ticker)) castig[t.ticker] = (castig[t.ticker] || 0) + t.rezultat; });
     // ale lui intai (actiunile pe care a castigat + lista lui), apoi Nasdaq-100: la dubluri ramane varianta cu istoricul lui
     const tickere = [...new Set(Object.keys(castig).filter((k) => castig[k] > 0).concat(lista.map((x) => x.replace(/\./g, "-") + "_US_EQ"), NDX.map((x) => x + "_US_EQ")))];
-    const r = await turaIdeiModul({ tickere, inchise, Idei, Probabilitati, ProfilMoneda, jurnal, simbol: (tk) => T212.simbol(tk), acum: Date.now(), pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+    const r = await turaIdeiModul({ tickere, inchise, Idei, Reveniri, Probabilitati, ProfilMoneda, jurnal, simbol: (tk) => T212.simbol(tk), acum: Date.now(), pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       // v93: bareToate - la 8 dimineata ultima zi de bursa e INCHISA (bare() o arunca: ideile erau cu o zi in urma)
       cereBare: async (tk) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []),
       ndx: new Set(NDX), rezumat: Acasa.rezumatActiune,
       cereRezultate: async (tk) => { const d = await cere("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); return d && d.data || null; } });
     const urm = Idei.urmarire(id && Array.isArray(id.istoric) ? id.istoric : [], r.preturi, Date.now());
-    await trimite("/api/t212?action=idei", { la: Date.now(), zi, actiuni: r.actiuni, restul: r.restul, judecate: r.judecate, trecute: r.trecute, urmarire: urm, ndx: r.ndx });
+    // v101.58 (reveniri): urmărirea acțiunilor pe revenire - pe ticker, de la 14 zile calendaristice (~10 de bursă), după comisionul de conversie
+    const urmRev = Reveniri.urmarire(id && Array.isArray(id.istoricReveniri) ? id.istoricReveniri : [], r.preturi, Date.now(), { zile: 14, cost: 0.003, cheie: "ticker" });
+    await trimite("/api/t212?action=idei", { la: Date.now(), zi, actiuni: r.actiuni, restul: r.restul, reveniri: r.reveniri, dovadaReveniri: r.dovadaReveniri, urmarireReveniri: urmRev, judecate: r.judecate, trecute: r.trecute, urmarire: urm, ndx: r.ndx });
     m.ideiZi = zi;
   } catch (e) { jurnal("idei ESEC", e.message); }
   ideiInLucru = false;

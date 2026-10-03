@@ -142,14 +142,24 @@ export async function onRequestPost({ request, env }) {
     const act2 = (Array.isArray(corp && corp.actiuni) ? corp.actiuni : []).slice(0, 10).map(curata).filter((x) => x.ticker && x.pret > 0);
     // v100.82 (03.10, ideea 1): celelalte care trec de poartă - curățate la fel, cel mult 40, fără urmărire (istoricul ideilor rămâne pe primele 5)
     const rest2 = (Array.isArray(corp && corp.restul) ? corp.restul : []).slice(0, 40).map(curata).filter((x) => x.ticker && x.pret > 0);
+    // v100.85 (reveniri): acțiunile pe revenire (≤ 10, doar long), istoricul regulii și urmărirea lor - notările separat de ale ideilor
+    const curataRev = (x) => ({ ticker: tk(x && x.ticker), simbol: sim(x && x.simbol), pret: nr(x && x.pret), cadere: nr(x && x.cadere), deLaMin: nr(x && x.deLaMin), zileDeLaMin: nr(x && x.zileDeLaMin), stop: nr(x && x.stop), tinta: nr(x && x.tinta),
+      istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null });
+    const rev2 = (Array.isArray(corp && corp.reveniri) ? corp.reveniri : []).slice(0, 10).map(curataRev).filter((x) => x.ticker && x.pret > 0);
+    const dvR = corp && corp.dovadaReveniri, dov2 = dvR && typeof dvR === "object" ? { n: nr(dvR.n), saptamani: nr(dvR.saptamani), pePlus: nr(dvR.pePlus), medie: nr(dvR.medie), mediana: nr(dvR.mediana),
+      baza: dvR.baza && typeof dvR.baza === "object" ? { n: nr(dvR.baza.n), pePlus: nr(dvR.baza.pePlus), medie: nr(dvR.baza.medie) } : null, eticheta: ["mai bine", "mai slab", "cam la fel"].includes(dvR.eticheta) ? dvR.eticheta : null, putine: dvR.putine === true } : null;
+    const uR = corp && corp.urmarireReveniri, urm2 = uR && typeof uR === "object" ? { n: nr(uR.n), pePlus: nr(uR.pePlus), medie: nr(uR.medie), text: txt(uR.text, 300) } : null;
     const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
     const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;
-    await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, restul: rest2, urmarire: urm }));
+    await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, restul: rest2, reveniri: rev2, dovadaReveniri: dov2, urmarireReveniri: urm2, urmarire: urm }));
     await salveazaNdx(env, corp, zi);
     const ist = await citesteKv(env, "t212:idei-istoric", []), l = Array.isArray(ist) ? ist : [];
     act2.forEach((x) => { if (!l.some((y) => y.zi === zi && y.ticker === x.ticker)) l.push({ zi, ticker: x.ticker, simbol: x.simbol, pret: x.pret }); });
     const de = new Date(Date.now() - 150 * 86400000).toISOString().slice(0, 10);
     await env.ISTORIC.put("t212:idei-istoric", JSON.stringify(l.filter((x) => x.zi >= de).slice(-1000)));
+    const istR = await citesteKv(env, "t212:reveniri-istoric", []), lr = Array.isArray(istR) ? istR : [];
+    rev2.forEach((x) => { if (!lr.some((y) => y.zi === zi && y.ticker === x.ticker)) lr.push({ zi, ticker: x.ticker, simbol: x.simbol, pret: x.pret }); });
+    await env.ISTORIC.put("t212:reveniri-istoric", JSON.stringify(lr.filter((x) => x.zi >= de).slice(-1000)));
     return json({ ok: true, actiuni: act2.length });
   }
   // v94: rezumatul Nasdaq 100 si in timpul bursei (colectorul, o data pe ora) - fara idei
@@ -258,8 +268,8 @@ export async function onRequestGet({ request, env }) {
     }
     if (a === "idei") {
       if (!env.ISTORIC?.get) return faraKv();
-      const [idei, istoric, lista] = await Promise.all([citesteKv(env, "t212:idei", null), citesteKv(env, "t212:idei-istoric", []), citesteKv(env, "t212:lista", [])]);
-      return json({ idei, istoric: Array.isArray(istoric) ? istoric : [], lista: Array.isArray(lista) ? lista : [] });
+      const [idei, istoric, lista, istoricReveniri] = await Promise.all([citesteKv(env, "t212:idei", null), citesteKv(env, "t212:idei-istoric", []), citesteKv(env, "t212:lista", []), citesteKv(env, "t212:reveniri-istoric", [])]);
+      return json({ idei, istoric: Array.isArray(istoric) ? istoric : [], lista: Array.isArray(lista) ? lista : [], istoricReveniri: Array.isArray(istoricReveniri) ? istoricReveniri : [] });
     }
     if (a === "cf") {
       if (!env.ISTORIC?.get) return faraKv();
