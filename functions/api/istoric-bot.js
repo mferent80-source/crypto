@@ -19,6 +19,8 @@ const simbolKv=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,
 const q21=a=>Array.isArray(a)&&a.length===21&&a.every(x=>typeof x==="number"&&Number.isFinite(x)&&x>=0&&x<=100)?a.slice():null;   // revizia 01.10: BR avea 231% pe 24 h; un pump nu blocheaza profilul
 function curataDistributie(d){if(!d||typeof d!=="object")return null;const jos=q21(d.jos),sus=q21(d.sus);return jos&&sus?{jos,sus,n:nr(d.n),nIndep:nr(d.nIndep)}:null}
 
+// v100.85 (reveniri + short): starea de revenire a monedei din clasament - numere sau null, `revine` strict boolean
+function curataRevenire(r){return r&&typeof r==="object"?{cadere:nr(r.cadere),deLaMin:nr(r.deLaMin),zileDeLaMin:nr(r.zileDeLaMin),revine:r.revine===true}:null}
 function curata(x){
   if(!x||typeof x!=="object")return null;
   // o intrare din viitor n-ar mai expira niciodata
@@ -180,7 +182,7 @@ export async function onRequestPost({request,env}){
     if(la===null||!monede)return json({error:"Lipseste la sau monede"},400);
     // se pastreaza doar campurile cunoscute, cu numerele curatate (lipsa = null, nu 0)
     const CAMP_NR=["volum","pret","latime","pas","grile","profitGrila","traversariZi","scor"];
-    const curate=monede.slice(0,150).map(m=>{if(!m||typeof m!=="object")return null;const o={simbol:String(m.simbol||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,32),stare:["evita","candidat","fara-date"].includes(m.stare)?m.stare:"fara-date",dir:["long","neutru","short"].includes(m.dir)?m.dir:null,tarie:typeof m.tarie==="string"?m.tarie.slice(0,12):null,regim:m.regim&&typeof m.regim==="object"?{r4h:nr(m.regim.r4h),r24h:nr(m.regim.r24h),miscare:!!m.regim.miscare}:null};for(const k of CAMP_NR)o[k]=nr(m[k]);return o.simbol?o:null}).filter(Boolean);
+    const curate=monede.slice(0,150).map(m=>{if(!m||typeof m!=="object")return null;const o={simbol:String(m.simbol||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,32),stare:["evita","candidat","fara-date"].includes(m.stare)?m.stare:"fara-date",dir:["long","neutru","short"].includes(m.dir)?m.dir:null,tarie:typeof m.tarie==="string"?m.tarie.slice(0,12):null,regim:m.regim&&typeof m.regim==="object"?{r4h:nr(m.regim.r4h),r24h:nr(m.regim.r24h),miscare:!!m.regim.miscare}:null,revenire:curataRevenire(m.revenire)};for(const k of CAMP_NR)o[k]=nr(m[k]);return o.simbol?o:null}).filter(Boolean);
     // expira dupa 6 ore: un clasament de ieri nu trebuie sa arate ca unul de azi
     await env.ISTORIC.put("clasament",JSON.stringify({la,monede:curate}),{expirationTtl:6*3600});
     return json({ok:true,monede:curate.length});

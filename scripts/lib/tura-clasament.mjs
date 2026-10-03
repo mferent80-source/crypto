@@ -19,7 +19,10 @@ export async function turaClasament(d) {
       const k = await d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(m.simbol) + "&interval=4H&limit=500");
       const bare = d.GridCalcul.bare(k && k.data && k.data.klines);
       if (!bare.length) throw new Error((k && (k.error || k.message || k.code)) || "fara lumanari");   // 200 cu result:false e tot esec
-      monede.push(d.GridClasament.judeca(m.simbol, bare, m.volum));
+      const j = d.GridClasament.judeca(m.simbol, bare, m.volum);
+      // v101.58 (reveniri + short): starea de revenire din aceleași bare de 4h (doar cele închise) - fără cereri în plus
+      if (d.Reveniri) { try { j.revenire = d.Reveniri.monedaPeRevenire(bare, d.acum ? d.acum() : Date.now()); } catch { j.revenire = null; } }
+      monede.push(j);
     } catch (e) {
       esecuri++; monede.push(d.GridClasament.judeca(m.simbol, null, m.volum));
       if (esecuri >= maxEsecuri) { d.jurnal("clasament: prea multe esecuri, ma opresc la", monede.length); break; }

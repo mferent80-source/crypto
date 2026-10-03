@@ -128,6 +128,7 @@ const T212 = incarca("t212.js", "T212");
 const ActiuniSemnale = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "actiuni-semnale.js"), "utf8") + "; return ActiuniSemnale;")(GridCalcul);
 const Consilier = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "consilier.js"), "utf8") + "; return Consilier;")(ActiuniSemnale);
 const Idei = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "idei.js"), "utf8") + "; return Idei;")(ActiuniSemnale);
+const Reveniri = incarca("reveniri.js", "Reveniri");   // v101.58 (reveniri + short): regulile, istoricul, urmărirea
 // Nasdaq-100 din aplicatie (o singura sursa: public/app.js, NDX_UNIVERSE)
 const NDX = (() => { try { const m = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").match(/const NDX_UNIVERSE=(\[[^\]]*\])/); return m ? JSON.parse(m[1]) : []; } catch { return []; } })();
 const ProfilMoneda = incarca("profil-moneda.js", "ProfilMoneda");
@@ -494,7 +495,7 @@ async function turaClasament() {
   if (clasamentInLucru || Date.now() - clasamentLa < CLASAMENT_MS) return;
   clasamentInLucru = true;
   try {
-    const r = await turaClasamentModul({ cere, trimite, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridClasament, top: CLASAMENT_TOP });
+    const r = await turaClasamentModul({ cere, trimite, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridClasament, Reveniri, top: CLASAMENT_TOP });
     clasamentLa = r.urcat ? Date.now() : Date.now() - CLASAMENT_MS + 10 * 60000;   // neurcat -> reincearca in 10 min
     if (r.urcat) tineRitm("clasament", clasamentLa);
   } catch (e) { jurnal("clasament ESEC", e.message); clasamentLa = Date.now() - CLASAMENT_MS + 10 * 60000; }
