@@ -131,11 +131,11 @@ function acasaCumpar(d) {
 function acasaMergiLa(ecran, id) {
   if (typeof navTo === "function") navTo(ecran, true);
   setTimeout(function () {
-    var e = $(id); if (!e || !e.scrollIntoView) return;
-    e.scrollIntoView({ block: "start" });
-    // bara de sus e lipită (header.topStatus: ~56 px pe calculator, ~156 pe telefon) - panoul coboară sub ea, să i se vadă titlul
+    var e = $(id); if (!e || !e.getBoundingClientRect) return;
+    // bara de sus e lipită (header.topStatus: ~56 px pe calculator, ~156 pe telefon) - panoul stă sub ea, să i se vadă titlul.
+    // O singură derulare, instant: html are scroll-behavior:smooth, iar scrollIntoView urmat de scrollBy se anulau (pagina rămânea sus)
     var bara = document.querySelector("header.topStatus"), h = bara ? bara.getBoundingClientRect().bottom : 0;
-    if (h > 0 && window.scrollBy) window.scrollBy(0, -(h + 8));
+    window.scrollTo({ top: Math.max(0, Math.round(window.scrollY + e.getBoundingClientRect().top - (h > 0 ? h + 8 : 0))), behavior: "instant" });
   }, 400);
 }
 function acasaDeseneaza() {
