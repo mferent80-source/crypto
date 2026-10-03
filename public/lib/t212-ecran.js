@@ -377,7 +377,31 @@ function tbIdeiRender() {
   }).join("");
   tbUrmAdu();
   if (tbUrm.v && typeof GridProba !== "undefined") { try { h += '<p class="tbSub">⚡ ' + escapeHtml(GridProba.socotealaUrmarire(tbUrm.v).text) + '</p>'; } catch (e) {} }
-  box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>';
+  box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>' + tbSugestiiHtml(cl, contTot.sugestii, contTot.inchise);   /* v100.85 (reveniri + short): sub nota listei de candidați */
+}
+// v100.85 (reveniri + short, 03.10): sub „Pe ce aș porni un bot acum” - două liste cu istoricul pe față și urmărirea (filtre, nu predicții)
+function tbSugestiiHtml(cl, sg, inchise) {
+  if (typeof Reveniri === "undefined" || typeof Idei === "undefined" || !Idei.reveniriBoti) return "";
+  try { return tbSugestiiCorp(cl, sg, inchise); } catch (e) { return ""; }   /* o eroare în date nu strică lista de candidați de deasupra */
+}
+function tbSugestiiCorp(cl, sg, inchise) {
+  var rev = Idei.reveniriBoti(cl, inchise || [], 5), sh = Idei.shortBoti(cl, inchise || [], 5), s = sg && sg.sugestii, dv = s && s.dovada || {}, u = s && s.urmarire || {};
+  var ist = function (x) { return x.istoric.n ? "istoricul tău: " + t212Cate(x.istoric.n, "bot", "boți") + ", " + x.istoric.pePlus + " pe plus, " + (x.istoric.total >= 0 ? "+" : "−") + Math.abs(x.istoric.total).toFixed(2) + " USDT" : "n-ai mai avut boți pe ea"; };
+  var dov = function (d, cum) { var b = d && d.boti ? Reveniri.textBoti(d.boti, cum) : ""; return '<p class="tbSub">' + escapeHtml(Reveniri.textDovada(d && d.piata, cum)) + (b ? ' ' + escapeHtml(b) : '') + '</p>'; };
+  var urm = function (x) { return x && x.text ? '<p class="tbSub">📏 ' + escapeHtml(x.text) + '</p>' : ''; };
+  var dunga = function (d) { return d && d.piata && d.piata.eticheta === "mai slab" ? "g" : "v"; };
+  var rand = function (x, det, dir, d) { return '<div class="tbTodoRand"><span class="tbDunga ' + dunga(d) + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist(x)) + '</p></div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMonedaDir(\'' + escapeHtml(x.moneda) + '\',\'' + dir + '\')">Fișa (' + dir + ')</button></div>'; };
+  var gol = function (t) { return '<p class="tbSub tbTodoGol">' + (cl ? t : "Aștept clasamentul…") + '</p>'; };
+  var h = '<div class="tbSugestii"><h4>↩️ Pe revenire (bot long)</h4>' + dov(dv.revenire, "monede");
+  h += rev.length ? rev.map(function (x) { var r = x.revenire; return rand(x, "căzută −" + Math.round(r.cadere * 100) + "% de la maximul pe 30 de zile · +" + Math.round(r.deLaMin * 100) + "% de la minim (acum " + t212Cate(Math.round(r.zileDeLaMin), "zi", "zile") + ")", "long", dv.revenire); }).join("") : gol("Acum nicio monedă nu e pe revenire.");
+  h += urm(u.revenire) + '<h4>📉 Pentru short</h4>' + dov(dv.short, "short");
+  h += sh.length ? sh.map(function (x) { return rand(x, [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : "", "direcția short" + (x.tarie && x.tarie !== "fara-date" ? " (" + x.tarie + ")" : "")].filter(Boolean).join(" · "), "short", dv.short); }).join("") : gol("Acum nicio monedă liniștită nu are direcția short.");
+  return h + urm(u.short) + '</div>';
+}
+// v100.85: „Fișa (long/short)” din listele de sugestii - aceeași fișă, cu direcția aleasă (comutatorul fișei; rămâne aleasă, ca atunci când o alegi de mână)
+function gridDeschideMonedaDir(m, dir) {
+  gridDeschideMoneda(m);
+  if (typeof gridDirectie === "function" && (dir === "long" || dir === "short")) gridDirectie(dir);
 }
 // v97.3: acelasi drum ca din clasament / Scan: moneda aleasa, calculul ei, pagina dusa la fisa (nu lasata sus)
 function gridDeschideMoneda(m) {
@@ -835,7 +859,7 @@ function t212Cireasa(l) {
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", function () { jtAplicaFiltru(); });
 
 // v87: tot contul pe un rand, sus pe ambele pagini: botii Pionex (USDT, cu echivalentul in lei) si Trading 212 (lei)
-var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0 };
+var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0, sugestii: null, sugestiiLa: 0 };
 async function contTotStiriCrypto(m) {
   if (!m || contTot.stiriCrypto[m]) return;
   try { var sc = await getJSON("/api/stiri?action=crypto&moneda=" + encodeURIComponent(m)); contTot.stiriCrypto[m] = sc && sc.moneda || []; } catch (e) { contTot.stiriCrypto[m] = []; }
@@ -874,6 +898,7 @@ async function contTotAsigura() {
     // v100.25: toata istoria (arhiva de acasa + prima pagina Pionex), nu doar primii 10
     if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { var bi = (typeof jtAduBoti === "function" ? await jtAduBoti() : null) || []; contTot.inchise = JurnalTrade.din(bi); contTot.alteInchise = JurnalTrade.alte(bi); } catch (e) { contTot.inchise = []; contTot.alteInchise = []; } }
     if (Date.now() - contTot.clasamentLa > 10 * 60000) { try { var cl = await getJSON("/api/istoric-bot?action=clasament"); contTot.clasament = cl && cl.clasament || null; contTot.clasamentLa = Date.now(); } catch (e) {} }
+    if (Date.now() - (contTot.sugestiiLa || 0) > 10 * 60000) { try { contTot.sugestii = await getJSON("/api/istoric-bot?action=sugestii"); contTot.sugestiiLa = Date.now(); } catch (e) {} }   /* v100.85 (reveniri + short) */
     var bb = typeof tbStare !== "undefined" && tbStare.bot; if (bb) await contTotStiriCrypto(String(bb.baza || "").replace(/\.PERP$/, ""));
   } finally { contTot.inLucru = false; }
   contTotRender();
