@@ -73,10 +73,19 @@ var Busola = (function () {
     var gf = gridFolosit(rez), g = gf.g, d = g.miscareDovedita === true ? "dovedit" : g.miscareDovedita === false ? "nedovedit" : null;
     return [typeof g.miscare === "number" && isFinite(g.miscare) ? proc(g.miscare) + " pe episod" : null, canalText(gf), d].filter(Boolean).join(", ");
   }
+  // v100.92 (I-524): propunerea fișei (sau gridul botului) față de intervalul Busolei - cât de larg e, în procente; ±10% = cam la fel.
+  // Intervalul Busolei e cel care a pierdut cel mai puțin în cutia ei sigilată (I-505: +4,2/−3,9 ATR față de ±2×ATR), măsurat pe SPOT -
+  // scopul se spune pe față („pe spot”); boții lui sunt pe futures (I-511 a arătat că pe futures pierde la fel). Nimic ce Busola n-a dovedit
+  function comparaInterval(fisa, jos, sus) {
+    var fj = fisa && Number(fisa.jos), fs = fisa && Number(fisa.sus), j = Number(jos), s = Number(sus);
+    if (!(fj > 0) || !(fs > fj) || !(j > 0) || !(s > j)) return null;
+    var r = (s - j) / (fs - fj) - 1, p = Math.round(Math.abs(r) * 100), d = " decât al Busolei (al ei a pierdut cel mai puțin, pe spot)";
+    return { raport: r, text: Math.abs(r) <= 0.1 ? "intervalul tău e cam la fel de larg ca al Busolei" : "intervalul tău e cu " + p + "% mai " + (r < 0 ? "îngust" : "larg") + d };
+  }
   // v100.90 (I-514, Busola 1.38): intervalul măsurat de Busola pe 4h, sub propunerea fișei - pentru comparație, nu în locul ei.
   // Prețurile fișei sunt în unitățile SURSEI (revizia 1.40.1): `fisa4h.simbol` (ex. „1000PEPE”) sau cheia; un bot pe „1000X” cu fișa
   // fără „1000” ⇒ ×1000, invers ⇒ ÷1000 (6 cifre semnificative). pret = formatatorul fișei (grPret); lipsă ⇒ null, nimic inventat
-  function randFisa(rez, simbol, acum, pret) {
+  function randFisa(rez, simbol, acum, pret, prop) {
     if (!rez || !rez.monede || !rez.grid) return null;
     var cheie = simbolBusola(simbol), m = rez.monede[cheie], f = m && m.fisa4h, g = rez.grid, P = typeof pret === "function" ? pret : String;
     if (!f || !(f.jos > 0) || !(f.sus > f.jos) || !(f.linii >= 2)) return null;
@@ -87,7 +96,8 @@ var Busola = (function () {
     var ora = Number(g.fisa4hLa) > 0 ? new Date(Number(g.fisa4hLa)).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : null;
     var det = ["4h", typeof g.canal4h === "string" && g.canal4h.trim() ? g.canal4h.trim() : null, ora ? "la prețul de la " + ora : null].filter(Boolean).join(", ");
     var v = acum - Number(rez.la), vechi = v > VECHI_MS ? " · măsurat acum " + ore(v) : "";   /* rezumatul vechi își spune vârsta, ca rândul de mișcare */
-    return { jos: jos, sus: sus, linii: linii, factor: factor, text: "Busola, măsurat (" + det + "): jos " + P(jos) + " · sus " + P(sus) + " · " + cate(linii, "linie", "linii") + vechi };
+    var scurt = "jos " + P(jos) + " · sus " + P(sus) + " · " + cate(linii, "linie", "linii"), c = prop && typeof prop === "object" ? comparaInterval({ jos: jos, sus: sus }, prop.jos, prop.sus) : null;   /* v100.92 (I-524): propunerea, în unitățile botului */
+    return { jos: jos, sus: sus, linii: linii, factor: factor, scurt: scurt, comparatie: c ? c.text : null, raport: c ? c.raport : null, text: "Busola, măsurat (" + det + "): " + scurt + vechi };
   }
   // v100.90 (I-513): eticheta de pe cartela botului - starea Busolei pe moneda lui (perp4h ?? grid4h ?? 4h), de când e în ea
   // („de” îl ține colectorul, prin ruta `paza`) și cât de vechi e rezumatul. null cât rezumatul lipsește
@@ -119,6 +129,25 @@ var Busola = (function () {
     return '<div class="tbBloc grBusola"><p class="' + cls + '">' + esc(r.text) + (sub ? ' <span class="tbSub">· ' + esc(sub) + "</span>" : "") + "</p></div>";
   }
 
+  // v100.92 (I-518): UN singur producător pentru tot ce spune Busola despre o monedă - eticheta (starea, de când, cât de vechi), intervalul
+  // ei (cu propunerea fișei sau gridul botului față de el) și rândul scurt (dimineața, portofoliul). Fișa, Tabloul și Acasă desenează
+  // aceeași cartelă; o = { kv (ruta paza), pret (formatatorul fișei), prop {jos, sus} }. null cât rezumatul lipsește
+  function cartela(rez, simbol, acum, o) {
+    o = o && typeof o === "object" ? o : {};
+    var e = eticheta(rez, simbol, acum, o.kv); if (!e) return null;
+    var f = randFisa(rez, simbol, acum, o.pret, o.prop && typeof o.prop === "object" ? o.prop : null);
+    var d = o.kv && typeof o.kv === "object" && o.kv.stare === e.stare ? Number(o.kv.de) : NaN;
+    return { eticheta: e, interval: f, rand: liniaBoti([{ nume: simbolBusola(simbol), stare: e.stare, de: d > 0 ? d : null }], acum) };
+  }
+  // cartela în forma Tabloului (rânduri tbLinie): starea cu nota și culoarea ei, intervalul Busolei cu comparația (mai îngust = atenție)
+  function htmlCartela(c, esc) {
+    if (!c || !c.eticheta) return "";
+    var E = typeof esc === "function" ? esc : String, e = c.eticheta, f = c.interval;
+    var h = '<div class="tbLinie"><span>Busola, pe 4h' + (e.nota ? ' <span class="tbSub">' + E(e.nota) + '</span>' : '') + '</span><b class="' + (e.nivel === "atentie" ? "tbWarn" : e.nivel === "nemasurat" ? "tbSubVal" : "") + '">' + E(e.text) + '</b></div>';
+    if (f) h += '<div class="tbLinie"><span>Intervalul Busolei (4h)' + (f.comparatie ? ' <span class="' + (f.raport < -0.1 ? "tbWarn" : "tbSub") + '">' + E(f.comparatie) + '</span>' : '') + '</span><b>' + E(f.scurt) + '</b></div>';
+    return h;
+  }
+
   // true = au venit date noi (fișa se redesenează o dată); false = din cache sau Busola n-a răspuns (fără buclă)
   // v100.67 (revizia): cât cererea e în curs, ceilalți chemători primesc false — altfel fiecare desen adăuga încă o
   // redesenare la sosire. Cererea are limită de timp: o Busolă agățată nu mai blochează reîmprospătarea.
@@ -139,6 +168,6 @@ var Busola = (function () {
   function _reset() { stare = { rez: null, la: 0, inLucru: null, esec: false }; }
 
   return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, cifraMiscare: cifraMiscare,
-    randFisa: randFisa, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset };
+    randFisa: randFisa, comparaInterval: comparaInterval, cartela: cartela, htmlCartela: htmlCartela, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset };
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

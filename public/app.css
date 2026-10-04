@@ -1410,7 +1410,11 @@ body.peTablou main>.note{display:none}
 #gridset .grCamp{display:flex;flex-direction:column;gap:4px;min-width:0}
 #gridset .grCamp input,#gridset .grCamp select{min-width:110px}
 #gridset .grCalc{padding:8px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#06101a;font:inherit;font-weight:800}
-#gridset .grVerdict{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid currentColor;margin:12px 0}
+#gridset .grVerdict{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid currentColor;margin:12px 0;position:sticky;top:var(--grSus,72px);z-index:5;background:var(--panel)}
+#gridset .grPliabil>.tbBlocCap,#gridset .grPliabil>.grPoartaCap{cursor:pointer;user-select:none}
+#gridset .grPliabil>.tbBlocCap h4:after,#gridset .grPliabil>.grPoartaCap b:after{content:" ▾";color:var(--muted);font-weight:400}
+#gridset .grPliat>.tbBlocCap h4:after,#gridset .grPliat>.grPoartaCap b:after{content:" ▸"}
+@media (max-width:600px){#gridset .grPliat>:not(.tbBlocCap):not(.grPoartaCap){display:none}#gridset .grPliat>.tbBlocCap,#gridset .grPliat>.grPoartaCap{margin:0}}
 #gridset .grVEt{font-size:20px;font-weight:900;white-space:nowrap}
 #gridset .grVMotiv{margin:2px 0 0;font-weight:700;color:var(--text)}
 #gridset .grLista{margin:6px 0 0;padding-left:18px;color:var(--text)}
@@ -2099,6 +2103,11 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot .tbGrStanga{display:grid;gap:8px;align-content:start;min-width:0}
 #tabloubot .tbGrStanga>.tbBloc,#tabloubot .tbGrStanga>.tbTodo{min-width:0;margin:0}
 #tabloubot #tbAcumCard{margin:8px 0 0}
+#tabloubot #tbAcum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 28px}
+#tabloubot .tbGrupCard{min-width:0}
+#tabloubot .tbGrup{margin:4px 0 2px;font-size:13px;font-weight:700;color:var(--muted)}
+#tabloubot .tbGrup+.tbLinie{border-top:0}
+@media (max-width:980px){#tabloubot #tbAcum{grid-template-columns:1fr}#tabloubot .tbGrupCard+.tbGrupCard .tbGrup{margin-top:14px}}
 #tabloubot #tbAcum{columns:2 360px;column-gap:32px}
 #tabloubot #tbAcum .tbLinie{break-inside:avoid;padding:3px 0}
 #tabloubot #tbAcum>p{column-span:all}

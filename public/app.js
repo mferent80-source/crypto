@@ -5019,7 +5019,8 @@ function grIngustHtml(f){
     +'<p class="tbSub">Pe test ('+TextRo.cate(r.test.nIndep,"fereastră independentă","ferestre independente")+', nevăzute la alegere): median '+P(r.test.mediana)+' din sumă'+(r.test.medie!=null?' (medie '+P(r.test.medie)+')':'')+', '+Math.round(r.test.pePlus*100)+'% pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+TextRo.cate(Math.round(r.test.perechiZi),"pereche","perechi")+'/zi. Ce s-a întâmplat, nu o promisiune.</p>'+grUrmHtml()+'</div>';
 }
 // v100.90 (I-514, Busola 1.38): intervalul măsurat de Busola pe 4h, sub propunerea fișei - pentru comparație, nu în locul ei (lățimea e pe spot; gridul pierde oricum, mai larg pierde mai puțin); lipsă ⇒ nimic
-function grBusolaFisaHtml(f,i){try{if(typeof Busola==="undefined")return "";var r=Busola.randFisa(Busola.rezumat(),f.simbol,Date.now(),function(x){return grPret(x,i)});return r?'<p class="tbSub grBusolaFisa">'+escapeHtml(r.text)+'</p>':""}catch(e){return ""}}
+function grBusolaFisaHtml(f,i){try{if(typeof Busola==="undefined")return "";var st=GridProba.setarePropusa(f)||f.setare,r=Busola.randFisa(Busola.rezumat(),f.simbol,Date.now(),function(x){return grPret(x,i)},st?{jos:st.jos,sus:st.sus}:null);   /* v100.92 (I-524): propunerea fișei față de intervalul Busolei */
+  return r?'<p class="tbSub grBusolaFisa">'+escapeHtml(r.text)+(r.comparatie?' <span class="'+(r.raport<-0.1?"tbWarn":"")+'">· '+escapeHtml(r.comparatie)+'</span>':'')+'</p>':""}catch(e){return ""}}
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
 function grRandSumaMaxima(f){
@@ -5459,6 +5460,22 @@ function jtRender(){
       +'<textarea class="jtNota" data-id="'+escapeHtml(t.id)+'" rows="2" placeholder="De ce am intrat, ce am simțit, ce aș face altfel…">'+escapeHtml(note[t.id]||"")+'</textarea></div>';
   }).join("")+(l.length>arata?'<button type="button" class="stBtn jtMai" data-action-click="jtArataMai()">Arată încă '+Math.min(30,l.length-arata)+' (ai văzut '+arata+' din '+l.length+')</button>':"");
 }
+// v100.92 (I-519): verdictul rămâne la vedere (lipicios sub bara de sus - înălțimea ei se MĂSOARĂ, nu se presupune) și, pe telefon
+// (sub 600 px), secțiunile fișei stau pliate sub titlul lor, în afară de „Setările de pus în Pionex”; ce deschide el rămâne deschis la redesenare
+var grPliere={};
+function grPliabil(t){t=String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").trim();return !!t&&!/^Setările de pus în Pionex/.test(t)}
+function grSusMasoara(){var s=0;[".topStatus",".tabs"].forEach(function(sel){var el=document.querySelector(sel);if(!el)return;var cs=getComputedStyle(el);if(cs.position!=="sticky"||cs.display==="none")return;s=Math.max(s,(parseFloat(cs.top)||0)+el.getBoundingClientRect().height)});return s}
+function grPliazaPeTelefon(box){
+  var gs=$("gridset");if(gs)gs.style.setProperty("--grSus",Math.round(grSusMasoara()+8)+"px");
+  if(!box||!window.matchMedia||!window.matchMedia("(max-width:600px)").matches)return;
+  box.querySelectorAll(".tbBloc,.grPoarta").forEach(function(s){
+    var cap=s.querySelector(":scope>.tbBlocCap,:scope>.grPoartaCap"),t=cap&&cap.querySelector("h4,b");
+    if(!cap||!t||!grPliabil(t.textContent))return;
+    s.classList.add("grPliabil");s.classList.toggle("grPliat",!grPliere[t.textContent]);
+    cap.setAttribute("data-action-click","grPliereComuta(this)");cap.setAttribute("role","button");cap.setAttribute("tabindex","0");
+  });
+}
+function grPliereComuta(cap){var s=cap&&cap.closest(".grPliabil"),t=s&&cap.querySelector("h4,b");if(!s)return;s.classList.toggle("grPliat");grPliere[t?t.textContent:""]=!s.classList.contains("grPliat")}
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
   if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
@@ -5519,7 +5536,7 @@ function renderGrid(){
     +'<li>Când alertele Radarului anunță «gata liniștea», aș închide botul: după mișcare gridul iese cel mai rău.</li>'
     +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")
     +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Gridul a ieșit în medie pe minus când l-am măsurat pe 30 de monede; ce s-a dovedit e să nu-l pornești după mișcare.</p></div>';
-  box.innerHTML=h;
+  box.innerHTML=h;grPliazaPeTelefon(box);   /* v100.92 (I-519) */
   grProbDeseneaza(f);   // v100.47
 }
 
@@ -6005,12 +6022,14 @@ function tbDeseneazaSemafor(b){
 function tbCheieBusola(b){return b.simbolPionex||TabloBot.simboluri(b.baza,b.quote).pionex}
 var tbPazaKv={la:0,inLucru:false,boti:{}};
 function tbPazaAdu(){if(tbPazaKv.inLucru||Date.now()-tbPazaKv.la<5*60000)return;tbPazaKv.inLucru=true;getJSON("/api/istoric-bot?action=paza").then(function(d){tbPazaKv.boti=d&&d.paza&&d.paza.boti||{};if(tbPanouVizibil()&&tbStare.bot)tbDeseneazaExtra(tbStare.bot)}).catch(function(){}).then(function(){tbPazaKv.la=Date.now();tbPazaKv.inLucru=false})}
+// v100.92 (I-517): titlul unui grup din „Pe zi, la închidere, ce știm”
+function tbGrup(t){return '<p class="tbGrup">'+escapeHtml(t)+'</p>'}
 function tbBusolaLinie(b){
   if(typeof Busola==="undefined"||!b)return "";
   tbPazaAdu();Busola.incarca(window.fetch.bind(window),Date.now()).then(function(nou){if(nou&&tbPanouVizibil()&&tbStare.bot)tbDeseneazaExtra(tbStare.bot)});
-  var e=Busola.eticheta(Busola.rezumat(),tbCheieBusola(b),Date.now(),tbPazaKv.boti[b.id]);
-  if(!e)return '<div class="tbLinie"><span>Busola, pe 4h</span><b class="tbSubVal">'+(Busola.nuRaspunde()?"Busola nu răspunde":"aștept rezumatul…")+'</b></div>';   /* v100.91 (ideea 2): eșecul nu mai arată ca așteptarea */
-  return '<div class="tbLinie"><span>Busola, pe 4h <span class="tbSub">'+escapeHtml(e.nota)+'</span></span><b class="'+(e.nivel==="atentie"?"tbWarn":e.nivel==="nemasurat"?"tbSubVal":"")+'">'+escapeHtml(e.text)+'</b></div>';
+  // v100.92 (I-518): cartela unică a Busolei - starea cu „de când”, intervalul ei față de gridul botului; aceeași cartelă în fișă și pe Acasă
+  return Busola.htmlCartela(Busola.cartela(Busola.rezumat(),tbCheieBusola(b),Date.now(),{kv:tbPazaKv.boti[b.id],pret:function(x){return grPret(x,null)},prop:{jos:botiNr(b.gridJos),sus:botiNr(b.gridSus)}}),escapeHtml)
+    ||'<div class="tbLinie"><span>Busola, pe 4h</span><b class="tbSubVal">'+(Busola.nuRaspunde()?"Busola nu răspunde":"aștept rezumatul…")+'</b></div>';   /* v100.91 (ideea 2): eșecul nu mai arată ca așteptarea */
 }
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
@@ -6029,14 +6048,18 @@ function tbDeseneazaExtra(b){
   }
   // 2) pe zi  3) la inchidere  4) liniste + laborator  5) jurnal
   var z=TabloExtra.grileVsCosturi(b,Date.now()),q=TabloExtra.dacaInchizi(b),h="";
-  h+=tbBusolaLinie(b);
+  // v100.92 (I-517): trei grupuri - Azi (grile și costuri), Dacă închizi acum (banii), Contextul (Busola, liniștea, laboratorul, long simplu, jurnalul)
+  h+='<div class="tbGrupCard">'+tbGrup("Azi");
   h+=linie("Grile, ultimele 24 h",z.grile24h==null?"—":botiBan(z.grile24h),botiClasa(z.grile24h),z.umpleri24h!=null?TextRo.cate(z.umpleri24h,"tranzacție","tranzacții"):"");
   h+=linie("Comisioane pe zi",z.comisionZi==null?"—":botiBan(z.comisionZi),"tbSubVal","medie de la pornire");
   h+=linie("Funding pe zi",z.fundingZi==null?"—":botiBan(z.fundingZi),z.fundingMananca?"bad":"tbSubVal",z.fundingMananca?"mănâncă tot câștigul din grile":"medie de la pornire");
   h+=linie("Grile − costuri, pe zi",z.netZi==null?"—":botiBan(z.netZi),botiClasa(z.netZi));
+  h+='</div><div class="tbGrupCard">'+tbGrup("Dacă închizi acum");
   h+='<div class="tbLinie tbLinieTotal"><span>Dacă îl închizi acum, iei</span><b class="'+botiClasa(q.iei!=null&&botiNr(b.investit)!=null?q.iei-botiNr(b.investit):null)+'">'+escapeHtml(q.iei==null?"—":q.iei.toFixed(2)+" USDT")+'</b></div>';
   h+=linie("Comisionul de închidere",q.comisionInchidere==null?"—":botiBan(-q.comisionInchidere),"tbSubVal");
   h+=linie("Prețul la care botul e pe zero",q.pretZero==null?"—":grPret(q.pretZero,null),"",q.distantaZeroPct==null?"":(q.distantaZeroPct>=0?"+":"")+P(q.distantaZeroPct)+" de aici");
+  h+='</div><div class="tbGrupCard">'+tbGrup("Contextul");
+  h+=tbBusolaLinie(b);
   if(f&&f.liniste){var L=f.liniste;h+=linie("Liniștea (fișa)",!L.linisteAcum?"acum e mișcare":!L.suficient?"prea puține perioade":L.k+" din "+L.n+" au mai ținut 2 zile ("+P(L.p)+")",!L.linisteAcum?"tbWarn":"","frecvență, nu promisiune")}
   var lab=grLaborator&&grLaborator.date,qm=lab&&Array.isArray(lab.intrebari)?lab.intrebari.find(function(x){return x.id==="miscare"}):null;
   if(qm)h+=linie("Laboratorul: după mișcare vs liniște",P(qm.A&&qm.A.pePlus)+" vs "+P(qm.B&&qm.B.pePlus)+" pe plus",qm.verdict==="dovedit"?"good":"tbSubVal",qm.verdict==="dovedit"?"DOVEDIT":"n-am aflat încă");
@@ -6044,6 +6067,7 @@ function tbDeseneazaExtra(b){
   if(vp&&vp.pozitieSimpla!=null)h+=linie(b.directie==="long"||b.directie==="short"?"Un "+b.directie+" simplu, aceeași sumă și levier":"Fără bot (neutru)",botiBan(vp.pozitieSimpla),botiClasa(vp.pozitieSimpla),vp.diferenta!=null?"gridul "+(vp.diferenta>=0?"a adus ":"a pierdut ")+Math.abs(vp.diferenta).toFixed(2)+" față de el":"");
   var j=TabloExtra.legaturaJurnal(grJurnalCitit(),b);
   h+=j?linie("Din jurnal","pornit la "+((GR_NIVEL[j.verdict]||["?"])[0])+", proba zicea mediana "+P(j.mediana),"","acum "+(botiNr(b.profitTotal)!=null&&botiNr(b.investit)?P(botiNr(b.profitTotal)/botiNr(b.investit)):"—")):linie("Din jurnal","nelegat","tbSubVal","n-ai notat fișa la pornire");
+  h+='</div>';
   el2.innerHTML=h;
 }
 // Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.

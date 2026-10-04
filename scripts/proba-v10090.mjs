@@ -166,7 +166,8 @@ await test("(5) pagina: rândul Busolei sub „Număr de grile” în fișă (gr
   assert.ok(/^function grBusolaFisaHtml\(f,i\)\{/m.test(a), "lipsește grBusolaFisaHtml"); assert.ok(/\+grBusolaFisaHtml\(f,i\)\s*\n\s*\+grRand\("Levier"/.test(a), "rândul nu e sub „Număr de grile”");
   assert.ok(/^function tbCheieBusola\(b\)\{return b\.simbolPionex\|\|TabloBot\.simboluri\(b\.baza,b\.quote\)\.pionex\}/m.test(a), "lipsește tbCheieBusola (tickerul Pionex, nu numele botului)");
   assert.ok(/^function tbBusolaLinie\(b\)\{/m.test(a) && /^function tbPazaAdu\(\)\{/m.test(a) && a.includes('getJSON("/api/istoric-bot?action=paza")'), "lipsește tbBusolaLinie / tbPazaAdu");
-  assert.ok(a.includes("Busola.eticheta(Busola.rezumat(),tbCheieBusola(b),Date.now(),tbPazaKv.boti[b.id])"), "eticheta primește cheia Pionex și KV-ul întreg");
+  /* v100.92 (I-518): cartela unică (Busola.cartela) a luat locul etichetei pe Tablou - aceeași cheie Pionex, același KV întreg */
+  assert.ok(a.includes("Busola.eticheta(Busola.rezumat(),tbCheieBusola(b),Date.now(),tbPazaKv.boti[b.id])") || a.includes("Busola.cartela(Busola.rezumat(),tbCheieBusola(b),Date.now(),{kv:tbPazaKv.boti[b.id],"), "eticheta/cartela primește cheia Pionex și KV-ul întreg");
   const ex = a.slice(a.indexOf("function tbDeseneazaExtra(b){"), a.indexOf("\nfunction tbDeseneazaBanii(")); assert.ok(/h\+=tbBusolaLinie\(b\);/.test(ex), "eticheta nu e în tbDeseneazaExtra");
   const po = a.slice(a.indexOf("function tbDeseneazaPortofoliu(){"), a.indexOf("\n// v97.8")); assert.ok(po.includes("Busola, pe 4h") && po.includes("Busola.liniaBoti(") && po.includes("tbCheieBusola(b)") && po.includes("k.stare===s.stare"), "portofoliul: cheia Pionex + „de” doar pe aceeași stare");
 });
