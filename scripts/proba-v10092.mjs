@@ -207,11 +207,12 @@ await test("(D) I-526 dimineața: rândul-verdict e PRIMUL (înaintea rândurilo
 
 // ======== sarcina 10: versiunile ========
 await test("(E) versiunile: pagina v100.92 (BUILD_INFO, versiune.js, sw, index ×4, package.json 100.92.0, lanțul cu v10092), colectorul v101.62", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(bi.version, "v100.92"); assert.match(bi.badge, /^v100\.92 · /);
-  assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "v100.92";'), "versiune.js");
-  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-92";'), "sw.js");
-  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.92/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.91/.test(ix), "index.html mai are v100.91");
-  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.92.0"); assert.ok(/npm run test:v10091 && npm run test:v10092( && |")/.test(pk), "lanțul de teste");   /* v100.93: lanțul continuă (v10093, arbori) */
+  /* v100.93: versiunea a mers mai departe - proba cere „de la 92 în sus”, aceeași peste tot (proba v10093 pină 93 exact) */
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[2-9]$/); assert.match(bi.badge, /^v100\.9[2-9] · /);
+  assert.ok(/export const VERSIUNE = "v100\.9[2-9]";/.test(citeste("functions", "_shared", "versiune.js")), "versiune.js");
+  assert.ok(/const CACHE="crypto-radar-v100-9[2-9]";/.test(citeste("public", "sw.js")), "sw.js");
+  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.9[2-9]/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.91/.test(ix), "index.html mai are v100.91");
+  const pk = citeste("package.json"); assert.match(JSON.parse(pk).version, /^100\.9[2-9]\.0$/); assert.ok(/npm run test:v10091 && npm run test:v10092( && |")/.test(pk), "lanțul de teste");   /* v100.93: lanțul continuă (v10093, arbori) */
   assert.ok(/VERSIUNE_COLECTOR = "v101\.6\d"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.62");
 });
 
