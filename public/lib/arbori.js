@@ -49,7 +49,7 @@ var Arbori = (function () {
     var m = modele && modele["rezultat-t212"]; if (!m || m.versiune !== VERSIUNE) return null;
     var por = nr(t && t.pornit); if (por === null || (nr(m.la) !== null && m.la > por)) return null;
     var f = Retea.intrareCumparare(t, bare, qqq, ist); if (!f) return null;
-    var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n };
+    var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n, inPlaja: f.inPlaja };
   }
   return { VERSIUNE: VERSIUNE, prezice: prezice, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, pentruActiune: pentruActiune, pentruCumparare: pentruCumparare };
 })();

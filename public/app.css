@@ -2229,3 +2229,8 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .t212File .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line);font-weight:700}
 .t212File .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #tabloubot .tbTodoRand p.bad{color:var(--bad)}
+
+/* v100.96: randul-rezumat al modelelor (sub semaforul Tabloului si sub verdictul fisei) + pe randul pozitiei T212 */
+.tbRezumat{margin:.45rem 0 0;padding:.45rem .65rem;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.93rem;line-height:1.4;color:var(--text,#e6edf3)}
+.tbRezumat[hidden]{display:none}
+.t212Modele{display:block;white-space:nowrap;margin-top:.15rem}

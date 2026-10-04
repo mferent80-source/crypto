@@ -12,6 +12,7 @@ import { incarcaModulele, simboluri, citesteBare, randuriMoneda, reperRand, rand
 import { tickere, citesteZile, citesteTradeuri, randuriActiune, reperActiune, randuriTradeuri, ORIZONT_T212, QQQ } from "./date-t212.mjs";   // v100.94 (L2): țintele pe acțiuni T212
 import { luniDeTest, judecaLuna, modelFinal, verificare, optiuniLuni, luna } from "./verifica.mjs";
 import { antreneaza, HIPER, porneste } from "./model.mjs";
+import { hashCod } from "./hash-cod.mjs";
 
 const COD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ARG = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 && process.argv[i + 1] !== undefined ? process.argv[i + 1] : d; };
@@ -28,7 +29,7 @@ const BACKEND = await porneste();
 if (BACKEND !== "wasm") { spune("TensorFlow nu rulează pe WebAssembly (" + BACKEND + "): nu antrenez, modelele de ieri rămân"); process.exit(2); }
 // revizia finală (I2, M8): cheia CODULUI (versiunea, hiperparametrii și fișierele rețelei) păstrează modelele de ieri; lunile judecate mai
 // cer și AMPRENTA DATELOR (luna primei bare a fiecărei monede și a BTC) - cât se umple istoria de 400 de zile, lunile se refac
-const COD_HASH = crypto.createHash("sha1").update(["public/lib/retea.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs", "retea/date-t212.mjs"].map((f) => fs.readFileSync(path.join(COD, f), "utf8")).join("\n")).digest("hex").slice(0, 12);
+const COD_HASH = hashCod(COD, ["public/lib/retea.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs", "retea/date-t212.mjs"]).slice(0, 12);   /* v100.96 (ideea 3): fără texte - vezi hash-cod.mjs */
 const M = incarcaModulele(COD), CHEIE = M.R.VERSIUNE + "|" + JSON.stringify(HIPER) + "|" + COD_HASH, acum = Date.now();
 const OPT = { antreneaza, prezice: M.R.prezice, versiune: M.R.VERSIUNE, ascunse: HIPER.ascunse, seminte: Number(ARG("seminte", HIPER.seminte)), maxRanduri: Number(ARG("max-randuri", 40000)) };
 const vechi = citeste(path.join(DATA, "modele.json")), modele = vechi && vechi.cheie === CHEIE && vechi.modele ? vechi.modele : {};

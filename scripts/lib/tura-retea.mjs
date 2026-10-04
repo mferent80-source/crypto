@@ -61,7 +61,7 @@ export async function turaRetea(d) {
         // revizia (🟡3): rotație - niciodată aduse (vechime 0) și cele mai vechi fișiere întâi, ca lista lui și acțiunile tranzacționate să ajungă și ele; QQQ mereu
         const tk = await d.tickereZile(), vech = (x) => (d.vechimeZile ? Number(d.vechimeZile(x)) || 0 : 0);
         const lista = ["QQQ_US_EQ"].concat(tk.filter((x) => x !== "QQQ_US_EQ").sort((a, b) => vech(a) - vech(b))).slice(0, ZILE_PE_NOAPTE); let ok = 0;
-        for (const t of lista) { try { const r = await d.cereZile(t); if (r && Array.isArray(r.randuri) && r.randuri.length) { d.scrieZile(t, r.randuri); ok++; } } catch (e) { d.jurnal("zile: " + t, e.message); } await d.pauza(1500); }   /* revizia (🔵11): pauza și după un ticker picat (429-ul Yahoo nu se rostogolește) */
+        for (const t of lista) { try { const r = await d.cereZile(t); if (r && Array.isArray(r.randuri) && r.randuri.length && d.scrieZile(t, r.randuri) !== false) ok++; }   /* v101.66 (revizia 🔵10): o scriere picată nu se numără */ catch (e) { d.jurnal("zile: " + t, e.message); } await d.pauza(1500); }   /* revizia (🔵11): pauza și după un ticker picat (429-ul Yahoo nu se rostogolește) */
         d.jurnal("zile: " + ok + " din " + cate(lista.length, "ticker", "tickere") + " cu bare zilnice");
         const tr = await d.tradeuri(); d.scrieTradeuri(tr); d.jurnal("zile: " + cate(tr.length, "pereche închisă", "perechi închise") + " pentru rezultatul tău pe acțiuni");
       } catch (e) { d.jurnal("zile", e.message); }

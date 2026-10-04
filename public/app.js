@@ -5499,6 +5499,7 @@ function renderGrid(){
   // v99: setarile de pus = ce PROPUNE fisa (gridul des 0,3 % in liniste, cand proba n-o respinge; altfel platoul probei)
   var st=GridProba.setarePropusa(f)||f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive,T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
   var h='<div class="grVerdict '+niv[1]+'" data-action-click="grVerdictComuta()"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>'+(mot.length>1?'<ul class="grLista grListaJos">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"");   /* revizia Opus (04.10): pe telefon motivele stau sub caseta lipicioasă (CSS) - caseta ține doar eticheta și primul motiv */
+  h+='<p id="grRezumat" class="tbRezumat" hidden></p>';   /* v100.96: rândul modelelor sub verdict (umplut de grProbDeseneaza) */
   h+=grPoartaHtml(f);
   if(typeof grBiletTu==="function")h+=grBiletTu(f);
   // v100.64 (I-491): Busola - verdictul ei de miscare pe 4h si ce a facut gridul dupa el (masurat). Avertizeaza, nu refuza.
@@ -5747,6 +5748,7 @@ function grProbDeseneaza(f){
   reteaAdu(function(){if(grStare.fisa)renderGrid()});grReteaBtc();
   var zar=Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}),rt=null,rtA=null;try{rt=reteaM.m&&grProb.bare?Retea.pentruBot(reteaM.m,grProb.bare,grProb.o,grRetea.btc):null}catch(e){rt=null}
   try{rtA=reteaM.a&&grProb.bare?Arbori.pentruBot(reteaM.a,grProb.bare,grProb.o,grRetea.btc):null}catch(e){rtA=null}   /* v100.93: 🌳 pe aceleași bare și niveluri */
+  var rz=$("grRezumat");if(rz){var tz=null;try{tz=Retea.rezumat(reteaM.m,rt,zar,{acum:Date.now(),dir:dir},rtA&&reteaM.a?{modele:reteaM.a,rt:rtA}:null)}catch(e){tz=null}rz.hidden=!tz;rz.textContent=tz||""}   /* v100.96: rândul modelelor sub verdict */
   el.innerHTML='<div class="tbBloc grProbBloc"><h4>🎲 Ce s-a întâmplat în trecut, cu gridul propus</h4><p class="tbSub">acum: '+escapeHtml(Probabilitati.ETICHETE[rez.stare]||rez.stare)+' · '+Math.round(rez.bare/24)+' de zile de bare de 1 h</p>'
     +zar.map(tbProbRandHtml).join("")
     +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei, în situații ca acum — nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra.</p>'+reteaHtml(rt,zar,{acum:Date.now()},rtA)+'</div>';   /* v100.71 (I2); v100.80: 🧠 sub nota lui 🎲 */
@@ -5765,6 +5767,9 @@ function grReteaPoartaHtml(f,p){var m=reteaM.m,st=grProbSetare(f);if(typeof Rete
   var pzA=null,vdA=null;try{pzA=reteaM.a?Arbori.pentruPornire(reteaM.a,t,grProb.bare,grRetea.btc,p.trades):null;vdA=pzA?Arbori.verdict(reteaM.a.rezultat,Date.now()):null}catch(e){pzA=null;vdA=null}   /* v100.93: 🌳 lângă 🧠, aceleași intrări */
   var ll=Retea.textPornire(pz,vd,pzA,vdA).split("\n");
   return ll.map(function(x){return '<p class="tbSub grRetea">'+(ll.length===1?'🧠 ':'')+escapeHtml(x)+'</p>'}).join("")}catch(e){return ""}}
+// v100.96 (el: „nu le văd pe toate, scoate-le în evidență”): rândul-rezumat al modelelor sub semafor (Retea.rezumat), ținut în tbProb.rezumat
+// de tbDeseneazaProb; cartela 🎲 e deschisă implicit (index.html). Fără cifre rândul stă ascuns
+function tbRezumatHtml(){var t=tbProb&&tbProb.rezumat;return '<p id="tbRezumatModele" class="tbRezumat"'+(t?'':' hidden')+'>'+escapeHtml(t||"")+'</p>'}
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
   var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;
@@ -5774,6 +5779,8 @@ function tbDeseneazaProb(b){
   if(rez.gol){if(sub)sub.textContent="încă nu se pot socoti";el.innerHTML='<p class="tbSub">'+escapeHtml(rez.gol)+'.</p>';return}
   var l=Probabilitati.randuri(rez,t.cal),P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))};
   var vh=tbProbVechi(rez);
+  tbProb.rezumat=null;try{tbProb.rezumat=typeof Retea!=="undefined"&&!vh?Retea.rezumat(reteaM.m,rez.retea||null,l,{acum:Date.now(),dir:b.directie},rez.arbori&&reteaM.a?{modele:reteaM.a,rt:rez.arbori}:null):null}catch(e){tbProb.rezumat=null}   /* v100.96: rezumatul de sub semafor */
+  var rz0=$("tbRezumatModele");if(rz0){rz0.hidden=!tbProb.rezumat;rz0.textContent=tbProb.rezumat||""}
   if(sub)sub.textContent=(vh?"⚠ cifre de acum "+vh+" h (colectorul nu le-a mai reînnoit) · stare: ":"acum: ")+(Probabilitati.ETICHETE[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
   el.innerHTML=(l.length?l.map(tbProbRandHtml).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
     +tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>'+reteaHtml(rez.retea,l,{acum:Date.now(),pornire:rez.retea&&rez.retea.pornire},rez.arbori);   /* v100.80: 🧠 sub nota lui 🎲 */
@@ -5997,7 +6004,7 @@ function tbDeseneazaSemafor(b){
   cons.altaVoce=Consiliu.altaVoce(ck&&ck.cons,cons);   // revizia 01.10 (I2): cand Discord / pagina alerts spun altceva, se vede aici
   var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol&&!tbProbVechi(tp.rez)?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
   var r0=el.querySelector(".tbConsRest");if(r0)tbConsRestDeschis=!!r0.open;   // „Restul” ramane deschis la reimprospatare
-  el.innerHTML=h+tbConsHtml(cons);$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;
+  el.innerHTML=h+tbConsHtml(cons)+tbRezumatHtml();$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;   /* v100.96: rândul modelelor sub semafor */
   if(mot)mot.hidden=true;
   // "Acum, concret": cifra mare + eticheta + actiunea; detaliile (si setarile de copiat ale gridului propus) sub "detalii"
   var gmd=muta?null:SemnaleBot.gridMaiDes(b,f),T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};

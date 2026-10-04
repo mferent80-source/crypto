@@ -31,9 +31,13 @@ export function situatiiRetea(pune) {
     "prea puține": [{ ...BB, judecate: 12, independente: 9, verdict: "prea puține" }], "prea puține monede": [{ ...BB, verdict: "prea puține" }],
     "bate rata de bază": [BB], "mai prost": [{ ...BB, verdict: "mai prost" }], "n-am aflat": [{ ...BB, verdict: "n-am aflat" }], "fără cifre": [{ ...BB, brier: null, brierBaza: null, verdict: "n-am aflat" }],
     "cifre mari": [GREU], "cifre mari, mai prost": [{ ...GREU, verdict: "mai prost" }], "cifre mari, n-am aflat": [{ ...GREU, verdict: "n-am aflat" }], "cifre mari, prea puține monede": [{ ...GREU, verdict: "prea puține" }] };
+  // v100.96 (🔵7 + ideea 1): textBusola dă 1–2 rânduri; și cu `simboluri`/`asteptare` (Busola 1.43.0), și fără (bilanț vechi)
+  BUS["cu monede și așteptare"] = [{ ...BB, simboluri: 12, asteptare: 7 }, 2]; BUS["cifre mari, cu monede și așteptare"] = [{ ...GREU, simboluri: 12, asteptare: 123 }, 12];
+  BUS["prea puține monede (9, cere 10)"] = [{ ...BB, verdict: "prea puține", simboluri: 9 }]; BUS["o predicție, o monedă"] = [{ ...BB, judecate: 1, independente: 1, simboluri: 1, asteptare: 1 }, 1];
+  BUS["nimic judecat, 17 în așteptare, Radarul nu trimite"] = [{ ...ZERO, asteptare: 17 }, 0]; BUS["nimic judecat, 7 în așteptare, Radarul trimite 2"] = [{ ...ZERO, asteptare: 7 }, 2];
   for (const [sit, [r, tr]] of Object.entries(BUS)) {
-    pune("busola: " + sit, "retea", "subsol", { t: R.textBusola({ la: ACUM - 3600000, retea: r, trimise: tr }, ACUM) }, [["t", "raport"]]);
-    pune("busola: " + sit + ", bilanț vechi", "retea", "subsol", { t: R.textBusola({ la: ACUM - 20 * 864e5, retea: r, trimise: tr }, ACUM) }, [["t", "raport"]]);
+    R.textBusola({ la: ACUM - 3600000, retea: r, trimise: tr }, ACUM).forEach((l, i) => pune("busola: " + sit + " · rândul " + (i + 1), "retea", "subsol", { t: l }, [["t", "raport"]]));
+    R.textBusola({ la: ACUM - 20 * 864e5, retea: r, trimise: tr }, ACUM).forEach((l, i) => pune("busola: " + sit + ", bilanț vechi · rândul " + (i + 1), "retea", "subsol", { t: l }, [["t", "raport"]]));
   }
   // v100.93 (arborii, a treia părere 🌳): aceleași rânduri cu amândouă familiile - rețeaua dovedită, arborii pe toate stările (+ „față de 🧠”
   // în subsol, pe plus și pe minus); direcția cu amândouă nedovedite („cât dat cu banul” o singură dată); doar arborii (rețeaua lipsă);
@@ -47,6 +51,8 @@ export function situatiiRetea(pune) {
   for (const [sit, v] of Object.entries(VER)) {
     const ma = modeleDe(R.VERSIUNE_ARBORI, v, sit === "dovedită" ? { n: 300, bss: 0.012, ic: [0.003, 0.021] } : { n: 300, bss: -0.008, ic: [-0.02, 0.004] });
     R.randuri(mR, RT, ZAR, { acum: ACUM, pornire: PZ }, { modele: ma, rt: RA }).forEach((r) => puneRand("arborii: " + sit + " · " + r.cod, r));
+    // v100.96 (el: „scoate modelele în evidență”): rezumatul permanent de lângă verdict (Tablou/fișă), long și short, cu și fără arbori
+    for (const dir of ["long", "short"]) { pune("rezumat: " + sit + " · " + dir, "retea", "rezumat", { t: R.rezumat(mR, RT, ZAR, { acum: ACUM, dir }, { modele: ma, rt: RA }) }, [["t", "raport"]]); pune("rezumat: " + sit + " · " + dir + ", doar rețeaua", "retea", "rezumat", { t: R.rezumat(mR, RT, ZAR, { acum: ACUM, dir }, null) }, [["t", "raport"]]); }
     R.subsol(mR, ma).filter((l) => /^🌳/.test(l)).forEach((l, i) => pune("arborii: " + sit + " · verificarea " + (i + 1), "retea", "arbori.subsol", { t: l }, [["t", "raport"]]));
     R.textPornire(PZ, R.verdict(mR.rezultat, ACUM), { p: 0.39, rata: 0.524 }, R.verdictArbori(ma.rezultat, ACUM)).split("\n").forEach((l, i) => pune("arborii: " + sit + " · poarta " + (i + 1), "retea", "arbori.textPornire", { t: l }, [["t", "deCe"]]));
   }
@@ -68,6 +74,9 @@ export function situatiiRetea(pune) {
   for (const [sit, v] of Object.entries(VER)) {
     const ma = modeleT(R.VERSIUNE_ARBORI, v, sit === "dovedită" ? { n: 300, bss: 0.012, ic: [0.003, 0.021] } : { n: 300, bss: -0.008, ic: [-0.02, 0.004] });
     R.randuri(mRT, RT_T, ZAR_T, OT, { modele: ma, rt: RA_T }).forEach((r) => puneRand("acțiuni: " + sit + " · " + r.cod, r));
+    // v100.96: rândul poziției T212 (scurt) + poarta cu costul în afara perechilor lui (ideea 4)
+    pune("rezumat: acțiuni " + sit, "retea", "rezumat", { t: R.rezumat(mRT, RT_T, null, { acum: ACUM, cod: "directie5", scurt: true }, { modele: ma, rt: RA_T }) }, [["t", "raport"]]);
+    R.randuri(mRT, RT_T, ZAR_T, { ...OT, pornire: { ...OT.pornire, inPlaja: false } }, { modele: ma, rt: RA_T }).filter((r) => r.cod === "rezultat-t212").forEach((r) => puneRand("acțiuni: " + sit + " · cost în afara plajei", r));
     R.subsol(mRT, ma, { actiuni: true }).filter((l) => /^🌳/.test(l)).forEach((l, i) => pune("acțiuni: " + sit + " · verificarea " + (i + 1), "retea", "arbori.subsol", { t: l }, [["t", "raport"]]));   /* revizia 🔵8: subsolul pe piața paginii */
   }
   R.randuri(modeleT(R.VERSIUNE, v0), RT_T, ZAR_T, OT, { modele: modeleT(R.VERSIUNE_ARBORI, v0), rt: RA_T }).forEach((r) => puneRand("acțiuni: amândouă nu bat reperul · " + r.cod, r));

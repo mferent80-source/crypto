@@ -478,6 +478,20 @@ function gridDeschideMoneda(m) {
   if (typeof gridCalculeaza === "function") gridCalculeaza("fortat");
 }
 
+// v100.96 (el: „nu le văd pe toate, scoate-le în evidență”): pe rândul poziției, sub trend, direcția pe 5 zile de bursă după 🧠 · 🌳 și
+// starea lor (Retea.rezumat scurt), pe barele ÎNCHISE ale acțiunii (t212.bare), cu stopul și ținta poziției; fără modele sau bare nimic
+function t212ModeleRand(p) {
+  try {
+    if (typeof Retea === "undefined" || typeof reteaM === "undefined" || !(reteaM.m || reteaM.a)) return "";
+    var b = t212.bare[p.ticker], q = t212.bare.QQQ_US_EQ || null, j = t212Jurnal(), inchise = j ? j.p.inchise : [];
+    if (!b || b.length < 251) return "";
+    var n = p.niv, o = { acum: Date.now(), pret: p.pret, stop: n ? n.stopPozitie : null, tinta: p.plan && p.plan.tinta > 0 ? p.plan.tinta : n ? n.tintaPozitie : null, ticker: p.ticker };
+    var rt = reteaM.m ? Retea.pentruActiune(reteaM.m, b, o, q, inchise) : null, ra = null;
+    try { ra = reteaM.a && typeof Arbori !== "undefined" ? Arbori.pentruActiune(reteaM.a, b, o, q, inchise) : null; } catch (e) { ra = null; }
+    var t = Retea.rezumat(reteaM.m, rt, null, { acum: Date.now(), cod: "directie5", scurt: true }, ra && reteaM.a ? { modele: reteaM.a, rt: ra } : null);
+    return t ? '<span class="t212Mic t212Modele" title="Prețul mai sus peste 5 zile de bursă: 🧠 rețeaua · 🌳 arborii">' + escapeHtml(t) + '</span>' : "";
+  } catch (e) { return ""; }
+}
 function t212RandPozitie(p) {
   var niv = T212_NIVEL[p.sem.nivel] || T212_NIVEL["fara-date"], n = p.niv, tk = escapeHtml(p.ticker), pl = p.plan || {}, des = !!t212.deschis[p.ticker];
   var pctPret = p.pret / p.pretMediu - 1, tr = p.st.trend.dir;
@@ -489,7 +503,7 @@ function t212RandPozitie(p) {
     + '<td class="c-rez"><b class="' + t212Cls(p.ppl) + '">' + t212Lei(p.ppl) + '</b><span class="t212Mic">' + (p.pctLei !== null ? t212Pct(p.pctLei) + ' · preț ' + t212Pct(pctPret) : 'preț ' + t212Pct(pctPret)) + '</span></td>'
     + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' : '—') + '</td>'
     + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + t212Usd(n.tintaPozitie) + '</span><span class="t212Mic">' + t212Pct(n.tintaPozitie / p.pret - 1) + '</span>' : '—') + '</td>'
-    + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b></td>'
+    + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + t212ModeleRand(p) + '</td>'
     + '<td class="c-pond">' + (p.pond !== null ? Math.round(p.pond * 100) + '%<span class="t212MiniBara"><i class="' + w + '" style="width:' + Math.min(100, p.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—') + '</td>'
     + '<td class="c-plan">' + (p.plan ? '<span class="t212PlanChip ok">✓ ' + escapeHtml(planTxt) + '</span>' : '<span class="t212PlanChip">fără plan</span>') + '</td>'
     + '</tr>';

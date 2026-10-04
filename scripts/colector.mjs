@@ -33,12 +33,12 @@ import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs"; 
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { bilantDinBusola } from "./lib/din-busola.mjs";   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠
-import { unesteZile } from "../retea/date-t212.mjs";   // v101.64 (L2, revizia 🟡6): barele zilnice se adună peste 2 ani
+import { unesteZile, randuriInchise } from "../retea/date-t212.mjs";   // v101.64 (L2, revizia 🟡6): barele zilnice se adună peste 2 ani
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.65";
+const VERSIUNE_COLECTOR = "v101.66";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1013,7 +1013,7 @@ async function turaIdeiZi() {
     m.ideiZi = zi;
     // v101.65 (ideea 2): universul zilnic întreg - barele aduse oricum pentru idei (Nasdaq-100 + ale lui, 2 ani) intră în data/retea/zile,
     // unite peste cele vechi; rotația de noapte (după vechimea fișierului) trece singură la ceilalți. După idei: o eroare aici nu lasă ziua fără ele
-    try { let nz = 0; for (const [tk, rd] of randuriIdei) if (scrieZileTicker(tk, rd)) nz++; jurnal("idei: bare zilnice scrise pentru rețea:", cate(nz, "ticker", "tickere"), "din", randuriIdei.size); } catch (e) { jurnal("idei: barele zilnice", e.message); }
+    try { let nz = 0; for (const [tk, rd] of randuriIdei) if (scrieZileTicker(tk, randuriInchise(rd, Date.now(), GridCalcul))) nz++;   /* v101.66 (revizia 🔵11): fără bara în curs */ jurnal("idei: bare zilnice scrise pentru rețea:", cate(nz, "ticker", "tickere"), "din", randuriIdei.size); } catch (e) { jurnal("idei: barele zilnice", e.message); }
   } catch (e) { jurnal("idei ESEC", e.message); }
   ideiInLucru = false;
 }

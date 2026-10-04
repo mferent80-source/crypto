@@ -13,5 +13,7 @@ export function bilantDinBusola(j, trimise) {
   const retea = { judecate: r.judecate, independente: r.independente };
   for (const k of CIFRE) retea[k] = typeof r[k] === "number" && Number.isFinite(r[k]) ? r[k] : null;
   retea.verdict = r.verdict.slice(0, 40);
+  // v101.66 (ideea 1): Busola 1.43.0 exportă și câte monede au intrat în bilanț și câte predicții așteaptă judecata; lipsesc = rămân lipsă
+  for (const k of ["simboluri", "asteptare"]) if (intreg(r[k])) retea[k] = r[k];
   return { la, retea, trimise: intreg(trimise) ? trimise : null };
 }

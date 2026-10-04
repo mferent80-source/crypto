@@ -141,7 +141,7 @@ await test("colector: o data pe ora pe bot, jurnalul la 4 h, judecata dupa orizo
 
 await test("Tablou: sectiunea probabilitatilor (ascunsa fara server) cu banda IC, adusa din prob + calibrare, randul in Consilier", () => {
   const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8"), css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
-  assert.match(html, /<details class="tbPl" id="tbPl-prob" hidden>/); assert.match(html, /<div id="tbProb"><\/div>/);
+  assert.match(html, /<details class="tbPl" id="tbPl-prob"( open)? hidden>/); assert.match(html, /<div id="tbProb"><\/div>/);
   assert.match(html, /<script src="\/lib\/probabilitati\.js"><\/script>/); assert.match(sw, /"\/lib\/probabilitati\.js"/);
   assert.match(app, /action=prob&bot=/); assert.match(app, /action=calibrare/); assert.match(app, /Probabilitati\.randuri\(/); assert.match(app, /Probabilitati\.rand\(/);
   assert.match(app, /tbProbBanda/); assert.match(css, /\.tbProbBanda\{/); assert.match(app, /c\.sansa/);

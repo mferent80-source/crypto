@@ -15,6 +15,14 @@ export function tickere(rad) { try { return fs.readdirSync(ZILE(rad)).filter((f)
 // barele zilnice ÎNCHISE ale unui ticker (fișierul colectorului: { la, randuri } sau lista brută), normalizate ca pe pagină (GridCalcul.bareBursa scoate ziua în curs)
 export function citesteZile(rad, ticker, G) { try { const j = JSON.parse(fs.readFileSync(path.join(ZILE(rad), ticker + ".json"), "utf8")); return G.bareBursa(Array.isArray(j) ? j : (j && j.randuri) || [], Date.now()); } catch { return []; } }
 // revizia 04.10 (🟡6): barele noi (2 ani de la rută) se unesc cu cele de pe disc, pe `time` (cea nouă câștigă), ca istoria să crească peste 2 ani
+// v101.66 (revizia 🔵11): rândurile brute ale rutei doar până la ultima bară ÎNCHISĂ (GridCalcul.bareBursa lasă deoparte ziua în curs cât
+// bursa e deschisă) - dimineața, cu colectorul pornit în ședință, bara în formare nu intră în istoria rețelei
+export function randuriInchise(randuri, acum, G) {
+  const l = Array.isArray(randuri) ? randuri : [], v = G.bareBursa(l, acum);
+  if (!v.length) return [];
+  const pana = v[v.length - 1].t;
+  return l.filter((x) => x && Number.isFinite(Number(x.time)) && Number(x.time) <= pana);
+}
 export function unesteZile(vechi, noi) {
   const h = new Map(), pune = (l) => { for (const r of (Array.isArray(l) ? l : [])) if (r && Number.isFinite(Number(r.time))) h.set(Number(r.time), r); };
   pune(vechi && !Array.isArray(vechi) ? vechi.randuri : vechi); pune(noi);

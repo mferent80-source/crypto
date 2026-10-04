@@ -85,30 +85,25 @@ await test("(3) tura ideilor scrie barele zilnice aduse dimineața în data/rete
 const BZ = (retea, la) => ({ la: la === undefined ? ACUM - ORA : la, retea });
 const BATE = { judecate: 240, independente: 131, brier: 0.2101, brierBaza: 0.2402, castig: 0.125, icJos: 0.02, icSus: 0.2, verdict: "bate rata de bază" };
 await test("(4a) Retea.textBusola: rândul Busolei pentru „Cum s-a verificat” - nimic judecat (cu câte îi trimite Radarul acum - revizia 🟡5), prea puține cazuri / prea puține monede (🟡2), bate / mai prost / n-am aflat „IC cuprinde 0” (🟡3), verdict necunoscut ca atare, bilanț vechi; cifrele prin TextRo (🔵8); fără cifre nu scrie NaN/null; o propoziție ≤ 160 și la 5 cifre cu bilanț de 20 de zile (🔵6); null fără bilanț", () => {
+  // v100.96: textBusola dă 1–2 rânduri („🧭 Busola, pe marginile gridului în 24 h: …”); textele exacte le pinează proba-v10096 (6b) - aici rămân invariantele
   assert.equal(R.textBusola(null, ACUM), null); assert.equal(R.textBusola({ la: ACUM }, ACUM), null, "fără retea");
   const ZERO = { judecate: 0, independente: 0, brier: null, brierBaza: null, castig: null, icJos: null, icSus: null, verdict: "prea puține" };
-  assert.equal(R.textBusola(BZ(ZERO), ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 (le judecă după ce le trece orizontul).", "KV vechi, fără „trimise”");
-  assert.equal(R.textBusola({ ...BZ(ZERO), trimise: 7 }, ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 · Radarul îi trimite acum 7 predicții, le judecă după ce le trece orizontul.");
-  assert.equal(R.textBusola({ ...BZ(ZERO), trimise: 1 }, ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 · Radarul îi trimite acum 1 predicție, o judecă după ce îi trece orizontul.");
-  assert.equal(R.textBusola({ ...BZ(ZERO), trimise: 0 }, ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 · Radarul nu-i trimite nimic acum (fără boți sau fără modelul pe 24 h).", "legătura ruptă se vede");
-  assert.equal(R.textBusola(BZ({ judecate: 12, independente: 9, brier: 0.2213, brierBaza: 0.2401, castig: null, icJos: null, icSus: null, verdict: "prea puține" }), ACUM), "🧭 Busola a judecat 12 predicții 🧠 (9 independente): prea puține ca să judece (cere 100 de independente).");
-  assert.equal(R.textBusola(BZ({ ...BATE, verdict: "prea puține" }), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 de independente): prea puține monede ca să judece (cere 10).", "≥ 100 independente și tot „prea puține” = sub 10 monede");
-  assert.equal(R.textBusola(BZ(BATE), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 de independente): Brier 0,210 (rata de bază 0,240) ⇒ bate rata de bază.");
-  assert.match(R.textBusola(BZ({ ...BATE, verdict: "mai prost" }), ACUM), /⇒ mai prost decât rata de bază\.$/);
-  assert.match(R.textBusola(BZ({ ...BATE, verdict: "n-am aflat" }), ACUM), /⇒ n-am aflat \(IC cuprinde 0\)\.$/, "IC-ul cuprinde zero, nu „peste zero”");
-  assert.match(R.textBusola(BZ({ ...BATE, verdict: "altceva" }), ACUM), /⇒ altceva\.$/, "verdictul necunoscut, ca atare");
-  assert.equal(R.textBusola(BZ(BATE, ACUM - 3 * ZI), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 de independente): Brier 0,210 (rata de bază 0,240) ⇒ bate rata de bază · de acum 3 zile.");
-  assert.ok(!/de acum/.test(R.textBusola(BZ(BATE, ACUM - ZI), ACUM)), "o zi nu e „vechi”");
-  assert.match(R.textBusola(BZ({ ...BATE, independente: 1, judecate: 1 }), ACUM), /^🧭 Busola a judecat 1 predicție 🧠 \(1 independentă\): /);
-  const faraCifre = R.textBusola(BZ({ judecate: 150, independente: 120, brier: null, brierBaza: null, castig: null, icJos: null, icSus: null, verdict: "n-am aflat" }), ACUM);
-  assert.ok(!/NaN|null|undefined|Brier/.test(faraCifre), faraCifre); assert.match(faraCifre, /^🧭 Busola a judecat 150 de predicții 🧠 \(120 de independente\) ⇒ /);
+  const T = (b) => { const l = R.textBusola(b, ACUM); assert.ok(Array.isArray(l) && l.length >= 1 && l.length <= 2, JSON.stringify(l)); l.forEach(oPropozitie); assert.match(l[0], /^🧭 Busola, pe marginile gridului în 24 h: /); return l; };
+  assert.equal(T(BZ(ZERO)).length, 1, "nimic judecat: un rând"); assert.match(T({ ...BZ(ZERO), trimise: 7 })[0], /Radarul îi trimite acum 7 predicții/); assert.match(T({ ...BZ(ZERO), trimise: 0 })[0], /Radarul nu-i trimite nimic acum/, "legătura ruptă se vede");
+  assert.match(T(BZ({ judecate: 12, independente: 9, brier: 0.2213, brierBaza: 0.2401, castig: null, icJos: null, icSus: null, verdict: "prea puține" }))[0], /prea puține ca să judece \(cere 100 de independente\)/);
+  assert.match(T(BZ({ ...BATE, verdict: "prea puține" }))[0], /prea puține monede ca să judece/, "≥ 100 independente și tot „prea puține” = sub 10 monede");
+  const lb = T(BZ(BATE)); assert.match(lb[0], /Brier 0,210 \(rata de bază 0,240\) ⇒ bate rata de bază\.$/); assert.match(lb[1], /^🧭 240 de predicții 🧠 judecate, 131 de independente\.$/);
+  assert.match(T(BZ({ ...BATE, verdict: "mai prost" }))[0], /⇒ mai prost decât rata de bază\.$/); assert.match(T(BZ({ ...BATE, verdict: "n-am aflat" }))[0], /⇒ n-am aflat \(IC cuprinde 0\)\.$/, "IC-ul cuprinde zero, nu „peste zero”");
+  assert.match(T(BZ({ ...BATE, verdict: "altceva" }))[0], /altceva\.$/, "verdictul necunoscut, ca atare");
+  assert.match(T(BZ(BATE, ACUM - 3 * ZI))[1], /· de acum 3 zile\.$/); assert.ok(!/de acum/.test(T(BZ(BATE, ACUM - ZI)).join(" ")), "o zi nu e „vechi”");
+  const faraCifre = T(BZ({ judecate: 150, independente: 120, brier: null, brierBaza: null, castig: null, icJos: null, icSus: null, verdict: "n-am aflat" })); assert.ok(!/Brier/.test(faraCifre[0]), faraCifre[0]);
   const GREU = { ...BATE, judecate: 12345, independente: 10123 };
-  [BATE, GREU, { ...GREU, verdict: "mai prost" }, { ...GREU, verdict: "n-am aflat" }, { ...GREU, verdict: "prea puține" }].forEach((r) => { oPropozitie(R.textBusola(BZ(r, ACUM - 20 * ZI), ACUM)); oPropozitie(R.textBusola(BZ(r), ACUM)); });
-  oPropozitie(R.textBusola({ ...BZ(ZERO, ACUM - 20 * ZI), trimise: 12 }, ACUM)); oPropozitie(R.textBusola({ ...BZ(ZERO, ACUM - 20 * ZI), trimise: 0 }, ACUM));
+  [BATE, GREU, { ...GREU, verdict: "mai prost" }, { ...GREU, verdict: "n-am aflat" }, { ...GREU, verdict: "prea puține" }].forEach((r) => { T(BZ(r, ACUM - 20 * ZI)); T(BZ(r)); });
+  T({ ...BZ(ZERO, ACUM - 20 * ZI), trimise: 12 }); T({ ...BZ(ZERO, ACUM - 20 * ZI), trimise: 0 });
 });
 await test("(4b) Retea.subsol: cu o.busola rândul 🧭 e primul în „Cum s-a verificat” pe paginile crypto; pe acțiuni (o.actiuni) lipsește - Busola judecă boții; fără busola nimic nou", () => {
   const modele = { "atinge-24": { tinta: "atinge-24", versiune: R.VERSIUNE, la: ACUM - ORA, verificare: null } };
-  const l = R.subsol(modele, null, { busola: BZ(BATE), acum: ACUM }); assert.equal(l.length, 2, JSON.stringify(l)); assert.match(l[0], /^🧭 Busola a judecat 240 de predicții/); assert.match(l[1], /neverificată încă/);
+  const l = R.subsol(modele, null, { busola: BZ(BATE), acum: ACUM }); assert.equal(l.length, 3, JSON.stringify(l)); assert.match(l[0], /^🧭 Busola, pe marginile gridului în 24 h: /); assert.match(l[1], /^🧭 240 de predicții 🧠 judecate/); assert.match(l[2], /neverificată încă/);   /* v100.96: două rânduri ale Busolei */
   assert.equal(R.subsol(modele, null, { busola: BZ(BATE), actiuni: true }).some((x) => /^🧭/.test(x)), false, "pe acțiuni nu");
   assert.equal(R.subsol(modele, null, {}).length, 1); assert.equal(R.subsol(modele).length, 1); assert.equal(R.subsol(modele, null, { busola: { la: ACUM } }).length, 1, "bilanț fără retea: nimic");
 });
@@ -150,13 +145,13 @@ await test("(4e) pagina: reteaAdu cere și busolaRetea (reteaM.b), reteaHtml îl
 });
 
 // ======== Task 5: versiunile ========
-await test("(E) versiunile: pagina v100.95 (BUILD_INFO, versiune.js, sw, index ×4, package.json 100.95.0, lanțul cu v10095), colectorul v101.65", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(bi.version, "v100.95"); assert.match(bi.badge, /^v100\.95 · /);
-  assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "v100.95";'), "versiune.js");
-  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-95";'), "sw.js");
-  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.95/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.94/.test(ix), "index.html mai are v100.94");
-  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.95.0"); assert.ok(/npm run test:v10094 && npm run test:v10095( && |")/.test(pk), "lanțul de teste"); assert.equal(JSON.parse(pk).scripts["test:v10095"], "node scripts/proba-v10095.mjs");
-  assert.ok(/VERSIUNE_COLECTOR = "v101\.65"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.65");
+await test("(E) versiunile: pagina de la v100.95 în sus (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v10095), colectorul de la v101.65 în sus - versiunea merge înainte (v100.96 a lărgit-o)", () => {
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[5-9]$/, "de la 95 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "), "badge-ul cu versiunea");
+  assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V + '";'), "versiune.js");
+  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'), "sw.js");
+  const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.94/.test(ix), "index.html mai are v100.94");
+  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, V.slice(1) + ".0"); assert.ok(/npm run test:v10094 && npm run test:v10095( && |")/.test(pk), "lanțul de teste"); assert.equal(JSON.parse(pk).scripts["test:v10095"], "node scripts/proba-v10095.mjs");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.6[5-9]"/.test(citeste("scripts", "colector.mjs")), "colectorul de la v101.65 în sus");
 });
 
 console.log("\n" + (pica ? "✗ " + pica + " picate, " + ok + " trecute" : "✓ toate cele " + ok + " teste au trecut"));

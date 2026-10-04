@@ -14,6 +14,7 @@ import { incarcaModulele, simboluri, citesteBare, randuriMoneda, reperRand, rand
 import { tickere, citesteZile, citesteTradeuri, randuriActiune, reperActiune, randuriTradeuri, ORIZONT_T212, QQQ } from "./date-t212.mjs";   // v100.94 (L2): țintele pe acțiuni T212
 import { luniDeTest, optiuniLuni, impartire, normalizare, matrice, esantion, logistica, verificare, luna, bss, bootstrap2 } from "./verifica.mjs";
 import { antreneazaArbori, preziceArbori, exportaArbori, HIPER_ARBORI } from "./arbori.mjs";
+import { hashCod } from "./hash-cod.mjs";
 
 const COD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ARG = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 && process.argv[i + 1] !== undefined ? process.argv[i + 1] : d; };
@@ -27,7 +28,7 @@ const citeste = (f) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } 
 if (!(BUGET > 0)) { spune("buget 0: nimic de antrenat, modelele arborilor rămân"); process.exit(0); }
 fs.mkdirSync(DATA, { recursive: true });
 // cheia CODULUI (versiunea, hiperparametrii și fișierele atinse) păstrează modelele de ieri; lunile judecate mai cer și AMPRENTA DATELOR
-const COD_HASH = crypto.createHash("sha1").update(["public/lib/retea.js", "public/lib/arbori.js", "retea/date.mjs", "retea/verifica.mjs", "retea/arbori.mjs", "retea/date-t212.mjs"].map((f) => fs.readFileSync(path.join(COD, f), "utf8")).join("\n")).digest("hex").slice(0, 12);
+const COD_HASH = hashCod(COD, ["public/lib/retea.js", "public/lib/arbori.js", "retea/date.mjs", "retea/verifica.mjs", "retea/arbori.mjs", "retea/date-t212.mjs"]).slice(0, 12);   /* v100.96 (ideea 3): fără texte - vezi hash-cod.mjs */
 const M = incarcaModulele(COD), CHEIE = VERSIUNE + "|" + JSON.stringify(HIPER_ARBORI) + "|" + COD_HASH, acum = Date.now();
 const vechi = citeste(path.join(DATA, "modele-arbori.json")), modele = vechi && vechi.cheie === CHEIE && vechi.modele ? vechi.modele : {};
 const btc = citesteBare(RAD, "BTC_USDT_PERP", M.G), bareDe = new Map(), memo = new Map();
