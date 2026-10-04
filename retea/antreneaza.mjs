@@ -37,7 +37,10 @@ for (const s of simboluri(RAD)) { if (s === "BTC_USDT_PERP") continue; const b =
 // v100.94 (L2): barele zilnice ale acțiunilor (data/retea/zile, strânse noaptea de colector), QQQ și perechile lui închise - țintele T212; amprenta le cuprinde
 const qqq = citesteZile(RAD, QQQ, M.G), zileDe = new Map(), memoZi = new Map(), tradeuri = citesteTradeuri(RAD);
 for (const tk of tickere(RAD)) { const b = citesteZile(RAD, tk, M.G); if (b.length > 300) { zileDe.set(tk, b); memoZi.set(tk, {}); } }
-const AMPRENTA = crypto.createHash("sha1").update([...bareDe.entries()].map(([s, b]) => s + ":" + luna(b[0].t)).concat([...zileDe.entries()].map(([s, b]) => "zi:" + s + ":" + luna(b[0].t))).sort().join(",") + "|BTC:" + (btc.length ? luna(btc[0].t) : "-")).digest("hex").slice(0, 12), CHEIE_LUNI = CHEIE + "|" + AMPRENTA;
+// revizia 04.10 (🟡4): amprenta datelor PE PIAȚĂ - un ticker nou în zile/ nu rejudecă lunile crypto, o monedă nouă în ore/ nu le rejudecă pe cele T212
+const A_CRYPTO = crypto.createHash("sha1").update([...bareDe.entries()].map(([s, b]) => s + ":" + luna(b[0].t)).sort().join(",") + "|BTC:" + (btc.length ? luna(btc[0].t) : "-")).digest("hex").slice(0, 12);
+const A_T212 = crypto.createHash("sha1").update([...zileDe.entries()].map(([s, b]) => s + ":" + luna(b[0].t)).sort().join(",") + "|QQQ:" + (qqq.length ? luna(qqq[0].t) : "-")).digest("hex").slice(0, 12);
+const CHEIE_LUNI = (t) => CHEIE + "|" + (t.endsWith("-t212") ? A_T212 : A_CRYPTO);
 spune("pornit: " + bareDe.size + " monede, BTC " + btc.length + " bare, buget " + Math.round(BUGET / 60000) + " min, " + BACKEND);
 const tinte = Object.keys(M.R.TINTE).filter((t) => !DOAR || t === DOAR);
 function randuri(t) {
@@ -62,7 +65,7 @@ for (const t of tinte) {
 for (const t of tinte) {
   if (!modele[t]) continue;
   const R = randuri(t), luni = luniDeTest(R, OPT_LUNI(t)), fis = path.join(DATA, "luni-" + t + ".json");
-  let cache = citeste(fis); if (!cache || cache.cheie !== CHEIE_LUNI || !cache.luni) cache = { cheie: CHEIE_LUNI, luni: {} };
+  let cache = citeste(fis); if (!cache || cache.cheie !== CHEIE_LUNI(t) || !cache.luni) cache = { cheie: CHEIE_LUNI(t), luni: {} };
   let noi = 0;
   for (const l of luni) {
     if (cache.luni[l] || Date.now() >= PANA) continue;

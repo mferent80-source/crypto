@@ -55,7 +55,7 @@ export function situatiiRetea(pune) {
   for (const [sit, v] of Object.entries(VER)) {
     const ma = modeleT(R.VERSIUNE_ARBORI, v, sit === "dovedită" ? { n: 300, bss: 0.012, ic: [0.003, 0.021] } : { n: 300, bss: -0.008, ic: [-0.02, 0.004] });
     R.randuri(mRT, RT_T, ZAR_T, OT, { modele: ma, rt: RA_T }).forEach((r) => puneRand("acțiuni: " + sit + " · " + r.cod, r));
-    R.subsol(mRT, ma).filter((l) => /^🌳/.test(l)).forEach((l, i) => pune("acțiuni: " + sit + " · verificarea " + (i + 1), "retea", "arbori.subsol", { t: l }, [["t", "raport"]]));
+    R.subsol(mRT, ma, { actiuni: true }).filter((l) => /^🌳/.test(l)).forEach((l, i) => pune("acțiuni: " + sit + " · verificarea " + (i + 1), "retea", "arbori.subsol", { t: l }, [["t", "raport"]]));   /* revizia 🔵8: subsolul pe piața paginii */
   }
   R.randuri(modeleT(R.VERSIUNE, v0), RT_T, ZAR_T, OT, { modele: modeleT(R.VERSIUNE_ARBORI, v0), rt: RA_T }).forEach((r) => puneRand("acțiuni: amândouă nu bat reperul · " + r.cod, r));
   R.randuri(mRT, RT_T, ZAR_T, OT).forEach((r) => puneRand("acțiuni: doar rețeaua · " + r.cod, r));

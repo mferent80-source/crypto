@@ -32,6 +32,7 @@ import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
+import { unesteZile } from "../retea/date-t212.mjs";   // v101.64 (L2, revizia 🟡6): barele zilnice se adună peste 2 ani
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
@@ -1001,7 +1002,7 @@ async function turaIdeiZi() {
       const mR = modeleRetea(), mA = modeleArbori();
       if (mR || mA) {
         let qqq = bareIdei.get("QQQ_US_EQ") || null; if (!qqq) { try { qqq = GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ")).randuri || []); } catch {} }
-        const cif = (x) => { const b = x && bareIdei.get(x.ticker); if (!b || !qqq) return; const t = { ticker: x.ticker, pornit: Date.now(), cost: 100 };
+        const cif = (x) => { const b = x && bareIdei.get(x.ticker); if (!b || !qqq) return; const t = { ticker: x.ticker, pornit: Date.now(), cost: Retea.costTipic(inchise) };   /* revizia (🟡5): mărimea lui tipică, nu 100 de lei */
           const pz = mR ? Retea.pentruCumparare(mR, t, b, qqq, inchise) : null; if (pz) { const vd = Retea.verdict(mR["rezultat-t212"], Date.now()); x.retea = { p: pz.p, dovedita: !!(vd && vd.dovedita) }; }
           const pa = mA ? Arbori.pentruCumparare(mA, t, b, qqq, inchise) : null; if (pa) { const va = Arbori.verdict(mA["rezultat-t212"], Date.now()); x.arbori = { p: pa.p, dovedita: !!(va && va.dovedita) }; } };
         for (const x of [].concat(r.actiuni || [], r.restul || [])) cif(x);
@@ -1430,7 +1431,8 @@ async function turaReteaColector() {
       return [...t].filter((x) => /_US_EQ$/.test(x));
     },
     cereZile: (tk) => cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)),
-    scrieZile: (tk, randuri) => { try { scrieAtomic(path.join(RETEA_ZILE, String(tk).replace(/[^A-Z0-9_.-]/gi, "") + ".json"), { la: Date.now(), randuri }); } catch (e) { jurnal("zile: nescrise", tk, e.message); } },
+    scrieZile: (tk, randuri) => { try { const f = path.join(RETEA_ZILE, String(tk).replace(/[^A-Z0-9_.-]/gi, "") + ".json"); scrieAtomic(f, { la: Date.now(), randuri: unesteZile(citesteJson(f, null), randuri) }); } catch (e) { jurnal("zile: nescrise", tk, e.message); } },
+    vechimeZile: (tk) => { const j = citesteJson(path.join(RETEA_ZILE, String(tk).replace(/[^A-Z0-9_.-]/gi, "") + ".json"), null); return (j && Number(j.la)) || 0; },   // revizia (🟡3): rotația tickerelor
     tradeuri: async () => { const h = await cere("/api/t212?action=istoric"); return T212.perechi((h && h.umpleri) || []).inchise; },
     scrieTradeuri: (l) => scrieAtomic(path.join(RETEA_DIR, "trade-uri.json"), l),
     porneste: pornesteAntrenorul, citesteModele: () => citesteJson(path.join(RETEA_DIR, "modele.json"), null), trimite, jurnal,

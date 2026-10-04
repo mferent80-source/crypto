@@ -163,7 +163,7 @@ await test("(10) Retea.randuri cu ambele familii: „🧠 61% · 🌳 58% · �
 await test("(10) pagina: reteaM.a din action=arbori; Tablou (rez.arbori), fișa (Arbori.pentruBot) și poarta (Arbori.pentruPornire) dau arborii lui reteaHtml / textPornire; al doilea marker pe bandă (CSS)", () => {
   const a = citeste("public", "app.js"), css = citeste("public", "app.css");
   assert.ok(a.includes('getJSON("/api/istoric-bot?action=arbori")') && /reteaM\.a=d&&d\.arbori&&typeof Arbori!=="undefined"&&d\.arbori\.versiune===Arbori\.VERSIUNE\?d\.arbori\.modele:null/.test(a), "reteaM.a");
-  assert.ok(/^function reteaHtml\(rt,zar,o,ra\)\{/m.test(a) && a.includes("var aM=ra&&reteaM.a?reteaM.a:null") && a.includes("Retea.randuri(m,rt,zar,o,aM?{modele:aM,rt:ra}:null)") && a.includes("Retea.antet(m,o&&o.acum||Date.now(),aM)") && a.includes("Retea.subsol(m,aM)"), "reteaHtml cu arbori");
+  assert.ok(/^function reteaHtml\(rt,zar,o,ra\)\{/m.test(a) && a.includes("var aM=ra&&reteaM.a?reteaM.a:null") && a.includes("Retea.randuri(m,rt,zar,o,aM?{modele:aM,rt:ra}:null)") && a.includes("Retea.antet(m,o&&o.acum||Date.now(),aM)") && a.includes("Retea.subsol(m,aM,o)"), "reteaHtml cu arbori");
   assert.ok(a.includes("rtA=reteaM.a&&grProb.bare?Arbori.pentruBot(reteaM.a,grProb.bare,grProb.o,grRetea.btc):null") && a.includes("reteaHtml(rt,zar,{acum:Date.now()},rtA)"), "fișa");
   assert.ok(a.includes("reteaHtml(rez.retea,l,{acum:Date.now(),pornire:rez.retea&&rez.retea.pornire},rez.arbori)"), "Tabloul");
   assert.ok(fnApp("grReteaPoartaHtml").includes("Arbori.pentruPornire(reteaM.a,") && fnApp("grReteaPoartaHtml").includes("Retea.textPornire(pz,vd,pzA,vdA)"), "poarta");
@@ -227,7 +227,7 @@ await test("(R3) 🔵5 (specul): cu amândouă, cifra mare și semnul plin stau 
 await test("(R4) 🔵6/🔵7/🔵8 + ruling 13: după redesen caseta se recompactează (grVerdictScroll după grPliazaPeTelefon); capul și subsolul primesc arborii doar cu ra (aM); grReteaBtc aduce BTC și doar cu arborii; Arbori.verdict deleagă la Retea.verdictArbori", () => {
   const a = citeste("public", "app.js"), ar = citeste("public", "lib", "arbori.js");
   assert.ok(a.includes("box.innerHTML=h;grPliazaPeTelefon(box);grVerdictScroll();"), "🔵6: caseta rămâne lărgită după redesen");
-  assert.ok(a.includes("var aM=ra&&reteaM.a?reteaM.a:null") && a.includes("Retea.antet(m,o&&o.acum||Date.now(),aM)") && a.includes("Retea.subsol(m,aM)") && !a.includes("Retea.subsol(m,reteaM.a)"), "🔵7");
+  assert.ok(a.includes("var aM=ra&&reteaM.a?reteaM.a:null") && a.includes("Retea.antet(m,o&&o.acum||Date.now(),aM)") && a.includes("Retea.subsol(m,aM,o)") && !a.includes("Retea.subsol(m,reteaM.a)"), "🔵7");
   assert.ok(/^function grReteaBtc\(\)\{if\(typeof Retea==="undefined"\|\|!\(reteaM\.m\|\|reteaM\.a\)\|\|/m.test(a), "🔵8");
   assert.ok(/function verdict\(m, acum\) \{ return Retea\.verdictArbori\(m, acum\); \}/.test(ar), "ruling 13: Arbori.verdict e o copie");
 });

@@ -4,19 +4,27 @@
 // barele de până la t. Folosit de amândoi antrenorii (antreneaza.mjs, antreneaza-arbori.mjs).
 import fs from "node:fs";
 import path from "node:path";
+import { cuSamanta } from "./verifica.mjs";
 
 export const ZI = 864e5, ORIZONT_T212 = { "stop1-t212": 24, "sare1-t212": 24, "cursa5-t212": 168, "directie-t212": 168, "rezultat-t212": 24 };
 // grila nivelurilor (specul): stopul la −2…−10% (stop1, sare1); perechile țintă/stop pentru cursa pe 5 zile - aceeași grilă ca 🎲 pe idei
-export const STOPURI = [-0.02, -0.03, -0.05, -0.08, -0.1], CURSE = [[0.03, -0.03], [0.05, -0.03], [0.05, -0.05], [0.08, -0.05], [0.1, -0.05]], QQQ = "QQQ_US_EQ";
+// revizia 04.10 (🔴1): grila acoperă ce cere pagina - stopul care urcă (−15…−20% de la maxim) și ținta la 2× risc (până la +40%); Retea.INTERVAL_T212 = marginile ei
+export const STOPURI = [-0.02, -0.03, -0.05, -0.08, -0.1, -0.15, -0.2], CURSE = [[0.03, -0.03], [0.05, -0.03], [0.05, -0.05], [0.08, -0.05], [0.1, -0.05], [0.15, -0.08], [0.2, -0.1], [0.3, -0.15], [0.4, -0.2]], QQQ = "QQQ_US_EQ";
 const ZILE = (rad) => path.join(rad, "data", "retea", "zile");
 export function tickere(rad) { try { return fs.readdirSync(ZILE(rad)).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)).filter((t) => t !== QQQ).sort(); } catch { return []; } }
 // barele zilnice ÎNCHISE ale unui ticker (fișierul colectorului: { la, randuri } sau lista brută), normalizate ca pe pagină (GridCalcul.bareBursa scoate ziua în curs)
 export function citesteZile(rad, ticker, G) { try { const j = JSON.parse(fs.readFileSync(path.join(ZILE(rad), ticker + ".json"), "utf8")); return G.bareBursa(Array.isArray(j) ? j : (j && j.randuri) || [], Date.now()); } catch { return []; } }
+// revizia 04.10 (🟡6): barele noi (2 ani de la rută) se unesc cu cele de pe disc, pe `time` (cea nouă câștigă), ca istoria să crească peste 2 ani
+export function unesteZile(vechi, noi) {
+  const h = new Map(), pune = (l) => { for (const r of (Array.isArray(l) ? l : [])) if (r && Number.isFinite(Number(r.time))) h.set(Number(r.time), r); };
+  pune(vechi && !Array.isArray(vechi) ? vechi.randuri : vechi); pune(noi);
+  return [...h.values()].sort((a, b) => Number(a.time) - Number(b.time));
+}
 export function citesteTradeuri(rad) { try { const j = JSON.parse(fs.readFileSync(path.join(rad, "data", "retea", "trade-uri.json"), "utf8")); return Array.isArray(j) ? j : (j && j.inchise) || []; } catch { return []; } }
 // lipsa rămâne LIPSĂ: Number(null) === 0 ar inventa un cost / un rezultat
 const nr = (v) => { if (v === null || v === undefined || v === "" || typeof v === "boolean") return null; const x = Number(v); return Number.isFinite(x) ? x : null; };
 const bun = (t) => !!t && nr(t.pornit) !== null && nr(t.inchis) !== null && nr(t.cost) > 0 && nr(t.rezultat) !== null;
-const pePlus = (t) => t.rezultat - 0.003 * t.cost > 0;   // netul după comisioane și conversie (0,3% din valoarea cumpărată, ca la urmărirea revenirilor)
+const pePlus = (t) => t.rezultat > 0;   // revizia 04.10 (🟡7): `rezultat` din T212.perechi e deja NET (comisioanele de cumpărare și de vânzare scăzute) - nu se mai scade încă 0,3%
 // rata lui de până la `pana` (perechile închise înainte): globală și pe ticker trasă spre medie cu k = 10 (specul rețelei) - aceeași regulă ca Retea.rataPe
 export function rataPe(trades, ticker, pana) {
   const l = (Array.isArray(trades) ? trades : []).filter((t) => bun(t) && t.inchis <= pana), n = l.length, glob = n ? l.filter(pePlus).length / n : 0.5;
@@ -28,7 +36,7 @@ export function rataPe(trades, ticker, pana) {
 // directie = închiderea de peste 5 zile strict mai mare. null când nu sunt destule bare după
 export function eticheta(tinta, b, i, e) {
   const c = b[i] && b[i].c; if (!(c > 0)) return null;
-  if (tinta === "stop1-t212" || tinta === "sare1-t212") { const n1 = b[i + 1]; if (!n1) return null; const niv = c * (1 + e.relS); return tinta === "stop1-t212" ? (n1.o > niv && n1.l <= niv ? 1 : 0) : (n1.o <= niv ? 1 : 0); }
+  if (tinta === "stop1-t212" || tinta === "sare1-t212") { const n1 = b[i + 1]; if (!n1) return null; const niv = c * (1 + e.relS); return tinta === "stop1-t212" ? (n1.l <= niv ? 1 : 0) : (n1.o <= niv ? 1 : 0); }   // revizia (🟡2): stop1 = atins mâine PE ORICE CALE (și prin săritură), ca rândul 🎲 „Atinge stopul mâine” (stop1 + sare1)
   if (tinta === "cursa5-t212") { if (i + 5 >= b.length) return null; const T = c * (1 + e.relT), S = c * (1 + e.relS); for (let k = 1; k <= 5; k++) { if (b[i + k].l <= S) return 0; if (b[i + k].h >= T) return 1; } return 0; }
   if (tinta === "directie-t212") { if (i + 5 >= b.length) return null; return b[i + 5].c > c ? 1 : 0; }
   return null;
@@ -42,9 +50,9 @@ export function randuriActiune(tinta, tk, b, qqq, trades, M, memo) {
   for (let i = 250; i + zile < b.length; i++) {
     const rp = memo.rata[i] || (memo.rata[i] = rataPe(trades, tk, b[i].t + ZI));
     const f = R.trasaturiZilnice(b, i, qqq, rp.rata); if (!f) continue;
-    const k = (sem + i) >>> 0; let e;
-    if (tinta === "stop1-t212" || tinta === "sare1-t212") e = { relS: STOPURI[k % STOPURI.length] };
-    else if (tinta === "cursa5-t212") { const [relT, relS] = CURSE[k % CURSE.length]; e = { relT, relS }; }
+    const u = cuSamanta((sem + i) >>> 0)(); let e;   // revizia (🔵12): hash, nu k % n - altfel nivelul ar fi legat de ziua săptămânii (grila de 5 pe săptămâna de 5 zile)
+    if (tinta === "stop1-t212" || tinta === "sare1-t212") e = { relS: STOPURI[Math.floor(u * STOPURI.length)] };
+    else if (tinta === "cursa5-t212") { const [relT, relS] = CURSE[Math.floor(u * CURSE.length)]; e = { relT, relS }; }
     else if (tinta === "directie-t212") e = {};
     else return out;
     const y = eticheta(tinta, b, i, e); if (y === null) continue;
@@ -59,7 +67,7 @@ export function reperActiune(tinta, b, r, M, memo) {
   if (tinta === "directie-t212") { const st = P.stareActiuneLa(b, r.i), q = P.frecventaActiune(v, 5, (bb, k, h) => (bb[k + h].c > bb[k].c ? "da" : "nu"), "da", st, memo); return q && Number.isFinite(q.p) ? q.p : null; }
   const pa = P.pentruActiune(v, { pret: c, stop: c * (1 + r.e.relS), tinta: r.e.relT ? c * (1 + r.e.relT) : null, acum: b[r.i].t + ZI, memo });
   if (!pa) return null;
-  const q = tinta === "stop1-t212" ? pa.stop1 : tinta === "sare1-t212" ? pa.sare1 : pa.cursa5 && pa.cursa5.tinta;
+  const q = tinta === "stop1-t212" ? (pa.stop1 && pa.sare1 && Number.isFinite(pa.stop1.p) && Number.isFinite(pa.sare1.p) ? { p: pa.stop1.p + pa.sare1.p } : null) : tinta === "sare1-t212" ? pa.sare1 : pa.cursa5 && pa.cursa5.tinta;   // revizia (🟡2): reperul stop1 = stop1 + sare1 (aceleași ferestre)
   return q && Number.isFinite(q.p) ? q.p : null;
 }
 // „un trade ca ăsta iese pe plus”: un rând pe pereche închisă, trăsăturile la ultima zi ÎNCHISĂ dinaintea cumpărării, y = rezultat − 0,3% din cost > 0,

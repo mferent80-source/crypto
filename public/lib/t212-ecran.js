@@ -44,7 +44,7 @@ async function t212Porneste(forta) {
       if (!t212.bare[tk] || forta) { try { var nm = t212Nume(tk), b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); t212.simbolPret[tk] = b && b.simbol || null; t212.bare[tk] = GridCalcul.bareBursa(b && b.randuri || [], Date.now()); } catch (e) { t212.bare[tk] = []; } }
       t212Render();
     }
-    if (!t212.bare.QQQ_US_EQ) { try { var q = await getJSON("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ"); t212.bare.QQQ_US_EQ = GridCalcul.bareBursa(q && q.randuri || [], Date.now()); } catch (e) { t212.bare.QQQ_US_EQ = []; } }
+    if (!t212.bare.QQQ_US_EQ || forta) { try { var q = await getJSON("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ"); t212.bare.QQQ_US_EQ = GridCalcul.bareBursa(q && q.randuri || [], Date.now()); } catch (e) { t212.bare.QQQ_US_EQ = []; } }
     t212.poz.forEach(function (x) { t212.beta[x.ticker] = ActiuniSemnale.beta(t212.bare[x.ticker], t212.bare.QQQ_US_EQ); });
   }
   t212.inLucru = false; t212Render();
@@ -554,7 +554,7 @@ async function t212Poarta() {
     var tot = t212.cont && t212.cont.cash && t212.cont.cash.total;
     // planul scris de el bate stopul calculat; fara plan, poarta judeca cu stopul calculat
     var planPoarta = plan.stop || plan.trailPct ? plan : niv.nivel === "ok" ? { stop: niv.stop } : plan;
-    t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, planScris: !!(plan.stop || plan.trailPct), v: ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore }), tot: tot };
+    t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), v: ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore }), tot: tot };
     // v89: biletul - ce spune istoricul tau despre situatii asemanatoare, rezultatele, stirile
     try { var rz = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); t212.poarta.rezultate = rz && rz.data || null; } catch (e) { t212.poarta.rezultate = null; }
     try { var sp = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); t212.poarta.stiri = sp && sp.stiri || []; } catch (e) { t212.poarta.stiri = []; }
@@ -584,10 +584,11 @@ function t212ReteaHtml(o, b, prob, cump) {
     var rt = reteaM.m ? Retea.pentruActiune(reteaM.m, b, o, q, inchise) : null, ra = null;
     try { ra = reteaM.a && typeof Arbori !== "undefined" ? Arbori.pentruActiune(reteaM.a, b, o, q, inchise) : null; } catch (e) { ra = null; }
     if (cump) {
-      if (rt) { var pz = Retea.pentruCumparare(reteaM.m, cump, b, q, inchise); if (pz) rt.pornire = pz; }
-      if (ra) { try { var pa = Arbori.pentruCumparare(reteaM.a, cump, b, q, inchise); if (pa) ra.pornire = pa; } catch (e2) {} }
+      var cu = { ticker: cump.ticker, pornit: cump.pornit, cost: cump.cost > 0 ? cump.cost : Retea.costTipic(inchise) };   /* revizia 🟡5: mărimea lui tipică, nu 100 de lei */
+      if (rt) { var pz = Retea.pentruCumparare(reteaM.m, cu, b, q, inchise); if (pz) rt.pornire = pz; }
+      if (ra) { try { var pa = Arbori.pentruCumparare(reteaM.a, cu, b, q, inchise); if (pa) ra.pornire = pa; } catch (e2) {} }
     }
-    return reteaHtml(rt, prob, { acum: Date.now(), codDirectie: "directie5", tintaRezultat: "rezultat-t212", pornire: rt && rt.pornire }, ra);
+    return reteaHtml(rt, prob, { acum: Date.now(), codDirectie: "directie5", tintaRezultat: "rezultat-t212", pornire: rt && rt.pornire, actiuni: true }, ra);   /* revizia 🔵8: subsolul doar cu țintele de pe acțiuni */
   } catch (e) { return ""; }
 }
 // v100.55: randurile de probabilitate (pozitia si poarta, aceeasi forma)
@@ -640,7 +641,7 @@ function t212ProfilPoarta(p) {
   if (cmp) h += '<p class="' + (cmp.strans ? "tbWarn" : "tbSub") + '">📐 ' + (sp.alTau ? "Cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + "): " : "") + escapeHtml(cmp.text) + '</p>';
   if (sr) h += '<p class="tbSub">⚡ ' + escapeHtml(sr) + '</p>';
   if (p.prob && p.prob.length) h += '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · ' + (sp && sp.alTau ? "cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + ") și ținta de mai sus" : "cu stopul și ținta de mai sus") + ', cât de des s-a întâmplat pe acțiunea asta în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>';
-  h += t212ReteaHtml({ acum: Date.now(), pret: baza, stop: sp && sp.stop, tinta: p.niv && p.niv.tinta, ticker: p.ticker }, p.bare, p.prob, { ticker: p.ticker, pornit: Date.now(), cost: 100 });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus” */
+  h += t212ReteaHtml({ acum: Date.now(), pret: baza, stop: sp && sp.stop, tinta: p.niv && p.niv.tinta, ticker: p.ticker }, p.bareZi, p.prob, { ticker: p.ticker, pornit: Date.now() });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus”; revizia 🔵9: barele ÎNCHISE (bareBursa), 🟡5: costul tipic */
   return h ? '<div class="t212ProfilPoarta">' + h + '</div>' : "";
 }
 function t212PreturiPoarta(p) {

@@ -65,21 +65,22 @@ await test("(2) date-t212: rândurile pe stop1/sare1/cursa5/directie din bare zi
     const l = D.randuriActiune(t, "AAA_US_EQ", b, q, [], M, {}); assert.ok(l.length > 100, t + ": " + l.length);
     for (const r of l.slice(0, 20)) { assert.ok(r.y === 0 || r.y === 1); assert.ok(r.tEt > r.t && r.x.length === R.intrareActiune(t, R.trasaturiZilnice(b, r.i, q, 0.5), r.e).length, t + " x"); const p = D.reperActiune(t, b, r, M, {}); assert.ok(p === null || (p >= 0 && p <= 1), t + " reper"); }
     const r0 = l[0], pa = P.pentruActiune(b.slice(0, r0.i + 1), { pret: b[r0.i].c, stop: b[r0.i].c * (1 + (r0.e.relS ?? -0.05)), tinta: b[r0.i].c * (1 + (r0.e.relT ?? 0.05)), acum: b[r0.i].t + ZI });
-    if (t === "stop1-t212") assert.equal(D.reperActiune(t, b, r0, M, {}), pa.stop1.p); if (t === "sare1-t212") assert.equal(D.reperActiune(t, b, r0, M, {}), pa.sare1.p); if (t === "cursa5-t212") assert.equal(D.reperActiune(t, b, r0, M, {}), pa.cursa5.tinta.p);
+    if (t === "stop1-t212") assert.equal(D.reperActiune(t, b, r0, M, {}), pa.stop1.p + pa.sare1.p, "reperul stop1 = atins pe orice cale (ca rândul 🎲)"); if (t === "sare1-t212") assert.equal(D.reperActiune(t, b, r0, M, {}), pa.sare1.p); if (t === "cursa5-t212") assert.equal(D.reperActiune(t, b, r0, M, {}), pa.cursa5.tinta.p);
   }
   // etichetele de mână: bara i și ce urmează
   const z = bareZi(300, 100, 3); const i = 280; z[i] = { ...z[i], c: 100 }; z[i + 1] = { ...z[i + 1], o: 99, l: 94, h: 101, c: 100 };
   assert.equal(D.eticheta("stop1-t212", z, i, { relS: -0.05 }), 1, "stop atins mâine (deschide peste, minimul sub)"); assert.equal(D.eticheta("sare1-t212", z, i, { relS: -0.05 }), 0);
-  z[i + 1] = { ...z[i + 1], o: 94, l: 93, h: 101, c: 100 }; assert.equal(D.eticheta("stop1-t212", z, i, { relS: -0.05 }), 0, "sare peste stop ⇒ nu „atins în zi”"); assert.equal(D.eticheta("sare1-t212", z, i, { relS: -0.05 }), 1);
+  z[i + 1] = { ...z[i + 1], o: 94, l: 93, h: 101, c: 100 }; assert.equal(D.eticheta("stop1-t212", z, i, { relS: -0.05 }), 1, "sare peste stop ⇒ tot „atins mâine” (pe orice cale, ca rândul 🎲)"); assert.equal(D.eticheta("sare1-t212", z, i, { relS: -0.05 }), 1);
   for (let k = 1; k <= 5; k++) z[i + k] = { ...z[i + k], o: 100, h: 100.5, l: 99.5, c: 100 }; z[i + 3] = { ...z[i + 3], h: 106, l: 94 }; assert.equal(D.eticheta("cursa5-t212", z, i, { relT: 0.05, relS: -0.05 }), 0, "ținta și stopul în aceeași zi ⇒ stop");
   z[i + 3] = { ...z[i + 3], h: 106, l: 99 }; assert.equal(D.eticheta("cursa5-t212", z, i, { relT: 0.05, relS: -0.05 }), 1); z[i + 5] = { ...z[i + 5], c: 101 }; assert.equal(D.eticheta("directie-t212", z, i, {}), 1);
   assert.equal(D.eticheta("cursa5-t212", z, z.length - 3, { relT: 0.05, relS: -0.05 }), null, "sub 5 bare după ⇒ fără etichetă");
   // găuri: scot 10 bare din mijloc - rândurile rămân, nimic nu aruncă
   const g = b.slice(0, 320).concat(b.slice(330)); assert.ok(D.randuriActiune("stop1-t212", "AAA_US_EQ", g, q, [], M, {}).length > 50);
   // trade-urile lui: rata pe acțiune trasă spre medie, eticheta = rezultat − 0,3% din cost > 0; cost 0 / rezultat lipsă ⇒ sar
-  const tr = [{ ticker: "AAA_US_EQ", pornit: b[300].t + 3 * 3600000, inchis: b[305].t, cost: 500, rezultat: 10 }, { ticker: "AAA_US_EQ", pornit: b[320].t + 3 * 3600000, inchis: b[322].t, cost: 500, rezultat: -2 }, { ticker: "AAA_US_EQ", pornit: b[330].t, inchis: b[331].t, cost: 0, rezultat: 5 }, { ticker: "BBB_US_EQ", pornit: b[330].t, inchis: b[331].t, cost: 100, rezultat: null }];
-  const rp = D.rataPe(tr, "AAA_US_EQ", b[330].t); assert.equal(rp.nPe, 2); assert.ok(Math.abs(rp.glob - 0.5) < 1e-9 && Math.abs(rp.rata - (1 + 10 * 0.5) / 12) < 1e-9, JSON.stringify(rp));
-  const rt = D.randuriTradeuri(tr, (tk) => (tk === "AAA_US_EQ" ? b : null), q, M); assert.equal(rt.length, 2); assert.deepEqual(rt.map((r) => r.y), [1, 0]); assert.ok(rt[0].x.length === 17 && rt[0].tEt === b[305].t && rt[0].r1 === 0.5, JSON.stringify([rt[0].x.length, rt[0].tEt, rt[0].r1]));
+  /* revizia (🟡7): `rezultat` e deja NET (T212.perechi scade comisioanele) ⇒ pe plus = rezultat > 0, fără încă un 0,3% */
+  const tr = [{ ticker: "AAA_US_EQ", pornit: b[300].t + 3 * 3600000, inchis: b[305].t, cost: 500, rezultat: 10 }, { ticker: "AAA_US_EQ", pornit: b[320].t + 3 * 3600000, inchis: b[322].t, cost: 500, rezultat: -2 }, { ticker: "AAA_US_EQ", pornit: b[330].t, inchis: b[331].t, cost: 0, rezultat: 5 }, { ticker: "BBB_US_EQ", pornit: b[330].t, inchis: b[331].t, cost: 100, rezultat: null }, { ticker: "AAA_US_EQ", pornit: b[340].t + 3 * 3600000, inchis: b[341].t, cost: 1000, rezultat: 1 }];
+  const rp = D.rataPe(tr, "AAA_US_EQ", b[350].t); assert.equal(rp.nPe, 3); assert.ok(Math.abs(rp.glob - 2 / 3) < 1e-9 && Math.abs(rp.rata - (2 + 10 * 2 / 3) / 13) < 1e-9, JSON.stringify(rp));
+  const rt = D.randuriTradeuri(tr, (tk) => (tk === "AAA_US_EQ" ? b : null), q, M); assert.equal(rt.length, 3); assert.deepEqual(rt.map((r) => r.y), [1, 0, 1]); assert.ok(rt[0].x.length === 17 && rt[0].tEt === b[305].t && rt[0].r1 === 0.5, JSON.stringify([rt[0].x.length, rt[0].tEt, rt[0].r1]));
 });
 
 // ======== Task 3: pentruActiune / pentruCumparare pe rețea și arbori, randuri pe codurile T212 ========
@@ -122,19 +123,26 @@ await test("(4) antrenorul arborilor pe un dosar sintetic cu bare ZILNICE (3 tic
   const o1 = run("antreneaza-arbori.mjs", ["--tinta", "stop1-t212"]), m = JSON.parse(fs.readFileSync(path.join(DR, "modele-arbori.json"), "utf8")); assert.ok(m.modele["stop1-t212"] && m.modele["stop1-t212"].verificare && m.modele["stop1-t212"].verificare.reper === "🎲", o1);
   const o2 = run("antreneaza-arbori.mjs", ["--tinta", "rezultat-t212"]), m2 = JSON.parse(fs.readFileSync(path.join(DR, "modele-arbori.json"), "utf8")); assert.ok(m2.modele["rezultat-t212"] && m2.modele["rezultat-t212"].nIn === 17, o2);
   const o3 = run("antreneaza.mjs", ["--tinta", "stop1-t212"]); assert.match(o3, /stop1-t212: modelul de azi pe \d+ rânduri/);
+  /* revizia (🟡4): amprenta e PE PIAȚĂ - o monedă nouă în ore/ nu rejudecă lunile T212 */
+  const ore = (n) => { const l = []; let c = 100; for (let i = 0; i < n; i++) { const o = c; c = c * (1 + Math.sin(i * 0.37) * 0.01); l.push({ time: Date.UTC(2026, 0, 1) + i * 3600000, open: o, high: Math.max(o, c) * 1.002, low: Math.min(o, c) * 0.998, close: c, volume: 10 }); } return l; };
+  fs.writeFileSync(path.join(DR, "ore", "ZZZ_USDT_PERP.json"), JSON.stringify(ore(3600)));
+  const o5 = run("antreneaza-arbori.mjs", ["--tinta", "stop1-t212"]); assert.match(o5, /stop1-t212: \d+ luni din cache, 0 noi/);
   fs.rmSync(path.join(DR, "zile"), { recursive: true, force: true }); const o4 = run("antreneaza-arbori.mjs", ["--tinta", "cursa5-t212"]); assert.match(o4, /cursa5-t212: prea puține rânduri/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
 // ======== Task 5: colectorul v101.64 - barele zilnice și trade-urile noaptea, bugetul, cifrele pe idei ========
 await test("(5) tura-retea strânge noaptea barele zilnice (buget 40 de tickere, QQQ întâi) și trade-urile înainte de antrenori; un ticker picat nu oprește restul; colectorul v101.64 cu bugetul rețelei 45/50 min; ruta idei păstrează retea/arbori {p, dovedita}; ideile primesc pentruCumparare", async () => {
-  const TR = await import("./lib/tura-retea.mjs"); const scrise = {}, jur = [];
-  const d = { acum: Date.UTC(2026, 9, 5, 0, 30), stare: {}, forta: true, eNoapte: () => true, ziRo: () => "2026-10-05", simboluri: [], cereKlines: async () => null, pauza: async () => {}, citesteOre: () => [], scrieOre: () => {}, boti: async () => [], scrieBoti: () => {},
+  const TR = await import("./lib/tura-retea.mjs"); const scrise = {}, jur = [], cereri = [], pauze = { n: 0 };
+  /* revizia (🟡3, 🔵11): tickerele se iau după vechimea fișierului (niciodată aduse și cele mai vechi întâi), cel mult 40 pe noapte, QQQ întâi; pauza și după un ticker picat */
+  const d = { acum: Date.UTC(2026, 9, 5, 0, 30), stare: {}, forta: true, eNoapte: () => true, ziRo: () => "2026-10-05", simboluri: [], cereKlines: async () => null, pauza: async () => { pauze.n++; }, citesteOre: () => [], scrieOre: () => {}, boti: async () => [], scrieBoti: () => {},
     porneste: async () => ({ cod: 1, minute: 0 }), citesteModele: () => null, trimite: async () => true, jurnal: (...a) => jur.push(a.join(" ")), scrieStare: () => {},
-    tickereZile: async () => ["AAA_US_EQ", "QQQ_US_EQ", "BBB_US_EQ"], cereZile: async (tk) => { if (tk === "BBB_US_EQ") throw new Error("Yahoo a limitat"); return { randuri: [{ time: 1, open: 1, high: 1, low: 1, close: 1 }] }; }, scrieZile: (tk, r) => { scrise[tk] = r; }, tradeuri: async () => [{ ticker: "AAA_US_EQ" }], scrieTradeuri: (l) => { scrise.trade = l; } };
-  await TR.turaRetea(d); assert.deepEqual(Object.keys(scrise), ["QQQ_US_EQ", "AAA_US_EQ", "trade"], JSON.stringify(Object.keys(scrise))); assert.ok(jur.some((l) => /zile: 2 din 3 tickere/.test(l)) && jur.some((l) => /BBB_US_EQ.*Yahoo a limitat/.test(l)), jur.join("\n"));
+    tickereZile: async () => ["AAA_US_EQ", "CCC_US_EQ", "BBB_US_EQ"].concat(Array.from({ length: 45 }, (_, i) => "T" + i + "_US_EQ")), vechimeZile: (tk) => ({ AAA_US_EQ: 5, BBB_US_EQ: 0, CCC_US_EQ: 9 })[tk] ?? (tk.startsWith("T") ? 100 + Number(tk.slice(1, -6)) : 0),
+    cereZile: async (tk) => { cereri.push(tk); if (tk === "BBB_US_EQ") throw new Error("Yahoo a limitat"); return { randuri: [{ time: 1, open: 1, high: 1, low: 1, close: 1 }] }; }, scrieZile: (tk, r) => { scrise[tk] = r; }, tradeuri: async () => [{ ticker: "AAA_US_EQ" }], scrieTradeuri: (l) => { scrise.trade = l; } };
+  await TR.turaRetea(d); assert.equal(cereri.length, 40, "cel mult 40 de tickere pe noapte"); assert.deepEqual(cereri.slice(0, 5), ["QQQ_US_EQ", "BBB_US_EQ", "AAA_US_EQ", "CCC_US_EQ", "T0_US_EQ"], JSON.stringify(cereri.slice(0, 5)));
+  assert.equal(pauze.n, 40, "pauza și după tickerul picat"); assert.deepEqual(Object.keys(scrise).slice(0, 3), ["QQQ_US_EQ", "AAA_US_EQ", "CCC_US_EQ"]); assert.ok(jur.some((l) => /zile: 39 din 40 de tickere/.test(l)) && jur.some((l) => /BBB_US_EQ.*Yahoo a limitat/.test(l)), jur.join("\n"));
   const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.64"/.test(col), "versiunea colectorului"); assert.ok(col.includes('"antreneaza.mjs"), "--buget-min", "45"') && col.includes("retea: antrenorul oprit după 50 de minute"), "bugetul rețelei 45/50");
-  assert.ok(col.includes("tickereZile:") && col.includes("cereZile:") && col.includes("scrieZile:") && col.includes("tradeuri:") && col.includes("scrieTradeuri:"), "deps-urile turei de noapte");
+  assert.ok(col.includes("tickereZile:") && col.includes("cereZile:") && col.includes("scrieZile:") && col.includes("tradeuri:") && col.includes("scrieTradeuri:") && col.includes("vechimeZile:"), "deps-urile turei de noapte");
   assert.ok(col.includes("Retea.pentruCumparare(") && col.includes("Arbori.pentruCumparare(") && col.includes("bareIdei"), "ideile fără cifrele 🧠/🌳");
   const ruta = citeste("functions", "api", "t212.js"); assert.ok(ruta.includes("retea: x && x.retea") && ruta.includes("arbori: x && x.arbori"), "ruta idei nu păstrează retea/arbori");
 });
@@ -155,7 +163,7 @@ await test("(7) garda: rândurile 🧠/🌳 de pe acțiuni (stop1, sare1, cursa5
   const s = situatii().filter((x) => /^arbori\./.test(x.sursa) && /^acțiuni:/.test(x.sit)); assert.ok(s.length >= 40, "situații pe acțiuni: " + s.length);
   const rele = s.map((x) => ({ x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.x.sursa + ": " + q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
   assert.ok(s.some((x) => /rata pe acțiune/.test(x.text)), "reperul „rata pe acțiune” lipsește"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["rezultat-t212"]), "rândul „un trade ca ăsta”");
-  assert.ok(s.some((x) => /^🌳 Ținta înaintea stopului în 5 zile: /.test(x.text)), "subsolul T212"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["directie-t212"]), "direcția pe 5 zile");
+  assert.ok(s.some((x) => /^🌳 Ținta înaintea stopului în 5 zile de bursă: /.test(x.text)), "subsolul T212"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["directie-t212"]), "direcția pe 5 zile");
 });
 await test("(E) versiunile: pagina v100.94 (BUILD_INFO, versiune.js, sw, index ×4, package.json 100.94.0, lanțul cu v10094), colectorul v101.64", () => {
   const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(bi.version, "v100.94"); assert.match(bi.badge, /^v100\.94 · /);
@@ -164,6 +172,52 @@ await test("(E) versiunile: pagina v100.94 (BUILD_INFO, versiune.js, sw, index �
   const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.94/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.93/.test(ix), "index.html mai are v100.93");
   const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.94.0"); assert.ok(/npm run test:arbori && npm run test:v10094( && |")/.test(pk), "lanțul de teste"); assert.ok(JSON.parse(pk).scripts["test:v10094"] === "node scripts/proba-v10094.mjs", "scriptul test:v10094");
   assert.ok(/VERSIUNE_COLECTOR = "v101\.64"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.64");
+});
+
+// ======== revizia Opus (04.10, v100.94): pasul de reparații - fiecare văzut ROȘU întâi ========
+await test("(R1) 🔴1: pe acțiuni nivelurile din afara grilei învățate nu primesc cifră (INTERVAL_T212 = marginile grilei STOPURI/CURSE din date-t212); stopul la −15% și ținta la +30% (ce cere pagina) sunt ÎN grilă", async () => {
+  const D = await import("../retea/date-t212.mjs"); const b = bareZi(400, 100, 11), q = bareZi(400, 300, 5), c = b[b.length - 1].c, o = { acum: b[b.length - 1].t + 2 * ZI, pret: c, ticker: "AAA_US_EQ" };
+  const coduri = (st, ti) => R.intrariActiune(b, { ...o, stop: st, tinta: ti }, q, []).lista.map((x) => x.cod);
+  assert.deepEqual(coduri(c * 0.75, c * 1.1), ["directie5"], "stop −25% ⇒ fără stop1/sare1/cursa5"); assert.deepEqual(coduri(c * 0.99, c * 1.05), ["directie5"], "stop −1% ⇒ sub grilă");
+  assert.deepEqual(coduri(c * 0.85, c * 1.3), ["stop1", "sare1", "cursa5", "directie5"], "stop −15%, ținta +30% (pozițiile lui) ⇒ toate"); assert.deepEqual(coduri(c * 0.95, c * 1.6), ["stop1", "sare1", "directie5"], "ținta +60% ⇒ fără cursă");
+  const I = R.INTERVAL_T212, S = D.STOPURI.map(Math.abs), T = D.CURSE.map((x) => x[0]), SS = D.CURSE.map((x) => Math.abs(x[1]));
+  assert.deepEqual(I.S, [Math.min(...S), Math.max(...S)]); assert.deepEqual(I.cursaT, [Math.min(...T), Math.max(...T)]); assert.deepEqual(I.cursaS, [Math.min(...SS), Math.max(...SS)]);
+  assert.ok(Math.max(...S) >= 0.2 && Math.max(...T) >= 0.3 && Math.max(...SS) >= 0.15, "grila acoperă stopul care urcă (−15…−20%) și ținta la 2× risc (+30%)");
+});
+await test("(R2) 🟡4: amprenta datelor e PE PIAȚĂ (A_CRYPTO / A_T212) și cheia lunilor e pe țintă, în amândoi antrenorii și în vsRetea", () => {
+  for (const f of ["antreneaza.mjs", "antreneaza-arbori.mjs"]) { const s = citeste("retea", f); assert.ok(/const A_CRYPTO = /.test(s) && /const A_T212 = /.test(s) && /const CHEIE_LUNI = \(t\) => CHEIE \+ "\|" \+ \(t\.endsWith\("-t212"\) \? A_T212 : A_CRYPTO\);/.test(s), f + ": cheia pe piață"); assert.ok(!/CHEIE_LUNI(?![( ])/.test(s), f + ": CHEIE_LUNI folosită fără țintă"); }
+  assert.ok(/c\.cheie !== cr\.cheie \+ "\|" \+ \(t\.endsWith\("-t212"\) \? A_T212 : A_CRYPTO\)/.test(citeste("retea", "antreneaza-arbori.mjs")), "vsRetea cu cheia pe piață");
+});
+await test("(R3) 🟡5/🟡7: Retea.costTipic = mediana costului perechilor lui (poarta și ideile nu mai judecă „un trade de 100 de lei”); Retea.rataPe pe plus = rezultat > 0 (netul)", () => {
+  assert.equal(R.costTipic([{ cost: 100 }, { cost: 300 }, { cost: 200 }, { cost: 0 }, {}, { cost: null }]), 200); assert.equal(R.costTipic([{ cost: 100 }, { cost: 300 }]), 200); assert.equal(R.costTipic([]), null); assert.equal(R.costTipic(null), null);
+  const rp = R.rataPe([{ ticker: "A", inchis: 5, cost: 1000, rezultat: 1 }, { ticker: "A", inchis: 6, cost: 1000, rezultat: -1 }], "A", 10); assert.equal(rp.nPe, 2); assert.ok(Math.abs(rp.glob - 0.5) < 1e-9 && Math.abs(rp.rata - (1 + 5) / 12) < 1e-9, JSON.stringify(rp));
+  const e = citeste("public", "lib", "t212-ecran.js"), col = citeste("scripts", "colector.mjs");
+  assert.ok(e.includes("cost: cump.cost > 0 ? cump.cost : Retea.costTipic(inchise)") && !e.includes("cost: 100 }"), "poarta cu cost tipic"); assert.ok(col.includes("cost: Retea.costTipic(inchise)") && !col.includes("cost: 100 }"), "ideile cu cost tipic");
+});
+await test("(R4) 🟡6: date-t212.unesteZile unește barele noi cu cele de pe disc (pe time, cea nouă câștigă, în ordinea timpului) ⇒ istoria crește peste 2 ani; colectorul o folosește la scriere", async () => {
+  const D = await import("../retea/date-t212.mjs");
+  assert.deepEqual(D.unesteZile([{ time: 1, close: 1 }, { time: 2, close: 2 }], [{ time: 2, close: 9 }, { time: 3, close: 3 }]), [{ time: 1, close: 1 }, { time: 2, close: 9 }, { time: 3, close: 3 }]);
+  assert.deepEqual(D.unesteZile(null, [{ time: 5 }]), [{ time: 5 }]); assert.deepEqual(D.unesteZile({ la: 1, randuri: [{ time: 7 }] }, [{ time: 6 }]), [{ time: 6 }, { time: 7 }]);
+  assert.ok(citeste("scripts", "colector.mjs").includes("unesteZile(citesteJson(f, null), randuri)"), "scrieZile nu unește cu fișierul vechi");
+});
+await test("(R5) 🔵8: „Cum s-a verificat” pe piața paginii - pe crypto doar țintele crypto (7 🧠 + 7 🌳), pe T212 doar cele T212 (5 + 5); reteaHtml dă o subsolului, T212 cere actiuni: true", () => {
+  const mix = (ver) => Object.fromEntries(Object.keys(R.TINTE).map((t) => [t, { tinta: t, versiune: ver, la: ACUM - 3600000, verificare: null }]));
+  const sC = R.subsol(mix(R.VERSIUNE), mix("a1")), sA = R.subsol(mix(R.VERSIUNE), mix("a1"), { actiuni: true });
+  assert.equal(sC.length, 14, "crypto: " + sC.join(" | ")); assert.ok(sC.every((x) => !/stopul mâine|trade ca ăsta|5 zile|sare peste/i.test(x)), sC.join("\n"));
+  assert.equal(sA.length, 10, "acțiuni: " + sA.join(" | ")); assert.ok(sA.every((x) => /stopul mâine|trade ca ăsta|5 zile|sare peste/i.test(x)), sA.join("\n"));
+  assert.ok(citeste("public", "app.js").includes("Retea.subsol(m,aM,o)"), "reteaHtml nu dă o subsolului"); assert.ok(/actiuni:\s*true/.test(citeste("public", "lib", "t212-ecran.js")), "T212 nu cere subsolul pe acțiuni");
+});
+await test("(R6) 🔵9/🔵10/🔵11: poarta judecă pe barele ÎNCHISE (bareBursa, nu bare care aruncă mereu ultima); QQQ se readuce la „Reîncarcă”; pauza vine și după un ticker picat", () => {
+  const e = citeste("public", "lib", "t212-ecran.js"), tr = citeste("scripts", "lib", "tura-retea.mjs");
+  assert.ok(e.includes("bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now())") && e.includes("p.bareZi, p.prob,"), "poarta pe bareZi");
+  assert.ok(e.includes("if (!t212.bare.QQQ_US_EQ || forta)"), "QQQ la Reîncarcă");
+  assert.ok(/catch \(e\) \{ d\.jurnal\("zile: " \+ t, e\.message\); \}\s*await d\.pauza\(1500\);/.test(tr), "pauza după catch");
+});
+await test("(R7) 🔵12 + ruling 4: nivelul din grilă NU e legat de ziua săptămânii (hash, nu k % n); numele T212 lungi și clare („…de bursă”, „iese pe plus”)", async () => {
+  const D = await import("../retea/date-t212.mjs"); const M = { G, P, R, A: incarcaArbori() }, b = bareZi(400, 100, 11), q = bareZi(400, 300, 5);
+  const l = D.randuriActiune("stop1-t212", "AAA_US_EQ", b, q, [], M, {}), peZi = {}; for (const r of l) { const z = new Date(b[r.i].t).getUTCDay(); (peZi[z] = peZi[z] || new Set()).add(r.e.relS); }
+  assert.ok(Object.values(peZi).every((s) => s.size >= 3), "nivelul e legat de ziua săptămânii: " + JSON.stringify(Object.fromEntries(Object.entries(peZi).map(([k, v]) => [k, [...v]]))));
+  assert.equal(R.NUME["rezultat-t212"], "Un trade ca ăsta iese pe plus"); assert.equal(R.NUME["directie-t212"], "Prețul mai sus peste 5 zile de bursă"); assert.equal(R.NUME["sare1-t212"], "Deschiderea sare peste stop"); assert.equal(R.NUME["cursa5-t212"], "Ținta înaintea stopului în 5 zile de bursă");
 });
 
 console.log("\n" + (pica ? "V100.94 PICA · " + pica + " din " + (ok + pica) : "V100.94 PASS · " + ok + "/" + ok));

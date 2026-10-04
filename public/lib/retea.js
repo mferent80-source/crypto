@@ -12,6 +12,8 @@ var Retea = (function () {
     "stop1-t212": { bloc: 24 }, "sare1-t212": { bloc: 24 }, "cursa5-t212": { bloc: 168 }, "directie-t212": { bloc: 168 }, "rezultat-t212": { bloc: 24 } };   /* v100.94 (L2): țintele pe acțiuni - zilele / săptămânile de bursă */
   // revizia finală (M1): distanțele pe care rețeaua a învățat - aceleași cu grila din retea/date.mjs (proba le compară); în afara lor nu dă cifră
   var INTERVAL = { 24: [0.01, 0.12], 72: [0.01, 0.12], 168: [0.1, 0.4], cursaT: [0.02, 0.08], cursaS: [0.02, 0.05] };
+  // v100.94 (revizia 🔴1): pe acțiuni, marginile grilei învățate (STOPURI / CURSE din retea/date-t212.mjs - proba le ține egale); în afara lor nu se dă cifră
+  var INTERVAL_T212 = { S: [0.02, 0.2], cursaT: [0.03, 0.4], cursaS: [0.03, 0.2] };
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v); return isFinite(x) ? x : null; }
   function taie(v) { return !isFinite(v) ? 0 : v > LIM ? LIM : v < -LIM ? -LIM : v; }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -105,9 +107,14 @@ var Retea = (function () {
   }
   // rata lui pe o acțiune: perechile închise ÎNAINTE de `pana` (netul după comisioane și conversie, 0,3% din cost), globală și pe ticker trasă spre medie cu k = 10 - aceeași regulă ca date-t212.rataPe
   function rataPe(ist, ticker, pana) {
-    var l = (Array.isArray(ist) ? ist : []).filter(function (t) { return t && nr(t.inchis) !== null && t.inchis <= pana && nr(t.cost) > 0 && nr(t.rezultat) !== null; }), plusDe = function (t) { return t.rezultat - 0.003 * t.cost > 0; };
+    var l = (Array.isArray(ist) ? ist : []).filter(function (t) { return t && nr(t.inchis) !== null && t.inchis <= pana && nr(t.cost) > 0 && nr(t.rezultat) !== null; }), plusDe = function (t) { return t.rezultat > 0; };   /* revizia 🟡7: rezultatul e deja NET (T212.perechi scade comisioanele) */
     var n = l.length, glob = n ? l.filter(plusDe).length / n : 0.5, pe = l.filter(function (t) { return t.ticker === ticker; }), plus = pe.filter(plusDe).length;
     return { glob: glob, rata: (plus + 10 * glob) / (pe.length + 10), nPe: pe.length };
+  }
+  // v100.94 (revizia 🟡5): costul tipic al unui trade de-al lui = mediana costului perechilor închise (lei); null fără perechi - „un trade ca ăsta” se judecă la mărimea lui, nu la 100 de lei
+  function costTipic(ist) {
+    var c = (Array.isArray(ist) ? ist : []).map(function (t) { return t ? nr(t.cost) : null; }).filter(function (v) { return v !== null && v > 0; }).sort(function (a, b) { return a - b; });
+    if (!c.length) return null; var m = c.length >> 1; return c.length % 2 ? c[m] : (c[m - 1] + c[m]) / 2;
   }
   // intrările pe o acțiune (poziție / poartă): o = { acum, pret, stop, tinta, ticker }; bare = barele zilnice ale paginii (GridCalcul.bare a scos deja bara în formare;
   // aici se ia ultima ÎNCHISĂ la `acum`); ist = perechile lui închise. -> { la, f, lista: [{cod, tinta, x}] }: stop1 + sare1 (cu stop sub preț), cursa5 (și cu țintă peste preț), directie5 (mereu)
@@ -117,7 +124,8 @@ var Retea = (function () {
     var rp = rataPe(ist, o.ticker, acum), f = trasaturiZilnice(b, i, Array.isArray(qqq) ? qqq : null, rp.rata); if (!f) return null;
     var rel = function (x) { x = nr(x); return x !== null && x > 0 ? x / pr - 1 : null; }, relS = rel(o.stop), relT = rel(o.tinta), lista = [];
     var pune = function (cod, tinta, e) { var x = intrareActiune(tinta, f, e); if (x) lista.push({ cod: cod, tinta: tinta, x: x }); };
-    if (relS !== null && relS < 0) { pune("stop1", "stop1-t212", { relS: relS }); pune("sare1", "sare1-t212", { relS: relS }); if (relT !== null && relT > 0) pune("cursa5", "cursa5-t212", { relT: relT, relS: relS }); }
+    var inI = function (v, iv) { var a = Math.abs(v); return a >= iv[0] - 1e-9 && a <= iv[1] + 1e-9; };   /* revizia 🔴1: în afara grilei învățate nu se dă cifră (ca Retea.INTERVAL pe boți) */
+    if (relS !== null && relS < 0 && inI(relS, INTERVAL_T212.S)) { pune("stop1", "stop1-t212", { relS: relS }); pune("sare1", "sare1-t212", { relS: relS }); if (relT !== null && relT > 0 && inI(relT, INTERVAL_T212.cursaT) && inI(relS, INTERVAL_T212.cursaS)) pune("cursa5", "cursa5-t212", { relT: relT, relS: relS }); }
     pune("directie5", "directie-t212", {});
     return { la: acum, f: f, lista: lista };
   }
@@ -226,7 +234,7 @@ var Retea = (function () {
   }
   // ---- rândurile 🧠 (Tablou, fișă) ----
   var NUME = { "atinge-24": "Atinge un nivel în 24 h", "atinge-72": "Atinge un nivel în 3 zile", "atinge-168": "Atinge lichidarea în 7 zile", cursa: "Ținta înaintea stopului, în 7 zile", liniste: "Liniștea mai ține", directie: "Prețul mai sus peste 24 h", rezultat: "Rezultatul tău",
-    "stop1-t212": "Atinge stopul mâine", "sare1-t212": "Sare peste stop", "cursa5-t212": "Ținta înaintea stopului în 5 zile", "directie-t212": "Prețul mai sus peste 5 zile", "rezultat-t212": "Un trade ca ăsta pe plus" };   /* v100.94 (L2): nume scurte - rândul 🌳 din „Cum s-a verificat” ține sub 160 */
+    "stop1-t212": "Atinge stopul mâine", "sare1-t212": "Deschiderea sare peste stop", "cursa5-t212": "Ținta înaintea stopului în 5 zile de bursă", "directie-t212": "Prețul mai sus peste 5 zile de bursă", "rezultat-t212": "Un trade ca ăsta iese pe plus" };   /* v100.94 (L2; revizia, ruling 4): numele întregi încap de când rândul 🌳 nu mai repetă formula */
   var UNIT = { 24: ["zi independentă", "zile independente"], 48: ["bloc de 2 zile", "blocuri de 2 zile"], 72: ["bloc de 3 zile", "blocuri de 3 zile"], 168: ["săptămână", "săptămâni"] };
   var TINTA_DE = { cursa: "cursa", "iese-jos-24": "atinge-24", "iese-sus-24": "atinge-24", "iese-jos-72": "atinge-72", "iese-sus-72": "atinge-72", lichidare: "atinge-168", "liniste-24": "liniste", "liniste-48": "liniste", "directie-24": "directie", stop1: "stop1-t212", sare1: "sare1-t212", cursa5: "cursa5-t212", directie5: "directie-t212" };   /* v100.94 (L2): codurile rândurilor 🎲 de pe acțiuni */
   function PC(v) { return Math.round(v * 100) + "%"; }
@@ -282,13 +290,15 @@ var Retea = (function () {
   }
   // „Cum s-a verificat”: un rând pe țintă - cazurile independente, Brier rețea / reper / formula simplă, IC față de reper
   // v100.93: + un rând 🌳 pe țintă, cu cazurile LUI (pot diferi de ale rețelei când lunile judecate diferă - revizia 04.10): Brier, IC și „față de 🧠” (BSS al arborilor cu rețeaua drept reper, cu IC)
-  function subsol(modele, arbori) {
-    var out = Object.keys(NUME).filter(function (k) { return modele && modele[k] && modele[k].versiune === VERSIUNE; }).map(function (k) {
+  // v100.94 (revizia 🔵8): o = { actiuni } - pe pagina T212 doar țintele de pe acțiuni, pe crypto doar cele crypto (fiecare pagină își citește piața)
+  function subsol(modele, arbori, o) {
+    var eT = function (k) { return /-t212$/.test(k); }, vrea = function (k) { return o && o.actiuni ? eT(k) : !eT(k); };
+    var out = Object.keys(NUME).filter(function (k) { return vrea(k) && modele && modele[k] && modele[k].versiune === VERSIUNE; }).map(function (k) {
       var v = modele[k].verificare, u = UNIT[(TINTE[k] || { bloc: 24 }).bloc] || UNIT[24];
       if (!v) return NUME[k] + ": neverificată încă.";
       return NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "") + ".";
     });
-    Object.keys(NUME).filter(function (k) { return arbori && arbori[k] && arbori[k].versiune === VERSIUNE_ARBORI; }).forEach(function (k) {
+    Object.keys(NUME).filter(function (k) { return vrea(k) && arbori && arbori[k] && arbori[k].versiune === VERSIUNE_ARBORI; }).forEach(function (k) {
       var v = arbori[k].verificare, vs = v && v.vsRetea, u = UNIT[(TINTE[k] || { bloc: 24 }).bloc] || UNIT[24];
       if (!v) { out.push("🌳 " + NUME[k] + ": neverificată încă."); return; }
       out.push("🌳 " + NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "")
@@ -301,6 +311,6 @@ var Retea = (function () {
     if (!pzA || !vdA || nr(pzA.p) === null) return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + ".";
     return "Un bot ca ăsta ar ieși pe plus: 🧠 " + PC(pz.p) + " · 🌳 " + PC(pzA.p) + " · rata ta: " + PC(pz.rata) + ".\n🧠 " + eticheta(vd) + " · 🌳 " + eticheta(vdA) + ".";
   }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, inchisZi: inchisZi, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, INTERVAL_T212: INTERVAL_T212, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, inchisZi: inchisZi, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, costTipic: costTipic, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;
