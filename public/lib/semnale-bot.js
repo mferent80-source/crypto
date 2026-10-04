@@ -336,7 +336,8 @@ var SemnaleBot = (function () {
     // v100.92 (I-523): Busola - „mai agitată” intră în verdict DOAR când bilanțul pazei (I-512, pe date noi) e „dovedit”, cu cifra lui (x.busola =
     // Busola.pentruVerdict); „pe dos” / „n-am aflat” / „prea puține” ⇒ nimic; niciodată IEȘI de la Busola singură. Ipoteză: se judecă în socoteală (cod „busola”)
     var bz = x.busola, bl = bz && bz.bilant, Pp = function (d) { return (d < 0 ? "−" : "+") + Math.abs(d * 100).toFixed(2).replace(".", ",") + " pp"; };
-    if (bz && bz.stare === "miscare" && bl && bl.verdict === "dovedit" && typeof bl.dif === "number" && isFinite(bl.dif))
+    // revizia Opus (04.10): mișcarea CU botul rămâne „ține-l” (regula din 27.09) - Busola nu calcă pașii „cu botul”, ca și componenta Radarului
+    if (bz && bz.stare === "miscare" && sf !== "cu" && bl && bl.verdict === "dovedit" && typeof bl.dif === "number" && isFinite(bl.dif))
       c.push({ nivel: "atentie", cod: "busola", motiv: "Busola: agitație dovedită, " + Pp(bl.dif) + " pe episod pe date noi", faCe: "N-aș adăuga bani cât ține agitația; aș verifica stopul botului în Pionex.",
         deCe: "Busola a măsurat pe date noi: după „mai agitat” gridul a pierdut mai mult decât oricând" + (bl.monede > 0 ? " (" + TextRo.cate(bl.monede, "monedă", "monede") + ")" : "") + "." });
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";

@@ -33,8 +33,8 @@ import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs"; 
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
-import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";
-import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513)
+import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
+import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
 const VERSIUNE_COLECTOR = "v101.62";
 
@@ -311,6 +311,7 @@ async function semnaleBot(b, ctx, acum) {
     const stA = stareAlerte[b.id] || (stareAlerte[b.id] = {});
     // revizia 01.10 (I1): starea alertelor botului (ce s-a anuntat deja imediat) si sfaturile tacute (I-466) - ca alerta Consilierului sa nu dubleze
     const activ = Object.fromEntries(Object.entries(stA).filter(([k, v]) => k.charAt(0) !== "_" && v && v.nivel).map(([k, v]) => [k, v.nivel]));
+    if (stA._busola && stA._busola.stare === "miscare") activ["busola-miscare"] = "atentie";   // v101.62 (revizia Opus): paza a anunțat deja „mai agitată” - Consilierul nu trimite al doilea mesaj
     const ch = Consiliu.schimbare(stA._cons, x.cons, acum, String(b.baza || "").replace(/\.PERP$/, ""), { activ, taci: socotealaTaci || {} });
     stA._cons = ch.stare; scrieStare();
     if (ch.alerta) await trimiteAlerta(ch.alerta, b.id, "consilier");
@@ -1003,6 +1004,7 @@ async function turaIdeiZi() {
 let dimineataInLucru = false;
 async function dateDimineata() {
   const out = { deIesit: [], rezultate: [], plafon: [], stiri: [], boti: [] };
+  let t212Citit = false;   // v101.62 (revizia Opus): „de ieșit” se spune doar cu pozițiile T212 citite - altfel „nimic de ieșit” ar fi inventat
   // v92: barele zilnice de bursa CU ultima zi (bare() o scotea - "ultima zi" arata ziua de dinainte)
   try { const pz = await cere("/api/stiri?action=piata"); const zi = (r) => (Array.isArray(r) && r.length ? GridCalcul.bareToate(r) : null); out.piata = Consilier.piata({ qqq: zi(pz.qqq), spy: zi(pz.spy), vix: zi(pz.vix), fg: pz.fg }); } catch (e) { jurnal("dimineata piata", e.message); }
   const v = citesteVarsSigur();
@@ -1010,6 +1012,7 @@ async function dateDimineata() {
     try {
       const c = await cere("/api/t212?action=cont"), pz = await cere("/api/t212?action=pozitii"), h = await cere("/api/t212?action=istoric");
       const poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0), des = T212.perechi((h && h.umpleri) || []).deschise, cash = c && c.cash || {};
+      t212Citit = true;
       let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
       const inv = cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
       const zi = new Date().toISOString().slice(0, 10), intrari = [], barePe = {};
@@ -1042,6 +1045,7 @@ async function dateDimineata() {
   try { const id = await cere("/api/t212?action=idei"); out.idei = (id && id.idei && Array.isArray(id.idei.actiuni) ? id.idei.actiuni : []).slice(0, 5).map((x) => x.simbol);
     out.reveniriN = id && id.idei && Array.isArray(id.idei.reveniri) ? id.idei.reveniri.length : null; out.reveniriEt = id && id.idei && id.idei.dovadaReveniri && id.idei.dovadaReveniri.eticheta || null; } catch {}   // v101.62 (I-526)
   try { const cl = await cere("/api/istoric-bot?action=clasament"); out.ideiBoti = Idei.ideiBoti(cl && cl.clasament, [], 3).map((x) => x.moneda); } catch {}
+  let lBoti = [], liniaVeche = "";
   try {
     const bo = await cere("/api/bot-orders"), boti = bo && bo.bots || [], acum = Date.now();
     out.boti = boti.filter((b) => b.activ && Number.isFinite(Number(b.distantaLichidarePct)) && Math.abs(Number(b.distantaLichidarePct)) < 15).map((b) => ({ nume: String(b.baza || "").replace(/\.PERP$/, ""), lich: Math.abs(Number(b.distantaLichidarePct)) }));
@@ -1051,10 +1055,13 @@ async function dateDimineata() {
     const l = boti.filter((b) => b && b.id && b.activ !== false).map((b) => { const s = stareAlerte[b.id] && stareAlerte[b.id]._busola; if (s && Number(s.la) > laMax) laMax = Number(s.la); return { nume: String(b.baza || "").replace(/\.PERP$/, ""), stare: s ? s.stare : null, de: s ? s.de : null }; });
     const sufix = laMax > 0 && acum - laMax > Busola.PAZA_VECHI_MS ? " (rezumat de acum " + TextRo.ore(acum - laMax) + ")" : "";
     const t = Busola.liniaBoti(l, acum, 142 - sufix.length); out.liniiExtra = t ? ["🧭 Busola, pe 4h: " + t + sufix] : [];
-    // v101.62 (I-526): rândul-verdict din capul rezumatului - din aceleași date (boții pe agitație/calm, bilanțul pazei, acțiunile pe revenire, de ieșit)
-    const rz = Busola.rezumat(), tz = titluDimineata({ boti: l, bilant: rz && rz.perp && rz.perp.bilant ? rz.perp.bilant.verdict : null, reveniri: out.reveniriN, eticheta: out.reveniriEt, deIesit: out.deIesit.length });
-    out.liniiIntai = tz ? [tz] : [];
+    lBoti = l; liniaVeche = sufix;
   } catch {}
+  // v101.62 (I-526): rândul-verdict din capul rezumatului - din aceleași date (boții pe agitație/calm, bilanțul pazei, acțiunile pe revenire, de ieșit).
+  // Revizia Opus: în afara try-ului bot-orders (revenirile și „de ieșit” sunt știute și când Pionex pică); boții DOAR din rezumat proaspăt
+  // (rezumatul vechi ⇒ fără partea cu boții, nu „Azi: 1 bot pe agitație” de acum 10 h); „de ieșit” doar cu T212 citit
+  const rz = Busola.rezumat(), tz = titluDimineata({ boti: liniaVeche ? [] : lBoti, bilant: rz && rz.perp && rz.perp.bilant ? rz.perp.bilant.verdict : null, reveniri: out.reveniriN, eticheta: out.reveniriEt, deIesit: t212Citit ? out.deIesit.length : null });
+  out.liniiIntai = tz ? [tz] : [];
   return out;
 }
 async function turaDimineata() {

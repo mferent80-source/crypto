@@ -72,9 +72,9 @@ await test("(A) I-517 Tabloul: blocul „Pe zi, la închidere, ce știm” în 3
 // ---- lotul A: I-519 fișa ----
 await test("(A) I-519 fișa: grPliabil - toate secțiunile se pliază pe telefon în afară de „Setările de pus în Pionex”; grPliazaPeTelefon după desen; verdictul lipicios", () => {
   const a = citeste("public", "app.js"), ctx = {}; vm.createContext(ctx); vm.runInContext(fnApp("grPliabil") + "\n;this.f=grPliabil;", ctx);
-  assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Poarta de pornire"), true); assert.equal(ctx.f("Ce spune istoricul tău"), true); assert.equal(ctx.f(""), false);
+  assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Poarta de pornire"), false);   /* revizia Opus: Poarta e faptă, rămâne deschisă */ assert.equal(ctx.f("Ce spune istoricul tău"), true); assert.equal(ctx.f(""), false);
   assert.ok(/^function grPliazaPeTelefon\(box\)\{/m.test(a), "lipsește grPliazaPeTelefon");
-  const rg = fnApp("renderGrid"); assert.ok(/box\.innerHTML=h[^\n]*\n\s*grPliazaPeTelefon\(box\)/.test(rg) || /grPliazaPeTelefon\(box\)/.test(rg), "plierea nu se cheamă după desen");
+  const rg = fnApp("renderGrid"); assert.ok(/box\.innerHTML=h;grPliazaPeTelefon\(box\)/.test(rg), "plierea nu se cheamă imediat după desen");
   /* poza de la 390 (04.10): dispatch-ul data-action-click nu acceptă `this` ca argument (v54ActionArg) ⇒ cheia secțiunii se dă ca text ('3'), iar funcția o caută după data-gr-sect */
   assert.ok(/^function grPliereComuta\(k\)\{/m.test(a), "grPliereComuta primește cheia secțiunii (text), nu elementul");
   const pl = fnApp("grPliazaPeTelefon"); assert.ok(pl.includes(`s.setAttribute("data-gr-sect",String(i))`) && pl.includes(`cap.setAttribute("data-action-click","grPliereComuta('"+i+"')")`), "secțiunea nu-și primește cheia / acțiunea cu text");
@@ -89,7 +89,7 @@ const IST = (n, pePlus, total) => ({ n: n, pePlus: pePlus, total: total });
 function sugestii(rev, sh) {
   const ctx = { Reveniri: { textDovada: () => "dovada", textBoti: () => "", TEXT_SUPRAVIETUITORI: "" }, Idei: { reveniriBoti: () => rev, shortBoti: () => sh }, GridCalcul: { procent: (v) => (v * 100).toFixed(1).replace(".", ",") + "%" }, escapeHtml: esc, TextRo: globalThis.TextRo };
   vm.createContext(ctx);
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiCorp;", ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricRosu") + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiCorp;", ctx);
   return ctx.f({ la: 1, monede: [{ revenire: REV() }] }, null, []);
 }
 await test("(B) I-525 listele de revenire/short: istoricul tău pe minus (≥ 3 boți, regula candidaților) ⇒ dunga roșie și istoricul pe roșu; altfel după piață (verde), istoricul gri", () => {
@@ -166,8 +166,8 @@ await test("(C) Busola.pentruVerdict: starea + bilanțul (verdict, dif, monede) 
 });
 await test("(C) I-522 Consiliul: un rând doar când Radarul (regimul fișei) și Busola se contrazic, ≤ 110; de acord sau fără una din ele ⇒ nimic; verdictul neatins", () => {
   const sm = S.semafor({ bot: BOT, fisa: null }), x = (busola, regim) => CS.alcatuieste({ sm: sm, concret: [], sfaturi: [], busola: busola, regim: regim });
-  assert.equal(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar, "Radarul: liniște (4 h față de mediana ei) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite");
-  assert.equal(x({ stare: "liniste" }, { miscare: true }).busolaVsRadar, "Radarul: mișcare (4 h față de mediana ei) · Busola: mai calmă (ATR 4h față de un an) — orizonturi diferite");
+  assert.equal(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar, "Radarul: liniște (4h/24h față de obișnuit) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite");
+  assert.equal(x({ stare: "liniste" }, { miscare: true }).busolaVsRadar, "Radarul: mișcare (4h/24h față de obișnuit) · Busola: mai calmă (ATR 4h față de un an) — orizonturi diferite");
   assert.ok(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar.length <= 110);
   for (const [b, r] of [[{ stare: "miscare" }, { miscare: true }], [{ stare: "liniste" }, { miscare: false }], [{ stare: "nu-stiu" }, { miscare: true }], [null, { miscare: true }], [{ stare: "miscare" }, null]]) assert.equal(x(b, r).busolaVsRadar, null, JSON.stringify([b, r]));
   assert.equal(x({ stare: "miscare" }, { miscare: false }).nivel, x(null, null).nivel, "verdictul neatins");
@@ -213,6 +213,59 @@ await test("(E) versiunile: pagina v100.92 (BUILD_INFO, versiune.js, sw, index �
   const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.92/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.91/.test(ix), "index.html mai are v100.91");
   const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.92.0"); assert.ok(/npm run test:v10091 && npm run test:v10092"/.test(pk), "lanțul de teste");
   assert.ok(/VERSIUNE_COLECTOR = "v101\.62"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.62");
+});
+
+// ======== revizia Opus (04.10): pasul de reparații - fiecare văzut ROȘU întâi ========
+const FISA_REG = (sens) => ({ regim: { miscare: true, sens: sens, r4h: 2.1, r24h: 1 } });
+await test("(F) I-523 nu calcă „mișcarea e cu botul”: Busola dovedită + mișcare CU botul ⇒ ȚINE / cu-botul, fără componenta busola; mișcare CONTRA ⇒ componenta busola rămâne, după cea a Radarului", () => {
+  const cu = S.semafor({ bot: BOT, fisa: FISA_REG("urca"), busola: BZ("miscare", "dovedit") });
+  assert.equal(cu.nivel + "/" + cu.cod, "tine/cu-botul"); assert.ok(!cu.componente.some((k) => k.cod === "busola"), "componenta busola a calcat „cu botul”");
+  const contra = S.semafor({ bot: BOT, fisa: FISA_REG("coboara"), busola: BZ("miscare", "dovedit") }), coduri = contra.componente.map((k) => k.cod);
+  assert.equal(contra.nivel, "atentie"); assert.ok(coduri.indexOf("miscare") >= 0 && coduri.indexOf("busola") > coduri.indexOf("miscare"), coduri.join(","));
+});
+await test("(F) Discord o singură dată: Consiliu.schimbare tace (doarRadar) când paza a anunțat deja „mai agitată” (activ busola-miscare); CHEI.busola; colectorul pune cheia din _busola", () => {
+  const c = { nivel: "atentie", eticheta: "🟡 Atenție", titlu: "Busola: agitație dovedită", faCe: "N-aș adăuga bani.", motive: [{ cod: "busola", c: "g", titlu: "Busola: agitație dovedită, −0,17 pp pe episod pe date noi", scurt: "agitație dovedită" }] };
+  const st = () => ({ acum: { nivel: "tine", eticheta: "🟢 Ține", titlu: "Nimic nu cere o mișcare", faCe: "", motive: [] }, nou: { nivel: "atentie" } });
+  const cu = CS.schimbare(st(), c, ACUM, "CRV", { activ: { "busola-miscare": "atentie" } }), fara = CS.schimbare(st(), c, ACUM, "CRV", { activ: {} });
+  assert.ok(cu.alerta && cu.alerta.doarRadar === true, "cu paza anunțată: doar în Radar"); assert.ok(fara.alerta && fara.alerta.doarRadar === false, "fără paza: pe Discord");
+  assert.ok(/busola: \["busola-miscare"\]/.test(lib("consiliu.js")), "CHEI.busola");
+  assert.ok(citeste("scripts", "colector.mjs").includes('if (stA._busola && stA._busola.stare === "miscare") activ["busola-miscare"] = "atentie";'), "colectorul: cheia pazei în activ");
+});
+await test("(F) I-525 în toate listele la fel: candidații (tbIdeiRender) cu istoricul lui pe minus (≥ 3 boți) ⇒ dunga roșie și istoricul pe roșu, prin același ajutor tbIstoricRosu", () => {
+  const s = lib("t212-ecran.js"); assert.ok(/^function tbIstoricRosu\(x\)/m.test(s), "lipsește tbIstoricRosu");
+  const r = fnDin("t212-ecran.js", "tbIdeiRender"), g = fnDin("t212-ecran.js", "tbSugestiiCorp");
+  assert.ok(r.includes('(tbIstoricRosu(x) ? "r" : "v")') && r.includes(`(tbIstoricRosu(x) ? ' class="bad"' : '')`), "candidații nu folosesc ajutorul comun");
+  assert.ok(g.includes("tbIstoricRosu(x)") && !/var rosu = function/.test(g), "listele nu folosesc ajutorul comun");
+  const ctx = {}; vm.createContext(ctx); vm.runInContext(fnDin("t212-ecran.js", "tbIstoricRosu") + ";this.f=tbIstoricRosu;", ctx);
+  assert.equal(ctx.f({ istoric: IST(17, 10, -173.55) }), true); assert.equal(ctx.f({ istoric: IST(2, 0, -5) }), false); assert.equal(ctx.f({ istoric: IST(5, 4, 12) }), false); assert.equal(ctx.f({}), false);
+});
+await test("(F) I-522 textul spune cum măsoară Radarul de fapt (percentila 75, 4h SAU 24h) - fără „mediana”", () => {
+  assert.ok(!/mediana ei/.test(lib("consiliu.js")), "textul mai zice „mediana”");
+  const sm = S.semafor({ bot: BOT, fisa: null }), t = CS.alcatuieste({ sm: sm, concret: [], sfaturi: [], busola: { stare: "miscare" }, regim: { miscare: false } }).busolaVsRadar;
+  assert.equal(t, "Radarul: liniște (4h/24h față de obișnuit) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite"); assert.ok(t.length <= 110, "lung: " + t.length);
+});
+await test("(F) I-526 fără inventat: „de ieșit” doar dacă T212 a fost citit (t212Citit), boții doar din rezumat proaspăt, rândul-verdict în afara try-ului bot-orders", () => {
+  const col = citeste("scripts", "colector.mjs"), d = col.slice(col.indexOf("async function dateDimineata()"), col.indexOf("async function turaDimineata()"));
+  assert.ok(/let t212Citit = false;/.test(d) && /t212Citit = true;/.test(d) && /deIesit: t212Citit \? out\.deIesit\.length : null/.test(d), "deIesit null când T212 nu e citit");
+  assert.ok(/boti: liniaVeche \? \[\] : lBoti/.test(d), "boții doar din rezumat proaspăt");
+  const dupa = d.slice(d.indexOf("titluDimineata({")), iR = dupa.indexOf("return out;"), iC = dupa.indexOf("} catch {}");
+  assert.ok(iR > 0 && (iC < 0 || iR < iC), "titlul e înăuntrul try-ului bot-orders");
+});
+await test("(F) I-519 pe telefon: caseta lipicioasă ține doar eticheta și primul motiv (lista motivelor sub ea, nelipicioasă); Poarta de pornire (FAPTĂ) nu se pliază; secțiunea pliată cu avertisment poartă ⚠", () => {
+  const rg = fnApp("renderGrid"), css = citeste("public", "app.css");
+  assert.ok(rg.includes(`'<ul class="grLista grListaJos">'`), "lista motivelor sub casetă");
+  assert.ok(/#gridset \.grListaJos\{display:none/.test(css) && css.includes("@media (max-width:600px){#gridset .grPliat>:not(.tbBlocCap):not(.grPoartaCap){display:none}#gridset .grPliat>.tbBlocCap,#gridset .grPliat>.grPoartaCap{margin:0}#gridset .grVerdict .grLista{display:none}#gridset .grListaJos{display:block}}"), "CSS: pe telefon lista iese din casetă");
+  const ctx = {}; vm.createContext(ctx); vm.runInContext(fnApp("grPliabil") + "\n;this.f=grPliabil;", ctx);
+  assert.equal(ctx.f("🚦 Poarta de pornire"), false); assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Direcția"), true);
+  assert.ok(fnApp("grPliazaPeTelefon").includes(`s.classList.toggle("grAvert",!!s.querySelector(".tbWarn,.bad"))`) && /#gridset \.grPliat\.grAvert>/.test(css), "⚠ pe secțiunea pliată cu avertisment");
+});
+await test("(F) I-524 la margine: o diferență care se rotunjește la 10% e „cam la fel” (nu „cu 10% mai îngust”)", () => {
+  assert.equal(B.comparaInterval({ jos: 100, sus: 200 }, 100, 189.6).text, "intervalul tău e cam la fel de larg ca al Busolei");
+  assert.match(B.comparaInterval({ jos: 100, sus: 200 }, 100, 189).text, /cu 11% mai îngust/);
+});
+await test("(F) igienă: importul paza-boti și-a păstrat comentariul pe rândul lui (nu lipit pe rândul dimineata-titlu)", () => {
+  const l = citeste("scripts", "colector.mjs").split(/\r?\n/).find((x) => x.includes('from "./lib/dimineata-titlu.mjs"'));
+  assert.ok(l && (l.match(/\/\//g) || []).length === 1, l);
 });
 
 console.log("\n" + (pica ? "V100.92 PICA · " + pica + " din " + (ok + pica) : "V100.92 PASS · " + ok + "/" + ok));

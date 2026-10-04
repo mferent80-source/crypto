@@ -195,11 +195,11 @@ var Consiliu = (function () {
     (Array.isArray(x.consilier) ? x.consilier : []).forEach(function (k) { if (k && k.titlu) rest.push({ titlu: k.titlu, text: [k.text, k.ceAsFace ? "👉 " + k.ceAsFace : ""].filter(Boolean).join(" ") }); });
     if (x.indicatori) rest.push({ titlu: String(x.indicatori), text: "" });
     if (x.btc) rest.push({ titlu: String(x.btc), text: "" });
-    // v100.92 (I-522): Radarul (regimul fișei: ultimele 4 h față de mediana ei) și Busola (găleata ATR pe 4h față de un an) pot spune altceva -
+    // v100.92 (I-522): Radarul (regimul fișei: 4 h SAU 24 h peste percentila 75 a obișnuitului ei) și Busola (găleata ATR pe 4h față de un an) pot spune altceva -
     // un rând DOAR când se contrazic, ca să nu aleagă el între două „adevăruri” fără explicație; verdictul nu se schimbă (rândul ≤ 110, garda)
     var bz = x.busola, rg = x.regim, bvr = null;
     if (bz && rg && typeof rg.miscare === "boolean" && ((rg.miscare && bz.stare === "liniste") || (!rg.miscare && bz.stare === "miscare")))
-      bvr = "Radarul: " + (rg.miscare ? "mișcare" : "liniște") + " (4 h față de mediana ei) · Busola: " + (bz.stare === "miscare" ? "mai agitată" : "mai calmă") + " (ATR 4h față de un an) — orizonturi diferite";
+      bvr = "Radarul: " + (rg.miscare ? "mișcare" : "liniște") + " (4h/24h față de obișnuit) · Busola: " + (bz.stare === "miscare" ? "mai agitată" : "mai calmă") + " (ATR 4h față de un an) — orizonturi diferite";
 
     return { nivel: nivel, eticheta: ETICHETA[nivel] || ETICHETA.asteapta, titlu: titlu, faCe: faCe, explica: explica, bani: bani.length ? bani.join(" · ") : null, incredere: inc,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: m.cip, extra: m.extra || null, scurt: m.scurt || null }; }), rest: rest, busolaVsRadar: bvr };
@@ -228,7 +228,7 @@ var Consiliu = (function () {
   // alerta lui activa, alerta Consilierului ar fi al doilea mesaj pe Discord pentru acelasi fapt -> ramane doar in Radar.
   var CHEI = { opreste: ["status"], lichidare: ["lich"], pericol: ["lich", "status", "grid", "activ"], plan: ["plan"], stop: ["plan-stop", "opritor"],
     muta: ["s-muta", "grid", "p-margine"], margine: ["s-muta", "grid", "p-margine"], btc: ["s-btc", "m-btc"], aglomerare: ["s-aglomerare"],
-    "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie"], perechi: [],
+    "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie"], busola: ["busola-miscare"], perechi: [],   /* revizia Opus (04.10): paza anunță „mai agitată”, Consilierul nu dublează */
     // v100.54 (actiunile T212): alertele planului pe pozitie (stop / −X% de la maxim / tinta) - colectorul le da ca activ["t212-stop"] etc.
     "stop-plan": ["t212-stop"], "trail-plan": ["t212-trail"], "tinta-plan": ["t212-tinta"], "stop-urcator": ["sltp-sl"] };
   // revizia 01.10 (I1): motivele fara socoteala proprie (nu pot „tacea” ca in I-466) nu suna pe Discord cand sunt in varf - raman in Radar

@@ -1414,7 +1414,9 @@ body.peTablou main>.note{display:none}
 #gridset .grPliabil>.tbBlocCap,#gridset .grPliabil>.grPoartaCap{cursor:pointer;user-select:none}
 #gridset .grPliabil>.tbBlocCap h4:after,#gridset .grPliabil>.grPoartaCap b:after{content:" ▾";color:var(--muted);font-weight:400}
 #gridset .grPliat>.tbBlocCap h4:after,#gridset .grPliat>.grPoartaCap b:after{content:" ▸"}
-@media (max-width:600px){#gridset .grPliat>:not(.tbBlocCap):not(.grPoartaCap){display:none}#gridset .grPliat>.tbBlocCap,#gridset .grPliat>.grPoartaCap{margin:0}}
+#gridset .grListaJos{display:none;margin:-4px 0 12px;padding-left:18px;color:var(--text)}
+#gridset .grPliat.grAvert>.tbBlocCap h4:after,#gridset .grPliat.grAvert>.grPoartaCap b:after{content:" ⚠ ▸";color:var(--warn)}
+@media (max-width:600px){#gridset .grPliat>:not(.tbBlocCap):not(.grPoartaCap){display:none}#gridset .grPliat>.tbBlocCap,#gridset .grPliat>.grPoartaCap{margin:0}#gridset .grVerdict .grLista{display:none}#gridset .grListaJos{display:block}}
 #gridset .grVEt{font-size:20px;font-weight:900;white-space:nowrap}
 #gridset .grVMotiv{margin:2px 0 0;font-weight:700;color:var(--text)}
 #gridset .grLista{margin:6px 0 0;padding-left:18px;color:var(--text)}

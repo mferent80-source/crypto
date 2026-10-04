@@ -62,7 +62,7 @@ await test("(2) Tabloul, candidații („Pe ce aș porni un bot acum”): rându
   const ctx = { Idei: ID, GridCalcul: G, escapeHtml: esc, TextRo: globalThis.TextRo, contTot: { clasament: cl, inchise: [{ moneda: "VVV", rezultat: -100.5 }, { moneda: "VVV", rezultat: -20.68 }] },
     tbIngustAdu: () => {}, tbUrmAdu: () => {}, tbUrm: { v: null }, tbSugestiiHtml: () => "", $: (id) => (id === "tbIdei" ? box : null) };
   vm.createContext(ctx);
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbIdeiRender") + "\n;tbIdeiRender();", ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricRosu") + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbIdeiRender") + "\n;tbIdeiRender();", ctx);   /* v100.92 (revizia Opus): + tbIstoricRosu */
   const t = text(box.innerHTML);
   assert.ok(t.includes("VVV interval 16,33%") && t.includes("istoricul tău: 2 boți, 0 pe plus, −121,18 USDT") && !t.includes("121.18"), t);
 });

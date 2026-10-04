@@ -25,7 +25,7 @@ console.log("Proba v100.87 · Tabloul: moneda din AMBELE liste (revenire long + 
 function tablou(cl) {
   const ctx = { Reveniri: R, Idei: ID, GridCalcul: G, escapeHtml: esc, TextRo: globalThis.TextRo }; vm.createContext(ctx);
   // v100.89: + tbIstoricBoti (istoricul cu virgulă) - fără el tbSugestiiCorp aruncă, iar try/catch-ul dă ""
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiHtml") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiHtml;", ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricRosu") + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiHtml") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiHtml;", ctx);   /* v100.92 (revizia Opus): + tbIstoricRosu */
   return ctx.f(cl, null, []);
 }
 // rândurile listelor, fiecare cu moneda și textul lui (în ordinea din pagină: întâi revenirea, apoi shortul)

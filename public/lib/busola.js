@@ -88,7 +88,7 @@ var Busola = (function () {
     var fj = fisa && Number(fisa.jos), fs = fisa && Number(fisa.sus), j = Number(jos), s = Number(sus);
     if (!(fj > 0) || !(fs > fj) || !(j > 0) || !(s > j)) return null;
     var r = (s - j) / (fs - fj) - 1, p = Math.round(Math.abs(r) * 100), d = " decât al Busolei (al ei a pierdut cel mai puțin, pe spot)";
-    return { raport: r, text: Math.abs(r) <= 0.1 ? "intervalul tău e cam la fel de larg ca al Busolei" : "intervalul tău e cu " + p + "% mai " + (r < 0 ? "îngust" : "larg") + d };
+    return { raport: r, text: p <= 10 ? "intervalul tău e cam la fel de larg ca al Busolei" : "intervalul tău e cu " + p + "% mai " + (r < 0 ? "îngust" : "larg") + d };
   }
   // v100.90 (I-514, Busola 1.38): intervalul măsurat de Busola pe 4h, sub propunerea fișei - pentru comparație, nu în locul ei.
   // Prețurile fișei sunt în unitățile SURSEI (revizia 1.40.1): `fisa4h.simbol` (ex. „1000PEPE”) sau cheia; un bot pe „1000X” cu fișa
