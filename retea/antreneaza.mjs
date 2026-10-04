@@ -9,6 +9,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { incarcaModulele, simboluri, citesteBare, randuriMoneda, reperRand, randuriBoti, ORIZONT } from "./date.mjs";
+import { tickere, citesteZile, citesteTradeuri, randuriActiune, reperActiune, randuriTradeuri, ORIZONT_T212, QQQ } from "./date-t212.mjs";   // v100.94 (L2): țintele pe acțiuni T212
 import { luniDeTest, judecaLuna, modelFinal, verificare, optiuniLuni, luna } from "./verifica.mjs";
 import { antreneaza, HIPER, porneste } from "./model.mjs";
 
@@ -27,22 +28,27 @@ const BACKEND = await porneste();
 if (BACKEND !== "wasm") { spune("TensorFlow nu rulează pe WebAssembly (" + BACKEND + "): nu antrenez, modelele de ieri rămân"); process.exit(2); }
 // revizia finală (I2, M8): cheia CODULUI (versiunea, hiperparametrii și fișierele rețelei) păstrează modelele de ieri; lunile judecate mai
 // cer și AMPRENTA DATELOR (luna primei bare a fiecărei monede și a BTC) - cât se umple istoria de 400 de zile, lunile se refac
-const COD_HASH = crypto.createHash("sha1").update(["public/lib/retea.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs"].map((f) => fs.readFileSync(path.join(COD, f), "utf8")).join("\n")).digest("hex").slice(0, 12);
+const COD_HASH = crypto.createHash("sha1").update(["public/lib/retea.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs", "retea/date-t212.mjs"].map((f) => fs.readFileSync(path.join(COD, f), "utf8")).join("\n")).digest("hex").slice(0, 12);
 const M = incarcaModulele(COD), CHEIE = M.R.VERSIUNE + "|" + JSON.stringify(HIPER) + "|" + COD_HASH, acum = Date.now();
 const OPT = { antreneaza, prezice: M.R.prezice, versiune: M.R.VERSIUNE, ascunse: HIPER.ascunse, seminte: Number(ARG("seminte", HIPER.seminte)), maxRanduri: Number(ARG("max-randuri", 40000)) };
 const vechi = citeste(path.join(DATA, "modele.json")), modele = vechi && vechi.cheie === CHEIE && vechi.modele ? vechi.modele : {};
 const btc = citesteBare(RAD, "BTC_USDT_PERP", M.G), bareDe = new Map(), memo = new Map();
 for (const s of simboluri(RAD)) { if (s === "BTC_USDT_PERP") continue; const b = citesteBare(RAD, s, M.G); if (b.length > 800) { bareDe.set(s, b); memo.set(s, {}); } }
-const AMPRENTA = crypto.createHash("sha1").update([...bareDe.entries()].map(([s, b]) => s + ":" + luna(b[0].t)).sort().join(",") + "|BTC:" + (btc.length ? luna(btc[0].t) : "-")).digest("hex").slice(0, 12), CHEIE_LUNI = CHEIE + "|" + AMPRENTA;
+// v100.94 (L2): barele zilnice ale acțiunilor (data/retea/zile, strânse noaptea de colector), QQQ și perechile lui închise - țintele T212; amprenta le cuprinde
+const qqq = citesteZile(RAD, QQQ, M.G), zileDe = new Map(), memoZi = new Map(), tradeuri = citesteTradeuri(RAD);
+for (const tk of tickere(RAD)) { const b = citesteZile(RAD, tk, M.G); if (b.length > 300) { zileDe.set(tk, b); memoZi.set(tk, {}); } }
+const AMPRENTA = crypto.createHash("sha1").update([...bareDe.entries()].map(([s, b]) => s + ":" + luna(b[0].t)).concat([...zileDe.entries()].map(([s, b]) => "zi:" + s + ":" + luna(b[0].t))).sort().join(",") + "|BTC:" + (btc.length ? luna(btc[0].t) : "-")).digest("hex").slice(0, 12), CHEIE_LUNI = CHEIE + "|" + AMPRENTA;
 spune("pornit: " + bareDe.size + " monede, BTC " + btc.length + " bare, buget " + Math.round(BUGET / 60000) + " min, " + BACKEND);
 const tinte = Object.keys(M.R.TINTE).filter((t) => !DOAR || t === DOAR);
 function randuri(t) {
   if (t === "rezultat") return randuriBoti(citeste(path.join(DATA, "boti.json")) || [], (s) => bareDe.get(s) || null, btc, M);
+  if (t === "rezultat-t212") return randuriTradeuri(tradeuri, (tk) => zileDe.get(tk) || null, qqq, M);   // v100.94 (L2): perechile lui închise
+  if (t.endsWith("-t212")) { const o2 = []; for (const [tk, b] of zileDe) for (const r of randuriActiune(t, tk, b, qqq, tradeuri, M, memoZi.get(tk))) o2.push(r); return o2.sort((a, b) => a.t - b.t); }
   const out = []; for (const [s, b] of bareDe) for (const r of randuriMoneda(t, s, b, btc, M, memo.get(s))) out.push(r);
   return out.sort((a, b) => a.t - b.t);
 }
-const OPT_LUNI = (t) => optiuniLuni(t, ORIZONT[t], acum);   // revizia finală (I1)
-const NUME_REPER = (t) => (t === "rezultat" ? ["rata ta", "rata pe monedă"] : t === "directie" ? ["🎲", "50%"] : ["🎲"]);
+const OPT_LUNI = (t) => optiuniLuni(t.startsWith("rezultat") ? "rezultat" : t, ORIZONT[t] || ORIZONT_T212[t], acum);   // revizia finală (I1)
+const NUME_REPER = (t) => (t.startsWith("rezultat") ? ["rata ta", t === "rezultat" ? "rata pe monedă" : "rata pe acțiune"] : t.startsWith("directie") ? ["🎲", "50%"] : ["🎲"]);   /* v100.94 (L2): și pe acțiuni */
 // (1) modelele de azi
 for (const t of tinte) {
   if (Date.now() >= PANA) break;
@@ -61,7 +67,7 @@ for (const t of tinte) {
   for (const l of luni) {
     if (cache.luni[l] || Date.now() >= PANA) continue;
     const rows = await judecaLuna(R, l, OPT);
-    if (rows && t !== "rezultat") for (const r of rows) { r.r1 = reperRand(t, bareDe.get(r.s), r, M, memo.get(r.s)); r.r2 = t === "directie" ? 0.5 : null; }
+    if (rows && !t.startsWith("rezultat")) for (const r of rows) { r.r1 = t.endsWith("-t212") ? reperActiune(t, zileDe.get(r.s), r, M, memoZi.get(r.s)) : reperRand(t, bareDe.get(r.s), r, M, memo.get(r.s)); r.r2 = t.startsWith("directie") ? 0.5 : null; }   /* v100.94 (L2): reperul 🎲 pe acțiuni */
     cache.luni[l] = (rows || []).map((r) => [r.t, r.s, r.y, r.p, r.pLog, r.r1, r.r2]); noi++;
     scrie(fis, cache); spune(t + ": luna " + l + " judecată (" + cache.luni[l].length + " rânduri)");
   }

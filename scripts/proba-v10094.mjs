@@ -39,7 +39,8 @@ await test("(1) Retea.trasaturiZilnice: 14 cifre tăiate la ±10 la ziua i, iden
   const b = bareZi(400, 100, 11), q = bareZi(400, 300, 5);
   const f = R.trasaturiZilnice(b, 300, q, 0.5); assert.ok(f && f.x.length === 14 && f.x.every((v) => Number.isFinite(v) && Math.abs(v) <= 10), JSON.stringify(f));
   assert.deepEqual(R.trasaturiZilnice(b.slice(0, 301), 300, q.slice(0, 301), 0.5).x, f.x, "barele de după i schimbă trăsăturile");
-  assert.equal(f.t, b[300].t + ZI); assert.ok(f.s1 > 0 && f.c === b[300].c && typeof f.stare === "string", JSON.stringify([f.s1, f.c, f.stare]));
+  assert.equal(f.t, Math.floor(b[300].t / ZI) * ZI + ZI + 1.5 * ORA, "t = bara închisă la 01:30 UTC a zilei următoare (după after-hours)"); assert.ok(f.s1 > 0 && f.c === b[300].c && typeof f.stare === "string", JSON.stringify([f.s1, f.c, f.stare]));
+  assert.equal(R.indexZi(b, b[300].t + 8 * ORA), 299, "în timpul ședinței bara zilei nu e închisă"); assert.equal(R.indexZi(b, Math.floor(b[300].t / ZI) * ZI + ZI + 1.5 * ORA), 300, "la 01:30 UTC a doua zi e închisă"); assert.equal(R.indexZi(b, Math.floor(b[300].t / ZI) * ZI + ZI + ORA), 299);
   assert.equal(R.trasaturiZilnice(b, 249, q, 0.5), null); assert.equal(R.trasaturiZilnice(b, 300, null, 0.5), null); assert.equal(R.trasaturiZilnice(b, 300, q.slice(0, 200), 0.5), null, "QQQ fără bară la zi");
   assert.equal(R.intrareActiune("stop1-t212", f, { relS: -0.05 }).length, 17); assert.equal(R.intrareActiune("sare1-t212", f, { relS: -0.05 })[16], -1);
   assert.equal(R.intrareActiune("cursa5-t212", f, { relT: 0.05, relS: -0.03 }).length, 18); assert.equal(R.intrareActiune("directie-t212", f, {}).length, 14);
@@ -89,7 +90,8 @@ await test("(3) Retea/Arbori.pentruActiune: aceleași intrări (un singur produc
   assert.deepEqual(R.intrariActiune(b.concat([{ t: b[b.length - 1].t + ZI, o: 1, h: 1, l: 1, c: 1, v: 1 }]), { ...o, acum: b[b.length - 1].t + ZI + 3600000 }, q, []).f.x, it.f.x, "bara zilei în curs a intrat în trăsături");
   assert.deepEqual(R.intrariActiune(b, { ...o, stop: null }, q, []).lista.map((x) => x.cod), ["directie5"]);
   // modele sintetice pe fiecare țintă: arborii antrenați pe rânduri aleatoare cu nIn potrivit
-  const mA = {}; for (const [t, nIn] of [["stop1-t212", 17], ["sare1-t212", 17], ["cursa5-t212", 18], ["directie-t212", 14]]) { const X = Array.from({ length: 400 }, (_, i) => Array.from({ length: nIn }, (__, k) => Math.sin(i * (k + 1)))), y = X.map((x) => (x[0] + x[1] > 0 ? 1 : 0)); const m = antreneazaArbori(X, y, { runde: 20, seminte: 1 }); mA[t] = { tinta: t, versiune: "a1", la: ACUM, ...exportaArbori(m) }; }
+  const antreneaza = (nIn, N, fn) => { const X = new Float32Array(N * nIn), y = new Float32Array(N); for (let i = 0; i < N; i++) { for (let k = 0; k < nIn; k++) X[i * nIn + k] = fn(i, k); y[i] = X[i * nIn] + X[i * nIn + 1] > 0 ? 1 : 0; } const m = antreneazaArbori(X, y, nIn, { seed: 2, runde: 20 }); return exportaArbori({ baza: m.baza, pas: m.pas, semi: [m.arbori] }); };
+  const mA = {}; for (const [t, nIn] of [["stop1-t212", 17], ["sare1-t212", 17], ["cursa5-t212", 18], ["directie-t212", 14]]) mA[t] = { tinta: t, versiune: "a1", la: ACUM, ...antreneaza(nIn, 400, (i, k) => Math.sin(i * (k + 1))) };
   const ra = A.pentruActiune(mA, b, o, q, []); assert.ok(ra && ra.v === "a1" && ["stop1", "sare1", "cursa5", "directie5"].every((c) => Number.isFinite(ra.p[c])), JSON.stringify(ra));
   for (const x of it.lista) assert.ok(Math.abs(preziceArbori(mA[x.tinta], x.x) - ra.p[x.cod]) <= 5e-4, x.cod + " nu e bit-exact cu antrenorul");
   assert.equal(A.pentruActiune({ "atinge-24": mA["stop1-t212"] }, b, o, q, []), null, "fără modele T212 ⇒ null");
@@ -97,7 +99,7 @@ await test("(3) Retea/Arbori.pentruActiune: aceleași intrări (un singur produc
   const t = { ticker: "AAA_US_EQ", pornit: b[380].t + 5 * 3600000, cost: 500 }, ic = R.intrareCumparare(t, b, q, []); assert.ok(ic && ic.x.length === 17 && ic.rata === 0.5 && ic.n === 0, JSON.stringify(ic));
   const mR = { "rezultat-t212": { tinta: "rezultat-t212", versiune: R.VERSIUNE, la: b[300].t, norm: { m: Array(17).fill(0), s: Array(17).fill(1) }, ansamblu: [[{ W: Array.from({ length: 17 }, () => [0]), b: [0.2], act: "sigmoid" }]] } };
   const pc = R.pentruCumparare(mR, t, b, q, []); assert.ok(pc && Math.abs(pc.p - 0.55) < 1e-3 && pc.rata === 0.5, JSON.stringify(pc)); assert.equal(R.pentruCumparare({ "rezultat-t212": { ...mR["rezultat-t212"], la: t.pornit + 1 } }, t, b, q, []), null);
-  const mAc = { "rezultat-t212": { tinta: "rezultat-t212", versiune: "a1", la: b[300].t, ...exportaArbori(antreneazaArbori(Array.from({ length: 300 }, (_, i) => Array.from({ length: 17 }, (__, k) => Math.cos(i * (k + 1)))), Array.from({ length: 300 }, (_, i) => i % 2), { runde: 10, seminte: 1 })) } };
+  const mAc = { "rezultat-t212": { tinta: "rezultat-t212", versiune: "a1", la: b[300].t, ...antreneaza(17, 300, (i, k) => Math.cos(i * (k + 1))) } };
   const pcA = A.pentruCumparare(mAc, t, b, q, []); assert.ok(pcA && Number.isFinite(pcA.p) && pcA.rata === 0.5, JSON.stringify(pcA));
   // randuri pe T212: zar = rândurile randActiune (cu cod), direcția pe codul directie5, rezultatul pe ținta rezultat-t212
   const vB = { luni: 9, luniGata: 9, nIndep: 150, reper: "🎲", brier: 0.2, brierReper: 0.21, brierLog: 0.205, ic: [0.01, 0.04], icLog: [0.003, 0.02], bss3: 0.01, logloss: 0.6, loglossReper: 0.61, loglossLog: 0.61 };
@@ -108,6 +110,33 @@ await test("(3) Retea/Arbori.pentruActiune: aceleași intrări (un singur produc
   assert.deepEqual(l.map((x) => x.cod), ["stop1", "cursa5", "sare1", "directie5", "rezultat-t212"], JSON.stringify(l.map((x) => x.cod))); assert.equal(l[3].titlu, R.NUME["directie-t212"]); assert.equal(l[4].titlu, R.NUME["rezultat-t212"]);
   assert.equal(l[0].text, "🧠 12% · 🌳 15% · 🎲 10%\n🧠 dovedită pe 150 de zile independente · 🌳 dovedită pe 150 de zile independente"); assert.equal(l[3].text.split("\n")[0], "🧠 52% · 🌳 50%"); assert.equal(l[4].text.split("\n")[0], "🧠 57% · 🌳 60% · rata ta: 50%");
   assert.equal(R.randuri(MOD(R.VERSIUNE), { la: ACUM, v: R.VERSIUNE, p: { "iese-jos-24": 0.5 } }, [{ cod: "iese-jos-24", titlu: "x", p: 0.5 }], { acum: ACUM }).length, 0, "modelele T212 nu răspund pe codurile crypto");
+});
+
+// ======== Task 4: amândoi antrenorii pe țintele T212 ========
+await test("(4) antrenorul arborilor pe un dosar sintetic cu bare ZILNICE (3 tickere + QQQ, 600 de zile) și 250 de trade-uri: modele-arbori.json are stop1-t212 (verificare completă, reper 🎲) și rezultat-t212; fără dosarul zile/ țintele T212 dau „prea puține rânduri”; antrenorul rețelei pornește pe stop1-t212", async () => {
+  const dir = path.join(os.tmpdir(), "t212-proba-" + Date.now()), DR = path.join(dir, "data", "retea"); fs.mkdirSync(path.join(DR, "zile"), { recursive: true }); fs.mkdirSync(path.join(DR, "ore"), { recursive: true });
+  const yahoo = (b) => ({ la: Date.now(), randuri: b.map((x) => ({ time: x.t, open: x.o, high: x.h, low: x.l, close: x.c, volume: x.v })) });
+  for (const [tk, sem] of [["AAA_US_EQ", 11], ["BBB_US_EQ", 12], ["CCC_US_EQ", 13], ["QQQ_US_EQ", 5]]) fs.writeFileSync(path.join(DR, "zile", tk + ".json"), JSON.stringify(yahoo(bareZi(600, 100, sem))));
+  const b = bareZi(600, 100, 11); fs.writeFileSync(path.join(DR, "trade-uri.json"), JSON.stringify(Array.from({ length: 250 }, (_, i) => ({ ticker: "AAA_US_EQ", pornit: b[260 + i].t + 3 * 3600000, inchis: b[262 + i].t, cost: 500, rezultat: i % 3 ? 7 : -4 }))));
+  const run = (f, extra) => execFileSync(process.execPath, [path.join(RAD, "retea", f), "--rad", dir, "--buget-min", "4", "--seminte", "1", "--max-randuri", "3000", ...extra], { encoding: "utf8", timeout: 600000 });
+  const o1 = run("antreneaza-arbori.mjs", ["--tinta", "stop1-t212"]), m = JSON.parse(fs.readFileSync(path.join(DR, "modele-arbori.json"), "utf8")); assert.ok(m.modele["stop1-t212"] && m.modele["stop1-t212"].verificare && m.modele["stop1-t212"].verificare.reper === "🎲", o1);
+  const o2 = run("antreneaza-arbori.mjs", ["--tinta", "rezultat-t212"]), m2 = JSON.parse(fs.readFileSync(path.join(DR, "modele-arbori.json"), "utf8")); assert.ok(m2.modele["rezultat-t212"] && m2.modele["rezultat-t212"].nIn === 17, o2);
+  const o3 = run("antreneaza.mjs", ["--tinta", "stop1-t212"]); assert.match(o3, /stop1-t212: modelul de azi pe \d+ rânduri/);
+  fs.rmSync(path.join(DR, "zile"), { recursive: true, force: true }); const o4 = run("antreneaza-arbori.mjs", ["--tinta", "cursa5-t212"]); assert.match(o4, /cursa5-t212: prea puține rânduri/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+// ======== Task 5: colectorul v101.64 - barele zilnice și trade-urile noaptea, bugetul, cifrele pe idei ========
+await test("(5) tura-retea strânge noaptea barele zilnice (buget 40 de tickere, QQQ întâi) și trade-urile înainte de antrenori; un ticker picat nu oprește restul; colectorul v101.64 cu bugetul rețelei 45/50 min; ruta idei păstrează retea/arbori {p, dovedita}; ideile primesc pentruCumparare", async () => {
+  const TR = await import("./lib/tura-retea.mjs"); const scrise = {}, jur = [];
+  const d = { acum: Date.UTC(2026, 9, 5, 0, 30), stare: {}, forta: true, eNoapte: () => true, ziRo: () => "2026-10-05", simboluri: [], cereKlines: async () => null, pauza: async () => {}, citesteOre: () => [], scrieOre: () => {}, boti: async () => [], scrieBoti: () => {},
+    porneste: async () => ({ cod: 1, minute: 0 }), citesteModele: () => null, trimite: async () => true, jurnal: (...a) => jur.push(a.join(" ")), scrieStare: () => {},
+    tickereZile: async () => ["AAA_US_EQ", "QQQ_US_EQ", "BBB_US_EQ"], cereZile: async (tk) => { if (tk === "BBB_US_EQ") throw new Error("Yahoo a limitat"); return { randuri: [{ time: 1, open: 1, high: 1, low: 1, close: 1 }] }; }, scrieZile: (tk, r) => { scrise[tk] = r; }, tradeuri: async () => [{ ticker: "AAA_US_EQ" }], scrieTradeuri: (l) => { scrise.trade = l; } };
+  await TR.turaRetea(d); assert.deepEqual(Object.keys(scrise), ["QQQ_US_EQ", "AAA_US_EQ", "trade"], JSON.stringify(Object.keys(scrise))); assert.ok(jur.some((l) => /zile: 2 din 3 tickere/.test(l)) && jur.some((l) => /BBB_US_EQ.*Yahoo a limitat/.test(l)), jur.join("\n"));
+  const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.64"/.test(col), "versiunea colectorului"); assert.ok(col.includes('"antreneaza.mjs"), "--buget-min", "45"') && col.includes("retea: antrenorul oprit după 50 de minute"), "bugetul rețelei 45/50");
+  assert.ok(col.includes("tickereZile:") && col.includes("cereZile:") && col.includes("scrieZile:") && col.includes("tradeuri:") && col.includes("scrieTradeuri:"), "deps-urile turei de noapte");
+  assert.ok(col.includes("Retea.pentruCumparare(") && col.includes("Arbori.pentruCumparare(") && col.includes("bareIdei"), "ideile fără cifrele 🧠/🌳");
+  const ruta = citeste("functions", "api", "t212.js"); assert.ok(ruta.includes("retea: x && x.retea") && ruta.includes("arbori: x && x.arbori"), "ruta idei nu păstrează retea/arbori");
 });
 
 console.log("\n" + (pica ? "V100.94 PICA · " + pica + " din " + (ok + pica) : "V100.94 PASS · " + ok + "/" + ok));

@@ -37,6 +37,20 @@ var Arbori = (function () {
     var f = Retea.intrarePornire(t, bare, btc, ist); if (!f) return null;
     var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n };
   }
-  return { VERSIUNE: VERSIUNE, prezice: prezice, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire };
+  // v100.94 (L2, acțiunile T212): aceleași intrări ca Retea.pentruActiune / pentruCumparare (producătorul comun), altă aritmetică
+  function pentruActiune(modele, bare, o, qqq, ist) {
+    if (!modele || typeof modele !== "object") return null;
+    var it = Retea.intrariActiune(bare, o, qqq, ist); if (!it) return null;
+    var p = {}, k = 0;
+    it.lista.forEach(function (q) { var m = modele[q.tinta]; if (!m || m.versiune !== VERSIUNE) return; var v = prezice(m, q.x); if (v !== null) { p[q.cod] = Math.round(v * 1000) / 1000; k++; } });
+    return k ? { la: it.la, v: VERSIUNE, p: p } : null;
+  }
+  function pentruCumparare(modele, t, bare, qqq, ist) {
+    var m = modele && modele["rezultat-t212"]; if (!m || m.versiune !== VERSIUNE) return null;
+    var por = nr(t && t.pornit); if (por === null || (nr(m.la) !== null && m.la > por)) return null;
+    var f = Retea.intrareCumparare(t, bare, qqq, ist); if (!f) return null;
+    var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n };
+  }
+  return { VERSIUNE: VERSIUNE, prezice: prezice, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, pentruActiune: pentruActiune, pentruCumparare: pentruCumparare };
 })();
 if (typeof globalThis !== "undefined") globalThis.Arbori = Arbori;
