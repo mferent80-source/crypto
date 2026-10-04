@@ -310,20 +310,32 @@ var Retea = (function () {
   // v100.96 (el: „nu le văd pe toate, scoate-le în evidență”): un rând mereu la vedere, lângă verdict - ținta care contează (marginea
   // împotriva botului în 24 h: jos la long, sus la short; pe acțiuni o.cod = direcția pe 5 zile) cu 🧠 · 🌳 · 🎲 și starea lor, apoi
   // lichidarea în 7 zile când există; o.scurt = doar cifrele și starea (rândul poziției T212); null fără nicio cifră
+  // revizia 🟡2: fiecare țintă din rând poartă starea EI (lichidarea nu se citește sub starea mărginii); revizia 🔵7: la gridul neutru marginea
+  // cu cifra mai mare, iar fără cifra mărginii (în afara grilei învățate) rândul rămâne cu lichidarea
+  function stareDoua(vd, vda) {
+    if (vd && vda) return vd.dovedita && vda.dovedita ? "amândouă dovedite" : vd.dovedita ? "🧠 dovedită, 🌳 nu" : vda.dovedita ? "🌳 dovedită, 🧠 nu" : "niciuna dovedită";
+    return (vd || vda).dovedita ? "dovedită" : "nedovedită";
+  }
   function rezumat(modele, rt, zar, o, arb) {
     o = o || {}; var acum = nr(o.acum) || Date.now(), dir = String(o.dir || "").toLowerCase();
-    var cod = o.cod || (dir === "short" ? "iese-sus-24" : "iese-jos-24"), t = TINTA_DE[cod]; if (!t) return null;
     var cuR = !!(modele && rt && !(rt.v && rt.v !== VERSIUNE)), A = arb && arb.modele && arb.rt && arb.rt.v === VERSIUNE_ARBORI ? arb : null;
-    var q = cuR ? nr((rt.p || {})[cod]) : null, qa = A ? nr((A.rt.p || {})[cod]) : null;
-    var vd = q !== null ? verdict(modele[t], acum) : null, vda = qa !== null ? verdictArbori(A.modele[t], acum) : null;
-    if (!vd && !vda) return null;
-    var z = (Array.isArray(zar) ? zar : []).filter(function (x) { return x && x.cod === cod && nr(x.p) !== null; })[0];
-    var c = []; if (vd) c.push("🧠 " + PC(q)); if (vda) c.push("🌳 " + PC(qa)); if (z && !o.scurt) c.push("🎲 " + PC(z.p));
-    var st = vd && vda ? (vd.dovedita && vda.dovedita ? "amândouă dovedite" : vd.dovedita ? "🧠 dovedită, 🌳 nu" : vda.dovedita ? "🌳 dovedită, 🧠 nu" : "niciuna dovedită") : ((vd || vda).dovedita ? "dovedită" : "nedovedită");
-    var titlu = o.scurt ? "" : cod === "iese-sus-24" ? "Marginea de sus în 24 h: " : cod === "iese-jos-24" ? "Marginea de jos în 24 h: " : NUME[t] + ": ";
-    var s = titlu + c.join(" · ") + " · " + st;
-    if (!o.scurt) { var ql = cuR ? nr((rt.p || {}).lichidare) : null, qla = A ? nr((A.rt.p || {}).lichidare) : null, cl = []; if (ql !== null) cl.push("🧠 " + PC(ql)); if (qla !== null) cl.push("🌳 " + PC(qla)); if (cl.length) s += " · lichidarea în 7 zile: " + cl.join(" · "); }
-    return s;
+    var pR = cuR ? rt.p || {} : {}, pA = A ? A.rt.p || {} : {};
+    var bucata = function (cod, cuZar) {
+      var t = TINTA_DE[cod]; if (!t) return null;
+      var q = nr(pR[cod]), qa = nr(pA[cod]);
+      var vd = q !== null ? verdict(modele[t], acum) : null, vda = qa !== null ? verdictArbori(A.modele[t], acum) : null;
+      if (!vd && !vda) return null;
+      var z = cuZar ? (Array.isArray(zar) ? zar : []).filter(function (x) { return x && x.cod === cod && nr(x.p) !== null; })[0] : null;
+      var c = []; if (vd) c.push("🧠 " + PC(q)); if (vda) c.push("🌳 " + PC(qa)); if (z) c.push("🎲 " + PC(z.p));
+      return { text: c.join(" · ") + " · " + stareDoua(vd, vda), p: vd ? q : qa };
+    };
+    if (o.cod) { var b1 = bucata(o.cod, !o.scurt); if (!b1) return null; return o.scurt ? b1.text : NUME[TINTA_DE[o.cod]] + ": " + b1.text; }
+    var jos = bucata("iese-jos-24", true), sus = bucata("iese-sus-24", true);
+    var m = dir === "short" ? sus : dir === "long" ? jos : jos && sus ? (sus.p > jos.p ? sus : jos) : jos || sus;
+    var l = bucata("lichidare", false), s = [];
+    if (m) s.push((m === sus ? "Marginea de sus în 24 h: " : "Marginea de jos în 24 h: ") + m.text);
+    if (l) s.push((m ? "lichidarea în 7 zile: " : "Lichidarea în 7 zile: ") + l.text);
+    return s.length ? s.join(" · ") : null;
   }
   // capul sub-blocului; modelul mai vechi de 2 zile se spune (antrenarea n-a mers de atunci)
   // v100.93: cu modelele arborilor (arbori = {tinta: model}) titlul numește amândouă familiile; fiecare familie veche se spune cu emoji-ul ei
@@ -354,13 +366,13 @@ var Retea = (function () {
     if (!(j > 0)) {
       var s0 = cap + "nicio predicție 🧠 judecată încă";
       if (t === null) return [s0 + " (le judecă după ce le trece orizontul)" + vechi + "."];
-      if (t > 0) return [s0 + " · Radarul îi trimite acum " + cate(t, "predicție", "predicții") + (ast !== null ? ", " + ast + " în așteptare" : ", le judecă după orizont") + vechi + "."];
-      return [s0 + " · Radarul nu-i trimite nimic acum" + (ast !== null && ast > 0 ? " · " + ast + " în așteptare" : " (fără boți sau fără model)") + vechi + "."];
+      if (t > 0) return [s0 + " · Radarul îi trimite acum " + cate(t, "predicție", "predicții") + (ast !== null && ast > 0 ? ", " + ast + " așteaptă la ea" : ", le judecă după orizont") + vechi + "."];   /* revizia 🔵6: 0 în așteptare = Busola n-a rulat încă */
+      return [s0 + " · Radarul nu-i trimite nimic acum" + (ast !== null && ast > 0 ? " · " + ast + " așteaptă la ea" : " (fără boți sau fără model)") + vechi + "."];
     }
     var l1;
     if (r.verdict === "prea puține") l1 = cap + (ind >= 100 ? "prea puține monede ca să judece (" + (sim !== null ? cate(sim, "monedă", "monede") + ", cere 10" : "cere 10") + ")" : "prea puține ca să judece (cere 100 de independente)") + ".";
     else { var br = nr(r.brier), bb = nr(r.brierBaza), v = VERDICT_BUSOLA[r.verdict] || String(r.verdict || ""); l1 = cap + (br !== null && bb !== null ? "Brier " + num(br, 3) + " (rata de bază " + num(bb, 3) + ") ⇒ " : "") + v + "."; }
-    var l2 = "🧭 " + cate(j, "predicție", "predicții") + " 🧠 " + (j === 1 ? "judecată" : "judecate") + ", " + cate(ind, "independentă", "independente") + (sim !== null ? " pe " + cate(sim, "monedă", "monede") : "") + (ast !== null ? " · " + ast + " în așteptare" : "") + vechi + ".";
+    var l2 = "🧭 " + cate(j, "predicție", "predicții") + " 🧠 " + (j === 1 ? "judecată" : "judecate") + ", " + cate(ind, "independentă", "independente") + (sim !== null ? " pe " + cate(sim, "monedă", "monede") : "") + (ast !== null && ast > 0 ? " · " + ast + " așteaptă la Busola" : "") + vechi + ".";
     return [l1, l2];
   }
   // v100.95: cu o.busola (bilanțul Busolei) rândul ei stă primul - doar pe paginile crypto (Busola judecă boții, nu acțiunile)

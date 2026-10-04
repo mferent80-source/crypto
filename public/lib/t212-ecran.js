@@ -489,7 +489,7 @@ function t212ModeleRand(p) {
     var rt = reteaM.m ? Retea.pentruActiune(reteaM.m, b, o, q, inchise) : null, ra = null;
     try { ra = reteaM.a && typeof Arbori !== "undefined" ? Arbori.pentruActiune(reteaM.a, b, o, q, inchise) : null; } catch (e) { ra = null; }
     var t = Retea.rezumat(reteaM.m, rt, null, { acum: Date.now(), cod: "directie5", scurt: true }, ra && reteaM.a ? { modele: reteaM.a, rt: ra } : null);
-    return t ? '<span class="t212Mic t212Modele" title="Prețul mai sus peste 5 zile de bursă: 🧠 rețeaua · 🌳 arborii">' + escapeHtml(t) + '</span>' : "";
+    return t ? '<span class="t212Mic t212Modele" title="Prețul mai sus peste 5 zile de bursă: 🧠 rețeaua · 🌳 arborii">' + 'peste 5 zile: ' + escapeHtml(t) + '</span>' : "";   /* revizia 🔵5: în prima celulă (vizibilă și pe telefon), cu prefix */
   } catch (e) { return ""; }
 }
 function t212RandPozitie(p) {
@@ -498,12 +498,12 @@ function t212RandPozitie(p) {
   var planTxt = p.plan ? [pl.trailPct ? "−" + String(pl.trailPct).replace(".", ",") + "% de la max" : "", pl.stop ? "stop " + t212Usd(pl.stop) : "", pl.tinta ? "țintă " + t212Usd(pl.tinta) : ""].filter(Boolean).join(" · ") : "";
   var w = p.pond > 0.2 ? " rau" : p.pond > 0.15 ? " atentie" : "";
   var rand = '<tr class="t212Rand" id="t212R-' + tk + '" tabindex="0" aria-expanded="' + des + '" data-action-click="t212Comuta(\'' + tk + '\')">'
-    + '<td><div class="t212Sim"><span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + (+p.qty.toFixed(2)) + ' buc · mediu ' + t212Usd(p.pretMediu) + (t212.rezultate[p.ticker] && t212.rezultate[p.ticker].data ? ' · rezultate ' + t212ZiScurta(t212.rezultate[p.ticker].data) : '') + '</span></div></div></td>'
+    + '<td><div class="t212Sim"><span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + (+p.qty.toFixed(2)) + ' buc · mediu ' + t212Usd(p.pretMediu) + (t212.rezultate[p.ticker] && t212.rezultate[p.ticker].data ? ' · rezultate ' + t212ZiScurta(t212.rezultate[p.ticker].data) : '') + '</span>' + t212ModeleRand(p) + '</div></div></td>'
     + '<td class="c-acum">' + t212Usd(p.pret) + '</td>'
     + '<td class="c-rez"><b class="' + t212Cls(p.ppl) + '">' + t212Lei(p.ppl) + '</b><span class="t212Mic">' + (p.pctLei !== null ? t212Pct(p.pctLei) + ' · preț ' + t212Pct(pctPret) : 'preț ' + t212Pct(pctPret)) + '</span></td>'
     + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' : '—') + '</td>'
     + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + t212Usd(n.tintaPozitie) + '</span><span class="t212Mic">' + t212Pct(n.tintaPozitie / p.pret - 1) + '</span>' : '—') + '</td>'
-    + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + t212ModeleRand(p) + '</td>'
+    + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b></td>'
     + '<td class="c-pond">' + (p.pond !== null ? Math.round(p.pond * 100) + '%<span class="t212MiniBara"><i class="' + w + '" style="width:' + Math.min(100, p.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—') + '</td>'
     + '<td class="c-plan">' + (p.plan ? '<span class="t212PlanChip ok">✓ ' + escapeHtml(planTxt) + '</span>' : '<span class="t212PlanChip">fără plan</span>') + '</td>'
     + '</tr>';

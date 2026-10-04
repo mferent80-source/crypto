@@ -28,7 +28,7 @@ const citeste = (f) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } 
 if (!(BUGET > 0)) { spune("buget 0: nimic de antrenat, modelele arborilor rămân"); process.exit(0); }
 fs.mkdirSync(DATA, { recursive: true });
 // cheia CODULUI (versiunea, hiperparametrii și fișierele atinse) păstrează modelele de ieri; lunile judecate mai cer și AMPRENTA DATELOR
-const COD_HASH = hashCod(COD, ["public/lib/retea.js", "public/lib/arbori.js", "retea/date.mjs", "retea/verifica.mjs", "retea/arbori.mjs", "retea/date-t212.mjs"]).slice(0, 12);   /* v100.96 (ideea 3): fără texte - vezi hash-cod.mjs */
+const COD_HASH = hashCod(COD, ["public/lib/retea.js", "public/lib/arbori.js", "retea/date.mjs", "retea/verifica.mjs", "retea/arbori.mjs", "retea/date-t212.mjs", "public/lib/grid-calcul.js", "public/lib/actiuni-semnale.js", "public/lib/probabilitati.js"]).slice(0, 12);   /* v100.96 (ideea 3): fără texte - vezi hash-cod.mjs; revizia 🔵4: și modulele etichetelor, trăsăturilor și reperului 🎲 */
 const M = incarcaModulele(COD), CHEIE = VERSIUNE + "|" + JSON.stringify(HIPER_ARBORI) + "|" + COD_HASH, acum = Date.now();
 const vechi = citeste(path.join(DATA, "modele-arbori.json")), modele = vechi && vechi.cheie === CHEIE && vechi.modele ? vechi.modele : {};
 const btc = citesteBare(RAD, "BTC_USDT_PERP", M.G), bareDe = new Map(), memo = new Map();

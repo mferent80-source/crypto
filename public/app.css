@@ -2233,4 +2233,7 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 /* v100.96: randul-rezumat al modelelor (sub semaforul Tabloului si sub verdictul fisei) + pe randul pozitiei T212 */
 .tbRezumat{margin:.45rem 0 0;padding:.45rem .65rem;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.93rem;line-height:1.4;color:var(--text,#e6edf3)}
 .tbRezumat[hidden]{display:none}
-.t212Modele{display:block;white-space:nowrap;margin-top:.15rem}
+.t212Modele{display:block;margin-top:.15rem}
+
+@media (max-width:640px){.t212Tab tr.t212Rand .t212Sim .t212Mic.t212Modele{display:block;margin-top:4px}}   /* v100.96 (revizia 🔵5): pe telefon prima celulă ascunde .t212Mic, dar rândul modelelor rămâne */
+@media (max-width:640px){.t212Tab tr.t212Rand{grid-template-columns:minmax(0,1fr) auto}.t212Tab tr.t212Rand .t212Sim>div{min-width:0}.t212Tab tr.t212Rand .t212Sim .t212Mic.t212Modele{white-space:normal}}   /* v100.96 (poza 390): rândul lung se împachetează în prima coloană, rezultatul nu mai iese din card */

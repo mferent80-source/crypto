@@ -52,7 +52,10 @@ export function situatiiRetea(pune) {
     const ma = modeleDe(R.VERSIUNE_ARBORI, v, sit === "dovedită" ? { n: 300, bss: 0.012, ic: [0.003, 0.021] } : { n: 300, bss: -0.008, ic: [-0.02, 0.004] });
     R.randuri(mR, RT, ZAR, { acum: ACUM, pornire: PZ }, { modele: ma, rt: RA }).forEach((r) => puneRand("arborii: " + sit + " · " + r.cod, r));
     // v100.96 (el: „scoate modelele în evidență”): rezumatul permanent de lângă verdict (Tablou/fișă), long și short, cu și fără arbori
-    for (const dir of ["long", "short"]) { pune("rezumat: " + sit + " · " + dir, "retea", "rezumat", { t: R.rezumat(mR, RT, ZAR, { acum: ACUM, dir }, { modele: ma, rt: RA }) }, [["t", "raport"]]); pune("rezumat: " + sit + " · " + dir + ", doar rețeaua", "retea", "rezumat", { t: R.rezumat(mR, RT, ZAR, { acum: ACUM, dir }, null) }, [["t", "raport"]]); }
+    for (const dir of ["long", "short", "neutru"]) { pune("rezumat: " + sit + " · " + dir, "retea", "rezumat", { t: R.rezumat(mR, RT, ZAR, { acum: ACUM, dir }, { modele: ma, rt: RA }) }, [["t", "raport"]]); pune("rezumat: " + sit + " · " + dir + ", doar rețeaua", "retea", "rezumat", { t: R.rezumat(mR, RT, ZAR, { acum: ACUM, dir }, null) }, [["t", "raport"]]); }
+    /* revizia 🟡2/🔵7: lichidarea cu starea ei (marginea dovedită, lichidarea nu) și rândul fără margine (în afara grilei), doar cu lichidarea */
+    pune("rezumat: " + sit + " · lichidarea nedovedită", "retea", "rezumat", { t: R.rezumat({ ...mR, "atinge-168": { ...mR["atinge-168"], verificare: v0 } }, RT, ZAR, { acum: ACUM, dir: "long" }, { modele: ma, rt: RA }) }, [["t", "raport"]]);
+    pune("rezumat: " + sit + " · fără margine", "retea", "rezumat", { t: R.rezumat(mR, { ...RT, p: { lichidare: RT.p.lichidare } }, ZAR, { acum: ACUM, dir: "long" }, { modele: ma, rt: { ...RA, p: { lichidare: RA.p.lichidare } } }) }, [["t", "raport"]]);
     R.subsol(mR, ma).filter((l) => /^🌳/.test(l)).forEach((l, i) => pune("arborii: " + sit + " · verificarea " + (i + 1), "retea", "arbori.subsol", { t: l }, [["t", "raport"]]));
     R.textPornire(PZ, R.verdict(mR.rezultat, ACUM), { p: 0.39, rata: 0.524 }, R.verdictArbori(ma.rezultat, ACUM)).split("\n").forEach((l, i) => pune("arborii: " + sit + " · poarta " + (i + 1), "retea", "arbori.textPornire", { t: l }, [["t", "deCe"]]));
   }

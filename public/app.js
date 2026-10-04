@@ -5769,9 +5769,10 @@ function grReteaPoartaHtml(f,p){var m=reteaM.m,st=grProbSetare(f);if(typeof Rete
   return ll.map(function(x){return '<p class="tbSub grRetea">'+(ll.length===1?'🧠 ':'')+escapeHtml(x)+'</p>'}).join("")}catch(e){return ""}}
 // v100.96 (el: „nu le văd pe toate, scoate-le în evidență”): rândul-rezumat al modelelor sub semafor (Retea.rezumat), ținut în tbProb.rezumat
 // de tbDeseneazaProb; cartela 🎲 e deschisă implicit (index.html). Fără cifre rândul stă ascuns
-function tbRezumatHtml(){var t=tbProb&&tbProb.rezumat;return '<p id="tbRezumatModele" class="tbRezumat"'+(t?'':' hidden')+'>'+escapeHtml(t||"")+'</p>'}
+function tbRezumatHtml(t){return '<p id="tbRezumatModele" class="tbRezumat"'+(t?'':' hidden')+'>'+escapeHtml(t||"")+'</p>'}
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
+  tbProb.rezumat=null;var rz1=$("tbRezumatModele");if(rz1){rz1.hidden=true;rz1.textContent=""}   /* revizia 🟡1: la schimbarea botului sau fără cifre, rândul de sub verdict nu rămâne cu cifrele altui bot */
   var t=tbProb.botId===b.id?tbProb:null,rez=t&&t.rez;
   if(!rez){card.hidden=true;return}
   reteaAdu(function(){if(tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaProb(tbStare.bot)});   /* v100.80 (rețeaua neuronală) */
@@ -5819,7 +5820,7 @@ function tbDecStareText(c){var k=tbConsCheie(c),e=(tbConsKv.decizii||[]).filter(
   return e?"notat: "+(e.urmat?"am făcut":"n-am făcut")+" ("+new Date(e.t).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+")"+(e.r!=null?" · după 24 h: "+(e.r>=0?"+":"−")+Math.abs(e.r).toFixed(2)+" USDT":""):"ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers"}
 function tbConsHtml(c){
   var cip=function(x){return x?'<span class="tbConsCip '+escapeHtml(x.cls||"")+'" title="'+escapeHtml(x.titlu||"")+'">'+escapeHtml(x.t)+'</span>':''};
-  return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'
+  return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'+tbRezumatHtml(c.rezumat)
     +(c.deCeText?'<p class="tbConsDeCe tbSub">🔁 '+escapeHtml(c.deCeText)+'</p>':'')+(c.altaVoce?'<p class="tbConsDeCe tbSub">📣 '+escapeHtml(c.altaVoce)+'</p>':'')+(c.busolaVsRadar?'<p class="tbConsDeCe tbSub">🧭 '+escapeHtml(c.busolaVsRadar)+'</p>':'')
     +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.explica?'<p class="tbSub tbConsExplica">'+escapeHtml(c.explica)+'</p>':'')+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')
     +(c.nivel&&c.nivel!=="asteapta"?'<div class="tbDecizii"><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(true)" aria-label="Am făcut ce zice Consilierul">✅ am făcut</button><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(false)" aria-label="N-am făcut ce zice Consilierul">✋ n-am făcut</button><span class="tbSub" id="tbDecStare">'+escapeHtml(tbDecStareText(c))+'</span></div>'+(c.decSoc?'<p class="tbSub tbDecSoc">'+escapeHtml(c.decSoc)+'</p>':''):'')+'</div>'
@@ -6004,7 +6005,8 @@ function tbDeseneazaSemafor(b){
   cons.altaVoce=Consiliu.altaVoce(ck&&ck.cons,cons);   // revizia 01.10 (I2): cand Discord / pagina alerts spun altceva, se vede aici
   var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol&&!tbProbVechi(tp.rez)?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
   var r0=el.querySelector(".tbConsRest");if(r0)tbConsRestDeschis=!!r0.open;   // „Restul” ramane deschis la reimprospatare
-  el.innerHTML=h+tbConsHtml(cons)+tbRezumatHtml();$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;   /* v100.96: rândul modelelor sub semafor */
+  cons.rezumat=tbProb&&tbProb.rezumat||null;   /* v100.96: rândul modelelor stă sub eticheta verdictului (tbConsHtml), ca pe fișă */
+  el.innerHTML=h+tbConsHtml(cons);$("tbSemaforCard").className="tbCons tbCons-"+cons.nivel;
   if(mot)mot.hidden=true;
   // "Acum, concret": cifra mare + eticheta + actiunea; detaliile (si setarile de copiat ale gridului propus) sub "detalii"
   var gmd=muta?null:SemnaleBot.gridMaiDes(b,f),T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};

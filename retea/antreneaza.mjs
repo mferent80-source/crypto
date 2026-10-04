@@ -29,7 +29,7 @@ const BACKEND = await porneste();
 if (BACKEND !== "wasm") { spune("TensorFlow nu rulează pe WebAssembly (" + BACKEND + "): nu antrenez, modelele de ieri rămân"); process.exit(2); }
 // revizia finală (I2, M8): cheia CODULUI (versiunea, hiperparametrii și fișierele rețelei) păstrează modelele de ieri; lunile judecate mai
 // cer și AMPRENTA DATELOR (luna primei bare a fiecărei monede și a BTC) - cât se umple istoria de 400 de zile, lunile se refac
-const COD_HASH = hashCod(COD, ["public/lib/retea.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs", "retea/date-t212.mjs"]).slice(0, 12);   /* v100.96 (ideea 3): fără texte - vezi hash-cod.mjs */
+const COD_HASH = hashCod(COD, ["public/lib/retea.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs", "retea/date-t212.mjs", "public/lib/grid-calcul.js", "public/lib/actiuni-semnale.js", "public/lib/probabilitati.js"]).slice(0, 12);   /* v100.96 (ideea 3): fără texte - vezi hash-cod.mjs; revizia 🔵4: și modulele etichetelor, trăsăturilor și reperului 🎲 */
 const M = incarcaModulele(COD), CHEIE = M.R.VERSIUNE + "|" + JSON.stringify(HIPER) + "|" + COD_HASH, acum = Date.now();
 const OPT = { antreneaza, prezice: M.R.prezice, versiune: M.R.VERSIUNE, ascunse: HIPER.ascunse, seminte: Number(ARG("seminte", HIPER.seminte)), maxRanduri: Number(ARG("max-randuri", 40000)) };
 const vechi = citeste(path.join(DATA, "modele.json")), modele = vechi && vechi.cheie === CHEIE && vechi.modele ? vechi.modele : {};

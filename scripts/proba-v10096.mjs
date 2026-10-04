@@ -12,6 +12,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 const fnDin = (f, nume) => { const s = lib(f), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în " + f); const j = s.indexOf("\nfunction ", i + 10); return s.slice(i, j < 0 ? undefined : j); };
+const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 const fnColector = (nume) => { const s = citeste("scripts", "colector.mjs"), i = s.search(new RegExp("^(async )?function " + nume + "\\(", "m")); assert.ok(i >= 0, "lipsește " + nume + " în colector.mjs"); const k = s.indexOf("\n}\n", i); return s.slice(i, k < 0 ? undefined : k + 2); };
 globalThis.GridCalcul = globalThis.GridCalcul || new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 const G = globalThis.GridCalcul, AS = new Function("GridCalcul", `${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)(G);
@@ -58,10 +59,17 @@ await test("(3) retea/hash-cod.mjs: normalizarea scoate comentariile, conținutu
   assert.notEqual(H.normalizeazaCod(a), H.normalizeazaCod(a.replace("v > 2", "v > 3")), "un număr schimbat se vede"); assert.notEqual(H.normalizeazaCod(a), H.normalizeazaCod(a.replace("return v", "return -v")), "logica schimbată se vede");
   assert.ok(!/comentariu|prea puține|alt text/.test(H.normalizeazaCod(a)), H.normalizeazaCod(a));
   assert.equal(H.normalizeazaCod('u("http://x.y/z"); // c'), H.normalizeazaCod('u("https://a.b/c");'), "adresa e tot un șir");
-  const FIS = ["public/lib/retea.js", "public/lib/arbori.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs", "retea/date-t212.mjs", "retea/arbori.mjs"];
-  for (const f of FIS) { const s = citeste(...f.split("/")); assert.ok(!/\/[^/\n ]*["'][^/\n ]*\/[gimsuy]*[ ,;)]/.test(s), f + ": regex cu ghilimele ar strica normalizarea"); const n = H.normalizeazaCod(s); assert.ok(n.length > s.length * 0.5 && /function /.test(n), f + ": normalizarea a înghițit codul"); }
+  // revizia 🔵3: o singură trecere, primul token câștigă - un „/*” dintr-un comentariu „//”, o ghilimea într-un șir simplu sau un apostrof
+  // într-un bloc nu pot ascunde cod de după ele
+  const n = H.normalizeazaCod;
+  const a1 = "var k = 1; // fișierele din public/lib/*.js\nif (v > 2) { x(); } /* bloc */\n"; assert.notEqual(n(a1), n(a1.replace("v > 2", "v > 3")), "un „/*” dintr-un comentariu „//” nu deschide un bloc");
+  const b1 = "var q = '\"'; y = s.slice(0, 2); z = \"a\";\n"; assert.notEqual(n(b1), n(b1.replace("slice(0, 2)", "slice(0, 3)")), "ghilimeaua dintr-un șir simplu nu se împerechează cu alta");
+  const c1 = "/* it's */ u = 1; w = 'x'; if (v > 2) {} /* end */\n"; assert.notEqual(n(c1), n(c1.replace("v > 2", "v > 3")), "apostroful dintr-un bloc nu mănâncă „*/”");
+  // revizia 🔵4: și modulele din care vin etichetele crypto, o parte din trăsături și reperul 🎲 intră în hash
+  const FIS = ["public/lib/retea.js", "public/lib/arbori.js", "retea/date.mjs", "retea/verifica.mjs", "retea/model.mjs", "retea/date-t212.mjs", "retea/arbori.mjs", "public/lib/grid-calcul.js", "public/lib/actiuni-semnale.js", "public/lib/probabilitati.js"];
+  for (const f of FIS) { const s = citeste(...f.split("/")); assert.ok(!/\/[^/\n ]*["'][^/\n ]*\/[gimsuy]*[ ,;)]/.test(s), f + ": regex cu ghilimele ar strica normalizarea"); assert.ok(!/\/[^/\n ]*(\/\/|\/\*)[^/\n ]*\/[gimsuy]*[ ,;)]/.test(s), f + ": regex cu „//” sau „/*” ar strica normalizarea"); const nn = n(s); assert.ok(nn.length > s.length * 0.35 && /function /.test(nn), f + ": normalizarea a înghițit codul"); }
   const h1 = H.hashCod(RAD, FIS); assert.match(h1, /^[0-9a-f]{40}$/); assert.equal(h1, H.hashCod(RAD, FIS), "stabil");
-  for (const f of ["retea/antreneaza.mjs", "retea/antreneaza-arbori.mjs"]) { const s = citeste(...f.split("/")); assert.ok(/import \{ hashCod \} from "\.\/hash-cod\.mjs"/.test(s) && /const COD_HASH = hashCod\(COD, \[/.test(s), f + ": nu folosește hashCod"); }
+  for (const f of ["retea/antreneaza.mjs", "retea/antreneaza-arbori.mjs"]) { const s = citeste(...f.split("/")); assert.ok(/import \{ hashCod \} from "\.\/hash-cod\.mjs"/.test(s) && /const COD_HASH = hashCod\(COD, \[/.test(s), f + ": nu folosește hashCod"); for (const x of ["grid-calcul.js", "actiuni-semnale.js", "probabilitati.js"]) assert.ok(s.includes('"public/lib/' + x + '"'), f + ": " + x + " lipsește din hash"); }
 });
 
 // ======== Task 4 (ideea 2): pragul „dovedită” pe bloc ========
@@ -103,11 +111,13 @@ await test("(6b) Retea.textBusola dă 1–2 rânduri: primul spune că judecă m
   assert.equal(R.textBusola(null, ACUM), null);
   assert.deepEqual(R.textBusola(BZ(ZERO), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă (le judecă după ce le trece orizontul)."]);
   assert.deepEqual(R.textBusola(BZ(ZERO, undefined, { trimise: 2 }), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă · Radarul îi trimite acum 2 predicții, le judecă după orizont."]);
-  assert.deepEqual(R.textBusola(BZ({ ...ZERO, asteptare: 7 }, undefined, { trimise: 2 }), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă · Radarul îi trimite acum 2 predicții, 7 în așteptare."]);
-  assert.deepEqual(R.textBusola(BZ({ ...ZERO, asteptare: 17 }, ACUM - 20 * ZI, { trimise: 0 }), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă · Radarul nu-i trimite nimic acum · 17 în așteptare · de acum 20 de zile."]);
+  assert.deepEqual(R.textBusola(BZ({ ...ZERO, asteptare: 7 }, undefined, { trimise: 2 }), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă · Radarul îi trimite acum 2 predicții, 7 așteaptă la ea."]);
+  assert.deepEqual(R.textBusola(BZ({ ...ZERO, asteptare: 0 }, undefined, { trimise: 2 }), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă · Radarul îi trimite acum 2 predicții, le judecă după orizont."], "0 în așteptare = Busola n-a rulat încă, nu legătură ruptă (revizia 🔵6)");
+  assert.deepEqual(R.textBusola(BZ({ ...ZERO, asteptare: 17 }, ACUM - 20 * ZI, { trimise: 0 }), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă · Radarul nu-i trimite nimic acum · 17 așteaptă la ea · de acum 20 de zile."]);
   assert.deepEqual(R.textBusola(BZ(ZERO, undefined, { trimise: 0 }), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: nicio predicție 🧠 judecată încă · Radarul nu-i trimite nimic acum (fără boți sau fără model)."]);
   assert.deepEqual(R.textBusola(BZ(BATE), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: Brier 0,210 (rata de bază 0,240) ⇒ bate rata de bază.", "🧭 240 de predicții 🧠 judecate, 131 de independente."]);
-  assert.deepEqual(R.textBusola(BZ({ ...BATE, simboluri: 12, asteptare: 7 }, ACUM - 3 * ZI), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: Brier 0,210 (rata de bază 0,240) ⇒ bate rata de bază.", "🧭 240 de predicții 🧠 judecate, 131 de independente pe 12 monede · 7 în așteptare · de acum 3 zile."]);
+  assert.deepEqual(R.textBusola(BZ({ ...BATE, simboluri: 12, asteptare: 7 }, ACUM - 3 * ZI), ACUM), ["🧭 Busola, pe marginile gridului în 24 h: Brier 0,210 (rata de bază 0,240) ⇒ bate rata de bază.", "🧭 240 de predicții 🧠 judecate, 131 de independente pe 12 monede · 7 așteaptă la Busola · de acum 3 zile."]);
+  assert.deepEqual(R.textBusola(BZ({ ...BATE, simboluri: 12, asteptare: 0 }), ACUM)[1], "🧭 240 de predicții 🧠 judecate, 131 de independente pe 12 monede.", "0 în așteptare nu se scrie");
   assert.deepEqual(R.textBusola(BZ({ ...BATE, verdict: "prea puține", simboluri: 9 }), ACUM)[0], "🧭 Busola, pe marginile gridului în 24 h: prea puține monede ca să judece (9 monede, cere 10).");
   assert.deepEqual(R.textBusola(BZ({ ...BATE, verdict: "prea puține" }), ACUM)[0], "🧭 Busola, pe marginile gridului în 24 h: prea puține monede ca să judece (cere 10).", "fără simboluri în bilanț");
   assert.deepEqual(R.textBusola(BZ({ ...BATE, independente: 50, judecate: 60, verdict: "prea puține" }), ACUM)[0], "🧭 Busola, pe marginile gridului în 24 h: prea puține ca să judece (cere 100 de independente).");
@@ -129,7 +139,7 @@ await test("(6b) Retea.textBusola dă 1–2 rânduri: primul spune că judecă m
   assert.equal((await post({ la: ACUM, retea: { ...BATE, simboluri: -1 } })).status, 400, "simboluri negativ"); assert.equal((await post({ la: ACUM, retea: { ...BATE, asteptare: "7" } })).status, 400, "asteptare text");
   assert.equal((await post({ la: ACUM, retea: { ...BATE, simboluri: 12, asteptare: 7 }, trimise: 2 })).status, 200); let j = await (await get()).json(); assert.equal(j.busolaRetea.retea.simboluri, 12); assert.equal(j.busolaRetea.retea.asteptare, 7);
   assert.equal((await post({ la: ACUM + 1, retea: BATE })).status, 200); j = await (await get()).json(); assert.equal("simboluri" in j.busolaRetea.retea, false, "fără ele ⇒ fără chei");
-  const s = situatii().filter((x) => x.mod === "retea" && /^busola:/.test(x.sit)); assert.ok(s.some((x) => /pe 12 monede/.test(x.text)) && s.some((x) => /în așteptare/.test(x.text)), "garda fără monede/așteptare");
+  const s = situatii().filter((x) => x.mod === "retea" && /^busola:/.test(x.sit)); assert.ok(s.some((x) => /pe 12 monede/.test(x.text)) && s.some((x) => /așteaptă la (ea|Busola)/.test(x.text)), "garda fără monede/așteptare");
   const rele = s.map((x) => ({ x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.x.sit + ": " + q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
 });
 
@@ -141,20 +151,35 @@ await test("(7) Retea.rezumat: un rând cu ținta care contează (marginea împo
   const RT = { la: ACUM, v: R.VERSIUNE, p: { "iese-jos-24": 0.26, "iese-sus-24": 0.21, lichidare: 0.01, directie5: 0.52 } }, RA = { la: ACUM, v: R.VERSIUNE_ARBORI, p: { "iese-jos-24": 0.25, "iese-sus-24": 0.23, lichidare: 0.07, directie5: 0.48 } };
   const ZAR = [{ cod: "iese-jos-24", titlu: "Atinge marginea de jos (88) în 24 h", p: 0.61 }, { cod: "iese-sus-24", titlu: "Atinge marginea de sus (92) în 24 h", p: 0.48 }];
   const mD = mod(R.VERSIUNE, { ...v0, ...bun }), aD = mod(R.VERSIUNE_ARBORI, { ...v0, ...bun }), mN = mod(R.VERSIUNE, v0), aN = mod(R.VERSIUNE_ARBORI, v0);
-  assert.equal(R.rezumat(mD, RT, ZAR, { acum: ACUM, dir: "long" }, { modele: aD, rt: RA }), "Marginea de jos în 24 h: 🧠 26% · 🌳 25% · 🎲 61% · amândouă dovedite · lichidarea în 7 zile: 🧠 1% · 🌳 7%");
-  assert.equal(R.rezumat(mD, RT, ZAR, { acum: ACUM, dir: "short" }, { modele: aN, rt: RA }), "Marginea de sus în 24 h: 🧠 21% · 🌳 23% · 🎲 48% · 🧠 dovedită, 🌳 nu · lichidarea în 7 zile: 🧠 1% · 🌳 7%");
-  assert.equal(R.rezumat(mN, RT, ZAR, { acum: ACUM, dir: "long" }, null), "Marginea de jos în 24 h: 🧠 26% · 🎲 61% · nedovedită · lichidarea în 7 zile: 🧠 1%");
-  assert.equal(R.rezumat(null, null, ZAR, { acum: ACUM, dir: "long" }, { modele: aD, rt: RA }), "Marginea de jos în 24 h: 🌳 25% · 🎲 61% · dovedită · lichidarea în 7 zile: 🌳 7%", "doar arborii");
+  assert.equal(R.rezumat(mD, RT, ZAR, { acum: ACUM, dir: "long" }, { modele: aD, rt: RA }), "Marginea de jos în 24 h: 🧠 26% · 🌳 25% · 🎲 61% · amândouă dovedite · lichidarea în 7 zile: 🧠 1% · 🌳 7% · amândouă dovedite");
+  assert.equal(R.rezumat(mD, RT, ZAR, { acum: ACUM, dir: "short" }, { modele: aN, rt: RA }), "Marginea de sus în 24 h: 🧠 21% · 🌳 23% · 🎲 48% · 🧠 dovedită, 🌳 nu · lichidarea în 7 zile: 🧠 1% · 🌳 7% · 🧠 dovedită, 🌳 nu");
+  assert.equal(R.rezumat(mN, RT, ZAR, { acum: ACUM, dir: "long" }, null), "Marginea de jos în 24 h: 🧠 26% · 🎲 61% · nedovedită · lichidarea în 7 zile: 🧠 1% · nedovedită");
+  assert.equal(R.rezumat(null, null, ZAR, { acum: ACUM, dir: "long" }, { modele: aD, rt: RA }), "Marginea de jos în 24 h: 🌳 25% · 🎲 61% · dovedită · lichidarea în 7 zile: 🌳 7% · dovedită", "doar arborii");
+  const mL = { ...mD, "atinge-168": { ...mD["atinge-168"], verificare: { ...v0, oreBloc: 168 } } };   /* revizia 🟡2: lichidarea cu starea EI, nu a mărginii */
+  assert.equal(R.rezumat(mL, RT, ZAR, { acum: ACUM, dir: "long" }, { modele: aD, rt: RA }), "Marginea de jos în 24 h: 🧠 26% · 🌳 25% · 🎲 61% · amândouă dovedite · lichidarea în 7 zile: 🧠 1% · 🌳 7% · 🌳 dovedită, 🧠 nu");
+  assert.equal(R.rezumat(mD, RT, ZAR, { acum: ACUM, dir: "neutru" }, { modele: aD, rt: RA }), "Marginea de jos în 24 h: 🧠 26% · 🌳 25% · 🎲 61% · amândouă dovedite · lichidarea în 7 zile: 🧠 1% · 🌳 7% · amândouă dovedite", "neutru: marginea cu cifra 🧠 mai mare (revizia 🔵7)");
+  assert.equal(R.rezumat(mD, { ...RT, p: { ...RT.p, "iese-sus-24": 0.3 } }, ZAR, { acum: ACUM, dir: "neutru" }, null), "Marginea de sus în 24 h: 🧠 30% · 🎲 48% · dovedită · lichidarea în 7 zile: 🧠 1% · dovedită", "neutru: sus când sus e mai probabil");
+  assert.equal(R.rezumat(mD, { la: ACUM, v: R.VERSIUNE, p: { lichidare: 0.01 } }, ZAR, { acum: ACUM, dir: "long" }, null), "Lichidarea în 7 zile: 🧠 1% · dovedită", "marginea în afara grilei: rândul doar cu lichidarea");
   assert.equal(R.rezumat(null, null, ZAR, { acum: ACUM }, null), null, "fără nicio cifră");
   assert.equal(R.rezumat(mN, RT, null, { acum: ACUM, cod: "directie5", scurt: true }, { modele: aN, rt: RA }), "🧠 52% · 🌳 48% · niciuna dovedită", "T212, scurt");
   assert.equal(R.rezumat(mD, { ...RT, v: "r0" }, ZAR, { acum: ACUM, dir: "long" }, null), null, "altă versiune a trăsăturilor ⇒ nimic");
   [R.rezumat(mD, RT, ZAR, { acum: ACUM, dir: "long" }, { modele: aD, rt: RA }), R.rezumat(mN, RT, ZAR, { acum: ACUM, dir: "short" }, { modele: aN, rt: RA })].forEach(oPropozitie);
-  const app = citeste("public", "app.js"); assert.ok(/function tbRezumatHtml\(\)/.test(app) && /tbConsHtml\(cons\)\+tbRezumatHtml\(\)/.test(app), "Tabloul: rândul sub semafor"); assert.ok(/tbProb\.rezumat=.*Retea\.rezumat\(reteaM\.m,rez\.retea\|\|null,l,\{acum:Date\.now\(\),dir:b\.directie\}/.test(app), "Tabloul: Retea.rezumat pe cifrele colectorului");
+  const app = citeste("public", "app.js"); assert.ok(/function tbRezumatHtml\(t\)/.test(app) && /cons\.rezumat=tbProb&&tbProb\.rezumat\|\|null/.test(app) && /<\/h3>'\+tbRezumatHtml\(c\.rezumat\)/.test(app), "Tabloul: rândul sub eticheta verdictului (tbConsHtml)"); assert.ok(/tbProb\.rezumat=.*Retea\.rezumat\(reteaM\.m,rez\.retea\|\|null,l,\{acum:Date\.now\(\),dir:b\.directie\}/.test(app), "Tabloul: Retea.rezumat pe cifrele colectorului");
   assert.ok(/id="grRezumat"/.test(app) && /rz\.textContent=tz\|\|""/.test(app), "fișa: rândul sub verdict"); assert.ok(/<details class="tbPl" id="tbPl-prob" open hidden>/.test(citeste("public", "index.html")), "cartela 🎲 deschisă implicit");
-  const e = citeste("public", "lib", "t212-ecran.js"); assert.ok(/function t212ModeleRand\(p\)/.test(e) && /t212ModeleRand\(p\) \+ '<\/td>'/.test(e) && /cod: "directie5", scurt: true/.test(e), "T212: pe rândul poziției");
-  assert.ok(/\.tbRezumat\{/.test(citeste("public", "app.css")) && /\.t212Modele\{/.test(citeste("public", "app.css")), "stilurile");
+  const e = citeste("public", "lib", "t212-ecran.js"); assert.ok(/function t212ModeleRand\(p\)/.test(e) && /cod: "directie5", scurt: true/.test(e), "T212: pe rândul poziției");
+  assert.ok(/<\/span>' \+ t212ModeleRand\(p\) \+ '<\/div><\/div><\/td>'/.test(e) && !/t212ModeleRand\(p\) \+ '<\/td>'/.test(e), "T212: în prima celulă (vizibilă și pe telefon, revizia 🔵5), nu în coloana trend ascunsă sub 640 px"); assert.ok(/'peste 5 zile: ' \+ escapeHtml\(t\)/.test(e), "cu prefix vizibil");
+  const css = citeste("public", "app.css"); assert.ok(/\.tbRezumat\{/.test(css) && /\.t212Modele\{/.test(css) && !/\.t212Modele\{[^}]*nowrap/.test(css), "stilurile (fără nowrap: tabelul nu se lățește la 1.100–1.400 px)");
+  assert.ok(/\.t212Tab tr\.t212Rand \.t212Sim \.t212Mic\.t212Modele\{display:block/.test(css), "pe telefon rândul modelelor rămâne la vedere (regula care ascunde .t212Mic din prima celulă sub 640 px nu-l atinge)");
+  assert.ok(/\.t212Tab tr\.t212Rand\{grid-template-columns:minmax\(0,1fr\) auto\}/.test(css) && /\.t212Tab tr\.t212Rand \.t212Sim>div\{min-width:0\}/.test(css), "pe telefon prima coloană a fișei poziției se poate strânge: rândul lung se împachetează, rezultatul (lei) nu mai iese din card");
   const s = situatii().filter((x) => x.mod === "retea" && /^rezumat:/.test(x.sit)); assert.ok(s.length >= 6, "situații rezumat: " + s.length);
   const rele = s.map((x) => ({ x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.x.sit + ": " + q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
+});
+
+// ======== revizia Opus (04.10, v100.96): pasul de reparații - fiecare văzut ROȘU întâi ========
+await test("(R1) 🟡1: după schimbarea botului sau o reîmprospătare picată, rândul de sub verdict nu rămâne cu cifrele altui bot - tbDeseneazaProb îl golește (și pe ecran) ÎNAINTE de ieșirile timpurii (fără rez / rez.gol)", () => {
+  const f = fnApp("tbDeseneazaProb"); const iReset = f.indexOf("tbProb.rezumat=null"), iFara = f.indexOf("if(!rez){card.hidden=true;return}"), iGol = f.indexOf("if(rez.gol)");
+  assert.ok(iReset >= 0 && iFara > 0 && iGol > 0, "ancorele"); assert.ok(iReset < iFara && iReset < iGol, "golirea stă înaintea ieșirilor timpurii");
+  assert.ok(/rz1\.hidden=true;rz1\.textContent=""/.test(f.slice(0, iFara)), "și pe ecran rândul se ascunde la golire");
 });
 
 // ======== Task 7: versiunile ========

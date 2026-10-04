@@ -117,7 +117,7 @@ Gradient boosting pe arbori de regresie, pierderea log-loss (binară), pași New
 
 Identică cu a rețelei (`verifica.mjs`, nimic reimplementat): walk-forward pe luni, antrenare pe tot ce era înainte de luna L minus o pauză
 cât orizontul, judecată pe luna L; Brier, log-loss, calibrarea în 10 cutii; IC 95% prin bootstrap pe două trepte (lunile, apoi monedele /
-tickerele / boții din lună); **„dovedită”** = toate patru: ≥ 100 de cazuri independente; IC-ul scorului Brier peste 0 față de reper ȘI
+tickerele / boții din lună); **„dovedită”** = toate patru: ≥ 100 de cazuri independente (v100.96: 40 pe blocul de 7 zile, unde 430 de zile de istorie dau cel mult ~45–61 de săptămâni); IC-ul scorului Brier peste 0 față de reper ȘI
 față de formula simplă; ultimele 3 luni ≥ 0; log-loss-ul nu mai rău decât al reperului și al formulei. Motivele au aceeași formă.
 
 **În plus, 🌳 față de 🧠:** pe lunile judecate de amândoi (același `t`, aceeași monedă, aceleași niveluri), scorul Brier al arborilor față de

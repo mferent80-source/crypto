@@ -129,7 +129,7 @@ colector (tura-retea) ── data/retea/date-<tinta>.json ──► retea/antren
   - la rezultatul tău, zilele de pornire sau de cumpărare.
 - **Intervalul de încredere:** IC 95% pentru scorul Brier (1 − Brier rețea / Brier reper), prin bootstrap **pe două trepte**: întâi lunile, cu înlocuire, apoi, în fiecare lună aleasă, monedele ei (la rezultatul tău, boții), tot cu înlocuire. Așa, săptămânile în care toată piața se mișcă împreună nu se mai socotesc drept cazuri separate. 1.000 de reeșantionări.
 - **„Dovedită”** cere toate patru:
-  1. cel puțin 100 de cazuri independente;
+  1. cel puțin 100 de cazuri independente (v100.96, ideea 2 din raportul v100.95: 40 pe blocul de 7 zile — în 430 de zile de istorie ies cel mult ~45–61 de săptămâni, 100 nu s-ar atinge niciodată);
   2. marginea de jos a IC 95% peste 0 **și față de reper** (🎲, rata ta sau 50%), **și față de formula simplă**;
   3. pe ultimele 3 luni, luate singure, scorul față de reper cel puțin 0;
   4. log-loss-ul nu mai rău nici decât al reperului, nici decât al formulei simple.
