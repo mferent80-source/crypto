@@ -69,5 +69,29 @@ await test("(A4) pe telefon, după ce derulezi de verdict, caseta ține doar eti
   assert.ok(/@media \(max-width:600px\)\{[^\n]*#gridset \.grVerdict\.grMic \.grVMotiv,#gridset \.grVerdict\.grMic \.grLista\{display:none\}/.test(css), "CSS grMic");
 });
 
+// ======== L1: arborii pe boți ========
+const incarcaArbori = () => new Function("Retea", "Probabilitati", `${lib("arbori.js")}; return Arbori;`)(R, P);
+await test("(6) Arbori.prezice (ES5) dă EXACT ce dă preziceArbori din antrenor (1.000 de rânduri, ≤ 1e−9); NaN / listă scurtă / model fără semi ⇒ null", async () => {
+  const A = incarcaArbori(), { antreneazaArbori, preziceArbori, exportaArbori } = await import("../retea/arbori.mjs");
+  const r = (() => { let a = 7; return () => ((a = (a * 1103515245 + 12345) % 2147483648) / 2147483648); })(), N = 3000, K = 5, X = new Float32Array(N * K), y = new Float32Array(N);
+  for (let i = 0; i < N; i++) { for (let j = 0; j < K; j++) X[i * K + j] = r() * 4 - 2; y[i] = (X[i * K] * X[i * K + 1] > 0) !== (r() < 0.1) ? 1 : 0; }
+  const m = antreneazaArbori(X, y, K, { seed: 2 }), model = exportaArbori({ baza: m.baza, pas: m.pas, semi: [m.arbori] }); model.versiune = "a1";
+  assert.ok(m.arbori.length > 5, "antrenorul n-a învățat nimic: " + m.arbori.length + " runde");
+  let dmax = 0; for (let i = 0; i < 1000; i++) { const x = Array.from({ length: K }, (_, j) => X[i * K + j]); dmax = Math.max(dmax, Math.abs(A.prezice(model, x) - preziceArbori(model, x))); }
+  assert.ok(dmax <= 1e-9, "diferența " + dmax);
+  assert.equal(A.prezice(model, [NaN, 1, 1, 1, 1]), null); assert.equal(A.prezice(model, [1, 2]), null); assert.equal(A.prezice({ versiune: "a1" }, [1, 1, 1, 1, 1]), null);
+});
+await test("(6) Retea.intrariBot / intrarePornire sunt singurul producător de intrări; pentruBot dă aceleași cifre ca înainte; Arbori.pentruBot le folosește; scriptul și cache-ul", () => {
+  const s = lib("retea.js"); assert.ok(/function intrariBot\(bare, o, btc\)/.test(s) && /function intrarePornire\(t, bare, btc, ist\)/.test(s) && /intrariBot: intrariBot, intrarePornire: intrarePornire/.test(s), "exporturile");
+  assert.ok(!/function pentruBot\(modele, bare, o, btc\) \{[\s\S]{0,400}var pune = function/.test(s), "pentruBot mai are logica nivelurilor în el (trebuie în intrariBot)");
+  const a = lib("arbori.js"); assert.ok(a.includes("Retea.intrariBot(bare, o, btc)") && a.includes("Retea.intrarePornire(t, bare, btc, ist)"), "Arbori nu folosește producătorul comun");
+  assert.ok(/<script src="\/lib\/retea\.js"[^>]*><\/script>\s*<script src="\/lib\/arbori\.js"/.test(citeste("public", "index.html")) && citeste("public", "sw.js").includes('"/lib/arbori.js"'), "scriptul / cache-ul");
+  // regresie: pe o monedă sintetică (900 de bare, random walk cu sămânță), pentruBot cu un model logistic mic dă aceleași coduri ca intrariBot (listă nevidă)
+  const rr = (() => { let q = 3; return () => ((q = (q * 1103515245 + 12345) % 2147483648) / 2147483648); })(), T0 = Date.UTC(2026, 6, 1); let c = 1;
+  const bare = Array.from({ length: 900 }, (_, i) => { const o = c; c = c * (1 + (rr() - 0.5) * 0.02); return { t: T0 + i * ORA, o, h: Math.max(o, c) * 1.002, l: Math.min(o, c) * 0.998, c }; }), btc = bare.map((b) => ({ ...b, c: b.c * 60000, o: b.o * 60000, h: b.h * 60000, l: b.l * 60000 }));
+  const o = { acum: T0 + 900 * ORA, pret: c, dir: "long", jos: c * 0.97, sus: c * 1.03, lichidare: c * 0.8, tinta: c * 1.04, stop: c * 0.965 };
+  const it = R.intrariBot(bare, o, btc); assert.ok(it && it.lista.length >= 5, "intrariBot: " + (it ? it.lista.length : "null")); assert.ok(it.lista.every((q) => Array.isArray(q.x) && q.cod && q.tinta));
+});
+
 console.log("\n" + (pica ? "V100.93 PICA · " + pica + " din " + (ok + pica) : "V100.93 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

@@ -211,7 +211,7 @@ await test("(E) versiunile: pagina v100.92 (BUILD_INFO, versiune.js, sw, index �
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "v100.92";'), "versiune.js");
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-92";'), "sw.js");
   const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.92/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.91/.test(ix), "index.html mai are v100.91");
-  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.92.0"); assert.ok(/npm run test:v10091 && npm run test:v10092"/.test(pk), "lanțul de teste");
+  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.92.0"); assert.ok(/npm run test:v10091 && npm run test:v10092( && |")/.test(pk), "lanțul de teste");   /* v100.93: lanțul continuă (v10093, arbori) */
   assert.ok(/VERSIUNE_COLECTOR = "v101\.62"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.62");
 });
 

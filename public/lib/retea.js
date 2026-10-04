@@ -107,13 +107,14 @@ var Retea = (function () {
   }
   // aceleași intrări ca Probabilitati.pentruBot (o = {acum, pret, dir, jos, sus, lichidare, tinta, stop}); modele = {tinta: model}.
   // -> { la, v, p: {cod: probabilitate} } pe codurile rândurilor 🎲 + „directie-24”; null fără modele, fără 30 de zile de bare sau fără nicio cifră
-  function pentruBot(modele, bare, o, btc) {
-    o = o || {}; if (!modele || typeof modele !== "object") return null;
-    var acum = nr(o.acum) || Date.now(), b = Probabilitati.pregateste(bare, acum), f = trasaturiBare(b, b.length - 1, btc ? Probabilitati.pregateste(btc, acum) : null), pr = nr(o.pret);
+  // v100.93 (arborii): UN singur producător de intrări pentru 🧠 și 🌳 - codurile rândurilor 🎲 + „directie-24”, cu intrarea pe țintă
+  // (aceleași praguri INTERVAL ca până acum); modelele doar prezic peste lista asta. -> { la, f, lista: [{cod, tinta, x}] } sau null
+  function intrariBot(bare, o, btc) {
+    o = o || {}; var acum = nr(o.acum) || Date.now(), b = Probabilitati.pregateste(bare, acum), f = trasaturiBare(b, b.length - 1, btc ? Probabilitati.pregateste(btc, acum) : null), pr = nr(o.pret);
     if (!f || !(pr > 0)) return null;
-    var rel = function (x) { x = nr(x); return x !== null && x > 0 ? x / pr - 1 : null; }, dir = String(o.dir || "").toLowerCase(), p = {}, k = 0;
+    var rel = function (x) { x = nr(x); return x !== null && x > 0 ? x / pr - 1 : null; }, dir = String(o.dir || "").toLowerCase(), lista = [];
     var inInterval = function (v, iv) { var a = Math.abs(v); return a >= iv[0] - 1e-9 && a <= iv[1] + 1e-9; };
-    var pune = function (cod, tinta, e) { if (/^atinge-/.test(tinta) && !inInterval(e.rel, INTERVAL[e.H])) return; if (tinta === "cursa" && !(inInterval(e.relT, INTERVAL.cursaT) && inInterval(e.relS, INTERVAL.cursaS))) return; var m = modele[tinta]; if (!m || m.versiune !== VERSIUNE) return; var x = intrare(tinta, f, e), q = x ? prezice(m, x) : null; if (q !== null) { p[cod] = Math.round(q * 1000) / 1000; k++; } };
+    var pune = function (cod, tinta, e) { if (/^atinge-/.test(tinta) && !inInterval(e.rel, INTERVAL[e.H])) return; if (tinta === "cursa" && !(inInterval(e.relT, INTERVAL.cursaT) && inInterval(e.relS, INTERVAL.cursaS))) return; var x = intrare(tinta, f, e); if (x) lista.push({ cod: cod, tinta: tinta, x: x }); };
     var jos = rel(o.jos), sus = rel(o.sus), lich = rel(o.lichidare), tinta = rel(o.tinta), stop = rel(o.stop);
     if (jos !== null && jos < 0) { pune("iese-jos-24", "atinge-24", { rel: jos, H: 24 }); pune("iese-jos-72", "atinge-72", { rel: jos, H: 72 }); }
     if (sus !== null && sus > 0) { pune("iese-sus-24", "atinge-24", { rel: sus, H: 24 }); pune("iese-sus-72", "atinge-72", { rel: sus, H: 72 }); }
@@ -122,14 +123,28 @@ var Retea = (function () {
     if (cursaOk) pune("cursa", "cursa", { relT: tinta, relS: stop });
     if (f.stare && f.stare.indexOf("liniste") === 0) { pune("liniste-24", "liniste", { H: 24 }); pune("liniste-48", "liniste", { H: 48 }); }
     pune("directie-24", "directie", {});
-    return k ? { la: acum, v: VERSIUNE, p: p } : null;
+    return { la: acum, f: f, lista: lista };
+  }
+  // aceleași intrări ca Probabilitati.pentruBot (o = {acum, pret, dir, jos, sus, lichidare, tinta, stop}); modele = {tinta: model}.
+  // -> { la, v, p: {cod: probabilitate} } pe codurile rândurilor 🎲 + „directie-24”; null fără modele, fără 30 de zile de bare sau fără nicio cifră
+  function pentruBot(modele, bare, o, btc) {
+    if (!modele || typeof modele !== "object") return null;
+    var it = intrariBot(bare, o, btc); if (!it) return null;
+    var p = {}, k = 0;
+    it.lista.forEach(function (q) { var m = modele[q.tinta]; if (!m || m.versiune !== VERSIUNE) return; var v = prezice(m, q.x); if (v !== null) { p[q.cod] = Math.round(v * 1000) / 1000; k++; } });
+    return k ? { la: it.la, v: VERSIUNE, p: p } : null;
   }
   // „Rezultatul tău” la pornire: botul care rulează (pornit = pornitLa) sau fișa (pornit = acum); ist = boții închiși (forma JurnalTrade)
+  // v100.93 (arborii): intrarea „la pornire” - producător comun: trăsăturile botului la pornire (barele pregătite la `pornit`) -> { x, glob, rata, n } sau null
+  function intrarePornire(t, bare, btc, ist) {
+    var por = nr(t && t.pornit); if (por === null) return null;
+    return trasaturiBot(t, Probabilitati.pregateste(bare, por), btc ? Probabilitati.pregateste(btc, por) : null, ist);
+  }
   function pentruPornire(modele, t, bare, btc, ist) {
     var m = modele && modele.rezultat; if (!m || m.versiune !== VERSIUNE) return null;
     var por = nr(t && t.pornit); if (por === null) return null;
-    if (nr(m.la) !== null && m.la > por) return null;   // revizia finală (I7): modelul de după pornire ar fi văzut ce a urmat
-    var f = trasaturiBot(t, Probabilitati.pregateste(bare, por), btc ? Probabilitati.pregateste(btc, por) : null, ist); if (!f) return null;
+    if (nr(m.la) !== null && m.la > por) return null;   /* revizia finală (I7): modelul de după pornire ar fi văzut ce a urmat */
+    var f = intrarePornire(t, bare, btc, ist); if (!f) return null;
     var q = prezice(m, f.x); return q === null ? null : { p: Math.round(q * 1000) / 1000, rata: Math.round(f.rata * 1000) / 1000, n: f.n };
   }
   // ---- rândurile 🧠 (Tablou, fișă) ----
@@ -169,6 +184,6 @@ var Retea = (function () {
   }
   // rândul gri de la poarta fișei
   function textPornire(pz, vd) { return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + "."; }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;
