@@ -53,7 +53,7 @@ await test("(8) Tabloul: reteaHtml desenează sub-blocul (capul, rândurile, „
   assert.match(h, /^<div class="tbRetea"><h4 class="tbProbH">🧠 Rețeaua neuronală — a doua părere<\/h4>/);
   assert.match(h, /<details class="tbProbFara"><summary>Cum s-a verificat<\/summary>/); assert.equal((h.match(/class="tbProbRand/g) || []).length, 3);
   ctx.reteaM.m = null; assert.equal(ctx.f(RT, ZAR, { acum: ACUM }), "");
-  assert.match(fn("tbDeseneazaProb"), /\+reteaHtml\(rez\.retea,l,\{acum:Date\.now\(\),pornire:rez\.retea&&rez\.retea\.pornire\}\)/);
+  assert.match(fn("tbDeseneazaProb"), /\+reteaHtml\(rez\.retea,l,\{acum:Date\.now\(\),pornire:rez\.retea&&rez\.retea\.pornire\}(,rez\.arbori)?\)/);   /* v100.93: + arborii */
 });
 
 await test("(8) retea.js se încarcă după probabilitati.js și e în cache-ul aplicației", () => {
@@ -71,7 +71,7 @@ await test("(8) garda: grupul „retea” e STRICT și n-are abateri (toate form
 await test("(9) fișa: 🧠 pe aceleași bare și niveluri ca 🎲 (grProb.bare / grProb.o), cu BTC din Pionex; rândurile sub cele 🎲", () => {
   const f = fn("grProbDeseneaza");
   assert.match(f, /grProb\.bare=Probabilitati\.imbina\(b1,b15,Date\.now\(\)\)/); assert.match(f, /grProb\.rez=Probabilitati\.pentruBot\(grProb\.bare,grProb\.o\)/);
-  assert.match(f, /Retea\.pentruBot\(reteaM\.m,grProb\.bare,grProb\.o,grRetea\.btc\)/); assert.match(f, /semnul e cifra\.<\/p>'\+reteaHtml\(rt,zar,\{acum:Date\.now\(\)\}\)\+'<\/div>'/);
+  assert.match(f, /Retea\.pentruBot\(reteaM\.m,grProb\.bare,grProb\.o,grRetea\.btc\)/); assert.match(f, /semnul e cifra\.<\/p>'\+reteaHtml\(rt,zar,\{acum:Date\.now\(\)\}(,rtA)?\)\+'<\/div>'/);   /* v100.93: + arborii */
 });
 await test("(9) poarta: rândul gri „🧠 Un bot ca ăsta ar ieși pe plus: …” din istoria ta; fără modele / bare / istoric, barele altei monede sau o eroare -> nimic; poarta neschimbată", () => {
   const ctx = { Retea: R, escapeHtml: (x) => String(x), reteaM: { m: null }, grProb: { bare: null, simbol: null }, grRetea: { btc: null }, grProbSetare: (f) => f.setare, Date,

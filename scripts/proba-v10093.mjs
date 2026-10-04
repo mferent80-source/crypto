@@ -130,5 +130,40 @@ await test("(9) tura-retea: după rețea pornește antrenorul arborilor și urc�
   const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.63"/.test(col) && /function pornesteAntrenorArbori\(\)/.test(col) && col.includes('"antreneaza-arbori.mjs"') && /function modeleArbori\(\)/.test(col) && col.includes("Arbori, modeleArbori: mA,") && col.includes("pornesteArbori: pornesteAntrenorArbori, citesteModeleArbori: "), "colectorul");
 });
 
+await test("(10) Retea.randuri cu ambele familii: „🧠 61% · 🌳 58% · 🎲 55% · 🧠 dovedită … · 🌳 nedovedită …”, p2 pentru al doilea marker; fără arbori ⇒ rândul de ieri; capul „A doua părere: 🧠 rețeaua · 🌳 arborii”; subsolul cu „🌳 față de 🧠”; poarta cu amândouă", () => {
+  const MOD = (ver, v) => Object.fromEntries(Object.keys(R.TINTE).map((t) => [t, { tinta: t, versiune: ver, la: ACUM - 3600000, verificare: v }]));
+  const vBun = { luni: 11, luniGata: 11, nIndep: 274, reper: "🎲", brier: 0.17, brierReper: 0.18, brierLog: 0.175, ic: [0.01, 0.05], icLog: [0.004, 0.03], bss3: 0.02, logloss: 0.52, loglossReper: 0.53, loglossLog: 0.53 };
+  const vRau = { ...vBun, ic: [-0.04, 0.01], vsRetea: { n: 300, bss: 0.012, ic: [0.003, 0.021] } };
+  const rt = { la: ACUM, v: R.VERSIUNE, p: { "iese-jos-24": 0.61, "directie-24": 0.52 } }, ra = { la: ACUM, v: "a1", p: { "iese-jos-24": 0.58, "directie-24": 0.49 } }, zar = [{ cod: "iese-jos-24", titlu: "Atinge marginea de jos (0.3605) în 24 h", p: 0.55 }];
+  const mR = MOD(R.VERSIUNE, vBun), mA = MOD("a1", vRau);
+  const l = R.randuri(mR, rt, zar, { acum: ACUM }, { modele: mA, rt: ra });
+  assert.equal(l[0].p, 0.61); assert.equal(l[0].p2, 0.58);
+  assert.equal(l[0].text, "🧠 61% · 🌳 58% · 🎲 55% · 🧠 dovedită pe 274 de zile independente · 🌳 nedovedită: nu bate 🎲 (Brier 0,170 față de 0,180)");
+  assert.equal(R.randuri(mR, rt, zar, { acum: ACUM })[0].text, "🎲 55% · dovedită pe 274 de zile independente"); assert.equal(R.randuri(mR, rt, zar, { acum: ACUM })[0].p2, undefined);
+  assert.equal(R.randuri(null, null, zar, { acum: ACUM }, { modele: mA, rt: ra })[0].text, "🌳 58% · 🎲 55% · 🌳 nedovedită: nu bate 🎲 (Brier 0,170 față de 0,180)");
+  assert.equal(R.antet(mR, ACUM, mA).titlu, "A doua părere: 🧠 rețeaua · 🌳 arborii"); assert.equal(R.antet(mR, ACUM).titlu, "🧠 Rețeaua neuronală — a doua părere");
+  const sub = R.subsol(mR, mA); assert.ok(sub.some((x) => /🌳 față de 🧠: \+0,012 \(IC \+0,003…\+0,021\)/.test(x)), sub.join("\n")); assert.ok(sub.every((x) => x.length <= 160), "subsol > 160: " + sub.map((x) => x.length).join(","));
+  const vd = R.verdict(mR.rezultat, ACUM), tp = R.textPornire({ p: 0.41, rata: 0.524 }, vd, { p: 0.39, rata: 0.524 }, { dovedita: false, motiv: "nu bate rata ta", nIndep: 50, bloc: 24 });
+  assert.equal(tp, "Un bot ca ăsta ar ieși pe plus: 🧠 41% · 🌳 39% · rata ta: 52%.\n🧠 dovedită pe 274 de zile independente · 🌳 nedovedită: nu bate rata ta."); assert.ok(tp.split("\n").every((x) => x.length <= 160));
+  assert.equal(R.VERSIUNE_ARBORI, incarcaArbori().VERSIUNE, "versiunea arborilor din retea.js ≠ Arbori.VERSIUNE");
+  assert.equal(R.textPornire({ p: 0.41, rata: 0.524 }, vd), "Un bot ca ăsta ar ieși pe plus: 41% · rata ta: 52% · dovedită pe 274 de zile independente.");
+});
+await test("(10) pagina: reteaM.a din action=arbori; Tablou (rez.arbori), fișa (Arbori.pentruBot) și poarta (Arbori.pentruPornire) dau arborii lui reteaHtml / textPornire; al doilea marker pe bandă (CSS)", () => {
+  const a = citeste("public", "app.js"), css = citeste("public", "app.css");
+  assert.ok(a.includes('getJSON("/api/istoric-bot?action=arbori")') && /reteaM\.a=d&&d\.arbori&&typeof Arbori!=="undefined"&&d\.arbori\.versiune===Arbori\.VERSIUNE\?d\.arbori\.modele:null/.test(a), "reteaM.a");
+  assert.ok(/^function reteaHtml\(rt,zar,o,ra\)\{/m.test(a) && a.includes("Retea.randuri(m,rt,zar,o,ra&&reteaM.a?{modele:reteaM.a,rt:ra}:null)") && a.includes("Retea.antet(m,o&&o.acum||Date.now(),reteaM.a)") && a.includes("Retea.subsol(m,reteaM.a)"), "reteaHtml cu arbori");
+  assert.ok(a.includes("rtA=reteaM.a&&grProb.bare?Arbori.pentruBot(reteaM.a,grProb.bare,grProb.o,grRetea.btc):null") && a.includes("reteaHtml(rt,zar,{acum:Date.now()},rtA)"), "fișa");
+  assert.ok(a.includes("reteaHtml(rez.retea,l,{acum:Date.now(),pornire:rez.retea&&rez.retea.pornire},rez.arbori)"), "Tabloul");
+  assert.ok(fnApp("grReteaPoartaHtml").includes("Arbori.pentruPornire(reteaM.a,") && fnApp("grReteaPoartaHtml").includes("Retea.textPornire(pz,vd,pzA,vdA)"), "poarta");
+  assert.ok(/x\.p2!=null\?'<b class="tbProbP2" style="left:'/.test(a) && /\.tbProbBanda b\.tbProbP2\{/.test(css), "al doilea marker");
+});
+
+await test("(11) garda: rândurile cu arbori (toate stările 🌳, și fără rețea, amândouă nedovedite pe direcție), capul (și vechi), subsolul cu „față de 🧠” și poarta pe două rânduri sunt în grupul STRICT retea și n-au abateri", () => {
+  const s = situatii().filter((x) => /^arbori\./.test(x.sursa)); assert.ok(s.length >= 40, "situații arbori: " + s.length);
+  const rele = s.map((x) => ({ x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.x.sursa + ": " + q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
+  for (const f of ["arbori.randuri", "arbori.subsol", "arbori.antet", "arbori.textPornire"]) assert.ok(s.some((x) => x.sursa.startsWith(f)), "lipsește sursa " + f);
+  assert.ok(s.some((x) => /🌳 față de 🧠: \+0,012/.test(x.text)), "subsolul fără „față de 🧠”"); assert.ok(s.some((x) => /cât dat cu banul — 🧠 nedovedită/.test(x.text)), "direcția cu amândouă nedovedite"); assert.ok(s.some((x) => /^🌳 \d+% · 🎲 /.test(x.text)), "rândul doar cu arborii");
+});
+
 console.log("\n" + (pica ? "V100.93 PICA · " + pica + " din " + (ok + pica) : "V100.93 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

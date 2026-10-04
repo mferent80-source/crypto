@@ -100,11 +100,15 @@ var Retea = (function () {
     return { dovedita: true, motiv: null };
   }
   // verdictul unui model, pentru pagini: null fără model sau pe altă versiune a trăsăturilor (modelul vechi nu se folosește)
-  function verdict(m, acum) {
-    if (!m || m.versiune !== VERSIUNE) return null;
+  // v100.93 (arborii): aceeași regulă „dovedită” și pe modelele arborilor - versiunea lor e Arbori.VERSIUNE (proba (10) le ține egale)
+  var VERSIUNE_ARBORI = "a1";
+  function verdictCu(m, acum, ver) {
+    if (!m || m.versiune !== ver) return null;
     var d = decide(m.verificare || null), v = m.verificare || {}, la = nr(m.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
     return { dovedita: d.dovedita, motiv: d.motiv, nIndep: nr(v.nIndep) || 0, bloc: (TINTE[m.tinta] || { bloc: 24 }).bloc, vechi: z !== null && z >= 2 ? z : null };
   }
+  function verdict(m, acum) { return verdictCu(m, acum, VERSIUNE); }
+  function verdictArbori(m, acum) { return verdictCu(m, acum, VERSIUNE_ARBORI); }
   // aceleași intrări ca Probabilitati.pentruBot (o = {acum, pret, dir, jos, sus, lichidare, tinta, stop}); modele = {tinta: model}.
   // -> { la, v, p: {cod: probabilitate} } pe codurile rândurilor 🎲 + „directie-24”; null fără modele, fără 30 de zile de bare sau fără nicio cifră
   // v100.93 (arborii): UN singur producător de intrări pentru 🧠 și 🌳 - codurile rândurilor 🎲 + „directie-24”, cu intrarea pe țintă
@@ -153,37 +157,71 @@ var Retea = (function () {
   var TINTA_DE = { cursa: "cursa", "iese-jos-24": "atinge-24", "iese-sus-24": "atinge-24", "iese-jos-72": "atinge-72", "iese-sus-72": "atinge-72", lichidare: "atinge-168", "liniste-24": "liniste", "liniste-48": "liniste", "directie-24": "directie" };
   function PC(v) { return Math.round(v * 100) + "%"; }
   function eticheta(vd) { var u = UNIT[vd.bloc] || UNIT[24]; return vd.dovedita ? "dovedită pe " + cate(vd.nIndep, u[0], u[1]) : "nedovedită: " + vd.motiv; }
-  // forma tbProbRandHtml ({cod, titlu, p, ic, avertizare, text}): titlul rândului 🎲, cifra rețelei, cifra 🎲 alături și starea;
+  function semn(v, z) { var s = num(Math.abs(v), z); return v > 0 ? "+" + s : v < 0 ? "−" + s : s; }
+  // forma tbProbRandHtml ({cod, titlu, p, p2, ic, avertizare, text}): titlul rândului 🎲, cifra rețelei, cifra 🎲 alături și starea;
   // direcția cu „cât dat cu banul” până e dovedită; rezultatul tău lângă rata ta. zar = Probabilitati.randuri(...); o = {acum, pornire}
-  function randuri(modele, rt, zar, o) {
-    o = o || {}; var out = [], p = rt && rt.p || {}, acum = nr(o.acum) || Date.now();
-    if (!modele || !rt || (rt.v && rt.v !== VERSIUNE)) return out;
+  // v100.93 (arborii): arb = { modele, rt } (modelele 🌳 + ce a dat Arbori.pentruBot) ⇒ „🧠 x% · 🌳 y% · 🎲 z% · 🧠 stare · 🌳 stare”, p2 = 🌳;
+  // fără arb ⇒ exact rândurile de ieri; fără rețea, doar cu arbori ⇒ „🌳 y% · 🎲 z% · 🌳 stare”
+  function randuri(modele, rt, zar, o, arb) {
+    o = o || {}; var out = [], acum = nr(o.acum) || Date.now();
+    var cuR = !!(modele && rt && !(rt.v && rt.v !== VERSIUNE)), p = cuR ? rt.p || {} : {};
+    var A = arb && arb.modele && arb.rt && arb.rt.v === VERSIUNE_ARBORI ? arb : null, pa = A ? A.rt.p || {} : {};
+    if (!cuR && !A) return out;
+    var vR = function (t) { return cuR ? verdict(modele[t], acum) : null; }, vA = function (t) { return A ? verdictArbori(A.modele[t], acum) : null; };
+    var ban = function (vd, cuBan) { return cuBan && !vd.dovedita ? "cât dat cu banul — " : ""; };
+    // un rând din cele două familii: q/vd = 🧠, qa/vda = 🌳 (null = familia n-are cifră sau verdict); cifre = ce stă între cifre și stări (🎲 / rata ta)
+    var rand = function (cod, titlu, q, vd, qa, vda, cifre, cuBan) {
+      var r = q !== null && !!vd, a = qa !== null && !!vda; if (!r && !a) return;
+      var x = { cod: cod, titlu: titlu, p: r ? q : qa, ic: null, avertizare: false }; if (r && a) x.p2 = qa;
+      if (!A) { x.text = (cifre ? cifre + " · " : "") + ban(vd, cuBan) + eticheta(vd); out.push(x); return; }
+      var c = [], s = [];
+      if (r) c.push("🧠 " + PC(q)); if (a) c.push("🌳 " + PC(qa)); if (cifre) c.push(cifre);
+      if (cuBan && r && a && !vd.dovedita && !vda.dovedita) { s.push("cât dat cu banul — 🧠 " + eticheta(vd)); s.push("🌳 " + eticheta(vda)); }
+      else { if (r) s.push("🧠 " + ban(vd, cuBan) + eticheta(vd)); if (a) s.push("🌳 " + ban(vda, cuBan) + eticheta(vda)); }
+      x.text = c.concat(s).join(" · "); out.push(x);
+    };
     (Array.isArray(zar) ? zar : []).forEach(function (z) {
-      var q = nr(p[z.cod]), vd = verdict(modele[TINTA_DE[z.cod]], acum); if (q === null || !vd || nr(z.p) === null) return;
-      out.push({ cod: z.cod, titlu: z.titlu, p: q, ic: null, avertizare: false, text: "🎲 " + PC(z.p) + " · " + eticheta(vd) });
+      if (nr(z.p) === null) return; var t = TINTA_DE[z.cod];
+      rand(z.cod, z.titlu, nr(p[z.cod]), vR(t), nr(pa[z.cod]), vA(t), "🎲 " + PC(z.p), false);
     });
-    var qd = nr(p["directie-24"]), vdd = verdict(modele.directie, acum);
-    if (qd !== null && vdd) out.push({ cod: "directie-24", titlu: NUME.directie, p: qd, ic: null, avertizare: false, text: vdd.dovedita ? eticheta(vdd) : "cât dat cu banul — " + eticheta(vdd) });
-    var pz = o.pornire, vdr = verdict(modele.rezultat, acum);
-    if (pz && nr(pz.p) !== null && nr(pz.rata) !== null && vdr) out.push({ cod: "rezultat", titlu: "La pornire, un bot ca ăsta ieșea pe plus", p: pz.p, ic: null, avertizare: false, text: "rata ta: " + PC(pz.rata) + " · " + eticheta(vdr) });
+    rand("directie-24", NUME.directie, nr(p["directie-24"]), vR("directie"), nr(pa["directie-24"]), vA("directie"), "", true);
+    var okP = function (x) { return x && nr(x.p) !== null && nr(x.rata) !== null ? x : null; }, pz = okP(o.pornire), pzA = okP(A && A.rt.pornire);
+    var rata = pz ? pz.rata : pzA ? pzA.rata : null;
+    if (rata !== null) rand("rezultat", "La pornire, un bot ca ăsta ieșea pe plus", pz ? pz.p : null, vR("rezultat"), pzA ? pzA.p : null, vA("rezultat"), "rata ta: " + PC(rata), false);
     return out;
   }
   // capul sub-blocului; modelul mai vechi de 2 zile se spune (antrenarea n-a mers de atunci)
-  function antet(modele, acum) {
-    var la = 0; Object.keys(modele || {}).forEach(function (k) { var x = nr(modele[k] && modele[k].la); if (x !== null && x > la) la = x; });
-    var z = la ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
-    return { titlu: "🧠 Rețeaua neuronală — a doua părere", sub: z !== null && z >= 2 ? "Model de acum " + cate(z, "zi", "zile") + " — antrenarea n-a mers de atunci." : "Nu schimbă semaforul, verdictul sau alertele; o cifră contează doar când e „dovedită”." };
+  // v100.93: cu modelele arborilor (arbori = {tinta: model}) titlul numește amândouă familiile; fiecare familie veche se spune cu emoji-ul ei
+  function antet(modele, acum, arbori) {
+    var zile = function (mm) { var la = 0; Object.keys(mm || {}).forEach(function (k) { var x = nr(mm[k] && mm[k].la); if (x !== null && x > la) la = x; }); return la ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null; };
+    var z = zile(modele), cuA = Object.keys(arbori || {}).some(function (k) { return !!(arbori[k] && arbori[k].versiune === VERSIUNE_ARBORI); });
+    var implicit = "Nu schimbă semaforul, verdictul sau alertele; o cifră contează doar când e „dovedită”.";
+    if (!cuA) return { titlu: "🧠 Rețeaua neuronală — a doua părere", sub: z !== null && z >= 2 ? "Model de acum " + cate(z, "zi", "zile") + " — antrenarea n-a mers de atunci." : implicit };
+    var za = zile(arbori), s = [];
+    if (z !== null && z >= 2) s.push("🧠 model de acum " + cate(z, "zi", "zile")); if (za !== null && za >= 2) s.push("🌳 model de acum " + cate(za, "zi", "zile"));
+    return { titlu: "A doua părere: 🧠 rețeaua · 🌳 arborii", sub: s.length ? s.join(" · ") + " — antrenarea n-a mers de atunci." : implicit };
   }
   // „Cum s-a verificat”: un rând pe țintă - cazurile independente, Brier rețea / reper / formula simplă, IC față de reper
-  function subsol(modele) {
-    return Object.keys(NUME).filter(function (k) { return modele && modele[k] && modele[k].versiune === VERSIUNE; }).map(function (k) {
+  // v100.93: + un rând 🌳 pe țintă (aceleași cazuri ca 🧠): Brier, IC și „față de 🧠” (BSS al arborilor cu rețeaua drept reper, cu IC)
+  function subsol(modele, arbori) {
+    var out = Object.keys(NUME).filter(function (k) { return modele && modele[k] && modele[k].versiune === VERSIUNE; }).map(function (k) {
       var v = modele[k].verificare, u = UNIT[(TINTE[k] || { bloc: 24 }).bloc] || UNIT[24];
       if (!v) return NUME[k] + ": neverificată încă.";
       return NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "") + ".";
     });
+    Object.keys(NUME).filter(function (k) { return arbori && arbori[k] && arbori[k].versiune === VERSIUNE_ARBORI; }).forEach(function (k) {
+      var v = arbori[k].verificare, vs = v && v.vsRetea;
+      if (!v) { out.push("🌳 " + NUME[k] + ": neverificată încă."); return; }
+      out.push("🌳 " + NUME[k] + ": Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "")
+        + (vs && nr(vs.bss) !== null && vs.ic ? " · 🌳 față de 🧠: " + semn(vs.bss, 3) + " (IC " + semn(vs.ic[0], 3) + "…" + semn(vs.ic[1], 3) + ")" : "") + ".");
+    });
+    return out;
   }
-  // rândul gri de la poarta fișei
-  function textPornire(pz, vd) { return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + "."; }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
+  // rândul gri de la poarta fișei; v100.93: cu arborii (pzA, vdA) două rânduri (despărțite cu „\n”): cifrele celor două familii, apoi stările lor
+  function textPornire(pz, vd, pzA, vdA) {
+    if (!pzA || !vdA || nr(pzA.p) === null) return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + ".";
+    return "Un bot ca ăsta ar ieși pe plus: 🧠 " + PC(pz.p) + " · 🌳 " + PC(pzA.p) + " · rata ta: " + PC(pz.rata) + ".\n🧠 " + eticheta(vd) + " · 🌳 " + eticheta(vdA) + ".";
+  }
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;

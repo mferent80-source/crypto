@@ -2173,7 +2173,9 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .tbProbBanda{grid-column:1/-1;position:relative;height:8px;border-radius:4px;background:var(--line-soft)}
 .tbProbBanda i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--accent-2);opacity:.35}
 .tbProbBanda b{position:absolute;top:-3px;width:3px;height:14px;margin-left:-1px;border-radius:2px;background:var(--accent-2)}
+.tbProbBanda b.tbProbP2{background:transparent;border:2px solid var(--accent-2);box-sizing:border-box;width:7px;height:14px;top:-3px;margin-left:-3px;border-radius:4px}   /* v100.93: 🌳 - inel gol lângă semnul plin 🧠 */
 .tbProbRand.tbWarn .tbProbBanda b,.tbProbRand.tbWarn .tbProbBanda i{background:var(--warn)}
+.tbProbRand.tbWarn .tbProbBanda b.tbProbP2{background:transparent;border-color:var(--warn)}
 .tbProbNota{margin-top:8px}
 .tbConsSansa{margin:6px 0 0}
 /* v100.47 (I-471): indicatorii cu dovada - semnul subtire „de obicei” pe banda, titlul blocului, „fara semn” pliat */
