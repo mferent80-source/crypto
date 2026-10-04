@@ -70,6 +70,7 @@ export async function onRequestGet({request,env}){
   // v100.85 (reveniri + short): istoricul listelor de monede, urmărirea lor și notările (le scrie tura sugestiilor, o dată pe zi)
   if(action==="sugestii"){let s=null,l=[];try{s=JSON.parse(await env.ISTORIC.get("sugestii")||"null")}catch{s=null}try{l=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{l=[]}return json({sugestii:s,istoric:Array.isArray(l)?l:[]})}
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
+  if(action==="paza"){let p=null;try{p=JSON.parse(await env.ISTORIC.get("paza-boti")||"null")}catch{p=null}return json({paza:p})}   // v100.90 (I-513): starea Busolei pe boți, cu „de când”
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
   if(action==="ingustLista"){const l=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(simbolKv).filter(Boolean))].slice(0,10),out={};for(const s of l){let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}out[s]=v}return json({ingust:out})}
@@ -277,6 +278,12 @@ export async function onRequestPost({request,env}){
   }
   // v100.46 (pachetul 2a): probabilitatile botului (colectorul, o data pe ora) si calibrarea lor
   // v100.80 (rețeaua neuronală, livrarea 1): modelele de azi-noapte (antrenorul de acasă, prin colector); forma o citește Retea.prezice
+  // v100.90 (I-513, paza boților): starea Busolei pe fiecare bot deschis, cu „de când” - o cheie mică, rescrisă la fiecare tură; cel mult 60 de boți
+  if(action==="paza"){
+    const STARI=["miscare","liniste","nu-stiu"],b=corp&&corp.boti&&typeof corp.boti==="object"?corp.boti:{},boti={};
+    for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object")continue;boti[id]={stare:STARI.includes(x.stare)?x.stare:null,de:nr(x.de),la:nr(x.la)}}
+    await env.ISTORIC.put("paza-boti",JSON.stringify({la:nr(corp&&corp.la)||Date.now(),boti}));return json({ok:true})
+  }
   if(action==="sugestii"){
     // v100.85 (reveniri + short): istoricul (piața + boții lui), urmărirea și notările zilei - curățate; notările fără dubluri, 150 de zile
     const dv=x=>x&&typeof x==="object"?{n:nr(x.n),saptamani:nr(x.saptamani),pePlus:nr(x.pePlus),medie:nr(x.medie),mediana:nr(x.mediana),baza:x.baza&&typeof x.baza==="object"?{n:nr(x.baza.n),pePlus:nr(x.baza.pePlus),medie:nr(x.baza.medie)}:null,eticheta:["mai bine","mai slab","cam la fel"].includes(x.eticheta)?x.eticheta:null,putine:x.putine===true}:null;

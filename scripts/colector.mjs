@@ -33,8 +33,9 @@ import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs"; 
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
-import { pazaPas, notaVeche } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”)
-const VERSIUNE_COLECTOR = "v101.59";
+import { pazaPas, notaVeche, pentruServer } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513)
+import { alcatuieste as pentruBusola } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
+const VERSIUNE_COLECTOR = "v101.60";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -479,13 +480,17 @@ async function tura() {
     } catch (e) { jurnal("podea", b.id, e.message); }
     // v101.59 (§2 „paza boților”): moneda botului trece în „mai agitată ca de obicei” pe 4h (Busola) ⇒ un mesaj, nerepetat până iese.
     // După `stareAlerte[b.id] = r.stare`: _busola se scrie pe starea nouă (evalueaza o copiază la tura următoare)
-    try { await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie) }); } catch (e) { jurnal("paza busola", b.id, e.message); }
+    try { await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie), monede: meta().busolaMonede || (meta().busolaMonede = {}) }); } catch (e) { jurnal("paza busola", b.id, e.message); }
     // o alerta care n-a plecat (ntfy picat, fara internet) nu se trece ca trimisa:
     // starea ei revine la cea de dinainte, ca tura urmatoare s-o reincerce
     for (const msg of r.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) {
       if (inainte[msg.cheie]) stareAlerte[b.id][msg.cheie] = inainte[msg.cheie]; else delete stareAlerte[b.id][msg.cheie];
     }
   }
+  // v101.60 (I-513): starea Busolei pe fiecare bot (cu „de când”) la server, ca Tabloul să scrie „de N h”
+  try { await trimite("/api/istoric-bot?action=paza", pentruServer(boti, stareAlerte, acum)); } catch (e) { jurnal("paza server", e.message); }
+  // v101.60 (I-515 + I-498): fișierul local pentru Busola - boții deschiși + închișii din 90 de zile, scris atomic la fiecare tură
+  try { await scriePentruBusola(boti, acum); } catch (e) { jurnal("pentru-busola", e.message); }
   try { await turaPreturi(acum); } catch (e) { jurnal("preturi", e.message); }
   try { await turaMediu(acum); } catch (e) { jurnal("raport 3h", e.message); }
   try { await turaRaport(acum); } catch (e) { jurnal("raport", e.message); }
@@ -602,7 +607,29 @@ async function botiInchisiToti() {
   try { const d = await cere("/api/bot-orders?status=finished&limit=100"); for (const y of (d && Array.isArray(d.bots) ? d.bots : [])) { const x = y.brut || y, id = String(x && (x.strategyId || x.buOrderId) || y.id || ""); if (id && !out.has(id)) out.set(id, x); } } catch (e) { jurnal("botii inchisi (Pionex)", e.message); }
   return [...out.values()];
 }
+// v101.60 (I-515 + I-498, specul colaborării 2 §5): ce trimite Radarul Busolei - fișier LOCAL scris atomic la fiecare tură (Busola îl
+// citește oricând; peste 24 h îl socotește vechi). Închișii (arhiva + prima pagină Pionex) se reîmprospătează la 10 minute; o citire
+// goală nu șterge lista de dinainte. Deschișii vin din tura curentă.
+const PENTRU_BUSOLA_FIS = path.join(DATA, "pentru-busola.json");
+let pbInchisi = { la: 0, lista: [] };
+async function scriePentruBusola(boti, acum) {
+  const de90 = acum - 90 * 86400000;
+  if (acum - pbInchisi.la > 10 * 60000) {
+    try {
+      await simbolPerp("BTC");   // încălzește lista Pionex (LIGHTER -> LIT_USDT_PERP) pentru cheile închișilor
+      // revizia: doar ultimele 90 de zile intră în JurnalTrade.din (altfel trecerea greșelilor, pătratică, mergea pe toată arhiva la 10 min);
+      // o citire parțială (arhiva picată, doar pagina Pionex) se UNEȘTE cu lista de dinainte, nu o înlocuiește
+      const l = JurnalTrade.din((await botiInchisiToti()).filter((x) => Number(x && x.closeTime) >= de90));
+      const m = new Map(pbInchisi.lista.map((t) => [t.id, t])); for (const t of l) m.set(t.id, t);
+      pbInchisi = { la: acum, lista: [...m.values()].filter((t) => t.inchis >= de90) };
+    } catch (e) { jurnal("pentru-busola inchisi", e.message); pbInchisi.la = acum - 7 * 60000; }
+  }
+  const cheiaBusola = (s) => (simboluriPerp && simboluriPerp[String(s || "").toUpperCase()]) || s;
+  scrieAtomic(PENTRU_BUSOLA_FIS, pentruBusola({ la: acum, versiune: VERSIUNE_COLECTOR, deschisi: boti, inchisi: pbInchisi.lista, acum, Busola, cheia: cheiaBusola }));
+}
+
 // v100.40: tickerul Pionex al monedei unui bot (LIGHTER -> LIT_USDT_PERP, PUMPFUN -> PUMP_USDT_PERP), din lista de simboluri
+
 let simboluriPerp = null, simboluriLa = 0;
 async function simbolPerp(moneda) {
   if (!simboluriPerp || Date.now() - simboluriLa > 6 * 3600000) {
@@ -1013,6 +1040,11 @@ async function dateDimineata() {
   try { const id = await cere("/api/t212?action=idei"); out.idei = (id && id.idei && Array.isArray(id.idei.actiuni) ? id.idei.actiuni : []).slice(0, 5).map((x) => x.simbol); } catch {}
   try { const cl = await cere("/api/istoric-bot?action=clasament"); out.ideiBoti = Idei.ideiBoti(cl && cl.clasament, [], 3).map((x) => x.moneda); } catch {}
   try { const bo = await cere("/api/bot-orders"); out.boti = (bo && bo.bots || []).filter((b) => b.activ && Number.isFinite(Number(b.distantaLichidarePct)) && Math.abs(Number(b.distantaLichidarePct)) < 15).map((b) => ({ nume: String(b.baza || "").replace(/\.PERP$/, ""), lich: Math.abs(Number(b.distantaLichidarePct)) })); } catch {}
+  // v101.60 (I-513): Busola pe boții deschiși, pe scurt (starea și „de când” le ține colectorul în alerte-stare)
+  try {
+    const bo = await cere("/api/bot-orders"), l = (bo && bo.bots || []).filter((b) => b && b.id && b.activ !== false).map((b) => { const s = stareAlerte[b.id] && stareAlerte[b.id]._busola; return { nume: String(b.baza || "").replace(/\.PERP$/, ""), stare: s ? s.stare : null, de: s ? s.de : null }; });
+    const t = Busola.liniaBoti(l, Date.now()); out.liniiExtra = t ? ["Busola, pe 4h: " + t] : [];
+  } catch {}
   return out;
 }
 async function turaDimineata() {

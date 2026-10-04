@@ -11,6 +11,8 @@ export async function turaDimineata(d) {
   if (z.ora < 9 || d.stare.dimineataTrimis === z.data) return { trimis: false };
   const date = (await d.date()) || {};
   const r = d.Consilier.rezumatDimineata(Object.assign({ acum }, date));
-  if (await d.trimite({ nivel: "info", titlu: r.titlu + " (" + z.data.slice(8, 10) + "." + z.data.slice(5, 7) + ")", mesaj: r.linii.join("\n") })) { d.stare.dimineataTrimis = z.data; return { trimis: true, linii: r.linii }; }
+  // v101.60 (I-513): rândurile colectorului, după cele ale Consilierului (Busola pe boții deschiși)
+  const linii = r.linii.concat(Array.isArray(date.liniiExtra) ? date.liniiExtra.filter((x) => typeof x === "string" && x) : []);
+  if (await d.trimite({ nivel: "info", titlu: r.titlu + " (" + z.data.slice(8, 10) + "." + z.data.slice(5, 7) + ")", mesaj: linii.join("\n") })) { d.stare.dimineataTrimis = z.data; return { trimis: true, linii }; }
   return { trimis: false };
 }

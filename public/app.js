@@ -5018,6 +5018,8 @@ function grIngustHtml(f){
     +'<p class="tbSub">⏱️ L-aș închide după '+r.ore+' h dacă n-a atins stopul: așa a fost probat.</p>'
     +'<p class="tbSub">Pe test ('+TextRo.cate(r.test.nIndep,"fereastră independentă","ferestre independente")+', nevăzute la alegere): median '+P(r.test.mediana)+' din sumă'+(r.test.medie!=null?' (medie '+P(r.test.medie)+')':'')+', '+Math.round(r.test.pePlus*100)+'% pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+TextRo.cate(Math.round(r.test.perechiZi),"pereche","perechi")+'/zi. Ce s-a întâmplat, nu o promisiune.</p>'+grUrmHtml()+'</div>';
 }
+// v100.90 (I-514, Busola 1.38): intervalul măsurat de Busola pe 4h, sub propunerea fișei - pentru comparație, nu în locul ei (lățimea e pe spot; gridul pierde oricum, mai larg pierde mai puțin); lipsă ⇒ nimic
+function grBusolaFisaHtml(f,i){try{if(typeof Busola==="undefined")return "";var r=Busola.randFisa(Busola.rezumat(),f.simbol,Date.now(),function(x){return grPret(x,i)});return r?'<p class="tbSub grBusolaFisa">'+escapeHtml(r.text)+'</p>':""}catch(e){return ""}}
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
 function grRandSumaMaxima(f){
@@ -5481,6 +5483,7 @@ function renderGrid(){
     +grRand("Preț de jos",grPret(st.jos,i),grPret(st.jos,i))
     +grRand("Preț de sus",grPret(st.sus,i),grPret(st.sus,i))
     +grRand("Număr de grile",(st.grile+1)+" · alege „Geometric” în Pionex (implicit e aritmetic) · Pionex numără liniile, cu cea de jos și cea de sus: "+TextRo.cate(st.grile+1,"linie","linii")+" = "+TextRo.cate(st.grile,"interval","intervale")+(st.redus?" · redus de la "+(st.redus.de+1)+", ca să încapă minimul pe ordin":""),String(st.grile+1))   // v100.38
+    +grBusolaFisaHtml(f,i)
     +grRand("Levier",st.levier+"×"+(st.pesteSigur?" (peste sigur: "+st.levierSigur+"×)":""),String(st.levier))
     +(grPerechiText(f)?grRand("Perechi încheiate pe zi",grPerechiText(f),null):"")   // v100.51 (I-477)
     +(f.deasa&&!f.deasa.aceeasi?grRand("Grid des (0,3%)",f.propusa==="deasa"&&f.aleasa?"propus (setările de mai sus) · proba n-a respins-o · ~"+T1(f.deasa.treceriZi)+" perechi încheiate/zi pe ultimele 30 z (gridul rar al probei: "+TextRo.cate(f.aleasa.setare.grile+1,"grilă","grile")+" la "+P(f.aleasa.setare.pas)+", ~"+T1(f.aleasa.treceriZi)+" perechi/zi)":TextRo.cate(f.deasa.setare.grile+1,"grilă","grile")+" · ~"+T1(f.deasa.treceriZi)+" perechi/zi · nepropus: "+(f.deasa.respinsa?f.deasa.motiv:"nu e mai des decât gridul de mai sus"),null):"")
@@ -5881,8 +5884,11 @@ function tbDeseneazaPortofoliu(){
     +'<div class="tbLinie"><span>Expunerea (sumă × levier)</span><b>'+p.expunere.toFixed(0)+' USDT'+(p.expunerePeSold!=null?' · '+p.expunerePeSold.toFixed(1).replace(".",",")+'× soldul':'')+'</b></div>'
     +'<div class="tbLinie"><span>Dacă toată piața scade 10%</span><b class="'+(p.soc10<0?"bad":"good")+'">'+U(p.soc10)+'</b></div>'
     +(p.lichidatiLaSoc.length?'<div class="tbLinie"><span>S-ar lichida la −10%</span><b class="bad">'+escapeHtml(p.lichidatiLaSoc.join(", "))+'</b></div>':'')
+    +tbBusolaPortofoliu(boti)
     +(p.acelasiPariu?'<p class="tbSub">'+TextRo.cate(Math.max(p.peParte.long,p.peParte.short),"bot","boți")+' pe aceeași parte sunt un singur pariu, nu mai multe.</p><p class="tbFac">👉 <b>Ce aș face eu:</b> N-aș mai porni unul pe partea asta, ci unul neutru sau pe partea cealaltă.</p>':'');
 }
+// v100.90 (I-513): Busola pe toți boții deschiși, pe un rând („AAVE mai agitată de 8 h · LIT mai calmă de 2,5 h”); fără rezumat ⇒ nimic
+function tbBusolaPortofoliu(boti){if(typeof Busola==="undefined"||!Busola.rezumat())return "";var acum=Date.now(),t=Busola.liniaBoti(boti.map(function(b){var k=tbPazaKv.boti[b.id],s=Busola.pazaStare(Busola.rezumat(),tbCheieBusola(b),acum);return {nume:String(b.baza||"").replace(/\.PERP$/,""),stare:s?s.stare:null,de:k&&s&&k.stare===s.stare?k.de:null}}),acum);return t?'<div class="tbLinie"><span>Busola, pe 4h</span><b>'+escapeHtml(t)+'</b></div>':""}
 // v97.8 (27.09, fara niciun bot pornit): in locul semaforului, pregatirea urmatorului bot - fisa de inchidere a ultimului,
 // vremea pietei (ca pe Home) si primele 3 monede "Bun pentru grid" din Scan, fiecare cu fisa ei
 var tbPreg={la:0,inLucru:false,fisa:null,vreme:null,grid:null};
@@ -5993,6 +5999,19 @@ function tbDeseneazaSemafor(b){
     var ps=$("tbPlSub-socoteala");if(ps)ps.textContent=soc&&Object.keys(soc).length?TextRo.cate(Object.keys(soc).length,"semnal urmărit","semnale urmărite")+" · au avut dreptate după 24 h?":"au avut dreptate după 24 h?";
   }
 }
+// v100.90 (I-513): starea Busolei pe moneda botului („mai agitată ca de obicei · de 8 h · măsurat acum 1 h”) - starea din rezumatul public
+// (perp4h ?? grid4h ?? 4h, ca în fișă și în colector), „de când” din ruta `paza` (colectorul o ține în alerte-stare), adusă la 5 min
+// revizia: cheia Busolei din TICKERUL Pionex (LIGHTER.PERP ⇒ LIT_USDT_PERP ⇒ LIT), nu din numele botului - 17 monede au baza altfel
+function tbCheieBusola(b){return b.simbolPionex||TabloBot.simboluri(b.baza,b.quote).pionex}
+var tbPazaKv={la:0,inLucru:false,boti:{}};
+function tbPazaAdu(){if(tbPazaKv.inLucru||Date.now()-tbPazaKv.la<5*60000)return;tbPazaKv.inLucru=true;getJSON("/api/istoric-bot?action=paza").then(function(d){tbPazaKv.boti=d&&d.paza&&d.paza.boti||{};if(tbPanouVizibil()&&tbStare.bot)tbDeseneazaExtra(tbStare.bot)}).catch(function(){}).then(function(){tbPazaKv.la=Date.now();tbPazaKv.inLucru=false})}
+function tbBusolaLinie(b){
+  if(typeof Busola==="undefined"||!b)return "";
+  tbPazaAdu();Busola.incarca(window.fetch.bind(window),Date.now()).then(function(nou){if(nou&&tbPanouVizibil()&&tbStare.bot)tbDeseneazaExtra(tbStare.bot)});
+  var e=Busola.eticheta(Busola.rezumat(),tbCheieBusola(b),Date.now(),tbPazaKv.boti[b.id]);
+  if(!e)return '<div class="tbLinie"><span>Busola, pe 4h</span><b class="tbSubVal">aștept rezumatul…</b></div>';
+  return '<div class="tbLinie"><span>Busola, pe 4h <span class="tbSub">'+escapeHtml(e.nota)+'</span></span><b class="'+(e.nivel==="atentie"?"tbWarn":e.nivel==="nemasurat"?"tbSubVal":"")+'">'+escapeHtml(e.text)+'</b></div>';
+}
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
   if(!b){el.innerHTML=el2.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
@@ -6010,6 +6029,7 @@ function tbDeseneazaExtra(b){
   }
   // 2) pe zi  3) la inchidere  4) liniste + laborator  5) jurnal
   var z=TabloExtra.grileVsCosturi(b,Date.now()),q=TabloExtra.dacaInchizi(b),h="";
+  h+=tbBusolaLinie(b);
   h+=linie("Grile, ultimele 24 h",z.grile24h==null?"—":botiBan(z.grile24h),botiClasa(z.grile24h),z.umpleri24h!=null?TextRo.cate(z.umpleri24h,"tranzacție","tranzacții"):"");
   h+=linie("Comisioane pe zi",z.comisionZi==null?"—":botiBan(z.comisionZi),"tbSubVal","medie de la pornire");
   h+=linie("Funding pe zi",z.fundingZi==null?"—":botiBan(z.fundingZi),z.fundingMananca?"bad":"tbSubVal",z.fundingMananca?"mănâncă tot câștigul din grile":"medie de la pornire");

@@ -18,7 +18,7 @@ export function situatiiAlerte(pune) {
   // botul CRV al lui (long, 0.3841-0.4331); LIGHTER pe short; BTC cu preturi de 5 cifre; PUMP sub 0,01
   const CRV = (o) => Object.assign({ baza: "CRV.PERP", directie: "long", pretCurent: 0.3858, gridJos: 0.3841, gridSus: 0.4331, distantaLichidarePct: 30, pretLichidare: 0.3382876201448984,
     investit: 49.67, levier: 5, pornitLa: T0 - 4 * ZI }, o || {});
-  const LIT = (o) => Object.assign({ baza: "LIGHTER.PERP", directie: "short", pretCurent: 4.912, gridJos: 4.2, gridSus: 5.1, distantaLichidarePct: 25, pretLichidare: 6.1234,
+  const LIT = (o) => Object.assign({ baza: "LIGHTER.PERP", simbolPionex: "LIT_USDT_PERP", directie: "short", pretCurent: 4.912, gridJos: 4.2, gridSus: 5.1, distantaLichidarePct: 25, pretLichidare: 6.1234,
     investit: 120, levier: 4, pornitLa: T0 - 2 * ZI }, o || {});
   const BTC = (o) => Object.assign({ baza: "BTC.PERP", directie: "long", pretCurent: 64123.45, gridJos: 60000, gridSus: 72000, distantaLichidarePct: 30, pretLichidare: 45123.67,
     investit: 2500, levier: 3, pornitLa: T0 - 6 * ZI }, o || {});
@@ -177,7 +177,7 @@ export function situatiiAlerte(pune) {
   // v100.86 (§2 „paza boților”): mesajele pazei din producătorul REAL (pazaBot cu Busola și Alerte.pret, nota din notaVeche) -
   // CRV long 5×, LIGHTER short 4×, BTC (prețuri de 5 cifre), PUMP (sub 0,01), bot nou, neutru fără levier, nedovedit, fără cifră
   const BU = globalThis.Busola, GR = { canal: "±2×ATR", miscare: -0.0021398053, miscareDovedita: true };
-  const REZB = (g) => ({ la: T0 - 2 * ORA, monede: { CRV: { perp4h: "miscare" }, LIGHTER: { perp4h: "miscare" }, BTC: { grid4h: "miscare" }, PUMP: { perp4h: "miscare" } }, grid: g || GR, perp: { prag: 200000 } });
+  const REZB = (g) => ({ la: T0 - 2 * ORA, monede: { CRV: { perp4h: "miscare" }, LIT: { perp4h: "miscare" }, BTC: { grid4h: "miscare" }, PUMP: { perp4h: "miscare" }, MARSCOIN: { perp4h: "miscare" } }, grid: g || GR, perp: { prag: 200000 } });
   const paz = (sit, b, g, prim) => co(sit, "busolaMiscare", pazaBot({ Busola: BU, rez: REZB(g), bot: b, inainte: prim ? undefined : { stare: "liniste", la: 1 }, acum: T0, pret: A.pret }).mesaj);
   paz("Busola: mai agitată (CRV long 5×, dovedit)", CRV());
   paz("Busola: mai agitată (LIGHTER short 4×)", LIT());
@@ -188,6 +188,13 @@ export function situatiiAlerte(pune) {
   paz("Busola: mai agitată, nedovedit (LIGHTER)", LIT(), Object.assign({}, GR, { miscareDovedita: false }));
   paz("Busola: mai agitată, rezumat fără cifră și fără canal", CRV(), {});
   co("Busola: rezumatul vechi (6 ore)", "busolaVeche", notaVeche({ Busola: BU, rez: REZB(), acum: T0 + 4 * ORA + 1, anuntat: null }));
+  // v100.90 (I-511): mesajul pazei cu cifra de pe futures („futures ±2×ATR”, aceeași lungime ca „grid pe ±2×ATR”)
+  paz("Busola: mai agitată, cifra de pe futures (MARSCOIN)", CRV({ baza: "MARSCOIN.PERP" }), Object.assign({}, GR, { futures: { canal: "±2×ATR", miscare: -0.011375026, liniste: -0.0081966036, oricand: -0.0094983709, dovedit: false, miscareDovedita: true } }));
+  // v100.90 (I-513): rândul Busolei din rezumatul de dimineață (raport: rânduri ≤ 160), din producătorul real (Busola.liniaBoti)
+  const lb = (sit, l) => pune(sit, "alerte", "busola.linia", { t: "Busola, pe 4h: " + BU.liniaBoti(l, T0) }, [["t", "raport"]]);
+  lb("Busola dimineața: 4 boți, toate stările", [{ nume: "CRV", stare: "miscare", de: T0 - 8 * ORA }, { nume: "LIGHTER", stare: "liniste", de: T0 - 2.5 * ORA }, { nume: "PUMP", stare: "nu-stiu", de: T0 - 30 * 60000 }, { nume: "BTC", stare: null }]);
+  lb("Busola dimineața: un bot", [{ nume: "CRV", stare: "miscare", de: T0 - 50 * ORA }]);
+  lb("Busola dimineața: 12 boți (tăiat la 145)", Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - ORA })));
   co("gridul îngust a ajuns la durata probată", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", false));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));
   co("Trading 212 nu mai răspunde (cheia)", "t212Rau", MC.t212Rau(18, 401, "HTTP 401"));

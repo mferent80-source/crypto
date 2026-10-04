@@ -15,7 +15,7 @@ var Busola = (function () {
   var stare = { rez: null, la: 0, inLucru: null };
 
   // JTO_USDT_PERP -> JTO; 1000BONK_USDT_PERP -> BONK (pe spot nu există „1000”); ethusdt -> ETH
-  function simbolBusola(s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$/, "").replace(/^1000+/, ""); }
+  function simbolBusola(s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$|\.PERP$/, "").replace(/^1000+/, ""); }   /* v100.90: + „AAVE.PERP” (baza botului) */
   function proc(x) { return typeof x === "number" && isFinite(x) ? (x < 0 ? "−" : "+") + Math.abs(x * 100).toFixed(3).replace(".", ",") + "%" : "?"; }
   // v100.86 (Busola 1.36, §2 „paza boților”): prima stare MĂSURATĂ pe 4h - futures-ul lichid (perp4h, doar monedele din afara
   // hărții / topului spot), filtrul de grid, harta; „nemasurat” sau lipsă -> null. Aceeași alegere în fișă și în colector.
@@ -23,16 +23,27 @@ var Busola = (function () {
   function stare4h(m) { return !m ? null : masurat(m.perp4h) ? m.perp4h : masurat(m.grid4h) ? m.grid4h : masurat(m["4h"]) ? m["4h"] : null; }
   // „200.000” (mii cu punct)
   function mii(x) { return String(Math.round(Number(x))).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  // v100.90 (Busola 1.37, I-511): boții sunt pe futures - când rezumatul are grid.futures (aceeași formă, cu comisionul real), cifrele
+  // și dovada vin de acolo; altfel din grid (spot). „futures ±2×ATR” are aceeași lungime ca „grid pe ±2×ATR” (garda ține rândul la 160)
+  function gridFolosit(rez) {
+    var g = rez && rez.grid || {}, f = g.futures;
+    // revizia: blocul se folosește doar ÎNTREG (Busola pune NaN pe un grup nemăsurat) - altfel fraza de liniște ar scrie „(?)”
+    var ok = f && typeof f === "object" && ["miscare", "liniste", "oricand"].every(function (k) { return typeof f[k] === "number" && isFinite(f[k]); });
+    return ok ? { g: f, futures: true } : { g: g, futures: false };
+  }
+  function canalText(gf) { var c = gf.g && typeof gf.g.canal === "string" && gf.g.canal.trim() ? gf.g.canal.trim() : null; return c ? (gf.futures ? "futures " : "grid pe ") + c : null; }
+  // „8 h” / „30 min” / „2,5 h” - TextRo.ore; rezerva știe aceeași regulă (contextele fără TextRo)
+  function ore(ms) { if (typeof TextRo !== "undefined" && TextRo.ore) return TextRo.ore(ms); if (typeof ms !== "number" || !isFinite(ms)) return "—"; var m = Math.round(ms / 60000); return m < 60 ? m + " min" : String(Math.round(ms / 360000) / 10).replace(".", ",") + " h"; }
 
   // {nivel, text, varsta, nota} sau null cand rezumatul inca lipseste
   function randGrid(rez, simbol, acum) {
     if (!rez || !rez.monede || !rez.grid) return null;
-    var cheie = simbolBusola(simbol), m = rez.monede[cheie], g = rez.grid;
+    var cheie = simbolBusola(simbol), m = rez.monede[cheie], gf = gridFolosit(rez), g = gf.g;
     var v = acum - Number(rez.la), varsta = v > VECHI_MS ? "măsurat acum " + cate(Math.round(v / 3600000), "oră", "ore") : null;
     // v100.79 (Busola 1.32, cerere de la el prin sesiunea Busolei): pe ce canal e cifra gridului (grid.canal, azi „±2×ATR”) - în nota
     // gri; la liniște și dacă „pierde mai puțin decât oricând” e dovedit (grid.dovedit privește DOAR liniștea). Nedovedit -> fraza nu mai
     // spune „cel mai puțin”. Rezumatul vechi (fără câmpuri) -> textele de până acum, fără notă.
-    var canal = typeof g.canal === "string" && g.canal.trim() ? "grid pe " + g.canal.trim() : null;
+    var canal = canalText(gf);
     var nota = function (d) { return [canal, d].filter(Boolean).join(", ") || null; };
     // v100.86 (paza boților): de la Busola 1.36 (blocul `perp`) măsoară și futures-ul lichid - o monedă lipsă e sub pragul de USDT pe zi
     if (!m) return { nivel: "nemasurat", text: rez.perp && Number(rez.perp.prag) > 0 ? "Busola nu măsoară " + cheie + ": pe futures urmărește doar monedele cu peste " + mii(rez.perp.prag) + " USDT pe zi." : "Busola n-a măsurat " + cheie + ": urmărește topul spot Pionex, nu futures.", varsta: varsta };
@@ -56,8 +67,46 @@ var Busola = (function () {
   // cifra din mesajul de mișcare: „−0,214% pe episod, grid pe ±2×ATR, dovedit”. Dovada DOAR din grid.miscareDovedita
   // (Busola 1.34, I-506; grid.dovedit privește liniștea); ce lipsește (rezumat vechi) se lasă afară, nimic inventat.
   function cifraMiscare(rez) {
-    var g = rez && rez.grid || {}, d = g.miscareDovedita === true ? "dovedit" : g.miscareDovedita === false ? "nedovedit" : null;
-    return [typeof g.miscare === "number" && isFinite(g.miscare) ? proc(g.miscare) + " pe episod" : null, typeof g.canal === "string" && g.canal.trim() ? "grid pe " + g.canal.trim() : null, d].filter(Boolean).join(", ");
+    var gf = gridFolosit(rez), g = gf.g, d = g.miscareDovedita === true ? "dovedit" : g.miscareDovedita === false ? "nedovedit" : null;
+    return [typeof g.miscare === "number" && isFinite(g.miscare) ? proc(g.miscare) + " pe episod" : null, canalText(gf), d].filter(Boolean).join(", ");
+  }
+  // v100.90 (I-514, Busola 1.38): intervalul măsurat de Busola pe 4h, sub propunerea fișei - pentru comparație, nu în locul ei.
+  // Prețurile fișei sunt în unitățile SURSEI (revizia 1.40.1): `fisa4h.simbol` (ex. „1000PEPE”) sau cheia; un bot pe „1000X” cu fișa
+  // fără „1000” ⇒ ×1000, invers ⇒ ÷1000 (6 cifre semnificative). pret = formatatorul fișei (grPret); lipsă ⇒ null, nimic inventat
+  function randFisa(rez, simbol, acum, pret) {
+    if (!rez || !rez.monede || !rez.grid) return null;
+    var cheie = simbolBusola(simbol), m = rez.monede[cheie], f = m && m.fisa4h, g = rez.grid, P = typeof pret === "function" ? pret : String;
+    if (!f || !(f.jos > 0) || !(f.sus > f.jos) || !(f.linii >= 2)) return null;
+    var baza = String(simbol || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$|\.PERP$/, ""), sursa = typeof f.simbol === "string" && f.simbol ? f.simbol.toUpperCase() : cheie;
+    // multiplicatorul se CITEȘTE („1000”, „1000000”), nu se presupune 1000 (revizia)
+    var mult = function (s) { var m = /^(1(?:000)+)(?=[A-Z])/.exec(s); return m ? Number(m[1]) : 1; }, factor = mult(baza) / mult(sursa);
+    var r6 = function (x) { return +Number(x * factor).toPrecision(6); }, jos = r6(f.jos), sus = r6(f.sus), linii = Math.round(f.linii);
+    var ora = Number(g.fisa4hLa) > 0 ? new Date(Number(g.fisa4hLa)).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : null;
+    var det = ["4h", typeof g.canal4h === "string" && g.canal4h.trim() ? g.canal4h.trim() : null, ora ? "la prețul de la " + ora : null].filter(Boolean).join(", ");
+    var v = acum - Number(rez.la), vechi = v > VECHI_MS ? " · măsurat acum " + ore(v) : "";   /* rezumatul vechi își spune vârsta, ca rândul de mișcare */
+    return { jos: jos, sus: sus, linii: linii, factor: factor, text: "Busola, măsurat (" + det + "): jos " + P(jos) + " · sus " + P(sus) + " · " + cate(linii, "linie", "linii") + vechi };
+  }
+  // v100.90 (I-513): eticheta de pe cartela botului - starea Busolei pe moneda lui (perp4h ?? grid4h ?? 4h), de când e în ea
+  // („de” îl ține colectorul, prin ruta `paza`) și cât de vechi e rezumatul. null cât rezumatul lipsește
+  var TEXT_STARE = { miscare: ["atentie", "mai agitată ca de obicei"], liniste: ["info", "mai calmă ca de obicei"], "nu-stiu": ["neutru", "nimic neobișnuit"] };
+  // kv = { stare, de } de la colector (ruta `paza`): „de N h” DOAR când starea lui e aceeași cu cea de aici (cele două rezumate pot fi
+  // defazate ~30 min); „de” necunoscut (prima vedere a monedei) ⇒ fără durată. „nu urmărește” (moneda lipsește) ≠ „n-a putut măsura”
+  function eticheta(rez, simbol, acum, kv) {
+    var p = pazaStare(rez, simbol, acum); if (!p) return null;
+    var t = TEXT_STARE[p.stare] || ["nemasurat", rez.monede[p.cheie] ? "n-a putut măsura moneda" : "nu urmărește moneda"];
+    var d = kv && typeof kv === "object" && kv.stare === p.stare ? Number(kv.de) : NaN;
+    return { stare: p.stare, nivel: t[0], text: t[1], nota: [d > 0 && acum - d >= 0 ? "de " + ore(acum - d) : null, "măsurat acum " + ore(acum - p.la)].filter(Boolean).join(" · ") };
+  }
+  // rândul boților deschiși (portofoliu + rezumatul de dimineață): „AAVE mai agitată de 8 h · LIT mai calmă de 2,5 h · PUMP nimic neobișnuit”;
+  // peste 145 de semne (raportul ține 160, cu „Busola, pe 4h: ” în față) cad duratele, apoi coada devine „+N” - niciun bot pierdut pe tăcute
+  var SCURT_STARE = { miscare: "mai agitată", liniste: "mai calmă", "nu-stiu": "nimic neobișnuit" };
+  function liniaBoti(lista, acum) {
+    var l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.nume; }); if (!l.length) return null;
+    var MAX = 145, unu = function (x, cuDurata) { var d = Number(x.de); return x.nume + " " + (SCURT_STARE[x.stare] || "nemăsurată") + (cuDurata && d > 0 && acum - d >= 0 ? " de " + ore(acum - d) : ""); };
+    var t = l.map(function (x) { return unu(x, true); }).join(" · "); if (t.length <= MAX) return t;
+    var p = l.map(function (x) { return unu(x, false); }); t = p.join(" · "); if (t.length <= MAX) return t;
+    for (var n = p.length - 1; n >= 1; n--) { t = p.slice(0, n).join(" · ") + " · +" + (p.length - n); if (t.length <= MAX) return t; }
+    return p[0].slice(0, MAX - 6) + " · +" + (p.length - 1);
   }
 
   // v100.79: nota (canalul, dovedit / nedovedit) și vârsta, gri, după frază
@@ -84,6 +133,6 @@ var Busola = (function () {
   function _reset() { stare = { rez: null, la: 0, inLucru: null }; }
 
   return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, cifraMiscare: cifraMiscare,
-    incarca: incarca, rezumat: rezumat, _reset: _reset };
+    randFisa: randFisa, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, _reset: _reset };
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

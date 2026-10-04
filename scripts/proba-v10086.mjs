@@ -77,11 +77,11 @@ await test("(5) trecerea în „mai agitată”: din liniște / nimic neobișnui
   const agit = { rez: REZ({ monede: { CRV: { perp4h: "miscare" } } }) }, linis = { rez: REZ({ monede: { CRV: { perp4h: "liniste" } } }) };
   for (const prev of ["liniste", "nu-stiu", null]) {
     const d = decide({ stare: prev, la: 1 }, agit);
-    assert.ok(d.mesaj, "din „" + prev + "” ⇒ mesaj"); assert.equal(d.tine, true); assert.deepEqual(d.stare, { stare: "miscare", la: ACUM - 2 * ORA });
+    assert.ok(d.mesaj, "din „" + prev + "” ⇒ mesaj"); assert.equal(d.tine, true); assert.deepEqual(d.stare, { stare: "miscare", la: ACUM - 2 * ORA, de: ACUM - 2 * ORA });   /* v100.90: + de */
     assert.equal(d.mesaj.titlu, "CRV long 5× · Busola: mai agitată ca de obicei"); assert.match(d.mesaj.mesaj, /\(gridul 0\.38410 – 0\.43310\)/); assert.match(d.mesaj.mesaj, /\(−0,214% pe episod, grid pe ±2×ATR, dovedit\)/);
   }
   const r = decide({ stare: "miscare", la: 1 }, agit); assert.equal(r.mesaj, null, "rămâne agitată ⇒ nerepetat"); assert.equal(r.tine, true);
-  const i = decide({ stare: "miscare", la: 1 }, linis); assert.equal(i.mesaj, null); assert.deepEqual(i.stare, { stare: "liniste", la: ACUM - 2 * ORA }, "iese ⇒ starea nouă, ca reintrarea să sune");
+  const i = decide({ stare: "miscare", la: 1 }, linis); assert.equal(i.mesaj, null); assert.deepEqual(i.stare, { stare: "liniste", la: ACUM - 2 * ORA, de: ACUM - 2 * ORA }, "iese ⇒ starea nouă, ca reintrarea să sune");
   const n = decide({ stare: "liniste", la: 1 }, { rez: REZ({ monede: { CRV: { perp4h: "nemasurat" } } }) }); assert.equal(n.mesaj, null, "nemăsurat ⇒ nicio alertă"); assert.equal(n.stare.stare, null);
 });
 await test("(5) prima vedere: botul vechi (după o repornire) ⇒ doar ține minte; botul NOU (sub 30 min) pe o monedă deja agitată ⇒ mesajul „bot nou”; botul nou pe liniște ⇒ nimic", () => {
@@ -105,7 +105,7 @@ await test("(6) pasul colectorului: mesajul picat ⇒ starea NU avansează (tura
   const st = { _busola: { stare: "liniste", la: 1 } }, trimise = [], agit = REZ({ monede: { CRV: { perp4h: "miscare" } } });
   const pas = (trimite, rez) => P.pazaPas({ Busola: B, rez: rez || agit, bot: bot(), st, acum: ACUM, pret: A.pret, trimite: async (m) => { trimise.push(m.titlu); return trimite; } });
   await pas(false); assert.deepEqual(st._busola, { stare: "liniste", la: 1 }, "n-a plecat ⇒ neatinsă"); assert.equal(trimise.length, 1);
-  await pas(true); assert.deepEqual(st._busola, { stare: "miscare", la: ACUM - 2 * ORA }); assert.equal(trimise.length, 2);
+  await pas(true); assert.deepEqual(st._busola, { stare: "miscare", la: ACUM - 2 * ORA, de: ACUM - 2 * ORA }); assert.equal(trimise.length, 2);
   await pas(true); assert.equal(trimise.length, 2, "rămâne agitată ⇒ nu mai trimite");
   await pas(true, REZ({ monede: { CRV: { perp4h: "liniste" } } })); assert.equal(st._busola.stare, "liniste"); assert.equal(trimise.length, 2);
 });
@@ -128,11 +128,11 @@ await test("(8) garda: mesajele pazei (agitată, bot nou, short, prețuri mici, 
 });
 await test("(9) colectorul: încarcă busola.js (proba de încărcare), aduce rezumatul o dată pe tură înaintea boților, păzește fiecare bot DUPĂ starea nouă a alertelor", () => {
   const c = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
-  assert.ok(/^const Busola = incarca\("busola\.js", "Busola"\);/m.test(c), "colectorul nu încarcă busola.js"); assert.ok(/import \{ pazaPas, notaVeche \} from "\.\/lib\/paza-boti\.mjs";/.test(c), "colectorul nu importă paza-boti.mjs");
+  assert.ok(/^const Busola = incarca\("busola\.js", "Busola"\);/m.test(c), "colectorul nu încarcă busola.js"); assert.ok(/import \{ pazaPas, notaVeche, pentruServer \} from "\.\/lib\/paza-boti\.mjs";/.test(c), "colectorul nu importă paza-boti.mjs");   /* v101.60: + pentruServer */
   const r = spawnSync(process.execPath, [path.join(RAD, "scripts", "colector.mjs")], { env: { ...process.env, COLECTOR_DOAR_INCARCA: "1" }, encoding: "utf8", timeout: 30000 });
   assert.equal(r.status, 0, (r.stderr || "").slice(0, 400)); assert.match(r.stdout, /INCARCAT true/); assert.ok(/Retea, Busola\]\.every\(Boolean\)/.test(c), "Busola lipsește din proba de încărcare (INCARCAT)");
   const t = c.slice(c.indexOf("async function tura() {"), c.indexOf("\n// v79 F3"));
-  const inc = t.indexOf("await Busola.incarca(fetch, acum);"), loop = t.indexOf("  for (const b of boti) {\n"), stare = t.indexOf("stareAlerte[b.id] = r.stare;"), paz = t.indexOf("await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie) });");
+  const inc = t.indexOf("await Busola.incarca(fetch, acum);"), loop = t.indexOf("  for (const b of boti) {\n"), stare = t.indexOf("stareAlerte[b.id] = r.stare;"), paz = t.indexOf("await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie), monede: meta().busolaMonede || (meta().busolaMonede = {}) });");   /* v101.60: + harta „de” pe monedă */
   assert.ok(inc > 0 && loop > inc, "rezumatul se aduce înaintea buclei boților"); assert.ok(paz > stare && stare > loop, "paza după `stareAlerte[b.id] = r.stare` (altfel _busola s-ar scrie pe obiectul vechi)");
   assert.ok(/if \(n && \(await trimiteAlerta\(n, null, n\.cheie\)\)\) meta\(\)\.busolaVeche = n\.la;/.test(t), "nota se ține minte doar după ce a plecat");
 });
