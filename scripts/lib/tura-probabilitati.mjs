@@ -29,6 +29,13 @@ export async function turaProbabilitati(d) {
           if (rt) { const pz = d.pornireDe ? d.pornireDe(b, bare) : null; if (pz) rt.pornire = pz; rez.retea = rt; if (d.noteazaRetea) d.noteazaRetea(b, rt); }
         } catch (e) { d.jurnal("retea ESEC", b.id, e.message); }
       }
+      // v101.63: arborii pe aceleași intrări (Retea.intrariBot) - rez.arbori lângă rez.retea, aceeași cheie prob:<bot>
+      if (rez && d.Arbori && d.modeleArbori) {
+        try {
+          const ra = d.Arbori.pentruBot(d.modeleArbori, bare, { acum: d.acum, pret: nr(b.pretCurent), dir, jos: nr(b.gridJos), sus: nr(b.gridSus), lichidare: dir === "short" ? nr(b.lichidareSus) : nr(b.lichidareJos), tinta, stop }, d.btc || null);
+          if (ra) { const pz = d.pornireArboriDe ? d.pornireArboriDe(b, bare) : null; if (pz) ra.pornire = pz; rez.arbori = ra; }
+        } catch (e) { d.jurnal("arbori ESEC", b.id, e.message); }
+      }
       await d.trimite("/api/istoric-bot?action=prob", { bot: b.id, rez: rez || { la: d.acum, gol: bare.length < 37 * 24 ? "moneda are doar " + cate(Math.floor(bare.length / 24), "zi", "zile") + " de bare de 1 h; cifrele apar de la 37 de zile" : "lipsește prețul botului sau starea pieței" } });
       st.la[b.id] = d.acum; schimbat = true;
       if (rez && d.acum - (st.notat[b.id] || 0) >= NOTARE) { st.jurnal.push(...d.Probabilitati.intrari(rez, { t: d.acum, bot: b.id, simbol })); st.notat[b.id] = d.acum; }

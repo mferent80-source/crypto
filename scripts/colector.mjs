@@ -36,7 +36,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.62";
+const VERSIUNE_COLECTOR = "v101.63";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -148,6 +148,7 @@ const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "publ
 const Asemanatoare = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati);   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 
 const Retea = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "retea.js"), "utf8") + "; return Retea;")(Probabilitati);   // v101.56 (rețeaua neuronală, livrarea 1)
+const Arbori = new Function("Retea", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "arbori.js"), "utf8") + "; return Arbori;")(Retea, Probabilitati);   // v101.63: arborii (aceleași intrări ca rețeaua)
 
 // Proba de incarcare (scripts/colector-v77.mjs): toate modulele s-au incarcat, fara retea.
 if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, IndicatoriBot, Acasa, Directie, Scan, TabloBot, GridCalcul, GridClasament, JurnalTrade, Contrafactual, SemnaleBot, TabloExtra, GridProba, GridLaborator, Obiceiuri, T212, ActiuniSemnale, Consilier, Idei, ProfilMoneda, Probabilitati, GraficBot, Dovada, Asemanatoare, Consiliu, Scenariu, Sfaturi, Valoare, Perechi, Retea, Busola].every(Boolean) && NDX.length > 90); process.exit(0); }
@@ -1322,8 +1323,9 @@ async function turaProbabilitati() {
   probInLucru = true; probLa = Date.now();
   try {
     const act = await cere("/api/bot-orders");
-    const modele = modeleRetea(), btc = modele ? await bareBtc() : null;   // v101.56 (rețeaua neuronală)
+    const modele = modeleRetea(), mA = modeleArbori(), btc = modele || mA ? await bareBtc() : null;   // v101.56 (rețeaua neuronală); v101.63 (arborii)
     await turaProbabilitatiModul({ acum: Date.now(), boti: ((act && act.bots) || []).filter((b) => b && b.activ !== false), GridCalcul, Probabilitati, Dovada, TabloExtra, cere, trimite, jurnal, stare: probStare, Retea, modele, btc, pornireDe: modele ? pornireDe(modele, btc) : null,
+      Arbori, modeleArbori: mA, pornireArboriDe: mA ? pornireArboriDe(mA, btc) : null,
       noteazaRetea: (b, rt) => { const p = rt && rt.p && rt.p["iese-jos-24"], m = modele && modele["atinge-24"], vd = m && Retea.verdict(m, Date.now()); if (Number.isFinite(p)) reteaUltim[b.id] = { simbol: cheiaBusola(b), tinta: "atinge-24", p, dovedita: !!(vd && vd.dovedita), la: Date.now() }; else delete reteaUltim[b.id]; },
       simbolDe: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
       planDe: async (id) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
@@ -1345,6 +1347,7 @@ const citesteJson = (f, impl) => { try { return JSON.parse(fs.readFileSync(f, "u
 const peDisc = {};
 function dinDisc(f) { try { const m = fs.statSync(f).mtimeMs; if (!peDisc[f] || peDisc[f].m !== m) peDisc[f] = { m, v: JSON.parse(fs.readFileSync(f, "utf8")) }; return peDisc[f].v; } catch { return null; } }
 function modeleRetea() { const x = dinDisc(path.join(RETEA_DIR, "modele.json")); return x && x.versiune === Retea.VERSIUNE && x.modele && Object.keys(x.modele).length ? x.modele : null; }
+function modeleArbori() { const x = dinDisc(path.join(RETEA_DIR, "modele-arbori.json")); return x && x.versiune === Arbori.VERSIUNE && x.modele && Object.keys(x.modele).length ? x.modele : null; }   // v101.63
 let btcViu = { la: 0, b: null };
 async function bareBtc() {
   if (btcViu.b && Date.now() - btcViu.la < 50 * 60000) return btcViu.b;
@@ -1362,6 +1365,15 @@ function pornireDe(modele, btc) {
     return r;
   };
 }
+// v101.63 (arborii): rezultatul „la pornire” cu arborii - aceeași regulă (doar modelul antrenat ÎNAINTE de pornire, înghețat pe bot)
+function pornireArboriDe(modele, btc) {
+  return (b, bare) => {
+    const cache = reteaStare.pornireArbori || (reteaStare.pornireArbori = {}); if (cache[b.id] && typeof cache[b.id].p === "number") return cache[b.id];
+    const g = TabloExtra.geometrieBot(b), r = Arbori.pentruPornire(modele, { moneda: JurnalTrade.moneda(b.baza), dir: String(b.directie || "").toLowerCase(), levier: b.levier, jos: b.gridJos, sus: b.gridSus, pasNet: g ? g.netPct : null, investit: b.investit, pornit: b.pornitLa }, bare, btc, dinDisc(path.join(RETEA_DIR, "boti.json")) || []);
+    if (r) { cache[b.id] = r; try { scrieAtomic(RETEA_STARE, reteaStare); } catch {} }
+    return r;
+  };
+}
 function pornesteAntrenorul() {
   return new Promise((gata) => {
     const t0 = Date.now(), c = spawn(process.execPath, [path.join(RAD, "retea", "antreneaza.mjs"), "--buget-min", "30"], { cwd: RAD, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
@@ -1370,6 +1382,18 @@ function pornesteAntrenorul() {
     c.stdout.on("data", rand); c.stderr.on("data", rand);
     const ceas = setTimeout(() => { jurnal("retea: antrenorul oprit după 35 de minute"); try { c.kill(); } catch {} }, 35 * 60000);
     c.on("error", (e) => { clearTimeout(ceas); jurnal("retea: antrenorul nu pornește", e.message); gata({ cod: -1, minute: 0 }); });
+    c.on("exit", (cod) => { clearTimeout(ceas); gata({ cod: cod === null ? -1 : cod, minute: Math.round((Date.now() - t0) / 60000) }); });
+  });
+}
+// v101.63: antrenorul arborilor (retea/antreneaza-arbori.mjs, JS curat) - proces separat, prioritate scăzută, oprit la 35 de minute, ca al rețelei
+function pornesteAntrenorArbori() {
+  return new Promise((gata) => {
+    const t0 = Date.now(), c = spawn(process.execPath, [path.join(RAD, "retea", "antreneaza-arbori.mjs"), "--buget-min", "30"], { cwd: RAD, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    try { os.setPriority(c.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch {}
+    const rand = (x) => String(x).split(/\r?\n/).filter(Boolean).forEach((l) => jurnal("arbori:", l.slice(0, 300)));
+    c.stdout.on("data", rand); c.stderr.on("data", rand);
+    const ceas = setTimeout(() => { jurnal("arbori: antrenorul oprit după 35 de minute"); try { c.kill(); } catch {} }, 35 * 60000);
+    c.on("error", (e) => { clearTimeout(ceas); jurnal("arbori: antrenorul nu pornește", e.message); gata({ cod: -1, minute: 0 }); });
     c.on("exit", (cod) => { clearTimeout(ceas); gata({ cod: cod === null ? -1 : cod, minute: Math.round((Date.now() - t0) / 60000) }); });
   });
 }
@@ -1384,6 +1408,7 @@ async function turaReteaColector() {
     boti: async () => { const h = simbolPeMoneda(); return JurnalTrade.din(await botiInchisiToti()).map((t) => ({ id: t.id, moneda: t.moneda, simbol: h[t.moneda] || null, dir: t.dir, levier: t.levier, jos: t.jos, sus: t.sus, pasNet: t.pasNet, pus: t.pus, investit: t.investit, net: t.net, pornit: t.pornit, inchis: t.inchis })); },   // revizia finală (I6): toți boții (rata ta e pe toți)
     scrieBoti: (l) => scrieAtomic(path.join(RETEA_DIR, "boti.json"), l),
     porneste: pornesteAntrenorul, citesteModele: () => citesteJson(path.join(RETEA_DIR, "modele.json"), null), trimite, jurnal,
+    pornesteArbori: pornesteAntrenorArbori, citesteModeleArbori: () => citesteJson(path.join(RETEA_DIR, "modele-arbori.json"), null),   // v101.63
     scrieStare: (st) => { try { scrieAtomic(RETEA_STARE, st); } catch {} } });
 }
 // v101.58 (reveniri + short, 03.10): o dată pe zi, de la 8:00 ora României - istoricul listelor de monede (depozitul de 1 h + boții lui)

@@ -118,5 +118,17 @@ await test("(8) ruta arbori (serverul local): POST refuză fără modele/versiun
   assert.equal(await post(era && era.modele ? { la: era.la, versiune: era.versiune, modele: era.modele } : { la: Date.now(), versiune: "a1", modele: {} }), 200);   /* restaurez MEREU - altfel pagina ar servi modelul de test */
 });
 
+await test("(9) tura-retea: după rețea pornește antrenorul arborilor și urcă modelele la action=arbori; antrenorul picat ⇒ „nimic urcat”, rețeaua neatinsă; tura 🎲 pune rez.arbori; colectorul v101.63", async () => {
+  const TR = await import("./lib/tura-retea.mjs"); const trimise = [], jur = [];
+  const d = (codArbori) => ({ acum: Date.UTC(2026, 9, 5, 0, 30), stare: {}, forta: true, eNoapte: () => true, ziRo: () => "2026-10-05", simboluri: [], cereKlines: async () => null, pauza: async () => {}, citesteOre: () => [], scrieOre: () => {}, boti: async () => [], scrieBoti: () => {},
+    porneste: async () => ({ cod: 0, minute: 1 }), citesteModele: () => ({ la: 1, versiune: "r1", modele: { directie: { norm: { m: [1], s: [1] }, ansamblu: [[]] } } }),
+    pornesteArbori: async () => ({ cod: codArbori, minute: 1 }), citesteModeleArbori: () => ({ la: 2, versiune: "a1", modele: { directie: { baza: 0, pas: 0.08, semi: [[]] } } }),
+    trimite: async (u, b) => { trimise.push(u); return true; }, jurnal: (...a) => jur.push(a.join(" ")), scrieStare: () => {} });
+  await TR.turaRetea(d(0)); assert.deepEqual(trimise, ["/api/istoric-bot?action=retea", "/api/istoric-bot?action=arbori"]);
+  trimise.length = 0; jur.length = 0; await TR.turaRetea(d(1)); assert.deepEqual(trimise, ["/api/istoric-bot?action=retea"]); assert.ok(jur.some((l) => /arbori: nimic urcat/.test(l)), jur.join("\n"));
+  const tp = citeste("scripts", "lib", "tura-probabilitati.mjs"); assert.ok(tp.includes("if (rez && d.Arbori && d.modeleArbori)") && tp.includes("rez.arbori = ra;"), "tura 🎲 fără arbori");
+  const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.63"/.test(col) && /function pornesteAntrenorArbori\(\)/.test(col) && col.includes('"antreneaza-arbori.mjs"') && /function modeleArbori\(\)/.test(col) && col.includes("Arbori, modeleArbori: mA,") && col.includes("pornesteArbori: pornesteAntrenorArbori, citesteModeleArbori: "), "colectorul");
+});
+
 console.log("\n" + (pica ? "V100.93 PICA · " + pica + " din " + (ok + pica) : "V100.93 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

@@ -60,6 +60,13 @@ export async function turaRetea(d) {
       try { await d.trimite("/api/istoric-bot?action=retea", { la: m.la, versiune: m.versiune, modele: m.modele }); d.jurnal("retea: urcate " + cate(Object.keys(m.modele).length, "model", "modele")); }
       catch (e) { d.jurnal("retea: urcarea", e.message); }
     } else d.jurnal("retea: nimic urcat, modelele de ieri rămân");
+    // v101.63 (arborii): al doilea antrenor, DUPĂ rețea; unul picat nu-l oprește pe celălalt, modelul vechi rămâne
+    if (d.pornesteArbori) {
+      const ra = await d.pornesteArbori(); d.jurnal("arbori: antrenorul a ieșit cu " + ra.cod + " după " + cate(ra.minute, "minut", "minute"));
+      const ma = ra.cod === 0 && d.citesteModeleArbori ? d.citesteModeleArbori() : null;
+      if (ma && ma.modele && Object.keys(ma.modele).length) { try { await d.trimite("/api/istoric-bot?action=arbori", { la: ma.la, versiune: ma.versiune, modele: ma.modele }); d.jurnal("arbori: urcate " + cate(Object.keys(ma.modele).length, "model", "modele")); } catch (e) { d.jurnal("arbori: urcarea", e.message); } }
+      else d.jurnal("arbori: nimic urcat, modelele de ieri rămân");
+    }
     st.zi = azi;
     return { cod: r.cod };
   } finally { st.inLucru = false; d.scrieStare(st); }

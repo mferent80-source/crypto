@@ -200,7 +200,7 @@ await test("(D) I-526 dimineața: rândul-verdict e PRIMUL (înaintea rândurilo
   const r = await TD.turaDimineata({ acum: Date.UTC(2026, 9, 4, 7, 0), stare: {}, jurnal: () => {}, Consilier: { rezumatDimineata: () => ({ titlu: "Dimineața", linii: ["📈 Piața: liniște"] }) },
     date: async () => ({ liniiIntai: ["Azi: nimic de ieșit"], liniiExtra: ["🧭 Busola, pe 4h: CRV mai agitată"] }), trimite: async (m) => { trimise.push(m); return true; } });
   assert.deepEqual(r.linii, ["Azi: nimic de ieșit", "📈 Piața: liniște", "🧭 Busola, pe 4h: CRV mai agitată"]); assert.equal(trimise[0].mesaj.split("\n")[0], "Azi: nimic de ieșit");
-  const col = citeste("scripts", "colector.mjs"); assert.ok(col.includes('import { titluDimineata } from "./lib/dimineata-titlu.mjs"') && col.includes("out.liniiIntai = ") && /VERSIUNE_COLECTOR = "v101\.62"/.test(col), "colectorul");
+  const col = citeste("scripts", "colector.mjs"); assert.ok(col.includes('import { titluDimineata } from "./lib/dimineata-titlu.mjs"') && col.includes("out.liniiIntai = ") && /VERSIUNE_COLECTOR = "v101\.6\d"/.test(col), "colectorul");
   const s = situatii().filter((x) => /^dimineata\.titlu/.test(x.sursa)); assert.ok(s.length >= 2, "situații dimineata.titlu: " + s.length);
   const rele = s.map((x) => ({ x: x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
 });
@@ -212,7 +212,7 @@ await test("(E) versiunile: pagina v100.92 (BUILD_INFO, versiune.js, sw, index �
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-92";'), "sw.js");
   const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.92/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.91/.test(ix), "index.html mai are v100.91");
   const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.92.0"); assert.ok(/npm run test:v10091 && npm run test:v10092( && |")/.test(pk), "lanțul de teste");   /* v100.93: lanțul continuă (v10093, arbori) */
-  assert.ok(/VERSIUNE_COLECTOR = "v101\.62"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.62");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.6\d"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.62");
 });
 
 // ======== revizia Opus (04.10): pasul de reparații - fiecare văzut ROȘU întâi ========
