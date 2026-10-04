@@ -62,6 +62,9 @@ const r4 = (v) => (v === null || v === undefined || !Number.isFinite(v) ? null :
 // arborii față de rețea pe aceleași rânduri judecate (t + moneda), cu IC prin același bootstrap; sub 100 de rânduri comune ⇒ null
 function vsRetea(t, test) {
   const c = citeste(path.join(DATA, "luni-" + t + ".json")); if (!c || !c.luni) return null;
+  // revizia 04.10 (🟡3): doar față de rețeaua SERVITĂ (cheia din modele.json) și pe aceleași date (amprenta de azi) - altfel ar compara cu o rețea veche, pe alte rânduri
+  const cr = citeste(path.join(DATA, "modele.json"));
+  if (!cr || !cr.cheie || c.cheie !== cr.cheie + "|" + AMPRENTA) { spune(t + ": vsRetea: cache-ul rețelei e pe altă cheie - fără „față de 🧠”"); return null; }
   const nn = new Map(); for (const l of Object.values(c.luni)) for (const a of l) nn.set(a[0] + "|" + a[1], a[3]);
   const l = test.filter((x) => Number.isFinite(x.p) && Number.isFinite(nn.get(x.t + "|" + x.s))).map((x) => ({ ...x, pNN: nn.get(x.t + "|" + x.s) }));
   if (l.length < 100) return null;

@@ -35,7 +35,7 @@ import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
-import { alcatuieste as pentruBusola } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
+import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
 const VERSIUNE_COLECTOR = "v101.63";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -629,7 +629,7 @@ async function scriePentruBusola(boti, acum) {
     } catch (e) { jurnal("pentru-busola inchisi", e.message); pbInchisi.la = acum - 7 * 60000; }
   }
   const cheiaBusola = (s) => (simboluriPerp && simboluriPerp[String(s || "").toUpperCase()]) || s;
-  scrieAtomic(PENTRU_BUSOLA_FIS, pentruBusola({ la: acum, versiune: VERSIUNE_COLECTOR, deschisi: boti, inchisi: pbInchisi.lista, acum, Busola, cheia: cheiaBusola, retea: Object.values(reteaUltim) }));
+  scrieAtomic(PENTRU_BUSOLA_FIS, pentruBusola({ la: acum, versiune: VERSIUNE_COLECTOR, deschisi: boti, inchisi: pbInchisi.lista, acum, Busola, cheia: cheiaBusola, retea: Object.values(reteaUltim).flat() }));
 }
 
 // v100.40: tickerul Pionex al monedei unui bot (LIGHTER -> LIT_USDT_PERP, PUMPFUN -> PUMP_USDT_PERP), din lista de simboluri
@@ -1326,7 +1326,8 @@ async function turaProbabilitati() {
     const modele = modeleRetea(), mA = modeleArbori(), btc = modele || mA ? await bareBtc() : null;   // v101.56 (rețeaua neuronală); v101.63 (arborii)
     await turaProbabilitatiModul({ acum: Date.now(), boti: ((act && act.bots) || []).filter((b) => b && b.activ !== false), GridCalcul, Probabilitati, Dovada, TabloExtra, cere, trimite, jurnal, stare: probStare, Retea, modele, btc, pornireDe: modele ? pornireDe(modele, btc) : null,
       Arbori, modeleArbori: mA, pornireArboriDe: mA ? pornireArboriDe(mA, btc) : null,
-      noteazaRetea: (b, rt) => { const p = rt && rt.p && rt.p["iese-jos-24"], m = modele && modele["atinge-24"], vd = m && Retea.verdict(m, Date.now()); if (Number.isFinite(p)) reteaUltim[b.id] = { simbol: cheiaBusola(b), tinta: "atinge-24", p, dovedita: !!(vd && vd.dovedita), la: Date.now() }; else delete reteaUltim[b.id]; },
+      // revizia 04.10 (🔴1/🟡2): forma §5 din funcția pură (cheiaBusola era un const din scriePentruBusola ⇒ ReferenceError, prins de catch-ul rețelei)
+      noteazaRetea: (b, rt) => { const m = modele && modele["atinge-24"], vd = m && Retea.verdict(m, Date.now()); const l = intrariRetea({ Busola, b, rt, dovedita: !!(vd && vd.dovedita), acum: Date.now() }); if (l.length) reteaUltim[b.id] = l; else delete reteaUltim[b.id]; },
       simbolDe: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
       planDe: async (id) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
       citesteBare: (s) => { try { return JSON.parse(fs.readFileSync(fisOre(s), "utf8")); } catch { return []; } },

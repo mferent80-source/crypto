@@ -5464,7 +5464,7 @@ function jtRender(){
 // (sub 600 px), secțiunile fișei stau pliate sub titlul lor, în afară de „Setările de pus în Pionex”; ce deschide el rămâne deschis la redesenare
 var grPliere={};
 // v100.93 (A1): cheia secțiunii = titlul fără cifre („Proba pe ultimele 31 de zile” își schimbă cifra la redesen - nu și cheia)
-function grCheieSectiune(t){return String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").replace(/\d+/g,"").replace(/\s+/g," ").trim()}
+function grCheieSectiune(t){return String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").replace(/\d+(\s+de\b)?/g,"").replace(/\s+/g," ").trim()}   /* revizia 04.10 (🔵11): „20 de zile” și „19 zile” dau aceeași cheie */
 function grSusAplica(){var gs=$("gridset");if(gs)gs.style.setProperty("--grSus",Math.round(grSusMasoara()+8)+"px")}
 function grPliabil(t){t=String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").trim();return !!t&&!/^(Setările de pus în Pionex|Poarta de pornire)/.test(t)}   /* revizia Opus: Poarta e FAPTĂ (planul, „Verifică poarta”), rămâne deschisă - regula lui din 25.09 */
 function grSusMasoara(){var s=0;[".topStatus",".tabs"].forEach(function(sel){var el=document.querySelector(sel);if(!el)return;var cs=getComputedStyle(el);if(cs.position!=="sticky"||cs.display==="none")return;s=Math.max(s,(parseFloat(cs.top)||0)+el.getBoundingClientRect().height)});return s}
@@ -5547,7 +5547,7 @@ function renderGrid(){
     +'<li>Când alertele Radarului anunță «gata liniștea», aș închide botul: după mișcare gridul iese cel mai rău.</li>'
     +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")
     +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Gridul a ieșit în medie pe minus când l-am măsurat pe 30 de monede; ce s-a dovedit e să nu-l pornești după mișcare.</p></div>';
-  box.innerHTML=h;grPliazaPeTelefon(box);   /* v100.92 (I-519) */
+  box.innerHTML=h;grPliazaPeTelefon(box);grVerdictScroll();   /* v100.92 (I-519) */
   grProbDeseneaza(f);   // v100.47
 }
 
@@ -5710,14 +5710,14 @@ function tbAsemanatoareHtml(b,rez){
 var reteaM={la:0,m:null,a:null,inLucru:false};   /* v100.93: a = modelele arborilor (🌳) */
 function reteaAdu(dupa){if(typeof Retea==="undefined"||reteaM.inLucru||Date.now()-reteaM.la<30*60000)return;reteaM.inLucru=true;getJSON("/api/istoric-bot?action=retea").then(function(d){reteaM.m=d&&d.retea&&d.retea.versiune===Retea.VERSIUNE?d.retea.modele:null}).catch(function(){reteaM.m=null}).then(function(){return getJSON("/api/istoric-bot?action=arbori").then(function(d){reteaM.a=d&&d.arbori&&typeof Arbori!=="undefined"&&d.arbori.versiune===Arbori.VERSIUNE?d.arbori.modele:null;if(reteaM.a&&!Object.keys(reteaM.a).length)reteaM.a=null}).catch(function(){reteaM.a=null})}).then(function(){reteaM.la=Date.now();reteaM.inLucru=false;if((reteaM.m||reteaM.a)&&typeof dupa==="function")dupa()})}
 // sub-blocul 🧠 sub 🎲 (Tablou și fișă): capul, rândurile (forma tbProbRandHtml), „Cum s-a verificat” pliat; fără modele -> nimic
-function reteaHtml(rt,zar,o,ra){var m=reteaM.m;if(typeof Retea==="undefined"||(!(m&&rt)&&!(ra&&reteaM.a)))return "";try{var l=Retea.randuri(m,rt,zar,o,ra&&reteaM.a?{modele:reteaM.a,rt:ra}:null);if(!l.length)return "";var an=Retea.antet(m,o&&o.acum||Date.now(),reteaM.a);   /* v100.93: ra = ce au dat arborii (🌳) pe aceleași rânduri */   /* revizia finală (M5): o eroare în rețea nu oprește desenul */
-  return '<div class="tbRetea"><h4 class="tbProbH">'+escapeHtml(an.titlu)+'</h4><p class="tbSub">'+escapeHtml(an.sub)+'</p>'+l.map(tbProbRandHtml).join("")+'<details class="tbProbFara"><summary>Cum s-a verificat</summary>'+Retea.subsol(m,reteaM.a).map(function(x){return '<p class="tbSub">'+escapeHtml(x)+'</p>'}).join("")+'</details></div>'}catch(e){return ""}}
+function reteaHtml(rt,zar,o,ra){var m=reteaM.m;if(typeof Retea==="undefined"||(!(m&&rt)&&!(ra&&reteaM.a)))return "";try{var aM=ra&&reteaM.a?reteaM.a:null,l=Retea.randuri(m,rt,zar,o,aM?{modele:aM,rt:ra}:null);if(!l.length)return "";var an=Retea.antet(m,o&&o.acum||Date.now(),aM);   /* revizia 04.10 (🔵7): capul și subsolul numesc 🌳 doar când rândurile îl au */   /* v100.93: ra = ce au dat arborii (🌳) pe aceleași rânduri */   /* revizia finală (M5): o eroare în rețea nu oprește desenul */
+  return '<div class="tbRetea"><h4 class="tbProbH">'+escapeHtml(an.titlu)+'</h4><p class="tbSub">'+escapeHtml(an.sub)+'</p>'+l.map(tbProbRandHtml).join("")+'<details class="tbProbFara"><summary>Cum s-a verificat</summary>'+Retea.subsol(m,aM).map(function(x){return '<p class="tbSub">'+escapeHtml(x)+'</p>'}).join("")+'</details></div>'}catch(e){return ""}}
 // un rand de probabilitate: titlul, procentul si banda 0-100% (zona = intervalul de incredere, semnul = cifra) - Tablou si fisa Grid
 function tbProbRandHtml(x){
   var P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))},lo=x.ic?P(x.ic[0]):null,hi=x.ic?P(x.ic[1]):null;
-  return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+P(x.p)+'%</b>'
-    +'<div class="tbProbBanda" role="img" aria-label="'+P(x.p)+'%, interval de încredere '+lo+'–'+hi+'%'+(x.p2!=null?', arborii '+P(x.p2)+'%':'')+'">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b>'+(x.p2!=null?'<b class="tbProbP2" style="left:'+P(x.p2)+'%"></b>':'')+'</div>'
-    +'<p class="tbSub">'+escapeHtml(x.text)+'</p></div>';
+  return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+(x.familia?x.familia+' ':'')+P(x.p)+'%</b>'
+    +'<div class="tbProbBanda" role="img" aria-label="'+(x.familia?x.familia+' ':'')+P(x.p)+'%'+(lo!==null?', interval de încredere '+lo+'–'+hi+'%':'')+(x.p2!=null?', '+(x.familia==="🌳"?'rețeaua':'arborii')+' '+P(x.p2)+'%':'')+'">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b>'+(x.p2!=null?'<b class="tbProbP2" style="left:'+P(x.p2)+'%"></b>':'')+'</div>'
+    +String(x.text).split("\n").map(function(l){return '<p class="tbSub">'+escapeHtml(l)+'</p>'}).join("")+'</div>';   /* revizia 04.10 (🟡4): rândurile 🧠/🌳 au stările pe al doilea rând */
 }
 // v100.47 (pachetul 2b): probabilitatile din istoric pe GRIDUL PROPUS din fisa - barele de 1 h din KV (colectorul, noaptea) + orele de azi
 // din 15M; fara bare (moneda fara profil, pagina publicata) blocul lipseste
@@ -5753,7 +5753,7 @@ function grProbDeseneaza(f){
 }
 // v100.80 (rețeaua neuronală): BTC pentru trăsăturile 🧠 ale fișei (ultimele 500 de ore din Pionex), o dată la 30 de minute
 var grRetea={btc:null,la:0,inLucru:false};
-function grReteaBtc(){if(typeof Retea==="undefined"||!reteaM.m||grRetea.inLucru||Date.now()-grRetea.la<30*60000)return;grRetea.inLucru=true;getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500").then(function(k){grRetea.btc=GridCalcul.bare(k&&k.data&&k.data.klines||[])}).catch(function(){grRetea.btc=null}).then(function(){grRetea.la=Date.now();grRetea.inLucru=false;if(grStare.fisa)renderGrid()})}
+function grReteaBtc(){if(typeof Retea==="undefined"||!(reteaM.m||reteaM.a)||grRetea.inLucru||Date.now()-grRetea.la<30*60000)return;grRetea.inLucru=true;getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500").then(function(k){grRetea.btc=GridCalcul.bare(k&&k.data&&k.data.klines||[])}).catch(function(){grRetea.btc=null}).then(function(){grRetea.la=Date.now();grRetea.inLucru=false;if(grStare.fisa)renderGrid()})}
 // la poartă, rândul gri: „un bot ca ăsta ar ieși pe plus” din istoria lui și piața de acum - informație, poarta rămâne a ei
 // revizia finală (I5): doar pe barele monedei ei (grProb.simbol), cu numele botului din lista Pionex (LIT = LIGHTER, ca la poartă), doar cu
 // istoria lui (fără ea nu „rata ta: 50%”); (C1) suma de pornire; o eroare în rețea nu strică poarta

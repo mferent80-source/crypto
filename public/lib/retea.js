@@ -160,8 +160,9 @@ var Retea = (function () {
   function semn(v, z) { var s = num(Math.abs(v), z); return v > 0 ? "+" + s : v < 0 ? "−" + s : s; }
   // forma tbProbRandHtml ({cod, titlu, p, p2, ic, avertizare, text}): titlul rândului 🎲, cifra rețelei, cifra 🎲 alături și starea;
   // direcția cu „cât dat cu banul” până e dovedită; rezultatul tău lângă rata ta. zar = Probabilitati.randuri(...); o = {acum, pornire}
-  // v100.93 (arborii): arb = { modele, rt } (modelele 🌳 + ce a dat Arbori.pentruBot) ⇒ „🧠 x% · 🌳 y% · 🎲 z% · 🧠 stare · 🌳 stare”, p2 = 🌳;
-  // fără arb ⇒ exact rândurile de ieri; fără rețea, doar cu arbori ⇒ „🌳 y% · 🎲 z% · 🌳 stare”
+  // v100.93 (arborii): arb = { modele, rt } (modelele 🌳 + ce a dat Arbori.pentruBot) ⇒ rândul 1 „🧠 x% · 🌳 y% · 🎲 z%”, rândul 2 „🧠 stare · 🌳 stare”
+  // (despărțite cu „\n”, fiecare ≤ 160); p = cifra mare (familia dovedită când e una singură, altfel 🧠), p2 = cealaltă, familia = a cui e p;
+  // fără arb ⇒ exact rândurile de ieri; fără rețea, doar cu arbori ⇒ „🌳 y% · 🎲 z%” + „🌳 stare”
   function randuri(modele, rt, zar, o, arb) {
     o = o || {}; var out = [], acum = nr(o.acum) || Date.now();
     var cuR = !!(modele && rt && !(rt.v && rt.v !== VERSIUNE)), p = cuR ? rt.p || {} : {};
@@ -172,13 +173,15 @@ var Retea = (function () {
     // un rând din cele două familii: q/vd = 🧠, qa/vda = 🌳 (null = familia n-are cifră sau verdict); cifre = ce stă între cifre și stări (🎲 / rata ta)
     var rand = function (cod, titlu, q, vd, qa, vda, cifre, cuBan) {
       var r = q !== null && !!vd, a = qa !== null && !!vda; if (!r && !a) return;
-      var x = { cod: cod, titlu: titlu, p: r ? q : qa, ic: null, avertizare: false }; if (r && a) x.p2 = qa;
+      var x = { cod: cod, titlu: titlu, p: r ? q : qa, ic: null, avertizare: false };
+      // revizia 04.10 (🔵5, specul): cu amândouă, cifra mare și semnul plin stau pe familia DOVEDITĂ când e una singură (altfel pe 🧠); familia = a cui e cifra mare
+      if (r && a) { var doarA = !!(vda.dovedita && !vd.dovedita); x.p = doarA ? qa : q; x.p2 = doarA ? q : qa; x.familia = doarA ? "🌳" : "🧠"; }
       if (!A) { x.text = (cifre ? cifre + " · " : "") + ban(vd, cuBan) + eticheta(vd); out.push(x); return; }
       var c = [], s = [];
       if (r) c.push("🧠 " + PC(q)); if (a) c.push("🌳 " + PC(qa)); if (cifre) c.push(cifre);
       if (cuBan && r && a && !vd.dovedita && !vda.dovedita) { s.push("cât dat cu banul — 🧠 " + eticheta(vd)); s.push("🌳 " + eticheta(vda)); }
       else { if (r) s.push("🧠 " + ban(vd, cuBan) + eticheta(vd)); if (a) s.push("🌳 " + ban(vda, cuBan) + eticheta(vda)); }
-      x.text = c.concat(s).join(" · "); out.push(x);
+      x.text = c.join(" · ") + "\n" + s.join(" · "); out.push(x);   /* revizia 04.10 (🟡4): stările pe al doilea rând - fiecare rând ≤ 160 */
     };
     (Array.isArray(zar) ? zar : []).forEach(function (z) {
       if (nr(z.p) === null) return; var t = TINTA_DE[z.cod];
@@ -202,7 +205,7 @@ var Retea = (function () {
     return { titlu: "A doua părere: 🧠 rețeaua · 🌳 arborii", sub: s.length ? s.join(" · ") + " — antrenarea n-a mers de atunci." : implicit };
   }
   // „Cum s-a verificat”: un rând pe țintă - cazurile independente, Brier rețea / reper / formula simplă, IC față de reper
-  // v100.93: + un rând 🌳 pe țintă (aceleași cazuri ca 🧠): Brier, IC și „față de 🧠” (BSS al arborilor cu rețeaua drept reper, cu IC)
+  // v100.93: + un rând 🌳 pe țintă, cu cazurile LUI (pot diferi de ale rețelei când lunile judecate diferă - revizia 04.10): Brier, IC și „față de 🧠” (BSS al arborilor cu rețeaua drept reper, cu IC)
   function subsol(modele, arbori) {
     var out = Object.keys(NUME).filter(function (k) { return modele && modele[k] && modele[k].versiune === VERSIUNE; }).map(function (k) {
       var v = modele[k].verificare, u = UNIT[(TINTE[k] || { bloc: 24 }).bloc] || UNIT[24];
@@ -210,10 +213,10 @@ var Retea = (function () {
       return NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "") + ".";
     });
     Object.keys(NUME).filter(function (k) { return arbori && arbori[k] && arbori[k].versiune === VERSIUNE_ARBORI; }).forEach(function (k) {
-      var v = arbori[k].verificare, vs = v && v.vsRetea;
+      var v = arbori[k].verificare, vs = v && v.vsRetea, u = UNIT[(TINTE[k] || { bloc: 24 }).bloc] || UNIT[24];
       if (!v) { out.push("🌳 " + NUME[k] + ": neverificată încă."); return; }
-      out.push("🌳 " + NUME[k] + ": Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "")
-        + (vs && nr(vs.bss) !== null && vs.ic ? " · 🌳 față de 🧠: " + semn(vs.bss, 3) + " (IC " + semn(vs.ic[0], 3) + "…" + semn(vs.ic[1], 3) + ")" : "") + ".");
+      out.push("🌳 " + NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "")
+        + (vs && nr(vs.bss) !== null && vs.ic ? " · față de 🧠: " + semn(vs.bss, 3) + " (IC " + semn(vs.ic[0], 3) + "…" + semn(vs.ic[1], 3) + ")" : "") + ".");
     });
     return out;
   }

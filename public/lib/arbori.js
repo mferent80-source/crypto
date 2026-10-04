@@ -19,11 +19,8 @@ var Arbori = (function () {
     var p = s / model.semi.length; return isFinite(p) ? p : null;
   }
   // „dovedită / nedovedită” cu motivul - același prag ca rețeaua (Retea.decide), vârsta modelului la fel
-  function verdict(m, acum) {
-    if (!m || m.versiune !== VERSIUNE) return null;
-    var d = Retea.decide(m.verificare || null), v = m.verificare || {}, la = nr(m.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
-    return { dovedita: d.dovedita, motiv: d.motiv, nIndep: nr(v.nIndep) || 0, bloc: (Retea.TINTE[m.tinta] || { bloc: 24 }).bloc, vechi: z !== null && z >= 2 ? z : null };
-  }
+  // revizia 04.10 (ruling 13, specul „refolosit, nu copiat”): aceeași regulă și aceeași versiune (Retea.VERSIUNE_ARBORI = Arbori.VERSIUNE, proba (10))
+  function verdict(m, acum) { return Retea.verdictArbori(m, acum); }
   // aceleași intrări ca Retea.pentruBot (prin producătorul comun Retea.intrariBot) -> { la, v, p: {cod: probabilitate} } sau null
   function pentruBot(modele, bare, o, btc) {
     if (!modele || typeof modele !== "object") return null;
