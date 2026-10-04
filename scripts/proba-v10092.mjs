@@ -75,7 +75,10 @@ await test("(A) I-519 fișa: grPliabil - toate secțiunile se pliază pe telefon
   assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Poarta de pornire"), true); assert.equal(ctx.f("Ce spune istoricul tău"), true); assert.equal(ctx.f(""), false);
   assert.ok(/^function grPliazaPeTelefon\(box\)\{/m.test(a), "lipsește grPliazaPeTelefon");
   const rg = fnApp("renderGrid"); assert.ok(/box\.innerHTML=h[^\n]*\n\s*grPliazaPeTelefon\(box\)/.test(rg) || /grPliazaPeTelefon\(box\)/.test(rg), "plierea nu se cheamă după desen");
-  assert.ok(/^function grPliereComuta\(cap\)\{/m.test(a), "lipsește grPliereComuta (data-action-click)");
+  /* poza de la 390 (04.10): dispatch-ul data-action-click nu acceptă `this` ca argument (v54ActionArg) ⇒ cheia secțiunii se dă ca text ('3'), iar funcția o caută după data-gr-sect */
+  assert.ok(/^function grPliereComuta\(k\)\{/m.test(a), "grPliereComuta primește cheia secțiunii (text), nu elementul");
+  const pl = fnApp("grPliazaPeTelefon"); assert.ok(pl.includes(`s.setAttribute("data-gr-sect",String(i))`) && pl.includes(`cap.setAttribute("data-action-click","grPliereComuta('"+i+"')")`), "secțiunea nu-și primește cheia / acțiunea cu text");
+  assert.ok(!/grPliereComuta\(this\)/.test(a), "argumentul `this` nu e acceptat de dispatch (eroare în consolă pe telefon)");
   const css = citeste("public", "app.css"); assert.ok(/\.grVerdict\{[^}]*position:sticky/.test(css) && /@media \(max-width:600px\)\{#gridset \.grPliat>/.test(css), "CSS: verdict lipicios + pliere doar sub 600 px (pragul fișei)");
 });
 
@@ -115,7 +118,9 @@ await test("(B) I-520 pagina: t212IdeiRender pune ideile, revenirea și socoteal
   assert.ok(r.indexOf("t212File(") < r.indexOf('class="t212Lista"'), "lista „Urmăresc și” sub file");
   assert.ok(/^function t212FilaAlege\(k\)/m.test(s), "lipsește t212FilaAlege");
   const a = fnDin("acasa-ecran.js", "acasaMergiLa"); assert.ok(/^function acasaMergiLa\(ecran, id, fila\)/.test(a) && a.includes("t212FilaAlege(fila)"), "acasaMergiLa nu deschide fila");
-  assert.ok(/\.t212File\{/.test(citeste("public", "app.css")), "CSS .t212File");
+  const css = citeste("public", "app.css"); assert.ok(/\.t212File\{/.test(css), "CSS .t212File");
+  /* poza de la 1920 (04.10): butoanele ieșeau ca trei bare pe toată lățimea - .tbIntBtn e stilat doar sub #tabloubot / #gridset / .t212Graf */
+  assert.ok(/\.t212File \.tbIntBtn\{[^}]*width:auto[^}]*flex:0 0 auto/.test(css) && /\.t212File \.tbIntBtn\[aria-pressed="true"\]\{/.test(css), "filele n-au stilul de buton de filă (width:auto, apăsat)");
 });
 const SH = (s, scor, o) => Object.assign({ simbol: s + "_USDT_PERP", volum: 10, stare: "candidat", dir: "short", tarie: "mediu", scor: scor, latime: 0.15, profitGrila: 0.0026, traversariZi: 20, revenire: REV({ revine: false }) }, o || {});
 const CLB = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evita", dir: "long", scor: 9, revenire: REV({ cadere: 0.79 }) }, SH("Q", 5, { volum: 30, revenire: REV() }), SH("LIT", 7)] };

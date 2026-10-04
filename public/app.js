@@ -5468,14 +5468,14 @@ function grSusMasoara(){var s=0;[".topStatus",".tabs"].forEach(function(sel){var
 function grPliazaPeTelefon(box){
   var gs=$("gridset");if(gs)gs.style.setProperty("--grSus",Math.round(grSusMasoara()+8)+"px");
   if(!box||!window.matchMedia||!window.matchMedia("(max-width:600px)").matches)return;
-  box.querySelectorAll(".tbBloc,.grPoarta").forEach(function(s){
+  box.querySelectorAll(".tbBloc,.grPoarta").forEach(function(s,i){
     var cap=s.querySelector(":scope>.tbBlocCap,:scope>.grPoartaCap"),t=cap&&cap.querySelector("h4,b");
     if(!cap||!t||!grPliabil(t.textContent))return;
-    s.classList.add("grPliabil");s.classList.toggle("grPliat",!grPliere[t.textContent]);
-    cap.setAttribute("data-action-click","grPliereComuta(this)");cap.setAttribute("role","button");cap.setAttribute("tabindex","0");
+    s.classList.add("grPliabil");s.classList.toggle("grPliat",!grPliere[t.textContent]);s.setAttribute("data-gr-sect",String(i));
+    cap.setAttribute("data-action-click","grPliereComuta('"+i+"')");cap.setAttribute("role","button");cap.setAttribute("tabindex","0");   /* cheia ca text: dispatch-ul (v54ActionArg) nu acceptă `this` */
   });
 }
-function grPliereComuta(cap){var s=cap&&cap.closest(".grPliabil"),t=s&&cap.querySelector("h4,b");if(!s)return;s.classList.toggle("grPliat");grPliere[t?t.textContent:""]=!s.classList.contains("grPliat")}
+function grPliereComuta(k){var s=document.querySelector('#grFisa [data-gr-sect="'+k+'"]'),cap=s&&s.querySelector(":scope>.tbBlocCap,:scope>.grPoartaCap"),t=cap&&cap.querySelector("h4,b");if(!s)return;s.classList.toggle("grPliat");grPliere[t?t.textContent:""]=!s.classList.contains("grPliat")}
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
   if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";

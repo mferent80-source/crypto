@@ -2224,4 +2224,7 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #dash .acCumparCol p.tbWarn{color:var(--warn);margin-top:4px}
 @media (max-width:900px){#dash .acCumparCol3{grid-template-columns:1fr}}
 .t212File{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0}.t212Fila{min-width:0}
+.t212File .tbIntBtn{width:auto;flex:0 0 auto;white-space:nowrap;padding:5px 12px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.t212File .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line);font-weight:700}
+.t212File .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #tabloubot .tbTodoRand p.bad{color:var(--bad)}
