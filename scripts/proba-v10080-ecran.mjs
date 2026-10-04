@@ -41,7 +41,7 @@ await test("(8) fără modele, pe altă versiune sau fără cifra rețelei: nici
 await test("(8) capul: modelul mai vechi de 2 zile se spune; „Cum s-a verificat”: un rând pe țintă, cu blocurile ei", () => {
   assert.equal(R.antet(MOD, ACUM).titlu, "🧠 Rețeaua neuronală — a doua părere");
   assert.equal(R.antet(MOD, ACUM + 3 * 864e5).sub, "Model de acum 3 zile — antrenarea n-a mers de atunci.");
-  const s = R.subsol(MOD); assert.equal(s.length, 7);
+  const s = R.subsol(MOD); assert.equal(s.length, Object.keys(R.TINTE).length);   /* v100.94: un rând pe țintă, câte ținte are Retea (cu cele T212) */
   assert.equal(s[0], "Atinge un nivel în 24 h: 312 zile independente, Brier 0,183 · 🎲 0,180 · formula simplă 0,182 · IC −0,04…0,01.");
   assert.match(s.find((x) => /^Atinge lichidarea/.test(x)), /: 312 săptămâni,/);   // 312: fără „de” (ultimele două cifre 12 < 20)
 });

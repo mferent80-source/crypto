@@ -100,6 +100,8 @@ var Probabilitati = (function () {
     if (relT !== null) { var ev = cursa(relT, relS); out.cursa5 = { tinta: frecventa(b, 5, ev, "tinta", stare, op), stop: frecventa(b, 5, ev, "stop", stare, op) }; }
     return out;
   }
+  // v100.94 (L2): frecventa cu configurația acțiunilor (istorie 60 de zile, starea zilnică) - reperul 🎲 al antrenorului pe acțiuni, aceeași cifră ca pentruActiune
+  function frecventaActiune(b, H, ev, bun, stare, memo) { return frecventa(b, H, ev, bun, stare, { memo: memo || {}, cfg: CFG_ACT }); }
   // v100.53: ce a urmat dupa o cumparare - primele 5 zile de bursa DUPA ziua cumpararii (ziua ei nu intra: nu stim ora fata de min/max);
   // tinta inaintea stopului -> 1, altfel 0 (amandoua in aceeasi zi -> 0, pesimist); sub 5 zile dupa -> null
   function rezultatCumparare(bare, pornit, stop, tinta) {
@@ -147,17 +149,17 @@ var Probabilitati = (function () {
     var a = rez.stop1, s = rez.sare1, relS = rez.niv && rez.niv.relS;
     if (a && s) {
       var pt = a.p + s.p, ki = a.k + s.k;
-      out.push({ titlu: "Atinge stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: ki + " din " + unde(a) + " · din care prin săritură la deschidere: " + PCt(s.p) + putine(a), avertizare: pt >= 0.25 });
+      out.push({ cod: "stop1", titlu: "Atinge stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: ki + " din " + unde(a) + " · din care prin săritură la deschidere: " + PCt(s.p) + putine(a), avertizare: pt >= 0.25 });
     }
     if (rez.cursa5 && rez.cursa5.tinta) {
       // revizia 01.10 (I3): cifra ACTIUNII ramane; calibrarea (alt stop / alta tinta - ale Radarului la cumparare - si cutii late) e doar nota
       var x = rez.cursa5.tinta, rz = cal && cal.rezumat;
       var nota = rz && rz.n >= 20 ? "pe cumpărările tale (cu stopul și ținta Radarului la cumpărare): am zis în medie " + PCt(rz.pMed) + ", s-a întâmplat în " + PCt(rz.rata) + ", din " + cate(rz.n, "caz", "cazuri") + " în " + cate(rz.saptamani, "săptămână", "săptămâni")
         : "pe cumpărările tale: " + cate(rz ? rz.n : 0, "caz judecat", "cazuri judecate") + " — sub 20 nu spun nimic";
-      out.push({ titlu: "În 5 zile de bursă: ținta înaintea stopului", p: x.p, ic: x.ic, text: x.k + " din " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
+      out.push({ cod: "cursa5", titlu: "În 5 zile de bursă: ținta înaintea stopului", p: x.p, ic: x.ic, text: x.k + " din " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
     }
     // v100.69: si saritura poarta marcajul pe esantion mic (il avea doar „Atinge stopul mâine”)
-    if (s) out.push({ titlu: "Deschiderea sare peste stop", p: s.p, ic: s.ic, text: s.k + " din " + unde(s) + " — stopul se execută atunci sub prețul lui" + ic(s) + putine(s), avertizare: s.p >= 0.05 });
+    if (s) out.push({ cod: "sare1", titlu: "Deschiderea sare peste stop", p: s.p, ic: s.ic, text: s.k + " din " + unde(s) + " — stopul se execută atunci sub prețul lui" + ic(s) + putine(s), avertizare: s.p >= 0.05 });
     var z = nr(o.rezultateZile);
     if (z !== null && z >= 0 && z <= 5) {
       // v100.69: o fraza ≤ 160 - e si explicatia motivului „Rezultatele vin” din Consilierul pozitiei, unde „de mai sus” n-ar avea sens.
@@ -286,5 +288,5 @@ var Probabilitati = (function () {
     var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
     return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
   }
-  return { probLaCumparare: probLaCumparare, randActiune: randActiune, rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
+  return { probLaCumparare: probLaCumparare, randActiune: randActiune, rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, frecventaActiune: frecventaActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();
