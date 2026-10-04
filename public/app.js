@@ -5463,19 +5463,30 @@ function jtRender(){
 // v100.92 (I-519): verdictul rămâne la vedere (lipicios sub bara de sus - înălțimea ei se MĂSOARĂ, nu se presupune) și, pe telefon
 // (sub 600 px), secțiunile fișei stau pliate sub titlul lor, în afară de „Setările de pus în Pionex”; ce deschide el rămâne deschis la redesenare
 var grPliere={};
+// v100.93 (A1): cheia secțiunii = titlul fără cifre („Proba pe ultimele 31 de zile” își schimbă cifra la redesen - nu și cheia)
+function grCheieSectiune(t){return String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").replace(/\d+/g,"").replace(/\s+/g," ").trim()}
+function grSusAplica(){var gs=$("gridset");if(gs)gs.style.setProperty("--grSus",Math.round(grSusMasoara()+8)+"px")}
 function grPliabil(t){t=String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").trim();return !!t&&!/^(Setările de pus în Pionex|Poarta de pornire)/.test(t)}   /* revizia Opus: Poarta e FAPTĂ (planul, „Verifică poarta”), rămâne deschisă - regula lui din 25.09 */
 function grSusMasoara(){var s=0;[".topStatus",".tabs"].forEach(function(sel){var el=document.querySelector(sel);if(!el)return;var cs=getComputedStyle(el);if(cs.position!=="sticky"||cs.display==="none")return;s=Math.max(s,(parseFloat(cs.top)||0)+el.getBoundingClientRect().height)});return s}
 function grPliazaPeTelefon(box){
-  var gs=$("gridset");if(gs)gs.style.setProperty("--grSus",Math.round(grSusMasoara()+8)+"px");
+  grSusAplica();
   if(!box||!window.matchMedia||!window.matchMedia("(max-width:600px)").matches)return;
   box.querySelectorAll(".tbBloc,.grPoarta").forEach(function(s,i){
     var cap=s.querySelector(":scope>.tbBlocCap,:scope>.grPoartaCap"),t=cap&&cap.querySelector("h4,b");
     if(!cap||!t||!grPliabil(t.textContent))return;
-    s.classList.add("grPliabil");s.classList.toggle("grPliat",!grPliere[t.textContent]);s.setAttribute("data-gr-sect",String(i));s.classList.toggle("grAvert",!!s.querySelector(".tbWarn,.bad"));
-    cap.setAttribute("data-action-click","grPliereComuta('"+i+"')");cap.setAttribute("role","button");cap.setAttribute("tabindex","0");   /* cheia ca text: dispatch-ul (v54ActionArg) nu acceptă `this` */
+    var ch=grCheieSectiune(t.textContent);s.classList.add("grPliabil");s.classList.toggle("grPliat",!grPliere[ch]);s.setAttribute("data-gr-sect",String(i));s.classList.toggle("grAvert",!!s.querySelector(".tbWarn,.bad"));
+    cap.setAttribute("data-action-click","grPliereComuta('"+i+"')");cap.setAttribute("role","button");cap.setAttribute("tabindex","0");cap.setAttribute("aria-expanded",String(!s.classList.contains("grPliat")));   /* cheia ca text: dispatch-ul (v54ActionArg) nu acceptă `this` */
   });
 }
-function grPliereComuta(k){var s=document.querySelector('#grFisa [data-gr-sect="'+k+'"]'),cap=s&&s.querySelector(":scope>.tbBlocCap,:scope>.grPoartaCap"),t=cap&&cap.querySelector("h4,b");if(!s)return;s.classList.toggle("grPliat");grPliere[t?t.textContent:""]=!s.classList.contains("grPliat")}
+function grPliereComuta(k){var s=document.querySelector('#grFisa [data-gr-sect="'+k+'"]'),cap=s&&s.querySelector(":scope>.tbBlocCap,:scope>.grPoartaCap"),t=cap&&cap.querySelector("h4,b");if(!s)return;s.classList.toggle("grPliat");if(cap)cap.setAttribute("aria-expanded",String(!s.classList.contains("grPliat")));grPliere[grCheieSectiune(t?t.textContent:"")]=!s.classList.contains("grPliat")}
+// v100.93 (A1): Enter/Space pe capul unei secțiuni pliabile (delegarea de click nu ascultă tastatura); --grSus se remăsoară la rotire/redimensionare
+document.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){var cap=e.target&&e.target.closest&&e.target.closest("#grFisa .grPliabil>.tbBlocCap,#grFisa .grPliabil>.grPoartaCap");if(!cap)return;e.preventDefault();grPliereComuta(cap.parentElement.getAttribute("data-gr-sect"))}});
+window.addEventListener("resize",grSusAplica);window.addEventListener("orientationchange",grSusAplica);
+// v100.93 (A4): pe telefon, după ce derulezi de verdict, caseta lipicioasă ține doar eticheta; o atingere o deschide la loc (și rămâne așa până derulezi sus)
+var grMicManual=false;
+function grVerdictComuta(){var v=document.querySelector("#grFisa .grVerdict");if(!v)return;grMicManual=v.classList.contains("grMic");v.classList.toggle("grMic")}
+function grVerdictScroll(){if(!window.matchMedia||!window.matchMedia("(max-width:600px)").matches)return;var v=document.querySelector("#grFisa .grVerdict"),f=$("grFisa"),gs=$("gridset");if(!v||!f||!gs)return;var sus=f.getBoundingClientRect().top<=(parseFloat(getComputedStyle(gs).getPropertyValue("--grSus"))||72);if(!sus){v.classList.remove("grMic");grMicManual=false}else if(!grMicManual)v.classList.add("grMic")}
+window.addEventListener("scroll",grVerdictScroll,{passive:true});
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
   if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
@@ -5487,7 +5498,7 @@ function renderGrid(){
   if(!f){box.innerHTML=grStare.inLucru&&ceScrie?'<div class="emptyState">Calculez fișa pentru <b>'+escapeHtml(ceScrie.replace(/_USDT_PERP$/,""))+'</b>… (aduc ~30 de zile de lumânări)</div>':'<div class="emptyState">Scrie o monedă (de exemplu MET) și suma. Fișa se recalculează singură la 5 minute cât stă deschisă.</div>';return}
   // v99: setarile de pus = ce PROPUNE fisa (gridul des 0,3 % in liniste, cand proba n-o respinge; altfel platoul probei)
   var st=GridProba.setarePropusa(f)||f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive,T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
-  var h='<div class="grVerdict '+niv[1]+'"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>'+(mot.length>1?'<ul class="grLista grListaJos">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"");   /* revizia Opus (04.10): pe telefon motivele stau sub caseta lipicioasă (CSS) - caseta ține doar eticheta și primul motiv */
+  var h='<div class="grVerdict '+niv[1]+'" data-action-click="grVerdictComuta()"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>'+(mot.length>1?'<ul class="grLista grListaJos">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"");   /* revizia Opus (04.10): pe telefon motivele stau sub caseta lipicioasă (CSS) - caseta ține doar eticheta și primul motiv */
   h+=grPoartaHtml(f);
   if(typeof grBiletTu==="function")h+=grBiletTu(f);
   // v100.64 (I-491): Busola - verdictul ei de miscare pe 4h si ce a facut gridul dupa el (masurat). Avertizeaza, nu refuza.

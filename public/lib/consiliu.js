@@ -34,9 +34,9 @@ var Consiliu = (function () {
   var ETICHETA = { iesi: "🔴 Ieși", atentie: "🟡 Atenție", tine: "🟢 Ține", asteapta: "⏳ Socotesc" };
   // codul sfatului -> codul din socoteala (increderea masurata pe botii lui)
   var SOC = { margine: "muta", muta: "muta", liniste: "tine", directie: "tine", tine: "tine", "miscare-cu": "cu-botul", miscare: "miscare", costuri: "costuri",
-    trend: "trend", plan: "plan", stop: "plan", lichidare: "lichidare", btc: "btc", aglomerare: "aglomerare", "ia-profit": "ia-profit", podea: "podea" };
+    trend: "trend", plan: "plan", stop: "plan", lichidare: "lichidare", btc: "btc", aglomerare: "aglomerare", "ia-profit": "ia-profit", podea: "podea", busola: "busola" };   /* v100.93 (A2): motivul Busolei primește cipul de încredere */
   // ordinea in care cantaresc motivele de acelasi nivel (banii in joc: lichidarea si pierderea maxima intai)
-  var PRIO = ["opreste", "lichidare", "stop", "plan", "pericol", "margine", "muta", "costuri", "perechi", "trend", "miscare", "btc", "aglomerare", "ia-profit", "liniste"];
+  var PRIO = ["opreste", "lichidare", "stop", "plan", "pericol", "margine", "muta", "costuri", "perechi", "trend", "miscare", "btc", "aglomerare", "busola", "ia-profit", "liniste"];
   function prio(cod) { var i = PRIO.indexOf(cod); return i < 0 ? PRIO.length : i; }
   // v100.50 (I-479): siguranta nu se negociaza - acestea raman primele la acelasi nivel, oricat ar fi adus altele
   // revizia 01.10 (I4): si „pericol” (pretul afara din grid, margin call pe ton de atentie) e siguranta

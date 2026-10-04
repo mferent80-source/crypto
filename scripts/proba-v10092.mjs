@@ -79,7 +79,7 @@ await test("(A) I-519 fișa: grPliabil - toate secțiunile se pliază pe telefon
   assert.ok(/^function grPliereComuta\(k\)\{/m.test(a), "grPliereComuta primește cheia secțiunii (text), nu elementul");
   const pl = fnApp("grPliazaPeTelefon"); assert.ok(pl.includes(`s.setAttribute("data-gr-sect",String(i))`) && pl.includes(`cap.setAttribute("data-action-click","grPliereComuta('"+i+"')")`), "secțiunea nu-și primește cheia / acțiunea cu text");
   assert.ok(!/grPliereComuta\(this\)/.test(a), "argumentul `this` nu e acceptat de dispatch (eroare în consolă pe telefon)");
-  const css = citeste("public", "app.css"); assert.ok(/\.grVerdict\{[^}]*position:sticky/.test(css) && /@media \(max-width:600px\)\{#gridset \.grPliat>/.test(css), "CSS: verdict lipicios + pliere doar sub 600 px (pragul fișei)");
+  const css = citeste("public", "app.css"); assert.ok(/\.grVerdict\{[^}]*position:sticky/.test(css) && /@media \(max-width:600px\)\{[^\n]*#gridset \.grPliat>/.test(css), "CSS: verdict lipicios + pliere doar sub 600 px (pragul fișei)");   /* v100.93 (A1): regulile stau în același bloc @media */
 });
 
 // ======== lotul B: I-525 dunga după istoricul lui, I-520 Trading 212 pe file, I-521 Acasă pe 3 coloane ========
@@ -151,11 +151,11 @@ const BOT = { id: "1", baza: "CRV.PERP", directie: "long", levier: 5, investit: 
 const BZ = (stare, verdict, dif, monede) => ({ stare: stare, bilant: verdict ? { verdict: verdict, dif: dif === undefined ? -0.0017 : dif, monede: monede === undefined ? 24 : monede } : null });
 await test("(C) I-523 semaforul: „mai agitată” + bilanț „dovedit” cu cifră ⇒ motiv de ATENȚIE (cod busola) cu cifra; „pe dos” / „prea puține” / fără cifră / calm / fără Busola ⇒ nimic; niciodată IEȘI", () => {
   const r = S.semafor({ bot: BOT, fisa: null, busola: BZ("miscare", "dovedit") });
-  assert.equal(r.nivel, "atentie"); assert.equal(r.cod, "busola"); assert.equal(r.motiv, "Busola: agitație dovedită, −0,17 pp pe episod pe date noi");
+  assert.equal(r.nivel, "atentie"); assert.equal(r.cod, "busola"); assert.equal(r.motiv, "Busola: după agitație gridul pierde −0,17 pp pe episod");   /* v100.93 (A2) */
   assert.equal(r.faCe, "N-aș adăuga bani cât ține agitația; aș verifica stopul botului în Pionex."); assert.equal(r.deCe, "Busola a măsurat pe date noi: după „mai agitat” gridul a pierdut mai mult decât oricând (24 de monede).");
   for (const bz of [BZ("miscare", "pe dos"), BZ("miscare", "prea puține"), BZ("miscare", "n-am aflat"), BZ("miscare", "dovedit", null), BZ("liniste", "dovedit"), BZ("nu-stiu", "dovedit"), null, { stare: "miscare", bilant: null }])
     assert.ok(!S.semafor({ bot: BOT, fisa: null, busola: bz }).componente.some((k) => k.cod === "busola"), JSON.stringify(bz));
-  assert.ok(lib("semnale-bot.js").includes('busola: "Busola: agitație dovedită"'), "NUME_SFAT fără busola (socoteala pe cod)");
+  assert.ok(lib("semnale-bot.js").includes('busola: "Busola: după agitație gridul pierde mai mult"'), "NUME_SFAT fără busola (socoteala pe cod)");   /* v100.93 (A2): textul nou */
 });
 await test("(C) Busola.pentruVerdict: starea + bilanțul (verdict, dif, monede) din rezumatul proaspăt; rezumat vechi (> 4,5 h), lipsă sau monedă neurmărită ⇒ null; fără bilanț ⇒ bilant null", () => {
   const v = B.pentruVerdict(REZ({ perp: { la: LA, monede: 102, prag: 200000, bilant: { verdict: "dovedit", dif: -0.0017, monede: 24, judecate: 300 } } }), "AAVE.PERP", ACUM);
@@ -254,7 +254,7 @@ await test("(F) I-526 fără inventat: „de ieșit” doar dacă T212 a fost ci
 await test("(F) I-519 pe telefon: caseta lipicioasă ține doar eticheta și primul motiv (lista motivelor sub ea, nelipicioasă); Poarta de pornire (FAPTĂ) nu se pliază; secțiunea pliată cu avertisment poartă ⚠", () => {
   const rg = fnApp("renderGrid"), css = citeste("public", "app.css");
   assert.ok(rg.includes(`'<ul class="grLista grListaJos">'`), "lista motivelor sub casetă");
-  assert.ok(/#gridset \.grListaJos\{display:none/.test(css) && css.includes("@media (max-width:600px){#gridset .grPliat>:not(.tbBlocCap):not(.grPoartaCap){display:none}#gridset .grPliat>.tbBlocCap,#gridset .grPliat>.grPoartaCap{margin:0}#gridset .grVerdict .grLista{display:none}#gridset .grListaJos{display:block}}"), "CSS: pe telefon lista iese din casetă");
+  assert.ok(/#gridset \.grListaJos\{display:none/.test(css) && /@media \(max-width:600px\)\{[^\n]*#gridset \.grPliat>:not\(\.tbBlocCap\):not\(\.grPoartaCap\)\{display:none\}#gridset \.grPliat>\.tbBlocCap,#gridset \.grPliat>\.grPoartaCap\{margin:0\}#gridset \.grVerdict \.grLista\{display:none\}#gridset \.grListaJos\{display:block\}/.test(css), "CSS: pe telefon lista iese din casetă");
   const ctx = {}; vm.createContext(ctx); vm.runInContext(fnApp("grPliabil") + "\n;this.f=grPliabil;", ctx);
   assert.equal(ctx.f("🚦 Poarta de pornire"), false); assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Direcția"), true);
   assert.ok(fnApp("grPliazaPeTelefon").includes(`s.classList.toggle("grAvert",!!s.querySelector(".tbWarn,.bad"))`) && /#gridset \.grPliat\.grAvert>/.test(css), "⚠ pe secțiunea pliată cu avertisment");

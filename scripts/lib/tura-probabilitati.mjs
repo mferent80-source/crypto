@@ -26,7 +26,7 @@ export async function turaProbabilitati(d) {
       if (rez && d.Retea && d.modele) {
         try {
           const rt = d.Retea.pentruBot(d.modele, bare, { acum: d.acum, pret: nr(b.pretCurent), dir, jos: nr(b.gridJos), sus: nr(b.gridSus), lichidare: dir === "short" ? nr(b.lichidareSus) : nr(b.lichidareJos), tinta, stop }, d.btc || null);
-          if (rt) { const pz = d.pornireDe ? d.pornireDe(b, bare) : null; if (pz) rt.pornire = pz; rez.retea = rt; }
+          if (rt) { const pz = d.pornireDe ? d.pornireDe(b, bare) : null; if (pz) rt.pornire = pz; rez.retea = rt; if (d.noteazaRetea) d.noteazaRetea(b, rt); }
         } catch (e) { d.jurnal("retea ESEC", b.id, e.message); }
       }
       await d.trimite("/api/istoric-bot?action=prob", { bot: b.id, rez: rez || { la: d.acum, gol: bare.length < 37 * 24 ? "moneda are doar " + cate(Math.floor(bare.length / 24), "zi", "zile") + " de bare de 1 h; cifrele apar de la 37 de zile" : "lipsește prețul botului sau starea pieței" } });

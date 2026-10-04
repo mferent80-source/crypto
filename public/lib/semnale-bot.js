@@ -338,7 +338,7 @@ var SemnaleBot = (function () {
     var bz = x.busola, bl = bz && bz.bilant, Pp = function (d) { return (d < 0 ? "−" : "+") + Math.abs(d * 100).toFixed(2).replace(".", ",") + " pp"; };
     // revizia Opus (04.10): mișcarea CU botul rămâne „ține-l” (regula din 27.09) - Busola nu calcă pașii „cu botul”, ca și componenta Radarului
     if (bz && bz.stare === "miscare" && sf !== "cu" && bl && bl.verdict === "dovedit" && typeof bl.dif === "number" && isFinite(bl.dif))
-      c.push({ nivel: "atentie", cod: "busola", motiv: "Busola: agitație dovedită, " + Pp(bl.dif) + " pe episod pe date noi", faCe: "N-aș adăuga bani cât ține agitația; aș verifica stopul botului în Pionex.",
+      c.push({ nivel: "atentie", cod: "busola", motiv: "Busola: după agitație gridul pierde " + Pp(bl.dif) + " pe episod", faCe: "N-aș adăuga bani cât ține agitația; aș verifica stopul botului în Pionex.",
         deCe: "Busola a măsurat pe date noi: după „mai agitat” gridul a pierdut mai mult decât oricând" + (bl.monede > 0 ? " (" + TextRo.cate(bl.monede, "monedă", "monede") + ")" : "") + "." });
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";
     if (ip) c.push({ nivel: "atentie", cod: "ia-profit", motiv: "moment bun de încasat" + ipT, faCe: "Aș închide botul pe plus și aș reporni doar când fișa zice iar 🟢.", deCe: ip.deCe || "" });
@@ -444,7 +444,7 @@ var SemnaleBot = (function () {
   //   tace - cel putin 30 judecate, fara avantaj dovedit (marginea de jos <= 50%) SI fara bani salvati (el: „tace pe Discord, rămâne în Radar”)
   //   nesigur - restul. Lichidarea, planul LUI si podeaua nu tac niciodata (siguranta si hotararile lui).
   var NU_TACE = { lichidare: 1, plan: 1, podea: 1 };
-  var NUME_SFAT = { tine: "„Ține-l”", "cu-botul": "„Mișcarea e cu botul”", podea: "„Ținta devine podea”", lichidare: "Lichidarea aproape", plan: "Planul tău", busola: "Busola: agitație dovedită",
+  var NUME_SFAT = { tine: "„Ține-l”", "cu-botul": "„Mișcarea e cu botul”", podea: "„Ținta devine podea”", lichidare: "Lichidarea aproape", plan: "Planul tău", busola: "Busola: după agitație gridul pierde mai mult",
     trend: "Trendul împotriva botului", miscare: "Mișcare mare", "ia-profit": "„Încasează acum”", muta: "„Mută gridul”", costuri: "„Costurile mănâncă grilele”",
     btc: "„BTC în mișcare”", aglomerare: "„Mulțimea înghesuită”" };
   function socotealaToti(loguri) {

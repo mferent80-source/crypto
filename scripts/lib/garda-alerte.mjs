@@ -202,6 +202,8 @@ export function situatiiAlerte(pune) {
   td("dimineața: rândul-verdict, 3 boți", { boti: [{ nume: "CRV", stare: "miscare" }, { nume: "LIGHTER", stare: "liniste" }, { nume: "PUMP", stare: "liniste" }], bilant: "dovedit", reveniri: 9, eticheta: "cam la fel", deIesit: 0 });
   td("dimineața: rândul-verdict, 40 de boți, 2 de ieșit", { boti: Array.from({ length: 40 }, (_, i) => ({ nume: "M" + i, stare: i % 2 ? "miscare" : "liniste" })), bilant: "prea puține", reveniri: 123, eticheta: "mai slab", deIesit: 2 });
   td("dimineața: rândul-verdict, nimic", { boti: [{ nume: "SOL", stare: "nemasurat" }], reveniri: 0, deIesit: 0 });
+  // v100.93 (A2): comparația fișei cu intervalul Busolei (I-524) - cele trei forme, rând ≤ 110
+  for (const [sit, j, s] of [["mai îngust", 3.177, 3.962], ["mai larg", 2.5, 4.9], ["cam la fel", 3.0, 4.25]]) pune("Busola, comparația: " + sit, "alerte", "busola.comparatie", { t: BU.comparaInterval({ jos: 3.009, sus: 4.224 }, j, s).text }, [["t", "rand"]]);
   lb("Busola dimineața: 12 boți (tăiat la 145)", Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - ORA })));
   co("gridul îngust a ajuns la durata probată", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", false));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));

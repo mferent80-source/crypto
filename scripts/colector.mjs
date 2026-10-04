@@ -628,7 +628,7 @@ async function scriePentruBusola(boti, acum) {
     } catch (e) { jurnal("pentru-busola inchisi", e.message); pbInchisi.la = acum - 7 * 60000; }
   }
   const cheiaBusola = (s) => (simboluriPerp && simboluriPerp[String(s || "").toUpperCase()]) || s;
-  scrieAtomic(PENTRU_BUSOLA_FIS, pentruBusola({ la: acum, versiune: VERSIUNE_COLECTOR, deschisi: boti, inchisi: pbInchisi.lista, acum, Busola, cheia: cheiaBusola }));
+  scrieAtomic(PENTRU_BUSOLA_FIS, pentruBusola({ la: acum, versiune: VERSIUNE_COLECTOR, deschisi: boti, inchisi: pbInchisi.lista, acum, Busola, cheia: cheiaBusola, retea: Object.values(reteaUltim) }));
 }
 
 // v100.40: tickerul Pionex al monedei unui bot (LIGHTER -> LIT_USDT_PERP, PUMPFUN -> PUMP_USDT_PERP), din lista de simboluri
@@ -1316,6 +1316,7 @@ async function turaProfil() {
 const PROB_FIS = path.join(DATA, "prob-jurnal.json");
 let probStare = {}; try { probStare = JSON.parse(fs.readFileSync(PROB_FIS, "utf8")) || {}; } catch { probStare = {}; }
 let probInLucru = false, probLa = 0;
+const reteaUltim = {};   // v101.63 (A3): ultima cifră a rețelei pe bot (ieșirea în jos în 24 h), pentru fișierul Busolei
 async function turaProbabilitati() {
   if (probInLucru || Date.now() - probLa < 5 * 60000) return;
   probInLucru = true; probLa = Date.now();
@@ -1323,6 +1324,7 @@ async function turaProbabilitati() {
     const act = await cere("/api/bot-orders");
     const modele = modeleRetea(), btc = modele ? await bareBtc() : null;   // v101.56 (rețeaua neuronală)
     await turaProbabilitatiModul({ acum: Date.now(), boti: ((act && act.bots) || []).filter((b) => b && b.activ !== false), GridCalcul, Probabilitati, Dovada, TabloExtra, cere, trimite, jurnal, stare: probStare, Retea, modele, btc, pornireDe: modele ? pornireDe(modele, btc) : null,
+      noteazaRetea: (b, rt) => { const p = rt && rt.p && rt.p["iese-jos-24"], m = modele && modele["atinge-24"], vd = m && Retea.verdict(m, Date.now()); if (Number.isFinite(p)) reteaUltim[b.id] = { simbol: cheiaBusola(b), tinta: "atinge-24", p, dovedita: !!(vd && vd.dovedita), la: Date.now() }; else delete reteaUltim[b.id]; },
       simbolDe: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
       planDe: async (id) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
       citesteBare: (s) => { try { return JSON.parse(fs.readFileSync(fisOre(s), "utf8")); } catch { return []; } },
