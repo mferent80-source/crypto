@@ -212,6 +212,7 @@ function t212Deschide(tk) {
 
 function t212Render() {
   var sus = $("t212Sus"), box = $("t212Continut"), pfBox = $("t212Pf"); if (!box) return;
+  if (typeof reteaAdu === "function") reteaAdu(function () { t212Render(); });   /* v100.94 (L2): modelele 🧠/🌳 din KV pentru poziții și poartă (o dată la 30 de minute) */
   if (t212.inLucru && !t212.cont) { t212Stare("citesc contul din Trading 212…"); return; }
   if (t212.eroare) { if (sus) sus.innerHTML = ""; box.innerHTML = '<p class="bad t212Gol">' + escapeHtml(t212.eroare) + '</p>'; t212Stare("n-am putut citi contul"); return; }
   if (!t212.cont) { box.innerHTML = '<div class="emptyState">Apasă „Reîncarcă”.</div>'; return; }
@@ -321,6 +322,9 @@ function t212ReveniriCorp(id) {
 function t212IdeiRand(x) {
   var ist = x.istoric && x.istoric.n ? t212Cate(x.istoric.n, "trade", "trade-uri") + ", " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
   return '<tr><td><b>' + escapeHtml(x.simbol) + '</b><span class="t212Mic">' + escapeHtml((x.motive || [])[2] || "") + '</span></td><td>' + t212Usd(x.pret) + '</td><td>' + t212Usd(x.intrare) + '</td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">' + (x.riscPct != null ? "−" + (x.riscPct * 100).toFixed(1).replace(".", ",") + "%, " : "") + 'din probă</span></td><td class="good">' + t212Usd(x.tinta) + '</td><td><span class="t212Mic ' + (x.istoric && x.istoric.total < 0 ? "bad" : "") + '">' + escapeHtml(ist) + '</span>' + (x.prob && x.prob.tinta5 !== null && x.prob.stop1 !== null ? '<span class="t212Mic">🎲 ținta înaintea stopului în 5 zile: ' + Math.round(x.prob.tinta5 * 100) + '% · stopul mâine: ' + Math.round(x.prob.stop1 * 100) + '%</span>' : '')
+    // v100.94 (L2): a doua (🧠) și a treia părere (🌳) pe idee - „un trade ca ăsta pe plus”, cifrele colectorului (nedovedită = modelul n-a trecut pragul)
+    + (x.retea && x.retea.p != null ? '<span class="t212Mic">🧠 un trade ca ăsta pe plus: ' + Math.round(x.retea.p * 100) + '%' + (x.retea.dovedita ? '' : ' (nedovedită)') + (x.arbori && x.arbori.p != null ? ' · 🌳 ' + Math.round(x.arbori.p * 100) + '%' + (x.arbori.dovedita ? '' : ' (nedovedită)') : '') + '</span>'
+      : (x.arbori && x.arbori.p != null ? '<span class="t212Mic">🌳 un trade ca ăsta pe plus: ' + Math.round(x.arbori.p * 100) + '%' + (x.arbori.dovedita ? '' : ' (nedovedită)') + '</span>' : ''))
     // v100.57: profilul actiunii - stopul ideii fata de coborarea obisnuita pe 5 zile + sariturile mari
     + (x.prof && x.prof.dist > 0 ? '<span class="t212Mic' + (x.prof.strans ? ' bad' : '') + '">📐 coborârea obișnuită pe 5 zile −' + (x.prof.dist * 100).toFixed(1).replace(".", ",") + '%' + (x.prof.strans ? ' · stopul ideii e mai strâns: te poate scoate pe o mișcare normală' : ' · stopul e în afara ei') + '</span>' : '')
     + (x.prof && x.prof.sar && x.prof.sar.n ? '<span class="t212Mic">⚡ sărituri mari la deschidere: ' + x.prof.sar.n + ', de obicei ~' + Math.round(x.prof.sar.med * 100) + '%, cea mai mare ' + Math.round(x.prof.sar.max * 100) + '%</span>' : '') + '</td><td><button type="button" class="t212BtnLinie" data-action-click="t212BiletPentru(\'' + escapeHtml(x.simbol) + '\')">Biletul</button></td></tr>';
@@ -505,7 +509,7 @@ function t212RandPozitie(p) {
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="t212PlanSalveaza(\'' + tk + '\')">Salvează planul</button>'
     + (p.plan ? '<button type="button" class="t212BtnLinie" data-action-click="t212PlanSterge(\'' + tk + '\')">Șterge</button>' : '') + '</div>'
     + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212Usd(n.tintaPozitie) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
-      + (p.prob && p.prob.length && typeof tbProbRandHtml === "function" ? '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · cât de des s-a întâmplat pe acțiunea asta, în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>' : '')
+      + (p.prob && p.prob.length && typeof tbProbRandHtml === "function" ? '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · cât de des s-a întâmplat pe acțiunea asta, în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>' : '') + t212ReteaHtml({ acum: Date.now(), pret: p.pret, stop: n.stopPozitie, tinta: p.plan && p.plan.tinta > 0 ? p.plan.tinta : n.tintaPozitie, ticker: p.ticker }, t212.bare[p.ticker], p.prob)
       + (n.sursaTrail ? '<p class="tbSub">Stopul care urcă: ' + escapeHtml(n.sursaTrail) + ' (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
       + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
       : '<p class="tbSub">' + escapeHtml(p.nivMotiv || "Prețurile calculate apar după ce vin prețurile zilnice.") + '</p>') + '</div>';
@@ -550,7 +554,7 @@ async function t212Poarta() {
     var tot = t212.cont && t212.cont.cash && t212.cont.cash.total;
     // planul scris de el bate stopul calculat; fara plan, poarta judeca cu stopul calculat
     var planPoarta = plan.stop || plan.trailPct ? plan : niv.nivel === "ok" ? { stop: niv.stop } : plan;
-    t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, planScris: !!(plan.stop || plan.trailPct), v: ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore }), tot: tot };
+    t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, planScris: !!(plan.stop || plan.trailPct), v: ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore }), tot: tot };
     // v89: biletul - ce spune istoricul tau despre situatii asemanatoare, rezultatele, stirile
     try { var rz = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); t212.poarta.rezultate = rz && rz.data || null; } catch (e) { t212.poarta.rezultate = null; }
     try { var sp = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); t212.poarta.stiri = sp && sp.stiri || []; } catch (e) { t212.poarta.stiri = []; }
@@ -570,6 +574,22 @@ async function t212Poarta() {
   t212RenderPoarta();
 }
 function p4ok(p) { return !!(p.niv && p.niv.nivel === "ok" && p.stopP && p.stopP.stop > 0); }
+// v100.94 (L2): a doua părere (🧠 rețeaua) și a treia (🌳 arborii) pe acțiune, din modelele din KV (reteaM) și barele zilnice ale paginii (+ QQQ,
+// perechile lui); o = { acum, pret, stop, tinta, ticker }, prob = rândurile 🎲 (randActiune, cu cod), cump = { ticker, pornit, cost } la poartă
+// („un trade ca ăsta iese pe plus”). Nimic fără modele T212, fără 250 de zile de bare sau fără QQQ; o eroare aici nu oprește desenul
+function t212ReteaHtml(o, b, prob, cump) {
+  if (typeof Retea === "undefined" || typeof reteaHtml !== "function" || typeof reteaM === "undefined" || !b || b.length < 251) return "";
+  try {
+    var j = t212Jurnal(), inchise = j ? j.p.inchise : [], q = t212.bare && t212.bare.QQQ_US_EQ ? t212.bare.QQQ_US_EQ : null;
+    var rt = reteaM.m ? Retea.pentruActiune(reteaM.m, b, o, q, inchise) : null, ra = null;
+    try { ra = reteaM.a && typeof Arbori !== "undefined" ? Arbori.pentruActiune(reteaM.a, b, o, q, inchise) : null; } catch (e) { ra = null; }
+    if (cump) {
+      if (rt) { var pz = Retea.pentruCumparare(reteaM.m, cump, b, q, inchise); if (pz) rt.pornire = pz; }
+      if (ra) { try { var pa = Arbori.pentruCumparare(reteaM.a, cump, b, q, inchise); if (pa) ra.pornire = pa; } catch (e2) {} }
+    }
+    return reteaHtml(rt, prob, { acum: Date.now(), codDirectie: "directie5", tintaRezultat: "rezultat-t212", pornire: rt && rt.pornire }, ra);
+  } catch (e) { return ""; }
+}
 // v100.55: randurile de probabilitate (pozitia si poarta, aceeasi forma)
 function t212ProbListaHtml(l) {
   if (!l || !l.length || typeof tbProbRandHtml !== "function") return "";
@@ -620,6 +640,7 @@ function t212ProfilPoarta(p) {
   if (cmp) h += '<p class="' + (cmp.strans ? "tbWarn" : "tbSub") + '">📐 ' + (sp.alTau ? "Cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + "): " : "") + escapeHtml(cmp.text) + '</p>';
   if (sr) h += '<p class="tbSub">⚡ ' + escapeHtml(sr) + '</p>';
   if (p.prob && p.prob.length) h += '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · ' + (sp && sp.alTau ? "cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + ") și ținta de mai sus" : "cu stopul și ținta de mai sus") + ', cât de des s-a întâmplat pe acțiunea asta în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>';
+  h += t212ReteaHtml({ acum: Date.now(), pret: baza, stop: sp && sp.stop, tinta: p.niv && p.niv.tinta, ticker: p.ticker }, p.bare, p.prob, { ticker: p.ticker, pornit: Date.now(), cost: 100 });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus” */
   return h ? '<div class="t212ProfilPoarta">' + h + '</div>' : "";
 }
 function t212PreturiPoarta(p) {

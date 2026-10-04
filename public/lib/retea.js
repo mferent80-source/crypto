@@ -278,7 +278,7 @@ var Retea = (function () {
     if (!cuA) return { titlu: "🧠 Rețeaua neuronală — a doua părere", sub: z !== null && z >= 2 ? "Model de acum " + cate(z, "zi", "zile") + " — antrenarea n-a mers de atunci." : implicit };
     var za = zile(arbori), s = [];
     if (z !== null && z >= 2) s.push("🧠 model de acum " + cate(z, "zi", "zile")); if (za !== null && za >= 2) s.push("🌳 model de acum " + cate(za, "zi", "zile"));
-    return { titlu: "A doua părere: 🧠 rețeaua · 🌳 arborii", sub: s.length ? s.join(" · ") + " — antrenarea n-a mers de atunci." : implicit };
+    return { titlu: "A doua părere: 🧠 rețeaua · 🌳 arborii", sub: s.length ? s.join(" · ") + " — antrenarea n-a mers de atunci." : implicit.replace(/\.$/, "") + " · semnul plin = cifra mare, inelul = cealaltă familie." };   /* v100.94 (ideea 3): legenda benzii */
   }
   // „Cum s-a verificat”: un rând pe țintă - cazurile independente, Brier rețea / reper / formula simplă, IC față de reper
   // v100.93: + un rând 🌳 pe țintă, cu cazurile LUI (pot diferi de ale rețelei când lunile judecate diferă - revizia 04.10): Brier, IC și „față de 🧠” (BSS al arborilor cu rețeaua drept reper, cu IC)

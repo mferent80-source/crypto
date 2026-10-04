@@ -150,5 +150,21 @@ await test("(6) pagina T212: pozițiile și poarta primesc sub-blocul „A doua 
   const an = R.antet(m1, ACUM, a1); assert.ok(/semnul plin = cifra mare, inelul = cealaltă familie/.test(an.sub) && an.sub.length <= 160, an.sub); assert.ok(!/inelul/.test(R.antet(m1, ACUM).sub), "legenda fără arbori");
 });
 
+// ======== Task 7: garda pe T212, versiunile v100.94 ========
+await test("(7) garda: rândurile 🧠/🌳 de pe acțiuni (stop1, sare1, cursa5, directie5, rezultat-t212 cu „rata pe acțiune”, toate stările 🌳) și rândurile 🌳 T212 din „Cum s-a verificat” sunt în grupul STRICT retea, fără abateri", () => {
+  const s = situatii().filter((x) => /^arbori\./.test(x.sursa) && /^acțiuni:/.test(x.sit)); assert.ok(s.length >= 40, "situații pe acțiuni: " + s.length);
+  const rele = s.map((x) => ({ x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.x.sursa + ": " + q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
+  assert.ok(s.some((x) => /rata pe acțiune/.test(x.text)), "reperul „rata pe acțiune” lipsește"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["rezultat-t212"]), "rândul „un trade ca ăsta”");
+  assert.ok(s.some((x) => /^🌳 Ținta înaintea stopului în 5 zile: /.test(x.text)), "subsolul T212"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["directie-t212"]), "direcția pe 5 zile");
+});
+await test("(E) versiunile: pagina v100.94 (BUILD_INFO, versiune.js, sw, index ×4, package.json 100.94.0, lanțul cu v10094), colectorul v101.64", () => {
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(bi.version, "v100.94"); assert.match(bi.badge, /^v100\.94 · /);
+  assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "v100.94";'), "versiune.js");
+  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-94";'), "sw.js");
+  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.94/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.93/.test(ix), "index.html mai are v100.93");
+  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.94.0"); assert.ok(/npm run test:arbori && npm run test:v10094( && |")/.test(pk), "lanțul de teste"); assert.ok(JSON.parse(pk).scripts["test:v10094"] === "node scripts/proba-v10094.mjs", "scriptul test:v10094");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.64"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.64");
+});
+
 console.log("\n" + (pica ? "V100.94 PICA · " + pica + " din " + (ok + pica) : "V100.94 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;
