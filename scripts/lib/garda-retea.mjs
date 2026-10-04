@@ -24,12 +24,16 @@ export function situatiiRetea(pune) {
   pune("rețeaua: capul, modelul vechi", "retea", "antet", R.antet(m3, ACUM), [["titlu", "titlu"], ["sub", "deCe"]]);
   // v100.95 (ideea 1): rândul Busolei din „Cum s-a verificat” (Retea.textBusola, pus primul de subsol) - nimic judecat, prea puține, bate /
   // mai prost / n-am aflat, fără cifre; fiecare și cu bilanțul vechi de 3 zile
+  // revizia 04.10 (🟡2/🟡5/🔵6): și „prea puține monede”, Radarul trimite 7 / 1 / nimic, cifre de 5 cifre, bilanțul vechi de 20 de zile („de”)
   const BB = { judecate: 240, independente: 131, brier: 0.2101, brierBaza: 0.2402, castig: 0.125, icJos: 0.02, icSus: 0.2, verdict: "bate rata de bază" };
-  const BUS = { "nimic judecat": { ...BB, judecate: 0, independente: 0, brier: null, brierBaza: null, verdict: "prea puține" }, "prea puține": { ...BB, judecate: 12, independente: 9, verdict: "prea puține" },
-    "bate rata de bază": BB, "mai prost": { ...BB, verdict: "mai prost" }, "n-am aflat": { ...BB, verdict: "n-am aflat" }, "fără cifre": { ...BB, brier: null, brierBaza: null, verdict: "n-am aflat" } };
-  for (const [sit, r] of Object.entries(BUS)) {
-    pune("busola: " + sit, "retea", "subsol", { t: R.textBusola({ la: ACUM - 3600000, retea: r }, ACUM) }, [["t", "raport"]]);
-    pune("busola: " + sit + ", bilanț vechi", "retea", "subsol", { t: R.textBusola({ la: ACUM - 3 * 864e5, retea: r }, ACUM) }, [["t", "raport"]]);
+  const ZERO = { ...BB, judecate: 0, independente: 0, brier: null, brierBaza: null, verdict: "prea puține" }, GREU = { ...BB, judecate: 12345, independente: 10123 };
+  const BUS = { "nimic judecat (KV vechi)": [ZERO], "nimic judecat, Radarul trimite 7": [ZERO, 7], "nimic judecat, Radarul trimite 1": [ZERO, 1], "nimic judecat, Radarul nu trimite": [ZERO, 0],
+    "prea puține": [{ ...BB, judecate: 12, independente: 9, verdict: "prea puține" }], "prea puține monede": [{ ...BB, verdict: "prea puține" }],
+    "bate rata de bază": [BB], "mai prost": [{ ...BB, verdict: "mai prost" }], "n-am aflat": [{ ...BB, verdict: "n-am aflat" }], "fără cifre": [{ ...BB, brier: null, brierBaza: null, verdict: "n-am aflat" }],
+    "cifre mari": [GREU], "cifre mari, mai prost": [{ ...GREU, verdict: "mai prost" }], "cifre mari, n-am aflat": [{ ...GREU, verdict: "n-am aflat" }], "cifre mari, prea puține monede": [{ ...GREU, verdict: "prea puține" }] };
+  for (const [sit, [r, tr]] of Object.entries(BUS)) {
+    pune("busola: " + sit, "retea", "subsol", { t: R.textBusola({ la: ACUM - 3600000, retea: r, trimise: tr }, ACUM) }, [["t", "raport"]]);
+    pune("busola: " + sit + ", bilanț vechi", "retea", "subsol", { t: R.textBusola({ la: ACUM - 20 * 864e5, retea: r, trimise: tr }, ACUM) }, [["t", "raport"]]);
   }
   // v100.93 (arborii, a treia părere 🌳): aceleași rânduri cu amândouă familiile - rețeaua dovedită, arborii pe toate stările (+ „față de 🧠”
   // în subsol, pe plus și pe minus); direcția cu amândouă nedovedite („cât dat cu banul” o singură dată); doar arborii (rețeaua lipsă);

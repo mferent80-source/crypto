@@ -1564,13 +1564,16 @@ async function turaDecizii() {
 // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠 ale Radarului - fișierul ei de pe același PC (cron-ul Busolei îl scrie; pe pagina ei
 // nu apare), urcat în KV când `la` se schimbă; se uită cel mult o dată la 10 minute; fișier lipsă/stricat = nimic (fără jurnal la fiecare minut)
 const BUSOLA_BILANT = process.env.BUSOLA_BILANT || "C:/Users/Cimin/busola/cron/stare/din-radar-bilant.json";
-let bilantLa = 0, bilantVazutLa = 0, bilantInLucru = false;
+let bilantLa = 0, bilantTrimise = null, bilantVazutLa = 0, bilantInLucru = false;
 async function turaBilantBusola() {
   if (bilantInLucru || Date.now() - bilantVazutLa < 10 * 60000) return;
   bilantVazutLa = Date.now();
-  const b = bilantDinBusola(citesteJson(BUSOLA_BILANT, null), bilantLa); if (!b) return;
+  // revizia 🟡5: și câte predicții îi trimite Radarul acum (ce pleacă în pentru-busola.json din reteaUltim) - cu 0 judecate, rândul de pe
+  // pagină arată dacă legătura e vie; se retrimite doar când s-a schimbat `la` (Busola a remăsurat) sau numărul trimis
+  const trimise = Object.values(reteaUltim).reduce((s, l) => s + (Array.isArray(l) ? l.length : 0), 0);
+  const b = bilantDinBusola(citesteJson(BUSOLA_BILANT, null), trimise); if (!b || (b.la === bilantLa && b.trimise === bilantTrimise)) return;
   bilantInLucru = true;
-  try { await trimite("/api/istoric-bot?action=busolaRetea", b); bilantLa = b.la; jurnal("busola: bilanțul 🧠 urcat -", cate(b.retea.judecate, "predicție judecată", "predicții judecate") + " ·", b.retea.verdict); }
+  try { await trimite("/api/istoric-bot?action=busolaRetea", b); bilantLa = b.la; bilantTrimise = b.trimise; jurnal("busola: bilanțul 🧠 urcat -", cate(b.retea.judecate, "predicție judecată", "predicții judecate") + " ·", b.retea.verdict, "· Radarul îi trimite", cate(trimise, "predicție", "predicții")); }
   catch (e) { jurnal("busola: bilanțul ESEC", e.message); }
   bilantInLucru = false;
 }

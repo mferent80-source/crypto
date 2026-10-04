@@ -29,33 +29,38 @@ console.log("Proba v100.95 · ideile raportului v100.94");
 const ORA = 3600000, ZI = 864e5, ACUM = Date.UTC(2026, 9, 4, 12, 0);
 
 // ======== Task 1: „încă ~N luni” la „prea puține cazuri” (ideea 3) ========
-await test("(1) Retea.decide: la „prea puține cazuri” scrie și cât mai durează la ritmul de până acum (cazuri pe lună judecată); peste 3 ani în ani; fără luni judecate sau cu 0 cazuri textul vechi; „în lucru” neschimbat; eticheta o propoziție ≤ 160", () => {
-  const d = (v) => R.decide(v).motiv;
-  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 35 }), "prea puține cazuri: 35 din 100 · încă ~21 de luni", "35 în 11 luni ⇒ 65 la 3,18 pe lună ⇒ 21");
-  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 48 }), "prea puține cazuri: 48 din 100 · încă ~12 luni");
-  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 99 }), "prea puține cazuri: 99 din 100 · încă ~1 lună", "TextRo.cate nu face „o lună”: 1 lună, ca „1 zi” în rest");
-  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 3 }), "prea puține cazuri: 3 din 100 · încă ~30 de ani", "356 de luni ⇒ 30 de ani");
-  assert.equal(d({ nIndep: 35 }), "prea puține cazuri: 35 din 100", "fără luni judecate: textul vechi");
-  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 0 }), "prea puține cazuri: 0 din 100", "fără cazuri nu există ritm");
-  assert.equal(d({ luni: 11, luniGata: 6, nIndep: 35 }), "verificarea în lucru: 6 din 11 luni", "în lucru rămâne primul");
-  assert.equal(R.decide({ luni: 11, luniGata: 11, nIndep: 120, ic: [0.01, 0.05], icLog: [0.01, 0.03], bss3: 0.01, logloss: 0.5, loglossReper: 0.51, loglossLog: 0.52 }).dovedita, true, "de la 100 nu se mai socotesc luni");
-  const vd = R.verdict({ tinta: "atinge-24", versiune: R.VERSIUNE, la: ACUM - ORA, verificare: { luni: 11, luniGata: 11, nIndep: 35 } }, ACUM);
-  assert.match(vd.motiv, /încă ~21 de luni$/);
-  const rand = R.randuri({ "atinge-24": { tinta: "atinge-24", versiune: R.VERSIUNE, la: ACUM - ORA, verificare: { luni: 11, luniGata: 11, nIndep: 35 } } }, { la: ACUM, v: R.VERSIUNE, p: { "iese-jos-24": 0.21 } },
-    [{ cod: "iese-jos-24", titlu: "Atinge marginea de jos (0.3605) în 24 h", p: 0.18 }], { acum: ACUM });
-  assert.equal(rand.length, 1); String(rand[0].text).split("\n").forEach(oPropozitie); assert.ok(/încă ~21 de luni/.test(rand[0].text), rand[0].text);
+await test("(1) Retea.decide(v, cuRitm): la „prea puține cazuri” scrie cât mai durează DOAR unde istoria crește (țintele T212 - revizia 🔴1: pe crypto depozitul de 1 h e tăiat la 430 de zile, lunile nu cresc); de la 10 cazuri, peste 3 ani în ani (rotunjit), peste 10 ani plafon (revizia 🔵9); „în lucru” neschimbat; eticheta o propoziție ≤ 160", () => {
+  const d = (v, r) => R.decide(v, r).motiv;
+  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 35 }), "prea puține cazuri: 35 din 100", "fără cuRitm (crypto): fără estimare");
+  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 35 }, true), "prea puține cazuri: 35 din 100 · încă ~21 de luni", "35 în 11 luni ⇒ 65 la 3,18 pe lună ⇒ 21");
+  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 48 }, true), "prea puține cazuri: 48 din 100 · încă ~12 luni");
+  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 99 }, true), "prea puține cazuri: 99 din 100 · încă ~1 lună", "TextRo.cate nu face „o lună”: 1 lună, ca „1 zi” în rest");
+  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 20 }, true), "prea puține cazuri: 20 din 100 · încă ~4 ani", "44 de luni ⇒ 4 ani (rotunjit o singură dată)");
+  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 3 }, true), "prea puține cazuri: 3 din 100", "sub 10 cazuri nu există ritm");
+  assert.equal(d({ luni: 24, luniGata: 24, nIndep: 10 }, true), "prea puține cazuri: 10 din 100 · încă peste 10 ani", "216 luni ⇒ plafon");
+  assert.equal(d({ nIndep: 35 }, true), "prea puține cazuri: 35 din 100", "fără luni judecate: textul vechi");
+  assert.equal(d({ luni: 11, luniGata: 11, nIndep: 0 }, true), "prea puține cazuri: 0 din 100", "fără cazuri nu există ritm");
+  assert.equal(d({ luni: 11, luniGata: 6, nIndep: 35 }, true), "verificarea în lucru: 6 din 11 luni", "în lucru rămâne primul");
+  assert.equal(R.decide({ luni: 11, luniGata: 11, nIndep: 120, ic: [0.01, 0.05], icLog: [0.01, 0.03], bss3: 0.01, logloss: 0.5, loglossReper: 0.51, loglossLog: 0.52 }, true).dovedita, true, "de la 100 nu se mai socotesc luni");
+  const V = { luni: 11, luniGata: 11, nIndep: 35 }, mod = (t) => ({ tinta: t, versiune: R.VERSIUNE, la: ACUM - ORA, verificare: V });
+  assert.equal(R.verdict(mod("atinge-24"), ACUM).motiv, "prea puține cazuri: 35 din 100", "crypto: fără estimare"); assert.equal(R.verdict(mod("cursa"), ACUM).motiv, "prea puține cazuri: 35 din 100");
+  assert.match(R.verdict(mod("cursa5-t212"), ACUM).motiv, /încă ~21 de luni$/, "T212: istoria se adună (unesteZile) ⇒ estimarea e cinstită");
+  assert.match(R.verdictArbori({ ...mod("directie-t212"), versiune: R.VERSIUNE_ARBORI }, ACUM).motiv, /încă ~21 de luni$/, "și pe arbori");
+  const rand = R.randuri({ "atinge-24": mod("atinge-24") }, { la: ACUM, v: R.VERSIUNE, p: { "iese-jos-24": 0.21 } }, [{ cod: "iese-jos-24", titlu: "Atinge marginea de jos (0.3605) în 24 h", p: 0.18 }], { acum: ACUM });
+  assert.equal(rand.length, 1); String(rand[0].text).split("\n").forEach(oPropozitie); assert.ok(!/încă/.test(rand[0].text), rand[0].text);
 });
 
 // ======== Task 2: suma propusă a porții la „un trade ca ăsta” (ideea 4) ========
-await test("(2) poarta T212: „un trade ca ăsta” se judecă pe SUMA propusă (ActiuniSemnale.marime, ca „Cât cumperi”), nu pe mediană; fără cont sau cu stopul peste intrare ⇒ cost null ⇒ rezerva costTipic rămâne în t212ReteaHtml", () => {
-  const src = fnDin("t212-ecran.js", "t212ProfilPoarta"); let prins = null;
-  const f = new Function("ActiuniSemnale", "t212ReteaHtml", "t212Fx", "escapeHtml", "t212Usd", "t212ProbListaHtml", src + "; return t212ProfilPoarta;")(AS, (o, b, prob, cump) => { prins = { o, cump }; return ""; }, () => 4.6, (x) => String(x), (x) => String(x), () => "");
-  const p = { simbol: "ASTS", ticker: "ASTS_US_EQ", baza4: 100, stopP: { stop: 92, alTau: false }, prof: null, prob: [], niv: { nivel: "ok", tinta: 116, stop: 92 }, bareZi: [], tot: 10000, rezultate: null, stiri: [] };
-  f(p); assert.ok(prins, "t212ReteaHtml nechemat"); const m = AS.marime({ intrare: 100, stop: 92, cont: 10000, fx: 4.6 });
-  assert.ok(m && m.suma > 0, "marime"); assert.equal(prins.cump.cost, m.suma, "costul = suma propusă (lei)"); assert.equal(prins.cump.ticker, "ASTS_US_EQ"); assert.equal(prins.o.pret, 100);
-  prins = null; f({ ...p, tot: null }); assert.equal(prins.cump.cost, null, "fără cont: null ⇒ rezerva (mediana)");
-  prins = null; f({ ...p, stopP: { stop: 105 } }); assert.equal(prins.cump.cost, null, "stopul peste intrare: null");
-  prins = null; f({ ...p, stopP: null }); assert.equal(prins.cump.cost, null, "fără stop: null");
+await test("(2) poarta T212: „un trade ca ăsta” se judecă pe SUMA din „Cât cumperi” (t212MarimePoarta: intrarea, stopul calculat, doar cu intrare și poarta nu pe „nu” - revizia 🟡4), nu pe mediană; fără sumă ⇒ cost null ⇒ rezerva costTipic rămâne în t212ReteaHtml", () => {
+  const src = fnDin("t212-ecran.js", "t212MarimePoarta") + "\n" + fnDin("t212-ecran.js", "t212ProfilPoarta"); let prins = null;
+  const f = new Function("ActiuniSemnale", "t212ReteaHtml", "t212Fx", "escapeHtml", "t212Usd", "t212ProbListaHtml", src + "\n; return t212ProfilPoarta;")(AS, (o, b, prob, cump) => { prins = { o, cump }; return ""; }, () => 4.6, (x) => String(x), (x) => String(x), () => "");   /* „\n” înainte de return: felia se poate termina cu un comentariu */
+  const p = { simbol: "ASTS", ticker: "ASTS_US_EQ", baza4: 100, stopP: { stop: 96, alTau: true }, prof: null, prob: [], niv: { nivel: "ok", intrare: { pret: 100, motiv: "limită" }, tinta: 116, stop: 92, riscPct: 8 }, v: { nivel: "ok" }, st: { pret: 101 }, bareZi: [], tot: 10000, rezultate: null, stiri: [] };
+  f(p); assert.ok(prins, "t212ReteaHtml nechemat"); const m92 = AS.marime({ intrare: 100, stop: 92, cont: 10000, fx: 4.6 }), m96 = AS.marime({ intrare: 100, stop: 96, cont: 10000, fx: 4.6 });
+  assert.ok(m92 && m92.suma > 0 && m96.suma !== m92.suma, "marime"); assert.equal(prins.cump.cost, m92.suma, "costul = suma din „Cât cumperi” (stopul calculat), nu pe stopul lui"); assert.equal(prins.o.stop, 96, "probabilitățile rămân pe stopul LUI"); assert.equal(prins.cump.ticker, "ASTS_US_EQ");
+  prins = null; f({ ...p, v: { nivel: "nu" } }); assert.equal(prins.cump.cost, null, "poarta pe „nu”: nicio sumă ⇒ rezerva (mediana)");
+  prins = null; f({ ...p, niv: { ...p.niv, intrare: null } }); assert.equal(prins.cump.cost, null, "fără intrare (trend jos): null");
+  prins = null; f({ ...p, tot: null }); assert.equal(prins.cump.cost, null, "fără cont: null");
+  const pp = fnDin("t212-ecran.js", "t212PreturiPoarta"); assert.ok(/t212MarimePoarta\(p\)/.test(pp) && !/ActiuniSemnale\.marime\(/.test(pp), "„Cât cumperi” ia suma din aceeași funcție");
   assert.ok(/cost: cump\.cost > 0 \? cump\.cost : Retea\.costTipic\(inchise\)/.test(fnDin("t212-ecran.js", "t212ReteaHtml")), "rezerva costTipic în t212ReteaHtml");
 });
 
@@ -79,19 +84,27 @@ await test("(3) tura ideilor scrie barele zilnice aduse dimineața în data/rete
 // ======== Task 4: bilanțul Busolei despre predicțiile 🧠 ale Radarului (ideea 1) ========
 const BZ = (retea, la) => ({ la: la === undefined ? ACUM - ORA : la, retea });
 const BATE = { judecate: 240, independente: 131, brier: 0.2101, brierBaza: 0.2402, castig: 0.125, icJos: 0.02, icSus: 0.2, verdict: "bate rata de bază" };
-await test("(4a) Retea.textBusola: rândul Busolei pentru „Cum s-a verificat” - nimic judecat, prea puține, bate / mai prost / n-am aflat, verdict necunoscut ca atare, bilanț vechi; fără cifre nu scrie NaN/null; o propoziție ≤ 160; null fără bilanț", () => {
+await test("(4a) Retea.textBusola: rândul Busolei pentru „Cum s-a verificat” - nimic judecat (cu câte îi trimite Radarul acum - revizia 🟡5), prea puține cazuri / prea puține monede (🟡2), bate / mai prost / n-am aflat „IC cuprinde 0” (🟡3), verdict necunoscut ca atare, bilanț vechi; cifrele prin TextRo (🔵8); fără cifre nu scrie NaN/null; o propoziție ≤ 160 și la 5 cifre cu bilanț de 20 de zile (🔵6); null fără bilanț", () => {
   assert.equal(R.textBusola(null, ACUM), null); assert.equal(R.textBusola({ la: ACUM }, ACUM), null, "fără retea");
-  assert.equal(R.textBusola(BZ({ judecate: 0, independente: 0, brier: null, brierBaza: null, castig: null, icJos: null, icSus: null, verdict: "prea puține" }), ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 (le judecă după ce le trece orizontul).");
-  assert.equal(R.textBusola(BZ({ judecate: 12, independente: 9, brier: 0.2213, brierBaza: 0.2401, castig: null, icJos: null, icSus: null, verdict: "prea puține" }), ACUM), "🧭 Busola a judecat 12 predicții 🧠 (9 independente): prea puține ca să judece (de la 100 independente).");
-  assert.equal(R.textBusola(BZ(BATE), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 independente): Brier 0,210 față de 0,240 la rata de bază ⇒ bate rata de bază.");
+  const ZERO = { judecate: 0, independente: 0, brier: null, brierBaza: null, castig: null, icJos: null, icSus: null, verdict: "prea puține" };
+  assert.equal(R.textBusola(BZ(ZERO), ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 (le judecă după ce le trece orizontul).", "KV vechi, fără „trimise”");
+  assert.equal(R.textBusola({ ...BZ(ZERO), trimise: 7 }, ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 · Radarul îi trimite acum 7 predicții, le judecă după ce le trece orizontul.");
+  assert.equal(R.textBusola({ ...BZ(ZERO), trimise: 1 }, ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 · Radarul îi trimite acum 1 predicție, o judecă după ce îi trece orizontul.");
+  assert.equal(R.textBusola({ ...BZ(ZERO), trimise: 0 }, ACUM), "🧭 Busola n-a judecat încă nicio predicție 🧠 · Radarul nu-i trimite nimic acum (fără boți sau fără modelul pe 24 h).", "legătura ruptă se vede");
+  assert.equal(R.textBusola(BZ({ judecate: 12, independente: 9, brier: 0.2213, brierBaza: 0.2401, castig: null, icJos: null, icSus: null, verdict: "prea puține" }), ACUM), "🧭 Busola a judecat 12 predicții 🧠 (9 independente): prea puține ca să judece (cere 100 de independente).");
+  assert.equal(R.textBusola(BZ({ ...BATE, verdict: "prea puține" }), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 de independente): prea puține monede ca să judece (cere 10).", "≥ 100 independente și tot „prea puține” = sub 10 monede");
+  assert.equal(R.textBusola(BZ(BATE), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 de independente): Brier 0,210 (rata de bază 0,240) ⇒ bate rata de bază.");
   assert.match(R.textBusola(BZ({ ...BATE, verdict: "mai prost" }), ACUM), /⇒ mai prost decât rata de bază\.$/);
-  assert.match(R.textBusola(BZ({ ...BATE, verdict: "n-am aflat" }), ACUM), /⇒ n-am aflat \(IC peste zero\)\.$/, "cuvintele ei, scurt: cu „bilanț vechi” rândul stă sub 160");
+  assert.match(R.textBusola(BZ({ ...BATE, verdict: "n-am aflat" }), ACUM), /⇒ n-am aflat \(IC cuprinde 0\)\.$/, "IC-ul cuprinde zero, nu „peste zero”");
   assert.match(R.textBusola(BZ({ ...BATE, verdict: "altceva" }), ACUM), /⇒ altceva\.$/, "verdictul necunoscut, ca atare");
-  assert.equal(R.textBusola(BZ(BATE, ACUM - 3 * ZI), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 independente): Brier 0,210 față de 0,240 la rata de bază ⇒ bate rata de bază · bilanț de acum 3 zile.");
-  assert.ok(!/bilanț de acum/.test(R.textBusola(BZ(BATE, ACUM - ZI), ACUM)), "o zi nu e „vechi”");
+  assert.equal(R.textBusola(BZ(BATE, ACUM - 3 * ZI), ACUM), "🧭 Busola a judecat 240 de predicții 🧠 (131 de independente): Brier 0,210 (rata de bază 0,240) ⇒ bate rata de bază · de acum 3 zile.");
+  assert.ok(!/de acum/.test(R.textBusola(BZ(BATE, ACUM - ZI), ACUM)), "o zi nu e „vechi”");
+  assert.match(R.textBusola(BZ({ ...BATE, independente: 1, judecate: 1 }), ACUM), /^🧭 Busola a judecat 1 predicție 🧠 \(1 independentă\): /);
   const faraCifre = R.textBusola(BZ({ judecate: 150, independente: 120, brier: null, brierBaza: null, castig: null, icJos: null, icSus: null, verdict: "n-am aflat" }), ACUM);
-  assert.ok(!/NaN|null|undefined|Brier/.test(faraCifre), faraCifre); assert.match(faraCifre, /^🧭 Busola a judecat 150 de predicții 🧠 \(120 independente\) ⇒ /);
-  [BATE, { ...BATE, verdict: "mai prost" }, { ...BATE, verdict: "n-am aflat" }].forEach((r) => oPropozitie(R.textBusola(BZ(r, ACUM - 5 * ZI), ACUM)));
+  assert.ok(!/NaN|null|undefined|Brier/.test(faraCifre), faraCifre); assert.match(faraCifre, /^🧭 Busola a judecat 150 de predicții 🧠 \(120 de independente\) ⇒ /);
+  const GREU = { ...BATE, judecate: 12345, independente: 10123 };
+  [BATE, GREU, { ...GREU, verdict: "mai prost" }, { ...GREU, verdict: "n-am aflat" }, { ...GREU, verdict: "prea puține" }].forEach((r) => { oPropozitie(R.textBusola(BZ(r, ACUM - 20 * ZI), ACUM)); oPropozitie(R.textBusola(BZ(r), ACUM)); });
+  oPropozitie(R.textBusola({ ...BZ(ZERO, ACUM - 20 * ZI), trimise: 12 }, ACUM)); oPropozitie(R.textBusola({ ...BZ(ZERO, ACUM - 20 * ZI), trimise: 0 }, ACUM));
 });
 await test("(4b) Retea.subsol: cu o.busola rândul 🧭 e primul în „Cum s-a verificat” pe paginile crypto; pe acțiuni (o.actiuni) lipsește - Busola judecă boții; fără busola nimic nou", () => {
   const modele = { "atinge-24": { tinta: "atinge-24", versiune: R.VERSIUNE, la: ACUM - ORA, verificare: null } };
@@ -108,19 +121,24 @@ await test("(4c) ruta istoric-bot: POST busolaRetea validează (lipsa la/retea, 
   assert.equal((await post({})).status, 400, "fără la/retea"); assert.equal((await post({ la: ACUM, retea: { judecate: "12", independente: 9, verdict: "x" } })).status, 400, "judecate text");
   assert.equal((await post({ la: ACUM, retea: { judecate: 12, independente: 9, brier: "0.2", brierBaza: 0.24, castig: null, icJos: null, icSus: null, verdict: "x" } })).status, 400, "brier text");
   assert.equal((await post({ la: ACUM, retea: { judecate: 12, independente: 9, brier: 0.22, brierBaza: 0.24, castig: null, icJos: null, icSus: null, verdict: "a".repeat(41) } })).status, 400, "verdict lung");
+  assert.equal((await post({ la: ACUM, retea: { judecate: 12, independente: 9, brier: 0.22, brierBaza: 0.24, castig: null, icJos: null, icSus: null, verdict: "x" }, trimise: "7" })).status, 400, "trimise text (revizia 🟡5)");
+  assert.equal((await post({ la: ACUM, retea: { judecate: 12, independente: 9, brier: 0.22, brierBaza: 0.24, castig: null, icJos: null, icSus: null, verdict: "x" }, trimise: -1 })).status, 400, "trimise negativ");
   r = await post({ la: ACUM, retea: { judecate: 12, independente: 9, brier: 0.2213, brierBaza: 0.2401, castig: null, icJos: null, icSus: null, verdict: "prea puține", extra: "nu" } }); assert.equal(r.status, 200, await r.text());
-  r = await get(); const j = await r.json(); assert.equal(j.busolaRetea.la, ACUM); assert.deepEqual(j.busolaRetea.retea, { judecate: 12, independente: 9, brier: 0.2213, brierBaza: 0.2401, castig: null, icJos: null, icSus: null, verdict: "prea puține" });
+  r = await get(); let j = await r.json(); assert.equal(j.busolaRetea.la, ACUM); assert.deepEqual(j.busolaRetea.retea, { judecate: 12, independente: 9, brier: 0.2213, brierBaza: 0.2401, castig: null, icJos: null, icSus: null, verdict: "prea puține" }); assert.equal(j.busolaRetea.trimise, null, "fără trimise ⇒ null");
+  r = await post({ la: ACUM + 1, retea: { judecate: 0, independente: 0, brier: null, brierBaza: null, castig: null, icJos: null, icSus: null, verdict: "prea puține" }, trimise: 7 }); assert.equal(r.status, 200, await r.text());
+  r = await get(); j = await r.json(); assert.equal(j.busolaRetea.trimise, 7, "trimise păstrat"); assert.equal(j.busolaRetea.la, ACUM + 1);
 });
-await test("(4d) scripts/lib/din-busola.mjs: bilantDinBusola curăță fișierul Busolei (null pe lipsă/stricat/la egal/fără retea; cifrele doar numere sau null, niciodată 0 din null); colectorul îl urcă din turaBilantBusola (calea din BUSOLA_BILANT, implicit busola/cron/stare/din-radar-bilant.json), cel mult o dată la 10 minute, din bucla", async () => {
+await test("(4d) scripts/lib/din-busola.mjs: bilantDinBusola(j, trimise) curăță fișierul Busolei (null pe lipsă/stricat/fără retea; cifrele doar numere sau null, niciodată 0 din null; „trimise” = câte predicții îi trimite Radarul acum - revizia 🟡5); colectorul îl urcă din turaBilantBusola (calea din BUSOLA_BILANT, implicit busola/cron/stare/din-radar-bilant.json), cel mult o dată la 10 minute, doar când se schimbă la sau trimise, din bucla", async () => {
   const { bilantDinBusola } = await import("./lib/din-busola.mjs");
   assert.equal(bilantDinBusola(null, 0), null); assert.equal(bilantDinBusola({}, 0), null); assert.equal(bilantDinBusola({ la: ACUM }, 0), null, "fără retea");
-  assert.equal(bilantDinBusola({ la: ACUM, retea: BATE }, ACUM), null, "la egal cu ultimul trimis");
   assert.equal(bilantDinBusola({ la: ACUM, retea: { ...BATE, judecate: "12" } }, 0), null, "judecate text");
-  const b = bilantDinBusola({ la: ACUM, retea: { ...BATE, brier: null, extra: 1 }, boti: { x: 1 } }, 0);
-  assert.deepEqual(b, { la: ACUM, retea: { judecate: 240, independente: 131, brier: null, brierBaza: 0.2402, castig: 0.125, icJos: 0.02, icSus: 0.2, verdict: "bate rata de bază" } }, "doar cheile știute, null rămâne null");
+  const b = bilantDinBusola({ la: ACUM, retea: { ...BATE, brier: null, extra: 1 }, boti: { x: 1 } }, 7);
+  assert.deepEqual(b, { la: ACUM, retea: { judecate: 240, independente: 131, brier: null, brierBaza: 0.2402, castig: 0.125, icJos: 0.02, icSus: 0.2, verdict: "bate rata de bază" }, trimise: 7 }, "doar cheile știute, null rămâne null, trimise întreg");
+  assert.equal(bilantDinBusola({ la: ACUM, retea: BATE }, 0).trimise, 0, "0 e o cifră, nu lipsă"); assert.equal(bilantDinBusola({ la: ACUM, retea: BATE }, "7").trimise, null, "trimise ne-întreg ⇒ null"); assert.equal(bilantDinBusola({ la: ACUM, retea: BATE }).trimise, null);
   const col = citeste("scripts", "colector.mjs"), t = fnColector("turaBilantBusola");
   assert.ok(/const BUSOLA_BILANT = process\.env\.BUSOLA_BILANT \|\| "C:\/Users\/Cimin\/busola\/cron\/stare\/din-radar-bilant\.json"/.test(col), "calea");
   assert.ok(/bilantDinBusola\(/.test(t) && /trimite\("\/api\/istoric-bot\?action=busolaRetea"/.test(t), "urcă prin bilantDinBusola"); assert.ok(/10 \* 60000/.test(t), "cel mult o dată la 10 minute");
+  assert.ok(/reteaUltim/.test(t), "trimise = predicțiile din reteaUltim (ce pleacă spre Busola)"); assert.ok(/b\.la === bilantLa && b\.trimise === bilantTrimise/.test(t), "nu retrimite când nu s-a schimbat nimic");
   assert.ok(/turaBilantBusola\(\)\.catch/.test(fnColector("bucla")), "în bucla"); assert.ok(/import \{ bilantDinBusola \} from "\.\/lib\/din-busola\.mjs"/.test(col), "importul");
 });
 await test("(4e) pagina: reteaAdu cere și busolaRetea (reteaM.b), reteaHtml îl dă subsolului cu actiuni din o; garda are situațiile Busolei în grupul retea, fără abateri", () => {

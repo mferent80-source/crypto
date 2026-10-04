@@ -324,7 +324,9 @@ export async function onRequestPost({request,env}){
     const intreg=x=>Number.isInteger(x)&&x>=0,cifra=x=>x===null||x===undefined||(typeof x==="number"&&Number.isFinite(x));
     if(!intreg(r.judecate)||!intreg(r.independente)||!["brier","brierBaza","castig","icJos","icSus"].every(k=>cifra(r[k]))||typeof r.verdict!=="string"||r.verdict.length>40)return json({error:"Bilant nevalid"},400);
     const retea={judecate:r.judecate,independente:r.independente,brier:r.brier??null,brierBaza:r.brierBaza??null,castig:r.castig??null,icJos:r.icJos??null,icSus:r.icSus??null,verdict:r.verdict};
-    await env.ISTORIC.put("busolaRetea",JSON.stringify({la,retea}));return json({ok:true});
+    // revizia 🟡5: „trimise” (câte predicții îi trimite Radarul acum) e opțional, dar dacă vine trebuie să fie un întreg ≥ 0
+    const tr=corp.trimise;if(tr!==undefined&&tr!==null&&!(Number.isInteger(tr)&&tr>=0))return json({error:"Bilant nevalid"},400);
+    await env.ISTORIC.put("busolaRetea",JSON.stringify({la,retea,trimise:Number.isInteger(tr)?tr:null}));return json({ok:true});
   }
   if(action==="prob"){
     const bot=idBot(corp&&corp.bot),rez=corp&&corp.rez;if(!bot||!rez||typeof rez!=="object")return json({error:"Lipseste bot sau rez"},400);

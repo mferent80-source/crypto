@@ -167,19 +167,22 @@ var Retea = (function () {
     }
     var p = sum / model.ansamblu.length; return isFinite(p) ? p : null;
   }
-  // v100.95 (ideea 3): la ritmul de până acum (cazuri independente pe lună judecată - istoria se adună o lună pe lună), cam cât mai
-  // durează până la MIN_INDEP; peste 3 ani se spune în ani; fără luni judecate sau fără cazuri nu există ritm
+  // v100.95 (ideea 3): la ritmul de până acum (cazuri independente pe lună judecată), cam cât mai durează până la MIN_INDEP - DOAR unde
+  // istoria se adună o lună pe lună (țintele T212, barele zilnice se unesc peste ani; revizia 🔴1: pe crypto depozitul de 1 h e tăiat la
+  // 430 de zile, lunile de test nu cresc, deci promisiunea ar fi falsă). De la 10 cazuri (sub, ritmul e zgomot); peste 3 ani în ani, rotunjit;
+  // peste 10 ani doar „peste 10 ani” (revizia 🔵9)
   function incaLuni(v) {
     var n = nr(v.nIndep), lg = nr(v.luniGata);
-    if (n === null || !(n > 0) || n >= MIN_INDEP || lg === null || !(lg >= 1)) return "";
+    if (n === null || !(n >= 10) || n >= MIN_INDEP || lg === null || !(lg >= 1)) return "";
     var m = Math.ceil((MIN_INDEP - n) / (n / lg));
-    return " · încă ~" + (m > 36 ? cate(Math.ceil(m / 12), "an", "ani") : cate(m, "lună", "luni"));
+    if (m > 120) return " · încă peste 10 ani";
+    return " · încă ~" + (m > 36 ? cate(Math.round(m / 12), "an", "ani") : cate(m, "lună", "luni"));
   }
-  // pragul „dovedită” (specul): toate patru, față de reper ȘI de formula simplă; altfel motivul, în ordinea în care cade
-  function decide(v) {
+  // pragul „dovedită” (specul): toate patru, față de reper ȘI de formula simplă; altfel motivul, în ordinea în care cade; cuRitm = și „încă ~N luni”
+  function decide(v, cuRitm) {
     if (!v) return { dovedita: false, motiv: "neverificată încă" };
     if (nr(v.luniGata) !== null && nr(v.luni) !== null && v.luniGata < v.luni) return { dovedita: false, motiv: "verificarea în lucru: " + v.luniGata + " din " + cate(v.luni, "lună", "luni") };
-    if (!(nr(v.nIndep) >= MIN_INDEP)) return { dovedita: false, motiv: "prea puține cazuri: " + (nr(v.nIndep) || 0) + " din " + MIN_INDEP + incaLuni(v) };
+    if (!(nr(v.nIndep) >= MIN_INDEP)) return { dovedita: false, motiv: "prea puține cazuri: " + (nr(v.nIndep) || 0) + " din " + MIN_INDEP + (cuRitm ? incaLuni(v) : "") };
     var rep = v.reper || "🎲";
     if (!(v.ic && v.ic[0] > 0)) return { dovedita: false, motiv: "nu bate " + rep + " (Brier " + num(v.brier, 3) + " față de " + num(v.brierReper, 3) + ")" };
     if (!(v.icLog && v.icLog[0] > 0)) return { dovedita: false, motiv: "nu face mai mult decât o formulă simplă" };
@@ -193,7 +196,7 @@ var Retea = (function () {
   var VERSIUNE_ARBORI = "a1";
   function verdictCu(m, acum, ver) {
     if (!m || m.versiune !== ver) return null;
-    var d = decide(m.verificare || null), v = m.verificare || {}, la = nr(m.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
+    var d = decide(m.verificare || null, /-t212$/.test(String(m.tinta || ""))), v = m.verificare || {}, la = nr(m.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
     return { dovedita: d.dovedita, motiv: d.motiv, nIndep: nr(v.nIndep) || 0, bloc: (TINTE[m.tinta] || { bloc: 24 }).bloc, vechi: z !== null && z >= 2 ? z : null };
   }
   function verdict(m, acum) { return verdictCu(m, acum, VERSIUNE); }
@@ -301,16 +304,24 @@ var Retea = (function () {
   // v100.94 (revizia 🔵8): o = { actiuni } - pe pagina T212 doar țintele de pe acțiuni, pe crypto doar cele crypto (fiecare pagină își citește piața)
   // v100.95 (ideea 1): rândul Busolei - ce a aflat EA despre predicțiile 🧠 trimise de Radar (din-radar-bilant.json de pe PC-ul lui, urcat
   // de colector în KV); b = { la, retea: { judecate, independente, brier, brierBaza, verdict } }; verdictul ei, în cuvintele ei; null fără bilanț
-  var VERDICT_BUSOLA = { "bate rata de bază": "bate rata de bază", "mai prost": "mai prost decât rata de bază", "n-am aflat": "n-am aflat (IC peste zero)" };
+  // revizia 🟡3: „n-am aflat” al Busolei = intervalul de încredere cuprinde zero. revizia 🟡5: b.trimise = câte predicții îi trimite Radarul
+  // acum (de la colector) - cu 0 judecate rândul arată dacă legătura e vie (Busola rescrie bilanțul la 4 h și cu jurnalul gol). revizia 🟡2:
+  // „prea puține” cu ≥ 100 independente vine din prea puține monede (Busola cere 10). Cifrele prin TextRo (🔵8); scurt, ca să stea sub 160 (🔵6)
+  var VERDICT_BUSOLA = { "bate rata de bază": "bate rata de bază", "mai prost": "mai prost decât rata de bază", "n-am aflat": "n-am aflat (IC cuprinde 0)" };
   function textBusola(b, acum) {
     var r = b && b.retea; if (!r || typeof r !== "object") return null;
-    var j = nr(r.judecate) || 0, ind = nr(r.independente) || 0, la = nr(b.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
-    var vechi = z !== null && z >= 2 ? " · bilanț de acum " + cate(z, "zi", "zile") : "";
-    if (!(j > 0)) return "🧭 Busola n-a judecat încă nicio predicție 🧠 (le judecă după ce le trece orizontul)" + vechi + ".";
-    var cap = "🧭 Busola a judecat " + cate(j, "predicție", "predicții") + " 🧠 (" + ind + " independente)";
-    if (r.verdict === "prea puține") return cap + ": prea puține ca să judece (de la 100 independente)" + vechi + ".";
+    var j = nr(r.judecate) || 0, ind = nr(r.independente) || 0, la = nr(b.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null, t = nr(b.trimise);
+    var vechi = z !== null && z >= 2 ? " · de acum " + cate(z, "zi", "zile") : "";
+    if (!(j > 0)) {
+      var cap0 = "🧭 Busola n-a judecat încă nicio predicție 🧠";
+      if (t === null) return cap0 + " (le judecă după ce le trece orizontul)" + vechi + ".";
+      if (t > 0) return cap0 + " · Radarul îi trimite acum " + cate(t, "predicție", "predicții") + (t === 1 ? ", o judecă după ce îi trece orizontul" : ", le judecă după ce le trece orizontul") + vechi + ".";
+      return cap0 + " · Radarul nu-i trimite nimic acum (fără boți sau fără modelul pe 24 h)" + vechi + ".";
+    }
+    var cap = "🧭 Busola a judecat " + cate(j, "predicție", "predicții") + " 🧠 (" + cate(ind, "independentă", "independente") + ")";
+    if (r.verdict === "prea puține") return cap + (ind >= 100 ? ": prea puține monede ca să judece (cere 10)" : ": prea puține ca să judece (cere 100 de independente)") + vechi + ".";
     var br = nr(r.brier), bb = nr(r.brierBaza), v = VERDICT_BUSOLA[r.verdict] || String(r.verdict || "");
-    return cap + (br !== null && bb !== null ? ": Brier " + num(br, 3) + " față de " + num(bb, 3) + " la rata de bază" : "") + " ⇒ " + v + vechi + ".";
+    return cap + (br !== null && bb !== null ? ": Brier " + num(br, 3) + " (rata de bază " + num(bb, 3) + ")" : "") + " ⇒ " + v + vechi + ".";
   }
   // v100.95: cu o.busola (bilanțul Busolei) rândul ei stă primul - doar pe paginile crypto (Busola judecă boții, nu acțiunile)
   function subsol(modele, arbori, o) {

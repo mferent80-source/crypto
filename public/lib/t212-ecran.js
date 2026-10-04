@@ -641,17 +641,24 @@ function t212ProfilPoarta(p) {
   if (cmp) h += '<p class="' + (cmp.strans ? "tbWarn" : "tbSub") + '">📐 ' + (sp.alTau ? "Cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + "): " : "") + escapeHtml(cmp.text) + '</p>';
   if (sr) h += '<p class="tbSub">⚡ ' + escapeHtml(sr) + '</p>';
   if (p.prob && p.prob.length) h += '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · ' + (sp && sp.alTau ? "cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + ") și ținta de mai sus" : "cu stopul și ținta de mai sus") + ', cât de des s-a întâmplat pe acțiunea asta în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>';
-  // v100.95 (ideea 4): „un trade ca ăsta” pe SUMA propusă de poartă (aceeași formulă ca „Cât cumperi”: 1% din cont la stop, plafon 20%);
-  // fără cont, fără stop sau cu stopul peste intrare marime dă null -> cost null -> t212ReteaHtml ia rezerva (mediana trade-urilor lui)
-  var ms = baza && sp && sp.stop > 0 ? ActiuniSemnale.marime({ intrare: baza, stop: sp.stop, cont: p.tot, fx: t212Fx() }) : null;
+  // v100.95 (ideea 4): „un trade ca ăsta” pe SUMA propusă de poartă - exact cea din „Cât cumperi” (t212MarimePoarta, revizia 🟡4: același
+  // stop, aceeași condiție); fără sumă (fără cont, fără intrare, poarta pe „nu”) cost null -> t212ReteaHtml ia rezerva (mediana trade-urilor lui)
+  var ms = t212MarimePoarta(p);
   h += t212ReteaHtml({ acum: Date.now(), pret: baza, stop: sp && sp.stop, tinta: p.niv && p.niv.tinta, ticker: p.ticker }, p.bareZi, p.prob, { ticker: p.ticker, pornit: Date.now(), cost: ms && ms.suma > 0 ? ms.suma : null });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus”; revizia 🔵9: barele ÎNCHISE (bareBursa), 🟡5: costul tipic */
   return h ? '<div class="t212ProfilPoarta">' + h + '</div>' : "";
+}
+// v100.95 (revizia 🟡4): O SINGURĂ sursă pentru suma propusă - „Cât cumperi” și „un trade ca ăsta iese pe plus” judecă același trade:
+// intrarea (ordinul limită), stopul CALCULAT, doar cu intrare (nu pe trend jos) și cu poarta nu pe „nu” (ar contrazice verdictul); altfel null
+function t212MarimePoarta(p) {
+  var n = p && p.niv;
+  if (!n || n.nivel !== "ok" || !n.intrare || !(n.intrare.pret > 0) || !p.v || p.v.nivel === "nu" || !(n.stop > 0)) return null;
+  return ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: p.tot, fx: t212Fx() });
 }
 function t212PreturiPoarta(p) {
   var n = p.niv;
   if (!n || n.nivel !== "ok") return n ? '<p class="tbSub">🎯 ' + escapeHtml(n.motiv || "") + '</p>' : "";
-  // fara intrare (trend jos) sau poarta pe "nu" -> nu dau o marime de cumparare: ar contrazice verdictul
-  var baza = n.intrare ? n.intrare.pret : p.st.pret, cumpar = !!n.intrare && p.v.nivel !== "nu", m = cumpar ? ActiuniSemnale.marime({ intrare: baza, stop: n.stop, cont: p.tot, fx: t212Fx() }) : null;
+  // fara intrare (trend jos) sau poarta pe "nu" -> nu dau o marime de cumparare: ar contrazice verdictul (regula sta in t212MarimePoarta)
+  var baza = n.intrare ? n.intrare.pret : p.st.pret, cumpar = !!n.intrare && p.v.nivel !== "nu", m = t212MarimePoarta(p);
   return '<div class="t212Preturi"><div class="t212PretCap"><b>🎯 Prețurile calculate pentru ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</span></div><div class="t212PretGrid">'
     + '<div><span class="tbEt2">Intrare (ordin limită)</span><b>' + (n.intrare ? t212Usd(n.intrare.pret) : "—") + '</b><span class="tbSub">' + escapeHtml(n.intrare ? n.intrare.motiv + (n.intrare.pret < p.st.pret ? " · " + t212Pct(n.intrare.pret / p.st.pret - 1) + " față de acum" : "") : n.intrareMotiv) + '</span></div>'
     + '<div><span class="tbEt2">Stop' + (n.intrare ? "" : " (dacă o cumperi totuși)") + '</span><b class="bad">' + t212Usd(n.stop) + '</b><span class="tbSub">' + t212Pct(-n.riscPct) + (n.intrare ? ' de la intrare' : ' de la prețul de acum') + (p.planScris ? " · ai scris tu alt stop — poarta îl folosește pe al tău" : "") + '</span></div>'
