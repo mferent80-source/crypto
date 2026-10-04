@@ -70,6 +70,7 @@ export async function onRequestGet({request,env}){
   // v100.85 (reveniri + short): istoricul listelor de monede, urmărirea lor și notările (le scrie tura sugestiilor, o dată pe zi)
   if(action==="sugestii"){let s=null,l=[];try{s=JSON.parse(await env.ISTORIC.get("sugestii")||"null")}catch{s=null}try{l=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{l=[]}return json({sugestii:s,istoric:Array.isArray(l)?l:[]})}
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
+  if(action==="busolaRetea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("busolaRetea")||"null")}catch{r=null}return json({busolaRetea:r})}   // v100.95 (ideea 1): bilanțul Busolei despre predicțiile 🧠
   if(action==="arbori"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("arbori")||"null")}catch{r=null}return json({arbori:r})}   // v100.93: arborii (gradient boosting), aceeași formă ca retea
   if(action==="paza"){let p=null;try{p=JSON.parse(await env.ISTORIC.get("paza-boti")||"null")}catch{p=null}return json({paza:p})}   // v100.90 (I-513): starea Busolei pe boți, cu „de când”
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
@@ -314,6 +315,16 @@ export async function onRequestPost({request,env}){
     const bun=x=>x&&typeof x==="object"&&typeof x.baza==="number"&&typeof x.pas==="number"&&Array.isArray(x.semi)&&x.semi.length>=1&&x.semi.length<=5&&x.semi.every(s=>Array.isArray(s)&&s.length<=200&&s.every(a=>Array.isArray(a)&&a.length>=1&&a.length<=64&&a.every(nod)));
     if(Object.keys(m).length>12||!Object.values(m).every(bun))return json({error:"Modele nevalide"},400);
     await env.ISTORIC.put("arbori",JSON.stringify({la:nr(corp.la)||Date.now(),versiune:v,modele:m}));return json({ok:true,n:Object.keys(m).length});
+  }
+  // v100.95 (ideea 1): bilanțul Busolei despre predicțiile 🧠 ale Radarului (din-radar-bilant.json, urcat de colector): doar cheile știute,
+  // cifrele numere sau null (lipsa = null, nu 0), verdictul ei ca text scurt. Cheia KV „busolaRetea”, citită de pagini cu GET
+  if(action==="busolaRetea"){
+    const r=corp&&corp.retea,la=nr(corp&&corp.la);
+    if(!(la>0)||!r||typeof r!=="object")return json({error:"Lipseste la sau retea"},400);
+    const intreg=x=>Number.isInteger(x)&&x>=0,cifra=x=>x===null||x===undefined||(typeof x==="number"&&Number.isFinite(x));
+    if(!intreg(r.judecate)||!intreg(r.independente)||!["brier","brierBaza","castig","icJos","icSus"].every(k=>cifra(r[k]))||typeof r.verdict!=="string"||r.verdict.length>40)return json({error:"Bilant nevalid"},400);
+    const retea={judecate:r.judecate,independente:r.independente,brier:r.brier??null,brierBaza:r.brierBaza??null,castig:r.castig??null,icJos:r.icJos??null,icSus:r.icSus??null,verdict:r.verdict};
+    await env.ISTORIC.put("busolaRetea",JSON.stringify({la,retea}));return json({ok:true});
   }
   if(action==="prob"){
     const bot=idBot(corp&&corp.bot),rez=corp&&corp.rez;if(!bot||!rez||typeof rez!=="object")return json({error:"Lipseste bot sau rez"},400);

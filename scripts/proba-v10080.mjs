@@ -90,7 +90,7 @@ await test("(1) pragul „dovedită”: toate patru; motivele în ordine (în lu
   const v = { luni: 11, luniGata: 11, nIndep: 300, reper: "🎲", brier: 0.17, brierReper: 0.18, brierLog: 0.175, ic: [0.01, 0.09], icLog: [0.005, 0.04], bss3: 0.02, logloss: 0.5, loglossReper: 0.52, loglossLog: 0.51 };
   assert.deepEqual(Retea.decide(v), { dovedita: true, motiv: null });
   assert.equal(Retea.decide({ ...v, luniGata: 6 }).motiv, "verificarea în lucru: 6 din 11 luni");
-  assert.equal(Retea.decide({ ...v, nIndep: 48 }).motiv, "prea puține cazuri: 48 din 100");
+  assert.match(Retea.decide({ ...v, nIndep: 48 }).motiv, /^prea puține cazuri: 48 din 100( · încă ~\d+ (de )?(lună|luni|an|ani))?$/, "v100.95 adaugă „încă ~N luni” când există luni judecate");
   assert.equal(Retea.decide({ ...v, ic: [-0.01, 0.05] }).motiv, "nu bate 🎲 (Brier 0,170 față de 0,180)");
   assert.equal(Retea.decide({ ...v, icLog: [-0.002, 0.03] }).motiv, "nu face mai mult decât o formulă simplă");
   assert.equal(Retea.decide({ ...v, bss3: -0.01 }).motiv, "pică pe ultimele 3 luni");

@@ -22,6 +22,15 @@ export function situatiiRetea(pune) {
   const m1 = { directie: { tinta: "directie", versiune: R.VERSIUNE, la: ACUM - 3600000, verificare: null } }, m3 = { directie: { ...m1.directie, la: ACUM - 3 * 864e5 } };
   pune("rețeaua: capul", "retea", "antet", R.antet(m1, ACUM), [["titlu", "titlu"], ["sub", "deCe"]]);
   pune("rețeaua: capul, modelul vechi", "retea", "antet", R.antet(m3, ACUM), [["titlu", "titlu"], ["sub", "deCe"]]);
+  // v100.95 (ideea 1): rândul Busolei din „Cum s-a verificat” (Retea.textBusola, pus primul de subsol) - nimic judecat, prea puține, bate /
+  // mai prost / n-am aflat, fără cifre; fiecare și cu bilanțul vechi de 3 zile
+  const BB = { judecate: 240, independente: 131, brier: 0.2101, brierBaza: 0.2402, castig: 0.125, icJos: 0.02, icSus: 0.2, verdict: "bate rata de bază" };
+  const BUS = { "nimic judecat": { ...BB, judecate: 0, independente: 0, brier: null, brierBaza: null, verdict: "prea puține" }, "prea puține": { ...BB, judecate: 12, independente: 9, verdict: "prea puține" },
+    "bate rata de bază": BB, "mai prost": { ...BB, verdict: "mai prost" }, "n-am aflat": { ...BB, verdict: "n-am aflat" }, "fără cifre": { ...BB, brier: null, brierBaza: null, verdict: "n-am aflat" } };
+  for (const [sit, r] of Object.entries(BUS)) {
+    pune("busola: " + sit, "retea", "subsol", { t: R.textBusola({ la: ACUM - 3600000, retea: r }, ACUM) }, [["t", "raport"]]);
+    pune("busola: " + sit + ", bilanț vechi", "retea", "subsol", { t: R.textBusola({ la: ACUM - 3 * 864e5, retea: r }, ACUM) }, [["t", "raport"]]);
+  }
   // v100.93 (arborii, a treia părere 🌳): aceleași rânduri cu amândouă familiile - rețeaua dovedită, arborii pe toate stările (+ „față de 🧠”
   // în subsol, pe plus și pe minus); direcția cu amândouă nedovedite („cât dat cu banul” o singură dată); doar arborii (rețeaua lipsă);
   // capul cu amândouă (arborii vechi / amândouă vechi); poarta pe două rânduri

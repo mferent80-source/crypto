@@ -32,12 +32,13 @@ import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
+import { bilantDinBusola } from "./lib/din-busola.mjs";   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠
 import { unesteZile } from "../retea/date-t212.mjs";   // v101.64 (L2, revizia 🟡6): barele zilnice se adună peste 2 ani
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.64";
+const VERSIUNE_COLECTOR = "v101.65";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -988,10 +989,10 @@ async function turaIdeiZi() {
     const castig = {}; inchise.forEach((t) => { if (/_US_EQ$/.test(t.ticker)) castig[t.ticker] = (castig[t.ticker] || 0) + t.rezultat; });
     // ale lui intai (actiunile pe care a castigat + lista lui), apoi Nasdaq-100: la dubluri ramane varianta cu istoricul lui
     const tickere = [...new Set(Object.keys(castig).filter((k) => castig[k] > 0).concat(lista.map((x) => x.replace(/\./g, "-") + "_US_EQ"), NDX.map((x) => x + "_US_EQ")))];
-    const bareIdei = new Map();   // v101.64 (L2): barele aduse pentru idei, refolosite la cifrele 🧠/🌳
+    const bareIdei = new Map(), randuriIdei = new Map();   // v101.64 (L2): barele aduse pentru idei, refolosite la cifrele 🧠/🌳; v101.65 (ideea 2): și rândurile brute, scrise în data/retea/zile
     const r = await turaIdeiModul({ tickere, inchise, Idei, Reveniri, Probabilitati, ProfilMoneda, jurnal, simbol: (tk) => T212.simbol(tk), acum: Date.now(), pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       // v93: bareToate - la 8 dimineata ultima zi de bursa e INCHISA (bare() o arunca: ideile erau cu o zi in urma)
-      cereBare: async (tk) => { const b = GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []); bareIdei.set(tk, b); return b; },
+      cereBare: async (tk) => { const rd = (await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []; randuriIdei.set(tk, rd); const b = GridCalcul.bareToate(rd); bareIdei.set(tk, b); return b; },
       ndx: new Set(NDX), rezumat: Acasa.rezumatActiune,
       cereRezultate: async (tk) => { const d = await cere("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); return d && d.data || null; } });
     const urm = Idei.urmarire(id && Array.isArray(id.istoric) ? id.istoric : [], r.preturi, Date.now());
@@ -1010,6 +1011,9 @@ async function turaIdeiZi() {
     } catch (e) { jurnal("idei: a doua părere", e.message); }
     await trimite("/api/t212?action=idei", { la: Date.now(), zi, actiuni: r.actiuni, restul: r.restul, reveniri: r.reveniri, dovadaReveniri: r.dovadaReveniri, urmarireReveniri: urmRev, judecate: r.judecate, trecute: r.trecute, urmarire: urm, ndx: r.ndx });
     m.ideiZi = zi;
+    // v101.65 (ideea 2): universul zilnic întreg - barele aduse oricum pentru idei (Nasdaq-100 + ale lui, 2 ani) intră în data/retea/zile,
+    // unite peste cele vechi; rotația de noapte (după vechimea fișierului) trece singură la ceilalți. După idei: o eroare aici nu lasă ziua fără ele
+    try { let nz = 0; for (const [tk, rd] of randuriIdei) if (scrieZileTicker(tk, rd)) nz++; jurnal("idei: bare zilnice scrise pentru rețea:", cate(nz, "ticker", "tickere"), "din", randuriIdei.size); } catch (e) { jurnal("idei: barele zilnice", e.message); }
   } catch (e) { jurnal("idei ESEC", e.message); }
   ideiInLucru = false;
 }
@@ -1355,6 +1359,13 @@ async function turaProbabilitati() {
 const RETEA_DIR = path.join(DATA, "retea"), RETEA_ORE = path.join(RETEA_DIR, "ore"), RETEA_STARE = path.join(RETEA_DIR, "stare.json"), RETEA_ACUM = path.join(RETEA_DIR, "porneste-acum");
 fs.mkdirSync(RETEA_ORE, { recursive: true });
 const RETEA_ZILE = path.join(RETEA_DIR, "zile"); fs.mkdirSync(RETEA_ZILE, { recursive: true });   // v101.64 (L2): barele zilnice ale acțiunilor
+// v101.65 (ideea 2): barele zilnice ale unui ticker pe disc, unite peste cele vechi (pe „time”, 2 ani) - noaptea (tura rețelei) și dimineața
+// (tura ideilor, ~100 de tickere aduse oricum pentru idei); rânduri goale = nimic de scris (un ticker picat nu golește fișierul); true dacă a scris
+function scrieZileTicker(tk, randuri) {
+  if (!Array.isArray(randuri) || !randuri.length) return false;
+  try { const f = path.join(RETEA_ZILE, String(tk).replace(/[^A-Z0-9_.-]/gi, "") + ".json"); scrieAtomic(f, { la: Date.now(), randuri: unesteZile(citesteJson(f, null), randuri) }); return true; }
+  catch (e) { jurnal("zile: nescrise", tk, e.message); return false; }
+}
 let reteaStare = {}; try { reteaStare = JSON.parse(fs.readFileSync(RETEA_STARE, "utf8")) || {}; } catch { reteaStare = {}; }
 reteaStare.inLucru = false;
 const reteaFis = (s) => path.join(RETEA_ORE, String(s).replace(/[^A-Z0-9_]/gi, "") + ".json");
@@ -1431,7 +1442,7 @@ async function turaReteaColector() {
       return [...t].filter((x) => /_US_EQ$/.test(x));
     },
     cereZile: (tk) => cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)),
-    scrieZile: (tk, randuri) => { try { const f = path.join(RETEA_ZILE, String(tk).replace(/[^A-Z0-9_.-]/gi, "") + ".json"); scrieAtomic(f, { la: Date.now(), randuri: unesteZile(citesteJson(f, null), randuri) }); } catch (e) { jurnal("zile: nescrise", tk, e.message); } },
+    scrieZile: scrieZileTicker,   // v101.65 (ideea 2): aceeași funcție ca în tura ideilor
     vechimeZile: (tk) => { const j = citesteJson(path.join(RETEA_ZILE, String(tk).replace(/[^A-Z0-9_.-]/gi, "") + ".json"), null); return (j && Number(j.la)) || 0; },   // revizia (🟡3): rotația tickerelor
     tradeuri: async () => { const h = await cere("/api/t212?action=istoric"); return T212.perechi((h && h.umpleri) || []).inchise; },
     scrieTradeuri: (l) => scrieAtomic(path.join(RETEA_DIR, "trade-uri.json"), l),
@@ -1550,6 +1561,20 @@ async function turaDecizii() {
   deciziiInLucru = false;
 }
 
+// v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠 ale Radarului - fișierul ei de pe același PC (cron-ul Busolei îl scrie; pe pagina ei
+// nu apare), urcat în KV când `la` se schimbă; se uită cel mult o dată la 10 minute; fișier lipsă/stricat = nimic (fără jurnal la fiecare minut)
+const BUSOLA_BILANT = process.env.BUSOLA_BILANT || "C:/Users/Cimin/busola/cron/stare/din-radar-bilant.json";
+let bilantLa = 0, bilantVazutLa = 0, bilantInLucru = false;
+async function turaBilantBusola() {
+  if (bilantInLucru || Date.now() - bilantVazutLa < 10 * 60000) return;
+  bilantVazutLa = Date.now();
+  const b = bilantDinBusola(citesteJson(BUSOLA_BILANT, null), bilantLa); if (!b) return;
+  bilantInLucru = true;
+  try { await trimite("/api/istoric-bot?action=busolaRetea", b); bilantLa = b.la; jurnal("busola: bilanțul 🧠 urcat -", cate(b.retea.judecate, "predicție judecată", "predicții judecate") + " ·", b.retea.verdict); }
+  catch (e) { jurnal("busola: bilanțul ESEC", e.message); }
+  bilantInLucru = false;
+}
+
 async function bucla() {
   try { await tura(); } catch (e) { jurnal("tură", e.message); }
   // v98.2 (audit 28.09, #1): planurile si poza cer amandoua pozitiile T212 - una dupa alta, nu deodata (serverul leaga oricum
@@ -1569,6 +1594,7 @@ async function bucla() {
   turaSocotealaActiuni().catch((e) => jurnal("socoteala actiuni", e.message));   // v101.33
   turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message));
   turaPaznic().catch(() => {});
+  turaBilantBusola().catch((e) => jurnal("busola bilanț", e.message));   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠, în KV
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).catch((e) => jurnal("idei/dimineata", e.message));
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut

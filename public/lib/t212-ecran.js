@@ -641,7 +641,10 @@ function t212ProfilPoarta(p) {
   if (cmp) h += '<p class="' + (cmp.strans ? "tbWarn" : "tbSub") + '">📐 ' + (sp.alTau ? "Cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + "): " : "") + escapeHtml(cmp.text) + '</p>';
   if (sr) h += '<p class="tbSub">⚡ ' + escapeHtml(sr) + '</p>';
   if (p.prob && p.prob.length) h += '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · ' + (sp && sp.alTau ? "cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + ") și ținta de mai sus" : "cu stopul și ținta de mai sus") + ', cât de des s-a întâmplat pe acțiunea asta în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>';
-  h += t212ReteaHtml({ acum: Date.now(), pret: baza, stop: sp && sp.stop, tinta: p.niv && p.niv.tinta, ticker: p.ticker }, p.bareZi, p.prob, { ticker: p.ticker, pornit: Date.now() });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus”; revizia 🔵9: barele ÎNCHISE (bareBursa), 🟡5: costul tipic */
+  // v100.95 (ideea 4): „un trade ca ăsta” pe SUMA propusă de poartă (aceeași formulă ca „Cât cumperi”: 1% din cont la stop, plafon 20%);
+  // fără cont, fără stop sau cu stopul peste intrare marime dă null -> cost null -> t212ReteaHtml ia rezerva (mediana trade-urilor lui)
+  var ms = baza && sp && sp.stop > 0 ? ActiuniSemnale.marime({ intrare: baza, stop: sp.stop, cont: p.tot, fx: t212Fx() }) : null;
+  h += t212ReteaHtml({ acum: Date.now(), pret: baza, stop: sp && sp.stop, tinta: p.niv && p.niv.tinta, ticker: p.ticker }, p.bareZi, p.prob, { ticker: p.ticker, pornit: Date.now(), cost: ms && ms.suma > 0 ? ms.suma : null });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus”; revizia 🔵9: barele ÎNCHISE (bareBursa), 🟡5: costul tipic */
   return h ? '<div class="t212ProfilPoarta">' + h + '</div>' : "";
 }
 function t212PreturiPoarta(p) {

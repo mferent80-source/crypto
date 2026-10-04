@@ -167,11 +167,19 @@ var Retea = (function () {
     }
     var p = sum / model.ansamblu.length; return isFinite(p) ? p : null;
   }
+  // v100.95 (ideea 3): la ritmul de până acum (cazuri independente pe lună judecată - istoria se adună o lună pe lună), cam cât mai
+  // durează până la MIN_INDEP; peste 3 ani se spune în ani; fără luni judecate sau fără cazuri nu există ritm
+  function incaLuni(v) {
+    var n = nr(v.nIndep), lg = nr(v.luniGata);
+    if (n === null || !(n > 0) || n >= MIN_INDEP || lg === null || !(lg >= 1)) return "";
+    var m = Math.ceil((MIN_INDEP - n) / (n / lg));
+    return " · încă ~" + (m > 36 ? cate(Math.ceil(m / 12), "an", "ani") : cate(m, "lună", "luni"));
+  }
   // pragul „dovedită” (specul): toate patru, față de reper ȘI de formula simplă; altfel motivul, în ordinea în care cade
   function decide(v) {
     if (!v) return { dovedita: false, motiv: "neverificată încă" };
     if (nr(v.luniGata) !== null && nr(v.luni) !== null && v.luniGata < v.luni) return { dovedita: false, motiv: "verificarea în lucru: " + v.luniGata + " din " + cate(v.luni, "lună", "luni") };
-    if (!(nr(v.nIndep) >= MIN_INDEP)) return { dovedita: false, motiv: "prea puține cazuri: " + (nr(v.nIndep) || 0) + " din " + MIN_INDEP };
+    if (!(nr(v.nIndep) >= MIN_INDEP)) return { dovedita: false, motiv: "prea puține cazuri: " + (nr(v.nIndep) || 0) + " din " + MIN_INDEP + incaLuni(v) };
     var rep = v.reper || "🎲";
     if (!(v.ic && v.ic[0] > 0)) return { dovedita: false, motiv: "nu bate " + rep + " (Brier " + num(v.brier, 3) + " față de " + num(v.brierReper, 3) + ")" };
     if (!(v.icLog && v.icLog[0] > 0)) return { dovedita: false, motiv: "nu face mai mult decât o formulă simplă" };
@@ -291,6 +299,20 @@ var Retea = (function () {
   // „Cum s-a verificat”: un rând pe țintă - cazurile independente, Brier rețea / reper / formula simplă, IC față de reper
   // v100.93: + un rând 🌳 pe țintă, cu cazurile LUI (pot diferi de ale rețelei când lunile judecate diferă - revizia 04.10): Brier, IC și „față de 🧠” (BSS al arborilor cu rețeaua drept reper, cu IC)
   // v100.94 (revizia 🔵8): o = { actiuni } - pe pagina T212 doar țintele de pe acțiuni, pe crypto doar cele crypto (fiecare pagină își citește piața)
+  // v100.95 (ideea 1): rândul Busolei - ce a aflat EA despre predicțiile 🧠 trimise de Radar (din-radar-bilant.json de pe PC-ul lui, urcat
+  // de colector în KV); b = { la, retea: { judecate, independente, brier, brierBaza, verdict } }; verdictul ei, în cuvintele ei; null fără bilanț
+  var VERDICT_BUSOLA = { "bate rata de bază": "bate rata de bază", "mai prost": "mai prost decât rata de bază", "n-am aflat": "n-am aflat (IC peste zero)" };
+  function textBusola(b, acum) {
+    var r = b && b.retea; if (!r || typeof r !== "object") return null;
+    var j = nr(r.judecate) || 0, ind = nr(r.independente) || 0, la = nr(b.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
+    var vechi = z !== null && z >= 2 ? " · bilanț de acum " + cate(z, "zi", "zile") : "";
+    if (!(j > 0)) return "🧭 Busola n-a judecat încă nicio predicție 🧠 (le judecă după ce le trece orizontul)" + vechi + ".";
+    var cap = "🧭 Busola a judecat " + cate(j, "predicție", "predicții") + " 🧠 (" + ind + " independente)";
+    if (r.verdict === "prea puține") return cap + ": prea puține ca să judece (de la 100 independente)" + vechi + ".";
+    var br = nr(r.brier), bb = nr(r.brierBaza), v = VERDICT_BUSOLA[r.verdict] || String(r.verdict || "");
+    return cap + (br !== null && bb !== null ? ": Brier " + num(br, 3) + " față de " + num(bb, 3) + " la rata de bază" : "") + " ⇒ " + v + vechi + ".";
+  }
+  // v100.95: cu o.busola (bilanțul Busolei) rândul ei stă primul - doar pe paginile crypto (Busola judecă boții, nu acțiunile)
   function subsol(modele, arbori, o) {
     var eT = function (k) { return /-t212$/.test(k); }, vrea = function (k) { return o && o.actiuni ? eT(k) : !eT(k); };
     var out = Object.keys(NUME).filter(function (k) { return vrea(k) && modele && modele[k] && modele[k].versiune === VERSIUNE; }).map(function (k) {
@@ -304,6 +326,7 @@ var Retea = (function () {
       out.push("🌳 " + NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "")
         + (vs && nr(vs.bss) !== null && vs.ic ? " · față de 🧠: " + semn(vs.bss, 3) + " (IC " + semn(vs.ic[0], 3) + "…" + semn(vs.ic[1], 3) + ")" : "") + ".");
     });
+    if (o && !o.actiuni && o.busola) { var tb = textBusola(o.busola, o.acum); if (tb) out.unshift(tb); }
     return out;
   }
   // rândul gri de la poarta fișei; v100.93: cu arborii (pzA, vdA) două rânduri (despărțite cu „\n”): cifrele celor două familii, apoi stările lor
@@ -311,6 +334,6 @@ var Retea = (function () {
     if (!pzA || !vdA || nr(pzA.p) === null) return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + ".";
     return "Un bot ca ăsta ar ieși pe plus: 🧠 " + PC(pz.p) + " · 🌳 " + PC(pzA.p) + " · rata ta: " + PC(pz.rata) + ".\n🧠 " + eticheta(vd) + " · 🌳 " + eticheta(vdA) + ".";
   }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, INTERVAL_T212: INTERVAL_T212, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, inchisZi: inchisZi, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, costTipic: costTipic, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, INTERVAL_T212: INTERVAL_T212, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, inchisZi: inchisZi, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, costTipic: costTipic, randuri: randuri, antet: antet, textBusola: textBusola, subsol: subsol, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;
