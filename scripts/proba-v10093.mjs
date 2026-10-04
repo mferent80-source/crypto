@@ -93,5 +93,30 @@ await test("(6) Retea.intrariBot / intrarePornire sunt singurul producător de i
   const it = R.intrariBot(bare, o, btc); assert.ok(it && it.lista.length >= 5, "intrariBot: " + (it ? it.lista.length : "null")); assert.ok(it.lista.every((q) => Array.isArray(q.x) && q.cod && q.tinta));
 });
 
+await test("(7) antrenorul arborilor pe un dosar sintetic (2 monede + BTC, 3.600 de bare de 1 h, ca proba rețelei): scrie modele-arbori.json cu verificare (atinge-24) și cheia; a doua rulare ia lunile din cache; Arbori.prezice citește modelul", async () => {
+  const dir = path.join(os.tmpdir(), "arbori-proba-" + Date.now()), ore = path.join(dir, "data", "retea", "ore"); fs.mkdirSync(ore, { recursive: true });
+  const r = (() => { let a = 11; return () => ((a = (a * 1103515245 + 12345) % 2147483648) / 2147483648); })(), T0 = Date.UTC(2026, 0, 1);
+  const bare = (p0) => { const l = []; let c = p0; for (let i = 0; i < 3600; i++) { const o = c; c = c * (1 + (r() - 0.5) * 0.02); l.push({ time: T0 + i * 3600000, open: o, high: Math.max(o, c) * 1.003, low: Math.min(o, c) * 0.997, close: c, volume: 10 }); } return l; };
+  for (const s of ["BTC_USDT_PERP", "AAA_USDT_PERP", "BBB_USDT_PERP"]) fs.writeFileSync(path.join(ore, s + ".json"), JSON.stringify(bare(s === "BTC_USDT_PERP" ? 60000 : 1)));
+  const run = () => execFileSync(process.execPath, [path.join(RAD, "retea", "antreneaza-arbori.mjs"), "--rad", dir, "--buget-min", "5", "--tinta", "atinge-24", "--seminte", "1", "--max-randuri", "1500"], { encoding: "utf8", timeout: 600000 });
+  const o1 = run(), m = JSON.parse(fs.readFileSync(path.join(dir, "data", "retea", "modele-arbori.json"), "utf8"));
+  assert.equal(m.versiune, "a1"); assert.ok(m.cheie && m.modele["atinge-24"] && Array.isArray(m.modele["atinge-24"].semi) && m.modele["atinge-24"].versiune === "a1", o1);
+  const v = m.modele["atinge-24"].verificare; assert.ok(v && typeof v.brier === "number" && typeof v.dovedita === "boolean" && "vsRetea" in v, JSON.stringify(v));
+  assert.match(run(), /luni din cache/);
+  const A = incarcaArbori(), x = Array.from({ length: m.modele["atinge-24"].nIn }, () => 0); assert.ok(typeof A.prezice(m.modele["atinge-24"], x) === "number", "Arbori.prezice nu citește modelul");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+await test("(8) ruta arbori (serverul local): POST refuză fără modele/versiune, model fără semi, > 12 modele; acceptă un model bun; GET îl dă înapoi; restaurez ce era", async () => {
+  const T = (fs.readFileSync(path.join(RAD, ".dev.vars"), "utf8").match(/^APP_API_TOKEN=(.*)$/m) || [])[1].trim().replace(/^"|"$/g, ""), U = "http://127.0.0.1:8788/api/istoric-bot?action=arbori", H = { "content-type": "application/json", "x-app-token": T, authorization: "Bearer " + T, origin: "http://127.0.0.1:8788" };   /* POST cere origin = originea rutei (sameOrigin) */
+  const post = async (b) => (await fetch(U, { method: "POST", headers: H, body: JSON.stringify(b) })).status, get = async () => (await (await fetch(U, { headers: H })).json()).arbori;
+  const era = await get();
+  assert.equal(await post({ versiune: "a1" }), 400); assert.equal(await post({ versiune: "a1", modele: { x: { baza: 0, pas: 0.08 } } }), 400);
+  assert.equal(await post({ versiune: "a1", modele: Object.fromEntries(Array.from({ length: 13 }, (_, i) => ["t" + i, { baza: 0, pas: 0.08, semi: [[[[-1, 0.1]]]] }])) }), 400);
+  const bun = { la: Date.now(), versiune: "a1", modele: { "atinge-24": { tinta: "atinge-24", versiune: "a1", la: Date.now(), n: 10, nIn: 3, baza: -0.4, pas: 0.08, semi: [[[[0, 0.5, 1, 2], [-1, 0.1], [-1, -0.2]]]], verificare: null } } };
+  assert.equal(await post(bun), 200); const dupa = await get(); assert.equal(dupa && dupa.modele["atinge-24"].baza, -0.4);
+  assert.equal(await post(era && era.modele ? { la: era.la, versiune: era.versiune, modele: era.modele } : { la: Date.now(), versiune: "a1", modele: {} }), 200);   /* restaurez MEREU - altfel pagina ar servi modelul de test */
+});
+
 console.log("\n" + (pica ? "V100.93 PICA · " + pica + " din " + (ok + pica) : "V100.93 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

@@ -70,6 +70,7 @@ export async function onRequestGet({request,env}){
   // v100.85 (reveniri + short): istoricul listelor de monede, urmărirea lor și notările (le scrie tura sugestiilor, o dată pe zi)
   if(action==="sugestii"){let s=null,l=[];try{s=JSON.parse(await env.ISTORIC.get("sugestii")||"null")}catch{s=null}try{l=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{l=[]}return json({sugestii:s,istoric:Array.isArray(l)?l:[]})}
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
+  if(action==="arbori"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("arbori")||"null")}catch{r=null}return json({arbori:r})}   // v100.93: arborii (gradient boosting), aceeași formă ca retea
   if(action==="paza"){let p=null;try{p=JSON.parse(await env.ISTORIC.get("paza-boti")||"null")}catch{p=null}return json({paza:p})}   // v100.90 (I-513): starea Busolei pe boți, cu „de când”
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
@@ -103,7 +104,7 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.25: colectorul trimite botii inchisi pe bucati; se unesc cu arhiva (compact, fara dubluri); „completa” nu se mai pierde
   if(action==="botiInchisi"){
@@ -303,6 +304,16 @@ export async function onRequestPost({request,env}){
     const bun=x=>x&&typeof x==="object"&&x.norm&&Array.isArray(x.norm.m)&&x.norm.m.length<=64&&Array.isArray(x.ansamblu)&&x.ansamblu.length>=1&&x.ansamblu.length<=5;
     if(Object.keys(m).length>12||!Object.values(m).every(bun))return json({error:"Modele nevalide"},400);
     await env.ISTORIC.put("retea",JSON.stringify({la:nr(corp.la)||Date.now(),versiune:v,modele:m}));return json({ok:true,n:Object.keys(m).length});
+  }
+  // v100.93 (arborii): modelele de arbori de la colector - cel mult 12, fiecare cu baza/pas numere și semi = ≤ 5 semințe × ≤ 200 de arbori de ≤ 64 de noduri
+  // ([k, prag, stânga, dreapta] sau [-1, valoare]); corpul ≤ 2 MB (mai sus). Cheia KV „arbori”, citită de pagini cu GET
+  if(action==="arbori"){
+    const m=corp&&corp.modele,v=corp&&typeof corp.versiune==="string"?corp.versiune.slice(0,16):null;
+    if(!m||typeof m!=="object"||!v)return json({error:"Lipseste modele sau versiune"},400);
+    const nod=x=>Array.isArray(x)&&(x[0]===-1?x.length===2&&typeof x[1]==="number":x.length===4&&x.every(y=>typeof y==="number"));
+    const bun=x=>x&&typeof x==="object"&&typeof x.baza==="number"&&typeof x.pas==="number"&&Array.isArray(x.semi)&&x.semi.length>=1&&x.semi.length<=5&&x.semi.every(s=>Array.isArray(s)&&s.length<=200&&s.every(a=>Array.isArray(a)&&a.length>=1&&a.length<=64&&a.every(nod)));
+    if(Object.keys(m).length>12||!Object.values(m).every(bun))return json({error:"Modele nevalide"},400);
+    await env.ISTORIC.put("arbori",JSON.stringify({la:nr(corp.la)||Date.now(),versiune:v,modele:m}));return json({ok:true,n:Object.keys(m).length});
   }
   if(action==="prob"){
     const bot=idBot(corp&&corp.bot),rez=corp&&corp.rez;if(!bot||!rez||typeof rez!=="object")return json({error:"Lipseste bot sau rez"},400);

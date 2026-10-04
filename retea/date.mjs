@@ -20,7 +20,8 @@ export function incarcaModulele(radCod) {
   const AS = new Function("GridCalcul", src("actiuni-semnale.js") + "; return ActiuniSemnale;")(G);
   const P = new Function("GridCalcul", "ActiuniSemnale", src("probabilitati.js") + "; return Probabilitati;")(G, AS);
   const R = new Function("Probabilitati", src("retea.js") + "; return Retea;")(P);
-  return { G, P, R };
+  const A = new Function("Retea", "Probabilitati", src("arbori.js") + "; return Arbori;")(R, P);   // v100.93: arborii (aceleași intrări, altă aritmetică)
+  return { G, P, R, A };
 }
 const DIRS = (rad) => [path.join(rad, "data", "retea", "ore"), path.join(rad, "data", "istoric-1h")];
 export function simboluri(rad) {
