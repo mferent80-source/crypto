@@ -71,14 +71,17 @@ var Retea = (function () {
     return { x: x.concat(f.x), glob: glob, rata: rata, n: n };
   }
   // ---- v100.94 (L2, acțiunile T212): trăsăturile ZILNICE - aceeași funcție pentru istoric (antrenor) și pentru „acum” (pagina) ----
-  // ultima bară zilnică ÎNCHISĂ la momentul t: b[i].t + ZI <= t (bara zilei D e închisă abia a doua zi); -1 dacă nu e niciuna
-  function indexZi(b, t) { var lo = 0, hi = (Array.isArray(b) ? b.length : 0) - 1, i = -1; while (lo <= hi) { var m = (lo + hi) >> 1; if (b[m].t + ZI <= t) { i = m; lo = m + 1; } else hi = m - 1; } return i; }
+  // bara zilei D (t = începutul ședinței, 13:30 UTC la Yahoo, sau miezul nopții la alte surse) e ÎNCHISĂ de la 01:30 UTC a zilei D+1 (după after-hours):
+  // dimineața, la 8 ora României, bara de ieri e închisă; în timpul ședinței bara zilei nu e. Aceeași regulă la antrenor și pe pagină
+  function inchisZi(t) { return Math.floor(t / ZI) * ZI + ZI + 1.5 * ORA; }
+  // ultima bară zilnică ÎNCHISĂ la momentul t; -1 dacă nu e niciuna
+  function indexZi(b, t) { var lo = 0, hi = (Array.isArray(b) ? b.length : 0) - 1, i = -1; while (lo <= hi) { var m = (lo + hi) >> 1; if (inchisZi(b[m].t) <= t) { i = m; lo = m + 1; } else hi = m - 1; } return i; }
   function sigmaZi(b, i, n) { var s = 0, s2 = 0; for (var j = i - n + 1; j <= i; j++) { var r = Math.log(b[j].c / b[j - 1].c); s += r; s2 += r * r; } var m = s / n, v = s2 / n - m * m; return v > 0 ? Math.sqrt(v) : 0; }
   function mediaZi(b, i, n) { var s = 0; for (var j = i - n + 1; j <= i; j++) s += b[j].c; return s / n; }
   // QQQ la aceeași zi (ultima bară a lui închisă până la ziua barei i, la cel mult o zi distanță): randamentul pe 5 zile în volatilitatea lui pe 20; null fără bară la zi sau sub 25 de bare
-  function qqqLa(q, t) { if (!Array.isArray(q)) return null; var j = indexZi(q, t + ZI); if (j < 25 || Math.abs(q[j].t - t) > ZI) return null; var s = sigmaZi(q, j, 20); return s > 0 ? Math.log(q[j].c / q[j - 5].c) / (s * Math.sqrt(5)) : 0; }
+  function qqqLa(q, t) { if (!Array.isArray(q)) return null; var j = -1; for (var k = q.length - 1; k >= 0; k--) if (q[k].t <= t) { j = k; break; } if (j < 25 || t - q[j].t > ZI) return null; var s = sigmaZi(q, j, 20); return s > 0 ? Math.log(q[j].c / q[j - 5].c) / (s * Math.sqrt(5)) : 0; }
   // TRĂSĂTURILE la bara zilnică închisă i: doar b[0..i] și QQQ de până la aceeași zi; rata = rata lui pe acțiune (trasă spre medie) sau 0,5
-  // -> { x: 14 cifre tăiate la ±10, s1 (volatilitatea zilnică pe 20 de zile), c, stare, t (ziua de după bara i, 00:00 UTC) }; null sub 250 de zile, fără QQQ la zi sau fără mișcare
+  // -> { x: 14 cifre tăiate la ±10, s1 (volatilitatea zilnică pe 20 de zile), c, stare, t (momentul închiderii barei i: 01:30 UTC a doua zi) }; null sub 250 de zile, fără QQQ la zi sau fără mișcare
   function trasaturiZilnice(b, i, qqq, rata) {
     if (!Array.isArray(b) || !(i >= 250) || i >= b.length) return null;
     var c = b[i].c, s20 = sigmaZi(b, i, 20), s250 = sigmaZi(b, i, 250); if (!(c > 0) || !(s20 > 0) || !(s250 > 0)) return null;
@@ -88,7 +91,7 @@ var Retea = (function () {
     var x = [r(5) / (s20 * Math.sqrt(5)), r(20) / (s20 * Math.sqrt(20)), r(60) / (s20 * Math.sqrt(60)), Math.log(s20), Math.log(s20 / s250), Math.log(mx / c) / s20,
       Math.log(c / mediaZi(b, i, 50)), Math.log(c / mediaZi(b, i, 200)), qq, st && st.indexOf("sus") === 0 ? 1 : st && st.indexOf("jos") === 0 ? -1 : 0, st && /miscare$/.test(st) ? 1 : 0,
       Math.sin(2 * Math.PI * zi / 7), Math.cos(2 * Math.PI * zi / 7), rt === null ? 0.5 : rt].map(taie);
-    return { x: x, s1: s20, c: c, stare: st || null, t: b[i].t + ZI };
+    return { x: x, s1: s20, c: c, stare: st || null, t: inchisZi(b[i].t) };
   }
   // intrările pe țintă T212 = trăsăturile + ce cere ținta: distanța la stop (simplă, în volatilități pe o zi) și semnul; la cursă ambele distanțe (pe 5 zile);
   // la „un trade ca ăsta”: valoarea cumpărată (log), rata lui globală, câte trade-uri a avut pe acțiune (log)
@@ -298,6 +301,6 @@ var Retea = (function () {
     if (!pzA || !vdA || nr(pzA.p) === null) return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + ".";
     return "Un bot ca ăsta ar ieși pe plus: 🧠 " + PC(pz.p) + " · 🌳 " + PC(pzA.p) + " · rata ta: " + PC(pz.rata) + ".\n🧠 " + eticheta(vd) + " · 🌳 " + eticheta(vdA) + ".";
   }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
+  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, inchisZi: inchisZi, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, randuri: randuri, antet: antet, subsol: subsol, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;

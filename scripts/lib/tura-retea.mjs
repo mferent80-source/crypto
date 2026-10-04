@@ -3,8 +3,9 @@
 // într-un proces SEPARAT (prioritate scăzută, oprit după 35 de minute - colectorul nu încarcă TensorFlow), (4) modelele urcate în KV
 // (`retea`). Antrenorul care pică lasă modelul de ieri (pe disc și în KV). d.forta = o tură acum, oricând (steagul porneste-acum).
 // deps: { acum, stare, forta, eNoapte(t), ziRo(t), simboluri, cereKlines(simbol, end), pauza(ms), citesteOre(s), scrieOre(s, rânduri),
-//         boti() -> [JurnalTrade + simbol], scrieBoti(l), porneste() -> Promise<{cod, minute}>, citesteModele(), trimite, jurnal, scrieStare(st) }
-const ORA = 3600000, ZILE = 400, PAGINI = 300;
+//         boti() -> [JurnalTrade + simbol], scrieBoti(l), porneste() -> Promise<{cod, minute}>, citesteModele(), trimite, jurnal, scrieStare(st),
+//         v101.64 (L2, opționale): tickereZile() -> [ticker], cereZile(ticker) -> {randuri}, scrieZile(ticker, randuri), tradeuri() -> perechile închise, scrieTradeuri(l) }
+const ORA = 3600000, ZILE = 400, PAGINI = 300, ZILE_PE_NOAPTE = 40;   // v101.64 (L2): cel mult 40 de tickere cu bare zilnice pe noapte (o cerere Yahoo pe ticker)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const tBara = (r) => Number(r && r.time);
 // rândurile de pe disc (depozitul de 400 de zile + istoric-1h): fără dubluri (cel de mai târziu în listă câștigă - istoric-1h e mai proaspăt),
@@ -53,6 +54,16 @@ export async function turaRetea(d) {
       catch (e) { d.jurnal("retea: istoria " + s, e.message); }
     }
     try { const l = await d.boti(); d.scrieBoti(l); d.jurnal("retea: " + cate(l.length, "bot închis", "boți închiși") + " pentru rezultatul tău"); } catch (e) { d.jurnal("retea: boții", e.message); }
+    // v101.64 (L2): barele zilnice ale acțiunilor (2 ani, o cerere pe ticker, cel mult ZILE_PE_NOAPTE pe noapte, QQQ întâi) + perechile închise - țintele T212;
+    // un ticker picat nu oprește restul (jurnal); fără deps rămâne ca ieri
+    if (d.tickereZile) {
+      try {
+        const tk = await d.tickereZile(), lista = ["QQQ_US_EQ"].concat(tk.filter((x) => x !== "QQQ_US_EQ")).slice(0, ZILE_PE_NOAPTE); let ok = 0;
+        for (const t of lista) { try { const r = await d.cereZile(t); if (r && Array.isArray(r.randuri) && r.randuri.length) { d.scrieZile(t, r.randuri); ok++; } await d.pauza(1500); } catch (e) { d.jurnal("zile: " + t, e.message); } }
+        d.jurnal("zile: " + ok + " din " + cate(lista.length, "ticker", "tickere") + " cu bare zilnice");
+        const tr = await d.tradeuri(); d.scrieTradeuri(tr); d.jurnal("zile: " + cate(tr.length, "pereche închisă", "perechi închise") + " pentru rezultatul tău pe acțiuni");
+      } catch (e) { d.jurnal("zile", e.message); }
+    }
     const r = await d.porneste();
     d.jurnal("retea: antrenorul a ieșit cu " + r.cod + " după " + cate(r.minute, "minut", "minute"));
     const m = r.cod === 0 ? d.citesteModele() : null;

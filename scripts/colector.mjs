@@ -36,7 +36,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.63";
+const VERSIUNE_COLECTOR = "v101.64";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -987,14 +987,26 @@ async function turaIdeiZi() {
     const castig = {}; inchise.forEach((t) => { if (/_US_EQ$/.test(t.ticker)) castig[t.ticker] = (castig[t.ticker] || 0) + t.rezultat; });
     // ale lui intai (actiunile pe care a castigat + lista lui), apoi Nasdaq-100: la dubluri ramane varianta cu istoricul lui
     const tickere = [...new Set(Object.keys(castig).filter((k) => castig[k] > 0).concat(lista.map((x) => x.replace(/\./g, "-") + "_US_EQ"), NDX.map((x) => x + "_US_EQ")))];
+    const bareIdei = new Map();   // v101.64 (L2): barele aduse pentru idei, refolosite la cifrele 🧠/🌳
     const r = await turaIdeiModul({ tickere, inchise, Idei, Reveniri, Probabilitati, ProfilMoneda, jurnal, simbol: (tk) => T212.simbol(tk), acum: Date.now(), pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       // v93: bareToate - la 8 dimineata ultima zi de bursa e INCHISA (bare() o arunca: ideile erau cu o zi in urma)
-      cereBare: async (tk) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []),
+      cereBare: async (tk) => { const b = GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []); bareIdei.set(tk, b); return b; },
       ndx: new Set(NDX), rezumat: Acasa.rezumatActiune,
       cereRezultate: async (tk) => { const d = await cere("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); return d && d.data || null; } });
     const urm = Idei.urmarire(id && Array.isArray(id.istoric) ? id.istoric : [], r.preturi, Date.now());
     // v101.58 (reveniri): urmărirea acțiunilor pe revenire - pe ticker, de la 14 zile calendaristice (~10 de bursă), după comisionul de conversie
     const urmRev = Reveniri.urmarire(id && Array.isArray(id.istoricReveniri) ? id.istoricReveniri : [], r.preturi, Date.now(), { zile: 14, cost: 0.003, cheie: "ticker" });
+    // v101.64 (L2): a doua (🧠) și a treia părere (🌳) pe idei - „un trade ca ăsta iese pe plus”, cu modelele de pe disc, pe barele aduse deja; fără modele T212 nimic
+    try {
+      const mR = modeleRetea(), mA = modeleArbori();
+      if (mR || mA) {
+        let qqq = bareIdei.get("QQQ_US_EQ") || null; if (!qqq) { try { qqq = GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ")).randuri || []); } catch {} }
+        const cif = (x) => { const b = x && bareIdei.get(x.ticker); if (!b || !qqq) return; const t = { ticker: x.ticker, pornit: Date.now(), cost: 100 };
+          const pz = mR ? Retea.pentruCumparare(mR, t, b, qqq, inchise) : null; if (pz) { const vd = Retea.verdict(mR["rezultat-t212"], Date.now()); x.retea = { p: pz.p, dovedita: !!(vd && vd.dovedita) }; }
+          const pa = mA ? Arbori.pentruCumparare(mA, t, b, qqq, inchise) : null; if (pa) { const va = Arbori.verdict(mA["rezultat-t212"], Date.now()); x.arbori = { p: pa.p, dovedita: !!(va && va.dovedita) }; } };
+        for (const x of [].concat(r.actiuni || [], r.restul || [])) cif(x);
+      }
+    } catch (e) { jurnal("idei: a doua părere", e.message); }
     await trimite("/api/t212?action=idei", { la: Date.now(), zi, actiuni: r.actiuni, restul: r.restul, reveniri: r.reveniri, dovadaReveniri: r.dovadaReveniri, urmarireReveniri: urmRev, judecate: r.judecate, trecute: r.trecute, urmarire: urm, ndx: r.ndx });
     m.ideiZi = zi;
   } catch (e) { jurnal("idei ESEC", e.message); }
@@ -1341,6 +1353,7 @@ async function turaProbabilitati() {
 // BTC pentru „acum” (pagina nouă din Pionex + depozitul de 400 de zile), rezultatul tău la pornire (o dată pe bot și pe model)
 const RETEA_DIR = path.join(DATA, "retea"), RETEA_ORE = path.join(RETEA_DIR, "ore"), RETEA_STARE = path.join(RETEA_DIR, "stare.json"), RETEA_ACUM = path.join(RETEA_DIR, "porneste-acum");
 fs.mkdirSync(RETEA_ORE, { recursive: true });
+const RETEA_ZILE = path.join(RETEA_DIR, "zile"); fs.mkdirSync(RETEA_ZILE, { recursive: true });   // v101.64 (L2): barele zilnice ale acțiunilor
 let reteaStare = {}; try { reteaStare = JSON.parse(fs.readFileSync(RETEA_STARE, "utf8")) || {}; } catch { reteaStare = {}; }
 reteaStare.inLucru = false;
 const reteaFis = (s) => path.join(RETEA_ORE, String(s).replace(/[^A-Z0-9_]/gi, "") + ".json");
@@ -1377,11 +1390,11 @@ function pornireArboriDe(modele, btc) {
 }
 function pornesteAntrenorul() {
   return new Promise((gata) => {
-    const t0 = Date.now(), c = spawn(process.execPath, [path.join(RAD, "retea", "antreneaza.mjs"), "--buget-min", "30"], { cwd: RAD, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    const t0 = Date.now(), c = spawn(process.execPath, [path.join(RAD, "retea", "antreneaza.mjs"), "--buget-min", "45"], { cwd: RAD, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     try { os.setPriority(c.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch {}
     const rand = (x) => String(x).split(/\r?\n/).filter(Boolean).forEach((l) => jurnal("retea:", l.slice(0, 300)));
     c.stdout.on("data", rand); c.stderr.on("data", rand);
-    const ceas = setTimeout(() => { jurnal("retea: antrenorul oprit după 35 de minute"); try { c.kill(); } catch {} }, 35 * 60000);
+    const ceas = setTimeout(() => { jurnal("retea: antrenorul oprit după 50 de minute"); try { c.kill(); } catch {} }, 50 * 60000);   /* v101.64 (ideea 2): 45 de minute buget - țintele T212 în plus, iar lunile rejudecate încăpeau greu în 30 */
     c.on("error", (e) => { clearTimeout(ceas); jurnal("retea: antrenorul nu pornește", e.message); gata({ cod: -1, minute: 0 }); });
     c.on("exit", (cod) => { clearTimeout(ceas); gata({ cod: cod === null ? -1 : cod, minute: Math.round((Date.now() - t0) / 60000) }); });
   });
@@ -1408,6 +1421,18 @@ async function turaReteaColector() {
     scrieOre: (s, r) => { try { scrieAtomic(reteaFis(s), r); } catch (e) { jurnal("retea: ore nescrise", s, e.message); } },
     boti: async () => { const h = simbolPeMoneda(); return JurnalTrade.din(await botiInchisiToti()).map((t) => ({ id: t.id, moneda: t.moneda, simbol: h[t.moneda] || null, dir: t.dir, levier: t.levier, jos: t.jos, sus: t.sus, pasNet: t.pasNet, pus: t.pus, investit: t.investit, net: t.net, pornit: t.pornit, inchis: t.inchis })); },   // revizia finală (I6): toți boții (rata ta e pe toți)
     scrieBoti: (l) => scrieAtomic(path.join(RETEA_DIR, "boti.json"), l),
+    // v101.64 (L2): barele zilnice ale acțiunilor - universul: pozițiile deschise, ideile de azi (și restul, și revenirile), lista lui, acțiunile tranzacționate în ultimii 2 ani; + perechile închise
+    tickereZile: async () => {
+      const t = new Set();
+      try { const p = await cere("/api/t212?action=pozitii"); for (const x of (p && Array.isArray(p.pozitii) ? p.pozitii : [])) if (x && x.ticker) t.add(String(x.ticker)); } catch {}
+      try { const i = await cere("/api/t212?action=idei"); const id = i && i.idei; for (const x of [].concat((id && id.actiuni) || [], (id && id.restul) || [], (id && id.reveniri) || [])) if (x && x.ticker) t.add(String(x.ticker)); for (const s of (i && Array.isArray(i.lista) ? i.lista : [])) t.add(String(s).replace(/\./g, "-") + "_US_EQ"); } catch {}
+      try { const h = await cere("/api/t212?action=istoric"); const de = Date.now() - 2 * 365 * 864e5; for (const x of T212.perechi((h && h.umpleri) || []).inchise) if (x && x.ticker && x.inchis >= de) t.add(String(x.ticker)); } catch {}
+      return [...t].filter((x) => /_US_EQ$/.test(x));
+    },
+    cereZile: (tk) => cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)),
+    scrieZile: (tk, randuri) => { try { scrieAtomic(path.join(RETEA_ZILE, String(tk).replace(/[^A-Z0-9_.-]/gi, "") + ".json"), { la: Date.now(), randuri }); } catch (e) { jurnal("zile: nescrise", tk, e.message); } },
+    tradeuri: async () => { const h = await cere("/api/t212?action=istoric"); return T212.perechi((h && h.umpleri) || []).inchise; },
+    scrieTradeuri: (l) => scrieAtomic(path.join(RETEA_DIR, "trade-uri.json"), l),
     porneste: pornesteAntrenorul, citesteModele: () => citesteJson(path.join(RETEA_DIR, "modele.json"), null), trimite, jurnal,
     pornesteArbori: pornesteAntrenorArbori, citesteModeleArbori: () => citesteJson(path.join(RETEA_DIR, "modele-arbori.json"), null),   // v101.63
     scrieStare: (st) => { try { scrieAtomic(RETEA_STARE, st); } catch {} } });

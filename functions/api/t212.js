@@ -137,6 +137,8 @@ export async function onRequestPost({ request, env }) {
       motive: (Array.isArray(x && x.motive) ? x.motive : []).slice(0, 5).map((z) => txt(z, 200)), istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null,
       // v100.55: starea ideii (aceeasi cheie ca t212:cf) si probabilitatile actiunii
       sit: /^(sus|lateral|jos)\|(calm|dupa-miscare)\|(departe|langa-max)$/.test(String(x && x.sit)) ? x.sit : null, prob: x && x.prob && typeof x.prob === "object" ? { tinta5: nr(x.prob.tinta5), stop1: nr(x.prob.stop1) } : null,
+      // v100.94 (L2): a doua (🧠) și a treia părere (🌳) pe idee - „un trade ca ăsta iese pe plus” {p, dovedita}, scrise de colector
+      retea: x && x.retea && typeof x.retea === "object" ? { p: nr(x.retea.p), dovedita: x.retea.dovedita === true } : null, arbori: x && x.arbori && typeof x.arbori === "object" ? { p: nr(x.arbori.p), dovedita: x.arbori.dovedita === true } : null,
       // v100.57: profilul actiunii pe idee (coborarea obisnuita pe 5 zile vs stopul, sariturile)
       prof: x && x.prof && typeof x.prof === "object" ? { dist: nr(x.prof.dist), strans: x.prof.strans === true, zile: nr(x.prof.zile), sar: x.prof.sar && typeof x.prof.sar === "object" ? { n: nr(x.prof.sar.n), med: nr(x.prof.sar.med), max: nr(x.prof.sar.max) } : null } : null });
     const act2 = (Array.isArray(corp && corp.actiuni) ? corp.actiuni : []).slice(0, 10).map(curata).filter((x) => x.ticker && x.pret > 0);

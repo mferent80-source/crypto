@@ -139,5 +139,16 @@ await test("(5) tura-retea strânge noaptea barele zilnice (buget 40 de tickere,
   const ruta = citeste("functions", "api", "t212.js"); assert.ok(ruta.includes("retea: x && x.retea") && ruta.includes("arbori: x && x.arbori"), "ruta idei nu păstrează retea/arbori");
 });
 
+// ======== Task 6: pagina T212 - sub-blocul pe poziții și la poartă, cifrele pe idei, legenda (ideea 3) ========
+await test("(6) pagina T212: pozițiile și poarta primesc sub-blocul „A doua părere” din reteaHtml cu codDirectie directie5 și tintaRezultat rezultat-t212 (barele paginii, QQQ, perechile lui); ideile arată 🧠/🌳 cu starea; T212 aduce modelele (reteaAdu); legenda benzii în capul sub-blocului (ideea 3) ≤ 160", () => {
+  const e = citeste("public", "lib", "t212-ecran.js");
+  assert.ok(/^function t212ReteaHtml\(/m.test(e) && e.includes("Retea.pentruActiune(reteaM.m,") && e.includes("Arbori.pentruActiune(reteaM.a,") && /codDirectie:\s*"directie5",\s*tintaRezultat:\s*"rezultat-t212"/.test(e), "t212ReteaHtml");
+  assert.ok(e.includes("Retea.pentruCumparare(reteaM.m,") && e.includes("Arbori.pentruCumparare(reteaM.a,"), "poarta fără „un trade ca ăsta”");
+  assert.ok((e.match(/t212ReteaHtml\(/g) || []).length >= 3, "nechemat pe poziție și la poartă"); assert.ok(e.includes("bare: bare,"), "poarta nu păstrează barele");
+  assert.ok(e.includes("x.retea.p") && e.includes("x.arbori.p"), "ideile fără 🧠/🌳"); assert.ok(/reteaAdu\(function\s*\(\)\s*\{\s*t212Render\(\)/.test(e), "T212 nu aduce modelele");
+  const m1 = { directie: { tinta: "directie", versiune: R.VERSIUNE, la: ACUM - 3600000, verificare: null } }, a1 = { directie: { tinta: "directie", versiune: "a1", la: ACUM - 3600000, verificare: null } };
+  const an = R.antet(m1, ACUM, a1); assert.ok(/semnul plin = cifra mare, inelul = cealaltă familie/.test(an.sub) && an.sub.length <= 160, an.sub); assert.ok(!/inelul/.test(R.antet(m1, ACUM).sub), "legenda fără arbori");
+});
+
 console.log("\n" + (pica ? "V100.94 PICA · " + pica + " din " + (ok + pica) : "V100.94 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

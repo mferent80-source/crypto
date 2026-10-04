@@ -49,7 +49,7 @@ export function randuriActiune(tinta, tk, b, qqq, trades, M, memo) {
     else return out;
     const y = eticheta(tinta, b, i, e); if (y === null) continue;
     const x = R.intrareActiune(tinta, f, e); if (!x) continue;
-    out.push({ t: f.t, s: tk, i, e, y, x, tEt: b[i + zile].t + ZI });
+    out.push({ t: f.t, s: tk, i, e, y, x, tEt: R.inchisZi(b[i + zile].t) });
   }
   return out;
 }
