@@ -6009,7 +6009,7 @@ function tbBusolaLinie(b){
   if(typeof Busola==="undefined"||!b)return "";
   tbPazaAdu();Busola.incarca(window.fetch.bind(window),Date.now()).then(function(nou){if(nou&&tbPanouVizibil()&&tbStare.bot)tbDeseneazaExtra(tbStare.bot)});
   var e=Busola.eticheta(Busola.rezumat(),tbCheieBusola(b),Date.now(),tbPazaKv.boti[b.id]);
-  if(!e)return '<div class="tbLinie"><span>Busola, pe 4h</span><b class="tbSubVal">aștept rezumatul…</b></div>';
+  if(!e)return '<div class="tbLinie"><span>Busola, pe 4h</span><b class="tbSubVal">'+(Busola.nuRaspunde()?"Busola nu răspunde":"aștept rezumatul…")+'</b></div>';   /* v100.91 (ideea 2): eșecul nu mai arată ca așteptarea */
   return '<div class="tbLinie"><span>Busola, pe 4h <span class="tbSub">'+escapeHtml(e.nota)+'</span></span><b class="'+(e.nivel==="atentie"?"tbWarn":e.nivel==="nemasurat"?"tbSubVal":"")+'">'+escapeHtml(e.text)+'</b></div>';
 }
 function tbDeseneazaExtra(b){

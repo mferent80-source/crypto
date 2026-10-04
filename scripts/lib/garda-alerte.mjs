@@ -191,7 +191,9 @@ export function situatiiAlerte(pune) {
   // v100.90 (I-511): mesajul pazei cu cifra de pe futures („futures ±2×ATR”, aceeași lungime ca „grid pe ±2×ATR”)
   paz("Busola: mai agitată, cifra de pe futures (MARSCOIN)", CRV({ baza: "MARSCOIN.PERP" }), Object.assign({}, GR, { futures: { canal: "±2×ATR", miscare: -0.011375026, liniste: -0.0081966036, oricand: -0.0094983709, dovedit: false, miscareDovedita: true } }));
   // v100.90 (I-513): rândul Busolei din rezumatul de dimineață (raport: rânduri ≤ 160), din producătorul real (Busola.liniaBoti)
-  const lb = (sit, l) => pune(sit, "alerte", "busola.linia", { t: "Busola, pe 4h: " + BU.liniaBoti(l, T0) }, [["t", "raport"]]);
+  const lb = (sit, l) => pune(sit, "alerte", "busola.linia", { t: "🧭 Busola, pe 4h: " + BU.liniaBoti(l, T0) }, [["t", "raport"]]);   /* v100.91: „🧭”, 142 + 18 = 160 */
+  const SUFIX = " (rezumat de acum 6 h)";   /* v100.91: rezumatul vechi își spune vârsta; lungimea rezervată din rând */
+  pune("Busola dimineața: 12 boți, rezumat vechi (6 ore)", "alerte", "busola.linia", { t: "🧭 Busola, pe 4h: " + BU.liniaBoti(Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - 9 * ORA })), T0, 142 - SUFIX.length) + SUFIX }, [["t", "raport"]]);
   lb("Busola dimineața: 4 boți, toate stările", [{ nume: "CRV", stare: "miscare", de: T0 - 8 * ORA }, { nume: "LIGHTER", stare: "liniste", de: T0 - 2.5 * ORA }, { nume: "PUMP", stare: "nu-stiu", de: T0 - 30 * 60000 }, { nume: "BTC", stare: null }]);
   lb("Busola dimineața: un bot", [{ nume: "CRV", stare: "miscare", de: T0 - 50 * ORA }]);
   lb("Busola dimineața: 12 boți (tăiat la 145)", Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - ORA })));

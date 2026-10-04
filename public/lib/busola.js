@@ -12,7 +12,10 @@ var Busola = (function () {
   var CACHE_MS = 30 * 60 * 1000, VECHI_MS = 6 * 3600 * 1000;
   // v100.86 (§2 „paza boților”): peste 4,5 h (Busola rulează la 4 h) colectorul nu mai anunță nimic din rezumat
   var PAZA_VECHI_MS = 4.5 * 3600 * 1000;
-  var stare = { rez: null, la: 0, inLucru: null };
+  var stare = { rez: null, la: 0, inLucru: null, esec: false };
+  // v100.91 (ideea 3): bilanțul pazei Busolei (I-512) - după „mai agitat” pe futures, gridul chiar a pierdut mai mult? Pe pagină, la mișcare,
+  // doar când verdictul e pe date destule („dovedit” / „pe dos” / „n-am aflat”); „prea puține” tace
+  function bilantText(rez) { var v = rez && rez.perp && rez.perp.bilant && rez.perp.bilant.verdict; return ["dovedit", "pe dos", "n-am aflat"].indexOf(v) >= 0 ? "pe date noi: " + v : null; }
 
   // JTO_USDT_PERP -> JTO; 1000BONK_USDT_PERP -> BONK (pe spot nu există „1000”); ethusdt -> ETH
   function simbolBusola(s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$|\.PERP$/, "").replace(/^1000+/, ""); }   /* v100.90: + „AAVE.PERP” (baza botului) */
@@ -51,7 +54,7 @@ var Busola = (function () {
     // înainte, amândouă ieșeau „nimic neobișnuit”. Se ia prima valoare MĂSURATĂ (futures, filtrul de grid, apoi harta - stare4h).
     var s = stare4h(m);
     if (!s) return { nivel: "nemasurat", text: "Busola n-a putut măsura " + cheie + " pe 4h acum (eroare sau prea puține cazuri).", varsta: varsta };
-    if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta, nota: nota(null) };
+    if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta, nota: nota(bilantText(rez)) };
     if (s === "liniste" && g.dovedit === false) return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — gridul a pierdut ceva mai puțin decât oricând (" + proc(g.liniste) + ").", varsta: varsta, nota: nota("nedovedit") };
     if (s === "liniste") return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (" + proc(g.liniste) + "), tot pe minus.", varsta: varsta, nota: nota(g.dovedit === true ? "dovedit" : null) };
     return { nivel: "neutru", text: "Busola, pe 4h: nimic neobișnuit — un grid oarecare a ieșit pe minus (" + proc(g.oricand) + " pe episod).", varsta: varsta, nota: nota(null) };
@@ -95,14 +98,15 @@ var Busola = (function () {
     var p = pazaStare(rez, simbol, acum); if (!p) return null;
     var t = TEXT_STARE[p.stare] || ["nemasurat", rez.monede[p.cheie] ? "n-a putut măsura moneda" : "nu urmărește moneda"];
     var d = kv && typeof kv === "object" && kv.stare === p.stare ? Number(kv.de) : NaN;
-    return { stare: p.stare, nivel: t[0], text: t[1], nota: [d > 0 && acum - d >= 0 ? "de " + ore(acum - d) : null, "măsurat acum " + ore(acum - p.la)].filter(Boolean).join(" · ") };
+    return { stare: p.stare, nivel: t[0], text: t[1], nota: [d > 0 && acum - d >= 0 ? "de " + ore(acum - d) : null, "măsurat acum " + ore(acum - p.la), p.stare === "miscare" ? bilantText(rez) : null].filter(Boolean).join(" · ") };
   }
   // rândul boților deschiși (portofoliu + rezumatul de dimineață): „AAVE mai agitată de 8 h · LIT mai calmă de 2,5 h · PUMP nimic neobișnuit”;
   // peste 145 de semne (raportul ține 160, cu „Busola, pe 4h: ” în față) cad duratele, apoi coada devine „+N” - niciun bot pierdut pe tăcute
   var SCURT_STARE = { miscare: "mai agitată", liniste: "mai calmă", "nu-stiu": "nimic neobișnuit" };
-  function liniaBoti(lista, acum) {
+  function liniaBoti(lista, acum, max) {
     var l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.nume; }); if (!l.length) return null;
-    var MAX = 145, unu = function (x, cuDurata) { var d = Number(x.de); return x.nume + " " + (SCURT_STARE[x.stare] || "nemăsurată") + (cuDurata && d > 0 && acum - d >= 0 ? " de " + ore(acum - d) : ""); };
+    // v100.91: implicit 142 = 160 − „🧭 Busola, pe 4h: ” (18); colectorul scade și coada cu vârsta rezumatului
+    var MAX = Number(max) > 0 ? Number(max) : 142, unu = function (x, cuDurata) { var d = Number(x.de); return x.nume + " " + (SCURT_STARE[x.stare] || "nemăsurată") + (cuDurata && d > 0 && acum - d >= 0 ? " de " + ore(acum - d) : ""); };
     var t = l.map(function (x) { return unu(x, true); }).join(" · "); if (t.length <= MAX) return t;
     var p = l.map(function (x) { return unu(x, false); }); t = p.join(" · "); if (t.length <= MAX) return t;
     for (var n = p.length - 1; n >= 1; n--) { t = p.slice(0, n).join(" · ") + " · +" + (p.length - n); if (t.length <= MAX) return t; }
@@ -124,15 +128,17 @@ var Busola = (function () {
     stare.inLucru = Promise.resolve()
       .then(function () { return fetchFn(URL_REZUMAT, { signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined }); })
       .then(function (r) { if (!r || !r.ok) throw new Error("HTTP " + (r && r.status)); return r.json(); })
-      .then(function (j) { stare.rez = j; return true; }, function () { return false; })
+      .then(function (j) { stare.rez = j; stare.esec = false; return true; }, function () { stare.esec = true; return false; })
       .then(function (nou) { stare.la = acum; stare.inLucru = null; return nou; });
     return stare.inLucru;
   }
 
   function rezumat() { return stare.rez; }
-  function _reset() { stare = { rez: null, la: 0, inLucru: null }; }
+  // v100.91 (ideea 2): ultima încărcare a picat și n-avem niciun rezumat - cartela spune „Busola nu răspunde”, nu „aștept rezumatul…” la nesfârșit
+  function nuRaspunde() { return !stare.rez && stare.esec === true; }
+  function _reset() { stare = { rez: null, la: 0, inLucru: null, esec: false }; }
 
   return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, cifraMiscare: cifraMiscare,
-    randFisa: randFisa, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, _reset: _reset };
+    randFisa: randFisa, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset };
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

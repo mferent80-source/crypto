@@ -35,7 +35,7 @@ import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513)
 import { alcatuieste as pentruBusola } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.60";
+const VERSIUNE_COLECTOR = "v101.61";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1039,11 +1039,15 @@ async function dateDimineata() {
   try { const u = await adresaRadarului(); if (u) out.link = u; } catch {}
   try { const id = await cere("/api/t212?action=idei"); out.idei = (id && id.idei && Array.isArray(id.idei.actiuni) ? id.idei.actiuni : []).slice(0, 5).map((x) => x.simbol); } catch {}
   try { const cl = await cere("/api/istoric-bot?action=clasament"); out.ideiBoti = Idei.ideiBoti(cl && cl.clasament, [], 3).map((x) => x.moneda); } catch {}
-  try { const bo = await cere("/api/bot-orders"); out.boti = (bo && bo.bots || []).filter((b) => b.activ && Number.isFinite(Number(b.distantaLichidarePct)) && Math.abs(Number(b.distantaLichidarePct)) < 15).map((b) => ({ nume: String(b.baza || "").replace(/\.PERP$/, ""), lich: Math.abs(Number(b.distantaLichidarePct)) })); } catch {}
-  // v101.60 (I-513): Busola pe boții deschiși, pe scurt (starea și „de când” le ține colectorul în alerte-stare)
   try {
-    const bo = await cere("/api/bot-orders"), l = (bo && bo.bots || []).filter((b) => b && b.id && b.activ !== false).map((b) => { const s = stareAlerte[b.id] && stareAlerte[b.id]._busola; return { nume: String(b.baza || "").replace(/\.PERP$/, ""), stare: s ? s.stare : null, de: s ? s.de : null }; });
-    const t = Busola.liniaBoti(l, Date.now()); out.liniiExtra = t ? ["Busola, pe 4h: " + t] : [];
+    const bo = await cere("/api/bot-orders"), boti = bo && bo.bots || [], acum = Date.now();
+    out.boti = boti.filter((b) => b.activ && Number.isFinite(Number(b.distantaLichidarePct)) && Math.abs(Number(b.distantaLichidarePct)) < 15).map((b) => ({ nume: String(b.baza || "").replace(/\.PERP$/, ""), lich: Math.abs(Number(b.distantaLichidarePct)) }));
+    // v101.60 (I-513): Busola pe boții deschiși, pe scurt (starea și „de când” le ține colectorul în alerte-stare); v101.61 (ideea 4): „🧭”,
+    // vârsta rezumatului când e vechi (> 4,5 h), lungimea rezervată prefixului și cozii (raportul ține 160), aceeași cerere bot-orders
+    let laMax = 0;
+    const l = boti.filter((b) => b && b.id && b.activ !== false).map((b) => { const s = stareAlerte[b.id] && stareAlerte[b.id]._busola; if (s && Number(s.la) > laMax) laMax = Number(s.la); return { nume: String(b.baza || "").replace(/\.PERP$/, ""), stare: s ? s.stare : null, de: s ? s.de : null }; });
+    const sufix = laMax > 0 && acum - laMax > Busola.PAZA_VECHI_MS ? " (rezumat de acum " + TextRo.ore(acum - laMax) + ")" : "";
+    const t = Busola.liniaBoti(l, acum, 142 - sufix.length); out.liniiExtra = t ? ["🧭 Busola, pe 4h: " + t + sufix] : [];
   } catch {}
   return out;
 }
