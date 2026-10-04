@@ -200,5 +200,15 @@ await test("(D) I-526 dimineața: rândul-verdict e PRIMUL (înaintea rândurilo
   const rele = s.map((x) => ({ x: x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
 });
 
+// ======== sarcina 10: versiunile ========
+await test("(E) versiunile: pagina v100.92 (BUILD_INFO, versiune.js, sw, index ×4, package.json 100.92.0, lanțul cu v10092), colectorul v101.62", () => {
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(bi.version, "v100.92"); assert.match(bi.badge, /^v100\.92 · /);
+  assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "v100.92";'), "versiune.js");
+  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-92";'), "sw.js");
+  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.92/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.91/.test(ix), "index.html mai are v100.91");
+  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.92.0"); assert.ok(/npm run test:v10091 && npm run test:v10092"/.test(pk), "lanțul de teste");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.62"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.62");
+});
+
 console.log("\n" + (pica ? "V100.92 PICA · " + pica + " din " + (ok + pica) : "V100.92 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

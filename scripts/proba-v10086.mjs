@@ -128,7 +128,7 @@ await test("(8) garda: mesajele pazei (agitată, bot nou, short, prețuri mici, 
 });
 await test("(9) colectorul: încarcă busola.js (proba de încărcare), aduce rezumatul o dată pe tură înaintea boților, păzește fiecare bot DUPĂ starea nouă a alertelor", () => {
   const c = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
-  assert.ok(/^const Busola = incarca\("busola\.js", "Busola"\);/m.test(c), "colectorul nu încarcă busola.js"); assert.ok(/import \{ pazaPas, notaVeche, pentruServer \} from "\.\/lib\/paza-boti\.mjs";/.test(c), "colectorul nu importă paza-boti.mjs");   /* v101.60: + pentruServer */
+  assert.ok(/^const Busola = incarca\("busola\.js", "Busola"\);/m.test(c), "colectorul nu încarcă busola.js"); assert.ok(/import \{ pazaPas, notaVeche, pentruServer(, cheiaBot)? \} from "\.\/lib\/paza-boti\.mjs";/.test(c), "colectorul nu importă paza-boti.mjs");   /* v101.60: + pentruServer; v101.62: + cheiaBot */
   const r = spawnSync(process.execPath, [path.join(RAD, "scripts", "colector.mjs")], { env: { ...process.env, COLECTOR_DOAR_INCARCA: "1" }, encoding: "utf8", timeout: 30000 });
   assert.equal(r.status, 0, (r.stderr || "").slice(0, 400)); assert.match(r.stdout, /INCARCAT true/); assert.ok(/Retea, Busola\]\.every\(Boolean\)/.test(c), "Busola lipsește din proba de încărcare (INCARCAT)");
   const t = c.slice(c.indexOf("async function tura() {"), c.indexOf("\n// v79 F3"));
