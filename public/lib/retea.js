@@ -291,7 +291,7 @@ var Retea = (function () {
     Object.keys(NUME).filter(function (k) { return arbori && arbori[k] && arbori[k].versiune === VERSIUNE_ARBORI; }).forEach(function (k) {
       var v = arbori[k].verificare, vs = v && v.vsRetea, u = UNIT[(TINTE[k] || { bloc: 24 }).bloc] || UNIT[24];
       if (!v) { out.push("🌳 " + NUME[k] + ": neverificată încă."); return; }
-      out.push("🌳 " + NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + " · formula simplă " + num(v.brierLog, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "")
+      out.push("🌳 " + NUME[k] + ": " + cate(v.nIndep, u[0], u[1]) + ", Brier " + num(v.brier, 3) + " · " + (v.reper || "🎲") + " " + num(v.brierReper, 3) + (v.ic ? " · IC " + num(v.ic[0], 2) + "…" + num(v.ic[1], 2) : "")
         + (vs && nr(vs.bss) !== null && vs.ic ? " · față de 🧠: " + semn(vs.bss, 3) + " (IC " + semn(vs.ic[0], 3) + "…" + semn(vs.ic[1], 3) + ")" : "") + ".");
     });
     return out;
