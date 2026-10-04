@@ -79,5 +79,64 @@ await test("(A) I-519 fișa: grPliabil - toate secțiunile se pliază pe telefon
   const css = citeste("public", "app.css"); assert.ok(/\.grVerdict\{[^}]*position:sticky/.test(css) && /@media \(max-width:600px\)\{#gridset \.grPliat>/.test(css), "CSS: verdict lipicios + pliere doar sub 600 px (pragul fișei)");
 });
 
+// ======== lotul B: I-525 dunga după istoricul lui, I-520 Trading 212 pe file, I-521 Acasă pe 3 coloane ========
+const ID = new Function("ActiuniSemnale", `${lib("idei.js")}; return Idei;`)(new Function(`${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)());
+const REV = (o) => Object.assign({ cadere: 0.62, deLaMin: 0.28, zileDeLaMin: 6, revine: true }, o || {});
+const IST = (n, pePlus, total) => ({ n: n, pePlus: pePlus, total: total });
+function sugestii(rev, sh) {
+  const ctx = { Reveniri: { textDovada: () => "dovada", textBoti: () => "", TEXT_SUPRAVIETUITORI: "" }, Idei: { reveniriBoti: () => rev, shortBoti: () => sh }, GridCalcul: { procent: (v) => (v * 100).toFixed(1).replace(".", ",") + "%" }, escapeHtml: esc, TextRo: globalThis.TextRo };
+  vm.createContext(ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiCorp;", ctx);
+  return ctx.f({ la: 1, monede: [{ revenire: REV() }] }, null, []);
+}
+await test("(B) I-525 listele de revenire/short: istoricul tău pe minus (≥ 3 boți, regula candidaților) ⇒ dunga roșie și istoricul pe roșu; altfel după piață (verde), istoricul gri", () => {
+  const h = sugestii([{ moneda: "POWER", revenire: REV(), istoric: IST(17, 10, -173.55) }, { moneda: "AKE", revenire: REV(), istoric: IST(2, 0, -5) }], [{ moneda: "LIT", dir: "short", istoric: IST(5, 4, 12.3) }, { moneda: "Q", dir: "short", istoric: IST(3, 1, -0.5) }]);
+  const rand = (m) => { const i = h.indexOf("<b>" + m + "</b>"); assert.ok(i >= 0, "lipsește rândul " + m); return h.slice(Math.max(0, i - 120), i + 320); };
+  assert.match(rand("POWER"), /tbDunga r"/); assert.match(rand("POWER"), /<p class="bad">istoricul tău: 17 boți, 10 pe plus, −173,55 USDT<\/p>/);
+  assert.match(rand("AKE"), /tbDunga v"/); assert.match(rand("AKE"), /<p>istoricul tău: 2 boți, 0 pe plus, −5,00 USDT<\/p>/);
+  assert.match(rand("LIT"), /tbDunga v"/); assert.match(rand("LIT"), /<p>istoricul tău: 5 boți/);
+  assert.match(rand("Q"), /tbDunga r"/); assert.match(rand("Q"), /<p class="bad">istoricul tău: 3 boți, 1 pe plus, −0,50 USDT<\/p>/);
+});
+await test("(B) I-520 Trading 212: t212File - 3 file cu numărul în titlu, fila aleasă apăsată și vizibilă, celelalte ascunse; t212FilaAleasa din localStorage (implicit „idei”)", () => {
+  const ctx = { escapeHtml: esc, localStorage: { getItem: (k) => (k === "t212Fila" ? "revenire" : null), setItem() {} } }; vm.createContext(ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212File") + "\n" + fnDin("t212-ecran.js", "t212FilaAleasa") + "\n;this.f=t212File;this.g=t212FilaAleasa;", ctx);
+  const h = ctx.f([{ k: "idei", t: "Idei", n: 23, h: "<i>a</i>" }, { k: "revenire", t: "Pe revenire", n: 9, h: "<i>b</i>" }, { k: "socoteala", t: "Socoteala sfaturilor", n: null, h: "<i>c</i>" }], "revenire");
+  assert.equal((h.match(/class="tbIntBtn"/g) || []).length, 3);
+  assert.match(h, /<button type="button" class="tbIntBtn" aria-pressed="false" data-action-click="t212FilaAlege\('idei'\)">Idei · 23<\/button>/);
+  assert.match(h, /aria-pressed="true" data-action-click="t212FilaAlege\('revenire'\)">Pe revenire · 9<\/button>/);
+  assert.match(h, /aria-pressed="false" data-action-click="t212FilaAlege\('socoteala'\)">Socoteala sfaturilor<\/button>/);
+  assert.match(h, /<div class="t212Fila" data-fila="idei" hidden><i>a<\/i><\/div>/); assert.match(h, /<div class="t212Fila" data-fila="revenire"><i>b<\/i><\/div>/); assert.match(h, /data-fila="socoteala" hidden>/);
+  assert.equal(ctx.g(), "revenire");
+  ctx.localStorage.getItem = () => "altceva"; assert.equal(ctx.g(), "idei");
+});
+await test("(B) I-520 pagina: t212IdeiRender pune ideile, revenirea și socoteala în file (notele la fila lor), lista „Urmăresc și” sub file; Acasă deschide fila potrivită (acasaMergiLa cu fila); CSS", () => {
+  const s = lib("t212-ecran.js"), r = fnDin("t212-ecran.js", "t212IdeiRender");
+  assert.ok(/h \+= t212File\(\[/.test(r) && r.includes('k: "idei"') && r.includes('k: "revenire"') && r.includes('k: "socoteala"'), "cele 3 file din t212IdeiRender");
+  assert.ok(r.indexOf("t212File(") < r.indexOf('class="t212Lista"'), "lista „Urmăresc și” sub file");
+  assert.ok(/^function t212FilaAlege\(k\)/m.test(s), "lipsește t212FilaAlege");
+  const a = fnDin("acasa-ecran.js", "acasaMergiLa"); assert.ok(/^function acasaMergiLa\(ecran, id, fila\)/.test(a) && a.includes("t212FilaAlege(fila)"), "acasaMergiLa nu deschide fila");
+  assert.ok(/\.t212File\{/.test(citeste("public", "app.css")), "CSS .t212File");
+});
+const SH = (s, scor, o) => Object.assign({ simbol: s + "_USDT_PERP", volum: 10, stare: "candidat", dir: "short", tarie: "mediu", scor: scor, latime: 0.15, profitGrila: 0.0026, traversariZi: 20, revenire: REV({ revine: false }) }, o || {});
+const CLB = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evita", dir: "long", scor: 9, revenire: REV({ cadere: 0.79 }) }, SH("Q", 5, { volum: 30, revenire: REV() }), SH("LIT", 7)] };
+const IIB = { idei: { idei: { zi: "2026-10-04", judecate: 202, trecute: 2, actiuni: [{ simbol: "TE" }, { simbol: "LNKS" }], reveniri: [{ simbol: "LAES" }], dovadaReveniri: { eticheta: "cam la fel" } } } };
+function acasa() {
+  const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
+  vm.runInContext(["acClasamentSumar", "acasaCumpar", "acasaCumpar2", "acasaCumpar2Corp", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);
+  return ctx;
+}
+await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe 3 coloane - acțiuni / boți / revenire și short, fiecare cu butonul ei; nota „aș sări peste ea” doar sub a treia; rândul vechi (acasaCumpar2) neschimbat", () => {
+  const c = acasa(), d = { ...IIB, clasament: CLB, sugestii: null }, h = c.f(d);
+  assert.equal((h.match(/class="acCumparCol"/g) || []).length, 3, h);
+  const col = h.split('<div class="acCumparCol">');
+  assert.ok(text(col[1]).startsWith("Acțiuni") && col[1].includes("<b>TE, LNKS</b>") && col[1].includes("acasaMergiLa('t212','t212Idei','idei')"), text(col[1]));
+  assert.ok(text(col[2]).startsWith("Boți") && col[2].includes("acasaMergiLa('tabloubot','tbIdei')"), text(col[2]));
+  assert.ok(text(col[3]).startsWith("Revenire și short") && col[3].includes("<b>LAES</b>") && col[3].includes("<b>AKE, Q</b>") && col[3].includes("<b>LIT, Q</b>") && col[3].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[3]));
+  assert.match(col[3], /<p class="tbWarn">⚠ Q e și pe revenire, și la short: aș sări peste ea<\/p>/);
+  assert.ok(!col[1].includes("⚠") && !col[2].includes("⚠"), "nota doar sub coloana ei");
+  assert.equal(text(c.g(d)), "↩️ pe revenire: acțiunile LAES (cam la fel) · monedele AKE, Q · 📉 short: LIT, Q · ⚠ Q e și pe revenire, și la short: aș sări peste ea");
+  assert.ok(/#dash \.acCumparCol3\{/.test(citeste("public", "app.css")), "CSS acCumparCol3");
+});
+
 console.log("\n" + (pica ? "V100.92 PICA · " + pica + " din " + (ok + pica) : "V100.92 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

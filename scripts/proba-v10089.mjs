@@ -28,7 +28,7 @@ const CL = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evita
 // ---- (1) Acasă ----
 function acasa2(d) {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n;this.g=acasaCumpar2;", ctx);
+  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n;this.g=acasaCumpar2;", ctx);   /* v100.92: + Parti */
   return ctx.g(d);
 }
 const II = { idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [], reveniri: [] } } };

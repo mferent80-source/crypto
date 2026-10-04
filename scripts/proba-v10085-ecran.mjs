@@ -111,18 +111,19 @@ await test("(8) revizia (I7): înainte de prima tură cu reveniri (ideile de azi
 await test("(8) Trading 212: fără acțiuni pe revenire ⇒ „Azi nicio acțiune nu e pe revenire.”; fără istoric ⇒ fraza „se socotește”, fără supraviețuitori; fără idei ⇒ nimic", () => {
   const t = text(t212Rev({ reveniri: [], dovadaReveniri: null })); assert.ok(t.includes("Azi nicio acțiune nu e pe revenire.") && t.includes("Istoricul se socotește azi de la 8:00.") && !t.includes("supraviețuitori") && !t.includes(R.TEXT_SUPRAVIETUITORI), t);
   assert.equal(t212Rev(null), ""); assert.equal(t212Rev({ get reveniri() { throw new Error("x"); } }), "", "o eroare în date nu strică panoul ideilor");
-  assert.match(fnDin("t212-ecran.js", "t212IdeiRender"), /tabel\(rest\) \+ '<\/details>';\r?\n  h \+= t212ReveniriHtml\(id\);/);
+  assert.match(fnDin("t212-ecran.js", "t212IdeiRender"), /tabel\(rest\) \+ '<\/details>';\r?\n  var fRev = t212ReveniriHtml\(id\)/);   /* v100.92 (I-520): revenirea e fila ei */
 });
 function acasa2(d) {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);
+  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);   /* v100.92: + Parti */
   return { tot: ctx.f(d), doi: ctx.g(d) };
 }
 await test("(8) Acasă: al doilea rând din „Ce aș cumpăra azi” - primele nume din fiecare listă, cu eticheta istoricului; liste goale ⇒ „nimic azi”; fără date ⇒ lipsește", () => {
   const d = { idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 23, actiuni: [{ simbol: "SNDK" }], reveniri: [RV, { ...RV, simbol: "MU" }], dovadaReveniri: BINE } }, clasament: CL, sugestii: SG };
   const r = acasa2(d);
   assert.equal(text(r.doi), "↩️ pe revenire: acțiunile INTC, MU (mai bine) · monedele AAA (mai slab) · 📉 short: DDD (cam la fel)");
-  assert.ok(text(r.tot).startsWith("💡 Ce aș cumpăra azi: acțiunea SNDK (23 din 202 trec de poartă pe 03.10)") && text(r.tot).endsWith(text(r.doi)), text(r.tot));
+  /* v100.92 (I-521): cartela pe 3 coloane - rândul al doilea devine coloana „Revenire și short” */
+  assert.ok(text(r.tot).startsWith("💡 Ce aș cumpăra azi Acțiuni SNDK 23 din 202 trec de poartă pe 03.10") && text(r.tot).includes("Revenire și short ↩️ acțiunile INTC, MU (mai bine) ↩️ monedele AAA (mai slab) 📉 short: DDD (cam la fel)"), text(r.tot));
   assert.equal(text(acasa2({ idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [], reveniri: [] } }, clasament: { la: 5, monede: [] }, sugestii: null }).doi), "↩️ pe revenire: acțiunile nimic azi · monedele nimic azi · 📉 short: nimic azi");
   assert.equal(acasa2({}).doi, "");
   assert.equal(acasa2({ get sugestii() { throw new Error("x"); }, clasament: CL }).doi, "", "o eroare în date nu strică rândul întâi");

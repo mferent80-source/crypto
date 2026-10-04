@@ -76,7 +76,7 @@ function deseneazaIdei(id) {
     t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", t212Pct: (v) => v + "%", t212IdeiSit: () => "", t212ReveniriHtml: () => "" };
   vm.createContext(ctx);
   // t212Cate e pe un singur rând (dedesubt e `var t212 = {…}`, care ar acoperi datele probei)
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212IdeiRand") + "\n" + fnDin("t212-ecran.js", "t212IdeiRender") + "\n;t212IdeiRender();", ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212IdeiRand") + "\n" + fnDin("t212-ecran.js", "t212File") + "\n" + fnDin("t212-ecran.js", "t212FilaAleasa") + "\n" + fnDin("t212-ecran.js", "t212IdeiRender") + "\n;t212IdeiRender();", ctx);   /* v100.92 (I-520): + filele */
   return box.innerHTML;
 }
 const CINCI = ["LITE", "DELL", "ARM", "INTC", "NBIS"].map((s) => idee(s));
@@ -103,17 +103,18 @@ const CL = { monede: [{ simbol: "PONS_USDT_PERP", stare: "candidat", scor: 8 }, 
 const IDEI = { idei: { zi: "2026-10-02", judecate: 201, trecute: 24, actiuni: CINCI } };
 await test("(2) Acasă: „💡 Ce aș cumpăra azi” - primele 3 acțiuni cu cifrele zilei, primele 3 monede candidate, două butoane spre panouri", () => {
   const h = cumpar({ idei: IDEI, clasament: CL });
-  assert.ok(text(h).startsWith("💡 Ce aș cumpăra azi: acțiunile LITE, DELL, ARM (24 din 201 trec de poartă pe 02.10) · un bot pe LIT, PONS sau VVV"), text(h));
-  assert.match(h, /<button class="acBtn" type="button" data-action-click="acasaMergiLa\('t212','t212Idei'\)">Idei de cumpărare<\/button>/);
+  /* v100.92 (I-521): cartela pe 3 coloane - aceleași fapte, pe coloana lor */
+  assert.match(text(h), /^💡 Ce aș cumpăra azi\s*Acțiuni\s*LITE, DELL, ARM 24 din 201 trec de poartă pe 02\.10\s*Idei de cumpărare\s*Boți\s*LIT, PONS sau VVV\s*Pe ce aș porni un bot/);
+  assert.match(h, /<button class="acBtn" type="button" data-action-click="acasaMergiLa\('t212','t212Idei','idei'\)">Idei de cumpărare<\/button>/);
   assert.match(h, /<button class="acBtn" type="button" data-action-click="acasaMergiLa\('tabloubot','tbIdei'\)">Pe ce aș porni un bot<\/button>/);
 });
 await test("(2) Acasă: stările - fără idei / nicio acțiune / fără clasament / nicio monedă; o acțiune și una, două monede", () => {
-  assert.match(text(cumpar({ idei: null, clasament: CL })), /^💡 Ce aș cumpăra azi: acțiuni: aștept ideile · /);
-  assert.match(text(cumpar({ idei: { idei: { zi: "2026-10-02", judecate: 201, trecute: 0, actiuni: [] } }, clasament: CL })), /acțiuni: pe 02\.10 niciuna nu trece de poartă · /);
-  assert.match(text(cumpar({ idei: IDEI, clasament: null })), / · boți: aștept clasamentul/);
-  assert.match(text(cumpar({ idei: IDEI, clasament: { monede: [{ simbol: "BTC_USDT_PERP", stare: "evita" }] } })), / · boți: acum nicio monedă nu e candidată/);
+  assert.match(text(cumpar({ idei: null, clasament: CL })), /^💡 Ce aș cumpăra azi\s*Acțiuni\s*aștept ideile/);   /* v100.92 (I-521): pe coloane */
+  assert.match(text(cumpar({ idei: { idei: { zi: "2026-10-02", judecate: 201, trecute: 0, actiuni: [] } }, clasament: CL })), /Acțiuni\s*pe 02\.10 niciuna nu trece de poartă/);
+  assert.match(text(cumpar({ idei: IDEI, clasament: null })), /Boți\s*aștept clasamentul/);
+  assert.match(text(cumpar({ idei: IDEI, clasament: { monede: [{ simbol: "BTC_USDT_PERP", stare: "evita" }] } })), /Boți\s*acum nicio monedă nu e candidată/);
   assert.match(text(cumpar({ idei: { idei: { zi: "2026-10-02", judecate: 201, trecute: 1, actiuni: [idee("LITE")] } }, clasament: { monede: [CL.monede[2], CL.monede[0]] } })),
-    /acțiunea LITE \(1 din 201 trece de poartă pe 02\.10\) · un bot pe LIT sau PONS/);
+    /Acțiuni\s*LITE 1 din 201 trece de poartă pe 02\.10\s*Idei de cumpărare\s*Boți\s*LIT sau PONS/);
 });
 await test("(2) Acasă: rândul stă sub cele două verdicte, înaintea legăturii BTC–bursa, și se desenează la fiecare desen al paginii", () => {
   const h = citeste("public", "index.html"), v = h.indexOf('class="acVerdicte"'), c = h.indexOf('<div class="acLegatura acCumpar" id="acCumpar"></div>'), l = h.indexOf('id="acLegatura"');

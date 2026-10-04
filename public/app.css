@@ -2215,3 +2215,13 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot .tbTodoRand p.tbWarn{color:var(--warn)}
 .t212Reveniri{padding:8px 12px}.t212Reveniri h5{margin:0 0 6px}
 #dash .acCumpar .acCumpar2{display:block;margin-top:6px}
+/* v100.92 (I-521): „Ce aș cumpăra azi” pe 3 coloane (una sub 900 px); (I-520) filele panoului de idei; (I-525) istoricul pe roșu în liste */
+#dash .acCumparCap{margin:0 0 4px}
+#dash .acCumparCol3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 18px}
+#dash .acCumparCol{min-width:0}#dash .acCumparCol p{margin:0}
+#dash .acCumparCol .acCumparEt{color:var(--muted);font-size:13px;margin:0 0 2px}
+#dash .acCumparCol .acCumparBtn{display:flex;margin:6px 0 0}
+#dash .acCumparCol p.tbWarn{color:var(--warn);margin-top:4px}
+@media (max-width:900px){#dash .acCumparCol3{grid-template-columns:1fr}}
+.t212File{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0}.t212Fila{min-width:0}
+#tabloubot .tbTodoRand p.bad{color:var(--bad)}

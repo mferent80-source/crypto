@@ -120,24 +120,29 @@ function acasaCumpar(d) {
   var ii = d && d.idei && d.idei.idei, act = ii && Array.isArray(ii.actiuni) ? ii.actiuni : [], cl = acClasamentSumar(d && d.clasament), m = cl ? cl.buni.slice(0, 3) : [];
   var zi = ii && /^\d{4}-\d{2}-\d{2}/.test(String(ii.zi)) ? String(ii.zi).slice(8, 10) + "." + String(ii.zi).slice(5, 7) : "—", tr = ii ? Number(ii.trecute) || act.length : 0;
   var lista = function (l, sau) { return l.length < 2 ? l.join("") : l.slice(0, -1).join(", ") + " " + sau + " " + l[l.length - 1]; };
-  var ah = !ii ? escapeHtml("acțiuni: aștept ideile") : !act.length ? escapeHtml("acțiuni: pe " + zi + " niciuna nu trece de poartă")
-    : (act.length === 1 ? "acțiunea " : "acțiunile ") + '<b>' + escapeHtml(act.slice(0, 3).map(function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; }).join(", ")) + '</b> <span class="acMut">('
-      + escapeHtml(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi) + ')</span>';
-  var bh = !cl ? escapeHtml("boți: aștept clasamentul") : !m.length ? escapeHtml("boți: acum nicio monedă nu e candidată")
-    : 'un bot pe <b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
-  return '💡 <b>Ce aș cumpăra azi:</b> ' + ah + ' · ' + bh + ' <span class="acCumparBtn"><button class="acBtn" type="button" data-action-click="acasaMergiLa(\'t212\',\'t212Idei\')">Idei de cumpărare</button>'
-    + '<button class="acBtn" type="button" data-action-click="acasaMergiLa(\'tabloubot\',\'tbIdei\')">Pe ce aș porni un bot</button></span>' + (typeof acasaCumpar2 === "function" ? acasaCumpar2(d) : "");
+  // v100.92 (I-521): o cartelă cu 3 coloane - acțiuni / boți / revenire și short - numele în bold, eticheta sub ele și butonul ei;
+  // nota semnalelor opuse („aș sări peste ea”) doar sub coloana ei. Aceleași fapte ca rândurile de până acum, nimic ascuns
+  var mut = function (t) { return '<span class="acMut">' + escapeHtml(t) + '</span>'; };
+  var ah = !ii ? mut("aștept ideile") : !act.length ? mut("pe " + zi + " niciuna nu trece de poartă")
+    : '<b>' + escapeHtml(act.slice(0, 3).map(function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; }).join(", ")) + '</b> ' + mut(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi);
+  var bh = !cl ? mut("aștept clasamentul") : !m.length ? mut("acum nicio monedă nu e candidată") : '<b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
+  var p = null; try { p = typeof acasaCumpar2Parti === "function" ? acasaCumpar2Parti(d) : null; } catch (e) { p = null; }   /* o eroare în date nu strică cartela */
+  var ch = !p ? mut("aștept listele") : '↩️ acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + '<br>↩️ monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM) + '<br>📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS);
+  var btn = function (ecran, id, fila, t) { return '<span class="acCumparBtn"><button class="acBtn" type="button" data-action-click="acasaMergiLa(\'' + ecran + '\',\'' + id + '\'' + (fila ? ',\'' + fila + '\'' : '') + ')">' + t + '</button></span>'; };
+  var col = function (et, corp, extra, b) { return '<div class="acCumparCol"><p class="acCumparEt">' + et + '</p><p>' + corp + '</p>' + (extra ? '<p class="tbWarn">' + escapeHtml(extra) + '</p>' : '') + b + '</div>'; };
+  return '<p class="acCumparCap">💡 <b>Ce aș cumpăra azi</b></p><div class="acCumparCol3">' + col("Acțiuni", ah, null, btn("t212", "t212Idei", "idei", "Idei de cumpărare"))
+    + col("Boți", bh, null, btn("tabloubot", "tbIdei", null, "Pe ce aș porni un bot")) + col("Revenire și short", ch, p && p.nota, btn("t212", "t212Idei", "revenire", "Pe revenire")) + '</div>';
 }
 // v100.85 (reveniri + short, 03.10): al doilea rând din „Ce aș cumpăra azi” - listele noi, fiecare cu eticheta istoricului ei
 function acasaCumpar2(d) {
   try { return acasaCumpar2Corp(d); } catch (e) { return ""; }   /* o eroare în date nu strică rândul întâi */
 }
-function acasaCumpar2Corp(d) {
+function acasaCumpar2Parti(d) {
   var ii = d && d.idei && d.idei.idei, sg = d && d.sugestii && d.sugestii.sugestii, dv = sg && sg.dovada || {}, I = typeof Idei !== "undefined" && Idei.reveniriBoti ? Idei : null;
   // revizia (I7): un clasament făcut înainte de colectorul nou n-are starea de revenire (lipsește sau e null peste tot) ⇒ „—”, ca acțiunile fără listă, nu „nimic azi”
   var cm = d && d.clasament && d.clasament.monede, faraStare = Array.isArray(cm) && cm.length > 0 && !cm.some(function (m) { return m && m.revenire; });
   var ra = ii && Array.isArray(ii.reveniri) ? ii.reveniri : null, rm = I && d && d.clasament && !faraStare ? I.reveniriBoti(d.clasament, [], 3) : null, rs = I && d && d.clasament ? I.shortBoti(d.clasament, [], 3) : null;
-  if (!ra && !rm && !rs) return "";
+  if (!ra && !rm && !rs) return null;
   var et = function (x) { return x && x.eticheta ? " (" + x.eticheta + ")" : ""; };
   var nume = function (l, f) { return !l ? "—" : l.length ? l.slice(0, 3).map(f).join(", ") : "nimic azi"; };
   var mo = function (x) { return String(x.simbol || x.moneda || "").replace(/_USDT_PERP$/, ""); }, ac = function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; };
@@ -146,15 +151,21 @@ function acasaCumpar2Corp(d) {
   var ambele = function (rm, rs) {
     if (!rm || !rs) return "";
     var r5 = I.reveniriBoti(d.clasament, [], 5).map(mo), a = I.shortBoti(d.clasament, [], 5).map(mo).filter(function (m) { return r5.indexOf(m) >= 0; });
-    return a.length ? ' · <span class="tbWarn">' + escapeHtml("⚠ " + a.join(", ") + (a.length === 1 ? " e și pe revenire, și la short: aș sări peste ea" : " sunt și pe revenire, și la short: aș sări peste ele")) + '</span>' : "";
+    return a.length ? "⚠ " + a.join(", ") + (a.length === 1 ? " e și pe revenire, și la short: aș sări peste ea" : " sunt și pe revenire, și la short: aș sări peste ele") : "";
   };
-  return '<span class="acCumpar2">↩️ pe revenire: acțiunile <b>' + escapeHtml(nume(ra, ac)) + '</b>' + escapeHtml(ra && ra.length ? et(ii && ii.dovadaReveniri) : "")
-    + ' · monedele <b>' + escapeHtml(nume(rm, mo)) + '</b>' + escapeHtml(rm && rm.length ? et(dv.revenire && dv.revenire.piata) : "")
-    + ' · 📉 short: <b>' + escapeHtml(nume(rs, mo)) + '</b>' + escapeHtml(rs && rs.length ? et(dv.short && dv.short.piata) : "") + ambele(rm, rs) + '</span>';
+  return { actiuni: nume(ra, ac), etA: ra && ra.length ? et(ii && ii.dovadaReveniri) : "", monede: nume(rm, mo), etM: rm && rm.length ? et(dv.revenire && dv.revenire.piata) : "",
+    short: nume(rs, mo), etS: rs && rs.length ? et(dv.short && dv.short.piata) : "", nota: ambele(rm, rs) };
+}
+// rândul al doilea ca până acum (o frază cu „·”), din părțile de mai sus - cartela de pe Acasă (acasaCumpar) le pune pe coloana ei
+function acasaCumpar2Corp(d) {
+  var p = acasaCumpar2Parti(d); if (!p) return "";
+  return '<span class="acCumpar2">↩️ pe revenire: acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + ' · monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM)
+    + ' · 📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS) + (p.nota ? ' · <span class="tbWarn">' + escapeHtml(p.nota) + '</span>' : '') + '</span>';
 }
 // v100.82: butoanele din „Ce aș cumpăra azi” - deschid pagina și aduc panoul sus (fără animație)
-function acasaMergiLa(ecran, id) {
+function acasaMergiLa(ecran, id, fila) {
   if (typeof navTo === "function") navTo(ecran, true);
+  if (fila && typeof t212FilaAlege === "function") t212FilaAlege(fila);   /* v100.92 (I-520): fila potrivită din panoul ideilor */
   setTimeout(function () {
     var e = $(id); if (!e || !e.getBoundingClientRect) return;
     // bara de sus e lipită (header.topStatus: ~56 px pe calculator, ~156 pe telefon) - panoul stă sub ea, să i se vadă titlul.

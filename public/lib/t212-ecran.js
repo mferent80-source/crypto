@@ -331,22 +331,25 @@ function t212IdeiRender() {
   var d = t212.idei, id = d && d.idei, l = id && Array.isArray(id.actiuni) ? id.actiuni : [];
   var tabel = function (q) { return '<div class="t212TabWrap"><table class="t212Tab t212IdeiTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Intrare</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>' + q.map(t212IdeiRand).join("") + '</tbody></table></div>'; };
   var h = '<div class="t212PanouCap"><h4>💡 Idei de cumpărare</h4><span class="tbSub">' + (id ? escapeHtml("din " + t212Cate(id.judecate || 0, "acțiune judecată", "acțiuni judecate") + " pe " + t212ZiScurta(id.zi) + ", " + (id.trecute || 0) + " trec de poartă") : "colectorul le caută în fiecare dimineață de la 8:00") + '</span></div>';
-  h += '<p class="tbSub t212IdeiNota">Un filtru care te ține departe de situațiile proaste (trend în jos, după mișcare, lângă maxim, rezultate în 10 zile), nu o predicție: pe trade-urile tale, „doar pe 🟢” a adus mai puțin decât ai făcut singur. ' + escapeHtml(id && id.urmarire ? id.urmarire.text : "Ideile se urmăresc: după ~30 se poate spune dacă merită urmate.") + '</p>';
-  if (!l.length) h += '<p class="tbSub t212Gol">' + (id ? "Azi nicio acțiune nu trece de poartă — și asta e un răspuns: n-aș cumpăra nimic nou azi." : "Primele idei apar după prima trecere a colectorului.") + '</p>';
-  else h += t212IdeiSit(l) + tabel(l);
+  var fIdei = '<p class="tbSub t212IdeiNota">Un filtru care te ține departe de situațiile proaste (trend în jos, după mișcare, lângă maxim, rezultate în 10 zile), nu o predicție: pe trade-urile tale, „doar pe 🟢” a adus mai puțin decât ai făcut singur. ' + escapeHtml(id && id.urmarire ? id.urmarire.text : "Ideile se urmăresc: după ~30 se poate spune dacă merită urmate.") + '</p>';
+  if (!l.length) fIdei += '<p class="tbSub t212Gol">' + (id ? "Azi nicio acțiune nu trece de poartă — și asta e un răspuns: n-aș cumpăra nimic nou azi." : "Primele idei apar după prima trecere a colectorului.") + '</p>';
+  else fIdei += t212IdeiSit(l) + tabel(l);
   // v100.82 (03.10, ideea 1): și celelalte care trec de poartă, pliate sub tabel - primele 5 rămân sus
   var rest = id && Array.isArray(id.restul) ? id.restul : [];
-  if (l.length && rest.length) h += '<details class="t212IdeiRest"><summary>' + (rest.length === 1 ? "Vezi și cealaltă acțiune care trece de poartă" : "Vezi și celelalte " + t212Cate(rest.length, "acțiune care trece", "acțiuni care trec") + " de poartă") + '</summary>' + tabel(rest) + '</details>';
-  h += t212ReveniriHtml(id);
+  if (l.length && rest.length) fIdei += '<details class="t212IdeiRest"><summary>' + (rest.length === 1 ? "Vezi și cealaltă acțiune care trece de poartă" : "Vezi și celelalte " + t212Cate(rest.length, "acțiune care trece", "acțiuni care trec") + " de poartă") + '</summary>' + tabel(rest) + '</details>';
+  var fRev = t212ReveniriHtml(id) || '<p class="tbSub t212Gol">Primele idei apar după prima trecere a colectorului.</p>', fSoc = "";
   // v91: socoteala sfaturilor - au avut dreptate semafoarele? (dupa 5 / 10 / 20 de zile)
   if (t212.sfaturiIst && typeof Consilier !== "undefined") {
     var sc = Consilier.socotealaSfaturi(t212.sfaturiIst), NV = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
     var cel = function (x) { return x.n ? x.dreptate + " din " + x.n + ' <span class="t212Mic">' + t212Pct(x.medie) + '</span>' : '<span class="t212Estompat">—</span>'; };
-    h += '<div class="t212Socoteala"><h5>📏 Socoteala sfaturilor <span class="t212Estompat">· au avut dreptate? (IEȘI/ATENȚIE: prețul a scăzut după; ȚINE: a crescut)</span></h5>'
+    fSoc = '<div class="t212Socoteala"><h5>📏 Socoteala sfaturilor <span class="t212Estompat">· au avut dreptate? (IEȘI/ATENȚIE: prețul a scăzut după; ȚINE: a crescut)</span></h5>'
       + '<div class="t212TabWrap"><table class="t212Tab"><thead><tr><th>Semaforul</th><th>după 5 zile</th><th>după 10 zile</th><th>după 20 de zile</th></tr></thead><tbody>'
       + Object.keys(NV).map(function (k) { return '<tr><td><b>' + NV[k] + '</b></td><td>' + cel(sc[k][5]) + '</td><td>' + cel(sc[k][10]) + '</td><td>' + cel(sc[k][20]) + '</td></tr>'; }).join("")
       + '</tbody></table></div><p class="tbSub">' + escapeHtml(sc.text) + ' Se notează în fiecare dimineață, pe fiecare poziție.</p></div>';
   }
+  // v100.92 (I-520): trei file în același panou - numărul în titlu („Idei · 23”), fila aleasă ținută în localStorage; notele rămân la fila lor
+  h += t212File([{ k: "idei", t: "Idei", n: id ? l.length + rest.length : null, h: fIdei }, { k: "revenire", t: "Pe revenire", n: id && Array.isArray(id.reveniri) ? id.reveniri.length : null, h: fRev },
+    { k: "socoteala", t: "Socoteala sfaturilor", n: null, h: fSoc || '<p class="tbSub t212Gol">Socoteala apare după primele sfaturi notate dimineața.</p>' }], t212FilaAleasa());
   var lista = d && Array.isArray(d.lista) ? d.lista : [];
   h += '<div class="t212Lista"><label for="t212ListaIn" class="tbSub">Urmăresc și (simboluri, despărțite prin virgulă):</label><input id="t212ListaIn" value="' + escapeHtml(lista.join(", ")) + '" placeholder="ex. ASTS, MSFT, NVDA" autocomplete="off"><button type="button" class="t212BtnLinie" data-action-click="t212ListaSalveaza()">Salvează</button></div>';
   // v100.71 (I2): avertizarile comune si sub idei (randul 📊 „În situații ca asta”, „(puține cazuri)”)
@@ -354,6 +357,19 @@ function t212IdeiRender() {
   box.innerHTML = h;
 }
 // v100.55: „in situatii ca asta” pentru idei (toate au trecut de poarta: aceeasi stare) - o linie deasupra tabelului
+// v100.92 (I-520): filele panoului de idei - butoanele (numărul în titlu), fila aleasă vizibilă, celelalte ascunse (hidden); alegerea fără redesen
+function t212File(file, aleasa) {
+  var k = file.some(function (f) { return f.k === aleasa; }) ? aleasa : file[0].k;
+  return '<div class="t212File" role="tablist">' + file.map(function (f) { return '<button type="button" class="tbIntBtn" aria-pressed="' + (f.k === k) + '" data-action-click="t212FilaAlege(\'' + f.k + '\')">' + escapeHtml(f.t + (f.n != null ? " · " + f.n : "")) + '</button>'; }).join("") + '</div>'
+    + file.map(function (f) { return '<div class="t212Fila" data-fila="' + f.k + '"' + (f.k === k ? "" : " hidden") + '>' + f.h + '</div>'; }).join("");
+}
+function t212FilaAleasa() { try { var v = localStorage.getItem("t212Fila"); return v === "revenire" || v === "socoteala" ? v : "idei"; } catch (e) { return "idei"; } }
+function t212FilaAlege(k) {
+  try { localStorage.setItem("t212Fila", k); } catch (e) {}
+  var box = $("t212Idei"); if (!box) return;
+  box.querySelectorAll(".t212Fila").forEach(function (p) { p.hidden = p.getAttribute("data-fila") !== k; });
+  box.querySelectorAll(".t212File .tbIntBtn").forEach(function (b) { var m = /\('(\w+)'\)/.exec(b.getAttribute("data-action-click") || ""); b.setAttribute("aria-pressed", String(!!m && m[1] === k)); });
+}
 function t212IdeiSit(l) {
   var j = t212Jurnal(), sit = l.length && l[0].sit; if (!j || !sit) return "";
   return '<p class="tbSub">📊 ' + escapeHtml(ActiuniSemnale.textSituatie(ActiuniSemnale.situatiiCaAsta(j.p.inchise, t212.cf || {}, sit, null))) + '</p>';
@@ -427,7 +443,9 @@ function tbSugestiiCorp(cl, sg, inchise) {
   // v100.87 (el, „ok” după poza de la 10:55 - Q era în ambele liste): moneda aflată și pe revenire, și la short primește pe fiecare rând
   // al ei „Aș sări peste ea” - semnalele se bat cap în cap; listele tot nu se filtrează între ele (specul)
   var inRev = {}, inSh = {}; rev.forEach(function (x) { inRev[x.moneda] = 1; }); sh.forEach(function (x) { inSh[x.moneda] = 1; });
-  var rand = function (x, det, dir, d, nota) { return '<div class="tbTodoRand"><span class="tbDunga ' + dunga(d) + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p>' + escapeHtml(ist(x)) + '</p>' + (nota ? '<p class="tbWarn">' + escapeHtml(nota) + '</p>' : '') + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMonedaDir(\'' + escapeHtml(x.moneda) + '\',\'' + dir + '\')">Fișa (' + dir + ')</button></div>'; };
+  // v100.92 (I-525): istoricul LUI pe monedă pe minus (≥ 3 boți - regula candidaților) ⇒ dunga roșie și istoricul pe roșu, în toate listele la fel
+  var rosu = function (x) { return !!(x.istoric && x.istoric.n >= 3 && x.istoric.total < 0); };
+  var rand = function (x, det, dir, d, nota) { return '<div class="tbTodoRand"><span class="tbDunga ' + (rosu(x) ? "r" : dunga(d)) + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p' + (rosu(x) ? ' class="bad"' : '') + '>' + escapeHtml(ist(x)) + '</p>' + (nota ? '<p class="tbWarn">' + escapeHtml(nota) + '</p>' : '') + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMonedaDir(\'' + escapeHtml(x.moneda) + '\',\'' + dir + '\')">Fișa (' + dir + ')</button></div>'; };
   var gol = function (t) { return '<p class="tbSub tbTodoGol">' + (cl ? t : "Aștept clasamentul…") + '</p>'; };
   // revizia (I7): un clasament făcut înainte de colectorul nou n-are starea de revenire (lipsește sau e null peste tot, după ruta curățată)
   var faraStare = !!(cl && Array.isArray(cl.monede) && cl.monede.length && !cl.monede.some(function (m) { return m && m.revenire; }));
