@@ -195,9 +195,14 @@ var Consiliu = (function () {
     (Array.isArray(x.consilier) ? x.consilier : []).forEach(function (k) { if (k && k.titlu) rest.push({ titlu: k.titlu, text: [k.text, k.ceAsFace ? "👉 " + k.ceAsFace : ""].filter(Boolean).join(" ") }); });
     if (x.indicatori) rest.push({ titlu: String(x.indicatori), text: "" });
     if (x.btc) rest.push({ titlu: String(x.btc), text: "" });
+    // v100.92 (I-522): Radarul (regimul fișei: ultimele 4 h față de mediana ei) și Busola (găleata ATR pe 4h față de un an) pot spune altceva -
+    // un rând DOAR când se contrazic, ca să nu aleagă el între două „adevăruri” fără explicație; verdictul nu se schimbă (rândul ≤ 110, garda)
+    var bz = x.busola, rg = x.regim, bvr = null;
+    if (bz && rg && typeof rg.miscare === "boolean" && ((rg.miscare && bz.stare === "liniste") || (!rg.miscare && bz.stare === "miscare")))
+      bvr = "Radarul: " + (rg.miscare ? "mișcare" : "liniște") + " (4 h față de mediana ei) · Busola: " + (bz.stare === "miscare" ? "mai agitată" : "mai calmă") + " (ATR 4h față de un an) — orizonturi diferite";
 
     return { nivel: nivel, eticheta: ETICHETA[nivel] || ETICHETA.asteapta, titlu: titlu, faCe: faCe, explica: explica, bani: bani.length ? bani.join(" · ") : null, incredere: inc,
-      motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: m.cip, extra: m.extra || null, scurt: m.scurt || null }; }), rest: rest };
+      motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: m.cip, extra: m.extra || null, scurt: m.scurt || null }; }), rest: rest, busolaVsRadar: bvr };
   }
 
   // v100.50 (I-473): de ce s-a schimbat verdictul - din ce nivel in care, motivele aparute (+) si disparute (−); nimic schimbat -> null

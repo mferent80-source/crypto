@@ -173,7 +173,7 @@ await test("(5) pagina: rândul Busolei sub „Număr de grile” în fișă (gr
 });
 await test("(5) colectorul: `de` pe monedă (meta().busolaMonede), starea la server după bucla boților, fișierul pentru Busola (închișii: 90 de zile ÎNAINTE de jurnal, uniți cu lista de dinainte; cheia prin lista Pionex), rândul de dimineață, v101.60; proba de încărcare", () => {
   const c = citeste("scripts", "colector.mjs");
-  assert.ok(/import \{ pazaPas, notaVeche, pentruServer \} from "\.\/lib\/paza-boti\.mjs";/.test(c), "importul pentruServer");
+  assert.ok(/import \{ pazaPas, notaVeche, pentruServer(, cheiaBot)? \} from "\.\/lib\/paza-boti\.mjs";/.test(c), "importul pentruServer");   /* v101.62: + cheiaBot (I-523) */
   assert.ok(/import \{ alcatuieste as pentruBusola \} from "\.\/lib\/pentru-busola\.mjs";/.test(c), "importul pentru-busola");
   assert.ok(c.includes("monede: meta().busolaMonede || (meta().busolaMonede = {})"), "harta „de” pe monedă, ținută în starea alertelor");
   assert.ok(c.includes('await trimite("/api/istoric-bot?action=paza", pentruServer(boti, stareAlerte, acum));'), "POST-ul paza");

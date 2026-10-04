@@ -5799,7 +5799,7 @@ function tbDecStareText(c){var k=tbConsCheie(c),e=(tbConsKv.decizii||[]).filter(
 function tbConsHtml(c){
   var cip=function(x){return x?'<span class="tbConsCip '+escapeHtml(x.cls||"")+'" title="'+escapeHtml(x.titlu||"")+'">'+escapeHtml(x.t)+'</span>':''};
   return '<div class="tbConsGrid"><div class="tbConsSt"><span class="tbConsEt '+escapeHtml(c.nivel)+'">'+escapeHtml(c.eticheta)+'</span><h3>'+escapeHtml(c.titlu)+'</h3>'
-    +(c.deCeText?'<p class="tbConsDeCe tbSub">🔁 '+escapeHtml(c.deCeText)+'</p>':'')+(c.altaVoce?'<p class="tbConsDeCe tbSub">📣 '+escapeHtml(c.altaVoce)+'</p>':'')
+    +(c.deCeText?'<p class="tbConsDeCe tbSub">🔁 '+escapeHtml(c.deCeText)+'</p>':'')+(c.altaVoce?'<p class="tbConsDeCe tbSub">📣 '+escapeHtml(c.altaVoce)+'</p>':'')+(c.busolaVsRadar?'<p class="tbConsDeCe tbSub">🧭 '+escapeHtml(c.busolaVsRadar)+'</p>':'')
     +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.explica?'<p class="tbSub tbConsExplica">'+escapeHtml(c.explica)+'</p>':'')+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')
     +(c.nivel&&c.nivel!=="asteapta"?'<div class="tbDecizii"><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(true)" aria-label="Am făcut ce zice Consilierul">✅ am făcut</button><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(false)" aria-label="N-am făcut ce zice Consilierul">✋ n-am făcut</button><span class="tbSub" id="tbDecStare">'+escapeHtml(tbDecStareText(c))+'</span></div>'+(c.decSoc?'<p class="tbSub tbDecSoc">'+escapeHtml(c.decSoc)+'</p>':''):'')+'</div>'
     +(c.incredere?'<p class="tbConsInc">'+escapeHtml(c.incredere)+'</p>':'')+'</div>'
@@ -5953,7 +5953,7 @@ function tbDeseneazaSemafor(b){
   if(plan)tbMinusAtins[b.id]=plan.atins.indexOf("minus")>=0;   // v100.39: histerezis pe pragul de minus (ca in colector)
   var prT=tbProfilPt(b),pmT=ProfilMoneda.praguriMargine(prT),psT=ProfilMoneda.pragStop(prT,String(b.directie||"").toLowerCase());   // v100.45 (pachetul 1)
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0,pmT),iap=SemnaleBot.iaProfit(b,f),zero=TabloExtra.dacaInchizi(b),costuri=TabloExtra.grileVsCosturi(b,Date.now());
-  var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:zero,plan:plan,costuri:costuri,btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap,distInainte:SemnaleBot.distantaLaOra(tbSapt.botId===b.id?tbSapt.intrari:null,Date.now(),3600000)});   /* v100.60: lichidarea se apropie sau se indeparteaza */
+  var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:zero,plan:plan,costuri:costuri,btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap,distInainte:SemnaleBot.distantaLaOra(tbSapt.botId===b.id?tbSapt.intrari:null,Date.now(),3600000),busola:tbBusolaVerdict(b)});   /* v100.60: lichidarea se apropie sau se indeparteaza; v100.92 (I-523): Busola */
   var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"],asteapta:["⏳ SOCOTESC","neutral"]},n=N[sm.nivel]||N.asteapta;
   var CUL={iesi:"var(--bad)",atentie:"var(--warn)",podea:"var(--good)"},mare=function(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1)};
   // v97.6: botul n-are plan -> sus, inaintea semaforului: propunerea si un singur buton
@@ -5972,7 +5972,7 @@ function tbDeseneazaSemafor(b){
   if(ac&&ac.aglomerare&&ac.aglomerare.text&&ac.aglomerare.nivel==="info")alte.push({c:"var(--muted)",m:ac.aglomerare.text,f:""});
   // v100.44 (I-465, demo aprobat 01.10): UN singur Consilier - toate sursele intr-un verdict, o actiune cu bani, 3 motive, restul pliat
   var vv=tbStare.verdictVechi,ind=$("tbIndicatoriRezumat");
-  var cons=Consiliu.alcatuieste({sm:sm,concret:conc,sfaturi:tbStare.sfaturiLista||[],consilier:typeof consilierBot==="function"?consilierBot(b):[],socoteala:(tbAduSocoteala(),tbSoc.peCod),
+  var cons=Consiliu.alcatuieste({sm:sm,concret:conc,busola:tbBusolaVerdict(b),regim:f&&f.regim?{miscare:!!f.regim.miscare}:null,sfaturi:tbStare.sfaturiLista||[],consilier:typeof consilierBot==="function"?consilierBot(b):[],socoteala:(tbAduSocoteala(),tbSoc.peCod),
     laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,perechi:tbPerechiPt(b),
     indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
     note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
@@ -6022,6 +6022,8 @@ function tbDeseneazaSemafor(b){
 function tbCheieBusola(b){return b.simbolPionex||TabloBot.simboluri(b.baza,b.quote).pionex}
 var tbPazaKv={la:0,inLucru:false,boti:{}};
 function tbPazaAdu(){if(tbPazaKv.inLucru||Date.now()-tbPazaKv.la<5*60000)return;tbPazaKv.inLucru=true;getJSON("/api/istoric-bot?action=paza").then(function(d){tbPazaKv.boti=d&&d.paza&&d.paza.boti||{};if(tbPanouVizibil()&&tbStare.bot)tbDeseneazaExtra(tbStare.bot)}).catch(function(){}).then(function(){tbPazaKv.la=Date.now();tbPazaKv.inLucru=false})}
+// v100.92 (I-522 / I-523): ce primesc semaforul și Consiliul de la Busola pentru moneda botului (null fără rezumat proaspăt)
+function tbBusolaVerdict(b){return typeof Busola==="undefined"||!b?null:Busola.pentruVerdict(Busola.rezumat(),tbCheieBusola(b),Date.now())}
 // v100.92 (I-517): titlul unui grup din „Pe zi, la închidere, ce știm”
 function tbGrup(t){return '<p class="tbGrup">'+escapeHtml(t)+'</p>'}
 function tbBusolaLinie(b){

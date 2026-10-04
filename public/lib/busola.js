@@ -67,6 +67,14 @@ var Busola = (function () {
     var cheie = simbolBusola(simbol), v = acum - Number(rez.la);
     return { cheie: cheie, stare: stare4h(rez.monede[cheie]), vechi: !(v <= PAZA_VECHI_MS), la: Number(rez.la) };
   }
+  // v100.92 (I-522 / I-523): ce primesc verdictul (semaforul) și Consiliul de la Busola - starea monedei pe 4h și bilanțul pazei (I-512:
+  // verdict, diferența „mișcare − oricând” pe date noi, monedele). Rezumatul vechi (> 4,5 h), lipsă sau moneda neurmărită ⇒ null:
+  // un verdict nu se sprijină pe o măsurătoare veche. Pragul e tot al botului - semaforul doar avertizează, și doar pe „dovedit”
+  function pentruVerdict(rez, simbol, acum) {
+    var p = pazaStare(rez, simbol, acum); if (!p || p.vechi || !p.stare) return null;
+    var b = rez.perp && rez.perp.bilant && typeof rez.perp.bilant === "object" ? rez.perp.bilant : null;
+    return { stare: p.stare, bilant: b ? { verdict: String(b.verdict || ""), dif: typeof b.dif === "number" && isFinite(b.dif) ? b.dif : null, monede: Number(b.monede) || 0 } : null };
+  }
   // cifra din mesajul de mișcare: „−0,214% pe episod, grid pe ±2×ATR, dovedit”. Dovada DOAR din grid.miscareDovedita
   // (Busola 1.34, I-506; grid.dovedit privește liniștea); ce lipsește (rezumat vechi) se lasă afară, nimic inventat.
   function cifraMiscare(rez) {
@@ -167,7 +175,7 @@ var Busola = (function () {
   function nuRaspunde() { return !stare.rez && stare.esec === true; }
   function _reset() { stare = { rez: null, la: 0, inLucru: null, esec: false }; }
 
-  return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, cifraMiscare: cifraMiscare,
+  return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, pentruVerdict: pentruVerdict, cifraMiscare: cifraMiscare,
     randFisa: randFisa, comparaInterval: comparaInterval, cartela: cartela, htmlCartela: htmlCartela, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset };
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

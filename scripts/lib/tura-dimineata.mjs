@@ -12,7 +12,9 @@ export async function turaDimineata(d) {
   const date = (await d.date()) || {};
   const r = d.Consilier.rezumatDimineata(Object.assign({ acum }, date));
   // v101.60 (I-513): rândurile colectorului, după cele ale Consilierului (Busola pe boții deschiși)
-  const linii = r.linii.concat(Array.isArray(date.liniiExtra) ? date.liniiExtra.filter((x) => typeof x === "string" && x) : []);
+  // v101.62 (I-526): rândul-verdict al colectorului ÎNAINTEA rândurilor Consilierului
+  const str = (l) => (Array.isArray(l) ? l.filter((x) => typeof x === "string" && x) : []);
+  const linii = str(date.liniiIntai).concat(r.linii, str(date.liniiExtra));
   if (await d.trimite({ nivel: "info", titlu: r.titlu + " (" + z.data.slice(8, 10) + "." + z.data.slice(5, 7) + ")", mesaj: linii.join("\n") })) { d.stare.dimineataTrimis = z.data; return { trimis: true, linii }; }
   return { trimis: false };
 }

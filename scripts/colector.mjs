@@ -33,9 +33,10 @@ import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs"; 
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
-import { pazaPas, notaVeche, pentruServer } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513)
+import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";
+import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513)
 import { alcatuieste as pentruBusola } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.61";
+const VERSIUNE_COLECTOR = "v101.62";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -293,7 +294,8 @@ async function semnaleBot(b, ctx, acum) {
   const x = { bot: b, fisa: f, plan: ctx.plan || null, costuri: TabloExtra.grileVsCosturi(b, acum),
     btc: SemnaleBot.btcAvertizare(regimBtc, f && f.regim), aglomerare: SemnaleBot.aglomerare(fut, dir),
     muta: SemnaleBot.mutaGridul(b, f, afaraOre, ProfilMoneda.praguriMargine(profileMoneda.get(s) || null)), iaProfit: SemnaleBot.iaProfit(b, f),
-    distInainte: SemnaleBot.distantaLaOra(st._distIst, acum, 3600000) };   // v101.40: directia distantei pana la lichidare
+    distInainte: SemnaleBot.distantaLaOra(st._distIst, acum, 3600000),   // v101.40: directia distantei pana la lichidare
+    busola: Busola.pentruVerdict(Busola.rezumat(), cheiaBot(b), acum) };   // v101.62 (I-523): Busola, doar din rezumatul proaspăt
   x.semafor = SemnaleBot.semafor(x);
   // v101.29 (I-474): Consilierul alcatuit si aici, pe ce are colectorul (semaforul, „Acum, concret” cu lumanarile de 15M, socoteala,
   // banii la margine) - poza si Discord spun ce spune Tabloul. Revizia 01.10 (I2): si SFATURILE (aceleasi intrari, Sfaturi.intrare) si
@@ -303,7 +305,7 @@ async function semnaleBot(b, ctx, acum) {
     x.concret = SemnaleBot.acumConcret({ bot: b, fisa: f, zero: TabloExtra.dacaInchizi(b), costuri: x.costuri, plan: ctx.plan || null, pragMargine: ProfilMoneda.praguriMargine(prof), pragStop: ProfilMoneda.pragStop(prof, dirC), acum,
       cifre: (pr) => TabloExtra.cifreActiuni(b, { protectie: pr, b15 }) });
     x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fundingHist: fut && Array.isArray(fut.fundingHist) ? fut.fundingHist : null, fisa: f, rezumat: null, acum }));
-    x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
+    x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, busola: x.busola, regim: f && f.regim ? { miscare: !!f.regim.miscare } : null, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
       opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null,
       perechi: Perechi.raport(b.ordinePerechi, b.pornitLa, acum, perechiEst && perechiEst[b.id] || null, { urme: perechiEst && perechiEst[b.id] && perechiEst[b.id].urme, factor: perechiCor[s] && perechiCor[s].factor, inGrid: Number(b.pretCurent) >= Number(b.gridJos) && Number(b.pretCurent) <= Number(b.gridSus) }) });   // v101.30 (I-477)
     const stA = stareAlerte[b.id] || (stareAlerte[b.id] = {});
@@ -1037,7 +1039,8 @@ async function dateDimineata() {
   }
   // v91: linkul spre Radar de pe telefon, doar daca raspunde; v101.6: acelasi drum ca poza (Tailscale fix, apoi tunelul)
   try { const u = await adresaRadarului(); if (u) out.link = u; } catch {}
-  try { const id = await cere("/api/t212?action=idei"); out.idei = (id && id.idei && Array.isArray(id.idei.actiuni) ? id.idei.actiuni : []).slice(0, 5).map((x) => x.simbol); } catch {}
+  try { const id = await cere("/api/t212?action=idei"); out.idei = (id && id.idei && Array.isArray(id.idei.actiuni) ? id.idei.actiuni : []).slice(0, 5).map((x) => x.simbol);
+    out.reveniriN = id && id.idei && Array.isArray(id.idei.reveniri) ? id.idei.reveniri.length : null; out.reveniriEt = id && id.idei && id.idei.dovadaReveniri && id.idei.dovadaReveniri.eticheta || null; } catch {}   // v101.62 (I-526)
   try { const cl = await cere("/api/istoric-bot?action=clasament"); out.ideiBoti = Idei.ideiBoti(cl && cl.clasament, [], 3).map((x) => x.moneda); } catch {}
   try {
     const bo = await cere("/api/bot-orders"), boti = bo && bo.bots || [], acum = Date.now();
@@ -1048,6 +1051,9 @@ async function dateDimineata() {
     const l = boti.filter((b) => b && b.id && b.activ !== false).map((b) => { const s = stareAlerte[b.id] && stareAlerte[b.id]._busola; if (s && Number(s.la) > laMax) laMax = Number(s.la); return { nume: String(b.baza || "").replace(/\.PERP$/, ""), stare: s ? s.stare : null, de: s ? s.de : null }; });
     const sufix = laMax > 0 && acum - laMax > Busola.PAZA_VECHI_MS ? " (rezumat de acum " + TextRo.ore(acum - laMax) + ")" : "";
     const t = Busola.liniaBoti(l, acum, 142 - sufix.length); out.liniiExtra = t ? ["🧭 Busola, pe 4h: " + t + sufix] : [];
+    // v101.62 (I-526): rândul-verdict din capul rezumatului - din aceleași date (boții pe agitație/calm, bilanțul pazei, acțiunile pe revenire, de ieșit)
+    const rz = Busola.rezumat(), tz = titluDimineata({ boti: l, bilant: rz && rz.perp && rz.perp.bilant ? rz.perp.bilant.verdict : null, reveniri: out.reveniriN, eticheta: out.reveniriEt, deIesit: out.deIesit.length });
+    out.liniiIntai = tz ? [tz] : [];
   } catch {}
   return out;
 }

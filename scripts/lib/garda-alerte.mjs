@@ -9,6 +9,7 @@ import { mesajReteta } from "./tura-scan.mjs";
 import { mesajFundingPiata } from "./tura-piata.mjs";
 import { mesajPornire } from "./tura-pornire.mjs";
 import { pazaBot, notaVeche } from "./paza-boti.mjs";
+import { titluDimineata } from "./dimineata-titlu.mjs";   // v101.62 (I-526)
 
 const T0 = Date.UTC(2026, 9, 1, 16, 0), ORA = 3600000, ZI = 86400000;
 const AL = [["titlu", "alertaTitlu"], ["mesaj", "alertaMesaj"]], RAP = [["titlu", "alertaTitlu"], ["mesaj", "raport"]];
@@ -196,6 +197,11 @@ export function situatiiAlerte(pune) {
   pune("Busola dimineața: 12 boți, rezumat vechi (6 ore)", "alerte", "busola.linia", { t: "🧭 Busola, pe 4h: " + BU.liniaBoti(Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - 9 * ORA })), T0, 142 - SUFIX.length) + SUFIX }, [["t", "raport"]]);
   lb("Busola dimineața: 4 boți, toate stările", [{ nume: "CRV", stare: "miscare", de: T0 - 8 * ORA }, { nume: "LIGHTER", stare: "liniste", de: T0 - 2.5 * ORA }, { nume: "PUMP", stare: "nu-stiu", de: T0 - 30 * 60000 }, { nume: "BTC", stare: null }]);
   lb("Busola dimineața: un bot", [{ nume: "CRV", stare: "miscare", de: T0 - 50 * ORA }]);
+  // v101.62 (I-526): rândul-verdict din capul rezumatului (raport: ≤ 160), din producătorul real
+  const td = (sit, o) => pune(sit, "alerte", "dimineata.titlu", { t: titluDimineata(o) }, [["t", "raport"]]);
+  td("dimineața: rândul-verdict, 3 boți", { boti: [{ nume: "CRV", stare: "miscare" }, { nume: "LIGHTER", stare: "liniste" }, { nume: "PUMP", stare: "liniste" }], bilant: "dovedit", reveniri: 9, eticheta: "cam la fel", deIesit: 0 });
+  td("dimineața: rândul-verdict, 40 de boți, 2 de ieșit", { boti: Array.from({ length: 40 }, (_, i) => ({ nume: "M" + i, stare: i % 2 ? "miscare" : "liniste" })), bilant: "prea puține", reveniri: 123, eticheta: "mai slab", deIesit: 2 });
+  td("dimineața: rândul-verdict, nimic", { boti: [{ nume: "SOL", stare: "nemasurat" }], reveniri: 0, deIesit: 0 });
   lb("Busola dimineața: 12 boți (tăiat la 145)", Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - ORA })));
   co("gridul îngust a ajuns la durata probată", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", false));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));

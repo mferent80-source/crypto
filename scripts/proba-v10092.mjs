@@ -138,5 +138,67 @@ await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe 3 coloane - acțiuni 
   assert.ok(/#dash \.acCumparCol3\{/.test(citeste("public", "app.css")), "CSS acCumparCol3");
 });
 
+// ======== lotul C: I-523 semaforul cu bilanțul pazei, I-522 Radar vs Busola în Consiliu; lotul D: I-526 verdict-titlu dimineața ========
+globalThis.GridCalcul = globalThis.GridCalcul || new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
+const S = new Function(`${lib("semnale-bot.js")}; return SemnaleBot;`)(); globalThis.SemnaleBot = S;
+const CS = new Function(`${lib("consiliu.js")}; return Consiliu;`)();
+const BOT = { id: "1", baza: "CRV.PERP", directie: "long", levier: 5, investit: 49.67, pretCurent: 0.3907, gridJos: 0.3841, gridSus: 0.4331, distantaLichidarePct: 30 };
+const BZ = (stare, verdict, dif, monede) => ({ stare: stare, bilant: verdict ? { verdict: verdict, dif: dif === undefined ? -0.0017 : dif, monede: monede === undefined ? 24 : monede } : null });
+await test("(C) I-523 semaforul: „mai agitată” + bilanț „dovedit” cu cifră ⇒ motiv de ATENȚIE (cod busola) cu cifra; „pe dos” / „prea puține” / fără cifră / calm / fără Busola ⇒ nimic; niciodată IEȘI", () => {
+  const r = S.semafor({ bot: BOT, fisa: null, busola: BZ("miscare", "dovedit") });
+  assert.equal(r.nivel, "atentie"); assert.equal(r.cod, "busola"); assert.equal(r.motiv, "Busola: agitație dovedită, −0,17 pp pe episod pe date noi");
+  assert.equal(r.faCe, "N-aș adăuga bani cât ține agitația; aș verifica stopul botului în Pionex."); assert.equal(r.deCe, "Busola a măsurat pe date noi: după „mai agitat” gridul a pierdut mai mult decât oricând (24 de monede).");
+  for (const bz of [BZ("miscare", "pe dos"), BZ("miscare", "prea puține"), BZ("miscare", "n-am aflat"), BZ("miscare", "dovedit", null), BZ("liniste", "dovedit"), BZ("nu-stiu", "dovedit"), null, { stare: "miscare", bilant: null }])
+    assert.ok(!S.semafor({ bot: BOT, fisa: null, busola: bz }).componente.some((k) => k.cod === "busola"), JSON.stringify(bz));
+  assert.ok(lib("semnale-bot.js").includes('busola: "Busola: agitație dovedită"'), "NUME_SFAT fără busola (socoteala pe cod)");
+});
+await test("(C) Busola.pentruVerdict: starea + bilanțul (verdict, dif, monede) din rezumatul proaspăt; rezumat vechi (> 4,5 h), lipsă sau monedă neurmărită ⇒ null; fără bilanț ⇒ bilant null", () => {
+  const v = B.pentruVerdict(REZ({ perp: { la: LA, monede: 102, prag: 200000, bilant: { verdict: "dovedit", dif: -0.0017, monede: 24, judecate: 300 } } }), "AAVE.PERP", ACUM);
+  assert.deepEqual(v, { stare: "miscare", bilant: { verdict: "dovedit", dif: -0.0017, monede: 24 } });
+  assert.deepEqual(B.pentruVerdict(cuVerdict("prea puține"), "LIT_USDT_PERP", ACUM), { stare: "liniste", bilant: { verdict: "prea puține", dif: null, monede: 0 } });
+  assert.equal(B.pentruVerdict(REZ(), "AAVE", ACUM + 5 * ORA), null); assert.equal(B.pentruVerdict(null, "AAVE", ACUM), null); assert.equal(B.pentruVerdict(REZ(), "ZZZ", ACUM), null);
+  assert.equal(B.pentruVerdict(REZ({ perp: { la: LA, monede: 1, prag: 1 } }), "AAVE", ACUM).bilant, null);
+});
+await test("(C) I-522 Consiliul: un rând doar când Radarul (regimul fișei) și Busola se contrazic, ≤ 110; de acord sau fără una din ele ⇒ nimic; verdictul neatins", () => {
+  const sm = S.semafor({ bot: BOT, fisa: null }), x = (busola, regim) => CS.alcatuieste({ sm: sm, concret: [], sfaturi: [], busola: busola, regim: regim });
+  assert.equal(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar, "Radarul: liniște (4 h față de mediana ei) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite");
+  assert.equal(x({ stare: "liniste" }, { miscare: true }).busolaVsRadar, "Radarul: mișcare (4 h față de mediana ei) · Busola: mai calmă (ATR 4h față de un an) — orizonturi diferite");
+  assert.ok(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar.length <= 110);
+  for (const [b, r] of [[{ stare: "miscare" }, { miscare: true }], [{ stare: "liniste" }, { miscare: false }], [{ stare: "nu-stiu" }, { miscare: true }], [null, { miscare: true }], [{ stare: "miscare" }, null]]) assert.equal(x(b, r).busolaVsRadar, null, JSON.stringify([b, r]));
+  assert.equal(x({ stare: "miscare" }, { miscare: false }).nivel, x(null, null).nivel, "verdictul neatins");
+});
+await test("(C) pagina + colectorul: semaforul și Consiliul primesc Busola (pentruVerdict) și regimul fișei; Consiliul desenează rândul 🧭; cheiaBot importată în colector", () => {
+  const a = citeste("public", "app.js"), col = citeste("scripts", "colector.mjs");
+  assert.ok(/^function tbBusolaVerdict\(b\)\{/m.test(a) && a.includes("Busola.pentruVerdict(Busola.rezumat(),tbCheieBusola(b),Date.now())"), "tbBusolaVerdict");
+  assert.ok(/var sm=SemnaleBot\.semafor\(\{bot:b,fisa:f,[^\n]*busola:tbBusolaVerdict\(b\)/.test(a), "semaforul paginii fără Busola");
+  assert.ok(/var cons=Consiliu\.alcatuieste\(\{sm:sm,concret:conc,[^\n]*busola:tbBusolaVerdict\(b\),regim:f&&f\.regim\?\{miscare:!!f\.regim\.miscare\}:null/.test(a), "Consiliul paginii fără Busola/regim");
+  assert.ok(fnApp("tbConsHtml").includes("c.busolaVsRadar?'<p class=\"tbConsDeCe tbSub\">🧭 '"), "rândul 🧭 nedesenat");
+  assert.ok(col.includes('import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs"') && col.includes("busola: Busola.pentruVerdict(Busola.rezumat(), cheiaBot(b), acum)") && col.includes("busola: x.busola, regim: f && f.regim ? { miscare: !!f.regim.miscare } : null"), "colectorul: semafor/Consiliu fără Busola");
+});
+await test("(C) garda: situațiile noi (semafor.busola, consiliu.busolaVsRadar ×2) există și trec regulile STRICT", () => {
+  const s = situatii().filter((x) => /^semafor\.busola\b/.test(x.sursa) || /^consiliu\.busolaVsRadar/.test(x.sursa));   /* sursa poartă sufixul câmpului */
+  assert.ok(s.some((x) => /^semafor\.busola\b/.test(x.sursa)) && s.filter((x) => /^consiliu\.busolaVsRadar/.test(x.sursa)).length >= 2, "situații: " + s.map((x) => x.sursa).join(","));
+  const rele = s.map((x) => ({ x: x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length);
+  assert.equal(rele.length, 0, rele.map((q) => q.x.sursa + ": " + q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
+});
+await test("(D) I-526 titluDimineata: „Azi: 1 bot pe agitație dovedită, 2 pe calm · 9 acțiuni pe revenire, istoricul cam la fel · nimic de ieșit”; fără dovadă ⇒ „pe agitație”; părțile lipsă se lasă afară; nimic ⇒ null; ≤ 160", async () => {
+  const { titluDimineata: T } = await import("./lib/dimineata-titlu.mjs");
+  const boti = [{ nume: "AAVE", stare: "miscare" }, { nume: "LIT", stare: "liniste" }, { nume: "PUMP", stare: "liniste" }];
+  assert.equal(T({ boti: boti, bilant: "dovedit", reveniri: 9, eticheta: "cam la fel", deIesit: 0 }), "Azi: 1 bot pe agitație dovedită, 2 pe calm · 9 acțiuni pe revenire, istoricul cam la fel · nimic de ieșit");
+  assert.equal(T({ boti: boti, bilant: "prea puține", reveniri: 1, eticheta: null, deIesit: 2 }), "Azi: 1 bot pe agitație, 2 pe calm · 1 acțiune pe revenire · 2 poziții de ieșit");
+  assert.equal(T({ boti: [{ nume: "SOL", stare: "nemasurat" }], reveniri: 0, deIesit: 0 }), "Azi: niciun bot pe agitație · nicio acțiune pe revenire · nimic de ieșit");
+  assert.equal(T({ boti: [], reveniri: null, deIesit: null }), null); assert.equal(T({}), null);
+  const lung = T({ boti: Array.from({ length: 40 }, (_, i) => ({ nume: "M" + i, stare: i % 2 ? "miscare" : "liniste" })), bilant: "dovedit", reveniri: 123, eticheta: "mai slab", deIesit: 7 }); assert.ok(lung && lung.length <= 160, lung);
+});
+await test("(D) I-526 dimineața: rândul-verdict e PRIMUL (înaintea rândurilor Consilierului), colectorul îl alcătuiește (out.liniiIntai, v101.62) și garda îl ține ≤ 160 (sursa dimineata.titlu)", async () => {
+  const TD = await import("./lib/tura-dimineata.mjs"); const trimise = [];
+  const r = await TD.turaDimineata({ acum: Date.UTC(2026, 9, 4, 7, 0), stare: {}, jurnal: () => {}, Consilier: { rezumatDimineata: () => ({ titlu: "Dimineața", linii: ["📈 Piața: liniște"] }) },
+    date: async () => ({ liniiIntai: ["Azi: nimic de ieșit"], liniiExtra: ["🧭 Busola, pe 4h: CRV mai agitată"] }), trimite: async (m) => { trimise.push(m); return true; } });
+  assert.deepEqual(r.linii, ["Azi: nimic de ieșit", "📈 Piața: liniște", "🧭 Busola, pe 4h: CRV mai agitată"]); assert.equal(trimise[0].mesaj.split("\n")[0], "Azi: nimic de ieșit");
+  const col = citeste("scripts", "colector.mjs"); assert.ok(col.includes('import { titluDimineata } from "./lib/dimineata-titlu.mjs"') && col.includes("out.liniiIntai = ") && /VERSIUNE_COLECTOR = "v101\.62"/.test(col), "colectorul");
+  const s = situatii().filter((x) => /^dimineata\.titlu/.test(x.sursa)); assert.ok(s.length >= 2, "situații dimineata.titlu: " + s.length);
+  const rele = s.map((x) => ({ x: x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
+});
+
 console.log("\n" + (pica ? "V100.92 PICA · " + pica + " din " + (ok + pica) : "V100.92 PASS · " + ok + "/" + ok));
 if (pica) process.exitCode = 1;

@@ -160,6 +160,8 @@ export function situatii() {
   sem("lichidarea 12,4%, fara istoric", { bot: crv, fisa: fisa() });
   sem("lichidarea 6%", { bot: CRV({ distantaLichidarePct: 6 }), fisa: fisa() });
   sem("lichidarea depasita", { bot: CRV({ distantaLichidarePct: -3.4 }), fisa: fisa() });
+  // v100.92 (I-523): Busola intră în verdict doar pe bilanțul „dovedit” al pazei, cu cifra lui
+  sem("Busola: agitatie dovedita (bilantul pazei)", { bot: crv, fisa: fisa(), busola: { stare: "miscare", bilant: { verdict: "dovedit", dif: -0.0017, monede: 24 } } });
   sem("planul: minus atins", { bot: JTO(), fisa: fisa(), plan: { atins: ["minus"], minus: { prag: 10 } } });
   sem("planul: plus atins, piata contra", { bot: JTO(), fisa: { ...fisa(), regim: JOS }, plan: { atins: ["plus"], plus: { prag: 5 } } });
   sem("planul: plus atins, piata cu botul", { bot: JTO(), fisa: { ...fisa(), regim: SUS }, plan: { atins: ["plus"], plus: { prag: 5 } } });
@@ -202,8 +204,12 @@ export function situatii() {
     const c = C.alcatuieste(x);
     pune(sit, "consiliu", "consiliu", c, [["titlu", "titlu"], ["faCe", "faCe"], ["explica", "deCe"], ["bani", "detalii"], ["incredere", "detalii"]]);
     c.motive.forEach((m, i) => pune(sit, "consiliu", "consiliu.motiv" + (i + 1) + "." + m.cod, m, [["titlu", "titlu"], ["text", "deCe"], ["extra", "detalii"]]));
+    if (c.busolaVsRadar) pune(sit, "consiliu", "consiliu.busolaVsRadar", c, [["busolaVsRadar", "rand"]]);   // v100.92 (I-522): rândul ≤ 110
     return c;
   };
+  // v100.92 (I-522): Radarul și Busola nu sunt de acord - un rând de explicație, pe amândouă sensurile
+  cons("Radarul liniste, Busola agitata", { sm: S.semafor({ bot: JTO(), fisa: fisa() }), concret: [], sfaturi: [], busola: { stare: "miscare" }, regim: { miscare: false } });
+  cons("Radarul miscare, Busola calma", { sm: S.semafor({ bot: JTO(), fisa: fisa() }), concret: [], sfaturi: [], busola: { stare: "liniste" }, regim: { miscare: true } });
   const smL = S.semafor({ bot: LIGHTER(), fisa: { regim: LIN }, plan: lp });
   const cL = cons("LIGHTER: stopul peste plan", { sm: smL, concret: conL, sfaturi: [], consilier: [], socoteala: null, opritor: 3.787 });
   cons("lichidarea se indeparteaza + muta gridul", { sm: S.semafor({ bot: crv, fisa: fisa(), distInainte: 11.2, muta }), concret: [], sfaturi: [] });
