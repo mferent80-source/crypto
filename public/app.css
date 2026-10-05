@@ -2079,6 +2079,17 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot .gbTip{position:absolute;pointer-events:none;background:#0a141f;border:1px solid var(--tb-linie);border-radius:8px;padding:7px 9px;font-size:12px;line-height:1.35;min-width:150px;max-width:260px;box-shadow:0 6px 24px rgba(0,0,0,.45);z-index:3}
 #tabloubot .gbR{display:flex;justify-content:space-between;gap:12px}
 #tabloubot .gbEv{margin-top:4px;padding-top:4px;border-top:1px solid var(--tb-linie)}
+/* v100.98: citirea graficului + „dacă închizi la” în cursor */
+#tabloubot .gbLa{margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--tb-linie)}
+#tabloubot .tbCitScurt{font-weight:700;font-size:14.5px;line-height:1.4;background:var(--panel-2);border-radius:10px;padding:9px 11px;margin:0 0 4px}
+#tabloubot .tbCitR{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:13.5px;line-height:1.45;padding:6px 0;border-top:1px solid var(--tb-linie)}
+#tabloubot .tbCitIc{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:800}
+#tabloubot .tbCitTx{color:#cdd7e4}
+#tabloubot .tbCitR.bine .tbCitIc{background:rgba(85,216,155,.15);color:var(--good)}
+#tabloubot .tbCitR.atentie .tbCitIc{background:rgba(245,196,81,.15);color:var(--warn)}
+#tabloubot .tbCitR.rau .tbCitIc{background:rgba(255,107,120,.16);color:var(--bad)}
+#tabloubot .tbCitR.info .tbCitIc{background:rgba(144,160,182,.14);color:var(--muted)}
+#tabloubot .tbGrInd[hidden]{display:none}
 #tabloubot .gbLeg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
 #tabloubot .gbLeg span{display:inline-flex;align-items:center;gap:6px}
 #tabloubot .gbLeg i{display:inline-block;width:16px;height:0;border-top:2px solid}

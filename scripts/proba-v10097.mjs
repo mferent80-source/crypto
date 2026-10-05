@@ -53,13 +53,12 @@ await test("(6) conturile se aduc (futures + balances) cel mult o dată la 5 min
   assert.match(asigura, /5 \* 60000/);
   assert.match(ecran, /contTot\.conturi/);
 });
-await test("(E) versiunile v100.97 peste tot", () => {
-  const v = "v100.97";
-  assert.match(citeste("public", "index.html"), new RegExp('content="' + v.replace(".", "\\.") + '" name="app-version"'));
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-97/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.97"/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.97"/);
-  assert.match(citeste("package.json"), /"version": "100\.97\.0"/);
+await test("(E) versiunile de la v100.97 în sus (index, sw, BUILD_INFO, versiune.js, package.json, lanțul cu v10097) - versiunea merge înainte (v100.98 a lărgit-o)", () => {
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[7-9]$/, "de la 97 în sus"); const V = bi.version;
+  assert.match(citeste("public", "index.html"), new RegExp('content="' + V.replace(".", "\\.") + '" name="app-version"'));
+  assert.ok(citeste("public", "sw.js").includes("crypto-radar-" + V.replace(".", "-")));
+  assert.ok(citeste("functions", "_shared", "versiune.js").includes('"' + V + '"'));
+  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, V.slice(1) + ".0"); assert.ok(/npm run test:v10096 && npm run test:v10097( && |")/.test(pk), "lanțul de teste");
 });
 
 console.log(`\n${ok} trec · ${pica} pică`);

@@ -6398,8 +6398,24 @@ function tbPretScurt(v){if(v==null||!isFinite(v))return "—";var a=Math.abs(v);
 // v100 (demo-ul aprobat 28.09): graficul desenat de GraficBot (public/lib/grafic-bot.js, pur): lumanari + volum, planul, zero-ul,
 // gridul, stopul, lichidarea, alertele DOAR ale botului (TabloExtra.alerteleBotului), Bollinger / EMA 20·50 / RSI / profil de volum.
 var TB_IND_KEY="tbGraficInd",tbGrafRz=null;
-function tbIndStare(){var d={bb:true,ema:true,rsi:true,vp:true,zi:true,val:true};try{var v=JSON.parse(localStorage.getItem(TB_IND_KEY)||"null");if(v&&typeof v==="object")for(var k in d)if(typeof v[k]==="boolean")d[k]=v[k]}catch(_){}return d}
-function tbSincInd(){var s=tbIndStare();["bb","ema","rsi","vp","zi","val"].forEach(function(k){var e=$("tbInd-"+k);if(e)e.setAttribute("aria-pressed",String(!!s[k]))})}
+function tbIndStare(){var d={bb:true,ema:true,rsi:true,vp:true,zi:true,val:true,adx:true};try{var v=JSON.parse(localStorage.getItem(TB_IND_KEY)||"null");if(v&&typeof v==="object")for(var k in d)if(typeof v[k]==="boolean")d[k]=v[k]}catch(_){}return d}
+function tbSincInd(){var s=tbIndStare();["bb","ema","rsi","vp","zi","val","adx"].forEach(function(k){var e=$("tbInd-"+k);if(e)e.setAttribute("aria-pressed",String(!!s[k]))});tbSincMod()}
+// v100.98 (05.10, demo aprobat): „Simplu” (implicit) = lumânările, marginile gridului, zero, planul, stopul, acum, EMA, RSI/ADX; „Complet” = tot, cu comutatoarele
+var TB_MOD_KEY="tbGraficMod";
+function tbModSimplu(){try{return localStorage.getItem(TB_MOD_KEY)!=="complet"}catch(_){return true}}
+function tbSincMod(){var s=tbModSimplu(),a=$("tbMod-simplu"),c=$("tbMod-complet"),g=document.querySelector("#tabloubot .tbGrInd");if(a)a.setAttribute("aria-pressed",String(s));if(c)c.setAttribute("aria-pressed",String(!s));if(g)g.hidden=s}
+function tbAlegeMod(m){if(m!=="simplu"&&m!=="complet")return;try{localStorage.setItem(TB_MOD_KEY,m)}catch(_){}tbSincMod();renderTabloGrafic()}
+// v100.98: funding-ul pentru citire (rata + ora următoarei plăți, din istoria ratelor adusă de tbAduExtra; Binance, Pionex are rata lui, apropiată)
+function tbFundingPt(){var e=tbStare.extra||{},b=tbStare.bot;if(!b||e.bot!==b.id||e.funding==null||!isFinite(e.funding))return null;var h=Array.isArray(e.fundingHist)?e.fundingHist:[],u=null;
+  if(h.length>1){var ult=Number(h[h.length-1].fundingTime),pas=ult-Number(h[h.length-2].fundingTime);if(ult>0&&pas>0){u=ult+pas;while(u<=Date.now())u+=pas}}
+  return {rata:e.funding,urmatoarea:u,acum:Date.now(),sursa:"după Binance"}}
+// v100.98: „dacă închizi la…” sub cursor - totalul botului închis la prețul de la înălțimea mouse-ului, cu gridul care umple pe drum
+function tbLaPret(b){return function(px){var t=TabloExtra.totalCuGridLa(b,px);if(t==null||!isFinite(t))return null;return '<b>dacă închizi la '+escapeHtml(tbPretScurt(px))+':</b> <span class="'+(t>=0?"good":"bad")+'">'+(t>=0?"+":"−")+Math.abs(t).toFixed(2).replace(".",",")+' USDT</span><div class="mutedInfo">cu ce cumpără / vinde gridul pe drum, după comision</div>'}}
+// v100.98: citirea graficului în coloana din dreapta - doar ce se vede pe grafic, în cuvinte (sfatul rămâne la semafor)
+function tbDeseneazaCitire(o,b){var el=$("tbCitire");if(!el)return;var c=GraficBot.citire(o,b,botiNr(b.pretCurent));
+  if(!c){el.innerHTML='<p class="tbSub">Prea puține prețuri pentru citire.</p>';return}
+  var IC={bine:"✓",atentie:"!",rau:"✕",info:"·"};
+  el.innerHTML='<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+c.randuri.map(function(x){return '<div class="tbCitR '+x.stare+'"><span class="tbCitIc" aria-hidden="true">'+IC[x.stare]+'</span><div><b>'+escapeHtml(x.ce)+':</b> <span class="tbCitTx">'+escapeHtml(x.text)+'</span></div></div>'}).join("")}
 function tbComutaInd(k){var s=tbIndStare();if(!Object.prototype.hasOwnProperty.call(s,k))return;s[k]=!s[k];try{localStorage.setItem(TB_IND_KEY,JSON.stringify(s))}catch(_){}tbSincInd();renderTabloGrafic()}
 // v100.51 (I-477): perechile reale vs estimarea fisei (KV perechi-est, de la colector) + corectia pe moneda; adus la 10 min
 var tbPerechi={la:0,est:{},cor:{},inLucru:false};
@@ -6440,14 +6456,16 @@ function renderTabloGrafic(){
   tbSincInd();
   if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
-  var pl=tbPlan.botId===b.id?tbPlan.plan:null,z=TabloExtra.dacaInchizi(b),pPl=pl&&botiNr(pl.plus)>0?TabloExtra.pretPentruTotal(b,botiNr(pl.plus)):null,pMi=pl&&botiNr(pl.minus)>0?TabloExtra.pretPentruTotal(b,-botiNr(pl.minus)):null;
+  var pl=tbPlan.botId===b.id?tbPlan.plan:null,z=TabloExtra.dacaInchizi(b),pPl=pl&&botiNr(pl.plus)>0?TabloExtra.pretTintaPentru(b,botiNr(pl.plus)):null,pMi=pl&&botiNr(pl.minus)>0?TabloExtra.pretOpritorPentru(b,-botiNr(pl.minus)):null;   // v100.98: CU gridul pe drum (era fără gridul pe drum: pe TAKE „−6,5” ieșea de fapt −8,4)
   var niv=GraficBot.niveluriBot({bot:b,zero:z&&z.pretZero,planPlus:pPl?{pret:pPl,usdt:botiNr(pl.plus)}:null,planMinus:pMi?{pret:pMi,usdt:botiNr(pl.minus)}:null});
   var xo=(brut&&brut.buOrderData)||{},gj=botiNr(xo.bottom),gs=botiNr(xo.top);
   var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer||[],b.id,Date.now());
   var pVal=tbValoarePt(b),pZi=GraficBot.ziObisnuita(pvPretViuAcum(b)||bare[bare.length-1].c,tbProfilPt(b));   // v100.51 (I-470, I-476)
-  var d=GraficBot.desen({bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,zi:pZi,val:pVal,consLinii:tbStare.consLinii&&tbStare.consLinii.bot===b.id?tbStare.consLinii:null,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),linii:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h",pretViu:pvPretViuAcum(b),
+  bare=GraficBot.cuPretViu(bare,pvPretViuAcum(b),Date.now());   // v100.98: lumânarea de acum urmează prețul live
+  var oG={simplu:tbModSimplu(),pornit:botiNr(b.pornitLa),funding:tbFundingPt(),bare:bare,W:W,ingust:ingust,st:tbIndStare(),niv:niv,zi:pZi,val:pVal,consLinii:tbStare.consLinii&&tbStare.consLinii.bot===b.id?tbStare.consLinii:null,grila:{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),linii:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric"},alerte:alerte,per:tbStare.graficInterval||"24h",pretViu:pvPretViuAcum(b),
     // v100.38: umplerile si perechile gridului, deduse din lumanari de la pornire, langa numarul de perechi al Pionex
-    umpleri:GraficBot.umpleri(bare,{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),linii:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric",p0:botiNr(xo.initPrice),pornit:botiNr(b.pornitLa),dir:String(b.directie||"").toLowerCase()}),perechiPionex:botiNr(b.ordinePerechi)});
+    umpleri:GraficBot.umpleri(bare,{jos:gj!==null?gj:botiNr(b.gridJos),sus:gs!==null?gs:botiNr(b.gridSus),linii:botiNr(xo.row),geo:String(xo.gridType||"").toLowerCase()==="geometric",p0:botiNr(xo.initPrice),pornit:botiNr(b.pornitLa),dir:String(b.directie||"").toLowerCase()}),perechiPionex:botiNr(b.ordinePerechi)};
+  var d=GraficBot.desen(oG);tbDeseneazaCitire(oG,b);
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
   // ultimele 3 alerte ale botului si ca text (pe telefon punctele de pe banda se citesc greu)
@@ -6456,9 +6474,10 @@ function renderTabloGrafic(){
   var fg=pVal&&pVal.zona?Valoare.fataDeGrid(pVal.zona,gj!==null?gj:botiNr(b.gridJos),gs!==null?gs:botiNr(b.gridSus)):null;   // v100.51 (I-470): gridul tau fata de zona de valoare
   el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
-  var ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none"};
+  var crY=svg.querySelector(".gbCruceY"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none"};
   var arata=function(cx,cy){
-    var r=svg.getBoundingClientRect(),sx=(cx-r.left)*(d.harta.W/(r.width||d.harta.W)),h=GraficBot.tip(d.harta,sx);
+    var r=svg.getBoundingClientRect(),k=d.harta.W/(r.width||d.harta.W),sx=(cx-r.left)*k,sy=(cy-r.top)*k,h=GraficBot.tip(d.harta,sx,sy,tbLaPret(b));
+    if(crY){if(sy>=0&&sy<=d.harta.mainH){crY.setAttribute("y1",sy.toFixed(1));crY.setAttribute("y2",sy.toFixed(1));crY.style.display=""}else crY.style.display="none"}
     if(!h){ascunde();return}
     var bi=Math.max(0,Math.min(d.harta.bare.length-1,Math.floor(sx/d.harta.cw))),x=(bi*d.harta.cw+d.harta.cw/2).toFixed(1);
     if(cr){cr.setAttribute("x1",x);cr.setAttribute("x2",x);cr.style.display=""}

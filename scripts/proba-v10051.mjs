@@ -75,7 +75,7 @@ await test("I-476/I-470 desen: banda zilei, zona de valoare, POC, pivotii DOAR c
 await test("Tabloul: comutatoarele „Ziua obișnuită” si „Zona de valoare” in sistemul existent (aria-pressed, TB_IND_KEY)", () => {
   const html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.match(html, /id="tbInd-zi"[^>]*aria-pressed/); assert.match(html, /id="tbInd-val"[^>]*aria-pressed/);
-  assert.match(app, /var d=\{bb:true,ema:true,rsi:true,vp:true,zi:true,val:true\}/); assert.match(app, /GraficBot\.ziObisnuita\(/); assert.match(app, /Valoare\.zona\(/);
+  assert.match(app, /var d=\{bb:true,ema:true,rsi:true,vp:true,zi:true,val:true(?:,adx:true)?\}/);   /* v100.98: + ADX 14 (comutatorul nou) */ assert.match(app, /GraficBot\.ziObisnuita\(/); assert.match(app, /Valoare\.zona\(/);
   assert.match(app, /tbStare\.consLinii=/); assert.match(app, /Valoare\.fataDeGrid\(/);
 });
 

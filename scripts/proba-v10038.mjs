@@ -76,7 +76,8 @@ await test("comparatia cu botul: propunerea de 7 intervale = botul cu 8 grile Pi
   assert.equal(TE.gridDiferitDeBot({ jos: 0.3755, sus: 0.423, grile: 8 }, CRV).acelasi, false);
 });
 await test("graficul Tabloului: treptele pe liniile Pionex (row linii), umplerile si legenda „perechi pe grafic: N · Pionex: M”", () => {
-  const i = app.indexOf("var d=GraficBot.desen({"), corp = app.slice(i - 200, i + 900);
+  // v100.98: obiectul desenului e scos în `var oG={…}` (îl primește și citirea graficului) - ancora se mută acolo, conținutul păzit rămâne
+  const i = app.indexOf("var oG={simplu:"), corp = app.slice(i - 200, i + 1100); assert.ok(i >= 0, "lipsește obiectul desenului");
   assert.match(corp, /linii:botiNr\(xo\.row\)[,}]/); assert.match(corp, /GraficBot\.umpleri\(bare,/); assert.match(corp, /perechiPionex:botiNr\(b\.ordinePerechi\)/); assert.match(corp, /dir:String\(b\.directie/);   // v100.39: cu [,}] - `linii:botiNr(xo.row)-1` nu mai trece (02.10: comentariul la capat - inainte inghitea cele trei asertiuni de dupa el)
   const T0 = CRV.pornitLa, bare = [{ t: T0, o: 0.3997, h: 0.4097, l: 0.3990, c: 0.4080, v: 1 }, { t: T0 + 60000, o: 0.4080, h: 0.4085, l: 0.4014, c: 0.4021, v: 1 }];
   const GR = { jos: 0.3755, sus: 0.423, linii: 8, geo: true };
