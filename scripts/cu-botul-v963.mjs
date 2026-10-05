@@ -156,7 +156,7 @@ await test("socoteala pe bani: 'tine' urmat = castigul de dupa; 'iesi' urmat = c
 // ---- v97.6: planul propus la botul nou fara plan ----
 await test("propunePlan: planul lui de la VVV (+3/-14/12h pe 91,9) scalat la 96,63 USDT; fara plan: 3% / 15% / 12 h; fara nimic: null", async () => {
   const p = T.propunePlan({ plus: 3, minus: 14, afaraOre: 12, investit: 91.9, nume: "VVV" }, 96.63);
-  assert.deepEqual([p.plus, p.minus, p.afaraOre], [3.2, 14.7, 12]); assert.match(p.nota, /după planul tău de la VVV \(\+3 \/ −14 USDT \/ 12 h, scalat de la 91,9 la 96,6 USDT\)/);
+  assert.deepEqual([p.plus, p.minus, p.afaraOre], [3.2, 14.7, 12]); assert.match(p.nota, /luat de la botul tău VVV: \+3 \/ −14 USDT pe 91,9 USDT, scalat la 96,6 USDT/   /* v100.102: formularea fără paranteze în paranteze */);
   const f = T.propunePlan({ plus: 3, minus: 14 }, 50); assert.deepEqual([f.plus, f.minus, f.afaraOre], [3, 14, 12], "fără suma botului vechi: aceleași sume");
   const d = T.propunePlan(null, 100); assert.deepEqual([d.plus, d.minus, d.afaraOre], [3, 15, 12]); assert.match(d.nota, /propunerea mea/);
   assert.equal(T.propunePlan(null, null), null);

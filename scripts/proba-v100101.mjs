@@ -51,7 +51,7 @@ await test("(3) motive: „de ce da” / „de ce nu” din cifrele variantei (f
   assert.ok(mm.da.some((x) => /ține o zi obișnuită a monedei \(±11,1%\)/.test(x)) && mm.da.some((x) => /fără lichidare/.test(x)) && mm.nu.some((x) => /tipic 25 h/.test(x)), JSON.stringify(mm));
   assert.ok(mm.nu.some((x) => x === "24 din 109 porniri încă în grid după 3 zile"));
   // poza 05.10: LARG strâns cât planul (−8,4% / +9,8%, o zi e ±11,1%) - motivul spune banda REALĂ; orele rotunjite („2.5 h” ieșea cu punct)
-  assert.equal(GP.motive(Object.assign({}, mea, { dir: "long", d: 0.0838, u: 0.0976 }), "mea", 0.111).da[0], "ține −8,4% / +9,8% fără să iasă (o zi obișnuită e ±11,1%: strânsă cât planul)");
+  assert.equal(GP.motive(Object.assign({}, mea, { dir: "long", d: 0.0838, u: 0.0976 }), "mea", 0.111).da[0], "ține −8,4% / +9,8% fără să iasă (o zi obișnuită e ±11,1%; strânsă ca la stop să nu treci de pragul de pierdere)");
   assert.equal(GP.motive(Object.assign({}, mea, { dir: "long", d: 0.112, u: 0.115 }), "mea", 0.111).da[0], "ține −11,2% / +11,5% fără să iasă, cât o zi obișnuită a monedei (±11,1%)");
   assert.ok(GP.motive(Object.assign({}, ta, { proba: Object.assign({}, ta.proba, { oreTipic: 2.5 }) }), "ta", 0.111).da.includes("ieși repede: tipic după 3 h, banii nu stau"));
   assert.match(GP.alege(V(5, 54, 109, -1.04, 0, 2), V(1, 27, 109, 0.31, 24, 25)).text, /\(−6,5 USDT\).*media pe pornire \+0,3 USDT față de −1,0 USDT/, "o singură zecimală");
@@ -69,8 +69,8 @@ await test("(4) gridVsPlan pe botul care rulează: −27 la marginea de jos (64%
 await test("(5) mesajul de Discord: titlul ≤ 60, două rânduri (faptul · 👉 ce aș face), cu cifrele și ieșirea", () => {
   const m = MC.gridPreaLarg("TAKE", Object.assign(TE.gridVsPlan(BOT, 6.5), { plan: 6.5 }));
   assert.equal(m.cheie, "grid-larg"); assert.equal(m.nivel, "atentie"); assert.ok(m.titlu.length <= 60, m.titlu); assert.equal(m.titlu, "TAKE: gridul e prea larg pentru levier");
-  assert.match(m.mesaj, /≈ \d+,\d USDT/, "o singură zecimală"); assert.match(m.mesaj, /planul −6,5[;.]/);
-  const r = m.mesaj.split("\n"); assert.equal(r.length, 2); assert.match(r[0], /La marginea de jos pierzi ≈ \d+,?\d* USDT \(\d+% din bani\), planul −6,5/); assert.match(r[0], /din 49 de grile n-ar lucra/);
+  assert.match(m.mesaj, /≈ \d+,\d USDT/, "o singură zecimală"); assert.match(m.mesaj, /pragul de pierdere −6,5[;.]/);   /* v100.102 */
+  const r = m.mesaj.split("\n"); assert.equal(r.length, 2); assert.match(r[0], /La marginea de jos pierzi ≈ \d+,?\d* USDT \(\d+% din bani\), pragul de pierdere −6,5/); assert.match(r[0], /din 49 de grile n-ar lucra/);
   assert.match(r[1], /^👉 Aș închide aproape de zero și aș porni ÎNGUST sau LARG din fișă/);
 });
 await test("(6) pagina: capul fișei = Îngust / Larg sub verdict; setările vechi pliate cu „la stop pierzi”; poarta cu jos/sus/levier/sumă; Tabloul cu rândul roșu", () => {

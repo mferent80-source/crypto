@@ -100,23 +100,23 @@ var GridPlan = (function () {
     if (!(plus > 0) || !(minus > 0)) return { eroare: "Îmi trebuie planul întreg: ținta pe plus și pragul pe minus, în USDT." };
     var x = { pret: P, dir: dir, suma: suma, pas: nr(o.pas), minOrdin: o.minOrdin, b15: o.b15, zile: nr(o.zile) };
     // TA: levierul tau, banda cat planul
-    var dT = dPentru(suma * Lt, minus, plus), ta = complet(x, potriveste(x, Lt, dT, uPentru(suma * Lt, dT, plus), false, minus, plus), { cum: "levierul tău, banda cât planul" });
+    var dT = dPentru(suma * Lt, minus, plus), ta = complet(x, potriveste(x, Lt, dT, uPentru(suma * Lt, dT, plus), false, minus, plus), { cum: "levierul tău, banda cât îți permite pragul de pierdere" });
     // MEA: banda cat o zi obisnuita, levierul cel mai mare (<= al tau) la care, pe simulator, marginea costa cel mult planul
     var mea = null, faraMea = null;
     if (amp === null || !(amp > 0)) faraMea = "N-am mișcarea monedei pe zi (îmi trebuie lumânările de 4 ore pe 30 de zile).";
     // v100.18 (prinsa pe laboratorul real: BTC −1,8 vs +0,1, XAU −3,9 vs −1,6): moneda linistita, banda planului e deja cat o zi
     // sau mai larga -> n-are rost s-o strang; varianta mea = a ta
-    else if (amp <= ta.d) mea = Object.assign({}, ta, { cum: "banda planului e deja cât o zi obișnuită sau mai largă: la fel ca a ta", egalaCuTa: true, stransaLaPlan: false });
+    else if (amp <= ta.d) mea = Object.assign({}, ta, { cum: "banda îngustă e deja cât o zi obișnuită sau mai largă: la fel ca ÎNGUST", egalaCuTa: true, stransaLaPlan: false });
     else {
       for (var L = Lt; L >= 1 && !mea; L--) {
         var st = potriveste(x, L, amp, uPentru(suma * L, amp, plus), true, minus, plus);
         // „≈ planul”: pana la +5% (la LIT, 0,6 USDT - sub alunecarea reala a unui stop, 2,4 la LIGHTER); altfel un short cu
         // grile geometrice ar cadea la jumatate de levier pentru cativa centi. Cifra adevarata ramane la vedere.
-        if (-laMargine(st, "pierdere") <= minus * 1.05) mea = complet(x, st, { cum: "banda cât o zi obișnuită, levierul din plan", stransaLaPlan: false });
+        if (-laMargine(st, "pierdere") <= minus * 1.05) mea = complet(x, st, { cum: "banda cât o zi obișnuită, levierul ales după pragul de pierdere", stransaLaPlan: false });
       }
-      if (!mea) { var d1 = dPentru(suma, minus, plus); mea = complet(x, potriveste(x, 1, d1, uPentru(suma, d1, plus), false, minus, plus), { cum: "nici la 1× banda de o zi nu încape: strânsă cât planul", stransaLaPlan: true }); }
+      if (!mea) { var d1 = dPentru(suma, minus, plus); mea = complet(x, potriveste(x, 1, d1, uPentru(suma, d1, plus), false, minus, plus), { cum: "nici la 1× banda de o zi nu încape în pragul de pierdere: strânsă cât permite el", stransaLaPlan: true }); }
     }
-    return { ta: ta, mea: mea, faraMea: faraMea, plan: { plus: plus, minus: minus }, amp: amp };
+    return { ta: ta, mea: mea, faraMea: faraMea, plan: { plus: plus, minus: minus, afaraOre: nr(plan.afaraOre) }, amp: amp };
   }
 
   // v100.17 (ideea 2): botul care RULEAZA - „de la pornirea ta, pe drumul real”: cele doua variante pornite in aceeasi lumanare
@@ -168,7 +168,9 @@ var GridPlan = (function () {
     var dif = b.mediaUsdt - a.mediaUsdt, maiRar = b.stop < a.stop * 0.8, maiDes = a.stop < b.stop * 0.8;
     var cine = maiRar && dif > -0.5 ? "mea" : maiDes && dif < 0.5 ? "ta" : dif >= 0 ? "mea" : "ta", x = cine === "mea" ? mea : ta, y = cine === "mea" ? ta : mea;
     var ind = Math.min(nr(a.independente) || 0, nr(b.independente) || 0);
-    return { cine: cine, text: (cine === "mea" ? "LARG" : "ÎNGUST") + " · aceeași pierdere la stop (" + U1(x.laStop) + "), stopul atins de " + cate(x.proba.stop, "dată", "ori") + " din " + cate(x.proba.n, "pornire", "porniri")
+    return { cine: cine, text: (cine === "mea" ? "LARG" : "ÎNGUST") + " · " + (Math.abs(x.laStop - y.laStop) < 0.15 ? "aceeași pierdere la stop (" + U1(x.laStop) + ")"
+      // v100.102 (poza 05.10): cu planul scalat, LARG încape într-o zi întreagă și pierde la stop mai puțin decât ÎNGUST - se spun amândouă
+      : "la stop pierzi " + U1(x.laStop) + " față de " + U1(y.laStop) + " la " + (cine === "mea" ? "ÎNGUST" : "LARG")) + ", stopul atins de " + cate(x.proba.stop, "dată", "ori") + " din " + cate(x.proba.n, "pornire", "porniri")
       + ", față de " + y.proba.stop + ", media pe pornire " + U1(x.proba.mediaUsdt) + " față de " + U1(y.proba.mediaUsdt)
       + (ind < 30 ? ". Cu ~" + cate(ind, "caz independent", "cazuri independente") + " diferența de medie nu e dovedită; aleg după cât de des te scoate stopul." : ".") };
   }
@@ -181,7 +183,7 @@ var GridPlan = (function () {
       da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas).replace(/(\d),(\d)%$/, "$1,$2%") : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), "ieși repede: tipic după " + ORE(pr.oreTipic) + ", banii nu stau", "levierul tău (" + v.levier + "×)"],
       nu: ["zgomotul unei ore te scoate: stop " + pr.stop + " din " + n, "fiecare grilă aduce mai mult, dar ieși des pe minus"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) };
     return {
-      da: [(banda ? "ține " + banda + " fără să iasă" + (nr(amp) === null ? "" : stransa ? " (o zi obișnuită e ±" + P1(amp) + ": strânsă cât planul)" : ", cât o zi obișnuită a monedei (±" + P1(amp) + ")") : nr(amp) !== null ? "ține o zi obișnuită a monedei (±" + P1(amp) + ") fără să iasă" : "ține mai mult fără să iasă"), "stopul atins mai rar: " + pr.stop + " din " + n].concat(lq === null ? ["fără lichidare: la " + v.levier + "× nu se lichidează"] : []),
+      da: [(banda ? "ține " + banda + " fără să iasă" + (nr(amp) === null ? "" : stransa ? " (o zi obișnuită e ±" + P1(amp) + "; strânsă ca la stop să nu treci de pragul de pierdere)" : ", cât o zi obișnuită a monedei (±" + P1(amp) + ")") : nr(amp) !== null ? "ține o zi obișnuită a monedei (±" + P1(amp) + ") fără să iasă" : "ține mai mult fără să iasă"), "stopul atins mai rar: " + pr.stop + " din " + n].concat(lq === null ? ["fără lichidare: la " + v.levier + "× nu se lichidează"] : []),
       nu: ["levier mic ⇒ bani mai puțini pe grilă", "banii stau mai mult: tipic " + ORE(pr.oreTipic), pr.inGrid + " din " + n + " încă în grid după 3 zile"] };
   }
 

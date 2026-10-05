@@ -284,9 +284,12 @@ var TabloExtra = (function () {
   function propunePlan(ult, investitNou) {
     var inv = nr(investitNou), r1 = function (v) { return v === null || !isFinite(v) ? null : Math.round(v * 10) / 10; };
     if (ult && (nr(ult.plus) > 0 || nr(ult.minus) > 0)) {
-      var ui = nr(ult.investit), k = ui > 0 && inv > 0 ? inv / ui : 1, v = function (x) { return String(x).replace(".", ","); }, cum = ui > 0 && inv > 0 ? "scalat de la " + v(r1(ui)) + " la " + v(r1(inv)) + " USDT" : "aceleași sume";
-      return { plus: r1(nr(ult.plus) * k), minus: r1(nr(ult.minus) * k), afaraOre: nr(ult.afaraOre) || 12,
-        nota: "după planul tău de la " + (ult.nume || "botul de dinainte") + " (+" + v(ult.plus) + " / −" + v(ult.minus) + " USDT" + (ult.afaraOre ? " / " + ult.afaraOre + " h" : "") + ", " + cum + ")" };
+      // v100.102 (el: „chestia cu planul e cam ambiguă”): sursa și scalarea spuse într-o frază, fără paranteze în paranteze („aceleași sume” nu spunea nimic)
+      var ui = nr(ult.investit), k = ui > 0 && inv > 0 ? inv / ui : 1, v = function (x) { return String(x).replace(".", ","); }, bot = "botul tău " + (ult.nume || "de dinainte");
+      var nota = !(ui > 0 && inv > 0) ? "luat de la " + bot + "; suma lui n-o știu, deci nescalat: verifică cifrele"
+        : Math.abs(k - 1) < 0.005 ? "luat de la " + bot + ", pe aceeași sumă (" + v(r1(ui)) + " USDT)"
+        : "luat de la " + bot + ": +" + v(ult.plus) + " / −" + v(ult.minus) + " USDT pe " + v(r1(ui)) + " USDT, scalat la " + v(r1(inv)) + " USDT";
+      return { plus: r1(nr(ult.plus) * k), minus: r1(nr(ult.minus) * k), afaraOre: nr(ult.afaraOre) || 12, nota: nota };
     }
     if (inv > 0) return { plus: r1(inv * 0.03), minus: r1(inv * 0.15), afaraOre: 12, nota: "propunerea mea: +3% / −15% din investiție / 12 h afară din grid" };
     return null;

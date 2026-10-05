@@ -68,7 +68,7 @@ await test("moneda linistita (2%/zi, sub banda planului): varianta mea NU e mai 
   const v = GridPlan.variante(O({ amp: 0.02 }));
   assert.equal(v.mea.egalaCuTa, true);
   assert.equal(v.mea.levier, v.ta.levier); assert.equal(v.mea.jos, v.ta.jos); assert.equal(v.mea.sus, v.ta.sus);
-  assert.match(v.mea.cum, /la fel ca a ta/);
+  assert.match(v.mea.cum, /la fel ca ÎNGUST/);   /* v100.102: „a ta” -> ÎNGUST */
 });
 
 await test("moneda care se misca 30%/zi: nici la 1x banda de o zi nu incape -> 1x si banda strans cat planul", () => {
