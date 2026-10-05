@@ -36,7 +36,7 @@
     "test:fifo": "node scripts/jurnal-fifo-v746.mjs",
     "test:ecran": "node scripts/proba-ecran-tablou.mjs",
     "test:directie": "node scripts/directie-v75.mjs",
-    "test:colector": "node scripts/colector-v77.mjs && node scripts/alerte-v9111.mjs && node scripts/alerte-v94.mjs && node scripts/tura-piata-v94.mjs && node scripts/scan-v96.mjs && node scripts/paznic-v97.mjs && node scripts/paznic-poza-v98.mjs && node scripts/alerte-centru-v974.mjs",
+    "test:colector": "node scripts/colector-v77.mjs && node scripts/alerte-v9111.mjs && node scripts/alerte-v94.mjs && node scripts/tura-piata-v94.mjs && node scripts/scan-v96.mjs && node scripts/paznic-v97.mjs && node scripts/paznic-poza-v98.mjs && node scripts/alerte-centru-v974.mjs && node scripts/proba-v10169.mjs",
     "test:scenarii": "node scripts/scenariu-v77.mjs",
     "test:grid": "node scripts/grid-v78.mjs",
     "test:jurnaltrade": "node scripts/jurnal-trade-v81.mjs",

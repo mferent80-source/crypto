@@ -30,6 +30,7 @@ import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
 import { turaProfil as turaProfilModul, eNoapte } from "./lib/tura-profil.mjs";   // v101.26 (pachetul 1)
+import { turaArhivaOre as turaArhivaOreModul, planArhiva } from "./lib/tura-arhiva-ore.mjs";   // v101.69 (el: „fă 5”): barele de 1 h ale arhivei boților
 import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabilitati.mjs";   // v101.27 (pachetul 2a)
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { bilantDinBusola } from "./lib/din-busola.mjs";   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠
@@ -38,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.68";
+const VERSIUNE_COLECTOR = "v101.69";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1527,6 +1528,30 @@ async function turaPerechi() {
   } catch (e) { jurnal("perechi ESEC", e.message); perechiLa = Date.now() - 50 * 60000; }   // reincerc peste ~10 min
   perechiInLucru = false;
 }
+// v101.69 (el: „fă 5”): barele de 1 h pentru ARHIVA boților - toate monedele, de la cel mai vechi bot (măsurătorile pe arhivă prindeau doar 528
+// din 2.214 boți). Noaptea, 400 de cereri pe tură, reluat; fișiere separate (profilul monedei rămâne pe istoric-1h, 6 luni). Planul: planArhiva.
+const ORE_ARHIVA_DIR = path.join(DATA, "istoric-1h-arhiva"); fs.mkdirSync(ORE_ARHIVA_DIR, { recursive: true });
+const ARHIVA_ORE_STARE = path.join(DATA, "arhiva-ore-stare.json");
+const fisArhiva = (m) => path.join(ORE_ARHIVA_DIR, String(m).replace(/[^A-Z0-9_]/gi, "") + ".json");
+const citesteArhiva = (m) => citesteJson(fisArhiva(m), []);
+let arhivaOreInLucru = false;
+async function turaArhivaOre() {
+  if (!eNoapte(Date.now())) return;
+  if (arhivaOreInLucru) return;
+  arhivaOreInLucru = true;
+  try {
+    const st = citesteJson(ARHIVA_ORE_STARE, {}), harta = simbolPeMoneda();
+    const r = await turaArhivaOreModul({ acum: Date.now(), trades: async () => JurnalTrade.din(await botiInchisiToti()),
+      primaBaraAcum: (m) => { if (!harta[m]) return null; const o = citesteJson(fisOre(harta[m]), []), t = Number(o[0] && o[0].time); return Number.isFinite(t) ? t : null; },
+      simbolPentru: async (m) => harta[m] || simbolPerp(m), citeste: citesteArhiva,
+      scrie: (m, rr) => { try { scrieAtomic(fisArhiva(m), rr); } catch (e) { jurnal("arhiva 1h nescrisa", m, e.message); } },
+      cere, pauza: (ms) => new Promise((res) => setTimeout(res, ms)), jurnal, stare: st,
+      scrieStare: (s) => { try { scrieAtomic(ARHIVA_ORE_STARE, s); } catch (e) { jurnal("arhiva 1h: starea nescrisa", e.message); } }, buget: 400, GridCalcul });
+    jurnal("arhiva 1h: " + TextRo.cate(r.cereri, "cerere", "cereri") + " · gata " + r.gata + " din " + TextRo.cate(r.plan, "monedă", "monede"));
+    if (r.cereri > 0) profilStare.cazuriZi = null;   // bare noi ⇒ cazurile se refac chiar în noaptea asta, nu abia mâine
+  } catch (e) { jurnal("arhiva 1h ESEC", e.message); }
+  arhivaOreInLucru = false;
+}
 // revizia 01.10: dupa un esec (413, server oprit) se asteapta o ora, nu se reia la fiecare minut; cele mai noi 6.000 de cazuri
 let cazuriInLucru = false, cazuriEsec = 0;
 async function turaCazuri() {
@@ -1535,7 +1560,8 @@ async function turaCazuri() {
   cazuriInLucru = true;
   try {
     const tr = JurnalTrade.din(await botiInchisiToti()).sort((a, b) => (b.pornit || 0) - (a.pornit || 0)).slice(0, 6000), harta = simbolPeMoneda();
-    const bareDe = (m) => { if (!harta[m]) return null; try { return GridCalcul.bare(JSON.parse(fs.readFileSync(fisOre(harta[m]), "utf8"))); } catch { return null; } };
+    // v101.69: barele arhivei (de la cel mai vechi bot) + cele de acum, unite (o bară o singură dată)
+    const bareDe = (m) => { const ore = harta[m] ? citesteJson(fisOre(harta[m]), []) : [], u = GridCalcul.imbinaRanduri(citesteArhiva(m), ore, 0); return u.length ? GridCalcul.bare(u) : null; };
     const cz = Asemanatoare.cazuri(tr, bareDe);
     await trimite("/api/istoric-bot?action=cazuri", { la: Date.now(), cazuri: cz });
     profilStare.cazuriZi = zi; try { scrieAtomic(PROFIL_STARE, profilStare); } catch {}
@@ -1604,7 +1630,7 @@ async function bucla() {
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
-  turaProfil().then(() => turaCazuri()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
+  turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
   turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00
