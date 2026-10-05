@@ -183,14 +183,15 @@ await test("(R1) 🟡1: după schimbarea botului sau o reîmprospătare picată,
 });
 
 // ======== Task 7: versiunile ========
-await test("(E) versiunile: pagina v100.96 (BUILD_INFO, versiune.js, sw, index ×4, package.json 100.96.0, lanțul cu v10096), colectorul v101.66, Busola 1.43.0", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(bi.version, "v100.96"); assert.match(bi.badge, /^v100\.96 · /);
-  assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "v100.96";'), "versiune.js");
-  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-96";'), "sw.js");
-  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.96/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.95/.test(ix), "index.html mai are v100.95");
-  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.96.0"); assert.ok(/npm run test:v10095 && npm run test:v10096( && |")/.test(pk), "lanțul de teste"); assert.equal(JSON.parse(pk).scripts["test:v10096"], "node scripts/proba-v10096.mjs");
+await test("(E) versiunile: pagina de la v100.96 în sus (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v10096), colectorul de la v101.66 în sus, Busola de la 1.43.0 în sus - versiunea merge înainte (v100.97 a lărgit-o)", () => {
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[6-9]$/, "de la 96 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "), "badge-ul cu versiunea");
+  assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V + '";'), "versiune.js");
+  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'), "sw.js");
+  const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.95/.test(ix), "index.html mai are v100.95");
+  const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, V.slice(1) + ".0"); assert.ok(/npm run test:v10095 && npm run test:v10096( && |")/.test(pk), "lanțul de teste"); assert.equal(JSON.parse(pk).scripts["test:v10096"], "node scripts/proba-v10096.mjs");
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v(?:101\.(?:6[6-9]|[7-9]\d|\d{3,})|10[2-9]\.\d+|1[1-9]\d\.\d+)";/, "cel putin v101.66");
-  assert.equal(JSON.parse(fs.readFileSync("C:/Users/Cimin/busola/package.json", "utf8")).version, "1.43.0", "Busola 1.43.0");
+  const bv = JSON.parse(fs.readFileSync("C:/Users/Cimin/busola/package.json", "utf8")).version.split(".").map(Number);
+  assert.ok(bv[0] > 1 || (bv[0] === 1 && (bv[1] > 43 || (bv[1] === 43 && bv[2] >= 0))), "Busola de la 1.43.0 în sus: " + bv.join("."));
 });
 
 console.log("\n" + (pica ? "✗ " + pica + " picate, " + ok + " trecute" : "✓ toate cele " + ok + " teste au trecut"));

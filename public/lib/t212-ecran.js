@@ -968,7 +968,22 @@ function t212Cireasa(l) {
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", function () { jtAplicaFiltru(); });
 
 // v87: tot contul pe un rand, sus pe ambele pagini: botii Pionex (USDT, cu echivalentul in lei) si Trading 212 (lei)
-var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0, sugestii: null, sugestiiLa: 0 };
+var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0, conturi: null, conturiLa: 0, sugestii: null, sugestiiLa: 0 };
+// v100.97 (el, 05.10: „să afișezi la bot SOLDUL CONTULUI”): soldul Pionex = conturile (spot USDT+USDC, futures manual) + ce valorează
+// boții activi (investit + profitul lor). Pe contul lui azi aproape tot stă în bot (spot ~0,006, futures 0, TAKE 42,47 investit).
+// conturi = { spot, futures } citite; null / un cont lipsă ⇒ conturiCitite:false și suma e doar „în boți” - nu un „sold” fals de mic.
+function contTotSoldPionex(boti, conturi) {
+  var inBoti = 0, areBoti = false, faraInvestit = 0;
+  (boti || []).forEach(function (b) {
+    if (!b || !b.activ) return;
+    var inv = Number(b.investit), pr = Number(b.profitTotal);
+    if (!isFinite(inv) || inv <= 0) { faraInvestit++; return; }
+    inBoti += inv + (isFinite(pr) ? pr : 0); areBoti = true;
+  });
+  var citite = !!conturi && isFinite(conturi.spot) && conturi.spot !== null && isFinite(conturi.futures) && conturi.futures !== null;
+  if (!areBoti && !citite) return null;
+  return { sold: inBoti + (citite ? conturi.spot + conturi.futures : 0), inBoti: inBoti, conturiCitite: citite, botiFaraInvestit: faraInvestit };
+}
 async function contTotStiriCrypto(m) {
   if (!m || contTot.stiriCrypto[m]) return;
   try { var sc = await getJSON("/api/stiri?action=crypto&moneda=" + encodeURIComponent(m)); contTot.stiriCrypto[m] = sc && sc.moneda || []; } catch (e) { contTot.stiriCrypto[m] = []; }
@@ -998,6 +1013,15 @@ async function contTotAsigura() {
     var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : null;
     if (!boti && Date.now() - contTot.botiLa > 60000) { try { var d = await getJSON("/api/bot-orders"); contTot.boti = d && Array.isArray(d.bots) ? d.bots : []; contTot.botiLa = Date.now(); } catch (e) { contTot.boti = contTot.boti || null; } }
     // v100.40: contul se reia cand e mai vechi de 60 s (era adus o singura data - Acasa scria „actualizat” peste cifre inghetate)
+    // v100.97: conturile Pionex (spot + futures manual) pentru soldul de pe rândul de sus - la 5 min, poarta Pionex e comună cu boții
+    if (Date.now() - contTot.conturiLa > 5 * 60000) {
+      contTot.conturiLa = Date.now();
+      try {
+        var cf = await getJSON("/api/pionex-account?action=futures"), cs = await getJSON("/api/pionex-account?action=balances");
+        var st = (cs && cs.data && Array.isArray(cs.data.balances) ? cs.data.balances : []).reduce(function (s, x) { return x && (x.coin === "USDT" || x.coin === "USDC") ? s + (Number(x.free) || 0) + (Number(x.frozen) || 0) : s; }, 0);
+        contTot.conturi = { spot: st, futures: cf && cf.usdt && isFinite(Number(cf.usdt.total)) ? Number(cf.usdt.total) : 0 };
+      } catch (e) { contTot.conturi = null; }
+    }
     if (!t212.cont || Date.now() - (t212.contLa || 0) > 60000) { try { t212.cont = await getJSON("/api/t212?action=cont"); t212.contLa = Date.now(); } catch (e) {} }
     // v100.40: semaforul actiunilor cere pozitiile + preturile lor - le aduce pagina T212 (in fundal, fara s-o deschida); la 5 min
     if (typeof t212Porneste === "function" && !t212.inLucru && (!t212.la || Date.now() - t212.la > 5 * 60000)) t212Porneste(false).then(function () { contTotRender(); if (typeof acasaDeseneaza === "function" && typeof acasaPe === "function" && acasaPe()) acasaDeseneaza(); });
@@ -1017,7 +1041,10 @@ function contTotRender() {
   var act = (boti || []).filter(function (b) { return b && b.activ; }), usdt = 0, areUsdt = false;
   act.forEach(function (b) { var v = Number(b.profitTotal); if (isFinite(v)) { usdt += v; areUsdt = true; } });
   var fx = t212Fx(), c = t212.cont && t212.cont.cash, parti = [];
-  parti.push(boti ? '<span><b>Pionex</b> · ' + t212Cate(act.length, "bot activ", "boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + (usdt >= 0 ? "+" : "−") + Math.abs(usdt).toFixed(2) + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
+  // v100.97: soldul contului întâi (ca la Trading 212), o zecimală; fără conturile citite se spune „în boți”
+  var sp = contTotSoldPionex(boti, contTot.conturi);
+  var soldH = sp ? ' · ' + (sp.conturiCitite ? "sold " : "în boți ") + '<b>' + sp.sold.toFixed(1).replace(".", ",") + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Suma(sp.sold / fx)) + ')</span>' : '') : '';   // un sold, nu un profit: fără „+”
+  parti.push(boti ? '<span><b>Pionex</b>' + soldH + ' · ' + t212Cate(act.length, "bot activ", "boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + (usdt >= 0 ? "+" : "−") + Math.abs(usdt).toFixed(2) + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
   parti.push(c ? '<span><b>Trading 212</b> · ' + escapeHtml(t212Suma(c.total)) + ' · deschise <b class="' + t212Cls(c.ppl) + '">' + escapeHtml(t212Lei(c.ppl)) + '</b></span>' : '<span class="tbSub">Trading 212: aduc contul…</span>');
   // actiunile pe IESI: semaforul le-a pus deja in tabelul pozitiilor
   var iesi = t212.nrIesi || 0;   // v100.40: din date (t212Render), nu din DOM-ul paginii T212
