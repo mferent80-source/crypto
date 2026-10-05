@@ -179,12 +179,12 @@ await test("(11) garda: rândurile cu arbori (toate stările 🌳, și fără re
 
 await test("(E) versiunile: pagina v100.93 (BUILD_INFO, versiune.js, sw, index ×4, package.json 100.93.0, lanțul cu v10093 și arbori), colectorul v101.63; index.html încarcă arbori.js după retea.js și sw.js îl ține", () => {
   /* v100.94: versiunea a mers mai departe - proba cere „de la 93 în sus” (proba v10094 pină 94 exact) */
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[3-9]$/); assert.match(bi.badge, /^v100\.9[3-9] · /);
-  assert.ok(/export const VERSIUNE = "v100\.9[3-9]";/.test(citeste("functions", "_shared", "versiune.js")), "versiune.js");
-  const sw = citeste("public", "sw.js"); assert.ok(/const CACHE="crypto-radar-v100-9[3-9]";/.test(sw), "sw.js"); assert.ok(sw.includes('"/lib/retea.js","/lib/arbori.js"'), "sw.js nu ține arbori.js");
-  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.9[3-9]/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.92/.test(ix), "index.html mai are v100.92");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:9[3-9]|1\d\d)$/); assert.match(bi.badge, /^v100\.(?:9[3-9]|1\d\d) · /);
+  assert.ok(/export const VERSIUNE = "v100\.(?:9[3-9]|1\d\d)";/.test(citeste("functions", "_shared", "versiune.js")), "versiune.js");
+  const sw = citeste("public", "sw.js"); assert.ok(/const CACHE="crypto-radar-v100-(?:9[3-9]|1\d\d)";/.test(sw), "sw.js"); assert.ok(sw.includes('"/lib/retea.js","/lib/arbori.js"'), "sw.js nu ține arbori.js");
+  const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.(?:9[3-9]|1\d\d)/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.92/.test(ix), "index.html mai are v100.92");
   assert.ok(ix.includes('<script src="/lib/retea.js"></script><script src="/lib/arbori.js"></script>'), "arbori.js după retea.js");
-  const pk = citeste("package.json"); assert.match(JSON.parse(pk).version, /^100\.9[3-9]\.0$/); assert.ok(/npm run test:v10092 && npm run test:v10093 && npm run test:arbori( && |")/.test(pk), "lanțul de teste");
+  const pk = citeste("package.json"); assert.match(JSON.parse(pk).version, /^100\.(?:9[3-9]|1\d\d)\.0$/); assert.ok(/npm run test:v10092 && npm run test:v10093 && npm run test:arbori( && |")/.test(pk), "lanțul de teste");
   assert.ok(/VERSIUNE_COLECTOR = "v101\.6[3-9]"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.63");
 });
 

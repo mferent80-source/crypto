@@ -100,7 +100,7 @@ await test("(9) pagina: Simplu/Complet ținut minte, ADX comutabil, pornirea + f
 });
 
 await test("(E) versiunile v100.98 (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v10098)", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[8-9]$/, "de la 98 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "));
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:9[8-9]|1\d\d)$/, "de la 98 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "));
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V + '";'));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'));
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4");

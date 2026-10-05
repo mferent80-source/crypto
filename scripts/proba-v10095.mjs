@@ -146,7 +146,7 @@ await test("(4e) pagina: reteaAdu cere și busolaRetea (reteaM.b), reteaHtml îl
 
 // ======== Task 5: versiunile ========
 await test("(E) versiunile: pagina de la v100.95 în sus (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v10095), colectorul de la v101.65 în sus - versiunea merge înainte (v100.96 a lărgit-o)", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[5-9]$/, "de la 95 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "), "badge-ul cu versiunea");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:9[5-9]|1\d\d)$/, "de la 95 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "), "badge-ul cu versiunea");
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V + '";'), "versiune.js");
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'), "sw.js");
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.94/.test(ix), "index.html mai are v100.94");

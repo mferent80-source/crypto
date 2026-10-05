@@ -5700,7 +5700,7 @@ function tbIndicatoriHtml(rez){
 }
 // v100.47 (I-469): boții LUI in situatii asemanatoare (KV cazuri, colectorul o data pe zi); vecinii se aleg aici
 var tbCazuri={la:0,l:null,inLucru:false};
-function tbCazuriAdu(){if(tbCazuri.inLucru||Date.now()-tbCazuri.la<30*60000)return;tbCazuri.inLucru=true;getJSON("/api/istoric-bot?action=cazuri").then(function(d){tbCazuri.l=d&&d.cazuri&&d.cazuri.cazuri||null}).catch(function(){tbCazuri.l=null}).then(function(){tbCazuri.la=Date.now();tbCazuri.inLucru=false;if(tbStare.bot)tbDeseneazaProb(tbStare.bot)})}
+function tbCazuriAdu(){if(tbCazuri.inLucru||Date.now()-tbCazuri.la<30*60000)return;tbCazuri.inLucru=true;getJSON("/api/istoric-bot?action=cazuri").then(function(d){tbCazuri.l=d&&d.cazuri&&d.cazuri.cazuri||null;tbCazuri.adx=null;try{tbCazuri.adx=tbCazuri.l&&typeof Asemanatoare!=="undefined"?Asemanatoare.textAdx(Asemanatoare.bilantAdx(tbCazuri.l)):null}catch(e){tbCazuri.adx=null}}).catch(function(){tbCazuri.l=null}).then(function(){tbCazuri.la=Date.now();tbCazuri.inLucru=false;if(tbStare.bot)tbDeseneazaProb(tbStare.bot)})}
 function tbAsemanatoareHtml(b,rez){
   tbCazuriAdu();var p=botiNr(b&&b.pretCurent),jos=botiNr(b&&b.gridJos),sus=botiNr(b&&b.gridSus);
   if(!tbCazuri.l||!(p>0)||!(sus>jos))return "";
@@ -6470,7 +6470,7 @@ function renderTabloGrafic(){
   if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
-  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:tbStare.graficInterval||"24h"});
+  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:tbStare.graficInterval||"24h"});
   var d=GraficBot.desen(oG);tbDeseneazaCitire(oG,b);
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);

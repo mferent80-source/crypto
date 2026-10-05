@@ -121,7 +121,7 @@ var GraficBot = (function () {
     var A = adx(raw, 14), a = A.adx[N - 1], z = zonaAdx(a), pdi = A.pdi[N - 1], mdi = A.mdi[N - 1];
     if (a !== null) {
       var spre = pdi > mdi ? "sus" : "jos", contraA = z === "trend" && ((dir === "long" && spre === "jos") || (dir === "short" && spre === "sus"));
-      rows.push({ ce: "ADX 14", stare: z === "loc" ? "bine" : z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) });
+      rows.push({ ce: "ADX 14", peBoti: o.adxPeBoti || null, stare: z === "loc" ? "bine" : z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) + (o.adxPeBoti ? " · " + o.adxPeBoti : "") });
     }
     if (N >= 48) {
       var sume = []; for (var i = 12; i <= N; i++) { var sv = 0; for (var j = i - 12; j < i; j++) sv += raw[j].v; sume.push(sv); }
@@ -266,7 +266,8 @@ var GraficBot = (function () {
       // v100.38: umplerile si perechile gridului, deduse din lumanari de la pornire, langa numarul de perechi al Pionex
       umpleri: umpleri(bv, { jos: grila.jos, sus: grila.sus, linii: grila.linii, geo: grila.geo, p0: nr(xo.initPrice), pornit: nr(b.pornitLa), dir: dir }), perechiPionex: nr(b.ordinePerechi),
       stopVsPlan: laStop !== null && minus > 0 ? { laStop: laStop, plan: minus } : null,   // v100.99 (I-527)
-      proba: d.proba || null };   // v100.99 (I-529): { pret, text } - linia stopului de probă
+      proba: d.proba || null,   // v100.99 (I-529): { pret, text } - linia stopului de probă
+      adxPeBoti: d.adxPeBoti || null };   // v100.100 (I-530): ce a arătat ADX-ul pe arhiva LUI (Asemanatoare.textAdx)   // v100.99 (I-529): { pret, text } - linia stopului de probă
   }
 
   // o = { bare, W, ingust, st:{bb,ema,rsi,vp}, niv, grila:{jos,sus,n,geo}, alerte, per }

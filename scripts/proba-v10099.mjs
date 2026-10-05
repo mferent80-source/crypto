@@ -98,7 +98,7 @@ await test("(5) I-531 pe telefon: citirea și imediat sub grafic (același conț
   assert.match(fnApp("tbDeseneazaCitire"), /\[\$\("tbCitire"\),\$\("tbCitireMobil"\)\]/);
 });
 await test("(E) versiunile v100.99 (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v10099)", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.99$|^v10[1-9]\.\d+$/, "de la 99 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "));
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:99|1\d\d)$|^v10[1-9]\.\d+$/, "de la 99 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "));
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V + '";'));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'));
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4");

@@ -166,7 +166,7 @@ await test("(7) garda: rândurile 🧠/🌳 de pe acțiuni (stop1, sare1, cursa5
   assert.ok(s.some((x) => /^🌳 Ținta înaintea stopului în 5 zile de bursă: /.test(x.text)), "subsolul T212"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["directie-t212"]), "direcția pe 5 zile");
 });
 await test("(E) versiunile: pagina de la v100.94 în sus (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v10094), colectorul de la v101.64 în sus - versiunea merge înainte (v100.95 a lărgit-o)", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[4-9]$/, "de la 94 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "), "badge-ul cu versiunea");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:9[4-9]|1\d\d)$/, "de la 94 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "), "badge-ul cu versiunea");
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V + '";'), "versiune.js");
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'), "sw.js");
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.93/.test(ix), "index.html mai are v100.93");

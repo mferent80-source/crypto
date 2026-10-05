@@ -54,7 +54,7 @@ await test("(6) conturile se aduc (futures + balances) cel mult o dată la 5 min
   assert.match(ecran, /contTot\.conturi/);
 });
 await test("(E) versiunile de la v100.97 în sus (index, sw, BUILD_INFO, versiune.js, package.json, lanțul cu v10097) - versiunea merge înainte (v100.98 a lărgit-o)", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.9[7-9]$/, "de la 97 în sus"); const V = bi.version;
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:9[7-9]|1\d\d)$/, "de la 97 în sus"); const V = bi.version;
   assert.match(citeste("public", "index.html"), new RegExp('content="' + V.replace(".", "\\.") + '" name="app-version"'));
   assert.ok(citeste("public", "sw.js").includes("crypto-radar-" + V.replace(".", "-")));
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('"' + V + '"'));

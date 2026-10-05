@@ -38,7 +38,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.67";
+const VERSIUNE_COLECTOR = "v101.68";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -147,7 +147,7 @@ const Scenariu = incarca("scenariu.js", "Scenariu");   // revizia 01.10 (I2): sf
 const Sfaturi = new Function("Alerte", "Scenariu", "TabloExtra", fs.readFileSync(path.join(RAD, "public", "lib", "sfaturi.js"), "utf8") + "; return Sfaturi;")(Alerte, Scenariu, TabloExtra);   // Alerte ca parametru: altfel „pericol” dispare tacut
 const Perechi = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "perechi.js"), "utf8") + "; return Perechi;")(GridCalcul, GridProba);   // v101.30 (I-477)
 const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "consiliu.js"), "utf8") + "; return Consiliu;")(SemnaleBot);   // v101.29 (I-474): o singura voce
-const Asemanatoare = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati);   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
+const Asemanatoare = new Function("Probabilitati", "GraficBot", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati, GraficBot);   // v101.68 (I-530): + GraficBot ⇒ ADX la pornire în fiecare caz   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 
 const Retea = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "retea.js"), "utf8") + "; return Retea;")(Probabilitati);   // v101.56 (rețeaua neuronală, livrarea 1)
 const Arbori = new Function("Retea", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "arbori.js"), "utf8") + "; return Arbori;")(Retea, Probabilitati);   // v101.63: arborii (aceleași intrări ca rețeaua)
@@ -1539,7 +1539,7 @@ async function turaCazuri() {
     const cz = Asemanatoare.cazuri(tr, bareDe);
     await trimite("/api/istoric-bot?action=cazuri", { la: Date.now(), cazuri: cz });
     profilStare.cazuriZi = zi; try { scrieAtomic(PROFIL_STARE, profilStare); } catch {}
-    jurnal("cazuri:", cz.length, "cu starea de la pornire:", cz.filter((c) => c.stare).length);
+    jurnal("cazuri:", cz.length, "cu starea de la pornire:", cz.filter((c) => c.stare).length, "cu ADX:", cz.filter((c) => c.adx != null).length);
   } catch (e) { cazuriEsec = Date.now(); jurnal("cazuri ESEC (reincerc peste o ora)", e.message); }
   cazuriInLucru = false;
 }
