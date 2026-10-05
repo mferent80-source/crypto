@@ -37,7 +37,7 @@ var GridJurnal = (function () {
     // f.stat = statistica setarii PROPUSE (gridul des cand fisa il propune); platoul brut ramane rezerva pentru fise vechi
     var fs = fe && fe.setare ? fe.setare : null, st = fs || f.setare || {}, pe = fs ? null : f.stat || (f.proba && f.proba.pe && f.proba.pe[f.dir]), a = pe && pe.antren, t = pe && pe.test;
     var e = {
-      id: String(acum) + "-" + moneda(f.simbol).replace(/[^A-Z0-9]/g, ""), t: acum, simbol: f.simbol, dir: f.dir, H: f.H, pret: nr(f.pret),
+      id: String(acum) + "-" + moneda(f.simbol).replace(/[^A-Z0-9]/g, ""), t: acum, simbol: f.simbol, dir: fs && fs.dir ? fs.dir : f.dir, H: f.H, pret: nr(f.pret),   // revizia 05.10: fișa neutră arată ferestrele pentru long
       verdict: f.verdict && f.verdict.nivel || null, suma: nr(st.suma),
       jos: nr(st.jos), sus: nr(st.sus), grile: nr(st.grile), levier: nr(st.levier),
       mediana: a ? nr(a.mediana) : null, ceaMaiProasta: a ? nr(a.ceaMaiProasta) : null, medianaNevazut: t ? nr(t.mediana) : null,
@@ -55,6 +55,15 @@ var GridJurnal = (function () {
   function actualizeaza(lista, boti, acum) {
     if (!Array.isArray(lista)) return [];
     if (!Array.isArray(boti)) return lista.slice();
+    // revizia 05.10 (I-535): un rând recunoscut automat cedează botul unui rând apăsat de el („Am pornit-o”), nelegat încă, pe aceeași monedă
+    // și în fereastra de legare - altfel apăsatul rămânea „aștept botul” pentru totdeauna și botul apărea de două ori
+    var manuale = lista.filter(function (e) { return e && !e.auto && !e.botId; });
+    if (manuale.length) lista = lista.filter(function (e) {
+      if (!e || !e.auto || !e.botId) return true;
+      var b = null; for (var q = 0; q < boti.length; q++) if (boti[q] && String(boti[q].id) === e.botId) { b = boti[q]; break; }
+      var p = b ? nr(b.pornitLa) : null;
+      return !(p !== null && manuale.some(function (m) { return moneda(m.simbol) === moneda(e.simbol) && p >= m.t - LEAGA_INAINTE_MS && p <= m.t + LEAGA_DUPA_MS; }));
+    });
     var legati = {};
     lista.forEach(function (e) { if (e.botId) legati[e.botId] = true; });
     var peId = {};
@@ -155,13 +164,15 @@ var GridJurnal = (function () {
   // oferite = ferestrele arătate de fișă { simbol, t, dir, verdict?, ta:{jos,sus,levier}, mea:{…} }. Un bot futures pornit DUPĂ o ofertă
   // (cel mult 12 h), pe aceeași monedă și direcție, cu setările unei ferestre (GridPlan.recunoaste) intră singur în jurnal, cu eticheta ei.
   // Oferta de DUPĂ pornire nu contează: informația trebuie să fi fost disponibilă atunci.
-  function recunoaste(lista, boti, oferite, acum) {
-    var out = Array.isArray(lista) ? lista.slice() : [];
+  // ignorati = boții ale căror rânduri recunoscute le-a șters el (nu mai revin)
+  function recunoaste(lista, boti, oferite, acum, ignorati) {
+    var out = Array.isArray(lista) ? lista.slice() : [], ign = {};
+    (Array.isArray(ignorati) ? ignorati : []).forEach(function (x) { ign[String(x)] = true; });
     if (!Array.isArray(boti) || !Array.isArray(oferite) || !oferite.length || typeof GridPlan === "undefined" || !GridPlan.fereastraBotului) return out;
     var legati = {};
     out.forEach(function (e) { if (e && e.botId) legati[e.botId] = true; });
     boti.forEach(function (b) {
-      if (!b || !b.id || legati[String(b.id)]) return;
+      if (!b || !b.id || legati[String(b.id)] || ign[String(b.id)]) return;
       var fb = GridPlan.fereastraBotului(b, oferite);   // v100.104: aceeași regulă ca mesajul de pornire al colectorului
       if (!fb || !fb.k) return;
       var p = nr(b.pornitLa), m = moneda(b.baza);

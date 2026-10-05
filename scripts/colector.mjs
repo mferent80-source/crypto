@@ -472,14 +472,14 @@ async function tura() {
       if (pl && !st._gridLarg && acum - Number(b.pornitLa) < 6 * 3600000) {
         const pragCfg = await pragDinConfig(), planMinus = pl.plan && !pl.plan.proba && Number(pl.plan.minus) > 0 ? Number(pl.plan.minus) : (TabloExtra.propunePlan(null, b.investit, pragCfg) || {}).minus;
         const gv = TabloExtra.gridVsPlan(b, planMinus);
-        if (!gv || !gv.preaLarg) st._gridLarg = "ok";
+        if (gv && !gv.preaLarg) st._gridLarg = "ok";   // revizia 05.10: fără date (gv null) se reîncearcă, nu se declară „ok” pentru totdeauna
         else { const m = MesajeColector.gridPreaLarg(String(b.baza || "botul").replace(/\.PERP$/, ""), gv); if (await trimiteAlerta(m, b.id, m.cheie)) st._gridLarg = "trimis"; }
       }
       // v101.73 (I-538): botul nou, o dată în primele 6 h - seamănă cu ÎNGUST / LARG din fișa de DINAINTE de pornire? (ferestrele de pe server)
       if (!st._fereastra && acum - Number(b.pornitLa) < 6 * 3600000) {
         const fb = GridPlan.fereastraBotului(b, await ferestreServer());
-        if (!fb) st._fereastra = { k: null, oreTipic: null, faraOferta: true };
-        else { const m = MesajeColector.pornitCa(String(b.baza || "botul").replace(/\.PERP$/, ""), fb); if (await trimiteAlerta(m, b.id, m.cheie)) st._fereastra = { k: fb.k, oreTipic: fb.oreTipic || null }; }
+        // revizia 05.10: fără ofertă (încă - lista de pe server e ținută 5 min) nu se marchează nimic: se reîncearcă în cele 6 h
+        if (fb) { const m = MesajeColector.pornitCa(String(b.baza || "botul").replace(/\.PERP$/, ""), fb); if (await trimiteAlerta(m, b.id, m.cheie)) st._fereastra = { k: fb.k, oreTipic: fb.oreTipic || null }; }
       }
       // v101.73 (I-540): ceasul ferestrei LARG - o notă, o dată, când stă de peste 2× durata tipică din proba ferestrei
       if (st._fereastra && st._fereastra.k === "larg" && st._fereastra.oreTipic > 0 && !st._ceasLarg && acum - Number(b.pornitLa) > 2 * st._fereastra.oreTipic * 3600000) {

@@ -116,7 +116,7 @@ export async function onRequestPost({request,env}){
     const o=corp&&corp.oferta,t=nr(o&&o.t),sim=String(o&&o.simbol||""),dir=String(o&&o.dir||"");
     if(!/^[A-Z0-9]{1,20}_USDT_PERP$/.test(sim)||!(t>0)||(dir!=="long"&&dir!=="short"))return json({error:"oferta: simbol PERP, timp și direcție"},400);
     const fer=x=>{if(!x||typeof x!=="object")return null;const j=nr(x.jos),s=nr(x.sus),lv=nr(x.levier);if(!(j>0)||!(s>j)||!(lv>0))return null;return {jos:j,sus:s,levier:lv,stop:nr(x.stop),n:nr(x.n),oreTipic:nr(x.oreTipic)}};
-    const nou={simbol:sim,t:t,dir:dir,verdict:/^[a-z-]{1,12}$/.test(String(o.verdict||""))?String(o.verdict):null,rec:o.rec==="ingust"||o.rec==="larg"?o.rec:null,ta:fer(o.ta),mea:fer(o.mea)};
+    const nou={simbol:sim,t:t,dir:dir,verdict:/^[a-z-]{1,12}$/.test(String(o.verdict||""))?String(o.verdict):null,rec:o.rec==="ingust"||o.rec==="larg"?o.rec:null,ultim:nr(o.ultim)>=t?nr(o.ultim):null,ta:fer(o.ta),mea:fer(o.mea)};
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("ferestre")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
     l=l.filter(x=>!(x&&x.simbol===sim&&x.t===t));l.push(nou);l=l.slice(-60);
     await env.ISTORIC.put("ferestre",JSON.stringify(l));return json({ok:true,n:l.length});

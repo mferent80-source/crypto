@@ -90,7 +90,7 @@ await test("(3) I-535 bilanțul (regula fixată dinainte: media rezultatului în
 });
 await test("(3) I-535 pagina: ferestrele oferite se țin minte; jurnalul recunoaște boții; bilanțul pe fișă și în jurnal", () => {
   assert.match(fnApp("grFerestreTine"), /localStorage\.setItem\("grFerestre"/);
-  assert.match(fnApp("gridJurnalActualizeaza"), /GridJurnal\.recunoaste\(GridJurnal\.actualizeaza\(l,boti,Date\.now\(\)\),boti,grFerestreCitite\(\),Date\.now\(\)\)/);
+  assert.match(fnApp("gridJurnalActualizeaza"), /GridJurnal\.recunoaste\(GridJurnal\.actualizeaza\(l,boti,Date\.now\(\)\),boti,grFerestreCitite\(\),Date\.now\(\),grJurnalIgnoratiCititi\(\)\)/);
   assert.match(fnApp("renderGridJurnal"), /GridJurnal\.textFerestre\(GridJurnal\.bilantFerestre\(l\)\)/);
   assert.match(fnApp("grPlanVarHtml"), /GridJurnal\.textFerestre\(GridJurnal\.bilantFerestre\(grJurnalCitit\(\)\)\)/);
 });

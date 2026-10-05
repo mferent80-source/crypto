@@ -165,6 +165,8 @@ var GridPlan = (function () {
     if (!a && !b) return null;
     if (!b) return { cine: "ta", text: "ÎNGUST · larg nu se poate la planul ăsta" };
     if (!a) return { cine: "mea", text: "LARG · îngust nu se poate la planul ăsta" };
+    // revizia 05.10: LARG copiat din ÎNGUST (moneda liniștită) ⇒ aceeași fereastră; o numim ÎNGUST, ca recunoașterea boților
+    if (mea.egalaCuTa) return { cine: "ta", text: "ÎNGUST · LARG e la fel la moneda asta: banda îngustă ține deja o zi obișnuită" };
     var dif = b.mediaUsdt - a.mediaUsdt, maiRar = b.stop < a.stop * 0.8, maiDes = a.stop < b.stop * 0.8;
     var cine = maiRar && dif > -0.5 ? "mea" : maiDes && dif < 0.5 ? "ta" : dif >= 0 ? "mea" : "ta", x = cine === "mea" ? mea : ta, y = cine === "mea" ? ta : mea;
     var ind = Math.min(nr(a.independente) || 0, nr(b.independente) || 0);
@@ -178,10 +180,14 @@ var GridPlan = (function () {
   function motive(v, cheie, amp) {
     var dd = nr(v && v.d), uu = nr(v && v.u), jo = v && v.dir === "short" ? uu : dd, su = v && v.dir === "short" ? dd : uu;
     var banda = jo !== null && su !== null ? "−" + P1(jo) + " / +" + P1(su) : null, stransa = banda && nr(amp) !== null && Math.min(dd, uu) < amp * 0.95;
+    var arePr = !!(v && v.proba);   // revizia 05.10: monedă nouă (fără probă) ⇒ doar motivele care nu depind de probă
     var pr = v && v.proba || {}, lat = nr(v && v.sus) > 0 && nr(v && v.jos) > 0 ? v.sus / v.jos - 1 : null, lq = v && v.lichidare ? nr(v.lichidare.jos) : null, n = cate(pr.n, "pornire", "porniri");
-    if (cheie === "ta") return {
+    if (cheie === "ta") return arePr ? {
       da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas).replace(/(\d),(\d)%$/, "$1,$2%") : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), "ieși repede: tipic după " + ORE(pr.oreTipic) + ", banii nu stau", "levierul tău (" + v.levier + "×)"],
-      nu: ["zgomotul unei ore te scoate: stop " + pr.stop + " din " + n, "fiecare grilă aduce mai mult, dar ieși des pe minus"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) };
+      nu: ["zgomotul unei ore te scoate: stop " + pr.stop + " din " + n, "fiecare grilă aduce mai mult, dar ieși des pe minus"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) } : { da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas) : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), "levierul tău (" + v.levier + "×)"],
+      nu: ["fiecare grilă aduce mai mult, dar ieși des pe minus", "moneda e prea nouă pentru proba pe 30 de zile"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) };
+    if (!arePr) return { da: [banda ? "ține " + banda + " fără să iasă" : "banda mai largă"].concat(lq === null ? ["fără lichidare: la " + v.levier + "× nu se lichidează"] : []),
+      nu: ["levier mic ⇒ bani mai puțini pe grilă", "moneda e prea nouă pentru proba pe 30 de zile"] };
     return {
       da: [(banda ? "ține " + banda + " fără să iasă" + (nr(amp) === null ? "" : stransa ? " (o zi obișnuită e ±" + P1(amp) + "; strânsă ca la stop să nu treci de pragul de pierdere)" : ", cât o zi obișnuită a monedei (±" + P1(amp) + ")") : nr(amp) !== null ? "ține o zi obișnuită a monedei (±" + P1(amp) + ") fără să iasă" : "ține mai mult fără să iasă"), "stopul atins mai rar: " + pr.stop + " din " + n].concat(lq === null ? ["fără lichidare: la " + v.levier + "× nu se lichidează"] : []),
       nu: ["levier mic ⇒ bani mai puțini pe grilă", "banii stau mai mult: tipic " + ORE(pr.oreTipic), pr.inGrid + " din " + n + " încă în grid după 3 zile"] };
@@ -213,7 +219,8 @@ var GridPlan = (function () {
     if (!b || !/\.PERP$/i.test(String(b.baza || "")) || !Array.isArray(oferite)) return null;
     var p = nr(b.pornitLa), dir = String(b.directie || "").toLowerCase(), m = mon(b.baza);
     if (p === null) return null;
-    var cand = oferite.filter(function (o) { return o && mon(o.simbol) === m && o.dir === dir && nr(o.t) !== null && o.t <= p && p - o.t <= 12 * 3600000; })
+    // revizia 05.10: o ofertă văzută din nou se reînnoiește (ultim) ⇒ cele 12 h se numără de la ultima vedere, nu de la prima
+    var cand = oferite.filter(function (o) { var u = Math.max(nr(o && o.t) || 0, nr(o && o.ultim) || 0); return o && mon(o.simbol) === m && o.dir === dir && nr(o.t) !== null && o.t <= p && p - u <= 12 * 3600000; })
       .sort(function (x, y) { return y.t - x.t; });
     if (!cand.length) return null;
     var cu = function (o, x) { return x ? { jos: x.jos, sus: x.sus, levier: x.levier, dir: o.dir } : null; };
