@@ -256,6 +256,44 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
   return out;
 }
 
+// v101.67 (el, 05.10: „±1% la ce dețin”, A la T212): trepte de 1% fata de inchiderea de ieri (+1, +2, −1…), fiecare o data.
+// Saltul peste mai multe trepte = un singur mesaj (cea mai mare), restul se marcheaza in `marcheaza`. Inchiderea de ieri intra in
+// cheie: o sesiune noua (alt `prev`) porneste treptele de la capat, si la actiunile germane, care nu urmeaza ziua sesiunii NY.
+export function alerteT212Pasi(poza, facute, acum) {
+  const zi = ziSesiune(acum), out = [], f = facute || {}, pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4)).replace(".", ",");
+  for (const p of poza && Array.isArray(poza.t212) ? poza.t212 : []) {
+    const pret = p && nr(p.pret), prev = p && nr(p.prev);
+    if (!pret || !prev || !p.s) continue;
+    const d = pret / prev - 1, n = Math.floor(Math.abs(d) * 100 + 1e-9);
+    if (n < 1) continue;
+    const semn = d > 0 ? "p" : "m", cheie = (k) => "t212-pas-" + p.s + "-" + semn + k + "-" + rot(prev, 4) + "-" + zi;
+    if (f[cheie(n)]) continue;
+    const marcheaza = []; for (let k = 1; k <= n; k++) marcheaza.push(cheie(k));
+    const m = /\.(DE|F|PA|AS|MI)$/.test(p.s) ? "€" : "$", mediu = nr(p.mediu), fm = mediu ? pret / mediu - 1 : null;
+    out.push({ cheie: cheie(n), marcheaza, nivel: "info", titlu: p.s + ": " + (d > 0 ? "+" : "−") + n + "% azi",
+      mesaj: m + pr(pret) + " (ieri " + m + pr(prev) + ")" + (fm !== null ? " · tu: " + (fm >= 0 ? "+" : "−") + pctTxt(fm) + " față de prețul tău mediu" : "") + "." });
+  }
+  return out;
+}
+// v101.67 (B la boti): 1% fata de pretul ultimei alerte (prima citire doar fixeaza referinta); 00–07 ora Romaniei doar in Radar.
+// „Pe marjă cel mult”: levierul × mișcarea, cu poziția plină - gridul ține de obicei mai puțin, deci e plafonul, nu suma.
+export function alertaBotPas(b, ref, acum) {
+  const pret = b && nr(b.pretCurent);
+  if (!pret) return { alerta: null, ref: ref || null };
+  if (!ref || !nr(ref.p)) return { alerta: null, ref: { p: pret, t: acum } };
+  const d = pret / ref.p - 1;
+  if (Math.abs(d) < 0.01 - 1e-12) return { alerta: null, ref };
+  const s = String(b.baza || "").replace(/\.PERP$/, ""), dir = String(b.directie || "").toLowerCase(), lev = nr(b.levier) || 1;
+  const min = Math.max(1, Math.round((acum - (nr(ref.t) || acum)) / 60000)), cat = min < 120 ? min + " min" : Math.round(min / 60) + " h";
+  const fp = (v) => (v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(3) : v.toPrecision(4)).replace(".", ",");
+  const jos = nr(b.gridJos), sus = nr(b.gridSus), inGrid = jos !== null && sus !== null && sus > jos ? Math.round((pret - jos) / (sus - jos) * 100) : null;
+  const marja = dir === "long" ? d * lev : dir === "short" ? -d * lev : null, mr = minutRo(acum);
+  return { ref: { p: pret, t: acum }, alerta: { cheie: ("bot-pas-" + b.id).slice(0, 60), nivel: "info", doarRadar: mr < 7 * 60,
+    titlu: s + (dir ? " (" + dir + " " + lev + "×)" : "") + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " în " + cat,
+    mesaj: fp(ref.p) + " → " + fp(pret) + (inGrid !== null ? " · în grid " + inGrid + "%" : "")
+      + (marja !== null ? " · pe marjă cel mult ≈ " + (marja >= 0 ? "+" : "−") + Math.round(Math.abs(marja) * 100) + "%" : "") + "." } };
+}
+
 // v101.1 (el, 28.09: „alerte discord fă” — ideea 5 din SL/TP pe alerts): alertele din SL/TP-ul pozei, o data pe zi (cheia poarta ziua):
 //   - pozitie aproape de stop: ultimul sfert al drumului SL -> TP (stopul din plan sau cel sugerat), nivel „atentie”;
 //   - pozitie FARA plan: SL / TP sugerat atins (cu plan, „a atins stopul / tinta din plan” vine deja din ActiuniSemnale.alertePlan);

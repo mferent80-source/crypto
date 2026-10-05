@@ -4,7 +4,7 @@
 // v100.70 (revizia pachetului 3): textele de baza vin din producatorii REALI (SemnaleBot, IndicatoriBot.mediu, Acasa.vreme/vremeBursa,
 // Obiceiuri.istoricMoneda/subOOra/frana, TabloExtra.propunePlan) - fixturile inventate ascundeau abateri reale.
 import * as MC from "./mesaje-colector.mjs";
-import { alerteSimboluri, alerteSLTP } from "./poza.mjs";
+import { alerteSimboluri, alerteSLTP, alerteT212Pasi, alertaBotPas } from "./poza.mjs";
 import { mesajReteta } from "./tura-scan.mjs";
 import { mesajFundingPiata } from "./tura-piata.mjs";
 import { mesajPornire } from "./tura-pornire.mjs";
@@ -152,6 +152,11 @@ export function situatiiAlerte(pune) {
   const poza = { t212: [{ s: "AMD", pret: 141.2, plan: { stop: 138.5, tinta: 168 } }, { s: "INTC", pret: 19.1, sugestie: { stop: 19.6, tinta: 26.4 } }, { s: "PLTR", pret: 151.3, sugestie: { stop: 118.2, tinta: 150 } }],
     simboluri: [{ s: "MSFT", pret: 402.1, moneda: "$", sugestie: { intrare: { pret: 401 }, stop: 384.5, tinta: 436, proba: { medie: 0.021, pePlus: 0.58, n: 41 }, marime: { bucati: 1.42, suma: 2610, risc: 98, plafonat: false } } }] };
   for (const a of alerteSLTP(poza, T0)) pune("SL/TP: " + a.cheie.split("-").slice(0, 2).join("-"), "alerte", "alerteSLTP." + a.cheie.split("-")[1], a, AL);
+
+  // v101.67 (el, 05.10: „±1% la ce dețin”): treptele T212 fata de ieri si 1% pe boti fata de ultima alerta (BTC 5 cifre, PUMP sub 0,01, short)
+  for (const a of alerteT212Pasi({ t212: [{ s: "AVGO", pret: 312.4, prev: 306.3, mediu: 322.4 }, { s: "RHM.DE", pret: 1488, prev: 1520.5 }] }, {}, T0)) pune("T212 ±1%: " + a.titlu.split(":")[0], "alerte", "alerteT212Pasi", a, AL);
+  for (const [n, b, p] of [["CRV", CRV({ id: "b1" }), 0.3897], ["LIGHTER short", LIT({ id: "b2" }), 4.85], ["BTC", BTC({ id: "b3" }), 64850], ["PUMP noaptea", PUMP({ id: "b4" }), 0.00418]])
+    pune("bot ±1%: " + n, "alerte", "alertaBotPas", alertaBotPas(Object.assign({}, b, { pretCurent: p }), { p: b.pretCurent, t: T0 - 40 * 60000 }, n === "PUMP noaptea" ? Date.UTC(2026, 9, 2, 1, 0) : T0).alerta, AL);
 
   // avertizarea la pornire (textul de baza vine din Obiceiuri - pachetul 5), retetele scanului, funding-ul pietei
   // v100.70 (revizia pachetului 3, I4): istoria monedei si prima ora din Obiceiuri REAL (textele lor aveau 3 fraze si sume cu punct)

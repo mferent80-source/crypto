@@ -189,7 +189,7 @@ await test("(E) versiunile: pagina v100.96 (BUILD_INFO, versiune.js, sw, index �
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-96";'), "sw.js");
   const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.96/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.95/.test(ix), "index.html mai are v100.95");
   const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, "100.96.0"); assert.ok(/npm run test:v10095 && npm run test:v10096( && |")/.test(pk), "lanțul de teste"); assert.equal(JSON.parse(pk).scripts["test:v10096"], "node scripts/proba-v10096.mjs");
-  assert.ok(/VERSIUNE_COLECTOR = "v101\.66"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.66");
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v(?:101\.(?:6[6-9]|[7-9]\d|\d{3,})|10[2-9]\.\d+|1[1-9]\d\.\d+)";/, "cel putin v101.66");
   assert.equal(JSON.parse(fs.readFileSync("C:/Users/Cimin/busola/package.json", "utf8")).version, "1.43.0", "Busola 1.43.0");
 });
 

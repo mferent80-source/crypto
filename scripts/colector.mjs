@@ -25,7 +25,7 @@ import os from "node:os";
 import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
@@ -38,7 +38,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.66";
+const VERSIUNE_COLECTOR = "v101.67";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -371,6 +371,18 @@ async function tura() {
   const boti = Array.isArray(d && d.bots) ? d.bots : [];
   ultimiiBoti = boti; ultimiiBotiLa = Date.now();   // v100.40: ora citirii - poza nu mai stampileaza boti vechi cu „acum”
   for (const b of boti) if (b && b.id && Number.isFinite(Number(b.pretCurent))) { const r = pret30[b.id] || (pret30[b.id] = []); r.push(Number(b.pretCurent)); if (r.length > 30) r.shift(); }
+  // v101.67 (el, 05.10: „±1% la ce dețin”, B): fiecare bot activ - 1% fata de pretul ultimei alerte; referinta pe disc (rezista la repornire)
+  {
+    const ref = m.pasBoti || (m.pasBoti = {}), vii = {};
+    for (const x of boti) {
+      if (!x || !x.id || x.activ === false) continue;
+      vii[x.id] = true;
+      const r = alertaBotPas(x, ref[x.id], acum);
+      if (!r.alerta) { ref[x.id] = r.ref; continue; }
+      if (await trimiteAlerta(r.alerta, x.id, r.alerta.cheie)) ref[x.id] = r.ref;   // netrimisa -> referinta veche, se reincearca
+    }
+    if (boti.length) for (const id of Object.keys(ref)) if (!vii[id]) delete ref[id];   // lista goala (citire proasta) nu sterge referintele
+  }
   // un bot care mergea si a disparut din lista
   const acumIds = {}; for (const b of boti) if (b && b.id) acumIds[b.id] = true;
   for (const id of Object.keys(m.cunoscuti)) {
@@ -957,6 +969,10 @@ async function turaPoza() {
     for (const a of alerteSimboluri(poza.simboluri, ultimeleSimboluri, Date.now()).concat(alerteSLTP(poza, Date.now()))) {
       if (st[a.cheie]) continue;
       if (await trimiteAlerta({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, null, a.cheie.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60))) st[a.cheie] = true;
+    }
+    // v101.67 (el, 05.10: „±1% la ce dețin”, A): pozitiile T212 - fiecare treapta noua de 1% fata de ieri, o data; saltul marcheaza si treptele de sub el
+    for (const a of alerteT212Pasi(poza, st, Date.now())) {
+      if (await trimiteAlerta({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, null, a.cheie.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60))) for (const k of a.marcheaza) st[k] = true;
     }
     if (poza.simboluri.length) { ultimeleSimboluri = {}; for (const s of poza.simboluri) ultimeleSimboluri[s.s] = s; }
     try { scrieStare(); } catch {}
