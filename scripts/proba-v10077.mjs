@@ -35,7 +35,7 @@ await test("(2) poarta fișei: nota cu numele botului pe rândul ei (gri, sub fr
   const rez = OB.poarta({ acum: T0, fisa: f, levier: 3, dir: "long", plan: { plus: 5, minus: 10 }, trades: ist, numeBot: "LIGHTER.PERP" });
   const s = app(), i = s.indexOf("function grPoartaHtml("), corp = s.slice(i, s.indexOf("\nfunction ", i + 10));
   // v100.80: rândul 🧠 de la poartă are proba lui (proba-v10080-ecran); aici doar rândul „moneda”
-  const ctx = { Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (x) => String(x), grPoartaRez: { simbol: "LIT_USDT_PERP", rez }, grReteaPoartaHtml: () => "", grPoartaGridForm: () => "", grPragVal: () => "" };
+  const ctx = { Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (x) => String(x), grPoartaRez: { simbol: "LIT_USDT_PERP", rez }, grReteaPoartaHtml: () => "", grPoartaGridForm: () => "", grPragVal: () => "", grPragIstHtml: () => "" };
   vm.createContext(ctx); vm.runInContext(corp + ";this.f=grPoartaHtml;", ctx);
   const h = ctx.f({ simbol: "LIT_USDT_PERP" }), li = (h.match(/<li class="bad">✗ Pe LIGHTER[\s\S]*?<\/li>/) || [""])[0];
   assert.ok(li, "rândul „moneda” lipsește");

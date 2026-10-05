@@ -206,6 +206,24 @@ var GridPlan = (function () {
     return null;
   }
 
-  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste };
+  // v100.104 (I-538): botul futures față de ferestrele arătate de fișă ÎNAINTE de pornire (cel mult 12 h), pe aceeași monedă și direcție.
+  // Aceeași regulă pentru jurnal (pagina) și pentru mesajul de pornire (colectorul). ⇒ null fără ofertă; { k: "ingust"|"larg"|null, t, … } altfel
+  function fereastraBotului(b, oferite) {
+    var mon = function (s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$/, "").replace(/\.PERP$/, "").replace(/USDT$/, ""); };
+    if (!b || !/\.PERP$/i.test(String(b.baza || "")) || !Array.isArray(oferite)) return null;
+    var p = nr(b.pornitLa), dir = String(b.directie || "").toLowerCase(), m = mon(b.baza);
+    if (p === null) return null;
+    var cand = oferite.filter(function (o) { return o && mon(o.simbol) === m && o.dir === dir && nr(o.t) !== null && o.t <= p && p - o.t <= 12 * 3600000; })
+      .sort(function (x, y) { return y.t - x.t; });
+    if (!cand.length) return null;
+    var cu = function (o, x) { return x ? { jos: x.jos, sus: x.sus, levier: x.levier, dir: o.dir } : null; };
+    for (var i = 0; i < cand.length; i++) {
+      var o = cand[i], k = recunoaste({ dir: dir, jos: nr(b.gridJos), sus: nr(b.gridSus), levier: nr(b.levier) }, { ta: cu(o, o.ta), mea: cu(o, o.mea) });
+      if (k) { var x = k === "larg" ? o.mea : o.ta; return { k: k, t: o.t, simbol: o.simbol, verdict: o.verdict || null, rec: o.rec || null, stop: nr(x.stop), n: nr(x.n), oreTipic: nr(x.oreTipic) }; }
+    }
+    return { k: null, t: cand[0].t, simbol: cand[0].simbol, verdict: cand[0].verdict || null, rec: cand[0].rec || null };
+  }
+
+  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste, fereastraBotului: fereastraBotului };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridPlan = GridPlan;

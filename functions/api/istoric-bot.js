@@ -83,6 +83,10 @@ export async function onRequestGet({request,env}){
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
   if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
   // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
+  // v100.104 (I-537): toate planurile scrise (fără cele de probă și fără T212) - pentru pragul propus din istoria lui
+  if(action==="planuri"){const out=[];try{const l=await env.ISTORIC.list({prefix:"plan:"});for(const k of (l&&l.keys)||[]){const id=k.name.slice(5);if(/^t212-/.test(id))continue;let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(nr(p.plus)>0||nr(p.minus)>0))continue;out.push({bot:id,plan:{plus:nr(p.plus),minus:nr(p.minus),afaraOre:nr(p.afaraOre)}});if(out.length>=300)break}}catch{}return json({planuri:out})}
+  // v100.104 (I-538): ferestrele ÎNGUST / LARG arătate de fișă (ultimele 60) - pentru jurnal pe orice aparat și pentru colector
+  if(action==="ferestre"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("ferestre")||"[]")}catch{l=[]}return json({ferestre:Array.isArray(l)?l:[]})}
   if(action==="ultimulPlan"){let bun=null;try{const l=await env.ISTORIC.list({prefix:"plan:"});for(const k of (l&&l.keys)||[]){const id=k.name.slice(5);if(/^t212-/.test(id))continue;
       let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(p.plus>0||p.minus>0))continue;if(!bun||(p.la||0)>(bun.plan.la||0))bun={bot:id,plan:p}}}catch{bun=null}
     return json(bun||{bot:null,plan:null})}
@@ -107,6 +111,16 @@ export async function onRequestPost({request,env}){
   const u=new URL(request.url),action=u.searchParams.get("action");
   const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
+  // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
+  if(action==="ferestre"){
+    const o=corp&&corp.oferta,t=nr(o&&o.t),sim=String(o&&o.simbol||""),dir=String(o&&o.dir||"");
+    if(!/^[A-Z0-9]{1,20}_USDT_PERP$/.test(sim)||!(t>0)||(dir!=="long"&&dir!=="short"))return json({error:"oferta: simbol PERP, timp și direcție"},400);
+    const fer=x=>{if(!x||typeof x!=="object")return null;const j=nr(x.jos),s=nr(x.sus),lv=nr(x.levier);if(!(j>0)||!(s>j)||!(lv>0))return null;return {jos:j,sus:s,levier:lv,stop:nr(x.stop),n:nr(x.n),oreTipic:nr(x.oreTipic)}};
+    const nou={simbol:sim,t:t,dir:dir,verdict:/^[a-z-]{1,12}$/.test(String(o.verdict||""))?String(o.verdict):null,rec:o.rec==="ingust"||o.rec==="larg"?o.rec:null,ta:fer(o.ta),mea:fer(o.mea)};
+    let l=[];try{l=JSON.parse(await env.ISTORIC.get("ferestre")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
+    l=l.filter(x=>!(x&&x.simbol===sim&&x.t===t));l.push(nou);l=l.slice(-60);
+    await env.ISTORIC.put("ferestre",JSON.stringify(l));return json({ok:true,n:l.length});
+  }
   // v100.25: colectorul trimite botii inchisi pe bucati; se unesc cu arhiva (compact, fara dubluri); „completa” nu se mai pierde
   if(action==="botiInchisi"){
     if(!corp||!Array.isArray(corp.boti))return json({error:"Lipseste lista boti"},400);

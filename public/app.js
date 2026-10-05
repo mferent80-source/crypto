@@ -5071,7 +5071,7 @@ function grPoartaHtml(f){
   // v100.103 (I-536): pragul meu, o dată pentru toți boții (o setare fără buton nu există)
   h+='<div class="grFrana grPrag"><span class="tbEt2">🎯 Pragul meu de ieșire, % din sumă — fișa, Tabloul și Discordul îl folosesc când botul n-are plan scris</span><div class="grPoartaForm">'
     +'<label><span class="tbEt2">Ies dacă pierd, %</span><input id="grPragPierdere" inputmode="decimal" placeholder="ex. 15"'+grPragVal("pierdere")+'></label><label><span class="tbEt2">Ies pe plus la, %</span><input id="grPragTinta" inputmode="decimal" placeholder="ex. 3"'+grPragVal("tinta")+'></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPragOre" inputmode="decimal" placeholder="12"'+grPragVal("afaraOre")+'></label>'
-    +'<button type="button" class="actionGhost" data-action-click="grPragSalveaza()">Salvează pragul</button></div></div>';
+    +'<button type="button" class="actionGhost" data-action-click="grPragSalveaza()">Salvează pragul</button></div>'+grPragIstHtml()+'</div>';
   return h+'</div>';
 }
 function grPlanCitit(){return {plus:grNumar($("grPlanPlus")&&$("grPlanPlus").value),minus:grNumar($("grPlanMinus")&&$("grPlanMinus").value),afaraOre:grNumar($("grPlanAfara")&&$("grPlanAfara").value)}}
@@ -5129,7 +5129,7 @@ function grPlanVarHtml(pv,i,extra,butoane){
     +'<div class="grPlanDoua">'+bloc(ta,"ÎNGUST · "+ta.levier+"×","ta")+(mea?bloc(mea,"LARG · "+mea.levier+"×"+(pv.amp!=null?" · banda ±"+P1(pv.amp):""),"mea"):'<div class="tbBloc grPlanBloc"><h4>'+"LARG"+'</h4><p class="tbSub">'+escapeHtml(pv.faraMea||"")+'</p></div>')+'</div>'
     +(rec?'<p class="grPlanAleg">👉 <b>Ce aș alege eu acum:</b> '+escapeHtml(rec.text)+'</p>':'')
     // v100.103 (I-535): cum au ieșit cele două pe boții lui reali (jurnalul), cu verdictul cinstit
-    +(butoane&&typeof GridJurnal!=="undefined"?(function(t){return t?'<p class="tbSub grPlanBilant">📒 '+escapeHtml(t)+'</p>':''})(GridJurnal.textFerestre(GridJurnal.bilantFerestre(grJurnalCitit()))):'')
+    +(butoane&&typeof GridJurnal!=="undefined"?(function(t,t2){return (t?'<p class="tbSub grPlanBilant">📒 '+escapeHtml(t)+'</p>':'')+(t2?'<p class="tbSub grPlanBilant">👉 '+escapeHtml(t2)+'</p>':'')})(GridJurnal.textFerestre(GridJurnal.bilantFerestre(grJurnalCitit())),GridJurnal.textRecomandare(GridJurnal.bilantRecomandare(grJurnalCitit()))):'')
     +'<p class="grNota">Proba: o pornire la 6 h pe ultimele 30 de zile, fiecare urmărită '+TextRo.cate(pr?pr.ferestreZile:3,"zi","zile")+' (se suprapun: ~'+(pr?pr.independente:10)+' independente); media e cu comisioane, iar ce rămâne deschis se socotește la capătul ferestrei. E trecutul, nu o promisiune, iar LARG își ia lățimea din aceleași 30 de zile. Sumele de la margini sunt pe drumul drept; alunecarea unui stop pe o cădere bruscă vine peste. Pasul e regula ta, 0,30% (mai rar doar dacă suma nu ajunge la minimul Pionex pe ordin).</p></div>';
 }
 function tbPlanVarHtml(b){
@@ -5173,6 +5173,26 @@ async function grPragSalveaza(){
   try{var r=await apiFetch("/api/istoric-bot?action=config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prag:gol?null:{pierdere:pi,tinta:ti,afaraOre:o}})});if(!r.ok)throw Error("HTTP "+r.status);
     grFrana.la=0;await grFranaAdu();toast(gol?"Pragul tău e șters: revin la planul botului de dinainte":"Pragul tău e salvat: −"+pi+"% / +"+ti+"% din sumă","good");renderGrid()}catch(e){toast("Nu s-a salvat pragul: "+textEroare(e),"bad")}
 }
+// v100.104 (I-537): pragul propus din planurile lui scrise (mediana în % din investiția fiecărui bot) - informație + buton care completează câmpurile
+var grPragIst=null,grPragIstLa=0;
+async function grPragIstAdu(trades){
+  if(grPragIstLa&&Date.now()-grPragIstLa<10*60000)return;
+  try{var d=await getJSON("/api/istoric-bot?action=planuri"),inv={};
+    (trades||[]).forEach(function(t){var v=botiNr(t.pus)>0?botiNr(t.pus):botiNr(t.investit);if(t&&t.id&&v>0)inv[t.id]=v});
+    var act=(typeof tbStare!=="undefined"&&tbStare.boti)||(typeof contTot!=="undefined"&&contTot.boti)||[];act.forEach(function(b){if(b&&b.id&&botiNr(b.investit)>0)inv[b.id]=botiNr(b.investit)});
+    grPragIst=TabloExtra.pragDinPlanuri(d&&d.planuri||[],inv);grPragIstLa=Date.now()}catch(e){}
+}
+function grPragIstHtml(){
+  var p=grPragIst;if(!p||!p.n)return "";
+  var V=function(v){return String(v).replace(".",",")};
+  if(p.putine)return '<p class="tbSub">Din planurile tale scrise: doar '+TextRo.cate(p.n,"bot","boți")+' cu suma știută, prea puține ca să-ți propun un prag.</p>';
+  return '<p class="tbSub grPragIst">Din planurile tale scrise ('+TextRo.cate(p.n,"bot","boți")+'): −'+V(p.pierdere)+'% / +'+V(p.tinta)+'% / '+V(p.afaraOre)+' h <button type="button" class="actionGhost" data-action-click="grPragDinIstorie()">Ia-l din istoria mea</button></p>';
+}
+function grPragDinIstorie(){
+  var p=grPragIst;if(!p||p.putine)return;
+  [["grPragPierdere",p.pierdere],["grPragTinta",p.tinta],["grPragOre",p.afaraOre]].forEach(function(x){var el=$(x[0]);if(el&&x[1]!=null)el.value=String(x[1]).replace(".",",")});
+  toast("Completat din istoria ta; apasă „Salvează pragul” dacă îl vrei","good");
+}
 function grPragVal(k){var p=typeof grFrana!=="undefined"&&grFrana.prag;return p&&p[k]!=null?' value="'+escapeHtml(String(p[k]).replace(".",","))+'"':''}
 async function grFranaSalveaza(){
   var v=function(id){var x=$(id);return x?Number(String(x.value).replace(",",".")):NaN},p={zi:v("grFranaZi"),sapt:v("grFranaSapt"),rand:Math.round(v("grFranaRand"))};
@@ -5209,6 +5229,7 @@ async function gridPoarta(){
   var plan=grPlanCitit();
   if(!jtStare.boti&&!jtStare.inLucru){try{await jtPorneste(true)}catch(e){}}
   var trades=JurnalTrade.din(jtStare.boti||[]),lev=grNumar($("grLevier")&&$("grLevier").value)||f.setare.levier;
+  try{await grPragIstAdu(trades)}catch(e){}   // v100.104 (I-537)
   // v100.30: numele botului din lista oficiala Pionex (LIT -> LIGHTER), ca istoricul si reintrarea sa-l gaseasca
   // v100.43 (I-468): frana contului - netul de azi / 7 zile / seria pe minus, cu pragurile lui (configurarea de pe server)
   await grFranaAdu();
@@ -5234,16 +5255,24 @@ function grHartieScrie(l){try{localStorage.setItem("grHartie",JSON.stringify(l.s
 // v100.103 (I-533): fereastra apăsată (ÎNGUST / LARG) din variantele fișei de acum; altfel null (= gridul din „Alte setări”)
 function grFereastraAleasa(k){
   var f=grStare.fisa,m=grPlanMemo.grid,v=f&&m&&m.cheie&&m.cheie.indexOf(f.simbol+"|")===0?m.v:null,x=v&&!v.eroare?(k==="ta"?v.ta:k==="mea"?v.mea:null):null;
-  return x?{eticheta:k==="ta"?"ingust":"larg",setare:GridPlan.setareFereastra(x)}:null;
+  return x?{eticheta:k==="ta"?"ingust":"larg",setare:GridPlan.setareFereastra(x),recomandat:grRecomandatAcum()}:null;
+}
+// v100.104 (I-539): ce recomanda fișa acum („Ce aș alege eu”) - "ingust" | "larg" | null
+function grRecomandatAcum(){
+  var f=grStare.fisa,m=grPlanMemo.grid,v=f&&m&&m.cheie&&m.cheie.indexOf(f.simbol+"|")===0?m.v:null,rec=v&&!v.eroare?GridPlan.alege(v.ta,v.mea):null;
+  return rec?(rec.cine==="mea"?"larg":"ingust"):null;
 }
 // v100.103 (I-535): ferestrele arătate de fișă (localStorage „grFerestre”, ultimele 60): o ofertă nouă doar când se schimbă ferestrele
-function grFerestreCitite(){try{var v=JSON.parse(localStorage.getItem("grFerestre")||"[]");return Array.isArray(v)?v.filter(function(x){return x&&x.simbol&&x.t>0}):[]}catch(e){return []}}
+var grFerestreSrv=[];   // v100.104 (I-538): ofertele de pe server (și de pe celălalt aparat)
+function grFerestreCitite(){var v=[];try{v=JSON.parse(localStorage.getItem("grFerestre")||"[]")}catch(e){v=[]}var vazut={};return (Array.isArray(v)?v:[]).concat(grFerestreSrv).filter(function(x){if(!x||!x.simbol||!(x.t>0))return false;var k=x.simbol+"|"+x.t;if(vazut[k])return false;vazut[k]=1;return true})}
 function grFerestreTine(f,v){
-  var sc=function(x){return x?{jos:x.jos,sus:x.sus,levier:x.levier}:null},ta=sc(v.ta),mea=sc(v.mea),l=grFerestreCitite(),acum=Date.now();
+  // v100.104 (I-538/I-539): și proba ferestrei (stop, porniri, ore) + ce recomandam; oferta pleacă și pe server (jurnal pe orice aparat, colectorul)
+  var sc=function(x){var p=x&&x.proba;return x?{jos:x.jos,sus:x.sus,levier:x.levier,stop:p?p.stop:null,n:p?p.n:null,oreTipic:p?p.oreTipic:null}:null},ta=sc(v.ta),mea=sc(v.mea),l=grFerestreCitite(),acum=Date.now(),rec=GridPlan.alege(v.ta,v.mea);
   var la=function(a,b){return !a&&!b||a&&b&&a.levier===b.levier&&Math.abs(a.jos/b.jos-1)<0.005&&Math.abs(a.sus/b.sus-1)<0.005};
   if(l.some(function(o){return o.simbol===f.simbol&&o.dir===f.dir&&acum-o.t<12*3600000&&la(o.ta,ta)&&la(o.mea,mea)}))return;
-  l.push({simbol:f.simbol,t:acum,dir:f.dir,verdict:f.verdict&&f.verdict.nivel||null,ta:ta,mea:mea});
+  var o={simbol:f.simbol,t:acum,dir:f.dir,verdict:f.verdict&&f.verdict.nivel||null,rec:rec?(rec.cine==="mea"?"larg":"ingust"):null,ta:ta,mea:mea};l.push(o);
   try{localStorage.setItem("grFerestre",JSON.stringify(l.slice(-60)))}catch(e){}
+  try{apiFetch("/api/istoric-bot?action=ferestre",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({oferta:o})}).then(function(r){if(r&&r.ok)grFerestreSrv=grFerestreSrv.concat([o])}).catch(function(){})}catch(e){}
 }
 function gridHartiePorneste(k){
   var f=grStare.fisa;if(!f)return;var fe=grFereastraAleasa(k),st=fe?fe.setare:f.setare;
@@ -5269,7 +5298,7 @@ function grJurnalCitit(){var t=null;try{t=localStorage.getItem(GR_JURNAL_CHEIE)}
 function grJurnalScrie(l){try{localStorage.setItem(GR_JURNAL_CHEIE,JSON.stringify(l))}catch(e){}}
 function gridJurnalAdauga(k){
   var f=grStare.fisa;if(!f)return;
-  var fe=grFereastraAleasa(k),lj=GridJurnal.adauga(grJurnalCitit(),f,Date.now(),fe),pl=grPlanCitit();
+  var fe=grFereastraAleasa(k),ra=fe?null:grRecomandatAcum(),lj=GridJurnal.adauga(grJurnalCitit(),f,Date.now(),fe||(ra?{recomandat:ra}:null)),pl=grPlanCitit();
   if(pl.plus||pl.minus||pl.afaraOre){lj[lj.length-1].plan=pl;lj[lj.length-1].planTrimis=false}
   grJurnalScrie(lj);
   toast("Notat în jurnal: "+f.simbol.replace(/_USDT_PERP$/,"")+" "+GR_DIR[f.dir]+(fe?" "+(fe.eticheta==="larg"?"LARG":"ÎNGUST"):"")+" · "+(fe?fe.setare.suma:f.setare.suma)+" USDT","good");
@@ -5279,11 +5308,12 @@ function gridJurnalSterge(id){var l=grJurnalCitit().filter(function(e){return e.
 // botii (activi + inchisi) se citesc rar; lista null = citire picata (nu inchidem nimic)
 async function gridJurnalActualizeaza(fortat){
   var l=grJurnalCitit();
-  if(!l.length&&!grFerestreCitite().length){renderGridJurnal();return}   // v100.103: cu ferestre oferite, boții se pot recunoaște și cu jurnalul gol
+  // v100.104 (I-538): și cu jurnalul gol se citesc boții - ofertele pot veni de pe server, de pe celălalt aparat
   if(grJurnalStare.inLucru)return;
   if(!fortat&&Date.now()-grJurnalStare.la<5*60000){renderGridJurnal();return}
   grJurnalStare.inLucru=true;
   try{
+    try{var fsv=await getJSON("/api/istoric-bot?action=ferestre");if(fsv&&Array.isArray(fsv.ferestre))grFerestreSrv=fsv.ferestre}catch(e){}   // v100.104 (I-538)
     var d=await getJSON("/api/bot-orders");
     var boti=d&&Array.isArray(d.bots)?d.bots:null;
     var cu=null;
@@ -5318,9 +5348,9 @@ function renderGridJurnal(){
   var l=grJurnalCitit().slice().sort(function(a,b){return b.t-a.t}),P=GridCalcul.procent;
   if(!l.length){box.innerHTML='<p class="tbSub">Niciun grid pornit din fișă încă.</p>';return}
   var r=GridJurnal.rezumat(l),niv=function(k){var x=r[k];if(!x||!x.n)return "";return (GR_NIVEL[k]?GR_NIVEL[k][0]:k)+": "+x.n+(x.legate?" · "+x.legate+" cu rezultat, media "+P(x.mediaPct)+", "+x.pePlus+" pe plus":" · fără rezultat încă")};
-  var rez=["porneste","asteapta","nu"].map(niv).filter(Boolean).join(" &nbsp;|&nbsp; "),tf=GridJurnal.textFerestre(GridJurnal.bilantFerestre(l));   // v100.103 (I-535)
+  var rez=["porneste","asteapta","nu"].map(niv).filter(Boolean).join(" &nbsp;|&nbsp; "),tf=GridJurnal.textFerestre(GridJurnal.bilantFerestre(l)),tr2=GridJurnal.textRecomandare(GridJurnal.bilantRecomandare(l));   // v100.103 (I-535) · v100.104 (I-539)
   if(sub)sub.textContent=(grJurnalStare.eroare?grJurnalStare.eroare+" · ":"")+l.length+" în jurnal"+(grJurnalStare.la?" · boții citiți la "+new Date(grJurnalStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"}):"");
-  var h='<p class="grRezumat">'+rez+'</p>'+(tf?'<p class="grRezumat">📒 '+escapeHtml(tf)+'</p>':'')+'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Când</th><th>Moneda</th><th>Verdict</th><th>Setarea</th><th>Proba a zis</th><th>Real</th><th>Stare</th><th></th></tr></thead><tbody>';
+  var h='<p class="grRezumat">'+rez+'</p>'+(tf?'<p class="grRezumat">📒 '+escapeHtml(tf)+'</p>':'')+(tr2?'<p class="grRezumat">👉 '+escapeHtml(tr2)+'</p>':'')+'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Când</th><th>Moneda</th><th>Verdict</th><th>Setarea</th><th>Proba a zis</th><th>Real</th><th>Stare</th><th></th></tr></thead><tbody>';
   l.forEach(function(e){
     var baza=e.investit>0?e.investit:e.suma,pct=e.rezultat!=null&&baza>0?e.rezultat/baza:null;
     var real=e.botId?(e.rezultat!=null?TextRo.usdt(e.rezultat)+" ("+P(pct)+")":"—"):"nelegat de un bot";

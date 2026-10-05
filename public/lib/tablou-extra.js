@@ -281,6 +281,19 @@ var TabloExtra = (function () {
   }
 
   // v97.6 "plan cerut la botul nou": ult = { plus, minus, afaraOre, investit?, nume? } (planul lui cel mai nou)
+  // v100.104 (I-537): pragul propus din planurile LUI scrise - mediana pierderii și a țintei în % din investiția fiecărui bot, mediana orelor.
+  // planuri = [{ bot, plan:{plus,minus,afaraOre} }], inv = { idBot: investiție }. Sub 5 planuri cu investiția știută ⇒ „puține”, fără cifre.
+  function pragDinPlanuri(planuri, inv) {
+    var mp = [], pp = [], oo = [], med = function (v) { if (!v.length) return null; var s = v.slice().sort(function (x, y) { return x - y; }); return s[Math.floor(s.length / 2)]; };
+    (Array.isArray(planuri) ? planuri : []).forEach(function (x) {
+      var p = x && x.plan, i = nr(inv && x && inv[x.bot]);
+      if (!p || !(i > 0) || !(nr(p.minus) > 0)) return;
+      mp.push(nr(p.minus) / i * 100); if (nr(p.plus) > 0) pp.push(nr(p.plus) / i * 100); if (nr(p.afaraOre) > 0) oo.push(nr(p.afaraOre));
+    });
+    var r1 = function (v) { return v === null ? null : Math.round(v * 10) / 10; };
+    if (mp.length < 5) return { n: mp.length, pierdere: null, tinta: null, afaraOre: null, putine: true };
+    return { n: mp.length, pierdere: r1(med(mp)), tinta: r1(med(pp)), afaraOre: med(oo), putine: false };
+  }
   // v100.103 (I-536): prag = { pierdere, tinta, afaraOre } în % din sumă, setat de el în poartă (config pe server) - bate planul împrumutat
   function propunePlan(ult, investitNou, prag) {
     var inv = nr(investitNou), r1 = function (v) { return v === null || !isFinite(v) ? null : Math.round(v * 10) / 10; };
@@ -628,7 +641,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

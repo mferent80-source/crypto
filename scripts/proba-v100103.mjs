@@ -47,7 +47,7 @@ await test("(1) I-533 pagina: butoane „pe hârtie” / „am pornit-o” pe fi
   const h = c.f(pv, null, "", true);
   for (const k of ["ta", "mea"]) { assert.ok(h.includes(`data-action-click="gridHartiePorneste('${k}')"`), "hârtie " + k); assert.ok(h.includes(`data-action-click="gridJurnalAdauga('${k}')"`), "jurnal " + k); }
   assert.ok(!c.f(pv, null, "").includes("gridHartiePorneste"), "pe Tablou fără butoane");
-  assert.match(fnApp("gridHartiePorneste"), /grFereastraAleasa\(k\)/); assert.match(fnApp("grFereastraAleasa"), /GridPlan\.setareFereastra\(/); assert.match(fnApp("gridJurnalAdauga"), /GridJurnal\.adauga\(grJurnalCitit\(\),f,Date\.now\(\),fe\)/);
+  assert.match(fnApp("gridHartiePorneste"), /grFereastraAleasa\(k\)/); assert.match(fnApp("grFereastraAleasa"), /GridPlan\.setareFereastra\(/); assert.match(fnApp("gridJurnalAdauga"), /GridJurnal\.adauga\(grJurnalCitit\(\),f,Date\.now\(\),fe\|\|/);   /* v100.104: fără fereastră merge doar recomandarea */
   assert.match(fnApp("grFereastraAleasa"), /grPlanMemo\.grid/);
 });
 const PG = (laMargine) => ({ r: { laMargine, procent: laMargine / 100, parte: "jos", stopPlan: 0.95, moarte: 0.5, plan: 15, preaLarg: laMargine > 18 }, prag: 15 });

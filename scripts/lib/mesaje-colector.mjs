@@ -40,6 +40,20 @@ export const gridPreaLarg = (nume, x) => ({ nivel: "atentie", cheie: "grid-larg"
     + (x.moarte != null && x.intervale ? "; cu stopul la prag, " + x.moarte + " din " + cate(x.intervale, "grilă", "grile") + " n-ar lucra." : "."),
     "Aș închide aproape de zero și aș porni ÎNGUST sau LARG din fișă" + (x.stopPlan ? "; dacă-l ții, stopul la " + String(Number(x.stopPlan.toPrecision(4))).replace(".", ",") : "") + ".") });
 
+// v101.73 (I-538): botul nou seamănă cu o fereastră din fișă (GridPlan.fereastraBotului) - o dată, cu ora fișei și proba ferestrei
+const oraRo = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" }).format(new Date(t)); } catch { return ""; } };
+export const pornitCa = (nume, f) => {
+  if (!f.k) return { nivel: "atentie", cheie: "pornit-ca", titlu: nume + ": pornit cu alt grid decât fișa",
+    mesaj: msg("Nu seamănă nici cu ÎNGUST, nici cu LARG din fișa de la " + oraRo(f.t) + ".", "Aș verifica poarta: gridul poate să nu încapă în pragul tău de pierdere.") };
+  const larg = f.k === "larg", ore = Number(f.oreTipic) > 0 ? Math.round(Number(f.oreTipic)) : null;
+  return { nivel: "info", cheie: "pornit-ca", titlu: nume + ": pornit ca " + (larg ? "LARG" : "ÎNGUST") + " din fișă",
+    mesaj: msg("Seamănă cu " + (larg ? "LARG" : "ÎNGUST") + " din fișa de la " + oraRo(f.t) + (Number(f.stop) >= 0 && Number(f.n) > 0 ? " (în probă: stopul atins de " + cate(f.stop, "dată", "ori") + " din " + cate(f.n, "pornire", "porniri") + ")" : "") + ".",
+      larg ? "Aș lăsa botul să lucreze; dacă stă peste " + (ore ? 2 * ore + " h" : "de două ori durata tipică") + ", te anunț." : "Aș ține stopul la marginea gridului: îngust iese repede" + (ore ? " (tipic " + ore + " h)" : "") + ".") };
+};
+// v101.73 (I-540): ceasul ferestrei LARG - botul stă de peste 2× durata tipică din proba ferestrei
+export const ceasLarg = (nume, ore, tipic) => ({ nivel: "info", cheie: "ceas-larg", titlu: nume + ": LARG stă de " + Math.round(ore) + " h (tipic " + Math.round(tipic) + " h)",
+  mesaj: msg("Banii stau în grid de peste două ori mai mult decât în probă.", "Aș închide aproape de zero dacă prețul nu mai trece prin grid; dacă lucrează, îl las.") });
+
 // ceasul gridului ingust (I-481): ore = durata probata, hm = ora inchiderii „HH:MM”, tarziu = colectorul a fost oprit
 export const ceasIngust = (nume, ore, hm, tarziu) => ({ nivel: "atentie", titlu: nume + ": gridul îngust a ajuns la " + ore + " h",
   mesaj: msg("Așa a fost probat (închiderea era la " + hm + (tarziu ? "; mesajul vine întârziat, colectorul a fost oprit" : "") + "): ținut mai mult, nu mai seamănă cu proba.",

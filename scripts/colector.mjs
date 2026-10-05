@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.72";
+const VERSIUNE_COLECTOR = "v101.73";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -166,6 +166,13 @@ async function pragDinConfig() {
   if (Date.now() - pragMemo.la < 10 * 60000) return pragMemo.v;
   try { const c = await cere("/api/istoric-bot?action=config"); pragMemo = { la: Date.now(), v: c && c.config && c.config.prag || null }; } catch (e) { pragMemo = { la: Date.now(), v: pragMemo.v }; }
   return pragMemo.v;
+}
+// v101.73 (I-538): ferestrele arătate de fișă, de pe server - citite cel mult o dată la 5 min
+let ferestreMemo = { la: 0, v: [] };
+async function ferestreServer() {
+  if (Date.now() - ferestreMemo.la < 5 * 60000) return ferestreMemo.v;
+  try { const d = await cere("/api/istoric-bot?action=ferestre"); ferestreMemo = { la: Date.now(), v: d && Array.isArray(d.ferestre) ? d.ferestre : [] }; } catch (e) { ferestreMemo = { la: Date.now(), v: ferestreMemo.v }; }
+  return ferestreMemo.v;
 }
 async function cere(cale, opt = {}) {
   const ePret = cale.startsWith("/api/market?type=pionex_");
@@ -467,6 +474,17 @@ async function tura() {
         const gv = TabloExtra.gridVsPlan(b, planMinus);
         if (!gv || !gv.preaLarg) st._gridLarg = "ok";
         else { const m = MesajeColector.gridPreaLarg(String(b.baza || "botul").replace(/\.PERP$/, ""), gv); if (await trimiteAlerta(m, b.id, m.cheie)) st._gridLarg = "trimis"; }
+      }
+      // v101.73 (I-538): botul nou, o dată în primele 6 h - seamănă cu ÎNGUST / LARG din fișa de DINAINTE de pornire? (ferestrele de pe server)
+      if (!st._fereastra && acum - Number(b.pornitLa) < 6 * 3600000) {
+        const fb = GridPlan.fereastraBotului(b, await ferestreServer());
+        if (!fb) st._fereastra = { k: null, oreTipic: null, faraOferta: true };
+        else { const m = MesajeColector.pornitCa(String(b.baza || "botul").replace(/\.PERP$/, ""), fb); if (await trimiteAlerta(m, b.id, m.cheie)) st._fereastra = { k: fb.k, oreTipic: fb.oreTipic || null }; }
+      }
+      // v101.73 (I-540): ceasul ferestrei LARG - o notă, o dată, când stă de peste 2× durata tipică din proba ferestrei
+      if (st._fereastra && st._fereastra.k === "larg" && st._fereastra.oreTipic > 0 && !st._ceasLarg && acum - Number(b.pornitLa) > 2 * st._fereastra.oreTipic * 3600000) {
+        const m = MesajeColector.ceasLarg(String(b.baza || "botul").replace(/\.PERP$/, ""), (acum - Number(b.pornitLa)) / 3600000, st._fereastra.oreTipic);
+        if (await trimiteAlerta(m, b.id, m.cheie)) st._ceasLarg = true;
       }
       // v101.39 (I-481): ceasul gridului ingust - botul pornit cu setarile variantei ingusta: un singur mesaj cand trece durata probata.
       // Potrivirea se tine minte (KV-ul ingust se rescrie la 6 h si poate sa nu mai propuna)

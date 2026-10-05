@@ -41,7 +41,8 @@ var GridJurnal = (function () {
       verdict: f.verdict && f.verdict.nivel || null, suma: nr(st.suma),
       jos: nr(st.jos), sus: nr(st.sus), grile: nr(st.grile), levier: nr(st.levier),
       mediana: a ? nr(a.mediana) : null, ceaMaiProasta: a ? nr(a.ceaMaiProasta) : null, medianaNevazut: t ? nr(t.mediana) : null,
-      botId: null, activ: null, investit: null, rezultat: null, inchisLa: null, actualizatLa: null, fereastra: fs ? String(fe.eticheta) : "alte"
+      botId: null, activ: null, investit: null, rezultat: null, inchisLa: null, actualizatLa: null, fereastra: fs ? String(fe.eticheta) : "alte",
+      recomandat: fe && (fe.recomandat === "ingust" || fe.recomandat === "larg") ? fe.recomandat : null   // v100.104 (I-539): ce recomandam la apăsare
     };
     // apasat de doua ori in 10 minute pe aceeasi moneda, fara bot legat -> o inlocuieste
     var fara = lista.filter(function (x) { return !(x.botId === null && moneda(x.simbol) === moneda(f.simbol) && acum - x.t < INLOCUIRE_MS); });
@@ -156,25 +157,19 @@ var GridJurnal = (function () {
   // Oferta de DUPĂ pornire nu contează: informația trebuie să fi fost disponibilă atunci.
   function recunoaste(lista, boti, oferite, acum) {
     var out = Array.isArray(lista) ? lista.slice() : [];
-    if (!Array.isArray(boti) || !Array.isArray(oferite) || !oferite.length || typeof GridPlan === "undefined" || !GridPlan.recunoaste) return out;
+    if (!Array.isArray(boti) || !Array.isArray(oferite) || !oferite.length || typeof GridPlan === "undefined" || !GridPlan.fereastraBotului) return out;
     var legati = {};
     out.forEach(function (e) { if (e && e.botId) legati[e.botId] = true; });
     boti.forEach(function (b) {
-      if (!b || !b.id || legati[String(b.id)] || !/\.PERP$/i.test(String(b.baza || ""))) return;
-      var p = nr(b.pornitLa), dir = String(b.directie || "").toLowerCase(), m = moneda(b.baza);
-      if (p === null) return;
-      var cand = oferite.filter(function (o) { return o && moneda(o.simbol) === m && o.dir === dir && nr(o.t) !== null && o.t <= p && p - o.t <= LEAGA_DUPA_MS; })
-        .sort(function (x, y) { return y.t - x.t; });
-      for (var i = 0; i < cand.length; i++) {
-        var o = cand[i], k = GridPlan.recunoaste({ dir: dir, jos: nr(b.gridJos), sus: nr(b.gridSus), levier: nr(b.levier) },
-          { ta: o.ta ? { jos: o.ta.jos, sus: o.ta.sus, levier: o.ta.levier, dir: o.dir } : null, mea: o.mea ? { jos: o.mea.jos, sus: o.mea.sus, levier: o.mea.levier, dir: o.dir } : null });
-        if (!k) continue;
-        out.push({ id: String(p) + "-" + m.replace(/[^A-Z0-9]/g, "") + "-a", t: p, simbol: o.simbol, dir: dir, H: null, pret: null, verdict: o.verdict || null, suma: nr(b.investit),
-          jos: nr(b.gridJos), sus: nr(b.gridSus), grile: null, levier: nr(b.levier), mediana: null, ceaMaiProasta: null, medianaNevazut: null,
-          botId: String(b.id), activ: b.activ !== false, investit: nr(b.investit), rezultat: null, inchisLa: null, actualizatLa: null, fereastra: k, auto: true });
-        legati[String(b.id)] = true;
-        break;
-      }
+      if (!b || !b.id || legati[String(b.id)]) return;
+      var fb = GridPlan.fereastraBotului(b, oferite);   // v100.104: aceeași regulă ca mesajul de pornire al colectorului
+      if (!fb || !fb.k) return;
+      var p = nr(b.pornitLa), m = moneda(b.baza);
+      out.push({ id: String(p) + "-" + m.replace(/[^A-Z0-9]/g, "") + "-a", t: p, simbol: fb.simbol, dir: String(b.directie || "").toLowerCase(), H: null, pret: null, verdict: fb.verdict || null, suma: nr(b.investit),
+        jos: nr(b.gridJos), sus: nr(b.gridSus), grile: null, levier: nr(b.levier), mediana: null, ceaMaiProasta: null, medianaNevazut: null,
+        botId: String(b.id), activ: b.activ !== false, investit: nr(b.investit), rezultat: null, inchisLa: null, actualizatLa: null, fereastra: fb.k, auto: true,
+        recomandat: fb.rec === "ingust" || fb.rec === "larg" ? fb.rec : null });
+      legati[String(b.id)] = true;
     });
     return out;
   }
@@ -184,23 +179,31 @@ var GridJurnal = (function () {
   // Regula fixată DINAINTE (nu după ce vedem cifrele): media rezultatului în % din investiție, LARG − ÎNGUST, pe boții ÎNCHIȘI.
   // IC 90% prin bootstrap pe MONEDE (boții aceleiași monede nu sunt independenți), 2000 de reluări, sămânța fixă.
   // Sub 5 boți pe o fereastră sau sub 3 monede ⇒ „puține”; IC peste 0 ⇒ „dovedit” (LARG mai bun); sub 0 ⇒ „pe dos”; altfel „nedovedit”.
+  // v100.104 (I-539): aceeași comparație pentru două grupuri oarecare (A, B); dif = B − A
+  function inchis(e) { var baza = e && (e.investit > 0 ? e.investit : e.suma); return e && e.botId && e.activ === false && nr(e.rezultat) !== null && baza > 0 ? { m: moneda(e.simbol), pct: e.rezultat / baza, usdt: nr(e.rezultat) } : null; }
   function bilantFerestre(lista) {
     var g = { ingust: [], larg: [] };
-    (Array.isArray(lista) ? lista : []).forEach(function (e) {
-      if (!e || !g[e.fereastra] || !e.botId || e.activ !== false || nr(e.rezultat) === null) return;
-      var baza = e.investit > 0 ? e.investit : e.suma;
-      if (!(baza > 0)) return;
-      g[e.fereastra].push({ m: moneda(e.simbol), pct: e.rezultat / baza, usdt: nr(e.rezultat) });
-    });
+    (Array.isArray(lista) ? lista : []).forEach(function (e) { var c = e && g[e.fereastra] ? inchis(e) : null; if (c) g[e.fereastra].push(c); });
+    var o = compara(g.ingust, g.larg, 535);
+    return { ingust: o.a, larg: o.b, dif: o.dif, ic: o.ic, verdict: o.verdict };
+  }
+  function bilantRecomandare(lista) {
+    var u = [], nu = [];
+    (Array.isArray(lista) ? lista : []).forEach(function (e) { if (!e || !e.recomandat) return; var c = inchis(e); if (c) (e.fereastra === e.recomandat ? u : nu).push(c); });
+    var o = compara(nu, u, 539);
+    return { neurmata: o.a, urmata: o.b, dif: o.dif, ic: o.ic, verdict: o.verdict };
+  }
+  function compara(gA, gB, seed) {
+    var g = { ingust: gA, larg: gB };
     var st = function (x) {
       var m = {}, s = 0, u = 0, plus = 0;
       x.forEach(function (c) { (m[c.m] = m[c.m] || []).push(c.pct); s += c.pct; u += c.usdt; if (c.pct > 0) plus++; });
       return { n: x.length, monede: Object.keys(m).length, mediaPct: x.length ? s / x.length : null, netUsdt: u, pePlus: plus, peMoneda: m };
     };
-    var a = st(g.ingust), b = st(g.larg), out = { ingust: a, larg: b, dif: null, ic: null, verdict: "puține" };
+    var a = st(g.ingust), b = st(g.larg), out = { a: a, b: b, dif: null, ic: null, verdict: "puține" };
     if (a.n && b.n) out.dif = b.mediaPct - a.mediaPct;
     if (a.n < 5 || b.n < 5 || a.monede < 3 || b.monede < 3) return out;
-    var rnd = mulberry32(535), B = 2000, d = [];
+    var rnd = mulberry32(seed), B = 2000, d = [];
     var reia = function (pm) { var k = Object.keys(pm), s = 0, n = 0; for (var i = 0; i < k.length; i++) { var x = pm[k[Math.floor(rnd() * k.length)]]; for (var j = 0; j < x.length; j++) { s += x[j]; n++; } } return s / n; };
     for (var i = 0; i < B; i++) d.push(reia(b.peMoneda) - reia(a.peMoneda));
     d.sort(function (x, y) { return x - y; });
@@ -216,7 +219,15 @@ var GridJurnal = (function () {
       : b.verdict === "pe dos" ? "ÎNGUST a adus mai mult (dovedit)" : "diferența nu e dovedită (pot fi la fel)";
     return "ÎNGUST vs LARG pe boții tăi: " + parte("ÎNGUST", b.ingust) + " · " + parte("LARG", b.larg) + " — " + conc + ".";
   }
+  function textRecomandare(b) {
+    if (!b || (!b.urmata.n && !b.neurmata.n)) return null;
+    var P = function (v) { return v === null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };
+    var parte = function (nume, x) { return nume + " " + cate(x.n, "bot", "boți") + ", media " + P(x.mediaPct); };
+    var conc = b.verdict === "puține" ? "puține cazuri (trebuie cel puțin 5 pe fiecare, din cel puțin 3 monede)" : b.verdict === "dovedit" ? "urmată a adus mai mult (dovedit)"
+      : b.verdict === "pe dos" ? "neurmată a adus mai mult (dovedit)" : "diferența nu e dovedită (pot fi la fel)";
+    return "Recomandarea mea pe boții tăi: " + parte("urmată", b.urmata) + " · " + parte("neurmată", b.neurmata) + " — " + conc + ".";
+  }
 
-  return { citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda, calibrare: calibrare, recunoaste: recunoaste, bilantFerestre: bilantFerestre, textFerestre: textFerestre };
+  return { citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda, calibrare: calibrare, recunoaste: recunoaste, bilantFerestre: bilantFerestre, textFerestre: textFerestre, bilantRecomandare: bilantRecomandare, textRecomandare: textRecomandare };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridJurnal = GridJurnal;

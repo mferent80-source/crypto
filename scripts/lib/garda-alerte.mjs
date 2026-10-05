@@ -182,6 +182,11 @@ export function situatiiAlerte(pune) {
   co("botul n-are plan, fără propunere", "faraPlan", MC.faraPlan("CRV", null));
   // v101.70: botul nou cu gridul prea larg pentru levier (cu și fără stopul planului în grid)
   co("botul nou cu gridul prea larg pentru levier", "gridPreaLarg", MC.gridPreaLarg("TAKE", { laMargine: 24.9, procent: 0.62, parte: "jos", plan: 6.5, stopPlan: 0.0614, moarte: 22, intervale: 49 }));
+  // v101.73: pornit ca LARG / ÎNGUST / alt grid; ceasul LARG
+  co("botul nou seamănă cu LARG din fișă", "pornitCa", MC.pornitCa("ABC", { k: "larg", t: Date.UTC(2026, 9, 5, 11, 20), stop: 15, n: 100, oreTipic: 24 }));
+  co("botul nou seamănă cu ÎNGUST din fișă", "pornitCa", MC.pornitCa("ABC", { k: "ingust", t: Date.UTC(2026, 9, 5, 11, 20), stop: 40, n: 100, oreTipic: 5 }));
+  co("botul nou nu seamănă cu nicio fereastră", "pornitCa", MC.pornitCa("ABC", { k: null, t: Date.UTC(2026, 9, 5, 11, 20) }));
+  co("botul LARG stă de 2× durata tipică", "ceasLarg", MC.ceasLarg("ABC", 50, 24));
   co("gridul prea larg, fără grile numărate", "gridPreaLarg", MC.gridPreaLarg("CRV", { laMargine: 12.4, procent: 0.25, parte: "sus", plan: 5, stopPlan: null, moarte: null, intervale: null }));
   // v100.86 (§2 „paza boților”): mesajele pazei din producătorul REAL (pazaBot cu Busola și Alerte.pret, nota din notaVeche) -
   // CRV long 5×, LIGHTER short 4×, BTC (prețuri de 5 cifre), PUMP (sub 0,01), bot nou, neutru fără levier, nedovedit, fără cifră
