@@ -126,7 +126,12 @@ await test("pagina: verdict scurt + #tbMotive + #tbConcret dupa randul de sus; D
 });
 await test("app.js: graficul deseneaza cu GraficBot si DOAR alertele botului (TabloExtra.alerteleBotului), nu tot contul; verdictul nu mai contine „Acum, concret”", () => {
   const a = citeste("../public/app.js"), i = a.indexOf("function renderTabloGrafic("), corp = a.slice(i, a.indexOf("\nfunction ", i + 10));
-  assert.ok(i > 0); assert.match(corp, /GraficBot\.desen\(/); assert.match(corp, /TabloExtra\.alerteleBotului\(/);
+  assert.ok(i > 0); assert.match(corp, /GraficBot\.desen\(/);
+  // v100.99 (I-532): filtrul pe bot e în intrarea PURĂ (GraficBot.intrareBot, cu TabloExtra.alerteleBotului) - se verifică ce întoarce
+  assert.match(corp, /GraficBot\.intrareBot\(\{bot:b,/);
+  const GBi = new Function(fs.readFileSync(new URL("../public/lib/grafic-bot.js", import.meta.url), "utf8") + "; return GraficBot;")();
+  const TEa = { alerteleBotului: (l, id) => l.filter((x) => x.bot === id), dacaInchizi: () => null, totalLaOpritor: () => null };
+  assert.deepEqual(GBi.intrareBot({ bot: { id: "A" }, bare: [], alerteServer: [{ bot: "A", t: 1 }, { bot: "B", t: 2 }], W: 800, TabloExtra: TEa }).alerte, [{ bot: "A", t: 1 }], "doar alertele botului");
   assert.doesNotMatch(corp, /TabloExtra\.evenimente\(ist,tbStare\.alerteServer/, "vechiul desen cu toate alertele contului");
   const j = a.indexOf("function tbDeseneazaSemafor("), sem = a.slice(j, a.indexOf("\nfunction ", j + 10));
   assert.doesNotMatch(sem, /tbConcret"><h5>Acum, concret/, "Acum, concret are randul lui");

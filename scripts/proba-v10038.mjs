@@ -76,9 +76,13 @@ await test("comparatia cu botul: propunerea de 7 intervale = botul cu 8 grile Pi
   assert.equal(TE.gridDiferitDeBot({ jos: 0.3755, sus: 0.423, grile: 8 }, CRV).acelasi, false);
 });
 await test("graficul Tabloului: treptele pe liniile Pionex (row linii), umplerile si legenda „perechi pe grafic: N · Pionex: M”", () => {
-  // v100.98: obiectul desenului e scos în `var oG={…}` (îl primește și citirea graficului) - ancora se mută acolo, conținutul păzit rămâne
-  const i = app.indexOf("var oG={simplu:"), corp = app.slice(i - 200, i + 1100); assert.ok(i >= 0, "lipsește obiectul desenului");
-  assert.match(corp, /linii:botiNr\(xo\.row\)[,}]/); assert.match(corp, /GraficBot\.umpleri\(bare,/); assert.match(corp, /perechiPionex:botiNr\(b\.ordinePerechi\)/); assert.match(corp, /dir:String\(b\.directie/);   // v100.39: cu [,}] - `linii:botiNr(xo.row)-1` nu mai trece (02.10: comentariul la capat - inainte inghitea cele trei asertiuni de dupa el)
+  // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - se verifică ce ÎNTOARCE, nu textul din app.js (row = linii, nu row−1;
+  // umplerile pe lumânările botului, cu direcția lui; perechile Pionex alături)
+  assert.match(app, /var oG=GraficBot\.intrareBot\(\{bot:b,brut:brut,bare:bare,/, "renderTabloGrafic cheamă intrarea pură");
+  const ib = GB.intrareBot({ bot: { id: "C", directie: "long", ordinePerechi: 7, pornitLa: CRV.pornitLa }, brut: { buOrderData: { bottom: "0.3755", top: "0.423", row: 8, gridType: "geometric", initPrice: "0.4" } },
+    bare: [{ t: CRV.pornitLa, o: 0.3997, h: 0.4097, l: 0.3990, c: 0.4080, v: 1 }, { t: CRV.pornitLa + 60000, o: 0.4080, h: 0.4085, l: 0.4014, c: 0.4021, v: 1 }], W: 900, acum: CRV.pornitLa + 120000, TabloExtra: null });
+  assert.equal(ib.grila.linii, 8, "row = linii (nu row−1)"); assert.equal(ib.grila.geo, true); assert.equal(ib.perechiPionex, 7);
+  assert.deepEqual(ib.umpleri, GB.umpleri(ib.bare, { jos: 0.3755, sus: 0.423, linii: 8, geo: true, p0: 0.4, pornit: CRV.pornitLa, dir: "long" }), "umplerile cu direcția botului");
   const T0 = CRV.pornitLa, bare = [{ t: T0, o: 0.3997, h: 0.4097, l: 0.3990, c: 0.4080, v: 1 }, { t: T0 + 60000, o: 0.4080, h: 0.4085, l: 0.4014, c: 0.4021, v: 1 }];
   const GR = { jos: 0.3755, sus: 0.423, linii: 8, geo: true };
   const d = GB.desen({ bare, W: 800, st: {}, niv: [], grila: GR, alerte: [], per: "24h", umpleri: GB.umpleri(bare, Object.assign({ p0: 0.3997, pornit: T0, dir: "long" }, GR)), perechiPionex: 1 });

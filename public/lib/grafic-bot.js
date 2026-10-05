@@ -92,7 +92,15 @@ var GraficBot = (function () {
     var pp = dist(niv.planPlus), pm = dist(niv.planMinus);
     if (pp !== null || pm !== null) rows.push({ ce: "Planul", stare: "info", text: (pp !== null ? "încasezi la " + pct(pp) : "") + (pp !== null && pm !== null ? " · " : "") + (pm !== null ? "închizi la " + pct(pm) : "") });
     var ds = dist(niv.stop), dl = dist(niv.lich), as = ds !== null ? Math.abs(ds) : null;
-    if (ds !== null || dl !== null) rows.push({ ce: "Stopul", stare: as !== null && as < 0.03 ? "rau" : as !== null && as < 0.07 ? "atentie" : "bine", text: (ds !== null ? "la " + pct(ds) : "nepus") + (dl !== null ? " · lichidarea la " + pct(dl) : "") });
+    // v100.99 (I-527): cât pierzi LA STOP (cu gridul pe drum) față de plan - mereu, nu doar peste toleranța alertei „plan-stop”
+    var sv = o.stopVsPlan, ls = sv ? nr(sv.laStop) : null, pg = sv ? nr(sv.plan) : null, peste = ls !== null && pg !== null && pg > 0 ? -ls - pg : null;
+    if (ds !== null || dl !== null) {
+      var stS = as !== null && as < 0.03 ? "rau" : as !== null && as < 0.07 ? "atentie" : "bine";
+      if (peste !== null && peste > 0.05 && stS === "bine") stS = "atentie";
+      rows.push({ ce: peste !== null ? "Stopul vs planul" : "Stopul", stare: stS, text: (ds !== null ? "la " + pct(ds) : "nepus") + (ls !== null ? " · la stop pierzi " + u(ls) : "")
+        + (peste !== null ? (peste > 0.05 ? ", planul −" + pg.toFixed(2).replace(".", ",") + " (cu " + peste.toFixed(2).replace(".", ",") + " mai mult)" : ", în plan (−" + pg.toFixed(2).replace(".", ",") + ")") : "")
+        + (dl !== null ? " · lichidarea la " + pct(dl) : "") });
+    }
     var g = o.grila || {}, Lg = liniiPionex(g.jos, g.sus, g.linii, g.geo);
     if (Lg.length) {
       var k = 0; while (k < Lg.length - 1 && Lg[k + 1] <= p) k++;
@@ -218,6 +226,49 @@ var GraficBot = (function () {
     return g;
   }
 
+  // v100.99 (I-528): șansele MĂSURATE (Probabilitati.randuri) pe liniile lor: marginile în 24 h, lichidarea în 7 zile, ținta planului înaintea
+  // stopului în 7 zile (cursa). Doar ce s-a măsurat - pe stopul botului nu există o cifră proprie (aceea e la acțiuni), deci nu se inventează.
+  var SANSE = { gridJos: ["iese-jos-24", "24 h"], gridSus: ["iese-sus-24", "24 h"], lich: ["lichidare", "7 zile"], planPlus: ["cursa", "înaintea stopului, 7 zile"] };
+  function cuSanse(niv, sanse) {
+    var dupa = {}; (Array.isArray(sanse) ? sanse : []).forEach(function (r) { if (r && r.cod && nr(r.p) !== null) dupa[r.cod] = r; });
+    return niv.map(function (x) {
+      var m = SANSE[x.k], r = m && dupa[m[0]]; if (!r) return x;
+      var p = Math.round(r.p * 100) + "%";
+      return Object.assign({}, x, { sansa: m[1] + ": " + p, sansaScurt: p, sansaLung: r.titlu + ": " + p + (r.text ? " · " + r.text : "") });
+    });
+  }
+  // v100.99 (I-529): stopul DE PROBĂ - cât ai pierde dacă ai pune stopul la `pret` (total = TabloExtra.totalCuGridLa, cu gridul pe drum), față de plan
+  function stopProba(pret, pAcum, total, plan) {
+    pret = nr(pret); pAcum = nr(pAcum); total = nr(total); plan = nr(plan);
+    if (pret === null || !(pret > 0)) return null;
+    var dist = pAcum > 0 ? pret / pAcum - 1 : null, peste = total !== null && plan > 0 ? -total - plan : null;
+    var u = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+    return { pret: pret, dist: dist, total: total, peste: peste, scurt: fmtP(pret) + (total !== null ? " · " + u(total) : ""),   /* pe telefon */
+      text: "stop de probă la " + fmtP(pret) + (dist !== null ? " (" + pct(dist) + ")" : "") + (total !== null ? ": " + (total < 0 ? "pierzi " : "rămâi cu ") + u(total) : "")
+        + (peste !== null ? (Math.abs(peste) <= 0.05 ? ", exact planul" : peste > 0 ? ", cu " + peste.toFixed(2).replace(".", ",") + " peste plan" : ", cu " + (-peste).toFixed(2).replace(".", ",") + " sub plan") : "") };
+  }
+  // v100.99 (I-532): intrarea graficului botului, PURĂ - ce construia renderTabloGrafic în app.js (probele verifică ce întoarce, nu textul codului).
+  // d = { bot, brut, bare, plan, alerteServer, valoare, profil, consLinii, funding, sanse, proba, pretViu, acum, W, st, simplu, per, TabloExtra? }
+  function intrareBot(d) {
+    var TE = d.TabloExtra || (typeof TabloExtra !== "undefined" ? TabloExtra : null), b = d.bot || {}, pl = d.plan || null, viu = nr(d.pretViu) > 0 ? nr(d.pretViu) : null;
+    var raw = Array.isArray(d.bare) ? d.bare : [], acum = nr(d.acum) || Date.now(), dir = String(b.directie || "").toLowerCase();
+    var z = TE ? TE.dacaInchizi(b) : null, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
+    // v100.98: planul CU gridul pe drum (pretTintaPentru / pretOpritorPentru)
+    var pPl = TE && plus > 0 ? TE.pretTintaPentru(b, plus) : null, pMi = TE && minus > 0 ? TE.pretOpritorPentru(b, -minus) : null;
+    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null }), d.sanse);
+    var xo = d.brut && d.brut.buOrderData || {}, gj = nr(xo.bottom), gs = nr(xo.top);
+    var grila = { jos: gj !== null ? gj : nr(b.gridJos), sus: gs !== null ? gs : nr(b.gridSus), linii: nr(xo.row), geo: String(xo.gridType || "").toLowerCase() === "geometric" };
+    var zi = ziObisnuita(viu || (raw.length ? raw[raw.length - 1].c : null), d.profil);   // v100.51 (I-470, I-476)
+    var bv = cuPretViu(raw, viu, acum);   // v100.98: lumânarea de acum urmează prețul live
+    var laStop = TE && b.opritorPierdereActiv ? TE.totalLaOpritor(b) : null;
+    return { simplu: d.simplu !== false, pornit: nr(b.pornitLa), funding: d.funding || null, bare: bv, W: d.W, ingust: d.W < 560, st: d.st || {}, niv: niv, zi: zi, val: d.valoare || null,
+      consLinii: d.consLinii && d.consLinii.bot === b.id ? d.consLinii : null, grila: grila, alerte: TE ? TE.alerteleBotului(d.alerteServer || [], b.id, acum) : [], per: d.per || "24h", pretViu: viu,
+      // v100.38: umplerile si perechile gridului, deduse din lumanari de la pornire, langa numarul de perechi al Pionex
+      umpleri: umpleri(bv, { jos: grila.jos, sus: grila.sus, linii: grila.linii, geo: grila.geo, p0: nr(xo.initPrice), pornit: nr(b.pornitLa), dir: dir }), perechiPionex: nr(b.ordinePerechi),
+      stopVsPlan: laStop !== null && minus > 0 ? { laStop: laStop, plan: minus } : null,   // v100.99 (I-527)
+      proba: d.proba || null };   // v100.99 (I-529): { pret, text } - linia stopului de probă
+  }
+
   // o = { bare, W, ingust, st:{bb,ema,rsi,vp}, niv, grila:{jos,sus,n,geo}, alerte, per }
   function desen(o) {
     var raw = o.bare || [], st = o.st || {}, W = Math.max(300, o.W || 800), ingust = !!o.ingust, simplu = !!o.simplu;
@@ -333,8 +384,14 @@ var GraficBot = (function () {
         var y = Y(x.p);
         if (x.st !== "fine") q.push('<line class="gbNiv" x1="0" x2="' + f1(plotW) + '" y1="' + f1(y) + '" y2="' + f1(y) + '" stroke="' + x.c + '" stroke-width="' + (x.st === "lich" ? 2 : 1.3) + '"' + (x.st === "dash" ? ' stroke-dasharray="6 4"' : x.st === "lich" ? ' stroke-dasharray="2 3"' : '') + '/>');
         et.push({ y: y, t: x.t, s: x.s, p: x.p, c: x.c });
+        // v100.99 (I-528): șansa MĂSURATĂ (Probabilitati) deasupra liniei, la marginea din dreapta a graficului - eticheta din dreapta rămâne scurtă
+        if (x.sansa) q.push('<text class="gbSansa" x="' + f1(plotW - 6) + '" y="' + f1(y - 5) + '" text-anchor="end" font-size="11.5" fill="' + x.c + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4"><title>' + esc(x.sansaLung || x.sansa) + '</title>' + esc(ingust ? x.sansaScurt || x.sansa : x.sansa) + '</text>');
       } else afara.push(x);
     });
+    // v100.99 (I-529): stopul de probă - linia trasă de el, cu ce ar pierde acolo (textul vine gata din stopProba)
+    var pr0 = o.proba && nr(o.proba.pret);
+    if (pr0 !== null && pr0 >= lo && pr0 <= hi) q.push('<g class="gbProba"><line x1="0" x2="' + f1(plotW) + '" y1="' + f1(Y(pr0)) + '" y2="' + f1(Y(pr0)) + '" stroke="' + COL.text + '" stroke-width="1.6" stroke-dasharray="8 4"/>'
+      + (ingust ? '' : '<text x="8" y="' + f1(Y(pr0) - 6) + '" font-size="12.5" font-weight="700" fill="' + COL.text + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">🧪 ' + esc(o.proba.text || ("stop de probă " + fmtP(pr0))) + '</text>') + '</g>');   /* pe telefon doar linia: textul e în citirea de sub grafic (lista din stânga-jos ar acoperi-o) */
     // v100.51 (I-476): stopul planului (Consilierul) langa stopul tau - mereu, nu e indicator; aproape identice -> o singura eticheta
     var cl = o.consLinii || {}, spP = nr(cl.stopPlan), spA = nr(cl.stopAcum), etP = cl.et || "stopul planului";   // v100.56: la actiuni „stopul propus”
     if (spP !== null && spP > 0) {
@@ -354,7 +411,7 @@ var GraficBot = (function () {
     });
     var ys = 17, yj = mainH - 9;
     afara.forEach(function (x) {
-      var inSus = x.p > hi, t = (inSus ? "↑ " : "↓ ") + x.t + " " + fmtP(x.p) + (pAcum ? " (" + pct(x.p / pAcum - 1) + ")" : "");
+      var inSus = x.p > hi, t = (inSus ? "↑ " : "↓ ") + x.t + " " + fmtP(x.p) + (pAcum ? " (" + pct(x.p / pAcum - 1) + ")" : "") + (x.sansa ? " · " + (ingust ? x.sansaScurt || x.sansa : x.sansa) : "");
       q.push('<text x="8" y="' + (inSus ? ys : yj) + '" font-size="12.5" fill="' + x.c + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">' + esc(t) + '</text>');
       if (inSus) ys += 17; else yj -= 17;
     });
@@ -462,6 +519,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu };
+  return { COL: COL, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba };
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;

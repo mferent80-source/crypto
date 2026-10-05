@@ -2090,6 +2090,13 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot .tbCitR.rau .tbCitIc{background:rgba(255,107,120,.16);color:var(--bad)}
 #tabloubot .tbCitR.info .tbCitIc{background:rgba(144,160,182,.14);color:var(--muted)}
 #tabloubot .tbGrInd[hidden]{display:none}
+/* v100.99 (I-531): pe telefon citirea graficului stă imediat sub grafic (același conținut, randat în două locuri - nimic mutat) */
+#tabloubot .tbCitireMobil{display:none}
+@media (max-width:1180px){#tabloubot #tbCitireCard{display:none}#tabloubot .tbCitireMobil{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--tb-linie)}}
+/* v100.99 (I-529): stopul de probă */
+#tabloubot .tbCitProba{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--tb-linie)}
+#tabloubot .tbCitProba .tbIntBtn{justify-self:start}
+#tabloubot .gbSansa{pointer-events:auto}
 #tabloubot .gbLeg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
 #tabloubot .gbLeg span{display:inline-flex;align-items:center;gap:6px}
 #tabloubot .gbLeg i{display:inline-block;width:16px;height:0;border-top:2px solid}

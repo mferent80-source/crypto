@@ -79,16 +79,22 @@ await test("(7) lumânarea live: în perioada ei, ultima lumânare primește pre
   assert.equal(G.cuPretViu(b, null, u.t + 1000), b, "fără preț ⇒ aceeași listă");
 });
 await test("(8) liniile planului se pun CU gridul pe drum (pretTintaPentru / pretOpritorPentru), nu cu pretPentruTotal", () => {
-  const r = fnApp("renderTabloGrafic");
-  assert.match(r, /TabloExtra\.pretTintaPentru\(b,botiNr\(pl\.plus\)\)/); assert.match(r, /TabloExtra\.pretOpritorPentru\(b,-botiNr\(pl\.minus\)\)/);
-  assert.doesNotMatch(r, /pretPentruTotal/);
+  // v100.99 (I-532): socoteala a plecat în GraficBot.intrareBot ⇒ se verifică ce întoarce (pe un TabloExtra de probă), nu textul din app.js
+  const cer = [], TE = { dacaInchizi: () => null, alerteleBotului: () => [], totalLaOpritor: () => null, pretPentruTotal: () => { cer.push("fara grid"); return 9; },
+    pretTintaPentru: (b, t) => { cer.push("tinta " + t); return 1.05; }, pretOpritorPentru: (b, t) => { cer.push("opritor " + t); return 0.95; } };
+  const o = G.intrareBot({ bot: { id: "x", directie: "long" }, bare: zigzag(30), plan: { plus: 2.2, minus: 6.5 }, W: 900, TabloExtra: TE });
+  assert.deepEqual(cer, ["tinta 2.2", "opritor -6.5"], "doar socoteala cu gridul"); assert.ok(o.niv.some((x) => x.k === "planPlus" && x.p === 1.05) && o.niv.some((x) => x.k === "planMinus" && x.p === 0.95));
+  assert.doesNotMatch(fnApp("renderTabloGrafic"), /pretPentruTotal/);
 });
 await test("(9) pagina: Simplu/Complet ținut minte, ADX comutabil, pornirea + funding + lumânarea live în desen, cursorul cu „dacă închizi la”, citirea în coloana din dreapta", () => {
   const r = fnApp("renderTabloGrafic"), ix = citeste("public", "index.html");
   assert.match(ix, /id="tbMod-simplu"/); assert.match(ix, /id="tbMod-complet"/); assert.match(ix, /id="tbInd-adx"/);
   assert.match(ix, /<div class="tbGrCol"><div class="tbBloc" id="tbCitireCard">/, "citirea, prima în coloana din dreapta");
-  assert.match(r, /simplu:tbModSimplu\(\)/); assert.match(r, /pornit:botiNr\(b\.pornitLa\)/); assert.match(r, /funding:tbFundingPt\(\)/);
-  assert.match(r, /GraficBot\.cuPretViu\(/); assert.match(r, /GraficBot\.tip\(d\.harta,sx,sy,tbLaPret\(b\)\)/);
+  assert.match(r, /simplu:tbModSimplu\(\)/); assert.match(r, /funding:tbFundingPt\(\)/);
+  // v100.99 (I-532): pornirea și lumânarea live le pune intrarea pură - se verifică ce întoarce
+  const zz = zigzag(20), u = zz[zz.length - 1], oi = G.intrareBot({ bot: { id: "x", pornitLa: 123 }, bare: zz, pretViu: u.h * 1.01, acum: u.t + 1000, W: 900, TabloExtra: null });
+  assert.equal(oi.pornit, 123); assert.equal(oi.bare[oi.bare.length - 1].c, u.h * 1.01);
+  assert.match(r, /GraficBot\.tip\(d\.harta,sx,sy,tbLaPret\(b\)\)/);
   assert.match(r, /tbDeseneazaCitire\(/);
   assert.match(fnApp("tbIndStare"), /adx:true/);
 });

@@ -75,7 +75,7 @@ await test("I-476/I-470 desen: banda zilei, zona de valoare, POC, pivotii DOAR c
 await test("Tabloul: comutatoarele „Ziua obișnuită” si „Zona de valoare” in sistemul existent (aria-pressed, TB_IND_KEY)", () => {
   const html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
   assert.match(html, /id="tbInd-zi"[^>]*aria-pressed/); assert.match(html, /id="tbInd-val"[^>]*aria-pressed/);
-  assert.match(app, /var d=\{bb:true,ema:true,rsi:true,vp:true,zi:true,val:true(?:,adx:true)?\}/);   /* v100.98: + ADX 14 (comutatorul nou) */ assert.match(app, /GraficBot\.ziObisnuita\(/); assert.match(app, /Valoare\.zona\(/);
+  assert.match(app, /var d=\{bb:true,ema:true,rsi:true,vp:true,zi:true,val:true(?:,adx:true)?\}/);   /* v100.98: + ADX 14 (comutatorul nou) */ assert.match(app, /profil:tbProfilPt\(b\)/);   /* v100.99 (I-532): ziua obișnuită o socotește intrarea pură - se verifică ce întoarce */ if (GB) { const zp = { z24: { jos: Array(21).fill(0.01), sus: Array(21).fill(0.02) }, zile: 10 }, zo = GB.intrareBot({ bot: { id: "z" }, bare: [{ t: 0, o: 1, h: 1, l: 1, c: 1, v: 1 }, { t: 60000, o: 1, h: 1, l: 1, c: 1, v: 1 }], profil: zp, pretViu: 2, acum: 70000, W: 900, TabloExtra: null }); assert.ok(zo.zi && Math.abs(zo.zi.p50Jos - 1.98) < 1e-12 && Math.abs(zo.zi.p50Sus - 2.04) < 1e-12, "ziua obișnuită de la prețul live"); } assert.match(app, /Valoare\.zona\(/);
   assert.match(app, /tbStare\.consLinii=/); assert.match(app, /Valoare\.fataDeGrid\(/);
 });
 
