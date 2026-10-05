@@ -180,6 +180,9 @@ export function situatiiAlerte(pune) {
   co("botul n-are plan, propunerea mea (implicită)", "faraPlan", MC.faraPlan("CRV", TE.propunePlan(null, 49.67)));
   co("botul n-are plan, după planul de dinainte", "faraPlan", MC.faraPlan("CRV", TE.propunePlan({ plus: 5.5, minus: 15.7, afaraOre: 12, nume: "LIGHTER", investit: 103.38 }, 49.67)));
   co("botul n-are plan, fără propunere", "faraPlan", MC.faraPlan("CRV", null));
+  // v101.70: botul nou cu gridul prea larg pentru levier (cu și fără stopul planului în grid)
+  co("botul nou cu gridul prea larg pentru levier", "gridPreaLarg", MC.gridPreaLarg("TAKE", { laMargine: 24.9, procent: 0.62, parte: "jos", plan: 6.5, stopPlan: 0.0614, moarte: 22, intervale: 49 }));
+  co("gridul prea larg, fără grile numărate", "gridPreaLarg", MC.gridPreaLarg("CRV", { laMargine: 12.4, procent: 0.25, parte: "sus", plan: 5, stopPlan: null, moarte: null, intervale: null }));
   // v100.86 (§2 „paza boților”): mesajele pazei din producătorul REAL (pazaBot cu Busola și Alerte.pret, nota din notaVeche) -
   // CRV long 5×, LIGHTER short 4×, BTC (prețuri de 5 cifre), PUMP (sub 0,01), bot nou, neutru fără levier, nedovedit, fără cifră
   const BU = globalThis.Busola, GR = { canal: "±2×ATR", miscare: -0.0021398053, miscareDovedita: true };

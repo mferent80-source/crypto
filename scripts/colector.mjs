@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.69";
+const VERSIUNE_COLECTOR = "v101.70";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -452,6 +452,14 @@ async function tura() {
         const pp = TabloExtra.propunePlan(ult, b.investit), nume = String(b.baza || "botul").replace(/\.PERP$/, "");
         const m = MesajeColector.faraPlan(nume, pp);
         if (await trimiteAlerta(m, b.id, m.cheie)) st._faraPlan = true;
+      }
+      // v101.70 (05.10, el: „să nu se mai întâmple situația de azi”, TAKE −18% la 5×): botul NOU cu gridul prea larg pentru levier - o dată, în
+      // primele 6 h, cu planul lui sau, fără plan, cu cel obișnuit (TabloExtra.propunePlan). Azi alerta „grid-plan” a venit după 3 ore (cere planul scris).
+      if (pl && !st._gridLarg && acum - Number(b.pornitLa) < 6 * 3600000) {
+        const planMinus = pl.plan && !pl.plan.proba && Number(pl.plan.minus) > 0 ? Number(pl.plan.minus) : (TabloExtra.propunePlan(null, b.investit) || {}).minus;
+        const gv = TabloExtra.gridVsPlan(b, planMinus);
+        if (!gv || !gv.preaLarg) st._gridLarg = "ok";
+        else { const m = MesajeColector.gridPreaLarg(String(b.baza || "botul").replace(/\.PERP$/, ""), gv); if (await trimiteAlerta(m, b.id, m.cheie)) st._gridLarg = "trimis"; }
       }
       // v101.39 (I-481): ceasul gridului ingust - botul pornit cu setarile variantei ingusta: un singur mesaj cand trece durata probata.
       // Potrivirea se tine minte (KV-ul ingust se rescrie la 6 h si poate sa nu mai propuna)

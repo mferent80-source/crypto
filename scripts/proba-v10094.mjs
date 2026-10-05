@@ -141,7 +141,7 @@ await test("(5) tura-retea strânge noaptea barele zilnice (buget 40 de tickere,
     cereZile: async (tk) => { cereri.push(tk); if (tk === "BBB_US_EQ") throw new Error("Yahoo a limitat"); return { randuri: [{ time: 1, open: 1, high: 1, low: 1, close: 1 }] }; }, scrieZile: (tk, r) => { scrise[tk] = r; }, tradeuri: async () => [{ ticker: "AAA_US_EQ" }], scrieTradeuri: (l) => { scrise.trade = l; } };
   await TR.turaRetea(d); assert.equal(cereri.length, 40, "cel mult 40 de tickere pe noapte"); assert.deepEqual(cereri.slice(0, 5), ["QQQ_US_EQ", "BBB_US_EQ", "AAA_US_EQ", "CCC_US_EQ", "T0_US_EQ"], JSON.stringify(cereri.slice(0, 5)));
   assert.equal(pauze.n, 40, "pauza și după tickerul picat"); assert.deepEqual(Object.keys(scrise).slice(0, 3), ["QQQ_US_EQ", "AAA_US_EQ", "CCC_US_EQ"]); assert.ok(jur.some((l) => /zile: 39 din 40 de tickere/.test(l)) && jur.some((l) => /BBB_US_EQ.*Yahoo a limitat/.test(l)), jur.join("\n"));
-  const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.6[4-9]"/.test(col), "versiunea colectorului (de la v101.64 în sus)"); assert.ok(col.includes('"antreneaza.mjs"), "--buget-min", "45"') && col.includes("retea: antrenorul oprit după 50 de minute"), "bugetul rețelei 45/50");
+  const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.(6[4-9]|[7-9]\d)"/.test(col), "versiunea colectorului (de la v101.64 în sus)"); assert.ok(col.includes('"antreneaza.mjs"), "--buget-min", "45"') && col.includes("retea: antrenorul oprit după 50 de minute"), "bugetul rețelei 45/50");
   assert.ok(col.includes("tickereZile:") && col.includes("cereZile:") && col.includes("scrieZile:") && col.includes("tradeuri:") && col.includes("scrieTradeuri:") && col.includes("vechimeZile:"), "deps-urile turei de noapte");
   assert.ok(col.includes("Retea.pentruCumparare(") && col.includes("Arbori.pentruCumparare(") && col.includes("bareIdei"), "ideile fără cifrele 🧠/🌳");
   const ruta = citeste("functions", "api", "t212.js"); assert.ok(ruta.includes("retea: x && x.retea") && ruta.includes("arbori: x && x.arbori"), "ruta idei nu păstrează retea/arbori");
@@ -171,7 +171,7 @@ await test("(E) versiunile: pagina de la v100.94 în sus (BUILD_INFO, versiune.j
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'), "sw.js");
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.93/.test(ix), "index.html mai are v100.93");
   const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, V.slice(1) + ".0"); assert.ok(/npm run test:arbori && npm run test:v10094( && |")/.test(pk), "lanțul de teste"); assert.equal(JSON.parse(pk).scripts["test:v10094"], "node scripts/proba-v10094.mjs");
-  assert.ok(/VERSIUNE_COLECTOR = "v101\.6[4-9]"/.test(citeste("scripts", "colector.mjs")), "colectorul de la v101.64 în sus");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.(6[4-9]|[7-9]\d)"/.test(citeste("scripts", "colector.mjs")), "colectorul de la v101.64 în sus");
 });
 
 // ======== revizia Opus (04.10, v100.94): pasul de reparații - fiecare văzut ROȘU întâi ========

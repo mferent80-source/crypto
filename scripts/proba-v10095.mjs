@@ -151,7 +151,7 @@ await test("(E) versiunile: pagina de la v100.95 în sus (BUILD_INFO, versiune.j
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V.replace(".", "-") + '";'), "sw.js");
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V.replace(".", "\\."), "g")) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.94/.test(ix), "index.html mai are v100.94");
   const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, V.slice(1) + ".0"); assert.ok(/npm run test:v10094 && npm run test:v10095( && |")/.test(pk), "lanțul de teste"); assert.equal(JSON.parse(pk).scripts["test:v10095"], "node scripts/proba-v10095.mjs");
-  assert.ok(/VERSIUNE_COLECTOR = "v101\.6[5-9]"/.test(citeste("scripts", "colector.mjs")), "colectorul de la v101.65 în sus");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.(6[5-9]|[7-9]\d)"/.test(citeste("scripts", "colector.mjs")), "colectorul de la v101.65 în sus");
 });
 
 console.log("\n" + (pica ? "✗ " + pica + " picate, " + ok + " trecute" : "✓ toate cele " + ok + " teste au trecut"));

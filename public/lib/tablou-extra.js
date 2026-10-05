@@ -150,6 +150,19 @@ var TabloExtra = (function () {
   }
   // v101.7: cat pierde (castiga) botul daca se atinge opritorul LUI din Pionex. In procente (profit_ratio) Pionex il opreste
   // exact la raport x investit; pe pret, cu grilele de pe drum. Opritor stins / lipsa -> null.
+  // v100.101 (05.10, el: „să nu se mai întâmple situația de azi”, TAKE): botul care RULEAZĂ - încape gridul în plan? Cât pierde la marginea de
+  // pierdere (cu gridul care umple pe drum), unde ar sta stopul planului, câte grile n-ar lucra sub el. „Prea larg” peste 1,3× planul (ca alerta
+  // „grid-plan”). Merge și fără plan scris (chematorul dă planul obișnuit) - azi alerta a venit după 3 ore, doar după ce s-a scris planul.
+  function gridVsPlan(b, planMinus, comision) {
+    var pm = nr(planMinus), dir = String(b && b.directie || "").toLowerCase(), jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), inv = nr(b && b.investit);
+    if (!b || !(pm > 0) || (dir !== "long" && dir !== "short") || !(jos > 0) || !(sus > jos)) return null;
+    var lung = dir === "long", mg = lung ? jos : sus, t = totalCuGridLa(b, mg, comision);
+    if (t === null) return null;
+    var laMargine = -t, stopPlan = laMargine > pm ? pretOpritorPentru(b, -pm, comision) : null, u = bu(b), row = nr(u.row), N = row > 1 ? row - 1 : null;
+    var geo = String(u.gridType || "").toLowerCase() === "geometric", fr = null;
+    if (stopPlan !== null && stopPlan > jos && stopPlan < sus) fr = lung ? (geo ? Math.log(stopPlan / jos) / Math.log(sus / jos) : (stopPlan - jos) / (sus - jos)) : (geo ? Math.log(sus / stopPlan) / Math.log(sus / jos) : (sus - stopPlan) / (sus - jos));
+    return { laMargine: laMargine, procent: inv > 0 ? laMargine / inv : null, parte: lung ? "jos" : "sus", stopPlan: stopPlan, intervale: N, moarte: fr !== null && N ? Math.round(fr * N) : null, plan: pm, preaLarg: laMargine > pm * 1.3 };
+  }
   function totalLaOpritor(b, comision) {
     if (!b || !b.opritorPierdereActiv) return null;
     var inv = nr(b.investit), r = nr(b.opritorPierdereRaport);
@@ -608,7 +621,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

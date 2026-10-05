@@ -140,6 +140,51 @@ var GridPlan = (function () {
     return { t: b[s].t, pret: b[s].o, ta: ruleaza(v.ta), mea: ruleaza(v.mea), faraMea: v.faraMea };
   }
 
-  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig };
+  // v100.101 (05.10, el: „2 ferestre larg și îngust, motivele, să nu se mai întâmple situația de azi”): TAKE long 5× pe un grid −18% / +11%
+  // pierdea ~27 USDT la marginea de jos față de un plan de −6,5 - stopul planului ar fi stat la mijlocul gridului. POTRIVIREA unui grid
+  // (înainte de pornire) cu planul: cât pierzi la marginea de pierdere (socoteala netedă, ca variantele), unde ar sta stopul planului și ce
+  // parte din înălțimea gridului n-ar lucra. „Prea larg” peste 1,2× planul. o = { pret, dir, jos, sus, levier, suma }.
+  function potrivire(o, planMinus) {
+    o = o || {}; var P = nr(o.pret), jos = nr(o.jos), sus = nr(o.sus), L = nr(o.levier), S = nr(o.suma), pm = nr(planMinus), lung = o.dir !== "short";
+    if (!(P > 0) || !(jos > 0) || !(sus > jos) || !(L > 0) || !(S > 0) || !(pm > 0) || !(P > jos && P < sus)) return null;
+    var E = S * L, d = lung ? 1 - jos / P : sus / P - 1, u = lung ? sus / P - 1 : 1 - jos / P, laMargine = pierdere(E, d, u);
+    var dp = laMargine <= pm ? d : cauta(function (x) { return pierdere(E, x, u); }, pm, 1e-6, d);
+    var stopPlan = lung ? P * (1 - dp) : P * (1 + dp), geo = o.geo !== false;
+    var moarte = laMargine <= pm ? 0 : lung ? (geo ? Math.log(stopPlan / jos) / Math.log(sus / jos) : (stopPlan - jos) / (sus - jos)) : (geo ? Math.log(sus / stopPlan) / Math.log(sus / jos) : (sus - stopPlan) / (sus - jos));
+    return { laMargine: laMargine, procent: laMargine / S, stopPlan: stopPlan, moarte: moarte, parte: lung ? "jos" : "sus", plan: pm, preaLarg: laMargine > pm * 1.2 };
+  }
+  // „1 pornire”, „27 de ori” (TextRo.cate; rezerva știe aceeași regulă)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (k !== 0 && (r === 0 || r >= 20) ? " de " : " ") + pl; }
+  var U1 = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + " USDT"; };
+  var ORE = function (o) { o = nr(o); return o === null ? "—" : o < 48 ? Math.round(o) + " h" : (o / 24).toFixed(1).replace(".", ",") + " zile"; };
+  var P1 = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; };
+  // ce aș alege eu între ÎNGUST (ta) și LARG (mea): amândouă pierd planul la stop ⇒ după cât de des a fost atins stopul în probă, dacă media nu
+  // e mai proastă; cu sub 30 de cazuri independente diferența de medie se spune nedovedită. ⇒ { cine: "ta"|"mea", text } sau null
+  function alege(ta, mea) {
+    var a = ta && ta.proba, b = mea && mea.proba;
+    if (!a && !b) return null;
+    if (!b) return { cine: "ta", text: "ÎNGUST · larg nu se poate la planul ăsta" };
+    if (!a) return { cine: "mea", text: "LARG · îngust nu se poate la planul ăsta" };
+    var dif = b.mediaUsdt - a.mediaUsdt, maiRar = b.stop < a.stop * 0.8, maiDes = a.stop < b.stop * 0.8;
+    var cine = maiRar && dif > -0.5 ? "mea" : maiDes && dif < 0.5 ? "ta" : dif >= 0 ? "mea" : "ta", x = cine === "mea" ? mea : ta, y = cine === "mea" ? ta : mea;
+    var ind = Math.min(nr(a.independente) || 0, nr(b.independente) || 0);
+    return { cine: cine, text: (cine === "mea" ? "LARG" : "ÎNGUST") + " · aceeași pierdere la stop (" + U1(x.laStop) + "), stopul atins de " + cate(x.proba.stop, "dată", "ori") + " din " + cate(x.proba.n, "pornire", "porniri")
+      + ", față de " + y.proba.stop + ", media pe pornire " + U1(x.proba.mediaUsdt) + " față de " + U1(y.proba.mediaUsdt)
+      + (ind < 30 ? ". Cu ~" + cate(ind, "caz independent", "cazuri independente") + " diferența de medie nu e dovedită; aleg după cât de des te scoate stopul." : ".") };
+  }
+  // motivele fiecărei ferestre, din cifrele ei (nimic scris de mână): { da: [], nu: [] }
+  function motive(v, cheie, amp) {
+    var dd = nr(v && v.d), uu = nr(v && v.u), jo = v && v.dir === "short" ? uu : dd, su = v && v.dir === "short" ? dd : uu;
+    var banda = jo !== null && su !== null ? "−" + P1(jo) + " / +" + P1(su) : null, stransa = banda && nr(amp) !== null && Math.min(dd, uu) < amp * 0.95;
+    var pr = v && v.proba || {}, lat = nr(v && v.sus) > 0 && nr(v && v.jos) > 0 ? v.sus / v.jos - 1 : null, lq = v && v.lichidare ? nr(v.lichidare.jos) : null, n = cate(pr.n, "pornire", "porniri");
+    if (cheie === "ta") return {
+      da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas).replace(/(\d),(\d)%$/, "$1,$2%") : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), "ieși repede: tipic după " + ORE(pr.oreTipic) + ", banii nu stau", "levierul tău (" + v.levier + "×)"],
+      nu: ["zgomotul unei ore te scoate: stop " + pr.stop + " din " + n, "fiecare grilă aduce mai mult, dar ieși des pe minus"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) };
+    return {
+      da: [(banda ? "ține " + banda + " fără să iasă" + (nr(amp) === null ? "" : stransa ? " (o zi obișnuită e ±" + P1(amp) + ": strânsă cât planul)" : ", cât o zi obișnuită a monedei (±" + P1(amp) + ")") : nr(amp) !== null ? "ține o zi obișnuită a monedei (±" + P1(amp) + ") fără să iasă" : "ține mai mult fără să iasă"), "stopul atins mai rar: " + pr.stop + " din " + n].concat(lq === null ? ["fără lichidare: la " + v.levier + "× nu se lichidează"] : []),
+      nu: ["levier mic ⇒ bani mai puțini pe grilă", "banii stau mai mult: tipic " + ORE(pr.oreTipic), pr.inGrid + " din " + n + " încă în grid după 3 zile"] };
+  }
+
+  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, motive: motive };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridPlan = GridPlan;

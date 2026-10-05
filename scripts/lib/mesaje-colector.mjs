@@ -8,6 +8,7 @@
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const U2 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT";
 const V = (v) => String(Math.round(Math.abs(Number(v)) * 100) / 100).replace(".", ",");
+const V1 = (v) => Math.abs(Number(v)).toFixed(1).replace(".", ",");   // v101.70: rezultatele cu o singură zecimală
 const scurt = (s, n) => { s = String(s || ""); return s.length <= n ? s : s.slice(0, n - 1).replace(/\s+\S*$/, "") + "…"; };
 const msg = (fapt, act) => fapt + (act ? "\n👉 " + act : "");
 
@@ -31,6 +32,13 @@ const notaPlan = (n) => { n = String(n || ""); const m = n.match(/^propunerea me
 export const faraPlan = (nume, pp) => ({ nivel: "atentie", cheie: "fara-plan", titlu: nume + ": botul n-are plan",
   mesaj: pp ? msg("Propun +" + V(pp.plus) + " / −" + V(pp.minus) + " USDT și " + pp.afaraOre + " h afară din grid" + notaPlan(pp.nota) + ".","Aș pune planul propus din Tablou: fără el nu te pot anunța când să încasezi sau să închizi.")
     : msg("Fără țintă și prag scrise la rece nu te pot anunța când să încasezi sau să închizi botul.", "Aș scrie planul în Tablou → „Planul tău”.") });
+
+// v101.70 (05.10, el: „să nu se mai întâmple situația de azi”, TAKE): botul nou cu gridul prea larg pentru levier - o dată, la primul tur;
+// x = TabloExtra.gridVsPlan(b, planMinus) (+ plan). Azi alerta „gridul e mai larg decât planul” a venit după 3 ore, doar după planul scris.
+export const gridPreaLarg = (nume, x) => ({ nivel: "atentie", cheie: "grid-larg", titlu: nume + ": gridul e prea larg pentru levier",
+  mesaj: msg("La marginea de " + x.parte + " pierzi ≈ " + V1(x.laMargine) + " USDT (" + Math.round((x.procent || 0) * 100) + "% din bani), planul −" + V1(x.plan)
+    + (x.moarte != null && x.intervale ? "; cu stopul la plan, " + x.moarte + " din " + cate(x.intervale, "grilă", "grile") + " n-ar lucra." : "."),
+    "Aș închide aproape de zero și aș porni ÎNGUST sau LARG din fișă" + (x.stopPlan ? "; dacă-l ții, stopul la " + String(Number(x.stopPlan.toPrecision(4))).replace(".", ",") : "") + ".") });
 
 // ceasul gridului ingust (I-481): ore = durata probata, hm = ora inchiderii „HH:MM”, tarziu = colectorul a fost oprit
 export const ceasIngust = (nume, ore, hm, tarziu) => ({ nivel: "atentie", titlu: nume + ": gridul îngust a ajuns la " + ore + " h",

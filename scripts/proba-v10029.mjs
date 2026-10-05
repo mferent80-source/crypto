@@ -87,7 +87,7 @@ await test("pagina: poarta arata sfaturile (sub reguli)", () => {
   const i = app.indexOf("function grPoartaHtml("), corp = app.slice(i, app.indexOf("\nfunction ", i + 10));
   assert.match(corp, /p\.rez\.sfaturi/);
   // si chiar il deseneaza (nu doar il pomeneste)
-  const ctx = { grReteaPoartaHtml: () => "", Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (s) => String(s), grPoartaRez: { simbol: "KAITO_USDT_PERP", rez: { reguli: [{ cod: "moneda", ok: false, text: "Pe KAITO pierzi" }], trecut: false, sfaturi: ["Boții închiși în prima oră: 12"] } } };
+  const ctx = { grReteaPoartaHtml: () => "", grPoartaGridForm: () => "", Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (s) => String(s), grPoartaRez: { simbol: "KAITO_USDT_PERP", rez: { reguli: [{ cod: "moneda", ok: false, text: "Pe KAITO pierzi" }], trecut: false, sfaturi: ["Boții închiși în prima oră: 12"] } } };
   vm.createContext(ctx); vm.runInContext(corp + ";this.f=grPoartaHtml;", ctx);
   const h = ctx.f({ simbol: "KAITO_USDT_PERP" });
   assert.match(h, /💡 Boții închiși în prima oră: 12/); assert.match(h, /✗ Pe KAITO pierzi/);

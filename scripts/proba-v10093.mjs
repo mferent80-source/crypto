@@ -139,7 +139,7 @@ await test("(9) tura-retea: după rețea pornește antrenorul arborilor și urc�
   await TR.turaRetea(d(0)); assert.deepEqual(trimise, ["/api/istoric-bot?action=retea", "/api/istoric-bot?action=arbori"]);
   trimise.length = 0; jur.length = 0; await TR.turaRetea(d(1)); assert.deepEqual(trimise, ["/api/istoric-bot?action=retea"]); assert.ok(jur.some((l) => /arbori: nimic urcat/.test(l)), jur.join("\n"));
   const tp = citeste("scripts", "lib", "tura-probabilitati.mjs"); assert.ok(tp.includes("if (rez && d.Arbori && d.modeleArbori)") && tp.includes("rez.arbori = ra;"), "tura 🎲 fără arbori");
-  const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.6[3-9]"/.test(col) && /function pornesteAntrenorArbori\(\)/.test(col) && col.includes('"antreneaza-arbori.mjs"') && /function modeleArbori\(\)/.test(col) && col.includes("Arbori, modeleArbori: mA,") && col.includes("pornesteArbori: pornesteAntrenorArbori, citesteModeleArbori: "), "colectorul");
+  const col = citeste("scripts", "colector.mjs"); assert.ok(/VERSIUNE_COLECTOR = "v101\.(6[3-9]|[7-9]\d)"/.test(col) && /function pornesteAntrenorArbori\(\)/.test(col) && col.includes('"antreneaza-arbori.mjs"') && /function modeleArbori\(\)/.test(col) && col.includes("Arbori, modeleArbori: mA,") && col.includes("pornesteArbori: pornesteAntrenorArbori, citesteModeleArbori: "), "colectorul");
 });
 
 await test("(10) Retea.randuri cu ambele familii: „🧠 61% · 🌳 58% · 🎲 55% · 🧠 dovedită … · 🌳 nedovedită …”, p2 pentru al doilea marker; fără arbori ⇒ rândul de ieri; capul „A doua părere: 🧠 rețeaua · 🌳 arborii”; subsolul cu „🌳 față de 🧠”; poarta cu amândouă", () => {
@@ -185,7 +185,7 @@ await test("(E) versiunile: pagina v100.93 (BUILD_INFO, versiune.js, sw, index �
   const ix = citeste("public", "index.html"); assert.equal((ix.match(/v100\.(?:9[3-9]|1\d\d)/g) || []).length, 4, "index.html ×4"); assert.ok(!/v100\.92/.test(ix), "index.html mai are v100.92");
   assert.ok(ix.includes('<script src="/lib/retea.js"></script><script src="/lib/arbori.js"></script>'), "arbori.js după retea.js");
   const pk = citeste("package.json"); assert.match(JSON.parse(pk).version, /^100\.(?:9[3-9]|1\d\d)\.0$/); assert.ok(/npm run test:v10092 && npm run test:v10093 && npm run test:arbori( && |")/.test(pk), "lanțul de teste");
-  assert.ok(/VERSIUNE_COLECTOR = "v101\.6[3-9]"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.63");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.(6[3-9]|[7-9]\d)"/.test(citeste("scripts", "colector.mjs")), "colectorul v101.63");
 });
 
 // ======== revizia Opus (04.10): pasul de reparații - fiecare văzut ROȘU întâi ========

@@ -5052,6 +5052,7 @@ function grPoartaHtml(f){
   var ds=grPlanDinScan(f),ID={plus:"grPlanPlus",minus:"grPlanMinus",afaraOre:"grPlanAfara"},vv=function(k){var el=$(ID[k]),v=el&&el.value.trim()?el.value.trim():ds&&ds[k]!=null?String(ds[k]).replace(".",","):"";return v?' value="'+escapeHtml(v)+'"':''};
   if(ds)h+='<p class="tbFac grDinScan">📝 <b>Venit din Scan:</b> planul e completat '+escapeHtml(ds.nota)+'. Când ținta e atinsă, panoul botului îți spune unde muți opritorul (ținta devine podea). Schimbă cifrele dacă vrei, apoi „Verifică poarta”.</p>';
   h+='<div class="grPoartaForm"><label><span class="tbEt2">Ies pe plus la, USDT</span><input id="grPlanPlus" inputmode="decimal" placeholder="ex. 5"'+vv("plus")+'></label><label><span class="tbEt2">Ies dacă pierd, USDT</span><input id="grPlanMinus" inputmode="decimal" placeholder="ex. 10"'+vv("minus")+'></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPlanAfara" inputmode="decimal" placeholder="ex. 12"'+vv("afaraOre")+'></label>'
+    +grPoartaGridForm(f)
     +'<button type="button" class="grCalc" data-action-click="gridPoarta()">Verifică poarta</button><button type="button" class="actionGhost" data-action-click="gridHartiePorneste()">🧾 Pornește pe hârtie</button></div>';
   if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+(function(t,c){return c?escapeHtml(t.replace(/\.$/,""))+' <span class="tbSub">('+escapeHtml(c)+')</span>'+(/\.$/.test(t)?".":""):escapeHtml(t)})(String(r.text),!r.ok&&r.cost?r.cost:null)+(r.nota?'<br><span class="tbSub">'+escapeHtml(r.nota)+'</span>':'')+'</li>'}).join("")+'</ul>'
     // v100.80 (rețeaua neuronală): rândul gri 🧠, după regulile porții (poarta nu se schimbă)
@@ -5098,22 +5099,27 @@ function grPlanVarHtml(pv,i,extra){
   if(!pv)return "";
   if(pv.eroare)return '<div class="grPlanVar"><p class="tbSub"><b>Gridul după planul tău:</b> '+escapeHtml(pv.eroare)+'</p></div>';
   var U=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(1).replace(".",",")+" USDT"},P1=function(v){return (v*100).toFixed(1).replace(".",",")+"%"},V=function(v){return String(v).replace(".",",")};
-  var bloc=function(x,titlu){
+  var rec=GridPlan.alege(pv.ta,pv.mea);   // v100.101: ce aș alege eu (aceeași pierdere la stop ⇒ după cât de des te scoate stopul)
+  var bloc=function(x,titlu,cheie){
     var lung=x.dir==="long",p=x.proba,stopP=lung?x.stop.jos:x.stop.sus,tintaP=lung?x.stop.sus:x.stop.jos,lq=lung?x.lichidare.jos:x.lichidare.sus;
     var ore=p&&p.oreTipic!=null?(p.oreTipic<48?Math.round(p.oreTipic)+" h":(p.oreTipic/24).toFixed(1).replace(".",",")+" zile"):null;
-    return '<div class="tbBloc grPlanBloc"><div class="tbBlocCap"><h4>'+escapeHtml(titlu)+'</h4><span class="tbSub">'+escapeHtml(x.cum)+'</span></div>'
+    var ales=rec&&rec.cine===cheie,mo=GridPlan.motive(x,cheie,pv.amp);
+    return '<div class="tbBloc grPlanBloc'+(ales?' grPlanAles':'')+'"><div class="tbBlocCap"><h4>'+escapeHtml(titlu)+'</h4>'+(ales?'<span class="grPlanPill">aș alege-o acum</span>':'')+'<span class="tbSub">'+escapeHtml(x.cum)+'</span></div>'
       +grRand("Preț de jos",grPret(x.jos,i),grPret(x.jos,i))+grRand("Preț de sus",grPret(x.sus,i),grPret(x.sus,i))
       +grRand("Număr de grile",(x.grile+1)+" geometric · pas "+P1(x.pas)+" ("+TextRo.cate(x.grile,"interval","intervale")+")",String(x.grile+1))   /* v100.38: in Pionex = linii */+grRand("Levier",x.levier+"×",String(x.levier))
       +grRand(lung?"Stop-loss, la marginea de jos":"Stop-loss, la marginea de sus",grPret(stopP,i),grPret(stopP,i))
       +grRand(lung?"Take-profit, la marginea de sus":"Take-profit, la marginea de jos",grPret(tintaP,i),grPret(tintaP,i))
       +'<p class="grPlanBani"><span>atins stopul <b class="bad">'+U(x.laStop)+'</b></span><span>atinsă ținta <b class="good">'+U(x.laTinta)+'</b> + grilele încasate</span><span>lichidare '+(lq!=null?grPret(lq,i)+' <span class="tbSub">('+P1(Math.abs(lq/stopP-1))+' dincolo de stop)</span>':"—")+'</span></p>'
+      +'<div class="grPlanDe"><div><b class="good">De ce da</b><ul>'+mo.da.map(function(t){return '<li>'+escapeHtml(t)+'</li>'}).join("")+'</ul></div><div><b class="bad">De ce nu</b><ul>'+mo.nu.map(function(t){return '<li>'+escapeHtml(t)+'</li>'}).join("")+'</ul></div></div>'
       +(p?'<p class="grPlanProba">Pe ultimele '+TextRo.cate(p.zile,"zi","zile")+' ('+TextRo.cate(p.n,"pornire","porniri")+'): <b class="bad">stop '+p.stop+'</b> · <b class="good">țintă '+p.tinta+'</b> · încă în grid după '+TextRo.cate(p.ferestreZile,"zi","zile")+' '+p.inGrid+(p.lichidari?' · <b class="bad">lichidat '+p.lichidari+'</b>':'')+(ore?' · ieșirea tipică după '+ore:'')+' · media pe pornire <b class="'+(p.mediaUsdt>=0?"good":"bad")+'">'+U(p.mediaUsdt)+'</b>'+(p.ceaMaiProastaUsdt!=null?' · cea mai proastă pornire <b class="'+(p.ceaMaiProastaUsdt>=0?"good":"bad")+'">'+U(p.ceaMaiProastaUsdt)+'</b>':'')+'</p>':'<p class="tbSub">Proba pe 30 de zile: prea puține lumânări.</p>')
       +'</div>';
   };
   var ta=pv.ta,mea=pv.mea,pr=ta.proba;
-  return '<div class="grPlanVar"><p class="grPlanCap"><b>Gridul după planul tău</b> · +'+V(pv.plan.plus)+' / −'+V(pv.plan.minus)+' USDT'+(pv.nota?' <span class="tbSub">('+escapeHtml(pv.nota)+')</span>':'')+'. Stopul și ținta stau la marginile gridului, cel mult ½ pas dincolo: gridul complet = ieșirea.</p>'+(extra||"")
-    +'<div class="grPlanDoua">'+bloc(ta,"Varianta ta · "+ta.levier+"×")+(mea?bloc(mea,"Varianta mea · "+mea.levier+"×"+(pv.amp!=null?" · banda ±"+P1(pv.amp):"")):'<div class="tbBloc grPlanBloc"><p class="tbSub">'+escapeHtml(pv.faraMea||"")+'</p></div>')+'</div>'
-    +'<p class="grNota">Proba: o pornire la 6 h pe ultimele 30 de zile, fiecare urmărită '+TextRo.cate(pr?pr.ferestreZile:3,"zi","zile")+' (se suprapun: ~'+(pr?pr.independente:10)+' independente); media e cu comisioane, iar ce rămâne deschis se socotește la capătul ferestrei. E trecutul, nu o promisiune, iar varianta mea își ia lățimea din aceleași 30 de zile. Sumele de la margini sunt pe drumul drept; alunecarea unui stop pe o cădere bruscă vine peste. Pasul e regula ta, 0,30% (mai rar doar dacă suma nu ajunge la minimul Pionex pe ordin).</p></div>';
+  // v100.101 (el: „2 ferestre, larg și îngust, motivele pentru fiecare”): ÎNGUST = levierul tău, banda cât planul; LARG = banda cât o zi obișnuită, levier mic
+  return '<div class="grPlanVar"><p class="grPlanCap"><b>Îngust sau Larg</b> · amândouă cu stopul la marginea gridului și pierderea la stop cât planul tău: +'+V(pv.plan.plus)+' / −'+V(pv.plan.minus)+' USDT'+(pv.nota?' <span class="tbSub">('+escapeHtml(pv.nota)+')</span>':'')+'. Gridul complet = ieșirea.</p>'+(extra||"")
+    +'<div class="grPlanDoua">'+bloc(ta,"ÎNGUST · "+ta.levier+"×","ta")+(mea?bloc(mea,"LARG · "+mea.levier+"×"+(pv.amp!=null?" · banda ±"+P1(pv.amp):""),"mea"):'<div class="tbBloc grPlanBloc"><h4>'+"LARG"+'</h4><p class="tbSub">'+escapeHtml(pv.faraMea||"")+'</p></div>')+'</div>'
+    +(rec?'<p class="grPlanAleg">👉 <b>Ce aș alege eu acum:</b> '+escapeHtml(rec.text)+'</p>':'')
+    +'<p class="grNota">Proba: o pornire la 6 h pe ultimele 30 de zile, fiecare urmărită '+TextRo.cate(pr?pr.ferestreZile:3,"zi","zile")+' (se suprapun: ~'+(pr?pr.independente:10)+' independente); media e cu comisioane, iar ce rămâne deschis se socotește la capătul ferestrei. E trecutul, nu o promisiune, iar LARG își ia lățimea din aceleași 30 de zile. Sumele de la margini sunt pe drumul drept; alunecarea unui stop pe o cădere bruscă vine peste. Pasul e regula ta, 0,30% (mai rar doar dacă suma nu ajunge la minimul Pionex pe ordin).</p></div>';
 }
 function tbPlanVarHtml(b){
   var tf=tbFisa.botId===b.id&&tbFisa.b15?tbFisa:null;if(!tf)return "";
@@ -5152,6 +5158,24 @@ async function grFranaSalveaza(){
   var v=function(id){var x=$(id);return x?Number(String(x.value).replace(",",".")):NaN},p={zi:v("grFranaZi"),sapt:v("grFranaSapt"),rand:Math.round(v("grFranaRand"))};
   if(!(p.zi>0&&p.sapt>0&&p.rand>0)){toast("Scrie trei numere pozitive: pe zi, pe 7 zile, câți la rând","bad");return}
   try{var r=await apiFetch("/api/istoric-bot?action=config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({frana:p})});if(!r.ok)throw Error("HTTP "+r.status);grFrana.la=0;toast("Pragurile frânei sunt salvate (le folosește și colectorul pentru alertă)","good");gridPoarta()}catch(e){toast("Nu s-au salvat pragurile: "+textEroare(e),"bad")}
+}
+// v100.101 (el: „să nu se mai întâmple situația de azi”): în poartă, gridul pe care îl pornești (jos, sus, levier, sumă) față de planul din „Ies dacă
+// pierd” - dacă la marginea de pierdere pierzi peste 1,2× planul, rândul roșu + ÎNGUST / LARG alături. Completat cu ce aș alege eu; ce scrie el rămâne.
+function grPoartaGridForm(f){
+  var v=grPlanMemo.grid&&grPlanMemo.grid.cheie&&grPlanMemo.grid.cheie.indexOf(f.simbol+"|")===0?grPlanMemo.grid.v:null,rec=v&&!v.eroare?GridPlan.alege(v.ta,v.mea):null,x=rec?(rec.cine==="mea"?v.mea:v.ta):null;
+  var cmp=[["grPgJos","Preț de jos",x&&x.jos],["grPgSus","Preț de sus",x&&x.sus],["grPgLev","Levier",x&&x.levier],["grPgSuma","Investiție, USDT",x&&x.suma]];
+  return '<div class="grPoartaGrid"><span class="tbEt2">Gridul pe care îl pornești'+(x?' (completat cu '+(rec.cine==="mea"?"LARG":"ÎNGUST")+')':'')+'</span><div class="grPoartaGridF">'+cmp.map(function(c){var el=$(c[0]),val=el&&el.value.trim()?el.value.trim():c[2]!=null?String(c[0]==="grPgJos"||c[0]==="grPgSus"?grPret(c[2],grStare.monede&&grStare.monede[f.simbol]):c[2]):"";
+    return '<label><span class="tbEt2">'+c[1]+'</span><input id="'+c[0]+'" inputmode="decimal" data-action-input="grPoartaGrid()" value="'+escapeHtml(val)+'"></label>'}).join("")+'</div><div id="grPgVerdict">'+grPoartaGrid(true)+'</div></div>';
+}
+function grPoartaGrid(doarHtml){
+  var f=grStare.fisa;if(!f)return "";
+  var n=function(id){var el=$(id);return el?grNumar(el.value):null},pl=n("grPlanMinus")||(grPlanPentruVariante(f,n("grPgSuma")||f.setare.suma)||{}).minus;
+  var o={pret:f.pret,dir:f.dir==="short"?"short":"long",jos:n("grPgJos"),sus:n("grPgSus"),levier:n("grPgLev"),suma:n("grPgSuma")},r=GridPlan.potrivire(o,pl);
+  var V=function(v){return v.toFixed(1).replace(".",",")},h=!r?'':r.preaLarg
+    ?'<p class="tbWarn grPgRosu">🔴 <b>Gridul e prea larg pentru levier:</b> la marginea de '+r.parte+' pierzi ≈ '+V(r.laMargine)+' USDT ('+Math.round(r.procent*100)+'% din bani), planul tău e −'+V(pl)+'. Ca să rămâi în plan, stopul ar sta la '+escapeHtml(tbPretScurt(r.stopPlan))+', la '+Math.round(r.moarte*100)+'% din înălțimea gridului: grilele de dincolo n-ar lucra. 👉 Alege ÎNGUST sau LARG de mai sus. <span class="tbSub">Poarta doar avertizează: poți porni oricum.</span></p>'
+    :'<p class="good grPgVerde">✓ Gridul se potrivește cu planul: la marginea de '+r.parte+' ≈ '+V(r.laMargine)+' USDT, planul −'+V(pl)+'.</p>';
+  if(!doarHtml){var el=$("grPgVerdict");if(el)el.innerHTML=h}
+  return h;
 }
 async function gridPoarta(){
   var f=grStare.fisa;if(!f)return;
@@ -5466,7 +5490,7 @@ var grPliere={};
 // v100.93 (A1): cheia secțiunii = titlul fără cifre („Proba pe ultimele 31 de zile” își schimbă cifra la redesen - nu și cheia)
 function grCheieSectiune(t){return String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").replace(/\d+(\s+de\b)?/g,"").replace(/\s+/g," ").trim()}   /* revizia 04.10 (🔵11): „20 de zile” și „19 zile” dau aceeași cheie */
 function grSusAplica(){var gs=$("gridset");if(gs)gs.style.setProperty("--grSus",Math.round(grSusMasoara()+8)+"px")}
-function grPliabil(t){t=String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").trim();return !!t&&!/^(Setările de pus în Pionex|Poarta de pornire)/.test(t)}   /* revizia Opus: Poarta e FAPTĂ (planul, „Verifică poarta”), rămâne deschisă - regula lui din 25.09 */
+function grPliabil(t){t=String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").trim();return !!t&&!/^(Setările de pus în Pionex|Poarta de pornire|ÎNGUST|LARG)/.test(t)}   /* revizia Opus: Poarta e FAPTĂ (planul, „Verifică poarta”), rămâne deschisă - regula lui din 25.09 */
 function grSusMasoara(){var s=0;[".topStatus",".tabs"].forEach(function(sel){var el=document.querySelector(sel);if(!el)return;var cs=getComputedStyle(el);if(cs.position!=="sticky"||cs.display==="none")return;s=Math.max(s,(parseFloat(cs.top)||0)+el.getBoundingClientRect().height)});return s}
 function grPliazaPeTelefon(box){
   grSusAplica();
@@ -5500,6 +5524,11 @@ function renderGrid(){
   var st=GridProba.setarePropusa(f)||f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive,T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
   var h='<div class="grVerdict '+niv[1]+'" data-action-click="grVerdictComuta()"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>'+(mot.length>1?'<ul class="grLista grListaJos">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"");   /* revizia Opus (04.10): pe telefon motivele stau sub caseta lipicioasă (CSS) - caseta ține doar eticheta și primul motiv */
   h+='<p id="grRezumat" class="tbRezumat" hidden></p>';   /* v100.96: rândul modelelor sub verdict (umplut de grProbDeseneaza) */
+  // v100.101 (el: „2 ferestre, larg și îngust”): Îngust / Larg sus, imediat sub verdict - propunerea veche a fișei (gridul des) trece la „Alte setări”
+  var dG=grStare.date&&grStare.simbol===f.simbol?grStare.date:null,sumG=grNumar($("grSuma")&&$("grSuma").value)||st.suma,levG=grNumar($("grLevier")&&$("grLevier").value),plG=grPlanPentruVariante(f,sumG);
+  // fisa zice neutru -> pentru long, directia botilor lui (10 din 10 long pana acum), spus pe fata; short doar daca il alege el
+  var dirG=f.dir==="long"||f.dir==="short"?f.dir:"long",notaG=plG?plG.nota+(dirG!==f.dir?" · fișa zice neutru; ți-l arăt pentru long, cum sunt boții tăi (alege Short sus dacă vrei invers)":""):"";
+  h+='<div id="grPlanVar">'+(dG&&plG?grPlanVarHtml(grPlanVarCalc("grid",[f.simbol,grStare.la,dirG,sumG,levG,plG.plus,plG.minus].join("|"),function(){return {pret:f.pret,dir:dirG,suma:sumG,levier:levG?Math.round(levG):null,plan:plG,amp:TabloExtra.miscareZi(GridCalcul.bare(dG.r4)),pas:GridCalcul.C.PAS_MIN,b15:GridCalcul.bare(dG.r15),minOrdin:i&&Number(i.minNotional)>0?Number(i.minNotional):null}},notaG),i):"")+'</div>';
   h+=grPoartaHtml(f);
   if(typeof grBiletTu==="function")h+=grBiletTu(f);
   // v100.64 (I-491): Busola - verdictul ei de miscare pe 4h si ce a facut gridul dupa el (masurat). Avertizeaza, nu refuza.
@@ -5507,6 +5536,9 @@ function renderGrid(){
   if(typeof Busola!=="undefined"){var rB=Busola.randGrid(Busola.rezumat(),f.simbol,Date.now());if(rB)h+=Busola.htmlRand(rB,escapeHtml);Busola.incarca(window.fetch.bind(window),Date.now()).then(function(nou){if(nou&&grStare.fisa===f)renderGrid()})}
   h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
     +(f.contra?'<p class="tbWarn">'+(f.manual?"Ai ales ":"Trendul zice ")+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div>';
+  // v100.101: setările vechi ale fișei NU ascultă de plan (TAKE, 05.10: 100 USDT la 4× pierdea la stop −23,99 = 3,7× planul) ⇒ pliate, cu potrivirea spusă
+  var potV=plG?GridPlan.potrivire({pret:f.pret,dir:f.dir,jos:st.jos,sus:st.sus,levier:st.levier,suma:st.suma},plG.minus):null;
+  h+='</div><details class="grAlte" id="grAlte"><summary>Alte setări · gridul des al fișei</summary>'+(potV&&potV.preaLarg?'<p class="tbWarn grAlteAvert">⚠️ <b>Nu ascultă de planul tău:</b> la marginea de '+potV.parte+' pierzi ≈ '+potV.laMargine.toFixed(1).replace(".",",")+' USDT ('+(potV.laMargine/plG.minus).toFixed(1).replace(".",",")+' × planul de −'+String(plG.minus).replace(".",",")+'). Folosește ÎNGUST sau LARG de mai sus.</p>':potV?'<p class="tbSub">La marginea de '+potV.parte+' ≈ '+potV.laMargine.toFixed(1).replace(".",",")+' USDT, în planul tău (−'+String(plG.minus).replace(".",",")+').</p>':'')
   h+='<div class="tbBloc"><div class="tbBlocCap"><h4>Setările de pus în Pionex</h4><span class="tbSub">Futures Grid · '+escapeHtml(f.simbol.replace(/_USDT_PERP$/,""))+'/USDT</span></div>'
     +grRand("Direcție",GR_DIR_PIONEX[f.dir],GR_DIR_PIONEX[f.dir])
     +grRand("Preț de jos",grPret(st.jos,i),grPret(st.jos,i))
@@ -5520,14 +5552,10 @@ function renderGrid(){
     +(f.dir!=="short"?grRand("Stop-loss jos",grPret(st.stop.jos,i),grPret(st.stop.jos,i)):"")
     +(f.dir!=="long"?grRand("Stop-loss sus",grPret(st.stop.sus,i),grPret(st.stop.sus,i)):grRand("Take-profit sus (oprire)",grPret(st.stop.sus,i),grPret(st.stop.sus,i)))
     +grRand("Pentru TradingView (GRID-FISA)","liniile din fișă, pe grafic",grCodTV(st,i,{verdict:f.verdict&&f.verdict.nivel||"",copiatLa:Date.now(),marg:grProb.profil&&grProb.simbol===f.simbol?ProfilMoneda.praguriMargine(grProb.profil):null}))+grTvNotaVerdict(f)
-    +'</div></div>'+grTvAvertHtml(f.simbol,st);   // v100.37
+    +'</div></details>'+grTvAvertHtml(f.simbol,st);   // v100.37
   try{h+=grIngustHtml(f)}catch(e){}   // v100.58; revizia 01.10: o eroare aici nu strica fisa
   // v100.16: gridul dupa planul tau - doua variante una langa alta + proba pe 30 de zile
-  var dG=grStare.date&&grStare.simbol===f.simbol?grStare.date:null,sumG=grNumar($("grSuma")&&$("grSuma").value)||st.suma,levG=grNumar($("grLevier")&&$("grLevier").value),plG=grPlanPentruVariante(f,sumG);
-  // fisa zice neutru -> pentru long, directia botilor lui (10 din 10 long pana acum), spus pe fata; short doar daca il alege el
-  var dirG=f.dir==="long"||f.dir==="short"?f.dir:"long",notaG=plG?plG.nota+(dirG!==f.dir?" · fișa zice neutru; ți-l arăt pentru long, cum sunt boții tăi (alege Short sus dacă vrei invers)":""):"";
   h+='<div id="grProb"></div>';   // v100.47 (pachetul 2b): probabilitatile pe gridul propus (umplut de grProbDeseneaza)
-  h+='<div id="grPlanVar">'+(dG&&plG?grPlanVarHtml(grPlanVarCalc("grid",[f.simbol,grStare.la,dirG,sumG,levG,plG.plus,plG.minus].join("|"),function(){return {pret:f.pret,dir:dirG,suma:sumG,levier:levG?Math.round(levG):null,plan:plG,amp:TabloExtra.miscareZi(GridCalcul.bare(dG.r4)),pas:GridCalcul.C.PAS_MIN,b15:GridCalcul.bare(dG.r15),minOrdin:i&&Number(i.minNotional)>0?Number(i.minNotional):null}},notaG),i):"")+'</div>';
   var lj=st.lichidare.jos,ls=st.lichidare.sus;
   h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Ce înseamnă în bani</h4></div>'
     +grRand("Pasul grilei",P(st.pas))+grRand("Profit pe grilă, după comision",P(st.profitGrila)+" ≈ "+(st.perOrdin*st.profitGrila).toFixed(3).replace(".",",")+" USDT")
@@ -6455,9 +6483,21 @@ function tbValoarePt(b){
   var d=tbStare.directie,piv=d&&d.randuri4h?Valoare.pivoti(GraficBot.bare(d.randuri4h),3):[];
   return {zona:tbValoare.zona,pivoti:piv};
 }
+// v100.101: pe Tablou, rândul roșu cât botul rulează cu gridul prea larg pentru levier (planul lui sau cel obișnuit, ca pe Discord)
+function tbGridLargRender(b){
+  var el=$("tbGridLarg");if(!el)return;
+  var pl=b&&tbPlan.botId===b.id&&tbPlan.plan&&!tbPlan.plan.proba&&botiNr(tbPlan.plan.minus)>0?{minus:botiNr(tbPlan.plan.minus),nota:"planul botului"}:b?TabloExtra.propunePlan(null,b.investit):null;
+  var r=b&&pl?TabloExtra.gridVsPlan(b,pl.minus):null;
+  if(!r||!r.preaLarg){el.hidden=true;el.innerHTML="";return}
+  var V=function(v){return v.toFixed(1).replace(".",",")},nume=String(b.baza||"botul").replace(/\.PERP$/,"");
+  el.hidden=false;
+  el.innerHTML='<b>⚠️ '+escapeHtml(nume)+': gridul e mai larg decât îi permite levierul</b><span>La marginea de '+r.parte+' −'+V(r.laMargine)+' USDT'+(r.procent!=null?' ('+Math.round(r.procent*100)+'% din bani)':'')+', planul −'+V(pl.minus)+(pl.nota&&pl.nota!=="planul botului"?' <span class="tbSub">(planul obișnuit)</span>':'')+'.'
+    +(r.stopPlan?' Stopul planului: '+escapeHtml(tbPretScurt(r.stopPlan))+(r.moarte!=null&&r.intervale?' · '+r.moarte+' din '+TextRo.cate(r.intervale,"grilă","grile")+' n-ar lucra':'')+'.':'')+'</span><span>👉 Ce aș face eu: lași stopul la plan și închizi aproape de zero; botul următor îl pornești ÎNGUST sau LARG din fișă.</span>';
+}
 function renderTabloGrafic(){
   var el=$("tbGrafic");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot,g=tbStare.grafic,brut=tbStare.botBrut;
+  try{tbGridLargRender(b)}catch(e){}   // v100.101: o eroare aici nu strică graficul
   if(!b){el.innerHTML='<div class="emptyState">—</div>';return}
   if(!g||!g.randuri){el.innerHTML='<div class="emptyState">'+escapeHtml(g&&g.eroare?"Nu am prețurile: "+g.eroare:"Aștept prețurile…")+'</div>';return}
   if(typeof GraficBot==="undefined"){el.innerHTML='<div class="emptyState">Nu s-a încărcat desenul graficului (lib/grafic-bot.js). Reîncarcă pagina.</div>';return}

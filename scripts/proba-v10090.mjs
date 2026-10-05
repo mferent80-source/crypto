@@ -180,7 +180,7 @@ await test("(5) colectorul: `de` pe monedă (meta().busolaMonede), starea la ser
   assert.ok(c.includes('path.join(DATA, "pentru-busola.json")') && /scrieAtomic\(PENTRU_BUSOLA_FIS, pentruBusola\(/.test(c), "fișierul pentru Busola");
   assert.ok(/closeTime\) >= de90\)/.test(c) && /new Map\(pbInchisi\.lista\.map\(/.test(c) && /cheia: cheiaBusola/.test(c), "închișii: tăiați la 90 z înainte de JurnalTrade.din, uniți cu lista veche, cheia prin simbolPerp");
   assert.ok(/out\.liniiExtra = /.test(c) && /Busola\.liniaBoti\(/.test(c), "rândul de dimineață");
-  assert.ok(/const VERSIUNE_COLECTOR = "v101\.6\d";/.test(c), "versiunea colectorului (v101.60 sau mai nouă)");
+  assert.ok(/const VERSIUNE_COLECTOR = "v101\.(6\d|[7-9]\d)";/.test(c), "versiunea colectorului (v101.60 sau mai nouă)");
   assert.ok(/liniiExtra/.test(citeste("scripts", "lib", "tura-dimineata.mjs")));
   const r = spawnSync(process.execPath, [path.join(RAD, "scripts", "colector.mjs")], { env: { ...process.env, COLECTOR_DOAR_INCARCA: "1" }, encoding: "utf8", timeout: 30000 });
   assert.equal(r.status, 0, (r.stderr || "").slice(0, 400)); assert.match(r.stdout, /INCARCAT true/);

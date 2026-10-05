@@ -2090,6 +2090,22 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #tabloubot .tbCitR.rau .tbCitIc{background:rgba(255,107,120,.16);color:var(--bad)}
 #tabloubot .tbCitR.info .tbCitIc{background:rgba(144,160,182,.14);color:var(--muted)}
 #tabloubot .tbGrInd[hidden]{display:none}
+/* v100.101: Îngust / Larg în capul fișei, setările vechi pliate, poarta cu gridul, rândul roșu pe Tablou */
+.grPlanBloc.grPlanAles{border-top:3px solid var(--accent)}
+.grPlanPill{white-space:nowrap;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--accent);color:var(--accent);margin-left:8px}
+.grPlanDe{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0;font-size:13.5px}
+.grPlanDe ul{margin:4px 0 0;padding-left:17px;display:grid;gap:3px;color:#cdd7e4}
+@media (max-width:480px){.grPlanDe{grid-template-columns:minmax(0,1fr)}}
+.grPlanAleg{border-left:4px solid var(--accent);background:var(--panel-2);border-radius:10px;padding:11px 13px;margin:10px 0;font-size:15px}
+details.grAlte{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:10px 0;background:var(--panel)}
+details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
+.grAlteAvert{margin:10px 0}
+.grPoartaGrid{display:grid;gap:6px;margin:8px 0}
+.grPoartaGridF{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:640px){.grPoartaGridF{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.grPoartaGridF input{min-width:0;width:100%;box-sizing:border-box}
+.tbGridLarg{display:grid;gap:4px;border-left:4px solid var(--bad);background:rgba(255,107,120,.08);border-radius:10px;padding:10px 14px;margin:8px 0;font-size:14px}
+.tbGridLarg>b{color:var(--bad)}
 /* v100.99 (I-531): pe telefon citirea graficului stă imediat sub grafic (același conținut, randat în două locuri - nimic mutat) */
 #tabloubot .tbCitireMobil{display:none}
 @media (max-width:1180px){#tabloubot #tbCitireCard{display:none}#tabloubot .tbCitireMobil{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--tb-linie)}}
