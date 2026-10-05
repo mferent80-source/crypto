@@ -80,6 +80,12 @@ var Obiceiuri = (function () {
     if (o.frana) R.push({ cod: "frana", ok: !o.frana.activa, text: o.frana.text });
     // v100.45 (I-475): planul potrivit monedei - cat de des o zi obisnuita ajunge la stopul planului (din profilul monedei)
     if (o.planMoneda && o.planMoneda.text) R.push({ cod: "plan-moneda", ok: !o.planMoneda.avertizare, text: o.planMoneda.text });
+    // v100.103 (I-534): gridul completat în poartă față de pragul de pierdere (GridPlan.potrivire) - în listă, nu doar un rând separat
+    if (o.gridPrag && o.gridPrag.r) {
+      var gp = o.gridPrag.r, V1 = function (v) { return Number(v).toFixed(1).replace(".", ","); }, pg = String(o.gridPrag.prag).replace(".", ",");
+      R.push({ cod: "grid-prag", ok: !gp.preaLarg, text: gp.preaLarg ? "Gridul nu încape în pragul tău de pierdere: la marginea de " + gp.parte + " pierzi ≈ " + V1(gp.laMargine) + " USDT, pragul e −" + pg + "."
+        : "Gridul încape în pragul tău de pierdere (≈ " + V1(gp.laMargine) + " USDT la marginea de " + gp.parte + ", pragul −" + pg + ")." });
+    }
     var so = subOOra(o.trades);
     // v100.47 (I-469 + pachetul 2b): situatiile asemanatoare pe botii lui si probabilitatile pe gridul propus - informatie, nu reguli
     var sf = so ? [so.text] : [];
@@ -260,6 +266,7 @@ var Obiceiuri = (function () {
   function facPoarta(rez) {
     var r = rez || {}, rele = (Array.isArray(r.reguli) ? r.reguli : []).filter(function (x) { return x && !x.ok; });
     if (r.trecut) return { fac: "Aș porni: toate regulile trec, iar eu îl notez în jurnal cu planul tău.", nota: "" };
+    if (rele.length && rele.every(function (x) { return x.cod === "grid-prag"; })) return { fac: "Aș porni ÎNGUST sau LARG din fișă: gridul ăsta nu încape în pragul tău de pierdere.", nota: "Restul regulilor trec; poarta doar avertizează." };
     if (rele.length && rele.every(function (x) { return x.cod === "moneda"; })) return { fac: "Aș porni cu o sumă mai mică și aș ține stopul la plan.", nota: "Fișa, planul și levierul sunt în regulă, dar pe moneda asta istoria ta e pe minus; îl notez în jurnal." };
     return { fac: "Aș aștepta până trec regulile de mai sus.", nota: "Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate." };
   }

@@ -101,7 +101,7 @@ await test("(4b) poarta: rândul „moneda” ≤ 160 și la peste 100 de boți;
   assert.ok(m && !m.ok, JSON.stringify(m)); assert.ok(m.text.length <= 160, m.text.length + ": " + m.text);
   assert.equal(m.nota, "LIT = LIGHTER la boții Pionex", "nota cu numele botului"); assert.doesNotMatch(m.text, /la boții Pionex/);
   const s = app(), i = s.indexOf("function grPoartaHtml("), corp = s.slice(i, s.indexOf("\nfunction ", i + 10));
-  const ctx = { grReteaPoartaHtml: () => "", grPoartaGridForm: () => "", Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (x) => String(x), grPoartaRez: { simbol: "LIT_USDT_PERP", rez: r } };
+  const ctx = { grReteaPoartaHtml: () => "", grPoartaGridForm: () => "", grPragVal: () => "", Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (x) => String(x), grPoartaRez: { simbol: "LIT_USDT_PERP", rez: r } };
   vm.createContext(ctx); vm.runInContext(corp + ";this.f=grPoartaHtml;", ctx);
   assert.match(ctx.f({ simbol: "LIT_USDT_PERP" }), /<br><span class="tbSub">LIT = LIGHTER la boții Pionex<\/span>/, "fișa nu arată nota (v100.77: pe rândul ei)");
 });

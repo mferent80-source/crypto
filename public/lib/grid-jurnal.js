@@ -30,16 +30,18 @@ var GridJurnal = (function () {
     return v.filter(function (e) { return e && typeof e === "object" && typeof e.id === "string" && /^[A-Za-z0-9_-]+$/.test(e.id) && e.simbol; });
   }
 
-  function adauga(lista, f, acum) {
+  // v100.103 (I-533): fe = { eticheta: "ingust"|"larg", setare } - fereastra apăsată; fără ea = gridul din „Alte setări” („alte”).
+  // Mediana probei e a gridului des ⇒ pe o fereastră rămâne null (nu se amestecă în calibrare).
+  function adauga(lista, f, acum, fe) {
     lista = Array.isArray(lista) ? lista.slice() : [];
     // f.stat = statistica setarii PROPUSE (gridul des cand fisa il propune); platoul brut ramane rezerva pentru fise vechi
-    var st = f.setare || {}, pe = f.stat || (f.proba && f.proba.pe && f.proba.pe[f.dir]), a = pe && pe.antren, t = pe && pe.test;
+    var fs = fe && fe.setare ? fe.setare : null, st = fs || f.setare || {}, pe = fs ? null : f.stat || (f.proba && f.proba.pe && f.proba.pe[f.dir]), a = pe && pe.antren, t = pe && pe.test;
     var e = {
       id: String(acum) + "-" + moneda(f.simbol).replace(/[^A-Z0-9]/g, ""), t: acum, simbol: f.simbol, dir: f.dir, H: f.H, pret: nr(f.pret),
       verdict: f.verdict && f.verdict.nivel || null, suma: nr(st.suma),
       jos: nr(st.jos), sus: nr(st.sus), grile: nr(st.grile), levier: nr(st.levier),
       mediana: a ? nr(a.mediana) : null, ceaMaiProasta: a ? nr(a.ceaMaiProasta) : null, medianaNevazut: t ? nr(t.mediana) : null,
-      botId: null, activ: null, investit: null, rezultat: null, inchisLa: null, actualizatLa: null
+      botId: null, activ: null, investit: null, rezultat: null, inchisLa: null, actualizatLa: null, fereastra: fs ? String(fe.eticheta) : "alte"
     };
     // apasat de doua ori in 10 minute pe aceeasi moneda, fara bot legat -> o inlocuieste
     var fara = lista.filter(function (x) { return !(x.botId === null && moneda(x.simbol) === moneda(f.simbol) && acum - x.t < INLOCUIRE_MS); });
@@ -148,6 +150,73 @@ var GridJurnal = (function () {
     return out;
   }
 
-  return { citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda, calibrare: calibrare };
+  // ---- v100.103 (I-535): ÎNGUST vs LARG pe boții LUI reali ----
+  // oferite = ferestrele arătate de fișă { simbol, t, dir, verdict?, ta:{jos,sus,levier}, mea:{…} }. Un bot futures pornit DUPĂ o ofertă
+  // (cel mult 12 h), pe aceeași monedă și direcție, cu setările unei ferestre (GridPlan.recunoaste) intră singur în jurnal, cu eticheta ei.
+  // Oferta de DUPĂ pornire nu contează: informația trebuie să fi fost disponibilă atunci.
+  function recunoaste(lista, boti, oferite, acum) {
+    var out = Array.isArray(lista) ? lista.slice() : [];
+    if (!Array.isArray(boti) || !Array.isArray(oferite) || !oferite.length || typeof GridPlan === "undefined" || !GridPlan.recunoaste) return out;
+    var legati = {};
+    out.forEach(function (e) { if (e && e.botId) legati[e.botId] = true; });
+    boti.forEach(function (b) {
+      if (!b || !b.id || legati[String(b.id)] || !/\.PERP$/i.test(String(b.baza || ""))) return;
+      var p = nr(b.pornitLa), dir = String(b.directie || "").toLowerCase(), m = moneda(b.baza);
+      if (p === null) return;
+      var cand = oferite.filter(function (o) { return o && moneda(o.simbol) === m && o.dir === dir && nr(o.t) !== null && o.t <= p && p - o.t <= LEAGA_DUPA_MS; })
+        .sort(function (x, y) { return y.t - x.t; });
+      for (var i = 0; i < cand.length; i++) {
+        var o = cand[i], k = GridPlan.recunoaste({ dir: dir, jos: nr(b.gridJos), sus: nr(b.gridSus), levier: nr(b.levier) },
+          { ta: o.ta ? { jos: o.ta.jos, sus: o.ta.sus, levier: o.ta.levier, dir: o.dir } : null, mea: o.mea ? { jos: o.mea.jos, sus: o.mea.sus, levier: o.mea.levier, dir: o.dir } : null });
+        if (!k) continue;
+        out.push({ id: String(p) + "-" + m.replace(/[^A-Z0-9]/g, "") + "-a", t: p, simbol: o.simbol, dir: dir, H: null, pret: null, verdict: o.verdict || null, suma: nr(b.investit),
+          jos: nr(b.gridJos), sus: nr(b.gridSus), grile: null, levier: nr(b.levier), mediana: null, ceaMaiProasta: null, medianaNevazut: null,
+          botId: String(b.id), activ: b.activ !== false, investit: nr(b.investit), rezultat: null, inchisLa: null, actualizatLa: null, fereastra: k, auto: true });
+        legati[String(b.id)] = true;
+        break;
+      }
+    });
+    return out;
+  }
+  // „1 bot”, „20 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (k !== 0 && (r === 0 || r >= 20) ? " de " : " ") + pl; }
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  // Regula fixată DINAINTE (nu după ce vedem cifrele): media rezultatului în % din investiție, LARG − ÎNGUST, pe boții ÎNCHIȘI.
+  // IC 90% prin bootstrap pe MONEDE (boții aceleiași monede nu sunt independenți), 2000 de reluări, sămânța fixă.
+  // Sub 5 boți pe o fereastră sau sub 3 monede ⇒ „puține”; IC peste 0 ⇒ „dovedit” (LARG mai bun); sub 0 ⇒ „pe dos”; altfel „nedovedit”.
+  function bilantFerestre(lista) {
+    var g = { ingust: [], larg: [] };
+    (Array.isArray(lista) ? lista : []).forEach(function (e) {
+      if (!e || !g[e.fereastra] || !e.botId || e.activ !== false || nr(e.rezultat) === null) return;
+      var baza = e.investit > 0 ? e.investit : e.suma;
+      if (!(baza > 0)) return;
+      g[e.fereastra].push({ m: moneda(e.simbol), pct: e.rezultat / baza, usdt: nr(e.rezultat) });
+    });
+    var st = function (x) {
+      var m = {}, s = 0, u = 0, plus = 0;
+      x.forEach(function (c) { (m[c.m] = m[c.m] || []).push(c.pct); s += c.pct; u += c.usdt; if (c.pct > 0) plus++; });
+      return { n: x.length, monede: Object.keys(m).length, mediaPct: x.length ? s / x.length : null, netUsdt: u, pePlus: plus, peMoneda: m };
+    };
+    var a = st(g.ingust), b = st(g.larg), out = { ingust: a, larg: b, dif: null, ic: null, verdict: "puține" };
+    if (a.n && b.n) out.dif = b.mediaPct - a.mediaPct;
+    if (a.n < 5 || b.n < 5 || a.monede < 3 || b.monede < 3) return out;
+    var rnd = mulberry32(535), B = 2000, d = [];
+    var reia = function (pm) { var k = Object.keys(pm), s = 0, n = 0; for (var i = 0; i < k.length; i++) { var x = pm[k[Math.floor(rnd() * k.length)]]; for (var j = 0; j < x.length; j++) { s += x[j]; n++; } } return s / n; };
+    for (var i = 0; i < B; i++) d.push(reia(b.peMoneda) - reia(a.peMoneda));
+    d.sort(function (x, y) { return x - y; });
+    out.ic = [d[Math.floor(B * 0.05)], d[Math.floor(B * 0.95)]];
+    out.verdict = out.ic[0] > 0 ? "dovedit" : out.ic[1] < 0 ? "pe dos" : "nedovedit";
+    return out;
+  }
+  function textFerestre(b) {
+    if (!b || (!b.ingust.n && !b.larg.n)) return null;
+    var P = function (v) { return v === null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };
+    var parte = function (nume, x) { return nume + " " + cate(x.n, "bot", "boți") + ", media " + P(x.mediaPct); };
+    var conc = b.verdict === "puține" ? "puține cazuri (trebuie cel puțin 5 pe fiecare, din cel puțin 3 monede)" : b.verdict === "dovedit" ? "LARG a adus mai mult (dovedit)"
+      : b.verdict === "pe dos" ? "ÎNGUST a adus mai mult (dovedit)" : "diferența nu e dovedită (pot fi la fel)";
+    return "ÎNGUST vs LARG pe boții tăi: " + parte("ÎNGUST", b.ingust) + " · " + parte("LARG", b.larg) + " — " + conc + ".";
+  }
+
+  return { citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda, calibrare: calibrare, recunoaste: recunoaste, bilantFerestre: bilantFerestre, textFerestre: textFerestre };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridJurnal = GridJurnal;

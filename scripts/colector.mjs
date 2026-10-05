@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.71";
+const VERSIUNE_COLECTOR = "v101.72";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -160,6 +160,13 @@ if (process.env.COLECTOR_DOAR_INCARCA) { console.log("INCARCAT", [Alerte, Indica
 const ANTET = { authorization: "Bearer " + TOKEN, accept: "application/json", "x-radar-client": "colector" };
 // v91.11 (1): pe tura, cate cereri de PRETURI Pionex au mers / au picat (26.09: 1 ora de preturi moarte fara nicio alerta)
 let preturiTura = { ok: 0, rau: 0, eroare: null };
+// v101.72 (I-536): pragul lui de ieșire (% din sumă), din config - citit cel mult o dată la 10 min
+let pragMemo = { la: 0, v: null };
+async function pragDinConfig() {
+  if (Date.now() - pragMemo.la < 10 * 60000) return pragMemo.v;
+  try { const c = await cere("/api/istoric-bot?action=config"); pragMemo = { la: Date.now(), v: c && c.config && c.config.prag || null }; } catch (e) { pragMemo = { la: Date.now(), v: pragMemo.v }; }
+  return pragMemo.v;
+}
 async function cere(cale, opt = {}) {
   const ePret = cale.startsWith("/api/market?type=pionex_");
   try {
@@ -449,14 +456,14 @@ async function tura() {
         let ult = null;
         try { const u = await cere("/api/istoric-bot?action=ultimulPlan"); if (u && u.plan) { ult = { plus: u.plan.plus, minus: u.plan.minus, afaraOre: u.plan.afaraOre };
           try { const fb = await cere("/api/bot-orders?status=finished&limit=30"), fa = await cere("/api/bot-orders").catch(() => null); const x = (fb && fb.bots || []).concat(fa && fa.bots || []).find((y) => String(y.id) === String(u.bot)); if (x) { ult.investit = Number(x.investit) || null; ult.nume = String(x.baza || "").replace(/\.PERP$/, ""); } } catch {} } } catch {}
-        const pp = TabloExtra.propunePlan(ult, b.investit), nume = String(b.baza || "botul").replace(/\.PERP$/, "");
+        const pragCfg = await pragDinConfig(), pp = TabloExtra.propunePlan(ult, b.investit, pragCfg), nume = String(b.baza || "botul").replace(/\.PERP$/, "");
         const m = MesajeColector.faraPlan(nume, pp);
         if (await trimiteAlerta(m, b.id, m.cheie)) st._faraPlan = true;
       }
       // v101.70 (05.10, el: „să nu se mai întâmple situația de azi”, TAKE −18% la 5×): botul NOU cu gridul prea larg pentru levier - o dată, în
       // primele 6 h, cu planul lui sau, fără plan, cu cel obișnuit (TabloExtra.propunePlan). Azi alerta „grid-plan” a venit după 3 ore (cere planul scris).
       if (pl && !st._gridLarg && acum - Number(b.pornitLa) < 6 * 3600000) {
-        const planMinus = pl.plan && !pl.plan.proba && Number(pl.plan.minus) > 0 ? Number(pl.plan.minus) : (TabloExtra.propunePlan(null, b.investit) || {}).minus;
+        const pragCfg = await pragDinConfig(), planMinus = pl.plan && !pl.plan.proba && Number(pl.plan.minus) > 0 ? Number(pl.plan.minus) : (TabloExtra.propunePlan(null, b.investit, pragCfg) || {}).minus;
         const gv = TabloExtra.gridVsPlan(b, planMinus);
         if (!gv || !gv.preaLarg) st._gridLarg = "ok";
         else { const m = MesajeColector.gridPreaLarg(String(b.baza || "botul").replace(/\.PERP$/, ""), gv); if (await trimiteAlerta(m, b.id, m.cheie)) st._gridLarg = "trimis"; }

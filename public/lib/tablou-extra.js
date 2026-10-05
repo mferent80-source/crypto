@@ -281,8 +281,12 @@ var TabloExtra = (function () {
   }
 
   // v97.6 "plan cerut la botul nou": ult = { plus, minus, afaraOre, investit?, nume? } (planul lui cel mai nou)
-  function propunePlan(ult, investitNou) {
+  // v100.103 (I-536): prag = { pierdere, tinta, afaraOre } în % din sumă, setat de el în poartă (config pe server) - bate planul împrumutat
+  function propunePlan(ult, investitNou, prag) {
     var inv = nr(investitNou), r1 = function (v) { return v === null || !isFinite(v) ? null : Math.round(v * 10) / 10; };
+    var pp = prag && nr(prag.pierdere) > 0 && nr(prag.pierdere) < 100 && nr(prag.tinta) > 0 && nr(prag.tinta) < 100 ? prag : null;
+    if (pp && inv > 0) { var vp = function (x) { return String(x).replace(".", ","); }, oreP = nr(pp.afaraOre) > 0 ? nr(pp.afaraOre) : 12;
+      return { plus: r1(inv * nr(pp.tinta) / 100), minus: r1(inv * nr(pp.pierdere) / 100), afaraOre: oreP, sursa: "prag", nota: "pragul tău: −" + vp(nr(pp.pierdere)) + "% / +" + vp(nr(pp.tinta)) + "% din sumă, " + vp(oreP) + " h afară (setat în poartă)" }; }
     if (ult && (nr(ult.plus) > 0 || nr(ult.minus) > 0)) {
       // v100.102 (el: „chestia cu planul e cam ambiguă”): sursa și scalarea spuse într-o frază, fără paranteze în paranteze („aceleași sume” nu spunea nimic)
       var ui = nr(ult.investit), k = ui > 0 && inv > 0 ? inv / ui : 1, v = function (x) { return String(x).replace(".", ","); }, bot = "botul tău " + (ult.nume || "de dinainte");

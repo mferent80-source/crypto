@@ -424,6 +424,8 @@ export async function onRequestPost({request,env}){
     const la=nr(corp&&corp.colectorLa);if(la!==null)nou.colectorLa=la;
     // v100.43 (I-468): pragurile franei contului (USDT pe zi, USDT pe 7 zile, cati boti pe minus la rand) - puse de el din pagina
     if(corp&&corp.frana&&typeof corp.frana==="object"){const p=v=>{const x=nr(v);return x!==null&&x>0&&x<1e6?x:null};const fr={zi:p(corp.frana.zi),sapt:p(corp.frana.sapt),rand:p(corp.frana.rand)};if(fr.zi===null||fr.sapt===null||fr.rand===null)return json({error:"frana: trei numere pozitive (zi, sapt, rand)"},400);nou.frana={zi:fr.zi,sapt:fr.sapt,rand:Math.round(fr.rand)}}
+    // v100.103 (I-536): pragul lui de ieșire, în % din sumă (pierdere, țintă) + orele afară; null = șters
+    if(corp&&Object.prototype.hasOwnProperty.call(corp,"prag")){if(corp.prag===null)delete nou.prag;else{const q=corp.prag||{},pi=nr(q.pierdere),ti=nr(q.tinta),o=nr(q.afaraOre);if(!(pi>0&&pi<100&&ti>0&&ti<100&&(o===null||(o>0&&o<=240))))return json({error:"prag: pierderea și ținta în % (între 0 și 100), orele între 1 și 240"},400);nou.prag={pierdere:pi,tinta:ti,afaraOre:o===null?12:o}}}
     await env.ISTORIC.put("config",JSON.stringify(nou));
     return json({ok:true,config:nou});
   }

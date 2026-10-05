@@ -100,7 +100,7 @@ await test("poarta fișei pe ecran: costul regulii înaintea punctului (nu „�
   const rez = OB.poarta({ acum: T0, fisa: { simbol: "LIT_USDT_PERP", dir: "long", verdict: { nivel: "asteapta", motive: ["pe ultimele zile, nevăzute la alegere, a ieșit pe minus (−0,58%)"] }, setare: { levierSigur: 4 }, directie: { dir: "long", tarie: "mediu" } }, levier: 4, dir: "long", plan: { minus: 10 }, trades: [] });
   const rv = rez.reguli.find((x) => x.cod === "verde"); assert.ok(rv && !rv.ok && /\.$/.test(rv.text), "regula fișei: " + JSON.stringify(rv));
   rv.cost = "pe boții tăi închiși: doar pe 🟢 ar fi fost −0,99 în loc de −21,45 USDT";
-  const ctx = { grReteaPoartaHtml: () => "", grPoartaGridForm: () => "", Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (x) => String(x), grFrana: { praguri: { zi: 20, sapt: 60, rand: 3 }, istoric: fi }, grPoartaRez: { simbol: "LIT_USDT_PERP", rez } };
+  const ctx = { grReteaPoartaHtml: () => "", grPoartaGridForm: () => "", grPragVal: () => "", Obiceiuri: OB, $: () => null, grPlanDinScan: () => null, escapeHtml: (x) => String(x), grFrana: { praguri: { zi: 20, sapt: 60, rand: 3 }, istoric: fi }, grPoartaRez: { simbol: "LIT_USDT_PERP", rez } };
   vm.createContext(ctx); vm.runInContext(corp + ";this.f=grPoartaHtml;", ctx);
   const h = ctx.f({ simbol: "LIT_USDT_PERP" });
   assert.doesNotMatch(h, /\.\s*<span class="tbSub">\(/, "costul după punct: „…%). (pe boții…)”");

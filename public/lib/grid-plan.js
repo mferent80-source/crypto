@@ -187,6 +187,25 @@ var GridPlan = (function () {
       nu: ["levier mic ⇒ bani mai puțini pe grilă", "banii stau mai mult: tipic " + ORE(pr.oreTipic), pr.inGrid + " din " + n + " încă în grid după 3 zile"] };
   }
 
-  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, motive: motive };
+  // v100.103 (I-533): gridul unei ferestre, în forma botului de hârtie / jurnalului (stopul la margini, ½ pas dincolo)
+  function setareFereastra(v) {
+    if (!v) return null;
+    return { dir: v.dir, jos: v.jos, sus: v.sus, grile: v.grile, levier: v.levier, suma: v.suma, stop: v.stop ? { jos: v.stop.jos, sus: v.stop.sus } : null };
+  }
+  // v100.103 (I-535): botul pornit seamănă cu ÎNGUST sau cu LARG? Aceeași direcție (dacă fereastra o știe), același levier, marginile la ±2%.
+  // fer = { ta, mea } (fiecare { jos, sus, levier, dir? }); ⇒ "ingust" | "larg" | null
+  function recunoaste(bot, fer) {
+    var b = bot || {}, J = nr(b.jos), S = nr(b.sus), L = nr(b.levier), lista = [["ta", "ingust"], ["mea", "larg"]];
+    if (!(J > 0) || !(S > J) || !(L > 0)) return null;
+    for (var i = 0; i < lista.length; i++) {
+      var x = fer && fer[lista[i][0]];
+      if (!x || !(nr(x.jos) > 0) || !(nr(x.sus) > 0) || Math.round(nr(x.levier)) !== Math.round(L)) continue;
+      if (x.dir && b.dir && x.dir !== b.dir) continue;
+      if (Math.abs(J / x.jos - 1) <= 0.02 && Math.abs(S / x.sus - 1) <= 0.02) return lista[i][1];
+    }
+    return null;
+  }
+
+  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridPlan = GridPlan;

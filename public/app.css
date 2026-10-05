@@ -2096,6 +2096,8 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 .grPlanDe{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0;font-size:13.5px}
 .grPlanDe ul{margin:4px 0 0;padding-left:17px;display:grid;gap:3px;color:#cdd7e4}
 @media (max-width:480px){.grPlanDe{grid-template-columns:minmax(0,1fr)}}
+.grPlanBut{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.grPlanBilant{margin:6px 0 10px}
 .grPlanAleg{border-left:4px solid var(--accent);background:var(--panel-2);border-radius:10px;padding:11px 13px;margin:10px 0;font-size:15px}
 details.grAlte{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:10px 0;background:var(--panel)}
 details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
