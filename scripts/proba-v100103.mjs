@@ -64,7 +64,7 @@ await test("(2) I-534: regula „grid-prag” în poartă (✗ peste 1,2× pragu
 await test("(3) I-535 recunoașterea: un bot pornit DUPĂ ce fișa a oferit ferestrele, pe aceeași monedă și direcție, cu setările unei ferestre (±2%, același levier)", () => {
   assert.equal(GP.recunoaste({ dir: "long", jos: 0.892, sus: 1.105, levier: 1 }, { ta: TA, mea: MEA }), "larg");
   assert.equal(GP.recunoaste({ dir: "long", jos: 0.97, sus: 1.02, levier: 5 }, { ta: TA, mea: MEA }), "ingust");
-  assert.equal(GP.recunoaste({ dir: "long", jos: 0.97, sus: 1.02, levier: 3 }, { ta: TA, mea: MEA }), null, "alt levier");
+  assert.equal(GP.recunoaste({ dir: "long", jos: 0.97, sus: 1.02, levier: 3 }, { ta: TA, mea: MEA }), "ingust", "v100.114 (ZAMA): alt levier, aceeași bandă = aceeași fereastră");
   assert.equal(GP.recunoaste({ dir: "short", jos: 0.892, sus: 1.105, levier: 1 }, { ta: TA, mea: MEA }), null, "altă direcție");
   const of = [{ simbol: "ABC_USDT_PERP", t: 1000, dir: "long", ta: { jos: 0.97, sus: 1.02, levier: 5 }, mea: { jos: 0.89, sus: 1.11, levier: 1 } }];
   const bot = { id: "9", baza: "ABC.PERP", directie: "long", gridJos: 0.891, gridSus: 1.108, levier: 1, investit: 100, pornitLa: 5000, activ: true };

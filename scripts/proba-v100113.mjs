@@ -77,7 +77,7 @@ await test("(1f) episoade: de la prima cumpărare până la zero; „ai cumpăra
 await test("(1g) comportamentActiuni: medierea pe minus dovedit rea pe date construite (40 de acțiuni, ambele jumătăți)", () => {
   const ep = []; for (let i = 0; i < 40; i++) for (const t of [Date.UTC(2026, 0, 10) + i * ZI, Date.UTC(2026, 6, 10) + i * ZI]) { ep.push({ ticker: "T" + i, start: t - 2 * ZI, final: t, pus: 100, rez: -8, pct: -0.08, A1: true, A2: false, A3: true }, { ticker: "T" + i, start: t, final: t + ZI, pus: 100, rez: 2, pct: 0.02, A1: false, A2: false, A3: true }); }
   const r = RL.comportamentActiuni(ep, { reps: 400, seed: 5 });
-  assert.equal(r[0].k, "A1"); assert.equal(r[0].stare, "dovedit-rau"); assert.equal(r[0].nume, "Ai cumpărat mai jos pe o poziție pe minus");
+  assert.equal(r[0].k, "A1"); assert.equal(r[0].stare, "dovedit-rau"); assert.equal(r[0].nume, "Ai cumpărat la preț mai mic pe o poziție pe minus");
   assert.equal(r.find((x) => x.k === "A3").stare, "prea puține");
 });
 await test("(1h) corelatie: aceeași mișcare ⇒ 1, invers ⇒ −1; doar orele comune, bare închise", () => {
@@ -92,7 +92,7 @@ await test("(1i) textele: probabilitatea botului după cât stă deja, a poziți
   assert.equal(RL.textBot(sb, 0.3), null);
   const sa = [{ h: 5, n: 227, pePlus: 0.45, mari: 0.26, medie: -0.0333 }];
   assert.equal(RL.textActiune(sa, 12, false), "Din pozițiile tale ținute peste 5 zile (227), 45% s-au încheiat pe plus și 26% cu o pierdere de peste 5% (media −3,3%).");
-  assert.equal(RL.textMediere({ k: "A1", stare: "dovedit-rau", cu: 65, mariCu: 0.323, mariFara: 0.092 }), "Ai cumpărat mai jos pe ea cât era pe minus: la tine, pozițiile mediate așa s-au încheiat cu pierdere de peste 5% în 32% din cazuri, față de 9% (dovedit pe 65 de episoade). Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum.");
+  assert.equal(RL.textMediere({ k: "A1", stare: "dovedit-rau", cu: 65, mariCu: 0.323, mariFara: 0.092 }), "Ai cumpărat la preț mai mic pe ea cât era pe minus: la tine, pozițiile mediate așa s-au încheiat cu pierdere de peste 5% în 32% din cazuri, față de 9% (dovedit pe 65 de episoade). Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum.");
   assert.equal(RL.textLuna({ K: 30, S: 43.72, p5: -56.04, pMinus: 0.51, legat: true }, "USDT"), "Luna proastă la ritmul tău (30 de boți în 30 de zile, ~43,7 USDT fiecare): −56,0 USDT; o lună din două iese pe minus.");
   assert.equal(RL.textLuna({ K: 16, S: 5174.985, p5: -4267.4, pMinus: 0.41 }, "lei", ["poziție", "poziții"]), "Luna proastă la ritmul tău (16 poziții în 30 de zile, ~5.175,0 lei fiecare): −4.267,4 lei; luna iese pe minus în 41% din simulări.");
 });
@@ -130,7 +130,7 @@ await test("(2c) colectorul: tura riscului o dată pe zi, după cazuri; arhiva +
   assert.match(col, /turaCazuri\(\)\)\.then\(\(\) => turaRisc\(\)\)/);
 });
 // ---------------- etapa 3: pagina din meniu ----------------
-const A1 = { k: "A1", nume: "Ai cumpărat mai jos pe o poziție pe minus", cu: 65, fara: 768, medieCu: -0.0389, medieFara: -0.002, mariCu: 0.323, mariFara: 0.092, stare: "dovedit-rau", banCu: -9006, banFara: 13450 };
+const A1 = { k: "A1", nume: "Ai cumpărat la preț mai mic pe o poziție pe minus", cu: 65, fara: 768, medieCu: -0.0389, medieFara: -0.002, mariCu: 0.323, mariFara: 0.092, stare: "dovedit-rau", banCu: -9006, banFara: 13450 };
 await test("(3a) textObicei: verdictul spus explicit, cu cifrele și cu limita de cauză unde e cazul", () => {
   assert.equal(RL.textObicei(A1, "actiuni"), "Obicei rău, dovedit: media −3,9% față de −0,2%, pierderi de peste 5% în 32% din cazuri față de 9% (65 de episoade cu, 768 fără). Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum.");
   assert.equal(RL.textObicei({ k: "O1", cu: 397, fara: 1338, medieCu: 0.0009, medieFara: -0.0068, mariCu: 0.154, mariFara: 0.109, stare: "nedovedit" }, "boti"), "Nedovedit: media +0,1% față de −0,7%, pierderi de peste 5% în 15% din cazuri față de 11% (397 de boți cu, 1338 fără); diferența poate fi întâmplare.");
@@ -151,7 +151,7 @@ await test("(3b) concluziile: ce înseamnă pentru tine și ce aș face eu - din
   assert.match(c.boti[1].text, /^Cei ținuți peste 24 h \(76\) au adus −1\.540 USDT, cei sub 4 h \(1360\) \+460\. /);
   assert.match(c.boti[2].text, /^Grilele au adus \+4\.287 USDT, comisioanele −2\.388 \(bani reali\)\. 635 de boți au stat sub 15 minute\.$/);
   assert.ok(c.boti.every((x) => !x.faCe || /^Aș /.test(x.faCe)), "„ce aș face eu” la persoana I");
-  assert.deepEqual(a, ["Cumperi mai jos pe pozițiile pe minus", "Comisioanele de conversie îți iau o mare parte din câștig", "Câteva poziții mari pe minus șterg câștigul celorlalte"]);
+  assert.deepEqual(a, ["Cumperi la preț mai mic pe pozițiile pe minus", "Comisioanele de conversie îți iau o mare parte din câștig", "Câteva poziții mari pe minus șterg câștigul celorlalte"]);
   assert.match(c.actiuni[1].text, /^Ai plătit 6\.367 lei comision de conversie; rezultatul real e \+4\.659 lei \(T212 afișează \+11\.026, fără comisioane\)\.$/);
   for (const x of c.boti.concat(c.actiuni)) assert.ok((x.titlu + (x.text || "") + (x.faCe || "")).length && !/NaN|undefined|null/.test(x.titlu + x.text + (x.faCe || "")), x.titlu);
 });
@@ -168,7 +168,7 @@ await test("(3c) pagina din meniu: „Monte Carlo · riscul tău” - pagina nou
 await test("(3d) pagina desenată (fără browser): boții și acțiunile, alegerea ritmului, histograma, obiceiurile, concluziile; fără raport ⇒ spune de ce", () => {
   const ctx = { RiscLuna: RL, TextRo: globalThis.TextRo }; vm.createContext(ctx); vm.runInContext(citeste("public", "lib", "risc-ecran.js"), ctx);
   const h = ctx.rlHtml(RAPORT(), { kBoti: 159, kAct: 16 });
-  for (const s of ["Boții tăi", "Acțiunile tale", "Luna proastă la ritmul tău (159 de boți în 30 de zile", "Câțiva boți cu pierderi mari", "Cumperi mai jos pe pozițiile pe minus", "Obicei rău, dovedit", "<svg", "data-action-click=\"rlAlegeK('boti',159)\""]) assert.ok(h.includes(s), s);
+  for (const s of ["Boții tăi", "Acțiunile tale", "Luna proastă la ritmul tău (159 de boți în 30 de zile", "Câțiva boți cu pierderi mari", "Cumperi la preț mai mic pe pozițiile pe minus", "Obicei rău, dovedit", "<svg", "data-action-click=\"rlAlegeK('boti',159)\""]) assert.ok(h.includes(s), s);
   assert.doesNotMatch(h, /NaN|undefined/, (h.match(/.{0,80}(NaN|undefined).{0,40}/) || [])[0]);
   assert.match(ctx.rlHtml(null, {}), /Raportul se face o dată pe noapte/);
 });
@@ -261,9 +261,9 @@ await test("(R10) textele: „pierdut 5.555” fără minus dublu, „1 din 20 �
 });
 await test("(E) versiunea v100.113 / colector v101.76", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.113"/); assert.match(html, /id="antetVersiune">v100\.113/); assert.match(html, /id="healthAppVersion">v100\.113</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.113.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-113";/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.76";/);
+  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(7[6-9]|[89]\d)";/);
   const sc = JSON.parse(citeste("package.json")).scripts; assert.equal(sc["test:v100113"], "node scripts/proba-v100113.mjs"); assert.match(sc.test, /npm run test:v100113/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

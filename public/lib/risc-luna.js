@@ -79,7 +79,7 @@ var RiscLuna = (function () {
     return Object.assign(baza, { dif: dif, ic: ic, ic99: ic99, d1: d1, d2: d2, stare: dov ? "dovedit-" + sens : lim ? "la-limita-" + sens : "nedovedit" });
   }
   var OBICEIURI_BOTI = [["O1", "Stop pus"], ["O2", "Marjă adăugată pe drum"], ["O3", "Levier peste 3×"], ["O4", "Banda sub 10%"], ["O5", "Pornit în partea grea a benzii"],
-    ["O6", "Pornit la cel mult 30 min după un bot pe minus"], ["O7", "Suma mărită după o pierdere"], ["O8", "Prima oară pe moneda asta"], ["O9", "Short"]];
+    ["O6", "Pornit la ≤ 30 min după un bot pe minus"], ["O7", "Suma mărită după o pierdere"], ["O8", "Prima oară pe moneda asta"], ["O9", "Short"]];
   // obiceiurile la boți (lista închisă); boti = arhiva întreagă (cele de dinainte de `de` contează pentru „prima oară” / „după o pierdere”)
   function comportamentBoti(boti, o) {
     o = o || {}; var de = nr(o.de) || 0, S = nr(o.S) || 45, toti = bazinBoti(boti, {}), vazute = {}, l = [];
@@ -133,7 +133,7 @@ var RiscLuna = (function () {
     inch.forEach(function (e) { var prev = null; for (var i = inch.length - 1; i >= 0; i--) if (inch[i].final < e.start) { prev = inch[i]; break; } e.A2 = !!(prev && prev.rez < 0 && e.pus >= 1.5 * prev.pus); e.A3 = e.zile <= 5; });
     return { inchise: inch, deschise: Object.keys(d).map(function (k) { var e = d[k]; return { ticker: e.ticker, simbol: e.simbol, start: e.start, qty: e.qty, cost: e.cost, pus: e.pus, A1: e.A1 }; }) };
   }
-  var OBICEIURI_ACT = [["A1", "Ai cumpărat mai jos pe o poziție pe minus"], ["A2", "Suma mărită după o pierdere"], ["A3", "Episod scurt (cel mult 5 zile)"]];
+  var OBICEIURI_ACT = [["A1", "Ai cumpărat la preț mai mic pe o poziție pe minus"], ["A2", "Suma mărită după o pierdere"], ["A3", "Episod scurt (cel mult 5 zile)"]];
   function comportamentActiuni(ep, o) {
     o = o || {}; var l = (ep || []).map(function (e) { return Object.assign({}, e, { r: e.pct, t: e.final }); });
     return OBICEIURI_ACT.map(function (ob, k) { return Object.assign({ k: ob[0], nume: ob[1] }, verdict(l, function (x) { return !!x[ob[0]]; }, { min: 20, putini: "prea puține", cheie: "ticker", timp: "t", reps: o.reps || 2000, seed: (o.seed || 7) + k, S: function (x) { return x.pus; } })); });
@@ -169,7 +169,7 @@ var RiscLuna = (function () {
   function textBot(s, ore) { var p = pragulAtins(s, ore); if (!p) return null; return "Din boții tăi care au ajuns la " + p.h + " h (" + p.n + "), " + pct(p.pePlus) + " au ieșit pe plus și " + pct(p.mari) + " au pierdut peste 5% (media " + semn1(p.medie * 100) + "%)."; }
   function textActiune(s, zile) { var p = pragulAtins(s, zile); if (!p) return null; return "Din pozițiile tale ținute peste " + cate(p.h, "zi", "zile") + " (" + p.n + "), " + pct(p.pePlus) + " s-au încheiat pe plus și " + pct(p.mari) + " cu o pierdere de peste 5% (media " + semn1(p.medie * 100) + "%)."; }
   // revizia (R10): avertismentul doar când medierea iese rea (dovedit sau la limită), cu limita de cauză
-  function textMediere(r) { if (!r || r.k !== "A1" || r.mariCu === null || (r.stare !== "dovedit-rau" && r.stare !== "la-limita-rau")) return null; return "Ai cumpărat mai jos pe ea cât era pe minus: la tine, pozițiile mediate așa s-au încheiat cu pierdere de peste 5% în " + pct(r.mariCu) + " din cazuri, față de " + pct(r.mariFara) + " (" + (r.stare === "dovedit-rau" ? "dovedit" : "la limită, încă nesigur") + " pe " + cate(r.cu, "episod", "episoade") + "). Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum."; }
+  function textMediere(r) { if (!r || r.k !== "A1" || r.mariCu === null || (r.stare !== "dovedit-rau" && r.stare !== "la-limita-rau")) return null; return "Ai cumpărat la preț mai mic pe ea cât era pe minus: la tine, pozițiile mediate așa s-au încheiat cu pierdere de peste 5% în " + pct(r.mariCu) + " din cazuri, față de " + pct(r.mariFara) + " (" + (r.stare === "dovedit-rau" ? "dovedit" : "la limită, încă nesigur") + " pe " + cate(r.cu, "episod", "episoade") + "). Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum."; }
   function textLuna(mc, unit, noun, ritmulTau) {
     if (!mc) return null; noun = noun || ["bot", "boți"]; var pm = mc.pMinus;
     return (ritmulTau === false ? "Luna proastă cu " + cate(mc.K, noun[0], noun[1]) + " pe lună (~" : "Luna proastă la ritmul tău (" + cate(mc.K, noun[0], noun[1]) + " în 30 de zile, ~") + v1(mc.S) + " " + unit + " fiecare): " + semn1(mc.p5) + " " + unit + "; "
@@ -214,9 +214,9 @@ var RiscLuna = (function () {
       : r.stare === "la-limita-rau" ? "La limită (semn de obicei rău, încă nesigur): " + cifre + "." : r.stare === "la-limita-bun" ? "La limită (semn de obicei bun, încă nesigur): " + cifre + "." : "Nedovedit: " + cifre + "; diferența poate fi întâmplare.";
     return LIMITA[r.k] && r.stare !== "nedovedit" ? t + " " + LIMITA[r.k] : t;
   }
-  var CE_FAC = { A1: "N-aș mai cumpăra mai jos pe o acțiune pe minus; dacă vreau mai mult din ea, aștept să urce peste prețul meu mediu.",
+  var CE_FAC = { A1: "N-aș mai cumpăra la preț mai mic pe o acțiune pe minus; aș aștepta să urce peste prețul meu mediu.",
     A2: "Aș păstra suma obișnuită după o pierdere, nu aș mări-o ca să recuperez.", O2: "Aș închide botul în loc să-i adaug marjă.", O3: "Aș rula cu cel mult 3×.", O4: "Aș lua banda mai largă de 10%." };
-  var TITLU_ACT = { A1: ["Cumperi mai jos pe pozițiile pe minus", "Cumpărarea mai jos pe minus îți iese bine"], A2: ["Mărești suma după o pierdere", "Suma mărită după o pierdere îți iese bine"], A3: ["Pozițiile lungi îți ies mai prost", "Pozițiile scurte îți ies mai bine (legătură, nu cauză)"] };
+  var TITLU_ACT = { A1: ["Cumperi la preț mai mic pe pozițiile pe minus", "Cumpărarea la preț mai mic pe minus îți iese bine"], A2: ["Mărești suma după o pierdere", "Suma mărită după o pierdere îți iese bine"], A3: ["Pozițiile lungi îți ies mai prost", "Pozițiile scurte îți ies mai bine (legătură, nu cauză)"] };
   // ⇒ { boti: [], actiuni: [] }, fiecare { nivel: "rau"|"atentie"|"bine"|"info", titlu, text, faCe } - din cifrele raportului
   function concluzii(rp) {
     var out = { boti: [], actiuni: [] }, B = rp && rp.boti, A = rp && rp.actiuni;
@@ -224,16 +224,16 @@ var RiscLuna = (function () {
       var d = B.desc, S = B.ritm ? B.ritm.S : null, c = d.coada;
       if (c && c.laS < 0 && c.restLaS > 0) out.boti.push({ nivel: "rau", titlu: "Câțiva boți cu pierderi mari șterg câștigul celorlalți",
         text: "Cei mai răi 10% (" + cate(c.n, "bot", "boți") + ", fiecare sub " + semn1(c.prag * 100) + "%) au pierdut " + mii(-c.laS).replace(/^[+−]/, "") + " USDT la suma ta de acum (~" + v1(S) + " USDT pe bot), iar ceilalți 90% au câștigat " + mii(c.restLaS).replace(/^[+−]/, "") + ".",
-        faCe: "Aș pune stop la fiecare bot, la marginea gridului: stopul n-a ieșit dovedit bun la tine, dar fără el o pierdere mare nu are margine, iar pierderile mari fac luna." });
+        faCe: "Aș pune stop la fiecare bot, la marginea gridului: fără el, o pierdere mare nu are margine." });
       var lung = (d.durate || []).filter(function (x) { return x.de >= 24; }), scurt = (d.durate || []).filter(function (x) { return x.pana !== null && x.pana <= 4; });
       var sl = lung.reduce(function (s, x) { return s + x.laS; }, 0), nl = lung.reduce(function (s, x) { return s + x.n; }, 0), ss = scurt.reduce(function (s, x) { return s + x.laS; }, 0), ns = scurt.reduce(function (s, x) { return s + x.n; }, 0);
       if (nl >= 10 && sl < 0) out.boti.push({ nivel: "rau", titlu: "Boții ținuți peste o zi pierd", text: "Cei ținuți peste 24 h (" + nl + ") au adus " + mii(sl) + " USDT, cei sub 4 h (" + ns + ") " + mii(ss) + ". Durata e și urmare: ții mai mult ce merge prost.",
-        faCe: "Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină (în plan: „ies dacă stă afară”)." });
+        faCe: "Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină." });
       if (d.bani && d.bani.grile > 0 && -d.bani.comisioane > 0.3 * d.bani.grile) { var rapid = (d.durate || []).filter(function (x) { return x.pana !== null && x.pana <= 0.25; }).reduce(function (s, x) { return s + x.n; }, 0);
         out.boti.push({ nivel: "atentie", titlu: "Comisioanele iau " + pct(-d.bani.comisioane / d.bani.grile) + " din câștigul grilelor",   /* revizia (R5): aceeași bază ca textul */ text: "Grilele au adus " + mii(d.bani.grile) + " USDT, comisioanele " + mii(d.bani.comisioane) + " (bani reali)." + (rapid ? " " + cate(rapid, "bot", "boți") + " au stat sub 15 minute." : ""),
-          faCe: "Aș lăsa botul măcar o oră: închis și redeschis repede, plătește comisionul de pornire de fiecare dată." }); }
+          faCe: "Aș lăsa botul măcar o oră: fiecare pornire plătește din nou comisionul." }); }
       var dov = (B.comportament || []).filter(function (x) { return /^(dovedit|la-limita)/.test(x.stare); }), are = out.boti.length > 0;
-      dov.forEach(function (x) { var rau = /rau$/.test(x.stare), sigur = /^dovedit/.test(x.stare); out.boti.push({ nivel: rau ? (sigur ? "rau" : "atentie") : "bine", titlu: (sigur ? (rau ? "Obicei dovedit rău: " : "Obicei dovedit bun: ") : (rau ? "Obicei la limită (rău): " : "Obicei la limită (bun): ")) + x.nume, text: textObicei(x, "boti"), faCe: rau ? CE_FAC[x.k] || null : null }); });
+      dov.forEach(function (x) { var rau = /rau$/.test(x.stare), sigur = /^dovedit/.test(x.stare); out.boti.push({ nivel: rau ? (sigur ? "rau" : "atentie") : "bine", titlu: x.nume + (sigur ? (rau ? " (dovedit rău)" : " (dovedit bun)") : (rau ? " (la limită, rău)" : " (la limită, bun)")), text: textObicei(x, "boti"), faCe: rau ? CE_FAC[x.k] || null : null }); });   /* titlul ≤ 60 (garda) */
       if (!dov.length) out.boti.push({ nivel: "info", titlu: "Niciun obicei al boților nu e dovedit, nici bun, nici rău", text: "Din " + cate((B.comportament || []).length || 9, "obicei testat", "obiceiuri testate") + " pe boții tăi, niciunul nu trece regula (diferența poate fi întâmplare)." + (are ? " Pierderea vine din ce scrie mai sus." : ""), faCe: null });
     }
     if (A && A.desc) {

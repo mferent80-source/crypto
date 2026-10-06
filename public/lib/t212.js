@@ -62,7 +62,9 @@ var T212 = (function () {
   // cumpararii (partea vanduta) - comisionul vanzarii. Oficialul ramane ca rezultatOficial, FIFO ca verificare.
   function perechi(u) {
     var loturi = {}, inchise = [], fara = [];
-    (Array.isArray(u) ? u : []).forEach(function (x) {
+    // v100.114 (revizia v100.113): în ordinea timpului, iar la aceeași secundă întâi cumpărarea (PLTR, 05.11.2025: vânzarea listată înaintea
+    // cumpărării rămânea „fără cumpărare” și lăsa o poziție deschisă inventată) - ca RiscLuna.episoade
+    (Array.isArray(u) ? u : []).slice().sort(function (a, b) { return (a.t - b.t) || (a.side === b.side ? 0 : a.side === "BUY" ? -1 : 1); }).forEach(function (x) {
       var L = loturi[x.ticker] || (loturi[x.ticker] = []);
       if (x.side === "BUY") { L.push({ t: x.t, ramas: x.qty, qty: x.qty, costBuc: x.net / x.qty, feeBuc: x.fee / x.qty, pretBuc: x.pret, ext: x.ext, id: x.id }); return; }
       var ramas = x.qty, cost = 0, luat = 0, pornit = null, pretCump = 0, extCump = false, feeCump = 0;

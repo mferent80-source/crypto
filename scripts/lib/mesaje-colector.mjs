@@ -53,7 +53,9 @@ export const pornitCa = (nume, f) => {
     mesaj: msg("Nu seamănă nici cu ÎNGUST, nici cu LARG din fișa de la " + oraRo(f.t) + ".", "Aș verifica poarta: gridul poate să nu încapă în pragul tău de pierdere.") };
   const larg = f.k === "larg", ore = Number(f.oreTipic) > 0 ? Math.round(Number(f.oreTipic)) : null;
   return { nivel: "info", cheie: "pornit-ca", titlu: nume + ": pornit ca " + (larg ? "LARG" : "ÎNGUST") + " din fișă",
-    mesaj: msg("Seamănă cu " + (larg ? "LARG" : "ÎNGUST") + " din fișa de la " + oraRo(f.t) + (Number(f.stop) >= 0 && Number(f.n) > 0 ? " (în probă: stopul atins de " + cate(f.stop, "dată", "ori") + " din " + cate(f.n, "pornire", "porniri") + ")" : "") + ".",
+    // v101.77 (ZAMA, 06.10): levierul diferit de al fișei se spune, nu mai face din fereastră „alt grid”
+    mesaj: msg("Seamănă cu " + (larg ? "LARG" : "ÎNGUST") + " din fișa de la " + oraRo(f.t) + (Number(f.levierFisa) > 0 && Number(f.levierBot) > 0 && Math.round(f.levierFisa) !== Math.round(f.levierBot) ? " (levierul " + Math.round(f.levierBot) + "×, fișa avea " + Math.round(f.levierFisa) + "×)" : "")
+      + (Number(f.stop) >= 0 && Number(f.n) > 0 ? "; în probă stopul a venit de " + cate(f.stop, "dată", "ori") + " din " + cate(f.n, "pornire", "porniri") : "") + ".",
       larg ? "Aș lăsa botul să lucreze; dacă stă peste " + (ore ? 2 * ore + " h" : "de două ori durata tipică") + ", te anunț." : "Aș ține stopul la marginea gridului: îngust iese repede" + (ore ? " (tipic " + ore + " h)" : "") + ".") };
 };
 // v101.73 (I-540): ceasul ferestrei LARG - botul stă de peste 2× durata tipică din proba ferestrei

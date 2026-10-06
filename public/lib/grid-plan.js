@@ -205,7 +205,8 @@ var GridPlan = (function () {
     var N = { ingust: "ÎNGUST", larg: "LARG" }, la = ora ? " din fișa de la " + ora : " din fișă";
     if (!fb.k || !N[fb.k]) return "Gridul botului nu seamănă nici cu ÎNGUST, nici cu LARG" + la + ".";
     var s = nr(fb.stop), n = nr(fb.n), o = nr(fb.oreTipic);
-    return "Ai pornit " + N[fb.k] + la + (fb.rec === "asteapta" ? ", deși fișa zicea să aștepți" : N[fb.rec] ? (fb.rec === fb.k ? ", cum recomanda fișa" : ", deși fișa recomanda " + N[fb.rec]) : "")
+    var lv = nr(fb.levierFisa) > 0 && nr(fb.levierBot) > 0 && Math.round(fb.levierFisa) !== Math.round(fb.levierBot) ? " (levierul " + Math.round(fb.levierBot) + "×, fișa avea " + Math.round(fb.levierFisa) + "×)" : "";   // v100.114
+    return "Ai pornit " + N[fb.k] + la + lv + (fb.rec === "asteapta" ? ", deși fișa zicea să aștepți" : N[fb.rec] ? (fb.rec === fb.k ? ", cum recomanda fișa" : ", deși fișa recomanda " + N[fb.rec]) : "")
       + (s !== null && n !== null && n > 0 ? "; în probă stopul a venit în " + s + " din " + cate(n, "pornire", "porniri") + " (" + Math.round(s / n * 100) + "%)" + (o !== null && o > 0 ? ", ieșirea tipică " + (o < 1 ? "sub o oră" : "după " + ORE(o)) : "") : "") + ".";
   }
   // motivele fiecărei ferestre, din cifrele ei (nimic scris de mână): { da: [], nu: [] }
@@ -234,10 +235,12 @@ var GridPlan = (function () {
   // fer = { ta, mea } (fiecare { jos, sus, levier, dir? }); ⇒ "ingust" | "larg" | null
   function recunoaste(bot, fer) {
     var b = bot || {}, J = nr(b.jos), S = nr(b.sus), L = nr(b.levier), lista = [["ta", "ingust"], ["mea", "larg"]];
-    if (!(J > 0) || !(S > J) || !(L > 0)) return null;
+    if (!(J > 0) || !(S > J)) return null;
     for (var i = 0; i < lista.length; i++) {
       var x = fer && fer[lista[i][0]];
-      if (!x || !(nr(x.jos) > 0) || !(nr(x.sus) > 0) || Math.round(nr(x.levier)) !== Math.round(L)) continue;
+      // v100.114 (el, 06.10: „ZAMA am pornit după ce a propus fișa”): fereastra = BANDA (și direcția); levierul poate diferi (fișa îl taie la cel
+      // sigur, el îl alege) - se spune separat (fereastraBotului: levierFisa / levierBot), nu mai face din ÎNGUST „alt grid”
+      if (!x || !(nr(x.jos) > 0) || !(nr(x.sus) > 0)) continue;
       if (x.dir && b.dir && x.dir !== b.dir) continue;
       if (Math.abs(J / x.jos - 1) <= 0.02 && Math.abs(S / x.sus - 1) <= 0.02) return lista[i][1];
     }
@@ -258,7 +261,7 @@ var GridPlan = (function () {
     var cu = function (o, x) { return x ? { jos: x.jos, sus: x.sus, levier: x.levier, dir: o.dir } : null; };
     for (var i = 0; i < cand.length; i++) {
       var o = cand[i], k = recunoaste({ dir: dir, jos: nr(b.gridJos), sus: nr(b.gridSus), levier: nr(b.levier) }, { ta: cu(o, o.ta), mea: cu(o, o.mea) });
-      if (k) { var x = k === "larg" ? o.mea : o.ta; return { k: k, t: o.t, simbol: o.simbol, verdict: o.verdict || null, rec: o.rec || null, stop: nr(x.stop), n: nr(x.n), oreTipic: nr(x.oreTipic) }; }
+      if (k) { var x = k === "larg" ? o.mea : o.ta; return { k: k, t: o.t, simbol: o.simbol, verdict: o.verdict || null, rec: o.rec || null, stop: nr(x.stop), n: nr(x.n), oreTipic: nr(x.oreTipic), levierFisa: nr(x.levier), levierBot: nr(b.levier) }; }
     }
     return { k: null, t: cand[0].t, simbol: cand[0].simbol, verdict: cand[0].verdict || null, rec: cand[0].rec || null };
   }

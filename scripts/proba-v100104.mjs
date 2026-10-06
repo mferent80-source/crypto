@@ -50,7 +50,9 @@ const OF = { simbol: "ABC_USDT_PERP", t: 1000, dir: "long", rec: "larg", ta: { j
 const BOT = { id: "9", baza: "ABC.PERP", directie: "long", gridJos: 0.891, gridSus: 1.108, levier: 1, investit: 100, pornitLa: 5000, activ: true };
 await test("(2) I-538 GridPlan.fereastraBotului: doar oferte de ÎNAINTE de pornire (≤ 12 h), aceeași monedă și direcție; fără potrivire ⇒ k null cu oferta; fără ofertă ⇒ null", () => {
   const f = GP.fereastraBotului(BOT, [OF]); assert.equal(f.k, "larg"); assert.equal(f.t, 1000); assert.deepEqual([f.stop, f.n, f.oreTipic, f.rec], [15, 100, 24, "larg"]);
-  assert.equal(GP.fereastraBotului(Object.assign({}, BOT, { levier: 3 }), [OF]).k, null, "ofertă fără potrivire");
+  // v100.114 (ZAMA, 06.10): alt levier, aceeași bandă = aceeași fereastră (levierul se spune); altă bandă = fără potrivire
+  const lv = GP.fereastraBotului(Object.assign({}, BOT, { levier: 3 }), [OF]); assert.equal(lv.k, "larg"); assert.equal(lv.levierBot, 3);
+  assert.equal(GP.fereastraBotului(Object.assign({}, BOT, { gridJos: BOT.gridJos * 0.9 }), [OF]).k, null, "ofertă fără potrivire");
   assert.equal(GP.fereastraBotului(Object.assign({}, BOT, { pornitLa: 500 }), [OF]), null, "pornit înaintea ofertei");
   assert.equal(GP.fereastraBotului(Object.assign({}, BOT, { pornitLa: 1000 + 13 * 3600000 }), [OF]), null, "peste 12 h");
   assert.equal(GP.fereastraBotului(Object.assign({}, BOT, { baza: "XYZ.PERP" }), [OF]), null, "altă monedă");
@@ -67,7 +69,7 @@ await test("(2) I-538 serverul ține ferestrele oferite (curățate, ultimele 60
 await test("(2) I-538 mesajul de pornire: „pornit ca LARG” cu ora fișei și proba ferestrei; „alt grid decât fișa” fără potrivire; colectorul îl trimite o dată", () => {
   const m = MC.pornitCa("ABC", { k: "larg", t: Date.UTC(2026, 9, 5, 11, 20), stop: 15, n: 100, oreTipic: 24 });
   assert.equal(m.titlu, "ABC: pornit ca LARG din fișă"); assert.equal(m.cheie, "pornit-ca");
-  assert.equal(m.mesaj, "Seamănă cu LARG din fișa de la 14:20 (în probă: stopul atins de 15 ori din 100 de porniri).\n👉 Aș lăsa botul să lucreze; dacă stă peste 48 h, te anunț.");
+  assert.equal(m.mesaj, "Seamănă cu LARG din fișa de la 14:20; în probă stopul a venit de 15 ori din 100 de porniri.\n👉 Aș lăsa botul să lucreze; dacă stă peste 48 h, te anunț.");   /* v101.77: formularea nouă */
   assert.equal(MC.pornitCa("ABC", { k: "ingust", t: Date.UTC(2026, 9, 5, 11, 20), stop: 40, n: 100, oreTipic: 5 }).mesaj.split("\n")[1], "👉 Aș ține stopul la marginea gridului: îngust iese repede (tipic 5 h).");
   const a = MC.pornitCa("ABC", { k: null, t: Date.UTC(2026, 9, 5, 11, 20) }); assert.equal(a.titlu, "ABC: pornit cu alt grid decât fișa");
   assert.equal(a.mesaj, "Nu seamănă nici cu ÎNGUST, nici cu LARG din fișa de la 14:20.\n👉 Aș verifica poarta: gridul poate să nu încapă în pragul tău de pierdere.");
