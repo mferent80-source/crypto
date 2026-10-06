@@ -8,7 +8,9 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
-const pine = fs.existsSync("C:/Users/Cimin/pine-scripts/GRID-FISA/Grid_Fisa_v2_0.pine") ? fs.readFileSync("C:/Users/Cimin/pine-scripts/GRID-FISA/Grid_Fisa_v2_0.pine", "utf8") : null;
+// 06.10 (v100.117): v2.0 a fost șters de pe disc (au venit v2.1…v2.4) ⇒ se citește CEA MAI NOUĂ Grid_Fisa_v2_N.pine, nu un nume fix
+const DIR_GF = "C:/Users/Cimin/pine-scripts/GRID-FISA", ultimGF = fs.existsSync(DIR_GF) ? fs.readdirSync(DIR_GF).map((f) => /^Grid_Fisa_v2_(\d+)\.pine$/.exec(f)).filter(Boolean).sort((a, b) => Number(b[1]) - Number(a[1]))[0] : null;
+const pine = ultimGF ? fs.readFileSync(DIR_GF + "/" + ultimGF[0], "utf8") : null;
 const gc = fs.readFileSync(new URL("../public/lib/grid-calcul.js", import.meta.url), "utf8");
 
 let teste = 0, picate = 0;
@@ -30,7 +32,7 @@ await test("grCodTV: 11 campuri, ultimul „geometric” (dupa suma), ca GRID-FI
   assert.equal(p.length, 11, c); assert.equal(p[10], "geometric"); assert.equal(p[0], "long"); assert.equal(p[3], "6", "v100.38: 5 intervale -> 6 grile Pionex (linii)"); assert.equal(p[9], "100");
 });
 await test("GRID-FISA v2.0 (pe disc) citeste al 11-lea camp ca tip si deseneaza geometric jos·g^k", () => {
-  assert.ok(pine, "Grid_Fisa_v2_0.pine lipseste din pine-scripts/GRID-FISA");
+  assert.ok(pine, "nicio Grid_Fisa_v2_N.pine in pine-scripts/GRID-FISA");
   assert.match(pine, /t == "geometric" or t == "geo"/); assert.match(pine, /jos \* math\.pow\(g, k\)/);
 });
 

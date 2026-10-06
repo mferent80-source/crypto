@@ -69,6 +69,8 @@ export async function onRequestGet({request,env}){
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
   // v100.113: riscul boților și al acțiunilor + comportamentul (RiscLuna.raport, scris de colector o dată pe zi)
   if(action==="risc"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("risc")||"null")}catch{r=null}return json({risc:r})}
+  // v100.117 (I-561): carnetul fișei - raportul de noapte al laboratorului (re-joc + ofertele judecate)
+  if(action==="carnet"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("carnet")||"null")}catch{r=null}return json({carnet:r})}
   // v100.85 (reveniri + short): istoricul listelor de monede, urmărirea lor și notările (le scrie tura sugestiilor, o dată pe zi)
   if(action==="sugestii"){let s=null,l=[];try{s=JSON.parse(await env.ISTORIC.get("sugestii")||"null")}catch{s=null}try{l=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{l=[]}return json({sugestii:s,istoric:Array.isArray(l)?l:[]})}
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
@@ -111,14 +113,14 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"?262144:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"?262144:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
   if(action==="ferestre"){
     const o=corp&&corp.oferta,t=nr(o&&o.t),sim=String(o&&o.simbol||""),dir=String(o&&o.dir||"");
     if(!/^[A-Z0-9]{1,20}_USDT_PERP$/.test(sim)||!(t>0)||(dir!=="long"&&dir!=="short"))return json({error:"oferta: simbol PERP, timp și direcție"},400);
-    const fer=x=>{if(!x||typeof x!=="object")return null;const j=nr(x.jos),s=nr(x.sus),lv=nr(x.levier);if(!(j>0)||!(s>j)||!(lv>0))return null;return {jos:j,sus:s,levier:lv,stop:nr(x.stop),n:nr(x.n),oreTipic:nr(x.oreTipic)}};
-    const nou={simbol:sim,t:t,dir:dir,verdict:/^[a-z-]{1,12}$/.test(String(o.verdict||""))?String(o.verdict):null,rec:o.rec==="ingust"||o.rec==="larg"||o.rec==="asteapta"?o.rec:null,ultim:nr(o.ultim)>=t?nr(o.ultim):null,ta:fer(o.ta),mea:fer(o.mea)};
+    const fer=x=>{if(!x||typeof x!=="object")return null;const j=nr(x.jos),s=nr(x.sus),lv=nr(x.levier);if(!(j>0)||!(s>j)||!(lv>0))return null;const g=nr(x.grile),sj=nr(x.stopJos),ss=nr(x.stopSus),f={jos:j,sus:s,levier:lv,stop:nr(x.stop),n:nr(x.n),oreTipic:nr(x.oreTipic)};if(g>0&&g<=500)f.grile=Math.round(g);if(sj>0&&ss>sj){f.stopJos=sj;f.stopSus=ss}return f};   /* v100.117 (I-561): + grilele și prețurile stopului (carnetul), doar când sunt valide - ofertele vechi își păstrează forma */
+    const nou={simbol:sim,t:t,dir:dir,verdict:/^[a-z-]{1,12}$/.test(String(o.verdict||""))?String(o.verdict):null,rec:o.rec==="ingust"||o.rec==="larg"||o.rec==="asteapta"?o.rec:null,ultim:nr(o.ultim)>=t?nr(o.ultim):null,ta:fer(o.ta),mea:fer(o.mea)};if(o.cine==="ta"||o.cine==="mea")nou.cine=o.cine;if(o.egale===true||o.egale===false)nou.egale=o.egale;
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("ferestre")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
     l=l.filter(x=>!(x&&x.simbol===sim&&x.t===t));l.push(nou);l=l.slice(-60);
     await env.ISTORIC.put("ferestre",JSON.stringify(l));return json({ok:true,n:l.length});
@@ -259,6 +261,7 @@ export async function onRequestPost({request,env}){
   // v100.47 (I-469): situatiile asemanatoare - cazurile din arhiva cu ce se stia la pornire (colectorul, o data pe noapte)
   // v100.113: raportul riscului - un singur obiect, cu „la” (îl scrie colectorul; mărimea e păzită mai sus, 256 KB)
   if(action==="risc"){const r=corp&&corp.risc;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"risc: raportul cu „la”"},400);await env.ISTORIC.put("risc",JSON.stringify(r));return json({ok:true})}
+  if(action==="carnet"){const r=corp&&corp.carnet;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"carnet: raportul cu „la”"},400);await env.ISTORIC.put("carnet",JSON.stringify(r));return json({ok:true})}
   if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);const bl=corp.bilant&&typeof corp.bilant==="object"?{adx:typeof corp.bilant.adx==="string"?corp.bilant.adx.slice(0,300):null,sem:typeof corp.bilant.sem==="string"?corp.bilant.sem.slice(0,300):null}:null;await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l,bilant:bl}));return json({ok:true,n:l.length})}
   // v100.50 (I-472): jurnalul deciziilor - „am făcut / n-am făcut” langa actiunea Consilierului; o decizie pe verdict (cheia), ultima ramane.
   // Colectorul scrie inapoi lista cu judecata (r) - atunci corpul are „lista”.

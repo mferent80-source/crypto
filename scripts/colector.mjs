@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.79";
+const VERSIUNE_COLECTOR = "v101.80";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -150,6 +150,8 @@ const Perechi = new Function("GridCalcul", "GridProba", fs.readFileSync(path.joi
 const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "consiliu.js"), "utf8") + "; return Consiliu;")(SemnaleBot);   // v101.29 (I-474): o singura voce
 const Asemanatoare = new Function("Probabilitati", "GraficBot", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati, GraficBot);   // v101.68 (I-530): + GraficBot ⇒ ADX la pornire în fiecare caz   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 const RiscLuna = incarca("risc-luna.js", "RiscLuna");   // v101.76: riscul boților și al acțiunilor + comportamentul (raportul de noapte)
+const Carnet = incarca("carnet.js", "Carnet");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
+const CARNET_FIS = path.join(DATA, "carnet-oferte.json");
 
 const Retea = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "retea.js"), "utf8") + "; return Retea;")(Probabilitati);   // v101.56 (rețeaua neuronală, livrarea 1)
 const Arbori = new Function("Retea", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "arbori.js"), "utf8") + "; return Arbori;")(Retea, Probabilitati);   // v101.63: arborii (aceleași intrări ca rețeaua)
@@ -609,7 +611,20 @@ async function turaLaborator() {
     // v101.10: si monedele botilor care ruleaza (tickerul real Pionex), chiar daca nu sunt in top - randul „botul tău”
     let extra = [];
     try { const act = await cere("/api/bot-orders"); extra = [...new Set((act && act.bots || []).filter((b) => b && b.activ !== false && b.simbolPionex).map((b) => String(b.simbolPionex)))]; } catch (e) { jurnal("laborator botii care ruleaza", e.message); }
-    const r = await turaLaboratorModul({ cere: cerePionex, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridLaborator, GridClasament, top: 20, H: 2, pagini: 12, zile: 60, GridPlan, plan: pp.plan, suma: pp.suma, levier: pp.levier, notaPlan: pp.nota, miscareZi: TabloExtra.miscareZi, extraSimboluri: extra });
+    // v101.80 (I-561): ofertele carnetului - ale laboratorului (pe disc) + ale fișei lui (KV ferestre); cele nejudecate se judecă în tură
+    let carnetOf = []; try { carnetOf = JSON.parse(fs.readFileSync(CARNET_FIS, "utf8")); if (!Array.isArray(carnetOf)) carnetOf = []; } catch { carnetOf = []; }
+    try { const fv = await cere("/api/istoric-bot?action=ferestre"); carnetOf = Carnet.uneste(carnetOf, (fv && Array.isArray(fv.ferestre) ? fv.ferestre : []).map(Carnet.dinFisa).filter(Boolean), Date.now()); } catch (e) { jurnal("carnet: ofertele fișei", e.message); }
+    const r = await turaLaboratorModul({ Carnet, carnetDeJudecat: carnetOf.filter((o) => !o.r), cere: cerePionex, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), GridCalcul, GridLaborator, GridClasament, top: 20, H: 2, pagini: 12, zile: 60, GridPlan, plan: pp.plan, suma: pp.suma, levier: pp.levier, notaPlan: pp.nota, miscareZi: TabloExtra.miscareZi, extraSimboluri: extra });
+    if (r.carnet) {
+      try {
+        const toate = Carnet.uneste(carnetOf, r.carnet.oferteNoi, Date.now()); scrieAtomic(CARNET_FIS, toate);
+        const rap = Carnet.raport({ cazuri: r.carnet.cazuri, oferte: toate, acum: Date.now(), ms: r.carnet.ms, fara: r.carnet.fara });
+        if (r.carnet.erori) jurnal("carnet: fișa a căzut de", cate(r.carnet.erori, "dată", "ori"), "în re-joc (pornirile acelea lipsesc)");
+        await trimite("/api/istoric-bot?action=carnet", { carnet: rap });
+        jurnal("carnet:", cate(rap.rejoc.n, "caz", "cazuri"), "pe", cate(rap.rejoc.monede, "monedă", "monede"), "în", Math.round(r.carnet.ms / 1000) + " s ·", cate(rap.inainte.judecate, "ofertă judecată", "oferte judecate"), "din", rap.inainte.oferte, "· alegerea:", rap.rejoc.intrebari.alegere && rap.rejoc.intrebari.alegere.stare);
+      } catch (e) { jurnal("carnet ESEC", e.message); }
+      delete r.carnet;   // laboratorul pleacă pe server fără cazuri
+    }
     if (r.monede >= 10) { await trimite("/api/istoric-bot?action=laborator", r); laboratorLa = Date.now(); tineRitm("laborator", laboratorLa); }
     else { jurnal("laborator NEURCAT: doar", cate(r.monede, "monedă", "monede")); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }
   } catch (e) { jurnal("laborator ESEC", e.message); laboratorLa = Date.now() - LABORATOR_MS + 60 * 60000; }

@@ -275,6 +275,6 @@ var RiscLuna = (function () {
 
   return { bazinBoti: bazinBoti, ritm: ritm, monteCarlo: monteCarlo, supravietuire: supravietuire, pragulAtins: pragulAtins, comportamentBoti: comportamentBoti, descBoti: descBoti,
     episoade: episoade, comportamentActiuni: comportamentActiuni, descActiuni: descActiuni, corelatie: corelatie, perechiCorelate: perechiCorelate,
-    textBot: textBot, textActiune: textActiune, textMediere: textMediere, textLuna: textLuna, raport: raport, generator: generator, textObicei: textObicei, concluzii: concluzii, textTotiBotii: textTotiBotii, textCorelatie: textCorelatie };
+    textBot: textBot, textActiune: textActiune, textMediere: textMediere, textLuna: textLuna, raport: raport, generator: generator, textObicei: textObicei, concluzii: concluzii, textTotiBotii: textTotiBotii, textCorelatie: textCorelatie, verdict: verdict };
 })();
 if (typeof globalThis !== "undefined") globalThis.RiscLuna = RiscLuna;

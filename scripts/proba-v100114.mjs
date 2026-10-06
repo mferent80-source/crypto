@@ -45,7 +45,7 @@ await test("(P) T212.perechi: vânzare și cumpărare la aceeași oră - întâi
   assert.equal(p.faraCumparare.length, 0); assert.equal(p.deschise.length, 0); assert.equal(p.inchise.length, 2);
 });
 await test("(G) garda textelor are grupul „risc” (strict): probabilitățile, luna proastă, toți boții, corelația, obiceiurile, concluziile, pornirea", () => {
-  assert.match(citeste("scripts", "garda-texte.mjs"), /import \{ situatiiRisc \} from "\.\/lib\/garda-risc\.mjs";/); assert.match(citeste("scripts", "garda-texte.mjs"), /"risc"\]\);/);
+  assert.match(citeste("scripts", "garda-texte.mjs"), /import \{ situatiiRisc \} from "\.\/lib\/garda-risc\.mjs";/); assert.match(citeste("scripts", "garda-texte.mjs"), /STRICT = new Set\(\[[^\]]*"risc"[^\]]*\]\);/);   // v100.117: lista continuă („carnet”)
   const g = citeste("scripts", "lib", "garda-risc.mjs"); for (const f of ["textBot", "textActiune", "textMediere", "textLuna", "textTotiBotii", "textCorelatie", "textObicei", "concluzii", "textPornit"]) assert.match(g, new RegExp("\\." + f + "\\("), f);
 });
 await test("(E) versiunea v100.114 / colector v101.77", () => {

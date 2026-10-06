@@ -84,8 +84,8 @@ const meniu = (() => { const i = html.indexOf('<div class="sideMenu">'); return 
 const nav = (bucata) => [...bucata.matchAll(/data-nav="([a-z0-9]+)"/g)].map((m) => m[1]);
 const grup = (id) => { const i = meniu.indexOf('id="' + id + '"'); assert.ok(i > 0, id); const r = meniu.slice(i + 5), j = r.search(/<(div|details) class="sideGrup[ "]/); return j < 0 ? r : r.slice(0, j); };
 await test("(554a) meniul în 3 grupe, cu toate cele 47 de butoane (nimic șters): Zilnic, Unelte, Laborator vechi (pliat)", () => {
-  assert.equal([...meniu.matchAll(/class="sideBtn/g)].length, 47);
-  assert.deepEqual(nav(grup("sideZilnic")), ["dash", "tabloubot", "gridset", "jurnaltrade", "t212", "scan", "alerts", "montecarlo"]);
+  assert.equal([...meniu.matchAll(/class="sideBtn/g)].length, 48);   // v100.117: + „Carnetul fișei” (I-561) în Zilnic
+  assert.deepEqual(nav(grup("sideZilnic")), ["dash", "tabloubot", "gridset", "carnet", "jurnaltrade", "t212", "scan", "alerts", "montecarlo"]);
   assert.deepEqual(nav(grup("sideUnelte")), ["market", "deriv", "stocks", "account", "cloud", "settings", "health"]);
   const v = nav(grup("sideVechi")); assert.equal(v.length, 32); for (const k of ["desk", "engine", "mtf", "signals", "backtest", "replaylab", "researchml", "decisioncore"]) assert.ok(v.includes(k), k);
   assert.match(meniu, /<details class="sideGrup sideVechi" id="sideVechi"><summary class="sideGrupCap">Laborator vechi \(32\)<\/summary>/);
@@ -103,10 +103,10 @@ await test("(555) bara de jos pe telefon: Tablou · Grid · T212 · Alerte · �
   const j = html.indexOf('id="moreDrawer"'), sertar = html.slice(j, j + 6000);
   for (const k of ["dash", "scan", "signals", "market"]) assert.match(sertar, new RegExp("moreNav\\('" + k + "'"), k);
 });
-await test("(E) versiunea v100.116 / colector v101.79 (reparațiile reviziei)", () => {
-  assert.match(html, /content="v100\.116"/); assert.match(html, /id="antetVersiune">v100\.116/); assert.match(html, /id="healthAppVersion">v100\.116</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.116.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-116";/);
-  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.79";/);
+await test("(E) versiunea v100.116+ / colector v101.79+ (merge mai departe)", () => {
+  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
+  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(79|[89]\d)";/);
   const sc = JSON.parse(citeste("package.json")).scripts; assert.equal(sc["test:v100115"], "node scripts/proba-v100115.mjs"); assert.match(sc.test, /npm run test:v100115/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

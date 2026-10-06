@@ -17,15 +17,16 @@ import { situatiiAcasa } from "./lib/garda-acasa.mjs";
 import { situatiiRetea } from "./lib/garda-retea.mjs";   // v100.80 (rețeaua neuronală)
 import { situatiiSugestii } from "./lib/garda-sugestii.mjs";   // v100.85 (reveniri + short)
 import { situatiiRisc } from "./lib/garda-risc.mjs";   // v100.114 (riscul și obiceiurile, revizia v100.113)
+import { situatiiCarnet } from "./lib/garda-carnet.mjs";   // v100.117 (I-561): carnetul fișei
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js", "reveniri.js", "busola.js", "grid-plan.js", "risc-luna.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
+for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js", "reveniri.js", "busola.js", "grid-plan.js", "risc-luna.js", "carnet.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
 const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, Directie: DR } = globalThis;
 
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;
 // pachetul 2: sfaturi = sfaturi.js, consiliu-2 = Consilierul cu sfaturile reale, todo = „Ce ai de făcut acum”, server = avertismentele;
 // „alerte” = titlurile/textele din regulile alertelor (alerte.js), strict la pachetul 3)
-export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo", "server", "alerte", "actiuni", "acasa", "retea", "sugestii", "risc"]);   // v100.68: + alerte (pachetul 3); v100.69: + actiuni (pachetul 4); v100.72: + acasa (pachetul 5); v100.80: + retea (rețeaua neuronală)
+export const STRICT = new Set(["semafor", "cartele", "consiliu", "sfaturi", "consiliu-2", "todo", "server", "alerte", "actiuni", "acasa", "retea", "sugestii", "risc", "carnet"]);   // v100.68: + alerte (pachetul 3); v100.69: + actiuni (pachetul 4); v100.72: + acasa (pachetul 5); v100.80: + retea (rețeaua neuronală)
 
 // ---- regulile ----
 export const REGULI = {
@@ -334,6 +335,7 @@ export function situatii() {
   situatiiRetea(pune);   // v100.80 (rețeaua neuronală, livrarea 1)
   situatiiSugestii(pune);   // v100.85 (reveniri + short)
   situatiiRisc(pune);   // v100.114: riscul boților și al acțiunilor + obiceiurile
+  situatiiCarnet(pune);   // v100.117: carnetul fișei
   return out;
 }
 
