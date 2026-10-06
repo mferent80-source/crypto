@@ -4995,9 +4995,10 @@ function grCodTV(st,info,extra){
   var stopJos=st.dir==="short"?null:(st.stop&&st.stop.jos);
   var parti=[st.dir,p(st.jos),p(st.sus),String(st.grile+1),String(st.levier),   // v100.38: N intervale -> N + 1 linii Pionex
     p(stopJos),p(st.stop&&st.stop.sus),p(st.lichidare&&st.lichidare.jos),p(st.lichidare&&st.lichidare.sus),st.suma>0?String(st.suma):"0","geometric"];   // v100.36: + tipul (fisa socoteste geometric; fara el, GRID-FISA v2.0 il lua din setarea indicatorului)
+  // v100.118: fisa fara verdict trimite „fara-date” - golul inseamna pentru GRID-FISA v2.4 „cod din Tablou, botul ruleaza”
   // v100.48 (auditul GRID-FISA v2.1): + planul gol (0;0;0 - planul il pui in poarta / Tablou), verdictul FISEI (GRID-FISA v2.2 nu mai zice
   // „POȚI PORNI” cand fisa zice NU), momentul generarii si marginea din profilul monedei
-  if(extra){var fr=function(v){v=Number(v);return isFinite(v)&&v>0?v.toFixed(5):"0"};parti.push("0","0","0",String(extra.verdict||""),String(Math.round(extra.copiatLa||Date.now())),fr(extra.marg&&extra.marg.jos),fr(extra.marg&&extra.marg.sus))}
+  if(extra){var fr=function(v){v=Number(v);return isFinite(v)&&v>0?v.toFixed(5):"0"};parti.push("0","0","0",String(extra.verdict||"fara-date"),String(Math.round(extra.copiatLa||Date.now())),fr(extra.marg&&extra.marg.jos),fr(extra.marg&&extra.marg.sus))}
   return parti.join(";");
 }
 // v100.48: langa codul fisei, cand fisa NU zice PORNESTE - codul e ca sa vezi liniile (GRID-FISA v2.2 primeste verdictul si spune la fel)
@@ -6710,7 +6711,7 @@ function tbDeseneazaTvCod(){
   if(v&&v.sig===c.sig){el.hidden=true;el.innerHTML="";return}
   var P=function(x){return tbPretScurt(x)};
   var titlu=v&&v.jos?"🔁 Ai schimbat gridul: "+P(v.jos)+" – "+P(v.sus)+" ("+TextRo.cate(v.grile,"grilă","grile")+") → "+P(c.jos)+" – "+P(c.sus)+" ("+TextRo.cate(c.grile,"grilă","grile")+")":"📺 Gridul de acum, pentru TradingView";
-  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.2 → „Codul din fișă” (cu tipul gridului, planul tău, vârsta lichidării și marginea din profilul monedei; v2.0 și v2.1 refuză codul de 18 câmpuri — lipește întâi v2.2). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
+  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.4 → „Codul din fișă” (cu tipul gridului, planul tău, vârsta lichidării, marginea din profilul monedei și momentul pornirii botului; v2.3 și mai vechi refuză codul de 19 câmpuri — lipește întâi v2.4). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
     +'<div class="tbGnBtn"><button type="button" class="actionGhost" value="'+escapeHtml(c.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul</button><button type="button" class="actionGhost" data-action-click="tbTvAmPus()">L-am pus</button></div>';
   el.hidden=false;
 }

@@ -27,13 +27,14 @@ await test("botul: cu „extra” - 18 campuri: verdict gol (botul ruleaza), mom
   const fara = TE.codTVBot(bot(), { minus: 7.5, plus: 2.6, afaraOre: 12 });
   const c = TE.codTVBot(bot(), { minus: 7.5, plus: 2.6, afaraOre: 12 }, { copiatLa: 1790830000000, margJos: 0.0301, margSus: 0.0342 });
   const p = c.cod.split(";");
-  assert.equal(p.length, 18, c.cod); assert.equal(p[14], ""); assert.equal(p[15], "1790830000000"); assert.equal(p[16], "0.03010"); assert.equal(p[17], "0.03420");
+  assert.equal(p.length, 19, c.cod);   // v100.118: + pornirea (campul 19, proba-v100118)
+  assert.equal(p[14], ""); assert.equal(p[15], "1790830000000"); assert.equal(p[16], "0.03010"); assert.equal(p[17], "0.03420");
   assert.equal(c.sig, fara.sig, "alt moment de generare nu e alt grid");
 });
 await test("botul fara tip si fara plan: pozitiile 11-14 se completeaza (tip gol, plan 0;0;0) ca sa nu alunece campurile 15-18", () => {
   const c = TE.codTVBot(bot({ brut: { buOrderData: { row: 8 } } }), null, { copiatLa: 5, margJos: null, margSus: null });
-  const p = c.cod.split(";"); assert.equal(p.length, 18, c.cod);
-  assert.equal(p[10], ""); assert.deepEqual(p.slice(11, 14), ["0", "0", "0"]); assert.deepEqual(p.slice(16), ["0", "0"]);
+  const p = c.cod.split(";"); assert.equal(p.length, 19, c.cod);   // v100.118: + pornirea (campul 19)
+  assert.equal(p[10], ""); assert.deepEqual(p.slice(11, 14), ["0", "0", "0"]); assert.deepEqual(p.slice(16, 18), ["0", "0"]);
 });
 await test("pagina: fisa trimite verdictul ei + momentul + marginea; nota langa cod cand fisa nu zice PORNESTE; textele spun GRID-FISA v2.2", () => {
   const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");

@@ -502,6 +502,10 @@ var TabloExtra = (function () {
       if (parti.length === 11) parti.push("0", "0", "0");
       var fr = function (v) { v = nr(v); return v !== null && v > 0 ? v.toFixed(5) : "0"; };
       parti.push(String(extra.verdict || ""), nr(extra.copiatLa) !== null ? String(Math.round(extra.copiatLa)) : "", fr(extra.margJos), fr(extra.margSus));
+      // v100.118 (I-566, 06.10): al 19-lea camp = momentul pornirii botului (ms, Pionex createTime) - GRID-FISA v2.4 il ia cand „Pornit la”
+      // e gol. PONS 06.10: pornit la 18:48, GRID-FISA v2.3 zicea „ÎNAINTE DE PORNIRE” si alertele botului taceau. Necunoscut = „0”.
+      var pz = nr(b.pornitLa);
+      parti.push(pz !== null && pz > 0 ? String(Math.round(pz)) : "0");
     }
     return { cod: parti.join(";"), sig: parti.slice(0, 7).concat(tip ? [tip] : []).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir, tip: tip };
   }
