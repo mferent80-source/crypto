@@ -336,7 +336,7 @@ var Alerte = (function () {
       if (RANG[a.nivel] > RANG[v.nivel]) trimite = true;                       // s-a agravat
       else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= (REPETA_CHEIE_MS[cheie + ":" + a.nivel] || REPETA_CHEIE_MS[cheie] || REPETA_MS[a.nivel])) trimite = true; // persista
       // v100.68: nota „tăcut pe Discord” pe randul 1 (faptul), nu lipita de actiune
-      if (trimite) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: cuNota(a.mesaj, "tăcut pe Discord: pe boții tăi n-a bătut hazardul"), doarRadar: true } : a.doarRadar ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
+      if (trimite) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: cuNota(a.mesaj, "nu-l trimit pe Discord: pe boții tăi nu bate întâmplarea"), doarRadar: true } : a.doarRadar ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
       // coborarea critic -> atentie NU reseteaza ceasul: o revenire rapida in critic nu e o agravare noua
       nou[cheie] = { nivel: a.nivel, la: trimite ? acum : (RANG[a.nivel] <= RANG[v.nivel] ? v.la : acum) };
     });

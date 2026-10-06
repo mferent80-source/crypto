@@ -89,7 +89,9 @@ var GraficBot = (function () {
       var r = pe && pe[x.tf], an = r && typeof Directie !== "undefined" ? Directie.analizeaza(r, 1, d) : null;
       var o = { tf: x.tf, et: x.et, sc: x.sc, dir: an && an.dir || null, ton: an && an.fata ? an.fata.ton : "gol", vechime: an && an.vechime || null };
       if (!o.dir) { o.text = r ? "prea puține bare închise (trebuie 60)" : "Pionex n-a dat lumânările la ultima cerere"; return o; }
-      var b = bare(r); b.pop();
+      // v100.107 (revizia): ADX și RSI pe aceleași bare ca graficul și rândul „ADX 14” (cu bara în formare) - aceeași cifră pe TF-ul graficului;
+      // direcția rămâne pe bare închise (Directie)
+      var b = bare(r);
       var a = adx(b, 14).adx[b.length - 1], rs = rsi(b.map(function (y) { return y.c; }), 14)[b.length - 1];
       o.adx = a; o.rsi = rs;
       // ADX mare cu „lateral” = ADX-ul ține minte o mișcare mai veche (TAKE 1 zi, 06.10: 58, umflat de ziua de 23.09)
@@ -300,7 +302,7 @@ var GraficBot = (function () {
   function desen(o) {
     var raw = o.bare || [], st = o.st || {}, W = Math.max(300, o.W || 800), ingust = !!o.ingust, simplu = !!o.simplu;
     if (simplu) st = { ema: st.ema !== false, rsi: !!st.rsi, adx: st.adx !== false };   /* v100.98: Simplu = esențialul */
-    var gut = ingust ? 108 : 176, plotW = W - gut, mainH = ingust ? 270 : Math.round(Math.max(340, Math.min(520, W * 0.36))),   /* el, 01.10: graficul mai mare - creste cu latimea */ volH = ingust ? 34 : 46, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) ? (ingust ? 7 : 9) : 0;
+    var gut = ingust ? 108 : 176, plotW = W - gut, mainH = ingust ? 270 : Math.round(Math.max(340, Math.min(520, W * 0.36))),   /* el, 01.10: graficul mai mare - creste cu latimea */ volH = ingust ? 34 : 46, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) && typeof Directie !== "undefined" ? (ingust ? 7 : 9) : 0;
     var cl = raw.map(function (b) { return b.c; }), S = { e20: ema(cl, 20), e50: ema(cl, 50), bb: bollinger(cl, 20, 2), rsi: rsi(cl, 14) };
     // v100.106: trendul pe fiecare bară ÎNCHISĂ, pe istoria lungă a TF-ului (o.trendIstoric), ca banda să nu înceapă abia de la bara 60
     S.tr = null;
@@ -459,7 +461,8 @@ var GraficBot = (function () {
     // v100.106: semaforul trendului, sus-stânga peste grafic (în locul gol lăsat sus); becul TF-ului graficului e încercuit
     var semH = 0;
     if (Array.isArray(o.semafor) && o.semafor.length) {
-      var CS = ingust ? 38 : 62, HS = ingust ? 40 : 30, sx0 = 8, sy0 = 8, CULS = { bine: COL.good, rau: COL.bad, atentie: COL.warn, gol: COL.mut };
+      // v100.107 (revizia): pe un grafic îngust (telefon mic) becurile se strâng ca cutia să rămână în zona prețurilor
+      var CS = ingust ? Math.max(26, Math.min(38, Math.floor((plotW - 24) / o.semafor.length))) : 62, HS = ingust ? 40 : 30, sx0 = 8, sy0 = 8, CULS = { bine: COL.good, rau: COL.bad, atentie: COL.warn, gol: COL.mut };
       semH = HS + 8 + 6;
       q.push('<rect class="gbSemFond" x="' + sx0 + '" y="' + sy0 + '" width="' + (o.semafor.length * CS + 8) + '" height="' + (HS + 8) + '" rx="9" fill="' + COL.fond + '" fill-opacity=".88" stroke="#213247"/>');
       o.semafor.forEach(function (x, i) {

@@ -23,6 +23,7 @@ var Consiliu = (function () {
     var p = nr(s && s.pctJos), z = nr(s && s.zile), dinT = p === null ? /(\d+(?:[.,]\d+)?)\s?%/.exec(String(s && s.titlu || "")) : null;
     if (p === null && dinT) p = Number(dinT[1].replace(",", "."));   // forma veche a sfatului: cifra din titlu
     if (p === null) return mic(s && s.titlu);
+    if (p < 0.05) return "marginea de jos e chiar la preț" + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");   /* v100.107: nu „−0,0%” */
     return "marginea de jos e la −" + TextRo.pct(p) + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");
   }
   // revizia 01.10 (actiuni): un simbol in capul frazei („ECHO e în…”) nu se micsoreaza - inainte ajungea „eCHO” pe Discord
@@ -231,7 +232,8 @@ var Consiliu = (function () {
   // v100.106: „de ce s-a schimbat” pe ecran - cu ora, cu „a apărut / a dispărut” (și pentru textele vechi din KV, scrise cu „· + / · −”)
   // și cu avertizarea că cifrele motivului sunt cele din clipa schimbării (pe TAKE: „5,6%” atunci, 9,1% acum)
   function deCeAfisat(t, mn) {
-    t = String(t || "").replace(/ · \+ /g, " · a apărut: ").replace(/ · − /g, " · a dispărut: "); mn = Math.max(1, Math.round(nr(mn) || 0));
+    t = String(t || ""); mn = Math.max(1, Math.round(nr(mn) || 0));
+    if (!/ · a (apărut|dispărut): /.test(t)) t = t.replace(/ · \+ /g, " · a apărut: ").replace(/ · − /g, " · a dispărut: ");   /* v100.107: doar textele vechi din KV */
     var cand = mn < 60 ? mn + " min" : Math.round(mn / 60) + " h", acelasi = /^același verdict, alte motive/.test(t);
     return (acelasi ? "Motivele s-au schimbat acum " + cand + ", verdictul a rămas" + t.replace(/^același verdict, alte motive/, "") : "Verdictul s-a schimbat acum " + cand + ", " + t)
       + (/a (apărut|dispărut): [^·]*\d/.test(t) ? " · cifrele sunt cele de atunci" : "");
