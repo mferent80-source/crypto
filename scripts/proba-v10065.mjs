@@ -61,7 +61,7 @@ await test("(a) piața CU botul: verdele „Piața e cu botul” rămâne, cu co
 await test("(a) piața LINIȘTITĂ și contra: verdele spune „Piața e liniștită”, fără direcția contra în el", () => {
   const c = piata("coboara", "coboara", FISA()), m = c.motive.concat(c.rest).find((x) => /^Piața e liniștită/.test(x.titlu));
   assert.ok(m, toate(c).join(" | "));
-  assert.ok(!/Trendul, o singură măsură/.test(m.text || ""), m.text);
+  assert.ok(!/Trendul: /.test(m.text || ""), m.text);
   assert.ok(!toate(c).includes("Piața e cu botul"));
 });
 
@@ -128,7 +128,7 @@ const sm1 = (k) => ({ nivel: "atentie", cod: k.cod, motiv: k.motiv, faCe: k.faCe
 const margine = { cod: "margine", ton: "atentie", titlu: "0,4% până la marginea de jos (0.3841)", text: "~3 grile la margine.", faCe: "" };
 await test("(pachetul 2, M3) „N-aș închide botul pentru asta; …” nu e o ieșire: lângă margine, „n-aș pune bani în plus” nu se pierde", () => {
   const c = C.alcatuieste({ sm: sm1({ cod: "setare", motiv: "Gridul e mai des decât fișa", faCe: "N-aș închide botul pentru asta; la următorul aș lua grile geometrice." }), concret: [], sfaturi: [margine] });
-  assert.match((c.faCe || "") + " " + (c.explica || ""), /[Nn]-aș pune bani în plus cât stă lângă margine/, c.faCe + " || " + c.explica);
+  assert.match((c.faCe || "") + " " + (c.explica || ""), /[Nn]-aș pune bani în plus în botul ăsta/, c.faCe + " || " + c.explica);
   assert.ok((c.faCe.match(/;/g) || []).length <= 1, c.faCe);
 });
 await test("(pachetul 1, M3) când „n-aș pune bani în plus” nu încape și „de ce”-ul e ocupat (ramura stopului), merge la sfârșitul lui „de ce”", () => {
@@ -136,7 +136,7 @@ await test("(pachetul 1, M3) când „n-aș pune bani în plus” nu încape și
   const stop = { cod: "stop", tag: { c: "bad", t: "peste plan" }, atins: -123456789, cifre: { frecventa: 0.6, laOpritor: -123456789, pretPropus: 12000, laPropus: -7.6 }, deCe: "Stopul e prea departe.", act: "Aș muta stopul." };
   const c = C.alcatuieste({ sm: { nivel: "atentie", cod: "x", motiv: "Stopul", faCe: "", componente: [] }, concret: [stop], sfaturi: [margine], opritor: 12345.68 });
   assert.match(c.faCe, /^Aș lăsa stopul la 12345\.68/, c.faCe);
-  assert.match((c.faCe || "") + " " + (c.explica || ""), /[Nn]-aș pune bani în plus cât stă lângă margine/, c.faCe + " || " + c.explica);
+  assert.match((c.faCe || "") + " " + (c.explica || ""), /[Nn]-aș pune bani în plus în botul ăsta/, c.faCe + " || " + c.explica);
 });
 await test("(pachetul 1, M7) titlul Consilierului din pagină are plafonul de 60", () => {
   const c = C.alcatuieste({ sm: sm1({ cod: "x", motiv: "Un motiv foarte lung care spune multe lucruri despre bot și piață, peste șaizeci de caractere", faCe: "Aș aștepta." }), concret: [], sfaturi: [] });
@@ -170,13 +170,13 @@ await test("revizia 2b (2): pe piața contra, trendul „cu botul” nu mai apar
   const c = piata("coboara", "coboara");
   assert.ok(!c.rest.some((x) => /^Trendul e cu botul/.test(x.titlu)), c.rest.map((x) => x.titlu).join(" | "));
   const m = c.motive.find((x) => x.titlu === "Piața merge împotriva botului");
-  assert.ok(m && /\(structura pe medii: long, mediu\)\.$/.test(m.text), m && m.text);
+  assert.ok(m && /; mediile EMA arată long, mediu\.$/.test(m.text), m && m.text);
 });
 await test("revizia 2b (10): motivul verde cu liniștea și direcția - o frază ≤ 160 în text, direcția pe rândul de dedesubt", () => {
   const c = piata("lateral", "lateral", FISA()), m = c.motive.find((x) => x.c === "v");
   assert.ok(m, verzi(c).join(" | "));
   assert.ok(m.text.length <= 160 && !/\.\s+[A-ZĂÂÎȘȚ]/.test(m.text), m.text.length + ": " + m.text);
-  assert.match(m.extra || "", /^Trendul, o singură măsură: piața e laterală/);
+  assert.match(m.extra || "", /^Trendul: piața e laterală/);
 });
 await test("revizia 2b (3): intervalul funding-ului urmează schimbarea (ultimele două la 1 oră ⇒ „la o oră”); 16 h din două rate ⇒ 8 ore", () => {
   const h = ist(8, 20).concat([1, 2, 3].map((k) => ({ fundingTime: T0 + k * ORA, fundingRate: "0.0008" })));
@@ -213,7 +213,9 @@ await test("revizia 2b (7): acțiunea trendului contra după tăria lui (nu „t
 await test("revizia 2b (8, 9): „n-aș pune bani” lipit cu „;” (o frază); stopul exact pe zero = „fără pierdere”, nu „pe plus (0,0)”", () => {
   const stop = { cod: "stop", tag: { c: "bad", t: "peste plan" }, atins: -123456789, cifre: { frecventa: 0.6, laOpritor: -123456789, pretPropus: 12000, laPropus: -7.6 }, deCe: "Stopul e prea departe.", act: "Aș muta stopul." };
   const c = C.alcatuieste({ sm: { nivel: "atentie", cod: "x", motiv: "Stopul", faCe: "", componente: [] }, concret: [stop], sfaturi: [margine], opritor: 12345.68 });
-  assert.ok(/; n-aș pune bani în plus cât stă lângă margine\.$/.test(c.explica || "") && !/\.\s+[A-ZĂÂÎȘȚ]/.test(c.explica), c.explica);
+  // v100.106: adaosul e mai scurt („în botul ăsta”, nu „cât stă lângă margine”) - acum încape în acțiune; regula rămâne: lipit cu „;”, o frază
+  const und = /; n-aș pune bani în plus în botul ăsta\.$/.test(c.faCe || "") ? c.faCe : c.explica;
+  assert.ok(/; n-aș pune bani în plus în botul ăsta\.$/.test(und || "") && !/\.\s+[A-ZĂÂÎȘȚ]/.test(und), c.faCe + " || " + c.explica);
   const k = S.acumConcret({ bot: CRV({ opritorPierdereActiv: true, opritorPierdere: 0.36 }), fisa: FISA(), zero: null, costuri: null, plan: null, acum: T0,
     bani: { stop: { laPropus: -21, laOpritor: 0, frecventa: 0.3 } } }).find((x) => x.cod === "stop");
   assert.equal(k && k.bani, "💰 Stopul tău închide fără pierdere, mai bine decât cel propus (−21,0 USDT): l-aș lăsa unde e.");
@@ -226,7 +228,7 @@ await test("revizia 2b (10): regula „(k din n)” - fiecare frecvență cu mar
 });
 await test("revizia 2b (10): garda verifică și motivul verde al pieței (Consilierul cu direcția)", async () => {
   const G = await import(new URL("./garda-texte.mjs", import.meta.url).href);
-  assert.ok(G.situatii().some((x) => x.mod === "consiliu-2" && /^consiliu\.motiv\d\.(liniste|directie)\.(text|extra)$/.test(x.sursa) && /Trendul, o singură măsură/.test(x.text)), "lipsește motivul verde CU direcția în garda consiliu-2");
+  assert.ok(G.situatii().some((x) => x.mod === "consiliu-2" && /^consiliu\.motiv\d\.(liniste|directie)\.(text|extra)$/.test(x.sursa) && /^Trendul: /.test(x.text)), "lipsește motivul verde CU direcția în garda consiliu-2");
 });
 
 // ---- sarcina 6: garda pe forme reale (ideea 4, M2 din revizia pachetului 2) ----

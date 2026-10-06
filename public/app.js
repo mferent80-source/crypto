@@ -5937,7 +5937,7 @@ function tbConsHtml(c){
     +'<div class="tbConsFac"><p class="tbEt2">Ce aș face eu</p><p>'+escapeHtml(c.faCe||"L-aș lăsa să lucreze.")+'</p>'+(c.explica?'<p class="tbSub tbConsExplica">'+escapeHtml(c.explica)+'</p>':'')+(c.bani?'<p class="tbConsBani">💰 '+escapeHtml(c.bani).replace(/([−+]\d+(?:,\d+)?)/g,'<b class="tbConsSuma">$1</b>')+'</p>':'')+(c.sansa?'<p class="tbConsSansa tbSub">'+escapeHtml(c.sansa)+'</p>':'')
     +(c.nivel&&c.nivel!=="asteapta"?'<div class="tbDecizii"><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(true)" aria-label="Am făcut ce zice Consilierul">✅ am făcut</button><button type="button" class="actionGhost tbDecBtn" data-action-click="tbDecizie(false)" aria-label="N-am făcut ce zice Consilierul">✋ n-am făcut</button><span class="tbSub" id="tbDecStare">'+escapeHtml(tbDecStareText(c))+'</span></div>'+(c.decSoc?'<p class="tbSub tbDecSoc">'+escapeHtml(c.decSoc)+'</p>':''):'')+'</div>'
     +(c.incredere?'<p class="tbConsInc">'+escapeHtml(c.incredere)+'</p>':'')+'</div>'
-    +'<div class="tbConsDr"><h4>De ce'+(c.motive.length?' · '+TextRo.cate(c.motive.length,"motiv","motive")+', după banii în joc':'')+'</h4>'
+    +'<div class="tbConsDr"><h4>'+(c.nivel==="asteapta"?'De ce':'De ce '+escapeHtml(c.eticheta)+(c.motive.length?': '+TextRo.cate(c.motive.length,"motiv","motive")+(c.motive.length>1?', cel mai important primul':''):''))+'</h4>'
     +(c.motive.length?c.motive.map(function(m){return '<div class="tbConsMotiv"><i class="'+escapeHtml(m.c)+'"></i><div><b>'+escapeHtml(m.titlu)+'</b>'+(m.text?'<p>'+escapeHtml(m.text)+'</p>':'')
       +((m.cip||m.extra)?'<div class="tbConsL">'+cip(m.cip)+(m.extra?'<span>'+escapeHtml(m.extra)+'</span>':'')+'</div>':'')+'</div></div>'}).join(""):'<p class="tbSub">Nimic nu cere o mișcare acum.</p>')
     +'</div></div>'
@@ -6108,12 +6108,12 @@ function tbDeseneazaSemafor(b){
   // v100.44 (I-465, demo aprobat 01.10): UN singur Consilier - toate sursele intr-un verdict, o actiune cu bani, 3 motive, restul pliat
   var vv=tbStare.verdictVechi,ind=$("tbIndicatoriRezumat");
   var cons=Consiliu.alcatuieste({sm:sm,concret:conc,busola:tbBusolaVerdict(b),regim:f&&f.regim?{miscare:!!f.regim.miscare}:null,sfaturi:tbStare.sfaturiLista||[],consilier:typeof consilierBot==="function"?consilierBot(b):[],socoteala:(tbAduSocoteala(),tbSoc.peCod),
-    laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,perechi:tbPerechiPt(b),
+    laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),jos:botiNr(b.gridJos),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,perechi:tbPerechiPt(b),
     indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
     note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
   // v100.50 (I-473/I-472): „de ce s-a schimbat” (din verdictul colectorului, daca e acelasi nivel) + socoteala deciziilor
   var ck=tbConsKvPt(b);tbStare.consUlt=cons;
-  if(ck&&ck.cons&&ck.cons.deCe&&ck.cons.acum&&ck.cons.acum.nivel===cons.nivel&&ck.cons.schimbatLa){var mn=Math.round((Date.now()-ck.cons.schimbatLa)/60000);cons.deCeText="schimbat acum "+(mn<60?mn+" min":Math.round(mn/60)+" h")+": "+ck.cons.deCe}
+  if(ck&&ck.cons&&ck.cons.deCe&&ck.cons.acum&&ck.cons.acum.nivel===cons.nivel&&ck.cons.schimbatLa){var mn=Math.round((Date.now()-ck.cons.schimbatLa)/60000);cons.deCeText=Consiliu.deCeAfisat(ck.cons.deCe,mn)}   /* v100.106: cu „a apărut / a dispărut” și „cifrele de atunci” */
   cons.decSoc=ck&&ck.soc&&ck.soc.text?ck.soc.text:null;
   cons.altaVoce=Consiliu.altaVoce(ck&&ck.cons,cons);   // revizia 01.10 (I2): cand Discord / pagina alerts spun altceva, se vede aici
   var tp=tbProbPt(b);cons.sansa=tp&&tp.rez&&!tp.rez.gol&&!tbProbVechi(tp.rez)?Probabilitati.rand(tp.rez,tp.cal,String(b.directie||"").toLowerCase()):null;tbDeseneazaProb(b);   // v100.46 (pachetul 2a)
@@ -6388,6 +6388,9 @@ var TB_DIR_TF=[
   {tf:"60M",eticheta:"1 oră",orizont:24,limit:500,orizontText:"o zi"},
   {tf:"4H",eticheta:"4 ore",orizont:6,limit:500,orizontText:"o zi"},
   {tf:"1D",eticheta:"1 zi",orizont:7,limit:400,orizontText:"o săptămână"}];
+// v100.106 (revizia R2): 5 min și 30 min doar pentru semaforul trendului de pe grafic (2 cereri în plus la 5 min) - „Direcția pieței”
+// și „Ce spun indicatorii” rămân pe cele 4 intervale de mai sus
+var TB_SEM_EXTRA=[{tf:"5M",limit:500},{tf:"30M",limit:500}];
 var TB_DIR_REINCERCARE_MS=30000;
 var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
 var TB_PERIOADE={"24h":{i:"5M",l:288,gaura:12*60000},"3z":{i:"15M",l:288,gaura:40*60000},"7z":{i:"60M",l:168,gaura:150*60000}};
@@ -6401,6 +6404,7 @@ async function tbAduDirectie(){
   d.inLucru=true;
   try{
     var rez=[];
+    var pe={};   // v100.106 (revizia R1): lumânările pe interval, puse în d.randuriPe o dată, la final - nu peste cele ale monedei de dinainte
     // Pe rand, nu deodata: Pionex numara cererile, iar serverul le distanteaza oricum.
     for(var i=0;i<TB_DIR_TF.length;i++){
       var x=TB_DIR_TF[i];
@@ -6409,17 +6413,19 @@ async function tbAduDirectie(){
         var randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;
         if(!randuri)throw new Error((k&&k.error)||"Pionex nu a dat lumânări");
         rez.push(Object.assign({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText},Directie.analizeaza(randuri,x.orizont,b.directie)));
-        (d.randuriPe||(d.randuriPe={}))[x.tf]=randuri;
+        pe[x.tf]=randuri;
         if(x.tf==="4H")d.randuri4h=randuri;
       }catch(e){rez.push({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText,dir:null,stare:"eroare",motiv:textEroare(e)})}
     }
+    for(var j=0;j<TB_SEM_EXTRA.length;j++){try{var kx=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+TB_SEM_EXTRA[j].tf+"&limit="+TB_SEM_EXTRA[j].limit);if(kx&&kx.data&&Array.isArray(kx.data.klines))pe[TB_SEM_EXTRA[j].tf]=kx.data.klines}catch(e){}}
     // v91.9: "Mediul botului" - rata de funding a monedei si lumanarile de 4h ale BTC (2 cereri in plus la 5 min)
     try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(s));d.fundingRates=fr&&fr.data&&Array.isArray(fr.data.rates)?fr.data.rates:null}catch(e){d.fundingRates=null}
     try{var kb=await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200");d.btc4h=kb&&kb.data&&Array.isArray(kb.data.klines)?kb.data.klines:null}catch(e){d.btc4h=null}
-    d.rez=rez;d.simbol=cheie;d.la=Date.now();d.eroare=rez.every(function(r){return r.stare==="eroare"});
+    d.rez=rez;d.randuriPe=pe;d.simbol=cheie;d.la=Date.now();d.eroare=rez.every(function(r){return r.stare==="eroare"});
     tbCalculeazaIndicatorii(d);
   }finally{d.inLucru=false}
   renderTabloDirectia();renderTabloIndicatori();
+  if(typeof renderTabloGrafic==="function")renderTabloGrafic();   /* v100.106 (revizia): semaforul apare cum sosesc lumânările */
 }
 // v91.8: "Ce spun indicatorii" langa grafic - aceleasi calcule ca "Analizeaza piata" (calc), pe barele INCHISE
 // ale celor 4 intervale pe care Tabloul le aduce deja pentru directie (zero cereri in plus catre Pionex).
@@ -6533,6 +6539,11 @@ function tbProbaPt(b){if(!tbProbaStop.activ||tbProbaStop.botId!==b.id||tbProbaSt
   var x=GraficBot.stopProba(tbProbaStop.pret,pvPretViuAcum(b)||botiNr(b.pretCurent),TabloExtra.totalCuGridLa(b,tbProbaStop.pret),pl&&botiNr(pl.minus));return x?{pret:x.pret,text:x.text,scurt:x.scurt}:null}
 function tbProbaCopiaza(){var p=tbProbaStop.pret;if(p==null)return;var t=tbPretScurt(p);try{navigator.clipboard.writeText(t).then(function(){toast("Prețul "+t+" e copiat · îl pui ca stop în Pionex","good")},function(){toast("Nu l-am putut copia: "+t,"warn")})}catch(e){toast("Nu l-am putut copia: "+t,"warn")}}
 // v100.98: citirea graficului în coloana din dreapta - doar ce se vede pe grafic, în cuvinte (sfatul rămâne la semafor)
+// v100.106: semaforul trendului pe 5m/15m/30m/1h/4h/1z din lumânările pe care le aduce deja „Direcția” (tbAduDirectie); null până sosesc
+// revizia R1: doar lumânările monedei (și direcției) botului de acum - la schimbarea botului, până sosesc ale lui, nimic
+function tbCheieDir(b){return TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+(b.directie||"")}
+function tbSemaforTf(b){var d=tbStare.directie;if(!d||!d.randuriPe||!b||d.simbol!==tbCheieDir(b))return null;return GraficBot.semafor(d.randuriPe,b.directie)}
+function tbTrendIstoric(b){var d=tbStare.directie,p=TB_PERIOADE[tbStare.graficInterval||"24h"];if(!d||!d.randuriPe||!p||!b||d.simbol!==tbCheieDir(b))return null;return d.randuriPe[p.i]||null}
 function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filter(Boolean);if(!loc.length)return;var c=GraficBot.citire(o,b,botiNr(b.pretCurent));
   // v100.99 (I-529): butonul stopului de probă și rezultatul lui, în citire; (I-531) același conținut și sub grafic, pe telefon
   var on=tbProbaStop.activ&&tbProbaStop.botId===b.id,pr=on&&o.proba;
@@ -6540,7 +6551,10 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
     +(on?(pr?'<p class="tbSub"><b>'+escapeHtml(pr.text)+'</b></p><button type="button" class="tbIntBtn" data-action-click="tbProbaCopiaza()">copiază prețul '+escapeHtml(tbPretScurt(pr.pret))+'</button><p class="tbSub">Apasă din nou pe grafic ca să-l muți. Nu trimite nimic la Pionex.</p>':'<p class="tbSub">Apasă pe grafic la prețul unde ai pune stopul: vezi cât ai pierde acolo, cu gridul care cumpără pe drum.</p>'):'')+'</div>';
   if(!c){loc.forEach(function(el){el.innerHTML='<p class="tbSub">Prea puține prețuri pentru citire.</p>'+proba});return}
   var IC={bine:"✓",atentie:"!",rau:"✕",info:"·"};
-  var h='<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+c.randuri.map(function(x){return '<div class="tbCitR '+x.stare+'"><span class="tbCitIc" aria-hidden="true">'+IC[x.stare]+'</span><div><b>'+escapeHtml(x.ce)+':</b> <span class="tbCitTx">'+escapeHtml(x.text)+'</span></div></div>'}).join("")+proba;
+  var rd=function(x){return '<div class="tbCitR '+x.stare+'"><span class="tbCitIc" aria-hidden="true">'+IC[x.stare]+'</span><div><b>'+escapeHtml(x.ce)+':</b> <span class="tbCitTx">'+escapeHtml(x.text)+'</span></div></div>'};
+  // v100.106: rândurile semaforului (tf) stau împreună, într-un bloc cu titlul lor, acolo unde era rândul vechi „Direcția”
+  var tf=c.randuri.filter(function(x){return x.tf}),bloc=tf.length?'<div class="tbCitTf"><p class="tbEt2">Trendul pe TF-uri · culoarea = față de botul '+escapeHtml(String(b.directie||""))+'</p>'+tf.map(rd).join("")+'</div>':"",pus=false;
+  var h='<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+c.randuri.map(function(x){if(!x.tf)return rd(x);if(pus)return "";pus=true;return bloc}).join("")+proba;
   loc.forEach(function(el){el.innerHTML=h})}
 function tbComutaInd(k){var s=tbIndStare();if(!Object.prototype.hasOwnProperty.call(s,k))return;s[k]=!s[k];try{localStorage.setItem(TB_IND_KEY,JSON.stringify(s))}catch(_){}tbSincInd();renderTabloGrafic()}
 // v100.51 (I-477): perechile reale vs estimarea fisei (KV perechi-est, de la colector) + corectia pe moneda; adus la 10 min
@@ -6595,7 +6609,7 @@ function renderTabloGrafic(){
   if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
-  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:tbStare.graficInterval||"24h"});
+  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:tbStare.graficInterval||"24h",semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbStare.graficInterval||"24h"].i,trendIstoric:tbTrendIstoric(b)});
   var d=GraficBot.desen(oG);tbDeseneazaCitire(oG,b);
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);

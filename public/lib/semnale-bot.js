@@ -463,8 +463,8 @@ var SemnaleBot = (function () {
     if (!x) return "încă nu știm (niciun caz)";
     if (x.stare === "necunoscut") return "încă nu știm (" + cate(x.judecate, "judecat", "judecate") + ")";
     var s = "a avut dreptate " + x.corecte + " din " + x.judecate + " (" + Math.round(100 * x.corecte / x.judecate) + "%)";
-    if (x.baniN) s += ", " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(1).replace(".", ",") + " USDT dacă-l urmai";
-    if (x.stare === "tace") s += " · tăcut pe Discord (nu bate hazardul)";
+    if (x.baniN) s += ", " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(1).replace(".", ",") + " USDT dacă-l urmai de fiecare dată";
+    if (x.stare === "tace") s += " · nu-l trimit pe Discord: nu se descurcă mai bine decât întâmplarea";   /* v100.106: era „tăcut pe Discord (nu bate hazardul)” */
     return s;
   }
 

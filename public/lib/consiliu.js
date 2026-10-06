@@ -16,6 +16,15 @@ var Consiliu = (function () {
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v); return isFinite(x) ? x : null; }
   function mare(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
+  // v100.106 (el, 06.10, TAKE la 72% din grid: „prețul nu e lângă marginea de jos”): scurtul spunea „lângă” oricărui sfat „margine” galben,
+  // iar sfatul e galben după cât de des scade moneda atât într-o zi (≥ 20%), nu după cât de aproape e - acum spune cifra și frecvența
+  // doi = al doilea motiv din titlu („Stopul costă peste plan, iar marginea de jos e la −0,4%”): fără frecvență, ca să încapă în 60
+  function scurtMargine(s, doi) {
+    var p = nr(s && s.pctJos), z = nr(s && s.zile), dinT = p === null ? /(\d+(?:[.,]\d+)?)\s?%/.exec(String(s && s.titlu || "")) : null;
+    if (p === null && dinT) p = Number(dinT[1].replace(",", "."));   // forma veche a sfatului: cifra din titlu
+    if (p === null) return mic(s && s.titlu);
+    return "marginea de jos e la −" + TextRo.pct(p) + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");
+  }
   // revizia 01.10 (actiuni): un simbol in capul frazei („ECHO e în…”) nu se micsoreaza - inainte ajungea „eCHO” pe Discord
   function mic(s) { s = String(s || ""); var b = s.charAt(1); return b && b === b.toUpperCase() && b !== b.toLowerCase() ? s : s.charAt(0).toLowerCase() + s.slice(1); }
   function fp(v) { v = nr(v); if (v === null) return "?"; var t = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return t.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
@@ -48,7 +57,8 @@ var Consiliu = (function () {
     var k = SOC[cod]; if (!k || !soc) return null;
     var x = soc[k];
     if (!x || x.stare === "necunoscut" || !(x.judecate >= 10)) return { t: "încă nu știm", cls: "", titlu: (x && x.nume ? x.nume + ": " : "") + SemnaleBot.textIncredere(x || null) };
-    return { t: (x.nume || k) + " " + x.corecte + " din " + x.judecate + (x.baniN ? " · " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(0) + " USDT" : ""), cls: x.stare, titlu: SemnaleBot.textIncredere(x) };
+    // v100.106: cine, ce și pe ce bani - „„Mută gridul” 11 din 19 · ~+24 USDT” nu spunea că e socoteala sfatului pe boții lui
+    return { t: "pe boții tăi, " + (x.nume || k) + " a avut dreptate " + x.corecte + " din " + x.judecate + (x.baniN ? " · " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(0) + " USDT dacă-l urmai" : ""), cls: x.stare, titlu: SemnaleBot.textIncredere(x) };
   }
 
   // v100.54 (actiunile T212, pachetul 3): sortarea comuna - acelasi nivel: intai siguranta (fix), apoi cele masurate dupa banii pe caz,
@@ -100,7 +110,7 @@ var Consiliu = (function () {
     // medii” - nu ca sfat separat cu actiunea lui („L-aș lăsa să lucreze” sub „Piața merge împotriva botului” erau doua voci)
     var tr = sfCod("trend"), di0 = sfCod("directie"), trM = tr ? /\(([^)]*)\)\s*$/.exec(String(tr.titlu)) : null, trTxt = trM ? trM[1] : "";   // „Trendul e cu botul (long, tare)” -> „long, tare”
     var trPliat = !!(di0 && tr && trTxt && tr.ton !== "atentie" && tr.ton !== "critic");
-    var structura = function (t) { t = String(t || ""); return trPliat ? t.replace(/\.?\s*$/, "") + " (structura pe medii: " + trTxt + ")." : t; };
+    var structura = function (t) { t = String(t || ""); return trPliat ? t.replace(/\.?\s*$/, "") + (t.indexOf(";") >= 0 ? ", iar" : ";") + " mediile EMA arată " + trTxt + "." : t; };   /* revizia R4: cel mult un „;” */   /* v100.106: fără „structura pe medii” */
     if (trPliat) folosite.trend = 1;
     // 3) sfaturile de atentie / critice care n-au intrat deja
     sf.forEach(function (s) {
@@ -110,7 +120,7 @@ var Consiliu = (function () {
       if (cand.some(function (m) { return m.cod === s.cod; })) { folosite[s.cod] = 1; return; }
       folosite[s.cod] = 1;
       cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.titlu, text: s.cod === "directie" ? structura(s.text) : s.text || "", faCe: s.faCe || "",
-        scurt: s.cod === "margine" ? "prețul e lângă marginea de jos" : mic(s.titlu) });
+        scurt: s.cod === "margine" ? scurtMargine(s) : mic(s.titlu), scurtDoi: s.cod === "margine" ? scurtMargine(s, true) : null });
     });
     // 3b) v100.51 (I-477): gridul incheie sub jumatate din perechile pe care le astepta fisa pe istoricul de dinaintea pornirii
     var pe = x.perechi;
@@ -130,7 +140,7 @@ var Consiliu = (function () {
     var li = sfCod("liniste"), di = di0 && di0.ton === "bine" ? di0 : null;
     if (li || di) {
       var lateral = di && /^Piața e laterală/.test(di.rezumat || di.text || "");   // sfaturile vechi (fara „rezumat”) aveau concluzia in text
-      var frDi = di ? structura("Trendul, o singură măsură: " + mic(di.rezumat || di.text || di.titlu)) : "";
+      var frDi = di ? structura("Trendul: " + mic(di.rezumat || di.text || di.titlu)) : "";
       cand.push({ cod: li ? "liniste" : "directie", nivel: "bine", c: "v",
         titlu: "Piața e " + [li ? "liniștită" : null, lateral ? "laterală" : null].filter(Boolean).join(" și ") .replace(/^$/, "cu botul"),
         // revizia Opus a 2b (10): o fraza in text (liniștea SAU directia); cu amandoua, directia pe randul de dedesubt (extra) - ajungea la 249 de caractere
@@ -150,7 +160,8 @@ var Consiliu = (function () {
     var nivel = sm.nivel === "asteapta" ? "asteapta" : sm.nivel === "iesi" || motive.some(function (m) { return m.nivel === "iesi"; }) ? "iesi"
       : avert.length || sm.nivel === "atentie" ? "atentie" : "tine";
     // v100.61: titlul ≤ 60 - doua motive doar daca incap; altfel primul (al doilea e chiar dedesubt, in „De ce”)
-    var doi = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + avert[1].scurt : "";
+    var doi = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + (avert[1].scurtDoi || avert[1].scurt) : "";
+    if (doi.length > MAX_TITLU && avert[0].scurtDoi) doi = mare(avert[0].scurtDoi) + ", iar " + (avert[1].scurtDoi || avert[1].scurt);   /* revizia R3 */
     var titlu = taie(doi && doi.length <= MAX_TITLU ? doi : avert.length ? mare(avert[0].scurt) : mare(sm.motiv), MAX_TITLU);   // v100.65 (pachetul 1, M7): plafonul si in pagina
 
     // ce as face eu: actiunea motivului de sus; la stopul peste plan pe care o zi obisnuita l-ar atinge des -> las stopul, ajustez planul
@@ -164,7 +175,7 @@ var Consiliu = (function () {
       explica = "Stopul planului" + (nr(cf.pretPropus) !== null ? " (" + fp(cf.pretPropus) + ")" : "") + " e prea aproape: o zi obișnuită a monedei ajunge acolo în " + Math.round(nr(cf.frecventa) * 100) + "% din zile.";
     }
     // langa margine: „n-aș pune bani în plus” intra in aceeasi fraza, daca nu e deja spus si daca incape (≤ 110)
-    var adaos = "n-aș pune bani în plus cât stă lângă margine";
+    var adaos = "n-aș pune bani în plus în botul ăsta";   /* v100.106: fără „lângă” - marginea poate fi la 9% */
     // revizia 02.10: nu se lipeste de o iesire sau de „aș adăuga marjă” (s-ar citi pe dos)
     // v100.65 (minorele amanate): „N-aș închide …” nu e o iesire (pachetul 2, M3); fara al doilea „;” in actiune; cand nu incape, fraza
     // merge la sfarsitul lui „de ce”, si cand acesta e deja ocupat (pachetul 1, M3 - inainte se pierdea fara urma)
@@ -178,13 +189,14 @@ var Consiliu = (function () {
     // banii: pierderea maxima (cartela Stopul) + totalul la marginea de jos
     var bani = [];
     if (cf && nr(cf.laPropus) !== null) bani.push("pierderea maximă: " + (nr(cf.laOpritor) !== null ? U(nr(cf.laOpritor)) + " cu stopul de acum" : "fără margine (n-ai stop)") + " · " + U(nr(cf.laPropus)).replace(" USDT", "") + " cu stopul planului");
-    if (avert.some(function (m) { return m.cod === "margine"; }) && nr(x.laJos) !== null) bani.push("dacă atinge doar marginea de jos: " + U(nr(x.laJos)).replace(" USDT", ""));
+    // v100.106 (el: „exprimarea e ambiguă”): ce prag, ce sumă, ce unitate - „dacă atinge doar marginea de jos: −6,3” nu spunea nimic din ele
+    if (avert.some(function (m) { return m.cod === "margine"; }) && nr(x.laJos) !== null) bani.push("dacă prețul coboară la marginea de jos" + (nr(x.jos) !== null ? " (" + fp(x.jos) + ")" : "") + ": total " + U(nr(x.laJos)));
 
     // increderea verdictului: cand semaforul singur spunea altceva, se spune si cat a avut el dreptate
     var inc = null;
     if (sm.nivel !== nivel && sm.nivel !== "asteapta") {
       var ss = soc && soc[SOC[sm.cod] || sm.cod];
-      inc = "Semaforul singur zicea „" + (sm.nivel === "tine" ? "ȚINE" : sm.nivel === "iesi" ? "IEȘI" : "ATENȚIE") + "”" + (ss ? "; " + (ss.nume || sm.cod) + " " + SemnaleBot.textIncredere(ss) : "") + ".";
+      inc = "Fără motivele de aici, semaforul ar fi zis " + (ETICHETA[sm.nivel] || sm.nivel) + (ss ? "; pe boții tăi, " + (ss.nume || sm.cod) + (/^încă/.test(SemnaleBot.textIncredere(ss)) ? ": " : " ") + SemnaleBot.textIncredere(ss) : "") + ".";   /* v100.106 */
     }
 
     // restul, pliat: tot ce n-a intrat in motive - nimic nu se pierde
@@ -202,7 +214,7 @@ var Consiliu = (function () {
       bvr = "Radarul: " + (rg.miscare ? "mișcare" : "liniște") + " (4h/24h față de obișnuit) · Busola: " + (bz.stare === "miscare" ? "mai agitată" : "mai calmă") + " (ATR 4h față de un an) — orizonturi diferite";
 
     return { nivel: nivel, eticheta: ETICHETA[nivel] || ETICHETA.asteapta, titlu: titlu, faCe: faCe, explica: explica, bani: bani.length ? bani.join(" · ") : null, incredere: inc,
-      motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: m.cip, extra: m.extra || null, scurt: m.scurt || null }; }), rest: rest, busolaVsRadar: bvr };
+      motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: m.cip, extra: m.extra || null, scurt: m.scurt || null, scurtDoi: m.scurtDoi || null }; }), rest: rest, busolaVsRadar: bvr };
   }
 
   // v100.50 (I-473): de ce s-a schimbat verdictul - din ce nivel in care, motivele aparute (+) si disparute (−); nimic schimbat -> null
@@ -213,8 +225,16 @@ var Consiliu = (function () {
     var minus = Object.keys(ca).filter(function (k) { return !cb[k]; }).map(function (k) { return ca[k].titlu; });
     if (a.nivel === b.nivel && !plus.length && !minus.length) return null;
     var t = (a.nivel !== b.nivel ? "din " + (ETICHETA[a.nivel] || a.nivel) + " în " + (ETICHETA[b.nivel] || b.nivel) : "același verdict, alte motive")
-      + (plus.length ? " · + " + plus.join(" · + ") : "") + (minus.length ? " · − " + minus.join(" · − ") : "");
+      + (plus.length ? " · a apărut: " + plus.join(" · a apărut: ") : "") + (minus.length ? " · a dispărut: " + minus.join(" · a dispărut: ") : "");   /* v100.106: nu „+ / −” */
     return { text: t, plus: plus, minus: minus };
+  }
+  // v100.106: „de ce s-a schimbat” pe ecran - cu ora, cu „a apărut / a dispărut” (și pentru textele vechi din KV, scrise cu „· + / · −”)
+  // și cu avertizarea că cifrele motivului sunt cele din clipa schimbării (pe TAKE: „5,6%” atunci, 9,1% acum)
+  function deCeAfisat(t, mn) {
+    t = String(t || "").replace(/ · \+ /g, " · a apărut: ").replace(/ · − /g, " · a dispărut: "); mn = Math.max(1, Math.round(nr(mn) || 0));
+    var cand = mn < 60 ? mn + " min" : Math.round(mn / 60) + " h", acelasi = /^același verdict, alte motive/.test(t);
+    return (acelasi ? "Motivele s-au schimbat acum " + cand + ", verdictul a rămas" + t.replace(/^același verdict, alte motive/, "") : "Verdictul s-a schimbat acum " + cand + ", " + t)
+      + (/a (apărut|dispărut): [^·]*\d/.test(t) ? " · cifrele sunt cele de atunci" : "");
   }
   // v100.50 (I-474): Consilierul in forma semaforului, pentru poza (pagina alerts o citeste fara nicio schimbare: niv / motive / sfat)
   function pentruPoza(c) {
@@ -239,7 +259,7 @@ var Consiliu = (function () {
     st = st || {}; opt = opt || {};
     if (!c || !c.nivel || c.nivel === "asteapta") return { stare: st, alerta: null };
     var lite = { nivel: c.nivel, eticheta: c.eticheta || ETICHETA[c.nivel], titlu: c.titlu || "", faCe: c.faCe || "", bani: c.bani || null, la: acum,
-      motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return { cod: m && m.cod, c: m && m.c, titlu: m && m.titlu, scurt: m && m.scurt || null }; }) };
+      motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return { cod: m && m.cod, c: m && m.c, titlu: m && m.titlu, scurt: m && m.scurt || null, scurtDoi: m && m.scurtDoi || null }; }) };
     var cu = function (o) { if (st.trimis) o.trimis = st.trimis; return o; };
     if (!st.acum) return { stare: cu({ acum: lite }), alerta: null };
     if (st.acum.nivel === lite.nivel) return { stare: cu({ acum: lite, inainte: st.inainte || null, schimbatLa: st.schimbatLa || null, deCe: st.deCe || null }), alerta: null };
@@ -253,7 +273,8 @@ var Consiliu = (function () {
     if (!doar) trimis[lite.nivel] = acum;
     // v100.61 (specul, regula 8): titlul ≤ 60 (moneda · verdictul: faptul; daca nu incape - motivul de sus pe scurt), mesajul pe 2 randuri
     var niv = String(lite.eticheta || "").replace(/^\S+\s+/, ""), pref = N + " · " + niv + ": ", t1 = pref + mic(lite.titlu);
-    var tD = t1.length <= MAX_TITLU ? t1 : sus && sus.scurt && (pref + sus.scurt).length <= MAX_TITLU ? pref + sus.scurt : taie(t1, MAX_TITLU);
+    var tD = t1.length <= MAX_TITLU ? t1 : sus && sus.scurt && (pref + sus.scurt).length <= MAX_TITLU ? pref + sus.scurt
+      : sus && sus.scurtDoi && (pref + sus.scurtDoi).length <= MAX_TITLU ? pref + sus.scurtDoi : taie(t1, MAX_TITLU);   /* revizia R3: nu tăia în cifră */
     var al = { nivel: lite.nivel === "iesi" ? "critic" : lite.nivel === "atentie" ? "atentie" : "info", titlu: tD,
       mesaj: "👉 " + (lite.faCe || "—") + (lite.bani ? " · 💰 " + lite.bani : "") + (d ? "\nDe ce: " + d.text : ""), doarRadar: doar };
     return { stare: { acum: lite, inainte: st.acum, schimbatLa: acum, deCe: d ? d.text : null, trimis: trimis }, alerta: al };
@@ -336,7 +357,8 @@ var Consiliu = (function () {
     cand.slice(3).forEach(function (m) { rest.unshift({ titlu: m.titlu, text: m.text }); });
     var nivel = sem.nivel === "iesi" || motive.some(function (m) { return m.nivel === "iesi"; }) ? "iesi" : avert.length || sem.nivel === "atentie" ? "atentie" : "tine";
     // v100.69 (pachetul 4): titlul compus ≤ 60, ca la boti (pachetul 1, M7) - prea lung -> doar primul motiv (al doilea ramane in lista)
-    var doi = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + avert[1].scurt : "";
+    var doi = avert.length >= 2 ? mare(avert[0].scurt) + ", iar " + (avert[1].scurtDoi || avert[1].scurt) : "";
+    if (doi.length > MAX_TITLU && avert[0].scurtDoi) doi = mare(avert[0].scurtDoi) + ", iar " + (avert[1].scurtDoi || avert[1].scurt);   /* revizia R3 */
     var titlu = taie(doi && doi.length <= MAX_TITLU ? doi : avert.length ? mare(avert[0].scurt) : "Nimic nu cere o mișcare acum", MAX_TITLU);
     // revizia 01.10: un motiv de sus fara actiune proprie nu mai ia „o las să meargă” din semafor (contrazicea verdictul)
     var faCe = mare(avert[0] && avert[0].faCe ? avert[0].faCe : avert[0] && !avert[0].dinSem ? (nivel === "iesi" ? "Aș ieși (tot sau jumătate): " : "N-aș adăuga până nu se lămurește: ") + avert[0].scurt + "." : faCeSem);
@@ -461,6 +483,6 @@ var Consiliu = (function () {
     return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
       ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
   }
-  return { LEGENDA: LEGENDA, LEGENDA_ACTIUNI: LEGENDA_ACTIUNI, LEGENDA_COMUNA: LEG_COMUNA, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, alcatuieste: alcatuieste };
+  return { LEGENDA: LEGENDA, LEGENDA_ACTIUNI: LEGENDA_ACTIUNI, LEGENDA_COMUNA: LEG_COMUNA, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, deCeAfisat: deCeAfisat, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

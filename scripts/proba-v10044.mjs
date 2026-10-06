@@ -27,16 +27,16 @@ await test("CRV real: verdictul ia in seama TOATE sursele - 🟡 ATENȚIE (nu �
   assert.ok(CS && typeof CS.alcatuieste === "function", "lipseste Consiliu.alcatuieste");
   const c = CS.alcatuieste(intrare());
   assert.equal(c.nivel, "atentie"); assert.match(c.eticheta, /Atenție/);
-  assert.match(c.titlu, /^Stopul costă peste plan, iar prețul e lângă marginea de jos$/, c.titlu);   // v100.61: titlul ≤ 60
+  assert.match(c.titlu, /^Stopul costă peste plan, iar marginea de jos e la −1,7%$/, c.titlu);   // v100.106: cifra, nu „lângă”   // v100.61: titlul ≤ 60
 });
 
 await test("CRV real: 3 motive dupa banii in joc - stopul (rosu), marginea de jos (galben, cu „Mută gridul” 7 din 10), piata linistita si laterala (verde, UN singur trend)", () => {
   const c = CS.alcatuieste(intrare());
   assert.deepEqual(c.motive.map((m) => m.c), ["r", "g", "v"]);
   assert.match(c.motive[0].titlu, /Stopul e peste plan/); assert.match(c.motive[0].text, /10/);
-  assert.match(c.motive[1].titlu, /până la marginea de jos/i); assert.match(c.motive[1].cip.t, /„Mută gridul” 7 din 10/);   /* v100.62: titlul vine gata din sfaturi.js */
-  assert.match(c.motive[2].titlu, /Piața e liniștită și laterală/); assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /o singură măsură/);   /* revizia 2b: cu liniștea, direcția e pe rândul de dedesubt */
-  assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /structura pe medii: long, tare/, "fisa nu mai e un trend separat, e structura");   /* revizia 2b: lângă direcție, pe rândul de dedesubt */
+  assert.match(c.motive[1].titlu, /marginea de jos/i);   /* fixtura de pe 30.09 are titlul în forma veche */ assert.match(c.motive[1].cip.t, /^pe boții tăi, „Mută gridul” a avut dreptate 7 din 10/);   /* v100.106 */   /* v100.62: titlul vine gata din sfaturi.js */
+  assert.match(c.motive[2].titlu, /Piața e liniștită și laterală/); assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /Trendul: /);   /* revizia 2b: cu liniștea, direcția e pe rândul de dedesubt */
+  assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /mediile EMA arată long, tare/, "fisa nu mai e un trend separat, e structura");   /* revizia 2b: lângă direcție, pe rândul de dedesubt */
   assert.equal(c.motive[0].cip.t, "încă nu știm", "„Planul tău”: 9 judecate, sub 10");
 });
 
@@ -44,8 +44,8 @@ await test("„Ce aș face eu” cu bani: stopul planului e atins intr-o zi obis
   const c = CS.alcatuieste(intrare());
   assert.match(c.faCe, /Aș lăsa stopul la 0\.38 și aș trece planul la −10 USDT/, c.faCe);
   assert.match(c.explica, /în 71% din zile/); assert.match(c.explica, /\(0\.3842\)/); assert.doesNotMatch(c.faCe + c.explica, /\d\.\d{6,}/, "pret neformatat"); assert.match(c.faCe, /n-aș pune bani în plus/);   // v100.61: de ce, separat
-  assert.match(c.bani, /−10,2/); assert.match(c.bani, /−7,5/); assert.match(c.bani, /marginea de jos: −7,3/);
-  assert.match(c.incredere, /Semaforul singur zicea „ȚINE”/); assert.match(c.incredere, /10 din 21/);
+  assert.match(c.bani, /−10,2/); assert.match(c.bani, /−7,5/); assert.match(c.bani, /dacă prețul coboară la marginea de jos: total −7,3 USDT/);
+  assert.match(c.incredere, /^Fără motivele de aici, semaforul ar fi zis 🟢 Ține; pe boții tăi, /); assert.match(c.incredere, /10 din 21/);
 });
 
 await test("nimic pierdut: fiecare sfat de azi (in afara de trend, contopit) e in motive sau in „Restul”, plus consilierul, indicatorii si BTC", () => {

@@ -63,9 +63,12 @@ var Sfaturi = (function () {
       var fz = frecventa(x.sanse && x.sanse.josZi, "din zile"), fs = frecventa(x.sanse && x.sanse.josSapt, "din săptămâni");
       var dz = x.sanse && x.sanse.josZi && x.sanse.josZi.valoare, ton = dz === null || dz === undefined ? "info" : dz >= 20 ? "atentie" : "info";
       // v100.62: titlul cu cifra intai (asa il rescria Consilierul); textul = o fraza - ce ar fi la margine si cat de des coboara atat
-      out.push({ cod: "margine", ton: ton, titlu: TextRo.pct(Math.abs(100 * (jos - p) / p)) + " până la marginea de jos (" + pret(jos) + ")",
-        text: "~" + Math.round(laJos.pozitie) + " " + nume + " la margine (acum " + Math.round(scen.grid.poz) + "), total ~" + usdt(laJos.total) + "; " +
-          (fz || fs ? "coboară atât în " + [fz, fs].filter(Boolean).join(" și ") + "." : "n-am destul istoric pentru cât de des coboară atât."),
+      // v100.106 (el, 06.10: „prețul nu e lângă marginea de jos și toată exprimarea e ambiguă”): titlul = unde e marginea și cât de departe,
+      // textul = ce ar avea botul acolo și cât de des scade moneda atât; pctJos / zile le folosește Consilierul ca să spună cifra, nu „lângă”
+      var pj = Math.abs(100 * (jos - p) / p);
+      out.push({ cod: "margine", ton: ton, pctJos: pj, zile: dz === null || dz === undefined ? null : dz, titlu: "Marginea de jos (" + pret(jos) + ") e cu " + TextRo.pct(pj) + " sub preț",
+        text: "Acolo botul ar avea ~" + Math.round(laJos.pozitie) + " " + nume + " (acum " + Math.round(scen.grid.poz) + "), total ~" + usdt(laJos.total) + "; " +
+          (fz || fs ? "moneda scade cu atât în " + [fz, fs].filter(Boolean).join(" și ") + "." : "n-am destul istoric pentru cât de des scade moneda atât."),
         sursa: "Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere.",
         faCe: ton === "atentie" ? "N-aș mări levierul și n-aș pune bani în plus în botul ăsta." : null });
     }

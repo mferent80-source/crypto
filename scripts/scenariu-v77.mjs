@@ -140,7 +140,7 @@ await test("lichidare la 5% -> primul sfat e critic; totul in regula -> 'Nimic u
 
 await test("frecventa de a ajunge la marginea de jos se spune cu numarul de cazuri", () => {
   const s = sfaturiPentru({ sanse: { josZi: { valoare: 3.6, atinse: 3, cazuri: 83, stare: "dovedit" }, josSapt: { valoare: 45, atinse: 5, cazuri: 11, stare: "putin" } } });
-  const c = s.find((x) => /marginea de jos/.test(x.titlu));
+  const c = s.find((x) => /marginea de jos/i.test(x.titlu));   /* v100.106: „Marginea de jos (…) e cu X% sub preț” */
   assert.match(c.text, /4% din zile \(3 din 83\)/);
   assert.match(c.text, /45% din săptămâni \(5 din 11, puține cazuri\)/);
 });

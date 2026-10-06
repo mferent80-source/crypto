@@ -64,8 +64,8 @@ await test("garda: `--mod=` scrie în inventar doar grupurile cerute", () => {
 // ---- sarcina 2: sfaturi.js ----
 await test("„margine”: titlul cu cifra întâi și virgulă; textul = o frază (ce ar fi la margine + cât de des coboară atât); sursa separat; niciun sfat cu „deCe”", () => {
   const l = sfaturi(CRV()), m = cod(l, "margine");
-  assert.match(m.titlu, /^\d+,\d% până la marginea de jos \(0\.3841\)$/);
-  assert.match(m.text, /^~\d+ CRV la margine \(acum \d+\), total ~[−+]?\d+,\d\d USDT; coboară atât în \d+% din zile \(\d+ din \d+(, puține cazuri)?\)/);
+  assert.match(m.titlu, /^Marginea de jos \(0\.3841\) e cu \d+,\d% sub preț$/);   /* v100.106 */
+  assert.match(m.text, /^Acolo botul ar avea ~\d+ CRV \(acum \d+\), total ~[−+]?\d+,\d\d USDT; moneda scade cu atât în \d+% din zile \(\d+ din \d+(, puține cazuri)?\)/);
   assert.ok(m.text.length <= 160 && !/[.?]\s+[A-ZĂÂÎȘȚ]/.test(m.text), m.text);
   assert.match(m.sursa, /lumânările de 4 ore/);
   assert.ok(l.every((s) => !("deCe" in s)), "sfaturi cu „deCe”: " + l.filter((s) => "deCe" in s).map((s) => s.cod));
@@ -281,7 +281,7 @@ await test("I3: costurile - comisioanele și funding-ul plătit fără minus dub
 await test("M1: motivul pieței din Consilier păstrează concluzia direcției („piața merge cu botul”), nu doar dovezile", () => {
   const R = [{ tf: "4H", eticheta: "4 ore", dir: "urca", fata: { ton: "bine" } }, { tf: "1D", eticheta: "1 zi", dir: "urca", fata: { ton: "bine" } }];
   const b = CRV({ pretCurent: 0.41 }), c = C.alcatuieste({ sm: S.semafor({ bot: b, fisa: FISA() }), concret: [], sfaturi: sfaturi(b, { rezumat: globalThis.Directie.rezumat(R, "long") }) });
-  const m = c.motive.concat(c.rest).map((x) => ({ ...x, text: (x.text || "") + " " + (x.extra || "") })).find((x) => /Trendul, o singură măsură/.test(x.text));   /* revizia 2b: cu liniștea, direcția e pe rândul de dedesubt (extra) */
+  const m = c.motive.concat(c.rest).map((x) => ({ ...x, text: (x.text || "") + " " + (x.extra || "") })).find((x) => /Trendul: /.test(x.text));   /* revizia 2b: cu liniștea, direcția e pe rândul de dedesubt (extra) */
   assert.ok(m, "fără motivul pieței: " + c.motive.map((x) => x.cod).join(","));
   assert.match(m.text, /piața merge cu botul \(4 ore urcă, 1 zi urcă\)/);
 });

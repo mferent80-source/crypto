@@ -40,8 +40,8 @@ await test("I-473: deCe - din ce verdict in care, ce motive au aparut si ce au d
   assert.ok(typeof CS.deCe === "function", "lipseste Consiliu.deCe");
   const a = { nivel: "tine", motive: [{ cod: "liniste", titlu: "Piața e liniștită" }] }, b = { nivel: "atentie", motive: [{ cod: "stop", titlu: "Stopul e peste plan" }, { cod: "liniste", titlu: "Piața e liniștită" }] };
   const d = CS.deCe(a, b);
-  assert.match(d.text, /din 🟢 Ține în 🟡 Atenție/); assert.match(d.text, /\+ Stopul e peste plan/); assert.ok(!/− Piața/.test(d.text));
-  assert.match(CS.deCe(b, a).text, /− Stopul e peste plan/);
+  assert.match(d.text, /din 🟢 Ține în 🟡 Atenție/); assert.match(d.text, / · a apărut: Stopul e peste plan/); assert.ok(!/a dispărut: Piața/.test(d.text));   /* v100.106 */
+  assert.match(CS.deCe(b, a).text, / · a dispărut: Stopul e peste plan/);
   assert.equal(CS.deCe(b, b), null);
 });
 
@@ -63,7 +63,7 @@ await test("schimbare: prima vedere fara alerta; nivel nou confirmat la a doua t
   r = CS.schimbare(r.stare, A, 4, "CRV"); assert.equal(r.alerta, null, "pâlpâire: confirmarea o ia de la capat");
   r = CS.schimbare(r.stare, A, 5, "CRV");
   assert.ok(r.alerta && r.alerta.nivel === "atentie" && !r.alerta.doarRadar); assert.match(r.alerta.titlu, /^CRV · Atenție: /); assert.ok(r.alerta.titlu.length <= 60, r.alerta.titlu);   // v100.61: titlul Discord ≤ 60
-  assert.match(r.alerta.mesaj, /^👉 fa atentie/); assert.ok(r.alerta.mesaj.split("\n").length <= 2, "cel mult 2 randuri"); assert.match(r.alerta.mesaj, /De ce: din 🟢 Ține în 🟡 Atenție · \+ Stopul e peste plan/);
+  assert.match(r.alerta.mesaj, /^👉 fa atentie/); assert.ok(r.alerta.mesaj.split("\n").length <= 2, "cel mult 2 randuri"); assert.match(r.alerta.mesaj, /De ce: din 🟢 Ține în 🟡 Atenție · a apărut: Stopul e peste plan/);
   assert.equal(r.stare.inainte.nivel, "tine"); assert.equal(r.stare.schimbatLa, 5);
   r = CS.schimbare(r.stare, T, 6, "CRV"); r = CS.schimbare(r.stare, T, 7, "CRV"); assert.ok(r.alerta && r.alerta.doarRadar, "inapoi la ȚINE: doar in Radar");
   assert.equal(CS.schimbare(r.stare, { nivel: "asteapta" }, 8, "CRV").alerta, null);

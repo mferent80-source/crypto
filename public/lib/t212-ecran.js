@@ -168,7 +168,7 @@ async function t212Decizie(tk, da) {
 function t212ConsHtml(p) {
   var c = p.cons, tk = escapeHtml(p.ticker), niv = T212_NIVEL[p.sem.nivel] || T212_NIVEL["fara-date"]; if (!c) return "";
   var kv = t212ConsKvPt(p.ticker), kc = kv.cons, deCe = "";
-  if (kc && kc.acum && kc.acum.nivel === c.nivel && kc.deCe && kc.schimbatLa) { var mn = Math.max(1, Math.round((Date.now() - kc.schimbatLa) / 60000)); deCe = "🔁 schimbat acum " + (mn < 60 ? mn + " min" : Math.round(mn / 60) + " h") + ": " + kc.deCe; }
+  if (kc && kc.acum && kc.acum.nivel === c.nivel && kc.deCe && kc.schimbatLa) { var mn = Math.max(1, Math.round((Date.now() - kc.schimbatLa) / 60000)); deCe = "🔁 " + Consiliu.deCeAfisat(kc.deCe, mn); }   /* v100.106 */
   var alta = Consiliu.altaVoce(kc, c), restA = (c.rest || []).filter(function (r) { return r.din !== "sfat"; }), sfN = (p.sfaturi || []).filter(function (f) { return f && f.nivel !== "g"; });
   return '<div class="t212Cons"><h5><span class="t212Pill ' + niv[1] + '">' + escapeHtml(c.eticheta) + '</span> ' + escapeHtml(c.titlu) + '</h5>'
     + (deCe ? '<p class="tbSub">' + escapeHtml(deCe) + '</p>' : '') + (alta ? '<p class="tbSub">📣 ' + escapeHtml(alta) + '</p>' : '')

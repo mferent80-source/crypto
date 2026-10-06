@@ -88,7 +88,7 @@ await test("calibrarea: zise 70%, intamplate 40% (25 de cazuri) -> cifra corecta
 await test("textele: rand pentru Consilier (cursa daca exista, altfel iesirea pe partea de pierdere) cu n, independente si IC", () => {
   const b = mers(120 * 24, 0.006, 5), p = b[b.length - 1].c, acum = b[b.length - 1].t + ORA;
   const rez = PB.pentruBot(b, { acum, pret: p, dir: "long", jos: p * 0.95, sus: p * 1.05, lichidare: p * 0.7, tinta: p * 1.03, stop: p * 0.96 });
-  const r = PB.rand(rez, null, "long"); assert.match(r, /ținta/); assert.match(r, /din \d+/); assert.match(r, /IC \d+–\d+%/); assert.match(r, /necalibrat/);
+  const r = PB.rand(rez, null, "long"); assert.match(r, /ținta/); assert.match(r, /din \d+/); assert.match(r, /între \d+% și \d+%/); assert.match(r, /cât de bine nimeresc aceste procente: încă nu știu/);   /* v100.106: în cuvinte */
   const fara = PB.rand({ ...rez, cursa: null }, null, "long"); assert.match(fara, /marginea de jos/);
   const rr = PB.randuri(rez, null, "long"); assert.ok(rr.length >= 5 && rr.every((x) => x.titlu && x.text));
 });

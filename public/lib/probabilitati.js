@@ -252,7 +252,14 @@ var Probabilitati = (function () {
     var t = x.k + " din " + (x.nivel === "regim" ? cate(x.n, "situație", "situații") + " cu același regim (" + (x.stare === "liniste" ? "liniște" : "mișcare") + "; cu direcția de acum: prea puține)" : x.conditionat ? cate(x.n, "situație", "situații") + " ca acum" : cate(x.n, "pornire", "porniri") + " la 4 h (toate; situații ca acum: prea puține)") + " (≈ " + x.nIndep + " independente" + (c.calibrat ? "" : ", IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%") + ")"
       + (x.nIndep < 10 ? " · puține cazuri independente" : "")   // trader.md §1: sub 10 pe grupa = zgomot; v100.69: avertizarea comuna sta in legenda
       + " · " + c.text + (c.calibrat ? ", IC " + Math.round(ic[0] * 100) + "–" + Math.round(ic[1] * 100) + "%" + (c.avertizare ? " — ⚠ cifra brută era " + PC(c.brut) : "") : "");
-    return { p: c.p, ic: ic, avertizare: c.avertizare, text: t };
+    // v100.106 (el: „exprimarea e ambiguă”): același conținut în cuvinte - „în k din n situații ca acum”, intervalul ca „între a% și b%”,
+    // calibrarea ca „cât de bine nimeresc aceste procente” (fără „IC”, „necalibrat”, „≈ … independente”); pentru rândul din Consilier
+    var baza = x.nivel === "regim" ? cate(x.n, "situație", "situații") + " cu același regim (" + (x.stare === "liniste" ? "liniște" : "mișcare") + ", cu direcția de acum: prea puține)" : x.conditionat ? cate(x.n, "situație", "situații") + " ca acum" : cate(x.n, "pornire", "porniri") + " la 4 h (situații ca acum: prea puține)";
+    var intre = function (a) { return "între " + Math.round(a[0] * 100) + "% și " + Math.round(a[1] * 100) + "%"; };
+    var ex = (c.calibrat ? "brut: " : "") + "în " + x.k + " din " + baza + " (doar ~" + x.nIndep + " diferite între ele" + (c.calibrat ? "" : ", deci " + intre(x.ic)) + (x.nIndep < 10 ? ", puține cazuri" : "") + ")"
+      + " · " + (c.calibrat ? "corectat după ce s-a întâmplat: " + c.text.replace(/^calibrat: /, "") + ", deci " + intre(ic) + (c.avertizare ? " (cifra brută era " + PC(c.brut) + ")" : "")
+        : c.n >= 20 ? c.text : "cât de bine nimeresc aceste procente: încă nu știu (" + (c.n ? cate(c.n, "caz verificat", "cazuri verificate") : "niciun caz verificat") + ")");   /* revizia: lichidarea calibrată ține cifra brută, dar se știe */
+    return { p: c.p, ic: ic, avertizare: c.avertizare, text: t, explicit: ex };
   }
   // preturile ca pe Tablou (SemnaleBot.fmtPret)
   function fp(v) { v = nr(v); if (v === null) return "?"; var s = v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v > 0 && v < 1e-6 ? v.toFixed(Math.min(12, 3 - Math.floor(Math.log10(v)))) : v.toPrecision(4); return s.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, ""); }
@@ -272,7 +279,7 @@ var Probabilitati = (function () {
   }
   function randuri(rez, cal, o) {
     if (!rez) return [];
-    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, avertizare: y.avertizare, text: y.text }); } };   // sub 3 independente: nu spune nimic
+    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, avertizare: y.avertizare, text: y.text, explicit: y.explicit }); } };   // sub 3 independente: nu spune nimic
     add("cursa", o && o.titluCursa ? String(o.titluCursa) : "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
     add("iese-jos-24", "Atinge marginea de jos (" + fp(nv.jos) + ") în 24 h", rez.iese && rez.iese.jos24, "iese-jos-24");
     add("iese-sus-24", "Atinge marginea de sus (" + fp(nv.sus) + ") în 24 h", rez.iese && rez.iese.sus24, "iese-sus-24");
@@ -286,7 +293,7 @@ var Probabilitati = (function () {
   // randul din Consilier: cursa, daca exista; altfel iesirea pe partea de pierdere in 24 h
   function rand(rez, cal, dir, o) {
     var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
-    return r ? "🎲 " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + ": " + Math.round(r.p * 100) + "% — " + r.text : null;
+    return r ? "🎲 Cazurile asemănătoare: " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + " în " + Math.round(r.p * 100) + "% din cazuri — " + r.explicit : null;   /* v100.106 */
   }
   return { probLaCumparare: probLaCumparare, randActiune: randActiune, rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, frecventaActiune: frecventaActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();

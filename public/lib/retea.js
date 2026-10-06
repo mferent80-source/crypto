@@ -313,27 +313,28 @@ var Retea = (function () {
   // revizia 🟡2: fiecare țintă din rând poartă starea EI (lichidarea nu se citește sub starea mărginii); revizia 🔵7: la gridul neutru marginea
   // cu cifra mai mare, iar fără cifra mărginii (în afara grilei învățate) rândul rămâne cu lichidarea
   function stareDoua(vd, vda) {
-    if (vd && vda) return vd.dovedita && vda.dovedita ? "amândouă dovedite" : vd.dovedita ? "🧠 dovedită, 🌳 nu" : vda.dovedita ? "🌳 dovedită, 🧠 nu" : "niciuna dovedită";
-    return (vd || vda).dovedita ? "dovedită" : "nedovedită";
+    // v100.106 (el: „exprimarea e ambiguă”): „amândouă dovedite” lângă trei cifre - spus pe nume, care din modele a trecut proba
+    if (vd && vda) return vd.dovedita && vda.dovedita ? "(🧠 și 🌳 dovedite)" : vd.dovedita ? "(doar 🧠 dovedită)" : vda.dovedita ? "(doar 🌳 dovediți)" : "(nedovedite)";
+    return (vd || vda).dovedita ? (vd ? "(dovedită)" : "(dovediți)") : (vd ? "(nedovedită)" : "(nedovediți)");
   }
   function rezumat(modele, rt, zar, o, arb) {
     o = o || {}; var acum = nr(o.acum) || Date.now(), dir = String(o.dir || "").toLowerCase();
     var cuR = !!(modele && rt && !(rt.v && rt.v !== VERSIUNE)), A = arb && arb.modele && arb.rt && arb.rt.v === VERSIUNE_ARBORI ? arb : null;
     var pR = cuR ? rt.p || {} : {}, pA = A ? A.rt.p || {} : {};
-    var bucata = function (cod, cuZar) {
+    var bucata = function (cod, cuZar, cuNume) {   /* v100.106: cuNume - emoji-ul cu numele lui, o dată pe rând */
       var t = TINTA_DE[cod]; if (!t) return null;
       var q = nr(pR[cod]), qa = nr(pA[cod]);
       var vd = q !== null ? verdict(modele[t], acum) : null, vda = qa !== null ? verdictArbori(A.modele[t], acum) : null;
       if (!vd && !vda) return null;
       var z = cuZar ? (Array.isArray(zar) ? zar : []).filter(function (x) { return x && x.cod === cod && nr(x.p) !== null; })[0] : null;
-      var c = []; if (vd) c.push("🧠 " + PC(q)); if (vda) c.push("🌳 " + PC(qa)); if (z) c.push("🎲 " + PC(z.p));
-      return { text: c.join(" · ") + " · " + stareDoua(vd, vda), p: vd ? q : qa };
+      var c = []; if (vd) c.push("🧠 " + (cuNume ? "rețeaua " : "") + PC(q)); if (vda) c.push("🌳 " + (cuNume ? "arborii " : "") + PC(qa));
+      return { text: c.join(" · ") + " " + stareDoua(vd, vda) + (z ? " · 🎲 " + (cuNume ? "cazurile " : "") + PC(z.p) : ""), p: vd ? q : qa };
     };
-    if (o.cod) { var b1 = bucata(o.cod, !o.scurt); if (!b1) return null; return o.scurt ? b1.text : NUME[TINTA_DE[o.cod]] + ": " + b1.text; }
-    var jos = bucata("iese-jos-24", true), sus = bucata("iese-sus-24", true);
+    if (o.cod) { var b1 = bucata(o.cod, !o.scurt, !o.scurt); if (!b1) return null; return o.scurt ? b1.text : NUME[TINTA_DE[o.cod]] + ": " + b1.text; }
+    var jos = bucata("iese-jos-24", true, true), sus = bucata("iese-sus-24", true, true);
     var m = dir === "short" ? sus : dir === "long" ? jos : jos && sus ? (sus.p > jos.p ? sus : jos) : jos || sus;
-    var l = bucata("lichidare", false), s = [];
-    if (m) s.push((m === sus ? "Marginea de sus în 24 h: " : "Marginea de jos în 24 h: ") + m.text);
+    var l = bucata("lichidare", false, !m), s = [];
+    if (m) s.push((m === sus ? "Atinge marginea de sus în 24 h: " : "Atinge marginea de jos în 24 h: ") + m.text);
     if (l) s.push((m ? "lichidarea în 7 zile: " : "Lichidarea în 7 zile: ") + l.text);
     return s.length ? s.join(" · ") : null;
   }
