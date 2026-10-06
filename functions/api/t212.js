@@ -152,7 +152,7 @@ export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
-  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket") return json({ error: "Acțiune necunoscută" }, 400);
+  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket" && act !== "saltPozitii" && act !== "salt") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
   if (act === "idei") {
@@ -217,6 +217,17 @@ export async function onRequestPost({ request, env }) {
     if (!r || typeof r !== "object" || Array.isArray(r) || !(nr(r.la) > 0)) return json({ error: "sugestii: raportul cu „la”" }, 400);
     await env.ISTORIC.put("t212:sugestii", JSON.stringify(r)); return json({ ok: true });
   }
+  // v100.120 (pagina Salt): pozițiile scrise de el pe pagină (Salt n-are API) și raportul colectorului (tabelul + listele)
+  if (act === "saltPozitii") {
+    const l = (Array.isArray(corp && corp.pozitii) ? corp.pozitii : []).map((x) => ({ isin: String(x && x.isin || ""), simbol: String(x && x.simbol || ""), nume: txt(x && x.nume, 80), qty: nr(x && x.qty), pretMediu: nr(x && x.pretMediu), de: /^\d{4}-\d{2}-\d{2}$/.test(String(x && x.de || "")) ? String(x.de) : null, plata: x && x.plata === "EUR" ? "EUR" : "simbol" }))
+      .filter((x) => /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(x.isin) && /^[A-Za-z0-9][A-Za-z0-9.^=-]{0,19}$/.test(x.simbol) && x.qty > 0 && x.pretMediu > 0).slice(0, 60);
+    await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(l)); return json({ ok: true, n: l.length });
+  }
+  if (act === "salt") {
+    const r = corp && corp.raport;
+    if (!r || typeof r !== "object" || Array.isArray(r) || !(nr(r.la) > 0)) return json({ error: "salt: raportul cu „la”" }, 400);
+    await env.ISTORIC.put("t212:salt", JSON.stringify(r)); return json({ ok: true });
+  }
   if (act === "premarket") {
     const piata = corp && corp.piata, la = nr(corp && corp.la);
     if ((piata !== "us" && piata !== "eu") || !(la > 0) || !Array.isArray(corp.lista)) return json({ error: "premarket: piata us/eu, la și lista" }, 400);
@@ -262,15 +273,18 @@ export async function onRequestGet({ request, env }) {
   const u = new URL(request.url), a = u.searchParams.get("action") || "";
   try {
     if (a === "preturi") {
-      const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), iv = intervalPreturi(u.searchParams.get("interval"));
-      const cand = candidati(tk);
+      // v100.120 (pagina Salt): și după simbolul Yahoo direct (instrumentele Salt n-au ticker T212)
+      const yh = String(u.searchParams.get("yahoo") || "");
+      if (yh && !/^[A-Za-z0-9][A-Za-z0-9.^=-]{0,19}$/.test(yh)) return json({ error: "Simbol Yahoo nevalid." }, 400);
+      const tk = yh ? "y:" + yh : String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), iv = intervalPreturi(u.searchParams.get("interval"));
+      const cand = yh ? [yh] : candidati(tk);
       if (!cand.length) return json({ error: "Nu știu simbolul de bursă pentru " + tk + "." }, 404);
       const nume = String(u.searchParams.get("nume") || "").replace(/[^\p{L}\p{N} .,&'-]/gu, "").trim().slice(0, 60);
       const pp = u.searchParams.get("prepost") === "1" && /m$|h$/.test(iv) && iv !== "4h";   // v100.119: pre-market doar intraday (Twelve Data nu-l dă)
       const v = await prinCache("p:" + tk + ":" + iv + (pp ? ":pp" : ""), iv === "1d" ? 1800 : 300, async () => {
         for (const s of cand) {
           let rows = null, sursa = null;
-          if (env.TWELVE_DATA_API_KEY && !pp) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }
+          if (env.TWELVE_DATA_API_KEY && !pp && !yh) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }   // simbolurile Yahoo (Salt) - doar Yahoo
           if (!rows) { rows = await yahoo(s, iv, null, pp); sursa = "yahoo"; }
           if (rows) return { ticker: tk, simbol: s, sursa, interval: iv, randuri: rows };
         }
@@ -311,6 +325,11 @@ export async function onRequestGet({ request, env }) {
       if (!env.ISTORIC?.get) return faraKv();
       const [idei, istoric, lista, istoricReveniri] = await Promise.all([citesteKv(env, "t212:idei", null), citesteKv(env, "t212:idei-istoric", []), citesteKv(env, "t212:lista", []), citesteKv(env, "t212:reveniri-istoric", [])]);
       return json({ idei, istoric: Array.isArray(istoric) ? istoric : [], lista: Array.isArray(lista) ? lista : [], istoricReveniri: Array.isArray(istoricReveniri) ? istoricReveniri : [] });
+    }
+    if (a === "salt") {
+      if (!env.ISTORIC?.get) return faraKv();
+      const [raport, pozitii] = await Promise.all([citesteKv(env, "t212:salt", null), citesteKv(env, "t212:salt-pozitii", [])]);
+      return json({ raport, pozitii: Array.isArray(pozitii) ? pozitii : [] });
     }
     if (a === "sugestii") {
       if (!env.ISTORIC?.get) return faraKv();

@@ -3017,7 +3017,8 @@ function navTo(id,load=false){
    else if(id==="tabloubot")porneTabloBot();
    else if(id==="gridset"){porneGrid();if(typeof carnetPorneste==="function")carnetPorneste(false)}   // v100.117: rândul carnetului sub „Ce aș alege eu”
    else if(id==="carnet"){if(typeof carnetPorneste==="function")carnetPorneste(false)}
-   else if(id==="sugestii"){if(typeof sugPorneste==="function")sugPorneste(false)}   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
+   else if(id==="sugestii"){if(typeof sugPorneste==="function")sugPorneste(false)}
+   else if(id==="salt"){if(typeof saltPorneste==="function")saltPorneste(false)}   // v100.120: pagina Salt   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
    else if(id==="stocks"){loadStockContext();checkStocksHealth()}

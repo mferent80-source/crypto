@@ -23,5 +23,6 @@ Thumbs.db
 desktop.ini
 
 # Colectorul de acasa: istoricul, starea alertelor, canalul ntfy (secret), jurnalul
-data/
+/data/
+# v100.120: doar data/ de la rădăcină (al colectorului) - public/data/ (universul Salt) intră în git
 .superpowers/
