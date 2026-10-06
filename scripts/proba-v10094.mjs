@@ -106,7 +106,7 @@ await test("(3) Retea/Arbori.pentruActiune: aceleași intrări (un singur produc
   const vB = { luni: 9, luniGata: 9, nIndep: 150, reper: "🎲", brier: 0.2, brierReper: 0.21, brierLog: 0.205, ic: [0.01, 0.04], icLog: [0.003, 0.02], bss3: 0.01, logloss: 0.6, loglossReper: 0.61, loglossLog: 0.61 };
   const MOD = (ver) => Object.fromEntries(["stop1-t212", "sare1-t212", "cursa5-t212", "directie-t212", "rezultat-t212"].map((tt) => [tt, { tinta: tt, versiune: ver, la: ACUM - 3600000, verificare: vB }]));
   const rt = { la: ACUM, v: R.VERSIUNE, p: { stop1: 0.12, cursa5: 0.4, sare1: 0.03, directie5: 0.52 }, pornire: { p: 0.57, rata: 0.5 } }, rA = { la: ACUM, v: "a1", p: { stop1: 0.15, cursa5: 0.38, sare1: 0.02, directie5: 0.5 }, pornire: { p: 0.6, rata: 0.5 } };
-  const zar = [{ cod: "stop1", titlu: "Atinge stopul mâine", p: 0.1 }, { cod: "cursa5", titlu: "În 5 zile de bursă: ținta înaintea stopului", p: 0.42 }, { cod: "sare1", titlu: "Deschiderea sare peste stop", p: 0.02 }];
+  const zar = [{ cod: "stop1", titlu: "Șansa să atingă stopul mâine", p: 0.1 }, { cod: "cursa5", titlu: "Șansa ca ținta să vină înaintea stopului în 5 zile de bursă", p: 0.42 }, { cod: "sare1", titlu: "Șansa ca bursa să deschidă sub stop", p: 0.02 }];
   const l = R.randuri(MOD(R.VERSIUNE), rt, zar, { acum: ACUM, codDirectie: "directie5", tintaRezultat: "rezultat-t212", pornire: rt.pornire }, { modele: MOD("a1"), rt: rA });
   assert.deepEqual(l.map((x) => x.cod), ["stop1", "cursa5", "sare1", "directie5", "rezultat-t212"], JSON.stringify(l.map((x) => x.cod))); assert.equal(l[3].titlu, R.NUME["directie-t212"]); assert.equal(l[4].titlu, R.NUME["rezultat-t212"]);
   assert.equal(l[0].text, "🧠 12% · 🌳 15% · 🎲 10%\n🧠 dovedită pe 150 de zile independente · 🌳 dovedită pe 150 de zile independente"); assert.equal(l[3].text.split("\n")[0], "🧠 52% · 🌳 50%"); assert.equal(l[4].text.split("\n")[0], "🧠 57% · 🌳 60% · rata ta: 50%");
@@ -163,7 +163,7 @@ await test("(7) garda: rândurile 🧠/🌳 de pe acțiuni (stop1, sare1, cursa5
   const s = situatii().filter((x) => /^arbori\./.test(x.sursa) && /^acțiuni:/.test(x.sit)); assert.ok(s.length >= 40, "situații pe acțiuni: " + s.length);
   const rele = s.map((x) => ({ x, ab: verifica(x.text, x.tip, x.frate) })).filter((q) => q.ab.length); assert.equal(rele.length, 0, rele.map((q) => q.x.sursa + ": " + q.ab.join("; ") + " [" + q.x.text + "]").join("\n"));
   assert.ok(s.some((x) => /rata pe acțiune/.test(x.text)), "reperul „rata pe acțiune” lipsește"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["rezultat-t212"]), "rândul „un trade ca ăsta”");
-  assert.ok(s.some((x) => /^🌳 Ținta înaintea stopului în 5 zile de bursă: /.test(x.text)), "subsolul T212"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["directie-t212"]), "direcția pe 5 zile");
+  assert.ok(s.some((x) => /^🌳 Șansa ca ținta să vină înaintea stopului în 5 zile de bursă: /.test(x.text)), "subsolul T212"); assert.ok(s.some((x) => x.sursa === "arbori.randuri.titlu" && x.text === R.NUME["directie-t212"]), "direcția pe 5 zile");
 });
 await test("(E) versiunile: pagina de la v100.94 în sus (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v10094), colectorul de la v101.64 în sus - versiunea merge înainte (v100.95 a lărgit-o)", () => {
   const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:9[4-9]|1\d\d)$/, "de la 94 în sus"); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "), "badge-ul cu versiunea");
@@ -203,8 +203,8 @@ await test("(R4) 🟡6: date-t212.unesteZile unește barele noi cu cele de pe di
 await test("(R5) 🔵8: „Cum s-a verificat” pe piața paginii - pe crypto doar țintele crypto (7 🧠 + 7 🌳), pe T212 doar cele T212 (5 + 5); reteaHtml dă o subsolului, T212 cere actiuni: true", () => {
   const mix = (ver) => Object.fromEntries(Object.keys(R.TINTE).map((t) => [t, { tinta: t, versiune: ver, la: ACUM - 3600000, verificare: null }]));
   const sC = R.subsol(mix(R.VERSIUNE), mix("a1")), sA = R.subsol(mix(R.VERSIUNE), mix("a1"), { actiuni: true });
-  assert.equal(sC.length, 14, "crypto: " + sC.join(" | ")); assert.ok(sC.every((x) => !/stopul mâine|trade ca ăsta|5 zile|sare peste/i.test(x)), sC.join("\n"));
-  assert.equal(sA.length, 10, "acțiuni: " + sA.join(" | ")); assert.ok(sA.every((x) => /stopul mâine|trade ca ăsta|5 zile|sare peste/i.test(x)), sA.join("\n"));
+  assert.equal(sC.length, 14, "crypto: " + sC.join(" | ")); assert.ok(sC.every((x) => !/stopul mâine|trade ca ăsta|5 zile|sare peste|deschidă sub stop/i.test(x)), sC.join("\n"));
+  assert.equal(sA.length, 10, "acțiuni: " + sA.join(" | ")); assert.ok(sA.every((x) => /stopul mâine|trade ca ăsta|5 zile|sare peste|deschidă sub stop/i.test(x)), sA.join("\n"));
   assert.ok(/Retea\.subsol\(m,aM,(o|\{actiuni:!!\(o&&o\.actiuni\),busola:reteaM\.b,acum:Date\.now\(\)\})\)/.test(citeste("public", "app.js")), "reteaHtml nu dă o (actiuni) subsolului; v100.95: și bilanțul Busolei"); assert.ok(/actiuni:\s*true/.test(citeste("public", "lib", "t212-ecran.js")), "T212 nu cere subsolul pe acțiuni");
 });
 await test("(R6) 🔵9/🔵10/🔵11: poarta judecă pe barele ÎNCHISE (bareBursa, nu bare care aruncă mereu ultima); QQQ se readuce la „Reîncarcă”; pauza vine și după un ticker picat", () => {
@@ -217,7 +217,7 @@ await test("(R7) 🔵12 + ruling 4: nivelul din grilă NU e legat de ziua săpt�
   const D = await import("../retea/date-t212.mjs"); const M = { G, P, R, A: incarcaArbori() }, b = bareZi(400, 100, 11), q = bareZi(400, 300, 5);
   const l = D.randuriActiune("stop1-t212", "AAA_US_EQ", b, q, [], M, {}), peZi = {}; for (const r of l) { const z = new Date(b[r.i].t).getUTCDay(); (peZi[z] = peZi[z] || new Set()).add(r.e.relS); }
   assert.ok(Object.values(peZi).every((s) => s.size >= 3), "nivelul e legat de ziua săptămânii: " + JSON.stringify(Object.fromEntries(Object.entries(peZi).map(([k, v]) => [k, [...v]]))));
-  assert.equal(R.NUME["rezultat-t212"], "Un trade ca ăsta iese pe plus"); assert.equal(R.NUME["directie-t212"], "Prețul mai sus peste 5 zile de bursă"); assert.equal(R.NUME["sare1-t212"], "Deschiderea sare peste stop"); assert.equal(R.NUME["cursa5-t212"], "Ținta înaintea stopului în 5 zile de bursă");
+  assert.equal(R.NUME["rezultat-t212"], "Un trade ca ăsta iese pe plus"); assert.equal(R.NUME["directie-t212"], "Prețul mai sus peste 5 zile de bursă"); assert.equal(R.NUME["sare1-t212"], "Șansa ca bursa să deschidă sub stop"); assert.equal(R.NUME["cursa5-t212"], "Șansa ca ținta să vină înaintea stopului în 5 zile de bursă");
 });
 
 console.log("\n" + (pica ? "V100.94 PICA · " + pica + " din " + (ok + pica) : "V100.94 PASS · " + ok + "/" + ok));

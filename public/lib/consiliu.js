@@ -234,7 +234,7 @@ var Consiliu = (function () {
   function deCeAfisat(t, mn) {
     t = String(t || ""); mn = Math.max(1, Math.round(nr(mn) || 0));
     if (!/ · a (apărut|dispărut): /.test(t)) t = t.replace(/ · \+ /g, " · a apărut: ").replace(/ · − /g, " · a dispărut: ");   /* v100.107: doar textele vechi din KV */
-    var cand = mn < 60 ? mn + " min" : Math.round(mn / 60) + " h", acelasi = /^același verdict, alte motive/.test(t);
+    var cand = mn < 60 ? mn + " min" : mn < 48 * 60 ? Math.round(mn / 60) + " h" : cate(Math.round(mn / 1440), "zi", "zile"), acelasi = /^același verdict, alte motive/.test(t);
     return (acelasi ? "Motivele s-au schimbat acum " + cand + ", verdictul a rămas" + t.replace(/^același verdict, alte motive/, "") : "Verdictul s-a schimbat acum " + cand + ", " + t)
       + (/a (apărut|dispărut): [^·]*\d/.test(t) ? " · cifrele sunt cele de atunci" : "");
   }
@@ -332,7 +332,10 @@ var Consiliu = (function () {
     var cand = [], rest = [], niv = x.niv || null, faCeSem = String(sem.ceAsFace || "").replace(/^👉\s*Ce aș face eu:\s*/, "");
     (Array.isArray(sem.componente) ? sem.componente : []).forEach(function (k) {
       if (!k || !k.cod) return;
-      cand.push({ cod: k.cod, nivel: k.nivel === "iesi" || k.nivel === "atentie" ? k.nivel : "bine", c: k.nivel === "iesi" ? "r" : k.nivel === "atentie" ? "g" : "v", titlu: mare(k.motiv), text: "", faCe: "", scurt: mic(k.motiv), dinSem: true });
+      // v100.108 (AVGO, 06.10): trendul pe medii rămâne, dar când becul 1z (regula semaforului) zice „lateral”, diferența se spune pe față
+      var sz = x.semZi, jos = /^trend-jos/.test(k.cod), sus = k.cod === "trend-sus";
+      var dif = sz && sz.dir === "lateral" && (jos || sus) ? "Becul 1z spune lateral de " + cate(nr(sz.vechime) || 1, "zi", "zile") + ", deși mediile arată în " + (jos ? "jos" : "sus") + "." : "";
+      cand.push({ cod: k.cod, nivel: k.nivel === "iesi" || k.nivel === "atentie" ? k.nivel : "bine", c: k.nivel === "iesi" ? "r" : k.nivel === "atentie" ? "g" : "v", titlu: mare(k.motiv), text: dif, faCe: "", scurt: mic(k.motiv), dinSem: true });
     });
     if (niv && niv.stopAtins && !cand.some(function (m) { return m.cod === "stop-plan" || m.cod === "trail-plan"; })) {
       // v100.69: explicatia = sursa stopului, fara socoteala alegerii (aceea ramane intreaga langa preturi, pe pagina)
@@ -343,7 +346,7 @@ var Consiliu = (function () {
     }
     (Array.isArray(x.prob) ? x.prob : []).forEach(function (r) {
       if (!r || !r.titlu) return;
-      if (/Atinge stopul mâine/.test(r.titlu) && nr(r.p) !== null && r.p >= 0.25) cand.push({ cod: "stop-maine", nivel: "atentie", c: "g", titlu: r.titlu + ": " + Math.round(r.p * 100) + "%", text: r.text || "", faCe: "N-aș adăuga: stopul e în mișcarea obișnuită a unei zile și poate fi atins mâine.", scurt: "stopul poate fi atins mâine (" + Math.round(r.p * 100) + "%)" });
+      if (/stopul mâine/.test(r.titlu) && nr(r.p) !== null && r.p >= 0.25) cand.push({ cod: "stop-maine", nivel: "atentie", c: "g", titlu: r.titlu + ": " + Math.round(r.p * 100) + "%", text: r.text || "", faCe: "N-aș adăuga: stopul e în mișcarea obișnuită a unei zile și poate fi atins mâine.", scurt: "stopul poate fi atins mâine (" + Math.round(r.p * 100) + "%)" });
       else if (/Rezultatele vin/.test(r.titlu)) cand.push({ cod: "rezultate", nivel: "atentie", c: "g", titlu: r.titlu, text: r.text || "", faCe: "N-aș adăuga înainte de rezultate și aș hotărî dinainte dacă țin peste ele.", scurt: mic(r.titlu) });
       else rest.push({ titlu: r.titlu + (nr(r.p) !== null ? ": " + Math.round(r.p * 100) + "%" : ""), text: r.text || "" });
     });
@@ -366,9 +369,10 @@ var Consiliu = (function () {
     var faCe = mare(avert[0] && avert[0].faCe ? avert[0].faCe : avert[0] && !avert[0].dinSem ? (nivel === "iesi" ? "Aș ieși (tot sau jumătate): " : "N-aș adăuga până nu se lămurește: ") + avert[0].scurt + "." : faCeSem);
     // banii: unde e pozitia acum si cat ar fi la stopul care urca (dolari; lei doar cu costul in lei - fara curs inventat)
     var pret = nr(x.pret), pm = nr(x.pretMediu), q = nr(x.qty), cl = nr(x.costLei), fx = cl > 0 && q > 0 && pm > 0 ? cl / (q * pm) : null, bani = [];
-    var cuLei = function (usd) { return USD(usd) + (fx ? " ≈ " + LEI(usd * fx) : ""); };
-    if (pret > 0 && pm > 0 && q > 0) bani.push("acum: " + cuLei((pret - pm) * q));
-    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "la stopul care urcă (" + PA(niv.stopPozitie) + "): " + cuLei((niv.stopPozitie - pm) * q) : "stopul care urcă (" + PA(niv.stopPozitie) + ") e deja depășit");
+    // v100.108 (el: „fă explicit”): ce faci (vinzi acum / atinge stopul), suma, leii în paranteză; „e deja depășit” = prețul e deja sub stop
+    var cuLei = function (usd) { return USD(usd) + (fx ? " (≈ " + LEI(usd * fx) + ")" : ""); };
+    if (pret > 0 && pm > 0 && q > 0) bani.push("dacă vinzi acum: " + cuLei((pret - pm) * q));
+    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "dacă atinge stopul care urcă (" + PA(niv.stopPozitie) + "): " + cuLei((niv.stopPozitie - pm) * q) : "prețul e deja sub stopul care urcă (" + PA(niv.stopPozitie) + ")");
     return { nivel: nivel, eticheta: ETICHETA[nivel], titlu: titlu, faCe: faCe, bani: bani.length ? bani.join(" · ") : null,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: null, extra: null }; }), rest: rest };
   }

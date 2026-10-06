@@ -11,6 +11,8 @@ var Consilier = (function () {
   function L(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x)).toLocaleString("ro-RO") + " lei"; }
   function U(x) { return AS.usd(x); }   // v100.69: pretul ca pe pagina T212 („$33.00”), nu „$33,00”
   // v100.69: „6 trade-uri”, „60 de trade-uri” - v100.71 (revizia pachetului 4, I1): si singularul („1 trade”, „1 bot”), prin TextRo.cate
+  // v100.108: procentul cu semnul lui („−2,3%”); rezerva pentru contextele fără TextRo (probele vechi)
+  function pctS(f) { f = Number(f); if (!isFinite(f)) return "—"; if (typeof TextRo !== "undefined" && TextRo.pctSemn) return TextRo.pctSemn(100 * f, 1); return (f > 0 ? "+" : f < 0 ? "−" : "") + Math.abs(100 * f).toFixed(1).replace(".", ",") + "%"; }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
   function ultima(b) { return Array.isArray(b) && b.length ? b[b.length - 1] : null; }
   function stat(l) {
@@ -59,8 +61,8 @@ var Consilier = (function () {
     var zile = p.de > 0 ? (acum - p.de) / ZI : null;
     if (p.pctLei !== null && p.pctLei < 0 && zile !== null && zile >= 7 && zile <= 28) {
       var g = stat(inch.filter(function (t) { return t.durataOre >= 168 && t.durataOre < 672; }));
-      if (g.n >= 10 && g.total < 0) out.push({ nivel: "g", sursa: "istoric", titlu: p.simbol + " e în a " + Math.floor(zile) + "-a zi, pe minus",
-        text: "Trade-urile tale ținute 1–4 săptămâni: " + g.pePlus + " din " + g.n + " pe plus, total " + L(g.total) + ".",
+      if (g.n >= 10 && g.total < 0) out.push({ nivel: "g", sursa: "istoric", tip: "tinut-pe-minus", titlu: "Ții " + p.simbol + " de " + cate(Math.floor(zile), "zi", "zile") + " și ești pe " + pctS(p.pctLei) + " în lei",   /* v100.108 (revizia): procentul pe care îl judecă condiția, cu unitatea; „tip” = cheia listei „Ce ai de făcut” */
+        text: "Din trade-urile tale ținute 1–4 săptămâni, " + g.pePlus + " din " + g.n + " au ieșit pe plus; total " + L(g.total) + ".",
         ceAsFace: "N-aș aștepta să „își revină” fără stop: aș pune stopul care urcă (−15% de la maxim) sau aș ieși." });
     }
     // 3) profitul: aproape de tinta sau peste +15%

@@ -309,7 +309,7 @@ export function alerteSLTP(poza, acum) {
     const et = pl ? "stopul din planul tău" : "stopul sugerat", dist = 1 - sl / pret;
     if (pret > sl && (pret - sl) / (tp - sl) < 0.25)
       out.push({ cheie: "sltp-aproape-" + p.s + "-" + zi, nivel: "atentie", titlu: p.s + ": " + (dist < 0.0005 ? "chiar la " : "la " + pctTxt(dist) + " de ") + et + " ($" + pr(sl) + ")",
-        mesaj: "Prețul e $" + pr(pret) + ", în ultimul sfert al drumului spre stop (ținta $" + pr(tp) + ").\n👉 N-aș adăuga acum; dacă atinge stopul, aș ieși cum am scris." });
+        mesaj: "Prețul e $" + pr(pret) + ", în ultimul sfert al drumului spre stop (ținta $" + pr(tp) + ").\n👉 N-aș adăuga acum; dacă atinge stopul, aș ieși cum ai scris." });
     if (!pl && sg) {
       if (pret <= sl) out.push({ cheie: "sltp-sl-" + p.s + "-" + zi, nivel: "critic", titlu: p.s + ": a atins stopul sugerat ($" + pr(sl) + ")",
         mesaj: "Prețul e $" + pr(pret) + "; poziția n-are plan în Radar, stopul e cel sugerat (−15% de la maxim).\n👉 Aș ieși sau mi-aș scrie acum planul la rece." });

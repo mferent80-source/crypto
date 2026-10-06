@@ -71,7 +71,7 @@ export function situatiiRetea(pune) {
   // „un trade ca ăsta pe plus” (rezultat-t212, reperul „rata pe acțiune”) - rețeaua dovedită, arborii pe toate stările; + rândurile 🌳 T212 din subsol
   const T212 = ["stop1-t212", "sare1-t212", "cursa5-t212", "directie-t212", "rezultat-t212"], reperT = (t) => (t === "rezultat-t212" ? "rata pe acțiune" : t === "directie-t212" ? "50%" : "🎲");
   const modeleT = (ver, v, vs) => { const m = {}; for (const t of T212) m[t] = { tinta: t, versiune: ver, la: ACUM - 3600000, verificare: v && { ...v, reper: reperT(t), ...(vs ? { vsRetea: vs } : {}) } }; return m; };
-  const ZAR_T = [{ cod: "stop1", titlu: "Atinge stopul mâine", p: 0.11 }, { cod: "cursa5", titlu: "În 5 zile de bursă: ținta înaintea stopului", p: 0.42 }, { cod: "sare1", titlu: "Deschiderea sare peste stop", p: 0.02 }];
+  const ZAR_T = [{ cod: "stop1", titlu: "Șansa să atingă stopul mâine", p: 0.11 }, { cod: "cursa5", titlu: "Șansa ca ținta să vină înaintea stopului în 5 zile de bursă", p: 0.42 }, { cod: "sare1", titlu: "Șansa ca bursa să deschidă sub stop", p: 0.02 }];
   const RT_T = { la: ACUM, v: R.VERSIUNE, p: { stop1: 0.12, cursa5: 0.4, sare1: 0.03, directie5: 0.52 }, pornire: { p: 0.57, rata: 0.504, n: 1066 } }, RA_T = { la: ACUM, v: R.VERSIUNE_ARBORI, p: { stop1: 0.15, cursa5: 0.38, sare1: 0.02, directie5: 0.5 }, pornire: { p: 0.6, rata: 0.504, n: 1066 } };
   const mRT = modeleT(R.VERSIUNE, { ...v0, ...bun }), OT = { acum: ACUM, codDirectie: "directie5", tintaRezultat: "rezultat-t212", pornire: RT_T.pornire };
   for (const [sit, v] of Object.entries(VER)) {

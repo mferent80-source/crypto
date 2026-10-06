@@ -2082,6 +2082,16 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 /* v100.98: citirea graficului + „dacă închizi la” în cursor */
 #tabloubot .gbLa{margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--tb-linie)}
 #tabloubot .tbCitScurt{font-weight:700;font-size:14.5px;line-height:1.4;background:var(--panel-2);border-radius:10px;padding:9px 11px;margin:0 0 4px}
+#t212 .t212TfCit{margin-top:8px}
+#t212 .tbCitTf{padding:6px 10px 2px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02)}
+#t212 .tbCitTf .tbEt2{margin:0 0 2px}
+#t212 .tbCitR{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:13.5px;line-height:1.45;padding:6px 0;border-top:1px solid var(--line)}
+#t212 .tbCitTf .tbCitR:first-of-type{border-top:0}
+#t212 .tbCitIc{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:800}
+#t212 .tbCitR.bine .tbCitIc{background:rgba(85,216,155,.15);color:var(--good)}
+#t212 .tbCitR.atentie .tbCitIc{background:rgba(245,196,81,.15);color:var(--warn)}
+#t212 .tbCitR.rau .tbCitIc{background:rgba(255,107,120,.16);color:var(--bad)}
+#t212 .tbCitR.info .tbCitIc{background:rgba(144,160,182,.14);color:var(--muted)}
 #tabloubot .tbCitTf{margin:8px 0 4px;padding:6px 10px 2px;border:1px solid var(--tb-linie);border-radius:10px;background:rgba(255,255,255,.02)}
 #tabloubot .tbCitTf .tbEt2{margin:0 0 2px}
 #tabloubot .tbCitTf .tbCitR:first-of-type{border-top:0}

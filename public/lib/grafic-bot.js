@@ -83,20 +83,31 @@ var GraficBot = (function () {
   var TF_SEM = [{ tf: "5M", et: "5 min", sc: "5m" }, { tf: "15M", et: "15 min", sc: "15m" }, { tf: "30M", et: "30 min", sc: "30m" },
     { tf: "60M", et: "1 oră", sc: "1h" }, { tf: "4H", et: "4 ore", sc: "4h" }, { tf: "1D", et: "1 zi", sc: "1z" }];
   var SAGEATA = { urca: "↑", coboara: "↓", lateral: "↔" }, NUME_DIR = { urca: "urcă", coboara: "coboară", lateral: "lateral" };
-  function semafor(pe, dirBot) {
-    var d = String(dirBot || "").toLowerCase();
+  // v100.108 (Trading 212, demo aprobat): opt = { actiune: true, acum } - poziția e doar long, iar „lateral” nu e câștig ca la grid:
+  // verde urcă · galben lateral · roșu coboară. Barele ÎNCHISE (1z vine fără ziua de azi - bareBursa; intraday după ședință) primesc o copie
+  // a ultimei, ca Directie (care aruncă ultima bară ca „în formare”) să nu piardă o bară închisă; TF-urile sub o zi spun „ultima ședință”.
+  var FATA_ACT = { urca: { ton: "bine", eticheta: "cu poziția" }, lateral: { ton: "atentie", eticheta: "neutru pentru poziție" }, coboara: { ton: "rau", eticheta: "împotriva poziției" } };
+  var PAS_TF = { "5M": 3e5, "15M": 9e5, "30M": 18e5, "60M": 36e5, "4H": 4 * 36e5 };
+  function cuCopie(r) { var u = r[r.length - 1]; return r.concat([Array.isArray(u) ? [Number(u[0]) + 1].concat(u.slice(1)) : Object.assign({}, u, { time: Number(u.time) + 1 })]); }
+  function semafor(pe, dirBot, opt) {
+    var d = String(dirBot || "").toLowerCase(); opt = opt || {};
     return TF_SEM.map(function (x) {
-      var r = pe && pe[x.tf], an = r && typeof Directie !== "undefined" ? Directie.analizeaza(r, 1, d) : null;
+      var r = pe && pe[x.tf], b0 = r ? bare(r) : [], ultT = b0.length ? b0[b0.length - 1].t : null;
+      // revizia v100.108 (R5): opt.sedinta (bursa deschisă acum, după ora New York-ului) hotărăște; fără ea, vârsta ultimei bare
+      var inchise = !!opt.actiune && ultT !== null && (x.tf === "1D" || (opt.sedinta === false) || (opt.sedinta == null && !!PAS_TF[x.tf] && nr(opt.acum) !== null && opt.acum - ultT > 2 * PAS_TF[x.tf]));
+      var an = r && r.length && typeof Directie !== "undefined" ? Directie.analizeaza(inchise ? cuCopie(r) : r, 1, d) : null;
+      if (an && an.dir && opt.actiune) an.fata = FATA_ACT[an.dir];
       var o = { tf: x.tf, et: x.et, sc: x.sc, dir: an && an.dir || null, ton: an && an.fata ? an.fata.ton : "gol", vechime: an && an.vechime || null };
-      if (!o.dir) { o.text = r ? "prea puține bare închise (trebuie 60)" : "Pionex n-a dat lumânările la ultima cerere"; return o; }
+      if (!o.dir) { o.text = r ? "prea puține bare închise (trebuie 60)" : opt.actiune ? "lumânările n-au venit încă (se aduc când deschizi detaliul poziției)" : "Pionex n-a dat lumânările la ultima cerere"; return o; }
       // v100.107 (revizia): ADX și RSI pe aceleași bare ca graficul și rândul „ADX 14” (cu bara în formare) - aceeași cifră pe TF-ul graficului;
       // direcția rămâne pe bare închise (Directie)
-      var b = bare(r);
+      var b = b0;
       var a = adx(b, 14).adx[b.length - 1], rs = rsi(b.map(function (y) { return y.c; }), 14)[b.length - 1];
       o.adx = a; o.rsi = rs;
       // ADX mare cu „lateral” = ADX-ul ține minte o mișcare mai veche (TAKE 1 zi, 06.10: 58, umflat de ziua de 23.09)
       o.text = SAGEATA[o.dir] + " " + NUME_DIR[o.dir] + (o.vechime ? " de " + cate(o.vechime, "bară", "bare") : "") + (a != null ? " · ADX " + Math.round(a) + (o.dir === "lateral" && a > 25 ? " (ține minte o mișcare mai veche)" : "") : "")
         + (rs != null ? " · RSI " + Math.round(rs) : "") + " · " + an.fata.eticheta + (/botului$/.test(an.fata.eticheta) && d ? " " + d : "");
+      if (inchise && x.tf !== "1D") o.text += " · ultima ședință, " + ziLuna(ultT);
       return o;
     });
   }
@@ -307,7 +318,7 @@ var GraficBot = (function () {
     // v100.106: trendul pe fiecare bară ÎNCHISĂ, pe istoria lungă a TF-ului (o.trendIstoric), ca banda să nu înceapă abia de la bara 60
     S.tr = null;
     if (trH && typeof Directie !== "undefined") {
-      var bi0 = o.trendIstoric ? bare(o.trendIstoric) : raw.slice(); bi0.pop();
+      var bi0 = o.trendIstoric ? bare(o.trendIstoric) : raw.slice(); if (!o.trendInchise) bi0.pop();   /* v100.108: acțiunile au doar bare închise */
       var st0 = Directie.stari(bi0.map(function (x) { return x.c; })), peT = {};
       bi0.forEach(function (x, i) { peT[x.t] = st0[i]; });
       S.tr = raw.map(function (x) { return peT[x.t] || null; });
@@ -550,7 +561,7 @@ var GraficBot = (function () {
     if (va) Lg.push('<span><i class="gbPct" style="background:rgba(105,167,255,.35)"></i>zona de valoare, ' + esc(o.val.etLung || "7 zile") + ': 70% din ' + (va.dupa === "timp" ? "timp (lumânările n-au volum)" : "volum") + ' · POC punctat</span>');
     if (st.val && o.val && Array.isArray(o.val.pivoti) && o.val.pivoti.length) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>rezistență / <i style="border-color:' + COL.good + '"></i>suport din pivoți confirmați (' + esc(o.val.etPivoti || "4 h") + ')</span>');
     if (st.ema) Lg.push('<span><i style="border-color:' + COL.ema20 + '"></i>EMA 20</span><span><i style="border-color:' + COL.ema50 + '"></i>EMA 50</span>');
-    if (S.tr) Lg.push('<span><i class="gbPct" style="background:' + COL.good + '"></i><i class="gbPct" style="background:' + COL.bad + '"></i><i class="gbPct" style="background:' + COL.mut + '"></i>trend: urcă · coboară · lateral (banda de sub lumânări, EMA umplut)</span><span>semafor: culoarea = față de bot, săgeata = piața</span>');   /* v100.106: și în Complet */
+    if (S.tr) Lg.push('<span><i class="gbPct" style="background:' + COL.good + '"></i><i class="gbPct" style="background:' + COL.bad + '"></i><i class="gbPct" style="background:' + COL.mut + '"></i>trend: urcă · coboară · lateral (banda de sub lumânări, EMA umplut)</span><span>' + (o.actiune ? 'semafor: culoarea = față de poziția ta (verde urcă · galben lateral · roșu coboară), săgeata = piața' : 'semafor: culoarea = față de bot, săgeata = piața') + '</span>');   /* v100.106: și în Complet; v100.108: la acțiuni față de poziție */
     if (st.bb) Lg.push('<span><i style="border-color:' + COL.bb + '"></i>Bollinger 20, 2</span>');
     if (o.umpleri) Lg.push('<span>▲ cumpărare · ▼ vânzare pe grilă (deduse din lumânări) · perechi pe grafic: ' + o.umpleri.perechi + (nr(o.perechiPionex) !== null ? " · Pionex: " + nr(o.perechiPionex) : "") + '</span>');
     if (simplu && !o.actiune) {   /* v100.98: un singur rând, cu ce e pe grafic */

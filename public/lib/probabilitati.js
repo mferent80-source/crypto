@@ -140,26 +140,26 @@ var Probabilitati = (function () {
   function randActiune(rez, cal, o) {
     o = o || {}; var out = [], PCt = function (v) { return Math.round(v * 100) + "%"; };
     if (!rez) return out;
-    if (rez.motiv && !rez.stop1) return [{ titlu: "Probabilitățile stopului: " + rez.motiv, p: null, ic: null, text: "" }];
+    if (rez.motiv && !rez.stop1) return [{ titlu: /deja depășit/.test(rez.motiv) ? "Șansele stopului nu se mai socotesc: prețul e deja sub stop" : "Șansele stopului nu se socotesc: " + rez.motiv, p: null, ic: null, text: "" }];   /* v100.108 */
     // v100.73 (revizia pachetului 5, I2): numarul intra aici, cu „de” de la 20 („11 din 100 de zile ca acum”)
     var unde = function (x) { return x.nivel === "exact" ? cate(x.n, "zi", "zile") + " ca acum (" + etActiune(x.stare) + ")" : x.nivel === "regim" ? cate(x.n, "zi", "zile") + " cu același trend (" + (ET_ACT[x.stare] || x.stare) + "; cu mișcarea de acum: prea puține)" : x.n + " din toate zilele (ca acum: prea puține)"; };
-    var ic = function (x) { return x && x.ic ? " · IC " + Math.round(x.ic[0] * 100) + "–" + Math.round(x.ic[1] * 100) + "%" : ""; };
+    var ic = function (x) { return x && x.ic ? ", deci șansa reală e între " + Math.round(x.ic[0] * 100) + "% și " + Math.round(x.ic[1] * 100) + "%" : ""; };   /* v100.108: fără „IC”, lângă cifra lui */
     // v100.69 (sfaturile concise, pachetul 4): marcajul scurt; avertizarea comuna („un semn, nu o regulă”) sta in legenda
     var putine = function (x) { return x.nIndep < 10 ? " · puține cazuri independente" : ""; };
     var a = rez.stop1, s = rez.sare1, relS = rez.niv && rez.niv.relS;
     if (a && s) {
       var pt = a.p + s.p, ki = a.k + s.k;
-      out.push({ cod: "stop1", titlu: "Atinge stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: ki + " din " + unde(a) + " · din care prin săritură la deschidere: " + PCt(s.p) + putine(a), avertizare: pt >= 0.25 });
+      out.push({ cod: "stop1", titlu: "Șansa să atingă stopul mâine", p: pt, ic: G.wilson(Math.round(pt * a.nIndep), a.nIndep), text: "în " + ki + " din " + unde(a) + "; în " + PCt(s.p) + " din zile, printr-o săritură la deschidere" + putine(a), avertizare: pt >= 0.25 });
     }
     if (rez.cursa5 && rez.cursa5.tinta) {
       // revizia 01.10 (I3): cifra ACTIUNII ramane; calibrarea (alt stop / alta tinta - ale Radarului la cumparare - si cutii late) e doar nota
       var x = rez.cursa5.tinta, rz = cal && cal.rezumat;
-      var nota = rz && rz.n >= 20 ? "pe cumpărările tale (cu stopul și ținta Radarului la cumpărare): am zis în medie " + PCt(rz.pMed) + ", s-a întâmplat în " + PCt(rz.rata) + ", din " + cate(rz.n, "caz", "cazuri") + " în " + cate(rz.saptamani, "săptămână", "săptămâni")
-        : "pe cumpărările tale: " + cate(rz ? rz.n : 0, "caz judecat", "cazuri judecate") + " — sub 20 nu spun nimic";
-      out.push({ cod: "cursa5", titlu: "În 5 zile de bursă: ținta înaintea stopului", p: x.p, ic: x.ic, text: x.k + " din " + unde(x) + " · stopul întâi: " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
+      var nota = rz && rz.n >= 20 ? "verificat pe cumpărările tale: am zis în medie " + PCt(rz.pMed) + " și s-a întâmplat în " + PCt(rz.rata) + " (" + cate(rz.n, "caz", "cazuri") + ", " + cate(rz.saptamani, "săptămână", "săptămâni") + ")"
+        : "verificat pe cumpărările tale: " + cate(rz ? rz.n : 0, "caz judecat", "cazuri judecate") + " — sub 20 nu spun nimic";
+      out.push({ cod: "cursa5", titlu: "Șansa ca ținta să vină înaintea stopului în 5 zile de bursă", p: x.p, ic: x.ic, text: "în " + x.k + " din " + unde(x) + "; stopul a venit primul în " + PCt(rez.cursa5.stop ? rez.cursa5.stop.p : 0) + putine(x) + " · " + nota, avertizare: false });
     }
     // v100.69: si saritura poarta marcajul pe esantion mic (il avea doar „Atinge stopul mâine”)
-    if (s) out.push({ cod: "sare1", titlu: "Deschiderea sare peste stop", p: s.p, ic: s.ic, text: s.k + " din " + unde(s) + " — stopul se execută atunci sub prețul lui" + ic(s) + putine(s), avertizare: s.p >= 0.05 });
+    if (s) out.push({ cod: "sare1", titlu: "Șansa ca bursa să deschidă sub stop", p: s.p, ic: s.ic, text: "în " + s.k + " din " + unde(s) + ic(s) + "; atunci stopul se vinde sub prețul lui" + putine(s), avertizare: s.p >= 0.05 });
     var z = nr(o.rezultateZile);
     if (z !== null && z >= 0 && z <= 5) {
       // v100.69: o fraza ≤ 160 - e si explicatia motivului „Rezultatele vin” din Consilierul pozitiei, unde „de mai sus” n-ar avea sens.

@@ -243,9 +243,9 @@ await test("v88: un plan salvat de o PROBA de ecran (proba: true) nu declanseaza
 await test("v90 semafor: IESI din TREND cu un plan pus, dar neatins -> nu zice 'ce am scris' (planul nu cere iesirea); IESI din PLAN -> zice", () => {
   const t = A.semafor(poz({ pret: 85, plan: { trailPct: 15 }, maxDupaCumparare: 90 }), A.stare(coboara));
   // v100.69 (pachetul 4): „ce am scris înainte” a devenit „Aș ieși cum am scris în plan” - aceeasi deosebire, pe „am scris”
-  assert.equal(t.nivel, "iesi"); assert.doesNotMatch(t.ceAsFace, /am scris/);
+  assert.equal(t.nivel, "iesi"); assert.doesNotMatch(t.ceAsFace, /ai scris/);   /* v100.108: „cum ai scris în plan” (planul e al lui) */
   const p = A.semafor(poz({ pret: 85, plan: { stop: 90 } }), A.stare(urca));
-  assert.equal(p.nivel, "iesi"); assert.match(p.ceAsFace, /am scris în plan/);
+  assert.equal(p.nivel, "iesi"); assert.match(p.ceAsFace, /ai scris în plan/);
 });
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 if (picate) process.exit(1);

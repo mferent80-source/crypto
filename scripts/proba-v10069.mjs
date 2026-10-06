@@ -121,7 +121,7 @@ await test("rândurile 🎲: fără „un semn, nu o regulă”; „puține cazu
   const x = (o) => Object.assign({ p: 0.31, k: 31, n: 100, nIndep: 24, ic: [0.22, 0.41], nivel: "exact", stare: "sus-liniste", conditionat: true }, o || {});
   const ra = PB.randActiune({ stop1: x({ p: 0.08, k: 8 }), sare1: x({ p: 0.03, k: 3, nIndep: 7 }), cursa5: { tinta: x({ p: 0.44, k: 44 }), stop: { p: 0.21 } }, niv: {} }, null, { rezultateZile: 2, evenimente: { mediana: 0.06, max: 0.18 } });
   const tot = ra.map((r) => r.titlu + " " + r.text).join(" | ");
-  assert.doesNotMatch(tot, /un semn, nu o regulă/); assert.match(ra.find((r) => /Deschiderea sare/.test(r.titlu)).text, /puține cazuri independente/);
+  assert.doesNotMatch(tot, /un semn, nu o regulă/); assert.match(ra.find((r) => /deschidă sub stop/.test(r.titlu)).text, /puține cazuri independente/);
   const rz = ra.find((r) => /Rezultatele vin/.test(r.titlu)).text;
   assert.deepEqual(verifica(rz, "deCe"), [], rz); assert.match(rz, /~6%/); assert.match(rz, /18%/);
   const rb = PB.randuri({ niveluri: { tinta: 0.401, stop: 0.36 }, cursa: { tinta: x({ nIndep: 8 }) } }, null, {});

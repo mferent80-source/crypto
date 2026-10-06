@@ -86,10 +86,10 @@ await test("randActiune: stopul maine (cu saritura alaturi), tinta inaintea stop
   const rez = PR.pentruActiune(b, { pret, stop: pret * 0.97, tinta: pret * 1.05, acum: b[399].t + 864e5 });
   const r = PR.randActiune(rez, {}, { rezultateZile: 3, evenimente: { mediana: 0.06, max: 0.18 } });
   assert.ok(r.length === 4, JSON.stringify(r.map((x) => x.titlu)));
-  assert.match(r[0].titlu, /stopul.*mâine/i); assert.match(r[0].text, /din care prin săritură/); assert.match(r[1].text, /pe cumpărările tale: 0 cazuri judecate/);
+  assert.match(r[0].titlu, /stopul.*mâine/i); assert.match(r[0].text, /printr-o săritură la deschidere/);   /* v100.108 */ assert.match(r[1].text, /pe cumpărările tale: 0 cazuri judecate/);
   assert.match(r[3].titlu, /Rezultatele vin în 3 zile/); assert.match(r[3].text, /18%/);
   assert.equal(PR.randActiune(rez, {}, { rezultateZile: 12 }).length, 3, "rezultatele departe: fara rand");
-  assert.match(PR.randActiune(PR.pentruActiune(b, { pret, stop: pret * 1.01, tinta: pret * 1.05, acum: b[399].t + 864e5 }), {}, {})[0].titlu, /deja depășit/);
+  assert.match(PR.randActiune(PR.pentruActiune(b, { pret, stop: pret * 1.01, tinta: pret * 1.05, acum: b[399].t + 864e5 }), {}, {})[0].titlu, /prețul e deja sub stop/);   /* v100.108: titlul explicit */
   assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), /Probabilitati\.randActiune\(/);
 });
 

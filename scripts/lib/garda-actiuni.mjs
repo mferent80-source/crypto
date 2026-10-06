@@ -131,7 +131,8 @@ export function situatiiActiuni(pune) {
 
   // Consilierul pozitiei (Consiliu.alcatuiesteActiune): verdictul, ce as face, banii, motivele si restul - pe pagina T212, in poza si pe Discord
   const CO = globalThis.Consiliu, probA = PB.randActiune(rezA, { rezumat: { n: 26, pMed: 0.41, rata: 0.38, saptamani: 9 } }, { rezultateZile: 2, evenimente: { mediana: 0.06, max: 0.18 } });
-  const probMaine = probA.map((r) => /Atinge stopul mâine/.test(r.titlu) ? Object.assign({}, r, { p: 0.31 }) : r);
+  const probMaine = probA.map((r) => r.cod === "stop1" ? Object.assign({}, r, { p: 0.31 }) : r);   /* revizia v100.108: după cod, nu după titlu */
+  if (!probMaine.some((r) => r.cod === "stop1" && r.p === 0.31)) throw new Error("garda-actiuni: rândul „stopul mâine” (cod stop1) lipsește - situația „stop-maine” n-ar mai avea motivul ei");
   const NIV = (o) => Object.assign({ nivel: "ok", stopAtins: false, stopPozitie: 24.1, tintaPozitie: 33, sursaTrail: "−15% de la maxim (măsurat pe trade-urile tale)" }, o || {});
   const ca = (sit, poz, bare, o) => {
     const sem = AS.semafor(poz, bare ? AS.stare(bare, poz.pret) : null);

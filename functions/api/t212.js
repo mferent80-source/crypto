@@ -3,7 +3,7 @@
 //   ?action=cont      -> sold (cash) + moneda contului
 //   ?action=pozitii   -> pozitiile deschise (cere permisiunea "Portfolio" pe cheie)
 //   ?action=ordine[&cursor=<cifre>] -> o pagina de istoric (50), cu cursorul paginii urmatoare
-//   ?action=preturi&ticker=AAPL_US_EQ&interval=1d|1h -> lumanari (Twelve Data daca e cheia, altfel Yahoo)
+//   ?action=preturi&ticker=AAPL_US_EQ&interval=5m|15m|30m|1h|4h|1d -> lumanari (Twelve Data daca e cheia, altfel Yahoo)
 //                                                       in forma randurilor Pionex {time, open, high, low, close}
 //   ?action=istoric   -> istoricul COMPLET al umplerilor, strans de colector in KV-ul de acasa (ISTORIC)
 //   POST ?action=istoric {ordine:[id], umpleri:[...], stare} -> colectorul adauga o pagina (dedup pe id)
@@ -40,8 +40,24 @@ async function t212(env, cale, actiune) {
   return j;
 }
 
-async function yahoo(simbol, interval) {
-  const range = interval === "1h" ? "60d" : "2y";
+// v100.108 (semaforul trendului pe acțiuni): intervalele pe care le dă ruta; orice altceva = zilnic
+export function intervalPreturi(x) { return ["5m", "15m", "30m", "1h", "4h", "1d"].includes(x) ? x : "1d"; }
+// 4 h din barele de 1 h: câte 4 în aceeași zi de bursă (New York), ca rezerva Yahoo din stocks.js
+export function grupeaza4h(rows) {
+  const zi = (ms) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(ms)), g = [];
+  let cur = null, n = 0, z = "";
+  for (const r of rows || []) {
+    const zz = zi(r.time);
+    if (!cur || zz !== z || n >= 4) { if (cur) g.push(cur); cur = { ...r }; z = zz; n = 1; continue; }
+    cur.high = Math.max(cur.high, r.high); cur.low = Math.min(cur.low, r.low); cur.close = r.close; cur.volume = cur.volume === null || r.volume === null ? null : cur.volume + r.volume; n++;
+  }
+  if (cur) g.push(cur);
+  return g;
+}
+const RANGE_Y = { "5m": "5d", "15m": "1mo", "30m": "1mo", "1h": "60d", "1d": "2y" };
+async function yahoo(simbol, interval, rng) {
+  if (interval === "4h") { const h = await yahoo(simbol, "1h", "730d"); return h ? grupeaza4h(h) : null; }   /* revizia: 60 de zile dădeau doar ~82 de bare de 4 h */
+  const range = rng || RANGE_Y[interval] || "2y";
   const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=${interval}&range=${range}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
   // refuzul Yahoo (prea multe cereri / pana) NU e "fara preturi": urca, ca cine cere sa reincerce mai tarziu
   if (r.status === 429) throw Object.assign(new Error("Yahoo a limitat cererile de prețuri"), { status: 429, retryAfter: 60 });
@@ -70,8 +86,9 @@ function dataRezultate(j) {
   const m = t.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (!m) return null;
   return { data: m[3] + "-" + m[1] + "-" + m[2], sigur: !/estimated|expected/i.test(t) };
 }
+const TD_INTERVAL = { "5m": "5min", "15m": "15min", "30m": "30min", "1h": "1h", "4h": "4h", "1d": "1day" };
 async function twelve(env, simbol, interval) {
-  const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${interval === "1h" ? "1h" : "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`);
+  const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${TD_INTERVAL[interval] || "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`);
   let j = null; try { j = await r.json(); } catch {}
   if (!r.ok || !j || !Array.isArray(j.values)) return null;
   const out = j.values.map((v) => ({ time: Date.parse(String(v.datetime).replace(" ", "T") + (String(v.datetime).length <= 10 ? "T00:00:00Z" : "Z")), open: Number(v.open), high: Number(v.high), low: Number(v.low), close: Number(v.close), volume: v.volume == null ? null : Number(v.volume) }))
@@ -224,11 +241,11 @@ export async function onRequestGet({ request, env }) {
   const u = new URL(request.url), a = u.searchParams.get("action") || "";
   try {
     if (a === "preturi") {
-      const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), iv = u.searchParams.get("interval") === "1h" ? "1h" : "1d";
+      const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), iv = intervalPreturi(u.searchParams.get("interval"));
       const cand = candidati(tk);
       if (!cand.length) return json({ error: "Nu știu simbolul de bursă pentru " + tk + "." }, 404);
       const nume = String(u.searchParams.get("nume") || "").replace(/[^\p{L}\p{N} .,&'-]/gu, "").trim().slice(0, 60);
-      const v = await prinCache("p:" + tk + ":" + iv, iv === "1h" ? 300 : 1800, async () => {
+      const v = await prinCache("p:" + tk + ":" + iv, iv === "1d" ? 1800 : 300, async () => {
         for (const s of cand) {
           let rows = null, sursa = null;
           if (env.TWELVE_DATA_API_KEY) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }

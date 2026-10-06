@@ -263,7 +263,7 @@ var Retea = (function () {
   }
   // ---- rândurile 🧠 (Tablou, fișă) ----
   var NUME = { "atinge-24": "Atinge un nivel în 24 h", "atinge-72": "Atinge un nivel în 3 zile", "atinge-168": "Atinge lichidarea în 7 zile", cursa: "Ținta înaintea stopului, în 7 zile", liniste: "Liniștea mai ține", directie: "Prețul mai sus peste 24 h", rezultat: "Rezultatul tău",
-    "stop1-t212": "Atinge stopul mâine", "sare1-t212": "Deschiderea sare peste stop", "cursa5-t212": "Ținta înaintea stopului în 5 zile de bursă", "directie-t212": "Prețul mai sus peste 5 zile de bursă", "rezultat-t212": "Un trade ca ăsta iese pe plus" };   /* v100.94 (L2; revizia, ruling 4): numele întregi încap de când rândul 🌳 nu mai repetă formula */
+    "stop1-t212": "Șansa să atingă stopul mâine", "sare1-t212": "Șansa ca bursa să deschidă sub stop", "cursa5-t212": "Șansa ca ținta să vină înaintea stopului în 5 zile de bursă", "directie-t212": "Prețul mai sus peste 5 zile de bursă", "rezultat-t212": "Un trade ca ăsta iese pe plus" };   /* v100.94 (L2; revizia, ruling 4): numele întregi încap de când rândul 🌳 nu mai repetă formula */
   var UNIT = { 24: ["zi independentă", "zile independente"], 48: ["bloc de 2 zile", "blocuri de 2 zile"], 72: ["bloc de 3 zile", "blocuri de 3 zile"], 168: ["săptămână", "săptămâni"] };
   var TINTA_DE = { cursa: "cursa", "iese-jos-24": "atinge-24", "iese-sus-24": "atinge-24", "iese-jos-72": "atinge-72", "iese-sus-72": "atinge-72", lichidare: "atinge-168", "liniste-24": "liniste", "liniste-48": "liniste", "directie-24": "directie", stop1: "stop1-t212", sare1: "sare1-t212", cursa5: "cursa5-t212", directie5: "directie-t212" };   /* v100.94 (L2): codurile rândurilor 🎲 de pe acțiuni */
   function PC(v) { return Math.round(v * 100) + "%"; }
