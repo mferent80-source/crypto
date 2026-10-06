@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.75";
+const VERSIUNE_COLECTOR = "v101.76";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -149,6 +149,7 @@ const Sfaturi = new Function("Alerte", "Scenariu", "TabloExtra", fs.readFileSync
 const Perechi = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "perechi.js"), "utf8") + "; return Perechi;")(GridCalcul, GridProba);   // v101.30 (I-477)
 const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "consiliu.js"), "utf8") + "; return Consiliu;")(SemnaleBot);   // v101.29 (I-474): o singura voce
 const Asemanatoare = new Function("Probabilitati", "GraficBot", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati, GraficBot);   // v101.68 (I-530): + GraficBot ⇒ ADX la pornire în fiecare caz   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
+const RiscLuna = incarca("risc-luna.js", "RiscLuna");   // v101.76: riscul boților și al acțiunilor + comportamentul (raportul de noapte)
 
 const Retea = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "retea.js"), "utf8") + "; return Retea;")(Probabilitati);   // v101.56 (rețeaua neuronală, livrarea 1)
 const Arbori = new Function("Retea", "Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "arbori.js"), "utf8") + "; return Arbori;")(Retea, Probabilitati);   // v101.63: arborii (aceleași intrări ca rețeaua)
@@ -1611,6 +1612,26 @@ async function turaArhivaOre() {
   arhivaOreInLucru = false;
 }
 // revizia 01.10: dupa un esec (413, server oprit) se asteapta o ora, nu se reia la fiecare minut; cele mai noi 6.000 de cazuri
+// v101.76 (el, 06.10: „în Tablou probabilități despre bot sau stock, în pagina din meniu tot ce poate · fă explicit comportamentul”):
+// RiscLuna.raport o dată pe zi, după cazuri - arhiva boților + istoricul T212 (doar cu cheile T212); paginile îl citesc din KV
+let riscInLucru = false, riscEsec = 0;
+async function turaRisc() {
+  const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
+  if (riscInLucru || profilStare.riscZi === zi || Date.now() - riscEsec < 3600000) return;
+  riscInLucru = true;
+  try {
+    // revizia (R8): arhiva sau istoricul T212 picate ⇒ nu trimit un raport ciuntit peste cel bun; reîncerc peste o oră (ziua rămâne nemarcată)
+    const a = await cere("/api/istoric-bot?action=botiInchisi"); if (!a || !Array.isArray(a.boti) || !a.boti.length) throw new Error("arhiva boților n-a venit");
+    const boti = await botiInchisiToti(), v = citesteVarsSigur();
+    let umpleri = [];
+    if (v.T212_API_KEY && v.T212_API_SECRET) { let h = null; try { h = await cere("/api/t212?action=istoric"); } catch (e) { h = null; } if (!h || !Array.isArray(h.umpleri)) throw new Error("istoricul T212 n-a venit"); umpleri = h.umpleri; }
+    const risc = RiscLuna.raport({ boti, umpleri, perechi: T212.perechi(umpleri), acum: Date.now() });
+    await trimite("/api/istoric-bot?action=risc", { risc });
+    profilStare.riscZi = zi; try { scrieAtomic(PROFIL_STARE, profilStare); } catch {}
+    jurnal("risc:", risc.boti ? cate(risc.boti.n, "bot", "boți") + ", ritmul " + risc.boti.ritm.K : "fără boți", "·", risc.actiuni ? cate(risc.actiuni.n, "episod", "episoade") + " T212" : "fără T212");
+  } catch (e) { riscEsec = Date.now(); jurnal("risc ESEC (reîncerc peste o oră)", e.message); }
+  riscInLucru = false;
+}
 let cazuriInLucru = false, cazuriEsec = 0;
 async function turaCazuri() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
@@ -1691,7 +1712,7 @@ async function bucla() {
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
-  turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
+  turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
   turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00

@@ -2306,3 +2306,20 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 /* v100.112 (el: „fă tot” - pe telefon Tabloul ieșea din ecran, 465 px la 400): cipul lung al Consilierului se rupe pe rânduri; I-551 butoanele „copiază” */
 @media(max-width:760px){#tabloubot .tbConsCip{white-space:normal;border-radius:10px;max-width:100%}}
 #tabloubot .tbTodoCopiere{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+/* v100.113: „Monte Carlo · riscul tău” - riscul boților și al acțiunilor + obiceiurile, din raportul de noapte */
+#montecarlo #rlPagina{display:grid;gap:14px}#montecarlo .rlSec{display:grid;gap:10px;padding:12px 0;border-top:1px solid var(--line)}#montecarlo .rlSec:first-of-type{border-top:0}
+#montecarlo .rlSec h3{margin:0;font-size:18px}#montecarlo .rlSec h4{margin:8px 0 0;font-size:14px;color:var(--muted)}#montecarlo .rlRasp{margin:0;font-size:16px;line-height:1.5;max-width:90ch}
+#montecarlo .rlAlege{display:flex;flex-wrap:wrap;gap:6px;align-items:center}#montecarlo .rlAlege>span{color:var(--muted);font-size:13px;margin-right:4px}
+#montecarlo .rlK{font:600 13px inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer}#montecarlo .rlK[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+#montecarlo .rlCifre{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}#montecarlo .rlCifra{display:grid;gap:2px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;padding:8px 10px;min-width:0}
+#montecarlo .rlCifra>span,#montecarlo .rlCifra>small{color:var(--muted);font-size:12px}#montecarlo .rlCifra>b{font-size:18px;font-variant-numeric:tabular-nums}
+#montecarlo .rlSvg{display:block;width:100%;height:auto}#montecarlo .rlSvg text{fill:var(--muted);font-size:11.5px}#montecarlo .rlSvg text.rlRau{fill:var(--bad)}
+#montecarlo .rlConcl{display:grid;gap:8px}#montecarlo .rlCon{border-left:3px solid var(--muted);background:var(--panel-2);border-radius:8px;padding:8px 12px;display:grid;gap:3px}#montecarlo .rlCon p{margin:0;font-size:13.5px}
+#montecarlo .rlCon.rl-rau{border-left-color:var(--bad)}#montecarlo .rlCon.rl-atentie{border-left-color:var(--warn)}#montecarlo .rlCon.rl-bine{border-left-color:var(--good)}#montecarlo .rlFac{color:var(--text);font-weight:600}
+#montecarlo .rlTab{overflow-x:auto}#montecarlo .rlTab table{border-collapse:collapse;width:100%;font-size:13px}#montecarlo .rlTab th,#montecarlo .rlTab td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+#montecarlo .rlTab th{color:var(--muted);font-size:12px;white-space:nowrap}#montecarlo .rlNr{text-align:right!important;white-space:nowrap;font-variant-numeric:tabular-nums}
+#montecarlo .rlPill{white-space:nowrap;font-size:12px;font-weight:700;border-radius:999px;padding:1px 8px;border:1px solid var(--muted);color:var(--muted)}#montecarlo .rlPill.rl-rau{border-color:var(--bad);color:var(--bad)}#montecarlo .rlPill.rl-bine{border-color:var(--good);color:var(--good)}
+#montecarlo .rlMetoda summary,#montecarlo .rlVechi>summary{cursor:pointer;color:var(--accent);font-size:13px}#montecarlo .rlMetoda ul{color:var(--muted);font-size:13px;display:grid;gap:4px;max-width:95ch}#montecarlo .rlVechi{margin-top:12px}
+#tabloubot #tbRisc{display:grid;gap:6px;padding:6px 0}#tabloubot .tbRiscR{margin:0;line-height:1.45}
+#t212 .t212Risc{display:grid;gap:4px;margin-top:8px}#t212 .t212Risc p{margin:0}#t212 .t212RiscRau{color:var(--warn)}
+#montecarlo .rlPill.rl-atentie{border-color:var(--warn);color:var(--warn)}

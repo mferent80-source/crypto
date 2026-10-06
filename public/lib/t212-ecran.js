@@ -692,8 +692,21 @@ function t212GraficeDeseneaza() {
       + '<div class="gbZona">' + d.svg + '</div>'
       + (faraProfil && (s.zi || s.zi5) ? '<p class="tbSub">Ziua și cele 5 zile obișnuite apar când profilul vine de la colector (îl face noaptea).</p>' : '')
       + '<div class="gbLeg">' + d.legenda + '</div>'
-      + '<div class="t212TfCit">' + t212TfCitHtml(d.semafor) + '</div>';   /* v100.108: citirea pe TF-uri, sub grafic */
+      + '<div class="t212TfCit">' + t212TfCitHtml(d.semafor) + '</div>' + t212RiscHtml(p);   /* v100.108: citirea pe TF-uri, sub grafic; v100.113: riscul tău */
   });
+}
+// v100.113 (el, 06.10: „în Tablou să-mi spună despre bot sau stock probabilități”): probabilitățile poziției din istoria ta - după cât o ții deja
+// (din pozițiile tale ținute măcar atât) + medierea pe minus, dovedit rea la tine (RiscLuna, raportul de noapte)
+var t212RiscEp = { n: -1, ep: null };
+function t212RiscHtml(p) {
+  if (typeof RiscLuna === "undefined") return "";
+  var rp = typeof rlStare !== "undefined" ? rlStare.raport : null; if (!rp && typeof rlPorneste === "function") rlPorneste(false);
+  var u = t212.istoric && Array.isArray(t212.istoric.umpleri) ? t212.istoric.umpleri : null; if (!rp || !rp.actiuni || !u) return "";
+  if (t212RiscEp.n !== u.length) t212RiscEp = { n: u.length, ep: RiscLuna.episoade(u) };
+  var e = t212RiscEp.ep.deschise.filter(function (x) { return x.ticker === p.ticker; })[0]; if (!e) return "";
+  var t = RiscLuna.textActiune(rp.actiuni.supravietuire, (Date.now() - e.start) / 864e5), a1 = (rp.actiuni.comportament || []).filter(function (x) { return x.k === "A1"; })[0], m = e.A1 && a1 ? RiscLuna.textMediere(a1) : null;
+  if (!t && !m) return "";
+  return '<div class="t212Risc">' + (t ? '<p class="tbSub">🎲 ' + escapeHtml(t) + '</p>' : '') + (m ? '<p class="tbSub t212RiscRau">⚠️ ' + escapeHtml(m) + '</p>' : '') + '</div>';
 }
 // v100.55: profilul + probabilitatile actiunii propuse (avertizeaza, nu schimba verdictul portii)
 function t212ProfilPoarta(p) {

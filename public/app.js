@@ -3062,7 +3062,7 @@ function navTo(id,load=false){
    if(id==="edgepro")renderEdgePro();
    if(id==="profitready")renderProfitReadiness(false);
    if(id==="replaylab")renderReplayLab();
-   if(id==="montecarlo")runMonteCarlo();
+   if(id==="montecarlo"){if(typeof rlPorneste==="function")rlPorneste(false)}   // v100.113: riscul tău (raportul de noapte); vechiul Monte Carlo pe semnale pornește din butonul lui
    if(id==="scenario")renderScenario();
    if(id==="health")runHealthCheck();
  }
@@ -6711,7 +6711,35 @@ function tbTvAmPus(){
   try{localStorage.setItem(TB_TV_KEY+b.id,JSON.stringify({sig:c.sig,jos:c.jos,sus:c.sus,grile:c.grile,la:Date.now()}))}catch(_){}
   tbDeseneazaTvCod();toast("Ținut minte: la gridul următor îți arăt din nou codul","good");
 }
-function tbDeseneazaTabloulUnic(){renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbDeseneazaTvCod();tbPiataPeBot()}
+// v100.113 (el, 06.10: „în Tablou să-mi spună despre bot … probabilități”): riscul tău - probabilitățile botului după cât stă deja (din boții
+// tăi care au ajuns la vârsta lui), luna proastă la ritmul tău (raportul de noapte, RiscLuna), toți boții deodată și corelația lor (1 h, la 30 min)
+var tbRiscCor={cheie:null,la:0,c:null,inLucru:false};
+async function tbRiscAduCor(boti){
+  var mon=[],vaz={},nr={};(boti||[]).forEach(function(x){var s=TabloBot.simboluri(x.baza,x.quote,x.simbolPionex).pionex,n=String(x.baza||"").replace(/\.PERP$/,"");nr[n]=(nr[n]||0)+1;if(s&&!vaz[s]){vaz[s]=1;mon.push({s:s,nume:n})}});
+  tbRiscCor.dubluri=Object.keys(nr).filter(function(k){return nr[k]>1}).map(function(k){return {m:k,n:nr[k]}});   // revizia (R7): doi boți pe aceeași monedă = un singur pariu
+  var cheie=mon.map(function(x){return x.s}).sort().join(",");
+  if(tbRiscCor.cheie!==cheie)tbRiscCor.c=null;   // revizia (R7): lista schimbată ⇒ nu se arată corelația boților de dinainte
+  if(mon.length<2){tbRiscCor.cheie=cheie;tbRiscCor.la=Date.now();tbRiscCor.c={monede:mon.map(function(x){return x.nume}),M:[[1]],bare:0};return}
+  if(tbRiscCor.inLucru||(tbRiscCor.cheie===cheie&&Date.now()-tbRiscCor.la<30*60000))return;
+  tbRiscCor.inLucru=true;tbRiscCor.cheie=cheie;tbRiscCor.la=Date.now();var se={};
+  try{for(var i=0;i<mon.length;i++){try{var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(mon[i].s)+"&interval=60M&limit=500"),r=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:[];se[mon[i].nume]=r.map(function(x){return {t:Number(x.time),c:Number(x.close)}})}catch(e){}}   /* o monedă care pică nu le oprește pe celelalte */
+    tbRiscCor.c=RiscLuna.corelatie(se)}catch(e){}finally{tbRiscCor.inLucru=false}
+  tbRiscDeseneaza();
+}
+function tbRiscDeseneaza(){
+  var el=$("tbRisc");if(!el||typeof RiscLuna==="undefined")return;
+  var b=tbStare.routeOk===false?null:tbStare.bot,rp=typeof rlStare!=="undefined"?rlStare.raport:null,r=[],boti=(tbStare.boti||[]).filter(function(x){return x&&x.activ!==false});
+  if(!rp&&typeof rlPorneste==="function")rlPorneste(false);
+  if(rp&&rp.boti){
+    if(b&&Number(b.pornitLa)>0){var t=RiscLuna.textBot(rp.boti.supravietuire,(Date.now()-Number(b.pornitLa))/3600000);r.push(t||"Botul stă de sub o oră; din toți boții tăi, "+Math.round(rp.boti.desc.pePlus*100)+"% au ieșit pe plus.")}
+    r.push(RiscLuna.textLuna(rp.boti.mc[0],"USDT"));
+  }else r.push(typeof rlStare!=="undefined"&&rlStare.inLucru?"Aduc raportul de noapte…":typeof rlStare!=="undefined"&&rlStare.eroare?rlStare.eroare:"Raportul de noapte nu există încă: îl face colectorul, o dată pe zi.");
+  var tl=RiscLuna.textTotiBotii(boti.map(function(x){var st=x.opritorPierdereActiv?botiNr(x.opritorPierdere):null;return {nume:String(x.baza||"").replace(/\.PERP$/,""),investit:botiNr(x.investit)||0,laStop:st!=null?TabloExtra.totalCuGridLa(x,st):null,areStop:!!x.opritorPierdereActiv,lichPct:botiNr(x.distantaLichidarePct)}}));
+  if(tl)r.push(tl);
+  tbRiscAduCor(boti);if(boti.length&&tbRiscCor.c)r.push(RiscLuna.textCorelatie(tbRiscCor.c,tbRiscCor.dubluri));
+  el.innerHTML=r.filter(Boolean).map(function(t){return '<p class="tbSub tbRiscR">'+escapeHtml(t)+'</p>'}).join("")+'<button type="button" class="tbBtnLinie" data-action-click="navTo(\'montecarlo\',true)">Tot ce știu despre riscul și obiceiurile tale</button>';
+}
+function tbDeseneazaTabloulUnic(){try{tbRiscDeseneaza()}catch(e){};renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbDeseneazaTvCod();tbPiataPeBot()}
 // Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
 // vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
 // v100.6: bucatile vin din PretViu.banda (pur); pretul botului sta imediat dupa nume, live din Pionex.
