@@ -55,10 +55,11 @@ export function grupeaza4h(rows) {
   return g;
 }
 const RANGE_Y = { "5m": "5d", "15m": "1mo", "30m": "1mo", "1h": "60d", "1d": "2y" };
-async function yahoo(simbol, interval, rng) {
+async function yahoo(simbol, interval, rng, prepost) {
   if (interval === "4h") { const h = await yahoo(simbol, "1h", "730d"); return h ? grupeaza4h(h) : null; }   /* revizia: 60 de zile dădeau doar ~82 de bare de 4 h */
   const range = rng || RANGE_Y[interval] || "2y";
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=${interval}&range=${range}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+  // v100.119 (pagina Sugestii): prepost - și rândurile din pre-market (doar intraday; pre-market-ul US de la 16:00 RO)
+  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=${interval}&range=${range}${prepost ? "&includePrePost=true" : ""}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
   // refuzul Yahoo (prea multe cereri / pana) NU e "fara preturi": urca, ca cine cere sa reincerce mai tarziu
   if (r.status === 429) throw Object.assign(new Error("Yahoo a limitat cererile de prețuri"), { status: 429, retryAfter: 60 });
   if (r.status >= 500) throw Object.assign(new Error("Yahoo: HTTP " + r.status), { status: 502 });
@@ -151,7 +152,7 @@ export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
-  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx") return json({ error: "Acțiune necunoscută" }, 400);
+  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
   if (act === "idei") {
@@ -210,6 +211,19 @@ export async function onRequestPost({ request, env }) {
     await env.ISTORIC.put("t212:sfaturi", JSON.stringify(lista.filter((x) => x.zi >= de).slice(-2000)));
     return json({ ok: true, n: lista.length });
   }
+  // v100.119 (pagina Sugestii): listele dimineții (US + EU, cu istoricul fiecărei reguli) și, separat, pre-market-ul US / gap-ul EU
+  if (act === "sugestii") {
+    const r = corp && corp.sugestii;
+    if (!r || typeof r !== "object" || Array.isArray(r) || !(nr(r.la) > 0)) return json({ error: "sugestii: raportul cu „la”" }, 400);
+    await env.ISTORIC.put("t212:sugestii", JSON.stringify(r)); return json({ ok: true });
+  }
+  if (act === "premarket") {
+    const piata = corp && corp.piata, la = nr(corp && corp.la);
+    if ((piata !== "us" && piata !== "eu") || !(la > 0) || !Array.isArray(corp.lista)) return json({ error: "premarket: piata us/eu, la și lista" }, 400);
+    const v = await citesteKv(env, "t212:premarket", {}), o = v && typeof v === "object" && !Array.isArray(v) ? v : {};
+    o[piata] = { la, lista: corp.lista.slice(0, 60), judecate: nr(corp.judecate), fara: nr(corp.fara) };
+    await env.ISTORIC.put("t212:premarket", JSON.stringify(o)); return json({ ok: true });
+  }
   if (act === "lista") {
     // v90: simbolurile urmarite de el (se adauga la universul ideilor)
     const l = (Array.isArray(corp && corp.simboluri) ? corp.simboluri : []).map((x) => String(x || "").toUpperCase().trim()).filter((x) => /^[A-Z][A-Z0-9.-]{0,9}$/.test(x)).slice(0, 30);
@@ -252,11 +266,12 @@ export async function onRequestGet({ request, env }) {
       const cand = candidati(tk);
       if (!cand.length) return json({ error: "Nu știu simbolul de bursă pentru " + tk + "." }, 404);
       const nume = String(u.searchParams.get("nume") || "").replace(/[^\p{L}\p{N} .,&'-]/gu, "").trim().slice(0, 60);
-      const v = await prinCache("p:" + tk + ":" + iv, iv === "1d" ? 1800 : 300, async () => {
+      const pp = u.searchParams.get("prepost") === "1" && /m$|h$/.test(iv) && iv !== "4h";   // v100.119: pre-market doar intraday (Twelve Data nu-l dă)
+      const v = await prinCache("p:" + tk + ":" + iv + (pp ? ":pp" : ""), iv === "1d" ? 1800 : 300, async () => {
         for (const s of cand) {
           let rows = null, sursa = null;
-          if (env.TWELVE_DATA_API_KEY) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }
-          if (!rows) { rows = await yahoo(s, iv); sursa = "yahoo"; }
+          if (env.TWELVE_DATA_API_KEY && !pp) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }
+          if (!rows) { rows = await yahoo(s, iv, null, pp); sursa = "yahoo"; }
           if (rows) return { ticker: tk, simbol: s, sursa, interval: iv, randuri: rows };
         }
         if (nume.length >= 3) {
@@ -296,6 +311,11 @@ export async function onRequestGet({ request, env }) {
       if (!env.ISTORIC?.get) return faraKv();
       const [idei, istoric, lista, istoricReveniri] = await Promise.all([citesteKv(env, "t212:idei", null), citesteKv(env, "t212:idei-istoric", []), citesteKv(env, "t212:lista", []), citesteKv(env, "t212:reveniri-istoric", [])]);
       return json({ idei, istoric: Array.isArray(istoric) ? istoric : [], lista: Array.isArray(lista) ? lista : [], istoricReveniri: Array.isArray(istoricReveniri) ? istoricReveniri : [] });
+    }
+    if (a === "sugestii") {
+      if (!env.ISTORIC?.get) return faraKv();
+      const [sugestii, premarket] = await Promise.all([citesteKv(env, "t212:sugestii", null), citesteKv(env, "t212:premarket", null)]);
+      return json({ sugestii, premarket });
     }
     if (a === "cf") {
       if (!env.ISTORIC?.get) return faraKv();

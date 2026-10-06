@@ -263,7 +263,7 @@ await test("(5c) sub „Ce aș alege eu” din fișă: rândul carnetului + buto
   assert.match(app, /id==="gridset"[^\n]*carnetPorneste\(false\)/);
 });
 await test("(G) garda textelor: grupul „carnet” (strict) cu textele reale ale Carnetului", () => {
-  const g = citeste("scripts", "garda-texte.mjs"); assert.match(g, /import \{ situatiiCarnet \} from "\.\/lib\/garda-carnet\.mjs";/); assert.match(g, /"carnet"\]\);/);
+  const g = citeste("scripts", "garda-texte.mjs"); assert.match(g, /import \{ situatiiCarnet \} from "\.\/lib\/garda-carnet\.mjs";/); assert.match(g, /STRICT = new Set\(\[[^\]]*"carnet"[^\]]*\]\);/);   // v100.119: lista continuă („sugestii-act”)
   const s = citeste("scripts", "lib", "garda-carnet.mjs"); for (const f of ["textAlegere", "textAsteapta", "textCalibrare", "textVerdictFisa", "randSubFisa", "concluzie"]) assert.match(s, new RegExp("\\." + f + "\\("), f);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

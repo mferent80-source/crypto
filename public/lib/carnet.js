@@ -88,8 +88,8 @@
     var baza = { cu: cu.length, fara: fara.length, medieCu: cu.length ? mr(cu) : null, medieFara: fara.length ? mr(fara) : null };
     var gr = {}; l.forEach(function (x) { var k = x.simbol, t = test(x); if (t !== true && t !== false) return; if (!gr[k]) gr[k] = { a: [], b: [] }; gr[k][t ? "a" : "b"].push(x.r); });
     var dc = Object.keys(gr).filter(function (k) { return gr[k].a.length && gr[k].b.length; }).map(function (k) { return medie(gr[k].a) - medie(gr[k].b); });
-    var t0 = Math.min.apply(null, l.map(function (x) { return x.t; })), bl = {};
-    l.forEach(function (x) { var t = test(x); if (t !== true && t !== false) return; var k = Math.floor((x.t - t0) / (FEREASTRA * ZI)); if (!bl[k]) bl[k] = { a: [], b: [] }; bl[k][t ? "a" : "b"].push(x.r); });
+    var t0 = Infinity, bl = {}; for (var q0 = 0; q0 < l.length; q0++) if (l[q0].t < t0) t0 = l[q0].t;   // revizia: fără Math.min.apply (stiva se rupe peste ~124.000 de puncte)
+    l.forEach(function (x) { var t = test(x); if (t !== true && t !== false) return; var k = Math.floor((x.t - t0) / ((o.blocZile || FEREASTRA) * ZI)); if (!bl[k]) bl[k] = { a: [], b: [] }; bl[k][t ? "a" : "b"].push(x.r); });
     var db = Object.keys(bl).filter(function (k) { return bl[k].a.length && bl[k].b.length; }).map(function (k) { return medie(bl[k].a) - medie(bl[k].b); });
     baza.monede = dc.length; baza.blocuri = db.length;
     var motiv = cu.length < 30 || fara.length < 30 ? "cazuri" : dc.length < 8 ? "monede" : db.length < 8 ? "zile" : null;

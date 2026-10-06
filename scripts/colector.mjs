@@ -35,11 +35,13 @@ import { turaProbabilitati as turaProbabilitatiModul } from "./lib/tura-probabil
 import { turaRetea as turaReteaModul } from "./lib/tura-retea.mjs";   // v101.56 (rețeaua neuronală, livrarea 1)
 import { bilantDinBusola } from "./lib/din-busola.mjs";   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠
 import { unesteZile, randuriInchise } from "../retea/date-t212.mjs";   // v101.64 (L2, revizia 🟡6): barele zilnice se adună peste 2 ani
+import { sugestiiDimineata, sugestiiIntraday } from "./lib/tura-sugestii-actiuni.mjs";   // v101.81 (pagina Sugestii): acțiunile US + EU
+import { universEU } from "./lib/univers-eu.mjs";
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.80";
+const VERSIUNE_COLECTOR = "v101.81";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -150,7 +152,9 @@ const Perechi = new Function("GridCalcul", "GridProba", fs.readFileSync(path.joi
 const Consiliu = new Function("SemnaleBot", fs.readFileSync(path.join(RAD, "public", "lib", "consiliu.js"), "utf8") + "; return Consiliu;")(SemnaleBot);   // v101.29 (I-474): o singura voce
 const Asemanatoare = new Function("Probabilitati", "GraficBot", fs.readFileSync(path.join(RAD, "public", "lib", "asemanatoare.js"), "utf8") + "; return Asemanatoare;")(Probabilitati, GraficBot);   // v101.68 (I-530): + GraficBot ⇒ ADX la pornire în fiecare caz   // v101.28 (I-469)   // v101.26 (pachetul 1): profilul monedei din barele de 1 h
 const RiscLuna = incarca("risc-luna.js", "RiscLuna");   // v101.76: riscul boților și al acțiunilor + comportamentul (raportul de noapte)
-const Carnet = incarca("carnet.js", "Carnet");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
+const Carnet = incarca("carnet.js", "Carnet");
+const SugestiiActiuni = incarca("sugestii-actiuni.js", "SugestiiActiuni");   // v101.81 (pagina Sugestii): regulile „early” + istoricul lor (verdictul din Carnet)
+const SUG_BAZA_FIS = path.join(DATA, "sugestii-baza.json"), SUG_IST_FIS = path.join(DATA, "sugestii-istoric.json");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
 const CARNET_FIS = path.join(DATA, "carnet-oferte.json");
 
 const Retea = new Function("Probabilitati", fs.readFileSync(path.join(RAD, "public", "lib", "retea.js"), "utf8") + "; return Retea;")(Probabilitati);   // v101.56 (rețeaua neuronală, livrarea 1)
@@ -1111,11 +1115,45 @@ async function turaIdeiZi() {
     } catch (e) { jurnal("idei: a doua părere", e.message); }
     await trimite("/api/t212?action=idei", { la: Date.now(), zi, actiuni: r.actiuni, restul: r.restul, reveniri: r.reveniri, dovadaReveniri: r.dovadaReveniri, urmarireReveniri: urmRev, judecate: r.judecate, trecute: r.trecute, urmarire: urm, ndx: r.ndx });
     m.ideiZi = zi;
+    // v101.81 (pagina Sugestii): listele de acțiuni „early” - US pe barele aduse pentru idei, EU (DAX + CAC + AEX + ale lui) aduse acum -
+    // cu istoricul pe 2 ani și urmărirea înainte; baza (volumul mediu, închiderea de ieri) rămâne pe disc pentru turele de la 10:20 / 15:50
+    try {
+      let istS = []; try { istS = JSON.parse(fs.readFileSync(SUG_IST_FIS, "utf8")); if (!Array.isArray(istS)) istS = []; } catch { istS = []; }
+      const s = await sugestiiDimineata({ SA: SugestiiActiuni, Reveniri, bareUS: bareIdei, tickereEU: universEU(h && h.umpleri), acum: Date.now(), jurnal, istoric: istS, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+        cereBare: async (tk) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []) });
+      scrieAtomic(SUG_BAZA_FIS, { zi, la: Date.now(), tickere: s.baza }); scrieAtomic(SUG_IST_FIS, s.istoric);   // revizia (I1): baza își știe ziua
+      await trimite("/api/t212?action=sugestii", { sugestii: s.raport });
+    } catch (e) { jurnal("sugestii ESEC", e.message); }
     // v101.65 (ideea 2): universul zilnic întreg - barele aduse oricum pentru idei (Nasdaq-100 + ale lui, 2 ani) intră în data/retea/zile,
     // unite peste cele vechi; rotația de noapte (după vechimea fișierului) trece singură la ceilalți. După idei: o eroare aici nu lasă ziua fără ele
     try { let nz = 0; for (const [tk, rd] of randuriIdei) if (scrieZileTicker(tk, randuriInchise(rd, Date.now(), GridCalcul))) nz++;   /* v101.66 (revizia 🔵11): fără bara în curs */ jurnal("idei: bare zilnice scrise pentru rețea:", cate(nz, "ticker", "tickere"), "din", randuriIdei.size); } catch (e) { jurnal("idei: barele zilnice", e.message); }
   } catch (e) { jurnal("idei ESEC", e.message); }
   ideiInLucru = false;
+}
+
+// v101.81 (pagina Sugestii): gap-ul EU la 10:20 RO (bursele EU deschid la 10:00) și pre-market-ul US la 15:50 RO (deschiderea US 16:30),
+// în zilele lucrătoare, o dată pe zi. Fără niciun rând azi (sărbătoare) ⇒ ziua se notează, dar nu se scrie peste lista bună de ieri.
+let sugIntradayInLucru = false;
+async function turaSugestiiIntraday() {
+  if (sugIntradayInLucru || process.env.COLECTOR_FARA_IDEI) return;
+  const z = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", hourCycle: "h23" }).formatToParts(new Date());
+  const g = (k) => (z.find((x) => x.type === k) || {}).value, zi = g("year") + "-" + g("month") + "-" + g("day"), min = Number(g("hour")) * 60 + Number(g("minute")), m = meta();
+  if (g("weekday") === "Sat" || g("weekday") === "Sun") return;
+  // revizia (I3): fereastra US din deschiderea de la New York (40 de minute înainte) - ora de vară se schimbă la date diferite în SUA și în UE
+  const acum = Date.now(), deschNY = SugestiiActiuni.deschidereNY(acum);
+  const piata = min >= 10 * 60 + 20 && min < 11 * 60 + 30 && m.sugEuZi !== zi ? "eu" : acum >= deschNY - 40 * 60000 && acum < deschNY && m.sugUsZi !== zi ? "us" : null;
+  if (!piata) return;
+  let baza = null; try { baza = JSON.parse(fs.readFileSync(SUG_BAZA_FIS, "utf8")); } catch { baza = null; }
+  if (!baza || baza.zi !== zi || !baza.tickere) return;   // revizia (I1): doar pe baza de azi (altfel gap-ul ar cuprinde și ziua de ieri)
+  sugIntradayInLucru = true;
+  try {
+    const r = await sugestiiIntraday({ SA: SugestiiActiuni, piata, baza: baza.tickere, acum, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+      cere5m: async (tk) => (await cere("/api/t212?action=preturi&interval=5m&ticker=" + encodeURIComponent(tk) + (piata === "us" ? "&prepost=1" : ""))).randuri || [] });
+    if (r.asteapta > 0 && min < 11 * 60 + 20) return;   // revizia (I4): primele 20 de minute EU încă n-au venit la Yahoo - reîncerc la tura următoare
+    if (r.judecate > 0) await trimite("/api/t212?action=premarket", { piata, la: r.la, lista: r.lista, judecate: r.judecate, fara: r.fara });
+    if (piata === "eu") m.sugEuZi = zi; else m.sugUsZi = zi;
+  } catch (e) { jurnal("sugestii intraday ESEC", e.message); }
+  sugIntradayInLucru = false;
 }
 
 // v89: rezumatul de dimineata - o data pe zi, dupa 9:00 ora Romaniei (Radar + Discord)
@@ -1759,6 +1797,7 @@ async function bucla() {
   turaBilantBusola().catch((e) => jurnal("busola bilanț", e.message));   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠, în KV
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).catch((e) => jurnal("idei/dimineata", e.message));
+  turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);

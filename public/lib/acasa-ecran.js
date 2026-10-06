@@ -130,8 +130,10 @@ function acasaCumpar(d) {
   var ch = !p ? mut("aștept listele") : '↩️ acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + '<br>↩️ monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM) + '<br>📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS);
   var btn = function (ecran, id, fila, t) { return '<span class="acCumparBtn"><button class="acBtn" type="button" data-action-click="acasaMergiLa(\'' + ecran + '\',\'' + id + '\'' + (fila ? ',\'' + fila + '\'' : '') + ')">' + t + '</button></span>'; };
   var col = function (et, corp, extra, b) { return '<div class="acCumparCol"><p class="acCumparEt">' + et + '</p><p>' + corp + '</p>' + (extra ? '<p class="tbWarn">' + escapeHtml(extra) + '</p>' : '') + b + '</div>'; };
+  // v100.119: drumul spre pagina cu TOATE sugestiile (boți, US, EU, listele „early”)
   return '<p class="acCumparCap">💡 <b>Ce aș cumpăra azi</b></p><div class="acCumparCol3">' + col("Acțiuni", ah, null, btn("t212", "t212Idei", "idei", "Idei de cumpărare"))
-    + col("Boți", bh, null, btn("tabloubot", "tbIdei", null, "Pe ce aș porni un bot")) + col("Revenire și short", ch, p && p.nota, btn("t212", "t212Idei", "revenire", "Pe revenire")) + '</div>';
+    + col("Boți", bh, null, btn("tabloubot", "tbIdei", null, "Pe ce aș porni un bot")) + col("Revenire și short", ch, p && p.nota, btn("t212", "t212Idei", "revenire", "Pe revenire")) + '</div>'
+    + '<p class="acCumparToate"><button class="acBtn" type="button" data-action-click="navTo(\'sugestii\',true)">💡 Toate sugestiile: boți, acțiuni US și EU</button></p>';   // v100.119: sub cartelă, titlul rămâne același
 }
 // v100.85 (reveniri + short, 03.10): al doilea rând din „Ce aș cumpăra azi” - listele noi, fiecare cu eticheta istoricului ei
 function acasaCumpar2(d) {
