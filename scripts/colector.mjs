@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.78";
+const VERSIUNE_COLECTOR = "v101.79";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -175,7 +175,8 @@ let riscMemo = { la: 0, r: null };
 async function riscRaport() {
   if (Date.now() - riscMemo.la < 3600000) return riscMemo.r;
   riscMemo.la = Date.now();
-  try { const d = await cere("/api/istoric-bot?action=risc"); riscMemo.r = d && d.risc || null; } catch (e) { jurnal("risc (citire)", e.message); }
+  // revizia (I2): o citire ratată se reîncearcă în 5 minute (nu o oră), iar alerta de 24 h așteaptă cifrele până la 26 h
+  try { const d = await cere("/api/istoric-bot?action=risc"); riscMemo.r = d && d.risc || null; riscMemo.eroare = false; } catch (e) { riscMemo.eroare = true; riscMemo.la = Date.now() - 3600000 + 300000; jurnal("risc (citire)", e.message); }
   return riscMemo.r;
 }
 async function ferestreServer() {
@@ -500,10 +501,14 @@ async function tura() {
         if (await trimiteAlerta(m, b.id, m.cheie)) st._ceasLarg = true;
       }
       // v101.78 (I-563): botul stă de 24 h și e pe minus - o dată, cu cifrele lui (din boții tăi care au ajuns la 24 h; raportul de noapte)
-      if (!st._minus24 && acum - Number(b.pornitLa) >= 24 * 3600000 && Number(b.profitTotal) < 0) {
-        const rp = await riscRaport(), ore = (acum - Number(b.pornitLa)) / 3600000, t = rp && rp.boti ? RiscLuna.textBot(rp.boti.supravietuire, ore) : null;
-        const m = MesajeColector.minus24h(String(b.baza || "botul").replace(/\.PERP$/, ""), ore, Number(b.profitTotal), t);
-        if (await trimiteAlerta(m, b.id, m.cheie)) st._minus24 = true;
+      // revizia: fără ora pornirii nimic (M3); minusul contează de la 0,5% din investiție (M4)
+      if (!st._minus24 && Number(b.pornitLa) > 0 && acum - Number(b.pornitLa) >= 24 * 3600000 && Number(b.profitTotal) < -0.005 * (Number(b.investit) > 0 ? Number(b.investit) : 0)) {
+        const rp = await riscRaport(), ore = (acum - Number(b.pornitLa)) / 3600000;
+        if (rp || !riscMemo.eroare || ore >= 26) {
+          const pr = rp && rp.boti ? RiscLuna.pragulAtins(rp.boti.supravietuire, ore) : null, t = rp && rp.boti ? RiscLuna.textBot(rp.boti.supravietuire, ore) : null;
+          const m = MesajeColector.minus24h(String(b.baza || "botul").replace(/\.PERP$/, ""), ore, Number(b.profitTotal), t, pr);
+          if (await trimiteAlerta(m, b.id, m.cheie)) st._minus24 = true;
+        }
       }
       // v101.39 (I-481): ceasul gridului ingust - botul pornit cu setarile variantei ingusta: un singur mesaj cand trece durata probata.
       // Potrivirea se tine minte (KV-ul ingust se rescrie la 6 h si poate sa nu mai propuna)

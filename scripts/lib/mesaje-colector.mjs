@@ -59,8 +59,13 @@ export const pornitCa = (nume, f) => {
       larg ? "Aș lăsa botul să lucreze; dacă stă peste " + (ore ? 2 * ore + " h" : "de două ori durata tipică") + ", te anunț." : "Aș ține stopul la marginea gridului: îngust iese repede" + (ore ? " (tipic " + ore + " h)" : "") + ".") };
 };
 // v101.78 (I-563): botul stă de 24 h și e pe minus - o dată, cu cifrele lui (din boții tăi care au ajuns la 24 h; raportul de noapte RiscLuna)
-export const minus24h = (nume, ore, total, textBot) => ({ nivel: "atentie", cheie: "minus-24h", titlu: nume + ": " + Math.round(ore) + " h pe minus (" + U2(total) + ")",
-  mesaj: msg(textBot || "Botul stă de " + Math.round(ore) + " h și e pe " + U2(total) + "; cifrele din istoria ta vin cu raportul de noapte.", "Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină.") });
+// v101.79 (revizia, I1): sfatul urmează cifrele lui (p = rândul de 24 h din RiscLuna.supravietuire), ca rândul 1 să nu-l contrazică pe 2
+const sfat24 = (p) => !p ? "Aș verifica acum stopul botului, dacă nu are unul."
+  : p.medie >= 0 ? "Aș lăsa botul, dar cu stop: la tine, boții ținuți peste o zi au ieșit în medie pe plus."
+  : p.pePlus >= 0.5 ? "Aș pune un stop aproape: cei mai mulți revin, dar pierderile mari trag media în jos."
+  : "Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină.";
+export const minus24h = (nume, ore, total, textBot, p) => ({ nivel: "atentie", cheie: "minus-24h", titlu: nume + ": " + Math.round(ore) + " h pe minus (" + U2(total) + ")",
+  mesaj: msg(textBot && p ? textBot : "Botul stă de " + Math.round(ore) + " h și e pe " + U2(total) + "; încă n-am raportul de risc cu istoria ta.", sfat24(textBot ? p : null)) });
 // v101.73 (I-540): ceasul ferestrei LARG - botul stă de peste 2× durata tipică din proba ferestrei
 export const ceasLarg = (nume, ore, tipic) => ({ nivel: "info", cheie: "ceas-larg", titlu: nume + ": LARG stă de " + Math.round(ore) + " h (tipic " + Math.round(tipic) + " h)",
   mesaj: msg("Banii stau în grid de peste două ori mai mult decât în probă.", "Aș închide aproape de zero dacă prețul nu mai trece prin grid; dacă lucrează, îl las.") });

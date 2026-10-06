@@ -690,7 +690,8 @@ setInterval(()=>clearExpiredRequestCache(),120000);
 let dialogReturnFocus=null;function focusDialog(id){const p=$(id);if(!p)return;dialogReturnFocus=document.activeElement;setTimeout(()=>{const f=p.querySelector("button,input,select,textarea,[tabindex]:not([tabindex=\"-1\"])");(f||p).focus()},0)}
 function restoreDialogFocus(){const x=dialogReturnFocus;dialogReturnFocus=null;if(x?.focus)setTimeout(()=>x.focus(),0)}
 // v100.115 (I-554): laboratorul vechi din meniu - deschis / pliat se ține minte pe aparat
-function sideVechiTine(){var sv=$("sideVechi");if(!sv||!sv.addEventListener)return;try{if(localStorage.getItem("sideVechiDeschis")==="1")sv.open=true}catch(_){}sv.addEventListener("toggle",function(){try{localStorage.setItem("sideVechiDeschis",sv.open?"1":"0")}catch(_){}})}
+// revizia (M8): deschiderea automată (navTo) nu-i suprascrie alegerea; (M9) numărul din titlu se numără
+function sideVechiTine(){var sv=$("sideVechi");if(!sv||!sv.addEventListener)return;try{var cap=sv.querySelector("summary"),n=sv.querySelectorAll("[data-nav]").length;if(cap&&n)cap.textContent="Laborator vechi ("+n+")"}catch(_){}try{if(localStorage.getItem("sideVechiDeschis")==="1")sv.open=true}catch(_){}sv.addEventListener("toggle",function(){if(sv.__auto){sv.__auto=false;return}try{localStorage.setItem("sideVechiDeschis",sv.open?"1":"0")}catch(_){}})}
 function openMoreDrawer(){$("moreDrawer").classList.add("on");focusDialog("moreDrawer")}
 function closeMoreDrawer(){$("moreDrawer").classList.remove("on");restoreDialogFocus()}
 function moreNav(id,load=false){closeMoreDrawer();navTo(id,load)}
@@ -3009,7 +3010,7 @@ function navTo(id,load=false){
  try{localStorage.setItem(PAGINA_CURENTA_KEY,id)}catch(_){}
  document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id));
  // v100.115 (I-554): o pagină din laboratorul vechi (deschisă din alt loc sau la reîncărcare) deschide grupul ei, ca butonul activ să se vadă
- try{var sv=document.getElementById("sideVechi"),bv=sv&&sv.querySelector('[data-nav="'+id+'"]');if(bv)sv.open=true;}catch(_){}
+ try{var sv=document.getElementById("sideVechi"),bv=sv&&sv.querySelector('[data-nav="'+id+'"]');if(bv&&!sv.open){sv.__auto=true;sv.open=true}}catch(_){}
  if(load){
    if(id==="mtf")multiTF();
    else if(id==="dash"){if(typeof acasaPorneste==="function")acasaPorneste(false)}

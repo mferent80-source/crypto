@@ -226,8 +226,9 @@ export function situatiiAlerte(pune) {
   lb("Busola dimineața: 12 boți (tăiat la 145)", Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - ORA })));
   co("gridul îngust a ajuns la durata probată", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", false));
   // v101.78 (I-563): 24 h pe minus - cu cifrele lui și fără raport
-  co("24 h pe minus, cu cifrele lui", "minus24h", MC.minus24h("MARSCOIN", 26.4, -12.345, "Din boții tăi care au ajuns la 24 h (76), 57% au ieșit pe plus și 29% au pierdut peste 5% (media −12,6%)."));
-  co("24 h pe minus, fără raport", "minus24h", MC.minus24h("CRV", 30, -1.2, null));
+  const t24 = "Din boții tăi care au ajuns la 24 h (76), 57% au ieșit pe plus și 29% au pierdut peste 5% (media −12,6%).";
+  for (const [k, p] of [["media pe plus", { pePlus: 0.6, medie: 0.02 }], ["mulți revin", { pePlus: 0.57, medie: -0.126 }], ["rău", { pePlus: 0.4, medie: -0.126 }]]) co("24 h pe minus, " + k, "minus24h", MC.minus24h("MARSCOIN", 26.4, -12.345, t24, p));
+  co("24 h pe minus, fără raport", "minus24h", MC.minus24h("CRV", 30, -1.2, null, null));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));
   co("Trading 212 nu mai răspunde (cheia)", "t212Rau", MC.t212Rau(18, 401, "HTTP 401"));
   co("Trading 212 răspunde din nou", "t212DinNou", MC.t212DinNou());
