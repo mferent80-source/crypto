@@ -86,12 +86,19 @@ function dataRezultate(j) {
   const m = t.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (!m) return null;
   return { data: m[3] + "-" + m[1] + "-" + m[2], sigur: !/estimated|expected/i.test(t) };
 }
+// v100.110 (bug din revizia v100.108): ziua Twelve Data („2026-10-05”) la ora DESCHIDERII la New York, ca bara zilnică Yahoo - altfel
+// 00:00Z = ziua de dinainte la New York, GridCalcul.bareBursa nu scotea bara de azi în formare, iar arhiva ar fi avut zile dublate la schimbarea sursei
+export function ziTd(d) {
+  const t = Date.parse(String(d).slice(0, 10) + "T13:30:00Z"); if (!Number.isFinite(t)) return NaN;
+  const h = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "2-digit", hourCycle: "h23" }).format(new Date(t)));
+  return h === 9 ? t : t + 3600000;
+}
 const TD_INTERVAL = { "5m": "5min", "15m": "15min", "30m": "30min", "1h": "1h", "4h": "4h", "1d": "1day" };
 async function twelve(env, simbol, interval) {
   const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${TD_INTERVAL[interval] || "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`);
   let j = null; try { j = await r.json(); } catch {}
   if (!r.ok || !j || !Array.isArray(j.values)) return null;
-  const out = j.values.map((v) => ({ time: Date.parse(String(v.datetime).replace(" ", "T") + (String(v.datetime).length <= 10 ? "T00:00:00Z" : "Z")), open: Number(v.open), high: Number(v.high), low: Number(v.low), close: Number(v.close), volume: v.volume == null ? null : Number(v.volume) }))
+  const out = j.values.map((v) => ({ time: String(v.datetime).length <= 10 ? ziTd(v.datetime) : Date.parse(String(v.datetime).replace(" ", "T") + "Z"), open: Number(v.open), high: Number(v.high), low: Number(v.low), close: Number(v.close), volume: v.volume == null ? null : Number(v.volume) }))
     .filter((x) => Number.isFinite(x.time) && [x.open, x.high, x.low, x.close].every((y) => Number.isFinite(y) && y > 0));
   return out.length ? out : null;
 }

@@ -66,7 +66,7 @@ await test("(4) citirea: rândul ADX poartă ce s-a măsurat pe boții lui; pagi
   const B = bare(80, pe_loc), o = GB.intrareBot({ bot: { id: "x", directie: "long" }, bare: B, W: 900, adxPeBoti: "pe boții tăi nu s-a dovedit că ajută (…)", TabloExtra: null });
   const r = GB.citire(o, { directie: "long" }, B[B.length - 1].c).randuri.find((x) => x.ce === "ADX 14");
   assert.ok(r && r.text.endsWith(" · pe boții tăi nu s-a dovedit că ajută (…)"), r && r.text);
-  assert.match(fnApp("tbCazuriAdu"), /tbCazuri\.adx=tbCazuri\.l&&typeof Asemanatoare!=="undefined"\?Asemanatoare\.textAdx\(Asemanatoare\.bilantAdx\(tbCazuri\.l\)\)/);
+  assert.match(fnApp("tbCazuriAdu"), /tbCazuri\.adx=bl&&typeof bl\.adx==="string"\?bl\.adx:tbCazuri\.l&&typeof Asemanatoare!=="undefined"\?Asemanatoare\.textAdx\(Asemanatoare\.bilantAdx\(tbCazuri\.l\)\)/);   /* v100.110: întâi ce a socotit colectorul (bilant), apoi calculul vechi */
   assert.match(fnApp("renderTabloGrafic"), /adxPeBoti:\(tbCazuriAdu\(\),tbCazuri\.adx\|\|null\)/);
 });
 await test("(5) colectorul dă GraficBot modulului de cazuri (ADX noaptea) și scrie câte cazuri au ADX; versiunea v101.68", () => {

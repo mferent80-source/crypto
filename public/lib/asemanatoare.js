@@ -9,25 +9,82 @@ var Asemanatoare = (function () {
   // directia ca in arhiva: long / short / neutru (Pionex da „no_trend” pentru neutru - revizia 01.10)
   function dirN(d) { d = String(d || "").toLowerCase(); return d === "long" || d === "short" ? d : "neutru"; }
   function cazuri(trades, bareDe) {
-    var memo = {}, out = [], adxMemo = {}, GB = typeof GraficBot !== "undefined" && GraficBot && GraficBot.adx ? GraficBot : null;   // v100.100 (I-530)
+    var memo = {}, out = [], adxMemo = {}, tfMemo = {}, GB = typeof GraficBot !== "undefined" && GraficBot && GraficBot.adx ? GraficBot : null;   // v100.100 (I-530)
     (Array.isArray(trades) ? trades : []).forEach(function (t) {
       // revizia 01.10: pe NET (comisioane + funding), pe suma reala pusa - regula „judecata se face pe net” (v100.40)
       var bazaInv = nr(t.pus) > 0 ? nr(t.pus) : nr(t.investit), net = nr(t.net);
       var jos = nr(t.jos), sus = nr(t.sus), p0 = nr(t.pretInit), pct = net !== null && bazaInv > 0 ? net / bazaInv : nr(t.pct), por = nr(t.pornit);
       if (jos === null || sus === null || !(p0 > 0) || !(sus > jos) || pct === null || por === null) return;
-      var b = t.moneda in memo ? memo[t.moneda] : (memo[t.moneda] = bareDe(t.moneda) || null), stare = null, adx = null;
+      var b = t.moneda in memo ? memo[t.moneda] : (memo[t.moneda] = bareDe(t.moneda) || null), stare = null, adx = null, tf = null;
       if (b && b.length) {   // ultima bara de 1 h incheiata inainte de pornire (doar ce se stia atunci)
         var lo = 0, hi = b.length - 1, i = -1;
         while (lo <= hi) { var m = (lo + hi) >> 1; if (b[m].t + ORA <= por) { i = m; lo = m + 1; } else hi = m - 1; }
         if (i >= 0) stare = PB.stareLa(b, i);
         // v100.100 (I-530): ADX 14 la aceeași bară (netezirea Wilder merge doar înainte - valoarea de la i nu vede barele de după)
         if (i >= 0 && GB) { var A = adxMemo[t.moneda] || (adxMemo[t.moneda] = GB.adx(b, 14)); if (A.adx[i] != null) adx = Math.round(A.adx[i] * 10) / 10; }
+        // v100.110 (I-545): becurile 1h / 4h / 1z la pornire, din barele de 1 h (4 h și zilele UTC se strâng din ele) - doar bare ÎNCHEIATE înainte
+        if (i >= 0) { var TF = tfMemo[t.moneda] || (tfMemo[t.moneda] = becuriPe(b)); tf = becuriLa(TF, i, por); }
       }
       // latimea si pasul rotunjite: ~2.300 de cazuri incap in KV
       out.push({ id: String(t.id), moneda: t.moneda, dir: dirN(t.dir), lev: nr(t.levier) || 1, lat: Math.round((sus - jos) / p0 * 1e5) / 1e5, pas: nr(t.pasNet) !== null ? Math.round(t.pasNet * 1e6) / 1e6 : null, ora: new Date(por).getUTCHours(), stare: stare,
-        pct: Math.round(pct * 10000) / 10000, ore: nr(t.durataOre) !== null ? Math.round(t.durataOre * 10) / 10 : null, adx: adx, t: por });
+        pct: Math.round(pct * 10000) / 10000, ore: nr(t.durataOre) !== null ? Math.round(t.durataOre * 10) / 10 : null, adx: adx, tf: tf, t: por });
     });
     return out;
+  }
+
+  // v100.110 (I-545): stările (Directie.stari) pe 1 h, pe 4 h și pe zile UTC, cu sfârșitul fiecărei bare - o dată pe monedă
+  var COD = { urca: "u", coboara: "c", lateral: "l" };
+  function becuriPe(b) {
+    if (typeof Directie === "undefined" || !Directie.stari) return null;
+    var strange = function (lung) { var g = []; b.forEach(function (x) { var k = Math.floor(x.t / lung) * lung; if (!g.length || g[g.length - 1].k !== k) g.push({ k: k, sf: k + lung, c: x.c }); else g[g.length - 1].c = x.c; }); return g; };
+    var h4 = strange(4 * ORA), z1 = strange(24 * ORA);
+    return { s1: Directie.stari(b.map(function (x) { return x.c; })), h4: h4, s4: Directie.stari(h4.map(function (x) { return x.c; })), z1: z1, sz: Directie.stari(z1.map(function (x) { return x.c; })) };
+  }
+  function becuriLa(T, i, por) {
+    if (!T) return null;
+    var ult = function (g) { var lo = 0, hi = g.length - 1, j = -1; while (lo <= hi) { var m = (lo + hi) >> 1; if (g[m].sf <= por) { j = m; lo = m + 1; } else hi = m - 1; } return j; };
+    var j4 = ult(T.h4), jz = ult(T.z1), a = T.s1[i], b4 = j4 >= 0 ? T.s4[j4] : null, bz = jz >= 0 ? T.sz[jz] : null;
+    return a && b4 && bz ? COD[a.dir] + COD[b4.dir] + COD[bz.dir] : null;
+  }
+  // v100.110 (I-545, el: „fă tot”): becurile la pornire vs cum s-a terminat botul - regula fixată înainte de cifre (06.10), ca la ADX (I-530):
+  // „cu botul” = nici 4 h, nici 1 zi împotriva direcției botului (long: nu „coboară”; short: nu „urcă”); „împotrivă” = cel puțin unul contra;
+  // doar boții long / short (la neutru „împotrivă” n-are sens); măsura = net / suma pusă; dovedit = IC fără 0 + același semn pe 70% / 30%.
+  function bilantSemafor(cz, o) {
+    o = o || {}; var REP = o.rep || 2000;
+    var contra = function (c) { var x4 = c.tf.charAt(1), xz = c.tf.charAt(2); return c.dir === "long" ? x4 === "c" || xz === "c" : x4 === "u" || xz === "u"; };
+    var l = (Array.isArray(cz) ? cz : []).filter(function (c) { return c && typeof c.tf === "string" && c.tf.length === 3 && (c.dir === "long" || c.dir === "short") && nr(c.pct) !== null && c.moneda; });
+    var pe = function (s, z) { return s.filter(function (c) { return z === "contra" ? contra(c) : !contra(c); }); };
+    var plus = function (s) { return s.length ? s.filter(function (c) { return c.pct > 0; }).length / s.length : NaN; };
+    var md = function (s) { return med(s.map(function (c) { return c.pct; })); };
+    var dPlus = function (s) { return plus(pe(s, "cu")) - plus(pe(s, "contra")); }, dMed = function (s) { return md(pe(s, "cu")) - md(pe(s, "contra")); };
+    var gr = function (s) { return { n: s.length, plus: plus(s), med: s.length ? md(s) : null }; };
+    var monede = {}; l.forEach(function (c) { (monede[c.moneda] = monede[c.moneda] || []).push(c); });
+    var M = Object.keys(monede), cu = pe(l, "cu"), co = pe(l, "contra");
+    var out = { n: l.length, monede: M.length, cu: gr(cu), contra: gr(co), difPlus: null, icPlus: null, difMed: null, icMed: null, verdict: "puține" };
+    if (cu.length < 30 || co.length < 30 || M.length < 10) return out;
+    out.difPlus = dPlus(l); out.difMed = dMed(l);
+    var rnd = mulberry32(545), bp = [], bm = [];
+    for (var k = 0; k < REP; k++) {
+      var s = []; for (var j = 0; j < M.length; j++) { var mm = monede[M[Math.floor(rnd() * M.length)]]; for (var q = 0; q < mm.length; q++) s.push(mm[q]); }   /* revizia v100.110: push, nu concat */
+      var a = dPlus(s), b = dMed(s); if (isFinite(a)) bp.push(a); if (isFinite(b)) bm.push(b);
+    }
+    var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]]; };
+    out.icPlus = ic(bp); out.icMed = ic(bm);
+    var srt = l.slice().sort(function (x, y) { return (nr(x.t) || 0) - (nr(y.t) || 0); }), kk = Math.floor(srt.length * 0.7);
+    out.felii = { primele: dMed(srt.slice(0, kk)), ultimele: dMed(srt.slice(kk)) };
+    var semn = function (iv) { return iv[0] > 0 ? 1 : iv[1] < 0 ? -1 : 0; }, sm = semn(out.icMed), sp = semn(out.icPlus), s0 = sm || sp;
+    var stabil = s0 !== 0 && (sm === 0 || sp === 0 || sm === sp) && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0;
+    out.verdict = !s0 || !stabil ? "nedovedit" : s0 > 0 ? "dovedit" : "pe dos";
+    return out;
+  }
+  function textSemafor(bl) {
+    if (!bl || !(bl.n > 0)) return null;
+    if (bl.verdict === "puține") return "pe boții tăi: prea puține cazuri cu becurile la pornire (" + bl.n + ")";
+    // revizia v100.110: „fără bec împotrivă” (lateralul intră aici, nu „cu botul”) și miile cu punct
+    var P = function (x) { return Math.round(x * 100) + "%"; }, N = String(bl.n).replace(/\B(?=(\d{3})+(?!\d))/g, "."), rest = " pe plus · cu unul împotrivă: " + P(bl.contra.plus) + ", din " + N;
+    return bl.verdict === "dovedit" ? "pe boții tăi, porniți fără niciun bec împotrivă (4 h, 1 zi) au ieșit mai bine (fără: " + P(bl.cu.plus) + rest + ")"
+      : bl.verdict === "pe dos" ? "pe boții tăi, porniți cu un bec împotrivă au ieșit mai bine (fără: " + P(bl.cu.plus) + rest + ")"
+      : "pe boții tăi nu s-a dovedit că becurile ajută (fără bec împotrivă: " + P(bl.cu.plus) + rest + ")";
   }
 
   // v100.100 (I-530, el: „FA TOATE”): ADX la pornire vs cum s-a terminat botul, pe arhiva LUI. Regula fixată înainte de cifre (05.10):
@@ -50,7 +107,7 @@ var Asemanatoare = (function () {
     out.difPlus = dPlus(l); out.difMed = dMed(l);
     var rnd = mulberry32(530), bp = [], bm = [];
     for (var k = 0; k < REP; k++) {
-      var s = []; for (var j = 0; j < M.length; j++) s = s.concat(monede[M[Math.floor(rnd() * M.length)]]);
+      var s = []; for (var j = 0; j < M.length; j++) { var mm = monede[M[Math.floor(rnd() * M.length)]]; for (var q = 0; q < mm.length; q++) s.push(mm[q]); }   /* revizia v100.110: push, nu concat */
       var a = dPlus(s), b = dMed(s); if (isFinite(a)) bp.push(a); if (isFinite(b)) bm.push(b);
     }
     var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]]; };
@@ -95,5 +152,5 @@ var Asemanatoare = (function () {
       text: "În " + l.length + " de situații asemănătoare (aceeași direcție, lățime, pas și levier apropiate" + (t.stare ? "; piață la fel la " + laFel + " din " + l.length : "") + "), boții tăi: median " + PR(m) + (inv > 0 ? " (" + U(m * inv) + " pe suma asta)" : "")
         + ", " + Math.round(plus * 100) + "% pe plus, cel mai rău " + PR(rau) + (inv > 0 ? " (" + U(rau * inv) + ")" : "") + (mo !== null ? "; au ținut de obicei ~" + Math.round(mo) + " h" : "") + ". E trecutul tău, nu o promisiune." };
   }
-  return { cazuri: cazuri, vecini: vecini, bilantAdx: bilantAdx, textAdx: textAdx, zonaAdx: zonaAdx };
+  return { cazuri: cazuri, vecini: vecini, bilantAdx: bilantAdx, textAdx: textAdx, zonaAdx: zonaAdx, bilantSemafor: bilantSemafor, textSemafor: textSemafor };
 })();

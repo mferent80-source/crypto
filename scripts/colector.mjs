@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.73";
+const VERSIUNE_COLECTOR = "v101.74";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -270,6 +270,9 @@ async function directiaBotului(b) {
   try {
     const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=4H&limit=500");
     const a = Directie.analizeaza(k && k.data && k.data.klines, 6, b.directie);
+    // v101.74 (I-541): și 1 zi, ca Tabloul - Consilierul de pe Discord primește același rezumat 4 h + 1 zi (Directie.rezumat), nu „rezumat: null”
+    let a1 = null;
+    try { const k1 = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=1D&limit=400"); a1 = Directie.analizeaza(k1 && k1.data && k1.data.klines, 7, b.directie); } catch (e) { jurnal("direcție 1D", b.id, e.message); }
     // v79.1: regimul "miscare" pe 15M / 30 de zile - identic cu fisa (nu pe 4h ca in v79.0)
     let regim = null;
     try { regim = GridCalcul.regim(GridCalcul.bare(await lumanari15M(s))); } catch (e) { jurnal("regim 15M", b.id, e.message); }
@@ -287,7 +290,8 @@ async function directiaBotului(b) {
     // v101.8: cat se misca moneda intr-o zi obisnuita (din aceleasi lumanari de 4 h) - pentru „incape gridul in plan?”
     let ampZi = null;
     try { ampZi = TabloExtra.miscareZi(GridCalcul.bare(k && k.data && k.data.klines)); } catch (e) { jurnal("miscare pe zi", b.id, e.message); }
-    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim, k4: k && k.data && k.data.klines, calculat: false, funding, btc, ampZi };
+    const rez = [Object.assign({ tf: "4H", eticheta: "4 ore", orizontText: "o zi" }, a)].concat(a1 ? [Object.assign({ tf: "1D", eticheta: "1 zi", orizontText: "o săptămână" }, a1)] : []);
+    directii[b.id] = { la: Date.now(), fata4h: a.dir ? a.fata.ton : null, dir4h: a.dir, regim, k4: k && k.data && k.data.klines, calculat: false, funding, btc, ampZi, rez: rez };
   } catch (e) { jurnal("direcție", b.id, e.message); directii[b.id] = { la: Date.now(), fata4h: null, dir4h: null, regim: null }; }
   return directii[b.id];
 }
@@ -317,12 +321,12 @@ async function semnaleBot(b, ctx, acum) {
   x.semafor = SemnaleBot.semafor(x);
   // v101.29 (I-474): Consilierul alcatuit si aici, pe ce are colectorul (semaforul, „Acum, concret” cu lumanarile de 15M, socoteala,
   // banii la margine) - poza si Discord spun ce spune Tabloul. Revizia 01.10 (I2): si SFATURILE (aceleasi intrari, Sfaturi.intrare) si
-  // OPRESTE de la Pionex. Ramane doar pe Tablou directia pe mai multe intervale - acolo, cand verdictele difera, se spune pe fata.
+  // OPRESTE de la Pionex. v101.74 (I-541): si directia pe 4 h + 1 zi (ca Tabloul); cand verdictele tot difera (tura la cateva minute), se spune pe fata.
   try {
     const prof = profileMoneda.get(s) || null, b15 = GridCalcul.bare(r15), dirC = String(b.directie || "").toLowerCase();
     x.concret = SemnaleBot.acumConcret({ bot: b, fisa: f, zero: TabloExtra.dacaInchizi(b), costuri: x.costuri, plan: ctx.plan || null, pragMargine: ProfilMoneda.praguriMargine(prof), pragStop: ProfilMoneda.pragStop(prof, dirC), acum,
       cifre: (pr) => TabloExtra.cifreActiuni(b, { protectie: pr, b15 }) });
-    x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fundingHist: fut && Array.isArray(fut.fundingHist) ? fut.fundingHist : null, fisa: f, rezumat: null, acum }));
+    x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fundingHist: fut && Array.isArray(fut.fundingHist) ? fut.fundingHist : null, fisa: f, rezumat: d.rez ? Directie.rezumat(d.rez, b.directie) : null, acum }));   // v101.74 (I-541)
     x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, busola: x.busola, regim: f && f.regim ? { miscare: !!f.regim.miscare } : null, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
       opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null,
       perechi: Perechi.raport(b.ordinePerechi, b.pornitLa, acum, perechiEst && perechiEst[b.id] || null, { urme: perechiEst && perechiEst[b.id] && perechiEst[b.id].urme, factor: perechiCor[s] && perechiCor[s].factor, inGrid: Number(b.pretCurent) >= Number(b.gridJos) && Number(b.pretCurent) <= Number(b.gridSus) }) });   // v101.30 (I-477)
@@ -869,6 +873,8 @@ async function pozitiiPentruPoza() {
     const sursa = DUBLURI[p.simbol] || null; let extra = null;
     try { extra = await yahooExtra.extra(sursa || p.simbol); } catch (e) { jurnal("poza: extra t212", p.simbol, e.message); }
     const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
+    // v101.74 (I-547): becul 1z, ca pe pagina T212 - doar listările din SUA (bareBursa scoate bara de azi în formare doar pe ora New York-ului)
+    const semZi = /_US_EQ$/.test(x.ticker) && bare.length ? GraficBot.semZi(bare, "long") : null;
     const tp = ActiuniSemnale.trailPozitie(alesT, await pragProfilActiune(x.ticker));   // v101.31: stopul din profil doar daca a castigat
     const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail }) : null;
     // v101.33 (actiunile T212, pachetul 3): O SINGURA VOCE pe pozitie - Consilierul din semafor + stopul care urca + probabilitati + sfaturi;
@@ -881,7 +887,7 @@ async function pozitiiPentruPoza() {
       const rezZ = await rezultateZilePt(x.ticker), evAct = profilActCache[x.ticker] && profilActCache[x.ticker].ev || null;
       const prob = nOk && bare.length >= 120 ? Probabilitati.randActiune(Probabilitati.pentruActiune(bare, { pret: p.pret, stop: nOk.stopPozitie, tinta, acum: Date.now(), memo: sm.m }), {}, { rezultateZile: rezZ, evenimente: evAct }) : [];
       const sf = Consilier.sfaturiPozitie({ ...p, niv: nOk, pctLei: costLei ? x.ppl / costLei : null, de: Date.parse(x.initialFillDate || "") || null }, { inchise: inchiseT, acum: Date.now() });
-      const cons = Consiliu.alcatuiesteActiune({ sem, niv: nOk, prob, sfaturi: sf, plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei, simbol: p.simbol, socoteala: socotealaAct || {} });
+      const cons = Consiliu.alcatuiesteActiune({ sem, niv: nOk, prob, sfaturi: sf, plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei, simbol: p.simbol, socoteala: socotealaAct || {}, semZi });
       semC = Consiliu.pentruPozaActiune(cons);
       const k = "t212-" + x.ticker, stA = stareAlerte[k] || (stareAlerte[k] = {}), ziU = new Date().toISOString().slice(0, 10), pa = meta().t212Alerte || {};
       // revizia 01.10 (I1): din conditii (alerta planului / SL-ul pozei suna oricum), plus ce s-a trimis deja azi
@@ -889,6 +895,14 @@ async function pozitiiPentruPoza() {
       const ch = Consiliu.schimbare(stA._cons, cons, Date.now(), p.simbol, { activ, taci: {} });
       stA._cons = ch.stare; scrieStare();
       if (ch.alerta) await trimiteAlerta(ch.alerta, null, "consilier-" + x.ticker.replace(/[^A-Za-z0-9_-]/g, ""));
+      // v101.74 (I-547): becul 1z trece împotriva poziției (în jos) - o alertă pe schimbare; prima vedere doar ține minte (fără alertă la pornire)
+      // revizia v101.74: cel mult o alertă pe zi; starea se scrie după trimiterea reușită (altfel o alertă picată se pierdea) și doar la schimbare
+      if (semZi && stA._bec1z !== semZi.dir) {
+        const v1 = stA._bec1z, ziB = new Date().toISOString().slice(0, 10);
+        if (v1 && v1 !== "coboara" && semZi.dir === "coboara" && stA._bec1zZi !== ziB) {
+          if (await trimiteAlerta(MesajeColector.bec1zContra(p.simbol, semZi.vechime, p.pret / p.pretMediu - 1), null, "bec1z-" + x.ticker.replace(/[^A-Za-z0-9_-]/g, ""))) { stA._bec1z = semZi.dir; stA._bec1zZi = ziB; scrieStare(); }
+        } else { stA._bec1z = semZi.dir; scrieStare(); }
+      }
       // v101.34: poza poate pleca la 30 s - verdictul se scrie doar cand se schimba (ruta de scriere lasa 30 pe minut)
       const corpCons = { bot: k, acum: ch.stare.acum || null, inainte: ch.stare.inainte || null, schimbatLa: ch.stare.schimbatLa || null, deCe: ch.stare.deCe || null };
       const semnCons = JSON.stringify({ ...corpCons, acum: corpCons.acum ? { ...corpCons.acum, la: 0 } : null });
@@ -1596,7 +1610,10 @@ async function turaCazuri() {
     // v101.69: barele arhivei (de la cel mai vechi bot) + cele de acum, unite (o bară o singură dată)
     const bareDe = (m) => { const ore = harta[m] ? citesteJson(fisOre(harta[m]), []) : [], u = GridCalcul.imbinaRanduri(citesteArhiva(m), ore, 0); return u.length ? GridCalcul.bare(u) : null; };
     const cz = Asemanatoare.cazuri(tr, bareDe);
-    await trimite("/api/istoric-bot?action=cazuri", { la: Date.now(), cazuri: cz });
+    // v101.74 (revizia R4): bilanțurile ADX și becuri socotite aici, o dată pe noapte (pe pagină țineau firul 1–2 s) - stau lângă cazuri
+    let bilant = null;
+    try { bilant = { adx: Asemanatoare.textAdx(Asemanatoare.bilantAdx(cz)), sem: Asemanatoare.textSemafor(Asemanatoare.bilantSemafor(cz)) }; } catch (e) { jurnal("cazuri: bilanț ESEC", e.message); }
+    await trimite("/api/istoric-bot?action=cazuri", { la: Date.now(), cazuri: cz, bilant });
     profilStare.cazuriZi = zi; try { scrieAtomic(PROFIL_STARE, profilStare); } catch {}
     jurnal("cazuri:", cz.length, "cu starea de la pornire:", cz.filter((c) => c.stare).length, "cu ADX:", cz.filter((c) => c.adx != null).length);
   } catch (e) { cazuriEsec = Date.now(); jurnal("cazuri ESEC (reincerc peste o ora)", e.message); }

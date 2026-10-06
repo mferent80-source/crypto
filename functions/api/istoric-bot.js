@@ -255,7 +255,7 @@ export async function onRequestPost({request,env}){
     await env.ISTORIC.put("ore:"+s,JSON.stringify({la:Date.now(),simbol:s,b}));return json({ok:true,n:b.length});
   }
   // v100.47 (I-469): situatiile asemanatoare - cazurile din arhiva cu ce se stia la pornire (colectorul, o data pe noapte)
-  if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l}));return json({ok:true,n:l.length})}
+  if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);const bl=corp.bilant&&typeof corp.bilant==="object"?{adx:typeof corp.bilant.adx==="string"?corp.bilant.adx.slice(0,300):null,sem:typeof corp.bilant.sem==="string"?corp.bilant.sem.slice(0,300):null}:null;await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l,bilant:bl}));return json({ok:true,n:l.length})}
   // v100.50 (I-472): jurnalul deciziilor - „am făcut / n-am făcut” langa actiunea Consilierului; o decizie pe verdict (cheia), ultima ramane.
   // Colectorul scrie inapoi lista cu judecata (r) - atunci corpul are „lista”.
   if(action==="decizie"){

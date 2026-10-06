@@ -291,7 +291,7 @@ var Consiliu = (function () {
   // verdictul lui difera de al Tabloului, Tabloul o spune pe fata (o singura voce, iar unde nu se poate, diferenta e la vedere)
   function altaVoce(kv, c) {
     var a = kv && kv.acum; if (!a || !a.nivel || !c || !c.nivel || a.nivel === c.nivel || c.nivel === "asteapta") return null;
-    return "Pe Discord și pe pagina alerts: " + (a.eticheta || ETICHETA[a.nivel] || a.nivel) + "; colectorul nu vede direcția pe mai multe intervale și se reface la câteva minute, iar verdictul de aici e cel complet.";
+    return "Pe Discord și pe pagina alerts: " + (a.eticheta || ETICHETA[a.nivel] || a.nivel) + "; colectorul se reface la câteva minute și poate fi cu o tură în urmă, iar verdictul de aici e cel de acum.";
   }
   // v100.50 (I-472): jurnalul deciziilor - fiecare „am făcut / n-am făcut” se judeca la 24 h pe totalul botului (istoricul ist:<bot>,
   // cea mai apropiata intrare de t + 24 h, la cel mult 2 h); botul inchis inainte = rezultatul final - totalul de atunci. Ziua netrecuta -> nejudecat.

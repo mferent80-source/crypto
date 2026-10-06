@@ -212,16 +212,25 @@ function t212Deschide(tk) {
 // v100.108 (semaforul trendului, demo aprobat): lumânările 5m…4h DOAR pentru poziția deschisă (Twelve Data are 8 cereri pe minut), ținute 5 min;
 // 1z vine din barele zilnice pe care pagina le are deja
 var t212Tf = {};
-async function t212AduTf(tk) {
-  var c = t212Tf[tk]; if (c && (c.inLucru || Date.now() - c.la < 5 * 60000)) return;
-  c = t212Tf[tk] = { la: 0, pe: c ? c.pe : {}, inLucru: true };
-  var nm = t212Nume(tk), K = { "5m": "5M", "15m": "15M", "30m": "30M", "1h": "60M", "4h": "4H" }, lista = ["5m", "15m", "30m", "1h", "4h"];
+async function t212AduTf(tk, reia) {
+  var c = t212Tf[tk]; if (c && (c.inLucru || (!reia && Date.now() - c.la < 5 * 60000))) return;
+  var deReluat = reia && c ? c.lipsa : null; c = t212Tf[tk] = { la: c ? c.la : 0, pe: c ? c.pe : {}, inLucru: true, lipsa: [], reiaProgramat: false, aDouaOara: false };
+  var nm = t212Nume(tk), K = { "5m": "5M", "15m": "15M", "30m": "30M", "1h": "60M", "4h": "4H" }, lista = deReluat || ["5m", "15m", "30m", "1h", "4h"];
   for (var i = 0; i < lista.length; i++) {
-    try { var b = await getJSON("/api/t212?action=preturi&interval=" + lista[i] + "&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); if (b && Array.isArray(b.randuri) && b.randuri.length) c.pe[K[lista[i]]] = b.randuri; } catch (e) {}
+    var ok = false;
+    try { var b = await getJSON("/api/t212?action=preturi&interval=" + lista[i] + "&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); if (b && Array.isArray(b.randuri) && b.randuri.length) { c.pe[K[lista[i]]] = b.randuri; ok = true; } } catch (e) {}
+    if (!ok) c.lipsa.push(lista[i]);
+    try { if (t212.deschis[tk]) t212GraficeDeseneaza(); } catch (e) {}   // v100.110 (I-548): becurile pe rând
   }
-  c.la = Date.now(); c.inLucru = false;
+  if (!reia) c.la = Date.now(); c.inLucru = false;
+  // o singură reluare, doar pentru ce lipsește; revizia v100.110 (R1): becul spune „reîncerc” doar cât e chiar programată, apoi „nici la a doua cerere”
+  if (c.lipsa.length && !reia) { c.reiaProgramat = true; setTimeout(function () { t212AduTf(tk, true); }, 30000); }
+  else if (c.lipsa.length) c.aDouaOara = true;
   try { if (t212.deschis[tk]) t212GraficeDeseneaza(); } catch (e) {}
 }
+function t212Reincerc(tk) { var c = t212Tf[tk]; return !!(c && c.reiaProgramat); }
+function t212ADouaOara(tk) { var c = t212Tf[tk]; return !!(c && c.aDouaOara); }
+function t212SeAduc(tk) { var c = t212Tf[tk]; return !c || !!c.inLucru; }
 // revizia v100.108 (R5): bursa americană e deschisă acum? (luni–vineri 9:30–16:00 la New York, ca GridCalcul.bareBursa; fără sărbători)
 function t212SedintaDeschisa(acum) {
   try {
@@ -232,11 +241,7 @@ function t212SedintaDeschisa(acum) {
 function t212ZiRanduri(tk) { return (t212.bare[tk] || []).map(function (x) { return { time: x.t, open: x.o, high: x.h, low: x.l, close: x.c, volume: x.v }; }); }
 function t212PeTf(tk) { var c = t212Tf[tk], pe = Object.assign({}, c && c.pe || {}), z = t212ZiRanduri(tk); if (z.length) pe["1D"] = z; return pe; }
 // trendul zilnic după regula semaforului (bare închise) - Consilierul spune diferența când mediile lui zic altceva (AVGO, 06.10)
-function t212SemZi(tk) {
-  var z = t212ZiRanduri(tk); if (z.length < 61 || typeof Directie === "undefined") return null;
-  var an = Directie.analizeaza(z.concat([Object.assign({}, z[z.length - 1], { time: z[z.length - 1].time + 1 })]), 1, "long");
-  return an && an.dir ? { dir: an.dir, vechime: an.vechime } : null;
-}
+function t212SemZi(tk) { return /_US_EQ$/.test(tk) && typeof GraficBot !== "undefined" && GraficBot.semZi ? GraficBot.semZi(t212.bare[tk], "long") : null; }   /* revizia: doar listările din SUA */   /* v100.110: regula comună cu colectorul */
 function t212TfCitHtml(sem) {
   if (!Array.isArray(sem) || !sem.length) return "";
   var IC = { bine: "✓", atentie: "!", rau: "✕", info: "·" };
@@ -531,6 +536,8 @@ function t212ModeleRand(p) {
 function t212RandPozitie(p) {
   var niv = T212_NIVEL[p.sem.nivel] || T212_NIVEL["fara-date"], n = p.niv, tk = escapeHtml(p.ticker), pl = p.plan || {}, des = !!t212.deschis[p.ticker];
   var pctPret = p.pret / p.pretMediu - 1, tr = p.st.trend.dir;
+  var sz = t212SemZi(p.ticker), NZ = { urca: "urcă", coboara: "coboară", lateral: "lateral" };   // v100.110 (I-546): becul 1z, când nu e de acord cu mediile
+  var dif = sz && ((tr === "sus" && sz.dir !== "urca") || (tr === "jos" && sz.dir !== "coboara") || (tr === "lateral" && sz.dir !== "lateral"));
   var planTxt = p.plan ? [pl.trailPct ? "−" + String(pl.trailPct).replace(".", ",") + "% de la max" : "", pl.stop ? "stop " + t212Usd(pl.stop) : "", pl.tinta ? "țintă " + t212Usd(pl.tinta) : ""].filter(Boolean).join(" · ") : "";
   var w = p.pond > 0.2 ? " rau" : p.pond > 0.15 ? " atentie" : "";
   var rand = '<tr class="t212Rand" id="t212R-' + tk + '" tabindex="0" aria-expanded="' + des + '" data-action-click="t212Comuta(\'' + tk + '\')">'
@@ -539,7 +546,7 @@ function t212RandPozitie(p) {
     + '<td class="c-rez"><b class="' + t212Cls(p.ppl) + '">' + t212Lei(p.ppl) + '</b><span class="t212Mic">' + (p.pctLei !== null ? t212Pct(p.pctLei) + ' · preț ' + t212Pct(pctPret) : 'preț ' + t212Pct(pctPret)) + '</span></td>'
     + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' : '—') + '</td>'
     + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + t212Usd(n.tintaPozitie) + '</span><span class="t212Mic">' + t212Pct(n.tintaPozitie / p.pret - 1) + '</span>' : '—') + '</td>'
-    + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b></td>'
+    + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + (dif ? '<span class="t212Mic">1z: ' + NZ[sz.dir] + '</span>' : '') + '</td>'
     + '<td class="c-pond">' + (p.pond !== null ? Math.round(p.pond * 100) + '%<span class="t212MiniBara"><i class="' + w + '" style="width:' + Math.min(100, p.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—') + '</td>'
     + '<td class="c-plan">' + (p.plan ? '<span class="t212PlanChip ok">✓ ' + escapeHtml(planTxt) + '</span>' : '<span class="t212PlanChip">fără plan</span>') + '</td>'
     + '</tr>';
@@ -663,7 +670,7 @@ function t212GraficHtml(p, W) {
   var b = (t212.bare[p.ticker] || []).slice(-120); if (b.length < 10 || typeof GraficBot === "undefined") return null;
   var pf = t212ProfilPt(p.ticker), n = p.niv, pl = p.plan || {}, VA = typeof Valoare !== "undefined" ? Valoare : null;
   var stopAcum = pl.stop > 0 ? pl.stop : pl.trailPct > 0 && p.maxDupaCumparare ? p.maxDupaCumparare * (1 - pl.trailPct / 100) : null;
-  var sem = GraficBot.semafor(t212PeTf(p.ticker), "long", { actiune: true, acum: Date.now(), sedinta: t212SedintaDeschisa(Date.now()) });   /* v100.108 */
+  var sem = GraficBot.semafor(t212PeTf(p.ticker), "long", { actiune: true, acum: Date.now(), sedinta: t212SedintaDeschisa(Date.now()), reincerc: t212Reincerc(p.ticker), aDouaOara: t212ADouaOara(p.ticker), seAduc: t212SeAduc(p.ticker) });   /* v100.108; v100.110 reluarea */
   var d = GraficBot.desen({ bare: b, W: W, ingust: W < 560, st: t212IndStare(), actiune: true, pretViu: p.pret, semafor: sem, tfGrafic: "1D", trendIstoric: t212ZiRanduri(p.ticker), trendInchise: true,   /* revizia 01.10 (I2): in orele bursei bara de azi lipseste - „acum” = pretul viu */
     niv: GraficBot.niveluriActiune({ pretMediu: p.pretMediu, stop: stopAcum, tinta: pl.tinta > 0 ? pl.tinta : n ? n.tintaPozitie : null }),
     zi: GraficBot.ziObisnuitaActiune(p.pret, pf, 1), zi5: GraficBot.ziObisnuitaActiune(p.pret, pf, 5),

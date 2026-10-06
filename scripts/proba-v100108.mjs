@@ -59,7 +59,7 @@ await test("(S5) pagina T212: lumânările TF-urilor se aduc doar la deschiderea
   assert.match(fnE("t212AduTf"), /\/api\/t212\?action=preturi&interval=/);
   assert.match(fnE("t212Comuta"), /t212AduTf\(tk\)/); assert.match(fnE("t212Deschide"), /t212AduTf\(tk\)/);
   const g = fnE("t212GraficHtml");
-  assert.match(g, /var sem = GraficBot\.semafor\(t212PeTf\(p\.ticker\), "long", \{ actiune: true, acum: Date\.now\(\), sedinta: t212SedintaDeschisa\(Date\.now\(\)\) \}\)/); assert.match(g, /semafor: sem, tfGrafic: "1D", trendIstoric: t212ZiRanduri\(p\.ticker\), trendInchise: true/);
+  assert.match(g, /var sem = GraficBot\.semafor\(t212PeTf\(p\.ticker\), "long", \{ actiune: true, acum: Date\.now\(\), sedinta: t212SedintaDeschisa\(Date\.now\(\)\), reincerc: t212Reincerc\(p\.ticker\)/); assert.match(g, /semafor: sem, tfGrafic: "1D", trendIstoric: t212ZiRanduri\(p\.ticker\), trendInchise: true/);
   assert.match(g, /d\.semafor = sem;/);
   assert.match(fnE("t212GraficeDeseneaza"), /t212TfCit/);
 });

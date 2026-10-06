@@ -94,13 +94,16 @@ var GridPlan = (function () {
   function variante(o) {
     var P = nr(o && o.pret), dir = String(o && o.dir || ""), suma = nr(o && o.suma), plan = (o && o.plan) || {};
     var plus = nr(plan.plus), minus = nr(plan.minus), Lt = Math.max(1, Math.floor(nr(o && o.levier) || C.LEV_MAX)), amp = nr(o && o.amp);
+    // v100.110 (el, 06.10, NIL: „eu am făcut după el gridul” și Tabloul zicea „levier prea mare”): ÎNGUST (și LARG, care pornește de la el)
+    // nu trece de levierul SIGUR socotit de aceeași fișă (o.levierSigur) - altfel Radarul oferea ce tot el numea apoi „prea mare”
+    var LtTau = Lt, sig = nr(o && o.levierSigur); if (sig !== null && sig >= 1 && Lt > Math.floor(sig)) Lt = Math.floor(sig);
     if (!(P > 0)) return { eroare: "N-am prețul de acum al monedei." };
     if (dir !== "long" && dir !== "short") return { eroare: "Gridul după plan are sens doar pentru long sau short (cel neutru pierde pe ambele părți)." };
     if (!(suma > 0)) return { eroare: "N-am suma investită." };
     if (!(plus > 0) || !(minus > 0)) return { eroare: "Îmi trebuie planul întreg: ținta pe plus și pragul pe minus, în USDT." };
     var x = { pret: P, dir: dir, suma: suma, pas: nr(o.pas), minOrdin: o.minOrdin, b15: o.b15, zile: nr(o.zile) };
     // TA: levierul tau, banda cat planul
-    var dT = dPentru(suma * Lt, minus, plus), ta = complet(x, potriveste(x, Lt, dT, uPentru(suma * Lt, dT, plus), false, minus, plus), { cum: "levierul tău, banda cât îți permite pragul de pierdere" });
+    var dT = dPentru(suma * Lt, minus, plus), ta = complet(x, potriveste(x, Lt, dT, uPentru(suma * Lt, dT, plus), false, minus, plus), { cum: Lt < LtTau ? "levierul sigur de azi (" + Lt + "×; al tău e " + LtTau + "×), banda cât îți permite pragul de pierdere" : "levierul tău, banda cât îți permite pragul de pierdere", levierTau: LtTau });
     // MEA: banda cat o zi obisnuita, levierul cel mai mare (<= al tau) la care, pe simulator, marginea costa cel mult planul
     var mea = null, faraMea = null;
     if (amp === null || !(amp > 0)) faraMea = "N-am mișcarea monedei pe zi (îmi trebuie lumânările de 4 ore pe 30 de zile).";
@@ -183,8 +186,8 @@ var GridPlan = (function () {
     var arePr = !!(v && v.proba);   // revizia 05.10: monedă nouă (fără probă) ⇒ doar motivele care nu depind de probă
     var pr = v && v.proba || {}, lat = nr(v && v.sus) > 0 && nr(v && v.jos) > 0 ? v.sus / v.jos - 1 : null, lq = v && v.lichidare ? nr(v.lichidare.jos) : null, n = cate(pr.n, "pornire", "porniri");
     if (cheie === "ta") return arePr ? {
-      da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas).replace(/(\d),(\d)%$/, "$1,$2%") : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), "ieși repede: tipic după " + ORE(pr.oreTipic) + ", banii nu stau", "levierul tău (" + v.levier + "×)"],
-      nu: ["zgomotul unei ore te scoate: stop " + pr.stop + " din " + n, "fiecare grilă aduce mai mult, dar ieși des pe minus"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) } : { da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas) : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), "levierul tău (" + v.levier + "×)"],
+      da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas).replace(/(\d),(\d)%$/, "$1,$2%") : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), "ieși repede: tipic după " + ORE(pr.oreTipic) + ", banii nu stau", (nr(v.levierTau) > v.levier ? "levierul sigur de azi (" + v.levier + "×), nu al tău (" + v.levierTau + "×)" : "levierul tău (" + v.levier + "×)")]   /* v100.110: nu „al tău” când e cel sigur */,
+      nu: ["zgomotul unei ore te scoate: stop " + pr.stop + " din " + n, "fiecare grilă aduce mai mult, dar ieși des pe minus"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) } : { da: ["umple des: pas " + (nr(v.pas) !== null ? P1(v.pas) : "—") + (lat !== null ? ", banda doar " + P1(lat) + " lată" : ""), (nr(v.levierTau) > v.levier ? "levierul sigur de azi (" + v.levier + "×), nu al tău (" + v.levierTau + "×)" : "levierul tău (" + v.levier + "×)")]   /* v100.110: nu „al tău” când e cel sigur */,
       nu: ["fiecare grilă aduce mai mult, dar ieși des pe minus", "moneda e prea nouă pentru proba pe 30 de zile"].concat(lq ? ["lichidare la " + lq.toPrecision(4) + " dacă stopul alunecă"] : []) };
     if (!arePr) return { da: [banda ? "ține " + banda + " fără să iasă" : "banda mai largă"].concat(lq === null ? ["fără lichidare: la " + v.levier + "× nu se lichidează"] : []),
       nu: ["levier mic ⇒ bani mai puțini pe grilă", "moneda e prea nouă pentru proba pe 30 de zile"] };

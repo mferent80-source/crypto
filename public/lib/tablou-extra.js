@@ -542,9 +542,9 @@ var TabloExtra = (function () {
       if (!a || !a.titlu || !(a.t > 0) || acum - a.t > 86400000 || (a.nivel !== "critic" && a.nivel !== "atentie")) return;
       var t = String(a.titlu).replace(/^[A-Z0-9._-]+: /, ""), g = null;
       for (var i = 0; i < gr.length; i++) if (fel(gr[i].titlu) === fel(t)) { g = gr[i]; break; }
-      if (!g) { g = { c: a.nivel === "critic" ? "r" : "g", titlu: t, text: String(a.mesaj || ""), n: 0, ultima: a.t }; gr.push(g); }
+      if (!g) { g = { c: a.nivel === "critic" ? "r" : "g", titlu: t, text: String(a.mesaj || ""), n: 0, ultima: a.t, cheie: a.cheie || null, nivelA: a.nivel }; gr.push(g); }
       g.n++;
-      if (a.t >= g.ultima) { g.ultima = a.t; g.titlu = t; g.text = String(a.mesaj || g.text); g.c = a.nivel === "critic" ? "r" : "g"; }
+      if (a.t >= g.ultima) { g.ultima = a.t; g.titlu = t; g.text = String(a.mesaj || g.text); g.c = a.nivel === "critic" ? "r" : "g"; g.cheie = a.cheie || null; g.nivelA = a.nivel; }   /* v100.110 (I-543): cheia și nivelul alertei */
     });
     // v100.70 (revizia pachetului 3, I5): „semafor roșu — <motiv>” (alerta s-iesi, doar in Radar) spune acelasi fapt ca alerta motivului
     // (ex. „lichidarea la 6,2%”) - un rand, nu doua: se uneste cu ea (×N, rosu); fara alerta pereche ramane randul ei
@@ -597,6 +597,18 @@ var TabloExtra = (function () {
     return out;
   }
 
+  // v100.110 (I-543): rândurile din alerte pe care starea de ACUM le contrazice - verdictul Consilierului a coborât sub nivelul alertei
+  // (cheie „consilier”) sau regula alertei e acum „ok” (Alerte.reguli). Se potrivesc pe CHEIE, nu pe titlu (titlurile se reformulează).
+  function marcheazaDepasite(l, o) {
+    o = o || {}; var RA = { critic: 2, atentie: 1, info: 0 }, RC = { iesi: 2, atentie: 1, tine: 0 }, cons = o.cons, rg = o.reguli || null;
+    return (Array.isArray(l) ? l : []).map(function (x) {
+      if (!x || !x.cheie) return x;
+      var y = Object.assign({}, x);
+      if (/^consilier/.test(x.cheie)) { if (cons && cons.nivel in RC && x.nivelA in RA && RC[cons.nivel] < RA[x.nivelA]) y.depasit = "nu mai e valabil · acum: " + (cons.eticheta || cons.nivel); }
+      else if (rg && rg[x.cheie] && rg[x.cheie].nivel === "ok") y.depasit = "nu mai e așa acum";
+      return y;
+    });
+  }
   // v100.5: ora unui sfat, ca omul sa vada daca e de actualitate: "HH:MM · acum N min" ("ieri HH:MM" pentru ziua trecuta);
   // vechi = peste o ora. Ora locala a browserului.
   function oraSfat(la, acum) {
@@ -641,7 +653,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

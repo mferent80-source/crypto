@@ -40,6 +40,12 @@ export const gridPreaLarg = (nume, x) => ({ nivel: "atentie", cheie: "grid-larg"
     + (x.moarte != null && x.intervale ? "; cu stopul la prag, " + x.moarte + " din " + cate(x.intervale, "grilă", "grile") + " n-ar lucra." : "."),
     "Aș închide aproape de zero și aș porni ÎNGUST sau LARG din fișă" + (x.stopPlan ? "; dacă-l ții, stopul la " + String(Number(x.stopPlan.toPrecision(4))).replace(".", ",") : "") + ".") });
 
+// v101.74 (I-547): becul 1z al unei poziții T212 a trecut în jos (aceeași regulă ca semaforul paginii) - o dată pe schimbare
+const P1 = (f) => (f > 0 ? "+" : f < 0 ? "−" : "") + Math.abs(100 * f).toFixed(1).replace(".", ",") + "%";
+export const bec1zContra = (simbol, vechime, pct) => ({ nivel: "atentie", cheie: "bec1z", titlu: simbol + ": trendul pe 1 zi a trecut în jos",
+  mesaj: msg("Becul 1z al poziției e roșu de " + cate(Math.max(1, Number(vechime) || 1), "zi", "zile") + " (EMA 20 sub EMA 50, prețul merge în jos); ești pe " + P1(pct) + " față de prețul mediu.",
+    "N-aș cumpăra în plus până nu se întoarce; aș verifica stopul din plan.") });
+
 // v101.73 (I-538): botul nou seamănă cu o fereastră din fișă (GridPlan.fereastraBotului) - o dată, cu ora fișei și proba ferestrei
 const oraRo = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" }).format(new Date(t)); } catch { return ""; } };
 export const pornitCa = (nume, f) => {

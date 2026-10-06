@@ -24,9 +24,9 @@ await test("(2) structura pe care se sprijină regula: cele trei cartele sunt ch
 });
 await test("(E) versiunea v100.109 peste tot", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.109"/); assert.match(html, /id="sideVersiune"[^>]*>v100\.109/); assert.match(html, /id="antetVersiune">v100\.109/); assert.match(html, /id="healthAppVersion">v100\.109</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.109.0");
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-109";/);
+  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="sideVersiune"[^>]*>v100\.1\d\d/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);
