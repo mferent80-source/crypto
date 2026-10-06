@@ -333,11 +333,14 @@ var ActiuniSemnale = (function () {
     });
     return out;
   }
-  function alertaFrana(x, simbol) {
-    var s = simbol || x.ticker, a2 = x.nr >= 2;
+  // v100.115 (I-565): a1 = rândul A1 din raportul de risc (RiscLuna) - când medierea iese rea la el (dovedit / la limită), rândul 2 spune cifra LUI
+  function alertaFrana(x, simbol, a1) {
+    var s = simbol || x.ticker, a2 = x.nr >= 2, rau = a1 && (a1.stare === "dovedit-rau" || a1.stare === "la-limita-rau") && a1.mariCu != null && a1.mariFara != null;
+    var act = rau ? "N-aș mai adăuga pe minus: la tine, " + Math.round(a1.mariCu * 100) + "% din pozițiile mediate au pierdut peste 5%, față de " + Math.round(a1.mariFara * 100) + "%" + (a1.stare === "la-limita-rau" ? " (la limită)" : "") + "."
+      : "N-aș mai adăuga pe minus: așa a crescut NPA la 33.000 de lei și a pierdut 8.165 lei.";
     // v100.69 (pachetul 4): Discord pe 2 randuri - faptul cu sumele, apoi „👉 ” actiunea (cu lectia NPA); preturile ca pe pagina
     return { nivel: a2 ? "critic" : "atentie", titlu: s + ": ai cumpărat în plus pe minus" + (a2 ? " (a " + x.nr + "-a oară la rând)" : ""),
-      mesaj: "Ai cumpărat la " + usd(x.pret) + ", cu " + P(Math.abs(x.sub)).replace("+", "") + " sub prețul tău mediu (" + usd(x.mediu) + ")" + (x.suma > 0 ? ": " + Math.round(x.suma).toLocaleString("ro-RO") + " lei" : "") + ".\n👉 N-aș mai adăuga pe minus: așa a crescut NPA la 33.000 de lei și a pierdut 8.165 lei." };
+      mesaj: "Ai cumpărat la " + usd(x.pret) + ", cu " + P(Math.abs(x.sub)).replace("+", "") + " sub prețul tău mediu (" + usd(x.mediu) + ")" + (x.suma > 0 ? ": " + Math.round(x.suma).toLocaleString("ro-RO") + " lei" : "") + ".\n👉 " + act };
   }
 
   // ---------------- v87: cat te-ar fi salvat stopul ----------------

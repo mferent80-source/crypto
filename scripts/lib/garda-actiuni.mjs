@@ -68,6 +68,8 @@ export function situatiiActiuni(pune) {
   for (const a of AS.alertePlan({ ticker: "APLD_US_EQ", simbol: "APLD", pret: 31.4, plan: { tinta: 31 } }, T0)) pune("alerta planului: tinta", "actiuni", "alertePlan.tinta", a, AL);
   pune("frâna: prima cumpărare pe minus", "actiuni", "alertaFrana.1", AS.alertaFrana({ ticker: "NPA_US_EQ", pret: 4.12, mediu: 4.9, sub: -0.159, nr: 1, suma: 2100 }, "NPA"), AL);
   pune("frâna: a treia la rând", "actiuni", "alertaFrana.3", AS.alertaFrana({ ticker: "NPA_US_EQ", pret: 3.8, mediu: 4.9, sub: -0.224, nr: 3, suma: 1500 }, "NPA"), AL);
+  // v100.115 (I-565): frâna cu cifra lui (la limită / dovedit)
+  for (const st of ["la-limita-rau", "dovedit-rau"]) pune("frâna: cu cifra ta · " + st, "actiuni", "alertaFrana.cifra", AS.alertaFrana({ ticker: "PLTR_US_EQ", pret: 150.2, mediu: 160, sub: -0.061, nr: 1, suma: 2100 }, "PLTR", { k: "A1", stare: st, cu: 65, mariCu: 0.323, mariFara: 0.092 }), AL);
 
   // raportul saptamanii (randurile din raportul de duminica)
   const RAP = [["t", "raport"]];

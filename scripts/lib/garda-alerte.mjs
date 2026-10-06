@@ -225,6 +225,9 @@ export function situatiiAlerte(pune) {
   for (const [sit, j, s] of [["mai îngust", 3.177, 3.962], ["mai larg", 2.5, 4.9], ["cam la fel", 3.0, 4.25]]) pune("Busola, comparația: " + sit, "alerte", "busola.comparatie", { t: BU.comparaInterval({ jos: 3.009, sus: 4.224 }, j, s).text }, [["t", "rand"]]);
   lb("Busola dimineața: 12 boți (tăiat la 145)", Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - ORA })));
   co("gridul îngust a ajuns la durata probată", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", false));
+  // v101.78 (I-563): 24 h pe minus - cu cifrele lui și fără raport
+  co("24 h pe minus, cu cifrele lui", "minus24h", MC.minus24h("MARSCOIN", 26.4, -12.345, "Din boții tăi care au ajuns la 24 h (76), 57% au ieșit pe plus și 29% au pierdut peste 5% (media −12,6%)."));
+  co("24 h pe minus, fără raport", "minus24h", MC.minus24h("CRV", 30, -1.2, null));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));
   co("Trading 212 nu mai răspunde (cheia)", "t212Rau", MC.t212Rau(18, 401, "HTTP 401"));
   co("Trading 212 răspunde din nou", "t212DinNou", MC.t212DinNou());

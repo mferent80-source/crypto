@@ -2323,3 +2323,7 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 #tabloubot #tbRisc{display:grid;gap:6px;padding:6px 0}#tabloubot .tbRiscR{margin:0;line-height:1.45}
 #t212 .t212Risc{display:grid;gap:4px;margin-top:8px}#t212 .t212Risc p{margin:0}#t212 .t212RiscRau{color:var(--warn)}
 #montecarlo .rlPill.rl-atentie{border-color:var(--warn);color:var(--warn)}
+/* v100.115 (I-554): meniul în 3 grupe - Zilnic, Unelte, Laborator vechi (pliat) */
+.sideGrup{display:grid;gap:2px;margin:0 0 10px}.sideGrupCap{font-size:12px;font-weight:700;color:var(--muted);padding:6px 12px 3px;letter-spacing:.02em}
+.sideVechi>summary{cursor:pointer;list-style:none;border-radius:10px}.sideVechi>summary::-webkit-details-marker{display:none}.sideVechi>summary::before{content:"▸ "}.sideVechi[open]>summary::before{content:"▾ "}
+.sideVechi>summary:hover{color:var(--text)}.sideVechi>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

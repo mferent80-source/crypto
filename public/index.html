@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v100.114" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#071018" name="theme-color"/><meta charset="utf-8"/><meta content="v100.115" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar Pro Lite</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -7,18 +7,31 @@
 <aside class="sideNav">
 <div class="sideBrand"><div class="sideLogo">◈</div><div><div class="sideTitle">Crypto Radar Pro</div><div class="sideSub">Market Intelligence</div></div></div>
 <div class="sideMenu">
+<!-- I-554 (el: „continuă cu taburile din app”): 3 grupe - ce folosește zilnic sus, uneltele, laboratorul vechi pliat; nimic șters -->
+<div class="sideGrup" id="sideZilnic"><div class="sideGrupCap">Zilnic</div>
+<button class="sideBtn active" data-action-click="navTo('dash')" data-nav="dash"><span class="sideIcon">⌂</span>Dashboard</button>
 <button class="sideBtn" data-action-click="navTo('tabloubot',true)" data-nav="tabloubot"><span class="sideIcon">◉</span>Tabloul botului</button>
 <button class="sideBtn" data-action-click="navTo('gridset',true)" data-nav="gridset"><span class="sideIcon">▦</span>Grid: ce setez?</button>
 <button class="sideBtn" data-action-click="navTo('jurnaltrade',true)" data-nav="jurnaltrade"><span class="sideIcon">📓</span>Jurnal de trade</button>
 <button class="sideBtn" data-action-click="deschideT212()" data-nav="t212"><span class="sideIcon">💼</span>Trading 212</button>
-<button class="sideBtn active" data-action-click="navTo('dash')" data-nav="dash"><span class="sideIcon">⌂</span>Dashboard</button>
+<button class="sideBtn" data-action-click="navTo('scan',true)" data-nav="scan"><span class="sideIcon">⌕</span>Scanner</button>
+<button class="sideBtn" data-action-click="navTo('alerts')" data-nav="alerts"><span class="sideIcon">!</span>Alerts <span class="badgeNum" id="sideAlertCount" style="display:none">0</span></button>
+<button class="sideBtn" data-action-click="navTo('montecarlo')" data-nav="montecarlo"><span class="sideIcon">∴</span>Monte Carlo · riscul tău</button>
+</div>
+<div class="sideGrup" id="sideUnelte"><div class="sideGrupCap">Unelte</div>
+<button class="sideBtn" data-action-click="navTo('market',true)" data-nav="market"><span class="sideIcon">◉</span>Market Overview</button>
+<button class="sideBtn cryptoOnlyNav" data-action-click="navTo('deriv',true)" data-nav="deriv"><span class="sideIcon">≋</span>Futures</button>
+<button class="sideBtn stockOnly" data-action-click="openStocksDesk()" data-nav="stocks"><span class="sideIcon">N</span>Nasdaq / US Stocks</button>
+<button class="sideBtn cryptoOnlyNav" data-action-click="navTo('account',true)" data-nav="account"><span class="sideIcon">◎</span>Pionex Account</button>
+<button class="sideBtn" data-action-click="navTo('cloud',true)" data-nav="cloud"><span class="sideIcon">☁</span>Cloud Monitor</button>
+<button class="sideBtn" data-action-click="navTo('settings')" data-nav="settings"><span class="sideIcon">⚙</span>Settings</button>
+<button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
+</div>
+<details class="sideGrup sideVechi" id="sideVechi"><summary class="sideGrupCap">Laborator vechi (32)</summary>
 <button class="sideBtn" data-action-click="navTo('desk')" data-nav="desk"><span class="sideIcon">◆</span>Trading Desk</button>
 <button class="sideBtn" data-action-click="navTo('engine')" data-nav="engine"><span class="sideIcon">⚙</span>Quant Engine</button>
 <button class="sideBtn" data-action-click="navTo('mtf',true)" data-nav="mtf"><span class="sideIcon">▦</span>Multi-TF</button>
-<button class="sideBtn" data-action-click="navTo('scan',true)" data-nav="scan"><span class="sideIcon">⌕</span>Scanner</button>
 <button class="sideBtn" data-action-click="navTo('opportunity')" data-nav="opportunity"><span class="sideIcon">★</span>Opportunity Top 10</button>
-<button class="sideBtn" data-action-click="navTo('market',true)" data-nav="market"><span class="sideIcon">◉</span>Market Overview</button>
-<button class="sideBtn stockOnly" data-action-click="openStocksDesk()" data-nav="stocks"><span class="sideIcon">N</span>Nasdaq / US Stocks</button>
 <button class="sideBtn" data-action-click="navTo('profile',true)" data-nav="profile"><span class="sideIcon">▤</span>Volume Profile</button>
 <button class="sideBtn" data-action-click="navTo('quantflow')" data-nav="quantflow"><span class="sideIcon">∆</span>Flow &amp; Regime</button>
 <button class="sideBtn" data-action-click="navTo('volatilitylab')" data-nav="volatilitylab"><span class="sideIcon">σ</span>Volatility Intelligence</button>
@@ -36,27 +49,21 @@
 <button class="sideBtn" data-action-click="navTo('edgepro')" data-nav="edgepro"><span class="sideIcon">E</span>Edge Validation Pro</button>
 <button class="sideBtn" data-action-click="navTo('profitready')" data-nav="profitready"><span class="sideIcon">₿</span>Profit Readiness</button>
 <button class="sideBtn" data-action-click="navTo('replaylab')" data-nav="replaylab"><span class="sideIcon">⏮</span>Replay &amp; Historical Scanner</button>
-<button class="sideBtn" data-action-click="navTo('montecarlo')" data-nav="montecarlo"><span class="sideIcon">∴</span>Monte Carlo · riscul tău</button>
 <button class="sideBtn" data-action-click="navTo('scenario')" data-nav="scenario"><span class="sideIcon">±</span>Scenario Lab</button>
 <button class="sideBtn" data-action-click="navTo('depth',true)" data-nav="depth"><span class="sideIcon">≡</span>Order Book</button>
 <button class="sideBtn" data-action-click="navTo('signals',true)" data-nav="signals"><span class="sideIcon">↗</span>Signals</button>
 <button class="sideBtn" data-action-click="navTo('backtest',true)" data-nav="backtest"><span class="sideIcon">◫</span>Backtest</button>
-<button class="sideBtn cryptoOnlyNav" data-action-click="navTo('deriv',true)" data-nav="deriv"><span class="sideIcon">≋</span>Futures</button>
 <button class="sideBtn" data-action-click="navTo('watch')" data-nav="watch"><span class="sideIcon">★</span>Watchlist</button>
-<button class="sideBtn" data-action-click="navTo('alerts')" data-nav="alerts"><span class="sideIcon">!</span>Alerts <span class="badgeNum" id="sideAlertCount" style="display:none">0</span></button>
-<button class="sideBtn cryptoOnlyNav" data-action-click="navTo('account',true)" data-nav="account"><span class="sideIcon">◎</span>Pionex Account</button>
-<button class="sideBtn" data-action-click="navTo('cloud',true)" data-nav="cloud"><span class="sideIcon">☁</span>Cloud Monitor</button>
 <button class="sideBtn" data-action-click="navTo('profilelab',true)" data-nav="profilelab"><span class="sideIcon">▥</span>Market Profile</button>
 <button class="sideBtn" data-action-click="navTo('structurelab',true)" data-nav="structurelab"><span class="sideIcon">◇</span>Structure &amp; Sessions</button>
 <button class="sideBtn" data-action-click="navTo('intel',true)" data-nav="intel"><span class="sideIcon">◎</span>Context Intelligence</button>
 <button class="sideBtn" data-action-click="navTo('researchml')" data-nav="researchml"><span class="sideIcon">AI</span>Research ML</button>
 <button class="sideBtn" data-action-click="navTo('decisioncore',true)" data-nav="decisioncore"><span class="sideIcon">◆</span>Decision Core</button>
 <button class="sideBtn" data-action-click="navTo('localdata',true)" data-nav="localdata"><span class="sideIcon">DB</span>Local Data &amp; Reports</button>
-<button class="sideBtn" data-action-click="navTo('settings')" data-nav="settings"><span class="sideIcon">⚙</span>Settings</button>
-<button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Health</button>
+</details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.114 · FEREASTRA DUPĂ BANDĂ</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.115 · MENIUL PE GRUPE</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -73,7 +80,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.114 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.115 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar">
 <div class="controls">
@@ -1188,7 +1195,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v100.114</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v100.115</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -2269,13 +2276,13 @@
 <section class="panel" id="watch"><div class="card"><div class="label">Favorite memorate pe telefon</div><div id="watchout"></div></div></section>
 <p class="note">Engine-ul combină EMA20/50/200, RSI, MACD, ADX/DMI, Supertrend, Stoch RSI, Bollinger, VWAP/Anchored VWAP, ATR, MFI, CMF, OBV, Ichimoku, divergență RSI, Volume Profile, Donchian breakout, swing structure, BOS/CHoCH, liquidity sweep/FVG, order-book depth, futures context (OI, long/short, funding) și analogi istorici kNN. Procentele sunt frecvențe istorice condiționate, nu probabilități garantate sau predicții certe. Scorurile tehnice și confidence LONG/SHORT sunt euristici de confluență, nu probabilități garantate de profit. „Ținta” și „invalidarea” sunt niveluri tehnice orientative, nu instrucțiuni de tranzacționare. Datele pot fi întârziate sau indisponibile. Backtest-ul rămâne un model istoric simplificat; v41 adaugă separat un simulator Paper cu ordine pending, fill-uri parțiale, expirare, slippage dinamic, ambiguitate intrabar conservatoare și gap-through-stop. Nici acesta nu reproduce perfect matching engine-ul unui exchange.</p>
 </main></div></div><div class="toastHost" id="toastHost"></div>
-<nav class="mobileBottom"><button class="mobileNavBtn active" data-action-click="navTo('dash')" data-nav="dash"><b>⌂</b>Home</button><button class="mobileNavBtn" data-action-click="navTo('scan',true)" data-nav="scan"><b>⌕</b>Scan</button><button class="mobileNavBtn" data-action-click="navTo('signals',true)" data-nav="signals"><b>↗</b>Signals</button><button class="mobileNavBtn" data-action-click="navTo('market',true)" data-nav="market"><b>◉</b>Market</button><button class="mobileNavBtn" data-action-click="openMoreDrawer()"><b>⋯</b>More</button></nav>
+<nav class="mobileBottom"><button class="mobileNavBtn" data-action-click="navTo('tabloubot',true)" data-nav="tabloubot"><b>◉</b>Tablou</button><button class="mobileNavBtn" data-action-click="navTo('gridset',true)" data-nav="gridset"><b>▦</b>Grid</button><button class="mobileNavBtn" data-action-click="deschideT212()" data-nav="t212"><b>💼</b>T212</button><button class="mobileNavBtn" data-action-click="navTo('alerts')" data-nav="alerts"><b>!</b>Alerte</button><button class="mobileNavBtn" data-action-click="openMoreDrawer()"><b>⋯</b>More</button></nav>
 <div class="pwaInstall" id="pwaInstallCard"><span>Instalează Crypto Radar</span><button data-action-click="installPwa()">Instalează</button><button class="actionGhost" data-action-click="dismissPwaInstall()">×</button></div>
 <div class="pwaBanner" id="pwaUpdateBanner"><b>Este disponibilă o versiune nouă</b><div class="small" style="margin-top:4px">Actualizează aplicația instalată pentru a încărca cea mai nouă versiune.</div><div class="row2"><button data-action-click="applyPwaUpdate()">Actualizează</button><button class="actionGhost" data-action-click="dismissPwaUpdate()">Mai târziu</button></div></div>
 <div aria-label="More navigation" aria-modal="true" class="moreDrawer" data-action-click="if(event.target===this)closeMoreDrawer()" id="moreDrawer" role="dialog" tabindex="-1"><div class="moreSheet">
 <div class="moreHead"><b>Crypto Radar</b><button class="actionGhost" data-action-click="closeMoreDrawer()">Close</button></div>
 <div class="moreGrid">
-<button class="moreBtn" data-action-click="moreNav('tabloubot',true)"><b>◉</b>Tablou bot</button><button class="moreBtn" data-action-click="moreNav('gridset',true)"><b>▦</b>Grid: ce setez?</button><button class="moreBtn" data-action-click="moreNav('jurnaltrade',true)"><b>📓</b>Jurnal de trade</button><button class="moreBtn" data-action-click="closeMoreDrawer();deschideT212()"><b>💼</b>Trading 212</button>
+<button class="moreBtn" data-action-click="moreNav('dash')"><b>⌂</b>Dashboard</button><button class="moreBtn" data-action-click="moreNav('scan',true)"><b>⌕</b>Scan</button><button class="moreBtn" data-action-click="moreNav('signals',true)"><b>↗</b>Signals</button><button class="moreBtn" data-action-click="moreNav('market',true)"><b>◉</b>Market</button><button class="moreBtn" data-action-click="moreNav('tabloubot',true)"><b>◉</b>Tablou bot</button><button class="moreBtn" data-action-click="moreNav('gridset',true)"><b>▦</b>Grid: ce setez?</button><button class="moreBtn" data-action-click="moreNav('jurnaltrade',true)"><b>📓</b>Jurnal de trade</button><button class="moreBtn" data-action-click="closeMoreDrawer();deschideT212()"><b>💼</b>Trading 212</button>
 <button class="moreBtn" data-action-click="moreNav('desk')"><b>◆</b>Desk</button>
 <button class="moreBtn" data-action-click="moreNav('opportunity')"><b>★</b>Top 10</button>
 <button class="moreBtn" data-action-click="moreNav('engine')"><b>⚙</b>Engine</button>

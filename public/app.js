@@ -689,6 +689,8 @@ function clearExpiredRequestCache(maxAge=300000){
 setInterval(()=>clearExpiredRequestCache(),120000);
 let dialogReturnFocus=null;function focusDialog(id){const p=$(id);if(!p)return;dialogReturnFocus=document.activeElement;setTimeout(()=>{const f=p.querySelector("button,input,select,textarea,[tabindex]:not([tabindex=\"-1\"])");(f||p).focus()},0)}
 function restoreDialogFocus(){const x=dialogReturnFocus;dialogReturnFocus=null;if(x?.focus)setTimeout(()=>x.focus(),0)}
+// v100.115 (I-554): laboratorul vechi din meniu - deschis / pliat se ține minte pe aparat
+function sideVechiTine(){var sv=$("sideVechi");if(!sv||!sv.addEventListener)return;try{if(localStorage.getItem("sideVechiDeschis")==="1")sv.open=true}catch(_){}sv.addEventListener("toggle",function(){try{localStorage.setItem("sideVechiDeschis",sv.open?"1":"0")}catch(_){}})}
 function openMoreDrawer(){$("moreDrawer").classList.add("on");focusDialog("moreDrawer")}
 function closeMoreDrawer(){$("moreDrawer").classList.remove("on");restoreDialogFocus()}
 function moreNav(id,load=false){closeMoreDrawer();navTo(id,load)}
@@ -3006,6 +3008,8 @@ function navTo(id,load=false){
  // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
  try{localStorage.setItem(PAGINA_CURENTA_KEY,id)}catch(_){}
  document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id));
+ // v100.115 (I-554): o pagină din laboratorul vechi (deschisă din alt loc sau la reîncărcare) deschide grupul ei, ca butonul activ să se vadă
+ try{var sv=document.getElementById("sideVechi"),bv=sv&&sv.querySelector('[data-nav="'+id+'"]');if(bv)sv.open=true;}catch(_){}
  if(load){
    if(id==="mtf")multiTF();
    else if(id==="dash"){if(typeof acasaPorneste==="function")acasaPorneste(false)}
@@ -7123,7 +7127,7 @@ function refreshV67Operations(persist=true){const prev=v67LastState,x=renderV67O
 function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;window.__v67BootId=`${v67Now()}-${Math.random().toString(36).slice(2,8)}`;v67RecoverAfterRestart();refreshV67Operations(true);const cfg=v67OpsSettings();v67OpsTimer=setInterval(()=>refreshV67Operations(true),Math.max(10000,+cfg.watchdogMs||30000));if(typeof window!=="undefined"){window.addEventListener("online",()=>refreshV67Operations(true));window.addEventListener("offline",()=>{v67Incident("HARD","NETWORK_OFFLINE","Browser reported offline");refreshV67Operations(true)});window.addEventListener("pagehide",()=>{v67RecoverySnapshot();const hb=v60StoreGet("opsHeartbeatV67",{});hb.cleanPagehideTs=v67Now();v60StoreSet("opsHeartbeatV67",hb)});document?.addEventListener?.("visibilitychange",()=>{if(document.visibilityState==="visible")refreshV67Operations(true)})}}
 
 // Boot only after every versioned module and its lexical state are initialized.
-applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
+try{sideVechiTine()}catch(_){}applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
 // v100.8: linkul din pagina alerts cere un ecran anume (Tabloul botului / Trading 212) - dupa pornire, o singura data
 if(ecranDinLegatura)setTimeout(function(){try{navTo(ecranDinLegatura,true)}catch(e){}},0);
 if(ecranDinLegatura==="gridset"&&monedaDinLegatura)setTimeout(function(){try{grDinLegatura(monedaDinLegatura)}catch(e){}},300);   // v100.33

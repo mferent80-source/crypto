@@ -58,6 +58,9 @@ export const pornitCa = (nume, f) => {
       + (Number(f.stop) >= 0 && Number(f.n) > 0 ? "; în probă stopul a venit de " + cate(f.stop, "dată", "ori") + " din " + cate(f.n, "pornire", "porniri") : "") + ".",
       larg ? "Aș lăsa botul să lucreze; dacă stă peste " + (ore ? 2 * ore + " h" : "de două ori durata tipică") + ", te anunț." : "Aș ține stopul la marginea gridului: îngust iese repede" + (ore ? " (tipic " + ore + " h)" : "") + ".") };
 };
+// v101.78 (I-563): botul stă de 24 h și e pe minus - o dată, cu cifrele lui (din boții tăi care au ajuns la 24 h; raportul de noapte RiscLuna)
+export const minus24h = (nume, ore, total, textBot) => ({ nivel: "atentie", cheie: "minus-24h", titlu: nume + ": " + Math.round(ore) + " h pe minus (" + U2(total) + ")",
+  mesaj: msg(textBot || "Botul stă de " + Math.round(ore) + " h și e pe " + U2(total) + "; cifrele din istoria ta vin cu raportul de noapte.", "Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină.") });
 // v101.73 (I-540): ceasul ferestrei LARG - botul stă de peste 2× durata tipică din proba ferestrei
 export const ceasLarg = (nume, ore, tipic) => ({ nivel: "info", cheie: "ceas-larg", titlu: nume + ": LARG stă de " + Math.round(ore) + " h (tipic " + Math.round(tipic) + " h)",
   mesaj: msg("Banii stau în grid de peste două ori mai mult decât în probă.", "Aș închide aproape de zero dacă prețul nu mai trece prin grid; dacă lucrează, îl las.") });

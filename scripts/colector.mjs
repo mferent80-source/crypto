@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.77";
+const VERSIUNE_COLECTOR = "v101.78";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -170,6 +170,14 @@ async function pragDinConfig() {
 }
 // v101.73 (I-538): ferestrele arătate de fișă, de pe server - citite cel mult o dată la 5 min
 let ferestreMemo = { la: 0, v: [] };
+// v101.78: raportul de risc (RiscLuna, scris de colector noaptea, citit de pe server) ținut o oră - pentru mesajele cu cifrele lui (I-563, I-565)
+let riscMemo = { la: 0, r: null };
+async function riscRaport() {
+  if (Date.now() - riscMemo.la < 3600000) return riscMemo.r;
+  riscMemo.la = Date.now();
+  try { const d = await cere("/api/istoric-bot?action=risc"); riscMemo.r = d && d.risc || null; } catch (e) { jurnal("risc (citire)", e.message); }
+  return riscMemo.r;
+}
 async function ferestreServer() {
   if (Date.now() - ferestreMemo.la < 5 * 60000) return ferestreMemo.v;
   try { const d = await cere("/api/istoric-bot?action=ferestre"); ferestreMemo = { la: Date.now(), v: d && Array.isArray(d.ferestre) ? d.ferestre : [] }; } catch (e) { ferestreMemo = { la: Date.now(), v: ferestreMemo.v }; }
@@ -491,6 +499,12 @@ async function tura() {
         const m = MesajeColector.ceasLarg(String(b.baza || "botul").replace(/\.PERP$/, ""), (acum - Number(b.pornitLa)) / 3600000, st._fereastra.oreTipic);
         if (await trimiteAlerta(m, b.id, m.cheie)) st._ceasLarg = true;
       }
+      // v101.78 (I-563): botul stă de 24 h și e pe minus - o dată, cu cifrele lui (din boții tăi care au ajuns la 24 h; raportul de noapte)
+      if (!st._minus24 && acum - Number(b.pornitLa) >= 24 * 3600000 && Number(b.profitTotal) < 0) {
+        const rp = await riscRaport(), ore = (acum - Number(b.pornitLa)) / 3600000, t = rp && rp.boti ? RiscLuna.textBot(rp.boti.supravietuire, ore) : null;
+        const m = MesajeColector.minus24h(String(b.baza || "botul").replace(/\.PERP$/, ""), ore, Number(b.profitTotal), t);
+        if (await trimiteAlerta(m, b.id, m.cheie)) st._minus24 = true;
+      }
       // v101.39 (I-481): ceasul gridului ingust - botul pornit cu setarile variantei ingusta: un singur mesaj cand trece durata probata.
       // Potrivirea se tine minte (KV-ul ingust se rescrie la 6 h si poate sa nu mai propuna)
       try {
@@ -768,10 +782,11 @@ async function turaPlanuriT212() {
   // v87: frana de "cumparat in jos" (NPA: 4 cumparari pe minus, -8.165 lei) + plafonul de 20% din cont
   try {
     const zi = ziSesiune(Date.now()), h = await cere("/api/t212?action=istoric");   // v100.40: ziua sesiunii NY (plafonul de 20% o data pe sesiune)
+    const rpA = await riscRaport(), a1 = rpA && rpA.actiuni ? (rpA.actiuni.comportament || []).find((y) => y.k === "A1") : null;   // v101.78 (I-565): cifra lui
     for (const x of ActiuniSemnale.cumparariInJos((h && h.umpleri) || []).filter((y) => Date.now() - y.t < 24 * 3600000)) {
       const k = "t212-injos-" + x.id + "-" + new Date(x.t).toISOString().slice(0, 10);
       if (st[k]) continue;
-      if (await trimiteAlerta(ActiuniSemnale.alertaFrana(x, T212.simbol(x.ticker)), null, k.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60))) st[k] = true;
+      if (await trimiteAlerta(ActiuniSemnale.alertaFrana(x, T212.simbol(x.ticker), a1), null, k.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60))) st[k] = true;
     }
     const c = await cere("/api/t212?action=cont"), pz = await cere("/api/t212?action=pozitii");
     const cash = c && c.cash || {}, poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
