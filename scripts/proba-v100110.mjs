@@ -158,9 +158,9 @@ await test("(G) fișa: ÎNGUST nu trece de levierul sigur pe care tot ea îl soc
 });
 await test("(E) versiunea v100.110 / colector v101.74", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.110"/); assert.match(html, /id="antetVersiune">v100\.110/); assert.match(html, /id="healthAppVersion">v100\.110</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.110.0");
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-110";/);
+  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
   assert.match(col, /const VERSIUNE_COLECTOR = "v101\.74";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

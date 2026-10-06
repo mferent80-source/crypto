@@ -163,7 +163,7 @@ var GridPlan = (function () {
   var P1 = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; };
   // ce aș alege eu între ÎNGUST (ta) și LARG (mea): amândouă pierd planul la stop ⇒ după cât de des a fost atins stopul în probă, dacă media nu
   // e mai proastă; cu sub 30 de cazuri independente diferența de medie se spune nedovedită. ⇒ { cine: "ta"|"mea", text } sau null
-  function alege(ta, mea) {
+  function alegeBaza(ta, mea) {
     var a = ta && ta.proba, b = mea && mea.proba;
     if (!a && !b) return null;
     if (!b) return { cine: "ta", text: "ÎNGUST · larg nu se poate la planul ăsta" };
@@ -178,6 +178,35 @@ var GridPlan = (function () {
       : "la stop pierzi " + U1(x.laStop) + " față de " + U1(y.laStop) + " la " + (cine === "mea" ? "ÎNGUST" : "LARG")) + ", stopul atins de " + cate(x.proba.stop, "dată", "ori") + " din " + cate(x.proba.n, "pornire", "porniri")
       + ", față de " + y.proba.stop + ", media pe pornire " + U1(x.proba.mediaUsdt) + " față de " + U1(y.proba.mediaUsdt)
       + (ind < 30 ? ". Cu ~" + cate(ind, "caz independent", "cazuri independente") + " diferența de medie nu e dovedită; aleg după cât de des te scoate stopul." : ".") };
+  }
+  // v100.111 (revizia R1): fereastra „de sărit” (deSarit) nu se recomandă când cealaltă nu e de sărit; când toate cele care se pot porni sunt
+  // de sărit ⇒ { …, asteapta: true, deCe } (fișa zice „aș aștepta”, iar oferta se salvează cu rec „asteapta”)
+  function alege(ta, mea) {
+    var r = alegeBaza(ta, mea); if (!r) return r;
+    var N = { ta: "ÎNGUST", mea: "LARG" }, unaSingura = !mea || !mea.proba || mea.egalaCuTa, sa = deSarit(ta), sm = unaSingura ? null : deSarit(mea);
+    var x = r.cine === "mea" ? mea : ta, sx = r.cine === "mea" ? sm : sa, y = r.cine === "mea" ? ta : mea, sy = r.cine === "mea" ? sa : sm;
+    if (!sx) return r;
+    var areY = r.cine === "mea" ? !!(ta && ta.proba) : !unaSingura;
+    if (areY && !sy) { var cine = r.cine === "mea" ? "ta" : "mea";
+      return { cine: cine, text: N[cine] + " · la " + N[r.cine] + " stopul a venit în " + sx.stop + " din " + cate(sx.n, "pornire", "porniri") + " (" + Math.round(sx.pct * 100) + "%), aici în " + y.proba.stop + " din " + cate(y.proba.n, "pornire", "porniri")
+        + "; la stop pierzi " + U1(y.laStop) + ", media pe pornire " + U1(y.proba.mediaUsdt) + " față de " + U1(x.proba.mediaUsdt) + "." }; }
+    return { cine: r.cine, text: r.text, asteapta: true, deCe: areY ? "amândouă au stopul în peste jumătate din porniri" : "stopul vine în peste jumătate din porniri" };
+  }
+  // v100.111 (I-549, NIL 06.10: ÎNGUST cu stopul în 77 din 109 porniri, pornit totuși): fereastra cu stopul în peste jumătate din porniri
+  // (cel puțin 20) - se spune pe ea, nu se ascunde (pragul e un privilegiu: se avertizează). ⇒ null | { stop, n, pct, text }
+  function deSarit(v) {
+    var p = v && v.proba, s = nr(p && p.stop), n = nr(p && p.n);
+    if (s === null || n === null || n < 20 || s / n <= 0.5) return null;
+    return { stop: s, n: n, pct: s / n, text: "aș sări peste ea: stopul a venit în " + s + " din " + cate(n, "pornire", "porniri") + " (" + Math.round(s / n * 100) + "%)" };
+  }
+  // v100.111 (I-550): ce fereastră a pornit (fereastraBotului) și ce recomanda fișa atunci, cu proba ferestrei - pentru Tablou
+  function textPornit(fb, ora) {
+    if (!fb) return null;
+    var N = { ingust: "ÎNGUST", larg: "LARG" }, la = ora ? " din fișa de la " + ora : " din fișă";
+    if (!fb.k || !N[fb.k]) return "Gridul botului nu seamănă nici cu ÎNGUST, nici cu LARG" + la + ".";
+    var s = nr(fb.stop), n = nr(fb.n), o = nr(fb.oreTipic);
+    return "Ai pornit " + N[fb.k] + la + (fb.rec === "asteapta" ? ", deși fișa zicea să aștepți" : N[fb.rec] ? (fb.rec === fb.k ? ", cum recomanda fișa" : ", deși fișa recomanda " + N[fb.rec]) : "")
+      + (s !== null && n !== null && n > 0 ? "; în probă stopul a venit în " + s + " din " + cate(n, "pornire", "porniri") + " (" + Math.round(s / n * 100) + "%)" + (o !== null && o > 0 ? ", ieșirea tipică " + (o < 1 ? "sub o oră" : "după " + ORE(o)) : "") : "") + ".";
   }
   // motivele fiecărei ferestre, din cifrele ei (nimic scris de mână): { da: [], nu: [] }
   function motive(v, cheie, amp) {
@@ -234,6 +263,6 @@ var GridPlan = (function () {
     return { k: null, t: cand[0].t, simbol: cand[0].simbol, verdict: cand[0].verdict || null, rec: cand[0].rec || null };
   }
 
-  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste, fereastraBotului: fereastraBotului };
+  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, deSarit: deSarit, textPornit: textPornit, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste, fereastraBotului: fereastraBotului };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridPlan = GridPlan;

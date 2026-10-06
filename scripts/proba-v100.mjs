@@ -116,9 +116,10 @@ await test("pagina: verdict scurt + #tbMotive + #tbConcret dupa randul de sus; D
   const h = citeste("../public/index.html"), poz = (s) => { const i = h.indexOf(s); assert.ok(i >= 0, "lipseste " + s); return i; };
   assert.ok(poz('class="tbSus"') < poz('id="tbMotive"') && poz('id="tbMotive"') < poz('id="tbConcret"') && poz('id="tbConcret"') < poz('class="tbGraficRand"'));
   const rand = h.slice(poz('class="tbGraficRand"'), poz('id="tbIdei"'));
-  assert.ok(rand.includes('id="tbIndicatoriCard"') && rand.includes('id="tbDirectieCard"') && rand.indexOf('id="tbIndicatoriCard"') < rand.indexOf('id="tbDirectieCard"'), "Directia sub indicatori, langa grafic");
+  // v100.111 (I-542): indicatorii + direcția = UN tabel „Trendul pe TF-uri”, tot în rândul graficului
+  assert.ok(rand.includes('id="tbTrendCard"') && rand.includes('id="tbIndicatoriRezumat"') && rand.includes('id="tbDirectieRezumat"'), "tabelul unic, langa grafic");
   const side = h.slice(poz('class="tbSideNou"'), poz('id="tbPl-plan"'));
-  assert.ok(side.includes('id="tbBaniCard"') && !side.includes('id="tbDirectieCard"'));
+  assert.ok(side.includes('id="tbBaniCard"') && !side.includes('id="tbTrendCard"'));
   for (const k of ["bb", "ema", "rsi", "vp"]) assert.match(h, new RegExp("tbComutaInd\\('" + k + "'\\)"));
   assert.match(h, /id="tbPl-socoteala"/);
   assert.match(h, /<script src="\/lib\/grafic-bot\.js/); assert.ok(poz('src="/lib/grafic-bot.js') > poz('src="/lib/grid-calcul.js'));

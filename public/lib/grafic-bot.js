@@ -96,6 +96,33 @@ var GraficBot = (function () {
     var an = Directie.analizeaza(cuCopie(r), 1, dir || "long");
     return an && an.dir ? { dir: an.dir, vechime: an.vechime } : null;
   }
+  // v100.111 (I-542, demo aprobat 06.10): UN tabel „Trendul pe TF-uri” - becul e regula, celelalte coloane sunt dovezi lângă el.
+  // sem = semafor(...); rez = rândurile „Direcției” (Directie.analizeaza + tf, orizontText); ind = [{ tf, verdict: { t, c, titlu } | null }]
+  // calc = TF-urile pe care pagina socotește „Direcția” și indicatorii (revizia R3): lipsa lor înseamnă „se aduce…”, nu „nu se socotește”
+  function trendTabel(sem, rez, ind, calc) {
+    var pe = function (l) { var o = {}; (Array.isArray(l) ? l : []).forEach(function (x) { if (x && x.tf) o[x.tf] = x; }); return o; }, R = pe(rez), I = pe(ind);
+    return (Array.isArray(sem) ? sem : []).map(function (s) {
+      var r = R[s.tf], v = I[s.tf], sc = r && r.schimbare, a = nr(s.adx), intors = null, areCalc = Array.isArray(calc) ? calc.indexOf(s.tf) >= 0 : !!(r || v), nu = "— (nu se socotește pe " + s.et + ")";
+      if (r && r.dir) intors = sc && sc.valoare != null ? { text: "s-a schimbat în " + Math.round(sc.valoare) + "% din " + cate(sc.cazuri, "caz", "cazuri") + ", după " + r.orizontText,
+        titlu: (sc.ic ? "Interval de încredere " + Math.round(sc.ic.jos) + "-" + Math.round(sc.ic.sus) + "%" : "") + (sc.spreOpus != null ? ", spre direcția opusă " + Math.round(sc.spreOpus) + "%" : "") + (sc.stare === "dovedit" ? ", dovedit" : ", puține cazuri") + "."
+          + (r.vechime ? " Stare ținută de " + cate(r.vechime, "bară închisă", "bare închise") + "." : "") } : { text: "prea puține cazuri în istoric", titlu: "" };
+      return { tf: s.tf, et: s.et, ton: s.ton || "gol", sageata: s.dir ? SAGEATA[s.dir] : "–", bec: s.dir ? NUME_DIR[s.dir] + (s.vechime ? " de " + cate(s.vechime, "bară", "bare") : "") : null,
+        fata: s.dir ? s.fata || "" : null, lipsa: s.dir ? null : s.text || null, adx: a, rsi: nr(s.rsi), adxVechi: s.dir === "lateral" && a !== null && a > 25,
+        scor: v && v.verdict ? v.verdict : null, intors: intors, bara: r && r.formare && isFinite(r.formare.pct) ? r.formare.pct : null, areCalc: areCalc,
+        scorLipsa: v && v.verdict ? null : !areCalc ? nu : !v ? "se aduce…" : v.eroare || "prea puține bare închise",
+        intorsLipsa: intors ? null : !areCalc ? nu : !r ? "se aduce…" : r.motiv || "n-am destule bare" };
+    });
+  }
+  // rândul unic din „Ce spune graficul acum” (Tabloul): câte becuri cu botul / împotrivă / fără lumânări ⇒ { stare, text }
+  function trendSumar(sem) {
+    var l = Array.isArray(sem) ? sem : [], n = { bine: 0, rau: 0, atentie: 0 }, aprinse = 0;
+    l.forEach(function (s) { if (s && s.dir) { aprinse++; if (n[s.ton] != null) n[s.ton]++; } });
+    if (!aprinse) { var tx = l.map(function (s) { return s && s.text; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });   /* revizia (R9): motivul comun, nu doar al lui 5 min */
+      return { stare: "info", text: tx.length === 1 ? tx[0] : tx.length ? "lumânările n-au venit pe niciun TF" : "se aduc lumânările…" }; }
+    var b = [n.bine + " din " + l.length + " cu botul sau laterale"];
+    if (n.rau) b.push(n.rau + " împotrivă"); if (n.atentie) b.push(cate(n.atentie, "bec împinge gridul", "becuri împing gridul")); if (l.length > aprinse) b.push((l.length - aprinse) + " fără lumânări");
+    return { stare: n.rau >= 2 || n.rau > n.bine ? "rau" : n.rau || n.atentie ? "atentie" : "bine", text: b.join(" · ") + " — tabelul de sub grafic" };
+  }
   function semafor(pe, dirBot, opt) {
     var d = String(dirBot || "").toLowerCase(); opt = opt || {};
     return TF_SEM.map(function (x) {
@@ -114,8 +141,9 @@ var GraficBot = (function () {
       var a = adx(b, 14).adx[b.length - 1], rs = rsi(b.map(function (y) { return y.c; }), 14)[b.length - 1];
       o.adx = a; o.rsi = rs;
       // ADX mare cu „lateral” = ADX-ul ține minte o mișcare mai veche (TAKE 1 zi, 06.10: 58, umflat de ziua de 23.09)
+      o.fata = an.fata.eticheta + (/botului$/.test(an.fata.eticheta) && d ? " " + d : "");   /* v100.111 (I-542): și singură, pentru tabel */
       o.text = SAGEATA[o.dir] + " " + NUME_DIR[o.dir] + (o.vechime ? " de " + cate(o.vechime, "bară", "bare") : "") + (a != null ? " · ADX " + Math.round(a) + (o.dir === "lateral" && a > 25 ? " (ține minte o mișcare mai veche)" : "") : "")
-        + (rs != null ? " · RSI " + Math.round(rs) : "") + " · " + an.fata.eticheta + (/botului$/.test(an.fata.eticheta) && d ? " " + d : "");
+        + (rs != null ? " · RSI " + Math.round(rs) : "") + " · " + o.fata;
       if (inchise && x.tf !== "1D") o.text += " · ultima ședință, " + ziLuna(ultT);
       return o;
     });
@@ -618,6 +646,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, TF_SEM: TF_SEM, semZi: semZi };
+  return { COL: COL, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;

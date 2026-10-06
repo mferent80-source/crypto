@@ -13,13 +13,13 @@ let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; await Promise.resolve().then(fn).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).slice(0, 400)}`); }); }
 console.log("\nV100.109 · golul de sub „Ce ai de făcut acum” · proba\n");
 
-await test("(1) ecran lat: coloana dreaptă ține doar citirea; „Ce spun indicatorii” și „Direcția pieței” stau pe rândul de dedesubt, una lângă alta", () => {
+await test("(1) ecran lat: coloana dreaptă ține doar citirea; dedesubt, pe toată lățimea, tabelul „Trendul pe TF-uri” (v100.111, în locul celor două cartele)", () => {
   const css = citeste("public", "app.css");
-  assert.match(css, /@media \(min-width:1181px\)\{#tabloubot \.tbGrCol\{display:contents\}#tabloubot \.tbGrStanga\{grid-column:1;grid-row:1\}#tabloubot #tbCitireCard\{grid-column:2;grid-row:1;align-self:start\}#tabloubot #tbIndicatoriCard\{grid-column:1;grid-row:2\}#tabloubot #tbDirectieCard\{grid-column:2;grid-row:2\}\}/);
+  assert.match(css, /@media \(min-width:1181px\)\{#tabloubot \.tbGrCol\{display:contents\}#tabloubot \.tbGrStanga\{grid-column:1;grid-row:1\}#tabloubot #tbCitireCard\{grid-column:2;grid-row:1;align-self:start\}#tabloubot #tbTrendCard\{grid-column:1\/-1;grid-row:2\}\}/);   /* v100.111 (I-542): cele două cartele = UN tabel pe toată lățimea */
 });
 await test("(2) structura pe care se sprijină regula: cele trei cartele sunt chiar copiii lui .tbGrCol, iar rândul are două coloane", () => {
   const html = citeste("public", "index.html"), i = html.indexOf('<div class="tbGrCol">'), bucata = html.slice(i, i + 40000);
-  assert.ok(i > 0); for (const id of ["tbCitireCard", "tbIndicatoriCard", "tbDirectieCard"]) assert.ok(bucata.includes('id="' + id + '"'), id);
+  assert.ok(i > 0); for (const id of ["tbCitireCard", "tbTrendCard"]) assert.ok(bucata.includes('id="' + id + '"'), id);
   assert.match(citeste("public", "app.css"), /#tabloubot \.tbGraficRand\{grid-template-columns:minmax\(0,1fr\) 340px\}/);
 });
 await test("(E) versiunea v100.109 peste tot", () => {

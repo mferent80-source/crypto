@@ -314,7 +314,7 @@ await scenariu(390, 844, "telefon");
       assert.equal(new Set(titluri).size, titluri.length, "randuri dublate: " + titluri.join(" | "));
       const r = await b.ev(`(()=>{const a=document.querySelector("#tabloubot .tbMain").getBoundingClientRect(),c=document.querySelector("#tabloubot .tbSideNou").getBoundingClientRect();return a.right<=c.left+1||c.right<=a.left+1||a.bottom<=c.top+1||c.bottom<=a.top+1})()`);
       assert.equal(r, true, "graficul si coloana din dreapta se suprapun");
-      for (const id of ["tbKpiPozPill", "tbGrafic", "tbScenarii", "tbDirectie", "tbBani", "tbAcum", "tbSfaturi", "tbFisaBot", "tbSapt", "tbPlanStare", "tbAlerteStare", "tbPort", "tbMasuri"]) assert.ok(await b.ev(`!!document.getElementById("${id}")`), "lipseste #" + id);
+      for (const id of ["tbKpiPozPill", "tbGrafic", "tbScenarii", "tbTrend", "tbBani", "tbAcum", "tbSfaturi", "tbFisaBot", "tbSapt", "tbPlanStare", "tbAlerteStare", "tbPort", "tbMasuri"]) assert.ok(await b.ev(`!!document.getElementById("${id}")`), "lipseste #" + id);
       await b.ev(`document.getElementById("tbSemaforCard").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, "tablou-lat.png"));   /* v100.61: Tabloul la latimea LUI */
       await b.ev(`tbDeschidePlan()`); assert.equal(await b.ev(`document.getElementById("tbPl-plan").open`), true, "'Scrie planul' deschide planul");
       // v87: randul cu tot contul si pe Tablou; ritmul de recuperare langa rezultat (cand botul e pe minus)

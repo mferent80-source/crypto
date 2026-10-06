@@ -2094,9 +2094,6 @@ body.peAlerte .heroStrip,body.peAlerte .tabs,body.peAlerte .toolbar{display:none
 #t212 .tbCitR.info .tbCitIc{background:rgba(144,160,182,.14);color:var(--muted)}
 #tabloubot .tbTodoDepasit{opacity:.5}
 #tabloubot .tbTodoDep{margin-left:8px;font-size:12px;color:var(--muted);font-weight:600}
-#tabloubot .tbCitTf{margin:8px 0 4px;padding:6px 10px 2px;border:1px solid var(--tb-linie);border-radius:10px;background:rgba(255,255,255,.02)}
-#tabloubot .tbCitTf .tbEt2{margin:0 0 2px}
-#tabloubot .tbCitTf .tbCitR:first-of-type{border-top:0}
 #tabloubot .tbCitR{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:13.5px;line-height:1.45;padding:6px 0;border-top:1px solid var(--tb-linie)}
 #tabloubot .tbCitIc{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:800}
 #tabloubot .tbCitTx{color:#cdd7e4}
@@ -2154,7 +2151,7 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 #tabloubot .tbGrStanga>.tbBloc,#tabloubot .tbGrStanga>.tbTodo{min-width:0;margin:0}
 /* v100.109 (el, 06.10: „sub Ce ai de făcut acum rămâne un mare gol”): pe ecranul lat coloana dreaptă ține doar citirea; indicatorii și direcția
    coboară pe rândul lor, sub grafic, una lângă alta (stânga se termina la 2.462 px, dreapta la 3.531). Pe telefon rămâne o coloană. */
-@media (min-width:1181px){#tabloubot .tbGrCol{display:contents}#tabloubot .tbGrStanga{grid-column:1;grid-row:1}#tabloubot #tbCitireCard{grid-column:2;grid-row:1;align-self:start}#tabloubot #tbIndicatoriCard{grid-column:1;grid-row:2}#tabloubot #tbDirectieCard{grid-column:2;grid-row:2}}
+@media (min-width:1181px){#tabloubot .tbGrCol{display:contents}#tabloubot .tbGrStanga{grid-column:1;grid-row:1}#tabloubot #tbCitireCard{grid-column:2;grid-row:1;align-self:start}#tabloubot #tbTrendCard{grid-column:1/-1;grid-row:2}}
 #tabloubot #tbAcumCard{margin:8px 0 0}
 #tabloubot #tbAcum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 28px}
 #tabloubot .tbGrupCard{min-width:0}
@@ -2291,3 +2288,18 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 
 @media (max-width:640px){.t212Tab tr.t212Rand .t212Sim .t212Mic.t212Modele{display:block;margin-top:4px}}   /* v100.96 (revizia 🔵5): pe telefon prima celulă ascunde .t212Mic, dar rândul modelelor rămâne */
 @media (max-width:640px){.t212Tab tr.t212Rand{grid-template-columns:minmax(0,1fr) auto}.t212Tab tr.t212Rand .t212Sim>div{min-width:0}.t212Tab tr.t212Rand .t212Sim .t212Mic.t212Modele{white-space:normal}}   /* v100.96 (poza 390): rândul lung se împachetează în prima coloană, rezultatul nu mai iese din card */
+/* v100.111 (I-542): tabelul unic „Trendul pe TF-uri” (becul e regula, restul coloanelor sunt dovezi) + I-549 fereastra de sărit */
+#tabloubot .tbTrendNota{margin:0 0 6px}
+#tabloubot .tbTrendRez{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:6px}#tabloubot .tbTrendRez>.tbRezumat{flex:1 1 320px;min-width:0;margin:0}
+#tabloubot .tbTrendSum{margin:4px 0 6px;font-weight:700}
+#tabloubot #tbTrendCard .tbIndWrap{overflow-x:auto}
+#tabloubot .tbTrendTab{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+#tabloubot .tbTrendTab th{font-weight:700;color:var(--muted,#8aa0b4);text-align:left;padding:4px 12px 4px 0;font-size:12px;white-space:nowrap}
+#tabloubot .tbTrendTab td{padding:7px 12px 7px 0;text-align:left;vertical-align:top;border-top:1px solid var(--tb-linie,#23374a)}
+#tabloubot .tbTrendTf{white-space:nowrap;font-weight:800}
+#tabloubot .tbTrendBec{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;margin-right:8px;font-size:12px;font-weight:800;color:#071018;vertical-align:-4px;background:var(--muted,#8aa0b4)}
+#tabloubot .tbTrendBec.bine{background:var(--good)}#tabloubot .tbTrendBec.rau{background:var(--bad)}#tabloubot .tbTrendBec.atentie{background:var(--warn)}
+#tabloubot .tbTrendDet{margin-top:8px}#tabloubot .tbTrendDet>summary{cursor:pointer;color:var(--accent);font-size:13px}
+#tabloubot #tbTrendMediu .tbMediu{margin:10px 0 0}
+.grPlanPill.grPlanSari{border-color:var(--bad);color:var(--bad)}
+.grPlanSariTx{margin:6px 0 8px;padding:6px 10px;border-left:3px solid var(--bad);background:rgba(255,107,120,.08);font-size:13px}
