@@ -152,9 +152,9 @@ await test("(m) minorele: „cum ai scris” și pe Discord / poză · „când 
 
 await test("(E) versiunea v100.108 peste tot", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.108"/); assert.match(html, /id="sideVersiune"[^>]*>v100\.108/); assert.match(html, /id="antetVersiune">v100\.108/); assert.match(html, /id="healthAppVersion">v100\.108</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.108.0");
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-108";/);
+  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="sideVersiune"[^>]*>v100\.1\d\d/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

@@ -2150,6 +2150,9 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 /* v100.2: Ce ai de facut sub grafic (coloana stanga); Pe zi, la inchidere pe toata latimea, pe doua coloane - fara goluri */
 #tabloubot .tbGrStanga{display:grid;gap:8px;align-content:start;min-width:0}
 #tabloubot .tbGrStanga>.tbBloc,#tabloubot .tbGrStanga>.tbTodo{min-width:0;margin:0}
+/* v100.109 (el, 06.10: „sub Ce ai de făcut acum rămâne un mare gol”): pe ecranul lat coloana dreaptă ține doar citirea; indicatorii și direcția
+   coboară pe rândul lor, sub grafic, una lângă alta (stânga se termina la 2.462 px, dreapta la 3.531). Pe telefon rămâne o coloană. */
+@media (min-width:1181px){#tabloubot .tbGrCol{display:contents}#tabloubot .tbGrStanga{grid-column:1;grid-row:1}#tabloubot #tbCitireCard{grid-column:2;grid-row:1;align-self:start}#tabloubot #tbIndicatoriCard{grid-column:1;grid-row:2}#tabloubot #tbDirectieCard{grid-column:2;grid-row:2}}
 #tabloubot #tbAcumCard{margin:8px 0 0}
 #tabloubot #tbAcum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 28px}
 #tabloubot .tbGrupCard{min-width:0}
