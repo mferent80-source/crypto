@@ -10,6 +10,7 @@ import { mesajFundingPiata } from "./tura-piata.mjs";
 import { mesajPornire } from "./tura-pornire.mjs";
 import { pazaBot, notaVeche } from "./paza-boti.mjs";
 import { titluDimineata } from "./dimineata-titlu.mjs";   // v101.62 (I-526)
+import { liniiBecuri } from "./tura-dimineata.mjs";   // v101.75 (I-552)
 
 const T0 = Date.UTC(2026, 9, 1, 16, 0), ORA = 3600000, ZI = 86400000;
 const AL = [["titlu", "alertaTitlu"], ["mesaj", "alertaMesaj"]], RAP = [["titlu", "alertaTitlu"], ["mesaj", "raport"]];
@@ -215,6 +216,11 @@ export function situatiiAlerte(pune) {
   td("dimineața: rândul-verdict, 3 boți", { boti: [{ nume: "CRV", stare: "miscare" }, { nume: "LIGHTER", stare: "liniste" }, { nume: "PUMP", stare: "liniste" }], bilant: "dovedit", reveniri: 9, eticheta: "cam la fel", deIesit: 0 });
   td("dimineața: rândul-verdict, 40 de boți, 2 de ieșit", { boti: Array.from({ length: 40 }, (_, i) => ({ nume: "M" + i, stare: i % 2 ? "miscare" : "liniste" })), bilant: "prea puține", reveniri: 123, eticheta: "mai slab", deIesit: 2 });
   td("dimineața: rândul-verdict, nimic", { boti: [{ nume: "SOL", stare: "nemasurat" }], reveniri: 0, deIesit: 0 });
+  // v101.75 (I-552): becurile 4h · 1z și ce s-a schimbat (raport: rânduri ≤ 160), din producătorul real
+  const bc = (sit, l, ieri, et) => liniiBecuri(l, ieri, et).linii.forEach((t, i) => pune(sit + " · rândul " + (i + 1), "alerte", "dimineata.becuri", { t }, [["t", "raport"]]));
+  bc("dimineața: becurile, 3 boți + 2 acțiuni", [{ cheie: "a", nume: "CRV", dir: "long", h4: "urca", z1: "lateral" }, { cheie: "b", nume: "LIGHTER", dir: "short", h4: "urca", z1: "coboara" }, { cheie: "c", nume: "LIGHTER", dir: "long", h4: "lateral", z1: null },
+    { cheie: "d", nume: "AAPL", dir: "long", h4: "coboara", z1: "lateral" }, { cheie: "e", nume: "SAP", dir: "long", h4: "urca", faraZ1: true }], { a: { h4: "coboara", z1: "lateral" }, b: { h4: "urca", z1: "urca" } }, "Peste noapte");
+  bc("dimineața: becurile, 30 de poziții", Array.from({ length: 30 }, (_, i) => ({ cheie: "p" + i, nume: "MARSCOIN" + i, dir: "long", h4: "lateral", z1: "coboara" })), Object.fromEntries(Array.from({ length: 30 }, (_, i) => ["p" + i, { h4: "urca", z1: "urca" }])), "Față de 03.10");
   // v100.93 (A2): comparația fișei cu intervalul Busolei (I-524) - cele trei forme, rând ≤ 110
   for (const [sit, j, s] of [["mai îngust", 3.177, 3.962], ["mai larg", 2.5, 4.9], ["cam la fel", 3.0, 4.25]]) pune("Busola, comparația: " + sit, "alerte", "busola.comparatie", { t: BU.comparaInterval({ jos: 3.009, sus: 4.224 }, j, s).text }, [["t", "rand"]]);
   lb("Busola dimineața: 12 boți (tăiat la 145)", Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - ORA })));

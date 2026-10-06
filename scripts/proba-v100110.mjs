@@ -118,12 +118,13 @@ await test("(R1) T212: „reîncerc” doar cât reluarea e chiar programată; d
 });
 await test("(R2) Tablou: reluarea reface „Direcția” și indicatorii pentru TF-urile ei (o voce), nu pornește cât tura e în lucru și se programează abia după tură, doar dacă nu au căzut toate", () => {
   const r = fn(app, "tbReiaLipsa");
-  assert.match(r, /if\(!b\|\|!d\|\|d\.inLucru\|\|/); assert.match(r, /Directie\.analizeaza\(/); assert.match(r, /tbCalculeazaIndicatorii\(d\);renderTabloDirectia\(\);renderTabloIndicatori\(\)/);
-  assert.match(r, /d\.reiaProgramat=false/); assert.match(r, /d\.aDouaOara=/);
+  assert.match(r, /if\(!b\|\|!d\|\|typeof TabloTrend==="undefined"\|\|d\.inLucru\|\|/); assert.match(r, /Directie\.analizeaza\(/); assert.match(r, /tbCalculeazaIndicatorii\(d\);renderTabloDirectia\(\);renderTabloIndicatori\(\)/);
+  // v100.112 (I-553): reluarea, „a doua oară” și „reîncerc” stau în TabloTrend (reia / tura / stareSemafor) - probate pe comportament în proba-v100112
+  assert.match(r, /await TabloTrend\.reia\(d,/);
   const t = fn(app, "tbAduDirectie");
-  assert.match(t, /d\.eroare=rez\.every\([^)]*\)[^;]*\);[\s\S]*if\(lipsa\.length&&!d\.eroare\)\{d\.reiaProgramat=true;setTimeout\(tbReiaLipsa,30000\)\}/);
+  assert.match(t, /d\.eroare=t\.eroare;[\s\S]*d\.reiaProgramat=t\.reiaProgramat;d\.aDouaOara=false;if\(d\.reiaProgramat\)setTimeout\(tbReiaLipsa,30000\);/);
   assert.match(t, /if\(d\.simbol!==cheie\)\{d\.peLucru=\{cheie:cheie,pe:pe\};/, "becurile pe rând doar la prima încărcare / la schimbarea monedei");
-  assert.match(fn(app, "tbSemaforTf"), /reincerc:!!\(d\.simbol===k&&d\.reiaProgramat\)/);
+  assert.match(fn(app, "tbSemaforTf"), /TabloTrend\.stareSemafor\(/);
 });
 await test("(R3) I-547: becul 1z doar pe listările din SUA; alerta cel mult o dată pe zi, starea scrisă după trimiterea reușită și doar la schimbare", () => {
   assert.match(col, /const semZi = \/_US_EQ\$\/\.test\(x\.ticker\) && bare\.length \? GraficBot\.semZi\(bare, "long"\) : null/);
@@ -161,7 +162,7 @@ await test("(E) versiunea v100.110 / colector v101.74", () => {
   assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
   assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/);
   assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
-  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.74";/);
+  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(7[4-9]|[89]\d)";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);

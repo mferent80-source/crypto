@@ -15,7 +15,7 @@ import { trimiteDiscord } from "./lib/canal-discord.mjs";
 import * as MesajeColector from "./lib/mesaje-colector.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
-import { turaDimineata as turaDimineataModul } from "./lib/tura-dimineata.mjs";
+import { turaDimineata as turaDimineataModul, liniiBecuri, etichetaIeri } from "./lib/tura-dimineata.mjs";
 import { turaIdei as turaIdeiModul } from "./lib/tura-idei.mjs";
 import { turaIngust as turaIngustModul } from "./lib/tura-ingust.mjs";
 import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
@@ -39,7 +39,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.74";
+const VERSIUNE_COLECTOR = "v101.75";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1085,7 +1085,7 @@ async function turaIdeiZi() {
 // v89: rezumatul de dimineata - o data pe zi, dupa 9:00 ora Romaniei (Radar + Discord)
 let dimineataInLucru = false;
 async function dateDimineata() {
-  const out = { deIesit: [], rezultate: [], plafon: [], stiri: [], boti: [] };
+  const out = { deIesit: [], rezultate: [], plafon: [], stiri: [], boti: [] }, becuriBoti = [], becuriT212 = [];   // v101.75 (I-552)
   let t212Citit = false;   // v101.62 (revizia Opus): „de ieșit” se spune doar cu pozițiile T212 citite - altfel „nimic de ieșit” ar fi inventat
   // v92: barele zilnice de bursa CU ultima zi (bare() o scotea - "ultima zi" arata ziua de dinainte)
   try { const pz = await cere("/api/stiri?action=piata"); const zi = (r) => (Array.isArray(r) && r.length ? GridCalcul.bareToate(r) : null); out.piata = Consilier.piata({ qqq: zi(pz.qqq), spy: zi(pz.spy), vix: zi(pz.vix), fg: pz.fg }); } catch (e) { jurnal("dimineata piata", e.message); }
@@ -1103,6 +1103,10 @@ async function dateDimineata() {
         try {
           const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)), bare = GridCalcul.bareBursa(d && d.randuri || [], Date.now()), st = ActiuniSemnale.stare(bare, x.currentPrice);
           barePe[x.ticker] = bare;
+          // v101.75 (I-552): becurile poziției pentru dimineață - 1z doar pe listările din SUA (ca I-546 / I-547), 4 h din prețurile de 4 h
+          let h4 = null; try { const r4 = await cere("/api/t212?action=preturi&interval=4h&ticker=" + encodeURIComponent(x.ticker)), b4 = GraficBot.semafor({ "4H": r4 && r4.randuri || [] }, "long", { actiune: true, acum: Date.now() }).find((y) => y.tf === "4H"); h4 = b4 && b4.dir || null; } catch {}
+          let z1 = null; try { z1 = /_US_EQ$/.test(x.ticker) && bare.length ? (GraficBot.semZi(barePe[x.ticker], "long") || {}).dir || null : null; } catch {}
+          becuriT212.push({ cheie: "t212-" + x.ticker, nume: s, dir: "long", h4, z1, faraZ1: !/_US_EQ$/.test(x.ticker) });
           const niv = ActiuniSemnale.semafor({ ticker: x.ticker, simbol: s, qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan: null }, st).nivel;
           if (niv !== "fara-date") intrari.push({ zi, ticker: x.ticker, nivel: niv, pret: x.currentPrice });   // v91: socoteala sfaturilor
           if (niv === "iesi") {
@@ -1138,12 +1142,19 @@ async function dateDimineata() {
     const sufix = laMax > 0 && acum - laMax > Busola.PAZA_VECHI_MS ? " (rezumat de acum " + TextRo.ore(acum - laMax) + ")" : "";
     const t = Busola.liniaBoti(l, acum, 142 - sufix.length); out.liniiExtra = t ? ["🧭 Busola, pe 4h: " + t + sufix] : [];
     lBoti = l; liniaVeche = sufix;
+    // v101.75 (I-552): becurile 4 h / 1 zi ale boților deschiși - aceeași regulă ca Tabloul (directiaBotului, ținută 5 min)
+    for (const b of boti.filter((y) => y && y.id && y.activ !== false)) {
+      try { const dr = await directiaBotului(b), dirTf = (tf) => { const r = (dr && dr.rez || []).find((y) => y.tf === tf); return r && r.dir || null; };
+        becuriBoti.push({ cheie: "bot-" + b.id, nume: String(b.baza || "").replace(/\.PERP$/, ""), dir: String(b.directie || "").toLowerCase(), h4: dirTf("4H"), z1: dirTf("1D") }); } catch (e) { jurnal("dimineata becuri", b.id, e.message); }
+    }
   } catch {}
   // v101.62 (I-526): rândul-verdict din capul rezumatului - din aceleași date (boții pe agitație/calm, bilanțul pazei, acțiunile pe revenire, de ieșit).
   // Revizia Opus: în afara try-ului bot-orders (revenirile și „de ieșit” sunt știute și când Pionex pică); boții DOAR din rezumat proaspăt
   // (rezumatul vechi ⇒ fără partea cu boții, nu „Azi: 1 bot pe agitație” de acum 10 h); „de ieșit” doar cu T212 citit
   const rz = Busola.rezumat(), tz = titluDimineata({ boti: liniaVeche ? [] : lBoti, bilant: rz && rz.perp && rz.perp.bilant ? rz.perp.bilant.verdict : null, reveniri: out.reveniriN, eticheta: out.reveniriEt, deIesit: t212Citit ? out.deIesit.length : null });
   out.liniiIntai = tz ? [tz] : [];
+  // v101.75 (I-552): rândul becurilor (boții întâi, apoi pozițiile T212) + ce s-a schimbat față de rezumatul de ieri
+  try { const becuri = becuriBoti.concat(becuriT212), ieri = meta().becuriIeri, lb = liniiBecuri(becuri, ieri && ieri.b || null, etichetaIeri(ieri && ieri.data, Date.now())); out.liniiBecuri = lb.linii; out.becuriAzi = lb.azi; } catch (e) { jurnal("dimineata becuri", e.message); }
   return out;
 }
 async function turaDimineata() {

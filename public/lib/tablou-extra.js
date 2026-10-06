@@ -584,9 +584,12 @@ var TabloExtra = (function () {
         var t0 = String(y.text || "").trim(), tx = String(x.text || "").trim();
         if (!t0) y.text = tx + (x.faCe ? (tx ? " " : "") + "👉 " + x.faCe : "");
         else if (x.faCe && t0.indexOf("👉") < 0 && !/Ce aș face eu/i.test(t0)) y.text = t0 + " 👉 " + x.faCe;
+        if (Array.isArray(x.copiaza) && x.copiaza.length && !y.copiaza) y.copiaza = x.copiaza;   // v100.112 (I-551)
         return;
       }
-      out.push({ c: c, titlu: x.titlu, text: String(x.text || "") + (x.faCe ? " 👉 " + x.faCe : ""), n: 0, la: dateLa });
+      var it = { c: c, titlu: x.titlu, text: String(x.text || "") + (x.faCe ? " 👉 " + x.faCe : ""), n: 0, la: dateLa };
+      if (Array.isArray(x.copiaza) && x.copiaza.length) it.copiaza = x.copiaza;   // v100.112 (I-551): prețul de copiat merge cu rândul
+      out.push(it);
     });
     if (o.planGol) out.push({ c: "n", titlu: "Nu ai un plan pentru bot", text: "Cu planul scris la rece, colectorul te anunță când se atinge un prag.", n: 0, actiune: "plan", la: dateLa });
     var R = { r: 0, g: 1, n: 2 };

@@ -166,7 +166,8 @@ var Sfaturi = (function () {
         text: "Închis acum, ai lua " + (z.iei != null ? TextRo.num(z.iei, 2) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
         // v100.40 (audit 30.09): pe minus, prețul de zero e DINCOLO de pretul de acum (deasupra la long, dedesubt la short) -> e un
         // TAKE-PROFIT; un stop pus acolo s-ar executa pe loc (contrar cartelei „Stopul” de pe acelasi ecran)
-        faCe: "Aș pune take-profit-ul botului la " + pret(z.pretZero) + " ca să ies fără pierdere (nu stop: zero-ul e " + (z.distantaZeroPct > 0 ? "deasupra prețului" : "sub preț") + ")." });
+        faCe: "Aș pune take-profit-ul botului la " + pret(z.pretZero) + " ca să ies fără pierdere (nu stop: zero-ul e " + (z.distantaZeroPct > 0 ? "deasupra prețului" : "sub preț") + ").",
+        copiaza: [{ ce: "take-profit", pret: pret(z.pretZero) }] });   // v100.112 (I-551): prețul de copiat e câmp, nu se scoate din text
     }
 
     // 5) Directia fata de bot, spusa ca stare masurata.

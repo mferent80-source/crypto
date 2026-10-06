@@ -6326,7 +6326,7 @@ function tbRenderTodo(){
   l=TabloExtra.marcheazaDepasite(l,{cons:cu,reguli:rg});
   // v100.5 (el: „pune ora la fiecare sfat ca să știu dacă e de actualitate”): alerta = ora ei; restul = ora citirii botului
   box.innerHTML=l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1),o=TabloExtra.oraSfat(x.la,Date.now());
-    return '<div class="tbTodoRand'+(x.depasit?' tbTodoDepasit':'')+'"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(x.depasit?'<span class="tbTodoDep">'+escapeHtml(x.depasit)+'</span>':'')+(o?'<span class="tbOra'+(o.vechi?' tbOraVeche':'')+'" title="'+(x.n?'ora ultimei alerte':'ora datelor din care e socotit')+'">🕒 '+escapeHtml(o.text)+'</span>':'')+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+(x.stiri&&typeof t212StiriHtml==="function"?t212StiriHtml(x.stiri,3):'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
+    return '<div class="tbTodoRand'+(x.depasit?' tbTodoDepasit':'')+'"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(x.depasit?'<span class="tbTodoDep">'+escapeHtml(x.depasit)+'</span>':'')+(o?'<span class="tbOra'+(o.vechi?' tbOraVeche':'')+'" title="'+(x.n?'ora ultimei alerte':'ora datelor din care e socotit')+'">🕒 '+escapeHtml(o.text)+'</span>':'')+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+(Array.isArray(x.copiaza)&&x.copiaza.length?'<div class="tbTodoCopiere">'+x.copiaza.map(function(c){return '<button type="button" class="tbBtnLinie tbTodoCopiaza" value="'+escapeHtml(c.pret)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază prețul pentru '+escapeHtml(c.ce)+': '+escapeHtml(c.pret)+'">copiază '+escapeHtml(c.ce)+' '+escapeHtml(c.pret)+'</button>'}).join("")+'</div>':'')+(x.stiri&&typeof t212StiriHtml==="function"?t212StiriHtml(x.stiri,3):'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
   var azi=alerte.filter(function(a){return a.t>0&&Date.now()-a.t<86400000}).length,pune=function(id,t){var e=$(id);if(e)e.textContent=t};
   pune("tbPlSub-alerte",azi?azi+" în ultimele 24 h":"niciuna în ultimele 24 h");
   pune("tbPlSub-avert",aver.length?aver.length+" de la server":"niciunul");
@@ -6414,37 +6414,27 @@ var TB_DIR_REINCERCARE_MS=30000;
 var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
 var TB_PERIOADE={"24h":{i:"5M",l:288,gaura:12*60000},"3z":{i:"15M",l:288,gaura:40*60000},"7z":{i:"60M",l:168,gaura:150*60000}};
 function tbAlegeInterval(p){if(!TB_PERIOADE[p])return;tbStare.graficInterval=p;["24h","3z","7z"].forEach(function(k){var e=$("tbInt"+k);if(e)e.setAttribute("aria-pressed",String(k===p))});if(tbStare.grafic)tbStare.grafic.la=0;tbAduGraficul()}
+// v100.112 (I-553): lumânările unui TF din Pionex (eroare când nu vin) - rețeaua pentru TabloTrend.tura / reia
+function tbAduTf(s){return async function(tf,lim){var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+tf+"&limit="+lim),r=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;if(!Array.isArray(r))throw new Error((k&&k.error)||"Pionex nu a dat lumânări");return r}}   /* revizia: lista goală rămâne date (ca în v100.111) */
 async function tbAduDirectie(){
-  var b=tbStare.bot;if(!b||typeof Directie==="undefined")return;
+  var b=tbStare.bot;if(!b||typeof Directie==="undefined"||typeof TabloTrend==="undefined")return;
   var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex;
   var d=tbStare.directie||(tbStare.directie={la:0,simbol:null,rez:null,inLucru:false});
   var cheie=s+"|"+(b.directie||"");
   if(d.inLucru||(d.simbol===cheie&&Date.now()-d.la<(d.eroare?TB_DIR_REINCERCARE_MS:TB_DIR_MS)))return;
   d.inLucru=true;
   try{
-    var rez=[];
-    var pe={};   // v100.106 (revizia R1): lumânările pe interval, puse în d.randuriPe o dată, la final - nu peste cele ale monedei de dinainte
-    // Pe rand, nu deodata: Pionex numara cererile, iar serverul le distanteaza oricum.
-    for(var i=0;i<TB_DIR_TF.length;i++){
-      var x=TB_DIR_TF[i];
-      try{
-        var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+x.tf+"&limit="+x.limit);
-        var randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;
-        if(!randuri)throw new Error((k&&k.error)||"Pionex nu a dat lumânări");
-        rez.push(Object.assign({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText},Directie.analizeaza(randuri,x.orizont,b.directie)));
-        pe[x.tf]=randuri;if(d.simbol!==cheie){d.peLucru={cheie:cheie,pe:pe};if(typeof renderTabloGrafic==="function"){renderTabloGrafic();renderTabloTrend()}}   /* v100.110 (I-548): becurile pe rând - la prima încărcare / altă monedă */
-        if(x.tf==="4H")d.randuri4h=randuri;
-      }catch(e){rez.push({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText,dir:null,stare:"eroare",motiv:textEroare(e)})}
-    }
-    for(var j=0;j<TB_SEM_EXTRA.length;j++){try{var kx=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+TB_SEM_EXTRA[j].tf+"&limit="+TB_SEM_EXTRA[j].limit);if(kx&&kx.data&&Array.isArray(kx.data.klines)){pe[TB_SEM_EXTRA[j].tf]=kx.data.klines;if(d.simbol!==cheie){d.peLucru={cheie:cheie,pe:pe};if(typeof renderTabloGrafic==="function"){renderTabloGrafic();renderTabloTrend()}}}}catch(e){}}
-    // v100.110 (I-548): ce n-a venit se reia o dată, peste 30 s, doar pentru TF-urile lipsă (nu toate 6)
-    var lipsa=TB_DIR_TF.map(function(x){return x.tf}).concat(TB_SEM_EXTRA.map(function(x){return x.tf})).filter(function(tf){return !pe[tf]});
+    // v100.112 (I-553): tura (pe rând - Pionex numără cererile), „Direcția” cu motivul erorii, lipsa și reluarea ei - în TabloTrend (pur, probat
+    // pe secvențe de răspunsuri); lumânările pe interval intră în d.randuriPe o dată, la final (v100.106, revizia R1)
+    var t=await TabloTrend.tura({dirTf:TB_DIR_TF,extraTf:TB_SEM_EXTRA,aduce:tbAduTf(s),analizeaza:function(rows,x){return Directie.analizeaza(rows,x.orizont,b.directie)},motiv:textEroare,
+      pas:function(pe){if(d.simbol!==cheie){d.peLucru={cheie:cheie,pe:pe};if(typeof renderTabloGrafic==="function"){renderTabloGrafic();renderTabloTrend()}}}});   /* v100.110 (I-548): becurile pe rând - la prima încărcare / altă monedă */
+    d.randuri4h=t.pe["4H"]||(d.simbol===cheie?d.randuri4h:null);   // revizia: 4 h picat la altă monedă - nu lumânările monedei de dinainte
     // v91.9: "Mediul botului" - rata de funding a monedei si lumanarile de 4h ale BTC (2 cereri in plus la 5 min)
     try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(s));d.fundingRates=fr&&fr.data&&Array.isArray(fr.data.rates)?fr.data.rates:null}catch(e){d.fundingRates=null}
     try{var kb=await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200");d.btc4h=kb&&kb.data&&Array.isArray(kb.data.klines)?kb.data.klines:null}catch(e){d.btc4h=null}
-    d.rez=rez;d.randuriPe=pe;d.simbol=cheie;d.la=Date.now();d.eroare=rez.every(function(r){return r.stare==="eroare"});
+    d.rez=t.rez;d.randuriPe=t.pe;d.simbol=cheie;d.la=Date.now();d.eroare=t.eroare;
     // revizia v100.110 (R2): reluarea se programează abia acum (după d.randuriPe), și doar dacă n-au căzut toate (atunci se reia toată tura la 30 s)
-    d.lipsa=lipsa;d.reiaProgramat=false;d.aDouaOara=false;if(lipsa.length&&!d.eroare){d.reiaProgramat=true;setTimeout(tbReiaLipsa,30000)}
+    d.lipsa=t.lipsa;d.reiaProgramat=t.reiaProgramat;d.aDouaOara=false;if(d.reiaProgramat)setTimeout(tbReiaLipsa,30000);
     tbCalculeazaIndicatorii(d);
   }finally{d.inLucru=false}
   renderTabloDirectia();renderTabloIndicatori();
@@ -6578,16 +6568,13 @@ function tbProbaCopiaza(){var p=tbProbaStop.pret;if(p==null)return;var t=tbPretS
 // revizia R1: doar lumânările monedei (și direcției) botului de acum - la schimbarea botului, până sosesc ale lui, nimic;
 // v100.110 (I-548): cât se aduc, cele venite deja (d.peLucru, aceeași cheie) - becurile se aprind pe rând
 function tbCheieDir(b){return TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+(b.directie||"")}
-function tbSemaforTf(b){var d=tbStare.directie;if(!d||!b)return null;var k=tbCheieDir(b),pe=d.randuriPe&&d.simbol===k?d.randuriPe:d.peLucru&&d.peLucru.cheie===k?d.peLucru.pe:null;if(!pe)return null;var fin=d.simbol===k;return GraficBot.semafor(pe,b.directie,{reincerc:!!(d.simbol===k&&d.reiaProgramat),aDouaOara:!!(fin&&d.aDouaOara),seAduc:!fin})}
+function tbSemaforTf(b){var d=tbStare.directie;if(!d||!b||typeof TabloTrend==="undefined")return null;var x=TabloTrend.stareSemafor(d,tbCheieDir(b));return x?GraficBot.semafor(x.pe,b.directie,x.opt):null}   /* v100.112 (I-553) */
 // v100.110 (I-548): reluarea TF-urilor care n-au venit (o dată, la 30 s după tură) - doar pentru botul de atunci
 async function tbReiaLipsa(){
-  var b=tbStare.bot,d=tbStare.directie;if(!b||!d||d.inLucru||!d.lipsa||!d.lipsa.length||d.simbol!==tbCheieDir(b)||!d.randuriPe){if(d)d.reiaProgramat=false;return}
-  var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,rest=[],pe={};TB_DIR_TF.forEach(function(x){pe[x.tf]=x});
-  for(var i=0;i<d.lipsa.length;i++){var tf=d.lipsa[i],x=pe[tf],lim=x?x.limit:500;try{var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+tf+"&limit="+lim),rows=k&&k.data&&Array.isArray(k.data.klines)&&k.data.klines.length?k.data.klines:null;
-    if(!rows){rest.push(tf);continue}d.randuriPe[tf]=rows;
-    // revizia v100.110 (R2): TF-urile „Direcției” își refac și rândul de acolo (altfel becul 4 h se aprindea, iar „Direcția pieței” rămânea pe eroare)
-    if(x){var an=Object.assign({tf:x.tf,eticheta:x.eticheta,orizontText:x.orizontText},Directie.analizeaza(rows,x.orizont,b.directie));d.rez=(d.rez||[]).map(function(r){return r.tf===tf?an:r});if(tf==="4H")d.randuri4h=rows}}catch(e){rest.push(tf)}}
-  d.lipsa=rest;d.reiaProgramat=false;d.aDouaOara=rest.length>0;d.eroare=(d.rez||[]).every(function(r){return r.stare==="eroare"});
+  var b=tbStare.bot,d=tbStare.directie;if(!b||!d||typeof TabloTrend==="undefined"||d.inLucru||!d.lipsa||!d.lipsa.length||d.simbol!==tbCheieDir(b)||!d.randuriPe){if(d)d.reiaProgramat=false;return}
+  // v100.112 (I-553): o singură dată, doar lipsa; TF-urile „Direcției” își refac și rândul de acolo (revizia v100.110, R2) - în TabloTrend.reia
+  await TabloTrend.reia(d,{dirTf:TB_DIR_TF,extraTf:TB_SEM_EXTRA,aduce:tbAduTf(TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex),analizeaza:function(rows,x){return Directie.analizeaza(rows,x.orizont,b.directie)}});
+  if(d.randuriPe["4H"])d.randuri4h=d.randuriPe["4H"];
   tbCalculeazaIndicatorii(d);renderTabloDirectia();renderTabloIndicatori();if(typeof renderTabloSfaturi==="function")renderTabloSfaturi();if(typeof renderTabloGrafic==="function")renderTabloGrafic();
 }
 function tbTrendIstoric(b){var d=tbStare.directie,p=TB_PERIOADE[tbStare.graficInterval||"24h"];if(!d||!d.randuriPe||!p||!b||d.simbol!==tbCheieDir(b))return null;return d.randuriPe[p.i]||null}

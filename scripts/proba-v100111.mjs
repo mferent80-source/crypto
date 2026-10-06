@@ -182,13 +182,13 @@ await test("(542c) pagina: cartela „Trendul pe TF-uri” pe toată lățimea i
 });
 await test("(542d) becurile se aprind și în tabel pe rând, iar „Pe boții tăi” stă sub tabel", () => {
   const d = fn(app, "tbAduDirectie");
-  assert.equal((d.match(/renderTabloGrafic\(\);renderTabloTrend\(\)/g) || []).length, 2, "la fiecare TF venit, graficul ȘI tabelul");
+  assert.equal((d.match(/renderTabloGrafic\(\);renderTabloTrend\(\)/g) || []).length, 1, "la fiecare TF venit (pasul lui TabloTrend.tura, v100.112), graficul ȘI tabelul");
   assert.match(fn(app, "renderTabloTrend"), /tbCazuri\.sem/);
 });
 await test("(E) versiunea v100.111", () => {
-  assert.match(html, /content="v100\.111"/); assert.match(html, /id="antetVersiune">v100\.111/); assert.match(html, /id="healthAppVersion">v100\.111</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.111.0");
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-111";/);
+  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
   const sc = JSON.parse(citeste("package.json")).scripts; assert.equal(sc["test:v100111"], "node scripts/proba-v100111.mjs"); assert.match(sc.test, /npm run test:v100111/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

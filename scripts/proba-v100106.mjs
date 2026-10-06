@@ -130,10 +130,11 @@ await test("(A5) pagina: aduce și 5 min și 30 min; desenul primește semaforul
 });
 // ---------------- revizia de cod (Opus, 06.10): 4 importante + minorele ieftine ----------------
 await test("(R1) semaforul și banda nu arată trendul ALTEI monede: verifică simbolul; lumânările se pun o dată, la final, doar cele venite", () => {
-  assert.match(fnApp("tbSemaforTf"), /var k=tbCheieDir\(b\),pe=d\.randuriPe&&d\.simbol===k\?d\.randuriPe:d\.peLucru&&d\.peLucru\.cheie===k\?d\.peLucru\.pe:null/);   /* v100.110: și lumânările venite deja, aceeași cheie */ assert.match(fnApp("tbTrendIstoric"), /d\.simbol!==tbCheieDir\(b\)/);
+  // v100.112 (I-553): regula stă în TabloTrend.stareSemafor / tura, probată pe comportament în proba-v100112 (553a, 553c)
+  assert.match(fnApp("tbSemaforTf"), /TabloTrend\.stareSemafor\(d,tbCheieDir\(b\)\)/); assert.match(fnApp("tbTrendIstoric"), /d\.simbol!==tbCheieDir\(b\)/);
   const f = fnApp("tbAduDirectie");
   assert.doesNotMatch(f, /\(d\.randuriPe\|\|\(d\.randuriPe=\{\}\)\)/, "lumânările se scriau pe rând peste cele ale monedei vechi");
-  assert.match(f, /var pe=\{\};/); assert.match(f, /d\.randuriPe=pe;/); assert.match(f, /renderTabloGrafic\(\)/, "semaforul apare imediat, nu la următoarea redesenare");
+  assert.match(f, /d\.randuriPe=t\.pe;/); assert.match(f, /renderTabloGrafic\(\)/, "semaforul apare imediat, nu la următoarea redesenare");
 });
 await test("(R2) 5 min și 30 min doar pentru semafor: „Direcția pieței” și „Ce spun indicatorii” rămân pe cele 4 intervale de azi", () => {
   const i = app.indexOf("var TB_DIR_TF=["), lista = app.slice(i, app.indexOf("];", i));
