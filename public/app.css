@@ -2460,3 +2460,5 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 /* v100.132: „🎲 revine la intrare” din rând = buton spre Monte Carlo pe poziție (arată ca textul mic, subliniat punctat) */
 .mcsRevBtn{background:none;border:0;padding:0;margin:0;font:inherit;color:var(--muted);font-size:11.5px;text-align:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
 .mcsRevBtn:hover,.mcsRevBtn:focus-visible{color:var(--text,#e6edf3)}
+/* v100.133: orizontul la alegere în Monte Carlo pe simbol */
+#mcsPagina .mcsOriz{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 14px 0}

@@ -4,7 +4,15 @@
 // (pur); aici: funcțiile de desen (fără DOM, probate în vm) și aducerea datelor (Pionex 15M + 1D ca fișa Grid, Yahoo 1D ca pagina Salt).
 // v100.129 (el: „fa idei”): Enter în câmp + ultimele 10 simboluri; alegerea botului când sunt mai mulți pe aceeași monedă; „Compară 6 variante”
 // pe aceleași drumuri; 🎲 din pozițiile T212 / Salt (prețul tău de intrare și stopul poziției)
-var mcsStare = { sim: "", inLucru: false, eroare: null, rez: null, date: null, arhiva: null, recente: null, botIdx: 0, poz: null };
+var mcsStare = { sim: "", inLucru: false, eroare: null, rez: null, date: null, arhiva: null, recente: null, botIdx: 0, poz: null, oriz: { coin: 1, stock: 1 } };
+// v100.133 (el: „fa idei”): orizontul la alegere - perechi (scurt, lung), pe fel: coin în zile, acțiune în zile de bursă; implicit a doua
+function mcsOrizonturi(tip) { return tip === "stock" ? [[5, 20], [20, 60], [60, 120]] : [[3, 7], [7, 30], [30, 90]]; }
+function mcsOrizontAles(tip, i) { var l = mcsOrizonturi(tip); return l[i >= 0 && i < l.length ? i : 1]; }
+function mcsOrizontTxt(p, tip) { return p[0] + " și " + mcsCate(p[1], tip === "stock" ? "zi de bursă" : "zi", tip === "stock" ? "zile de bursă" : "zile"); }
+function mcsOrizHtml(r) {
+  var l = mcsOrizonturi(r.tip), ales = r.oriz >= 0 && r.oriz < l.length ? r.oriz : 1;
+  return '<div class="mcsOriz" role="group" aria-label="Orizontul"><span class="tbSub">Orizontul:</span>' + l.map(function (p, i) { return '<button type="button" class="tbIntBtn" aria-pressed="' + (i === ales) + '" data-action-click="mcsAlegeOriz(' + i + ')">' + mcsEsc(mcsOrizontTxt(p, r.tip)) + '</button>'; }).join("") + '</div>';
+}
 function mcsEsc(s) { return typeof escapeHtml === "function" ? escapeHtml(s) : String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 function mcsNr(v, z) { return Number(v).toLocaleString("ro-RO", { minimumFractionDigits: z, maximumFractionDigits: z }); }
 function mcsSemn(v) { return v > 0 ? "+" : v < 0 ? "−" : ""; }
@@ -245,6 +253,7 @@ function mcsPretHtml(r) {
   return '<section class="t212Panou mcsSec"><div class="t212PanouCap"><h4>📈 Încotro poate merge prețul</h4><span class="tbSub">' + mcsEsc(m.n.toLocaleString("ro-RO") + " de drumuri din " + mcsCate(m.zileIstoric, "zi", "zile") + " de istoric · bucăți reale de câte " + mcsCate(m.blocZile, "zi", "zile") + " · prețul de acum " + mcsPretTxt(r.pret)) + '</span></div>'
     + (r.poz ? '<p class="t212Fac mcsPoz">' + mcsEsc("Poziția ta: ai intrat la " + mcsPretTxt(r.poz.intrare) + ", acum " + mcsPretTxt(r.poz.pret) + " (" + mcsPct1(r.poz.pret / r.poz.intrare - 1) + ")" + (r.poz.stop > 0 ? "; stopul poziției " + mcsPretTxt(r.poz.stop) + (r.poz.stop >= r.poz.pret ? " (DEPĂȘIT: prețul e sub el)" : "") : "") + ". Mai jos: cât de des atinge prețul tău de intrare și cât de des ești peste el la capăt.") + '</p>' : '')
     + (m.faraTendinta ? '<p class="tbSub mcsNota">În ' + mcsEsc(mcsCate(m.zileIstoric, "zi", "zile")) + ', ' + mcsEsc(r.sim) + ' a mers în medie ' + mcsPct1(m.tendintaPeZi) + ' pe zi. Drumurile păstrează agitația reală, dar nu repetă tendința perioadei: o cădere (sau o urcare) care a fost nu se „prezice” mai departe.</p>' : '')
+    + mcsOrizHtml(r)
     + '<div class="mcsStopTinta"><label>Stopul, % sub prețul de acum <input id="mcsStop" inputmode="decimal" value="' + mcsNr(m.stopPct * 100, 1) + '"></label><label>Ținta, % peste <input id="mcsTinta" inputmode="decimal" value="' + mcsNr(m.tintaPct * 100, 1) + '"></label>'
     + '<button type="button" class="t212BtnLinie" data-action-click="mcsResimuleaza()">Refă simularea</button><span class="tbSub">' + mcsEsc(r.nivelText || "") + '</span></div>'
     + '<div class="mcsDoua">' + m.orizonturi.map(function (o) { return mcsCartPret(o, m, r.tip === "stock" ? "b" : "z", r.poz); }).join("") + '</div>'
@@ -423,7 +432,7 @@ if (typeof document !== "undefined" && document.addEventListener) document.addEv
 function mcsAlegeBot(v) {
   var d = mcsStare.date; mcsStare.botIdx = Number(v) || 0;
   if (!d || d.tip !== "coin") return;
-  mcsStare.rez = mcsCalculeaza(d, { stop: mcsNumar("mcsStop"), tinta: mcsNumar("mcsTinta"), botIdx: mcsStare.botIdx }); mcsDeseneaza();
+  mcsStare.rez = mcsCalculeaza(d, { stop: mcsNumar("mcsStop"), tinta: mcsNumar("mcsTinta"), botIdx: mcsStare.botIdx, oriz: mcsStare.oriz[d.tip] }); mcsDeseneaza();
 }
 function mcsCompara() {
   var r = mcsStare.rez, d = mcsStare.date;
@@ -516,6 +525,12 @@ function mcsAtrPct(b) {
   return a > 0 && P > 0 ? a / P : null;
 }
 function mcsStopuriAtr(a) { return [1, 1.5, 2, 3].map(function (k) { return Math.min(0.5, Math.max(0.005, k * a)); }); }
+// revizia v100.132 (R2): long cu TP sub preț / short cu TP peste (de ex. după schimbarea direcției) ⇒ s-ar închide pe prima bară; nu-l pun.
+// v100.133: o singură regulă pentru pagină (mcsCalculeaza) și pentru verificarea de noapte a colectorului
+function mcsTpValid(st, P) {
+  if (!st || !(st.tp > 0) || (st.dir === "long" && st.tp > P) || (st.dir === "short" && st.tp < P)) return st;
+  return Object.assign({}, st, { tp: null, tpIgnorat: st.dir === "neutru" ? null : st.tp });
+}
 function mcsListaStopuri(std, sp) {
   var l = std.filter(function (x) { return Math.abs(x - sp) >= 6e-4; }), out = [];
   if (sp > 0 && sp < 1) l.push(sp);
@@ -531,13 +546,13 @@ function mcsCalculeaza(d, o) {
     var P = d.b15[d.b15.length - 1].c, sp = o.stop > 0 ? o.stop / 100 : 0.1, tp = o.tinta > 0 ? o.tinta / 100 : 0.15;
     var atrC = d.b1.length >= 60 ? mcsAtrPct(d.b1) : null;   // v100.132: după ATR doar pe barele zilnice; pe 15 minute, % fix
     var slC = mcsListaStopuri(atrC ? mcsStopuriAtr(atrC) : [0.05, 0.1, 0.15, 0.2], sp), tlC = mcsListaTinte(tp);   // v100.131: și la coinuri
-    var pretMc = d.b1.length >= 60 ? MonteSimbol.pret(d.b1, { orizonturi: [7, 30], n: 1000, blocZile: 5, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC })
-      : MonteSimbol.pret(d.b15, { barePeZi: 96, orizonturi: [7, 30], n: 600, blocZile: 1, minZile: 14, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC });
+    var orC = mcsOrizontAles("coin", o.oriz);
+    var pretMc = d.b1.length >= 60 ? MonteSimbol.pret(d.b1, { orizonturi: orC, n: 1000, blocZile: 5, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC })
+      : MonteSimbol.pret(d.b15, { barePeZi: 96, orizonturi: orC, n: 600, blocZile: 1, minZile: 14, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC });
     if (pretMc && !pretMc.eroare) pretMc.atrPct = atrC;
     var bi = o.botIdx || 0, st = o.setari || mcsSetariBot(mcsBoti(), d.sim, bi) || mcsSetariProba(P);
-    // revizia (R2): long cu TP sub preț / short cu TP peste (de ex. după schimbarea direcției) ⇒ s-ar închide pe prima bară; nu-l pun
-    if (st && st.tp > 0 && !((st.dir === "long" && st.tp > P) || (st.dir === "short" && st.tp < P))) st = Object.assign({}, st, { tp: null, tpIgnorat: st.dir === "neutru" ? null : st.tp });
-    return { sim: d.sim, tip: "coin", sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist,
+    st = mcsTpValid(st, P);
+    return { sim: d.sim, tip: "coin", oriz: o.oriz, sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist,
       nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : "−10% / +15% pentru un coin: schimbă-le" };
   }
   var b = d.b, Pp = b[b.length - 1].c, n = typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale.niveluri(b, Pp, {}) : null, ok = n && n.nivel === "ok";
@@ -548,9 +563,9 @@ function mcsCalculeaza(d, o) {
   // v100.130: −5 / −8 / −10 / −15% și stopul de sus, pe aceleași drumuri (aceeași țintă)
   // revizia (R4): stopul de sus intră NEROTUNJIT (rândul lui = cardul de sus); un nivel standard la cel mult 0,05 puncte de el (s-ar scrie la fel, cu o zecimală) e înlocuit
   var atrS = mcsAtrPct(b), sl = mcsListaStopuri(atrS ? mcsStopuriAtr(atrS) : [0.05, 0.08, 0.1, 0.15], sp2), tl = mcsListaTinte(tp2);   // v100.132: după ATR
-  var pmS = MonteSimbol.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: sp2, tintaPct: tp2, prag: 0.1, intrare: poz ? poz.intrareR : undefined, stopuri: sl, tinte: tl });
+  var pmS = MonteSimbol.pret(b, { orizonturi: mcsOrizontAles("stock", o.oriz), n: 1000, blocZile: 5, seed: 21, stopPct: sp2, tintaPct: tp2, prag: 0.1, intrare: poz ? poz.intrareR : undefined, stopuri: sl, tinte: tl });
   if (pmS && !pmS.eroare) pmS.atrPct = atrS;
-  return { sim: d.sim, tip: "stock", sursa: d.sursa, pret: Pp, pretMc: pmS, grid: null, setari: null, ist: d.ist, poz: poz,
+  return { sim: d.sim, tip: "stock", oriz: o.oriz, sursa: d.sursa, pret: Pp, pretMc: pmS, grid: null, setari: null, ist: d.ist, poz: poz,
     nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : spPoz !== null ? "stopul poziției tale (" + mcsPretTxt(poz.stop) + ")" + (ok && n.tinta > Pp ? "; ținta: a Radarului" : "") : poz && poz.stop > 0 ? "stopul poziției (" + mcsPretTxt(poz.stop) + ") e deja depășit: prețul e sub el; aici −10% de acum" : poz ? "poziția n-are stop: −10%" : ok ? "ale Radarului pentru o intrare nouă azi (stopul " + mcsPretTxt(n.stop) + ", ținta " + mcsPretTxt(n.tinta) + ")" : "−10% / +15%: schimbă-le" };
 }
 async function mcsAnalizeaza() {
@@ -573,17 +588,23 @@ async function mcsAnalizeaza() {
       d = { tip: "stock", sim: s.sim, sursa: s.sim + " · Yahoo (acțiune / ETF)", b: s.b, ist: mcsIstorieStock(u, s.sim, Date.now()) };
     }
     mcsStare.date = d; await mcsPauza(0);   // „aduc… / simulez” apare înainte de calcul
-    mcsStare.rez = mcsCalculeaza(d, { poz: poz });
+    mcsStare.rez = mcsCalculeaza(d, { poz: poz, oriz: mcsStare.oriz[d.tip] });
     mcsStare.recente = mcsRecente(mcsStare.recente || mcsCitesteRecente(), d.sim, d.tip); mcsSalveazaRecente();
   } catch (e) { mcsStare.eroare = e && e.message || String(e); }
   finally { mcsStare.inLucru = false; }
   mcsDeseneaza();
   if (mcsStare.reia) { mcsStare.reia = false; var ii = mcsEl("mcsSim"); if (ii && mcsStare.poz) ii.value = mcsStare.poz.sim; return mcsAnalizeaza(); }
 }
+// v100.133: alt orizont ⇒ aceeași simulare, alte zile (ținut minte pe fel, pentru simbolurile următoare)
+function mcsAlegeOriz(i) {
+  var d = mcsStare.date; if (!d || mcsStare.inLucru) return;
+  mcsStare.oriz[d.tip] = Number(i) >= 0 ? Number(i) : 1;
+  mcsResimuleaza();
+}
 // refă simularea pe aceleași date, cu stopul / ținta / setările botului din câmpuri (fără cereri noi)
 function mcsResimuleaza() {
   var d = mcsStare.date; if (!d) return;
-  var o = { stop: mcsNumar("mcsStop"), tinta: mcsNumar("mcsTinta"), poz: mcsStare.poz && mcsStare.poz.sim === d.sim ? mcsStare.poz : null, botIdx: mcsStare.botIdx };
+  var o = { stop: mcsNumar("mcsStop"), tinta: mcsNumar("mcsTinta"), poz: mcsStare.poz && mcsStare.poz.sim === d.sim ? mcsStare.poz : null, botIdx: mcsStare.botIdx, oriz: mcsStare.oriz[d.tip] };
   if (d.tip === "coin" && mcsEl("mcsJos")) {
     var jos = mcsNumar("mcsJos"), sus = mcsNumar("mcsSus"), g = mcsNumar("mcsGrile"), lv = mcsNumar("mcsLevier"), dirEl = mcsEl("mcsDir"), suma = mcsNumar("mcsSuma"), sb = mcsNumar("mcsStopBot"), tpb = mcsNumar("mcsTpBot"), dir = dirEl ? dirEl.value : "long";
     if (jos > 0 && sus > jos && g >= 2 && lv >= 1 && suma > 0) {

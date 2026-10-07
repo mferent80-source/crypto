@@ -506,6 +506,10 @@ var TabloExtra = (function () {
       // e gol. PONS 06.10: pornit la 18:48, GRID-FISA v2.3 zicea „ÎNAINTE DE PORNIRE” si alertele botului taceau. Necunoscut = „0”.
       var pz = nr(b.pornitLa);
       parti.push(pz !== null && pz > 0 ? String(Math.round(pz)) : "0");
+      // v100.133 (el: „fa idei”): al 20-lea camp = TP aproximat („1”) - Pionex a dat tinta in % din investitie, iar pretul din campul 7 e
+      // cel socotit ACUM pentru botul care ruleaza (GRID-FISA v2.5 deseneaza linia punctat, „≈”). DOAR atunci: v2.4 refuza peste 19 campuri,
+      // deci ceilalti boti raman pe 19. Doar la long (la short / neutru TP-ul nu intra in cod - v100.11)
+      if (dir === "long" && ss !== null && b.opritorProfitTip === "raport") parti.push("1");
     }
     return { cod: parti.join(";"), sig: parti.slice(0, 7).concat(tip ? [tip] : []).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir, tip: tip };
   }

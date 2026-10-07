@@ -18,6 +18,7 @@ import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
 import { turaDimineata as turaDimineataModul, liniiBecuri, etichetaIeri } from "./lib/tura-dimineata.mjs";
 import { turaIdei as turaIdeiModul } from "./lib/tura-idei.mjs";
 import { turaIngust as turaIngustModul } from "./lib/tura-ingust.mjs";
+import { turaVarianteNoapte as turaVarianteNoapteModul, mcsDinPagina } from "./lib/tura-variante-noapte.mjs";   // v101.88 (el: „fa idei”)
 import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
 import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
@@ -45,7 +46,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.87";
+const VERSIUNE_COLECTOR = "v101.88";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -134,6 +135,8 @@ const Contrafactual = new Function(fs.readFileSync(path.join(RAD, "public", "lib
 const SemnaleBot = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "semnale-bot.js"), "utf8") + "; return SemnaleBot;")(GridCalcul);
 const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "tablou-extra.js"), "utf8") + "; return TabloExtra;")(GridCalcul);
 const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
+// v101.88: pagina Monte Carlo pe simbol (aceleași funcții: variantele, țintele TP, regulile „sigur”) pentru verificarea de noapte
+const Mcs = mcsDinPagina(fs.readFileSync(path.join(RAD, "public", "lib", "monte-simbol.js"), "utf8"), fs.readFileSync(path.join(RAD, "public", "lib", "monte-simbol-ecran.js"), "utf8"), GridCalcul, GridProba);
 const Valoare = incarca("valoare.js", "Valoare");   // v101.30 (I-470): zona de valoare + pivotii (laboratorul)
 const GridLaborator = new Function("GridCalcul", "GridProba", "Valoare", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba, Valoare);
 const GridPlan = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-plan.js"), "utf8") + "; return GridPlan;")(GridCalcul, GridProba);   // v101.9
@@ -1788,6 +1791,24 @@ async function turaArhivaOre() {
 // v101.76 (el, 06.10: „în Tablou probabilități despre bot sau stock, în pagina din meniu tot ce poate · fă explicit comportamentul”):
 // RiscLuna.raport o dată pe zi, după cazuri - arhiva boților + istoricul T212 (doar cu cheile T212); paginile îl citesc din KV
 let riscInLucru = false, riscEsec = 0;
+// v101.88 (el 07.10: „fa idei”): noaptea (2–5), o dată pe zi - pe fiecare bot activ, „Compară variante” și „Compară ținte (TP)” de pe
+// pagina Monte Carlo, pe aceleași drumuri; pe Discord doar sfaturile sigure, o dată (același sfat nu se repetă noapte de noapte)
+let varianteNoapteInLucru = false;
+async function turaVarianteNoapte() {
+  const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
+  if (process.env.COLECTOR_FARA_VARIANTE || varianteNoapteInLucru || !eNoapte(Date.now()) || ritm.varianteNoapte === zi) return;
+  if (!ultimiiBoti.length) return;   // boții nu s-au citit încă: nu marchez ziua
+  varianteNoapteInLucru = true;
+  try {
+    const st = { anuntate: ritm.varianteAnuntate && typeof ritm.varianteAnuntate === "object" ? ritm.varianteAnuntate : {} };
+    const r = await turaVarianteNoapteModul({ boti: ultimiiBoti, Mcs, GridCalcul, stare: st, jurnal, pauzaMs: 1600, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+      cere: (simbol, end) => cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")),
+      anunta: (m, bot, cheie) => trimiteAlerta(m, bot, cheie) });
+    tineRitm("varianteAnuntate", st.anuntate); tineRitm("varianteNoapte", zi);
+    jurnal("variante noapte: " + TextRo.cate(r.boti, "bot activ", "boți activi") + " · " + TextRo.cate(r.anuntate, "sfat trimis", "sfaturi trimise"));
+  } catch (e) { jurnal("variante noapte ESEC", e.message); }
+  varianteNoapteInLucru = false;
+}
 async function turaRisc() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
   if (riscInLucru || profilStare.riscZi === zi || Date.now() - riscEsec < 3600000) return;
@@ -1885,7 +1906,7 @@ async function bucla() {
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
-  turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
+  turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaVarianteNoapte()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
   turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00
