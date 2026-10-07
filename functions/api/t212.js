@@ -152,7 +152,7 @@ export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
-  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket" && act !== "saltPozitii" && act !== "salt" && act !== "saltRezumat") return json({ error: "Acțiune necunoscută" }, 400);
+  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket" && act !== "saltPozitii" && act !== "saltPoz" && act !== "salt" && act !== "saltRezumat") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
   if (act === "idei") {
@@ -218,10 +218,23 @@ export async function onRequestPost({ request, env }) {
     await env.ISTORIC.put("t212:sugestii", JSON.stringify(r)); return json({ ok: true });
   }
   // v100.120 (pagina Salt): pozițiile scrise de el pe pagină (Salt n-are API) și raportul colectorului (tabelul + listele)
+  // o poziție Salt curățată (null = stricată) - aceeași regulă pentru lista întreagă și pentru o singură operație
+  const pozSalt = (x) => { const p = { isin: String(x && x.isin || ""), simbol: String(x && x.simbol || ""), nume: txt(x && x.nume, 80), qty: nr(x && x.qty), pretMediu: nr(x && x.pretMediu), de: /^\d{4}-\d{2}-\d{2}$/.test(String(x && x.de || "")) ? String(x.de) : null, plata: x && x.plata === "EUR" ? "EUR" : "simbol" };
+    return /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(p.isin) && /^[A-Za-z0-9][A-Za-z0-9.^=-]{0,19}$/.test(p.simbol) && p.qty > 0 && p.pretMediu > 0 ? p : null; };
   if (act === "saltPozitii") {
-    const l = (Array.isArray(corp && corp.pozitii) ? corp.pozitii : []).map((x) => ({ isin: String(x && x.isin || ""), simbol: String(x && x.simbol || ""), nume: txt(x && x.nume, 80), qty: nr(x && x.qty), pretMediu: nr(x && x.pretMediu), de: /^\d{4}-\d{2}-\d{2}$/.test(String(x && x.de || "")) ? String(x.de) : null, plata: x && x.plata === "EUR" ? "EUR" : "simbol" }))
-      .filter((x) => /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(x.isin) && /^[A-Za-z0-9][A-Za-z0-9.^=-]{0,19}$/.test(x.simbol) && x.qty > 0 && x.pretMediu > 0).slice(0, 60);
+    const l = (Array.isArray(corp && corp.pozitii) ? corp.pozitii : []).map(pozSalt).filter(Boolean).slice(0, 60);
     await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(l)); return json({ ok: true, n: l.length });
+  }
+  // v101.87 (el 07.10, „DA LA TOT”): pagina Salt trimite O operație (pune / scoate) aplicată pe lista PROASPĂTĂ din KV - nu toată
+  // lista din memoria ei, care ar fi șters o poziție adăugată între timp de pe pagina alerts (prin colector)
+  if (act === "saltPoz") {
+    const l = await citesteKv(env, "t212:salt-pozitii", []), lista = Array.isArray(l) ? l : [];
+    let noua;
+    if (corp && corp.pune) { const p = pozSalt(corp.pune); if (!p) return json({ error: "poziția nu e bună (ISIN, simbol, cantitate și preț pozitive)" }, 400); noua = lista.some((x) => x && x.isin === p.isin) ? lista.map((x) => (x && x.isin === p.isin ? p : x)) : lista.concat([p]); }
+    else if (corp && typeof corp.scoate === "string" && /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(corp.scoate)) noua = lista.filter((x) => x && x.isin !== corp.scoate);
+    else return json({ error: "saltPoz: „pune” sau „scoate”" }, 400);
+    if (noua.length > 60) return json({ error: "cel mult 60 de poziții Salt" }, 400);
+    await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(noua)); return json({ ok: true, pozitii: noua });
   }
   // v100.126: rezumatul pozițiilor Salt (colectorul, la 15 minute) pentru banda de cont și Acasă - curățat, mic
   if (act === "saltRezumat") {

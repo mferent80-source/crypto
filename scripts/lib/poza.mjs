@@ -252,6 +252,13 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
       out.push({ cheie: "sim-insider-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
         mesaj: t.cine + " (" + String(t.rol || "").slice(0, 30) + ") a cumpărat " + cate(t.act, "acțiune", "acțiuni").replace(/^\d+/, miiTxt(t.act)) + ", ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + "; cumpărările cu bani contează, cele primite gratis nu.\n👉 Aș trece-o pe lista de urmărit, fără să cumpăr doar pentru asta." });
     }
+    // v101.87 (el 07.10, „DA LA TOT”): rezultatele vin mâine - o dată pe zi, ca să nu-l prindă saltul de după raport
+    const rz = s.rezultate;
+    if (rz && rz.zile === 1 && /^\d{4}-\d{2}-\d{2}$/.test(String(rz.data || ""))) {
+      const LUNI = ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sept", "oct", "nov", "dec"], d = String(rz.data);
+      out.push({ cheie: "sim-rezultate-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": rezultatele vin mâine (" + Number(d.slice(8)) + " " + LUNI[Number(d.slice(5, 7)) - 1] + ")",
+        mesaj: (nr(rz.eps) !== null ? "EPS estimat " + String(rz.eps).replace(".", ",") + ". " : "") + "După raport, prețul se poate mișca mult în ambele sensuri.\n👉 N-aș intra și n-aș adăuga chiar înainte de raport; aș aștepta să văd cum reacționează piața." });
+    }
   }
   return out;
 }
