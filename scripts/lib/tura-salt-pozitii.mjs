@@ -60,3 +60,28 @@ export async function turaSaltPozitii(d) {
   for (const k of ["val", "cost", "rez"]) rez[k] = Math.round(rez[k] * 100) / 100;
   return { rezumat: rez, trimise };
 }
+
+// v101.85 (el 07.10, „fa idei”): fără prețuri (măcar o poziție) de cel puțin 3 h ⇒ o alertă - altfel alerta la stopul care urcă ar tăcea
+// fără să știe; când revin, o dată „au revenit”. Starea în același obiect (meta().saltAlerte): faraDe / faraAnuntat.
+const cateTxt = (n, sg, pl) => (globalThis.TextRo && globalThis.TextRo.cate ? globalThis.TextRo.cate(n, sg, pl) : n + " " + (n === 1 ? sg : pl));
+const oreTxt = (ms) => (globalThis.TextRo && globalThis.TextRo.ore ? globalThis.TextRo.ore(ms) : Math.round(ms / 360000) / 10 + " h");
+export function alertaFaraPreturi(st, r, acum, pragMs) {
+  const prag = pragMs || 3 * 3600000;
+  if (r && r.n > 0 && r.fara > 0) {
+    if (!st.faraDe) st.faraDe = acum;
+    if (st.faraAnuntat || acum - st.faraDe < prag) return null;
+    st.faraAnuntat = true;
+    return { nivel: "atentie", titlu: "Salt: n-am prețuri de " + oreTxt(acum - st.faraDe),
+      mesaj: "Yahoo nu dă prețuri pentru " + r.fara + " din " + cateTxt(r.n, "poziție", "poziții") + " Salt. Cât lipsesc, alerta la stopul care urcă nu poate suna, iar banda de cont arată cifrele de dinainte.\n👉 Aș verifica pozițiile direct la Salt până revin prețurile." };
+  }
+  const anuntat = !!st.faraAnuntat; delete st.faraDe; delete st.faraAnuntat;
+  return anuntat && r && r.n > 0 ? { nivel: "info", titlu: "Salt: prețurile au revenit", mesaj: "Pozițiile Salt au iar prețuri: alerta la stopul care urcă merge din nou." } : null;
+}
+// rândul Salt din rezumatul de dimineață (sus, după becuri): valoarea, pe deschise, cine e de ieșit; rezumatul vechi (> 45 min) ⇒ spus
+export function liniaDimineataSalt(r, acum) {
+  if (!r || !(r.n > 0)) return null;
+  if ((r.fara || 0) >= r.n) return "🧂 Salt: n-am prețuri pentru nicio poziție (" + r.n + ") - verifică direct la Salt";
+  const vechi = acum - r.la > 45 * 60000, cap = "🧂 Salt" + (vechi ? " (rezumat de acum " + oreTxt(acum - r.la) + ")" : "") + ": ";
+  return cap + nrRo(r.val, 1) + " EUR · deschise " + eur1(r.rez) + (r.cost > 0 ? " (" + pct1(r.rez / r.cost) + ")" : "")
+    + ((r.iesi || []).length ? " · de ieșit: " + r.iesi.join(", ") : " · nimic de ieșit") + (r.fara > 0 ? " · " + r.fara + " din " + r.n + " fără prețuri" : "");
+}

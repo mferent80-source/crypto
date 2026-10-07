@@ -50,7 +50,8 @@ export async function turaDimineata(d) {
   // v101.62 (I-526): rândul-verdict al colectorului ÎNAINTEA rândurilor Consilierului
   const str = (l) => (Array.isArray(l) ? l.filter((x) => typeof x === "string" && x) : []);
   // v101.75 (I-552, revizia R3): becurile imediat după rândul-verdict - mesajul se taie la coadă (600 de caractere în Radar, 2000 pe Discord)
-  const linii = str(date.liniiIntai).concat(str(date.liniiBecuri), r.linii, str(date.liniiExtra));
+  // v101.85: rândul Salt imediat după becuri (are „de ieșit”, nu trebuie tăiat la coadă)
+  const linii = str(date.liniiIntai).concat(str(date.liniiBecuri), str(date.liniiSalt), r.linii, str(date.liniiExtra));
   if (await d.trimite({ nivel: "info", titlu: r.titlu + " (" + z.data.slice(8, 10) + "." + z.data.slice(5, 7) + ")", mesaj: linii.join("\n") })) {
     d.stare.dimineataTrimis = z.data;
     // „ieri” = ce a plecat, cu data lui; azi gol (Pionex / T212 picate) nu șterge ce era (revizia R4)

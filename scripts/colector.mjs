@@ -38,12 +38,12 @@ import { unesteZile, randuriInchise } from "../retea/date-t212.mjs";   // v101.6
 import { sugestiiDimineata, sugestiiIntraday } from "./lib/tura-sugestii-actiuni.mjs";   // v101.81 (pagina Sugestii): acțiunile US + EU
 import { universEU } from "./lib/univers-eu.mjs";
 import { turaSalt as turaSaltModul } from "./lib/tura-salt.mjs";   // v101.82 (pagina Salt)
-import { turaSaltPozitii as turaSaltPozitiiModul } from "./lib/tura-salt-pozitii.mjs";   // v101.84: alerta la stop + rezumatul Salt
+import { turaSaltPozitii as turaSaltPozitiiModul, alertaFaraPreturi, liniaDimineataSalt } from "./lib/tura-salt-pozitii.mjs";   // v101.84: alerta la stop + rezumatul Salt; v101.85: „n-am prețuri” + rândul de dimineață
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.84";
+const VERSIUNE_COLECTOR = "v101.85";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1175,6 +1175,9 @@ async function turaSaltPozitii() {
     if (r.rezumat.n > 0 && r.rezumat.fara >= r.rezumat.n) jurnal("salt: nicio poziție cu prețuri - rămâne rezumatul de dinainte");
     else await trimite("/api/t212?action=saltRezumat", { rezumat: r.rezumat });
     if (r.trimise) jurnal("salt: alerte la stopul care urcă trimise:", r.trimise);
+    // v101.85: fără prețuri de cel puțin 3 h ⇒ o alertă (altfel alerta la stop ar tăcea fără să știe); când revin ⇒ „au revenit”
+    const fa = alertaFaraPreturi(st, r.rezumat, Date.now());
+    if (fa) { const ok = await trimiteAlerta(fa, null, "salt-fara-preturi"); if (!ok && fa.nivel === "atentie") st.faraAnuntat = false; scrieStare(); }
   } catch (e) { jurnal("salt poziții ESEC", e.message); }
   saltPozInLucru = false;
 }
@@ -1275,6 +1278,8 @@ async function dateDimineata() {
   // (rezumatul vechi ⇒ fără partea cu boții, nu „Azi: 1 bot pe agitație” de acum 10 h); „de ieșit” doar cu T212 citit
   const rz = Busola.rezumat(), tz = titluDimineata({ boti: liniaVeche ? [] : lBoti, bilant: rz && rz.perp && rz.perp.bilant ? rz.perp.bilant.verdict : null, reveniri: out.reveniriN, eticheta: out.reveniriEt, deIesit: t212Citit ? out.deIesit.length : null });
   out.liniiIntai = tz ? [tz] : [];
+  // v101.85: rândul Salt (rezumatul colectorului, la 15 minute) - sus, după becuri
+  try { const sr = await cere("/api/t212?action=saltRezumat"), ls = liniaDimineataSalt(sr && sr.rezumat, Date.now()); out.liniiSalt = ls ? [ls] : []; } catch (e) { jurnal("dimineata salt", e.message); }
   // v101.75 (I-552): rândul becurilor (boții întâi, apoi pozițiile T212) + ce s-a schimbat față de rezumatul de ieri
   try { const becuri = becuriBoti.concat(becuriT212), ieri = meta().becuriIeri, lb = liniiBecuri(becuri, ieri && ieri.b || null, etichetaIeri(ieri && ieri.data, Date.now())); out.liniiBecuri = lb.linii; out.becuriAzi = lb.azi; } catch (e) { jurnal("dimineata becuri", e.message); }
   return out;

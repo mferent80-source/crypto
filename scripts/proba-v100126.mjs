@@ -90,7 +90,7 @@ await test("(2c) Acasă, în „Acțiunile tale”: Salt (valoarea, pe deschise,
 });
 await test("(3) colectorul: tura pozițiilor Salt la 15 minute (alertele în meta().saltAlerte, rezumatul pe server); Salt.analizeaza cu modulele colectorului", () => {
   const c = citeste("scripts", "colector.mjs");
-  assert.match(c, /import \{ turaSaltPozitii as turaSaltPozitiiModul \} from "\.\/lib\/tura-salt-pozitii\.mjs";/);
+  assert.match(c, /import \{ turaSaltPozitii as turaSaltPozitiiModul[^}]*\} from "\.\/lib\/tura-salt-pozitii\.mjs";/); /* v100.127: și alertaFaraPreturi, liniaDimineataSalt */
   assert.match(c, /async function turaSaltPozitii\(\)/); assert.match(c, /m\.saltAlerte/); assert.match(c, /await trimite\("\/api\/t212\?action=saltRezumat", \{ rezumat: /);
   assert.match(c, /deps: \{ ActiuniSemnale, Consiliu, Consilier, Probabilitati \}/); assert.match(c, /15 \* 60000/);
 });
@@ -123,12 +123,12 @@ await test("(R3/R4/R5) cursul ținut minte pe tură (o cerere pe monedă), pauz�
   assert.ok(salvari.length >= 1, "starea scrisă pe loc"); assert.equal(stare["salt-stop-DE0000000000"], undefined, "cheia poziției șterse");
   assert.match(citeste("scripts", "colector.mjs"), /salveaza: scrieStare/);
 });
-await test("(E) versiunea v100.126 / colector v101.84", () => {
+await test("(E) versiunea de la v100.126 în sus / colector de la v101.84 în sus", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.126"/); assert.match(html, /id="antetVersiune">v100\.126 /); assert.match(html, /id="healthAppVersion">v100\.126</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.126.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-126";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.126"/); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.126");
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.84";/);
+  assert.match(html, /content="v100\.1(2[6-9]|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(2[6-9]|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(2[6-9]|[3-9]\d)</);   // v100.127: lărgit
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(2[6-9]|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(2[6-9]|[3-9]\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(2[6-9]|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(2[6-9]|[3-9]\d)$/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(8[4-9]|9\d)";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);
