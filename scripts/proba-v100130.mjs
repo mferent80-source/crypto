@@ -127,7 +127,8 @@ await test("(4b) caseta acțiunii: tabelul „alt stop, aceleași drumuri” cu 
   const h = G.mcsPretHtml(r);
   assert.match(h, /Alt stop, aceleași drumuri/); assert.match(h, /<tr class="mcsVarTu"><td>−12,0%/); assert.match(h, /Ce aș face eu:/);
   // v100.131: stopurile pe aceleași drumuri și la coinuri (proba-v100131 (2a)) - aici doar că la coin nu scrie „zile de bursă”
-  assert.doesNotMatch(G.mcsPretHtml(Object.assign({}, r, { tip: "coin" })), /zile de bursă, ținta/);
+  const hc = G.mcsPretHtml(Object.assign({}, r, { tip: "coin" }));
+  assert.doesNotMatch(hc, /zile de bursă, ținta/); assert.match(hc, /Alt stop, aceleași drumuri \(60 de zile, ținta/);   /* revizia v100.131 (R5): tabelul e acolo */
 });
 await test("(4c) recomandarea stopului: media aproape aceeași (sub 1 punct) ⇒ păstrează stopul de sus și spune ce schimbă stopul; altfel cel cu media clar mai bună", () => {
   // proba pe RHM.DE 07.10: stopul întâi ≈ ținta / (stop + țintă) - o cursă fără avantaj; „cel mult o treime” cerea doar un stop de 2× ținta
@@ -138,14 +139,14 @@ await test("(4c) recomandarea stopului: media aproape aceeași (sub 1 punct) ⇒
   assert.doesNotMatch(t, /o treime/);
   // revizia (R1): „Aș lua” cere ȘI drum cu drum mai bun în mai multe drumuri decât mai rău (media singură vine din centrarea pe mijloc)
   const d = (maiBun, maiRau) => ({ maiBun, maiRau, egal: 1 - maiBun - maiRau });
-  const r2 = [Object.assign(s(0.05, 0.6, -0.03, -0.06), { drum: null }), Object.assign(s(0.1, 0.5, -0.001, -0.1), { drum: d(0.6, 0.3) }), Object.assign(s(0.15, 0.4, -0.012, -0.16), { drum: d(0.4, 0.5) })];
-  assert.match(G.mcsStopRecomandat(r2, 60, 0.05), /^Aș lua −10,0%: rezultatul mediu −0,1%, față de −3,0% la stopul de sus.*mai bun în 60% din drumuri/);
+  const r2 = [Object.assign(s(0.05, 0.6, -0.03, -0.06), { drum: null }), Object.assign(s(0.1, 0.5, -0.001, -0.1), { drum: d(0.7, 0.2) })   /* v100.131: 70 / 90 = 78% din drumurile decise */, Object.assign(s(0.15, 0.4, -0.012, -0.16), { drum: d(0.4, 0.5) })];
+  assert.match(G.mcsStopRecomandat(r2, 60, 0.05), /^Aș lua −10,0%: rezultatul mediu −0,1%, față de −3,0% la stopul de sus.*mai bun în 70% din drumuri/);
   const r3 = [r2[0], Object.assign({}, r2[1], { drum: d(0.3, 0.6) }), r2[2]];
   assert.match(G.mcsStopRecomandat(r3, 60, 0.05), /^Păstrează stopul de sus \(−5,0%\)/, "media mai bună dar mai rău în mai multe drumuri ⇒ nu");
   // revizia (R5): intervalul mediilor peste 1 punct, dar stopul de sus printre cele mai bune ⇒ nu „aproape același”
   const r4 = [s(0.05, 0.6, 0.003, -0.06), s(0.1, 0.5, 0.019, -0.1), s(0.15, 0.4, 0.012, -0.16)];
   const t4 = G.mcsStopRecomandat(r4, 60, 0.1);
-  assert.match(t4, /^Păstrează stopul de sus \(−10,0%\)/); assert.match(t4, /iese printre cele mai bune/); assert.doesNotMatch(t4, /aproape același/);
+  assert.match(t4, /^Păstrează stopul de sus \(−10,0%\)/); assert.match(t4, /niciun alt nivel nu are media mai bună cu cel puțin 1 punct/);   /* revizia v100.131 (R2) */ assert.doesNotMatch(t4, /aproape același/);
 });
 await test("(4d) pret cu stopuri: fiecare rând are drum cu drum față de stopul de sus (stopPct), pe aceleași drumuri; rândul lui, fără", () => {
   const b = bareZi(400, 9, 0.05), r = M.pret(b, { orizonturi: [60], n: 300, seed: 21, stopPct: 0.08, tintaPct: 0.15, stopuri: [0.05, 0.08, 0.15] });

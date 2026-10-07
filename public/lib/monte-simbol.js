@@ -59,17 +59,19 @@ var MonteSimbol = (function () {
       var rez = { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined, pPesteIntrareStop: R ? pis / n : undefined };
       // revizia (R1): fiecare nivel față de cel de sus (stopPct / tintaPct), drum cu drum - media singură favorizează stopul larg (drumurile
       // au mijlocul la zero, deci media e pe plus pe acțiunile agitate: cine stă mai mult în piață o adună)
-      var randuri = function (g, eRef) {
-        var ref = g.filter(eRef)[0];
+      // revizia v100.131 (R3): nivelul de sus întâi după egalitate EXACTĂ (listele îl pun exact) - la ținte foarte mici (0,1%) ×0,75 / ×1,5
+      // cădeau în toleranță și ieșeau două „cea de sus”; rândul poartă ref
+      var randuri = function (g, eExact, eRef) {
+        var ref = g.filter(eExact)[0] || g.filter(eRef)[0];
         return g.map(function (k) {
           var dr = null;
           if (ref && k !== ref) { var bun = 0, rau = 0; for (var q = 0; q < n; q++) { var dd = k.v[q] - ref.v[q]; if (dd > 1e-9) bun++; else if (dd < -1e-9) rau++; } dr = { maiBun: bun / n, maiRau: rau / n, egal: (n - bun - rau) / n }; }
           var v = k.v.slice().sort(function (a, c) { return a - c; });
-          return { sp: k.sp, tp: k.tp, pStop: k.st / n, pTinta: k.ti / n, pNiciuna: (n - k.st - k.ti) / n, media: v.reduce(function (a, c) { return a + c; }, 0) / n, p5: pc(v, 0.05), p50: pc(v, 0.5), drum: dr };
+          return { sp: k.sp, tp: k.tp, ref: k === ref, pStop: k.st / n, pTinta: k.ti / n, pNiciuna: (n - k.st - k.ti) / n, media: v.reduce(function (a, c) { return a + c; }, 0) / n, p5: pc(v, 0.05), p50: pc(v, 0.5), drum: dr };
         });
       };
-      if (sl) rez.stopuri = randuri(sl, function (k) { return Math.abs(k.sp - sp) < 5e-4; });
-      if (tl) rez.tinte = randuri(tl, function (k) { return Math.abs(k.tp - tp) < 5e-4; });
+      if (sl) rez.stopuri = randuri(sl, function (k) { return k.sp === sp; }, function (k) { return Math.abs(k.sp - sp) < 5e-4; });
+      if (tl) rez.tinte = randuri(tl, function (k) { return k.tp === tp; }, function (k) { return Math.abs(k.tp - tp) < 5e-4; });
       return rez;
     }
     // revizia Opus (07.10): fără tendință = MIJLOCUL la zero, nu media - cu media scoasă, o cădere de câteva zile (restul liniștit) făcea
@@ -78,7 +80,7 @@ var MonteSimbol = (function () {
       var mF = mu; if (fara) { var p0 = trece(Z, j, mu); mF = mu + Math.log(1 + p0.p50) / (Z * bz); }
       var r = trece(Z, j, fara ? mF : 0, true);
       // cât de mult contează tendința perioadei: aceeași simulare, cu ea păstrată (doar cifrele de bază, pentru comparație)
-      if (fara) { var c = trece(Z, j, 0); r.cuTendinta = { p50: c.p50, pSus: c.pSus, pJos: c.pJos, pStop: c.pStop, pTinta: c.pTinta }; }
+      if (fara && !o.faraCuTendinta) { var c = trece(Z, j, 0); r.cuTendinta = { p50: c.p50, pSus: c.pSus, pJos: c.pJos, pStop: c.pStop, pTinta: c.pTinta }; }
       return r;
     });
     return { n: n, blocZile: bloc / bz, barePeZi: bz, zileIstoric: zi, stopPct: sp, tintaPct: tp, prag: prag, faraTendinta: fara, tendintaPeZi: Math.exp(mu * bz) - 1, orizonturi: orizonturi };

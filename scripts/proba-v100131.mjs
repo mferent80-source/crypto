@@ -96,25 +96,56 @@ await test("(3b) recomandarea țintei: alta doar cu media mai bună cu 1 punct �
   const rows = [t(0.075, 0.6, -0.004, d(0.5, 0.4)), t(0.15, 0.4, -0.006, null), t(0.3, 0.2, -0.002, d(0.3, 0.6))];
   const s = G.mcsTintaRecomandata(rows, 60, 0.15, "b");
   assert.match(s, /^Păstrează ținta de sus \(\+15,0%\)/); assert.match(s, /60% la \+7,5%, 20% la \+30,0%/);
-  const r2 = [rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.6, 0.3))];
-  assert.match(G.mcsTintaRecomandata(r2, 60, 0.15, "b"), /^Aș lua ținta \+30,0%: rezultatul mediu \+2,0%, față de −0,6%.*mai bună în 60% din drumuri/);
+  // revizia (R1): „sigur” = din drumurile decise, cel puțin 70% mai bune (70 / (70 + 20) = 78%)
+  const r2 = [rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.7, 0.2))];
+  assert.match(G.mcsTintaRecomandata(r2, 60, 0.15, "b"), /^Aș lua ținta \+30,0%: rezultatul mediu \+2,0%, față de −0,6%.*mai bună în 70% din drumuri/);
+  assert.match(G.mcsTintaRecomandata([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.6, 0.3))], 60, 0.15, "b"), /^Păstrează/, "60 / 90 = 67% < 70%");
   const r3 = [rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.3, 0.6))];
   assert.match(G.mcsTintaRecomandata(r3, 30, 0.15, "z"), /^Păstrează ținta de sus/);
-  // „majoritatea drumurilor” = peste jumătate din toate: 45% mai bună / 10% mai rea / 45% la fel NU ajunge (200 de serii fără avantaj: 3% false)
-  assert.match(G.mcsTintaRecomandata([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.45, 0.1))], 60, 0.15, "b"), /^Păstrează ținta de sus/);
+  // revizia (R1): egalitățile nu contează - 29% mai bună / 12% mai rea / 59% la fel = 71% din cele decise ⇒ sigur (regula „> 0,5 din
+  // toate” l-ar fi respins); 29 / 21 = 58% ⇒ nesigur
+  assert.match(G.mcsTintaRecomandata([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.29, 0.12))], 60, 0.15, "b"), /^Aș lua ținta \+30,0%/);
+  assert.match(G.mcsTintaRecomandata([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.29, 0.21))], 60, 0.15, "b"), /^Păstrează ținta de sus/);
   const sr = (sp, media, drum) => ({ sp, pStop: 0.5, pTinta: 0.5, pNiciuna: 0, media, p5: -0.1, p50: 0, drum });
-  assert.match(G.mcsStopRecomandat([sr(0.05, -0.03, null), sr(0.1, 0, d(0.45, 0.1))], 60, 0.05, "b"), /^Păstrează stopul de sus/, "la fel la stop");
+  assert.match(G.mcsStopRecomandat([sr(0.05, -0.03, null), sr(0.1, 0, d(0.45, 0.25))], 60, 0.05, "b"), /^Păstrează stopul de sus/, "la fel la stop (64%)");
 });
-// măsurat la scrierea probei (scratchpad rata200): pe 200 de serii fără avantaj × 3 agitații, 0 „Aș lua” (stop și țintă); cu regula
-// veche (mai bună > mai rea) ținta dădea 6/200 la 3,5%/zi - seriile 5000+ de mai jos sunt dintre ele
-await test("(3c) pe serii FĂRĂ avantaj, „Aș lua” (stop sau țintă) nu apare: 0 din 40 la 3,5%/zi, inclusiv seriile care păcăleau regula veche", () => {
-  let fals = 0;
-  for (let k = 0; k < 40; k++) {
-    const r = G.mcsCalculeaza({ tip: "stock", sim: "X", b: serie(400, 5000 + k, 0.035), ist: {} }, { stop: 8, tinta: 12 });
-    const m = r.pretMc, o = m.orizonturi[m.orizonturi.length - 1];
-    if (/^Aș lua/.test(G.mcsTintaRecomandata(o.tinte, o.H, m.tintaPct, "b")) || /^Aș lua/.test(G.mcsStopRecomandat(o.stopuri, o.H, m.stopPct, "b"))) fals++;
-  }
-  assert.equal(fals, 0, `${fals} din 40`);
+// (3c) de la prima variantă (0 din 40 pe seriile 5000–5039) s-a mutat în (3e): 200 de serii, cu o rată, nu cu zero - o regulă care
+// mai poate recomanda ceva are și o rată mică de alarme false (măsurată: ~1%), iar ce contează e s-o știm și să fie mică
+// revizia v100.131 (R1): „> 0,5 din TOATE drumurile” nu putea recomanda nimic (la ținte, cele mai multe drumuri ies la egalitate) ⇒
+// regula: din drumurile în care nivelurile DIFERĂ, cel puțin 70% mai bune (+ media mai bună cu 1 punct). Probate ambele părți:
+// alarmele false pe 200 de serii fără avantaj ȘI puterea pe serii cu momentum (blocurile de 5 zile îl păstrează și fără tendință)
+const momentum = (n, seed, vol, phi) => { const g = M.generator(seed), z = () => { let u = 0; for (let i = 0; i < 12; i++) u += g(); return u - 6; }, b = []; let c = 100, r0 = 0;
+  for (let i = 0; i < n; i++) { const r = phi * r0 + z() * vol * Math.sqrt(1 - phi * phi); r0 = r; const o = c * Math.exp(z() * vol * 0.2), cc = c * Math.exp(r); b.push({ t: i * ZI, o, h: Math.max(o, cc) * Math.exp(Math.abs(z()) * vol * 0.4), l: Math.min(o, cc) * Math.exp(-Math.abs(z()) * vol * 0.4), c: cc, v: 1 }); c = cc; }
+  return b; };
+const recomanda = (b) => { const r = G.mcsCalculeaza({ tip: "stock", sim: "X", b, ist: {} }, { stop: 8, tinta: 12 }), m = r.pretMc, o = m.orizonturi[m.orizonturi.length - 1];
+  return /^Aș lua/.test(G.mcsTintaRecomandata(o.tinte, o.H, m.tintaPct, "b")) || /^Aș lua/.test(G.mcsStopRecomandat(o.stopuri, o.H, m.stopPct, "b")); };
+await test("(3e) alarme false: pe 200 de serii fără avantaj (3,5%/zi), „Aș lua” cel mult în 2 (1%)", () => {
+  let fals = 0; for (let k = 0; k < 200; k++) if (recomanda(serie(400, 5000 + k, 0.035))) fals++;
+  assert.ok(fals <= 2, fals + " din 200");
+});
+await test("(3f) putere: pe 40 de serii cu momentum (phi 0,6), „Aș lua” un alt nivel în cel puțin 10 (regula „> 0,5 din toate” dădea 0)", () => {
+  let da = 0; for (let k = 0; k < 40; k++) if (recomanda(momentum(400, 7000 + k, 0.025, 0.6))) da++;
+  assert.ok(da >= 10, da + " din 40");
+});
+await test("(3g) revizia R2/R3: „Păstrează” spune adevărul când un nivel are media mai bună dar nu e sigur; rândul de sus după semn (ref), nu după toleranță", () => {
+  const t = (tp, pTinta, media, drum, ref) => ({ tp, pTinta, pStop: 1 - pTinta, pNiciuna: 0, media, p5: -0.1, p50: 0, drum, ref: !!ref });
+  const d = (a, b) => ({ maiBun: a, maiRau: b, egal: 1 - a - b });
+  const s = G.mcsTintaRecomandata([t(0.075, 0.6, -0.004, d(0.2, 0.2)), t(0.15, 0.4, -0.006, null, true), t(0.3, 0.2, 0.02, d(0.33, 0.21))], 60, 0.15, "b");
+  assert.match(s, /^Păstrează ținta de sus \(\+15,0%\)/);
+  assert.match(s, /\+30,0% are media mai bună \(\+2,0% față de −0,6%\): mai bună în 33% din drumuri, mai rea în 21%, la fel în 46% - nu destul de sigur ca s-o schimb/);
+  assert.doesNotMatch(s, /câteva drumuri/);
+  // ținta de sus 0,1%: ×0,75 și ×1,5 cad la sub 5e-4 de ea - „cea de sus” e doar rândul cu ref
+  const b = bareZi(400, 9, 0.05), r = M.pret(b, { orizonturi: [60], n: 200, seed: 21, stopPct: 0.1, tintaPct: 0.001, tinte: [0.0005, 0.00075, 0.001, 0.0015, 0.002] });
+  const l = r.orizonturi[0].tinte; assert.deepEqual(l.map((x) => x.ref), [false, false, true, false, false]); assert.equal(l.filter((x) => x.drum === null).length, 1);
+  const h = G.mcsNiveluriHtml({ orizonturi: r.orizonturi, stopPct: 0.1, tintaPct: 0.001 }, "b", "tinta");
+  assert.equal((h.match(/cea de sus/g) || []).length, 1);
+});
+await test("(3h) revizia R4: mcsSansaRevenire fără trecerea „cu tendința” (n-o folosește) - aceeași cifră", () => {
+  assert.match(functie(MSE, "mcsSansaRevenire"), /faraCuTendinta: true/);
+  const b = bareZi(400, 9, 0.05), P = b[b.length - 1].c, I = P * 1.3;
+  const m = M.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: 0.1, tintaPct: 0.15, prag: 0.1, intrare: I / P });
+  assert.equal(G.mcsSansaRevenire(b, P, I, P * 1.1).p, m.orizonturi[1].pIntrare);
+  assert.equal(M.pret(b, { orizonturi: [20], n: 50, faraCuTendinta: true }).orizonturi[0].cuTendinta, undefined);
 });
 await test("(3d) caseta: „Altă țintă, aceleași drumuri” la acțiuni și la coinuri; ambele tabele au „Drum cu drum” față de cea de sus", () => {
   const rs = G.mcsCalculeaza({ tip: "stock", sim: "X", b: bareZi(400, 9, 0.05), ist: { r: { cazuri: 0 } } }, { stop: 8, tinta: 12 });
