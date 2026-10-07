@@ -32,17 +32,18 @@ var MonteSimbol = (function () {
     // v100.129: poziția lui - intrarea ca raport față de prețul de acum (> 1 = e pe minus: o atinge dacă urcă; < 1 = pe plus: o atinge dacă scade)
     var R = o.intrare > 0 ? o.intrare : null;
     function trece(Z, j, m) {
-      var H = Z * bz, rnd = generator((o.seed || 1) * 1000 + j), ret = [], sus = 0, jos = 0, st = 0, ti = 0, ai = 0, pi = 0;
+      var H = Z * bz, rnd = generator((o.seed || 1) * 1000 + j), ret = [], sus = 0, jos = 0, st = 0, ti = 0, ai = 0, pi = 0, pis = 0;
       for (var s = 0; s < n; s++) {
         var d = drum(b, H, Math.min(bloc, H), 1, rnd, m), atins = null, atI = false;
         for (var i = 0; i < d.length && !atins; i++) { if (d[i].l <= 1 - sp) atins = "stop"; else if (d[i].h >= 1 + tp) atins = "tinta"; }
         if (atins === "stop") st++; else if (atins === "tinta") ti++;
-        if (R) { for (var q = 0; q < d.length && !atI; q++) atI = R >= 1 ? d[q].h >= R : d[q].l <= R; if (atI) ai++; if (d[d.length - 1].c >= R) pi++; }
+        // revizia (R3): „peste intrare la capăt” și varianta cu stopul activ (drumurile care au atins stopul ies înainte de capăt)
+        if (R) { for (var q = 0; q < d.length && !atI; q++) atI = R >= 1 ? d[q].h >= R : d[q].l <= R; if (atI) ai++; if (d[d.length - 1].c >= R) { pi++; var ok1 = true; for (var w = 0; w < d.length && ok1; w++) ok1 = d[w].l > 1 - sp; if (ok1) pis++; } }
         var r = d[d.length - 1].c - 1; ret.push(r); if (r >= prag) sus++; if (r <= -prag) jos++;
       }
       ret.sort(function (a, c) { return a - c; });
       // istoricul sub 3× orizontul ⇒ simularea doar reamestecă aceleași zile (spus pe pagină)
-      return { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined };
+      return { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined, pPesteIntrareStop: R ? pis / n : undefined };
     }
     // revizia Opus (07.10): fără tendință = MIJLOCUL la zero, nu media - cu media scoasă, o cădere de câteva zile (restul liniștit) făcea
     // ca mijlocul să iasă pe plus (o „revenire” inventată de calcul). Prima trecere măsoară mijlocul log pe orizont, a doua îl scoate.
@@ -83,7 +84,7 @@ var MonteSimbol = (function () {
     // mijlocul prețului de la capătul drumurilor, cu tendința m scoasă (ieftin: fără simulatorul gridului) - pentru centrare, ca la preț
     function mijlocLog(m) { var rnd = generator(o.seed || 1), v = []; for (var s = 0; s < n; s++) { var d = drum(b15, H, BZ, P, rnd, m); v.push(Math.log(d[d.length - 1].c / P)); } v.sort(function (a, c) { return a - c; }); return pc(v, 0.5); }
     var r = trece(fara ? mu + mijlocLog(mu) / H : 0); r.faraTendinta = fara; r.tendintaPeZi = Math.exp(mu * BZ) - 1;
-    if (fara) { var c = trece(0); r.cuTendinta = { p50: c.p50, pPlus: c.pPlus, pLichidare: c.pLichidare, pStop: c.pStop }; }
+    if (fara && !o.faraCuTendinta) { var c = trece(0); r.cuTendinta = { p50: c.p50, pPlus: c.pPlus, pLichidare: c.pLichidare, pStop: c.pStop }; }
     return r;
   }
   // (3) istoria lui pe simbol: o lună cu K cazuri trase la întâmplare (cu întoarcere) din ale lui; bani = rezultatul fiecăruia

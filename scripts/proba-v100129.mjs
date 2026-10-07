@@ -112,7 +112,7 @@ await test("(4b) calculul pe poziție: stopul poziției ⇒ stopPct față de pr
   assert.ok(Math.abs(r.pretMc.stopPct - 0.1) < 1e-9); assert.ok(Math.abs(r.poz.intrareR - 13496 / 9454) < 1e-9);
   assert.match(r.nivelText, /stopul poziției tale/);
   const h = G.mcsHtml({ sim: "RHM.DE", rez: r });
-  assert.match(h, /Poziția ta: ai intrat la 13\.496,00/); assert.match(h, /atinge prețul tău de intrare/); assert.match(h, /la capăt ești peste intrare/);
+  assert.match(h, /Poziția ta: ai intrat la 13\.496,00/); assert.match(h, /atinge prețul tău de intrare/); assert.match(h, /la capăt peste intrare, fără stop/);
   const r2 = G.mcsCalculeaza(d, { poz: { sim: "RHM.DE", pret: 100, intrare: 90, stop: 120 } });
   assert.ok(Math.abs(r2.pretMc.stopPct - 0.1) < 1e-9, "stop deasupra prețului (greșit) ⇒ stopul obișnuit");
 });
@@ -129,9 +129,38 @@ await test("(3e) „ce aș face eu” când și cea mai bună variantă pierde d
   assert.match(G.mcsVariantaBuna([rd("așa cum e", -5.6), rd("mai îngust", -5.4)]), /toate variantele ies de obicei pe minus/);
   assert.doesNotMatch(G.mcsVariantaBuna([rd("așa cum e", 1), rd("mai îngust", 4)]), /pe minus/);
 });
+// ---------------- revizia Opus (07.10) ----------------
+await test("(R1) „ce aș face eu” nu recomandă un pariu doar mai MARE: mijlocul mai bun cu coada de jos mai rea și același „pe plus” (levier mai mare) nu e recomandat", () => {
+  const rd = (nume, p50, p5, pPlus) => ({ nume, st: { suma: 50 }, g: { p50, p5, pPlus, pLichidare: 0 } });
+  assert.match(G.mcsVariantaBuna([rd("așa cum e", 4, -11.8, 0.62), rd("levier mai mare", 6, -17.7, 0.62)]), /^Păstrează/);
+  assert.match(G.mcsVariantaBuna([rd("așa cum e", 4, -11.8, 0.62), rd("mai îngust", 6, -10, 0.66)]), /mai îngust/);
+  assert.match(G.mcsVariantaBuna([rd("așa cum e", 4, -11.8, 0.62), rd("mai îngust", 6, -10, 0.60)]), /^Păstrează/, "pe plus mai rar ⇒ nu");
+});
+await test("(R2) „Refă simularea” nu lipește poziția altui simbol; 🎲 apăsat în timpul altei analize se ține minte și pornește după ea", () => {
+  const f = functie(MSE, "mcsResimuleaza"); assert.match(f, /mcsStare\.poz && mcsStare\.poz\.sim === d\.sim \? mcsStare\.poz : null/);
+  assert.match(functie(MSE, "mcsPozitie"), /mcsStare\.inLucru\) \{ mcsStare\.reia = true/); assert.match(functie(MSE, "mcsAnalizeaza"), /mcsStare\.reia/);
+});
+await test("(R3) „la capăt ești peste intrare” cu stopul: doar drumurile care n-au atins stopul înainte (≤ cel fără stop); amândouă pe pagină", () => {
+  const b = bareZi(300, 9), r = M.pret(b, { orizonturi: [60], n: 600, seed: 3, stopPct: 0.08, intrare: 1.1 }).orizonturi[0];
+  assert.ok(r.pPesteIntrareStop <= r.pPesteIntrare && r.pPesteIntrareStop >= 0); assert.ok(r.pPesteIntrareStop < r.pPesteIntrare, "pe 60 de zile cu −8% unele drumuri ating stopul");
+  const d = { tip: "stock", sim: "RHM.DE", b: bareZi(300, 4), ist: { r: { cazuri: 0 } } };
+  const h = G.mcsHtml({ sim: "RHM.DE", rez: G.mcsCalculeaza(d, { poz: { sim: "RHM.DE", pret: 9454, intrare: 13496, stop: 8508.6 } }) });
+  assert.match(h, /la capăt peste intrare, fără să fi atins stopul \(−10,0%\)/); assert.match(h, /la capăt peste intrare, fără stop/);
+});
+await test("(R-min) variantele: stopul scris ÎN grid ⇒ pus la marginea gridului; „mai larg” păstrează stopul; fără rânduri identice; grile 2 ⇒ fără „jumătate”", () => {
+  const st = { jos: 1, sus: 2, grile: 20, levier: 2, dir: "long", suma: 50, stop: { jos: 1.2 }, botulTau: true };
+  G.mcsVariante(st).filter((v) => /îngust|larg/.test(v.nume)).forEach((v) => { if (v.st.stop) assert.ok(v.st.stop.jos <= v.st.jos + 1e-12, v.nume + ": stopul în grid"); });
+  const lat = G.mcsVariante({ jos: 0.01, sus: 1, grile: 20, levier: 2, dir: "long", suma: 50, stop: { jos: 0.005 } }).find((x) => /larg/.test(x.nume));
+  assert.ok(lat.st.stop && lat.st.stop.jos > 0 && lat.st.stop.jos < lat.st.jos); assert.doesNotMatch(lat.nume, /×1,5/);
+  const v2 = G.mcsVariante({ jos: 1, sus: 2, grile: 2, levier: 1, dir: "long", suma: 50, stop: null });
+  assert.ok(!v2.some((x) => /jumătate din grile/.test(x.nume)));
+  assert.match(functie(MSE, "mcsCompara"), /varianteEroare/); assert.doesNotMatch(functie(MSE, "mcsCompara"), /mcsStare\.eroare =/);
+  assert.match(functie(MSE, "mcsCalcVariante"), /faraCuTendinta: true/);
+  assert.match(citeste("public", "lib", "t212-ecran.js"), /mcsPozButon\(t212\.simbolPret\[p\.ticker\] \|\| p\.simbol, /);
+});
 await test("(4c) butoanele 🎲: în detaliul poziției T212 și Salt, cu simbolul, prețul de acum, intrarea și stopul; mcsPozitie deschide pagina Monte Carlo", () => {
   const t = citeste("public", "lib", "t212-ecran.js"), s = citeste("public", "lib", "salt-ecran.js");
-  assert.match(t, /mcsPozButon\(p\.simbol, p\.pret, p\.pretMediu, n \? n\.stopPozitie : null\)/); assert.match(s, /mcsPozButon\(p\.simbol, pr, a\.p\.pretMediu, n \? n\.stopPozitie : null\)/);
+  assert.match(t, /mcsPozButon\(t212\.simbolPret\[p\.ticker\] \|\| p\.simbol, p\.pret, p\.pretMediu, n \? n\.stopPozitie : null\)/); assert.match(s, /mcsPozButon\(p\.simbol, pr, a\.p\.pretMediu, n \? n\.stopPozitie : null\)/);
   assert.match(functie(MSE, "mcsPozitie"), /navTo\("montecarlo"/); assert.match(functie(MSE, "mcsPozitie"), /mcsAnalizeaza\(\)/);
   assert.equal(G.mcsPozArg(1349.6), "1349.6"); assert.equal(G.mcsPozArg(0.000012345), "0.000012345"); assert.equal(G.mcsPozArg(null), "null"); assert.equal(G.mcsPozArg(NaN), "null");
   assert.match(G.mcsPozButon("RHM.DE", 945.4, 1349.6, 903.41), /^<button type="button" class="t212BtnLinie" data-action-click="mcsPozitie\('RHM\.DE',945\.4,1349\.6,903\.41\)">🎲 Monte Carlo pe poziție<\/button>$/);
