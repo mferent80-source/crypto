@@ -13,6 +13,8 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 for (const f of ["grid-calcul.js", "grid-proba.js", "actiuni-semnale.js", "risc-luna.js", "t212.js", "monte-simbol.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 globalThis.escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 vm.runInThisContext(citeste("public", "lib", "monte-simbol-ecran.js"), { filename: "monte-simbol-ecran.js" });
+const MSE = citeste("public", "lib", "monte-simbol-ecran.js");
+globalThis.mcsFunctie = (n) => { const i = MSE.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = MSE.indexOf("{", i); for (; j < MSE.length; j++) { if (MSE[j] === "{") a++; else if (MSE[j] === "}" && --a === 0) break; } return MSE.slice(i, j + 1); };
 const M = globalThis.MonteSimbol;
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 700)}`); }); }
@@ -127,6 +129,53 @@ await test("(9b) stock scris fără bursă (RHM): caută în lista Salt chiar da
   const f = citeste("public", "lib", "monte-simbol-ecran.js");
   assert.match(f, /fetch\("\/data\/salt-univers\.json"\)/); assert.match(f, /mcsStare\.univers/);
   assert.match(globalThis.mcsHtml({ sim: "PONS", inLucru: true }), /~15 secunde/);
+});
+// ---------------- revizia Opus (07.10) ----------------
+await test("(R1) fără tendință = mijlocul la zero (centrat pe median): după o cădere de câteva zile nu „prezice” nici continuarea, nici o revenire", () => {
+  const b = []; let c = 100; const g = M.generator(77);
+  for (let i = 0; i < 200; i++) { const o = c; c = i >= 190 ? c * 0.95 : c * Math.exp((g() - 0.5) * 0.06); b.push({ t: i * 864e5, o, h: Math.max(o, c) * 1.005, l: Math.min(o, c) * 0.995, c, v: 1 }); }
+  for (const seed of [1, 2, 3]) { const r = M.pret(b, { orizonturi: [30], n: 800, blocZile: 5, seed }); assert.ok(Math.abs(r.orizonturi[0].p50) < 0.01, "mijlocul ~0, nu " + r.orizonturi[0].p50); }
+  const bc = []; let c2 = 1; for (let i = 0; i < 31 * 96; i++) { const o = c2; c2 = i >= 28 * 96 ? c2 * Math.exp(-0.2 / (3 * 96)) : c2 * Math.exp((g() - 0.5) * 0.004); bc.push({ t: i * 9e5, o, h: Math.max(o, c2) * 1.001, l: Math.min(o, c2) * 0.999, c: c2, v: 1 }); }
+  const gr = M.grid(bc, { jos: 0.9, sus: 1.1, grile: 20, levier: 1, dir: "neutru", suma: 100, pret: 1 }, { zile: 7, n: 150, seed: 3 });
+  assert.ok(Math.abs(gr.pretMijloc) < 0.01, "gridul pe drumuri centrate: prețul de la capăt, mijlocul ~0, nu " + gr.pretMijloc);
+});
+await test("(R2) botul neutral (Pionex: neutral / no_trend) rămâne neutru; „Refă” cu setările neatinse păstrează botul tău", () => {
+  const bot = { activ: true, baza: "LIT.PERP", gridJos: 4, gridSus: 5, levier: 2, directie: "neutral", investit: 50, brut: { buOrderData: { row: 21 } } };
+  assert.equal(globalThis.mcsSetariBot([bot], "LIT").dir, "neutru");
+  assert.equal(globalThis.mcsSetariBot([Object.assign({}, bot, { directie: "no_trend" })], "LIT").dir, "neutru");
+  const st = globalThis.mcsSetariBot([bot], "LIT");
+  assert.equal(globalThis.mcsAceleasiSetari(st, { jos: 4, sus: 5, grile: 20, levier: 2, dir: "neutru", suma: 50, stop: null }), true);
+  assert.equal(globalThis.mcsAceleasiSetari(st, { jos: 4.1, sus: 5, grile: 20, levier: 2, dir: "neutru", suma: 50, stop: null }), false);
+  assert.match(globalThis.mcsFunctie("mcsResimuleaza"), /mcsAceleasiSetari\(/);
+});
+await test("(R3) PUMPFUN: botul are baza PUMPFUN, dar pe Pionex e PUMP_USDT_PERP - scurtătura, botul și istoria merg pe simbolul Pionex", () => {
+  const bot = { activ: true, baza: "PUMPFUN.PERP", simbolPionex: "PUMP_USDT_PERP", gridJos: 0.004, gridSus: 0.006, levier: 2, directie: "long", investit: 30, brut: { buOrderData: { row: 11 } } };
+  assert.equal(globalThis.mcsSimbolBot(bot), "PUMP");
+  assert.ok(globalThis.mcsSetariBot([bot], "PUMP")); assert.ok(globalThis.mcsSetariBot([bot], "PUMPFUN"));
+  const z = Date.UTC(2026, 9, 6), arh = [{ base: "PUMPFUN.PERP", buOrderType: "futures_grid", createTime: z, closeTime: z + 36e5, buOrderData: { usdtInvestment: 30, totalRealizedProfit: 7.77, trend: "LONG", leverage: 2 } }];
+  assert.equal(globalThis.mcsIstorieCoin(arh, "PUMP", z + 2 * 36e5, ["PUMPFUN"]).l.length, 1);
+});
+await test("(R4) Pionex: doar „simbol inexistent” (MARKET_INVALID_SYMBOL) trece la Yahoo; o eroare (429, cădere) se spune - nu analizez altceva cu același nume; antetul spune ce am analizat", () => {
+  assert.equal(globalThis.mcsPionexFel({ result: false, code: "MARKET_INVALID_SYMBOL", message: "symbol error" }), "lipsa");
+  assert.equal(globalThis.mcsPionexFel({ data: { klines: [{ time: 1, open: 1, high: 1, low: 1, close: 1 }] } }), "date");
+  assert.equal(globalThis.mcsPionexFel({ data: { klines: [] } }), "lipsa");
+  assert.equal(globalThis.mcsPionexFel({ result: false, code: "TOO_MANY_REQUESTS" }), "eroare");
+  assert.equal(globalThis.mcsPionexFel(null), "eroare");
+  assert.match(globalThis.mcsFunctie("mcsAduCoin"), /mcsPionexFel\(/); assert.match(globalThis.mcsFunctie("mcsAduCoin"), /throw /);
+  const h = globalThis.mcsHtml({ sim: "PONS", rez: { sim: "PONS", tip: "coin", sursa: "PONS_USDT_PERP · Pionex", pret: 1, pretMc: { eroare: "x" }, setari: null, grid: { eroare: "y" }, ist: { r: { cazuri: 0 } } } });
+  assert.match(h, /Am analizat: <b>PONS_USDT_PERP · Pionex<\/b>/);
+});
+await test("(R-min) gramatica „la 30 de zile”; eticheta intervalelor spune cum se scrie în Pionex (N+1 linii); lista Salt întâi la un simbol fără bursă", () => {
+  const f = citeste("public", "lib", "monte-simbol-ecran.js");
+  assert.doesNotMatch(f, /'… la ' \+ o\.H \+ ' de zile/); assert.doesNotMatch(f, /la ' \+ o\.H \+ ' de zile/);
+  assert.match(f, /Intervale \(în Pionex scrii/);
+  assert.match(globalThis.mcsFunctie("mcsAduStock"), /cand\.unshift\(/);
+});
+await test("(R5) mijlocul −0,0004 (afișat 0,0%) nu e colorat roșu: culoarea după valoarea ROTUNJITĂ, ca semnul", () => {
+  const h = globalThis.mcsHtml({ sim: "X", rez: { sim: "X", tip: "stock", pret: 1, pretMc: { n: 10, blocZile: 5, barePeZi: 1, zileIstoric: 300, stopPct: 0.05, tintaPct: 0.1, prag: 0.1, faraTendinta: true, tendintaPeZi: 0,
+    orizonturi: [{ H: 20, scurt: false, p5: -0.2, p25: -0.1, p50: -0.0004, p75: 0.1, p95: 0.2, pSus: 0.3, pJos: 0.3, pStop: 0.5, pTinta: 0.4, pNiciuna: 0.1, hist: { min: -0.2, max: 0.2, latime: 0.1, c: [1, 2, 2, 1] } }] }, grid: null, ist: { r: { cazuri: 0 } } } });
+  assert.match(h, /<b class="">0,0%<\/b>|<b>0,0%<\/b>|class="mcsVal">0,0%|0,0%/);
+  assert.doesNotMatch(h, /bad[^>]*>0,0%/);
 });
 await test("(10) pagina: caseta deasupra „riscului tău”, scripturile după risc-ecran și în cache, navTo o desenează", () => {
   const html = citeste("public", "index.html"), app = citeste("public", "app.js"), sw = citeste("public", "sw.js");

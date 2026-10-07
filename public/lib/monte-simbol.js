@@ -41,8 +41,11 @@ var MonteSimbol = (function () {
       // istoricul sub 3× orizontul ⇒ simularea doar reamestecă aceleași zile (spus pe pagină)
       return { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24) };
     }
+    // revizia Opus (07.10): fără tendință = MIJLOCUL la zero, nu media - cu media scoasă, o cădere de câteva zile (restul liniștit) făcea
+    // ca mijlocul să iasă pe plus (o „revenire” inventată de calcul). Prima trecere măsoară mijlocul log pe orizont, a doua îl scoate.
     var orizonturi = (o.orizonturi || [7, 30]).map(function (Z, j) {
-      var r = trece(Z, j, fara ? mu : 0);
+      var mF = mu; if (fara) { var p0 = trece(Z, j, mu); mF = mu + Math.log(1 + p0.p50) / (Z * bz); }
+      var r = trece(Z, j, fara ? mF : 0);
       // cât de mult contează tendința perioadei: aceeași simulare, cu ea păstrată (doar cifrele de bază, pentru comparație)
       if (fara) { var c = trece(Z, j, 0); r.cuTendinta = { p50: c.p50, pSus: c.pSus, pJos: c.pJos, pStop: c.pStop, pTinta: c.pTinta }; }
       return r;
@@ -64,16 +67,19 @@ var MonteSimbol = (function () {
     var n = o.n || 1000, P = st.pret > 0 ? st.pret : b15[b15.length - 1].c, suma = st.suma > 0 ? st.suma : 100, mu = tendinta(b15), fara = o.cuTendinta !== true;
     // fără tendința perioadei (implicit), ca la preț: un short pe o lună care a căzut nu iese „bun” doar din căderea care a fost
     function trece(m) {
-      var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0;
+      var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [];
       for (var s = 0; s < n; s++) {
         var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: st.stop || null });
-        net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) opr++; per += r.perechi || 0;
+        cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) opr++; per += r.perechi || 0;
       }
       net.sort(function (a, c) { return a - c; });
       return { n: n, zile: zile, zileIstoric: Math.floor(b15.length / BZ), p5: pc(net, 0.05), p25: pc(net, 0.25), p50: pc(net, 0.5), p75: pc(net, 0.75), p95: pc(net, 0.95),
-        pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24) };
+        pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24),
+        pretMijloc: pc(cap.sort(function (a, c) { return a - c; }), 0.5) };
     }
-    var r = trece(fara ? mu : 0); r.faraTendinta = fara; r.tendintaPeZi = Math.exp(mu * BZ) - 1;
+    // mijlocul prețului de la capătul drumurilor, cu tendința m scoasă (ieftin: fără simulatorul gridului) - pentru centrare, ca la preț
+    function mijlocLog(m) { var rnd = generator(o.seed || 1), v = []; for (var s = 0; s < n; s++) { var d = drum(b15, H, BZ, P, rnd, m); v.push(Math.log(d[d.length - 1].c / P)); } v.sort(function (a, c) { return a - c; }); return pc(v, 0.5); }
+    var r = trece(fara ? mu + mijlocLog(mu) / H : 0); r.faraTendinta = fara; r.tendintaPeZi = Math.exp(mu * BZ) - 1;
     if (fara) { var c = trece(0); r.cuTendinta = { p50: c.p50, pPlus: c.pPlus, pLichidare: c.pLichidare, pStop: c.pStop }; }
     return r;
   }
