@@ -92,4 +92,44 @@ await test("aplicaCereriSalt: respinge USD la acțiune în EUR, simbol necunoscu
   assert.match(r.rezultate[0].motiv, /RHM\.DE se tranzacționează în EUR/); assert.match(r.rezultate[1].motiv, /nu e în lista Salt/);
   assert.match(r.rezultate[2].motiv, /bucăți/); assert.match(r.rezultate[3].motiv, /nu e în pozițiile tale/);
 });
+// ---- reparațiile după revizie (I2, I3, M1, M5, M7, M9) ----
+const AZ = await import("./lib/alerte-zi.mjs"), SC = await import("./lib/salt-cereri.mjs");
+await test("I3: aceeași alertă (cheie+titlu+bot) în 30 min nu se scrie de două ori (Radarul căzut retrimite grila); după 30 min da", () => {
+  const a = { t: T, nivel: "info", titlu: "PONS: grilă atinsă — a vândut la ~0.40970", bot: "2411", cheie: "grila" };
+  let j = AZ.adaugaInJurnal(null, a, T); j = AZ.adaugaInJurnal(j, { ...a, t: T + 60000 }, T + 60000); j = AZ.adaugaInJurnal(j, { ...a, t: T + 120000 }, T + 120000);
+  assert.equal(j.lista.length, 1);
+  j = AZ.adaugaInJurnal(j, { ...a, t: T + 31 * 60000 }, T + 31 * 60000); assert.equal(j.lista.length, 2);
+  j = AZ.adaugaInJurnal(j, { ...a, titlu: "PONS: grilă atinsă — a vândut la ~0.41000", t: T + 32 * 60000 }, T + 32 * 60000); assert.equal(j.lista.length, 3, "alt preț = altă alertă");
+});
+await test("I3: la plafon pleacă întâi zgomotul, nu alertele importante de dimineață", () => {
+  let j = AZ.adaugaInJurnal(null, { t: T, nivel: "critic", titlu: "APLD: −15% de la maxim", cheie: "t212-APLD-trail" }, T);
+  for (let i = 0; i < AZ.ALERTE_ZI_MAX + 10; i++) j = AZ.adaugaInJurnal(j, { t: T + 1 + i, nivel: "info", titlu: "PONS: grilă atinsă — a vândut la ~0." + (10000 + i), bot: "2411", cheie: "grila" }, T + 1 + i);
+  assert.equal(j.lista.length, AZ.ALERTE_ZI_MAX); assert.equal(j.lista[0].titlu, "APLD: −15% de la maxim", "alerta critică de dimineață rămâne");
+});
+await test("M1: alerta de mișcare la un simbol urmărit care e în Salt are sursa „salt”, nu „T212”", () => {
+  const p = AZ.alertePentruPoza({ zi: "2026-10-07", lista: [{ t: T, nivel: "atentie", titlu: "RHM.DE: −3,1% azi, de 2,2× mișcarea lui obișnuită", cheie: "sim-miscare-RHM.DE-2026-10-07" }] },
+    { detinute: ["RHM.DE"], urmarite: ["RHM.DE"], boti: [], salt: ["RHM.DE"] }, T + 1);
+  assert.equal(p[0].grup, "det"); assert.equal(p[0].src, "salt");
+});
+await test("M9: poza peste plafon ⇒ alertele-zgomot ies primele, importantele rămân", () => {
+  const poza = { la: T, alerte: [{ titlu: "APLD: −15%", zgomot: false, mesaj: "x".repeat(50) }].concat(Array.from({ length: 300 }, (_, i) => ({ titlu: "grilă " + i, zgomot: true, mesaj: "" }))) };
+  const text = AZ.pozaInLimita(poza, 2000);
+  assert.ok(text.length <= 2000); const p = JSON.parse(text); assert.equal(p.alerte.length, 1); assert.equal(p.alerte[0].titlu, "APLD: −15%"); assert.equal(p.alerteTaiate, 300);
+  assert.equal(AZ.pozaInLimita({ la: T, alerte: [] }, 2000), JSON.stringify({ la: T, alerte: [] }), "sub plafon: neschimbată");
+});
+await test("I2: „Editează” fără dată păstrează data cumpărării de dinainte (altfel dispare stopul care urcă)", () => {
+  const l0 = [{ isin: "DE0007030009", simbol: "RHM.DE", nume: "Rheinmetall AG", qty: 1.0456, pretMediu: 1349.6, de: "2026-05-11", plata: "EUR" }];
+  let r = SC.aplicaCereriSalt(l0, [{ id: "e", op: "pune", isin: "DE0007030009", qty: 2, pretMediu: 1300, moneda: "EUR" }], UNIV);
+  assert.equal(r.lista[0].de, "2026-05-11"); assert.equal(r.lista[0].qty, 2);
+  r = SC.aplicaCereriSalt(l0, [{ id: "f", op: "pune", isin: "DE0007030009", qty: 2, pretMediu: 1300, moneda: "EUR", de: "2026-06-01" }], UNIV);
+  assert.equal(r.lista[0].de, "2026-06-01", "data nouă câștigă");
+});
+await test("M5: forma scurtă din alerte („RHM”) găsește RHM.DE când e unică", () => {
+  const r = SC.aplicaCereriSalt([], [{ id: "s", op: "pune", simbol: "rhm", qty: 1, pretMediu: 900, moneda: "EUR" }], UNIV);
+  assert.equal(r.rezultate[0].stare, "ok"); assert.equal(r.lista[0].simbol, "RHM.DE");
+});
+await test("M7: lista Salt citită GOALĂ cât poza știe poziții ⇒ nu se scrie peste ea (Radarul a răspuns prost)", () => {
+  assert.equal(SC.listaSaltSigura([], [{ simbol: "RHM.DE" }]), false);
+  assert.equal(SC.listaSaltSigura([], []), true); assert.equal(SC.listaSaltSigura([{ isin: "X" }], [{ simbol: "RHM.DE" }]), true); assert.equal(SC.listaSaltSigura(null, []), false);
+});
 console.log(`\n${teste - picate}/${teste} probe trec`); if (picate) process.exit(1);

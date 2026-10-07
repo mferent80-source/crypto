@@ -61,9 +61,15 @@ export async function simboluriScrie(env, text, acum = Date.now()) {
 export async function simboluriCiteste(env) { let o = null; try { o = JSON.parse(await env.PAZNIC.get("simboluri") || "null"); } catch { o = null; } return o && Array.isArray(o.simboluri) ? o : { simboluri: [], la: null }; }
 
 // v101.86 (pagina alerts în două): pozițiile Salt adăugate de pe pagină - pagina scrie cererea (cheia de citire), colectorul o ia,
-// o aplică pe lista din Radar și o confirmă (tokenul lui). O singură cheie KV; cel mult 20 în așteptare și 100 de scrieri pe zi.
-const SALT_CERERI_MAX = 20, SALT_SCRIERI_ZI = 100;
-async function saltCereriCiteste(env) { let o = null; try { o = JSON.parse(await env.PAZNIC.get("salt-cereri") || "null"); } catch { o = null; } return o && Array.isArray(o.cereri) ? o : { cereri: [] }; }
+// o aplică pe lista din Radar și o confirmă (tokenul lui). Cel mult 20 în așteptare.
+// revizia (I4): o cheie pe cerere („salt-cerere:<id>”), nu o listă într-o singură cheie - KV-ul e „eventual consistent”, iar
+// citește-modifică-scrie pe o listă comună pierdea o cerere venită între citirea colectorului și confirmarea lui
+const SALT_CERERI_MAX = 20, SALT_PREFIX = "salt-cerere:";
+async function saltCereriCiteste(env) {
+  const l = await env.PAZNIC.list({ prefix: SALT_PREFIX }), cereri = [];
+  for (const k of (l && l.keys) || []) { try { const x = JSON.parse(await env.PAZNIC.get(k.name) || "null"); if (x && x.id) cereri.push(x); } catch {} }
+  return { cereri: cereri.sort((a, b) => (a.la || 0) - (b.la || 0)) };
+}
 export async function saltCerereScrie(env, text, acum = Date.now()) {
   if (String(text || "").length > 2000) return { status: 413, corp: { error: "cerere prea mare" } };
   let c; try { c = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
@@ -77,17 +83,17 @@ export async function saltCerereScrie(env, text, acum = Date.now()) {
     if (c.moneda !== "EUR" && c.moneda !== "USD") return { status: 400, corp: { error: "moneda: EUR sau USD" } };
     Object.assign(x, { qty: c.qty, pretMediu: c.pretMediu, moneda: c.moneda, de: /^\d{4}-\d{2}-\d{2}$/.test(String(c.de || "")) ? c.de : null });
   }
-  const v = await saltCereriCiteste(env), zi = new Date(acum).toISOString().slice(0, 10), scrieri = v.zi === zi ? (Number(v.scrieriZi) || 0) : 0;
-  if (v.cereri.length >= SALT_CERERI_MAX) return { status: 429, corp: { error: "sunt deja " + SALT_CERERI_MAX + " cereri în așteptare: colectorul de acasă nu le-a luat (e pornit?)" } };
-  if (scrieri >= SALT_SCRIERI_ZI) return { status: 429, corp: { error: "prea multe cereri azi (" + SALT_SCRIERI_ZI + "); mâine se poate din nou" } };
-  await env.PAZNIC.put("salt-cereri", JSON.stringify({ cereri: v.cereri.concat([x]), zi, scrieriZi: scrieri + 1 }));
+  const l = await env.PAZNIC.list({ prefix: SALT_PREFIX });
+  if (((l && l.keys) || []).length >= SALT_CERERI_MAX) return { status: 429, corp: { error: "sunt deja " + SALT_CERERI_MAX + " cereri în așteptare: colectorul de acasă nu le-a luat (e pornit?)" } };
+  await env.PAZNIC.put(SALT_PREFIX + x.id, JSON.stringify(x));
   return { status: 200, corp: { ok: true, id: x.id } };
 }
 export async function saltCereriConfirma(env, text) {
   let c; try { c = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
-  const iduri = new Set(Array.isArray(c && c.iduri) ? c.iduri.map(String) : []), v = await saltCereriCiteste(env), ramase = v.cereri.filter((x) => !iduri.has(String(x.id)));
-  if (ramase.length !== v.cereri.length) await env.PAZNIC.put("salt-cereri", JSON.stringify({ ...v, cereri: ramase }));
-  return { status: 200, corp: { ok: true, ramase: ramase.length } };
+  const iduri = (Array.isArray(c && c.iduri) ? c.iduri : []).map((x) => String(x).replace(/[^a-z0-9]/g, "")).filter(Boolean).slice(0, 40);
+  for (const id of iduri) await env.PAZNIC.delete(SALT_PREFIX + id);
+  const v = await saltCereriCiteste(env);
+  return { status: 200, corp: { ok: true, ramase: v.cereri.length } };
 }
 
 async function citeste(env) { try { return JSON.parse(await env.PAZNIC.get("stare") || "null") || {}; } catch { return {}; } }

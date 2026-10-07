@@ -39,8 +39,8 @@ import { sugestiiDimineata, sugestiiIntraday } from "./lib/tura-sugestii-actiuni
 import { universEU } from "./lib/univers-eu.mjs";
 import { turaSalt as turaSaltModul } from "./lib/tura-salt.mjs";   // v101.82 (pagina Salt)
 import { turaSaltPozitii as turaSaltPozitiiModul, alertaFaraPreturi, liniaDimineataSalt } from "./lib/tura-salt-pozitii.mjs";   // v101.84: alerta la stop + rezumatul Salt; v101.85: „n-am prețuri” + rândul de dimineață
-import { adaugaInJurnal, alertePentruPoza } from "./lib/alerte-zi.mjs";   // v101.86 (el 07.10): pagina alerts în două - alertele de azi
-import { aplicaCereriSalt } from "./lib/salt-cereri.mjs";   // v101.86: pozițiile Salt adăugate de pe pagina alerts
+import { adaugaInJurnal, alertePentruPoza, pozaInLimita } from "./lib/alerte-zi.mjs";   // v101.86 (el 07.10): pagina alerts în două - alertele de azi
+import { aplicaCereriSalt, listaSaltSigura } from "./lib/salt-cereri.mjs";   // v101.86: pozițiile Salt adăugate de pe pagina alerts
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
@@ -1061,8 +1061,8 @@ async function turaPoza() {
     const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
     // v101.86: alertele de azi, grupate pe filele paginii alerts - cu simbolurile chiar din poză (boții cu numele din botPoza)
     poza.alerte = alertePentruPoza(alerteZi, { detinute: poza.t212.map((x) => x.s).concat(poza.boti.map((b) => b.s), (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol)),
-      urmarite: poza.simboluri.map((s) => s.s), boti: poza.boti }, Date.now());
-    const text = JSON.stringify(poza);
+      urmarite: poza.simboluri.map((s) => s.s), boti: poza.boti, salt: (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol) }, Date.now());
+    const text = pozaInLimita(poza, 450 * 1024);   // revizia (M9): sub plafonul de 512 KB al worker-ului, întâi ies alertele-zgomot
     const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
     if (!r.ok) jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));
     else { pozaOkLa = Date.now(); jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", cate(t212.length, "poziție", "poziții"), cate(boti.length, "bot", "boți"), cate(simboluri.length, "simbol", "simboluri"), radarUrl ? "tunel" : ""); }
@@ -1173,22 +1173,37 @@ async function turaSaltZi() {
 // Fără poziții se scrie tot un rezumat (n: 0) - altfel banda ar arăta pozițiile șterse.
 // v101.86 (el 07.10: „la dețineri să pot adăuga și manual cu preț în euro și USD”): cererile Salt de pe pagina alerts stau la worker
 // (/salt-cereri); la fiecare poză le iau, le aplic pe lista Salt din Radar (aceeași cu pagina Salt), le confirm și pornesc tura Salt
+// revizia: răspunsurile țin pe disc (I5 - altfel o repornire le golea și pagina arăta iar „în așteptare”); cererile aplicate a căror
+// confirmare n-a mers nu se mai aplică a doua oară (M6); citirea cererilor cel mult o dată la 2 min (listarea cheilor KV are cotă pe zi)
+let ultimeleSalt = null, saltCereriRez = [];   // v101.86: rândurile Salt ale ultimei ture + răspunsurile la cererile de pe pagina alerts (în poză)
+const SALT_REZ_FIS = path.join(DATA, "salt-cereri-rez.json");
+try { saltCereriRez = JSON.parse(fs.readFileSync(SALT_REZ_FIS, "utf8")); if (!Array.isArray(saltCereriRez)) saltCereriRez = []; } catch { saltCereriRez = []; }
+const saltAplicate = new Set(); let saltCereriLa = 0;
 async function aplicaCererileSalt() {
+  if (Date.now() - saltCereriLa < 2 * 60000) return;
+  saltCereriLa = Date.now();
   try {
     const baza = PAZNIC_URL.replace(/\/+$/, ""), cr = await fetch(baza + "/salt-cereri", { headers: { authorization: "Bearer " + PAZNIC_TOKEN }, signal: AbortSignal.timeout(15000) });
-    const cer = cr.ok ? ((await cr.json()).cereri || []) : [];
+    const toate = cr.ok ? ((await cr.json()).cereri || []) : [], cer = toate.filter((c) => !saltAplicate.has(c.id));
+    const ack = async (iduri) => { const r = await fetch(baza + "/salt-cereri/ack", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ iduri }), signal: AbortSignal.timeout(15000) });
+      if (!r.ok) throw new Error("confirmarea la worker: HTTP " + r.status); };
+    if (toate.length > cer.length) { try { await ack(toate.filter((c) => saltAplicate.has(c.id)).map((c) => c.id)); } catch (e) { jurnal("salt: cererile", e.message); } }
     if (!cer.length) return;
     const s = await cere("/api/t212?action=salt"), u = JSON.parse(fs.readFileSync(path.join(RAD, "public", "data", "salt-univers.json"), "utf8"));
-    const a = aplicaCereriSalt(s && s.pozitii || [], cer, u && u.instrumente || []), ok = a.rezultate.some((x) => x.stare === "ok");
+    const citita = s && s.pozitii;
+    // M7: Radarul întoarce [] la o eroare de citire - nu scriu lista doar cu poziția nouă peste ce a scris el de mână
+    if (!listaSaltSigura(citita, ultimeleSalt && ultimeleSalt.randuri)) { jurnal("salt: lista din Radar a venit goală, deși știu poziții - cererile așteaptă"); return; }
+    const a = aplicaCereriSalt(citita, cer, u && u.instrumente || []), ok = a.rezultate.some((x) => x.stare === "ok");
     if (ok) await trimite("/api/t212?action=saltPozitii", { pozitii: a.lista });   // aruncă la eșec ⇒ nu confirm, cererile rămân la worker
-    await fetch(baza + "/salt-cereri/ack", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ iduri: cer.map((c) => c.id) }), signal: AbortSignal.timeout(15000) });
+    for (const c of cer) saltAplicate.add(c.id);
     saltCereriRez = saltCereriRez.concat(a.rezultate.map((x) => ({ ...x, la: Date.now() }))).slice(-20);
+    try { scrieAtomic(SALT_REZ_FIS, saltCereriRez); } catch (e) { jurnal("salt: răspunsurile nescrise", e.message); }
     jurnal("salt: cereri de pe pagina alerts", a.rezultate.map((x) => x.stare + " " + x.motiv).join("; "));
+    try { await ack(cer.map((c) => c.id)); } catch (e) { jurnal("salt: cererile", e.message + " - aplicate, le confirm la tura următoare"); }
     if (ok) { saltPozLa = 0; turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message)); }
   } catch (e) { jurnal("salt: cererile", e.message); }
 }
 let saltPozLa = 0, saltPozInLucru = false;
-let ultimeleSalt = null, saltCereriRez = [];   // v101.86: rândurile Salt ale ultimei ture + răspunsurile la cererile de pe pagina alerts (în poză)
 async function turaSaltPozitii() {
   if (saltPozInLucru || Date.now() - saltPozLa < 15 * 60000) return;
   saltPozInLucru = true; saltPozLa = Date.now();
