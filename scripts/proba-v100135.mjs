@@ -62,7 +62,7 @@ await test("(3c) pagina: funding-ul real se aduce o dată pe monedă (pionex_fun
   assert.match(functie(E, "gsCiteste"), /fundingSursa = "manual"/);
   const s = { mod: "nou", boti: [], sim: "PONS", st: { jos: 0.37, sus: 0.42, grile: 34, levier: 3, dir: "short", suma: 50, stop: { sus: 0.43 }, tp: null, tip: "geometric" }, plan: { minus: null, plus: null }, fundingZi: -0.00012, fundingSursa: "pionex", fundingInfo: { rataZi: -0.00012, intervalOre: 8, zile: 7, n: 21 }, pornitLa: null, rez: null, oriz: 2 };
   const h = G.gsFormHtml(s);
-  assert.match(h, /<input id="gsFunding"[^>]*value="-0\.012"/); assert.match(h, /funding-ul real Pionex: −0,012% pe zi \(media ultimelor 7 zile, la 8 h\) · long plătește, short încasează/);
+  assert.match(h, /<input id="gsFunding"[^>]*value="-0\.012"/); assert.match(h, /funding-ul real Pionex \(PONS\): −0,012% pe zi \(media ultimelor 7 zile, la 8 h\) · short plătește, long încasează/);   // revizia (R4): pe semn
   assert.match(G.gsFormHtml(Object.assign({}, s, { fundingSursa: "manual" })), /funding scris de tine/);
   assert.match(G.gsFormHtml(Object.assign({}, s, { fundingSursa: null, fundingZi: 0.0003 })), /cost fix presupus/);
 });
@@ -82,7 +82,7 @@ await test("(1b) pagina Simulator grid: după rezultat, secțiunea „Alte setă
   const s = { mod: "nou", boti: [], sim: "PONS", st: { jos: 0.37, sus: 0.42, grile: 34, levier: 3, dir: "short", suma: 50, stop: { sus: 0.43 }, tp: null, tip: "geometric" }, plan: { minus: null, plus: null }, fundingZi: 0.0003, pornitLa: null, rez: { n: 40, zile: 14, zileIstoric: 20, suma: 50, acum: null, orizonturi: [oz, oz, oz, oz] }, oriz: 2 };
   const h = G.gsHtml(s);
   assert.match(h, /Alte setări, pe aceleași drumuri/); assert.match(h, /data-action-click="gsCompara\(\)"/); assert.match(h, /data-action-click="gsComparaTp\(\)"/);
-  assert.match(functie(E, "gsCompara"), /mcsCalcVariante\(/); assert.match(functie(E, "gsCompara"), /GS_ORIZ\[gsStare\.oriz\]/); assert.match(functie(E, "gsComparaTp"), /mcsCalcTinteBot\(/);
+  assert.match(functie(E, "gsCompara"), /mcsVariante\(/); assert.match(functie(E, "gsCompara"), /GS_ORIZ\[gsStare\.oriz\]/); assert.match(functie(E, "gsComparaTp"), /mcsTinteBot\(/);
   assert.match(functie(E, "gsSimuleaza"), /gsStare\.variante = null/);
 });
 
@@ -93,6 +93,59 @@ await test("(2a) Tabloul are butonul „⚄ Simulează” (vizibil când e un bo
   assert.match(functie(app, "tbDeseneazaTvCod"), /tbSimBtn/);
   const f = functie(E, "gsDeschideBot");
   assert.match(f, /navTo\("gridsim", true\)/); assert.match(f, /gsAlegeBot\(/); assert.match(f, /gsSimuleaza\(\)/); assert.match(f, /tbStare\.bot/);
+});
+
+// ---------------- revizia Opus (09f8479..973fd8f) ----------------
+await test("(R1) funding-ul real NU devine „scris de tine” din rotunjirea câmpului; câmpul golit revine la rata reală", () => {
+  assert.equal(G.gsFundingManual(0.0855, 0.000854823), false, "câmpul arată valoarea rotunjită a celei memorate");
+  assert.equal(G.gsFundingManual(0.05, 0.000854823), true); assert.equal(G.gsFundingManual(0.03, 0.0003), false);
+  assert.match(functie(E, "gsCiteste"), /gsFundingManual\(/); assert.match(functie(E, "gsCiteste"), /fundingSursa = null; gsStare\.fundingSim = null/);
+});
+await test("(R2) aducerea funding-ului picată pe moneda B ⇒ costul presupus, nu rata lui A etichetată „reală”; nota spune moneda", () => {
+  const f = functie(E, "gsAduFunding"); assert.match(f, /fundingZi = 0\.0003; gsStare\.fundingSursa = null; gsStare\.fundingInfo = null/); assert.match(f, /sim: sim/);
+  const s = { mod: "nou", boti: [], sim: "PONS", st: { jos: 0.37, sus: 0.42, grile: 34, levier: 3, dir: "short", suma: 50, stop: { sus: 0.43 }, tp: null, tip: "geometric" }, plan: {}, fundingZi: 0.00085, fundingSursa: "pionex", fundingInfo: { sim: "PONS", rataZi: 0.00085, intervalOre: 4, zile: 7, n: 42 }, rez: null, oriz: 2 };
+  assert.match(G.gsFormHtml(s), /funding-ul real Pionex \(PONS\): 0,085% pe zi \(media ultimelor 7 zile, la 4 h\) · long plătește, short încasează/);
+});
+await test("(R3) „așa cum e” din „Alte setări” = verdictul (același motor, aceleași drumuri): GridSim.compara; MonteSimbol.grid trimite tip și fundingZi", () => {
+  const st = Object.assign({}, ST, { tp: null, tip: "aritmetic", fundingZi: 0.003 }), o = { zile: 14, orizonturi: [7], n: 40, seed: 12 };
+  const v = GS.simuleaza(B, st, o).orizonturi[0], rows = GS.compara(B, G.mcsVariante(st), Object.assign({}, o, { oriz: 7 }));
+  assert.equal(rows.length, 7); assert.equal(rows[0].g.p50, v.p50); assert.equal(rows[0].g.pPlus, v.pCastig); assert.equal(rows[0].g.pLichidare, v.pLich); assert.equal(rows[0].g.drumuri.length, 40);
+  rows.slice(1).forEach((x) => { assert.ok(x.drum && Math.abs(x.drum.maiBun + x.drum.maiRau + x.drum.egal - 1) < 1e-9, x.nume); assert.equal(x.g.zile, 7); });
+  assert.match(G.mcsVarHtml({ setari: st, variante: rows }, "gsCompara()", 7), /Aceleași drumuri, 7 variante · 7 zile/);
+  const t = GS.compara(B, G.mcsTinteBot(Object.assign({}, st, { dir: "long" }), B[B.length - 1].c).map((x) => ({ nume: x.nume, tp: x.tp, tu: x.tu, st: Object.assign({}, st, { dir: "long", tp: x.tp }) })), Object.assign({}, o, { oriz: 7 }));
+  assert.ok(t.length >= 2 && t.every((x) => x.g && (x.g.eroare || typeof x.g.pTp === "number")));
+  const b = bare15(20, 3, 0.012), g0 = M.grid(b, { pret: 1, jos: 0.5, sus: 1.5, grile: 10, levier: 2, dir: "long", suma: 50, stop: null }, { zile: 7, n: 40, seed: 12, faraCuTendinta: true });
+  assert.notEqual(M.grid(b, { pret: 1, jos: 0.5, sus: 1.5, grile: 10, levier: 2, dir: "long", suma: 50, stop: null, tip: "aritmetic" }, { zile: 7, n: 40, seed: 12, faraCuTendinta: true }).p50, g0.p50, "tipul ajunge la simulator");
+  assert.ok(M.grid(b, { pret: 1, jos: 0.5, sus: 1.5, grile: 10, levier: 2, dir: "long", suma: 50, stop: null, fundingZi: 0.01 }, { zile: 7, n: 40, seed: 12, faraCuTendinta: true }).p50 < g0.p50, "funding-ul ajunge la simulator");
+  assert.match(functie(E, "gsCompara"), /GridSim\.compara\(/); assert.match(functie(E, "gsComparaTp"), /GridSim\.compara\(/);
+});
+await test("(R4) nota funding-ului după semn; costul presupus e cost oricare ar fi direcția (fundingCost pe |Ql − Qs|)", () => {
+  const s = { mod: "nou", boti: [], sim: "PONS", st: { jos: 0.37, sus: 0.42, grile: 34, levier: 3, dir: "short", suma: 50, stop: null, tp: null, tip: "geometric" }, plan: {}, fundingZi: -0.0006, fundingSursa: "pionex", fundingInfo: { sim: "PONS", rataZi: -0.0006, intervalOre: 8, zile: 7, n: 21 }, rez: null, oriz: 2 };
+  assert.match(G.gsFormHtml(s), /−0,06% pe zi .* · short plătește, long încasează/);
+  assert.match(G.gsFormHtml(Object.assign({}, s, { fundingSursa: null, fundingZi: 0.0003 })), /cost fix presupus \(0,03% pe zi, plătit oricare ar fi direcția\)/);
+  const sh = { jos: 0.9, sus: 1.1, grile: 10, levier: 2, dir: "short", suma: 50, stop: null, fundingZi: 0.0003, fundingCost: true };
+  assert.ok(GP.simuleaza(B, 0, 672, sh).funding > 0, "cost și la short"); assert.ok(GP.simuleaza(B, 0, 672, Object.assign({}, sh, { fundingCost: false })).funding < 0);
+  assert.match(functie(E, "gsSimuleaza"), /fundingCost: gsStare\.fundingSursa !== "pionex" && gsStare\.fundingSursa !== "manual"/);
+});
+await test("(R5/R10/R11) dejaAtins cu ≤; funding-ul se plătește și pe prima zi întreagă (de la bara 0); r.comisioane fără funding", () => {
+  assert.match(citeste("public", "lib", "grid-sim.js"), /iPlus < pre && \(iMinus === null \|\| iPlus < iMinus\)\) dejaAtins = "plus"; else if \(iMinus !== null && iMinus < pre && \(iPlus === null \|\| iMinus <= iPlus\)\)/);
+  assert.ok(GP.simuleaza(B, 0, 32, Object.assign({}, ST, { fundingZi: 0.01 })).funding > 0, "prima plată la bara 0 (Pionex ia la următoarea oră de funding)");
+  const r0 = GP.simuleaza(B, 0, 672, ST), r1 = GP.simuleaza(B, 0, 672, Object.assign({}, ST, { fundingZi: 0.01 }));
+  assert.ok(Math.abs(r0.comisioane - r1.comisioane) < 1e-12, "comisioanele nu includ funding-ul");
+});
+await test("(R6/R7) gsRataFunding: suma ratelor din fereastră pe zilele acoperite (intervale amestecate); doar rate vechi ⇒ „veche”", () => {
+  const T0 = Date.UTC(2026, 9, 7, 12), mix = [];
+  for (let i = 0; i < 48; i++) mix.push({ fundingTime: T0 - i * 3600000, fundingRate: 0.00005 });   // 2 zile la 1 h
+  for (let i = 1; i <= 15; i++) mix.push({ fundingTime: T0 - 48 * 3600000 - i * 8 * 3600000, fundingRate: 0.0001 });   // apoi la 8 h
+  const r = G.gsRataFunding(mix, T0); assert.ok(Math.abs(r.rataZi - (48 * 0.00005 + 14 * 0.0001) / 7) < 1e-9, "suma / zile (a 15-a rată la 8 h e exact la −7 zile, în afara ferestrei): " + r.rataZi); assert.equal(r.veche, false);
+  const v = G.gsRataFunding([{ fundingTime: T0 - 10 * 864e5, fundingRate: 0.0002 }, { fundingTime: T0 - 10 * 864e5 - 8 * 3600000, fundingRate: 0.0002 }], T0);
+  assert.equal(v.veche, true); assert.ok(Math.abs(v.rataZi - 0.0006) < 1e-9);
+  const s = { mod: "nou", boti: [], sim: "PONS", st: { jos: 0.37, sus: 0.42, grile: 34, levier: 3, dir: "short", suma: 50, stop: null, tp: null, tip: "geometric" }, plan: {}, fundingZi: 0.0006, fundingSursa: "pionex", fundingInfo: Object.assign({ sim: "PONS", zile: 7, n: 2 }, v), rez: null, oriz: 2 };
+  assert.match(G.gsFormHtml(s), /rată veche, ultima de pe 27\.09\.2026/);
+});
+await test("(R8/R9) „Compară” pe altă monedă decât cea simulată ⇒ eroare; alegerea botului / Simulează din Tablou în timpul unei simulări ⇒ după ea", () => {
+  assert.match(functie(E, "gsAltaMoneda"), /date\.sim !== gsStare\.sim/); assert.match(functie(E, "gsCompara"), /gsAltaMoneda\(\)/); assert.match(functie(E, "gsComparaTp"), /gsAltaMoneda\(\)/);
+  assert.match(functie(E, "gsDeschideBot"), /gsStare\.dupa = /); assert.match(functie(E, "gsAlegeBot"), /gsStare\.dupa = /); assert.match(functie(E, "gsSimuleaza"), /gsStare\.dupa/);
 });
 
 await test("(E) versiunea de la v100.135 în sus (colectorul neatins)", () => {

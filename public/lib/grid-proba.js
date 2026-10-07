@@ -66,7 +66,7 @@ var GridProba = (function () {
     function lichidat(p) { return capital(p) <= C.MMR * (Ql + Qs) * p; }
     function rezultat(extra) {
       // v100.16: iesit = pe ce parte l-a inchis stopul/tinta ("jos"/"sus", null = n-a iesit), bare = dupa cate lumanari
-      var r = { net: 0, realizat: real, comisioane: fee, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi, iesit: null, bare: null, funding: funding };
+      var r = { net: 0, realizat: real, comisioane: fee - funding, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi, iesit: null, bare: null, funding: funding };
       for (var e in extra) r[e] = extra[e];
       // v100.134: traseul se incheie la bara stopului / lichidarii cu rezultatul ei (la capatul normal, ultima bara e deja pusa in bucla)
       if (tr) { if (extra && (extra.lichidat || extra.oprit)) { tr.net.push(r.net); tr.perechi.push(perechi); tr.iesiri.push(iesiri); tr.min.push(Math.min(bMin, r.net)); tr.max.push(Math.max(bMax, r.net)); } r.traseu = tr; }
@@ -82,7 +82,9 @@ var GridProba = (function () {
     var fin = Math.min(b.length, start + lungime);
     for (var i = start; i < fin; i++) {
       var x = b[i], drum = x.c >= x.o ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
-      if (fundingZi && i > start && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (Ql - Qs) * x.o; fee += fz; funding += fz; }   // v100.134: la 8 h; v100.135: cu semn
+      // v100.134: la 8 h; v100.135: cu semn pe pozitia neta; revizia: de la bara 0 (Pionex ia la urmatoarea ora de funding: 3 plati pe zi
+      // si pe orizontul de o zi); st.fundingCost (rata PRESUPUSA, nu cea reala) = cost oricare ar fi directia, pe |Ql - Qs|
+      if (fundingZi && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }
       bMin = Infinity; bMax = -Infinity;
       for (var d = 0; d < 4; d++) {
         var p = drum[d];

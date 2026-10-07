@@ -106,7 +106,7 @@ var MonteSimbol = (function () {
     function trece(m) {
       var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [], tpa = 0;
       for (var s = 0; s < n; s++) {
-        var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0 });
+        var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0, tip: st.tip, fundingZi: st.fundingZi, fundingCost: st.fundingCost });   // v100.135 (revizia): tipul și funding-ul nu se mai pierd
         cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) { if (parteTp && r.iesit === parteTp) tpa++; else opr++; } per += r.perechi || 0;
       }
       // v100.130: o.peDrum ⇒ rezultatele în ordinea drumurilor (variantele se compară drum cu drum, pe aceleași drumuri)

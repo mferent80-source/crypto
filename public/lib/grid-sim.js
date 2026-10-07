@@ -116,7 +116,7 @@ var GridSim = (function () {
       var iPlus = null, iMinus = null;
       // v100.135: planul în INTERIORUL barei (minimul / maximul pe cele 4 puncte); amândouă în aceeași bară ⇒ minusul întâi (pesimist: iPlus < iMinus strict)
       if (plan) for (var j = 0; j < L && (iPlus === null || iMinus === null); j++) { if (iMinus === null && plan.minus > 0 && tr.min[j] * suma <= -plan.minus) iMinus = j; if (iPlus === null && plan.plus > 0 && tr.max[j] * suma >= plan.plus) iPlus = j; }
-      if (plan && pre && dejaAtins === null) { if (iPlus !== null && iPlus < pre && (iMinus === null || iPlus < iMinus)) dejaAtins = "plus"; else if (iMinus !== null && iMinus < pre && (iPlus === null || iMinus < iPlus)) dejaAtins = "minus"; }
+      if (plan && pre && dejaAtins === null) { if (iPlus !== null && iPlus < pre && (iMinus === null || iPlus < iMinus)) dejaAtins = "plus"; else if (iMinus !== null && iMinus < pre && (iPlus === null || iMinus <= iPlus)) dejaAtins = "minus"; }   // revizia (R5): ≤, ca la rău
       for (var h = 0; h < oriz.length; h++) {
         var bare = bareO[h], ix = Math.min(bare, L) - 1, c = col[h], net = tr.net[ix];
         c.net.push(net); if (acum) c.deAici.push(net - acum.net);
@@ -137,11 +137,33 @@ var GridSim = (function () {
         p5: pc(nets, 0.05), p50: pc(nets, 0.5), p95: pc(nets, 0.95), hist: M.histograma(nets, 24),
         plan: plan ? { p: c.plan / n, pRau: c.planRau / n, zileMediana: c.planZile.length ? mediana(c.planZile) : null, dejaAtins: dejaAtins } : null,
         pLich: c.lich / n, pStop: c.stop / n, pTp: c.tp / n, pIesire: c.ies / n, perechi: c.per / n, maxJos: { p50: pc(mjs, 0.5), p5: pc(mjs, 0.05) }, funding: c.funding / n * suma };
+      if (o.peDrum) out.drumuri = c.net.map(function (x) { return x * suma; });   // revizia (R3): rezultatele în ordinea drumurilor (drum cu drum)
       // revizia (R3): la botul care rulează, hotărârea lui („îl țin?”) depinde de ce URMEAZĂ ⇒ „de aici încolo” întreg: câștigă / pierde, marja, histograma
       if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: marja(dc / n, n), hist: M.histograma(da, 24) }; }
       return out;
     });
     return { n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, acum: acum, orizonturi: orizonturi };
+  }
+
+  // revizia (R3): alte setări pe ACELEAȘI drumuri, cu ACELAȘI motor ca verdictul (14 zile, sămânța 12, fără prefix = bot pornit acum) ⇒ rândul
+  // „așa cum e” e verdictul de deasupra, nu altă simulare (Monte Carlo pierdea tipul și funding-ul). lista = [{ nume, st, tp?, tu? }],
+  // o.oriz = orizontul citit (zile); drum cu drum față de rândul de referință (cel cu tu, altfel primul). g are forma cardului din Monte Carlo
+  function drumCuDrum(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || !a.length || a.length !== b.length) return null;
+    var bun = 0, rau = 0;
+    for (var i = 0; i < a.length; i++) { var dd = b[i] - a[i]; if (dd > 0.005) bun++; else if (dd < -0.005) rau++; }
+    return { maiBun: bun / a.length, maiRau: rau / a.length, egal: (a.length - bun - rau) / a.length };
+  }
+  function compara(b15, lista, o) {
+    o = o || {}; var oriz = o.oriz > 0 ? o.oriz : 7, n = o.n > 0 ? o.n : 500;
+    var rows = (Array.isArray(lista) ? lista : []).map(function (x) {
+      var r = simuleaza(b15, x.st, { zile: o.zile, orizonturi: [oriz], n: n, seed: o.seed, plan: null, pornitLa: null, peDrum: true }), z = r && !r.eroare ? r.orizonturi[0] : null;
+      var g = z ? { zile: oriz, n: n, drumuri: z.drumuri, p5: z.p5, p50: z.p50, p95: z.p95, pPlus: z.pCastig, pLichidare: z.pLich, pStop: z.pStop, pTp: z.pTp, pIesire: z.pIesire, perechiMedii: z.perechi, hist: z.hist, funding: z.funding } : { eroare: r && r.eroare || "fără date" };
+      return { nume: x.nume, st: x.st, tp: x.tp, tu: x.tu, g: g };
+    });
+    var ref = rows.filter(function (x) { return x.tu; })[0] || rows[0];
+    rows.forEach(function (x) { x.drum = x === ref || !ref || !ref.g.drumuri || x.g.eroare ? null : drumCuDrum(ref.g.drumuri, x.g.drumuri); });
+    return rows;
   }
 
   // ---------------- (3) verdictul ----------------
@@ -171,6 +193,6 @@ var GridSim = (function () {
     return { rand: rand, marja: mj > 0 ? "±" + mj + " puncte" : "sub ±1 punct", culoare: P >= 55 ? "good" : P <= 45 ? "bad" : "mijl", sub: sub, faCe: faCe, deAici: !!d,
       nota: "Pe istoria monedei reluată, fără tendința perioadei; o criză mai rea decât orice a avut nu apare în drumuri. Umplerile sunt estimate pe bare, nu pe ordinele reale." };
   }
-  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, verdict: verdict, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
+  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, verdict: verdict, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;
