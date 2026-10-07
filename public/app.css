@@ -2462,3 +2462,22 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 .mcsRevBtn:hover,.mcsRevBtn:focus-visible{color:var(--text,#e6edf3)}
 /* v100.133: orizontul la alegere în Monte Carlo pe simbol */
 #mcsPagina .mcsOriz{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 14px 0}
+/* v100.134: Simulator grid (#gridsim / #gsPagina) - clasele paginii Monte Carlo (mcsCap, mcsRand, mcsHist, mcsAvert) + ale ei */
+#gsPagina .mcsCap{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}#gsPagina .mcsCap h4{margin:0}
+#gsPagina .gsSec{margin-top:12px}#gsPagina .gsSec>.t212PanouCap{margin-bottom:6px}
+#gsPagina .gsMod{display:flex;gap:6px;flex-wrap:wrap;margin:0 14px 8px}#gsPagina .tbIntBtn{white-space:nowrap;padding:4px 10px;border-radius:8px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;cursor:pointer}
+#gsPagina .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
+#gsPagina .gsBotAles{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 14px 8px}#gsPagina .gsBotAles select{max-width:100%}
+#gsPagina .gsCod{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:0 14px 8px}#gsPagina .gsCodL{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:12px}
+#gsPagina .gsCod textarea{width:100%;min-width:0;font:12px/1.4 ui-monospace,Consolas,monospace;resize:vertical;background:var(--tb-fond);color:var(--text);border:1px solid var(--tb-linie);border-radius:8px;padding:6px 8px}
+#gsPagina .gsCampuri{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:0 14px}#gsPagina .gsCampuri label{display:flex;flex-direction:column;gap:3px;color:var(--muted);font-size:12px;min-width:0}
+#gsPagina .gsCampuri input,#gsPagina .gsCampuri select{width:104px;max-width:100%}#gsPagina .gsCampuri #gsSim{width:120px}#gsPagina .gsCampuri #gsPornit{width:150px}#gsPagina .gsCampuri .t212Btn{margin-left:auto}
+#gsPagina .gsNota{margin:8px 14px 0}#gsPagina .gsCodOut{margin:8px 14px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}#gsPagina .gsCodOut code{font-size:11.5px;word-break:break-all;background:var(--tb-fond);padding:3px 6px;border-radius:6px;border:1px solid var(--tb-linie)}
+#gsPagina .gsVerdict{margin:6px 14px 0;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}#gsPagina .gsVerdict b{font-size:24px;line-height:1.2;letter-spacing:.01em}
+#gsPagina .gsVerdict.good b{color:var(--good,#2fd27a)}#gsPagina .gsVerdict.bad b{color:var(--bad,#ff5a6a)}#gsPagina .gsVerdict.mijl b{color:var(--warn,#f5c451)}
+#gsPagina .gsSub{margin:4px 14px 0;font-size:15px}#gsPagina .gsHist{margin:6px 14px 0;max-width:600px}
+#gsPagina .gsRiscuri{padding:0 14px}#gsPagina .mcsRand{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--tb-linie);font-size:13px}#gsPagina .mcsRand span{color:var(--muted)}#gsPagina .mcsRand b{text-align:right}
+#gsPagina .gsDurate td,#gsPagina .gsDurate th{white-space:nowrap;font-variant-numeric:tabular-nums}#gsPagina .gsRand{cursor:pointer}#gsPagina tr.gsRandAles td{font-weight:700;background:var(--tb-fond2)}
+#gsPagina .t212Tab{display:table}#gsPagina .t212Tab thead{display:table-header-group}#gsPagina .t212Tab tbody{display:table-row-group}
+#gsPagina .t212Fac{margin:8px 14px 0}#gsPagina .mcsAvert{margin:12px 14px 0;padding:8px 10px;border-left:3px solid var(--warn);background:rgba(245,196,81,.08);border-radius:4px;font-size:13px}
+@media (max-width:760px){#gsPagina .gsCampuri label{flex:1 1 calc(50% - 8px)}#gsPagina .gsCampuri input,#gsPagina .gsCampuri select,#gsPagina .gsCampuri #gsSim,#gsPagina .gsCampuri #gsPornit{width:100%}#gsPagina .gsCampuri .t212Btn{margin-left:0;flex:1 1 100%}#gsPagina .gsVerdict b{font-size:20px}#gsPagina .t212PanouCap{flex-wrap:wrap}#gsPagina .t212PanouCap>.tbSub{flex-basis:100%}}

@@ -3087,6 +3087,7 @@ function navTo(id,load=false){
    if(id==="edgepro")renderEdgePro();
    if(id==="profitready")renderProfitReadiness(false);
    if(id==="replaylab")renderReplayLab();
+   if(id==="gridsim"){if(typeof gsPorneste==="function")gsPorneste()}   // v100.134: Simulator grid (botul pe 500 de drumuri, 1 / 3 / 7 / 14 zile)
    if(id==="montecarlo"){if(typeof rlPorneste==="function")rlPorneste(false);if(typeof mcsDeseneaza==="function")mcsDeseneaza()}   // v100.113: riscul tău (raportul de noapte); vechiul Monte Carlo pe semnale pornește din butonul lui
    if(id==="scenario")renderScenario();
    if(id==="health")runHealthCheck();

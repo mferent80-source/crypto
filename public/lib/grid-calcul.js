@@ -178,6 +178,13 @@ var GridCalcul = (function () {
     v[N] = sus;
     return v;
   }
+  // v100.134 (Simulator grid): gridul ARITMETIC - liniile la distante egale, cum le pune Pionex la „Arithmetic” (GRID-FISA le deseneaza la fel)
+  function niveluriArit(jos, sus, N) {
+    var p = (sus - jos) / N, v = [];
+    for (var k = 0; k <= N; k++) v.push(jos + p * k);
+    v[N] = sus;
+    return v;
+  }
 
   // Pretul de lichidare cu pozitia PLINA pe partea periculoasa, marja izolata
   // normalizata la 1 (suma se simplifica). Castigul din grile nu se socoteste
@@ -368,7 +375,7 @@ var GridCalcul = (function () {
   }
 
   return { C: C, bare: bare, bareToate: bareToate, bareBursa: bareBursa, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent, oriDe: oriDe,
-    latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, lichidare: lichidare,
+    latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, niveluriArit: niveluriArit, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
     regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine, eCrypto: eCrypto };
 })();
