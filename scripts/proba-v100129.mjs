@@ -26,11 +26,12 @@ const bot = (o) => Object.assign({ activ: true, baza: "PONS.PERP", gridJos: 0.38
 
 // ---------------- (1) Enter + recente ----------------
 await test("(1a) recentele: ultimul analizat primul, fără dubluri, cel mult 10; gunoiul (simboluri invalide, nu-listă) e ignorat", () => {
-  assert.deepEqual(G.mcsRecente(["AAPL", "PONS"], "RHM.DE"), ["RHM.DE", "AAPL", "PONS"]);
-  assert.deepEqual(G.mcsRecente(["AAPL", "PONS", "RHM.DE"], "PONS"), ["PONS", "AAPL", "RHM.DE"]);
+  const S = (l) => l.map((x) => x.s);   /* v100.130: recentele țin și felul */
+  assert.deepEqual(S(G.mcsRecente(["AAPL", "PONS"], "RHM.DE")), ["RHM.DE", "AAPL", "PONS"]);
+  assert.deepEqual(S(G.mcsRecente(["AAPL", "PONS", "RHM.DE"], "PONS")), ["PONS", "AAPL", "RHM.DE"]);
   assert.equal(G.mcsRecente(Array.from({ length: 15 }, (_, i) => "S" + i), "X").length, 10);
-  assert.deepEqual(G.mcsRecente(null, "AAPL"), ["AAPL"]);
-  assert.deepEqual(G.mcsRecente(["<b>", "AAPL"], "PONS"), ["PONS", "AAPL"]);
+  assert.deepEqual(S(G.mcsRecente(null, "AAPL")), ["AAPL"]);
+  assert.deepEqual(S(G.mcsRecente(["<b>", "AAPL"], "PONS")), ["PONS", "AAPL"]);
 });
 await test("(1b) caseta: rândul „recente” deasupra scurtăturilor; Enter în câmp pornește analiza, Enter în stop / țintă reface simularea", () => {
   const h = G.mcsHtml({ recente: ["RHM.DE", "PONS"], scurtaturi: ["BE"] });
@@ -166,11 +167,11 @@ await test("(4c) butoanele 🎲: în detaliul poziției T212 și Salt, cu simbol
   assert.match(G.mcsPozButon("RHM.DE", 945.4, 1349.6, 903.41), /^<button type="button" class="t212BtnLinie" data-action-click="mcsPozitie\('RHM\.DE',945\.4,1349\.6,903\.41\)">🎲 Monte Carlo pe poziție<\/button>$/);
   assert.equal(G.mcsPozButon("<x>", 1, 1, 1), "");
 });
-await test("(E) versiunea v100.129 (colectorul neatins)", () => {
+await test("(E) versiunea de la v100.129 în sus (colectorul neatins)", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.129"/); assert.match(html, /id="antetVersiune">v100\.129 /); assert.match(html, /id="healthAppVersion">v100\.129</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.129.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-129";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.129"/); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.129");
+  assert.match(html, /content="v100\.1(29|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(29|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(29|[3-9]\d)</); /* v100.130: lărgit */
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(29|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(29|[3-9]\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(29|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(29|[3-9]\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);

@@ -117,9 +117,17 @@ function saltIdeiHtml(d) {
     var t = { urcare: ["ies dintr-o perioadă liniștită, cu volum", function (x) { return saltP1(x.ruptura) + " peste maximul pe 20 de zile, volum ×" + Number(x.volX || 0).toFixed(1).replace(".", ","); }],
       revers: ["prima zi de întoarcere după o cădere de 15%+", function (x) { return "−" + Math.round((x.cadere || 0) * 100) + "% de la maxim"; }],
       revine: ["au scăzut puternic și acum revin", function (x) { return "−" + Math.round((x.cadere || 0) * 100) + "% de la maxim, revine"; }] }[fila];
-    var l = L[fila] || [];
+    var l = L[fila] || [], nv = d.nivListe || {};
+    // v100.130: stopul și ținta Radarului pentru o intrare azi (ca la T212), socotite pe pagină când se deschide fila (saltNivelePeLista)
+    var nivCel = function (x) {
+      var n = nv[x.simbol];
+      if (!n) return '<td class="tbSub">…</td><td class="tbSub">…</td>';
+      if (n.eroare) return '<td class="tbSub">—</td><td class="tbSub">—</td>';
+      return '<td class="bad">' + saltPret(n.stop, "") + '<span class="t212Mic">' + (n.riscPct != null ? "−" + (n.riscPct * 100).toFixed(1).replace(".", ",") + "%" : "") + '</span>' + (n.trend === "jos" ? '<span class="t212Mic">trend în jos: doar dacă se întoarce</span>' : '') + '</td><td class="good">' + saltPret(n.tinta, "") + '</td>';
+    };
     h += '<p class="tbSub saltNota">' + saltEsc(t[0]) + (dv[fila] && dv[fila].text ? ' · <b>' + saltEsc(dv[fila].text) + '</b>' : '') + '</p>'
-      + (l.length ? '<div class="rlTab"><table class="t212Tab saltLista"><thead><tr><th>Instrument</th><th>Acum</th><th>De ce e aici</th></tr></thead><tbody>' + l.map(function (x) { return '<tr><td><b>' + saltEsc(x.simbol || x.isin) + '</b><span class="t212Mic">' + saltEsc(String(x.nume || "").slice(0, 44)) + '</span></td><td>' + saltPret(x.pret, "") + '</td><td class="saltDece">' + saltEsc(t[1](x)) + '</td></tr>'; }).join("") + '</tbody></table></div>'
+      + (l.length ? '<div class="rlTab"><table class="t212Tab saltLista"><thead><tr><th>Instrument</th><th>Acum</th><th>De ce e aici</th><th>Stop</th><th>Țintă</th></tr></thead><tbody>' + l.map(function (x) { return '<tr><td><b>' + saltEsc(x.simbol || x.isin) + '</b><span class="t212Mic">' + saltEsc(String(x.nume || "").slice(0, 44)) + '</span></td><td>' + saltPret(x.pret, "") + '</td><td class="saltDece">' + saltEsc(t[1](x)) + '</td>' + nivCel(x) + '</tr>'; }).join("") + '</tbody></table></div>'
+        + '<p class="tbSub saltNota">Stopul și ținta: ale Radarului pentru o intrare azi (ca la Trading 212: stopul din agitația ei, ținta la de 2 ori distanța), socotite acum, la deschiderea filei. Nu trec prin poarta din fila „Idei”.</p>'
         : '<p class="sugGol">' + saltEsc(r ? "nimic azi" : "aștept tura de la 8:00") + '</p>');
   }
   return '<div class="t212Panou saltPanou"><div class="t212PanouCap"><h4>💡 Idei de cumpărare</h4><span class="tbSub">' + (r ? saltEsc("din " + saltCate(r.judecate || 0, "instrument Salt judecat", "instrumente Salt judecate") + (r.la ? " pe " + new Date(r.la).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit" }) : "") + (idei ? ", " + idei.length + " trec de poartă" : "")) : "") + '</span></div>' + h
@@ -138,7 +146,8 @@ function saltPozRandHtml(r, d) {
   var rand = '<tr class="t212Rand" id="saltR-' + isin + '" tabindex="0" aria-expanded="' + des + '" data-action-click="saltComuta(\'' + isin + '\')">' + cap
     + '<td class="c-acum">' + saltPret(pr, m) + (m !== "EUR" && r.fx ? '<span class="t212Mic">≈ ' + saltBani(pr / r.fx) + ' EUR</span>' : '') + '</td>'
     + '<td class="c-rez"><b class="' + saltCls(r.rez !== null ? r.rez : r.rezM) + '">' + (r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + '</b><span class="t212Mic">' + (r.pct !== null ? saltP1(r.pct) + " în EUR · " : "") + 'preț ' + saltP1(pr / a.p.pretMediu - 1) + '</span></td>'
-    + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (atins ? "bad" : "") + '">' + saltPret(n.stopPozitie, m) + '</span><span class="t212Mic">' + (atins ? "DEPĂȘIT" : saltP1(n.stopPozitie / pr - 1) + " de acum") + '</span>' : '—') + '</td>'
+    + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (atins ? "bad" : "") + '">' + saltPret(n.stopPozitie, m) + '</span><span class="t212Mic">' + (atins ? "DEPĂȘIT" : saltP1(n.stopPozitie / pr - 1) + " de acum") + '</span>'
+      + (atins && a.revine ? '<span class="t212Mic">🎲 revine la intrare: ' + Math.round(a.revine.p * 100) + '% în ' + a.revine.zile + ' z</span>' : '') : '—') + '</td>'
     + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + saltPret(n.tintaPozitie, m) + '</span><span class="t212Mic">' + saltP1(n.tintaPozitie / pr - 1) + '</span>' : '—') + '</td>'
     + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b></td>'
     + '<td class="c-pond">' + (r.pond !== null ? Math.round(r.pond * 100) + '%<span class="t212MiniBara"><i class="' + (r.pond > 0.2 ? " rau" : r.pond > 0.15 ? " atentie" : "") + '" style="width:' + Math.min(100, r.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—') + '</td></tr>';
@@ -152,6 +161,7 @@ function saltPozRandHtml(r, d) {
     + (a.avert ? '<p class="tbWarn">' + saltEsc(a.avert) + '</p>' : '')
     + '<p><span class="t212Pill ' + (SALT_NIVEL[c.nivel] || SALT_NIVEL["fara-date"])[1] + '">' + saltEsc(c.eticheta || (SALT_NIVEL[c.nivel] || SALT_NIVEL["fara-date"])[0]) + '</span> <b>' + saltEsc(saltInMoneda(c.titlu || "", m)) + '</b></p>'
     + (c.motive && c.motive.length ? '<ul class="t212Motive">' + c.motive.slice(0, 4).map(function (x) { return '<li>' + saltEsc(saltInMoneda(x.titlu, m)) + (x.text ? ' <span class="t212Mic saltInline">' + saltEsc(saltInMoneda(x.text, m).replace(/ \(măsurat pe trade-urile tale\)/, "")) + '</span>' : '') + '</li>'; }).join("") + '</ul>' : '')
+    + (atins && a.revine ? '<p class="saltRevine">🎲 Șansa să revină la prețul tău de intrare (' + saltPret(a.p.pretMediu, m) + ') măcar o dată în ' + a.revine.zile + ' de zile de bursă: <b>' + Math.round(a.revine.p * 100) + '%</b>; la capăt peste intrare: ' + Math.round(a.revine.pCapat * 100) + '%. <span class="t212Mic saltInline">Monte Carlo pe istoria ei, fără tendința perioadei: zile reale reluate de 1.000 de ori, nu o predicție.</span></p>' : '')
     + (c.faCe ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + saltEsc(saltInMoneda(c.faCe, m)) + '<span class="t212Mic">dacă vinzi acum: ' + saltEsc(r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + (restBani ? " · " + saltEsc(restBani) : "") + '</span></p>' : '')
     + '<p class="tbSub">' + saltEsc(qty + " buc · plătit " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + " pe bucată" + (de ? " pe " + de : "") + (p.plata === "EUR" && m && m !== "EUR" ? " (= " + saltBani(a.p.pretMediu) + " " + saltMon(m) + (de ? " la cursul din ziua cumpărării" : " la cursul de azi") + (r.fx ? "; azi 1 EUR = " + (r.fx / (m === "GBp" ? 100 : 1)).toFixed(4).replace(".", ",") + " " + (m === "GBp" ? "GBP" : m) : "") + ")" : "")) + '</p>'
     + (!p.de ? '<p class="tbSub">Fără data cumpărării, stopul care urcă pornește de la prețul de azi: scrie data ca să urce de la maximul de după cumpărare.</p>' : '')
@@ -266,7 +276,26 @@ function saltDeseneazaPoz() {
 }
 function saltDeseneazaIdei() { var el = saltEl("saltIdeiBox"); if (el) el.innerHTML = saltIdeiHtml(saltStare.d); }
 function saltFiltru() { var i = saltEl("saltCauta"), t = saltEl("saltTabel"); saltStare.d.filtru = i ? i.value : ""; if (t) t.innerHTML = saltTabelHtml(saltStare.d); }   // doar tabelul: câmpul își păstrează cursorul
-function saltFila(k) { saltStare.d.fila = k; saltDeseneazaIdei(); }
+function saltFila(k) { saltStare.d.fila = k; saltDeseneazaIdei(); saltNivelePeLista(k); }
+// v100.130: stopul și ținta pentru un instrument din liste - ActiuniSemnale.niveluri pe prețul de acum (ultima bară), ca pe pagina T212
+function saltNivLista(b) {
+  var P = Array.isArray(b) && b.length ? b[b.length - 1].c : null, n = P > 0 ? ActiuniSemnale.niveluri(b, P, {}) : null;
+  if (!n || n.nivel !== "ok") return { eroare: n && n.motiv || "fără prețuri" };
+  return { pret: P, intrare: n.intrare ? n.intrare.pret : null, stop: n.stop, tinta: n.tinta, riscPct: n.riscPct, trend: n.trend };
+}
+// pe rând, cu o pauză între cereri (Yahoo prin server); fiecare rând apare când e gata; o dată pe pagină
+async function saltNivelePeLista(fila) {
+  var d = saltStare.d, l = d.raport && d.raport.liste && d.raport.liste[fila]; if (!Array.isArray(l)) return;
+  d.nivListe = d.nivListe || {}; saltStare.nivInLucru = saltStare.nivInLucru || {};
+  for (var i = 0; i < l.length; i++) {
+    var s = l[i] && l[i].simbol; if (!s || d.nivListe[s] || saltStare.nivInLucru[s]) continue;
+    saltStare.nivInLucru[s] = true;
+    try { d.nivListe[s] = saltNivLista(await saltBareDe(s)); } catch (e) { d.nivListe[s] = { eroare: "n-am prețurile" }; }
+    saltStare.nivInLucru[s] = false;
+    saltDeseneazaIdei();
+    await new Promise(function (r) { setTimeout(r, 250); });
+  }
+}
 function saltComuta(isin) {
   var d = saltStare.d; d.deschis[isin] = !d.deschis[isin];
   var r = saltEl("saltR-" + isin), det = saltEl("saltDet-" + isin); if (r) r.setAttribute("aria-expanded", String(!!d.deschis[isin])); if (det) det.hidden = !d.deschis[isin];
@@ -315,6 +344,17 @@ async function saltVerifica() {
   // revizia (R6): două „Verifică” la rând - rezultatul celui vechi nu calcă peste cel nou
   if (d.verif && d.verif.x === x) { d.verif = nou; arata(); }
 }
+// v100.130: stopul care urcă DEPĂȘIT și prețul sub intrare ⇒ șansa să revină la intrare în 60 de zile de bursă. Aceleași drumuri ca
+// 🎲 „Monte Carlo pe poziție” (MonteSimbol.pret, sămânța 21, orizonturile 20 / 60): cifra de aici = cifra de pe pagina Monte Carlo.
+// Prețurile în moneda simbolului (intrarea la cursul din ziua cumpărării), ca butonul 🎲.
+function saltSansaRevenire(b, a) {
+  if (typeof MonteSimbol === "undefined" || !a || !a.p || !a.niv) return null;
+  var P = a.p.pret, I = a.p.pretMediu;
+  if (!(P > 0) || !(a.niv.stopPozitie > P) || !(I > P) || !Array.isArray(b)) return null;
+  var m = MonteSimbol.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: 0.1, tintaPct: 0.15, prag: 0.1, intrare: I / P });
+  var o = m && !m.eroare ? m.orizonturi[1] : null;
+  return o ? { p: o.pIntrare, pCapat: o.pPesteIntrare, zile: 60 } : null;
+}
 // o poziție: barele simbolului + cursul EUR ⇒ moneda simbolului (prețul mediu plătit în EUR, valoarea în EUR) + beta față de indicele pieței
 async function saltAnalizeazaUna(p) {
   var u = (saltStare.d.univers || []).filter(function (x) { return x.isin === p.isin; })[0], m = u && u.moneda, b = await saltBareDe(p.simbol), fx = null, pf = Salt.perecheFx(m);
@@ -326,6 +366,7 @@ async function saltAnalizeazaUna(p) {
     a.fxAcum = m === "EUR" ? 1 : fx && fx.length ? fx[fx.length - 1].c : null; if (m && m !== "EUR" && a.fxAcum > 0) saltStare.fx[m] = a.fxAcum;
     try { var q = await saltBareIndice(m); a.beta = q && q.length ? ActiuniSemnale.beta(b, q) : null; } catch (e) { a.beta = null; }
     a.indice = SALT_INDICE[m] ? SALT_INDICE[m].nume : null;
+    try { a.revine = saltSansaRevenire(b, a); } catch (e) { a.revine = null; }
   }
   return a;
 }
@@ -349,6 +390,8 @@ async function saltPorneste(fortat) {
     saltDeseneaza();
     try { var er = await saltBareDe("EURRON=X"); saltStare.d.eurRon = er.length ? er[er.length - 1].c : null; } catch (e) { saltStare.d.eurRon = null; }
     await saltAnalize();
+    // v100.130: pagina se deschide pe o listă (fără idei azi) ⇒ stopul și ținta pentru ea, după poziții
+    var fa = saltFilaAleasa(saltStare.d); if (fa !== "idei") saltNivelePeLista(fa);
   } catch (e) { saltStare.d.eroare = "N-am putut citi pozițiile Salt: " + (typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e)); }
   finally { saltStare.inLucru = false; }
   if (saltStare.d.eroare) saltDeseneaza(); else saltDeseneazaPoz();   // revizia (R4): pe drumul bun doar cifrele și pozițiile - ce scrii în formular / „Vreau” rămâne

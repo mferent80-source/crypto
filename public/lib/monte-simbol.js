@@ -31,10 +31,19 @@ var MonteSimbol = (function () {
     var mu = tendinta(b), fara = o.cuTendinta !== true;
     // v100.129: poziția lui - intrarea ca raport față de prețul de acum (> 1 = e pe minus: o atinge dacă urcă; < 1 = pe plus: o atinge dacă scade)
     var R = o.intrare > 0 ? o.intrare : null;
-    function trece(Z, j, m) {
+    // v100.130: alte stopuri pe ACELEAȘI drumuri (doar în trecerea de bază): cine vine întâi și cu cât ieși - la stop cel mult nivelul
+    // (o deschidere sub el = ieși la deschidere, gap), la țintă cel puțin ținta; niciunul ⇒ la capăt
+    var SL = Array.isArray(o.stopuri) ? o.stopuri.filter(function (x) { return x > 0 && x < 1; }) : null;
+    function trece(Z, j, m, cuSL) {
       var H = Z * bz, rnd = generator((o.seed || 1) * 1000 + j), ret = [], sus = 0, jos = 0, st = 0, ti = 0, ai = 0, pi = 0, pis = 0;
+      var sl = cuSL && SL ? SL.map(function (x) { return { sp: x, st: 0, ti: 0, v: [] }; }) : null;
       for (var s = 0; s < n; s++) {
         var d = drum(b, H, Math.min(bloc, H), 1, rnd, m), atins = null, atI = false;
+        if (sl) sl.forEach(function (k) {
+          var ies = null;
+          for (var q = 0; q < d.length && ies === null; q++) { if (d[q].l <= 1 - k.sp) { ies = Math.min(1 - k.sp, d[q].o) - 1; k.st++; } else if (d[q].h >= 1 + tp) { ies = Math.max(1 + tp, d[q].o) - 1; k.ti++; } }
+          k.v.push(ies === null ? d[d.length - 1].c - 1 : ies);
+        });
         for (var i = 0; i < d.length && !atins; i++) { if (d[i].l <= 1 - sp) atins = "stop"; else if (d[i].h >= 1 + tp) atins = "tinta"; }
         if (atins === "stop") st++; else if (atins === "tinta") ti++;
         // revizia (R3): „peste intrare la capăt” și varianta cu stopul activ (drumurile care au atins stopul ies înainte de capăt)
@@ -43,13 +52,15 @@ var MonteSimbol = (function () {
       }
       ret.sort(function (a, c) { return a - c; });
       // istoricul sub 3× orizontul ⇒ simularea doar reamestecă aceleași zile (spus pe pagină)
-      return { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined, pPesteIntrareStop: R ? pis / n : undefined };
+      var rez = { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined, pPesteIntrareStop: R ? pis / n : undefined };
+      if (sl) rez.stopuri = sl.map(function (k) { var v = k.v.sort(function (a, c) { return a - c; }); return { sp: k.sp, pStop: k.st / n, pTinta: k.ti / n, pNiciuna: (n - k.st - k.ti) / n, media: v.reduce(function (a, c) { return a + c; }, 0) / n, p5: pc(v, 0.05), p50: pc(v, 0.5) }; });
+      return rez;
     }
     // revizia Opus (07.10): fără tendință = MIJLOCUL la zero, nu media - cu media scoasă, o cădere de câteva zile (restul liniștit) făcea
     // ca mijlocul să iasă pe plus (o „revenire” inventată de calcul). Prima trecere măsoară mijlocul log pe orizont, a doua îl scoate.
     var orizonturi = (o.orizonturi || [7, 30]).map(function (Z, j) {
       var mF = mu; if (fara) { var p0 = trece(Z, j, mu); mF = mu + Math.log(1 + p0.p50) / (Z * bz); }
-      var r = trece(Z, j, fara ? mF : 0);
+      var r = trece(Z, j, fara ? mF : 0, true);
       // cât de mult contează tendința perioadei: aceeași simulare, cu ea păstrată (doar cifrele de bază, pentru comparație)
       if (fara) { var c = trece(Z, j, 0); r.cuTendinta = { p50: c.p50, pSus: c.pSus, pJos: c.pJos, pStop: c.pStop, pTinta: c.pTinta }; }
       return r;
@@ -76,8 +87,10 @@ var MonteSimbol = (function () {
         var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: st.stop || null });
         cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) opr++; per += r.perechi || 0;
       }
+      // v100.130: o.peDrum ⇒ rezultatele în ordinea drumurilor (variantele se compară drum cu drum, pe aceleași drumuri)
+      var peDrum = o.peDrum ? net.slice() : undefined;
       net.sort(function (a, c) { return a - c; });
-      return { n: n, zile: zile, zileIstoric: Math.floor(b15.length / BZ), p5: pc(net, 0.05), p25: pc(net, 0.25), p50: pc(net, 0.5), p75: pc(net, 0.75), p95: pc(net, 0.95),
+      return { n: n, drumuri: peDrum, zile: zile, zileIstoric: Math.floor(b15.length / BZ), p5: pc(net, 0.05), p25: pc(net, 0.25), p50: pc(net, 0.5), p75: pc(net, 0.75), p95: pc(net, 0.95),
         pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24),
         pretMijloc: pc(cap.sort(function (a, c) { return a - c; }), 0.5) };
     }

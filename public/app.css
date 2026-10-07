@@ -2444,3 +2444,8 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #mcsPagina .mcsVar td,#mcsPagina .mcsVar th{white-space:nowrap;font-variant-numeric:tabular-nums}
 #mcsPagina .mcsVar tr.mcsVarTu td{font-weight:700}
 #mcsPagina .mcsPoz{margin:8px 0}
+/* v100.130: felul simbolului la recente / scurtături, stopurile pe aceleași drumuri, șansa de revenire în Salt */
+#mcsPagina .mcsForm button small{font-size:10.5px;color:var(--muted);margin-left:4px;font-weight:600}
+#mcsPagina .mcsVar td .t212Mic{white-space:nowrap}
+#salt .saltRevine{margin:6px 0;line-height:1.45}
+#salt .saltLista td.bad,#salt .saltLista td.good{font-variant-numeric:tabular-nums}
