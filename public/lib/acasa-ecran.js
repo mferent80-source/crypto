@@ -328,7 +328,8 @@ function acasaDeseneaza() {
       + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi == null ? "acMut" : iesi ? "bad" : "good") + '">' + (iesi == null ? "aduc prețurile…" : iesi ? iesi + " de ieșit" : "nimic roșu") + '</b></div>'   /* v100.40: null = inca nu stiu, nu „nimic roșu” */
       + (zt && zt.t212 !== null ? '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.t212 >= 0 ? "good" : "bad") + '">' + (zt.t212 >= 0 ? "+" : "−") + escapeHtml(acLei(Math.abs(zt.t212))) + '</b></div>' : '') : '<p class="acMut">Aduc contul…</p>')
     + (rz.length ? '<div class="acEt" style="margin-top:4px">Următoarele rezultate financiare' + (rz.some(function (x) { return !x.sigur; }) ? " (estimate)" : "") + ':</div><div class="acRez">' + rz.slice(0, 3).map(function (x) { var z = zile(x.data); return '<b>' + escapeHtml(x.simbol) + '</b><span>' + escapeHtml(acZiRo(x.data)) + '</span><b class="' + (z <= 14 ? "warn" : "acMut") + '">' + (z <= 0 ? "azi" : z === 1 ? "mâine" : "peste " + acCate(z, "zi", "zile")) + '</b>'; }).join("") + '</div>' : '')
-    + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>';
+    + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>'
+    + (typeof saltAcasaHtml === "function" && typeof contTot !== "undefined" ? saltAcasaHtml(contTot.salt) : "");   // v100.126: Salt lângă T212 (rezumatul colectorului)
 
   var ideiL = d.idei && d.idei.idei && Array.isArray(d.idei.idei.actiuni) ? d.idei.idei.actiuni : [], ii = d.idei && d.idei.idei;
   $("acIdei").innerHTML = '<div class="acCap"><h4>Idei de azi</h4><span class="acSub">filtre, nu predicții</span></div>'

@@ -201,6 +201,20 @@ function saltDreaptaHtml(d, R) {
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + saltEsc(sfat) + '</p></div>';
 }
 function saltSusHtml(d, R) { return saltKpiHtml(d, R) + saltTodoHtml(R); }
+// v100.126 (el 07.10, „ok fa idei”): Salt lângă Trading 212 - din rezumatul colectorului (/api/t212?action=saltRezumat, la 15 minute)
+function saltBandaHtml(r) {
+  if (!r || !(r.n > 0) || r.val == null) return "";
+  return '<span><b>Salt</b> · ' + saltBani1(r.val) + ' EUR' + (r.eurRon > 0 ? ' <span class="tbSub">(≈ ' + saltLei(r.val * r.eurRon) + ')</span>' : '') + ' · deschise <b class="' + saltCls(r.rez) + '">' + saltSuma1(r.rez) + '</b></span>';
+}
+function saltAcasaHtml(r) {
+  if (!r || !(r.n > 0) || r.val == null) return "";
+  var ie = (r.iesi || []).length, at = (r.atentie || []).length;
+  return '<div class="acEt" style="margin-top:6px">Salt · ' + saltEsc(saltCate(r.n, "poziție", "poziții")) + '</div>'
+    + '<div class="acLin"><span>Valoarea</span><b>' + saltBani1(r.val) + ' EUR</b></div>'
+    + '<div class="acLin"><span>Pozițiile deschise</span><b class="' + saltCls(r.rez) + '">' + saltSuma1(r.rez) + '</b></div>'
+    + '<div class="acLin"><span>Semafoare</span><b class="' + (ie ? "bad" : at ? "tbWarn" : "good") + '">' + (ie ? ie + " de ieșit" + (r.iesi.length ? " (" + saltEsc(r.iesi.join(", ")) + ")" : "") : at ? at + " cu atenție" : "nimic roșu") + '</b></div>'
+    + '<button class="acBtn" type="button" data-action-click="navTo(\'salt\',true)">Deschide Salt</button>';
+}
 function saltHtml(d, acum) {
   d = d || {}; var R = saltRanduri(d), r = d.raport, tb = r && Array.isArray(r.tabel) ? r.tabel : [];
   return (d.eroare ? '<p class="tbWarn">' + saltEsc(d.eroare) + '</p>' : '')

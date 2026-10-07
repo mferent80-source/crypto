@@ -48,8 +48,9 @@
     return { isin: x.isin, simbol: x.simbol, nume: x.nume, tip: x.tip, bursa: x.bursa, pret: b[j].c, zi: b[j - 1].c > 0 ? b[j].c / b[j - 1].c - 1 : null, trend: trendLa(b, j) };
   }
   // analiza unei poziții, pe barele zilnice ale simbolului - aceleași module ca pagina Trading 212 (fără planul și istoricul T212)
-  function analizeaza(poz, b, acum) {
-    var AS = root.ActiuniSemnale, PR = root.Probabilitati, CL = root.Consilier, CS = root.Consiliu;
+  // v100.126: modulele pot veni ca parametru (colectorul: Probabilitati nu stă pe globalThis acolo); fără ele, cele globale (pagina)
+  function analizeaza(poz, b, acum, deps) {
+    var g = deps || {}, AS = g.ActiuniSemnale || root.ActiuniSemnale, PR = g.Probabilitati || root.Probabilitati, CL = g.Consilier || root.Consilier, CS = g.Consiliu || root.Consiliu;
     if (!poz || !Array.isArray(b) || b.length < 30) return { eroare: "fara-bare" };
     if (!AS || !CS) return { eroare: "fara-module" };
     acum = acum === undefined ? Date.now() : acum;

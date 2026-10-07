@@ -1031,7 +1031,7 @@ function t212Cireasa(l) {
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", function () { jtAplicaFiltru(); });
 
 // v87: tot contul pe un rand, sus pe ambele pagini: botii Pionex (USDT, cu echivalentul in lei) si Trading 212 (lei)
-var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0, conturi: null, conturiLa: 0, sugestii: null, sugestiiLa: 0 };
+var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0, conturi: null, conturiLa: 0, salt: null, saltLa: 0, sugestii: null, sugestiiLa: 0 };
 // v100.97 (el, 05.10: „să afișezi la bot SOLDUL CONTULUI”): soldul Pionex = conturile (spot USDT+USDC, futures manual) + ce valorează
 // boții activi (investit + profitul lor). Pe contul lui azi aproape tot stă în bot (spot ~0,006, futures 0, TAKE 42,47 investit).
 // conturi = { spot, futures } citite; null / un cont lipsă ⇒ conturiCitite:false și suma e doar „în boți” - nu un „sold” fals de mic.
@@ -1094,6 +1094,7 @@ async function contTotAsigura() {
     // v100.25: toata istoria (arhiva de acasa + prima pagina Pionex), nu doar primii 10
     if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { var bi = (typeof jtAduBoti === "function" ? await jtAduBoti() : null) || []; contTot.inchise = JurnalTrade.din(bi); contTot.alteInchise = JurnalTrade.alte(bi); } catch (e) { contTot.inchise = []; contTot.alteInchise = []; } }
     if (Date.now() - contTot.clasamentLa > 10 * 60000) { try { var cl = await getJSON("/api/istoric-bot?action=clasament"); contTot.clasament = cl && cl.clasament || null; contTot.clasamentLa = Date.now(); } catch (e) {} }
+    if (Date.now() - (contTot.saltLa || 0) > 5 * 60000) { try { var sr = await getJSON("/api/t212?action=saltRezumat"); contTot.salt = sr && sr.rezumat || null; contTot.saltLa = Date.now(); } catch (e) {} }   /* v100.126: Salt lângă T212 (rezumatul colectorului) */
     if (Date.now() - (contTot.sugestiiLa || 0) > 10 * 60000) { try { contTot.sugestii = await getJSON("/api/istoric-bot?action=sugestii"); contTot.sugestiiLa = Date.now(); } catch (e) {} }   /* v100.85 (reveniri + short) */
     var bb = typeof tbStare !== "undefined" && tbStare.bot; if (bb) await contTotStiriCrypto(String(bb.baza || "").replace(/\.PERP$/, ""));
   } finally { contTot.inLucru = false; }
@@ -1108,12 +1109,15 @@ function contTotRender() {
   var sp = contTotSoldPionex(boti, contTot.conturi);
   var soldH = sp ? ' · ' + (sp.conturiCitite ? "sold " : "în boți ") + '<b>' + sp.sold.toFixed(1).replace(".", ",") + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Suma(sp.sold / fx)) + ')</span>' : '') : '';   // un sold, nu un profit: fără „+”
   parti.push(boti ? '<span><b>Pionex</b>' + soldH + ' · ' + t212Cate(act.length, "bot activ", "boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + (usdt >= 0 ? "+" : "−") + Math.abs(usdt).toFixed(2) + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
+  var sbH = typeof saltBandaHtml === "function" ? saltBandaHtml(contTot.salt) : "";   // v100.126: Salt lângă T212
   parti.push(c ? '<span><b>Trading 212</b> · ' + escapeHtml(t212Suma(c.total)) + ' · deschise <b class="' + t212Cls(c.ppl) + '">' + escapeHtml(t212Lei(c.ppl)) + '</b></span>' : '<span class="tbSub">Trading 212: aduc contul…</span>');
   // actiunile pe IESI: semaforul le-a pus deja in tabelul pozitiilor
   var iesi = t212.nrIesi || 0;   // v100.40: din date (t212Render), nu din DOM-ul paginii T212
   var lich = act.filter(function (b) { var d = Number(b.distantaLichidarePct); return b.lichidareDepasita || (isFinite(d) && Math.abs(d) < 15); }).length;
-  var ati = iesi + lich;
-  parti.push(ati ? '<span class="bad">⚠️ ' + (iesi ? t212Cate(iesi, "acțiune", "acțiuni") + " de ieșit" : "") + (iesi && lich ? " · " : "") + (lich ? t212Cate(lich, "bot", "boți") + " aproape de lichidare" : "") + '</span>'
+  if (sbH) parti.push(sbH);
+  var iesiS = contTot.salt && Array.isArray(contTot.salt.iesi) ? contTot.salt.iesi.length : 0;   // v100.126: și pozițiile Salt de ieșit
+  var ati = iesi + lich + iesiS;
+  parti.push(ati ? '<span class="bad">⚠️ ' + [iesi ? t212Cate(iesi, "acțiune", "acțiuni") + " de ieșit" : "", iesiS ? t212Cate(iesiS, "acțiune", "acțiuni") + " de ieșit la Salt" : "", lich ? t212Cate(lich, "bot", "boți") + " aproape de lichidare" : ""].filter(Boolean).join(" · ") + '</span>'
     : t212.nrIesi == null && !t212.eroare && (!t212.poz || t212.poz.length) ? '<span class="tbSub">acțiunile: aduc prețurile…</span>' : '<span class="good">✓ nimic roșu</span>');   // v100.40: fara semafor inca -> nu „nimic roșu”
   document.querySelectorAll("[data-cont-tot]").forEach(function (el) { el.innerHTML = parti.join('<span class="contTotSep">│</span>'); });
   piataAziRender();

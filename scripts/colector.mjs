@@ -37,12 +37,13 @@ import { bilantDinBusola } from "./lib/din-busola.mjs";   // v101.65 (ideea 1): 
 import { unesteZile, randuriInchise } from "../retea/date-t212.mjs";   // v101.64 (L2, revizia 🟡6): barele zilnice se adună peste 2 ani
 import { sugestiiDimineata, sugestiiIntraday } from "./lib/tura-sugestii-actiuni.mjs";   // v101.81 (pagina Sugestii): acțiunile US + EU
 import { universEU } from "./lib/univers-eu.mjs";
-import { turaSalt as turaSaltModul } from "./lib/tura-salt.mjs";   // v101.82 (pagina Salt)
+import { turaSalt as turaSaltModul } from "./lib/tura-salt.mjs";
+import { turaSaltPozitii as turaSaltPozitiiModul } from "./lib/tura-salt-pozitii.mjs";   // v101.84: alerta la stop + rezumatul Salt   // v101.82 (pagina Salt)
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.83";
+const VERSIUNE_COLECTOR = "v101.84";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1154,6 +1155,27 @@ async function turaSaltZi() {
   saltInLucru = false;
 }
 
+// v101.84 (el 07.10, „ok fa idei” după pagina Salt): pozițiile Salt la 15 minute - aceeași analiză ca pagina; alertă pe Discord când
+// prețul trece sub stopul care urcă (o dată pe trecere, starea în meta().saltAlerte) și rezumatul pentru banda de cont și Acasă.
+// Fără poziții se scrie tot un rezumat (n: 0) - altfel banda ar arăta pozițiile șterse.
+let saltPozLa = 0, saltPozInLucru = false;
+async function turaSaltPozitii() {
+  if (saltPozInLucru || Date.now() - saltPozLa < 15 * 60000) return;
+  saltPozInLucru = true; saltPozLa = Date.now();
+  try {
+    const s = await cere("/api/t212?action=salt"), poz = s && Array.isArray(s.pozitii) ? s.pozitii : [];
+    const u = JSON.parse(fs.readFileSync(path.join(RAD, "public", "data", "salt-univers.json"), "utf8"));
+    const cereBare = async (sim) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(sim))).randuri || []);
+    let eurRon = null; if (poz.length) { try { const b = await cereBare("EURRON=X"); eurRon = b.length ? b[b.length - 1].c : null; } catch { eurRon = null; } }
+    const m = meta(), st = m.saltAlerte || (m.saltAlerte = {});
+    const r = await turaSaltPozitiiModul({ pozitii: poz, univers: u && u.instrumente || [], cereBare, Salt, deps: { ActiuniSemnale, Consiliu, Consilier, Probabilitati }, stare: st,
+      trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60)), acum: Date.now(), eurRon, jurnal });
+    await trimite("/api/t212?action=saltRezumat", { rezumat: r.rezumat });
+    if (r.trimise) jurnal("salt: alerte la stopul care urcă trimise:", r.trimise);
+  } catch (e) { jurnal("salt poziții ESEC", e.message); }
+  saltPozInLucru = false;
+}
+
 // v101.81 (pagina Sugestii): gap-ul EU la 10:20 RO (bursele EU deschid la 10:00) și pre-market-ul US la 15:50 RO (deschiderea US 16:30),
 // în zilele lucrătoare, o dată pe zi. Fără niciun rând azi (sărbătoare) ⇒ ziua se notează, dar nu se scrie peste lista bună de ieri.
 let sugIntradayInLucru = false;
@@ -1821,6 +1843,7 @@ async function bucla() {
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
+  turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);

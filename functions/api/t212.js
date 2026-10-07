@@ -152,7 +152,7 @@ export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return json({ error: "Origin rejected" }, 403);
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
-  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket" && act !== "saltPozitii" && act !== "salt") return json({ error: "Acțiune necunoscută" }, 400);
+  if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket" && act !== "saltPozitii" && act !== "salt" && act !== "saltRezumat") return json({ error: "Acțiune necunoscută" }, 400);
   const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
   if (act === "idei") {
@@ -222,6 +222,14 @@ export async function onRequestPost({ request, env }) {
     const l = (Array.isArray(corp && corp.pozitii) ? corp.pozitii : []).map((x) => ({ isin: String(x && x.isin || ""), simbol: String(x && x.simbol || ""), nume: txt(x && x.nume, 80), qty: nr(x && x.qty), pretMediu: nr(x && x.pretMediu), de: /^\d{4}-\d{2}-\d{2}$/.test(String(x && x.de || "")) ? String(x.de) : null, plata: x && x.plata === "EUR" ? "EUR" : "simbol" }))
       .filter((x) => /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(x.isin) && /^[A-Za-z0-9][A-Za-z0-9.^=-]{0,19}$/.test(x.simbol) && x.qty > 0 && x.pretMediu > 0).slice(0, 60);
     await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(l)); return json({ ok: true, n: l.length });
+  }
+  // v100.126: rezumatul pozițiilor Salt (colectorul, la 15 minute) pentru banda de cont și Acasă - curățat, mic
+  if (act === "saltRezumat") {
+    const r = corp && corp.rezumat;
+    if (!r || typeof r !== "object" || Array.isArray(r) || !(nr(r.la) > 0)) return json({ error: "saltRezumat: rezumatul cu „la”" }, 400);
+    const sim = (l) => (Array.isArray(l) ? l : []).slice(0, 60).map((x) => txt(x, 16).replace(/[^A-Za-z0-9.-]/g, "")).filter(Boolean);
+    const o = { la: nr(r.la), n: nr(r.n) || 0, val: nr(r.val), cost: nr(r.cost), rez: nr(r.rez), eurRon: nr(r.eurRon), iesi: sim(r.iesi), atentie: sim(r.atentie), fara: nr(r.fara) || 0 };
+    await env.ISTORIC.put("t212:salt-rezumat", JSON.stringify(o)); return json({ ok: true });
   }
   if (act === "salt") {
     const r = corp && corp.raport;
@@ -325,6 +333,10 @@ export async function onRequestGet({ request, env }) {
       if (!env.ISTORIC?.get) return faraKv();
       const [idei, istoric, lista, istoricReveniri] = await Promise.all([citesteKv(env, "t212:idei", null), citesteKv(env, "t212:idei-istoric", []), citesteKv(env, "t212:lista", []), citesteKv(env, "t212:reveniri-istoric", [])]);
       return json({ idei, istoric: Array.isArray(istoric) ? istoric : [], lista: Array.isArray(lista) ? lista : [], istoricReveniri: Array.isArray(istoricReveniri) ? istoricReveniri : [] });
+    }
+    if (a === "saltRezumat") {
+      if (!env.ISTORIC?.get) return faraKv();
+      return json({ rezumat: await citesteKv(env, "t212:salt-rezumat", null) });
     }
     if (a === "salt") {
       if (!env.ISTORIC?.get) return faraKv();
