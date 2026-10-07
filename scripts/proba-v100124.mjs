@@ -61,11 +61,11 @@ await test("(2c) scriptul: doar la schimbări în public/, serverul viu (/health
   const pj = JSON.parse(citeste("package.json")).scripts; assert.match(pj["instaleaza-hook"], /scripts\/hooks\/pre-push/);
 });
 
-await test("(E) versiunea v100.124 (colectorul neatins, v101.82)", () => {
-  assert.match(html, /content="v100\.124"/); assert.match(html, /id="antetVersiune">v100\.124 /); assert.match(html, /id="healthAppVersion">v100\.124</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.124.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-124";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.124"/); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.124");
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.82";/);
+await test("(E) versiunea de la v100.124 în sus (colector de la v101.82 în sus)", () => {
+  assert.match(html, /content="v100\.1(2[4-9]|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(2[4-9]|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(2[4-9]|[3-9]\d)</);   // v100.125: lărgit
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(2[4-9]|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(2[4-9]|[3-9]\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(2[4-9]|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(2[4-9]|[3-9]\d)$/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(8[2-9]|9\d)";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);

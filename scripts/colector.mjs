@@ -42,7 +42,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.82";
+const VERSIUNE_COLECTOR = "v101.83";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1145,7 +1145,7 @@ async function turaSaltZi() {
   saltInLucru = true;
   try {
     const u = JSON.parse(fs.readFileSync(path.join(RAD, "public", "data", "salt-univers.json"), "utf8"));
-    const r = await turaSaltModul({ Salt, SA: SugestiiActiuni, Reveniri, univers: u && u.instrumente || [], acum: Date.now(), jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+    const r = await turaSaltModul({ Salt, SA: SugestiiActiuni, Reveniri, Idei, Probabilitati, ProfilMoneda, univers: u && u.instrumente || [], acum: Date.now(), jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       cereBare: async (s) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(s))).randuri || []) });
     // peste 10% fără prețuri (Yahoo a limitat) ⇒ eșec: rămâne raportul de ieri, reîncerc peste o oră
     const nU = (u && u.instrumente || []).length;

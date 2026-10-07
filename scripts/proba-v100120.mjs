@@ -156,7 +156,7 @@ await test("(4c) pagina în aplicație: #salt în Zilnic după Trading 212, scri
 });
 await test("(E) versiunea de la v100.120 în sus / colector v101.82; meniul 50 de butoane", () => {
   const html = citeste("public", "index.html"); assert.match(html, /content="v100\.1[2-9]\d"/); assert.match(JSON.parse(citeste("package.json")).version, /^100\.1[2-9]\d\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1[2-9]\d";/);   // v100.121: lărgit
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.82";/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(8[2-9]|9\d)";/);   // v100.125: lărgit (colector v101.83)
   const m = html.slice(html.indexOf('<div class="sideMenu">'), html.indexOf('<div class="sideFooter">')); assert.equal([...m.matchAll(/class="sideBtn/g)].length, 50);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
