@@ -1260,7 +1260,7 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 #tabloubot .tbPretViu .tbSub{font-size:12px}
 #tabloubot .tbViuPunct{width:7px;height:7px;border-radius:50%;background:var(--muted);align-self:center}#tabloubot .tbPretViu.viu .tbViuPunct{background:var(--good);box-shadow:0 0 8px rgba(85,216,155,.7)}
 .botStrip.bad{color:var(--bad);border-color:var(--bad)}.botStrip.tbWarn{color:var(--warn);border-color:var(--warn)}.botStrip.good{color:var(--good)}
-@media(max-width:760px){.botStrip{order:-1;flex-basis:100%;max-width:none;white-space:normal;text-align:left}}
+@media(max-width:760px){.botStrip{order:-1;flex-basis:100%;max-width:none;white-space:nowrap;text-align:left}}/* v100.122: pe un rand si pe telefon - cad „piata”, „azi”, „grid” (tbActualizeazaBanda), raman numele, pretul, totalul */
 .botStrip[hidden]{display:none!important}
 
 /* v76 Tabloul botului, reasezat. Un singur sistem: colturi 12px pe blocuri,
@@ -2342,3 +2342,5 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{display:none}
 .rlTab{overflow-x:auto;max-width:100%}
 @media (max-width:640px){.sectionHead{flex-wrap:wrap}.sectionHead .small{white-space:normal}}
+/* v100.122: banda de sus pe telefon avea 139-156 px (lipita) - fara dublurile analizei vechi (moneda + 4h/AUTO/BINANCE stau si in bara paginilor vechi) si WS (LIVE DATA ramane) */
+@media (max-width:760px){.topLeft{display:none}#wsStatus{display:none}}

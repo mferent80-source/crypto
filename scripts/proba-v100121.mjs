@@ -66,10 +66,10 @@ await test("(3) pe telefon subtitlul paginii (`.sectionHead .small`) se rupe pe 
   assert.ok(are(".sectionHead .small", "white-space", "nowrap", false), "pe PC rămâne cum era (un rând)");
 });
 
-await test("(E) versiunea v100.121 (colectorul neatins, v101.82)", () => {
-  const html = citeste("public", "index.html"); assert.match(html, /content="v100\.121"/); assert.match(html, /id="antetVersiune">v100\.121 /); assert.match(html, /id="healthAppVersion">v100\.121</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.121.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-121";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.121"/); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.121");
+await test("(E) versiunea de la v100.121 în sus (colectorul neatins, v101.82)", () => {
+  const html = citeste("public", "index.html"); assert.match(html, /content="v100\.1(2[1-9]|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(2[1-9]|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(2[1-9]|[3-9]\d)</);   // v100.122: lărgit
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(2[1-9]|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(2[1-9]|[3-9]\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(2[1-9]|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(2[1-9]|[3-9]\d)$/);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.82";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

@@ -753,7 +753,11 @@ function isStandalonePwa(){return window.matchMedia&&window.matchMedia("(display
 function showPwaInstall(){
  let inchisDeOm=false;try{inchisDeOm=localStorage.getItem("pwaInstallDismissed")==="1"}catch{}
  if(isStandalonePwa()||inchisDeOm)return;
- if($("pwaInstallCard"))$("pwaInstallCard").classList.add("on")
+ // v100.122: cel mult o data pe zi si se ascunde singur dupa 15 s - pe telefon acoperea continutul pe fiecare pagina
+ const d=new Date(),azi=d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+ try{if(localStorage.getItem("pwaInstallArataLa")===azi)return;localStorage.setItem("pwaInstallArataLa",azi)}catch{}
+ if($("pwaInstallCard"))$("pwaInstallCard").classList.add("on");
+ setTimeout(()=>{if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on")},15000)
 }
 function dismissPwaInstall(){try{localStorage.setItem("pwaInstallDismissed","1")}catch{}if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on")}
 async function installPwa(){
@@ -2815,7 +2819,7 @@ async function refreshLocalDataPanel(){
   const ok=localDbSupported();$("localDbState").textContent=ok?"READY":"UNAVAILABLE";$("localDbState").className=ok?"syncReady":"syncBad";
   const mig=await localDbMetaGet("migration-v54");$("localMigration").textContent=mig?new Date(mig).toLocaleString():(ok?"PENDING":"FALLBACK");
   const pairs=[["signals","localSignals"],["paper","localPaper"],["paper_v3","localPaperV3"],["scanner_runs","localScans"],["snapshots","localSnapshots"],["experiments","localExperiments"],["decisions","localDecisions"],["verdict_center","localVerdictCenter"],["profit_readiness","localProfitReadiness"],["historical_replay","localHistoricalReplay"],["historical_scans","localHistoricalScans"],["volatility_intel","localVolatilityIntel"],["external_intel","localExternalIntel"],["portfolio_risk","localPortfolioRisk"],["stress_tests","localStressTests"],["edge_drift_v61","localEdgeDriftV61"],["champion_challenger_v61","localChampionChallengerV61"],["provider_health_v62","localProviderHealthV62"],["live_readiness_v63","localLiveReadinessV63"],["market_breadth_v64","localBreadthV64"],["decision_intel_v65","localDecisionV65"],["edge_validation_v66","localEdgeV66"],["ops_heartbeat_v67","localOpsV67"],["live_execution_v68","localLiveV68"],["live_performance_v69","localLiveV69"],["pionex_journal_v71","localPionexV71"],["models","localModels"]];
-  for(const [t,id] of pairs)$(id).textContent=await localDbCount(t);
+  for(const [t,id] of pairs)if($(id))$(id).textContent=await localDbCount(t);   // v100.122: localLiveV68/V69 nu mai sunt in pagina - pagina arunca TypeError
   $("localReports").textContent=(await localReportsAll(500)).length;$("localLastWrite").textContent=lastLocalArchiveWrite?new Date(lastLocalArchiveWrite).toLocaleTimeString():"—";$("localIntegrity").textContent=ok?"KEYED + DEDUPED":"WORKING-SET ONLY";
   const est=await localStorageEstimate();$("localStorageEstimate").textContent=est?`${(est.usage/1048576).toFixed(1)} MB / ${(est.quota/1073741824).toFixed(1)} GB`:"N/A";$("localSyncReady").textContent=ok?"SCHEMA READY":"NO IDB";$("localSyncReady").className=ok?"syncReady":"syncWarn";renderReportHistory()
 }

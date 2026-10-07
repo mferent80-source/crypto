@@ -1156,7 +1156,7 @@ async function main() {
 
     await test("D12d. bannerul 'Instaleaza' se inchide, tine minte, si nu crapa cand stocarea e blocata", async () => {
       const r = await b.ev(`(() => {
-        try { localStorage.removeItem('pwaInstallDismissed'); } catch (e) {}
+        try { localStorage.removeItem('pwaInstallDismissed'); localStorage.removeItem('pwaInstallArataLa'); } catch (e) {}   // v100.122: o data pe zi
         showPwaInstall();
         const card = document.getElementById('pwaInstallCard');
         const vizibilInainte = card.classList.contains('on');
