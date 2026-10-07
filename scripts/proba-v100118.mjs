@@ -44,9 +44,10 @@ await test("cu plan: 19 campuri, planul la locul lui (12-14), pornirea la 19", (
   const p = TE.codTVBot(pons(), { minus: 7.5, plus: 2.6, afaraOre: 12 }, EXTRA).cod.split(";");
   assert.equal(p.length, 19); assert.deepEqual(p.slice(11, 14), ["7.5", "2.6", "12"]); assert.equal(p[18], "1791301681464");
 });
-await test("Tabloul spune GRID-FISA v2.4 (v2.3 si mai vechi refuza 19 campuri)", () => {
-  assert.ok(/lipește-l în indicatorul GRID-FISA v2\.4/.test(app), "textul din Tablou nu spune v2.4");
-  assert.ok(!/lipește-l în indicatorul GRID-FISA v2\.[0-3]/.test(app), "a ramas o versiune veche in textul din Tablou");
+// v100.133 (revizia R1): GRID-FISA v2.5 - codul cu TP-ul in procente are 20 de campuri, pe care v2.4 le refuza
+await test("Tabloul spune GRID-FISA v2.5 (v2.4 refuza 20 de campuri, v2.3 si mai vechi 19)", () => {
+  assert.ok(/lipește-l în indicatorul GRID-FISA v2\.5/.test(app), "textul din Tablou nu spune v2.5");
+  assert.ok(!/lipește-l în indicatorul GRID-FISA v2\.[0-4]/.test(app), "a ramas o versiune veche in textul din Tablou");
 });
 
 await test("fisa fara verdict trimite „fara-date”, nu gol (golul inseamna „botul ruleaza” pentru GRID-FISA v2.4 ⇒ 🟡 BOTUL PARE PORNIT fals)", () => {

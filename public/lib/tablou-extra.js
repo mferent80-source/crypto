@@ -511,7 +511,10 @@ var TabloExtra = (function () {
       // deci ceilalti boti raman pe 19. Doar la long (la short / neutru TP-ul nu intra in cod - v100.11)
       if (dir === "long" && ss !== null && b.opritorProfitTip === "raport") parti.push("1");
     }
-    return { cod: parti.join(";"), sig: parti.slice(0, 7).concat(tip ? [tip] : []).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir, tip: tip };
+    // revizia v100.133 (R11): la TP-ul dat în procente, prețul din câmpul 7 se mută cu botul ⇒ în semnătură „≈”, nu prețul (altfel banda
+    // „Ai schimbat gridul” revenea după fiecare umplere); un bot marcat pe v2.4 e chemat o dată să recopieze (câmpul 20)
+    var tpAproxSig = dir === "long" && ss !== null && b.opritorProfitTip === "raport";
+    return { cod: parti.join(";"), sig: (tpAproxSig ? parti.slice(0, 6).concat(["≈"]) : parti.slice(0, 7)).concat(tip ? [tip] : []).join(";"), jos: jos, sus: sus, grile: Math.round(grile), dir: dir, tip: tip };
   }
 
   // v100.37 (30.09, el: „fa idei”): fisa propune un grid, dar pe moneda aceea poate rula un bot cu ALTUL (CRV: fisa 0,3822–0,4307 / 5 grile,

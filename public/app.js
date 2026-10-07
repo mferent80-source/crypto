@@ -6730,7 +6730,7 @@ function tbDeseneazaTvCod(){
   if(v&&v.sig===c.sig){el.hidden=true;el.innerHTML="";return}
   var P=function(x){return tbPretScurt(x)};
   var titlu=v&&v.jos?"🔁 Ai schimbat gridul: "+P(v.jos)+" – "+P(v.sus)+" ("+TextRo.cate(v.grile,"grilă","grile")+") → "+P(c.jos)+" – "+P(c.sus)+" ("+TextRo.cate(c.grile,"grilă","grile")+")":"📺 Gridul de acum, pentru TradingView";
-  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.4 → „Codul din fișă” (cu tipul gridului, planul tău, vârsta lichidării, marginea din profilul monedei și momentul pornirii botului; v2.3 și mai vechi refuză codul de 19 câmpuri — lipește întâi v2.4). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
+  el.innerHTML='<div class="tbGnText"><b>'+escapeHtml(titlu)+'</b><span class="tbSub">Copiază rândul și lipește-l în indicatorul GRID-FISA v2.5 → „Codul din fișă” (cu tipul gridului, planul tău, vârsta lichidării, marginea din profilul monedei, momentul pornirii botului și, la TP-ul dat în procente, „TP aproximat”; v2.4 refuză codul de 20 de câmpuri, v2.3 și mai vechi și pe cel de 19 — lipește întâi v2.5). Apoi apasă „L-am pus”; banda revine singură la gridul următor.</span><code class="tbGnCod">'+escapeHtml(c.cod)+'</code></div>'
     +'<div class="tbGnBtn"><button type="button" class="actionGhost" value="'+escapeHtml(c.cod)+'" data-action-click="gridCopiaza(this.value)">Copiază codul</button><button type="button" class="actionGhost" data-action-click="tbTvAmPus()">L-am pus</button></div>';
   el.hidden=false;
 }

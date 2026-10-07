@@ -21,7 +21,12 @@ function mcsPr(v) { return v == null || !isFinite(v) ? "—" : Math.round(v * 10
 function mcsBani1(v, unit) { return v == null || !isFinite(v) ? "—" : mcsSemn(Math.round(v * 10) / 10) + mcsNr(Math.abs(v), 1) + " " + (unit || "USDT"); }   // rezultatele: o zecimală
 function mcsCls(v) { return v > 0 ? "good" : v < 0 ? "bad" : ""; }
 function mcsCate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var r = Math.abs(n) % 100; return n === 1 ? "1 " + sg : n + (r >= 20 || (r === 0 && n >= 100) ? " de " : " ") + pl; }
-function mcsPretTxt(v) { return v == null || !isFinite(v) ? "—" : mcsNr(v, v < 1 ? 4 : 2); }
+// revizia v100.133 (R3): sub 0,01 cu 4 cifre semnificative („0,00001234”, nu „0,0000”) - pe pagină, pe Discord, în cheia anti-repetare
+function mcsPretTxt(v) {
+  if (v == null || !isFinite(v)) return "—";
+  var a = Math.abs(v);
+  return a > 0 && a < 0.01 ? mcsNr(Number(v.toPrecision(4)), Math.min(12, 3 - Math.floor(Math.log10(a)))) : mcsNr(v, a < 1 ? 4 : 2);
+}
 function mcsCurata(s) { var t = String(s == null ? "" : s).trim().toUpperCase().replace(/\s+/g, ""); return /^[A-Z0-9][A-Z0-9.^=-]{0,19}$/.test(t) ? t : ""; }
 // ultimele 10 simboluri analizate: cel nou primul, fără dubluri, doar simboluri curate
 // v100.130: fiecare ține și felul ({s, tip: "coin" | "stock" | null}) - BE analizat ca acțiune (din poziție) se redeschide ca acțiune,
@@ -236,7 +241,7 @@ function mcsRand(et, v, cls) { return '<div class="mcsRand"><span>' + mcsEsc(et)
 function mcsCartPret(o, m, unit, poz) {
   var mk = [{ v: o.p5, t: "5%", c: "bad" }, { v: o.p50, t: "mijloc", c: "mijl" }, { v: o.p95, t: "95%", c: "good" }];
   return '<div class="mcsCart"><h5>Peste ' + mcsEsc(mcsCate(o.H, unit === "b" ? "zi de bursă" : "zi", unit === "b" ? "zile de bursă" : "zile")) + '</h5>'
-    + (o.scurt ? '<p class="mcsAvert">Istoricul e scurt față de orizont: la ' + mcsEsc(mcsCate(o.H, "zi", "zile")) + ' simularea doar reamestecă aceleași zile. Citește cifrele ca o schiță.</p>' : '')
+    + (o.scurt ? '<p class="mcsAvert">Istoricul e scurt față de orizont: la ' + mcsEsc(unit === "b" ? mcsCate(o.H, "zi de bursă", "zile de bursă") : mcsCate(o.H, "zi", "zile")) + ' simularea doar reamestecă aceleași zile. Citește cifrele ca o schiță.</p>' : '')
     + '<div class="mcsCifre">' + mcsCif("5% din drumuri, sub", mcsPct1(o.p5), "bad") + mcsCif("mijlocul", mcsPct1(o.p50), mcsCls(Math.round(o.p50 * 1000) / 1000)) + mcsCif("5% din drumuri, peste", mcsPct1(o.p95), "good") + '</div>'
     + mcsHist(o.hist, mk, mcsPct1)
     + (poz && o.pIntrare !== undefined ? mcsRand("atinge prețul tău de intrare (" + mcsPretTxt(poz.intrare) + ") măcar o dată", mcsPr(o.pIntrare)) + mcsRand("la capăt peste intrare, fără să fi atins stopul (−" + mcsNr(m.stopPct * 100, 1) + "%)", mcsPr(o.pPesteIntrareStop), o.pPesteIntrareStop >= 0.5 ? "good" : "bad") + mcsRand("la capăt peste intrare, fără stop", mcsPr(o.pPesteIntrare)) : "")
@@ -588,6 +593,8 @@ async function mcsAnalizeaza() {
       d = { tip: "stock", sim: s.sim, sursa: s.sim + " · Yahoo (acțiune / ETF)", b: s.b, ist: mcsIstorieStock(u, s.sim, Date.now()) };
     }
     mcsStare.date = d; await mcsPauza(0);   // „aduc… / simulez” apare înainte de calcul
+    // revizia v100.133 (R12): din 🎲 al unei poziții ⇒ 20 / 60 de zile de bursă (cifra „revine la intrare” din rând e pe 60)
+    if (poz && d.tip === "stock") mcsStare.oriz.stock = 1;
     mcsStare.rez = mcsCalculeaza(d, { poz: poz, oriz: mcsStare.oriz[d.tip] });
     mcsStare.recente = mcsRecente(mcsStare.recente || mcsCitesteRecente(), d.sim, d.tip); mcsSalveazaRecente();
   } catch (e) { mcsStare.eroare = e && e.message || String(e); }

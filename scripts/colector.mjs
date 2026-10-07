@@ -1793,20 +1793,26 @@ async function turaArhivaOre() {
 let riscInLucru = false, riscEsec = 0;
 // v101.88 (el 07.10: „fa idei”): noaptea (2–5), o dată pe zi - pe fiecare bot activ, „Compară variante” și „Compară ținte (TP)” de pe
 // pagina Monte Carlo, pe aceleași drumuri; pe Discord doar sfaturile sigure, o dată (același sfat nu se repetă noapte de noapte)
-let varianteNoapteInLucru = false;
+let varianteNoapteInLucru = false, varianteEsecLa = 0;
 async function turaVarianteNoapte() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
   if (process.env.COLECTOR_FARA_VARIANTE || varianteNoapteInLucru || !eNoapte(Date.now()) || ritm.varianteNoapte === zi) return;
-  if (!ultimiiBoti.length) return;   // boții nu s-au citit încă: nu marchez ziua
+  // revizia (R5): fără o listă proaspătă de boți (citirea a picat ore în șir) nu dau sfaturi pentru boți poate opriți; ziua rămâne nemarcată
+  if (!ultimiiBoti.length || Date.now() - ultimiiBotiLa > 15 * 60000) return;
+  if (Date.now() - varianteEsecLa < 30 * 60000) return;
   varianteNoapteInLucru = true;
   try {
     const st = { anuntate: ritm.varianteAnuntate && typeof ritm.varianteAnuntate === "object" ? ritm.varianteAnuntate : {} };
+    // revizia (R4): lumânările 15M pe care colectorul le ține deja (aceleași 6 pagini / 3000) - fără cereri noi la Pionex
     const r = await turaVarianteNoapteModul({ boti: ultimiiBoti, Mcs, GridCalcul, stare: st, jurnal, pauzaMs: 1600, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+      randuri15: lumanari15M,
       cere: (simbol, end) => cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(simbol) + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")),
       anunta: (m, bot, cheie) => trimiteAlerta(m, bot, cheie) });
-    tineRitm("varianteAnuntate", st.anuntate); tineRitm("varianteNoapte", zi);
-    jurnal("variante noapte: " + TextRo.cate(r.boti, "bot activ", "boți activi") + " · " + TextRo.cate(r.anuntate, "sfat trimis", "sfaturi trimise"));
-  } catch (e) { jurnal("variante noapte ESEC", e.message); }
+    tineRitm("varianteAnuntate", st.anuntate);
+    // revizia (R2): ziua se marchează doar dacă a mers măcar un bot; altfel (Pionex picat) reîncerc peste 30 de minute, tot noaptea
+    if (r.simulati > 0 || r.boti === 0) tineRitm("varianteNoapte", zi); else varianteEsecLa = Date.now();
+    jurnal("variante noapte: " + r.simulati + " din " + TextRo.cate(r.boti, "bot activ simulat", "boți activi simulați") + " · " + TextRo.cate(r.anuntate, "sfat trimis", "sfaturi trimise"));
+  } catch (e) { jurnal("variante noapte ESEC", e.message); varianteEsecLa = Date.now(); }
   varianteNoapteInLucru = false;
 }
 async function turaRisc() {

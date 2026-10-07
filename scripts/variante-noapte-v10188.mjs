@@ -64,12 +64,45 @@ await test("TP-ul: la neutru nu se compară; TP de partea greșită ⇒ mcsTpVal
   assert.equal(vazute.length, 1, "doar long-ul (neutru nu)"); assert.equal(vazute[0].tp, null, "TP sub preț la long ⇒ scos");
   assert.equal(r.rezultate.length, 2); assert.ok(jurnalul.some((l) => /XXX/.test(l) && /429/.test(l)));
 });
+// ---------------- revizia Opus ----------------
+const McsA = (txt) => Object.assign({}, Mcs, { mcsVariantaBuna: () => txt.v, mcsTpRecomandat: () => txt.tp });
+const ziua = (k) => Date.UTC(2026, 9, 8 + k, 1);
+await test("(R2/R4) lumânările colectorului (randuri15) în loc de cereri noi; câți boți au fost simulați (simulati)", async () => {
+  let cereri = 0, randuri = 0;
+  const r = await turaVarianteNoapte({ boti: [bot({}), bot({ id: "5", baza: "XXX.PERP", simbolPionex: "XXX_USDT_PERP" })], Mcs, GridCalcul, cere: async () => { cereri++; return null; },
+    randuri15: async (s) => { randuri++; if (/XXX/.test(s)) throw new Error("Pionex 429"); return K; }, anunta: async () => true, stare: {}, jurnal: () => {}, pauza: async () => {}, pauzaMs: 0, n: 30, acum: ziua(0) });
+  assert.equal(cereri, 0); assert.equal(randuri, 2); assert.equal(r.boti, 2); assert.equal(r.simulati, 1);
+});
+await test("(R6) A ⇒ B ⇒ A în 3 zile: A a doua oară tace; după 3 zile se poate spune din nou; „ca protecție” = aceeași propunere; cheile boților închiși se șterg", async () => {
+  const anunturi = [], stare = {};
+  const d = (txt, k, boti) => turaVarianteNoapte({ boti: boti || [bot({})], Mcs: McsA(txt), GridCalcul, cere, anunta: async (m, b, c) => { anunturi.push({ m, b, c }); return true; }, stare, jurnal: () => {}, pauza: async () => {}, pauzaMs: 0, n: 30, acum: ziua(k) });
+  const A = { v: "Aș încerca „levier mai mic”: de obicei −3,9 USDT.", tp: "Rămâi fără TP: x." }, B = { v: "Aș încerca „jumătate din grile”: de obicei −4,0 USDT.", tp: "Rămâi fără TP: x." };
+  await d(A, 0); await d(B, 1); await d(A, 2);
+  assert.deepEqual(anunturi.map((x) => /levier/.test(x.m.mesaj) ? "A" : "B"), ["A", "B"], "A a doua oară, în 3 zile: tăcere");
+  await d(A, 5); assert.equal(anunturi.length, 3, "după 3 zile: din nou");
+  assert.equal(anunturi[0].c, "noapte-variante", "(R7) cheia scurtă, id-ul botului merge separat"); assert.equal(anunturi[0].b, "2408");
+  assert.equal(cheieSfat("1", "tp", "Aș pune TP-ul la 0,3700 ca protecție: de obicei"), cheieSfat("1", "tp", "Aș pune TP-ul la 0,3700: de obicei"));
+  await d(A, 6, [bot({ id: "77" })]);
+  assert.ok(!Object.keys(stare.anuntate).some((k) => k.startsWith("2408|")), "botul 2408 nu mai e activ ⇒ cheile lui ies");
+});
+await test("(R8) mesajul are cifrele: botul tău (interval, levier) și setarea propusă; la TP în % spune că e aproximat", async () => {
+  const anunturi = [];
+  await turaVarianteNoapte({ boti: [bot({ directie: "long", opritorPierdere: 0.35, opritorProfitActiv: true, opritorProfit: 0.5, opritorProfitTip: "raport" })], Mcs: McsA({ v: "Aș încerca „levier mai mic”: de obicei −3,9 USDT.", tp: "Aș pune TP-ul la 0,4300: de obicei 1,0 USDT." }), GridCalcul, cere,
+    anunta: async (m) => { anunturi.push(m); return true; }, stare: {}, jurnal: () => {}, pauza: async () => {}, pauzaMs: 0, n: 30, acum: ziua(0) });
+  assert.equal(anunturi.length, 2);
+  assert.match(anunturi[0].mesaj, /Botul tău: long 3× · 0,3700–0,4200 · 34 de grile/); assert.match(anunturi[0].mesaj, /Setarea propusă: long 2× · 0,3700–0,4200 · 34 de grile/);
+  assert.match(anunturi[1].mesaj, /TP-ul tău e dat de Pionex în procente: prețul lui e aproximativ/);
+});
+await test("(R2/R5) colectorul: ziua se marchează doar dacă a fost simulat măcar un bot (altfel reîncearcă peste 30 min); lista boților veche de peste 15 min ⇒ nimic", () => {
+  const c = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), f = c.slice(c.indexOf("async function turaVarianteNoapte()"), c.indexOf("async function turaVarianteNoapte()") + 2200);
+  assert.match(f, /Date\.now\(\) - ultimiiBotiLa > 15 \* 60000/); assert.match(f, /r\.simulati > 0/); assert.match(f, /varianteEsecLa/); assert.match(f, /randuri15: lumanari15M/);
+});
 await test("colectorul: încarcă modulele paginii, tura noaptea (eNoapte), o dată pe zi, v101.88", () => {
   const c = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(8[8-9]|9\d)"/);
   assert.match(c, /mcsDinPagina\(/); assert.match(c, /monte-simbol-ecran\.js/);
   assert.match(c, /async function turaVarianteNoapte\(\)/); assert.match(c, /turaVarianteNoapteModul\(/);
-  const f = c.slice(c.indexOf("async function turaVarianteNoapte()"), c.indexOf("async function turaVarianteNoapte()") + 1500);
+  const f = c.slice(c.indexOf("async function turaVarianteNoapte()"), c.indexOf("async function turaVarianteNoapte()") + 2600);
   assert.match(f, /eNoapte\(/); assert.match(f, /tineRitm\("varianteNoapte"/);
   assert.match(c, /turaVarianteNoapte\(\)/.source && /turaVarianteNoapte\(\);|turaVarianteNoapte\(\)\)|\.then\(\(\) => turaVarianteNoapte\(\)\)/);
 });

@@ -36,7 +36,8 @@ await test("(2b) fără TP în procente (preț, fără TP, short, neutru) sau f�
   assert.equal(TE.codTVBot(lng({ opritorProfitActiv: false, opritorProfitTip: "raport" }), null, EXTRA).cod.split(";").length, 19);
   assert.equal(TE.codTVBot(lng({ directie: "short", opritorPierdere: 0.46, opritorProfit: 0.35, opritorProfitTip: "raport" }), null, EXTRA).cod.split(";").length, 19, "la short TP-ul nu intră în cod");
   assert.equal(TE.codTVBot(lng({ opritorProfitTip: "raport" }), null).cod.split(";").length, 10, "fără extra: neschimbat");
-  assert.equal(TE.codTVBot(lng({ opritorProfitTip: "raport" }), null, EXTRA).sig, TE.codTVBot(lng({}), null, EXTRA).sig, "câmpul 20 nu intră în semnătură");
+  // revizia (R11): la TP în procente semnătura are „≈” în locul prețului TP (vezi (R11)); câmpul 20 în sine nu intră în ea
+  assert.equal(TE.codTVBot(lng({ opritorProfitTip: "raport" }), null, EXTRA).sig.split(";").length, TE.codTVBot(lng({}), null, EXTRA).sig.split(";").length, "câmpul 20 nu intră în semnătură");
 });
 
 // ---------------- (3) orizontul la alegere ----------------
@@ -64,6 +65,21 @@ await test("(3c) caseta: butoanele orizontului (aria-pressed pe cel ales, mcsAle
   assert.match(hs, /aria-pressed="true" data-action-click="mcsAlegeOriz\(1\)">20 și 60 de zile de bursă<\/button>/);
   for (const f of ["mcsResimuleaza", "mcsAlegeBot", "mcsAnalizeaza"]) assert.match(functie(MSE, f), /oriz: mcsStare\.oriz\[/, f);
   assert.match(functie(MSE, "mcsAlegeOriz"), /mcsResimuleaza\(\)/);
+});
+
+// ---------------- revizia Opus ----------------
+await test("(R11) semnătura gridului ignoră TP-ul în procente (prețul lui se mută cu botul) - altfel „Ai schimbat gridul” revenea", () => {
+  const a = TE.codTVBot(lng({ opritorProfitTip: "raport", opritorProfit: 0.47 }), null, EXTRA).sig, b = TE.codTVBot(lng({ opritorProfitTip: "raport", opritorProfit: 0.49 }), null, EXTRA).sig;
+  assert.equal(a, b); assert.notEqual(a, TE.codTVBot(lng({}), null, EXTRA).sig, "un bot marcat pe v2.4 e chemat o dată să recopieze (câmpul 20)");
+  assert.notEqual(TE.codTVBot(lng({ opritorProfit: 0.47 }), null, EXTRA).sig, TE.codTVBot(lng({ opritorProfit: 0.49 }), null, EXTRA).sig, "TP-ul ca preț rămâne în semnătură");
+});
+await test("(R3) prețurile foarte mici cu cifre semnificative (pe Discord și în cheia anti-repetare), nu „0,0000”", () => {
+  assert.equal(G.mcsPretTxt(0.00001234), "0,00001234"); assert.equal(G.mcsPretTxt(0.005123), "0,005123"); assert.equal(G.mcsPretTxt(0.4), "0,4000"); assert.equal(G.mcsPretTxt(1349.6), "1.349,60");
+});
+await test("(R12/R13) 🎲 din rând (mcsPozitie) deschide orizontul 20 / 60 (cifra din rând e pe 60); „istoric scurt” scrie zile de bursă la acțiuni", () => {
+  assert.match(functie(MSE, "mcsAnalizeaza"), /if \(poz && d\.tip === "stock"\) mcsStare\.oriz\.stock = 1;/);
+  const s = G.mcsCalculeaza({ tip: "stock", sim: "X", b: bareZi(100, 9, 0.05), ist: { r: { cazuri: 0 } } }, { oriz: 2 });
+  assert.match(G.mcsPretHtml(s), /la 120 de zile de bursă simularea doar reamestecă/);
 });
 
 await test("(E) versiunea de la v100.133 în sus (colectorul neatins)", () => {
