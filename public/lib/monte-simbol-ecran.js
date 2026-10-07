@@ -67,7 +67,9 @@ function mcsSetariBot(boti, sim, idx) {
   var stop = b.opritorPierdereActiv && Number(b.opritorPierdere) > 0 ? (dir === "short" ? { sus: Number(b.opritorPierdere) } : { jos: Number(b.opritorPierdere) }) : null;
   // v100.132: ținta (TP) lui din Pionex - long deasupra, short dedesubt (ca Tabloul, opritorProfit e deja preț); la neutru nu are o parte
   var tp = dir !== "neutru" && b.opritorProfitActiv && Number(b.opritorProfit) > 0 ? Number(b.opritorProfit) : null;
-  return { jos: Number(b.gridJos), sus: Number(b.gridSus), grile: row > 1 ? row - 1 : 20, levier: Number(b.levier) || 1, dir: dir, suma: Number(b.investit) || 50, stop: stop, tp: tp, botulTau: true };
+  var r = { jos: Number(b.gridJos), sus: Number(b.gridSus), grile: row > 1 ? row - 1 : 20, levier: Number(b.levier) || 1, dir: dir, suma: Number(b.investit) || 50, stop: stop, tp: tp, botulTau: true };
+  if (tp && b.opritorProfitTip === "raport") r.tpAprox = true;   // revizia (R4): Pionex l-a dat în % din investiție
+  return r;
 }
 // fără bot activ: setări de probă (schimbabile pe pagină) - ±8% în jurul prețului, 20 de grile, 2×, long, 50 USDT, fără stop
 function mcsEticheteBoti(boti, sim) {
@@ -138,10 +140,12 @@ function mcsVariantaBuna(rows) {
 }
 // v100.132: ținte (TP) pentru bot pe aceleași drumuri - fără TP, la marginea gridului, +¼, +½, +1 lățime de grid pe partea profitului
 // (long deasupra, short dedesubt) + TP-ul lui; rândul lui (sau „fără TP” dacă n-are) e cel de sus. La neutru: nimic
-function mcsTinteBot(st) {
+// revizia (R1): P = prețul de acum - un nivel deja atins (long ≤ P, short ≥ P) ar închide botul pe prima bară („TP atins 100%”); îl scot
+function mcsTinteBot(st, P) {
   if (!st || (st.dir !== "long" && st.dir !== "short")) return [];
   var w = st.sus - st.jos, lg = st.dir === "long", e = lg ? st.sus : st.jos, l = [{ nume: "fără TP", tp: null }];
-  [[0, "la marginea gridului"], [0.25, "+¼ din grid"], [0.5, "+½ din grid"], [1, "+1 grid"]].forEach(function (k) { var v = lg ? e + k[0] * w : e - k[0] * w; if (v > 0) l.push({ nume: k[1], tp: v }); });
+  var dincolo = function (v) { return !(P > 0) || (lg ? v > P : v < P); };
+  [[0, "la marginea gridului"], [0.25, "+¼ din grid"], [0.5, "+½ din grid"], [1, "+1 grid"]].forEach(function (k) { var v = lg ? e + k[0] * w : e - k[0] * w; if (v > 0 && dincolo(v)) l.push({ nume: k[1], tp: v }); });
   if (st.tp > 0 && !l.some(function (x) { return x.tp !== null && Math.abs(x.tp - st.tp) <= 1e-9 * Math.max(1, st.tp); })) l.push({ nume: "TP-ul tău", tp: st.tp });
   var cheie = function (x) { return x.tp === null ? -Infinity : lg ? x.tp : -x.tp; };
   l.sort(function (a, b) { return cheie(a) - cheie(b); });
@@ -151,7 +155,9 @@ function mcsTinteBot(st) {
 // aceeași sămânță (12) și aceleași drumuri ca botul; drum cu drum față de rândul lui
 function mcsCalcTinteBot(b15, st, P, o) {
   o = o || {};
-  var rows = mcsTinteBot(st).map(function (x) { return { nume: x.nume, tp: x.tp, tu: x.tu, g: MonteSimbol.grid(b15, Object.assign({ pret: P }, st, { tp: x.tp }), { zile: 7, n: o.n || 500, seed: 12, faraCuTendinta: true, peDrum: true }) }; });
+  // revizia (R6): rândul tău = cardul botului (o.prima, aceleași drumuri) - o simulare mai puțin
+  var prima = o.prima && o.prima.drumuri && o.prima.n === (o.n || 500) ? o.prima : null;
+  var rows = mcsTinteBot(st, P).map(function (x) { return { nume: x.nume, tp: x.tp, tu: x.tu, g: x.tu && prima ? prima : MonteSimbol.grid(b15, Object.assign({ pret: P }, st, { tp: x.tp }), { zile: 7, n: o.n || 500, seed: 12, faraCuTendinta: true, peDrum: true }) }; });
   var tu = rows.filter(function (x) { return x.tu; })[0];
   rows.forEach(function (x) { x.drum = x === tu || !tu || !x.g || x.g.eroare ? null : mcsDrumCuDrum(tu.g.drumuri, x.g.drumuri); });
   return rows;
@@ -164,8 +170,13 @@ function mcsTpRecomandat(rows, suma) {
   if (!tu || !tu.g || tu.g.eroare) return "Nu pot compara: botul n-are rezultat pe drumurile astea.";
   var ok = rows.filter(function (x) { return x !== tu && x.g && !x.g.eroare && x.g.p50 - tu.g.p50 >= prag && mcsSigur(x.drum) && x.g.pLichidare <= 0.02 && !(x.g.p5 < tu.g.p5); }).sort(function (a, b) { return b.g.p50 - a.g.p50; })[0];
   if (ok) return (ok.tp === null ? "Aș scoate TP-ul" : "Aș pune TP-ul la " + n(ok)) + ": de obicei " + mcsBani1(ok.g.p50) + " în loc de " + mcsBani1(tu.g.p50) + ", mai bun în " + mcsPr(ok.drum.maiBun) + " din drumuri (mai rău în " + mcsPr(ok.drum.maiRau) + "), pe aceleași drumuri. Pe istoria scurtă a monedei, nu o promisiune.";
+  // revizia (R7): „ca protecție” - pe o urcare urmată de cădere (pump & dump) mijlocul e același, dar TP-ul taie coada de jos (măsurat:
+  // 5% sub −29,8 ⇒ +1,3 USDT). Doar un TP (nu scoaterea lui), mijlocul nu mai rău (10 cenți), coada de jos mai bună cu pragul ȘI cu 25%,
+  // fără lichidare în plus și nu mai rău în majoritatea drumurilor. Pe mers aleator nu apare (proba (R7b)): acolo TP-ul strică mijlocul
+  var prot = rows.filter(function (x) { return x !== tu && x.tp !== null && x.g && !x.g.eroare && x.g.p50 >= tu.g.p50 - 0.1 && x.g.p5 - tu.g.p5 >= Math.max(prag, 0.25 * Math.abs(tu.g.p5)) && x.g.pLichidare <= Math.max(0.02, tu.g.pLichidare) && !(x.drum && x.drum.maiRau > 0.5); }).sort(function (a, b) { return b.g.p5 - a.g.p5; })[0];
+  if (prot) return "Aș pune TP-ul la " + n(prot) + " ca protecție: de obicei cam la fel (" + mcsBani1(prot.g.p50) + " față de " + mcsBani1(tu.g.p50) + "), dar în 5% din drumuri cele mai proaste " + mcsBani1(prot.g.p5) + " în loc de " + mcsBani1(tu.g.p5) + " - taie coada de jos (o urcare urmată de cădere)." + (isFinite(prot.g.p95) && isFinite(tu.g.p95) ? " Costul: 5% din drumuri peste " + mcsBani1(prot.g.p95) + " în loc de " + mcsBani1(tu.g.p95) + "." : "") + " Pe istoria scurtă a monedei, nu o promisiune.";
   var nes = rows.filter(function (x) { return x !== tu && x.g && !x.g.eroare && x.g.p50 - tu.g.p50 >= prag; }).sort(function (a, b) { return b.g.p50 - a.g.p50; })[0];
-  return "Păstrează " + (tu.tp === null ? "fără TP" : "TP-ul la " + n(tu)) + ": " + (nes ? n(nes) + " are mijlocul mai bun (" + mcsBani1(nes.g.p50) + " față de " + mcsBani1(tu.g.p50) + ")" + (nes.drum ? ", mai bun în " + mcsPr(nes.drum.maiBun) + " din drumuri, mai rău în " + mcsPr(nes.drum.maiRau) + ", la fel în " + mcsPr(nes.drum.egal) : "") + (nes.g.pLichidare > 0.02 ? ", dar cu lichidare în " + mcsPr(nes.g.pLichidare) : nes.g.p5 < tu.g.p5 ? ", dar coada de jos e mai rea (" + mcsBani1(nes.g.p5) + ")" : "") + " - nu destul de sigur ca să-l schimb" : "niciun alt TP nu iese mai bine cu cel puțin " + mcsBani1(prag) + " de obicei") + ". Un TP aproape încasează des puțin și oprește botul; unul departe îl lasă să lucreze.";
+  return (tu.tp === null ? "Rămâi fără TP" : "Păstrează TP-ul la " + n(tu)) + ": " + (nes ? n(nes) + " are mijlocul mai bun (" + mcsBani1(nes.g.p50) + " față de " + mcsBani1(tu.g.p50) + ")" + (nes.drum ? ", mai bun în " + mcsPr(nes.drum.maiBun) + " din drumuri, mai rău în " + mcsPr(nes.drum.maiRau) + ", la fel în " + mcsPr(nes.drum.egal) : "") + (nes.g.pLichidare > 0.02 ? ", dar cu lichidare în " + mcsPr(nes.g.pLichidare) : nes.g.p5 < tu.g.p5 ? ", dar coada de jos e mai rea (" + mcsBani1(nes.g.p5) + ")" : "") + " - nu destul de sigur ca să-l schimb" : "niciun alt TP nu iese mai bine cu cel puțin " + mcsNr(prag, 1) + " USDT de obicei") + ". Un TP aproape încasează des puțin și oprește botul; unul departe îl lasă să lucreze - de obicei unul strică mijlocul, celălalt coada de jos: de aceea recomand rar alt TP.";
 }
 // tabelul TP la cerere (ca variantele)
 function mcsTpHtml(r) {
@@ -307,8 +318,11 @@ function mcsGridHtml(r) {
     + '<label>Direcția <select id="mcsDir">' + ["long", "short", "neutru"].map(function (d) { return '<option' + (st.dir === d ? ' selected' : '') + '>' + d + '</option>'; }).join("") + '</select></label>'
     + '<label>Suma, USDT <input id="mcsSuma" inputmode="decimal" value="' + mcsEsc(st.suma) + '"></label>'
     + '<label>Stop <input id="mcsStopBot" inputmode="decimal" placeholder="fără" value="' + mcsEsc(st.stop ? (st.stop.sus || st.stop.jos) : "") + '"></label>'
-    + '<label>TP (take profit) <input id="mcsTpBot" inputmode="decimal" placeholder="fără" value="' + mcsEsc(st.tp > 0 ? st.tp : "") + '"></label>'
-    + '<button type="button" class="t212BtnLinie" data-action-click="mcsResimuleaza()">Refă simularea</button></div>';
+    + (st.dir === "neutru" ? '<label>TP (take profit) <input id="mcsTpBot" inputmode="decimal" placeholder="la neutru nu" value="" disabled></label>'   // revizia (R5)
+      : '<label>TP (take profit) <input id="mcsTpBot" inputmode="decimal" placeholder="fără" value="' + mcsEsc(st.tp > 0 ? st.tp : st.tpIgnorat > 0 ? st.tpIgnorat : "") + '"></label>')
+    + '<button type="button" class="t212BtnLinie" data-action-click="mcsResimuleaza()">Refă simularea</button></div>'
+    + (st.tpIgnorat > 0 ? '<p class="tbWarn mcsNota">' + mcsEsc("TP-ul (" + mcsPretTxt(st.tpIgnorat) + ") e de partea greșită a prețului pentru " + st.dir + ": nu-l pun în simulare. La long, TP-ul e deasupra prețului de acum; la short, dedesubt.") + '</p>' : '')
+    + (st.tpAprox ? '<p class="tbSub mcsNota">TP-ul tău e în procente din investiție: prețul de aici e cel socotit de Pionex pentru botul care rulează; pentru un bot pornit azi e aproximativ.</p>' : '');
   if (r.boti && r.boti.length > 1) form = '<label class="mcsBotAles tbSub">' + mcsEsc("ai " + mcsCate(r.boti.length, "bot activ", "boți activi") + " pe " + r.sim + "; îl simulez pe:") + ' <select id="mcsBotAles" data-action-change="mcsAlegeBot(this.value)">'
     + r.boti.map(function (t, i) { return '<option value="' + i + '"' + (i === (r.botIdx || 0) ? ' selected' : '') + '>' + mcsEsc(t) + '</option>'; }).join("") + '</select></label>' + form;
   var cap = '<section class="t212Panou mcsSec"><div class="t212PanouCap"><h4>🤖 ' + (st.botulTau ? "Un bot grid ca al tău, pornit azi" : "Un bot grid pe " + mcsEsc(r.sim) + " (setări de probă - schimbă-le)") + '</h4>'
@@ -426,7 +440,7 @@ function mcsComparaTp() {
   if (!r || !d || d.tip !== "coin" || !r.setari || r.tinteBotInLucru) return;
   r.tinteBotInLucru = true; mcsDeseneaza();
   setTimeout(function () {
-    try { r.tinteBot = mcsCalcTinteBot(d.b15, r.setari, r.pret, { n: 500 }); r.tinteBotEroare = null; } catch (e) { r.tinteBot = null; r.tinteBotEroare = "Țintele n-au mers: " + (e && e.message || e); }
+    try { r.tinteBot = mcsCalcTinteBot(d.b15, r.setari, r.pret, { n: 500, prima: r.grid && !r.grid.eroare ? r.grid : null }); r.tinteBotEroare = null; } catch (e) { r.tinteBot = null; r.tinteBotEroare = "Țintele n-au mers: " + (e && e.message || e); }
     r.tinteBotInLucru = false; if (mcsStare.rez === r) mcsDeseneaza();
   }, 30);
 }
@@ -502,7 +516,13 @@ function mcsAtrPct(b) {
   return a > 0 && P > 0 ? a / P : null;
 }
 function mcsStopuriAtr(a) { return [1, 1.5, 2, 3].map(function (k) { return Math.min(0.5, Math.max(0.005, k * a)); }); }
-function mcsListaStopuri(std, sp) { var l = std.filter(function (x) { return Math.abs(x - sp) >= 6e-4; }); if (sp > 0 && sp < 1) l.push(sp); return l.sort(function (x, y) { return x - y; }); }
+function mcsListaStopuri(std, sp) {
+  var l = std.filter(function (x) { return Math.abs(x - sp) >= 6e-4; }), out = [];
+  if (sp > 0 && sp < 1) l.push(sp);
+  // revizia v100.132 (R3): după limitarea 0,5% / 50%, multiplii ATR pot cădea pe același nivel ⇒ fără dubluri (stopul de sus rămâne)
+  l.sort(function (x, y) { return x - y; }).forEach(function (x) { if (!out.some(function (y) { return Math.abs(y - x) < 6e-4; })) out.push(x); });
+  return out;
+}
 // v100.131: ținta de sus × ½, ¾, 1, 1,5, 2 (ținta de sus exact, ca rândul ei să fie cardul)
 function mcsListaTinte(tp) { return tp > 0 ? [0.5, 0.75, 1, 1.5, 2].map(function (k) { return k === 1 ? tp : tp * k; }) : []; }
 function mcsCalculeaza(d, o) {
@@ -515,6 +535,8 @@ function mcsCalculeaza(d, o) {
       : MonteSimbol.pret(d.b15, { barePeZi: 96, orizonturi: [7, 30], n: 600, blocZile: 1, minZile: 14, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC });
     if (pretMc && !pretMc.eroare) pretMc.atrPct = atrC;
     var bi = o.botIdx || 0, st = o.setari || mcsSetariBot(mcsBoti(), d.sim, bi) || mcsSetariProba(P);
+    // revizia (R2): long cu TP sub preț / short cu TP peste (de ex. după schimbarea direcției) ⇒ s-ar închide pe prima bară; nu-l pun
+    if (st && st.tp > 0 && !((st.dir === "long" && st.tp > P) || (st.dir === "short" && st.tp < P))) st = Object.assign({}, st, { tp: null, tpIgnorat: st.dir === "neutru" ? null : st.tp });
     return { sim: d.sim, tip: "coin", sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist,
       nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : "−10% / +15% pentru un coin: schimbă-le" };
   }

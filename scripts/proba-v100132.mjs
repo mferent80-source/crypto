@@ -92,9 +92,9 @@ await test("(2e) recomandarea TP: alta doar cu mijlocul mai bun cu pragul (1 USD
   const d = (a, r) => ({ maiBun: a, maiRau: r, egal: 1 - a - r });
   const tu = { nume: "fără TP", tp: null, tu: true, g: g(-2, -9) };
   assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.5, 0.1) }], 50), /^Aș pune TP-ul la 1,05: de obicei 0,0 USDT în loc de −2,0 USDT, mai bun în 50% din drumuri \(mai rău în 10%\)/);
-  assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.3, 0.3) }], 50), /^Păstrează fără TP/, "nesigur drum cu drum");
-  assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(-1.5, -8), drum: d(0.5, 0.1) }], 50), /^Păstrează fără TP/, "sub prag");
-  assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -12), drum: d(0.5, 0.1) }], 50), /^Păstrează fără TP/, "coada mai rea");
+  assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.3, 0.3) }], 50), /^Rămâi fără TP/, "nesigur drum cu drum");
+  assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(-1.5, -8), drum: d(0.5, 0.1) }], 50), /^Rămâi fără TP/, "sub prag");
+  assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -12), drum: d(0.5, 0.1) }], 50), /^Rămâi fără TP/, "coada mai rea");
 });
 await test("(2f) formularul are TP; „Refă” îl citește; aceleași setări cu alt TP ⇒ altele; variantele mută TP-ul cu marginea", () => {
   const st = G.mcsSetariBot([bot({})], "PONS");
@@ -111,6 +111,64 @@ await test("(2g) pe 15 grafice fără avantaj (15 minute), „Aș pune TP-ul” 
     if (/^Aș pune/.test(G.mcsTpRecomandat(G.mcsCalcTinteBot(b, st, P, { n: 120 }), 50))) da++;
   }
   assert.ok(da <= 1, da + " din 15");
+});
+
+// ---------------- revizia v100.132 ----------------
+await test("(R1) mcsTinteBot(st, P): nivelurile deja atinse la prețul de acum ies din listă (long ≤ P, short ≥ P)", () => {
+  const st = { jos: 0.4, sus: 0.44, grile: 10, levier: 2, dir: "long", suma: 50, stop: { jos: 0.36 }, tp: null };
+  assert.deepEqual(G.mcsTinteBot(st, 0.445).map((x) => x.tp === null ? null : +x.tp.toFixed(4)), [null, 0.45, 0.46, 0.48]);
+  assert.deepEqual(G.mcsTinteBot(Object.assign({}, st, { dir: "short", stop: { sus: 0.46 } }), 0.395).map((x) => x.tp === null ? null : +x.tp.toFixed(4)), [null, 0.39, 0.38, 0.36]);
+});
+await test("(R2) un TP de partea greșită a prețului (long sub preț / short peste) nu intră în simulare: tpIgnorat + nota pe card", () => {
+  const d = { tip: "coin", sim: "PONS", sursa: "x", b15: bare15(20, 3), b1: [], ist: { r: { cazuri: 0 } } }, P = d.b15[d.b15.length - 1].c;
+  const r = G.mcsCalculeaza(d, { setari: { jos: P * 0.95, sus: P * 1.05, grile: 10, levier: 2, dir: "short", suma: 50, stop: { sus: P * 1.1 }, tp: P * 1.2, botulTau: false } });
+  assert.equal(r.setari.tp, null); assert.equal(r.setari.tpIgnorat, P * 1.2);
+  assert.match(G.mcsGridHtml(r), /TP-ul \([\d,]+\) e de partea greșită a prețului pentru short: nu-l pun în simulare/);
+  const r2 = G.mcsCalculeaza(d, { setari: { jos: P * 0.95, sus: P * 1.05, grile: 10, levier: 2, dir: "long", suma: 50, stop: null, tp: P * 1.2, botulTau: false } });
+  assert.equal(r2.setari.tp, P * 1.2, "long cu TP deasupra: rămâne");
+});
+await test("(R3) stopurile după ATR fără dubluri după limitare (ATR 0,2% / 30%)", () => {
+  const l = G.mcsListaStopuri(G.mcsStopuriAtr(0.002), 0.1); assert.deepEqual(l.map((x) => +x.toFixed(4)), [0.005, 0.006, 0.1]);
+  const l2 = G.mcsListaStopuri(G.mcsStopuriAtr(0.3), 0.1); assert.deepEqual(l2.map((x) => +x.toFixed(4)), [0.1, 0.3, 0.45, 0.5]);
+});
+await test("(R4/R5) TP-ul din Pionex în procente ⇒ nota „aproximat”; la neutru câmpul TP e dezactivat", () => {
+  const st = G.mcsSetariBot([bot({ opritorProfitTip: "raport", opritorProfitRaport: 0.2 })], "PONS");
+  assert.equal(st.tpAprox, true);
+  assert.match(G.mcsGridHtml({ tip: "coin", sim: "PONS", setari: st, grid: { eroare: "x" } }), /TP-ul tău e în procente din investiție/);
+  assert.match(G.mcsGridHtml({ tip: "coin", sim: "PONS", setari: Object.assign({}, st, { dir: "neutru", tp: null }), grid: { eroare: "x" } }), /<input id="mcsTpBot" inputmode="decimal" placeholder="la neutru nu" value="" disabled>/);
+});
+await test("(R6) mcsCalcTinteBot refolosește cardul botului (o.prima) pentru rândul tău", () => {
+  const b = bare15(20, 3, 0.012), st = { jos: 0.95, sus: 1.03, grile: 10, levier: 2, dir: "long", suma: 50, stop: { jos: 0.9 }, tp: null };
+  const card = M.grid(b, Object.assign({ pret: 1 }, st), { zile: 7, n: 80, seed: 12, peDrum: true });
+  const rows = G.mcsCalcTinteBot(b, st, 1, { n: 80, prima: card });
+  assert.equal(rows.find((x) => x.tu).g, card);
+});
+// pump & dump (urcare de 12% în 8 bare de 15 minute, apoi −20% în 24): mijlocul botului e același cu și fără TP, dar coada de jos
+// se taie (măsurat la scriere: 5% sub −29,8 ⇒ +1,25 USDT) - regula pe mijloc n-o putea vedea
+const pd = (zile, seed, pas, p) => { const g = M.generator(seed), b = []; let c = 1, faza = 0, k = 0;
+  for (let i = 0; i < zile * 96; i++) { const o = c; let r = (g() - 0.5) * pas;
+    if (faza === 0 && g() < p) { faza = 1; k = 0; }
+    if (faza === 1) { r += Math.log(1.12) / 8; if (++k >= 8) { faza = 2; k = 0; } } else if (faza === 2) { r += Math.log(0.80) / 24; if (++k >= 24) faza = 0; }
+    const x = c * Math.exp(r); b.push({ t: i * 9e5, o, h: Math.max(o, x) * 1.001, l: Math.min(o, x) * 0.999, c: x, v: 1 }); c = x; } return b; };
+const tpLong = (b) => { const P = b[b.length - 1].c; return [{ jos: P * 0.95, sus: P * 1.05, grile: 15, levier: 2, dir: "long", suma: 50, stop: null, tp: null }, P]; };
+await test("(R7a) putere: pe 10 grafice pump & dump, „Aș pune TP-ul … ca protecție” în cel puțin 5", () => {
+  let da = 0, ex = "";
+  for (let k = 0; k < 10; k++) { const b = pd(20, 1200 + k, 0.004, 0.01), [st, P] = tpLong(b), t = G.mcsTpRecomandat(G.mcsCalcTinteBot(b, st, P, { n: 120 }), 50); if (/^Aș pune TP-ul la [\d,]+ ca protecție/.test(t)) { da++; ex = ex || t; } }
+  assert.ok(da >= 5, da + " din 10"); assert.match(ex, /taie coada de jos/);
+});
+await test("(R7b) alarme false: pe 30 de grafice fără avantaj (15 minute, long și short), „Aș pune / Aș scoate” cel mult o dată", () => {
+  let da = 0;
+  for (let k = 0; k < 30; k++) {
+    const b = bare15(20, 400 + k, 0.01), P = b[b.length - 1].c, sh = k % 2 === 1;
+    const st = sh ? { jos: P * 0.94, sus: P * 1.06, grile: 15, levier: 2, dir: "short", suma: 50, stop: { sus: P * 1.12 }, tp: null } : { jos: P * 0.94, sus: P * 1.06, grile: 15, levier: 2, dir: "long", suma: 50, stop: { jos: P * 0.88 }, tp: null };
+    if (/^Aș (pune|scoate)/.test(G.mcsTpRecomandat(G.mcsCalcTinteBot(b, st, P, { n: 120 }), 50))) da++;
+  }
+  assert.ok(da <= 1, da + " din 30");
+});
+await test("(R8/R9) „Rămâi fără TP” / „Păstrează TP-ul la …”; textul spune de ce recomand rar alt TP", () => {
+  const g = (p50, p5) => ({ p50, p5, p95: 5, pPlus: 0.5, pLichidare: 0, pTp: 0.3, pStop: 0.1 });
+  const t = G.mcsTpRecomandat([{ nume: "fără TP", tp: null, tu: true, g: g(-2, -9) }, { nume: "+¼ din grid", tp: 1.05, g: g(-3, -9), drum: { maiBun: 0.2, maiRau: 0.5, egal: 0.3 } }], 50);
+  assert.match(t, /^Rămâi fără TP/); assert.match(t, /de aceea recomand rar alt TP/);
 });
 
 // ---------------- (3) 🎲 din rând ----------------
