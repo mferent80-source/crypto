@@ -96,11 +96,12 @@ try {
     else {
       await tr("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: b.x, y: b.y }] }); await asteapta(900);
       await tr("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await asteapta(600);
-      const r = await ev(`(() => { const p = document.getElementById("botStripTot"); return { vizibil: !!p && !p.hidden, randuri: p ? p.querySelectorAll(".bsTotRand").length : 0, pagina: (document.querySelector(".panel.on") || {}).id }; })()`);
+      const r = await ev(`(() => { const p = document.getElementById("botStripTot"); return { vizibil: !!p && !p.hidden, randuri: p ? p.querySelectorAll(".bsTotRand").length : 0, pagina: (document.querySelector(".panel.on") || {}).id,
+        semn: getComputedStyle(document.getElementById("botStrip"), "::after").content }; })()`);   // v100.124: „⋯” la capătul benzii
       writeFileSync(path.join(DOSAR_POZE, "tel-apasare-lunga.png"), Buffer.from((await tr("Page.captureScreenshot", { format: "png" })).data, "base64"));
-      const ok = r.vizibil && r.randuri >= 4 && r.pagina === "engine";
+      const ok = r.vizibil && r.randuri >= 4 && r.pagina === "engine" && /⋯/.test(r.semn);
       if (!ok) picate++;
-      console.log(`  ${ok ? "ok  " : "PICA"} apăsarea lungă pe banda botului: panou ${r.vizibil ? "vizibil" : "ascuns"}, ${r.randuri} rânduri, pagina rămâne „${r.pagina}”`);
+      console.log(`  ${ok ? "ok  " : "PICA"} apăsarea lungă pe banda botului: panou ${r.vizibil ? "vizibil" : "ascuns"}, ${r.randuri} rânduri, pagina rămâne „${r.pagina}”, semnul ${r.semn}`);
     }
   }
   ws.close();

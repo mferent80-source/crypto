@@ -1,0 +1,3 @@
+#!/bin/sh
+# v100.124: proba de telefon inainte de push (vezi scripts/inainte-de-push.mjs). Instalare: npm run instaleaza-hook
+exec node scripts/inainte-de-push.mjs

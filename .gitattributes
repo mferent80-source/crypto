@@ -2,3 +2,5 @@
 # La checkout ies mereu CRLF, oricare ar fi core.autocrlf al celui care cloneaza.
 *.bat text eol=crlf
 *.cmd text eol=crlf
+# v100.124: hook-ul git e citit de sh - cu CRLF, comanda "exec node ..." pica
+scripts/hooks/* text eol=lf

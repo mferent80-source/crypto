@@ -2359,3 +2359,8 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
   .toolbar:not(.deschisa)>.status{grid-column:1/-1}
   .toolbar.deschisa>.tbarRezumat{margin-bottom:8px}
 }
+/* v100.124: pe telefon „⋯” la capatul benzii botului - semnul ca apasarea lunga arata tot randul (in locul „…” taiat) */
+@media (max-width:760px){
+  .botStrip{position:relative;padding-right:30px;text-overflow:clip}
+  .botStrip::after{content:"⋯";position:absolute;top:0;right:0;bottom:0;display:flex;align-items:center;padding:0 11px 0 18px;border-radius:0 999px 999px 0;background:linear-gradient(90deg,rgba(13,24,36,0),#0d1824 45%);font-weight:900}
+}
