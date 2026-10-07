@@ -202,17 +202,29 @@ function saltDreaptaHtml(d, R) {
 }
 function saltSusHtml(d, R) { return saltKpiHtml(d, R) + saltTodoHtml(R); }
 // v100.126 (el 07.10, „ok fa idei”): Salt lângă Trading 212 - din rezumatul colectorului (/api/t212?action=saltRezumat, la 15 minute)
-function saltBandaHtml(r) {
-  if (!r || !(r.n > 0) || r.val == null) return "";
-  return '<span><b>Salt</b> · ' + saltBani1(r.val) + ' EUR' + (r.eurRon > 0 ? ' <span class="tbSub">(≈ ' + saltLei(r.val * r.eurRon) + ')</span>' : '') + ' · deschise <b class="' + saltCls(r.rez) + '">' + saltSuma1(r.rez) + '</b></span>';
+// revizia Opus (07.10): toate pozițiile fără prețuri ⇒ nimic (nu „0,0 EUR · nimic roșu”); parțial ⇒ se spune câte;
+// vechi (colectorul oprit, peste 45 de minute) ⇒ „de acum …” și nu mai aprinde ⚠️
+function saltRezumatProaspat(r, acum) { return !!(r && r.la > 0 && (acum || Date.now()) - r.la <= 45 * 60000); }
+function saltRezumatBun(r) { return !!(r && r.n > 0 && r.val != null && !((r.fara || 0) >= r.n)); }
+function saltDeCand(r, acum) {
+  if (saltRezumatProaspat(r, acum)) return "";
+  var m = Math.round(((acum || Date.now()) - r.la) / 60000);
+  return "de acum " + (m < 60 ? m + " min" : m < 48 * 60 ? Math.floor(m / 60) + " h" : saltCate(Math.floor(m / 1440), "zi", "zile"));
 }
-function saltAcasaHtml(r) {
-  if (!r || !(r.n > 0) || r.val == null) return "";
-  var ie = (r.iesi || []).length, at = (r.atentie || []).length;
-  return '<div class="acEt" style="margin-top:6px">Salt · ' + saltEsc(saltCate(r.n, "poziție", "poziții")) + '</div>'
+function saltBandaHtml(r, acum) {
+  if (!saltRezumatBun(r)) return "";
+  var dc = saltDeCand(r, acum);
+  return '<span><b>Salt</b> · ' + saltBani1(r.val) + ' EUR' + (r.eurRon > 0 ? ' <span class="tbSub">(≈ ' + saltLei(r.val * r.eurRon) + ')</span>' : '') + ' · deschise <b class="' + saltCls(r.rez) + '">' + saltSuma1(r.rez) + '</b>'
+    + (r.fara > 0 ? ' <span class="tbSub">· ' + r.fara + ' din ' + r.n + ' fără prețuri</span>' : '') + (dc ? ' <span class="tbSub">(' + dc + ')</span>' : '') + '</span>';
+}
+function saltAcasaHtml(r, acum) {
+  if (!saltRezumatBun(r)) return "";
+  var ie = (r.iesi || []).length, at = (r.atentie || []).length, dc = saltDeCand(r, acum);
+  var sem = ie ? ie + " de ieșit (" + saltEsc(r.iesi.join(", ")) + ")" : at ? at + " cu atenție" : r.fara > 0 ? r.fara + " din " + r.n + " fără prețuri" : "nimic roșu";
+  return '<div class="acEt" style="margin-top:6px">Salt · ' + saltEsc(saltCate(r.n, "poziție", "poziții")) + (dc ? ' · ' + dc : '') + '</div>'
     + '<div class="acLin"><span>Valoarea</span><b>' + saltBani1(r.val) + ' EUR</b></div>'
     + '<div class="acLin"><span>Pozițiile deschise</span><b class="' + saltCls(r.rez) + '">' + saltSuma1(r.rez) + '</b></div>'
-    + '<div class="acLin"><span>Semafoare</span><b class="' + (ie ? "bad" : at ? "tbWarn" : "good") + '">' + (ie ? ie + " de ieșit" + (r.iesi.length ? " (" + saltEsc(r.iesi.join(", ")) + ")" : "") : at ? at + " cu atenție" : "nimic roșu") + '</b></div>'
+    + '<div class="acLin"><span>Semafoare</span><b class="' + (ie ? "bad" : at ? "tbWarn" : r.fara > 0 ? "acMut" : "good") + '">' + sem + '</b></div>'
     + '<button class="acBtn" type="button" data-action-click="navTo(\'salt\',true)">Deschide Salt</button>';
 }
 function saltHtml(d, acum) {

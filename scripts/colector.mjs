@@ -37,8 +37,8 @@ import { bilantDinBusola } from "./lib/din-busola.mjs";   // v101.65 (ideea 1): 
 import { unesteZile, randuriInchise } from "../retea/date-t212.mjs";   // v101.64 (L2, revizia 🟡6): barele zilnice se adună peste 2 ani
 import { sugestiiDimineata, sugestiiIntraday } from "./lib/tura-sugestii-actiuni.mjs";   // v101.81 (pagina Sugestii): acțiunile US + EU
 import { universEU } from "./lib/univers-eu.mjs";
-import { turaSalt as turaSaltModul } from "./lib/tura-salt.mjs";
-import { turaSaltPozitii as turaSaltPozitiiModul } from "./lib/tura-salt-pozitii.mjs";   // v101.84: alerta la stop + rezumatul Salt   // v101.82 (pagina Salt)
+import { turaSalt as turaSaltModul } from "./lib/tura-salt.mjs";   // v101.82 (pagina Salt)
+import { turaSaltPozitii as turaSaltPozitiiModul } from "./lib/tura-salt-pozitii.mjs";   // v101.84: alerta la stop + rezumatul Salt
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
@@ -1169,8 +1169,11 @@ async function turaSaltPozitii() {
     let eurRon = null; if (poz.length) { try { const b = await cereBare("EURRON=X"); eurRon = b.length ? b[b.length - 1].c : null; } catch { eurRon = null; } }
     const m = meta(), st = m.saltAlerte || (m.saltAlerte = {});
     const r = await turaSaltPozitiiModul({ pozitii: poz, univers: u && u.instrumente || [], cereBare, Salt, deps: { ActiuniSemnale, Consiliu, Consilier, Probabilitati }, stare: st,
-      trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60)), acum: Date.now(), eurRon, jurnal });
-    await trimite("/api/t212?action=saltRezumat", { rezumat: r.rezumat });
+      trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60)), salveaza: scrieStare,
+      pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), acum: Date.now(), eurRon, jurnal });
+    // revizia (R1): nicio poziție cu prețuri (Yahoo limitează / e căzut) ⇒ NU scriu peste rezumatul bun; pagina îl arată „de acum …”
+    if (r.rezumat.n > 0 && r.rezumat.fara >= r.rezumat.n) jurnal("salt: nicio poziție cu prețuri - rămâne rezumatul de dinainte");
+    else await trimite("/api/t212?action=saltRezumat", { rezumat: r.rezumat });
     if (r.trimise) jurnal("salt: alerte la stopul care urcă trimise:", r.trimise);
   } catch (e) { jurnal("salt poziții ESEC", e.message); }
   saltPozInLucru = false;

@@ -1115,7 +1115,7 @@ function contTotRender() {
   var iesi = t212.nrIesi || 0;   // v100.40: din date (t212Render), nu din DOM-ul paginii T212
   var lich = act.filter(function (b) { var d = Number(b.distantaLichidarePct); return b.lichidareDepasita || (isFinite(d) && Math.abs(d) < 15); }).length;
   if (sbH) parti.push(sbH);
-  var iesiS = contTot.salt && Array.isArray(contTot.salt.iesi) ? contTot.salt.iesi.length : 0;   // v100.126: și pozițiile Salt de ieșit
+  var iesiS = contTot.salt && Array.isArray(contTot.salt.iesi) && typeof saltRezumatProaspat === "function" && saltRezumatProaspat(contTot.salt, Date.now()) ? contTot.salt.iesi.length : 0;   // v100.126: și pozițiile Salt de ieșit (doar din rezumatul proaspăt - revizia R2)
   var ati = iesi + lich + iesiS;
   parti.push(ati ? '<span class="bad">⚠️ ' + [iesi ? t212Cate(iesi, "acțiune", "acțiuni") + " de ieșit" : "", iesiS ? t212Cate(iesiS, "acțiune", "acțiuni") + " de ieșit la Salt" : "", lich ? t212Cate(lich, "bot", "boți") + " aproape de lichidare" : ""].filter(Boolean).join(" · ") + '</span>'
     : t212.nrIesi == null && !t212.eroare && (!t212.poz || t212.poz.length) ? '<span class="tbSub">acțiunile: aduc prețurile…</span>' : '<span class="good">✓ nimic roșu</span>');   // v100.40: fara semafor inca -> nu „nimic roșu”

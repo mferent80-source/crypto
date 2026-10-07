@@ -94,6 +94,35 @@ await test("(3) colectorul: tura pozițiilor Salt la 15 minute (alertele în met
   assert.match(c, /async function turaSaltPozitii\(\)/); assert.match(c, /m\.saltAlerte/); assert.match(c, /await trimite\("\/api\/t212\?action=saltRezumat", \{ rezumat: /);
   assert.match(c, /deps: \{ ActiuniSemnale, Consiliu, Consilier, Probabilitati \}/); assert.match(c, /15 \* 60000/);
 });
+// ---------------- revizia Opus (07.10) ----------------
+await test("(R1) fără prețuri: rezumatul spune câte (nu „0,0 EUR · nimic roșu”); toate fără prețuri ⇒ banda / Acasă nu arată cifre; fiecare poziție fără bare ⇒ jurnal", async () => {
+  const j = [];
+  const r = await TP.turaSaltPozitii({ pozitii: POZ, univers: U, cereBare: async () => [], Salt, deps: DEPS, stare: {}, trimite: async () => true, acum: T0, jurnal: (...a) => j.push(a.join(" ")) });
+  assert.equal(r.rezumat.fara, 1); assert.equal(r.rezumat.n, 1); assert.ok(j.some((t) => /RHM\.DE/.test(t) && /fără prețuri/.test(t)), j.join(" | "));
+  assert.equal(globalThis.saltBandaHtml(Object.assign({}, REZ, { val: 0, rez: 0, fara: 2, iesi: [] }), T0 + 60000), "");
+  assert.equal(globalThis.saltAcasaHtml(Object.assign({}, REZ, { val: 0, rez: 0, fara: 2, iesi: [] }), T0 + 60000), "");
+  const p = Object.assign({}, REZ, { fara: 1, iesi: [] });
+  assert.match(globalThis.saltBandaHtml(p, T0 + 60000), /1 din 2 fără prețuri/); assert.doesNotMatch(globalThis.saltAcasaHtml(p, T0 + 60000), /nimic roșu/);
+  assert.match(citeste("scripts", "colector.mjs"), /r\.rezumat\.n > 0 && r\.rezumat\.fara >= r\.rezumat\.n/, "colectorul nu scrie peste rezumatul bun când n-are niciun preț");
+});
+await test("(R2) rezumatul vechi (peste 45 de minute) se spune („de acum …”) și nu mai aprinde ⚠️", () => {
+  const vechi = globalThis.saltBandaHtml(REZ, T0 + 2 * 3600000); assert.match(vechi, /de acum 2 h/);
+  assert.doesNotMatch(globalThis.saltBandaHtml(REZ, T0 + 10 * 60000), /de acum/);
+  assert.equal(globalThis.saltRezumatProaspat(REZ, T0 + 2 * 3600000), false); assert.equal(globalThis.saltRezumatProaspat(REZ, T0 + 10 * 60000), true);
+  assert.match(globalThis.saltAcasaHtml(REZ, T0 + 2 * 3600000), /de acum 2 h/);
+  assert.match(citeste("public", "lib", "t212-ecran.js"), /saltRezumatProaspat\(contTot\.salt/);
+});
+await test("(R3/R4/R5) cursul ținut minte pe tură (o cerere pe monedă), pauză între poziții; starea scrisă pe loc; cheile pozițiilor șterse se curăță", async () => {
+  const cerute = [], salvari = [], pauze = [];
+  const poz = [{ isin: "US64110L1061", simbol: "NFLX", nume: "Netflix", qty: 1, pretMediu: 80, de: "2026-01-02", plata: "EUR" }, { isin: "US0000000001", simbol: "XYZ", nume: "X", qty: 1, pretMediu: 80, de: "2026-01-02", plata: "EUR" }];
+  const univ = U.concat([{ isin: "US0000000001", simbol: "XYZ", nume: "X", tip: "actiune", moneda: "USD" }]);
+  const fx = Array.from({ length: 300 }, (_, i) => ({ t: T0 - (300 - i) * ZI, o: 1.1, h: 1.1, l: 1.1, c: 1.1, v: 1 }));
+  const stare = { "salt-stop-DE0000000000": "sub" };
+  await TP.turaSaltPozitii({ pozitii: poz, univers: univ, cereBare: async (s) => { cerute.push(s); return s === "EURUSD=X" ? fx : bare(); }, Salt, deps: DEPS, stare, trimite: async () => true, salveaza: () => salvari.push(1), pauza: async (ms) => pauze.push(ms), acum: T0, jurnal: () => {} });
+  assert.equal(cerute.filter((s) => s === "EURUSD=X").length, 1, "cursul o dată pe tură"); assert.ok(pauze.length >= 1, "pauză între poziții");
+  assert.ok(salvari.length >= 1, "starea scrisă pe loc"); assert.equal(stare["salt-stop-DE0000000000"], undefined, "cheia poziției șterse");
+  assert.match(citeste("scripts", "colector.mjs"), /salveaza: scrieStare/);
+});
 await test("(E) versiunea v100.126 / colector v101.84", () => {
   const html = citeste("public", "index.html");
   assert.match(html, /content="v100\.126"/); assert.match(html, /id="antetVersiune">v100\.126 /); assert.match(html, /id="healthAppVersion">v100\.126</);
