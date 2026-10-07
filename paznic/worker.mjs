@@ -60,6 +60,36 @@ export async function simboluriScrie(env, text, acum = Date.now()) {
 }
 export async function simboluriCiteste(env) { let o = null; try { o = JSON.parse(await env.PAZNIC.get("simboluri") || "null"); } catch { o = null; } return o && Array.isArray(o.simboluri) ? o : { simboluri: [], la: null }; }
 
+// v101.86 (pagina alerts în două): pozițiile Salt adăugate de pe pagină - pagina scrie cererea (cheia de citire), colectorul o ia,
+// o aplică pe lista din Radar și o confirmă (tokenul lui). O singură cheie KV; cel mult 20 în așteptare și 100 de scrieri pe zi.
+const SALT_CERERI_MAX = 20, SALT_SCRIERI_ZI = 100;
+async function saltCereriCiteste(env) { let o = null; try { o = JSON.parse(await env.PAZNIC.get("salt-cereri") || "null"); } catch { o = null; } return o && Array.isArray(o.cereri) ? o : { cereri: [] }; }
+export async function saltCerereScrie(env, text, acum = Date.now()) {
+  if (String(text || "").length > 2000) return { status: 413, corp: { error: "cerere prea mare" } };
+  let c; try { c = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
+  const op = c && c.op, n = (x) => (typeof x === "number" && Number.isFinite(x) ? x : NaN);
+  if (op !== "pune" && op !== "scoate") return { status: 400, corp: { error: "op: pune sau scoate" } };
+  const isin = String(c.isin || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12), simbol = String(c.simbol || "").toUpperCase().replace(/[^A-Z0-9.\-]/g, "").slice(0, 20);
+  if (!isin && !simbol) return { status: 400, corp: { error: "lipsește simbolul sau ISIN-ul" } };
+  const x = { id: acum.toString(36) + Math.random().toString(36).slice(2, 6), op, isin: isin || null, simbol: simbol || null, la: acum };
+  if (op === "pune") {
+    if (!(n(c.qty) > 0) || !(n(c.pretMediu) > 0)) return { status: 400, corp: { error: "bucățile și prețul mediu trebuie să fie mai mari ca zero" } };
+    if (c.moneda !== "EUR" && c.moneda !== "USD") return { status: 400, corp: { error: "moneda: EUR sau USD" } };
+    Object.assign(x, { qty: c.qty, pretMediu: c.pretMediu, moneda: c.moneda, de: /^\d{4}-\d{2}-\d{2}$/.test(String(c.de || "")) ? c.de : null });
+  }
+  const v = await saltCereriCiteste(env), zi = new Date(acum).toISOString().slice(0, 10), scrieri = v.zi === zi ? (Number(v.scrieriZi) || 0) : 0;
+  if (v.cereri.length >= SALT_CERERI_MAX) return { status: 429, corp: { error: "sunt deja " + SALT_CERERI_MAX + " cereri în așteptare: colectorul de acasă nu le-a luat (e pornit?)" } };
+  if (scrieri >= SALT_SCRIERI_ZI) return { status: 429, corp: { error: "prea multe cereri azi (" + SALT_SCRIERI_ZI + "); mâine se poate din nou" } };
+  await env.PAZNIC.put("salt-cereri", JSON.stringify({ cereri: v.cereri.concat([x]), zi, scrieriZi: scrieri + 1 }));
+  return { status: 200, corp: { ok: true, id: x.id } };
+}
+export async function saltCereriConfirma(env, text) {
+  let c; try { c = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
+  const iduri = new Set(Array.isArray(c && c.iduri) ? c.iduri.map(String) : []), v = await saltCereriCiteste(env), ramase = v.cereri.filter((x) => !iduri.has(String(x.id)));
+  if (ramase.length !== v.cereri.length) await env.PAZNIC.put("salt-cereri", JSON.stringify({ ...v, cereri: ramase }));
+  return { status: 200, corp: { ok: true, ramase: ramase.length } };
+}
+
 async function citeste(env) { try { return JSON.parse(await env.PAZNIC.get("stare") || "null") || {}; } catch { return {}; } }
 async function scrie(env, s) { await env.PAZNIC.put("stare", JSON.stringify(s)); }
 function minute(ms) { const m = Math.round(ms / 60000); return m < 90 ? m + " de minute" : (m / 60).toFixed(1).replace(".", ",") + " ore"; }
@@ -135,6 +165,16 @@ export default {
       if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await simboluriScrie(env, await request.text()); return J(r.corp, r.status, h); }
       if (m === "GET") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); return J(await simboluriCiteste(env), 200, h); }
       return J({ error: "doar GET sau POST" }, 405, h);
+    }
+    if (u.pathname === "/salt-cereri") {
+      if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await saltCerereScrie(env, await request.text()); return J(r.corp, r.status, h); }
+      if (m === "GET") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); const v = await saltCereriCiteste(env); return J({ cereri: v.cereri }, 200, h); }
+      return J({ error: "doar GET sau POST" }, 405, h);
+    }
+    if (u.pathname === "/salt-cereri/ack") {
+      if (m !== "POST") return J({ error: "doar POST" }, 405, h);
+      if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h);
+      const r = await saltCereriConfirma(env, await request.text()); return J(r.corp, r.status, h);
     }
     return J({ serviciu: "paznicul colectorului Crypto Radar" }, 200, h);
   },
