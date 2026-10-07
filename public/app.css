@@ -2405,3 +2405,34 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
   #salt .saltLista td{display:block;padding:0;border:0;white-space:normal}
   #salt .saltLista td.saltDece{grid-column:1/-1;color:var(--muted);font-size:12.5px}
 }
+/* v100.128 (el 07.10, „fă montecarlo să facă și analiza pe un coin sau stock ales” → „da” pe demo): caseta „Monte Carlo pe un coin sau un stock” */
+#montecarlo{--tb-r:12px;--tb-linie:rgba(144,160,182,.16);--tb-fond:#0c1621;--tb-fond2:#0f1b28}
+#mcsPagina{display:grid;gap:10px;min-width:0;font-variant-numeric:tabular-nums}
+#mcsPagina>*{min-width:0}
+#mcsPagina .mcsCap{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}#mcsPagina .mcsCap h4{margin:0;font-size:17px}
+#mcsPagina .mcsForm,#mcsPagina .mcsStopTinta,#mcsPagina .mcsSetari{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+#mcsPagina .mcsStopTinta,#mcsPagina .mcsSetari{padding:10px 14px 0}
+#mcsPagina .mcsForm input{width:200px;max-width:100%}
+#mcsPagina input,#mcsPagina select{font:inherit;font-size:14px;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0;width:auto}
+#mcsPagina .mcsStopTinta input,#mcsPagina .mcsSetari input{width:96px}
+#mcsPagina label{display:grid;gap:3px;color:var(--muted);font-size:12px}
+#mcsPagina .t212Btn,#mcsPagina .t212BtnLinie{width:auto}
+#mcsPagina .mcsNota{margin:8px 14px 12px}
+#mcsPagina .mcsDoua{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px 14px}
+#mcsPagina .mcsCart{background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:10px;padding:10px 12px;min-width:0;display:grid;gap:8px}
+#mcsPagina .mcsCart h5{margin:0;font-size:14px}
+#mcsPagina .mcsCifre{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#mcsPagina .mcsCif{display:flex;flex-direction:column;gap:1px;min-width:0}#mcsPagina .mcsCif span{color:var(--muted);font-size:11.5px}#mcsPagina .mcsCif b{font-size:17px}
+#mcsPagina .mcsRand{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--tb-linie);padding-top:6px;font-size:13px}#mcsPagina .mcsRand span{color:var(--muted)}
+#mcsPagina .mcsBaraSt{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--tb-fond2);gap:2px;margin-top:4px}
+#mcsPagina .mcsBaraSt i{display:block;height:100%}#mcsPagina .mcsBaraSt .s{background:var(--bad)}#mcsPagina .mcsBaraSt .t{background:var(--good)}#mcsPagina .mcsBaraSt .n{background:#4a5566}
+#mcsPagina .mcsLeg{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+#mcsPagina .mcsHist{display:block;max-width:600px}
+#mcsPagina .mcsHist text{fill:var(--muted);font-size:10px}
+#mcsPagina .mcsBara{fill:var(--accent);fill-opacity:.55}
+#mcsPagina .mcsZero{stroke:var(--text);stroke-opacity:.5;stroke-dasharray:3 3}
+#mcsPagina .mcsMarc{stroke-width:2}#mcsPagina .mcsMarc.bad{stroke:var(--bad)}#mcsPagina .mcsMarc.good{stroke:var(--good)}#mcsPagina .mcsMarc.mijl{stroke:var(--text)}
+#mcsPagina .mcsAvert{margin:0;padding:8px 10px;border-left:3px solid var(--warn);background:rgba(245,196,81,.08);border-radius:4px;font-size:13px}
+#mcsPagina .mcsSec .mcsAvert.mcsNota{margin:10px 14px 0}
+#mcsPagina .t212Fac{margin:0}
+@media (max-width:760px){#mcsPagina .t212PanouCap{flex-wrap:wrap}#mcsPagina .t212PanouCap>.tbSub{flex-basis:100%}#mcsPagina .mcsDoua{grid-template-columns:1fr}#mcsPagina .mcsCif b{font-size:15px}#mcsPagina .mcsHist text{font-size:14px}}

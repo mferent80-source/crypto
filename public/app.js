@@ -3087,7 +3087,7 @@ function navTo(id,load=false){
    if(id==="edgepro")renderEdgePro();
    if(id==="profitready")renderProfitReadiness(false);
    if(id==="replaylab")renderReplayLab();
-   if(id==="montecarlo"){if(typeof rlPorneste==="function")rlPorneste(false)}   // v100.113: riscul tău (raportul de noapte); vechiul Monte Carlo pe semnale pornește din butonul lui
+   if(id==="montecarlo"){if(typeof rlPorneste==="function")rlPorneste(false);if(typeof mcsDeseneaza==="function")mcsDeseneaza()}   // v100.113: riscul tău (raportul de noapte); vechiul Monte Carlo pe semnale pornește din butonul lui
    if(id==="scenario")renderScenario();
    if(id==="health")runHealthCheck();
  }

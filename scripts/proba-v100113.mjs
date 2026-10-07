@@ -163,7 +163,7 @@ await test("(3c) pagina din meniu: „Monte Carlo · riscul tău” - pagina nou
   assert.match(html, /data-nav="montecarlo"><span class="sideIcon">∴<\/span>Monte Carlo · riscul tău</);
   assert.ok(html.indexOf('src="/lib/risc-luna.js"') > 0 && html.indexOf('src="/lib/risc-ecran.js"') > html.indexOf('src="/lib/risc-luna.js"') && html.indexOf('src="/lib/risc-ecran.js"') < html.indexOf('src="/app.js'));
   assert.match(sw, /"\/lib\/risc-luna\.js","\/lib\/risc-ecran\.js"/);
-  assert.match(app, /if\(id==="montecarlo"\)\{if\(typeof rlPorneste==="function"\)rlPorneste\(false\)\}/);
+  assert.match(app, /if\(id==="montecarlo"\)\{if\(typeof rlPorneste==="function"\)rlPorneste\(false\)(;if\(typeof mcsDeseneaza==="function"\)mcsDeseneaza\(\))?\}/); /* v100.128: + caseta Monte Carlo pe simbol */
 });
 await test("(3d) pagina desenată (fără browser): boții și acțiunile, alegerea ritmului, histograma, obiceiurile, concluziile; fără raport ⇒ spune de ce", () => {
   const ctx = { RiscLuna: RL, TextRo: globalThis.TextRo }; vm.createContext(ctx); vm.runInContext(citeste("public", "lib", "risc-ecran.js"), ctx);

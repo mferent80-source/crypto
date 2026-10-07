@@ -48,12 +48,12 @@ await test("(3) colectorul: rezumatul Salt citit în dimineață (liniiSalt), al
   assert.match(c, /out\.liniiSalt = /); assert.match(c, /\/api\/t212\?action=saltRezumat/);
   assert.match(c, /alertaFaraPreturi\(st, r\.rezumat, Date\.now\(\)\)/); assert.match(c, /import \{ turaSaltPozitii as turaSaltPozitiiModul, alertaFaraPreturi, liniaDimineataSalt \} from/);
 });
-await test("(E) versiunea v100.127 / colector v101.85", () => {
+await test("(E) versiunea de la v100.127 în sus / colector de la v101.85 în sus", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.127"/); assert.match(html, /id="antetVersiune">v100\.127 /); assert.match(html, /id="healthAppVersion">v100\.127</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.127.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-127";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.127"/); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.127");
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.85";/);
+  assert.match(html, /content="v100\.1(2[7-9]|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(2[7-9]|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(2[7-9]|[3-9]\d)</); /* v100.128: lărgit */
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(2[7-9]|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(2[7-9]|[3-9]\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(2[7-9]|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(2[7-9]|[3-9]\d)$/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(8[5-9]|9\d)";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);
