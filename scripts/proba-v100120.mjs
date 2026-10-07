@@ -154,8 +154,8 @@ await test("(4c) pagina în aplicație: #salt în Zilnic după Trading 212, scri
   for (const f of ["/lib/salt.js", "/lib/salt-ecran.js", "/data/salt-univers.json"]) assert.ok(sw.includes('"' + f + '"'), f);
   assert.match(app, /if\(id==="salt"\)\{if\(typeof saltPorneste==="function"\)saltPorneste\(false\)\}/); assert.match(html, /moreNav\('salt',true\)/);
 });
-await test("(E) versiunea v100.120 / colector v101.82; meniul 50 de butoane", () => {
-  const html = citeste("public", "index.html"); assert.match(html, /content="v100\.120"/); assert.equal(JSON.parse(citeste("package.json")).version, "100.120.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-120";/);
+await test("(E) versiunea de la v100.120 în sus / colector v101.82; meniul 50 de butoane", () => {
+  const html = citeste("public", "index.html"); assert.match(html, /content="v100\.1[2-9]\d"/); assert.match(JSON.parse(citeste("package.json")).version, /^100\.1[2-9]\d\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1[2-9]\d";/);   // v100.121: lărgit
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.82";/);
   const m = html.slice(html.indexOf('<div class="sideMenu">'), html.indexOf('<div class="sideFooter">')); assert.equal([...m.matchAll(/class="sideBtn/g)].length, 50);
 });

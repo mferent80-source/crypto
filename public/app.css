@@ -2338,3 +2338,7 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 .saltCampuri{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.saltCampuri label,.saltCautaEt{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 .saltCampuri input,.saltCautaEt input{font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
 .saltCautaEt{max-width:360px;margin:4px 0 8px}.saltTab td:nth-child(n+4),.saltTab th:nth-child(n+4){text-align:right}
+/* v100.121 (el: „se vede aiurea pe telefon”): paginile noi fără antetul vechi gol; tabelele derulează în ele (pe Salt pagina avea 527 px pe 390); subtitlul se rupe pe telefon */
+body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{display:none}
+.rlTab{overflow-x:auto;max-width:100%}
+@media (max-width:640px){.sectionHead{flex-wrap:wrap}.sectionHead .small{white-space:normal}}
