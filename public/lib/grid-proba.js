@@ -23,7 +23,9 @@ var GridProba = (function () {
   function simuleaza(b, start, lungime, st, opt) {
     // v100.39: com = TAKER (pornire, inchidere, stop), comG = MAKER pe ordinele limita ale grilelor (masurat pe CRV: 0,02%)
     var N = st.grile, niv = st.tip === "aritmetic" ? G.niveluriArit(st.jos, st.sus, N) : G.niveluri(st.jos, st.sus, N), L = st.levier, com = C.COMISION, comG = C.COMISION_GRILA;
-    var fundingZi = st.fundingZi > 0 ? st.fundingZi : 0, funding = 0, tr = opt && opt.traseu ? { net: [], perechi: [], iesiri: [] } : null;
+    // v100.135: funding-ul cu SEMN dupa pozitie (rata pozitiva: longul plateste pe Ql, shortul incaseaza pe Qs; rata negativa invers) - poate fi
+    // negativ (incasat); traseul tine si MINIMUL / MAXIMUL rezultatului pe cele 4 puncte ale barei (pierderea maxima si planul in interiorul barei)
+    var fundingZi = isFinite(st.fundingZi) ? Number(st.fundingZi) : 0, funding = 0, tr = opt && opt.traseu ? { net: [], perechi: [], iesiri: [], min: [], max: [] } : null, bMin = Infinity, bMax = -Infinity;
     var P = b[start].o, tip = [], tine = [], intr = [], q = [];
     var Ql = 0, Cl = 0, Qs = 0, Cs = 0, real = 0, fee = 0, umpleri = 0, iesiri = 0, perechi = 0;   // perechi = grile INCASATE (o pereche = 2 umpleri; umplerile de pornire nu-s perechi)
     // v100.39 (regula dovedita in v100.38): la pornire, linia cea mai apropiata de pret ramane FARA ordin - la long celula de sub
@@ -67,7 +69,7 @@ var GridProba = (function () {
       var r = { net: 0, realizat: real, comisioane: fee, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi, iesit: null, bare: null, funding: funding };
       for (var e in extra) r[e] = extra[e];
       // v100.134: traseul se incheie la bara stopului / lichidarii cu rezultatul ei (la capatul normal, ultima bara e deja pusa in bucla)
-      if (tr) { if (extra && (extra.lichidat || extra.oprit)) { tr.net.push(r.net); tr.perechi.push(perechi); tr.iesiri.push(iesiri); } r.traseu = tr; }
+      if (tr) { if (extra && (extra.lichidat || extra.oprit)) { tr.net.push(r.net); tr.perechi.push(perechi); tr.iesiri.push(iesiri); tr.min.push(Math.min(bMin, r.net)); tr.max.push(Math.max(bMax, r.net)); } r.traseu = tr; }
       return r;
     }
     function inchide(p, parte, nb) {
@@ -80,18 +82,20 @@ var GridProba = (function () {
     var fin = Math.min(b.length, start + lungime);
     for (var i = start; i < fin; i++) {
       var x = b[i], drum = x.c >= x.o ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
-      if (fundingZi && i > start && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (Ql + Qs) * x.o; fee += fz; funding += fz; }   // v100.134: la 8 h
+      if (fundingZi && i > start && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (Ql - Qs) * x.o; fee += fz; funding += fz; }   // v100.134: la 8 h; v100.135: cu semn
+      bMin = Infinity; bMax = -Infinity;
       for (var d = 0; d < 4; d++) {
         var p = drum[d];
         if (p <= sj) { misca(pret, sj); if (inauntru) iesiri++; return inchide(sj, "jos", i - start + 1); }
         if (p >= ss) { misca(pret, ss); if (inauntru) iesiri++; return inchide(ss, "sus", i - start + 1); }
         misca(pret, p); pret = p;
+        if (tr) { var nlp = netLa(p); if (nlp < bMin) bMin = nlp; if (nlp > bMax) bMax = nlp; }   // v100.135: in interiorul barei
         var acum = p >= st.jos && p <= st.sus;
         if (inauntru && !acum) iesiri++;
         inauntru = acum;
         if (lichidat(p)) return rezultat({ net: -1, lichidat: true, bare: i - start + 1 });
       }
-      if (tr) { tr.net.push(netLa(pret)); tr.perechi.push(perechi); tr.iesiri.push(iesiri); }   // v100.134: traseul, la inchiderea barei
+      if (tr) { tr.net.push(netLa(pret)); tr.perechi.push(perechi); tr.iesiri.push(iesiri); tr.min.push(bMin); tr.max.push(bMax); }   // v100.134: traseul, la inchiderea barei
     }
     var fee2 = (Ql + Qs) * pret * com;   // comisionul de inchidere la final
     return rezultat({ net: real - fee - fee2 + (Ql * pret - Cl) + (Cs - Qs * pret), bare: fin - start });

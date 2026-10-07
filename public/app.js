@@ -6724,6 +6724,7 @@ function tbTvCitit(id){try{return JSON.parse(localStorage.getItem(TB_TV_KEY+id)|
 function tbTvCod(){var b=tbStare.routeOk===false?null:tbStare.bot;if(!(b&&b.id&&typeof TabloExtra!=="undefined"))return null;var pm=ProfilMoneda.praguriMargine(tbProfilPt(b));   // v100.48: + momentul + marginea din profil (GRID-FISA v2.2)
   return TabloExtra.codTVBot(b,tbPlan.botId===b.id?tbPlan.plan:null,{copiatLa:Date.now(),margJos:pm&&pm.jos,margSus:pm&&pm.sus})}
 function tbDeseneazaTvCod(){
+  var sb=$("tbSimBtn");if(sb)sb.hidden=!(tbStare.routeOk!==false&&tbStare.bot&&tbStare.bot.id);   // v100.135: „⚄ Simulează” - Simulatorul grid pe botul acesta
   var el=$("tbGridNou");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot,c=tbTvCod();
   if(!c){el.hidden=true;el.innerHTML="";return}

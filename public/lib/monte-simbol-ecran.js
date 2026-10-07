@@ -121,7 +121,8 @@ function mcsVariante(st) {
 // aceeași sămânță ca botul ⇒ aceleași drumuri pentru toate (diferența dintre rânduri vine din setări, nu din noroc); o.prima = cardul deja calculat
 function mcsCalcVariante(b15, st, P, o) {
   o = o || {};
-  var rows = mcsVariante(st).map(function (v, i) { return { nume: v.nume, st: v.st, g: i === 0 && o.prima && o.prima.drumuri ? o.prima : MonteSimbol.grid(b15, Object.assign({ pret: P }, v.st), { zile: 7, n: o.n || 500, seed: 12, faraCuTendinta: true, peDrum: true }) }; });
+  var zile = o.zile > 0 ? o.zile : 7;   // v100.135: și pe alt orizont (Simulatorul grid: 1 / 3 / 7 / 14 zile); cardul se refolosește doar pe același
+  var rows = mcsVariante(st).map(function (v, i) { return { nume: v.nume, st: v.st, g: i === 0 && o.prima && o.prima.drumuri && (o.prima.zile || 7) === zile ? o.prima : MonteSimbol.grid(b15, Object.assign({ pret: P }, v.st), { zile: zile, n: o.n || 500, seed: 12, faraCuTendinta: true, peDrum: true }) }; });
   var baza = rows[0].g && rows[0].g.drumuri;
   rows.slice(1).forEach(function (x) { x.drum = x.g && !x.g.eroare ? mcsDrumCuDrum(baza, x.g.drumuri) : null; });
   return rows;
@@ -169,8 +170,8 @@ function mcsTinteBot(st, P) {
 function mcsCalcTinteBot(b15, st, P, o) {
   o = o || {};
   // revizia (R6): rândul tău = cardul botului (o.prima, aceleași drumuri) - o simulare mai puțin
-  var prima = o.prima && o.prima.drumuri && o.prima.n === (o.n || 500) ? o.prima : null;
-  var rows = mcsTinteBot(st, P).map(function (x) { return { nume: x.nume, tp: x.tp, tu: x.tu, g: x.tu && prima ? prima : MonteSimbol.grid(b15, Object.assign({ pret: P }, st, { tp: x.tp }), { zile: 7, n: o.n || 500, seed: 12, faraCuTendinta: true, peDrum: true }) }; });
+  var zile = o.zile > 0 ? o.zile : 7, prima = o.prima && o.prima.drumuri && o.prima.n === (o.n || 500) && (o.prima.zile || 7) === zile ? o.prima : null;
+  var rows = mcsTinteBot(st, P).map(function (x) { return { nume: x.nume, tp: x.tp, tu: x.tu, g: x.tu && prima ? prima : MonteSimbol.grid(b15, Object.assign({ pret: P }, st, { tp: x.tp }), { zile: zile, n: o.n || 500, seed: 12, faraCuTendinta: true, peDrum: true }) }; });
   var tu = rows.filter(function (x) { return x.tu; })[0];
   rows.forEach(function (x) { x.drum = x === tu || !tu || !x.g || x.g.eroare ? null : mcsDrumCuDrum(tu.g.drumuri, x.g.drumuri); });
   return rows;
@@ -192,12 +193,12 @@ function mcsTpRecomandat(rows, suma) {
   return (tu.tp === null ? "Rămâi fără TP" : "Păstrează TP-ul la " + n(tu)) + ": " + (nes ? n(nes) + " are mijlocul mai bun (" + mcsBani1(nes.g.p50) + " față de " + mcsBani1(tu.g.p50) + ")" + (nes.drum ? ", mai bun în " + mcsPr(nes.drum.maiBun) + " din drumuri, mai rău în " + mcsPr(nes.drum.maiRau) + ", la fel în " + mcsPr(nes.drum.egal) : "") + (nes.g.pLichidare > 0.02 ? ", dar cu lichidare în " + mcsPr(nes.g.pLichidare) : nes.g.p5 < tu.g.p5 ? ", dar coada de jos e mai rea (" + mcsBani1(nes.g.p5) + ")" : "") + " - nu destul de sigur ca să-l schimb" : "niciun alt TP nu iese mai bine cu cel puțin " + mcsNr(prag, 1) + " USDT de obicei") + ". Un TP aproape încasează des puțin și oprește botul; unul departe îl lasă să lucreze - de obicei unul strică mijlocul, celălalt coada de jos: de aceea recomand rar alt TP.";
 }
 // tabelul TP la cerere (ca variantele)
-function mcsTpHtml(r) {
-  var st = r.setari; if (!st) return "";
+function mcsTpHtml(r, act) {
+  var st = r.setari; if (!st) return ""; act = act || "mcsComparaTp()";   // v100.135: și de pe Simulatorul grid
   if (st.dir !== "long" && st.dir !== "short") return '<p class="tbSub mcsNota">La neutru, botul n-are o parte a profitului: ținta (TP) nu se compară.</p>';
   if (r.tinteBotInLucru) return '<p class="tbSub mcsNota">calculez țintele (TP) pe aceleași drumuri…</p>';
   if (r.tinteBotEroare) return '<p class="tbWarn mcsNota">' + mcsEsc(r.tinteBotEroare) + '</p>';
-  if (!r.tinteBot) return '<p class="mcsNota mcsVarBut"><button type="button" class="t212BtnLinie" data-action-click="mcsComparaTp()">Compară ținte (TP) pe aceleași drumuri</button> <span class="tbSub">fără TP, la marginea gridului, +¼ / +½ / +1 lățime de grid (câteva secunde)</span></p>';
+  if (!r.tinteBot) return '<p class="mcsNota mcsVarBut"><button type="button" class="t212BtnLinie" data-action-click="' + act + '">Compară ținte (TP) pe aceleași drumuri</button> <span class="tbSub">fără TP, la marginea gridului, +¼ / +½ / +1 lățime de grid (câteva secunde)</span></p>';
   var rows = r.tinteBot;
   return '<div class="mcsVarBloc"><h5>' + mcsEsc("Altă țintă (TP), aceleași drumuri (" + (st.dir === "long" ? "deasupra gridului" : "sub grid") + ")") + '</h5><div class="rlTab"><table class="t212Tab mcsVar"><thead><tr><th>TP</th><th>De obicei</th><th>Pe plus</th><th>TP atins</th><th>Stop atins</th><th>Lichidare</th><th>5% sub</th><th>Drum cu drum</th></tr></thead><tbody>'
     + rows.map(function (x) {
@@ -355,13 +356,13 @@ function mcsGridHtml(r) {
     + '<p class="tbSub mcsNota">' + mcsEsc(mcsCate(g.zileIstoric, "zi", "zile") + " pe 15 minute (atât dă Pionex); drumurile = zile întregi reale, fără tendința perioadei.") + '</p></section>';
 }
 // v100.129: „Compară variante” (la cerere: câteva secunde) ⇒ tabelul pe aceleași drumuri + „ce aș face eu”
-function mcsVarHtml(r) {
-  if (!r.setari) return "";
+function mcsVarHtml(r, act, zile) {
+  if (!r.setari) return ""; act = act || "mcsCompara()";   // v100.135: și de pe Simulatorul grid, cu orizontul lui
   if (r.varianteInLucru) return '<p class="tbSub mcsNota">calculez variantele pe aceleași drumuri…</p>';
   if (r.varianteEroare) return '<p class="tbWarn mcsNota">' + mcsEsc(r.varianteEroare) + '</p>';
-  if (!r.variante) return '<p class="mcsNota mcsVarBut"><button type="button" class="t212BtnLinie" data-action-click="mcsCompara()">Compară ' + (mcsVariante(r.setari).length - 1) + ' variante pe aceleași drumuri</button> <span class="tbSub">interval îngust / larg, levier ±1, grile ½ / ×2 (câteva secunde)</span></p>';
+  if (!r.variante) return '<p class="mcsNota mcsVarBut"><button type="button" class="t212BtnLinie" data-action-click="' + act + '">Compară ' + (mcsVariante(r.setari).length - 1) + ' variante pe aceleași drumuri</button> <span class="tbSub">interval îngust / larg, levier ±1, grile ½ / ×2 (câteva secunde)</span></p>';
   var rows = r.variante;
-  return '<div class="mcsVarBloc"><h5>' + mcsEsc("Aceleași drumuri, " + mcsCate(rows.length, "variantă", "variante")) + '</h5><div class="rlTab"><table class="t212Tab mcsVar"><thead><tr><th>Varianta</th><th>De obicei</th><th>Pe plus</th><th>Stop atins</th><th>Lichidare</th><th>5% sub</th><th>Drum cu drum</th><th>Setările</th></tr></thead><tbody>'
+  return '<div class="mcsVarBloc"><h5>' + mcsEsc("Aceleași drumuri, " + mcsCate(rows.length, "variantă", "variante") + (zile > 0 ? " · " + mcsCate(zile, "zi", "zile") : "")) + '</h5><div class="rlTab"><table class="t212Tab mcsVar"><thead><tr><th>Varianta</th><th>De obicei</th><th>Pe plus</th><th>Stop atins</th><th>Lichidare</th><th>5% sub</th><th>Drum cu drum</th><th>Setările</th></tr></thead><tbody>'
     + rows.map(function (x, i) {
       var g = x.g || {}, st = x.st, er = !g || g.eroare, dd = x.drum;
       // v100.130: față de al tău pe fiecare drum; verde doar când e mai bun în mai multe drumuri decât mai rău

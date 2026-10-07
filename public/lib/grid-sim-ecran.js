@@ -3,7 +3,9 @@
 // (gsFormHtml, gsVerdictHtml, gsDurateHtml, gsRiscuriHtml, gsBotulMeuHtml, gsHtml - probate în vm, fără DOM); legătura cu pagina
 // (gsPorneste, gsMod, gsAlegeBot, gsDinCod, gsDirectie, gsSimuleaza, gsOriz, gsCopiazaCod, Enter) e la coadă. Calculul: GridSim (pur).
 // Refolosește din pagina Monte Carlo: mcsAduCoin (barele 15M Pionex, 6 pagini cu pauze), mcsBoti / mcsSimbolBot, mcsHist, mcsEsc, mcsPretTxt.
-var gsStare = { mod: "nou", botIdx: 0, boti: [], sim: "", st: { jos: null, sus: null, grile: 20, levier: 2, dir: "long", suma: 50, stop: null, tp: null, tip: "geometric" }, plan: { minus: null, plus: null }, fundingZi: 0.0003, pornitLa: null, tpAprox: false, bot: null, rez: null, oriz: 2, inLucru: false, eroare: null, cod: "", codEroare: null, pret: null, date: null, dateLa: 0 };
+var gsStare = { mod: "nou", botIdx: 0, boti: [], sim: "", st: { jos: null, sus: null, grile: 20, levier: 2, dir: "long", suma: 50, stop: null, tp: null, tip: "geometric" }, plan: { minus: null, plus: null }, fundingZi: 0.0003, pornitLa: null, tpAprox: false, bot: null, rez: null, oriz: 2, inLucru: false, eroare: null, cod: "", codEroare: null, pret: null, date: null, dateLa: 0,
+  variante: null, varianteInLucru: false, varianteEroare: null, tinteBot: null, tinteBotInLucru: false, tinteBotEroare: null,   // v100.135: alte setări pe aceleași drumuri
+  fundingSursa: null, fundingInfo: null, fundingSim: null };   // v100.135: funding-ul real Pionex (null = cost fix presupus, "pionex", "manual")
 var GS_ORIZ = [1, 3, 7, 14];
 function gsNr(v, z) { return Number(v).toLocaleString("ro-RO", { minimumFractionDigits: z, maximumFractionDigits: z }); }
 function gsCate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -17,7 +19,19 @@ function gsPlanTxt(plan) { return plan && plan.plus > 0 && plan.minus > 0 ? "Pla
 function gsPlanOk(plan) { return !!(plan && (plan.plus > 0 || plan.minus > 0)); }
 // zilele până la plan: sub o zi în ore („2 h”), altfel zile (cu o zecimală doar când e nevoie)
 function gsZileTxt(v) { if (v == null || !isFinite(v)) return "—"; if (v < 1) return Math.max(1, Math.round(v * 24)) + " h"; var z = Math.round(v * 10) / 10; return gsNr(z, z % 1 ? 1 : 0) + " z"; }
-function gsFundingTxt(v) { return v < 0.05 ? "sub 0,1 USDT" : "≈ " + gsNr(v, 1) + " USDT"; }
+function gsFundingTxt(v) { var a = Math.abs(v); return (v < 0 ? "încasat " : "") + (a < 0.05 ? "sub 0,1 USDT" : "≈ " + gsNr(a, 1) + " USDT"); }
+function gsPctF(v) { return (v < 0 ? "−" : "") + Math.abs(v * 100).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 3 }) + "%"; }
+// v100.135: rata de funding pe zi din ratele Pionex (lista „rates”: fundingTime, fundingRate) - media ultimelor 7 zile × perioade pe zi;
+// intervalul (4 h / 8 h) din timpii ratelor. Cu semn: pozitivă = longul plătește, shortul încasează.
+function gsRataFunding(rates, acum) {
+  var l = (Array.isArray(rates) ? rates : []).map(function (z) { return { t: Number(z && z.fundingTime), r: Number(z && z.fundingRate) }; }).filter(function (z) { return isFinite(z.t) && isFinite(z.r); }).sort(function (a, b) { return b.t - a.t; });
+  if (l.length < 2) return null;
+  var d = []; for (var i = 1; i < l.length; i++) d.push((l[i - 1].t - l[i].t) / 3600000); d.sort(function (a, b) { return a - b; });
+  var ore = Math.round(d[Math.floor(d.length / 2)] * 10) / 10; if (!(ore > 0)) return null;
+  var ult = l.filter(function (z) { return z.t > acum - 7 * 864e5; }); if (!ult.length) ult = l.slice(0, Math.max(1, Math.round(7 * 24 / ore)));
+  var medie = ult.reduce(function (s, z) { return s + z.r; }, 0) / ult.length;
+  return { rataZi: medie * (24 / ore), intervalOre: ore, zile: 7, n: ult.length, rata: ult[0].r };
+}
 
 // ---------------- desenul (pur) ----------------
 // schimbarea direcției: numărul de DEASUPRA prețului și cel de DEDESUBT își păstrează locul, rolul vine din direcția nouă
@@ -50,9 +64,11 @@ function gsFormHtml(s) {
     + '<label>Suma, USDT ' + inp("gsSuma", st.suma) + '</label>'
     + '<label>Tip <select id="gsTip">' + ["geometric", "aritmetic"].map(function (t) { return '<option value="' + t + '"' + ((st.tip || "geometric") === t ? ' selected' : '') + '>' + t + '</option>'; }).join("") + '</select></label>'
     + '<label>Planul: ies la − ' + inp("gsPlanMinus", s.plan && s.plan.minus, ' placeholder="USDT"') + '</label><label>încasez la + ' + inp("gsPlanPlus", s.plan && s.plan.plus, ' placeholder="USDT"') + '</label>'
-    + '<label>Funding pe zi, % ' + inp("gsFunding", s.fundingZi > 0 ? +(s.fundingZi * 100).toFixed(4) : 0) + '</label>'
+    + '<label>Funding pe zi, % ' + inp("gsFunding", isFinite(s.fundingZi) ? +(s.fundingZi * 100).toFixed(4) : 0) + '</label>'
     + (meu ? '<label>Pornit la <input id="gsPornit" readonly value="' + mcsEsc(gsData(s.pornitLa)) + '"></label>' : '')
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="gsSimuleaza()">Simulează</button></div>';
+  var fnot = s.fundingSursa === "pionex" && s.fundingInfo ? "funding-ul real Pionex: " + gsPctF(s.fundingInfo.rataZi) + " pe zi (media ultimelor " + gsCate(s.fundingInfo.zile, "zi", "zile") + ", la " + s.fundingInfo.intervalOre + " h)" : s.fundingSursa === "manual" ? "funding scris de tine" : "funding: cost fix presupus (" + gsPctF(s.fundingZi || 0) + " pe zi) până la prima simulare, apoi rata reală Pionex a monedei";
+  h += '<p class="tbSub gsNota">' + mcsEsc(fnot + " · long plătește, short încasează") + '</p>';
   if (s.tpAprox && st.tp > 0) h += '<p class="tbSub gsNota">TP-ul tău e în procente din investiție: prețul de aici e cel socotit de Pionex pentru botul care rulează; e aproximativ.</p>';
   if (st.jos > 0 && st.sus > st.jos) h += '<p class="tbSub gsCodOut">Codul pentru TradingView: <code id="gsCodOut">' + mcsEsc(GridSim.inCod(st, gsPlanOk(s.plan) ? s.plan : null)) + '</code> <button type="button" class="t212BtnLinie" data-action-click="gsCopiazaCod()">Copiază</button></p>';
   return '<section class="t212Panou gsSec gsSetare"><div class="t212PanouCap"><h4>⚙️ Setarea</h4><span class="tbSub">ca în GRID-FISA: lipești codul sau completezi câmpurile; liniile sunt ca în Pionex</span></div>' + h + '</section>';
@@ -91,7 +107,7 @@ function gsRiscuriHtml(s) {
   if (st.tp > 0) h += gsRand("atinge TP-ul (" + mcsPretTxt(st.tp) + ")", GridSim.pr(o.pTp));
   h += gsRand("iese din grid măcar o dată", GridSim.pr(o.pIesire)) + gsRand("grile încasate, în medie", gsNr(o.perechi, 1))
     + gsRand("pierderea maximă pe drum" + (r.acum ? " (de la pornire)" : ""), GridSim.bani1(o.maxJos.p50) + " de obicei · " + GridSim.bani1(o.maxJos.p5) + " în cele mai proaste 5%", "bad")
-    + gsRand("funding (cost fix presupus), în medie", gsFundingTxt(o.funding));
+    + gsRand("funding (" + (s.fundingSursa === "pionex" ? "rata reală Pionex" : s.fundingSursa === "manual" ? "scris de tine" : "cost fix presupus") + "), în medie", gsFundingTxt(o.funding));
   if (s.mod === "meu" && s.bot && typeof TabloExtra !== "undefined" && TabloExtra.dacaInchizi) { var z = TabloExtra.dacaInchizi(s.bot); if (z && z.pretZero > 0) h += gsRand("prețul de zero (botul tău, acum)", mcsPretTxt(z.pretZero) + (z.distantaZeroPct !== null ? " (" + mcsPct1(z.distantaZeroPct) + " de aici)" : "")); }
   return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>⚠️ Riscurile pe nume, pe ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + '</h4></div><div class="gsRiscuri">' + h + '</div></section>';
 }
@@ -104,6 +120,13 @@ function gsBotulMeuHtml(s) {
   if (o.deAici) h += '<p class="gsNota">de aici încolo, în ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + ': câștigă în ' + mcsEsc(GridSim.pr(o.deAici.pCastig)) + ' din drumuri, de obicei ' + mcsEsc(GridSim.bani1(o.deAici.p50)) + ' (5% sub ' + mcsEsc(gsSemn1(o.deAici.p5)) + ', 5% peste ' + mcsEsc(gsSemn1(o.deAici.p95)) + ').</p>';
   return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>🤖 Botul meu, de la pornire</h4><span class="tbSub">Pionex nu dă ce ține botul pe fiecare grilă: e reluarea, nu starea reală</span></div>' + h + '</section>';
 }
+// v100.135: variantele și țintele (TP) de pe pagina Monte Carlo, pe orizontul ales, pe setarea din formular (la botul care rulează: ca un bot pornit acum)
+function gsAlteSetariHtml(s) {
+  var st = s.st; if (!st || !(st.jos > 0)) return "";
+  var zile = GS_ORIZ[s.oriz >= 0 && s.oriz < GS_ORIZ.length ? s.oriz : 2], rv = { setari: st, variante: s.variante, varianteInLucru: s.varianteInLucru, varianteEroare: s.varianteEroare, tinteBot: s.tinteBot, tinteBotInLucru: s.tinteBotInLucru, tinteBotEroare: s.tinteBotEroare };
+  return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>🧪 Alte setări, pe aceleași drumuri</h4><span class="tbSub">' + mcsEsc("variantele și țintele (TP) de pe pagina Monte Carlo, pe " + gsCate(zile, "zi", "zile") + (s.rez && s.rez.acum ? " · la botul care rulează: ca un bot pornit acum, nu de la pornire" : "")) + '</span></div>'
+    + mcsVarHtml(rv, "gsCompara()", zile) + mcsTpHtml(rv, "gsComparaTp()") + '</section>';
+}
 function gsSemn1(v) { return v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + gsNr(Math.abs(Math.round(v * 10) / 10), 1); }
 function gsHtml(s) {
   s = s || gsStare;
@@ -114,7 +137,7 @@ function gsHtml(s) {
   if (!s.rez) return h + '<p class="tbSub gsNota">Lipește codul din Tablou sau completează setarea, apoi apasă „Simulează”: câștigă sau pierde, cât de des, cât, planul tău, pe 1 / 3 / 7 / 14 zile.</p>';
   var sv = s.st && s.st.stop ? (s.st.stop.sus || s.st.stop.jos) : null, inGrid = sv > 0 && s.st.jos > 0 && sv > s.st.jos && sv < s.st.sus;
   return h + (inGrid ? '<p class="tbWarn gsNota">' + mcsEsc("Stopul (" + mcsPretTxt(sv) + ") e ÎN grid (" + mcsPretTxt(s.st.jos) + "–" + mcsPretTxt(s.st.sus) + "): regula ta e „stopul nu stă în mijlocul gridului” - o mișcare obișnuită l-ar opri cu poziția pe jumătate.") + '</p>' : '') + (s.rez.tpIgnorat > 0 ? '<p class="tbWarn gsNota">' + mcsEsc("TP-ul (" + mcsPretTxt(s.rez.tpIgnorat) + ") e de partea greșită a prețului pentru " + s.st.dir + ": nu l-am pus în simulare. La long, TP-ul e deasupra prețului de acum; la short, dedesubt.") + '</p>' : '')
-    + gsVerdictHtml(s) + gsDurateHtml(s) + gsRiscuriHtml(s) + gsBotulMeuHtml(s)
+    + gsVerdictHtml(s) + gsDurateHtml(s) + gsRiscuriHtml(s) + gsBotulMeuHtml(s) + gsAlteSetariHtml(s)
     + '<p class="mcsAvert">Trecutul reluat de ' + mcsEsc(gsCate(s.rez.n, "dată", "ori")) + ', nu o predicție: drumurile sunt zile reale ale monedei lipite la întâmplare, fără tendința perioadei; o criză mai rea decât orice a avut nu apare în ele. Aceeași cifră la aceeași dată (sămânță fixă).</p>';
 }
 
@@ -170,7 +193,7 @@ function gsCiteste(bland) {
   if (gsEl("gsStop")) st.stop = stop > 0 ? (st.dir === "short" ? { sus: stop } : st.dir === "neutru" ? (stop < ref ? { jos: stop } : { sus: stop }) : { jos: stop }) : null;
   if (gsEl("gsTp")) st.tp = tp > 0 ? tp : null;
   var pm = n("gsPlanMinus"), pp = n("gsPlanPlus"); if (gsEl("gsPlanMinus")) gsStare.plan = { minus: pm > 0 ? pm : null, plus: pp > 0 ? pp : null };
-  var fz = n("gsFunding"); if (gsEl("gsFunding")) gsStare.fundingZi = fz >= 0 ? fz / 100 : 0;
+  var fz = n("gsFunding"); if (gsEl("gsFunding") && fz !== null) { if (Math.abs(fz / 100 - (gsStare.fundingZi || 0)) > 1e-9) gsStare.fundingSursa = "manual"; gsStare.fundingZi = fz / 100; }   // v100.135: cu semn; schimbat de mână ⇒ rămâne al lui
   if (!bland && !er) {
     if (!gsStare.sim) er = "Scrie moneda (ca pe Pionex, ex. PONS).";
     else if (!(st.jos > 0) || !(st.sus > st.jos)) er = "Sus trebuie să fie peste jos, amândouă peste zero.";
@@ -184,9 +207,12 @@ function gsCiteste(bland) {
 async function gsSimuleaza() {
   if (gsStare.inLucru) return;
   var er = gsCiteste(false); if (er) { gsStare.eroare = er; gsStare.rez = null; gsDeseneaza(); return; }
-  gsStare.inLucru = true; gsStare.eroare = null; gsStare.rez = null; gsDeseneaza();
+  gsStare.inLucru = true; gsStare.eroare = null; gsStare.rez = null;
+  gsStare.variante = null; gsStare.varianteEroare = null; gsStare.tinteBot = null; gsStare.tinteBotEroare = null;   // v100.135: altă simulare ⇒ comparațiile de la capăt
+  gsDeseneaza();
   try {
     var sim = gsStare.sim;
+    if (gsStare.fundingSursa !== "manual" && gsStare.fundingSim !== sim) await gsAduFunding(sim);   // v100.135: rata reală a monedei, o dată
     if (!gsStare.date || gsStare.date.sim !== sim || Date.now() - gsStare.dateLa > 5 * 60000) {
       var c = await mcsAduCoin(sim);
       if (!c || !c.b15.length) throw new Error("Nu găsesc „" + sim + "” pe Pionex (" + sim + "_USDT_PERP). Scrie moneda cum e pe Pionex.");
@@ -200,6 +226,42 @@ async function gsSimuleaza() {
   } catch (e) { gsStare.eroare = e && e.message || String(e); }
   finally { gsStare.inLucru = false; }
   gsDeseneaza();
+}
+// v100.135: ratele de funding ale monedei (Pionex, ultimele ~16 zile) ⇒ rata pe zi din ultimele 7 zile; un eșec lasă costul fix (spus în notă)
+async function gsAduFunding(sim) {
+  try {
+    var r = await getJSON("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(sim + "_USDT_PERP")), info = gsRataFunding(r && r.data && r.data.rates, Date.now());
+    if (info) { gsStare.fundingZi = info.rataZi; gsStare.fundingSursa = "pionex"; gsStare.fundingInfo = info; }
+  } catch (e) {}
+  gsStare.fundingSim = sim;
+}
+// v100.135: „Compară variante” / „Compară ținte (TP)” (din Monte Carlo) pe setarea de aici, pe orizontul ales - la cerere (câteva secunde)
+function gsCompara() {
+  var d = gsStare.date; if (!d || !gsStare.rez || gsStare.varianteInLucru) return;
+  gsCiteste(true); gsStare.varianteInLucru = true; gsDeseneaza();
+  var st = Object.assign({}, gsStare.st, { fundingZi: gsStare.fundingZi }), P = gsStare.pret, zile = GS_ORIZ[gsStare.oriz] || 7;
+  setTimeout(function () {
+    try { gsStare.variante = mcsCalcVariante(d.b15, st, P, { n: 500, zile: zile }); gsStare.varianteEroare = null; } catch (e) { gsStare.variante = null; gsStare.varianteEroare = "Variantele n-au mers: " + (e && e.message || e); }
+    gsStare.varianteInLucru = false; gsDeseneaza();
+  }, 30);
+}
+function gsComparaTp() {
+  var d = gsStare.date; if (!d || !gsStare.rez || gsStare.tinteBotInLucru) return;
+  gsCiteste(true); gsStare.tinteBotInLucru = true; gsDeseneaza();
+  var st = GridSim.tpValid(Object.assign({}, gsStare.st, { fundingZi: gsStare.fundingZi }), gsStare.pret).st, P = gsStare.pret, zile = GS_ORIZ[gsStare.oriz] || 7;
+  setTimeout(function () {
+    try { gsStare.tinteBot = mcsCalcTinteBot(d.b15, st, P, { n: 500, zile: zile }); gsStare.tinteBotEroare = null; } catch (e) { gsStare.tinteBot = null; gsStare.tinteBotEroare = "Țintele n-au mers: " + (e && e.message || e); }
+    gsStare.tinteBotInLucru = false; gsDeseneaza();
+  }, 30);
+}
+// v100.135: din Tablou („⚄ Simulează”): pagina pe botul ales acolo - dacă e activ, ca „Botul meu”; altfel (oprit) ca bot nou cu setările lui
+function gsDeschideBot() {
+  var b = typeof tbStare !== "undefined" && tbStare.bot; if (!b || !b.id) return;
+  if (typeof navTo === "function") navTo("gridsim", true);
+  var l = gsBoti(), k = -1; for (var i = 0; i < l.length; i++) if (String(l[i].id) === String(b.id)) k = i;
+  if (k >= 0) { gsStare.mod = "meu"; gsAlegeBot(k); }
+  else { var d = GridSim.setariDinBot(b); gsStare.mod = "nou"; gsStare.bot = null; gsStare.botId = null; gsStare.pornitLa = null; gsStare.sim = mcsSimbolBot(b); gsStare.st = Object.assign({}, d.st, { suma: d.st.suma || 50 }); gsStare.tpAprox = d.tpAprox; gsStare.rez = null; gsDeseneaza(); }
+  gsSimuleaza();
 }
 function gsOriz(i) { gsCiteste(true); gsStare.oriz = Number(i) >= 0 && Number(i) < GS_ORIZ.length ? Number(i) : 2; gsDeseneaza(); }
 // revizia (R5): codul copiat = câmpurile de ACUM (nu setarea de la ultima simulare)

@@ -114,17 +114,18 @@ var GridSim = (function () {
       // „până acum” = traseul la ultima bară reală (identic pe toate drumurile); t = închiderea ei; oprit și când stopul cade chiar pe ea (revizia)
       if (pre && !acum) { var ia = Math.min(pre, L) - 1; acum = { net: tr.net[ia], usdt: tr.net[ia] * suma, bare: pre, t: prefix[prefix.length - 1].t + 9e5, perechi: tr.perechi[ia], oprit: (r.lichidat || r.oprit) && r.bare <= pre ? (r.lichidat ? "lichidat" : "oprit") : null }; }
       var iPlus = null, iMinus = null;
-      if (plan) for (var j = 0; j < L && (iPlus === null || iMinus === null); j++) { var u = tr.net[j] * suma; if (iPlus === null && plan.plus > 0 && u >= plan.plus) iPlus = j; if (iMinus === null && plan.minus > 0 && u <= -plan.minus) iMinus = j; }
+      // v100.135: planul în INTERIORUL barei (minimul / maximul pe cele 4 puncte); amândouă în aceeași bară ⇒ minusul întâi (pesimist: iPlus < iMinus strict)
+      if (plan) for (var j = 0; j < L && (iPlus === null || iMinus === null); j++) { if (iMinus === null && plan.minus > 0 && tr.min[j] * suma <= -plan.minus) iMinus = j; if (iPlus === null && plan.plus > 0 && tr.max[j] * suma >= plan.plus) iPlus = j; }
       if (plan && pre && dejaAtins === null) { if (iPlus !== null && iPlus < pre && (iMinus === null || iPlus < iMinus)) dejaAtins = "plus"; else if (iMinus !== null && iMinus < pre && (iPlus === null || iMinus < iPlus)) dejaAtins = "minus"; }
       for (var h = 0; h < oriz.length; h++) {
         var bare = bareO[h], ix = Math.min(bare, L) - 1, c = col[h], net = tr.net[ix];
         c.net.push(net); if (acum) c.deAici.push(net - acum.net);
-        if (plan) { var hit = iPlus !== null && iPlus < bare && (iMinus === null || iPlus < iMinus), rau = iMinus !== null && iMinus < bare && (iPlus === null || iMinus < iPlus); if (hit) { c.plan++; if (iPlus >= pre) c.planZile.push((iPlus - pre + 1) / BZ); } if (rau) c.planRau++; }   // revizia: atins în prefix ⇒ fără zile („deja”)
+        if (plan) { var hit = iPlus !== null && iPlus < bare && (iMinus === null || iPlus < iMinus), rau = iMinus !== null && iMinus < bare && (iPlus === null || iMinus <= iPlus); if (hit) { c.plan++; if (iPlus >= pre) c.planZile.push((iPlus - pre + 1) / BZ); } if (rau) c.planRau++; }   // revizia: atins în prefix ⇒ fără zile („deja”)
         if (r.lichidat && r.bare <= bare) c.lich++;
         if (r.oprit && r.bare <= bare) { if (parteTp && r.iesit === parteTp) c.tp++; else c.stop++; }
         if (tr.iesiri[ix] > 0) c.ies++;
         c.per += tr.perechi[ix];
-        var mj = Infinity; for (var w = 0; w <= ix; w++) if (tr.net[w] < mj) mj = tr.net[w]; c.maxJos.push(mj);
+        var mj = Infinity; for (var w = 0; w <= ix; w++) if (tr.min[w] < mj) mj = tr.min[w]; c.maxJos.push(mj);   // v100.135: minimul în bară, nu pe închideri
         c.funding += r.funding * (ix + 1) / L;
       }
     }

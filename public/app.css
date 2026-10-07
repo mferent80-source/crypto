@@ -2481,3 +2481,7 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #gsPagina .t212Tab{display:table}#gsPagina .t212Tab thead{display:table-header-group}#gsPagina .t212Tab tbody{display:table-row-group}
 #gsPagina .t212Fac{margin:8px 14px 0}#gsPagina .mcsAvert{margin:12px 14px 0;padding:8px 10px;border-left:3px solid var(--warn);background:rgba(245,196,81,.08);border-radius:4px;font-size:13px}
 @media (max-width:760px){#gsPagina .gsCampuri label{flex:1 1 calc(50% - 8px)}#gsPagina .gsCampuri input,#gsPagina .gsCampuri select,#gsPagina .gsCampuri #gsSim,#gsPagina .gsCampuri #gsPornit{width:100%}#gsPagina .gsCampuri .t212Btn{margin-left:0;flex:1 1 100%}#gsPagina .gsVerdict b{font-size:20px}#gsPagina .mcsHist text{font-size:14px}#gsPagina .t212PanouCap{flex-wrap:wrap}#gsPagina .t212PanouCap>.tbSub{flex-basis:100%}}
+/* v100.135: „⚄ Simulează” în antetul Tabloului; secțiunea „Alte setări” pe Simulatorul grid refolosește .mcsVarBloc / .mcsVar */
+#tabloubot .tbSimBtn{margin-left:6px;padding:3px 10px;font-size:12px}
+#gsPagina .mcsVarBloc{margin:12px 14px 4px;min-width:0}#gsPagina .mcsVar td,#gsPagina .mcsVar th{white-space:nowrap;font-variant-numeric:tabular-nums}#gsPagina .mcsVar tr.mcsVarTu td{font-weight:700}#gsPagina .mcsVar td .t212Mic{white-space:nowrap}
+#gsPagina .mcsNota{margin:8px 14px 0}#gsPagina .mcsVarBut{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
