@@ -1624,6 +1624,7 @@ body.peTablou main>.note{display:none}
   .t212Tab tr.t212Rand td.c-rez,.t212Tab tr.t212Rand td.c-tinta{text-align:right}
   .t212Tab tr.t212Rand td.c-acum,.t212Tab tr.t212Rand td.c-trend,.t212Tab tr.t212Rand td.c-pond,.t212Tab tr.t212Rand td.c-chev{display:none}
   .t212Tab tr.t212Rand td.c-stop,.t212Tab tr.t212Rand td.c-tinta{font-size:12.5px}
+  .t212Tab tr.t212Rand td.c-stop .t212Mic.t212RevMic{display:none}
   .t212Tab tr.t212Rand td.c-plan{grid-column:1/-1}
   .t212Tab tr.t212Rand td[data-et]::before{content:attr(data-et) " ";color:var(--muted)}
   .t212Tab tr.t212Det{display:block}.t212Tab tr.t212Det td{display:block;padding:0 14px 14px}
@@ -2454,3 +2455,5 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #mcsPagina .t212Tab{display:table}#mcsPagina .t212Tab thead{display:table-header-group}#mcsPagina .t212Tab tbody{display:table-row-group}
 #salt .saltRevine{margin:6px 0;line-height:1.45}
 #salt .saltLista td.bad,#salt .saltLista td.good{font-variant-numeric:tabular-nums}
+/* v100.131: T212 - șansa să revină la intrare (stopul depășit), în detaliul poziției */
+.t212Revine{margin:6px 0;line-height:1.45}

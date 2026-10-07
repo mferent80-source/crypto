@@ -30,6 +30,14 @@ function mcsRecente(lista, sim, tip) {
 function mcsButonSim(x, rec) {
   return '<button type="button" class="t212BtnLinie' + (rec ? ' mcsRecent' : '') + '" data-action-click="mcsAlege(\'' + x.s + '\'' + (x.tip ? ',\'' + x.tip + '\'' : '') + ')"' + (x.tip ? ' title="' + (x.tip === "coin" ? "coin pe Pionex" : "acțiune / ETF (Yahoo)") + '"' : '') + '>' + x.s + (x.tip === "stock" && x.s.indexOf(".") < 0 ? '<small>acț.</small>' : '') + '</button>';
 }
+// v100.130 / v100.131: stopul care urcă DEPĂȘIT și prețul sub intrare ⇒ șansa să revină la intrare în 60 de zile de bursă - aceleași drumuri
+// ca 🎲 „Monte Carlo pe poziție” (MonteSimbol.pret, sămânța 21, orizonturile 20 / 60). Comună: pagina Salt și pagina T212.
+function mcsSansaRevenire(b, P, I, stop) {
+  if (typeof MonteSimbol === "undefined" || !(P > 0) || !(stop > P) || !(I > P) || !Array.isArray(b)) return null;
+  var m = MonteSimbol.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: 0.1, tintaPct: 0.15, prag: 0.1, intrare: I / P });
+  var o = m && !m.eroare ? m.orizonturi[1] : null;
+  return o ? { p: o.pIntrare, pCapat: o.pPesteIntrare, zile: 60 } : null;
+}
 // butonul 🎲 din detaliul unei poziții (T212 / Salt): numerele fără exponent (delegarea acceptă doar 123.45), simbolul curățat
 function mcsPozArg(v) { if (v == null || !isFinite(v)) return "null"; var t = Number(v).toFixed(10); return t.indexOf(".") >= 0 ? t.replace(/0+$/, "").replace(/\.$/, "") : t; }
 function mcsPozButon(sim, pret, intrare, stop) {
@@ -167,32 +175,53 @@ function mcsPretHtml(r) {
     + '<div class="mcsStopTinta"><label>Stopul, % sub prețul de acum <input id="mcsStop" inputmode="decimal" value="' + mcsNr(m.stopPct * 100, 1) + '"></label><label>Ținta, % peste <input id="mcsTinta" inputmode="decimal" value="' + mcsNr(m.tintaPct * 100, 1) + '"></label>'
     + '<button type="button" class="t212BtnLinie" data-action-click="mcsResimuleaza()">Refă simularea</button><span class="tbSub">' + mcsEsc(r.nivelText || "") + '</span></div>'
     + '<div class="mcsDoua">' + m.orizonturi.map(function (o) { return mcsCartPret(o, m, r.tip === "stock" ? "b" : "z", r.poz); }).join("") + '</div>'
-    + (r.tip === "stock" ? mcsStopuriHtml(m) : '')
+    + mcsNiveluriHtml(m, r.tip === "stock" ? "b" : "z", "stop") + mcsNiveluriHtml(m, r.tip === "stock" ? "b" : "z", "tinta")
     + '<p class="tbSub mcsNota">Aceeași zi atinge și stopul, și ținta ⇒ se numără stopul (pesimist).</p></section>';
 }
+// v100.131: „N zile” - la acțiuni zile de bursă (u = "b"), la coinuri zile (u = "z")
+function mcsZileTxt(n, u) { return u === "z" ? mcsCate(n, "zi", "zile") : mcsCate(n, "zi de bursă", "zile de bursă"); }
 // v100.130: „ce aș face eu” la stop. Cu ținta fixă, „stopul întâi” e o cursă stop – țintă: pe drumuri fără tendință iese cam
 // ținta / (stop + țintă) la orice stop (RHM.DE 07.10: 71% la −4,6% cu ținta +9,1%), deci nu spune care stop e „bun”. Ce contează e
 // rezultatul mediu: aproape același (sub 1 punct) ⇒ păstrează stopul de sus și spune ce schimbă stopul; altfel cel cu media clar mai bună.
-function mcsStopRecomandat(rows, zile, spSus) {
+function mcsStopRecomandat(rows, zile, spSus, u) {
   var tu = rows.filter(function (s) { return Math.abs(s.sp - spSus) < 5e-4; })[0] || rows[0], prim = rows[0], ult = rows[rows.length - 1];
   var best = rows.slice().sort(function (x, y) { return y.media - x.media; })[0], lo = Math.min.apply(null, rows.map(function (s) { return s.media; }));
   var p = function (s) { return "−" + mcsNr(s.sp * 100, 1) + "%"; };
   // revizia (R1): alt stop doar dacă media e mai bună cu 1 punct ȘI iese mai bine în mai multe drumuri decât mai rău (proba (4e): pe
   // serii fără avantaj, media singură recomanda „−15%” în 13–27 din 40); altfel păstrează stopul de sus
-  var alt = rows.filter(function (s) { return s !== tu && s.media - tu.media >= 0.01 && s.drum && s.drum.maiBun > s.drum.maiRau; }).sort(function (x, y) { return y.media - x.media; })[0];
-  if (alt) return "Aș lua " + p(alt) + ": rezultatul mediu " + mcsPct1(alt.media) + ", față de " + mcsPct1(tu.media) + " la stopul de sus (" + p(tu) + "), și iese mai bun în " + mcsPr(alt.drum.maiBun) + " din drumuri (mai rău în " + mcsPr(alt.drum.maiRau) + "), pe aceleași drumuri în " + mcsCate(zile, "zi de bursă", "zile de bursă") + ". Pe istoria ei reluată, nu o promisiune.";
+  // v100.131: „majoritatea drumurilor” = peste jumătate din TOATE (nu doar mai multe bune decât rele: la ținte, cele mai multe drumuri
+  // ies la egalitate - 200 de serii fără avantaj dădeau 3% „Aș lua +24%” cu „mai bună în 29%, mai rea în 12%”)
+  var alt = rows.filter(function (s) { return s !== tu && s.media - tu.media >= 0.01 && s.drum && s.drum.maiBun > 0.5; }).sort(function (x, y) { return y.media - x.media; })[0];
+  if (alt) return "Aș lua " + p(alt) + ": rezultatul mediu " + mcsPct1(alt.media) + ", față de " + mcsPct1(tu.media) + " la stopul de sus (" + p(tu) + "), și iese mai bun în " + mcsPr(alt.drum.maiBun) + " din drumuri (mai rău în " + mcsPr(alt.drum.maiRau) + "), pe aceleași drumuri în " + mcsZileTxt(zile, u) + ". Pe istoria ei reluată, nu o promisiune.";
   return "Păstrează stopul de sus (" + p(tu) + "): " + (best.media - lo < 0.01 ? "pe drumurile fără tendință, rezultatul mediu e aproape același la toate (între " + mcsPct1(lo) + " și " + mcsPct1(best.media) + ")" : "niciun alt stop nu iese mai bine în majoritatea drumurilor; diferențele de medie (între " + mcsPct1(lo) + " și " + mcsPct1(best.media) + ") vin din câteva drumuri, iar stopul de sus iese printre cele mai bune") + ". Stopul schimbă doar cât de des ieși (" + mcsPr(prim.pStop) + " la " + p(prim) + ", " + mcsPr(ult.pStop) + " la " + p(ult) + ") și cât pierzi într-un drum prost (5% sub: " + mcsPct1(prim.p5) + " față de " + mcsPct1(ult.p5) + "). Alege-l după cât poți pierde o dată și potrivește mărimea poziției.";
 }
-function mcsStopuriHtml(m) {
-  var o = m.orizonturi[m.orizonturi.length - 1], rows = o && o.stopuri;
+// v100.131: la fel pentru țintă (stopul de sus fix): alta doar cu media mai bună cu 1 punct ȘI mai bună în majoritatea drumurilor -
+// pe drumuri fără tendință, o țintă aproape vine des dar aduce puțin, una departe invers: media rămâne cam aceeași
+function mcsTintaRecomandata(rows, zile, tpSus, u) {
+  var tu = rows.filter(function (t) { return Math.abs(t.tp - tpSus) < 5e-4; })[0] || rows[0], prim = rows[0], ult = rows[rows.length - 1];
+  var best = rows.slice().sort(function (x, y) { return y.media - x.media; })[0], lo = Math.min.apply(null, rows.map(function (t) { return t.media; }));
+  var p = function (t) { return "+" + mcsNr(t.tp * 100, 1) + "%"; };
+  var alt = rows.filter(function (t) { return t !== tu && t.media - tu.media >= 0.01 && t.drum && t.drum.maiBun > 0.5; }).sort(function (x, y) { return y.media - x.media; })[0];
+  if (alt) return "Aș lua ținta " + p(alt) + ": rezultatul mediu " + mcsPct1(alt.media) + ", față de " + mcsPct1(tu.media) + " la ținta de sus (" + p(tu) + "), și iese mai bună în " + mcsPr(alt.drum.maiBun) + " din drumuri (mai rea în " + mcsPr(alt.drum.maiRau) + "), pe aceleași drumuri în " + mcsZileTxt(zile, u) + ". Pe istoria reluată, nu o promisiune.";
+  return "Păstrează ținta de sus (" + p(tu) + "): " + (best.media - lo < 0.01 ? "pe drumurile fără tendință, rezultatul mediu e aproape același la toate (între " + mcsPct1(lo) + " și " + mcsPct1(best.media) + ")" : "nicio altă țintă nu iese mai bine în majoritatea drumurilor; diferențele de medie (între " + mcsPct1(lo) + " și " + mcsPct1(best.media) + ") vin din câteva drumuri") + ". Ținta schimbă doar cât de des o atingi (" + mcsPr(prim.pTinta) + " la " + p(prim) + ", " + mcsPr(ult.pTinta) + " la " + p(ult) + ") și cât iei o dată: una aproape vine des, dar aduce puțin.";
+}
+// v100.130 / v100.131: tabelul „alt stop” (fel = "stop") sau „altă țintă” (fel = "tinta") pe aceleași drumuri, pe orizontul cel mai lung,
+// cu „drum cu drum” față de nivelul de sus
+function mcsNiveluriHtml(m, u, fel) {
+  var o = m.orizonturi[m.orizonturi.length - 1], st = fel === "stop", rows = o && (st ? o.stopuri : o.tinte);
   if (!rows || !rows.length) return "";
-  return '<div class="mcsVarBloc"><h5>' + mcsEsc("Alt stop, aceleași drumuri (" + mcsCate(o.H, "zi de bursă", "zile de bursă") + ", ținta +" + mcsNr(m.tintaPct * 100, 1) + "%)") + '</h5><div class="rlTab"><table class="t212Tab mcsVar"><thead><tr><th>Stopul</th><th>Stopul întâi</th><th>Ținta întâi</th><th>Niciuna</th><th>Rezultatul mediu</th><th>5% sub</th></tr></thead><tbody>'
-    + rows.map(function (s) {
-      var tu = Math.abs(s.sp - m.stopPct) < 5e-4;
-      return '<tr' + (tu ? ' class="mcsVarTu"' : '') + '><td>−' + mcsNr(s.sp * 100, 1) + '%' + (tu ? '<span class="t212Mic">cel de sus</span>' : '') + '</td><td class="' + (s.pStop > 0.5 ? "bad" : "") + '">' + mcsPr(s.pStop) + '</td><td>' + mcsPr(s.pTinta) + '</td><td>' + mcsPr(s.pNiciuna) + '</td><td class="' + mcsCls(Math.round(s.media * 1000) / 1000) + '">' + mcsPct1(s.media) + '</td><td>' + mcsPct1(s.p5) + '</td></tr>';
+  var titlu = st ? "Alt stop, aceleași drumuri (" + mcsZileTxt(o.H, u) + ", ținta +" + mcsNr(m.tintaPct * 100, 1) + "%)" : "Altă țintă, aceleași drumuri (" + mcsZileTxt(o.H, u) + ", stopul −" + mcsNr(m.stopPct * 100, 1) + "%)";
+  var cap = st ? "<th>Stopul</th><th>Stopul întâi</th><th>Ținta întâi</th>" : "<th>Ținta</th><th>Ținta întâi</th><th>Stopul întâi</th>";
+  return '<div class="mcsVarBloc"><h5>' + mcsEsc(titlu) + '</h5><div class="rlTab"><table class="t212Tab mcsVar"><thead><tr>' + cap + '<th>Niciuna</th><th>Rezultatul mediu</th><th>5% sub</th><th>Drum cu drum</th></tr></thead><tbody>'
+    + rows.map(function (x) {
+      var tu = st ? Math.abs(x.sp - m.stopPct) < 5e-4 : Math.abs(x.tp - m.tintaPct) < 5e-4, dd = x.drum;
+      var niv = st ? "−" + mcsNr(x.sp * 100, 1) + "%" : "+" + mcsNr(x.tp * 100, 1) + "%";
+      var p1 = st ? '<td class="' + (x.pStop > 0.5 ? "bad" : "") + '">' + mcsPr(x.pStop) + '</td><td>' + mcsPr(x.pTinta) + '</td>' : '<td>' + mcsPr(x.pTinta) + '</td><td class="' + (x.pStop > 0.5 ? "bad" : "") + '">' + mcsPr(x.pStop) + '</td>';
+      var dc = tu || !dd ? '<td class="tbSub">—</td>' : '<td class="' + (dd.maiBun > dd.maiRau ? "good" : dd.maiRau > dd.maiBun ? "bad" : "") + '">' + (st ? "mai bun în " : "mai bună în ") + mcsPr(dd.maiBun) + '<span class="t212Mic">' + (st ? "mai rău în " : "mai rea în ") + mcsPr(dd.maiRau) + '</span></td>';
+      return '<tr' + (tu ? ' class="mcsVarTu"' : '') + '><td>' + niv + (tu ? '<span class="t212Mic">' + (st ? "cel de sus" : "cea de sus") + '</span>' : '') + '</td>' + p1 + '<td>' + mcsPr(x.pNiciuna) + '</td><td class="' + mcsCls(Math.round(x.media * 1000) / 1000) + '">' + mcsPct1(x.media) + '</td><td>' + mcsPct1(x.p5) + '</td>' + dc + '</tr>';
     }).join("") + '</tbody></table></div>'
-    + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(mcsStopRecomandat(rows, o.H, m.stopPct)) + '</p>'
-    + '<p class="tbSub">Rezultatul: ieși la stop (sau la deschidere, dacă prețul sare peste el), la țintă, altfel la capăt. Toate stopurile pe aceleași drumuri, deci diferențele vin din stop, nu din noroc.</p></div>';
+    + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(st ? mcsStopRecomandat(rows, o.H, m.stopPct, u) : mcsTintaRecomandata(rows, o.H, m.tintaPct, u)) + '</p>'
+    + '<p class="tbSub">' + (st ? "Rezultatul: ieși la stop (sau la deschidere, dacă prețul sare peste el), la țintă, altfel la capăt. Toate stopurile pe aceleași drumuri, deci diferențele vin din stop, nu din noroc." : "Aceeași socoteală, cu stopul de sus fix și ținta schimbată; „drum cu drum” = în câte drumuri iese mai bine decât ținta de sus.") + '</p></div>';
 }
 function mcsGridHtml(r) {
   if (r.tip !== "coin") return '<section class="t212Panou mcsSec"><div class="t212PanouCap"><h4>🤖 Un bot grid</h4></div><p class="tbSub mcsNota">Doar la coinuri (Pionex). ' + mcsEsc(r.sim) + ' e o acțiune.</p></section>';
@@ -377,12 +406,17 @@ async function mcsArhiva() {
   return mcsStare.arhiva;
 }
 // calculul (fără rețea) pe datele aduse; stopul / ținta / setările botului din câmpuri dacă le-a schimbat
+// revizia v100.130 (R4): nivelul de sus intră nerotunjit; un nivel standard care s-ar scrie la fel (≤ 0,06 puncte) e înlocuit
+function mcsListaStopuri(std, sp) { var l = std.filter(function (x) { return Math.abs(x - sp) >= 6e-4; }); if (sp > 0 && sp < 1) l.push(sp); return l.sort(function (x, y) { return x - y; }); }
+// v100.131: ținta de sus × ½, ¾, 1, 1,5, 2 (ținta de sus exact, ca rândul ei să fie cardul)
+function mcsListaTinte(tp) { return tp > 0 ? [0.5, 0.75, 1, 1.5, 2].map(function (k) { return k === 1 ? tp : tp * k; }) : []; }
 function mcsCalculeaza(d, o) {
   o = o || {}; var acum = Date.now();
   if (d.tip === "coin") {
     var P = d.b15[d.b15.length - 1].c, sp = o.stop > 0 ? o.stop / 100 : 0.1, tp = o.tinta > 0 ? o.tinta / 100 : 0.15;
-    var pretMc = d.b1.length >= 60 ? MonteSimbol.pret(d.b1, { orizonturi: [7, 30], n: 1000, blocZile: 5, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1 })
-      : MonteSimbol.pret(d.b15, { barePeZi: 96, orizonturi: [7, 30], n: 600, blocZile: 1, minZile: 14, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1 });
+    var slC = mcsListaStopuri([0.05, 0.1, 0.15, 0.2], sp), tlC = mcsListaTinte(tp);   // v100.131: și la coinuri
+    var pretMc = d.b1.length >= 60 ? MonteSimbol.pret(d.b1, { orizonturi: [7, 30], n: 1000, blocZile: 5, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC })
+      : MonteSimbol.pret(d.b15, { barePeZi: 96, orizonturi: [7, 30], n: 600, blocZile: 1, minZile: 14, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC });
     var bi = o.botIdx || 0, st = o.setari || mcsSetariBot(mcsBoti(), d.sim, bi) || mcsSetariProba(P);
     return { sim: d.sim, tip: "coin", sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist,
       nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : "−10% / +15% pentru un coin: schimbă-le" };
@@ -394,8 +428,8 @@ function mcsCalculeaza(d, o) {
   var sp2 = o.stop > 0 ? o.stop / 100 : poz ? (spPoz !== null ? spPoz : 0.1) : ok && n.stop > 0 && n.stop < Pp ? 1 - n.stop / Pp : 0.1, tp2 = o.tinta > 0 ? o.tinta / 100 : ok && n.tinta > Pp ? n.tinta / Pp - 1 : 0.15;
   // v100.130: −5 / −8 / −10 / −15% și stopul de sus, pe aceleași drumuri (aceeași țintă)
   // revizia (R4): stopul de sus intră NEROTUNJIT (rândul lui = cardul de sus); un nivel standard la cel mult 0,05 puncte de el (s-ar scrie la fel, cu o zecimală) e înlocuit
-  var sl = [0.05, 0.08, 0.1, 0.15].filter(function (x) { return Math.abs(x - sp2) >= 6e-4; }); if (sp2 > 0 && sp2 < 1) sl.push(sp2); sl.sort(function (x, y) { return x - y; });
-  return { sim: d.sim, tip: "stock", sursa: d.sursa, pret: Pp, pretMc: MonteSimbol.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: sp2, tintaPct: tp2, prag: 0.1, intrare: poz ? poz.intrareR : undefined, stopuri: sl }), grid: null, setari: null, ist: d.ist, poz: poz,
+  var sl = mcsListaStopuri([0.05, 0.08, 0.1, 0.15], sp2), tl = mcsListaTinte(tp2);
+  return { sim: d.sim, tip: "stock", sursa: d.sursa, pret: Pp, pretMc: MonteSimbol.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: sp2, tintaPct: tp2, prag: 0.1, intrare: poz ? poz.intrareR : undefined, stopuri: sl, tinte: tl }), grid: null, setari: null, ist: d.ist, poz: poz,
     nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : spPoz !== null ? "stopul poziției tale (" + mcsPretTxt(poz.stop) + ")" + (ok && n.tinta > Pp ? "; ținta: a Radarului" : "") : poz && poz.stop > 0 ? "stopul poziției (" + mcsPretTxt(poz.stop) + ") e deja depășit: prețul e sub el; aici −10% de acum" : poz ? "poziția n-are stop: −10%" : ok ? "ale Radarului pentru o intrare nouă azi (stopul " + mcsPretTxt(n.stop) + ", ținta " + mcsPretTxt(n.tinta) + ")" : "−10% / +15%: schimbă-le" };
 }
 async function mcsAnalizeaza() {

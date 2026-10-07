@@ -126,7 +126,8 @@ await test("(4b) caseta acțiunii: tabelul „alt stop, aceleași drumuri” cu 
   assert.deepEqual(ul, [5, 8, 10, 12, 15], "stopul lui (12%) intră între ele");
   const h = G.mcsPretHtml(r);
   assert.match(h, /Alt stop, aceleași drumuri/); assert.match(h, /<tr class="mcsVarTu"><td>−12,0%/); assert.match(h, /Ce aș face eu:/);
-  assert.doesNotMatch(G.mcsPretHtml(Object.assign({}, r, { tip: "coin" })), /Alt stop, aceleași drumuri/);
+  // v100.131: stopurile pe aceleași drumuri și la coinuri (proba-v100131 (2a)) - aici doar că la coin nu scrie „zile de bursă”
+  assert.doesNotMatch(G.mcsPretHtml(Object.assign({}, r, { tip: "coin" })), /zile de bursă, ținta/);
 });
 await test("(4c) recomandarea stopului: media aproape aceeași (sub 1 punct) ⇒ păstrează stopul de sus și spune ce schimbă stopul; altfel cel cu media clar mai bună", () => {
   // proba pe RHM.DE 07.10: stopul întâi ≈ ținta / (stop + țintă) - o cursă fără avantaj; „cel mult o treime” cerea doar un stop de 2× ținta

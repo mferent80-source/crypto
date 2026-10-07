@@ -352,13 +352,10 @@ async function saltVerifica() {
 // v100.130: stopul care urcă DEPĂȘIT și prețul sub intrare ⇒ șansa să revină la intrare în 60 de zile de bursă. Aceleași drumuri ca
 // 🎲 „Monte Carlo pe poziție” (MonteSimbol.pret, sămânța 21, orizonturile 20 / 60): cifra de aici = cifra de pe pagina Monte Carlo.
 // Prețurile în moneda simbolului (intrarea la cursul din ziua cumpărării), ca butonul 🎲.
+// v100.131: calculul e comun cu pagina T212 (mcsSansaRevenire, în monte-simbol-ecran.js)
 function saltSansaRevenire(b, a) {
-  if (typeof MonteSimbol === "undefined" || !a || !a.p || !a.niv) return null;
-  var P = a.p.pret, I = a.p.pretMediu;
-  if (!(P > 0) || !(a.niv.stopPozitie > P) || !(I > P) || !Array.isArray(b)) return null;
-  var m = MonteSimbol.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: 0.1, tintaPct: 0.15, prag: 0.1, intrare: I / P });
-  var o = m && !m.eroare ? m.orizonturi[1] : null;
-  return o ? { p: o.pIntrare, pCapat: o.pPesteIntrare, zile: 60 } : null;
+  if (typeof mcsSansaRevenire !== "function" || !a || !a.p || !a.niv) return null;
+  return mcsSansaRevenire(b, a.p.pret, a.p.pretMediu, a.niv.stopPozitie);
 }
 // o poziție: barele simbolului + cursul EUR ⇒ moneda simbolului (prețul mediu plătit în EUR, valoarea în EUR) + beta față de indicele pieței
 async function saltAnalizeazaUna(p) {
