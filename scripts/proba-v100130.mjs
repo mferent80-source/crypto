@@ -76,7 +76,7 @@ await test("(2c) variantele: fiecare are „drum cu drum” față de al tău (d
   assert.equal(rows[0].drum, undefined);
   rows.slice(1).forEach((x) => { assert.ok(x.drum, x.nume); assert.ok(Math.abs(x.drum.maiBun + x.drum.maiRau + x.drum.egal - 1) < 1e-9); });
   const h = G.mcsVarHtml({ setari: st, variante: rows });
-  assert.match(h, /<th>Drum cu drum<\/th>/); assert.match(h, /mai bun în \d+%/);
+  assert.match(h, /<th>Drum cu drum<\/th>/); assert.match(h, /mai bună în \d+%/);
 });
 await test("(2d) „ce aș face eu”: o variantă mai bună pe mijloc dar mai rea în mai multe drumuri decât mai bună NU se recomandă", () => {
   const g = (p50, p5, pPlus) => ({ p50, p5, pPlus, pLichidare: 0 });
@@ -94,6 +94,18 @@ await test("(2e) două variante bune cu mijlocul la fel în limita pragului ⇒ 
   assert.match(G.mcsVariantaBuna([baza, lev, gr]), /Aș încerca „jumătate din grile”/);
   const lev2 = Object.assign({}, lev, { g: g(-2.5, -6.1, 0.28) });   // mijlocul mai bun cu peste prag ⇒ rămâne mijlocul
   assert.match(G.mcsVariantaBuna([baza, lev2, gr]), /Aș încerca „levier mai mic”/);
+  // revizia (R6): fără alunecare din aproape în aproape - toate se compară cu cea mai bună pe mijloc, nu cu ultima aleasă
+  const a = { nume: "A", st: {}, g: g(-2.0, -6, 0.3), drum: { maiBun: 0.6, maiRau: 0.4, egal: 0 } };
+  const b2 = { nume: "B", st: {}, g: g(-2.8, -6, 0.3), drum: { maiBun: 0.7, maiRau: 0.3, egal: 0 } };
+  const c = { nume: "C", st: {}, g: g(-3.6, -6, 0.3), drum: { maiBun: 0.8, maiRau: 0.2, egal: 0 } };
+  assert.match(G.mcsVariantaBuna([baza, a, b2, c]), /Aș încerca „B”/, "C e la 1,6 USDT de A (peste prag): nu");
+});
+await test("(2f) recentele vechi (doar text) iau felul scurtăturii cu același simbol; felurile diferite ⇒ scurtătura rămâne la vedere (revizia R2)", () => {
+  const u = G.mcsUnesteFel([{ s: "BE", tip: null }, { s: "PONS", tip: "coin" }, { s: "LIT", tip: "coin" }], [{ s: "BE", tip: "stock" }, { s: "PONS", tip: "coin" }, { s: "LIT", tip: "stock" }, { s: "NFLX", tip: "stock" }]);
+  assert.deepEqual(u.rec, [{ s: "BE", tip: "stock" }, { s: "PONS", tip: "coin" }, { s: "LIT", tip: "coin" }]);
+  assert.deepEqual(u.scu, [{ s: "LIT", tip: "stock" }, { s: "NFLX", tip: "stock" }]);
+  assert.match(functie(MSE, "mcsDeseneaza"), /mcsUnesteFel\(/);
+  assert.match(G.mcsVarHtml({ setari: { jos: 1, sus: 2, grile: 2, levier: 1 }, variante: [{ nume: "x", st: { jos: 1, sus: 2, grile: 2, levier: 1 }, g: { p50: 0, pPlus: 0, pLichidare: 0, p5: 0 } }, { nume: "y", st: { jos: 1, sus: 2, grile: 2, levier: 1 }, g: { p50: 0, pPlus: 0, pLichidare: 0, p5: 0 }, drum: { maiBun: 0.5, maiRau: 0.2, egal: 0.3 } }] }), /mai bună în 50%<span class="t212Mic">mai rea în 20%/, "revizia R7: varianta e „ea”");
 });
 
 // ---------------- (4) stopuri pe aceleași drumuri (acțiuni) ----------------
@@ -123,8 +135,43 @@ await test("(4c) recomandarea stopului: media aproape aceeași (sub 1 punct) ⇒
   const t = G.mcsStopRecomandat(rows, 60, 0.046);
   assert.match(t, /^Păstrează stopul de sus \(−4,6%\)/); assert.match(t, /între −1,1% și −0,5%/); assert.match(t, /71% la −4,6%.*41% la −15,0%/); assert.match(t, /−5,7%.*−16,5%/);
   assert.doesNotMatch(t, /o treime/);
-  const r2 = [s(0.05, 0.6, -0.03, -0.06), s(0.1, 0.5, -0.001, -0.1), s(0.15, 0.4, -0.012, -0.16)];
-  assert.match(G.mcsStopRecomandat(r2, 60, 0.05), /^Aș lua −10,0%: rezultatul mediu −0,1%, față de −3,0% la stopul de sus/);
+  // revizia (R1): „Aș lua” cere ȘI drum cu drum mai bun în mai multe drumuri decât mai rău (media singură vine din centrarea pe mijloc)
+  const d = (maiBun, maiRau) => ({ maiBun, maiRau, egal: 1 - maiBun - maiRau });
+  const r2 = [Object.assign(s(0.05, 0.6, -0.03, -0.06), { drum: null }), Object.assign(s(0.1, 0.5, -0.001, -0.1), { drum: d(0.6, 0.3) }), Object.assign(s(0.15, 0.4, -0.012, -0.16), { drum: d(0.4, 0.5) })];
+  assert.match(G.mcsStopRecomandat(r2, 60, 0.05), /^Aș lua −10,0%: rezultatul mediu −0,1%, față de −3,0% la stopul de sus.*mai bun în 60% din drumuri/);
+  const r3 = [r2[0], Object.assign({}, r2[1], { drum: d(0.3, 0.6) }), r2[2]];
+  assert.match(G.mcsStopRecomandat(r3, 60, 0.05), /^Păstrează stopul de sus \(−5,0%\)/, "media mai bună dar mai rău în mai multe drumuri ⇒ nu");
+  // revizia (R5): intervalul mediilor peste 1 punct, dar stopul de sus printre cele mai bune ⇒ nu „aproape același”
+  const r4 = [s(0.05, 0.6, 0.003, -0.06), s(0.1, 0.5, 0.019, -0.1), s(0.15, 0.4, 0.012, -0.16)];
+  const t4 = G.mcsStopRecomandat(r4, 60, 0.1);
+  assert.match(t4, /^Păstrează stopul de sus \(−10,0%\)/); assert.match(t4, /iese printre cele mai bune/); assert.doesNotMatch(t4, /aproape același/);
+});
+await test("(4d) pret cu stopuri: fiecare rând are drum cu drum față de stopul de sus (stopPct), pe aceleași drumuri; rândul lui, fără", () => {
+  const b = bareZi(400, 9, 0.05), r = M.pret(b, { orizonturi: [60], n: 300, seed: 21, stopPct: 0.08, tintaPct: 0.15, stopuri: [0.05, 0.08, 0.15] });
+  const l = r.orizonturi[0].stopuri;
+  assert.equal(l[1].drum, null); [l[0], l[2]].forEach((x) => { assert.ok(x.drum); assert.ok(Math.abs(x.drum.maiBun + x.drum.maiRau + x.drum.egal - 1) < 1e-9); });
+});
+await test("(4e) pe serii FĂRĂ avantaj (aleatoare), „Aș lua” un alt stop apare rar: cel mult 1 din 40 la fiecare agitație (revizia: era 17,5% la 3,5%/zi)", () => {
+  // serii realiste fără avantaj: randamente ~normale, salt la deschidere, umbre cât agitația (cu bareZi - fără gap, umbre mici - proba trecea din motivul greșit)
+  const serie = (n, seed, vol) => { const g = M.generator(seed), z = () => { let u = 0; for (let i = 0; i < 12; i++) u += g(); return u - 6; }, b = []; let c = 100;
+    for (let i = 0; i < n; i++) { const o = c * Math.exp(z() * vol * 0.3), cc = o * Math.exp(z() * vol * 0.95); b.push({ t: i * ZI, o, h: Math.max(o, cc) * Math.exp(Math.abs(z()) * vol * 0.5), l: Math.min(o, cc) * Math.exp(-Math.abs(z()) * vol * 0.5), c: cc, v: 1 }); c = cc; }
+    return b; };
+  for (const vol of [0.015, 0.025, 0.035]) {
+    let fals = 0;
+    for (let k = 0; k < 40; k++) {
+      const b = serie(400, 1000 + k, vol), r = G.mcsCalculeaza({ tip: "stock", sim: "X", b, ist: {} }, { stop: 5 });
+      const m = r.pretMc, o = m.orizonturi[m.orizonturi.length - 1];
+      if (/^Aș lua/.test(G.mcsStopRecomandat(o.stopuri, o.H, m.stopPct))) fals++;
+    }
+    assert.ok(fals <= 1, `agitația ${vol * 100}%/zi: ${fals} din 40 recomandări false`);
+  }
+});
+await test("(4f) stopul de sus nerotunjit: 9,95% intră ca atare, e marcat, iar un nivel standard la sub 0,05 puncte de el e înlocuit (revizia R4)", () => {
+  const b = bareZi(400, 9, 0.05), d = { tip: "stock", sim: "X", sursa: "x", b, ist: { r: { cazuri: 0 } } };
+  const r = G.mcsCalculeaza(d, { stop: 9.95 }), sl = r.pretMc.orizonturi[1].stopuri.map((s) => Math.round(s.sp * 1e6) / 1e6);
+  assert.deepEqual(sl, [0.05, 0.08, 0.0995, 0.15]);
+  assert.match(G.mcsPretHtml(r), /<tr class="mcsVarTu"><td>−10,0%<span class="t212Mic">cel de sus/);   // 9,95 se scrie cu o zecimală
+  assert.equal(r.pretMc.orizonturi[1].stopuri[2].pStop, r.pretMc.orizonturi[1].pStop, "rândul de sus = cardul de sus");
 });
 
 // ---------------- (3) Salt: stopul depășit ⇒ șansa să revină la intrare ----------------
@@ -143,7 +190,7 @@ await test("(3b) rândul Salt cu stopul DEPĂȘIT arată șansa; detaliul o spun
   const poz = { isin: "DE0007030009", simbol: "RHM.DE", nume: "Rheinmetall", qty: 1.0456, pretMediu: 1349.6, de: "2026-05-11", plata: "EUR" };
   const a = { p: { pret: 936.6, pretMediu: 1349.6 }, niv: { stopPozitie: 1109.1, tintaPozitie: 1436.5 }, cons: { nivel: "iesi", titlu: "x" }, st: { trend: { dir: "jos" } }, revine: { p: 0.13, pCapat: 0.07, zile: 60 } };
   const h = G.saltPozRandHtml({ a, p: poz, m: "EUR", pret: 936.6, fx: 1, rez: -400, pct: -0.3, cost: 1411, val: 979, pond: 1 }, { deschis: {}, incarcate: true });
-  assert.match(h, /DEPĂȘIT<\/span><span class="t212Mic">🎲 revine la intrare: 13% în 60 z<\/span>/);
+  assert.match(h, /DEPĂȘIT<\/span><span class="t212Mic saltRevMic">🎲 revine la intrare: 13% în 60 z<\/span>/);
   assert.match(h, /Șansa să revină la prețul tău de intrare \(1\.349,60 EUR\) măcar o dată în 60 de zile de bursă: <b>13%<\/b>; la capăt peste intrare: 7%/);
   assert.match(functie(SE, "saltAnalizeazaUna"), /saltSansaRevenire\(b, a\)/);
 });
@@ -159,13 +206,48 @@ await test("(5b) lista: coloanele Stop / Țintă; în curs ⇒ „…”, fără
     nivListe: { AAA: { pret: 10, stop: 9.2, tinta: 11.6, riscPct: 0.08, trend: "jos" }, CCC: { eroare: "prea puține zile" } } };
   const h = G.saltIdeiHtml(d);
   assert.match(h, /<th>Stop<\/th><th>Țintă<\/th>/);
-  assert.match(h, /9,20<span class="t212Mic">−8,0%<\/span>/); assert.match(h, /11,60/); assert.match(h, /trend în jos: doar dacă se întoarce/);
-  assert.match(h, /BBB[\s\S]*?<td class="tbSub">…<\/td>/); assert.match(h, /CCC[\s\S]*?<td class="tbSub">—<\/td>/);
+  assert.match(h, /9,20<span class="t212Mic">−8,0% de acum<\/span>/); assert.match(h, /11,60/); assert.match(h, /trend în jos: doar dacă se întoarce/);
+  assert.match(h, /BBB[\s\S]*?<td class="tbSub l-stop">…<\/td>/); assert.match(h, /CCC[\s\S]*?<td class="tbSub l-stop">—<\/td>/);
+  assert.match(h, /<td class="bad l-stop">9,20/); assert.match(h, /<td class="good l-tinta">11,60/);   // etichetele de pe telefon (cartonașe)
 });
 await test("(5c) fila aleasă pornește calculul (saltFila ⇒ saltNivelePeLista), și la deschiderea paginii pe o listă", () => {
   assert.match(functie(SE, "saltFila"), /saltNivelePeLista\(/);
   assert.match(functie(SE, "saltPorneste"), /saltNivelePeLista\(/);
   assert.match(functie(SE, "saltNivelePeLista"), /saltBareDe\(/); assert.match(functie(SE, "saltNivelePeLista"), /saltDeseneazaIdei\(\)/);
+});
+await test("(5d) revizia R3/R9: o eroare nu se ține minte (se reîncearcă la următoarea deschidere); două deschideri la rând ⇒ o singură trecere; raport nou ⇒ se golesc", async () => {
+  const vechi = { b: G.saltBareDe, d: G.saltDeseneazaIdei }, cereri = []; let strica = true;
+  G.saltDeseneazaIdei = () => {};
+  G.saltBareDe = async (s) => { cereri.push(s); if (strica) throw new Error("rețea"); return bareZi(300, 4, 0.04); };
+  try {
+    G.saltStare.d.raport = { la: 1, liste: { revers: [{ simbol: "AAA" }, { simbol: "BBB" }] } }; G.saltStare.d.nivListe = {};
+    await G.saltNivelePeLista("revers");
+    assert.ok(G.saltStare.d.nivListe.AAA.eroare);
+    strica = false; cereri.length = 0;
+    await Promise.all([G.saltNivelePeLista("revers"), G.saltNivelePeLista("revers")]);
+    assert.deepEqual(cereri, ["AAA", "BBB"], "o singură trecere, erorile reîncercate");
+    assert.ok(G.saltStare.d.nivListe.AAA.stop > 0);
+  } finally { G.saltBareDe = vechi.b; G.saltDeseneazaIdei = vechi.d; }
+  assert.match(functie(SE, "saltPorneste"), /nivListe = \{\}/);
+});
+await test("(5f) saltPorneste încarcă pozițiile (comentariul lipit la mijlocul rândului a înghițit o dată `pozitii = …; incarcate = true`); raport nou ⇒ nivListe golit, același raport ⇒ păstrat", async () => {
+  const vechi = { j: G.getJSON, b: G.saltBareDe, f: G.fetch, a: G.saltAnalize };
+  const POZ = [{ isin: "DE0007030009", simbol: "RHM.DE", qty: 1, pretMediu: 1000, plata: "EUR" }];
+  let raportLa = 5;
+  G.getJSON = async () => ({ raport: { la: raportLa, liste: {} }, pozitii: POZ });
+  G.saltBareDe = async () => []; G.saltAnalize = async () => {}; G.fetch = async () => ({ json: async () => ({ instrumente: [] }) });
+  try {
+    G.saltStare.d.raport = { la: 5 }; G.saltStare.d.nivListe = { AAA: { stop: 1 } }; G.saltStare.la = 0; G.saltStare.inLucru = false;
+    await G.saltPorneste(true);
+    assert.equal(G.saltStare.d.pozitii.length, 1); assert.equal(G.saltStare.d.incarcate, true); assert.equal(G.saltStare.d.eroare, null);
+    assert.ok(G.saltStare.d.nivListe.AAA, "același raport ⇒ păstrat");
+    raportLa = 6; await G.saltPorneste(true);
+    assert.deepEqual(G.saltStare.d.nivListe, {}, "raport nou ⇒ golit");
+  } finally { G.getJSON = vechi.j; G.saltBareDe = vechi.b; G.fetch = vechi.f; G.saltAnalize = vechi.a; }
+});
+await test("(5e) revizia R8: lângă stop, procentul e față de prețul de ACUM (ultima bară), scris „de acum”", () => {
+  const d = { raport: { liste: { revers: [{ simbol: "AAA", pret: 10, cadere: 0.2 }] }, dovada: {} }, fila: "revers", nivListe: { AAA: { pret: 10, stop: 9.2, tinta: 11.6, riscPct: 0.05, trend: "sus" } } };
+  assert.match(G.saltIdeiHtml(d), /9,20<span class="t212Mic">−8,0% de acum<\/span>/);
 });
 
 await test("(E) versiunea de la v100.130 în sus (colectorul neatins)", () => {

@@ -106,7 +106,8 @@ function mcsVariantaBuna(rows) {
   var bune = rows.slice(1).filter(function (x) { return x.g && !x.g.eroare && x.g.pLichidare <= 0.02 && x.g.p50 - b.g.p50 >= prag && !(x.g.p5 < b.g.p5) && !(x.g.pPlus < b.g.pPlus) && !(x.drum && x.drum.maiBun <= x.drum.maiRau); }).sort(function (x, y) { return y.g.p50 - x.g.p50; });
   // mijloacele la fel în limita pragului (zgomot) ⇒ câștigă cea mai bună drum cu drum (PONS 07.10: ½ grile, mai bună în 99%, față de levier −1, în 72%)
   var marja = function (x) { return x.drum ? x.drum.maiBun - x.drum.maiRau : 0; }, c = bune[0];
-  bune.forEach(function (x) { if (c && x.g.p50 >= c.g.p50 - prag && marja(x) > marja(c)) c = x; });
+  // revizia (R6): toate față de cea mai bună pe mijloc (bune[0]), nu față de ultima aleasă - altfel alunecă din aproape în aproape
+  bune.forEach(function (x) { if (c && x.g.p50 >= bune[0].g.p50 - prag && marja(x) > marja(c)) c = x; });
   // toate pe minus ⇒ se spune: setarea „mai bună” doar pierde mai puțin (problema e botul pe moneda asta, nu setarea)
   var toate = rows.every(function (x) { return !x.g || x.g.eroare || x.g.p50 < 0; });
   if (!c) return "Păstrează-l așa: nicio variantă nu iese clar mai bună (cu cel puțin " + mcsBani1(prag) + " de obicei) pe aceleași drumuri, fără să pună mai mult la risc." + (toate ? " Dar toate variantele ies de obicei pe minus: problema e botul pe moneda asta acum, nu setarea." : "");
@@ -176,8 +177,11 @@ function mcsStopRecomandat(rows, zile, spSus) {
   var tu = rows.filter(function (s) { return Math.abs(s.sp - spSus) < 5e-4; })[0] || rows[0], prim = rows[0], ult = rows[rows.length - 1];
   var best = rows.slice().sort(function (x, y) { return y.media - x.media; })[0], lo = Math.min.apply(null, rows.map(function (s) { return s.media; }));
   var p = function (s) { return "−" + mcsNr(s.sp * 100, 1) + "%"; };
-  if (best.media - tu.media >= 0.01) return "Aș lua " + p(best) + ": rezultatul mediu " + mcsPct1(best.media) + ", față de " + mcsPct1(tu.media) + " la stopul de sus (" + p(tu) + "), pe aceleași drumuri în " + mcsCate(zile, "zi de bursă", "zile de bursă") + ". Pe istoria ei reluată, nu o promisiune.";
-  return "Păstrează stopul de sus (" + p(tu) + "): pe drumurile fără tendință, rezultatul mediu e aproape același la toate (între " + mcsPct1(lo) + " și " + mcsPct1(best.media) + "). Stopul schimbă doar cât de des ieși (" + mcsPr(prim.pStop) + " la " + p(prim) + ", " + mcsPr(ult.pStop) + " la " + p(ult) + ") și cât pierzi într-un drum prost (5% sub: " + mcsPct1(prim.p5) + " față de " + mcsPct1(ult.p5) + "). Alege-l după cât poți pierde o dată și potrivește mărimea poziției.";
+  // revizia (R1): alt stop doar dacă media e mai bună cu 1 punct ȘI iese mai bine în mai multe drumuri decât mai rău (proba (4e): pe
+  // serii fără avantaj, media singură recomanda „−15%” în 13–27 din 40); altfel păstrează stopul de sus
+  var alt = rows.filter(function (s) { return s !== tu && s.media - tu.media >= 0.01 && s.drum && s.drum.maiBun > s.drum.maiRau; }).sort(function (x, y) { return y.media - x.media; })[0];
+  if (alt) return "Aș lua " + p(alt) + ": rezultatul mediu " + mcsPct1(alt.media) + ", față de " + mcsPct1(tu.media) + " la stopul de sus (" + p(tu) + "), și iese mai bun în " + mcsPr(alt.drum.maiBun) + " din drumuri (mai rău în " + mcsPr(alt.drum.maiRau) + "), pe aceleași drumuri în " + mcsCate(zile, "zi de bursă", "zile de bursă") + ". Pe istoria ei reluată, nu o promisiune.";
+  return "Păstrează stopul de sus (" + p(tu) + "): " + (best.media - lo < 0.01 ? "pe drumurile fără tendință, rezultatul mediu e aproape același la toate (între " + mcsPct1(lo) + " și " + mcsPct1(best.media) + ")" : "niciun alt stop nu iese mai bine în majoritatea drumurilor; diferențele de medie (între " + mcsPct1(lo) + " și " + mcsPct1(best.media) + ") vin din câteva drumuri, iar stopul de sus iese printre cele mai bune") + ". Stopul schimbă doar cât de des ieși (" + mcsPr(prim.pStop) + " la " + p(prim) + ", " + mcsPr(ult.pStop) + " la " + p(ult) + ") și cât pierzi într-un drum prost (5% sub: " + mcsPct1(prim.p5) + " față de " + mcsPct1(ult.p5) + "). Alege-l după cât poți pierde o dată și potrivește mărimea poziției.";
 }
 function mcsStopuriHtml(m) {
   var o = m.orizonturi[m.orizonturi.length - 1], rows = o && o.stopuri;
@@ -227,7 +231,7 @@ function mcsVarHtml(r) {
     + rows.map(function (x, i) {
       var g = x.g || {}, st = x.st, er = !g || g.eroare, dd = x.drum;
       // v100.130: față de al tău pe fiecare drum; verde doar când e mai bun în mai multe drumuri decât mai rău
-      var dc = i === 0 ? '<td class="tbSub">al tău</td>' : dd ? '<td class="' + (dd.maiBun > dd.maiRau ? "good" : dd.maiRau > dd.maiBun ? "bad" : "") + '">mai bun în ' + mcsPr(dd.maiBun) + '<span class="t212Mic">mai rău în ' + mcsPr(dd.maiRau) + '</span></td>' : '<td class="tbSub">—</td>';
+      var dc = i === 0 ? '<td class="tbSub">al tău</td>' : dd ? '<td class="' + (dd.maiBun > dd.maiRau ? "good" : dd.maiRau > dd.maiBun ? "bad" : "") + '">mai bună în ' + mcsPr(dd.maiBun) + '<span class="t212Mic">mai rea în ' + mcsPr(dd.maiRau) + '</span></td>' : '<td class="tbSub">—</td>';
       return '<tr' + (i === 0 ? ' class="mcsVarTu"' : '') + '><td>' + mcsEsc(x.nume) + '</td>'
         + (er ? '<td colspan="6" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (g.pLichidare > 0.02 ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '<td>' + mcsEsc(mcsPretTxt(st.jos) + "–" + mcsPretTxt(st.sus) + " · " + mcsCate(st.grile, "grilă", "grile") + " · " + st.levier + "×") + '</td>' + '</tr>';
     }).join("") + '</tbody></table></div>'
@@ -277,8 +281,16 @@ function mcsSalveazaRecente() { try { localStorage.setItem(MCS_RECENTE, JSON.str
 function mcsDeseneaza() {
   var el = mcsEl("mcsPagina"); if (!el) return;
   if (!mcsStare.recente) mcsStare.recente = mcsCitesteRecente();
-  var rec = mcsStare.recente.map(function (x) { return x.s; });
-  el.innerHTML = mcsHtml(Object.assign({}, mcsStare, { scurtaturi: mcsScurtaturi().filter(function (x) { return rec.indexOf(x.s) < 0; }) }));
+  var u = mcsUnesteFel(mcsStare.recente, mcsScurtaturi());
+  el.innerHTML = mcsHtml(Object.assign({}, mcsStare, { recente: u.rec, scurtaturi: u.scu }));
+}
+// revizia (R2): un recent vechi (doar text, salvat înainte de v100.130) ia felul scurtăturii cu același simbol (BE din T212 ⇒ acțiune);
+// scurtătura se ascunde doar când recentul are ACELAȘI fel - cu felul diferit (LIT monedă vs LIT acțiune) rămân amândouă
+function mcsUnesteFel(recente, scurtaturi) {
+  var scu = (Array.isArray(scurtaturi) ? scurtaturi : []).map(mcsFel).filter(Boolean), dupa = {};
+  scu.forEach(function (x) { if (!dupa[x.s]) dupa[x.s] = x.tip; });
+  var rec = (Array.isArray(recente) ? recente : []).map(mcsFel).filter(Boolean).map(function (x) { return x.tip || !dupa[x.s] ? x : { s: x.s, tip: dupa[x.s] }; });
+  return { rec: rec, scu: scu.filter(function (x) { return !rec.some(function (y) { return y.s === x.s && y.tip === x.tip; }); }) };
 }
 // Enter: în câmpul simbolului ⇒ „Analizează”; în stop / țintă / setările botului ⇒ „Refă simularea”
 function mcsTasta(e) {
@@ -381,7 +393,8 @@ function mcsCalculeaza(d, o) {
   var spPoz = poz && poz.stop > 0 && poz.stop < poz.pret ? 1 - poz.stop / poz.pret : null;
   var sp2 = o.stop > 0 ? o.stop / 100 : poz ? (spPoz !== null ? spPoz : 0.1) : ok && n.stop > 0 && n.stop < Pp ? 1 - n.stop / Pp : 0.1, tp2 = o.tinta > 0 ? o.tinta / 100 : ok && n.tinta > Pp ? n.tinta / Pp - 1 : 0.15;
   // v100.130: −5 / −8 / −10 / −15% și stopul de sus, pe aceleași drumuri (aceeași țintă)
-  var sl = [0.05, 0.08, 0.1, 0.15], spR = Math.round(sp2 * 1000) / 1000; if (sl.indexOf(spR) < 0 && spR > 0 && spR < 1) sl.push(spR); sl.sort(function (x, y) { return x - y; });
+  // revizia (R4): stopul de sus intră NEROTUNJIT (rândul lui = cardul de sus); un nivel standard la cel mult 0,05 puncte de el (s-ar scrie la fel, cu o zecimală) e înlocuit
+  var sl = [0.05, 0.08, 0.1, 0.15].filter(function (x) { return Math.abs(x - sp2) >= 6e-4; }); if (sp2 > 0 && sp2 < 1) sl.push(sp2); sl.sort(function (x, y) { return x - y; });
   return { sim: d.sim, tip: "stock", sursa: d.sursa, pret: Pp, pretMc: MonteSimbol.pret(b, { orizonturi: [20, 60], n: 1000, blocZile: 5, seed: 21, stopPct: sp2, tintaPct: tp2, prag: 0.1, intrare: poz ? poz.intrareR : undefined, stopuri: sl }), grid: null, setari: null, ist: d.ist, poz: poz,
     nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : spPoz !== null ? "stopul poziției tale (" + mcsPretTxt(poz.stop) + ")" + (ok && n.tinta > Pp ? "; ținta: a Radarului" : "") : poz && poz.stop > 0 ? "stopul poziției (" + mcsPretTxt(poz.stop) + ") e deja depășit: prețul e sub el; aici −10% de acum" : poz ? "poziția n-are stop: −10%" : ok ? "ale Radarului pentru o intrare nouă azi (stopul " + mcsPretTxt(n.stop) + ", ținta " + mcsPretTxt(n.tinta) + ")" : "−10% / +15%: schimbă-le" };
 }

@@ -121,9 +121,9 @@ function saltIdeiHtml(d) {
     // v100.130: stopul și ținta Radarului pentru o intrare azi (ca la T212), socotite pe pagină când se deschide fila (saltNivelePeLista)
     var nivCel = function (x) {
       var n = nv[x.simbol];
-      if (!n) return '<td class="tbSub">…</td><td class="tbSub">…</td>';
-      if (n.eroare) return '<td class="tbSub">—</td><td class="tbSub">—</td>';
-      return '<td class="bad">' + saltPret(n.stop, "") + '<span class="t212Mic">' + (n.riscPct != null ? "−" + (n.riscPct * 100).toFixed(1).replace(".", ",") + "%" : "") + '</span>' + (n.trend === "jos" ? '<span class="t212Mic">trend în jos: doar dacă se întoarce</span>' : '') + '</td><td class="good">' + saltPret(n.tinta, "") + '</td>';
+      if (!n) return '<td class="tbSub l-stop">…</td><td class="tbSub l-tinta">…</td>';
+      if (n.eroare) return '<td class="tbSub l-stop">—</td><td class="tbSub l-tinta">—</td>';
+      return '<td class="bad l-stop">' + saltPret(n.stop, "") + '<span class="t212Mic">' + (n.pret > 0 ? saltP1(n.stop / n.pret - 1) + " de acum" : "") + '</span>' + (n.trend === "jos" ? '<span class="t212Mic">trend în jos: doar dacă se întoarce</span>' : '') + '</td><td class="good l-tinta">' + saltPret(n.tinta, "") + '</td>';
     };
     h += '<p class="tbSub saltNota">' + saltEsc(t[0]) + (dv[fila] && dv[fila].text ? ' · <b>' + saltEsc(dv[fila].text) + '</b>' : '') + '</p>'
       + (l.length ? '<div class="rlTab"><table class="t212Tab saltLista"><thead><tr><th>Instrument</th><th>Acum</th><th>De ce e aici</th><th>Stop</th><th>Țintă</th></tr></thead><tbody>' + l.map(function (x) { return '<tr><td><b>' + saltEsc(x.simbol || x.isin) + '</b><span class="t212Mic">' + saltEsc(String(x.nume || "").slice(0, 44)) + '</span></td><td>' + saltPret(x.pret, "") + '</td><td class="saltDece">' + saltEsc(t[1](x)) + '</td>' + nivCel(x) + '</tr>'; }).join("") + '</tbody></table></div>'
@@ -147,7 +147,7 @@ function saltPozRandHtml(r, d) {
     + '<td class="c-acum">' + saltPret(pr, m) + (m !== "EUR" && r.fx ? '<span class="t212Mic">≈ ' + saltBani(pr / r.fx) + ' EUR</span>' : '') + '</td>'
     + '<td class="c-rez"><b class="' + saltCls(r.rez !== null ? r.rez : r.rezM) + '">' + (r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + '</b><span class="t212Mic">' + (r.pct !== null ? saltP1(r.pct) + " în EUR · " : "") + 'preț ' + saltP1(pr / a.p.pretMediu - 1) + '</span></td>'
     + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (atins ? "bad" : "") + '">' + saltPret(n.stopPozitie, m) + '</span><span class="t212Mic">' + (atins ? "DEPĂȘIT" : saltP1(n.stopPozitie / pr - 1) + " de acum") + '</span>'
-      + (atins && a.revine ? '<span class="t212Mic">🎲 revine la intrare: ' + Math.round(a.revine.p * 100) + '% în ' + a.revine.zile + ' z</span>' : '') : '—') + '</td>'
+      + (atins && a.revine ? '<span class="t212Mic saltRevMic">🎲 revine la intrare: ' + Math.round(a.revine.p * 100) + '% în ' + a.revine.zile + ' z</span>' : '') : '—') + '</td>'
     + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + saltPret(n.tintaPozitie, m) + '</span><span class="t212Mic">' + saltP1(n.tintaPozitie / pr - 1) + '</span>' : '—') + '</td>'
     + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b></td>'
     + '<td class="c-pond">' + (r.pond !== null ? Math.round(r.pond * 100) + '%<span class="t212MiniBara"><i class="' + (r.pond > 0.2 ? " rau" : r.pond > 0.15 ? " atentie" : "") + '" style="width:' + Math.min(100, r.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—') + '</td></tr>';
@@ -161,7 +161,7 @@ function saltPozRandHtml(r, d) {
     + (a.avert ? '<p class="tbWarn">' + saltEsc(a.avert) + '</p>' : '')
     + '<p><span class="t212Pill ' + (SALT_NIVEL[c.nivel] || SALT_NIVEL["fara-date"])[1] + '">' + saltEsc(c.eticheta || (SALT_NIVEL[c.nivel] || SALT_NIVEL["fara-date"])[0]) + '</span> <b>' + saltEsc(saltInMoneda(c.titlu || "", m)) + '</b></p>'
     + (c.motive && c.motive.length ? '<ul class="t212Motive">' + c.motive.slice(0, 4).map(function (x) { return '<li>' + saltEsc(saltInMoneda(x.titlu, m)) + (x.text ? ' <span class="t212Mic saltInline">' + saltEsc(saltInMoneda(x.text, m).replace(/ \(măsurat pe trade-urile tale\)/, "")) + '</span>' : '') + '</li>'; }).join("") + '</ul>' : '')
-    + (atins && a.revine ? '<p class="saltRevine">🎲 Șansa să revină la prețul tău de intrare (' + saltPret(a.p.pretMediu, m) + ') măcar o dată în ' + a.revine.zile + ' de zile de bursă: <b>' + Math.round(a.revine.p * 100) + '%</b>; la capăt peste intrare: ' + Math.round(a.revine.pCapat * 100) + '%. <span class="t212Mic saltInline">Monte Carlo pe istoria ei, fără tendința perioadei: zile reale reluate de 1.000 de ori, nu o predicție.</span></p>' : '')
+    + (atins && a.revine ? '<p class="saltRevine">🎲 Șansa să revină la prețul tău de intrare (' + saltPret(a.p.pretMediu, m) + (p.plata === "EUR" && m && m !== "EUR" ? ", din EUR la cursul din ziua cumpărării" : "") + ') măcar o dată în ' + a.revine.zile + ' de zile de bursă: <b>' + Math.round(a.revine.p * 100) + '%</b>; la capăt peste intrare: ' + Math.round(a.revine.pCapat * 100) + '%. <span class="t212Mic saltInline">Monte Carlo pe istoria ei, fără tendința perioadei: zile reale reluate de 1.000 de ori, nu o predicție.</span></p>' : '')
     + (c.faCe ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + saltEsc(saltInMoneda(c.faCe, m)) + '<span class="t212Mic">dacă vinzi acum: ' + saltEsc(r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + (restBani ? " · " + saltEsc(restBani) : "") + '</span></p>' : '')
     + '<p class="tbSub">' + saltEsc(qty + " buc · plătit " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + " pe bucată" + (de ? " pe " + de : "") + (p.plata === "EUR" && m && m !== "EUR" ? " (= " + saltBani(a.p.pretMediu) + " " + saltMon(m) + (de ? " la cursul din ziua cumpărării" : " la cursul de azi") + (r.fx ? "; azi 1 EUR = " + (r.fx / (m === "GBp" ? 100 : 1)).toFixed(4).replace(".", ",") + " " + (m === "GBp" ? "GBP" : m) : "") + ")" : "")) + '</p>'
     + (!p.de ? '<p class="tbSub">Fără data cumpărării, stopul care urcă pornește de la prețul de azi: scrie data ca să urce de la maximul de după cumpărare.</p>' : '')
@@ -284,17 +284,22 @@ function saltNivLista(b) {
   return { pret: P, intrare: n.intrare ? n.intrare.pret : null, stop: n.stop, tinta: n.tinta, riscPct: n.riscPct, trend: n.trend };
 }
 // pe rând, cu o pauză între cereri (Yahoo prin server); fiecare rând apare când e gata; o dată pe pagină
+// revizia (R3/R9): o singură trecere pe filă odată (clicurile repetate nu dublează cererile); erorile nu se țin minte - la următoarea
+// deschidere a filei se reîncearcă (ca R8: un eșec nu rămâne toată sesiunea)
 async function saltNivelePeLista(fila) {
   var d = saltStare.d, l = d.raport && d.raport.liste && d.raport.liste[fila]; if (!Array.isArray(l)) return;
-  d.nivListe = d.nivListe || {}; saltStare.nivInLucru = saltStare.nivInLucru || {};
-  for (var i = 0; i < l.length; i++) {
-    var s = l[i] && l[i].simbol; if (!s || d.nivListe[s] || saltStare.nivInLucru[s]) continue;
-    saltStare.nivInLucru[s] = true;
-    try { d.nivListe[s] = saltNivLista(await saltBareDe(s)); } catch (e) { d.nivListe[s] = { eroare: "n-am prețurile" }; }
-    saltStare.nivInLucru[s] = false;
-    saltDeseneazaIdei();
-    await new Promise(function (r) { setTimeout(r, 250); });
-  }
+  saltStare.nivFila = saltStare.nivFila || {}; if (saltStare.nivFila[fila]) return;
+  saltStare.nivFila[fila] = true;
+  try {
+    d.nivListe = d.nivListe || {};
+    Object.keys(d.nivListe).forEach(function (k) { if (d.nivListe[k] && d.nivListe[k].eroare) delete d.nivListe[k]; });
+    for (var i = 0; i < l.length; i++) {
+      var s = l[i] && l[i].simbol; if (!s || d.nivListe[s]) continue;
+      try { d.nivListe[s] = saltNivLista(await saltBareDe(s)); } catch (e) { d.nivListe[s] = { eroare: "n-am prețurile" }; }
+      saltDeseneazaIdei();
+      await new Promise(function (r) { setTimeout(r, 250); });
+    }
+  } finally { saltStare.nivFila[fila] = false; }
 }
 function saltComuta(isin) {
   var d = saltStare.d; d.deschis[isin] = !d.deschis[isin];
@@ -384,7 +389,10 @@ async function saltPorneste(fortat) {
   saltStare.inLucru = true;
   try {
     if (!saltStare.d.univers) { try { var u = await (await fetch("/data/salt-univers.json")).json(); saltStare.d.univers = u && u.instrumente || null; } catch (e) { saltStare.d.univers = null; } }
-    var s = await getJSON("/api/t212?action=salt"); saltStare.d.raport = s && s.raport || null; saltStare.d.pozitii = s && Array.isArray(s.pozitii) ? s.pozitii : []; saltStare.d.incarcate = true; saltStare.d.eroare = null;
+    var s = await getJSON("/api/t212?action=salt"), laVechi = saltStare.d.raport && saltStare.d.raport.la; saltStare.d.raport = s && s.raport || null;
+    saltStare.d.pozitii = s && Array.isArray(s.pozitii) ? s.pozitii : []; saltStare.d.incarcate = true; saltStare.d.eroare = null;
+    // revizia (R3): raport nou ⇒ stopul și ținta de pe liste se socotesc din nou
+    if ((saltStare.d.raport && saltStare.d.raport.la) !== laVechi) saltStare.d.nivListe = {};
     saltStare.la = Date.now();   // revizia (C2): ținut minte doar după o citire reușită
     var ch = saltEl("saltChip"); if (ch) ch.textContent = "citit la " + new Date().toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + (saltStare.d.raport && saltStare.d.raport.la ? " · raportul de la " + new Date(saltStare.d.raport.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "") + " · pozițiile le scrii tu (Salt n-are API)";
     saltDeseneaza();
@@ -396,10 +404,14 @@ async function saltPorneste(fortat) {
   finally { saltStare.inLucru = false; }
   if (saltStare.d.eroare) saltDeseneaza(); else saltDeseneazaPoz();   // revizia (R4): pe drumul bun doar cifrele și pozițiile - ce scrii în formular / „Vreau” rămâne
 }
-async function saltSalveaza() {
+// v101.87 (el 07.10, „DA LA TOT”): trimite O operație ({pune: poziție} / {scoate: isin}), aplicată de server pe lista proaspătă;
+// înainte trimitea toată lista din memoria paginii și ștergea o poziție adăugată între timp de pe pagina alerts. Lista se ia de la server.
+async function saltSalveaza(op) {
   if (!saltStare.d.incarcate) throw new Error("pozițiile nu s-au citit încă de pe server");   // revizia (C2)
-  var r = await apiFetch("/api/t212?action=saltPozitii", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pozitii: saltStare.d.pozitii }) });
+  var r = await apiFetch("/api/t212?action=saltPoz", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(op) });
   if (!r.ok) throw new Error("HTTP " + r.status);
+  var j = null; try { j = await r.json(); } catch (e) { j = null; }
+  if (j && Array.isArray(j.pozitii)) saltStare.d.pozitii = j.pozitii;
 }
 async function saltAdauga() {
   var g = function (id) { var el = saltEl(id); return el ? el.value : ""; }, m = saltEl("saltMesaj"), u = saltStare.d.univers || [];
@@ -411,11 +423,11 @@ async function saltAdauga() {
   try { var a = await saltAnalizeazaUna(p); if (a && a.avert) { if (m) m.textContent = a.avert + " Nu l-am salvat."; return; } } catch (e) {}
   var exista = saltStare.d.pozitii.some(function (x) { return x.isin === p.isin; });
   var vechi = saltStare.d.pozitii; saltStare.d.pozitii = vechi.filter(function (x) { return x.isin !== p.isin; }).concat([p]);
-  try { await saltSalveaza(); if (m) m.textContent = exista ? "Am înlocuit poziția " + p.simbol + " (am înlocuit poziția, nu am adunat: scrie cantitatea totală și prețul mediu)." : "Am salvat " + p.simbol + "."; saltStare.d.analize[p.isin] = null; saltDeseneazaPoz(); await saltAnalize(); }
+  try { await saltSalveaza({ pune: p }); if (m) m.textContent = exista ? "Am înlocuit poziția " + p.simbol + " (am înlocuit poziția, nu am adunat: scrie cantitatea totală și prețul mediu)." : "Am salvat " + p.simbol + "."; saltStare.d.analize[p.isin] = null; saltDeseneazaPoz(); await saltAnalize(); }
   catch (e) { saltStare.d.pozitii = vechi; if (m) m.textContent = "Nu s-a salvat (" + e.message + "): încearcă din nou."; }
 }
 async function saltSterge(isin) {
   var vechi = saltStare.d.pozitii; saltStare.d.pozitii = vechi.filter(function (x) { return x.isin !== isin; });
-  try { await saltSalveaza(); delete saltStare.d.analize[isin]; delete saltStare.d.deschis[isin]; } catch (e) { saltStare.d.pozitii = vechi; saltStare.d.eroare = "Nu s-a șters pe server (" + e.message + "): poziția rămâne."; }
+  try { await saltSalveaza({ scoate: isin }); delete saltStare.d.analize[isin]; delete saltStare.d.deschis[isin]; } catch (e) { saltStare.d.pozitii = vechi; saltStare.d.eroare = "Nu s-a șters pe server (" + e.message + "): poziția rămâne."; }
   saltDeseneaza();
 }

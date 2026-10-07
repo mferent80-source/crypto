@@ -53,7 +53,17 @@ var MonteSimbol = (function () {
       ret.sort(function (a, c) { return a - c; });
       // istoricul sub 3× orizontul ⇒ simularea doar reamestecă aceleași zile (spus pe pagină)
       var rez = { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined, pPesteIntrareStop: R ? pis / n : undefined };
-      if (sl) rez.stopuri = sl.map(function (k) { var v = k.v.sort(function (a, c) { return a - c; }); return { sp: k.sp, pStop: k.st / n, pTinta: k.ti / n, pNiciuna: (n - k.st - k.ti) / n, media: v.reduce(function (a, c) { return a + c; }, 0) / n, p5: pc(v, 0.05), p50: pc(v, 0.5) }; });
+      if (sl) {
+        // revizia (R1): fiecare stop față de stopul de sus (stopPct), drum cu drum - media singură favorizează stopul larg (drumurile au
+        // mijlocul la zero, deci media e pe plus pe acțiunile agitate: cine stă mai mult în piață o adună)
+        var ref = sl.filter(function (k) { return Math.abs(k.sp - sp) < 5e-4; })[0];
+        rez.stopuri = sl.map(function (k) {
+          var dr = null;
+          if (ref && k !== ref) { var bun = 0, rau = 0; for (var q = 0; q < n; q++) { var dd = k.v[q] - ref.v[q]; if (dd > 1e-9) bun++; else if (dd < -1e-9) rau++; } dr = { maiBun: bun / n, maiRau: rau / n, egal: (n - bun - rau) / n }; }
+          var v = k.v.slice().sort(function (a, c) { return a - c; });
+          return { sp: k.sp, pStop: k.st / n, pTinta: k.ti / n, pNiciuna: (n - k.st - k.ti) / n, media: v.reduce(function (a, c) { return a + c; }, 0) / n, p5: pc(v, 0.05), p50: pc(v, 0.5), drum: dr };
+        });
+      }
       return rez;
     }
     // revizia Opus (07.10): fără tendință = MIJLOCUL la zero, nu media - cu media scoasă, o cădere de câteva zile (restul liniștit) făcea
