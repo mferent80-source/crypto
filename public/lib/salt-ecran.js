@@ -155,7 +155,7 @@ function saltPozRandHtml(r, d) {
     + (c.faCe ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + saltEsc(saltInMoneda(c.faCe, m)) + '<span class="t212Mic">dacă vinzi acum: ' + saltEsc(r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + (restBani ? " · " + saltEsc(restBani) : "") + '</span></p>' : '')
     + '<p class="tbSub">' + saltEsc(qty + " buc · plătit " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + " pe bucată" + (de ? " pe " + de : "") + (p.plata === "EUR" && m && m !== "EUR" ? " (= " + saltBani(a.p.pretMediu) + " " + saltMon(m) + (de ? " la cursul din ziua cumpărării" : " la cursul de azi") + (r.fx ? "; azi 1 EUR = " + (r.fx / (m === "GBp" ? 100 : 1)).toFixed(4).replace(".", ",") + " " + (m === "GBp" ? "GBP" : m) : "") + ")" : "")) + '</p>'
     + (!p.de ? '<p class="tbSub">Fără data cumpărării, stopul care urcă pornește de la prețul de azi: scrie data ca să urce de la maximul de după cumpărare.</p>' : '')
-    + '<p class="saltDetBut"><button type="button" class="t212BtnLinie" data-action-click="saltEditeaza(\'' + isin + '\')">Editează</button> <button type="button" class="t212BtnLinie" data-action-click="saltSterge(\'' + isin + '\')"' + (d.incarcate ? '' : ' disabled') + '>Șterge poziția</button></p>'
+    + '<p class="saltDetBut">' + (typeof mcsPozButon === "function" ? mcsPozButon(p.simbol, pr, a.p.pretMediu, n ? n.stopPozitie : null) + ' ' : '') + '<button type="button" class="t212BtnLinie" data-action-click="saltEditeaza(\'' + isin + '\')">Editează</button> <button type="button" class="t212BtnLinie" data-action-click="saltSterge(\'' + isin + '\')"' + (d.incarcate ? '' : ' disabled') + '>Șterge poziția</button></p>'
     + '</div></td></tr>';
   return rand + det;
 }

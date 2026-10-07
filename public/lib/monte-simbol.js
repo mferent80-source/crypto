@@ -29,17 +29,20 @@ var MonteSimbol = (function () {
     if (!Array.isArray(b) || b.length < minZ * bz) return { eroare: "Prea puțin istoric ca să simulez: " + cate(zi, "zi", "zile") + "; îmi trebuie cel puțin " + minZ + "." };
     var n = o.n || 2000, bloc = (o.blocZile || o.bloc || 5) * bz, sp = o.stopPct > 0 ? o.stopPct : 0.1, tp = o.tintaPct > 0 ? o.tintaPct : 0.15, prag = o.prag > 0 ? o.prag : 0.1;
     var mu = tendinta(b), fara = o.cuTendinta !== true;
+    // v100.129: poziția lui - intrarea ca raport față de prețul de acum (> 1 = e pe minus: o atinge dacă urcă; < 1 = pe plus: o atinge dacă scade)
+    var R = o.intrare > 0 ? o.intrare : null;
     function trece(Z, j, m) {
-      var H = Z * bz, rnd = generator((o.seed || 1) * 1000 + j), ret = [], sus = 0, jos = 0, st = 0, ti = 0;
+      var H = Z * bz, rnd = generator((o.seed || 1) * 1000 + j), ret = [], sus = 0, jos = 0, st = 0, ti = 0, ai = 0, pi = 0;
       for (var s = 0; s < n; s++) {
-        var d = drum(b, H, Math.min(bloc, H), 1, rnd, m), atins = null;
+        var d = drum(b, H, Math.min(bloc, H), 1, rnd, m), atins = null, atI = false;
         for (var i = 0; i < d.length && !atins; i++) { if (d[i].l <= 1 - sp) atins = "stop"; else if (d[i].h >= 1 + tp) atins = "tinta"; }
         if (atins === "stop") st++; else if (atins === "tinta") ti++;
+        if (R) { for (var q = 0; q < d.length && !atI; q++) atI = R >= 1 ? d[q].h >= R : d[q].l <= R; if (atI) ai++; if (d[d.length - 1].c >= R) pi++; }
         var r = d[d.length - 1].c - 1; ret.push(r); if (r >= prag) sus++; if (r <= -prag) jos++;
       }
       ret.sort(function (a, c) { return a - c; });
       // istoricul sub 3× orizontul ⇒ simularea doar reamestecă aceleași zile (spus pe pagină)
-      return { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24) };
+      return { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined };
     }
     // revizia Opus (07.10): fără tendință = MIJLOCUL la zero, nu media - cu media scoasă, o cădere de câteva zile (restul liniștit) făcea
     // ca mijlocul să iasă pe plus (o „revenire” inventată de calcul). Prima trecere măsoară mijlocul log pe orizont, a doua îl scoate.

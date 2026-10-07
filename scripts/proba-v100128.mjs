@@ -184,11 +184,11 @@ await test("(10) pagina: caseta deasupra „riscului tău”, scripturile după 
   for (const f of ["/lib/monte-simbol.js", "/lib/monte-simbol-ecran.js"]) assert.ok(sw.includes('"' + f + '"'), f);
   assert.match(app, /if\(id==="montecarlo"\)\{if\(typeof rlPorneste==="function"\)rlPorneste\(false\);if\(typeof mcsDeseneaza==="function"\)mcsDeseneaza\(\)\}/);
 });
-await test("(E) versiunea v100.128 (colectorul neatins)", () => {
+await test("(E) versiunea de la v100.128 în sus (colectorul neatins)", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.128"/); assert.match(html, /id="antetVersiune">v100\.128 /); assert.match(html, /id="healthAppVersion">v100\.128</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.128.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-128";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.128"/); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.128");
+  assert.match(html, /content="v100\.1(2[8-9]|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(2[8-9]|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(2[8-9]|[3-9]\d)</); /* v100.129: lărgit */
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(2[8-9]|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(2[8-9]|[3-9]\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(2[8-9]|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(2[8-9]|[3-9]\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);

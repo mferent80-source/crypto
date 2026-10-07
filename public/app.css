@@ -2436,3 +2436,11 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #mcsPagina .mcsSec .mcsAvert.mcsNota{margin:10px 14px 0}
 #mcsPagina .t212Fac{margin:0}
 @media (max-width:760px){#mcsPagina .t212PanouCap{flex-wrap:wrap}#mcsPagina .t212PanouCap>.tbSub{flex-basis:100%}#mcsPagina .mcsDoua{grid-template-columns:1fr}#mcsPagina .mcsCif b{font-size:15px}#mcsPagina .mcsHist text{font-size:14px}}
+/* v100.129: Monte Carlo pe simbol - recentele, alegerea botului, variantele, poziția */
+#mcsPagina .mcsRecent{border-style:dashed}
+#mcsPagina .mcsBotAles{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px}
+#mcsPagina .mcsBotAles select{max-width:100%}
+#mcsPagina .mcsVarBloc{margin:12px 14px 4px;min-width:0}
+#mcsPagina .mcsVar td,#mcsPagina .mcsVar th{white-space:nowrap;font-variant-numeric:tabular-nums}
+#mcsPagina .mcsVar tr.mcsVarTu td{font-weight:700}
+#mcsPagina .mcsPoz{margin:8px 0}

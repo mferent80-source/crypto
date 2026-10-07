@@ -559,7 +559,8 @@ function t212RandPozitie(p) {
     + '<p class="t212Fac">' + escapeHtml(p.sem.ceAsFace) + '</p>' + t212SfaturiHtml(p.sfaturi))
     + (!p.cons && n && n.stopAtins ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> Aș ieși (măcar jumătate), fără să aștept să „își revină”: ' + escapeHtml(p.simbol) + ' e deja sub stopul calculat.</p>' : '')
     + '<p class="tbSub">' + escapeHtml(info || (t212.inLucru ? "aduc prețurile zilnice…" : "fără prețuri zilnice pentru " + p.simbol)) + '</p>'
-    + (n ? '<p class="tbSub"><b>Adaug doar la:</b> ' + (n.intrare && p.pret >= p.pretMediu ? t212Usd(n.intrare.pret) + " — " + escapeHtml(n.intrare.motiv) : escapeHtml(p.pret < p.pretMediu ? "— ești pe minus: nu adaug (așa a crescut NPA la 33.000 de lei)" : "— " + n.intrareMotiv)) + '</p>' : '') + '</div>';
+    + (n ? '<p class="tbSub"><b>Adaug doar la:</b> ' + (n.intrare && p.pret >= p.pretMediu ? t212Usd(n.intrare.pret) + " — " + escapeHtml(n.intrare.motiv) : escapeHtml(p.pret < p.pretMediu ? "— ești pe minus: nu adaug (așa a crescut NPA la 33.000 de lei)" : "— " + n.intrareMotiv)) + '</p>' : '')
+    + (typeof mcsPozButon === "function" ? '<p class="tbSub">' + mcsPozButon(p.simbol, p.pret, p.pretMediu, n ? n.stopPozitie : null) + '</p>' : '') + '</div>';
   var v = function (camp, calc) { return pl[camp] != null ? pl[camp] : calc != null ? calc : ""; };
   var dreapta = '<div class="t212Preturi"><h5>Planul tău <span class="t212Estompat">· ' + (p.plan ? "salvat " + new Date(pl.la).toLocaleDateString("ro-RO") + " · colectorul te anunță" : n ? "completat cu prețurile calculate" : "scrie-l tu") + '</span></h5>'
     + '<div class="t212Plan"><label>Ies la −% de la maxim<input inputmode="decimal" id="t212Trail-' + tk + '" class="' + (!p.plan && n ? "calc" : "") + '" value="' + escapeHtml(String(v("trailPct", n ? +n.trailPct.toFixed(1) : null))) + '" placeholder="8"></label>'
