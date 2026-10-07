@@ -29,7 +29,10 @@ export async function turaSaltPozitii(d) {
   let trimise = 0, prima = true;
   const cursuri = new Map(), lista = Array.isArray(d.pozitii) ? d.pozitii : [];
   const scrie = () => { if (d.salveaza) { try { d.salveaza(); } catch {} } };
-  const fara = (p, de) => { rez.fara++; if (d.jurnal) d.jurnal("salt: " + (p && p.simbol) + " fără prețuri (" + de + ") - nu intră în rezumat"); };
+  // v101.86 (pagina alerts în două): un rând pe poziție pentru poza paginii alerts - și cel fără prețuri (pret null + motivul)
+  const randuri = [];
+  const fara = (p, de) => { rez.fara++; randuri.push({ isin: p && p.isin, simbol: p && p.simbol, nume: p && p.nume || "", qty: p && p.qty, pretMediu: p && p.pretMediu, plata: p && p.plata, de: p && p.de || null, pret: null, motivFara: de });
+    if (d.jurnal) d.jurnal("salt: " + (p && p.simbol) + " fără prețuri (" + de + ") - nu intră în rezumat"); };
   for (const p of lista) {
     rez.n++;
     if (!prima && d.pauza) await d.pauza(d.pauzaMs || 400); prima = false;
@@ -45,6 +48,12 @@ export async function turaSaltPozitii(d) {
       if (!a || !a.p) { fara(p, a && a.eroare || "analiza"); continue; }
       const val = p.qty * a.p.pret / fx, cost = p.plata === "EUR" ? p.qty * p.pretMediu : p.qty * p.pretMediu / fx;
       rez.val += val; rez.cost += cost; rez.rez += val - cost;
+      const cs = a.cons || {}, r2 = (v) => Math.round(v * 100) / 100;
+      randuri.push({ isin: p.isin, simbol: p.simbol, nume: p.nume || "", qty: p.qty, pretMediu: p.pretMediu, plata: p.plata, de: p.de || null, moneda: m || "EUR",
+        pret: a.p.pret, prev: b.length > 1 ? b[b.length - 2].c : null, closes30: b.slice(-30).map((x) => x.c), val: r2(val), cost: r2(cost), rez: r2(val - cost),
+        niv: cs.nivel || null, motive: Array.isArray(cs.motive) ? cs.motive.slice(0, 4) : [], sfat: String(cs.faCe || cs.titlu || ""),
+        sugestie: a.niv && a.niv.stopPozitie > 0 && a.niv.tintaPozitie > 0 ? { stop: a.niv.stopPozitie, tinta: a.niv.tintaPozitie } : null,
+        max: a.p.maxDupaCumparare || null, mediuSimbol: pm });
       const niv = a.cons && a.cons.nivel; if (niv === "iesi") rez.iesi.push(scurt(p.simbol)); else if (niv === "atentie") rez.atentie.push(scurt(p.simbol));
       if (a.niv && a.niv.stopPozitie > 0) {
         const k = "salt-stop-" + p.isin, sub = a.p.pret < a.niv.stopPozitie;
@@ -58,7 +67,7 @@ export async function turaSaltPozitii(d) {
   for (const k of Object.keys(stare)) if (k.startsWith("salt-stop-") && !vii.has(k)) { delete stare[k]; sterse++; }
   if (sterse) scrie();
   for (const k of ["val", "cost", "rez"]) rez[k] = Math.round(rez[k] * 100) / 100;
-  return { rezumat: rez, trimise };
+  return { rezumat: rez, trimise, randuri };
 }
 
 // v101.85 (el 07.10, „fa idei”): fără prețuri (măcar o poziție) de cel puțin 3 h ⇒ o alertă - altfel alerta la stopul care urcă ar tăcea

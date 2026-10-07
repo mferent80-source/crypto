@@ -340,5 +340,8 @@ export function construiestePoza(i) {
   const t212Eroare = i.t212Eroare ? String(i.t212Eroare) : null;
   return { la: acum, versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, radarUrl: i.radarUrl ? String(i.radarUrl) : null, t212, t212La: nr(i.t212La), t212Eroare, boti,
     simboluri: (i.simboluri || []).filter((x) => x && x.s).map((x) => simbolPoza(x, acum)),
+    // v101.86 (pagina alerts în două): alertele de azi, pozițiile Salt și răspunsul la cererile Salt - doar când colectorul le are
+    ...(Array.isArray(i.alerte) ? { alerte: i.alerte } : {}), ...(i.salt && Array.isArray(i.salt.randuri) ? { salt: { la: nr(i.salt.la), randuri: i.salt.randuri } } : {}),
+    ...(Array.isArray(i.saltCereri) ? { saltCereri: i.saltCereri.slice(-20) } : {}),
     gol: { boti: boti.length ? null : "niciun bot activ", t212: t212.length ? null : (t212Eroare ? "Trading 212 n-a răspuns (" + t212Eroare + "); pozițiile vin cu poza următoare" : "nicio poziție deschisă") } };
 }
