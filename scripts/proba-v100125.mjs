@@ -16,6 +16,9 @@ for (const f of ["grid-calcul.js", "tablou-extra.js", "profil-moneda.js", "proba
   vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 globalThis.escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 vm.runInThisContext(citeste("public", "lib", "salt-ecran.js"), { filename: "salt-ecran.js" });
+// textul unei funcții din salt-ecran.js (pentru gărzile pe forma codului async, care cere DOM / rețea)
+const SE = citeste("public", "lib", "salt-ecran.js");
+globalThis.saltFunctie = (n) => { const i = SE.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = SE.indexOf("{", i); for (; j < SE.length; j++) { if (SE[j] === "{") a++; else if (SE[j] === "}" && --a === 0) break; } return SE.slice(i, j + 1); };
 const TSalt = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-salt.mjs")).href);
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 700)}`); }); }
@@ -107,6 +110,42 @@ await test("(8) colectorul dă turei Salt Idei, Probabilitati și ProfilMoneda; 
   assert.match(c, /turaSaltModul\(\{ Salt, SA: SugestiiActiuni, Reveniri, Idei, Probabilitati, ProfilMoneda,/);
   assert.match(s, /Idei\.judecaActiune\(/); assert.match(s, /Salt\.cauta\(/); assert.match(s, /ActiuniSemnale\.beta\(/);
   assert.match(s, /"EURRON=X"/); assert.match(s, /EXS1\.DE/); assert.match(s, /"QQQ"/);
+});
+// ---------------- revizia Opus (07.10) ----------------
+await test("(R1, critic) GBp = pence: cursul EUR→GBP se înmulțește cu 100 și la Bilet (altfel bucăți de 100 de ori prea puține)", () => {
+  assert.equal(globalThis.saltFxPret("GBp", 0.86), 86); assert.equal(globalThis.saltFxPret("USD", 1.12), 1.12); assert.equal(globalThis.saltFxPret("EUR", 5), 1); assert.equal(globalThis.saltFxPret("USD", null), null);
+  const x = { simbol: "ULVR.L", moneda: "GBp", intrare: 2500, stop: 2300, tinta: 2900 }, b = globalThis.saltBiletHtml(x, 19, globalThis.saltFxPret("GBp", 0.86));
+  assert.ok(b.includes((19 * 86 / 200).toLocaleString("ro-RO", { maximumFractionDigits: 3 }) + " buc"), b);
+  assert.match(globalThis.saltFunctie("saltBilet"), /saltFxPret\(x\.moneda, /, "biletul trece prin saltFxPret");
+});
+await test("(R2) detaliile: nicio sumă în „$” - suma la stopul care urcă socotită în EUR, cu o zecimală", () => {
+  const an = JSON.parse(JSON.stringify(AN));
+  an.DE0007030009 = Object.assign(an.DE0007030009, { p: { pret: 1200, pretMediu: 1349.6 }, cons: Object.assign(iesi("1109.08"), { nivel: "atentie", bani: "dacă vinzi acum: −156,42 $ · dacă atinge stopul care urcă ($1109.08): −250,12 $" }) });
+  const h = globalThis.saltHtml(d0({ analize: an, deschis: { DE0007030009: true } }), T0);
+  assert.doesNotMatch(h, /\$/, "fără „$”"); assert.ok(h.includes("dacă atinge stopul care urcă (1.109,08 EUR): " + ro1(1.0456 * 1109.08 - 1.0456 * 1349.6) + " EUR"), "suma la stop în EUR");
+});
+await test("(R3) moneda din raport se escapează (intră în innerHTML)", () => {
+  const h = globalThis.saltHtml(d0({ raport: Object.assign({}, RAP, { idei: [Object.assign({}, IDEI[0], { moneda: "<x>" })] }) }), T0);
+  assert.doesNotMatch(h, /<x>/); assert.match(h, /&lt;x&gt;/);
+});
+await test("(R5/R10) „o ai deja” spune pe IEȘI să nu cumperi în plus, altfel doar cât crește; beta negativ cu „−”", () => {
+  assert.match(globalThis.saltVreauHtml({ x: U[0], r: { trece: true, intrare: 1, stop: 1, tinta: 1, motive: [] }, ai: true, nivel: "tine" }), /o ai deja[^<]*crește/);
+  assert.doesNotMatch(globalThis.saltVreauHtml({ x: U[0], r: { trece: true, intrare: 1, stop: 1, tinta: 1, motive: [] }, ai: true, nivel: "tine" }), /n-aș cumpăra în plus/);
+  assert.match(globalThis.saltVreauHtml({ x: U[0], r: { trece: false, motive: [] }, ai: true, nivel: "iesi" }), /o ai deja[^<]*n-aș cumpăra în plus/);
+  assert.match(globalThis.saltHtml(d0(), T0), /NFLX β −0,16/);
+});
+await test("(R4/R6/R8/R11) încărcarea nu redesenează tot la final; „Verifică” vechi nu calcă peste cel nou; indicele picat nu rămâne ținut minte; Biletul așteaptă toate prețurile", () => {
+  const p = globalThis.saltFunctie("saltPorneste"); assert.match(p, /finally \{ saltStare\.inLucru = false; \}\s*if \(saltStare\.d\.eroare\) saltDeseneaza\(\); else saltDeseneazaPoz\(\);/);
+  assert.match(globalThis.saltFunctie("saltVerifica"), /if \(d\.verif && d\.verif\.x === x\)/);
+  assert.doesNotMatch(globalThis.saltFunctie("saltBareIndice"), /indici\[i\.sim\] = \[\]/);
+  assert.match(globalThis.saltFunctie("saltBilet"), /aștept prețurile pozițiilor/);
+});
+await test("(R7) tura Salt: erorile din judecaActiune se numără și ajung în jurnal (nu „niciuna nu trece” tăcut)", async () => {
+  const ZI = 86400000, B0 = Date.UTC(2025, 0, 6), j = [];
+  const bare = () => Array.from({ length: 300 }, (_, i) => { const c = 100 + i * 0.1; return { t: B0 + i * ZI, o: c, h: c, l: c, c, v: 1 }; });
+  const r = await TSalt.turaSalt({ Salt: globalThis.Salt, SA: { puncte: () => [], azi: () => null, dovada: () => ({}), textDovada: () => "", areSalt: () => true }, Idei: { judecaActiune: () => { throw new Error("stricat"); } },
+    univers: [{ isin: "A1", simbol: "AAA", nume: "Alfa", tip: "actiune" }], cereBare: async () => bare(), acum: B0 + 300 * ZI, jurnal: (t) => j.push(t) });
+  assert.deepEqual(r.idei, []); assert.equal(r.ideiErori, 1); assert.ok(j.some((t) => /erori.*1|1.*erori/.test(t)), j.join(" | "));
 });
 await test("(E) versiunea v100.125 / colector v101.83", () => {
   const html = citeste("public", "index.html");

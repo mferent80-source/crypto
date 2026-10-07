@@ -16,7 +16,7 @@ function saltBani(v) { var n = Number(v); return isFinite(n) ? n.toLocaleString(
 function saltP1(x) { var n = Number(x); if (x == null || !isFinite(n)) return "—"; var r = Math.round(n * 1000) / 10; return (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r).toFixed(1).replace(".", ",") + "%"; }
 function saltCate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 function saltSim(s) { return String(s || "").replace(/\.[A-Z]+$/, ""); }   // RHM.DE ⇒ RHM
-function saltMon(m) { return m === "GBp" ? "p" : m || ""; }
+function saltMon(m) { return m === "GBp" ? "p" : saltEsc(m || ""); }   // revizia (R3): moneda din raport intră în innerHTML
 function saltPret(v, m) { return v == null || !isFinite(Number(v)) ? "—" : saltBani(v) + (m ? " " + saltMon(m) : ""); }
 function saltSemn(v) { return v > 0 ? "+" : v < 0 ? "−" : ""; }
 function saltSuma1(v, m) { return v == null || !isFinite(v) ? "—" : saltSemn(Math.round(v * 10) / 10) + saltBani1(Math.abs(v)) + " " + saltMon(m || "EUR"); }
@@ -27,8 +27,10 @@ function saltInMoneda(t, m) { return String(t == null ? "" : t).replace(/\$(\d[\
 
 // ---------------- socoteala (fără DOM) ----------------
 // o poziție: valoarea și rezultatul în EUR (ce a plătit, la cursul de azi). fx = câte unități din moneda simbolului face 1 EUR (GBp: ×100)
+// câte unități din moneda PREȚULUI face 1 EUR: GBp e în pence ⇒ cursul EUR→GBP ×100 (revizia R1: Biletul uita ×100 ⇒ bucăți de 100 de ori prea puține)
+function saltFxPret(m, fxBrut) { return !m || m === "EUR" ? 1 : fxBrut > 0 ? fxBrut * (m === "GBp" ? 100 : 1) : null; }
 function saltRand(p, a, u) {
-  var m = u && u.moneda || "", fx = m === "EUR" ? 1 : a && a.fxAcum > 0 ? a.fxAcum * (m === "GBp" ? 100 : 1) : null, pret = a && a.p ? a.p.pret : null;
+  var m = u && u.moneda || "", fx = saltFxPret(m, a && a.fxAcum), pret = a && a.p ? a.p.pret : null;
   var costEur = p.plata === "EUR" ? p.qty * p.pretMediu : fx ? p.qty * p.pretMediu / fx : null, val = pret !== null && fx ? p.qty * pret / fx : null;
   var rez = val !== null && costEur !== null ? val - costEur : null;
   // fără curs: rezultatul în moneda simbolului (pe prețul mediu din moneda lui)
@@ -56,7 +58,7 @@ function saltKpiHtml(d, R) {
   return '<div class="t212Kpi">'
     + cel("Ce ai la Salt", cu.length ? saltBani1(R.tot) + " EUR" : "—", "", (d.eurRon > 0 && cu.length ? "≈ " + saltLei(R.tot * d.eurRon) + " · " : "") + saltCate(l.length, "poziție", "poziții") + (cost > 0 ? " · plătit " + saltBani1(cost) + " EUR" : "") + (lipsa ? " · " + lipsa + " fără curs încă" : ""))
     + cel("Pe pozițiile deschise", cu.length ? saltSuma1(rez) : "—", saltCls(rez), (cost > 0 ? saltP1(rez / cost) : "—") + lei(rez) + " · " + pe + " din " + cu.length + " pe plus")
-    + cel("Dacă piața scade 10%", cu.length ? saltSuma1(soc) : "—", cu.length ? "bad" : "", cu.map(function (r) { return saltSim(r.p.simbol) + " β " + (r.a && r.a.beta != null ? r.a.beta.toFixed(2).replace(".", ",") : "—") + (r.a && r.a.indice ? " față de " + r.a.indice : ""); }).join(" · ") + " · beta ≤ 0 se socotește 1, ca la T212")
+    + cel("Dacă piața scade 10%", cu.length ? saltSuma1(soc) : "—", cu.length ? "bad" : "", cu.map(function (r) { return saltSim(r.p.simbol) + " β " + (r.a && r.a.beta != null ? (r.a.beta < 0 ? "−" : "") + Math.abs(r.a.beta).toFixed(2).replace(".", ",") : "—") + (r.a && r.a.indice ? " față de " + r.a.indice : ""); }).join(" · ") + " · beta ≤ 0 se socotește 1, ca la T212")
     + cel("Cea mai mare poziție", max ? saltSim(max.p.simbol) + " · " + Math.round(max.pond * 100) + "%" : "—", max && max.pond > 0.2 ? "bad" : max && max.pond > 0.15 ? "tbWarn" : "", "din ce ai la Salt · plafonul e 20%")
     + '</div>';
 }
@@ -140,7 +142,12 @@ function saltPozRandHtml(r, d) {
     + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + saltPret(n.tintaPozitie, m) + '</span><span class="t212Mic">' + saltP1(n.tintaPozitie / pr - 1) + '</span>' : '—') + '</td>'
     + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b></td>'
     + '<td class="c-pond">' + (r.pond !== null ? Math.round(r.pond * 100) + '%<span class="t212MiniBara"><i class="' + (r.pond > 0.2 ? " rau" : r.pond > 0.15 ? " atentie" : "") + '" style="width:' + Math.min(100, r.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—') + '</td></tr>';
-  var restBani = saltInMoneda(String(c.bani || "").replace(/^dacă vinzi acum:[^·]*·?\s*/, ""), m);
+  // revizia (R2): sumele Consilierului sunt în „$”, pe baza din moneda simbolului ⇒ le scot și pun suma la stopul care urcă în EUR (cum a plătit)
+  var laStop = n && r.fx && r.cost !== null ? p.qty * n.stopPozitie / r.fx - r.cost : null;
+  var restBani = String(c.bani || "").split(" · ").slice(1).map(function (t) {
+    var fara = t.replace(/:\s*[−+-]?[\d.,]+\s*\$\s*$/, "");
+    return saltInMoneda(/dacă atinge stopul/.test(t) && laStop !== null ? fara + ": " + saltSuma1(laStop) : fara, m);
+  }).filter(Boolean).join(" · ");
   var det = '<tr class="t212Det saltDet" id="saltDet-' + isin + '"' + (des ? '' : ' hidden') + '><td colspan="7"><div class="saltDetCorp">'
     + (a.avert ? '<p class="tbWarn">' + saltEsc(a.avert) + '</p>' : '')
     + '<p><span class="t212Pill ' + (SALT_NIVEL[c.nivel] || SALT_NIVEL["fara-date"])[1] + '">' + saltEsc(c.eticheta || (SALT_NIVEL[c.nivel] || SALT_NIVEL["fara-date"])[0]) + '</span> <b>' + saltEsc(saltInMoneda(c.titlu || "", m)) + '</b></p>'
@@ -179,7 +186,7 @@ function saltVreauHtml(v) {
     ? '<p><span class="t212Pill t212Pill-tine">TRECE</span> <b>' + saltEsc(x.simbol) + '</b> trece de poartă</p>' + (r.motive || []).map(function (t) { return '<p class="t212Mic">· ' + saltEsc(t) + '</p>'; }).join("")
       + '<p>Intrare ' + saltPret(r.intrare, m) + ' · stop ' + saltPret(r.stop, m) + ' · țintă ' + saltPret(r.tinta, m) + '</p>'
     : '<p><span class="t212Pill t212Pill-iesi">NU</span> <b>' + saltEsc(x.simbol) + '</b> nu trece de poartă</p>' + (r.motive || []).map(function (t) { return '<p class="t212Mic">· ' + saltEsc(t) + '</p>'; }).join(""))
-    + (v.ai ? '<p class="t212Mic">Pe ea o ai deja la Salt: n-aș cumpăra în plus până nu se lămurește poziția de acum.</p>' : '') + '</div>';
+    + (v.ai ? '<p class="t212Mic">' + (v.nivel === "iesi" ? "Pe ea o ai deja la Salt și e pe IEȘI: n-aș cumpăra în plus până nu se lămurește poziția de acum." : "Pe ea o ai deja la Salt: cumpărând în plus, crește cât din Salt stă în ea (plafonul e 20%).") + '</p>' : '') + '</div>';
 }
 function saltDreaptaHtml(d, R) {
   var cu = R.l.filter(function (r) { return r.pond !== null; }).sort(function (a, b) { return b.pond - a.pond; });
@@ -254,13 +261,16 @@ async function saltFxAcum(m) {
   if (!m || m === "EUR") return 1; if (saltStare.fx[m]) return saltStare.fx[m];
   var pf = Salt.perecheFx(m); if (!pf) return null; var b = await saltBareDe(pf); var v = b.length ? b[b.length - 1].c : null; if (v > 0) saltStare.fx[m] = v; return v;
 }
-async function saltBareIndice(m) { var i = SALT_INDICE[m]; if (!i) return null; if (!saltStare.indici[i.sim]) { try { saltStare.indici[i.sim] = await saltBareDe(i.sim); } catch (e) { saltStare.indici[i.sim] = []; } } return saltStare.indici[i.sim]; }
+// revizia (R8): un eșec nu se ține minte (altfel beta rămânea 1 toată sesiunea)
+async function saltBareIndice(m) { var i = SALT_INDICE[m]; if (!i) return null; if (!saltStare.indici[i.sim]) { try { var q = await saltBareDe(i.sim); if (q && q.length) saltStare.indici[i.sim] = q; } catch (e) {} } return saltStare.indici[i.sim] || null; }
 async function saltBilet(simbol) {
   var d = saltStare.d; if (d.bilet[simbol]) { delete d.bilet[simbol]; saltDeseneazaIdei(); return; }
   var x = (d.raport && d.raport.idei || []).filter(function (y) { return y.simbol === simbol; })[0]; if (!x) return;
   d.bilet[simbol] = { html: null }; saltDeseneazaIdei();
-  var fx = null; try { fx = await saltFxAcum(x.moneda); } catch (e) { fx = null; }
-  var tot = saltRanduri(d).tot, risc = tot > 0 ? Math.max(5, tot * 0.01) : 10;
+  var fx = null; try { fx = saltFxPret(x.moneda, await saltFxAcum(x.moneda)); } catch (e) { fx = null; }
+  var R = saltRanduri(d), tot = R.tot, risc = tot > 0 ? Math.max(5, tot * 0.01) : 10;
+  // revizia (R11): cât încă se aduc prețurile pozițiilor, totalul e parțial ⇒ riscul de 1% ar ieși prea mic
+  if (R.l.some(function (r) { return r.val === null && !(r.a && r.a.eroare); })) { if (d.bilet[simbol]) d.bilet[simbol].html = '<p class="tbSub">aștept prețurile pozițiilor ca să socotesc riscul de 1% din ce ai la Salt - apasă din nou „Biletul” peste câteva secunde.</p>'; saltDeseneazaIdei(); return; }
   if (d.bilet[simbol]) d.bilet[simbol].html = fx ? saltBiletHtml(x, risc, fx) + (tot > 0 ? '' : '<p class="t212Mic">Riscul de 10 EUR e ales de mine până scrii pozițiile (atunci: 1% din ce ai la Salt).</p>') : '<p class="tbSub">n-am cursul EUR pentru ' + saltEsc(x.moneda) + '</p>';
   saltDeseneazaIdei();
 }
@@ -268,14 +278,16 @@ async function saltVerifica() {
   var d = saltStare.d, i = saltEl("saltVreauIn"), t = i ? i.value : "", u = d.univers || [], box = saltEl("saltVreau");
   var isin = (t.match(/[A-Z]{2}[A-Z0-9]{9}\d/) || [])[0], x = isin ? u.filter(function (y) { return y.isin === isin; })[0] : Salt.cauta(u, t)[0];
   var arata = function () { if (box) box.innerHTML = saltVreauHtml(d.verif); };
-  if (!x) { d.verif = { eroare: "nu găsesc „" + t + "” în lista Salt (" + u.length + " de instrumente)" }; arata(); return; }
+  if (!x) { d.verif = { eroare: "nu găsesc „" + t + "” în lista Salt (" + saltCate(u.length, "instrument", "instrumente") + ")" }; arata(); return; }
   d.verif = { x: x, inLucru: true }; arata();
+  var nou;
   try {
-    var b = await saltBareDe(x.simbol), ai = d.pozitii.some(function (p) { return p.isin === x.isin; });
+    var b = await saltBareDe(x.simbol), ai = d.pozitii.some(function (p) { return p.isin === x.isin; }), an = d.analize[x.isin];
     var r = b.length ? Idei.judecaActiune(b, b[b.length - 1].c, { acum: Date.now(), Probabilitati: typeof Probabilitati !== "undefined" ? Probabilitati : null, ProfilMoneda: typeof ProfilMoneda !== "undefined" ? ProfilMoneda : null, simbol: x.simbol }) : { trece: false, motive: ["n-am prețurile simbolului (Yahoo)"] };
-    d.verif = { x: x, r: r, ai: ai };
-  } catch (e) { d.verif = { eroare: "nu pot verifica acum: " + (e && e.message || e) }; }
-  arata();
+    nou = { x: x, r: r, ai: ai, nivel: an && an.cons ? an.cons.nivel : null };
+  } catch (e) { nou = { x: x, eroare: "nu pot verifica acum: " + (e && e.message || e) }; }
+  // revizia (R6): două „Verifică” la rând - rezultatul celui vechi nu calcă peste cel nou
+  if (d.verif && d.verif.x === x) { d.verif = nou; arata(); }
 }
 // o poziție: barele simbolului + cursul EUR ⇒ moneda simbolului (prețul mediu plătit în EUR, valoarea în EUR) + beta față de indicele pieței
 async function saltAnalizeazaUna(p) {
@@ -313,7 +325,7 @@ async function saltPorneste(fortat) {
     await saltAnalize();
   } catch (e) { saltStare.d.eroare = "N-am putut citi pozițiile Salt: " + (typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e)); }
   finally { saltStare.inLucru = false; }
-  saltDeseneaza();
+  if (saltStare.d.eroare) saltDeseneaza(); else saltDeseneazaPoz();   // revizia (R4): pe drumul bun doar cifrele și pozițiile - ce scrii în formular / „Vreau” rămâne
 }
 async function saltSalveaza() {
   if (!saltStare.d.incarcate) throw new Error("pozițiile nu s-au citit încă de pe server");   // revizia (C2)

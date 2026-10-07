@@ -8,6 +8,7 @@
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); const k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 export async function turaSalt(d) {
   const S = d.Salt, SA = d.SA, acum = d.acum || Date.now(), tabel = [], liste = { urcare: [], revers: [], revine: [] }, serii = { urcare: [], revers: [], revine: [] }, idei = [];
+  let ideiErori = 0;   // revizia (R7): o eroare din judecaActiune se numără și se spune în jurnal
   let judecate = 0, fara = 0;
   for (const x of Array.isArray(d.univers) ? d.univers : []) {
     let b = null; try { b = await d.cereBare(x.simbol); } catch { b = null; }
@@ -17,7 +18,7 @@ export async function turaSalt(d) {
     const r = S.randTabel(x, b, acum); if (r) tabel.push(r);
     const id = { isin: x.isin, simbol: x.simbol, nume: x.nume, tip: x.tip };
     if (d.Idei && b.length >= 120) {
-      try { const r = d.Idei.judecaActiune(b, b[b.length - 1].c, { acum, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: x.simbol }); if (r && r.trece) idei.push({ ...id, moneda: x.moneda || "", bursa: x.bursa || "", ...r }); } catch {}
+      try { const r = d.Idei.judecaActiune(b, b[b.length - 1].c, { acum, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: x.simbol }); if (r && r.trece) idei.push({ ...id, moneda: x.moneda || "", bursa: x.bursa || "", ...r }); } catch { ideiErori++; }
     }
     for (const k of ["urcare", "revers"]) { serii[k].push({ ticker: x.simbol, puncte: SA.puncte(b, k) }); const a = SA.azi(b, k, acum, { sesiuneOre: 9 }); if (a) liste[k].push({ ...id, ...a }); }
     // „pe revenire” (regula veche Reveniri) - fără seriile cu salturi de unitate și fără bara încă în lucru
@@ -33,6 +34,6 @@ export async function turaSalt(d) {
   else dovada.revine = { text: "" };
   tabel.sort((a, b) => String(a.nume).localeCompare(String(b.nume), "ro"));
   idei.sort((a, b) => b.scor - a.scor);
-  if (d.jurnal) d.jurnal("salt: " + cate(judecate, "instrument judecat", "instrumente judecate") + ", fără prețuri: " + fara + " · idei (poarta T212): " + idei.length + " · început de urcare: " + liste.urcare.length + " · revers timpuriu: " + liste.revers.length + " · pe revenire: " + liste.revine.length);
-  return { la: acum, judecate, fara, tabel, liste: { urcare: liste.urcare.slice(0, 10), revers: liste.revers.slice(0, 10), revine: liste.revine.slice(0, 10) }, dovada, idei: idei.slice(0, 50) };
+  if (d.jurnal) d.jurnal("salt: " + cate(judecate, "instrument judecat", "instrumente judecate") + ", fără prețuri: " + fara + " · idei (poarta T212): " + idei.length + (ideiErori ? " (erori la poartă: " + ideiErori + ")" : "") + " · început de urcare: " + liste.urcare.length + " · revers timpuriu: " + liste.revers.length + " · pe revenire: " + liste.revine.length);
+  return { la: acum, judecate, fara, tabel, liste: { urcare: liste.urcare.slice(0, 10), revers: liste.revers.slice(0, 10), revine: liste.revine.slice(0, 10) }, dovada, idei: idei.slice(0, 50), ideiErori };
 }
