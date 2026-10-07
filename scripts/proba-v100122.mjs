@@ -95,10 +95,10 @@ await test("(4) „Local data” nu mai aruncă: fiecare rând scris există în
   assert.ok(lipsa.length === 0 || /for\(const \[t,id\] of pairs\)if\(\$\(id\)\)/.test(f), "lipsesc din pagină " + lipsa.join(", ") + " și scrierea nu e păzită");
 });
 
-await test("(E) versiunea v100.122 (colectorul neatins, v101.82)", () => {
-  assert.match(html, /content="v100\.122"/); assert.match(html, /id="antetVersiune">v100\.122 /); assert.match(html, /id="healthAppVersion">v100\.122</);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.122.0"); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-122";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.122"/); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.122");
+await test("(E) versiunea de la v100.122 în sus (colectorul neatins, v101.82)", () => {
+  assert.match(html, /content="v100\.1(2[2-9]|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(2[2-9]|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(2[2-9]|[3-9]\d)</);   // v100.123: lărgit
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(2[2-9]|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(2[2-9]|[3-9]\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(2[2-9]|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(2[2-9]|[3-9]\d)$/);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.82";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

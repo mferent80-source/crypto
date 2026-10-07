@@ -2344,3 +2344,18 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 @media (max-width:640px){.sectionHead{flex-wrap:wrap}.sectionHead .small{white-space:normal}}
 /* v100.122: banda de sus pe telefon avea 139-156 px (lipita) - fara dublurile analizei vechi (moneda + 4h/AUTO/BINANCE stau si in bara paginilor vechi) si WS (LIVE DATA ramane) */
 @media (max-width:760px){.topLeft{display:none}#wsStatus{display:none}}
+/* v100.123: apasarea lunga pe banda botului - tot randul intr-un panou sub banda; fara meniul de text al telefonului */
+.botStrip{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.bsTot{position:fixed;left:10px;right:10px;z-index:40;max-width:520px;margin-left:auto;display:grid;gap:4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#0b1824;box-shadow:0 12px 35px rgba(0,0,0,.4);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.bsTot[hidden]{display:none}.bsTot .bsTotRand.sus{color:var(--good)}.bsTot .bsTotRand.jos{color:var(--bad)}.bsTotNota{margin-top:4px;font-size:12px;font-weight:500;color:var(--muted)}
+/* v100.123: bara de alegere a monedei din paginile vechi - pe telefon stransa pe un rand (rezumat + Analizeaza), se desface la apasare */
+.tbarRezumat{display:none}
+@media (max-width:760px){
+  .tbarRezumat{display:block;text-align:left;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toolbar:not(.deschisa){display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+  .toolbar:not(.deschisa)>.controls,.toolbar:not(.deschisa)>.scroll{display:none}
+  .toolbar:not(.deschisa)>.actions{margin-top:0;grid-template-columns:auto}
+  .toolbar:not(.deschisa)>.actions>button:not(#analyzeBtn){display:none}
+  .toolbar:not(.deschisa)>.status{grid-column:1/-1}
+  .toolbar.deschisa>.tbarRezumat{margin-bottom:8px}
+}

@@ -3007,6 +3007,19 @@ function renderMarketOverview(){
 function toast(msg,type=""){
  const host=$("toastHost");if(!host)return;const d=document.createElement("div");d.className="toast "+type;d.textContent=msg;host.appendChild(d);setTimeout(()=>d.remove(),3200)
 }
+// v100.123 (el 07.10, „fa idei”): pe telefon bara de alegere a monedei din paginile vechi ocupa ~280 px - stransa pe un rand
+// („PON · 4h · Auto · Binance ▾” + „Analizează piața”), se desface la apasare. Pe PC rezumatul nu se vede (CSS).
+function tbarRezumat(){
+ const v=id=>{const e=$(id);if(!e)return"";if(e.tagName==="SELECT"){const o=e.options[e.selectedIndex];return o?String(o.text).split(" · ")[0]:""}return String(e.value||"").trim().toUpperCase()};
+ return [v("symbol")||"—",v("tf"),v("mode"),v("analysisSource")].filter(Boolean).join(" · ")
+}
+function tbarActualizeaza(){
+ const b=$("tbarRezumat");if(!b)return;const t=b.closest(".toolbar"),des=!!(t&&t.classList.contains("deschisa"));
+ b.textContent=tbarRezumat()+(des?" ▴":" ▾");b.setAttribute("aria-expanded",des?"true":"false")
+}
+function tbarComuta(){const t=document.querySelector(".toolbar");if(!t)return;t.classList.toggle("deschisa");tbarActualizeaza()}
+// la DOMContentLoaded, nu pe loc: `const $` e definit mai jos in fisier (TDZ) - chemat aici, oprea TOT app.js
+if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){const t=document.querySelector(".toolbar");if(!t)return;["input","change","click"].forEach(n=>t.addEventListener(n,()=>setTimeout(tbarActualizeaza,0)));tbarActualizeaza()});
 const NAV_CU_LOAD=new Set(["mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
 function navTo(id,load=false){
  show(id);
@@ -3130,7 +3143,7 @@ function loadPionexUniverseCache(){
 
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
 function num(x){return Number(x).toLocaleString(undefined,{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:2}).format(x)}
-function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peAcasa",id==="dash");document.body.classList.toggle("peScan",id==="scan");document.body.classList.toggle("peAlerte",id==="alerts");if(typeof acasaBara==="function")acasaBara();document.body.classList.toggle("peT212",id==="t212");document.body.classList.toggle("peJurnal",id==="jurnaltrade");document.body.classList.toggle("peGrid",id==="gridset")/* v100.40: fara antetul vechi gol („WAIT”, „—”) deasupra ferestrei Grid */;document.body.classList.toggle("pePaginaNoua",id==="salt"||id==="sugestii"||id==="carnet")/* v100.121: la fel pe Salt, Sugestii, Carnet - pe telefon era un ecran intreg gol deasupra */;var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
+function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peAcasa",id==="dash");document.body.classList.toggle("peScan",id==="scan");document.body.classList.toggle("peAlerte",id==="alerts");if(typeof acasaBara==="function")acasaBara();document.body.classList.toggle("peT212",id==="t212");document.body.classList.toggle("peJurnal",id==="jurnaltrade");document.body.classList.toggle("peGrid",id==="gridset")/* v100.40: fara antetul vechi gol („WAIT”, „—”) deasupra ferestrei Grid */;document.body.classList.toggle("pePaginaNoua",id==="salt"||id==="sugestii"||id==="carnet")/* v100.121: la fel pe Salt, Sugestii, Carnet - pe telefon era un ecran intreg gol deasupra */;if(typeof tbarActualizeaza==="function")tbarActualizeaza()/* v100.123: rezumatul barei stranse, si cand moneda s-a schimbat din cod */;var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
 const MARKET_BASES=[
@@ -6760,6 +6773,28 @@ function tbDeseneazaTabloulUnic(){try{tbRiscDeseneaza()}catch(e){};renderTabloDi
 // v100.6: bucatile vin din PretViu.banda (pur); pretul botului sta imediat dupa nume, live din Pionex.
 // v100.59 (I-481): rezultatul gridului ingust pe moneda botului din Tablou, o data la 10 min
 var tbIngB={};
+// v100.123 (el 07.10, „fa idei”): pe telefon banda e pe un rand si cad „piata”, „azi”, „grid” (iar „lichidare” iese taiata) -
+// apasarea lunga pe banda arata TOT randul intr-un panou sub ea; clicul de dupa apasarea lunga nu mai deschide Tabloul.
+var tbBandaParti=[];
+function bsArataTot(){
+  var p=$("botStripTot");
+  if(!p){p=document.createElement("div");p.id="botStripTot";p.className="bsTot";p.setAttribute("role","status");document.body.appendChild(p)}
+  var s=document.querySelector(".topStatus"),jos=s?Math.round(s.getBoundingClientRect().bottom):0;
+  p.style.top=(jos+6)+"px";
+  p.innerHTML=tbBandaParti.map(function(x){return '<div class="bsTotRand'+(x.ton?' '+x.ton:'')+'">'+escapeHtml(x.t)+'</div>'}).join("")+'<div class="bsTotNota">atinge oriunde ca să închizi · apasă scurt pe bandă pentru Tablou</div>';
+  p.hidden=false;
+  clearTimeout(p.__ceas);p.__ceas=setTimeout(function(){p.hidden=true},8000);
+  if(!p.__inchide){p.__inchide=true;document.addEventListener("pointerdown",function(e){if(!p.hidden&&!p.contains(e.target))p.hidden=true},true)}
+}
+function bsLegaApasareLunga(el){
+  if(!el||el.__lung)return;el.__lung=true;
+  var t=null,lung=false,x0=0,y0=0;
+  el.addEventListener("pointerdown",function(e){lung=false;x0=e.clientX;y0=e.clientY;clearTimeout(t);t=setTimeout(function(){lung=true;bsArataTot()},550)});
+  el.addEventListener("pointermove",function(e){if(Math.abs(e.clientX-x0)>10||Math.abs(e.clientY-y0)>10)clearTimeout(t)});
+  ["pointerup","pointercancel","pointerleave"].forEach(function(n){el.addEventListener(n,function(){clearTimeout(t)})});
+  el.addEventListener("click",function(e){if(lung){lung=false;e.preventDefault();e.stopImmediatePropagation()}},true);
+  el.addEventListener("contextmenu",function(e){e.preventDefault()});
+}
 function tbCeasBot(id){var c=tbIngB[id];if(!c||(!c.inLucru&&Date.now()-c.la>10*60000)){tbIngB[id]={la:Date.now(),v:c?c.v:null,inLucru:true};getJSON("/api/istoric-bot?action=ingustCeas&bot="+encodeURIComponent(id)).then(function(d){tbIngB[id]={la:Date.now(),v:d&&d.ceas||null,inLucru:false};tbActualizeazaBanda()}).catch(function(){tbIngB[id].inLucru=false})}return tbIngB[id]&&tbIngB[id].v}
 function tbActualizeazaBanda(){
   var el=$("botStrip");if(!el)return;
@@ -6780,6 +6815,7 @@ function tbActualizeazaBanda(){
   el.title=r.parti.map(function(p){return p.t}).join(" · ")+" — deschide Tabloul botului";
   el.hidden=false;
   el.className="statusChip botStrip "+r.clasa;
+  tbBandaParti=r.parti.slice();bsLegaApasareLunga(el);   // v100.123: toate bucatile, inainte sa cada ce nu incape - le arata apasarea lunga
   // Nu incape (ecran mai ingust decat 1920)? Cad intai „piata”, apoi „azi”, apoi „grid” (distantele gridului conteaza cel mai mult la un bot de grid); numele, pretul, totalul si lichidarea raman.
   ["piata","zi","grid"].forEach(function(k){
     if(el.scrollWidth<=el.clientWidth+1)return;
