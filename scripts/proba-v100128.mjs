@@ -95,7 +95,7 @@ await test("(6) simbolul curățat: litere mari, fără spații, doar caractere 
 });
 await test("(7) setările botului tău de pe coin: linii Pionex − 1 = intervale, stopul pe partea direcției; fără bot activ ⇒ null", () => {
   const bot = { activ: true, baza: "PONS.PERP", gridJos: 0.38, gridSus: 0.44, levier: 3, directie: "short", investit: 47.83, opritorPierdereActiv: true, opritorPierdere: 0.44, brut: { buOrderData: { row: 30 } } };
-  assert.deepEqual(globalThis.mcsSetariBot([bot], "PONS"), { jos: 0.38, sus: 0.44, grile: 29, levier: 3, dir: "short", suma: 47.83, stop: { sus: 0.44 }, botulTau: true });
+  assert.deepEqual(globalThis.mcsSetariBot([bot], "PONS"), { jos: 0.38, sus: 0.44, grile: 29, levier: 3, dir: "short", suma: 47.83, stop: { sus: 0.44 }, tp: null, botulTau: true });   /* v100.132: și TP-ul (aici fără) */
   assert.equal(globalThis.mcsSetariBot([Object.assign({}, bot, { activ: false })], "PONS"), null); assert.equal(globalThis.mcsSetariBot([bot], "LIT"), null);
   const p = globalThis.mcsSetariProba(0.5); assert.ok(p.jos < 0.5 && p.sus > 0.5 && p.grile > 0 && p.levier >= 1 && p.botulTau === false);
 });

@@ -67,9 +67,11 @@ await test("(1c) T212: rândul arată „🎲 revine la intrare: X% în 60 z” 
 await test("(2a) coin: stopurile −5/−10/−15/−20% + stopul de sus, pe 30 de zile; tabelul spune „zile”, nu „zile de bursă”", () => {
   const d = { tip: "coin", sim: "PONS", sursa: "x", b15: bare15(20, 3), b1: bareZi(120, 4, 0.08), ist: { r: { cazuri: 0 } } };
   const r = G.mcsCalculeaza(d, { stop: 12 }), o = r.pretMc.orizonturi[r.pretMc.orizonturi.length - 1];
-  assert.deepEqual(o.stopuri.map((s) => Math.round(s.sp * 1000) / 10), [5, 10, 12, 15, 20]);
+  // v100.132: cu bare zilnice, nivelurile sunt după ATR (1×, 1,5×, 2×, 3×) + stopul de sus; doar pe 15 minute rămân −5/−10/−15/−20%
+  const a = G.mcsAtrPct(d.b1), ast = [1, 1.5, 2, 3].map((k) => Math.min(0.5, Math.max(0.005, k * a))).concat([0.12]).sort((x, y) => x - y);
+  assert.deepEqual(o.stopuri.map((s) => +s.sp.toFixed(9)), ast.map((x) => +x.toFixed(9)));
   const h = G.mcsPretHtml(r);
-  assert.match(h, /Alt stop, aceleași drumuri \(30 de zile, ținta \+15,0%\)/); assert.doesNotMatch(h, /zile de bursă/);
+  assert.match(h, /Alt stop, aceleași drumuri \(30 de zile, ținta \+15,0%; ATR [\d,]+% pe zi\)/); assert.doesNotMatch(h, /zile de bursă/);
   assert.match(h, /<tr class="mcsVarTu"><td>−12,0%/);
 });
 await test("(2b) coin fără destule zile pe 1D (doar 15M): tot are stopurile", () => {

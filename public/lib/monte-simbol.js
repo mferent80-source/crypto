@@ -99,17 +99,21 @@ var MonteSimbol = (function () {
     if (!Array.isArray(b15) || b15.length < 7 * BZ) return { eroare: "Prea puțin istoric ca să simulez botul: " + cate(Math.floor((b15 ? b15.length : 0) / BZ), "zi", "zile") + " pe 15 minute; îmi trebuie cel puțin 7." };
     var n = o.n || 1000, P = st.pret > 0 ? st.pret : b15[b15.length - 1].c, suma = st.suma > 0 ? st.suma : 100, mu = tendinta(b15), fara = o.cuTendinta !== true;
     // fără tendința perioadei (implicit), ca la preț: un short pe o lună care a căzut nu iese „bun” doar din căderea care a fost
+    // v100.132: ținta (TP) botului = închiderea pe partea profitului - la long deasupra (stop.sus), la short dedesubt (stop.jos); la neutru
+    // nu există o parte a profitului. Atingerea ei se numără separat (pTp), nu ca „stop atins”
+    var parteTp = st.tp > 0 ? (st.dir === "long" ? "sus" : st.dir === "short" ? "jos" : null) : null, opr0 = st.stop ? { jos: st.stop.jos, sus: st.stop.sus } : null;
+    if (parteTp) { opr0 = opr0 || {}; opr0[parteTp] = st.tp; }
     function trece(m) {
-      var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [];
+      var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [], tpa = 0;
       for (var s = 0; s < n; s++) {
-        var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: st.stop || null });
-        cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) opr++; per += r.perechi || 0;
+        var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0 });
+        cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) { if (parteTp && r.iesit === parteTp) tpa++; else opr++; } per += r.perechi || 0;
       }
       // v100.130: o.peDrum ⇒ rezultatele în ordinea drumurilor (variantele se compară drum cu drum, pe aceleași drumuri)
       var peDrum = o.peDrum ? net.slice() : undefined;
       net.sort(function (a, c) { return a - c; });
       return { n: n, drumuri: peDrum, zile: zile, zileIstoric: Math.floor(b15.length / BZ), p5: pc(net, 0.05), p25: pc(net, 0.25), p50: pc(net, 0.5), p75: pc(net, 0.75), p95: pc(net, 0.95),
-        pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24),
+        pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pTp: tpa / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24),
         pretMijloc: pc(cap.sort(function (a, c) { return a - c; }), 0.5) };
     }
     // mijlocul prețului de la capătul drumurilor, cu tendința m scoasă (ieftin: fără simulatorul gridului) - pentru centrare, ca la preț

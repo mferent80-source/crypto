@@ -2457,3 +2457,6 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #salt .saltLista td.bad,#salt .saltLista td.good{font-variant-numeric:tabular-nums}
 /* v100.131: T212 - șansa să revină la intrare (stopul depășit), în detaliul poziției */
 .t212Revine{margin:6px 0;line-height:1.45}
+/* v100.132: „🎲 revine la intrare” din rând = buton spre Monte Carlo pe poziție (arată ca textul mic, subliniat punctat) */
+.mcsRevBtn{background:none;border:0;padding:0;margin:0;font:inherit;color:var(--muted);font-size:11.5px;text-align:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
+.mcsRevBtn:hover,.mcsRevBtn:focus-visible{color:var(--text,#e6edf3)}

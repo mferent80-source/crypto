@@ -551,7 +551,10 @@ function t212RevinePt(p, b, n) {
 function t212RevineHtml(p) {
   var r = p && p.revine;
   if (!r) return { mic: "", det: "" };
-  return { mic: '<span class="t212Mic t212RevMic">🎲 revine la intrare: ' + Math.round(r.p * 100) + '% în ' + r.zile + ' z</span>',
+  // v100.132: în rând e un buton care deschide Monte Carlo pe poziție (mcsRevineButon); fără simbol, doar textul
+  var sim = (typeof t212 !== "undefined" && t212.simbolPret && t212.simbolPret[p.ticker]) || p.simbol, stop = p.niv ? p.niv.stopPozitie : null;
+  var btn = sim && typeof mcsRevineButon === "function" ? mcsRevineButon(sim, p.pret, p.pretMediu, stop, r, "t212RevMic") : "";
+  return { mic: btn || '<span class="t212Mic t212RevMic">🎲 revine la intrare: ' + Math.round(r.p * 100) + '% în ' + r.zile + ' z</span>',
     det: '<p class="t212Revine">🎲 Șansa să revină la prețul tău de intrare (' + t212Usd(p.pretMediu) + ') măcar o dată în ' + r.zile + ' de zile de bursă: <b>' + Math.round(r.p * 100) + '%</b>; la capăt peste intrare: ' + Math.round(r.pCapat * 100) + '%. <span class="t212Mic">Monte Carlo pe istoria ei, fără tendința perioadei: zile reale reluate de 1.000 de ori, nu o predicție.</span></p>' };
 }
 function t212RandPozitie(p) {

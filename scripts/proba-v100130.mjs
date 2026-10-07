@@ -123,7 +123,8 @@ await test("(4b) caseta acțiunii: tabelul „alt stop, aceleași drumuri” cu 
   const b = bareZi(400, 9, 0.05), d = { tip: "stock", sim: "RHM.DE", sursa: "x", b, ist: { r: { cazuri: 0 } } };
   const r = G.mcsCalculeaza(d, { stop: 12 });
   const ul = r.pretMc.orizonturi[r.pretMc.orizonturi.length - 1].stopuri.map((s) => Math.round(s.sp * 100));
-  assert.deepEqual(ul, [5, 8, 10, 12, 15], "stopul lui (12%) intră între ele");
+  // v100.132: nivelurile sunt după ATR (1×, 1,5×, 2×, 3×) - aici doar că stopul lui (12%) e printre ele, iar lista e crescătoare
+  assert.equal(ul.length, 5); assert.ok(ul.includes(12), "stopul lui (12%) intră între ele"); assert.deepEqual(ul, ul.slice().sort((x, y) => x - y));
   const h = G.mcsPretHtml(r);
   assert.match(h, /Alt stop, aceleași drumuri/); assert.match(h, /<tr class="mcsVarTu"><td>−12,0%/); assert.match(h, /Ce aș face eu:/);
   // v100.131: stopurile pe aceleași drumuri și la coinuri (proba-v100131 (2a)) - aici doar că la coin nu scrie „zile de bursă”
@@ -170,10 +171,11 @@ await test("(4e) pe serii FĂRĂ avantaj (aleatoare), „Aș lua” un alt stop 
 });
 await test("(4f) stopul de sus nerotunjit: 9,95% intră ca atare, e marcat, iar un nivel standard la sub 0,05 puncte de el e înlocuit (revizia R4)", () => {
   const b = bareZi(400, 9, 0.05), d = { tip: "stock", sim: "X", sursa: "x", b, ist: { r: { cazuri: 0 } } };
-  const r = G.mcsCalculeaza(d, { stop: 9.95 }), sl = r.pretMc.orizonturi[1].stopuri.map((s) => Math.round(s.sp * 1e6) / 1e6);
-  assert.deepEqual(sl, [0.05, 0.08, 0.0995, 0.15]);
+  const r = G.mcsCalculeaza(d, { stop: 9.95 });
+  // v100.132: lista de la pagină e după ATR - înlocuirea nivelului standard se probează direct pe mcsListaStopuri
+  assert.deepEqual(G.mcsListaStopuri([0.05, 0.08, 0.1, 0.15], 0.0995).map((x) => Math.round(x * 1e6) / 1e6), [0.05, 0.08, 0.0995, 0.15]);
   assert.match(G.mcsPretHtml(r), /<tr class="mcsVarTu"><td>−10,0%<span class="t212Mic">cel de sus/);   // 9,95 se scrie cu o zecimală
-  assert.equal(r.pretMc.orizonturi[1].stopuri[2].pStop, r.pretMc.orizonturi[1].pStop, "rândul de sus = cardul de sus");
+  const sus = r.pretMc.orizonturi[1].stopuri.find((s) => s.ref); assert.equal(sus.pStop, r.pretMc.orizonturi[1].pStop, "rândul de sus = cardul de sus");
 });
 
 // ---------------- (3) Salt: stopul depășit ⇒ șansa să revină la intrare ----------------
@@ -192,7 +194,7 @@ await test("(3b) rândul Salt cu stopul DEPĂȘIT arată șansa; detaliul o spun
   const poz = { isin: "DE0007030009", simbol: "RHM.DE", nume: "Rheinmetall", qty: 1.0456, pretMediu: 1349.6, de: "2026-05-11", plata: "EUR" };
   const a = { p: { pret: 936.6, pretMediu: 1349.6 }, niv: { stopPozitie: 1109.1, tintaPozitie: 1436.5 }, cons: { nivel: "iesi", titlu: "x" }, st: { trend: { dir: "jos" } }, revine: { p: 0.13, pCapat: 0.07, zile: 60 } };
   const h = G.saltPozRandHtml({ a, p: poz, m: "EUR", pret: 936.6, fx: 1, rez: -400, pct: -0.3, cost: 1411, val: 979, pond: 1 }, { deschis: {}, incarcate: true });
-  assert.match(h, /DEPĂȘIT<\/span><span class="t212Mic saltRevMic">🎲 revine la intrare: 13% în 60 z<\/span>/);
+  assert.match(h, /DEPĂȘIT<\/span><button type="button" class="mcsRevBtn t212Mic saltRevMic" data-action-click="mcsPozitie\('RHM\.DE',936\.6,1349\.6,1109\.1\)" title="Monte Carlo pe poziție">🎲 revine la intrare: 13% în 60 z<\/button>/);   /* v100.132: buton */
   assert.match(h, /Șansa să revină la prețul tău de intrare \(1\.349,60 EUR\) măcar o dată în 60 de zile de bursă: <b>13%<\/b>; la capăt peste intrare: 7%/);
   assert.match(functie(SE, "saltAnalizeazaUna"), /saltSansaRevenire\(b, a\)/);
 });
