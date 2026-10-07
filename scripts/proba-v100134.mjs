@@ -115,7 +115,7 @@ await test("(c2) planul (stricare): plan uriaș ⇒ 0% (și pRau 0%); pierdere m
 await test("(c3) botul care rulează (pornitLa): prefixul real = GridProba pe barele reale; „până acum” identic pe toate drumurile; orizonturile încep după prefix", () => {
   const s = B.length - 3 * 96, t0 = B[s].t, r = GS.simuleaza(B, ST, Object.assign({}, O, { pornitLa: t0, orizonturi: [1, 7] }));
   const real = GP.simuleaza(B, s, B.length - s, ST, { traseu: true });
-  assert.equal(r.acum.bare, B.length - s); assert.equal(r.acum.net, real.net); assert.equal(r.acum.usdt, real.net * 50); assert.equal(r.acum.t, B[B.length - 1].t); assert.equal(r.acum.perechi, real.perechi);
+  assert.equal(r.acum.bare, B.length - s); assert.equal(r.acum.net, real.net); assert.equal(r.acum.usdt, real.net * 50); assert.equal(r.acum.t, B[B.length - 1].t + 9e5, "până la = închiderea ultimei bare (revizia)"); assert.equal(r.acum.perechi, real.perechi);
   assert.deepEqual(r.orizonturi.map((o) => o.bare), [B.length - s + 96, B.length - s + 672]);
   assert.ok(r.orizonturi[0].deAici && typeof r.orizonturi[0].deAici.p50 === "number", "de aici încolo: rezultatul față de acum");
   assert.equal(GS.simuleaza(B, ST, Object.assign({}, O, { pornitLa: B[0].t - 1 })).eroare, undefined, "pornit înaintea barelor: se ia de la prima bară");
@@ -142,9 +142,11 @@ await test("(d2) „Ce aș face eu”, regulile în ordine: lichidare > 2% · pl
   assert.match(f({ p5: -5, pCastig: 0.4, pPierde: 0.6, p50: -1.2 }), /^N-aș porni: pierde în 60% din drumuri \(de obicei −1,2 USDT\)/);
   assert.match(f({ p5: -5, pCastig: 0.5, pPierde: 0.5 }), /^O aruncare de ban: 50% câștigă, 50% pierde/);
   assert.match(f({ p5: -5 }, null), /^Aș porni: câștigă în 62% din drumuri, de obicei \+1,8 USDT\./, "fără plan, fără partea cu planul");
-  const m2 = GS.verdict(rz({ p5: -5, deAici: { p50: 1.2, pCastig: 0.58 } }, { net: 0.01, usdt: 0.5, bare: 300, t: 0, perechi: 10 }), ST, { minus: 6.5, plus: 2.6 }, 0, { profitNet: 0.67 });
-  assert.match(m2.faCe, /De la pornire, botul tău are \+0,7 USDT \(Pionex\), \+0,5 estimat; de aici încolo, în 7 zile: câștigă în 58%, de obicei \+1,2 USDT/);
-  assert.match(GS.verdict(rz({ p5: -5, plan: { p: 0.63, pRau: 0.2, zileMediana: 4, dejaAtins: "plus" } }, { net: 0.06, usdt: 3, bare: 300, t: 0, perechi: 10 }), ST, { minus: 6.5, plus: 2.6 }, 0, { profitNet: 3 }).faCe, /planul tău e deja atins \(\+2,6\): încasează, cum ți-ai propus/);
+  // revizia (R3): la botul care rulează, regula e pe „de aici încolo” (Aș ține / Aș opri), apoi ce a făcut de la pornire
+  const m2 = GS.verdict(rz({ p5: -5, deAici: { p50: 1.2, p5: -4, p95: 6, pCastig: 0.58, pPierde: 0.42, pZero: 0, marja: 4 } }, { net: 0.01, usdt: 0.5, bare: 300, t: 0, perechi: 10 }), ST, { minus: 6.5, plus: 2.6 }, 0, { profitNet: 0.67 });
+  assert.match(m2.faCe, /^Aș ține: de aici încolo câștigă în 58% din drumuri, de obicei \+1,2 USDT; planul \+2,6 vine înainte de −6,5 în 63%\. De la pornire botul tău are \+0,7 USDT \(Pionex\), \+0,5 estimat\./);
+  assert.equal(m2.rand, "de aici încolo: CÂȘTIGĂ în 58% din drumuri · PIERDE în 42%");
+  assert.match(GS.verdict(rz({ p5: -5, plan: { p: 0.63, pRau: 0.2, zileMediana: 4, dejaAtins: "plus" }, deAici: { p50: 1.2, p5: -4, p95: 6, pCastig: 0.58, pPierde: 0.42, pZero: 0, marja: 4 } }, { net: 0.06, usdt: 3, bare: 300, t: 0, perechi: 10 }), ST, { minus: 6.5, plus: 2.6 }, 0, { profitNet: 3 }).faCe, /planul tău e deja atins \(\+2,6\): încasează, cum ți-ai propus/);
   assert.match(GS.verdict(rz({}), ST, null, 0).nota, /istoria monedei reluată, fără tendința perioadei/);
 });
 
@@ -178,7 +180,7 @@ await test("(e2) gsDirectieSt: schimbarea direcției mută stopul și TP-ul pe p
 });
 await test("(e3) verdictul: rândul mare cu culoarea, marja, cifrele, histograma, „Ce aș face eu”, nota, orizontul", () => {
   const h = G.gsVerdictHtml(stare({ rez: REZ(), plan: null }));   // fără plan: p5 −9,2 ar declanșa „nu se potrivește cu planul” (−6,5)
-  assert.match(h, /<div class="gsVerdict good"><b>CÂȘTIGĂ în 58% din drumuri · PIERDE în 42%<\/b><span class="t212Mic">±4 puncte<\/span><\/div>/);
+  assert.match(h, /<div class="gsVerdict good"><b>CÂȘTIGĂ în 58% din drumuri · PIERDE în 42%<\/b><span class="t212Mic">±4 puncte · doar din numărul drumurilor<\/span><\/div>/);
   assert.match(h, /pe 7 zile/); assert.match(h, /de obicei \+1,8 USDT · cele mai proaste 5%: −9,2 USDT · cele mai bune 5%: \+8,3 USDT/);
   assert.match(h, /<svg class="mcsHist"/); assert.match(h, /👉 <b>Ce aș face eu:<\/b> Aș porni: câștigă în 58%/); assert.match(h, /istoria monedei reluată/);
   assert.match(G.gsVerdictHtml(stare({ rez: REZ(), oriz: 3, plan: null })), /pe 14 zile[\s\S]*Istoricul e scurt/);
@@ -193,7 +195,7 @@ await test("(e4) pe durate: 4 rânduri (clic = orizontul), cel ales marcat, plan
 });
 await test("(e5) riscurile pe nume pe orizontul ales + prețul de zero la „Botul meu”", () => {
   const h = G.gsRiscuriHtml(stare({ rez: REZ() }));
-  for (const t of ["lichidare", "atinge stopul", "atinge TP-ul", "iese din grid măcar o dată", "grile încasate, în medie", "pierderea maximă pe drum", "funding plătit"]) assert.ok(h.includes(t), t);
+  for (const t of ["lichidare", "atinge stopul", "atinge TP-ul", "iese din grid măcar o dată", "grile încasate, în medie", "pierderea maximă pe drum", "funding (cost fix presupus)"]) assert.ok(h.includes(t), t);
   assert.match(h, /pierderea maximă pe drum[\s\S]*?<b class="bad">−4,1 USDT de obicei · −12,0 USDT în cele mai proaste 5%<\/b>/); assert.doesNotMatch(h, /prețul de zero/);
   const m = G.gsRiscuriHtml(stare({ mod: "meu", rez: Object.assign(REZ(), { acum: { net: 0.01, usdt: 0.5, bare: 300, t: 0, perechi: 10 } }), bot: bot({}) }));
   assert.match(m, /prețul de zero[\s\S]*?0,4\d\d\d/);
@@ -231,6 +233,59 @@ await test("(E) versiunea de la v100.134 în sus (colectorul neatins)", () => {
   assert.match(html, /content="v100\.1(3[4-9]|[4-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(3[4-9]|[4-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(3[4-9]|[4-9]\d)</);
   assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(3[4-9]|[4-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(3[4-9]|[4-9]\d)";/);
   assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(3[4-9]|[4-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(3[4-9]|[4-9]\d)$/);
+});
+
+// ---------------- revizia Opus (211d9fd..805e823) ----------------
+await test("(R1) stopul de partea greșită a prețului ⇒ eroare pe nume, nu „câștigă 100%” (long cu stopul peste preț, short cu stopul sub, neutru cu amândouă greșite)", () => {
+  const P = B[B.length - 1].c;
+  assert.match(GS.simuleaza(B, Object.assign({}, ST, { stop: { jos: P * 1.05 } }), O).eroare, /Stopul \([\d,]+\) e de partea greșită a prețului pentru long/);
+  assert.match(GS.simuleaza(B, { jos: 0.95, sus: 1.03, grile: 10, levier: 2, dir: "short", suma: 50, stop: { sus: P * 0.95 } }, O).eroare, /pentru short/);
+  assert.match(GS.simuleaza(B, { jos: 0.95, sus: 1.03, grile: 10, levier: 2, dir: "neutru", suma: 50, stop: { jos: P * 1.05 } }, O).eroare, /pentru neutru/);
+  assert.equal(GS.simuleaza(B, { jos: 0.95, sus: 1.03, grile: 10, levier: 2, dir: "neutru", suma: 50, stop: { jos: P * 0.9, sus: P * 1.1 } }, O).eroare, undefined, "neutru cu amândouă pe partea lor: merge");
+  // botul care rulează: față de prețul de la pornire (deschiderea primei bare reale), nu de acum
+  const s = B.length - 3 * 96, P0 = B[s].o;
+  assert.match(GS.simuleaza(B, Object.assign({}, ST, { stop: { jos: P0 * 1.02 } }), Object.assign({}, O, { pornitLa: B[s].t })).eroare, /pentru long/);
+});
+await test("(R2) botul pornit înaintea barelor avute (peste 15 min) ⇒ eroare clară, nu „reluat de la pornire” fals", () => {
+  assert.match(GS.simuleaza(B, ST, Object.assign({}, O, { pornitLa: B[0].t - 20 * 864e5 })).eroare, /pornit .* înainte de barele pe care le am/);
+  assert.equal(GS.simuleaza(B, ST, Object.assign({}, O, { pornitLa: B[0].t - 10 * 60000 })).eroare, undefined, "cu 10 minute înainte de prima bară: se ia de la ea");
+});
+await test("(R3) botul care rulează: rândul mare, cifrele și regulile 4–6 pe „de aici încolo” (Aș ține / Aș opri); planul pe totalul de la pornire; histograma de aici încolo", () => {
+  const s = B.length - 3 * 96, r = GS.simuleaza(B, ST, Object.assign({}, O, { pornitLa: B[s].t, orizonturi: [7] })), o = r.orizonturi[0];
+  assert.ok(o.deAici.hist && o.deAici.hist.c.length === 24); assert.ok(o.deAici.marja >= 0); assert.ok(Math.abs(o.deAici.pCastig + o.deAici.pPierde + o.deAici.pZero - 1) < 1e-9);
+  const de = (o2, acum) => GS.verdict({ n: 500, orizonturi: [oz(o2)], acum: acum }, ST, { minus: 6.5, plus: 2.6 }, 0, { profitNet: 5.2 });
+  const v = de({ pCastig: 0.95, pPierde: 0.05, p50: 5.5, p5: 1, deAici: { p5: -8, p50: -1.2, p95: 7, pCastig: 0.4, pPierde: 0.6, pZero: 0, marja: 4 } }, { net: 0.1, usdt: 5, bare: 300, t: 0, perechi: 10 });
+  assert.equal(v.rand, "de aici încolo: CÂȘTIGĂ în 40% din drumuri · PIERDE în 60%"); assert.equal(v.culoare, "bad");
+  assert.match(v.sub, /^de obicei −1,2 USDT · cele mai proaste 5%: −8,0 USDT · cele mai bune 5%: \+7,0 USDT · cu tot cu ce a făcut până acum: de obicei \+5,5 USDT$/);
+  assert.match(v.faCe, /^Aș opri: de aici încolo pierde în 60% din drumuri \(de obicei −1,2 USDT\)/); assert.match(v.faCe, /De la pornire botul tău are \+5,2 USDT \(Pionex\), \+5,0 estimat/);
+  const t = de({ pCastig: 0.3, pPierde: 0.7, p50: -2, p5: -5, deAici: { p5: -3, p50: 1.4, p95: 6, pCastig: 0.62, pPierde: 0.38, pZero: 0, marja: 4 } }, { net: -0.04, usdt: -2, bare: 300, t: 0, perechi: 10 });
+  assert.match(t.faCe, /^Aș ține: de aici încolo câștigă în 62% din drumuri, de obicei \+1,4 USDT; planul \+2,6 vine înainte de −6,5 în 63%/);
+  const l = de({ pLich: 0.05, deAici: { p5: -3, p50: 1.4, p95: 6, pCastig: 0.62, pPierde: 0.38, pZero: 0, marja: 4 } }, { net: 0, usdt: 0, bare: 300, t: 0, perechi: 10 });
+  assert.match(l.faCe, /^L-aș opri: lichidare în 5% din drumuri de aici încolo/);
+  const pl = de({ p5: -9.2, deAici: { p5: -3, p50: 1.4, p95: 6, pCastig: 0.62, pPierde: 0.38, pZero: 0, marja: 4 } }, { net: 0, usdt: 0, bare: 300, t: 0, perechi: 10 });
+  assert.match(pl.faCe, /^Nu se potrivește cu planul tău: în cele mai proaste 5% ajungi la −9,2 USDT de la pornire, planul tău zice −6,5\. Mută stopul la planul tău\./);
+  const op = de({ deAici: { p5: -3, p50: 1.4, p95: 6, pCastig: 0.62, pPierde: 0.38, pZero: 0, marja: 4 } }, { net: -0.2, usdt: -10, bare: 300, t: 0, perechi: 10, oprit: "oprit" });
+  assert.match(op.faCe, /^Reluarea arată botul OPRIT pe drumul real/);
+});
+await test("(R-mărunte motor) zilele până la plan „deja” când e atins în prefix; „până la” = închiderea ultimei bare; oprirea pe ultima bară reală e văzută; dinCod cu virgulă zecimală, 12–13 câmpuri, neutru cu ambele stopuri", () => {
+  const s = B.length - 3 * 96, r = GS.simuleaza(B, ST, Object.assign({}, O, { pornitLa: B[s].t, plan: { minus: 1e9, plus: 0.0001 }, orizonturi: [1] }));
+  assert.equal(r.orizonturi[0].plan.dejaAtins, "plus"); assert.equal(r.orizonturi[0].plan.zileMediana, null, "atins în prefix ⇒ fără zile (se scrie „deja”)");
+  assert.equal(r.acum.t, B[B.length - 1].t + 9e5);
+  const st2 = { jos: 0.995, sus: 1.005, grile: 5, levier: 100, dir: "long", suma: 50, stop: null }, r2 = GS.simuleaza(B, st2, Object.assign({}, O, { pornitLa: B[s].t, orizonturi: [1] }));
+  assert.ok(r2.eroare || r2.acum.oprit === "lichidat", "levier 100: lichidat în prefix ⇒ acum.oprit");
+  assert.deepEqual(GS.dinCod("long;0,38;0,44;30;3;0,36;0,47;0;0;47,83").st.jos, 0.38);
+  assert.deepEqual(GS.dinCod("long;0.38;0.44;30;3;0;0;0;0;50;geometric;7.5;2.6").plan, { minus: 7.5, plus: 2.6, afaraOre: 0 });
+  assert.deepEqual(GS.dinCod("neutru;0.37;0.42;35;3;0.33;0.46;0;0").st.stop, { jos: 0.33, sus: 0.46 });
+});
+await test("(R4/R5/R6) ecranul: histograma stilată și pe #gsPagina; Copiază / orizont / comutator citesc întâi câmpurile; un câmp golit sau greșit = eroare pe nume; marja „doar din numărul drumurilor”", () => {
+  const css = citeste("public", "app.css"), E = citeste("public", "lib", "grid-sim-ecran.js");
+  assert.match(css, /#gsPagina \.mcsHist \.mcsBara/); assert.match(css, /#gsPagina \.mcsHist \.mcsMarc/); assert.match(css, /#gsPagina \.mcsHist text/);
+  for (const f of ["gsCopiazaCod", "gsOriz", "gsMod", "gsDinCod"]) assert.match(functie(E, f), /gsCiteste\(true\)/, f);
+  assert.match(functie(E, "gsCopiazaCod"), /GridSim\.inCod\(/);
+  assert.match(functie(E, "gsCiteste"), /nu e un număr/); assert.match(functie(E, "gsCiteste"), /e gol/);
+  assert.match(G.gsVerdictHtml(stare({ rez: REZ(), plan: null })), /<span class="t212Mic">±4 puncte · doar din numărul drumurilor<\/span>/);
+  assert.match(G.gsHtml(stare({ rez: REZ(), st: Object.assign({}, STP, { stop: { jos: 0.4 } }) })), /Stopul \(0,4000\) e ÎN grid/);
+  assert.match(G.gsRiscuriHtml(stare({ rez: REZ() })), /funding \(cost fix presupus\)/);
 });
 
 console.log(`\n${teste - picate}/${teste} ok`);
