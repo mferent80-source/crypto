@@ -7011,6 +7011,8 @@ function tbActualizeazaBanda(){
     var x=el.querySelector('.bsParte[data-k="'+k+'"]');if(!x)return;
     var sep=x.previousElementSibling;if(sep&&sep.classList.contains("bsSep"))sep.remove();x.remove();
   });
+  // v100.142: nici minimul nu incape (telefon la 390: „lichid…”)? Pe doua randuri, centrat (CSS .botStrip.bsRupt, doar sub 760 px); clasa se reface mai sus la fiecare actualizare
+  if(el.scrollWidth>el.clientWidth+1)el.classList.add("bsRupt");
   pvArata();
 }
 // ===== v100.6: pretul botului LIVE - tranzactiile Pionex (topic TRADE) pe EXACT piata botului (JTO_USDT_PERP) =====

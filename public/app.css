@@ -1239,7 +1239,8 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 .tbAxa{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:6px}
 @media(max-width:760px){.tbDirRand{grid-template-columns:1fr 1fr}.tbDirFata,.tbDirSch{grid-column:1/-1}.tbDirRand.tbCap{display:none}.tbErouCifra{font-size:32px}.tbGraficZona{height:200px}}
 /* v100.6: banda nu mai e taiata la 520 px - ia locul liber din bara (dreapta se intinde), restul chip-urilor nu se strang */
-.topRight{flex:1 1 auto;justify-content:flex-end}.topRight>.statusChip:not(.botStrip){flex-shrink:0}
+/* v100.142 (el 08.10: „banda de sus și toată linia de sus o vreau centrată”): grupul din dreapta (banda botului + Alerts + WS + LIVE DATA + versiunea) centrat în spațiul liber, nu lipit de dreapta */
+.topRight{flex:1 1 auto;justify-content:center}.topRight>.statusChip:not(.botStrip){flex-shrink:0}
 .botStrip{display:block;width:auto;font-weight:800;min-width:0;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .botStrip .bsPret{color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}.botStrip .bsPret.viu{color:var(--text)}
 .botStrip .bsSep{opacity:.7}
@@ -1260,7 +1261,7 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 #tabloubot .tbPretViu .tbSub{font-size:12px}
 #tabloubot .tbViuPunct{width:7px;height:7px;border-radius:50%;background:var(--muted);align-self:center}#tabloubot .tbPretViu.viu .tbViuPunct{background:var(--good);box-shadow:0 0 8px rgba(85,216,155,.7)}
 .botStrip.bad{color:var(--bad);border-color:var(--bad)}.botStrip.tbWarn{color:var(--warn);border-color:var(--warn)}.botStrip.good{color:var(--good)}
-@media(max-width:760px){.botStrip{order:-1;flex-basis:100%;max-width:none;white-space:nowrap;text-align:left}}/* v100.122: pe un rand si pe telefon - cad „piata”, „azi”, „grid” (tbActualizeazaBanda), raman numele, pretul, totalul */
+@media(max-width:760px){.botStrip{order:-1;flex-basis:100%;max-width:none;white-space:nowrap;text-align:center}.botStrip.bsRupt{white-space:normal;line-height:1.3}}/* v100.142: textul benzii centrat pe telefon; când nici minimul (nume, preț, total, lichidare) nu încape, tbActualizeazaBanda pune bsRupt ⇒ două rânduri, nu tăiat la „lichid…”; rândul cipurilor de sub ea e centrat de .topRight · v100.122: pe un rand si pe telefon - cad „piata”, „azi”, „grid” (tbActualizeazaBanda), raman numele, pretul, totalul */
 .botStrip[hidden]{display:none!important}
 
 /* v76 Tabloul botului, reasezat. Un singur sistem: colturi 12px pe blocuri,
