@@ -79,11 +79,25 @@ await test("(R1) clic pe alt interval cât se aduc încă lumânările: după ce
 await test("(R4) celelalte intervale vin din lumânările trendului (randuriPe), tăiate la perioada lor - zero cereri în plus; alt simbol în trend ⇒ nu", async () => {
   const c = cutie(), x = c.ctx; x.tbStare.directie = { simbol: "PONS_USDT_PERP|SHORT", la: Date.now(), randuriPe: { "5M": rows(500, 3e5), "15M": rows(500, 9e5), "60M": rows(500, 36e5), "4H": rows(500, 144e5), "1D": rows(400, 864e5) } };
   x.tbAduGraficul(); await c.flush(); await c.flush();
-  assert.deepEqual(c.cereri, ["5M"]); assert.deepEqual(Object.keys(x.tbStare.graficCache).sort(), ["PONS_USDT_PERP|15M", "PONS_USDT_PERP|1D", "PONS_USDT_PERP|4H", "PONS_USDT_PERP|5M", "PONS_USDT_PERP|60M"]);
-  assert.equal(x.tbStare.graficCache["PONS_USDT_PERP|4H"].randuri.length, 180); assert.equal(x.tbStare.graficCache["PONS_USDT_PERP|1D"].randuri.length, 200); assert.equal(x.tbStare.graficCache["PONS_USDT_PERP|5M"].randuri.length, 288, "cel adus rămâne cel adus");
-  x.tbAlegeInterval("4H"); await c.flush(); assert.deepEqual(c.cereri, ["5M"], "4h din cache, proaspăt ⇒ nicio cerere"); assert.equal(x.tbStare.grafic.simbol, "PONS_USDT_PERP|4H"); assert.equal(x.tbStare.grafic.randuri.length, 180);
+  // trendul e PROASPĂT (sub 2 minute) ⇒ nici 5m nu se mai cere: zero cereri (cu trendul mai vechi se aduce - (R4b))
+  assert.deepEqual(c.cereri, []); assert.deepEqual(Object.keys(x.tbStare.graficCache).sort(), ["PONS_USDT_PERP|15M", "PONS_USDT_PERP|1D", "PONS_USDT_PERP|4H", "PONS_USDT_PERP|5M", "PONS_USDT_PERP|60M"]);
+  assert.equal(x.tbStare.graficCache["PONS_USDT_PERP|4H"].randuri.length, 180); assert.equal(x.tbStare.graficCache["PONS_USDT_PERP|1D"].randuri.length, 200); assert.equal(x.tbStare.graficCache["PONS_USDT_PERP|5M"].randuri.length, 288);
+  assert.equal(x.tbStare.grafic.simbol, "PONS_USDT_PERP|5M"); assert.equal(x.tbStare.grafic.randuri.length, 288, "graficul s-a arătat din trend, pe loc");
+  x.tbAlegeInterval("4H"); await c.flush(); assert.deepEqual(c.cereri, [], "4h din cache, proaspăt ⇒ nicio cerere"); assert.equal(x.tbStare.grafic.simbol, "PONS_USDT_PERP|4H"); assert.equal(x.tbStare.grafic.randuri.length, 180);
   const c2 = cutie(), y = c2.ctx; y.tbStare.directie = { simbol: "BTC_USDT_PERP|LONG", la: Date.now(), randuriPe: { "4H": rows(500, 144e5) } };
   y.tbAduGraficul(); await c2.flush(); await c2.flush(); assert.deepEqual(Object.keys(y.tbStare.graficCache), ["PONS_USDT_PERP|5M"], "lumânările altei monede nu intră");
+});
+await test("(R4b) lumânările din trend vin de la Pionex cu cea mai NOUĂ întâi ⇒ se taie cele mai noi l, în ordine crescătoare (nu cele mai vechi); trendul sosit înaintea primei aduceri nu lasă graficul pe lumânări vechi", async () => {
+  const c = cutie(), x = c.ctx, desc = rows(500, 144e5).slice().reverse();   // Pionex: cea mai nouă întâi
+  x.tbStare.directie = { simbol: "PONS_USDT_PERP|SHORT", la: Date.now(), randuriPe: { "4H": desc } };
+  await x.tbPreiaRestulTf("PONS_USDT_PERP");
+  const r = x.tbStare.graficCache["PONS_USDT_PERP|4H"].randuri; assert.equal(r.length, 180); assert.ok(r[0][0] < r[179][0], "crescător"); assert.equal(r[179][0], desc[0][0], "ultima = cea mai nouă");
+  // trendul (cu 5M, 500 de rânduri vechi + noi) e deja aici când pornește prima aducere: graficul trebuie să rămână pe cele ADUSE (288, proaspete), nu pe cele din trend
+  const c2 = cutie(), y = c2.ctx; y.tbStare.directie = { simbol: "PONS_USDT_PERP|SHORT", la: Date.now() - 4 * 60000, randuriPe: { "5M": rows(500, 3e5, Date.UTC(2026, 9, 1)).slice().reverse() } };
+  y.tbAduGraficul(); await c2.flush(); await c2.flush();
+  assert.deepEqual(c2.cereri, ["5M"]); assert.equal(y.tbStare.grafic.randuri.length, 288); assert.equal(y.tbStare.grafic.simbol, "PONS_USDT_PERP|5M");
+  assert.equal(y.tbStare.grafic.randuri, y.tbStare.graficCache["PONS_USDT_PERP|5M"].randuri, "graficul arată lumânările ADUSE (cache-ul 5M e cel adus, nu cel din trend)");
+  assert.ok(y.tbStare.grafic.la >= Date.now() - 1000, "ora aducerii, nu a trendului");
 });
 await test("(R1b) intervalul ales sosește din trend cât ecranul spune „Aștept prețurile…” ⇒ se arată pe loc", async () => {
   const c = cutie(), x = c.ctx; x.tbStare.graficInterval = "4H"; x.tbStare.grafic = { la: Date.now(), simbol: "PONS_USDT_PERP|5M", randuri: rows(288, 3e5), eroare: null, inLucru: false };

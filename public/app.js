@@ -6481,7 +6481,9 @@ function tbPreiaRestulTf(s){
   Object.keys(TB_PERIOADE).forEach(function(tf){
     var cheie=s+"|"+tf,per=TB_PERIOADE[tf],rd=d.randuriPe[per.i];
     if(tbStare.graficCache[cheie]||!Array.isArray(rd)||!rd.length)return;
-    tbStare.graficCache[cheie]={cheie:cheie,randuri:rd.slice(-per.l),la:d.la||Date.now()};
+    // revizia 08.10 (poza: axa de 42 h pe 5m, RSI 92): Pionex dă lumânările cu cea mai NOUĂ întâi - sortez crescător ÎNAINTE să tai ultimele l
+    var tt=function(r){return Number(Array.isArray(r)?r[0]:r&&r.time)};
+    tbStare.graficCache[cheie]={cheie:cheie,randuri:rd.slice().sort(function(a,b){return tt(a)-tt(b)}).slice(-per.l),la:d.la||Date.now()};
     if(cheie===curent&&(!tbStare.grafic||tbStare.grafic.simbol!==cheie)&&!(tbStare.grafic&&tbStare.grafic.inLucru)){tbStare.grafic={la:d.la||Date.now(),simbol:cheie,randuri:tbStare.graficCache[cheie].randuri,eroare:null,inLucru:false};renderTabloGrafic()}
   });
 }
@@ -6565,7 +6567,7 @@ async function tbAduGraficul(){
   // v100.137: lumânările din cache (proaspete) se arată fără cerere; cele vechi se arată și se împrospătează
   if(c&&c.randuri&&g.simbol!==cheieG&&!g.inLucru){tbStare.grafic=g={la:c.la,simbol:cheieG,randuri:c.randuri,eroare:null,inLucru:false};renderTabloGrafic()}
   if(g.inLucru)return;   /* revizia (1): cât se aduce ceva, nu pornesc altceva - la final se verifică dacă intervalul s-a schimbat */
-  tbPreiaRestulTf(s);
+  tbPreiaRestulTf(s);g=tbStare.grafic;   /* prefetch-ul poate pune alt obiect în tbStare.grafic - lucrez pe cel de acum */
   if(g.simbol===cheieG&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS))return;
   g.inLucru=true;
   try{
@@ -6575,6 +6577,7 @@ async function tbAduGraficul(){
     g.simbol=cheieG;g.la=Date.now();
     if(g.randuri)tbStare.graficCache[cheieG]={cheie:cheieG,randuri:g.randuri,la:g.la};
   }catch(e){g.eroare=textEroare(e)}finally{g.inLucru=false}
+  tbStare.grafic=g;   /* cele ADUSE acum sunt cele mai proaspete - nu rămâne obiectul pus între timp din trend */
   renderTabloGrafic();
   tbPreiaRestulTf(s);
   if(s+"|"+tbTf()!==cheieG)tbAduGraficul();   /* revizia (1): omul a apăsat alt interval cât se aduceau astea - îl aduc acum, o singură dată */
