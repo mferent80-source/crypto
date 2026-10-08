@@ -6466,7 +6466,7 @@ function tbTfButoane(){var p=tbTf();Object.keys(TB_PERIOADE).forEach(function(k)
 // (GraficBot.fereastraBot); alegerea se ține în memoria paginii; butonul se vede doar când fereastra botului e posibilă (bot pornit în fereastră)
 function tbFereastraToataE(){if(tbStare.fereastraToata==null)tbStare.fereastraToata=tbCiteste(TB_FER_CHEIE)==="1";return !!tbStare.fereastraToata}
 function tbFereastraToata(){tbStare.fereastraToata=!tbFereastraToataE();tbScrie(TB_FER_CHEIE,tbStare.fereastraToata?"1":"0");renderTabloGrafic()}
-function tbFereastraButon(oG,tf){var e=$("tbFerToata");if(!e)return;e.hidden=!oG.fereastraPosibila;var cat=TB_PERIOADE[tbTf()].cat||"";e.textContent=cat==="24 de ore"?"24 h":cat;e.setAttribute("aria-pressed",String(!!oG.fereastraToata));
+function tbFereastraButon(oG){var e=$("tbFerToata");if(!e)return;e.hidden=!oG.fereastraPosibila;var cat=TB_PERIOADE[tbTf()].cat||"";e.textContent=cat==="24 de ore"?"24 h":cat;e.setAttribute("aria-pressed",String(!!oG.fereastraToata));
   e.title=oG.fereastraToata?"toată fereastra ("+cat+") · apasă: doar de la pornirea botului, cu 2 ore înainte":"apasă: toată fereastra ("+cat+"), nu doar de la pornirea botului"}
 function tbAlegeInterval(p){
   p=TB_TF_VECHI[p]||p;if(!TB_PERIOADE[p])return;
@@ -6851,6 +6851,7 @@ function tbGridLargRender(b){
 function renderTabloGrafic(){
   var el=$("tbGrafic");if(!el)return;
   tbTfButoane();   /* v100.137 (revizia 10): intervalul ținut minte se vede și pe butoane, de la primul desen */
+  var fb=$("tbFerToata");if(fb)fb.hidden=true;   /* v100.144 (revizia Opus): butonul „24 h” se arată doar pe drumul bun, cu graficul desenat */
   var b=tbStare.routeOk===false?null:tbStare.bot,g=tbStare.grafic,brut=tbStare.botBrut;
   try{tbGridLargRender(b)}catch(e){}   // v100.101: o eroare aici nu strică graficul
   if(!b){el.innerHTML='<div class="emptyState">—</div>';return}
@@ -6865,8 +6866,8 @@ function renderTabloGrafic(){
   if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
-  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
-  var d=GraficBot.desen(oG);tbFereastraButon(oG,tbTf());tbDeseneazaCitire(oG,b);
+  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
+  var d=GraficBot.desen(oG);tbFereastraButon(oG);tbDeseneazaCitire(oG,b);
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
   // ultimele 3 alerte ale botului si ca text (pe telefon punctele de pe banda se citesc greu)
@@ -6877,7 +6878,9 @@ function renderTabloGrafic(){
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
   var crY=svg.querySelector(".gbCruceY"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none"};
   var arata=function(cx,cy){
-    var r=svg.getBoundingClientRect(),k=d.harta.W/(r.width||d.harta.W),sx=(cx-r.left)*k,sy=(cy-r.top)*k,h=GraficBot.tip(d.harta,sx,sy,tbLaPret(b));
+    var r=svg.getBoundingClientRect(),k=d.harta.W/(r.width||d.harta.W),sx=(cx-r.left)*k,sy=(cy-r.top)*k;
+    if(sy<(d.harta.sus||0)){ascunde();return}   /* v100.144 (revizia Opus): în banda semaforului nu e nicio lumânare */
+    var h=GraficBot.tip(d.harta,sx,sy,tbLaPret(b));
     var syG=sy-(d.harta.sus||0);   /* v100.144: pe telefon desenul e coborât sub banda semaforului */
     if(crY){if(syG>=0&&syG<=d.harta.mainH){crY.setAttribute("y1",syG.toFixed(1));crY.setAttribute("y2",syG.toFixed(1));crY.style.display=""}else crY.style.display="none"}
     if(!h){ascunde();return}

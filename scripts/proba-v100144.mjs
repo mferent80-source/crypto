@@ -28,7 +28,7 @@ await test("(1) butonul „24 h”: intrareBot cu fereastraToata ⇒ toată fere
   assert.match(HTML, /<div class="tbInterval tbTf"[^>]*>(<button[^>]*>[^<]*<\/button>){5}<button type="button" class="tbIntBtn tbFerBtn" id="tbFerToata" hidden aria-pressed="false" data-action-click="tbFereastraToata\(\)"[^>]*>24 h<\/button><\/div>/, "butonul al 6-lea, ascuns până e nevoie");
   const f = functie(APP, "tbFereastraToata"); assert.match(f, /tbStare\.fereastraToata=!tbFereastraToataE\(\)/); assert.match(f, /tbScrie\(TB_FER_CHEIE,/); assert.match(f, /renderTabloGrafic\(\)/);
   assert.match(APP, /TB_FER_CHEIE="tabloBotFereastra_v1"/); assert.match(functie(APP, "tbFereastraToataE"), /tbStare\.fereastraToata=tbCiteste\(TB_FER_CHEIE\)==="1"/, "alegerea se citește (o dată) din memoria paginii");
-  const r = functie(APP, "renderTabloGrafic"); assert.match(r, /fereastraToata:tbFereastraToataE\(\)/); assert.match(r, /tbFereastraButon\(oG,/);
+  const r = functie(APP, "renderTabloGrafic"); assert.match(r, /fereastraToata:tbFereastraToataE\(\)/); assert.match(r, /tbFereastraButon\(oG\)/);
   const fb = functie(APP, "tbFereastraButon"); assert.match(fb, /\.hidden=!oG\.fereastraPosibila/); assert.match(fb, /aria-pressed/); assert.match(fb, /TB_PERIOADE\[tbTf\(\)\]\.cat/, "eticheta: „24 de ore” / „3 zile”, după interval");
 });
 await test("(2) pe telefon semaforul stă în banda lui deasupra graficului: restul desenului e mutat în jos cu `sus`, prețurile iau tot graficul (fără rezerva de 54 px), harta știe `sus`; pe ecran lat ca înainte", () => {
@@ -48,10 +48,39 @@ await test("(3) săgețile după soartă: grupul cu pereche închisă e verde (�
   const s2 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "S", 0.539), umpl(200, "S", 0.537)], perechi: 0 } })).svg;
   assert.ok(s2.includes('fill="' + C.mut + '" stroke="' + C.fond + '" stroke-width="1"/>'), "gri, fără inel"); assert.doesNotMatch(s2, /gbPereche/);
   const s3 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true), umpl(200, "B", 0.533)], perechi: 1 } })).svg;
-  assert.ok(s3.includes('fill="' + C.good + '" stroke="' + C.fond + '"'), "amestecat ⇒ verde"); assert.match(s3, /<title>1 din 2 perechi închise\n/);
+  assert.ok(s3.includes('fill="' + C.good + '" stroke="' + C.fond + '"'), "amestecat ⇒ verde"); assert.match(s3, /<title>1 din 2 umpleri cu perechea închisă\n/);
   const d = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } }));
   assert.match(d.legenda, /▲ cumpărare · ▼ vânzare pe grilă \(deduse din lumânări\) · verde = pereche închisă · gri = încă deschisă · perechi pe grafic: 1/);
   const ds = G.desen(Object.assign({}, baza, { simplu: true, umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } })); assert.match(ds.legenda, /▲▼ umpleri: verde = pereche închisă \(1\) · gri = deschisă/);
+});
+await test("(R1) revizia Opus 🔴: soarta pe umpleri REALE (GraficBot.umpleri, bot long): cumpărarea a cărei vânzare s-a făcut e „închisă” (verde), cumpărările rămase după ultima coborâre sunt deschise (gri); la short invers; titlul numără umplerile", () => {
+  // prețul coboară de la 0.55 la 0.50 (cumpără pe linii), urcă înapoi (vinde = închide), apoi coboară iar până la 0.52 (cumpărări deschise)
+  const drum = [0.55, 0.54, 0.53, 0.52, 0.51, 0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.54, 0.53, 0.52], b = drum.map((c, i) => ({ t: ACUM - (drum.length - i) * M5, o: i ? drum[i - 1] : c, h: Math.max(i ? drum[i - 1] : c, c) + 0.0005, l: Math.min(i ? drum[i - 1] : c, c) - 0.0005, c, v: 1 }));
+  const U = G.umpleri(b, { jos: 0.50, sus: 0.55, linii: 6, geo: false, p0: 0.55, pornit: b[0].t, dir: "long" });
+  const cump = U.umpleri.filter((u) => u.tip === "B"), vanz = U.umpleri.filter((u) => u.tip === "S");
+  assert.ok(cump.length >= 7 && vanz.length >= 4, "umpleri: " + cump.length + " cumpărări, " + vanz.length + " vânzări");
+  assert.ok(vanz.every((u) => u.pereche), "la long fiecare vânzare închide o pereche");
+  const inchise = cump.filter((u) => u.inchisa), deschise = cump.filter((u) => !u.inchisa);
+  assert.ok(inchise.length >= 4 && deschise.length >= 2, "cumpărări închise " + inchise.length + ", deschise " + deschise.length);
+  assert.ok(deschise.every((u) => u.t > inchise[inchise.length - 1].t), "cele deschise sunt ultimele (după ultima vânzare)");
+  const s = G.desen({ bare: b, W: 1000, st: {}, niv: [], alerte: [], per: "24h", umpleri: U }).svg, C = G.COL;
+  const grupuri = s.match(/<g class="gbUmplere[^"]*"><title>[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/g) || [];
+  assert.ok(grupuri.some((x) => x.includes('fill="' + C.good + '"')) && grupuri.some((x) => x.includes('fill="' + C.mut + '"')), "și verzi, și gri");
+  assert.match(s, /<title>\d+ din \d+ umpleri cu perechea închisă\n|<title>(cumpărare|vânzare)/);
+  const S = G.umpleri(b.map((x) => ({ t: x.t, o: 1.1 - x.o, h: 1.1 - x.l, l: 1.1 - x.h, c: 1.1 - x.c, v: 1 })), { jos: 0.55, sus: 0.60, linii: 6, geo: false, p0: 0.55, pornit: b[0].t, dir: "short" });
+  assert.ok(S.umpleri.filter((u) => u.tip === "S").some((u) => u.inchisa) && S.umpleri.filter((u) => u.tip === "B").every((u) => u.pereche), "la short vânzarea se închide prin cumpărare");
+});
+await test("(R2) revizia Opus 🟡: banda semaforului doar pe graficul botului (acțiunile T212 rămân ca înainte); butonul „24 h” se ascunde la începutul fiecărui desen și pe 1 h fereastra nu e posibilă; legenda spune când e toată fereastra; butonul nu se strânge pe telefon; o atingere în bandă nu arată fișa", () => {
+  const baza = { bare: B5, st: {}, niv: [], alerte: [], per: "24h", tfGrafic: "5M" };
+  assert.equal(G.desen(Object.assign({}, baza, { W: 390, ingust: true, semafor: SEM, actiune: true })).harta.sus, 0, "acțiune pe telefon: fără bandă");
+  const B60 = bare(168, 3600000, 0.50, 0.55), i60 = G.intrareBot({ bot: { id: "1", pornitLa: ACUM - 5 * 3600000, gridJos: 0.5, gridSus: 0.55 }, bare: B60, acum: ACUM, W: 1000, fereastraToata: true });
+  assert.equal(i60.fereastraPosibila, false, "pe 1 h nu se taie ⇒ butonul n-are rost"); assert.equal(i60.fereastraToata, true);
+  const r = functie(APP, "renderTabloGrafic"); assert.match(r, /tbTfButoane\(\);[^\n]*\n\s*var fb=\$\("tbFerToata"\);if\(fb\)fb\.hidden=true;/, "ascuns la început, arătat doar pe drumul bun");
+  const d = G.desen(Object.assign({}, baza, { W: 1000, fereastraToata: true, fereastraPosibila: true })); assert.match(d.legenda, /fereastra: toată \(24 de ore\), nu doar de la pornirea botului/);
+  assert.doesNotMatch(G.desen(Object.assign({}, baza, { W: 1000, fereastraToata: true, fereastraPosibila: false })).legenda, /fereastra: toată/, "pe un bot vechi nu e nimic de spus");
+  assert.match(CSS, /#tabloubot #tbGraficCard \.tbFerBtn\{[^}]*flex:0 0 auto;min-width:auto/, "pe telefon cele 5 butoane se împart egal; al 6-lea rămâne cât textul lui");
+  assert.match(functie(APP, "renderTabloGrafic"), /if\(sy<\(d\.harta\.sus\|\|0\)\)\{ascunde\(\);return\}/, "atingerea în banda semaforului nu arată fișa lumânării");
+  assert.match(functie(APP, "tbFereastraButon"), /^function tbFereastraButon\(oG\)\{/, "parametrul nefolosit a plecat");
 });
 await test("(E) versiunea de la v100.144 în sus", () => {
   assert.match(HTML, /content="v100\.1(4[4-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[4-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[4-9]|[5-9]\d)</);
