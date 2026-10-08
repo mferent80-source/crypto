@@ -6716,8 +6716,8 @@ var tbMcWorker=null,tbMcWorkerId=0,tbMcWorkerCereri={},TB_MC_WORKER_MS=20000;
 // v100.141 (ideea 3): pe telefon (ecran îngust) un worker care atârnă nu ține pagina 20 s - cad pe fir după 10 s
 function tbMcWorkerAsteptare(){return typeof window!=="undefined"&&window.innerWidth<600?Math.min(TB_MC_WORKER_MS,10000):TB_MC_WORKER_MS}
 function tbMcSimuleaza(b15,st,o){
-  return new Promise(function(res){
-    var gata=false,fin=function(r){if(gata)return;gata=true;res(r)};
+  return new Promise(function(res,rej){
+    var gata=false,fin=function(r){if(gata)return;gata=true;res(r)},cad=function(e){if(gata)return;gata=true;rej(e)};
     var peFir=function(){try{fin(GridSim.simuleaza(b15,st,o))}catch(e){fin({eroare:String(e&&e.message||e)})}};
     if(typeof Worker==="undefined")return peFir();
     try{
@@ -6726,13 +6726,15 @@ function tbMcSimuleaza(b15,st,o){
         tbMcWorker.onmessage=function(ev){var d=ev&&ev.data||{},c=tbMcWorkerCereri[d.id];if(!c)return;delete tbMcWorkerCereri[d.id];clearTimeout(c.t);if(d.rez)c.fin(d.rez);else c.peFir()};
         tbMcWorker.onerror=function(){var l=tbMcWorkerCereri;tbMcWorkerCereri={};try{tbMcWorker.terminate()}catch(e){}tbMcWorker=null;Object.keys(l).forEach(function(k){clearTimeout(l[k].t);l[k].peFir()})};
       }
-      var id=++tbMcWorkerId;
-      tbMcWorkerCereri[id]={fin:fin,peFir:peFir,t:setTimeout(function(){if(tbMcWorkerCereri[id]){delete tbMcWorkerCereri[id];peFir()}},tbMcWorkerAsteptare())};
+      var id=++tbMcWorkerId,ms=tbMcWorkerAsteptare();
+      // revizia Opus (7): worker-ul care nu răspunde e OPRIT (terminate), nu dublat pe fir - pe telefon pagina îngheța cât socotea pe fir după un worker
+      // atârnat; cererea pică ⇒ tbMcPorneste ține verdictul vechi pe ecran și reîncearcă în 2 minute, cu un worker nou
+      tbMcWorkerCereri[id]={fin:fin,peFir:peFir,cad:cad,t:setTimeout(function(){if(!tbMcWorkerCereri[id])return;var l=tbMcWorkerCereri;tbMcWorkerCereri={};try{tbMcWorker.terminate()}catch(e){}tbMcWorker=null;var er=new Error("worker-ul n-a răspuns în "+Math.round(ms/1000)+" s");Object.keys(l).forEach(function(c){clearTimeout(l[c].t);l[c].cad(er)})},ms)};
       tbMcWorker.postMessage({id:id,b15:b15,st:st,o:o});
     }catch(e){peFir()}
   })}
-var TB_MC_MS=15*60000,TB_MC_REINCERCARE_MS=2*60000,TB_MC_KV_PROASPAT_MS=20*60000,tbMc={botId:null,cheie:null,la:0,randLa:0,urmatorul:0,inLucru:false,rez:null,rand:null,st:null,plan:null,eroare:null,b15:null,b15La:0,b15Sim:null,funding:null,sursa:null,kvUltima:0};
-// v100.141 (ideea 2): verdictul socotit de COLECTOR (la 15 minute, același motor), din KV - citit o dată la 2 minute; proaspăt (sub 20 min) ⇒
+var TB_MC_MS=15*60000,TB_MC_REINCERCARE_MS=2*60000,TB_MC_KV_PROASPAT_MS=30*60000,tbMc={botId:null,cheie:null,cheieLa:0,la:0,randLa:0,urmatorul:0,inLucru:false,rez:null,rand:null,st:null,plan:null,eroare:null,b15:null,b15La:0,b15Sim:null,funding:null,sursa:null,randSursa:null,kvUltima:0};
+// v100.141 (ideea 2): verdictul socotit de COLECTOR (la 15 minute, același motor), din KV - citit o dată la 2 minute; proaspăt (sub 30 min) ⇒
 // Tabloul îl arată ca atare și nu mai socotește pe telefon; vechi / lipsă (colectorul oprit) ⇒ pagina socotește singură, ca înainte
 var tbMcKv={la:0,d:null,inLucru:null};
 function tbMcDinKv(){
@@ -6743,11 +6745,19 @@ function tbMcDinKv(){
 // revizia (8): cheia = setarea botului (grid, stop, TP, levier, pornire, activ) + planul lui - schimbate ⇒ se socotește din nou, nu peste 15 minute
 function tbMcCheie(b){try{var d=GridSim.setariDinBot(b),pl=tbPlan.botId===b.id&&tbPlan.plan&&!tbPlan.plan.proba?tbPlan.plan:null;return JSON.stringify([d.st,d.pornitLa,b.activ!==false,pl?{minus:pl.minus,plus:pl.plus}:null])}catch(e){return null}}
 async function tbMcTick(){var b=tbStare.routeOk===false?null:tbStare.bot;if(!b||!b.id||!tbPanouVizibil()||tbMc.inLucru)return;
-  var k=tbMcCheie(b),kv=await tbMcDinKv(),v=kv&&kv.boti&&kv.boti[String(b.id)];
-  if(v&&v.text&&Date.now()-(Number(v.ultima)||0)<TB_MC_KV_PROASPAT_MS){
-    if(String(tbMc.botId)!==String(b.id)||tbMc.sursa!=="colector"||tbMc.kvUltima!==v.ultima){tbMc.botId=String(b.id);tbMc.cheie=k;tbMc.sursa="colector";tbMc.kvUltima=v.ultima;tbMc.rand={stare:v.stare||"info",text:v.text,cat:v.cat||null};tbMc.eroare=null;tbMc.la=v.ultima;tbMc.randLa=v.ultima;tbMc.urmatorul=v.ultima+TB_MC_MS;tbMcDeseneaza()}
+  var k=tbMcCheie(b),acelasi=String(tbMc.botId)===String(b.id);
+  // revizia Opus (1): setările / planul schimbate cât verdictul din KV e proaspăt - colectorul l-a socotit pe setările VECHI ⇒ din KV iau doar un
+  // verdict socotit DUPĂ schimbare (ultima ≥ cheieLa), până atunci socotesc local; la alt bot ceasul schimbării se șterge
+  if(acelasi&&tbMc.cheie&&k!==tbMc.cheie)tbMc.cheieLa=Date.now();else if(!acelasi)tbMc.cheieLa=0;
+  var kv=await tbMcDinKv();
+  // revizia Opus (2): după await garda inLucru se verifică din nou - două tic-uri în zbor (schimbarea botului cheamă tura de două ori) porneau două socotiri
+  if(tbMc.inLucru||!tbStare.bot||String(tbStare.bot.id)!==String(b.id))return;
+  var v=kv&&kv.boti&&kv.boti[String(b.id)],ultima=v?Number(v.ultima)||0:0;
+  if(v&&v.text&&Date.now()-ultima<TB_MC_KV_PROASPAT_MS&&ultima>=tbMc.cheieLa){
+    var nou=!acelasi||tbMc.sursa!=="colector"||tbMc.kvUltima!==v.ultima;tbMc.botId=String(b.id);tbMc.cheie=k;tbMc.cheieLa=0;
+    if(nou){tbMc.sursa="colector";tbMc.randSursa="colector";tbMc.kvUltima=v.ultima;tbMc.rand={stare:v.stare||"info",text:v.text,cat:v.cat||null};tbMc.eroare=null;tbMc.la=v.ultima;tbMc.randLa=v.ultima;tbMc.urmatorul=v.ultima+TB_MC_MS;tbMcDeseneaza()}
     return}
-  if(String(tbMc.botId)===String(b.id)&&tbMc.sursa!=="colector"&&k===tbMc.cheie&&Date.now()-tbMc.la<TB_MC_MS)return;
+  if(acelasi&&tbMc.sursa!=="colector"&&k===tbMc.cheie&&Date.now()-tbMc.la<TB_MC_MS)return;
   return tbMcPorneste(b,k)}
 async function tbMcPorneste(b,k){
   if(typeof GridSim==="undefined"||typeof mcsAduCoin!=="function")return;
@@ -6766,7 +6776,7 @@ async function tbMcPorneste(b,k){
     await new Promise(function(r){setTimeout(r,30)});   /* „socotesc…” apare înainte de calcul */
     var rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,n:500,seed:12,orizonturi:[1,7],zile:14});
     if(rez.eroare&&pornitLa){var motiv=String(rez.eroare).split(/[.:]/)[0];rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1,7],zile:14});if(!rez.eroare)note.push("ca bot pornit acum ("+motiv+")")}   /* revizia (6): motivul adevărat */
-    tbMc.rez=rez;tbMc.st=st;tbMc.plan=plan;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);if(note.length)tbMc.rand.text=note.join(" · ")+": "+tbMc.rand.text;tbMc.randLa=Date.now();ok=true;
+    tbMc.rez=rez;tbMc.st=st;tbMc.plan=plan;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);if(note.length)tbMc.rand.text=note.join(" · ")+": "+tbMc.rand.text;tbMc.randLa=Date.now();tbMc.randSursa="pagina";ok=true;
   }catch(e){tbMc.eroare=textEroare(e)}   /* revizia (9): verdictul vechi rămâne pe ecran, cu ora lui */
   finally{tbMc.inLucru=false;tbMc.la=ok?Date.now():Date.now()-TB_MC_MS+TB_MC_REINCERCARE_MS;tbMc.urmatorul=tbMc.la+TB_MC_MS}   /* picat ⇒ reîncercare în 2 minute */
   tbMcDeseneaza()}
@@ -6774,9 +6784,9 @@ function tbMcDeseneaza(){if(tbStare.citireO&&tbStare.bot){try{tbDeseneazaCitire(
 function tbMcRand(b){
   if(!b||String(tbMc.botId)!==String(b.id))return null;
   var hm=function(t){var d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
-  var cand=tbMc.la?" — "+(tbMc.sursa==="colector"?"socotit de colector ":"socotit ")+hm(tbMc.la)+" · următorul "+hm(tbMc.urmatorul):"";
+  var cand=tbMc.la?" — "+(tbMc.randSursa==="colector"?"socotit de colector ":"socotit ")+hm(tbMc.la)+" · următorul "+hm(tbMc.urmatorul):"";   /* revizia Opus: nota după sursa TEXTULUI de pe ecran (la trecerea pe local textul e încă al colectorului) */
   // v100.141 (ideea 4): reluarea nepotrivită („Reluarea arată botul OPRIT…”) ⇒ drumul e să-i verifici setările în Simulator
-  var buton=tbMc.rand&&(tbMc.rand.cat==="reluare"||/^Reluarea arată/.test(tbMc.rand.faCe||""))?"verifică setările în Simulator":"deschide în Simulator";
+  var buton=tbMc.rand&&(/^Reluarea arată/.test(tbMc.rand.faCe||"")||/«Reluarea arată/.test(tbMc.rand.text||""))?"verifică setările în Simulator":"deschide în Simulator";   /* revizia Opus (3): după TEXTUL de pe ecran - din KV felul e cel confirmat, textul e al ultimei socotiri */
   if(tbMc.inLucru&&!tbMc.rand)return {ce:"Monte Carlo",stare:"info",text:"socotesc 500 de drumuri pe botul tău…",buton:buton};
   if(!tbMc.rand)return tbMc.eroare?{ce:"Monte Carlo",stare:"info",text:"n-a mers: "+tbMc.eroare,nota:cand.replace(/^ — /,""),buton:buton}:null;
   // v100.140 (ideea 3): verdictul în text, restul („șanse… · socotit”) în nota mai mică de sub el - pe telefon rândul nu mai are 6–8 rânduri
@@ -6946,7 +6956,7 @@ function tbRiscDeseneaza(){
   tbRiscAduCor(boti);if(boti.length&&tbRiscCor.c)r.push(RiscLuna.textCorelatie(tbRiscCor.c,tbRiscCor.dubluri));
   el.innerHTML=r.filter(Boolean).map(function(t){return '<p class="tbSub tbRiscR">'+escapeHtml(t)+'</p>'}).join("")+'<button type="button" class="tbBtnLinie" data-action-click="navTo(\'montecarlo\',true)">Tot ce știu despre riscul și obiceiurile tale</button>';
 }
-function tbDeseneazaTabloulUnic(){try{tbRiscDeseneaza()}catch(e){};try{tbMcTick()}catch(e){};renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbDeseneazaTvCod();tbPiataPeBot()}
+function tbDeseneazaTabloulUnic(){try{tbRiscDeseneaza()}catch(e){};try{tbMcTick().catch(function(){})}catch(e){};renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbDeseneazaTvCod();tbPiataPeBot()}
 // Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
 // vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
 // v100.6: bucatile vin din PretViu.banda (pur); pretul botului sta imediat dupa nume, live din Pionex.

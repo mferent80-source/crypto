@@ -36,9 +36,16 @@ await test("(2a) ruta istoric-bot: POST mcVerdict curăță (fel / culoare știu
 });
 await test("(1) liniaMonteCarlo: „MET «aș ține» de 2 zile · PONS «aș opri» de 3 h” din starea turei, doar boții activi cu fel; nimic ⇒ null; starea ține și culoarea", async () => {
   const boti = [{ id: "1", baza: "MET.PERP", activ: true }, { id: "2", baza: "PONS.PERP", activ: true }, { id: "3", baza: "XYZ.PERP", activ: false }, { id: "4", baza: "ABC.PERP", activ: true }];
-  const st = { 1: { cat: "tine", la: ACUM - 2 * 86400000 - 3600000 }, 2: { cat: "opreste", la: ACUM - 3 * 3600000 - 60000 }, 3: { cat: "tine", la: ACUM }, 5: { cat: "ban", la: ACUM } };
+  const U = ACUM - 5 * 60000, st = { 1: { cat: "tine", la: ACUM - 2 * 86400000 - 3600000, ultima: U }, 2: { cat: "opreste", la: ACUM - 3 * 3600000 - 60000, ultima: U }, 3: { cat: "tine", la: ACUM, ultima: U }, 5: { cat: "ban", la: ACUM, ultima: U } };
   assert.equal(liniaMonteCarlo(st, boti, ACUM), "MET «aș ține» de 2 zile · PONS «aș opri» de 3 h"); assert.equal(liniaMonteCarlo({}, boti, ACUM), null); assert.equal(liniaMonteCarlo(null, [], ACUM), null);
-  assert.equal(liniaMonteCarlo({ 1: { cat: "plan", la: ACUM - 20 * 60000 } }, boti, ACUM), "MET «nu se potrivește cu planul» de 20 min");
+  assert.equal(liniaMonteCarlo({ 1: { cat: "plan", la: ACUM - 20 * 60000, ultima: U } }, boti, ACUM), "MET «nu se potrivește cu planul» de 20 min");
+  // revizia Opus (5): PC-ul pornit după ora rezumatului ⇒ starea e de aseară - boții cu socotirea mai veche de 30 de minute (sau fără) nu intră; toți vechi ⇒ fără rând
+  assert.equal(liniaMonteCarlo({ 1: { cat: "tine", la: ACUM - 14 * 3600000, ultima: ACUM - 9 * 3600000 }, 2: { cat: "opreste", la: ACUM - 3600000, ultima: U } }, boti, ACUM), "PONS «aș opri» de 1 h");
+  assert.equal(liniaMonteCarlo({ 1: { cat: "tine", la: ACUM - 3600000 } }, boti, ACUM), null, "fără ultima ⇒ nu intră");
+  // revizia Opus (4): rândul ≤ 160 ca al Busolei („🎰 Monte Carlo: ” are 16 ⇒ 144): întâi fără „de când”, apoi „· +N”
+  const multi = Array.from({ length: 8 }, (_, i) => ({ id: String(10 + i), baza: "MARSCOIN" + i + ".PERP", activ: true })), stM = {}; multi.forEach((b) => { stM[b.id] = { cat: "plan", la: ACUM - 2 * 86400000, ultima: U }; });
+  const lm = liniaMonteCarlo(stM, multi, ACUM); assert.ok(lm.length <= 144, lm.length + ": " + lm); assert.match(lm, / · \+\d$/); assert.doesNotMatch(lm, /de 2 zile/);
+  const trei = liniaMonteCarlo(stM, multi.slice(0, 3), ACUM); assert.ok(trei.length <= 144); assert.doesNotMatch(trei, /\+\d$/);
   const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), GC = new Function(lib("grid-calcul.js") + "; return GridCalcul;")(), GP = new Function("GridCalcul", lib("grid-proba.js") + "; return GridProba;")(GC);
   const Mcs = mcsDinPagina(lib("monte-simbol.js"), lib("monte-simbol-ecran.js"), GC, GP), GSc = gridSimDinPagina(lib("grid-sim.js"), GC, GP, Mcs.MonteSimbol);
   const rows = B.map((x) => ({ time: x.t, open: x.o, high: x.h, low: x.l, close: x.c, volume: 1 })), d = { boti: [{ id: "9", activ: true, baza: "PONS.PERP", simbolPionex: "PONS_USDT_PERP", gridJos: ST.jos, gridSus: ST.sus, levier: 2, directie: "long", investit: 50, opritorPierdereActiv: true, opritorPierdere: ST.stop.jos, pornitLa: B[B.length - 288].t, brut: { buOrderData: { row: 11 } } }], GridSim: GSc, GridCalcul: GC, randuri15: async () => rows, stare: { boti: {} }, jurnal: () => {}, n: 40, anunta: async () => true };
@@ -57,9 +64,28 @@ await test("(2b) pagina: tbMcTick ia verdictul colectorului din KV (proaspăt, s
   const a = fa(kvFresh, ACUM - 5 * 60000); await a.ctx.tbMcTick(); await new Promise((r) => setTimeout(r, 80));
   assert.equal(a.aduceri(), 0, "cu verdict proaspăt din colector nu se aduc lumânări și nu se socotește"); assert.equal(a.ctx.tbMc.rand.text, kvFresh[1].text); assert.equal(a.ctx.tbMc.sursa, "colector"); assert.equal(a.ctx.tbMc.rand.stare, "bine");
   const r = a.ctx.tbMcRand(a.ctx.tbStare.bot); assert.match(r.nota, / · socotit de colector \d\d:\d\d · următorul \d\d:\d\d$/); assert.equal(r.text, kvFresh[1].text);
-  const b = fa({ 1: Object.assign({}, kvFresh[1], { ultima: ACUM - 30 * 60000 }) }, ACUM - 30 * 60000); b.ctx.tbMcTick(); for (let i = 0; i < 100 && (b.aduceri() === 0 || b.ctx.tbMc.inLucru); i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60));
-  assert.equal(b.aduceri(), 1, "verdict vechi de 30 de minute ⇒ se socotește local"); assert.equal(b.ctx.tbMc.sursa, "pagina");
+  const b = fa({ 1: Object.assign({}, kvFresh[1], { ultima: ACUM - 45 * 60000 }) }, ACUM - 45 * 60000); b.ctx.tbMcTick(); for (let i = 0; i < 100 && (b.aduceri() === 0 || b.ctx.tbMc.inLucru); i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60));
+  assert.equal(b.aduceri(), 1, "verdict vechi de 45 de minute ⇒ se socotește local"); assert.equal(b.ctx.tbMc.sursa, "pagina");
   const c = fa(null, null); c.ctx.tbMcTick(); for (let i = 0; i < 100 && (c.aduceri() === 0 || c.ctx.tbMc.inLucru); i++) await new Promise((r) => setTimeout(r, 50)); assert.equal(c.aduceri(), 1, "fără KV ⇒ local");
+  // revizia Opus (6): pragul de prospețime 30 de minute (tura la 15 min + bucla + copia paginii de 2 min ajungeau la ~20)
+  assert.equal(a.ctx.TB_MC_KV_PROASPAT_MS, 30 * 60000); const d = fa({ 1: Object.assign({}, kvFresh[1], { ultima: ACUM - 25 * 60000 }) }, ACUM - 25 * 60000); await d.ctx.tbMcTick(); await new Promise((r) => setTimeout(r, 80)); assert.equal(d.aduceri(), 0, "25 de minute e încă proaspăt");
+  const gata = async (x) => { for (let i = 0; i < 100 && (x.aduceri() === 0 || x.ctx.tbMc.inLucru); i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60)); };
+  // revizia Opus (2): două tic-uri în zbor (schimbarea botului cheamă tura de două ori) ⇒ O singură socotire
+  const e = fa(null, null); e.ctx.tbMcTick(); e.ctx.tbMcTick(); await gata(e); assert.equal(e.aduceri(), 1, "două tic-uri în paralel ⇒ o socotire");
+  // revizia Opus (1): setările / planul schimbate cât verdictul din KV e proaspăt ⇒ verdictul colectorului e pe setările vechi ⇒ local, până vine unul socotit DUPĂ schimbare
+  const f = fa(kvFresh, ACUM - 5 * 60000); await f.ctx.tbMcTick(); assert.equal(f.ctx.tbMc.sursa, "colector");
+  f.ctx.tbStare.bot = Object.assign({}, f.ctx.tbStare.bot, { opritorPierdere: ST.stop.jos * 0.98 }); f.ctx.tbMcTick(); await gata(f); assert.equal(f.aduceri(), 1, "cheia schimbată ⇒ socotit local"); assert.equal(f.ctx.tbMc.sursa, "pagina");
+  f.ctx.tbMcKv.la = 0; f.ctx.getJSON = async () => ({ mcVerdict: { la: Date.now(), boti: { 1: Object.assign({}, kvFresh[1], { ultima: Date.now() + 1000, text: "verdict nou" }) } } }); await f.ctx.tbMcTick(); await new Promise((r) => setTimeout(r, 80));
+  assert.equal(f.ctx.tbMc.sursa, "colector", "verdict socotit după schimbare ⇒ iar colectorul"); assert.equal(f.ctx.tbMc.rand.text, "verdict nou");
+  // revizia Opus (🔵): pagina publicată n-are KV (503) ⇒ getJSON aruncă ⇒ local, fără excepție scăpată
+  const g = fa(null, null); g.ctx.getJSON = async () => { throw new Error("HTTP 503"); }; await g.ctx.tbMcTick(); await gata(g); assert.equal(g.aduceri(), 1, "503 ⇒ local");
+});
+await test("(R7) worker-ul care nu răspunde: la depășire e OPRIT (terminate, tbMcWorker=null) și cererea pică cu eroare - NU se socotește pe fir (pe telefon pagina îngheța); verdictul vechi rămâne, reîncercare în 2 min", async () => {
+  const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + functie(APP, "tbMcWorkerAsteptare") + "\n" + functie(APP, "tbMcSimuleaza");
+  let terminari = 0; class WorkerMut { constructor() {} postMessage() {} terminate() { terminari++; } }
+  const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Promise, setTimeout, clearTimeout, GridSim: GS, Worker: WorkerMut }; vm.createContext(ctx); vm.runInContext(src, ctx); ctx.TB_MC_WORKER_MS = 50;
+  await assert.rejects(() => ctx.tbMcSimuleaza(B, ST, { plan: null, n: 20, seed: 12, orizonturi: [7], zile: 14 }), /n-a răspuns/); assert.equal(terminari, 1); assert.equal(ctx.tbMcWorker, null);
+  assert.match(functie(APP, "tbDeseneazaTabloulUnic"), /tbMcTick\(\)\.catch\(function\(\)\{\}\)/, "promisiunea async nu rămâne neprinsă");
 });
 await test("(3) worker-ul așteaptă 10 s pe telefon (ecran îngust), TB_MC_WORKER_MS altfel; tbMcSimuleaza folosește așteptarea", () => {
   const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + functie(APP, "tbMcWorkerAsteptare");
@@ -75,8 +101,13 @@ await test("(4) «Reluarea arată botul OPRIT» ⇒ butonul rândului zice „ve
   ctx.tbMc.botId = "1"; ctx.tbMc.la = Date.now(); ctx.tbMc.randLa = ctx.tbMc.la; ctx.tbMc.urmatorul = ctx.tbMc.la + 15 * 60000; ctx.tbMc.rand = { stare: "rau", text: "de aici încolo, 7 zile: …", faCe: "Reluarea arată botul OPRIT pe drumul real: setările…", cat: "reluare" };
   assert.equal(ctx.tbMcRand(ctx.tbStare.bot).buton, "verifică setările în Simulator");
   ctx.tbMc.rand = { stare: "bine", text: "x", faCe: "Aș ține: …", cat: "tine" }; assert.equal(ctx.tbMcRand(ctx.tbStare.bot).buton, "deschide în Simulator");
-  ctx.tbMc.rand = { stare: "rau", text: "x", cat: "reluare" }; assert.equal(ctx.tbMcRand(ctx.tbStare.bot).buton, "verifică setările în Simulator", "și din KV (doar felul)");
+  // revizia Opus (3): din KV felul (cat) e cel CONFIRMAT, textul e al ultimei socotiri ⇒ butonul urmează TEXTUL de pe ecran, nu felul
+  ctx.tbMc.rand = { stare: "rau", text: "de aici încolo, 7 zile: PIERDE în 70% · «Reluarea arată botul OPRIT pe drumul real» · pe o zi: …", cat: "tine" }; assert.equal(ctx.tbMcRand(ctx.tbStare.bot).buton, "verifică setările în Simulator", "textul zice reluare, felul încă nu");
+  ctx.tbMc.rand = { stare: "bine", text: "de aici încolo, 7 zile: CÂȘTIGĂ în 61% · «Aș ține»", cat: "reluare" }; assert.equal(ctx.tbMcRand(ctx.tbStare.bot).buton, "deschide în Simulator", "felul zice reluare, textul nu");
+  // revizia Opus (🔵): la trecerea de la colector la socotit local, nota spune „socotit de colector” cât textul e încă al lui
+  ctx.tbMc.sursa = "pagina"; ctx.tbMc.randSursa = "colector"; ctx.tbMc.inLucru = true; assert.match(ctx.tbMcRand(ctx.tbStare.bot).nota, /socotit de colector \d\d:\d\d · următorul \d\d:\d\d · socotesc din nou…$/);
   assert.match(functie(APP, "tbDeseneazaCitire"), /escapeHtml\(mc\.buton\)/);
+  assert.match(citeste("functions", "api", "istoric-bot.js"), /return json\(\{paza:p\}\)\}\s+\/\/ v100\.90 \(I-513\)/, "comentariul rutei paza stă la ruta paza");
 });
 await test("(E) versiunea de la v100.141 în sus; colectorul v101.90", () => {
   assert.match(HTML, /content="v100\.1(4[1-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[1-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[1-9]|[5-9]\d)</);

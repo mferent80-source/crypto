@@ -11,6 +11,7 @@ import { mesajPornire } from "./tura-pornire.mjs";
 import { pazaBot, notaVeche } from "./paza-boti.mjs";
 import { titluDimineata } from "./dimineata-titlu.mjs";   // v101.62 (I-526)
 import { liniiBecuri } from "./tura-dimineata.mjs";   // v101.75 (I-552)
+import { liniaMonteCarlo } from "./tura-monte-carlo-bot.mjs";   // v101.90 (revizia Opus 4)
 
 const T0 = Date.UTC(2026, 9, 1, 16, 0), ORA = 3600000, ZI = 86400000;
 const AL = [["titlu", "alertaTitlu"], ["mesaj", "alertaMesaj"]], RAP = [["titlu", "alertaTitlu"], ["mesaj", "raport"]];
@@ -211,6 +212,9 @@ export function situatiiAlerte(pune) {
   pune("Busola dimineața: 12 boți, rezumat vechi (6 ore)", "alerte", "busola.linia", { t: "🧭 Busola, pe 4h: " + BU.liniaBoti(Array.from({ length: 12 }, (_, i) => ({ nume: "MARSCOIN" + i, stare: "miscare", de: T0 - 9 * ORA })), T0, 142 - SUFIX.length) + SUFIX }, [["t", "raport"]]);
   lb("Busola dimineața: 4 boți, toate stările", [{ nume: "CRV", stare: "miscare", de: T0 - 8 * ORA }, { nume: "LIGHTER", stare: "liniste", de: T0 - 2.5 * ORA }, { nume: "PUMP", stare: "nu-stiu", de: T0 - 30 * 60000 }, { nume: "BTC", stare: null }]);
   lb("Busola dimineața: un bot", [{ nume: "CRV", stare: "miscare", de: T0 - 50 * ORA }]);
+  // v101.90 (revizia Opus 4): rândul Monte Carlo din rezumatul de dimineață (raport: ≤ 160), din producătorul real (liniaMonteCarlo, 16 + 144)
+  const lmc = (sit, n) => { const boti = Array.from({ length: n }, (_, i) => ({ id: String(100 + i), baza: "MARSCOIN" + i + ".PERP", activ: true })), st = {}; boti.forEach((b, i) => { st[b.id] = { cat: ["tine", "opreste", "plan", "zgomot", "ban", "reluare", "alt"][i % 7], la: T0 - (i + 1) * 5 * ORA, ultima: T0 - 60000 }; }); pune(sit, "alerte", "mc.linia", { t: "🎰 Monte Carlo: " + liniaMonteCarlo(st, boti, T0) }, [["t", "raport"]]); };
+  lmc("Monte Carlo dimineața: 8 boți", 8); lmc("Monte Carlo dimineața: 2 boți", 2);
   // v101.62 (I-526): rândul-verdict din capul rezumatului (raport: ≤ 160), din producătorul real
   const td = (sit, o) => pune(sit, "alerte", "dimineata.titlu", { t: titluDimineata(o) }, [["t", "raport"]]);
   td("dimineața: rândul-verdict, 3 boți", { boti: [{ nume: "CRV", stare: "miscare" }, { nume: "LIGHTER", stare: "liniste" }, { nume: "PUMP", stare: "liniste" }], bilant: "dovedit", reveniri: 9, eticheta: "cam la fel", deIesit: 0 });

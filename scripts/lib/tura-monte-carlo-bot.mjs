@@ -29,12 +29,24 @@ function ora(t) { const d = new Date(t); return String(d.getHours()).padStart(2,
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); const k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 function deCand(la, acum) { const ms = acum - la; return ms >= 86400000 ? "de " + cate(Math.round(ms / 86400000), "zi", "zile") : "de la " + ora(la); }   // peste 24 h ora singură ar minți
 const nr = (v) => (typeof v === "number" && isFinite(v) ? v : null);
-// v101.90 (ideea 1): rândul din rezumatul de dimineață - „MET «aș ține» de 2 zile · PONS «aș opri» de 3 h”, doar boții activi cu un fel știut
+// v101.90 (ideea 1): rândul din rezumatul de dimineață - „MET «aș ține» de 2 zile · PONS «aș opri» de 3 h”, doar boții activi cu un fel știut.
+// Revizia Opus (4, 5): ≤ 144 (160 − „🎰 Monte Carlo: ”) ca rândul Busolei - întâi fără „de când”, apoi „· +N”; boții cu socotirea mai veche de
+// 30 de minute (PC-ul pornit după ora rezumatului ⇒ starea e de aseară) nu intră; nimic proaspăt ⇒ fără rând
+const LINIA_MAX = 144, SOCOTIRE_PROASPATA_MS = 30 * 60000;
 function deCat(ms) { return ms >= 86400000 ? "de " + cate(Math.round(ms / 86400000), "zi", "zile") : ms >= 3600000 ? "de " + Math.round(ms / 3600000) + " h" : "de " + Math.max(1, Math.round(ms / 60000)) + " min"; }
-export function liniaMonteCarlo(stareBoti, boti, acum) {
-  const st = stareBoti && typeof stareBoti === "object" ? stareBoti : {}, l = [];
-  for (const b of boti || []) { if (!b || b.id == null || b.activ === false) continue; const s = st[String(b.id)]; if (!s || !s.cat || !NUME_CAT[s.cat]) continue; l.push(String(b.baza || "").replace(/\.PERP$/, "") + " «" + NUME_CAT[s.cat] + "» " + deCat(acum - (nr(s.la) || acum))); }
-  return l.length ? l.join(" · ") : null;
+export function liniaMonteCarlo(stareBoti, boti, acum, max) {
+  const st = stareBoti && typeof stareBoti === "object" ? stareBoti : {}, MAX = Number(max) > 0 ? Number(max) : LINIA_MAX, l = [];
+  for (const b of boti || []) {
+    if (!b || b.id == null || b.activ === false) continue; const s = st[String(b.id)]; if (!s || !s.cat || !NUME_CAT[s.cat]) continue;
+    const u = nr(s.ultima); if (!(u > 0) || acum - u > SOCOTIRE_PROASPATA_MS) continue;
+    l.push({ nume: String(b.baza || "").replace(/\.PERP$/, ""), fel: NUME_CAT[s.cat], de: deCat(acum - (nr(s.la) || acum)) });
+  }
+  if (!l.length) return null;
+  const unu = (x, cuDurata) => x.nume + " «" + x.fel + "»" + (cuDurata ? " " + x.de : "");
+  let tx = l.map((x) => unu(x, true)).join(" · "); if (tx.length <= MAX) return tx;
+  const p = l.map((x) => unu(x, false)); tx = p.join(" · "); if (tx.length <= MAX) return tx;
+  for (let n = p.length - 1; n >= 1; n--) { tx = p.slice(0, n).join(" · ") + " · +" + (p.length - n); if (tx.length <= MAX) return tx; }
+  return p[0].slice(0, MAX - 6) + " · +" + (p.length - 1);
 }
 
 export async function turaMonteCarloBot(d) {

@@ -69,7 +69,7 @@ await test("(1b) tbMcSimuleaza: cu Worker ⇒ rezultatul vine din worker (pagina
   class WorkerStricat { constructor() { throw new Error("nu merge"); } }
   const r3 = await fa(WorkerStricat).tbMcSimuleaza(B, ST, o); assert.equal(r3.orizonturi[0].p50, peFir.orizonturi[0].p50, "worker picat la pornire: pe fir");
   class WorkerMut { constructor() {} postMessage() {} terminate() {} }
-  const ctx4 = fa(WorkerMut); ctx4.TB_MC_WORKER_MS = 50; const r4 = await ctx4.tbMcSimuleaza(B, ST, o); assert.equal(r4.orizonturi[0].p50, peFir.orizonturi[0].p50, "worker care nu răspunde: pe fir după așteptare");
+  const ctx4 = fa(WorkerMut); ctx4.TB_MC_WORKER_MS = 50; await assert.rejects(() => ctx4.tbMcSimuleaza(B, ST, o), /n-a răspuns/, "worker care nu răspunde: oprit și cererea pică (v100.141, revizia Opus 7) - nu pe fir");
 });
 await test("(E) versiunea de la v100.140 în sus; colectorul v101.89", () => {
   assert.match(HTML, /content="v100\.1(4\d|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4\d|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4\d|[5-9]\d)</);

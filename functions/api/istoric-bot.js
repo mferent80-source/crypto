@@ -76,8 +76,8 @@ export async function onRequestGet({request,env}){
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
   if(action==="busolaRetea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("busolaRetea")||"null")}catch{r=null}return json({busolaRetea:r})}   // v100.95 (ideea 1): bilanțul Busolei despre predicțiile 🧠
   if(action==="arbori"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("arbori")||"null")}catch{r=null}return json({arbori:r})}   // v100.93: arborii (gradient boosting), aceeași formă ca retea
-  if(action==="paza"){let p=null;try{p=JSON.parse(await env.ISTORIC.get("paza-boti")||"null")}catch{p=null}return json({paza:p})}
-  if(action==="mcVerdict"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("mc-verdict")||"null")}catch{r=null}return json({mcVerdict:r})}   // v100.141 (ideea 2): verdictul Monte Carlo al colectorului pe boți   // v100.90 (I-513): starea Busolei pe boți, cu „de când”
+  if(action==="paza"){let p=null;try{p=JSON.parse(await env.ISTORIC.get("paza-boti")||"null")}catch{p=null}return json({paza:p})}   // v100.90 (I-513): starea Busolei pe boți, cu „de când”
+  if(action==="mcVerdict"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("mc-verdict")||"null")}catch{r=null}return json({mcVerdict:r})}   // v100.141 (ideea 2): verdictul Monte Carlo al colectorului pe boți
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
   if(action==="ingustLista"){const l=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(simbolKv).filter(Boolean))].slice(0,10),out={};for(const s of l){let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}out[s]=v}return json({ingust:out})}
