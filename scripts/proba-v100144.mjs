@@ -26,8 +26,8 @@ await test("(1) butonul „24 h”: intrareBot cu fereastraToata ⇒ toată fere
   const iB = G.intrareBot({ bot, bare: B5, acum: ACUM, W: 1000 }); assert.equal(iB.bare.length, 84); assert.equal(iB.fereastraBot, true); assert.equal(iB.fereastraPosibila, true);
   const iN = G.intrareBot({ bot: { id: "1", gridJos: 0.5, gridSus: 0.55 }, bare: B5, acum: ACUM, W: 1000, fereastraToata: true }); assert.equal(iN.fereastraPosibila, false, "fără pornire nu e ce arăta");
   assert.match(HTML, /<div class="tbInterval tbTf"[^>]*>(<button[^>]*>[^<]*<\/button>){5}<button type="button" class="tbIntBtn tbFerBtn" id="tbFerToata" hidden aria-pressed="false" data-action-click="tbFereastraToata\(\)"[^>]*>24 h<\/button><\/div>/, "butonul al 6-lea, ascuns până e nevoie");
-  const f = functie(APP, "tbFereastraToata"); assert.match(f, /tbStare\.fereastraToata=!tbFereastraToataE\(\)/); assert.match(f, /tbScrie\(TB_FER_CHEIE,/); assert.match(f, /renderTabloGrafic\(\)/);
-  assert.match(APP, /TB_FER_CHEIE="tabloBotFereastra_v1"/); assert.match(functie(APP, "tbFereastraToataE"), /tbStare\.fereastraToata=tbCiteste\(TB_FER_CHEIE\)==="1"/, "alegerea se citește (o dată) din memoria paginii");
+  const f = functie(APP, "tbFereastraToata"); assert.match(f, /tbScrie\(TB_FER_CHEIE,m\)/); assert.match(f, /renderTabloGrafic\(\)/);   // v100.145: pe bot
+  assert.match(APP, /TB_FER_CHEIE="tabloBotFereastra_v2"/); assert.match(functie(APP, "tbFereastraToataE"), /tbStare\.fereastraToataPe=v&&typeof v==="object"\?v:\{\}/, "alegerea se citește (o dată) din memoria paginii, ca obiect pe bot");
   const r = functie(APP, "renderTabloGrafic"); assert.match(r, /fereastraToata:tbFereastraToataE\(\)/); assert.match(r, /tbFereastraButon\(oG\)/);
   const fb = functie(APP, "tbFereastraButon"); assert.match(fb, /\.hidden=!oG\.fereastraPosibila/); assert.match(fb, /aria-pressed/); assert.match(fb, /TB_PERIOADE\[tbTf\(\)\]\.cat/, "eticheta: „24 de ore” / „3 zile”, după interval");
 });
@@ -42,16 +42,16 @@ await test("(2) pe telefon semaforul stă în banda lui deasupra graficului: res
   assert.match(APP, /sy-\(d\.harta\.sus\|\|0\)/, "cursorul paginii scade banda la crucea orizontală");
 });
 await test("(3) săgețile după soartă: grupul cu pereche închisă e verde (și cu inel), cel fără e gri; amestecat ⇒ verde cu „1 din 2 perechi închise” în titlu; forma rămâne ▲/▼; legenda spune ce înseamnă culorile (și pe rândul scurt)", () => {
-  const baza = { bare: B5, W: 1000, st: {}, niv: [], alerte: [], per: "24h" }, C = G.COL;
+  const baza = { bare: B5, W: 1000, st: {}, niv: [], alerte: [], per: "24h", acum: ACUM }, C = G.COL;   // v100.145: `acum` al probei, altfel umplerile deschise ar fi „de peste o oră” (galbene)
   const s1 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true), umpl(200, "B", 0.533, true)], perechi: 2 } })).svg;
   assert.match(s1, /class="gbUmplere gbPereche"><title>[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/); assert.ok(s1.includes('fill="' + C.good + '" stroke="' + C.fond + '" stroke-width="1"/><circle'), "verde + inel");
-  const s2 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "S", 0.539), umpl(200, "S", 0.537)], perechi: 0 } })).svg;
+  const s2 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(286, "S", 0.539), umpl(286, "S", 0.537)], perechi: 0 } })).svg;   // v100.145: deschise DE CURÂND (bara 286) ⇒ gri; cele vechi de ore sunt galbene
   assert.ok(s2.includes('fill="' + C.mut + '" stroke="' + C.fond + '" stroke-width="1"/>'), "gri, fără inel"); assert.doesNotMatch(s2, /gbPereche/);
   const s3 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true), umpl(200, "B", 0.533)], perechi: 1 } })).svg;
   assert.ok(s3.includes('fill="' + C.good + '" stroke="' + C.fond + '"'), "amestecat ⇒ verde"); assert.match(s3, /<title>1 din 2 umpleri cu perechea închisă\n/);
   const d = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } }));
-  assert.match(d.legenda, /▲ cumpărare · ▼ vânzare pe grilă \(deduse din lumânări\) · verde = pereche închisă · gri = încă deschisă · perechi pe grafic: 1/);
-  const ds = G.desen(Object.assign({}, baza, { simplu: true, umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } })); assert.match(ds.legenda, /▲▼ umpleri: verde = pereche închisă \(1\) · gri = deschisă/);
+  assert.match(d.legenda, /▲ cumpărare · ▼ vânzare pe grilă \(deduse din lumânări\) · verde = pereche închisă · gri = deschisă · galben = deschisă de peste o oră · perechi pe grafic: 1/);   // v100.145: + galben
+  const ds = G.desen(Object.assign({}, baza, { simplu: true, umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } })); assert.match(ds.legenda, /▲▼ umpleri: verde = pereche închisă \(1\) · gri = deschisă · galben = de peste o oră/);
 });
 await test("(R1) revizia Opus 🔴: soarta pe umpleri REALE (GraficBot.umpleri, bot long): cumpărarea a cărei vânzare s-a făcut e „închisă” (verde), cumpărările rămase după ultima coborâre sunt deschise (gri); la short invers; titlul numără umplerile", () => {
   // prețul coboară de la 0.55 la 0.50 (cumpără pe linii), urcă înapoi (vinde = închide), apoi coboară iar până la 0.52 (cumpărări deschise)
@@ -63,7 +63,7 @@ await test("(R1) revizia Opus 🔴: soarta pe umpleri REALE (GraficBot.umpleri, 
   const inchise = cump.filter((u) => u.inchisa), deschise = cump.filter((u) => !u.inchisa);
   assert.ok(inchise.length >= 4 && deschise.length >= 2, "cumpărări închise " + inchise.length + ", deschise " + deschise.length);
   assert.ok(deschise.every((u) => u.t > inchise[inchise.length - 1].t), "cele deschise sunt ultimele (după ultima vânzare)");
-  const s = G.desen({ bare: b, W: 1000, st: {}, niv: [], alerte: [], per: "24h", umpleri: U }).svg, C = G.COL;
+  const s = G.desen({ bare: b, W: 1000, st: {}, niv: [], alerte: [], per: "24h", umpleri: U, acum: ACUM }).svg, C = G.COL;
   const grupuri = s.match(/<g class="gbUmplere[^"]*"><title>[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/g) || [];
   assert.ok(grupuri.some((x) => x.includes('fill="' + C.good + '"')) && grupuri.some((x) => x.includes('fill="' + C.mut + '"')), "și verzi, și gri");
   assert.match(s, /<title>\d+ din \d+ umpleri cu perechea închisă\n|<title>(cumpărare|vânzare)/);

@@ -6455,7 +6455,7 @@ var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
 // schimbarea e instantă; după primul desen se aduc din spate și celelalte intervale (tbPreiaRestulTf), cu pauză între cereri.
 var TB_PERIOADE={"5M":{i:"5M",l:288,per:"24h",gaura:12*60000,eticheta:"5m",cat:"24 de ore"},"15M":{i:"15M",l:288,per:"3z",gaura:40*60000,eticheta:"15m",cat:"3 zile"},"60M":{i:"60M",l:168,per:"7z",gaura:150*60000,eticheta:"1h",cat:"7 zile"},"4H":{i:"4H",l:180,per:"30z",gaura:10*3600000,eticheta:"4h",cat:"30 de zile"},"1D":{i:"1D",l:200,per:"200z",gaura:3*86400000,eticheta:"1z",cat:"200 de zile"}};
 var TB_TF_VECHI={"24h":"5M","3z":"15M","7z":"60M"};
-var TB_TF_CHEIE="tabloBotTf_v1",TB_FER_CHEIE="tabloBotFereastra_v1";
+var TB_TF_CHEIE="tabloBotTf_v1",TB_FER_CHEIE="tabloBotFereastra_v2";
 // revizia (10): intervalul ales se ține minte (ca în TradingView); o valoare veche (24h/3z/7z) sau stricată cade pe 5m
 function tbTf(){
   if(!tbStare.graficInterval){var v=tbCiteste(TB_TF_CHEIE);v=TB_TF_VECHI[v]||v;tbStare.graficInterval=TB_PERIOADE[v]?v:"5M"}
@@ -6464,8 +6464,9 @@ function tbTf(){
 function tbTfButoane(){var p=tbTf();Object.keys(TB_PERIOADE).forEach(function(k){var e=$("tbInt"+k);if(e)e.setAttribute("aria-pressed",String(k===p))})}
 // v100.144 (el 08.10, „fa idei”): butonul „24 h” / „3 zile” de lângă intervale - toată fereastra intervalului, nu doar de la pornirea botului
 // (GraficBot.fereastraBot); alegerea se ține în memoria paginii; butonul se vede doar când fereastra botului e posibilă (bot pornit în fereastră)
-function tbFereastraToataE(){if(tbStare.fereastraToata==null)tbStare.fereastraToata=tbCiteste(TB_FER_CHEIE)==="1";return !!tbStare.fereastraToata}
-function tbFereastraToata(){tbStare.fereastraToata=!tbFereastraToataE();tbScrie(TB_FER_CHEIE,tbStare.fereastraToata?"1":"0");renderTabloGrafic()}
+// v100.145 (el 08.10, „fa idei”): alegerea e PE BOT ({id: 1} în tabloBotFereastra_v2) - pe un bot vechi vrei ziua, pe unul nou fereastra lui
+function tbFereastraToataE(){var b=tbStare.bot,id=b&&b.id!=null?String(b.id):"";if(!tbStare.fereastraToataPe){var v=tbCiteste(TB_FER_CHEIE);tbStare.fereastraToataPe=v&&typeof v==="object"?v:{}}return !!(id&&tbStare.fereastraToataPe[id])}
+function tbFereastraToata(){var b=tbStare.bot;if(!b||b.id==null)return;var id=String(b.id),era=tbFereastraToataE(),m=tbStare.fereastraToataPe;if(era)delete m[id];else m[id]=1;tbScrie(TB_FER_CHEIE,m);renderTabloGrafic()}
 function tbFereastraButon(oG){var e=$("tbFerToata");if(!e)return;e.hidden=!oG.fereastraPosibila;var cat=TB_PERIOADE[tbTf()].cat||"";e.textContent=cat==="24 de ore"?"24 h":cat;e.setAttribute("aria-pressed",String(!!oG.fereastraToata));
   e.title=oG.fereastraToata?"toată fereastra ("+cat+") · apasă: doar de la pornirea botului, cu 2 ore înainte":"apasă: toată fereastra ("+cat+"), nu doar de la pornirea botului"}
 function tbAlegeInterval(p){
@@ -6874,7 +6875,8 @@ function renderTabloGrafic(){
   var ult=oG.alerte.slice().sort(function(x,y){return y.t-x.t}).slice(0,3),Cn={critic:"bad",atentie:"neutral",info:"mutedInfo"};
   var ultHtml=ult.length?'<div class="gbUlt">'+ult.map(function(a){var dt=new Date(a.t);return '<span><b class="'+(Cn[a.nivel]||"mutedInfo")+'">●</b> '+escapeHtml(String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0"))+' '+escapeHtml(String(a.titlu||"").replace(/^[A-Z0-9._-]+: /,""))+'</span>'}).join("")+'</div>':"";
   var fg=oG.val&&oG.val.zona?Valoare.fataDeGrid(oG.val.zona,oG.grila.jos,oG.grila.sus):null;   // v100.51 (I-470): gridul tau fata de zona de valoare
-  el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
+  var bl=GraficBot.bilantUmpleri(oG.umpleri,b,!oG.fereastraPosibila);   // v100.145: bilanțul umplerilor din fereastră - primul rând sub grafic; botul mai vechi decât fereastra ⇒ Pionex „pe tot botul”
+  el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+(bl?'<p class="tbSub gbBilant"><b>▲▼ în fereastră:</b> '+escapeHtml(bl.text)+'</p>':'')+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
   var crY=svg.querySelector(".gbCruceY"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none"};
   var arata=function(cx,cy){
