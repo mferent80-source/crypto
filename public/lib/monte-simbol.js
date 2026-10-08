@@ -104,16 +104,16 @@ var MonteSimbol = (function () {
     var parteTp = st.tp > 0 ? (st.dir === "long" ? "sus" : st.dir === "short" ? "jos" : null) : null, opr0 = st.stop ? { jos: st.stop.jos, sus: st.stop.sus } : null;
     if (parteTp) { opr0 = opr0 || {}; opr0[parteTp] = st.tp; }
     function trece(m) {
-      var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [], tpa = 0;
+      var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [], tpa = 0, fund = 0;   // v100.136: și funding-ul
       for (var s = 0; s < n; s++) {
         var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0, tip: st.tip, fundingZi: st.fundingZi, fundingCost: st.fundingCost });   // v100.135 (revizia): tipul și funding-ul nu se mai pierd
-        cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) { if (parteTp && r.iesit === parteTp) tpa++; else opr++; } per += r.perechi || 0;
+        cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) { if (parteTp && r.iesit === parteTp) tpa++; else opr++; } per += r.perechi || 0; fund += r.funding || 0;
       }
       // v100.130: o.peDrum ⇒ rezultatele în ordinea drumurilor (variantele se compară drum cu drum, pe aceleași drumuri)
       var peDrum = o.peDrum ? net.slice() : undefined;
       net.sort(function (a, c) { return a - c; });
       return { n: n, drumuri: peDrum, zile: zile, zileIstoric: Math.floor(b15.length / BZ), p5: pc(net, 0.05), p25: pc(net, 0.25), p50: pc(net, 0.5), p75: pc(net, 0.75), p95: pc(net, 0.95),
-        pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pTp: tpa / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24),
+        pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pTp: tpa / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24), funding: fund / n * suma,
         pretMijloc: pc(cap.sort(function (a, c) { return a - c; }), 0.5) };
     }
     // mijlocul prețului de la capătul drumurilor, cu tendința m scoasă (ieftin: fără simulatorul gridului) - pentru centrare, ca la preț

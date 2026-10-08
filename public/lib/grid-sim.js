@@ -102,6 +102,14 @@ var GridSim = (function () {
     var opr = stS.stop ? { jos: stS.stop.jos, sus: stS.stop.sus } : null, parteTp = stS.tp > 0 ? (stS.dir === "long" ? "sus" : stS.dir === "short" ? "jos" : null) : null;
     if (parteTp) { opr = opr || {}; opr[parteTp] = stS.tp; }
     stS.stop = opr;
+    // v100.136: o.stPrefix = setarea botului PE prefix (gridul lui, stopul lui, ținta lui de până acum); ținta / stopul din st se aplică abia
+    // de la prima bară simulată - „schimb ținta acum” pe botul care rulează, cu pozițiile de acum (GridProba: dinBara + stopDupa)
+    var optGP = { traseu: true };
+    if (pre && o.stPrefix) {
+      var vp = tpValid(o.stPrefix, Pst), oprP = vp.st.stop ? { jos: vp.st.stop.jos, sus: vp.st.stop.sus } : null, ptP = vp.st.tp > 0 ? (vp.st.dir === "long" ? "sus" : vp.st.dir === "short" ? "jos" : null) : null;
+      if (ptP) { oprP = oprP || {}; oprP[ptP] = vp.st.tp; }
+      optGP.dinBara = pre; optGP.stopDupa = opr || {}; stS.stop = oprP;
+    }
     // fără tendința perioadei: mijlocul log al capătului drumurilor la zero (ca MonteSimbol.grid)
     var mu = tendinta(b15), m;
     { var rnd0 = M.generator(seed), v0 = []; for (var q = 0; q < n; q++) { var d0 = M.drum(b15, H, BZ, P0, rnd0, mu); v0.push(Math.log(d0[d0.length - 1].c / P0)); } v0.sort(function (a, c) { return a - c; }); m = mu + pc(v0, 0.5) / H; }
@@ -110,7 +118,7 @@ var GridSim = (function () {
     var acum = null, dejaAtins = null;
     for (var sIdx = 0; sIdx < n; sIdx++) {
       var d = M.drum(b15, H, BZ, P0, rnd, m), drumT = pre ? prefix.concat(d) : d;
-      var r = GP.simuleaza(drumT, 0, drumT.length, stS, { traseu: true }), tr = r.traseu, L = tr.net.length;
+      var r = GP.simuleaza(drumT, 0, drumT.length, stS, optGP), tr = r.traseu, L = tr.net.length;
       // „până acum” = traseul la ultima bară reală (identic pe toate drumurile); t = închiderea ei; oprit și când stopul cade chiar pe ea (revizia)
       if (pre && !acum) { var ia = Math.min(pre, L) - 1; acum = { net: tr.net[ia], usdt: tr.net[ia] * suma, bare: pre, t: prefix[prefix.length - 1].t + 9e5, perechi: tr.perechi[ia], oprit: (r.lichidat || r.oprit) && r.bare <= pre ? (r.lichidat ? "lichidat" : "oprit") : null }; }
       var iPlus = null, iMinus = null;
@@ -139,7 +147,7 @@ var GridSim = (function () {
         pLich: c.lich / n, pStop: c.stop / n, pTp: c.tp / n, pIesire: c.ies / n, perechi: c.per / n, maxJos: { p50: pc(mjs, 0.5), p5: pc(mjs, 0.05) }, funding: c.funding / n * suma };
       if (o.peDrum) out.drumuri = c.net.map(function (x) { return x * suma; });   // revizia (R3): rezultatele în ordinea drumurilor (drum cu drum)
       // revizia (R3): la botul care rulează, hotărârea lui („îl țin?”) depinde de ce URMEAZĂ ⇒ „de aici încolo” întreg: câștigă / pierde, marja, histograma
-      if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: marja(dc / n, n), hist: M.histograma(da, 24) }; }
+      if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: marja(dc / n, n), hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
       return out;
     });
     return { n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, acum: acum, orizonturi: orizonturi };
@@ -154,11 +162,14 @@ var GridSim = (function () {
     for (var i = 0; i < a.length; i++) { var dd = b[i] - a[i]; if (dd > 0.005) bun++; else if (dd < -0.005) rau++; }
     return { maiBun: bun / a.length, maiRau: rau / a.length, egal: (a.length - bun - rau) / a.length };
   }
+  // v100.136: x.dinStare + o.pornitLa (+ o.stPrefix = setarea botului de până acum) ⇒ rândul e botul CU POZIȚIILE DE ACUM, judecat „de aici
+  // încolo” (deAici); fără dinStare rândul e un bot pornit acum, de la zero (= dacă l-ai opri și ai porni varianta). Aceleași drumuri.
   function compara(b15, lista, o) {
     o = o || {}; var oriz = o.oriz > 0 ? o.oriz : 7, n = o.n > 0 ? o.n : 500;
     var rows = (Array.isArray(lista) ? lista : []).map(function (x) {
-      var r = simuleaza(b15, x.st, { zile: o.zile, orizonturi: [oriz], n: n, seed: o.seed, plan: null, pornitLa: null, peDrum: true }), z = r && !r.eroare ? r.orizonturi[0] : null;
-      var g = z ? { zile: oriz, n: n, drumuri: z.drumuri, p5: z.p5, p50: z.p50, p95: z.p95, pPlus: z.pCastig, pLichidare: z.pLich, pStop: z.pStop, pTp: z.pTp, pIesire: z.pIesire, perechiMedii: z.perechi, hist: z.hist, funding: z.funding } : { eroare: r && r.eroare || "fără date" };
+      var dinStare = !!(x.dinStare && o.pornitLa > 0);
+      var r = simuleaza(b15, x.st, { zile: o.zile, orizonturi: [oriz], n: n, seed: o.seed, plan: null, pornitLa: dinStare ? o.pornitLa : null, stPrefix: dinStare ? (o.stPrefix || x.st) : null, peDrum: true }), z = r && !r.eroare ? r.orizonturi[0] : null, da = z && dinStare && z.deAici ? z.deAici : null;
+      var g = z ? { zile: oriz, n: n, drumuri: da ? z.drumuriDeAici : z.drumuri, p5: (da || z).p5, p50: (da || z).p50, p95: (da || z).p95, pPlus: (da || z).pCastig, pLichidare: z.pLich, pStop: z.pStop, pTp: z.pTp, pIesire: z.pIesire, perechiMedii: z.perechi, hist: (da || z).hist, funding: z.funding, deAici: !!da } : { eroare: r && r.eroare || "fără date" };
       return { nume: x.nume, st: x.st, tp: x.tp, tu: x.tu, g: g };
     });
     var ref = rows.filter(function (x) { return x.tu; })[0] || rows[0];

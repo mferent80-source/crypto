@@ -4683,7 +4683,7 @@ async function incarcaBoti(cuToast=false){
   return d
 }
 var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1",TB_BOT_ALES="tabloBotAles_v1";
-var tbStare={bot:null,botBrut:null,boti:[],klinePerp:[],klineStare:"ok",
+var tbStare={bot:null,botBrut:null,boti:[],klinePerp:[],klineStare:"ok",funding:null,
   pretSpot:null,pretSpotLa:0,ws:null,wsSimbol:null,wsIncercari:0,wsTimeout:null,
   ceas:null,routeOk:null,eroare:null,eroareStatus:null,probleme:null,
   motivAlegere:null,stocareStricata:false,istoric:[]};
@@ -4782,6 +4782,13 @@ async function tbAduDate(){
     }catch(e){
       // Pastram lumanarile vechi (mai bine decat nimic), dar le marcam invechite.
       tbStare.klineStare="invechit";
+    }
+    // v100.136: ratele de funding ale monedei (o data la 30 min pe simbol; picat ⇒ peste 5 min) - KPI „din grid”: cine plateste, cat pe saptamana
+    var fu=tbStare.funding;
+    if(!fu||fu.sim!==s.pionex||Date.now()-fu.la>30*60000){
+      try{var kf=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(s.pionex));if(gen!==tbStare.gen)return;
+        tbStare.funding={sim:s.pionex,la:Date.now(),info:typeof gsRataFunding==="function"?gsRataFunding(kf&&kf.data&&kf.data.rates,Date.now()):null}}
+      catch(e){tbStare.funding={sim:s.pionex,la:Date.now()-25*60000,info:null}}
     }
     // Colectorul de fundal (alt ecran) cheama tot tbAduDate() - dar n-are
     // voie sa deschida WebSocket cand nu esti pe panou: "fara WebSocket in
@@ -6409,7 +6416,8 @@ function tbDeseneazaKpi(){
   pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?tbFormateazaSemn(100*tot/inv,2)+"% din "+inv.toFixed(2)+" investiți":"cu tot cu poziția deschisă")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):tot!==null&&tot<0&&gvc&&gvc.preaTanar?" · ritmul de recuperare se socotește după o zi de viață":""),"");
   // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): ce a adus DOAR gridul (Pionex „Grid profit”) + cat aduce o grila
   var gp=botiNr(b.gridProfitBrut),pg=typeof TabloExtra!=="undefined"?TabloExtra.profitPeGrila(b):null;
-  pune("tbKpiGrid","din grid "+(gp===null?"—":(gp>0?"+":"")+gp.toFixed(2)+" USDT")+(pg?" · pe grilă "+GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+pg.usdt.toFixed(3)+" USDT":""):""),"tbKpiGrid "+botiClasa(b.gridProfitBrut));
+  var fb=typeof TabloExtra!=="undefined"&&tbStare.funding&&tbStare.funding.info?TabloExtra.fundingBot(b,tbStare.funding.info):null;   /* v100.136: funding-ul monedei, langa grid */
+  pune("tbKpiGrid","din grid "+(gp===null?"—":(gp>0?"+":"")+gp.toFixed(2)+" USDT")+(pg?" · pe grilă "+GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+pg.usdt.toFixed(3)+" USDT":""):"")+(fb?" · "+fb.text:""),"tbKpiGrid "+botiClasa(b.gridProfitBrut));
   var dist=botiNr(b.distantaLichidarePct),dep=!!b.lichidareDepasita,parte=b.lichidarePartea==="sus"?"sus":b.lichidarePartea==="jos"?"jos":null;
   var nivel=dep||(dist!==null&&Math.abs(dist)<8)?"bad":dist!==null&&Math.abs(dist)<15?"tbWarn":dist===null?"mutedInfo":"good";
   pune("tbKpiLich",dep?"DEPĂȘITĂ":dist===null?"—":Math.abs(dist).toFixed(1)+"%",nivel);

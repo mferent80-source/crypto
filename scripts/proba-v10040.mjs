@@ -230,7 +230,7 @@ await test("🟡 „Ce ai de făcut acum”: cele mai NOI sus si dupa consilier 
 await test("🟡 Grid fara antetul vechi gol; navTo(id,true) deseneaza si ecranele din ramura fara load; citirea veche a Tabloului se anuleaza", () => {
   assert.match(app, /classList\.toggle\("peGrid",id==="gridset"\)/); assert.match(css, /body\.peGrid \.toolbar,body\.peGrid \.heroStrip,body\.peGrid \.tabs\{display:none\}/);
   assert.match(functia(app, "navTo"), /if\(!load\|\|!NAV_CU_LOAD\.has\(id\)\)\{/); assert.doesNotMatch(functia(app, "navTo"), /\} else \{/);
-  const t = functia(app, "tbAduDate"); assert.match(t, /var gen=tbStare\.gen=\(tbStare\.gen\|\|0\)\+1;/); assert.equal((t.match(/if\(gen!==tbStare\.gen\)return;/g) || []).length, 2);
+  const t = functia(app, "tbAduDate"); assert.match(t, /var gen=tbStare\.gen=\(tbStare\.gen\|\|0\)\+1;/); assert.equal((t.match(/if\(gen!==tbStare\.gen\)return;/g) || []).length, 3);   // v100.136: și la ratele de funding (a treia cerere)
 });
 
 await test("🔵 curatenie: trainTemporalModel (nechemata) scoasa; Ctrl+K are ecranele zilnice; „a” nu porneste analiza de pe ele; $ cu 2 zecimale de la $10", () => {

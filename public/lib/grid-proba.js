@@ -79,9 +79,13 @@ var GridProba = (function () {
       return rezultat({ net: real - fee, oprit: true, iesit: parte, bare: nb });
     }
     var pret = P, inauntru = true, sj = st.stop ? st.stop.jos : -Infinity, ss = st.stop ? st.stop.sus : Infinity;
+    // v100.136: opt.dinBara + opt.stopDupa ⇒ DIN bara dinBara (fata de start) stopul / tinta devin stopDupa ({jos, sus} sau {}) - tinta
+    // schimbata ACUM pe un bot care ruleaza: pe prefixul real ramane cea veche (st.stop), de la prima bara simulata vine cea noua
+    var sd = opt && opt.stopDupa !== undefined && opt.stopDupa !== null ? opt.stopDupa : null, dinBara = opt && isFinite(opt.dinBara) ? Math.max(0, opt.dinBara) : 0;
     var fin = Math.min(b.length, start + lungime);
     for (var i = start; i < fin; i++) {
       var x = b[i], drum = x.c >= x.o ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
+      if (sd && i - start === dinBara) { sj = sd.jos > 0 ? sd.jos : -Infinity; ss = sd.sus > 0 ? sd.sus : Infinity; sd = null; }   // v100.136
       // v100.134: la 8 h; v100.135: cu semn pe pozitia neta; revizia: de la bara 0 (Pionex ia la urmatoarea ora de funding: 3 plati pe zi
       // si pe orizontul de o zi); st.fundingCost (rata PRESUPUSA, nu cea reala) = cost oricare ar fi directia, pe |Ql - Qs|
       if (fundingZi && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }

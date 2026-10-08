@@ -39,6 +39,18 @@ var TabloExtra = (function () {
     return { pct: g.netPct, usdt: inv !== null && inv > 0 ? inv * lev / g.intervale * g.netPct : null, grile: g.grile, mod: g.mod };
   }
 
+  // v100.136: funding-ul monedei botului (rata pe zi cu semn: pozitiva = longul plateste, shortul incaseaza) ⇒ cine plateste si cat pe
+  // saptamana, pe pozitia deschisa (|pozitie| x pret) sau, fara ea, pe investit x levier. Neutru: depinde de pozitia neta - doar rata
+  function fundingBot(b, info) {
+    var r = info ? nr(info.rataZi) : null; if (!b || r === null) return null;
+    var pct = (r < 0 ? "−" : "") + Math.abs(r * 100).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 3 }) + "%", dir = String(b.directie || "").toLowerCase();
+    if (dir !== "long" && dir !== "short") return { text: "funding " + pct + " pe zi · pe poziția netă (long plătește, short încasează)", ton: "mutedInfo" };
+    var q = nr(b.pozitie), p = nr(b.pretCurent), inv = nr(b.investit), lev = nr(b.levier) || 1;
+    var notional = q !== null && q !== 0 && p !== null && p > 0 ? Math.abs(q) * p : inv !== null && inv > 0 ? inv * lev : null;
+    var plateste = dir === "long" ? r > 0 : r < 0, sapt = notional !== null ? Math.abs(r) * 7 * notional : null;
+    return { text: "funding " + pct + " pe zi · " + (plateste ? "plătești" : "încasezi") + (sapt !== null ? " ≈ " + sapt.toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " USDT pe săptămână" : ""), ton: plateste ? "bad" : "good" };
+  }
+
   function comparaCuFisa(b, f) {
     var out = { randuri: [], semnale: [] };
     if (!b || !f || !f.setare) return out;
@@ -667,7 +679,7 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

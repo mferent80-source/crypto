@@ -325,6 +325,9 @@ function mcsNiveluriHtml(m, u, fel) {
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(st ? mcsStopRecomandat(rows, o.H, m.stopPct, u) : mcsTintaRecomandata(rows, o.H, m.tintaPct, u)) + '</p>'
     + '<p class="tbSub">' + (st ? "Rezultatul: ieși la stop (sau la deschidere, dacă prețul sare peste el), la țintă, altfel la capăt. Toate stopurile pe aceleași drumuri, deci diferențele vin din stop, nu din noroc." : "Aceeași socoteală, cu stopul de sus fix și ținta schimbată; „drum cu drum” = în câte drumuri iese mai bine decât ținta de sus.") + '</p></div>';
 }
+// v100.136: funding-ul pe card - rata cu semn (pozitivă: longul plătește, shortul încasează) și banii pe orizont, în medie
+function mcsPctF(v) { return (v < 0 ? "−" : "") + Math.abs(v * 100).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 3 }) + "%"; }
+function mcsFundingTxt(v) { var a = Math.abs(v); return (v < 0 ? "încasat " : "") + (a < 0.05 ? "sub 0,1 USDT" : "≈ " + mcsNr(a, 1) + " USDT"); }
 function mcsGridHtml(r) {
   if (r.tip !== "coin") return '<section class="t212Panou mcsSec"><div class="t212PanouCap"><h4>🤖 Un bot grid</h4></div><p class="tbSub mcsNota">Doar la coinuri (Pionex). ' + mcsEsc(r.sim) + ' e o acțiune.</p></section>';
   var g = r.grid, st = r.setari || {};
@@ -350,6 +353,7 @@ function mcsGridHtml(r) {
     + '<div class="mcsCart"><h5>Cât de des, în ' + mcsEsc(mcsCate(g.zile, "zi", "zile")) + '</h5>'
     + mcsRand("lichidare", mcsPr(g.pLichidare), g.pLichidare > 0.02 ? "bad" : "good") + (stopV ? mcsRand("atinge stopul (" + mcsPretTxt(stopV) + ")", mcsPr(g.pStop), g.pStop > 0.5 ? "bad" : "") : "") + (st.tp > 0 ? mcsRand("atinge TP-ul (" + mcsPretTxt(st.tp) + ")", mcsPr(g.pTp)) : "")
     + mcsRand("iese măcar o dată din grid", mcsPr(g.pIesire)) + mcsRand("se închide pe plus", mcsPr(g.pPlus), g.pPlus >= 0.5 ? "good" : "bad") + mcsRand("grile încasate, în medie", mcsNr(g.perechiMedii, 1))
+    + (r.fundingInfo ? mcsRand("funding (rata reală Pionex, " + mcsPctF(r.fundingInfo.rataZi) + " pe zi, la " + r.fundingInfo.intervalOre + " h), în medie", mcsFundingTxt(g.funding || 0)) : mcsRand("fără funding (Pionex n-a dat ratele monedei)", "—"))
     + (g.cuTendinta ? '<p class="tbSub">Cu tendința perioadei păstrată: mijlocul ' + mcsBani1(g.cuTendinta.p50) + ', pe plus ' + mcsPr(g.cuTendinta.pPlus) + (stopV ? ', stopul ' + mcsPr(g.cuTendinta.pStop) : '') + '.</p>' : '')
     + '<p class="t212Fac">👉 <b>Ce înseamnă:</b> ' + mcsEsc("rezultatul obișnuit în " + mcsCate(g.zile, "zi", "zile") + " e " + mcsBani1(g.p50) + "; lichidare în " + mcsPr(g.pLichidare) + " din drumuri" + (stopV ? ", stopul atins în " + mcsPr(g.pStop) : "") + ".") + '</p></div></div>'
     + mcsVarHtml(r) + mcsTpHtml(r)
@@ -499,7 +503,9 @@ async function mcsAduCoin(sim) {
   }
   await mcsPauza(350);
   var r1 = []; try { var k1 = await getJSON(baza + "&interval=1D&limit=200"); r1 = k1 && k1.data && k1.data.klines || []; } catch (e) {}
-  return { b15: GridCalcul.bare(r15), b1: GridCalcul.bare(r1) };
+  // v100.136: ratele de funding ale monedei (la 4 h / 8 h, ~16 zile) ⇒ rata pe zi cu semn (gsRataFunding, din Simulatorul grid); lipsa = null
+  var fi = null; try { var kf = await getJSON("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(sim + "_USDT_PERP")); fi = typeof gsRataFunding === "function" ? gsRataFunding(kf && kf.data && kf.data.rates, Date.now()) : null; if (fi) fi.sim = sim; } catch (e) {}
+  return { b15: GridCalcul.bare(r15), b1: GridCalcul.bare(r1), fundingInfo: fi };
 }
 // lista Salt (ISIN ⇒ simbol Yahoo cu bursa): „RHM” ⇒ RHM.DE; adusă o dată, chiar dacă pagina Salt n-a fost deschisă
 async function mcsUnivers() {
@@ -558,7 +564,8 @@ function mcsCalculeaza(d, o) {
     if (pretMc && !pretMc.eroare) pretMc.atrPct = atrC;
     var bi = o.botIdx || 0, st = o.setari || mcsSetariBot(mcsBoti(), d.sim, bi) || mcsSetariProba(P);
     st = mcsTpValid(st, P);
-    return { sim: d.sim, tip: "coin", oriz: o.oriz, sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist,
+    st = Object.assign({}, st, { fundingZi: d.fundingInfo ? d.fundingInfo.rataZi : 0 });   // v100.136: funding-ul real al monedei, cu semn (lipsă ⇒ fără)
+    return { sim: d.sim, tip: "coin", oriz: o.oriz, sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, fundingInfo: d.fundingInfo || null, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist,
       nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : "−10% / +15% pentru un coin: schimbă-le" };
   }
   var b = d.b, Pp = b[b.length - 1].c, n = typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale.niveluri(b, Pp, {}) : null, ok = n && n.nivel === "ok";
@@ -585,7 +592,7 @@ async function mcsAnalizeaza() {
     // v100.130: felul ținut minte (recente / scurtături): „stock” nu întreabă Pionex, „coin” nu trece la Yahoo (alt instrument)
     var c = sim.indexOf(".") < 0 && !poz && forta !== "stock" ? await mcsAduCoin(sim) : null, d = null;
     var alias = mcsBoti().filter(function (b) { return mcsBotPe(b, sim); }).map(function (b) { return String(b.baza || "").replace(/\.PERP$/, "").toUpperCase(); });
-    if (c && c.b15.length) d = { tip: "coin", sim: sim, sursa: sim + "_USDT_PERP · Pionex", b15: c.b15, b1: c.b1, ist: mcsIstorieCoin(await mcsArhiva(), sim, Date.now(), alias) };
+    if (c && c.b15.length) d = { tip: "coin", sim: sim, sursa: sim + "_USDT_PERP · Pionex", b15: c.b15, b1: c.b1, fundingInfo: c.fundingInfo || null, ist: mcsIstorieCoin(await mcsArhiva(), sim, Date.now(), alias) };
     else if (forta === "coin") throw new Error("Nu găsesc „" + sim + "” pe Pionex (" + sim + "_USDT_PERP) acum. L-ai analizat înainte ca monedă; ca acțiune scrie-l în câmp și apasă „Analizează”.");
     else {
       var s = await mcsAduStock(sim, !!poz || forta === "stock"); if (!s) throw new Error("Nu găsesc „" + sim + "”: nici ca monedă pe Pionex (" + sim + "_USDT_PERP), nici ca acțiune la Yahoo (cu cel puțin 60 de zile). La acțiunile din afara SUA scrie și bursa: RHM.DE, ULVR.L.");
