@@ -104,11 +104,11 @@ var GridSim = (function () {
     stS.stop = opr;
     // v100.136: o.stPrefix = setarea botului PE prefix (gridul lui, stopul lui, ținta lui de până acum); ținta / stopul din st se aplică abia
     // de la prima bară simulată - „schimb ținta acum” pe botul care rulează, cu pozițiile de acum (GridProba: dinBara + stopDupa)
-    var optGP = { traseu: true };
+    var optGP = { traseu: true }, tpIgnoratPrefix = null;
     if (pre && o.stPrefix) {
       var vp = tpValid(o.stPrefix, Pst), oprP = vp.st.stop ? { jos: vp.st.stop.jos, sus: vp.st.stop.sus } : null, ptP = vp.st.tp > 0 ? (vp.st.dir === "long" ? "sus" : vp.st.dir === "short" ? "jos" : null) : null;
       if (ptP) { oprP = oprP || {}; oprP[ptP] = vp.st.tp; }
-      optGP.dinBara = pre; optGP.stopDupa = opr || {}; stS.stop = oprP;
+      optGP.dinBara = pre; optGP.stopDupa = opr || {}; stS.stop = oprP; tpIgnoratPrefix = vp.ignorat || null;   // revizia (I2): spus, nu tăcut
     }
     // fără tendința perioadei: mijlocul log al capătului drumurilor la zero (ca MonteSimbol.grid)
     var mu = tendinta(b15), m;
@@ -150,7 +150,7 @@ var GridSim = (function () {
       if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: marja(dc / n, n), hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
       return out;
     });
-    return { n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, acum: acum, orizonturi: orizonturi };
+    return { n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, orizonturi: orizonturi };
   }
 
   // revizia (R3): alte setări pe ACELEAȘI drumuri, cu ACELAȘI motor ca verdictul (14 zile, sămânța 12, fără prefix = bot pornit acum) ⇒ rândul
@@ -164,17 +164,33 @@ var GridSim = (function () {
   }
   // v100.136: x.dinStare + o.pornitLa (+ o.stPrefix = setarea botului de până acum) ⇒ rândul e botul CU POZIȚIILE DE ACUM, judecat „de aici
   // încolo” (deAici); fără dinStare rândul e un bot pornit acum, de la zero (= dacă l-ai opri și ai porni varianta). Aceleași drumuri.
+  // revizia (I5): o.orizonturi = toate orizonturile dintr-o singură simulare pe rând (gOriz / drumOriz), g și drum = cele pe o.oriz; comparaLa
+  // le citește pe altul fără recalcul. Revizia (I1): botul oprit / lichidat deja pe drumul real ⇒ eroare pe nume, nu zerouri „câștigate”
   function compara(b15, lista, o) {
-    o = o || {}; var oriz = o.oriz > 0 ? o.oriz : 7, n = o.n > 0 ? o.n : 500;
+    o = o || {}; var oriz = o.oriz > 0 ? o.oriz : 7, n = o.n > 0 ? o.n : 500, orizs = Array.isArray(o.orizonturi) && o.orizonturi.length ? o.orizonturi.slice() : [oriz];
+    if (orizs.indexOf(oriz) < 0) orizs.push(oriz);
     var rows = (Array.isArray(lista) ? lista : []).map(function (x) {
       var dinStare = !!(x.dinStare && o.pornitLa > 0);
-      var r = simuleaza(b15, x.st, { zile: o.zile, orizonturi: [oriz], n: n, seed: o.seed, plan: null, pornitLa: dinStare ? o.pornitLa : null, stPrefix: dinStare ? (o.stPrefix || x.st) : null, peDrum: true }), z = r && !r.eroare ? r.orizonturi[0] : null, da = z && dinStare && z.deAici ? z.deAici : null;
-      var g = z ? { zile: oriz, n: n, drumuri: da ? z.drumuriDeAici : z.drumuri, p5: (da || z).p5, p50: (da || z).p50, p95: (da || z).p95, pPlus: (da || z).pCastig, pLichidare: z.pLich, pStop: z.pStop, pTp: z.pTp, pIesire: z.pIesire, perechiMedii: z.perechi, hist: (da || z).hist, funding: z.funding, deAici: !!da } : { eroare: r && r.eroare || "fără date" };
-      return { nume: x.nume, st: x.st, tp: x.tp, tu: x.tu, g: g };
+      var r = simuleaza(b15, x.st, { zile: o.zile, orizonturi: orizs, n: n, seed: o.seed, plan: null, pornitLa: dinStare ? o.pornitLa : null, stPrefix: dinStare ? (o.stPrefix || x.st) : null, peDrum: true });
+      var er = !r ? "fără date" : r.eroare ? r.eroare : dinStare && r.acum && r.acum.oprit ? "botul s-ar fi " + (r.acum.oprit === "lichidat" ? "lichidat" : "oprit") + " deja pe drumul real: setările de aici nu se potrivesc cu botul din Pionex - verifică-le" : null;
+      var gOriz = {};
+      orizs.forEach(function (zz, k) {
+        if (er) { gOriz[zz] = { eroare: er }; return; }
+        var z = r.orizonturi[k], da = dinStare && z.deAici ? z.deAici : null;
+        gOriz[zz] = { zile: zz, n: n, drumuri: da ? z.drumuriDeAici : z.drumuri, p5: (da || z).p5, p50: (da || z).p50, p95: (da || z).p95, pPlus: (da || z).pCastig, pLichidare: z.pLich, pStop: z.pStop, pTp: z.pTp, pIesire: z.pIesire, perechiMedii: z.perechi, hist: (da || z).hist, funding: z.funding, deAici: !!da };
+      });
+      return { nume: x.nume, st: x.st, tp: x.tp, tu: x.tu, gOriz: gOriz, g: gOriz[oriz] };
     });
     var ref = rows.filter(function (x) { return x.tu; })[0] || rows[0];
-    rows.forEach(function (x) { x.drum = x === ref || !ref || !ref.g.drumuri || x.g.eroare ? null : drumCuDrum(ref.g.drumuri, x.g.drumuri); });
+    rows.forEach(function (x) {
+      x.drumOriz = {};
+      orizs.forEach(function (zz) { var a = ref && ref.gOriz[zz], b = x.gOriz[zz]; x.drumOriz[zz] = x === ref || !a || !a.drumuri || b.eroare ? null : drumCuDrum(a.drumuri, b.drumuri); });
+      x.drum = x.drumOriz[oriz];
+    });
     return rows;
+  }
+  function comparaLa(rows, zile) {
+    return (Array.isArray(rows) ? rows : []).map(function (x) { return x.gOriz && x.gOriz[zile] ? Object.assign({}, x, { g: x.gOriz[zile], drum: x.drumOriz ? x.drumOriz[zile] : x.drum }) : x; });
   }
 
   // ---------------- (3) verdictul ----------------
@@ -204,6 +220,6 @@ var GridSim = (function () {
     return { rand: rand, marja: mj > 0 ? "±" + mj + " puncte" : "sub ±1 punct", culoare: P >= 55 ? "good" : P <= 45 ? "bad" : "mijl", sub: sub, faCe: faCe, deAici: !!d,
       nota: "Pe istoria monedei reluată, fără tendința perioadei; o criză mai rea decât orice a avut nu apare în drumuri. Umplerile sunt estimate pe bare, nu pe ordinele reale." };
   }
-  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, verdict: verdict, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
+  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

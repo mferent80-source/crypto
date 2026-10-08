@@ -138,7 +138,8 @@ function mcsDrumCuDrum(a, b) {
 // „ce aș face eu”: alta doar dacă e mai bună cu cel puțin 1 USDT și 2% din sumă (sub atât e zgomot), fără lichidare peste 2%
 // revizia (R1): ȘI coada de jos (5%) nu mai rea, ȘI pe plus cel puțin la fel de des - altfel e doar un pariu mai mare (levierul umflă și câștigul, și pierderea)
 function mcsVariantaBuna(rows) {
-  var b = rows[0], prag = Math.max(1, 0.02 * (Number(b.st && b.st.suma) || 0));
+  var b = rows[0], prag = Math.max(1, 0.02 * (Number(b && b.st && b.st.suma) || 0));
+  if (!b || !b.g || b.g.eroare) return "Nu pot compara: " + (b && b.g && b.g.eroare || "botul n-are rezultat pe drumurile astea.");   // revizia (I1): nu pe zerouri
   // v100.130: ȘI mai bună decât a ta în mai multe drumuri decât mai rea (altfel mijlocul mai bun vine din câteva drumuri norocoase)
   var bune = rows.slice(1).filter(function (x) { return x.g && !x.g.eroare && x.g.pLichidare <= 0.02 && x.g.p50 - b.g.p50 >= prag && !(x.g.p5 < b.g.p5) && !(x.g.pPlus < b.g.pPlus) && !(x.drum && x.drum.maiBun <= x.drum.maiRau); }).sort(function (x, y) { return y.g.p50 - x.g.p50; });
   // mijloacele la fel în limita pragului (zgomot) ⇒ câștigă cea mai bună drum cu drum (PONS 07.10: ½ grile, mai bună în 99%, față de levier −1, în 72%)
@@ -205,7 +206,7 @@ function mcsTpHtml(r, act) {
       var g = x.g || {}, er = !x.g || g.eroare, dd = x.drum;
       var dc = x.tu || !dd ? '<td class="tbSub">—</td>' : '<td class="' + (dd.maiBun > dd.maiRau ? "good" : dd.maiRau > dd.maiBun ? "bad" : "") + '">mai bun în ' + mcsPr(dd.maiBun) + '<span class="t212Mic">mai rău în ' + mcsPr(dd.maiRau) + '</span></td>';
       return '<tr' + (x.tu ? ' class="mcsVarTu"' : '') + '><td>' + mcsEsc(x.tp === null ? "fără TP" : mcsPretTxt(x.tp)) + '<span class="t212Mic">' + mcsEsc(x.tu ? "al tău" : x.nume) + '</span></td>'
-        + (er ? '<td colspan="7" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (x.tp === null ? "—" : mcsPr(g.pTp)) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (g.pLichidare > 0.02 ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '</tr>';
+        + (er ? '<td colspan="7" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + (g.deAici ? '<span class="t212Mic">de aici încolo</span>' : '') + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (x.tp === null ? "—" : mcsPr(g.pTp)) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (g.pLichidare > 0.02 ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '</tr>';
     }).join("") + '</tbody></table></div>'
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(mcsTpRecomandat(rows, st.suma)) + '</p>'
     + '<p class="tbSub">Același bot, aceleași drumuri; se schimbă doar TP-ul (botul se închide când prețul îl atinge). În Pionex: „Take profit” la prețul de mai sus.</p></div>';
@@ -353,7 +354,7 @@ function mcsGridHtml(r) {
     + '<div class="mcsCart"><h5>Cât de des, în ' + mcsEsc(mcsCate(g.zile, "zi", "zile")) + '</h5>'
     + mcsRand("lichidare", mcsPr(g.pLichidare), g.pLichidare > 0.02 ? "bad" : "good") + (stopV ? mcsRand("atinge stopul (" + mcsPretTxt(stopV) + ")", mcsPr(g.pStop), g.pStop > 0.5 ? "bad" : "") : "") + (st.tp > 0 ? mcsRand("atinge TP-ul (" + mcsPretTxt(st.tp) + ")", mcsPr(g.pTp)) : "")
     + mcsRand("iese măcar o dată din grid", mcsPr(g.pIesire)) + mcsRand("se închide pe plus", mcsPr(g.pPlus), g.pPlus >= 0.5 ? "good" : "bad") + mcsRand("grile încasate, în medie", mcsNr(g.perechiMedii, 1))
-    + (r.fundingInfo ? mcsRand("funding (rata reală Pionex, " + mcsPctF(r.fundingInfo.rataZi) + " pe zi, la " + r.fundingInfo.intervalOre + " h), în medie", mcsFundingTxt(g.funding || 0)) : mcsRand("fără funding (Pionex n-a dat ratele monedei)", "—"))
+    + (r.fundingInfo ? mcsRand("funding (rata reală Pionex, " + mcsPctF(r.fundingInfo.rataZi) + " pe zi, la " + mcsNr(r.fundingInfo.intervalOre, r.fundingInfo.intervalOre % 1 ? 1 : 0) + " h), în medie", mcsFundingTxt(g.funding || 0)) : mcsRand("funding (cost fix presupus, 0,03% pe zi, plătit oricare ar fi direcția - Pionex n-a dat ratele monedei), în medie", mcsFundingTxt(g.funding || 0)))
     + (g.cuTendinta ? '<p class="tbSub">Cu tendința perioadei păstrată: mijlocul ' + mcsBani1(g.cuTendinta.p50) + ', pe plus ' + mcsPr(g.cuTendinta.pPlus) + (stopV ? ', stopul ' + mcsPr(g.cuTendinta.pStop) : '') + '.</p>' : '')
     + '<p class="t212Fac">👉 <b>Ce înseamnă:</b> ' + mcsEsc("rezultatul obișnuit în " + mcsCate(g.zile, "zi", "zile") + " e " + mcsBani1(g.p50) + "; lichidare în " + mcsPr(g.pLichidare) + " din drumuri" + (stopV ? ", stopul atins în " + mcsPr(g.pStop) : "") + ".") + '</p></div></div>'
     + mcsVarHtml(r) + mcsTpHtml(r)
@@ -372,7 +373,7 @@ function mcsVarHtml(r, act, zile) {
       // v100.130: față de al tău pe fiecare drum; verde doar când e mai bun în mai multe drumuri decât mai rău
       var dc = i === 0 ? '<td class="tbSub">al tău</td>' : dd ? '<td class="' + (dd.maiBun > dd.maiRau ? "good" : dd.maiRau > dd.maiBun ? "bad" : "") + '">mai bună în ' + mcsPr(dd.maiBun) + '<span class="t212Mic">mai rea în ' + mcsPr(dd.maiRau) + '</span></td>' : '<td class="tbSub">—</td>';
       return '<tr' + (i === 0 ? ' class="mcsVarTu"' : '') + '><td>' + mcsEsc(x.nume) + '</td>'
-        + (er ? '<td colspan="6" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (g.pLichidare > 0.02 ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '<td>' + mcsEsc(mcsPretTxt(st.jos) + "–" + mcsPretTxt(st.sus) + " · " + mcsCate(st.grile, "grilă", "grile") + " · " + st.levier + "×") + '</td>' + '</tr>';
+        + (er ? '<td colspan="6" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + (g.deAici ? '<span class="t212Mic">de aici încolo</span>' : '') + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (g.pLichidare > 0.02 ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '<td>' + mcsEsc(mcsPretTxt(st.jos) + "–" + mcsPretTxt(st.sus) + " · " + mcsCate(st.grile, "grilă", "grile") + " · " + st.levier + "×") + '</td>' + '</tr>';
     }).join("") + '</tbody></table></div>'
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(mcsVariantaBuna(rows)) + '</p>'
     + '<p class="tbSub">Toate pe aceleași drumuri (aceeași sămânță), din același istoric scurt: o diferență mică între rânduri e zgomot; mai multe variante vecine care merg în aceeași direcție spun mai mult decât una singură. În Pionex, la grile scrii N+1 linii.</p></div>';
@@ -504,6 +505,7 @@ async function mcsAduCoin(sim) {
   await mcsPauza(350);
   var r1 = []; try { var k1 = await getJSON(baza + "&interval=1D&limit=200"); r1 = k1 && k1.data && k1.data.klines || []; } catch (e) {}
   // v100.136: ratele de funding ale monedei (la 4 h / 8 h, ~16 zile) ⇒ rata pe zi cu semn (gsRataFunding, din Simulatorul grid); lipsa = null
+  await mcsPauza(350);
   var fi = null; try { var kf = await getJSON("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(sim + "_USDT_PERP")); fi = typeof gsRataFunding === "function" ? gsRataFunding(kf && kf.data && kf.data.rates, Date.now()) : null; if (fi) fi.sim = sim; } catch (e) {}
   return { b15: GridCalcul.bare(r15), b1: GridCalcul.bare(r1), fundingInfo: fi };
 }
@@ -564,7 +566,7 @@ function mcsCalculeaza(d, o) {
     if (pretMc && !pretMc.eroare) pretMc.atrPct = atrC;
     var bi = o.botIdx || 0, st = o.setari || mcsSetariBot(mcsBoti(), d.sim, bi) || mcsSetariProba(P);
     st = mcsTpValid(st, P);
-    st = Object.assign({}, st, { fundingZi: d.fundingInfo ? d.fundingInfo.rataZi : 0 });   // v100.136: funding-ul real al monedei, cu semn (lipsă ⇒ fără)
+    st = Object.assign({}, st, { fundingZi: d.fundingInfo ? d.fundingInfo.rataZi : 0.0003, fundingCost: !d.fundingInfo });   // v100.136: funding-ul real al monedei, cu semn; lipsă ⇒ costul fix presupus, ca Simulatorul (revizia I6)
     return { sim: d.sim, tip: "coin", oriz: o.oriz, sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, fundingInfo: d.fundingInfo || null, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist,
       nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : "−10% / +15% pentru un coin: schimbă-le" };
   }

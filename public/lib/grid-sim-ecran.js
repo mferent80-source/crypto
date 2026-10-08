@@ -6,7 +6,7 @@
 var gsStare = { mod: "nou", botIdx: 0, boti: [], sim: "", st: { jos: null, sus: null, grile: 20, levier: 2, dir: "long", suma: 50, stop: null, tp: null, tip: "geometric" }, plan: { minus: null, plus: null }, fundingZi: 0.0003, pornitLa: null, tpAprox: false, bot: null, rez: null, oriz: 2, inLucru: false, eroare: null, cod: "", codEroare: null, pret: null, date: null, dateLa: 0,
   variante: null, varianteInLucru: false, varianteEroare: null, tinteBot: null, tinteBotInLucru: false, tinteBotEroare: null,   // v100.135: alte setări pe aceleași drumuri
   fundingSursa: null, fundingInfo: null, fundingSim: null, dupa: null,
-  varianteZile: null, tinteBotZile: null };   // v100.136: orizontul pe care s-au calculat comparațiile   // dupa (revizia R9): ce s-a cerut în timpul unei simulări   // v100.135: funding-ul real Pionex (null = cost fix presupus, "pionex", "manual")
+  varianteZile: null, tinteBotZile: null, varianteToate: null, tinteBotToate: null };   // v100.136: orizontul citit + toate orizonturile calculate (revizia I5)   // dupa (revizia R9): ce s-a cerut în timpul unei simulări   // v100.135: funding-ul real Pionex (null = cost fix presupus, "pionex", "manual")
 var GS_ORIZ = [1, 3, 7, 14];
 function gsNr(v, z) { return Number(v).toLocaleString("ro-RO", { minimumFractionDigits: z, maximumFractionDigits: z }); }
 function gsCate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -77,7 +77,7 @@ function gsFormHtml(s) {
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="gsSimuleaza()">Simulează</button></div>';
   // revizia (R2/R4/R7): moneda ratei, „veche” când Pionex n-are rate din ultimele 7 zile, cine plătește după SEMN; costul presupus e cost oricare ar fi direcția
   var fi = s.fundingInfo, semn = function (v) { return v < 0 ? "short plătește, long încasează" : "long plătește, short încasează"; };
-  var fnot = s.fundingSursa === "pionex" && fi ? "funding-ul real Pionex (" + (fi.sim || s.sim) + "): " + gsPctF(fi.rataZi) + " pe zi (" + (fi.veche ? "rată veche, ultima de pe " + gsDataTxt(fi.ultimaLa) : "media ultimelor " + gsCate(fi.zile, "zi", "zile") + ", la " + fi.intervalOre + " h") + ") · " + semn(fi.rataZi)
+  var fnot = s.fundingSursa === "pionex" && fi ? "funding-ul real Pionex (" + (fi.sim || s.sim) + "): " + gsPctF(fi.rataZi) + " pe zi (" + (fi.veche ? "rată veche, ultima de pe " + gsDataTxt(fi.ultimaLa) : "media ultimelor " + gsCate(fi.zile, "zi", "zile") + ", la " + gsNr(fi.intervalOre, fi.intervalOre % 1 ? 1 : 0) + " h") + ") · " + semn(fi.rataZi)
     : s.fundingSursa === "manual" ? "funding scris de tine · " + semn(s.fundingZi)
     : "funding: cost fix presupus (" + gsPctF(s.fundingZi || 0) + " pe zi, plătit oricare ar fi direcția) până la prima simulare, apoi rata reală Pionex a monedei";
   h += '<p class="tbSub gsNota">' + mcsEsc(fnot) + '</p>';
@@ -128,6 +128,8 @@ function gsBotulMeuHtml(s) {
   var o = r.orizonturi[s.oriz] || r.orizonturi[2], b = s.bot || {}, pn = b.profitNet, plan = gsPlanOk(s.plan) ? s.plan : null;
   var h = '<p class="gsNota">reluat pe barele reale de la ' + mcsEsc(gsData(s.pornitLa)) + ' până la ' + mcsEsc(gsData(a.t)) + ': <b>' + mcsEsc(GridSim.bani1(a.usdt)) + '</b> estimat' + (pn !== null && pn !== undefined && isFinite(pn) ? '; Pionex spune <b>' + mcsEsc(GridSim.bani1(pn)) + '</b>' : '') + ' (umplerile sunt estimate pe bare, nu pe ordinele reale)'
     + ' · ' + mcsEsc(gsCate(a.perechi, "grilă încasată", "grile încasate")) + (isFinite(b.pozitie) && b.pozitie ? ' · poziția ' + mcsEsc(gsNr(Math.abs(b.pozitie), Math.abs(b.pozitie) < 10 ? 4 : 0) + " " + (s.sim || "")) : '') + (a.oprit ? ' · <b class="bad">botul ar fi fost ' + (a.oprit === "lichidat" ? "lichidat" : "oprit") + ' pe drumul real</b>' : '') + '</p>';
+  // revizia (I2): ținta de partea greșită a prețului DE LA PORNIRE nu se pune pe reluare - se spune, nu se tace
+  if (r.tpIgnoratPrefix > 0) h += '<p class="tbWarn gsNota">' + mcsEsc("ținta (" + mcsPretTxt(r.tpIgnoratPrefix) + ") era de partea greșită a prețului la pornire: pe reluare n-o pun" + (r.tpIgnorat > 0 ? "; nici de aici încolo: e de partea greșită și față de prețul de acum" : ", de aici încolo da") + ".") + '</p>';
   if (o.plan && o.plan.dejaAtins && plan) h += '<p class="t212Fac">planul tău (' + (o.plan.dejaAtins === "plus" ? "+" + gsNr(plan.plus, 1) + ") e deja atins: încasează" : "−" + gsNr(plan.minus, 1) + ") e deja atins: ieși") + ', cum ți-ai propus.</p>';
   if (o.deAici) h += '<p class="gsNota">de aici încolo, în ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + ': câștigă în ' + mcsEsc(GridSim.pr(o.deAici.pCastig)) + ' din drumuri, de obicei ' + mcsEsc(GridSim.bani1(o.deAici.p50)) + ' (5% sub ' + mcsEsc(gsSemn1(o.deAici.p5)) + ', 5% peste ' + mcsEsc(gsSemn1(o.deAici.p95)) + ').</p>';
   return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>🤖 Botul meu, de la pornire</h4><span class="tbSub">Pionex nu dă ce ține botul pe fiecare grilă: e reluarea, nu starea reală</span></div>' + h + '</section>';
@@ -137,7 +139,7 @@ function gsAlteSetariHtml(s) {
   var st = s.st; if (!st || !(st.jos > 0)) return "";
   var zile = GS_ORIZ[s.oriz >= 0 && s.oriz < GS_ORIZ.length ? s.oriz : 2], rv = { setari: st, variante: s.variante, varianteInLucru: s.varianteInLucru, varianteEroare: s.varianteEroare, tinteBot: s.tinteBot, tinteBotInLucru: s.tinteBotInLucru, tinteBotEroare: s.tinteBotEroare };
   // v100.136: la botul care rulează „așa cum e” și țintele pornesc din pozițiile de acum; titlul variantelor spune orizontul CALCULAT
-  var nota = "variantele și țintele (TP) de pe pagina Monte Carlo, pe " + gsCate(zile, "zi", "zile") + (s.rez && s.rez.acum ? " · „așa cum e” și țintele: botul tău cu pozițiile de acum, de aici încolo · celelalte variante: pornite acum, de la zero (ca și cum l-ai opri și ai porni varianta)" : "");
+  var nota = "variantele și țintele (TP) de pe pagina Monte Carlo, pe " + gsCate(zile, "zi", "zile") + (s.rez && s.rez.acum ? " · „așa cum e” și țintele: botul tău cu pozițiile de acum, de aici încolo · celelalte variante: pornite acum, de la zero, cu aceeași sumă ca a ta (ca și cum l-ai opri și ai porni varianta)" : "");
   return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>🧪 Alte setări, pe aceleași drumuri</h4><span class="tbSub">' + mcsEsc(nota) + '</span></div>'
     + mcsVarHtml(rv, "gsCompara()", s.varianteZile || zile) + mcsTpHtml(rv, "gsComparaTp()") + '</section>';
 }
@@ -225,7 +227,7 @@ async function gsSimuleaza() {
   if (gsStare.inLucru) return;
   var er = gsCiteste(false); if (er) { gsStare.eroare = er; gsStare.rez = null; gsDeseneaza(); return; }
   gsStare.inLucru = true; gsStare.eroare = null; gsStare.rez = null;
-  gsStare.variante = null; gsStare.varianteEroare = null; gsStare.tinteBot = null; gsStare.tinteBotEroare = null;   // v100.135: altă simulare ⇒ comparațiile de la capăt
+  gsStare.variante = null; gsStare.varianteEroare = null; gsStare.tinteBot = null; gsStare.tinteBotEroare = null; gsStare.varianteToate = null; gsStare.tinteBotToate = null;   // v100.135: altă simulare ⇒ comparațiile de la capăt
   gsDeseneaza();
   try {
     var sim = gsStare.sim;
@@ -237,7 +239,7 @@ async function gsSimuleaza() {
     if (gsStare.fundingSursa !== "manual" && gsStare.fundingSim !== sim) gsPuneFunding(sim, gsStare.date.fundingInfo);   // v100.136: rata reală vine cu barele (o singură cerere)
     await new Promise(function (r) { setTimeout(r, 30); });   // „calculez…” apare înainte de calcul
     var st = Object.assign({}, gsStare.st, { fundingZi: gsStare.fundingZi, fundingCost: gsStare.fundingSursa !== "pionex" && gsStare.fundingSursa !== "manual" });   // revizia (R4): rata presupusă = cost
-    var rez = GridSim.simuleaza(gsStare.date.b15, st, { plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, pornitLa: gsStare.mod === "meu" ? gsStare.pornitLa : null, n: 500, seed: 12, orizonturi: GS_ORIZ, zile: 14 });
+    var rez = GridSim.simuleaza(gsStare.date.b15, st, { plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, pornitLa: gsStare.mod === "meu" ? gsStare.pornitLa : null, stPrefix: gsStare.mod === "meu" ? st : null, n: 500, seed: 12, orizonturi: GS_ORIZ, zile: 14 });   // revizia (I2): ținta de pe prefix cu aceeași regulă ca rândul 0
     if (rez.eroare) throw new Error(rez.eroare);
     gsStare.rez = rez;
   } catch (e) { gsStare.eroare = e && e.message || String(e); }
@@ -264,9 +266,9 @@ function gsCompara() {
   var st = gsStCuFunding(), zile = GS_ORIZ[gsStare.oriz] || 7, meu = gsMeu(), lista = mcsVariante(st);
   if (meu) lista[0].dinStare = true;
   setTimeout(function () {
-    try { gsStare.variante = GridSim.compara(d.b15, lista, { n: 500, seed: 12, zile: 14, oriz: zile, pornitLa: meu ? gsStare.pornitLa : null, stPrefix: st }); gsStare.varianteZile = zile; gsStare.varianteEroare = null; } catch (e) { gsStare.variante = null; gsStare.varianteEroare = "Variantele n-au mers: " + (e && e.message || e); }
+    // revizia (I5): toate orizonturile dintr-un calcul; se citește cel ales ACUM (dacă s-a schimbat cât calculam, tot fără recalcul)
+    try { var z0 = GS_ORIZ[gsStare.oriz] || zile; gsStare.varianteToate = GridSim.compara(d.b15, lista, { n: 500, seed: 12, zile: 14, oriz: z0, orizonturi: GS_ORIZ, pornitLa: meu ? gsStare.pornitLa : null, stPrefix: st }); gsStare.variante = GridSim.comparaLa(gsStare.varianteToate, z0); gsStare.varianteZile = z0; gsStare.varianteEroare = null; } catch (e) { gsStare.variante = null; gsStare.varianteToate = null; gsStare.varianteEroare = "Variantele n-au mers: " + (e && e.message || e); }
     gsStare.varianteInLucru = false; gsDeseneaza();
-    if (gsStare.variante && gsStare.rez && GS_ORIZ[gsStare.oriz] !== zile) gsCompara();   // v100.136: orizontul s-a schimbat cât calculam
   }, 30);
 }
 function gsComparaTp() {
@@ -277,9 +279,8 @@ function gsComparaTp() {
   // v100.136: ținta se schimbă pe botul care rulează ⇒ toate rândurile cu pozițiile de acum (ținta nouă abia de acum, pe prefix cea veche)
   var lista = mcsTinteBot(st, P).map(function (x) { return { nume: x.nume, tp: x.tp, tu: x.tu, dinStare: meu, st: Object.assign({}, st, { tp: x.tp }) }; });
   setTimeout(function () {
-    try { gsStare.tinteBot = GridSim.compara(d.b15, lista, { n: 500, seed: 12, zile: 14, oriz: zile, pornitLa: meu ? gsStare.pornitLa : null, stPrefix: st }); gsStare.tinteBotZile = zile; gsStare.tinteBotEroare = null; } catch (e) { gsStare.tinteBot = null; gsStare.tinteBotEroare = "Țintele n-au mers: " + (e && e.message || e); }
+    try { var z0 = GS_ORIZ[gsStare.oriz] || zile; gsStare.tinteBotToate = GridSim.compara(d.b15, lista, { n: 500, seed: 12, zile: 14, oriz: z0, orizonturi: GS_ORIZ, pornitLa: meu ? gsStare.pornitLa : null, stPrefix: st }); gsStare.tinteBot = GridSim.comparaLa(gsStare.tinteBotToate, z0); gsStare.tinteBotZile = z0; gsStare.tinteBotEroare = null; } catch (e) { gsStare.tinteBot = null; gsStare.tinteBotToate = null; gsStare.tinteBotEroare = "Țintele n-au mers: " + (e && e.message || e); }
     gsStare.tinteBotInLucru = false; gsDeseneaza();
-    if (gsStare.tinteBot && gsStare.rez && GS_ORIZ[gsStare.oriz] !== zile) gsComparaTp();   // v100.136: orizontul s-a schimbat cât calculam
   }, 30);
 }
 // v100.135: din Tablou („⚄ Simulează”): pagina pe botul ales acolo - dacă e activ, ca „Botul meu”; altfel (oprit) ca bot nou cu setările lui
@@ -293,9 +294,12 @@ function gsDeschideBot() {
   gsSimuleaza();
 }
 function gsOriz(i) {
-  gsCiteste(true); gsStare.oriz = Number(i) >= 0 && Number(i) < GS_ORIZ.length ? Number(i) : 2; gsDeseneaza();
-  // v100.136: comparațiile deja făcute se refac pe orizontul nou (până atunci titlul lor spune orizontul calculat)
-  var z = GS_ORIZ[gsStare.oriz]; if (gsStare.variante && gsStare.varianteZile !== z) gsCompara(); if (gsStare.tinteBot && gsStare.tinteBotZile !== z) gsComparaTp();
+  gsCiteste(true); gsStare.oriz = Number(i) >= 0 && Number(i) < GS_ORIZ.length ? Number(i) : 2;
+  // v100.136 (revizia I5): comparațiile sunt calculate pe toate orizonturile - aici doar se citește cel ales, fără recalcul (era 1-2 s pe clic)
+  var z = GS_ORIZ[gsStare.oriz];
+  if (gsStare.varianteToate) { gsStare.variante = GridSim.comparaLa(gsStare.varianteToate, z); gsStare.varianteZile = z; }
+  if (gsStare.tinteBotToate) { gsStare.tinteBot = GridSim.comparaLa(gsStare.tinteBotToate, z); gsStare.tinteBotZile = z; }
+  gsDeseneaza();
 }
 // revizia (R5): codul copiat = câmpurile de ACUM (nu setarea de la ultima simulare)
 function gsCopiazaCod() {

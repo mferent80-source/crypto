@@ -41,14 +41,19 @@ var TabloExtra = (function () {
 
   // v100.136: funding-ul monedei botului (rata pe zi cu semn: pozitiva = longul plateste, shortul incaseaza) ⇒ cine plateste si cat pe
   // saptamana, pe pozitia deschisa (|pozitie| x pret) sau, fara ea, pe investit x levier. Neutru: depinde de pozitia neta - doar rata
+  // revizia (I4): pozitia ZERO = fara funding acum (nu investit x levier); rata 0 spusa; sub 0,05 USDT „sub 0,1”; rata veche spusa
   function fundingBot(b, info) {
     var r = info ? nr(info.rataZi) : null; if (!b || r === null) return null;
+    if (r === 0) return { text: "fără funding acum (rata 0)", ton: "mutedInfo" };
     var pct = (r < 0 ? "−" : "") + Math.abs(r * 100).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 3 }) + "%", dir = String(b.directie || "").toLowerCase();
-    if (dir !== "long" && dir !== "short") return { text: "funding " + pct + " pe zi · pe poziția netă (long plătește, short încasează)", ton: "mutedInfo" };
-    var q = nr(b.pozitie), p = nr(b.pretCurent), inv = nr(b.investit), lev = nr(b.levier) || 1;
-    var notional = q !== null && q !== 0 && p !== null && p > 0 ? Math.abs(q) * p : inv !== null && inv > 0 ? inv * lev : null;
-    var plateste = dir === "long" ? r > 0 : r < 0, sapt = notional !== null ? Math.abs(r) * 7 * notional : null;
-    return { text: "funding " + pct + " pe zi · " + (plateste ? "plătești" : "încasezi") + (sapt !== null ? " ≈ " + sapt.toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " USDT pe săptămână" : ""), ton: plateste ? "bad" : "good" };
+    var cap = "funding " + pct + " pe zi, " + (info.veche ? "rată veche" : "media 7 zile");
+    if (dir !== "long" && dir !== "short") return { text: cap + " · pe poziția netă (long plătește, short încasează)", ton: "mutedInfo" };
+    var q = nr(b.pozitie), p = nr(b.pretCurent), inv = nr(b.investit), lev = nr(b.levier) || 1, plateste = dir === "long" ? r > 0 : r < 0;
+    if (q === 0) return { text: cap + " · fără poziție deschisă: nu " + (plateste ? "plătești" : "încasezi") + " funding acum", ton: "mutedInfo" };
+    var notional = q !== null && p !== null && p > 0 ? Math.abs(q) * p : q === null && inv !== null && inv > 0 ? inv * lev : null;
+    var sapt = notional !== null ? Math.abs(r) * 7 * notional : null;
+    var bani = sapt === null ? "" : sapt < 0.05 ? " sub 0,1 USDT pe săptămână" : " ≈ " + sapt.toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " USDT pe săptămână";
+    return { text: cap + " · " + (plateste ? "plătești" : "încasezi") + bani, ton: plateste ? "bad" : "good" };
   }
 
   function comparaCuFisa(b, f) {
