@@ -6875,8 +6875,8 @@ function renderTabloGrafic(){
   var ult=oG.alerte.slice().sort(function(x,y){return y.t-x.t}).slice(0,3),Cn={critic:"bad",atentie:"neutral",info:"mutedInfo"};
   var ultHtml=ult.length?'<div class="gbUlt">'+ult.map(function(a){var dt=new Date(a.t);return '<span><b class="'+(Cn[a.nivel]||"mutedInfo")+'">●</b> '+escapeHtml(String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0"))+' '+escapeHtml(String(a.titlu||"").replace(/^[A-Z0-9._-]+: /,""))+'</span>'}).join("")+'</div>':"";
   var fg=oG.val&&oG.val.zona?Valoare.fataDeGrid(oG.val.zona,oG.grila.jos,oG.grila.sus):null;   // v100.51 (I-470): gridul tau fata de zona de valoare
-  var bl=GraficBot.bilantUmpleri(oG.umpleri,b,!oG.fereastraPosibila);   // v100.145: bilanțul umplerilor din fereastră - primul rând sub grafic; botul mai vechi decât fereastra ⇒ Pionex „pe tot botul”
-  el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+(bl?'<p class="tbSub gbBilant"><b>▲▼ în fereastră:</b> '+escapeHtml(bl.text)+'</p>':'')+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
+  var bl=GraficBot.bilantUmpleri(oG.umpleri,b,{eticheta:TB_PERIOADE[tbTf()].eticheta,pornitInFereastra:oG.pornitInFereastra,lo:d.harta.lo,hi:d.harta.hi});   // v100.145: bilanțul umplerilor - primul rând sub grafic (intervalul, de unde numără, ce e în afara cadrului)
+  el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+(bl?'<p class="tbSub gbBilant"><b>▲▼ umpleri:</b> '+escapeHtml(bl.text)+'</p>':'')+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
   var crY=svg.querySelector(".gbCruceY"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none"};
   var arata=function(cx,cy){

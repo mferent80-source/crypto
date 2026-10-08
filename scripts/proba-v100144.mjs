@@ -20,7 +20,7 @@ const B5 = bare(288, M5, 0.50, 0.55);
 const umpl = (ri, tip, p, pereche) => ({ t: B5[ri].t, ri, k: 0, p, tip, pereche: !!pereche });
 const SEM = [{ tf: "5M", et: "5 min", sc: "5m", dir: "urca", ton: "bine", text: "urcă" }, { tf: "15M", et: "15 min", sc: "15m", dir: "lateral", ton: "gol", text: "lateral" }, { tf: "60M", et: "1 h", sc: "1h", dir: "coboara", ton: "rau", text: "coboară" }];
 
-await test("(1) butonul „24 h”: intrareBot cu fereastraToata ⇒ toată fereastra (și spune că cea a botului era posibilă); pagina ține alegerea (tabloBotFereastra_v1), arată butonul doar când fereastra botului e posibilă, cu eticheta intervalului", () => {
+await test("(1) butonul „24 h”: intrareBot cu fereastraToata ⇒ toată fereastra (și spune că cea a botului era posibilă); pagina ține alegerea (tabloBotFereastra_v2, pe bot din v100.145), arată butonul doar când fereastra botului e posibilă, cu eticheta intervalului", () => {
   const bot = { id: "1", pornitLa: ACUM - 5 * 3600000, gridJos: 0.5, gridSus: 0.55, directie: "LONG" };
   const iT = G.intrareBot({ bot, bare: B5, acum: ACUM, W: 1000, fereastraToata: true }); assert.equal(iT.bare.length, 288); assert.equal(iT.fereastraBot, false); assert.equal(iT.fereastraPosibila, true);
   const iB = G.intrareBot({ bot, bare: B5, acum: ACUM, W: 1000 }); assert.equal(iB.bare.length, 84); assert.equal(iB.fereastraBot, true); assert.equal(iB.fereastraPosibila, true);
@@ -47,7 +47,7 @@ await test("(3) săgețile după soartă: grupul cu pereche închisă e verde (�
   assert.match(s1, /class="gbUmplere gbPereche"><title>[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/); assert.ok(s1.includes('fill="' + C.good + '" stroke="' + C.fond + '" stroke-width="1"/><circle'), "verde + inel");
   const s2 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(286, "S", 0.539), umpl(286, "S", 0.537)], perechi: 0 } })).svg;   // v100.145: deschise DE CURÂND (bara 286) ⇒ gri; cele vechi de ore sunt galbene
   assert.ok(s2.includes('fill="' + C.mut + '" stroke="' + C.fond + '" stroke-width="1"/>'), "gri, fără inel"); assert.doesNotMatch(s2, /gbPereche/);
-  const s3 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true), umpl(200, "B", 0.533)], perechi: 1 } })).svg;
+  const s3 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(286, "B", 0.531, true), umpl(286, "B", 0.533)], perechi: 1 } })).svg;   // v100.145: amestec cu deschisa DE CURÂND ⇒ verde; cu una veche de ore ar fi galben (galbenul bate verdele)
   assert.ok(s3.includes('fill="' + C.good + '" stroke="' + C.fond + '"'), "amestecat ⇒ verde"); assert.match(s3, /<title>1 din 2 umpleri cu perechea închisă\n/);
   const d = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } }));
   assert.match(d.legenda, /▲ cumpărare · ▼ vânzare pe grilă \(deduse din lumânări\) · verde = pereche închisă · gri = deschisă · galben = deschisă de peste o oră · perechi pe grafic: 1/);   // v100.145: + galben
