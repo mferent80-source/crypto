@@ -211,11 +211,22 @@ var GraficBot = (function () {
     }
     var fu = o.funding, ra = fu ? nr(fu.rata) : null;   // v100.137 (revizia): fără funding ⇒ null, nu undefined (undefined !== null intra pe ramura de jos)
     if (ra !== null) {
-      var platesti = (dir === "long" && ra > 0) || (dir === "short" && ra < 0), val = poz !== null ? Math.abs(poz) * p * Math.abs(ra) : null, un = nr(fu.urmatoarea), acumT = nr(fu.acum) || Date.now();
+      var platesti = (dir === "long" && ra > 0) || (dir === "short" && ra < 0), val = poz !== null && !o.doarPiata ? Math.abs(poz) * p * Math.abs(ra) : null, un = nr(fu.urmatoarea), acumT = nr(fu.acum) || Date.now();   /* v100.138: doarPiata ⇒ fără banii botului */
       var min = un !== null ? Math.max(0, Math.round((un - acumT) / 60000)) : null;
       rows.push({ ce: "Funding", stare: platesti ? "atentie" : "bine", text: (ra >= 0 ? "+" : "−") + Math.abs(ra * 100).toFixed(4).replace(".", ",") + "%" + (un !== null ? " · următoarea plată la " + ora(un) + " (în " + (min >= 60 ? Math.floor(min / 60) + " h " + (min % 60) + " min" : min + " min") + ")" : "") + (val !== null ? " · botul " + (platesti ? "plătește" : "încasează") + " ~" + val.toFixed(3).replace(".", ",") + " USDT" : "") + (fu.sursa ? " (" + fu.sursa + ")" : "") });
     }
     var scurt = [];
+    // v100.138 (el, 08.10): o.doarPiata ⇒ doar piața - direcția, trendul (rândurile tf), unde e prețul, ADX, volumul, funding-ul; fără banii
+    // botului, zero, plan, stop, grid. Pe scurt: direcția · zona ADX · RSI
+    if (o.doarPiata) {
+      var PIATA = { "Direcția": 1, "Unde e prețul": 1, "ADX 14": 1, "Volumul": 1, "Funding": 1 };
+      rows = rows.filter(function (x) { return x.tf || PIATA[x.ce]; });
+      var rD = rows.filter(function (x) { return x.ce === "Direcția"; })[0];
+      if (rD) scurt.push("direcția " + String(rD.text).split(":")[0]);
+      if (z) scurt.push(z === "loc" ? "piața stă pe loc" : z === "trend" ? "piața e în trend" : "piața e nehotărâtă");
+      if (rs !== null && rs !== undefined) scurt.push("RSI " + Math.round(rs));
+      return { pret: p, randuri: rows, peScurt: scurt.join(" · "), adx: a, zona: z };
+    }
     if (pr !== null) scurt.push("botul " + (pr >= 0 ? "pe plus" : "pe minus") + " " + u(pr));
     if (z) scurt.push(z === "loc" ? "piața stă pe loc" : z === "trend" ? "piața e în trend" : "piața e nehotărâtă");
     if (as !== null) scurt.push("stopul la " + pct(ds));

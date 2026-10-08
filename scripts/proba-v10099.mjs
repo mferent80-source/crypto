@@ -83,7 +83,7 @@ await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față 
   assert.match(fnApp("tbProbaPt"), /GraficBot\.stopProba\(tbProbaStop\.pret,.*TabloExtra\.totalCuGridLa\(b,tbProbaStop\.pret\)/);
   assert.match(fnApp("renderTabloGrafic"), /if\(tbProbaStop\.activ&&tbProbaStop\.botId===b\.id\)\{.*GraficBot\.pretLaY\(d\.harta,sy\)/);
   assert.match(fnApp("tbProbaCopiaza"), /navigator\.clipboard\.writeText/);
-  assert.match(fnApp("tbDeseneazaCitire"), /data-action-click="tbProbaComuta\(\)"/);
+  assert.doesNotMatch(fnApp("tbDeseneazaCitire"), /tbProbaComuta/);   // v100.138 (el): „Stop de probă” scos din citire
 });
 await test("(1) renderTabloGrafic cheamă intrarea pură o singură dată, cu planul, șansele, stopul de probă, funding-ul și modul", () => {
   const r = fnApp("renderTabloGrafic");

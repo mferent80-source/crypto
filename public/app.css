@@ -2488,3 +2488,5 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 /* v100.137: intervalele graficului (5m · 15m · 1h · 4h · 1z) - apăsabile cu degetul; pe telefon umplu rândul */
 #tabloubot #tbGraficCard .tbTf .tbIntBtn{padding:6px 12px;font-size:14px;font-weight:700;min-width:44px;text-align:center}
 @media (max-width:640px){#tabloubot #tbGraficCard .tbTf{width:100%}#tabloubot #tbGraficCard .tbTf .tbIntBtn{flex:1 1 0;min-width:0;min-height:44px}}
+/* v100.138: ceasul live din antetul citirii (verde cât vine prețul, galben când nu) */
+#tabloubot .tbCitLive{font-variant-numeric:tabular-nums}#tabloubot .tbCitLive.viu{color:var(--good)}#tabloubot .tbCitLive.vechi{color:var(--warn)}

@@ -6656,18 +6656,53 @@ async function tbReiaLipsa(){
   tbCalculeazaIndicatorii(d);renderTabloDirectia();renderTabloIndicatori();if(typeof renderTabloSfaturi==="function")renderTabloSfaturi();if(typeof renderTabloGrafic==="function")renderTabloGrafic();
 }
 function tbTrendIstoric(b){var d=tbStare.directie,p=TB_PERIOADE[tbTf()];if(!d||!d.randuriPe||!p||!b||d.simbol!==tbCheieDir(b))return null;return d.randuriPe[p.i]||null}
-function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filter(Boolean);if(!loc.length)return;var c=GraficBot.citire(o,b,botiNr(b.pretCurent));
-  // v100.99 (I-529): butonul stopului de probă și rezultatul lui, în citire; (I-531) același conținut și sub grafic, pe telefon
-  var on=tbProbaStop.activ&&tbProbaStop.botId===b.id,pr=on&&o.proba;
-  var proba='<div class="tbCitProba"><button type="button" class="tbIntBtn tbProbaBtn" aria-pressed="'+on+'" data-action-click="tbProbaComuta()">🧪 Stop de probă</button>'
-    +(on?(pr?'<p class="tbSub"><b>'+escapeHtml(pr.text)+'</b></p><button type="button" class="tbIntBtn" data-action-click="tbProbaCopiaza()">copiază prețul '+escapeHtml(tbPretScurt(pr.pret))+'</button><p class="tbSub">Apasă din nou pe grafic ca să-l muți. Nu trimite nimic la Pionex.</p>':'<p class="tbSub">Apasă pe grafic la prețul unde ai pune stopul: vezi cât ai pierde acolo, cu gridul care cumpără pe drum.</p>'):'')+'</div>';
-  if(!c){loc.forEach(function(el){el.innerHTML='<p class="tbSub">Prea puține prețuri pentru citire.</p>'+proba});return}
+// v100.138 (el, 08.10: „acolo mă interesează doar direcție, trend, indicatori diverși, ce zice Busola … și foarte important să fie LIVE”):
+// citirea e despre PIAȚĂ (GraficBot.citire cu doarPiata) + Indicatorii pe intervalul graficului, Estimarea pe 16 ore și Busola pe 4h;
+// fără banii botului și fără „Stop de probă” (el: „îl scot de tot”). tbStare.citireO ține intrarea pentru recitirea la fiecare tic (tbCitireLive).
+function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filter(Boolean);if(!loc.length)return;
+  tbStare.citireO=o;
+  var c=GraficBot.citire(Object.assign({},o,{doarPiata:true}),b,botiNr(b.pretCurent));
+  if(!c){loc.forEach(function(el){el.innerHTML='<p class="tbSub">Prea puține prețuri pentru citire.</p>'});return}
   var IC={bine:"✓",atentie:"!",rau:"✕",info:"·"};
   var rd=function(x){return '<div class="tbCitR '+x.stare+'"><span class="tbCitIc" aria-hidden="true">'+IC[x.stare]+'</span><div><b>'+escapeHtml(x.ce)+':</b> <span class="tbCitTx">'+escapeHtml(x.text)+'</span></div></div>'};
   // v100.111 (I-542): în locul celor 6 rânduri ale semaforului, unul singur - tabelul „Trendul pe TF-uri” de sub grafic le arată pe toate
-  var su=GraficBot.trendSumar(tbSemaforTf(b)),bloc=rd({stare:su.stare,ce:"Trendul pe TF-uri",text:su.text}),pus=false;
-  var h='<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+c.randuri.map(function(x){if(!x.tf)return rd(x);if(pus)return "";pus=true;return bloc}).join("")+proba;
+  var su=GraficBot.trendSumar(tbSemaforTf(b)),bloc=rd({stare:su.stare,ce:"Trendul pe TF-uri",text:su.text}),pus=false,ex=tbCitireExtra(b,o),out=[],fund=false;
+  c.randuri.forEach(function(x){
+    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.indicatori)out.push(rd(ex.indicatori));return}
+    if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));if(ex.busola)out.push(rd(ex.busola))}
+    out.push(rd(x))});
+  if(!pus&&ex.indicatori)out.push(rd(ex.indicatori));
+  if(!fund){if(ex.estimare)out.push(rd(ex.estimare));if(ex.busola)out.push(rd(ex.busola))}
+  var h='<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+out.join("");
   loc.forEach(function(el){el.innerHTML=h})}
+// v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
+// când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
+function tbCitireExtra(b,o){
+  var out={indicatori:null,estimare:null,busola:null},d=tbStare.directie;
+  var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
+  if(l&&typeof IndicatoriBot!=="undefined"){
+    var tf=tbTf(),r=l.filter(function(x){return x.tf===tf&&x.q})[0]||l.filter(function(x){return x.tf==="15M"&&x.q})[0];
+    if(r){var ce=IndicatoriBot.celule(r.q);if(ce)out.indicatori={ce:"Indicatorii",stare:"info",text:"pe "+r.eticheta+": "+ce.verdict.t+" · Supertrend "+ce.supertrend.t+" · MACD "+ce.macd.t+" · Stochastic "+ce.stoch.t+": "+ce.stoch.titlu+" · MFI "+ce.mfi.t+": "+ce.mfi.titlu}}
+    var p=IndicatoriBot.predictie(l,String(b.directie||"").toLowerCase());
+    if(p&&p.text)out.estimare={ce:"Estimare pe 16 ore",stare:p.ton==="bine"||p.ton==="rau"||p.ton==="atentie"?p.ton:"info",text:String(p.text).replace(/^Estimare pe 16 ore: /,"")}
+  }
+  if(typeof Busola!=="undefined"){
+    var rez=Busola.rezumat(),e=rez?Busola.eticheta(rez,TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,Date.now(),null):null;
+    out.busola=e?{ce:"Busola, pe 4h",stare:e.nivel==="atentie"?"atentie":e.nivel==="info"?"bine":"info",text:e.text+(e.nota?" · "+e.nota:"")}
+      :{ce:"Busola, pe 4h",stare:"info",text:rez?"Busola n-a măsurat încă moneda asta":"aștept rezumatul Busolei (vine o dată la 30 de minute)"}
+  }
+  return out}
+// v100.138: LIVE - antetul citirii poartă ceasul și prețul la fiecare tic; rândurile se recitesc cel mult o dată pe secundă (EMA / RSI / ADX
+// pe lumânările graficului, cu prețul viu), fără să redeseneze graficul
+var tbCitLiveLa=0;
+function tbCitireLive(b,pa){
+  var st=$("tbCitireLive");
+  if(st){var d=new Date(),hh=[d.getHours(),d.getMinutes(),d.getSeconds()].map(function(x){return String(x).padStart(2,"0")}).join(":");
+    if(pa&&pa.viu){st.textContent="● live · "+hh+" · "+pa.text;st.className="tbSub tbCitLive viu"}
+    else{st.textContent=(pa?"○ fără preț live · ultimul "+pa.text:"○ aștept prețul")+" · "+hh;st.className="tbSub tbCitLive vechi"}}
+  if(!b||!pa||!pa.viu||!tbStare.citireO||Date.now()-tbCitLiveLa<1000)return;tbCitLiveLa=Date.now();
+  try{tbDeseneazaCitire(Object.assign({},tbStare.citireO,{pretViu:pa.pret}),b)}catch(e){}
+}
 function tbComutaInd(k){var s=tbIndStare();if(!Object.prototype.hasOwnProperty.call(s,k))return;s[k]=!s[k];try{localStorage.setItem(TB_IND_KEY,JSON.stringify(s))}catch(_){}tbSincInd();renderTabloGrafic()}
 // v100.51 (I-477): perechile reale vs estimarea fisei (KV perechi-est, de la colector) + corectia pe moneda; adus la 10 min
 var tbPerechi={la:0,est:{},cor:{},inLucru:false};
@@ -6955,7 +6990,7 @@ function pvArata(){
     if(bg&&dg)bg.textContent=PretViu.textGrid(dg);
   }
   if(b&&tbPanouVizibil()){
-    tbKpiPretDeseneaza(b);
+    tbKpiPretDeseneaza(b);tbCitireLive(b,pa);
     var g=$("tbGrafic");
     if(pa&&pa.viu&&Date.now()-pvStare.grafLa>=5000&&!(g&&g.querySelector(".gbTip:not([hidden])"))){pvStare.grafLa=Date.now();renderTabloGrafic()}
   }
