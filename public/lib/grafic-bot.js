@@ -151,8 +151,11 @@ var GraficBot = (function () {
 
   // v100.98 (05.10): CITIREA LIVE de lângă grafic - funcție PURĂ (o = intrarea graficului, bot = botul Pionex, p0 = prețul la care s-a citit botul).
   // Doar ce SE VEDE pe grafic, spus în cuvinte; nu e un sfat nou (sfatul rămâne la semaforul Tabloului).
+  // v100.137 (revizia 3): citirea judecă pe lumânările graficului - pe alt interval decât 5m textele spun pe ce („pe ultimele 2 zile”, nu „pe ultima oră”)
+  var TF_12 = { "5M": "pe ultima oră", "15M": "pe ultimele 3 ore", "30M": "pe ultimele 6 ore", "60M": "pe ultimele 12 ore", "4H": "pe ultimele 2 zile", "1D": "pe ultimele 12 zile" };
   function citire(o, bot, p0) {
     var raw = o.bare || [], N = raw.length; if (N < 30) return null;
+    var tfEt = (TF_SEM.filter(function (x) { return x.tf === o.tfGrafic; })[0] || {}).et, peTf = tfEt ? " · lumânări de " + tfEt : "", vol12 = TF_12[o.tfGrafic] || "pe ultimele 12 lumânări";
     var cl = raw.map(function (b) { return b.c; }), p = nr(o.pretViu) > 0 ? nr(o.pretViu) : cl[N - 1];
     var niv = {}; (o.niv || []).forEach(function (x) { niv[x.k] = x.p; });
     var dist = function (x) { return x ? x / p - 1 : null; }, rows = [], dir = String(bot && bot.directie || "").toLowerCase();
@@ -194,19 +197,19 @@ var GraficBot = (function () {
     var bb = bollinger(cl, 20, 2)[N - 1], rs = rsi(cl, 14)[N - 1];
     if (bb && rs !== null) {
       var pb = (p - bb.j) / ((bb.s - bb.j) || 1), unde = pb < 0 ? "sub banda Bollinger" : pb < 0.2 ? "lângă marginea de jos a Bollinger" : pb > 1 ? "peste banda Bollinger" : pb > 0.8 ? "lângă marginea de sus a Bollinger" : "în mijlocul benzii Bollinger";
-      rows.push({ ce: "Unde e prețul", stare: "info", text: unde + " · RSI " + Math.round(rs) + (rs < 30 ? " (apăsat)" : rs > 70 ? " (încins)" : "") });
+      rows.push({ ce: "Unde e prețul", stare: "info", text: unde + " · RSI " + Math.round(rs) + (rs < 30 ? " (apăsat)" : rs > 70 ? " (încins)" : "") + peTf });
     }
     var A = adx(raw, 14), a = A.adx[N - 1], z = zonaAdx(a), pdi = A.pdi[N - 1], mdi = A.mdi[N - 1];
     if (a !== null) {
       var spre = pdi > mdi ? "sus" : "jos", contraA = z === "trend" && ((dir === "long" && spre === "jos") || (dir === "short" && spre === "sus"));
-      rows.push({ ce: "ADX 14", peBoti: o.adxPeBoti || null, stare: z === "loc" ? "bine" : z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) + (o.adxPeBoti ? " · " + o.adxPeBoti : "") });
+      rows.push({ ce: "ADX 14", peBoti: o.adxPeBoti || null, stare: z === "loc" ? "bine" : z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) + (o.adxPeBoti ? " · " + o.adxPeBoti : "") + peTf });
     }
     if (N >= 48) {
       var sume = []; for (var i = 12; i <= N; i++) { var sv = 0; for (var j = i - 12; j < i; j++) sv += raw[j].v; sume.push(sv); }
       var acum = sume[sume.length - 1], srt = sume.slice().sort(function (x, y) { return x - y; }), med = srt[srt.length >> 1] || 0, rap = med ? acum / med : null;
-      if (rap !== null) rows.push({ ce: "Volumul", stare: "info", text: rap.toFixed(1).replace(".", ",") + "× față de obișnuit pe ultima oră" + (rap < 0.7 ? " (liniște)" : rap > 1.6 ? " (agitație)" : "") });
+      if (rap !== null) rows.push({ ce: "Volumul", stare: "info", text: rap.toFixed(1).replace(".", ",") + "× față de obișnuit " + vol12 + (rap < 0.7 ? " (liniște)" : rap > 1.6 ? " (agitație)" : "") });
     }
-    var fu = o.funding, ra = fu && nr(fu.rata);
+    var fu = o.funding, ra = fu ? nr(fu.rata) : null;   // v100.137 (revizia): fără funding ⇒ null, nu undefined (undefined !== null intra pe ramura de jos)
     if (ra !== null) {
       var platesti = (dir === "long" && ra > 0) || (dir === "short" && ra < 0), val = poz !== null ? Math.abs(poz) * p * Math.abs(ra) : null, un = nr(fu.urmatoarea), acumT = nr(fu.acum) || Date.now();
       var min = un !== null ? Math.max(0, Math.round((un - acumT) / 60000)) : null;
@@ -584,8 +587,8 @@ var GraficBot = (function () {
     }
     var josTot = st.adx ? ay0 + adxH : rsiH ? ry0 + rsiH : ly0 + laneH;
     // axa timpului
-    var ay = josTot + 18, lung = o.per && o.per !== "24h";
-    [0, 0.25, 0.5, 0.75, 1].forEach(function (fr, ii) { if (ingust && (ii === 1 || ii === 3)) return; q.push('<text x="' + f1(fr * plotW) + '" y="' + ay + '" font-size="12" fill="' + COL.mut + '" text-anchor="' + (fr === 0 ? "start" : fr === 1 ? "end" : "middle") + '">' + (o.actiune ? ziLuna(t0 + fr * (t1 - t0)) : ora(t0 + fr * (t1 - t0), lung)) + '</text>'); });
+    var ay = josTot + 18, lung = o.per && o.per !== "24h", doarZi = o.actiune || o.per === "200z";   // v100.137 (revizia 6): la 1z ora e zgomot
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (fr, ii) { if (ingust && (ii === 1 || ii === 3)) return; q.push('<text x="' + f1(fr * plotW) + '" y="' + ay + '" font-size="12" fill="' + COL.mut + '" text-anchor="' + (fr === 0 ? "start" : fr === 1 ? "end" : "middle") + '">' + (doarZi ? ziLuna(t0 + fr * (t1 - t0)) : ora(t0 + fr * (t1 - t0), lung)) + '</text>'); });
     q.push('<line class="gbCruceY" x1="0" x2="' + f1(plotW) + '" y1="0" y2="0" stroke="' + COL.text + '" stroke-opacity=".35" stroke-width="1" stroke-dasharray="2 3" style="display:none"/>');
     q.push('<line class="gbCruce" x1="0" x2="0" y1="0" y2="' + josTot + '" stroke="' + COL.text + '" stroke-opacity=".35" stroke-width="1" style="display:none"/>');
     var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="' + (o.actiune ? "Prețul acțiunii (zilnic) cu stopul, ținta și zona de valoare" : "Prețul cu gridul, planul și alertele botului") + '">' + q.join("") + '</svg>';

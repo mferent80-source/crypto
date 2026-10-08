@@ -6455,30 +6455,35 @@ var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
 // schimbarea e instantă; după primul desen se aduc din spate și celelalte intervale (tbPreiaRestulTf), cu pauză între cereri.
 var TB_PERIOADE={"5M":{i:"5M",l:288,per:"24h",gaura:12*60000,eticheta:"5m",cat:"24 de ore"},"15M":{i:"15M",l:288,per:"3z",gaura:40*60000,eticheta:"15m",cat:"3 zile"},"60M":{i:"60M",l:168,per:"7z",gaura:150*60000,eticheta:"1h",cat:"7 zile"},"4H":{i:"4H",l:180,per:"30z",gaura:10*3600000,eticheta:"4h",cat:"30 de zile"},"1D":{i:"1D",l:200,per:"200z",gaura:3*86400000,eticheta:"1z",cat:"200 de zile"}};
 var TB_TF_VECHI={"24h":"5M","3z":"15M","7z":"60M"};
-var TB_TF_PAUZA_MS=350;
-function tbTf(){return TB_PERIOADE[tbStare.graficInterval]?tbStare.graficInterval:"5M"}
+var TB_TF_CHEIE="tabloBotTf_v1";
+// revizia (10): intervalul ales se ține minte (ca în TradingView); o valoare veche (24h/3z/7z) sau stricată cade pe 5m
+function tbTf(){
+  if(!tbStare.graficInterval){var v=tbCiteste(TB_TF_CHEIE);v=TB_TF_VECHI[v]||v;tbStare.graficInterval=TB_PERIOADE[v]?v:"5M"}
+  return TB_PERIOADE[tbStare.graficInterval]?tbStare.graficInterval:"5M"
+}
+function tbTfButoane(){var p=tbTf();Object.keys(TB_PERIOADE).forEach(function(k){var e=$("tbInt"+k);if(e)e.setAttribute("aria-pressed",String(k===p))})}
 function tbAlegeInterval(p){
   p=TB_TF_VECHI[p]||p;if(!TB_PERIOADE[p])return;
-  tbStare.graficInterval=p;Object.keys(TB_PERIOADE).forEach(function(k){var e=$("tbInt"+k);if(e)e.setAttribute("aria-pressed",String(k===p))});
+  tbStare.graficInterval=p;tbScrie(TB_TF_CHEIE,p);tbTfButoane();
   // lumânările deja aduse pentru intervalul ăsta se arată PE LOC (chiar dacă-s mai vechi de 2 minute); tbAduGraficul le împrospătează din spate
   var b=tbStare.bot,c=b?tbStare.graficCache[TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+p]:null;
   if(c&&c.randuri){tbStare.grafic={la:c.la,simbol:c.cheie,randuri:c.randuri,eroare:null,inLucru:false};renderTabloGrafic()}
   else renderTabloGrafic();
   tbAduGraficul()
 }
-// v100.137: celelalte intervale se aduc din spate, pe rând, doar cât panoul e vizibil și doar o dată pe simbol (apoi la cerere)
-async function tbPreiaRestulTf(s){
-  if(tbStare.graficPrefetch)return;tbStare.graficPrefetch=true;
-  try{
-    var tf=Object.keys(TB_PERIOADE);
-    for(var i=0;i<tf.length;i++){
-      var cheie=s+"|"+tf[i];if(tbStare.graficCache[cheie]||!tbPanouVizibil())continue;
-      if(!tbStare.bot||TabloBot.simboluri(tbStare.bot.baza,tbStare.bot.quote,tbStare.bot.simbolPionex).pionex!==s)break;
-      await new Promise(function(r){setTimeout(r,TB_TF_PAUZA_MS)});
-      try{var per=TB_PERIOADE[tf[i]],k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+per.i+"&limit="+per.l),rd=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;
-        if(rd)tbStare.graficCache[cheie]={cheie:cheie,randuri:rd,la:Date.now()}}catch(e){}
-    }
-  }finally{tbStare.graficPrefetch=false}
+// v100.137 (revizia 4): celelalte intervale NU se mai cer de la Pionex - „Direcția pieței” aduce deja toate cele 5 intervale (tbAduDirectie,
+// la 5 minute, 400–500 de lumânări); de acolo se taie ultimele l și intră în cache, cu ora aducerii lor. Zero cereri în plus, zero reîncercări.
+// Dacă intervalul ALES tocmai a sosit așa cât ecranul spunea „Aștept prețurile…”, se arată pe loc (revizia 1).
+function tbPreiaRestulTf(s){
+  var b=tbStare.bot,d=tbStare.directie;if(!b||!d||!d.randuriPe||d.simbol!==tbCheieDir(b))return;
+  if(TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex!==s)return;
+  var curent=s+"|"+tbTf();
+  Object.keys(TB_PERIOADE).forEach(function(tf){
+    var cheie=s+"|"+tf,per=TB_PERIOADE[tf],rd=d.randuriPe[per.i];
+    if(tbStare.graficCache[cheie]||!Array.isArray(rd)||!rd.length)return;
+    tbStare.graficCache[cheie]={cheie:cheie,randuri:rd.slice(-per.l),la:d.la||Date.now()};
+    if(cheie===curent&&(!tbStare.grafic||tbStare.grafic.simbol!==cheie)&&!(tbStare.grafic&&tbStare.grafic.inLucru)){tbStare.grafic={la:d.la||Date.now(),simbol:cheie,randuri:tbStare.graficCache[cheie].randuri,eroare:null,inLucru:false};renderTabloGrafic()}
+  });
 }
 // v100.112 (I-553): lumânările unui TF din Pionex (eroare când nu vin) - rețeaua pentru TabloTrend.tura / reia
 function tbAduTf(s){return async function(tf,lim){var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+tf+"&limit="+lim),r=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;if(!Array.isArray(r))throw new Error((k&&k.error)||"Pionex nu a dat lumânări");return r}}   /* revizia: lista goală rămâne date (ca în v100.111) */
@@ -6558,8 +6563,10 @@ async function tbAduGraficul(){
   var g=tbStare.grafic||(tbStare.grafic={la:0,simbol:null,randuri:null,inLucru:false});
   var cheieG=s+"|"+tbTf(),c=tbStare.graficCache[cheieG];
   // v100.137: lumânările din cache (proaspete) se arată fără cerere; cele vechi se arată și se împrospătează
-  if(c&&c.randuri&&g.simbol!==cheieG){tbStare.grafic=g={la:c.la,simbol:cheieG,randuri:c.randuri,eroare:null,inLucru:false};renderTabloGrafic()}
-  if(g.inLucru||(g.simbol===cheieG&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS))){tbPreiaRestulTf(s);return}
+  if(c&&c.randuri&&g.simbol!==cheieG&&!g.inLucru){tbStare.grafic=g={la:c.la,simbol:cheieG,randuri:c.randuri,eroare:null,inLucru:false};renderTabloGrafic()}
+  if(g.inLucru)return;   /* revizia (1): cât se aduce ceva, nu pornesc altceva - la final se verifică dacă intervalul s-a schimbat */
+  tbPreiaRestulTf(s);
+  if(g.simbol===cheieG&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS))return;
   g.inLucru=true;
   try{
     var per=TB_PERIOADE[tbTf()];
@@ -6570,6 +6577,7 @@ async function tbAduGraficul(){
   }catch(e){g.eroare=textEroare(e)}finally{g.inLucru=false}
   renderTabloGrafic();
   tbPreiaRestulTf(s);
+  if(s+"|"+tbTf()!==cheieG)tbAduGraficul();   /* revizia (1): omul a apăsat alt interval cât se aduceau astea - îl aduc acum, o singură dată */
 }
 function tbTon(ton){return ton==="rau"?"bad":ton==="bine"?"good":ton==="atentie"?"tbWarn":"mutedInfo"}
 function renderTabloDirectia(){
@@ -6699,6 +6707,7 @@ function tbGridLargRender(b){
 }
 function renderTabloGrafic(){
   var el=$("tbGrafic");if(!el)return;
+  tbTfButoane();   /* v100.137 (revizia 10): intervalul ținut minte se vede și pe butoane, de la primul desen */
   var b=tbStare.routeOk===false?null:tbStare.bot,g=tbStare.grafic,brut=tbStare.botBrut;
   try{tbGridLargRender(b)}catch(e){}   // v100.101: o eroare aici nu strică graficul
   if(!b){el.innerHTML='<div class="emptyState">—</div>';return}
