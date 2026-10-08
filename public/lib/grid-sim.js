@@ -220,6 +220,19 @@ var GridSim = (function () {
     return { rand: rand, marja: mj > 0 ? "±" + mj + " puncte" : "sub ±1 punct", culoare: P >= 55 ? "good" : P <= 45 ? "bad" : "mijl", sub: sub, faCe: faCe, deAici: !!d,
       nota: "Pe istoria monedei reluată, fără tendința perioadei; o criză mai rea decât orice a avut nu apare în drumuri. Umplerile sunt estimate pe bare, nu pe ordinele reale." };
   }
-  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
+  // v100.139 (el, 08.10: „Monte Carlo cu un scan automat pe bot la 15 min” în Tablou): rândul SCURT - verdictul pe 7 zile (CÂȘTIGĂ / PIERDE,
+  // stopul / lichidarea / TP-ul atins), «ce aș face» (prima propoziție din faCe) și „pe o zi” - într-un singur rând; eroarea ca text
+  function verdictScurt(rez, st, plan, bot) {
+    if (!rez || rez.eroare) return { stare: "info", text: rez && rez.eroare ? String(rez.eroare) : "fără rezultat" };
+    var i7 = -1, i1 = -1; (rez.orizonturi || []).forEach(function (o, i) { if (o.zile === 7) i7 = i; if (o.zile === 1) i1 = i; });
+    var k7 = i7 >= 0 ? i7 : 0, v = verdict(rez, st, plan, k7, bot), v1 = i1 >= 0 ? verdict(rez, st, plan, i1, bot) : null; if (!v) return { stare: "info", text: "fără rezultat" };
+    var o7 = rez.orizonturi[k7], meu = !!rez.acum, fara = function (s) { return String(s).replace(/^de aici încolo: /, ""); };
+    var parti = [(meu ? "de aici încolo, " : "") + cate(o7.zile, "zi", "zile") + ": " + fara(v.rand)];
+    if (o7.pStop > 0) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich > 0.005) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp > 0) parti.push("TP atins " + pr(o7.pTp));
+    var faCe = String(v.faCe || "").split(/[.:]/)[0].trim(); if (faCe) parti.push("«" + faCe + "»");
+    if (v1) parti.push("pe o zi: " + fara(v1.rand).replace(/ din drumuri/, ""));
+    return { stare: v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie", text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand };
+  }
+  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

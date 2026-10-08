@@ -2492,3 +2492,6 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #tabloubot .tbCitLive{font-variant-numeric:tabular-nums}#tabloubot .tbCitLive.viu{color:var(--good)}#tabloubot .tbCitLive.vechi{color:var(--warn)}
 /* v100.138 (revizia 3): antetul copiei de pe telefon - titlul și ceasul live, ca pe cardul ascuns sub 1180 px */
 #tabloubot .tbCitCap{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 6px}#tabloubot .tbCitCap b{font-size:14px}
+/* v100.139: rândul Monte Carlo din citire - primul, pe fond, cu butonul spre Simulator */
+#tabloubot .tbCitR.tbCitMc{background:var(--panel-2);border-radius:10px;padding:8px 10px;border-top:0;margin:4px 0 2px}#tabloubot .tbCitR.tbCitMc .tbCitIc{background:transparent;font-size:16px}
+#tabloubot .tbCitMc .tbMcBtn{margin:4px 0 0;padding:2px 8px;font-size:12px;width:auto}

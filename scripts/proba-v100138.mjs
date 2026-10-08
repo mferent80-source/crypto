@@ -95,7 +95,7 @@ function cutieCitire() {   // tbDeseneazaCitire + tbCitireLive adevărate, cu DO
   ctx.$ = (id) => el[id] || null; ctx.document = { querySelectorAll: (q) => (q === "[data-cit-live]" ? stamps : []) };
   ctx.tbStare = { bot: null, citireO: null, citireCheie: null, citireH: null, citireStamp: null, directie: null };
   ctx.TabloBot = { simboluri: () => ({ pionex: st.simbol }) }; ctx.tbCheieDir = (b) => st.simbol + "|" + b.directie; ctx.tbCheieBusola = () => st.simbol; ctx.tbPazaKv = { boti: {} };
-  ctx.botiNr = (v) => (typeof v === "number" && isFinite(v) ? v : null); ctx.tbSemaforTf = () => null; ctx.Busola = undefined; ctx.tbCiteste = () => null; ctx.tbScrie = () => true;
+  ctx.botiNr = (v) => (typeof v === "number" && isFinite(v) ? v : null); ctx.tbSemaforTf = () => null; ctx.Busola = undefined; ctx.tbCiteste = () => null; ctx.tbScrie = () => true; ctx.tbMcRand = () => null;
   const consts = ["TB_PERIOADE", "TB_TF_VECHI", "TB_TF_CHEIE"].map((n) => APP.match(new RegExp("var " + n + "=[^\\n]*;"))[0]).join("\n");
   const src = consts + "\n" + ["tbTf", "tbDeseneazaCitire", "tbCitireExtra", "tbCitireLive"].map((n) => functie(APP, n)).join("\n") + "\nvar tbCitLiveLa=0,tbCitLiveEroare=false;";
   vm.createContext(ctx); vm.runInContext(src, ctx);

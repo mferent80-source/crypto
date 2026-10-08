@@ -6681,6 +6681,8 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
     if(x.ce==="Direcția"&&ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}});   /* revizia: fără semafor, Indicatorii stau după Direcția */
   if(!ind&&ex.indicatori)out.push(rd(ex.indicatori));
   if(!fund){if(ex.estimare)out.push(rd(ex.estimare));if(ex.busola)out.push(rd(ex.busola))}
+  // v100.139: Monte Carlo pe botul tău, primul rând - cu drumul spre Simulatorul grid (botul deja ales acolo)
+  var mc=tbMcRand(b);if(mc)out.unshift('<div class="tbCitR '+mc.stare+' tbCitMc"><span class="tbCitIc" aria-hidden="true">🎰</span><div><b>'+escapeHtml(mc.ce)+':</b> <span class="tbCitTx">'+escapeHtml(mc.text)+'</span> <button type="button" class="tbIntBtn tbMcBtn" data-action-click="gsDeschideBot()">deschide în Simulator</button></div></div>');
   scrie('<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+out.join(""))}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}
@@ -6704,6 +6706,39 @@ function tbCitireExtra(b,o){
       :{ce:"Busola, pe 4h",stare:"info",text:rez?"Busola n-a măsurat încă moneda asta":Busola.nuRaspunde()?"Busola nu răspunde acum":"aștept rezumatul Busolei (vine o dată la 30 de minute)"}
   }
   return out}
+// v100.139 (el, 08.10: „tot acolo pune Monte Carlo cu un scan automat pe bot la 15 min să spună predicția” - a ales A, în pagină): primul rând
+// din „Ce spune piața acum” = verdictul Simulatorului grid pe botul reluat cu pozițiile de acum (GridSim, 500 de drumuri pe 14 zile), socotit
+// la 15 minute și la schimbarea botului; lumânările de 15 minute (~31 de zile) vin prin mcsAduCoin o dată pe monedă și se țin minte.
+// Cuvântul e „șanse”, nu „predicție” (regula lui: clar și răspicat ce înseamnă cifra).
+var TB_MC_MS=15*60000,tbMc={botId:null,la:0,urmatorul:0,inLucru:false,rez:null,rand:null,eroare:null,b15:null,b15La:0,b15Sim:null,funding:null};
+function tbMcTick(){var b=tbStare.routeOk===false?null:tbStare.bot;if(!b||!b.id||!tbPanouVizibil()||tbMc.inLucru)return;
+  if(String(tbMc.botId)===String(b.id)&&Date.now()-tbMc.la<TB_MC_MS)return;
+  tbMcPorneste(b)}
+async function tbMcPorneste(b){
+  if(typeof GridSim==="undefined"||typeof mcsAduCoin!=="function")return;
+  tbMc.inLucru=true;tbMc.eroare=null;if(String(tbMc.botId)!==String(b.id)){tbMc.rand=null;tbMc.rez=null}tbMc.botId=String(b.id);tbMcDeseneaza();
+  try{
+    var sim=mcsSimbolBot(b);
+    if(tbMc.b15Sim!==sim||Date.now()-tbMc.b15La>TB_MC_MS){var c=await mcsAduCoin(sim);if(!c||!c.b15||!c.b15.length)throw new Error("Pionex n-a dat lumânările de 15 minute pentru "+sim);tbMc.b15=c.b15;tbMc.b15La=Date.now();tbMc.b15Sim=sim;tbMc.funding=c.fundingInfo||null}
+    if(!tbStare.bot||String(tbStare.bot.id)!==String(b.id))return;   /* alt bot ales cât aduceam lumânările */
+    var d=GridSim.setariDinBot(b),fi=tbStare.funding&&tbStare.funding.info||tbMc.funding||null;
+    var st=Object.assign({},d.st,{suma:d.st.suma||50,fundingZi:fi?fi.rataZi:0.0003,fundingCost:!fi}),plan=tbPlan.botId===b.id&&tbPlan.plan?tbPlan.plan:null;
+    await new Promise(function(r){setTimeout(r,30)});   /* „socotesc…” apare înainte de calcul */
+    var rez=GridSim.simuleaza(tbMc.b15,st,{plan:plan,pornitLa:d.pornitLa,stPrefix:st,n:500,seed:12,orizonturi:[1,7],zile:14}),caNou=false;
+    if(rez.eroare&&d.pornitLa){rez=GridSim.simuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1,7],zile:14});caNou=!rez.eroare}   /* botul mai vechi decât barele ⇒ ca bot pornit acum */
+    tbMc.rez=rez;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);if(caNou)tbMc.rand.text="ca bot pornit acum (nu pot relua de la pornire): "+tbMc.rand.text;
+  }catch(e){tbMc.eroare=textEroare(e);tbMc.rand=null}
+  finally{tbMc.inLucru=false;tbMc.la=Date.now();tbMc.urmatorul=tbMc.la+TB_MC_MS}
+  tbMcDeseneaza()}
+function tbMcDeseneaza(){if(tbStare.citireO&&tbStare.bot){try{tbDeseneazaCitire(tbStare.citireO,tbStare.bot)}catch(e){}}}
+function tbMcRand(b){
+  if(!b||String(tbMc.botId)!==String(b.id))return null;
+  var hm=function(t){var d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+  var cand=tbMc.la?" — socotit "+hm(tbMc.la)+" · următorul "+hm(tbMc.urmatorul):"";
+  if(tbMc.inLucru&&!tbMc.rand)return {ce:"Monte Carlo",stare:"info",text:"socotesc 500 de drumuri pe botul tău…"};
+  if(tbMc.eroare)return {ce:"Monte Carlo",stare:"info",text:"n-a mers: "+tbMc.eroare+cand};
+  if(!tbMc.rand)return null;
+  return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+" · șanse pe drumuri ca ultimele 14 zile, nu o predicție"+cand+(tbMc.inLucru?" · socotesc din nou…":"")}}
 // v100.138: LIVE - antetul citirii poartă ceasul și prețul la fiecare tic; rândurile se recitesc cel mult o dată pe secundă (EMA / RSI / ADX
 // pe lumânările graficului, cu prețul viu), fără să redeseneze graficul
 var tbCitLiveLa=0,tbCitLiveEroare=false;
@@ -6869,7 +6904,7 @@ function tbRiscDeseneaza(){
   tbRiscAduCor(boti);if(boti.length&&tbRiscCor.c)r.push(RiscLuna.textCorelatie(tbRiscCor.c,tbRiscCor.dubluri));
   el.innerHTML=r.filter(Boolean).map(function(t){return '<p class="tbSub tbRiscR">'+escapeHtml(t)+'</p>'}).join("")+'<button type="button" class="tbBtnLinie" data-action-click="navTo(\'montecarlo\',true)">Tot ce știu despre riscul și obiceiurile tale</button>';
 }
-function tbDeseneazaTabloulUnic(){try{tbRiscDeseneaza()}catch(e){};renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbDeseneazaTvCod();tbPiataPeBot()}
+function tbDeseneazaTabloulUnic(){try{tbRiscDeseneaza()}catch(e){};try{tbMcTick()}catch(e){};renderTabloDirectia();renderTabloIndicatori();tbDeseneazaKpi();renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();tbAduExtra();renderTabloGrafic();renderTabloDovada();tbAduDirectie();if(tbPanouVizibil())tbAduGraficul();tbActualizeazaBanda();tbDeseneazaTvCod();tbPiataPeBot()}
 // Banda de sus, pe ORICE ecran: botul, banii totali, lichidarea, directia. Omul
 // vede starea botului fara sa deschida Tabloul; apasand, ajunge in el.
 // v100.6: bucatile vin din PretViu.banda (pur); pretul botului sta imediat dupa nume, live din Pionex.
