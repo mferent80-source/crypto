@@ -28,10 +28,29 @@ const deps = (o) => { const trimise = []; return Object.assign({ trimise, boti: 
 await test("gridSimDinPagina: motorul paginii, fără să murdărească globalThis", () => {
   assert.equal(typeof GridSim.simuleaza, "function"); assert.equal(typeof GridSim.verdictScurt, "function"); assert.equal(globalThis.GridSim, undefined);
 });
-await test("categorie: felul verdictului din «ce aș face»", () => {
-  assert.equal(categorie("Aș ține: de aici încolo câștigă…"), "tine"); assert.equal(categorie("Aș opri: …"), "opreste"); assert.equal(categorie("L-aș opri: lichidare…"), "opreste"); assert.equal(categorie("N-aș porni așa: …"), "opreste");
-  assert.equal(categorie("Reluarea arată botul OPRIT pe drumul real: …"), "opreste"); assert.equal(categorie("Nu se potrivește cu planul tău: …"), "plan"); assert.equal(categorie("Stopul e în zgomot: atins…"), "zgomot");
-  assert.equal(categorie("O aruncare de ban de aici încolo: …"), "ban"); assert.equal(categorie(""), "alt");
+await test("categorie: felul verdictului din «ce aș face» - și varianta de bot NOU („Aș porni” = ține, „N-aș porni” = oprește); reluarea nepotrivită e felul ei", () => {
+  assert.equal(categorie("Aș ține: de aici încolo câștigă…"), "tine"); assert.equal(categorie("Aș porni: câștigă în 62%…"), "tine", "revizia (1): boții mai vechi de 31 de zile se socotesc ca bot nou");
+  assert.equal(categorie("Aș opri: …"), "opreste"); assert.equal(categorie("L-aș opri: lichidare…"), "opreste"); assert.equal(categorie("N-aș porni așa: …"), "opreste");
+  assert.equal(categorie("Reluarea arată botul OPRIT pe drumul real: …"), "reluare"); assert.equal(categorie("Nu se potrivește cu planul tău: …"), "plan"); assert.equal(categorie("Stopul e în zgomot: atins…"), "zgomot");
+  assert.equal(categorie("O aruncare de ban de aici încolo: …"), "ban"); assert.equal(categorie("O aruncare de ban: 50% câștigă…"), "ban"); assert.equal(categorie(""), "alt");
+});
+await test("revizia (3): felul nou se anunță abia după DOUĂ ture la rând (nu la prima tură care sare), cel mult un mesaj pe bot pe oră; (mărunt) alerta netrimisă nu schimbă starea", async () => {
+  const d = deps(); await turaMonteCarloBot(d); const acum = d.stare.boti["2408"].cat, altul = acum === "tine" ? "zgomot" : "tine";
+  d.stare.boti["2408"] = { cat: altul, text: "x", la: Date.now() - 3600000, ultima: Date.now() - 900000 };
+  const r1 = await turaMonteCarloBot(d); assert.equal(r1.anuntate, 0, "prima tură cu felul nou: doar candidat"); assert.equal(d.stare.boti["2408"].cat, altul, "felul vechi rămâne"); assert.equal(d.stare.boti["2408"].candidat, acum); assert.equal(d.stare.boti["2408"].candidatN, 1);
+  const r2 = await turaMonteCarloBot(d); assert.equal(r2.anuntate, 1, "a doua tură la rând ⇒ mesaj"); assert.equal(d.stare.boti["2408"].cat, acum); assert.ok(d.stare.boti["2408"].anuntatLa > 0); assert.equal(d.stare.boti["2408"].candidat, null);
+  d.stare.boti["2408"].cat = altul; d.stare.boti["2408"].candidat = acum; d.stare.boti["2408"].candidatN = 1;   // iar diferit, de două ture, dar la mai puțin de o oră de la ultimul mesaj
+  const r3 = await turaMonteCarloBot(d); assert.equal(r3.anuntate, 0, "sub o oră de la ultimul mesaj nu se mai anunță"); assert.equal(d.stare.boti["2408"].cat, altul);
+  d.stare.boti["2408"].anuntatLa = Date.now() - 3700000; d.anunta = async () => false;
+  const r4 = await turaMonteCarloBot(d); assert.equal(r4.anuntate, 0); assert.equal(d.stare.boti["2408"].cat, altul, "netrimisă ⇒ starea veche rămâne, se reîncearcă"); assert.ok(d.stare.boti["2408"].candidatN >= 2);
+});
+await test("revizia (2): funding-ul real prin deps.funding (rata cu semn, nu costul presupus); „de la” cu ziua când felul ține de peste 24 h; simbolul prin deps.simbol", async () => {
+  let cerut = null; const d = deps({ funding: async (s) => { cerut = s; return { rataZi: -0.002 }; }, simbol: (b) => "ALT_USDT_PERP" }); await turaMonteCarloBot(d);
+  assert.equal(cerut, "ALT_USDT_PERP"); assert.equal(d.stare.boti["2408"].fundingZi, -0.002, "rata reală, cu semn, ajunge în simulare");
+  const acum = d.stare.boti["2408"].cat, altul = acum === "tine" ? "zgomot" : "tine";
+  d.stare.boti["2408"] = { cat: altul, text: "x", la: Date.now() - 3 * 86400000, ultima: Date.now() - 900000, candidat: acum, candidatN: 1 };
+  await turaMonteCarloBot(d); assert.equal(d.trimise.length, 1); assert.match(d.trimise[0].m.titlu, /\(era «[^»]+» de 3 zile\)$/, d.trimise[0].m.titlu);
+  assert.equal(typeof GridSim.rataFunding, "function", "rata de funding e în motorul pur (GridSim), nu doar în ecranul Simulatorului");
 });
 await test("prima socotire pe un bot TACE (nimic de comparat) și ține minte felul; a doua, cu același fel, tot tace", async () => {
   const d = deps(); const r = await turaMonteCarloBot(d);
@@ -41,7 +60,7 @@ await test("prima socotire pe un bot TACE (nimic de comparat) și ține minte fe
 });
 await test("felul s-a schimbat ⇒ UN mesaj pe Discord, cu felul vechi și de când; nivel „atentie” la oprește / plan; cheia pe fel", async () => {
   const d = deps(); await turaMonteCarloBot(d); const acum = d.stare.boti["2408"].cat, altul = acum === "tine" ? "zgomot" : "tine";
-  d.stare.boti["2408"] = { cat: altul, text: "x", la: Date.now() - 3600000, ultima: Date.now() - 900000 };
+  d.stare.boti["2408"] = { cat: altul, text: "x", la: Date.now() - 3600000, ultima: Date.now() - 900000, candidat: acum, candidatN: 1 };   // felul nou s-a văzut deja o tură (revizia 3)
   const r = await turaMonteCarloBot(d); assert.equal(r.anuntate, 1); assert.equal(d.trimise.length, 1);
   const t = d.trimise[0]; assert.equal(t.b, "2408"); assert.equal(t.cheie, "mc-verdict-" + acum); assert.match(t.m.titlu, /^🎰 PONS: Monte Carlo zice acum «[^»]+» \(era «[^»]+» de la \d\d:\d\d\)$/); assert.match(t.m.mesaj, / · șanse pe drumuri ca ultimele 14 zile, nu o predicție$/);
   assert.equal(t.m.nivel, acum === "opreste" || acum === "plan" ? "atentie" : "info"); assert.equal(d.stare.boti["2408"].cat, acum); assert.ok(Date.now() - d.stare.boti["2408"].la < 5000, "de când = acum (fel nou)");
@@ -58,6 +77,7 @@ await test("colectorul: tura la 15 minute, starea în ritm (mcBoti), lumânăril
   assert.match(col, /const GridSim = gridSimDinPagina\(fs\.readFileSync\(path\.join\(RAD, "public", "lib", "grid-sim\.js"\), "utf8"\), GridCalcul, GridProba, Mcs\.MonteSimbol\)/);
   const i = col.indexOf("async function turaMonteCarloBot()"), f = col.slice(i, i + 1600); assert.ok(i > 0, "tura există");
   assert.match(f, /Date\.now\(\) - mcBotLa < 15 \* 60000/); assert.match(f, /randuri15: lumanari15M/); assert.match(f, /tineRitm\("mcBoti", st\.boti\)/); assert.match(f, /anunta: \(m, bot, cheie\) => trimiteAlerta\(m, bot, cheie\)/);
+  assert.match(f, /funding: async \(s\) =>[^\n]*pionex_funding[^\n]*GridSim\.rataFunding\(/, "revizia (2): rata reală, ca în Tablou"); assert.match(f, /simbol: \(b\) => TabloBot\.simboluri\(b\.baza, b\.quote, b\.simbolPionex\)\.pionex/);
   assert.match(col, /turaMonteCarloBot\(\)\.catch\(\(e\) => jurnal\("monte carlo boți", e\.message\)\)/); assert.match(col, /VERSIUNE_COLECTOR = "v101\.89"/);
 });
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICA" : "trec"}`);

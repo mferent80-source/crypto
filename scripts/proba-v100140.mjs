@@ -24,6 +24,11 @@ await test("(4) rotunjirea: CÂȘTIGĂ 97% · PIERDE 3% (nu 4%: suma e 100); cu 
   assert.match(GS.verdict(REZ({ pCastig: 0.965, pPierde: 0.023, pZero: 0.012 }), ST, null, 0, null).rand, /^CÂȘTIGĂ în 97% din drumuri · PIERDE în 2% · pe zero 1%$/);
   assert.match(GS.verdict(REZ({ pCastig: 0.004, pPierde: 0.996 }), ST, null, 0, null).rand, /^CÂȘTIGĂ în 0% din drumuri · PIERDE în 100%$/);
   assert.match(GS.verdict(REZ({ pCastig: 0.5, pPierde: 0.496, pZero: 0.004 }), ST, null, 0, null).rand, /^CÂȘTIGĂ în 50% din drumuri · PIERDE în 50%$/);
+  assert.match(GS.verdict(REZ({ pCastig: 0.995, pPierde: 0, pZero: 0.005 }), ST, null, 0, null).rand, /^CÂȘTIGĂ în 100% din drumuri · PIERDE în 0%$/, "revizia: 99,5 + 0,5 nu face 101");
+  // revizia (2) colector: rata de funding e în motorul pur, ecranul doar o cheamă
+  const T0 = Date.UTC(2026, 9, 7, 12), r8 = Array.from({ length: 40 }, (_, i) => ({ fundingTime: T0 - i * 8 * 3600000, fundingRate: 0.0001 })), f = GS.rataFunding(r8, T0);
+  assert.equal(f.intervalOre, 8); assert.ok(Math.abs(f.rataZi - 0.0003) < 1e-12); assert.equal(GS.rataFunding([], T0), null);
+  assert.match(functie(citeste("public", "lib", "grid-sim-ecran.js"), "gsRataFunding"), /return GridSim\.rataFunding\(rates, acum\)/);
 });
 await test("(3) tbMcRand: verdictul în text, „șanse… · socotit hh:mm · următorul hh:mm” în nota (mai mică, pe rândul ei); rândul le desenează pe amândouă", () => {
   const r = functie(APP, "tbMcRand"); assert.match(r, /nota:/); assert.match(r, /șanse pe drumuri ca ultimele 14 zile, nu o predicție/);

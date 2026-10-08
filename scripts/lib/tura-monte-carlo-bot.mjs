@@ -13,15 +13,21 @@ export function gridSimDinPagina(src, GridCalcul, GridProba, MonteSimbol) {
 // felul verdictului, din prima propoziție a lui «ce aș face» (GridSim.verdict) - cifrele se mișcă la fiecare tură, felul nu
 export function categorie(faCe) {
   const s = String(faCe || "").trim();
-  if (/^Aș ține/.test(s)) return "tine";
-  if (/^(Aș opri|L-aș opri|N-aș porni|Reluarea arată)/.test(s)) return "opreste";
+  if (/^(Aș ține|Aș porni)/.test(s)) return "tine";   // revizia (1): „Aș porni” = varianta de bot NOU (boții mai vechi de ~31 de zile se socotesc așa)
+  if (/^(Aș opri|L-aș opri|N-aș porni)/.test(s)) return "opreste";
+  if (/^Reluarea arată/.test(s)) return "reluare";   // setările de aici nu se potrivesc cu botul din Pionex - nu e „aș opri”
   if (/^Nu se potrivește/.test(s)) return "plan";
   if (/^Stopul e în zgomot/.test(s)) return "zgomot";
   if (/^O aruncare de ban/.test(s)) return "ban";
   return "alt";
 }
-const NUME_CAT = { tine: "aș ține", opreste: "aș opri", plan: "nu se potrivește cu planul", zgomot: "stopul e în zgomot", ban: "o aruncare de ban", alt: "altfel" };
+const NUME_CAT = { tine: "aș ține", opreste: "aș opri", plan: "nu se potrivește cu planul", zgomot: "stopul e în zgomot", ban: "o aruncare de ban", reluare: "reluarea nu se potrivește cu Pionex", alt: "altfel" };
+// revizia (3): un fel nou se anunță abia când ține DOUĂ ture la rând (marja e ±4 puncte - la P≈55 felul ar sări la fiecare 15 minute) și cel
+// mult un mesaj pe bot pe oră; (mărunt) alerta netrimisă nu schimbă starea - se reîncearcă la tura următoare
+const TURE_PANA_LA_ANUNT = 2, PAUZA_ANUNT_MS = 60 * 60000;
 function ora(t) { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); const k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+function deCand(la, acum) { const ms = acum - la; return ms >= 86400000 ? "de " + cate(Math.round(ms / 86400000), "zi", "zile") : "de la " + ora(la); }   // peste 24 h ora singură ar minți
 const nr = (v) => (typeof v === "number" && isFinite(v) ? v : null);
 
 export async function turaMonteCarloBot(d) {
@@ -33,7 +39,7 @@ export async function turaMonteCarloBot(d) {
   for (const b of activi) {
     out.boti++;
     try {
-      const simbol = b.simbolPionex || String(b.baza || "").replace(/\.PERP$/, "") + "_USDT_PERP", nume = String(b.baza || simbol).replace(/\.PERP$/, "").replace(/_USDT_PERP$/, "");
+      const simbol = d.simbol ? d.simbol(b) : (b.simbolPionex || String(b.baza || "").replace(/\.PERP$/, "") + "_USDT_PERP"), nume = String(b.baza || simbol).replace(/\.PERP$/, "").replace(/_USDT_PERP$/, "");   // simbolul ca în restul colectorului (TabloBot.simboluri)
       const b15 = d.GridCalcul.bare(await d.randuri15(simbol)); if (b15.length < 7 * 96) throw new Error("prea puține lumânări de 15 minute (" + b15.length + ")");
       const s = d.GridSim.setariDinBot(b), fi = d.funding ? await d.funding(simbol) : null, rata = fi ? nr(fi.rataZi) : null;
       const set = Object.assign({}, s.st, { suma: s.st.suma || 50, fundingZi: rata !== null ? rata : 0.0003, fundingCost: rata === null });
@@ -44,14 +50,17 @@ export async function turaMonteCarloBot(d) {
       if (rez.eroare) throw new Error(rez.eroare);
       const v = d.GridSim.verdictScurt(rez, set, plan, b), cat = categorie(v.faCe), text = nota + v.text;
       out.simulati++;
-      const prev = st.boti[String(b.id)];
-      if (prev && prev.cat && prev.cat !== cat) {
-        const ok = await d.anunta({ nivel: cat === "opreste" || cat === "plan" ? "atentie" : "info",
-          titlu: "🎰 " + nume + ": Monte Carlo zice acum «" + (NUME_CAT[cat] || cat) + "» (era «" + (NUME_CAT[prev.cat] || prev.cat) + "» de la " + ora(prev.la) + ")",
+      const prev = st.boti[String(b.id)], fundingZi = set.fundingZi;
+      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0 }; continue; }   // prima socotire tace
+      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, ultima: acum, fundingZi, candidat: null, candidatN: 0 }); continue; }
+      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, ultima: acum, fundingZi, candidat: cat, candidatN });
+      if (candidatN >= TURE_PANA_LA_ANUNT && acum - (prev.anuntatLa || 0) >= PAUZA_ANUNT_MS) {
+        const ok = await d.anunta({ nivel: cat === "opreste" || cat === "plan" || cat === "reluare" ? "atentie" : "info",
+          titlu: "🎰 " + nume + ": Monte Carlo zice acum «" + (NUME_CAT[cat] || cat) + "» (era «" + (NUME_CAT[prev.cat] || prev.cat) + "» " + deCand(prev.la, acum) + ")",
           mesaj: text + " · șanse pe drumuri ca ultimele 14 zile, nu o predicție" }, b.id, "mc-verdict-" + cat);
-        if (ok) out.anuntate++;
+        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum }; continue; }
       }
-      st.boti[String(b.id)] = { cat, text, la: prev && prev.cat === cat ? prev.la : acum, ultima: acum };
+      st.boti[String(b.id)] = nou;   // încă nu se anunță (o tură, pauza de o oră sau alerta netrimisă): felul vechi rămâne, candidatul se ține
     } catch (e) { out.erori++; if (d.jurnal) d.jurnal("monte carlo bot", b.id, e && e.message || e); }
   }
   return out;

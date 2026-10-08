@@ -193,6 +193,21 @@ var GridSim = (function () {
     return (Array.isArray(rows) ? rows : []).map(function (x) { return x.gOriz && x.gOriz[zile] ? Object.assign({}, x, { g: x.gOriz[zile], drum: x.drumOriz ? x.drumOriz[zile] : x.drum }) : x; });
   }
 
+  // v100.140 (revizia colectorului): rata de funding pe zi din ratele Pionex („rates”: fundingTime, fundingRate) - aici, în motorul pur, ca s-o
+  // folosească la fel Simulatorul, Monte Carlo, Tabloul și colectorul. SUMA ratelor din fereastra de 7 zile pe zilele acoperite (fiecare rată
+  // acoperă intervalul dinaintea ei; o gaură nu se numără peste o zi); doar rate mai vechi de 7 zile ⇒ „veche”. Cu semn: pozitivă = longul plătește
+  function rataFunding(rates, acum) {
+    var l = (Array.isArray(rates) ? rates : []).map(function (z) { return { t: Number(z && z.fundingTime), r: Number(z && z.fundingRate) }; }).filter(function (z) { return isFinite(z.t) && isFinite(z.r); }).sort(function (a, b) { return b.t - a.t; });
+    if (l.length < 2) return null;
+    var d = []; for (var i = 1; i < l.length; i++) d.push((l[i - 1].t - l[i].t) / 3600000); d.sort(function (a, b) { return a - b; });
+    var ore = Math.round(d[Math.floor(d.length / 2)] * 10) / 10; if (!(ore > 0)) return null;
+    var veche = !(l[0].t > acum - 7 * 864e5), ref = veche ? l[0].t : acum, ult = [], zile = 0;
+    for (var k = 0; k < l.length; k++) { if (!(l[k].t > ref - 7 * 864e5)) break; var c = k + 1 < l.length ? (l[k].t - l[k + 1].t) / 3600000 : ore; ult.push(l[k]); zile += Math.min(24, Math.max(0, c)) / 24; }
+    zile = Math.min(7, zile); if (!(zile > 0)) return null;
+    var suma = ult.reduce(function (s, z) { return s + z.r; }, 0);
+    return { rataZi: suma / zile, intervalOre: ore, zile: Math.round(zile * 10) / 10, n: ult.length, rata: l[0].r, veche: veche, ultimaLa: l[0].t };
+  }
+
   // ---------------- (3) verdictul ----------------
   // regulile, fixate ÎNAINTE de cifre (spec §3), în ordinea asta; bot = botul Pionex (profitNet) la „Botul meu”.
   // revizia (R3): la botul care RULEAZĂ, rândul mare, cifrele și regulile 4–6 sunt pe „de aici încolo” (Aș ține / Aș opri) - ce a făcut
@@ -202,8 +217,8 @@ var GridSim = (function () {
     var meu = !!rez.acum, d = meu && o.deAici ? o.deAici : null, pl = plan && (plan.minus > 0 || plan.plus > 0) ? plan : null;
     var pC = d ? d.pCastig : o.pCastig, pP = d ? (d.pPierde != null ? d.pPierde : 1 - d.pCastig) : o.pPierde, pZ = d ? (d.pZero || 0) : o.pZero;
     // v100.140 (ideea 4): rotunjite separat, 96,5% / 3,5% dădeau „97% · 4%” = 101 - PIERDE ia restul până la 100 (cu „pe zero” doar de la 0,5%)
-    var P = Math.round(pC * 100), Z = pZ >= 0.005 ? Math.round(pZ * 100) : 0, Q = Math.max(0, 100 - P - Z), p50 = d ? d.p50 : o.p50, p5 = d ? d.p5 : o.p5, p95 = d ? d.p95 : o.p95, mj = d && d.marja != null ? d.marja : o.marja;
-    var rand = (meu ? "de aici încolo: " : "") + "CÂȘTIGĂ în " + P + "% din drumuri · PIERDE în " + Q + "%" + (pZ >= 0.005 ? " · pe zero " + Z + "%" : "");
+    var P = Math.round(pC * 100), Z = pZ >= 0.005 ? Math.min(Math.round(pZ * 100), 100 - P) : 0, Q = Math.max(0, 100 - P - Z), p50 = d ? d.p50 : o.p50, p5 = d ? d.p5 : o.p5, p95 = d ? d.p95 : o.p95, mj = d && d.marja != null ? d.marja : o.marja;
+    var rand = (meu ? "de aici încolo: " : "") + "CÂȘTIGĂ în " + P + "% din drumuri · PIERDE în " + Q + "%" + (Z > 0 ? " · pe zero " + Z + "%" : "");
     var sub = "de obicei " + bani1(p50) + " · cele mai proaste 5%: " + bani1(p5) + " · cele mai bune 5%: " + bani1(p95) + (meu ? " · cu tot cu ce a făcut până acum: de obicei " + bani1(o.p50) : "");
     var zi = cate(o.zile, "zi", "zile"), faCe, planTxt = pl && o.plan && pl.plus > 0 && pl.minus > 0 ? "; planul +" + nrRo(pl.plus, 1) + " vine înainte de −" + nrRo(pl.minus, 1) + " în " + pr(o.plan.p) : "";
     if (meu && rez.acum.oprit) faCe = "Reluarea arată botul " + (rez.acum.oprit === "lichidat" ? "LICHIDAT" : "OPRIT") + " pe drumul real: setările de aici nu se potrivesc cu botul tău din Pionex (stopul sau gridul diferă) - verifică-le înainte să te iei după cifre.";
@@ -242,6 +257,6 @@ var GridSim = (function () {
     var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
+  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

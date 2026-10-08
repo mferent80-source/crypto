@@ -26,17 +26,8 @@ function gsPctF(v) { return (v < 0 ? "−" : "") + Math.abs(v * 100).toLocaleStr
 // intervalul (4 h / 8 h) din timpii ratelor. Cu semn: pozitivă = longul plătește, shortul încasează.
 // revizia (R6/R7): SUMA ratelor din fereastra de 7 zile pe zilele acoperite (fiecare rată acoperă intervalul dinaintea ei - merge și cu
 // intervale amestecate, o gaură nu se numără peste o zi); doar rate mai vechi de 7 zile ⇒ „veche” (fereastra de la ultima rată)
-function gsRataFunding(rates, acum) {
-  var l = (Array.isArray(rates) ? rates : []).map(function (z) { return { t: Number(z && z.fundingTime), r: Number(z && z.fundingRate) }; }).filter(function (z) { return isFinite(z.t) && isFinite(z.r); }).sort(function (a, b) { return b.t - a.t; });
-  if (l.length < 2) return null;
-  var d = []; for (var i = 1; i < l.length; i++) d.push((l[i - 1].t - l[i].t) / 3600000); d.sort(function (a, b) { return a - b; });
-  var ore = Math.round(d[Math.floor(d.length / 2)] * 10) / 10; if (!(ore > 0)) return null;
-  var veche = !(l[0].t > acum - 7 * 864e5), ref = veche ? l[0].t : acum, ult = [], zile = 0;
-  for (var k = 0; k < l.length; k++) { if (!(l[k].t > ref - 7 * 864e5)) break; var c = k + 1 < l.length ? (l[k].t - l[k + 1].t) / 3600000 : ore; ult.push(l[k]); zile += Math.min(24, Math.max(0, c)) / 24; }
-  zile = Math.min(7, zile); if (!(zile > 0)) return null;
-  var suma = ult.reduce(function (s, z) { return s + z.r; }, 0);
-  return { rataZi: suma / zile, intervalOre: ore, zile: Math.round(zile * 10) / 10, n: ult.length, rata: l[0].r, veche: veche, ultimaLa: l[0].t };
-}
+// v100.140: socoteala stă în motorul pur (GridSim.rataFunding) - o folosesc la fel Simulatorul, Monte Carlo, Tabloul și colectorul
+function gsRataFunding(rates, acum) { return GridSim.rataFunding(rates, acum); }
 function gsDataTxt(t) { return new Date(t).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric" }); }
 // revizia (R1): câmpul arată valoarea ROTUNJITĂ (4 zecimale) ⇒ „scris de mână” doar când diferă de ce se AFIȘEAZĂ, nu de valoarea exactă
 function gsFundingManual(fz, memorat) { return Math.abs(fz - (isFinite(memorat) ? +(memorat * 100).toFixed(4) : 0)) > 1e-9; }

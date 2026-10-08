@@ -1828,6 +1828,8 @@ async function turaMonteCarloBot() {
     const st = { boti: ritm.mcBoti && typeof ritm.mcBoti === "object" ? ritm.mcBoti : {} };
     const r = await turaMonteCarloBotModul({ boti: ultimiiBoti, GridSim, GridCalcul, stare: st, jurnal, randuri15: lumanari15M,
       plan: async (b) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
+      funding: async (s) => { try { const r = await cere("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(s)); return GridSim.rataFunding(r && r.data && r.data.rates, Date.now()); } catch { return null; } },   // revizia (2): rata reală, ca în Tablou
+      simbol: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
       anunta: (m, bot, cheie) => trimiteAlerta(m, bot, cheie) });
     tineRitm("mcBoti", st.boti); mcBotLa = Date.now();
     jurnal("monte carlo boți: " + r.simulati + " din " + TextRo.cate(r.boti, "bot activ", "boți activi") + " · " + TextRo.cate(r.anuntate, "schimbare anunțată", "schimbări anunțate") + (r.erori ? " · " + TextRo.cate(r.erori, "eroare", "erori") : ""));
