@@ -202,7 +202,7 @@ var GraficBot = (function () {
     var A = adx(raw, 14), a = A.adx[N - 1], z = zonaAdx(a), pdi = A.pdi[N - 1], mdi = A.mdi[N - 1];
     if (a !== null) {
       var spre = pdi > mdi ? "sus" : "jos", contraA = z === "trend" && ((dir === "long" && spre === "jos") || (dir === "short" && spre === "sus"));
-      rows.push({ ce: "ADX 14", peBoti: o.adxPeBoti || null, stare: z === "loc" ? "bine" : z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) + (o.adxPeBoti ? " · " + o.adxPeBoti : "") + peTf });
+      rows.push({ ce: "ADX 14", peBoti: o.adxPeBoti || null, stare: z === "loc" ? "bine" : z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) + (o.adxPeBoti && !o.doarPiata ? " · " + o.adxPeBoti : "") + peTf });   /* v100.138: doarPiata fără statistica boților */
     }
     if (N >= 48) {
       var sume = []; for (var i = 12; i <= N; i++) { var sv = 0; for (var j = i - 12; j < i; j++) sv += raw[j].v; sume.push(sv); }
@@ -221,8 +221,10 @@ var GraficBot = (function () {
     if (o.doarPiata) {
       var PIATA = { "Direcția": 1, "Unde e prețul": 1, "ADX 14": 1, "Volumul": 1, "Funding": 1 };
       rows = rows.filter(function (x) { return x.tf || PIATA[x.ce]; });
+      // revizia (4): cu becurile aprinse, direcția e cea de pe intervalul graficului („pe 5 min lateral”); fără ele, rândul EMA
+      var NUME_DIR = { urca: "urcă", coboara: "coboară", lateral: "lateral" }, sT = Array.isArray(o.semafor) ? o.semafor.filter(function (x) { return x && x.tf === o.tfGrafic && x.dir; })[0] : null;
       var rD = rows.filter(function (x) { return x.ce === "Direcția"; })[0];
-      if (rD) scurt.push("direcția " + String(rD.text).split(":")[0]);
+      if (sT) scurt.push("pe " + sT.et + " " + (NUME_DIR[sT.dir] || sT.dir)); else if (rD) scurt.push("direcția " + String(rD.text).split(":")[0]);
       if (z) scurt.push(z === "loc" ? "piața stă pe loc" : z === "trend" ? "piața e în trend" : "piața e nehotărâtă");
       if (rs !== null && rs !== undefined) scurt.push("RSI " + Math.round(rs));
       return { pret: p, randuri: rows, peScurt: scurt.join(" · "), adx: a, zona: z };

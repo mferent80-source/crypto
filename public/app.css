@@ -2490,3 +2490,5 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 @media (max-width:640px){#tabloubot #tbGraficCard .tbTf{width:100%}#tabloubot #tbGraficCard .tbTf .tbIntBtn{flex:1 1 0;min-width:0;min-height:44px}}
 /* v100.138: ceasul live din antetul citirii (verde cât vine prețul, galben când nu) */
 #tabloubot .tbCitLive{font-variant-numeric:tabular-nums}#tabloubot .tbCitLive.viu{color:var(--good)}#tabloubot .tbCitLive.vechi{color:var(--warn)}
+/* v100.138 (revizia 3): antetul copiei de pe telefon - titlul și ceasul live, ca pe cardul ascuns sub 1180 px */
+#tabloubot .tbCitCap{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 6px}#tabloubot .tbCitCap b{font-size:14px}
