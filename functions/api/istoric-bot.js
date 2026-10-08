@@ -76,7 +76,8 @@ export async function onRequestGet({request,env}){
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
   if(action==="busolaRetea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("busolaRetea")||"null")}catch{r=null}return json({busolaRetea:r})}   // v100.95 (ideea 1): bilanțul Busolei despre predicțiile 🧠
   if(action==="arbori"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("arbori")||"null")}catch{r=null}return json({arbori:r})}   // v100.93: arborii (gradient boosting), aceeași formă ca retea
-  if(action==="paza"){let p=null;try{p=JSON.parse(await env.ISTORIC.get("paza-boti")||"null")}catch{p=null}return json({paza:p})}   // v100.90 (I-513): starea Busolei pe boți, cu „de când”
+  if(action==="paza"){let p=null;try{p=JSON.parse(await env.ISTORIC.get("paza-boti")||"null")}catch{p=null}return json({paza:p})}
+  if(action==="mcVerdict"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("mc-verdict")||"null")}catch{r=null}return json({mcVerdict:r})}   // v100.141 (ideea 2): verdictul Monte Carlo al colectorului pe boți   // v100.90 (I-513): starea Busolei pe boți, cu „de când”
   if(action==="ore"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let o=null;try{o=JSON.parse(await env.ISTORIC.get("ore:"+s)||"null")}catch{o=null}return json({simbol:s,ore:o})}
   // v100.58: toate ideile intr-o singura cerere (limita de citiri e comuna cu colectorul, acelasi IP)
   if(action==="ingustLista"){const l=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(simbolKv).filter(Boolean))].slice(0,10),out={};for(const s of l){let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}out[s]=v}return json({ingust:out})}
@@ -306,6 +307,14 @@ export async function onRequestPost({request,env}){
     const STARI=["miscare","liniste","nu-stiu"],b=corp&&corp.boti&&typeof corp.boti==="object"?corp.boti:{},boti={};
     for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object")continue;boti[id]={stare:STARI.includes(x.stare)?x.stare:null,de:nr(x.de),la:nr(x.la)}}
     await env.ISTORIC.put("paza-boti",JSON.stringify({la:nr(corp&&corp.la)||Date.now(),boti}));return json({ok:true})
+  }
+  // v100.141 (ideea 2): verdictul Monte Carlo al colectorului pe fiecare bot deschis (felul, culoarea, textul scurt, de când, ultima socotire) -
+  // o cheie mică, rescrisă la 15 minute; Tabloul îl arată fără să mai socotească pe telefon. Cel mult 60 de boți, textul la 400 de semne
+  if(action==="mcVerdict"){
+    const CAT=["tine","opreste","plan","zgomot","ban","reluare","alt"],STARI=["bine","rau","atentie","info"],la=nr(corp&&corp.la),b=corp&&corp.boti;
+    if(la===null||!b||typeof b!=="object")return json({error:"Lipseste la / boti"},400);
+    const boti={};for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object"||!CAT.includes(x.cat))continue;boti[id]={cat:x.cat,stare:STARI.includes(x.stare)?x.stare:null,text:String(x.text||"").slice(0,400),la:nr(x.la),ultima:nr(x.ultima)}}
+    await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti}));return json({ok:true})
   }
   if(action==="sugestii"){
     // v100.85 (reveniri + short): istoricul (piața + boții lui), urmărirea și notările zilei - curățate; notările fără dubluri, 150 de zile

@@ -73,12 +73,12 @@ await test("botul închis iese din stare; botul fără grid se sare; lumânăril
 });
 await test("colectorul: tura la 15 minute, starea în ritm (mcBoti), lumânările colectorului, planul botului; versiunea v101.89", () => {
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
-  assert.match(col, /import \{ turaMonteCarloBot as turaMonteCarloBotModul, gridSimDinPagina \} from "\.\/lib\/tura-monte-carlo-bot\.mjs"/);
+  assert.match(col, /import \{ turaMonteCarloBot as turaMonteCarloBotModul, gridSimDinPagina(, liniaMonteCarlo)? \} from "\.\/lib\/tura-monte-carlo-bot\.mjs"/);
   assert.match(col, /const GridSim = gridSimDinPagina\(fs\.readFileSync\(path\.join\(RAD, "public", "lib", "grid-sim\.js"\), "utf8"\), GridCalcul, GridProba, Mcs\.MonteSimbol\)/);
-  const i = col.indexOf("async function turaMonteCarloBot()"), f = col.slice(i, i + 1600); assert.ok(i > 0, "tura există");
+  const i = col.indexOf("async function turaMonteCarloBot()"), f = col.slice(i, i + 3000); assert.ok(i > 0, "tura există");
   assert.match(f, /Date\.now\(\) - mcBotLa < 15 \* 60000/); assert.match(f, /randuri15: lumanari15M/); assert.match(f, /tineRitm\("mcBoti", st\.boti\)/); assert.match(f, /anunta: \(m, bot, cheie\) => trimiteAlerta\(m, bot, cheie\)/);
   assert.match(f, /funding: async \(s\) =>[^\n]*pionex_funding[^\n]*GridSim\.rataFunding\(/, "revizia (2): rata reală, ca în Tablou"); assert.match(f, /simbol: \(b\) => TabloBot\.simboluri\(b\.baza, b\.quote, b\.simbolPionex\)\.pionex/);
-  assert.match(col, /turaMonteCarloBot\(\)\.catch\(\(e\) => jurnal\("monte carlo boți", e\.message\)\)/); assert.match(col, /VERSIUNE_COLECTOR = "v101\.89"/);
+  assert.match(col, /turaMonteCarloBot\(\)\.catch\(\(e\) => jurnal\("monte carlo boți", e\.message\)\)/); assert.match(col, /VERSIUNE_COLECTOR = "v101\.(89|9\d)"/);
 });
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICA" : "trec"}`);
 if (picate) process.exit(1);

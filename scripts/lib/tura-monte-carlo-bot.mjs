@@ -29,6 +29,13 @@ function ora(t) { const d = new Date(t); return String(d.getHours()).padStart(2,
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); const k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 function deCand(la, acum) { const ms = acum - la; return ms >= 86400000 ? "de " + cate(Math.round(ms / 86400000), "zi", "zile") : "de la " + ora(la); }   // peste 24 h ora singură ar minți
 const nr = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+// v101.90 (ideea 1): rândul din rezumatul de dimineață - „MET «aș ține» de 2 zile · PONS «aș opri» de 3 h”, doar boții activi cu un fel știut
+function deCat(ms) { return ms >= 86400000 ? "de " + cate(Math.round(ms / 86400000), "zi", "zile") : ms >= 3600000 ? "de " + Math.round(ms / 3600000) + " h" : "de " + Math.max(1, Math.round(ms / 60000)) + " min"; }
+export function liniaMonteCarlo(stareBoti, boti, acum) {
+  const st = stareBoti && typeof stareBoti === "object" ? stareBoti : {}, l = [];
+  for (const b of boti || []) { if (!b || b.id == null || b.activ === false) continue; const s = st[String(b.id)]; if (!s || !s.cat || !NUME_CAT[s.cat]) continue; l.push(String(b.baza || "").replace(/\.PERP$/, "") + " «" + NUME_CAT[s.cat] + "» " + deCat(acum - (nr(s.la) || acum))); }
+  return l.length ? l.join(" · ") : null;
+}
 
 export async function turaMonteCarloBot(d) {
   const acum = d.acum || Date.now(), st = d.stare || {}, out = { boti: 0, simulati: 0, anuntate: 0, erori: 0 };
@@ -51,14 +58,15 @@ export async function turaMonteCarloBot(d) {
       const v = d.GridSim.verdictScurt(rez, set, plan, b), cat = categorie(v.faCe), text = nota + v.text;
       out.simulati++;
       const prev = st.boti[String(b.id)], fundingZi = set.fundingZi;
-      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0 }; continue; }   // prima socotire tace
-      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, ultima: acum, fundingZi, candidat: null, candidatN: 0 }); continue; }
-      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, ultima: acum, fundingZi, candidat: cat, candidatN });
+      // v101.90: și culoarea (stare) - KV-ul o duce în Tablou, care arată ultimul text / culoare; felul (cat) rămâne cel confirmat (Discord)
+      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0 }; continue; }   // prima socotire tace
+      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: null, candidatN: 0 }); continue; }
+      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: cat, candidatN });
       if (candidatN >= TURE_PANA_LA_ANUNT && acum - (prev.anuntatLa || 0) >= PAUZA_ANUNT_MS) {
         const ok = await d.anunta({ nivel: cat === "opreste" || cat === "plan" || cat === "reluare" ? "atentie" : "info",
           titlu: "🎰 " + nume + ": Monte Carlo zice acum «" + (NUME_CAT[cat] || cat) + "» (era «" + (NUME_CAT[prev.cat] || prev.cat) + "» " + deCand(prev.la, acum) + ")",
           mesaj: text + " · șanse pe drumuri ca ultimele 14 zile, nu o predicție" }, b.id, "mc-verdict-" + cat);
-        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum }; continue; }
+        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum }; continue; }
       }
       st.boti[String(b.id)] = nou;   // încă nu se anunță (o tură, pauza de o oră sau alerta netrimisă): felul vechi rămâne, candidatul se ține
     } catch (e) { out.erori++; if (d.jurnal) d.jurnal("monte carlo bot", b.id, e && e.message || e); }

@@ -19,7 +19,7 @@ import { turaDimineata as turaDimineataModul, liniiBecuri, etichetaIeri } from "
 import { turaIdei as turaIdeiModul } from "./lib/tura-idei.mjs";
 import { turaIngust as turaIngustModul } from "./lib/tura-ingust.mjs";
 import { turaVarianteNoapte as turaVarianteNoapteModul, mcsDinPagina } from "./lib/tura-variante-noapte.mjs";   // v101.88 (el: „fa idei”)
-import { turaMonteCarloBot as turaMonteCarloBotModul, gridSimDinPagina } from "./lib/tura-monte-carlo-bot.mjs";   // v101.89 (el 08.10: „fa ideile” - B)
+import { turaMonteCarloBot as turaMonteCarloBotModul, gridSimDinPagina, liniaMonteCarlo } from "./lib/tura-monte-carlo-bot.mjs";   // v101.89 (el 08.10: „fa ideile” - B); v101.90: + rândul de dimineață
 import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
 import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
@@ -47,7 +47,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.89";
+const VERSIUNE_COLECTOR = "v101.90";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1318,6 +1318,8 @@ async function dateDimineata() {
     const l = boti.filter((b) => b && b.id && b.activ !== false).map((b) => { const s = stareAlerte[b.id] && stareAlerte[b.id]._busola; if (s && Number(s.la) > laMax) laMax = Number(s.la); return { nume: String(b.baza || "").replace(/\.PERP$/, ""), stare: s ? s.stare : null, de: s ? s.de : null }; });
     const sufix = laMax > 0 && acum - laMax > Busola.PAZA_VECHI_MS ? " (rezumat de acum " + TextRo.ore(acum - laMax) + ")" : "";
     const t = Busola.liniaBoti(l, acum, 142 - sufix.length); out.liniiExtra = t ? ["🧭 Busola, pe 4h: " + t + sufix] : [];
+    // v101.90 (ideea 1): felul Monte Carlo pe fiecare bot deschis, cu „de când” (starea turei de la 15 minute)
+    try { const mcl = liniaMonteCarlo(ritm.mcBoti, boti, acum); if (mcl) out.liniiExtra.push("🎰 Monte Carlo: " + mcl); } catch (e) { jurnal("dimineata monte carlo", e.message); }
     lBoti = l; liniaVeche = sufix;
     // v101.75 (I-552): becurile 4 h / 1 zi ale boților deschiși - aceeași regulă ca Tabloul (directiaBotului, ținută 5 min)
     for (const b of boti.filter((y) => y && y.id && y.activ !== false)) {
@@ -1832,6 +1834,8 @@ async function turaMonteCarloBot() {
       simbol: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
       anunta: (m, bot, cheie) => trimiteAlerta(m, bot, cheie) });
     tineRitm("mcBoti", st.boti); mcBotLa = Date.now();
+    // v101.90 (ideea 2): verdictul fiecărui bot în KV - Tabloul îl arată ca atare și nu mai socotește pe telefon cât e proaspăt (sub 20 min)
+    try { await trimite("/api/istoric-bot?action=mcVerdict", { la: Date.now(), boti: st.boti }); } catch (e) { jurnal("monte carlo KV", e.message); }
     jurnal("monte carlo boți: " + r.simulati + " din " + TextRo.cate(r.boti, "bot activ", "boți activi") + " · " + TextRo.cate(r.anuntate, "schimbare anunțată", "schimbări anunțate") + (r.erori ? " · " + TextRo.cate(r.erori, "eroare", "erori") : ""));
   } catch (e) { jurnal("monte carlo boți ESEC", e.message); mcBotLa = Date.now() - 13 * 60000; }
   mcBotInLucru = false;
