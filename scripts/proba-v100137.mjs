@@ -35,7 +35,7 @@ await test("(b2) app: TB_PERIOADE pe intervale (5M/15M/60M/4H/1D, fiecare cu per
   assert.match(APP, /var TB_PERIOADE=\{"5M":\{i:"5M",l:288,per:"24h",[^}]*\},"15M":\{i:"15M",l:288,per:"3z",[^}]*\},"60M":\{i:"60M",l:168,per:"7z",[^}]*\},"4H":\{i:"4H",l:180,per:"30z",[^}]*\},"1D":\{i:"1D",l:200,per:"200z",[^}]*\}\}/);
   assert.match(APP, /var TB_TF_VECHI=\{"24h":"5M","3z":"15M","7z":"60M"\}/);
   assert.match(functie(APP, "tbTf"), /TB_PERIOADE\[tbStare\.graficInterval\]/); assert.doesNotMatch(APP, /graficInterval\|\|"24h"/);
-  assert.match(APP, /per:TB_PERIOADE\[tbTf\(\)\]\.per,semafor:tbSemaforTf\(b\),tfGrafic:TB_PERIOADE\[tbTf\(\)\]\.i,trendIstoric:tbTrendIstoric\(b\)/);
+  assert.match(APP, /per:TB_PERIOADE\[tbTf\(\)\]\.per,fereastraToata:tbFereastraToataE\(\),semafor:tbSemaforTf\(b\),tfGrafic:TB_PERIOADE\[tbTf\(\)\]\.i,trendIstoric:tbTrendIstoric\(b\)/);
   assert.match(APP, /semClic:\{"5M":"tbAlegeInterval\('5M'\)","15M":"tbAlegeInterval\('15M'\)","60M":"tbAlegeInterval\('60M'\)","4H":"tbAlegeInterval\('4H'\)","1D":"tbAlegeInterval\('1D'\)"\}/, "becurile de pe grafic comută și pe 4h / 1z");
 });
 await test("(b3) schimbarea e instantă: lumânările stau în tbStare.graficCache pe simbol|interval, tbAlegeInterval le arată pe loc (fără la=0), tbAduGraficul le aduce din spate pe celelalte", () => {

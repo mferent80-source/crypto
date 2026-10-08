@@ -2141,6 +2141,7 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:14px}
 #tabloubot #tbGraficCard .tbInterval{flex-wrap:wrap;max-width:100%}
 #tabloubot #tbGrafic{min-width:0;max-width:100%}
 #tabloubot #tbGraficCard .tbIntBtn{width:auto;flex:0 0 auto}
+#tabloubot #tbGraficCard .tbFerBtn{margin-left:6px;border-style:dashed}#tabloubot #tbGraficCard .tbFerBtn[aria-pressed="true"]{border-style:solid}/* v100.144: butonul „24 h” - toată fereastra, nu doar de la pornirea botului */
 #tabloubot .tbGraficRand{align-items:start}
 #tabloubot .tbConcret[hidden]{display:none}
 #tabloubot .tbMotive[hidden]{display:none}
