@@ -19,6 +19,7 @@ import { turaDimineata as turaDimineataModul, liniiBecuri, etichetaIeri } from "
 import { turaIdei as turaIdeiModul } from "./lib/tura-idei.mjs";
 import { turaIngust as turaIngustModul } from "./lib/tura-ingust.mjs";
 import { turaVarianteNoapte as turaVarianteNoapteModul, mcsDinPagina } from "./lib/tura-variante-noapte.mjs";   // v101.88 (el: „fa idei”)
+import { turaMonteCarloBot as turaMonteCarloBotModul, gridSimDinPagina } from "./lib/tura-monte-carlo-bot.mjs";   // v101.89 (el 08.10: „fa ideile” - B)
 import { turaPiata as turaPiataModul } from "./lib/tura-piata.mjs";
 import { turaScan as turaScanModul } from "./lib/tura-scan.mjs";
 import { faCopie } from "./lib/copie.mjs";
@@ -46,7 +47,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.88";
+const VERSIUNE_COLECTOR = "v101.89";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -137,6 +138,7 @@ const TabloExtra = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "pu
 const GridProba = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(GridCalcul);
 // v101.88: pagina Monte Carlo pe simbol (aceleași funcții: variantele, țintele TP, regulile „sigur”) pentru verificarea de noapte
 const Mcs = mcsDinPagina(fs.readFileSync(path.join(RAD, "public", "lib", "monte-simbol.js"), "utf8"), fs.readFileSync(path.join(RAD, "public", "lib", "monte-simbol-ecran.js"), "utf8"), GridCalcul, GridProba);
+const GridSim = gridSimDinPagina(fs.readFileSync(path.join(RAD, "public", "lib", "grid-sim.js"), "utf8"), GridCalcul, GridProba, Mcs.MonteSimbol);   // v101.89: Simulatorul grid al paginii (Monte Carlo pe bot)
 const Valoare = incarca("valoare.js", "Valoare");   // v101.30 (I-470): zona de valoare + pivotii (laboratorul)
 const GridLaborator = new Function("GridCalcul", "GridProba", "Valoare", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba, Valoare);
 const GridPlan = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-plan.js"), "utf8") + "; return GridPlan;")(GridCalcul, GridProba);   // v101.9
@@ -1815,6 +1817,23 @@ async function turaVarianteNoapte() {
   } catch (e) { jurnal("variante noapte ESEC", e.message); varianteEsecLa = Date.now(); }
   varianteNoapteInLucru = false;
 }
+// v101.89 (el 08.10: „fa ideile” - ideea B): Monte Carlo pe boții activi la 15 minute, cu lumânările pe care colectorul le are deja; pe Discord
+// doar când verdictul își schimbă felul (aș ține → aș opri…); starea (felul și de când) în ritm, ca să nu reanunțe după repornire
+let mcBotLa = 0, mcBotInLucru = false;
+async function turaMonteCarloBot() {
+  if (process.env.COLECTOR_FARA_MC || mcBotInLucru || Date.now() - mcBotLa < 15 * 60000) return;
+  if (!ultimiiBoti.length || Date.now() - ultimiiBotiLa > 15 * 60000) return;   // fără o listă proaspătă nu judec boți poate opriți
+  mcBotInLucru = true;
+  try {
+    const st = { boti: ritm.mcBoti && typeof ritm.mcBoti === "object" ? ritm.mcBoti : {} };
+    const r = await turaMonteCarloBotModul({ boti: ultimiiBoti, GridSim, GridCalcul, stare: st, jurnal, randuri15: lumanari15M,
+      plan: async (b) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
+      anunta: (m, bot, cheie) => trimiteAlerta(m, bot, cheie) });
+    tineRitm("mcBoti", st.boti); mcBotLa = Date.now();
+    jurnal("monte carlo boți: " + r.simulati + " din " + TextRo.cate(r.boti, "bot activ", "boți activi") + " · " + TextRo.cate(r.anuntate, "schimbare anunțată", "schimbări anunțate") + (r.erori ? " · " + TextRo.cate(r.erori, "eroare", "erori") : ""));
+  } catch (e) { jurnal("monte carlo boți ESEC", e.message); mcBotLa = Date.now() - 13 * 60000; }
+  mcBotInLucru = false;
+}
 async function turaRisc() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
   if (riscInLucru || profilStare.riscZi === zi || Date.now() - riscEsec < 3600000) return;
@@ -1926,6 +1945,7 @@ async function bucla() {
   turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
   turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)
+  turaMonteCarloBot().catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute, Discord la schimbarea verdictului
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);

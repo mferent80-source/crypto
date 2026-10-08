@@ -225,7 +225,7 @@ await test("(f1) pagina gridsim: meniul, panelul cu #gsPagina, script-urile dup�
   const sc = [...html.matchAll(/<script src="\/lib\/([a-z0-9-]+)\.js"><\/script>/g)].map((m) => m[1]);
   assert.ok(sc.indexOf("grid-sim") > sc.indexOf("tablou-extra") && sc.indexOf("grid-sim-ecran") === sc.indexOf("grid-sim") + 1, "grid-sim după tablou-extra, ecranul imediat după");
   assert.match(app, /if\(id==="gridsim"\)\{if\(typeof gsPorneste==="function"\)gsPorneste\(\)\}/);
-  assert.match(sw, /"\/lib\/grid-sim\.js","\/lib\/grid-sim-ecran\.js"/); assert.match(css, /#gsPagina \.gsVerdict\{/);
+  assert.match(sw, /"\/lib\/grid-sim\.js","\/lib\/grid-sim-worker\.js","\/lib\/grid-sim-ecran\.js"/); assert.match(css, /#gsPagina \.gsVerdict\{/);
   assert.match(html, /moreNav\('gridsim',true\)/, "și în „Mai multe” pe telefon");
 });
 await test("(E) versiunea de la v100.134 în sus (colectorul neatins)", () => {

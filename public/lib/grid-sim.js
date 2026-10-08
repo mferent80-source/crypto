@@ -201,7 +201,8 @@ var GridSim = (function () {
     var o = rez && rez.orizonturi && rez.orizonturi[oriz >= 0 ? oriz : 0]; if (!o) return null;
     var meu = !!rez.acum, d = meu && o.deAici ? o.deAici : null, pl = plan && (plan.minus > 0 || plan.plus > 0) ? plan : null;
     var pC = d ? d.pCastig : o.pCastig, pP = d ? (d.pPierde != null ? d.pPierde : 1 - d.pCastig) : o.pPierde, pZ = d ? (d.pZero || 0) : o.pZero;
-    var P = Math.round(pC * 100), Q = Math.round(pP * 100), Z = Math.round(pZ * 100), p50 = d ? d.p50 : o.p50, p5 = d ? d.p5 : o.p5, p95 = d ? d.p95 : o.p95, mj = d && d.marja != null ? d.marja : o.marja;
+    // v100.140 (ideea 4): rotunjite separat, 96,5% / 3,5% dădeau „97% · 4%” = 101 - PIERDE ia restul până la 100 (cu „pe zero” doar de la 0,5%)
+    var P = Math.round(pC * 100), Z = pZ >= 0.005 ? Math.round(pZ * 100) : 0, Q = Math.max(0, 100 - P - Z), p50 = d ? d.p50 : o.p50, p5 = d ? d.p5 : o.p5, p95 = d ? d.p95 : o.p95, mj = d && d.marja != null ? d.marja : o.marja;
     var rand = (meu ? "de aici încolo: " : "") + "CÂȘTIGĂ în " + P + "% din drumuri · PIERDE în " + Q + "%" + (pZ >= 0.005 ? " · pe zero " + Z + "%" : "");
     var sub = "de obicei " + bani1(p50) + " · cele mai proaste 5%: " + bani1(p5) + " · cele mai bune 5%: " + bani1(p95) + (meu ? " · cu tot cu ce a făcut până acum: de obicei " + bani1(o.p50) : "");
     var zi = cate(o.zile, "zi", "zile"), faCe, planTxt = pl && o.plan && pl.plus > 0 && pl.minus > 0 ? "; planul +" + nrRo(pl.plus, 1) + " vine înainte de −" + nrRo(pl.minus, 1) + " în " + pr(o.plan.p) : "";

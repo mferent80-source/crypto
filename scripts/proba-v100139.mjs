@@ -35,7 +35,7 @@ await test("(a) GridSim.verdictScurt: 7 zile + «ce aș face» + pe o zi, într-
 });
 await test("(b) app: tbMc la 15 min (TB_MC_MS), pornit la tic și la alt bot; GridSim pe botul reluat (stPrefix, [1,7] zile), funding-ul real; rândul primul în citire, cu ceasul și clicul spre Simulator", () => {
   assert.match(APP, /var TB_MC_MS=15\*60000/); assert.match(functie(APP, "tbDeseneazaTabloulUnic"), /tbMcTick\(\)/);
-  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim\)/); assert.match(p, /GridSim\.setariDinBot\(b\)/); assert.match(p, /GridSim\.simuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1,7\],zile:14\}\)/); assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
+  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim\)/); assert.match(p, /GridSim\.setariDinBot\(b\)/); assert.match(p, /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1,7\],zile:14\}\)/);   // v100.140: în worker assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
   const t = functie(APP, "tbMcTick"); assert.match(t, /Date\.now\(\)-tbMc\.la<TB_MC_MS/); assert.match(t, /tbPanouVizibil\(\)/);
   const c = functie(APP, "tbDeseneazaCitire"); assert.match(c, /tbMcRand\(b\)/); assert.match(c, /out\.unshift\(/); assert.match(c, /data-action-click="gsDeschideBot\(\)"[^>]*>deschide în Simulator</);
   const r = functie(APP, "tbMcRand"); assert.match(r, /șanse pe drumuri ca ultimele 14 zile, nu o predicție/); assert.match(r, /socotit "\+hm\(tbMc\.la\)\+" · următorul "\+hm\(tbMc\.urmatorul\)/);
@@ -46,11 +46,11 @@ await test("(c) comportamentul: primul tic socotește pe bot (lumânări prin mc
   let aduceri = 0; ctx.mcsAduCoin = async (sim) => { aduceri++; return { b15: B, b1: [], fundingInfo: { rataZi: 0.0005 } }; }; ctx.mcsSimbolBot = (b) => "PONS"; ctx.tbPanouVizibil = () => true; ctx.textEroare = (e) => String(e && e.message || e); ctx.TabloBot = { simboluri: () => ({ pionex: "PONS_USDT_PERP" }) };
   const bot = (id) => ({ id, baza: "PONS.PERP", quote: "USDT", directie: "LONG", gridJos: ST.jos, gridSus: ST.sus, levier: 2, investit: 50, pornitLa: B[B.length - 288].t, opritorPierdereActiv: true, opritorPierdere: ST.stop.jos, brut: { buOrderData: { row: 11 } }, profitNet: 0.2 });
   ctx.tbStare = { routeOk: true, bot: bot("1"), citireO: null, funding: null }; ctx.tbPlan = { botId: null, plan: null }; ctx.tbDeseneazaCitire = () => {};
-  const src = APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + ["tbMcCheie", "tbMcTick", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
+  const src = APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + ["tbMcSimuleaza", "tbMcCheie", "tbMcTick", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
   vm.createContext(ctx); vm.runInContext(src, ctx);
   ctx.tbMcTick(); for (let i = 0; i < 100 && ctx.tbMc.inLucru; i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60));
   assert.equal(aduceri, 1); assert.ok(ctx.tbMc.rand, "verdictul e gata"); assert.equal(ctx.tbMc.botId, "1"); assert.ok(ctx.tbMc.urmatorul - ctx.tbMc.la === 15 * 60000);
-  const r = ctx.tbMcRand(ctx.tbStare.bot); assert.equal(r.ce, "Monte Carlo"); assert.match(r.text, /^de aici încolo, 7 zile: /); assert.match(r.text, / · șanse pe drumuri ca ultimele 14 zile, nu o predicție — socotit \d\d:\d\d · următorul \d\d:\d\d$/);
+  const r = ctx.tbMcRand(ctx.tbStare.bot); assert.equal(r.ce, "Monte Carlo"); assert.match(r.text, /^de aici încolo, 7 zile: /); assert.match(r.nota, /^șanse pe drumuri ca ultimele 14 zile, nu o predicție · socotit \d\d:\d\d · următorul \d\d:\d\d$/);   // v100.140: nota separată
   assert.equal(ctx.tbMcRand(bot("2")), null, "alt bot ⇒ nimic din verdictul vechi");
   const la = ctx.tbMc.la; ctx.tbMcTick(); await new Promise((r) => setTimeout(r, 80)); assert.equal(aduceri, 1); assert.equal(ctx.tbMc.la, la, "în 15 minute nu se socotește din nou");
   ctx.tbStare.bot = bot("2"); ctx.tbMcTick(); for (let i = 0; i < 100 && ctx.tbMc.inLucru; i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60));
@@ -77,7 +77,7 @@ await test("(R1/R6/R7/R8/R9/R10) Tablou: botul OPRIT se socotește ca bot nou ș
   ctx.TabloBot = { simboluri: () => ({ pionex: "PONS_USDT_PERP" }) };
   const bot = (id, activ) => ({ id, activ: activ !== false, baza: "PONS.PERP", quote: "USDT", directie: "LONG", gridJos: ST.jos, gridSus: ST.sus, levier: 2, investit: 50, pornitLa: B[B.length - 288].t, opritorPierdereActiv: true, opritorPierdere: ST.stop.jos, brut: { buOrderData: { row: 11 } }, profitNet: 0.2 });
   ctx.tbStare = { routeOk: true, bot: bot("1", false), citireO: null, funding: { sim: "BTC_USDT_PERP", info: { rataZi: 0.009 } } }; ctx.tbPlan = { botId: "1", plan: { minus: 1, plus: 2, proba: true } }; ctx.tbDeseneazaCitire = () => {};
-  const src = APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + ["tbMcCheie", "tbMcTick", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
+  const src = APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + ["tbMcSimuleaza", "tbMcCheie", "tbMcTick", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
   vm.createContext(ctx); vm.runInContext(src, ctx);
   const gata = async () => { for (let i = 0; i < 100 && ctx.tbMc.inLucru; i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60)); };
   ctx.tbMcTick(); await gata();
@@ -85,7 +85,7 @@ await test("(R1/R6/R7/R8/R9/R10) Tablou: botul OPRIT se socotește ca bot nou ș
   const la = ctx.tbMc.la; ctx.tbPlan = { botId: "1", plan: { minus: 1, plus: 2 } }; ctx.tbMcTick(); await gata(); assert.ok(ctx.tbMc.la > la, "planul schimbat ⇒ din nou"); assert.deepEqual(ctx.tbMc.plan, { minus: 1, plus: 2 });
   cade = true; ctx.tbMc.b15La = 0; ctx.tbMc.la = 0; const vechi = ctx.tbMc.rand.text; ctx.tbMcTick(); await gata();
   assert.equal(ctx.tbMc.rand.text, vechi, "verdictul vechi rămâne"); assert.match(ctx.tbMc.eroare || "", /n-a răspuns/); assert.ok(Date.now() - ctx.tbMc.la >= 15 * 60000 - 2 * 60000 - 1000, "reîncercare în ~2 minute, nu 15");
-  assert.match(ctx.tbMcRand(ctx.tbStare.bot).text, / · din \d\d:\d\d; acum n-a mers: Pionex n-a răspuns acum/);
+  assert.match(ctx.tbMcRand(ctx.tbStare.bot).nota, / · din \d\d:\d\d; acum n-a mers: Pionex n-a răspuns acum/);   // v100.140: în notă
   cade = false; ctx.tbStare.bot = bot("3", true); ctx.tbStare.bot.brut = null; ctx.tbMcTick(); await gata(); assert.match(ctx.tbMc.rand.text, /număr de grile necunoscut, am pus 20/);
 });
 await test("(E) versiunea de la v100.139 în sus (colectorul neatins)", () => {
