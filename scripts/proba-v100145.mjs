@@ -18,23 +18,24 @@ const ACUM = Date.UTC(2026, 9, 8, 9, 0, 0), M5 = 300000;
 const drum = [0.55, 0.54, 0.53, 0.52, 0.51, 0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.54, 0.53, 0.52], B = drum.map((c, i) => ({ t: ACUM - (drum.length - i) * M5, o: i ? drum[i - 1] : c, h: Math.max(i ? drum[i - 1] : c, c) + 0.0005, l: Math.min(i ? drum[i - 1] : c, c) - 0.0005, c, v: 1 }));
 const U = G.umpleri(B, { jos: 0.50, sus: 0.55, linii: 6, geo: false, p0: 0.55, pornit: B[0].t, dir: "long" });
 const umpl = (ri, tip, p, extra) => Object.assign({ t: B[ri].t, ri, k: 0, p, tip, pereche: false, inchisa: false }, extra || {});
+const hm = (t) => { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }, ULT = " · ultima pereche la " + hm(U.umpleri.filter((u) => u.pereche).reduce((m, u) => Math.max(m, u.t), 0));   // v100.146
 
 await test("(1) bilantUmpleri pe umpleri REALE: perechile deduse (închise = U.perechi, deschise) lângă cifrele REALE Pionex (perechi, profit din grid, o zecimală) - fără înmulțiri (din POZĂ: „≈ +11,5” la un bot cu +6,7); bot mai vechi decât fereastra ⇒ „pe tot botul”; singularul; fără umpleri ⇒ null; rândul e sub grafic", () => {
   const deschise = U.umpleri.filter((u) => !u.pereche && !u.inchisa).length; assert.ok(U.perechi >= 4 && deschise >= 2, U.perechi + " / " + deschise);
   const IN = { eticheta: "5m", pornitInFereastra: true }, b1 = G.bilantUmpleri(U, { ordinePerechi: 62, gridProfitBrut: 6.34 }, IN);
   assert.equal(b1.inchise, U.perechi); assert.equal(b1.deschise, deschise); assert.deepEqual(b1.pionex, { perechi: 62, grid: 6.34 });
   // revizia Opus (3, 6): rândul spune INTERVALUL și de unde numără; „Pionex pe tot botul” doar când botul e mai vechi decât fereastra
-  assert.equal(b1.text, "deduse din lumânările de 5m, de la pornire: " + U.perechi + " perechi închise · " + deschise + " deschise · Pionex: 62 de perechi · +6,3 USDT din grid");
-  assert.equal(G.bilantUmpleri(U, { ordinePerechi: 62, gridProfitBrut: 6.34 }, { eticheta: "1h", pornitInFereastra: false }).text, "deduse din lumânările de 1h, de la începutul ferestrei: " + U.perechi + " perechi închise · " + deschise + " deschise · Pionex pe tot botul: 62 de perechi · +6,3 USDT din grid");
-  assert.equal(G.bilantUmpleri(U, { ordinePerechi: 0, gridProfitBrut: 0 }, IN).text, "deduse din lumânările de 5m, de la pornire: " + U.perechi + " perechi închise · " + deschise + " deschise · Pionex: n-a dat încă perechile");
+  assert.equal(b1.text, "deduse din lumânările de 5m, de la pornire: " + U.perechi + " perechi închise · " + deschise + " deschise" + ULT + " · Pionex: 62 de perechi · +6,3 USDT din grid");
+  assert.equal(G.bilantUmpleri(U, { ordinePerechi: 62, gridProfitBrut: 6.34 }, { eticheta: "1h", pornitInFereastra: false }).text, "deduse din lumânările de 1h, de la începutul ferestrei: " + U.perechi + " perechi închise · " + deschise + " deschise" + ULT + " · Pionex pe tot botul: 62 de perechi · +6,3 USDT din grid");
+  assert.equal(G.bilantUmpleri(U, { ordinePerechi: 0, gridProfitBrut: 0 }, IN).text, "deduse din lumânările de 5m, de la pornire: " + U.perechi + " perechi închise · " + deschise + " deschise" + ULT + " · Pionex: n-a dat încă perechile");
   assert.match(G.bilantUmpleri(U, { ordinePerechi: 3, gridProfitBrut: 0.03 }, IN).text, /Pionex: 3 perechi · aproape 0 USDT din grid$/, "sub 0,05 nu se rotunjește la „0,0” și nu minte cu semnul");
   assert.match(G.bilantUmpleri(U, { ordinePerechi: 3, gridProfitBrut: -0.03 }, IN).text, /aproape 0 USDT din grid$/);
   const mic = { umpleri: [umpl(2, "B", 0.53, { inchisa: true }), umpl(3, "S", 0.54, { pereche: true }), umpl(5, "B", 0.51)], perechi: 1 };
-  assert.equal(G.bilantUmpleri(mic, { ordinePerechi: 1, gridProfitBrut: 0.1 }, {}).text, "deduse din lumânări, de la începutul ferestrei: 1 pereche închisă · 1 deschisă · Pionex pe tot botul: 1 pereche · +0,1 USDT din grid");
+  assert.equal(G.bilantUmpleri(mic, { ordinePerechi: 1, gridProfitBrut: 0.1 }, {}).text, "deduse din lumânări, de la începutul ferestrei: 1 pereche închisă · 1 deschisă · ultima pereche la " + hm(B[3].t) + " · Pionex pe tot botul: 1 pereche · +0,1 USDT din grid");
   // revizia Opus (5): umplerile din afara cadrului graficului (nu se desenează) se spun, nu se ascund
-  assert.match(G.bilantUmpleri(mic, { ordinePerechi: 1, gridProfitBrut: 0.1 }, { eticheta: "5m", pornitInFereastra: true, lo: 0.515, hi: 0.535 }).text, /1 pereche închisă · 1 deschisă \(2 în afara graficului\) · Pionex:/);
+  assert.match(G.bilantUmpleri(mic, { ordinePerechi: 1, gridProfitBrut: 0.1 }, { eticheta: "5m", pornitInFereastra: true, lo: 0.515, hi: 0.535 }).text, /1 pereche închisă · 1 deschisă \(2 în afara graficului\) · ultima pereche la \d\d:\d\d · Pionex:/);
   assert.equal(G.bilantUmpleri({ umpleri: [], perechi: 0 }, {}, IN), null); assert.equal(G.bilantUmpleri(null, {}, IN), null);
-  const r = functie(APP, "renderTabloGrafic"); assert.match(r, /var bl=GraficBot\.bilantUmpleri\(oG\.umpleri,b,\{eticheta:TB_PERIOADE\[tbTf\(\)\]\.eticheta,pornitInFereastra:oG\.pornitInFereastra,lo:d\.harta\.lo,hi:d\.harta\.hi\}\)/); assert.match(r, /<\/div>'\+\(bl\?'<p class="tbSub gbBilant"><b>▲▼ umpleri:<\/b> '\+escapeHtml\(bl\.text\)\+'<\/p>':''\)\+ultHtml/, "primul rând sub grafic");
+  const r = functie(APP, "renderTabloGrafic"); assert.match(r, /var bl=GraficBot\.bilantUmpleri\(oG\.umpleri,b,\{eticheta:oG\.umpleriEticheta\|\|TB_PERIOADE\[tbTf\(\)\]\.eticheta,pornitInFereastra:oG\.pornitInFereastra,lo:d\.harta\.lo,hi:d\.harta\.hi\}\)/); /* v100.146: eticheta „1 min” când umplerile vin de acolo */ assert.match(r, /<\/div>'\+\(bl\?'<p class="tbSub gbBilant"><b>▲▼ umpleri:<\/b> '\+escapeHtml\(bl\.text\)\+'<\/p>':''\)\+ultHtml/, "primul rând sub grafic");
   assert.match(CSS, /#tabloubot \.gbBilant\{[^}]*font-size:12\.5px/, "aceeași literă ca vecinii");
 });
 await test("(R2) revizia Opus 🟡: botul mai vechi decât fereastra ⇒ starea grilei pornește de la deschiderea primei bare (nu de la prețul de pornire) - fără umpleri fantomă pe prima bară; intrareBot spune pornitInFereastra", () => {

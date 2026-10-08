@@ -6469,6 +6469,27 @@ function tbFereastraToataE(){var b=tbStare.bot,id=b&&b.id!=null?String(b.id):"";
 function tbFereastraToata(){var b=tbStare.bot;if(!b||b.id==null)return;var id=String(b.id),era=tbFereastraToataE(),m=tbStare.fereastraToataPe;if(era)delete m[id];else m[id]=1;tbScrie(TB_FER_CHEIE,m);renderTabloGrafic()}
 function tbFereastraButon(oG){var e=$("tbFerToata");if(!e)return;e.hidden=!oG.fereastraPosibila;var cat=TB_PERIOADE[tbTf()].cat||"";e.textContent=cat==="24 de ore"?"24 h":cat;e.setAttribute("aria-pressed",String(!!oG.fereastraToata));
   e.title=oG.fereastraToata?"toată fereastra ("+cat+") · apasă: doar de la pornirea botului, cu 2 ore înainte":"apasă: toată fereastra ("+cat+"), nu doar de la pornirea botului"}
+// v100.146 (el 08.10, ideea 2): lumânările de 1 MINUT ale ferestrei botului (de la pornire − 2 h), pentru umplerile deduse - cele de 5 min nu văd
+// oscilațiile din interiorul lor (109 deduse față de 181 la Pionex). Pagini de 500 (Pionex dă cele mai noi întâi), cel mult 3 (25 h); mai vechi
+// ⇒ nu se cer, rămân lumânările graficului. Se țin 2 minute; când vin date noi, graficul se redesenează o dată
+var tbUm1m={sim:null,pornit:0,la:0,bare:null,inLucru:false};
+var TB_UM1M_MS=2*60000,TB_UM1M_PAGINI=3;
+function tbBare1m(b){if(!b||!(Number(b.pornitLa)>0)||!tbUm1m.bare)return null;var sim=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex;return tbUm1m.sim===sim&&tbUm1m.pornit===Number(b.pornitLa)?tbUm1m.bare:null}
+function tbAdu1m(b){
+  if(!b||!(Number(b.pornitLa)>0)||typeof GridCalcul==="undefined")return;
+  var sim=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,pornit=Number(b.pornitLa),deLa=pornit-2*3600000,acum=Date.now();
+  if(acum-deLa>TB_UM1M_PAGINI*500*60000){if(tbUm1m.sim!==sim||tbUm1m.pornit!==pornit)tbUm1m={sim:sim,pornit:pornit,la:acum,bare:null,inLucru:false};return}
+  if(tbUm1m.inLucru||(tbUm1m.sim===sim&&tbUm1m.pornit===pornit&&acum-tbUm1m.la<TB_UM1M_MS))return;
+  tbUm1m.inLucru=true;
+  (async function(){
+    var baza="/api/market?type=pionex_klines&symbol="+encodeURIComponent(sim)+"&interval=1M&limit=500",r=[],end=null,ok=false;
+    try{for(var p=0;p<TB_UM1M_PAGINI;p++){var k=await getJSON(baza+(end?"&endTime="+end:""));var l=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;if(!l||!l.length)break;r=r.concat(l);ok=true;var tMin=Math.min.apply(null,l.map(function(x){return Number(x.time)}).filter(isFinite));if(l.length<500||!(tMin>deLa))break;end=tMin-1}}catch(e){}
+    var bare=ok?GridCalcul.bare(r).slice().sort(function(a,b){return a.t-b.t}):null;
+    if(bare&&(!bare.length||bare[0].t>pornit))bare=null;   /* nu acoperă de la pornire ⇒ nu se folosesc */
+    var vechi=tbUm1m.bare,nou=!!bare&&(!vechi||tbUm1m.sim!==sim||tbUm1m.pornit!==pornit||bare.length!==vechi.length||bare[bare.length-1].c!==vechi[vechi.length-1].c||bare[bare.length-1].t!==vechi[vechi.length-1].t);
+    tbUm1m={sim:sim,pornit:pornit,la:Date.now(),bare:bare,inLucru:false};
+    if(nou&&tbPanouVizibil()&&tbStare.bot&&String(tbStare.bot.id)===String(b.id))renderTabloGrafic()
+  })()}
 function tbAlegeInterval(p){
   p=TB_TF_VECHI[p]||p;if(!TB_PERIOADE[p])return;
   tbStare.graficInterval=p;tbScrie(TB_TF_CHEIE,p);tbTfButoane();
@@ -6683,11 +6704,11 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var su=GraficBot.trendSumar(tbSemaforTf(b)),bloc=rd({stare:su.stare,ce:"Trendul pe TF-uri",text:su.text}),pus=false,ind=false,ex=tbCitireExtra(b,o),out=[],fund=false;
   c.randuri.forEach(function(x){
     if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}
-    if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));if(ex.busola)out.push(rd(ex.busola))}
+    if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));if(ex.busola)out.push(rd(ex.busola));if(ex.busolaGrid)out.push(rd(ex.busolaGrid));if(ex.busolaInterval)out.push(rd(ex.busolaInterval))}
     out.push(rd(x));
     if(x.ce==="Direcția"&&ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}});   /* revizia: fără semafor, Indicatorii stau după Direcția */
   if(!ind&&ex.indicatori)out.push(rd(ex.indicatori));
-  if(!fund){if(ex.estimare)out.push(rd(ex.estimare));if(ex.busola)out.push(rd(ex.busola))}
+  if(!fund){if(ex.estimare)out.push(rd(ex.estimare));if(ex.busola)out.push(rd(ex.busola));if(ex.busolaGrid)out.push(rd(ex.busolaGrid));if(ex.busolaInterval)out.push(rd(ex.busolaInterval))}
   // v100.139: Monte Carlo pe botul tău, primul rând - cu drumul spre Simulatorul grid (botul deja ales acolo)
   var mc=tbMcRand(b);if(mc)out.unshift('<div class="tbCitR '+mc.stare+' tbCitMc"><span class="tbCitIc" aria-hidden="true">🎰</span><div><b>'+escapeHtml(mc.ce)+':</b> <span class="tbCitTx">'+escapeHtml(mc.text)+'</span>'+(mc.nota?'<span class="tbSub tbMcNota">'+escapeHtml(mc.nota)+'</span>':'')+' <button type="button" class="tbIntBtn tbMcBtn" data-action-click="gsDeschideBot()">'+escapeHtml(mc.buton)+'</button></div></div>');
   scrie('<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+out.join(""))}
@@ -6696,7 +6717,7 @@ function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare
 // v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
 // când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
 function tbCitireExtra(b,o){
-  var out={indicatori:null,estimare:null,busola:null},d=tbStare.directie;
+  var out={indicatori:null,estimare:null,busola:null,busolaGrid:null,busolaInterval:null},d=tbStare.directie;
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){
     var tf=tbTf(),r=l.filter(function(x){return x.tf===tf&&x.q})[0]||l.filter(function(x){return x.tf==="15M"&&x.q})[0];
@@ -6711,6 +6732,13 @@ function tbCitireExtra(b,o){
     var rez=Busola.rezumat(),e=rez?Busola.eticheta(rez,tbCheieBusola(b),Date.now(),tbPazaKv.boti[b.id]||null):null;
     out.busola=e?{ce:"Busola, pe 4h",stare:e.nivel==="atentie"?"atentie":e.nivel==="info"?"bine":"info",text:e.text+(e.nota?" · "+e.nota:"")}
       :{ce:"Busola, pe 4h",stare:"info",text:rez?"Busola n-a măsurat încă moneda asta":Busola.nuRaspunde()?"Busola nu răspunde acum":"aștept rezumatul Busolei (vine o dată la 30 de minute)"}
+    // v100.146 (el 08.10: „integrează mai mult Busola în ce spune piața”): ce înseamnă regimul de acum pentru un grid (Busola.randGrid - cât a
+    // pierdut un grid pe episod în regimul ăsta, cu o zecimală, canalul, dovada) și intervalul măsurat de Busola pe 4h față de gridul botului
+    // (Busola.randFisa; mai îngust cu peste 10% ⇒ atenție) - toate din rezumatul real al Busolei, nimic inventat
+    var rG=rez?Busola.randGrid(rez,tbCheieBusola(b),Date.now()):null;
+    out.busolaGrid=rG&&rG.nivel!=="nemasurat"?{ce:"Gridul, după Busola",stare:rG.nivel==="atentie"?"atentie":"info",text:String(rG.text).replace(/^Busola, pe 4h: /,"").replace(/\.$/,"").replace(/(\d+,\d)\d+%/g,"$1%")+(rG.nota?" · "+rG.nota:"")}:null;
+    var rF=rez?Busola.randFisa(rez,tbCheieBusola(b),Date.now(),tbPretScurt,{jos:Number(b.gridJos),sus:Number(b.gridSus)}):null,vF=rF&&/ · măsurat acum /.test(rF.text)?rF.text.slice(rF.text.indexOf(" · măsurat acum ")):"";
+    out.busolaInterval=rF?{ce:"Intervalul Busolei (4h)",stare:rF.raport!==null&&rF.raport<-0.1?"atentie":"info",text:rF.scurt+(rF.comparatie?" · "+rF.comparatie:"")+vF}:null;
   }
   return out}
 // v100.139 (el, 08.10: „tot acolo pune Monte Carlo cu un scan automat pe bot la 15 min să spună predicția” - a ales A, în pagină): primul rând
@@ -6867,7 +6895,8 @@ function renderTabloGrafic(){
   if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
-  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
+  tbAdu1m(b);   /* v100.146: lumânările de 1 min ale ferestrei botului, din spate; când vin, se redesenează o dată */
+  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,bare1m:tbBare1m(b),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
   var d=GraficBot.desen(oG);tbFereastraButon(oG);tbDeseneazaCitire(oG,b);
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
@@ -6875,7 +6904,7 @@ function renderTabloGrafic(){
   var ult=oG.alerte.slice().sort(function(x,y){return y.t-x.t}).slice(0,3),Cn={critic:"bad",atentie:"neutral",info:"mutedInfo"};
   var ultHtml=ult.length?'<div class="gbUlt">'+ult.map(function(a){var dt=new Date(a.t);return '<span><b class="'+(Cn[a.nivel]||"mutedInfo")+'">●</b> '+escapeHtml(String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0"))+' '+escapeHtml(String(a.titlu||"").replace(/^[A-Z0-9._-]+: /,""))+'</span>'}).join("")+'</div>':"";
   var fg=oG.val&&oG.val.zona?Valoare.fataDeGrid(oG.val.zona,oG.grila.jos,oG.grila.sus):null;   // v100.51 (I-470): gridul tau fata de zona de valoare
-  var bl=GraficBot.bilantUmpleri(oG.umpleri,b,{eticheta:TB_PERIOADE[tbTf()].eticheta,pornitInFereastra:oG.pornitInFereastra,lo:d.harta.lo,hi:d.harta.hi});   // v100.145: bilanțul umplerilor - primul rând sub grafic (intervalul, de unde numără, ce e în afara cadrului)
+  var bl=GraficBot.bilantUmpleri(oG.umpleri,b,{eticheta:oG.umpleriEticheta||TB_PERIOADE[tbTf()].eticheta,pornitInFereastra:oG.pornitInFereastra,lo:d.harta.lo,hi:d.harta.hi});   // v100.145: bilanțul umplerilor - primul rând sub grafic (intervalul, de unde numără, ce e în afara cadrului)
   el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+(bl?'<p class="tbSub gbBilant"><b>▲▼ umpleri:</b> '+escapeHtml(bl.text)+'</p>':'')+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
   var crY=svg.querySelector(".gbCruceY"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none"};

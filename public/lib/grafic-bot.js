@@ -361,11 +361,14 @@ var GraficBot = (function () {
     var grila = { jos: gj !== null ? gj : nr(b.gridJos), sus: gs !== null ? gs : nr(b.gridSus), linii: nr(xo.row), geo: String(xo.gridType || "").toLowerCase() === "geometric" };
     var zi = ziObisnuita(viu || (raw.length ? raw[raw.length - 1].c : null), d.profil);   // v100.51 (I-470, I-476)
     var bv = cuPretViu(raw, viu, acum);   // v100.98: lumânarea de acum urmează prețul live
+    // v100.146 (ideea 2): umplerile din lumânările de 1 MINUT (d.bare1m), când acoperă de la pornirea botului - cele de 5 min nu văd oscilațiile
+    // din interiorul lor (109 deduse față de 181 la Pionex); altfel din lumânările graficului. Săgețile se așază pe lumânarea graficului după timp
+    var p0t = nr(b.pornitLa), b1m = Array.isArray(d.bare1m) && d.bare1m.length > 1 && p0t !== null && d.bare1m[0].t <= p0t ? cuPretViu(d.bare1m, viu, acum) : null;
     var laStop = TE && b.opritorPierdereActiv ? TE.totalLaOpritor(b) : null;
     return { simplu: d.simplu !== false, pornit: nr(b.pornitLa), pornitInFereastra: nr(b.pornitLa) !== null && raw.length > 0 && nr(b.pornitLa) >= raw[0].t, acum: acum, funding: d.funding || null, bare: bv, fereastraBot: raw !== rawTot, fereastraPosibila: rawBot !== rawTot, fereastraToata: !!d.fereastraToata, fereastraCat: d.fereastraCat || null, W: d.W, ingust: d.W < 560, st: d.st || {}, niv: niv, zi: zi, val: d.valoare || null,
       consLinii: d.consLinii && d.consLinii.bot === b.id ? d.consLinii : null, grila: grila, alerte: TE ? TE.alerteleBotului(d.alerteServer || [], b.id, acum) : [], per: d.per || "24h", pretViu: viu,
       // v100.38: umplerile si perechile gridului, deduse din lumanari de la pornire, langa numarul de perechi al Pionex
-      umpleri: umpleri(bv, { jos: grila.jos, sus: grila.sus, linii: grila.linii, geo: grila.geo, p0: nr(xo.initPrice), pornit: nr(b.pornitLa), dir: dir }), perechiPionex: nr(b.ordinePerechi),
+      umpleri: umpleri(b1m || bv, { jos: grila.jos, sus: grila.sus, linii: grila.linii, geo: grila.geo, p0: nr(xo.initPrice), pornit: nr(b.pornitLa), dir: dir }), umpleriEticheta: b1m ? "1 min" : null, perechiPionex: nr(b.ordinePerechi),
       stopVsPlan: laStop !== null && minus > 0 ? { laStop: laStop, plan: minus } : null,   // v100.99 (I-527)
       proba: d.proba || null,   // v100.99 (I-529): { pret, text } - linia stopului de probă
       semafor: d.semafor || null, tfGrafic: d.tfGrafic || null, trendIstoric: d.trendIstoric || null,   // v100.106: semaforul trendului + banda
@@ -496,7 +499,7 @@ var GraficBot = (function () {
     var U = o.umpleri && Array.isArray(o.umpleri.umpleri) ? o.umpleri.umpleri : [], GU = {}, GUk = [], acumU = nr(o.acum) || Date.now(), pasU = raw.length > 1 ? raw[1].t - raw[0].t : 0;
     U.forEach(function (u) {
       if (!(u.p >= lo && u.p <= hi)) return;
-      var bi = 0; while (bi < n - 1 && B[bi].k < u.ri) bi++;
+      var bi = 0; while (bi < n - 1 && B[bi + 1].t <= u.t) bi++;   /* v100.146: după TIMP - umplerile pot veni din lumânările de 1 min */
       var kk = bi + "|" + u.tip; if (!GU[kk]) { GU[kk] = { bi: bi, tip: u.tip, l: [] }; GUk.push(kk); } GU[kk].l.push(u);
     });
     GUk.forEach(function (kk) {
@@ -504,12 +507,14 @@ var GraficBot = (function () {
       // v100.145: deschisă de peste o oră - vârsta se măsoară de la ÎNCHIDEREA barei umplerii (revizia Opus: de la deschidere, pe 4h / 1z orice
       // umplere ieșea „de 3 h” / „de 24 h”); bara curentă nu e niciodată galbenă; e o margine de jos ⇒ „de cel puțin N h”
       var ore = function (u) { return u.pereche || u.inchisa ? 0 : Math.max(0, Math.floor((acumU - (u.t + pasU)) / 3600000)); }, agatate = gu.l.filter(function (u) { return ore(u) >= 1; }).length;
+      // v100.146 (ideea 3): pe ecran lat vârsta stă lângă săgeata galbenă („×2 · 3 h”, „2 zile”); pe telefon doar în titlu (n-ar încăpea)
+      var oreMax = Math.max.apply(null, gu.l.map(ore)), varsta = !ingust && agatate ? (oreMax >= 24 ? cate(Math.floor(oreMax / 24), "zi", "zile") : oreMax + " h") : "", eti = [gu.l.length > 1 ? "×" + gu.l.length : "", varsta].filter(Boolean).join(" · ");
       var x = X(gu.bi), y = Y(p), cul = agatate ? COL.warn : per ? COL.good : COL.mut;   /* v100.144 (el 08.10): culoarea = soarta (verde = pereche închisă, gri = deschisă); v100.145: galbenul (deschisă de peste o oră) bate verdele - inelul rămâne semnul perechii închise */
       var tri = cum ? f1(x - 4.5) + "," + f1(y + 10) + " " + f1(x + 4.5) + "," + f1(y + 10) + " " + f1(x) + "," + f1(y + 2) : f1(x - 4.5) + "," + f1(y - 10) + " " + f1(x + 4.5) + "," + f1(y - 10) + " " + f1(x) + "," + f1(y - 2);
       var tit = (per && per < gu.l.length ? per + " din " + cate(gu.l.length, "umplere", "umpleri") + " cu perechea închisă\n" : "") + gu.l.map(function (u) { return (cum ? "cumpărare la " : "vânzare la ") + fmtP(u.p) + " · " + ora(u.t, true) + (u.pereche || u.inchisa ? " · pereche închisă" : ore(u) >= 24 ? " · deschisă de cel puțin " + cate(Math.floor(ore(u) / 24), "zi", "zile") : ore(u) >= 1 ? " · deschisă de cel puțin " + ore(u) + " h" : " · încă deschisă"); }).join("\n");
       q.push('<g class="gbUmplere' + (per ? " gbPereche" : "") + '"><title>' + esc(tit) + '</title>'
         + '<polygon points="' + tri + '" fill="' + cul + '" stroke="' + COL.fond + '" stroke-width="1"/>' + (per ? '<circle cx="' + f1(x) + '" cy="' + f1(y) + '" r="6" fill="none" stroke="' + COL.text + '" stroke-width="1.4"/>' : "")
-        + (gu.l.length > 1 ? '<text x="' + f1(x + 6) + '" y="' + f1(cum ? y + 14 : y - 6) + '" font-size="10.5" font-weight="700" fill="' + cul + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">×' + gu.l.length + '</text>' : "") + "</g>");
+        + (eti ? '<text x="' + f1(x + 6) + '" y="' + f1(cum ? y + 14 : y - 6) + '" font-size="10.5" font-weight="700" fill="' + cul + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">' + eti + '</text>' : "") + "</g>");
     });
     // v100.98 (05.10) (el: „linia de pornire a botului”): ce a trăit botul vs ce era înainte
     var tPorn = nr(o.pornit);
@@ -695,8 +700,9 @@ var GraficBot = (function () {
     var l = U && Array.isArray(U.umpleri) ? U.umpleri : [], b = bot || {}; o = o || {}; if (!l.length) return null;
     var inchise = nr(U.perechi) || 0, deschise = l.filter(function (u) { return !u.pereche && !u.inchisa; }).length, pp = nr(b.ordinePerechi), gp = nr(b.gridProfitBrut);
     var lo = nr(o.lo), hi = nr(o.hi), afara = lo !== null && hi !== null ? l.filter(function (u) { return !(u.p >= lo && u.p <= hi); }).length : 0, inF = !!o.pornitInFereastra;
+    var ult = l.filter(function (u) { return u.pereche; }).reduce(function (m, u) { return Math.max(m, u.t); }, 0);   /* v100.146 (ideea 1): ultima pereche închisă - botul mai lucrează? */
     var t = "deduse din " + (o.eticheta ? "lumânările de " + o.eticheta : "lumânări") + (inF ? ", de la pornire: " : ", de la începutul ferestrei: ") + cate(inchise, "pereche închisă", "perechi închise") + " · " + cate(deschise, "deschisă", "deschise")
-      + (afara ? " (" + afara + " în afara graficului)" : "") + " · Pionex" + (inF ? "" : " pe tot botul") + ": " + (pp !== null && pp > 0 ? cate(pp, "pereche", "perechi") + (gp !== null ? " · " + bani1(gp) + " din grid" : "") : "n-a dat încă perechile");
+      + (afara ? " (" + afara + " în afara graficului)" : "") + (ult > 0 ? " · ultima pereche la " + ora(ult) : " · nicio pereche încă") + " · Pionex" + (inF ? "" : " pe tot botul") + ": " + (pp !== null && pp > 0 ? cate(pp, "pereche", "perechi") + (gp !== null ? " · " + bani1(gp) + " din grid" : "") : "n-a dat încă perechile");
     return { inchise: inchise, deschise: deschise, afara: afara, pionex: { perechi: pp, grid: gp }, text: t };
   }
 
