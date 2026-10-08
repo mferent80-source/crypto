@@ -114,7 +114,8 @@ await test("acumConcret: fiecare cartela are cifra mare, eticheta de stare si ac
 });
 await test("pagina: verdict scurt + #tbMotive + #tbConcret dupa randul de sus; Directia pietei in coloana graficului sub indicatori; Banii botului ramane in dreapta jos; butoanele indicatorilor; socoteala coboara intr-o sectiune pliata", () => {
   const h = citeste("../public/index.html"), poz = (s) => { const i = h.indexOf(s); assert.ok(i >= 0, "lipseste " + s); return i; };
-  assert.ok(poz('class="tbSus"') < poz('id="tbMotive"') && poz('id="tbMotive"') < poz('id="tbConcret"') && poz('id="tbConcret"') < poz('class="tbGraficRand"'));
+  // v100.137 (el, 08.10: „mută graficul să fie primul sub rezultate”): rândul graficului vine imediat după rândul de sus, înaintea motivelor
+  assert.ok(poz('class="tbSus"') < poz('class="tbGraficRand"') && poz('class="tbGraficRand"') < poz('id="tbMotive"') && poz('id="tbMotive"') < poz('id="tbConcret"'));
   const rand = h.slice(poz('class="tbGraficRand"'), poz('id="tbIdei"'));
   // v100.111 (I-542): indicatorii + direcția = UN tabel „Trendul pe TF-uri”, tot în rândul graficului
   assert.ok(rand.includes('id="tbTrendCard"') && rand.includes('id="tbIndicatoriRezumat"') && rand.includes('id="tbDirectieRezumat"'), "tabelul unic, langa grafic");

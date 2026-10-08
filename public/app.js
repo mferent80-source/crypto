@@ -4683,7 +4683,7 @@ async function incarcaBoti(cuToast=false){
   return d
 }
 var TB_ISTORIC_PREFIX="tabloBotIstoric_v1_",TB_MOD="tabloBotMod_v1",TB_BOT_ALES="tabloBotAles_v1";
-var tbStare={bot:null,botBrut:null,boti:[],klinePerp:[],klineStare:"ok",funding:null,
+var tbStare={bot:null,botBrut:null,boti:[],klinePerp:[],klineStare:"ok",funding:null,graficCache:{},graficPrefetch:false,
   pretSpot:null,pretSpotLa:0,ws:null,wsSimbol:null,wsIncercari:0,wsTimeout:null,
   ceas:null,routeOk:null,eroare:null,eroareStatus:null,probleme:null,
   motivAlegere:null,stocareStricata:false,istoric:[]};
@@ -4704,7 +4704,7 @@ function tbAlegeBot(id){
   tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
   tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
   // Simbol nou => lumanari noi, WebSocket nou, istoricul altui bot.
-  tbStare.klinePerp=[];tbStare.pretSpot=null;tbStare.pretSpotLa=0;tbStare.istoric=[];
+  tbStare.klinePerp=[];tbStare.pretSpot=null;tbStare.pretSpotLa=0;tbStare.istoric=[];tbStare.graficCache={};   /* v100.137: lumânările altei monede nu se țin */
   renderTabloBot();
   tbAduDate().then(renderTabloBot);
 }
@@ -6449,8 +6449,37 @@ var TB_DIR_TF=[
 var TB_SEM_EXTRA=[{tf:"5M",limit:500},{tf:"30M",limit:500}];
 var TB_DIR_REINCERCARE_MS=30000;
 var TB_DIR_MS=5*60000,TB_GRAFIC_MS=2*60000;
-var TB_PERIOADE={"24h":{i:"5M",l:288,gaura:12*60000},"3z":{i:"15M",l:288,gaura:40*60000},"7z":{i:"60M",l:168,gaura:150*60000}};
-function tbAlegeInterval(p){if(!TB_PERIOADE[p])return;tbStare.graficInterval=p;["24h","3z","7z"].forEach(function(k){var e=$("tbInt"+k);if(e)e.setAttribute("aria-pressed",String(k===p))});if(tbStare.grafic)tbStare.grafic.la=0;tbAduGraficul()}
+// v100.137 (el, 08.10: „să meargă ușor să schimb time frame-urile”, a ales intervale ca în TradingView): cheia e INTERVALUL lumânării
+// (5M/15M/60M/4H/1D), fiecare cu perioada lui (l = câte lumânări) și eticheta axei (per: GraficBot pune ora pe „24h”, data în rest).
+// Cheile vechi (24h/3z/7z) rămân primite (becurile vechi, preferințe). Lumânările stau în tbStare.graficCache pe simbol|interval ⇒
+// schimbarea e instantă; după primul desen se aduc din spate și celelalte intervale (tbPreiaRestulTf), cu pauză între cereri.
+var TB_PERIOADE={"5M":{i:"5M",l:288,per:"24h",gaura:12*60000,eticheta:"5m",cat:"24 de ore"},"15M":{i:"15M",l:288,per:"3z",gaura:40*60000,eticheta:"15m",cat:"3 zile"},"60M":{i:"60M",l:168,per:"7z",gaura:150*60000,eticheta:"1h",cat:"7 zile"},"4H":{i:"4H",l:180,per:"30z",gaura:10*3600000,eticheta:"4h",cat:"30 de zile"},"1D":{i:"1D",l:200,per:"200z",gaura:3*86400000,eticheta:"1z",cat:"200 de zile"}};
+var TB_TF_VECHI={"24h":"5M","3z":"15M","7z":"60M"};
+var TB_TF_PAUZA_MS=350;
+function tbTf(){return TB_PERIOADE[tbStare.graficInterval]?tbStare.graficInterval:"5M"}
+function tbAlegeInterval(p){
+  p=TB_TF_VECHI[p]||p;if(!TB_PERIOADE[p])return;
+  tbStare.graficInterval=p;Object.keys(TB_PERIOADE).forEach(function(k){var e=$("tbInt"+k);if(e)e.setAttribute("aria-pressed",String(k===p))});
+  // lumânările deja aduse pentru intervalul ăsta se arată PE LOC (chiar dacă-s mai vechi de 2 minute); tbAduGraficul le împrospătează din spate
+  var b=tbStare.bot,c=b?tbStare.graficCache[TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+p]:null;
+  if(c&&c.randuri){tbStare.grafic={la:c.la,simbol:c.cheie,randuri:c.randuri,eroare:null,inLucru:false};renderTabloGrafic()}
+  else renderTabloGrafic();
+  tbAduGraficul()
+}
+// v100.137: celelalte intervale se aduc din spate, pe rând, doar cât panoul e vizibil și doar o dată pe simbol (apoi la cerere)
+async function tbPreiaRestulTf(s){
+  if(tbStare.graficPrefetch)return;tbStare.graficPrefetch=true;
+  try{
+    var tf=Object.keys(TB_PERIOADE);
+    for(var i=0;i<tf.length;i++){
+      var cheie=s+"|"+tf[i];if(tbStare.graficCache[cheie]||!tbPanouVizibil())continue;
+      if(!tbStare.bot||TabloBot.simboluri(tbStare.bot.baza,tbStare.bot.quote,tbStare.bot.simbolPionex).pionex!==s)break;
+      await new Promise(function(r){setTimeout(r,TB_TF_PAUZA_MS)});
+      try{var per=TB_PERIOADE[tf[i]],k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+per.i+"&limit="+per.l),rd=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;
+        if(rd)tbStare.graficCache[cheie]={cheie:cheie,randuri:rd,la:Date.now()}}catch(e){}
+    }
+  }finally{tbStare.graficPrefetch=false}
+}
 // v100.112 (I-553): lumânările unui TF din Pionex (eroare când nu vin) - rețeaua pentru TabloTrend.tura / reia
 function tbAduTf(s){return async function(tf,lim){var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+tf+"&limit="+lim),r=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;if(!Array.isArray(r))throw new Error((k&&k.error)||"Pionex nu a dat lumânări");return r}}   /* revizia: lista goală rămâne date (ca în v100.111) */
 async function tbAduDirectie(){
@@ -6527,16 +6556,20 @@ async function tbAduGraficul(){
   var b=tbStare.bot;if(!b)return;
   var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex;
   var g=tbStare.grafic||(tbStare.grafic={la:0,simbol:null,randuri:null,inLucru:false});
-  var cheieG=s+"|"+(tbStare.graficInterval||"24h");
-  if(g.inLucru||(g.simbol===cheieG&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS)))return;
+  var cheieG=s+"|"+tbTf(),c=tbStare.graficCache[cheieG];
+  // v100.137: lumânările din cache (proaspete) se arată fără cerere; cele vechi se arată și se împrospătează
+  if(c&&c.randuri&&g.simbol!==cheieG){tbStare.grafic=g={la:c.la,simbol:cheieG,randuri:c.randuri,eroare:null,inLucru:false};renderTabloGrafic()}
+  if(g.inLucru||(g.simbol===cheieG&&Date.now()-g.la<(g.eroare?TB_DIR_REINCERCARE_MS:TB_GRAFIC_MS))){tbPreiaRestulTf(s);return}
   g.inLucru=true;
   try{
-    var per=TB_PERIOADE[tbStare.graficInterval||"24h"];
+    var per=TB_PERIOADE[tbTf()];
     var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s)+"&interval="+per.i+"&limit="+per.l);
     g.randuri=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;g.eroare=g.randuri?null:"Pionex nu a dat prețuri";
     g.simbol=cheieG;g.la=Date.now();
+    if(g.randuri)tbStare.graficCache[cheieG]={cheie:cheieG,randuri:g.randuri,la:g.la};
   }catch(e){g.eroare=textEroare(e)}finally{g.inLucru=false}
   renderTabloGrafic();
+  tbPreiaRestulTf(s);
 }
 function tbTon(ton){return ton==="rau"?"bad":ton==="bine"?"good":ton==="atentie"?"tbWarn":"mutedInfo"}
 function renderTabloDirectia(){
@@ -6614,7 +6647,7 @@ async function tbReiaLipsa(){
   if(d.randuriPe["4H"])d.randuri4h=d.randuriPe["4H"];
   tbCalculeazaIndicatorii(d);renderTabloDirectia();renderTabloIndicatori();if(typeof renderTabloSfaturi==="function")renderTabloSfaturi();if(typeof renderTabloGrafic==="function")renderTabloGrafic();
 }
-function tbTrendIstoric(b){var d=tbStare.directie,p=TB_PERIOADE[tbStare.graficInterval||"24h"];if(!d||!d.randuriPe||!p||!b||d.simbol!==tbCheieDir(b))return null;return d.randuriPe[p.i]||null}
+function tbTrendIstoric(b){var d=tbStare.directie,p=TB_PERIOADE[tbTf()];if(!d||!d.randuriPe||!p||!b||d.simbol!==tbCheieDir(b))return null;return d.randuriPe[p.i]||null}
 function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filter(Boolean);if(!loc.length)return;var c=GraficBot.citire(o,b,botiNr(b.pretCurent));
   // v100.99 (I-529): butonul stopului de probă și rezultatul lui, în citire; (I-531) același conținut și sub grafic, pe telefon
   var on=tbProbaStop.activ&&tbProbaStop.botId===b.id,pr=on&&o.proba;
@@ -6672,7 +6705,7 @@ function renderTabloGrafic(){
   if(!g||!g.randuri){el.innerHTML='<div class="emptyState">'+escapeHtml(g&&g.eroare?"Nu am prețurile: "+g.eroare:"Aștept prețurile…")+'</div>';return}
   if(typeof GraficBot==="undefined"){el.innerHTML='<div class="emptyState">Nu s-a încărcat desenul graficului (lib/grafic-bot.js). Reîncarcă pagina.</div>';return}
   // lumanarile trebuie sa fie ale botului si perioadei de ACUM (la schimbarea botului/perioadei, pana vin cele noi)
-  var cheieG=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+(tbStare.graficInterval||"24h");
+  var cheieG=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+tbTf();
   if(g.simbol!==cheieG){el.innerHTML='<div class="emptyState">Aștept prețurile…</div>';return}
   var bare=GraficBot.bare(g.randuri);
   if(bare.length<10){el.innerHTML='<div class="emptyState">Prea puține prețuri pentru grafic.</div>';return}
@@ -6680,7 +6713,7 @@ function renderTabloGrafic(){
   if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
-  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:tbStare.graficInterval||"24h",semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbStare.graficInterval||"24h"].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('24h')","15M":"tbAlegeInterval('3z')","60M":"tbAlegeInterval('7z')"},semPeBoti:tbCazuri.sem||null});
+  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
   var d=GraficBot.desen(oG);tbDeseneazaCitire(oG,b);
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);

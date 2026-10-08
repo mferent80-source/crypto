@@ -123,7 +123,7 @@ await test("(A4) citirea: un rând pe TF (tf: true), iar rândul vechi „Direc�
 });
 await test("(A5) pagina: aduce și 5 min și 30 min; desenul primește semaforul, TF-ul graficului și istoria lui; citirea grupează rândurile TF", () => {
   assert.match(app, /var TB_SEM_EXTRA=\[\{tf:"5M"/);   /* revizia (R2): 5 și 30 min aduse separat, doar pentru semafor */
-  assert.match(app, /semafor:tbSemaforTf\(b\),tfGrafic:TB_PERIOADE\[tbStare\.graficInterval\|\|"24h"\]\.i,trendIstoric:tbTrendIstoric\(b\)/);
+  assert.match(app, /semafor:tbSemaforTf\(b\),tfGrafic:TB_PERIOADE\[tbTf\(\)\]\.i,trendIstoric:tbTrendIstoric\(b\)/);   // v100.137: intervalul prin tbTf()
   // v100.111 (I-542, demo aprobat): pe Tablou, blocul de rânduri TF a devenit UN rând + tabelul de sub grafic (T212 își păstrează rândurile)
   assert.match(fnApp("tbDeseneazaCitire"), /GraficBot\.trendSumar\(tbSemaforTf\(b\)\)/);
   assert.match(citeste("public", "app.css"), /#t212 \.tbCitTf\{/);

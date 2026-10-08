@@ -53,7 +53,7 @@ await test("(544) becurile 5m / 15m / 1h sunt butoane spre perioada graficului; 
   const d = GB.desen({ bare: raw, W: 1000, st: { ema: true }, simplu: true, niv: [], semafor: sem, tfGrafic: "5M", semClic: { "5M": "tbAlegeInterval('24h')", "15M": "tbAlegeInterval('3z')", "60M": "tbAlegeInterval('7z')" } });
   assert.match(d.svg, /<g class="gbSem" tabindex="0" role="button" data-action-click="tbAlegeInterval\('3z'\)">/);
   assert.equal((d.svg.match(/data-action-click=/g) || []).length, 3);
-  assert.match(app, /semClic:\{"5M":"tbAlegeInterval\('24h'\)","15M":"tbAlegeInterval\('3z'\)","60M":"tbAlegeInterval\('7z'\)"\}/);
+  assert.match(app, /semClic:\{"5M":"tbAlegeInterval\('5M'\)","15M":"tbAlegeInterval\('15M'\)","60M":"tbAlegeInterval\('60M'\)","4H":"tbAlegeInterval\('4H'\)","1D":"tbAlegeInterval\('1D'\)"\}/);   // v100.137: intervale ca în TradingView
   assert.match(app, /zona\.addEventListener\("pointerdown",function\(e\)\{if\(e\.target&&e\.target\.closest&&e\.target\.closest\("\.gbSem"\)\)return;/);
 });
 // ---------------- I-545 ----------------
