@@ -6465,6 +6465,8 @@ function tbTfButoane(){var p=tbTf();Object.keys(TB_PERIOADE).forEach(function(k)
 // v100.144 (el 08.10, „fa idei”): butonul „24 h” / „3 zile” de lângă intervale - toată fereastra intervalului, nu doar de la pornirea botului
 // (GraficBot.fereastraBot); alegerea se ține în memoria paginii; butonul se vede doar când fereastra botului e posibilă (bot pornit în fereastră)
 // v100.145 (el 08.10, „fa idei”): alegerea e PE BOT ({id: 1} în tabloBotFereastra_v2) - pe un bot vechi vrei ziua, pe unul nou fereastra lui
+// v100.146 (revizia Opus): procentele din textele Busolei la o zecimală ROTUNJITĂ („−0,999%” ⇒ „−1,0%”), nu tăiată
+function tbRotPct(t){return String(t).replace(/([−+-]?)(\d+),(\d+)%/g,function(m,s,a,b){return s+(Math.round(Number(a+"."+b)*10)/10).toFixed(1).replace(".",",")+"%"})}
 function tbFereastraToataE(){var b=tbStare.bot,id=b&&b.id!=null?String(b.id):"";if(!tbStare.fereastraToataPe){var v=tbCiteste(TB_FER_CHEIE);tbStare.fereastraToataPe=v&&typeof v==="object"?v:{}}return !!(id&&tbStare.fereastraToataPe[id])}
 function tbFereastraToata(){var b=tbStare.bot;if(!b||b.id==null)return;var id=String(b.id),era=tbFereastraToataE(),m=tbStare.fereastraToataPe;if(era)delete m[id];else m[id]=1;tbScrie(TB_FER_CHEIE,m);renderTabloGrafic()}
 function tbFereastraButon(oG){var e=$("tbFerToata");if(!e)return;e.hidden=!oG.fereastraPosibila;var cat=TB_PERIOADE[tbTf()].cat||"";e.textContent=cat==="24 de ore"?"24 h":cat;e.setAttribute("aria-pressed",String(!!oG.fereastraToata));
@@ -6486,8 +6488,10 @@ function tbAdu1m(b){
     try{for(var p=0;p<TB_UM1M_PAGINI;p++){var k=await getJSON(baza+(end?"&endTime="+end:""));var l=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;if(!l||!l.length)break;r=r.concat(l);ok=true;var tMin=Math.min.apply(null,l.map(function(x){return Number(x.time)}).filter(isFinite));if(l.length<500||!(tMin>deLa))break;end=tMin-1}}catch(e){}
     var bare=ok?GridCalcul.bare(r).slice().sort(function(a,b){return a.t-b.t}):null;
     if(bare&&(!bare.length||bare[0].t>pornit))bare=null;   /* nu acoperă de la pornire ⇒ nu se folosesc */
-    var vechi=tbUm1m.bare,nou=!!bare&&(!vechi||tbUm1m.sim!==sim||tbUm1m.pornit!==pornit||bare.length!==vechi.length||bare[bare.length-1].c!==vechi[vechi.length-1].c||bare[bare.length-1].t!==vechi[vechi.length-1].t);
-    tbUm1m={sim:sim,pornit:pornit,la:Date.now(),bare:bare,inLucru:false};
+    var vechi=tbUm1m.bare,acelasi=tbUm1m.sim===sim&&tbUm1m.pornit===pornit,nou=!!bare&&(!vechi||!acelasi||bare.length!==vechi.length||bare[bare.length-1].c!==vechi[vechi.length-1].c||bare[bare.length-1].t!==vechi[vechi.length-1].t);
+    // revizia Opus: o aducere picată (503, pagina a 2-a căzută) NU aruncă lumânările bune ale aceluiași bot; reîncearcă în 30 s, nu în 2 minute
+    if(!bare&&acelasi&&vechi){tbUm1m={sim:sim,pornit:pornit,la:Date.now()-TB_UM1M_MS+30000,bare:vechi,inLucru:false};return}
+    tbUm1m={sim:sim,pornit:pornit,la:bare?Date.now():Date.now()-TB_UM1M_MS+30000,bare:bare,inLucru:false};
     if(nou&&tbPanouVizibil()&&tbStare.bot&&String(tbStare.bot.id)===String(b.id))renderTabloGrafic()
   })()}
 function tbAlegeInterval(p){
@@ -6736,9 +6740,9 @@ function tbCitireExtra(b,o){
     // pierdut un grid pe episod în regimul ăsta, cu o zecimală, canalul, dovada) și intervalul măsurat de Busola pe 4h față de gridul botului
     // (Busola.randFisa; mai îngust cu peste 10% ⇒ atenție) - toate din rezumatul real al Busolei, nimic inventat
     var rG=rez?Busola.randGrid(rez,tbCheieBusola(b),Date.now()):null;
-    out.busolaGrid=rG&&rG.nivel!=="nemasurat"?{ce:"Gridul, după Busola",stare:rG.nivel==="atentie"?"atentie":"info",text:String(rG.text).replace(/^Busola, pe 4h: /,"").replace(/\.$/,"").replace(/(\d+,\d)\d+%/g,"$1%")+(rG.nota?" · "+rG.nota:"")}:null;
+    out.busolaGrid=rG&&rG.nivel!=="nemasurat"?{ce:"Gridul, după Busola",stare:rG.nivel==="atentie"?"atentie":"info",text:tbRotPct(String(rG.text).replace(/^Busola, pe 4h: /,"").replace(/\.$/,"").replace(/^[^—]*— /,""))+(rG.nota?" · "+rG.nota:"")}:null;   /* revizia Opus: fără starea repetată din rândul de deasupra, procentele rotunjite */
     var rF=rez?Busola.randFisa(rez,tbCheieBusola(b),Date.now(),tbPretScurt,{jos:Number(b.gridJos),sus:Number(b.gridSus)}):null,vF=rF&&/ · măsurat acum /.test(rF.text)?rF.text.slice(rF.text.indexOf(" · măsurat acum ")):"";
-    out.busolaInterval=rF?{ce:"Intervalul Busolei (4h)",stare:rF.raport!==null&&rF.raport<-0.1?"atentie":"info",text:rF.scurt+(rF.comparatie?" · "+rF.comparatie:"")+vF}:null;
+    out.busolaInterval=rF?{ce:"Intervalul Busolei (4h)",stare:rF.raport!==null&&rF.raport<0&&Math.round(Math.abs(rF.raport)*100)>10?"atentie":"info",text:rF.scurt+(rF.comparatie?" · "+rF.comparatie:"")+vF}:null;
   }
   return out}
 // v100.139 (el, 08.10: „tot acolo pune Monte Carlo cu un scan automat pe bot la 15 min să spună predicția” - a ales A, în pagină): primul rând
@@ -6904,7 +6908,7 @@ function renderTabloGrafic(){
   var ult=oG.alerte.slice().sort(function(x,y){return y.t-x.t}).slice(0,3),Cn={critic:"bad",atentie:"neutral",info:"mutedInfo"};
   var ultHtml=ult.length?'<div class="gbUlt">'+ult.map(function(a){var dt=new Date(a.t);return '<span><b class="'+(Cn[a.nivel]||"mutedInfo")+'">●</b> '+escapeHtml(String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0"))+' '+escapeHtml(String(a.titlu||"").replace(/^[A-Z0-9._-]+: /,""))+'</span>'}).join("")+'</div>':"";
   var fg=oG.val&&oG.val.zona?Valoare.fataDeGrid(oG.val.zona,oG.grila.jos,oG.grila.sus):null;   // v100.51 (I-470): gridul tau fata de zona de valoare
-  var bl=GraficBot.bilantUmpleri(oG.umpleri,b,{eticheta:oG.umpleriEticheta||TB_PERIOADE[tbTf()].eticheta,pornitInFereastra:oG.pornitInFereastra,lo:d.harta.lo,hi:d.harta.hi});   // v100.145: bilanțul umplerilor - primul rând sub grafic (intervalul, de unde numără, ce e în afara cadrului)
+  var bl=GraficBot.bilantUmpleri(oG.umpleri,b,{eticheta:oG.umpleriEticheta||TB_PERIOADE[tbTf()].eticheta,pornitInFereastra:oG.pornitInFereastra,lo:d.harta.lo,hi:d.harta.hi,pas:oG.umpleriPas||(bare.length>1?bare[1].t-bare[0].t:0),acum:Date.now()});   // v100.145: bilanțul umplerilor - primul rând sub grafic (intervalul, de unde numără, ce e în afara cadrului)
   el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+(bl?'<p class="tbSub gbBilant"><b>▲▼ umpleri:</b> '+escapeHtml(bl.text)+'</p>':'')+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
   var crY=svg.querySelector(".gbCruceY"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none"};

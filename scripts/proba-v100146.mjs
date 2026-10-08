@@ -56,13 +56,13 @@ await test("(4) Busola în „Ce spune piața acum”: rândul stării (ca pân�
   const rez = { la: Date.now() - 20 * 60000, monede: { MET: { perp4h: "nu-stiu", fisa4h: { jos: 0.3982, sus: 0.6414, linii: 17 } } }, grid: { interval: "4h", canal: "±2×ATR", dovedit: false, miscareDovedita: true, liniste: -0.0081, oricand: -0.0094, miscare: -0.0113, futures: { canal: "±2×ATR", dovedit: false, miscareDovedita: true, liniste: -0.0082, oricand: -0.0095, miscare: -0.0114 }, canal4h: "+4,2/−3,9 ATR" }, perp: { bilant: { verdict: "prea puține" } } };
   ctx.Busola.rezumat = () => rez; ctx.tbStare = { bot: { id: "9", baza: "MET.PERP", quote: "USDT", directie: "SHORT", gridJos: 0.46, gridSus: 0.50 }, graficInterval: "5M", directie: null };
   ctx.TabloBot = { simboluri: () => ({ pionex: "MET_USDT_PERP" }) }; ctx.tbCheieDir = () => "MET_USDT_PERP|SHORT"; ctx.tbCheieBusola = () => "MET_USDT_PERP"; ctx.tbPazaKv = { boti: {} };
-  const src = "var TB_PERIOADE=" + APP.match(/var TB_PERIOADE=(\{[^\n]*\});/)[1] + ";\n" + ["tbTf", "tbPretScurt", "tbCitireExtra"].map((n) => functie(APP, n)).join("\n");
+  const src = "var TB_PERIOADE=" + APP.match(/var TB_PERIOADE=(\{[^\n]*\});/)[1] + ";\n" + ["tbTf", "tbPretScurt", "tbRotPct", "tbCitireExtra"].map((n) => functie(APP, n)).join("\n");
   vm.runInContext(src, ctx);
   const x = ctx.tbCitireExtra(ctx.tbStare.bot, {});
   assert.equal(x.busola.ce, "Busola, pe 4h"); assert.match(x.busola.text, /^nimic neobișnuit · măsurat acum 20 min$/);
-  assert.equal(x.busolaGrid.ce, "Gridul, după Busola"); assert.equal(x.busolaGrid.stare, "info"); assert.equal(x.busolaGrid.text, "nimic neobișnuit — un grid oarecare a ieșit pe minus (−0,9% pe episod) · futures ±2×ATR", "o zecimală, fără prefixul „Busola, pe 4h: ”");
+  assert.equal(x.busolaGrid.ce, "Gridul, după Busola"); assert.equal(x.busolaGrid.stare, "info"); assert.equal(x.busolaGrid.text, "un grid oarecare a ieșit pe minus (−1,0% pe episod) · futures ±2×ATR", "o zecimală ROTUNJITĂ (−0,950 ⇒ −1,0), fără prefixul „Busola, pe 4h: ” și fără starea repetată din rândul de deasupra (revizia Opus)");
   assert.equal(x.busolaInterval.ce, "Intervalul Busolei (4h)"); assert.equal(x.busolaInterval.stare, "atentie"); assert.equal(x.busolaInterval.text, "jos 0.39820 · sus 0.64140 · 17 linii · intervalul tău e cu 84% mai îngust decât al Busolei (al ei a pierdut cel mai puțin, pe spot)");
-  rez.monede.MET.perp4h = "miscare"; const y = ctx.tbCitireExtra(ctx.tbStare.bot, {}); assert.equal(y.busolaGrid.stare, "atentie"); assert.match(y.busolaGrid.text, /^moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult \(−1,1% pe episod\) · futures ±2×ATR$/);
+  rez.monede.MET.perp4h = "miscare"; const y = ctx.tbCitireExtra(ctx.tbStare.bot, {}); assert.equal(y.busolaGrid.stare, "atentie"); assert.match(y.busolaGrid.text, /^aici gridul a pierdut cel mai mult \(−1,1% pe episod\) · futures ±2×ATR$/);
   ctx.tbStare.bot.gridJos = 0.40; ctx.tbStare.bot.gridSus = 0.64; assert.equal(ctx.tbCitireExtra(ctx.tbStare.bot, {}).busolaInterval.stare, "info", "cam la fel de larg ⇒ info");
   delete rez.monede.MET.fisa4h; assert.equal(ctx.tbCitireExtra(ctx.tbStare.bot, {}).busolaInterval, null, "fără fișă ⇒ fără rând");
   const d = functie(APP, "tbDeseneazaCitire"); assert.equal((d.match(/if\(ex\.busola\)out\.push\(rd\(ex\.busola\)\);if\(ex\.busolaGrid\)out\.push\(rd\(ex\.busolaGrid\)\);if\(ex\.busolaInterval\)out\.push\(rd\(ex\.busolaInterval\)\)/g) || []).length, 2, "după rândul Busolei, în amândouă locurile");
@@ -81,6 +81,49 @@ await test("(2b) pagina: tbAdu1m aduce lumânările de 1 min de la pornire − 2
   ctx.tbStare.bot = { id: "2", baza: "MET.PERP", quote: "USDT", pornitLa: acum - 30 * 3600000 }; ctx.tbAdu1m(ctx.tbStare.bot); await new Promise((r) => setTimeout(r, 30)); assert.equal(ctx.cereri.length, 1, "bot de 30 h: prea lung pentru 1 min"); assert.equal(ctx.tbBare1m(ctx.tbStare.bot), null);
   ctx.tbStare.bot = { id: "3", baza: "MET.PERP", quote: "USDT", pornitLa: acum - 12 * 3600000 }; ctx.tbAdu1m(ctx.tbStare.bot); for (let i = 0; i < 50 && ctx.tbUm1m.inLucru; i++) await new Promise((r) => setTimeout(r, 20)); await new Promise((r) => setTimeout(r, 30));
   assert.equal(ctx.cereri.length, 3, "bot de 12 h ⇒ 2 pagini (14 h ≤ 16,6 h)"); assert.match(ctx.cereri[2], /endTime=\d+/); assert.equal(ctx.tbUm1m.bare.length, 999);
+});
+await test("(R1) revizia Opus: vârsta umplerilor de 1 min nu depinde de intervalul graficului (umpleriPas), „ultima pereche” cu ziua când nu e azi și „în bara de la” pe bare de 1 h+, eticheta de lângă săgeată nu intră în margine (text-anchor=end aproape de dreapta)", () => {
+  const C = G.COL, H4 = 4 * 3600000, b4 = Array.from({ length: 12 }, (_, i) => ({ t: ACUM - 3 * 3600000 - (11 - i) * H4, o: 0.52, h: 0.53, l: 0.51, c: 0.52, v: 1 }));
+  // umplere de 1 min deschisă acum 6 h, desenată pe graficul de 4h: vârsta rămâne 6 h, nu „2 h” (acum − (u.t + 4 h))
+  const u = { t: ACUM - 6 * 3600000, ri: 0, k: 0, p: 0.52, tip: "B", pereche: false, inchisa: false };
+  const cuPas = G.desen({ bare: b4, W: 1000, st: {}, niv: [], alerte: [], per: "30z", acum: ACUM, umpleri: { umpleri: [u], perechi: 0 }, umpleriPas: 60000 }).svg;
+  assert.match(cuPas, />5 h<\/text>/, "6 h − 1 min ⇒ „cel puțin 5 h” (margine de jos cu pasul de 1 min)"); assert.match(cuPas, /deschisă de cel puțin 5 h<\/title>/);
+  const faraPas = G.desen({ bare: b4, W: 1000, st: {}, niv: [], alerte: [], per: "30z", acum: ACUM, umpleri: { umpleri: [u], perechi: 0 } }).svg; assert.match(faraPas, />2 h<\/text>/, "fără umpleriPas, pasul graficului (4 h)");
+  const bot = { id: "1", pornitLa: B[0].t, gridJos: 0.50, gridSus: 0.55, directie: "LONG" }, brut = { buOrderData: { row: 6, initPrice: 0.52, bottom: 0.50, top: 0.55, gridType: "arithmetic" } };
+  const b1 = []; for (let i = 0; i < 70; i++) { const t = ACUM - (70 - i) * M1; b1.push({ t, o: 0.52, h: 0.5205, l: 0.5195, c: 0.52, v: 1 }); }
+  assert.equal(G.intrareBot({ bot, brut, bare: B, bare1m: b1, acum: ACUM, W: 1000 }).umpleriPas, 60000); assert.equal(G.intrareBot({ bot, brut, bare: B, acum: ACUM, W: 1000 }).umpleriPas, null);
+  const ult = U.umpleri.filter((x) => x.pereche).reduce((m, x) => Math.max(m, x.t), 0), ieri = ult + 86400000, hmz = (t) => { const d = new Date(t); return d.getDate() + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + hm(t); };
+  assert.match(G.bilantUmpleri(U, {}, { eticheta: "5m", pornitInFereastra: true, acum: ACUM, pas: M5 }).text, new RegExp(" · ultima pereche la " + hm(ult) + " · "), "azi: doar ora");
+  assert.match(G.bilantUmpleri(U, {}, { eticheta: "5m", pornitInFereastra: true, acum: ieri, pas: M5 }).text, new RegExp(" · ultima pereche la " + hmz(ult) + " · "), "nu e azi: cu ziua");
+  assert.match(G.bilantUmpleri(U, {}, { eticheta: "1h", pornitInFereastra: true, acum: ACUM, pas: 3600000 }).text, new RegExp(" · ultima pereche în bara de la " + hm(ult) + " · "), "pe bare de 1 h+: ora barei, spus");
+  const r = functie(APP, "renderTabloGrafic"); assert.match(r, /pas:oG\.umpleriPas\|\|\(bare\.length>1\?bare\[1\]\.t-bare\[0\]\.t:0\),acum:Date\.now\(\)/);
+  const dreapta = G.desen({ bare: B, W: 1000, st: {}, niv: [], alerte: [], per: "24h", acum: ACUM + 3 * 3600000, umpleri: { umpleri: [umpl(13, "B", 0.52), umpl(13, "B", 0.53)], perechi: 0 } }).svg;
+  assert.match(dreapta, /<text x="[\d.]+" y="[\d.]+" text-anchor="end" font-size="10\.5"[^>]*>×2 · 3 h<\/text>/, "lângă marginea dreaptă eticheta se întoarce spre stânga (bara 13 s-a închis acum 3 h)");
+});
+await test("(R2) revizia Opus: procentele Busolei se rotunjesc (−0,999% ⇒ −1,0%), nu se taie; pragul de atenție = regula comparației (exact −10% ⇒ „cam la fel” ⇒ info); „Gridul, după Busola” nu repetă starea din rândul de deasupra", () => {
+  const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, TextRo: globalThis.TextRo };
+  vm.createContext(ctx); vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + citeste("public", "lib", "busola.js"), ctx);
+  const rez = { la: Date.now() - 20 * 60000, monede: { MET: { perp4h: "nu-stiu", fisa4h: { jos: 0.40, sus: 0.50, linii: 11 } } }, grid: { interval: "4h", canal: "±2×ATR", dovedit: false, miscareDovedita: true, liniste: -0.0081, oricand: -0.00999, miscare: -0.0113, futures: { canal: "±2×ATR", dovedit: false, miscareDovedita: true, liniste: -0.0082, oricand: -0.00999, miscare: -0.0114 }, canal4h: "+4,2/−3,9 ATR" }, perp: { bilant: { verdict: "prea puține" } } };
+  ctx.Busola.rezumat = () => rez; ctx.tbStare = { bot: { id: "9", baza: "MET.PERP", quote: "USDT", directie: "SHORT", gridJos: 0.41, gridSus: 0.50 }, graficInterval: "5M", directie: null };
+  ctx.TabloBot = { simboluri: () => ({ pionex: "MET_USDT_PERP" }) }; ctx.tbCheieDir = () => "MET_USDT_PERP|SHORT"; ctx.tbCheieBusola = () => "MET_USDT_PERP"; ctx.tbPazaKv = { boti: {} };
+  vm.runInContext("var TB_PERIOADE=" + APP.match(/var TB_PERIOADE=(\{[^\n]*\});/)[1] + ";\n" + ["tbTf", "tbPretScurt", "tbRotPct", "tbCitireExtra"].map((n) => functie(APP, n)).join("\n"), ctx);
+  const x = ctx.tbCitireExtra(ctx.tbStare.bot, {});
+  assert.equal(x.busolaGrid.text, "un grid oarecare a ieșit pe minus (−1,0% pe episod) · futures ±2×ATR", "rotunjit, fără „nimic neobișnuit — ” repetat");
+  assert.equal(ctx.tbRotPct("−0,299% · +0,045% · 12,34%"), "−0,3% · +0,0% · 12,3%");
+  assert.equal(x.busolaInterval.stare, "info", "0,09 / 0,10 − 1 = −10% ⇒ „cam la fel” ⇒ info, nu galben"); assert.match(x.busolaInterval.text, /cam la fel de larg/);
+  ctx.tbStare.bot.gridJos = 0.42; assert.equal(ctx.tbCitireExtra(ctx.tbStare.bot, {}).busolaInterval.stare, "atentie", "−20% ⇒ atenție");
+});
+await test("(R3) revizia Opus: o aducere picată (503) păstrează lumânările de 1 min bune și reîncearcă în 30 s, nu le aruncă", async () => {
+  const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Promise, setTimeout, encodeURIComponent, GridCalcul: GC, randari: 0, cereri: 0, cade: false };
+  ctx.TabloBot = { simboluri: () => ({ pionex: "MET_USDT_PERP" }) }; ctx.tbPanouVizibil = () => true; ctx.renderTabloGrafic = () => { ctx.randari++; };
+  const acum = Date.now(); ctx.tbStare = { bot: { id: "1", baza: "MET.PERP", quote: "USDT", pornitLa: acum - 3 * 3600000 } };
+  ctx.getJSON = async () => { ctx.cereri++; if (ctx.cade) throw new Error("HTTP 503"); const l = []; for (let i = 0; i < 500; i++) l.push({ time: acum - i * M1, open: "0.52", high: "0.521", low: "0.519", close: "0.52", volume: "1" }); return { data: { klines: l } }; };
+  vm.createContext(ctx); vm.runInContext(APP.match(/var tbUm1m=[^\n]*\n/)[0] + APP.match(/var TB_UM1M_MS=[^\n]*\n/)[0] + functie(APP, "tbAdu1m") + "\n" + functie(APP, "tbBare1m"), ctx);
+  const gata = async () => { for (let i = 0; i < 50 && ctx.tbUm1m.inLucru; i++) await new Promise((r) => setTimeout(r, 20)); await new Promise((r) => setTimeout(r, 30)); };
+  ctx.tbAdu1m(ctx.tbStare.bot); await gata(); assert.equal(ctx.tbUm1m.bare.length, 499);
+  ctx.cade = true; ctx.tbUm1m.la = 0; ctx.tbAdu1m(ctx.tbStare.bot); await gata(); assert.equal(ctx.cereri, 2); assert.equal(ctx.tbUm1m.bare.length, 499, "lumânările bune rămân"); assert.ok(Date.now() - ctx.tbUm1m.la >= ctx.TB_UM1M_MS - 31000, "reîncercare în ~30 s, nu în 2 min");
+  assert.equal(ctx.randari, 1, "fără redesen la eșec");
+  const first = ctx.tbStare.bot; ctx.tbStare.bot = { id: "2", baza: "MET.PERP", quote: "USDT", pornitLa: acum - 2 * 3600000 }; ctx.tbUm1m.la = 0; ctx.tbAdu1m(ctx.tbStare.bot); await gata(); assert.equal(ctx.tbBare1m(ctx.tbStare.bot), null, "alt bot picat ⇒ nimic, nu lumânările celuilalt"); assert.equal(ctx.tbBare1m(first), null);
 });
 await test("(E) versiunea de la v100.146 în sus", () => {
   assert.match(HTML, /content="v100\.1(4[6-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[6-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[6-9]|[5-9]\d)</);

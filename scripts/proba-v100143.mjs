@@ -35,7 +35,7 @@ await test("(1) fereastraBot: pe 5 min fereastra începe cu 2 h înaintea pornir
   assert.doesNotMatch(G.desen({ bare: B5, W: 1000, st: {}, niv: [], alerte: [], per: "24h" }).legenda, /de la pornirea botului/);
 });
 await test("(2) umplerile: 5 cumpărări pe aceeași lumânare ⇒ UN ▲ cu „×5” (la linia cea mai de jos), titlul le înșiră; ▲ și ▼ pe aceeași lumânare ⇒ două; pe lumânări diferite ⇒ câte una, fără „×”", () => {
-  const baza = { bare: B5, W: 1000, st: {}, niv: [], alerte: [], per: "24h", acum: B5[210].t + M5 + 60000 };   // v100.145: „acum” = la un minut după bara 210, altfel umplerile deschise (barele 200 / 210) ar fi „de peste o oră” (galbene, cu vârsta lângă „×5”)
+  const baza = { bare: B5, W: 1000, st: {}, niv: [], alerte: [], per: "24h", acum: B5[210].t + M5 + 60000 };   // v100.146: „acum” = la un minut după bara 210, altfel umplerile deschise (barele 200 / 210) ar fi „de peste o oră” (galbene, cu vârsta lângă „×5”)
   const u5 = [0.531, 0.533, 0.535, 0.537, 0.539].map((p) => umpl(200, "B", p)), s1 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: u5, perechi: 0 } })).svg;
   assert.equal((s1.match(/class="gbUmplere/g) || []).length, 1, "o singură săgeată"); assert.match(s1, />×5</); assert.match(s1, /<title>cumpărare la 0\.5310[^<]*\ncumpărare la 0\.5330/);
   const yMin = Number(s1.match(/class="gbUmplere[^"]*"><title>[^<]*<\/title><polygon points="[\d.]+,([\d.]+)/)[1]); assert.ok(yMin > 0);

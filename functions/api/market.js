@@ -84,7 +84,7 @@ export async function onRequestGet({request,env}){
     // v78: endTime (ms) pentru paginarea in urma a lumanarilor; trimis doar cand e numar pozitiv.
     const etRaw=u.searchParams.get("endTime"),et=Math.floor(Number(etRaw));
     const endQ=etRaw&&Number.isFinite(et)&&et>0?`&endTime=${et}`:"";
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}${endQ}`,interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300,env))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}${endQ}`,interval==="1M"?45:interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300,env))}catch(e){return softFail("Pionex klines unavailable",e.message,e.status===429?(e.retryAfter||60):null)}
   }
   if(type==="pionex_funding"){
     // v91.9: ratele de funding (ultimele 100, la 4 h la Pionex = ~16 zile) pentru "Mediul botului" din Tablou
