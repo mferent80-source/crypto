@@ -35,7 +35,7 @@ await test("(a) GridSim.verdictScurt: 7 zile + «ce aș face» + pe o zi, într-
 });
 await test("(b) app: tbMc la 15 min (TB_MC_MS), pornit la tic și la alt bot; GridSim pe botul reluat (stPrefix, [1,7] zile), funding-ul real; rândul primul în citire, cu ceasul și clicul spre Simulator", () => {
   assert.match(APP, /var TB_MC_MS=15\*60000/); assert.match(functie(APP, "tbDeseneazaTabloulUnic"), /tbMcTick\(\)/);
-  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim\)/); assert.match(p, /GridSim\.setariDinBot\(b\)/); assert.match(p, /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1,7\],zile:14\}\)/);   // v100.140: în worker assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
+  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim\)/); assert.match(p, /GridSim\.setariDinBot\(b\)/); assert.match(p, /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1,7\],zile:14\}\)/); assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
   const t = functie(APP, "tbMcTick"); assert.match(t, /Date\.now\(\)-tbMc\.la<TB_MC_MS/); assert.match(t, /tbPanouVizibil\(\)/);
   const c = functie(APP, "tbDeseneazaCitire"); assert.match(c, /tbMcRand\(b\)/); assert.match(c, /out\.unshift\(/); assert.match(c, /data-action-click="gsDeschideBot\(\)"[^>]*>deschide în Simulator</);
   const r = functie(APP, "tbMcRand"); assert.match(r, /șanse pe drumuri ca ultimele 14 zile, nu o predicție/); assert.match(r, /socotit "\+hm\(tbMc\.la\)\+" · următorul "\+hm\(tbMc\.urmatorul\)/);
