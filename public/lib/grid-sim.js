@@ -228,10 +228,18 @@ var GridSim = (function () {
     var k7 = i7 >= 0 ? i7 : 0, v = verdict(rez, st, plan, k7, bot), v1 = i1 >= 0 ? verdict(rez, st, plan, i1, bot) : null; if (!v) return { stare: "info", text: "fără rezultat" };
     var o7 = rez.orizonturi[k7], meu = !!rez.acum, fara = function (s) { return String(s).replace(/^de aici încolo: /, ""); };
     var parti = [(meu ? "de aici încolo, " : "") + cate(o7.zile, "zi", "zile") + ": " + fara(v.rand)];
-    if (o7.pStop > 0) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich > 0.005) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp > 0) parti.push("TP atins " + pr(o7.pTp));
+    // revizia (2): planul deja atins e cel mai urgent lucru - imediat după cifre, nu pierdut în coada textului lung
+    var atins = o7.plan && o7.plan.dejaAtins && plan && (plan.minus > 0 || plan.plus > 0) ? o7.plan.dejaAtins : null;
+    if (atins) parti.push("planul atins: " + (atins === "plus" ? "încasează" : "ieși"));
+    // revizia (5): sub 0,5% nu se scrie „0%”
+    if (o7.pStop >= 0.005) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich >= 0.005) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp >= 0.005) parti.push("TP atins " + pr(o7.pTp));
     var faCe = String(v.faCe || "").split(/[.:]/)[0].trim(); if (faCe) parti.push("«" + faCe + "»");
     if (v1) parti.push("pe o zi: " + fara(v1.rand).replace(/ din drumuri/, ""));
-    return { stare: v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie", text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand };
+    // revizia (3): culoarea urmează TEXTUL - „oprește / nu porni / nu se potrivește / oprit pe drumul real” e rău oricare ar fi procentul;
+    // planul atins pe plus e bine (încasează), pe minus e rău (ieși)
+    var rau = /^(L-aș opri|N-aș porni|Aș opri|Nu se potrivește|Reluarea arată)/.test(faCe);
+    var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
+    return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
   return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
 })();

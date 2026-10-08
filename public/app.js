@@ -6710,25 +6710,33 @@ function tbCitireExtra(b,o){
 // din „Ce spune piața acum” = verdictul Simulatorului grid pe botul reluat cu pozițiile de acum (GridSim, 500 de drumuri pe 14 zile), socotit
 // la 15 minute și la schimbarea botului; lumânările de 15 minute (~31 de zile) vin prin mcsAduCoin o dată pe monedă și se țin minte.
 // Cuvântul e „șanse”, nu „predicție” (regula lui: clar și răspicat ce înseamnă cifra).
-var TB_MC_MS=15*60000,tbMc={botId:null,la:0,urmatorul:0,inLucru:false,rez:null,rand:null,eroare:null,b15:null,b15La:0,b15Sim:null,funding:null};
+var TB_MC_MS=15*60000,TB_MC_REINCERCARE_MS=2*60000,tbMc={botId:null,cheie:null,la:0,randLa:0,urmatorul:0,inLucru:false,rez:null,rand:null,st:null,plan:null,eroare:null,b15:null,b15La:0,b15Sim:null,funding:null};
+// revizia (8): cheia = setarea botului (grid, stop, TP, levier, pornire, activ) + planul lui - schimbate ⇒ se socotește din nou, nu peste 15 minute
+function tbMcCheie(b){try{var d=GridSim.setariDinBot(b),pl=tbPlan.botId===b.id&&tbPlan.plan&&!tbPlan.plan.proba?tbPlan.plan:null;return JSON.stringify([d.st,d.pornitLa,b.activ!==false,pl?{minus:pl.minus,plus:pl.plus}:null])}catch(e){return null}}
 function tbMcTick(){var b=tbStare.routeOk===false?null:tbStare.bot;if(!b||!b.id||!tbPanouVizibil()||tbMc.inLucru)return;
-  if(String(tbMc.botId)===String(b.id)&&Date.now()-tbMc.la<TB_MC_MS)return;
-  tbMcPorneste(b)}
-async function tbMcPorneste(b){
+  var k=tbMcCheie(b);
+  if(String(tbMc.botId)===String(b.id)&&k===tbMc.cheie&&Date.now()-tbMc.la<TB_MC_MS)return;
+  tbMcPorneste(b,k)}
+async function tbMcPorneste(b,k){
   if(typeof GridSim==="undefined"||typeof mcsAduCoin!=="function")return;
-  tbMc.inLucru=true;tbMc.eroare=null;if(String(tbMc.botId)!==String(b.id)){tbMc.rand=null;tbMc.rez=null}tbMc.botId=String(b.id);tbMcDeseneaza();
+  tbMc.inLucru=true;tbMc.eroare=null;if(String(tbMc.botId)!==String(b.id)){tbMc.rand=null;tbMc.rez=null;tbMc.randLa=0}tbMc.botId=String(b.id);tbMc.cheie=k||tbMcCheie(b);tbMcDeseneaza();
+  var ok=false;
   try{
-    var sim=mcsSimbolBot(b);
+    if(!(Number(b.gridJos)>0&&Number(b.gridSus)>Number(b.gridJos)))throw new Error("botul n-are gridul citit (jos / sus)");
+    var sim=mcsSimbolBot(b),s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex;
     if(tbMc.b15Sim!==sim||Date.now()-tbMc.b15La>TB_MC_MS){var c=await mcsAduCoin(sim);if(!c||!c.b15||!c.b15.length)throw new Error("Pionex n-a dat lumânările de 15 minute pentru "+sim);tbMc.b15=c.b15;tbMc.b15La=Date.now();tbMc.b15Sim=sim;tbMc.funding=c.fundingInfo||null}
     if(!tbStare.bot||String(tbStare.bot.id)!==String(b.id))return;   /* alt bot ales cât aduceam lumânările */
-    var d=GridSim.setariDinBot(b),fi=tbStare.funding&&tbStare.funding.info||tbMc.funding||null;
-    var st=Object.assign({},d.st,{suma:d.st.suma||50,fundingZi:fi?fi.rataZi:0.0003,fundingCost:!fi}),plan=tbPlan.botId===b.id&&tbPlan.plan?tbPlan.plan:null;
+    var d=GridSim.setariDinBot(b),fi=tbMc.funding||(tbStare.funding&&tbStare.funding.sim===s?tbStare.funding.info:null)||null;   /* revizia (7): funding-ul MONEDEI botului */
+    var st=Object.assign({},d.st,{suma:d.st.suma||50,fundingZi:fi?fi.rataZi:0.0003,fundingCost:!fi}),plan=tbPlan.botId===b.id&&tbPlan.plan&&!tbPlan.plan.proba?tbPlan.plan:null;   /* revizia (8): planul de probă nu intră */
+    var oprit=b.activ===false,pornitLa=oprit?null:d.pornitLa,note=[];   /* revizia (1): botul OPRIT nu se reia „de aici încolo” */
+    if(oprit)note.push("bot oprit - socotit ca bot nou cu setările lui");
+    if(!(b.brut&&b.brut.buOrderData&&Number(b.brut.buOrderData.row)>1))note.push("număr de grile necunoscut, am pus 20");   /* revizia (10) */
     await new Promise(function(r){setTimeout(r,30)});   /* „socotesc…” apare înainte de calcul */
-    var rez=GridSim.simuleaza(tbMc.b15,st,{plan:plan,pornitLa:d.pornitLa,stPrefix:st,n:500,seed:12,orizonturi:[1,7],zile:14}),caNou=false;
-    if(rez.eroare&&d.pornitLa){rez=GridSim.simuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1,7],zile:14});caNou=!rez.eroare}   /* botul mai vechi decât barele ⇒ ca bot pornit acum */
-    tbMc.rez=rez;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);if(caNou)tbMc.rand.text="ca bot pornit acum (nu pot relua de la pornire): "+tbMc.rand.text;
-  }catch(e){tbMc.eroare=textEroare(e);tbMc.rand=null}
-  finally{tbMc.inLucru=false;tbMc.la=Date.now();tbMc.urmatorul=tbMc.la+TB_MC_MS}
+    var rez=GridSim.simuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,n:500,seed:12,orizonturi:[1,7],zile:14});
+    if(rez.eroare&&pornitLa){var motiv=String(rez.eroare).split(/[.:]/)[0];rez=GridSim.simuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1,7],zile:14});if(!rez.eroare)note.push("ca bot pornit acum ("+motiv+")")}   /* revizia (6): motivul adevărat */
+    tbMc.rez=rez;tbMc.st=st;tbMc.plan=plan;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);if(note.length)tbMc.rand.text=note.join(" · ")+": "+tbMc.rand.text;tbMc.randLa=Date.now();ok=true;
+  }catch(e){tbMc.eroare=textEroare(e)}   /* revizia (9): verdictul vechi rămâne pe ecran, cu ora lui */
+  finally{tbMc.inLucru=false;tbMc.la=ok?Date.now():Date.now()-TB_MC_MS+TB_MC_REINCERCARE_MS;tbMc.urmatorul=tbMc.la+TB_MC_MS}   /* picat ⇒ reîncercare în 2 minute */
   tbMcDeseneaza()}
 function tbMcDeseneaza(){if(tbStare.citireO&&tbStare.bot){try{tbDeseneazaCitire(tbStare.citireO,tbStare.bot)}catch(e){}}}
 function tbMcRand(b){
@@ -6736,9 +6744,8 @@ function tbMcRand(b){
   var hm=function(t){var d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
   var cand=tbMc.la?" — socotit "+hm(tbMc.la)+" · următorul "+hm(tbMc.urmatorul):"";
   if(tbMc.inLucru&&!tbMc.rand)return {ce:"Monte Carlo",stare:"info",text:"socotesc 500 de drumuri pe botul tău…"};
-  if(tbMc.eroare)return {ce:"Monte Carlo",stare:"info",text:"n-a mers: "+tbMc.eroare+cand};
-  if(!tbMc.rand)return null;
-  return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+" · șanse pe drumuri ca ultimele 14 zile, nu o predicție"+cand+(tbMc.inLucru?" · socotesc din nou…":"")}}
+  if(!tbMc.rand)return tbMc.eroare?{ce:"Monte Carlo",stare:"info",text:"n-a mers: "+tbMc.eroare+cand}:null;
+  return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+" · șanse pe drumuri ca ultimele 14 zile, nu o predicție"+(tbMc.eroare?" · din "+hm(tbMc.randLa||tbMc.la)+"; acum n-a mers: "+tbMc.eroare+" · reîncerc "+hm(tbMc.urmatorul):cand)+(tbMc.inLucru?" · socotesc din nou…":"")}}
 // v100.138: LIVE - antetul citirii poartă ceasul și prețul la fiecare tic; rândurile se recitesc cel mult o dată pe secundă (EMA / RSI / ADX
 // pe lumânările graficului, cu prețul viu), fără să redeseneze graficul
 var tbCitLiveLa=0,tbCitLiveEroare=false;
