@@ -68,7 +68,7 @@ await test("(3) I-528 șansele MĂSURATE pe liniile lor: marginile 24 h, lichida
   // pe desen: în cadru ⇒ textul gbSansa; ce iese din cadru ⇒ la marginea din stânga, după procentul distanței
   const TEaproape = Object.assign({}, TE, { pretTintaPentru: () => P * 1.003 });   // ținta în cadru (lumânările de probă se mișcă ±0,5%)
   const svg = G.desen(G.intrareBot(D({ sanse, TabloExtra: TEaproape }))).svg;
-  assert.match(svg, /class="gbSansa"[^>]*>(<title>[^<]*<\/title>)?înaintea stopului, 7 zile: 38%/); assert.match(svg, /grid jos [\d.]+ \([^)]*\) · 24 h: 12%/);
+  assert.match(svg, /class="gbSansa"[^>]*>(<title>[^<]*<\/title>)?înaintea stopului, 7 zile: 38%/); /* v100.143: tspan în eticheta din dreapta */ assert.match(svg, /grid jos [\d.]+ \([^)]*\) · 24 h: 12%/);
   assert.equal((G.desen(G.intrareBot(D())).svg.match(/gbSansa/g) || []).length, 0, "fără șanse ⇒ nimic");
 });
 await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față de plan; linia apare pe grafic; pagina are butonul, apăsarea și copierea", () => {

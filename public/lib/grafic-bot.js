@@ -345,7 +345,8 @@ var GraficBot = (function () {
   // d = { bot, brut, bare, plan, alerteServer, valoare, profil, consLinii, funding, sanse, proba, pretViu, acum, W, st, simplu, per, TabloExtra? }
   function intrareBot(d) {
     var TE = d.TabloExtra || (typeof TabloExtra !== "undefined" ? TabloExtra : null), b = d.bot || {}, pl = d.plan || null, viu = nr(d.pretViu) > 0 ? nr(d.pretViu) : null;
-    var raw = Array.isArray(d.bare) ? d.bare : [], acum = nr(d.acum) || Date.now(), dir = String(b.directie || "").toLowerCase();
+    var rawTot = Array.isArray(d.bare) ? d.bare : [], acum = nr(d.acum) || Date.now(), dir = String(b.directie || "").toLowerCase();
+    var raw = fereastraBot(rawTot, b.pornitLa, acum);   // v100.143: de la pornirea botului (cu 2 h înainte) pe intervalele de zi
     var z = TE ? TE.dacaInchizi(b) : null, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
     // v100.98: planul CU gridul pe drum (pretTintaPentru / pretOpritorPentru)
     var pPl = TE && plus > 0 ? TE.pretTintaPentru(b, plus) : null, pMi = TE && minus > 0 ? TE.pretOpritorPentru(b, -minus) : null;
@@ -355,7 +356,7 @@ var GraficBot = (function () {
     var zi = ziObisnuita(viu || (raw.length ? raw[raw.length - 1].c : null), d.profil);   // v100.51 (I-470, I-476)
     var bv = cuPretViu(raw, viu, acum);   // v100.98: lumânarea de acum urmează prețul live
     var laStop = TE && b.opritorPierdereActiv ? TE.totalLaOpritor(b) : null;
-    return { simplu: d.simplu !== false, pornit: nr(b.pornitLa), funding: d.funding || null, bare: bv, W: d.W, ingust: d.W < 560, st: d.st || {}, niv: niv, zi: zi, val: d.valoare || null,
+    return { simplu: d.simplu !== false, pornit: nr(b.pornitLa), funding: d.funding || null, bare: bv, fereastraBot: raw !== rawTot, W: d.W, ingust: d.W < 560, st: d.st || {}, niv: niv, zi: zi, val: d.valoare || null,
       consLinii: d.consLinii && d.consLinii.bot === b.id ? d.consLinii : null, grila: grila, alerte: TE ? TE.alerteleBotului(d.alerteServer || [], b.id, acum) : [], per: d.per || "24h", pretViu: viu,
       // v100.38: umplerile si perechile gridului, deduse din lumanari de la pornire, langa numarul de perechi al Pionex
       umpleri: umpleri(bv, { jos: grila.jos, sus: grila.sus, linii: grila.linii, geo: grila.geo, p0: nr(xo.initPrice), pornit: nr(b.pornitLa), dir: dir }), perechiPionex: nr(b.ordinePerechi),
@@ -370,7 +371,11 @@ var GraficBot = (function () {
   function desen(o) {
     var raw = o.bare || [], st = o.st || {}, W = Math.max(300, o.W || 800), ingust = !!o.ingust, simplu = !!o.simplu;
     if (simplu) st = { ema: st.ema !== false, rsi: !!st.rsi, adx: st.adx !== false };   /* v100.98: Simplu = esențialul */
-    var gut = ingust ? 108 : 176, plotW = W - gut, mainH = ingust ? 270 : Math.round(Math.max(340, Math.min(520, W * 0.36))),   /* el, 01.10: graficul mai mare - creste cu latimea */ volH = ingust ? 34 : 46, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) && typeof Directie !== "undefined" ? (ingust ? 7 : 9) : 0;
+    // v100.143: marginea din dreapta crește cu cea mai lungă etichetă (nume + preț + șansa), ca „grid sus 0.5500 · 24 h: 67%” să nu iasă din cadru;
+    // cel mult 24% din lățime; pe telefon rămâne 108 (acolo etichetele sunt scurte). Stopul planului lângă lichidare dă o etichetă unită lungă
+    var etMax = 0; (o.niv || []).forEach(function (x) { if (x && x.t) etMax = Math.max(etMax, String(x.t).length + 8 + (x.sansa ? String(x.sansa).length * 0.85 + 3 : 0)); });
+    if (o.consLinii && nr(o.consLinii.stopPlan) > 0) etMax = Math.max(etMax, 36);
+    var gut = ingust ? 108 : Math.min(Math.round(W * 0.24), Math.max(176, 12 + Math.round(etMax * 7.1))), plotW = W - gut, mainH = ingust ? 270 : Math.round(Math.max(340, Math.min(520, W * 0.36))),   /* el, 01.10: graficul mai mare - creste cu latimea */ volH = ingust ? 34 : 46, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) && typeof Directie !== "undefined" ? (ingust ? 7 : 9) : 0;
     var cl = raw.map(function (b) { return b.c; }), S = { e20: ema(cl, 20), e50: ema(cl, 50), bb: bollinger(cl, 20, 2), rsi: rsi(cl, 14) };
     // v100.106: trendul pe fiecare bară ÎNCHISĂ, pe istoria lungă a TF-ului (o.trendIstoric), ca banda să nu înceapă abia de la bara 60
     S.tr = null;
@@ -476,14 +481,22 @@ var GraficBot = (function () {
     });
     if (st.ema) q.push(linie(S.e20, "gbEma20", COL.ema20, 2), linie(S.e50, "gbEma50", COL.ema50, 2));
     // v100.38: umplerile gridului (▲ cumparare / ▼ vanzare; inel = pereche inchisa), la lumanarea lor
-    var U = o.umpleri && Array.isArray(o.umpleri.umpleri) ? o.umpleri.umpleri : [];
+    // v100.143 (el 08.10): O săgeată pe lumânare și fel - ▲ la cea mai de jos linie umplută, ▼ la cea mai de sus - cu „×n” când sunt mai multe;
+    // 96 de săgeți pe 80 px acopereau lumânările și cercul alertei. Titlul le înșiră pe toate (preț · oră)
+    var U = o.umpleri && Array.isArray(o.umpleri.umpleri) ? o.umpleri.umpleri : [], GU = {}, GUk = [];
     U.forEach(function (u) {
       if (!(u.p >= lo && u.p <= hi)) return;
       var bi = 0; while (bi < n - 1 && B[bi].k < u.ri) bi++;
-      var x = X(bi), y = Y(u.p), cum = u.tip === "B", cul = cum ? COL.accent : COL.warn;
+      var kk = bi + "|" + u.tip; if (!GU[kk]) { GU[kk] = { bi: bi, tip: u.tip, l: [] }; GUk.push(kk); } GU[kk].l.push(u);
+    });
+    GUk.forEach(function (kk) {
+      var gu = GU[kk], cum = gu.tip === "B", pp = gu.l.map(function (u) { return u.p; }), p = cum ? Math.min.apply(null, pp) : Math.max.apply(null, pp), per = gu.l.filter(function (u) { return u.pereche; }).length;
+      var x = X(gu.bi), y = Y(p), cul = cum ? COL.accent : COL.warn;
       var tri = cum ? f1(x - 4.5) + "," + f1(y + 10) + " " + f1(x + 4.5) + "," + f1(y + 10) + " " + f1(x) + "," + f1(y + 2) : f1(x - 4.5) + "," + f1(y - 10) + " " + f1(x + 4.5) + "," + f1(y - 10) + " " + f1(x) + "," + f1(y - 2);
-      q.push('<g class="gbUmplere' + (u.pereche ? " gbPereche" : "") + '"><title>' + esc((cum ? "cumpărare la " : "vânzare la ") + fmtP(u.p) + " · " + ora(u.t, true) + (u.pereche ? " · pereche închisă" : "")) + '</title>'
-        + '<polygon points="' + tri + '" fill="' + cul + '" stroke="' + COL.fond + '" stroke-width="1"/>' + (u.pereche ? '<circle cx="' + f1(x) + '" cy="' + f1(y) + '" r="6" fill="none" stroke="' + COL.text + '" stroke-width="1.4"/>' : "") + "</g>");
+      var tit = gu.l.map(function (u) { return (cum ? "cumpărare la " : "vânzare la ") + fmtP(u.p) + " · " + ora(u.t, true) + (u.pereche ? " · pereche închisă" : ""); }).join("\n");
+      q.push('<g class="gbUmplere' + (per ? " gbPereche" : "") + '"><title>' + esc(tit) + '</title>'
+        + '<polygon points="' + tri + '" fill="' + cul + '" stroke="' + COL.fond + '" stroke-width="1"/>' + (per ? '<circle cx="' + f1(x) + '" cy="' + f1(y) + '" r="6" fill="none" stroke="' + COL.text + '" stroke-width="1.4"/>' : "")
+        + (gu.l.length > 1 ? '<text x="' + f1(x + 6) + '" y="' + f1(cum ? y + 14 : y - 6) + '" font-size="10.5" font-weight="700" fill="' + cul + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">×' + gu.l.length + '</text>' : "") + "</g>");
     });
     // v100.98 (05.10) (el: „linia de pornire a botului”): ce a trăit botul vs ce era înainte
     var tPorn = nr(o.pornit);
@@ -500,9 +513,8 @@ var GraficBot = (function () {
       if (x.p >= lo && x.p <= hi) {
         var y = Y(x.p);
         if (x.st !== "fine") q.push('<line class="gbNiv" x1="0" x2="' + f1(plotW) + '" y1="' + f1(y) + '" y2="' + f1(y) + '" stroke="' + x.c + '" stroke-width="' + (x.st === "lich" ? 2 : 1.3) + '"' + (x.st === "dash" ? ' stroke-dasharray="6 4"' : x.st === "lich" ? ' stroke-dasharray="2 3"' : '') + '/>');
-        et.push({ y: y, t: x.t, s: x.s, p: x.p, c: x.c });
-        // v100.99 (I-528): șansa MĂSURATĂ (Probabilitati) deasupra liniei, la marginea din dreapta a graficului - eticheta din dreapta rămâne scurtă
-        if (x.sansa) q.push('<text class="gbSansa" x="' + f1(plotW - 6) + '" y="' + f1(y - 5) + '" text-anchor="end" font-size="11.5" fill="' + x.c + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4"><title>' + esc(x.sansaLung || x.sansa) + '</title>' + esc(ingust ? x.sansaScurt || x.sansa : x.sansa) + '</text>');
+        // v100.99 (I-528): șansa MĂSURATĂ (Probabilitati); v100.143 (el 08.10): nu mai stă peste lumânări - intră în eticheta din dreapta, după preț
+        et.push({ y: y, t: x.t, s: x.s, p: x.p, c: x.c, sansa: x.sansa || null, sansaScurt: x.sansaScurt || x.sansa || null, sansaLung: x.sansaLung || x.sansa || null });
       } else afara.push(x);
     });
     // v100.99 (I-529): stopul de probă - linia trasă de el, cu ce ar pierde acolo (textul vine gata din stopProba)
@@ -520,11 +532,27 @@ var GraficBot = (function () {
     if (viu !== null) q.push('<line class="gbViu" x1="' + f1(X(n - 1)) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(viu)) + '" y2="' + f1(Y(viu)) + '" stroke="' + COL.text + '" stroke-width="1.2" stroke-dasharray="3 3"/>');
     if (pAcum !== null) et.push({ y: Y(pAcum), t: "acum", p: pAcum, c: COL.text, acum: true });
     et.sort(function (a, b) { return a.y - b.y; });
+    // v100.143 (el 08.10): nivelurile aproape pe aceeași linie (sub 8 px) au O etichetă („lichidare · stopul planului 0.5523”, titlul cu ambele
+    // prețuri), nu două una sub alta; șansa o ia cel care o are
+    for (var mi = et.length - 1; mi >= 1; mi--) {
+      var ea = et[mi - 1], eb = et[mi]; if (ea.acum || eb.acum || eb.y - ea.y >= 8) continue;
+      ea.tit = (ea.tit || ea.t + " " + fmtP(ea.p)) + " · " + eb.t + " " + fmtP(eb.p); ea.t = ea.t + " · " + eb.t; ea.s = ingust ? (ea.s || ea.t).replace(/\+$/, "") + "+" : (ea.s || ea.t) + " · " + (eb.s || eb.t);   /* pe telefon (108 px): primul nume scurt + „+” */
+      if (ea.t.length > 22) ea.t = ea.s;   /* din POZĂ: eticheta unită lungă iese din margine ⇒ numele scurte */
+      if (!ea.sansa && eb.sansa) { ea.sansa = eb.sansa; ea.sansaScurt = eb.sansaScurt; ea.sansaLung = eb.sansaLung; }
+      et.splice(mi, 1);
+    }
+    et.forEach(function (e) { e.y0 = e.y; });
     var minD = ingust ? 17 : 20; for (var ei = 1; ei < et.length; ei++) if (et[ei].y - et[ei - 1].y < minD) et[ei].y = et[ei - 1].y + minD;
     var peste = et.length ? et[et.length - 1].y - (mainH - 6) : 0; if (peste > 0) et.forEach(function (e) { e.y -= peste; });
     et.forEach(function (e) {
+      // v100.143: eticheta împinsă de pe linia ei primește o liniuță spre linie (altfel nu se știe a cui e)
+      if (Math.abs(e.y - e.y0) > 3) q.push('<line class="gbLeg" x1="' + f1(plotW) + '" x2="' + f1(plotW + 5) + '" y1="' + f1(e.y0) + '" y2="' + f1(e.y) + '" stroke="' + e.c + '" stroke-width="1" stroke-opacity=".8"/>');
       if (e.acum) q.push('<rect x="' + f1(plotW + 2) + '" y="' + f1(e.y - 11) + '" width="' + (gut - 4) + '" height="22" rx="5" fill="' + COL.text + '"/><text x="' + f1(plotW + 8) + '" y="' + f1(e.y + 5) + '" font-size="13.5" font-weight="700" fill="#071018">' + (ingust ? "" : "acum ") + fmtP(e.p) + '</text>');
-      else q.push('<text x="' + f1(plotW + 6) + '" y="' + f1(e.y + 4.5) + '" font-size="13" fill="' + e.c + '">' + esc(ingust ? (e.s || "") : e.t) + " " + fmtP(e.p) + '</text>');
+      else {
+        var tit = e.sansaLung ? (e.tit ? e.tit + " · " : "") + e.sansaLung : e.tit || "";
+        q.push('<text x="' + f1(plotW + 6) + '" y="' + f1(e.y + 4.5) + '" font-size="13" fill="' + e.c + '">' + (tit ? '<title>' + esc(tit) + '</title>' : "") + esc(ingust ? (e.s || "") : e.t) + " " + fmtP(e.p)
+          + (e.sansa ? (ingust ? " " : " · ") + '<tspan class="gbSansa" font-size="' + (ingust ? 10 : 11) + '" opacity=".9">' + esc(ingust ? e.sansaScurt : e.sansa) + '</tspan>' : "") + '</text>');
+      }
     });
     // v100.106: semaforul trendului, sus-stânga peste grafic (în locul gol lăsat sus); becul TF-ului graficului e încercuit
     var semH = 0;
@@ -622,12 +650,15 @@ var GraficBot = (function () {
     if (S.tr) Lg.push('<span><i class="gbPct" style="background:' + COL.good + '"></i><i class="gbPct" style="background:' + COL.bad + '"></i><i class="gbPct" style="background:' + COL.mut + '"></i>trend: urcă · coboară · lateral (banda de sub lumânări, EMA umplut)</span><span>' + (o.actiune ? 'semafor: culoarea = față de poziția ta (verde urcă · galben lateral · roșu coboară), săgeata = piața' : 'semafor: culoarea = față de bot, săgeata = piața') + '</span>');   /* v100.106: și în Complet; v100.108: la acțiuni față de poziție */
     if (st.bb) Lg.push('<span><i style="border-color:' + COL.bb + '"></i>Bollinger 20, 2</span>');
     if (o.umpleri) Lg.push('<span>▲ cumpărare · ▼ vânzare pe grilă (deduse din lumânări) · perechi pe grafic: ' + o.umpleri.perechi + (nr(o.perechiPionex) !== null ? " · Pionex: " + nr(o.perechiPionex) : "") + '</span>');
+    var LgFer = o.fereastraBot ? '<span class="mutedInfo">fereastra: de la pornirea botului, cu 2 ore înainte (' + cate(raw.length, "bară", "bare") + ')</span>' : "";   /* v100.143 */
+    if (LgFer) Lg.push(LgFer);
     if (simplu && !o.actiune) {   /* v100.98: un singur rând, cu ce e pe grafic */
       Lg = ['<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero</span>', '<span><i class="gbDash" style="border-color:' + COL.good + '"></i>plan +</span>', '<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>plan −</span>', '<span><i style="border-color:' + COL.bad + '"></i>stop</span>',
         '<span><i style="border-color:' + COL.ema20 + '"></i>EMA 20</span>', '<span><i style="border-color:' + COL.ema50 + '"></i>EMA 50</span>',
         (S.tr ? '<span><i class="gbPct" style="background:' + COL.good + '"></i><i class="gbPct" style="background:' + COL.bad + '"></i><i class="gbPct" style="background:' + COL.mut + '"></i>trend: urcă · coboară · lateral</span><span>semafor: culoarea = față de bot, săgeata = piața</span>' : ''),
         '<span>▲▼ umpleri · ◯ pereche închisă (' + (o.umpleri ? o.umpleri.perechi : 0) + ')</span>',
         '<span><i class="gbPct" style="background:' + COL.warn + '"></i>alertă: galben atenție · gri info · roșu critic (' + evs.length + ')</span>'];
+      if (LgFer) Lg.push(LgFer);   /* v100.143: și pe rândul scurt */
       return { svg: svg, inaltime: H, legenda: Lg.join(""), harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: H, lo: lo, hi: hi, mainH: mainH } };
     }
     if (!o.actiune) Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
@@ -638,6 +669,16 @@ var GraficBot = (function () {
 
   // ce spune cursorul la x (in coordonatele SVG-ului): bara, indicatorii, alertele din apropiere - totul scapat
   // v100.98 (el: „lumânarea live”): ultima lumânare urmează prețul live; după capătul perioadei ei începe una nouă (copie, lista primită rămâne)
+  // v100.143 (el 08.10: „graficul e foarte îngrămădit… unde e activitate”): pe intervalele de zi (bare de cel mult 15 min) fereastra începe cu
+  // 2 ore înaintea pornirii botului - cu 24 de ore de bare de 5 min, ora botului stătea într-a 12-a parte din lățime, lumânări de 2 px.
+  // Cel puțin 48 de bare; fără oră de pornire sau bot mai vechi decât fereastra ⇒ fereastra întreagă; pe 1 h și mai lungi nu se taie (context)
+  var FEREASTRA_MIN = 48, FEREASTRA_INAINTE_MS = 2 * 3600000;
+  function fereastraBot(raw, pornit, acum) {
+    var t0 = nr(pornit); if (!Array.isArray(raw) || raw.length <= FEREASTRA_MIN || t0 === null || !(t0 > 0)) return raw;
+    var pas = raw[1].t - raw[0].t; if (!(pas > 0) || pas > 15 * 60000) return raw;
+    var deLa = t0 - FEREASTRA_INAINTE_MS, i0 = 0; while (i0 < raw.length && raw[i0].t < deLa) i0++;
+    i0 = Math.min(i0, raw.length - FEREASTRA_MIN); return i0 > 0 ? raw.slice(i0) : raw;
+  }
   function cuPretViu(bare, pret, acum) {
     pret = nr(pret); if (pret === null || !(pret > 0) || !Array.isArray(bare) || bare.length < 2) return bare;
     var pas = bare[1].t - bare[0].t, u = bare[bare.length - 1], out = bare.slice(); if (!(pas > 0)) return bare;
@@ -662,6 +703,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };
+  return { COL: COL, fereastraBot: fereastraBot, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;
