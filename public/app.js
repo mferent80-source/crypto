@@ -6760,11 +6760,13 @@ function tbCitireExtra(b,o){
     /* v100.148 (I-576): și 1h / 1z, unde Busola le are (cele 30 de monede ale ei; pe futures doar 4h) */
     var ai=rez&&e?Busola.alteIntervale(rez,tbCheieBusola(b)):null;if(ai){out.busola.ce="Busola";out.busola.text+=" · "+ai}   /* revizia: eticheta spune „Busola” când nu e doar 4h */
     else if(rez&&rez.monede&&e){var mF=rez.monede[Busola.simbolBusola(tbCheieBusola(b))];if(mF&&mF.perp4h&&!mF["4h"]&&!mF.grid4h)out.busola.text+=" · pe futures doar 4h"}
-    out.busola.link=Busola.linkBusola(tbCheieBusola(b),"4h");   /* v100.149 (I-582) */
+    /* v100.149 (I-582): linkul spre Busolă se pune mai jos, după rândurile pe 1h (revizia Opus) */
     /* v100.149 (I-580): pe graficele sub 4h, direcția și cifra Busolei pe 1h înaintea celor pe 4h (doar pe monedele Busolei) */
     out.busolaDirectie1h=null;out.busolaVerdict1h=null;
     if(rez&&/^(5M|15M|30M|60M)$/.test(tbTf())){var d1=Busola.randDirectie(rez,tbCheieBusola(b),Date.now(),{bot:b.directie,interval:"1h"});if(d1&&d1.nivel!=="nemasurat")out.busolaDirectie1h={ce:"Direcția, după Busola (1h)",stare:d1.nivel,text:d1.text};
       var c1=Busola.randVerdict(rez,tbCheieBusola(b),Date.now(),{interval:"1h"});if(c1)out.busolaVerdict1h={ce:"Cifra Busolei (1h)",stare:c1.nivel,text:c1.text}}
+    /* v100.149 (I-582, revizia): butonul spre Busolă doar când moneda e măsurată, pe intervalul arătat (1h când sunt rândurile pe 1h) */
+    if(e)out.busola.link=Busola.linkBusola(tbCheieBusola(b),out.busolaDirectie1h||out.busolaVerdict1h?"1h":"4h");
     // v100.146 (el 08.10: „integrează mai mult Busola în ce spune piața”): ce înseamnă regimul de acum pentru un grid (Busola.randGrid - cât a
     // pierdut un grid pe episod în regimul ăsta, cu o zecimală, canalul, dovada) și intervalul măsurat de Busola pe 4h față de gridul botului
     // (Busola.randFisa; mai îngust cu peste 10% ⇒ atenție) - toate din rezumatul real al Busolei, nimic inventat
@@ -6870,7 +6872,8 @@ function tbMcRand(b){
   if(!tbMc.rand)return tbMc.eroare?{ce:"Monte Carlo",stare:"info",text:"n-a mers: "+tbMc.eroare,nota:cand.replace(/^ — /,""),buton:buton}:null;
   // v100.140 (ideea 3): verdictul în text, restul („șanse… · socotit”) în nota mai mică de sub el - pe telefon rândul nu mai are 6–8 rânduri
   /* v100.149 (I-579): regimul Busolei - doar validat (poarta din colector); nevalidat sau cu eroare ⇒ nimic */
-  var rg=tbMc.rand.regim&&tbMc.rand.regim.nevalidat===false&&!tbMc.rand.regim.eroare&&tbMc.rand.regim.text?" · în regimul de acum ("+tbMc.rand.regim.stare+", "+TextRo.cate(tbMc.rand.regim.zile,"zi de bare","zile de bare")+"): "+tbMc.rand.regim.text:"";
+  var RG_ST={miscare:"mai agitată",liniste:"mai calmă","nu-stiu":"nimic neobișnuit"},rgo=tbMc.rand.regim;
+  var rg=rgo&&rgo.nevalidat===false&&!rgo.eroare&&rgo.text?" · în regimul de acum ("+(RG_ST[rgo.stare]||rgo.stare)+", "+TextRo.cate(rgo.zile,"zi de bare","zile de bare")+"): "+rgo.text:"";   /* revizia: starea pe înțeles */
   return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+rg,buton:buton,nota:"șanse pe drumuri ca ultimele 14 zile, nu o predicție"+(tbMc.eroare?" · din "+hm(tbMc.randLa||tbMc.la)+"; acum n-a mers: "+tbMc.eroare+" · reîncerc "+hm(tbMc.urmatorul):cand.replace(/^ — /," · "))+(tbMc.inLucru?" · socotesc din nou…":"")}}
 // v100.138: LIVE - antetul citirii poartă ceasul și prețul la fiecare tic; rândurile se recitesc cel mult o dată pe secundă (EMA / RSI / ADX
 // pe lumânările graficului, cu prețul viu), fără să redeseneze graficul

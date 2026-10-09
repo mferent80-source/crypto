@@ -53,11 +53,12 @@ export function liniaMonteCarlo(stareBoti, boti, acum, max) {
 // vocile botului acum (Busola.concluzie pe graficul pe 4h, direcția Busolei, felul Monte Carlo) + semnele lor și prețul; se notează în KV
 // la fiecare SCHIMBARE a frazei și se judecă după 24 h (judecaVoci: încotro a mers prețul; sub 0,2% = pe loc). Pure, probate în proba-v100149.
 const SEMN_GR = { urca: 1, coboara: -1, lateral: 0 }, SEMN_B = { "inclinat-long": 1, "inclinat-short": -1, asteapta: 0 }, SEMN_MC = { bine: 1, rau: -1, atentie: 0 };
-export function vociBot({ Busola, rez, bot, grafic, mc, acum }) {
+export function vociBot({ Busola, rez, bot, grafic, mc, mcAtins, acum }) {
   if (!Busola || !rez || !bot) return null;
   const cheie = bot.simbolPionex || String(bot.baza || "").replace(/\.PERP$/, "") + "_USDT_PERP";
-  const r = Busola.randDirectie(rez, cheie, acum, { bot: bot.directie }), semnB = r && r.semn ? r.semn : null;
-  const c = Busola.concluzie({ bot: bot.directie, grafic: grafic || null, busola: semnB, mc: mc || null });
+  // revizia Opus: aceeași frază ca în Tablou - vocea Busolei doar din rezumat proaspăt (sub 4,5 h), „planul atins (încasează)” la MC
+  const p = Busola.pazaStare(rez, cheie, acum), r = p && !p.vechi ? Busola.randDirectie(rez, cheie, acum, { bot: bot.directie }) : null, semnB = r && r.semn ? r.semn : null;
+  const c = Busola.concluzie({ bot: bot.directie, grafic: grafic || null, busola: semnB, mc: mc || null, mcAtins: !!mcAtins });
   if (!c) return null;
   const d = String(bot.directie || "").toLowerCase();
   return { la: acum, bot: String(bot.id), simbol: cheie, pret: nr(bot.pretCurent), dir: d === "long" || d === "short" ? d : "neutru", text: c.text, nivel: c.nivel, contrazic: /^Vocile se contrazic/.test(c.text),
@@ -69,7 +70,8 @@ export function judecaVoci(lista, bareDupaSimbol, acum) {
   for (const x of Array.isArray(lista) ? lista : []) {
     if (!x || x.dupa || !(nr(x.pret) > 0) || acum - Number(x.la) < H24) continue;
     const b = bareDupaSimbol && bareDupaSimbol[x.simbol]; if (!Array.isArray(b) || !b.length) continue;
-    const bara = b.find((y) => y && y.t >= Number(x.la) + H24 && y.t + 900000 <= acum); if (!bara || !(bara.c > 0)) continue;
+    // revizia Opus: bara la ≥ 24 h, dar nu mai târziu de 24 h 30 min (fără bare acolo ⇒ intrarea se lasă, nu se judecă pe un preț de peste zile)
+    const bara = b.find((y) => y && y.t >= Number(x.la) + H24 && y.t <= Number(x.la) + H24 + 1800000 && y.t + 900000 <= acum); if (!bara || !(bara.c > 0)) continue;
     const r = bara.c / Number(x.pret) - 1;
     out.push({ la: Number(x.la), bot: String(x.bot), pret24: bara.c, pretDir: Math.abs(r) < 0.002 ? 0 : r > 0 ? 1 : -1 });
   }
@@ -112,9 +114,12 @@ export async function turaMonteCarloBot(d) {
         try {
           const rg = await d.regim(b);
           if (rg && rg.stare && Array.isArray(rg.ferestre) && rg.ferestre.length) {
-            const starturi = d.GridSim.starturiRegim(b15, rg.ferestre, 96), rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt, { starturi }));
-            regim = rr.eroare ? { stare: rg.stare, zile: Math.floor(starturi.length / 96), text: String(rr.eroare).slice(0, 200), eroare: true, nevalidat: !d.regimValidat }
-              : { stare: rg.stare, zile: Math.floor(starturi.length / 96), text: d.GridSim.verdictScurt(rr, set, plan, b).text, nevalidat: !d.regimValidat };
+            // revizia Opus: aceeași reluare ca verdictul principal (prefixul de la pornire; căzut ⇒ ca bot nou), altfel cele două n-ar fi comparabile
+            const starturi = d.GridSim.starturiRegim(b15, rg.ferestre, 96), zile = Math.ceil(starturi.length / 96);
+            let rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt, { starturi })), notaR = "";
+            if (rr.eroare && s.pornitLa && !/regimul de acum/.test(String(rr.eroare))) { rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt, { starturi })); if (!rr.eroare) notaR = "ca bot pornit acum: "; }
+            regim = rr.eroare ? { stare: rg.stare, zile, text: String(rr.eroare).slice(0, 200), eroare: true, nevalidat: !d.regimValidat }
+              : { stare: rg.stare, zile, text: notaR + d.GridSim.verdictScurt(rr, set, plan, b).text, nevalidat: !d.regimValidat };
           }
         } catch (e) { if (d.jurnal) d.jurnal("monte carlo regim", b.id, e && e.message || e); }
       }

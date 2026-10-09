@@ -237,9 +237,11 @@ async function golesteCoada() {
 // cerut, pe canalul extern. "Trimisa" = a ajuns macar in KV (v100.40: iar Discord refuzat -> coada, reincercata).
 // v101.92 (I-581): prețul botului la alertă (din ultima listă de boți) - ca „ce a urmat” după 24 h să aibă de la ce porni
 function pretBot(id) { const b = (ultimiiBoti || []).find((x) => x && String(x.id) === String(id)), p = b ? Number(b.pretCurent) : NaN; return Number.isFinite(p) && p > 0 ? p : null; }
+// revizia Opus: și simbolul, ca „ce a urmat” să se judece și pe boții opriți după avertizare (altfel bilanțul ar număra doar supraviețuitorii)
+function simbolBot(id) { const b = (ultimiiBoti || []).find((x) => x && String(x.id) === String(id)); try { return b ? TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex : null; } catch { return null; } }
 async function trimiteAlerta(m, bot, cheie) {
   let inKv = false;
-  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null, pret: pretBot(bot) } }); inKv = !!(r && r.ok); }
+  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null, pret: pretBot(bot), simbol: simbolBot(bot) } }); inKv = !!(r && r.ok); }
   catch (e) { jurnal("alerta in KV EȘEC", e.message); }
   notezAlerta({ t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null });   // v101.86: și „doar în Radar” (grilele)
   // v97.9: unele alerte (grila atinsa) raman doar in Radar - pagina Alerts le arata, canalul extern nu le primeste
@@ -1850,7 +1852,7 @@ async function turaMonteCarloBot() {
     try {
       const rz = Busola.rezumat(), jv = ritm.voci && typeof ritm.voci === "object" ? ritm.voci : {};
       for (const b of ultimiiBoti.filter((y) => y && y.id != null && y.activ !== false)) {
-        const v = vociBot({ Busola, rez: rz, bot: b, grafic: directii[b.id] && directii[b.id].dir4h || null, mc: st.boti[String(b.id)] && st.boti[String(b.id)].stare || null, acum: Date.now() });
+        const sb = st.boti[String(b.id)], v = vociBot({ Busola, rez: rz, bot: b, grafic: directii[b.id] && directii[b.id].dir4h || null, mc: sb && sb.stare || null, mcAtins: !!(sb && /planul atins/i.test(String(sb.text || ""))), acum: Date.now() });
         if (!v || !schimbareVoci(jv[String(b.id)], v)) continue;
         const r = await trimite("/api/istoric-bot?action=voci", { intrare: v }); if (r && r.ok) jv[String(b.id)] = { text: v.text, la: v.la };
       }
@@ -1880,16 +1882,17 @@ async function turaDupa24h() {
   const bareDe = async (s) => { if (!s) return null; if (!bare[s]) { try { bare[s] = GridCalcul.bare(await lumanari15M(s)); } catch { bare[s] = null; } } return bare[s]; };
   try {
     const r = await cere("/api/istoric-bot?action=voci"), lista = r && Array.isArray(r.voci) ? r.voci : [];
-    const scadente = lista.filter((x) => x && !x.dupa && acum - Number(x.la) >= 86400000);
+    const scadente = lista.filter((x) => x && !x.dupa && Number(x.pret) > 0 && acum - Number(x.la) >= 86400000 && acum - Number(x.la) <= 30 * 86400000);   // revizia: cu preț, și nu mai vechi decât barele
     for (const x of scadente) await bareDe(x.simbol);
     const j = judecaVoci(scadente, bare, acum); if (j.length) await trimite("/api/istoric-bot?action=vociDupa", { lista: j });
   } catch (e) { jurnal("vocile după 24 h", e.message); }
   try {
     const r = await cere("/api/istoric-bot?action=alerte"), lista = r && Array.isArray(r.alerte) ? r.alerte : [], out = [];
-    for (const a of lista.filter((x) => x && x.bot && Number(x.pret) > 0 && !x.dupa && acum - Number(x.t) >= 86400000)) {
-      const b = (ultimiiBoti || []).find((y) => y && String(y.id) === String(a.bot)); if (!b) continue;
-      const l = await bareDe(TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex); if (!l) continue;
-      const bara = l.find((y) => y && y.t >= Number(a.t) + 86400000 && y.t + 900000 <= acum); if (bara && bara.c > 0) out.push({ t: a.t, bot: a.bot, pret24: bara.c });
+    for (const a of lista.filter((x) => x && x.bot && Number(x.pret) > 0 && !x.dupa && acum - Number(x.t) >= 86400000 && acum - Number(x.t) <= 7 * 86400000)) {
+      // revizia: pe simbolul scris în alertă (și boții opriți între timp); fără simbol, lista boților de acum
+      const b = (ultimiiBoti || []).find((y) => y && String(y.id) === String(a.bot)), sym = a.simbol || (b ? TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex : null);
+      const l = await bareDe(sym); if (!l) continue;
+      const bara = l.find((y) => y && y.t >= Number(a.t) + 86400000 && y.t <= Number(a.t) + 86400000 + 1800000 && y.t + 900000 <= acum); if (bara && bara.c > 0) out.push({ t: a.t, bot: a.bot, pret24: bara.c });
     }
     if (out.length) await trimite("/api/istoric-bot?action=alerteDupa", { lista: out });
   } catch (e) { jurnal("alertele după 24 h", e.message); }

@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import * as P from "./lib/paza-boti.mjs";
 import * as MC from "./lib/mesaje-colector.mjs";
 import * as TM from "./lib/tura-monte-carlo-bot.mjs";
+import { pCastig, verdictRegim } from "./lib/mc-regim.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -35,7 +36,7 @@ await test("(I-582) Busola.linkBusola: adresa cu stare spre moneda și intervalu
   assert.equal(B.linkBusola("", "4h"), null);
   const d = functie(APP, "tbDeseneazaCitire");
   assert.match(d, /x\.link\?'<a class="tbMcBtn tbCitLink" href="'\+escapeHtml\(x\.link\)\+'" target="_blank" rel="noopener">deschide în Busolă<\/a>':''/, "rd() desenează butonul când rândul are link");
-  assert.match(functie(APP, "tbCitireExtra"), /out\.busola\.link=Busola\.linkBusola\(tbCheieBusola\(b\),"4h"\)/, "rândul Busolei primește adresa");
+  assert.match(functie(APP, "tbCitireExtra"), /if\(e\)out\.busola\.link=Busola\.linkBusola\(tbCheieBusola\(b\),out\.busolaDirectie1h\|\|out\.busolaVerdict1h\?"1h":"4h"\)/, "rândul Busolei primește adresa doar când moneda e măsurată, pe intervalul arătat (revizia)");
 });
 await test("(I-580) Busola.randDirectie / randVerdict pe 1h (o.interval) - pentru graficele sub 4h; fără comparația cu graficul pe 4h", () => {
   const r = rez();
@@ -60,6 +61,13 @@ await test("(I-578) paza: UN mesaj „toate vocile contra botului tău” (≥ 2
   const v2 = P.pazaVoci({ Busola: B, rez: rez({ la: LA + H4 }), bot, inainte: v1.stare, acum: ACUM + H4, grafic: "coboara", mc: "rau" });
   assert.ok(v2.mesaj); assert.equal(v2.mesaj.cheie, "busola-voci"); assert.equal(v2.mesaj.nivel, "atentie");
   assert.match(v2.mesaj.titlu, /^MET long 3× · toate vocile contra: graficul pe 4h, Busola \(nedovedit\) și Monte Carlo/); assert.match(v2.mesaj.mesaj, /nu e un semnal de închidere/);
+  const doua = P.pazaVoci({ Busola: B, rez: rez({ la: LA + H4 }), bot, inainte: v1.stare, acum: ACUM + H4, grafic: "coboara", mc: null });
+  assert.match(doua.mesaj.titlu, /· 2 din 2 voci contra: graficul pe 4h și Busola \(nedovedit\)$/, "revizia: numărul real de voci, nu „toate”");
+  // revizia: fraza pâlpâie o tură pe „se contrazic” (MC la limită), Busola rămâne contra ⇒ episodul anunțat NU se resetează, nu se repetă la 4 h
+  const palp = P.pazaVoci({ Busola: B, rez: rez({ la: LA + 2 * H4 }), bot, inainte: v2.stare, acum: ACUM + 2 * H4, grafic: "coboara", mc: "bine" });
+  assert.equal(palp.stare.contra, false); assert.equal(palp.stare.anuntatContra, true, "anunțat rămâne cât Busola e contra");
+  const iar = P.pazaVoci({ Busola: B, rez: rez({ la: LA + 4 * H4 }), bot, inainte: palp.stare, acum: ACUM + 4 * H4 + 1, grafic: "coboara", mc: "rau" });
+  assert.equal(iar.mesaj, null, "revine pe contra în același episod al Busolei ⇒ fără al doilea mesaj");
   const v3 = P.pazaVoci({ Busola: B, rez: rez({ la: LA + 2 * H4 }), bot, inainte: v2.stare, acum: ACUM + 2 * H4, grafic: "coboara", mc: "rau" });
   assert.equal(v3.mesaj, null, "episodul e anunțat o dată");
   const una = P.pazaVoci({ Busola: B, rez: rez({ la: LA + H4 }), bot, inainte: v1.stare, acum: ACUM + H4, grafic: null, mc: null });
@@ -73,6 +81,10 @@ await test("(I-578) paza: UN mesaj „toate vocile contra botului tău” (≥ 2
   await pas(rez(), ACUM); assert.deepEqual(trimise, []);
   await pas(rez({ la: LA + H4 }), ACUM + H4);
   assert.deepEqual(trimise, ["busola-voci"], "un singur mesaj, nu trei"); assert.equal(st._busolaDir.anuntatSemn, "inclinat-short"); assert.equal(st._busolaBtc.anuntatContra, true); assert.equal(st._busolaVoci.anuntat, ACUM + H4);
+  // revizia: BTC devine CONTRA abia după mesajul vocilor, în același episod ⇒ tot nu pleacă (se marchează)
+  st._busolaBtc = { contra: false, la: LA + H4, vazut: 1, anuntat: 0, anuntatContra: false };
+  await pas(rez({ la: LA + 2 * H4 }), ACUM + 2 * H4); await pas(rez({ la: LA + 3 * H4 }), ACUM + 3 * H4);
+  assert.deepEqual(trimise, ["busola-voci"], "nimic nou cât ține episodul vocilor"); assert.equal(st._busolaBtc.anuntatContra, true);
   assert.match(COL, /voci: \{ grafic: [^}]*dir4h[^}]*, mc: [^}]*\}/, "colectorul dă pazei graficul pe 4h (cache-ul direcției) și felul Monte Carlo");
   assert.equal(typeof MC.busolaVoci, "function");
 });
@@ -91,9 +103,15 @@ await test("(I-577) jurnalul vocilor: vociBot (fraza + semnele), schimbarea, jud
   assert.equal(j.length, 1, "doar intrările scadente, fără „dupa”, cu bare"); assert.equal(j[0].la, ACUM); assert.equal(j[0].pret24, 0.52); assert.equal(j[0].pretDir, 1);
   const bil = B.bilantVoci([{ ...lista[0], dupa: { pret: 0.52, pretDir: 1 } }, { ...lista[1], dupa: { pret: 0.9, pretDir: -1 } }, { ...lista[2] }, { la: ACUM - 40 * H24, bot: "1", contrazic: true, semne: { grafic: 1, busola: -1, mc: 0 }, dir: "long", pret: 1, dupa: { pret: 2, pretDir: 1 } }], ACUM + 26 * 3600000);
   assert.equal(bil.judecate, 2, "30 de zile, doar cele judecate"); assert.deepEqual([bil.grafic, bil.busola, bil.mc], [2, 0, 1], "pe botul short „aș opri” cu prețul în jos e greșit (pentru short jos = bine)");
-  assert.equal(bil.text, "în 30 de zile, 2 contraziceri judecate: a avut dreptate graficul pe 4h în 2, Busola în 0, Monte Carlo în 1 · prea puține sub 10");
+  assert.equal(bil.text, "pe boții tăi, de la 10.10: 2 contraziceri judecate, prea puține · a avut dreptate graficul pe 4h în 2 din 2, Busola în 0 din 2, Monte Carlo în 1 din 2", "revizia: numitor pe voce, fereastra reală, „pe boții tăi”");
+  const dublu = B.bilantVoci([{ ...lista[0], dupa: { pret: 0.52, pretDir: 1 } }, { ...lista[0], bot: "77", dupa: { pret: 0.52, pretDir: 1 } }], ACUM + 26 * 3600000);
+  assert.equal(dublu.judecate, 1, "doi boți pe aceeași monedă în aceeași oră = o singură contrazicere");
   assert.equal(B.bilantVoci([], ACUM), null);
   assert.match(COL, /action=voci"/, "colectorul scrie jurnalul vocilor în KV"); assert.match(COL, /action=vociDupa"/, "…și judecata după 24 h");
+  // revizia: vocea Busolei doar din rezumat proaspăt; bara de după 24 h nu mai târziu de 24 h 30 min
+  assert.equal(TM.vociBot({ Busola: B, rez: rez({ la: ACUM - 5 * 3600000 }), bot, grafic: "urca", mc: "bine", acum: ACUM }).semne.busola, 0, "rezumat vechi ⇒ Busola nu e voce");
+  const tarziu = [{ la: ACUM, bot: "9", simbol: "MET_USDT_PERP", pret: 0.5, dir: "long", contrazic: true, semne: { grafic: 1, busola: -1, mc: 1 } }];
+  assert.equal(TM.judecaVoci(tarziu, { MET_USDT_PERP: b15.filter((x) => x.t >= ACUM + H24 + 3 * 3600000) }, ACUM + 30 * 3600000).length, 0, "barele încep abia la 27 h ⇒ nu se judecă pe un preț de mai târziu");
   assert.match(API, /action==="voci"/); assert.match(API, /action==="vociDupa"/);
   assert.match(APP, /action=voci/, "Tabloul citește jurnalul"); assert.match(functie(APP, "tbDeseneazaCitire"), /tbVociBilant/, "bilanțul sub fraza vocilor");
 });
@@ -106,8 +124,9 @@ await test("(I-581) alertele cu „ce a urmat”: prețul la alertă + prețul d
   assert.equal(TE.dupaAlerta(l[0]), "după 24 h: −2,0%"); assert.equal(TE.dupaAlerta(l[2]), null); assert.equal(TE.dupaAlerta(l[3]), "după 24 h: 0,0%");
   const b = TE.bilantAlerte(l);
   assert.equal(b.length, 2); assert.equal(b[0].cheie, "busola-miscare"); assert.equal(b[0].n, 2); assert.equal(b[0].peMinus, 1); assert.equal(b[0].text, "«mai agitată»: prețul a scăzut în 1 din 2 după 24 h (prea puține)");
-  assert.match(COL, /pret: pretBot\(bot\)/, "alerta pleacă în KV cu prețul botului"); assert.match(COL, /action=alerteDupa"/, "judecata după 24 h");
-  assert.match(API, /action==="alerteDupa"/); assert.match(API, /pret:nr\(a\.pret\)/, "KV ține prețul alertei");
+  assert.match(COL, /pret: pretBot\(bot\), simbol: simbolBot\(bot\)/, "alerta pleacă în KV cu prețul și simbolul botului (revizia: și boții opriți se judecă)"); assert.match(COL, /action=alerteDupa"/, "judecata după 24 h");
+  assert.match(API, /action==="alerteDupa"/); assert.match(API, /pret:nr\(a\.pret\),simbol:simbolKv\(a\.simbol\)/, "KV ține prețul și simbolul alertei");
+  assert.match(API, /env\.ISTORIC\.put\("alerte-dupa"/, "revizia: „ce a urmat” în cheia ei, nu peste lista alertelor (fără scrieri pierdute)");
   assert.match(functie(APP, "renderTabloAlerte"), /TabloExtra\.dupaAlerta\(a\)/); assert.match(functie(APP, "renderTabloAlerte"), /TabloExtra\.bilantAlerte\(/);
 });
 await test("(I-579) Monte Carlo pe regim: ferestrele din jurnalul de stări al Busolei, starturile drumurilor doar din ele, poarta de validare", () => {
@@ -131,6 +150,16 @@ await test("(I-579) Monte Carlo pe regim: ferestrele din jurnalul de stări al B
   assert.match(COL, /mc-regim-verdict\.json/, "poarta: verdictul validării de pe disc"); assert.match(COL, /jurnal-stari\.json/, "jurnalul de stări al Busolei, de pe același PC");
   assert.match(functie(APP, "tbMcRand"), /regim/, "Tabloul arată regimul doar când e validat");
   assert.ok(fs.existsSync(path.join(RAD, "scripts", "proba-mc-regim.mjs")), "proba de validare pe date reale există (în afara npm test)");
+  // revizia Opus (critic): validarea citea câmpuri inexistente ⇒ partea pură e probată aici, pe un rezultat REAL al simulatorului și pe tăieturi cu y cunoscut
+  assert.ok(pCastig(baza) !== null && pCastig(baza) >= 0 && pCastig(baza) <= 1, "pCastig citește orizonturi[0].pCastig din rezultatul real: " + pCastig(baza));
+  assert.equal(pCastig({ orizonturi: [] }), null); assert.equal(pCastig(null), null);
+  const taie = (k, pB, pR, y) => ({ s: "M" + (k % 4), t0: ACUM + k * 12 * 3600000, pB, pR, y });
+  const bune = Array.from({ length: 60 }, (_, k) => taie(k, 0.5, k % 2 ? 0.9 : 0.1, k % 2 ? 1 : 0)), rele = Array.from({ length: 60 }, (_, k) => taie(k, 0.5, k % 2 ? 0.1 : 0.9, k % 2 ? 1 : 0));
+  const vb = verdictRegim(bune), vr = verdictRegim(rele), vp = verdictRegim(bune.slice(0, 20));
+  assert.equal(vb.trece, true, "regimul mai bine calibrat decât baza, pe ≥ 8 blocuri ⇒ trece: " + vb.motiv); assert.ok(vb.icSus < 0 && vb.brierRegim < vb.brierBaza);
+  assert.equal(vr.trece, false, "regimul invers ⇒ nu trece"); assert.equal(vp.trece, false); assert.match(vp.motiv, /prea puține tăieturi/);
+  const zgomot = Array.from({ length: 60 }, (_, k) => taie(k, 0.5, 0.5001, k % 2 ? 1 : 0)); assert.equal(verdictRegim(zgomot).trece, false, "o diferență de 0,0001 nu deschide poarta");
+  assert.match(citeste("scripts", "proba-mc-regim.mjs"), /pCastig\(baza\), pR = pCastig\(reg\)/); assert.match(citeste("scripts", "proba-mc-regim.mjs"), /GridSim\.setariDinBot\(/, "setarea ca în Tablou (grile, tip)"); assert.match(citeste("scripts", "proba-mc-regim.mjs"), /verdictRegim\(taieturi\)/);
 });
 await test("(E) versiunea de la v100.149 în sus, colectorul v101.92+", () => {
   assert.match(HTML, /content="v100\.1(49|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(49|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(49|[5-9]\d)</);

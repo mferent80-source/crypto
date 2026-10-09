@@ -77,7 +77,7 @@ var GridSim = (function () {
   // un start e bun când blocul lui întreg (bloc bare) cade într-o fereastră. drumDin = M.drum cu startul ales din listă, nu din tot istoricul
   function starturiRegim(b15, ferestre, bloc) {
     var out = [], F = Array.isArray(ferestre) ? ferestre : [], pas = b15.length > 1 ? b15[1].t - b15[0].t : 900000;
-    for (var i = 1; i <= b15.length - bloc; i++) { var t0 = b15[i].t, t1 = b15[i + bloc - 1].t; for (var k = 0; k < F.length; k++) if (t0 >= F[k].de && t1 < F[k].pana) { out.push(i); break; }   /* bara t1 se închide la t1 + pas ≤ pana */ }
+    for (var i = 1; i <= b15.length - bloc; i++) { var t0 = b15[i].t, t1 = b15[i + bloc - 1].t; for (var k = 0; k < F.length; k++) if (t0 >= F[k].de && t1 + pas <= F[k].pana) { out.push(i); break; }   /* revizia: blocul întreg, cu închiderea ultimei bare, în fereastră */ }
     return out;
   }
   function drumDin(b, n, bloc, pret0, rnd, mu, starturi) {

@@ -286,12 +286,21 @@ var Busola = (function () {
   function linkBusola(simbol, interval) { var c = simbolBusola(simbol); return c ? URL_BUSOLA + "?sym=" + encodeURIComponent(c) + "&interval=" + encodeURIComponent(interval || "4h") : null; }
   // v100.149 (I-577): bilanțul jurnalului vocilor - contrazicerile judecate după 24 h (dupa.pretDir: 1 / −1 / 0 = pe loc); „dreptate” =
   // vocea a arătat încotro a mers prețul (Monte Carlo: bun/rău PENTRU BOT ⇒ pe short semnul se întoarce). Statistică, nu semnal; sub 10 = prea puține
+  // revizia Opus: o intrare pe monedă și oră (doi boți pe aceeași monedă / aceeași frază nu se numără de două ori); fiecare voce cu numitorul
+  // ei (câte cazuri s-a pronunțat); fereastra reală („de la 03.10”) când jurnalul nu acoperă 30 de zile; sub 10 = „prea puține”
   function bilantVoci(lista, acum, zile) {
-    var Z = (zile > 0 ? zile : 30) * 86400000, l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.contrazic && x.dupa && typeof x.dupa.pretDir === "number" && x.semne && acum - Number(x.la) <= Z; });
+    var Z = (zile > 0 ? zile : 30) * 86400000, vazute = {}, l = [];
+    (Array.isArray(lista) ? lista : []).forEach(function (x) {
+      if (!(x && x.contrazic && x.dupa && typeof x.dupa.pretDir === "number" && x.semne && acum - Number(x.la) <= Z)) return;
+      var k = simbolBusola(x.simbol || "") + "|" + Math.floor(Number(x.la) / 3600000); if (vazute[k]) return; vazute[k] = true; l.push(x);
+    });
     if (!l.length) return null;
-    var g = 0, b = 0, m = 0;
-    l.forEach(function (x) { var p = x.dupa.pretDir, s = x.semne, bot = String(x.dir || "").toLowerCase(); if (s.grafic && s.grafic === p) g++; if (s.busola && s.busola === p) b++; if (s.mc && p && (bot === "long" ? p : bot === "short" ? -p : 0) === s.mc) m++; });
-    var N = l.length, text = "în " + (zile > 0 ? zile : 30) + " de zile, " + (N === 1 ? "1 contrazicere judecată" : cate(N, "contrazicere judecată", "contraziceri judecate")) + ": a avut dreptate graficul pe 4h în " + g + ", Busola în " + b + ", Monte Carlo în " + m + (N < 10 ? " · prea puține sub 10" : "");
+    var g = 0, b = 0, m = 0, ng = 0, nb = 0, nm = 0, de = Infinity;
+    l.forEach(function (x) { var p = x.dupa.pretDir, s = x.semne, bot = String(x.dir || "").toLowerCase(); de = Math.min(de, Number(x.la));
+      if (s.grafic) { ng++; if (s.grafic === p) g++; } if (s.busola) { nb++; if (s.busola === p) b++; } if (s.mc) { nm++; if (p && (bot === "long" ? p : bot === "short" ? -p : 0) === s.mc) m++; } });
+    var N = l.length, dz = new Date(de), fereastra = acum - de < Z - 86400000 ? "de la " + String(dz.getDate()).padStart(2, "0") + "." + String(dz.getMonth() + 1).padStart(2, "0") : "în " + (zile > 0 ? zile : 30) + " de zile";
+    var voce = function (nume, k, nk) { return nk ? nume + " în " + k + " din " + nk : null; };
+    var text = "pe boții tăi, " + fereastra + ": " + (N === 1 ? "1 contrazicere judecată" : cate(N, "contrazicere judecată", "contraziceri judecate")) + (N < 10 ? ", prea puține" : "") + " · a avut dreptate " + [voce("graficul pe 4h", g, ng), voce("Busola", b, nb), voce("Monte Carlo", m, nm)].filter(Boolean).join(", ");
     return { judecate: N, grafic: g, busola: b, mc: m, text: text };
   }
 

@@ -86,7 +86,9 @@ export async function onRequestGet({request,env}){
   if(action==="ingust"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}return json({simbol:s,ingust:v})}   // v100.58
   if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
-  if(action==="alerte"){let a=[];try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}return json({alerte:Array.isArray(a)?a.slice().reverse():[]})}
+  if(action==="alerte"){let a=[],d={};try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}try{d=JSON.parse(await env.ISTORIC.get("alerte-dupa")||"{}")||{}}catch{d={}}
+    // v100.149 (I-581, revizia): „ce a urmat” stă în cheia ei (alerte-dupa) - scrierea alertelor noi și judecata nu se calcă pe aceeași cheie
+    return json({alerte:Array.isArray(a)?a.slice().reverse().map(x=>{const k=x&&x.t+"|"+(x.bot||"");return d[k]?Object.assign({},x,{dupa:d[k]}):x}):[]})}
   if(action==="voci"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}return json({voci:Array.isArray(l)?l:[]})}   // v100.149 (I-577): jurnalul vocilor
   // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
   // v100.104 (I-537): toate planurile scrise (fără cele de probă și fără T212) - pentru pragul propus din istoria lui
@@ -327,7 +329,7 @@ export async function onRequestPost({request,env}){
     const intrare={la,bot,simbol:simbolKv(x.simbol),pret:nr(x.pret),dir:["long","short","neutru"].includes(x.dir)?x.dir:"neutru",text:String(x.text||"").slice(0,300),nivel:["info","atentie"].includes(x.nivel)?x.nivel:"info",contrazic:!!x.contrazic,semne:{grafic:semn(sg.grafic),busola:semn(sg.busola),mc:semn(sg.mc)}};
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
     if(!l.some(y=>y&&y.la===la&&y.bot===bot)){l.push(intrare);l.sort((p,q)=>p.la-q.la)}
-    const de=Date.now()-60*86400000;l=l.filter(y=>y&&y.la>=de).slice(-300);
+    const de=Date.now()-60*86400000;l=l.filter(y=>y&&y.la>=de).slice(-600);   // revizia: 600, ca 30 de zile să încapă
     await env.ISTORIC.put("voci",JSON.stringify(l));return json({ok:true,voci:l.length})
   }
   if(action==="vociDupa"){
@@ -337,9 +339,10 @@ export async function onRequestPost({request,env}){
   }
   // v100.149 (I-581): „ce a urmat” după alertă - prețul după 24 h, scris de colector
   if(action==="alerteDupa"){
-    const l0=Array.isArray(corp&&corp.lista)?corp.lista:[];let l=[];try{l=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];let n=0;
-    for(const d of l0.slice(0,100)){const t=nr(d&&d.t),bot=idBot(d&&d.bot),p=nr(d&&d.pret24);if(t===null||!bot||p===null)continue;const y=l.find(z=>z&&z.t===t&&z.bot===bot);if(y&&!y.dupa){y.dupa={pret:p};n++}}
-    if(n)await env.ISTORIC.put("alerte",JSON.stringify(l));return json({ok:true,judecate:n})
+    const l0=Array.isArray(corp&&corp.lista)?corp.lista:[];let d={};try{d=JSON.parse(await env.ISTORIC.get("alerte-dupa")||"{}")||{}}catch{d={}}let n=0;
+    for(const x of l0.slice(0,100)){const t=nr(x&&x.t),bot=idBot(x&&x.bot),p=nr(x&&x.pret24);if(t===null||!bot||p===null)continue;const k=t+"|"+bot;if(!d[k]){d[k]={pret:p};n++}}
+    const de=Date.now()-PASTRARE_MS;for(const k of Object.keys(d)){if(Number(k.split("|")[0])<de)delete d[k]}
+    if(n)await env.ISTORIC.put("alerte-dupa",JSON.stringify(d));return json({ok:true,judecate:n})
   }
   if(action==="sugestii"){
     // v100.85 (reveniri + short): istoricul (piața + boții lui), urmărirea și notările zilei - curățate; notările fără dubluri, 150 de zile
@@ -464,7 +467,7 @@ export async function onRequestPost({request,env}){
     const t=nr(a&&a.t),titlu=a&&typeof a.titlu==="string"?a.titlu.slice(0,200):"";
     if(t===null||!titlu)return json({error:"Lipseste t sau titlu"},400);
     const NIVEL=["info","atentie","critic"];
-    const intrare={t,nivel:NIVEL.includes(a.nivel)?a.nivel:"info",titlu,mesaj:typeof a.mesaj==="string"?a.mesaj.slice(0,600):"",bot:idBot(a.bot)||null,cheie:typeof a.cheie==="string"?a.cheie.replace(/[^A-Za-z0-9_-]/g,"").slice(0,32):null,pret:nr(a.pret)};   // v100.149 (I-581): prețul botului la alertă
+    const intrare={t,nivel:NIVEL.includes(a.nivel)?a.nivel:"info",titlu,mesaj:typeof a.mesaj==="string"?a.mesaj.slice(0,600):"",bot:idBot(a.bot)||null,cheie:typeof a.cheie==="string"?a.cheie.replace(/[^A-Za-z0-9_-]/g,"").slice(0,32):null,pret:nr(a.pret),simbol:simbolKv(a.simbol)||null};   // v100.149 (I-581): prețul și simbolul botului la alertă
     let lista=[];try{lista=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{lista=[]}
     if(!Array.isArray(lista))lista=[];
     lista.push(intrare);lista.sort((x,y)=>x.t-y.t);

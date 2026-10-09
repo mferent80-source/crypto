@@ -89,11 +89,16 @@ export function pazaVoci({ Busola, rez, bot, inainte, acum, grafic, mc }) {
   const r = Busola.randDirectie(rez, cheiaBot(bot), acum, { bot: bot.directie });
   const c = Busola.concluzie({ bot: bot.directie, grafic: grafic || null, busola: r && r.semn || null, mc: mc || null });
   const contra = !!(c && /spun la fel: contra botului tău/.test(c.text));
+  // revizia Opus: episodul e al BUSOLEI (contra botului) - graficul (5 min) și MC (15 min) pâlpâie în același rezumat; „anunțat” rămâne cât
+  // Busola e contra, chiar dacă fraza cade o tură pe „se contrazic” (altfel mesajul s-ar repeta la fiecare 4 h)
+  const busolaContra = !!(r && r.nivel === "atentie");
   const la = Number(rez.la), acelasi = !!(inainte && !!inainte.contra === contra), vazut = numara(inainte, acelasi, la), anuntat = inainte ? Number(inainte.anuntat) || 0 : 0;
-  const anuntatContra = acelasi ? !!inainte.anuntatContra : false;
+  const anuntatContra = inainte && busolaContra ? !!inainte.anuntatContra : false;
   const stare = { contra, la, vazut, anuntat, anuntatContra, text: c ? c.text : null };
   if (!(contra && vazut >= 2 && !anuntatContra && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
-  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum, anuntatContra: true }), mesaj: MC.busolaVoci({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, cine: c.text.split(" spun la fel")[0].replace(/^./, (x) => x.toLowerCase()), text: c.text }) };
+  // câte voci s-au pronunțat și câte sunt contra (spec: ≥ 2) - titlul spune numărul real, „toate” doar când sunt 3 din 3
+  const cine = c.text.split(" spun la fel")[0], nContra = cine.split(/, | și /).length, nVoci = [grafic, r && r.semn, mc].filter(Boolean).length;
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum, anuntatContra: true }), mesaj: MC.busolaVoci({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, cine: cine.replace(/^./, (x) => x.toLowerCase()), nContra, nVoci, text: c.text }) };
 }
 
 // pasul din bucla colectorului: mesajul care n-a plecat nu mută starea și nici harta (tura următoare reîncearcă, ca la celelalte alerte)
@@ -113,11 +118,13 @@ export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, moned
     } catch (e) { out = Object.assign({}, out, { eroare: String(e && e.message || e) }); }
   }
   // v101.91 (I-572): direcția și BTC, fiecare cu starea ei pe bot (_busolaDir / _busolaBtc, copiate de evalueaza ca orice cheie)
+  // revizia Opus: și cât ține episodul anunțat al vocilor (nu doar în tura în care a plecat) alertele separate doar se marchează
+  const vociInEpisod = !!(st._busolaVoci && st._busolaVoci.contra && st._busolaVoci.anuntatContra);
   for (const [cheie, fn] of [["_busolaDir", pazaDirectie], ["_busolaBtc", pazaBtc]]) {
     try {
       const x = fn({ Busola, rez, bot, inainte: st[cheie], acum });
       if (!x.tine) continue;
-      if (x.mesaj && vociPlecat) { st[cheie] = Object.assign({}, x.stare, cheie === "_busolaDir" ? { anuntatSemn: x.stare.semn } : { anuntatContra: true }); continue; }
+      if (x.mesaj && (vociPlecat || vociInEpisod)) { st[cheie] = Object.assign({}, x.stare, cheie === "_busolaDir" ? { anuntatSemn: x.stare.semn } : { anuntatContra: true }); continue; }
       if (x.mesaj && !(await trimite(x.mesaj))) continue;
       st[cheie] = x.stare;
     } catch (e) { out = Object.assign({}, out, { eroare: String(e && e.message || e) }); }

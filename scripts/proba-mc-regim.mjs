@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";
+import { pCastig, verdictRegim } from "./lib/mc-regim.mjs";   // revizia Opus: partea pură, probată
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const URL = (process.argv[2] || "http://127.0.0.1:8788").replace(/\/+$/, "");
@@ -49,26 +50,25 @@ const cheieBusola = (s) => String(s).toUpperCase().replace(/_USDT_PERP$|_USDT$|U
   for (const s of simboluri) {
     let b; try { b = await bare15(s); } catch (e) { console.log(`  ${s}: fără bare (${e.message})`); continue; }
     if (b.length < 21 * BZ) { console.log(`  ${s}: doar ${Math.floor(b.length / BZ)} zile de bare (trebuie 21)`); continue; }
-    const cheie = cheieBusola(s), st = { suma: 100, dir: "long", linii: 10, geo: false, jos: 0, sus: 0, levier: 3 };
+    const cheie = cheieBusola(s);
     for (let cut = 14 * BZ; cut + 7 * BZ <= b.length; cut += 48) {
       const inainte = b.slice(0, cut), dupa = b.slice(cut, cut + 7 * BZ), p0 = inainte[inainte.length - 1].c, t0 = inainte[inainte.length - 1].t;
-      const set = Object.assign({}, st, { jos: p0 * 0.92, sus: p0 * 1.08 });   // gridul lui obișnuit: ±8% în jurul prețului, 10 linii, long ×3
+      // revizia Opus: setarea ca în Tablou (setariDinBot: grile, tip, dir, levier) - gridul lui obișnuit: ±8% în jurul prețului, 10 linii, long ×3
+      const set = Object.assign({}, GridSim.setariDinBot({ gridJos: p0 * 0.92, gridSus: p0 * 1.08, directie: "LONG", levier: 3, investit: 100, brut: { buOrderData: { row: 11 } } }).st, { suma: 100 });
       const stare = (() => { let x = null; for (const r of stari) if (r.la <= t0) x = r; return x && x.monede ? x.monede[cheie] : null; })();
       if (!stare || stare === "nemasurat") continue;
       const fer = ferestreRegim(stari, cheie, stare, t0), starturi = GridSim.starturiRegim(inainte, fer, BZ);
       const baza = GridSim.simuleaza(inainte, set, { n: 300, seed: 7, orizonturi: [7], zile: 14 }), reg = GridSim.simuleaza(inainte, set, { n: 300, seed: 7, orizonturi: [7], zile: 14, starturi });
       if (baza.eroare || reg.eroare) continue;
-      const pr = (r) => { const c = r.col && r.col[0] ? r.col[0] : r.orizonturi && r.orizonturi[0]; const net = c && c.net; return Array.isArray(net) && net.length ? net.filter((x) => x > 0).length / net.length : null; };
-      const pB = pr(baza), pR = pr(reg); if (pB === null || pR === null) continue;
+      const pB = pCastig(baza), pR = pCastig(reg); if (pB === null || pR === null) continue;
       const real = GridProba.simuleaza(dupa, 0, dupa.length, set, {}), y = real && real.net > 0 ? 1 : 0;
       taieturi.push({ s, t0, stare, zileRegim: Math.floor(starturi.length / BZ), pB, pR, y });
     }
     console.log(`  ${s}: ${taieturi.filter((x) => x.s === s).length} tăieturi`);
   }
-  const n = taieturi.length, brier = (k) => taieturi.reduce((a, x) => a + (x[k] - x.y) ** 2, 0) / Math.max(1, n);
-  const bB = brier("pB"), bR = brier("pR"), trece = n >= 30 && bR < bB;
-  const verdict = { la: Date.now(), n, brierBaza: +bB.toFixed(4), brierRegim: +bR.toFixed(4), trece, motiv: n < 30 ? `prea puține tăieturi (${n}, trebuie 30): jurnalul de stări al Busolei e prea scurt încă` : trece ? "Brier-ul regimului e mai mic decât al bazei" : "regimul nu bate baza (Brier)", monede: simboluri.length, rulariBusola: stari.length };
+  // revizia Opus: bootstrap pe blocuri (monedă × săptămână), „trece” doar cu IC-ul diferenței sub zero - nu o diferență de 0,0001
+  const v = verdictRegim(taieturi), verdict = Object.assign({ la: Date.now(), monede: simboluri.length, rulariBusola: stari.length }, v);
   fs.mkdirSync(path.join(RAD, "data"), { recursive: true });
   fs.writeFileSync(path.join(RAD, "data", "mc-regim-verdict.json"), JSON.stringify(verdict, null, 2));
-  console.log(`\nverdict: ${trece ? "TRECE" : "NU TRECE"} · n=${n} · Brier baza ${bB.toFixed(4)} · regim ${bR.toFixed(4)} · ${verdict.motiv}\nscris în data/mc-regim-verdict.json`);
+  console.log(`\nverdict: ${v.trece ? "TRECE" : "NU TRECE"} · n=${v.n} · blocuri ${v.blocuri} · Brier baza ${v.brierBaza} · regim ${v.brierRegim} · dif ${v.dif} [${v.icJos}; ${v.icSus}] · ${v.motiv}\nscris în data/mc-regim-verdict.json`);
 })().catch((e) => { console.error("validarea n-a mers:", e.message); process.exit(1); });
