@@ -2503,3 +2503,5 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 /* v100.148 (I-571): fraza vocilor din capul citirii - gri, galben când se contrazic / contra botului */
 #tabloubot .tbCitVoci{font-size:13.5px;line-height:1.4;padding:7px 11px;margin:0 0 6px;border-radius:10px;border-left:3px solid var(--muted);background:rgba(144,160,182,.08)}
 #tabloubot .tbCitVoci.atentie{border-left-color:var(--warn);background:rgba(245,196,81,.08)}
+/* v100.149 (I-582): butonul „deschide în Busolă” din rândul Busolei - ca butonul Monte Carlo, în rând cu textul */
+#tabloubot .tbCitLink{display:inline-block;margin:2px 0 0 8px;padding:1px 8px;font-size:12px;border-radius:8px;border:1px solid var(--line);color:var(--text);text-decoration:none;white-space:nowrap;vertical-align:middle}#tabloubot .tbCitLink:hover{border-color:var(--accent);color:var(--accent)}
