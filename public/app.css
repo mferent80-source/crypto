@@ -2500,3 +2500,6 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #tabloubot .tbCitMc .tbMcBtn{margin:4px 0 0;padding:2px 8px;font-size:12px;width:auto}
 /* v100.140 (ideea 3): nota rândului Monte Carlo („șanse… · socotit hh:mm”) - mică, pe rândul ei, nu în verdict */
 #tabloubot .tbMcNota{display:block;margin-top:3px;font-size:11.5px;line-height:1.35}
+/* v100.148 (I-571): fraza vocilor din capul citirii - gri, galben când se contrazic / contra botului */
+#tabloubot .tbCitVoci{font-size:13.5px;line-height:1.4;padding:7px 11px;margin:0 0 6px;border-radius:10px;border-left:3px solid var(--muted);background:rgba(144,160,182,.08)}
+#tabloubot .tbCitVoci.atentie{border-left-color:var(--warn);background:rgba(245,196,81,.08)}

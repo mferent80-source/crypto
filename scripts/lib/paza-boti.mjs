@@ -42,14 +42,59 @@ export function pentruServer(boti, stareAlerte, acum) {
   return { la: acum, boti: out };
 }
 
+// v101.91 (I-572, el 09.10: „fă ideile”): paza și pe DIRECȚIA Busolei și pe BTC. Aceleași reguli de liniște: trecerea se anunță abia
+// după 2 rezumate la rând (vazut ≥ 2 pe rezumate diferite - direcția oscilează la prag), cel mult un mesaj pe bot la 4 h (ritmul
+// rezumatului), rezumat vechi / monedă fără direcție / bot neutru ⇒ nu atinge starea. Pure, probate în proba-v100148.mjs.
+const RITM_MS = 4 * 3600000, PRAG_BTC = 0.02;
+const dirBot = (b) => { const d = String(b && b.directie || "").toUpperCase(); return d === "LONG" ? "long" : d === "SHORT" ? "short" : null; };
+const numara = (inainte, acelasi, la) => (acelasi ? (Number(inainte.la) === la ? Number(inainte.vazut) || 1 : (Number(inainte.vazut) || 0) + 1) : 1);
+const numeBot = (bot) => String(bot && bot.baza || "").replace(/\.PERP$/, "");
+
+// { tine:false } | { tine:true, stare:{ semn, la, vazut, anuntat }, mesaj | null } - „invers față de bot” = randDirectie pe galben
+export function pazaDirectie({ Busola, rez, bot, inainte, acum }) {
+  const p = Busola.pazaStare(rez, cheiaBot(bot), acum);
+  if (!p || p.vechi || !dirBot(bot)) return { tine: false, mesaj: null };
+  const r = Busola.randDirectie(rez, cheiaBot(bot), acum, { bot: bot.directie });
+  if (!r || !r.semn) return { tine: false, mesaj: null };
+  const la = Number(rez.la), acelasi = !!(inainte && inainte.semn === r.semn), vazut = numara(inainte, acelasi, la), anuntat = acelasi ? Number(inainte.anuntat) || 0 : 0;
+  const stare = { semn: r.semn, la, vazut, anuntat };
+  if (!(r.nivel === "atentie" && vazut >= 2 && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum }), mesaj: MC.busolaDirectie({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, spre: r.semn === "inclinat-long" ? "long" : "short", text: r.text }) };
+}
+
+// { tine:false } | { tine:true, stare:{ contra, la, vazut, anuntat }, mesaj | null } - CONTRA = randBtc pe galben (legătura DA) cu BTC mișcat ≥ 2%
+export function pazaBtc({ Busola, rez, bot, inainte, acum }) {
+  if (!rez || !rez.btc || typeof rez.btc !== "object") return { tine: false, mesaj: null };
+  const p = Busola.pazaStare(rez, cheiaBot(bot), acum);
+  if (!p || p.vechi || !dirBot(bot)) return { tine: false, mesaj: null };
+  const r = Busola.randBtc(rez, cheiaBot(bot), acum, { bot: bot.directie });
+  if (!r) return { tine: false, mesaj: null };
+  const contra = r.nivel === "atentie" && typeof r.h24 === "number" && Math.abs(r.h24) >= PRAG_BTC;
+  const la = Number(rez.la), acelasi = !!(inainte && !!inainte.contra === contra), vazut = numara(inainte, acelasi, la), anuntat = inainte ? Number(inainte.anuntat) || 0 : 0;
+  const stare = { contra, la, vazut, anuntat };
+  if (!(contra && vazut >= 2 && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
+  const btc = String(r.text).split(" · ")[0];
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum }), mesaj: MC.busolaBtc({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, btc, text: r.text }) };
+}
+
 // pasul din bucla colectorului: mesajul care n-a plecat nu mută starea și nici harta (tura următoare reîncearcă, ca la celelalte alerte)
 export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, monede }) {
   const d = pazaBot({ Busola, rez, bot, inainte: st._busola, acum, pret, monede });
-  if (!d.tine) return d;
-  if (d.mesaj && !(await trimite(d.mesaj))) return Object.assign({}, d, { trimis: false });
-  st._busola = d.stare;
-  if (monede && typeof monede === "object") monede[d.cheie] = { stare: d.stare.stare, de: d.stare.de };
-  return d;
+  let out = d;
+  if (d.tine) {
+    if (d.mesaj && !(await trimite(d.mesaj))) out = Object.assign({}, d, { trimis: false });
+    else { st._busola = d.stare; if (monede && typeof monede === "object") monede[d.cheie] = { stare: d.stare.stare, de: d.stare.de }; }
+  }
+  // v101.91 (I-572): direcția și BTC, fiecare cu starea ei pe bot (_busolaDir / _busolaBtc, copiate de evalueaza ca orice cheie)
+  for (const [cheie, fn] of [["_busolaDir", pazaDirectie], ["_busolaBtc", pazaBtc]]) {
+    try {
+      const x = fn({ Busola, rez, bot, inainte: st[cheie], acum });
+      if (!x.tine) continue;
+      if (x.mesaj && !(await trimite(x.mesaj))) continue;
+      st[cheie] = x.stare;
+    } catch (e) { out = Object.assign({}, out, { eroare: String(e && e.message || e) }); }
+  }
+  return out;
 }
 
 // rezumatul vechi: o notă doar în Radar, o dată pe rezumat (anuntat = `la`-ul rezumatului deja anunțat)

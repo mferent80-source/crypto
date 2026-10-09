@@ -83,6 +83,14 @@ export const busolaMiscare = (o) => ({ nivel: "atentie", cheie: "busola-miscare"
   titlu: o.nume + " " + (DIR_BOT[o.directie] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · Busola: " + (o.nou ? "bot nou pe monedă agitată" : "mai agitată ca de obicei"),
   mesaj: msg("Pe 4h, " + o.nume + " e mai agitată ca de obicei: după asta, gridurile măsurate de Busola au pierdut cel mai mult" + (o.cifra ? " (" + o.cifra + ")" : "") + ".",
     "Aș verifica stopul botului" + (o.interval ? " (gridul " + o.interval + ")" : "") + " și n-aș adăuga bani cât ține.") });
+// v101.91 (I-572): Busola a trecut pe „invers față de botul tău” (direcția ei pe 4h, nedovedită) - după 2 rezumate la rând
+export const busolaDirectie = (o) => ({ nivel: "atentie", cheie: "busola-directie",
+  titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · Busola: înclină " + o.spre + ", invers față de bot",
+  mesaj: msg("Pe 4h Busola e " + o.text + ".", "E o înclinare nedovedită (Busola nu prezice direcția): n-aș adăuga bani și aș verifica stopul; nu e un semnal de închidere.") });
+// v101.91 (I-572): BTC s-a mișcat ≥ 2% în 24 h, moneda botului merge cu BTC (DA) și botul e CONTRA - după 2 rezumate la rând
+export const busolaBtc = (o) => ({ nivel: "atentie", cheie: "busola-btc",
+  titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · " + o.btc + ", botul tău e CONTRA",
+  mesaj: msg(o.text + ".", "Legătura e măsurată pe ultimele 30 de zile; nu e o prezicere că BTC continuă. Aș verifica stopul și n-aș adăuga bani cât ține.") });
 // rezumatul Busolei e vechi: paza tace - o notă doar în Radar, o dată pe rezumat
 export const busolaVeche = (ore) => ({ nivel: "info", cheie: "busola-veche", doarRadar: true, titlu: "Busola: rezumatul are " + cate(ore, "oră", "ore"),
   mesaj: "Paza boților tace până vine un rezumat nou: pe date vechi nu anunț mișcarea." });

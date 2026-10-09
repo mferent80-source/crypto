@@ -47,7 +47,7 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.90";
+const VERSIUNE_COLECTOR = "v101.91";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -1320,6 +1320,8 @@ async function dateDimineata() {
     const t = Busola.liniaBoti(l, acum, 142 - sufix.length); out.liniiExtra = t ? ["🧭 Busola, pe 4h: " + t + sufix] : [];
     // v101.90 (ideea 1): felul Monte Carlo pe fiecare bot deschis, cu „de când” (starea turei de la 15 minute)
     try { const mcl = liniaMonteCarlo(ritm.mcBoti, boti, acum); if (mcl) out.liniiExtra.push("🎰 Monte Carlo: " + mcl); } catch (e) { jurnal("dimineata monte carlo", e.message); }
+    // v101.91 (I-575): boții deschiși față de BTC (mișcarea pe 24 h, legătura monedei, CU / CONTRA) - din rezumatul Busolei 1.47+
+    try { const lb = Busola.liniaBtc(Busola.rezumat(), boti.filter((y) => y && y.id && y.activ !== false).map((y) => ({ nume: String(y.baza || "").replace(/\.PERP$/, ""), cheie: cheiaBot(y), directie: y.directie })), acum); if (lb) out.liniiExtra.push("₿ BTC și boții tăi: " + lb); } catch (e) { jurnal("dimineata btc", e.message); }
     lBoti = l; liniaVeche = sufix;
     // v101.75 (I-552): becurile 4 h / 1 zi ale boților deschiși - aceeași regulă ca Tabloul (directiaBotului, ținută 5 min)
     for (const b of boti.filter((y) => y && y.id && y.activ !== false)) {
