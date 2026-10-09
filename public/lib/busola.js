@@ -168,12 +168,13 @@ var Busola = (function () {
   // pe același orizont - revizia Opus: rândul „Direcția” al citirii nu există când semaforul e listă; o = { bot: "LONG"|"SHORT"|…,
   // grafic: "urca"|"coboara"|"lateral"|null }). Fără verdict pe monedă ⇒ nivel „nemasurat”, spus; moneda neurmărită ⇒ null (rândul
   // stării o spune deja). Culoarea doar ca avertizare (invers față de bot), nu ca laudă: direcția e nedovedită
+  // v100.149 (I-580): o.interval = "1h" ⇒ directie1h (gridurile pe 5m/15m); pe 1h graficul pe 4h NU se compară (alt orizont)
   function randDirectie(rez, simbol, acum, o) {
     if (!rez || !rez.monede) return null;
-    var cheie = simbolBusola(simbol), m = rez.monede[cheie], d = m && m.directie4h, varsta = varstaText(rez, acum);
+    var pe1h = o && o.interval === "1h", cheie = simbolBusola(simbol), m = rez.monede[cheie], d = m && (pe1h ? m.directie1h : m.directie4h), varsta = varstaText(rez, acum);
     if (!m) return null;
-    if (!d || !TEXT_DIR[d]) return { nivel: "nemasurat", semn: null, text: rez.btc ? "Busola n-a judecat direcția pe moneda asta" : "Busola n-a trimis încă direcția pe moneda asta (rezumat de dinainte de 1.47)", varsta: varsta };
-    var b = botDir(o), g = o && GR_DIR[o.grafic] ? o.grafic : o && o.grafic === "lateral" ? "lateral" : null, p = [TEXT_DIR[d]], nivel = "info";
+    if (!d || !TEXT_DIR[d]) return { nivel: "nemasurat", semn: null, text: pe1h ? "Busola n-a judecat direcția pe 1h pe moneda asta" : rez.btc ? "Busola n-a judecat direcția pe moneda asta" : "Busola n-a trimis încă direcția pe moneda asta (rezumat de dinainte de 1.47)", varsta: varsta };
+    var b = botDir(o), g = !pe1h && o && GR_DIR[o.grafic] ? o.grafic : !pe1h && o && o.grafic === "lateral" ? "lateral" : null, p = [TEXT_DIR[d]], nivel = "info";
     if (d === "asteapta") { if (g) p.push(g === "lateral" ? "graficul pe 4h e lateral" : "graficul pe 4h " + GR_DIR[g] + ", Busola nu confirmă o direcție"); }
     else {
       var dB = d === "inclinat-long" ? "long" : "short";
@@ -187,12 +188,12 @@ var Busola = (function () {
   // capul Busolei (cifraVerdict), cu nota ei; „tot iese mai des decât stă” = cifra singură ar păcăli ⇒ atenție. Lipsă (futures) ⇒ null
   // revizia Opus: „ating ținta înaintea stopului” e despre ținta și stopul BUSOLEI (nu ale botului) - spus; pe un bot „1000X” canalul
   // Busolei e în prețul spot (÷1000 față de grafic) ⇒ cifrele canalului ies, rămâne „canalul Busolei (pe spot)”
-  function randVerdict(rez, simbol, acum) {
+  function randVerdict(rez, simbol, acum, o) {
     if (!rez || !rez.monede) return null;
-    var m = rez.monede[simbolBusola(simbol)], c = m && m.verdict4h;
+    var pe1h = o && o.interval === "1h", m = rez.monede[simbolBusola(simbol)], c = m && (pe1h ? m.verdict1h : m.verdict4h);   /* v100.149 (I-580) */
     if (!c || !(c.cate >= 1) || !(c.deObicei >= 1) || !c.ce) return null;
     var baza = String(simbol || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$|\.PERP$/, ""), ce = String(c.ce);
-    if (/^ating ținta/.test(ce)) ce += " (ținta și stopul Busolei, pe 4h)";
+    if (/^ating ținta/.test(ce)) ce += " (ținta și stopul Busolei, pe " + (pe1h ? "1h" : "4h") + ")";
     if (/^(1(?:000)+)(?=[A-Z])/.test(baza)) ce = ce.replace(/canalul \S+ în/, "canalul Busolei (pe spot) în");
     var nota = typeof c.nota === "string" && c.nota ? c.nota : c.cate === c.deObicei ? "cât de obicei" : null, varsta = varstaText(rez, acum);
     return { nivel: /mai des decât stă/.test(nota || "") ? "atentie" : "info", cate: c.cate, deObicei: c.deObicei,
@@ -280,6 +281,20 @@ var Busola = (function () {
     return t + coada;
   }
 
+  // v100.149 (I-582): adresa cu stare a Busolei (folosesteAdresa.ts: ?sym= fără USDT e completat acolo; pe spot nu există „1000X”)
+  var URL_BUSOLA = "https://busola.mferent80.workers.dev/";
+  function linkBusola(simbol, interval) { var c = simbolBusola(simbol); return c ? URL_BUSOLA + "?sym=" + encodeURIComponent(c) + "&interval=" + encodeURIComponent(interval || "4h") : null; }
+  // v100.149 (I-577): bilanțul jurnalului vocilor - contrazicerile judecate după 24 h (dupa.pretDir: 1 / −1 / 0 = pe loc); „dreptate” =
+  // vocea a arătat încotro a mers prețul (Monte Carlo: bun/rău PENTRU BOT ⇒ pe short semnul se întoarce). Statistică, nu semnal; sub 10 = prea puține
+  function bilantVoci(lista, acum, zile) {
+    var Z = (zile > 0 ? zile : 30) * 86400000, l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.contrazic && x.dupa && typeof x.dupa.pretDir === "number" && x.semne && acum - Number(x.la) <= Z; });
+    if (!l.length) return null;
+    var g = 0, b = 0, m = 0;
+    l.forEach(function (x) { var p = x.dupa.pretDir, s = x.semne, bot = String(x.dir || "").toLowerCase(); if (s.grafic && s.grafic === p) g++; if (s.busola && s.busola === p) b++; if (s.mc && p && (bot === "long" ? p : bot === "short" ? -p : 0) === s.mc) m++; });
+    var N = l.length, text = "în " + (zile > 0 ? zile : 30) + " de zile, " + (N === 1 ? "1 contrazicere judecată" : cate(N, "contrazicere judecată", "contraziceri judecate")) + ": a avut dreptate graficul pe 4h în " + g + ", Busola în " + b + ", Monte Carlo în " + m + (N < 10 ? " · prea puține sub 10" : "");
+    return { judecate: N, grafic: g, busola: b, mc: m, text: text };
+  }
+
   // true = au venit date noi (fișa se redesenează o dată); false = din cache sau Busola n-a răspuns (fără buclă)
   // v100.67 (revizia): cât cererea e în curs, ceilalți chemători primesc false — altfel fiecare desen adăuga încă o
   // redesenare la sosire. Cererea are limită de timp: o Busolă agățată nu mai blochează reîmprospătarea.
@@ -302,6 +317,7 @@ var Busola = (function () {
   return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, pentruVerdict: pentruVerdict, cifraMiscare: cifraMiscare,
     randFisa: randFisa, comparaInterval: comparaInterval, cartela: cartela, htmlCartela: htmlCartela, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset,
     randDirectie: randDirectie, randVerdict: randVerdict, randBtc: randBtc,   /* v100.147 */
-    concluzie: concluzie, alteIntervale: alteIntervale, liniaBtc: liniaBtc };   /* v100.148 */
+    concluzie: concluzie, alteIntervale: alteIntervale, liniaBtc: liniaBtc,   /* v100.148 */
+    linkBusola: linkBusola, bilantVoci: bilantVoci };   /* v100.149 */
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

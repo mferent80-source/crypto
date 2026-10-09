@@ -44,10 +44,11 @@ import { turaSaltPozitii as turaSaltPozitiiModul, alertaFaraPreturi, liniaDimine
 import { adaugaInJurnal, alertePentruPoza, pozaInLimita } from "./lib/alerte-zi.mjs";   // v101.86 (el 07.10): pagina alerts în două - alertele de azi
 import { aplicaCereriSalt, listaSaltSigura } from "./lib/salt-cereri.mjs";   // v101.86: pozițiile Salt adăugate de pe pagina alerts
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
-import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
+import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";
+import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.91";
+const VERSIUNE_COLECTOR = "v101.92";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -234,9 +235,11 @@ async function golesteCoada() {
 }
 // Alerta pleaca INTAI in KV (se vede in Radar, pe orice dispozitiv de acasa); apoi, daca e
 // cerut, pe canalul extern. "Trimisa" = a ajuns macar in KV (v100.40: iar Discord refuzat -> coada, reincercata).
+// v101.92 (I-581): prețul botului la alertă (din ultima listă de boți) - ca „ce a urmat” după 24 h să aibă de la ce porni
+function pretBot(id) { const b = (ultimiiBoti || []).find((x) => x && String(x.id) === String(id)), p = b ? Number(b.pretCurent) : NaN; return Number.isFinite(p) && p > 0 ? p : null; }
 async function trimiteAlerta(m, bot, cheie) {
   let inKv = false;
-  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null } }); inKv = !!(r && r.ok); }
+  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null, pret: pretBot(bot) } }); inKv = !!(r && r.ok); }
   catch (e) { jurnal("alerta in KV EȘEC", e.message); }
   notezAlerta({ t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null });   // v101.86: și „doar în Radar” (grilele)
   // v97.9: unele alerte (grila atinsa) raman doar in Radar - pagina Alerts le arata, canalul extern nu le primeste
@@ -581,7 +584,8 @@ async function tura() {
     } catch (e) { jurnal("podea", b.id, e.message); }
     // v101.59 (§2 „paza boților”): moneda botului trece în „mai agitată ca de obicei” pe 4h (Busola) ⇒ un mesaj, nerepetat până iese.
     // După `stareAlerte[b.id] = r.stare`: _busola se scrie pe starea nouă (evalueaza o copiază la tura următoare)
-    try { await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie), monede: meta().busolaMonede || (meta().busolaMonede = {}) }); } catch (e) { jurnal("paza busola", b.id, e.message); }
+    try { await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie), monede: meta().busolaMonede || (meta().busolaMonede = {}),
+      voci: { grafic: directii[b.id] && directii[b.id].dir4h || null, mc: ritm.mcBoti && ritm.mcBoti[String(b.id)] && ritm.mcBoti[String(b.id)].stare || null } }); } catch (e) { jurnal("paza busola", b.id, e.message); }   // v101.92 (I-578): + vocile
     // o alerta care n-a plecat (ntfy picat, fara internet) nu se trece ca trimisa:
     // starea ei revine la cea de dinainte, ca tura urmatoare s-o reincerce
     for (const msg of r.mesaje) if (!(await trimiteAlerta(msg, b.id, msg.cheie))) {
@@ -1837,13 +1841,58 @@ async function turaMonteCarloBot() {
       plan: async (b) => { try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(b.id)); return p && p.plan && !p.plan.proba ? p.plan : null; } catch { return null; } },
       funding: async (s) => { try { const r = await cere("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(s)); return GridSim.rataFunding(r && r.data && r.data.rates, Date.now()); } catch { return null; } },   // revizia (2): rata reală, ca în Tablou
       simbol: (b) => TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex,
+      // v101.92 (I-579): regimul Busolei pe moneda botului (jurnalul ei de stări, de pe același PC) + poarta de validare (data/mc-regim-verdict.json)
+      regim: (b) => { const rz = Busola.rezumat(), p = rz ? Busola.pazaStare(rz, cheiaBot(b), Date.now()) : null; if (!p || !p.stare || p.vechi) return null; return { stare: p.stare, ferestre: ferestreRegim(jurnalStariBusola(), p.cheie, p.stare, Date.now()) }; },
+      regimValidat: regimValidat(),
       anunta: (m, bot, cheie) => trimiteAlerta(m, bot, cheie) });
     tineRitm("mcBoti", st.boti); mcBotLa = Date.now();
+    // v101.92 (I-577): jurnalul vocilor - la schimbarea frazei, o intrare în KV cu prețul și semnele
+    try {
+      const rz = Busola.rezumat(), jv = ritm.voci && typeof ritm.voci === "object" ? ritm.voci : {};
+      for (const b of ultimiiBoti.filter((y) => y && y.id != null && y.activ !== false)) {
+        const v = vociBot({ Busola, rez: rz, bot: b, grafic: directii[b.id] && directii[b.id].dir4h || null, mc: st.boti[String(b.id)] && st.boti[String(b.id)].stare || null, acum: Date.now() });
+        if (!v || !schimbareVoci(jv[String(b.id)], v)) continue;
+        const r = await trimite("/api/istoric-bot?action=voci", { intrare: v }); if (r && r.ok) jv[String(b.id)] = { text: v.text, la: v.la };
+      }
+      tineRitm("voci", jv);
+    } catch (e) { jurnal("jurnalul vocilor", e.message); }
     // v101.90 (ideea 2): verdictul fiecărui bot în KV - Tabloul îl arată ca atare și nu mai socotește pe telefon cât e proaspăt (sub 20 min)
     try { await trimite("/api/istoric-bot?action=mcVerdict", { la: Date.now(), boti: st.boti }); } catch (e) { jurnal("monte carlo KV", e.message); }
     jurnal("monte carlo boți: " + r.simulati + " din " + TextRo.cate(r.boti, "bot activ", "boți activi") + " · " + TextRo.cate(r.anuntate, "schimbare anunțată", "schimbări anunțate") + (r.erori ? " · " + TextRo.cate(r.erori, "eroare", "erori") : ""));
   } catch (e) { jurnal("monte carlo boți ESEC", e.message); mcBotLa = Date.now() - 13 * 60000; }
   mcBotInLucru = false;
+}
+// v101.92 (I-579): jurnalul de stări al Busolei (cron/stare/jurnal-stari.json) - pe același PC; lipsă / stricat ⇒ [] (fără regim)
+const JURNAL_STARI_BUSOLA = process.env.BUSOLA_JURNAL_STARI || "C:/Users/Cimin/busola/cron/stare/jurnal-stari.json";
+let jurnalStariCache = { la: 0, l: [] };
+function jurnalStariBusola() {
+  if (Date.now() - jurnalStariCache.la < 10 * 60000) return jurnalStariCache.l;
+  let l = []; try { l = JSON.parse(fs.readFileSync(JURNAL_STARI_BUSOLA, "utf8")); } catch { l = []; }
+  jurnalStariCache = { la: Date.now(), l: Array.isArray(l) ? l : [] }; return jurnalStariCache.l;
+}
+// poarta: proba-mc-regim.mjs (pe date reale, în afara npm test) scrie verdictul; fără fișier sau „trece: false” ⇒ nevalidat (Tabloul nu arată)
+function regimValidat() { try { const v = JSON.parse(fs.readFileSync(path.join(DATA, "mc-regim-verdict.json"), "utf8")); return v && v.trece === true; } catch { return false; } }
+// v101.92 (I-577 + I-581): o dată pe oră, judecata după 24 h - vocile (încotro a mers prețul) și alertele (prețul după 24 h), din lumânările de 15 min
+let dupaLa = 0;
+async function turaDupa24h() {
+  if (Date.now() - dupaLa < 3600000) return; dupaLa = Date.now();
+  const acum = Date.now(), bare = {};
+  const bareDe = async (s) => { if (!s) return null; if (!bare[s]) { try { bare[s] = GridCalcul.bare(await lumanari15M(s)); } catch { bare[s] = null; } } return bare[s]; };
+  try {
+    const r = await cere("/api/istoric-bot?action=voci"), lista = r && Array.isArray(r.voci) ? r.voci : [];
+    const scadente = lista.filter((x) => x && !x.dupa && acum - Number(x.la) >= 86400000);
+    for (const x of scadente) await bareDe(x.simbol);
+    const j = judecaVoci(scadente, bare, acum); if (j.length) await trimite("/api/istoric-bot?action=vociDupa", { lista: j });
+  } catch (e) { jurnal("vocile după 24 h", e.message); }
+  try {
+    const r = await cere("/api/istoric-bot?action=alerte"), lista = r && Array.isArray(r.alerte) ? r.alerte : [], out = [];
+    for (const a of lista.filter((x) => x && x.bot && Number(x.pret) > 0 && !x.dupa && acum - Number(x.t) >= 86400000)) {
+      const b = (ultimiiBoti || []).find((y) => y && String(y.id) === String(a.bot)); if (!b) continue;
+      const l = await bareDe(TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex); if (!l) continue;
+      const bara = l.find((y) => y && y.t >= Number(a.t) + 86400000 && y.t + 900000 <= acum); if (bara && bara.c > 0) out.push({ t: a.t, bot: a.bot, pret24: bara.c });
+    }
+    if (out.length) await trimite("/api/istoric-bot?action=alerteDupa", { lista: out });
+  } catch (e) { jurnal("alertele după 24 h", e.message); }
 }
 async function turaRisc() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
@@ -1956,7 +2005,7 @@ async function bucla() {
   turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
   turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)
-  turaMonteCarloBot().catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute, Discord la schimbarea verdictului
+  turaMonteCarloBot().then(() => turaDupa24h()).catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute; v101.92: + judecata după 24 h (voci, alerte)
   if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);

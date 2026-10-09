@@ -684,7 +684,21 @@ var TabloExtra = (function () {
     return l.filter(function (a) { return a && (a.bot ? String(a.bot) === String(botId) : a.cheie === "colector" && a.nivel !== "info" && a0 - a.t < 2 * 3600000 && !alertaRezolvata(a, l) && !/nu mai apare în lista/i.test(String(a.titlu || ""))); });
   }
 
-  return { cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  // v100.149 (I-581): „ce a urmat” după o alertă - prețul botului la alertă (KV: pret) și după 24 h (KV: dupa.pret, scris de colector)
+  var NUME_ALERTA = { "busola-miscare": "mai agitată", "busola-directie": "invers față de bot", "busola-btc": "BTC contra", "busola-voci": "toate vocile contra", "grid-larg": "gridul prea larg", "minus-24h": "pe minus 24 h", "ceas-larg": "ceasul larg", "fara-plan": "fără plan", "pornit-ca": "pornit ca" };
+  function dupaAlerta(a) {
+    if (!a || !(Number(a.pret) > 0) || !a.dupa || !(Number(a.dupa.pret) > 0)) return null;
+    var x = (Number(a.dupa.pret) / Number(a.pret) - 1) * 100;
+    return "după 24 h: " + (typeof TextRo !== "undefined" && TextRo.pctSemn ? TextRo.pctSemn(x) : x.toFixed(1) + "%");
+  }
+  // bilanțul pe tipuri: câte au prețul mai jos după 24 h (nu PnL-ul: alerta nu știe sensul botului); sub 10 = prea puține
+  function bilantAlerte(lista) {
+    var pe = {};
+    (Array.isArray(lista) ? lista : []).forEach(function (a) { if (!a || !a.cheie || !(Number(a.pret) > 0) || !a.dupa || !(Number(a.dupa.pret) > 0)) return; var g = pe[a.cheie] || (pe[a.cheie] = { cheie: a.cheie, n: 0, peMinus: 0 }); g.n++; if (Number(a.dupa.pret) < Number(a.pret)) g.peMinus++; });
+    return Object.keys(pe).map(function (k) { var g = pe[k]; g.text = "«" + (NUME_ALERTA[k] || k) + "»: prețul a scăzut în " + g.peMinus + " din " + g.n + " după 24 h" + (g.n < 10 ? " (prea puține)" : ""); return g; }).sort(function (a, b) { return b.n - a.n; });
+  }
+
+  return { dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

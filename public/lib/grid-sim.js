@@ -73,6 +73,22 @@ var GridSim = (function () {
 
   // ---------------- (2) simularea ----------------
   function tendinta(b) { var s = 0, n = 0; for (var i = 1; i < b.length; i++) if (b[i].c > 0 && b[i - 1].c > 0) { s += Math.log(b[i].c / b[i - 1].c); n++; } return n ? s / n : 0; }
+  // v100.149 (I-579): Monte Carlo pe REGIMUL Busolei - blocurile se trag doar din ferestrele de timp cu aceeași stare (ferestre = [{de, pana}]);
+  // un start e bun când blocul lui întreg (bloc bare) cade într-o fereastră. drumDin = M.drum cu startul ales din listă, nu din tot istoricul
+  function starturiRegim(b15, ferestre, bloc) {
+    var out = [], F = Array.isArray(ferestre) ? ferestre : [], pas = b15.length > 1 ? b15[1].t - b15[0].t : 900000;
+    for (var i = 1; i <= b15.length - bloc; i++) { var t0 = b15[i].t, t1 = b15[i + bloc - 1].t; for (var k = 0; k < F.length; k++) if (t0 >= F[k].de && t1 < F[k].pana) { out.push(i); break; }   /* bara t1 se închide la t1 + pas ≤ pana */ }
+    return out;
+  }
+  function drumDin(b, n, bloc, pret0, rnd, mu, starturi) {
+    var out = [], cur = pret0, t = 0, k = mu ? Math.exp(-mu) : 1;
+    while (out.length < n) {
+      var i = starturi[Math.floor(rnd() * starturi.length)];
+      for (var j = 0; j < bloc && out.length < n; j++) { var x = b[i + j], f = cur / b[i + j - 1].c * k; out.push({ t: t++, o: x.o * f, h: x.h * f, l: x.l * f, c: x.c * f, v: x.v }); cur = out[out.length - 1].c; }
+    }
+    return out;
+  }
+  var MIN_STARTURI_REGIM = 3 * BZ;
   function marja(p, n) { return !(n > 0) || !(p > 0) || !(p < 1) ? 0 : Math.round(1.96 * Math.sqrt(p * (1 - p) / n) * 100); }
   function mediana(v) { if (!v.length) return null; var s = v.slice().sort(function (a, b) { return a - b; }); return pc(s, 0.5); }
   // o = { zile (14), orizonturi ([1,3,7,14]), n (500), seed (12), plan: { minus, plus } | null, pornitLa: ms | null }
@@ -111,13 +127,17 @@ var GridSim = (function () {
       optGP.dinBara = pre; optGP.stopDupa = opr || {}; stS.stop = oprP; tpIgnoratPrefix = vp.ignorat || null;   // revizia (I2): spus, nu tăcut
     }
     // fără tendința perioadei: mijlocul log al capătului drumurilor la zero (ca MonteSimbol.grid)
+    // v100.149 (I-579): pe regim, drumurile pornesc doar din ferestrele cu aceeași stare a Busolei; sub 3 zile de starturi ⇒ eroare pe nume
+    var ST = Array.isArray(o.starturi) ? o.starturi.filter(function (i) { return i >= 1 && i <= b15.length - BZ; }) : null;
+    if (ST && ST.length < MIN_STARTURI_REGIM) return { eroare: "Prea puține bare în regimul de acum (" + cate(Math.floor(ST.length / BZ), "zi", "zile") + "): îmi trebuie cel puțin 3 ca să trag drumuri doar din el." };
+    var DRUM = ST ? function (b, hh, bz, p, r, muu) { return drumDin(b, hh, bz, p, r, muu, ST); } : M.drum;
     var mu = tendinta(b15), m;
-    { var rnd0 = M.generator(seed), v0 = []; for (var q = 0; q < n; q++) { var d0 = M.drum(b15, H, BZ, P0, rnd0, mu); v0.push(Math.log(d0[d0.length - 1].c / P0)); } v0.sort(function (a, c) { return a - c; }); m = mu + pc(v0, 0.5) / H; }
+    { var rnd0 = M.generator(seed), v0 = []; for (var q = 0; q < n; q++) { var d0 = DRUM(b15, H, BZ, P0, rnd0, mu); v0.push(Math.log(d0[d0.length - 1].c / P0)); } v0.sort(function (a, c) { return a - c; }); m = mu + pc(v0, 0.5) / H; }
     var rnd = M.generator(seed), bareO = oriz.map(function (z) { return pre + z * BZ; });
     var col = oriz.map(function () { return { net: [], deAici: [], plan: 0, planRau: 0, planZile: [], lich: 0, stop: 0, tp: 0, ies: 0, per: 0, maxJos: [], funding: 0 }; });
     var acum = null, dejaAtins = null;
     for (var sIdx = 0; sIdx < n; sIdx++) {
-      var d = M.drum(b15, H, BZ, P0, rnd, m), drumT = pre ? prefix.concat(d) : d;
+      var d = DRUM(b15, H, BZ, P0, rnd, m), drumT = pre ? prefix.concat(d) : d;
       var r = GP.simuleaza(drumT, 0, drumT.length, stS, optGP), tr = r.traseu, L = tr.net.length;
       // „până acum” = traseul la ultima bară reală (identic pe toate drumurile); t = închiderea ei; oprit și când stopul cade chiar pe ea (revizia)
       if (pre && !acum) { var ia = Math.min(pre, L) - 1; acum = { net: tr.net[ia], usdt: tr.net[ia] * suma, bare: pre, t: prefix[prefix.length - 1].t + 9e5, perechi: tr.perechi[ia], oprit: (r.lichidat || r.oprit) && r.bare <= pre ? (r.lichidat ? "lichidat" : "oprit") : null }; }
@@ -150,7 +170,7 @@ var GridSim = (function () {
       if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: marja(dc / n, n), hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
       return out;
     });
-    return { n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, orizonturi: orizonturi };
+    return { regim: ST ? { starturi: ST.length } : null, n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, orizonturi: orizonturi };
   }
 
   // revizia (R3): alte setări pe ACELEAȘI drumuri, cu ACELAȘI motor ca verdictul (14 zile, sămânța 12, fără prefix = bot pornit acum) ⇒ rândul
@@ -257,6 +277,6 @@ var GridSim = (function () {
     var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
+  return { starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

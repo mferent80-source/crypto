@@ -91,6 +91,10 @@ export const busolaDirectie = (o) => ({ nivel: "atentie", cheie: "busola-directi
 export const busolaBtc = (o) => ({ nivel: "atentie", cheie: "busola-btc",
   titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · " + o.btc + ", botul tău e CONTRA",
   mesaj: msg(o.text + ".", "Legătura e măsurată pe ultimele 30 de zile; nu e o prezicere că BTC continuă. Aș verifica stopul și n-aș adăuga bani cât ține.") });
+// v101.92 (I-578): graficul pe 4h, Busola și Monte Carlo spun toate „contra botului tău” - un singur mesaj, în locul celor separate
+export const busolaVoci = (o) => ({ nivel: "atentie", cheie: "busola-voci",
+  titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · toate vocile contra: " + o.cine,
+  mesaj: msg(o.text + ".", "Trei voci pe aceeași parte, niciuna dovedită: aș verifica stopul și n-aș adăuga bani; nu e un semnal de închidere.") });
 // rezumatul Busolei e vechi: paza tace - o notă doar în Radar, o dată pe rezumat
 export const busolaVeche = (ore) => ({ nivel: "info", cheie: "busola-veche", doarRadar: true, titlu: "Busola: rezumatul are " + cate(ore, "oră", "ore"),
   mesaj: "Paza boților tace până vine un rezumat nou: pe date vechi nu anunț mișcarea." });

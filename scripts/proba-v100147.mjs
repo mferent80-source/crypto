@@ -110,7 +110,7 @@ await test("(4) pagina: tbCitireExtra dă cele trei rânduri noi, cu direcția g
   assert.equal(w.busolaVerdict.ce, "Cifra Busolei"); assert.match(w.busolaVerdict.text, /^73 din 100 ating ținta înaintea stopului, pe long \(ținta și stopul Busolei, pe 4h\) · de obicei 61/);
   const d = functie(APP, "tbDeseneazaCitire");
   assert.match(d, /tbCitireExtra\(b,o\)/, "citirea extra n-are nevoie de rândurile citirii");
-  assert.equal((d.match(/\[ex\.busola,ex\.busolaDirectie,ex\.busolaVerdict,ex\.busolaGrid,ex\.busolaInterval,ex\.busolaBtc\]/g) || []).length, 1, "ordinea Busolei, o singură dată (ajutorul)");
+  assert.equal((d.match(/\[ex\.busola,(ex\.busolaDirectie1h,ex\.busolaVerdict1h,)?ex\.busolaDirectie,ex\.busolaVerdict,ex\.busolaGrid,ex\.busolaInterval,ex\.busolaBtc\]/g) || []).length, 1, "ordinea Busolei, o singură dată (ajutorul)");
   assert.equal((d.match(/busolaRanduri\(\)/g) || []).length, 2, "chemat în amândouă locurile (după Funding și fără Funding)");
   assert.match(functie(APP, "tbCitireExtra"), /x\.tf==="4H"&&x\.dir/, "direcția graficului vine din semaforul pe 4h");
 });

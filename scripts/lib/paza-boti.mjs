@@ -81,19 +81,43 @@ export function pazaBtc({ Busola, rez, bot, inainte, acum }) {
   return { tine: true, stare: Object.assign({}, stare, { anuntat: acum, anuntatContra: true }), mesaj: MC.busolaBtc({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, btc, text: r.text }) };
 }
 
+// v101.92 (I-578): „toate vocile contra botului tău” - concluzia (graficul pe 4h, Busola, Monte Carlo) cu ≥ 2 voci, toate contra;
+// aceleași reguli (2 rezumate la rând, o dată pe episod, 4 h frână). Când pleacă, alertele separate (direcție, BTC) tac pe episodul lor
+export function pazaVoci({ Busola, rez, bot, inainte, acum, grafic, mc }) {
+  const p = Busola.pazaStare(rez, cheiaBot(bot), acum);
+  if (!p || p.vechi || !dirBot(bot)) return { tine: false, mesaj: null };
+  const r = Busola.randDirectie(rez, cheiaBot(bot), acum, { bot: bot.directie });
+  const c = Busola.concluzie({ bot: bot.directie, grafic: grafic || null, busola: r && r.semn || null, mc: mc || null });
+  const contra = !!(c && /spun la fel: contra botului tău/.test(c.text));
+  const la = Number(rez.la), acelasi = !!(inainte && !!inainte.contra === contra), vazut = numara(inainte, acelasi, la), anuntat = inainte ? Number(inainte.anuntat) || 0 : 0;
+  const anuntatContra = acelasi ? !!inainte.anuntatContra : false;
+  const stare = { contra, la, vazut, anuntat, anuntatContra, text: c ? c.text : null };
+  if (!(contra && vazut >= 2 && !anuntatContra && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum, anuntatContra: true }), mesaj: MC.busolaVoci({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, cine: c.text.split(" spun la fel")[0].replace(/^./, (x) => x.toLowerCase()), text: c.text }) };
+}
+
 // pasul din bucla colectorului: mesajul care n-a plecat nu mută starea și nici harta (tura următoare reîncearcă, ca la celelalte alerte)
-export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, monede }) {
+export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, monede, voci }) {
   const d = pazaBot({ Busola, rez, bot, inainte: st._busola, acum, pret, monede });
   let out = d;
   if (d.tine) {
     if (d.mesaj && !(await trimite(d.mesaj))) out = Object.assign({}, d, { trimis: false });
     else { st._busola = d.stare; if (monede && typeof monede === "object") monede[d.cheie] = { stare: d.stare.stare, de: d.stare.de }; }
   }
+  // v101.92 (I-578): întâi „toate vocile contra”; dacă a plecat, direcția și BTC nu mai trimit și ele (episoadele lor se marchează anunțate)
+  let vociPlecat = false;
+  if (voci && typeof voci === "object") {
+    try {
+      const v = pazaVoci({ Busola, rez, bot, inainte: st._busolaVoci, acum, grafic: voci.grafic, mc: voci.mc });
+      if (v.tine) { if (v.mesaj && !(await trimite(v.mesaj))) { /* netrimis: starea rămâne */ } else { st._busolaVoci = v.stare; vociPlecat = !!v.mesaj; } }
+    } catch (e) { out = Object.assign({}, out, { eroare: String(e && e.message || e) }); }
+  }
   // v101.91 (I-572): direcția și BTC, fiecare cu starea ei pe bot (_busolaDir / _busolaBtc, copiate de evalueaza ca orice cheie)
   for (const [cheie, fn] of [["_busolaDir", pazaDirectie], ["_busolaBtc", pazaBtc]]) {
     try {
       const x = fn({ Busola, rez, bot, inainte: st[cheie], acum });
       if (!x.tine) continue;
+      if (x.mesaj && vociPlecat) { st[cheie] = Object.assign({}, x.stare, cheie === "_busolaDir" ? { anuntatSemn: x.stare.semn } : { anuntatContra: true }); continue; }
       if (x.mesaj && !(await trimite(x.mesaj))) continue;
       st[cheie] = x.stare;
     } catch (e) { out = Object.assign({}, out, { eroare: String(e && e.message || e) }); }
