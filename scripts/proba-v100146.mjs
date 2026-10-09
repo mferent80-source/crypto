@@ -65,7 +65,7 @@ await test("(4) Busola în „Ce spune piața acum”: rândul stării (ca pân�
   rez.monede.MET.perp4h = "miscare"; const y = ctx.tbCitireExtra(ctx.tbStare.bot, {}); assert.equal(y.busolaGrid.stare, "atentie"); assert.match(y.busolaGrid.text, /^aici gridul a pierdut cel mai mult \(−1,1% pe episod\) · futures ±2×ATR$/);
   ctx.tbStare.bot.gridJos = 0.40; ctx.tbStare.bot.gridSus = 0.64; assert.equal(ctx.tbCitireExtra(ctx.tbStare.bot, {}).busolaInterval.stare, "info", "cam la fel de larg ⇒ info");
   delete rez.monede.MET.fisa4h; assert.equal(ctx.tbCitireExtra(ctx.tbStare.bot, {}).busolaInterval, null, "fără fișă ⇒ fără rând");
-  const d = functie(APP, "tbDeseneazaCitire"); assert.equal((d.match(/if\(ex\.busola\)out\.push\(rd\(ex\.busola\)\);if\(ex\.busolaGrid\)out\.push\(rd\(ex\.busolaGrid\)\);if\(ex\.busolaInterval\)out\.push\(rd\(ex\.busolaInterval\)\)/g) || []).length, 2, "după rândul Busolei, în amândouă locurile");
+  const d = functie(APP, "tbDeseneazaCitire"); assert.equal((d.match(/busolaRanduri\(\)/g) || []).length, 2, "după rândul Busolei, în amândouă locurile (v100.147: prin ajutorul busolaRanduri)");
 });
 await test("(2b) pagina: tbAdu1m aduce lumânările de 1 min de la pornire − 2 h (pagini de 500, cel mult 3), le ține 2 minute, redesenează o dată când vin; botul mai vechi de 25 h ⇒ nu cere; renderTabloGrafic le dă lui intrareBot și rândului eticheta „1 min”", async () => {
   const r = functie(APP, "renderTabloGrafic"); assert.match(r, /tbAdu1m\(b\)/); assert.match(r, /bare1m:tbBare1m\(b\)/); assert.match(r, /eticheta:oG\.umpleriEticheta\|\|TB_PERIOADE\[tbTf\(\)\]\.eticheta/);
