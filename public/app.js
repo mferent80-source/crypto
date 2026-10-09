@@ -6705,7 +6705,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var IC={bine:"✓",atentie:"!",rau:"✕",info:"·"};
   var rd=function(x){return '<div class="tbCitR '+x.stare+'"><span class="tbCitIc" aria-hidden="true">'+IC[x.stare]+'</span><div><b>'+escapeHtml(x.ce)+':</b> <span class="tbCitTx">'+escapeHtml(x.text)+'</span></div></div>'};
   // v100.111 (I-542): în locul celor 6 rânduri ale semaforului, unul singur - tabelul „Trendul pe TF-uri” de sub grafic le arată pe toate
-  var su=GraficBot.trendSumar(tbSemaforTf(b)),bloc=rd({stare:su.stare,ce:"Trendul pe TF-uri",text:su.text}),pus=false,ind=false,ex=tbCitireExtra(b,o,c),out=[],fund=false;
+  var su=GraficBot.trendSumar(tbSemaforTf(b)),bloc=rd({stare:su.stare,ce:"Trendul pe TF-uri",text:su.text}),pus=false,ind=false,ex=tbCitireExtra(b,o),out=[],fund=false;
   /* v100.147: rândurile Busolei, în ordinea ei (starea, direcția, cifra, gridul, intervalul, BTC) - un singur loc pentru amândouă chemările */
   var busolaRanduri=function(){[ex.busola,ex.busolaDirectie,ex.busolaVerdict,ex.busolaGrid,ex.busolaInterval,ex.busolaBtc].forEach(function(x){if(x)out.push(rd(x))})};
   c.randuri.forEach(function(x){
@@ -6722,7 +6722,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}
 // v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
 // când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
-function tbCitireExtra(b,o,c){
+function tbCitireExtra(b,o){
   var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null},d=tbStare.directie;
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){
@@ -6746,9 +6746,10 @@ function tbCitireExtra(b,o,c){
     var rF=rez?Busola.randFisa(rez,tbCheieBusola(b),Date.now(),tbPretScurt,{jos:Number(b.gridJos),sus:Number(b.gridSus)}):null,vF=rF&&/ · măsurat acum /.test(rF.text)?rF.text.slice(rF.text.indexOf(" · măsurat acum ")):"";
     out.busolaInterval=rF?{ce:"Intervalul Busolei (4h)",stare:rF.raport!==null&&rF.raport<0&&Math.round(Math.abs(rF.raport)*100)>10?"atentie":"info",text:rF.scurt+(rF.comparatie?" · "+rF.comparatie:"")+vF}:null;
     /* v100.147 (el, 09.10: „integrează mai mult Busola și verdictul din ea … la ce spune piața acum” - toate trei): verdictul ei de direcție
-       pe 4h față de botul lui și de graficul de acum (rândul „Direcția” al citirii: „în sus…” / „în jos…”), cifra de pe capul Busolei
-       („N din 100 …”) și BTC pe 24 h + cât de strâns merge moneda cu BTC + CU / CONTRA pentru bot - din rezumatul 1.47.0; lipsă ⇒ spus / fără rând */
-    var rD=c&&c.randuri?c.randuri.filter(function(x){return x.ce==="Direcția"})[0]:null,gr=rD&&/^în sus/.test(String(rD.text))?"sus":rD&&/^în jos/.test(String(rD.text))?"jos":null;
+       pe 4h față de botul lui și de graficul pe 4h (semaforul Radarului pe același orizont - revizia Opus: rândul „Direcția” al citirii nu
+       există când semaforul e listă), cifra de pe capul Busolei („N din 100 …”) și BTC pe 24 h + cât de strâns merge moneda cu BTC +
+       CU / CONTRA pentru bot - din rezumatul 1.47.0; lipsă ⇒ spus / fără rând */
+    var sem=typeof tbSemaforTf==="function"?tbSemaforTf(b):null,s4=Array.isArray(sem)?sem.filter(function(x){return x&&x.tf==="4H"&&x.dir})[0]:null,gr=s4?s4.dir:null;
     var oB={bot:b.directie,grafic:gr},dB=rez?Busola.randDirectie(rez,tbCheieBusola(b),Date.now(),oB):null;
     out.busolaDirectie=dB?{ce:"Direcția, după Busola",stare:dB.nivel==="nemasurat"?"info":dB.nivel,text:dB.text}:null;
     var cB=rez?Busola.randVerdict(rez,tbCheieBusola(b),Date.now()):null;
