@@ -25,8 +25,7 @@ const JURNAL = process.env.BUSOLA_JURNAL_STARI || "C:/Users/Cimin/busola/cron/st
 const H = 3600000, ZI = 24 * H, BZ = 96;
 
 // jetonul serverului, ca în colector (.dev.vars: APP_API_TOKEN)
-const TOKEN = (() => { try { const m = /^APP_API_TOKEN[ 	]*=[ 	]*"?([^"
-]+)"?/m.exec(fs.readFileSync(path.join(RAD, ".dev.vars"), "utf8")); return m ? m[1].trim() : ""; } catch { return ""; } })();
+const TOKEN = (() => { try { const linie = fs.readFileSync(path.join(RAD, ".dev.vars"), "utf8").split(/\r?\n/).find((l) => l.startsWith("APP_API_TOKEN")); return linie ? linie.split("=").slice(1).join("=").trim().replace(/^"|"$/g, "") : ""; } catch { return ""; } })();
 async function json(u) { const r = await fetch(URL + u, { headers: { authorization: "Bearer " + TOKEN, accept: "application/json", "x-radar-client": "proba-mc-regim" }, signal: AbortSignal.timeout(30000) }); if (!r.ok) throw new Error("HTTP " + r.status + " " + u); return r.json(); }
 async function bare15(simbol) {
   // paginile de 500 cu endTime, ca lumanari15M din colector - ~31 de zile
