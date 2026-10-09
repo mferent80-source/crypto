@@ -366,6 +366,9 @@ async function semnaleBot(b, ctx, acum) {
     // revizia 01.10 (I1): starea alertelor botului (ce s-a anuntat deja imediat) si sfaturile tacute (I-466) - ca alerta Consilierului sa nu dubleze
     const activ = Object.fromEntries(Object.entries(stA).filter(([k, v]) => k.charAt(0) !== "_" && v && v.nivel).map(([k, v]) => [k, v.nivel]));
     if (stA._busola && stA._busola.stare === "miscare") activ["busola-miscare"] = "atentie";   // v101.62 (revizia Opus): paza a anunțat deja „mai agitată” - Consilierul nu trimite al doilea mesaj
+    // v101.91 (I-572, revizia Opus): paza pe direcție / BTC a anunțat deja ⇒ Consilierul nu dublează (cât ține episodul anunțat)
+    if (stA._busolaDir && stA._busolaDir.anuntatSemn && stA._busolaDir.anuntatSemn === stA._busolaDir.semn) activ["busola-directie"] = "atentie";
+    if (stA._busolaBtc && stA._busolaBtc.contra && stA._busolaBtc.anuntatContra) activ["busola-btc"] = "atentie";
     const ch = Consiliu.schimbare(stA._cons, x.cons, acum, String(b.baza || "").replace(/\.PERP$/, ""), { activ, taci: socotealaTaci || {} });
     stA._cons = ch.stare; scrieStare();
     if (ch.alerta) await trimiteAlerta(ch.alerta, b.id, "consilier");
@@ -1321,7 +1324,7 @@ async function dateDimineata() {
     // v101.90 (ideea 1): felul Monte Carlo pe fiecare bot deschis, cu „de când” (starea turei de la 15 minute)
     try { const mcl = liniaMonteCarlo(ritm.mcBoti, boti, acum); if (mcl) out.liniiExtra.push("🎰 Monte Carlo: " + mcl); } catch (e) { jurnal("dimineata monte carlo", e.message); }
     // v101.91 (I-575): boții deschiși față de BTC (mișcarea pe 24 h, legătura monedei, CU / CONTRA) - din rezumatul Busolei 1.47+
-    try { const lb = Busola.liniaBtc(Busola.rezumat(), boti.filter((y) => y && y.id && y.activ !== false).map((y) => ({ nume: String(y.baza || "").replace(/\.PERP$/, ""), cheie: cheiaBot(y), directie: y.directie })), acum); if (lb) out.liniiExtra.push("₿ BTC și boții tăi: " + lb); } catch (e) { jurnal("dimineata btc", e.message); }
+    try { const lb = Busola.liniaBtc(Busola.rezumat(), boti.filter((y) => y && y.id && y.activ !== false).map((y) => ({ nume: String(y.baza || "").replace(/\.PERP$/, ""), cheie: cheiaBot(y), directie: y.directie })), acum, 160 - "₿ BTC și boții tăi: ".length); if (lb) out.liniiExtra.push("₿ BTC și boții tăi: " + lb); } catch (e) { jurnal("dimineata btc", e.message); }
     lBoti = l; liniaVeche = sufix;
     // v101.75 (I-552): becurile 4 h / 1 zi ale boților deschiși - aceeași regulă ca Tabloul (directiaBotului, ținută 5 min)
     for (const b of boti.filter((y) => y && y.id && y.activ !== false)) {

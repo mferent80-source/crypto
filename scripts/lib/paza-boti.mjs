@@ -47,7 +47,8 @@ export function pentruServer(boti, stareAlerte, acum) {
 // rezumatului), rezumat vechi / monedă fără direcție / bot neutru ⇒ nu atinge starea. Pure, probate în proba-v100148.mjs.
 const RITM_MS = 4 * 3600000, PRAG_BTC = 0.02;
 const dirBot = (b) => { const d = String(b && b.directie || "").toUpperCase(); return d === "LONG" ? "long" : d === "SHORT" ? "short" : null; };
-const numara = (inainte, acelasi, la) => (acelasi ? (Number(inainte.la) === la ? Number(inainte.vazut) || 1 : (Number(inainte.vazut) || 0) + 1) : 1);
+// revizia Opus: după o gaură (rezumat vechi ore întregi, Busola căzută) numărătoarea pornește de la 1, nu continuă episodul vechi
+const numara = (inainte, acelasi, la) => (acelasi ? (Number(inainte.la) === la ? Number(inainte.vazut) || 1 : la - Number(inainte.la) > 2 * RITM_MS ? 1 : (Number(inainte.vazut) || 0) + 1) : 1);
 const numeBot = (bot) => String(bot && bot.baza || "").replace(/\.PERP$/, "");
 
 // { tine:false } | { tine:true, stare:{ semn, la, vazut, anuntat }, mesaj | null } - „invers față de bot” = randDirectie pe galben
@@ -56,10 +57,12 @@ export function pazaDirectie({ Busola, rez, bot, inainte, acum }) {
   if (!p || p.vechi || !dirBot(bot)) return { tine: false, mesaj: null };
   const r = Busola.randDirectie(rez, cheiaBot(bot), acum, { bot: bot.directie });
   if (!r || !r.semn) return { tine: false, mesaj: null };
-  const la = Number(rez.la), acelasi = !!(inainte && inainte.semn === r.semn), vazut = numara(inainte, acelasi, la), anuntat = acelasi ? Number(inainte.anuntat) || 0 : 0;
-  const stare = { semn: r.semn, la, vazut, anuntat };
-  if (!(r.nivel === "atentie" && vazut >= 2 && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
-  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum }), mesaj: MC.busolaDirectie({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, spre: r.semn === "inclinat-long" ? "long" : "short", text: r.text }) };
+  // revizia Opus (spec: „doar la schimbare”): un episod „invers” se anunță O dată (anuntatSemn); 4 h = frână la oscilație, nu ritm de repetare
+  const la = Number(rez.la), acelasi = !!(inainte && inainte.semn === r.semn), vazut = numara(inainte, acelasi, la), anuntat = inainte ? Number(inainte.anuntat) || 0 : 0;
+  const anuntatSemn = acelasi ? inainte.anuntatSemn || null : null;
+  const stare = { semn: r.semn, la, vazut, anuntat, anuntatSemn };
+  if (!(r.nivel === "atentie" && vazut >= 2 && anuntatSemn !== r.semn && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum, anuntatSemn: r.semn }), mesaj: MC.busolaDirectie({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, spre: r.semn === "inclinat-long" ? "long" : "short", text: r.text }) };
 }
 
 // { tine:false } | { tine:true, stare:{ contra, la, vazut, anuntat }, mesaj | null } - CONTRA = randBtc pe galben (legătura DA) cu BTC mișcat ≥ 2%
@@ -71,10 +74,11 @@ export function pazaBtc({ Busola, rez, bot, inainte, acum }) {
   if (!r) return { tine: false, mesaj: null };
   const contra = r.nivel === "atentie" && typeof r.h24 === "number" && Math.abs(r.h24) >= PRAG_BTC;
   const la = Number(rez.la), acelasi = !!(inainte && !!inainte.contra === contra), vazut = numara(inainte, acelasi, la), anuntat = inainte ? Number(inainte.anuntat) || 0 : 0;
-  const stare = { contra, la, vazut, anuntat };
-  if (!(contra && vazut >= 2 && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
+  const anuntatContra = acelasi ? !!inainte.anuntatContra : false;   // revizia Opus: o dată pe episodul CONTRA
+  const stare = { contra, la, vazut, anuntat, anuntatContra };
+  if (!(contra && vazut >= 2 && !anuntatContra && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
   const btc = String(r.text).split(" · ")[0];
-  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum }), mesaj: MC.busolaBtc({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, btc, text: r.text }) };
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum, anuntatContra: true }), mesaj: MC.busolaBtc({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, btc, text: r.text }) };
 }
 
 // pasul din bucla colectorului: mesajul care n-a plecat nu mută starea și nici harta (tura următoare reîncearcă, ca la celelalte alerte)

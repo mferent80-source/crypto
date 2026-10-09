@@ -249,8 +249,8 @@ var Consiliu = (function () {
   // revizia 01.10 (I1): motivul -> cheile Alerte care il anunta deja imediat (lichidarea, planul, mută gridul...). Cand motivul de sus are
   // alerta lui activa, alerta Consilierului ar fi al doilea mesaj pe Discord pentru acelasi fapt -> ramane doar in Radar.
   var CHEI = { opreste: ["status"], lichidare: ["lich"], pericol: ["lich", "status", "grid", "activ"], plan: ["plan"], stop: ["plan-stop", "opritor"],
-    muta: ["s-muta", "grid", "p-margine"], margine: ["s-muta", "grid", "p-margine"], btc: ["s-btc", "m-btc"], aglomerare: ["s-aglomerare"],
-    "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie"], busola: ["busola-miscare"], perechi: [],   /* revizia Opus (04.10): paza anunță „mai agitată”, Consilierul nu dublează */
+    muta: ["s-muta", "grid", "p-margine"], margine: ["s-muta", "grid", "p-margine"], btc: ["s-btc", "m-btc", "busola-btc"], aglomerare: ["s-aglomerare"],
+    "ia-profit": ["s-ia-profit"], funding: ["m-funding"], miscare: ["miscare"], directie: ["directie", "busola-directie"], busola: ["busola-miscare"], perechi: [],   /* v100.148 (revizia): paza pe direcție / BTC (busola-directie, busola-btc) - vezi btc / directie */   /* revizia Opus (04.10): paza anunță „mai agitată”, Consilierul nu dublează */
     // v100.54 (actiunile T212): alertele planului pe pozitie (stop / −X% de la maxim / tinta) - colectorul le da ca activ["t212-stop"] etc.
     "stop-plan": ["t212-stop"], "trail-plan": ["t212-trail"], "tinta-plan": ["t212-tinta"], "stop-urcator": ["sltp-sl"] };
   // revizia 01.10 (I1): motivele fara socoteala proprie (nu pot „tacea” ca in I-466) nu suna pe Discord cand sunt in varf - raman in Radar

@@ -59,7 +59,7 @@ await test("(4) Busola în „Ce spune piața acum”: rândul stării (ca pân�
   const src = "var TB_PERIOADE=" + APP.match(/var TB_PERIOADE=(\{[^\n]*\});/)[1] + ";\n" + ["tbTf", "tbPretScurt", "tbRotPct", "tbCitireExtra"].map((n) => functie(APP, n)).join("\n");
   vm.runInContext(src, ctx);
   const x = ctx.tbCitireExtra(ctx.tbStare.bot, {});
-  assert.equal(x.busola.ce, "Busola, pe 4h"); assert.match(x.busola.text, /^nimic neobișnuit · măsurat acum 20 min$/);
+  assert.equal(x.busola.ce, "Busola, pe 4h"); assert.match(x.busola.text, /^nimic neobișnuit · măsurat acum 20 min · pe futures doar 4h$/);   /* v100.148 (revizia): pe futures se spune că e doar 4h */
   assert.equal(x.busolaGrid.ce, "Gridul, după Busola"); assert.equal(x.busolaGrid.stare, "info"); assert.equal(x.busolaGrid.text, "un grid oarecare a ieșit pe minus (−1,0% pe episod) · futures ±2×ATR", "o zecimală ROTUNJITĂ (−0,950 ⇒ −1,0), fără prefixul „Busola, pe 4h: ” și fără starea repetată din rândul de deasupra (revizia Opus)");
   assert.equal(x.busolaInterval.ce, "Intervalul Busolei (4h)"); assert.equal(x.busolaInterval.stare, "atentie"); assert.equal(x.busolaInterval.text, "jos 0.39820 · sus 0.64140 · 17 linii · intervalul tău e cu 84% mai îngust decât al Busolei (al ei a pierdut cel mai puțin, pe spot)");
   rez.monede.MET.perp4h = "miscare"; const y = ctx.tbCitireExtra(ctx.tbStare.bot, {}); assert.equal(y.busolaGrid.stare, "atentie"); assert.match(y.busolaGrid.text, /^aici gridul a pierdut cel mai mult \(−1,1% pe episod\) · futures ±2×ATR$/);

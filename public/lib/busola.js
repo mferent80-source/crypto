@@ -227,18 +227,20 @@ var Busola = (function () {
   // v100.148 (I-571, el 09.10: „ce mai putem adăuga să dea plus valoare?”): cele trei voci ale citirii - graficul pe 4h (semaforul),
   // Busola (direcția ei, nedovedită) și Monte Carlo (felul lui) - adunate într-o frază: „spun la fel: cu / contra botului tău” sau
   // „se contrazic: …”. Doar din ce e deja socotit; galben ca AVERTIZARE (contra, sau se contrazic), niciodată un verdict nou
+  // revizia Opus: semnul Monte Carlo e „bun / rău PENTRU BOT” (nu „în sus / în jos”) ⇒ intră direct la cu / contra (`peBot`); „bine” cu
+  // planul atins înseamnă „încasează”, nu „aș ține” (o.mcAtins); Busola poartă „(nedovedit)” și în numele din frază
   var MC_VOCE = { bine: ["Monte Carlo aș ține", 1], rau: ["Monte Carlo aș opri", -1], atentie: ["Monte Carlo la limită", 0] };
   function concluzie(o) {
     o = o && typeof o === "object" ? o : {};
     var b = botDir(o), voci = [], g = o.grafic, d = o.busola, m = MC_VOCE[o.mc];
     if (GR_DIR[g] || g === "lateral") voci.push({ nume: "Graficul pe 4h", text: g === "lateral" ? "graficul pe 4h e lateral" : "graficul pe 4h " + GR_DIR[g], semn: g === "urca" ? 1 : g === "coboara" ? -1 : 0 });
-    if (TEXT_DIR[d]) voci.push({ nume: "Busola", text: d === "asteapta" ? "Busola așteaptă" : "Busola înclină " + (d === "inclinat-long" ? "long" : "short") + " (nedovedit)", semn: d === "inclinat-long" ? 1 : d === "inclinat-short" ? -1 : 0 });
-    if (m) voci.push({ nume: "Monte Carlo", text: m[0], semn: m[1] });
+    if (TEXT_DIR[d]) voci.push({ nume: "Busola (nedovedit)", text: d === "asteapta" ? "Busola așteaptă" : "Busola înclină " + (d === "inclinat-long" ? "long" : "short") + " (nedovedit)", semn: d === "inclinat-long" ? 1 : d === "inclinat-short" ? -1 : 0 });
+    if (m) voci.push({ nume: "Monte Carlo", text: o.mcAtins && o.mc === "bine" ? "Monte Carlo planul atins (încasează)" : m[0], semn: m[1], peBot: true });
     if (!voci.length) return null;
     var lista = voci.map(function (v) { return v.text; }).join(" · ");
     if (!b) return { nivel: "info", text: "Vocile: " + lista };
     var cu = [], contra = [], zero = [];
-    voci.forEach(function (v) { if (!v.semn) zero.push(v); else if ((v.semn > 0) === (b === "long")) cu.push(v); else contra.push(v); });
+    voci.forEach(function (v) { if (!v.semn) zero.push(v); else if (v.peBot ? v.semn > 0 : (v.semn > 0) === (b === "long")) cu.push(v); else contra.push(v); });
     if (cu.length && contra.length) return { nivel: "atentie", text: "Vocile se contrazic: " + lista };
     if (!cu.length && !contra.length) return { nivel: "info", text: "Vocile: " + lista };
     var luate = cu.length ? cu : contra, nume = luate.map(function (v) { return v.nume; }), cine = nume.length > 1 ? nume.slice(0, -1).join(", ") + " și " + nume[nume.length - 1] : nume[0];
@@ -255,20 +257,27 @@ var Busola = (function () {
   }
   // v100.148 (I-575): rândul de dimineață - boții deschiși față de BTC („MET short CU (0,7) · NIL long CONTRA (0,5) · PONS nemăsurat”);
   // lista = [{ nume, cheie, directie }]; fără blocul btc sau fără boți ⇒ null
-  function liniaBtc(rez, lista, acum) {
-    if (!rez || !rez.monede || !rez.btc || typeof rez.btc !== "object" || !Array.isArray(lista) || !lista.length) return null;
+  // revizia Opus: ca randBtc - botul pe BTC are legătura de la sine; CU / CONTRA doar la legătura DA (≥ 0,6) și condiționat („dacă
+  // continuă”); legătura parțială se spune ca atare; botul fără cheie se sare; plafon de lungime (raportul ține 160) cu coada „+N”
+  function liniaBtc(rez, lista, acum, max) {
+    if (!rez || !rez.monede || !rez.btc || typeof rez.btc !== "object" || !Array.isArray(lista)) return null;
     var h = rez.btc.h24, h24 = typeof h === "number" && isFinite(h) ? h : null, peLoc = h24 !== null && Math.abs(h24) < 0.005, urca = h24 !== null && h24 > 0;
     var pct = function (x) { return Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; }, zec = function (x) { return x.toFixed(1).replace(".", ","); };
-    var cap = h24 === null ? "BTC pe 24 h necunoscut" : peLoc ? "BTC aproape pe loc în 24 h" : "BTC a " + (urca ? "urcat " : "coborât ") + pct(h24) + " în 24 h";
-    var p = lista.map(function (x) {
-      var cheie = simbolBusola(x.cheie || x.nume), m = rez.monede[cheie], cor = m && typeof m.corBtc === "number" && isFinite(m.corBtc) ? m.corBtc : null, b = botDir({ bot: x.directie }), nume = String(x.nume || cheie) + (b ? " " + b : "");
+    var conditionat = h24 !== null && !peLoc;
+    var cap = h24 === null ? "BTC pe 24 h necunoscut" : peLoc ? "BTC aproape pe loc în 24 h" : "BTC a " + (urca ? "urcat " : "coborât ") + pct(h24) + " în 24 h, dacă continuă";
+    var p = lista.filter(function (x) { return x && simbolBusola(x.cheie || x.nume); }).map(function (x) {
+      var cheie = simbolBusola(x.cheie || x.nume), m = rez.monede[cheie], eBtc = cheie === "BTC", cor = eBtc ? 1 : m && typeof m.corBtc === "number" && isFinite(m.corBtc) ? m.corBtc : null, b = botDir({ bot: x.directie }), nume = String(x.nume || cheie) + (b ? " " + b : "");
       if (cor === null) return nume + " nemăsurat";
       if (cor < 0.3) return nume + " independent (" + zec(cor) + ")";
-      if (h24 === null || peLoc || !b) return nume + " merge cu BTC: " + (cor >= 0.6 ? "DA" : "PARȚIAL") + " (" + zec(cor) + ")";
-      return nume + " " + (urca === (b === "long") ? "CU" : "CONTRA") + " (" + zec(cor) + ")";
+      if (cor < 0.6) return nume + " parțial cu BTC (" + zec(cor) + ")";
+      if (!conditionat || !b) return nume + (eBtc ? "" : " merge cu BTC: DA (" + zec(cor) + ")");
+      return nume + " " + (urca === (b === "long") ? "CU" : "CONTRA") + (eBtc ? "" : " (" + zec(cor) + ")");
     });
-    var varsta = varstaText(rez, acum);
-    return [cap].concat(p).join(" · ") + (varsta ? " · " + varsta : "");
+    if (!p.length) return null;
+    var varsta = varstaText(rez, acum), coada = varsta ? " · " + varsta : "", MAX = Number(max) > 0 ? Number(max) : 142;
+    var t = [cap].concat(p).join(" · ");
+    for (var k = p.length - 1; t.length + coada.length > MAX && k >= 1; k--) t = [cap].concat(p.slice(0, k)).join(" · ") + " · +" + (p.length - k);
+    return t + coada;
   }
 
   // true = au venit date noi (fișa se redesenează o dată); false = din cache sau Busola n-a răspuns (fără buclă)

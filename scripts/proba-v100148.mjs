@@ -31,15 +31,21 @@ const rez = (o) => Object.assign({ la: LA, versiune: "1.48.0", btc: { h24: -0.02
 
 await test("(I-571) Busola.concluzie: vocile spun la fel / se contrazic, față de botul lui; culoarea doar ca avertizare", () => {
   const laFel = B.concluzie({ bot: "LONG", grafic: "urca", busola: "inclinat-long", mc: "bine" });
-  assert.equal(laFel.nivel, "info"); assert.equal(laFel.text, "Graficul pe 4h, Busola și Monte Carlo spun la fel: cu botul tău (long)");
+  assert.equal(laFel.nivel, "info"); assert.equal(laFel.text, "Graficul pe 4h, Busola (nedovedit) și Monte Carlo spun la fel: cu botul tău (long)");
   const contra = B.concluzie({ bot: "LONG", grafic: "coboara", busola: "inclinat-short", mc: "rau" });
-  assert.equal(contra.nivel, "atentie"); assert.equal(contra.text, "Graficul pe 4h, Busola și Monte Carlo spun la fel: contra botului tău (long)");
+  assert.equal(contra.nivel, "atentie"); assert.equal(contra.text, "Graficul pe 4h, Busola (nedovedit) și Monte Carlo spun la fel: contra botului tău (long)");
+  // revizia Opus: semnul Monte Carlo e „bun / rău pentru bot”, nu „în sus”: pe un bot SHORT „bine” e tot CU botul
+  const shortBine = B.concluzie({ bot: "SHORT", grafic: "coboara", busola: "inclinat-short", mc: "bine" });
+  assert.equal(shortBine.nivel, "info"); assert.equal(shortBine.text, "Graficul pe 4h, Busola (nedovedit) și Monte Carlo spun la fel: cu botul tău (short)");
+  assert.equal(B.concluzie({ bot: "SHORT", grafic: null, busola: null, mc: "rau" }).text, "Monte Carlo spune: contra botului tău (short)");
+  assert.equal(B.concluzie({ bot: "LONG", grafic: null, busola: null, mc: "bine", mcAtins: true }).text, "Monte Carlo spune: cu botul tău (long)", "planul atins pe plus e tot cu botul");
+  assert.equal(B.concluzie({ bot: "NEUTRAL", grafic: null, busola: null, mc: "bine", mcAtins: true }).text, "Vocile: Monte Carlo planul atins (încasează)", "…dar textul spune „încasează”, nu „aș ține”");
   const mixt = B.concluzie({ bot: "LONG", grafic: "urca", busola: "inclinat-short", mc: "bine" });
   assert.equal(mixt.nivel, "atentie"); assert.equal(mixt.text, "Vocile se contrazic: graficul pe 4h urcă · Busola înclină short (nedovedit) · Monte Carlo aș ține");
   const partial = B.concluzie({ bot: "SHORT", grafic: "coboara", busola: "asteapta", mc: "atentie" });
   assert.equal(partial.nivel, "info"); assert.equal(partial.text, "Graficul pe 4h spune: cu botul tău (short) · Busola așteaptă · Monte Carlo la limită");
   const una = B.concluzie({ bot: "SHORT", grafic: null, busola: "inclinat-long", mc: null });
-  assert.equal(una.nivel, "atentie"); assert.equal(una.text, "Busola spune: contra botului tău (short)");
+  assert.equal(una.nivel, "atentie"); assert.equal(una.text, "Busola (nedovedit) spune: contra botului tău (short)");
   const lateral = B.concluzie({ bot: "LONG", grafic: "lateral", busola: "asteapta", mc: null });
   assert.equal(lateral.nivel, "info"); assert.equal(lateral.text, "Vocile: graficul pe 4h e lateral · Busola așteaptă", "nicio voce nu ia partea nimănui ⇒ doar listate");
   const neutru = B.concluzie({ bot: "NEUTRAL", grafic: "urca", busola: "inclinat-short", mc: "bine" });
@@ -50,6 +56,8 @@ await test("(I-571) Busola.concluzie: vocile spun la fel / se contrazic, față 
 await test("(I-571) pagina: tbDeseneazaCitire pune fraza vocilor în capul citirii (tbCitVoci), din semaforul pe 4h, direcția Busolei și Monte Carlo", () => {
   const d = functie(APP, "tbDeseneazaCitire");
   assert.match(d, /Busola\.concluzie\(\{bot:b\.directie,grafic:[^}]*4H[^}]*,busola:[^}]*,mc:[^}]*\}\)/, "vocile din semaforul 4H + randDirectie + tbMcRand");
+  assert.match(d, /vP&&!vP\.vechi\?Busola\.randDirectie/, "revizia: vocea Busolei doar din rezumat proaspăt");
+  assert.equal((d.match(/tbMcRand\(b\)/g) || []).length, 1, "revizia: Monte Carlo citit o singură dată pe desen");
   assert.match(d, /class="tbCitVoci '\+voci\.nivel\+'">/, "paragraful vocilor, cu starea lui");
   assert.match(citeste("public", "app.css"), /\.tbCitVoci\.atentie/, "galben când se contrazic");
 });
@@ -60,16 +68,22 @@ await test("(I-576) Busola.alteIntervale: 1h și 1z lângă 4h, doar unde exist�
   assert.equal(B.alteIntervale(rez({ monede: { BTC: { "1h": "miscare", "4h": "nu-stiu", "1z": "nu-stiu" } } }), "BTC_USDT_PERP"), "pe 1h mai agitată · pe 1z nimic neobișnuit");
   assert.equal(B.alteIntervale(null, "ETH"), null);
   assert.match(functie(APP, "tbCitireExtra"), /Busola\.alteIntervale\(rez,tbCheieBusola\(b\)\)/, "rândul „Busola, pe 4h” primește și 1h/1z");
+  assert.match(functie(APP, "tbCitireExtra"), /out\.busola\.ce="Busola"/, "revizia: eticheta „Busola” când nu e doar 4h"); assert.match(functie(APP, "tbCitireExtra"), /pe futures doar 4h/, "revizia: pe futures se spune");
 });
 await test("(I-575) Busola.liniaBtc (dimineața) + rândul pe cartela botului din Acasă", () => {
   const l = [{ nume: "MET", cheie: "MET_USDT_PERP", directie: "SHORT" }, { nume: "NIL", cheie: "NIL_USDT_PERP", directie: "LONG" }, { nume: "PONS", cheie: "PONS_USDT_PERP", directie: "LONG" }, { nume: "XRP", cheie: "XRP_USDT_PERP", directie: "LONG" }];
-  assert.equal(B.liniaBtc(rez(), l, ACUM), "BTC a coborât 2,3% în 24 h · MET short CU (0,7) · NIL long CONTRA (0,5) · PONS long nemăsurat · XRP long independent (0,1)", "și la nemăsurat / independent se vede sensul botului");
+  // revizia Opus: condiționat („dacă continuă”), CU / CONTRA doar la legătura DA, parțial spus ca atare, botul pe BTC de la sine
+  assert.equal(B.liniaBtc(rez(), l, ACUM, 300), "BTC a coborât 2,3% în 24 h, dacă continuă · MET short CU (0,7) · NIL long parțial cu BTC (0,5) · PONS long nemăsurat · XRP long independent (0,1)", "și la nemăsurat / independent se vede sensul botului");
   assert.equal(B.liniaBtc(rez({ btc: { h24: 0.001, la: LA } }), l.slice(0, 1), ACUM), "BTC aproape pe loc în 24 h · MET short merge cu BTC: DA (0,7)");
   assert.equal(B.liniaBtc(rez({ btc: { h24: null, la: LA } }), l.slice(0, 1), ACUM), "BTC pe 24 h necunoscut · MET short merge cu BTC: DA (0,7)");
+  assert.equal(B.liniaBtc(rez(), [{ nume: "BTC", cheie: "BTC_USDT_PERP", directie: "LONG" }], ACUM), "BTC a coborât 2,3% în 24 h, dacă continuă · BTC long CONTRA", "botul pe BTC: legătura de la sine, fără cifră");
   assert.equal(B.liniaBtc(rez({ btc: undefined }), l, ACUM), null, "rezumat fără btc ⇒ fără rând");
-  assert.equal(B.liniaBtc(rez(), [], ACUM), null);
+  assert.equal(B.liniaBtc(rez(), [], ACUM), null); assert.equal(B.liniaBtc(rez(), [{ nume: "", cheie: "", directie: "LONG" }], ACUM), null, "botul fără cheie se sare");
   assert.match(B.liniaBtc(rez({ la: ACUM - 7 * 3600000 }), l.slice(0, 1), ACUM), / · măsurat acum 7 h$/);
-  assert.match(functie(APP, "tbBusolaLinie"), /Busola\.randBtc\(/, "cartela botului din Acasă are rândul BTC");
+  const lung = B.liniaBtc(rez(), l.concat(l, l, l), ACUM, 120); assert.ok(lung.length <= 120 && / · \+\d+$/.test(lung), "plafon de lungime cu coada „+N”: " + lung);
+  assert.doesNotMatch(functie(APP, "tbBusolaLinie"), /Busola\.randBtc\(/, "revizia: NU în „Contextul” botului (citirea îl are deja)");
+  assert.match(functie(APP, "tbBtcPortofoliu"), /Busola\.liniaBtc\(/, "revizia: pe cartela portofoliului (toți boții deschiși)");
+  assert.match(APP, /\+tbBusolaPortofoliu\(boti\)\r?\n\s*\+tbBtcPortofoliu\(boti\)/, "sub rândul Busolei din portofoliu");
   assert.match(COL, /Busola\.liniaBtc\(/, "colectorul pune rândul în rezumatul de dimineață");
   assert.match(COL, /"₿ BTC și boții tăi: "/, "cu prefixul lui, lângă rândul Busolei");
 });
@@ -86,9 +100,15 @@ await test("(I-572) paza: alertă la trecerea Busolei pe „invers față de bot
   const r3 = rez({ la: LA + 2 * H4 }), d3 = P.pazaDirectie({ Busola: B, rez: r3, bot, inainte: d2.stare, acum: ACUM + 2 * H4 });
   assert.equal(d3.mesaj, null, "rămâne invers: nu se repetă (anunțat acum 4 h, pragul e > 4 h)"); assert.equal(d3.stare.anuntat, ACUM + H4);
   const r4 = rez({ la: LA + 4 * H4 }), d4 = P.pazaDirectie({ Busola: B, rez: r4, bot, inainte: d3.stare, acum: ACUM + 4 * H4 + 1 });
-  assert.ok(d4.mesaj, "după peste 4 h și tot invers ⇒ din nou (cel mult una la 4 h)");
+  assert.equal(d4.mesaj, null, "revizia Opus (spec: doar la schimbare): tot invers după 16 h ⇒ NU se repetă, episodul e anunțat o dată");
+  assert.equal(d4.stare.anuntatSemn, "inclinat-short");
   const ca = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 2 * H4, monede: { MET: { perp4h: "nu-stiu", directie4h: "inclinat-long" } } }), bot, inainte: d2.stare, acum: ACUM + 2 * H4 });
-  assert.equal(ca.stare.semn, "inclinat-long"); assert.equal(ca.stare.vazut, 1); assert.equal(ca.mesaj, null, "a trecut pe „ca botul”: tăcere, se numără de la 1");
+  assert.equal(ca.stare.semn, "inclinat-long"); assert.equal(ca.stare.vazut, 1); assert.equal(ca.mesaj, null, "a trecut pe „ca botul”: tăcere, se numără de la 1"); assert.equal(ca.stare.anuntatSemn, null);
+  // revine pe invers după 2 rezumate: episod nou ⇒ se anunță din nou, dar nu mai devreme de 4 h de la ultimul mesaj (frâna la oscilație)
+  const inapoi1 = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 3 * H4 }), bot, inainte: ca.stare, acum: ACUM + 3 * H4 }); assert.equal(inapoi1.mesaj, null);
+  const inapoi2 = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 4 * H4 }), bot, inainte: inapoi1.stare, acum: ACUM + 4 * H4 }); assert.ok(inapoi2.mesaj, "episod nou de invers, 2 rezumate la rând, la 12 h de ultimul mesaj");
+  const gaura = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 10 * H4 }), bot, inainte: d1.stare, acum: ACUM + 10 * H4 });
+  assert.equal(gaura.stare.vazut, 1, "revizia: după o gaură de peste 8 h numărătoarea pornește de la 1");
   const sh = P.pazaDirectie({ Busola: B, rez: r2, bot: Object.assign({}, bot, { directie: "SHORT" }), inainte: d1.stare, acum: ACUM + H4 });
   assert.equal(sh.mesaj, null, "botul short pe Busola short = ca botul, nimic");
   assert.equal(P.pazaDirectie({ Busola: B, rez: rez({ la: ACUM - 5 * 3600000 }), bot, inainte: d1.stare, acum: ACUM }).tine, false, "rezumat vechi (> 4,5 h): nu atinge starea");
@@ -111,6 +131,9 @@ await test("(I-572) paza: alertă la CONTRA cu legătură DA și BTC mișcat ≥
   assert.equal(P.pazaBtc({ Busola: B, rez: rez({ btc: undefined }), bot, inainte: d1.stare, acum: ACUM }).tine, false, "rezumat fără btc: nu atinge starea");
   const d3 = P.pazaBtc({ Busola: B, rez: rez({ la: LA + 2 * H4 }), bot, inainte: d2.stare, acum: ACUM + 2 * H4 });
   assert.equal(d3.mesaj, null, "nu se repetă în 4 h");
+  assert.equal(P.pazaBtc({ Busola: B, rez: rez({ la: LA + 5 * H4 }), bot, inainte: d3.stare, acum: ACUM + 5 * H4 }).mesaj, null, "revizia: episodul CONTRA e anunțat o dată, nu la fiecare 4 h");
+  const iesit = P.pazaBtc({ Busola: B, rez: rez({ btc: { h24: 0.001, la: LA + 6 * H4 }, la: LA + 6 * H4 }), bot, inainte: d3.stare, acum: ACUM + 6 * H4 }); assert.equal(iesit.stare.contra, false); assert.equal(iesit.stare.anuntatContra, false);
+  assert.match(citeste("public", "lib", "consiliu.js"), /btc: \["s-btc", "m-btc", "busola-btc"\]/, "revizia: Consilierul nu dublează paza pe BTC"); assert.match(COL, /activ\["busola-btc"\] = "atentie"/);
 });
 await test("(I-572) pazaPas: pasul colectorului trece și prin direcție și BTC; mesajul netrimis nu mută starea; mesajele în colector", async () => {
   const bot = { id: "9", baza: "MET.PERP", simbolPionex: "MET_USDT_PERP", directie: "LONG", levier: 3, pornitLa: ACUM - 86400000 };
@@ -122,6 +145,7 @@ await test("(I-572) pazaPas: pasul colectorului trece și prin direcție și BTC
   assert.deepEqual(trimise, ["busola-directie", "busola-btc"], "amândouă încercate"); assert.equal(st._busolaDir.vazut, 1, "netrimis ⇒ starea rămâne (tura următoare reîncearcă)"); assert.equal(st._busolaBtc.vazut, 1);
   merge = true; await pas(rez({ la: LA + H4 }), ACUM + H4 + 60000);
   assert.equal(trimise.length, 4); assert.equal(st._busolaDir.vazut, 2); assert.equal(st._busolaDir.anuntat, ACUM + H4 + 60000); assert.equal(st._busolaBtc.anuntat, ACUM + H4 + 60000);
+  assert.equal(st._busolaDir.anuntatSemn, "inclinat-short"); assert.equal(st._busolaBtc.anuntatContra, true);
   assert.equal(typeof MC.busolaDirectie, "function"); assert.equal(typeof MC.busolaBtc, "function");
   assert.match(COL, /VERSIUNE_COLECTOR = "v101\.9[1-9]"/, "colectorul v101.91+");
 });

@@ -6088,8 +6088,12 @@ function tbDeseneazaPortofoliu(){
     +'<div class="tbLinie"><span>Dacă toată piața scade 10%</span><b class="'+(p.soc10<0?"bad":"good")+'">'+U(p.soc10)+'</b></div>'
     +(p.lichidatiLaSoc.length?'<div class="tbLinie"><span>S-ar lichida la −10%</span><b class="bad">'+escapeHtml(p.lichidatiLaSoc.join(", "))+'</b></div>':'')
     +tbBusolaPortofoliu(boti)
+    +tbBtcPortofoliu(boti)
     +(p.acelasiPariu?'<p class="tbSub">'+TextRo.cate(Math.max(p.peParte.long,p.peParte.short),"bot","boți")+' pe aceeași parte sunt un singur pariu, nu mai multe.</p><p class="tbFac">👉 <b>Ce aș face eu:</b> N-aș mai porni unul pe partea asta, ci unul neutru sau pe partea cealaltă.</p>':'');
 }
+// v100.148 (I-575, revizia Opus: pe cartela portofoliului, nu în „Contextul” botului - citirea îl are deja): boții deschiși față de BTC
+function tbBtcPortofoliu(boti){if(typeof Busola==="undefined"||!Busola.rezumat())return "";var t=Busola.liniaBtc(Busola.rezumat(),boti.map(function(b){return {nume:String(b.baza||"").replace(/\.PERP$/,""),cheie:tbCheieBusola(b),directie:b.directie}}),Date.now(),220);
+  return t?'<div class="tbLinie"><span>BTC și boții tăi</span><b class="'+(/ CONTRA/.test(t)?"tbWarn":"tbSubVal")+'">'+escapeHtml(t)+'</b></div>':""}
 // v100.90 (I-513): Busola pe toți boții deschiși, pe un rând („AAVE mai agitată de 8 h · LIT mai calmă de 2,5 h”); fără rezumat ⇒ nimic
 function tbBusolaPortofoliu(boti){if(typeof Busola==="undefined"||!Busola.rezumat())return "";var acum=Date.now(),t=Busola.liniaBoti(boti.map(function(b){var k=tbPazaKv.boti[b.id],s=Busola.pazaStare(Busola.rezumat(),tbCheieBusola(b),acum);return {nume:String(b.baza||"").replace(/\.PERP$/,""),stare:s?s.stare:null,de:k&&s&&k.stare===s.stare?k.de:null}}),acum);return t?'<div class="tbLinie"><span>Busola, pe 4h</span><b>'+escapeHtml(t)+'</b></div>':""}
 // v97.8 (27.09, fara niciun bot pornit): in locul semaforului, pregatirea urmatorului bot - fisa de inchidere a ultimului,
@@ -6220,10 +6224,7 @@ function tbBusolaLinie(b){
   // v100.92 (I-518): cartela unică a Busolei - starea cu „de când”, intervalul ei față de gridul botului; aceeași cartelă în fișă și pe Acasă
   var h=Busola.htmlCartela(Busola.cartela(Busola.rezumat(),tbCheieBusola(b),Date.now(),{kv:tbPazaKv.boti[b.id],pret:function(x){return grPret(x,null)},prop:{jos:botiNr(b.gridJos),sus:botiNr(b.gridSus)}}),escapeHtml)
     ||'<div class="tbLinie"><span>Busola, pe 4h</span><b class="tbSubVal">'+(Busola.nuRaspunde()?"Busola nu răspunde":"aștept rezumatul…")+'</b></div>';   /* v100.91 (ideea 2): eșecul nu mai arată ca așteptarea */
-  /* v100.148 (I-575): BTC și botul tău, pe cartela botului (aceeași frază ca în citire) */
-  var rb=Busola.rezumat()?Busola.randBtc(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null;
-  if(rb)h+='<div class="tbLinie"><span>BTC și botul tău</span><b class="'+(rb.nivel==="atentie"?"tbWarn":"tbSubVal")+'">'+escapeHtml(rb.text)+'</b></div>';
-  return h;
+  return h;   /* revizia Opus: rândul BTC NU aici (citirea îl are deja) - pe cartela portofoliului (tbBtcPortofoliu) */
 }
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
@@ -6714,8 +6715,10 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var busolaRanduri=function(){[ex.busola,ex.busolaDirectie,ex.busolaVerdict,ex.busolaGrid,ex.busolaInterval,ex.busolaBtc].forEach(function(x){if(x)out.push(rd(x))})};
   /* v100.148 (I-571): fraza vocilor în capul citirii - graficul pe 4h (semaforul), direcția Busolei, felul Monte Carlo; galben doar ca avertizare */
   var vSem=typeof tbSemaforTf==="function"?tbSemaforTf(b):null,v4H=Array.isArray(vSem)?vSem.filter(function(x){return x&&x.tf==="4H"&&x.dir})[0]:null;
-  var vB=typeof Busola!=="undefined"&&Busola.rezumat()?Busola.randDirectie(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null,vM=tbMcRand(b);
-  var voci=typeof Busola!=="undefined"?Busola.concluzie({bot:b.directie,grafic:v4H?v4H.dir:null,busola:vB?vB.semn:null,mc:vM?vM.stare:null}):null;
+  /* revizia Opus: vocea Busolei doar din rezumat proaspăt (sub 4,5 h; pazaStare.vechi), altfel fraza ar judeca pe o direcție de acum 10 h */
+  var vP=typeof Busola!=="undefined"&&Busola.rezumat()?Busola.pazaStare(Busola.rezumat(),tbCheieBusola(b),Date.now()):null;
+  var vB=vP&&!vP.vechi?Busola.randDirectie(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null,vM=tbMcRand(b);
+  var voci=typeof Busola!=="undefined"?Busola.concluzie({bot:b.directie,grafic:v4H?v4H.dir:null,busola:vB?vB.semn:null,mc:vM?vM.stare:null,mcAtins:!!(vM&&/planul atins/i.test(String(vM.text||"")))}):null;
   c.randuri.forEach(function(x){
     if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}
     if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
@@ -6724,7 +6727,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   if(!ind&&ex.indicatori)out.push(rd(ex.indicatori));
   if(!fund){if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
   // v100.139: Monte Carlo pe botul tău, primul rând - cu drumul spre Simulatorul grid (botul deja ales acolo)
-  var mc=tbMcRand(b);if(mc)out.unshift('<div class="tbCitR '+mc.stare+' tbCitMc"><span class="tbCitIc" aria-hidden="true">🎰</span><div><b>'+escapeHtml(mc.ce)+':</b> <span class="tbCitTx">'+escapeHtml(mc.text)+'</span>'+(mc.nota?'<span class="tbSub tbMcNota">'+escapeHtml(mc.nota)+'</span>':'')+' <button type="button" class="tbIntBtn tbMcBtn" data-action-click="gsDeschideBot()">'+escapeHtml(mc.buton)+'</button></div></div>');
+  var mc=vM;if(mc)out.unshift('<div class="tbCitR '+mc.stare+' tbCitMc"><span class="tbCitIc" aria-hidden="true">🎰</span><div><b>'+escapeHtml(mc.ce)+':</b> <span class="tbCitTx">'+escapeHtml(mc.text)+'</span>'+(mc.nota?'<span class="tbSub tbMcNota">'+escapeHtml(mc.nota)+'</span>':'')+' <button type="button" class="tbIntBtn tbMcBtn" data-action-click="gsDeschideBot()">'+escapeHtml(mc.buton)+'</button></div></div>');
   scrie('<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+(voci?'<p class="tbCitVoci '+voci.nivel+'">'+escapeHtml(voci.text)+'</p>':'')+out.join(""))}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}
@@ -6747,7 +6750,8 @@ function tbCitireExtra(b,o){
     out.busola=e?{ce:"Busola, pe 4h",stare:e.nivel==="atentie"?"atentie":e.nivel==="info"?"bine":"info",text:e.text+(e.nota?" · "+e.nota:"")}
       :{ce:"Busola, pe 4h",stare:"info",text:rez?"Busola n-a măsurat încă moneda asta":Busola.nuRaspunde()?"Busola nu răspunde acum":"aștept rezumatul Busolei (vine o dată la 30 de minute)"}
     /* v100.148 (I-576): și 1h / 1z, unde Busola le are (cele 30 de monede ale ei; pe futures doar 4h) */
-    var ai=rez&&e?Busola.alteIntervale(rez,tbCheieBusola(b)):null;if(ai)out.busola.text+=" · "+ai;
+    var ai=rez&&e?Busola.alteIntervale(rez,tbCheieBusola(b)):null;if(ai){out.busola.ce="Busola";out.busola.text+=" · "+ai}   /* revizia: eticheta spune „Busola” când nu e doar 4h */
+    else if(rez&&rez.monede&&e){var mF=rez.monede[Busola.simbolBusola(tbCheieBusola(b))];if(mF&&mF.perp4h&&!mF["4h"]&&!mF.grid4h)out.busola.text+=" · pe futures doar 4h"}
     // v100.146 (el 08.10: „integrează mai mult Busola în ce spune piața”): ce înseamnă regimul de acum pentru un grid (Busola.randGrid - cât a
     // pierdut un grid pe episod în regimul ăsta, cu o zecimală, canalul, dovada) și intervalul măsurat de Busola pe 4h față de gridul botului
     // (Busola.randFisa; mai îngust cu peste 10% ⇒ atenție) - toate din rezumatul real al Busolei, nimic inventat
