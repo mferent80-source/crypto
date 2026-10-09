@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import "./lib/text-ro-global.mjs";   // garda RF4: TextRo înaintea oricărei probe care pomenește consiliu.js
 import * as P from "./lib/paza-boti.mjs";
 import * as MC from "./lib/mesaje-colector.mjs";
 
