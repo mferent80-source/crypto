@@ -59,7 +59,7 @@ export async function turaLatime(d, st, acum) {
   if (!st.univers || !st.univers.length || acum - la("univers") >= RITM.univers) {
     const u = await universul(d, P, acum);
     if (u.univers) { st.univers = u.univers; st.la_univers = acum; }
-    else if (u.retea && st.univers && st.univers.length) d.jurnal("latime: " + u.retea + " - țin universul vechi (" + st.univers.length + " monede)");
+    else if (u.retea && st.univers && st.univers.length) d.jurnal("latime: " + u.retea + " - țin universul vechi, " + st.univers.length + " la număr");   /* fără „N monede” lipit: garda v100.75 */
     else {
       const motiv = u.eroare || u.retea; st.univers = null; st.la_univers = 0; d.jurnal("latime: " + motiv);
       await d.trimite("/api/istoric-bot?action=latime", { la: acum, n: 0, lipsa: 0, incomplet: true, eroare: motiv, regim: { cod: "NECUNOSCUT", pctSus: null, pctJos: null }, lat: d.Latime.latimea([], P), monede: [] });
