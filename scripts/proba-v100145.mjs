@@ -65,9 +65,10 @@ await test("(2) săgeata deschisă de peste o oră e galbenă (COL.warn), cea de
   assert.match(zi, /· deschisă de cel puțin 2 zile<\/title>/, "pe 1z vârsta în zile (bara 6 s-a închis acum 2 zile și 5 h)");
   // revizia Opus (4): galbenul bate verdele - culoarea spune cea mai rea stare deschisă; inelul rămâne semnul perechii închise
   const amestec = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(0, "B", 0.53), umpl(0, "B", 0.52, { inchisa: true })], perechi: 1 } })).svg;
-  assert.match(amestec, /class="gbUmplere gbPereche"><title>1 din 2 umpleri cu perechea închisă\n[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/); assert.ok(amestec.includes('fill="' + C.warn + '" stroke="' + C.fond + '" stroke-width="1"/><circle'), "galben + inel");
-  const d = G.desen(Object.assign({}, baza, { umpleri: U })); assert.match(d.legenda, /verde = pereche închisă · gri = deschisă · galben = deschisă de peste o oră/);
-  assert.match(G.desen(Object.assign({}, baza, { simplu: true, umpleri: U })).legenda, /▲▼ umpleri: verde = pereche închisă \(\d+\) · gri = deschisă · galben = de peste o oră/);
+  /* v100.151: galbenul (cea deschisă de ore) rămâne pe lumânare; inelul nu mai e - perechea închisă are liniuța ei jos */
+  assert.match(amestec, /class="gbUmplere gbPereche"><title>1 din 2 umpleri cu perechea închisă\n[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/); assert.ok(amestec.includes('fill="' + C.warn + '" stroke="' + C.fond + '" stroke-width="1"/>'), "galben"); assert.doesNotMatch(amestec, /<circle[^>]*r="6"/, "fără inel"); assert.match(amestec, /gbPerecheJos/, "liniuța perechii");
+  const d = G.desen(Object.assign({}, baza, { umpleri: U })); assert.match(d.legenda, /gri = deschisă · galben = deschisă de peste o oră · perechile închise = liniuțele verzi de jos/);
+  assert.match(G.desen(Object.assign({}, baza, { simplu: true, umpleri: U })).legenda, /▲▼ umpleri deschise: gri · galben = de peste o oră · <i class="gbPct"[^>]*><\/i>perechi închise, jos \(\d+\)/);
   assert.equal(G.intrareBot({ bot: { id: "1", gridJos: 0.5, gridSus: 0.55 }, bare: B, acum: ACUM, W: 1000 }).acum, ACUM);
 });
 await test("(3) alegerea „24 h” e pe bot: comutată pe botul 1 nu atinge botul 2; se ține în tabloBotFereastra_v2 ca obiect {id: 1}; valoarea veche („1”) nu mai contează", () => {

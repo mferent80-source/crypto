@@ -40,7 +40,8 @@ await test("(2) umplerile: 5 cumpărări pe aceeași lumânare ⇒ UN ▲ cu „
   assert.equal((s1.match(/class="gbUmplere/g) || []).length, 1, "o singură săgeată"); assert.match(s1, />×5</); assert.match(s1, /<title>cumpărare la 0\.5310[^<]*\ncumpărare la 0\.5330/);
   const yMin = Number(s1.match(/class="gbUmplere[^"]*"><title>[^<]*<\/title><polygon points="[\d.]+,([\d.]+)/)[1]); assert.ok(yMin > 0);
   const s2 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531), umpl(200, "S", 0.539, true)], perechi: 1 } })).svg;
-  assert.equal((s2.match(/class="gbUmplere/g) || []).length, 2, "▲ și ▼ separat"); assert.doesNotMatch(s2, />×\d</); assert.equal((s2.match(/gbPereche/g) || []).length, 1);
+  /* v100.151 (el, 11.10: „marchează altfel gridurile închise, că aglomerează”): ▲ deschisă rămâne pe lumânare; ▼ care a închis perechea pleacă jos, ca liniuță */
+  assert.equal((s2.match(/class="gbUmplere/g) || []).length, 1, "▲ pe lumânare, ▼ închisă jos"); assert.equal((s2.match(/class="gbPerecheJos"/g) || []).length, 1, "liniuța perechii"); assert.doesNotMatch(s2, />×\d</); assert.equal((s2.match(/gbPereche/g) || []).length, 1);
   const s3 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531), umpl(210, "B", 0.533)], perechi: 0 } })).svg;
   assert.equal((s3.match(/class="gbUmplere/g) || []).length, 2, "lumânări diferite"); assert.doesNotMatch(s3, />×\d</);
 });

@@ -1,11 +1,12 @@
 {
-  "version": "v100.150",
-  "badge": "v100.150 · LĂȚIMEA PIEȚEI PE 150 PERP-URI, PÂNDA",
+  "version": "v100.151",
+  "badge": "v100.151 · DESIGNUL PAZNIC: TEMA, GRAFICUL, AȘEZAREA",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "temaPaznicV151": "designul panoului PAZNIC-CRYPTO pe tot Radarul (demo aprobat de el 11.10.2026): paleta, colturi 3-5 px, fara umbre, IBM Plex local; graficul cu perechile inchise jos (nu inele pe lumanari); asezarea I-589..I-599 in lib/asezare-paznic.js; inventarul nimic-pierdut pe 51 de pagini x 1920/390",
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
     "executionCalibration": "Shadow modeled slippage vs next-bar-open proxy with gap MAE/P90",

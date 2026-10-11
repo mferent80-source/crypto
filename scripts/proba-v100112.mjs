@@ -25,7 +25,8 @@ console.log("\nV100.112 · telefonul + I-551 + I-552 + I-553 · proba\n");
 // ---------------- (W) telefonul ----------------
 await test("(W) sub 600 px: rândurile „Dovada” se rup pe două coloane; cipurile Consilierului se rup pe rânduri (nu împing pagina)", () => {
   assert.match(css, /#botiRanduri \.accountRow,#tbRigla \.accountRow,#tbDovada \.accountRow\{grid-template-columns:1fr 1fr;min-width:0\}/);
-  assert.match(css, /@media\(max-width:760px\)\{#tabloubot \.tbConsCip\{white-space:normal;border-radius:10px;max-width:100%\}\}/);
+  /* v100.151: colțul vine din tema PAZNIC (≤ 5 px); ce păzește proba e ruperea pe rânduri */
+  assert.match(css, /@media\(max-width:760px\)\{#tabloubot \.tbConsCip\{white-space:normal;border-radius:[0-5]px;max-width:100%\}\}/);
 });
 
 // ---------------- I-551 ----------------

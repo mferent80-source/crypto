@@ -38,8 +38,9 @@ await test("(2) umplerile din lumânările de 1 MINUT: intrareBot le folosește 
   const i1 = G.intrareBot({ bot, brut, bare: plat5, bare1m: b1, acum: ACUM, W: 1000 }); assert.equal(i1.umpleri.umpleri.length, 2, "pe 1 min se văd cumpărarea de la 0,51 (minutul 12 coboară la 0,5045) și vânzarea ei"); assert.equal(i1.umpleriEticheta, "1 min"); assert.equal(i1.umpleri.perechi, 1);
   const scurt = G.intrareBot({ bot, brut, bare: plat5, bare1m: b1.slice(20), acum: ACUM, W: 1000 }); assert.equal(scurt.umpleriEticheta, null, "lumânările de 1 min care nu acoperă de la pornire nu se folosesc"); assert.equal(scurt.umpleri.umpleri.length, 0);
   const d = G.desen(Object.assign({}, i1, { st: {}, niv: [], alerte: [], per: "24h" })), svg = d.svg, cw = d.harta.cw;
-  const xs = [...svg.matchAll(/class="gbUmplere[^"]*"><title>[^<]*<\/title><polygon points="([\d.]+),/g)].map((m) => Number(m[1]));
-  assert.ok(xs.length >= 1, "săgeți desenate"); const bi = Math.floor((xs[0] + 4.5) / cw); assert.equal(bi, 2, "umplerea din minutul 12 cade pe a 3-a lumânare de 5 min (indicele 2), nu pe indicele ei din șirul de 1 min: " + bi);
+  /* v100.151: perechea e închisă ⇒ liniuța de jos (rect la x − 1,5), nu săgeata pe lumânare; așezarea după TIMP rămâne ce se păzește */
+  const xs = [...svg.matchAll(/class="gbPerecheJos"><title>[^<]*<\/title><rect x="([\d.]+)"/g)].map((m) => Number(m[1]));
+  assert.ok(xs.length >= 1, "liniuțe desenate"); const bi = Math.floor((xs[0] + 1.5) / cw); assert.equal(bi, 2, "umplerea din minutul 12 cade pe a 3-a lumânare de 5 min (indicele 2), nu pe indicele ei din șirul de 1 min: " + bi);
 });
 await test("(3) pe ecran lat vârsta stă lângă săgeata galbenă („×2 · 3 h” / „3 h” / „2 zile”); pe telefon doar în titlu", () => {
   const baza = { bare: B, W: 1000, st: {}, niv: [], alerte: [], per: "24h", acum: ACUM + 3 * 3600000 }, C = G.COL;

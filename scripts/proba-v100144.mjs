@@ -44,14 +44,17 @@ await test("(2) pe telefon semaforul stă în banda lui deasupra graficului: res
 await test("(3) săgețile după soartă: grupul cu pereche închisă e verde (și cu inel), cel fără e gri; amestecat ⇒ verde cu „1 din 2 perechi închise” în titlu; forma rămâne ▲/▼; legenda spune ce înseamnă culorile (și pe rândul scurt)", () => {
   const baza = { bare: B5, W: 1000, st: {}, niv: [], alerte: [], per: "24h", acum: ACUM }, C = G.COL;   // v100.145: `acum` al probei, altfel umplerile deschise ar fi „de peste o oră” (galbene)
   const s1 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true), umpl(200, "B", 0.533, true)], perechi: 2 } })).svg;
-  assert.match(s1, /class="gbUmplere gbPereche"><title>[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/); assert.ok(s1.includes('fill="' + C.good + '" stroke="' + C.fond + '" stroke-width="1"/><circle'), "verde + inel");
+  /* v100.151 (el, 11.10): grupa toată închisă NU mai stă pe lumânare (nici săgeată verde, nici inel) - liniuță verde jos, cu același titlu */
+  assert.doesNotMatch(s1, /class="gbUmplere/); assert.doesNotMatch(s1, /<circle[^>]*r="6"/); assert.match(s1, /<g class="gbPerecheJos"><title>[^<]*pereche închisă[^<]*<\/title><rect [^>]*fill="#26A96C"/);
   const s2 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(286, "S", 0.539), umpl(286, "S", 0.537)], perechi: 0 } })).svg;   // v100.145: deschise DE CURÂND (bara 286) ⇒ gri; cele vechi de ore sunt galbene
   assert.ok(s2.includes('fill="' + C.mut + '" stroke="' + C.fond + '" stroke-width="1"/>'), "gri, fără inel"); assert.doesNotMatch(s2, /gbPereche/);
   const s3 = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(286, "B", 0.531, true), umpl(286, "B", 0.533)], perechi: 1 } })).svg;   // v100.145: amestec cu deschisa DE CURÂND ⇒ verde; cu una veche de ore ar fi galben (galbenul bate verdele)
-  assert.ok(s3.includes('fill="' + C.good + '" stroke="' + C.fond + '"'), "amestecat ⇒ verde"); assert.match(s3, /<title>1 din 2 umpleri cu perechea închisă\n/);
+  /* v100.151: amestecat ⇒ săgeata celei DESCHISE (gri) pe lumânare + liniuța celei închise jos; titlul le numără tot */
+  assert.ok(s3.includes('fill="' + C.mut + '" stroke="' + C.fond + '"'), "amestecat ⇒ gri pe lumânare"); assert.match(s3, /gbPerecheJos/); assert.match(s3, /<title>1 din 2 umpleri cu perechea închisă\n/);
   const d = G.desen(Object.assign({}, baza, { umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } }));
-  assert.match(d.legenda, /▲ cumpărare · ▼ vânzare pe grilă \(deduse din lumânări\) · verde = pereche închisă · gri = deschisă · galben = deschisă de peste o oră · perechi pe grafic: 1/);   // v100.145: + galben
-  const ds = G.desen(Object.assign({}, baza, { simplu: true, umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } })); assert.match(ds.legenda, /▲▼ umpleri: verde = pereche închisă \(1\) · gri = deschisă · galben = de peste o oră/);
+  /* v100.145: + galben; v100.151: perechile închise = liniuțele de jos */
+  assert.match(d.legenda, /▲ cumpărare · ▼ vânzare pe grilă \(deduse din lumânări\) · gri = deschisă · galben = deschisă de peste o oră · perechile închise = liniuțele verzi de jos · perechi pe grafic: 1/);
+  const ds = G.desen(Object.assign({}, baza, { simplu: true, umpleri: { umpleri: [umpl(200, "B", 0.531, true)], perechi: 1 } })); assert.match(ds.legenda, /▲▼ umpleri deschise: gri · galben = de peste o oră · <i class="gbPct"[^>]*><\/i>perechi închise, jos \(1\)/);
 });
 await test("(R1) revizia Opus 🔴: soarta pe umpleri REALE (GraficBot.umpleri, bot long): cumpărarea a cărei vânzare s-a făcut e „închisă” (verde), cumpărările rămase după ultima coborâre sunt deschise (gri); la short invers; titlul numără umplerile", () => {
   // prețul coboară de la 0.55 la 0.50 (cumpără pe linii), urcă înapoi (vinde = închide), apoi coboară iar până la 0.52 (cumpărări deschise)
@@ -65,7 +68,9 @@ await test("(R1) revizia Opus 🔴: soarta pe umpleri REALE (GraficBot.umpleri, 
   assert.ok(deschise.every((u) => u.t > inchise[inchise.length - 1].t), "cele deschise sunt ultimele (după ultima vânzare)");
   const s = G.desen({ bare: b, W: 1000, st: {}, niv: [], alerte: [], per: "24h", umpleri: U, acum: ACUM }).svg, C = G.COL;
   const grupuri = s.match(/<g class="gbUmplere[^"]*"><title>[^<]*<\/title><polygon points="[^"]+" fill="#[0-9a-fA-F]{6}"/g) || [];
-  assert.ok(grupuri.some((x) => x.includes('fill="' + C.good + '"')) && grupuri.some((x) => x.includes('fill="' + C.mut + '"')), "și verzi, și gri");
+  /* v100.151: soarta se socotește la fel; cele închise nu mai stau pe lumânare (liniuța verde de jos), cele deschise rămân gri */
+  assert.ok(/<g class="gbPerecheJos"><title>/.test(s) && grupuri.some((x) => x.includes('fill="' + C.mut + '"')), "închise jos, deschise gri pe lumânare");
+  assert.ok(!grupuri.some((x) => x.includes('fill="' + C.good + '"')), "nicio săgeată verde pe lumânare");
   assert.match(s, /<title>\d+ din \d+ umpleri cu perechea închisă\n|<title>(cumpărare|vânzare)/);
   const S = G.umpleri(b.map((x) => ({ t: x.t, o: 1.1 - x.o, h: 1.1 - x.l, l: 1.1 - x.h, c: 1.1 - x.c, v: 1 })), { jos: 0.55, sus: 0.60, linii: 6, geo: false, p0: 0.55, pornit: b[0].t, dir: "short" });
   assert.ok(S.umpleri.filter((u) => u.tip === "S").some((u) => u.inchisa) && S.umpleri.filter((u) => u.tip === "B").every((u) => u.pereche), "la short vânzarea se închide prin cumpărare");
