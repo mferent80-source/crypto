@@ -78,9 +78,21 @@ await test("(5) antetele stau ca FRATE, în afara containerelor rescrise cu inne
   assert.match(AS, /if \(!ref \|\| !ref\.parentNode \|\| !cfg \|\| !cfg\.verb\) \{ if \(el\) \{ el\.hidden = true;/);
   // Cloud / Settings / Health: fâșia de preț + filele se PLIAZĂ (buton, alegerea ținută minte), nu dispar; bara cu simbolul nu e atinsă
   assert.match(AS, /var FARA_MONEDA = \{ cloud: 1, settings: 1, health: 1 \};/); assert.match(AS, /pagHealth, pliazaFasia\]/, "pliazaFasia în tură");
-  assert.match(CSS, /body\.pzFasiaPliata \.heroStrip,body\.pzFasiaPliata \.tabs\{display:none\}/); assert.doesNotMatch(CSS, /pzFasiaPliata [^{]*\.toolbar/, "bara cu simbolul nu se pliază");
+  // revizia a doua I-D: pliatul îl face CSS-ul (:has pe pagina activă), nu tura de 1,5 s ⇒ fără salt la schimbarea paginii
+  assert.match(CSS, /body:not\(\.pzFasiaDeschisa\):has\(main>#cloud\.on,main>#settings\.on,main>#health\.on\) main :is\(\.heroStrip,\.tabs\)\{display:none\}/);
+  assert.match(CSS, /body:has\(main>#cloud\.on,main>#settings\.on,main>#health\.on\) \.pzFasiaBtn\{display:block\}/);
+  assert.doesNotMatch(CSS, /pzFasia[^{]*\.toolbar/, "bara cu simbolul nu se pliază"); assert.doesNotMatch(AS, /pzFasiaPliata/, "JS-ul nu mai ascunde nimic");
   assert.match(AS, /localStorage\.setItem\("pzFasiaDeschisa"/);
   assert.doesNotMatch(AS, /innerHTML\s*=\s*[^;]*\+\s*(?!esc\()[a-zA-Z_.]+\.textContent/, "text din pagină în HTML fără esc()");
+});
+await test("(7) revizia a doua: Jurnalul pe formatul REAL („+0,00 USDT”), Sugestii doar din cartela „Pe ce aș porni un bot”, vârsta datelor redesenată de pagină, verbele lungi se rup", () => {
+  assert.equal(A.valJurnal("+0,00 USDT"), 0); assert.equal(A.valJurnal("−5906,42 USDT"), -5906.42); assert.equal(A.valJurnal("+12,50 USDT"), 12.5); assert.equal(A.valJurnal("—"), null);
+  assert.match(AS, /n = valJurnal\(v && v\.textContent\)/); assert.match(AS, /n === 0 \? "CRYPTO: PE ZERO"/);
+  assert.match(AS, /\/Pe ce aș porni un bot\/\.test\(tx\("h4", c\)\)/, "Sugestii: cartela după titlu");
+  assert.doesNotMatch(AS, /querySelector\("#sugPagina \.sugCartela \.sugLista li"\)/, "prima idee din ORICE cartelă");
+  assert.match(AS, /typeof renderFreshness === "function"\) renderFreshness\(\)/, "vârsta datelor redesenată cu funcția paginii (textul îngheța pe 0s)");
+  assert.match(CSS, /\.pzAntet \.pzVerb\{white-space:normal;overflow-wrap:anywhere;max-width:62%\}/);
+  for (const v of ["\"VERIFICĂ\"", "\"NU MERG: \""]) assert.ok(!AS.includes(v), "verb al stratului: " + v);
 });
 await test("(6) versiunea: aceeași în BUILD_INFO, index, sw, package.json, versiune.js (≥ v100.152)", () => {
   const V = JSON.parse(citeste("BUILD_INFO.json")).version, m = V.match(/^v100\.(\d+)$/); assert.ok(m && +m[1] >= 152, V);
