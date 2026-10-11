@@ -22,6 +22,8 @@ function sugUrm(u) { return !u || !u.n ? "Urmărirea înainte începe: semnalele
 // boti = boții lui activi din /api/bot-orders, { s: "ADA", dir: "long" } (I-586: primii în tabel, CU / CONTRA direcției monedei)
 function sugZec(x) { return x == null || !isFinite(x) ? "—" : (x < 0 ? "−" : "") + Math.abs(x).toFixed(1).replace(".", ","); }
 function sugPandaNr(x) { return x == null || !isFinite(x) ? "—" : String(Math.round(x)); }   /* nu sugPc: aceea e pentru procente (× 100) */
+// prețul își păstrează cifrele semnificative (poza 11.10: „US 0,0”, „ADA 0,2” nu spuneau nimic): ≥ 100 o zecimală, ≥ 1 două, sub 1 patru cifre semnificative
+function sugPandaPret(x) { if (x == null || !isFinite(x)) return "—"; var z = x >= 100 ? 1 : x >= 1 ? 2 : Math.max(4, 3 - Math.floor(Math.log10(Math.abs(x) || 1))); return x.toFixed(z).replace(/(\.\d*?[1-9])0+$|\.0+$/, "$1").replace(".", ","); }
 function sugPandaHtml(l, boti, acum) {
   var t = typeof Latime !== "undefined" ? Latime.textCitire(l, null, acum) : null, a = l && l.acum;
   var min = a ? Math.max(0, Math.round((acum - a.la) / 60000)) : null;
@@ -42,7 +44,7 @@ function sugPandaHtml(l, boti, acum) {
     + Latime.filtreaza(m, f, simb).map(function (x) {
       var s = String(x.sym).replace(/USDT$/, ""), db = dirBot(s);
       var cu = !db ? null : db === "neutru" ? "neutru" : x.dir === "neclara" ? "—" : Latime.esteBotContra(db, x.dir === "SUS" ? "LARG-SUS" : "LARG-JOS") ? "CONTRA" : "CU";   /* moneda SUS + bot short = CONTRA; moneda JOS + bot long = CONTRA */
-      return '<tr class="sugPandaRand' + (db ? ' bot' : '') + '"><td><b>' + sugEsc(s) + '</b> <span class="tbSub">' + sugEsc(sugZec(x.pret)) + '</span></td>'
+      return '<tr class="sugPandaRand' + (db ? ' bot' : '') + '"><td><b>' + sugEsc(s) + '</b> <span class="tbSub">' + sugEsc(sugPandaPret(x.pret)) + '</span></td>'
         + '<td class="' + (x.dir === "SUS" ? "good" : x.dir === "JOS" ? "bad" : "neutral") + '">' + sugEsc(x.dir === "neclara" ? "neclară" : x.dir) + (x.dir !== "neclara" && x.zileDir != null ? ' <span class="tbSub">de ' + sugCate(x.zileDir, "zi", "zile") + '</span>' : '') + '</td>'
         + '<td class="sugPandaCel' + prag(x.volPctl, P.volPctl) + '">' + sugPandaNr(x.volPctl) + '</td><td class="sugPandaCel' + prag(x.extPctl, P.extPctl) + '">' + sugPandaNr(x.extPctl) + '</td><td class="sugPandaCel' + prag(x.adrUsed, P.adrConsumat) + '">' + (x.adrUsed == null ? "—" : sugZec(x.adrUsed) + "%") + '</td>'
         + '<td class="sugPandaCel' + (prag(x.fundPctl, P.fundPctlSus) || prag(x.fundPctl, P.fundPctlJos, true)) + '">' + sugPandaNr(x.fundPctl) + '</td><td class="sugPandaCel' + prag(x.oiPctl, P.oiPctl) + '">' + sugPandaNr(x.oiPctl) + (x.oiChg != null ? ' <span class="tbSub">' + sugZec(x.oiChg) + '%</span>' : '') + '</td>'

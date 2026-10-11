@@ -222,6 +222,11 @@ await test("(D) desfăcut: filtrele cu numere, tabelul cu 150 de rânduri, boți
   assert.match(h, /−2,9/); assert.match(h, /28,4%/); assert.match(h, /class="sugPandaCel prag"[^>]*>97[ <]/); assert.match(h, /SUS <span class="tbSub">de 1 zi<\/span>/); assert.match(h, />CU</);
   const hS = vm.runInContext("sugHtml(" + JSON.stringify(dSug({ boti: [{ s: "C1", dir: "short" }] })) + "," + ACUM + ")", S); assert.match(hS, />CONTRA</);
 });
+await test("(D) prețul din pândă își păstrează cifrele semnificative (poza: „US 0,0”, „ADA 0,2” erau goale): 83023,7 · 1,23 · 0,2475 · 0,0265 · 0,000012", () => {
+  const f = (x) => vm.runInContext("sugPandaPret(" + x + ")", S);
+  assert.equal(f(83023.7), "83023,7"); assert.equal(f(1.23456), "1,23"); assert.equal(f(0.2475), "0,2475"); assert.equal(f(0.026502), "0,0265"); assert.equal(f(0.0000123), "0,0000123"); assert.equal(f(null), "—");
+  const h = vm.runInContext("sugStare.panda.desfacut=true;sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S); assert.match(h, /<b>C0<\/b> <span class="tbSub">1,23<\/span>/); vm.runInContext("sugStare.panda.desfacut=false", S);
+});
 await test("(D) filtrul „contra” lasă 20; „boti” lasă 1; starea filtrului rămâne după redesenare", () => {
   vm.runInContext("sugPanda('contra')", S); let h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S); assert.equal((h.match(/<tr class="sugPandaRand/g) || []).length, 20);
   vm.runInContext("sugPanda('boti')", S); h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S); assert.equal((h.match(/<tr class="sugPandaRand/g) || []).length, 1);
