@@ -64,17 +64,18 @@ await test("(3) etichetele: lichidarea și stopul planului pe aceeași linie (su
   assert.match(v4, /<span class="gbVN">lichidare<\/span><b class="gbVP">0\.5523<\/b><span class="gbVD">[^<]*<\/span><span class="gbVS">7 zile: 83%<\/span>/); assert.match(v4, /<span class="gbVN">stopul planului<\/span><b class="gbVP">0\.5528<\/b>/);
   const dese = [0.540, 0.542, 0.544, 0.546, 0.548, 0.550, 0.552].map((p, i) => niv(p, "n" + i, "nivel " + i, "n" + i, "#0f0", "dash"));   // la ~13 px una de alta: nu se unesc (sub 8), dar se împing (sub 20)
   const s2 = G.desen(Object.assign({}, baza, { niv: dese })).svg;
-  const v2 = G.desen(Object.assign({}, baza, { niv: dese })).valori, p2 = [...v2.matchAll(/<b class="gbVP">([\d.]+)<\/b>/g)].map((m) => +m[1]);
+  const v2 = G.desen(Object.assign({}, baza, { niv: dese })).valori, p2 = [...v2.matchAll(/<span class="gbVN">nivel \d<\/span><b class="gbVP">([\d.]+)<\/b>/g)].map((m) => +m[1]);
   assert.equal(p2.length, 7, "niveluri dese ⇒ 7 rânduri în fâșie, niciunul pierdut (v100.161)"); assert.deepEqual(p2, p2.slice().sort((a, b) => b - a)); assert.equal((s2.match(/class="gbNiv"/g) || []).length, 7, "liniile toate pe grafic");
   const rare = [niv(0.505, "a", "nivel a", "a", "#0f0", "dash"), niv(0.545, "b", "nivel b", "b", "#0f0", "dash")];
-  assert.equal((G.desen(Object.assign({}, baza, { niv: rare })).svg.match(/class="gbLeg"/g) || []).length, 0, "niveluri rare ⇒ fără liniuțe");
+  // revizia a patra (I3): fără etichete pe grafic, „gbLeg” nu se mai poate desena - garda nouă: niciun nume de nivel scris pe grafic, toate în fâșie
+  const dR = G.desen(Object.assign({}, baza, { niv: rare })); assert.doesNotMatch(dR.svg, />nivel [ab]/, "pe grafic nu se scrie niciun nivel"); assert.match(dR.valori, /nivel a/); assert.match(dR.valori, /nivel b/);
 });
 await test("(4) șansele măsurate: nu mai stau peste lumânări (niciun text gbSansa cu text-anchor=end în cadru), ci în eticheta din dreapta a liniei, după preț; titlul lung rămâne", () => {
   const n = [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine", { sansa: "24 h: 67%", sansaScurt: "67%", sansaLung: "Atinge marginea de sus (0.55) în 24 h: 67% · 76 din 113 situații" })];
   const dm = G.desen({ bare: B5, W: 1000, st: {}, niv: n, alerte: [], per: "24h" }), s = dm.svg;
-  assert.doesNotMatch(s, /<text class="gbSansa" x="[\d.]+" y="[\d.]+" text-anchor="end"/, "nu peste lumânări");
+  assert.doesNotMatch(s, /gbSansa|24 h: 67%/, "șansa nu se mai scrie deloc pe grafic (revizia a patra, I3: garda veche nu mai putea pica)");
   assert.match(dm.valori, /<li title="Atinge marginea de sus \(0\.55\) în 24 h: 67%[^"]*">.*<span class="gbVN">grid sus<\/span><b class="gbVP">0\.5500<\/b>.*<span class="gbVS">24 h: 67%<\/span>/, "v100.161: și pe ecranul mare în fâșia de sub grafic, titlul lung pe rând");
-  const t = G.desen({ bare: B5, W: 400, ingust: true, st: {}, niv: n, alerte: [], per: "24h" }).valori; assert.match(t, /<li title="Atinge marginea de sus \(0\.55\) în 24 h: 67%[^"]*">.*<span class="gbVN">grid sus<\/span><b class="gbVP">0\.5500<\/b>.*<span class="gbVS">24 h: 67%<\/span>/, "pe telefon (v100.157): șansa în fâșia de sub grafic, titlul lung pe rând");
+  const t = G.desen({ bare: B5, W: 400, ingust: true, st: {}, niv: n, alerte: [], per: "24h" }).valori; assert.match(t, /<li title="Atinge marginea de sus \(0\.55\) în 24 h: 67%[^"]*">.*<span class="gbVN">grid sus<\/span><b class="gbVP">0\.5500<\/b>.*<span class="gbVS">67%<\/span>/, "pe telefon (v100.157): șansa în fâșia de sub grafic, titlul lung pe rând");
 });
 await test("(5) marginea din dreapta crește cu cea mai lungă etichetă (nume + preț + șansă), cel mult un sfert din lățime; fără șanse rămâne 176", () => {
   const d0 = G.desen({ bare: B5, W: 1000, st: {}, niv: [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine")], alerte: [], per: "24h" });

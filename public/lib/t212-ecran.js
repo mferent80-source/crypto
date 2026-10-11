@@ -715,7 +715,7 @@ function t212GraficeDeseneaza() {
     if (!d) { el.innerHTML = '<p class="tbSub">Graficul apare după ce vin prețurile zilnice (cel puțin 10 zile).</p>'; return; }
     var faraProfil = !t212ProfilPt(p.ticker);
     el.innerHTML = '<div class="tbInterval tbGrInd" role="group" aria-label="Indicatorii graficului ' + escapeHtml(p.simbol) + '">' + T212_IND.map(function (x) { return '<button type="button" class="tbIntBtn" aria-pressed="' + !!s[x[0]] + '" title="' + escapeHtml(x[2]) + '" data-action-click="t212ComutaInd(\'' + x[0] + '\')">' + escapeHtml(x[1]) + '</button>'; }).join("") + '</div>'
-      + '<div class="gbZona">' + d.svg + '</div>'
+      + '<div class="gbZona">' + d.svg + '</div>' + (d.valori || '')   /* v100.162 (revizia Opus C1): ținta, prețul mediu, stopurile - în fâșia de sub grafic */
       + (faraProfil && (s.zi || s.zi5) ? '<p class="tbSub">Ziua și cele 5 zile obișnuite apar când profilul vine de la colector (îl face noaptea).</p>' : '')
       + '<div class="gbLeg">' + d.legenda + '</div>'
       + '<div class="t212TfCit">' + t212TfCitHtml(d.semafor) + '</div>' + t212RiscHtml(p);   /* v100.108: citirea pe TF-uri, sub grafic; v100.113: riscul tău */

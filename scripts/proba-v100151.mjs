@@ -20,7 +20,7 @@ console.log("\nV100.151 · designul PAZNIC: tema, fonturile locale, graficul, a�
 const VECHI = ["#55d89b", "#ff6b78", "#f5c451", "#4fd1c5", "#69a7ff", "#90a0b6", "#f5f7fb", "#071018", "#0a1520", "#0d1722", "#e9eef6", "#6d7d93", "#1fa99c", "#d9772f", "#8b74f0", "rgba(85,216,155,", "rgba(255,107,120,", "rgba(245,196,81,", "rgba(79,209,197,", "rgba(105,167,255,"];
 
 await test("(1) tema: jetoanele PAZNIC, nicio culoare veche în foaie, colțuri ≤ 5 px (cercurile rămân 50%), fără umbre cu blur, fără sticlă", () => {
-  assert.match(CSS, /--bg:#0E141A;--panel:#141C24;[^}]*--good:#26A96C;--bad:#E0524A;--warn:#E9B949/);
+  assert.match(CSS, /--bg:#0E141A;--panel:#141C24;[^}]*--good:#26A96C;--bad:#E5615A;--warn:#E9B949/);   /* v100.162: roșul de TEXT #E5615A (contrast ≥4,5 pe fondurile temei; #E0524A avea 4,48 / 4,10) - lumânările rămân #E0524A */
   for (const c of VECHI) assert.ok(!CSS.toLowerCase().includes(c.toLowerCase()), "culoare veche în app.css: " + c);
   const mari = (CSS.match(/border-radius\s*:\s*[^;}]+/g) || []).filter((v) => !/%|var\(|inherit/.test(v)).filter((v) => (v.match(/(\d+(?:\.\d+)?)px/g) || []).some((x) => parseFloat(x) > 5));
   assert.deepEqual(mari, [], "colțuri mari rămase");

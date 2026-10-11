@@ -102,5 +102,29 @@ await test("(9) v100.161: auditul celor 18 pagini - fâșia „Selected market�
   assert.ok(CSS.trim().split("\n").pop().startsWith("@media (max-width:640px){.sugPandaTab thead"), "regula pandei rămâne ultima");
 });
 
+await test("(10) v100.162: contrastul - roșul de TEXT trece de 4,5 pe fondurile temei; insigna cu număr (alb pe roșu) trece de 4,5; niciun text rămas în roșul vechi", () => {
+  const L = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const k = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const rosu = (CSS.match(/--bad:(#[0-9A-F]{6})/) || [])[1]; assert.equal(rosu, "#E5615A");
+  for (const f of ["#0E141A", "#141C24", "#1A242E"]) assert.ok(k(rosu, f) >= 4.5, rosu + " pe " + f + ": " + k(rosu, f).toFixed(2));
+  const ins = (CSS.match(/\.badgeNum\{[^}]*background:(#[0-9A-F]{6})/) || [])[1]; assert.ok(ins && k("#FFFFFF", ins) >= 4.5, "insigna: " + ins);
+  assert.doesNotMatch(CSS, /(^|[^-])color:#E0524A/m, "text în roșul vechi");
+  assert.ok(CSS.includes("#scan .scTp.a{color:#6E9DD0;"), "eticheta „ACȚIUNE” din Scanner (4,25 → 5,08)");
+  for (const [c, al] of [[[38, 169, 108], 0.62], [[224, 82, 74], 0.62]]) { const f = [20, 28, 36], b = c.map((x, i) => Math.round(al * x + (1 - al) * f[i])); const h = "#" + b.map((x) => x.toString(16).padStart(2, "0")).join("").toUpperCase(); assert.ok(k("#E6EDF3", h) >= 4.5, "harta de pe Acasă: alb pe " + h + " = " + k("#E6EDF3", h).toFixed(2)); }
+  assert.match(citeste("public", "lib", "acasa-ecran.js"), /\(0\.15 \+ a \* 0\.47\)/, "plăcile hărții: intensitatea cel mult 0,62");
+});
+
+await test("(11) revizia a patra: ORICE pagină care desenează graficul pune și fâșia valorilor (C1: T212 / Salt nu o puneau - ținta, prețul mediu, stopurile dispăruseră); „POC” în dreapta, „🧪 stop de probă” după eticheta prețului; rândul „acum” în fâșie", () => {
+  const surse = fs.readdirSync(path.join(RAD, "public", "lib")).map((f) => ["lib/" + f, citeste("public", "lib", f)]).concat([["app.js", citeste("public", "app.js")]]);
+  const chemari = surse.filter(([, s]) => /GraficBot\.desen\(/.test(s));
+  assert.ok(chemari.length >= 2, "cine desenează: " + chemari.map((x) => x[0]));
+  for (const [f, s] of chemari) assert.match(s, /d\.valori\s*\|\|\s*''/, f + " desenează graficul dar nu pune fâșia valorilor");
+  const v = G.desen(Object.assign({}, baza, { W: 1400 })).valori;
+  assert.match(v, /<span class="gbVN">acum<\/span><b class="gbVP">2\.0300<\/b><span class="gbVD"><\/span>/, "rândul „acum”, fără procent față de el însuși");
+  const g = citeste("public", "lib", "grafic-bot.js");
+  assert.match(g, /if \(cmp && va\.poc > lo && va\.poc < hi\) VAL\.push\(\{ t: "POC "/, "POC în fâșie (pe grafic doar linia lui: în stânga călca prețul, în dreapta „zi obișnuită”)");
+  assert.match(g, /Math\.abs\(Y\(pr0\) - Y\(pAcum\)\) < 24 \? fmtP\(pAcum\)\.length \* 7 \+ 17 : 8/, "🧪 după eticheta prețului");
+});
+
 console.log(`\n${teste - picate}/${teste} verzi`);
 if (picate) process.exit(1);

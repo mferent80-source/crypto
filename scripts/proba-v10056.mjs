@@ -51,10 +51,10 @@ await test("desen: banda de 5 zile doar cu comutatorul, etichetele actiunii (20 
     consLinii: { stopAcum: 96, stopPlan: 97, et: "stopul propus", etLung: "stopul propus (din profilul acțiunii)" } };
   const cu = GB.desen({ ...baza, st: { zi: true, zi5: true, val: true } }), fara = GB.desen({ ...baza, st: { zi: true, zi5: false, val: true } });
   assert.match(cu.svg, /class="gbZi5"/); assert.ok(!/class="gbZi5"/.test(fara.svg));
-  assert.match(cu.svg, /POC 20 z/); assert.match(cu.legenda, /20 de zile de bursă/); assert.match(cu.svg + cu.valori, /stopul propus/); assert.match(cu.legenda, /5 zile de bursă obișnuite/);
+  assert.match(cu.valori, /POC 20 z/); assert.match(cu.legenda, /20 de zile de bursă/); assert.match(cu.svg + cu.valori, /stopul propus/); assert.match(cu.legenda, /5 zile de bursă obișnuite/);
   const bot = GB.desen({ bare, W: 800, niv: [], st: { zi: true, val: true }, zi: GB.ziObisnuita(100, { z24: { jos: q(0.02), sus: q(0.02) }, zile: 185 }),
     val: { zona: VA.zona(bareZ(30, true), {}), pivoti: [] }, consLinii: { stopAcum: 90, stopPlan: 95 } });
-  assert.match(bot.svg, />zi obișnuită</); assert.match(bot.svg, /POC 7 z/); assert.match(bot.legenda, /zona de valoare, 7 zile/); assert.match(bot.legenda, /stopul planului \(Consilierul\)/);
+  assert.match(bot.svg, />zi obișnuită</); assert.match(bot.valori, /POC 7 z/); assert.match(bot.legenda, /zona de valoare, 7 zile/); assert.match(bot.legenda, /stopul planului \(Consilierul\)/);
 });
 
 // ---- pasul 2: graficul in detaliul pozitiei T212 ----
