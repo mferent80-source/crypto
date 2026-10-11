@@ -4,7 +4,9 @@
 // REGIM_LARG :2708, regimPietei :2710, verdictPiata :2718 - ca cifrele să bată cu PAZNIC în comparația de 2-3 zile (I-587).
 // Pragurile sunt IPOTEZE (trader.md): cine le mută, le mută cu mâna și le validează pe date de după.
 var Latime = (function () {
-  var PRAGURI = { volPctl: 90, extPctl: 90, adrConsumat: 90, fundPctlSus: 75, fundPctlJos: 25, oiPctl: 95, emaRapid: 21, emaLent: 55, atrLen: 14, pctlBare: 564, minZileListate: 10, nSimboluri: 150, paralel: 5, REGIM_LARG: 65, bugetEpuizatPct: 60, volExtremPct: 40, vechiMin: 45 };
+  // tendinta / tsmomBare = strategia de direcție din PRODUCȚIA PAZNIC (decizie.mjs:289, :321): momentum pe 504 bare de 4h = 84 de zile;
+  // „ema” rămâne opțiune, ca acolo. bare4h = câte bare se aduc (PAZNIC aduce 633; cu 1000 „de câte zile” vede ~82 de zile în urmă)
+  var PRAGURI = { volPctl: 90, extPctl: 90, adrConsumat: 90, fundPctlSus: 75, fundPctlJos: 25, oiPctl: 95, emaRapid: 21, emaLent: 55, atrLen: 14, pctlBare: 564, minZileListate: 10, nSimboluri: 150, paralel: 5, REGIM_LARG: 65, bugetEpuizatPct: 60, volExtremPct: 40, vechiMin: 45, tendinta: "tsmom", tsmomBare: 504, bare4h: 1000 };
   var fin = function (x) { return typeof x === "number" && isFinite(x); };
   // rangul median: sub 30 de valori nu e percentilă, e zgomot (I-401)
   function percentila(sir, v) {
@@ -20,18 +22,34 @@ var Latime = (function () {
     for (var i = 0; i < tr.length; i++) { s += tr[i]; if (i >= len) s -= tr[i - len]; out.push(i >= len - 1 ? s / len : NaN); }
     return out;
   }
-  // decizie.mjs:591-595 - SUS cere și prețul peste EMA rapidă (nu doar EMA21 > EMA55), JOS invers; altfel neclară
+  // decizie.mjs:539-595 (directiaDeFond): tsmom = semnul randamentului pe `tsmomBare` bare (neclară când nu ajung barele sau randamentul e 0);
+  // ema = SUS cere și prețul peste EMA rapidă (nu doar EMA21 > EMA55), JOS invers; altfel neclară. EMA-urile se dau mereu (extensia le cere)
   function directia(inchideri, P) {
-    P = P || PRAGURI; if (!inchideri || inchideri.length < 100) return { dir: "neclara", eR: null, eL: null };
-    var eR = ema(inchideri, P.emaRapid), eL = ema(inchideri, P.emaLent), acum = inchideri[inchideri.length - 1], r = eR[eR.length - 1], l = eL[eL.length - 1];
+    P = P || PRAGURI; var n = inchideri ? inchideri.length : 0;
+    if (n < 100) return { dir: "neclara", eR: null, eL: null };
+    var eR = ema(inchideri, P.emaRapid), eL = ema(inchideri, P.emaLent), acum = inchideri[n - 1];
+    if ((P.tendinta || "tsmom") === "tsmom") {
+      var lb = P.tsmomBare; if (n <= lb) return { dir: "neclara", eR: eR, eL: eL };
+      var rd = acum / inchideri[n - 1 - lb] - 1;
+      return { dir: rd > 0 ? "SUS" : rd < 0 ? "JOS" : "neclara", eR: eR, eL: eL };
+    }
+    var r = eR[n - 1], l = eL[n - 1];
     return { dir: r > l && acum > r ? "SUS" : r < l && acum < r ? "JOS" : "neclara", eR: eR, eL: eL };
   }
-  // I-585: câte bare de 4h la rând ține semnul EMA21 − EMA55 (prima bară nu se numără: EMA-urile pornesc egale)
+  // I-585: câte bare de 4h la rând ține semnul direcției (tsmom: semnul randamentului pe 504 bare; ema: semnul EMA21 − EMA55), ÷ 6 = zile
   function zileDir(inchideri, P) {
-    P = P || PRAGURI; if (!inchideri || inchideri.length < 2) return 0;
-    var eR = ema(inchideri, P.emaRapid), eL = ema(inchideri, P.emaLent), n = inchideri.length, semn = Math.sign(eR[n - 1] - eL[n - 1]), c = 0;
-    if (!semn) return 0;
-    for (var i = n - 1; i >= 1; i--) { if (Math.sign(eR[i] - eL[i]) !== semn) break; c++; }
+    P = P || PRAGURI; var n = inchideri ? inchideri.length : 0, c = 0, semn, i;
+    if ((P.tendinta || "tsmom") === "tsmom") {
+      var lb = P.tsmomBare; if (n <= lb) return 0;
+      var s = function (k) { return Math.sign(inchideri[k] / inchideri[k - lb] - 1); };
+      semn = s(n - 1); if (!semn) return 0;
+      for (i = n - 1; i > lb; i--) { if (s(i) !== semn) break; c++; }
+      return Math.floor(c / 6);
+    }
+    if (n < 2) return 0;
+    var eR = ema(inchideri, P.emaRapid), eL = ema(inchideri, P.emaLent);
+    semn = Math.sign(eR[n - 1] - eL[n - 1]); if (!semn) return 0;
+    for (i = n - 1; i >= 1; i--) { if (Math.sign(eR[i] - eL[i]) !== semn) break; c++; }
     return Math.floor(c / 6);
   }
   // permisiune() :598-660, doar partea de MĂSURARE (fără permisiune, fără fișă - măsurate, nu selectează nimic)

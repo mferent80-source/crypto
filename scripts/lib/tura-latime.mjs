@@ -57,7 +57,7 @@ export async function turaLatime(d, st, acum) {
   const prem = await d.binance(FAPI + "/fapi/v1/premiumIndex"), fr = new Map(Array.isArray(prem) ? prem.map((x) => [x.symbol, +x.lastFundingRate]) : []);
   const randuri = await inParalel(st.univers, P.paralel, async ({ sym }) => {
     if (refaSerii || !serii.has(sym)) await seriile(d, sym);
-    const b4 = await d.binance(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=${P.pctlBare}`), b1d = await d.binance(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=30`);
+    const b4 = await d.binance(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=4h&limit=${P.bare4h}`), b1d = await d.binance(`${FAPI}/fapi/v1/klines?symbol=${sym}&interval=1d&limit=30`);
     if (!Array.isArray(b4) || !Array.isArray(b1d)) return null;
     const s = serii.get(sym) || {};
     return d.Latime.masuraMoneda({ sym, pret: +b4[b4.length - 1][4], b4: b4.map(bara), b1d: b1d.map(bara), frAcum: fr.has(sym) ? fr.get(sym) : null, fundIst: s.fundIst, oiSerie: s.oiSerie, mari: s.mari, mici: s.mici, taker: s.taker }, P);

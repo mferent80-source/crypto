@@ -29,8 +29,8 @@ const intrari = (o) => Object.assign({
   mari: serie(200, () => ({ longAccount: 0.62 })), mici: serie(200, () => ({ longAccount: 0.45 })), taker: serie(500, (i) => ({ buySellRatio: 0.9 + (i % 5) * 0.05 })),
 }, o || {});
 
-await test("PRAGURI = cele din PAZNIC (11.10.2026)", () => {
-  assert.deepEqual([P.volPctl, P.extPctl, P.adrConsumat, P.fundPctlSus, P.fundPctlJos, P.oiPctl, P.emaRapid, P.emaLent, P.atrLen, P.pctlBare, P.minZileListate, P.nSimboluri, P.paralel, P.REGIM_LARG], [90, 90, 90, 75, 25, 95, 21, 55, 14, 564, 10, 150, 5, 65]);
+await test("PRAGURI = cele din PAZNIC (11.10.2026), inclusiv strategia de direcție din producție: tsmom pe 504 bare", () => {
+  assert.deepEqual([P.volPctl, P.extPctl, P.adrConsumat, P.fundPctlSus, P.fundPctlJos, P.oiPctl, P.emaRapid, P.emaLent, P.atrLen, P.pctlBare, P.minZileListate, P.nSimboluri, P.paralel, P.REGIM_LARG, P.tendinta, P.tsmomBare, P.bare4h], [90, 90, 90, 75, 25, 95, 21, 55, 14, 564, 10, 150, 5, 65, "tsmom", 504, 1000]);
 });
 await test("percentila: rangul median, null sub 30 de valori", () => {
   assert.equal(L.percentila(serie(100, (i) => i), 90), 91, "rang median: 90 mai mici + jumătate din cea egală = 90,5 ⇒ 91 (ca în PAZNIC)"); assert.equal(L.percentila(serie(100, (i) => i), 89.5), 90); assert.equal(L.percentila(serie(100, (i) => i), 200), 100);
@@ -40,17 +40,35 @@ await test("atrSerie: media SIMPLĂ a TR pe len bare (decizie.mjs:405), NaN îna
   const b = bare4(20, () => 100), a = L.atrSerie(b, 14);
   assert.equal(a.length, 20); assert.ok(Number.isNaN(a[12])); assert.ok(Math.abs(a[13] - 2) < 1e-9, "TR = h − l = 2 la preț constant"); assert.ok(Math.abs(a[19] - 2) < 1e-9);
 });
-await test("directia: SUS cere EMA21 > EMA55 ȘI prețul peste EMA21; JOS invers; altfel neclară; sub 100 bare neclară", () => {
+await test("directia (tsmom, ca în producția PAZNIC): semnul randamentului pe 504 bare; sub 505 bare neclară", () => {
   assert.equal(L.directia(serie(600, (i) => 100 + i), P).dir, "SUS");
   assert.equal(L.directia(serie(600, (i) => 700 - i), P).dir, "JOS");
-  const urcaApoiCade = serie(600, (i) => i < 590 ? 100 + i : 690 - (i - 590) * 3);   // EMA21 încă peste EMA55, prețul sub EMA21
-  assert.equal(L.directia(urcaApoiCade, P).dir, "neclara");
-  assert.equal(L.directia(serie(99, (i) => 100 + i), P).dir, "neclara");
+  const urcaApoiCade = serie(600, (i) => i < 590 ? 100 + i : 690 - (i - 590) * 3);   // pe 84 de zile tot sus e, chiar dacă ultimele 10 bare cad
+  assert.equal(L.directia(urcaApoiCade, P).dir, "SUS");
+  assert.equal(L.directia(serie(505, (i) => 100 + i), P).dir, "SUS", "505 bare ajung (lungime > 504)");
+  assert.equal(L.directia(serie(504, (i) => 100 + i), P).dir, "neclara");
+  assert.equal(L.directia(serie(600, () => 100), P).dir, "neclara", "randament 0 ⇒ neclară");
 });
-await test("zileDir: bare consecutive cu același semn EMA21−EMA55, împărțite la 6", () => {
-  assert.equal(L.zileDir(serie(600, (i) => 100 + i), P), 99);   // tot istoricul (599 bare utile ÷ 6)
+await test("directia (ema, opțiunea din PAZNIC): SUS cere EMA21 > EMA55 ȘI prețul peste EMA21; JOS invers; altfel neclară; sub 100 bare neclară", () => {
+  const Pe = Object.assign({}, P, { tendinta: "ema" });
+  assert.equal(L.directia(serie(600, (i) => 100 + i), Pe).dir, "SUS");
+  assert.equal(L.directia(serie(600, (i) => 700 - i), Pe).dir, "JOS");
+  const urcaApoiCade = serie(600, (i) => i < 590 ? 100 + i : 690 - (i - 590) * 3);   // EMA21 încă peste EMA55, prețul sub EMA21
+  assert.equal(L.directia(urcaApoiCade, Pe).dir, "neclara");
+  assert.equal(L.directia(serie(99, (i) => 100 + i), Pe).dir, "neclara");
+});
+await test("zileDir (tsmom): bare consecutive cu același semn al randamentului pe 504 bare, împărțite la 6", () => {
+  assert.equal(L.zileDir(serie(600, (i) => 100 + i), P), 15, "600 − 505 = 95 bare cu semn ⇒ 15 zile");
+  assert.equal(L.zileDir(serie(1000, (i) => 100 + i), P), 82, "1000 − 505 = 495 bare ⇒ 82 zile");
+  const cotitura = serie(1000, (i) => i < 940 ? 2000 - i : 1060 + (i - 940) * 30);   // ultimele 60 de bare: prețul sare peste cel de acum 504 bare
+  const z = L.zileDir(cotitura, P); assert.ok(z >= 5 && z <= 10, "cotitură de ~60 bare ⇒ 5–10 zile, nu " + z);
+  assert.equal(L.zileDir(serie(504, (i) => 100 + i), P), 0);
+});
+await test("zileDir (ema): bare consecutive cu același semn EMA21−EMA55, împărțite la 6", () => {
+  const Pe = Object.assign({}, P, { tendinta: "ema" });
+  assert.equal(L.zileDir(serie(600, (i) => 100 + i), Pe), 99);   // tot istoricul (599 bare utile ÷ 6)
   const cotitura = serie(600, (i) => i < 540 ? 700 - i : 160 + (i - 540) * 4);   // ultimele 60 de bare urcă
-  const z = L.zileDir(cotitura, P); assert.ok(z >= 5 && z <= 9, "cotitură de ~60 bare ⇒ 5–9 zile, nu " + z);
+  const z = L.zileDir(cotitura, Pe); assert.ok(z >= 5 && z <= 9, "cotitură de ~60 bare ⇒ 5–9 zile, nu " + z);
 });
 await test("masuraMoneda: percentilele pe fereastra de 564, bugetul zilei, poziționarea, delta; sub 100 bare ⇒ null", () => {
   const r = L.masuraMoneda(intrari(), P);
