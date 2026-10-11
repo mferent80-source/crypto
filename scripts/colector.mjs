@@ -44,11 +44,12 @@ import { turaSaltPozitii as turaSaltPozitiiModul, alertaFaraPreturi, liniaDimine
 import { adaugaInJurnal, alertePentruPoza, pozaInLimita } from "./lib/alerte-zi.mjs";   // v101.86 (el 07.10): pagina alerts în două - alertele de azi
 import { aplicaCereriSalt, listaSaltSigura } from "./lib/salt-cereri.mjs";   // v101.86: pozițiile Salt adăugate de pe pagina alerts
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
+import { turaLatime as turaLatimeModul, cereBinance } from "./lib/tura-latime.mjs";   // v101.93 (I-583): lățimea pieței pe 150 perp-uri Binance
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.92";
+const VERSIUNE_COLECTOR = "v101.93";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -164,6 +165,7 @@ const Asemanatoare = new Function("Probabilitati", "GraficBot", fs.readFileSync(
 const RiscLuna = incarca("risc-luna.js", "RiscLuna");   // v101.76: riscul boților și al acțiunilor + comportamentul (raportul de noapte)
 const Carnet = incarca("carnet.js", "Carnet");
 const SugestiiActiuni = incarca("sugestii-actiuni.js", "SugestiiActiuni");
+const Latime = incarca("latime.js", "Latime");   // v101.93 (I-583): formulele lățimii pieței (aceleași ca în pagină); TextRo e deja global
 const Salt = incarca("salt.js", "Salt");   // v101.82 (pagina Salt): tabelul instrumentelor Salt Bank (trendul, ziua de ieri)   // v101.81 (pagina Sugestii): regulile „early” + istoricul lor (verdictul din Carnet)
 const SUG_BAZA_FIS = path.join(DATA, "sugestii-baza.json"), SUG_IST_FIS = path.join(DATA, "sugestii-istoric.json");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
 const CARNET_FIS = path.join(DATA, "carnet-oferte.json");
@@ -1428,6 +1430,21 @@ async function turaPiataColector() {
   piataInLucru = false;
 }
 
+// v101.93 (I-583): lățimea pieței pe 150 perp-uri Binance - ritmul ei în scripts/lib/tura-latime.mjs (bare la 15 min, serii la oră);
+// cererile pleacă direct la Binance din PC (nu prin Pages), o singură scriere în KV `latime` pe tură
+let latimeInLucru = false;
+const binanceDirect = cereBinance({ fetch: globalThis.fetch, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal });
+async function turaLatimeColector() {
+  if (latimeInLucru || process.env.COLECTOR_FARA_LATIME) return;
+  latimeInLucru = true;
+  try {
+    const m = meta(); m.latime = m.latime || {};
+    await turaLatimeModul({ binance: binanceDirect, trimite, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Latime, botiSimboluri: () => [] }, m.latime, Date.now());
+    try { scrieStare(); } catch {}
+  } catch (e) { jurnal("latime ESEC", e.message); }
+  latimeInLucru = false;
+}
+
 // v96: pagina Scan - rezumatul zilnic al top 100 PERP (o data pe ora) si al actiunilor (Nasdaq 100 + ale lui),
 // cu ritmul lui in scripts/lib/tura-scan.mjs; porneste dupa clasament (monedele vin din el)
 let scanInLucru = false;
@@ -2005,6 +2022,7 @@ async function bucla() {
   turaPaznic().catch(() => {});
   turaBilantBusola().catch((e) => jurnal("busola bilanț", e.message));   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠, în KV
   turaPiataColector().catch((e) => jurnal("piata", e.message));
+  turaLatimeColector().catch((e) => jurnal("latime", e.message));   // v101.93 (I-583): lățimea pieței la 15 minute
   turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
   turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)

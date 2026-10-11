@@ -308,7 +308,7 @@ var Latime = (function () {
 - Modify: `functions/api/istoric-bot.js` (GET după linia 80 `mcVerdict`; POST după blocul `mcVerdict` ~linia 320; limita de mărime în ternarul de la linia 120)
 - Modify: `scripts/proba-v100150.mjs` (partea B)
 
-**Interfaces (produce):** `GET /api/istoric-bot?action=latime` ⇒ `{ latime: { acum, istoric } | null }`; `POST …?action=latime` corp `{ la, n, lipsa, incomplet, eroare, regim:{cod,pctSus,pctJos}, lat:{…}, monede:[…] }` ⇒ `{ ok:true, monede:N, istoric:M }`; cheia KV `latime` = `{ acum, istoric:[{la, cod, pctSus, pctJos, mariLong}] }`, istoricul tăiat la 30 de zile.
+**Interfaces (produce):** (corectură la execuție: simbolurile se validează cu `^[A-Z0-9]{1,20}USDT$` — Binance are și `TUSDT`, `4USDT`, 18 monede cu o singură literă) `GET /api/istoric-bot?action=latime` ⇒ `{ latime: { acum, istoric } | null }`; `POST …?action=latime` corp `{ la, n, lipsa, incomplet, eroare, regim:{cod,pctSus,pctJos}, lat:{…}, monede:[…] }` ⇒ `{ ok:true, monede:N, istoric:M }`; cheia KV `latime` = `{ acum, istoric:[{la, cod, pctSus, pctJos, mariLong}] }`, istoricul tăiat la 30 de zile.
 
 - [ ] **Step 1: proba (partea B)** — adaugă în `scripts/proba-v100150.mjs`, înaintea rândului final cu `teste - picate`:
 

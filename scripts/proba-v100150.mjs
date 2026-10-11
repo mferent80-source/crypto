@@ -141,6 +141,11 @@ await test("(B) POST stricat ⇒ 400 și nimic scris: fără la, sym cu semne, d
     const ist = kv(); const r = await API.onRequestPost({ request: cerere("latime", corp), env: env(ist) }); assert.equal(r.status, 400, JSON.stringify(corp).slice(0, 80)); assert.equal(ist.m.size, 0);
   }
 });
+await test("(B) simbolurile reale Binance cu o literă (4USDT, TUSDT), cele lungi (1000000MOGUSDT) și cele cu litere chinezești (币安人生USDT) trec; cu spații, semne sau fără USDT nu", async () => {
+  const ist = kv(); const r = await API.onRequestPost({ request: cerere("latime", corpBun({ monede: [{ sym: "4USDT", dir: "JOS" }, { sym: "TUSDT", dir: "SUS" }, { sym: "1000000MOGUSDT", dir: "neclara" }, { sym: "币安人生USDT", dir: "SUS" }] })), env: env(ist) });
+  assert.equal(r.status, 200, await r.clone().text()); assert.equal((await r.json()).monede, 4);
+  for (const sym of ["BTC USDT", "BTC-USDT", "BTCUSDC", "BTC&USDT", "btcusdt", "A".repeat(31) + "USDT"]) assert.equal((await API.onRequestPost({ request: cerere("latime", corpBun({ monede: [{ sym, dir: "SUS" }] })), env: env(kv()) })).status, 400, sym);
+});
 await test("(B) POST prea mare (> 262144 octeți) ⇒ 413", async () => {
   const r = await API.onRequestPost({ request: cerere("latime", corpBun({ monede: Array.from({ length: 200 }, (_, i) => ({ sym: "C" + i + "USDT", dir: "SUS", umplutura: "x".repeat(1500) })) })), env: env(kv()) }); assert.equal(r.status, 413);
 });

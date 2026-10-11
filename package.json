@@ -65,6 +65,8 @@
     "test:v100147": "node scripts/proba-v100147.mjs",
     "test:v100148": "node scripts/proba-v100148.mjs",
     "test:v100149": "node scripts/proba-v100149.mjs",
+    "test:v100150": "node scripts/proba-v100150.mjs",
+    "test:v100150col": "node scripts/proba-v100150-colector.mjs",
     "test:v1016": "node scripts/proba-v1016.mjs",
     "test:v992": "node scripts/proba-v992.mjs",
     "test:v991": "node scripts/proba-v991.mjs",

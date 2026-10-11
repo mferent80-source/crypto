@@ -323,14 +323,15 @@ export async function onRequestPost({request,env}){
     const boti={};for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object"||!CAT.includes(x.cat))continue;boti[id]={cat:x.cat,stare:STARI.includes(x.stare)?x.stare:null,text:String(x.text||"").slice(0,400),la:nr(x.la),ultima:nr(x.ultima),regim:rg(x.regim)}}
     await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti}));return json({ok:true})
   }
-  // v100.150 (I-583): lățimea pieței - validată strict (numere finite, simboluri ^[A-Z0-9]{2,20}USDT$, cel mult 200 de monede, dir din listă);
+  // v100.150 (I-583): lățimea pieței - validată strict (numere finite, simboluri = litere/cifre din orice alfabet + USDT, 1-30 de semne - Binance are
+  // și TUSDT / 4USDT și perp-uri cu nume chinezești (币安人生USDT); cel mult 200 de monede, dir din listă);
   // istoricul regimului în aceeași cheie (un punct pe tură, 30 de zile) - o singură scriere pe tură
   if(action==="latime"){
     const DIR=["SUS","JOS","neclara"],COD=["LARG-SUS","LARG-JOS","AMESTECAT","NECUNOSCUT"],la=nr(corp&&corp.la),lat=corp&&corp.lat,rg=corp&&corp.regim,mo=corp&&corp.monede;
     const CAMP=["n","sus","jos","neclar","lipsa","bugetEpuizat","volExtrem","oiExtrem","fundExtrem","mariLong"],CM=["pret","zileDir","volPctl","extPctl","adrUsed","frAcum","fundPctl","oiChg","oiPctl","lMari","lMici","diverg","deltaPctl"];
     if(la===null||!lat||typeof lat!=="object"||!rg||!COD.includes(rg.cod)||!Array.isArray(mo)||mo.length>200)return json({error:"Lipseste la / lat / regim sau prea multe monede"},400);
     const L={};for(const k of CAMP){const v=nr(lat[k]);if(v===null&&lat[k]!=null)return json({error:"lat."+k+" nu e numar"},400);L[k]=v}
-    const monede=[];for(const x of mo){if(!x||typeof x!=="object"||!/^[A-Z0-9]{2,20}USDT$/.test(String(x.sym||""))||!DIR.includes(x.dir))return json({error:"moneda stricata"},400);const m={sym:x.sym,dir:x.dir};for(const k of CM)m[k]=nr(x[k]);monede.push(m)}
+    const monede=[];for(const x of mo){if(!x||typeof x!=="object"||!/^[\p{Lu}\p{Lo}\p{N}]{1,30}USDT$/u.test(String(x.sym||""))||!DIR.includes(x.dir))return json({error:"moneda stricata"},400);const m={sym:x.sym,dir:x.dir};for(const k of CM)m[k]=nr(x[k]);monede.push(m)}
     const acum={la,n:nr(corp.n),lipsa:nr(corp.lipsa)||0,incomplet:corp.incomplet===true,eroare:typeof corp.eroare==="string"?corp.eroare.slice(0,200):null,regim:{cod:rg.cod,pctSus:nr(rg.pctSus),pctJos:nr(rg.pctJos)},lat:L,monede};
     let vechi=null;try{vechi=JSON.parse(await env.ISTORIC.get("latime")||"null")}catch{vechi=null}
     let istoric=vechi&&Array.isArray(vechi.istoric)?vechi.istoric:[];
