@@ -32,9 +32,11 @@ await test("(1) v100.157 (el: „aș integra altfel valorile în grafic” → f
   assert.equal(mareV, "", "ecranul mare: fără fâșie");
   assert.match(mare, /class="gbTag"/); assert.match(mare, /class="gbSansa"[^>]*>23%/);
 });
-await test("(2) prețul de acum: pe telefon chenar pe fondul graficului, cifra deschisă (nu cutie albă plină); pe ecranul mare neschimbat", () => {
+await test("(2) prețul de acum: pe telefon cutie mică cu chenar (v100.158: „ocupă mult spațiu doar el”) - coloana din dreapta 58 px, litera potrivită ca orice preț să încapă; pe ecranul mare neschimbat", () => {
   const C = G.COL;
-  assert.match(tel, new RegExp(`height="22" rx="2" fill="${C.fond}" stroke="${C.text}" stroke-width="1.2"/><text [^>]*font-size="13.5" font-weight="700" fill="${C.text}">`));
+  const m = tel.match(new RegExp(`<rect x="[\\d.]+" y="[\\d.]+" width="(\\d+)" height="18" rx="2" fill="${C.fond}" stroke="${C.text}" stroke-width="1"/><text [^>]*text-anchor="middle" font-size="([\\d.]+)" font-weight="700" fill="${C.text}">([\\d.]+)</text>`));
+  assert.ok(m, "cutia mică a prețului"); assert.equal(+m[1], 56); assert.ok(+m[3].length * +m[2] * 0.62 <= 56 - 8, "încape: " + m[3] + " la " + m[2] + " px");
+  for (const p of [0.012345, 109876.5, 2.03]) { const s = G.desen(Object.assign({}, baza, { W: 344, ingust: true, pretViu: p, niv: [] })).svg; const q = s.match(/text-anchor="middle" font-size="([\d.]+)" font-weight="700" fill="[^"]+">([\d.]+)<\/text>/); assert.ok(q && q[2].length * +q[1] * 0.62 <= 48, p + " ⇒ " + (q && q[2] + " la " + q[1])); }
   assert.match(mare, new RegExp(`height="22" rx="2" fill="${C.text}"/><text [^>]*fill="#0E141A">acum `));
 });
 await test("(3)(4) „botul pornit hh:mm”: pe telefon ultimul rând din fâșie (linia lui rămâne pe grafic); pe ecranul mare neatins", () => {

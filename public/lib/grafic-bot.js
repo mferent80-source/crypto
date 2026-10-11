@@ -388,7 +388,7 @@ var GraficBot = (function () {
     // cel mult 24% din lățime; pe telefon rămâne 108 (acolo etichetele sunt scurte). Stopul planului lângă lichidare dă o etichetă unită lungă
     var etMax = 0; (o.niv || []).forEach(function (x) { if (x && x.t) etMax = Math.max(etMax, String(x.t).length + 8 + (x.sansa ? String(x.sansa).length * 0.85 + 3 : 0)); });
     if (o.consLinii && nr(o.consLinii.stopPlan) > 0) etMax = Math.max(etMax, 36);
-    var gut = ingust ? 108 : Math.min(Math.round(W * 0.24), Math.max(176, 12 + Math.round(etMax * 7.1))), plotW = W - gut, mainH = ingust ? 270 : Math.round(Math.max(340, Math.min(520, W * 0.36))),   /* el, 01.10: graficul mai mare - creste cu latimea */ volH = ingust ? 34 : 46, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) && typeof Directie !== "undefined" ? (ingust ? 7 : 9) : 0;
+    var gut = ingust ? 58 : Math.min(Math.round(W * 0.24), Math.max(176, 12 + Math.round(etMax * 7.1))), plotW = W - gut, mainH = ingust ? 270 : Math.round(Math.max(340, Math.min(520, W * 0.36))),   /* el, 01.10: graficul mai mare - creste cu latimea */ volH = ingust ? 34 : 46, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) && typeof Directie !== "undefined" ? (ingust ? 7 : 9) : 0;
     var cl = raw.map(function (b) { return b.c; }), S = { e20: ema(cl, 20), e50: ema(cl, 50), bb: bollinger(cl, 20, 2), rsi: rsi(cl, 14) };
     // v100.106: trendul pe fiecare bară ÎNCHISĂ, pe istoria lungă a TF-ului (o.trendIstoric), ca banda să nu înceapă abia de la bara 60
     S.tr = null;
@@ -573,7 +573,8 @@ var GraficBot = (function () {
     et.forEach(function (e) {
       // v100.143: eticheta împinsă de pe linia ei primește o liniuță spre linie (altfel nu se știe a cui e)
       if (Math.abs(e.y - e.y0) > 3) q.push('<line class="gbLeg" x1="' + f1(plotW) + '" x2="' + f1(plotW + 5) + '" y1="' + f1(e.y0) + '" y2="' + f1(e.y) + '" stroke="' + e.c + '" stroke-width="1" stroke-opacity=".8"/>');
-      if (e.acum) q.push('<rect x="' + f1(plotW + 2) + '" y="' + f1(e.y - 11) + '" width="' + (gut - 4) + '" height="22" rx="2" fill="' + (ingust ? COL.fond : COL.text) + '"' + (ingust ? ' stroke="' + COL.text + '" stroke-width="1.2"' : '') + '/><text x="' + f1(plotW + 8) + '" y="' + f1(e.y + 5) + '" font-size="13.5" font-weight="700" fill="' + (ingust ? COL.text : "#0E141A") + '">' + (ingust ? "" : "acum ") + fmtP(e.p) + '</text>');
+      if (e.acum && ingust) { var tp = fmtP(e.p), fsP = Math.min(12, Math.floor((gut - 9) / (tp.length * 0.62) * 2) / 2); q.push('<rect x="' + f1(plotW + 1) + '" y="' + f1(e.y - 9) + '" width="' + (gut - 2) + '" height="18" rx="2" fill="' + COL.fond + '" stroke="' + COL.text + '" stroke-width="1"/><text x="' + f1(plotW + gut / 2) + '" y="' + f1(e.y + 4) + '" text-anchor="middle" font-size="' + fsP + '" font-weight="700" fill="' + COL.text + '">' + tp + '</text>'); }   /* v100.158: pe telefon cutia mică */
+      else if (e.acum) q.push('<rect x="' + f1(plotW + 2) + '" y="' + f1(e.y - 11) + '" width="' + (gut - 4) + '" height="22" rx="2" fill="' + COL.text + '"/><text x="' + f1(plotW + 8) + '" y="' + f1(e.y + 5) + '" font-size="13.5" font-weight="700" fill="#0E141A">acum ' + fmtP(e.p) + '</text>');
       else {
         var tit = e.sansaLung ? (e.tit ? e.tit + " · " : "") + e.sansaLung : e.tit || "";
         if (!ingust) q.push('<rect class="gbTag" x="' + f1(plotW + 2) + '" y="' + f1(e.y - 9) + '" width="' + Math.min(gut - 4, Math.round(((ingust ? (e.s || "") : e.t) + " " + fmtP(e.p)).length * 6.5 + 12)) + '" height="18" rx="2" fill="' + e.c + '" fill-opacity=".13" stroke="' + e.c + '" stroke-opacity=".6"/>'); q.push('<text x="' + f1(plotW + (ingust ? 5 : 7)) + '" y="' + f1(e.y + 4.5) + '" font-size="' + (ingust ? 12 : 13) + '" fill="' + e.c + '">' + (tit ? '<title>' + esc(tit) + '</title>' : "") + esc(ingust ? (e.s || "") : e.t) + " " + fmtP(e.p)
@@ -619,7 +620,7 @@ var GraficBot = (function () {
     var TX = function (t) { return (t - t0) / ((t1 - t0) || 1) * plotW; };
     if (!o.actiune) {   // v100.56: actiunile n-au banda alertelor botului
       q.push('<rect x="0" y="' + ly0 + '" width="' + f1(plotW) + '" height="' + laneH + '" rx="6" fill="' + COL.fond + '"/>');
-      q.push('<text x="' + f1(plotW + 6) + '" y="' + (ly0 + 17) + '" font-size="12" fill="' + COL.mut + '">alertele botului</text>');
+      q.push('<text x="' + f1(plotW + 6) + '" y="' + (ly0 + 17) + '" font-size="12" fill="' + COL.mut + '">' + (ingust ? "alerte" : "alertele botului") + '</text>');
     }
     var evs = (o.alerte || []).filter(function (a) { return a && nr(a.t) !== null && a.t >= t0 && a.t <= t1; }), gr2 = grupeaza(evs, TX, 16), CUL = { critic: COL.bad, atentie: COL.warn, info: COL.info };
     gr2.forEach(function (u, ui) {
@@ -652,7 +653,7 @@ var GraficBot = (function () {
       q.push('<path class="gbAdx" d="' + da + '" fill="none" stroke="' + COL.intrare + '" stroke-width="1.6"/>');
       var al = S.adx.adx[raw.length - 1], za = zonaAdx(al);
       q.push('<text x="' + f1(plotW + 6) + '" y="' + (ay0 + 14) + '" font-size="12.5" fill="' + COL.intrare + '">ADX ' + (al != null ? Math.round(al) : "—") + '</text>'
-        + (za ? '<text x="' + f1(plotW + 6) + '" y="' + (ay0 + 30) + '" font-size="12" fill="' + (za === "loc" ? COL.good : za === "trend" ? COL.warn : COL.mut) + '">' + (za === "loc" ? "stă pe loc" : za === "trend" ? "trend" : "nehotărât") + '</text>' : ''));
+        + (za ? '<text x="' + f1(plotW + 6) + '" y="' + (ay0 + 30) + '" font-size="' + (ingust ? 11 : 12) + '" fill="' + (za === "loc" ? COL.good : za === "trend" ? COL.warn : COL.mut) + '">' + (za === "loc" ? "stă pe loc" : za === "trend" ? "trend" : "nehotărât") + '</text>' : ''));
     }
     var josTot = st.adx ? ay0 + adxH : rsiH ? ry0 + rsiH : ly0 + laneH;
     // axa timpului
