@@ -2820,4 +2820,28 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 @media (min-width:981px) and (max-width:1359px){.heroStrip{grid-template-columns:minmax(0,1fr)}#tabloubot .tbConsCip{white-space:normal;max-width:100%}}
 /* v100.161: pe telefon panoul „Acum” (sus): etichetele se rup pe rânduri în celula lor („cea mai aproape lichidare” ieșea din ecran), „acum 1 min” rămâne întreg */
 @media (max-width:760px){.pzAcumGrila .pzCel{white-space:normal}.pzAcumGrila .pzCel>b small{white-space:nowrap}}
+/* Rezultate (v100.163, 11.10.2026): pagina earnings-hub mutată în Radar */
+.pzDemo #stocks.on>.rzRandStocks{order:11}
+.rzRandStocks:empty{display:none}
+.rzCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rzLink{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline}
+.rzFiltre{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.rzSep{width:14px}
+.rzCheieBox{margin:8px 0}
+.rzCheieRand{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.rzCheieRand input{flex:1 1 260px;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--text);font:inherit}
+.rzMesaj,.rzEroare{color:var(--warn)}
+.rzTabel{overflow-x:auto}
+.rzTab{width:100%;font-variant-numeric:tabular-nums}
+.rzTab .num{text-align:right}
+.rzTab tr.rzZi td{background:var(--panel-2,transparent);padding-top:10px}
+.rzTab tr.rzRand[data-action-click]{cursor:pointer}
+.rzTab tr.rzRand[data-action-click]:hover td{background:var(--panel-3,rgba(255,255,255,.03))}
+.rzEt{border:1px solid var(--line);color:var(--muted);padding:0 5px;border-radius:3px;font-size:11px;font-weight:400;margin-left:4px}
+.rzChev{color:var(--muted);width:18px;text-align:center}
+.rzIst{padding:6px 0}
+.rzIstTab{width:auto;margin-top:6px}
+.rzIst .bun,.rzIstTab td.bun{color:var(--good)}
+.rzIst .rau,.rzIstTab td.rau{color:var(--bad)}
+@media (max-width:640px){.rzTab thead{display:none}.rzTab,.rzTab tbody{display:block}.rzTab tr.rzRand{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--line)}.rzTab tr.rzRand td{display:block;padding:0;border:0}.rzTab tr.rzRand td.rzNume{grid-column:1/2}.rzTab tr.rzRand td.rzChev{grid-column:2;grid-row:1}.rzTab tr.rzRand td.rzOra{grid-column:1/-1;color:var(--muted);font-size:12px}.rzTab tr.rzRand td.rzEps{grid-column:1;text-align:left;font-size:12px;color:var(--muted)}.rzTab tr.rzRand td.rzEps::before{content:"EPS estimat "}.rzTab tr.rzRand td.rzVenit{grid-column:2;font-size:12px;color:var(--muted)}.rzTab tr.rzZi,.rzTab tr.rzDet{display:block}.rzTab tr.rzZi td,.rzTab tr.rzDet td{display:block}.rzIstTab{width:100%}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

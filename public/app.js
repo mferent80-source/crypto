@@ -3020,7 +3020,7 @@ function tbarActualizeaza(){
 function tbarComuta(){const t=document.querySelector(".toolbar");if(!t)return;t.classList.toggle("deschisa");tbarActualizeaza()}
 // la DOMContentLoaded, nu pe loc: `const $` e definit mai jos in fisier (TDZ) - chemat aici, oprea TOT app.js
 if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){const t=document.querySelector(".toolbar");if(!t)return;["input","change","click"].forEach(n=>t.addEventListener(n,()=>setTimeout(tbarActualizeaza,0)));tbarActualizeaza()});
-const NAV_CU_LOAD=new Set(["mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
+const NAV_CU_LOAD=new Set(["rezultate","mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
 function navTo(id,load=false){
  show(id);
  // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
@@ -3035,10 +3035,11 @@ function navTo(id,load=false){
    else if(id==="gridset"){porneGrid();if(typeof carnetPorneste==="function")carnetPorneste(false)}   // v100.117: rândul carnetului sub „Ce aș alege eu”
    else if(id==="carnet"){if(typeof carnetPorneste==="function")carnetPorneste(false)}
    else if(id==="sugestii"){if(typeof sugPorneste==="function")sugPorneste(false)}
+   else if(id==="rezultate"){if(typeof rzPorneste==="function")rzPorneste()}   // v100.163: pagina Rezultate (calendarul raportărilor)
    else if(id==="salt"){if(typeof saltPorneste==="function")saltPorneste(false)}   // v100.120: pagina Salt   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
-   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza()}
+   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
    else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false);if(typeof contTotAsigura==="function")contTotAsigura()}
    else if(id==="scan"){if(typeof scanPorneste==="function")scanPorneste(false)}   // v96: lista noua; scannerul vechi porneste doar din butonul lui
    else if(id==="replaylab")renderReplayLab();
@@ -3067,7 +3068,7 @@ function navTo(id,load=false){
    if(id==="opportunity")renderOpportunity();
    if(id==="calibration")renderCalibrationLab();
    if(id==="settings"){renderSettings();renderPushStatus()}
-   if(id==="stocks"){loadStockContext().catch(()=>{});checkStocksHealth().catch(()=>{});if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza()}
+   if(id==="stocks"){loadStockContext().catch(()=>{});checkStocksHealth().catch(()=>{});if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
    if(id==="riskmgr")calculateRisk();
    if(id==="decision"&&window.__radarState)buildDecision(window.__radarState.q,window.__radarState.hs||historicalSet(window.__radarState.j),mtfComposite(window.__radarState.m||[]),window.__signalState?.sm||{direction:"WAIT",long:50,short:50,edge:0});
    if(id==="paper"){renderPaper();refreshPaper()}
@@ -6756,6 +6757,50 @@ function latimeUsDeseneaza(){
   latimeUsAduce(latimeUsDeseneaza)}
 // Pagina alerts din suită (Ce dețin / Ce urmăresc / News / Istoric) rămâne mereu, la cererea lui (11.10.2026); Radarul doar o deschide
 function deschideAlertsPagina(){window.open("https://mferent80-source.github.io/premarket_scanner.html/alerts/","_blank","noopener")}
+// Rezultate (v100.163, 11.10.2026): pagina earnings-hub din premarket_scanner mutată în Radar. Desenul în lib/rezultate.js,
+// datele din /api/rezultate (cheia Finnhub în KV-ul de acasă). ⭐ = pozițiile T212 + Salt („deții”) și lista urmărită („urmărești”).
+var rzStare={cheie:null,zile:7,doarStea:false,cal:null,stele:{},deschis:null,istoric:{},arataCheie:false,mesajCheie:"",steleLa:0,calLa:0};
+function rzDeseneaza(){var el=$("rzPagina");if(!el||typeof Rezultate==="undefined")return;el.innerHTML=rzStare.cheie===null?'<p class="tbSub">Aduc starea…</p>':Rezultate.htmlPagina(Object.assign({acum:Date.now()},rzStare))}
+async function rzStele(){
+  if(Date.now()-rzStare.steleLa<10*60000)return;
+  var st={},pune=function(s,fel){s=String(s||"").toUpperCase();if(s&&!st[s])st[s]=fel};
+  try{var p=await getJSON("/api/t212?action=pozitii");(Array.isArray(p)?p:p&&(p.items||p.pozitii)||[]).forEach(function(x){pune(Rezultate.simbolDin(x&&x.ticker),"detii")})}catch(e){}
+  try{var sa=await getJSON("/api/t212?action=salt");(sa&&Array.isArray(sa.pozitii)?sa.pozitii:[]).forEach(function(x){var s=String(x&&(x.simbol||x.yahoo)||"");pune(s,"detii");pune(s.split(".")[0],"detii")})}catch(e){}
+  try{var w=await getJSON("/api/rezultate?action=simboluri");(w&&Array.isArray(w.simboluri)?w.simboluri:[]).forEach(function(s){pune(s,"urmaresti");pune(String(s).split(".")[0],"urmaresti")})}catch(e){}
+  rzStare.stele=st;rzStare.steleLa=Date.now()}
+async function rzCalendar(fortat){
+  if(!rzStare.cheie)return;
+  if(!fortat&&rzStare.cal&&!rzStare.cal.eroare&&rzStare.cal.zile===rzStare.zile&&Date.now()-rzStare.calLa<3600000)return;
+  rzStare.cal=null;rzDeseneaza();
+  try{rzStare.cal=await getJSON("/api/rezultate?action=calendar&zile="+rzStare.zile)}catch(e){rzStare.cal={eroare:(e&&e.message)||"nu s-a putut aduce calendarul"}}
+  rzStare.calLa=Date.now()}
+async function rzPorneste(){
+  if(rzStare.cheie===null){try{var s=await getJSON("/api/rezultate?action=stare");rzStare.cheie=!!(s&&s.areCheie)}catch(e){rzStare.cheie=false;rzStare.mesajCheie="Serverul de acasă nu a răspuns: "+((e&&e.message)||"")}}
+  rzDeseneaza();await rzStele();await rzCalendar(false);rzDeseneaza()}
+function rzZile(n){rzStare.zile=n;rzStare.deschis=null;rzCalendar(true).then(rzDeseneaza)}
+function rzDoarStea(){rzStare.doarStea=true;rzDeseneaza()}
+function rzToate(){rzStare.doarStea=false;rzDeseneaza()}
+function rzReincarca(){rzCalendar(true).then(rzDeseneaza)}
+function rzArataCheie(){rzStare.arataCheie=!rzStare.arataCheie;rzStare.mesajCheie="";rzDeseneaza()}
+async function rzDesfa(s){
+  if(rzStare.deschis===s){rzStare.deschis=null;return rzDeseneaza()}
+  rzStare.deschis=s;rzDeseneaza();
+  if(!rzStare.istoric[s]){try{rzStare.istoric[s]=await getJSON("/api/rezultate?action=istoric&s="+encodeURIComponent(s))}catch(e){rzStare.istoric[s]={s:s,eroare:(e&&e.message)||"nu a răspuns"}}if(rzStare.deschis===s)rzDeseneaza()}}
+async function rzSalveazaCheie(){
+  var i=$("rzCheie"),k=i?String(i.value).trim():"";
+  if(!k){rzStare.mesajCheie="Lipește cheia întâi.";return rzDeseneaza()}
+  try{var r=await apiFetch("/api/rezultate?action=cheie",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({cheie:k})}),j=await r.json().catch(function(){return {}});
+    if(!r.ok){rzStare.mesajCheie=j.error||("serverul a răspuns "+r.status);return rzDeseneaza()}
+    rzStare.cheie=true;rzStare.arataCheie=false;rzStare.mesajCheie="";rzStare.cal=null;await rzCalendar(true);rzDeseneaza();rzRandStocksDeseneaza()}
+  catch(e){rzStare.mesajCheie="Nu s-a salvat: "+((e&&e.message)||"");rzDeseneaza()}}
+// rândul scurt din pagina de acțiuni: ce raportează în 7 zile din ce deții / urmărești (calendarul pe 7 zile, o dată pe oră)
+async function rzRandStocksDeseneaza(){
+  var el=$("rzRandStocks");if(!el||typeof Rezultate==="undefined")return;
+  try{if(rzStare.cheie===null){var s=await getJSON("/api/rezultate?action=stare");rzStare.cheie=!!(s&&s.areCheie)}}catch(e){return}
+  if(!rzStare.cheie){el.innerHTML="";return}
+  await rzStele();
+  if(!rzStare.cal||rzStare.cal.eroare||rzStare.cal.zile<7||Date.now()-rzStare.calLa>=3600000){var z=rzStare.zile;rzStare.zile=Math.max(7,z);await rzCalendar(true);rzStare.zile=z}
+  el.innerHTML=Rezultate.randStocks(rzStare.cal,rzStare.stele,Date.now())||""}
 function latimeUsDeschide(){if(typeof setAssetClass==="function")setAssetClass("STOCKS");navTo("stocks",true)}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}

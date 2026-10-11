@@ -1,11 +1,12 @@
 {
-  "version": "v100.162",
-  "badge": "v100.162 · CONTRASTUL TEXTULUI ROȘU",
+  "version": "v100.163",
+  "badge": "v100.163 · REZULTATE: CINE RAPORTEAZĂ",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "rezultateV163": "pagina earnings-hub din premarket_scanner mutată în Radar (11.10.2026, „o aplicație și atât”): pagina Rezultate — calendarul raportărilor pe toată piața SUA (Finnhub, 7/14/30 de zile, grupat pe zile), ⭐ singură pe pozițiile T212 + Salt și pe lista urmărită, „doar ⭐”, la clic reacția prețului după raportările trecute (ziua de după, 5 zile, EPS față de estimare); cheia Finnhub în KV-ul de acasă, pusă din pagină; rândul „Raportează în 7 zile” în pagina de acțiuni",
     "latimeUsV160": "pagina market-breadth din premarket_scanner mutată în Radar (11.10.2026, „o aplicație și atât”): rândul „Acțiuni US” în „Ce spune piața acum” + blocul sus în pagina de acțiuni (verdict, S&P / participare / Nasdaq 100 / Russell 2000, participarea pe 60 de zile, sectoare în creștere, Early Buy, Contrarian); datele le face robotul GitHub pages.yml din premarket_scanner, Radarul doar citește latest.json o dată la 30 de minute; plus butonul spre pagina alerts din suită",
     "paginiModelTablouV152": "paginile Zilnic + Unelte dupa modelul Tabloului (el, 11.10): antet de verdict citit din pagina (T212, Salt, Alerte, Monte Carlo, Carnet, Jurnal, Sugestii, Market, Account, Cloud, Settings, Health), ordinea decizie -> detalii din CSS; Grid, Simulator, Scanner, Acasa isi pastreaza decizia proprie (o singura voce)",
     "temaPaznicV151": "designul panoului PAZNIC-CRYPTO pe tot Radarul (demo aprobat de el 11.10.2026): paleta, colturi 3-5 px, fara umbre, IBM Plex local; graficul cu perechile inchise jos (nu inele pe lumanari); asezarea I-589..I-599 in lib/asezare-paznic.js; inventarul nimic-pierdut pe 51 de pagini x 1920/390",
