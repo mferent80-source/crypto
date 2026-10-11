@@ -179,6 +179,10 @@ await test("meniul: „Rezultate” în grupa Unelte, imediat după acțiuni", (
   const g = idx.slice(idx.indexOf('id="sideUnelte"'), idx.indexOf("</div>", idx.indexOf('id="sideUnelte"') + 600) + 6);
   assert.match(g, /data-nav="stocks"[\s\S]{0,200}data-action-click="navTo\('rezultate',true\)" data-nav="rezultate"/);
 });
+await test("telefon: „Rezultate” și în sertarul „More” (pe telefon meniul din stânga nu se vede — el, 12.10: „nu văd pe telefon rezultate”)", () => {
+  const j = idx.indexOf('id="moreDrawer"'), sertar = idx.slice(j, idx.indexOf("</div>", idx.indexOf("moreSheet", j) + 3000));
+  assert.match(sertar, /<button class="moreBtn" data-action-click="moreNav\('rezultate',true\)"><b>📅<\/b>Rezultate<\/button>/);
+});
 await test("sw.js: lib/rezultate.js în APP_SHELL", () => { assert.match(sw, /"\/lib\/rezultate\.js"/); });
 await test("app.js: navTo pornește pagina și rândul din acțiuni; funcțiile butoanelor există", () => {
   assert.match(app, /id==="rezultate"\)\{[^}]*rzPorneste\(/);
