@@ -28,7 +28,7 @@ Tiparul e `tura-piata.mjs`: modul cu ritmul lui, primește `{ cere, trimite, jur
 **Modulul pur `scripts/lib/latime.mjs`** (fără rețea; probat în vm; aceleași formule ca `PAZNIC-CRYPTO/decizie.mjs`, copiate cu referință la linie, nu reinventate):
 - `percentila(serie, x)` = rangul median (I-401);
 - `masuraMoneda(intrari, P)` ⇒ `{ sym, pret, dir, zileDir, volPctl, extPctl, adrUsed, frAcum, fundPctl, oiChg, oiPctl, lMari, lMici, diverg, deltaPctl }`:
-  - `dir` SUS / JOS / neclară: EMA 21 față de EMA 55 pe închiderile de 4h (`directiaDeFond`, felul `ema`); sub 100 de bare ⇒ neclară;
+  - `dir` SUS / JOS / neclară (`directiaDeFond`, felul `ema`, `decizie.mjs:591-595`): **SUS** când EMA 21 > EMA 55 **și prețul e peste EMA 21**; **JOS** când EMA 21 < EMA 55 și prețul e sub EMA 21; altfel neclară; sub 100 de bare ⇒ neclară;
   - `zileDir` = câte bare de 4h la rând ține relația EMA 21 / EMA 55 ÷ 6 — **nou față de PAZNIC** (persistența direcției, I-585);
   - `volPctl` = percentila lui ATR(14)/preț × 100 față de ultimele 563 de bare; `extPctl` = percentila lui |c − EMA 55| / ATR;
   - `adrUsed` = range-ul de azi ÷ media range-urilor ultimelor 14 zile închise × 100;
@@ -39,7 +39,7 @@ Tiparul e `tura-piata.mjs`: modul cu ritmul lui, primește `{ cere, trimite, jur
 - `regimDeCand(istoric)` ⇒ de câte ore / zile ține regimul de acum (din punctele păstrate).
 - Pragurile `P` (volPctl 90, extPctl 90, adrConsumat 90, fundPctlSus 75, fundPctlJos 25, oiPctl 95, emaRapid 21, emaLent 55, atrLen 14, pctlBare 564, minZileListate 10, n 150) stau într-un singur obiect cu comentariul „copiate din PAZNIC-CRYPTO/decizie.mjs PRAGURI, 11.10.2026”. Sunt **ipoteze** (trader.md), nu adevăruri; schimbarea lor se validează pe date de după.
 
-**Publicarea:** o singură scriere pe tură, `trimite("/api/istoric-bot?action=latime", { la, n, lipsa, incomplet, regim: { cod, pctSus, pctJos }, lat, monede: [...] })`. KV: cheia `latime` = `{ acum: <tot ce a venit>, istoric: [{ la, pctSus, pctJos, mariLong }] }` — istoricul e **în aceeași cheie** (un punct la 15 min, 30 de zile, ≈ 2.900 puncte) ⇒ **96 scrieri/zi**, nu 192 (planul gratuit KV: 1.000 scrieri/zi; planul numără scrierile de azi ale colectorului ÎNAINTE de a adăuga). Mărimea ≈ 40 KB + 120 KB, sub 256 KB (funcția refuză cu 413 peste).
+**Publicarea:** o singură scriere pe tură, `trimite("/api/istoric-bot?action=latime", { la, n, lipsa, incomplet, eroare, regim: { cod, pctSus, pctJos }, lat, monede: [...] })`. KV: cheia `latime` = `{ acum: <tot ce a venit>, istoric: [{ la, cod, pctSus, pctJos, mariLong }] }` — istoricul e **în aceeași cheie** (un punct la 15 min, 30 de zile, ≈ 2.900 puncte). **Corectură (11.10, la plan): KV-ul `ISTORIC` e LOCAL**, pe PC-ul lui (`PORNESTE-CRYPTO-RADAR.bat` pornește `wrangler pages dev` pe `:8788` cu `--persist-to`; pe Cloudflare istoricul nu există ⇒ 503) ⇒ nu există cotă de scrieri de păzit. Mărimea ≈ 40 KB + 120 KB, sub 256 KB (funcția refuză cu 413 peste).
 
 **`functions/api/istoric-bot.js`:** `GET action=latime` ⇒ `{ latime: { acum, istoric } }`; `POST action=latime` validează (numere finite, `sym` pe `^[A-Z0-9]{2,20}USDT$`, cel mult 200 de monede, `dir` din listă, fără texte libere), scrie o dată. Autentificarea existentă (`requireApiAuth`, antetul `x-radar-client: colector`).
 
@@ -80,7 +80,7 @@ Tiparul e `tura-piata.mjs`: modul cu ritmul lui, primește `{ cere, trimite, jur
 
 ## 6. Riscuri
 - **Binance 429 / ban temporar de IP** ar lovi și PAZNIC (același IP) cât rulează amândouă: 5 în paralel, pauze, 60 s la 429; dacă apar 429 repetate, tura rară se mută la 2 ore.
-- **Scrierile KV:** planul numără scrierile de azi ale colectorului înainte de a adăuga cele 96.
+- **Scrierile KV:** KV-ul e local (corectura de la §1) — fără cotă; o scriere la 15 min.
 - **Monede noi** (sub 100 de bare de 4h) ⇒ `neclar`, nu în sus/jos.
 - **Universul la margine** diferă de PAZNIC ⇒ comparația tolerează 3.
-- **PC oprit** ⇒ lățimea veche, spusă pe față; telefonul o vede din KV.
+- **PC oprit ⇒ tot Radarul e oprit** (serverul și KV-ul sunt pe PC; telefonul intră prin cloudflared / Tailscale la PC). „Veche, de la HH:MM” apare doar când serverul merge și colectorul e oprit. Varianta C (I-588, Workers Paid) ar schimba asta.
