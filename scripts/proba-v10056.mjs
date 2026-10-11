@@ -123,7 +123,7 @@ await test("poza: la actiuni fara banda „alertele botului”; stopul tau egal 
   const a = GB.desen({ bare, W: 800, niv, st: {}, actiune: true, consLinii: { stopAcum: 97, stopPlan: 97, et: "stopul propus" } });
   assert.ok(!/alertele botului/.test(a.svg)); assert.match(a.svg, /stopul tău = stopul propus/); assert.ok(!/al planului/.test(a.svg));
   const ai = GB.desen({ bare, W: 390, ingust: true, niv, st: {}, actiune: true, consLinii: { stopAcum: 97, stopPlan: 97, et: "stopul propus" } });
-  assert.match(ai.svg, /stop=propus/); assert.ok(!/stop=plan/.test(ai.svg), "pe telefon: eticheta scurta");
+  assert.match(ai.valori, /stopul tău = stopul propus/); assert.ok(!/al planului/.test(ai.valori), "pe telefon (v100.157): în fâșia de sub grafic, cu numele întreg");
   const b = GB.desen({ bare, W: 800, niv: [{ k: "stop", p: 97, t: "stopul tău", c: "#f00", st: "solid", s: "stop" }], st: {}, consLinii: { stopAcum: 97, stopPlan: 97 } });
   assert.match(b.svg, /alertele botului/); assert.match(b.svg, /stopul tău = al planului/);
 });

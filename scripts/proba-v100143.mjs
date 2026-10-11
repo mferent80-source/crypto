@@ -52,7 +52,9 @@ await test("(3) etichetele: lichidarea și stopul planului pe aceeași linie (su
   assert.match(s1, /<text[^>]*><title>stopul tău 0\.5528 · lichidare 0\.5523<\/title>stopul tău · lichidare 0\.5528<\/text>/, "o singură etichetă (cea de sus întâi) cu ambele nume și prețul ei; titlul cu ambele prețuri"); assert.doesNotMatch(s1, />lichidare 0\.5523</);
   assert.equal((s1.match(/class="gbNiv"/g) || []).length, 2, "liniile rămân amândouă");
   // din POZA la 390: „lich. · grid↑ 0.5533 60%” ieșea din marginea de 108 px ⇒ pe telefon eticheta unită = primul nume scurt + „+”
-  assert.match(G.desen(Object.assign({}, baza, { W: 390, ingust: true, niv: apropiate })).svg, /<text[^>]*><title>stopul tău 0\.5528 · lichidare 0\.5523<\/title>stop\+ 0\.5528<\/text>/, "pe telefon: „stop+ 0.5528”, titlul cu amândouă");
+  // v100.157: pe telefon fiecare valoare are rândul ei în fâșia de sub grafic (acolo e loc) - amândouă, fiecare cu prețul ei
+  const v1 = G.desen(Object.assign({}, baza, { W: 390, ingust: true, niv: apropiate })).valori;
+  assert.match(v1, /<span class="gbVN">stopul tău<\/span><b class="gbVP">0\.5528<\/b>/); assert.match(v1, /<span class="gbVN">lichidare<\/span><b class="gbVP">0\.5523<\/b>/);
   // din POZĂ: „lichidare · stopul planului 0.5532” ieșea din marginea dreaptă ⇒ eticheta unită lungă folosește numele scurte
   const lungi = [niv(0.5523, "lich", "lichidare", "lich.", "#f00", "lich", { sansa: "7 zile: 83%", sansaScurt: "83%", sansaLung: "Atinge lichidarea în 7 zile: 83%" }), niv(0.5528, "stopPlan", "stopul planului", "stop plan", "#f00", "dash")];
   const s4 = G.desen(Object.assign({}, baza, { niv: lungi })).svg;
@@ -68,7 +70,7 @@ await test("(4) șansele măsurate: nu mai stau peste lumânări (niciun text gb
   const s = G.desen({ bare: B5, W: 1000, st: {}, niv: n, alerte: [], per: "24h" }).svg;
   assert.doesNotMatch(s, /<text class="gbSansa" x="[\d.]+" y="[\d.]+" text-anchor="end"/, "nu peste lumânări");
   assert.match(s, /<text x="[\d.]+" y="[\d.]+" font-size="13" fill="#0af"><title>Atinge marginea de sus \(0\.55\) în 24 h: 67%[^<]*<\/title>grid sus 0\.5500 · <tspan class="gbSansa"[^>]*>24 h: 67%<\/tspan><\/text>/, "în eticheta din dreapta");
-  const t = G.desen({ bare: B5, W: 400, ingust: true, st: {}, niv: n, alerte: [], per: "24h" }).svg; assert.match(t, /grid↑ 0\.5500 <tspan class="gbSansa"[^>]*>67%<\/tspan>/, "pe telefon forma scurtă, fără „·” (marginea e de 108 px)");
+  const t = G.desen({ bare: B5, W: 400, ingust: true, st: {}, niv: n, alerte: [], per: "24h" }).valori; assert.match(t, /<li title="Atinge marginea de sus \(0\.55\) în 24 h: 67%[^"]*">.*<span class="gbVN">grid sus<\/span><b class="gbVP">0\.5500<\/b>.*<span class="gbVS">24 h: 67%<\/span>/, "pe telefon (v100.157): șansa în fâșia de sub grafic, titlul lung pe rând");
 });
 await test("(5) marginea din dreapta crește cu cea mai lungă etichetă (nume + preț + șansă), cel mult un sfert din lățime; fără șanse rămâne 176", () => {
   const d0 = G.desen({ bare: B5, W: 1000, st: {}, niv: [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine")], alerte: [], per: "24h" });

@@ -2693,7 +2693,7 @@ body:before{background-image:none!important}
    le ascund cu !important în modul greșit și trebuie să câștige în continuare (harta paginilor Unelte). */
 .pzAntet{border:1px solid var(--pzLi);background:var(--pzF1);border-radius:5px;padding:12px 14px;margin:0 0 10px;order:5}
 .pzAntet[hidden]{display:none}
-body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on) main :is(.heroStrip,.tabs){display:none}.pzFasiaBtn{display:none}body:has(main>#cloud.on,main>#settings.on,main>#health.on) .pzFasiaBtn{display:block}.pzFasiaBtn{margin:0 0 8px;padding:5px 10px;background:var(--f1,#141C24);color:#9FB3C4;border:1px solid #26333F;border-radius:4px;font:inherit;font-size:12px;cursor:pointer;text-align:left}.pzFasiaBtn:hover{color:#E6EDF3;border-color:#35485A}.pzFasiaBtn:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}.pzAntet .pzVerb{white-space:normal;overflow-wrap:anywhere;max-width:62%}@media (max-width:550px){.pzAntet .pzVerb{max-width:none}}
+html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on) main :is(.heroStrip,.tabs){display:none}.pzFasiaBtn{display:none}html.pzDemo body:has(main>#cloud.on,main>#settings.on,main>#health.on) .pzFasiaBtn{display:block}.pzFasiaBtn{margin:0 0 8px;padding:5px 10px;background:var(--f1,#141C24);color:#9FB3C4;border:1px solid #26333F;border-radius:4px;font:inherit;font-size:12px;cursor:pointer;text-align:left}.pzFasiaBtn:hover{color:#E6EDF3;border-color:#35485A}.pzFasiaBtn:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}.pzAntet .pzVerb{white-space:normal;overflow-wrap:anywhere;max-width:62%}@media (max-width:550px){.pzAntet .pzVerb{max-width:none}}
 @media (max-width:550px){.pzVerb{white-space:normal;overflow-wrap:anywhere}}
 /* T212 (.t212Card e deja coloană flex) */
 .pzDemo #t212Card>*{order:900}
@@ -2735,7 +2735,7 @@ body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on)
 .pzDemo #gridset.on>#grHartieCard{order:80}.pzDemo #gridset.on>#grJurnalCard{order:85}.pzDemo #gridset.on>#grClasamentCard{order:90}.pzDemo #gridset.on>#grLaboratorCard{order:95}
 .pzDemo #gridset.on:has(#grFisa>.emptyState)>#grClasamentCard{order:15}
 .pzDemo #grFisa{display:flex;flex-direction:column}
-.pzDemo #grFisa>*{order:65}
+.pzDemo #grFisa>*{order:65}.pzDemo #grFisa>#grAlte+p{order:61}
 .pzDemo #grFisa>.grVerdict{order:0}.pzDemo #grFisa>.grListaJos{order:1}.pzDemo #grFisa>#grRezumat{order:2}.pzDemo #grFisa>#grPlanVar{order:10}
 .pzDemo #grFisa>.grPoarta{order:20}.pzDemo #grFisa>#grProb{order:30}.pzDemo #grFisa>.grBusola{order:35}.pzDemo #grFisa>.tbRand:has(.grDir){order:40}
 .pzDemo #grFisa>.grBilet{order:45}.pzDemo #grFisa>#grAlte{order:60}.pzDemo #grFisa>.tbRand:has(.grTabel){order:70}
@@ -2785,7 +2785,9 @@ body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on)
 .pzDemo #settings .settingsGrid>[data-pz-ord="99"]{order:99}
 /* v100.150 (I-584, revizia 5): pe telefon tabelul pandei isi tine capul - .t212Tab ascunde thead sub 640 px */
 /* v100.155: bara de sus - grupul din stânga (moneda, interval, mod, sursa) nu se mai strânge sub conținutul lui; banda botului se scurtează cu „…” în locul lui (se călcau sub ~1500 px) */
-.topStatus>.topLeft{flex:0 0 auto}
+.topStatus>.topLeft{flex:0 0 auto}.topStatus>.topRight{justify-content:safe center}
 /* v100.155: la 981–1359 px „Analizează piața” acoperea alegerea sursei (Binance · stable) - butoanele trec pe rândul de sub câmpuri */
 @media (min-width:981px) and (max-width:1359px){.toolbar{grid-template-columns:minmax(0,1fr)}.toolbar>.actions{grid-column:1;grid-row:2;margin-top:7px}.toolbar>.controls{grid-template-columns:130px minmax(140px,1fr) 80px 110px 170px}}
+/* v100.157: pe telefon valorile graficului stau sub grafic, câte una pe rând (el: „aș integra altfel valorile în grafic” → fâșia de valori) */
+.gbValori{list-style:none;margin:6px 0 8px;padding:6px 0 0;border-top:1px solid #26333F;display:grid;grid-template-columns:auto 1fr auto auto auto;column-gap:10px;row-gap:3px;font-size:13px;align-items:center}.gbValori li{display:contents}.gbValori i{width:9px;height:9px;border-radius:2px;display:inline-block}.gbValori i.gbVPornit{background:none;border-left:2px dashed;width:0;height:11px;margin-left:3px}.gbValori .gbVN{color:#9FB3C4}.gbValori .gbVP{color:#E6EDF3;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}.gbValori .gbVD,.gbValori .gbVS{color:#8799AA;font-variant-numeric:tabular-nums;text-align:right}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

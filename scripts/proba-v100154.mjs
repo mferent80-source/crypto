@@ -23,9 +23,13 @@ const niv = [{ p: 1.98, t: "grila de jos", s: "grid↓+", c: "#5B8FC7", sansa: "
 const baza = { bare: B, st: { rsi: true }, niv, alerte: [], per: "5m", acum: ACUM, pornit: B[35].t, pretViu: 2.03 };
 const tel = G.desen(Object.assign({}, baza, { W: 344, ingust: true })).svg, mare = G.desen(Object.assign({}, baza, { W: 1400, ingust: false })).svg;
 
-await test("(1) etichetele din dreapta: pe telefon fără cutie colorată și cu litera 12 (cutia + litera 13 scoteau „23%” din grafic); șansa rămâne la vedere (faptă, cerută pe 08.10); ecranul mare la fel ca înainte", () => {
-  assert.doesNotMatch(tel, /class="gbTag"/);
-  assert.match(tel, /font-size="12" fill="#5B8FC7"><title>[^<]*23% din drumuri ating linia<\/title>grid↓\+ 1\.9800 <tspan class="gbSansa"[^>]*>23%<\/tspan>/, "șansa la vedere, în eticheta din dreapta");
+const telV = G.desen(Object.assign({}, baza, { W: 344, ingust: true })).valori, mareV = G.desen(Object.assign({}, baza, { W: 1400, ingust: false })).valori;
+await test("(1) v100.157 (el: „aș integra altfel valorile în grafic” → fâșia de valori): pe telefon valorile NU mai stau pe grafic, ci sub el, câte una pe rând, în ordinea prețului, cu șansa la vedere (faptă, cerută pe 08.10); ecranul mare la fel ca înainte", () => {
+  assert.doesNotMatch(tel, /class="gbTag"|grid↓\+ 1\.9800|>↓ lichidare|>botul pornit/, "pe grafic: doar liniile și prețul de acum");
+  assert.match(telV, /<li title="23% din drumuri ating linia"><i style="background:#5B8FC7"><\/i><span class="gbVN">grila de jos<\/span><b class="gbVP">1\.9800<\/b><span class="gbVD">−2,5%<\/span><span class="gbVS">23%<\/span><\/li>/, "rândul: culoarea liniei · nume · preț · față de acum · șansa");
+  assert.match(telV, /<span class="gbVN">↓ lichidare<\/span><b class="gbVP">1\.5000<\/b>/, "și cele din afara graficului, cu săgeata");
+  const ord = [...telV.matchAll(/<b class="gbVP">([\d.]+)<\/b>/g)].map((m) => +m[1]); assert.deepEqual(ord, ord.slice().sort((a, b) => b - a), "în ordinea prețului: " + ord);
+  assert.equal(mareV, "", "ecranul mare: fără fâșie");
   assert.match(mare, /class="gbTag"/); assert.match(mare, /class="gbSansa"[^>]*>23%/);
 });
 await test("(2) prețul de acum: pe telefon chenar pe fondul graficului, cifra deschisă (nu cutie albă plină); pe ecranul mare neschimbat", () => {
@@ -33,11 +37,9 @@ await test("(2) prețul de acum: pe telefon chenar pe fondul graficului, cifra d
   assert.match(tel, new RegExp(`height="22" rx="2" fill="${C.fond}" stroke="${C.text}" stroke-width="1.2"/><text [^>]*font-size="13.5" font-weight="700" fill="${C.text}">`));
   assert.match(mare, new RegExp(`height="22" rx="2" fill="${C.text}"/><text [^>]*fill="#0E141A">acum `));
 });
-await test("(3)(4) jos în grafic: „↓ lichidare” urcă un rând când „botul pornit” e desenat; „botul pornit” lângă marginea dreaptă se scrie spre stânga", () => {
-  const yPornit = +(tel.match(/<text x="[\d.]+"(?: text-anchor="end")? y="([\d.]+)"[^>]*>botul pornit/) || [])[1];
-  const yLich = +(tel.match(/<text x="8" y="([\d.]+)"[^>]*>↓ lichidare/) || [])[1];
-  assert.ok(yPornit > 0 && yLich > 0, yPornit + " / " + yLich); assert.ok(yPornit - yLich >= 14, "rânduri separate: " + yLich + " vs " + yPornit);
-  assert.match(tel, /text-anchor="end" y="[\d.]+" font-size="12" fill="[^"]+"[^>]*>botul pornit/, "pornit la bara 35 din 40 ⇒ spre stânga liniei");
+await test("(3)(4) „botul pornit hh:mm”: pe telefon ultimul rând din fâșie (linia lui rămâne pe grafic); pe ecranul mare neatins", () => {
+  assert.match(tel, /class="gbPornit"/, "linia pornirii rămâne");
+  assert.match(telV, /<span class="gbVN">botul pornit<\/span><b class="gbVP">\d\d:\d\d<\/b><span class="gbVD"><\/span><span class="gbVS"><\/span><\/li><\/ul>$/, "ultimul rând");
   const yLichMare = +(mare.match(/<text x="8" y="([\d.]+)"[^>]*>↓ lichidare/) || [])[1], yPornitMare = +(mare.match(/y="([\d.]+)"[^>]*>botul pornit/) || [])[1];
   assert.equal(yLichMare, yPornitMare - 1, "ecranul mare neatins (cerut: doar pe telefon)");
 });
@@ -58,7 +60,7 @@ await test("(5) Jurnal pe Acțiuni / Tot: „Rezultat total” citit în formatu
   assert.match(AS, /if \(f === "actiuni" \|\| f === "tot"\) \{ pagJurnalAltaFila\(f\); return; \}/);
   assert.match(AS, /#sugPagina \.sugPanda p\.tbSub/); assert.match(AS, /lățimea e " \+ capSub/);
   assert.match(AS, /b\.setAttribute\("aria-controls", h\.id\)/);
-  assert.doesNotMatch(CSS, /#grAlte\+p\{order/);
+  assert.match(CSS, /#grAlte\+p\{order:61\}/, "regula NU era moartă (revizia a treia, M4): prinde nota „✓ Rândul Pentru TradingView…”");
 });
 
 await test("(6) v100.155: bara de analiză la 981–1359 px - butoanele pe rândul de sub câmpuri („Analizează piața” acoperea sursa); bara de sus - grupul din stânga nu se strânge sub banda botului", () => {
@@ -73,6 +75,15 @@ await test("(7) v100.156 (poza lui de pe telefon): fără contur sub literele gr
   const HTML = citeste("public", "index.html");
   assert.match(HTML, /<meta content="dark" name="color-scheme"\/>/);
   assert.match(CSS, /background:#141C24;backdrop-filter:none;\s*\/\* v100\.156/, "bara de jos opacă");
+});
+
+await test("(8) revizia a treia: Jurnal pe Acțiuni = „Câștigat REAL” (toată istoria, ca pe Crypto), pe Tot cu perioada aleasă; antetul urmează fila pe loc; pliatul fâșiei legat de strat; nota de sub „Alte setări” la locul ei; bara de sus nu fuge din ecran", () => {
+  assert.match(AS, /if \(fila === "actiuni"\) \{ cel = ref && ref\.querySelector\("\.jtKpi \.tbKpiCel"\)/);
+  assert.match(AS, /tx\("\.stGrup \[aria-pressed=\\"true\\"\]", ref\)/, "Tot: perioada aleasă");
+  assert.match(AS, /closest\("#jurnaltrade \.jtFiltru"\)\) setTimeout\(function \(\) \{ try \{ pagJurnal\(\); \}/);
+  assert.match(AS, /"CRYPTO: " \+ \(v \? v\.textContent\.trim\(\) : "—"\)/);
+  assert.ok(CSS.includes("html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on) main :is(.heroStrip,.tabs){display:none}"), "fără strat fâșia rămâne la vedere");
+  assert.ok(CSS.includes(".pzDemo #grFisa>#grAlte+p{order:61}") && CSS.includes(".topStatus>.topRight{justify-content:safe center}"));
 });
 
 console.log(`\n${teste - picate}/${teste} verzi`);

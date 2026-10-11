@@ -381,6 +381,7 @@ var GraficBot = (function () {
   function desen(o) {
     var raw = o.bare || [], st = o.st || {}, W = Math.max(300, o.W || 800), ingust = !!o.ingust, simplu = !!o.simplu;
     // v100.156: conturul de sub litere (închis, culoarea fondului) - pe telefon nu: browserul care întunecă singur pagina îl făcea ALB (poza lui, 11.10)
+    var VAL = [];   /* v100.157: pe telefon valorile ies în fâșia de sub grafic (rânduri), nu pe grafic */
     var HALO = function (w) { return ingust ? "" : 'paint-order="stroke" stroke="' + COL.fond + '" stroke-width="' + w + '"'; };
     if (simplu) st = { ema: st.ema !== false, rsi: !!st.rsi, adx: st.adx !== false };   /* v100.98: Simplu = esențialul */
     // v100.143: marginea din dreapta crește cu cea mai lungă etichetă (nume + preț + șansa), ca „grid sus 0.5500 · 24 h: 67%” să nu iasă din cadru;
@@ -528,8 +529,8 @@ var GraficBot = (function () {
       var xp = X(bp) + cw / 2;
       q.push('<rect class="gbInainte" x="0" y="0" width="' + f1(xp) + '" height="' + mainH + '" fill="' + COL.fond + '" fill-opacity=".45"/>'
         + '<line class="gbPornit" x1="' + f1(xp) + '" x2="' + f1(xp) + '" y1="0" y2="' + mainH + '" stroke="' + COL.accent + '" stroke-width="1.4" stroke-dasharray="5 4"/>'
-        + '<text x="' + f1(ingust && xp + 5 + 112 > plotW ? xp - 5 : xp + 5) + '"' + (ingust && xp + 5 + 112 > plotW ? ' text-anchor="end"' : '') + ' y="' + (mainH - 8) + '" font-size="12" fill="' + COL.accent + '" ' + HALO(4) + '>botul pornit ' + ora(tPorn) + '</text>');
-      var etPornitJos = true;   /* v100.154: pe telefon eticheta „↓ …” de jos urcă un rând, să nu calce „botul pornit” */
+        + (ingust ? '' : '<text x="' + f1(xp + 5) + '" y="' + (mainH - 8) + '" font-size="12" fill="' + COL.accent + '" ' + HALO(4) + '>botul pornit ' + ora(tPorn) + '</text>'));
+      if (ingust) VAL.pornit = ora(tPorn);
     }
     // liniile + etichetele din dreapta (se imping ca sa nu se suprapuna); ce e in afara cadrului -> sageata la margine
     var et = [], afara = [];
@@ -556,6 +557,7 @@ var GraficBot = (function () {
     if (viu !== null) q.push('<line class="gbViu" x1="' + f1(X(n - 1)) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(viu)) + '" y2="' + f1(Y(viu)) + '" stroke="' + COL.text + '" stroke-width="1.2" stroke-dasharray="3 3"/>');
     if (pAcum !== null) et.push({ y: Y(pAcum), t: "acum", p: pAcum, c: COL.text, acum: true });
     et.sort(function (a, b) { return a.y - b.y; });
+    if (ingust) { et.forEach(function (e) { if (!e.acum) VAL.push({ t: e.t, p: e.p, c: e.c, sansa: e.sansa, tit: e.sansaLung || e.tit || "" }); }); et = et.filter(function (e) { return e.acum; }); }
     // v100.143 (el 08.10): nivelurile aproape pe aceeași linie (sub 8 px) au O etichetă („lichidare · stopul planului 0.5523”, titlul cu ambele
     // prețuri), nu două una sub alta; șansa o ia cel care o are
     for (var mi = et.length - 1; mi >= 1; mi--) {
@@ -595,8 +597,9 @@ var GraficBot = (function () {
           + '<text x="' + f1(ingust ? cx : cx + 17) + '" y="' + f1(ingust ? cy + 25 : cy + 4.5) + '"' + (ingust ? ' text-anchor="middle"' : '') + ' font-size="' + (ingust ? 11.5 : 13) + '"' + (eu ? ' font-weight="700"' : '') + ' fill="' + (eu ? COL.text : COL.info) + '">' + esc(x.sc) + '</text></g>');
       });
     }
-    var ys = 17 + semH, yj = mainH - 9 - (ingust && etPornitJos ? 17 : 0);
+    var ys = 17 + semH, yj = mainH - 9;
     afara.forEach(function (x) {
+      if (ingust) { VAL.push({ t: x.t, p: x.p, c: x.c, sansa: x.sansa, tit: x.sansaLung || "", afara: x.p > hi ? "↑" : "↓" }); return; }
       var inSus = x.p > hi, t = (inSus ? "↑ " : "↓ ") + x.t + " " + fmtP(x.p) + (pAcum ? " (" + pct(x.p / pAcum - 1) + ")" : "") + (x.sansa ? " · " + (ingust ? x.sansaScurt || x.sansa : x.sansa) : "");
       q.push('<text x="8" y="' + (inSus ? ys : yj) + '" font-size="12.5" fill="' + x.c + '" ' + HALO(4) + '>' + esc(t) + '</text>');
       if (inSus) ys += 17; else yj -= 17;
@@ -661,6 +664,9 @@ var GraficBot = (function () {
     var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + HT + '" width="' + W + '" height="' + HT + '" role="img" aria-label="' + (o.actiune ? "Prețul acțiunii (zilnic) cu stopul, ținta și zona de valoare" : "Prețul cu gridul, planul și alertele botului") + '">' + (bandaSem ? qSem.join("") + '<g class="gbTot" transform="translate(0,' + bandaSem + ')">' + q.join("") + '</g>' : q.join("")) + '</svg>';
     // legenda: identitatea nu sta doar in culoare
     // v100.56: la actiuni (o.actiune) nu exista grid si nici alertele botului - legenda nu le pomeneste
+    var valori = !ingust || (!VAL.length && !VAL.pornit) ? "" : '<ul class="gbValori" aria-label="Valorile de pe grafic">' + VAL.slice().sort(function (a, b) { return b.p - a.p; }).map(function (v) {
+      return '<li' + (v.tit ? ' title="' + esc(v.tit) + '"' : '') + '><i style="background:' + v.c + '"></i><span class="gbVN">' + (v.afara ? v.afara + " " : "") + esc(v.t) + '</span><b class="gbVP">' + fmtP(v.p) + '</b><span class="gbVD">' + (pAcum ? pct(v.p / pAcum - 1) : "") + '</span><span class="gbVS">' + (v.sansa ? esc(v.sansa) : "") + '</span></li>';
+    }).join("") + (VAL.pornit ? '<li><i class="gbVPornit" style="border-color:' + COL.accent + '"></i><span class="gbVN">botul pornit</span><b class="gbVP">' + esc(VAL.pornit) + '</b><span class="gbVD"></span><span class="gbVS"></span></li>' : "") + '</ul>';
     var Lg = o.actiune ? [] : ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gl ? " (" + cate(gl, "linie", "linii") + ")" : "") + '</span>', ];
     var are = function (k) { return niv.some(function (x) { return x.k === k; }); };
     if (are("zero")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero-ul botului</span>');
@@ -686,12 +692,12 @@ var GraficBot = (function () {
         '<span>▲▼ umpleri deschise: gri · galben = de peste o oră · <i class="gbPct" style="background:' + COL.good + '"></i>perechi închise, jos (' + (o.umpleri ? o.umpleri.perechi : 0) + ')</span>',
         '<span><i class="gbPct" style="background:' + COL.warn + '"></i>alertă: galben atenție · gri info · roșu critic (' + evs.length + ')</span>'];
       if (LgFer) Lg.push(LgFer);   /* v100.143: și pe rândul scurt */
-      return { svg: svg, inaltime: HT, legenda: Lg.join(""), harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem } };
+      return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem } };
     }
     if (!o.actiune) Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
     if (o.actiune) { if (f > 1) Lg.push('<span class="mutedInfo">o lumânare = ' + cate(f, "zi", "zile") + ' de bursă</span>'); }
     else Lg.push('<span class="mutedInfo">' + cate(evs.length, "alertă", "alerte") + ' ale botului în perioadă' + (f > 1 ? " · o lumânare = " + cate(f, "bară", "bare") : "") + '</span>');
-    return { svg: svg, inaltime: HT, legenda: Lg.join(""), harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem } };
+    return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem } };
   }
 
   // ce spune cursorul la x (in coordonatele SVG-ului): bara, indicatorii, alertele din apropiere - totul scapat

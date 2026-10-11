@@ -151,7 +151,9 @@ await test("revizie 🔴: moneda ieftina (0.00001234) - etichetele din grafic au
 });
 await test("revizie: pe telefon etichetele din dreapta au un nume scurt (zero, stop, −14.9 …), nu doar cifre colorate", () => {
   const d = GB.desen({ bare: GB.bare(klines()), W: 330, ingust: true, st: ST, niv: NIV(), grila: { jos: 0.5722, sus: 0.6572, n: 18 }, alerte: [], per: "24h" });
-  assert.match(d.svg, />zero 0\.5951</); assert.match(d.svg, />−14\.9 0\.5756</); assert.match(d.svg, />intrare 0\.5918</);
+  // v100.157: pe telefon valorile stau în fâșia de sub grafic - fiecare cu numele ei, nu doar cifre colorate
+  for (const p of ["0\\.5951", "0\\.5756", "0\\.5918"]) assert.match(d.valori, new RegExp('<span class="gbVN">[^<]*[a-zăîâșț0-9][^<]*</span><b class="gbVP">' + p + '</b>'), "rând cu nume pentru " + p);
+  assert.doesNotMatch(d.svg, />zero 0\.5951</, "nu și pe grafic");
 });
 await test("revizie: cu RSI oprit, axa timpului ramane in SVG; legenda nu arata ce nu e desenat (fara zero / fara plan / o singura parte a planului)", () => {
   const d = GB.desen({ bare: GB.bare(klines()), W: 1000, ingust: false, st: { bb: false, ema: false, rsi: false, vp: false }, niv: [], grila: {}, alerte: [], per: "24h" });
