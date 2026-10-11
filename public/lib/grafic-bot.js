@@ -526,7 +526,8 @@ var GraficBot = (function () {
       var xp = X(bp) + cw / 2;
       q.push('<rect class="gbInainte" x="0" y="0" width="' + f1(xp) + '" height="' + mainH + '" fill="' + COL.fond + '" fill-opacity=".45"/>'
         + '<line class="gbPornit" x1="' + f1(xp) + '" x2="' + f1(xp) + '" y1="0" y2="' + mainH + '" stroke="' + COL.accent + '" stroke-width="1.4" stroke-dasharray="5 4"/>'
-        + '<text x="' + f1(xp + 5) + '" y="' + (mainH - 8) + '" font-size="12" fill="' + COL.accent + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">botul pornit ' + ora(tPorn) + '</text>');
+        + '<text x="' + f1(ingust && xp + 5 + 112 > plotW ? xp - 5 : xp + 5) + '"' + (ingust && xp + 5 + 112 > plotW ? ' text-anchor="end"' : '') + ' y="' + (mainH - 8) + '" font-size="12" fill="' + COL.accent + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">botul pornit ' + ora(tPorn) + '</text>');
+      var etPornitJos = true;   /* v100.154: pe telefon eticheta „↓ …” de jos urcă un rând, să nu calce „botul pornit” */
     }
     // liniile + etichetele din dreapta (se imping ca sa nu se suprapuna); ce e in afara cadrului -> sageata la margine
     var et = [], afara = [];
@@ -568,10 +569,10 @@ var GraficBot = (function () {
     et.forEach(function (e) {
       // v100.143: eticheta împinsă de pe linia ei primește o liniuță spre linie (altfel nu se știe a cui e)
       if (Math.abs(e.y - e.y0) > 3) q.push('<line class="gbLeg" x1="' + f1(plotW) + '" x2="' + f1(plotW + 5) + '" y1="' + f1(e.y0) + '" y2="' + f1(e.y) + '" stroke="' + e.c + '" stroke-width="1" stroke-opacity=".8"/>');
-      if (e.acum) q.push('<rect x="' + f1(plotW + 2) + '" y="' + f1(e.y - 11) + '" width="' + (gut - 4) + '" height="22" rx="2" fill="' + COL.text + '"/><text x="' + f1(plotW + 8) + '" y="' + f1(e.y + 5) + '" font-size="13.5" font-weight="700" fill="#0E141A">' + (ingust ? "" : "acum ") + fmtP(e.p) + '</text>');
+      if (e.acum) q.push('<rect x="' + f1(plotW + 2) + '" y="' + f1(e.y - 11) + '" width="' + (gut - 4) + '" height="22" rx="2" fill="' + (ingust ? COL.fond : COL.text) + '"' + (ingust ? ' stroke="' + COL.text + '" stroke-width="1.2"' : '') + '/><text x="' + f1(plotW + 8) + '" y="' + f1(e.y + 5) + '" font-size="13.5" font-weight="700" fill="' + (ingust ? COL.text : "#0E141A") + '">' + (ingust ? "" : "acum ") + fmtP(e.p) + '</text>');
       else {
         var tit = e.sansaLung ? (e.tit ? e.tit + " · " : "") + e.sansaLung : e.tit || "";
-        q.push('<rect class="gbTag" x="' + f1(plotW + 2) + '" y="' + f1(e.y - 9) + '" width="' + Math.min(gut - 4, Math.round(((ingust ? (e.s || "") : e.t) + " " + fmtP(e.p)).length * 6.5 + 12)) + '" height="18" rx="2" fill="' + e.c + '" fill-opacity=".13" stroke="' + e.c + '" stroke-opacity=".6"/>'); q.push('<text x="' + f1(plotW + 7) + '" y="' + f1(e.y + 4.5) + '" font-size="13" fill="' + e.c + '">' + (tit ? '<title>' + esc(tit) + '</title>' : "") + esc(ingust ? (e.s || "") : e.t) + " " + fmtP(e.p)
+        if (!ingust) q.push('<rect class="gbTag" x="' + f1(plotW + 2) + '" y="' + f1(e.y - 9) + '" width="' + Math.min(gut - 4, Math.round(((ingust ? (e.s || "") : e.t) + " " + fmtP(e.p)).length * 6.5 + 12)) + '" height="18" rx="2" fill="' + e.c + '" fill-opacity=".13" stroke="' + e.c + '" stroke-opacity=".6"/>'); q.push('<text x="' + f1(plotW + (ingust ? 5 : 7)) + '" y="' + f1(e.y + 4.5) + '" font-size="' + (ingust ? 12 : 13) + '" fill="' + e.c + '">' + (tit ? '<title>' + esc(tit) + '</title>' : "") + esc(ingust ? (e.s || "") : e.t) + " " + fmtP(e.p)
           + (e.sansa ? (ingust ? " " : " · ") + '<tspan class="gbSansa" font-size="' + (ingust ? 10 : 11) + '" opacity=".9">' + esc(ingust ? e.sansaScurt : e.sansa) + '</tspan>' : "") + '</text>');
       }
     });
@@ -592,7 +593,7 @@ var GraficBot = (function () {
           + '<text x="' + f1(ingust ? cx : cx + 17) + '" y="' + f1(ingust ? cy + 25 : cy + 4.5) + '"' + (ingust ? ' text-anchor="middle"' : '') + ' font-size="' + (ingust ? 11.5 : 13) + '"' + (eu ? ' font-weight="700"' : '') + ' fill="' + (eu ? COL.text : COL.info) + '">' + esc(x.sc) + '</text></g>');
       });
     }
-    var ys = 17 + semH, yj = mainH - 9;
+    var ys = 17 + semH, yj = mainH - 9 - (ingust && etPornitJos ? 17 : 0);
     afara.forEach(function (x) {
       var inSus = x.p > hi, t = (inSus ? "↑ " : "↓ ") + x.t + " " + fmtP(x.p) + (pAcum ? " (" + pct(x.p / pAcum - 1) + ")" : "") + (x.sansa ? " · " + (ingust ? x.sansaScurt || x.sansa : x.sansa) : "");
       q.push('<text x="8" y="' + (inSus ? ys : yj) + '" font-size="12.5" fill="' + x.c + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">' + esc(t) + '</text>');
@@ -626,7 +627,7 @@ var GraficBot = (function () {
     if (st.rsi) {
       var RY = function (v) { return ry0 + (1 - v / 100) * rsiH; };
       q.push('<rect x="0" y="' + ry0 + '" width="' + f1(plotW) + '" height="' + rsiH + '" fill="' + COL.fond + '"/><rect x="0" y="' + f1(RY(70)) + '" width="' + f1(plotW) + '" height="' + f1(RY(30) - RY(70)) + '" fill="rgba(155,127,224,.06)"/>');
-      [70, 30].forEach(function (v) { q.push('<line x1="0" x2="' + f1(plotW) + '" y1="' + f1(RY(v)) + '" y2="' + f1(RY(v)) + '" stroke="#26333F" stroke-dasharray="3 3"/><text x="' + f1(plotW + 6) + '" y="' + f1(RY(v) + 4) + '" font-size="12" fill="' + COL.mut + '">' + v + '</text>'); });
+      [70, 30].forEach(function (v) { var loc = !ingust || RY(v) + 4 - (ry0 + 14) >= 14; q.push('<line x1="0" x2="' + f1(plotW) + '" y1="' + f1(RY(v)) + '" y2="' + f1(RY(v)) + '" stroke="#26333F" stroke-dasharray="3 3"/>' + (loc ? '<text x="' + f1(plotW + 6) + '" y="' + f1(RY(v) + 4) + '" font-size="12" fill="' + COL.mut + '">' + v + '</text>' : '')); });
       var d = "", pen = false; B.forEach(function (b, bi) { var v = S.rsi[b.k]; if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + f1(X(bi)) + "," + f1(RY(v)); pen = true; });
       q.push('<path class="gbRsi" d="' + d + '" fill="none" stroke="' + COL.intrare + '" stroke-width="1.4"/>');
       var rl = S.rsi[raw.length - 1]; q.push('<text x="' + f1(plotW + 6) + '" y="' + (ry0 + 14) + '" font-size="12.5" fill="' + COL.intrare + '">RSI ' + (rl != null ? Math.round(rl) : "—") + '</text>');

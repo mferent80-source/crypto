@@ -388,7 +388,17 @@
   }
   // „+0,00 USDT” / „−5906,42 USDT” ⇒ număr (sufixul monedei scos; nr() singur dă null pe el)
   function valJurnal(t) { return nr(String(t == null ? "" : t).replace(/\s*USDT.*$/i, "").trim()); }
+  // „Rezultat total” din statistica filei Acțiuni / Tot (lei sau $): semnul din clasa pusă de pagină, zero din cifre
+  function valBani(t) { var x = String(t == null ? "" : t).replace(/[−–]/g, "-").replace(/[^\d,.\-+]/g, ""); if (!/\d/.test(x)) return null; if (x.indexOf(".") >= 0 && (x.indexOf(",") > 0 || /\.\d{3}(\.|$)/.test(x))) x = x.replace(/\./g, ""); return /^[+-]?0+([.,]0+)?$/.test(x) ? 0 : nr(x); }   /* „—” = lipsă, nu zero; „1.234,56” = mii cu punct */
+  function pagJurnalAltaFila(fila) {
+    var ref = fila === "actiuni" ? $("jtActiuni") : $("jtStatTot"), tile = ref && ref.querySelector(".stTile"), v = tile && tile.querySelector(".stVal");
+    if (!v) { antet("pzV-jt", ref, null); return; }
+    var n = valBani(v.textContent), ton = n === 0 ? "mut" : tonCls(v), CUM = fila === "actiuni" ? "ACȚIUNI" : "TOT";
+    antet("pzV-jt", ref, { verb: CUM + ": " + (n === 0 ? "PE ZERO" : ton === "sus" ? "PE PLUS" : ton === "jos" ? "PE MINUS" : v.textContent.trim()), ton: ton, titlu: (tx(".stEt", tile) || "Rezultat total") + ": " + v.textContent.trim(), fac: tx(".stSub", tile), din: fila === "actiuni" ? "Statistica · Trading 212" : "Statistica · tot, în lei" });
+  }
   function pagJurnal() {
+    var fila = document.querySelector('#jurnaltrade .jtFiltru [aria-pressed="true"]'), f = fila ? fila.id.replace("jtF-", "") : "crypto";
+    if (f === "actiuni" || f === "tot") { pagJurnalAltaFila(f); return; }
     var cel = document.querySelector("#jtRezumat .jtKpi .tbKpiCel"), cr = $("jtCrypto");
     var ref = cr && cr.firstElementChild; if (ref && ref.id === "pzV-jt") ref = ref.nextElementSibling;
     if (!cel || !cr) { antet("pzV-jt", ref, null); return; }
@@ -397,12 +407,13 @@
   }
   // sugestiile: „fapte, nu semnal” (scrie pagina) ⇒ verbul = cuvântul îngroșat al lățimii, FĂRĂ culoare de bine / rău
   function pagSugestii() {
-    var p = document.querySelector("#sugPagina .sugPanda p.tbCitScurt");
+    var p = document.querySelector("#sugPagina .sugPanda p.tbCitScurt") || document.querySelector("#sugPagina .sugPanda p.tbSub");
     if (!p) { antet("pzV-sug", $("sugPagina"), null); return; }
+    var capSub = tx("#sugPagina .sugPanda .sugPandaCap .tbSub"), vechi = /veche/.test(capSub);
     var b = p.querySelector("b"), cart = [].filter.call(document.querySelectorAll("#sugPagina .sugCartela"), function (c) { return /Pe ce aș porni un bot/.test(tx("h4", c)); })[0];
     var li = cart ? cart.querySelector(".sugLista li") : null, prim = li ? (li.querySelector("b") || li).textContent.trim() : "";
     var verb = (b ? b.textContent : "").trim().toUpperCase() || "LĂȚIMEA PIEȚEI";
-    antet("pzV-sug", $("sugPagina"), { verb: verb.length > 28 ? verb.slice(0, 26) + "…" : verb, ton: "mut", titlu: "", fac: prim ? "pe ce aș porni un bot: " + prim : "", din: "lățimea pieței pe 150 perp-uri (fapte, nu semnal) · „Pe ce aș porni un bot”" });
+    antet("pzV-sug", $("sugPagina"), { verb: verb.length > 28 ? verb.slice(0, 26) + "…" : verb, ton: "mut", titlu: (b ? "" : p.textContent.replace(/\s+/g, " ").trim()) + (vechi ? (b ? "" : " · ") + "lățimea e " + capSub.split("·")[0].trim() : ""), fac: prim ? "pe ce aș porni un bot: " + prim : "", din: "lățimea pieței pe 150 perp-uri (fapte, nu semnal) · „Pe ce aș porni un bot”" });
   }
   // Market: cifrele „Breadth summary”, fără prag inventat
   function pagMarket() {
@@ -460,12 +471,13 @@
       b.addEventListener("click", function () { var d = !document.body.classList.contains("pzFasiaDeschisa"); b._d = d; try { localStorage.setItem("pzFasiaDeschisa", d ? "1" : "0"); } catch (e) {} pliazaFasia(); });
     }
     if (b && h && b.nextElementSibling !== h) h.parentNode.insertBefore(b, h);
+    if (b && h) { if (!h.id) h.id = "pzFasiaPret"; if (b.getAttribute("aria-controls") !== h.id) b.setAttribute("aria-controls", h.id); }
     if (b && b._d != null) des = b._d;
     document.body.classList.toggle("pzFasiaDeschisa", des);
     if (b) { var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
   }
 
-  window.AsezarePaznic = { valJurnal: valJurnal, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, lichDin: lichDin, verdictValid: verdictValid, tonLich: tonLich };
+  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, lichDin: lichDin, verdictValid: verdictValid, tonLich: tonLich };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   setInterval(tura, 1500); setTimeout(tura, 300);

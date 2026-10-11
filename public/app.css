@@ -2738,7 +2738,7 @@ body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on)
 .pzDemo #grFisa>*{order:65}
 .pzDemo #grFisa>.grVerdict{order:0}.pzDemo #grFisa>.grListaJos{order:1}.pzDemo #grFisa>#grRezumat{order:2}.pzDemo #grFisa>#grPlanVar{order:10}
 .pzDemo #grFisa>.grPoarta{order:20}.pzDemo #grFisa>#grProb{order:30}.pzDemo #grFisa>.grBusola{order:35}.pzDemo #grFisa>.tbRand:has(.grDir){order:40}
-.pzDemo #grFisa>.grBilet{order:45}.pzDemo #grFisa>#grAlte{order:60}.pzDemo #grFisa>#grAlte+p{order:61}.pzDemo #grFisa>.tbRand:has(.grTabel){order:70}
+.pzDemo #grFisa>.grBilet{order:45}.pzDemo #grFisa>#grAlte{order:60}.pzDemo #grFisa>.tbRand:has(.grTabel){order:70}
 /* Simulator grid: când există rezultat, verdictul și riscurile urcă deasupra setărilor */
 .pzDemo #gsPagina{display:flex;flex-direction:column}
 .pzDemo #gsPagina:has(.gsVerdict)>*{order:900}
