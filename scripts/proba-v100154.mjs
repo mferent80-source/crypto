@@ -32,11 +32,13 @@ await test("(1) v100.157 (el: „aș integra altfel valorile în grafic” → f
   assert.equal(mareV, "", "ecranul mare: fără fâșie");
   assert.match(mare, /class="gbTag"/); assert.match(mare, /class="gbSansa"[^>]*>23%/);
 });
-await test("(2) prețul de acum: pe telefon cutie mică cu chenar (v100.158: „ocupă mult spațiu doar el”) - coloana din dreapta 58 px, litera potrivită ca orice preț să încapă; pe ecranul mare neschimbat", () => {
-  const C = G.COL;
-  const m = tel.match(new RegExp(`<rect x="[\\d.]+" y="[\\d.]+" width="(\\d+)" height="18" rx="2" fill="${C.fond}" stroke="${C.text}" stroke-width="1"/><text [^>]*text-anchor="middle" font-size="([\\d.]+)" font-weight="700" fill="${C.text}">([\\d.]+)</text>`));
-  assert.ok(m, "cutia mică a prețului"); assert.equal(+m[1], 56); assert.ok(+m[3].length * +m[2] * 0.62 <= 56 - 8, "încape: " + m[3] + " la " + m[2] + " px");
-  for (const p of [0.012345, 109876.5, 2.03]) { const s = G.desen(Object.assign({}, baza, { W: 344, ingust: true, pretViu: p, niv: [] })).svg; const q = s.match(/text-anchor="middle" font-size="([\d.]+)" font-weight="700" fill="[^"]+">([\d.]+)<\/text>/); assert.ok(q && q[2].length * +q[1] * 0.62 <= 48, p + " ⇒ " + (q && q[2] + " la " + q[1])); }
+await test("(2) prețul de acum pe telefon: PE grafic (v100.160, el: „pe grafic”) - eticheta pe linia prețului la marginea STÂNGĂ (în dreapta acoperea ultima lumânare), linia punctată pe toată lățimea, fără coloana din dreapta; numele benzilor în benzi; pe ecranul mare neschimbat", () => {
+  const C = G.COL, d = G.desen(Object.assign({}, baza, { W: 344, ingust: true }));
+  assert.equal(d.harta.plotW, 344, "fără coloana din dreapta");
+  const m = tel.match(new RegExp(`<g class="gbPretAcum"><rect x="1" y="([\\d.]+)" width="(\\d+)" height="18" rx="2" fill="${C.fond}" fill-opacity=".94" stroke="${C.text}" stroke-width="1"/><text x="([\\d.]+)" y="[\\d.]+" text-anchor="middle" font-size="12" font-weight="700" fill="${C.text}">([\\d.]+)</text></g>`));
+  assert.ok(m, "eticheta prețului, în stânga"); assert.equal(m[4], "2.0300"); assert.ok(+m[2] >= m[4].length * 7, "încape");
+  assert.match(tel, /<line class="gbViu" x1="0\.0" stroke-opacity=".55" x2="344.0"/, "linia prețului pe toată lățimea");
+  for (const n of ["trend", "volum", "alerte", "RSI ", "ADX "].filter((n) => new RegExp(">" + n).test(tel))) assert.match(tel, new RegExp(`<text x="(4|8)\\.0" y="[\\d.]+" font-size="1[01](\\.5)?" fill="[^"]+">${n}`), "în bandă: " + n); assert.ok(["volum", "RSI "].every((n) => new RegExp(">" + n).test(tel)), "benzile desenate au nume");
   assert.match(mare, new RegExp(`height="22" rx="2" fill="${C.text}"/><text [^>]*fill="#0E141A">acum `));
 });
 await test("(3)(4) „botul pornit hh:mm”: pe telefon ultimul rând din fâșie (linia lui rămâne pe grafic); pe ecranul mare neatins", () => {
@@ -48,7 +50,9 @@ await test("(3)(4) „botul pornit hh:mm”: pe telefon ultimul rând din fâși
 await test("(4b) RSI: cifra pragului 70 rămâne la vedere și nu calcă „RSI nn” - pe telefon și pe ecranul mare (v100.155)", () => {
   const g = citeste("public", "lib", "grafic-bot.js");
   assert.match(g, /if \(v === 70 && yt - \(ry0 \+ 14\) < 14\) yt = RY\(v\) \+ 14;/);
-  for (const s of [tel, mare]) {
+  // v100.160: pe telefon „RSI nn” e în colțul stâng al benzii, iar 70 / 30 la capătul drept al liniilor lor ⇒ nu se pot călca
+  assert.match(tel, /<text x="4\.0" y="[\d.]+" font-size="11" fill="[^"]+">RSI /); assert.match(tel, /text-anchor="end" y="[\d.]+" font-size="10" fill="[^"]+">70<\/text>/); assert.match(tel, /text-anchor="end" y="[\d.]+" font-size="10" fill="[^"]+">30<\/text>/);
+  for (const s of [mare]) {
     const yR = +(s.match(/y="([\d.]+)" font-size="12\.5" fill="[^"]+">RSI /) || [])[1], y70 = +(s.match(/y="([\d.]+)" font-size="12" fill="[^"]+">70<\/text>/) || [])[1], y30 = +(s.match(/y="([\d.]+)" font-size="12" fill="[^"]+">30<\/text>/) || [])[1];
     assert.ok(yR > 0 && y70 > 0 && y30 > 0, [yR, y70, y30].join(" / ")); assert.ok(y70 - yR >= 14 && y30 - y70 >= 14, "rânduri separate: " + [yR, y70, y30].join(" / "));
   }

@@ -78,7 +78,7 @@ await test("(5) marginea din dreapta crește cu cea mai lungă etichetă (nume +
   const d1 = G.desen({ bare: B5, W: 1000, st: {}, niv: [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine", { sansa: "24 h: 67%", sansaScurt: "67%", sansaLung: "x" })], alerte: [], per: "24h" });
   assert.ok(d1.harta.plotW < d0.harta.plotW && 1000 - d1.harta.plotW <= 240, "cu șansă marginea crește, dar nu peste 24%: " + (1000 - d1.harta.plotW));
   const dT = G.desen({ bare: B5, W: 390, ingust: true, st: {}, niv: [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine", { sansa: "24 h: 67%", sansaScurt: "67%", sansaLung: "x" })], alerte: [], per: "24h" });
-  assert.equal(dT.harta.plotW, 390 - 58, "pe telefon marginea e 58 (v100.158: valorile stau în fâșia de sub grafic, în dreapta doar prețul și numele benzilor)");
+  assert.equal(dT.harta.plotW, 390, "pe telefon fără coloana din dreapta (v100.160: valorile în fâșia de sub grafic, prețul pe grafic, numele benzilor în benzi)");
 });
 await test("(E) versiunea de la v100.143 în sus", () => {
   assert.match(HTML, /content="v100\.1(4[3-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[3-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[3-9]|[5-9]\d)</);
