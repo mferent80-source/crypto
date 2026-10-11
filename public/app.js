@@ -3038,7 +3038,7 @@ function navTo(id,load=false){
    else if(id==="salt"){if(typeof saltPorneste==="function")saltPorneste(false)}   // v100.120: pagina Salt   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
-   else if(id==="stocks"){loadStockContext();checkStocksHealth()}
+   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza()}
    else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false);if(typeof contTotAsigura==="function")contTotAsigura()}
    else if(id==="scan"){if(typeof scanPorneste==="function")scanPorneste(false)}   // v96: lista noua; scannerul vechi porneste doar din butonul lui
    else if(id==="replaylab")renderReplayLab();
@@ -3067,7 +3067,7 @@ function navTo(id,load=false){
    if(id==="opportunity")renderOpportunity();
    if(id==="calibration")renderCalibrationLab();
    if(id==="settings"){renderSettings();renderPushStatus()}
-   if(id==="stocks"){loadStockContext().catch(()=>{});checkStocksHealth().catch(()=>{})}
+   if(id==="stocks"){loadStockContext().catch(()=>{});checkStocksHealth().catch(()=>{});if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza()}
    if(id==="riskmgr")calculateRisk();
    if(id==="decision"&&window.__radarState)buildDecision(window.__radarState.q,window.__radarState.hs||historicalSet(window.__radarState.j),mtfComposite(window.__radarState.m||[]),window.__signalState?.sm||{direction:"WAIT",long:50,short:50,edge:0});
    if(id==="paper"){renderPaper();refreshPaper()}
@@ -6721,7 +6721,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var vB=vP&&!vP.vechi?Busola.randDirectie(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null,vM=tbMcRand(b);
   var voci=typeof Busola!=="undefined"?Busola.concluzie({bot:b.directie,grafic:v4H?v4H.dir:null,busola:vB?vB.semn:null,mc:vM?vM.stare:null,mcAtins:!!(vM&&/planul atins/i.test(String(vM.text||"")))}):null;
   c.randuri.forEach(function(x){
-    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
+    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
     if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
     out.push(rd(x));
     if(x.ce==="Direcția"&&ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}});   /* revizia: fără semafor, Indicatorii stau după Direcția */
@@ -6742,15 +6742,32 @@ var tbLatimeKv={la:0,d:null,inLucru:null};
 function tbLatimeDinKv(){
   if(Date.now()-tbLatimeKv.la<10*60000||tbLatimeKv.inLucru)return;
   tbLatimeKv.inLucru=getJSON("/api/istoric-bot?action=latime").then(function(r){tbLatimeKv.d=r&&r.latime&&r.latime.acum?r.latime:null},function(){tbLatimeKv.d=tbLatimeKv.d||null}).then(function(){tbLatimeKv.la=Date.now();tbLatimeKv.inLucru=null;if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)})}
+// Lățimea pieței US (11.10.2026, pagina market-breadth mutată din premarket_scanner): datele le face robotul
+// de pe GitHub (pages.yml, după închiderea bursei); aici doar se citește latest.json, cel mult o dată la 30 de minute.
+var latimeUsStare={la:0,j:null,inLucru:null};
+function latimeUsAduce(dupa){
+  if(typeof LatimeUS==="undefined")return null;
+  if(Date.now()-latimeUsStare.la<30*60000||latimeUsStare.inLucru)return latimeUsStare.inLucru;
+  latimeUsStare.inLucru=fetch(LatimeUS.SURSA,{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j)latimeUsStare.j=j},function(){}).then(function(){latimeUsStare.la=Date.now();latimeUsStare.inLucru=null;if(typeof dupa==="function")dupa()});
+  return latimeUsStare.inLucru}
+function latimeUsDeseneaza(){
+  var el=$("latimeUsBloc");if(!el||typeof LatimeUS==="undefined")return;
+  el.innerHTML=latimeUsStare.la?LatimeUS.htmlBloc(LatimeUS.normalizeaza(latimeUsStare.j,Date.now())):'<p class="tbSub">Aduc lățimea pieței US…</p>';
+  latimeUsAduce(latimeUsDeseneaza)}
+// Pagina alerts din suită (Ce dețin / Ce urmăresc / News / Istoric) rămâne mereu, la cererea lui (11.10.2026); Radarul doar o deschide
+function deschideAlertsPagina(){window.open("https://mferent80-source.github.io/premarket_scanner.html/alerts/","_blank","noopener")}
+function latimeUsDeschide(){if(typeof setAssetClass==="function")setAssetClass("STOCKS");navTo("stocks",true)}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}
 // v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
 // când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
 function tbCitireExtra(b,o){
-  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null},d=tbStare.directie;
+  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeUs:null},d=tbStare.directie;
   /* v100.150 (I-583): lățimea pieței pe 150 perp-uri, din KV (colectorul la 15 min) - Latime.textCitire dă textul, starea și vechimea; „pânda ›” duce în Sugestii */
   if(typeof tbLatimeDinKv==="function")tbLatimeDinKv();out.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"?Latime.textCitire(tbLatimeKv.d,b,Date.now()):null;   /* probele vechi rulează funcția cu stub-uri, fără KV */
-  if(out.latime)Object.assign(out.latime,{actiune:out.latime.link?"sugDeschidePanda()":null,linkText:"pânda ›",link:null});   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
+  if(out.latime)Object.assign(out.latime,{actiune:out.latime.link?"sugDeschidePanda()":null,linkText:"pânda ›",link:null});
+  /* lățimea pieței US (11.10.2026): rândul apare după prima citire a lui latest.json; sosirea redesenează citirea o dată */
+  if(typeof latimeUsAduce==="function"&&typeof LatimeUS!=="undefined"){latimeUsAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.latimeUs=latimeUsStare.la?LatimeUS.textCitire(LatimeUS.normalizeaza(latimeUsStare.j,Date.now()),Date.now()):null}   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){
     var tf=tbTf(),r=l.filter(function(x){return x.tf===tf&&x.q})[0]||l.filter(function(x){return x.tf==="15M"&&x.q})[0];

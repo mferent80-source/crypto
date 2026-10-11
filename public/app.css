@@ -2790,4 +2790,30 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 @media (min-width:981px) and (max-width:1359px){.toolbar{grid-template-columns:minmax(0,1fr)}.toolbar>.actions{grid-column:1;grid-row:2;margin-top:7px}.toolbar>.controls{grid-template-columns:130px minmax(140px,1fr) 80px 110px 170px}}
 /* v100.157: pe telefon valorile graficului stau sub grafic, câte una pe rând (el: „aș integra altfel valorile în grafic” → fâșia de valori) */
 .gbValori{list-style:none;margin:6px 0 8px;padding:6px 0 0;border-top:1px solid #26333F;display:grid;grid-template-columns:auto 1fr auto auto auto;column-gap:10px;row-gap:3px;font-size:13px;align-items:center}.gbValori li{display:contents}.gbValori i{width:9px;height:9px;border-radius:2px;display:inline-block}.gbValori i.gbVPornit{background:none;border-left:2px dashed;width:0;height:11px;margin-left:3px}.gbValori .gbVN{color:#9FB3C4}.gbValori .gbVP{color:#E6EDF3;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}.gbValori .gbVD,.gbValori .gbVS{color:#8799AA;font-variant-numeric:tabular-nums;text-align:right}
+/* Lățimea pieței US (11.10.2026, mutată din premarket_scanner/market-breadth) */
+.latimeUsBloc{margin:0 0 12px}
+.pzDemo #stocks.on>.latimeUsBloc{order:10}
+.luVerdict{margin:6px 0 8px}
+.luVerdict.lusatentie b,.luVerdict.lusrau b{color:var(--bad)}
+.luVerdict.lusbine b{color:var(--good)}
+.luCartele{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.luCartela{border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+.luScor{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.luZona{font-weight:700}
+.luZStrong,.luZHealthy{color:var(--good)}
+.luZNeutral{color:var(--warn,#d9a400)}
+.luZWeakening,.luZCritical{color:var(--bad)}
+.luGrafic{display:block;width:100%;max-width:560px;height:auto;margin-top:10px}
+.luGrafic polyline{fill:none;stroke-width:2}
+.luGrafic .luUp{stroke:#5aa9e6}
+.luGrafic .luSp{stroke:#c9a227}
+.luGrafic .luMijloc{stroke:var(--line);stroke-dasharray:3 4}
+.luLegUp{color:#5aa9e6}
+.luLegSp{color:#c9a227}
+.luTabel{margin-top:10px;overflow-x:auto}
+.luTab{width:100%;font-variant-numeric:tabular-nums}
+.luTab .num{text-align:right}
+.luNota{opacity:.8;margin-top:6px}
+.luBloc.vechi .luCartele,.luBloc.vechi .luGrafic{opacity:.6}
+@media (max-width:640px){.luSector{display:none}.luCartele{grid-template-columns:repeat(2,minmax(0,1fr))}.luTab thead{display:table-header-group}.luTab{display:table}.luTab tbody{display:table-row-group}.luTab tr{display:table-row}.luTab td,.luTab th{display:table-cell}.luTab .luSector{display:none}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
