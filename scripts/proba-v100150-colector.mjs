@@ -42,11 +42,25 @@ await test("o tură întreagă: bare 4h + 1d pe 150, serii pe 150, premiumIndex 
   assert.equal(w.trimise.length, 1); const c = w.trimise[0].corp; assert.equal(w.trimise[0].c, "/api/istoric-bot?action=latime");
   assert.equal(c.n, 150); assert.equal(c.lipsa, 1); assert.equal(c.incomplet, false); assert.equal(c.lat.sus, 149); assert.equal(c.regim.cod, "LARG-SUS"); assert.equal(c.monede.length, 149); assert.ok(c.monede.every((m) => m.lMari === 62));
 });
-await test("ritmurile: la 10 minute nu face nimic; la 15 min doar barele (300 cereri), seriile abia după o oră", async () => {
-  const w = lume(); await turaLatime(w.d, w.st, ACUM); const n0 = w.cereri.length;
+await test("ritmurile (revizia 6): la 10 minute nimic; la fiecare 15 min barele + seriile unui SFERT din univers (salturi mici pe IP), fiecare monedă o dată pe oră", async () => {
+  const w = lume(); await turaLatime(w.d, w.st, ACUM); const n0 = w.cereri.length, oi = () => w.cereri.filter((u) => /openInterestHist/.test(u)).length;
+  assert.equal(oi(), 150, "prima tură: toate seriile");
   await turaLatime(w.d, w.st, ACUM + 10 * MIN); assert.equal(w.cereri.length, n0, "sub 15 min nimic");
-  await turaLatime(w.d, w.st, ACUM + 15 * MIN); const n1 = w.cereri.length - n0; assert.ok(n1 >= 300 && n1 <= 302, "doar barele + premiumIndex: " + n1); assert.equal(w.trimise.length, 2);
-  await turaLatime(w.d, w.st, ACUM + 61 * MIN); assert.ok(w.cereri.filter((u) => /openInterestHist/.test(u)).length >= 300, "seriile a doua oară după o oră");
+  await turaLatime(w.d, w.st, ACUM + 15 * MIN); const n1 = w.cereri.length - n0; assert.ok(n1 >= 300 + 37 * 5 && n1 <= 302 + 38 * 5, "barele + premiumIndex + un sfert din serii: " + n1); assert.equal(w.trimise.length, 2);
+  await turaLatime(w.d, w.st, ACUM + 30 * MIN); await turaLatime(w.d, w.st, ACUM + 45 * MIN); await turaLatime(w.d, w.st, ACUM + 60 * MIN);
+  assert.equal(oi(), 300, "după 4 ture de 15 min fiecare monedă a fost refăcută exact o dată");
+});
+await test("(revizia 1) ticker/24hr picat ⇒ eroare publicată, universul NU rămâne gol o oră; exchangeInfo picat cu univers vechi ⇒ ține universul, nu publică eroare", async () => {
+  const w = lume(); const b = w.d.binance; let tickerPicat = true; w.d.binance = async (u) => /ticker\/24hr/.test(u) && tickerPicat ? null : b(u);
+  await turaLatime(w.d, w.st, ACUM); assert.equal(w.trimise.length, 1); assert.match(w.trimise[0].corp.eroare, /ticker/); assert.equal(w.trimise[0].corp.regim.cod, "NECUNOSCUT"); assert.ok(!w.st.univers || !w.st.univers.length, "universul gol nu se ține");
+  tickerPicat = false; await turaLatime(w.d, w.st, ACUM + 15 * MIN); assert.equal(w.cereri.filter((u) => /exchangeInfo/.test(u)).length, 2, "la tura următoare universul se cere din nou"); assert.equal(w.trimise[1].corp.n, 150);
+  let infoPicat = true; w.d.binance = async (u) => /exchangeInfo/.test(u) && infoPicat ? null : b(u);
+  await turaLatime(w.d, w.st, ACUM + 75 * MIN); assert.equal(w.st.univers.length, 150, "universul vechi ținut"); assert.equal(w.trimise.length, 3); assert.equal(w.trimise[2].corp.n, 150); assert.equal(w.trimise[2].corp.eroare, null); assert.ok(w.jurnal.some((j) => /exchangeInfo/.test(j) && /vechi/.test(j)));
+  infoPicat = false;
+});
+await test("(revizia 1) ticker/24hr cu 0 simboluri cu volum ⇒ eroare (câmp redenumit), nu „n: 0” tăcut", async () => {
+  const w = lume(); const b = w.d.binance; w.d.binance = async (u) => /ticker\/24hr/.test(u) ? (await b(u)).map((x) => ({ simbol: x.symbol, quoteVolume: x.quoteVolume })) : b(u);
+  await turaLatime(w.d, w.st, ACUM); assert.match(w.trimise[0].corp.eroare, /ticker/); assert.ok(w.jurnal.some((j) => /ticker/.test(j)));
 });
 await test("universul gol ⇒ se oprește și spune de ce (jurnal + KV cu eroare), nu cade pe „orice *USDT”", async () => {
   const w = lume({ universGol: true }); await turaLatime(w.d, w.st, ACUM);
@@ -63,6 +77,12 @@ await test("cereBinance: 3 încercări, la 429 pauză de 60 s o dată, la eșec 
   const b = cereBinance({ fetch: f, pauza: async (ms) => pauze.push(ms), jurnal: () => {} });
   assert.deepEqual(await b("https://fapi.binance.com/x"), { ok: 1 }); assert.deepEqual(pauze, [60000]);
   const rau = cereBinance({ fetch: async () => new Response("", { status: 500 }), pauza: async () => {}, jurnal: () => {} }); assert.equal(await rau("https://fapi.binance.com/x"), null);
+});
+await test("cereBinance (revizia 6): respectă Retry-After când e mai mare de 60 s; greutatea mare din antet ajunge în jurnal", async () => {
+  const pauze = [], jurnal = []; let n = 0;
+  const f = async () => { n++; return n === 1 ? new Response("", { status: 429, headers: { "retry-after": "120" } }) : new Response("{}", { status: 200, headers: { "x-mbx-used-weight-1m": "1800" } }); };
+  await cereBinance({ fetch: f, pauza: async (ms) => pauze.push(ms), jurnal: (...a) => jurnal.push(a.join(" ")) })("https://fapi.binance.com/x");
+  assert.deepEqual(pauze, [120000]); assert.ok(jurnal.some((j) => /1800/.test(j)), "greutatea 1800 în jurnal");
 });
 await test("RITM: bare 15 min, serii 60 min, univers 60 min", () => { assert.deepEqual(RITM, { bare: 15 * MIN, serii: 60 * MIN, univers: 60 * MIN }); });
 console.log(`\n${teste - picate}/${teste} verzi\n`); if (picate) process.exit(1);

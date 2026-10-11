@@ -83,9 +83,11 @@ var Latime = (function () {
       bugetEpuizat: c(function (x) { return x.adrUsed != null && x.adrUsed >= P.adrConsumat; }), volExtrem: c(function (x) { return x.volPctl != null && x.volPctl >= P.volPctl; }), oiExtrem: c(function (x) { return x.oiPctl != null && x.oiPctl >= P.oiPctl; }),
       fundExtrem: c(function (x) { return x.fundPctl != null && (x.fundPctl >= P.fundPctlSus || x.fundPctl <= P.fundPctlJos); }), mariLong: c(function (x) { return x.lMari != null && x.lMari > 50; }) };
   }
+  // revizia (3): procentele pe monedele MĂSURATE (n − lipsă), ca în PAZNIC (paznic.mjs:663 ține doar rândurile măsurate)
   function regimPietei(L) {
-    if (!L || !L.n) return { cod: "NECUNOSCUT", pctSus: null, pctJos: null };
-    var pctSus = 100 * L.sus / L.n, pctJos = 100 * L.jos / L.n;
+    var n = L ? (L.n || 0) - (L.lipsa || 0) : 0;
+    if (!L || n <= 0) return { cod: "NECUNOSCUT", pctSus: null, pctJos: null };
+    var pctSus = 100 * L.sus / n, pctJos = 100 * L.jos / n;
     return { cod: pctSus >= PRAGURI.REGIM_LARG ? "LARG-SUS" : pctJos >= PRAGURI.REGIM_LARG ? "LARG-JOS" : "AMESTECAT", pctSus: pctSus, pctJos: pctJos };
   }
   function regimDeCand(istoric, acum) {
@@ -103,6 +105,8 @@ var Latime = (function () {
     var ce = "Lățimea pieței (150 perp-uri)", a = latime && latime.acum;
     if (!a || !a.lat || !fin(a.la)) return { ce: ce, stare: "info", text: "aștept lățimea pieței (vine o dată la 15 minute)", link: null, vechi: false };
     var L = a.lat, cod = a.regim && a.regim.cod || "NECUNOSCUT", min = Math.max(0, Math.round((acum - a.la) / 60000)), vechi = min > PRAGURI.vechiMin;
+    // revizia (2): eroarea colectorului (univers gol, Binance mut) se SPUNE, nu se arată „0 sus · 0 jos”
+    if (a.eroare) return { ce: ce, stare: "atentie", text: "colectorul n-a putut măsura lățimea: " + a.eroare + (vechi ? " · veche, de la " + hhmm(a.la) : " · acum " + min + " min"), link: null, vechi: vechi };
     var de = regimDeCand(latime.istoric, acum).text, nMas = a.n - (a.lipsa || 0);
     var text = regimText[cod] + (de ? " " + de : "") + " · " + L.sus + " sus · " + L.jos + " jos · conturile mari long pe " + L.mariLong + " din " + nMas + " · funding extrem " + L.fundExtrem + " · OI extrem " + L.oiExtrem;
     if (a.incomplet) text += " · pe " + nMas + " din " + a.n;

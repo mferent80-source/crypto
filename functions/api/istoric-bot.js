@@ -335,7 +335,8 @@ export async function onRequestPost({request,env}){
     const acum={la,n:nr(corp.n),lipsa:nr(corp.lipsa)||0,incomplet:corp.incomplet===true,eroare:typeof corp.eroare==="string"?corp.eroare.slice(0,200):null,regim:{cod:rg.cod,pctSus:nr(rg.pctSus),pctJos:nr(rg.pctJos)},lat:L,monede};
     let vechi=null;try{vechi=JSON.parse(await env.ISTORIC.get("latime")||"null")}catch{vechi=null}
     let istoric=vechi&&Array.isArray(vechi.istoric)?vechi.istoric:[];
-    if(!istoric.some(p=>p&&p.la===la))istoric.push({la,cod:rg.cod,pctSus:nr(rg.pctSus),pctJos:nr(rg.pctJos),mariLong:L.mariLong});
+    // revizia (2c): un punct NECUNOSCUT (colectorul n-a putut măsura) nu intră în istoric - ar tăia seria „de când”
+    if(rg.cod!=="NECUNOSCUT"&&!istoric.some(p=>p&&p.la===la))istoric.push({la,cod:rg.cod,pctSus:nr(rg.pctSus),pctJos:nr(rg.pctJos),mariLong:L.mariLong});
     const de=la-30*86400000;istoric=istoric.filter(p=>p&&nr(p.la)!==null&&p.la>=de).sort((p,q)=>p.la-q.la).slice(-3000);
     await env.ISTORIC.put("latime",JSON.stringify({acum,istoric}));return json({ok:true,monede:monede.length,istoric:istoric.length})
   }

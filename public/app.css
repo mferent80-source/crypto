@@ -2515,3 +2515,5 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 .sugPandaCel.prag{color:var(--bad);font-weight:700}
 .sugPandaRand.bot td:first-child b{text-decoration:underline dotted}
 .sugPandaTab td,.sugPandaTab th{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* v100.150 (I-584, revizia 5): pe telefon tabelul pandei isi tine capul - .t212Tab ascunde thead sub 640 px */
+@media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

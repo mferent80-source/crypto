@@ -93,6 +93,14 @@ await test("regimPietei: LARG-SUS la ≥ 65 % sus, LARG-JOS la ≥ 65 % jos, alt
   assert.equal(L.regimPietei({ n: 0, sus: 0, jos: 0 }).cod, "NECUNOSCUT");
   assert.equal(Math.round(L.regimPietei({ n: 150, sus: 136, jos: 9 }).pctSus * 10) / 10, 90.7);
 });
+await test("regimPietei (revizia 3): procentele pe monedele MĂSURATE, nu pe univers cu lipsă (PAZNIC: n = măsurate)", () => {
+  const r = L.regimPietei({ n: 150, sus: 95, jos: 5, lipsa: 50 }); assert.equal(r.cod, "LARG-SUS"); assert.equal(r.pctSus, 95);
+  assert.equal(L.regimPietei({ n: 150, sus: 95, jos: 5, lipsa: 150 }).cod, "NECUNOSCUT", "toate lipsă ⇒ necunoscut, nu împărțire la zero");
+});
+await test("textCitire (revizia 2): starea de eroare a colectorului se VEDE - atenție, textul erorii, fără link", () => {
+  const er = { acum: { la: ACUM - 3 * 60000, n: 0, lipsa: 0, incomplet: true, eroare: "universul e gol: 523 simboluri de la Binance, 0 trec filtrul", regim: { cod: "NECUNOSCUT", pctSus: null, pctJos: null }, lat: { n: 0, sus: 0, jos: 0, neclar: 0, lipsa: 0, bugetEpuizat: 0, volExtrem: 0, oiExtrem: 0, fundExtrem: 0, mariLong: 0 } }, istoric: [] };
+  const r = L.textCitire(er, { directie: "long" }, ACUM); assert.equal(r.stare, "atentie"); assert.equal(r.link, null); assert.match(r.text, /colectorul n-a putut măsura lățimea: universul e gol: 523 simboluri/); assert.match(r.text, /acum 3 min/); assert.doesNotMatch(r.text, /0 sus/);
+});
 await test("regimDeCand: de când ține codul de acum, din istoric", () => {
   const ist = [{ la: ACUM - 5 * ZI, cod: "AMESTECAT" }, { la: ACUM - 3 * ZI, cod: "LARG-SUS" }, { la: ACUM - ZI, cod: "LARG-SUS" }, { la: ACUM - 900000, cod: "LARG-SUS" }];
   assert.equal(L.regimDeCand(ist, ACUM).text, "de 3 zile");
@@ -164,6 +172,12 @@ await test("(B) simbolurile reale Binance cu o literă (4USDT, TUSDT), cele lung
   assert.equal(r.status, 200, await r.clone().text()); assert.equal((await r.json()).monede, 4);
   for (const sym of ["BTC USDT", "BTC-USDT", "BTCUSDC", "BTC&USDT", "btcusdt", "A".repeat(31) + "USDT"]) assert.equal((await API.onRequestPost({ request: cerere("latime", corpBun({ monede: [{ sym, dir: "SUS" }] })), env: env(kv()) })).status, 400, sym);
 });
+await test("(B, revizia 2c) un punct NECUNOSCUT (eroarea colectorului) nu intră în istoric - seria „de când” nu se taie", async () => {
+  const ist = kv(); await API.onRequestPost({ request: cerere("latime", corpBun()), env: env(ist) });
+  const r = await API.onRequestPost({ request: cerere("latime", corpBun({ la: ACUM + 900000, n: 0, incomplet: true, eroare: "ticker/24hr n-a răspuns", regim: { cod: "NECUNOSCUT", pctSus: null, pctJos: null }, lat: Object.assign({}, corpBun().lat, { sus: 0, jos: 0, mariLong: 0 }), monede: [] })), env: env(ist) });
+  assert.equal(r.status, 200, await r.clone().text());
+  const g = (await (await API.onRequestGet({ request: cerere("latime"), env: env(ist) })).json()).latime; assert.equal(g.acum.eroare, "ticker/24hr n-a răspuns"); assert.equal(g.istoric.length, 1); assert.equal(g.istoric[0].cod, "LARG-SUS");
+});
 await test("(B) POST prea mare (> 262144 octeți) ⇒ 413", async () => {
   const r = await API.onRequestPost({ request: cerere("latime", corpBun({ monede: Array.from({ length: 200 }, (_, i) => ({ sym: "C" + i + "USDT", dir: "SUS", umplutura: "x".repeat(1500) })) })), env: env(kv()) }); assert.equal(r.status, 413);
 });
@@ -184,10 +198,16 @@ await test("(C) tbCitireExtra dă out.latime din Latime.textCitire(tbLatimeKv.d,
 await test("(C) rândul lățimii intră imediat după „Trendul pe TF-uri”, înaintea Indicatorilor", () => {
   const f = functie(APP, "tbDeseneazaCitire"); assert.match(f, /out\.push\(bloc\);if\(ex\.latime\)out\.push\(rd\(ex\.latime\)\);if\(ex\.indicatori&&!ind\)/);
 });
-await test("(C) rd(): textul legăturii și navigarea în aplicație (pânda ›), clasa vechi", () => {
+await test("(C, revizia 4) rd(): „pânda ›” e un BUTON cu acțiune (nu <a href=\"#\">), care deschide Sugestii cu încărcare și blocul desfăcut; clasa vechi", () => {
   const f = functie(APP, "tbDeseneazaCitire");
-  assert.match(f, /x\.linkNav\?'<a class="tbMcBtn tbCitLink" href="#" data-action-click="navTo\(\\''\+x\.linkNav\+'\\'\)">'\+escapeHtml\(x\.linkText\|\|"deschide"\)\+'<\/a>':/);
-  assert.match(f, /'<div class="tbCitR '\+x\.stare\+\(x\.vechi\?" vechi":""\)\+'">/);
+  assert.match(f, /x\.actiune\?'<button type="button" class="tbMcBtn tbCitLink" data-action-click="'\+escapeHtml\(x\.actiune\)\+'">'\+escapeHtml\(x\.linkText\|\|"deschide"\)\+'<\/button>':/);
+  const rdLinie = /var rd=function\(x\)\{return [^\n]*?\};/.exec(f)[0]; assert.doesNotMatch(rdLinie, /href="#"/, "rândul citirii nu mai pune # în adresă"); assert.match(f, /'<div class="tbCitR '\+x\.stare\+\(x\.vechi\?" vechi":""\)\+'">/);
+  assert.match(functie(APP, "tbCitireExtra"), /actiune:out\.latime\.link\?"sugDeschidePanda\(\)":null/);
+  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /function sugDeschidePanda\(\) \{ sugStare\.panda\.desfacut = true; sugStare\.panda\.filtru = "toate"; navTo\("sugestii", true\); \}/);
+});
+await test("(C, revizia 5) pe telefon tabelul pândei își ține capul (t212Tab ascunde thead sub 640 px)", () => {
+  const css = citeste("public", "app.css"); const i = css.search(/@media \(max-width:640px\)\{\.sugPandaTab thead\{display:table-header-group\}/); assert.ok(i > 0, "regula pentru .sugPandaTab lipsește din fereastra media");
+  assert.ok(i > css.search(/\.t212Tab thead\{display:none\}/), "regula pândei vine DUPĂ cea a tabelului T212, ca s-o bată");
 });
 await test("(C) tbLatimeDinKv: o dată la 10 minute, redesenează citirea la sosire; chemat din tbCitireExtra", () => {
   const f = functie(APP, "tbLatimeDinKv"); assert.match(f, /10\*60000/); assert.match(f, /action=latime/); assert.match(f, /tbDeseneazaCitire\(tbStare\.citireO,tbStare\.bot\)/);
@@ -201,8 +221,8 @@ await test("(C) rândul se desenează cu textul lui Latime (sandbox: rd + textCi
   const ctx = sandbox(["latime.js"], { escapeHtml: (s) => String(s) });
   const IC = { bine: "✓", atentie: "!", rau: "✕", info: "·" }, rdSrc = /var rd=function\(x\)\{return [^\n]*?\};/.exec(functie(APP, "tbDeseneazaCitire"))[0];
   vm.runInContext("var IC=" + JSON.stringify(IC) + ";" + rdSrc + ";", ctx);
-  const html = vm.runInContext("rd(Object.assign(Latime.textCitire(" + JSON.stringify(latimeKv()) + ",{directie:'short'}," + ACUM + "),{linkText:'pânda ›',linkNav:'sugestii'}))", ctx);
-  assert.match(html, /class="tbCitR atentie"/); assert.match(html, /Lățimea pieței \(150 perp-uri\):/); assert.match(html, /larg SUS de 3 zile · 136 sus/); assert.match(html, /navTo\('sugestii'\)/); assert.match(html, />pânda ›</);
+  const html = vm.runInContext("rd(Object.assign(Latime.textCitire(" + JSON.stringify(latimeKv()) + ",{directie:'short'}," + ACUM + "),{linkText:'pânda ›',actiune:'sugDeschidePanda()',link:null}))", ctx);
+  assert.match(html, /class="tbCitR atentie"/); assert.match(html, /Lățimea pieței \(150 perp-uri\):/); assert.match(html, /larg SUS de 3 zile · 136 sus/); assert.match(html, /<button type="button" class="tbMcBtn tbCitLink" data-action-click="sugDeschidePanda\(\)">pânda ›<\/button>/); assert.doesNotMatch(html, /href="#"/);
 });
 
 // ---- D. Sugestii: blocul pândei (boții lui vin din /api/bot-orders, ca pe Tablou: { s: "C1", dir: "long" }) ----
@@ -233,6 +253,10 @@ await test("(D) filtrul „contra” lasă 20; „boti” lasă 1; starea filtru
   vm.runInContext("sugPanda('contra')", S); let h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S); assert.equal((h.match(/<tr class="sugPandaRand/g) || []).length, 20);
   vm.runInContext("sugPanda('boti')", S); h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S); assert.equal((h.match(/<tr class="sugPandaRand/g) || []).length, 1);
   vm.runInContext("sugPanda('toate');sugStare.panda.desfacut=false", S);
+});
+await test("(D, revizia 2) eroarea colectorului se vede și în blocul din Sugestii, fără „arată cele 0”", () => {
+  const er = { acum: { la: ACUM - 3 * 60000, n: 0, lipsa: 0, incomplet: true, eroare: "ticker/24hr n-a răspuns", regim: { cod: "NECUNOSCUT", pctSus: null, pctJos: null }, lat: { n: 0, sus: 0, jos: 0, neclar: 0, lipsa: 0, bugetEpuizat: 0, volExtrem: 0, oiExtrem: 0, fundExtrem: 0, mariLong: 0 }, monede: [] }, istoric: [] };
+  const h = vm.runInContext("sugHtml(" + JSON.stringify(dSug({ latime: er })) + "," + ACUM + ")", S); assert.match(h, /colectorul n-a putut măsura lățimea: ticker\/24hr n-a răspuns/); assert.doesNotMatch(h, /arată cele 0/); assert.doesNotMatch(h, /0 monede sus/);
 });
 await test("(D) fără lățime în KV ⇒ blocul spune „aștept lățimea pieței”, fără buton; sugPorneste aduce action=latime și boții", () => {
   const h = vm.runInContext("sugHtml(" + JSON.stringify(dSug({ latime: null })) + "," + ACUM + ")", S); assert.match(h, /aștept lățimea pieței \(vine o dată la 15 minute\)/); assert.doesNotMatch(h, /sugPandaDesfa/);

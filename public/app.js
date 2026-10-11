@@ -6709,7 +6709,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var c=GraficBot.citire(Object.assign({},o,{doarPiata:true}),b,botiNr(b.pretCurent));
   if(!c){scrie('<p class="tbSub">Prea puține prețuri pentru citire.</p>');return}
   var IC={bine:"✓",atentie:"!",rau:"✕",info:"·"};
-  var rd=function(x){return '<div class="tbCitR '+x.stare+(x.vechi?" vechi":"")+'"><span class="tbCitIc" aria-hidden="true">'+IC[x.stare]+'</span><div><b>'+escapeHtml(x.ce)+':</b> <span class="tbCitTx">'+escapeHtml(x.text)+'</span>'+(x.link&&!x.linkNav?'<a class="tbMcBtn tbCitLink" href="'+escapeHtml(x.link)+'" target="_blank" rel="noopener">deschide în Busolă</a>':'')+(x.linkNav?'<a class="tbMcBtn tbCitLink" href="#" data-action-click="navTo(\''+x.linkNav+'\')">'+escapeHtml(x.linkText||"deschide")+'</a>':'')+'</div></div>'};   /* v100.149 (I-582): butonul spre Busolă · v100.150 (I-583): legătură în aplicație (pânda ›) + clasa vechi */
+  var rd=function(x){return '<div class="tbCitR '+x.stare+(x.vechi?" vechi":"")+'"><span class="tbCitIc" aria-hidden="true">'+IC[x.stare]+'</span><div><b>'+escapeHtml(x.ce)+':</b> <span class="tbCitTx">'+escapeHtml(x.text)+'</span>'+(x.link&&!x.actiune?'<a class="tbMcBtn tbCitLink" href="'+escapeHtml(x.link)+'" target="_blank" rel="noopener">deschide în Busolă</a>':'')+(x.actiune?'<button type="button" class="tbMcBtn tbCitLink" data-action-click="'+escapeHtml(x.actiune)+'">'+escapeHtml(x.linkText||"deschide")+'</button>':'')+'</div></div>'};   /* v100.149 (I-582): butonul spre Busolă · v100.150 (I-583): buton cu acțiune în aplicație (pânda ›, revizia: nu <a href="#">) + clasa vechi */
   // v100.111 (I-542): în locul celor 6 rânduri ale semaforului, unul singur - tabelul „Trendul pe TF-uri” de sub grafic le arată pe toate
   var su=GraficBot.trendSumar(tbSemaforTf(b)),bloc=rd({stare:su.stare,ce:"Trendul pe TF-uri",text:su.text}),pus=false,ind=false,ex=tbCitireExtra(b,o),out=[],fund=false;
   /* v100.147: rândurile Busolei, în ordinea ei (starea, direcția, cifra, gridul, intervalul, BTC) - un singur loc pentru amândouă chemările */
@@ -6750,7 +6750,7 @@ function tbCitireExtra(b,o){
   var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null},d=tbStare.directie;
   /* v100.150 (I-583): lățimea pieței pe 150 perp-uri, din KV (colectorul la 15 min) - Latime.textCitire dă textul, starea și vechimea; „pânda ›” duce în Sugestii */
   if(typeof tbLatimeDinKv==="function")tbLatimeDinKv();out.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"?Latime.textCitire(tbLatimeKv.d,b,Date.now()):null;   /* probele vechi rulează funcția cu stub-uri, fără KV */
-  if(out.latime)Object.assign(out.latime,{linkNav:out.latime.link?"sugestii":null,linkText:"pânda ›",link:null});
+  if(out.latime)Object.assign(out.latime,{actiune:out.latime.link?"sugDeschidePanda()":null,linkText:"pânda ›",link:null});   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){
     var tf=tbTf(),r=l.filter(function(x){return x.tf===tf&&x.q})[0]||l.filter(function(x){return x.tf==="15M"&&x.q})[0];

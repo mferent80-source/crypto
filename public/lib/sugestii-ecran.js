@@ -29,6 +29,7 @@ function sugPandaHtml(l, boti, acum) {
   var min = a ? Math.max(0, Math.round((acum - a.la) / 60000)) : null;
   var cap = '<div class="tbBlocCap sugPandaCap"><h4>Lățimea pieței · 150 perp-uri Binance</h4><span class="tbSub">' + (a ? (t.vechi ? "veche, de " + sugCate(min, "minut", "minute") : "acum " + min + " min") + " · din colector, la 15 min" : "") + '</span></div>';
   if (!a || !t) return '<div class="tbBloc sugPanda">' + cap + '<p class="tbSub">' + sugEsc(t ? t.text : "aștept lățimea pieței (vine o dată la 15 minute)") + '</p></div>';
+  if (a.eroare) return '<div class="tbBloc sugPanda">' + cap + '<p class="tbCitScurt">' + sugEsc(t.text) + '</p></div>';   /* revizia (2): eroarea colectorului, nu „arată cele 0” */
   var L = a.lat, nMas = a.n - (a.lipsa || 0), regim = Latime.regimText[a.regim && a.regim.cod] || "necunoscută", deCand = Latime.regimDeCand(l.istoric, acum).text, larg = a.regim && (a.regim.cod === "LARG-SUS" || a.regim.cod === "LARG-JOS");
   var h = '<div class="tbBloc sugPanda">' + cap
     + '<p class="tbCitScurt">Piața e <b>' + sugEsc(regim) + '</b>' + (deCand ? " " + sugEsc(deCand) : "") + ': ' + sugCate(L.sus, "monedă", "monede") + ' sus, ' + L.jos + ' jos. Conturile mari sunt long pe ' + L.mariLong + ' din ' + nMas + '.' + (larg ? ' Riscul e corelat, nu diversificat.' : '') + (a.incomplet ? ' Măsurat pe ' + nMas + ' din ' + a.n + '.' : '') + '</p>'
@@ -53,6 +54,8 @@ function sugPandaHtml(l, boti, acum) {
   return h;
 }
 function sugPandaDesfa() { sugStare.panda.desfacut = true; sugDeseneaza(); }
+// revizia (4): „pânda ›” din Tablou - pagina se ÎNCARCĂ (navTo cu load), blocul vine desfăcut, filtrul pe toate
+function sugDeschidePanda() { sugStare.panda.desfacut = true; sugStare.panda.filtru = "toate"; navTo("sugestii", true); }
 function sugPanda(f) { sugStare.panda.filtru = f; sugStare.panda.desfacut = true; sugDeseneaza(); }
 function sugBani(v) { var n = Number(v); return isFinite(n) && n > 0 ? n.toFixed(2).replace(".", ",") : ""; }   // poza 06.10: virgula, nu punctul
 function sugSim(x) { return x.simbol || String(x.ticker || x.simbolTicker || "").split("_")[0]; }
