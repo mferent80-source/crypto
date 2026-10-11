@@ -211,7 +211,8 @@ const S = sandbox(["text-ro.js", "latime.js", "sugestii-ecran.js"], { escapeHtml
 await test("(D) blocul e PRIMUL în pagină, pliat: regimul, cifrele, fraza de cinste, butonul „arată cele 150”", () => {
   const h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S);
   assert.ok(h.indexOf("Lățimea pieței · 150 perp-uri Binance") < h.indexOf("sugCartela"), "blocul înaintea cartelelor");
-  assert.match(h, /larg SUS/); assert.match(h, /136 monede sus/); assert.match(h, /long pe 145/); assert.match(h, /Fapte, nu semnal: filtrul de permisiune și fișa de intrare ale lui PAZNIC n-au selectat nimic \(p = 0,23; 78 trade-uri pe hârtie\) și nu sunt aici/);
+  assert.match(h, /larg SUS/); assert.match(h, /136 de monede sus, 9 jos/, "„de” de la 20 (garda v100.75: numărul nu se lipește de substantiv)"); assert.match(h, /long pe 145/);
+  const h1 = vm.runInContext("sugHtml(" + JSON.stringify(dSug({ latime: latimeKv({ acum: Object.assign({}, latimeKv().acum, { lat: Object.assign({}, latimeKv().acum.lat, { sus: 1, jos: 21 }) }) }) })) + "," + ACUM + ")", S); assert.match(h1, /1 monedă sus, 21 jos/); assert.match(h, /Fapte, nu semnal: filtrul de permisiune și fișa de intrare ale lui PAZNIC n-au selectat nimic \(p = 0,23; 78 trade-uri pe hârtie\) și nu sunt aici/);
   assert.match(h, /data-action-click="sugPandaDesfa\(\)"[^>]*>arată cele 150/); assert.doesNotMatch(h, /<table/);
   const bloc = h.slice(h.indexOf('<div class="tbBloc sugPanda">'), h.indexOf("sugCartela")); assert.doesNotMatch(bloc, /predic[țt]ie/i, "în blocul pândei (pagina veche are „nu o predicție” în rândul ei de sus)");
 });
