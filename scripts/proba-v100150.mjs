@@ -174,4 +174,34 @@ await test("(B) fără jeton ⇒ 401; cu jeton și alt Origin ⇒ 403", async ()
   assert.equal((await API.onRequestPost({ request: altOrigin, env: env(kv()) })).status, 403);
 });
 
+// ---- C. Tabloul: rândul lățimii în „Ce spune piața acum” ----
+const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html");
+const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && !--a) break; } return src.slice(i, j + 1); };
+await test("(C) tbCitireExtra dă out.latime din Latime.textCitire(tbLatimeKv.d, b, Date.now())", () => {
+  const f = functie(APP, "tbCitireExtra"); assert.match(f, /latime:null/); assert.match(f, /out\.latime=typeof Latime!=="undefined"\?Latime\.textCitire\(tbLatimeKv\.d,b,Date\.now\(\)\):null/);
+});
+await test("(C) rândul lățimii intră imediat după „Trendul pe TF-uri”, înaintea Indicatorilor", () => {
+  const f = functie(APP, "tbDeseneazaCitire"); assert.match(f, /out\.push\(bloc\);if\(ex\.latime\)out\.push\(rd\(ex\.latime\)\);if\(ex\.indicatori&&!ind\)/);
+});
+await test("(C) rd(): textul legăturii și navigarea în aplicație (pânda ›), clasa vechi", () => {
+  const f = functie(APP, "tbDeseneazaCitire");
+  assert.match(f, /x\.linkNav\?'<a class="tbMcBtn tbCitLink" href="#" data-action-click="navTo\(\\''\+x\.linkNav\+'\\'\)">'\+escapeHtml\(x\.linkText\|\|"deschide"\)\+'<\/a>':/);
+  assert.match(f, /'<div class="tbCitR '\+x\.stare\+\(x\.vechi\?" vechi":""\)\+'">/);
+});
+await test("(C) tbLatimeDinKv: o dată la 10 minute, redesenează citirea la sosire; chemat din tbCitireExtra", () => {
+  const f = functie(APP, "tbLatimeDinKv"); assert.match(f, /10\*60000/); assert.match(f, /action=latime/); assert.match(f, /tbDeseneazaCitire\(tbStare\.citireO,tbStare\.bot\)/);
+  assert.match(functie(APP, "tbCitireExtra"), /tbLatimeDinKv\(\)/);
+});
+await test("(C) index.html încarcă /lib/latime.js înaintea lui busola.js și sugestii-ecran.js; sw.js îl are în APP_SHELL", () => {
+  assert.ok(HTML.indexOf('<script src="/lib/latime.js') > 0 && HTML.indexOf('<script src="/lib/latime.js') < HTML.indexOf('<script src="/lib/busola.js'));
+  assert.match(citeste("public", "sw.js"), /"\/lib\/latime\.js"/);
+});
+await test("(C) rândul se desenează cu textul lui Latime (sandbox: rd + textCitire)", () => {
+  const ctx = sandbox(["latime.js"], { escapeHtml: (s) => String(s) });
+  const IC = { bine: "✓", atentie: "!", rau: "✕", info: "·" }, rdSrc = /var rd=function\(x\)\{return [^\n]*?\};/.exec(functie(APP, "tbDeseneazaCitire"))[0];
+  vm.runInContext("var IC=" + JSON.stringify(IC) + ";" + rdSrc + ";", ctx);
+  const html = vm.runInContext("rd(Object.assign(Latime.textCitire(" + JSON.stringify(latimeKv()) + ",{directie:'short'}," + ACUM + "),{linkText:'pânda ›',linkNav:'sugestii'}))", ctx);
+  assert.match(html, /class="tbCitR atentie"/); assert.match(html, /Lățimea pieței \(150 perp-uri\):/); assert.match(html, /larg SUS de 3 zile · 136 sus/); assert.match(html, /navTo\('sugestii'\)/); assert.match(html, />pânda ›</);
+});
+
 console.log(`\n${teste - picate}/${teste} verzi\n`); if (picate) process.exit(1);
