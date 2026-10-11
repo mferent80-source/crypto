@@ -69,8 +69,9 @@ await test("desen: lumanari (o bara la 5 min), volum, banda + treptele gridului,
   assert.ok(d && typeof d.svg === "string" && d.harta, "desen() intoarce {svg, harta}");
   assert.equal((d.svg.match(/class="gbC"/g) || []).length, 288, "o lumanare pe bara la 1000 px");
   assert.equal((d.svg.match(/class="gbV"/g) || []).length, 288, "volumul");
-  assert.match(d.svg, /zero-ul botului 0\.5951/); assert.match(d.svg, /plan −14\.9 USDT 0\.5756/); assert.match(d.svg, /intrarea medie 0\.5918/);
-  assert.match(d.svg, /↓ lichidare 0\.4712/, "lichidarea e departe -> sageata jos cu distanta"); assert.match(d.svg, /↑ grid sus 0\.6572/);
+  const txtG = (d) => (d.svg + " " + (d.valori || "")).replace(/<title>[^<]*<\/title>/g, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");   // v100.161: valorile în fâșia de sub grafic
+  assert.match(txtG(d), /zero-ul botului 0\.5951/); assert.match(txtG(d), /plan −14\.9 USDT 0\.5756/); assert.match(txtG(d), /intrarea medie 0\.5918/);
+  assert.match(txtG(d), /↓ lichidare 0\.4712 −/, "lichidarea e departe -> sageata jos cu distanta (v100.161: în fâșia de sub grafic)"); assert.match(txtG(d), /↑ grid sus 0\.6572/);
   assert.equal((d.svg.match(/class="gbE"/g) || []).length, 2, "doua puncte pe banda de alerte");
   assert.match(d.svg, /class="gbRsi"/); assert.match(d.svg, /cel mai tranzacționat/); assert.match(d.svg, /class="gbEma20"/); assert.match(d.svg, /class="gbEma50"/); assert.match(d.svg, /class="gbBb"/);
   assert.doesNotMatch(d.svg, /<script>/, "titlurile alertelor nu intra in SVG ca HTML");
@@ -145,7 +146,7 @@ await test("revizie 🔴: moneda ieftina (0.00001234) - etichetele din grafic au
   const k = klines().map((x) => ({ ...x, open: String(Number(x.open) / 50000), close: String(Number(x.close) / 50000), high: String(Number(x.high) / 50000), low: String(Number(x.low) / 50000) }));
   const b = { ...BOT, gridJos: 0.5722 / 50000, gridSus: 0.6572 / 50000, pretDeschidere: 0.59176 / 50000, pretLichidare: 0.4712485 / 50000, opritorPierdere: 0.5455 / 50000 };
   const d = GB.desen({ bare: GB.bare(k), W: 1000, ingust: false, st: ST, niv: GB.niveluriBot({ bot: b, zero: 0.59512 / 50000 }), grila: { jos: b.gridJos, sus: b.gridSus, n: 18 }, alerte: [], per: "24h" });
-  assert.doesNotMatch(d.svg, /0\.0000</, "etichete „0.0000”"); assert.match(d.svg, /zero-ul botului 0\.00001190/);
+  assert.doesNotMatch(d.svg, /0\.0000</, "etichete „0.0000”"); assert.match((d.svg + d.valori).replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), /zero-ul botului 0\.00001190/); assert.doesNotMatch(d.valori, /0\.0000</, "nici în fâșie");
   const plat = Array.from({ length: 40 }, (_, i) => ({ time: T0 + i * M5, open: "1", close: "1", high: "1", low: "1", volume: "5" }));
   assert.doesNotMatch(GB.desen({ bare: GB.bare(plat), W: 800, ingust: false, st: ST, niv: [], grila: {}, alerte: [], per: "24h" }).svg, /NaN/);
 });

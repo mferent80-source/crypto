@@ -2789,7 +2789,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 /* v100.155: la 981–1359 px „Analizează piața” acoperea alegerea sursei (Binance · stable) - butoanele trec pe rândul de sub câmpuri */
 @media (min-width:981px) and (max-width:1359px){.toolbar{grid-template-columns:minmax(0,1fr)}.toolbar>.actions{grid-column:1;grid-row:2;margin-top:7px}.toolbar>.controls{grid-template-columns:130px minmax(140px,1fr) 80px 110px 170px}}
 /* v100.157: pe telefon valorile graficului stau sub grafic, câte una pe rând (el: „aș integra altfel valorile în grafic” → fâșia de valori) */
-.gbValori{list-style:none;margin:6px 0 8px;padding:6px 0 0;border-top:1px solid #26333F;display:grid;grid-template-columns:auto 1fr auto auto auto;column-gap:10px;row-gap:3px;font-size:13px;align-items:center}.gbValori li{display:contents}.gbValori i{width:9px;height:9px;border-radius:2px;display:inline-block}.gbValori i.gbVPornit{background:none;border-left:2px dashed;width:0;height:11px;margin-left:3px}.gbValori .gbVN{color:#9FB3C4}.gbValori .gbVP{color:#E6EDF3;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}.gbValori .gbVD,.gbValori .gbVS{color:#8799AA;font-variant-numeric:tabular-nums;text-align:right}
+.gbValori{max-width:620px;list-style:none;margin:6px 0 8px;padding:6px 0 0;border-top:1px solid #26333F;display:grid;grid-template-columns:auto 1fr auto auto auto;column-gap:10px;row-gap:3px;font-size:13px;align-items:center}.gbValori li{display:contents}.gbValori i{width:9px;height:9px;border-radius:2px;display:inline-block}.gbValori i.gbVPornit{background:none;border-left:2px dashed;width:0;height:11px;margin-left:3px}.gbValori .gbVN{color:#9FB3C4}.gbValori .gbVP{color:#E6EDF3;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}.gbValori .gbVD,.gbValori .gbVS{color:#8799AA;font-variant-numeric:tabular-nums;text-align:right}
 /* Lățimea pieței US (11.10.2026, mutată din premarket_scanner/market-breadth) */
 .latimeUsBloc{margin:0 0 12px}
 .pzDemo #stocks.on>.latimeUsBloc{order:10}
@@ -2816,4 +2816,8 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .luNota{opacity:.8;margin-top:6px}
 .luBloc.vechi .luCartele,.luBloc.vechi .luGrafic{opacity:.6}
 @media (max-width:640px){.luSector{display:none}.luCartele{grid-template-columns:repeat(2,minmax(0,1fr))}.luTab thead{display:table-header-group}.luTab{display:table}.luTab tbody{display:table-row-group}.luTab tr{display:table-row}.luTab td,.luTab th{display:table-cell}.luTab .luSector{display:none}}
+/* v100.161 (auditul celor 18 pagini, el: „refă audit să fie tot ok pe ele”): la 981–1359 px fâșia „Selected market” cerea ~830 px (derulare laterală pe Unelte / Tablou / Simulator / Monte Carlo) - trece pe o coloană; eticheta Consilierului de pe Tablou se rupe pe rânduri în loc să iasă din card */
+@media (min-width:981px) and (max-width:1359px){.heroStrip{grid-template-columns:minmax(0,1fr)}#tabloubot .tbConsCip{white-space:normal;max-width:100%}}
+/* v100.161: pe telefon panoul „Acum” (sus): etichetele se rup pe rânduri în celula lor („cea mai aproape lichidare” ieșea din ecran), „acum 1 min” rămâne întreg */
+.pzAcumGrila .pzCel{white-space:normal}.pzAcumGrila .pzCel>b small{white-space:nowrap}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

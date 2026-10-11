@@ -67,9 +67,9 @@ await test("(3) I-528 șansele MĂSURATE pe liniile lor: marginile 24 h, lichida
   assert.equal(k.stop.sansa, undefined); assert.equal(k.zero.sansa, undefined);
   // pe desen: în cadru ⇒ textul gbSansa; ce iese din cadru ⇒ la marginea din stânga, după procentul distanței
   const TEaproape = Object.assign({}, TE, { pretTintaPentru: () => P * 1.003 });   // ținta în cadru (lumânările de probă se mișcă ±0,5%)
-  const svg = G.desen(G.intrareBot(D({ sanse, TabloExtra: TEaproape }))).svg;
-  assert.match(svg, /class="gbSansa"[^>]*>(<title>[^<]*<\/title>)?înaintea stopului, 7 zile: 38%/); /* v100.143: tspan în eticheta din dreapta */ assert.match(svg, /grid jos [\d.]+ \([^)]*\) · 24 h: 12%/);
-  assert.equal((G.desen(G.intrareBot(D())).svg.match(/gbSansa/g) || []).length, 0, "fără șanse ⇒ nimic");
+  const dS = G.desen(G.intrareBot(D({ sanse, TabloExtra: TEaproape }))), svg = dS.svg, fasie = dS.valori.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  assert.match(fasie, /înaintea stopului, 7 zile: 38%/); /* v100.161: în fâșia de sub grafic */ /* v100.143: tspan în eticheta din dreapta */ assert.match(fasie, /grid jos [\d.]+ [−+][\d,]+% 24 h: 12%/);
+  { const d0 = G.desen(G.intrareBot(D())); assert.equal((d0.svg.match(/gbSansa/g) || []).length, 0, "fără șanse ⇒ nimic"); assert.doesNotMatch(d0.valori, /<span class="gbVS">[^<]+</, "fără șanse ⇒ coloana șansei goală"); }
 });
 await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față de plan; linia apare pe grafic; pagina are butonul, apăsarea și copierea", () => {
   assert.equal(G.stopProba(P * 0.946, P, -6.5, 6.5).text, "stop de probă la " + G.stopProba(P * 0.946, P, -6.5, 6.5).text.split(" la ")[1].split(" (")[0] + " (−5,4%): pierzi −6,50 USDT, exact planul");

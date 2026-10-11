@@ -81,7 +81,9 @@ test("botLaPret: copia botului cu prețul live (pentru „Prețul în grid”), 
 test("graficul: cu pretViu, eticheta „acum” arată prețul live și apare linia live de la ultima lumânare", () => {
   const bare = Array.from({ length: 60 }, (_, i) => ({ t: ACUM - (60 - i) * 300000, o: 0.57, h: 0.572, l: 0.568, c: 0.57, v: 10 }));
   const cu = GB.desen({ bare, W: 900, st: {}, niv: [], alerte: [], pretViu: 0.5693 }), fara = GB.desen({ bare, W: 900, st: {}, niv: [], alerte: [] });
-  assert.match(cu.svg, /class="gbViu"/); assert.match(cu.svg, /acum 0\.5693/); assert.doesNotMatch(fara.svg, /class="gbViu"/); assert.match(fara.svg, /acum 0\.5700/);
+  // v100.161: prețul de acum stă în eticheta de pe grafic (gbPretAcum); fără preț live linia trece la ultima închidere
+  assert.match(cu.svg, /class="gbViu"/); assert.match(cu.svg, /class="gbPretAcum">[^]*?>0\.5693<\/text>/); assert.match(fara.svg, /class="gbPretAcum">[^]*?>0\.5700<\/text>/);
+  assert.ok(!/>0\.5693</.test(fara.svg), "fără preț live nu apare prețul live");
 });
 test("app.js: „Prețul în grid”, linia de pe grafic și procentul zilei se hrănesc din prețul live", () => {
   assert.match(APP, /function tbKpiPretDeseneaza\(/); assert.match(APP, /PretViu\.botLaPret\(/); assert.match(APP, /pretViu:/);

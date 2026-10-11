@@ -51,7 +51,7 @@ await test("desen: banda de 5 zile doar cu comutatorul, etichetele actiunii (20 
     consLinii: { stopAcum: 96, stopPlan: 97, et: "stopul propus", etLung: "stopul propus (din profilul acțiunii)" } };
   const cu = GB.desen({ ...baza, st: { zi: true, zi5: true, val: true } }), fara = GB.desen({ ...baza, st: { zi: true, zi5: false, val: true } });
   assert.match(cu.svg, /class="gbZi5"/); assert.ok(!/class="gbZi5"/.test(fara.svg));
-  assert.match(cu.svg, /POC 20 z/); assert.match(cu.legenda, /20 de zile de bursă/); assert.match(cu.svg, /stopul propus/); assert.match(cu.legenda, /5 zile de bursă obișnuite/);
+  assert.match(cu.svg, /POC 20 z/); assert.match(cu.legenda, /20 de zile de bursă/); assert.match(cu.svg + cu.valori, /stopul propus/); assert.match(cu.legenda, /5 zile de bursă obișnuite/);
   const bot = GB.desen({ bare, W: 800, niv: [], st: { zi: true, val: true }, zi: GB.ziObisnuita(100, { z24: { jos: q(0.02), sus: q(0.02) }, zile: 185 }),
     val: { zona: VA.zona(bareZ(30, true), {}), pivoti: [] }, consLinii: { stopAcum: 90, stopPlan: 95 } });
   assert.match(bot.svg, />zi obișnuită</); assert.match(bot.svg, /POC 7 z/); assert.match(bot.legenda, /zona de valoare, 7 zile/); assert.match(bot.legenda, /stopul planului \(Consilierul\)/);
@@ -121,11 +121,11 @@ await test("poza: comutatoarele si legenda graficului actiunii au stilurile graf
 await test("poza: la actiuni fara banda „alertele botului”; stopul tau egal cu cel propus -> „stopul tău = stopul propus” (nu „al planului”)", () => {
   const bare = bareZ(60, true), niv = GB.niveluriActiune({ pretMediu: 101, stop: 97 });
   const a = GB.desen({ bare, W: 800, niv, st: {}, actiune: true, consLinii: { stopAcum: 97, stopPlan: 97, et: "stopul propus" } });
-  assert.ok(!/alertele botului/.test(a.svg)); assert.match(a.svg, /stopul tău = stopul propus/); assert.ok(!/al planului/.test(a.svg));
+  assert.ok(!/alertele botului|>alerte</.test(a.svg)); assert.match(a.valori, /stopul tău = stopul propus/); assert.ok(!/al planului/.test(a.svg + a.valori));
   const ai = GB.desen({ bare, W: 390, ingust: true, niv, st: {}, actiune: true, consLinii: { stopAcum: 97, stopPlan: 97, et: "stopul propus" } });
   assert.match(ai.valori, /stopul tău = stopul propus/); assert.ok(!/al planului/.test(ai.valori), "pe telefon (v100.157): în fâșia de sub grafic, cu numele întreg");
   const b = GB.desen({ bare, W: 800, niv: [{ k: "stop", p: 97, t: "stopul tău", c: "#f00", st: "solid", s: "stop" }], st: {}, consLinii: { stopAcum: 97, stopPlan: 97 } });
-  assert.match(b.svg, /alertele botului/); assert.match(b.svg, /stopul tău = al planului/);
+  assert.match(b.svg, /alertele botului/); assert.match(b.valori, /stopul tău = al planului/);
 });
 
 // ---- el, 01.10: „lățește puțin toată pagina în toată app și graficul să fie mai mare peste tot” (1.600 px, graficul crește cu lățimea) ----

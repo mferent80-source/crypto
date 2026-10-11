@@ -42,11 +42,12 @@ await test("(2) Simplu ⇒ fără treptele gridului, Bollinger, profil; Complet 
 await test("(3) scrisul: etichetele din dreapta 13 px, „acum” 13,5 px, ce iese din cadru 12,5 px; bulina cu explicație (<title>)", () => {
   const zz = zigzag(288), pz = zz[zz.length - 1].c;
   const svg = G.desen(baza(zz, { simplu: true, niv: NIV(pz).concat([{ k: "zero", p: pz * 1.002, t: "zero-ul botului", c: "#f5c451", st: "dash", s: "zero" }]), alerte: [{ t: T0 + 100 * M5, nivel: "atentie", titlu: "TAKE: botul n-are plan" }, { t: T0 + 101 * M5, nivel: "info", titlu: "TAKE: altceva" }] })).svg;
-  assert.match(svg, /font-size="13"/); assert.match(svg, /font-size="13.5" font-weight="700"/); assert.match(svg, /font-size="12.5"/);
+  // v100.161: valorile stau în fâșia de sub grafic (literă de pagină, 13 px - .gbValori), prețul de acum în eticheta de pe grafic (12 px, îngroșat)
+  assert.match(svg, /class="gbPretAcum">[^]*?font-size="12" font-weight="700"/); assert.ok(/\.gbValori\{[^}]*font-size:13px/.test(fs.readFileSync(new URL("../public/app.css", import.meta.url), "utf8")));
   assert.match(svg, /<g class="gbE"[^>]*><title>2 alerte ale botului, cea mai gravă de atenție/);
 });
 await test("(4) linia de pornire a botului: în cadru ⇒ linia + „botul pornit HH:MM” + lumânările de dinainte estompate; pornit înainte de cadru ⇒ nimic", () => {
-  const b = zigzag(288), cu = G.desen(baza(b, { pornit: BOT.pornitLa })).svg, inainte = G.desen(baza(b, { pornit: T0 - 10 * M5 })).svg;
+  const b = zigzag(288), cuD = G.desen(baza(b, { pornit: BOT.pornitLa })), cu = cuD.svg + cuD.valori.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), inainte = G.desen(baza(b, { pornit: T0 - 10 * M5 })).svg;
   assert.ok(/gbPornit/.test(cu) && /gbInainte/.test(cu) && /botul pornit \d\d:\d\d/.test(cu));
   assert.ok(!/gbPornit/.test(inainte));
 });
