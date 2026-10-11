@@ -6749,7 +6749,7 @@ function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare
 function tbCitireExtra(b,o){
   var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null},d=tbStare.directie;
   /* v100.150 (I-583): lățimea pieței pe 150 perp-uri, din KV (colectorul la 15 min) - Latime.textCitire dă textul, starea și vechimea; „pânda ›” duce în Sugestii */
-  tbLatimeDinKv();out.latime=typeof Latime!=="undefined"?Latime.textCitire(tbLatimeKv.d,b,Date.now()):null;
+  if(typeof tbLatimeDinKv==="function")tbLatimeDinKv();out.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"?Latime.textCitire(tbLatimeKv.d,b,Date.now()):null;   /* probele vechi rulează funcția cu stub-uri, fără KV */
   if(out.latime)Object.assign(out.latime,{linkNav:out.latime.link?"sugestii":null,linkText:"pânda ›",link:null});
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){

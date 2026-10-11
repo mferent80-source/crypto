@@ -178,7 +178,8 @@ await test("(B) fără jeton ⇒ 401; cu jeton și alt Origin ⇒ 403", async ()
 const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html");
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && !--a) break; } return src.slice(i, j + 1); };
 await test("(C) tbCitireExtra dă out.latime din Latime.textCitire(tbLatimeKv.d, b, Date.now())", () => {
-  const f = functie(APP, "tbCitireExtra"); assert.match(f, /latime:null/); assert.match(f, /out\.latime=typeof Latime!=="undefined"\?Latime\.textCitire\(tbLatimeKv\.d,b,Date\.now\(\)\):null/);
+  const f = functie(APP, "tbCitireExtra"); assert.match(f, /latime:null/); assert.match(f, /out\.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"\?Latime\.textCitire\(tbLatimeKv\.d,b,Date\.now\(\)\):null/);
+  assert.match(f, /if\(typeof tbLatimeDinKv==="function"\)tbLatimeDinKv\(\);/, "probele vechi (v100.138) rulează funcția cu stub-uri, fără tbLatimeDinKv");
 });
 await test("(C) rândul lățimii intră imediat după „Trendul pe TF-uri”, înaintea Indicatorilor", () => {
   const f = functie(APP, "tbDeseneazaCitire"); assert.match(f, /out\.push\(bloc\);if\(ex\.latime\)out\.push\(rd\(ex\.latime\)\);if\(ex\.indicatori&&!ind\)/);
