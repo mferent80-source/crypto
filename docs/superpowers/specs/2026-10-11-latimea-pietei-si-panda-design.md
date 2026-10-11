@@ -28,7 +28,7 @@ Tiparul e `tura-piata.mjs`: modul cu ritmul lui, primește `{ cere, trimite, jur
 **Modulul pur `scripts/lib/latime.mjs`** (fără rețea; probat în vm; aceleași formule ca `PAZNIC-CRYPTO/decizie.mjs`, copiate cu referință la linie, nu reinventate):
 - `percentila(serie, x)` = rangul median (I-401);
 - `masuraMoneda(intrari, P)` ⇒ `{ sym, pret, dir, zileDir, volPctl, extPctl, adrUsed, frAcum, fundPctl, oiChg, oiPctl, lMari, lMici, diverg, deltaPctl }`:
-  - `dir` SUS / JOS / neclară (`directiaDeFond`, felul `ema`, `decizie.mjs:591-595`): **SUS** când EMA 21 > EMA 55 **și prețul e peste EMA 21**; **JOS** când EMA 21 < EMA 55 și prețul e sub EMA 21; altfel neclară; sub 100 de bare ⇒ neclară;
+  - `dir` SUS / JOS / neclară = **strategia din PRODUCȚIA PAZNIC** (`PRAGURI.strategie.tendinta = "tsmom"`, `decizie.mjs:289`, `tsmomBare = 504`, `:321`): semnul randamentului prețului pe 504 bare de 4h (84 de zile); sub 505 bare sau randament 0 ⇒ neclară. (Corectură 11.10 la execuție: ramura `ema` — EMA 21 > EMA 55 și prețul peste EMA 21 — e doar o OPȚIUNE în PAZNIC; cu ea direcțiile nu băteau: 52/52 față de 136/9. Cu tsmom: acord 100 % pe 129 de monede comune.) Barele aduse: 1000 (PAZNIC 633), ca „de câte zile” să vadă ~82 de zile în urmă;
   - `zileDir` = câte bare de 4h la rând ține relația EMA 21 / EMA 55 ÷ 6 — **nou față de PAZNIC** (persistența direcției, I-585);
   - `volPctl` = percentila lui ATR(14)/preț × 100 față de ultimele 563 de bare; `extPctl` = percentila lui |c − EMA 55| / ATR;
   - `adrUsed` = range-ul de azi ÷ media range-urilor ultimelor 14 zile închise × 100;
