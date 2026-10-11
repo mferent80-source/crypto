@@ -20,7 +20,9 @@ async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() 
 console.log("\nV100.147 · Busola în „Ce spune piața acum”: direcția, cifra verdictului, BTC și botul tău · proba\n");
 
 const sandbox = () => { const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, TextRo: globalThis.TextRo }; vm.createContext(ctx); vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + citeste("public", "lib", "busola.js"), ctx); return ctx; };
-const ACUM = Date.UTC(2026, 9, 9, 19, 30, 0), LA = ACUM - 20 * 60000;
+// 11.10: ACUM e ceasul real - testul (4) rulează tbCitireExtra ADEVĂRATĂ, care cheamă Busola cu Date.now(); cu data fixă din 09.10, după
+// 4,5 h rezumatul devenea „vechi” și rândul primea „· măsurat acum 38,5 h” (bombă cu ceas, nu regresie)
+const ACUM = Date.now(), LA = ACUM - 20 * 60000;
 const rez = () => ({ la: LA, versiune: "1.47.0", btc: { h24: 0.0183, la: LA },
   monede: { MET: { perp4h: "nu-stiu", directie4h: "inclinat-short", corBtc: 0.72, fisa4h: { jos: 0.3982, sus: 0.6414, linii: 17 } },
     BTC: { "4h": "nu-stiu", directie4h: "inclinat-long", corBtc: 1, verdict4h: { cate: 73, ce: "ating ținta înaintea stopului, pe long", deObicei: 61, nota: "minim 56 ca să nu pierzi" } },
