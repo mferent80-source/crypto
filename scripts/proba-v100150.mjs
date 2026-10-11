@@ -116,4 +116,39 @@ await test("textele: diacritice, fără „predicție”", () => {
   assert.doesNotMatch(src, /predic[țt]ie/i); assert.match(src, /lățimea/i);
 });
 
+// ---- B. funcția KV (modulul real, env și Request false) ----
+const API = await import("../functions/api/istoric-bot.js");
+const kv = () => { const m = new Map(); return { m, get: async (k) => m.has(k) ? m.get(k) : null, put: async (k, v) => { m.set(k, v); }, list: async () => ({ keys: [], list_complete: true }) }; };
+const env = (ist) => ({ APP_API_TOKEN: "proba-jeton", ISTORIC: ist });
+const cerere = (action, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?action=" + action, { method: corp ? "POST" : "GET", headers: { authorization: "Bearer proba-jeton", origin: "http://127.0.0.1:8788", "x-radar-client": "colector", "content-type": "application/json", "cf-connecting-ip": "127.0.0.1" }, body: corp ? JSON.stringify(corp) : undefined });
+const corpBun = (o) => Object.assign({ la: ACUM, n: 150, lipsa: 2, incomplet: false, regim: { cod: "LARG-SUS", pctSus: 90.7, pctJos: 6 }, lat: { n: 150, sus: 136, jos: 9, neclar: 3, lipsa: 2, bugetEpuizat: 16, volExtrem: 31, oiExtrem: 16, fundExtrem: 59, mariLong: 145 }, monede: [{ sym: "BTCUSDT", pret: 112345.6, dir: "SUS", zileDir: 3, volPctl: 60, extPctl: 61, adrUsed: 28, frAcum: 0.0001, fundPctl: 59, oiChg: -2.9, oiPctl: 11, lMari: 65, lMici: 39, diverg: 26, deltaPctl: 78 }] }, o || {});
+await test("(B) GET latime fără cheie ⇒ { latime: null }", async () => {
+  const r = await API.onRequestGet({ request: cerere("latime"), env: env(kv()) }); assert.equal(r.status, 200, await r.clone().text()); assert.deepEqual(await r.json(), { latime: null });
+});
+await test("(B) POST latime scrie cheia (acum + istoric), GET o dă înapoi; al doilea POST adaugă în istoric", async () => {
+  const ist = kv(); let r = await API.onRequestPost({ request: cerere("latime", corpBun()), env: env(ist) }); assert.equal(r.status, 200, await r.clone().text());
+  const g = await (await API.onRequestGet({ request: cerere("latime"), env: env(ist) })).json();
+  assert.equal(g.latime.acum.regim.cod, "LARG-SUS"); assert.equal(g.latime.acum.monede[0].sym, "BTCUSDT"); assert.equal(g.latime.istoric.length, 1); assert.deepEqual(g.latime.istoric[0], { la: ACUM, cod: "LARG-SUS", pctSus: 90.7, pctJos: 6, mariLong: 145 });
+  await API.onRequestPost({ request: cerere("latime", corpBun({ la: ACUM + 900000 })), env: env(ist) });
+  assert.equal((await (await API.onRequestGet({ request: cerere("latime"), env: env(ist) })).json()).latime.istoric.length, 2);
+});
+await test("(B) istoricul se taie la 30 de zile și nu dublează același `la`", async () => {
+  const ist = kv(); await API.onRequestPost({ request: cerere("latime", corpBun({ la: ACUM - 31 * ZI })), env: env(ist) }); await API.onRequestPost({ request: cerere("latime", corpBun()), env: env(ist) }); await API.onRequestPost({ request: cerere("latime", corpBun()), env: env(ist) });
+  assert.equal((await (await API.onRequestGet({ request: cerere("latime"), env: env(ist) })).json()).latime.istoric.length, 1);
+});
+await test("(B) POST stricat ⇒ 400 și nimic scris: fără la, sym cu semne, dir necunoscută, 201 de monede, text în loc de număr", async () => {
+  for (const corp of [corpBun({ la: null }), corpBun({ monede: [{ sym: "<script>USDT", dir: "SUS" }] }), corpBun({ monede: [{ sym: "BTCUSDT", dir: "SUS; drop" }] }), corpBun({ monede: Array.from({ length: 201 }, (_, i) => ({ sym: "C" + i + "USDT", dir: "SUS" })) }), corpBun({ lat: Object.assign({}, corpBun().lat, { sus: "multe" }) })]) {
+    const ist = kv(); const r = await API.onRequestPost({ request: cerere("latime", corp), env: env(ist) }); assert.equal(r.status, 400, JSON.stringify(corp).slice(0, 80)); assert.equal(ist.m.size, 0);
+  }
+});
+await test("(B) POST prea mare (> 262144 octeți) ⇒ 413", async () => {
+  const r = await API.onRequestPost({ request: cerere("latime", corpBun({ monede: Array.from({ length: 200 }, (_, i) => ({ sym: "C" + i + "USDT", dir: "SUS", umplutura: "x".repeat(1500) })) })), env: env(kv()) }); assert.equal(r.status, 413);
+});
+await test("(B) fără jeton ⇒ 401; cu jeton și alt Origin ⇒ 403", async () => {
+  const faraJeton = new Request("http://127.0.0.1:8788/api/istoric-bot?action=latime", { headers: { origin: "http://127.0.0.1:8788" } });
+  assert.equal((await API.onRequestGet({ request: faraJeton, env: env(kv()) })).status, 401);
+  const altOrigin = new Request("http://127.0.0.1:8788/api/istoric-bot?action=latime", { method: "POST", headers: { authorization: "Bearer proba-jeton", origin: "http://rau.example", "content-type": "application/json" }, body: JSON.stringify(corpBun()) });
+  assert.equal((await API.onRequestPost({ request: altOrigin, env: env(kv()) })).status, 403);
+});
+
 console.log(`\n${teste - picate}/${teste} verzi\n`); if (picate) process.exit(1);
