@@ -2508,3 +2508,10 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 
 /* v100.150 (I-583): latimea veche (colectorul oprit) se vede stearsa */
 .tbCitR.vechi .tbCitTx{opacity:.75}
+
+/* v100.150 (I-584): panda din Sugestii - filtrele si celulele pe prag */
+.sugPandaFiltre{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sugPandaFiltre .ales{font-weight:800;border-color:var(--accent);color:var(--accent)}
+.sugPandaCel.prag{color:var(--bad);font-weight:700}
+.sugPandaRand.bot td:first-child b{text-decoration:underline dotted}
+.sugPandaTab td,.sugPandaTab th{font-variant-numeric:tabular-nums;white-space:nowrap}

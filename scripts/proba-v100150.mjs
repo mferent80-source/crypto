@@ -204,4 +204,32 @@ await test("(C) rândul se desenează cu textul lui Latime (sandbox: rd + textCi
   assert.match(html, /class="tbCitR atentie"/); assert.match(html, /Lățimea pieței \(150 perp-uri\):/); assert.match(html, /larg SUS de 3 zile · 136 sus/); assert.match(html, /navTo\('sugestii'\)/); assert.match(html, />pânda ›</);
 });
 
+// ---- D. Sugestii: blocul pândei (boții lui vin din /api/bot-orders, ca pe Tablou: { s: "C1", dir: "long" }) ----
+const monedeKv = Array.from({ length: 150 }, (_, i) => ({ sym: "C" + i + "USDT", pret: 1.23456, dir: i < 136 ? "SUS" : i < 145 ? "JOS" : "neclara", zileDir: i % 7, volPctl: i % 100, extPctl: 50, adrUsed: 28.4, frAcum: 0.0001, fundPctl: i < 59 ? 80 : 50, oiChg: -2.94, oiPctl: i < 16 ? 97 : 10, lMari: 65, lMici: i < 20 ? 39 : 60, diverg: i < 20 ? 26 : 5, deltaPctl: 78 }));
+const dSug = (o) => Object.assign({ latime: latimeKv({ acum: Object.assign(latimeKv().acum, { monede: monedeKv }) }), boti: [{ s: "C1", dir: "long" }] }, o || {});
+const S = sandbox(["text-ro.js", "latime.js", "sugestii-ecran.js"], { escapeHtml: (s) => String(s), getJSON: async () => ({}) });
+await test("(D) blocul e PRIMUL în pagină, pliat: regimul, cifrele, fraza de cinste, butonul „arată cele 150”", () => {
+  const h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S);
+  assert.ok(h.indexOf("Lățimea pieței · 150 perp-uri Binance") < h.indexOf("sugCartela"), "blocul înaintea cartelelor");
+  assert.match(h, /larg SUS/); assert.match(h, /136 monede sus/); assert.match(h, /long pe 145/); assert.match(h, /Fapte, nu semnal: filtrul de permisiune și fișa de intrare ale lui PAZNIC n-au selectat nimic \(p = 0,23; 78 trade-uri pe hârtie\) și nu sunt aici/);
+  assert.match(h, /data-action-click="sugPandaDesfa\(\)"[^>]*>arată cele 150/); assert.doesNotMatch(h, /<table/);
+  const bloc = h.slice(h.indexOf('<div class="tbBloc sugPanda">'), h.indexOf("sugCartela")); assert.doesNotMatch(bloc, /predic[țt]ie/i, "în blocul pândei (pagina veche are „nu o predicție” în rândul ei de sus)");
+});
+await test("(D) desfăcut: filtrele cu numere, tabelul cu 150 de rânduri, boții primii, o zecimală cu virgulă, celulele pe prag, CU / CONTRA", () => {
+  vm.runInContext("sugStare.panda.desfacut=true", S); const h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S);
+  assert.match(h, /data-action-click="sugPanda\('toate'\)"[^>]*>toate \(150\)/); assert.match(h, /sugPanda\('boti'\)"[^>]*>monedele boților mei \(1\)/); assert.match(h, /sugPanda\('contra'\)"[^>]*>contra mulțimii \(20\)/); assert.match(h, /SUS \(136\)/); assert.match(h, /JOS \(9\)/);
+  assert.equal((h.match(/<tr class="sugPandaRand/g) || []).length, 150); assert.ok(h.indexOf("<b>C1</b>") < h.indexOf("<b>C0</b>"), "botul lui C1 e primul");
+  assert.match(h, /−2,9/); assert.match(h, /28,4%/); assert.match(h, /class="sugPandaCel prag"[^>]*>97[ <]/); assert.match(h, /SUS <span class="tbSub">de 1 zi<\/span>/); assert.match(h, />CU</);
+  const hS = vm.runInContext("sugHtml(" + JSON.stringify(dSug({ boti: [{ s: "C1", dir: "short" }] })) + "," + ACUM + ")", S); assert.match(hS, />CONTRA</);
+});
+await test("(D) filtrul „contra” lasă 20; „boti” lasă 1; starea filtrului rămâne după redesenare", () => {
+  vm.runInContext("sugPanda('contra')", S); let h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S); assert.equal((h.match(/<tr class="sugPandaRand/g) || []).length, 20);
+  vm.runInContext("sugPanda('boti')", S); h = vm.runInContext("sugHtml(" + JSON.stringify(dSug()) + "," + ACUM + ")", S); assert.equal((h.match(/<tr class="sugPandaRand/g) || []).length, 1);
+  vm.runInContext("sugPanda('toate');sugStare.panda.desfacut=false", S);
+});
+await test("(D) fără lățime în KV ⇒ blocul spune „aștept lățimea pieței”, fără buton; sugPorneste aduce action=latime și boții", () => {
+  const h = vm.runInContext("sugHtml(" + JSON.stringify(dSug({ latime: null })) + "," + ACUM + ")", S); assert.match(h, /aștept lățimea pieței \(vine o dată la 15 minute\)/); assert.doesNotMatch(h, /sugPandaDesfa/);
+  const f = functie(citeste("public", "lib", "sugestii-ecran.js"), "sugPorneste"); assert.match(f, /pas\("latime"/); assert.match(f, /action=latime/); assert.match(f, /pas\("boti"/); assert.match(f, /\/api\/bot-orders/);
+});
+
 console.log(`\n${teste - picate}/${teste} verzi\n`); if (picate) process.exit(1);
