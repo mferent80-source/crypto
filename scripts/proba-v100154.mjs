@@ -37,7 +37,7 @@ await test("(3)(4) jos în grafic: „↓ lichidare” urcă un rând când „b
   const yPornit = +(tel.match(/<text x="[\d.]+"(?: text-anchor="end")? y="([\d.]+)"[^>]*>botul pornit/) || [])[1];
   const yLich = +(tel.match(/<text x="8" y="([\d.]+)"[^>]*>↓ lichidare/) || [])[1];
   assert.ok(yPornit > 0 && yLich > 0, yPornit + " / " + yLich); assert.ok(yPornit - yLich >= 14, "rânduri separate: " + yLich + " vs " + yPornit);
-  assert.match(tel, /text-anchor="end" y="[\d.]+" font-size="12" fill="[^"]+" paint-order="stroke"[^>]*>botul pornit/, "pornit la bara 35 din 40 ⇒ spre stânga liniei");
+  assert.match(tel, /text-anchor="end" y="[\d.]+" font-size="12" fill="[^"]+"[^>]*>botul pornit/, "pornit la bara 35 din 40 ⇒ spre stânga liniei");
   const yLichMare = +(mare.match(/<text x="8" y="([\d.]+)"[^>]*>↓ lichidare/) || [])[1], yPornitMare = +(mare.match(/y="([\d.]+)"[^>]*>botul pornit/) || [])[1];
   assert.equal(yLichMare, yPornitMare - 1, "ecranul mare neatins (cerut: doar pe telefon)");
 });
@@ -65,6 +65,14 @@ await test("(6) v100.155: bara de analiză la 981–1359 px - butoanele pe rând
   assert.ok(CSS.includes("@media (min-width:981px) and (max-width:1359px){.toolbar{grid-template-columns:minmax(0,1fr)}.toolbar>.actions{grid-column:1;grid-row:2;margin-top:7px}"), "rândul butoanelor");
   assert.ok(CSS.includes(".topStatus>.topLeft{flex:0 0 auto}"), "grupul din stânga");
   assert.ok(CSS.trim().split("\n").pop().startsWith("@media (max-width:640px){.sugPandaTab thead"), "regula pandei rămâne ultima");
+});
+
+await test("(7) v100.156 (poza lui de pe telefon): fără contur sub literele graficului pe telefon (browserul care întunecă singur pagina îl făcea ALB); pe ecranul mare rămâne; pagina se declară întunecată în <head>; bara de jos opacă", () => {
+  assert.doesNotMatch(tel, /paint-order="stroke"/, "telefon: niciun contur");
+  assert.match(mare, /paint-order="stroke" stroke="#0E141A"/, "ecranul mare: conturul rămâne");
+  const HTML = citeste("public", "index.html");
+  assert.match(HTML, /<meta content="dark" name="color-scheme"\/>/);
+  assert.match(CSS, /background:#141C24;backdrop-filter:none;\s*\/\* v100\.156/, "bara de jos opacă");
 });
 
 console.log(`\n${teste - picate}/${teste} verzi`);

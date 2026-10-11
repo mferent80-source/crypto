@@ -368,7 +368,7 @@ main{max-width:1160px;padding-top:14px}
   .mobileBottom{
     position:fixed;left:8px;right:8px;bottom:8px;z-index:60;
     display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:5px;
-    background:rgba(20,28,36,.94);backdrop-filter:none;
+    background:#141C24;backdrop-filter:none;   /* v100.156: opacă - fără estomparea din spate, textul paginii se vedea prin ea */
     border:1px solid #26333F;border-radius:5px;box-shadow:none}
   .mobileNavBtn{padding:8px 2px;background:transparent;border-color:transparent;font-size:12px;color:#9FB3C4;border-radius:5px}
   .mobileNavBtn b{display:block;font-size:15.5px;margin-bottom:2px}

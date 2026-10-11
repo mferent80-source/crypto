@@ -380,6 +380,8 @@ var GraficBot = (function () {
   // o = { bare, W, ingust, st:{bb,ema,rsi,vp}, niv, grila:{jos,sus,n,geo}, alerte, per }
   function desen(o) {
     var raw = o.bare || [], st = o.st || {}, W = Math.max(300, o.W || 800), ingust = !!o.ingust, simplu = !!o.simplu;
+    // v100.156: conturul de sub litere (închis, culoarea fondului) - pe telefon nu: browserul care întunecă singur pagina îl făcea ALB (poza lui, 11.10)
+    var HALO = function (w) { return ingust ? "" : 'paint-order="stroke" stroke="' + COL.fond + '" stroke-width="' + w + '"'; };
     if (simplu) st = { ema: st.ema !== false, rsi: !!st.rsi, adx: st.adx !== false };   /* v100.98: Simplu = esențialul */
     // v100.143: marginea din dreapta crește cu cea mai lungă etichetă (nume + preț + șansa), ca „grid sus 0.5500 · 24 h: 67%” să nu iasă din cadru;
     // cel mult 24% din lățime; pe telefon rămâne 108 (acolo etichetele sunt scurte). Stopul planului lângă lichidare dă o etichetă unită lungă
@@ -435,7 +437,7 @@ var GraficBot = (function () {
       var vs = Math.min(hi, va.vah), vj = Math.max(lo, va.val);
       if (vs > vj) q.push('<rect class="gbVa" x="0" y="' + f1(Y(vs)) + '" width="' + f1(plotW) + '" height="' + f1(Y(vj) - Y(vs)) + '" fill="rgba(105,167,255,.06)" stroke="rgba(105,167,255,.30)" stroke-dasharray="2 4"/>');
       if (va.poc > lo && va.poc < hi) q.push('<line class="gbPoc" x1="0" x2="' + f1(plotW) + '" y1="' + f1(Y(va.poc)) + '" y2="' + f1(Y(va.poc)) + '" stroke="#9fc3ff" stroke-opacity=".55" stroke-width="1" stroke-dasharray="3 3"/>'
-        + '<text x="6" y="' + f1(Y(va.poc) - 3) + '" font-size="10" fill="#9fc3ff" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">POC ' + esc(o.val.et || "7 z") + ' ' + fmtP(va.poc) + '</text>');
+        + '<text x="6" y="' + f1(Y(va.poc) - 3) + '" font-size="10" fill="#9fc3ff" ' + HALO(3) + '>POC ' + esc(o.val.et || "7 z") + ' ' + fmtP(va.poc) + '</text>');
     }
     if (st.val && o.val && Array.isArray(o.val.pivoti)) o.val.pivoti.forEach(function (pv) {
       if (!(pv && pv.p > lo && pv.p < hi)) return;
@@ -449,13 +451,13 @@ var GraficBot = (function () {
       var a5 = Math.min(hi, nr(o.zi.p50Sus)), c5 = Math.max(lo, nr(o.zi.p50Jos));
       if (a5 > c5) q.push('<rect class="gbZi" x="' + f1(zx) + '" y="' + f1(Y(a5)) + '" width="' + f1(zw) + '" height="' + f1(Y(c5) - Y(a5)) + '" fill="rgba(233,185,73,.09)" stroke="rgba(233,185,73,.35)" stroke-width="1"/>');
       ["p75Sus", "p75Jos"].forEach(function (k) { var v = nr(o.zi[k]); if (v !== null && v > lo && v < hi) q.push('<line class="gbZi" x1="' + f1(zx) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(v)) + '" y2="' + f1(Y(v)) + '" stroke="' + COL.warn + '" stroke-opacity=".6" stroke-dasharray="4 3"/>'); });
-      if (a5 > c5) q.push('<text class="gbZi" x="' + f1(zx + 4) + '" y="' + f1(Math.max(11, Y(a5) - 4)) + '" font-size="10" fill="' + COL.warn + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">' + esc(o.zi.et || "zi obișnuită") + '</text>');
+      if (a5 > c5) q.push('<text class="gbZi" x="' + f1(zx + 4) + '" y="' + f1(Math.max(11, Y(a5) - 4)) + '" font-size="10" fill="' + COL.warn + '" ' + HALO(3) + '>' + esc(o.zi.et || "zi obișnuită") + '</text>');
     }
     // v100.56: 5 zile obisnuite (actiuni) - doar liniile P50 (plin) si P75 (punctat), alta nuanta decat ziua
     if (st.zi5 && o.zi5) {
       var zx5 = plotW * (1 - (ingust ? 0.25 : 0.18));
       [["p50Sus", ""], ["p50Jos", ""], ["p75Sus", "2 3"], ["p75Jos", "2 3"]].forEach(function (k) { var v = nr(o.zi5[k[0]]); if (v !== null && v > lo && v < hi) q.push('<line class="gbZi5" x1="' + f1(zx5) + '" x2="' + f1(plotW) + '" y1="' + f1(Y(v)) + '" y2="' + f1(Y(v)) + '" stroke="' + COL.info + '" stroke-opacity=".7"' + (k[1] ? ' stroke-dasharray="' + k[1] + '"' : '') + '/>'); });
-      var s5 = nr(o.zi5.p50Sus); if (s5 !== null && s5 > lo && s5 < hi) q.push('<text class="gbZi5" x="' + f1(zx5 + 4) + '" y="' + f1(Math.max(11, Y(s5) - 4)) + '" font-size="10" fill="' + COL.info + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">5 zile</text>');
+      var s5 = nr(o.zi5.p50Sus); if (s5 !== null && s5 > lo && s5 < hi) q.push('<text class="gbZi5" x="' + f1(zx5 + 4) + '" y="' + f1(Math.max(11, Y(s5) - 4)) + '" font-size="10" fill="' + COL.info + '" ' + HALO(3) + '>5 zile</text>');
     }
     // profilul de volum
     if (st.vp) {
@@ -463,7 +465,7 @@ var GraficBot = (function () {
       raw.forEach(function (x) { var tp = (x.h + x.l + x.c) / 3, bi = Math.floor((tp - lo) / (hi - lo) * NB); if (bi >= 0 && bi < NB) bins[bi] += x.v; });
       var mx = Math.max.apply(null, bins) || 1, poc = bins.indexOf(mx), vw = plotW * (ingust ? 0.26 : 0.2), bh = mainH / NB;
       bins.forEach(function (v, bi) { if (!v) return; var w = v / mx * vw, y = mainH - (bi + 1) * bh; q.push('<rect class="gbVp" x="' + f1(plotW - w) + '" y="' + f1(y + 1) + '" width="' + f1(w) + '" height="' + f1(Math.max(1, bh - 2)) + '" fill="' + (bi === poc ? "rgba(105,167,255,.42)" : "rgba(144,160,182,.16)") + '"/>'); });
-      q.push('<text x="' + f1(plotW - 4) + '" y="' + f1(mainH - (poc + 1) * bh - 3) + '" text-anchor="end" font-size="10.5" fill="#9fc3ff" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">cel mai tranzacționat ' + fmtP(lo + (poc + 0.5) / NB * (hi - lo)) + '</text>');
+      q.push('<text x="' + f1(plotW - 4) + '" y="' + f1(mainH - (poc + 1) * bh - 3) + '" text-anchor="end" font-size="10.5" fill="#9fc3ff" ' + HALO(3) + '>cel mai tranzacționat ' + fmtP(lo + (poc + 0.5) / NB * (hi - lo)) + '</text>');
     }
     function linie(vals, cls, cul, gros, dash) {
       var d = "", pen = false;
@@ -517,7 +519,7 @@ var GraficBot = (function () {
       if (per === gu.l.length) return;   /* toată grupa e închisă: doar liniuța de jos */
       q.push('<g class="gbUmplere' + (per ? " gbPereche" : "") + '"><title>' + esc(tit) + '</title>'
         + '<polygon points="' + tri + '" fill="' + cul + '" stroke="' + COL.fond + '" stroke-width="1"/>' + ""
-        + (eti ? '<text x="' + f1(x + 6 + 60 > plotW ? x - 6 : x + 6) + '" y="' + f1(cum ? y + 14 : y - 6) + '"' + (x + 6 + 60 > plotW ? ' text-anchor="end"' : '') + ' font-size="10.5" font-weight="700" fill="' + cul + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="3">' + eti + '</text>' : "") + "</g>");
+        + (eti ? '<text x="' + f1(x + 6 + 60 > plotW ? x - 6 : x + 6) + '" y="' + f1(cum ? y + 14 : y - 6) + '"' + (x + 6 + 60 > plotW ? ' text-anchor="end"' : '') + ' font-size="10.5" font-weight="700" fill="' + cul + '" ' + HALO(3) + '>' + eti + '</text>' : "") + "</g>");
     });
     // v100.98 (05.10) (el: „linia de pornire a botului”): ce a trăit botul vs ce era înainte
     var tPorn = nr(o.pornit);
@@ -526,7 +528,7 @@ var GraficBot = (function () {
       var xp = X(bp) + cw / 2;
       q.push('<rect class="gbInainte" x="0" y="0" width="' + f1(xp) + '" height="' + mainH + '" fill="' + COL.fond + '" fill-opacity=".45"/>'
         + '<line class="gbPornit" x1="' + f1(xp) + '" x2="' + f1(xp) + '" y1="0" y2="' + mainH + '" stroke="' + COL.accent + '" stroke-width="1.4" stroke-dasharray="5 4"/>'
-        + '<text x="' + f1(ingust && xp + 5 + 112 > plotW ? xp - 5 : xp + 5) + '"' + (ingust && xp + 5 + 112 > plotW ? ' text-anchor="end"' : '') + ' y="' + (mainH - 8) + '" font-size="12" fill="' + COL.accent + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">botul pornit ' + ora(tPorn) + '</text>');
+        + '<text x="' + f1(ingust && xp + 5 + 112 > plotW ? xp - 5 : xp + 5) + '"' + (ingust && xp + 5 + 112 > plotW ? ' text-anchor="end"' : '') + ' y="' + (mainH - 8) + '" font-size="12" fill="' + COL.accent + '" ' + HALO(4) + '>botul pornit ' + ora(tPorn) + '</text>');
       var etPornitJos = true;   /* v100.154: pe telefon eticheta „↓ …” de jos urcă un rând, să nu calce „botul pornit” */
     }
     // liniile + etichetele din dreapta (se imping ca sa nu se suprapuna); ce e in afara cadrului -> sageata la margine
@@ -542,7 +544,7 @@ var GraficBot = (function () {
     // v100.99 (I-529): stopul de probă - linia trasă de el, cu ce ar pierde acolo (textul vine gata din stopProba)
     var pr0 = o.proba && nr(o.proba.pret);
     if (pr0 !== null && pr0 >= lo && pr0 <= hi) q.push('<g class="gbProba"><line x1="0" x2="' + f1(plotW) + '" y1="' + f1(Y(pr0)) + '" y2="' + f1(Y(pr0)) + '" stroke="' + COL.text + '" stroke-width="1.6" stroke-dasharray="8 4"/>'
-      + (ingust ? '' : '<text x="8" y="' + f1(Y(pr0) - 6) + '" font-size="12.5" font-weight="700" fill="' + COL.text + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">🧪 ' + esc(o.proba.text || ("stop de probă " + fmtP(pr0))) + '</text>') + '</g>');   /* pe telefon doar linia: textul e în citirea de sub grafic (lista din stânga-jos ar acoperi-o) */
+      + (ingust ? '' : '<text x="8" y="' + f1(Y(pr0) - 6) + '" font-size="12.5" font-weight="700" fill="' + COL.text + '" ' + HALO(4) + '>🧪 ' + esc(o.proba.text || ("stop de probă " + fmtP(pr0))) + '</text>') + '</g>');   /* pe telefon doar linia: textul e în citirea de sub grafic (lista din stânga-jos ar acoperi-o) */
     // v100.51 (I-476): stopul planului (Consilierul) langa stopul tau - mereu, nu e indicator; aproape identice -> o singura eticheta
     var cl = o.consLinii || {}, spP = nr(cl.stopPlan), spA = nr(cl.stopAcum), etP = cl.et || "stopul planului";   // v100.56: la actiuni „stopul propus”
     if (spP !== null && spP > 0) {
@@ -596,7 +598,7 @@ var GraficBot = (function () {
     var ys = 17 + semH, yj = mainH - 9 - (ingust && etPornitJos ? 17 : 0);
     afara.forEach(function (x) {
       var inSus = x.p > hi, t = (inSus ? "↑ " : "↓ ") + x.t + " " + fmtP(x.p) + (pAcum ? " (" + pct(x.p / pAcum - 1) + ")" : "") + (x.sansa ? " · " + (ingust ? x.sansaScurt || x.sansa : x.sansa) : "");
-      q.push('<text x="8" y="' + (inSus ? ys : yj) + '" font-size="12.5" fill="' + x.c + '" paint-order="stroke" stroke="' + COL.fond + '" stroke-width="4">' + esc(t) + '</text>');
+      q.push('<text x="8" y="' + (inSus ? ys : yj) + '" font-size="12.5" fill="' + x.c + '" ' + HALO(4) + '>' + esc(t) + '</text>');
       if (inSus) ys += 17; else yj -= 17;
     });
     // v100.106: banda de trend - o fâșie pe fiecare bară închisă, în culoarea direcției (aceeași regulă ca semaforul)
