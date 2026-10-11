@@ -627,7 +627,8 @@ var GraficBot = (function () {
     if (st.rsi) {
       var RY = function (v) { return ry0 + (1 - v / 100) * rsiH; };
       q.push('<rect x="0" y="' + ry0 + '" width="' + f1(plotW) + '" height="' + rsiH + '" fill="' + COL.fond + '"/><rect x="0" y="' + f1(RY(70)) + '" width="' + f1(plotW) + '" height="' + f1(RY(30) - RY(70)) + '" fill="rgba(155,127,224,.06)"/>');
-      [70, 30].forEach(function (v) { var loc = !ingust || RY(v) + 4 - (ry0 + 14) >= 14; q.push('<line x1="0" x2="' + f1(plotW) + '" y1="' + f1(RY(v)) + '" y2="' + f1(RY(v)) + '" stroke="#26333F" stroke-dasharray="3 3"/>' + (loc ? '<text x="' + f1(plotW + 6) + '" y="' + f1(RY(v) + 4) + '" font-size="12" fill="' + COL.mut + '">' + v + '</text>' : '')); });
+      [70, 30].forEach(function (v) { var yt = RY(v) + 4; if (v === 70 && yt - (ry0 + 14) < 14) yt = RY(v) + 14;   /* v100.155: sub linie, nu peste „RSI nn” */
+        q.push('<line x1="0" x2="' + f1(plotW) + '" y1="' + f1(RY(v)) + '" y2="' + f1(RY(v)) + '" stroke="#26333F" stroke-dasharray="3 3"/><text x="' + f1(plotW + 6) + '" y="' + f1(yt) + '" font-size="12" fill="' + COL.mut + '">' + v + '</text>'); });
       var d = "", pen = false; B.forEach(function (b, bi) { var v = S.rsi[b.k]; if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + f1(X(bi)) + "," + f1(RY(v)); pen = true; });
       q.push('<path class="gbRsi" d="' + d + '" fill="none" stroke="' + COL.intrare + '" stroke-width="1.4"/>');
       var rl = S.rsi[raw.length - 1]; q.push('<text x="' + f1(plotW + 6) + '" y="' + (ry0 + 14) + '" font-size="12.5" fill="' + COL.intrare + '">RSI ' + (rl != null ? Math.round(rl) : "—") + '</text>');

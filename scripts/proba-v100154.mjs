@@ -41,10 +41,13 @@ await test("(3)(4) jos în grafic: „↓ lichidare” urcă un rând când „b
   const yLichMare = +(mare.match(/<text x="8" y="([\d.]+)"[^>]*>↓ lichidare/) || [])[1], yPornitMare = +(mare.match(/y="([\d.]+)"[^>]*>botul pornit/) || [])[1];
   assert.equal(yLichMare, yPornitMare - 1, "ecranul mare neatins (cerut: doar pe telefon)");
 });
-await test("(4b) RSI pe telefon: cifra pragului 70 se scrie doar când nu calcă „RSI nn”", () => {
+await test("(4b) RSI: cifra pragului 70 rămâne la vedere și nu calcă „RSI nn” - pe telefon și pe ecranul mare (v100.155)", () => {
   const g = citeste("public", "lib", "grafic-bot.js");
-  assert.match(g, /var loc = !ingust \|\| RY\(v\) \+ 4 - \(ry0 \+ 14\) >= 14;/);
-  assert.match(mare, />70<\/text>/);
+  assert.match(g, /if \(v === 70 && yt - \(ry0 \+ 14\) < 14\) yt = RY\(v\) \+ 14;/);
+  for (const s of [tel, mare]) {
+    const yR = +(s.match(/y="([\d.]+)" font-size="12\.5" fill="[^"]+">RSI /) || [])[1], y70 = +(s.match(/y="([\d.]+)" font-size="12" fill="[^"]+">70<\/text>/) || [])[1], y30 = +(s.match(/y="([\d.]+)" font-size="12" fill="[^"]+">30<\/text>/) || [])[1];
+    assert.ok(yR > 0 && y70 > 0 && y30 > 0, [yR, y70, y30].join(" / ")); assert.ok(y70 - yR >= 14 && y30 - y70 >= 14, "rânduri separate: " + [yR, y70, y30].join(" / "));
+  }
 });
 const doc = { documentElement: { classList: { add() {} } }, addEventListener() {}, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] };
 const ctx = { document: doc, setInterval() {}, setTimeout() {}, clearTimeout() {}, addEventListener() {}, innerWidth: 1920, localStorage: { getItem: () => null, setItem() {} }, console };
@@ -56,6 +59,12 @@ await test("(5) Jurnal pe Acțiuni / Tot: „Rezultat total” citit în formatu
   assert.match(AS, /#sugPagina \.sugPanda p\.tbSub/); assert.match(AS, /lățimea e " \+ capSub/);
   assert.match(AS, /b\.setAttribute\("aria-controls", h\.id\)/);
   assert.doesNotMatch(CSS, /#grAlte\+p\{order/);
+});
+
+await test("(6) v100.155: bara de analiză la 981–1359 px - butoanele pe rândul de sub câmpuri („Analizează piața” acoperea sursa); bara de sus - grupul din stânga nu se strânge sub banda botului", () => {
+  assert.ok(CSS.includes("@media (min-width:981px) and (max-width:1359px){.toolbar{grid-template-columns:minmax(0,1fr)}.toolbar>.actions{grid-column:1;grid-row:2;margin-top:7px}"), "rândul butoanelor");
+  assert.ok(CSS.includes(".topStatus>.topLeft{flex:0 0 auto}"), "grupul din stânga");
+  assert.ok(CSS.trim().split("\n").pop().startsWith("@media (max-width:640px){.sugPandaTab thead"), "regula pandei rămâne ultima");
 });
 
 console.log(`\n${teste - picate}/${teste} verzi`);

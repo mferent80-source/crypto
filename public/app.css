@@ -2784,4 +2784,8 @@ body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on)
 .pzDemo #settings .settingsGrid>[data-pz-ord="90"]{order:90}.pzDemo #settings .settingsGrid>[data-pz-ord="95"]{order:95}.pzDemo #settings .settingsGrid>[data-pz-ord="98"]{order:98}
 .pzDemo #settings .settingsGrid>[data-pz-ord="99"]{order:99}
 /* v100.150 (I-584, revizia 5): pe telefon tabelul pandei isi tine capul - .t212Tab ascunde thead sub 640 px */
+/* v100.155: bara de sus - grupul din stânga (moneda, interval, mod, sursa) nu se mai strânge sub conținutul lui; banda botului se scurtează cu „…” în locul lui (se călcau sub ~1500 px) */
+.topStatus>.topLeft{flex:0 0 auto}
+/* v100.155: la 981–1359 px „Analizează piața” acoperea alegerea sursei (Binance · stable) - butoanele trec pe rândul de sub câmpuri */
+@media (min-width:981px) and (max-width:1359px){.toolbar{grid-template-columns:minmax(0,1fr)}.toolbar>.actions{grid-column:1;grid-row:2;margin-top:7px}.toolbar>.controls{grid-template-columns:130px minmax(140px,1fr) 80px 110px 170px}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
