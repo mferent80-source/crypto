@@ -64,7 +64,7 @@ await test("(4) așezarea: scriptul e în pagină și în cache-ul offline; capc
   assert.match(HTML, /<script defer="" src="\/lib\/alerte-ecran\.js"><\/script><script defer="" src="\/lib\/asezare-paznic\.js"><\/script>/);
   assert.match(SW, /"\/lib\/asezare-paznic\.js"/); for (const f of ["sans", "mono"]) for (const w of [400, 500, 600]) assert.match(SW, new RegExp(`"/fonts/ibm-plex-${f}-latin-${w}-normal\\.woff2"`));
   /* doar regulile v100.151 (pz* / .tbCadru>); „#tabloubot .tbIdei{order:0}” e mai veche și pierde oricum în fața lor (1 id + 1 clasă) */
-  const ord = [...CSS.matchAll(/^([^{\n]*)\{order:(\d+)\}/gm)].map((m) => m[1]).filter((s) => /pz|tbCadru>/.test(s));
+  const ord = [...CSS.matchAll(/^([^{\n]*)\{order:(\d+)\}/gm)].map((m) => m[1]).filter((s) => /.pzDemo #tabloubot/.test(s));   /* doar Tabloul; paginile v100.152 le păzește proba-v100152 */
   assert.ok(ord.length >= 25, "regulile de ordine: " + ord.length);
   for (const sel of ord) assert.match(sel, /^\.pzDemo #tabloubot \.tbCadru>/, "ordinea pierde la specificitate (în demo verdictul ajunsese JOS): " + sel);
   assert.match(CSS, /#tabloubot\.pzCuColoana\.on\{display:grid!important/, "doar pe pagina activă - altfel Tabloul apărea și pe Health");
@@ -115,10 +115,10 @@ await test("(5) așezarea, pur: proza → rânduri etichetă–cifră (valorile 
   assert.doesNotMatch(AS, /innerHTML\s*=\s*[^;]*\+\s*(?!esc\()[a-zA-Z_.]+\.textContent/, "text din pagină pus în HTML fără esc()");
 });
 await test("(6) versiunile v100.151 peste tot și app.js neatins în logică (doar culorile)", () => {
-  assert.match(HTML, /content="v100\.151" name="app-version"/); assert.match(HTML, /v100\.151 · DESIGNUL PAZNIC: TEMA, GRAFICUL, AȘEZAREA/);
-  assert.match(SW, /const CACHE="crypto-radar-v100-151"/);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.151.0"); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.151");
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.151"/);
+  /* versiunea curentă (de la v100.152 nu mai e scrisă fix aici): aceeași în BUILD_INFO, index, sw, package.json, versiune.js - și cel puțin v100.151 */
+  const V = JSON.parse(citeste("BUILD_INFO.json")).version, n = V.slice(1), m = V.match(/^v100\.(\d+)$/); assert.ok(m && +m[1] >= 151, V);
+  assert.ok(HTML.includes(`content="${V}" name="app-version"`)); assert.ok(SW.includes(`const CACHE="crypto-radar-${V.replace(".", "-")}"`)); assert.equal(JSON.parse(citeste("package.json")).version, n + ".0");
+  assert.ok(citeste("functions", "_shared", "versiune.js").includes(`VERSIUNE = "${V}"`));
   for (const c of VECHI) assert.ok(!APP.toLowerCase().includes(c.toLowerCase()), "culoare veche în app.js: " + c);
 });
 

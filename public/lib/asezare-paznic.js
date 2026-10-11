@@ -1,4 +1,4 @@
-// v100.151 · așezarea PAZNIC în Radar (I-589…I-599, demo aprobat de el pe 11.10.2026; designul vine din panoul PAZNIC-CRYPTO).
+// v100.151–152 · așezarea PAZNIC în Radar (I-589…I-599; v100.152: toate paginile Zilnic + Unelte după modelul Tabloului, demo aprobat de el pe 11.10.2026; designul vine din panoul PAZNIC-CRYPTO).
 // Strat peste paginile desenate de app.js: CITEȘTE ce pagina are deja (tbStare, Consilierul din #tbSemafor, nivelurile graficului din
 // window.tbGraficUltim, rândul contului .contTot, /api/bot-orders pentru boții închiși) și ADAUGĂ: fâșia cu cifrele contului, verdictul +
 // vocile, drumul botului, „Acum” pe telefon, rândurile cheie–valoare, ultimii boți închiși, BUILD în Health, coloana boților (de la 2 boți).
@@ -292,10 +292,175 @@
     if (window.__pzPauza) return;
     try { citeste(); } catch (e) { return; }
     [fasie, verdict, drum, acum, pliaza, ordine, function () { cadran("acFg", 0, 100, /între (\d+) și (\d+)/); cadran("acVix", 10, 40, /între ([\d,]+) și ([\d,]+)/); },
-      function () { ["tbKpiGrid", "tbKpiTotalSub", "tbKpiPretSub", "tbKpiLichSub"].forEach(kv); }, ultimii, avert, build, coloana]
+      function () { ["tbKpiGrid", "tbKpiTotalSub", "tbKpiPretSub", "tbKpiLichSub"].forEach(kv); }, ultimii, avert, build, coloana, pagT212, pagSalt, pagAlerte, pagMonteCarlo, pagCarnet, pagJurnal, pagSugestii, pagMarket, pagAccount, pagCloud, pagSettings, pagHealth, pliazaFasia]
       .forEach(function (f) { try { f(); } catch (e) { if (window.console) console.warn("asezare-paznic", f.name, e); } });
   }
-  window.AsezarePaznic = { randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, lichDin: lichDin, verdictValid: verdictValid, tonLich: tonLich };
+
+  // ======================================================================================================================================
+  // v100.152 · TOATE PAGINILE (Zilnic + Unelte) DUPĂ MODELUL TABLOULUI (el, 11.10: „vreau să faci toate paginile după modelul tabloul botului”).
+  // Sus: verdictul paginii - verbul + motivul + „ce aș face” + vocile + sursa („din: …”). REGULA (revizia Opus v100.152): antetul folosește DOAR
+  // cuvintele și culorile paginii - fără verbe, praguri sau afirmații inventate (ar fi o a doua voce). Unde pagina are deja o decizie (Grid,
+  // Simulator, Scanner, Acasă) nu se pune antet: doar ordinea. Antetul stă ca FRATE în afara containerelor rescrise cu innerHTML. Ordinea: doar CSS.
+  // ======================================================================================================================================
+  var tx = function (sel, root) { var e = (root || document).querySelector(sel); return e ? e.textContent.replace(/\s+/g, " ").trim() : ""; };
+  // tonul = culoarea pusă de PAGINĂ pe element (good / bad / warn / ...), nu o judecată a stratului
+  var tonCls = function (e) { var c = e ? String(e.className || "") : ""; return /\bbad\b|iesi|rl-rau|cloudErr/.test(c) ? "jos" : /tbWarn|\bwarn\b|atentie|cloudWarn/.test(c) ? "aur" : /\bgood\b|tine|rl-bine|cloudOk/.test(c) ? "sus" : "mut"; };
+  var VOT = { sus: "da", jos: "nu", aur: "atentie", mut: "neutru" }, SIMP = { da: "✓", nu: "✗", atentie: "!", neutru: "–" };
+  // „1 bot”, „20 de boți” - TextRo.cate (garda v100.75); rezerva știe aceeași regulă (contextele fără TextRo, probele)
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), q = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (q >= 20 || (q === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+  // antetul unei pagini: `ref` = elementul înaintea căruia stă; cfg null ⇒ ascuns (fără date nu rămâne un verdict vechi la vedere)
+  function antet(id, ref, cfg) {
+    var el = $(id);
+    if (!ref || !ref.parentNode || !cfg || !cfg.verb) { if (el) { el.hidden = true; el._h = ""; } return; }
+    if (!el) { el = document.createElement("section"); el.id = id; el.className = "pzAntet"; }
+    if (el.parentNode !== ref.parentNode || el.nextElementSibling !== ref) ref.parentNode.insertBefore(el, ref);
+    var h = '<div class="pzVerbRand"><span class="pzVerb pzVerb-' + (cfg.ton || "mut") + '">' + esc(cfg.verb) + '</span><div class="pzVerbTxt">' + (cfg.titlu ? '<b>' + esc(cfg.titlu) + '</b>' : "")
+      + (cfg.fac ? '<p>' + esc(cfg.fac) + '</p>' : "") + '<p class="pzDin">din: ' + esc(cfg.din || "") + '</p></div></div>'
+      + (cfg.voci && cfg.voci.length ? '<div class="pzVoci">' + cfg.voci.slice(0, 16).map(function (v) { var k = VOT[v.ton] || "neutru"; return '<span class="pzVoce pzVoce-' + k + '"' + (v.tit ? ' title="' + esc(v.tit) + '"' : "") + '>' + (v.semn === false ? "" : SIMP[k] + " ") + esc(v.n) + '</span>'; }).join("") + '</div>' : "");
+    el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; }
+  }
+  // pastila Consilierului (T212 / Salt) - după TEXTUL ei, cum o scrie pagina (AȘTEAPTĂ are clasa „fără date”, dar e un verdict - revizia I4)
+  var NIVPAST = { "IEȘI": "iesi", "ATENȚIE": "atentie", "AȘTEAPTĂ": "asteapta", "ȚINE": "tine" };
+  function nivelPastila(text) { return NIVPAST[String(text || "").trim().toUpperCase()] || "alt"; }
+  // pozițiile ⇒ verdictul paginii: cel mai grav nivel ARĂTAT de pastile (IEȘI > ATENȚIE > AȘTEAPTĂ > ȚINE), cu cuvântul pastilei (pur, probat)
+  function verdictPozitii(randuri, sursa) {
+    if (!randuri.length) return null;
+    var g = { iesi: [], atentie: [], asteapta: [], tine: [], alt: [] };
+    randuri.forEach(function (r) { (g[r.nivel] || g.alt).push(r.sim); });
+    var TON = { iesi: "jos", atentie: "aur", asteapta: "mut", tine: "sus", alt: "mut" }, CUV = { iesi: "IEȘI", atentie: "ATENȚIE", asteapta: "AȘTEAPTĂ", tine: "ȚINE" };
+    var voci = randuri.map(function (r) { return { n: r.sim, ton: TON[r.nivel] || "mut", tit: r.pill || "fără verdict încă" }; });
+    var k = ["iesi", "atentie", "asteapta", "tine"].filter(function (x) { return g[x].length; })[0];
+    var c = !k ? { verb: "FĂRĂ DATE", ton: "mut", titlu: "pozițiile n-au încă un verdict al Consilierului" }
+      : k === "tine" ? { verb: "ȚINE", ton: "sus", titlu: g.tine.length === randuri.length ? (randuri.length === 1 ? "poziția ține" : "toate cele " + cate(randuri.length, "poziție", "poziții") + " țin") : g.tine.length + " din " + randuri.length + " țin; restul fără verdict încă" }
+      : { verb: CUV[k], ton: TON[k], titlu: (g[k].length === 1 ? "la o poziție: " : "la " + cate(g[k].length, "poziție", "poziții") + ": ") + g[k].join(", ") };
+    c.voci = voci; c.din = sursa; return c;
+  }
+  function randuriPastile(sel, simDin) {
+    return [].map.call(document.querySelectorAll(sel), function (tr) {
+      var p = tr.querySelector(".t212Pill"); return { sim: simDin(tr), nivel: nivelPastila(p && p.textContent), pill: p ? p.textContent.trim() : "" };
+    }).filter(function (r) { return r.sim; });
+  }
+  function primulTodo(sel) { var r = document.querySelector(sel); if (!r) return ""; var b = r.querySelector("b"), p = r.querySelector("p"); return [b && b.textContent.trim(), p && p.textContent.replace(/^👉\s*/, "").trim()].filter(Boolean).join(" — "); }
+
+  function pagT212() {
+    var c = verdictPozitii(randuriPastile("#t212Continut tr.t212Rand", function (tr) { return tx(".t212Sim b", tr); }), "pastilele Consilierului pe fiecare poziție · „Ce ai de făcut acum”");
+    if (c) c.fac = primulTodo("#t212Sus .t212TodoRand");
+    antet("pzV-t212", $("t212Sus"), c);
+  }
+  function pagSalt() {
+    var c = verdictPozitii(randuriPastile("#saltPozBox tr.t212Rand", function (tr) { return tx("b", tr); }), "pastilele Consilierului pe fiecare poziție Salt · „Ce ai de făcut acum”");
+    if (c) c.fac = primulTodo("#saltSus .t212TodoRand");
+    antet("pzV-salt", $("saltPagina"), c);
+  }
+  // alertele: din TOATĂ lista (alSt.l), nu din rândurile filtrate; pe ultimele 24 h, după nivelul pus de colector - nu după „necitit”
+  // (clasa „nou” dispare în secunda în care deschizi pagina ⇒ „nimic nou” verde deasupra alertelor critice - revizia Opus C1)
+  function verdictAlerte(l, acum, drumFn) {
+    l = (Array.isArray(l) ? l : []).filter(function (x) { return x && acum - x.t <= 24 * 3600000; });
+    var crit = l.filter(function (x) { return x.nivel === "critic"; }), aten = l.filter(function (x) { return x.nivel === "atentie"; });
+    var prima = (crit.length ? crit : aten).slice().sort(function (a, b) { return b.t - a.t; })[0];
+    var c = crit.length ? { verb: "CRITICE: " + crit.length, ton: "jos" } : aten.length ? { verb: "DE ATENȚIE: " + aten.length, ton: "aur" } : { verb: l.length ? "DOAR INFORMĂRI" : "NICIO ALERTĂ", ton: "mut" };
+    c.titlu = prima ? "cea mai recentă: " + prima.titlu : (l.length ? cate(l.length, "informare", "informări") + " în ultimele 24 h" : "nicio alertă în ultimele 24 h");
+    var d = prima && drumFn ? drumFn(prima) : null; c.fac = d && d.et ? "→ " + d.et : "";
+    c.voci = [{ n: cate(crit.length, "critică", "critice"), ton: crit.length ? "jos" : "mut", semn: false }, { n: aten.length + " de atenție", ton: aten.length ? "aur" : "mut", semn: false }, { n: cate(l.length, "alertă", "alerte") + " în 24 h", ton: "mut", semn: false }];
+    c.din = "centrul de alerte (toate categoriile, ultimele 24 h)"; return c;
+  }
+  function pagAlerte() {
+    var l = null; try { l = alSt.l; } catch (e) {}
+    var drumFn = null; try { drumFn = AlCentru.drum; } catch (e) {}
+    antet("pzV-alerts", $("alCentru"), Array.isArray(l) ? verdictAlerte(l, Date.now(), drumFn) : null);
+  }
+  // riscul tău: concluzia cea mai gravă dintre cele ARĂTATE (cu culoarea ei); verbul = secțiunea (boții / acțiunile), nu un cuvânt al stratului
+  function pagMonteCarlo() {
+    var L = [].map.call(document.querySelectorAll("#rlPagina .rlCon"), function (x) { var s = x.closest(".rlSec"), h = s ? tx("h3", s) : ""; return { ton: tonCls(x), titlu: tx("b", x), fac: tx(".rlFac", x).replace(/^👉\s*/, ""), sec: h }; });
+    if (!L.length) { antet("pzV-mc", $("mcsPagina"), null); return; }
+    var ORD = { jos: 0, aur: 1, mut: 2, sus: 3 }, w = L.slice().sort(function (a, b) { return ORD[a.ton] - ORD[b.ton]; })[0];
+    antet("pzV-mc", $("mcsPagina"), { verb: "RISCUL TĂU", ton: w.ton, titlu: (w.sec ? w.sec + ": " : "") + w.titlu, fac: w.fac,
+      voci: L.map(function (x) { var t = (x.sec ? x.sec.split(" ")[0] + ": " : "") + x.titlu; return { n: t.length > 44 ? t.slice(0, 42) + "…" : t, ton: x.ton, tit: t }; }), din: "„Ce înseamnă pentru tine” din „Riscul și obiceiurile tale” (mai jos, după Monte Carlo pe simbol)" });
+  }
+  function pagCarnet() {
+    var st = null; try { st = carnetStare.raport.rejoc.intrebari.alegere.stare; } catch (e) {}
+    var fac = tx("#cnPagina .rlCon .rlFac").replace(/^👉\s*/, "");
+    if (!st || !fac) { antet("pzV-carnet", $("cnPagina"), null); return; }   /* fără stare nu se scrie nimic (Carnet.stareText(undefined) ar spune „prea puține cazuri”) */
+    var titlu = ""; try { titlu = Carnet.stareText(st) || ""; } catch (e) {}
+    var s = String(st), verb = (titlu || s).toUpperCase();
+    antet("pzV-carnet", $("cnPagina"), { verb: verb.length > 28 ? verb.slice(0, 26) + "…" : verb, ton: /-bun$/.test(s) ? "sus" : /-rau$/.test(s) ? "jos" : "mut", titlu: verb.length > 28 ? titlu : "", fac: fac, din: "carnetul fișei: alegerea ÎNGUST / LARG pe istoric" });
+  }
+  function pagJurnal() {
+    var cel = document.querySelector("#jtRezumat .jtKpi .tbKpiCel"), cr = $("jtCrypto");
+    var ref = cr && cr.firstElementChild; if (ref && ref.id === "pzV-jt") ref = ref.nextElementSibling;
+    if (!cel || !cr) { antet("pzV-jt", ref, null); return; }
+    var v = cel.querySelector(".tbKpiVal"), n = nr(v && v.textContent), ton = n === 0 ? "mut" : tonCls(v), fac = tx("#jtGreseli .tbFac") || tx("#jtReguliCard .tbFac") || tx(".jtCireasa .tbFac");
+    antet("pzV-jt", ref, { verb: n === 0 ? "PE ZERO" : ton === "sus" ? "PE PLUS" : ton === "jos" ? "PE MINUS" : (v ? v.textContent.trim() : "—"), ton: ton, titlu: [tx("span", cel), v ? v.textContent.trim() : ""].filter(Boolean).join(": "), fac: fac.replace(/^👉\s*/, ""), din: "jurnalul boților închiși (rezultatul după comisioane și funding)" });
+  }
+  // sugestiile: „fapte, nu semnal” (scrie pagina) ⇒ verbul = cuvântul îngroșat al lățimii, FĂRĂ culoare de bine / rău
+  function pagSugestii() {
+    var p = document.querySelector("#sugPagina .sugPanda p.tbCitScurt");
+    if (!p) { antet("pzV-sug", $("sugPagina"), null); return; }
+    var b = p.querySelector("b"), li = document.querySelector("#sugPagina .sugCartela .sugLista li"), prim = li ? (li.querySelector("b") || li).textContent.trim() : "";
+    var verb = (b ? b.textContent : "").trim().toUpperCase() || "LĂȚIMEA PIEȚEI";
+    antet("pzV-sug", $("sugPagina"), { verb: verb.length > 28 ? verb.slice(0, 26) + "…" : verb, ton: "mut", titlu: "", fac: prim ? "pe ce aș porni un bot: " + prim : "", din: "lățimea pieței pe 150 perp-uri (fapte, nu semnal) · „Pe ce aș porni un bot”" });
+  }
+  // Market: cifrele „Breadth summary”, fără prag inventat
+  function pagMarket() {
+    var bu = tx("#breadthBull"), be = tx("#breadthBear"), ne = tx("#breadthNeutral"), z = tx("#breadth24"), sec = $("market");
+    var ref = sec && sec.querySelector(":scope>.card");
+    if (!bu || !be || bu === "—" || be === "—") { antet("pzV-market", ref, null); return; }
+    antet("pzV-market", ref, { verb: "BULL " + bu + " · BEAR " + be, ton: "mut", titlu: (ne && ne !== "—" ? "Neutral " + ne : "") + (z && z !== "—" ? (ne ? " · " : "") + "24h " + z : ""), din: "Breadth summary (monedele din radarul de mai jos)" });
+  }
+  function pagAccount() {
+    var s = $("botiStare"), sec = $("account"), ref = sec && sec.querySelector(":scope>.card");
+    var t = s ? s.textContent.replace(/\s+/g, " ").trim() : "";
+    if (!t || t === "—" || /NECĂUTAT|NECAUTAT/i.test(t)) { antet("pzV-account", ref, null); return; }
+    antet("pzV-account", ref, { verb: t.split("·")[0].trim(), ton: tonCls(s), titlu: t.indexOf("·") > 0 ? t : (tx("#botiTotal") && tx("#botiTotal") !== "—" ? "total: " + tx("#botiTotal") : ""), din: "„Boți de grid” (mai jos) · configurarea API: " + (tx("#acctConfig") || "—") });
+  }
+  // Cloud: cuvântul paginii și culoarea ei (NOT CONFIGURED are cloudWarn pe pagină ⇒ galben) - fără afirmații în plus (revizia I5)
+  function pagCloud() {
+    var db = $("cloudDb"), ps = $("cloudPushSender"), mon = $("healthMonitor"), sec = $("cloud"), ref = sec && sec.querySelector(":scope>.card");
+    var tdb = db ? db.textContent.trim() : "";
+    if (!tdb || tdb === "—") { antet("pzV-cloud", ref, null); return; }
+    var V = [{ n: "baza D1: " + tdb, ton: tonCls(db), semn: false }, { n: "push: " + (ps ? ps.textContent.trim() || "—" : "—"), ton: tonCls(ps), semn: false }, { n: "monitor: " + (mon ? mon.textContent.trim() || "—" : "—"), ton: tonCls(mon), semn: false }];
+    antet("pzV-cloud", ref, { verb: "D1: " + tdb, ton: tonCls(db), titlu: V.slice(1).map(function (v) { return v.n; }).join(" · "), fac: tx("#cloudLastRun") && tx("#cloudLastRun") !== "—" ? "ultima rulare programată: " + tx("#cloudLastRun") : "", voci: V, din: "starea Cloudflare (mai jos)" });
+  }
+  // vârsta datelor, cum o scrie pagina („12s”, „5m”, „14h”, „—”): peste 15 min galben, ore roșu (revizia I6: „REST 14h” ieșea verde)
+  function tonVarsta(t) { var m = String(t || "").trim().match(/^(\d+)\s*(s|m|h)$/); if (!m) return "mut"; var n = +m[1], u = m[2]; return u === "h" ? "jos" : u === "m" && n >= 15 ? "aur" : "sus"; }
+  function pagSettings() {
+    var a = $("apiAuthStatus"), g = document.querySelector("#settings .settingsGrid");
+    // ordinea cardurilor (fără id) după titlul lor - CSS-ul citește data-pz-ord; cardurile nu se rescriu (setările sunt statice)
+    if (g) [].forEach.call(g.children, function (c) { if (c.hasAttribute("data-pz-ord")) return; var h = (tx("h4", c) || tx("h3", c)).toLowerCase(), o = /api security/.test(h) ? 10 : /freshness|prospe/.test(h) ? 20 : /push/.test(h) ? 30 : /spot provider|primary spot/.test(h) ? 40 : /preset/.test(h) ? 50 : /execution/.test(h) ? 60 : /^alert|alerts/.test(h) ? 70 : /calibr/.test(h) ? 80 : /stocks provider/.test(h) ? 85 : /privacy|confiden/.test(h) ? 90 : /backup/.test(h) ? 95 : /glosar/.test(h) ? 99 : 98; c.setAttribute("data-pz-ord", String(o)); });
+    var t = a ? a.textContent.trim() : "";
+    if (!t) { antet("pzV-settings", g, null); return; }
+    var lipsa = /NEPUS|LIPS|MISSING|NOT SET/i.test(t);
+    antet("pzV-settings", g, { verb: "PAROLA: " + t, ton: lipsa ? "jos" : "mut", titlu: "", fac: lipsa ? "scrie parola în cartela „API Security”, prima de mai jos" : "",
+      voci: [["REST", "#freshRest"], ["WS", "#freshWs"], ["Futures", "#freshFut"], ["Sentiment", "#freshSent"]].map(function (x) { var v = tx(x[1]); return { n: x[0] + " " + (v || "—"), ton: tonVarsta(v) }; }), din: "API Security · Data freshness (vârsta ultimelor date)" });
+  }
+  function pagHealth() {
+    var h = $("health"); if (!h) return;
+    var ov = $("providerHealthOverall"), o = ov ? ov.textContent.trim() : ""; if (o === "—") o = "";
+    var boxes = [].map.call(h.querySelectorAll(".healthGrid .healthBox"), function (b) { var et = tx("span", b) || "", v = tx("b", b) || ""; return { n: (et + " " + v).trim(), ton: /^(OK|LIVE|READY|ONLINE)\b/i.test(v) ? "sus" : /FAIL|ERROR|UNREACH|RATE LIMIT/i.test(v) ? "jos" : "mut" }; });
+    // sub titlul paginii (ca pe celelalte pagini), înaintea cardului
+    var cap = h.querySelector(":scope>.sectionHead"), dupa = cap ? cap.nextElementSibling : null; if (dupa && dupa.id === "pzV-health") dupa = dupa.nextElementSibling;
+    if (!o && !boxes.length) { antet("pzV-health", dupa, null); return; }
+    var rau = boxes.filter(function (b) { return b.ton === "jos"; });
+    antet("pzV-health", dupa, { verb: o ? "FURNIZORII: " + o.toUpperCase() : rau.length ? "NU MERG: " + rau.length : "VERIFICĂ", ton: ov && o ? tonCls(ov) : rau.length ? "jos" : "mut",
+      titlu: rau.length ? rau.map(function (b) { return b.n; }).join(" · ") : (o ? "" : "„Run health check” și „Run provider health” de mai jos dau starea furnizorilor"), voci: boxes, din: "Health (mai jos)" });
+  }
+
+  // Cloud / Settings / Health nu depind de monedă: fâșia „Selected market” + filele de analiză se PLIAZĂ (el, 11.10: „da, fă tot”), nu se ascund -
+  // un buton le deschide, alegerea se ține minte. Bara cu simbolul (Crypto / Stocks) rămâne mereu la vedere.
+  var FARA_MONEDA = { cloud: 1, settings: 1, health: 1 };
+  function pliazaFasia() {
+    var h = document.querySelector("main .heroStrip"), on = document.querySelector("main>section.panel.on"), b = $("pzFasiaBtn");
+    var aici = !!(h && on && FARA_MONEDA[on.id]), des = false; try { des = localStorage.getItem("pzFasiaDeschisa") === "1"; } catch (e) {}
+    if (h && !b) {
+      b = document.createElement("button"); b.type = "button"; b.id = "pzFasiaBtn"; b.className = "pzFasiaBtn";
+      b.addEventListener("click", function () { var d = false; try { d = localStorage.getItem("pzFasiaDeschisa") === "1"; localStorage.setItem("pzFasiaDeschisa", d ? "0" : "1"); } catch (e) {} b._d = !(b._d != null ? b._d : d); pliazaFasia(); });
+    }
+    if (b && h && b.nextElementSibling !== h) h.parentNode.insertBefore(b, h);
+    if (b && b._d != null) des = b._d;
+    document.body.classList.toggle("pzFasiaPliata", aici && !des);
+    if (b) { b.hidden = !aici; var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
+  }
+  window.AsezarePaznic = { verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, lichDin: lichDin, verdictValid: verdictValid, tonLich: tonLich };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   setInterval(tura, 1500); setTimeout(tura, 300);

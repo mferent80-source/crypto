@@ -2687,5 +2687,101 @@ body:before{background-image:none!important}
 
 /* v100.151 (revizia Opus I9): textul pe pastilele colorate e închis (alb pe galben = 1,83:1) */
 #tabloubot .tbPill,.t212Pill{color:#0E141A}
+/* ===== v100.152 · toate paginile (Zilnic + Unelte) după modelul Tabloului: decizia sus, apoi cifrele, acțiunile, contextul, detaliile =====
+   Ordinea e DOAR din CSS (`order` pe containere flex / grid; `:has()` pentru blocurile fără id) - nimic mutat în DOM, nimic ascuns.
+   Paginile devin coloană flex DOAR când sunt active (.on) și FĂRĂ !important: .marketModeStock .cryptoContextOnly / .marketModeCrypto .stockOnly
+   le ascund cu !important în modul greșit și trebuie să câștige în continuare (harta paginilor Unelte). */
+.pzAntet{border:1px solid var(--pzLi);background:var(--pzF1);border-radius:5px;padding:12px 14px;margin:0 0 10px;order:5}
+.pzAntet[hidden]{display:none}
+body.pzFasiaPliata .heroStrip,body.pzFasiaPliata .tabs{display:none}.pzFasiaBtn{display:block;margin:0 0 8px;padding:5px 10px;background:var(--f1,#141C24);color:#9FB3C4;border:1px solid #26333F;border-radius:4px;font:inherit;font-size:12px;cursor:pointer;text-align:left}.pzFasiaBtn:hover{color:#E6EDF3;border-color:#35485A}.pzFasiaBtn:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}.pzFasiaBtn[hidden]{display:none}
+@media (max-width:550px){.pzVerb{white-space:normal;overflow-wrap:anywhere}}
+/* T212 (.t212Card e deja coloană flex) */
+.pzDemo #t212Card>*{order:900}
+.pzDemo #t212Card>.t212CapCard{order:0}.pzDemo #t212Card>#pzV-t212{order:10}.pzDemo #t212Card>#t212Sus{order:20}
+.pzDemo #t212Card>.contTot{order:50}.pzDemo #t212Card>.piataAzi{order:55}.pzDemo #t212Card>.t212Grila{order:60}.pzDemo #t212Card>#t212Idei{order:210}
+/* Salt (#saltCard coloană flex; #saltPagina grilă) */
+.pzDemo #saltCard>*{order:900}
+.pzDemo #saltCard>.t212CapCard{order:0}.pzDemo #saltCard>#pzV-salt{order:10}.pzDemo #saltCard>#saltPagina{order:20}
+.pzDemo #saltPagina>*{order:900}
+.pzDemo #saltPagina>p.tbWarn{order:0}.pzDemo #saltPagina>#saltSus{order:10}.pzDemo #saltPagina>.t212Grila{order:20}.pzDemo #saltPagina>#saltIdeiBox{order:210}
+.pzDemo #saltPagina>.saltToate{order:300}.pzDemo #saltPagina>.saltSubsol{order:990}
+/* Scanner (.scNou e coloană flex): verdictele pieței sus, apoi rețetele, filtrele, lista; explicațiile după */
+.pzDemo #scNou>*{order:900}
+.pzDemo #scNou>.scAntet{order:0}.pzDemo #scNou>#scContext{order:10}.pzDemo #scNou>#scRetete{order:20}.pzDemo #scNou>.scFiltre{order:30}
+.pzDemo #scNou>#scExplic{order:25}.pzDemo #scNou>#scLista{order:40}.pzDemo #scNou>.scPachet{order:950}.pzDemo #scNou>.scNota{order:990}
+/* Alerte */
+.pzDemo #alerts.on{display:flex;flex-direction:column}
+.pzDemo #alerts.on>*{order:900;align-self:stretch}
+.pzDemo #alerts.on>.sectionHead{order:0}.pzDemo #alerts.on>#pzV-alerts{order:10}.pzDemo #alerts.on>#alCentru{order:20;width:100%}
+.pzDemo #alerts.on>.card:has(#alertList){order:800}.pzDemo #alerts.on>.card:has(#alertSrRule){order:990}
+/* Acasă (.acasa e coloană flex): verdictele, ce înseamnă pentru tine, ce aș cumpăra, apoi pulsul, harta, știrile */
+.pzDemo #acasa>*{order:900}
+.pzDemo #acasa>.acAntet{order:0}.pzDemo #acasa>.acVerdicte{order:10}
+.pzDemo #acasa>.acGrupCap:has(+.acTine){order:20}.pzDemo #acasa>.acTine{order:21}
+.pzDemo #acasa>#acCumpar{order:30}.pzDemo #acasa>#acLegatura{order:35}
+.pzDemo #acasa>.acRandCap:has(+.acPuls #acBtc){order:40}.pzDemo #acasa>.acPuls:has(#acBtc){order:41}
+.pzDemo #acasa>.acRandCap:has(+.acPuls #acNasdaq){order:42}.pzDemo #acasa>.acPuls:has(#acNasdaq){order:43}
+.pzDemo #acasa>.acDoua:has(#acMacro){order:50}.pzDemo #acasa>#acHarta{order:55}.pzDemo #acasa>.acDoua:has(#acMisca){order:60}
+.pzDemo #acasa>.acDoua:has(#acCalendar){order:70}.pzDemo #acasa>#acSocoteala{order:22}
+/* Sugestii (#sugPagina se rescrie tot ⇒ ordinea din CSS; lățimea pieței rămâne PRIMA - cererea lui, v100.150) */
+.pzDemo #sugPagina{display:flex;flex-direction:column;gap:10px}
+.pzDemo #sugPagina>*{order:900}
+.pzDemo #sugPagina>.sugPanda{order:10}.pzDemo #sugPagina>.rlSec:nth-of-type(1){order:20}.pzDemo #sugPagina>.rlSec:nth-of-type(2){order:30}
+.pzDemo #sugPagina>.rlSec:nth-of-type(3){order:40}.pzDemo #sugPagina>p.rlRasp{order:5}.pzDemo #sugPagina>p.tbSub{order:990}
+/* Grid: ce setez? - fișa (verdictul ei e deja sus, lipicios) înaintea clasamentului și laboratorului; clasamentul urcă doar când fișa e goală */
+.pzDemo #gridset.on{display:flex;flex-direction:column;gap:8px}
+.pzDemo #gridset.on>*{order:900}
+.pzDemo #gridset.on>.sectionHead{order:0}.pzDemo #gridset.on>.grIntrari{order:10}.pzDemo #gridset.on>#grFisa{order:20}
+.pzDemo #gridset.on>#grHartieCard{order:80}.pzDemo #gridset.on>#grJurnalCard{order:85}.pzDemo #gridset.on>#grClasamentCard{order:90}.pzDemo #gridset.on>#grLaboratorCard{order:95}
+.pzDemo #gridset.on:has(#grFisa>.emptyState)>#grClasamentCard{order:15}
+.pzDemo #grFisa{display:flex;flex-direction:column}
+.pzDemo #grFisa>*{order:65}
+.pzDemo #grFisa>.grVerdict{order:0}.pzDemo #grFisa>.grListaJos{order:1}.pzDemo #grFisa>#grRezumat{order:2}.pzDemo #grFisa>#grPlanVar{order:10}
+.pzDemo #grFisa>.grPoarta{order:20}.pzDemo #grFisa>#grProb{order:30}.pzDemo #grFisa>.grBusola{order:35}.pzDemo #grFisa>.tbRand:has(.grDir){order:40}
+.pzDemo #grFisa>.grBilet{order:45}.pzDemo #grFisa>#grAlte{order:60}.pzDemo #grFisa>#grAlte+p{order:61}.pzDemo #grFisa>.tbRand:has(.grTabel){order:70}
+/* Simulator grid: când există rezultat, verdictul și riscurile urcă deasupra setărilor */
+.pzDemo #gsPagina{display:flex;flex-direction:column}
+.pzDemo #gsPagina:has(.gsVerdict)>*{order:900}
+.pzDemo #gsPagina:has(.gsVerdict)>.mcsCap{order:0}.pzDemo #gsPagina:has(.gsVerdict)>p{order:5}
+.pzDemo #gsPagina:has(.gsVerdict)>.gsSec:has(.gsVerdict){order:10}.pzDemo #gsPagina:has(.gsVerdict)>.gsSec:has(.gsRiscuri){order:20}
+.pzDemo #gsPagina:has(.gsVerdict)>.gsSetare{order:30}.pzDemo #gsPagina:has(.gsVerdict)>.gsSec:has(.gsDurate){order:40}
+.pzDemo #gsPagina:has(.gsVerdict)>.gsSec:has(.mcsVarBloc){order:50}.pzDemo #gsPagina:has(.gsVerdict)>p.mcsAvert{order:990}
+/* Carnetul fișei: concluzia „👉” are acum chenarul ei și aici (stilul .rlCon era doar sub #montecarlo) */
+.pzDemo #cnPagina .rlCon{border-left:3px solid var(--pzInfo);background:var(--pzF2);padding:8px 10px;border-radius:0 3px 3px 0;margin:6px 0}
+/* Jurnal de trade (#jtCrypto coloană flex; #jtRezumat fără stil propriu ⇒ copiii lui intră în ordine) */
+.pzDemo #jtRezumat{display:contents}
+.pzDemo #jtCrypto>*,.pzDemo #jtRezumat>*{order:900}
+.pzDemo #jtCrypto>#pzV-jt{order:0}.pzDemo #jtRezumat>.jtKpi{order:10}.pzDemo #jtCrypto>#jtStatCrypto{order:20}
+.pzDemo #jtCrypto>.tbBloc:has(#jtGreseli){order:30}.pzDemo #jtCrypto>#jtReguliCard{order:35}.pzDemo #jtRezumat>.jtCireasa,.pzDemo #jtRezumat>p{order:40}
+.pzDemo #jtCrypto>#jtRaportCard{order:50}.pzDemo #jtRezumat>.emptyState,.pzDemo #jtRezumat>.tbBloc{order:5}.pzDemo #jtCrypto>#jtPl-crypto{order:90}
+/* Market Overview */
+.pzDemo #market.on{display:flex;flex-direction:column;gap:10px}
+.pzDemo #market.on>*{order:900}.pzDemo #market.on>.card{margin-top:0!important}
+.pzDemo #market.on>.sectionHead{order:0}.pzDemo #market.on>#pzV-market{order:10}.pzDemo #market.on>.card:has(#breadthBull){order:20}.pzDemo #market.on>.card:has(#marketOverview){order:60}
+/* Futures (grilă de 12 coloane): contextul (decizia) primul, pe tot rândul */
+.pzDemo #deriv .grid>.card:has(#fcontext){order:-2;grid-column:1/-1}.pzDemo #deriv .grid>.card:has(#ftext){order:-1;grid-column:1/-1}
+.pzDemo #deriv .grid>.card:has(#fundingBias){order:5}
+/* Nasdaq / US Stocks */
+.pzDemo #stocks.on{display:flex;flex-direction:column;gap:10px}
+.pzDemo #stocks.on>*{order:900}.pzDemo #stocks.on>.card{margin-top:0!important}
+.pzDemo #stocks.on>.sectionHead{order:0}.pzDemo #stocks.on>.stockHeroGrid{order:20}.pzDemo #stocks.on>.card:has(.pushState){order:40}
+.pzDemo #stocks.on>.card:has(#stockEarningsDate){order:60}.pzDemo #stocks.on>.t212Link{order:80}
+/* Pionex Account: boții primii (decizia), apoi API, balanțe, ordine, jurnalul v71 */
+.pzDemo #account.on{display:flex;flex-direction:column;gap:10px}
+.pzDemo #account.on>*{order:900}.pzDemo #account.on>.card{margin-top:0!important}
+.pzDemo #account.on>.sectionHead{order:0}.pzDemo #account.on>#pzV-account{order:10}.pzDemo #account.on>.card:has(#botiStare){order:20}
+.pzDemo #account.on>.card:has(#acctConfig){order:30}.pzDemo #account.on>.card:has(#acctBalanceRows){order:50}.pzDemo #account.on>.card:has(#acctOrderRows){order:55}
+.pzDemo #account.on>.card:has(#v71ReconState){order:90}
+/* Cloud Monitor */
+.pzDemo #cloud.on{display:flex;flex-direction:column;gap:10px}
+.pzDemo #cloud.on>*{order:900}.pzDemo #cloud.on>.card{margin-top:0!important}
+.pzDemo #cloud.on>.sectionHead{order:0}.pzDemo #cloud.on>#pzV-cloud{order:10}.pzDemo #cloud.on>.card:has(.cloudGrid){order:20}
+.pzDemo #cloud.on>.card:has(#cloudRuns){order:30}.pzDemo #cloud.on>.card:has(#cloudOpps){order:40}
+/* Settings (.settingsGrid e grilă): cardurile după data-pz-ord (pus de lib/asezare-paznic.js după titlu) */
+.pzDemo #settings .settingsGrid>[data-pz-ord="10"]{order:10}.pzDemo #settings .settingsGrid>[data-pz-ord="20"]{order:20}.pzDemo #settings .settingsGrid>[data-pz-ord="30"]{order:30}
+.pzDemo #settings .settingsGrid>[data-pz-ord="40"]{order:40}.pzDemo #settings .settingsGrid>[data-pz-ord="50"]{order:50}.pzDemo #settings .settingsGrid>[data-pz-ord="60"]{order:60}
+.pzDemo #settings .settingsGrid>[data-pz-ord="70"]{order:70}.pzDemo #settings .settingsGrid>[data-pz-ord="80"]{order:80}.pzDemo #settings .settingsGrid>[data-pz-ord="85"]{order:85}
+.pzDemo #settings .settingsGrid>[data-pz-ord="90"]{order:90}.pzDemo #settings .settingsGrid>[data-pz-ord="95"]{order:95}.pzDemo #settings .settingsGrid>[data-pz-ord="98"]{order:98}
+.pzDemo #settings .settingsGrid>[data-pz-ord="99"]{order:99}
 /* v100.150 (I-584, revizia 5): pe telefon tabelul pandei isi tine capul - .t212Tab ascunde thead sub 640 px */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

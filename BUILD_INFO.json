@@ -1,11 +1,12 @@
 {
-  "version": "v100.151",
-  "badge": "v100.151 · DESIGNUL PAZNIC: TEMA, GRAFICUL, AȘEZAREA",
+  "version": "v100.152",
+  "badge": "v100.152 · TOATE PAGINILE DUPĂ MODELUL TABLOULUI",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "paginiModelTablouV152": "paginile Zilnic + Unelte dupa modelul Tabloului (el, 11.10): antet de verdict citit din pagina (T212, Salt, Alerte, Monte Carlo, Carnet, Jurnal, Sugestii, Market, Account, Cloud, Settings, Health), ordinea decizie -> detalii din CSS; Grid, Simulator, Scanner, Acasa isi pastreaza decizia proprie (o singura voce)",
     "temaPaznicV151": "designul panoului PAZNIC-CRYPTO pe tot Radarul (demo aprobat de el 11.10.2026): paleta, colturi 3-5 px, fara umbre, IBM Plex local; graficul cu perechile inchise jos (nu inele pe lumanari); asezarea I-589..I-599 in lib/asezare-paznic.js; inventarul nimic-pierdut pe 51 de pagini x 1920/390",
     "liveCost": "SPOT/PERP/STOCK carry model with setup-time funding snapshot, explicit borrow assumption and locate state",
     "interruptionGuard": "suspected intraday data-gap guard; explicitly not an official halt/LULD feed",
