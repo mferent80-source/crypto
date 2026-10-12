@@ -273,6 +273,17 @@ await test("istoric: raportul de duminica (v84) se scrie curatat si se citeste i
   assert.equal((await cheama("POST", "action=raport", env, { corp: { la: 1 } })).status, 400);
 });
 
+await test("istoric: „Săptămâna pieței” (v100.166) se scrie curățat și se citește înapoi, separat de raportul de duminică; fără linii -> 400", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  assert.strictEqual((await cheama("GET", "action=raportPiata", env)).d.raport, null);
+  await cheama("POST", "action=raport", env, { corp: { la: 1, linii: ["boții"] } });
+  await cheama("POST", "action=raportPiata", env, { corp: { la: 2, titlu: "📊 Săptămâna pieței", linii: ["₿ Crypto", 7, "x".repeat(2000)] } });
+  const r = (await cheama("GET", "action=raportPiata", env)).d.raport;
+  assert.equal(r.la, 2); assert.equal(r.titlu, "📊 Săptămâna pieței"); assert.equal(r.linii.length, 2); assert.equal(r.linii[1].length, 1000);
+  assert.deepEqual((await cheama("GET", "action=raport", env)).d.raport.linii, ["boții"], "raportul de duminică rămâne neatins");
+  assert.equal((await cheama("POST", "action=raportPiata", env, { corp: { la: 1 } })).status, 400);
+});
+
 await test("colector.mjs SE INCARCA intreg (v84: o ordine gresita de incarcare l-a oprit tacut; probele pe bucati nu vedeau)", async () => {
   const { spawnSync } = await import("node:child_process");
   const r = spawnSync(process.execPath, [new URL("./colector.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")], { env: { ...process.env, COLECTOR_DOAR_INCARCA: "1" }, encoding: "utf8", timeout: 30000 });

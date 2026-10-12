@@ -5518,6 +5518,8 @@ async function jtPorneste(forta){
     jtStare.boti=await jtAduBoti();jtStare.eroare=jtStare.boti?null:"Pionex nu a dat lista";
     try{var cf=await getJSON("/api/istoric-bot?action=contrafactual");jtStare.cf=cf&&cf.contrafactual||{}}catch(e){jtStare.cf=null}
     try{var rp=await getJSON("/api/istoric-bot?action=raport");jtStare.raport=rp&&rp.raport||null}catch(e){jtStare.raport=undefined}
+    /* v100.166 (12.10, Weekly Review mutat aici): și „Săptămâna pieței” de duminică (până acum doar pe Discord) */
+    try{var rpp=await getJSON("/api/istoric-bot?action=raportPiata");jtStare.raportPiata=rpp&&rpp.raport||null}catch(e){jtStare.raportPiata=null}
   }catch(e){jtStare.eroare=grTextEroare(e)}
   jtStare.inLucru=false;jtStare.la=Date.now();jtRender();
 }
@@ -5590,7 +5592,8 @@ function jtRender(){
   // v100.78 (ideea 1): raportul SALVAT inainte de v100.61 („−36.16 USDT”) se afiseaza cu cifrele in forma noua; cuvintele lui raman
   var rap=$("jtRaport");if(rap){var R=jtStare.raport;
     if(R&&Array.isArray(R.linii)){rap.innerHTML='<ul class="grLista">'+R.linii.map(function(x){return '<li>'+escapeHtml(TextRo.cifreNoi(x))+'</li>'}).join("")+'</ul>';if($("jtRaportSub"))$("jtRaportSub").textContent="săptămâna "+(R.saptamana||"")+" · trimis duminică seara"}
-    else{var pr=Obiceiuri.raportDuminica({trades:l,acum:Date.now()});rap.innerHTML='<p class="tbSub">Primul raport vine duminică după ora 20. Cum ar arăta acum, pe ultimele 7 zile:</p><ul class="grLista">'+pr.linii.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>'}}
+    else{var pr=Obiceiuri.raportDuminica({trades:l,acum:Date.now()});rap.innerHTML='<p class="tbSub">Primul raport vine duminică după ora 20. Cum ar arăta acum, pe ultimele 7 zile:</p><ul class="grLista">'+pr.linii.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>'}
+    var RP=jtStare.raportPiata;if(RP&&Array.isArray(RP.linii)&&RP.linii.length)rap.insertAdjacentHTML("beforeend",'<div class="jtRaportPiata"><h5>'+escapeHtml(RP.titlu||"📊 Săptămâna pieței")+'</h5><ul class="grLista">'+RP.linii.map(function(x){return '<li>'+escapeHtml(TextRo.cifreNoi(x))+'</li>'}).join("")+'</ul></div>')}
   var rg=$("jtReguli");if(rg){var rp2=Obiceiuri.reguliPersonale(l,"Europe/Bucharest");
     rg.innerHTML=!rp2.suficient?'<p class="tbSub">'+TextRo.cate(rp2.n,"bot","boți")+' în jurnal: mai trebuie '+rp2.lipsa+' ca să-ți spun unde pierzi TU (ore, monede, durate, direcție). Sub 30, orice „regulă” ar fi noroc.</p>'
       :rp2.reguli.length?'<ul class="grLista">'+rp2.reguli.slice(0,5).map(function(r){return '<li class="bad">'+escapeHtml(r.text)+'</li>'}).join("")+'</ul><p class="tbFac">👉 <b>Ce aș face eu:</b> Aș evita deocamdată boții '+escapeHtml(rp2.reguli[0].grupa)+'.</p>':'<p class="good">Pe '+TextRo.cate(rp2.n,"bot","boți")+' nu văd o grupă care să piardă clar mai des decât restul.</p>'}

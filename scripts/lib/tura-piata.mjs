@@ -133,6 +133,19 @@ async function socoteala(d, st, acum) {
   if (schimbat || st.socTrimisN !== l.length) { await d.trimite("/api/istoric-bot?action=piata", { la: acum, socoteala: d.Acasa.socotealaAlerte(l) }); st.socTrimisN = l.length; }
 }
 
+// v100.166 (12.10, Weekly Review din premarket_scanner mutat in raport): latimea pietei, cu ACELASI text ca in „Ce spune piata acum”.
+// Crypto din KV (colectorul la 15 min), US de la robotul GitHub (LatimeUS.SURSA). Fara date / eroare / „astept” ⇒ null (randul lipseste).
+async function latimeCrypto(d, acum) {
+  if (!d.Latime) return null;
+  const r = await incearca(d, "raport latime", () => d.cere("/api/istoric-bot?action=latime"));
+  const a = r && r.latime && r.latime.acum; if (!a || !a.lat || a.eroare) return null;
+  return d.Latime.textCitire(r.latime, null, acum).text.replace(/ · acum [0-9]+ min$/, "");   // „acum N min” e pentru pagină; „veche, de la …” rămâne
+}
+async function latimeUs(d, acum) {
+  if (!d.LatimeUS) return null;
+  const n = await incearca(d, "raport latime US", async () => { const x = await (d.fetch || fetch)(d.LatimeUS.SURSA, { signal: AbortSignal.timeout(15000) }); return x && x.ok ? d.LatimeUS.normalizeaza(await x.json(), acum) : null; });
+  return n ? d.LatimeUS.textCitire(n, acum).text : null;
+}
 // ---- 7. raportul de duminica seara (dupa 20:00 Bucuresti), o data ----
 async function raportSaptamana(d, st, acum) {
   const r = ceas(acum, "Europe/Bucharest");
@@ -156,7 +169,10 @@ async function raportSaptamana(d, st, acum) {
   const m = A.raportSaptamana({ btc7: b1d && b1d.length > 7 ? (b1d[b1d.length - 1].c / b1d[b1d.length - 8].c - 1) * 100 : null,
     vreme: A.vreme({ clasament: cl, btc: { miscare: false }, fg: p.fg ? p.fg.valoare : null }), qqq5: qqq && qqq.length > 5 ? (qqq[qqq.length - 1].c / qqq[qqq.length - 6].c - 1) * 100 : null, vix,
     vremeBursa: A.vremeBursa({ qqq, vix, ndx: A.largimeNdx(l) }), sus: s5.slice(0, 3), jos: s5.slice(-3).reverse(),
-    botiTotal: act.length ? act.reduce((s, b) => s + Number(b.profitTotal), 0) : null, t212Ppl: co && co.cash ? Number(co.cash.ppl) : null, calendar: cal, rezultate: rz });
+    botiTotal: act.length ? act.reduce((s, b) => s + Number(b.profitTotal), 0) : null, t212Ppl: co && co.cash ? Number(co.cash.ppl) : null, calendar: cal, rezultate: rz,
+    latime: await latimeCrypto(d, acum), latimeUs: await latimeUs(d, acum) });
+  // v100.166: salvat și acasă, ca Jurnalul de trade să-l arate sub raportul de duminică (până acum era doar pe Discord)
+  await incearca(d, "raport salvat", () => d.trimite("/api/istoric-bot?action=raportPiata", { la: acum, titlu: m.titlu, linii: String(m.mesaj).split("\n") }));
   if (await d.trimiteAlerta(m, null, "raport-saptamana")) st.raportSaptZi = r.zi;
 }
 

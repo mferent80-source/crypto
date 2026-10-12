@@ -242,6 +242,9 @@ var Acasa = (function () {
     L.push("📈 Nasdaq " + semn(nr(o.qqq5)) + " pe săptămână" + (nr(o.vix) !== null ? " · VIX " + nr(o.vix).toFixed(1).replace(".", ",") : "") + (o.vremeBursa && o.vremeBursa.eticheta ? " · " + o.vremeBursa.eticheta.toLowerCase() : ""));
     var mm = function (l) { return (l || []).slice(0, 3).map(function (x) { return x.s + " " + semn(nr(x.ch5)); }).join(", "); };
     if ((o.sus || []).length || (o.jos || []).length) L.push("↕ Nasdaq 100 pe săptămână: sus " + (mm(o.sus) || "—") + " · jos " + (mm(o.jos) || "—"));
+    // v100.166 (12.10, Weekly Review mutat aici): lățimea crypto și a acțiunilor US, cu textul rândurilor din „Ce spune piața acum”; lipsă ⇒ fără rând
+    if (o.latime) L.push("🌐 Lățimea crypto (150 perp-uri): " + o.latime);
+    if (o.latimeUs) L.push("🗽 Acțiuni US: " + o.latimeUs);
     var bt = nr(o.botiTotal), tp = nr(o.t212Ppl);
     if (bt !== null || tp !== null) L.push("💼 Tu: boți " + (bt === null ? "—" : (bt >= 0 ? "+" : "−") + Math.abs(bt).toFixed(2).replace(".", ",") + " USDT") + " · acțiuni deschise " + (tp === null ? "—" : (tp >= 0 ? "+" : "−") + Math.abs(Math.round(tp)).toLocaleString("ro-RO") + " lei"));
     var cal = (o.calendar || []).filter(function (x) { return x && x.mare; }).slice(0, 5);

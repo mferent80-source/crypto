@@ -1,12 +1,13 @@
 // Proba turei de piata din colector (v94): vremea pietei (alerta la schimbare), funding-ul pe piata, miscarea
 // neobisnuita pe botii lui si pe actiunile lui, Nasdaq la zi cat e bursa deschisa, poza zilnica. Fara retea.
 // Rulare: node scripts/tura-piata-v94.mjs
+import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { turaPiata } from "./lib/tura-piata.mjs";
 
-for (const f of ["grid-calcul.js", "grid-clasament.js", "directie.js", "alerte.js", "acasa.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
+for (const f of ["grid-calcul.js", "grid-clasament.js", "directie.js", "alerte.js", "acasa.js", "latime.js", "latime-us.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
 let teste = 0, picate = 0;
 async function test(nume, fn) {
   teste++;
@@ -110,6 +111,35 @@ await test("v95 raportul de duminica: dupa ora 20 (Bucuresti), o singura data, c
   await turaPiata(w.d, st, DUMINICA); await turaPiata(w.d, st, DUMINICA + 2 * ORA);
   const r = w.alerte.filter((x) => /Săptămâna pieței/.test(x.titlu)); assert.equal(r.length, 1);
   assert.match(r[0].mesaj, /FOMC Statement/); assert.match(r[0].mesaj, /\n👉 (Crypto|Bursă|N-aș|Aș) /);   /* v100.72: acțiunile pe rânduri „👉 ” (era „Ce aș face eu:” cu trei lipite) */ assert.match(r[0].mesaj, /−7,75 USDT/);
+});
+// v100.166 (12.10, Weekly Review din premarket_scanner mutat aici - el: „completez raportul de duminică”): „Săptămâna pieței” spune și
+// lățimea pieței crypto (150 perp-uri) și a acțiunilor US, cu ACELEAȘI texte ca rândurile din „Ce spune piața acum”, și se salvează
+// pe serverul de acasă, ca Jurnalul de trade să-l arate sub raportul de duminică (până acum era doar pe Discord).
+const LAT = { latime: { acum: { la: Date.UTC(2026, 8, 27, 17, 25), n: 150, lipsa: 0, lat: { sus: 40, jos: 90, mariLong: 70, fundExtrem: 3, oiExtrem: 5, bugetEpuizat: 0, volExtrem: 0 }, regim: { cod: "LARG-JOS" } }, istoric: [] } };
+const US = { full: { status: "COMPLETE", engine: { data: { sp: { score: 27.6, zone: "Weakening", exposure: "40-60%", data_date: "2026-09-25" }, uptrend: { score: 49, zone: "Neutral", exposure: "60-80%", data_date: "2026-09-25" }, ndx: { score: 54, zone: "Healthy", exposure: "75-90%", data_date: "2026-09-25" }, r2k: { score: 34, zone: "Weakening", exposure: "40-60%", data_date: "2026-09-25" } }, master: { score: -2, stance: "PRUDENTA / DEFENSIV" } }, ideas: { rising_sectors: ["XLE"] } }, sources: {} };
+function lumeLat(o = {}) {
+  const w = lume(), cere0 = w.d.cere, cereriExt = [];
+  w.d.cere = async (u) => (u === "/api/istoric-bot?action=latime" ? (o.faraLat ? { latime: null } : LAT) : cere0(u));
+  w.d.Latime = globalThis.Latime; w.d.LatimeUS = globalThis.LatimeUS;
+  w.d.fetch = async (u) => { cereriExt.push(u); if (o.usCade) throw new Error("rețea"); return { ok: true, json: async () => US }; };
+  return Object.assign(w, { cereriExt });
+}
+await test("v100.166 Săptămâna pieței: + lățimea crypto și acțiunile US (textele din „Ce spune piața acum”) și se SALVEAZĂ pentru Jurnal", async () => {
+  const w = lumeLat(), st = {};
+  await turaPiata(w.d, st, DUMINICA);
+  const r = w.alerte.find((x) => /Săptămâna pieței/.test(x.titlu)); assert.ok(r, "raportul n-a plecat");
+  assert.match(r.mesaj, /\n🌐 Lățimea crypto \(150 perp-uri\): larg JOS · 40 sus · 90 jos/);
+  assert.match(r.mesaj, /\n🗽 Acțiuni US: .*S&P slăbire, Nasdaq sănătos, Russell slăbire/);
+  assert.doesNotMatch(r.mesaj, /acum [0-9]+ min/, "„acum N min” are sens în pagină, nu în raportul de duminică");
+  assert.ok(w.cereriExt[0] === globalThis.LatimeUS.SURSA, "lățimea US se citește de la robotul GitHub");
+  const s = w.trimise.find((x) => x[0] === "/api/istoric-bot?action=raportPiata"); assert.ok(s, "nu s-a salvat pentru Jurnal");
+  assert.equal(s[1].la, DUMINICA); assert.equal(s[1].titlu, r.titlu); assert.deepEqual(s[1].linii, r.mesaj.split("\n"));
+});
+await test("v100.166 fără lățime (colectorul n-a măsurat / GitHub tace): rândurile lipsesc, raportul pleacă oricum, fără „aștept…”", async () => {
+  const w = lumeLat({ faraLat: true, usCade: true }), st = {};
+  await turaPiata(w.d, st, DUMINICA);
+  const r = w.alerte.find((x) => /Săptămâna pieței/.test(x.titlu)); assert.ok(r);
+  assert.doesNotMatch(r.mesaj, /Lățimea crypto|Acțiuni US|aștept/);
 });
 await test("v95 socoteala: alerta de miscare se tine minte cu pretul; dupa 24 h i se pune pretul de atunci si se trimite socoteala", async () => {
   const w = lume({ vvvScade: true }), st = {};
