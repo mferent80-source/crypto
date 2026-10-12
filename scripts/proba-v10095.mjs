@@ -52,7 +52,7 @@ await test("(1) Retea.decide(v, cuRitm): la „prea puține cazuri” scrie cât
 
 // ======== Task 2: suma propusă a porții la „un trade ca ăsta” (ideea 4) ========
 await test("(2) poarta T212: „un trade ca ăsta” se judecă pe SUMA din „Cât cumperi” (t212MarimePoarta: intrarea, stopul calculat, doar cu intrare și poarta nu pe „nu” - revizia 🟡4), nu pe mediană; fără sumă ⇒ cost null ⇒ rezerva costTipic rămâne în t212ReteaHtml", () => {
-  const src = fnDin("t212-ecran.js", "t212MarimePoarta") + "\n" + fnDin("t212-ecran.js", "t212ProfilPoarta"); let prins = null;
+  const src = fnDin("t212-ecran.js", "t212PlanPoarta") + "\n" + fnDin("t212-ecran.js", "t212MarimePoarta") + "\n" + fnDin("t212-ecran.js", "t212ProfilPoarta"); let prins = null;
   const f = new Function("ActiuniSemnale", "t212ReteaHtml", "t212Fx", "escapeHtml", "t212Usd", "t212ProbListaHtml", src + "\n; return t212ProfilPoarta;")(AS, (o, b, prob, cump) => { prins = { o, cump }; return ""; }, () => 4.6, (x) => String(x), (x) => String(x), () => "");   /* „\n” înainte de return: felia se poate termina cu un comentariu */
   const p = { simbol: "ASTS", ticker: "ASTS_US_EQ", baza4: 100, stopP: { stop: 96, alTau: true }, prof: null, prob: [], niv: { nivel: "ok", intrare: { pret: 100, motiv: "limită" }, tinta: 116, stop: 92, riscPct: 8 }, v: { nivel: "ok" }, st: { pret: 101 }, bareZi: [], tot: 10000, rezultate: null, stiri: [] };
   f(p); assert.ok(prins, "t212ReteaHtml nechemat"); const m92 = AS.marime({ intrare: 100, stop: 92, cont: 10000, fx: 4.6 }), m96 = AS.marime({ intrare: 100, stop: 96, cont: 10000, fx: 4.6 });
@@ -60,6 +60,8 @@ await test("(2) poarta T212: „un trade ca ăsta” se judecă pe SUMA din „C
   prins = null; f({ ...p, v: { nivel: "nu" } }); assert.equal(prins.cump.cost, null, "poarta pe „nu”: nicio sumă ⇒ rezerva (mediana)");
   prins = null; f({ ...p, niv: { ...p.niv, intrare: null } }); assert.equal(prins.cump.cost, null, "fără intrare (trend jos): null");
   prins = null; f({ ...p, tot: null }); assert.equal(prins.cump.cost, null, "fără cont: null");
+  // v100.169: cu planul LUI scris la „am deja un plan în minte”, suma e pe planul lui (aceeași sursă ca „Cât cumperi · pe planul tău”)
+  prins = null; f({ ...p, planMeu: { scris: true, stop: 96 } }); assert.equal(prins.cump.cost, m96.suma, "plan scris ⇒ costul pe stopul LUI");
   const pp = fnDin("t212-ecran.js", "t212PreturiPoarta"); assert.ok(/t212MarimePoarta\(p\)/.test(pp) && !/ActiuniSemnale\.marime\(/.test(pp), "„Cât cumperi” ia suma din aceeași funcție");
   assert.ok(/cost: cump\.cost > 0 \? cump\.cost : Retea\.costTipic\(inchise\)/.test(fnDin("t212-ecran.js", "t212ReteaHtml")), "rezerva costTipic în t212ReteaHtml");
 });

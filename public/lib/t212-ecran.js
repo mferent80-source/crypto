@@ -628,6 +628,9 @@ async function t212Poarta() {
   if (!s) { if (out) out.innerHTML = '<p class="tbSub">Scrie simbolul (de exemplu ASTS).</p>'; return; }
   if (out) out.innerHTML = '<p class="tbSub">aduc prețurile zilnice pentru ' + escapeHtml(s) + '…</p>';
   var tk = s + "_US_EQ", plan = { stop: t212Nr($("t212PStop") && $("t212PStop").value), trailPct: t212Nr($("t212PTrail") && $("t212PTrail").value) };
+  // v100.169 (Sizerul din market-events): restul planului LUI - intrarea, ținta, riscul % din cont (gol = calculate / 1 %)
+  var pm = { intrare: t212Nr($("t212PIntrare") && $("t212PIntrare").value), tinta: t212Nr($("t212PTinta") && $("t212PTinta").value), riscPct: t212Nr($("t212PRisc") && $("t212PRisc").value), stop: plan.stop };
+  pm.scris = !!(pm.intrare || pm.tinta || pm.riscPct || plan.stop || plan.trailPct);
   try {
     var b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk));
     var bare = GridCalcul.bare(b && b.randuri || []), pret = GridCalcul.pretCurent(b && b.randuri || []);
@@ -637,7 +640,7 @@ async function t212Poarta() {
     var tot = t212.cont && t212.cont.cash && t212.cont.cash.total;
     // planul scris de el bate stopul calculat; fara plan, poarta judeca cu stopul calculat
     var planPoarta = plan.stop || plan.trailPct ? plan : niv.nivel === "ok" ? { stop: niv.stop } : plan;
-    t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), v: ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore }), tot: tot };
+    t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), planMeu: pm, v:ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore }), tot: tot };
     // v89: biletul - ce spune istoricul tau despre situatii asemanatoare, rezultatele, stirile
     try { var rz = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); t212.poarta.rezultate = rz && rz.data || null; } catch (e) { t212.poarta.rezultate = null; }
     try { var sp = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); t212.poarta.stiri = sp && sp.stiri || []; } catch (e) { t212.poarta.stiri = []; }
@@ -645,12 +648,12 @@ async function t212Poarta() {
     // pentru tine) + „in situatii ca asta” din trade-urile tale. Avertizeaza, nu schimba verdictul portii (revizia 01.10: try propriu -
     // o eroare aici lasa verdictul in picioare, fara randurile noi)
     try {
-      var P = t212.poarta, n4 = P.niv, baza4 = n4 && n4.nivel === "ok" ? (n4.intrare ? n4.intrare.pret : st.pret) : null;
+      var P = t212.poarta, n4 = P.niv, baza4 = n4 && n4.nivel === "ok" ? (pm.intrare || (n4.intrare ? n4.intrare.pret : st.pret)) : null;
       // revizia 01.10 (I2): stopul LUI cand l-a scris (poarta judeca tot cu el), altfel cel calculat
       P.stopP = ActiuniSemnale.stopPoarta(plan, n4, baza4); P.baza4 = baza4;
       P.prof = typeof ProfilMoneda !== "undefined" ? ProfilMoneda.calculeaza(bare, { piata: "actiuni", simbol: tk, acum: Date.now() }) : null;
       var zc4 = P.rezultate ? Math.ceil((Date.parse(P.rezultate + "T12:00:00Z") - Date.now()) / 86400000) : null;
-      t212.poarta.prob = typeof Probabilitati !== "undefined" && p4ok(P) ? Probabilitati.randActiune(Probabilitati.pentruActiune(bare, { pret: baza4, stop: P.stopP.stop, tinta: n4.tinta, acum: Date.now() }), t212Calibrare(), { rezultateZile: zc4 !== null && zc4 >= 0 ? Math.round(zc4 * 5 / 7) : null, evenimente: P.prof && P.prof.evenimente }) : [];
+      t212.poarta.prob = typeof Probabilitati !== "undefined" && p4ok(P) ? Probabilitati.randActiune(Probabilitati.pentruActiune(bare, { pret: baza4, stop: P.stopP.stop, tinta: pm.tinta > baza4 ? pm.tinta : n4.tinta, acum: Date.now() }), t212Calibrare(), { rezultateZile: zc4 !== null && zc4 >= 0 ? Math.round(zc4 * 5 / 7) : null, evenimente: P.prof && P.prof.evenimente }) : [];
       P.sit = j ? ActiuniSemnale.situatiiCaAsta(j.p.inchise, t212.cf || {}, ActiuniSemnale.cheieSituatie(st), tk) : null;
     } catch (e4) { t212.poarta.prof = null; t212.poarta.prob = []; t212.poarta.sit = null; t212.poarta.stopP = null; }
   } catch (e) { t212.poarta = { simbol: s, eroare: t212Eroare(e) }; }
@@ -750,14 +753,38 @@ function t212ProfilPoarta(p) {
 }
 // v100.95 (revizia 🟡4): O SINGURĂ sursă pentru suma propusă - „Cât cumperi” și „un trade ca ăsta iese pe plus” judecă același trade:
 // intrarea (ordinul limită), stopul CALCULAT, doar cu intrare (nu pe trend jos) și cu poarta nu pe „nu” (ar contrazice verdictul); altfel null
+// v100.169: cu planul LUI scris, suma e cea din planul lui (și la „așteaptă” / „nu”: se avertizează, nu se refuză)
 function t212MarimePoarta(p) {
-  var n = p && p.niv;
+  var n = p && p.niv, pl = t212PlanPoarta(p);
+  if (pl) return pl.m;
   if (!n || n.nivel !== "ok" || !n.intrare || !(n.intrare.pret > 0) || !p.v || p.v.nivel === "nu" || !(n.stop > 0)) return null;
   return ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: p.tot, fx: t212Fx() });
+}
+// v100.169 (Sizerul din market-events): planul scris de el la „am deja un plan în minte”, peste prețurile calculate; null fără plan scris
+function t212PlanPoarta(p) {
+  var pm = p && p.planMeu, n = p && p.niv;
+  if (!pm || !pm.scris || !n || n.nivel !== "ok") return null;
+  var stop = pm.stop || (p.stopP && p.stopP.alTau ? p.stopP.stop : null);
+  return ActiuniSemnale.planulMeu({ intrare: pm.intrare, stop: stop, tinta: pm.tinta, riscPct: pm.riscPct, cont: p.tot, fx: t212Fx(), calc: { intrare: n.intrare ? n.intrare.pret : p.st.pret, stop: n.stop, tinta: n.tinta } });
+}
+function t212PlanPoartaHtml(p, pl) {
+  var n = p.niv, c = function (et, v, cls, sub) { return '<div><span class="tbEt2">' + et + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</b><span class="tbSub">' + sub + '</span></div>'; };
+  var m = pl.m, cat = pl.eroare ? '<span class="bad">⚠ ' + escapeHtml(pl.eroare) + '</span>' : !m ? "citește întâi contul"
+    : "≈ " + t212Suma(m.suma) + " · la stop pierzi ~" + t212Suma(m.risc) + " (" + (m.riscPctReal * 100).toFixed(1).replace(".", ",") + "% din cont)" + (pl.castig !== null ? " · la țintă câștigi ~" + t212Suma(pl.castig) : "") + (m.plafonat ? " · tăiat la 20% din cont" : "") + " · comision dus-întors ~" + t212Suma(m.comision);
+  return '<div class="t212PretGrid">'
+    + c("Intrare" + (pl.ale.intrare ? " · a ta" : " (ordin limită)"), t212Usd(pl.intrare), "", t212Pct(pl.intrare / p.st.pret - 1) + " față de acum" + (pl.ale.intrare ? " · calculată " + (n.intrare ? t212Usd(n.intrare.pret) : "—") : ""))
+    + c("Stop" + (pl.ale.stop || (p.stopP && p.stopP.alTau) ? " · al tău" : ""), t212Usd(pl.stop), "bad", t212Pct(pl.stop / pl.intrare - 1) + " de la intrare · calculat " + t212Usd(n.stop))
+    + c("Țintă" + (pl.ale.tinta && pl.tinta !== null ? " · a ta" : ""), pl.tinta !== null ? t212Usd(pl.tinta) : "—", "good", pl.tinta !== null ? t212Pct(pl.tinta / pl.intrare - 1) + " · câștig/risc " + pl.rr.toFixed(1).replace(".", ",") + " : 1" : "")
+    + c("Cât cumperi · pe planul tău", m && !pl.eroare ? t212Bucati(m.bucati, pl.intrare) : "—", "", cat) + '</div>'
+    + pl.avert.map(function (a) { return '<p class="tbWarn">⚠️ ' + escapeHtml(a) + '</p>'; }).join("")
+    + (p.v && p.v.nivel === "nu" && m ? '<p class="tbWarn">⚠️ Poarta zice NU ACUM: mărimea de mai sus e doar socoteala planului tău.</p>' : "");
 }
 function t212PreturiPoarta(p) {
   var n = p.niv;
   if (!n || n.nivel !== "ok") return n ? '<p class="tbSub">🎯 ' + escapeHtml(n.motiv || "") + '</p>' : "";
+  var pl = t212PlanPoarta(p);
+  if (pl) return '<div class="t212Preturi"><div class="t212PretCap"><b>🎯 Planul tău pentru ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</span></div>' + t212PlanPoartaHtml(p, pl)
+    + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
   // fara intrare (trend jos) sau poarta pe "nu" -> nu dau o marime de cumparare: ar contrazice verdictul (regula sta in t212MarimePoarta)
   var baza = n.intrare ? n.intrare.pret : p.st.pret, cumpar = !!n.intrare && p.v.nivel !== "nu", m = t212MarimePoarta(p);
   return '<div class="t212Preturi"><div class="t212PretCap"><b>🎯 Prețurile calculate pentru ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</span></div><div class="t212PretGrid">'

@@ -308,10 +308,30 @@ var ActiuniSemnale = (function () {
   // intrare/stop in dolari; cont in lei; fx = dolari pe leu (din umplerile T212); lipsa fx -> aceeasi moneda
   function marime(o) {
     if (!o || !(o.cont > 0) || !(o.intrare > 0) || !(o.stop > 0) || o.stop >= o.intrare) return null;
-    var fx = o.fx > 0 ? o.fx : 1, riscLei = o.cont * 0.01, peBucLei = (o.intrare - o.stop) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = o.cont * 0.20, plaf = false;
+    // v100.169: riscPct (fracție) din planul LUI; fără el, 1 % ca înainte
+    var fx = o.fx > 0 ? o.fx : 1, riscLei = o.cont * (o.riscPct > 0 ? o.riscPct : 0.01), peBucLei = (o.intrare - o.stop) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = o.cont * 0.20, plaf = false;
     if (suma > plafon + 1e-9) { buc = plafon * fx / o.intrare; suma = plafon; plaf = true; }
     // v87: comisionul de conversie dus-intors (0,15% + 0,15%) si cat trebuie sa urce ca sa iesi pe zero
-    return { bucati: Math.round(buc * 10000) / 10000, suma: suma, risc: buc * peBucLei, plafonat: plaf, comision: suma * COST_CONV, peZero: COST_CONV };
+    return { bucati: Math.round(buc * 10000) / 10000, suma: suma, risc: buc * peBucLei, riscPctReal: buc * peBucLei / o.cont, plafonat: plaf, comision: suma * COST_CONV, peZero: COST_CONV };
+  }
+
+  // v100.169 (12.10, Sizerul din market-events mutat în Poartă): planul LUI - intrare, stop, țintă, risc % din cont; ce lasă gol rămâne
+  // pe valorile calculate (calc). Peste 1 % risc se avertizează, nu se refuză; riscul din text e cel REAL (după plafonul de 20 %). Doar long.
+  function planulMeu(o) {
+    if (!o || !(o.cont > 0)) return null;
+    var c = o.calc || {}, ale = { intrare: o.intrare > 0, stop: o.stop > 0, tinta: o.tinta > 0, risc: o.riscPct > 0 };
+    var intrare = ale.intrare ? o.intrare : c.intrare, stop = ale.stop ? o.stop : c.stop, tinta = ale.tinta ? o.tinta : c.tinta, riscPct = ale.risc ? o.riscPct : 1;
+    if (!(intrare > 0) || !(stop > 0)) return null;
+    var r = { intrare: intrare, stop: stop, tinta: tinta > 0 ? tinta : null, ale: ale, riscPct: riscPct, m: null, rr: null, castig: null, riscReal: null, avert: [], eroare: null };
+    if (stop >= intrare) { r.eroare = "Stopul trebuie să fie sub intrare (doar long)."; return r; }
+    var fx = o.fx > 0 ? o.fx : 1;
+    r.m = marime({ intrare: intrare, stop: stop, cont: o.cont, fx: fx, riscPct: riscPct / 100 });
+    if (!r.m) return r;
+    r.riscReal = r.m.riscPctReal;
+    if (r.tinta !== null && r.tinta <= intrare) { r.avert.push("Ținta trebuie să fie peste intrare: n-o socotesc."); r.tinta = null; }
+    if (r.tinta !== null) { r.rr = (r.tinta - intrare) / (intrare - stop); r.castig = r.m.bucati * (r.tinta - intrare) / fx; }
+    if (riscPct > 1) r.avert.push("Risc " + String(riscPct).replace(".", ",") + "% din cont: peste regula ta de 1%. Te las, dar la 3 stopuri la rând pierzi ~" + Math.round(r.m.risc * 3).toLocaleString("ro-RO") + " lei.");
+    return r;
   }
 
   // ---------------- v87: frana de "cumparat in jos" ----------------
@@ -538,6 +558,6 @@ var ActiuniSemnale = (function () {
   }
   // „Regulile tale”: grupa cea mai scumpa
   function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
-  return { usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;
