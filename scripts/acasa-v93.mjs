@@ -124,5 +124,15 @@ await test("tura de idei: pentru fiecare actiune din Nasdaq 100 (si doar pentru 
   assert.deepEqual(fara.ndx, []);
 });
 
+// revizia Opus v100.171 (Important): faireconomy căzut ⇒ lista goală se ținea minte o oră ⇒ alerta „eveniment mare în SUA” se pierdea tăcut
+await test("v100.171 ruta calendar: faireconomy cade ⇒ răspunsul spune eroarea și NU se ține minte (cererea următoare aduce evenimentele)", async () => {
+  const m = await import(`../functions/api/stiri.js?t=cal171_${Math.random()}`);
+  const cere = async () => { const res = await m.onRequestGet({ request: new Request("https://exemplu.test/api/stiri?action=calendar", { headers: { authorization: "Bearer " + TOKEN, "cf-connecting-ip": "10.93.1." + (++ip % 250) } }), env: ENV }); return JSON.parse(await res.text()); };
+  globalThis.fetch = async () => new Response("", { status: 503 });
+  const a = await cere(); assert.equal(a.evenimente.length, 0); assert.match(a.eroare || "", /calendarul/);
+  globalThis.fetch = async () => new Response(JSON.stringify([EV("2026-09-30T14:00:00-04:00", "CPI m/m", "High")]), { status: 200, headers: { "content-type": "application/json" } });
+  const b = await cere(); assert.equal(b.evenimente.length, 1, "eșecul nu s-a ținut minte"); assert.equal(b.eroare, undefined);
+});
+
 console.log(`\nACASA_V93 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

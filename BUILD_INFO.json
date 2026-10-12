@@ -1,12 +1,13 @@
 {
-  "version": "v100.170",
-  "badge": "v100.170 · SECTOARE + MARKET BREADTH",
+  "version": "v100.171",
+  "badge": "v100.171 · REVIZIA OPUS",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
     "macro168": "din pagina macro-dashboard a premarket_scanner, doar ce lipsea (12.10.2026, el: alerta + scorul de regim macro): lib/macro.js (VIX + dobânda 10 ani + dolarul + legătura BTC–S&P + frica crypto, trepte și histerezis ca în pagina veche), cardul Regim macro pe Dashboard, rândul în citire, colector v101.96: alertă la schimbarea reală a regimului și ~30 min înainte de evenimentele mari din SUA",
+    "revizia171": "revizia Opus pe v100.163–170: alerta de regim macro se confirmă la citirea următoare și vine cel mult o dată la 3 ore (VIX 17,9 ⇄ 18,1 dădea o alertă la fiecare citire); calendarul căzut nu se mai ține minte o oră (alerta de eveniment mare se pierdea); istoricul raportărilor se ține minte doar când Nasdaq și Yahoo au răspuns, altfel spune ce lipsește; data din istoric cu escape.",
     "sectoare170": "el 12.10: „nu prea arată la fel ca Market Breadth” ⇒ „conduc” spune orizontul (săptămâna + 3 luni, „revine după cădere”), iar lângă fiecare sector stă procentul de acțiuni pe trend din Market Breadth + media ciclice / defensive, ca să se poată compara.",
     "sizer169": "din pagina market-events a premarket_scanner, doar Sizerul (12.10.2026, el: „Mut doar Sizerul”, „Completez Poarta”, „ok” pe machetă; FIRE și early-bird NU — auditul: fără avantaj față de intrările la întâmplare): în Poarta din Trading 212, „am deja un plan în minte” cu intrarea, stopul, ținta și riscul % ale LUI (ActiuniSemnale.planulMeu); „Cât cumperi” pe planul lui, cu riscul real după plafonul de 20 %, câștig/risc și avertizare peste 1 %.",
     "sectoare167": "pagina sector-rotation din premarket_scanner mutată în Radar (12.10.2026, el: bloc în pagina Acțiuni + alertă doar la schimbarea regimului): lib/sectoare.js (Δ 1/5/21/63, RRG 21/5, regim ciclice − defensive ±0,6 pp), /api/sectoare (Yahoo, cache 30 min), blocul sub lățimea US, rândul „Sectoarele US” în citire, colector v101.95 alertează la schimbarea regimului după închidere",

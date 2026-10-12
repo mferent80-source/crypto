@@ -171,7 +171,14 @@ async function regimMacro(d, st, acum) {
   const r = d.Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: k && k.data && k.data.klines, fg: p.fg }, acum);
   if (!r || r.partial) return;
   const vechi = st.macroRegim || null, h = d.Macro.histerezis(vechi, r);
-  if (h.schimbat) { const m = d.Macro.mesajRegim(vechi.cod, r); if (m && !(await d.trimiteAlerta(m, null, "regim-macro"))) { st.la_macro = 0; return; } }
+  if (!h.schimbat) { st.macroRegim = { cod: h.cod, scor: h.scor }; delete st.macroCandidat; return; }
+  // revizia Opus v100.171: la pragul VIX 18 scorul sare cu 3 și histerezisul (2) nu ține ⇒ VIX 17,9 ⇄ 18,1 dădea o alertă la fiecare citire.
+  // Regimul nou trebuie să se CONFIRME la citirea următoare (30 min), iar între două alerte de regim trec cel puțin 3 ore.
+  if (!st.macroCandidat || st.macroCandidat.cod !== h.cod) { st.macroCandidat = { cod: h.cod, la: acum }; return; }
+  if (acum - (st.macroAlertaLa || 0) < 3 * 3600000) return;
+  const m = d.Macro.mesajRegim(vechi.cod, r);
+  if (m && !(await d.trimiteAlerta(m, null, "regim-macro"))) { st.la_macro = 0; return; }
+  st.macroAlertaLa = acum; delete st.macroCandidat;
   st.macroRegim = { cod: h.cod, scor: h.scor };
 }
 async function sectoareRegim(d, st, acum, zi) {

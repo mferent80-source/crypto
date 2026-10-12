@@ -98,7 +98,11 @@ async function istoric(env, s) {
     if (oraDedusa) o.oraDedusa = true;
     return o;
   });
+  // revizia Opus v100.171: istoricul se ține minte 6 ore DOAR când sursele au răspuns; altfel se spune ce lipsește (nu „n-am găsit raportări”)
   const o = { s, items };
+  const faraPret = !(res && Array.isArray(res.timestamp) && res.timestamp.length);
+  if (!items.length) return json({ s, items: [], eroare: "n-am primit raportările trecute de la Nasdaq (n-a răspuns sau nu are simbolul) — încearcă din nou mai târziu" });
+  if (faraPret) { o.eroarePret = "prețurile (Yahoo) n-au venit — reacțiile lipsesc, încearcă din nou mai târziu"; return json(o); }
   inCache(ck, o, 6 * 3600);
   return json(o);
 }

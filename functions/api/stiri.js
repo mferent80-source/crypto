@@ -65,11 +65,14 @@ export async function onRequestGet({ request, env }) {
   }
   if (a === "calendar") {
     const c = dinCache("calendar"); if (c) return json(c);
-    let l = [];
-    try { const r = await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json", { headers: UA }); if (r.ok) l = await r.json(); } catch { l = []; }
+    let l = [], eroare = null;
+    try { const r = await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json", { headers: UA }); if (r.ok) l = await r.json(); else eroare = "calendarul n-a răspuns (" + r.status + ")"; } catch { l = []; eroare = "calendarul n-a răspuns"; }
+    if (!eroare && !Array.isArray(l)) eroare = "calendarul a venit stricat";
     const cur = (t, n) => decodeaza(String(t == null ? "" : t)).replace(/<[^>]+>/g, "").trim().slice(0, n);
     const ev = (Array.isArray(l) ? l : []).filter((x) => x && x.country === "USD" && (x.impact === "High" || x.impact === "Medium") && Number.isFinite(Date.parse(x.date)))
       .map((x) => ({ date: cur(x.date, 40), title: cur(x.title, 120), impact: x.impact, country: "USD", forecast: cur(x.forecast, 20), previous: cur(x.previous, 20) }));
+    // revizia Opus v100.171: un eșec NU se ține minte (altfel „0 evenimente” o oră ⇒ alerta „eveniment mare în SUA” se pierdea tăcut)
+    if (eroare) return json({ la: Date.now(), evenimente: [], eroare });
     const v = { la: Date.now(), evenimente: ev }; inCache("calendar", v, 3600); return json(v);
   }
   if (a === "piata") {

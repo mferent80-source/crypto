@@ -16,6 +16,8 @@ const dirRadar = new Map(a.monede.map((m) => [m.sym, m.dir])), comune = Object.k
 // 12.10.2026: totalurile se calculau pe liste DIFERITE (129 de monede comune din 150; restul de ~20 diferă, multe listate de curând
 // și foarte volatile) ⇒ Δ volExtrem 9 venea doar din cele 20, pe comune era 0 (27 = 27). Acum Δ = pe monedele COMUNE, aceeași formulă
 // (volPctl ≥ 90, oiPctl ≥ 95, direcția); mariLong rămâne pe totaluri (PAZNIC nu-l dă pe monedă). dTotal rămâne în jurnal, la vedere.
+// revizia Opus v100.171: fără lista pe monede din PAZNIC, Δ pe comune ar ieși 0 și criteriul ar „trece” fără date
+if (!Array.isArray(paznic.simboluri) || !paznic.simboluri.length) { console.log("stare.json din PAZNIC n-are lista pe monede (simboluri) — comparația nu se poate face azi, nu scriu nimic"); process.exit(1); }
 const RM = new Map(a.monede.map((m) => [m.sym, m])), PM = new Map((paznic.simboluri || []).map((x) => [x.sym, x]));
 const peComune = (f) => comune.filter((s) => PM.has(s) && f(RM.get(s), "R")).length - comune.filter((s) => PM.has(s) && f(PM.get(s), "P")).length;
 const dirDe = (m, cine, s) => (cine === "R" ? m.dir : (paznic.dir[m.sym] || m.dir));

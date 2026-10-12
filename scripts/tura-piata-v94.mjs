@@ -202,8 +202,30 @@ await test("v100.168 regimul macro: prima citire doar se ține minte; mișcare m
   w.piata(piataMacro(20)); await turaPiata(w.d, st, SAMBATA);   // VIX 20 (−1) + dobânda stabilă (+1) + dolar plat (0) + frica 50 (0) = 0 ⇒ neutru
   assert.deepEqual(st.macroRegim, { cod: "neutru", scor: 0 }); assert.equal(reg().length, 0);
   w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 31 * MIN);   // VIX 17 (+2) ⇒ 3, înclinat: salt de 3 ⇒ schimbare reală
+  // revizia v100.171: regimul nou trebuie să se confirme la citirea următoare (30 min) ⇒ abia a doua oară pleacă alerta
+  assert.equal(reg().length, 0, "prima citire a regimului nou doar se notează"); assert.equal(st.macroRegim.cod, "neutru");
+  await turaPiata(w.d, st, SAMBATA + 40 * MIN); assert.equal(reg().length, 0, "la 30 de minute, nu la fiecare tură");
+  await turaPiata(w.d, st, SAMBATA + 62 * MIN);
   assert.equal(reg().length, 1); assert.match(reg()[0].mesaj, /^Din „neutru” în „înclinat spre risc” \(scor \+3\)/); assert.equal(st.macroRegim.cod, "inclinat");
-  await turaPiata(w.d, st, SAMBATA + 40 * MIN); assert.equal(reg().length, 1, "la 30 de minute, nu la fiecare tură");
+});
+// revizia Opus v100.171 (Important): la pragul VIX 18 scorul sare cu 3 (histerezisul de 2 nu-l ține) ⇒ VIX 17,9 ⇄ 18,1 dădea 5 alerte în 6 citiri
+await test("v100.171 VIX care se zbate la 18 (17,9 ⇄ 18,1 la fiecare citire) ⇒ NICIO alertă de regim; o schimbare care ține ⇒ una", async () => {
+  const w = lumeMacro(), st = {}, reg = () => w.alerte.filter((x) => /Regimul macro/.test(x.titlu || ""));
+  w.piata(piataMacro(17.9)); await turaPiata(w.d, st, SAMBATA);
+  for (let k = 1; k <= 6; k++) { w.piata(piataMacro(k % 2 ? 18.1 : 17.9)); await turaPiata(w.d, st, SAMBATA + k * 31 * MIN); }
+  assert.equal(reg().length, 0, "zbaterea nu se confirmă niciodată");
+  for (let k = 7; k <= 8; k++) { w.piata(piataMacro(18.1)); await turaPiata(w.d, st, SAMBATA + k * 31 * MIN); }
+  assert.equal(reg().length, 1, "VIX rămas peste 18 ⇒ o alertă după confirmare");
+});
+await test("v100.171 după o alertă de regim, următoarea vine abia după 3 ore (regimul nou se ține minte, alerta așteaptă)", async () => {
+  const w = lumeMacro(), st = {}, reg = () => w.alerte.filter((x) => /Regimul macro/.test(x.titlu || ""));
+  w.piata(piataMacro(20)); await turaPiata(w.d, st, SAMBATA);
+  w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 31 * MIN); await turaPiata(w.d, st, SAMBATA + 62 * MIN);
+  assert.equal(reg().length, 1);
+  w.piata(piataMacro(20)); await turaPiata(w.d, st, SAMBATA + 93 * MIN); await turaPiata(w.d, st, SAMBATA + 124 * MIN);
+  assert.equal(reg().length, 1, "sub 3 ore de la ultima alertă: nimic");
+  await turaPiata(w.d, st, SAMBATA + 62 * MIN + 3 * ORA + MIN);
+  assert.equal(reg().length, 2, "după 3 ore, schimbarea care a ținut pleacă");
 });
 await test("v95 socoteala: alerta de miscare se tine minte cu pretul; dupa 24 h i se pune pretul de atunci si se trimite socoteala", async () => {
   const w = lume({ vvvScade: true }), st = {};

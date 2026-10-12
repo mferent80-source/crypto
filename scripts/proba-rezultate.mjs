@@ -188,6 +188,29 @@ await test("(B) istoric merge și FĂRĂ cheia Finnhub (Nasdaq + Yahoo nu cer ch
   const rs = await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(kv()) });
   assert.equal(rs.status, 200); assert.equal((await rs.json()).items.length, 2); assert.ok(!cereri.some((u) => u.includes("finnhub.io")));
 });
+// revizia Opus v100.171 (Important): Nasdaq / Yahoo căzute ⇒ istoricul gol se ținea minte 6 ore („n-am găsit raportări” în loc de „nu am date”)
+await test("v100.171 istoric: Nasdaq nu răspunde (și Finnhub n-are trecutul) ⇒ „eroare” spusă, nimic ținut minte; data viitoare vin raportările", async () => {
+  API._golesteCache();
+  puneFetch((url) => { if (url.includes("api.nasdaq.com")) throw new Error("blocat"); return yahooN(); });
+  const a = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(kv()) })).json();
+  assert.match(a.eroare || "", /Nasdaq/); assert.equal((a.items || []).length, 0);
+  puneFetch((url) => url.includes("api.nasdaq.com") ? nasdaqN() : yahooN());
+  const b = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(kv()) })).json();
+  assert.equal(b.items.length, 2, "eșecul nu s-a ținut minte"); assert.equal(b.eroare, undefined);
+});
+await test("v100.171 istoric: Yahoo nu răspunde ⇒ raportările rămân, reacțiile lipsesc cu motivul spus; nimic ținut minte", async () => {
+  API._golesteCache();
+  puneFetch((url) => { if (url.includes("api.nasdaq.com")) return nasdaqN(); throw new Error("yahoo căzut"); });
+  const a = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(kv()) })).json();
+  assert.equal(a.items.length, 2); assert.ok(a.items.every((x) => x.reactie === null)); assert.match(a.eroarePret || "", /Yahoo/);
+  assert.match(RZ.htmlIstoric(a), /prețurile \(Yahoo\) n-au venit/);
+  puneFetch((url) => url.includes("api.nasdaq.com") ? nasdaqN() : yahooN());
+  const b = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(kv()) })).json();
+  assert.ok(b.items.some((x) => x.reactie !== null), "eșecul Yahoo nu s-a ținut minte"); assert.equal(b.eroarePret, undefined);
+});
+await test("v100.171 htmlIstoric: data ciudată de la sursă se scrie cu escape", () => {
+  assert.ok(!/<img/.test(RZ.htmlIstoric({ s: "X", items: [{ data: "<img src=x onerror=alert(1)>", ora: "bmo", reactie: 1, reactie5: 2 }] })));
+});
 await test("(A) htmlIstoric: ora dedusă se spune („după preț”), cea știută nu", () => {
   const h = RZ.htmlIstoric({ s: "ISRG", items: [{ data: "2026-07-22", ora: "amc", oraDedusa: true, reactie: 10, reactie5: 20, surpriza: 10 }, { data: "2026-04-22", ora: "bmo", reactie: 1, reactie5: 2, surpriza: 1 }] });
   assert.match(h, /după închidere · după preț/); assert.match(h, /înainte de deschidere</);
