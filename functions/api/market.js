@@ -55,7 +55,8 @@ async function pionexCached(url,ttl=30,env=null){
   let data;
   try{data=await pionexRateGate(url.includes("/common/symbols")?5:1,()=>j(url),env)}
   catch(e){if(e.status===429){pionexBlockedUntil=Math.max(pionexBlockedUntil,Date.now()+Math.max(75000,(e.retryAfter||60)*1000))}throw e}
-  if(cache){
+  // v100.173 (auditul Opus): Pionex refuză cu HTTP 200 + result:false - refuzul NU se ține minte (lista de simboluri goală stătea o oră)
+  if(cache&&!(data&&data.result===false)){
     const res=new Response(JSON.stringify(data),{headers:{"content-type":"application/json","cache-control":`public, max-age=${ttl}`}});
     await cache.put(key,res).catch(()=>{})
   }

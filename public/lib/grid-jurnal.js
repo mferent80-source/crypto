@@ -213,13 +213,26 @@ var GridJurnal = (function () {
     };
     var a = st(g.ingust), b = st(g.larg), out = { a: a, b: b, dif: null, ic: null, verdict: "puține" };
     if (a.n && b.n) out.dif = b.mediaPct - a.mediaPct;
-    if (a.n < 5 || b.n < 5 || a.monede < 3 || b.monede < 3) return out;
+    // v100.173 (auditul Opus): IC 90 % cu 5 boți / 3 monede dădea „dovedit” fals în ~12–15 % din seturile fără efect ⇒ IC 99 %, 10 boți și 5 monede pe grup
+    if (a.n < 10 || b.n < 10 || a.monede < 5 || b.monede < 5) return out;
     var rnd = mulberry32(seed), B = 2000, d = [];
     var reia = function (pm) { var k = Object.keys(pm), s = 0, n = 0; for (var i = 0; i < k.length; i++) { var x = pm[k[Math.floor(rnd() * k.length)]]; for (var j = 0; j < x.length; j++) { s += x[j]; n++; } } return s / n; };
     for (var i = 0; i < B; i++) d.push(reia(b.peMoneda) - reia(a.peMoneda));
     d.sort(function (x, y) { return x - y; });
-    out.ic = [d[Math.floor(B * 0.05)], d[Math.floor(B * 0.95)]];
-    out.verdict = out.ic[0] > 0 ? "dovedit" : out.ic[1] < 0 ? "pe dos" : "nedovedit";
+    out.ic = [d[Math.floor(B * 0.005)], d[Math.floor(B * 0.995)]];
+    // v100.173: bootstrap-ul pe puține monede e prea îndrăzneț (8 monede: ~5 % fals chiar la 99 %) ⇒ și un test de PERMUTARE: etichetele
+    // A / B amestecate ÎN fiecare monedă (exact când nu e niciun efect); „dovedit” cere ambele: IC fără 0 și p < 1 %
+    var poz = {}; gA.forEach(function (c) { (poz[c.m] = poz[c.m] || []).push({ v: c.pct, b: 0 }); }); gB.forEach(function (c) { (poz[c.m] = poz[c.m] || []).push({ v: c.pct, b: 1 }); });
+    var dif = function (et) { var sa = 0, na = 0, sb = 0, nb = 0; for (var i = 0; i < et.length; i++) { if (et[i].b) { sb += et[i].v; nb++; } else { sa += et[i].v; na++; } } return sb / nb - sa / na; };
+    var toate = []; Object.keys(poz).forEach(function (k) { toate.push(poz[k]); });
+    var obs = Math.abs(out.dif), peste = 0, P = 2000;
+    for (var pi = 0; pi < P; pi++) {
+      var et = [];
+      for (var gi = 0; gi < toate.length; gi++) { var gr = toate[gi], bs = gr.map(function (x) { return x.b; }); for (var si = bs.length - 1; si > 0; si--) { var sj = Math.floor(rnd() * (si + 1)), tmp = bs[si]; bs[si] = bs[sj]; bs[sj] = tmp; } for (var qi = 0; qi < gr.length; qi++) et.push({ v: gr[qi].v, b: bs[qi] }); }
+      if (Math.abs(dif(et)) >= obs - 1e-12) peste++;
+    }
+    out.p = (peste + 1) / (P + 1);
+    out.verdict = out.p >= 0.01 ? "nedovedit" : out.ic[0] > 0 ? "dovedit" : out.ic[1] < 0 ? "pe dos" : "nedovedit";
     return out;
   }
   function textFerestre(b) {

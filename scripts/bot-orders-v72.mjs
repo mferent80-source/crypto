@@ -192,6 +192,18 @@ await test("profitNet = marginBalance − investit; profitRealizatBrut = totalRe
     `identitatea nu tine: ${b.profitNet} ≠ ${b.profitRealizatBrut}+${b.comisioane}+${b.finantare}`);
 });
 
+// v100.173 (auditul Opus, Critic): marja adăugată pe drum (extraMargin) intră în marginBalance, dar nu în usdtInvestment ⇒
+// „marginBalance − usdtInvestment” arăta marja pusă ca PROFIT (+48 în loc de −1,95). Suma pusă = quoteInvestment + extraMargin − profitExited (JurnalTrade, v100.26).
+await test("v100.173 bot cu marjă adăugată (+50): profitul rămâne −1,95 (nu +48,05), investit = 250, totalul = net + nerealizat", async () => {
+  const b = await unBot([cuDate({ quoteInvestment: "200.00", extraMargin: "50.00", marginBalance: "248.0500" })]);
+  assert.ok(aprox(b.profitNet, -1.95), `profitNet: ${b.profitNet}`);
+  assert.ok(aprox(b.investit, 250), `investit: ${b.investit}`);
+  assert.ok(aprox(b.profitTotal, b.profitNet + b.pnlNerealizat), `profitTotal: ${b.profitTotal}`);
+});
+await test("v100.173 bot fără marjă adăugată (extraMargin 0): rămâne exact ca înainte (marginBalance − investit)", async () => {
+  const b = await unBot([cuDate({ quoteInvestment: "200.00", extraMargin: "0" })]);
+  assert.ok(aprox(b.profitNet, -1.95)); assert.ok(aprox(b.investit, 200));
+});
 await test("fara marginBalance, profitNet vine din suma celor trei", async () => {
   const b = await unBot([cuDate({ marginBalance: null })]);
   assert.ok(aprox(b.profitNet, -1.95), `profitNet din suma: ${b.profitNet}`);

@@ -19,9 +19,12 @@ var RiscLuna = (function () {
   // ---------------- boții ----------------
   // arhiva Pionex compactată (/api/istoric-bot?action=botiInchisi) ⇒ un rând pe bot futures_grid cu sumă; o = { de, levMax }
   function unBot(b) {
-    var d = b && b.buOrderData || {}, inv = nr(d.usdtInvestment), p = nr(d.totalRealizedProfit);
+    // v100.173 (auditul Opus): rezultatul = NETUL (realizatul Pionex e fără comisioane și funding) pe suma pusă REALĂ (quoteInvestment +
+    // extraMargin − profitExited, ca JurnalTrade v100.26) - înainte luna proastă și obiceiurile ieșeau prea optimiste
+    var d = b && b.buOrderData || {}, q = nr(d.quoteInvestment), inv = isFinite(q) && q > 0 ? q + (nr(d.extraMargin) || 0) - (nr(d.profitExited) || 0) : nr(d.usdtInvestment), p = nr(d.totalRealizedProfit);
     if (!b || b.buOrderType !== "futures_grid" || !(inv > 0) || !isFinite(p) || !(b.createTime > 0) || !(b.closeTime > 0)) return null;
-    return { t: b.createTime, inchis: b.closeTime, ore: (b.closeTime - b.createTime) / ORA, r: p / inv, m: String(b.base || "").replace(/\.PERP$/, ""), dir: String(d.trend || "").toLowerCase(),
+    var net = p + (nr(d.totalFee) || 0) + (nr(d.totalFundingFee) || 0);
+    return { t: b.createTime, inchis: b.closeTime, ore: (b.closeTime - b.createTime) / ORA, r: net / inv, m: String(b.base || "").replace(/\.PERP$/, ""), dir: String(d.trend || "").toLowerCase(),
       lev: nr(d.leverage), inv: inv, fee: nr(d.totalFee) || 0, grid: nr(d.gridProfit) || 0, fund: nr(d.totalFundingFee) || 0, stop: nr(d.lossStop) > 0, extra: nr(d.extraMargin) > 0,
       jos: nr(d.bottom), sus: nr(d.top), init: nr(d.initPrice), pretInchis: nr(d.closedPrice) };
   }

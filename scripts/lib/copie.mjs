@@ -9,7 +9,11 @@ export function faCopie({ sursa, dest, zi, pastreaza = 14 }) {
   fs.mkdirSync(dest, { recursive: true });
   const tinta = path.join(dest, "kv-" + zi);
   if (fs.existsSync(tinta)) return { facut: false, motiv: "deja facuta azi" };
-  fs.cpSync(sursa, tinta, { recursive: true });
+  // v100.173 (auditul Opus): copia se face în .tmp și abia întreagă se redenumește — o copie căzută la jumătate nu mai rămâne „copia zilei”
+  const tmp = tinta + ".tmp";
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.cpSync(sursa, tmp, { recursive: true });
+  fs.renameSync(tmp, tinta);
   const vechi = fs.readdirSync(dest).filter((n) => /^kv-\d{4}-\d{2}-\d{2}$/.test(n)).sort();
   for (const n of vechi.slice(0, Math.max(0, vechi.length - pastreaza))) fs.rmSync(path.join(dest, n), { recursive: true, force: true });
   return { facut: true, tinta };

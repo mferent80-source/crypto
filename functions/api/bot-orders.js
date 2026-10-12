@@ -117,12 +117,16 @@ function normalizeaza(bot,preturi,harta){
   // BANI (contractul): profitRealizatBrut e fara comisioane/finantare; profitNet e
   // cel realizat NET. Identitatea dovedita pe contul real:
   //   usdtInvestment + totalRealizedProfit + totalFee + totalFundingFee = marginBalance
-  const investit=nr(x.usdtInvestment)??nr(x.initUsdtInvestment);
+  // v100.173 (auditul Opus, Critic): identitatea de mai sus ține DOAR fără marjă adăugată pe drum. Cu extraMargin / profitExited,
+  // marginBalance cuprinde marja pusă, iar usdtInvestment nu ⇒ marja apărea ca profit. Atunci: suma pusă = quoteInvestment + extraMargin − profitExited
+  // (dovedită pe boții închiși, JurnalTrade v100.26) și netul = realizat + comisioane + funding (nu depinde de marjă).
+  const cuMarja=(nr(x.extraMargin)||0)>0||(nr(x.profitExited)||0)!==0,pusReal=nr(x.quoteInvestment)!==null?nr(x.quoteInvestment)+(nr(x.extraMargin)||0)-(nr(x.profitExited)||0):null;
+  const investit=cuMarja&&pusReal>0?pusReal:nr(x.usdtInvestment)??nr(x.initUsdtInvestment);
   const margine=nr(x.marginBalance);
   const profitRealizatBrut=nr(x.totalRealizedProfit),comisioane=nr(x.totalFee),finantare=nr(x.totalFundingFee);
   const gridProfitBrut=nr(x.gridProfit);
-  const profitNet=toate(margine,investit)?margine-investit
-    :toate(profitRealizatBrut,comisioane,finantare)?profitRealizatBrut+comisioane+finantare:null;
+  const dinSuma=toate(profitRealizatBrut,comisioane,finantare)?profitRealizatBrut+comisioane+finantare:null;
+  const profitNet=!cuMarja&&toate(margine,investit)?margine-investit:dinSuma;
   const pozitie=nr(x.position),pretDeschidere=nr(x.positionOpenPrice);
   const esteLong=dir==="long",esteShort=dir==="short";
   let pnlNerealizat=null;
@@ -130,7 +134,7 @@ function normalizeaza(bot,preturi,harta){
     pnlNerealizat=esteLong||esteShort?Math.abs(pozitie)*(pret-pretDeschidere)*(esteLong?1:-1):pozitie*(pret-pretDeschidere);
   }
   const echitate=toate(margine,pnlNerealizat)?margine+pnlNerealizat:null;
-  const profitTotal=toate(echitate,investit)?echitate-investit:null;
+  const profitTotal=cuMarja?(toate(profitNet,pnlNerealizat)?profitNet+pnlNerealizat:null):toate(echitate,investit)?echitate-investit:null;
   const lich=lichidare(pret,lichJos,lichSus,dir);
 
   // v91.1: stopLossEnabled/stopProfitEnabled vin false si cand SL/TP sunt puse si active in Pionex (botul VVV, 25.09):

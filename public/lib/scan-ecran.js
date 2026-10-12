@@ -223,7 +223,7 @@ function scDetaliu(x) {
     var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, pl = Scan.plan(x, x.fel === "a" && c ? Number(c.total) : null);
     if (pl) plan = '<h5>Plan orientativ (2× / 3× mișcarea zilnică)</h5><div class="scLin"><span>Mișcarea zilnică (ATR)</span><b>' + scNf(x.atrPct, 1) + '%</b></div>'
       + '<div class="scLin"><span>Stop</span><b class="bad">' + pr + scPret(pl.stop) + ' (' + scPct(pl.stopPct) + ')</b></div><div class="scLin"><span>Țintă</span><b class="good">' + pr + scPret(pl.tinta) + ' (' + scPct(pl.tintaPct) + ')</b></div>'
-      + (pl.marime != null ? '<div class="scLin"><span>Mărime la 1% risc din cont</span><b>' + scNf(pl.marime, 0) + ' lei</b></div>' : '');
+      + (pl.marime != null ? '<div class="scLin"><span>Mărime la 1% risc din cont</span><b>' + scNf(pl.marime, 0) + ' lei' + (pl.plafonat ? ' (tăiată la 20% din cont)' : '') + '</b></div>' : '');
   }
   if (x.fel === "c") {
     var fu = scanSt.funding[x.s];

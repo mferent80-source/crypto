@@ -20,12 +20,13 @@ console.log("\nV100.113 · riscul boților și al acțiunilor · proba\n");
 
 const ZI = 864e5, ORA = 36e5, T0 = Date.UTC(2026, 9, 6, 12, 0);
 // un bot din arhivă (forma Pionex compactată, ca /api/istoric-bot?action=botiInchisi)
+// v100.173: r e NETUL - realizatul Pionex se pune ca netul să iasă r × sumă (comisioanele și funding-ul se scad din el)
 const B = (o) => { const p = Object.assign({ m: "AAA", t: T0 - 10 * ZI, ore: 2, r: 0.01, inv: 50, lev: 3, tip: "futures_grid", dir: "long", stop: 0, extra: 0, jos: 1, sus: 1.2, init: 1.1, fee: -0.05 }, o);
   return { strategyId: String(Math.random()).slice(2), base: p.m + ".PERP", buOrderType: p.tip, createTime: p.t, closeTime: p.t + p.ore * ORA,
-    buOrderData: { totalRealizedProfit: String(p.r * p.inv), gridProfit: String(Math.max(0, p.r * p.inv) + 0.1), totalFee: String(p.fee), totalFundingFee: "-0.01", usdtInvestment: String(p.inv), leverage: String(p.lev), trend: p.dir,
+    buOrderData: { totalRealizedProfit: String(p.r * p.inv - p.fee + 0.01), gridProfit: String(Math.max(0, p.r * p.inv) + 0.1), totalFee: String(p.fee), totalFundingFee: "-0.01", usdtInvestment: String(p.inv), leverage: String(p.lev), trend: p.dir,
       bottom: String(p.jos), top: String(p.sus), initPrice: String(p.init), closedPrice: String(p.init * (1 + p.r)), lossStop: String(p.stop), extraMargin: String(p.extra) } }; };
 
-await test("(1a) bazinBoti: doar futures_grid, de la data dată, cu sumă; r = profit realizat / sumă; levierul maxim opțional", () => {
+await test("(1a) bazinBoti: doar futures_grid, de la data dată, cu sumă; r = netul (realizat + comisioane + funding, v100.173) / sumă; levierul maxim opțional", () => {
   const b = [B({ r: 0.02 }), B({ tip: "spot_grid" }), B({ t: Date.UTC(2025, 11, 20), ore: 1 }), B({ lev: 50 }), B({ inv: 0 })];
   const z = RL.bazinBoti(b, { de: Date.UTC(2026, 0, 1) });
   assert.equal(z.length, 2); assert.ok(Math.abs(z[0].r - 0.02) < 1e-12); assert.equal(z[0].m, "AAA"); assert.equal(z[0].ore, 2);

@@ -103,7 +103,10 @@ await test("alerteSLTP: simbol urmarit la intrarea sugerata -> info cu SL, TP si
 
 // v101.2 (el, 28.09: ideea 4 „câte bucăți”): cursul $/leu din pozitiile T212 + marimea (ActiuniSemnale.marime) in sugestia urmaritelor
 await test("fxDinPozitii: dolari pe leu din pozitiile T212 (Σ buc × pret mediu / Σ cost in lei); fara cost -> null", () => {
-  assert.ok(Math.abs(fxDinPozitii([{ qty: 2, pretMediu: 100, costLei: 920 }, { qty: 1, pretMediu: 50, costLei: 230 }]) - 250 / 1150) < 1e-9);
+  assert.ok(Math.abs(fxDinPozitii([{ ticker: "AAPL_US_EQ", qty: 2, pretMediu: 100, costLei: 920 }, { ticker: "MSFT_US_EQ", qty: 1, pretMediu: 50, costLei: 230 }]) - 250 / 1150) < 1e-9);
+  // v100.173 (auditul Opus, Critic): prețul mediu e în moneda bursei (EUR la .DE, pence la .L) ⇒ doar pozițiile americane intră în cursul $/leu
+  assert.ok(Math.abs(fxDinPozitii([{ ticker: "AAPL_US_EQ", qty: 2, pretMediu: 100, costLei: 920 }, { ticker: "SAPd_EQ", qty: 3, pretMediu: 200, costLei: 3000 }, { ticker: "VODl_EQ", qty: 100, pretMediu: 7000, costLei: 3800 }]) - 200 / 920) < 1e-9, "doar _US_EQ");
+  assert.equal(fxDinPozitii([{ ticker: "SAPd_EQ", qty: 3, pretMediu: 200, costLei: 3000 }]), null, "fără poziții americane: fără curs");
   assert.equal(fxDinPozitii([{ qty: 2, pretMediu: 100, costLei: null }]), null); assert.equal(fxDinPozitii([]), null); assert.equal(fxDinPozitii(null), null);
 });
 await test("simbolPoza: sugestia urmaritului poarta marimea (bucati, suma si riscul in lei) doar cand are intrare", () => {

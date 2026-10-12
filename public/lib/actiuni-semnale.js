@@ -305,11 +305,12 @@ var ActiuniSemnale = (function () {
       tintaPozitie: r2((o.pretMediu > 0 ? o.pretMediu : pret) + 2 * d) };
   }
   // Cate bucati ca atingerea stopului sa coste cel mult 1% din cont, plafon 20% din cont pe o actiune.
-  // intrare/stop in dolari; cont in lei; fx = dolari pe leu (din umplerile T212); lipsa fx -> aceeasi moneda
+  // intrare/stop in dolari; cont in lei; fx = dolari pe leu (BNR de azi sau umplerile T212)
+  // v100.173 (auditul Opus, Critic): fără curs -> null; înainte socotea dolarii drept lei (de ~4,6 ori prea multe bucăți, cu textul „1% din cont”)
   function marime(o) {
-    if (!o || !(o.cont > 0) || !(o.intrare > 0) || !(o.stop > 0) || o.stop >= o.intrare) return null;
+    if (!o || !(o.cont > 0) || !(o.intrare > 0) || !(o.stop > 0) || o.stop >= o.intrare || !(o.fx > 0)) return null;
     // v100.169: riscPct (fracție) din planul LUI; fără el, 1 % ca înainte
-    var fx = o.fx > 0 ? o.fx : 1, riscLei = o.cont * (o.riscPct > 0 ? o.riscPct : 0.01), peBucLei = (o.intrare - o.stop) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = o.cont * 0.20, plaf = false;
+    var fx = o.fx, riscLei = o.cont * (o.riscPct > 0 ? o.riscPct : 0.01), peBucLei = (o.intrare - o.stop) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = o.cont * 0.20, plaf = false;
     if (suma > plafon + 1e-9) { buc = plafon * fx / o.intrare; suma = plafon; plaf = true; }
     // v87: comisionul de conversie dus-intors (0,15% + 0,15%) si cat trebuie sa urce ca sa iesi pe zero
     return { bucati: Math.round(buc * 10000) / 10000, suma: suma, risc: buc * peBucLei, riscPctReal: buc * peBucLei / o.cont, plafonat: plaf, comision: suma * COST_CONV, peZero: COST_CONV };
@@ -326,7 +327,8 @@ var ActiuniSemnale = (function () {
     // v100.172 (revizia Opus): fără stop scris de el, stopul e cel CALCULAT ⇒ mesajul spune asta (nu „stopul trebuie să fie sub intrare” când n-a scris niciun stop)
     var bani = function (x) { return x.toFixed(2).replace(".", ",") + " $"; };
     if (stop >= intrare) { r.eroare = ale.stop ? "Stopul trebuie să fie sub intrare (doar long)." : "Intrarea ta (" + bani(intrare) + ") e sub stopul calculat (" + bani(stop) + "): scrie-ți și stopul tău."; return r; }
-    var fx = o.fx > 0 ? o.fx : 1;
+    if (!(o.fx > 0)) { r.eroare = "Lipsește cursul dolar/leu (nici BNR, nici istoricul T212 n-au venit): nu pot socoti câte bucăți."; return r; }
+    var fx = o.fx;
     r.m = marime({ intrare: intrare, stop: stop, cont: o.cont, fx: fx, riscPct: riscPct / 100 });
     if (!r.m) return r;
     r.riscReal = r.m.riscPctReal;

@@ -29,6 +29,7 @@ async function t212Porneste(forta) {
   } catch (e) { t212.eroare = t212Eroare(e); }
   try { t212.istoric = await getJSON("/api/t212?action=istoric"); t212.istoricEroare = null; } catch (e) { t212.istoric = null; t212.istoricEroare = t212Eroare(e); }
   try { var cf = await getJSON("/api/t212?action=cf"); t212.cf = cf && cf.cf || {}; } catch (e) { t212.cf = null; }
+  try { var bn = await getJSON("/api/curs-bnr?an=" + new Date().getFullYear()), zl = bn && bn.curs ? Object.keys(bn.curs).sort() : []; t212.bnr = zl.length ? { zi: zl[zl.length - 1], curs: bn.curs[zl[zl.length - 1]] } : null; } catch (e) { t212.bnr = null; }
   try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) { t212.piata = null; }
   try { t212.idei = await getJSON("/api/t212?action=idei"); } catch (e) { t212.idei = null; }
   try { var sfi = await getJSON("/api/t212?action=sfaturi"); t212.sfaturiIst = sfi && sfi.sfaturi || []; } catch (e) { t212.sfaturiIst = null; }
@@ -71,7 +72,9 @@ function t212Pozitie(x) {
 
 // ---------------- preturile calculate (v85.2): stop, tinta, intrare, marime ----------------
 // Dolari pe leu, din cea mai noua umplere pe o actiune americana (T212 da fxRate in walletImpact)
+// v100.173 (auditul Opus): cursul BNR de azi întâi (1 / lei pe dolar); ultima umplere americană din T212 doar ca rezervă (poate fi veche de luni)
 function t212Fx() {
+  if (t212.bnr && t212.bnr.curs > 0) return 1 / t212.bnr.curs;
   var u = t212.istoric && t212.istoric.umpleri || [];
   for (var i = u.length - 1; i >= 0; i--) if (/_US_EQ$/.test(u[i].ticker) && u[i].fx > 0) return u[i].fx;
   return null;
@@ -792,7 +795,7 @@ function t212PreturiPoarta(p) {
     + '<div><span class="tbEt2">Intrare (ordin limită)</span><b>' + (n.intrare ? t212Usd(n.intrare.pret) : "—") + '</b><span class="tbSub">' + escapeHtml(n.intrare ? n.intrare.motiv + (n.intrare.pret < p.st.pret ? " · " + t212Pct(n.intrare.pret / p.st.pret - 1) + " față de acum" : "") : n.intrareMotiv) + '</span></div>'
     + '<div><span class="tbEt2">Stop' + (n.intrare ? "" : " (dacă o cumperi totuși)") + '</span><b class="bad">' + t212Usd(n.stop) + '</b><span class="tbSub">' + t212Pct(-n.riscPct) + (n.intrare ? ' de la intrare' : ' de la prețul de acum') + (p.planScris ? " · ai scris tu alt stop — poarta îl folosește pe al tău" : "") + '</span></div>'
     + '<div><span class="tbEt2">Țintă</span><b class="good">' + t212Usd(n.tinta) + '</b><span class="tbSub">' + t212Pct(n.tinta / baza - 1) + ' (2× riscul)</span></div>'
-    + '<div><span class="tbEt2">Cât cumperi</span><b>' + (m ? t212Bucati(m.bucati, baza) : "—") + '</b><span class="tbSub">' + (m ? "≈ " + t212Suma(m.suma) + " · la stop pierzi ~" + t212Suma(m.risc) + " (1% din cont)" + (m.plafonat ? " · tăiat la 20% din cont" : "") + " · comision dus-întors ~" + t212Suma(m.comision) + ", deci ieși pe zero abia la +0,3%" : !cumpar ? "nu cumpăr acum — vezi verdictul de sus" : "citește întâi contul") + '</span></div></div>'
+    + '<div><span class="tbEt2">Cât cumperi</span><b>' + (m ? t212Bucati(m.bucati, baza) : "—") + '</b><span class="tbSub">' + (m ? "≈ " + t212Suma(m.suma) + " · la stop pierzi ~" + t212Suma(m.risc) + " (1% din cont)" + (m.plafonat ? " · tăiat la 20% din cont" : "") + " · comision dus-întors ~" + t212Suma(m.comision) + ", deci ieși pe zero abia la +0,3%" : !cumpar ? "nu cumpăr acum — vezi verdictul de sus" : p.tot > 0 && !t212Fx() ? "lipsește cursul dolar/leu (BNR și istoricul T212 n-au venit)" : "citește întâi contul") + '</span></div></div>'
     + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
 }
 // v89: biletul la intrare - partea despre TINE: situatiile asemanatoare din istoricul tau, rezultatele, stirile, piata
@@ -1126,7 +1129,7 @@ async function contTotAsigura() {
   if (contTot.inLucru) return; contTot.inLucru = true;
   try {
     var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : null;
-    if (!boti && Date.now() - contTot.botiLa > 60000) { try { var d = await getJSON("/api/bot-orders"); contTot.boti = d && Array.isArray(d.bots) ? d.bots : []; contTot.botiLa = Date.now(); } catch (e) { contTot.boti = contTot.boti || null; } }
+    if (!boti && Date.now() - contTot.botiLa > 60000) { try { var d = await getJSON("/api/bot-orders"); contTot.boti = d && Array.isArray(d.bots) ? d.bots : []; contTot.botiLa = Date.now(); contTot.botiEroare = null; } catch (e) { contTot.boti = contTot.boti || null; contTot.botiEroare = String(e && e.message || e).slice(0, 80); } }
     // v100.40: contul se reia cand e mai vechi de 60 s (era adus o singura data - Acasa scria „actualizat” peste cifre inghetate)
     // v100.97: conturile Pionex (spot + futures manual) pentru soldul de pe rândul de sus - la 5 min, poarta Pionex e comună cu boții
     if (Date.now() - contTot.conturiLa > 5 * 60000) {
@@ -1160,7 +1163,7 @@ function contTotRender() {
   // v100.97: soldul contului întâi (ca la Trading 212), o zecimală; fără conturile citite se spune „în boți”
   var sp = contTotSoldPionex(boti, contTot.conturi);
   var soldH = sp ? ' · ' + (sp.conturiCitite ? "sold " : "în boți ") + '<b>' + sp.sold.toFixed(1).replace(".", ",") + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Suma(sp.sold / fx)) + ')</span>' : '') : '';   // un sold, nu un profit: fără „+”
-  parti.push(boti ? '<span><b>Pionex</b>' + soldH + ' · ' + t212Cate(act.length, "bot activ", "boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + (usdt >= 0 ? "+" : "−") + Math.abs(usdt).toFixed(2) + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
+  parti.push(boti ? '<span><b>Pionex</b>' + soldH + ' · ' + t212Cate(act.length, "bot activ", "boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + (usdt >= 0 ? "+" : "−") + Math.abs(usdt).toFixed(2) + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : contTot.botiEroare ? '<span class="tbWarn">Pionex: nu răspunde acum</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
   var sbH = typeof saltBandaHtml === "function" ? saltBandaHtml(contTot.salt) : "";   // v100.126: Salt lângă T212
   parti.push(c ? '<span><b>Trading 212</b> · ' + escapeHtml(t212Suma(c.total)) + ' · deschise <b class="' + t212Cls(c.ppl) + '">' + escapeHtml(t212Lei(c.ppl)) + '</b></span>' : '<span class="tbSub">Trading 212: aduc contul…</span>');
   // actiunile pe IESI: semaforul le-a pus deja in tabelul pozitiilor
@@ -1170,7 +1173,9 @@ function contTotRender() {
   var iesiS = contTot.salt && Array.isArray(contTot.salt.iesi) && typeof saltRezumatProaspat === "function" && saltRezumatProaspat(contTot.salt, Date.now()) ? contTot.salt.iesi.length : 0;   // v100.126: și pozițiile Salt de ieșit (doar din rezumatul proaspăt - revizia R2)
   var ati = iesi + lich + iesiS;
   parti.push(ati ? '<span class="bad">⚠️ ' + [iesi ? t212Cate(iesi, "acțiune", "acțiuni") + " de ieșit" : "", iesiS ? t212Cate(iesiS, "acțiune", "acțiuni") + " de ieșit la Salt" : "", lich ? t212Cate(lich, "bot", "boți") + " aproape de lichidare" : ""].filter(Boolean).join(" · ") + '</span>'
-    : t212.nrIesi == null && !t212.eroare && (!t212.poz || t212.poz.length) ? '<span class="tbSub">acțiunile: aduc prețurile…</span>' : '<span class="good">✓ nimic roșu</span>');   // v100.40: fara semafor inca -> nu „nimic roșu”
+    // v100.173 (auditul Opus): cu T212 sau Pionex căzut nu se știe dacă e ceva roșu ⇒ „nu știu”, niciodată bifa verde
+    : t212.eroare || (!boti && contTot.botiEroare) ? '<span class="tbWarn">⚠ nu știu dacă e ceva roșu: ' + (t212.eroare ? "Trading 212" : "Pionex") + ' nu răspunde</span>'
+    : t212.nrIesi == null && (!t212.poz || t212.poz.length) ? '<span class="tbSub">acțiunile: aduc prețurile…</span>' : !boti ? '<span class="tbSub">Pionex: aduc boții…</span>' : '<span class="good">✓ nimic roșu</span>');   // v100.40: fara semafor inca -> nu „nimic roșu”
   document.querySelectorAll("[data-cont-tot]").forEach(function (el) { el.innerHTML = parti.join('<span class="contTotSep">│</span>'); });
   piataAziRender();
   tbIdeiRender();

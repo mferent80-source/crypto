@@ -10,6 +10,18 @@ import * as MC from "./mesaje-colector.mjs";
 
 const NOU_MS = 30 * 60000;
 
+// v100.173 (auditul Opus): un bot activ care lipsește din lista Pionex se declară „închis / lichidat” doar dacă apare printre cei închiși
+// sau lipsește 3 ture la rând — Pionex dă uneori listă goală / parțială (result:true, results:null) și pleca o alertă critică falsă.
+// c = m.cunoscuti[id] (se ține minte c.lipsa); prezent ⇒ contorul se șterge.
+export const LIPSA_TURE = 3;
+export function lipsaConfirmata(c, { prezent, gasitInchis }) {
+  if (!c) return false;
+  if (prezent) { delete c.lipsa; return false; }
+  if (gasitInchis) return true;
+  c.lipsa = (c.lipsa || 0) + 1;
+  return c.lipsa >= LIPSA_TURE;
+}
+
 // tickerul Pionex al botului (bot-orders îl dă ca simbolPionex); fără el rămâne baza fără „.PERP”
 export function cheiaBot(bot) {
   const t = bot && typeof bot.simbolPionex === "string" && /^[A-Z0-9]{1,24}_[A-Z0-9]{2,10}(_PERP)?$/.test(bot.simbolPionex) ? bot.simbolPionex : null;

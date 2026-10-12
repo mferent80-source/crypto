@@ -4,6 +4,8 @@
 import fs from "node:fs";
 const UA = { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36", accept: "*/*" };
 const EXTRA_MS = 6 * 3600000, CLOSES_MS = 30 * 60000, BARE_MS = 6 * 3600000;
+// v100.173 (auditul Opus): moneda reală a simbolului — Londra (GBp), Zürich (CHF) nu mai primesc „$” (și deci nici „câte bucăți” socotit în dolari)
+export function monedaYahoo(c) { return c === "EUR" ? "€" : c === "USD" || !c ? "$" : String(c).replace(/[^A-Za-z]/g, "").slice(0, 4); }
 export function creeazaYahooExtra({ fisier, fisierBare = null, pauzaMs = 400, f = fetch, acum = () => Date.now(), jurnal = () => {} } = {}) {
   let cache = {}; try { cache = JSON.parse(fs.readFileSync(fisier, "utf8")); } catch { cache = {}; }
   let cacheBare = {}; if (fisierBare) { try { cacheBare = JSON.parse(fs.readFileSync(fisierBare, "utf8")); } catch { cacheBare = {}; } }
@@ -33,7 +35,7 @@ export function creeazaYahooExtra({ fisier, fisierBare = null, pauzaMs = 400, f 
       const inch = j.indicators.quote[0].close || [], ts = j.timestamp || [], tc = [];
       ts.forEach((t, i) => { if (typeof inch[i] === "number" && typeof t === "number") tc.push({ t: t * 1000, c: inch[i] }); });
       const cl = tc.map((b) => b.c);
-      const v = { closes30: cl.slice(-30), pret: cl[cl.length - 1] ?? null, prev: cl[cl.length - 2] ?? null, tc: tc.slice(-31), la: ts.length ? ts[ts.length - 1] * 1000 : null, moneda: j.meta && j.meta.currency === "EUR" ? "€" : "$" };
+      const v = { closes30: cl.slice(-30), pret: cl[cl.length - 1] ?? null, prev: cl[cl.length - 2] ?? null, tc: tc.slice(-31), la: ts.length ? ts[ts.length - 1] * 1000 : null, moneda: monedaYahoo(j.meta && j.meta.currency) };
       cache[k] = { la: acum(), v }; salveaza(); await pauza(pauzaMs); return v;
     },
     // v101 (SL/TP pe alerts): lumanarile zilnice pe 1 an (OHLC) - ActiuniSemnale.niveluri cere cel putin 120 de zile.

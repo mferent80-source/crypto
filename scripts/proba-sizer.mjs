@@ -108,5 +108,25 @@ await test("v100.172 „un trade ca ăsta” judecă trade-ul din planul LUI (in
   assert.equal(primit.pret, 101); assert.equal(primit.stop, 95); assert.equal(primit.tinta, 113);
 });
 
+// v100.173 (auditul Opus, Critic): fără curs, marime() socotea dolarii drept lei ⇒ de ~4,6 ori prea multe bucăți, cu textul „1% din cont”
+await test("v100.173 marime fără curs dolar/leu ⇒ null (nu dolari luați drept lei)", () => {
+  assert.equal(AS.marime({ intrare: 50, stop: 47.5, cont: 20000 }), null);
+  assert.equal(AS.marime({ intrare: 50, stop: 47.5, cont: 20000, fx: null }), null);
+  assert.ok(AS.marime({ intrare: 50, stop: 47.5, cont: 20000, fx: 0.2152 }).bucati > 17);
+});
+await test("v100.173 planulMeu fără curs ⇒ eroarea spune că lipsește cursul, fără mărime", () => {
+  const r = J(AS.planulMeu({ intrare: 100, stop: 92, cont: CONT, calc: CALC }));
+  assert.equal(r.m, null); assert.match(r.eroare, /cursul dolar\/leu/);
+});
+await test("v100.173 t212Fx: cursul BNR de azi întâi (dolari pe leu = 1 / lei pe dolar), umplerile T212 doar ca rezervă", () => {
+  const c3 = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl, TextRo: globalThis.TextRo, localStorage: { getItem: () => null, setItem() {} } };
+  c3.window = c3; c3.globalThis = c3; vm.createContext(c3);
+  vm.runInContext(citeste("public", "lib", "actiuni-semnale.js"), c3); vm.runInContext(citeste("public", "lib", "t212-ecran.js"), c3);
+  vm.runInContext('t212.bnr = { zi: "2026-10-12", curs: 4.5 }; t212.istoric = { umpleri: [{ ticker: "AAPL_US_EQ", fx: 0.2 }] };', c3);
+  aprox(c3.t212Fx(), 1 / 4.5, 1e-12, "BNR");
+  vm.runInContext("t212.bnr = null;", c3); aprox(c3.t212Fx(), 0.2, 1e-12, "rezerva");
+  vm.runInContext("t212.istoric = null;", c3); assert.equal(c3.t212Fx(), null);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute`);
 if (picate) process.exit(1);

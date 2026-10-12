@@ -71,10 +71,10 @@ function rlHtml(rp, st) {
   if (rp.boti) h += rlParte("boti", rp.boti, st.kBoti || (rp.boti.ritm && rp.boti.ritm.K), c.boti);
   if (rp.actiuni) h += rlParte("actiuni", rp.actiuni, st.kAct || (rp.actiuni.ritm && rp.actiuni.ritm.K), c.actiuni);
   h += '<details class="rlMetoda"><summary>Cum am socotit (regula fixată înainte de cifre)</summary><ul>'
-    + ["Boții: futures grid închiși din 1 ianuarie; rezultatul unui bot = profitul realizat (cu comisioane și funding) împărțit la suma pusă, apoi înmulțit cu suma ta de acum. Monte Carlo doar pe levier de cel mult 5×.",
+    + ["Boții: futures grid închiși din 1 ianuarie; rezultatul unui bot = profitul realizat după comisioane și funding, împărțit la suma pusă cu tot cu marja adăugată pe drum, apoi înmulțit cu suma ta de acum. Monte Carlo doar pe levier de cel mult 5×.",
       "Ritmul tău: câți boți / câte poziții ai pornit în ultimele 30 de zile; suma de acum = mediana lor.",
       "O lună simulată = atâtea rezultate trase dintr-o fereastră reală de 30 de zile, aleasă la întâmplare: lunile proaste vin cu toți boții deodată.",
-      "Obiceiurile: lista e fixată dinainte. Dovedit = intervalul de 99% al diferenței (2.000 de reluări pe monede / acțiuni) nu conține zero și diferența are același semn în ambele jumătăți de timp. Altfel nedovedit, adică poate fi întâmplare (nu „fără efect”).",
+      "Obiceiurile: lista e fixată dinainte. Dovedit = intervalul de 99% al diferenței (2.000 de reluări pe monede / acțiuni) nu conține zero și diferența are același semn în ambele jumătăți de timp. Altfel nedovedit, adică poate fi întâmplare (nu „fără efect”). Se testează ~12 obiceiuri deodată: chiar cu regula asta, cam o dată din 15 rapoarte unul poate ieși „dovedit” din întâmplare — un singur obicei dovedit, fără să se repete în rapoartele următoare, e un indiciu, nu o regulă.",
       "Acțiunile: o poziție = de la prima cumpărare până la zero; rezultatul real în lei, cu comisioanele de conversie scăzute.",
       "„La limită” = semnul trece de pragul obișnuit (95%), dar nu de cel strict (99%): e un semn de urmărit, nu încă o dovadă. Pragul strict vine din probă: pe rezultate amestecate la întâmplare, cel obișnuit găsea „dovezi” false prea des.",
       "Boții și pozițiile încă deschise nu intră în socoteli (rezultatul lor nu e încă știut)."].map(function (t) { return "<li>" + rlEsc(t) + "</li>"; }).join("") + "</ul></details>";

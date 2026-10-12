@@ -68,12 +68,13 @@ var Asemanatoare = (function () {
       var s = []; for (var j = 0; j < M.length; j++) { var mm = monede[M[Math.floor(rnd() * M.length)]]; for (var q = 0; q < mm.length; q++) s.push(mm[q]); }   /* revizia v100.110: push, nu concat */
       var a = dPlus(s), b = dMed(s); if (isFinite(a)) bp.push(a); if (isFinite(b)) bm.push(b);
     }
-    var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]]; };
+    var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.005)], d[Math.min(d.length - 1, Math.floor(d.length * 0.995))]]; };
     out.icPlus = ic(bp); out.icMed = ic(bm);
     var srt = l.slice().sort(function (x, y) { return (nr(x.t) || 0) - (nr(y.t) || 0); }), kk = Math.floor(srt.length * 0.7);
     out.felii = { primele: dMed(srt.slice(0, kk)), ultimele: dMed(srt.slice(kk)) };
-    var semn = function (iv) { return iv[0] > 0 ? 1 : iv[1] < 0 ? -1 : 0; }, sm = semn(out.icMed), sp = semn(out.icPlus), s0 = sm || sp;
-    var stabil = s0 !== 0 && (sm === 0 || sp === 0 || sm === sp) && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0;
+    // v100.173 (auditul Opus): „sau” între două măsuri la 95 % dădea „dovedit” fals în ~6–10 % ⇒ IC 99 %, judecă DOAR mediana (fixată dinainte); „% pe plus” rămâne doar arătat
+    var semn = function (iv) { return iv[0] > 0 ? 1 : iv[1] < 0 ? -1 : 0; }, sm = semn(out.icMed), s0 = sm;
+    var stabil = s0 !== 0 && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0;
     out.verdict = !s0 || !stabil ? "nedovedit" : s0 > 0 ? "dovedit" : "pe dos";
     return out;
   }
@@ -110,12 +111,13 @@ var Asemanatoare = (function () {
       var s = []; for (var j = 0; j < M.length; j++) { var mm = monede[M[Math.floor(rnd() * M.length)]]; for (var q = 0; q < mm.length; q++) s.push(mm[q]); }   /* revizia v100.110: push, nu concat */
       var a = dPlus(s), b = dMed(s); if (isFinite(a)) bp.push(a); if (isFinite(b)) bm.push(b);
     }
-    var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]]; };
+    var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.005)], d[Math.min(d.length - 1, Math.floor(d.length * 0.995))]]; };
     out.icPlus = ic(bp); out.icMed = ic(bm);
     var srt = l.slice().sort(function (x, y) { return (nr(x.t) || 0) - (nr(y.t) || 0); }), kk = Math.floor(srt.length * 0.7), A1 = srt.slice(0, kk), A2 = srt.slice(kk);
     out.felii = { primele: dMed(A1), ultimele: dMed(A2) };
-    var semn = function (iv) { return iv[0] > 0 ? 1 : iv[1] < 0 ? -1 : 0; }, sm = semn(out.icMed), sp = semn(out.icPlus), s0 = sm || sp;
-    var stabil = s0 !== 0 && (sm === 0 || sp === 0 || sm === sp) && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0;
+    // v100.173 (auditul Opus): „sau” între două măsuri la 95 % dădea „dovedit” fals în ~6–10 % ⇒ IC 99 %, judecă DOAR mediana (fixată dinainte); „% pe plus” rămâne doar arătat
+    var semn = function (iv) { return iv[0] > 0 ? 1 : iv[1] < 0 ? -1 : 0; }, sm = semn(out.icMed), s0 = sm;
+    var stabil = s0 !== 0 && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0;
     out.verdict = !s0 ? "nedovedit" : !stabil ? "nedovedit" : s0 > 0 ? "dovedit" : "pe dos";
     return out;
   }

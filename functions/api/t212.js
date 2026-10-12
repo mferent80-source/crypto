@@ -31,7 +31,7 @@ function prinCache(k, sec, fn) {
 }
 
 async function t212(env, cale, actiune) {
-  const r = await fetch(BAZA + cale, { headers: { Authorization: "Basic " + btoa(env.T212_API_KEY + ":" + env.T212_API_SECRET), accept: "application/json" } });
+  const r = await fetch(BAZA + cale, { signal: AbortSignal.timeout(10000), headers: { Authorization: "Basic " + btoa(env.T212_API_KEY + ":" + env.T212_API_SECRET), accept: "application/json" } });
   if (r.status === 429) { const ra = Number(r.headers.get("x-ratelimit-reset")); throw Object.assign(new Error("Trading 212 a limitat cererile"), { status: 429, retryAfter: ra > 1e9 ? Math.max(1, Math.round(ra - Date.now() / 1000)) : 30 }); }
   if (r.status === 401 || r.status === 403) throw Object.assign(new Error("Cheia Trading 212 n-are voie aici: bifează permisiunea „" + (PERMISIUNE[actiune] || actiune) + "” când generezi cheia (Settings → API)."), { status: 403 });
   const text = await r.text(); let j = null; try { j = JSON.parse(text); } catch {}
@@ -59,7 +59,7 @@ async function yahoo(simbol, interval, rng, prepost) {
   if (interval === "4h") { const h = await yahoo(simbol, "1h", "730d"); return h ? grupeaza4h(h) : null; }   /* revizia: 60 de zile dădeau doar ~82 de bare de 4 h */
   const range = rng || RANGE_Y[interval] || "2y";
   // v100.119 (pagina Sugestii): prepost - și rândurile din pre-market (doar intraday; pre-market-ul US de la 16:00 RO)
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=${interval}&range=${range}${prepost ? "&includePrePost=true" : ""}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=${interval}&range=${range}${prepost ? "&includePrePost=true" : ""}`, { signal: AbortSignal.timeout(10000), headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
   // refuzul Yahoo (prea multe cereri / pana) NU e "fara preturi": urca, ca cine cere sa reincerce mai tarziu
   if (r.status === 429) throw Object.assign(new Error("Yahoo a limitat cererile de prețuri"), { status: 429, retryAfter: 60 });
   if (r.status >= 500) throw Object.assign(new Error("Yahoo: HTTP " + r.status), { status: 502 });
@@ -77,7 +77,7 @@ async function yahoo(simbol, interval, rng, prepost) {
 // doar pe bursele americane, si ia primul simbol care chiar are lumanari.
 const BURSE_US = ["NMS", "NGM", "NCM", "NYQ", "ASE", "PCX", "BTS", "NAS", "NYS"];
 async function dupaNume(nume) {
-  const r = await fetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(nume)}&quotesCount=6&newsCount=0`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+  const r = await fetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(nume)}&quotesCount=6&newsCount=0`, { signal: AbortSignal.timeout(10000), headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
   let j = null; try { j = await r.json(); } catch {}
   return (j && Array.isArray(j.quotes) ? j.quotes : []).filter((q) => q && q.quoteType === "EQUITY" && BURSE_US.includes(q.exchange) && /^[A-Z][A-Z0-9-]{0,9}$/.test(q.symbol || "")).map((q) => q.symbol).slice(0, 3);
 }
@@ -96,7 +96,7 @@ export function ziTd(d) {
 }
 const TD_INTERVAL = { "5m": "5min", "15m": "15min", "30m": "30min", "1h": "1h", "4h": "4h", "1d": "1day" };
 async function twelve(env, simbol, interval) {
-  const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${TD_INTERVAL[interval] || "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`);
+  const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${TD_INTERVAL[interval] || "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`, { signal: AbortSignal.timeout(10000) });
   let j = null; try { j = await r.json(); } catch {}
   if (!r.ok || !j || !Array.isArray(j.values)) return null;
   const out = j.values.map((v) => ({ time: String(v.datetime).length <= 10 ? ziTd(v.datetime) : Date.parse(String(v.datetime).replace(" ", "T") + "Z"), open: Number(v.open), high: Number(v.high), low: Number(v.low), close: Number(v.close), volume: v.volume == null ? null : Number(v.volume) }))
@@ -324,10 +324,12 @@ export async function onRequestGet({ request, env }) {
     if (a === "rezultate") {
       const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = /_US_EQ$/.test(tk) ? candidati(tk) : [];
       if (!cand.length) return json({ error: "Data rezultatelor: doar acțiuni americane (_US_EQ)." }, 404);
+      // v100.173 (auditul Opus): o pagină de verificare (nu JSON) e eroare, nu „fără dată” ținut 12 ore
       return json(await prinCache("rez:" + tk, 12 * 3600, async () => {
-        const r = await fetch("https://api.nasdaq.com/api/analyst/" + encodeURIComponent(cand[0]) + "/earnings-date", { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+        const r = await fetch("https://api.nasdaq.com/api/analyst/" + encodeURIComponent(cand[0]) + "/earnings-date", { signal: AbortSignal.timeout(10000), headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
         let j = null; try { j = await r.json(); } catch {}
         if (!r.ok && r.status !== 404) throw Object.assign(new Error("Nasdaq: HTTP " + r.status), { status: 502 });
+        if (r.ok && (j === null || typeof j !== "object")) throw Object.assign(new Error("Nasdaq a răspuns cu o pagină, nu cu date — încearcă mai târziu"), { status: 502 });
         const d = dataRezultate(j);
         return { ticker: tk, simbol: cand[0], data: d ? d.data : null, sigur: d ? d.sigur : null };
       }));

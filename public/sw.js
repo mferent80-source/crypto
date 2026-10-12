@@ -1,4 +1,4 @@
-const CACHE="crypto-radar-v100-172";
+const CACHE="crypto-radar-v100-173";
 const APP_SHELL=["/","/index.html","/app.css","/app.js","/research-worker.js","/engine-contract.json","/manifest.webmanifest","/offline.html","/icon-192.png","/icon-512.png","/icon-maskable-512.png","/lib/latime.js","/lib/latime-us.js","/lib/sectoare.js","/lib/macro.js","/lib/rezultate.js","/lib/asezare-paznic.js","/fonts/ibm-plex-sans-latin-400-normal.woff2","/fonts/ibm-plex-sans-latin-500-normal.woff2","/fonts/ibm-plex-sans-latin-600-normal.woff2","/fonts/ibm-plex-mono-latin-400-normal.woff2","/fonts/ibm-plex-mono-latin-500-normal.woff2","/fonts/ibm-plex-mono-latin-600-normal.woff2","/fonts/ibm-plex-sans-latin-ext-400-normal.woff2","/fonts/ibm-plex-sans-latin-ext-500-normal.woff2","/fonts/ibm-plex-sans-latin-ext-600-normal.woff2","/fonts/ibm-plex-mono-latin-ext-400-normal.woff2","/fonts/ibm-plex-mono-latin-ext-500-normal.woff2","/fonts/ibm-plex-mono-latin-ext-600-normal.woff2","/lib/grid-calcul.js","/lib/grafic-bot.js","/lib/tablou-trend.js","/lib/risc-luna.js","/lib/risc-ecran.js","/lib/monte-simbol.js","/lib/monte-simbol-ecran.js","/lib/grid-sim.js","/lib/grid-sim-worker.js","/lib/grid-sim-ecran.js","/lib/carnet.js","/lib/carnet-ecran.js","/lib/sugestii-actiuni.js","/lib/sugestii-ecran.js","/lib/salt.js","/lib/salt-ecran.js","/data/salt-univers.json","/lib/valoare.js","/lib/busola.js","/lib/pret-viu.js","/lib/grid-proba.js","/lib/perechi.js","/lib/grid-plan.js","/lib/profil-moneda.js","/lib/probabilitati.js","/lib/retea.js","/lib/arbori.js","/lib/dovada.js","/lib/asemanatoare.js","/lib/grid-jurnal.js","/lib/grid-umpleri.js","/lib/grid-clasament.js","/lib/grid-laborator.js","/lib/tablou-extra.js","/lib/indicatori-bot.js","/lib/acasa.js","/lib/acasa-ecran.js","/lib/scan.js","/lib/scan-ecran.js","/lib/alerte-ecran.js","/lib/jurnal-trade.js","/lib/statistica-trade.js","/lib/text-ro.js","/lib/semnale-bot.js","/lib/consiliu.js","/lib/contrafactual.js","/lib/obiceiuri.js","/lib/tablou-bot.js","/lib/directie.js","/lib/alerte.js","/lib/scenariu.js","/lib/sfaturi.js","/lib/t212.js","/lib/actiuni-semnale.js","/lib/consilier.js","/lib/reveniri.js","/lib/idei.js","/lib/t212-ecran.js"];
 
 self.addEventListener("install",event=>{
@@ -30,16 +30,22 @@ self.addEventListener("fetch",event=>{
     return;
   }
 
+  // v100.173 (auditul Opus): doar un răspuns BUN înlocuiește copia aplicației (un 502 de la tunel o suprascria); la ≥500 sau fără răspuns
+  // în 4 s (semnal slab) se servește copia, dacă există
   if(req.mode==="navigate"){
-    event.respondWith(
-      fetch(req).then(res=>{
-        const copy=res.clone();
-        caches.open(CACHE).then(cache=>cache.put("/index.html",copy)).catch(()=>{});
+    event.respondWith((async()=>{
+      const copia=async()=>(await caches.match("/index.html"))||(await caches.match("/offline.html"));
+      const retea=fetch(req).then(res=>{
+        if(res&&res.ok){const copy=res.clone();caches.open(CACHE).then(cache=>cache.put("/index.html",copy)).catch(()=>{})}
         return res;
-      }).catch(async()=>{
-        return (await caches.match("/index.html")) || (await caches.match("/offline.html"));
-      })
-    );
+      });
+      const rapid=await Promise.race([retea.catch(()=>null),new Promise(r=>setTimeout(()=>r("incet"),4000))]);
+      if(rapid&&rapid!=="incet"&&rapid.status<500)return rapid;
+      const c=await caches.match("/index.html");
+      if(c)return c;
+      if(rapid&&rapid!=="incet")return rapid;
+      try{return await retea}catch{return copia()}
+    })());
     return;
   }
 

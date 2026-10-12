@@ -75,7 +75,8 @@ function cuMarime(g, m) {
 // cursul in dolari pe leu din pozitiile T212 (Σ buc × pret mediu / Σ cost in lei) - cum il cere ActiuniSemnale.marime; fara cost -> null
 export function fxDinPozitii(t212) {
   let usd = 0, lei = 0;
-  for (const x of Array.isArray(t212) ? t212 : []) { if (!x || !(nr(x.costLei) > 0) || !(nr(x.qty) > 0) || !(nr(x.pretMediu) > 0)) continue; usd += x.qty * x.pretMediu; lei += x.costLei; }
+  // v100.173 (auditul Opus, Critic): prețul mediu e în moneda bursei (EUR la .DE, pence la .L) ⇒ doar pozițiile americane (_US_EQ) dau cursul $/leu
+  for (const x of Array.isArray(t212) ? t212 : []) { if (!x || !/_US_EQ$/.test(String(x.ticker || "")) || !(nr(x.costLei) > 0) || !(nr(x.qty) > 0) || !(nr(x.pretMediu) > 0)) continue; usd += x.qty * x.pretMediu; lei += x.costLei; }
   return lei > 0 && usd > 0 ? usd / lei : null;
 }
 export function sugestiePoza(n, pret, fel) {

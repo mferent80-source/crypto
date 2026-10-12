@@ -46,10 +46,11 @@ import { aplicaCereriSalt, listaSaltSigura } from "./lib/salt-cereri.mjs";   // 
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { turaLatime as turaLatimeModul, cereBinance } from "./lib/tura-latime.mjs";   // v101.93 (I-583): lățimea pieței pe 150 perp-uri Binance
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";
+import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Opus): botul „dispărut” confirmat 3 ture
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.98";   // v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.99";   // v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -450,6 +451,7 @@ async function tura() {
   }
   // un bot care mergea si a disparut din lista
   const acumIds = {}; for (const b of boti) if (b && b.id) acumIds[b.id] = true;
+  for (const id of Object.keys(m.cunoscuti)) if (acumIds[id]) lipsaConfirmata(m.cunoscuti[id], { prezent: true });
   for (const id of Object.keys(m.cunoscuti)) {
     if (!acumIds[id] && m.cunoscuti[id].activ) {
       // v97.7: fisa de inchidere - botul cautat printre cei inchisi (motivul, rezultatul, planul, lectia); negasit -> mesajul vechi
@@ -467,6 +469,8 @@ async function tura() {
           await judecaLaInchidere(id, x);   // v100.43 (I-466)
         }
       } catch (e) { jurnal("fisa de inchidere", id, e.message); }
+      // v100.173 (auditul Opus): negăsit printre cei închiși ⇒ „lipsește din Pionex” abia după 3 ture la rând (listă goală / parțială = nu e închidere)
+      if (!lipsaConfirmata(m.cunoscuti[id], { prezent: false, gasitInchis: !!fisa })) continue;
       const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaMesaj(MesajeColector.lipsaPionex(m.cunoscuti[id].nume));
       if (trimis) m.cunoscuti[id].activ = false;
     }
@@ -727,11 +731,13 @@ async function turaArhivaBoti() {
 // vedeau doar ultimii 10 boti (27.09: raportul a zis „10 boti, −18,39 USDT”; saptamana reala: 26 boti, +24,51 brut / +8,48 net).
 // Toti botii inchisi = arhiva de acasa (action=botiInchisi, toata istoria) + prima pagina Pionex (cei inchisi dupa ultima tura
 // de arhiva), unificati pe strategyId.
+// v100.173 (auditul Opus): lista poartă `complet` (arhiva de acasă a venit) — raportul, frâna și socoteala NU judecă doar pe ultimii 10 boți
 async function botiInchisiToti() {
-  const out = new Map();
-  try { const a = await cere("/api/istoric-bot?action=botiInchisi"); for (const x of (a && Array.isArray(a.boti) ? a.boti : [])) { const id = String(x && (x.strategyId || x.buOrderId) || ""); if (id) out.set(id, x); } } catch (e) { jurnal("arhiva botilor", e.message); }
+  const out = new Map(); let arhivaOk = false;
+  try { const a = await cere("/api/istoric-bot?action=botiInchisi"); for (const x of (a && Array.isArray(a.boti) ? a.boti : [])) { const id = String(x && (x.strategyId || x.buOrderId) || ""); if (id) out.set(id, x); } arhivaOk = true; } catch (e) { jurnal("arhiva botilor", e.message); }
   try { const d = await cere("/api/bot-orders?status=finished&limit=100"); for (const y of (d && Array.isArray(d.bots) ? d.bots : [])) { const x = y.brut || y, id = String(x && (x.strategyId || x.buOrderId) || y.id || ""); if (id && !out.has(id)) out.set(id, x); } } catch (e) { jurnal("botii inchisi (Pionex)", e.message); }
-  return [...out.values()];
+  const lista = [...out.values()]; lista.complet = arhivaOk;
+  return lista;
 }
 // v101.60 (I-515 + I-498, specul colaborării 2 §5): ce trimite Radarul Busolei - fișier LOCAL scris atomic la fiecare tură (Busola îl
 // citește oricând; peste 24 h îl socotește vechi). Închișii (arhiva + prima pagină Pionex) se reîmprospătează la 10 minute; o citire
@@ -759,7 +765,7 @@ async function scriePentruBusola(boti, acum) {
 let simboluriPerp = null, simboluriLa = 0;
 async function simbolPerp(moneda) {
   if (!simboluriPerp || Date.now() - simboluriLa > 6 * 3600000) {
-    try { const d = await cere("/api/market?type=pionex_symbols&market=PERP"), m = {}; for (const x of (d && d.data && d.data.symbols || [])) if (x && x.baseCurrency && /_USDT_PERP$/.test(x.symbol)) m[String(x.baseCurrency).toUpperCase()] = x.symbol; simboluriPerp = m; simboluriLa = Date.now(); } catch (e) { jurnal("simbolurile PERP", e.message); }
+    try { const d = await cere("/api/market?type=pionex_symbols&market=PERP"), m = {}; for (const x of (d && d.data && d.data.symbols || [])) if (x && x.baseCurrency && /_USDT_PERP$/.test(x.symbol)) m[String(x.baseCurrency).toUpperCase()] = x.symbol; if (!Object.keys(m).length) throw new Error("lista goală (Pionex a refuzat?)"); simboluriPerp = m; simboluriLa = Date.now(); } catch (e) { jurnal("simbolurile PERP", e.message); }
   }
   const b = String(moneda || "").toUpperCase();
   return (simboluriPerp && simboluriPerp[b]) || b + "_USDT_PERP";
@@ -1396,7 +1402,9 @@ async function turaRaport(acum) {
   const m = meta();
   if (m.raportTrimis === r.data) return;
   try {
-    const trades = JurnalTrade.din(await botiInchisiToti());   // v100.40: toata saptamana, nu ultimii 10
+    const toti = await botiInchisiToti();
+    if (!toti.complet) { jurnal("raportul de duminica amanat: arhiva botilor n-a venit (ar fi judecat doar ultimii 10)"); return; }
+    const trades = JurnalTrade.din(toti);   // v100.40: toata saptamana, nu ultimii 10
     let soc = {};
     if (socotealaUltima) soc = socotealaUltima;   // v100.43: pe toti botii (turaSocoteala), nu doar pe cei cunoscuti acum
     else for (const id of Object.keys(m.cunoscuti || {})) {
@@ -1493,7 +1501,9 @@ async function turaSocoteala() {
   if (socotealaInLucru || Date.now() - socotealaLa < 3600000) return;
   socotealaInLucru = true;
   try {
-    const inchisi = (await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 30 * 86400000);
+    const toti = await botiInchisiToti();
+    if (!toti.complet) { jurnal("socoteala amanata: arhiva botilor n-a venit"); return; }
+    const inchisi = toti.filter((x) => Number(x.closeTime) > Date.now() - 30 * 86400000);
     const act = await cere("/api/bot-orders"), activi = (act && Array.isArray(act.bots) ? act.bots : []).map((b) => String(b.id));
     const loguri = [], peMoneda = []; let judecati = 0;
     for (const x of inchisi) {
@@ -1524,7 +1534,9 @@ async function turaFrana() {
   if (Date.now() - franaLa < 5 * 60000) return;
   franaLa = Date.now();
   const cfg = await cere("/api/istoric-bot?action=config").catch(() => null), praguri = cfg && cfg.config && cfg.config.frana || null;
-  const trades = JurnalTrade.din((await botiInchisiToti()).filter((x) => Number(x.closeTime) > Date.now() - 8 * 86400000));
+  const toti = await botiInchisiToti();
+  if (!toti.complet) { jurnal("frana amanata: arhiva botilor n-a venit (ar fi judecat doar ultimii 10)"); return; }
+  const trades = JurnalTrade.din(toti.filter((x) => Number(x.closeTime) > Date.now() - 8 * 86400000));
   const act = await cere("/api/bot-orders"), f = Obiceiuri.frana({ trades, deschise: act && act.bots || [], acum: Date.now(), praguri });
   const m = meta(), zi = new Date(Obiceiuri.inceputZiRo(Date.now()) + 12 * 3600000).toISOString().slice(0, 10);
   if (f.activa && m.franaZi !== zi) {

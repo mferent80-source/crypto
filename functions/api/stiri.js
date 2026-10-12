@@ -26,11 +26,11 @@ function rss(xml, max) {
   return out;
 }
 async function aduRss(url, max) {
-  try { const r = await fetch(url, { headers: UA }); if (!r.ok) return []; return rss(await r.text(), max); } catch { return []; }
+  try { const r = await fetch(url, { signal: AbortSignal.timeout(12000), headers: UA }); if (!r.ok) return []; return rss(await r.text(), max); } catch { return []; }
 }
 async function chart(simbol) {
   try {
-    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=1d&range=1y`, { headers: UA });
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=1d&range=1y`, { signal: AbortSignal.timeout(12000), headers: UA });
     if (!r.ok) return null;
     const j = await r.json(), res = j && j.chart && Array.isArray(j.chart.result) ? j.chart.result[0] : null;
     if (!res || !Array.isArray(res.timestamp)) return null;
@@ -66,7 +66,7 @@ export async function onRequestGet({ request, env }) {
   if (a === "calendar") {
     const c = dinCache("calendar"); if (c) return json(c);
     let l = [], eroare = null;
-    try { const r = await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json", { headers: UA }); if (r.ok) l = await r.json(); else eroare = "calendarul n-a răspuns (" + r.status + ")"; } catch { l = []; eroare = "calendarul n-a răspuns"; }
+    try { const r = await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json", { signal: AbortSignal.timeout(12000), headers: UA }); if (r.ok) l = await r.json(); else eroare = "calendarul n-a răspuns (" + r.status + ")"; } catch { l = []; eroare = "calendarul n-a răspuns"; }
     if (!eroare && !Array.isArray(l)) eroare = "calendarul a venit stricat";
     const cur = (t, n) => decodeaza(String(t == null ? "" : t)).replace(/<[^>]+>/g, "").trim().slice(0, n);
     const ev = (Array.isArray(l) ? l : []).filter((x) => x && x.country === "USD" && (x.impact === "High" || x.impact === "Medium") && Number.isFinite(Date.parse(x.date)))
@@ -79,11 +79,13 @@ export async function onRequestGet({ request, env }) {
     const c = dinCache("piata3"); if (c) return json(c);
     // v95: + dobanda pe 10 ani, dolarul, aurul, dolar/leu (acelasi Yahoo, zilnic)
     const [tnx, dxy, aur, usdron] = await Promise.all([chart("^TNX"), chart("DX-Y.NYB"), chart("GC=F"), chart("RON=X")]);
-    const [qqq, spy, vix, fgR] = await Promise.all([chart("QQQ"), chart("SPY"), chart("^VIX"), fetch("https://api.alternative.me/fng/?limit=31", { headers: UA }).then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
+    const [qqq, spy, vix, fgR] = await Promise.all([chart("QQQ"), chart("SPY"), chart("^VIX"), fetch("https://api.alternative.me/fng/?limit=31", { signal: AbortSignal.timeout(12000), headers: UA }).then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
     const f = fgR && Array.isArray(fgR.data) && fgR.data[0], val = f ? Number(f.value) : NaN;
     // v92: si istoricul pe 30 de zile (alternative.me da de la azi spre trecut) - pentru Home, de la cel mai vechi la azi
     const istoric = (fgR && Array.isArray(fgR.data) ? fgR.data : []).map((x) => Number(x && x.value)).filter(Number.isFinite).reverse();
     const v = { qqq, spy, vix, tnx, dxy, aur, usdron, fg: Number.isFinite(val) ? { valoare: val, clasa: String(f.value_classification || "").slice(0, 20), istoric } : null };
+    // v100.173 (auditul Opus): Yahoo n-a dat nimic din bursă ⇒ nu se ține minte 30 de minute (macro și vremea bursei rămâneau goale) și se spune
+    if (!qqq && !spy && !vix) return json(Object.assign(v, { eroare: "Yahoo n-a dat prețurile bursei acum — se reîncearcă la următoarea cerere" }));
     inCache("piata3", v, 1800); return json(v);
   }
   return json({ error: "Acțiune necunoscută" }, 400);

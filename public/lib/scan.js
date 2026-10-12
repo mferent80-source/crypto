@@ -101,7 +101,8 @@ var Scan = (function () {
   function plan(x, cont) {
     var a = nr(x.atrPct), p = nr(x.p); if (a === null || p === null || a <= 0) return null;
     var o = { stop: p * (1 - 2 * a / 100), tinta: p * (1 + 3 * a / 100), stopPct: -2 * a, tintaPct: 3 * a };
-    var c = nr(cont); if (c !== null && c > 0) o.marime = Math.round(Math.min(c, c * 0.01 / (2 * a / 100)));
+    // v100.173 (auditul Opus): plafonul de 20 % din cont, ca Poarta (ATR 0,8 % dădea 62 % din cont, ATR 0,5 % tot contul)
+    var c = nr(cont); if (c !== null && c > 0) { var brut = c * 0.01 / (2 * a / 100); o.marime = Math.round(Math.min(c * 0.20, brut)); o.plafonat = brut > c * 0.20; }
     return o;
   }
 

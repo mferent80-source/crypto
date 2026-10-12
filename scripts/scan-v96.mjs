@@ -66,7 +66,8 @@ await test("perioade: 1 zi = ultimele 24 h din barele pe ora, 1 an = barele ziln
 await test("planul orientativ: stop la 2x miscarea zilnica, tinta la 3x, marimea la 1% risc din cont (niciodata peste cont)", async () => {
   const p = S.plan({ p: 100, atrPct: 2.5 }, 29251);
   assert.equal(p.stop, 95); assert.equal(p.tinta, 107.5); assert.equal(p.marime, Math.round(292.51 / 0.05));
-  assert.equal(S.plan({ p: 100, atrPct: 0.1 }, 1000).marime, 1000); assert.equal(S.plan({ p: 100, atrPct: null }, 1000), null);
+  // v100.173: plafonul de 20% din cont, ca Poarta (înainte: tot contul)
+  assert.equal(S.plan({ p: 100, atrPct: 0.1 }, 1000).marime, 200); assert.equal(S.plan({ p: 100, atrPct: null }, 1000), null);
 });
 
 // ---- tura colectorului, cu un server fals ----
