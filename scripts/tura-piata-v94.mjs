@@ -7,7 +7,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { turaPiata } from "./lib/tura-piata.mjs";
 
-for (const f of ["grid-calcul.js", "grid-clasament.js", "directie.js", "alerte.js", "acasa.js", "latime.js", "latime-us.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
+for (const f of ["grid-calcul.js", "grid-clasament.js", "directie.js", "alerte.js", "acasa.js", "latime.js", "latime-us.js", "sectoare.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
 let teste = 0, picate = 0;
 async function test(nume, fn) {
   teste++;
@@ -140,6 +140,40 @@ await test("v100.166 fără lățime (colectorul n-a măsurat / GitHub tace): r�
   await turaPiata(w.d, st, DUMINICA);
   const r = w.alerte.find((x) => /Săptămâna pieței/.test(x.titlu)); assert.ok(r);
   assert.doesNotMatch(r.mesaj, /Lățimea crypto|Acțiuni US|aștept/);
+});
+// v100.167 (12.10, pagina sector-rotation mutată în Radar — el: „Doar când se schimbă regimul”): după închiderea bursei, o dată pe zi,
+// colectorul citește rotația sectoarelor și trimite pe Discord DOAR când regimul se schimbă (ciclice / defensive / neutră); prima citire
+// doar se ține minte, regimul „parțial” (un sector lipsă) nu schimbă nimic.
+const sectSerii = (zi, pCyc, pDef, fara) => {
+  const sf = Date.UTC(2026, 8, zi, 13, 30), N = 130, L = N - 1, ser = (p) => Array.from({ length: N }, (_, i) => ({ t: sf - (L - i) * 86400000, c: i <= L - 5 ? 100 : 100 * (1 + (p / 100) * (i - (L - 5)) / 5) }));
+  const o = { SPY: ser(0) };
+  for (const x of globalThis.Sectoare.LISTA) if (!(fara || []).includes(x.s)) o[x.s] = ser(x.g === "defensiv" ? pDef : pCyc);
+  return { la: sf, serii: o };
+};
+function lumeSect() {
+  const w = lume(), cere0 = w.d.cere; let sect = null;
+  w.d.cere = async (u) => (u === "/api/sectoare" ? sect : cere0(u));
+  w.d.Sectoare = globalThis.Sectoare;
+  return Object.assign(w, { pune: (x) => { sect = x; } });
+}
+const DUPA = (zi) => Date.UTC(2026, 8, zi, 20, 30);   // 16:30 New York, după închidere (marți 29, miercuri 30)
+await test("v100.167 rotația sectoarelor: prima citire doar se ține minte; schimbarea regimului ⇒ O alertă; aceeași zi ⇒ nimic; parțial ⇒ nimic", async () => {
+  const w = lumeSect(), st = {}, rot = () => w.alerte.filter((x) => /Rotația sectoarelor/.test(x.titlu || ""));
+  w.pune(sectSerii(28, 1, 3)); await turaPiata(w.d, st, DUPA(28));
+  assert.equal(st.sectRegim, "off"); assert.equal(rot().length, 0, "prima citire nu trimite");
+  w.pune(sectSerii(29, 3, 1)); await turaPiata(w.d, st, LUNI + 25 * ORA);   // marți 10:30 New York: bursa deschisă ⇒ nu se judecă
+  assert.equal(rot().length, 0, "în ședință nu se judecă");
+  await turaPiata(w.d, st, DUPA(29));
+  assert.equal(rot().length, 1); assert.match(rot()[0].mesaj, /^Din „spre defensive \(risk-off\)” în „spre ciclice \(risk-on\)”/); assert.equal(st.sectRegim, "on");
+  await turaPiata(w.d, st, DUPA(29) + 30 * MIN); assert.equal(rot().length, 1, "o singură dată pe zi");
+  w.pune(sectSerii(30, 1, 3, ["XLE"])); await turaPiata(w.d, st, DUPA(30));
+  assert.equal(rot().length, 1, "parțial nu trimite"); assert.equal(st.sectRegim, "on", "parțial nu schimbă regimul ținut minte");
+});
+await test("v100.167 fără Sectoare în colector sau ruta tace ⇒ tura merge mai departe, fără alertă", async () => {
+  const w = lumeSect(), st = {};
+  w.pune(null); await turaPiata(w.d, st, DUPA(28));
+  assert.equal(w.alerte.filter((x) => /Rotația/.test(x.titlu || "")).length, 0); assert.equal(st.sectRegim, undefined);
+  delete w.d.Sectoare; w.pune(sectSerii(29, 3, 1)); await turaPiata(w.d, st, DUPA(29)); assert.equal(st.sectRegim, undefined);
 });
 await test("v95 socoteala: alerta de miscare se tine minte cu pretul; dupa 24 h i se pune pretul de atunci si se trimite socoteala", async () => {
   const w = lume({ vvvScade: true }), st = {};

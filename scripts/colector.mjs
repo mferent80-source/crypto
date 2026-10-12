@@ -49,7 +49,7 @@ import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs"
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.94";
+const VERSIUNE_COLECTOR = "v101.95";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(RAD, "data");
@@ -167,6 +167,7 @@ const Carnet = incarca("carnet.js", "Carnet");
 const SugestiiActiuni = incarca("sugestii-actiuni.js", "SugestiiActiuni");
 const Latime = incarca("latime.js", "Latime");   // v101.93 (I-583): formulele lățimii pieței (aceleași ca în pagină); TextRo e deja global
 const LatimeUS = incarca("latime-us.js", "LatimeUS");   // v101.94 (Weekly Review mutat in raport): lățimea US în „Săptămâna pieței”, cu textul din pagină
+const Sectoare = incarca("sectoare.js", "Sectoare");   // v101.95 (sector-rotation mutat în Radar): alerta la schimbarea regimului sectoarelor US
 const Salt = incarca("salt.js", "Salt");   // v101.82 (pagina Salt): tabelul instrumentelor Salt Bank (trendul, ziua de ieri)   // v101.81 (pagina Sugestii): regulile „early” + istoricul lor (verdictul din Carnet)
 const SUG_BAZA_FIS = path.join(DATA, "sugestii-baza.json"), SUG_IST_FIS = path.join(DATA, "sugestii-istoric.json");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
 const CARNET_FIS = path.join(DATA, "carnet-oferte.json");
@@ -1425,7 +1426,7 @@ async function turaPiataColector() {
   piataInLucru = true;
   try {
     const m = meta(); m.piata = m.piata || {};
-    await turaPiataModul({ cere, trimite, trimiteAlerta, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Acasa, Alerte, GridCalcul, GridClasament, Directie, NDX, Latime, LatimeUS }, m.piata, Date.now());
+    await turaPiataModul({ cere, trimite, trimiteAlerta, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Acasa, Alerte, GridCalcul, GridClasament, Directie, NDX, Latime, LatimeUS, Sectoare }, m.piata, Date.now());
     try { scrieStare(); } catch {}
   } catch (e) { jurnal("piata ESEC", e.message); }
   piataInLucru = false;

@@ -146,6 +146,19 @@ async function latimeUs(d, acum) {
   const n = await incearca(d, "raport latime US", async () => { const x = await (d.fetch || fetch)(d.LatimeUS.SURSA, { signal: AbortSignal.timeout(15000) }); return x && x.ok ? d.LatimeUS.normalizeaza(await x.json(), acum) : null; });
   return n ? d.LatimeUS.textCitire(n, acum).text : null;
 }
+// v100.167 (12.10, pagina sector-rotation mutata in Radar - el: „Doar când se schimbă regimul”): dupa inchiderea bursei, o data pe zi,
+// rotatia sectoarelor (lib/sectoare.js pe /api/sectoare); alerta DOAR la schimbarea regimului, pe date complete. Prima citire se tine minte.
+async function sectoareRegim(d, st, acum, zi) {
+  if (!d.Sectoare || st.sectZi === zi) return;
+  const r = await incearca(d, "sectoare", () => d.cere("/api/sectoare"));
+  const s = r && r.serii ? d.Sectoare.calculeaza(r.serii, acum) : null;
+  if (!s || !s.regim) return;   // ruta a tacut: se reincearca la tura urmatoare (serverul tine cache 30 min)
+  st.sectZi = zi;
+  if (s.regim.partial) return;   // un sector lipsa: nici alerta, nici regim nou tinut minte
+  const m = d.Sectoare.mesajSchimbare(st.sectRegim || null, s);
+  if (m && !(await d.trimiteAlerta(m, null, "sectoare-regim"))) { st.sectZi = null; return; }   // n-a plecat: mai incearca
+  st.sectRegim = s.regim.cod;
+}
 // ---- 7. raportul de duminica seara (dupa 20:00 Bucuresti), o data ----
 async function raportSaptamana(d, st, acum) {
   const r = ceas(acum, "Europe/Bucharest");
@@ -187,6 +200,7 @@ export async function turaPiata(d, st, acum) {
     facut("bursa"); if (bu.dupaInchidere) st.bursaInchisaZi = bu.zi;
     await incearca(d, "bursa", () => bursaLaZi(d, st, acum, bu.zi));
   }
+  if (bu.dupaInchidere) await incearca(d, "sectoare", () => sectoareRegim(d, st, acum, bu.zi));
   await incearca(d, "poza", () => poza(d, st, acum));
   if (acum - la("soc") >= ORA) { facut("soc"); await incearca(d, "socoteala", () => socoteala(d, st, acum)); }
   await incearca(d, "raport saptamana", () => raportSaptamana(d, st, acum));

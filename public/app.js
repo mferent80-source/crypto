@@ -3039,7 +3039,7 @@ function navTo(id,load=false){
    else if(id==="salt"){if(typeof saltPorneste==="function")saltPorneste(false)}   // v100.120: pagina Salt   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
-   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
+   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof sectoareDeseneaza==="function")sectoareDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
    else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false);if(typeof contTotAsigura==="function")contTotAsigura()}
    else if(id==="scan"){if(typeof scanPorneste==="function")scanPorneste(false)}   // v96: lista noua; scannerul vechi porneste doar din butonul lui
    else if(id==="replaylab")renderReplayLab();
@@ -3068,7 +3068,7 @@ function navTo(id,load=false){
    if(id==="opportunity")renderOpportunity();
    if(id==="calibration")renderCalibrationLab();
    if(id==="settings"){renderSettings();renderPushStatus()}
-   if(id==="stocks"){loadStockContext().catch(()=>{});checkStocksHealth().catch(()=>{});if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
+   if(id==="stocks"){loadStockContext().catch(()=>{});checkStocksHealth().catch(()=>{});if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof sectoareDeseneaza==="function")sectoareDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
    if(id==="riskmgr")calculateRisk();
    if(id==="decision"&&window.__radarState)buildDecision(window.__radarState.q,window.__radarState.hs||historicalSet(window.__radarState.j),mtfComposite(window.__radarState.m||[]),window.__signalState?.sm||{direction:"WAIT",long:50,short:50,edge:0});
    if(id==="paper"){renderPaper();refreshPaper()}
@@ -6725,7 +6725,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var vB=vP&&!vP.vechi?Busola.randDirectie(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null,vM=tbMcRand(b);
   var voci=typeof Busola!=="undefined"?Busola.concluzie({bot:b.directie,grafic:v4H?v4H.dir:null,busola:vB?vB.semn:null,mc:vM?vM.stare:null,mcAtins:!!(vM&&/planul atins/i.test(String(vM.text||"")))}):null;
   c.randuri.forEach(function(x){
-    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
+    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.sectoare)out.push(rd(ex.sectoare));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
     if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
     out.push(rd(x));
     if(x.ce==="Direcția"&&ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}});   /* revizia: fără semafor, Indicatorii stau după Direcția */
@@ -6804,18 +6804,32 @@ async function rzRandStocksDeseneaza(){
   await rzStele();
   if(!rzStare.cal||rzStare.cal.eroare||rzStare.cal.zile<7||Date.now()-rzStare.calLa>=3600000){var z=rzStare.zile;rzStare.zile=Math.max(7,z);await rzCalendar(true);rzStare.zile=z}
   el.innerHTML=Rezultate.randStocks(rzStare.cal,rzStare.stele,Date.now())||""}
+/* v100.167 (12.10, pagina sector-rotation mutată aici — el: „Bloc în pagina Acțiuni”): rotația sectoarelor US din /api/sectoare
+   (Yahoo, închiderile zilnice, cache 30 min pe server), calculele în lib/sectoare.js; blocul sub lățimea US + rândul din citire */
+var sectoareStare={la:0,j:null,inLucru:null};
+function sectoareAduce(dupa){
+  if(typeof Sectoare==="undefined")return null;
+  if(Date.now()-sectoareStare.la<30*60000||sectoareStare.inLucru)return sectoareStare.inLucru;
+  sectoareStare.inLucru=getJSON("/api/sectoare").then(function(j){if(j&&j.serii)sectoareStare.j=j},function(){}).then(function(){sectoareStare.la=Date.now();sectoareStare.inLucru=null;if(typeof dupa==="function")dupa()});
+  return sectoareStare.inLucru}
+function sectoareDate(){return sectoareStare.j?Sectoare.calculeaza(sectoareStare.j.serii,Date.now()):null}
+function sectoareDeseneaza(){
+  var el=$("sectoareBloc");if(!el||typeof Sectoare==="undefined")return;
+  el.innerHTML=sectoareStare.la?Sectoare.htmlBloc(sectoareDate()):'<p class="tbSub">Aduc rotația sectoarelor US…</p>';
+  sectoareAduce(sectoareDeseneaza)}
 function latimeUsDeschide(){if(typeof setAssetClass==="function")setAssetClass("STOCKS");navTo("stocks",true)}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}
 // v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
 // când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
 function tbCitireExtra(b,o){
-  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeUs:null},d=tbStare.directie;
+  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeUs:null,sectoare:null},d=tbStare.directie;
   /* v100.150 (I-583): lățimea pieței pe 150 perp-uri, din KV (colectorul la 15 min) - Latime.textCitire dă textul, starea și vechimea; „pânda ›” duce în Sugestii */
   if(typeof tbLatimeDinKv==="function")tbLatimeDinKv();out.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"?Latime.textCitire(tbLatimeKv.d,b,Date.now()):null;   /* probele vechi rulează funcția cu stub-uri, fără KV */
   if(out.latime)Object.assign(out.latime,{actiune:out.latime.link?"sugDeschidePanda()":null,linkText:"pânda ›",link:null});
   /* lățimea pieței US (11.10.2026): rândul apare după prima citire a lui latest.json; sosirea redesenează citirea o dată */
-  if(typeof latimeUsAduce==="function"&&typeof LatimeUS!=="undefined"){latimeUsAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.latimeUs=latimeUsStare.la?LatimeUS.textCitire(LatimeUS.normalizeaza(latimeUsStare.j,Date.now()),Date.now()):null}   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
+  if(typeof latimeUsAduce==="function"&&typeof LatimeUS!=="undefined"){latimeUsAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.latimeUs=latimeUsStare.la?LatimeUS.textCitire(LatimeUS.normalizeaza(latimeUsStare.j,Date.now()),Date.now()):null}
+  if(typeof sectoareAduce==="function"&&typeof Sectoare!=="undefined"){sectoareAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.sectoare=sectoareStare.la?Object.assign(Sectoare.textCitire(sectoareDate()),{actiune:"latimeUsDeschide()",linkText:"sectoarele ›"}):null}   /* v100.167 */   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){
     var tf=tbTf(),r=l.filter(function(x){return x.tf===tf&&x.q})[0]||l.filter(function(x){return x.tf==="15M"&&x.q})[0];
