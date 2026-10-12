@@ -6751,13 +6751,16 @@ function tbLatimeDinKv(){
 var latimeUsStare={la:0,j:null,inLucru:null};
 function latimeUsAduce(dupa){
   if(typeof LatimeUS==="undefined")return null;
-  if(Date.now()-latimeUsStare.la<30*60000||latimeUsStare.inLucru)return latimeUsStare.inLucru;
+  if(latimeUsStare.inLucru){if(typeof dupa==="function")latimeUsStare.inLucru.then(dupa);return latimeUsStare.inLucru}
+  if(Date.now()-latimeUsStare.la<30*60000)return null;
   latimeUsStare.inLucru=fetch(LatimeUS.SURSA,{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j)latimeUsStare.j=j},function(){}).then(function(){latimeUsStare.la=Date.now();latimeUsStare.inLucru=null;if(typeof dupa==="function")dupa()});
   return latimeUsStare.inLucru}
 function latimeUsDeseneaza(){
   var el=$("latimeUsBloc");if(!el||typeof LatimeUS==="undefined")return;
   el.innerHTML=latimeUsStare.la?LatimeUS.htmlBloc(LatimeUS.normalizeaza(latimeUsStare.j,Date.now())):'<p class="tbSub">Aduc lățimea pieței US…</p>';
-  latimeUsAduce(latimeUsDeseneaza)}
+  latimeUsAduce(latimeUsDeseneaza);
+  /* v100.170: sectoarele arată și coloana din Market Breadth ⇒ se redesenează când sosește latest.json (altfel ieșeau cu „—” dacă sectoarele veneau primele) */
+  if(latimeUsStare.j&&sectoareStare.la&&typeof sectoareDeseneaza==="function")sectoareDeseneaza()}
 // Pagina alerts din suită (Ce dețin / Ce urmăresc / News / Istoric) rămâne mereu, la cererea lui (11.10.2026); Radarul doar o deschide
 function deschideAlertsPagina(){window.open("https://mferent80-source.github.io/premarket_scanner.html/alerts/","_blank","noopener")}
 // Rezultate (v100.163, 11.10.2026): pagina earnings-hub din premarket_scanner mutată în Radar. Desenul în lib/rezultate.js,
@@ -6812,7 +6815,7 @@ function sectoareAduce(dupa){
   if(Date.now()-sectoareStare.la<30*60000||sectoareStare.inLucru)return sectoareStare.inLucru;
   sectoareStare.inLucru=getJSON("/api/sectoare").then(function(j){if(j&&j.serii)sectoareStare.j=j},function(){}).then(function(){sectoareStare.la=Date.now();sectoareStare.inLucru=null;if(typeof dupa==="function")dupa()});
   return sectoareStare.inLucru}
-function sectoareDate(){return sectoareStare.j?Sectoare.calculeaza(sectoareStare.j.serii,Date.now()):null}
+function sectoareDate(){return sectoareStare.j?Sectoare.calculeaza(sectoareStare.j.serii,Date.now(),latimeUsStare.j):null}
 function sectoareDeseneaza(){
   var el=$("sectoareBloc");if(!el||typeof Sectoare==="undefined")return;
   el.innerHTML=sectoareStare.la?Sectoare.htmlBloc(sectoareDate()):'<p class="tbSub">Aduc rotația sectoarelor US…</p>';

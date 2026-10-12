@@ -22,6 +22,9 @@
   };
   const CADRAN = { cdL: "Conduce", cdW: "Slăbește", cdG: "În urmă", cdI: "Revine" };
   const CULORI = { cdL: "#3fb950", cdW: "#d29922", cdG: "#f85149", cdI: "#58a6ff" };
+  // v100.170: numele sectoarelor în Market Breadth (latest.json, sources.uptrend.sectors) ⇒ ETF-ul din LISTA
+  const NUME_BT = { "Technology": "XLK", "Healthcare": "XLV", "Energy": "XLE", "Communication Services": "XLC", "Industrials": "XLI", "Consumer Defensive": "XLP",
+    "Consumer Cyclical": "XLY", "Basic Materials": "XLB", "Real Estate": "XLRE", "Financial Services": "XLF", "Utilities": "XLU" };
 
   const fin = (x) => typeof x === "number" && isFinite(x);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
@@ -61,17 +64,26 @@
   }
   function regimDin(spread) { return spread > PRAG ? REGIM.on : spread < -PRAG ? REGIM.off : REGIM.neutru; }
 
-  // serii = { SPY: [{t, c}], XLK: [...], ... } (de la /api/sectoare); acum = ms
-  function calculeaza(serii, acum) {
+  // v100.170: câte acțiuni din fiecare sector sunt pe trend, din Market Breadth (el: „pune și market breadth lângă sectoare”) — nivel, nu schimbare
+  function dinLatime(latime) {
+    const l = latime && latime.sources && latime.sources.uptrend && Array.isArray(latime.sources.uptrend.sectors) ? latime.sources.uptrend.sectors : null;
+    if (!l) return null;
+    const m = {}; let data = latime.sources.uptrend.asOf || null;
+    for (const x of l) { const s = x && NUME_BT[x.name]; if (s && fin(x.ratio)) { m[s] = { ratio: x.ratio, dir: x.trend === "up" ? "up" : x.trend === "down" ? "down" : null, n: x.count, total: x.total }; data = data || x.date; } }
+    return Object.keys(m).length ? { m, data } : null;
+  }
+
+  // serii = { SPY: [{t, c}], XLK: [...], ... } (de la /api/sectoare); acum = ms; latime = latest.json din Market Breadth (opțional)
+  function calculeaza(serii, acum, latime) {
     if (!serii || typeof serii !== "object") return null;
     const spy = inchise(serii.SPY, acum);
     if (spy.length < 2) return null;
-    const cSpy = spy.map((x) => x.c), randuri = [], lipsa = [];
+    const cSpy = spy.map((x) => x.c), randuri = [], lipsa = [], bt = dinLatime(latime);
     for (const s of LISTA) {
       const l = inchise(serii[s.s], acum);
       if (l.length < 2) { lipsa.push(s.s); continue; }
       const c = l.map((x) => x.c), f = forta(c, cSpy);
-      randuri.push({ s: s.s, n: s.n, g: s.g, z1: delta(c, 1), s1: delta(c, 5), l1: delta(c, 21), l3: delta(c, 63), x: f ? f.x : null, y: f ? f.y : null, coada: f ? f.coada : [], cadran: cadranDin(f) });
+      randuri.push({ s: s.s, n: s.n, g: s.g, z1: delta(c, 1), s1: delta(c, 5), l1: delta(c, 21), l3: delta(c, 63), x: f ? f.x : null, y: f ? f.y : null, coada: f ? f.coada : [], cadran: cadranDin(f), trend: bt && bt.m[s.s] ? bt.m[s.s] : null });
     }
     randuri.sort((a, b) => (fin(b.s1) ? b.s1 : -1e9) - (fin(a.s1) ? a.s1 : -1e9));
     const medie = (g) => { const v = randuri.filter((r) => r.g === g && fin(r.s1)).map((r) => r.s1); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
@@ -79,15 +91,34 @@
     const partial = randuri.filter((r) => r.g === "ciclic" && fin(r.s1)).length < nG("ciclic") || randuri.filter((r) => r.g === "defensiv" && fin(r.s1)).length < nG("defensiv");
     const regim = cyc !== null && def !== null ? Object.assign({}, regimDin(cyc - def), { ciclice: cyc, defensive: def, spread: cyc - def, partial }) : null;
     let zi = ""; try { zi = new Intl.DateTimeFormat("ro-RO", { weekday: "long", day: "2-digit", month: "2-digit", timeZone: "America/New_York" }).format(new Date(spy[spy.length - 1].t)); } catch (e) { zi = ny(spy[spy.length - 1].t).zi; }
-    return { zi, randuri, lipsa, regim, conduc: randuri.filter((r) => r.cadran && r.cadran.cod === "cdL").map((r) => r.n) };
+    let lat = null;
+    if (bt) {
+      const cuT = LISTA.filter((x) => bt.m[x.s]).map((x) => ({ n: x.n, g: x.g, ratio: bt.m[x.s].ratio }));
+      const med = (g) => { const v = cuT.filter((x) => x.g === g).map((x) => x.ratio); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+      const ord = cuT.slice().sort((a, b) => b.ratio - a.ratio), z = String(bt.data || "");
+      lat = { zi: /^\d{4}-\d{2}-\d{2}/.test(z) ? z.slice(8, 10) + "." + z.slice(5, 7) : z, ciclice: med("ciclic"), defensive: med("defensiv"), sus: ord.slice(0, 2), jos: ord.slice(-1) };
+    }
+    const cond = randuri.filter((r) => r.cadran && r.cadran.cod === "cdL");
+    return { zi, randuri, lipsa, regim, conduc: cond.map((r) => r.n), conducR: cond, latime: lat };
   }
 
   const CE = "Sectoarele US";
+  const pctT = (v) => (fin(v) ? (v * 100).toFixed(1).replace(".", ",") + "%" : "—");
+  // v100.170 (el: „nu prea arată la fel ca Market Breadth”): „conduce” = cadranul pe ~o lună + ultima săptămână ⇒ se spune orizontul,
+  // iar o revenire după o cădere pe 3 luni se numește așa, nu „lider”
+  function conducText(d) {
+    const l = (d.conducR || []).slice(0, 3);
+    return l.length ? " · conduc pe termen scurt: " + l.map((r) => r.n + " (" + pct(r.s1) + " săpt., " + pct(r.l3) + " în 3 luni" + (fin(r.l3) && r.l3 < 0 ? " — revine după cădere" : "") + ")").join(", ") : "";
+  }
+  function latimeText(d) {
+    const b = d.latime; if (!b || !b.sus.length) return "";
+    return " · Market Breadth (" + b.zi + "): pe trend cele mai multe " + b.sus[0].n + " " + pctT(b.sus[0].ratio) + ", cele mai puține " + b.jos[0].n + " " + pctT(b.jos[0].ratio);
+  }
   function textCitire(d) {
     if (!d || !d.regim) return { ce: CE, stare: "atentie", text: "datele sectoarelor nu s-au putut citi (Yahoo sau rețeaua) — se reîncearcă singur" };
     const r = d.regim;
     const text = "rotație " + r.text + " · ciclicele " + pct(r.ciclice) + ", defensivele " + pct(r.defensive) + " pe săptămână" +
-      (d.conduc.length ? " · conduc " + d.conduc.slice(0, 3).join(", ") : "") + (r.partial ? " · parțial: lipsesc " + d.lipsa.join(", ") : "") + " · închiderea de " + d.zi;
+      conducText(d) + latimeText(d) + (r.partial ? " · parțial: lipsesc " + d.lipsa.join(", ") : "") + " · închiderea de " + d.zi;
     return { ce: CE, stare: r.partial ? "info" : r.stare, text };
   }
 
@@ -114,12 +145,15 @@
     const cap = '<div class="tbBlocCap"><b>Rotația sectoarelor US</b>';
     if (!d || !d.regim) return '<div class="tbBloc srBloc">' + cap + '</div><p class="tbSub">Datele sectoarelor nu s-au putut citi acum (Yahoo sau rețeaua). Se reîncearcă singur.</p></div>';
     const r = d.regim, cls = (v) => (fin(v) ? (v >= 0 ? " bun" : " rau") : "");
-    const tab = '<table class="t212Tab srTab"><thead><tr><th>Sector</th><th class="num">1 zi</th><th class="num">1 săpt.</th><th class="num">1 lună</th><th class="num">3 luni</th><th>Față de S&amp;P</th></tr></thead><tbody>' +
+    const tab = '<table class="t212Tab srTab"><thead><tr><th>Sector</th><th class="num">1 zi</th><th class="num">1 săpt.</th><th class="num">1 lună</th><th class="num">3 luni</th><th>Față de S&amp;P</th><th class="num">Pe trend</th></tr></thead><tbody>' +
       d.randuri.map((x) => '<tr><td><b>' + esc(x.n) + '</b> <span class="tbSub">' + esc(x.s) + "</span></td>" + [x.z1, x.s1, x.l1, x.l3].map((v) => '<td class="num' + cls(v) + '">' + pct(v) + "</td>").join("") +
-        "<td>" + (x.cadran ? '<span class="srCad ' + x.cadran.cod + '">' + x.cadran.text + "</span>" : "—") + "</td></tr>").join("") + "</tbody></table>";
+        "<td>" + (x.cadran ? '<span class="srCad ' + x.cadran.cod + '">' + x.cadran.text + "</span>" : "—") + "</td>" +
+        (x.trend ? '<td class="num srBt' + (x.trend.dir === "up" ? " bun" : x.trend.dir === "down" ? " rau" : "") + '" title="' + esc("pe trend: " + (x.trend.n != null ? x.trend.n + " din " + x.trend.total : pctT(x.trend.ratio)) + " · Market Breadth") + '">' + pctT(x.trend.ratio) + (x.trend.dir === "up" ? " ↑" : x.trend.dir === "down" ? " ↓" : "") + "</td>" : '<td class="num srBt">—</td>') + "</tr>").join("") + "</tbody></table>";
+    const b = d.latime, bt = b && fin(b.ciclice) && fin(b.defensive) ? '<p class="tbSub srBtNota">📊 Market Breadth, ' + esc(b.zi) + ": în medie ciclicele au " + pctT(b.ciclice) + " din acțiuni pe trend, defensivele " + pctT(b.defensive) +
+      " · cele mai multe " + esc(b.sus.map((x) => x.n + " " + pctT(x.ratio)).join(", ")) + ", cele mai puține " + esc(b.jos[0].n + " " + pctT(b.jos[0].ratio)) + ". Coloana „Pe trend” arată câte acțiuni din sector sunt pe trend (se schimbă încet), nu cât a urcat sectorul săptămâna asta — de aceea un sector poate „conduce” pe săptămână și să aibă puține acțiuni pe trend.</p>" : "";
     return '<div class="tbBloc srBloc">' + cap + ' <span class="tbSub">· cele 11 sectoare S&amp;P față de S&amp;P 500 · închiderea de ' + esc(d.zi) + "</span></div>" +
       '<p class="luVerdict luS' + (r.partial ? "info" : r.stare) + '"><b>Rotație ' + esc(r.text) + "</b> — ciclicele " + pct(r.ciclice) + " pe săptămână, defensivele " + pct(r.defensive) +
-      (d.conduc.length ? " · conduc " + esc(d.conduc.slice(0, 3).join(", ")) : "") + (r.partial ? " · parțial: lipsesc " + esc(d.lipsa.join(", ")) : "") + "</p>" + grafic(d) + tab +
+      esc(conducText(d)) + (r.partial ? " · parțial: lipsesc " + esc(d.lipsa.join(", ")) : "") + "</p>" + bt + grafic(d) + tab +
       '<p class="tbSub luNota">Context, nu semnal. Cadranul = forța sectorului față de S&amp;P pe ~1 lună (dreapta = mai tare) și cum s-a schimbat în ultima săptămână (sus = câștigă teren); linia = drumul din ultimele 4 săptămâni. Alertă pe Discord doar când rotația se schimbă (ciclice / defensive / neutră). Sursa: Yahoo, închiderile zilnice.</p></div>';
   }
 
@@ -129,7 +163,7 @@
     const r = d.regim;
     return { nivel: r.cod === "off" ? "atentie" : "info", titlu: "🔄 Rotația sectoarelor US s-a schimbat",
       mesaj: "Din „" + REGIM[vechi].text + "” în „" + r.text + "”: ciclicele " + pct(r.ciclice) + ", defensivele " + pct(r.defensive) + " pe săptămână" +
-        (d.conduc.length ? " · conduc " + d.conduc.slice(0, 3).join(", ") : "") + " · închiderea de " + d.zi + ".\nContext pentru acțiuni, nu semnal de intrare." };
+        conducText(d) + " · închiderea de " + d.zi + ".\nContext pentru acțiuni, nu semnal de intrare." };
   }
 
   global.Sectoare = { LISTA, RRG_LB, RRG_MOM, PRAG, inchise, calculeaza, regimDin, textCitire, htmlBloc, mesajSchimbare };

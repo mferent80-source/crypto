@@ -76,7 +76,7 @@ await test("un sector lipsă (Yahoo n-a dat) ⇒ rândul lipsește, regimul e �
 await test("textCitire: rândul din „Ce spune piața acum” — regimul + cine conduce; fără date ⇒ spus, nu tăcut", () => {
   const d = SC.calculeaza(serii(), INCHIS), r = SC.textCitire(d);
   assert.equal(r.ce, "Sectoarele US"); assert.equal(r.stare, "atentie");
-  assert.match(r.text, /^rotație spre defensive \(risk-off\) · ciclicele \+0,8%, defensivele \+3,0% pe săptămână · conduc Imobiliare, /);
+  assert.match(r.text, /^rotație spre defensive \(risk-off\) · ciclicele \+0,8%, defensivele \+3,0% pe săptămână · conduc pe termen scurt: Imobiliare \(/);   // v100.170: cu orizontul
   assert.match(r.text, / · închiderea de luni, 07\.09$/);
   assert.equal(SC.textCitire(null).stare, "atentie"); assert.match(SC.textCitire(null).text, /nu s-au putut citi/);
   assert.match(SC.textCitire(SC.calculeaza(serii(["XLE"]), INCHIS)).text, /parțial/);
@@ -89,6 +89,48 @@ await test("htmlBloc: verdictul, graficul de rotație (11 puncte, 4 cadrane), ta
   assert.match(h, /Context, nu semnal/); assert.ok(!/undefined|NaN/.test(h));
   assert.match(SC.htmlBloc(null), /nu s-au putut citi/);
 });
+// ── v100.170 (12.10, el: „nu prea arată la fel ca Market Breadth”, apoi „da repară textul … și pune și market breadth lângă
+// sectoare să fie de comparație”): „conduc” spune ORIZONTUL (săptămâna + 3 luni, „revine după cădere” când 3 luni e pe minus)
+// și lângă fiecare sector stă procentul de acțiuni pe trend din Market Breadth (latest.json, sources.uptrend.sectors) ──
+const NUME_BT = { XLK: "Technology", XLV: "Healthcare", XLE: "Energy", XLC: "Communication Services", XLI: "Industrials", XLP: "Consumer Defensive",
+  XLY: "Consumer Cyclical", XLB: "Basic Materials", XLRE: "Real Estate", XLF: "Financial Services", XLU: "Utilities" };
+const RATIO = { XLK: 0.448, XLV: 0.228, XLE: 0.222, XLC: 0.221, XLI: 0.167, XLP: 0.154, XLY: 0.152, XLB: 0.114, XLRE: 0.098, XLF: 0.08, XLU: 0.013 };
+const latime = (fara) => ({ sources: { uptrend: { asOf: "2026-09-04", sectors: Object.keys(NUME_BT).filter((s) => !(fara || []).includes(s)).map((s) => ({ name: NUME_BT[s], date: "2026-09-04", count: Math.round(RATIO[s] * 100), total: 100, ratio: RATIO[s], trend: RATIO[s] > 0.1 ? "up" : "down" })) } } });
+const scade3 = (i) => (i < L - 63 ? 100 : i <= L - 5 ? 100 - (12 * (i - (L - 63))) / 58 : 88 + (4 * (i - (L - 5))) / 5);   // −12 % în 3 luni, apoi +4,5 % pe săptămână
+await test("v100.170 „conduc” cu orizontul: (+săpt., 3 luni) lângă fiecare; 3 luni pe minus ⇒ „revine după cădere”", () => {
+  const s = serii(); s.XLU = serie(scade3);
+  const d = SC.calculeaza(s, INCHIS), r = SC.textCitire(d).text, u = d.randuri.find((x) => x.s === "XLU");
+  assert.ok(u.l3 < 0 && u.cadran.cod === "cdL", "XLU: 3 luni pe minus, dar cadranul Conduce");
+  assert.match(r, / · conduc pe termen scurt: /);
+  assert.match(r, /Utilități \(\+[0-9,]+% săpt\., −[0-9,]+% în 3 luni — revine după cădere\)/);
+  assert.ok(!/ · conduc Imobiliare/.test(r), "formularea veche, fără orizont, a dispărut");
+  assert.match(SC.htmlBloc(d), /conduc pe termen scurt: Imobiliare \(/);
+});
+await test("v100.170 Market Breadth lângă sectoare: % acțiuni pe trend pe fiecare rând + media ciclice / defensive + cele mai multe / puține", () => {
+  const d = SC.calculeaza(serii(), INCHIS, latime());
+  assert.ok(Math.abs(d.randuri.find((x) => x.s === "XLU").trend.ratio - 0.013) < 1e-9); assert.equal(d.randuri.find((x) => x.s === "XLK").trend.dir, "up");
+  assert.equal(d.latime.zi, "04.09"); assert.equal(d.latime.sus[0].n, "Tehnologie"); assert.equal(d.latime.jos[0].n, "Utilități");
+  const cyc = (0.448 + 0.152 + 0.221 + 0.08 + 0.167 + 0.114 + 0.222) / 7, def = (0.228 + 0.154 + 0.013) / 3;
+  assert.ok(Math.abs(d.latime.ciclice - cyc) < 1e-9 && Math.abs(d.latime.defensive - def) < 1e-9, "XLRE în afara mediilor, ca la regim");
+  const h = SC.htmlBloc(d);
+  assert.match(h, /<th class="num">Pe trend<\/th>/); assert.match(h, /<td class="num srBt rau" title="pe trend: 1 din 100 · Market Breadth">1,3% ↓<\/td>/); assert.match(h, /<td class="num srBt bun" title="pe trend: 45 din 100 · Market Breadth">44,8% ↑<\/td>/);
+  assert.match(h, /Market Breadth, 04\.09: în medie ciclicele au 20,1% din acțiuni pe trend, defensivele 13,2%/);
+  assert.match(h, /câte acțiuni din sector sunt pe trend \(se schimbă încet\), nu cât a urcat sectorul săptămâna asta/);
+  assert.match(SC.textCitire(d).text, / · Market Breadth \(04\.09\): pe trend cele mai multe Tehnologie 44,8%, cele mai puține Utilități 1,3%/);
+  assert.ok(!/undefined|NaN/.test(h));
+});
+await test("v100.170 fără Market Breadth (sau sector lipsă) ⇒ coloana arată „—”, rândul de comparație lipsește, nimic stricat", () => {
+  const h0 = SC.htmlBloc(SC.calculeaza(serii(), INCHIS)); assert.ok(!/Market Breadth,/.test(h0)); assert.match(h0, /<td class="num srBt">—<\/td>/);
+  const d = SC.calculeaza(serii(), INCHIS, latime(["XLU"])); assert.equal(d.randuri.find((x) => x.s === "XLU").trend, null);
+  assert.equal(SC.calculeaza(serii(), INCHIS, { sources: {} }).latime, null);
+});
+await test("v100.170 app.js dă blocului și rândului din citire și Market Breadth (latimeUsStare.j)", () => {
+  const a = citeste("public", "app.js");
+  assert.match(a, /Sectoare\.calculeaza\(sectoareStare\.j\.serii,Date\.now\(\),latimeUsStare\.j\)/);
+  assert.match(a, /if\(latimeUsStare\.j&&sectoareStare\.la&&typeof sectoareDeseneaza==="function"\)sectoareDeseneaza\(\)\}/, "sosirea Market Breadth redesenează sectoarele");
+  assert.match(a, /if\(latimeUsStare\.inLucru\)\{if\(typeof dupa==="function"\)latimeUsStare\.inLucru\.then\(dupa\);return latimeUsStare\.inLucru\}/, "o cerere deja pornită își cheamă și ea „dupa”");
+});
+
 await test("mesajSchimbare: alerta doar când regimul se SCHIMBĂ (prima citire doar se ține minte; parțial ⇒ nimic)", () => {
   const off = SC.calculeaza(serii(), INCHIS), m = SC.mesajSchimbare("on", off);
   assert.equal(m.titlu, "🔄 Rotația sectoarelor US s-a schimbat"); assert.match(m.mesaj, /^Din „spre ciclice \(risk-on\)” în „spre defensive \(risk-off\)”/); assert.equal(m.nivel, "atentie");
