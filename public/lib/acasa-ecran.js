@@ -268,6 +268,8 @@ function acasaDeseneaza() {
       + macroRand("Dolar / leu", p.usdron, "#9FB3C4", function (v) { return acNr(v, 4); }, "pentru T212")
       + '<p class="acEt">Dobânzi și dolar în creștere apasă de obicei și pe acțiuni, și pe crypto; aurul urcă când lumea fuge de risc.</p>'
       : '<p class="acMut">Aduc datele…</p>');
+  // v100.168 (12.10, macro-dashboard mutat aici — el: „Alerta + scorul de regim macro”): scorul de regim din aceleași date (piata + btc1d)
+  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now())) : "";
   // v95: sectoarele Nasdaq 100 (din rezumatul zilnic al colectorului)
   var sec = ndxL && d.ndx ? Acasa.sectoare(d.ndx.actiuni) : [], smax = Math.max.apply(null, sec.map(function (x) { return Math.abs(x.ch5 || 0); }).concat([1]));
   $("acSectoare").innerHTML = '<div class="acCap"><h4>Sectoarele Nasdaq 100</h4><span class="acSub">pe 5 zile · azi</span></div>'

@@ -148,6 +148,32 @@ async function latimeUs(d, acum) {
 }
 // v100.167 (12.10, pagina sector-rotation mutata in Radar - el: „Doar când se schimbă regimul”): dupa inchiderea bursei, o data pe zi,
 // rotatia sectoarelor (lib/sectoare.js pe /api/sectoare); alerta DOAR la schimbarea regimului, pe date complete. Prima citire se tine minte.
+// v100.168 (12.10, macro-dashboard mutat in Radar - el: „Alerta + scorul de regim macro”): (1) cu ~30 de minute inainte de un eveniment
+// mare din SUA (calendarul faireconomy), o singura alerta pe eveniment; (2) la 30 de minute, regimul macro (lib/macro.js) cu histerezisul
+// paginii vechi: prima citire se tine minte, alerta doar la schimbarea REALA, „partial” nu schimba nimic.
+async function evenimenteMari(d, st, acum) {
+  if (!d.Macro || acum - (st.la_evenimente || 0) < 5 * 60000) return;
+  st.la_evenimente = acum;
+  const c = await incearca(d, "evenimente", () => d.cere("/api/stiri?action=calendar"));
+  const ev = c ? d.Macro.evenimenteCurand(c.evenimente, acum, 35) : [];
+  st.evAnuntate = (st.evAnuntate || []).filter((k) => Number(k.split("|")[0]) > acum - 86400000);
+  for (const e of ev) {
+    const k = e.t + "|" + e.titlu; if (st.evAnuntate.includes(k)) continue;
+    if (await d.trimiteAlerta(d.Macro.mesajEveniment(e, acum), null, "eveniment-mare")) st.evAnuntate.push(k);
+  }
+}
+async function regimMacro(d, st, acum) {
+  if (!d.Macro || acum - (st.la_macro || 0) < 30 * 60000) return;
+  st.la_macro = acum;
+  const p = await incearca(d, "macro piata", () => d.cere("/api/stiri?action=piata"));
+  if (!p) return;
+  const k = await incearca(d, "macro btc", () => d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=60"));
+  const r = d.Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: k && k.data && k.data.klines, fg: p.fg }, acum);
+  if (!r || r.partial) return;
+  const vechi = st.macroRegim || null, h = d.Macro.histerezis(vechi, r);
+  if (h.schimbat) { const m = d.Macro.mesajRegim(vechi.cod, r); if (m && !(await d.trimiteAlerta(m, null, "regim-macro"))) { st.la_macro = 0; return; } }
+  st.macroRegim = { cod: h.cod, scor: h.scor };
+}
 async function sectoareRegim(d, st, acum, zi) {
   if (!d.Sectoare || st.sectZi === zi) return;
   const r = await incearca(d, "sectoare", () => d.cere("/api/sectoare"));
@@ -201,6 +227,8 @@ export async function turaPiata(d, st, acum) {
     await incearca(d, "bursa", () => bursaLaZi(d, st, acum, bu.zi));
   }
   if (bu.dupaInchidere) await incearca(d, "sectoare", () => sectoareRegim(d, st, acum, bu.zi));
+  await incearca(d, "evenimente", () => evenimenteMari(d, st, acum));
+  await incearca(d, "regim macro", () => regimMacro(d, st, acum));
   await incearca(d, "poza", () => poza(d, st, acum));
   if (acum - la("soc") >= ORA) { facut("soc"); await incearca(d, "socoteala", () => socoteala(d, st, acum)); }
   await incearca(d, "raport saptamana", () => raportSaptamana(d, st, acum));

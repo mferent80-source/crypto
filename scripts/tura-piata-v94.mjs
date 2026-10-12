@@ -7,7 +7,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { turaPiata } from "./lib/tura-piata.mjs";
 
-for (const f of ["grid-calcul.js", "grid-clasament.js", "directie.js", "alerte.js", "acasa.js", "latime.js", "latime-us.js", "sectoare.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
+for (const f of ["grid-calcul.js", "grid-clasament.js", "directie.js", "alerte.js", "acasa.js", "latime.js", "latime-us.js", "sectoare.js", "macro.js"]) vm.runInThisContext(fs.readFileSync(new URL("../public/lib/" + f, import.meta.url), "utf8"));
 let teste = 0, picate = 0;
 async function test(nume, fn) {
   teste++;
@@ -174,6 +174,36 @@ await test("v100.167 fără Sectoare în colector sau ruta tace ⇒ tura merge m
   w.pune(null); await turaPiata(w.d, st, DUPA(28));
   assert.equal(w.alerte.filter((x) => /Rotația/.test(x.titlu || "")).length, 0); assert.equal(st.sectRegim, undefined);
   delete w.d.Sectoare; w.pune(sectSerii(29, 3, 1)); await turaPiata(w.d, st, DUPA(29)); assert.equal(st.sectRegim, undefined);
+});
+// v100.168 (12.10, macro-dashboard mutat în Radar — el: „Alerta + scorul de regim macro”, „e ok”): (1) cu ~30 de minute înainte de un
+// eveniment mare din SUA, o singură alertă pe eveniment; (2) la 30 de minute, regimul macro cu histerezis: prima citire se ține minte,
+// alertă doar la schimbarea REALĂ, „parțial” nu schimbă nimic.
+function lumeMacro() {
+  const w = lume(), cere0 = w.d.cere; let ev = [], piata = null;
+  w.d.cere = async (u) => (u === "/api/stiri?action=calendar" ? { evenimente: ev } : u === "/api/stiri?action=piata" && piata ? piata : /interval=1D&limit=60/.test(u) ? { data: { klines: [] } } : cere0(u));
+  w.d.Macro = globalThis.Macro;
+  return Object.assign(w, { ev: (l) => { ev = l; }, piata: (x) => { piata = x; } });
+}
+const evMare = (t, titlu) => ({ title: titlu || "CPI m/m", country: "USD", impact: "High", date: new Date(t).toISOString(), forecast: "0.3%", previous: "0.4%" });
+await test("v100.168 evenimentele mari: ~30 min înainte ⇒ O alertă pe eveniment (nu la fiecare tură); departe / trecut ⇒ nimic", async () => {
+  const w = lumeMacro(), st = {}, ale = () => w.alerte.filter((x) => /Eveniment mare/.test(x.titlu || ""));
+  w.ev([evMare(SAMBATA + 30 * MIN), evMare(SAMBATA + 3 * ORA, "FOMC Statement"), evMare(SAMBATA - 10 * MIN, "NFP")]);
+  await turaPiata(w.d, st, SAMBATA);
+  assert.equal(ale().length, 1); assert.match(ale()[0].mesaj, /^În 30 de minute: CPI m\/m/);
+  await turaPiata(w.d, st, SAMBATA + 6 * MIN); assert.equal(ale().length, 1, "o singură dată pe eveniment");
+  await turaPiata(w.d, st, SAMBATA + 3 * ORA - 30 * MIN); assert.equal(ale().length, 2); assert.match(ale()[1].titlu, /FOMC Statement/);
+});
+const piataMacro = (vix) => {
+  const N = 60, T0 = SAMBATA - N * 86400000, zl = (f) => Array.from({ length: N }, (_, i) => ({ time: T0 + i * 86400000 + 48600000, close: f(i) }));
+  return { vix: zl(() => vix), tnx: zl(() => 4.5), dxy: zl(() => 100), spy: zl((i) => 100 + i), qqq: zl((i) => 100 + i), fg: { valoare: 50 } };
+};
+await test("v100.168 regimul macro: prima citire doar se ține minte; mișcare mică la graniță ⇒ ținut; schimbare reală ⇒ O alertă", async () => {
+  const w = lumeMacro(), st = {}, reg = () => w.alerte.filter((x) => /Regimul macro/.test(x.titlu || ""));
+  w.piata(piataMacro(20)); await turaPiata(w.d, st, SAMBATA);   // VIX 20 (−1) + dobânda stabilă (+1) + dolar plat (0) + frica 50 (0) = 0 ⇒ neutru
+  assert.deepEqual(st.macroRegim, { cod: "neutru", scor: 0 }); assert.equal(reg().length, 0);
+  w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 31 * MIN);   // VIX 17 (+2) ⇒ 3, înclinat: salt de 3 ⇒ schimbare reală
+  assert.equal(reg().length, 1); assert.match(reg()[0].mesaj, /^Din „neutru” în „înclinat spre risc” \(scor \+3\)/); assert.equal(st.macroRegim.cod, "inclinat");
+  await turaPiata(w.d, st, SAMBATA + 40 * MIN); assert.equal(reg().length, 1, "la 30 de minute, nu la fiecare tură");
 });
 await test("v95 socoteala: alerta de miscare se tine minte cu pretul; dupa 24 h i se pune pretul de atunci si se trimite socoteala", async () => {
   const w = lume({ vvvScade: true }), st = {};

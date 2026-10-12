@@ -6725,7 +6725,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var vB=vP&&!vP.vechi?Busola.randDirectie(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null,vM=tbMcRand(b);
   var voci=typeof Busola!=="undefined"?Busola.concluzie({bot:b.directie,grafic:v4H?v4H.dir:null,busola:vB?vB.semn:null,mc:vM?vM.stare:null,mcAtins:!!(vM&&/planul atins/i.test(String(vM.text||"")))}):null;
   c.randuri.forEach(function(x){
-    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.sectoare)out.push(rd(ex.sectoare));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
+    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.sectoare)out.push(rd(ex.sectoare));if(ex.macro)out.push(rd(ex.macro));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
     if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
     out.push(rd(x));
     if(x.ce==="Direcția"&&ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}});   /* revizia: fără semafor, Indicatorii stau după Direcția */
@@ -6817,19 +6817,31 @@ function sectoareDeseneaza(){
   var el=$("sectoareBloc");if(!el||typeof Sectoare==="undefined")return;
   el.innerHTML=sectoareStare.la?Sectoare.htmlBloc(sectoareDate()):'<p class="tbSub">Aduc rotația sectoarelor US…</p>';
   sectoareAduce(sectoareDeseneaza)}
+/* v100.168 (12.10, macro-dashboard mutat aici): regimul macro pentru „Ce spune piața acum” — aceleași rute ca Dashboard-ul
+   (/api/stiri?action=piata + BTC zilnic de la Pionex), o dată la 30 de minute; calculul în lib/macro.js */
+var macroStare={la:0,p:null,btc:null,inLucru:null};
+function macroAduce(dupa){
+  if(typeof Macro==="undefined")return null;
+  if(Date.now()-macroStare.la<30*60000||macroStare.inLucru)return macroStare.inLucru;
+  macroStare.inLucru=Promise.all([getJSON("/api/stiri?action=piata").catch(function(){return null}),getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=60").catch(function(){return null})])
+    .then(function(r){if(r[0])macroStare.p=r[0];if(r[1]&&r[1].data&&r[1].data.klines)macroStare.btc=r[1].data.klines})
+    .then(function(){macroStare.la=Date.now();macroStare.inLucru=null;if(typeof dupa==="function")dupa()});
+  return macroStare.inLucru}
+function macroCitire(){var p=macroStare.p;return p?Macro.textCitire(Macro.scor({vix:p.vix,tnx:p.tnx,dxy:p.dxy,spy:p.spy,btc:macroStare.btc,fg:p.fg},Date.now())):Macro.textCitire(null)}
 function latimeUsDeschide(){if(typeof setAssetClass==="function")setAssetClass("STOCKS");navTo("stocks",true)}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}
 // v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
 // când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
 function tbCitireExtra(b,o){
-  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeUs:null,sectoare:null},d=tbStare.directie;
+  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeUs:null,sectoare:null,macro:null},d=tbStare.directie;
   /* v100.150 (I-583): lățimea pieței pe 150 perp-uri, din KV (colectorul la 15 min) - Latime.textCitire dă textul, starea și vechimea; „pânda ›” duce în Sugestii */
   if(typeof tbLatimeDinKv==="function")tbLatimeDinKv();out.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"?Latime.textCitire(tbLatimeKv.d,b,Date.now()):null;   /* probele vechi rulează funcția cu stub-uri, fără KV */
   if(out.latime)Object.assign(out.latime,{actiune:out.latime.link?"sugDeschidePanda()":null,linkText:"pânda ›",link:null});
   /* lățimea pieței US (11.10.2026): rândul apare după prima citire a lui latest.json; sosirea redesenează citirea o dată */
   if(typeof latimeUsAduce==="function"&&typeof LatimeUS!=="undefined"){latimeUsAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.latimeUs=latimeUsStare.la?LatimeUS.textCitire(LatimeUS.normalizeaza(latimeUsStare.j,Date.now()),Date.now()):null}
-  if(typeof sectoareAduce==="function"&&typeof Sectoare!=="undefined"){sectoareAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.sectoare=sectoareStare.la?Object.assign(Sectoare.textCitire(sectoareDate()),{actiune:"latimeUsDeschide()",linkText:"sectoarele ›"}):null}   /* v100.167 */   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
+  if(typeof sectoareAduce==="function"&&typeof Sectoare!=="undefined"){sectoareAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.sectoare=sectoareStare.la?Object.assign(Sectoare.textCitire(sectoareDate()),{actiune:"latimeUsDeschide()",linkText:"sectoarele ›"}):null}   /* v100.167 */
+  if(typeof macroAduce==="function"&&typeof Macro!=="undefined"){macroAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.macro=macroStare.la?Object.assign(macroCitire(),{actiune:"navTo('dash',true)",linkText:"Dashboard ›"}):null}   /* v100.168 */   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){
     var tf=tbTf(),r=l.filter(function(x){return x.tf===tf&&x.q})[0]||l.filter(function(x){return x.tf==="15M"&&x.q})[0];

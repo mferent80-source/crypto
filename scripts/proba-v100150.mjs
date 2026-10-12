@@ -196,7 +196,7 @@ await test("(C) tbCitireExtra dă out.latime din Latime.textCitire(tbLatimeKv.d,
   assert.match(f, /if\(typeof tbLatimeDinKv==="function"\)tbLatimeDinKv\(\);/, "probele vechi (v100.138) rulează funcția cu stub-uri, fără tbLatimeDinKv");
 });
 await test("(C) rândul lățimii intră imediat după „Trendul pe TF-uri”, înaintea Indicatorilor", () => {
-  const f = functie(APP, "tbDeseneazaCitire"); assert.match(f, /out\.push\(bloc\);if\(ex\.latime\)out\.push\(rd\(ex\.latime\)\);(if\(ex\.latimeUs\)out\.push\(rd\(ex\.latimeUs\)\);)?(if\(ex\.sectoare\)out\.push\(rd\(ex\.sectoare\)\);)?if\(ex\.indicatori&&!ind\)/);
+  const f = functie(APP, "tbDeseneazaCitire"); assert.match(f, /out\.push\(bloc\);if\(ex\.latime\)out\.push\(rd\(ex\.latime\)\);(if\(ex\.latimeUs\)out\.push\(rd\(ex\.latimeUs\)\);)?(if\(ex\.sectoare\)out\.push\(rd\(ex\.sectoare\)\);)?(if\(ex\.macro\)out\.push\(rd\(ex\.macro\)\);)?if\(ex\.indicatori&&!ind\)/);
 });
 await test("(C, revizia 4) rd(): „pânda ›” e un BUTON cu acțiune (nu <a href=\"#\">), care deschide Sugestii cu încărcare și blocul desfăcut; clasa vechi", () => {
   const f = functie(APP, "tbDeseneazaCitire");
