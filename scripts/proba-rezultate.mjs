@@ -153,6 +153,45 @@ await test("(B) istoric: reacția = închiderea de după vs cea de dinainte (amc
   ]);
   assert.ok(Math.abs(r.items[1].surpriza - 10) < 1e-9);
 });
+// v100.165 (12.10, cu cheia LUI): Finnhub gratuit NU dă calendarul în urmă (gol chiar și pe o lună) ⇒ istoricul era gol pentru orice simbol.
+// Datele + EPS vin din Nasdaq (fără cheie, ultimele 4); ora nu o dă nimeni pentru trecut ⇒ dedusă din saltul la deschidere.
+const ZILE_N = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24", "2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30"];
+const INCH_N = [100, 100, 100, 110, 111, 112, 113, 120, 121];
+const DESC_N = [100, 100, 100, 109, 110.5, 111.8, 113, 113.5, 120.5];
+const yahooN = () => raspuns({ chart: { result: [{ timestamp: ZILE_N.map((z) => Date.parse(z + "T20:00:00Z") / 1000), indicators: { quote: [{ open: DESC_N, close: INCH_N }] } }] } });
+const nasdaqN = () => raspuns({ data: { earningsSurpriseTable: { rows: [
+  { fiscalQtrEnd: "Jun 2026", dateReported: "7/28/2026", eps: 0.9, consensusForecast: "1.00", percentageSurprise: "-10" },
+  { fiscalQtrEnd: "Mar 2026", dateReported: "7/22/2026", eps: "2.2", consensusForecast: "2.00", percentageSurprise: "10" },
+] } } });
+await test("(B) istoric: Finnhub gol în urmă ⇒ datele și EPS din Nasdaq, ora DEDUSĂ din saltul la deschidere (salt a doua zi ⇒ după închidere)", async () => {
+  const ist = kv(); ist.m.set("finnhub:cheie", CHEIE); API._golesteCache(); cereri.length = 0;
+  puneFetch((url) => url.includes("finnhub.io") ? raspuns({ earningsCalendar: [] }) : url.includes("api.nasdaq.com") ? nasdaqN() : yahooN());
+  const r = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(ist) })).json();
+  assert.deepEqual(r.items.map((x) => [x.data, x.ora, x.oraDedusa, x.reactie == null ? null : Math.round(x.reactie * 10) / 10, x.reactie5 == null ? null : Math.round(x.reactie5 * 10) / 10]), [
+    ["2026-07-28", "bmo", true, 0.9, null], ["2026-07-22", "amc", true, 10, 20],
+  ]);
+  assert.ok(Math.abs(r.items[1].surpriza - 10) < 1e-9); assert.equal(r.items[1].epsAct, 2.2); assert.equal(r.items[1].epsEst, 2);
+  assert.ok(cereri.some((u) => u.startsWith("https://api.nasdaq.com/api/company/ISRG/earnings-surprise")));
+});
+await test("(B) istoric: ora din OBICEIUL firmei (următoarea raportare confirmată la Finnhub) bate deducția din preț — pe date reale prețul a greșit JPM și NVDA", async () => {
+  const ist = kv(); ist.m.set("finnhub:cheie", CHEIE); API._golesteCache();
+  const azi = new Date().toISOString().slice(0, 10);
+  puneFetch((url) => url.includes("finnhub.io")
+    ? (url.includes("&to=" + azi) ? raspuns({ earningsCalendar: [] }) : raspuns({ earningsCalendar: [{ symbol: "ISRG", date: "2099-01-20", hour: "amc" }, { symbol: "ISRG", date: "2098-10-20", hour: "bmo" }, { symbol: "ISRG", date: "2098-09-01", hour: "" }] }))
+    : url.includes("api.nasdaq.com") ? nasdaqN() : yahooN());
+  const r = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(ist) })).json();
+  assert.deepEqual(r.items.map((x) => [x.data, x.ora, !!x.oraDedusa, x.reactie == null ? null : Math.round(x.reactie * 10) / 10]), [["2026-07-28", "bmo", false, 0.9], ["2026-07-22", "bmo", false, 0]]);
+});
+await test("(B) istoric merge și FĂRĂ cheia Finnhub (Nasdaq + Yahoo nu cer cheie) și nu mai cheamă Finnhub", async () => {
+  API._golesteCache(); cereri.length = 0;
+  puneFetch((url) => url.includes("api.nasdaq.com") ? nasdaqN() : yahooN());
+  const rs = await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(kv()) });
+  assert.equal(rs.status, 200); assert.equal((await rs.json()).items.length, 2); assert.ok(!cereri.some((u) => u.includes("finnhub.io")));
+});
+await test("(A) htmlIstoric: ora dedusă se spune („după preț”), cea știută nu", () => {
+  const h = RZ.htmlIstoric({ s: "ISRG", items: [{ data: "2026-07-22", ora: "amc", oraDedusa: true, reactie: 10, reactie5: 20, surpriza: 10 }, { data: "2026-04-22", ora: "bmo", reactie: 1, reactie5: 2, surpriza: 1 }] });
+  assert.match(h, /după închidere · după preț/); assert.match(h, /înainte de deschidere</);
+});
 await test("(B) istoric: simbol nevalid ⇒ 400", async () => {
   const ist = kv(); ist.m.set("finnhub:cheie", CHEIE);
   assert.equal((await API.onRequestGet({ request: cerere("action=istoric&s=" + encodeURIComponent("<x>")), env: env(ist) })).status, 400);
@@ -193,6 +232,14 @@ await test("CSS: rândul de pe telefon pe două linii (momentul și EPS-ul sub n
   assert.match(css, /@media \(max-width:640px\)\{[^}]*\.rzTab/);
   assert.ok(css.trimEnd().endsWith("}") && css.lastIndexOf(".sugPandaTab thead{display:table-header-group}") > css.lastIndexOf(".rzTab"));
   assert.match(css, /\.pzDemo #stocks\.on>\.rzRandStocks\{order:11\}/);
+});
+
+await test("CSS telefon: istoricul pe două linii (data + momentul, apoi ziua / 5 zile / EPS cu etichete), textul se rupe — poza 12.10 îl arăta celulă cu celulă, tăiat în dreapta", () => {
+  const m = css.lastIndexOf(".rzTab tr.rzDet .rzIstTab tr{display:grid"); assert.ok(m > 0, "regula rândului de istoric");
+  assert.ok(m > css.lastIndexOf(".rzTab tr.rzDet td{display:block"), "vine după regula care desface celulele");
+  assert.match(css, /\.rzIstTab td:nth-child\(3\)::before\{content:"ziua de după "/);
+  assert.match(css, /\.rzIst\{[^}]*white-space:normal/);
+  assert.ok(css.lastIndexOf(".sugPandaTab thead{display:table-header-group}") > m, "regula pândei rămâne ultima");
 });
 
 console.log(`\n${teste - picate}/${teste} probe trec`);
