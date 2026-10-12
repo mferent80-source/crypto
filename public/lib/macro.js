@@ -80,8 +80,15 @@
       mesaj: "Din „" + textTreapta(vechiCod) + "” în „" + r.treapta.text + "” (scor " + scS(r.scor) + "): " + semneScurt(r) + ".\nContext pentru câți bani pui la risc, nu semnal de intrare." };
   }
 
-  function textCitire(r) {
-    const ce = "Regim macro";
+  // v100.172 (revizia Opus): regimul ținut de colector (histerezis + confirmare, cel anunțat pe Discord) ⇒ cardul și rândul nu-l mai contrazic.
+  // Aproape de prag (histerezisul îl ține) ⇒ se arată cel ținut, cu citirea de acum alături; schimbare reală încă neconfirmată ⇒ citirea de acum + nota.
+  function fataDeTinut(r, tinut) {
+    if (!r || r.partial || !tinut || !tinut.cod || !TREPTE.some((x) => x.cod === tinut.cod) || tinut.cod === r.treapta.cod) return null;
+    const h = histerezis({ cod: tinut.cod, scor: fin(tinut.scor) ? tinut.scor : r.scor }, r), t = TREPTE.find((x) => x.cod === tinut.cod);
+    return h.tinut ? { tinut: true, t, scor: h.scor } : { tinut: false, t };
+  }
+  function textCitire(r, tinut) {
+    const ce = "Regim macro", ft = fataDeTinut(r, tinut);
     if (!r) return { ce, stare: "atentie", text: "datele macro nu s-au putut citi (Yahoo / alternative.me sau rețeaua) — se reîncearcă singur" };
     const v = (c) => r.semne.find((x) => x.cod === c), p = [];
     if (v("vix").ok) p.push("VIX " + nr(v("vix").v, 1));
@@ -90,15 +97,20 @@
     if (v("btcSp").ok) p.push("BTC–S&P " + (v("btcSp").v < 0 ? "−" : "") + nr(v("btcSp").v, 2));
     if (v("frica").ok) p.push("frica crypto " + v("frica").valoare);
     if (r.partial) return { ce, stare: "info", text: "date parțiale (" + r.valide + " din 5 semne)" + (p.length ? " · " + p.join(" · ") : "") };
-    return { ce, stare: r.treapta.stare === "rau" ? "atentie" : r.treapta.stare, text: r.treapta.text + " (scor " + scS(r.scor) + ") · " + p.join(" · ") };
+    if (ft && ft.tinut) return { ce, stare: ft.t.stare === "rau" ? "atentie" : ft.t.stare, text: ft.t.text + " (ținut; citirea de acum: " + r.treapta.text + ", scor " + scS(r.scor) + ") · " + p.join(" · ") };
+    return { ce, stare: r.treapta.stare === "rau" ? "atentie" : r.treapta.stare, text: r.treapta.text + " (scor " + scS(r.scor) + ") · " + p.join(" · ") + (ft ? " · Discord: încă „" + ft.t.text + "” până se confirmă" : "") };
   }
 
-  function htmlCard(r) {
+  function htmlCard(r, tinut) {
     const cap = '<div class="acCap"><h4>Regim macro</h4><span class="acSub">5 semne · scor de la −10 la +7</span></div>';
     if (!r) return cap + '<p class="acMut">Aduc datele…</p>';
     const sc = (x) => '<span class="mcSc ' + (!x.ok ? "acMut" : x.scor > 0 ? "good" : x.scor < 0 ? "bad" : "acMut") + '">' + (x.ok ? scS(x.scor) : "—") + "</span>";
-    const poz = Math.max(0, Math.min(100, ((r.scor + 10) / 17) * 100)).toFixed(1);
-    return cap + '<p class="mcVerdict mc' + r.treapta.stare + '"><b>' + esc(r.treapta.text) + "</b> · scor " + scS(r.scor) + (r.partial ? " · doar " + r.valide + " din 5 semne" : "") + "</p>" +
+    const poz = Math.max(0, Math.min(100, ((r.scor + 10) / 17) * 100)).toFixed(1), ft = fataDeTinut(r, tinut);
+    const verdict = ft && ft.tinut
+      ? '<p class="mcVerdict mc' + ft.t.stare + '"><b>' + esc(ft.t.text) + "</b> · ținut (citirea de acum: " + esc(r.treapta.text) + " (scor " + scS(r.scor) + "), prea aproape de prag ca să schimbe regimul)</p>"
+      : '<p class="mcVerdict mc' + r.treapta.stare + '"><b>' + esc(r.treapta.text) + "</b> · scor " + scS(r.scor) + (r.partial ? " · doar " + r.valide + " din 5 semne" : "") + "</p>" +
+        (ft ? '<p class="acEt">Pe Discord e încă „' + esc(ft.t.text) + "”: schimbarea se anunță după ce se confirmă la citirea următoare (cel mult o alertă la 3 ore).</p>" : "");
+    return cap + verdict +
       '<div class="mcBara"><span style="left:' + poz + '%"></span></div><div class="mcAx"><span>stres −10</span><span>neutru</span><span>+7 risk-on</span></div>' +
       r.semne.map((x) => '<div class="acTr mcTr"><b>' + esc(x.ce) + '<span class="acMut acTrSub">' + esc(x.valoare) + '</span></b><span class="mcTxt">' + esc(x.text) + "</span>" + sc(x) + "</div>").join("") +
       '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>';

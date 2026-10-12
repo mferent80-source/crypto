@@ -208,6 +208,15 @@ await test("v100.168 regimul macro: prima citire doar se ține minte; mișcare m
   await turaPiata(w.d, st, SAMBATA + 62 * MIN);
   assert.equal(reg().length, 1); assert.match(reg()[0].mesaj, /^Din „neutru” în „înclinat spre risc” \(scor \+3\)/); assert.equal(st.macroRegim.cod, "inclinat");
 });
+// v100.172: colectorul publică regimul ținut (cel de pe Discord) ca Dashboard-ul să nu-l contrazică — la prima citire și la fiecare schimbare confirmată
+await test("v100.172 regimul ținut se trimite acasă (istoric-bot piata, macro) la prima citire și după schimbarea confirmată, nu la fiecare citire", async () => {
+  const w = lumeMacro(), st = {}, mac = () => w.trimise.filter(([u, c]) => u === "/api/istoric-bot?action=piata" && c && c.macro).map(([, c]) => c.macro.cod);
+  w.piata(piataMacro(20)); await turaPiata(w.d, st, SAMBATA);
+  assert.deepEqual(mac(), ["neutru"]);
+  await turaPiata(w.d, st, SAMBATA + 31 * MIN); assert.deepEqual(mac(), ["neutru"], "același regim: nu se retrimite");
+  w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 62 * MIN); assert.deepEqual(mac(), ["neutru"], "neconfirmat: nu se trimite");
+  await turaPiata(w.d, st, SAMBATA + 93 * MIN); assert.deepEqual(mac(), ["neutru", "inclinat"]);
+});
 // revizia Opus v100.171 (Important): la pragul VIX 18 scorul sare cu 3 (histerezisul de 2 nu-l ține) ⇒ VIX 17,9 ⇄ 18,1 dădea 5 alerte în 6 citiri
 await test("v100.171 VIX care se zbate la 18 (17,9 ⇄ 18,1 la fiecare citire) ⇒ NICIO alertă de regim; o schimbare care ține ⇒ una", async () => {
   const w = lumeMacro(), st = {}, reg = () => w.alerte.filter((x) => /Regimul macro/.test(x.titlu || ""));

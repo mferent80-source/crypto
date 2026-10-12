@@ -9,6 +9,14 @@ const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, header
 const SIMBOLURI = ["SPY", "XLK", "XLY", "XLC", "XLF", "XLI", "XLB", "XLE", "XLRE", "XLV", "XLP", "XLU"];
 const UA = { "user-agent": "Mozilla/5.0" };
 let cache = null;   // { pana, valoare } în memoria serverului de acasă
+// v100.172 (revizia Opus): cache-ul luat în ședință nu se dă după închiderea de la 16:00 New York — alerta colectorului de după
+// închidere judeca altfel un preț de moment din ședință (până la 30 de minute vechi) ca și cum ar fi închiderea
+function ny(t) {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t));
+  const g = (k) => (p.find((x) => x.type === k) || {}).value;
+  return { zi: g("year") + "-" + g("month") + "-" + g("day"), min: Number(g("hour")) * 60 + Number(g("minute")) };
+}
+function treceInchiderea(la, acum) { const a = ny(la), b = ny(acum); return a.zi === b.zi && a.min < 16 * 60 && b.min >= 16 * 60; }
 
 async function serie(s) {
   try {
@@ -24,7 +32,7 @@ async function serie(s) {
 
 export async function onRequestGet({ request, env }) {
   const auth = await requireApiAuth(request, env, "sectoare", 30); if (!auth.ok) return authErrorResponse(auth, H);
-  if (cache && cache.pana > Date.now()) return json(cache.valoare);
+  if (cache && cache.pana > Date.now() && !treceInchiderea(cache.valoare.la, Date.now())) return json(cache.valoare);
   const l = await Promise.all(SIMBOLURI.map(serie)), serii = {};
   SIMBOLURI.forEach((s, i) => { if (l[i]) serii[s] = l[i]; });
   if (!Object.keys(serii).length) return json({ error: "Yahoo nu a dat închiderile sectoarelor acum" }, 502);

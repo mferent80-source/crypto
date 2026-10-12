@@ -103,7 +103,7 @@ export async function onRequestGet({request,env}){
       let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(p.plus>0||p.minus>0))continue;if(!bun||(p.la||0)>(bun.plan.la||0))bun={bot:id,plan:p}}}catch{bun=null}
     return json(bun||{bot:null,plan:null})}
   // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
-  if(action==="piata"){let f=null,l=[],so=null;try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}try{so=JSON.parse(await env.ISTORIC.get("piata:socoteala")||"null")}catch{so=null}return json({funding:f,instantanee:Array.isArray(l)?l:[],socoteala:so})}
+  if(action==="piata"){let f=null,l=[],so=null,mc=null;try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}try{so=JSON.parse(await env.ISTORIC.get("piata:socoteala")||"null")}catch{so=null}try{mc=JSON.parse(await env.ISTORIC.get("piata:macro")||"null")}catch{mc=null}return json({funding:f,instantanee:Array.isArray(l)?l:[],socoteala:so,macro:mc})}
   // v96: pagina Scan - rezumatul zilnic al monedelor si al actiunilor + numele, de la colector
   if(action==="scan"){const ia=async k=>{try{return JSON.parse(await env.ISTORIC.get(k)||"null")}catch{return null}};const urmarite=(await ia("scan:urmarite"))||[];
     if(u.searchParams.get("doar")==="urmarite")return json({urmarite});
@@ -150,6 +150,9 @@ export async function onRequestPost({request,env}){
     // v95: socoteala alertelor (cate miscari neobisnuite au continuat)
     const so=corp&&corp.socoteala;
     if(so&&typeof so==="object")await env.ISTORIC.put("piata:socoteala",JSON.stringify({la:nr(corp.la)||Date.now(),n:nr(so.n),n1:nr(so.n1),continua1:nr(so.continua1),n3:nr(so.n3),continua3:nr(so.continua3),text:txt(so.text,300),textVreme:txt(so.textVreme,300)}));
+    // v100.172: regimul macro ținut de colector (cel anunțat pe Discord) - Dashboard-ul și „Ce spune piața acum” nu-l mai contrazic
+    const mc=corp&&corp.macro;
+    if(mc&&typeof mc==="object"&&["riskon","inclinat","neutru","prudent","riskoff","stres"].includes(mc.cod))await env.ISTORIC.put("piata:macro",JSON.stringify({la:nr(corp.la)||Date.now(),cod:mc.cod,scor:nr(mc.scor)}));
     const z=corp&&corp.instantaneu;
     if(z&&typeof z==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(z.zi))){
       let l=[];try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];

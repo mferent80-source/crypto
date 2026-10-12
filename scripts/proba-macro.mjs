@@ -90,6 +90,39 @@ await test("htmlCard: cardul de pe Dashboard (acCap, verdict, bara −10…+7, 5
   assert.match(h, /class="mcBara"><span style="left:70\.6%"/); assert.match(h, /nu semnal de intrare/); assert.ok(!/undefined|NaN/.test(h));
   assert.match(MC.htmlCard(null), /Aduc datele/);
 });
+// v100.172 (revizia Opus): cardul și rândul nu mai contrazic Discordul — regimul ținut de colector (histerezis + confirmare) e cel afișat
+await test("v100.172 htmlCard / textCitire cu regimul ținut de colector: aproape de prag ⇒ rămâne cel ținut, citirea de acum spusă alături", () => {
+  const r = MC.scor(date(), ACUM);   // înclinat spre risc, scor +2
+  const h = MC.htmlCard(r, { cod: "neutru", scor: 1 });
+  assert.match(h, /<b>neutru<\/b>/); assert.match(h, /citirea de acum: înclinat spre risc \(scor \+2\)/);
+  const t = MC.textCitire(r, { cod: "neutru", scor: 1 });
+  assert.match(t.text, /^neutru \(ținut; citirea de acum: înclinat spre risc, scor \+2\)/); assert.equal(t.stare, "info");
+});
+await test("v100.172 schimbare reală încă neconfirmată de colector ⇒ citirea de acum, cu nota că Discordul o anunță după confirmare", () => {
+  const r = MC.scor(date(), ACUM), h = MC.htmlCard(r, { cod: "prudent", scor: -3 });
+  assert.match(h, /<b>înclinat spre risc<\/b>/); assert.match(h, /Pe Discord e încă „prudent”/);
+  assert.match(MC.textCitire(r, { cod: "prudent", scor: -3 }).text, /^înclinat spre risc \(scor \+2\).*Discord: încă „prudent”/);
+});
+await test("v100.172 același regim ca la colector sau fără el ⇒ cardul și rândul neschimbate", () => {
+  const r = MC.scor(date(), ACUM);
+  assert.equal(MC.htmlCard(r, { cod: "inclinat", scor: 2 }), MC.htmlCard(r)); assert.equal(MC.htmlCard(r, null), MC.htmlCard(r));
+  assert.equal(MC.textCitire(r, { cod: "inclinat", scor: 2 }).text, MC.textCitire(r).text);
+});
+await test("v100.172 ruta piata (istoric-bot): colectorul salvează regimul ținut; GET îl dă; cod necunoscut ignorat", async () => {
+  const TOKEN = "proba-token-1234567890", kv = new Map(), ENV = { APP_API_TOKEN: TOKEN, ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
+  const H = { authorization: "Bearer " + TOKEN, "content-type": "application/json", origin: "https://exemplu.test", "cf-connecting-ip": "10.172.0.1" };
+  const m = await import(`../functions/api/istoric-bot.js?t=${Date.now()}`);
+  const post = (corp) => m.onRequestPost({ request: new Request("https://exemplu.test/api/istoric-bot?action=piata", { method: "POST", headers: H, body: JSON.stringify(corp) }), env: ENV });
+  const get = async () => JSON.parse(await (await m.onRequestGet({ request: new Request("https://exemplu.test/api/istoric-bot?action=piata", { headers: H }), env: ENV })).text());
+  assert.equal((await post({ la: ACUM, macro: { cod: "inclinat", scor: 2 } })).status, 200);
+  assert.deepEqual((await get()).macro, { la: ACUM, cod: "inclinat", scor: 2 });
+  await post({ la: ACUM, macro: { cod: "<b>", scor: 2 } }); assert.equal((await get()).macro.cod, "inclinat", "cod necunoscut ignorat");
+});
+await test("v100.172 Dashboard și „Ce spune piața acum” trimit regimul ținut (piataCol.macro) în card / rând", () => {
+  const ae = citeste("public", "lib", "acasa-ecran.js"), app = citeste("public", "app.js");
+  assert.match(ae, /Macro\.htmlCard\(Macro\.scor\(\{[^}]*\}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro\)/);
+  assert.match(app, /getJSON\("\/api\/istoric-bot\?action=piata"\)/); assert.ok(app.includes("Date.now()),macroStare.tinut)"), "macroCitire fără regimul ținut");
+});
 await test("evenimente: doar SUA, impact mare, în următoarele 35 de minute; mesajul cu prognoza / anteriorul cu virgulă", () => {
   const A = Date.UTC(2026, 9, 14, 12, 0), ev = (min, o) => Object.assign({ title: "CPI m/m", country: "USD", impact: "High", date: new Date(A + min * 60000).toISOString(), forecast: "0.3%", previous: "0.4%" }, o || {});
   const l = MC.evenimenteCurand([ev(30), ev(40), ev(-5), ev(20, { country: "EUR" }), ev(25, { impact: "Medium" })], A);
@@ -107,7 +140,7 @@ await test("index.html: cardul #acRegim imediat după „Dobânzi, dolar, aur”
   assert.match(idx, /<script src="\/lib\/macro\.js"><\/script>/); assert.match(sw, /"\/lib\/macro\.js"/);
 });
 await test("Dashboard: cardul se desenează din datele pe care ecranul le are deja (piata + btc1d), fără cereri noi", () => {
-  assert.match(ae, /\$\("acRegim"\)\.innerHTML = typeof Macro !== "undefined" \? Macro\.htmlCard\(Macro\.scor\(\{ vix: p\.vix, tnx: p\.tnx, dxy: p\.dxy, spy: p\.spy, btc: d\.btc1d, fg: p\.fg \}, Date\.now\(\)\)\) : ""/);
+  assert.match(ae, /\$\("acRegim"\)\.innerHTML = typeof Macro !== "undefined" \? Macro\.htmlCard\(Macro\.scor\(\{ vix: p\.vix, tnx: p\.tnx, dxy: p\.dxy, spy: p\.spy, btc: d\.btc1d, fg: p\.fg \}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro\) : ""/);
 });
 await test("„Ce spune piața acum”: rândul „Regim macro” după „Sectoarele US”", () => {
   assert.match(app, /if\(ex\.sectoare\)out\.push\(rd\(ex\.sectoare\)\);if\(ex\.macro\)out\.push\(rd\(ex\.macro\)\);/);

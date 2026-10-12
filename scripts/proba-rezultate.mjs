@@ -211,6 +211,24 @@ await test("v100.171 istoric: Yahoo nu răspunde ⇒ raportările rămân, reac�
 await test("v100.171 htmlIstoric: data ciudată de la sursă se scrie cu escape", () => {
   assert.ok(!/<img/.test(RZ.htmlIstoric({ s: "X", items: [{ data: "<img src=x onerror=alert(1)>", ora: "bmo", reactie: 1, reactie5: 2 }] })));
 });
+// v100.172 (minorele din revizia Opus): ora necunoscută nu mai e presupusă „înainte de deschidere”; ora luată din obiceiul firmei se marchează
+await test("v100.172 istoric: ora nu se știe și nu se poate deduce (ultima zi cu preț) ⇒ reacția lipsește, nu se presupune „înainte de deschidere”", async () => {
+  API._golesteCache();
+  const nasdaqUltima = () => raspuns({ data: { earningsSurpriseTable: { rows: [{ dateReported: "7/30/2026", eps: 1, consensusForecast: "1.00" }] } } });
+  puneFetch((url) => url.includes("api.nasdaq.com") ? nasdaqUltima() : yahooN());
+  const r = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(kv()) })).json();
+  assert.equal(r.items.length, 1); assert.equal(r.items[0].ora, ""); assert.equal(r.items[0].reactie, null); assert.equal(r.items[0].reactie5, null);
+});
+await test("v100.172 istoric: ora luată din obiceiul firmei e marcată (oraObicei) și pagina spune „după obiceiul firmei”", async () => {
+  const ist = kv(); ist.m.set("finnhub:cheie", CHEIE); API._golesteCache();
+  const azi = new Date().toISOString().slice(0, 10);
+  puneFetch((url) => url.includes("finnhub.io")
+    ? (url.includes("&to=" + azi) ? raspuns({ earningsCalendar: [] }) : raspuns({ earningsCalendar: [{ symbol: "ISRG", date: "2098-10-20", hour: "bmo" }] }))
+    : url.includes("api.nasdaq.com") ? nasdaqN() : yahooN());
+  const r = await (await API.onRequestGet({ request: cerere("action=istoric&s=ISRG"), env: env(ist) })).json();
+  assert.ok(r.items.every((x) => x.oraObicei === true && !x.oraDedusa));
+  assert.match(RZ.htmlIstoric(r), /înainte de deschidere · după obiceiul firmei/);
+});
 await test("(A) htmlIstoric: ora dedusă se spune („după preț”), cea știută nu", () => {
   const h = RZ.htmlIstoric({ s: "ISRG", items: [{ data: "2026-07-22", ora: "amc", oraDedusa: true, reactie: 10, reactie5: 20, surpriza: 10 }, { data: "2026-04-22", ora: "bmo", reactie: 1, reactie5: 2, surpriza: 1 }] });
   assert.match(h, /după închidere · după preț/); assert.match(h, /înainte de deschidere</);

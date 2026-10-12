@@ -747,8 +747,9 @@ function t212ProfilPoarta(p) {
   if (p.prob && p.prob.length) h += '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · ' + (sp && sp.alTau ? "cu stopul tău (" + escapeHtml(t212Usd(sp.stop)) + ") și ținta de mai sus" : "cu stopul și ținta de mai sus") + ', cât de des s-a întâmplat pe acțiunea asta în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>';
   // v100.95 (ideea 4): „un trade ca ăsta” pe SUMA propusă de poartă - exact cea din „Cât cumperi” (t212MarimePoarta, revizia 🟡4: același
   // stop, aceeași condiție); fără sumă (fără cont, fără intrare, poarta pe „nu”) cost null -> t212ReteaHtml ia rezerva (mediana trade-urilor lui)
-  var ms = t212MarimePoarta(p);
-  h += t212ReteaHtml({ acum: Date.now(), pret: baza, stop: sp && sp.stop, tinta: p.niv && p.niv.tinta, ticker: p.ticker }, p.bareZi, p.prob, { ticker: p.ticker, pornit: Date.now(), cost: ms && ms.suma > 0 ? ms.suma : null });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus”; revizia 🔵9: barele ÎNCHISE (bareBursa), 🟡5: costul tipic */
+  // v100.172 (revizia Opus): cu planul LUI scris, „un trade ca ăsta” judecă trade-ul LUI (intrarea, stopul, ținta lui), nu prețurile calculate
+  var ms = t212MarimePoarta(p), plT = t212PlanPoarta(p), cuPlan = !!(plT && !plT.eroare);
+  h += t212ReteaHtml({ acum: Date.now(), pret: cuPlan ? plT.intrare : baza, stop: cuPlan ? plT.stop : sp && sp.stop, tinta: cuPlan && plT.tinta !== null ? plT.tinta : p.niv && p.niv.tinta, ticker: p.ticker }, p.bareZi, p.prob, { ticker: p.ticker, pornit: Date.now(), cost: ms && ms.suma > 0 ? ms.suma : null });   /* v100.94 (L2): 🧠/🌳 + „un trade ca ăsta iese pe plus”; revizia 🔵9: barele ÎNCHISE (bareBursa), 🟡5: costul tipic */
   return h ? '<div class="t212ProfilPoarta">' + h + '</div>' : "";
 }
 // v100.95 (revizia 🟡4): O SINGURĂ sursă pentru suma propusă - „Cât cumperi” și „un trade ca ăsta iese pe plus” judecă același trade:

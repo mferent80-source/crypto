@@ -323,7 +323,9 @@ var ActiuniSemnale = (function () {
     var intrare = ale.intrare ? o.intrare : c.intrare, stop = ale.stop ? o.stop : c.stop, tinta = ale.tinta ? o.tinta : c.tinta, riscPct = ale.risc ? o.riscPct : 1;
     if (!(intrare > 0) || !(stop > 0)) return null;
     var r = { intrare: intrare, stop: stop, tinta: tinta > 0 ? tinta : null, ale: ale, riscPct: riscPct, m: null, rr: null, castig: null, riscReal: null, avert: [], eroare: null };
-    if (stop >= intrare) { r.eroare = "Stopul trebuie să fie sub intrare (doar long)."; return r; }
+    // v100.172 (revizia Opus): fără stop scris de el, stopul e cel CALCULAT ⇒ mesajul spune asta (nu „stopul trebuie să fie sub intrare” când n-a scris niciun stop)
+    var bani = function (x) { return x.toFixed(2).replace(".", ",") + " $"; };
+    if (stop >= intrare) { r.eroare = ale.stop ? "Stopul trebuie să fie sub intrare (doar long)." : "Intrarea ta (" + bani(intrare) + ") e sub stopul calculat (" + bani(stop) + "): scrie-ți și stopul tău."; return r; }
     var fx = o.fx > 0 ? o.fx : 1;
     r.m = marime({ intrare: intrare, stop: stop, cont: o.cont, fx: fx, riscPct: riscPct / 100 });
     if (!r.m) return r;

@@ -84,18 +84,20 @@ async function istoric(env, s) {
   for (const e of nasdaq) pePeData[e.date] = e;
   for (const e of (Array.isArray(cal && cal.earningsCalendar) ? cal.earningsCalendar : [])) if (e && e.date) pePeData[e.date] = Object.assign({}, pePeData[e.date] || {}, e, { epsActual: nr(e.epsActual) !== null ? e.epsActual : (pePeData[e.date] || {}).epsActual, epsEstimate: nr(e.epsEstimate) !== null ? e.epsEstimate : (pePeData[e.date] || {}).epsEstimate });
   const items = Object.values(pePeData).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 8).map((e) => {
-    let r1 = null, r5 = null, ora = String(e.hour || ""), oraDedusa = false;
+    let r1 = null, r5 = null, ora = String(e.hour || ""), oraDedusa = false, oraObicei = false;
     const i = indexZi(e.date);
     if (i >= 0 && zile[i] === e.date) {
-      if (ora !== "amc" && ora !== "bmo" && obicei) ora = obicei;
+      if (ora !== "amc" && ora !== "bmo" && obicei) { ora = obicei; oraObicei = true; }
       if (ora !== "amc" && ora !== "bmo") { const sZi = salt(i), sDupa = salt(i + 1); if (sZi !== null && sDupa !== null) { ora = sDupa > sZi ? "amc" : "bmo"; oraDedusa = true; } }
-      // „amc” = după închidere ⇒ reacția e a ZILEI URMĂTOARE; „bmo” = înainte de deschidere ⇒ chiar a zilei raportării
-      const iDupa = ora === "amc" ? i + 1 : i; r1 = reactie(iDupa, 1); r5 = reactie(iDupa, 5);
+      // „amc” = după închidere ⇒ reacția e a ZILEI URMĂTOARE; „bmo” / „dmh” ⇒ chiar a zilei raportării.
+      // v100.172: ora necunoscută NU se mai presupune „înainte de deschidere” (reacția ar fi putut fi a zilei greșite) ⇒ reacția lipsește
+      if (ora === "amc" || ora === "bmo" || ora === "dmh") { const iDupa = ora === "amc" ? i + 1 : i; r1 = reactie(iDupa, 1); r5 = reactie(iDupa, 5); }
     }
     const ea = nr(e.epsActual), ee = nr(e.epsEstimate);
     const surpriza = ea !== null && ee !== null && ee !== 0 ? ((ea - ee) / Math.abs(ee)) * 100 : null;
     const o = { data: String(e.date), ora, epsEst: ee, epsAct: ea, surpriza, reactie: r1, reactie5: r5 };
     if (oraDedusa) o.oraDedusa = true;
+    if (oraObicei) o.oraObicei = true;
     return o;
   });
   // revizia Opus v100.171: istoricul se ține minte 6 ore DOAR când sursele au răspuns; altfel se spune ce lipsește (nu „n-am găsit raportări”)

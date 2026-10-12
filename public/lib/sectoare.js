@@ -79,10 +79,12 @@
     const spy = inchise(serii.SPY, acum);
     if (spy.length < 2) return null;
     const cSpy = spy.map((x) => x.c), randuri = [], lipsa = [], bt = dinLatime(latime);
+    // v100.172 (revizia Opus): forța față de S&P pe ZILE comune (bara e la 09:30 New York ⇒ ziua UTC e ziua de bursă), nu pe poziție
+    const ziUtc = (t) => new Date(t).toISOString().slice(0, 10), spyZi = new Map(spy.map((x) => [ziUtc(x.t), x.c]));
     for (const s of LISTA) {
       const l = inchise(serii[s.s], acum);
       if (l.length < 2) { lipsa.push(s.s); continue; }
-      const c = l.map((x) => x.c), f = forta(c, cSpy);
+      const c = l.map((x) => x.c), com = l.filter((x) => spyZi.has(ziUtc(x.t))), f = forta(com.map((x) => x.c), com.map((x) => spyZi.get(ziUtc(x.t))));
       randuri.push({ s: s.s, n: s.n, g: s.g, z1: delta(c, 1), s1: delta(c, 5), l1: delta(c, 21), l3: delta(c, 63), x: f ? f.x : null, y: f ? f.y : null, coada: f ? f.coada : [], cadran: cadranDin(f), trend: bt && bt.m[s.s] ? bt.m[s.s] : null });
     }
     randuri.sort((a, b) => (fin(b.s1) ? b.s1 : -1e9) - (fin(a.s1) ? a.s1 : -1e9));

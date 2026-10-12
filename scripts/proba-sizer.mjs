@@ -87,5 +87,26 @@ await test("o singură sursă pentru suma propusă: t212MarimePoarta folosește 
   assert.match(f, /planulMeu|t212PlanPoarta/);
 });
 
+// v100.172 (minorele din revizia Opus pe v100.163–170)
+await test("v100.172 planulMeu: fără stop scris și intrarea lui sub stopul CALCULAT ⇒ mesajul spune asta și cere stopul lui (nu „stopul sub intrare”)", () => {
+  const r = J(AS.planulMeu({ intrare: 90, cont: CONT, fx: FX, calc: CALC }));
+  assert.equal(r.m, null); assert.doesNotMatch(r.eroare, /Stopul trebuie să fie sub intrare/);
+  assert.match(r.eroare, /sub stopul calculat/); assert.match(r.eroare, /scrie/i);
+});
+await test("v100.172 „un trade ca ăsta” judecă trade-ul din planul LUI (intrarea, stopul și ținta lui), nu prețurile calculate", () => {
+  const c2 = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl, TextRo: globalThis.TextRo, localStorage: { getItem: () => null, setItem() {} } };
+  c2.window = c2; c2.globalThis = c2; vm.createContext(c2);
+  vm.runInContext(citeste("public", "lib", "actiuni-semnale.js"), c2);
+  vm.runInContext(citeste("public", "lib", "t212-ecran.js"), c2);
+  let primit = null;
+  c2.t212ReteaHtml = (o) => { primit = o; return ""; }; c2.t212Fx = () => FX; c2.escapeHtml = (s) => String(s);
+  const p = { niv: { nivel: "ok", intrare: { pret: 101 }, stop: 95, tinta: 113, proba: {} }, st: { pret: 102 }, tot: CONT, baza4: 101, stopP: { stop: 95 }, ticker: "X_US_EQ", prof: null, prob: null, bareZi: [],
+    planMeu: { scris: true, intrare: 100, stop: 92, tinta: 130, riscPct: 1 } };
+  c2.t212ProfilPoarta(p);
+  assert.ok(primit, "t212ReteaHtml nechemat"); assert.equal(primit.pret, 100); assert.equal(primit.stop, 92); assert.equal(primit.tinta, 130);
+  primit = null; c2.t212ProfilPoarta(Object.assign({}, p, { planMeu: null }));
+  assert.equal(primit.pret, 101); assert.equal(primit.stop, 95); assert.equal(primit.tinta, 113);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute`);
 if (picate) process.exit(1);

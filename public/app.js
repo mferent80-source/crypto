@@ -6822,15 +6822,15 @@ function sectoareDeseneaza(){
   sectoareAduce(sectoareDeseneaza)}
 /* v100.168 (12.10, macro-dashboard mutat aici): regimul macro pentru „Ce spune piața acum” — aceleași rute ca Dashboard-ul
    (/api/stiri?action=piata + BTC zilnic de la Pionex), o dată la 30 de minute; calculul în lib/macro.js */
-var macroStare={la:0,p:null,btc:null,inLucru:null};
+var macroStare={la:0,p:null,btc:null,tinut:null,inLucru:null};
 function macroAduce(dupa){
   if(typeof Macro==="undefined")return null;
   if(Date.now()-macroStare.la<30*60000||macroStare.inLucru)return macroStare.inLucru;
-  macroStare.inLucru=Promise.all([getJSON("/api/stiri?action=piata").catch(function(){return null}),getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=60").catch(function(){return null})])
-    .then(function(r){if(r[0])macroStare.p=r[0];if(r[1]&&r[1].data&&r[1].data.klines)macroStare.btc=r[1].data.klines})
+  macroStare.inLucru=Promise.all([getJSON("/api/stiri?action=piata").catch(function(){return null}),getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=60").catch(function(){return null}),getJSON("/api/istoric-bot?action=piata").catch(function(){return null})])
+    .then(function(r){if(r[0])macroStare.p=r[0];if(r[1]&&r[1].data&&r[1].data.klines)macroStare.btc=r[1].data.klines;if(r[2])macroStare.tinut=r[2].macro||null})
     .then(function(){macroStare.la=Date.now();macroStare.inLucru=null;if(typeof dupa==="function")dupa()});
   return macroStare.inLucru}
-function macroCitire(){var p=macroStare.p;return p?Macro.textCitire(Macro.scor({vix:p.vix,tnx:p.tnx,dxy:p.dxy,spy:p.spy,btc:macroStare.btc,fg:p.fg},Date.now())):Macro.textCitire(null)}
+function macroCitire(){var p=macroStare.p;return p?Macro.textCitire(Macro.scor({vix:p.vix,tnx:p.tnx,dxy:p.dxy,spy:p.spy,btc:macroStare.btc,fg:p.fg},Date.now()),macroStare.tinut):Macro.textCitire(null)}
 function latimeUsDeschide(){if(typeof setAssetClass==="function")setAssetClass("STOCKS");navTo("stocks",true)}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}

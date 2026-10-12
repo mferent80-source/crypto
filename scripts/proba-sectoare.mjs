@@ -53,6 +53,12 @@ await test("cadranele față de S&P (RRG 21/5): urcă ⇒ Conduce, coboară ⇒ 
   assert.equal(c("XLU"), "Conduce"); assert.equal(c("XLK"), "În urmă"); assert.equal(c("XLB"), "Revine");
   assert.equal(d.randuri.find((r) => r.s === "XLU").coada.length, 4, "drumul pe 4 săptămâni");
 });
+// v100.172 (revizia Opus): forța față de S&P se socotește pe ZILE comune, nu pe poziție — o zi lipsă la un ETF strica toată fereastra
+await test("v100.172 forța față de S&P aliniată pe dată: o zi lipsă la un sector (raport sector/SPY constant) ⇒ tot 0 / 0, nu cifre false", () => {
+  const o = serii(); o.SPY = serie((i) => 100 + i * 0.7 + (i % 3)); o.XLK = o.SPY.map((x) => ({ t: x.t, c: 2 * x.c })); o.XLK.splice(L - 10, 1);
+  const r = SC.calculeaza(o, INCHIS).randuri.find((x) => x.s === "XLK");
+  assert.ok(Math.abs(r.x) < 1e-9 && Math.abs(r.y) < 1e-9, "x=" + r.x + " y=" + r.y);
+});
 await test("regimul: ciclicele (fără XLRE) față de defensive pe o săptămână, prag ±0,6 pp ⇒ spre defensive (risk-off)", () => {
   const d = SC.calculeaza(serii(), INCHIS), xlb = d.randuri.find((r) => r.s === "XLB").s1, cyc = (5 * 1 - 1 + xlb) / 7;
   assert.ok(Math.abs(d.regim.ciclice - cyc) < 1e-9, "XLRE nu intră"); assert.ok(Math.abs(d.regim.defensive - 3) < 1e-9);
@@ -152,6 +158,20 @@ await test("(B) seriile pentru SPY + 11 sectoare (6 luni, zilnic); închiderile 
   assert.deepEqual(r.serii.SPY.map((x) => x.c), [10, 11, 12]); assert.equal(r.serii.SPY[0].t, (1790000000 + 86400) * 1000);
   assert.equal(r.serii.XLE, undefined, "fără închideri ⇒ lipsește"); assert.ok(r.la > 0);
   await API.onRequestGet({ request: cerere(), env }); assert.equal(cereri.length, 12, "din cache");
+});
+// v100.172 (revizia Opus): cache-ul de 30 min nu trece peste închiderea bursei — altfel alerta de după 16:00 judeca un preț din ședință
+await test("v100.172 (B) cache luat în ședință (15:50 New York) NU se mai dă după închidere (16:10): se cer închiderile din nou", async () => {
+  API._golesteCache(); cereri.length = 0;
+  globalThis.fetch = async (u) => { cereri.push(String(u)); const s = decodeURIComponent(String(u).split("/chart/")[1].split("?")[0]); return new Response(JSON.stringify(yahoo(s)), { status: 200 }); };
+  const nowOrig = Date.now;
+  try {
+    Date.now = () => Date.UTC(2026, 8, 8, 19, 50);   // 15:50 New York
+    await API.onRequestGet({ request: cerere(), env }); assert.equal(cereri.length, 12);
+    Date.now = () => Date.UTC(2026, 8, 8, 19, 58); await API.onRequestGet({ request: cerere(), env }); assert.equal(cereri.length, 12, "tot în ședință: din cache");
+    Date.now = () => Date.UTC(2026, 8, 8, 20, 10);   // 16:10 New York, la 20 de minute de la cerere
+    await API.onRequestGet({ request: cerere(), env }); assert.equal(cereri.length, 24, "după închidere: cerere nouă");
+    Date.now = () => Date.UTC(2026, 8, 8, 20, 20); await API.onRequestGet({ request: cerere(), env }); assert.equal(cereri.length, 24, "luat după închidere: din cache");
+  } finally { Date.now = nowOrig; }
 });
 await test("(B) Yahoo cade pe tot ⇒ 502 cu motivul (nu serii goale tăcute)", async () => {
   API._golesteCache(); globalThis.fetch = async () => new Response("x", { status: 500 });
