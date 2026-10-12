@@ -162,7 +162,7 @@ await test("(E) versiunea v100.110 / colector v101.74", () => {
   assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
   assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/);
   assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
-  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(7[4-9]|[89]\d)";/);
+  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(7[4-9]|[89]\d|1\d\d)";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 if (picate) process.exit(1);

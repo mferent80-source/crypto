@@ -102,7 +102,7 @@ await test("(E) versiunile v100.104 / colector v101.73", () => {
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V2.replace(".", "-") + '";'));
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V2.replace(".", "\\.") + "(?!\\d)", "g")) || []).length, 4);
   const pk = citeste("package.json"); assert.equal(JSON.parse(pk).version, V2.slice(1) + ".0"); assert.ok(/npm run test:v100103 && npm run test:v100104( && |")/.test(pk));
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(7[3-9]|[89]\d)";/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(7[3-9]|[89]\d|1\d\d)";/);
 });
 
 console.log(`\n${ok} trec · ${pica} pică`);

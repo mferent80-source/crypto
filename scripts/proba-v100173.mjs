@@ -141,6 +141,45 @@ await test("pagina de risc spune că ~12 obiceiuri testate deodată pot da un �
   assert.match(re, /Se testează ~12 obiceiuri deodată/); assert.match(re, /după comisioane și funding, împărțit la suma pusă cu tot cu marja adăugată/);
 });
 
+// ── v100.174: revizia reparațiilor v100.172–173 ──
+const col2 = citeste("scripts", "colector.mjs");
+await test("v100.174 socoteala: arhiva lipsă ARUNCĂ (catch ⇒ reîncercare în 10 min, socotealaInLucru eliberat), nu `return` care o bloca până la repornire", () => {
+  const f = col2.slice(col2.indexOf("async function turaSocoteala"), col2.indexOf("async function turaSocoteala") + 600);
+  assert.match(f, /if \(!toti\.complet\) throw new Error/); assert.doesNotMatch(f, /if \(!toti\.complet\) \{[^}]*return; \}/);
+});
+await test("v100.174 listă Pionex GOALĂ ⇒ fără „lipsește din Pionex” (doar botul găsit printre cei închiși se anunță)", () => {
+  assert.match(col2, /const listaGoala = !boti\.length;/); assert.match(col2, /if \(!fisa && listaGoala\) continue;/);
+});
+await test("v100.174 arhiva e „completă” doar cu listă reală; cazuri / rețea / profil / arhiva pe ore cer lista completă", () => {
+  assert.match(col2, /Array\.isArray\(a && a\.boti\)\) arhivaOk = true;|if \(Array\.isArray\(a && a\.boti\)\) arhivaOk = true;/);
+  assert.match(col2, /async function botiInchisiCompleti\(\)/);
+  assert.ok((col2.match(/await botiInchisiCompleti\(\)/g) || []).length >= 4, "cel puțin 4 apelanți care țin minte");
+});
+await test("v100.174 grid jurnal: rezultatul se ține minte pe aceleași date (fișa se redesenează des; permutarea costa ~0,2 s pe apel)", () => {
+  const l = []; for (let m = 0; m < 12; m++) for (let j = 0; j < 20; j++) l.push({ botId: "b" + m + "_" + j, activ: false, simbol: "C" + m + "_USDT_PERP", investit: 100, rezultat: (j % 7) - 3 + m * 0.1, fereastra: j % 2 ? "larg" : "ingust" });
+  const a = GJ.bilantFerestre(l), t0 = Date.now(), b = GJ.bilantFerestre(l.slice()), dt = Date.now() - t0;
+  assert.deepEqual(JSON.parse(JSON.stringify(b)), JSON.parse(JSON.stringify(a))); assert.ok(dt < 30, "al doilea apel " + dt + " ms");
+});
+await test("v100.174 service worker: navigarea dă copia doar la ≥500 / fără rețea (fără cursa de 4 s: HTML vechi lângă JS nou); copia se scrie în waitUntil", () => {
+  const sw = citeste("public", "sw.js"), nav = sw.slice(sw.indexOf('if(req.mode==="navigate")'), sw.indexOf("v74.6"));
+  assert.doesNotMatch(nav, /4000/); assert.match(nav, /event\.waitUntil\(/); assert.match(nav, /status>=500/);
+});
+await test("v100.174 stiri piata: lipsește doar VIX ⇒ tot nu se ține minte (macro ar fi rămas „parțial” 30 min)", () => {
+  assert.match(stiri, /if \(!qqq \|\| !spy \|\| !vix\)/);
+});
+await test("v100.174 rândul de sus: Pionex căzut ⇒ „nu știu” chiar dacă are o listă veche de boți", () => {
+  const e = citeste("public", "lib", "t212-ecran.js"); assert.match(e, /: t212\.eroare \|\| contTot\.botiEroare \?/);
+});
+await test("v100.174 rezultate: ora „dmh” (în timpul ședinței) de la Finnhub nu e înlocuită de obicei / deducție", () => {
+  const r = citeste("functions", "api", "rezultate.js"); assert.match(r, /if \(ora !== "amc" && ora !== "bmo" && ora !== "dmh" && obicei\)/);
+});
+await test("v100.174 copia KV: un .tmp rămas de la o zi veche se șterge la curățare", () => {
+  const t = fs.mkdtempSync(path.join(os.tmpdir(), "copie174-")), src = path.join(t, "src"), dst = path.join(t, "dst");
+  fs.mkdirSync(src); fs.writeFileSync(path.join(src, "a"), "x"); fs.mkdirSync(path.join(dst, "kv-2026-10-01.tmp"), { recursive: true });
+  faCopie({ sursa: src, dest: dst, zi: "2026-10-12" }); assert.ok(!fs.existsSync(path.join(dst, "kv-2026-10-01.tmp")));
+  fs.rmSync(t, { recursive: true, force: true });
+});
+
 globalThis.fetch = fetchOrig;
 console.log(`\n${teste - picate}/${teste} probe trecute`);
 if (picate) process.exit(1);

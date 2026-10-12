@@ -148,7 +148,7 @@ await test("(I-572) pazaPas: pasul colectorului trece și prin direcție și BTC
   assert.equal(trimise.length, 4); assert.equal(st._busolaDir.vazut, 2); assert.equal(st._busolaDir.anuntat, ACUM + H4 + 60000); assert.equal(st._busolaBtc.anuntat, ACUM + H4 + 60000);
   assert.equal(st._busolaDir.anuntatSemn, "inclinat-short"); assert.equal(st._busolaBtc.anuntatContra, true);
   assert.equal(typeof MC.busolaDirectie, "function"); assert.equal(typeof MC.busolaBtc, "function");
-  assert.match(COL, /VERSIUNE_COLECTOR = "v101\.9[1-9]"/, "colectorul v101.91+");
+  assert.match(COL, /VERSIUNE_COLECTOR = "v101\.(9[1-9]|1\d\d)"/, "colectorul v101.91+");
 });
 await test("(E) versiunea de la v100.148 în sus", () => {
   assert.match(HTML, /content="v100\.1(4[8-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[8-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[8-9]|[5-9]\d)</);

@@ -120,7 +120,7 @@ function normalizeaza(bot,preturi,harta){
   // v100.173 (auditul Opus, Critic): identitatea de mai sus ține DOAR fără marjă adăugată pe drum. Cu extraMargin / profitExited,
   // marginBalance cuprinde marja pusă, iar usdtInvestment nu ⇒ marja apărea ca profit. Atunci: suma pusă = quoteInvestment + extraMargin − profitExited
   // (dovedită pe boții închiși, JurnalTrade v100.26) și netul = realizat + comisioane + funding (nu depinde de marjă).
-  const cuMarja=(nr(x.extraMargin)||0)>0||(nr(x.profitExited)||0)!==0,pusReal=nr(x.quoteInvestment)!==null?nr(x.quoteInvestment)+(nr(x.extraMargin)||0)-(nr(x.profitExited)||0):null;
+  const cuMarja=(nr(x.extraMargin)||0)>0||(nr(x.profitExited)||0)!==0,pusReal=(nr(x.quoteInvestment)??nr(x.usdtInvestment))!==null?(nr(x.quoteInvestment)??nr(x.usdtInvestment))+(nr(x.extraMargin)||0)-(nr(x.profitExited)||0):null;
   const investit=cuMarja&&pusReal>0?pusReal:nr(x.usdtInvestment)??nr(x.initUsdtInvestment);
   const margine=nr(x.marginBalance);
   const profitRealizatBrut=nr(x.totalRealizedProfit),comisioane=nr(x.totalFee),finantare=nr(x.totalFundingFee);

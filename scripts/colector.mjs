@@ -50,7 +50,7 @@ import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Op
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.99";   // v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.100";   // v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -452,6 +452,8 @@ async function tura() {
   // un bot care mergea si a disparut din lista
   const acumIds = {}; for (const b of boti) if (b && b.id) acumIds[b.id] = true;
   for (const id of Object.keys(m.cunoscuti)) if (acumIds[id]) lipsaConfirmata(m.cunoscuti[id], { prezent: true });
+  // v100.174: lista GOALĂ e de obicei o cădere Pionex (result:true, results:null) ⇒ nu numără ca „lipsă”; un bot închis de-adevăratelea apare printre cei închiși
+  const listaGoala = !boti.length;
   for (const id of Object.keys(m.cunoscuti)) {
     if (!acumIds[id] && m.cunoscuti[id].activ) {
       // v97.7: fisa de inchidere - botul cautat printre cei inchisi (motivul, rezultatul, planul, lectia); negasit -> mesajul vechi
@@ -470,6 +472,7 @@ async function tura() {
         }
       } catch (e) { jurnal("fisa de inchidere", id, e.message); }
       // v100.173 (auditul Opus): negăsit printre cei închiși ⇒ „lipsește din Pionex” abia după 3 ture la rând (listă goală / parțială = nu e închidere)
+      if (!fisa && listaGoala) continue;
       if (!lipsaConfirmata(m.cunoscuti[id], { prezent: false, gasitInchis: !!fisa })) continue;
       const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaMesaj(MesajeColector.lipsaPionex(m.cunoscuti[id].nume));
       if (trimis) m.cunoscuti[id].activ = false;
@@ -734,10 +737,16 @@ async function turaArhivaBoti() {
 // v100.173 (auditul Opus): lista poartă `complet` (arhiva de acasă a venit) — raportul, frâna și socoteala NU judecă doar pe ultimii 10 boți
 async function botiInchisiToti() {
   const out = new Map(); let arhivaOk = false;
-  try { const a = await cere("/api/istoric-bot?action=botiInchisi"); for (const x of (a && Array.isArray(a.boti) ? a.boti : [])) { const id = String(x && (x.strategyId || x.buOrderId) || ""); if (id) out.set(id, x); } arhivaOk = true; } catch (e) { jurnal("arhiva botilor", e.message); }
+  try { const a = await cere("/api/istoric-bot?action=botiInchisi"); for (const x of (a && Array.isArray(a.boti) ? a.boti : [])) { const id = String(x && (x.strategyId || x.buOrderId) || ""); if (id) out.set(id, x); } if (Array.isArray(a && a.boti)) arhivaOk = true; } catch (e) { jurnal("arhiva botilor", e.message); }
   try { const d = await cere("/api/bot-orders?status=finished&limit=100"); for (const y of (d && Array.isArray(d.bots) ? d.bots : [])) { const x = y.brut || y, id = String(x && (x.strategyId || x.buOrderId) || y.id || ""); if (id && !out.has(id)) out.set(id, x); } } catch (e) { jurnal("botii inchisi (Pionex)", e.message); }
   const lista = [...out.values()]; lista.complet = arhivaOk;
   return lista;
+}
+// v100.174 (revizia reparațiilor): pentru turele care ȚIN MINTE ce calculează (cazuri, rețea, profil, arhiva pe ore) — fără arhivă aruncă, tura reîncearcă
+async function botiInchisiCompleti() {
+  const l = await botiInchisiToti();
+  if (!l.complet) throw new Error("arhiva botilor n-a venit (amanat, ca sa nu tin minte calcule pe ultimii 10)");
+  return l;
 }
 // v101.60 (I-515 + I-498, specul colaborării 2 §5): ce trimite Radarul Busolei - fișier LOCAL scris atomic la fiecare tură (Busola îl
 // citește oricând; peste 24 h îl socotește vechi). Închișii (arhiva + prima pagină Pionex) se reîmprospătează la 10 minute; o citire
@@ -1502,7 +1511,7 @@ async function turaSocoteala() {
   socotealaInLucru = true;
   try {
     const toti = await botiInchisiToti();
-    if (!toti.complet) { jurnal("socoteala amanata: arhiva botilor n-a venit"); return; }
+    if (!toti.complet) throw new Error("amanata: arhiva botilor n-a venit");   // v100.174: return lăsa socotealaInLucru pe true până la repornire
     const inchisi = toti.filter((x) => Number(x.closeTime) > Date.now() - 30 * 86400000);
     const act = await cere("/api/bot-orders"), activi = (act && Array.isArray(act.bots) ? act.bots : []).map((b) => String(b.id));
     const loguri = [], peMoneda = []; let judecati = 0;
@@ -1621,7 +1630,7 @@ async function turaProfil() {
   try {
     await turaProfilModul({ GridCalcul, ProfilMoneda, acum: Date.now(), cere, trimite, jurnal, profile: profileMoneda, stare: profilStare,
       pauza: (ms) => new Promise((r) => setTimeout(r, ms)), simboluri: simboluriProfil,
-      trades: async () => JurnalTrade.din(await botiInchisiToti()),
+      trades: async () => JurnalTrade.din(await botiInchisiCompleti()),
       citesteBare: (s) => { try { return JSON.parse(fs.readFileSync(fisOre(s), "utf8")); } catch { return []; } },
       scrieBare: (s, r) => { try { scrieAtomic(fisOre(s), r); } catch (e) { jurnal("bare 1h nescrise", s, e.message); } },
       // v101.28 (pachetul 2b): barele si in KV (ore:<SIMBOL>), compacte, pentru probabilitatile din fisa Grid
@@ -1731,7 +1740,7 @@ async function turaReteaColector() {
     pauza: (ms) => new Promise((r) => setTimeout(r, ms)),
     citesteOre: (s) => citesteJson(reteaFis(s), []).concat(citesteJson(fisOre(s), [])),
     scrieOre: (s, r) => { try { scrieAtomic(reteaFis(s), r); } catch (e) { jurnal("retea: ore nescrise", s, e.message); } },
-    boti: async () => { const h = simbolPeMoneda(); return JurnalTrade.din(await botiInchisiToti()).map((t) => ({ id: t.id, moneda: t.moneda, simbol: h[t.moneda] || null, dir: t.dir, levier: t.levier, jos: t.jos, sus: t.sus, pasNet: t.pasNet, pus: t.pus, investit: t.investit, net: t.net, pornit: t.pornit, inchis: t.inchis })); },   // revizia finală (I6): toți boții (rata ta e pe toți)
+    boti: async () => { const h = simbolPeMoneda(); return JurnalTrade.din(await botiInchisiCompleti()).map((t) => ({ id: t.id, moneda: t.moneda, simbol: h[t.moneda] || null, dir: t.dir, levier: t.levier, jos: t.jos, sus: t.sus, pasNet: t.pasNet, pus: t.pus, investit: t.investit, net: t.net, pornit: t.pornit, inchis: t.inchis })); },   // revizia finală (I6): toți boții (rata ta e pe toți)
     scrieBoti: (l) => scrieAtomic(path.join(RETEA_DIR, "boti.json"), l),
     // v101.64 (L2): barele zilnice ale acțiunilor - universul: pozițiile deschise, ideile de azi (și restul, și revenirile), lista lui, acțiunile tranzacționate în ultimii 2 ani; + perechile închise
     tickereZile: async () => {
@@ -1824,7 +1833,7 @@ async function turaArhivaOre() {
   arhivaOreInLucru = true;
   try {
     const st = citesteJson(ARHIVA_ORE_STARE, {}), harta = simbolPeMoneda();
-    const r = await turaArhivaOreModul({ acum: Date.now(), trades: async () => JurnalTrade.din(await botiInchisiToti()),
+    const r = await turaArhivaOreModul({ acum: Date.now(), trades: async () => JurnalTrade.din(await botiInchisiCompleti()),
       primaBaraAcum: (m) => { if (!harta[m]) return null; const o = citesteJson(fisOre(harta[m]), []), t = Number(o[0] && o[0].time); return Number.isFinite(t) ? t : null; },
       simbolPentru: async (m) => harta[m] || simbolPerp(m), citeste: citesteArhiva,
       scrie: (m, rr) => { try { scrieAtomic(fisArhiva(m), rr); } catch (e) { jurnal("arhiva 1h nescrisa", m, e.message); } },
@@ -1953,7 +1962,7 @@ async function turaCazuri() {
   if (cazuriInLucru || profilStare.cazuriZi === zi || Date.now() - cazuriEsec < 3600000) return;
   cazuriInLucru = true;
   try {
-    const tr = JurnalTrade.din(await botiInchisiToti()).sort((a, b) => (b.pornit || 0) - (a.pornit || 0)).slice(0, 6000), harta = simbolPeMoneda();
+    const tr = JurnalTrade.din(await botiInchisiCompleti()).sort((a, b) => (b.pornit || 0) - (a.pornit || 0)).slice(0, 6000), harta = simbolPeMoneda();
     // v101.69: barele arhivei (de la cel mai vechi bot) + cele de acum, unite (o bară o singură dată)
     const bareDe = (m) => { const ore = harta[m] ? citesteJson(fisOre(harta[m]), []) : [], u = GridCalcul.imbinaRanduri(citesteArhiva(m), ore, 0); return u.length ? GridCalcul.bare(u) : null; };
     const cz = Asemanatoare.cazuri(tr, bareDe);

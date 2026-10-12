@@ -85,7 +85,7 @@ export async function onRequestGet({ request, env }) {
     const istoric = (fgR && Array.isArray(fgR.data) ? fgR.data : []).map((x) => Number(x && x.value)).filter(Number.isFinite).reverse();
     const v = { qqq, spy, vix, tnx, dxy, aur, usdron, fg: Number.isFinite(val) ? { valoare: val, clasa: String(f.value_classification || "").slice(0, 20), istoric } : null };
     // v100.173 (auditul Opus): Yahoo n-a dat nimic din bursă ⇒ nu se ține minte 30 de minute (macro și vremea bursei rămâneau goale) și se spune
-    if (!qqq && !spy && !vix) return json(Object.assign(v, { eroare: "Yahoo n-a dat prețurile bursei acum — se reîncearcă la următoarea cerere" }));
+    if (!qqq || !spy || !vix) return json(Object.assign(v, { eroare: "Yahoo n-a dat prețurile bursei acum — se reîncearcă la următoarea cerere" }));
     inCache("piata3", v, 1800); return json(v);
   }
   return json({ error: "Acțiune necunoscută" }, 400);

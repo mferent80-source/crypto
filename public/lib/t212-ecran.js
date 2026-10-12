@@ -1174,7 +1174,7 @@ function contTotRender() {
   var ati = iesi + lich + iesiS;
   parti.push(ati ? '<span class="bad">⚠️ ' + [iesi ? t212Cate(iesi, "acțiune", "acțiuni") + " de ieșit" : "", iesiS ? t212Cate(iesiS, "acțiune", "acțiuni") + " de ieșit la Salt" : "", lich ? t212Cate(lich, "bot", "boți") + " aproape de lichidare" : ""].filter(Boolean).join(" · ") + '</span>'
     // v100.173 (auditul Opus): cu T212 sau Pionex căzut nu se știe dacă e ceva roșu ⇒ „nu știu”, niciodată bifa verde
-    : t212.eroare || (!boti && contTot.botiEroare) ? '<span class="tbWarn">⚠ nu știu dacă e ceva roșu: ' + (t212.eroare ? "Trading 212" : "Pionex") + ' nu răspunde</span>'
+    : t212.eroare || contTot.botiEroare ? '<span class="tbWarn">⚠ nu știu dacă e ceva roșu: ' + (t212.eroare ? "Trading 212" : "Pionex") + ' nu răspunde</span>'
     : t212.nrIesi == null && (!t212.poz || t212.poz.length) ? '<span class="tbSub">acțiunile: aduc prețurile…</span>' : !boti ? '<span class="tbSub">Pionex: aduc boții…</span>' : '<span class="good">✓ nimic roșu</span>');   // v100.40: fara semafor inca -> nu „nimic roșu”
   document.querySelectorAll("[data-cont-tot]").forEach(function (el) { el.innerHTML = parti.join('<span class="contTotSep">│</span>'); });
   piataAziRender();

@@ -1,12 +1,13 @@
 {
-  "version": "v100.173",
-  "badge": "v100.173 · AUDITUL PE TOT",
+  "version": "v100.174",
+  "badge": "v100.174 · REVIZIA REPARAȚIILOR",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
     "macro168": "din pagina macro-dashboard a premarket_scanner, doar ce lipsea (12.10.2026, el: alerta + scorul de regim macro): lib/macro.js (VIX + dobânda 10 ani + dolarul + legătura BTC–S&P + frica crypto, trepte și histerezis ca în pagina veche), cardul Regim macro pe Dashboard, rândul în citire, colector v101.96: alertă la schimbarea reală a regimului și ~30 min înainte de evenimentele mari din SUA",
+    "revizia174": "revizia reparațiilor v100.172–173: socoteala nu se mai blochează când lipsește arhiva; lista Pionex goală nu mai dă „bot dispărut”; turele care țin minte cer arhiva completă; regimul macro publicat la fiecare citire (ignorat peste 2 ore); grid jurnal ține minte rezultatul; service worker fără cursa de 4 s; minore (VIX lipsă, dmh, „nu știu” cu listă veche, .tmp vechi, investit fără quoteInvestment).",
     "audit173": "auditul Opus pe tot Radarul: profitul botului cu marjă adăugată; cursul $/leu doar din acțiunile SUA și din BNR, fără curs nicio mărime; botul „dispărut” confirmat 3 ture; arhiva boților cerută la raport/frână; refuzurile Pionex, Yahoo și Nasdaq nu se mai țin minte; timeouts T212 și știri; copia KV atomică; riscul pe net și pe suma reală; Scan cu plafon 20%; rândul de sus spune „nu știu” când o sursă tace; service worker-ul nu mai salvează pagini de eroare; „dovedit” fals sub 1% la grid jurnal și becuri.",
     "minore172": "cele 7 minore din revizia Opus: ora raportului necunoscută nu mai e presupusă (reacția lipsește); ora din obiceiul firmei marcată; „un trade ca ăsta” judecă planul tău; mesajul despre stop când n-ai scris stop; forța sectoarelor pe zile comune; cache-ul sectoarelor nu trece peste închiderea bursei; regimul macro de pe Dashboard și din citire = cel ținut de colector (cel de pe Discord).",
     "revizia171": "revizia Opus pe v100.163–170: alerta de regim macro se confirmă la citirea următoare și vine cel mult o dată la 3 ore (VIX 17,9 ⇄ 18,1 dădea o alertă la fiecare citire); calendarul căzut nu se mai ține minte o oră (alerta de eveniment mare se pierdea); istoricul raportărilor se ține minte doar când Nasdaq și Yahoo au răspuns, altfel spune ce lipsește; data din istoric cu escape.",

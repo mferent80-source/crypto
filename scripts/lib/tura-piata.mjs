@@ -171,13 +171,14 @@ async function regimMacro(d, st, acum) {
   const r = d.Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: k && k.data && k.data.klines, fg: p.fg }, acum);
   if (!r || r.partial) return;
   const vechi = st.macroRegim || null, h = d.Macro.histerezis(vechi, r);
-  // v100.172: regimul ținut (cel de pe Discord) se trimite acasă când e nou, ca Dashboard-ul să nu-l contrazică
-  const publica = async () => { if (st.macroPublicat === st.macroRegim.cod) return; await d.trimite("/api/istoric-bot?action=piata", { la: acum, macro: st.macroRegim }); st.macroPublicat = st.macroRegim.cod; };
+  // v100.172 / v100.174: regimul ținut (cel de pe Discord) se trimite acasă la FIECARE citire completă, cu ora și scorul de acum —
+  // pagina face histerezisul față de același scor ca colectorul și știe când colectorul a stat (ignoră peste 2 ore)
+  const publica = () => d.trimite("/api/istoric-bot?action=piata", { la: acum, macro: st.macroRegim });
   if (!h.schimbat) { st.macroRegim = { cod: h.cod, scor: h.scor }; delete st.macroCandidat; await incearca(d, "macro acasa", publica); return; }
   // revizia Opus v100.171: la pragul VIX 18 scorul sare cu 3 și histerezisul (2) nu ține ⇒ VIX 17,9 ⇄ 18,1 dădea o alertă la fiecare citire.
   // Regimul nou trebuie să se CONFIRME la citirea următoare (30 min), iar între două alerte de regim trec cel puțin 3 ore.
-  if (!st.macroCandidat || st.macroCandidat.cod !== h.cod) { st.macroCandidat = { cod: h.cod, la: acum }; return; }
-  if (acum - (st.macroAlertaLa || 0) < 3 * 3600000) return;
+  if (!st.macroCandidat || st.macroCandidat.cod !== h.cod) { st.macroCandidat = { cod: h.cod, la: acum }; await incearca(d, "macro acasa", publica); return; }
+  if (acum - (st.macroAlertaLa || 0) < 3 * 3600000) { await incearca(d, "macro acasa", publica); return; }
   const m = d.Macro.mesajRegim(vechi.cod, r);
   if (m && !(await d.trimiteAlerta(m, null, "regim-macro"))) { st.la_macro = 0; return; }
   st.macroAlertaLa = acum; delete st.macroCandidat;

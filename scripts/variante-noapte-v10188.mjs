@@ -99,7 +99,7 @@ await test("(R2/R5) colectorul: ziua se marchează doar dacă a fost simulat mă
 });
 await test("colectorul: încarcă modulele paginii, tura noaptea (eNoapte), o dată pe zi, v101.88", () => {
   const c = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(8[8-9]|9\d)"/);
+  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(8[8-9]|9\d|1\d\d)"/);
   assert.match(c, /mcsDinPagina\(/); assert.match(c, /monte-simbol-ecran\.js/);
   assert.match(c, /async function turaVarianteNoapte\(\)/); assert.match(c, /turaVarianteNoapteModul\(/);
   const f = c.slice(c.indexOf("async function turaVarianteNoapte()"), c.indexOf("async function turaVarianteNoapte()") + 2600);

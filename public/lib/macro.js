@@ -83,7 +83,9 @@
   // v100.172 (revizia Opus): regimul ținut de colector (histerezis + confirmare, cel anunțat pe Discord) ⇒ cardul și rândul nu-l mai contrazic.
   // Aproape de prag (histerezisul îl ține) ⇒ se arată cel ținut, cu citirea de acum alături; schimbare reală încă neconfirmată ⇒ citirea de acum + nota.
   function fataDeTinut(r, tinut) {
+    // v100.174: regimul ținut mai vechi de 2 ore (colectorul stă) nu mai contează
     if (!r || r.partial || !tinut || !tinut.cod || !TREPTE.some((x) => x.cod === tinut.cod) || tinut.cod === r.treapta.cod) return null;
+    if (fin(tinut.la) && Date.now() - tinut.la > 2 * 3600000) return null;
     const h = histerezis({ cod: tinut.cod, scor: fin(tinut.scor) ? tinut.scor : r.scor }, r), t = TREPTE.find((x) => x.cod === tinut.cod);
     return h.tinut ? { tinut: true, t, scor: h.scor } : { tinut: false, t };
   }

@@ -82,7 +82,7 @@ await test("(4) colectorul: tura arhivei noaptea, între profil și cazuri; cazu
   assert.match(col, /const ORE_ARHIVA_DIR = path\.join\(DATA, "istoric-1h-arhiva"\)/);
   assert.match(col, /GridCalcul\.imbinaRanduri\(citesteArhiva\(m\), ore, 0\)/, "cazurile: arhiva + barele de acum");
   assert.match(col, /if \(!eNoapte\(Date\.now\(\)\)\) return;/);
-  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(69|[7-9]\d)";/);
+  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(69|[7-9]\d|1\d\d)";/);
 });
 
 console.log(`\n${ok} trec · ${pica} pică`);

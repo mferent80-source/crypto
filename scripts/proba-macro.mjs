@@ -123,6 +123,10 @@ await test("v100.172 Dashboard și „Ce spune piața acum” trimit regimul ți
   assert.match(ae, /Macro\.htmlCard\(Macro\.scor\(\{[^}]*\}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro\)/);
   assert.match(app, /getJSON\("\/api\/istoric-bot\?action=piata"\)/); assert.ok(app.includes("Date.now()),macroStare.tinut)"), "macroCitire fără regimul ținut");
 });
+await test("v100.174 regimul ținut mai vechi de 2 ore (colectorul stă) e ignorat: cardul arată citirea de acum", () => {
+  const r = MC.scor(date(), ACUM), vechi = { cod: "neutru", scor: 1, la: Date.now() - 3 * 3600000 }, proaspat = { cod: "neutru", scor: 1, la: Date.now() - 10 * 60000 };
+  assert.equal(MC.htmlCard(r, vechi), MC.htmlCard(r)); assert.match(MC.htmlCard(r, proaspat), /<b>neutru<\/b>/);
+});
 await test("evenimente: doar SUA, impact mare, în următoarele 35 de minute; mesajul cu prognoza / anteriorul cu virgulă", () => {
   const A = Date.UTC(2026, 9, 14, 12, 0), ev = (min, o) => Object.assign({ title: "CPI m/m", country: "USD", impact: "High", date: new Date(A + min * 60000).toISOString(), forecast: "0.3%", previous: "0.4%" }, o || {});
   const l = MC.evenimenteCurand([ev(30), ev(40), ev(-5), ev(20, { country: "EUR" }), ev(25, { impact: "Medium" })], A);

@@ -74,7 +74,7 @@ await test("(5) colectorul dă GraficBot modulului de cazuri (ADX noaptea) și s
   assert.match(col, /new Function\("Probabilitati", "GraficBot", fs\.readFileSync\(path\.join\(RAD, "public", "lib", "asemanatoare\.js"\)/); assert.match(col, /\)\(Probabilitati, GraficBot\);/);
   assert.ok(col.indexOf("const GraficBot = ") < col.indexOf("const Asemanatoare = "), "GraficBot înainte");
   assert.match(col, /"cu ADX:", cz\.filter\(\(c\) => c\.adx != null\)\.length/);
-  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(6[8-9]|[7-9]\d)";/);
+  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(6[8-9]|[7-9]\d|1\d\d)";/);
 });
 await test("(E) versiunile v100.100 (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul cu v100100)", () => {
   const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.1\d\d$/); const V = bi.version; assert.ok(bi.badge.startsWith(V + " · "));

@@ -87,8 +87,8 @@ async function istoric(env, s) {
     let r1 = null, r5 = null, ora = String(e.hour || ""), oraDedusa = false, oraObicei = false;
     const i = indexZi(e.date);
     if (i >= 0 && zile[i] === e.date) {
-      if (ora !== "amc" && ora !== "bmo" && obicei) { ora = obicei; oraObicei = true; }
-      if (ora !== "amc" && ora !== "bmo") { const sZi = salt(i), sDupa = salt(i + 1); if (sZi !== null && sDupa !== null) { ora = sDupa > sZi ? "amc" : "bmo"; oraDedusa = true; } }
+      if (ora !== "amc" && ora !== "bmo" && ora !== "dmh" && obicei) { ora = obicei; oraObicei = true; }
+      if (ora !== "amc" && ora !== "bmo" && ora !== "dmh") { const sZi = salt(i), sDupa = salt(i + 1); if (sZi !== null && sDupa !== null) { ora = sDupa > sZi ? "amc" : "bmo"; oraDedusa = true; } }
       // „amc” = după închidere ⇒ reacția e a ZILEI URMĂTOARE; „bmo” / „dmh” ⇒ chiar a zilei raportării.
       // v100.172: ora necunoscută NU se mai presupune „înainte de deschidere” (reacția ar fi putut fi a zilei greșite) ⇒ reacția lipsește
       if (ora === "amc" || ora === "bmo" || ora === "dmh") { const iDupa = ora === "amc" ? i + 1 : i; r1 = reactie(iDupa, 1); r5 = reactie(iDupa, 5); }

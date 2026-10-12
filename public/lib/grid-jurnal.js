@@ -204,7 +204,15 @@ var GridJurnal = (function () {
     var o = compara(nu, u, 539);
     return { neurmata: o.a, urmata: o.b, dif: o.dif, ic: o.ic, verdict: o.verdict };
   }
+  // v100.174 (revizia): permutarea costă ~0,2 s pe apel, iar fișa Grid se redesenează des ⇒ rezultatul se ține minte pe aceleași date
+  var memCompara = {};
   function compara(gA, gB, seed) {
+    var cheie = seed + "|" + gA.map(function (c) { return c.m + ":" + c.pct; }).join(",") + "|" + gB.map(function (c) { return c.m + ":" + c.pct; }).join(",");
+    if (memCompara[cheie]) return memCompara[cheie];
+    var keys = Object.keys(memCompara); if (keys.length > 20) delete memCompara[keys[0]];
+    return (memCompara[cheie] = comparaCalc(gA, gB, seed));
+  }
+  function comparaCalc(gA, gB, seed) {
     var g = { ingust: gA, larg: gB };
     var st = function (x) {
       var m = {}, s = 0, u = 0, plus = 0;

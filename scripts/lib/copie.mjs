@@ -14,6 +14,7 @@ export function faCopie({ sursa, dest, zi, pastreaza = 14 }) {
   fs.rmSync(tmp, { recursive: true, force: true });
   fs.cpSync(sursa, tmp, { recursive: true });
   fs.renameSync(tmp, tinta);
+  for (const n of fs.readdirSync(dest)) if (/^kv-\d{4}-\d{2}-\d{2}\.tmp$/.test(n)) fs.rmSync(path.join(dest, n), { recursive: true, force: true });   // v100.174: resturi de copii căzute
   const vechi = fs.readdirSync(dest).filter((n) => /^kv-\d{4}-\d{2}-\d{2}$/.test(n)).sort();
   for (const n of vechi.slice(0, Math.max(0, vechi.length - pastreaza))) fs.rmSync(path.join(dest, n), { recursive: true, force: true });
   return { facut: true, tinta };
