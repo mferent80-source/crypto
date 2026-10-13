@@ -11,7 +11,7 @@ export async function strangeBoti({ cere, trimite, pauza = (ms) => new Promise((
   // nu e completa pana nu trece tura prin toata istoria
   const stiute = new Set((arh && Array.isArray(arh.boti) ? arh.boti : []).filter((b) => b && Number(b.forma) === FORMA_ARHIVA).map(idArhiva));
   const complet = !!(arh && arh.complet && Number(arh.forma || 1) === FORMA_ARHIVA);
-  let tampon = [], noi = 0, pagini = 0, tok = null, gata = false, atinsStiut = false, spusComplet = false;
+  let tampon = [], noi = 0, pagini = 0, tok = null, gata = false, atinsStiut = false, spusComplet = false, paginiStiute = 0;
   const trimiteTampon = async (ultima) => {
     while (tampon.length >= bucata || (ultima && tampon.length)) {
       const b = tampon.slice(0, bucata); tampon = tampon.slice(bucata);
@@ -25,14 +25,19 @@ export async function strangeBoti({ cere, trimite, pauza = (ms) => new Promise((
       if (pagini) await pauza(pauzaMs);
       const d = await cere("/api/bot-orders?status=finished&brut=1" + (tok ? "&pageToken=" + encodeURIComponent(tok) : ""));
       pagini++;
+      let peAceasta = 0, stiutePeAceasta = 0;
       for (const b of Array.isArray(d && d.bots) ? d.bots : []) {
         const c = compactBot(b); if (!c) continue;
-        if (stiute.has(c.strategyId)) { atinsStiut = true; continue; }
+        peAceasta++;
+        if (stiute.has(c.strategyId)) { atinsStiut = true; stiutePeAceasta++; continue; }
         stiute.add(c.strategyId); tampon.push(c); noi++;
       }
       tok = d && d.nextPageToken || null;
       if (!tok) { gata = true; break; }
-      if (complet && atinsStiut) break;
+      // v100.175 (auditul Opus, neverificat): nu e sigur că Pionex ordonează boții închiși după ÎNCHIDERE (pe arhivă, 197 de perechi
+      // vecine au ordinea pornirii diferită de a închiderii) ⇒ oprirea abia după 2 pagini întregi deja știute, nu la primul bot știut
+      paginiStiute = peAceasta && stiutePeAceasta === peAceasta ? paginiStiute + 1 : 0;
+      if (complet && atinsStiut && paginiStiute >= 2) break;
       await trimiteTampon(false);
     }
   } catch (e) {

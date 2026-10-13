@@ -67,8 +67,9 @@ await test("planulMeu: plafonul de 20 % ⇒ textul spune riscul REAL, nu cel cer
   const r = J(AS.planulMeu({ intrare: 100, stop: 98, riscPct: 1.5, cont: CONT, fx: FX, calc: CALC }));
   assert.equal(r.m.plafonat, true); aprox(r.riscReal, 0.004, 1e-9, "riscul real");
 });
-await test("planulMeu: fără cont sau fără stop ⇒ null (pagina scrie „citește întâi contul”)", () => {
-  assert.equal(AS.planulMeu({ intrare: 100, stop: 92, cont: 0, fx: FX, calc: CALC }), null);
+await test("planulMeu: fără stop ⇒ null; fără cont ⇒ planul LUI rămâne, cu „contul n-a venit” (v100.175: poarta nu mai trece tăcut la prețurile calculate)", () => {
+  const fc = AS.planulMeu({ intrare: 100, stop: 92, cont: 0, fx: FX, calc: CALC });
+  assert.ok(fc && fc.intrare === 100 && fc.stop === 92 && fc.m === null); assert.match(fc.eroare, /Contul Trading 212 n-a venit/);
   assert.equal(AS.planulMeu({ intrare: 100, cont: CONT, fx: FX, calc: {} }), null);
 });
 

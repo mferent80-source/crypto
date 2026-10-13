@@ -15,7 +15,7 @@ export function cereBinance({ fetch: f, pauza, jurnal }) {
     let pauzat = false;
     for (let i = 0; i < 3; i++) {
       try {
-        const r = await fetchul(url, { headers: { "User-Agent": "crypto-radar/1.0" } });
+        const r = await fetchul(url, { headers: { "User-Agent": "crypto-radar/1.0" }, signal: AbortSignal.timeout(20000) });   // v100.175 (M21): undici dădea abia după ~300 s
         // revizia (6): greutatea pe minut din antet (limita 2400) - PAZNIC lovește același IP în zilele de suprapunere
         const g = Number(r.headers.get("x-mbx-used-weight-1m")); if (Number.isFinite(g) && g > 1500) jurnal("latime: greutatea Binance pe minut " + g + " din 2400");
         if ((r.status === 429 || r.status === 418) && !pauzat) { pauzat = true; const ra = Number(r.headers.get("retry-after")) || 0, ms = Math.max(60000, ra * 1000); jurnal("latime: Binance " + r.status + ", pauză " + Math.round(ms / 1000) + " s"); await pauza(ms); continue; }

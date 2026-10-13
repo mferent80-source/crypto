@@ -32,3 +32,5 @@ export async function trimiteDiscord(m, d) {
     return true;
   } catch (e) { d.jurnal("discord EȘEC", e.message); return false; }
 }
+// v100.175 (auditul Opus, M18): coada de pe disc la plafon taie întâi alertele „info” (cele mai vechi), apoi restul - nu critice vechi
+export function taieCoada(l, max) { const c = (Array.isArray(l) ? l : []).slice(); let taiate = 0; while (c.length > max) { let i = c.findIndex((x) => !x || !x.m || x.m.nivel === 'info'); if (i < 0) i = 0; c.splice(i, 1); taiate++; } return { coada: c, taiate }; }

@@ -12,6 +12,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { turaClasament as turaClasamentModul } from "./lib/tura-clasament.mjs";
 import { trimiteDiscord } from "./lib/canal-discord.mjs";
+import { taieCoada } from "./lib/canal-discord.mjs";   // v100.175: plafonul cozii taie întâi alertele „info”
 import * as MesajeColector from "./lib/mesaje-colector.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
@@ -50,7 +51,7 @@ import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Op
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.100";   // v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.101";   // v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -228,7 +229,8 @@ const trimite = (cale, corp) => cere(cale, { method: "POST", body: JSON.stringif
 const COADA_FIS = path.join(DATA, "de-trimis.json");
 let coadaDiscord = []; try { coadaDiscord = JSON.parse(fs.readFileSync(COADA_FIS, "utf8")); if (!Array.isArray(coadaDiscord)) coadaDiscord = []; } catch { coadaDiscord = []; }
 function scrieAtomic(fis, obj) { const tmp = fis + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, fis); }
-function salveazaCoada() { try { scrieAtomic(COADA_FIS, coadaDiscord.slice(-80)); } catch (e) { jurnal("coada discord nescrisa", e.message); } }
+// v100.175 (auditul Opus, M18): plafonul taie întâi alertele „info” (cele mai vechi), apoi restul - și spune în jurnal ce a pierdut
+function salveazaCoada() { try { const t = taieCoada(coadaDiscord, 200); if (t.taiate) { jurnal("coada discord: plafon 200, am renunțat la " + cate(t.taiate, "alertă", "alerte") + " (întâi cele info)"); coadaDiscord = t.coada; } scrieAtomic(COADA_FIS, coadaDiscord); } catch (e) { jurnal("coada discord nescrisa", e.message); } }
 async function golesteCoada() {
   if (CANAL !== "discord" || !coadaDiscord.length) return;
   const acum = Date.now(), ramase = [];
@@ -475,7 +477,7 @@ async function tura() {
       if (!fisa && listaGoala) continue;
       if (!lipsaConfirmata(m.cunoscuti[id], { prezent: false, gasitInchis: !!fisa })) continue;
       const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaMesaj(MesajeColector.lipsaPionex(m.cunoscuti[id].nume));
-      if (trimis) m.cunoscuti[id].activ = false;
+      if (trimis) { m.cunoscuti[id].activ = false; m.cunoscuti[id].inchisLa = acum; }
     }
   }
   // v100.29: bot nou pornit din Pionex pe o moneda unde pierzi (pe toata istoria, din arhiva) -> o alerta, inainte sa intre la „cunoscuti”
@@ -485,6 +487,8 @@ async function tura() {
     for (const x of av) await trimiteAlerta({ nivel: x.nivel, titlu: x.titlu, mesaj: x.mesaj }, x.bot, "pornire-moneda");
   } catch (e) { jurnal("avertizare la pornire", e.message); }
   for (const b of boti) if (b && b.id) m.cunoscuti[b.id] = { activ: b.activ !== false, nume: String(b.baza || "").replace(/\.PERP$/, "") };
+  // v100.175 (auditul Opus, M19): cei închiși de peste 30 de zile nu mai trebuie ținuți minte (starea creștea fără limită)
+  for (const id of Object.keys(m.cunoscuti)) { const c = m.cunoscuti[id]; if (c && !c.activ && !acumIds[id] && (Number(c.inchisLa) || 0) && acum - c.inchisLa > 30 * 86400000) delete m.cunoscuti[id]; }
   // v101.59 (Busola 1.36, §2 „paza boților”): rezumatul Busolei o dată la 30 min (ca fișa); vechi ⇒ o notă doar în Radar, o dată pe rezumat
   try {
     await Busola.incarca(fetch, acum);
@@ -1090,7 +1094,7 @@ async function turaPoza() {
       botiPentruPoza(), simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; }), adresaRadarului()]);
     // v101.2 (ideea 4 „câte bucăți”): la simbolurile urmarite in $ cu intrare sugerata - ActiuniSemnale.marime (1 % risc din contul T212,
     // plafon 20 %), cursul $/leu din pozitii; in € nu avem cursul euro din pozitii -> nimic, nu cifre inventate
-    const fx = fxDinPozitii(t212);
+    const fx = (await usdPeLeuBnr()) || fxDinPozitii(t212);   // v100.175 (revizia v100.173): BNR, ca pagina; pozițiile doar de rezervă
     for (const s of simboluri) { const n = s.niveluri; if (n && n.nivel === "ok" && n.intrare && s.moneda === "$" && contT212 && fx) { try { s.marime = ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: contT212, fx }); } catch (e) { jurnal("poza: marime", s.s, e.message); } } }
     await aplicaCererileSalt();
     const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
@@ -1539,12 +1543,31 @@ async function turaSocoteala() {
 }
 // v100.43 (I-468): frana contului - la 5 minute; peste prag, o alerta critica O DATA pe zi (ziua Romaniei). Pragurile din configurare.
 let franaLa = 0;
+// v100.175: cursul BNR de azi (lei pentru un dolar), ținut 6 ore - poza (câte bucăți) și contul întreg în lei îl folosesc ca pagina
+let bnrMemo = { la: 0, v: null };
+async function cursBnr() {
+  if (Date.now() - bnrMemo.la < 6 * 3600000 && bnrMemo.v) return bnrMemo.v;
+  try { const d = await cere("/api/curs-bnr?an=" + new Date().getFullYear()), z = d && d.curs ? Object.keys(d.curs).sort() : []; if (z.length) bnrMemo = { la: Date.now(), v: { zi: z[z.length - 1], curs: d.curs[z[z.length - 1]], toate: d.curs } }; }
+  catch (e) { jurnal("curs BNR", e.message); bnrMemo.la = Date.now() - 6 * 3600000 + 600000; }
+  return bnrMemo.v;
+}
+async function usdPeLeuBnr() { const c = await cursBnr(); return c && c.curs > 0 ? 1 / c.curs : null; }
 async function turaFrana() {
   if (Date.now() - franaLa < 5 * 60000) return;
   franaLa = Date.now();
   const cfg = await cere("/api/istoric-bot?action=config").catch(() => null), praguri = cfg && cfg.config && cfg.config.frana || null;
   const toti = await botiInchisiToti();
-  if (!toti.complet) { jurnal("frana amanata: arhiva botilor n-a venit (ar fi judecat doar ultimii 10)"); return; }
+  if (!toti.complet) {
+    jurnal("frana amanata: arhiva botilor n-a venit (ar fi judecat doar ultimii 10)");
+    // v100.175 (revizia v100.173): tăcerea nu e „totul e bine” - după 2 ore fără arhivă, o dată pe zi, spune că frâna nu poate judeca
+    const mF = meta(), ziF = new Date(Obiceiuri.inceputZiRo(Date.now()) + 12 * 3600000).toISOString().slice(0, 10);
+    if (!mF.franaFaraArhivaDe) { mF.franaFaraArhivaDe = Date.now(); scrieStare(); }
+    else if (Date.now() - mF.franaFaraArhivaDe > 2 * 3600000 && mF.franaFaraArhivaZi !== ziF) {
+      if (await trimiteAlerta(MesajeColector.franaFaraArhiva((Date.now() - mF.franaFaraArhivaDe) / 3600000), null, "frana-fara-arhiva")) { mF.franaFaraArhivaZi = ziF; scrieStare(); }
+    }
+    return;
+  }
+  { const mF = meta(); if (mF.franaFaraArhivaDe) { delete mF.franaFaraArhivaDe; scrieStare(); } }
   const trades = JurnalTrade.din(toti.filter((x) => Number(x.closeTime) > Date.now() - 8 * 86400000));
   const act = await cere("/api/bot-orders"), f = Obiceiuri.frana({ trades, deschise: act && act.bots || [], acum: Date.now(), praguri });
   const m = meta(), zi = new Date(Obiceiuri.inceputZiRo(Date.now()) + 12 * 3600000).toISOString().slice(0, 10);

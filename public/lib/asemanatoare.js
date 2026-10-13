@@ -82,10 +82,12 @@ var Asemanatoare = (function () {
     if (!bl || !(bl.n > 0)) return null;
     if (bl.verdict === "puține") return "pe boții tăi: prea puține cazuri cu becurile la pornire (" + bl.n + ")";
     // revizia v100.110: „fără bec împotrivă” (lateralul intră aici, nu „cu botul”) și miile cu punct
-    var P = function (x) { return Math.round(x * 100) + "%"; }, N = String(bl.n).replace(/\B(?=(\d{3})+(?!\d))/g, "."), rest = " pe plus · cu unul împotrivă: " + P(bl.contra.plus) + ", din " + N;
-    return bl.verdict === "dovedit" ? "pe boții tăi, porniți fără niciun bec împotrivă (4 h, 1 zi) au ieșit mai bine (fără: " + P(bl.cu.plus) + rest + ")"
-      : bl.verdict === "pe dos" ? "pe boții tăi, porniți cu un bec împotrivă au ieșit mai bine (fără: " + P(bl.cu.plus) + rest + ")"
-      : "pe boții tăi nu s-a dovedit că becurile ajută (fără bec împotrivă: " + P(bl.cu.plus) + rest + ")";
+    // v100.175 (revizia v100.173): verdictul e pe MEDIANĂ ⇒ textul o arată întâi; „% pe plus” rămâne alături, doar informativ
+    var P = function (x) { return Math.round(x * 100) + "%"; }, N = String(bl.n).replace(/\B(?=(\d{3})+(?!\d))/g, "."), M = function (g) { return g && g.med != null ? "mediana " + (g.med >= 0 ? "+" : "−") + Math.abs(g.med * 100).toFixed(1).replace(".", ",") + "%, " : ""; };
+    var rest = " pe plus · cu unul împotrivă: " + M(bl.contra) + P(bl.contra.plus) + " pe plus, din " + N;
+    return bl.verdict === "dovedit" ? "pe boții tăi, porniți fără niciun bec împotrivă (4 h, 1 zi) au ieșit mai bine (fără: " + M(bl.cu) + P(bl.cu.plus) + rest + ")"
+      : bl.verdict === "pe dos" ? "pe boții tăi, porniți cu un bec împotrivă au ieșit mai bine (fără: " + M(bl.cu) + P(bl.cu.plus) + rest + ")"
+      : "pe boții tăi nu s-a dovedit că becurile ajută (fără bec împotrivă: " + M(bl.cu) + P(bl.cu.plus) + rest + ")";
   }
 
   // v100.100 (I-530, el: „FA TOATE”): ADX la pornire vs cum s-a terminat botul, pe arhiva LUI. Regula fixată înainte de cifre (05.10):
@@ -127,7 +129,8 @@ var Asemanatoare = (function () {
     if (!bl || !(bl.n > 0)) return null;
     if (bl.verdict === "puține") return "pe boții tăi: prea puține cazuri (" + bl.n + ")";
     var P = function (x) { return Math.round(x * 100) + "%"; };
-    var cifre = "sub 20: " + P(bl.loc.plus) + " pe plus · peste 25: " + P(bl.trend.plus) + ", din " + bl.n;
+    var M = function (g) { return g && g.med != null ? "mediana " + (g.med >= 0 ? "+" : "−") + Math.abs(g.med * 100).toFixed(1).replace(".", ",") + "%, " : ""; };   /* v100.175: verdictul e pe mediană */
+    var cifre = "sub 20: " + M(bl.loc) + P(bl.loc.plus) + " pe plus · peste 25: " + M(bl.trend) + P(bl.trend.plus) + " pe plus, din " + bl.n;
     return bl.verdict === "dovedit" ? "pe boții tăi, porniți sub 20 au ieșit mai bine (" + cifre + ")"
       : bl.verdict === "pe dos" ? "pe boții tăi, porniți în trend au ieșit mai bine (" + cifre + ")"
       : "pe boții tăi nu s-a dovedit că ajută (" + cifre + ")";

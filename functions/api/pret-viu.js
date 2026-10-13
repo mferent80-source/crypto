@@ -1,4 +1,9 @@
 import {sameOrigin} from "../_shared/auth.js";
+// v100.175 (auditul Opus, M14): Origin-ul îl poate pune orice client care nu e browser ⇒ și parola aplicației (în adresă, `t=`; socketul din
+// browser nu poate trimite antete) și cel mult 8 releuri deschise deodată
+const enc=new TextEncoder();
+async function egal(a,b){const [x,y]=await Promise.all([crypto.subtle.digest("SHA-256",enc.encode(String(a||""))),crypto.subtle.digest("SHA-256",enc.encode(String(b||"")))]);const p=new Uint8Array(x),q=new Uint8Array(y);let d=0;for(let i=0;i<p.length;i++)d|=p[i]^q[i];return d===0}
+let deschise=0;const MAX_RELEE=8;
 
 // v100.6 (el, 28.09: „nicăieri nu se arată prețul live al botului”) - releu pentru prețul LIVE al botului.
 // WebSocket-ul public Pionex (wss://ws.pionex.com/wsPub) refuza cu 403 ORICE conexiune care are antet Origin
@@ -12,9 +17,12 @@ const SIMBOL=/^[A-Z0-9]{1,20}_USDT(?:_PERP)?$/;
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status)=>new Response(JSON.stringify(x),{status,headers:H});
 
-export async function onRequestGet({request}){
+export async function onRequestGet({request,env}){
   if((request.headers.get("upgrade")||"").toLowerCase()!=="websocket")return json({error:"WEBSOCKET_REQUIRED"},426);
   if(!sameOrigin(request))return json({error:"ORIGIN_REFUSED"},403);
+  const asteptat=String(env&&env.APP_API_TOKEN||"");
+  if(!asteptat||!(await egal(new URL(request.url).searchParams.get("t")||"",asteptat)))return json({error:"AUTH_INVALID"},401);
+  if(deschise>=MAX_RELEE)return json({error:"PREA_MULTE_RELEE"},429);
   const simbol=String(new URL(request.url).searchParams.get("simbol")||"").toUpperCase();
   if(!SIMBOL.test(simbol))return json({error:"SIMBOL_INVALID"},400);
 
@@ -28,7 +36,8 @@ export async function onRequestGet({request}){
 
   const pereche=new WebSocketPair(),client=pereche[0],server=pereche[1];
   server.accept();
-  const inchide=()=>{try{sus.close(1000,"gata")}catch(e){}try{server.close(1000,"gata")}catch(e){}};
+  deschise++;let gata=false;
+  const inchide=()=>{if(gata)return;gata=true;deschise=Math.max(0,deschise-1);try{sus.close(1000,"gata")}catch(e){}try{server.close(1000,"gata")}catch(e){}};
 
   sus.addEventListener("message",ev=>{
     // Pionex trimite JSON-ul in cadre BINARE (masurat) - fara decodare, nici PING-ul n-ar primi PONG si Pionex ar inchide.

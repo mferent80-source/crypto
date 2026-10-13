@@ -68,6 +68,8 @@ function rlHtml(rp, st) {
   if (!rp || (!rp.boti && !rp.actiuni)) return '<p class="tbSub">Raportul se face o dată pe noapte, de colector (arhiva boților + istoricul T212). Încă nu există: pornește colectorul și revino după prima lui tură.</p>';
   var c = RiscLuna.concluzii(rp), d = new Date(rp.la), p = function (n) { return String(n).padStart(2, "0"); };
   var h = '<p class="tbSub rlLa">Raportul de la ' + p(d.getDate()) + "." + p(d.getMonth() + 1) + ", ora " + p(d.getHours()) + ":" + p(d.getMinutes()) + " · se reface o dată pe noapte · e istoria ta, nu o promisiune.</p>";
+  // v100.175 (auditul Opus, M21): raportul vechi se vede (colectorul oprit de zile întregi nu-l mai reface)
+  var vechiOre = (Number(st.acum) || Date.now()) - rp.la; if (vechiOre > 36 * 3600000) h += '<p class="tbWarn">⚠ Raportul e vechi de ' + rlEsc(rlCate(Math.round(vechiOre / 86400000), "zi", "zile")) + ': colectorul nu l-a refăcut (e pornit PC-ul de acasă?). Cifrele sunt de atunci.</p>';
   if (rp.boti) h += rlParte("boti", rp.boti, st.kBoti || (rp.boti.ritm && rp.boti.ritm.K), c.boti);
   if (rp.actiuni) h += rlParte("actiuni", rp.actiuni, st.kAct || (rp.actiuni.ritm && rp.actiuni.ritm.K), c.actiuni);
   h += '<details class="rlMetoda"><summary>Cum am socotit (regula fixată înainte de cifre)</summary><ul>'

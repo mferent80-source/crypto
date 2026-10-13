@@ -159,7 +159,7 @@ function scIstoricHtml(k) {
     if (scanSt.fel !== "toate" && scanSt.fel !== m[0]) return;
     var t = Scan.textIstoric(ist[m[0]], k), o = ist[m[0]];
     if (!t) { if (o) l.push('<span class="scIst"><b>' + m[1] + ':</b> nicio intrare în rețeta asta în istoricul adus.</span>'); return; }
-    var cmp = t.mai === null ? "" : t.mai >= 3 ? ' <span class="good">(mai des pe plus decât o zi oarecare)</span>' : t.mai <= -3 ? ' <span class="bad">(mai rar pe plus decât o zi oarecare)</span>' : ' <span class="scMut">(cam ca o zi oarecare)</span>';
+    var cmp = t.mai === null ? "" : t.semnif === 1 ? ' <span class="good">(mai des pe plus decât o zi oarecare)</span>' : t.semnif === -1 ? ' <span class="bad">(mai rar pe plus decât o zi oarecare)</span>' : ' <span class="scMut">(nu se deosebește de o zi oarecare: diferența intră în zgomot)</span>';   /* v100.175 (M10): Wilson, nu ±3 puncte */
     l.push('<span class="scIst"><b>' + m[1] + '</b> · ' + scCate(t.n, "intrare", "intrări") + (t.putine ? ' <span class="warn">— puține cazuri, cifrele sunt orientative</span>' : '') + ': ' + t.text + cmp + '. <span class="scMut">' + t.baza + '</span></span>');
   });
   if (!l.length) return '<span class="scIst scMut">📏 Cât a mers rețeta în trecut apare după prima tură de noapte a colectorului.</span>';
@@ -195,7 +195,7 @@ function scRand(x) {
     + '<span>' + (x.fel === "a" ? "$" : "") + scPret(x.p) + '</span>'
     + '<span class="' + scCls(x.ch) + '">' + scPct(x.ch) + '</span>'
     + '<span class="' + scCls(x.ch7) + '">' + scPct(x.ch7) + '</span>'
-    + '<span class="' + scCls(x.rel) + '" title="față de ' + (x.fel === "c" ? "BTC" : "Nasdaq (QQQ)") + ' pe 7 zile">' + scPct(x.rel) + '</span>'
+    + '<span class="' + scCls(x.rel) + '" title="față de ' + (x.fel === "c" ? "BTC" : "Nasdaq (QQQ)") + ' pe 7 zile, în puncte procentuale">' + scPct(x.rel).replace("%", " pp") + '</span>'   /* v100.175 (M14): puncte, nu % */
     + '<span>' + tr + '</span>'
     + '<span class="' + (x.rsi > 70 ? "warn" : x.rsi < 30 ? "bad" : "") + '">' + scNf(x.rsi, 0) + '</span>'
     + '<span class="scMis ' + (x.mis >= 2 ? "warn" : "") + '">' + (x.mis == null ? "—" : scNf(x.mis, 1) + "×") + '</span>'

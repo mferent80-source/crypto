@@ -67,7 +67,7 @@ await test("(545) cazurile poartă becurile 1h / 4h / 1z de la pornire (doar bar
   const cz = []; for (let m = 0; m < 12; m++) for (let k = 0; k < 6; k++) { cz.push({ moneda: "M" + m, dir: "long", tf: "uul", pct: 0.02, t: m * 10 + k }); cz.push({ moneda: "M" + m, dir: "long", tf: "ucc", pct: k % 2 ? -0.03 : 0.01, t: m * 10 + k + 5 }); }
   const bl = AS.bilantSemafor(cz, { rep: 300 });
   assert.equal(bl.cu.n, 72); assert.equal(bl.contra.n, 72); assert.equal(bl.verdict, "dovedit");
-  assert.match(AS.textSemafor(bl), /^pe boții tăi, porniți fără niciun bec împotrivă \(4 h, 1 zi\) au ieșit mai bine \(fără: 100% pe plus · cu unul împotrivă: 50%, din 144\)$/);
+  assert.match(AS.textSemafor(bl), /^pe boții tăi, porniți fără niciun bec împotrivă \(4 h, 1 zi\) au ieșit mai bine \(fără: mediana \+2,0%, 100% pe plus · cu unul împotrivă: mediana −1,0%, 50% pe plus, din 144\)$/);   // v100.175: mediana întâi (pe ea e verdictul)
   assert.equal(AS.textSemafor(AS.bilantSemafor(cz.slice(0, 20))), "pe boții tăi: prea puține cazuri cu becurile la pornire (20)");
   assert.match(app, /tbCazuri\.sem=/); assert.match(app, /semPeBoti:tbCazuri\.sem\|\|null/);
   const cit = GB.citire({ bare: GB.bare(SUS(3e5)), semafor: GB.semafor({ "5M": SUS(3e5) }, "long"), semPeBoti: "pe boții tăi nu s-a dovedit că ajută (x)", funding: null }, { directie: "long" }, null);

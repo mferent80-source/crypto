@@ -1,3 +1,4 @@
+import { CalendarBursa } from "./calendar-bursa.mjs";   // v100.175: închiderea ședinței pe bursa simbolului
 // Istoricul COMPLET al ordinelor Trading 212 (v85), strans de colector in KV-ul de acasa.
 // T212 da istoricul in pagini de 50, cele mai noi primele, si lasa 6 cereri pe minut => o pagina la ~11 s.
 // Prima data: coboara pagina cu pagina pana la capat, cate `max` pagini pe tura, si tine minte unde a
@@ -95,7 +96,8 @@ export async function turaCfActiuni(d) {
       let stopU = {}, prob = null;
       if (bare && bare.length) {
         // planul Radarului: -X% de la maxim, cu X din pretul calculat la ora cumpararii (doar zilele de dinainte)
-        const inainte = bare.filter((b) => b.t + 8 * 3600000 <= t.pornit), n = inainte.length >= 120 ? d.ActiuniSemnale.niveluri(inainte, t.pretCumparare, {}) : null;
+        // v100.175 (auditul Opus, M17): bara zilei contează doar după închiderea ședinței EI (Xetra 17:30 Berlin, nu „deschiderea + 8 h”)
+        const inainte = bare.filter((b) => CalendarBursa.inchidereLa(CalendarBursa.ziLocala(b.t, tk), tk) <= t.pornit), n = inainte.length >= 120 ? d.ActiuniSemnale.niveluri(inainte, t.pretCumparare, {}) : null;
         // v100.52: stopul din profilul actiunii, socotit DOAR pe barele de dinaintea cumpararii (ca „plan”); fara profil atunci -> −15%,
         // exact ce face pozitia pe viu (altfel un „neatins” ar insemna si „fara profil”)
         const pp = d.ProfilMoneda ? d.ProfilMoneda.calculeaza(inainte, { piata: "actiuni", simbol: tk, acum: t.pornit }) : null, ps = pp ? d.ProfilMoneda.pragStopActiune(pp) : null;

@@ -201,19 +201,23 @@ let sus = null, antetSus = null, perechi = [];
 globalThis.fetch = async (u, o) => { antetSus = { u, h: o && o.headers }; sus = new FalsWS(); return { status: 101, webSocket: sus }; };
 globalThis.WebSocketPair = function () { const p = { 0: new FalsWS(), 1: new FalsWS() }; perechi.push(p); return p; };
 globalThis.Response = class { constructor(corp, i) { this.corp = corp; this.status = i.status; this.webSocket = i.webSocket; } };
-const cerere = (simbol, antete) => ({ url: "http://127.0.0.1:8788/api/pret-viu?simbol=" + simbol, headers: new Headers(antete) });
+// v100.175 (auditul Opus, M14): releul cere și parola aplicației, în adresă (`t=`)
+const cerere = (simbol, antete, t = "parola-buna") => ({ url: "http://127.0.0.1:8788/api/pret-viu?simbol=" + simbol + (t === null ? "" : "&t=" + t), headers: new Headers(antete) });
+const ENV = { APP_API_TOKEN: "parola-buna" };
 const BUN = { upgrade: "websocket", origin: "http://127.0.0.1:8788" };
 try {
   const { onRequestGet } = await import(new URL("../functions/api/pret-viu.js", import.meta.url));
-  const r426 = await onRequestGet({ request: cerere(S, { origin: BUN.origin }) });
-  const r403 = await onRequestGet({ request: cerere(S, { upgrade: "websocket", origin: "https://altcineva.ro" }) });
-  const r403b = await onRequestGet({ request: cerere(S, { upgrade: "websocket" }) });
-  const r400 = await onRequestGet({ request: cerere("JTO_USDT_PERP%22%7D", BUN) });
+  const r426 = await onRequestGet({ request: cerere(S, { origin: BUN.origin }), env: ENV });
+  const r403 = await onRequestGet({ request: cerere(S, { upgrade: "websocket", origin: "https://altcineva.ro" }), env: ENV });
+  const r403b = await onRequestGet({ request: cerere(S, { upgrade: "websocket" }), env: ENV });
+  const r401 = await onRequestGet({ request: cerere(S, BUN, null), env: ENV }), r401b = await onRequestGet({ request: cerere(S, BUN, "gresita"), env: ENV }), r401c = await onRequestGet({ request: cerere(S, BUN), env: {} });
+  const r400 = await onRequestGet({ request: cerere("JTO_USDT_PERP%22%7D", BUN), env: ENV });
   const nrFetch = sus ? 1 : 0;
-  const r101 = await onRequestGet({ request: cerere(S, BUN) });
+  const r101 = await onRequestGet({ request: cerere(S, BUN), env: ENV });
   const catreOm = perechi.at(-1)[1];
-  test("releu: fără upgrade → 426; Origin străin sau lipsă → 403; simbol ciudat → 400; niciunul nu sună la Pionex", () => {
+  test("releu: fără upgrade → 426; Origin străin sau lipsă → 403; fără parolă / parolă greșită / server fără parolă → 401; simbol ciudat → 400; niciunul nu sună la Pionex", () => {
     assert.equal(r426.status, 426); assert.equal(r403.status, 403); assert.equal(r403b.status, 403); assert.equal(r400.status, 400); assert.equal(nrFetch, 0);
+    assert.equal(r401.status, 401); assert.equal(r401b.status, 401); assert.equal(r401c.status, 401);
   });
   test("releu: se leagă la Pionex FĂRĂ Origin și abonează exact simbolul botului", () => {
     assert.equal(r101.status, 101); assert.ok(r101.webSocket); assert.match(antetSus.u, /ws\.pionex\.com\/wsPub/);
@@ -234,6 +238,15 @@ try {
     sus.da("message", { data: bin(trade("0.5711", ACUM)) }); assert.equal(typeof catreOm.trimise.at(-1), "string"); assert.equal(PV.mesaj(catreOm.trimise.at(-1), S).pret, 0.5711);
   });
   test("releu: Pionex închide → se închide și spre pagină (pagina se reconectează singură)", () => { sus.da("close", {}); assert.ok(catreOm.inchis); });
+  // v100.175: cel mult 8 releuri deschise deodată; unul închis eliberează locul
+  const deschise = []; for (let i = 0; i < 8; i++) { const r = await onRequestGet({ request: cerere(S, BUN), env: ENV }); deschise.push({ r, sus }); }
+  const r429 = await onRequestGet({ request: cerere(S, BUN), env: ENV });
+  deschise[0].sus.da("close", {});
+  const rDupa = await onRequestGet({ request: cerere(S, BUN), env: ENV });
+  test("releu: cel mult 8 deschise deodată (al nouălea → 429); unul închis eliberează locul", () => {
+    assert.ok(deschise.every((x) => x.r.status === 101)); assert.equal(r429.status, 429); assert.equal(rDupa.status, 101);
+  });
+  test("pagina trimite parola releului în adresă (WebSocket-ul din browser nu poate pune antete)", () => { assert.match(APP, /\/api\/pret-viu\?simbol="\+encodeURIComponent\(simbol\)\+"&t="\+encodeURIComponent\(apiSessionToken\(\)\|\|""\)/); });
 } catch (e) { test("releul se încarcă", () => { throw e; }); }
 finally { Object.assign(globalThis, vechi); }
 

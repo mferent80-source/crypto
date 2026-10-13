@@ -115,7 +115,8 @@ var T212 = (function () {
   function raportAnual(o) {
     o = o || {};
     var an = o.an, ani = {};
-    function aniDin(t) { var y = new Date(t).getUTCFullYear(); if (isFinite(y)) ani[y] = 1; return y; }
+    // v100.175 (auditul Opus, M12): anul după ora României (o vânzare la 00:30 pe 1 ianuarie e în anul nou, ca rândul din CSV)
+    function aniDin(t) { var y = Number(ziRo(t).slice(0, 4)); if (isFinite(y)) ani[y] = 1; return y; }
     // v100.28 (30.09, el: „fa idei”): Pionex si in LEI - fiecare bot la cursul BNR (USD) din ziua inchiderii dupa ora Romaniei
     // (weekend / sarbatoare -> ultimul curs publicat inainte); USDT socotit ca USD. Anul botului tot dupa ora Romaniei.
     var zileCurs = o.cursUsd && typeof o.cursUsd === "object" ? Object.keys(o.cursUsd).filter(function (k) { return /^\d{4}-\d{2}-\d{2}$/.test(k) && nr(o.cursUsd[k]) > 0; }).sort() : null;

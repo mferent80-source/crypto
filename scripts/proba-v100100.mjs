@@ -56,7 +56,9 @@ await test("(2) bilantAdx: loc clar mai bun ⇒ dovedit; invers ⇒ pe dos; la f
 });
 await test("(3) textAdx: spune verdictul cu cifrele, fără să promită când nu e dovedit", () => {
   const nd = { verdict: "nedovedit", n: 528, loc: { plus: 0.653 }, trend: { plus: 0.623 } };
-  assert.equal(ASM.textAdx(nd), "pe boții tăi nu s-a dovedit că ajută (sub 20: 65% pe plus · peste 25: 62%, din 528)");
+  assert.equal(ASM.textAdx(nd), "pe boții tăi nu s-a dovedit că ajută (sub 20: 65% pe plus · peste 25: 62% pe plus, din 528)");
+  // v100.175: verdictul e pe mediană ⇒ când grupurile o au, textul o arată întâi
+  assert.equal(ASM.textAdx({ ...nd, loc: { plus: 0.653, med: 0.021 }, trend: { plus: 0.623, med: -0.004 } }), "pe boții tăi nu s-a dovedit că ajută (sub 20: mediana +2,1%, 65% pe plus · peste 25: mediana −0,4%, 62% pe plus, din 528)");
   assert.match(ASM.textAdx({ ...nd, verdict: "dovedit" }), /^pe boții tăi, porniți sub 20 au ieșit mai bine/);
   assert.match(ASM.textAdx({ ...nd, verdict: "pe dos" }), /^pe boții tăi, porniți în trend au ieșit mai bine/);
   assert.equal(ASM.textAdx({ verdict: "puține", n: 12 }), "pe boții tăi: prea puține cazuri (12)"); assert.equal(ASM.textAdx(null), null);

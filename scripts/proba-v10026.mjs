@@ -138,9 +138,9 @@ await test("arhiva de forma veche se reface singura: tura o ia de la capat (retr
   // cat timp se reface, arhiva NU se da drept completa (dupa prima bucata trimisa)
   // vazute = [steagul bucatii 1, arhiva inainte de 1, steagul bucatii 2, arhiva DUPA bucata 1, ...]
   assert.equal(vazute[1], false, "arhiva veche nu se da drept completa nici inainte de prima bucata"); assert.equal(vazute[3], false);
-  // tura urmatoare (forma 2, completa): doar prima pagina
+  // tura urmatoare (forma 2, completa): doar primele 2 pagini (v100.175: oprirea după 2 pagini întregi știute)
   const r2 = await strangeBoti({ cere, trimite, pauza: async () => {} });
-  assert.equal(r2.noi, 0); assert.equal(r2.pagini, 1);
+  assert.equal(r2.noi, 0); assert.equal(r2.pagini, 2);
 });
 
 await test("colectorul cel putin v101.14 (tura arhivei stie de forma botilor)", () => {

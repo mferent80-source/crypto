@@ -16,7 +16,9 @@ export async function tenantKey(request,env){
   const h=request.headers.get('authorization')||'',token=h.startsWith('Bearer ')?h.slice(7).trim():request.headers.get('x-app-token')||'';if(!token)return 'anonymous';return 'app_'+hex(await digest(token)).slice(0,20)
 }
 export function sameOrigin(request){const u=new URL(request.url),origin=request.headers.get('origin');return !!origin&&origin===u.origin}
-function ipOf(request){return request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()||'unknown'}
+// v100.175 (auditul Opus, M13): primul IP din x-forwarded-for îl scrie clientul (fiecare ghicire putea veni cu alt „IP”); proxy-ul de acasă
+// (Tailscale serve) ADAUGĂ IP-ul real la capăt ⇒ se ia ultimul. Fără antet (colectorul, local) rămâne „unknown”, ca înainte.
+function ipOf(request){const cf=request.headers.get('cf-connecting-ip');if(cf)return cf;const l=String(request.headers.get('x-forwarded-for')||'').split(',').map(s=>s.trim()).filter(Boolean);return l.length?l[l.length-1]:'unknown'}
 export async function rateLimit(request,env,scope='api',limit=90,windowSec=60){
   const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/windowSec),key=`rl:${scope}:${ipOf(request)}:${bucket}`;
   if(env.API_RATE_LIMIT?.get&&env.API_RATE_LIMIT?.put){let n=Number(await env.API_RATE_LIMIT.get(key)||0)+1;await env.API_RATE_LIMIT.put(key,String(n),{expirationTtl:Math.max(60,windowSec+15)});return {ok:n<=limit,count:n,limit,retryAfter:(bucket+1)*windowSec-now}}

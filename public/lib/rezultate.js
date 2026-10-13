@@ -87,7 +87,8 @@
   // rândul scurt din pagina de acțiuni: ce raportează în următoarele 7 zile din ce deții / urmărești
   function randStocks(cal, stele, acum) {
     if (!cal || !Array.isArray(cal.items) || !stele) return null;
-    const azi = new Date(acum).toISOString().slice(0, 10), pana = new Date(acum + 7 * ZI).toISOString().slice(0, 10);
+    // v100.175 (auditul Opus, M19): ziua după ora României, nu UTC
+    const zR = (t) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Bucharest" }).format(new Date(t)), azi = zR(acum), pana = zR(acum + 7 * ZI);
     const l = cal.items.filter((x) => stele[x.s] && x.data >= azi && x.data <= pana).sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0));
     if (!l.length) return null;
     return '<div class="t212Link rzRand7">📅 Raportează în 7 zile (din ce deții / urmărești): <b>' + l.map((x) => esc(x.s) + " " + ziua(x.data).split(",")[0]).join(", ") + '</b> <button type="button" class="t212BtnLinie" data-action-click="navTo(\'rezultate\',true)">Rezultate ›</button></div>';

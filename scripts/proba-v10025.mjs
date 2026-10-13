@@ -82,15 +82,16 @@ await test("prima tura: TOATA istoria, pagina cu pagina, trimisa pe bucati; arhi
   assert.equal(pauze.length, 9); assert.ok(pauze.every((m) => m === 7), "pauza intre pagini (limita rutei si a Pionex)");
 });
 
-await test("turele de dupa: doar botii noi - se opreste la prima pagina care are un bot deja stiut", async () => {
+// v100.175: oprirea abia după 2 pagini ÎNTREGI deja știute (ordinea Pionex pe închidere nu e dovedită)
+await test("turele de dupa: doar botii noi - se opreste dupa 2 pagini intregi deja stiute", async () => {
   const px = pionexFals(95), srv = serverFals();
   await strangeBoti({ cere: cereCu(px, srv), trimite: srv.trimite, pauza: async () => {} });
   // se inchid inca 3 boti
   const px2 = pionexFals(98); px2.cereri.length = 0;
   const r = await strangeBoti({ cere: cereCu(px2, srv), trimite: srv.trimite, pauza: async () => {} });
-  assert.equal(r.noi, 3); assert.equal(r.pagini, 1); assert.equal(srv.arhiva.boti.length, 98);
+  assert.equal(r.noi, 3); assert.equal(r.pagini, 3); assert.equal(srv.arhiva.boti.length, 98);
   const r2 = await strangeBoti({ cere: cereCu(px2, srv), trimite: srv.trimite, pauza: async () => {} });
-  assert.equal(r2.noi, 0); assert.equal(r2.pagini, 1);
+  assert.equal(r2.noi, 0); assert.equal(r2.pagini, 2);
 });
 
 await test("picata la jumatate (Pionex refuza): ce s-a strans pana atunci se trimite, arhiva ramane incompleta, eroarea urca", async () => {

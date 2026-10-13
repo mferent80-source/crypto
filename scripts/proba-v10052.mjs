@@ -58,7 +58,7 @@ await test("ruta profil: primeste si intoarce forma actiunii (z1/z5/sar/evenimen
 await test("varianta prof: profilul din barele de DINAINTEA cumpararii; alegeTrail - prof doar daca iese >= u15 pe cel putin 30 de trade-uri", () => {
   assert.ok(typeof AS.alegeTrail === "function", "lipseste ActiuniSemnale.alegeTrail");
   const t = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-t212.mjs"), "utf8");
-  assert.match(t, /cheie: "prof"/); assert.match(t, /pragStopActiune\(/); assert.match(t, /b\.t \+ 8 \* 3600000 <= t\.pornit/);
+  assert.match(t, /cheie: "prof"/); assert.match(t, /pragStopActiune\(/); assert.match(t, /b\.t \+ 8 \* 3600000 <= t\.pornit|CalendarBursa\.inchidereLa\(CalendarBursa\.ziLocala\(b\.t, tk\), tk\) <= t\.pornit/);   // v100.175: închiderea ședinței EI
   // poza 01.10: randul „prof” in tabel ar fi fost socotit pe TOATE trade-urile (neprobat = fara stop) -> in tabel nu intra; sub el, comparatia corecta
   const ecr0 = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
   assert.ok(!/k: "prof"/.test(ecr0), "prof nu e rand in tabel"); assert.match(ecr0, /ActiuniSemnale\.alegeTrail\(l, cfm\)/);

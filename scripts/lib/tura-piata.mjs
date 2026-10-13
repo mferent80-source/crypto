@@ -4,6 +4,7 @@
 // Fiecare parte are ritmul ei si nu opreste restul daca pica. Probat in scripts/tura-piata-v94.mjs.
 // d = { cere, trimite, trimiteAlerta, jurnal, pauza, Acasa, Alerte, GridCalcul, GridClasament, Directie, NDX }
 // st = starea ei (colectorul o tine in meta si o scrie pe disc)
+import { CalendarBursa } from "./calendar-bursa.mjs";
 const MIN = 60000, ORA = 3600000;
 const RITM = { vreme: 10 * MIN, funding: ORA, boti: 30 * MIN, bursa: ORA };
 
@@ -15,9 +16,10 @@ function ceas(acum, tz) {
   new Intl.DateTimeFormat("en-GB", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(acum)).forEach((x) => { o[x.type] = x.value; });
   return { zi: o.year + "-" + o.month + "-" + o.day, sapt: o.weekday, min: Number(o.hour) * 60 + Number(o.minute) };
 }
+// v100.175 (auditul Opus, M16): zilele de sărbătoare ale NYSE nu mai sunt „deschise” (calendarul burselor)
 function bursa(acum) {
-  const n = ceas(acum, "America/New_York"), lucru = ["Sat", "Sun"].indexOf(n.sapt) < 0;
-  return { zi: n.zi, deschisa: lucru && n.min >= 570 && n.min < 960, dupaInchidere: lucru && n.min >= 965 && n.min < 1080 };
+  const s = CalendarBursa.stare(acum, "SPY");
+  return { zi: s.zi, deschisa: s.deschisa, dupaInchidere: s.dupaInchidere };
 }
 const cheiaNume = (s) => String(s || "").replace(/_USDT_PERP$/, "").replace(/\.PERP$/, "");
 function sumarClasament(c) {

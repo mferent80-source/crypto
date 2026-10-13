@@ -275,7 +275,9 @@ var ActiuniSemnale = (function () {
     per = ruleaza(conditionat);
     if (!per[K[0]].n || per[K[0]].n < 30) { per = ruleaza(false); conditionat = false; }
     var best = K[0]; K.forEach(function (k) { if (per[k].medie !== null && (per[best].medie === null || per[k].medie > per[best].medie + 1e-12)) best = k; });
-    return { k: best, n: per[best].n, medie: per[best].medie, pePlus: per[best].pePlus, conditionat: conditionat, perK: per };
+    // v100.175 (auditul Opus, M9): intrările zilnice cu orizont de 20 de zile se suprapun ⇒ ~n/20 cazuri independente; multiplul ATR e ales
+    // ca cel mai bun pe ACELEAȘI date pe care se raportează ⇒ cifra e optimistă (se spune în text)
+    return { k: best, n: per[best].n, nIndep: Math.floor(per[best].n / ORIZONT), alesPeAceleasi: true, medie: per[best].medie, pePlus: per[best].pePlus, conditionat: conditionat, perK: per };
   }
   function r2(x) { return x >= 100 ? Math.round(x * 100) / 100 : Math.round(x * 1000) / 1000; }
   // o: {pretMediu, maxDupaCumparare} pentru o pozitie deschisa
@@ -319,7 +321,7 @@ var ActiuniSemnale = (function () {
   // v100.169 (12.10, Sizerul din market-events mutat în Poartă): planul LUI - intrare, stop, țintă, risc % din cont; ce lasă gol rămâne
   // pe valorile calculate (calc). Peste 1 % risc se avertizează, nu se refuză; riscul din text e cel REAL (după plafonul de 20 %). Doar long.
   function planulMeu(o) {
-    if (!o || !(o.cont > 0)) return null;
+    if (!o) return null;
     var c = o.calc || {}, ale = { intrare: o.intrare > 0, stop: o.stop > 0, tinta: o.tinta > 0, risc: o.riscPct > 0 };
     var intrare = ale.intrare ? o.intrare : c.intrare, stop = ale.stop ? o.stop : c.stop, tinta = ale.tinta ? o.tinta : c.tinta, riscPct = ale.risc ? o.riscPct : 1;
     if (!(intrare > 0) || !(stop > 0)) return null;
@@ -327,6 +329,8 @@ var ActiuniSemnale = (function () {
     // v100.172 (revizia Opus): fără stop scris de el, stopul e cel CALCULAT ⇒ mesajul spune asta (nu „stopul trebuie să fie sub intrare” când n-a scris niciun stop)
     var bani = function (x) { return x.toFixed(2).replace(".", ",") + " $"; };
     if (stop >= intrare) { r.eroare = ale.stop ? "Stopul trebuie să fie sub intrare (doar long)." : "Intrarea ta (" + bani(intrare) + ") e sub stopul calculat (" + bani(stop) + "): scrie-ți și stopul tău."; return r; }
+    // v100.175 (revizia v100.173): fără cont, planul LUI rămâne pe ecran (înainte poarta trecea tăcut la prețurile calculate)
+    if (!(o.cont > 0)) { r.eroare = "Contul Trading 212 n-a venit încă: planul e al tău, dar nu pot socoti câte bucăți."; return r; }
     if (!(o.fx > 0)) { r.eroare = "Lipsește cursul dolar/leu (nici BNR, nici istoricul T212 n-au venit): nu pot socoti câte bucăți."; return r; }
     var fx = o.fx;
     r.m = marime({ intrare: intrare, stop: stop, cont: o.cont, fx: fx, riscPct: riscPct / 100 });

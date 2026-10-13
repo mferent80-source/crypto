@@ -143,8 +143,13 @@ var Scan = (function () {
   function textIstoric(ist, k) {
     var x = ist && ist[k], b = ist && ist.baza; if (!x || !x.s || !x.s.n) return null;
     var p = function (o) { return o && o.n ? o.pe + "% pe plus (mediana " + semn(o.med) + ")" : "—"; };
+    // v100.175 (auditul Opus, M10): „mai des pe plus” de la +3 puncte era zgomot (±7–9 puncte la 30–50 de intrări) ⇒ Wilson 95 % pe ~n/5
+    // cazuri independente (o săptămână = ~5 zile de bursă / 7 de crypto care se suprapun); culoare doar când intervalele nu se ating
+    var wil = function (pe, n) { var ne = Math.max(1, Math.floor(n / 5)), p0 = pe / 100, z = 1.96, d = 1 + z * z / ne, c = (p0 + z * z / (2 * ne)) / d, h = z * Math.sqrt(p0 * (1 - p0) / ne + z * z / (4 * ne * ne)) / d; return [c - h, c + h]; };
+    var semnif = null;
+    if (b && b.s && b.s.n && x.s.pe !== null && b.s.pe !== null) { var a1 = wil(x.s.pe, x.s.n), a2 = wil(b.s.pe, b.s.n); semnif = a1[0] > a2[1] ? 1 : a1[1] < a2[0] ? -1 : 0; }
     return { text: "după o săptămână " + p(x.s) + ", după o lună " + p(x.l), baza: b && b.s.n ? "orice zi: " + p(b.s) + " / " + p(b.l) : "", n: x.s.n, putine: x.s.n < 30,
-      mai: b && b.s.n && x.s.pe !== null ? x.s.pe - b.s.pe : null };
+      mai: b && b.s.n && x.s.pe !== null ? x.s.pe - b.s.pe : null, semnif: semnif };
   }
 
   return { istoricRetete: istoricRetete, textIstoric: textIstoric, rezumat: rezumat, fata: fata, scor: scor, semafor: semafor, RETETE: RETETE, retete: retete, PER: PER, puncte: puncte, starePer: starePer, SENS: SENS, textAcum: textAcum, plan: plan };

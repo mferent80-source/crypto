@@ -3,6 +3,7 @@
 // contractul spec-ului (docs/superpowers/specs/2026-09-27-alerts-trading-tools-din-radar-design.md, §4).
 // v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+import { CalendarBursa } from "./calendar-bursa.mjs";
 const ZI = 86400000, FEREASTRA_INSIDERI = 60 * ZI;
 const nr = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 const rot = (x, z = 4) => (nr(x) === null ? null : Math.round(x * 10 ** z) / 10 ** z);
@@ -204,15 +205,10 @@ export function pret30DinIstoric(intrari, ring) {
 // v100.40 (audit 30.09): ziua SESIUNII bursei americane (New York): inainte de 09:30 NY - si sambata/duminica - e sesiunea precedenta
 // (vinerea). Cheile „o dată pe zi” ale alertelor pe actiuni erau pe ziua UTC -> la 03:00 ora Romaniei (miezul noptii UTC) toate
 // se retrimiteau, cu informatia sesiunii de ieri, pe bursa inchisa.
-export function ziSesiune(acum) {
-  const p = new Intl.DateTimeFormat("en-CA", { timeZone: NY, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(acum));
-  const v = (t) => (p.find((x) => x.type === t) || {}).value;
-  let d = new Date(Date.UTC(Number(v("year")), Number(v("month")) - 1, Number(v("day"))));
-  const min = (Number(v("hour")) % 24) * 60 + Number(v("minute"));
-  if (min < 570) d = new Date(d.getTime() - ZI);
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d = new Date(d.getTime() - ZI);
-  return d.toISOString().slice(0, 10);
-}
+// v100.175 (auditul Opus, M15 + M16): pe bursa SIMBOLULUI (Xetra se deschide la 9:00 Berlin, nu la 9:30 New York) și fără sărbători
+// (Thanksgiving nu mai e „ziua de ieri, din nou”) - calendarul burselor; fără simbol = New York, ca înainte
+export function ziSesiune(acum, simbol) { return CalendarBursa.ziSesiune(acum, simbol || ""); }
+const monedaBursa = (s) => (CalendarBursa.bursaSimbol(s) === "XETRA" ? "€" : CalendarBursa.bursaSimbol(s) === "LSE" ? "£" : "$");
 // cat de des pleaca poza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri), altfel 5 minute
 // (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: cu un bot activ zi si noapte = 720 de poze; bataia separata NU se mai
 // trimite cat poza curge - vezi bataieNecesara - deci ramane loc)
@@ -230,7 +226,7 @@ function miiTxt(v) { v = nr(v) || 0; return Math.abs(v) >= 1e6 ? (v / 1e6).toFix
 // alertele pe simbolurile paginii (I-463): miscarea zilei peste 2x ATR-ul propriu (media |Δ zi| pe 14 zile) si o cumparare
 // de insider aparuta fata de poza anterioara. Cheile contin ziua: colectorul le dedupeaza (o alerta pe zi per simbol).
 export function alerteSimboluri(simboluri, anterioare, acum) {
-  const zi = ziSesiune(acum), out = [];   // v100.40: ziua sesiunii NY, nu ziua UTC
+  const zi = (x) => ziSesiune(acum, x), out = [];   // v100.40: ziua sesiunii, nu ziua UTC; v100.175: a bursei simbolului
   for (const s of Array.isArray(simboluri) ? simboluri : []) {
     if (!s || !s.s) continue;
     const c = Array.isArray(s.closes30) ? s.closes30 : [];
@@ -238,7 +234,7 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
       const ult = c.slice(-15); let suma = 0, n = 0;
       for (let k = 1; k < ult.length; k++) if (ult[k - 1] > 0 && ult[k] > 0) { suma += Math.abs(ult[k] / ult[k - 1] - 1); n++; }
       const atr = n ? suma / n : null, d = s.pret / s.prev - 1;
-      if (atr && Math.abs(d) > 2 * atr) out.push({ cheie: "sim-miscare-" + s.s + "-" + zi, nivel: "atentie",
+      if (atr && Math.abs(d) > 2 * atr) out.push({ cheie: "sim-miscare-" + s.s + "-" + zi(s.s), nivel: "atentie",
         titlu: s.s + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " azi, de " + (Math.abs(d) / atr).toFixed(1).replace(".", ",") + "× mișcarea lui obișnuită",
         // v100.68 (sfaturile concise, pachetul 3): faptul + „👉 ” actiunea; pragul ramane spus ca ipoteza
         mesaj: "Peste 2× ATR-ul lui (" + pctTxt(atr) + " pe zi, media pe 14 zile); pragul e o ipoteză, nu un semnal dovedit.\n👉 M-aș uita la știrile lui înainte să fac ceva: o mișcare mare nu cere singură o decizie." });
@@ -250,14 +246,14 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
     // si o cumparare NOUA fata de poza anterioara (verdictul poate deveni bull si cand vanzarile vechi ies din fereastra de 60 z)
     const noua = t && !(ant && ant.ultimaCumparare && ant.ultimaCumparare.zi && t.zi <= ant.ultimaCumparare.zi);
     if (ant && recenta && noua && (v === "bull" || v === "bull1") && va !== "bull" && va !== "bull1") {
-      out.push({ cheie: "sim-insider-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
+      out.push({ cheie: "sim-insider-" + s.s + "-" + zi(s.s), nivel: "info", titlu: s.s + ": cumpărare de insider" + (v === "bull" ? ", în grup" : ""),
         mesaj: t.cine + " (" + String(t.rol || "").slice(0, 30) + ") a cumpărat " + cate(t.act, "acțiune", "acțiuni").replace(/^\d+/, miiTxt(t.act)) + ", ~$" + miiTxt(t.val) + ", pe " + t.zi.slice(8) + "." + t.zi.slice(5, 7) + "; cumpărările cu bani contează, cele primite gratis nu.\n👉 Aș trece-o pe lista de urmărit, fără să cumpăr doar pentru asta." });
     }
     // v101.87 (el 07.10, „DA LA TOT”): rezultatele vin mâine - o dată pe zi, ca să nu-l prindă saltul de după raport
     const rz = s.rezultate;
     if (rz && rz.zile === 1 && /^\d{4}-\d{2}-\d{2}$/.test(String(rz.data || ""))) {
       const LUNI = ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sept", "oct", "nov", "dec"], d = String(rz.data);
-      out.push({ cheie: "sim-rezultate-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": rezultatele vin mâine (" + Number(d.slice(8)) + " " + LUNI[Number(d.slice(5, 7)) - 1] + ")",
+      out.push({ cheie: "sim-rezultate-" + s.s + "-" + zi(s.s), nivel: "info", titlu: s.s + ": rezultatele vin mâine (" + Number(d.slice(8)) + " " + LUNI[Number(d.slice(5, 7)) - 1] + ")",
         mesaj: (nr(rz.eps) !== null ? "EPS estimat " + String(rz.eps).replace(".", ",") + ". " : "") + "După raport, prețul se poate mișca mult în ambele sensuri.\n👉 N-aș intra și n-aș adăuga chiar înainte de raport; aș aștepta să văd cum reacționează piața." });
     }
   }
@@ -268,16 +264,16 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
 // Saltul peste mai multe trepte = un singur mesaj (cea mai mare), restul se marcheaza in `marcheaza`. Inchiderea de ieri intra in
 // cheie: o sesiune noua (alt `prev`) porneste treptele de la capat, si la actiunile germane, care nu urmeaza ziua sesiunii NY.
 export function alerteT212Pasi(poza, facute, acum) {
-  const zi = ziSesiune(acum), out = [], f = facute || {}, pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4)).replace(".", ",");
+  const zi = (x) => ziSesiune(acum, x), out = [], f = facute || {}, pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4)).replace(".", ",");
   for (const p of poza && Array.isArray(poza.t212) ? poza.t212 : []) {
     const pret = p && nr(p.pret), prev = p && nr(p.prev);
     if (!pret || !prev || !p.s) continue;
     const d = pret / prev - 1, n = Math.floor(Math.abs(d) * 100 + 1e-9);
     if (n < 1) continue;
-    const semn = d > 0 ? "p" : "m", cheie = (k) => "t212-pas-" + p.s + "-" + semn + k + "-" + rot(prev, 4) + "-" + zi;
+    const semn = d > 0 ? "p" : "m", cheie = (k) => "t212-pas-" + p.s + "-" + semn + k + "-" + rot(prev, 4) + "-" + zi(p.s);
     if (f[cheie(n)]) continue;
     const marcheaza = []; for (let k = 1; k <= n; k++) marcheaza.push(cheie(k));
-    const m = /\.(DE|F|PA|AS|MI)$/.test(p.s) ? "€" : "$", mediu = nr(p.mediu), fm = mediu ? pret / mediu - 1 : null;
+    const m = monedaBursa(p.s), mediu = nr(p.mediu), fm = mediu ? pret / mediu - 1 : null;
     out.push({ cheie: cheie(n), marcheaza, nivel: "info", titlu: p.s + ": " + (d > 0 ? "+" : "−") + n + "% azi",
       mesaj: m + pr(pret) + " (ieri " + m + pr(prev) + ")" + (fm !== null ? " · tu: " + (fm >= 0 ? "+" : "−") + pctTxt(fm) + " față de prețul tău mediu" : "") + "." });
   }
@@ -308,7 +304,7 @@ export function alertaBotPas(b, ref, acum) {
 //   - simbol urmarit: pretul a ajuns la intrarea sugerata (+0,5 %) - niciodata la trend in jos (intrare null) sau fara date.
 export function alerteSLTP(poza, acum) {
   const out = []; if (!poza) return out;
-  const zi = ziSesiune(acum), pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4));   // v100.40: ziua sesiunii NY
+  const zi = (x) => ziSesiune(acum, x), pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4));   // v100.40: ziua sesiunii; v100.175: a bursei simbolului
   for (const p of Array.isArray(poza.t212) ? poza.t212 : []) {
     if (!p || !p.s) continue;
     const pl = p.plan && nr(p.plan.stop) !== null ? p.plan : null, sg = p.sugestie && nr(p.sugestie.stop) !== null && nr(p.sugestie.tinta) !== null ? p.sugestie : null;
@@ -316,20 +312,20 @@ export function alerteSLTP(poza, acum) {
     if (sl === null || tp === null || !pret || !(tp > sl)) continue;
     const et = pl ? "stopul din planul tău" : "stopul sugerat", dist = 1 - sl / pret;
     if (pret > sl && (pret - sl) / (tp - sl) < 0.25)
-      out.push({ cheie: "sltp-aproape-" + p.s + "-" + zi, nivel: "atentie", titlu: p.s + ": " + (dist < 0.0005 ? "chiar la " : "la " + pctTxt(dist) + " de ") + et + " ($" + pr(sl) + ")",
-        mesaj: "Prețul e $" + pr(pret) + ", în ultimul sfert al drumului spre stop (ținta $" + pr(tp) + ").\n👉 N-aș adăuga acum; dacă atinge stopul, aș ieși cum ai scris." });
+      out.push({ cheie: "sltp-aproape-" + p.s + "-" + zi(p.s), nivel: "atentie", titlu: p.s + ": " + (dist < 0.0005 ? "chiar la " : "la " + pctTxt(dist) + " de ") + et + " (" + monedaBursa(p.s) + pr(sl) + ")",
+        mesaj: "Prețul e " + monedaBursa(p.s) + pr(pret) + ", în ultimul sfert al drumului spre stop (ținta " + monedaBursa(p.s) + pr(tp) + ").\n👉 N-aș adăuga acum; dacă atinge stopul, aș ieși cum ai scris." });
     if (!pl && sg) {
-      if (pret <= sl) out.push({ cheie: "sltp-sl-" + p.s + "-" + zi, nivel: "critic", titlu: p.s + ": a atins stopul sugerat ($" + pr(sl) + ")",
-        mesaj: "Prețul e $" + pr(pret) + "; poziția n-are plan în Radar, stopul e cel sugerat (−15% de la maxim).\n👉 Aș ieși sau mi-aș scrie acum planul la rece." });
-      else if (pret >= tp) out.push({ cheie: "sltp-tp-" + p.s + "-" + zi, nivel: "info", titlu: p.s + ": a atins ținta sugerată ($" + pr(tp) + ")",
-        mesaj: "Prețul e $" + pr(pret) + ".\n👉 Aș lua profit pe o parte și aș pune stopul la prețul de intrare; restul l-aș lăsa să meargă." });
+      if (pret <= sl) out.push({ cheie: "sltp-sl-" + p.s + "-" + zi(p.s), nivel: "critic", titlu: p.s + ": a atins stopul sugerat (" + monedaBursa(p.s) + pr(sl) + ")",
+        mesaj: "Prețul e " + monedaBursa(p.s) + pr(pret) + "; poziția n-are plan în Radar, stopul e cel sugerat (−15% de la maxim).\n👉 Aș ieși sau mi-aș scrie acum planul la rece." });
+      else if (pret >= tp) out.push({ cheie: "sltp-tp-" + p.s + "-" + zi(p.s), nivel: "info", titlu: p.s + ": a atins ținta sugerată (" + monedaBursa(p.s) + pr(tp) + ")",
+        mesaj: "Prețul e " + monedaBursa(p.s) + pr(pret) + ".\n👉 Aș lua profit pe o parte și aș pune stopul la prețul de intrare; restul l-aș lăsa să meargă." });
     }
   }
   for (const s of Array.isArray(poza.simboluri) ? poza.simboluri : []) {
     const g = s && s.sugestie, pret = s && nr(s.pret);
     if (!g || g.nivel || !g.intrare || nr(g.intrare.pret) === null || !pret || pret > g.intrare.pret * 1.005) continue;
     const m = s.moneda === "€" ? "€" : "$", q = g.proba || {};
-    out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi, nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
+    out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi(s.s), nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
       // v100.68 (pachetul 3): randul 1 = pretul, stopul, tinta si istoricul; randul 2 = cat as cumpara (reper, nu semnal)
       mesaj: "Prețul e " + m + pr(pret) + " · stop " + m + pr(g.stop) + " · țintă " + m + pr(g.tinta)
         + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + "% pe plus, " + cate(q.n, "intrare", "intrări") + ")" : "") + ".\n👉 "

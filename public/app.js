@@ -437,15 +437,18 @@ function renderAnalytics(){
  const buckets=[[60,64],[65,69],[70,74],[75,79],[80,100]],cal=$("confidenceCalibration");cal.innerHTML=buckets.map(([a,b])=>{let z=r.filter(x=>Math.max(x.longConf||0,x.shortConf||0)>=a&&Math.max(x.longConf||0,x.shortConf||0)<=b),wr=z.length?z.filter(x=>x.r>0).length/z.length*100:0;return `<div class="calibrationLine"><span>${a}-${b}</span><div class="calibrationTrack"><div class="calibrationFill" style="width:${wr}%"></div></div><b>${z.length?wr.toFixed(0)+"%":"—"}</b></div>`}).join("")
 }
 function percentile(a,p){if(!a.length)return NaN;let x=[...a].sort((m,n)=>m-n),i=(x.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?x[l]:x[l]+(x[h]-x[l])*(i-l)}
-function sampleBlock(vals,len){
- const n=vals.length;if(!n)return [];const start=Math.floor(Math.random()*n),out=[];for(let i=0;i<len;i++)out.push(vals[(start+i)%n]);return out
+// v100.175 (auditul Opus, M20): fără Math.random - mulberry32 cu sămânța din date (aceleași rezultate la fiecare reîncărcare)
+function mcMulberry(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function mcSamanta(vals){let h=2166136261;for(const v of vals){const s=String(Math.round(v*1e6));for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}}return h>>>0}
+function sampleBlock(vals,len,rnd){
+ const n=vals.length;if(!n)return [];const start=Math.floor((rnd||Math.random)()*n),out=[];for(let i=0;i<len;i++)out.push(vals[(start+i)%n]);return out
 }
 async function runMonteCarlo(){
  let source=$("mcSource").value,method=$("mcMethod")?.value||"BLOCK",block=Math.max(1,+$("mcBlock")?.value||5),runs=Math.max(100,Math.min(10000,+$("mcRuns").value||1000)),trades=Math.max(20,Math.min(1000,+$("mcTrades").value||100)),vals;
  if(source==="journal")vals=resolvedChronological(analysisSource()).map(x=>x.r);else vals=paperTrades().filter(x=>Number.isFinite(+x.realizedUsd)||Number.isFinite(+x.realized)).sort((a,b)=>(+a.opened||0)-(+b.opened||0)).map(x=>Number.isFinite(+x.realizedUsd)&&+x.riskUsd?+x.realizedUsd/+x.riskUsd:(+x.realized||0)/100);
  if(vals.length<20){toast("Need at least 20 resolved outcomes for Monte Carlo","warn");return}
- let result=null;try{result=await researchWorkerTask("monteCarlo",{vals,runs,trades,method,block,seed:Date.now()>>>0},60000)}catch{}
- if(!result){let ends=[],dds=[],loss=0;for(let q=0;q<runs;q++){let seq=[];if(method==="BLOCK"){while(seq.length<trades)seq.push(...sampleBlock(vals,Math.min(block,trades-seq.length)))}else{for(let i=0;i<trades;i++)seq.push(vals[Math.floor(Math.random()*vals.length)])}let eq=0,peak=0,dd=0;for(const v of seq.slice(0,trades)){eq+=v;peak=Math.max(peak,eq);dd=Math.min(dd,eq-peak)}ends.push(eq);dds.push(dd);if(eq<0)loss++}result={median:percentile(ends,.5),p5:percentile(ends,.05),p95:percentile(ends,.95),dd:percentile(dds,.5),lossProb:loss/runs}}
+ let result=null;try{result=await researchWorkerTask("monteCarlo",{vals,runs,trades,method,block,seed:mcSamanta(vals)},60000)}catch{}
+ if(!result){const rnd=mcMulberry(mcSamanta(vals));let ends=[],dds=[],loss=0;for(let q=0;q<runs;q++){let seq=[];if(method==="BLOCK"){while(seq.length<trades)seq.push(...sampleBlock(vals,Math.min(block,trades-seq.length),rnd))}else{for(let i=0;i<trades;i++)seq.push(vals[Math.floor(rnd()*vals.length)])}let eq=0,peak=0,dd=0;for(const v of seq.slice(0,trades)){eq+=v;peak=Math.max(peak,eq);dd=Math.min(dd,eq-peak)}ends.push(eq);dds.push(dd);if(eq<0)loss++}result={median:percentile(ends,.5),p5:percentile(ends,.05),p95:percentile(ends,.95),dd:percentile(dds,.5),lossProb:loss/runs}}
  $("mcMedian").textContent=result.median.toFixed(1)+" R";$("mcP5").textContent=result.p5.toFixed(1)+" R";$("mcP95").textContent=result.p95.toFixed(1)+" R";$("mcDd").textContent=result.dd.toFixed(1)+" R";$("mcLossProb").textContent=(100*result.lossProb).toFixed(1)+"%";
  if($("mcNote"))$("mcNote").textContent=(method==="BLOCK"?`Block bootstrap · block ${block} · preserves short outcome clustering better than IID.`:"IID bootstrap · assumes outcomes are independent.")+` ${researchWorkerSupported()?"Heavy simulation dispatched to Web Worker when available.":"Worker unavailable; synchronous fallback used."} Not a forecast.`
 }
@@ -5557,7 +5560,8 @@ function jtStatDate(piata){
 // v100.27: spot grid si smart copy intra in socoteala - nota spune cati sunt inclusi
 function jtNotaPionex(){var c=jtStat.toate.crypto,nb=c?c.tr.length:0,A=jtArhiva||{},B=jtStare.boti||[],nr2=function(t){return B.filter(function(b){return b&&b.buOrderType===t}).length},sp=nr2("spot_grid"),sc=nr2("smart_copy");
   return (A.sursa==="acasa"?(A.complet?"toată istoria Pionex ("+TextRo.cate(nb,"bot","boți")+")":TextRo.cate(nb,"bot","boți")+" până acum — colectorul încă strânge istoria"):"doar ultimii "+TextRo.cate(nb,"bot","boți")+" (prima pagină Pionex) — toată istoria se vede de acasă")+(sp||sc?" · inclusiv "+sp+" spot grid și "+sc+" smart copy":"")}
-function jtStatNota(piata,d){var px=jtNotaPionex();return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei (cursul ultimei tranzacții Trading 212); Pionex: "+px+"; boții apar cu „(bot)”"}
+// v100.175 (auditul Opus, M13): „Tot” pune boții la UN curs (cel BNR de azi) - nota o spune; Declarația folosește cursul din ziua fiecărui trade
+function jtStatNota(piata,d){var px=jtNotaPionex();return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei ("+(typeof t212!=="undefined"&&t212.bnr&&t212.bnr.curs>0?"cursul BNR din "+t212.bnr.zi.slice(8)+"."+t212.bnr.zi.slice(5,7):"cursul ultimei tranzacții Trading 212")+", același pentru toți boții; Declarația folosește cursul din ziua fiecărui trade); Pionex: "+px+"; boții apar cu „(bot)”"}
 function jtStatRender(piata){
   var el=$(piata==="crypto"?"jtStatCrypto":piata==="actiuni"?"jtStatActiuni":"jtStatTot");if(!el)return;
   var d=null;try{d=jtStatDate(piata)}catch(e){console.error("statistica",piata,e);el.innerHTML='<p class="tbSub">Statistica nu s-a putut socoti: '+escapeHtml(e.message)+'</p>';return}
@@ -7229,7 +7233,7 @@ function pvPorneste(simbol){
 }
 function pvDeschide(simbol){
   try{
-    var soc=new WebSocket((location.protocol==="https:"?"wss:":"ws:")+"//"+location.host+"/api/pret-viu?simbol="+encodeURIComponent(simbol));
+    var soc=new WebSocket((location.protocol==="https:"?"wss:":"ws:")+"//"+location.host+"/api/pret-viu?simbol="+encodeURIComponent(simbol)+"&t="+encodeURIComponent(apiSessionToken()||""));   /* v100.175: releul cere parola */
     pvStare.ws=soc;pvStare.ultimMesaj=Date.now();
     soc.onopen=function(){if(pvStare.ws===soc)pvStare.incercari=0};
     soc.onmessage=function(ev){

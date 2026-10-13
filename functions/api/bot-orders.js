@@ -222,7 +222,11 @@ export async function onRequestGet({request,env}){
 
   const probleme={};
   let brute,next=null;
-  try{({results:brute,next}=await citesteBoti(env,params))}
+  try{
+    ({results:brute,next}=await citesteBoti(env,params));
+    // v100.175 (auditul Opus, I3): Pionex dă boții pe pagini de câte 10 - și lista celor PORNIȚI; al 11-lea bot n-ar fi primit nicio alertă
+    if(!brutCerut&&!params.status&&!params.pageToken){for(let i=0;next&&i<9;i++){const p=await citesteBoti(env,{...params,pageToken:next});brute=brute.concat(p.results);next=p.next}}
+  }
   catch(e){
     const corp={error:e.message};
     if(e.motiv)corp.motiv=e.motiv;

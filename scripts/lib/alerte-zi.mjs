@@ -17,11 +17,19 @@ export function adaugaInJurnal(j, a, acum) {
 }
 export function eZgomot(a) { return !!a && (a.cheie === "grila" || /perech(e|i) încheiat/i.test(String(a.titlu || ""))); }
 // revizia (M9): poza peste plafonul worker-ului (512 KB) ar fi refuzată ÎNTREAGĂ (T212, boți) - întâi ies alertele-zgomot
+// v100.175 (auditul Opus, M22): dacă tot trece de plafon, în trepte - alertele „info” cele mai vechi (rămân ultimele 60), apoi seriile de
+// 30 de zile (graficele mici), apoi insiderii; pozițiile, boții și alertele importante rămân mereu
 export function pozaInLimita(poza, max) {
   let text = JSON.stringify(poza);
-  if (text.length <= max || !poza || !Array.isArray(poza.alerte)) return text;
-  const imp = poza.alerte.filter((a) => !a.zgomot), taiate = poza.alerte.length - imp.length;
-  text = JSON.stringify({ ...poza, alerte: imp, alerteTaiate: taiate });
+  if (text.length <= max || !poza) return text;
+  let p = poza;
+  const pasi = [
+    (x) => Array.isArray(x.alerte) ? { ...x, alerte: x.alerte.filter((a) => !a.zgomot), alerteTaiate: (x.alerteTaiate || 0) + x.alerte.filter((a) => a.zgomot).length } : x,
+    (x) => { if (!Array.isArray(x.alerte)) return x; const info = x.alerte.filter((a) => a.nivel === "info"); if (info.length <= 60) return x; const scot = new Set(info.slice().sort((a, b) => b.t - a.t).slice(60)); return { ...x, alerte: x.alerte.filter((a) => !scot.has(a)), alerteTaiate: (x.alerteTaiate || 0) + scot.size }; },
+    (x) => ({ ...x, t212: (x.t212 || []).map((r) => ({ ...r, closes30: [] })), simboluri: (x.simboluri || []).map((r) => ({ ...r, closes30: [] })), taiat: (x.taiat || []).concat(["closes30"]) }),
+    (x) => ({ ...x, t212: (x.t212 || []).map((r) => ({ ...r, insideri: null })), simboluri: (x.simboluri || []).map((r) => ({ ...r, insideri: null })), taiat: (x.taiat || []).concat(["insideri"]) }),
+  ];
+  for (const f of pasi) { p = f(p); text = JSON.stringify(p); if (text.length <= max) break; }
   return text;
 }
 const scurt = (s) => String(s || "").toUpperCase().replace(/\.[A-Z]+$/, "");

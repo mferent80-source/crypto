@@ -30,6 +30,8 @@ function curata(x){
 }
 async function citesteLista(env,bot){try{const v=JSON.parse(await env.ISTORIC.get("ist:"+bot)||"[]");return Array.isArray(v)?v:[]}catch{return []}}
 async function citesteConfig(env){try{return JSON.parse(await env.ISTORIC.get("config")||"null")}catch{return null}}
+// v100.175 (auditul Opus, M20): lista KV dă cel mult 1000 de chei pe pagină ⇒ se urmează cursorul (ca la deciziiBoti)
+async function toateCheile(env,prefix){const out=[];let cursor=null;do{const l=await env.ISTORIC.list(cursor?{prefix,cursor}:{prefix});for(const k of (l&&l.keys)||[])out.push(k);cursor=l&&!l.list_complete&&l.cursor?l.cursor:null}while(cursor&&out.length<20000);return out}
 const faraKv=()=>json({error:"ISTORIC_DOAR_ACASA",detail:"Istoricul de pe server merge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat)."},503);
 
 export async function onRequestGet({request,env}){
@@ -96,10 +98,10 @@ export async function onRequestGet({request,env}){
   if(action==="voci"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}return json({voci:Array.isArray(l)?l:[]})}   // v100.149 (I-577): jurnalul vocilor
   // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
   // v100.104 (I-537): toate planurile scrise (fără cele de probă și fără T212) - pentru pragul propus din istoria lui
-  if(action==="planuri"){const out=[];try{const l=await env.ISTORIC.list({prefix:"plan:"});for(const k of (l&&l.keys)||[]){const id=k.name.slice(5);if(/^t212-/.test(id))continue;let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(nr(p.plus)>0||nr(p.minus)>0))continue;out.push({bot:id,plan:{plus:nr(p.plus),minus:nr(p.minus),afaraOre:nr(p.afaraOre)}});if(out.length>=300)break}}catch{}return json({planuri:out})}
+  if(action==="planuri"){const out=[];try{for(const k of await toateCheile(env,"plan:")){const id=k.name.slice(5);if(/^t212-/.test(id))continue;let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(nr(p.plus)>0||nr(p.minus)>0))continue;out.push({bot:id,plan:{plus:nr(p.plus),minus:nr(p.minus),afaraOre:nr(p.afaraOre)}});if(out.length>=300)break}}catch{}return json({planuri:out})}
   // v100.104 (I-538): ferestrele ÎNGUST / LARG arătate de fișă (ultimele 60) - pentru jurnal pe orice aparat și pentru colector
   if(action==="ferestre"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("ferestre")||"[]")}catch{l=[]}return json({ferestre:Array.isArray(l)?l:[]})}
-  if(action==="ultimulPlan"){let bun=null;try{const l=await env.ISTORIC.list({prefix:"plan:"});for(const k of (l&&l.keys)||[]){const id=k.name.slice(5);if(/^t212-/.test(id))continue;
+  if(action==="ultimulPlan"){let bun=null;try{for(const k of await toateCheile(env,"plan:")){const id=k.name.slice(5);if(/^t212-/.test(id))continue;
       let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(p.plus>0||p.minus>0))continue;if(!bun||(p.la||0)>(bun.plan.la||0))bun={bot:id,plan:p}}}catch{bun=null}
     return json(bun||{bot:null,plan:null})}
   // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
