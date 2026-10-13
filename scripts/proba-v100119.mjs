@@ -225,7 +225,7 @@ await test("(5a') din poză (06.10): fără steaguri (pe Windows ies litere), f�
   const cl = { monede: [{ simbol: "LIT_USDT_PERP", stare: "candidat", latime: 0.06, profitGrila: 0.004, traversariZi: 3.2 }] };
   const h = globalThis.sugHtml(Object.assign({}, DATE, { clasament: cl, sugActiuni: { sugestii: DATE.sugActiuni.sugestii, premarket: null } }), T0);
   assert.doesNotMatch(h, /🇺🇸|🇪🇺/); assert.doesNotMatch(h, /scor 0/); assert.match(h, />LIT</); assert.match(h, /treceri pe zi/);
-  assert.equal((h.match(/se face înainte de deschiderea de la New York/g) || []).length, 1); assert.match(h, /intrare 180,00/);
+  assert.equal((h.match(/se face înainte de deschiderea de la New York/g) || []).length, 1); assert.match(h, /intrare 180,0 · stop 170,0 · țintă 200,0/);   /* v100.183: o zecimală de la 10 în sus (regula lui, 03.10) */
   const v = globalThis.sugHtml(DATE, T0 + 3 * ZI); assert.match(v, /la \d\d\.\d\d \d\d:\d\d/, "lista intraday de altă zi își spune data");
 });
 await test("(4f) EU „Pe revenire”: tickerul cu un salt de unitate (×100) iese și din istoricul regulii vechi (Reveniri n-are igiena; poza: +49,4% în medie)", async () => {

@@ -2514,6 +2514,7 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 .sugPandaCel.prag{color:var(--bad);font-weight:600}
 .sugPandaRand.bot td:first-child b{text-decoration:underline dotted}
 .sugPandaTab td,.sugPandaTab th{font-variant-numeric:tabular-nums;white-space:nowrap}
+.sugPandaTab .sugBusola{margin-left:4px;vertical-align:middle}   /* v100.183: 🧭 în pândă, lângă preț */
 /* ===== v100.151 · TEMA PAZNIC (aprobată de el pe demo, 11.10.2026) =====
    Doar aspect: paleta, colțuri 3–5 px, fără umbre și sticlă, fonturile IBM Plex (locale - CSP-ul nu lasă Google Fonts), cifrele în mono.
    Culorile de mai sus în foaie sunt deja trecute pe paleta PAZNIC; aici: fonturile, jetoanele și ce nu se putea face la sursă. */

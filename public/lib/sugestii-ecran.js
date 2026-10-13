@@ -46,7 +46,8 @@ function sugPandaHtml(l, boti, acum) {
     + Latime.filtreaza(m, f, simb).map(function (x) {
       var s = String(x.sym).replace(/USDT$/, ""), db = dirBot(s);
       var cu = !db ? null : db === "neutru" ? "neutru" : x.dir === "neclara" ? "—" : Latime.esteBotContra(db, x.dir === "SUS" ? "LARG-SUS" : "LARG-JOS") ? "CONTRA" : "CU";   /* moneda SUS + bot short = CONTRA; moneda JOS + bot long = CONTRA */
-      return '<tr class="sugPandaRand' + (db ? ' bot' : '') + '"><td><b>' + sugEsc(s) + '</b> <span class="tbSub">' + sugEsc(sugPandaPret(x.pret)) + '</span></td>'
+      var bz = typeof Busola !== "undefined" && Busola.adresaBusola ? Busola.adresaBusola({ simbol: s, tf: "4h" }) : null;   /* v100.183 (el: „poți face ideile”): 🧭 pe fiecare monedă, Busola pe 4h ca direcția din tabel */
+      return '<tr class="sugPandaRand' + (db ? ' bot' : '') + '"><td><b>' + sugEsc(s) + '</b> <span class="tbSub">' + sugEsc(sugPandaPret(x.pret)) + '</span>' + (bz ? '<a class="sugBusola" href="' + sugEsc(bz) + '" target="_blank" rel="noopener" aria-label="deschide ' + sugEsc(s) + ' în Busola" title="deschide în Busola">🧭</a>' : '') + '</td>'
         + '<td class="' + (x.dir === "SUS" ? "good" : x.dir === "JOS" ? "bad" : "neutral") + '">' + sugEsc(x.dir === "neclara" ? "neclară" : x.dir) + (x.dir !== "neclara" && x.zileDir != null ? ' <span class="tbSub">de ' + sugCate(x.zileDir, "zi", "zile") + '</span>' : '') + '</td>'
         + '<td class="sugPandaCel' + prag(x.volPctl, P.volPctl) + '">' + sugPandaNr(x.volPctl) + '</td><td class="sugPandaCel' + prag(x.extPctl, P.extPctl) + '">' + sugPandaNr(x.extPctl) + '</td><td class="sugPandaCel' + prag(x.adrUsed, P.adrConsumat) + '">' + (x.adrUsed == null ? "—" : sugZec(x.adrUsed) + "%") + '</td>'
         + '<td class="sugPandaCel' + (prag(x.fundPctl, P.fundPctlSus) || prag(x.fundPctl, P.fundPctlJos, true)) + '">' + sugPandaNr(x.fundPctl) + '</td><td class="sugPandaCel' + prag(x.oiPctl, P.oiPctl) + '">' + sugPandaNr(x.oiPctl) + (x.oiChg != null ? ' <span class="tbSub">' + sugZec(x.oiChg) + '%</span>' : '') + '</td>'
@@ -58,7 +59,7 @@ function sugPandaDesfa() { sugStare.panda.desfacut = true; sugDeseneaza(); }
 // revizia (4): „pânda ›” din Tablou - pagina se ÎNCARCĂ (navTo cu load), blocul vine desfăcut, filtrul pe toate
 function sugDeschidePanda() { sugStare.panda.desfacut = true; sugStare.panda.filtru = "toate"; navTo("sugestii", true); }
 function sugPanda(f) { sugStare.panda.filtru = f; sugStare.panda.desfacut = true; sugDeseneaza(); }
-function sugBani(v) { var n = Number(v); return isFinite(n) && n > 0 ? n.toFixed(2).replace(".", ",") : ""; }   // poza 06.10: virgula, nu punctul
+function sugBani(v) { var n = Number(v); return isFinite(n) && n > 0 ? n.toFixed(n >= 10 ? 1 : 2).replace(".", ",") : ""; }   // poza 06.10: virgula, nu punctul; v100.183 (regula lui, 03.10): o zecimală de la 10 în sus (±0,05 = sub 0,5%), sub 10 două (stopul s-ar muta cu peste 0,5%); întregi pe pagina Trading 212
 function sugSim(x) { return x.simbol || String(x.ticker || x.simbolTicker || "").split("_")[0]; }
 function sugActiuniPiata(p, sa, pm, ii, steag, nume, acum) {
   var s = sa && sa[p], urm = sa && sa.urmarire && sa.urmarire[p] || {}, h = "", ast = !sa ? "aștept tura de la 8:00" : "nimic azi";
