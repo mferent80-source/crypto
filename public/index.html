@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.179" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.180" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar Pro Lite</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -11,6 +11,7 @@
 <div class="sideGrup" id="sideZilnic"><div class="sideGrupCap">Zilnic</div>
 <button class="sideBtn active" data-action-click="navTo('dash')" data-nav="dash"><span class="sideIcon">⌂</span>Dashboard</button>
 <button class="sideBtn" data-action-click="navTo('tabloubot',true)" data-nav="tabloubot"><span class="sideIcon">◉</span>Tabloul botului</button>
+<button class="sideBtn" data-action-click="deschideBusola()" title="Busola în fereastra ei, pe moneda și intervalul tău"><span class="sideIcon">🧭</span>Busola ↗</button>
 <button class="sideBtn" data-action-click="navTo('sugestii',true)" data-nav="sugestii"><span class="sideIcon">💡</span>Sugestii</button>
 <button class="sideBtn" data-action-click="navTo('gridset',true)" data-nav="gridset"><span class="sideIcon">▦</span>Grid: ce setez?</button>
 <button class="sideBtn" data-action-click="navTo('gridsim',true)" data-nav="gridsim"><span class="sideIcon">⚄</span>Simulator grid</button>
@@ -68,7 +69,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.179 · DISCIPLINA</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.180 · DRUMUL SPRE BUSOLA</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -85,7 +86,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.179 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.180 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -1200,7 +1201,7 @@
 <div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v100.179</b></div>
+<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v100.180</b></div>
 <div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -2311,7 +2312,7 @@
 <div aria-label="More navigation" aria-modal="true" class="moreDrawer" data-action-click="if(event.target===this)closeMoreDrawer()" id="moreDrawer" role="dialog" tabindex="-1"><div class="moreSheet">
 <div class="moreHead"><b>Crypto Radar</b><button class="actionGhost" data-action-click="closeMoreDrawer()">Close</button></div>
 <div class="moreGrid">
-<button class="moreBtn" data-action-click="moreNav('dash')"><b>⌂</b>Dashboard</button><button class="moreBtn" data-action-click="moreNav('scan',true)"><b>⌕</b>Scan</button><button class="moreBtn" data-action-click="moreNav('gridsim',true)"><b>⚄</b>Simulator</button><button class="moreBtn" data-action-click="moreNav('signals',true)"><b>↗</b>Signals</button><button class="moreBtn" data-action-click="moreNav('market',true)"><b>◉</b>Market</button><button class="moreBtn" data-action-click="moreNav('tabloubot',true)"><b>◉</b>Tablou bot</button><button class="moreBtn" data-action-click="moreNav('salt',true)"><b>🧂</b>Salt</button><button class="moreBtn" data-action-click="moreNav('sugestii',true)"><b>💡</b>Sugestii</button><button class="moreBtn" data-action-click="moreNav('rezultate',true)"><b>📅</b>Rezultate</button><button class="moreBtn" data-action-click="moreNav('carnet',true)"><b>✓</b>Carnet</button><button class="moreBtn" data-action-click="moreNav('gridset',true)"><b>▦</b>Grid: ce setez?</button><button class="moreBtn" data-action-click="moreNav('jurnaltrade',true)"><b>📓</b>Jurnal de trade</button><button class="moreBtn" data-action-click="closeMoreDrawer();deschideT212()"><b>💼</b>Trading 212</button>
+<button class="moreBtn" data-action-click="moreNav('dash')"><b>⌂</b>Dashboard</button><button class="moreBtn" data-action-click="moreNav('scan',true)"><b>⌕</b>Scan</button><button class="moreBtn" data-action-click="moreNav('gridsim',true)"><b>⚄</b>Simulator</button><button class="moreBtn" data-action-click="moreNav('signals',true)"><b>↗</b>Signals</button><button class="moreBtn" data-action-click="moreNav('market',true)"><b>◉</b>Market</button><button class="moreBtn" data-action-click="moreNav('tabloubot',true)"><b>◉</b>Tablou bot</button><button class="moreBtn" data-action-click="closeMoreDrawer();deschideBusola()"><b>🧭</b>Busola ↗</button><button class="moreBtn" data-action-click="moreNav('salt',true)"><b>🧂</b>Salt</button><button class="moreBtn" data-action-click="moreNav('sugestii',true)"><b>💡</b>Sugestii</button><button class="moreBtn" data-action-click="moreNav('rezultate',true)"><b>📅</b>Rezultate</button><button class="moreBtn" data-action-click="moreNav('carnet',true)"><b>✓</b>Carnet</button><button class="moreBtn" data-action-click="moreNav('gridset',true)"><b>▦</b>Grid: ce setez?</button><button class="moreBtn" data-action-click="moreNav('jurnaltrade',true)"><b>📓</b>Jurnal de trade</button><button class="moreBtn" data-action-click="closeMoreDrawer();deschideT212()"><b>💼</b>Trading 212</button>
 <button class="moreBtn" data-action-click="moreNav('desk')"><b>◆</b>Desk</button>
 <button class="moreBtn" data-action-click="moreNav('opportunity')"><b>★</b>Top 10</button>
 <button class="moreBtn" data-action-click="moreNav('engine')"><b>⚙</b>Engine</button>

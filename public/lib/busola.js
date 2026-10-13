@@ -284,6 +284,15 @@ var Busola = (function () {
   // v100.149 (I-582): adresa cu stare a Busolei (folosesteAdresa.ts: ?sym= fără USDT e completat acolo; pe spot nu există „1000X”)
   var URL_BUSOLA = "https://busola.mferent80.workers.dev/";
   function linkBusola(simbol, interval) { var c = simbolBusola(simbol); return c ? URL_BUSOLA + "?sym=" + encodeURIComponent(c) + "&interval=" + encodeURIComponent(interval || "4h") : null; }
+  // v100.180 (el 13.10: Busola rămâne separată, Radarul are drumul scurt spre ea): Busola știe doar 15m / 1h / 4h / 1d (folosesteAdresa.ts) ⇒
+  // 5m merge pe 15m (cel mai scurt al ei); necunoscut ⇒ 4h, intervalul ei de bază
+  var INTERVAL_BUSOLA = { "5m": "15m", "15m": "15m", "60m": "1h", "1h": "1h", "4h": "4h", "1d": "1d", "1z": "1d" };
+  function intervalBusola(tf) { return INTERVAL_BUSOLA[String(tf || "").toLowerCase()] || "4h"; }
+  // moneda botului din Tablou (pe intervalul graficului) bate moneda din Radar; acțiunile / fără monedă ⇒ capul Busolei
+  function adresaBusola(o) {
+    o = o || {};
+    return (o.bot ? linkBusola(o.bot, intervalBusola(o.tfBot)) : null) || (!o.actiuni && o.simbol ? linkBusola(o.simbol, intervalBusola(o.tf)) : null) || URL_BUSOLA;
+  }
   // v100.149 (I-577): bilanțul jurnalului vocilor - contrazicerile judecate după 24 h (dupa.pretDir: 1 / −1 / 0 = pe loc); „dreptate” =
   // vocea a arătat încotro a mers prețul (Monte Carlo: bun/rău PENTRU BOT ⇒ pe short semnul se întoarce). Statistică, nu semnal; sub 10 = prea puține
   // revizia Opus: o intrare pe monedă și oră (doi boți pe aceeași monedă / aceeași frază nu se numără de două ori); fiecare voce cu numitorul
@@ -327,6 +336,7 @@ var Busola = (function () {
     randFisa: randFisa, comparaInterval: comparaInterval, cartela: cartela, htmlCartela: htmlCartela, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset,
     randDirectie: randDirectie, randVerdict: randVerdict, randBtc: randBtc,   /* v100.147 */
     concluzie: concluzie, alteIntervale: alteIntervale, liniaBtc: liniaBtc,   /* v100.148 */
-    linkBusola: linkBusola, bilantVoci: bilantVoci };   /* v100.149 */
+    linkBusola: linkBusola, bilantVoci: bilantVoci,   /* v100.149 */
+    intervalBusola: intervalBusola, adresaBusola: adresaBusola };   /* v100.180 */
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

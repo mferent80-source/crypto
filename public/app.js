@@ -6272,8 +6272,12 @@ function tbBusolaLinie(b){
   // v100.92 (I-518): cartela unică a Busolei - starea cu „de când”, intervalul ei față de gridul botului; aceeași cartelă în fișă și pe Acasă
   var h=Busola.htmlCartela(Busola.cartela(Busola.rezumat(),tbCheieBusola(b),Date.now(),{kv:tbPazaKv.boti[b.id],pret:function(x){return grPret(x,null)},prop:{jos:botiNr(b.gridJos),sus:botiNr(b.gridSus)}}),escapeHtml)
     ||'<div class="tbLinie"><span>Busola, pe 4h</span><b class="tbSubVal">'+(Busola.nuRaspunde()?"Busola nu răspunde":"aștept rezumatul…")+'</b></div>';   /* v100.91 (ideea 2): eșecul nu mai arată ca așteptarea */
+  /* v100.180 (el 13.10: Busola rămâne separată): Busola întreagă pe moneda botului și intervalul graficului - și când moneda n-a fost măsurată (Busola o analizează pe loc) */
+  h+='<div class="tbLinie"><span>Busola, pe moneda asta</span><a class="tbMcBtn tbCitLink" href="'+escapeHtml(Busola.adresaBusola({bot:tbCheieBusola(b),tfBot:tbTf()}))+'" target="_blank" rel="noopener">🧭 deschide în Busola ↗</a></div>';
   return h;   /* revizia Opus: rândul BTC NU aici (citirea îl are deja) - pe cartela portofoliului (tbBtcPortofoliu) */
 }
+// v100.180 (el 13.10: „poți face așa” - Busola rămâne aplicația ei, cu jurnalul, alertele și notificările ei): drumul scurt din meniu; pe Tabloul botului cu un bot citit ⇒ moneda lui pe intervalul graficului, altfel moneda și intervalul din Radar; acțiuni ⇒ capul Busolei
+function deschideBusola(){if(typeof Busola==="undefined")return;var a=document.querySelector(".sideBtn.active"),peTablou=!!(a&&a.dataset&&a.dataset.nav==="tabloubot"),b=peTablou&&tbStare.bot?tbStare.bot:null,s=$("symbol"),t=$("tf");window.open(Busola.adresaBusola({bot:b?tbCheieBusola(b):null,tfBot:b?tbTf():null,simbol:s?s.value:"",tf:t?t.value:"",actiuni:assetClass()==="STOCKS"}),"_blank","noopener")}
 function tbDeseneazaExtra(b){
   var el=$("tbFisaBot"),el2=$("tbAcum"),P=GridCalcul.procent;if(!el||!el2)return;
   if(!b){el.innerHTML=el2.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
