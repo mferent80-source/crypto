@@ -83,6 +83,10 @@ export async function onRequestGet({request,env}){
   if(action==="sectoareTop"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:sectoare")||"null")}catch{v=null}return json({sectoare:v})}
   if(action==="universSua"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}return json({la:v&&v.la||null,harta:v&&v.harta||{}})}
   if(action==="sector"){const s=String(u.searchParams.get("s")||"").toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,12);let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}const h=v&&v.harta&&v.harta[s];return json({s,sector:h?h[0]:null,industrie:h?h[1]:null})}
+  // v100.179 (disciplina): tezele, statisticile ieșirii din bandă, lecțiile săptămânii
+  if(action==="teze"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("teze:t212")||"[]")}catch{l=[]}return json({teze:Array.isArray(l)?l:[]})}
+  if(action==="disciplinaBanda"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("disciplina:banda")||"null")}catch{v=null}return json({banda:v})}
+  if(action==="lectii"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("disciplina:lectii")||"[]")}catch{l=[]}return json({lectii:Array.isArray(l)?l:[]})}
   if(action==="contZile"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("cont:zile")||"[]")}catch{l=[]}return json({zile:Array.isArray(l)?l:[]})}
   // v100.117 (I-561): carnetul fișei - raportul de noapte al laboratorului (re-joc + ofertele judecate)
   if(action==="carnet"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("carnet")||"null")}catch{r=null}return json({carnet:r})}
@@ -134,7 +138,7 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:action==="universSua"?1048576:action==="sectoareTop"?262144:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:action==="universSua"?1048576:action==="sectoareTop"?262144:action==="disciplinaBanda"?524288:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
   if(action==="ferestre"){
@@ -277,6 +281,10 @@ export async function onRequestPost({request,env}){
     // v85: pe actiunile T212 (bot = "t212-<TICKER>") planul are stop, tinta si "ies la -X% de la maxim"
     const tr=poz(p&&p.trailPct);
     const plan={plus:poz(p&&p.plus),minus:poz(p&&p.minus),afaraOre:poz(p&&p.afaraOre),stop:poz(p&&p.stop),tinta:poz(p&&p.tinta),trailPct:tr!==null&&tr<=90?tr:null,la:Date.now()};
+    // v100.179 (teza la intrare): de ce am intrat, ce m-ar face să ies, orizontul în zile - doar la acțiuni (t212-…); istoricul tezelor rămâne
+    const txt=(s,n)=>String(s==null?"":s).replace(/[\u0000-\u001f]/g," ").trim().slice(0,n);
+    if(/^t212-/.test(bot)&&p){const tz=txt(p.teza,300),inv=txt(p.invalidare,200),oz=nr(p.orizont);if(tz)plan.teza=tz;if(inv)plan.invalidare=inv;if(oz>0&&oz<=3650)plan.orizont=Math.round(oz);
+      if(tz||inv||plan.orizont){let l=[];try{l=JSON.parse(await env.ISTORIC.get("teze:t212")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];l.push({tk:bot.slice(5),t:Date.now(),teza:tz||null,invalidare:inv||null,orizont:plan.orizont||null});await env.ISTORIC.put("teze:t212",JSON.stringify(l.slice(-2000)))}}
     // v88: planul pus de o PROBA de ecran ramane marcat, ca sa nu declanseze alerte reale (colectorul il sare)
     if(p&&p.proba===true)plan.proba=true;
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
@@ -301,6 +309,8 @@ export async function onRequestPost({request,env}){
     const m=new Map();for(const x of l.concat(noi)){const c=x.s+"|"+x.k+"|"+z(x.t),v=m.get(c);if(!v||v.t<=x.t)m.set(c,x)}
     const out=[...m.values()].sort((a,b)=>a.t-b.t).slice(-20000);await env.ISTORIC.put("verdicte:jurnal",JSON.stringify(out));return json({ok:true,n:out.length})}
   if(action==="verdicteCalibrare"){const c=corp;if(!c||typeof c!=="object"||!(nr(c.la)>0)||!Array.isArray(c.calibrare))return json({error:"verdicteCalibrare: la + calibrare"},400);await env.ISTORIC.put("verdicte:calibrare",JSON.stringify(c));return json({ok:true})}
+  if(action==="disciplinaBanda"){if(!(nr(corp&&corp.la)>0)||!Array.isArray(corp.tabel))return json({error:"disciplinaBanda: la + tabel"},400);await env.ISTORIC.put("disciplina:banda",JSON.stringify(corp));return json({ok:true})}
+  if(action==="lectie"){const x=corp;if(!x||!(nr(x.la)>0)||!x.lectie||typeof x.lectie!=="object")return json({error:"lectie: la + lectie"},400);let l=[];try{l=JSON.parse(await env.ISTORIC.get("disciplina:lectii")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];l=l.filter(y=>y&&y.sapt!==x.sapt).concat([x]).slice(-26);await env.ISTORIC.put("disciplina:lectii",JSON.stringify(l));return json({ok:true,n:l.length})}
   if(action==="dvol"){const b=nr(corp&&corp.btc),e=nr(corp&&corp.eth);if(!(nr(corp&&corp.la)>0)||!(b>0||e>0))return json({error:"dvol: la + btc/eth"},400);await env.ISTORIC.put("piata:dvol",JSON.stringify({la:nr(corp.la),btc:b,eth:e}));return json({ok:true})}
   if(action==="universSua"){const h=corp&&corp.harta;if(!h||typeof h!=="object"||!(nr(corp.la)>0))return json({error:"universSua: la + harta"},400);const o={};for(const k of Object.keys(h).slice(0,12000)){const v=h[k];if(Array.isArray(v))o[String(k).toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,12)]=[String(v[0]||"").slice(0,40),String(v[1]||"").slice(0,80)]}await env.ISTORIC.put("univers:sua",JSON.stringify({la:nr(corp.la),harta:o}));return json({ok:true,n:Object.keys(o).length})}
   if(action==="sectoareTop"){if(!(nr(corp&&corp.la)>0)||!Array.isArray(corp.sectoare))return json({error:"sectoareTop: la + sectoare"},400);await env.ISTORIC.put("sugestii:sectoare",JSON.stringify(corp));return json({ok:true})}

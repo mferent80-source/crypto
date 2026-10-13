@@ -55,7 +55,7 @@ import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Op
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.105";   // v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.106";   // v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -178,7 +178,8 @@ const Sectoare = incarca("sectoare.js", "Sectoare");   // v101.95 (sector-rotati
 const Macro = incarca("macro.js", "Macro");   // v101.96 (macro-dashboard mutat în Radar): regimul macro + evenimentele mari din SUA, pe Discord
 const ContIntreg = incarca("cont-intreg.js", "ContIntreg");
 const Verdicte = incarca("verdicte.js", "Verdicte");
-const Factori = incarca("factori.js", "Factori");   // v101.105: factorii, atribuirea, MAE / MFE, ținta de volatilitate, opțiunile, topul pe sectoare   // v101.103: jurnalul verdictelor (aceleași reguli ca pagina)   // v101.102: contul întreg (aceleași formule ca pagina)
+const Factori = incarca("factori.js", "Factori");
+const Disciplina = incarca("disciplina.js", "Disciplina");   // v101.106: banda după istoria lui, gărzile, lecția săptămânii   // v101.105: factorii, atribuirea, MAE / MFE, ținta de volatilitate, opțiunile, topul pe sectoare   // v101.103: jurnalul verdictelor (aceleași reguli ca pagina)   // v101.102: contul întreg (aceleași formule ca pagina)
 const Salt = incarca("salt.js", "Salt");   // v101.82 (pagina Salt): tabelul instrumentelor Salt Bank (trendul, ziua de ieri)   // v101.81 (pagina Sugestii): regulile „early” + istoricul lor (verdictul din Carnet)
 const SUG_BAZA_FIS = path.join(DATA, "sugestii-baza.json"), SUG_IST_FIS = path.join(DATA, "sugestii-istoric.json");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
 const CARNET_FIS = path.join(DATA, "carnet-oferte.json");
@@ -2007,13 +2008,49 @@ async function bareZiCont(cale) {
 }
 async function turaContColector() {
   await turaContModul({ cere, trimite, trimiteAlerta, jurnal, ContIntreg, T212, JurnalTrade, GridCalcul, MesajeColector, versiune: VERSIUNE_COLECTOR,
-    Factori, bareZi: bareZiCont, botiInchisi: botiInchisiCompleti, salt: async () => (ultimeleSalt && Array.isArray(ultimeleSalt.randuri) ? ultimeleSalt.randuri : []), cursBnr, yahooLung }, contStare);
+    Factori, Disciplina, botiAfara: () => botiAfaraAcum(), bareZi: bareZiCont, botiInchisi: botiInchisiCompleti, salt: async () => (ultimeleSalt && Array.isArray(ultimeleSalt.randuri) ? ultimeleSalt.randuri : []), cursBnr, yahooLung }, contStare);
   try { const { inLucru, ...deScris } = contStare; scrieAtomic(path.join(DATA, "cont-stare.json"), deScris); } catch {}
 }
 const verdicteStare = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, "verdicte-stare.json"), "utf8")) || {}; } catch { return {}; } })();
 async function turaVerdicteColector() {
   await turaVerdicteModul({ cere, trimite, jurnal, Verdicte, GridCalcul, bareZi: bareZiCont }, verdicteStare);
   try { const { inLucru, ...deScris } = verdicteStare; scrieAtomic(path.join(DATA, "verdicte-stare.json"), deScris); } catch {}
+}
+// v101.106 (disciplina, el 13.10: „fă 1, 2, 3, 4”): (1) o dată pe zi, din boții închiși și barele de 1 h ale arhivei: ce s-a întâmplat după ce
+// prețul a ieșit din bandă (câți s-au întors, cât a mers împotrivă) ⇒ regula LUI în ore; (1b) pe viu: botul afară peste regula lui ⇒ o alertă
+let disciplinaZi = null, disciplinaInLucru = false, bandaMemo = { la: 0, v: null };
+async function turaDisciplinaBanda() {
+  const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
+  if (disciplinaInLucru || disciplinaZi === zi) return;
+  disciplinaInLucru = true;
+  try {
+    const tr = JurnalTrade.din(await botiInchisiCompleti()), harta = simbolPeMoneda();
+    const bareDe = (m) => { const ore = harta[m] ? citesteJson(fisOre(harta[m]), []) : [], u = GridCalcul.imbinaRanduri(citesteArhiva(m), ore, 0); return u.length ? GridCalcul.bare(u) : null; };
+    const r = Disciplina.iesiriBanda(tr, bareDe);
+    await trimite("/api/istoric-bot?action=disciplinaBanda", { la: Date.now(), tabel: r.tabel, regula: r.regula, grupe: r.grupe, oreAfaraPe: r.oreAfaraPe });
+    bandaMemo = { la: Date.now(), v: r }; disciplinaZi = zi;
+    jurnal("disciplina banda: " + (r.regula ? "după " + r.regula.h + " h afară se mai întorc " + Math.round(r.regula.intoarse * 100) + "% (" + cate(r.regula.n, "caz", "cazuri") + ")" : "fără regulă (prea puține cazuri)"));
+  } catch (e) { jurnal("disciplina banda ESEC", e.message); }
+  disciplinaInLucru = false;
+}
+async function regulaBanda() {
+  if (bandaMemo.v && Date.now() - bandaMemo.la < 6 * 3600000) return bandaMemo.v.regula;
+  try { const d = await cere("/api/istoric-bot?action=disciplinaBanda"); bandaMemo = { la: Date.now(), v: d && d.banda || null }; } catch { bandaMemo.la = Date.now() - 6 * 3600000 + 600000; }
+  return bandaMemo.v && bandaMemo.v.regula || null;
+}
+function botiAfaraAcum() { const m = meta(); return Object.entries(m.banda || {}).map(([id, s]) => ({ id, nume: s.nume, oreAfara: (Date.now() - s.de) / 3600000 })); }
+async function turaBandaLive() {
+  const r = await regulaBanda(), m = meta(); m.banda = m.banda || {};
+  const activi = new Set();
+  for (const b of ultimiiBoti || []) {
+    if (!b || b.activ === false || !(Number(b.gridJos) > 0) || !(Number(b.gridSus) > Number(b.gridJos)) || !(Number(b.pretCurent) > 0)) continue;
+    activi.add(String(b.id));
+    const p = Number(b.pretCurent), afara = p < Number(b.gridJos) || p > Number(b.gridSus), s = m.banda[b.id];
+    if (!afara) { if (s) { delete m.banda[b.id]; scrieStare(); } continue; }
+    if (!s) { m.banda[b.id] = { de: Date.now(), nume: String(b.baza || "").replace(/\.PERP$/, ""), anuntat: false }; scrieStare(); continue; }
+    if (r && !s.anuntat && Date.now() - s.de >= r.h * 3600000) { if (await trimiteAlerta(MesajeColector.afaraDinBanda(s.nume, (Date.now() - s.de) / 3600000, r), b.id, "banda-regula")) { s.anuntat = true; scrieStare(); } }
+  }
+  for (const id of Object.keys(m.banda)) if (!activi.has(id)) delete m.banda[id];
 }
 const sectoareStare = {}, UNIVERS_FIS = path.join(DATA, "univers-sua.json");
 async function turaSectoareColector() {
@@ -2134,7 +2171,9 @@ async function bucla() {
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaContColector().catch((e) => jurnal("cont", e.message));   // v101.102 (contul întreg): la 6 ore
   turaVerdicteColector().catch((e) => jurnal("verdicte", e.message));
-  turaSectoareColector().catch((e) => jurnal("sectoare", e.message));   // v101.105: topul pe sectoare o dată pe zi, DVOL la o oră   // v101.103: verdictele zilei + judecata la 6 ore
+  turaSectoareColector().catch((e) => jurnal("sectoare", e.message));
+  turaDisciplinaBanda().catch((e) => jurnal("disciplina", e.message));   // v101.106: o dată pe zi
+  turaBandaLive().catch((e) => jurnal("banda pe viu", e.message));   // v101.106: la fiecare tură   // v101.105: topul pe sectoare o dată pe zi, DVOL la o oră   // v101.103: verdictele zilei + judecata la 6 ore
   turaLatimeColector().catch((e) => jurnal("latime", e.message));   // v101.93 (I-583): lățimea pieței la 15 minute
   turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)

@@ -86,7 +86,10 @@ function t212ProbaText(n) {
 }
 async function t212PlanSalveaza(tk) {
   var g = function (p) { var e = $(p + tk); return e ? t212Nr(e.value) : null; };
-  var plan = { stop: g("t212Stop-"), tinta: g("t212Tinta-"), trailPct: g("t212Trail-") }, gol = plan.stop === null && plan.tinta === null && plan.trailPct === null;
+  var plan = { stop: g("t212Stop-"), tinta: g("t212Tinta-"), trailPct: g("t212Trail-") };
+  // v100.179 (teza la intrare): de ce ai intrat, ce te-ar face să ieși, orizontul în zile - se țin cu planul și în istoricul tezelor
+  var tx = function (p) { var e = $(p + tk); return e ? String(e.value || "").trim() : ""; }; plan.teza = tx("t212Teza-"); plan.invalidare = tx("t212Inv-"); plan.orizont = g("t212Oriz-");
+  var gol = plan.stop === null && plan.tinta === null && plan.trailPct === null && !plan.teza && !plan.invalidare && plan.orizont === null;
   try {
     var r = await apiFetch("/api/istoric-bot?action=plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ bot: "t212-" + tk, plan: gol ? null : (window.__proba ? Object.assign({ proba: true }, plan) : plan) }) });
     var d = await r.json().catch(function () { return null; });
@@ -594,6 +597,10 @@ function t212RandPozitie(p) {
     + '<label>Stop fix, $<input inputmode="decimal" id="t212Stop-' + tk + '" value="' + escapeHtml(String(v("stop", null))) + '" placeholder="opțional"></label>'
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="t212PlanSalveaza(\'' + tk + '\')">Salvează planul</button>'
     + (p.plan ? '<button type="button" class="t212BtnLinie" data-action-click="t212PlanSterge(\'' + tk + '\')">Șterge</button>' : '') + '</div>'
+    + '<div class="t212Teza"><label>De ce am intrat (teza)<input id="t212Teza-' + tk + '" maxlength="300" value="' + escapeHtml(pl.teza || "") + '" placeholder="ex. rezultate bune, sectorul conduce"></label>'
+    + '<label>Ies dacă (invalidarea)<input id="t212Inv-' + tk + '" maxlength="200" value="' + escapeHtml(pl.invalidare || "") + '" placeholder="ex. închide sub media de 50"></label>'
+    + '<label>Orizont, zile<input inputmode="numeric" id="t212Oriz-' + tk + '" value="' + escapeHtml(pl.orizont != null ? String(pl.orizont) : "") + '" placeholder="30"></label></div>'
+    + (pl.orizont > 0 && pl.la ? (function () { var trec = (Date.now() - pl.la) / 86400000; return trec > pl.orizont ? '<p class="tbWarn">⏰ ' + escapeHtml("Orizontul tău de " + t212Cate(pl.orizont, "zi", "zile") + " a trecut (au trecut " + t212Cate(Math.floor(trec), "zi", "zile") + "): teza ta mai stă în picioare?") + '</p>' : ""; })() : "")
     + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212Usd(n.tintaPozitie) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
       + (p.prob && p.prob.length && typeof tbProbRandHtml === "function" ? '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · cât de des s-a întâmplat pe acțiunea asta, în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>' : '') + t212ReteaHtml({ acum: Date.now(), pret: p.pret, stop: n.stopPozitie, tinta: p.plan && p.plan.tinta > 0 ? p.plan.tinta : n.tintaPozitie, ticker: p.ticker }, t212.bare[p.ticker], p.prob)
       + (n.sursaTrail ? '<p class="tbSub">Stopul care urcă: ' + escapeHtml(n.sursaTrail) + ' (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')

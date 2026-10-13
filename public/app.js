@@ -5100,7 +5100,8 @@ function grPoartaHtml(f){
     +grReteaPoartaHtml(f,p)
     // v100.177 (profitul așteptat): mediana boților tăi asemănători, trasă spre zero după câți sunt (puține cazuri ⇒ aproape zero)
     +(typeof grAsteptatHtml==="function"?grAsteptatHtml(p):"")
-    +(typeof grDvolHtml==="function"?grDvolHtml(f):"")   /* v100.178 (5): ce așteaptă piața de opțiuni față de banda gridului */
+    +(typeof grDvolHtml==="function"?grDvolHtml(f):"")
+    +(typeof grBandaRegulaHtml==="function"?grBandaRegulaHtml():"")   /* v100.179 (1): când iese din bandă, din boții tăi închiși */   /* v100.178 (5): ce așteaptă piața de opțiuni față de banda gridului */
     // v100.29: sfaturile din istoria lui (inchiderile din prima ora) - informatie, nu regula
     +(p.rez.sfaturi&&p.rez.sfaturi.length?p.rez.sfaturi.map(function(x){return '<p class="tbSub">💡 '+escapeHtml(x)+'</p>'}).join(""):"")
     // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
@@ -5264,6 +5265,12 @@ function grDvolHtml(f){
   var stV=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare,g=Factori.gridFataDeOptiuni({dvol:baza,raportVol:rv||1,pret:f.pret,jos:stV&&stV.jos,sus:stV&&stV.sus});if(!g)return "";
   var P=function(x){return "±"+Math.abs(x*100).toFixed(1).replace(".",",")+"%"};
   return '<p class="'+(g.maiIngust?"tbWarn":"tbSub")+'">📐 <b>Ce așteaptă opțiunile:</b> '+escapeHtml("DVOL "+(eth?"ETH ":"BTC ")+Math.round(baza)+"%"+(eth||!rv?"":", moneda se mișcă de ~"+rv.toFixed(1).replace(".",",")+"× cât BTC")+" ⇒ "+P(g.zi)+" pe zi, "+P(g.saptamana)+" pe săptămână; banda gridului are "+P(g.jumatate)+" până la marginea cea mai apropiată"+(g.zilePanaLaMargine!==null?", adică o abatere standard în ~"+(g.zilePanaLaMargine<1?"mai puțin de o zi":TextRo.cate(Math.round(g.zilePanaLaMargine),"zi","zile")):"")+".")+(g.maiIngust?' Banda e mai îngustă decât săptămâna așteptată: prețul poate ieși din ea.':"")+' <span class="tbSub">(o abatere standard ≈ 2 din 3 cazuri; e ce așteaptă piața, nu o predicție)</span></p>';
+}
+var grBandaR={v:null,la:0,inLucru:false};
+function grBandaRegulaHtml(){
+  if(!grBandaR.inLucru&&Date.now()-grBandaR.la>60*60000){grBandaR.inLucru=true;getJSON("/api/istoric-bot?action=disciplinaBanda").then(function(d){grBandaR.v=d&&d.banda||null}).catch(function(){}).then(function(){grBandaR.la=Date.now();grBandaR.inLucru=false;renderGrid()})}
+  var r=grBandaR.v&&grBandaR.v.regula;if(!r)return "";
+  return '<p class="tbSub">🚪 <b>Regula ta pentru ieșirea din bandă:</b> '+escapeHtml("după "+r.h+" h afară, doar "+Math.round(r.intoarse*100)+"% din boții tăi s-au mai întors în 24 h"+(r.miscareImpotriva!==null?" (prețul a mers în medie încă "+(r.miscareImpotriva*100).toFixed(1).replace(".",",")+"% împotrivă)":"")+" - dacă botul stă atât afară, Radarul te anunță să-l închizi sau să muți banda.")+'</p>';
 }
 function grAsteptatHtml(p){
   var a=p&&p.asG;if(!a||!(a.n>0)||a.medianaPct==null)return "";

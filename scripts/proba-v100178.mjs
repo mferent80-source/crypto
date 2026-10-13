@@ -145,7 +145,7 @@ await test("Sugestii: „Cele mai tari pe sectoare” — regula, istoricul cu a
 });
 await test("legarea: factori.js în pagină și în cache; colectorul încarcă Factori și rulează tura sectoarelor; tura contului primește Factori", () => {
   assert.match(citeste("public", "index.html"), /<script src="\/lib\/factori\.js"><\/script>/); assert.match(citeste("public", "sw.js"), /"\/lib\/factori\.js"/);
-  const c = citeste("scripts", "colector.mjs"); assert.match(c, /const Factori = incarca\("factori\.js", "Factori"\)/); assert.match(c, /turaSectoareColector\(\)\.catch/); assert.match(c, /Factori, bareZi: bareZiCont, botiInchisi/);
+  const c = citeste("scripts", "colector.mjs"); assert.match(c, /const Factori = incarca\("factori\.js", "Factori"\)/); assert.match(c, /turaSectoareColector\(\)\.catch/); assert.match(c, /Factori, (Disciplina, botiAfara: \(\) => botiAfaraAcum\(\), )?bareZi: bareZiCont, botiInchisi/);
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);

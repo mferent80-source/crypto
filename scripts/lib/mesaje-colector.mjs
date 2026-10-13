@@ -133,6 +133,16 @@ export const reconciliereArhiva = (r) => ({ nivel: "atentie", titlu: "Arhiva bo�
   mesaj: msg(cate(r.lipsa.length, "bot închis", "boți închiși") + " din prima pagină Pionex lipsesc din arhivă; raportul de duminică, frâna și riscul îi numără greșit.", "Aș lăsa colectorul pornit o oră: tura arhivei îi adaugă singură; dacă rămân, spune-mi.") });
 export const reconciliereUrmarire = (r) => ({ nivel: "critic", titlu: "Un bot pornit nu mai e urmărit de Radar",
   mesaj: msg(r.lipsa.map((x) => x.nume || x.id).join(", ") + ": pornit în Pionex, dar fără istoric în Radar de peste 20 de minute - alertele lui (lichidare, plan) nu vin.", "Aș verifica acum botul direct în Pionex și aș reporni colectorul.") });
+// v100.179 (disciplina): botul afară din bandă peste pragul LUI, garda încălcată, lecția săptămânii
+const pc0 = (x) => (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%";
+export const afaraDinBanda = (nume, ore, r) => ({ nivel: "atentie", titlu: (nume + ": afară din bandă de " + cate(Math.round(ore), "oră", "ore")).slice(0, 60),
+  mesaj: msg("Din boții tăi închiși, după " + r.h + " h afară doar " + Math.round(r.intoarse * 100) + "% s-au mai întors în bandă în 24 h" + (r.miscareImpotriva !== null ? ", iar prețul a mers în medie încă " + pc0(r.miscareImpotriva) + " împotriva botului" : "") + ".", "Aș închide botul sau i-aș muta banda acum, nu aș mai aștepta.") });
+export const garda = (g) => ({ nivel: "atentie", titlu: ("Gardă încălcată: " + g.titlu).slice(0, 60), mesaj: msg((g.detaliu ? g.detaliu + ". " : "") + "Garda vine din " + (g.sursa || "datele tale") + ".", "Aș readuce contul sub prag înainte de orice poziție nouă.") });
+export const lectiaSaptamanii = (l, ver) => {
+  const top = (l.top || []).map((d, i) => (i + 1) + ". " + d.ce + ": −" + Math.round(d.cost).toLocaleString("ro-RO") + " lei - " + d.motive.map((m) => m.text).join("; ")).join("\n");
+  const v = ver ? (ver.respectata ? "Regula de săptămâna trecută („" + ver.text + "”): respectată ✓." : "Regula de săptămâna trecută („" + ver.text + "”): încălcată de " + cate(ver.incalcari, "dată", "ori") + ".") + "\n" : "";
+  return { nivel: "info", titlu: "📘 Lecția săptămânii", mesaj: msg(v + (top ? "Cele mai scumpe decizii:\n" + top : "Săptămâna asta nicio pierdere n-a încălcat o regulă a ta."), l.regula ? "Regula pentru săptămâna care vine: " + l.regula.text + "." : "Aș păstra regulile de până acum.") };
+};
 export const frana = (f) => {
   const parti = f && typeof f === "object" && Array.isArray(f.depasit) && f.praguri ? f.depasit.map((d) => (DEP[d.cod] ? DEP[d.cod](f) : d.text)).filter(Boolean) : [];
   const fapt = parti.length ? parti.join(", ") : String(f && typeof f === "object" ? f.text || "" : f || "").replace(/^Frâna contului: gata pe azi\s*—\s*/, "").replace(/\s*N-aș mai porni boți azi;.*$/, "");

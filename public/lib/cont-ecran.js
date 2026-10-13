@@ -1,7 +1,7 @@
 // Pagina „Contul întreg” (v100.176; el 13.10: „din prima recomandare 1–6”): desenează raportul colectorului (ContIntreg, KV cont:raport).
 // ciHtml e fără DOM (proba o rulează în vm); ciPorneste leagă pagina. Răspunsul întâi, în cuvinte; cifrele și tabelele dedesubt; „cum am
 // socotit” pliat. Lipsa se spune (nu 0), aproximările se spun pe față.
-var ciStare = { raport: null, zile: null, la: 0, inLucru: false, eroare: null, verdicte: null };
+var ciStare = { raport: null, zile: null, la: 0, inLucru: false, eroare: null, verdicte: null, banda: null, lectii: null };
 function ciEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 function ciMii(x) { if (x == null || !isFinite(x)) return "—"; var r = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); return (x < 0 ? "−" : "") + r; }
 function ciLei(x, semn) { if (x == null || !isFinite(x)) return "—"; return (semn && x > 0 ? "+" : "") + ciMii(x) + " lei"; }
@@ -158,6 +158,36 @@ function ciHtml(r, st) {
     "Randamentul ponderat în timp: înlănțuit zi cu zi (câștigul zilei ÷ banii la lucru în ziua aceea), deci depunerile și retragerile nu-l strâmbă. Sharpe / Sortino anualizate pe 365 de zile, fără dobânda fără risc."].map(function (x) { return "<li>" + ciEsc(x) + "</li>"; }).join("") + "</ul></details>";
   return h;
 }
+// v100.179 (el 13.10: „fă 1, 2, 3, 4”): gărzile LUI (din datele lui), lecția săptămânii (duminică seara, cu verificarea regulii de data trecută),
+// ce se întâmplă după ce prețul iese din banda gridului (din boții lui închiși) - informează, nu blochează
+function ciDisciplinaHtml(r, banda, lectii) {
+  var h = "", g = r && r.garzi;
+  if (g && g.length) {
+    var rele = g.filter(function (x) { return !x.ok; });
+    h += '<section class="ciSec"><h3>Gărzile tale</h3><p class="ciRasp">' + ciEsc(rele.length ? ciCate(rele.length, "gardă e încălcată", "gărzi sunt încălcate") + " acum. Le vezi și la Poartă; pe Discord vine câte o alertă pe zi." : "Toate gărzile sunt respectate.") + '</p><ul class="ciLista">'
+      + g.map(function (x) { return '<li class="' + (x.ok ? "good" : "bad") + '">' + (x.ok ? "✓ " : "✗ ") + "<b>" + ciEsc(x.titlu) + "</b>" + (x.detaliu ? " · " + ciEsc(x.detaliu) : "") + ' <span class="tbSub">(' + ciEsc(x.sursa) + ")</span></li>"; }).join("") + "</ul></section>";
+  }
+  var l = Array.isArray(lectii) && lectii.length ? lectii[lectii.length - 1] : null;
+  h += '<section class="ciSec"><h3>Lecția săptămânii</h3>';
+  if (!l) h += '<p class="tbSub">Vine duminică seara (și pe Discord): cele mai scumpe 3 decizii ale săptămânii, ce regulă a ta au încălcat, cât au costat, și o singură regulă pentru săptămâna care vine. Duminica următoare: ai respectat-o?</p>';
+  else {
+    var L = l.lectie || {}, v = l.verificare;
+    if (v) h += '<p class="' + (v.respectata ? "good" : "bad") + '">' + ciEsc("Regula de data trecută („" + v.text + "”): " + (v.respectata ? "respectată ✓" : "încălcată de " + ciCate(v.incalcari, "dată", "ori"))) + "</p>";
+    h += (L.top && L.top.length ? '<ol class="ciLista">' + L.top.map(function (d) { return "<li><b>" + ciEsc(d.ce) + "</b> · −" + ciEsc(ciMii(d.cost)) + " lei · " + ciEsc(d.motive.map(function (m) { return m.text; }).join("; ")) + "</li>"; }).join("") + "</ol>" : '<p class="good">Săptămâna asta nicio pierdere n-a încălcat o regulă a ta.</p>')
+      + (L.regula ? '<p class="t212Fac">👉 <b>Regula săptămânii:</b> ' + ciEsc(L.regula.text) + ' <span class="tbSub">(' + ciEsc("a costat " + ciMii(L.regula.cost) + " lei săptămâna trecută") + ")</span></p>" : "")
+      + '<p class="tbSub">' + ciEsc("Săptămâna " + ciZi(new Date(L.de).toISOString().slice(0, 10)) + " – " + ciZi(l.sapt) + ".") + "</p>";
+  }
+  h += "</section>";
+  if (banda && Array.isArray(banda.tabel)) {
+    var R = banda.regula, P = function (x) { return x == null || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };
+    h += '<section class="ciSec"><h3>Când iese botul din bandă</h3><p class="ciRasp">' + ciEsc(R ? "Din boții tăi închiși: după " + R.h + " h afară din bandă, doar " + Math.round(R.intoarse * 100) + "% s-au mai întors în 24 h, iar prețul a mers în medie încă " + P(R.miscareImpotriva) + " împotriva botului (" + ciCate(R.n, "caz", "cazuri") + "). Regula ta: după " + R.h + " h afară, închizi sau muți banda - alerta vine singură." : "Prea puține ieșiri din bandă în istoria ta ca să scot o regulă (cel puțin 30 la un prag).") + "</p>"
+      + '<div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Afară de</th><th>Cazuri</th><th>S-au întors în 24 h</th><th>Mișcarea în continuare</th></tr></thead><tbody>'
+      + banda.tabel.map(function (x) { return '<tr' + (R && x.h === R.h ? ' class="ciAles"' : "") + "><td>" + ciEsc(ciCate(x.h, "oră", "ore")) + '</td><td class="num">' + ciEt("cazuri") + ciEsc(String(x.n)) + '</td><td class="num">' + ciEt("întoarse") + ciEsc(x.intoarse == null ? "—" : Math.round(x.intoarse * 100) + "%") + '</td><td class="num">' + ciEt("împotrivă") + ciEsc(P(x.miscareImpotriva)) + "</td></tr>"; }).join("") + "</tbody></table></div>"
+      + ((banda.grupe || []).length ? '<p class="tbSub">' + ciEsc("Rezultatul net (mediana) după cât au stat afară: " + banda.grupe.filter(function (x) { return x.n; }).map(function (x) { return x.grupa + " " + P(x.netMedian) + " (" + x.n + ")"; }).join(" · ") + ".") + "</p>" : "")
+      + "</section>";
+  }
+  return h;
+}
 // v100.177 (jurnalul verdictelor): au avut dreptate verdictele Radarului? + registrul TUTUROR testelor cu corecția pentru teste multiple
 function ciVerdicteHtml(c, st) {
   var h = '<section class="ciSec"><h3>Au avut dreptate verdictele?</h3>';
@@ -182,11 +212,13 @@ function ciVerdicteHtml(c, st) {
 async function ciPorneste(forta) {
   var box = document.getElementById("ciPagina"); if (!box) return;
   if (ciStare.inLucru) return;
-  if (!forta && ciStare.raport && Date.now() - ciStare.la < 5 * 60000) { box.innerHTML = ciHtml(ciStare.raport, {}) + ciVerdicteHtml(ciStare.verdicte, {}); return; }
+  if (!forta && ciStare.raport && Date.now() - ciStare.la < 5 * 60000) { box.innerHTML = ciHtml(ciStare.raport, {}) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {}); return; }
   ciStare.inLucru = true;
   try { var d = await getJSON("/api/istoric-bot?action=cont"); ciStare.raport = d && d.cont || null; ciStare.eroare = null; ciStare.la = Date.now(); }
   catch (e) { ciStare.eroare = String(e && e.message || e); }
   try { var dv = await getJSON("/api/istoric-bot?action=verdicteCalibrare"); ciStare.verdicte = dv && dv.calibrare || null; } catch (e2) { ciStare.verdicte = null; }
+  try { var db = await getJSON("/api/istoric-bot?action=disciplinaBanda"); ciStare.banda = db && db.banda || null; } catch (e3) { ciStare.banda = null; }
+  try { var dl = await getJSON("/api/istoric-bot?action=lectii"); ciStare.lectii = dl && dl.lectii || null; } catch (e4) { ciStare.lectii = null; }
   ciStare.inLucru = false;
-  box.innerHTML = (ciStare.eroare && !ciStare.raport ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" : ciHtml(ciStare.raport, {})) + ciVerdicteHtml(ciStare.verdicte, {});
+  box.innerHTML = (ciStare.eroare && !ciStare.raport ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" : ciHtml(ciStare.raport, {})) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {});
 }

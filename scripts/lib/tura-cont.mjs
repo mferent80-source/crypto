@@ -166,6 +166,33 @@ async function faRaport(d, st, acum) {
       vol = d.Factori.tintaVol(ist.zile, val0(), 0.15, folosite, serii);
     } catch (err) { d.jurnal("cont factori", err.message); }
   }
+  // 8d. v100.179: gărzile LUI (pragurile din datele lui) + lecția săptămânii (duminică seara)
+  let garziR = null, lectieR = null;
+  if (d.Disciplina) {
+    try {
+      const banda = await incearca(d, "banda", async () => (await d.cere("/api/istoric-bot?action=disciplinaBanda")).banda);
+      const regulaOre = banda && banda.regula ? banda.regula.h : null;
+      const pozPct = (poz || []).map((p) => ({ nume: d.T212.simbol(p.ticker), pct: Number(p.averagePrice) > 0 ? Number(p.currentPrice) / Number(p.averagePrice) - 1 : null }));
+      const stopM = mae && mae.stopSugerat !== null && mae.stopSugerat !== undefined ? mae.stopSugerat : -0.08;
+      garziR = d.Disciplina.garzi({ factori: factoriR, vol, pozitii: pozPct, stop: stopM, stopDinMae: !!(mae && mae.stopSugerat), boti: d.botiAfara ? d.botiAfara() : [], regulaOre });
+      // lecția: duminică de la 19:00 sau luni până la 12:00 (ora României), o dată pe săptămână
+      const ro = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", weekday: "short", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(acum)), w = (ro.find((x) => x.type === "weekday") || {}).value, h = Number((ro.find((x) => x.type === "hour") || {}).value);
+      const duminica = w === "Sun" ? acum : w === "Mon" ? acum - 86400000 : null, sapt = duminica ? ziRo(duminica) : null;
+      if (sapt && ((w === "Sun" && h >= 19) || (w === "Mon" && h < 12)) && st.lectieSapt !== sapt && umpleri) {
+        const maeLista = d.Factori ? d.Factori.maeMfe(d.T212.perechi(umpleri).inchise, bareT, { de: acum - 9 * 86400000 }).trades : [], mfePe = {}; maeLista.forEach((x) => { mfePe[x.id] = x.mfe; });
+        const tradesW = d.T212.perechi(umpleri).inchise.map((t) => ({ id: t.id, ticker: t.ticker, simbol: t.simbol, pornit: t.pornit, inchis: t.inchis, rezultat: t.rezultat, cost: t.cost, pct: t.pct, mfe: mfePe[t.id] !== undefined ? mfePe[t.id] : null }));
+        const botiW = (await incearca(d, "boții săptămânii", async () => d.JurnalTrade.din(await d.botiInchisi())) || []).map((t) => ({ id: t.id, moneda: t.moneda, inchis: t.inchis, net: t.net, oreAfara: banda && banda.oreAfaraPe ? banda.oreAfaraPe[t.id] || 0 : 0 }));
+        const verd = await incearca(d, "verdictele", async () => (await d.cere("/api/istoric-bot?action=verdicte")).verdicte) || [];
+        const teze = await incearca(d, "tezele", async () => (await d.cere("/api/istoric-bot?action=teze")).teze) || [];
+        const de = duminica - 7 * 86400000;
+        lectieR = d.Disciplina.lectia({ de, pana: duminica + 86400000, trades: tradesW, boti: botiW, usdLei: leiPe.USD, stop: stopM, regulaOre, verdicte: verd, teze });
+        const ver = d.Disciplina.verifica(st.regulaPrec || null, lectieR);
+        await d.trimite("/api/istoric-bot?action=lectie", { la: acum, sapt, lectie: lectieR, verificare: ver });
+        await d.trimiteAlerta(d.MesajeColector.lectiaSaptamanii(lectieR, ver), null, "lectia-" + sapt);
+        st.lectieSapt = sapt; if (lectieR.regula) st.regulaPrec = lectieR.regula;
+      }
+    } catch (err) { d.jurnal("cont disciplina", err.message); }
+  }
   // 9. raportul
   const val = C.valoare({ boti, pionexLiber, t212Cash: cash, salt, leiPe });
   const rot = (x, z) => (x === null || x === undefined || !Number.isFinite(x) ? null : Math.round(x * Math.pow(10, z || 0)) / Math.pow(10, z || 0));
@@ -177,7 +204,7 @@ async function faRaport(d, st, acum) {
     corelatii: perechi.slice(0, 15).map((p) => ({ a: p.a, b: p.b, rho: rot(p.rho, 2), n: p.n, acelasiRisc: p.acelasiRisc, seAcopera: p.seAcopera })), diversificare: div ? { raport: rot(div.raport, 2), pariuri: rot(div.pariuri, 1), pozitii: div.pozitii } : null,
     stres: stres.map((s) => ({ cod: s.cod, nume: s.nume, de: s.de, pana: s.pana, btc: rot(s.btc, 4), qqq: rot(s.qqq, 4), lei: rot(s.pnl), lipsa: s.lipsa, pozitii: s.pozitii.slice(0, 6).map((p) => ({ nume: p.nume, r: rot(p.r, 4), lei: rot(p.lei), cum: p.cum, lichidat: p.lichidat })) })),
     reconciliere: { t212: recT212, arhiva: recArhiva, urmarire: recUrm },
-    executie, factori: factoriR, atribuire: atribuireR, maeMfe: mae, vol,
+    executie, factori: factoriR, atribuire: atribuireR, maeMfe: mae, vol, garzi: garziR,
     randament,
     // seriile ultimelor 120 de zile, pentru Poartă (corelația candidatului cu ce ai deja)
     serii: Object.fromEntries(Object.entries(serii).map(([k, s]) => [k, Object.fromEntries(Object.keys(s).sort().slice(-120).map((z) => [z, rot(s[z], 5)]))])),
@@ -191,6 +218,8 @@ async function faRaport(d, st, acum) {
   if (recT212 && !recT212.ok) for (const a of recT212.abateri) abateri.push({ cheie: "rec-t212-" + a.ticker, m: d.MesajeColector.reconciliereT212(a) });
   if (recArhiva && !recArhiva.ok) abateri.push({ cheie: "rec-arhiva", m: d.MesajeColector.reconciliereArhiva(recArhiva) });
   if (recUrm && !recUrm.ok) abateri.push({ cheie: "rec-urmarire", m: d.MesajeColector.reconciliereUrmarire(recUrm) });
+  // v100.179: gărzile încălcate - o dată pe zi fiecare (aceeași coadă ca reconcilierea); banda o spune deja alerta pe viu
+  for (const g of garziR || []) if (!g.ok && g.cod !== "banda" && d.MesajeColector.garda) abateri.push({ cheie: "garda-" + g.cod, m: d.MesajeColector.garda(g) });
   st.spuse = st.spuse && st.spuse.zi === z ? st.spuse : { zi: z, chei: {} };
   for (const a of abateri) { if (st.spuse.chei[a.cheie]) continue; if (await d.trimiteAlerta(a.m, null, a.cheie)) st.spuse.chei[a.cheie] = 1; }
   d.jurnal("cont: " + Math.round(val.total).toLocaleString("ro-RO") + " lei" + (val.complet ? "" : " (fără " + val.lipsa.join(", ") + ")") + " · VaR95 " + (v95 ? Math.round(v95.var) + " lei" : "—") + " · " + (stres[0] ? "cea mai rea criză " + stres[0].nume + " " + Math.round(stres[0].pnl) + " lei" : "fără stres") + " · abateri " + abateri.length);

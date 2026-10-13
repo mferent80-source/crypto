@@ -109,7 +109,7 @@ var Factori = (function () {
       if (!n) return;
       // potrivirea prețurilor (split / alt simbol): închiderea zilei de cumpărare trebuie să semene cu prețul plătit
       if (Math.abs(lo / pc - 1) > 0.9 || Math.abs(hi / pc - 1) > 5) return;
-      out.push({ ticker: t.ticker, rez: pv / pc - 1, mae: Math.min(0, lo / pc - 1), mfe: Math.max(0, hi / pc - 1), zile: n });
+      out.push({ ticker: t.ticker, id: t.id, simbol: t.simbol, pornit: t.pornit, inchis: t.inchis, cost: nr(t.cost), rezultat: nr(t.rezultat), rez: pv / pc - 1, mae: Math.min(0, lo / pc - 1), mfe: Math.max(0, hi / pc - 1), zile: n });   // v100.179: + id / date / cost (lecția săptămânii)
     });
     var castig = out.filter(function (x) { return x.rez > 0; }), pierd = out.filter(function (x) { return x.rez <= 0; });
     // stopul care ar fi păstrat 80 % din câștigători (cuantila de 20 % a MAE-ului lor) și câte pierderi le-ar fi tăiat mai devreme

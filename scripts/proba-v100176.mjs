@@ -198,7 +198,7 @@ await test("legarea paginii: meniul din stânga, sertarul „More” de pe telef
   const html = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = citeste("public", "app.js");
   assert.match(html, /data-nav="contintreg"><span class="sideIcon">Σ<\/span>Contul întreg<\/button>/); assert.match(html, /moreNav\('contintreg',true\)"><b>Σ<\/b>Contul întreg<\/button>/);
   assert.match(html, /<section class="panel" id="contintreg">/); assert.match(html, /<div class="card full" id="ciPagina">/);
-  assert.match(html, /<script src="\/lib\/cont-intreg\.js"><\/script>(<script src="\/lib\/verdicte\.js"><\/script>)?(<script src="\/lib\/factori\.js"><\/script>)?<script src="\/lib\/cont-ecran\.js"><\/script>/); assert.match(sw, /"\/lib\/cont-intreg\.js",("\/lib\/verdicte\.js",)?("\/lib\/factori\.js",)?"\/lib\/cont-ecran\.js"/);
+  assert.match(html, /<script src="\/lib\/cont-intreg\.js"><\/script>(<script src="\/lib\/[a-z-]+\.js"><\/script>)*<script src="\/lib\/cont-ecran\.js"><\/script>/); assert.match(sw, /"\/lib\/cont-intreg\.js",("\/lib\/[a-z-]+\.js",)*"\/lib\/cont-ecran\.js"/);
   assert.match(app, /else if\(id==="contintreg"\)\{if\(typeof ciPorneste==="function"\)ciPorneste\(false\)\}/);
 });
 await test("colectorul: tura contului la 6 ore, cu formulele paginii; istoria lungă pe disc o săptămână; prețurile zilnice pe disc o zi, la 2,5 s", () => {
