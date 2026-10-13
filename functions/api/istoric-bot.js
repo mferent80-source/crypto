@@ -361,7 +361,8 @@ export async function onRequestPost({request,env}){
   if(action==="paza"){
     const STARI=["miscare","liniste","nu-stiu"],b=corp&&corp.boti&&typeof corp.boti==="object"?corp.boti:{},boti={};
     for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object")continue;boti[id]={stare:STARI.includes(x.stare)?x.stare:null,de:nr(x.de),la:nr(x.la)}}
-    await env.ISTORIC.put("paza-boti",JSON.stringify({la:nr(corp&&corp.la)||Date.now(),boti}));return json({ok:true})
+    const bilant=Array.isArray(corp&&corp.bilant)?corp.bilant.slice(0,6).map(x=>String(x).slice(0,400)):null;   // v100.188: bilanțul alertelor de direcție (colectorul), arătat pe Tablou
+    await env.ISTORIC.put("paza-boti",JSON.stringify({la:nr(corp&&corp.la)||Date.now(),boti,bilant}));return json({ok:true})
   }
   // v100.141 (ideea 2): verdictul Monte Carlo al colectorului pe fiecare bot deschis (felul, culoarea, textul scurt, de când, ultima socotire) -
   // o cheie mică, rescrisă la 15 minute; Tabloul îl arată fără să mai socotească pe telefon. Cel mult 60 de boți, textul la 400 de semne

@@ -6261,7 +6261,7 @@ function tbDeseneazaSemafor(b){
 // revizia: cheia Busolei din TICKERUL Pionex (LIGHTER.PERP ⇒ LIT_USDT_PERP ⇒ LIT), nu din numele botului - 17 monede au baza altfel
 function tbCheieBusola(b){return b.simbolPionex||TabloBot.simboluri(b.baza,b.quote).pionex}
 var tbPazaKv={la:0,inLucru:false,boti:{}};
-function tbPazaAdu(){if(tbPazaKv.inLucru||Date.now()-tbPazaKv.la<5*60000)return;tbPazaKv.inLucru=true;getJSON("/api/istoric-bot?action=paza").then(function(d){tbPazaKv.boti=d&&d.paza&&d.paza.boti||{};if(tbPanouVizibil()&&tbStare.bot)tbDeseneazaExtra(tbStare.bot)}).catch(function(){}).then(function(){tbPazaKv.la=Date.now();tbPazaKv.inLucru=false})}
+function tbPazaAdu(){if(tbPazaKv.inLucru||Date.now()-tbPazaKv.la<5*60000)return;tbPazaKv.inLucru=true;getJSON("/api/istoric-bot?action=paza").then(function(d){tbPazaKv.boti=d&&d.paza&&d.paza.boti||{};tbPazaKv.bilant=d&&d.paza&&Array.isArray(d.paza.bilant)?d.paza.bilant:null;if(tbPanouVizibil()&&tbStare.bot){tbDeseneazaExtra(tbStare.bot);if(tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)}}).catch(function(){}).then(function(){tbPazaKv.la=Date.now();tbPazaKv.inLucru=false})}
 // v100.92 (I-522 / I-523): ce primesc semaforul și Consiliul de la Busola pentru moneda botului (null fără rezumat proaspăt)
 function tbBusolaVerdict(b){return typeof Busola==="undefined"||!b?null:Busola.pentruVerdict(Busola.rezumat(),tbCheieBusola(b),Date.now())}
 // v100.92 (I-517): titlul unui grup din „Pe zi, la închidere, ce știm”
@@ -6773,7 +6773,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var vB=vP&&!vP.vechi?Busola.randDirectie(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null,vM=tbMcRand(b);
   var voci=typeof Busola!=="undefined"?Busola.concluzie({bot:b.directie,grafic:v4H?v4H.dir:null,busola:vB?vB.semn:null,mc:vM?vM.stare:null,mcAtins:!!(vM&&/planul atins/i.test(String(vM.text||"")))}):null;
   c.randuri.forEach(function(x){
-    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeMoneda)out.push(rd(ex.latimeMoneda));if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.sectoare)out.push(rd(ex.sectoare));if(ex.macro)out.push(rd(ex.macro));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
+    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeMoneda)out.push(rd(ex.latimeMoneda));if(ex.bilant)ex.bilant.forEach(function(x){out.push(rd(x))});if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.sectoare)out.push(rd(ex.sectoare));if(ex.macro)out.push(rd(ex.macro));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
     if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
     out.push(rd(x));
     if(x.ce==="Direcția"&&ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}});   /* revizia: fără semafor, Indicatorii stau după Direcția */
@@ -6885,12 +6885,14 @@ function tbCitireGol(text){tbStare.citireO=null;tbStare.citireCheie=null;tbStare
 // v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
 // când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
 function tbCitireExtra(b,o){
-  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeMoneda:null,latimeUs:null,sectoare:null,macro:null},d=tbStare.directie;
+  var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeMoneda:null,bilant:null,latimeUs:null,sectoare:null,macro:null},d=tbStare.directie;
   /* v100.150 (I-583): lățimea pieței pe 150 perp-uri, din KV (colectorul la 15 min) - Latime.textCitire dă textul, starea și vechimea; „pânda ›” duce în Sugestii */
   if(typeof tbLatimeDinKv==="function")tbLatimeDinKv();out.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"?Latime.textCitire(tbLatimeKv.d,b,Date.now()):null;   /* probele vechi rulează funcția cu stub-uri, fără KV */
   if(out.latime)Object.assign(out.latime,{actiune:out.latime.link?"sugDeschidePanda()":null,linkText:"pânda ›",link:null});
   /* v100.185 (el 13.10: „ok fă idei”): moneda botului în tabelul celor 150 - direcția cu zilele, percentilele, pragurile atinse, CONTRA botului */
   out.latimeMoneda=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"&&Latime.textMoneda?Latime.textMoneda(tbLatimeKv.d,b.baza,b.directie,Date.now()):null;
+  /* v100.188 (el: „fă idei”): bilanțul alertelor de direcție (pânda, Busola, vocile, BTC) - colectorul îl trimite cu starea pazei; un rând pe alertă */
+  if(typeof tbPazaAdu==="function")tbPazaAdu();out.bilant=(tbPazaKv.bilant||[]).map(function(l){var i=String(l).indexOf(": ");return i>0?{ce:String(l).slice(0,i),stare:"info",text:String(l).slice(i+2)}:null}).filter(Boolean);
   /* lățimea pieței US (11.10.2026): rândul apare după prima citire a lui latest.json; sosirea redesenează citirea o dată */
   if(typeof latimeUsAduce==="function"&&typeof LatimeUS!=="undefined"){latimeUsAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.latimeUs=latimeUsStare.la?LatimeUS.textCitire(LatimeUS.normalizeaza(latimeUsStare.j,Date.now()),Date.now()):null}
   if(typeof sectoareAduce==="function"&&typeof Sectoare!=="undefined"){sectoareAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.sectoare=sectoareStare.la?Object.assign(Sectoare.textCitire(sectoareDate()),{actiune:"latimeUsDeschide()",linkText:"sectoarele ›"}):null}   /* v100.167 */

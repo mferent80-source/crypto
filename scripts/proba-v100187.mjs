@@ -71,11 +71,11 @@ await test("bilanț: textul — prea puține sub 10 de fiecare fel; altfel proce
 });
 await test("colectorul: notează după paza fiecărui bot, judecă la fiecare tură, bilanțul intră în raportul de duminică; v101.108", () => {
   const COL = citeste("scripts", "colector.mjs");
-  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.108";/);
-  assert.match(COL, /const pandaInainte = stareAlerte\[b\.id\] && stareAlerte\[b\.id\]\._panda;/);
-  assert.match(COL, /pandaNoteaza\(meta\(\)\.pandaContra \|\| \(meta\(\)\.pandaContra = \[\]\), \{ bot: b, inainte: pandaInainte, dupa: stareAlerte\[b\.id\]\._panda, acum \}\)/);
+  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.1(0[89]|[1-9]\d)";/, "v101.108 sau mai nou");
+  /* v101.109: notarea și raportul s-au lărgit la toate alertele de direcție (bilantNoteaza / bilantAlerte) - le probează proba-v100188 */
+  assert.match(COL, /bilantNoteaza\(meta\(\)\.pandaContra/);
   assert.match(COL, /pandaJudeca\(meta\(\)\.pandaContra \|\| \(meta\(\)\.pandaContra = \[\]\), boti, acum\)/);
-  assert.match(COL, /rap\.linii\.push\(pandaBilant\(m\.pandaContra \|\| \[\]\)\);/);
+  assert.match(COL, /rap\.linii\.push\(\.\.\.bilantAlerte\(m\.pandaContra \|\| \[\]\)\);/);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute\n`);

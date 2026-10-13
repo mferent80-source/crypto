@@ -1,11 +1,12 @@
 {
-  "version": "v100.187",
-  "badge": "v100.187 · BILANȚUL ALERTEI CONTRA",
+  "version": "v100.188",
+  "badge": "v100.188 · BILANȚUL ALERTELOR",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "bilantalerte188": "bilanțul tuturor alertelor de direcție (13.10.2026, el: „fă idei”): colectorul v101.109 judecă la 72 h, cu același martor (o zi fără niciun episod), și alertele Busolei (invers față de bot, toate vocile contra, BTC); bilanțul pleacă la server cu starea pazei și Tabloul îl arată sub „În pândă”, un rând pe alertă",
     "pandabilant187": "lichidarea în zile obișnuite + bilanțul alertei contra (13.10.2026, el: „fă idei”): colectorul v101.108 - alerta „contra” spune cât de departe e lichidarea în zile obișnuite ale monedei (amplitudinea pe zi din pândă, adrPct); fiecare episod și un martor (o zi fără contra pe bot) se judecă la 72 h pe profitul botului, bilanțul intră în raportul de duminică (sub 10 de fiecare: prea puține)",
     "pandaalerta186": "alerta contra din pândă + semnul pe Acasă (13.10.2026, el: „fă idei”): colectorul v101.107 anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h, tace cât vocile sunt anunțate); pe Acasă fiecare bot are rândul „În pândă” (direcția, pragurile atinse, CONTRA botului)",
     "pandamoneda185": "moneda botului în pândă (13.10.2026, el: „ok fă idei”): în „Ce spune piața acum” din Tablou, rândul „În pândă, PLUME” (direcția cu zilele, volatilitatea, extensia, bugetul zilei, funding, OI, pragurile atinse, CONTRA botului); în pânda din Sugestii, și pliată, propoziția „⚠ Contra direcției monedei” când un bot e contra",
