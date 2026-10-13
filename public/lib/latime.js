@@ -100,6 +100,32 @@ var Latime = (function () {
   var regimText = { "LARG-SUS": "larg SUS", "LARG-JOS": "larg JOS", "AMESTECAT": "amestecată", "NECUNOSCUT": "necunoscută" };
   function esteBotContra(dirBot, cod) { var d = String(dirBot || "").toLowerCase(); return (d === "long" && cod === "LARG-JOS") || (d === "short" && cod === "LARG-SUS"); }
   var hhmm = function (t) { var d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  // v100.185 (el 13.10: „ok fă idei”): moneda unui bot în tabelul celor 150 - rândul din fișa botului și propoziția „contra” din pândă
+  var cheie = function (s) { return String(s || "").toUpperCase().replace(/\.PERP$/, "").replace(/_USDT.*$/, "").replace(/USDT$/, ""); };   /* baza din Pionex vine și „PLUME.PERP” */
+  function gasesteMoneda(latime, simbol) {
+    var a = latime && latime.acum, k = cheie(simbol); if (!a || a.eroare || !Array.isArray(a.monede) || !k) return null;
+    return a.monede.filter(function (m) { var s = cheie(m.sym); return s === k || s === "1000" + k; })[0] || null;
+  }
+  var dirText = function (m) { return m.dir === "neclara" ? "direcția neclară" : m.dir + (fin(m.zileDir) ? " de " + TextRo.cate(m.zileDir, "zi", "zile") : ""); };
+  var contra = function (dirBot, m) { return m.dir === "SUS" || m.dir === "JOS" ? esteBotContra(dirBot, "LARG-" + m.dir) : false; };
+  function textMoneda(latime, simbol, dirBot, acum) {
+    var m = gasesteMoneda(latime, simbol); if (!m) return null;
+    var P = PRAGURI, a = latime.acum, min = Math.max(0, Math.round((acum - a.la) / 60000)), vechi = min > P.vechiMin, nr = function (x) { return String(Math.round(x)); };
+    var parti = [dirText(m)], prag = [];
+    if (fin(m.volPctl)) { parti.push("volatilitate " + nr(m.volPctl)); if (m.volPctl >= P.volPctl) prag.push("volatilitate extremă"); }
+    if (fin(m.extPctl)) { parti.push("extensie " + nr(m.extPctl)); if (m.extPctl >= P.extPctl) prag.push("extensie extremă"); }
+    if (fin(m.adrUsed)) { parti.push("bugetul zilei " + nr(m.adrUsed) + "%"); if (m.adrUsed >= P.adrConsumat) prag.push("bugetul zilei epuizat"); }
+    if (fin(m.fundPctl)) { parti.push("funding " + nr(m.fundPctl)); if (m.fundPctl >= P.fundPctlSus || m.fundPctl <= P.fundPctlJos) prag.push("funding extrem"); }
+    if (fin(m.oiPctl)) { parti.push("OI " + nr(m.oiPctl)); if (m.oiPctl >= P.oiPctl) prag.push("OI extrem"); }
+    if (prag.length) parti.push("prag atins: " + prag.join(", "));
+    var c = contra(dirBot, m); if (c) parti.push("botul tău e CONTRA direcției monedei");
+    parti.push(vechi ? "veche, de la " + hhmm(a.la) : "acum " + min + " min");
+    return { ce: "În pândă, " + cheie(m.sym).replace(/^1000/, ""), stare: c ? "atentie" : "info", text: parti.join(" · "), vechi: vechi };
+  }
+  // boti = [{ s: "PLUME", dir: "long" | "short" | "neutru" }] ⇒ cei contra direcției monedei lor
+  function botiContra(latime, boti) {
+    return (boti || []).map(function (b) { var m = gasesteMoneda(latime, b.s); return m && contra(b.dir, m) ? { s: cheie(b.s), dirBot: String(b.dir).toLowerCase(), dir: m.dir, zileDir: m.zileDir, text: "moneda " + dirText(m) } : null; }).filter(Boolean);
+  }
   // rândul din „Ce spune piața acum” (Tablou) - aceeași funcție dă și antetul blocului din Sugestii
   function textCitire(latime, bot, acum) {
     var ce = "Lățimea pieței (150 perp-uri)", a = latime && latime.acum;
@@ -132,5 +158,5 @@ var Latime = (function () {
     });
     return l.filter(eBot).concat(l.filter(function (m) { return !eBot(m); }));
   }
-  return { PRAGURI: PRAGURI, percentila: percentila, ema: ema, atrSerie: atrSerie, directia: directia, zileDir: zileDir, masuraMoneda: masuraMoneda, latimea: latimea, regimPietei: regimPietei, regimDeCand: regimDeCand, regimText: regimText, esteBotContra: esteBotContra, textCitire: textCitire, filtreaza: filtreaza };
+  return { PRAGURI: PRAGURI, percentila: percentila, ema: ema, atrSerie: atrSerie, directia: directia, zileDir: zileDir, masuraMoneda: masuraMoneda, latimea: latimea, regimPietei: regimPietei, regimDeCand: regimDeCand, regimText: regimText, esteBotContra: esteBotContra, textCitire: textCitire, filtreaza: filtreaza, textMoneda: textMoneda, botiContra: botiContra };   /* v100.185 */
 })();

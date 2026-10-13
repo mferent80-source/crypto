@@ -1,11 +1,12 @@
 {
-  "version": "v100.184",
-  "badge": "v100.184 · BOȚII DIN PÂNDĂ",
+  "version": "v100.185",
+  "badge": "v100.185 · MONEDA BOTULUI ÎN PÂNDĂ",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "pandamoneda185": "moneda botului în pândă (13.10.2026, el: „ok fă idei”): în „Ce spune piața acum” din Tablou, rândul „În pândă, PLUME” (direcția cu zilele, volatilitatea, extensia, bugetul zilei, funding, OI, pragurile atinse, CONTRA botului); în pânda din Sugestii, și pliată, propoziția „⚠ Contra direcției monedei” când un bot e contra",
     "pandaboti184": "boții tăi la un clic din pânda pliată (13.10.2026, el: „fă idei”): lângă „arată cele N ›” stă „monedele boților mei (N) ›”, care desface tabelul direct pe filtrul boților; fără boți în listă butonul nu apare",
     "pandabusola183": "🧭 în pândă + prețurile cu o zecimală (13.10.2026, el: „poți face ideile”): în tabelul pândei din Sugestii fiecare monedă are 🧭 spre Busola pe 4h; intrarea, stopul și ținta din ideile de cumpărare au o zecimală de la 10 în sus (sub 10 rămân două, ca stopul să nu se mute cu peste 0,5%)",
     "liste182": "listele din Sugestii pe un rând (13.10.2026, el: „e la fel și la acțiuni, fă și acolo, se face lungă și lungește lista”): în toate listele (boți, US, EU) numele stă fix și descrierea se înfășoară lângă el, nu mai cade pe rândul următor; regula numai-pe-rândurile-cu-🧭 din v100.181 scoasă",

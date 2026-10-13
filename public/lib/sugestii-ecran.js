@@ -37,6 +37,8 @@ function sugPandaHtml(l, boti, acum) {
     + '<p class="tbSub">' + L.fundExtrem + ' în funding extrem · ' + L.oiExtrem + ' în OI extrem · ' + L.volExtrem + ' cu volatilitate extremă · ' + L.bugetEpuizat + ' cu bugetul zilei epuizat</p>'
     + '<p class="tbSub sugPandaCinste">Fapte, nu semnal: filtrul de permisiune și fișa de intrare ale lui PAZNIC n-au selectat nimic (p = 0,23; 78 trade-uri pe hârtie) și nu sunt aici.</p>';
   var lb = Array.isArray(boti) ? boti : [], simb = lb.map(function (b) { return b.s; }), m = a.monede || [], f = sugStare.panda.filtru, cate = function (k) { return Latime.filtreaza(m, k, simb).length; };
+  var bc = Latime.botiContra ? Latime.botiContra(l, lb) : [];   /* v100.185 (el: „ok fă idei”): boții contra direcției monedei, la vedere și cu pânda pliată */
+  if (bc.length) h += '<p class="tbCitScurt sugPandaContra">⚠ Contra direcției monedei: ' + bc.map(function (x) { return '<b>' + sugEsc(x.s) + '</b> (botul ' + sugEsc(x.dirBot) + ', ' + sugEsc(x.text) + ')'; }).join("; ") + '.</p>';
   if (!sugStare.panda.desfacut) { var nb = cate("boti");   /* v100.184 (el: „fă idei”): boții tăi la un clic, fără să cauți filtrul în tabelul desfăcut */
     return h + '<div class="sugPandaFiltre"><button type="button" class="t212BtnLinie" data-action-click="sugPandaDesfa()">arată cele ' + a.n + ' ›</button>' + (nb ? '<button type="button" class="t212BtnLinie" data-action-click="sugPanda(\'boti\')">monedele boților mei (' + nb + ') ›</button>' : '') + '</div></div>'; }
   var dirBot = function (s) { var b = lb.filter(function (x) { return x.s === s; })[0]; return b ? b.dir : null; };
