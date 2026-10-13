@@ -1,11 +1,12 @@
 {
-  "version": "v100.181",
-  "badge": "v100.181 · BUSOLA DIN SUGESTII",
+  "version": "v100.182",
+  "badge": "v100.182 · LISTELE PE UN RÂND",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "liste182": "listele din Sugestii pe un rând (13.10.2026, el: „e la fel și la acțiuni, fă și acolo, se face lungă și lungește lista”): în toate listele (boți, US, EU) numele stă fix și descrierea se înfășoară lângă el, nu mai cade pe rândul următor; regula numai-pe-rândurile-cu-🧭 din v100.181 scoasă",
     "busola181": "ideile 1 și 2 din v100.180 (13.10.2026, el: „fă idei”): 🧭 spre Busola pe fiecare monedă din cartelele de boți ale paginii Sugestii (pornire, revenire, short; pe 4h, intervalul clasamentului; țintă de deget 32 px) + „🧭 Busola ↗ (moneda ta)” în paleta de comenzi (al treilea câmp al comenzii = acțiunea, în locul lui navTo)",
     "busola180": "drumul scurt spre Busola (13.10.2026, el: „poți face așa” - Busola rămâne aplicația ei, neatinsă): „🧭 Busola ↗” în meniu, sub Tabloul botului, și în sertarul „⋯ More” pe telefon (moneda botului pe intervalul graficului când ești în Tablou, altfel moneda și intervalul din Radar; acțiuni ⇒ capul Busolei; 5m ⇒ 15m) + rândul „🧭 deschide în Busola ↗” în fișa botului; Busola.intervalBusola / adresaBusola (pure); fără iframe",
     "disciplina179": "disciplina (13.10.2026, el: „fă 1, 2, 3, 4”): ieșirea botului din bandă după istoria lui (din boții închiși: câți s-au întors după N ore afară, cât a mers prețul împotrivă ⇒ regula lui în ore; alertă pe viu când botul o depășește; regula și la Poarta gridului), gărzile lui (sector / industrie peste 40 %, o poziție peste 25 % din risc, contul peste 30 %/an, acțiuni sub stopul din MAE, boți afară peste regulă; o alertă pe zi), lecția săptămânii duminică seara (cele mai scumpe 3 decizii, regula încălcată, regula săptămânii și verificarea ei), teza la intrare în planul poziției T212 (de ce, invalidarea, orizontul; orizontul trecut se spune).",

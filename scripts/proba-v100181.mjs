@@ -48,7 +48,8 @@ await test("paleta de comenzi: „🧭 Busola ↗” cheamă deschideBusola() (n
 await test("stilul: 🧭 din Sugestii are țintă de deget (min 32 px) și nu lățește rândul", () => {
   const css = citeste("public", "app.css"); assert.match(css, /\.sugBusola\{[^}]*min-width:32px[^}]*min-height:32px/); assert.match(css, /\.sugBusola\{[^}]*margin-left:auto/);
   // poza 390 px: descrierea lungă împingea 🧭 singur pe rândul următor ⇒ pe rândurile cu 🧭 nu se mai rupe rândul, descrierea se înfășoară la mijloc
-  assert.match(css, /\.sugLista li:has\(\.sugBusola\)\{flex-wrap:nowrap\}\.sugLista li:has\(\.sugBusola\) \.tbSub\{flex:1;min-width:0\}/);
+  // v100.182: regula s-a generalizat pe toate rândurile (și acțiunile se lungeau) - proba-v100182.mjs o păzește
+  assert.match(css, /\.sugLista li\{display:flex;flex-wrap:nowrap;[^}]*\}\.sugLista li>b\{flex:none\}\.sugLista li>\.tbSub\{flex:1;min-width:0\}/);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute\n`);
