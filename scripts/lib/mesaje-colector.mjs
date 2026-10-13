@@ -125,6 +125,14 @@ const DEP = { zi: (f) => "azi " + U2(f.netZi) + " (pragul tău: −" + V(f.pragu
   rand: (f) => cate(f.rand, "bot închis", "boți închiși") + " pe minus la rând (pragul: " + f.praguri.rand + ")" };
 // v100.175 (revizia v100.173): arhiva boților nu vine de ore ⇒ frâna nu poate judeca; tăcerea ar părea „totul e bine”
 export const franaFaraArhiva = (ore) => ({ nivel: "atentie", titlu: "Frâna contului nu poate judeca", mesaj: msg("Arhiva boților închiși nu vine de " + cate(Math.max(1, Math.round(ore)), "oră", "ore") + ", deci nu știu cât ai pierdut azi și pe 7 zile.", "Până revine, aș număra singur pierderile de azi înainte să pornesc un bot nou.") });
+// v100.176 (contul întreg, reconcilierea cu brokerii): abaterile dintre ce știe Radarul și ce raportează T212 / Pionex
+const nrBuc = (x) => (Math.abs(x) >= 100 ? Math.round(x).toLocaleString("ro-RO") : String(Math.round(x * 1000) / 1000).replace(".", ","));
+export const reconciliereT212 = (a) => ({ nivel: "atentie", titlu: ("Trading 212 ≠ jurnalul Radarului: " + String(a.ticker).replace(/_US_EQ$|_EQ$/, "")).slice(0, 60),
+  mesaj: msg("T212 spune " + nrBuc(a.broker) + " buc, jurnalul Radarului " + nrBuc(a.radar) + " buc: " + a.motiv + ". Statistica, Declarația și riscul pe acest simbol ies greșit până se repară.", "Aș deschide istoricul T212 la simbolul ăsta și aș verifica ultimele ordine.") });
+export const reconciliereArhiva = (r) => ({ nivel: "atentie", titlu: "Arhiva boților nu are toți boții închiși",
+  mesaj: msg(cate(r.lipsa.length, "bot închis", "boți închiși") + " din prima pagină Pionex lipsesc din arhivă; raportul de duminică, frâna și riscul îi numără greșit.", "Aș lăsa colectorul pornit o oră: tura arhivei îi adaugă singură; dacă rămân, spune-mi.") });
+export const reconciliereUrmarire = (r) => ({ nivel: "critic", titlu: "Un bot pornit nu mai e urmărit de Radar",
+  mesaj: msg(r.lipsa.map((x) => x.nume || x.id).join(", ") + ": pornit în Pionex, dar fără istoric în Radar de peste 20 de minute - alertele lui (lichidare, plan) nu vin.", "Aș verifica acum botul direct în Pionex și aș reporni colectorul.") });
 export const frana = (f) => {
   const parti = f && typeof f === "object" && Array.isArray(f.depasit) && f.praguri ? f.depasit.map((d) => (DEP[d.cod] ? DEP[d.cod](f) : d.text)).filter(Boolean) : [];
   const fapt = parti.length ? parti.join(", ") : String(f && typeof f === "object" ? f.text || "" : f || "").replace(/^Frâna contului: gata pe azi\s*—\s*/, "").replace(/\s*N-aș mai porni boți azi;.*$/, "");

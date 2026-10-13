@@ -132,7 +132,7 @@ await test("(R3) I-547: becul 1z doar pe listările din SUA; alerta cel mult o d
   assert.match(fn(ecran, "t212SemZi"), /_US_EQ\$/);
 });
 await test("(R4) bilanțurile 🧠/becuri se socotesc în colector, o dată pe noapte, și se păstrează lângă cazuri; pagina le citește (fără 1–2 s de calcul pe telefon)", () => {
-  assert.match(col, /bilant = \{ adx: Asemanatoare\.textAdx\(Asemanatoare\.bilantAdx\(cz\)\), sem: Asemanatoare\.textSemafor\(Asemanatoare\.bilantSemafor\(cz\)\) \}/);
+  assert.match(col, /bilant = \{ adx: Asemanatoare\.textAdx\(Asemanatoare\.bilantAdx\(cz\)\), sem: Asemanatoare\.textSemafor\(Asemanatoare\.bilantSemafor\(cz\)\) \}|bilant = \{ adx: Asemanatoare\.textAdx\(bA\), sem: Asemanatoare\.textSemafor\(bS\)/);
   assert.match(citeste("functions", "api", "istoric-bot.js"), /bilant:/);
   assert.match(fn(app, "tbCazuriAdu"), /d\.cazuri\.bilant/);
   assert.doesNotMatch(citeste("public", "lib", "asemanatoare.js"), /s = s\.concat\(monede/);

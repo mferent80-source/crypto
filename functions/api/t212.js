@@ -133,7 +133,9 @@ function curataUmplere(x) {
   const qty = nr(x.qty), pret = nr(x.pret), net = nr(x.net);
   if (!id || t === null || t <= 0 || !side || !(qty > 0) || !(pret > 0) || net === null) return null;
   return { id, t, side, ticker: txt(x.ticker, 40).replace(/[^A-Za-z0-9._]/g, ""), simbol: txt(x.simbol, 16).replace(/[^A-Za-z0-9.-]/g, ""), nume: txt(x.nume, 80),
-    qty, pret, net, fee: nr(x.fee), moneda: txt(x.moneda, 3) || null, fx: nr(x.fx), ext: !!x.ext, realizat: side === "SELL" ? nr(x.realizat) : null };
+    qty, pret, net, fee: nr(x.fee), moneda: txt(x.moneda, 3) || null, fx: nr(x.fx), ext: !!x.ext, realizat: side === "SELL" ? nr(x.realizat) : null,
+    // v100.176: jurnalul de execuție (tipul ordinului, ora la care l-ai dat, prețul limită / de stop)
+    tip: /^(MARKET|LIMIT|STOP|STOP_LIMIT)$/.test(String(x.tip || "")) ? x.tip : null, creat: nr(x.creat), limita: nr(x.limita), stopPret: nr(x.stopPret) };
 }
 async function citesteKv(env, k, implicit) { try { const v = JSON.parse((await env.ISTORIC.get(k)) || "null"); return v === null ? implicit : v; } catch { return implicit; } }
 const faraKv = () => json({ error: "ISTORIC_DOAR_ACASA", detail: "Istoricul complet Trading 212 se strânge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat), de colector." }, 503);

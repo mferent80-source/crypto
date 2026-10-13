@@ -28,6 +28,7 @@ import os from "node:os";
 import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
+import { turaT212Exec } from "./lib/tura-t212.mjs";   // v101.102: completarea o dată a istoricului (tipul ordinului, ora) - jurnalul de execuție
 import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
@@ -47,11 +48,13 @@ import { aplicaCereriSalt, listaSaltSigura } from "./lib/salt-cereri.mjs";   // 
 import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   // v101.58 (reveniri + short)
 import { turaLatime as turaLatimeModul, cereBinance } from "./lib/tura-latime.mjs";   // v101.93 (I-583): lățimea pieței pe 150 perp-uri Binance
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";
+import { turaCont as turaContModul } from "./lib/tura-cont.mjs";
+import { turaVerdicte as turaVerdicteModul } from "./lib/tura-verdicte.mjs";   // v101.103 (jurnalul verdictelor + corecția pentru teste multiple)   // v101.102 (contul întreg): risc agregat, stres, reconciliere, randament
 import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Opus): botul „dispărut” confirmat 3 ture
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.101";   // v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.103";   // v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -172,6 +175,8 @@ const Latime = incarca("latime.js", "Latime");   // v101.93 (I-583): formulele l
 const LatimeUS = incarca("latime-us.js", "LatimeUS");   // v101.94 (Weekly Review mutat in raport): lățimea US în „Săptămâna pieței”, cu textul din pagină
 const Sectoare = incarca("sectoare.js", "Sectoare");   // v101.95 (sector-rotation mutat în Radar): alerta la schimbarea regimului sectoarelor US
 const Macro = incarca("macro.js", "Macro");   // v101.96 (macro-dashboard mutat în Radar): regimul macro + evenimentele mari din SUA, pe Discord
+const ContIntreg = incarca("cont-intreg.js", "ContIntreg");
+const Verdicte = incarca("verdicte.js", "Verdicte");   // v101.103: jurnalul verdictelor (aceleași reguli ca pagina)   // v101.102: contul întreg (aceleași formule ca pagina)
 const Salt = incarca("salt.js", "Salt");   // v101.82 (pagina Salt): tabelul instrumentelor Salt Bank (trendul, ziua de ieri)   // v101.81 (pagina Sugestii): regulile „early” + istoricul lor (verdictul din Carnet)
 const SUG_BAZA_FIS = path.join(DATA, "sugestii-baza.json"), SUG_IST_FIS = path.join(DATA, "sugestii-istoric.json");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
 const CARNET_FIS = path.join(DATA, "carnet-oferte.json");
@@ -818,6 +823,15 @@ async function turaT212() {
       umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 12 });
     // v87: la 5 minute (o pagina de cap pe tura), ca frana de "cumparat in jos" sa vina repede dupa cumparare
     t212La = Date.now();
+    // v101.102 (jurnalul de execuție): o singură dată, istoricul întreg se recitește (12 pagini pe tură) ca umplerile vechi să aibă tipul
+    // ordinului și ora la care l-ai dat; starea pe disc (data/t212-exec.json)
+    const fe = path.join(DATA, "t212-exec.json"); let se = {}; try { se = JSON.parse(fs.readFileSync(fe, "utf8")) || {}; } catch { se = {}; }
+    if (!se.gata) {
+      const r = await turaT212Exec({ cerePagina: (c) => cere("/api/t212?action=ordine" + (c ? "&cursor=" + encodeURIComponent(c) : "")), salveaza: (corp) => trimite("/api/t212?action=istoric", corp),
+        umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), max: 12 }, se);
+      try { scrieAtomic(fe, se); } catch {}
+      jurnal("t212 completare execuție: " + cate(r.pagini, "pagină", "pagini") + (r.gata ? " · gata" : ""));
+    }
   } catch (e) { jurnal("t212 ESEC", e.message); t212La = Date.now() + 5 * 60000; }
   t212InLucru = false;
 }
@@ -1962,6 +1976,43 @@ async function turaDupa24h() {
     if (out.length) await trimite("/api/istoric-bot?action=alerteDupa", { lista: out });
   } catch (e) { jurnal("alertele după 24 h", e.message); }
 }
+// v101.102 (contul întreg, el 13.10: „din prima recomandare 1–6”): la 6 ore raportul pe tot contul; istoria lungă Yahoo (10 ani, pentru
+// stres-teste) ținută pe disc o săptămână - crizele din 2020–2025 nu se schimbă
+const CONT_DIR = path.join(DATA, "cont-lung"); fs.mkdirSync(CONT_DIR, { recursive: true });
+const contStare = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, "cont-stare.json"), "utf8")) || {}; } catch { return {}; } })();
+async function yahooLung(simbol) {
+  const s = String(simbol || "").replace(/[^A-Za-z0-9.^=-]/g, ""), f = path.join(CONT_DIR, s + ".json");
+  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < 7 * 86400000) return x.bare; } catch {}
+  const r = await fetch("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s) + "?interval=1d&range=10y", { headers: { "user-agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error("Yahoo " + r.status);
+  const j = await r.json(), res = j && j.chart && j.chart.result && j.chart.result[0], q = res && res.indicators && res.indicators.quote && res.indicators.quote[0];
+  if (!res || !Array.isArray(res.timestamp) || !q) throw new Error("Yahoo fără serie pentru " + s);
+  const bare = res.timestamp.map((t, i) => ({ t: t * 1000, c: q.close[i] })).filter((b) => typeof b.c === "number" && b.c > 0);
+  if (!bare.length) throw new Error("Yahoo gol pentru " + s);
+  try { scrieAtomic(f, { la: Date.now(), bare }); } catch {}
+  return bare;
+}
+// prețurile zilnice ale contului întreg: o zi pe disc (data/cont-bare), cererile noi la 2,5 s (ruta T212 are limita ei pe minut)
+const CONT_BARE = path.join(DATA, "cont-bare"); fs.mkdirSync(CONT_BARE, { recursive: true });
+let contBareUltima = 0;
+async function bareZiCont(cale) {
+  const f = path.join(CONT_BARE, crypto.createHash("sha1").update(cale).digest("hex").slice(0, 20) + ".json");
+  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < 20 * 3600000) { if (x.lipsa) throw Object.assign(new Error("HTTP 404 (ținut minte)"), { tinut: true }); return x.r; } } catch (e) { if (e.tinut) throw e; }
+  const asteapta = contBareUltima + 2500 - Date.now(); if (asteapta > 0) await new Promise((r) => setTimeout(r, asteapta));
+  contBareUltima = Date.now();
+  try { const r = await cere(cale); try { scrieAtomic(f, { la: Date.now(), r }); } catch {} return r; }
+  catch (e) { if (e.status === 404) { try { scrieAtomic(f, { la: Date.now(), lipsa: true }); } catch {} } throw e; }
+}
+async function turaContColector() {
+  await turaContModul({ cere, trimite, trimiteAlerta, jurnal, ContIntreg, T212, JurnalTrade, GridCalcul, MesajeColector, versiune: VERSIUNE_COLECTOR,
+    bareZi: bareZiCont, botiInchisi: botiInchisiCompleti, salt: async () => (ultimeleSalt && Array.isArray(ultimeleSalt.randuri) ? ultimeleSalt.randuri : []), cursBnr, yahooLung }, contStare);
+  try { const { inLucru, ...deScris } = contStare; scrieAtomic(path.join(DATA, "cont-stare.json"), deScris); } catch {}
+}
+const verdicteStare = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, "verdicte-stare.json"), "utf8")) || {}; } catch { return {}; } })();
+async function turaVerdicteColector() {
+  await turaVerdicteModul({ cere, trimite, jurnal, Verdicte, GridCalcul, bareZi: bareZiCont }, verdicteStare);
+  try { const { inLucru, ...deScris } = verdicteStare; scrieAtomic(path.join(DATA, "verdicte-stare.json"), deScris); } catch {}
+}
 async function turaRisc() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
   if (riscInLucru || profilStare.riscZi === zi || Date.now() - riscEsec < 3600000) return;
@@ -1991,7 +2042,11 @@ async function turaCazuri() {
     const cz = Asemanatoare.cazuri(tr, bareDe);
     // v101.74 (revizia R4): bilanțurile ADX și becuri socotite aici, o dată pe noapte (pe pagină țineau firul 1–2 s) - stau lângă cazuri
     let bilant = null;
-    try { bilant = { adx: Asemanatoare.textAdx(Asemanatoare.bilantAdx(cz)), sem: Asemanatoare.textSemafor(Asemanatoare.bilantSemafor(cz)) }; } catch (e) { jurnal("cazuri: bilanț ESEC", e.message); }
+    try {
+      const bA = Asemanatoare.bilantAdx(cz), bS = Asemanatoare.bilantSemafor(cz);
+      // v101.103 (corecția pentru teste multiple): și p-ul fiecărui bilanț, pentru registrul comun al testelor
+      bilant = { adx: Asemanatoare.textAdx(bA), sem: Asemanatoare.textSemafor(bS), teste: [{ nume: "Boții porniți cu ADX sub 20 față de cei în trend (peste 25)", p: bA.p ?? null, difMed: bA.difMed ?? null, verdict: bA.verdict }, { nume: "Boții porniți fără bec împotrivă (4 h, 1 zi) față de cei cu unul", p: bS.p ?? null, difMed: bS.difMed ?? null, verdict: bS.verdict }] };
+    } catch (e) { jurnal("cazuri: bilanț ESEC", e.message); }
     await trimite("/api/istoric-bot?action=cazuri", { la: Date.now(), cazuri: cz, bilant });
     profilStare.cazuriZi = zi; try { scrieAtomic(PROFIL_STARE, profilStare); } catch {}
     jurnal("cazuri:", cz.length, "cu starea de la pornire:", cz.filter((c) => c.stare).length, "cu ADX:", cz.filter((c) => c.adx != null).length);
@@ -2070,6 +2125,8 @@ async function bucla() {
   turaPaznic().catch(() => {});
   turaBilantBusola().catch((e) => jurnal("busola bilanț", e.message));   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠, în KV
   turaPiataColector().catch((e) => jurnal("piata", e.message));
+  turaContColector().catch((e) => jurnal("cont", e.message));   // v101.102 (contul întreg): la 6 ore
+  turaVerdicteColector().catch((e) => jurnal("verdicte", e.message));   // v101.103: verdictele zilei + judecata la 6 ore
   turaLatimeColector().catch((e) => jurnal("latime", e.message));   // v101.93 (I-583): lățimea pieței la 15 minute
   turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)

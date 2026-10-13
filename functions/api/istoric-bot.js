@@ -73,6 +73,12 @@ export async function onRequestGet({request,env}){
   if(action==="cazuri"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("cazuri")||"null")}catch{c=null}return json({cazuri:c})}
   // v100.113: riscul boților și al acțiunilor + comportamentul (RiscLuna.raport, scris de colector o dată pe zi)
   if(action==="risc"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("risc")||"null")}catch{r=null}return json({risc:r})}
+  // v100.176 (contul întreg): raportul colectorului (valoare, risc, corelații, stres, reconciliere, randament) și valoarea pe zile
+  if(action==="cont"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("cont:raport")||"null")}catch{r=null}return json({cont:r})}
+  // v100.177 (jurnalul verdictelor): verdictele ținute minte și calibrarea lor (cu registrul testelor și corecția pentru teste multiple)
+  if(action==="verdicte"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("verdicte:jurnal")||"[]")}catch{l=[]}return json({verdicte:Array.isArray(l)?l:[]})}
+  if(action==="verdicteCalibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("verdicte:calibrare")||"null")}catch{c=null}return json({calibrare:c})}
+  if(action==="contZile"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("cont:zile")||"[]")}catch{l=[]}return json({zile:Array.isArray(l)?l:[]})}
   // v100.117 (I-561): carnetul fișei - raportul de noapte al laboratorului (re-joc + ofertele judecate)
   if(action==="carnet"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("carnet")||"null")}catch{r=null}return json({carnet:r})}
   // v100.85 (reveniri + short): istoricul listelor de monede, urmărirea lor și notările (le scrie tura sugestiilor, o dată pe zi)
@@ -123,7 +129,7 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
   const u=new URL(request.url),action=u.searchParams.get("action");
-  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:65536))return json({error:"Corp prea mare"},413);
+  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
   if(action==="ferestre"){
@@ -279,6 +285,19 @@ export async function onRequestPost({request,env}){
   }
   // v100.47 (I-469): situatiile asemanatoare - cazurile din arhiva cu ce se stia la pornire (colectorul, o data pe noapte)
   // v100.113: raportul riscului - un singur obiect, cu „la” (îl scrie colectorul; mărimea e păzită mai sus, 256 KB)
+  // v100.176: contul întreg - raportul (cu „la”) și valoarea unei zile (o intrare pe zi, ultimele 800)
+  if(action==="cont"){const r=corp&&corp.cont;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"cont: raportul cu „la”"},400);await env.ISTORIC.put("cont:raport",JSON.stringify(r));return json({ok:true})}
+  // v100.177: un verdict sau mai multe (pagina: Poarta; colectorul: ideile, macro); un verdict pe (sursă, simbol, zi), cel mai nou rămâne
+  if(action==="verdict"){const SURSE=new Set(["poarta-t212","poarta-grid","idei","macro"]),acum=Date.now(),z=t=>new Date(t).toISOString().slice(0,10);
+    const noi=(Array.isArray(corp&&corp.verdicte)?corp.verdicte:[corp]).slice(0,500).map(v=>{if(!v||typeof v!=="object")return null;const s=String(v.s||""),k=String(v.k||"").toUpperCase().replace(/[^A-Z0-9._=^-]/g,"").slice(0,32),n=String(v.n||"").toLowerCase().replace(/[^a-z-]/g,"").slice(0,20),p=nr(v.p),t=nr(v.t);
+      if(!SURSE.has(s)||!k||!n||!(p>0)||!(t>0)||t>acum+300000)return null;const o={s,k,n,p,t};const j=nr(v.j),u=nr(v.u);if(j>0&&u>j){o.j=j;o.u=u}return o}).filter(Boolean);
+    if(!noi.length)return json({error:"verdict: s, k, n, p, t"},400);
+    let l=[];try{l=JSON.parse(await env.ISTORIC.get("verdicte:jurnal")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
+    const m=new Map();for(const x of l.concat(noi)){const c=x.s+"|"+x.k+"|"+z(x.t),v=m.get(c);if(!v||v.t<=x.t)m.set(c,x)}
+    const out=[...m.values()].sort((a,b)=>a.t-b.t).slice(-20000);await env.ISTORIC.put("verdicte:jurnal",JSON.stringify(out));return json({ok:true,n:out.length})}
+  if(action==="verdicteCalibrare"){const c=corp;if(!c||typeof c!=="object"||!(nr(c.la)>0)||!Array.isArray(c.calibrare))return json({error:"verdicteCalibrare: la + calibrare"},400);await env.ISTORIC.put("verdicte:calibrare",JSON.stringify(c));return json({ok:true})}
+  if(action==="contZi"){const z=String(corp&&corp.z||"");if(!/^\d{4}-\d{2}-\d{2}$/.test(z)||!(nr(corp.valoare)>0))return json({error:"contZi: z și valoare"},400);let l=[];try{l=JSON.parse(await env.ISTORIC.get("cont:zile")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
+    l=l.filter(x=>x&&x.z!==z).concat([{z,valoare:nr(corp.valoare),complet:corp.complet===true,pionex:nr(corp.pionex),t212:nr(corp.t212),salt:nr(corp.salt)}]).sort((a,b)=>a.z<b.z?-1:1).slice(-800);await env.ISTORIC.put("cont:zile",JSON.stringify(l));return json({ok:true,n:l.length})}
   if(action==="risc"){const r=corp&&corp.risc;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"risc: raportul cu „la”"},400);await env.ISTORIC.put("risc",JSON.stringify(r));return json({ok:true})}
   if(action==="carnet"){const r=corp&&corp.carnet;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"carnet: raportul cu „la”"},400);await env.ISTORIC.put("carnet",JSON.stringify(r));return json({ok:true})}
   if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);const bl=corp.bilant&&typeof corp.bilant==="object"?{adx:typeof corp.bilant.adx==="string"?corp.bilant.adx.slice(0,300):null,sem:typeof corp.bilant.sem==="string"?corp.bilant.sem.slice(0,300):null}:null;await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l,bilant:bl}));return json({ok:true,n:l.length})}

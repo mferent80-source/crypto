@@ -79,7 +79,9 @@ var RiscLuna = (function () {
     // revizia (R1): cu IC 95% regula dădea „dovedit” pe date amestecate în 7–12% din cazuri ⇒ dovedit = IC 99%; IC 95% singur = „la limită”
     var jum2 = d1 !== null && d2 !== null && Math.sign(d1) === Math.sign(dif) && Math.sign(d2) === Math.sign(dif), sens = dif < 0 ? "rau" : "bun";
     var dov = jum2 && ic99[0] !== null && (ic99[0] > 0 || ic99[1] < 0), lim = !dov && jum2 && ic[0] !== null && (ic[0] > 0 || ic[1] < 0);
-    return Object.assign(baza, { dif: dif, ic: ic, ic99: ic99, d1: d1, d2: d2, stare: dov ? "dovedit-" + sens : lim ? "la-limita-" + sens : "nedovedit" });
+    // v100.177 (corecția pentru teste multiple): p-ul din aceeași distribuție bootstrap (de două ori partea mai mică de o parte a lui 0)
+    var pB = d.length ? Math.min(1, 2 * Math.min(d.filter(function (x) { return x <= 0; }).length, d.filter(function (x) { return x >= 0; }).length) / d.length) : null;
+    return Object.assign(baza, { dif: dif, ic: ic, ic99: ic99, d1: d1, d2: d2, p: pB, stare: dov ? "dovedit-" + sens : lim ? "la-limita-" + sens : "nedovedit" });
   }
   var OBICEIURI_BOTI = [["O1", "Stop pus"], ["O2", "Marjă adăugată pe drum"], ["O3", "Levier peste 3×"], ["O4", "Banda sub 10%"], ["O5", "Pornit în partea grea a benzii"],
     ["O6", "Pornit la ≤ 30 min după un bot pe minus"], ["O7", "Suma mărită după o pierdere"], ["O8", "Prima oară pe moneda asta"], ["O9", "Short"]];

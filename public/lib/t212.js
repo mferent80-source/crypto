@@ -49,7 +49,10 @@ var T212 = (function () {
       var fee = 0; (Array.isArray(w.taxes) ? w.taxes : []).forEach(function (tx) { var v = nr(tx && tx.quantity); if (v !== null) fee += Math.abs(v); });
       out.push({ id: String(f.id || o.id), t: t, side: side, ticker: o.ticker, simbol: simbol(o.ticker), nume: o.instrument && o.instrument.name || o.ticker,
         qty: q, pret: p, net: Math.abs(net), fee: fee, moneda: w.currency || null, fx: nr(w.fxRate), ext: !!o.extendedHours,
-        realizat: side === "SELL" ? nr(w.realisedProfitLoss) : null });
+        realizat: side === "SELL" ? nr(w.realisedProfitLoss) : null,
+        // v100.176 (jurnalul de execuție): tipul ordinului, când l-ai dat, prețul limită / de stop - prețul plănuit față de cel obținut
+        tip: /^(MARKET|LIMIT|STOP|STOP_LIMIT)$/.test(String(o.type || "").toUpperCase()) ? String(o.type).toUpperCase() : null,
+        creat: isFinite(Date.parse(o.createdAt)) ? Date.parse(o.createdAt) : null, limita: nr(o.limitPrice), stopPret: nr(o.stopPrice) });
     });
     return out.sort(function (a, b) { return a.t - b.t; });
   }

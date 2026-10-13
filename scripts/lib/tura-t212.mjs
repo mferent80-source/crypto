@@ -115,3 +115,20 @@ export async function turaCfActiuni(d) {
   if (judecate) d.jurnal("cf actiuni: " + cate(judecate, "trade judecat", "trade-uri judecate") + " pe " + cate(actiuni, "acțiune", "acțiuni") + (peTicker.size > actiuni ? " · mai sunt " + (peTicker.size - actiuni) : ""));
   return { judecate, actiuni, ramase: Math.max(0, peTicker.size - actiuni) };
 }
+// v100.176 (jurnalul de execuție): completarea o singură dată - pagină cu pagină de la cap la capăt, retrimite umplerile (serverul le
+// înlocuiește după id, cu tipul ordinului și ora la care a fost dat); st = { cursor, gata } ținut de colector pe disc
+export async function turaT212Exec(d, st) {
+  if (st.gata) return { pagini: 0, gata: true };
+  const max = d.max || 12, pas = d.pasMs == null ? 11000 : d.pasMs;
+  let pagini = 0, cur = st.cursor || null;
+  while (pagini < max) {
+    if (pagini > 0) await d.pauza(pas);
+    const p = await d.cerePagina(cur); pagini++;
+    const items = Array.isArray(p && p.items) ? p.items : [];
+    await d.salveaza({ ordine: items.map((x) => x && x.order && x.order.id).filter((id) => id !== null && id !== undefined).map(String), umpleri: d.umpleri(items), stare: null });
+    cur = p && p.cursor ? String(p.cursor) : null;
+    st.cursor = cur;
+    if (!cur) { st.gata = true; break; }
+  }
+  return { pagini, gata: !!st.gata };
+}

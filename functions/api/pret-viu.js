@@ -1,8 +1,12 @@
-import {sameOrigin} from "../_shared/auth.js";
-// v100.175 (auditul Opus, M14): Origin-ul îl poate pune orice client care nu e browser ⇒ și parola aplicației (în adresă, `t=`; socketul din
-// browser nu poate trimite antete) și cel mult 8 releuri deschise deodată
+import {sameOrigin,requireApiAuth,authErrorResponse} from "../_shared/auth.js";
+// v100.175 (auditul Opus, M14): Origin-ul îl poate pune orice client care nu e browser ⇒ releul cere un BILET și ține cel mult 8 conexiuni.
+// v100.176 (revizia de securitate a commitului): parola nu mai intră în adresă (adresele ajung în jurnale) - pagina cere cu POST (parola în
+// antet) un bilet = „expiră.semnătură”, HMAC-SHA256 cu parola peste simbol + expirare, valabil 60 s, doar pentru simbolul acela; fără stare
 const enc=new TextEncoder();
-async function egal(a,b){const [x,y]=await Promise.all([crypto.subtle.digest("SHA-256",enc.encode(String(a||""))),crypto.subtle.digest("SHA-256",enc.encode(String(b||"")))]);const p=new Uint8Array(x),q=new Uint8Array(y);let d=0;for(let i=0;i<p.length;i++)d|=p[i]^q[i];return d===0}
+async function semneaza(cheie,text){const k=await crypto.subtle.importKey("raw",enc.encode(String(cheie)),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return [...new Uint8Array(await crypto.subtle.sign("HMAC",k,enc.encode(text)))].map(b=>b.toString(16).padStart(2,"0")).join("")}
+function egalText(a,b){a=String(a||"");b=String(b||"");let d=a.length^b.length;for(let i=0;i<Math.max(a.length,b.length);i++)d|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);return d===0}
+export async function biletPentru(cheie,simbol,acum){const exp=Math.floor(acum/1000)+60;return exp+"."+await semneaza(cheie,"pret-viu:"+simbol+":"+exp)}
+export async function biletBun(cheie,simbol,bilet,acum){const m=/^(\d{10})\.([0-9a-f]{64})$/.exec(String(bilet||""));if(!cheie||!m)return false;const exp=Number(m[1]),t=Math.floor(acum/1000);if(exp<t||exp>t+120)return false;return egalText(m[2],await semneaza(cheie,"pret-viu:"+simbol+":"+exp))}
 let deschise=0;const MAX_RELEE=8;
 
 // v100.6 (el, 28.09: „nicăieri nu se arată prețul live al botului”) - releu pentru prețul LIVE al botului.
@@ -20,11 +24,10 @@ const json=(x,status)=>new Response(JSON.stringify(x),{status,headers:H});
 export async function onRequestGet({request,env}){
   if((request.headers.get("upgrade")||"").toLowerCase()!=="websocket")return json({error:"WEBSOCKET_REQUIRED"},426);
   if(!sameOrigin(request))return json({error:"ORIGIN_REFUSED"},403);
-  const asteptat=String(env&&env.APP_API_TOKEN||"");
-  if(!asteptat||!(await egal(new URL(request.url).searchParams.get("t")||"",asteptat)))return json({error:"AUTH_INVALID"},401);
-  if(deschise>=MAX_RELEE)return json({error:"PREA_MULTE_RELEE"},429);
   const simbol=String(new URL(request.url).searchParams.get("simbol")||"").toUpperCase();
   if(!SIMBOL.test(simbol))return json({error:"SIMBOL_INVALID"},400);
+  if(!(await biletBun(String(env&&env.APP_API_TOKEN||""),simbol,new URL(request.url).searchParams.get("b"),Date.now())))return json({error:"BILET_INVALID"},401);
+  if(deschise>=MAX_RELEE)return json({error:"PREA_MULTE_RELEE"},429);
 
   let sus;
   try{
@@ -53,4 +56,12 @@ export async function onRequestGet({request,env}){
   sus.send(JSON.stringify({op:"SUBSCRIBE",topic:"TRADE",symbol:simbol}));
 
   return new Response(null,{status:101,webSocket:client});
+}
+// v100.176: biletul releului - POST cu parola în antet (requireApiAuth), pentru un simbol Pionex valid
+export async function onRequestPost({request,env}){
+  const auth=await requireApiAuth(request,env,"pret-viu-bilet",30);if(!auth.ok)return authErrorResponse(auth,H);
+  if(!sameOrigin(request))return json({error:"ORIGIN_REFUSED"},403);
+  const simbol=String(new URL(request.url).searchParams.get("simbol")||"").toUpperCase();
+  if(!SIMBOL.test(simbol))return json({error:"SIMBOL_INVALID"},400);
+  return json({bilet:await biletPentru(env.APP_API_TOKEN,simbol,Date.now()),valabilS:60},200);
 }

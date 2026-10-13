@@ -1,0 +1,151 @@
+// Pagina „Contul întreg” (v100.176; el 13.10: „din prima recomandare 1–6”): desenează raportul colectorului (ContIntreg, KV cont:raport).
+// ciHtml e fără DOM (proba o rulează în vm); ciPorneste leagă pagina. Răspunsul întâi, în cuvinte; cifrele și tabelele dedesubt; „cum am
+// socotit” pliat. Lipsa se spune (nu 0), aproximările se spun pe față.
+var ciStare = { raport: null, zile: null, la: 0, inLucru: false, eroare: null, verdicte: null };
+function ciEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function ciMii(x) { if (x == null || !isFinite(x)) return "—"; var r = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); return (x < 0 ? "−" : "") + r; }
+function ciLei(x, semn) { if (x == null || !isFinite(x)) return "—"; return (semn && x > 0 ? "+" : "") + ciMii(x) + " lei"; }
+function ciPct(x, z) { if (x == null || !isFinite(x)) return "—"; var v = Math.abs(x * 100).toFixed(z == null ? 1 : z).replace(".", ","); return (x < 0 ? "−" : x > 0 ? "+" : "") + v + "%"; }
+function ciNr(x, z) { return x == null || !isFinite(x) ? "—" : Number(x).toFixed(z == null ? 2 : z).replace(".", ","); }
+function ciZi(z) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(z || "")); return m ? m[3] + "." + m[2] + "." + m[1] : "—"; }
+function ciEt(t) { return '<span class="ciEt">' + ciEsc(t) + " </span>"; }
+function ciCate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + pl; }
+// histograma zilelor (P&L-ul pozițiilor de acum pe ultimele ~250 de zile): sub zero roșu, peste zero verde, pragul zilei proaste (VaR 95 %) marcat
+function ciHisto(pnl, var95) {
+  var v = (pnl || []).map(function (x) { return x[1]; }).filter(function (x) { return x != null && isFinite(x); });
+  if (v.length < 20) return "";
+  var lo = Math.min.apply(null, v), hi = Math.max.apply(null, v), n = 24, w = (hi - lo) / n || 1, b = new Array(n).fill(0);
+  v.forEach(function (x) { b[Math.min(n - 1, Math.floor((x - lo) / w))]++; });
+  var mx = Math.max.apply(null, b), W = 480, H = 120, bw = W / n;
+  var bare = b.map(function (c, i) { var x0 = lo + i * w, h = c / mx * (H - 18); return '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (H - 14 - h).toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + h.toFixed(1) + '" class="' + (x0 + w / 2 < 0 ? "ciRosu" : "ciVerde") + '"></rect>'; }).join("");
+  var xv = var95 != null ? (-var95 - lo) / (hi - lo) * W : null;
+  var linie = xv != null && xv >= 0 && xv <= W ? '<line x1="' + xv.toFixed(1) + '" x2="' + xv.toFixed(1) + '" y1="0" y2="' + (H - 14) + '" class="ciPrag"></line><text x="' + Math.min(W - 4, xv + 4).toFixed(1) + '" y="10" class="ciPragT">ziua proastă (1 din 20)</text>' : "";
+  return '<svg class="ciHisto" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Câte zile au avut fiecare câștig sau pierdere, pe pozițiile de acum">' + bare + linie
+    + '<text x="0" y="' + (H - 2) + '" class="ciAx">' + ciEsc(ciLei(lo)) + '</text><text x="' + W + '" y="' + (H - 2) + '" text-anchor="end" class="ciAx">' + ciEsc(ciLei(hi, true)) + "</text></svg>";
+}
+// „ce aș face eu”: o singură acțiune, din ce strică cel mai tare (concentrarea, riscul pe zi, criza, reconcilierea)
+function ciFac(r) {
+  var tot = r.valoare && r.valoare.total, rec = r.reconciliere || {};
+  if (rec.urmarire && !rec.urmarire.ok) return "Aș verifica acum botul " + rec.urmarire.lipsa.map(function (x) { return x.nume; }).join(", ") + " direct în Pionex: Radarul nu-l mai urmărește.";
+  var cr = (r.stres || [])[0];
+  if (cr && tot > 0 && -cr.lei > 0.35 * tot) return "O criză ca „" + cr.nume + "” ți-ar lua ~" + Math.round(-cr.lei / tot * 100) + "% din cont: aș micșora întâi poziția care pierde cel mai mult acolo (" + ((cr.pozitii || [])[0] || {}).nume + ").";
+  var p = (r.corelatii || []).filter(function (x) { return x.acelasiRisc; })[0];
+  if (p && p.rho >= 0.8) return p.a + " și " + p.b + " se mișcă aproape la fel (ρ " + ciNr(p.rho) + "): aș socoti-le o singură poziție când îmi pun riscul.";
+  if (r.risc && r.risc.var95 && tot > 0 && r.risc.var95 > 0.04 * tot) return "O zi proastă îți ia ~" + ciPct(r.risc.var95 / tot) .replace("+", "") + " din cont: aș reduce expunerea până sub 3% pe zi.";
+  if (rec.t212 && !rec.t212.ok) return "Aș verifica în T212 " + rec.t212.abateri.map(function (a) { return String(a.ticker).replace(/_US_EQ$|_EQ$/, ""); }).join(", ") + ": jurnalul Radarului nu se potrivește cu contul.";
+  return "Nimic urgent pe tot contul: aș păstra riscul pe zi sub 3% din cont și aș verifica pagina după fiecare poziție nouă.";
+}
+function ciHtml(r, st) {
+  st = st || {};
+  if (!r) return '<p class="tbSub">Raportul pe tot contul îl face colectorul la 6 ore (boți, Trading 212, Salt, prețurile pe doi ani, crizele din 2020–2025). Încă nu există: pornește colectorul și revino peste câteva minute.</p>';
+  var acum = Number(st.acum) || Date.now(), v = r.valoare || {}, rs = r.risc || {}, tot = v.total, h = "";
+  var vechi = acum - r.la > 12 * 3600000;
+  var d = new Date(r.la), p2 = function (n) { return String(n).padStart(2, "0"); };
+  h += '<p class="tbSub ciLa">Raportul de la ' + p2(d.getDate()) + "." + p2(d.getMonth() + 1) + ", ora " + p2(d.getHours()) + ":" + p2(d.getMinutes()) + " · se reface la 6 ore · pozițiile de acum puse pe istoria reală; e un calcul, nu o promisiune.</p>";
+  if (vechi) h += '<p class="tbWarn">⚠ Raportul e vechi de ' + ciEsc(ciCate(Math.round((acum - r.la) / 3600000), "oră", "ore")) + ": colectorul nu l-a refăcut (e pornit PC-ul de acasă?).</p>";
+  // răspunsul
+  var cr = (r.stres || [])[0], txt = "Contul tău: " + ciLei(tot) + (v.complet ? "" : " (fără " + (v.lipsa || []).join(", ") + ")") + ".";
+  if (rs.var95 != null) txt += " Într-o zi proastă (1 din 20) pozițiile de acum pierd cel puțin ~" + ciLei(rs.var95) + (tot > 0 ? " (" + ciPct(rs.var95 / tot).replace("+", "") + ")" : "") + "; în medie, în zilele acelea, ~" + ciLei(rs.es95) + ".";
+  if (cr) txt += " Cea mai rea criză din trecut, pe ce ai acum: " + cr.nume + ", " + ciLei(cr.lei, true) + ".";
+  h += '<section class="ciSec"><p class="ciRasp">' + ciEsc(txt) + '</p><p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + ciEsc(ciFac(r)) + "</p>";
+  var div = r.diversificare;
+  var cif = [["Valoarea contului", ciLei(tot), "Pionex " + ciLei(v.pionex) + " · T212 " + ciLei(v.t212) + " · Salt " + ciLei(v.salt), ""],
+    ["Ziua proastă (1 din 20)", rs.var95 != null ? "−" + ciLei(rs.var95) : "—", "VaR 95 % pe o zi · ES " + (rs.es95 != null ? "−" + ciLei(rs.es95) : "—"), "bad"],
+    ["Ziua foarte proastă (1 din 100)", rs.var99 != null ? "−" + ciLei(rs.var99) : "—", "VaR 99 % · ES " + (rs.es99 != null ? "−" + ciLei(rs.es99) : "—"), "bad"],
+    ["Cea mai rea zi din ultimul an", rs.ziRea ? ciLei(rs.ziRea.lei, true) : "—", rs.ziRea ? "pe " + ciZi(rs.ziRea.z) + ", cu pozițiile de acum" : "", "bad"],
+    ["Pariuri independente", div ? ciNr(div.pariuri, 1).replace(",0", "") : "—", div ? "din " + ciCate(div.pozitii, "poziție", "poziții") + ": restul se mișcă împreună" : "", ""]];
+  h += '<div class="ciCifre">' + cif.map(function (c) { return '<div class="ciCifra"><span>' + ciEsc(c[0]) + '</span><b class="' + c[3] + '">' + ciEsc(c[1]) + "</b><small>" + ciEsc(c[2]) + "</small></div>"; }).join("") + "</div>";
+  h += ciHisto(rs.pnl, rs.var95);
+  if (rs.n && rs.n < 60) h += '<p class="tbWarn">Doar ' + ciEsc(ciCate(rs.n, "zi", "zile")) + " de istorie comună: cifrele de risc sunt orientative.</p>";
+  if (rs.scoase && rs.scoase.length) h += '<p class="tbSub">Fără ' + ciEsc(rs.scoase.map(function (x) { return x.nume + " (" + x.motiv + ")"; }).join(", ")) + ".</p>";
+  h += "</section>";
+  // expunerile
+  var ex = (r.expuneri || []).slice().sort(function (a, b) { return Math.abs(b.lei || 0) - Math.abs(a.lei || 0); });
+  if (ex.length) h += '<section class="ciSec"><h3>Pe ce stă riscul</h3><p class="tbSub">Expunerea = cât se mișcă poziția la o mișcare a prețului (la boți, poziția reală de acum din Pionex, nu suma pusă). β = cât se mișcă față de BTC (crypto) sau Nasdaq (acțiuni) pe 180 de zile.</p><div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Poziție</th><th>Expunere</th><th>% din cont</th><th>β</th></tr></thead><tbody>'
+    + ex.map(function (x) { return "<tr><td>" + ciEsc(x.nume) + (x.lipsa ? ' <span class="tbWarn">(' + ciEsc(x.lipsa) + ")</span>" : "") + '</td><td class="num">' + ciEt("expunere") + ciEsc(ciLei(x.lei)) + '</td><td class="num">' + ciEt("din cont") + (tot > 0 && x.lei != null ? ciEsc(ciPct(x.lei / tot).replace("+", "")) : "—") + '</td><td class="num">' + ciEt("β") + ciEsc(ciNr(x.beta, 1)) + "</td></tr>"; }).join("") + "</tbody></table></div></section>";
+  // corelațiile
+  var co = r.corelatii || [], acelasi = co.filter(function (x) { return x.acelasiRisc; }), acop = co.filter(function (x) { return x.seAcopera; });
+  h += '<section class="ciSec"><h3>Ce se mișcă împreună</h3>' + (acelasi.length ? '<p class="ciRasp">' + ciEsc(acelasi.length === 1 ? "O pereche e practic același risc:" : ciCate(acelasi.length, "pereche e", "perechi sunt") + " practic același risc:") + "</p><ul class=\"ciLista\">" + acelasi.map(function (x) { return "<li><b>" + ciEsc(x.a + " + " + x.b) + "</b> · ρ " + ciEsc(ciNr(x.rho)) + ' <span class="tbSub">(' + ciEsc(ciCate(x.n, "zi", "zile")) + " comune)</span></li>"; }).join("") + "</ul>" : '<p class="tbSub">Nicio pereche cu ρ ≥ 0,6 pe ultimele 90 de zile.</p>')
+    + (acop.length ? '<p class="tbSub">Se acoperă (una câștigă când cealaltă pierde): ' + ciEsc(acop.map(function (x) { return x.a + " + " + x.b; }).join(", ")) + ".</p>" : "") + "</section>";
+  // stres
+  var sr = r.stres || [];
+  if (sr.length) h += '<section class="ciSec"><h3>Dacă vine iar o criză</h3><p class="tbSub">Randamentele din ferestrele reale ale crizelor (închideri zilnice), puse pe pozițiile de acum: cu istoria ei unde o are, altfel β × BTC / Nasdaq. Boții cumpără pe drum, iar lichidarea ia tot ce e în bot. În timpul zilei căderile au fost mai mari.</p><div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Criza</th><th>BTC</th><th>Nasdaq</th><th>Contul tău</th><th>Cel mai lovit</th></tr></thead><tbody>'
+    + sr.map(function (s) { var p0 = (s.pozitii || [])[0]; return "<tr><td>" + ciEsc(s.nume) + '<br><span class="tbSub">' + ciEsc(ciZi(s.de).slice(0, 5) + "–" + ciZi(s.pana)) + '</span></td><td class="num ' + (s.btc < 0 ? "bad" : "good") + '">' + ciEt("BTC") + ciEsc(ciPct(s.btc)) + '</td><td class="num ' + (s.qqq < 0 ? "bad" : "good") + '">' + ciEt("Nasdaq") + ciEsc(ciPct(s.qqq)) + '</td><td class="num ' + (s.lei < 0 ? "bad" : "good") + '">' + ciEt("contul tău") + "<b>" + ciEsc(ciLei(s.lei, true)) + "</b>" + (tot > 0 ? '<br><span class="tbSub">' + ciEsc(ciPct(s.lei / tot)) + "</span>" : "") + "</td><td>" + ciEt("cel mai lovit") + (p0 ? ciEsc(p0.nume + " " + ciLei(p0.lei, true)) + (p0.lichidat ? ' <span class="bad">⚠ lichidat</span>' : "") : "—") + "</td></tr>"; }).join("") + "</tbody></table></div></section>";
+  // reconcilierea
+  var rc = r.reconciliere || {}, rand = function (ok, titlu, detaliu) { return '<li class="' + (ok === null ? "" : ok ? "good" : "bad") + '">' + (ok === null ? "· " : ok ? "✓ " : "✗ ") + "<b>" + ciEsc(titlu) + "</b>" + (detaliu ? ' <span class="tbSub">' + ciEsc(detaliu) + "</span>" : "") + "</li>"; };
+  h += '<section class="ciSec"><h3>Se potrivește cu brokerii?</h3><ul class="ciLista">'
+    + (rc.t212 ? rand(rc.t212.ok, rc.t212.ok ? "Trading 212: cantitățile din jurnal = cele din cont" : "Trading 212: " + ciCate(rc.t212.abateri.length, "abatere", "abateri"), rc.t212.ok ? ciCate(rc.t212.verificate, "simbol verificat", "simboluri verificate") : rc.t212.abateri.map(function (a) { return String(a.ticker).replace(/_US_EQ$|_EQ$/, "") + ": cont " + a.broker + ", jurnal " + ciNr(a.radar, 3).replace(/,?0+$/, "") + " — " + a.motiv; }).join("; ")) : rand(null, "Trading 212: necitit acum", ""))
+    + (rc.arhiva ? rand(rc.arhiva.ok, rc.arhiva.ok ? "Arhiva boților are toți boții închiși din Pionex" : "Arhiva boților: lipsesc " + ciCate(rc.arhiva.lipsa.length, "bot", "boți"), ciCate(rc.arhiva.verificate, "bot verificat", "boți verificați") + " (prima pagină Pionex)") : rand(null, "Arhiva boților: necitită acum", ""))
+    + (rc.urmarire ? rand(rc.urmarire.ok, rc.urmarire.ok ? "Toți boții porniți au istoric proaspăt în Radar" : "Boți porniți fără istoric în Radar: " + rc.urmarire.lipsa.map(function (x) { return x.nume; }).join(", "), ciCate(rc.urmarire.verificate, "bot pornit", "boți porniți")) : rand(null, "Urmărirea boților: necitită acum", ""))
+    + rand(null, "Salt: pozițiile le scrii tu (Salt n-are o legătură de citire), deci nu am cu ce le compara", "")
+    + "</ul></section>";
+  // execuția: prețul plănuit față de cel obținut
+  var ex2 = r.executie;
+  if (ex2 && ex2.n) {
+    var lin = [];
+    if (ex2.conversie && ex2.conversie.n) lin.push(["Conversia lei ↔ dolari", "comisionul T212: " + ciLei(ex2.conversie.lei) + " pe ultimul an (" + ciPct(ex2.conversie.mediana, 2).replace("+", "") + " la o tranzacție)" + (ex2.conversie.fataBnr ? "; cursul folosit față de BNR: " + ciPct(ex2.conversie.fataBnr.mediana, 2) + " (mediana, " + ciCate(ex2.conversie.fataBnr.n, "tranzacție", "tranzacții") + ")" : ""), ex2.conversie.lei > 0 ? "bad" : ""]);
+    if (ex2.pesteNoapte && ex2.pesteNoapte.n) lin.push(["Ordine la piață date cu bursa închisă", ciCate(ex2.pesteNoapte.n, "ordin umplut", "ordine umplute") + " abia la deschidere: față de închiderea dinainte, mediana " + ciPct(ex2.pesteNoapte.mediana) + ", cel mai rău " + ciPct(ex2.pesteNoapte.cel) + (ex2.pesteNoapte.cele && ex2.pesteNoapte.cele[0] ? " (" + String(ex2.pesteNoapte.cele[0].ticker).replace(/_US_EQ$|_EQ$/, "") + ")" : ""), ex2.pesteNoapte.mediana < 0 ? "bad" : ""]);
+    if (ex2.stop && ex2.stop.n) lin.push(["Ordinele stop", ciCate(ex2.stop.n, "stop atins", "stopuri atinse") + ": ai ieșit cu mediana " + ciPct(ex2.stop.mediana) + " față de prețul de stop, cel mai rău " + ciPct(ex2.stop.cel), ex2.stop.mediana < -0.005 ? "bad" : ""]);
+    if (ex2.subPlan && ex2.subPlan.n) lin.push(["Ieșiri sub stopul din planul tău", ciCate(ex2.subPlan.n, "vânzare", "vânzări") + " sub stopul scris în Radar: mediana " + ciPct(ex2.subPlan.mediana) + " sub el, cel mai rău " + ciPct(ex2.subPlan.cel), "bad"]);
+    if (ex2.limita && ex2.limita.n) lin.push(["Ordinele limită", ciCate(ex2.limita.n, "ordin", "ordine") + ": mediana " + ciPct(ex2.limita.mediana, 2) + " față de limită (≥ 0 = cel puțin cât ai cerut)", ""]);
+    h += '<section class="ciSec"><h3>Cât te costă execuția</h3><p class="tbSub">Prețul plănuit (stopul, limita, prețul de când ai dat ordinul) față de cel obținut, pe ultimul an. ' + (ex2.cuTip < ex2.n ? "Tipul ordinului îl știu pentru " + ciCate(ex2.cuTip, "umplere", "umpleri") + " din " + ex2.n + " (istoricul vechi se completează singur, câteva pagini la 5 minute)." : "") + '</p><ul class="ciLista">'
+      + (lin.length ? lin.map(function (x) { return '<li><b>' + ciEsc(x[0]) + ':</b> <span class="' + x[2] + '">' + ciEsc(x[1]) + "</span></li>"; }).join("") : '<li class="tbSub">Încă nimic de măsurat (ordinele vechi n-au tipul lor; vin pe măsură ce se completează istoricul).</li>') + "</ul></section>";
+  }
+  // randamentul
+  var ra = r.randament || {}, s = ra.tot;
+  h += '<section class="ciSec"><h3>Cât ai câștigat, corect socotit</h3>';
+  if (!s) h += '<p class="tbSub">Prea puține zile pentru randament (cel puțin 20).</p>';
+  else {
+    var fb = ra.fataBtc, fs = ra.fataSpy;
+    h += '<p class="ciRasp">' + ciEsc("Pe ultimul an (" + ciZi(s.de) + " – " + ciZi(s.pana) + "), banii puși la lucru au făcut " + ciPct(s.twr) + " ponderat în timp" + (fb ? "; BTC a făcut " + ciPct(fb.reper) : "") + (fs ? ", S&P " + ciPct(fs.reper) : "") + " pe aceleași zile.") + "</p>";
+    var c2 = [["Randament ponderat în timp", ciPct(s.twr), ciCate(s.n, "zi", "zile"), s.twr < 0 ? "bad" : "good"], ["Scăderea maximă", ciPct(s.maxDd), s.ziMaxDd ? "până pe " + ciZi(s.ziMaxDd) : "", "bad"],
+      ["Sharpe", ciNr(s.sharpe), "câștig pe unitate de risc, pe an (fără dobândă)", ""], ["Sortino", ciNr(s.sortino), "ca Sharpe, doar pe zilele cu pierdere", ""],
+      ["Zile pe plus", ciPct(s.zilePlus, 0).replace("+", ""), "", ""]];
+    h += '<div class="ciCifre">' + c2.map(function (c) { return '<div class="ciCifra"><span>' + ciEsc(c[0]) + '</span><b class="' + c[3] + '">' + ciEsc(c[1]) + "</b><small>" + ciEsc(c[2]) + "</small></div>"; }).join("") + "</div>";
+    var parte = function (et, x, f, rep) { return x ? "<tr><td>" + ciEsc(et) + '</td><td class="num ' + (x.twr < 0 ? "bad" : "good") + '">' + ciEsc(ciPct(x.twr)) + '</td><td class="num">' + ciEsc(ciPct(x.maxDd)) + '</td><td class="num">' + ciEsc(ciNr(x.sharpe)) + '</td><td class="num">' + (f ? ciEsc(ciPct(f.reper) + " (" + rep + ")") : "—") + "</td></tr>" : ""; };
+    h += '<div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Parte</th><th>Randament</th><th>Scădere max.</th><th>Sharpe</th><th>Reperul</th></tr></thead><tbody>' + parte("Boții Pionex", ra.boti, ra.botiFataBtc, "BTC") + parte("Trading 212", ra.t212, ra.t212FataSpy, "S&P") + parte("Tot contul", s, fs, "S&P") + "</tbody></table></div>";
+    var note = ["Boții: rezultatul fiecăruia împărțit egal pe zilele lui (Pionex nu dă istoria poziției), deci zilele par mai liniștite decât au fost și Sharpe-ul iese mai frumos.", "Trading 212: refăcut din umplerile tale și închiderile zilnice, pe banii investiți (cash-ul care stă nu intră)."];
+    if (ra.t212Aprox && ra.t212Aprox.length) note.push(ciCate(ra.t212Aprox.length, "simbol fără prețuri (delistat) e ținut", "simboluri fără prețuri (delistate) sunt ținute") + " la ultimul preț de tranzacție.");
+    if (ra.t212Nepotrivite && ra.t212Nepotrivite.length) note.push(ciCate(ra.t212Nepotrivite.length, "simbol are", "simboluri au") + " prețuri care nu se potrivesc cu tranzacțiile tale (alt simbol sau o împărțire de acțiuni): " + ra.t212Nepotrivite.slice(0, 8).map(function (t) { return String(t).replace(/_US_EQ$|_EQ$/, ""); }).join(", ") + (ra.t212Nepotrivite.length > 8 ? "…" : "") + " - merg pe prețurile tranzacțiilor.");
+    h += '<ul class="ciNote">' + note.map(function (n) { return '<li class="tbSub">' + ciEsc(n) + "</li>"; }).join("") + "</ul>";
+  }
+  h += "</section>";
+  h += '<details class="ciMetoda"><summary>Cum am socotit</summary><ul>' + ["Riscul pe o zi (VaR / ES): pozițiile de ACUM, în lei, puse pe randamentele zilnice reale ale fiecăreia din ultimele ~250 de zile, cu tot cu mișcarea leului față de dolar / euro (simulare istorică). VaR 95 % = pierderea depășită într-o zi din 20; ES = media acelor zile.",
+    "Corelațiile: pe zilele în care amândouă au preț (ultimele 90), cel puțin 40. „Pariuri independente” = pătratul raportului dintre suma riscurilor fiecărei poziții și riscul contului.",
+    "Crizele: ferestrele reale (Covid 2020, China 2021, Terra/Luna 2022, FTX 2022, yenul 2024, 10 octombrie 2025). Boții: gridul long cumpără la scădere până la marginea de jos (short-ul vinde la creștere), iar trecerea de prețul de lichidare = pierzi tot ce e în bot.",
+    "Reconcilierea: cantitatea fiecărei acțiuni din jurnalul Radarului (umplerile T212, FIFO) față de ce raportează T212; boții închiși de pe prima pagină Pionex față de arhivă; boții porniți față de istoricul din Radar. O abatere vine o dată pe zi pe Discord.",
+    "Randamentul ponderat în timp: înlănțuit zi cu zi (câștigul zilei ÷ banii la lucru în ziua aceea), deci depunerile și retragerile nu-l strâmbă. Sharpe / Sortino anualizate pe 365 de zile, fără dobânda fără risc."].map(function (x) { return "<li>" + ciEsc(x) + "</li>"; }).join("") + "</ul></details>";
+  return h;
+}
+// v100.177 (jurnalul verdictelor): au avut dreptate verdictele Radarului? + registrul TUTUROR testelor cu corecția pentru teste multiple
+function ciVerdicteHtml(c, st) {
+  var h = '<section class="ciSec"><h3>Au avut dreptate verdictele?</h3>';
+  if (!c) return h + '<p class="tbSub">Jurnalul verdictelor se umple de acum: fiecare verificare la Poartă (T212 și grid), ideile zilei și regimul macro se țin minte cu prețul de atunci și se judecă după 5 / 20 de zile de bursă (gridul după 1 / 3 zile). Prima judecată vine după prima tură de noapte a colectorului.</p></section>';
+  var P = function (x, z) { return x == null || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; };
+  var NIV = { cumpara: "cumpără", asteapta: "așteaptă", nu: "nu", porneste: "pornește", cumpar: "idee", riskon: "pofta de risc", inclinat: "înclinat spre risc", neutru: "neutru", prudent: "prudent", riskoff: "fuga de risc", stres: "stres" };
+  h += '<p class="tbSub">' + ciEsc(ciCate(c.n || 0, "verdict ținut minte", "verdicte ținute minte") + ", dintre care " + (c.evaluate || 0) + " au fost judecate (cele mai noi încă își așteaptă orizontul).") + "</p>";
+  (c.calibrare || []).forEach(function (r) {
+    var lin = r.niveluri.slice().sort(function (a, b) { return b.n - a.n; }).map(function (x) { return "<tr><td>" + ciEsc(NIV[x.nivel] || x.nivel) + '</td><td class="num">' + x.n + '</td><td class="num">' + ciEsc(r.masura === "linistit" ? Math.round(x.medie * 100) + "% au stat în bandă" : P(x.medie)) + '</td><td class="num">' + ciEsc(r.masura === "linistit" ? "—" : P(x.pePlus, 0).replace("+", "")) + "</td></tr>"; }).join("");
+    var t = r.test || {}, v = t.stare === "putine" ? "puține cazuri încă (" + t.nFav + " / " + t.nRest + ", trebuie cel puțin 30 pe fiecare parte)" : t.stare === "testat" ? "diferența " + (r.masura === "linistit" ? Math.round(t.dif * 100) + " puncte" : P(t.dif)) + ", p = " + ciNr(t.p, 3) : "";
+    h += "<h4>" + ciEsc(r.nume + " · după " + r.h + (r.masura === "linistit" ? (r.h === 1 ? " zi" : " zile") : " zile de bursă")) + '</h4><p class="tbSub">' + ciEsc(r.intrebare + (v ? ": " + v : "")) + '</p><div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Verdict</th><th>Câte</th><th>' + (r.masura === "pesteQqq" ? "Față de QQQ" : r.masura === "linistit" ? "Rezultat" : "Media") + "</th><th>Pe plus</th></tr></thead><tbody>" + lin + "</tbody></table></div>";
+  });
+  var rg = c.registru || [];
+  if (rg.length) {
+    var ram = rg.filter(function (x) { return x.ramane; });
+    h += '<h4>Ce e dovedit cu adevărat (după corecția pentru teste multiple)</h4><p class="ciRasp">' + ciEsc("Radarul are " + ciCate(rg.length, "test", "teste") + " deschise. Cu atâtea, câteva ies „dovedite” din întâmplare; după corecția Benjamini–Hochberg (cel mult 5% descoperiri false) rămân " + (ram.length ? ciCate(ram.length, "lucru dovedit", "lucruri dovedite") + ":" : "niciunul dovedit.")) + "</p>"
+      + (ram.length ? '<ul class="ciLista">' + ram.map(function (x) { return "<li><b>" + ciEsc(x.afirmatie) + "</b> · " + ciEsc(x.sursa) + ' <span class="tbSub">(p = ' + ciEsc(ciNr(x.p, 4)) + ")</span></li>"; }).join("") + "</ul>" : "")
+      + '<details class="ciMetoda"><summary>Toate testele (' + rg.length + ")</summary><ul>" + rg.slice().sort(function (a, b) { return a.p - b.p; }).map(function (x) { return '<li class="' + (x.ramane ? "good" : "") + '">' + ciEsc(x.sursa + " · " + x.afirmatie + " · p = " + ciNr(x.p, 4) + (x.stareVeche && /^dovedit/.test(x.stareVeche) && !x.ramane ? " · pagina lui zicea „dovedit”, după corecție NU mai e" : "")) + "</li>"; }).join("") + "</ul></details>";
+  }
+  return h + "</section>";
+}
+async function ciPorneste(forta) {
+  var box = document.getElementById("ciPagina"); if (!box) return;
+  if (ciStare.inLucru) return;
+  if (!forta && ciStare.raport && Date.now() - ciStare.la < 5 * 60000) { box.innerHTML = ciHtml(ciStare.raport, {}) + ciVerdicteHtml(ciStare.verdicte, {}); return; }
+  ciStare.inLucru = true;
+  try { var d = await getJSON("/api/istoric-bot?action=cont"); ciStare.raport = d && d.cont || null; ciStare.eroare = null; ciStare.la = Date.now(); }
+  catch (e) { ciStare.eroare = String(e && e.message || e); }
+  try { var dv = await getJSON("/api/istoric-bot?action=verdicteCalibrare"); ciStare.verdicte = dv && dv.calibrare || null; } catch (e2) { ciStare.verdicte = null; }
+  ciStare.inLucru = false;
+  box.innerHTML = (ciStare.eroare && !ciStare.raport ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" : ciHtml(ciStare.raport, {})) + ciVerdicteHtml(ciStare.verdicte, {});
+}

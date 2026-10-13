@@ -201,23 +201,35 @@ let sus = null, antetSus = null, perechi = [];
 globalThis.fetch = async (u, o) => { antetSus = { u, h: o && o.headers }; sus = new FalsWS(); return { status: 101, webSocket: sus }; };
 globalThis.WebSocketPair = function () { const p = { 0: new FalsWS(), 1: new FalsWS() }; perechi.push(p); return p; };
 globalThis.Response = class { constructor(corp, i) { this.corp = corp; this.status = i.status; this.webSocket = i.webSocket; } };
-// v100.175 (auditul Opus, M14): releul cere și parola aplicației, în adresă (`t=`)
-const cerere = (simbol, antete, t = "parola-buna") => ({ url: "http://127.0.0.1:8788/api/pret-viu?simbol=" + simbol + (t === null ? "" : "&t=" + t), headers: new Headers(antete) });
+// v100.175 / v100.176: releul cere un BILET de 60 s pe simbol (HMAC cu parola), nu parola în adresă
 const ENV = { APP_API_TOKEN: "parola-buna" };
+let BILET = null;
+const cerere = (simbol, antete, b = "bun") => ({ url: "http://127.0.0.1:8788/api/pret-viu?simbol=" + simbol + (b === null ? "" : "&b=" + (b === "bun" ? BILET : b)), headers: new Headers(antete) });
 const BUN = { upgrade: "websocket", origin: "http://127.0.0.1:8788" };
 try {
-  const { onRequestGet } = await import(new URL("../functions/api/pret-viu.js", import.meta.url));
+  const { onRequestGet, onRequestPost, biletPentru, biletBun } = await import(new URL("../functions/api/pret-viu.js", import.meta.url));
+  BILET = await biletPentru(ENV.APP_API_TOKEN, S, Date.now());
+  const biletVechi = await biletPentru(ENV.APP_API_TOKEN, S, Date.now() - 120000), biletAltSimbol = await biletPentru(ENV.APP_API_TOKEN, "BTC_USDT_PERP", Date.now());
   const r426 = await onRequestGet({ request: cerere(S, { origin: BUN.origin }), env: ENV });
   const r403 = await onRequestGet({ request: cerere(S, { upgrade: "websocket", origin: "https://altcineva.ro" }), env: ENV });
   const r403b = await onRequestGet({ request: cerere(S, { upgrade: "websocket" }), env: ENV });
-  const r401 = await onRequestGet({ request: cerere(S, BUN, null), env: ENV }), r401b = await onRequestGet({ request: cerere(S, BUN, "gresita"), env: ENV }), r401c = await onRequestGet({ request: cerere(S, BUN), env: {} });
+  const r401 = await onRequestGet({ request: cerere(S, BUN, null), env: ENV }), r401b = await onRequestGet({ request: cerere(S, BUN, "123.abc"), env: ENV }), r401c = await onRequestGet({ request: cerere(S, BUN), env: {} });
+  const r401d = await onRequestGet({ request: cerere(S, BUN, biletVechi), env: ENV }), r401e = await onRequestGet({ request: cerere(S, BUN, biletAltSimbol), env: ENV });
   const r400 = await onRequestGet({ request: cerere("JTO_USDT_PERP%22%7D", BUN), env: ENV });
   const nrFetch = sus ? 1 : 0;
   const r101 = await onRequestGet({ request: cerere(S, BUN), env: ENV });
   const catreOm = perechi.at(-1)[1];
-  test("releu: fără upgrade → 426; Origin străin sau lipsă → 403; fără parolă / parolă greșită / server fără parolă → 401; simbol ciudat → 400; niciunul nu sună la Pionex", () => {
+  test("releu: fără upgrade → 426; Origin străin sau lipsă → 403; fără bilet / bilet stricat / server fără parolă / bilet expirat / biletul altui simbol → 401; simbol ciudat → 400; niciunul nu sună la Pionex", () => {
     assert.equal(r426.status, 426); assert.equal(r403.status, 403); assert.equal(r403b.status, 403); assert.equal(r400.status, 400); assert.equal(nrFetch, 0);
-    assert.equal(r401.status, 401); assert.equal(r401b.status, 401); assert.equal(r401c.status, 401);
+    assert.equal(r401.status, 401); assert.equal(r401b.status, 401); assert.equal(r401c.status, 401); assert.equal(r401d.status, 401); assert.equal(r401e.status, 401);
+  });
+  const H_BILET = { authorization: "Bearer parola-buna", origin: "http://127.0.0.1:8788", "cf-connecting-ip": "10.176.0.1" };
+  const rb = await onRequestPost({ request: new Request("http://127.0.0.1:8788/api/pret-viu?simbol=" + S, { method: "POST", headers: H_BILET }), env: ENV });
+  const rbFara = await onRequestPost({ request: new Request("http://127.0.0.1:8788/api/pret-viu?simbol=" + S, { method: "POST", headers: { origin: "http://127.0.0.1:8788", "cf-connecting-ip": "10.176.0.2" } }), env: ENV });
+  const db = rb.status === 200 ? JSON.parse(rb.corp) : null;
+  test("biletul: POST cu parola în antet dă un bilet bun 60 s pentru simbolul cerut; fără parolă → 401", async () => {
+    assert.equal(rb.status, 200); assert.ok(db && /^\d{10}\.[0-9a-f]{64}$/.test(db.bilet)); assert.equal(await biletBun(ENV.APP_API_TOKEN, S, db.bilet, Date.now()), true);
+    assert.equal(await biletBun(ENV.APP_API_TOKEN, S, db.bilet, Date.now() + 61000), false, "expiră după 60 s"); assert.equal(rbFara.status, 401);
   });
   test("releu: se leagă la Pionex FĂRĂ Origin și abonează exact simbolul botului", () => {
     assert.equal(r101.status, 101); assert.ok(r101.webSocket); assert.match(antetSus.u, /ws\.pionex\.com\/wsPub/);
@@ -246,7 +258,10 @@ try {
   test("releu: cel mult 8 deschise deodată (al nouălea → 429); unul închis eliberează locul", () => {
     assert.ok(deschise.every((x) => x.r.status === 101)); assert.equal(r429.status, 429); assert.equal(rDupa.status, 101);
   });
-  test("pagina trimite parola releului în adresă (WebSocket-ul din browser nu poate pune antete)", () => { assert.match(APP, /\/api\/pret-viu\?simbol="\+encodeURIComponent\(simbol\)\+"&t="\+encodeURIComponent\(apiSessionToken\(\)\|\|""\)/); });
+  test("pagina: întâi biletul (POST, parola în antet), apoi socketul cu biletul — parola NU intră în adresa socketului", () => {
+    assert.match(APP, /apiFetch\("\/api\/pret-viu\?simbol="\+encodeURIComponent\(simbol\),\{method:"POST"/); assert.match(APP, /\/api\/pret-viu\?simbol="\+encodeURIComponent\(simbol\)\+"&b="\+encodeURIComponent\(bilet\)/);
+    assert.ok(!/pret-viu\?simbol="\+encodeURIComponent\(simbol\)\+"&t="/.test(APP));
+  });
 } catch (e) { test("releul se încarcă", () => { throw e; }); }
 finally { Object.assign(globalThis, vechi); }
 

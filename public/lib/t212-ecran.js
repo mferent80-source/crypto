@@ -644,6 +644,9 @@ async function t212Poarta() {
     var tot = t212.cont && t212.cont.cash && t212.cont.cash.total;
     // planul scris de el bate stopul calculat; fara plan, poarta judeca cu stopul calculat
     var planPoarta = plan.stop || plan.trailPct ? plan : niv.nivel === "ok" ? { stop: niv.stop } : plan;
+    // v100.177 (jurnalul verdictelor): verdictul Porții intră în jurnal cu prețul de acum (judecat după 5 și 20 de zile de bursă)
+    try { var vp = ActiuniSemnale.poarta({ stare: st, plan: plan.stop || plan.trailPct ? plan : niv.nivel === "ok" ? { stop: niv.stop } : plan, vandutPeMinusAcumOre: ore }); if (vp && vp.nivel && vp.nivel !== "fara-date" && typeof verdictTrimite === "function") verdictTrimite({ s: "poarta-t212", k: tk, n: vp.nivel, p: st.pret }); } catch (eV) {}
+    if (typeof ciStare !== "undefined" && !ciStare.raport && !ciStare.inLucru && typeof getJSON === "function") { ciStare.inLucru = true; getJSON("/api/istoric-bot?action=cont").then(function (d) { ciStare.raport = d && d.cont || null; ciStare.la = Date.now(); }).catch(function () {}).then(function () { ciStare.inLucru = false; if (t212.poarta && !t212.poarta.eroare) t212RenderPoarta(); }); }
     t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), planMeu: pm, v:ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore }), tot: tot };
     // v89: biletul - ce spune istoricul tau despre situatii asemanatoare, rezultatele, stirile
     try { var rz = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); t212.poarta.rezultate = rz && rz.data || null; } catch (e) { t212.poarta.rezultate = null; }
@@ -836,6 +839,39 @@ function piataAziRender() {
     el.innerHTML = !p ? '<span class="tbSub">Piața azi: aduc datele…</span>' : '<b>Piața azi</b> ' + p.parti.map(function (x) { return '<span>' + escapeHtml(x.et) + ': <b class="' + (x.cls || "") + '">' + escapeHtml(x.val) + '</b></span>'; }).join('<span class="contTotSep">·</span>');
   });
 }
+// v100.177 (el 13.10, „din a doua recomandare 1–4”): (4) profitul așteptat - media pe istoria ei în starea de acum, TRASĂ SPRE ZERO după câte
+// ferestre independente are (n/20; ~10 ferestre ⇒ o treime din medie), plus trade-urile tale de până acum; (2) corelația cu ce ai deja (seriile
+// din raportul contului întreg) și cât crește riscul pe o zi al contului dacă intri (VaR 95 % pe aceleași zile). Informează, nu schimbă verdictul.
+function t212PoartaCont(p) {
+  var h = "", n = p && p.niv, P = function (x, z) { return (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; };
+  try {
+    if (n && n.nivel === "ok" && n.proba && n.proba.medie != null && n.proba.n > 0) {
+      var ni = n.proba.nIndep != null ? n.proba.nIndep : Math.floor(n.proba.n / 20), e = n.proba.medie * ni / (ni + 20), m = t212MarimePoarta(p);
+      var j = t212Jurnal(), al = j ? j.p.inchise.filter(function (x) { return x.pct != null && isFinite(x.pct); }) : [], mAl = al.length ? al.reduce(function (s, x) { return s + x.pct; }, 0) / al.length : null;
+      h += '<p class="' + (e > 0 ? "tbSub" : "tbWarn") + '">' + (e > 0 ? "📈" : "📉") + ' <b>Profit așteptat:</b> ' + escapeHtml(P(e, 2)) + " pe trade după comision"
+        + escapeHtml(" (pe istoria ei în starea de acum " + P(n.proba.medie, 2) + ", trasă spre zero: doar ~" + t212Cate(ni, "fereastră independentă", "ferestre independente") + ")")
+        + (m && m.suma > 0 ? escapeHtml("; la ~" + t212Suma(m.suma) + " ≈ " + t212Lei(m.suma * e)) : "")
+        + (mAl !== null && al.length >= 10 ? escapeHtml(". Trade-urile tale de până acum: " + P(mAl) + " în medie (" + t212Cate(al.length, "vânzare", "vânzări") + ")") : "")
+        + (e <= 0 ? ". Fără avantaj măsurat: aș sări peste." : ".") + "</p>";
+    }
+    var r = typeof ciStare !== "undefined" ? ciStare.raport : null;
+    if (r && r.serii && typeof ContIntreg !== "undefined" && p.bare && p.bare.length > 60) {
+      var rc = ContIntreg.randamente(p.bare), nume = {}; (r.expuneri || []).forEach(function (x) { nume[x.cheie] = x.nume; });
+      var la = [];
+      Object.keys(r.serii).forEach(function (k) {
+        if (k === "T:" + p.ticker) return;
+        var s = r.serii[k], z = Object.keys(s).filter(function (d) { return rc[d] !== undefined; }); if (z.length < 40) return;
+        var rho = ContIntreg.corel(z.map(function (d) { return rc[d]; }), z.map(function (d) { return s[d]; })); if (rho !== null && rho >= 0.6) la.push({ nume: nume[k] || k.slice(2), rho: rho });
+      });
+      la.sort(function (a, b) { return b.rho - a.rho; });
+      var mm = t212MarimePoarta(p), pnl = r.risc && r.risc.pnl, v0 = null, v1 = null;
+      if (mm && mm.suma > 0 && pnl && pnl.length >= 60) { var q0 = ContIntreg.varEs(pnl.map(function (x) { return x[1]; }), 0.95), q = ContIntreg.varEs(pnl.map(function (x) { return x[1] + mm.suma * (rc[x[0]] || 0); }), 0.95); v0 = q0 ? q0.var : null; v1 = q && v0 !== null ? q.var : null; }
+      if (la.length) h += '<p class="tbWarn">🔗 <b>Se mișcă la fel cu ce ai deja:</b> ' + escapeHtml(la.slice(0, 3).map(function (x) { return x.nume + " (ρ " + x.rho.toFixed(2).replace(".", ",") + ")"; }).join(", ")) + ". Ar fi același risc de două ori, nu o poziție nouă.</p>";
+      if (v1 !== null) h += '<p class="tbSub">🧮 Riscul pe o zi al contului (ziua proastă, 1 din 20): ~' + escapeHtml(t212Suma(v0)) + " → ~" + escapeHtml(t212Suma(v1)) + (v0 > 0 ? " (" + escapeHtml(P(v1 / v0 - 1, 0)) + ")" : "") + " dacă intri cu ~" + escapeHtml(t212Suma(mm.suma)) + ".</p>";
+    }
+  } catch (e) {}
+  return h;
+}
 function t212RenderPoarta() {
   var out = $("t212PoartaRez"), p = t212.poarta; if (!out || !p) return;
   if (p.eroare) { out.innerHTML = '<p class="bad">' + escapeHtml(p.eroare) + '</p>'; return; }
@@ -846,6 +882,7 @@ function t212RenderPoarta() {
     + (p.v.motive.length ? '<ul class="t212Motive">' + p.v.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '<p class="good">Nimic de obiectat.</p>')
     + t212PreturiPoarta(p)
     + t212ProfilPoarta(p)
+    + t212PoartaCont(p)   /* v100.177: profitul așteptat + ce se mișcă la fel cu ce ai deja + riscul pe o zi al contului */
     + t212BiletTu(p)
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + escapeHtml(fac) + '</p>'
     + (p.v.nivel === "asteapta" ? '<p class="tbSub">Fără un plan scris, NPA a crescut prin cumpărări în jos la 33.000 de lei și a costat 8.165 lei.</p>' : '')

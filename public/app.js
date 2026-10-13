@@ -3023,7 +3023,7 @@ function tbarActualizeaza(){
 function tbarComuta(){const t=document.querySelector(".toolbar");if(!t)return;t.classList.toggle("deschisa");tbarActualizeaza()}
 // la DOMContentLoaded, nu pe loc: `const $` e definit mai jos in fisier (TDZ) - chemat aici, oprea TOT app.js
 if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){const t=document.querySelector(".toolbar");if(!t)return;["input","change","click"].forEach(n=>t.addEventListener(n,()=>setTimeout(tbarActualizeaza,0)));tbarActualizeaza()});
-const NAV_CU_LOAD=new Set(["rezultate","mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
+const NAV_CU_LOAD=new Set(["contintreg","rezultate","mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
 function navTo(id,load=false){
  show(id);
  // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
@@ -3038,7 +3038,8 @@ function navTo(id,load=false){
    else if(id==="gridset"){porneGrid();if(typeof carnetPorneste==="function")carnetPorneste(false)}   // v100.117: rândul carnetului sub „Ce aș alege eu”
    else if(id==="carnet"){if(typeof carnetPorneste==="function")carnetPorneste(false)}
    else if(id==="sugestii"){if(typeof sugPorneste==="function")sugPorneste(false)}
-   else if(id==="rezultate"){if(typeof rzPorneste==="function")rzPorneste()}   // v100.163: pagina Rezultate (calendarul raportărilor)
+   else if(id==="rezultate"){if(typeof rzPorneste==="function")rzPorneste()}
+   else if(id==="contintreg"){if(typeof ciPorneste==="function")ciPorneste(false)}   // v100.176: contul întreg (riscul, crizele, reconcilierea, randamentul)   // v100.163: pagina Rezultate (calendarul raportărilor)
    else if(id==="salt"){if(typeof saltPorneste==="function")saltPorneste(false)}   // v100.120: pagina Salt   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
@@ -5097,6 +5098,8 @@ function grPoartaHtml(f){
   if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+(function(t,c){return c?escapeHtml(t.replace(/\.$/,""))+' <span class="tbSub">('+escapeHtml(c)+')</span>'+(/\.$/.test(t)?".":""):escapeHtml(t)})(String(r.text),!r.ok&&r.cost?r.cost:null)+(r.nota?'<br><span class="tbSub">'+escapeHtml(r.nota)+'</span>':'')+'</li>'}).join("")+'</ul>'
     // v100.80 (rețeaua neuronală): rândul gri 🧠, după regulile porții (poarta nu se schimbă)
     +grReteaPoartaHtml(f,p)
+    // v100.177 (profitul așteptat): mediana boților tăi asemănători, trasă spre zero după câți sunt (puține cazuri ⇒ aproape zero)
+    +(typeof grAsteptatHtml==="function"?grAsteptatHtml(p):"")
     // v100.29: sfaturile din istoria lui (inchiderile din prima ora) - informatie, nu regula
     +(p.rez.sfaturi&&p.rez.sfaturi.length?p.rez.sfaturi.map(function(x){return '<p class="tbSub">💡 '+escapeHtml(x)+'</p>'}).join(""):"")
     // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
@@ -5247,6 +5250,11 @@ async function grFranaSalveaza(){
 }
 // v100.101 (el: „să nu se mai întâmple situația de azi”): în poartă, gridul pe care îl pornești (jos, sus, levier, sumă) față de planul din „Ies dacă
 // pierd” - dacă la marginea de pierdere pierzi peste 1,2× planul, rândul roșu + ÎNGUST / LARG alături. Completat cu ce aș alege eu; ce scrie el rămâne.
+function grAsteptatHtml(p){
+  var a=p&&p.asG;if(!a||!(a.n>0)||a.medianaPct==null)return "";
+  var e=a.medianaPct*a.n/(a.n+20),P=function(x){return (x>0?"+":x<0?"−":"")+Math.abs(x*100).toFixed(1).replace(".",",")+"%"};
+  return '<p class="tbSub">'+(e>0?"📈":"📉")+' <b>Profit așteptat</b> pe boții tăi asemănători: '+escapeHtml(P(e))+' din sumă (mediana lor '+escapeHtml(P(a.medianaPct))+', trasă spre zero: '+escapeHtml(TextRo.cate(a.n,"caz","cazuri"))+')'+(e<=0?". Fără avantaj măsurat: aș sări peste sau aș aștepta.":". E o medie trecută, nu o promisiune.")+'</p>';
+}
 function grPoartaGridForm(f){
   var v=grPlanMemo.grid&&grPlanMemo.grid.cheie&&grPlanMemo.grid.cheie.indexOf(f.simbol+"|")===0?grPlanMemo.grid.v:null,rec=v&&!v.eroare?GridPlan.alege(v.ta,v.mea):null,x=rec?(rec.cine==="mea"?v.mea:v.ta):null;
   var cmp=[["grPgJos","Preț de jos",x&&x.jos],["grPgSus","Preț de sus",x&&x.sus],["grPgLev","Levier",x&&x.levier],["grPgSuma","Investiție, USDT",x&&x.suma]];
@@ -5269,6 +5277,13 @@ function grPoartaGrid(doarHtml){
     :'<p class="good grPgVerde">✓ Gridul încape în pragul tău de pierdere: la marginea de '+r.parte+' ≈ '+V(r.laMargine)+' USDT, pragul −'+V(pl)+'.</p>';
   if(!doarHtml){var el=$("grPgVerdict");if(el)el.innerHTML=h}
   return h;
+}
+// v100.177 (jurnalul verdictelor): fiecare verdict al unei Porți se trimite acasă cu prețul de acum, o dată pe (sursă, simbol, zi); o eroare
+// de rețea nu strică Poarta (verdictul se pierde, nu blochează)
+var verdictTrimise={};
+function verdictTrimite(v){
+  try{if(!v||!v.s||!v.k||!v.n||!(v.p>0))return;var c=v.s+"|"+v.k+"|"+new Date().toISOString().slice(0,10);if(verdictTrimise[c])return;verdictTrimise[c]=1;
+    apiFetch("/api/istoric-bot?action=verdict",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(Object.assign({t:Date.now()},v)),timeoutMs:15000}).catch(function(){})}catch(e){}
 }
 async function gridPoarta(){
   var f=grStare.fisa;if(!f)return;
@@ -5293,6 +5308,9 @@ async function gridPoarta(){
     if(dCz&&dCz.cazuri&&dCz.cazuri.cazuri&&stP&&f.pret>0)asG=Asemanatoare.vecini(dCz.cazuri.cazuri,{dir:f.dir,lev:Math.max(1,Math.floor(lev)),lat:(stP.sus-stP.jos)/f.pret,pas:stP.pas-2*GridCalcul.C.COMISION_GRILA,stare:grProb.rez&&grProb.simbol===f.simbol?grProb.rez.stare:Probabilitati.stareDinRegim(f.regim),investit:grNumar($("grSuma")&&$("grSuma").value)||stP.suma})}catch(e){asG=null}
   var sansaG=grProb.rez&&grProb.simbol===f.simbol?Probabilitati.rand(grProb.rez,grProb.cal,f.dir,{titluCursa:grTitluCursa(grProb.rez)}):null;   // v100.47
   grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,trades:trades,lev:lev,rez:Obiceiuri.poarta({gridPrag:grPoartaGridPrag(),planMoneda:pmG,asemanatoare:asG,sansa:sansaG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
+  // v100.177: verdictul fișei intră în jurnal (cu banda gridului propus: „a stat prețul în bandă?” se judecă după 1 și 3 zile)
+  try{var stV=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare;if(f.verdict&&f.verdict.nivel&&f.pret>0)verdictTrimite({s:"poarta-grid",k:f.simbol,n:f.verdict.nivel,p:f.pret,j:stV&&stV.jos,u:stV&&stV.sus})}catch(e){}
+  grPoartaRez.asG=asG;
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
 }
@@ -7231,9 +7249,20 @@ function pvPorneste(simbol){
   }else{pvOpreste();pvStare.simbol=simbol;pvStare.incercari=0}
   pvDeschide(simbol);
 }
+// v100.176 (revizia de securitate): întâi biletul de 60 s (POST, parola în antet), apoi socketul cu biletul în adresă - parola nu intră în adrese
 function pvDeschide(simbol){
+  if(pvStare.biletInLucru===simbol)return;   /* biletul pe simbol: schimbarea botului în timpul cererii nu blochează simbolul nou */
+  pvStare.biletInLucru=simbol;
+  apiFetch("/api/pret-viu?simbol="+encodeURIComponent(simbol),{method:"POST",timeoutMs:15000}).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(d){
+    if(pvStare.biletInLucru===simbol)pvStare.biletInLucru=null;
+    if(pvStare.simbol!==simbol)return;
+    if(!d||!d.bilet){pvStare.incercari=Math.min(pvStare.incercari+1,6);pvStare.timeout=setTimeout(function(){pvStare.timeout=null;if(pvStare.simbol===simbol)pvDeschide(simbol)},Math.min(30000,1000*Math.pow(2,pvStare.incercari)));return}
+    pvDeschideCuBilet(simbol,d.bilet);
+  });
+}
+function pvDeschideCuBilet(simbol,bilet){
   try{
-    var soc=new WebSocket((location.protocol==="https:"?"wss:":"ws:")+"//"+location.host+"/api/pret-viu?simbol="+encodeURIComponent(simbol)+"&t="+encodeURIComponent(apiSessionToken()||""));   /* v100.175: releul cere parola */
+    var soc=new WebSocket((location.protocol==="https:"?"wss:":"ws:")+"//"+location.host+"/api/pret-viu?simbol="+encodeURIComponent(simbol)+"&b="+encodeURIComponent(bilet));
     pvStare.ws=soc;pvStare.ultimMesaj=Date.now();
     soc.onopen=function(){if(pvStare.ws===soc)pvStare.incercari=0};
     soc.onmessage=function(ev){
