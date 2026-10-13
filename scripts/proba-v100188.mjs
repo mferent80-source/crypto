@@ -77,7 +77,7 @@ await test("Tabloul: citirea pune rândurile bilanțului după „În pândă”
 });
 await test("colectorul: starea de dinainte pe toate cele 4 alerte, bilantNoteaza după paza fiecărui bot, raportul cu bilantAlerte; v101.109", () => {
   const COL = citeste("scripts", "colector.mjs");
-  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.109";/);
+  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.1(09|[1-9]\d)";/, "v101.109 sau mai nou");
   assert.match(COL, /const bilantInainte = \{\}; for \(const k of \["_panda", "_busolaDir", "_busolaVoci", "_busolaBtc"\]\) bilantInainte\[k\] = stareAlerte\[b\.id\] && stareAlerte\[b\.id\]\[k\];/);
   assert.match(COL, /bilantNoteaza\(meta\(\)\.pandaContra \|\| \(meta\(\)\.pandaContra = \[\]\), \{ bot: b, inainte: bilantInainte, dupa: stareAlerte\[b\.id\] \|\| \{\}, acum \}\)/);
   assert.match(COL, /rap\.linii\.push\(\.\.\.bilantAlerte\(m\.pandaContra \|\| \[\]\)\);/);

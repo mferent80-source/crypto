@@ -53,7 +53,10 @@ export function pentruServer(boti, stareAlerte, acum) {
   for (const b of Array.isArray(boti) ? boti : []) { const s = b && b.id && stareAlerte && stareAlerte[b.id] && stareAlerte[b.id]._busola; if (s) out[String(b.id)] = { stare: s.stare, la: s.la, de: s.de }; }
   // v101.109: + bilanțul alertelor (lista ține în meta colectorului, cheia _colector), ca Tabloul să-l arate
   const l = stareAlerte && stareAlerte._colector && stareAlerte._colector.pandaContra;
-  return Array.isArray(l) ? { la: acum, boti: out, bilant: bilantAlerte(l) } : { la: acum, boti: out };
+  if (!Array.isArray(l)) return { la: acum, boti: out };
+  // v101.110: + episoadele pentru pagina Alerts (cele mai noi 30, fără martori) și câți martori s-au notat
+  const ep = l.filter((x) => x && x.tip !== "martor").slice(-30).reverse().map((x) => ({ tip: x.tip, nume: x.nume, la: x.la, d24: x.delta24 != null ? x.delta24 : null, d72: x.delta != null ? x.delta : null }));
+  return { la: acum, boti: out, bilant: bilantAlerte(l), episoade: ep, martori: l.filter((x) => x && x.tip === "martor").length };
 }
 
 // v101.91 (I-572, el 09.10: „fă ideile”): paza și pe DIRECȚIA Busolei și pe BTC. Aceleași reguli de liniște: trecerea se anunță abia
@@ -108,15 +111,20 @@ export function pandaJudeca(lista, boti, acum) {
   for (const r of Array.isArray(lista) ? lista : []) {
     if (r.delta != null) continue;
     if (r.id in pr) r.ultim = pr[r.id];
+    if (r.delta24 == null && acum - r.la >= PANDA_24_MS) r.delta24 = Math.round((r.ultim - r.p0) * 100) / 100;   // v101.110: și la 24 h
     if (acum - r.la >= PANDA_JUDECA_MS) r.delta = Math.round((r.ultim - r.p0) * 100) / 100;
   }
 }
+const PANDA_24_MS = 24 * 3600000;
 function bilantTip(lista, tip, eticheta) {
-  const j = (Array.isArray(lista) ? lista : []).filter((x) => x && x.delta != null), c = j.filter((x) => x.tip === tip), m = j.filter((x) => x.tip === "martor");
+  const L = (Array.isArray(lista) ? lista : []).filter(Boolean), j = L.filter((x) => x.delta != null), c = j.filter((x) => x.tip === tip), m = j.filter((x) => x.tip === "martor");
+  const j24 = L.filter((x) => x.delta24 != null), c24 = j24.filter((x) => x.tip === tip), m24 = j24.filter((x) => x.tip === "martor");
   const cap = eticheta + " (bilanț la 72 h): ";
-  if (!c.length && !m.length) return cap + "încă nimic judecat.";
-  const T = globalThis.TextRo, pierd = (l) => l.filter((x) => x.delta < 0).length, pc = (l) => (l.length ? Math.round(100 * pierd(l) / l.length) : 0);
-  let t = cap + T.cate(c.length, "episod", "episoade") + ", botul a pierdut în " + pierd(c) + " (" + pc(c) + "%) · martorul (zile fără contra): " + m.length + ", pierdut în " + pierd(m) + " (" + pc(m) + "%)";
+  const T = globalThis.TextRo, pierd = (l, k) => l.filter((x) => x[k || "delta"] < 0).length, pc = (l, k) => (l.length ? Math.round(100 * pierd(l, k) / l.length) : 0);
+  // v101.110: și la 24 h (o alertă poate avea dreptate pe termen scurt și să greșească pe trei zile); verdictul rămâne pe 72 h
+  const p24 = c24.length || m24.length ? "la 24 h: pierdut în " + pierd(c24, "delta24") + " din " + c24.length + " (" + pc(c24, "delta24") + "%), martorul în " + pierd(m24, "delta24") + " din " + m24.length + " (" + pc(m24, "delta24") + "%)" : null;
+  if (!c.length && !m.length) return cap + (p24 ? "la 72 h încă nimic judecat · " + p24 + "." : "încă nimic judecat.");
+  let t = cap + T.cate(c.length, "episod", "episoade") + ", botul a pierdut în " + pierd(c) + " (" + pc(c) + "%) · martorul (zile fără contra): " + m.length + ", pierdut în " + pierd(m) + " (" + pc(m) + "%)" + (p24 ? " · " + p24 : "");
   if (c.length < 10 || m.length < 10) return t + " · prea puține ca să spună ceva (trebuie cel puțin 10 de fiecare).";
   return t + " · diferența e de " + T.cate(Math.abs(pc(c) - pc(m)), "punct", "puncte") + "; nedovedită pe atât de puține, o urmăresc.";
 }
@@ -124,7 +132,7 @@ export function pandaBilant(lista) { return bilantTip(lista, "contra", "Alerta �
 // v101.109: rândul pândei mereu; Busola / voci / BTC doar când au episoade judecate (altfel ar fi trei rânduri „încă nimic”)
 const BILANT_ETICHETE = [["dir", "Busola „invers față de bot”"], ["voci", "„Toate vocile contra”"], ["btc", "BTC contra botului"]];
 export function bilantAlerte(lista) {
-  const j = (Array.isArray(lista) ? lista : []).filter((x) => x && x.delta != null);
+  const j = (Array.isArray(lista) ? lista : []).filter((x) => x && (x.delta != null || x.delta24 != null));
   return [pandaBilant(lista)].concat(BILANT_ETICHETE.filter(([tip]) => j.some((x) => x.tip === tip)).map(([tip, e]) => bilantTip(lista, tip, e)));
 }
 
