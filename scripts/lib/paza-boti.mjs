@@ -76,7 +76,40 @@ export function pazaPanda({ Latime, latime, bot, inainte, acum }) {
   const acelasi = !!(c && inainte && inainte.contra && inainte.dir === c.dir);
   const stare = { contra: !!c, dir: c ? c.dir : null, la: Number(a.la), anuntat };
   if (!c || (acelasi && anuntat) || acum - anuntat < PANDA_RITM_MS) return { tine: true, stare, mesaj: null };
-  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum }), mesaj: MC.pandaContra({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, text: c.text }) };
+  // v101.108 (el: „fă idei”): cât de departe e lichidarea, în zile obișnuite ale monedei (distanța / amplitudinea medie pe zi din pândă)
+  const dist = Math.abs(Number(bot.distantaLichidarePct)), ap = Number(c.adrPct), v1 = (x) => (Math.round(x * 10) / 10).toFixed(1).replace(".", ",");
+  const lich = bot.distantaLichidarePct != null && dist > 0 && ap > 0 ? "Lichidarea e la " + v1(dist) + "%, " + (dist / ap < 1 ? "sub" : "de " + v1(dist / ap) + "×") + " amplitudinea obișnuită a monedei pe o zi (~" + v1(ap) + "%)." : null;   /* „N zile” cu zecimale ar încălca garda v100.75 */
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum }), mesaj: MC.pandaContra({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, text: c.text, lich }) };
+}
+
+// v101.108 (el: „fă idei”): bilanțul alertei „contra” - spune ceva alerta? Fiecare episod anunțat (sau marcat) se notează cu profitul botului;
+// MARTORUL = o zi fără contra pe același bot (cel mult una la 24 h). La 72 h fiecare se judecă: profitul ultim văzut − cel de la notare
+// (botul închis rămâne pe ultimul profit văzut). Lista stă în meta (cel mult 400). Fără verdict „dovedit”: sub 10 de fiecare ⇒ „prea puține”.
+const PANDA_JUDECA_MS = 72 * 3600000, PANDA_MAX = 400;
+export function pandaNoteaza(lista, { bot, inainte, dupa, acum }) {
+  const p = Number(bot && bot.profitTotal);
+  if (!Array.isArray(lista) || !bot || bot.profitTotal == null || !Number.isFinite(p) || !dupa) return;
+  const id = String(bot.id), rec = (tip) => lista.push({ tip, id, nume: numeBot(bot), la: acum, p0: p, ultim: p });
+  if (dupa.contra) { if (dupa.anuntat && dupa.anuntat !== (inainte && inainte.anuntat)) rec("contra"); }
+  else { const u = lista.filter((x) => x.tip === "martor" && x.id === id).pop(); if (!u || acum - u.la >= 24 * 3600000) rec("martor"); }
+  if (lista.length > PANDA_MAX) lista.splice(0, lista.length - PANDA_MAX);
+}
+export function pandaJudeca(lista, boti, acum) {
+  const pr = {}; for (const b of Array.isArray(boti) ? boti : []) { const v = Number(b && b.profitTotal); if (b && b.id != null && b.profitTotal != null && Number.isFinite(v)) pr[String(b.id)] = v; }
+  for (const r of Array.isArray(lista) ? lista : []) {
+    if (r.delta != null) continue;
+    if (r.id in pr) r.ultim = pr[r.id];
+    if (acum - r.la >= PANDA_JUDECA_MS) r.delta = Math.round((r.ultim - r.p0) * 100) / 100;
+  }
+}
+export function pandaBilant(lista) {
+  const j = (Array.isArray(lista) ? lista : []).filter((x) => x && x.delta != null), c = j.filter((x) => x.tip === "contra"), m = j.filter((x) => x.tip === "martor");
+  const cap = "Alerta „contra” din pândă (bilanț la 72 h): ";
+  if (!c.length && !m.length) return cap + "încă nimic judecat.";
+  const T = globalThis.TextRo, pierd = (l) => l.filter((x) => x.delta < 0).length, pc = (l) => (l.length ? Math.round(100 * pierd(l) / l.length) : 0);
+  let t = cap + T.cate(c.length, "episod", "episoade") + ", botul a pierdut în " + pierd(c) + " (" + pc(c) + "%) · martorul (zile fără contra): " + m.length + ", pierdut în " + pierd(m) + " (" + pc(m) + "%)";
+  if (c.length < 10 || m.length < 10) return t + " · prea puține ca să spună ceva (trebuie cel puțin 10 de fiecare).";
+  return t + " · diferența e de " + T.cate(Math.abs(pc(c) - pc(m)), "punct", "puncte") + "; nedovedită pe atât de puține, o urmăresc.";
 }
 
 // { tine:false } | { tine:true, stare:{ semn, la, vazut, anuntat }, mesaj | null } - „invers față de bot” = randDirectie pe galben

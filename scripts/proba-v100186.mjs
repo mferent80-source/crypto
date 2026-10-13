@@ -75,7 +75,7 @@ await test("tura lățimii dă corpul măsurat colectorului (d.dupa), și pe ero
 });
 await test("colectorul: ține ultima lățime și o dă pazei; versiunea v101.107", () => {
   const COL = citeste("scripts", "colector.mjs");
-  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.107";/);
+  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.1(0[7-9]|[1-9]\d)";/, "v101.107 sau mai nou");
   assert.match(COL, /var latimeUltima = null;/, "var, nu let (TDZ la pornire)");
   assert.match(COL, /dupa: \(c\) => \{ latimeUltima = \{ acum: c \}; \}/);
   assert.match(COL, /await pazaPas\(\{ Busola, rez: Busola\.rezumat\(\), bot: b, st: stareAlerte\[b\.id\], acum, pret: Alerte\.pret, trimite: \(m\) => trimiteAlerta\(m, b\.id, m\.cheie\), Latime, latime: latimeUltima,/);

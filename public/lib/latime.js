@@ -74,7 +74,7 @@ var Latime = (function () {
     if (Array.isArray(d.mari) && d.mari.length && Array.isArray(d.mici) && d.mici.length) { lMari = Math.round(100 * +d.mari[d.mari.length - 1].longAccount); lMici = Math.round(100 * +d.mici[d.mici.length - 1].longAccount); diverg = lMari - lMici; }
     var deltaPctl = null;
     if (Array.isArray(d.taker) && d.taker.length >= 60) { var rap = d.taker.map(function (x) { return +x.buySellRatio; }); deltaPctl = percentila(rap.slice(0, -1), rap[rap.length - 1]); }
-    return { sym: d.sym, pret: fin(d.pret) ? d.pret : inchideri[inchideri.length - 1], dir: D.dir, zileDir: zileDir(inchideri, P), volPctl: volPctl, extPctl: extPctl, adrUsed: adrUsed, frAcum: fin(d.frAcum) ? d.frAcum : null, fundPctl: fundPctl, oiChg: oiChg, oiPctl: oiPctl, lMari: lMari, lMici: lMici, diverg: diverg, deltaPctl: deltaPctl };
+    return { sym: d.sym, pret: fin(d.pret) ? d.pret : inchideri[inchideri.length - 1], dir: D.dir, zileDir: zileDir(inchideri, P), volPctl: volPctl, extPctl: extPctl, adrUsed: adrUsed, adrPct: adr > 0 && fin(d.pret) && d.pret > 0 ? Math.round(1000 * adr / d.pret) / 10 : null, frAcum: fin(d.frAcum) ? d.frAcum : null, fundPctl: fundPctl, oiChg: oiChg, oiPctl: oiPctl, lMari: lMari, lMici: lMici, diverg: diverg, deltaPctl: deltaPctl };
   }
   // latimea() :1641 + fundExtrem (pragurile funding-ului din permisiune) + neclar / lipsa
   function latimea(randuri, P) {
@@ -124,7 +124,7 @@ var Latime = (function () {
   }
   // boti = [{ s: "PLUME", dir: "long" | "short" | "neutru" }] ⇒ cei contra direcției monedei lor
   function botiContra(latime, boti) {
-    return (boti || []).map(function (b) { var m = gasesteMoneda(latime, b.s); return m && contra(b.dir, m) ? { s: cheie(b.s), dirBot: String(b.dir).toLowerCase(), dir: m.dir, zileDir: m.zileDir, text: "moneda " + dirText(m) } : null; }).filter(Boolean);
+    return (boti || []).map(function (b) { var m = gasesteMoneda(latime, b.s); return m && contra(b.dir, m) ? { s: cheie(b.s), dirBot: String(b.dir).toLowerCase(), dir: m.dir, zileDir: m.zileDir, adrPct: fin(m.adrPct) ? m.adrPct : null, text: "moneda " + dirText(m) } : null; }).filter(Boolean);   /* v100.187: + amplitudinea pe zi, % din preț */
   }
   // rândul din „Ce spune piața acum” (Tablou) - aceeași funcție dă și antetul blocului din Sugestii
   function textCitire(latime, bot, acum) {

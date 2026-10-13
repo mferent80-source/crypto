@@ -94,7 +94,7 @@ export const busolaBtc = (o) => ({ nivel: "atentie", cheie: "busola-btc",
 // v101.107 (el 13.10: „fă idei”): în pândă (150 perp-uri) moneda botului e pe partea cealaltă - o dată pe episod, cel mult la 24 h
 export const pandaContra = (o) => ({ nivel: "atentie", cheie: "panda-contra",
   titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · pânda: " + o.text + ", botul tău e CONTRA",
-  mesaj: msg("În pânda din Sugestii (150 perp-uri Binance), " + o.text + "; direcția = randamentul pe 84 de zile, ca în PAZNIC.", "Direcția pe 84 de zile nu e dovedită ca semnal: n-aș adăuga bani și aș verifica stopul; nu e un semnal de închidere.") });
+  mesaj: msg("În pânda din Sugestii (150 perp-uri Binance), " + o.text + "; direcția = randamentul pe 84 de zile, ca în PAZNIC." + (o.lich ? " " + o.lich : ""),"Direcția pe 84 de zile nu e dovedită ca semnal: n-aș adăuga bani și aș verifica stopul; nu e un semnal de închidere.") });
 // v101.92 (I-578): graficul pe 4h, Busola și Monte Carlo spun toate „contra botului tău” - un singur mesaj, în locul celor separate
 export const busolaVoci = (o) => ({ nivel: "atentie", cheie: "busola-voci",
   titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · " + (o.nContra >= 3 ? "toate vocile contra: " : o.nContra + " din " + o.nVoci + " voci contra: ") + o.cine,
