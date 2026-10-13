@@ -79,6 +79,47 @@ function ciHtml(r, st) {
     + (rc.urmarire ? rand(rc.urmarire.ok, rc.urmarire.ok ? "Toți boții porniți au istoric proaspăt în Radar" : "Boți porniți fără istoric în Radar: " + rc.urmarire.lipsa.map(function (x) { return x.nume; }).join(", "), ciCate(rc.urmarire.verificate, "bot pornit", "boți porniți")) : rand(null, "Urmărirea boților: necitită acum", ""))
     + rand(null, "Salt: pozițiile le scrii tu (Salt n-are o legătură de citire), deci nu am cu ce le compara", "")
     + "</ul></section>";
+  // v100.178 (1) factorii și sectoarele
+  var fa = r.factori;
+  if (fa && fa.actiuniLei > 0) {
+    var pp = fa.sectoare.filter(function (x) { return x.pestePrag; }), ip = fa.industrii.filter(function (x) { return x.pestePrag; });
+    h += '<section class="ciSec"><h3>Pe ce pariezi de fapt</h3><p class="ciRasp">' + ciEsc(pp.length || ip.length ? "Acțiunile tale stau " + (ip.length ? ciPct(ip[0].pondere, 0).replace("+", "") + " într-o singură industrie (" + ip[0].nume + ": " + ip[0].pozitii.join(", ") + ")" : ciPct(pp[0].pondere, 0).replace("+", "") + " într-un singur sector (" + pp[0].ro + ")") + ", peste pragul de 40 %: când sectorul cade, cad toate deodată." : "Nicio industrie și niciun sector nu trec de 40 % din acțiuni.") + "</p>"
+      + '<p class="tbSub">' + ciEsc("Pe factori (din " + ciLei(fa.actiuniLei) + " în acțiuni): piață " + ciLei(fa.factori.piata) + ", firme mici " + ciLei(fa.factori.mici, true) + ", momentum " + ciLei(fa.factori.momentum, true) + ", sectorul propriu " + ciLei(fa.factori.sector, true) + ". Adică la o zi cu S&P −1 %, acțiunile tale pierd ~" + ciLei(Math.abs(fa.factori.piata) * 0.01) + " doar din piață.") + "</p>"
+      + '<div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Sector</th><th>% din acțiuni</th><th>Poziții</th></tr></thead><tbody>' + fa.sectoare.map(function (x) { return '<tr><td>' + ciEsc(x.ro) + (x.pestePrag ? ' <span class="bad">⚠ peste 40 %</span>' : "") + '</td><td class="num">' + ciEt("din acțiuni") + ciEsc(ciPct(x.pondere, 0).replace("+", "")) + "</td><td>" + ciEsc(x.pozitii.join(", ")) + "</td></tr>"; }).join("") + "</tbody></table></div>"
+      + (fa.perPozitie && fa.perPozitie.length ? '<details class="ciMetoda"><summary>Factorii fiecărei poziții (regresie pe 250 de zile)</summary><ul>' + fa.perPozitie.map(function (x) { return "<li>" + ciEsc(x.nume + ": piață " + ciNr(x.piata) + ", firme mici " + ciNr(x.mici) + ", momentum " + ciNr(x.momentum) + (x.etf ? ", sectorul (" + x.etf + ") " + ciNr(x.sectorBeta) : "") + " · explică " + ciPct(x.r2, 0).replace("+", "") + " din mișcare") + "</li>"; }).join("") + "</ul></details>" : "")
+      + "</section>";
+  }
+  // v100.178 (2) atribuirea: piață sau alegere
+  var at = r.atribuire;
+  if (at && (at.t212Spy || at.boti)) {
+    var a1 = at.t212Spy, b1 = at.boti, lin2 = [];
+    if (a1) lin2.push("Trading 212 pe ultimul an: " + ciPct(a1.tu) + ". Cu același beta (" + ciNr(a1.beta) + ") pe S&P ai fi făcut " + ciPct(a1.pasiv) + " ⇒ alegerile tale (alfa) au adus " + ciPct(a1.alfa) + (a1.alfa < 0 ? ": un ETF pe S&P cu aceeași expunere ar fi ieșit mai bine." : "."));
+    if (at.t212Qqq) lin2.push("Față de Nasdaq (QQQ), beta " + ciNr(at.t212Qqq.beta) + ": pasiv " + ciPct(at.t212Qqq.pasiv) + ", alfa " + ciPct(at.t212Qqq.alfa) + ".");
+    h += '<section class="ciSec"><h3>Piață sau alegere</h3>' + lin2.map(function (x) { return '<p class="ciRasp">' + ciEsc(x) + "</p>"; }).join("");
+    if (b1 && b1.n) {
+      var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(0) + " USDT" + (at.usdLei ? " (" + ciLei(v * at.usdLei, true) + ")" : ""); };
+      h += '<p class="ciRasp">' + ciEsc("Boții, pe ultimul an (" + ciCate(b1.n, "bot închis", "boți închiși") + "): grila a adus " + U(b1.grila) + ", direcția prețului " + U(b1.directie) + ", comisioanele " + U(b1.comisioane) + ", finanțarea " + U(b1.finantare) + " ⇒ net " + U(b1.net) + ".") + "</p>"
+        + '<p class="tbSub">' + ciEsc(b1.directie < 0 && b1.grila > 0 ? "Grila își face treaba; pierderea vine din direcție (prețul a ieșit din bandă și a rămas acolo) - asta e de lucrat: banda, stopul, levierul." : b1.grila <= 0 ? "Nici grila n-a acoperit comisioanele: benzile au fost prea late sau gridul a stat puțin." : "") + "</p>";
+    }
+    h += "</section>";
+  }
+  // v100.178 (3) MAE / MFE
+  var mm2 = r.maeMfe;
+  if (mm2 && mm2.n >= 10) {
+    var lin3 = ["Câștigătorii tăi au coborât de obicei până la " + ciPct(mm2.maeCastig) + " înainte să iasă pe plus; pierzătorii până la " + ciPct(mm2.maePierd) + "."];
+    if (mm2.pierdDupaPlus5) lin3.push(ciCate(mm2.pierdDupaPlus5, "pierdere a fost", "pierderi au fost") + " întâi pe plus cu cel puțin 5 % (le-ai lăsat să se întoarcă).");
+    if (mm2.lasatPeMasa !== null) lin3.push("La câștigători ai lăsat pe masă (vârful de pe drum minus ieșirea) " + ciPct(mm2.lasatPeMasa).replace("+", "") + " în mediană.");
+    var fac3 = mm2.stopSugerat !== null ? "Un stop la " + ciPct(mm2.stopSugerat) + " de la cumpărare ar fi păstrat 80 % din câștigători și ar fi tăiat mai devreme " + ciCate(mm2.taiatePierderi, "pierdere", "pierderi") + (mm2.economie ? " (cu ~" + ciPct(mm2.economie).replace("+", "") + " mai puțin pierdut la fiecare)" : "") + "." : "";
+    h += '<section class="ciSec"><h3>Cât de jos merge un trade până să iasă</h3>' + lin3.map(function (x) { return '<p class="ciRasp">' + ciEsc(x) + "</p>"; }).join("") + (fac3 ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + ciEsc(fac3 + " E trecutul tău pe ultimul an, nu o garanție.") + "</p>" : "")
+      + '<p class="tbSub">' + ciEsc(ciCate(mm2.n, "trade închis", "trade-uri închise") + " pe ultimul an (" + mm2.castig + " pe plus, " + mm2.pierd + " pe minus); din barele zilnice, deci ziua cumpărării și a vânzării intră întregi.") + "</p></section>";
+  }
+  // v100.178 (4) ținta de volatilitate
+  var vo = r.vol;
+  if (vo) {
+    h += '<section class="ciSec"><h3>Cât de tare se mișcă contul</h3><p class="ciRasp">' + ciEsc("Contul tău se mișcă cu ~" + ciPct(vo.volAnual, 0).replace("+", "") + " pe an (o abatere standard). Ținta obișnuită la un cont de tranzacționare e 15 %" + (vo.factor < 1 ? ": ca s-o atingi, expunerea de acum ar trebui ținută la ~" + ciPct(vo.factor, 0).replace("+", "") + " din ce e." : ": ești sub ea.")) + "</p>"
+      + (vo.contrib && vo.contrib.length ? '<div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Poziție</th><th>Partea ei din riscul contului</th></tr></thead><tbody>' + vo.contrib.slice(0, 8).map(function (x) { return "<tr><td>" + ciEsc(x.nume) + '</td><td class="num">' + ciEt("din risc") + ciEsc(ciPct(x.pondere, 0).replace("+", "")) + "</td></tr>"; }).join("") + "</tbody></table></div>" : "")
+      + '<p class="tbSub">La o poziție nouă, Poarta din Trading 212 îți arată și mărimea „cu risc egal”: cât să pui ca poziția să aducă în cont cât o parte egală din ținta de 15 %.</p></section>';
+  }
   // execuția: prețul plănuit față de cel obținut
   var ex2 = r.executie;
   if (ex2 && ex2.n) {

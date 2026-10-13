@@ -138,8 +138,8 @@ await test("pagina: „Au avut dreptate verdictele?” — gol ⇒ cum se umple;
   assert.match(h, /Stop pus · p = 0,0300 · pagina lui zicea „dovedit”, după corecție NU mai e/);
 });
 await test("legarea: verdicte.js încărcat înainte de cont-ecran.js și în cache; colectorul încarcă Verdicte și rulează tura", () => {
-  assert.match(citeste("public", "index.html"), /<script src="\/lib\/cont-intreg\.js"><\/script><script src="\/lib\/verdicte\.js"><\/script><script src="\/lib\/cont-ecran\.js"><\/script>/);
-  assert.match(citeste("public", "sw.js"), /"\/lib\/cont-intreg\.js","\/lib\/verdicte\.js","\/lib\/cont-ecran\.js"/);
+  assert.match(citeste("public", "index.html"), /<script src="\/lib\/cont-intreg\.js"><\/script><script src="\/lib\/verdicte\.js"><\/script>(<script src="\/lib\/factori\.js"><\/script>)?<script src="\/lib\/cont-ecran\.js"><\/script>/);
+  assert.match(citeste("public", "sw.js"), /"\/lib\/cont-intreg\.js","\/lib\/verdicte\.js",("\/lib\/factori\.js",)?"\/lib\/cont-ecran\.js"/);
   const c = citeste("scripts", "colector.mjs"); assert.match(c, /const Verdicte = incarca\("verdicte\.js", "Verdicte"\)/); assert.match(c, /turaVerdicteColector\(\)\.catch/);
 });
 const TV = await import("./lib/tura-verdicte.mjs");

@@ -2860,4 +2860,6 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 #contintreg .ciLista{margin:0;padding-left:18px;display:grid;gap:4px}#contintreg .ciNote{margin:0;padding-left:18px}#contintreg .ciTab td.num{text-align:right;font-variant-numeric:tabular-nums}#contintreg .ciMetoda summary{cursor:pointer;color:var(--muted)}
 /* v100.176: pe telefon tabelele contului întreg se rup pe rânduri (cifrele crizelor ieșeau din ecran) */
 #contintreg .ciEt{display:none}@media (max-width:640px){#contintreg .ciEt{display:inline;color:var(--muted);font-size:11px}#contintreg .ciTab{font-size:12.5px}#contintreg .ciTab td,#contintreg .ciTab th{white-space:normal;padding:6px 4px;vertical-align:top}}
+/* v100.178: topul pe sectoare în Sugestii - căsuțe pe două-trei coloane, una pe telefon */
+.sugSectGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.sugSect{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:5px;padding:8px 10px;min-width:0}.sugSect ol{margin:6px 0 0;padding-left:20px;display:grid;gap:6px}.sugSect .sugSectBtn{padding:2px 8px;font-weight:700}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

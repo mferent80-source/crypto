@@ -95,10 +95,26 @@ function sugBoti(cl, sg) {
     + sugCartela("🔁 Pe revenire", "monede care au scăzut puternic și acum revin", rev, "nimic acum", R && dv.revenire ? R.textDovada(dv.revenire.piata, "monede") : null, null)
     + sugCartela("📉 Pentru short", "monede liniștite cu direcția short", sh, "nimic acum", R && dv.short ? R.textDovada(dv.short.piata, "short") : null, null) + '</div></section>';
 }
+// v100.178 (el 13.10: „vreau exemple de top stocks pe sectoare în pagina Sugestii”): cele mai tari 3 acțiuni mari din fiecare sector (forța relativă
+// pe 3 și 6 luni față de restul sectorului, doar cu trend în sus), cu istoricul regulii; clic ⇒ Poarta din Trading 212 pe simbol
+function sugLaPoarta(sim) { if (typeof deschideT212 === "function") deschideT212(); setTimeout(function () { if (typeof t212BiletPentru === "function") t212BiletPentru(String(sim || "").replace(/[^A-Za-z0-9.-]/g, "")); }, 900); }
+function sugSectoareHtml(x, acum) {
+  var h = '<section class="rlSec sugSectoare"><h3>🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)</h3>';
+  if (!x || !Array.isArray(x.sectoare)) return h + '<p class="tbSub">Topul se face o dată pe zi, de la 8:00 (după închiderea bursei din SUA), din screenerul Nasdaq: cele mai mari ~25 de firme din fiecare sector, cu prețurile pe 2 ani.</p></section>';
+  var ist = x.istoric || {}, P = function (v) { return v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(0) + "%"; };
+  h += '<p class="rlRasp">Regula, fixată înainte de cifre: în fiecare sector, doar acțiunile cu trend în sus (prețul peste media de 50 de zile, ea peste cea de 200), ordonate după cât au urcat pe 3 și pe 6 luni față de celelalte din sector. Un clasament, nu o predicție.</p>'
+    + (ist.luni ? '<p class="tbSub">' + sugEsc("Pe ultimele " + ist.luni + " luni, primele 3 din fiecare sector, ținute o lună, au făcut în medie " + (ist.medie >= 0 ? "+" : "−") + Math.abs(ist.medie * 100).toFixed(2).replace(".", ",") + "% pe lună față de media sectorului, pe plus în " + ist.luniPlus + " din " + ist.luni + " luni. ⚠ Firmele sunt cele mari de AZI (cele care au căzut din top lipsesc), deci istoricul e optimist; momentumul pe 3–12 luni are un avantaj documentat în studii, nu dovedit pe banii tăi - jurnalul verdictelor îl măsoară de acum.") + "</p>" : "");
+  h += '<div class="sugSectGrid">' + x.sectoare.map(function (s) {
+    return '<div class="sugSect"><b>' + sugEsc(s.ro) + '</b> <span class="tbSub">' + sugEsc(s.etf + " · din " + s.n) + "</span>" + (s.top.length ? "<ol>" + s.top.map(function (t) {
+      return '<li><button type="button" class="t212BtnLinie sugSectBtn" data-action-click="sugLaPoarta(\'' + String(t.s).replace(/[^A-Za-z0-9.-]/g, "") + '\')">' + sugEsc(t.s) + "</button> " + sugEsc(String(t.nume || "").slice(0, 28)) + '<br><span class="tbSub">' + sugEsc("3 luni " + P(t.r3) + " · 6 luni " + P(t.r6) + " (sectorul: " + P(t.r6 - t.peste6) + ") · " + (t.max52 > -0.005 ? "la maximul pe un an" : P(t.max52) + " de la maximul pe un an")) + "</span></li>";
+    }).join("") + "</ol>" : '<p class="tbSub">nicio acțiune mare cu trend în sus acum</p>') + "</div>";
+  }).join("") + "</div>" + '<p class="tbSub">Apasă pe simbol: se deschide Poarta din Trading 212 (planul, stopul, mărimea, ce se mișcă la fel cu ce ai deja). Sectoarele sunt după clasificarea Nasdaq, care diferă uneori de cea S&amp;P (Visa și Mastercard apar la Consum ciclic, transportul de gaze la Utilități).</p></section>';
+  return h;
+}
 function sugHtml(d, acum) {
   d = d || {}; var sa = d.sugActiuni && d.sugActiuni.sugestii, pm = d.sugActiuni && d.sugActiuni.premarket;
   return '<p class="rlRasp">Toate sugestiile, fiecare cu istoricul ei pe 2 ani. Un filtru, nu o predicție: o listă cu istoric slab rămâne, cu istoricul la vedere - judeci tu.</p>'
-    + sugPandaHtml(d.latime, d.boti, acum) + sugBoti(d.clasament, d.sugMonede) + sugActiuniPiata("us", sa, pm, d.idei, "📈", "Acțiuni US", acum) + sugActiuniPiata("eu", sa, pm, null, "📈", "Acțiuni EU (DAX, CAC, AEX + ale tale)", acum)
+    + sugPandaHtml(d.latime, d.boti, acum) + sugBoti(d.clasament, d.sugMonede) + sugActiuniPiata("us", sa, pm, d.idei, "📈", "Acțiuni US", acum) + sugSectoareHtml(d.sectoare, acum) + sugActiuniPiata("eu", sa, pm, null, "📈", "Acțiuni EU (DAX, CAC, AEX + ale tale)", acum)
     + '<p class="tbSub">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric. Istoricul: intrare la deschiderea zilei de după semnal (gap-ul: vezi cartela lui), ieșire după 10 zile de bursă, cu 0,3% comision.</p>';
 }
 function sugDeseneaza() { var el = typeof document !== "undefined" && document.getElementById("sugPagina"); if (el) el.innerHTML = sugHtml(sugStare.d, Date.now()); }
@@ -114,7 +130,8 @@ async function sugPorneste(fortat) {
       pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); return c && c.clasament || null; }),
       pas("sugMonede", function () { return getJSON("/api/istoric-bot?action=sugestii"); }),
       pas("idei", function () { return getJSON("/api/t212?action=idei"); }),
-      pas("sugActiuni", function () { return getJSON("/api/t212?action=sugestii"); })
+      pas("sugActiuni", function () { return getJSON("/api/t212?action=sugestii"); }),
+      pas("sectoare", function () { return getJSON("/api/istoric-bot?action=sectoareTop").then(function (r) { return r && r.sectoare || null; }); })   /* v100.178 */
     ]);
   } finally { sugStare.inLucru = false; }
   sugDeseneaza();

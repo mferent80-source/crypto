@@ -9,7 +9,7 @@ import { CalendarBursa } from "./calendar-bursa.mjs";   // jurnalul de execuție
 const ORA = 3600000, PAS = 6 * ORA;
 const ziRo = (t) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Bucharest" }).format(new Date(t));
 async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.jurnal("cont " + ce, e.message); return null; } }
-const bareDinRanduri = (G, randuri) => G.bareBursa(randuri || [], Date.now()).map((b) => ({ t: b.t, c: b.c }));
+const bareDinRanduri = (G, randuri) => G.bareBursa(randuri || [], Date.now()).map((b) => ({ t: b.t, c: b.c, h: b.h, l: b.l }));   // v100.178: + h / l (MAE / MFE)
 // prețurile zilnice prin cache-ul de pe disc (d.bareZi) când există, altfel direct
 const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
 
@@ -103,6 +103,7 @@ async function faRaport(d, st, acum) {
     recUrm = C.reconciliereUrmarire(boti.filter((x) => x && x.activ).map((b) => ({ id: b.id, nume: String(b.baza || "").replace(/\.PERP$/, "") })), ultima, acum, 20);
   }
 
+  const val0 = () => C.valoare({ boti, pionexLiber, t212Cash: cash, salt, leiPe }).total;
   // 8. randamentul: T212 refăcut din umpleri (tickerele din ultimele ~400 de zile), boții din arhivă (+ cei porniți, cu profitul de acum)
   let serieT212 = [], serieBoti = [];
   const bareT = {};   // barele zilnice ale acțiunilor tranzacționate (randamentul și jurnalul de execuție)
@@ -141,6 +142,30 @@ async function faRaport(d, st, acum) {
       executie = C.executie(umpleri, { leiZi, bare: bareT, planuri, de: acum - 365 * 86400000, sedinta: (t, tk) => CalendarBursa.stare(t, tk).deschisa });
     } catch (err) { d.jurnal("cont executie", err.message); }
   }
+  // 8c. v100.178: factorii și sectoarele, atribuirea, MAE / MFE, ținta de volatilitate (Factori)
+  let factoriR = null, atribuireR = null, mae = null, vol = null;
+  const rotF = (x, z) => (x === null || x === undefined || !Number.isFinite(x) ? null : Math.round(x * Math.pow(10, z || 0)) / Math.pow(10, z || 0));
+  if (d.Factori) {
+    try {
+      const fz = {}; for (const etf of d.Factori.ETF_FACTORI) { const b = await incearca(d, "factorul " + etf, async () => bareDinRanduri(G, (await zilnic(d, "/api/t212?action=preturi&interval=1d&yahoo=" + etf)).randuri)); if (b && b.length) fz[etf] = C.randamente(b); }
+      const uh = await incearca(d, "universul SUA", async () => (await d.cere("/api/istoric-bot?action=universSua")).harta) || {};
+      const info = {}, fb = {};
+      for (const x of e) {
+        if (x.clasa !== "actiuni") continue;
+        x.simbol = x.tip === "t212" ? d.T212.simbol(x.id) : String(x.id).split(".")[0];
+        const h = uh[String(x.simbol).toUpperCase()]; info[x.simbol] = h ? { sector: h[0], industrie: h[1] } : {};
+        const etf = h && d.Factori.SECTOARE[h[0]] ? (/Semicond/i.test(h[1] || "") ? "SMH" : d.Factori.SECTOARE[h[0]].etf) : null;
+        const f = d.Factori.factoriActiune(serii[x.cheie], fz, etf); if (f) fb[x.cheie] = f;
+      }
+      factoriR = d.Factori.expunere(e, info, fb, { prag: 0.4 });
+      factoriR.perPozitie = e.filter((x) => fb[x.cheie]).map((x) => ({ nume: x.nume, lei: rotF(x.notionalLei), sector: info[x.simbol] && info[x.simbol].sector || null, industrie: info[x.simbol] && info[x.simbol].industrie || null, piata: rotF(fb[x.cheie].piata, 2), mici: rotF(fb[x.cheie].mici, 2), momentum: rotF(fb[x.cheie].momentum, 2), sectorBeta: rotF(fb[x.cheie].sector, 2), etf: fb[x.cheie].etf || null, r2: rotF(fb[x.cheie].r2, 2) }));
+      factoriR.sectorPe = {}; e.forEach((x) => { if (x.simbol && info[x.simbol] && info[x.simbol].sector) factoriR.sectorPe[x.simbol] = info[x.simbol].sector; });
+      const inchBoti = await incearca(d, "boții pentru atribuire", async () => d.JurnalTrade.din(await d.botiInchisi())) || [];
+      atribuireR = { t212Spy: d.Factori.atribuire(an(serieT212), fz.SPY), t212Qqq: d.Factori.atribuire(an(serieT212), C.randamente(qqqB)), boti: d.Factori.descompunereBoti(inchBoti, acum - 365 * 86400000), usdLei: leiPe.USD };
+      if (umpleri) { const m = d.Factori.maeMfe(d.T212.perechi(umpleri).inchise, bareT, { de: acum - 365 * 86400000 }); mae = { ...m, trades: undefined, celeMaiAdanci: m.trades.filter((x) => x.rez <= 0).sort((a, b) => a.mae - b.mae).slice(0, 5) }; }
+      vol = d.Factori.tintaVol(ist.zile, val0(), 0.15, folosite, serii);
+    } catch (err) { d.jurnal("cont factori", err.message); }
+  }
   // 9. raportul
   const val = C.valoare({ boti, pionexLiber, t212Cash: cash, salt, leiPe });
   const rot = (x, z) => (x === null || x === undefined || !Number.isFinite(x) ? null : Math.round(x * Math.pow(10, z || 0)) / Math.pow(10, z || 0));
@@ -152,7 +177,7 @@ async function faRaport(d, st, acum) {
     corelatii: perechi.slice(0, 15).map((p) => ({ a: p.a, b: p.b, rho: rot(p.rho, 2), n: p.n, acelasiRisc: p.acelasiRisc, seAcopera: p.seAcopera })), diversificare: div ? { raport: rot(div.raport, 2), pariuri: rot(div.pariuri, 1), pozitii: div.pozitii } : null,
     stres: stres.map((s) => ({ cod: s.cod, nume: s.nume, de: s.de, pana: s.pana, btc: rot(s.btc, 4), qqq: rot(s.qqq, 4), lei: rot(s.pnl), lipsa: s.lipsa, pozitii: s.pozitii.slice(0, 6).map((p) => ({ nume: p.nume, r: rot(p.r, 4), lei: rot(p.lei), cum: p.cum, lichidat: p.lichidat })) })),
     reconciliere: { t212: recT212, arhiva: recArhiva, urmarire: recUrm },
-    executie,
+    executie, factori: factoriR, atribuire: atribuireR, maeMfe: mae, vol,
     randament,
     // seriile ultimelor 120 de zile, pentru Poartă (corelația candidatului cu ce ai deja)
     serii: Object.fromEntries(Object.entries(serii).map(([k, s]) => [k, Object.fromEntries(Object.keys(s).sort().slice(-120).map((z) => [z, rot(s[z], 5)]))])),

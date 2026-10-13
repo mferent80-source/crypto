@@ -866,6 +866,17 @@ function t212PoartaCont(p) {
       la.sort(function (a, b) { return b.rho - a.rho; });
       var mm = t212MarimePoarta(p), pnl = r.risc && r.risc.pnl, v0 = null, v1 = null;
       if (mm && mm.suma > 0 && pnl && pnl.length >= 60) { var q0 = ContIntreg.varEs(pnl.map(function (x) { return x[1]; }), 0.95), q = ContIntreg.varEs(pnl.map(function (x) { return x[1] + mm.suma * (rc[x[0]] || 0); }), 0.95); v0 = q0 ? q0.var : null; v1 = q && v0 !== null ? q.var : null; }
+      // v100.178 (4): mărimea „cu risc egal” - ținta contului de 15 % pe an împărțită egal pe poziții; (1) concentrarea pe sector după intrare
+      if (typeof Factori !== "undefined" && r.valoare && r.valoare.total > 0) {
+        var sz = Factori.sigmaZi(p.bare, 60), nPoz = (r.expuneri || []).filter(function (x) { return x.clasa === "actiuni"; }).length, mv = Factori.marimeVol(sz, r.valoare.total, 0.15, nPoz);
+        if (mv) h += '<p class="tbSub">⚖️ <b>Mărimea cu risc egal:</b> ~' + escapeHtml(t212Suma(mv.lei)) + " (se mișcă ~" + escapeHtml(P(sz)) + " pe zi; ținta contului de 15 % pe an, împărțită pe " + escapeHtml(t212Cate(mv.pozitii, "poziție", "poziții")) + ")" + (mm && mm.suma > 0 ? escapeHtml(" - planul cu 1 % risc dă ~" + t212Suma(mm.suma)) : "") + ".</p>";
+        var fa = r.factori, sec = t212.sectorCand && t212.sectorCand.s === p.simbol ? t212.sectorCand.v : null;
+        if (!t212.sectorCand || t212.sectorCand.s !== p.simbol) { t212.sectorCand = { s: p.simbol, v: null }; getJSON("/api/istoric-bot?action=sector&s=" + encodeURIComponent(p.simbol)).then(function (d) { t212.sectorCand = { s: p.simbol, v: d && d.sector || "" }; if (t212.poarta && t212.poarta.simbol === p.simbol) t212RenderPoarta(); }).catch(function () {}); }
+        if (sec && fa && fa.actiuniLei > 0 && mm && mm.suma > 0) {
+          var s0 = (fa.sectoare || []).filter(function (x) { return x.nume === sec; })[0], dupa = ((s0 ? s0.lei : 0) + mm.suma) / (fa.actiuniLei + mm.suma);
+          if (dupa > 0.4) h += '<p class="tbWarn">🧩 <b>Concentrare:</b> cu ea, ' + escapeHtml(Factori.sectorNume(sec)) + " ar fi " + escapeHtml(Math.round(dupa * 100) + "%") + " din acțiunile tale (pragul: 40 %).</p>";
+        }
+      }
       if (la.length) h += '<p class="tbWarn">🔗 <b>Se mișcă la fel cu ce ai deja:</b> ' + escapeHtml(la.slice(0, 3).map(function (x) { return x.nume + " (ρ " + x.rho.toFixed(2).replace(".", ",") + ")"; }).join(", ")) + ". Ar fi același risc de două ori, nu o poziție nouă.</p>";
       if (v1 !== null) h += '<p class="tbSub">🧮 Riscul pe o zi al contului (ziua proastă, 1 din 20): ~' + escapeHtml(t212Suma(v0)) + " → ~" + escapeHtml(t212Suma(v1)) + (v0 > 0 ? " (" + escapeHtml(P(v1 / v0 - 1, 0)) + ")" : "") + " dacă intri cu ~" + escapeHtml(t212Suma(mm.suma)) + ".</p>";
     }

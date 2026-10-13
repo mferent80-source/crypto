@@ -49,12 +49,13 @@ import { turaSugestii as turaSugestiiModul } from "./lib/tura-sugestii.mjs";   /
 import { turaLatime as turaLatimeModul, cereBinance } from "./lib/tura-latime.mjs";   // v101.93 (I-583): lățimea pieței pe 150 perp-uri Binance
 import { pazaPas, notaVeche, pentruServer, cheiaBot } from "./lib/paza-boti.mjs";
 import { turaCont as turaContModul } from "./lib/tura-cont.mjs";
-import { turaVerdicte as turaVerdicteModul } from "./lib/tura-verdicte.mjs";   // v101.103 (jurnalul verdictelor + corecția pentru teste multiple)   // v101.102 (contul întreg): risc agregat, stres, reconciliere, randament
+import { turaVerdicte as turaVerdicteModul } from "./lib/tura-verdicte.mjs";
+import { turaSectoare as turaSectoareModul } from "./lib/tura-sectoare.mjs";   // v101.105: topul pe sectoare + DVOL   // v101.103 (jurnalul verdictelor + corecția pentru teste multiple)   // v101.102 (contul întreg): risc agregat, stres, reconciliere, randament
 import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Opus): botul „dispărut” confirmat 3 ture
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.104";   // v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.105";   // v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -176,7 +177,8 @@ const LatimeUS = incarca("latime-us.js", "LatimeUS");   // v101.94 (Weekly Revie
 const Sectoare = incarca("sectoare.js", "Sectoare");   // v101.95 (sector-rotation mutat în Radar): alerta la schimbarea regimului sectoarelor US
 const Macro = incarca("macro.js", "Macro");   // v101.96 (macro-dashboard mutat în Radar): regimul macro + evenimentele mari din SUA, pe Discord
 const ContIntreg = incarca("cont-intreg.js", "ContIntreg");
-const Verdicte = incarca("verdicte.js", "Verdicte");   // v101.103: jurnalul verdictelor (aceleași reguli ca pagina)   // v101.102: contul întreg (aceleași formule ca pagina)
+const Verdicte = incarca("verdicte.js", "Verdicte");
+const Factori = incarca("factori.js", "Factori");   // v101.105: factorii, atribuirea, MAE / MFE, ținta de volatilitate, opțiunile, topul pe sectoare   // v101.103: jurnalul verdictelor (aceleași reguli ca pagina)   // v101.102: contul întreg (aceleași formule ca pagina)
 const Salt = incarca("salt.js", "Salt");   // v101.82 (pagina Salt): tabelul instrumentelor Salt Bank (trendul, ziua de ieri)   // v101.81 (pagina Sugestii): regulile „early” + istoricul lor (verdictul din Carnet)
 const SUG_BAZA_FIS = path.join(DATA, "sugestii-baza.json"), SUG_IST_FIS = path.join(DATA, "sugestii-istoric.json");   // v101.80 (I-561): carnetul fișei - după GridPlan / GridProba / RiscLuna (le ia de pe globalThis)
 const CARNET_FIS = path.join(DATA, "carnet-oferte.json");
@@ -2005,13 +2007,18 @@ async function bareZiCont(cale) {
 }
 async function turaContColector() {
   await turaContModul({ cere, trimite, trimiteAlerta, jurnal, ContIntreg, T212, JurnalTrade, GridCalcul, MesajeColector, versiune: VERSIUNE_COLECTOR,
-    bareZi: bareZiCont, botiInchisi: botiInchisiCompleti, salt: async () => (ultimeleSalt && Array.isArray(ultimeleSalt.randuri) ? ultimeleSalt.randuri : []), cursBnr, yahooLung }, contStare);
+    Factori, bareZi: bareZiCont, botiInchisi: botiInchisiCompleti, salt: async () => (ultimeleSalt && Array.isArray(ultimeleSalt.randuri) ? ultimeleSalt.randuri : []), cursBnr, yahooLung }, contStare);
   try { const { inLucru, ...deScris } = contStare; scrieAtomic(path.join(DATA, "cont-stare.json"), deScris); } catch {}
 }
 const verdicteStare = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, "verdicte-stare.json"), "utf8")) || {}; } catch { return {}; } })();
 async function turaVerdicteColector() {
   await turaVerdicteModul({ cere, trimite, jurnal, Verdicte, GridCalcul, bareZi: bareZiCont }, verdicteStare);
   try { const { inLucru, ...deScris } = verdicteStare; scrieAtomic(path.join(DATA, "verdicte-stare.json"), deScris); } catch {}
+}
+const sectoareStare = {}, UNIVERS_FIS = path.join(DATA, "univers-sua.json");
+async function turaSectoareColector() {
+  await turaSectoareModul({ cere, trimite, jurnal, Factori, GridCalcul, bareZi: bareZiCont, fetch,
+    universDisc: { citeste: () => { try { return JSON.parse(fs.readFileSync(UNIVERS_FIS, "utf8")); } catch { return null; } }, scrie: (x) => { try { scrieAtomic(UNIVERS_FIS, x); } catch {} } } }, sectoareStare);
 }
 async function turaRisc() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
@@ -2126,7 +2133,8 @@ async function bucla() {
   turaBilantBusola().catch((e) => jurnal("busola bilanț", e.message));   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠, în KV
   turaPiataColector().catch((e) => jurnal("piata", e.message));
   turaContColector().catch((e) => jurnal("cont", e.message));   // v101.102 (contul întreg): la 6 ore
-  turaVerdicteColector().catch((e) => jurnal("verdicte", e.message));   // v101.103: verdictele zilei + judecata la 6 ore
+  turaVerdicteColector().catch((e) => jurnal("verdicte", e.message));
+  turaSectoareColector().catch((e) => jurnal("sectoare", e.message));   // v101.105: topul pe sectoare o dată pe zi, DVOL la o oră   // v101.103: verdictele zilei + judecata la 6 ore
   turaLatimeColector().catch((e) => jurnal("latime", e.message));   // v101.93 (I-583): lățimea pieței la 15 minute
   turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)

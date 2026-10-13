@@ -5100,6 +5100,7 @@ function grPoartaHtml(f){
     +grReteaPoartaHtml(f,p)
     // v100.177 (profitul așteptat): mediana boților tăi asemănători, trasă spre zero după câți sunt (puține cazuri ⇒ aproape zero)
     +(typeof grAsteptatHtml==="function"?grAsteptatHtml(p):"")
+    +(typeof grDvolHtml==="function"?grDvolHtml(f):"")   /* v100.178 (5): ce așteaptă piața de opțiuni față de banda gridului */
     // v100.29: sfaturile din istoria lui (inchiderile din prima ora) - informatie, nu regula
     +(p.rez.sfaturi&&p.rez.sfaturi.length?p.rez.sfaturi.map(function(x){return '<p class="tbSub">💡 '+escapeHtml(x)+'</p>'}).join(""):"")
     // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
@@ -5250,6 +5251,20 @@ async function grFranaSalveaza(){
 }
 // v100.101 (el: „să nu se mai întâmple situația de azi”): în poartă, gridul pe care îl pornești (jos, sus, levier, sumă) față de planul din „Ies dacă
 // pierd” - dacă la marginea de pierdere pierzi peste 1,2× planul, rândul roșu + ÎNGUST / LARG alături. Completat cu ce aș alege eu; ce scrie el rămâne.
+// v100.178 (5): volatilitatea implicită a opțiunilor (DVOL, Deribit; BTC pentru orice monedă, ETH pentru ETH) scalată cu raportul volatilităților
+// trecute pe 30 de zile (moneda / BTC) ⇒ cât se așteaptă să se miște prețul pe o zi și pe o săptămână, față de jumătatea benzii gridului
+var grDvol={v:null,la:0,inLucru:false,rv:{}};
+function grDvolHtml(f){
+  if(!f||typeof Factori==="undefined")return "";
+  if(!grDvol.inLucru&&Date.now()-grDvol.la>30*60000){grDvol.inLucru=true;getJSON("/api/istoric-bot?action=dvol").then(function(d){grDvol.v=d&&d.dvol||null}).catch(function(){}).then(function(){grDvol.la=Date.now();grDvol.inLucru=false;renderGrid()})}
+  var dv=grDvol.v;if(!dv||!(dv.btc>0))return "";
+  var eth=/^ETH/.test(f.simbol),baza=eth&&dv.eth>0?dv.eth:dv.btc;
+  if(!eth&&grDvol.rv[f.simbol]===undefined){grDvol.rv[f.simbol]=null;Promise.all([getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(f.simbol)+"&interval=1D&limit=31"),getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=31")]).then(function(r){var a=Factori.sigmaZi(GridCalcul.bare(r[0]&&r[0].data&&r[0].data.klines),30),b=Factori.sigmaZi(GridCalcul.bare(r[1]&&r[1].data&&r[1].data.klines),30);grDvol.rv[f.simbol]=a&&b?a/b:false;renderGrid()}).catch(function(){grDvol.rv[f.simbol]=false})}
+  var rv=eth?1:grDvol.rv[f.simbol];if(rv===null||rv===undefined)return "";
+  var stV=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare,g=Factori.gridFataDeOptiuni({dvol:baza,raportVol:rv||1,pret:f.pret,jos:stV&&stV.jos,sus:stV&&stV.sus});if(!g)return "";
+  var P=function(x){return "±"+Math.abs(x*100).toFixed(1).replace(".",",")+"%"};
+  return '<p class="'+(g.maiIngust?"tbWarn":"tbSub")+'">📐 <b>Ce așteaptă opțiunile:</b> '+escapeHtml("DVOL "+(eth?"ETH ":"BTC ")+Math.round(baza)+"%"+(eth||!rv?"":", moneda se mișcă de ~"+rv.toFixed(1).replace(".",",")+"× cât BTC")+" ⇒ "+P(g.zi)+" pe zi, "+P(g.saptamana)+" pe săptămână; banda gridului are "+P(g.jumatate)+" până la marginea cea mai apropiată"+(g.zilePanaLaMargine!==null?", adică o abatere standard în ~"+(g.zilePanaLaMargine<1?"mai puțin de o zi":TextRo.cate(Math.round(g.zilePanaLaMargine),"zi","zile")):"")+".")+(g.maiIngust?' Banda e mai îngustă decât săptămâna așteptată: prețul poate ieși din ea.':"")+' <span class="tbSub">(o abatere standard ≈ 2 din 3 cazuri; e ce așteaptă piața, nu o predicție)</span></p>';
+}
 function grAsteptatHtml(p){
   var a=p&&p.asG;if(!a||!(a.n>0)||a.medianaPct==null)return "";
   var e=a.medianaPct*a.n/(a.n+20),P=function(x){return (x>0?"+":x<0?"−":"")+Math.abs(x*100).toFixed(1).replace(".",",")+"%"};
