@@ -236,7 +236,7 @@ await test("🟡 Grid fara antetul vechi gol; navTo(id,true) deseneaza si ecrane
 
 await test("🔵 curatenie: trainTemporalModel (nechemata) scoasa; Ctrl+K are ecranele zilnice; „a” nu porneste analiza de pe ele; $ cu 2 zecimale de la $10", () => {
   assert.doesNotMatch(app, /function trainTemporalModel\(/); assert.match(app, /function trainTemporalModelAsync\(/);
-  assert.match(app, /\["Tabloul botului","tabloubot"\],\["Grid: ce setez acum\?","gridset"\]/);
+  assert.match(app, /\["Tabloul botului","tabloubot"\],(\["🧭 Busola ↗ \(moneda ta\)","busola","deschideBusola\(\)"\],)?\["Grid: ce setez acum\?","gridset"\]/);   /* v100.181: + Busola în paletă */
   assert.match(app, /e\.key\.toLowerCase\(\)==="a"&&!\/\\b\(peTablou\|peGrid/);
   const usd = new Function(functia(t212Ecran, "t212Usd") + "; return t212Usd;")();
   // v100.69 (pachetul 4): 2 zecimale de la $1 (nu de la $10): a treia nu se poate cota peste $1, iar „$4.900” langa „2.100 lei” se citea ca mii;

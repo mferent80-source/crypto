@@ -2333,7 +2333,8 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 .sideVechi>summary:hover{color:var(--text)}.sideVechi>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* v100.119: pagina Sugestii - o grilă de cartele pe secțiune (boți / US / EU), o cartelă = o listă */
 .sugGrila{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.sugCartela{min-width:0;display:grid;gap:6px;align-content:start}
-.sugLista{margin:0;padding:0;list-style:none;display:grid;gap:4px}.sugLista li{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}.sugGol{margin:0;color:var(--muted)}
+.sugLista{margin:0;padding:0;list-style:none;display:grid;gap:4px}.sugLista li{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.sugLista li:has(.sugBusola){flex-wrap:nowrap}.sugLista li:has(.sugBusola) .tbSub{flex:1;min-width:0}.sugBusola{margin-left:auto;flex:none;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius);text-decoration:none;align-self:center}.sugBusola:hover,.sugBusola:focus-visible{background:var(--line)}   /* v100.181: 🧭 spre Busola în Sugestii */.sugGol{margin:0;color:var(--muted)}
 .sugIstoric,.sugUrm{margin:0}.sugCap{margin:14px 0 6px}.sugCartela h4{margin:0}.sugCartela>.tbSub{margin:0}
 /* v100.120: pagina Salt - pozițiile, formularul, tabelul tuturor instrumentelor */
 .saltPoz{display:grid;gap:6px;align-content:start;min-width:0}.saltPoz h5{margin:0}.saltPoz p{margin:0}.saltForm{display:grid;gap:8px;margin-top:10px}

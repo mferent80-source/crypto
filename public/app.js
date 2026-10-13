@@ -2706,11 +2706,11 @@ function updateDecisionCoreAfterAnalysis(){
 }
 
 const COMMANDS=[
-  ["Tabloul botului","tabloubot"],["Grid: ce setez acum?","gridset"],["Jurnal de trade","jurnaltrade"],["Trading 212","t212"],["Alerte","alerts"],   // v100.40: ecranele zilnice
+  ["Tabloul botului","tabloubot"],["🧭 Busola ↗ (moneda ta)","busola","deschideBusola()"],["Grid: ce setez acum?","gridset"],   // v100.181: al treilea câmp = acțiunea, în locul lui navTo["Jurnal de trade","jurnaltrade"],["Trading 212","t212"],["Alerte","alerts"],   // v100.40: ecranele zilnice
   ["Dashboard","dash"],["Edge Validation Pro","edgepro"],["Scanner","scan"],["Replay & Historical Scanner","replaylab"],["Decision Core","decisioncore"],["Profit Readiness","profitready"],["Volatility Intelligence","volatilitylab"],["Local Data & Reports","localdata"],["Research ML","researchml"],["Portfolio Intelligence","portfolio"],["Market Profile","profilelab"],["Structure & Sessions","structurelab"],["Context Intelligence","intel"],["Paper Trading v3","paper"],["Health","health"],["Settings","settings"]
 ];
 function toggleCommandPalette(force){const p=$("commandPalette"),on=force==null?!p.classList.contains("on"):!!force;p.classList.toggle("on",on);if(on){dialogReturnFocus=document.activeElement;$("commandInput").value="";renderCommandPalette();setTimeout(()=>$("commandInput").focus(),0)}else restoreDialogFocus()}
-function renderCommandPalette(){const q=($("commandInput")?.value||"").toLowerCase(),rows=COMMANDS.filter(x=>x[0].toLowerCase().includes(q));$("commandItems").innerHTML=rows.map(([n,id])=>`<div class="cmdItem" data-action-click="toggleCommandPalette(false);navTo(&#x27;${id}&#x27;,${["scan","replaylab","decisioncore","volatilitylab","localdata","portfolio","profilelab","structurelab","intel"].includes(id)})">${n}</div>`).join("")}
+function renderCommandPalette(){const q=($("commandInput")?.value||"").toLowerCase(),rows=COMMANDS.filter(x=>x[0].toLowerCase().includes(q));$("commandItems").innerHTML=rows.map(([n,id,act])=>`<div class="cmdItem" data-action-click="toggleCommandPalette(false);${act||`navTo(&#x27;${id}&#x27;,${["scan","replaylab","decisioncore","volatilitylab","localdata","portfolio","profilelab","structurelab","intel"].includes(id)})`}">${n}</div>`).join("")}
 
 const LOCAL_DB_NAME="CryptoRadarResearch";
 const LOCAL_DB_VERSION=54;
