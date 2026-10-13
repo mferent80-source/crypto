@@ -28,19 +28,20 @@ export async function onRequestGet({request,env}){
   if(!SIMBOL.test(simbol))return json({error:"SIMBOL_INVALID"},400);
   if(!(await biletBun(String(env&&env.APP_API_TOKEN||""),simbol,new URL(request.url).searchParams.get("b"),Date.now())))return json({error:"BILET_INVALID"},401);
   if(deschise>=MAX_RELEE)return json({error:"PREA_MULTE_RELEE"},429);
+  deschise++;let rezervat=true;const elibereaza=()=>{if(rezervat){rezervat=false;deschise=Math.max(0,deschise-1)}};   // (revizia, M11): locul se ia înainte de await
 
   let sus;
   try{
     const r=await fetch("https://ws.pionex.com/wsPub",{headers:{Upgrade:"websocket"}});
     sus=r.webSocket;
-    if(!sus)return json({error:"PIONEX_WS_REFUZ",status:r.status},502);
-  }catch(e){return json({error:"PIONEX_WS_INDISPONIBIL"},502)}
+    if(!sus){elibereaza();return json({error:"PIONEX_WS_REFUZ",status:r.status},502)}
+  }catch(e){elibereaza();return json({error:"PIONEX_WS_INDISPONIBIL"},502)}
   sus.accept();
 
   const pereche=new WebSocketPair(),client=pereche[0],server=pereche[1];
   server.accept();
-  deschise++;let gata=false;
-  const inchide=()=>{if(gata)return;gata=true;deschise=Math.max(0,deschise-1);try{sus.close(1000,"gata")}catch(e){}try{server.close(1000,"gata")}catch(e){}};
+  let gata=false;
+  const inchide=()=>{if(gata)return;gata=true;elibereaza();try{sus.close(1000,"gata")}catch(e){}try{server.close(1000,"gata")}catch(e){}};
 
   sus.addEventListener("message",ev=>{
     // Pionex trimite JSON-ul in cadre BINARE (masurat) - fara decodare, nici PING-ul n-ar primi PONG si Pionex ar inchide.

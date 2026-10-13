@@ -53,6 +53,8 @@ var CalendarBursa = (function () {
   // bursa simbolului: sufixele Yahoo / T212 europene ⇒ Xetra (Frankfurt, München, Paris, Amsterdam, Milano au aceleași ore și aproape
   // aceleași sărbători), .L ⇒ Londra, restul ⇒ New York
   function bursaSimbol(s) {
+    var lit = /([a-z])_EQ$/.exec(String(s || ""));   // T212: d Xetra, p Paris, a Amsterdam, m Milano, e Madrid, b Bruxelles, s Elveția, l Londra
+    if (lit) return lit[1] === "l" ? "LSE" : "XETRA";
     s = String(s || "").toUpperCase();
     if (/\.L$|_GB_EQ$|L_EQ$/.test(s)) return "LSE";
     if (/\.(DE|F|MU|BE|DU|HM|SG|PA|AS|MI|BR|MC|VI)$|_(DE|FR|NL|IT|ES|BE|AT)_EQ$|D_EQ$/.test(s)) return "XETRA";

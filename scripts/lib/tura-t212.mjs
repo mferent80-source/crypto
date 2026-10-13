@@ -128,7 +128,9 @@ export async function turaT212Exec(d, st) {
     await d.salveaza({ ordine: items.map((x) => x && x.order && x.order.id).filter((id) => id !== null && id !== undefined).map(String), umpleri: d.umpleri(items), stare: null });
     cur = p && p.cursor ? String(p.cursor) : null;
     st.cursor = cur;
-    if (!cur) { st.gata = true; break; }
+    if (!cur) st.gata = true;
+    if (d.salveazaStare) d.salveazaStare(st);   // (revizia, M7): o eroare la pagina 7 nu mai pierde paginile 1–6
+    if (!cur) break;
   }
   return { pagini, gata: !!st.gata };
 }

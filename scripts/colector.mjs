@@ -54,7 +54,7 @@ import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Op
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.103";   // v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.104";   // v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -828,7 +828,7 @@ async function turaT212() {
     const fe = path.join(DATA, "t212-exec.json"); let se = {}; try { se = JSON.parse(fs.readFileSync(fe, "utf8")) || {}; } catch { se = {}; }
     if (!se.gata) {
       const r = await turaT212Exec({ cerePagina: (c) => cere("/api/t212?action=ordine" + (c ? "&cursor=" + encodeURIComponent(c) : "")), salveaza: (corp) => trimite("/api/t212?action=istoric", corp),
-        umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), max: 12 }, se);
+        umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), max: 12, salveazaStare: (x) => { try { scrieAtomic(fe, x); } catch {} } }, se);
       try { scrieAtomic(fe, se); } catch {}
       jurnal("t212 completare execuție: " + cate(r.pagini, "pagină", "pagini") + (r.gata ? " · gata" : ""));
     }
@@ -1982,14 +1982,14 @@ const CONT_DIR = path.join(DATA, "cont-lung"); fs.mkdirSync(CONT_DIR, { recursiv
 const contStare = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, "cont-stare.json"), "utf8")) || {}; } catch { return {}; } })();
 async function yahooLung(simbol) {
   const s = String(simbol || "").replace(/[^A-Za-z0-9.^=-]/g, ""), f = path.join(CONT_DIR, s + ".json");
-  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < 7 * 86400000) return x.bare; } catch {}
+  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < 7 * 86400000 && x.cuExtreme) return x.bare; } catch {}
   const r = await fetch("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s) + "?interval=1d&range=10y", { headers: { "user-agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(20000) });
   if (!r.ok) throw new Error("Yahoo " + r.status);
   const j = await r.json(), res = j && j.chart && j.chart.result && j.chart.result[0], q = res && res.indicators && res.indicators.quote && res.indicators.quote[0];
   if (!res || !Array.isArray(res.timestamp) || !q) throw new Error("Yahoo fără serie pentru " + s);
-  const bare = res.timestamp.map((t, i) => ({ t: t * 1000, c: q.close[i] })).filter((b) => typeof b.c === "number" && b.c > 0);
+  const bare = res.timestamp.map((t, i) => ({ t: t * 1000, c: q.close[i], h: q.high && q.high[i], l: q.low && q.low[i] })).filter((b) => typeof b.c === "number" && b.c > 0);   // (revizia, I5): + h / l pentru fitilurile crizelor
   if (!bare.length) throw new Error("Yahoo gol pentru " + s);
-  try { scrieAtomic(f, { la: Date.now(), bare }); } catch {}
+  try { scrieAtomic(f, { la: Date.now(), bare, cuExtreme: true }); } catch {}
   return bare;
 }
 // prețurile zilnice ale contului întreg: o zi pe disc (data/cont-bare), cererile noi la 2,5 s (ruta T212 are limita ei pe minut)

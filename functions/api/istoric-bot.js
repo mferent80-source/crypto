@@ -289,7 +289,7 @@ export async function onRequestPost({request,env}){
   if(action==="cont"){const r=corp&&corp.cont;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"cont: raportul cu „la”"},400);await env.ISTORIC.put("cont:raport",JSON.stringify(r));return json({ok:true})}
   // v100.177: un verdict sau mai multe (pagina: Poarta; colectorul: ideile, macro); un verdict pe (sursă, simbol, zi), cel mai nou rămâne
   if(action==="verdict"){const SURSE=new Set(["poarta-t212","poarta-grid","idei","macro"]),acum=Date.now(),z=t=>new Date(t).toISOString().slice(0,10);
-    const noi=(Array.isArray(corp&&corp.verdicte)?corp.verdicte:[corp]).slice(0,500).map(v=>{if(!v||typeof v!=="object")return null;const s=String(v.s||""),k=String(v.k||"").toUpperCase().replace(/[^A-Z0-9._=^-]/g,"").slice(0,32),n=String(v.n||"").toLowerCase().replace(/[^a-z-]/g,"").slice(0,20),p=nr(v.p),t=nr(v.t);
+    const noi=(Array.isArray(corp&&corp.verdicte)?corp.verdicte:[corp]).slice(0,500).map(v=>{if(!v||typeof v!=="object")return null;const s=String(v.s||""),k=String(v.k||"").replace(/[^A-Za-z0-9._=^-]/g,"").slice(0,32),n=String(v.n||"").toLowerCase().replace(/[^a-z-]/g,"").slice(0,20),p=nr(v.p),t=nr(v.t);
       if(!SURSE.has(s)||!k||!n||!(p>0)||!(t>0)||t>acum+300000)return null;const o={s,k,n,p,t};const j=nr(v.j),u=nr(v.u);if(j>0&&u>j){o.j=j;o.u=u}return o}).filter(Boolean);
     if(!noi.length)return json({error:"verdict: s, k, n, p, t"},400);
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("verdicte:jurnal")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];

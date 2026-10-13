@@ -15,9 +15,9 @@ const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
 
 export async function turaCont(d, st) {
   const acum = d.acum || Date.now();
-  if (st.inLucru || acum - (st.la || 0) < PAS) return null;
+  if (st.inLucru || acum - (st.la || 0) < PAS || acum - (st.esecLa || 0) < ORA) return null;   // (revizia, M4): după un eșec, o oră pauză
   st.inLucru = true;
-  try { return await faRaport(d, st, acum); } finally { st.inLucru = false; }
+  try { return await faRaport(d, st, acum); } catch (e) { st.esecLa = acum; throw e; } finally { st.inLucru = false; }
 }
 
 async function faRaport(d, st, acum) {
@@ -46,6 +46,8 @@ async function faRaport(d, st, acum) {
   const leiZi = {}; for (const m of Object.keys(fxBare)) { leiZi[m] = {}; for (const b of fxBare[m]) leiZi[m][new Date(b.t).toISOString().slice(0, 10)] = b.c; }
   if (bnr && bnr.toate) for (const [z, c] of Object.entries(bnr.toate)) leiZi.USD[z] = c;   // BNR bate Yahoo pe zilele pe care le are
 
+  // (revizia, I8): moneda reală a instrumentelor T212
+  const mon = await incearca(d, "monedele T212", () => d.cere("/api/t212?action=monede")); if (mon && mon.monede) C.setMonede(mon.monede);
   // 3. expunerile
   const e = [];
   for (const b of boti || []) { const x = C.dinBot(b, leiPe); if (x) e.push(x); }
@@ -72,7 +74,7 @@ async function faRaport(d, st, acum) {
   const ist = C.pnlIstoric(e, serii, fxSerii, { n: 250 });
   const v95 = C.varEs(ist.zile, 0.95), v99 = C.varEs(ist.zile, 0.99), rea = C.ziuaCeaMaiRea(ist.zile);
   const folosite = e.filter((x) => ist.folosite.includes(x.cheie));
-  const perechi = C.corelatii(e, serii, { zile: 90, min: 40, max: 12 }), div = C.diversificare(folosite, serii, ist.zile);
+  const perechi = C.corelatii(e, serii, { zile: 90, min: 40, max: 12 }), div = C.diversificare(folosite, serii, ist.zileCal || ist.zile);
 
   // 6. stres-testele: factorii și pozițiile pe 10 ani (Yahoo, cache pe disc o săptămână); monedele pe BTC-USD / X-USD
   const lung = async (s) => (s ? await incearca(d, "istoria lungă " + s, () => d.yahooLung(s)) : null);
@@ -80,7 +82,10 @@ async function faRaport(d, st, acum) {
   for (const x of e) {
     if (bareLungi[x.cheie] !== undefined) continue;
     const s = x.tip === "bot" ? x.cheie.slice(2).replace(/^1000+/, "") + "-USD" : yahooSimbol[x.cheie];
-    bareLungi[x.cheie] = (await lung(s)) || null;
+    let bl = (await lung(s)) || null;
+    // (revizia, M10): „X-USD” la Yahoo poate fi altă monedă cu același nume ⇒ ultima închidere trebuie să semene (±25 %) cu prețul de acum
+    if (bl && bl.length && x.tip === "bot" && x.pret > 0 && Math.abs(bl[bl.length - 1].c / x.pret - 1) > 0.25) { d.jurnal("cont: " + s + " la Yahoo nu se potrivește cu prețul botului - folosesc β × BTC"); bl = null; }
+    bareLungi[x.cheie] = bl;
   }
   const stres = C.stres(e, { factori, bareLungi, betas, leiPe });
 
@@ -120,11 +125,11 @@ async function faRaport(d, st, acum) {
   } catch (err) { d.jurnal("cont randament boti", err.message); }
   const tot = C.combina([serieT212, serieBoti]), an = (s) => s.filter((x) => x.z >= new Date(acum - 365 * 86400000).toISOString().slice(0, 10));
   const randament = {
-    tot: C.statistici(an(tot)), t212: C.statistici(an(serieT212), { anual: 252 }), boti: C.statistici(an(serieBoti)),
+    tot: C.statistici(an(tot)), t212: C.statistici(an(serieT212)), boti: C.statistici(an(serieBoti)),
     fataBtc: C.fataDe(an(tot), C.randamente(factori.BTC || btcB)), fataSpy: C.fataDe(an(tot), C.randamente(factori.SPY || spyB)),
     t212FataSpy: C.fataDe(an(serieT212), C.randamente(factori.SPY || spyB)), botiFataBtc: C.fataDe(an(serieBoti), C.randamente(factori.BTC || btcB)),
     curba: an(tot).map((x) => [x.z, Math.round(x.r * 1e6) / 1e6]),
-    t212Aprox: serieT212.aprox || [], t212Nepotrivite: serieT212.nepotrivite || [], botiAprox: true,
+    t212Aprox: serieT212.aprox || [], t212Nepotrivite: serieT212.nepotrivite || [], t212FaraCumparare: serieT212.faraCumparare || [], botiAprox: true,
   };
 
   // 8b. execuția: prețul plănuit față de cel obținut (conversia, stopurile, limitele, ordinele date cu bursa închisă, ieșirile sub planul tău)
@@ -155,7 +160,7 @@ async function faRaport(d, st, acum) {
   await d.trimite("/api/istoric-bot?action=cont", { cont: raport });
   st.la = acum;
   const z = ziRo(acum);
-  if (st.ziValoare !== z && val.total > 0) { await incearca(d, "valoarea zilei", () => d.trimite("/api/istoric-bot?action=contZi", { z, valoare: rot(val.total), complet: val.complet, pionex: rot(val.pionex), t212: rot(val.t212), salt: rot(val.salt) })); st.ziValoare = z; }
+  if (st.ziValoare !== z && val.total > 0) { const okZ = await incearca(d, "valoarea zilei", () => d.trimite("/api/istoric-bot?action=contZi", { z, valoare: rot(val.total), complet: val.complet, pionex: rot(val.pionex), t212: rot(val.t212), salt: rot(val.salt) })); if (okZ) st.ziValoare = z; }   // (revizia, M5): doar dacă a ajuns
   // 10. reconcilierea pe Discord: o dată pe zi pentru fiecare abatere
   const abateri = [];
   if (recT212 && !recT212.ok) for (const a of recT212.abateri) abateri.push({ cheie: "rec-t212-" + a.ticker, m: d.MesajeColector.reconciliereT212(a) });

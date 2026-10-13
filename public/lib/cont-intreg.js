@@ -20,12 +20,18 @@ var ContIntreg = (function () {
 
   // ---------------- 1. expunerile ----------------
   // moneda instrumentului după bursă (prețul T212 vine în moneda bursei: USD, EUR, pence la Londra)
+  // v100.177 (revizia, I8): moneda din metadatele instrumentelor T212 (setMonede, de la colector) bate sufixul - un ETF de la Londra poate fi
+  // cotat în USD sau GBP, nu în pence
+  var MONEDE = {};
+  function setMonede(m) { MONEDE = m && typeof m === "object" ? m : {}; }
   function monedaTicker(tk) {
-    var brut = String(tk || ""), lit = /([a-z])_EQ$/.exec(brut);
+    var brut = String(tk || ""), lit = /([a-z])_EQ$/.exec(brut), md = MONEDE[brut];
+    if (md) return md === "GBX" || md === "GBp" ? "GBX" : String(md).toUpperCase();
     if (lit) return lit[1] === "l" ? "GBX" : lit[1] === "s" ? "CHF" : "EUR";
     var s = brut.toUpperCase();
     if (/\.L$|L_EQ$/.test(s)) return "GBX";
     if (/_CA_EQ$|\.TO$|\.V$/.test(s)) return "CAD";
+    if (/_AT_EQ$/.test(s)) return "EUR";
     if (/\.(DE|F|MU|BE|DU|HM|SG|PA|AS|MI|BR|MC|VI)$|D_EQ$/.test(s) && !/_US_EQ$/.test(s)) return "EUR";
     return "USD";
   }
@@ -63,7 +69,7 @@ var ContIntreg = (function () {
   // valoarea contului în lei, pe bucăți; o bucată necitită rămâne null și totalul spune „≥” (nu o sumă mai mică prezentată ca întreagă)
   function valoare(o) {
     var leiPe = o.leiPe || null, p = null, partiLipsa = [];
-    if (Array.isArray(o.boti)) { p = 0; o.boti.forEach(function (b) { var e = dinBot(b, leiPe); if (e && e.valoareLei !== null) p += e.valoareLei; else if (e) partiLipsa.push(e.nume); }); var lb = inLei((nr(o.pionexLiber) || 0), "USD", leiPe); if (lb !== null) p += lb; }
+    if (Array.isArray(o.boti)) { p = 0; o.boti.forEach(function (b) { var e = dinBot(b, leiPe); if (e && e.valoareLei !== null) p += e.valoareLei; else if (e) partiLipsa.push(e.nume); }); var lb = nr(o.pionexLiber) !== null ? inLei(nr(o.pionexLiber), "USD", leiPe) : null; if (lb !== null) p += lb; else partiLipsa.push("soldul liber Pionex"); }
     else partiLipsa.push("Pionex");
     var t = o.t212Cash && nr(o.t212Cash.total) !== null ? nr(o.t212Cash.total) : null; if (t === null) partiLipsa.push("Trading 212");
     var s = null; if (Array.isArray(o.salt)) { s = 0; o.salt.forEach(function (r) { var e = dinSalt(r, leiPe); if (e && e.valoareLei !== null) s += e.valoareLei; else if (r) partiLipsa.push(String(r.simbol) + " (Salt)"); }); }
@@ -95,11 +101,16 @@ var ContIntreg = (function () {
       var t = 0;
       folosite.forEach(function (x) {
         var r = serii[x.cheie][z] || 0, m = x.moneda === "USDT" ? "USD" : x.moneda === "GBX" ? "GBP" : x.moneda, rf = fx && fx[m] && fx[m][z] !== undefined ? fx[m][z] : 0;
-        t += x.notionalLei * ((1 + r) * (1 + rf) - 1);
+        // botul: cursul leului mișcă VALOAREA lui (marja), nu expunerea cu levier (revizia, M1)
+        t += x.tip === "bot" ? x.notionalLei * r + (x.valoareLei || 0) * rf : x.notionalLei * ((1 + r) * (1 + rf) - 1);
       });
       return { z: z, pnl: t };
     });
-    return { zile: pnl, folosite: folosite.map(function (x) { return x.cheie; }), scoase: scoase };
+    // v100.177 (revizia, I6): riscul „pe o zi” e pe ZILE DE BURSĂ - sâmbăta și duminica (doar crypto) se adună în lunea care urmează;
+    // altfel weekendurile cu acțiunile pe 0 diluau VaR-ul (~10 % sub cel real la un cont doar pe acțiuni)
+    var lucru = [], adus = 0;
+    pnl.forEach(function (x) { var w = new Date(x.z + "T12:00:00Z").getUTCDay(); if (w === 0 || w === 6) { adus += x.pnl; return; } lucru.push({ z: x.z, pnl: x.pnl + adus }); adus = 0; });
+    return { zile: lucru, zileCal: pnl, folosite: folosite.map(function (x) { return x.cheie; }), scoase: scoase };
   }
   function varEs(pnl, nivel) {
     var v = (pnl || []).map(function (x) { return typeof x === "number" ? x : x.pnl; }).filter(function (x) { return isFinite(x); }).sort(function (a, b) { return a - b; });
@@ -153,6 +164,15 @@ var ContIntreg = (function () {
     { cod: "oct25", nume: "Lichidările din 10 octombrie 2025", de: "2025-10-09", pana: "2025-10-10" }
   ];
   // randamentul unei serii de bare [{t, c}] între închiderea din `de` (ultima bară ≤ de) și cea din `pana`
+  // randamentul la închidere + cel mai jos / cel mai sus punct din fereastră (din l / h când barele le au, altfel din închideri)
+  function extremFereastra(bare, de, pana) {
+    var l = (bare || []).filter(function (b) { return b && nr(b.c) > 0; }).sort(function (a, b) { return a.t - b.t; }), a = null;
+    for (var i = 0; i < l.length; i++) if (zi(l[i].t) <= de) a = l[i];
+    var r = randFereastra(bare, de, pana); if (r === null || !a) return null;
+    var lo = Infinity, hi = -Infinity;
+    l.forEach(function (b) { var z = zi(b.t); if (z > zi(a.t) && z <= pana) { lo = Math.min(lo, nr(b.l) > 0 ? b.l : b.c); hi = Math.max(hi, nr(b.h) > 0 ? b.h : b.c); } });
+    return { r: r, min: isFinite(lo) ? Math.min(r, lo / a.c - 1) : r, max: isFinite(hi) ? Math.max(r, hi / a.c - 1) : r };
+  }
   function randFereastra(bare, de, pana) {
     var l = (bare || []).filter(function (b) { return b && nr(b.c) > 0; }).sort(function (a, b) { return a.t - b.t; }), a = null, b = null;
     for (var i = 0; i < l.length; i++) { var z = zi(l[i].t); if (z <= de) a = l[i]; if (z <= pana) b = l[i]; }
@@ -168,22 +188,27 @@ var ContIntreg = (function () {
   }
   // P&L-ul unui bot grid la o mișcare r a prețului: poziția se schimbă pe drum (long cumpără la scădere până la marginea de jos, short
   // vinde la creștere), integrată în 40 de pași; trecerea de prețul de lichidare = pierzi tot ce e în bot (valoarea lui)
-  function pnlBot(x, r) {
+  function pnlBot(x, r, ex) {
     var p0 = x.pret, p1 = p0 * (1 + r), val = x.valoare !== null ? Math.max(0, x.valoare) : null;
     if (!(p0 > 0) || x.notional === null) return null;
-    if ((x.lichJos !== null && x.lichJos > 0 && p1 <= x.lichJos) || (x.lichSus !== null && x.lichSus > 0 && p1 >= x.lichSus)) return val !== null ? { pnl: -val, lichidat: true } : null;
+    // v100.177 (revizia, I5): lichidarea se verifică pe punctul cel mai jos / cel mai sus din fereastră (fitilurile din timpul zilei), nu doar la închidere
+    var pMin = p0 * (1 + Math.min(r, ex && isFinite(ex.min) ? ex.min : r)), pMax = p0 * (1 + Math.max(r, ex && isFinite(ex.max) ? ex.max : r));
+    if ((x.lichJos !== null && x.lichJos > 0 && pMin <= x.lichJos) || (x.lichSus !== null && x.lichSus > 0 && pMax >= x.lichSus)) return val !== null ? { pnl: -val, lichidat: true } : null;
     var jos = x.gridJos, sus = x.gridSus, q0 = x.notional / p0, maxQ = x.investit !== null ? x.investit * (x.levier || 1) / p0 : Math.abs(q0);
     var areGrid = jos > 0 && sus > jos;
     // poziția (în monede, cu semn) la prețul p: dacă nu știm gridul, rămâne cea de acum (static)
     function q(p) {
       if (!areGrid) return q0;
       var f = x.dir === "long" ? (sus - p) / (sus - jos) : x.dir === "short" ? -(p - jos) / (sus - jos) : ((jos + sus) / 2 - p) / ((sus - jos) / 2);
-      f = Math.max(-1, Math.min(1, f));
+      // v100.177 (revizia, C1): long-ul stă în [0, 1] (peste bandă a vândut tot, nu devine short), short-ul în [−1, 0], neutrul în [−1, 1]
+      f = x.dir === "long" ? Math.max(0, Math.min(1, f)) : x.dir === "short" ? Math.max(-1, Math.min(0, f)) : Math.max(-1, Math.min(1, f));
       return f * maxQ * (p0 / p);
     }
     // calibrat pe poziția reală de acum (gridul real are alt număr de linii decât modelul)
-    var m0 = q(p0), k = areGrid && Math.abs(m0) > 1e-12 && Math.sign(m0) === Math.sign(q0) ? q0 / m0 : 1, pnl = 0, pasi = 40;
-    for (var i = 0; i < pasi; i++) { var a = p0 + (p1 - p0) * i / pasi, b = p0 + (p1 - p0) * (i + 1) / pasi, mij = (a + b) / 2; pnl += (areGrid ? k * q(mij) : q0) * (b - a); }
+    // (revizia, C1b): calibrarea limitată la [0,5; 2] și poziția la plin (maxQ) - lângă marginea benzii k exploda și lichida fals
+    var m0 = q(p0), k = areGrid && Math.abs(m0) > 1e-12 && Math.sign(m0) === Math.sign(q0) ? Math.max(0.5, Math.min(2, q0 / m0)) : 1, pnl = 0, pasi = 40;
+    var plin = function (qq, p) { var lim = maxQ * (p0 / p) * 1.0001; return Math.max(-lim, Math.min(lim, qq)); };
+    for (var i = 0; i < pasi; i++) { var a = p0 + (p1 - p0) * i / pasi, b = p0 + (p1 - p0) * (i + 1) / pasi, mij = (a + b) / 2; pnl += (areGrid ? plin(k * q(mij), mij) : q0) * (b - a); }
     if (val !== null && pnl < -val) return { pnl: -val, lichidat: true };
     return { pnl: pnl, lichidat: false };
   }
@@ -192,14 +217,16 @@ var ContIntreg = (function () {
     var tot = 0, rand = [], lipsa = [];
     e.forEach(function (x) {
       if (!x || x.notionalLei === null) return;
-      var r = proprii && proprii[x.cheie] !== undefined && proprii[x.cheie] !== null ? proprii[x.cheie] : null, cum = "a ei";
+      // proprii / factorii: număr (randamentul) sau { r, min, max } (cu punctele extreme din fereastră)
+      var pr = proprii && proprii[x.cheie] !== undefined && proprii[x.cheie] !== null ? proprii[x.cheie] : null, r = pr !== null && typeof pr === "object" ? pr.r : pr, ex = pr !== null && typeof pr === "object" ? pr : null, cum = "a ei";
       if (r === null) {
-        var fac = x.clasa === "crypto" ? "BTC" : "QQQ", b = betas && betas[x.cheie] !== undefined && betas[x.cheie] !== null ? betas[x.cheie] : 1;
-        if (f[fac] === null || f[fac] === undefined) { lipsa.push(x.nume); return; }
-        r = b * f[fac]; cum = "β " + b.toFixed(1).replace(".", ",") + " × " + fac;
+        var fac = x.clasa === "crypto" ? "BTC" : "QQQ", b = betas && betas[x.cheie] !== undefined && betas[x.cheie] !== null ? betas[x.cheie] : 1, fv = f[fac];
+        if (fv === null || fv === undefined) { lipsa.push(x.nume); return; }
+        var fr = typeof fv === "object" ? fv.r : fv; r = b * fr; cum = "β " + b.toFixed(1).replace(".", ",") + " × " + fac;
+        if (typeof fv === "object") ex = { r: r, min: b >= 0 ? b * fv.min : b * fv.max, max: b >= 0 ? b * fv.max : b * fv.min };
       }
       var lei;
-      if (x.tip === "bot") { var pb = pnlBot(x, r); if (!pb) { lipsa.push(x.nume); return; } lei = inLei(pb.pnl, "USD", leiPe); rand.push({ nume: x.nume, r: r, lei: lei, cum: cum, lichidat: pb.lichidat }); }
+      if (x.tip === "bot") { var pb = pnlBot(x, r, ex); if (!pb) { lipsa.push(x.nume); return; } lei = inLei(pb.pnl, "USD", leiPe); rand.push({ nume: x.nume, r: r, lei: lei, cum: cum, lichidat: pb.lichidat }); }
       else { lei = x.notionalLei * r; rand.push({ nume: x.nume, r: r, lei: lei, cum: cum, lichidat: false }); }
       if (lei !== null) tot += lei;
     });
@@ -209,11 +236,11 @@ var ContIntreg = (function () {
   function stres(e, o) {
     o = o || {}; var out = [];
     (o.crize || CRIZE).forEach(function (c) {
-      var f = {}; ["BTC", "QQQ", "SPY"].forEach(function (k) { f[k] = o.factori && o.factori[k] ? randFereastra(o.factori[k], c.de, c.pana) : null; });
+      var f = {}; ["BTC", "QQQ", "SPY"].forEach(function (k) { f[k] = o.factori && o.factori[k] ? extremFereastra(o.factori[k], c.de, c.pana) : null; });
       if (f.BTC === null && f.QQQ === null) return;
-      var proprii = {}; e.forEach(function (x) { if (x && o.bareLungi && o.bareLungi[x.cheie]) proprii[x.cheie] = randFereastra(o.bareLungi[x.cheie], c.de, c.pana); });
+      var proprii = {}; e.forEach(function (x) { if (x && o.bareLungi && o.bareLungi[x.cheie]) proprii[x.cheie] = extremFereastra(o.bareLungi[x.cheie], c.de, c.pana); });
       var s = scenariu(e, f, proprii, o.betas || {}, o.leiPe);
-      out.push({ cod: c.cod, nume: c.nume, de: c.de, pana: c.pana, btc: f.BTC, qqq: f.QQQ, pnl: s.pnl, pozitii: s.rand, lipsa: s.lipsa });
+      out.push({ cod: c.cod, nume: c.nume, de: c.de, pana: c.pana, btc: f.BTC && f.BTC.r, qqq: f.QQQ && f.QQQ.r, btcMin: f.BTC && f.BTC.min, pnl: s.pnl, pozitii: s.rand, lipsa: s.lipsa });
     });
     out.sort(function (a, b) { return a.pnl - b.pnl; });
     return out;
@@ -262,10 +289,10 @@ var ContIntreg = (function () {
     var zileCurs = {}; Object.keys(leiZi || {}).forEach(function (m) { zileCurs[m] = Object.keys(leiZi[m] || {}).sort(); });
     var curs = function (moneda, z) { var m = moneda === "GBX" ? "GBP" : moneda, c = leiZi && leiZi[m], k = zileCurs[m]; if (!c || !k || !k.length) return null; var lo = 0, hi = k.length - 1, g = -1; while (lo <= hi) { var mid = (lo + hi) >> 1; if (k[mid] <= z) { g = mid; lo = mid + 1; } else hi = mid - 1; } return c[k[g >= 0 ? g : 0]]; };
     // un simbol fără prețuri (delistat, OTC dispărut din Yahoo) se ține la ultimul preț de TRANZACȚIE - aproximare numărată în `aprox`
-    var ultimaInch = {}, ultimaTranz = {}, aproxTk = {}, q = {}, start = zi(u[0].t), pana = o.pana || zi(Date.now()), out = [], vIeri = 0, k = 0, ancorat = true;
+    var faraCump = {}, ultimaInch = {}, ultimaTranz = {}, aproxTk = {}, q = {}, start = zi(u[0].t), pana = o.pana || zi(Date.now()), out = [], vIeri = 0, k = 0, ancorat = true;
     for (var t = Date.parse(start + "T00:00:00Z"); zi(t) <= pana; t += ZI) {
       var z = zi(t), cump = 0, vand = 0;
-      while (k < u.length && zi(u[k].t) === z) { var x = u[k]; if (nr(x.pret) > 0) ultimaTranz[x.ticker] = nr(x.pret); if (x.side === "BUY") { q[x.ticker] = (q[x.ticker] || 0) + x.qty; cump += Math.abs(x.net); } else { q[x.ticker] = (q[x.ticker] || 0) - x.qty; vand += Math.abs(x.net); } k++; }
+      while (k < u.length && zi(u[k].t) === z) { var x = u[k]; if (nr(x.pret) > 0) ultimaTranz[x.ticker] = nr(x.pret); if (x.side === "BUY") { q[x.ticker] = (q[x.ticker] || 0) + x.qty; cump += Math.abs(x.net); } else { var are = Math.max(0, q[x.ticker] || 0), luat = Math.min(are, x.qty); q[x.ticker] = are - luat; vand += Math.abs(x.net) * (x.qty > 0 ? luat / x.qty : 0); if (luat < x.qty - 1e-9) faraCump[x.ticker] = 1; } k++; }
       var v = 0, lipsa = false;
       Object.keys(q).forEach(function (tk) {
         if (q[tk] <= 1e-9) return;
@@ -279,7 +306,7 @@ var ContIntreg = (function () {
       if (!lipsa && ancorat && cap > 0) out.push({ z: z, pnl: v - vIeri - cump + vand, cap: cap, r: (v - vIeri - cump + vand) / cap, v: v });
       if (!lipsa) { vIeri = v; ancorat = true; } else ancorat = false;
     }
-    out.aprox = Object.keys(aproxTk); out.nepotrivite = Object.keys(nepotrivite);
+    out.aprox = Object.keys(aproxTk); out.nepotrivite = Object.keys(nepotrivite); out.faraCumparare = Object.keys(faraCump);
     return out;
   }
   // boții: rezultatul net al fiecăruia împărțit EGAL pe zilele lui (aproximare: istoria pe ore a poziției nu există) - volatilitatea iese mai
@@ -360,7 +387,7 @@ var ContIntreg = (function () {
       subPlan: Object.assign(rez(plan, function (y) { return y.r; }), { bani: plan.reduce(function (a, y) { return a + y.bani; }, 0), cele: plan.sort(function (a, b) { return a.r - b.r; }).slice(0, 5) }) };
   }
 
-  return { ZI: ZI, CRIZE: CRIZE, executie: executie, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
+  return { ZI: ZI, CRIZE: CRIZE, executie: executie, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
     randamente: randamente, pnlIstoric: pnlIstoric, varEs: varEs, ziuaCeaMaiRea: cuDatele, corel: corel, corelatii: corelatii, diversificare: diversificare,
     randFereastra: randFereastra, beta: beta, pnlBot: pnlBot, scenariu: scenariu, stres: stres,
     reconciliereT212: reconciliereT212, reconciliereArhiva: reconciliereArhiva, reconciliereUrmarire: reconciliereUrmarire,

@@ -21,7 +21,7 @@ export async function turaVerdicte(d, st) {
       const id = await incearca(d, "istoricul ideilor", () => d.cere("/api/t212?action=idei"));
       if (id) {
         for (const x of Array.isArray(id.istoric) ? id.istoric : []) if (x && x.zi && x.ticker && x.pret > 0) noi.push({ s: "idei", k: x.ticker, n: "cumpar", p: x.pret, t: Date.parse(x.zi + "T06:00:00Z") });
-        st.umplutDinUrma = true;
+        st.deUmplut = true;
       }
     }
     // (1) verdictele zilei, după 9:00 ora României (ideile se fac la 8:00), o dată pe zi
@@ -32,9 +32,12 @@ export async function turaVerdicte(d, st) {
       const pi = await incearca(d, "regimul macro", () => d.cere("/api/istoric-bot?action=piata")), mac = pi && (pi.macro || (pi.piata && pi.piata.macro));
       const spy = await incearca(d, "SPY", async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&ticker=SPY_US_EQ")).randuri || [], acum));
       if (mac && mac.cod && spy && spy.length) noi.push({ s: "macro", k: "SPY_US_EQ", n: mac.cod, p: spy[spy.length - 1].c, t: acum });
-      st.ziLog = z;
+      st.deZi = z;
     }
-    if (noi.length) await d.trimite("/api/istoric-bot?action=verdict", { verdicte: noi });
+    // (revizia, M6): loturi de cel mult 400 (serverul ia 500 și 64 KB pe cerere); steagurile se pun DOAR după ce au ajuns
+    for (let i = 0; i < noi.length; i += 400) await d.trimite("/api/istoric-bot?action=verdict", { verdicte: noi.slice(i, i + 400) });
+    if (st.deUmplut) { st.umplutDinUrma = true; delete st.deUmplut; }
+    if (st.deZi) { st.ziLog = st.deZi; delete st.deZi; }
 
     // (2) evaluarea, la 6 ore
     if (acum - (st.evalLa || 0) < 6 * ORA) return { noi: noi.length };

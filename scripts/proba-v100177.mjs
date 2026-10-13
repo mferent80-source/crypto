@@ -19,7 +19,7 @@ const V = ctx.Verdicte, ZI = 86400000, T0 = Date.parse("2026-01-05T15:00:00Z");
 function mb(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 await test("jurnalul: un verdict pe (sursă, simbol, zi) — cel mai nou rămâne; sursele necunoscute și prețurile lipsă ies", () => {
-  const j = V.adauga([], [{ s: "poarta-t212", k: "aapl_us_eq", n: "Cumpara", p: 100, t: T0 }, { s: "poarta-t212", k: "AAPL_US_EQ", n: "nu", p: 101, t: T0 + 3600000 }, { s: "altceva", k: "X", n: "a", p: 1, t: T0 }, { s: "idei", k: "Y", n: "cumpar", p: 0, t: T0 }]);
+  const j = V.adauga([], [{ s: "poarta-t212", k: "AAPL_US_EQ", n: "Cumpara", p: 100, t: T0 }, { s: "poarta-t212", k: "AAPL_US_EQ", n: "nu", p: 101, t: T0 + 3600000 }, { s: "altceva", k: "X", n: "a", p: 1, t: T0 }, { s: "idei", k: "Y", n: "cumpar", p: 0, t: T0 }]);
   assert.equal(j.length, 1); assert.equal(j[0].n, "nu"); assert.equal(j[0].k, "AAPL_US_EQ");
   assert.equal(V.adauga(j, { s: "poarta-t212", k: "AAPL_US_EQ", n: "cumpara", p: 99, t: T0 + ZI }).length, 2, "a doua zi = alt verdict");
 });
@@ -75,7 +75,7 @@ await test("registrul: verdictele + obiceiurile din riscul tău + becurile boți
 });
 await test("riscul tău și boții asemănători dau p-ul din aceeași distribuție bootstrap (verdictul lor nu se schimbă)", () => {
   assert.match(citeste("public", "lib", "risc-luna.js"), /p: pB, stare: dov \? "dovedit-" \+ sens/);
-  assert.equal((citeste("public", "lib", "asemanatoare.js").match(/out\.p = bm\.length \? Math\.min\(1, 2 \* Math\.min\(/g) || []).length, 2);
+  assert.equal((citeste("public", "lib", "asemanatoare.js").match(/out\.p = bm\.length \? Math\.min\(1, \(2 \* Math\.min\(/g) || []).length, 2);
   assert.match(citeste("scripts", "colector.mjs"), /teste: \[\{ nume: "Boții porniți cu ADX sub 20 față de cei în trend \(peste 25\)", p: bA\.p \?\? null/);
 });
 

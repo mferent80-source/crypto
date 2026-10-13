@@ -382,6 +382,10 @@ export async function onRequestGet({ request, env }) {
         return { moneda: info && info.currencyCode || null, cash };
       }));
     }
+    // v100.177 (revizia contului întreg, I8): moneda fiecărui instrument (un ETF de la Londra poate fi în USD / GBP, nu în pence) - o zi
+    if (a === "monede") {
+      return json(await prinCache("monede", 86400, async () => { const l = await t212(env, "/equity/metadata/instruments", "pozitii"), m = {}; (Array.isArray(l) ? l : []).forEach((x) => { if (x && x.ticker && x.currencyCode) m[String(x.ticker).slice(0, 40)] = String(x.currencyCode).slice(0, 4); }); return { monede: m, n: Object.keys(m).length }; }));
+    }
     if (a === "pozitii") {
       return json(await prinCache("poz", 30, async () => { const p = await t212(env, "/equity/portfolio", "pozitii"); return { pozitii: Array.isArray(p) ? p : [] }; }));
     }

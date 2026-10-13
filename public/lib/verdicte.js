@@ -23,7 +23,7 @@ var Verdicte = (function () {
   // un verdict curățat (forma scurtă din KV): s = sursa, k = simbolul, n = nivelul, p = prețul de atunci, t = momentul, j/u = banda gridului
   function curata(v) {
     if (!v || typeof v !== "object") return null;
-    var s = String(v.s || v.sursa || ""), k = String(v.k || v.simbol || "").toUpperCase().replace(/[^A-Z0-9._=^-]/g, "").slice(0, 32), n = String(v.n || v.nivel || "").toLowerCase().replace(/[^a-z-]/g, "").slice(0, 20);
+    var s = String(v.s || v.sursa || ""), k = String(v.k || v.simbol || "").replace(/[^A-Za-z0-9._=^-]/g, "").slice(0, 32), n = String(v.n || v.nivel || "").toLowerCase().replace(/[^a-z-]/g, "").slice(0, 20);
     var p = nr(v.p != null ? v.p : v.pret), t = nr(v.t != null ? v.t : v.la);
     if (!SURSE[s] || !k || !n || !(p > 0) || !(t > 0)) return null;
     var o = { s: s, k: k, n: n, p: p, t: t };
@@ -102,8 +102,20 @@ var Verdicte = (function () {
     return { stare: "testat", nFav: l.length, nRest: 0, dif: medie(l.map(function (x) { return x.val; })), ic: [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]], p: (peste + 1) / (R + 1) };
   }
   // calibrarea: pe sursă și orizont - fiecare nivel (câte, media, mediana, % pe plus) + testul favorabil față de rest
+  // v100.177 (revizia, C2): verdictele aceluiași simbol în zile apropiate au randamente care se suprapun (20 de zile ⇒ 19/20 comune) și
+  // eticheta ține săptămâni (regimul macro e un singur simbol) ⇒ permutarea dădea „dovedit” fals în ~53 %; se păstrează doar verdictele
+  // a căror fereastră începe după încheierea celei de dinainte (zile de bursă ≈ 7/5 zile calendaristice)
+  function nesuprapuse(ev) {
+    var gr = {}, out = [];
+    ev.forEach(function (x) { var c = x.s + "|" + x.k + "|" + x.h; (gr[c] = gr[c] || []).push(x); });
+    Object.keys(gr).forEach(function (c) {
+      var l = gr[c].sort(function (a, b) { return a.t - b.t; }), S = SURSE[l[0].s], pas = l[0].h * ZI * (S && S.piata === "actiuni" ? 7 / 5 : 1), ult = -Infinity;
+      l.forEach(function (x) { if (x.t >= ult + pas) { out.push(x); ult = x.t; } });
+    });
+    return out;
+  }
   function calibrare(ev) {
-    var out = [];
+    var out = []; ev = nesuprapuse(ev);
     Object.keys(SURSE).forEach(function (s) {
       var S = SURSE[s];
       S.h.forEach(function (h) {
@@ -127,10 +139,12 @@ var Verdicte = (function () {
   // registrul tuturor testelor Radarului (verdictele + obiceiurile din riscul tău + becurile / ADX-ul boților) cu corecția pe toate deodată
   function registru(o) {
     var t = [];
-    (o.calibrare || []).forEach(function (c) { if (c.test && c.test.stare === "testat") t.push({ sursa: c.nume + " · " + c.h + (SURSE[c.sursa].piata === "crypto" ? " z" : " zile de bursă"), afirmatie: c.intrebare, p: c.test.p, dif: c.test.dif, felul: "verdict" }); });
-    ["boti", "actiuni"].forEach(function (k) { var P = o.risc && o.risc[k]; (P && P.comportament || []).forEach(function (x) { if (x.p !== null && x.p !== undefined) t.push({ sursa: "Riscul tău · " + (k === "boti" ? "boți" : "acțiuni"), afirmatie: x.nume, p: x.p, dif: x.dif, felul: "obicei", stareVeche: x.stare }); }); });
-    (o.asemanatoare || []).forEach(function (a) { if (a && a.p !== null && a.p !== undefined) t.push({ sursa: "Boți asemănători", afirmatie: a.nume, p: a.p, dif: a.difMed, felul: "bec", stareVeche: a.verdict }); });
-    return bh(t, o.q || 0.05);
+    // regula: verdictele - verdictul bun trebuie să iasă MAI BINE (dif > 0); obiceiurile și becurile - și regula lor fixată dinainte (cele două
+    // jumătăți de timp, IC 99 %), adică pagina lor zicea deja „dovedit”; BH doar taie din ce rămâne, nu adaugă
+    (o.calibrare || []).forEach(function (c) { if (c.test && c.test.stare === "testat") t.push({ sursa: c.nume + " · " + c.h + (SURSE[c.sursa].piata === "crypto" ? " z" : " zile de bursă"), afirmatie: c.intrebare, p: c.test.p, dif: c.test.dif, felul: "verdict", regula: c.test.dif > 0, directie: c.test.dif > 0 ? "verdictul bun a ieșit mai bine" : "verdictul bun a ieșit MAI RĂU" }); });
+    ["boti", "actiuni"].forEach(function (k) { var P = o.risc && o.risc[k]; (P && P.comportament || []).forEach(function (x) { if (x.p !== null && x.p !== undefined) t.push({ sursa: "Riscul tău · " + (k === "boti" ? "boți" : "acțiuni"), afirmatie: x.nume, p: x.p, dif: x.dif, felul: "obicei", stareVeche: x.stare, regula: /^dovedit/.test(String(x.stare || "")), directie: x.dif > 0 ? "obicei bun" : "obicei rău" }); }); });
+    (o.asemanatoare || []).forEach(function (a) { if (a && a.p !== null && a.p !== undefined) t.push({ sursa: "Boți asemănători", afirmatie: a.nume, p: a.p, dif: a.difMed, felul: "bec", stareVeche: a.verdict, regula: a.verdict === "dovedit" || a.verdict === "pe dos", directie: a.difMed > 0 ? "ajută" : "pe dos" }); });
+    return bh(t, o.q || 0.05).map(function (x) { return Object.assign(x, { treceBh: x.ramane, ramane: x.ramane && x.regula === true }); });
   }
   return { SURSE: SURSE, MAX: MAX, curata: curata, adauga: adauga, dupa: dupa, evalueaza: evalueaza, compara: compara, fataDeZero: fataDeZero, calibrare: calibrare, bh: bh, registru: registru, medie: medie, mediana: mediana };
 })();

@@ -856,12 +856,12 @@ function t212PoartaCont(p) {
     }
     var r = typeof ciStare !== "undefined" ? ciStare.raport : null;
     if (r && r.serii && typeof ContIntreg !== "undefined" && p.bare && p.bare.length > 60) {
-      var rc = ContIntreg.randamente(p.bare), nume = {}; (r.expuneri || []).forEach(function (x) { nume[x.cheie] = x.nume; });
+      var rc = ContIntreg.randamente(p.bare), nume = {}, semn = {}; (r.expuneri || []).forEach(function (x) { nume[x.cheie] = x.nume; semn[x.cheie] = (semn[x.cheie] || 0) + (x.lei || 0); });
       var la = [];
       Object.keys(r.serii).forEach(function (k) {
         if (k === "T:" + p.ticker) return;
         var s = r.serii[k], z = Object.keys(s).filter(function (d) { return rc[d] !== undefined; }); if (z.length < 40) return;
-        var rho = ContIntreg.corel(z.map(function (d) { return rc[d]; }), z.map(function (d) { return s[d]; })); if (rho !== null && rho >= 0.6) la.push({ nume: nume[k] || k.slice(2), rho: rho });
+        var rho = ContIntreg.corel(z.map(function (d) { return rc[d]; }), z.map(function (d) { return s[d]; })); if (rho !== null && rho * (semn[k] < 0 ? -1 : 1) >= 0.6) la.push({ nume: nume[k] || k.slice(2), rho: rho });   /* (revizia, M13): cu un short corelat e acoperire */
       });
       la.sort(function (a, b) { return b.rho - a.rho; });
       var mm = t212MarimePoarta(p), pnl = r.risc && r.risc.pnl, v0 = null, v1 = null;

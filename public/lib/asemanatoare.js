@@ -70,7 +70,7 @@ var Asemanatoare = (function () {
     }
     var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.005)], d[Math.min(d.length - 1, Math.floor(d.length * 0.995))]]; };
     out.icPlus = ic(bp); out.icMed = ic(bm);
-    out.p = bm.length ? Math.min(1, 2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) / bm.length) : null;   // v100.177: p pentru corecția comună
+    out.p = bm.length ? Math.min(1, (2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) + 1) / (bm.length + 1)) : null;   // v100.177: p pentru corecția comună
     var srt = l.slice().sort(function (x, y) { return (nr(x.t) || 0) - (nr(y.t) || 0); }), kk = Math.floor(srt.length * 0.7);
     out.felii = { primele: dMed(srt.slice(0, kk)), ultimele: dMed(srt.slice(kk)) };
     // v100.173 (auditul Opus): „sau” între două măsuri la 95 % dădea „dovedit” fals în ~6–10 % ⇒ IC 99 %, judecă DOAR mediana (fixată dinainte); „% pe plus” rămâne doar arătat
@@ -116,7 +116,7 @@ var Asemanatoare = (function () {
     }
     var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.005)], d[Math.min(d.length - 1, Math.floor(d.length * 0.995))]]; };
     out.icPlus = ic(bp); out.icMed = ic(bm);
-    out.p = bm.length ? Math.min(1, 2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) / bm.length) : null;   // v100.177: p pentru corecția comună
+    out.p = bm.length ? Math.min(1, (2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) + 1) / (bm.length + 1)) : null;   // v100.177: p pentru corecția comună
     var srt = l.slice().sort(function (x, y) { return (nr(x.t) || 0) - (nr(y.t) || 0); }), kk = Math.floor(srt.length * 0.7), A1 = srt.slice(0, kk), A2 = srt.slice(kk);
     out.felii = { primele: dMed(A1), ultimele: dMed(A2) };
     // v100.173 (auditul Opus): „sau” între două măsuri la 95 % dădea „dovedit” fals în ~6–10 % ⇒ IC 99 %, judecă DOAR mediana (fixată dinainte); „% pe plus” rămâne doar arătat
