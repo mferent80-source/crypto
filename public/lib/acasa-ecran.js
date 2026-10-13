@@ -176,6 +176,15 @@ function acasaMergiLa(ecran, id, fila) {
     window.scrollTo({ top: Math.max(0, Math.round(window.scrollY + e.getBoundingClientRect().top - (h > 0 ? h + 8 : 0))), behavior: "instant" });
   }, 400);
 }
+// v100.186 (el 13.10: „fă idei”): moneda botului în pândă (150 perp-uri) - direcția, pragurile atinse, CONTRA botului; fără date ⇒ fără rând.
+// Datele: tbLatimeKv din app.js (adus o dată la 10 minute; sosirea redesenează Acasă)
+function acPandaLin(b) {
+  if (typeof Latime === "undefined" || !Latime.textMoneda || typeof tbLatimeKv === "undefined") return "";
+  if (typeof tbLatimeDinKv === "function") tbLatimeDinKv();
+  var m = Latime.textMoneda(tbLatimeKv.d, b.simbolPionex || b.baza, b.directie, Date.now());
+  if (!m) return "";
+  return '<div class="acLin"><span>În pândă</span><b class="' + (m.contra ? "bad" : m.prag.length ? "tbWarn" : "acMut") + '">' + escapeHtml((m.contra ? "CONTRA botului · " : "") + m.dirText + (m.prag.length ? " · " + m.prag.join(", ") : "") + (m.vechi ? " · veche" : "")) + '</b></div>';
+}
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
   var d = acasa.d, cl = acClasamentSumar(d.clasament), mis = Acasa.miscari(d.tickers, { top: 60, inMiscare: cl ? cl.deEvitat.map(function (x) { return x.simbol; }) : [] });
@@ -313,7 +322,8 @@ function acasaDeseneaza() {
     var ent = d.clasament ? (d.clasament.monede || []).filter(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, "") === nume; })[0] : null, rg = !ent && d.regimBoti ? d.regimBoti[nume] : null, m2 = ent ? ent.stare === "evita" : rg ? !!rg.miscare : null;
     hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(2).replace(".", ",") + " USDT" : "—") + '</b></div>'
       + '<div class="acLin"><span>Prețul în grid</span><b>' + (inGrid == null ? "—" : inGrid + "%" + (panaJos != null && panaJos >= 0 ? " · " + panaJos.toFixed(1).replace(".", ",") + "% până jos" : " · sub grid")) + '</b></div>'
-      + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + Math.max(rg.r4h || 0, rg.r24h || 0).toFixed(1).replace(".", ",") + "×" : "")) + '</b></div>';
+      + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + Math.max(rg.r4h || 0, rg.r24h || 0).toFixed(1).replace(".", ",") + "×" : "")) + '</b></div>'
+      + acPandaLin(b);
   });
   if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>';
   // v95: ziua ta - fata de poza de ieri dimineata (colectorul, dupa ora 9)

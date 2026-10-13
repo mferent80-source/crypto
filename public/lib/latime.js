@@ -120,7 +120,7 @@ var Latime = (function () {
     if (prag.length) parti.push("prag atins: " + prag.join(", "));
     var c = contra(dirBot, m); if (c) parti.push("botul tău e CONTRA direcției monedei");
     parti.push(vechi ? "veche, de la " + hhmm(a.la) : "acum " + min + " min");
-    return { ce: "În pândă, " + cheie(m.sym).replace(/^1000/, ""), stare: c ? "atentie" : "info", text: parti.join(" · "), vechi: vechi };
+    return { ce: "În pândă, " + cheie(m.sym).replace(/^1000/, ""), stare: c ? "atentie" : "info", text: parti.join(" · "), vechi: vechi, dirText: dirText(m), prag: prag, contra: c };   /* v100.186: bucățile, pentru Acasă */
   }
   // boti = [{ s: "PLUME", dir: "long" | "short" | "neutru" }] ⇒ cei contra direcției monedei lor
   function botiContra(latime, boti) {

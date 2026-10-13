@@ -63,6 +63,22 @@ const dirBot = (b) => { const d = String(b && b.directie || "").toUpperCase(); r
 const numara = (inainte, acelasi, la) => (acelasi ? (Number(inainte.la) === la ? Number(inainte.vazut) || 1 : la - Number(inainte.la) > 2 * RITM_MS ? 1 : (Number(inainte.vazut) || 0) + 1) : 1);
 const numeBot = (bot) => String(bot && bot.baza || "").replace(/\.PERP$/, "");
 
+// v101.107 (el 13.10: „fă idei”): moneda botului în pândă (Latime, 150 perp-uri, direcția pe 84 de zile) e pe partea CEALALTĂ a botului.
+// { tine:false } (lățime lipsă / veche / cu eroare, monedă din afara celor 150, bot neutru) | { tine:true, stare:{ contra, dir, la, anuntat }, mesaj | null }
+// O dată pe episod (contra cu aceeași direcție a monedei); un episod nou se anunță abia la 24 h după ultimul mesaj (direcția oscilează lângă zero)
+const PANDA_RITM_MS = 24 * 3600000;
+export function pazaPanda({ Latime, latime, bot, inainte, acum }) {
+  const a = latime && latime.acum, d = dirBot(bot);
+  if (!Latime || !Latime.botiContra || !a || a.eroare || !(acum - Number(a.la) <= Latime.PRAGURI.vechiMin * 60000) || !d) return { tine: false, mesaj: null };
+  const k = cheiaBot(bot);
+  if (!Latime.textMoneda(latime, k, d, acum)) return { tine: false, mesaj: null };
+  const c = Latime.botiContra(latime, [{ s: k, dir: d }])[0] || null, anuntat = inainte ? Number(inainte.anuntat) || 0 : 0;
+  const acelasi = !!(c && inainte && inainte.contra && inainte.dir === c.dir);
+  const stare = { contra: !!c, dir: c ? c.dir : null, la: Number(a.la), anuntat };
+  if (!c || (acelasi && anuntat) || acum - anuntat < PANDA_RITM_MS) return { tine: true, stare, mesaj: null };
+  return { tine: true, stare: Object.assign({}, stare, { anuntat: acum }), mesaj: MC.pandaContra({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, text: c.text }) };
+}
+
 // { tine:false } | { tine:true, stare:{ semn, la, vazut, anuntat }, mesaj | null } - „invers față de bot” = randDirectie pe galben
 export function pazaDirectie({ Busola, rez, bot, inainte, acum }) {
   const p = Busola.pazaStare(rez, cheiaBot(bot), acum);
@@ -114,7 +130,7 @@ export function pazaVoci({ Busola, rez, bot, inainte, acum, grafic, mc }) {
 }
 
 // pasul din bucla colectorului: mesajul care n-a plecat nu mută starea și nici harta (tura următoare reîncearcă, ca la celelalte alerte)
-export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, monede, voci }) {
+export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, monede, voci, Latime, latime }) {
   const d = pazaBot({ Busola, rez, bot, inainte: st._busola, acum, pret, monede });
   let out = d;
   if (d.tine) {
@@ -132,12 +148,14 @@ export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, moned
   // v101.91 (I-572): direcția și BTC, fiecare cu starea ei pe bot (_busolaDir / _busolaBtc, copiate de evalueaza ca orice cheie)
   // revizia Opus: și cât ține episodul anunțat al vocilor (nu doar în tura în care a plecat) alertele separate doar se marchează
   const vociInEpisod = !!(st._busolaVoci && st._busolaVoci.contra && st._busolaVoci.anuntatContra);
-  for (const [cheie, fn] of [["_busolaDir", pazaDirectie], ["_busolaBtc", pazaBtc]]) {
+  let altaPlecata = false;   /* v101.107: pânda nu dublează în aceeași tură o alertă de direcție / BTC deja plecată */
+  for (const [cheie, fn] of [["_busolaDir", pazaDirectie], ["_busolaBtc", pazaBtc], ["_panda", pazaPanda]]) {
     try {
-      const x = fn({ Busola, rez, bot, inainte: st[cheie], acum });
+      const x = fn({ Busola, rez, bot, inainte: st[cheie], acum, Latime, latime });
       if (!x.tine) continue;
-      if (x.mesaj && (vociPlecat || vociInEpisod)) { st[cheie] = Object.assign({}, x.stare, cheie === "_busolaDir" ? { anuntatSemn: x.stare.semn } : { anuntatContra: true }); continue; }
+      if (x.mesaj && (vociPlecat || vociInEpisod || (cheie === "_panda" && altaPlecata))) { st[cheie] = Object.assign({}, x.stare, cheie === "_busolaDir" ? { anuntatSemn: x.stare.semn } : cheie === "_panda" ? {} : { anuntatContra: true }); continue; }
       if (x.mesaj && !(await trimite(x.mesaj))) continue;
+      if (x.mesaj) altaPlecata = true;
       st[cheie] = x.stare;
     } catch (e) { out = Object.assign({}, out, { eroare: String(e && e.message || e) }); }
   }

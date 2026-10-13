@@ -6793,7 +6793,7 @@ function tbVociBilant(){
 var tbLatimeKv={la:0,d:null,inLucru:null};
 function tbLatimeDinKv(){
   if(Date.now()-tbLatimeKv.la<10*60000||tbLatimeKv.inLucru)return;
-  tbLatimeKv.inLucru=getJSON("/api/istoric-bot?action=latime").then(function(r){tbLatimeKv.d=r&&r.latime&&r.latime.acum?r.latime:null},function(){tbLatimeKv.d=tbLatimeKv.d||null}).then(function(){tbLatimeKv.la=Date.now();tbLatimeKv.inLucru=null;if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)})}
+  tbLatimeKv.inLucru=getJSON("/api/istoric-bot?action=latime").then(function(r){tbLatimeKv.d=r&&r.latime&&r.latime.acum?r.latime:null},function(){tbLatimeKv.d=tbLatimeKv.d||null}).then(function(){tbLatimeKv.la=Date.now();tbLatimeKv.inLucru=null;if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot);var ac=$("dash");if(ac&&ac.classList.contains("on")&&typeof acasaDeseneaza==="function")acasaDeseneaza()})}   /* v100.186: și Acasă (rândul „În pândă” pe fiecare bot) */
 // Lățimea pieței US (11.10.2026, pagina market-breadth mutată din premarket_scanner): datele le face robotul
 // de pe GitHub (pages.yml, după închiderea bursei); aici doar se citește latest.json, cel mult o dată la 30 de minute.
 var latimeUsStare={la:0,j:null,inLucru:null};

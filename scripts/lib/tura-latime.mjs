@@ -2,7 +2,7 @@
 // (public/lib/latime.js = PAZNIC-CRYPTO/decizie.mjs). Cererile pleacă DIRECT la Binance, din PC (nu prin Pages Functions): barele
 // de 4h și 1d la 15 minute (300 de cereri), seriile (funding, OI, poziționare, agresiune) o dată pe oră (750), premiumIndex o dată
 // (toate monedele). 5 în paralel (PAZNIC: paralel 5). O singură publicare pe tură în KV `latime`. Probat în proba-v100150-colector.mjs.
-// d = { binance, trimite, jurnal, pauza, Latime, botiSimboluri }; st = starea ei (colectorul o ține în meta și o scrie pe disc)
+// d = { binance, trimite, jurnal, pauza, Latime, botiSimboluri, dupa? }; st = starea ei (colectorul o ține în meta și o scrie pe disc)
 const MIN = 60000;
 export const RITM = { bare: 15 * MIN, serii: 60 * MIN, univers: 60 * MIN };
 const FAPI = "https://fapi.binance.com";
@@ -62,7 +62,9 @@ export async function turaLatime(d, st, acum) {
     else if (u.retea && st.univers && st.univers.length) d.jurnal("latime: " + u.retea + " - țin universul vechi, " + st.univers.length + " la număr");   /* fără „N monede” lipit: garda v100.75 */
     else {
       const motiv = u.eroare || u.retea; st.univers = null; st.la_univers = 0; d.jurnal("latime: " + motiv);
-      await d.trimite("/api/istoric-bot?action=latime", { la: acum, n: 0, lipsa: 0, incomplet: true, eroare: motiv, regim: { cod: "NECUNOSCUT", pctSus: null, pctJos: null }, lat: d.Latime.latimea([], P), monede: [] });
+      const gol = { la: acum, n: 0, lipsa: 0, incomplet: true, eroare: motiv, regim: { cod: "NECUNOSCUT", pctSus: null, pctJos: null }, lat: d.Latime.latimea([], P), monede: [] };
+      if (typeof d.dupa === "function") d.dupa(gol);   /* v101.107: colectorul ține ultima lățime pentru paza boților */
+      await d.trimite("/api/istoric-bot?action=latime", gol);
       return st;
     }
   }
@@ -79,6 +81,7 @@ export async function turaLatime(d, st, acum) {
   });
   const lat = d.Latime.latimea(randuri, P), regim = d.Latime.regimPietei(lat), monede = randuri.filter(Boolean);
   const corp = { la: acum, n: st.univers.length, lipsa: lat.lipsa, incomplet: lat.lipsa > 0.2 * st.univers.length, eroare: null, regim, lat, monede };
+  if (typeof d.dupa === "function") d.dupa(corp);   /* v101.107: paza boților (botul CONTRA monedei din pândă) */
   await d.trimite("/api/istoric-bot?action=latime", corp);
   st.rot = toate ? 0 : (rot + 1) % 4; st.ultima = { la: acum, n: corp.n, lipsa: corp.lipsa, cod: regim.cod };
   d.jurnal("latime: " + regim.cod + " · " + lat.sus + " sus · " + lat.jos + " jos · lipsă " + lat.lipsa + (toate ? " · toate seriile" : " · seriile sfertului " + rot));

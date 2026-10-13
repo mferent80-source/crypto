@@ -55,7 +55,7 @@ import { lipsaConfirmata } from "./lib/paza-boti.mjs";   // v100.173 (auditul Op
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.106";   // v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.107";   // v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -611,7 +611,7 @@ async function tura() {
     } catch (e) { jurnal("podea", b.id, e.message); }
     // v101.59 (§2 „paza boților”): moneda botului trece în „mai agitată ca de obicei” pe 4h (Busola) ⇒ un mesaj, nerepetat până iese.
     // După `stareAlerte[b.id] = r.stare`: _busola se scrie pe starea nouă (evalueaza o copiază la tura următoare)
-    try { await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie), monede: meta().busolaMonede || (meta().busolaMonede = {}),
+    try { await pazaPas({ Busola, rez: Busola.rezumat(), bot: b, st: stareAlerte[b.id], acum, pret: Alerte.pret, trimite: (m) => trimiteAlerta(m, b.id, m.cheie), Latime, latime: latimeUltima, monede: meta().busolaMonede || (meta().busolaMonede = {}),
       voci: { grafic: directii[b.id] && directii[b.id].dir4h || null, mc: ritm.mcBoti && ritm.mcBoti[String(b.id)] && ritm.mcBoti[String(b.id)].stare || null } }); } catch (e) { jurnal("paza busola", b.id, e.message); }   // v101.92 (I-578): + vocile
     // o alerta care n-a plecat (ntfy picat, fara internet) nu se trece ca trimisa:
     // starea ei revine la cea de dinainte, ca tura urmatoare s-o reincerce
@@ -1475,13 +1475,14 @@ async function turaPiataColector() {
 // v101.93 (I-583): lățimea pieței pe 150 perp-uri Binance - ritmul ei în scripts/lib/tura-latime.mjs (bare la 15 min, serii la oră);
 // cererile pleacă direct la Binance din PC (nu prin Pages), o singură scriere în KV `latime` pe tură
 let latimeInLucru = false;
+var latimeUltima = null;   // v101.107 (var, nu let: bucla boților o poate citi înainte de rândul ăsta - TDZ): ultima lățime măsurată (doar în memorie; după repornire paza tace până la prima tură de 15 min)
 const binanceDirect = cereBinance({ fetch: globalThis.fetch, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal });
 async function turaLatimeColector() {
   if (latimeInLucru || process.env.COLECTOR_FARA_LATIME) return;
   latimeInLucru = true;
   try {
     const m = meta(); m.latime = m.latime || {};
-    await turaLatimeModul({ binance: binanceDirect, trimite, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Latime, botiSimboluri: () => [] }, m.latime, Date.now());
+    await turaLatimeModul({ binance: binanceDirect, trimite, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Latime, botiSimboluri: () => [], dupa: (c) => { latimeUltima = { acum: c }; } }, m.latime, Date.now());
     try { scrieStare(); } catch {}
   } catch (e) { jurnal("latime ESEC", e.message); }
   latimeInLucru = false;
