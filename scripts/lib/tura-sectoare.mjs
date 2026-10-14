@@ -66,7 +66,9 @@ export async function turaSectoare(d, st) {
     const sectoare = Object.keys(rez).map((s) => ({ sector: s, ...rez[s] })).sort((a, b) => a.ro.localeCompare(b.ro, "ro"));
     await d.trimite("/api/istoric-bot?action=sectoareTop", { la: acum, sectoare, istoric: ist, univers: top.length, cuBare: Object.keys(bare).length });
     // topul intră în jurnalul verdictelor (judecat față de QQQ după 5 și 20 de zile de bursă) - sursa „top-sector”
-    const verd = []; for (const s of sectoare) for (const x of s.top) verd.push({ s: "top-sector", k: x.s, n: "top", p: x.pret, t: acum });
+    /* v101.116 (C5): ora verdictului = închiderea ultimei bare din care vine prețul (zi + 21:00 UTC), nu ora turei */
+    const laInchidere = (s) => { const b = bare[s], u = b && b.length ? b[b.length - 1] : null; return u && u.t > 0 ? Date.parse(new Date(u.t).toISOString().slice(0, 10) + "T21:00:00Z") : acum; };
+    const verd = []; for (const s of sectoare) for (const x of s.top) verd.push({ s: "top-sector", k: x.s, n: "top", p: x.pret, t: laInchidere(x.s) });
     if (verd.length) await incearca(d, "verdictele topului", () => d.trimite("/api/istoric-bot?action=verdict", { verdicte: verd }));
     st.zi = z;
     d.jurnal("sectoare: " + d.Factori.cate(sectoare.length, "sector", "sectoare") + ", " + Object.keys(bare).length + " din " + d.Factori.cate(top.length, "acțiune", "acțiuni") + " cu prețuri · regula pe " + (ist.luni || 0) + " luni: " + (ist.medie !== null ? (ist.medie * 100).toFixed(2) + "%/lună față de sector" : "—"));

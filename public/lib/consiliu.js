@@ -325,7 +325,7 @@ var Consiliu = (function () {
   function prioAct(cod) { var i = PRIO_ACT.indexOf(cod); return i < 0 ? PRIO_ACT.length : i; }
   // v100.69 (sfaturile concise, pachetul 4): pretul unei actiuni ca pe pagina T212 („$30.12”, ActiuniSemnale.usd), sumele in dolari cu virgula
   var PA = function (v) { v = nr(v); return v === null ? "?" : typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale.usd(v) : "$" + v.toFixed(2); };
-  var USD = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " $"; }, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
+  var USD = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + " $"; }   /* v100.196: rezultatul cu o zecimală */, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
   function alcatuiesteActiune(x) {
     x = x || {}; var sem = x.sem || {};
     if (!sem.nivel || sem.nivel === "fara-date") return { nivel: "asteapta", eticheta: ETICHETA.asteapta, titlu: mare((Array.isArray(sem.motive) && sem.motive[0]) || "încă socotesc"), faCe: "", bani: null, motive: [], rest: [] };

@@ -39,7 +39,7 @@ if (!BROWSER) { console.log("PICA: nu găsesc Chrome sau Edge"); process.exit(1)
 if (!TOKEN) { console.log("PICA: lipsește APP_API_TOKEN din .dev.vars"); process.exit(1); }
 const port = 9500 + Math.floor(Math.random() * 300);
 const profil = path.join(tmpdir(), "proba-ecran-telefon-" + port);
-const br = spawn(BROWSER, ["--headless=new", "--disable-gpu", `--remote-debugging-port=${port}`, `--user-data-dir=${profil}`, `--window-size=${LAT},${INALT}`, "--no-first-run", "about:blank"], { stdio: "ignore" });
+const br = spawn(BROWSER, ["--headless=new", "--disable-sync", "--disable-extensions", "--disable-gpu", `--remote-debugging-port=${port}`, `--user-data-dir=${profil}`, `--window-size=${LAT},${INALT}`, "--no-first-run", "about:blank"], { stdio: "ignore" });
 let picate = 0, PAGINI_TOTAL = PAGINI.length;
 try {
   let t; for (let i = 0; i < 80 && !t; i++) { try { t = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((x) => x.type === "page"); } catch {} if (!t) await asteapta(250); }

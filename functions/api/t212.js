@@ -26,7 +26,7 @@ const inZbor = new Map();
 function prinCache(k, sec, fn) {
   const c = dinCache(k); if (c) return Promise.resolve(c);
   if (inZbor.has(k)) return inZbor.get(k);
-  const p = Promise.resolve().then(fn).then((v) => { if (v !== null && v !== undefined) inCache(k, v, sec); return v; }).finally(() => inZbor.delete(k));
+  const p = Promise.resolve().then(fn).then((v) => { if (v !== null && v !== undefined) inCache(k, v, typeof sec === "function" ? sec(v) : sec); return v; })   /* v100.196: durata poate depinde de răspuns */.finally(() => inZbor.delete(k));
   inZbor.set(k, p); return p;
 }
 
@@ -327,7 +327,7 @@ export async function onRequestGet({ request, env }) {
       const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = /_US_EQ$/.test(tk) ? candidati(tk) : [];
       if (!cand.length) return json({ error: "Data rezultatelor: doar acțiuni americane (_US_EQ)." }, 404);
       // v100.173 (auditul Opus): o pagină de verificare (nu JSON) e eroare, nu „fără dată” ținut 12 ore
-      return json(await prinCache("rez:" + tk, 12 * 3600, async () => {
+      return json(await prinCache("rez:" + tk, (v) => (v && v.data ? 12 * 3600 : 2 * 3600), async () => {   /* v100.196 (A6): „fără dată” 2 h, nu 12 */
         const r = await fetch("https://api.nasdaq.com/api/analyst/" + encodeURIComponent(cand[0]) + "/earnings-date", { signal: AbortSignal.timeout(10000), headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
         let j = null; try { j = await r.json(); } catch {}
         if (!r.ok && r.status !== 404) throw Object.assign(new Error("Nasdaq: HTTP " + r.status), { status: 502 });

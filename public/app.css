@@ -2856,4 +2856,6 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 /* v100.196 (auditul UI 🔵1, dataviz): verde/roșu ΔE 4,3 la deuteranopie ⇒ segmentul roșu din barele Pieței azi poartă și o textură la 135° */
 .acBar>i[style*="--bad"]{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.38) 0 2px,transparent 2px 6px)}
 /* v100.196 · reguli cerute de alte zone */
+/* (acțiuni, auditul UI 🟡1) pe telefon fiecare celulă își scrie numele coloanei; țintele de apăsare 44 px */
+@media (max-width:640px){.t212IdeiTab td[data-et]::before,.t212RevTab td[data-et]::before,.t212SocTab td[data-et]::before{content:attr(data-et) " ";color:var(--muted)}.t212RevTab,.t212RevTab tbody,.t212RevTab tr,.t212RevTab td,.t212SocTab,.t212SocTab tbody,.t212SocTab tr,.t212SocTab td{display:block}.t212RevTab tr,.t212SocTab tr{padding:8px 10px;border-bottom:1px solid var(--tb-linie)}.t212RevTab td,.t212SocTab td{padding:1px 0;border:0;text-align:left}.t212IdeiTab .t212BtnLinie{min-height:44px}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

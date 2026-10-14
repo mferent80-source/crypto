@@ -366,7 +366,7 @@ async function directiaBotului(b) {
     let funding = null, btc = null;
     try {
       const fr = await cere("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(s)), l = (fr && fr.data && Array.isArray(fr.data.rates) ? fr.data.rates : []).slice().sort((x, y) => Number(y.fundingTime) - Number(x.fundingTime));
-      if (l.length) { const iv = l.length > 1 ? Math.round((Number(l[0].fundingTime) - Number(l[1].fundingTime)) / 3600000) : 0; funding = { rate: Number(l[0].fundingRate), hist: l.map((x) => Number(x.fundingRate)), intervalOre: iv > 0 ? iv : 8 }; }
+      if (l.length) { const iv = l.length > 1 ? Math.round((Number(l[0].fundingTime) - Number(l[1].fundingTime)) / 3600000) : 0, F = GridSim.rataFunding(l, Date.now()); funding = { rate: Number(l[0].fundingRate), hist: l.map((x) => Number(x.fundingRate)), intervalOre: iv > 0 ? iv : 8, rataZi: F && Number.isFinite(F.rataZi) ? F.rataZi : null }; }   /* v101.116 (B4): rata pe zi, pentru fișă */
     } catch (e) { jurnal("funding", b.id, e.message); }
     try {
       const kb = await cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200"), ab = Directie.analizeaza(kb && kb.data && kb.data.klines, 6, b.directie);
@@ -392,7 +392,7 @@ async function semnaleBot(b, ctx, acum) {
   const s = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex;
   const r15 = await lumanari15M(s);
   const b4 = GridCalcul.bare(d.k4), b1 = GridCalcul.agrega(b4, 86400000);
-  const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, H: 2, dir: null, levier: null, minNotional: null });
+  const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, fundingZi: d.funding && d.funding.rataZi, H: 2, dir: null, levier: null, minNotional: null });
   const f = fisa && !fisa.eroare ? fisa : null;
   let regimBtc = null; try { regimBtc = GridCalcul.regim(GridCalcul.bare(await lumanari15M("BTC_USDT_PERP"))); } catch (e) { jurnal("regim BTC", e.message); }
   let fut = null; try { fut = await cere("/api/market?type=futures&symbol=" + encodeURIComponent(TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).binance)); } catch (e) { fut = null; }
@@ -1222,7 +1222,7 @@ async function turaIdeiZi() {
     const bareIdei = new Map(), randuriIdei = new Map();   // v101.64 (L2): barele aduse pentru idei, refolosite la cifrele 🧠/🌳; v101.65 (ideea 2): și rândurile brute, scrise în data/retea/zile
     const r = await turaIdeiModul({ tickere, inchise, Idei, Reveniri, Probabilitati, ProfilMoneda, jurnal, simbol: (tk) => T212.simbol(tk), acum: Date.now(), pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       // v93: bareToate - la 8 dimineata ultima zi de bursa e INCHISA (bare() o arunca: ideile erau cu o zi in urma)
-      cereBare: async (tk) => { const rd = (await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []; randuriIdei.set(tk, rd); const b = GridCalcul.bareToate(rd); bareIdei.set(tk, b); return b; },
+      cereBare: async (tk) => { const rd = (await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []; randuriIdei.set(tk, rd); const b = GridCalcul.bareBursa(rd, Date.now());   /* v101.116 (A10): fără bara zilei în formare */ bareIdei.set(tk, b); return b; },
       ndx: new Set(NDX), rezumat: Acasa.rezumatActiune,
       cereRezultate: async (tk) => { const d = await cere("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); return d && d.data || null; } });
     const urm = Idei.urmarire(id && Array.isArray(id.istoric) ? id.istoric : [], r.preturi, Date.now());

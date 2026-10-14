@@ -28,7 +28,7 @@ export async function scorZiDinDate(d, acum) {
   let mb = null;
   if (d.LatimeUS && d.LatimeUS.extins) mb = await incearca(d, "scor market breadth", async () => { const r = await (d.fetch || fetch)(d.LatimeUS.SURSA, { signal: AbortSignal.timeout(20000) }); return r && r.ok ? d.LatimeUS.extins(await r.json(), acum) : null; });
   const pi = await incearca(d, "scor regim tinut", () => d.cere("/api/istoric-bot?action=piata"));
-  const sz = d.ScorZi.calc({ macro, macroTinut: pi && (pi.macro || (pi.piata && pi.piata.macro)), ndx: ndxL, trend: tr && tr.trend, mbUs: mb, latime: lat && lat.latime, acum });
+  const sz = d.ScorZi.calc({ macro, macroTinut: (function () { const m = pi && (pi.macro || (pi.piata && pi.piata.macro)); return m ? Object.assign({ la: pi.la }, m) : null; })(), ndx: ndxL ? Object.assign({ la: ndx.la }, ndxL) : null,   /* v101.116: cu vârsta lor */ trend: tr && tr.trend, mbUs: mb, latime: lat && lat.latime, acum });
   const bt = btc ? d.GridCalcul.bareToate(btc) : null;
   return { sz, pretBtc: bt && bt.length ? bt[bt.length - 1].c : null };
 }

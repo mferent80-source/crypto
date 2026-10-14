@@ -133,7 +133,7 @@ const BOOTSTRAP = `(() => {
 async function porneste(lat, inal, profil) {
   const port = 9600 + Math.floor(Math.random() * 300);
   const proc = spawn(BROWSER, [
-    "--headless=new", "--disable-gpu", `--remote-debugging-port=${port}`,
+    "--headless=new", "--disable-sync", "--disable-extensions", "--disable-gpu", `--remote-debugging-port=${port}`,
     `--user-data-dir=${profil}`, `--window-size=${lat},${inal}`,
     "--no-first-run", "--no-default-browser-check", "--disable-features=Translate",
     "about:blank",

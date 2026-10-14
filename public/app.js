@@ -4960,7 +4960,9 @@ async function grAduLumanari(simbol){
   }
   var r4=grRanduri(await getJSON(baza+"&interval=4H&limit=300"));await grPauza(350);
   var r1=grRanduri(await getJSON(baza+"&interval=1D&limit=200"));
-  return {r15:r15,r4:r4||[],r1:r1||[]};
+  /* v100.196 (B4): rata de funding a monedei (Pionex), pentru fișă și gridul îngust; fără ea se folosește costul presupus */
+  var fz=null;try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(simbol));var F=typeof GridSim!=="undefined"?GridSim.rataFunding(fr&&fr.data&&fr.data.rates,Date.now()):null;fz=F&&isFinite(F.rataZi)?F.rataZi:null}catch(e){fz=null}
+  return {r15:r15,r4:r4||[],r1:r1||[],fundingZi:fz};
 }
 function grTextEroare(e){
   var local=/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
@@ -4987,10 +4989,10 @@ async function gridCalculeaza(fortat){
     var d=grStare.date,info=grStare.monede&&grStare.monede[simbol];
     if(grStare.monede&&!info)throw Error(simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.");
     var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),
-      suma:suma,H:grStare.H,dir:grStare.dir,levier:lev?Math.round(lev):null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
+      suma:suma,fundingZi:d.fundingZi,H:grStare.H,dir:grStare.dir,levier:lev?Math.round(lev):null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     if(f.eroare){grStare.fisa=null;grStare.eroare=f.eroare}else{f.info=info||null;grStare.fisa=f}
     // v100.58: gridul ingust calculat aici (~31 de zile) - folosit doar cand colectorul n-are rezultat pentru moneda
-    if(!f.eroare){try{f.ingustLocal=GridProba.ingust(GridCalcul.bare(d.r15),{dir:f.dir,miscare:!!(f.regim&&f.regim.miscare),pret:f.pret,suma:suma,levier:lev?Math.round(lev):null})}catch(e){f.ingustLocal=null}}
+    if(!f.eroare){try{f.ingustLocal=GridProba.ingust(GridCalcul.bare(d.r15),{dir:f.dir,miscare:!!(f.regim&&f.regim.miscare),pret:f.pret,suma:suma,levier:lev?Math.round(lev):null,fundingZi:d.fundingZi})}catch(e){f.ingustLocal=null}}
   }catch(e){grStare.fisa=null;grStare.eroare=grTextEroare(e)}
   finally{grStare.inLucru=false}
   renderGrid();
@@ -5889,7 +5891,7 @@ async function tbAduFisaBot(b){
     var d=grStare.date&&grStare.simbol===simbol&&Date.now()-grStare.la<10*60000?grStare.date:await grAduLumanari(simbol),info=grStare.monede&&grStare.monede[simbol];
     if(!(grStare.date&&grStare.simbol===simbol)){grStare.date=d;grStare.simbol=simbol;grStare.la=Date.now()}
     var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),
-      suma:botiNr(b.investit)||100,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
+      suma:botiNr(b.investit)||100,fundingZi:d.fundingZi,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null,
       b15:GridCalcul.bare(d.r15),pret:GridCalcul.pretCurent(d.r15),amp:TabloExtra.miscareZi(GridCalcul.bare(d.r4))};   // v100.16: pentru gridul dupa plan
   }catch(e){tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:null,eroare:grTextEroare(e)}}
@@ -6333,7 +6335,7 @@ function tbDeseneazaExtra(b){
   h+='</div><div class="tbGrupCard">'+tbGrup("Dacă închizi acum");
   h+='<div class="tbLinie tbLinieTotal"><span>Dacă îl închizi acum, iei</span><b class="'+botiClasa(q.iei!=null&&botiNr(b.investit)!=null?q.iei-botiNr(b.investit):null)+'">'+escapeHtml(q.iei==null?"—":q.iei.toFixed(2)+" USDT")+'</b></div>';
   h+=linie("Comisionul de închidere",q.comisionInchidere==null?"—":botiBan(-q.comisionInchidere),"tbSubVal");
-  h+=linie("Prețul la care botul e pe zero",q.pretZero==null?"—":grPret(q.pretZero,null),"",q.distantaZeroPct==null?"":(q.distantaZeroPct>=0?"+":"")+P(q.distantaZeroPct)+" de aici");
+  h+=linie("Prețul la care botul e pe zero",q.pretZero==null?(q.zeroNeatins?"din preț, în grid, nu mai ajunge pe zero":"—"):grPret(q.pretZero,null),"",q.distantaZeroPct==null?"":(q.distantaZeroPct>=0?"+":"")+P(q.distantaZeroPct)+" de aici");
   h+='</div><div class="tbGrupCard">'+tbGrup("Contextul");
   h+=tbBusolaLinie(b);
   if(f&&f.liniste){var L=f.liniste;h+=linie("Liniștea (fișa)",!L.linisteAcum?"acum e mișcare":!L.suficient?"prea puține perioade":L.k+" din "+L.n+" au mai ținut 2 zile ("+P(L.p)+")",!L.linisteAcum?"tbWarn":"","frecvență, nu promisiune")}

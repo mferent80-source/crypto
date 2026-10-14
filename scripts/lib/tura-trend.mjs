@@ -42,7 +42,7 @@ export function trendDinJson(j, b, acum) {
 
 /** Verdictele pentru jurnal: un „top” pe fiecare nume din primele 20 (judecat la 5 și 20 de zile față de QQQ, ca topul pe sectoare). */
 export function verdicteTrend(t, acum) {
-  return (t && Array.isArray(t.top) ? t.top : []).map((x) => ({ s: "trend-12-1", k: x.s, n: "top", p: x.pret, t: acum }));
+  return (t && Array.isArray(t.top) ? t.top : []).map((x) => ({ s: "trend-12-1", k: x.s, n: "top", p: x.pret, t: /^\d{4}-\d{2}-\d{2}$/.test(String(t.dataUltimei || "")) ? Date.parse(t.dataUltimei + "T21:00:00Z") : acum }));   /* v101.116 (C5): ora închiderii din care vine prețul, nu ora turei */
 }
 
 /** Tura: o dată pe zi, de la 8:00 ora României; nimic nou dacă robotul n-a publicat o zi nouă de date. d.forta = doar pentru probă. */
