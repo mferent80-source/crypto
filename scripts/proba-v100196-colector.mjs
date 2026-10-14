@@ -1,0 +1,110 @@
+// Probele v100.196 / colector v101.116 (14.10.2026 seara, el: „repară și fă tot” după auditul sever, zona COLECTOR + ALERTE + SERVER + PAZNIC):
+//  S1  frâna anti-ghicit nu mai blochează parola BUNĂ (nici în memorie, nici pe KV); colectorul ia AUTH_* drept cădere, cu anunț
+//  C3  lista de boți goală (Pionex results:null) cu boți activi cunoscuți ⇒ anunț „nu-ți mai văd boții”, nu tăcere
+//  C2  noaptea o bătaie picată se reîncearcă după 1 minut (nu dă alarma falsă „colectorul tace”)
+//  C1  pulsul paznicului = bucla alertelor (turaLa din poză), nu ceasul pozei; bătaia din colector.pid nu se învechește într-o tură lungă
+//  C4  verdictele cu simbol simplu (Trend 12 luni, topul pe sectoare) își cer barele cu `yahoo=`; 404 nu mai stă 20 h
+//  C5  starea Trend / sectoare pe disc (fără retrimitere la repornire); jurnalul păstrează PRIMUL verdict al zilei
+//  C6  colectorul nu-și mai consumă limita: alerta ratată în KV intră în coadă și se reîncearcă; găleată separată pentru alerte
+//  St2 registrul BH primește `bilant.teste` (serverul nu le mai aruncă)
+//  + 🔵: ipOf, biletul prețului live, config fără ntfyTopic, brut fără userId/keyId, trunchiat, nosniff, coada Discord, starea boților, mesajele cu o zecimală…
+import "./lib/text-ro-global.mjs";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
+let teste = 0, picate = 0;
+async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
+console.log("\nv100.196 · colectorul, alertele, serverul și paznicul · proba\n");
+
+const ENV = { APP_API_TOKEN: "parola-buna-de-proba-0123456789" };
+const cerere = (token, antete = {}) => new Request("http://127.0.0.1:8788/api/istoric-bot?action=config", { headers: Object.assign(token ? { authorization: "Bearer " + token } : {}, antete) });
+const authProaspat = async () => (await import(`../functions/_shared/auth.js?t=${Math.random()}`)).requireApiAuth;
+
+// ---------------- S1 ----------------
+await test("S1: după 12 parole greșite de pe același IP, parola BUNĂ trece (colectorul nu mai e încuiat); ghicitul rămâne oprit", async () => {
+  const requireApiAuth = await authProaspat();
+  const r = []; for (let i = 0; i < 12; i++) r.push(await requireApiAuth(cerere("parola-veche"), ENV, "istoric-read", 300));
+  assert.deepEqual(r.map((x) => x.status), [401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 429, 429]);
+  const bun = await requireApiAuth(cerere(ENV.APP_API_TOKEN, { "x-radar-client": "colector" }), ENV, "istoric-read", 300, 1200);
+  assert.equal(bun.ok, true, "parola bună: " + JSON.stringify(bun));
+  const iar = await requireApiAuth(cerere("alta-ghicire"), ENV, "istoric-read", 300);
+  assert.equal(iar.status, 429, "ghicitul tot 429");
+});
+await test("S1: pe KV (contorul între izolate) la fel - parola bună trece peste un contor plin, cea greșită primește 429", async () => {
+  const requireApiAuth = await authProaspat();
+  const kv = new Map(); const API_RATE_LIMIT = { get: async (k) => (k.startsWith("auth-fail:") ? "10" : kv.get(k) || null), put: async (k, v) => { kv.set(k, v); } };
+  const env = { ...ENV, API_RATE_LIMIT };
+  assert.equal((await requireApiAuth(cerere(ENV.APP_API_TOKEN), env, "istoric-read", 300)).ok, true);
+  assert.equal((await requireApiAuth(cerere("gresita"), env, "istoric-read", 300)).status, 429);
+});
+await test("S1 🔵1: prin Tailscale (x-forwarded-for pus de proxy) un client nu-și alege „IP-ul” cu cf-connecting-ip + cf-ray", async () => {
+  const requireApiAuth = await authProaspat();
+  const st = []; for (let i = 0; i < 12; i++) st.push((await requireApiAuth(cerere("ghicire" + i, { "x-forwarded-for": "100.64.0.7", "cf-connecting-ip": "10.0.0." + i, "cf-ray": "x" }), ENV, "api", 90)).status);
+  assert.equal(st.filter((s) => s === 429).length, 2, "al 11-lea și al 12-lea: " + st.join(","));
+});
+
+// ---------------- colectorul: căderea de autentificare ----------------
+const S = await import("./lib/sanatate-colector.mjs").catch(() => ({}));
+await test("S1 colector: AUTH_RATE_LIMITED / AUTH_INVALID / AUTH_REQUIRED sunt CĂDERE, nu limită de ritm; RATE_LIMITED simplu rămâne limită", () => {
+  const e = (status, cod) => Object.assign(new Error(cod), { status, cod });
+  assert.equal(S.eCadereAuth(e(429, "AUTH_RATE_LIMITED")), true);
+  assert.equal(S.eCadereAuth(e(401, "AUTH_INVALID")), true);
+  assert.equal(S.eCadereAuth(Object.assign(new Error("AUTH_REQUIRED"), { status: 401 })), true, "și doar din mesaj");
+  assert.equal(S.eCadereAuth(e(429, "RATE_LIMITED")), false);
+  assert.equal(S.eLimitaDeRitm(e(429, "RATE_LIMITED")), true);
+  assert.equal(S.eLimitaDeRitm(e(429, "AUTH_RATE_LIMITED")), false);
+  assert.equal(S.eCadereAuth(null), false);
+});
+await test("S1 colector: t212Sanatate nu mai înghite AUTH_RATE_LIMITED; bot-orders respins pe parolă ⇒ anunț după 3 min (nu 10), cu mesajul lui", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /if \(S\.eLimitaDeRitm\(e\)\) return;/, "t212Sanatate");
+  assert.doesNotMatch(c, /if \(e\.status === 429\) return;/);
+  assert.match(c, /\{ status: r\.status, cod: d && d\.error \|\| null \}/, "cere() poartă codul erorii");
+  assert.match(c, /const auth = S\.eCadereAuth\(e\), prag = auth \? 3 \* 60000 : 10 \* 60000;/);
+  assert.match(c, /auth \? MesajeColector\.authRespins\(/);
+});
+const M = await import("./lib/mesaje-colector.mjs");
+await test("S1 mesajul: „serverul Radarului respinge colectorul” - critic, cu ce face el", () => {
+  const m = M.authRespins(4, "AUTH_INVALID");
+  assert.equal(m.nivel, "critic"); assert.match(m.titlu, /respinge colectorul/); assert.match(m.mesaj, /4 minute/); assert.match(m.mesaj, /👉 /); assert.match(m.mesaj, /parola/);
+});
+
+
+// ---------------- C3: lista goală cu boți activi cunoscuți ----------------
+await test("C3: lista goală + boți activi cunoscuți ⇒ după 10 min „nu-ți văd boții” (o dată la 3 h); la revenire „îi văd iar”", () => {
+  const T = Date.UTC(2026, 9, 14, 20, 0), MIN = 60000, m = { cunoscuti: { a: { activ: true, nume: "SOL" }, b: { activ: false, nume: "ETH" }, c: { activ: true, nume: "CRV" } } };
+  assert.equal(S.listaGoalaPas(m, { goala: true, acum: T }).tip, null, "abia a început");
+  assert.equal(S.listaGoalaPas(m, { goala: true, acum: T + 9 * MIN }).tip, null);
+  const r = S.listaGoalaPas(m, { goala: true, acum: T + 10 * MIN });
+  assert.equal(r.tip, "orb"); assert.equal(r.minute, 10); assert.deepEqual(r.nume, ["SOL", "CRV"]);
+  m.listaGoalaAnuntat = T + 10 * MIN;   // apelantul o notează DOAR după ce mesajul a plecat
+  assert.equal(S.listaGoalaPas(m, { goala: true, acum: T + 40 * MIN }).tip, null, "nu repetă în 3 h");
+  assert.equal(S.listaGoalaPas(m, { goala: true, acum: T + 10 * MIN + 3 * 3600000 }).tip, "orb", "repetă la 3 h");
+  const v = S.listaGoalaPas(m, { goala: false, acum: T + 4 * 3600000 });
+  assert.equal(v.tip, "vede"); assert.equal(m.listaGoalaDe, 0);
+});
+await test("C3: lista goală fără boți activi cunoscuți (i-ai închis) ⇒ tăcere; lista plină fără anunț ⇒ nimic de trimis", () => {
+  const T = Date.UTC(2026, 9, 14, 20, 0), m = { cunoscuti: { b: { activ: false, nume: "ETH" } } };
+  assert.equal(S.listaGoalaPas(m, { goala: true, acum: T }).tip, null);
+  assert.equal(S.listaGoalaPas(m, { goala: true, acum: T + 3600000 }).tip, null);
+  assert.equal(S.listaGoalaPas({ cunoscuti: { a: { activ: true } } }, { goala: false, acum: T }).tip, null);
+});
+await test("C3 mesajele: critic „nu-ți mai văd boții” cu numele + ce merge totuși; info la revenire", () => {
+  const o = M.botiNevazuti(12, ["SOL", "CRV"]);
+  assert.equal(o.nivel, "critic"); assert.ok(o.titlu.length <= 60, o.titlu); assert.match(o.mesaj, /12 minute/); assert.match(o.mesaj, /SOL, CRV/); assert.match(o.mesaj, /lichidare/); assert.match(o.mesaj, /👉 /);
+  const i = M.botiVazutiIar(); assert.equal(i.nivel, "info"); assert.match(i.titlu, /vede iar/);
+});
+await test("C3 colector: pasul listei goale e legat în tură, după fișele de închidere, iar starea se notează DOAR după trimitere", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /const lg = S\.listaGoalaPas\(m, \{ goala: listaGoala, acum \}\);/);
+  assert.match(c, /if \(lg\.tip === "orb" && \(await anuntaMesaj\(MesajeColector\.botiNevazuti\(lg\.minute, lg\.nume\)\)\)\) m\.listaGoalaAnuntat = acum;/);
+  assert.match(c, /if \(lg\.tip === "vede" && \(await anuntaMesaj\(MesajeColector\.botiVazutiIar\(\)\)\)\) m\.listaGoalaAnuntat = 0;/);
+  assert.ok(c.indexOf("const lg = S.listaGoalaPas") > c.indexOf("if (!fisa && listaGoala) continue;"), "după bucla de închideri");
+});
+
+console.log(`\n${picate ? "PICĂ" : "TRECE"} · ${teste - picate}/${teste}\n`);
+process.exit(picate ? 1 : 0);

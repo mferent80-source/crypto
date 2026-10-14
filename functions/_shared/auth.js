@@ -19,14 +19,19 @@ export function sameOrigin(request){const u=new URL(request.url),origin=request.
 // v100.175 (auditul Opus, M13): primul IP din x-forwarded-for îl scrie clientul (fiecare ghicire putea veni cu alt „IP”); proxy-ul de acasă
 // (Tailscale serve) ADAUGĂ IP-ul real la capăt ⇒ se ia ultimul. Fără antet (colectorul, local) rămâne „unknown”, ca înainte.
 // v100.177 (revizia, I4): pe Cloudflare (cf-ray prezent) CF-Connecting-IP e al Cloudflare; acasă (wrangler) îl poate trimite clientul însuși
-function ipOf(request){const cf=request.headers.get('cf-connecting-ip');if(cf&&request.headers.get('cf-ray'))return cf;const l=String(request.headers.get('x-forwarded-for')||'').split(',').map(s=>s.trim()).filter(Boolean);return l.length?l[l.length-1]:(cf||'unknown')}   // fără proxy (direct pe 127.0.0.1): IP-ul pus de wrangler
+// v100.196 (auditul sever, 🔵1): x-forwarded-for ÎNAINTE de cf-connecting-ip - prin Tailscale un client își punea singur cf-connecting-ip + cf-ray și
+// alegea alt „IP” la fiecare ghicire. Ultimul din listă îl adaugă proxy-ul (Tailscale serve acasă; pe Cloudflare tot el = CF-Connecting-IP).
+// Fără antet (direct pe 127.0.0.1: colectorul, browserul de pe PC): IP-ul pus de wrangler sau „unknown”.
+function ipOf(request){const l=String(request.headers.get('x-forwarded-for')||'').split(',').map(s=>s.trim()).filter(Boolean);if(l.length)return l[l.length-1];return request.headers.get('cf-connecting-ip')||'unknown'}
 export async function rateLimit(request,env,scope='api',limit=90,windowSec=60){
   const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/windowSec),key=`rl:${scope}:${ipOf(request)}:${bucket}`;
   if(env.API_RATE_LIMIT?.get&&env.API_RATE_LIMIT?.put){let n=Number(await env.API_RATE_LIMIT.get(key)||0)+1;await env.API_RATE_LIMIT.put(key,String(n),{expirationTtl:Math.max(60,windowSec+15)});return {ok:n<=limit,count:n,limit,retryAfter:(bucket+1)*windowSec-now}}
   const prior=localBuckets.get(key)||0,n=prior+1;localBuckets.set(key,n);if(localBuckets.size>5000){for(const k of localBuckets.keys()){const b=Number(k.split(':').at(-1));if(b<bucket-2)localBuckets.delete(k)}}return {ok:n<=limit,count:n,limit,retryAfter:(bucket+1)*windowSec-now}
 }
 // Incercarile GRESITE (token prezentat, dar gresit) se numara pe IP: peste 10 pe minut,
-// IP-ul primeste 429 INAINTE ca tokenul sa mai fie verificat, deci ghicitul se opreste.
+// IP-ul primeste 429 la orice token GRESIT, deci ghicitul se opreste.
+// v100.196 (auditul sever, 🟡 S1): tokenul BUN trece MEREU. Inainte blocarea venea inaintea verificarii, iar acasa browserul
+// de pe PC si colectorul au aceeasi cheie de IP: un tab ramas cu parola veche incuia si colectorul (429), iar alertele taceau.
 // Cererile fara token nu se numara: nu ghicesc nimic, si aplicatia fara token nu se incuie.
 //
 // Runda 1: numaratoarea se citea inainte de verificare si crestea dupa un `await`, asa ca
@@ -46,12 +51,12 @@ export async function requireApiAuth(request,env,scope='api',limit=90,colectorLi
   const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/AUTH_FAIL_FEREASTRA),key=`auth-fail:${ipOf(request)}:${bucket}`,retryAfter=(bucket+1)*AUTH_FAIL_FEREASTRA-now;
   const blocat={ok:false,status:429,error:'AUTH_RATE_LIMITED',retryAfter};
   // --- pas sincron: nimic de aici pana la primul await nu cedeaza controlul ---
-  const n=localBuckets.get(key)||0;if(n>=AUTH_FAIL_MAX)return blocat;
   const token=tokenDin(request),bun=!!token&&egalInTimpConstant(token,expected);
+  const n=localBuckets.get(key)||0;if(n>=AUTH_FAIL_MAX&&!bun)return blocat;
   if(token&&!bun)localBuckets.set(key,n+1);
   // --- sfarsitul pasului sincron ---
   const kv=env.API_RATE_LIMIT?.get&&env.API_RATE_LIMIT?.put?env.API_RATE_LIMIT:null;
-  if(kv){const m=Number(await kv.get(key)||0);if(m>=AUTH_FAIL_MAX)return blocat;if(token&&!bun)await kv.put(key,String(m+1),{expirationTtl:AUTH_FAIL_FEREASTRA+15})}
+  if(kv&&!bun){const m=Number(await kv.get(key)||0);if(m>=AUTH_FAIL_MAX)return blocat;if(token)await kv.put(key,String(m+1),{expirationTtl:AUTH_FAIL_FEREASTRA+15})}
   if(!token)return {ok:false,status:401,error:'AUTH_REQUIRED'};
   if(!bun)return {ok:false,status:401,error:'AUTH_INVALID'};
   // v100.60 (el, 01.10): colectorul (antetul lui, verificat DUPA token) are galeata lui - pagina si colectorul nu-si mai fura limita.

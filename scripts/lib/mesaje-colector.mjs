@@ -22,6 +22,15 @@ export const serverOprit = (minute) => ({ nivel: "critic", titlu: "Crypto Radar 
 export const citireRea = (minute, eroare) => ({ nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul",
   mesaj: "De " + cate(minute, "minut", "minute") + " (" + scurt(eroare, 60) + ") alertele nu mai sunt de încredere până se rezolvă." });
 export const citireDinNou = () => ({ nivel: "info", titlu: "Crypto Radar citește din nou botul", mesaj: "Alertele merg din nou." });
+// v101.116 (auditul sever, S1): serverul respinge colectorul pe PAROLĂ (AUTH_*), nu pe ritm - înainte trecea drept „limită”, în tăcere
+export const authRespins = (minute, cod) => ({ nivel: "critic", titlu: "Serverul Radarului respinge colectorul",
+  mesaj: msg("De " + cate(minute, "minut", "minute") + " serverul de acasă refuză parola colectorului (" + scurt(cod, 40) + "): alertele boților și ale acțiunilor nu mai vin.",
+    "Aș închide taburile Radarului rămase cu parola veche și aș reporni PORNESTE-CRYPTO-RADAR.bat.") });
+// v101.116 (auditul sever, C3): Pionex dă lista boților porniți goală (results:null), deși știu boți porniți - bucla alertelor e oarbă
+export const botiNevazuti = (minute, nume) => ({ nivel: "critic", titlu: "Crypto Radar nu-ți mai vede boții",
+  mesaj: msg("De " + cate(minute, "minut", "minute") + " Pionex îmi dă lista boților goală, deși știu " + cate((nume || []).length, "bot pornit", "boți porniți") + " (" + scurt((nume || []).join(", "), 80) + "): alertele de lichidare, stop și plan nu merg.",
+    "Aș verifica boții direct în aplicația Pionex; stopurile puse în Pionex merg și fără Radar.") });
+export const botiVazutiIar = () => ({ nivel: "info", titlu: "Crypto Radar îți vede iar boții", mesaj: "Lista din Pionex a revenit: alertele de lichidare, stop și plan merg din nou." });
 
 export const lipsaPionex = (nume) => ({ nivel: "critic", titlu: (nume || "Botul") + " nu mai apare în lista Pionex", mesaj: msg("Poate a fost închis sau lichidat.", "Aș verifica în aplicația Pionex.") });
 

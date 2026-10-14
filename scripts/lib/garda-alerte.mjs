@@ -177,6 +177,9 @@ export function situatiiAlerte(pune) {
   co("serverul de acasă nu mai răspunde", "serverOprit", MC.serverOprit(15));
   co("colectorul nu mai poate citi botul", "citireRea", MC.citireRea(12, "HTTP 502"));
   co("colectorul citește din nou", "citireDinNou", MC.citireDinNou());
+  co("serverul respinge parola colectorului", "authRespins", MC.authRespins(4, "AUTH_INVALID"));   // v101.116 (auditul sever, S1)
+  co("Pionex dă lista boților goală", "botiNevazuti", MC.botiNevazuti(12, ["SOL", "CRV"]));   // v101.116 (C3)
+  co("lista boților a revenit", "botiVazutiIar", MC.botiVazutiIar());
   co("botul nu mai apare în Pionex", "lipsaPionex", MC.lipsaPionex("CRV"));
   // v100.70 (revizia pachetului 3, I4): propunerea din TabloExtra.propunePlan REAL (nota implicita repeta „Propun” si orele)
   co("botul n-are plan, propunerea mea (implicită)", "faraPlan", MC.faraPlan("CRV", TE.propunePlan(null, 49.67)));

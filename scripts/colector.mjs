@@ -53,6 +53,7 @@ import { turaVerdicte as turaVerdicteModul } from "./lib/tura-verdicte.mjs";
 import { turaTrend as turaTrendModul } from "./lib/tura-trend.mjs";   // v101.111: „Trend 12 luni” din robotul premarket_scanner, în KV + jurnalul verdictelor
 import { turaSectoare as turaSectoareModul } from "./lib/tura-sectoare.mjs";   // v101.105: topul pe sectoare + DVOL   // v101.103 (jurnalul verdictelor + corecția pentru teste multiple)   // v101.102 (contul întreg): risc agregat, stres, reconciliere, randament
 import { lipsaConfirmata } from "./lib/paza-boti.mjs";
+import * as S from "./lib/sanatate-colector.mjs";   /* v101.116 (auditul sever): căderea pe parolă (S1), lista goală a boților (C3) */
 import { bilantNoteaza, pandaJudeca, bilantAlerte } from "./lib/paza-boti.mjs";   // v101.108/109: bilanțul alertelor de direcție (pânda, Busola, vocile, BTC)   // v100.173 (auditul Opus): botul „dispărut” confirmat 3 ture
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
@@ -225,7 +226,7 @@ async function cere(cale, opt = {}) {
   try {
     const r = await fetch(BAZA + cale, { ...opt, headers: { ...ANTET, ...(opt.headers || {}) }, signal: AbortSignal.timeout(20000) });
     const text = await r.text(); let d = null; try { d = JSON.parse(text); } catch {}
-    if (!r.ok) throw Object.assign(new Error((d && (d.error + (d.detail ? " · " + d.detail : ""))) || "HTTP " + r.status), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error((d && (d.error + (d.detail ? " · " + d.detail : ""))) || "HTTP " + r.status), { status: r.status, cod: d && d.error || null });
     if (ePret) { if (d && d.result === false) { preturiTura.rau++; preturiTura.eroare = String((d.error || "Pionex") + (d.detail ? " · " + d.detail : "")); } else preturiTura.ok++; }
     return d;
   } catch (e) {
@@ -437,8 +438,11 @@ async function tura() {
       jurnal("bot-orders", e.status, e.message);
       const m = meta(); m.citireRea = m.citireRea || acum;
       // 10 minute la rand fara citire -> o alerta; se repeta cel mult la 3 ore
-      if (acum - m.citireRea >= 10 * 60000 && acum - (m.anuntatRau || 0) >= 3 * 3600000) {
-        if (await anuntaMesaj(MesajeColector.citireRea(Math.round((acum - m.citireRea) / 60000), e.message))) m.anuntatRau = acum;
+      // v101.116 (auditul sever, S1): serverul respinge PAROLA colectorului (AUTH_*) ⇒ nu trece singur: anunțul după 3 minute, cu ce e de făcut
+      const auth = S.eCadereAuth(e), prag = auth ? 3 * 60000 : 10 * 60000;
+      if (acum - m.citireRea >= prag && acum - (m.anuntatRau || 0) >= 3 * 3600000) {
+        const min = Math.round((acum - m.citireRea) / 60000);
+        if (await anuntaMesaj(auth ? MesajeColector.authRespins(min, e.cod || e.message) : MesajeColector.citireRea(min, e.message))) m.anuntatRau = acum;
       }
       try { scrieStare(); } catch {}
     }
@@ -490,6 +494,12 @@ async function tura() {
       const trimis = fisa ? await trimiteAlerta({ nivel: fisa.nivel, titlu: fisa.titlu, mesaj: fisa.mesaj }, id, "inchis") : await anuntaMesaj(MesajeColector.lipsaPionex(m.cunoscuti[id].nume));
       if (trimis) { m.cunoscuti[id].activ = false; m.cunoscuti[id].inchisLa = acum; }
     }
+  }
+  // v101.116 (auditul sever, C3): lista goală + boți activi cunoscuți = alertele de risc sunt OARBE ⇒ spus după 10 min (o dată la 3 h), nu tăcere
+  {
+    const lg = S.listaGoalaPas(m, { goala: listaGoala, acum });
+    if (lg.tip === "orb" && (await anuntaMesaj(MesajeColector.botiNevazuti(lg.minute, lg.nume)))) m.listaGoalaAnuntat = acum;
+    if (lg.tip === "vede" && (await anuntaMesaj(MesajeColector.botiVazutiIar()))) m.listaGoalaAnuntat = 0;
   }
   // v100.29: bot nou pornit din Pionex pe o moneda unde pierzi (pe toata istoria, din arhiva) -> o alerta, inainte sa intre la „cunoscuti”
   try {
@@ -851,10 +861,11 @@ let planT212La = 0, planT212InLucru = false;
 // v100.40 (audit 30.09): Trading 212 nu mai raspunde (cheie revocata/expirata, 401/403, serverul fara chei) -> dupa 30 de minute
 // o alerta critica (repetata cel mult la 6 ore), iar la revenire una de informare. Inainte: doar jurnal - alertele de stop pe
 // pozitiile T212 se opreau in liniste. 429 (limita de ritm) nu e cadere.
+// v101.116 (auditul sever, S1): 429 AUTH_RATE_LIMITED (serverul de acasă respinge parola colectorului) ESTE cădere - trecea drept limită
 async function t212Sanatate(e) {
   const m = meta(), acum = Date.now();
   if (!e) { if (m.t212AnuntatRau) await anuntaMesaj(MesajeColector.t212DinNou()); m.t212RauDe = 0; m.t212AnuntatRau = 0; return; }
-  if (e.status === 429) return;
+  if (S.eLimitaDeRitm(e)) return;
   m.t212RauDe = m.t212RauDe || acum;
   if (acum - m.t212RauDe >= 30 * 60000 && acum - (m.t212AnuntatRau || 0) >= 6 * 3600000) {
     if (await anuntaMesaj(MesajeColector.t212Rau(Math.round((acum - m.t212RauDe) / 60000), e.status, e.message))) m.t212AnuntatRau = acum;
