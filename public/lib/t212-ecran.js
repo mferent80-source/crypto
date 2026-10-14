@@ -293,6 +293,8 @@ function t212ADouaOara(tk) { var c = t212Tf[tk]; return !!(c && c.aDouaOara); }
 function t212SeAduc(tk) { var c = t212Tf[tk]; return !c || !!c.inLucru; }
 // revizia v100.108 (R5): bursa americană e deschisă acum? (luni–vineri 9:30–16:00 la New York, ca GridCalcul.bareBursa; fără sărbători)
 function t212SedintaDeschisa(acum) {
+  /* v100.196 (auditul sever, 🔵9): cu calendarul bursei (sărbătorile NYSE), când e încărcat; altfel ca înainte */
+  if (typeof CalendarBursa !== "undefined" && CalendarBursa.stare) { try { return !!CalendarBursa.stare(acum, "SPY").deschisa; } catch (e) {} }
   try {
     var o = {}; new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(acum)).forEach(function (x) { o[x.type] = x.value; });
     var min = Number(o.hour) * 60 + Number(o.minute); return ["Sat", "Sun"].indexOf(o.weekday) < 0 && min >= 570 && min < 960;
@@ -411,12 +413,13 @@ function t212ReveniriCorp(id) {
     + (id.dovadaReveniri ? '<p class="tbSub">⚠ ' + escapeHtml(Reveniri.TEXT_SUPRAVIETUITORI) + '</p>' : '');
   if (!Array.isArray(id.reveniri)) h += '<p class="tbSub t212Gol">Lista apare la următoarea tură a ideilor, de la 8:00.</p>';
   else if (!l.length) h += '<p class="tbSub t212Gol">Azi nicio acțiune nu e pe revenire.</p>';
-  else h += '<div class="t212TabWrap"><table class="t212Tab t212RevTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Căderea</th><th>De la minim</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th>Cât cumperi</th></tr></thead><tbody>'
+  // v100.196 (raportul UI, 🔴5 / 🟡1): „La idee” = prețul din tura de dimineață (nu cel de acum); fiecare celulă își spune coloana (data-et) pe telefon
+  else h += '<div class="t212TabWrap"><table class="t212Tab t212RevTab"><thead><tr><th>Acțiune</th><th>La idee</th><th>Căderea</th><th>De la minim</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th>Cât cumperi</th></tr></thead><tbody>'
     + l.map(function (x) {
-      var m = cont > 0 && AS ? AS.marime({ intrare: x.pret, stop: x.stop, cont: cont, fx: t212Fx() }) : null;
-      var cat = m ? '<b>' + t212Bucati(m.bucati, x.pret) + '</b><span class="t212Mic">≈ ' + t212Suma(m.suma) + ' · la stop pierzi ~' + t212Suma(m.risc) + ' (1% din cont)' + (m.plafonat ? ' · tăiat la 20% din cont' : '') + '</span>' : '—' + (cont > 0 ? '' : '<span class="t212Mic">citește întâi contul</span>');
+      var m = cont > 0 && AS ? AS.marime({ intrare: x.pret, stop: x.stop, cont: cont, fx: t212Fx(), deja: typeof t212DejaLei === "function" ? t212DejaLei(x.ticker) : 0 }) : null;   /* v100.196 (🔴1): plafonul pe total */
+      var cat = m ? '<b>' + t212Bucati(m.bucati, x.pret) + '</b><span class="t212Mic">≈ ' + t212Suma(m.suma) + ' · la stop pierzi ~' + t212Suma(m.risc) + ' (' + t212PctRisc(m.riscPctReal) + ' din cont)' + (m.plin ? ' · ai deja 20% din cont în ea' : m.plafonat ? ' · tăiat la 20% din cont' : '') + '</span>' : '—' + (cont > 0 ? '' : '<span class="t212Mic">citește întâi contul</span>');
       var ist = x.istoric && x.istoric.n ? t212Cate(x.istoric.n, "trade", "trade-uri") + ", " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
-      return '<tr><td><b>' + escapeHtml(x.simbol) + '</b></td><td>' + t212Usd(x.pret) + '</td><td class="bad">−' + Math.round(x.cadere * 100) + '%<span class="t212Mic">de la maximul pe 60 de zile</span></td><td class="good">+' + Math.round(x.deLaMin * 100) + '%<span class="t212Mic">' + escapeHtml("minimul acum " + t212Cate(Math.round(x.zileDeLaMin), "zi de bursă", "zile de bursă")) + '</span></td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">sub minim</span></td><td class="good">' + t212Usd(x.tinta) + '<span class="t212Mic">maximul</span></td><td><span class="t212Mic' + (x.istoric && x.istoric.total < 0 ? " bad" : "") + '">' + escapeHtml(ist) + '</span></td><td>' + cat + '</td></tr>';
+      return '<tr><td data-et="Acțiune"><b>' + escapeHtml(x.simbol) + '</b></td><td data-et="La idee">' + t212Usd(x.pret) + '</td><td class="bad" data-et="Căderea">−' + Math.round(x.cadere * 100) + '%<span class="t212Mic">de la maximul pe 60 de zile</span></td><td class="good" data-et="De la minim">+' + Math.round(x.deLaMin * 100) + '%<span class="t212Mic">' + escapeHtml("minimul acum " + t212Cate(Math.round(x.zileDeLaMin), "zi de bursă", "zile de bursă")) + '</span></td><td class="bad" data-et="Stop">' + t212Usd(x.stop) + '<span class="t212Mic">sub minim</span></td><td class="good" data-et="Țintă">' + t212Usd(x.tinta) + '<span class="t212Mic">maximul</span></td><td data-et="Istoricul tău"><span class="t212Mic' + (x.istoric && x.istoric.total < 0 ? " bad" : "") + '">' + escapeHtml(ist) + '</span></td><td data-et="Cât cumperi">' + cat + '</td></tr>';
     }).join("") + '</tbody></table></div><p class="tbSub">Fără „Biletul”: poarta lui cere trend în sus, deci la o revenire ar spune NU; mărimea de aici e pe stopul de sub minim, cu 1% din cont.</p>';
   if (id.urmarireReveniri && id.urmarireReveniri.text) h += '<p class="tbSub">📏 ' + escapeHtml(id.urmarireReveniri.text) + '</p>';
   return h + '</div>';
@@ -424,7 +427,7 @@ function t212ReveniriCorp(id) {
 // v100.82: un rând din tabelul ideilor (primele 5 și, pliate, celelalte) - mutat neschimbat din t212IdeiRender
 function t212IdeiRand(x) {
   var ist = x.istoric && x.istoric.n ? t212Cate(x.istoric.n, "trade", "trade-uri") + ", " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
-  return '<tr><td><b>' + escapeHtml(x.simbol) + '</b><span class="t212Mic">' + escapeHtml((x.motive || [])[2] || "") + '</span></td><td>' + t212Usd(x.pret) + '</td><td>' + t212Usd(x.intrare) + '</td><td class="bad">' + t212Usd(x.stop) + '<span class="t212Mic">' + (x.riscPct != null ? "−" + (x.riscPct * 100).toFixed(1).replace(".", ",") + "%, " : "") + 'din probă</span></td><td class="good">' + t212Usd(x.tinta) + '</td><td><span class="t212Mic ' + (x.istoric && x.istoric.total < 0 ? "bad" : "") + '">' + escapeHtml(ist) + '</span>' + (x.prob && x.prob.tinta5 !== null && x.prob.stop1 !== null ? '<span class="t212Mic">🎲 ținta înaintea stopului în 5 zile: ' + Math.round(x.prob.tinta5 * 100) + '% · stopul mâine: ' + Math.round(x.prob.stop1 * 100) + '%</span>' : '')
+  return '<tr><td data-et="Acțiune"><b>' + escapeHtml(x.simbol) + '</b><span class="t212Mic">' + escapeHtml((x.motive || [])[2] || "") + '</span></td><td data-et="La idee">' + t212Usd(x.pret) + '</td><td data-et="Intrare">' + t212Usd(x.intrare) + '</td><td class="bad" data-et="Stop">' + t212Usd(x.stop) + '<span class="t212Mic">' + (x.riscPct != null ? "−" + (x.riscPct * 100).toFixed(1).replace(".", ",") + "%, " : "") + 'din probă</span></td><td class="good" data-et="Țintă">' + t212Usd(x.tinta) + '</td><td data-et="Istoricul tău"><span class="t212Mic ' + (x.istoric && x.istoric.total < 0 ? "bad" : "") + '">' + escapeHtml(ist) + '</span>' + (x.prob && x.prob.tinta5 !== null && x.prob.stop1 !== null ? '<span class="t212Mic">🎲 ținta înaintea stopului în 5 zile: ' + Math.round(x.prob.tinta5 * 100) + '% · stopul mâine: ' + Math.round(x.prob.stop1 * 100) + '%</span>' : '')
     // v100.94 (L2): a doua (🧠) și a treia părere (🌳) pe idee - „un trade ca ăsta pe plus”, cifrele colectorului (nedovedită = modelul n-a trecut pragul)
     + (x.retea && x.retea.p != null ? '<span class="t212Mic">🧠 un trade ca ăsta pe plus: ' + Math.round(x.retea.p * 100) + '%' + (x.retea.dovedita ? '' : ' (nedovedită)') + (x.arbori && x.arbori.p != null ? ' · 🌳 ' + Math.round(x.arbori.p * 100) + '%' + (x.arbori.dovedita ? '' : ' (nedovedită)') : '') + '</span>'
       : (x.arbori && x.arbori.p != null ? '<span class="t212Mic">🌳 un trade ca ăsta pe plus: ' + Math.round(x.arbori.p * 100) + '%' + (x.arbori.dovedita ? '' : ' (nedovedită)') + '</span>' : ''))
@@ -436,11 +439,15 @@ function t212IdeiRand(x) {
 function t212IdeiRender() {
   var box = $("t212Idei"); if (!box) return;
   var d = t212.idei, id = d && d.idei, l = id && Array.isArray(id.actiuni) ? id.actiuni : [];
-  var tabel = function (q) { return '<div class="t212TabWrap"><table class="t212Tab t212IdeiTab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Intrare</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>' + q.map(t212IdeiRand).join("") + '</tbody></table></div>'; };
-  var h = '<div class="t212PanouCap"><h4>💡 Idei de cumpărare</h4><span class="tbSub">' + (id ? escapeHtml("din " + t212Cate(id.judecate || 0, "acțiune judecată", "acțiuni judecate") + " pe " + t212ZiScurta(id.zi) + ", " + (id.trecute || 0) + " trec de poartă") : "colectorul le caută în fiecare dimineață de la 8:00") + '</span></div>';
+  // v100.196 (raportul UI, 🔴5): coloana „Acum” era prețul din tura de dimineață (închiderea zilei de bursă de dinainte), iar „Biletul” de pe aceeași
+  // pagină socotea pe prețul viu (LITE: $987.99 în tabel, $913.61 pe bilet, alt stop) ⇒ antetul spune ce e („La idee”), panoul spune ora turei,
+  // iar nota spune că „Biletul” reface intrarea, stopul și suma pe prețul de acum - una singură, consecventă
+  var oraT = id && id.la > 0 ? new Date(id.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }) : "";
+  var tabel = function (q) { return '<div class="t212TabWrap"><table class="t212Tab t212IdeiTab"><thead><tr><th>Acțiune</th><th>La idee</th><th>Intrare</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>' + q.map(t212IdeiRand).join("") + '</tbody></table></div>'; };
+  var h = '<div class="t212PanouCap"><h4>💡 Idei de cumpărare</h4><span class="tbSub">' + (id ? escapeHtml("din " + t212Cate(id.judecate || 0, "acțiune judecată", "acțiuni judecate") + " pe " + t212ZiScurta(id.zi) + (oraT ? ", la " + oraT : "") + ", " + (id.trecute || 0) + " trec de poartă") : "colectorul le caută în fiecare dimineață de la 8:00") + '</span></div>';
   var fIdei = '<p class="tbSub t212IdeiNota">Un filtru care te ține departe de situațiile proaste (trend în jos, după mișcare, lângă maxim, rezultate în 10 zile), nu o predicție: pe trade-urile tale, „doar pe 🟢” a adus mai puțin decât ai făcut singur. ' + escapeHtml(id && id.urmarire ? id.urmarire.text : "Ideile se urmăresc: după ~30 se poate spune dacă merită urmate.") + '</p>';
   if (!l.length) fIdei += '<p class="tbSub t212Gol">' + (id ? "Azi nicio acțiune nu trece de poartă — și asta e un răspuns: n-aș cumpăra nimic nou azi." : "Primele idei apar după prima trecere a colectorului.") + '</p>';
-  else fIdei += t212IdeiSit(l) + tabel(l);
+  else fIdei += t212IdeiSit(l) + tabel(l) + '<p class="tbSub">Prețurile sunt cele din tura de dimineață' + (oraT ? ' (' + escapeHtml(oraT) + ')' : '') + ', pe închiderea zilei de bursă de dinainte; „Biletul” le reface pe prețul de acum, cu stopul și suma lui.</p>';
   // v100.82 (03.10, ideea 1): și celelalte care trec de poartă, pliate sub tabel - primele 5 rămân sus
   var rest = id && Array.isArray(id.restul) ? id.restul : [];
   if (l.length && rest.length) fIdei += '<details class="t212IdeiRest"><summary>' + (rest.length === 1 ? "Vezi și cealaltă acțiune care trece de poartă" : "Vezi și celelalte " + t212Cate(rest.length, "acțiune care trece", "acțiuni care trec") + " de poartă") + '</summary>' + tabel(rest) + '</details>';
@@ -450,8 +457,8 @@ function t212IdeiRender() {
     var sc = Consilier.socotealaSfaturi(t212.sfaturiIst), NV = { iesi: "IEȘI", atentie: "ATENȚIE", tine: "ȚINE" };
     var cel = function (x) { return x.n ? x.dreptate + " din " + x.n + ' <span class="t212Mic">' + t212Pct(x.medie) + '</span>' : '<span class="t212Estompat">—</span>'; };
     fSoc = '<div class="t212Socoteala"><h5>📏 Socoteala sfaturilor <span class="t212Estompat">· au avut dreptate? (IEȘI/ATENȚIE: prețul a scăzut după; ȚINE: a crescut)</span></h5>'
-      + '<div class="t212TabWrap"><table class="t212Tab"><thead><tr><th>Semaforul</th><th>după 5 zile</th><th>după 10 zile</th><th>după 20 de zile</th></tr></thead><tbody>'
-      + Object.keys(NV).map(function (k) { return '<tr><td><b>' + NV[k] + '</b></td><td>' + cel(sc[k][5]) + '</td><td>' + cel(sc[k][10]) + '</td><td>' + cel(sc[k][20]) + '</td></tr>'; }).join("")
+      + '<div class="t212TabWrap"><table class="t212Tab t212SocTab"><thead><tr><th>Semaforul</th><th>după 5 zile</th><th>după 10 zile</th><th>după 20 de zile</th></tr></thead><tbody>'
+      + Object.keys(NV).map(function (k) { return '<tr><td data-et="Semaforul"><b>' + NV[k] + '</b></td><td data-et="după 5 zile">' + cel(sc[k][5]) + '</td><td data-et="după 10 zile">' + cel(sc[k][10]) + '</td><td data-et="după 20 de zile">' + cel(sc[k][20]) + '</td></tr>'; }).join("")
       + '</tbody></table></div><p class="tbSub">' + escapeHtml(sc.text) + ' Se notează în fiecare dimineață, pe fiecare poziție.</p></div>';
   }
   // v100.92 (I-520): trei file în același panou - numărul în titlu („Idei · 23”), fila aleasă ținută în localStorage; notele rămân la fila lor
@@ -621,14 +628,16 @@ function t212RandPozitie(p) {
   var pctPret = p.pret / p.pretMediu - 1, tr = p.st.trend.dir;
   var sz = t212SemZi(p.ticker), NZ = { urca: "urcă", coboara: "coboară", lateral: "lateral" };   // v100.110 (I-546): becul 1z, când nu e de acord cu mediile
   var dif = sz && ((tr === "sus" && sz.dir !== "urca") || (tr === "jos" && sz.dir !== "coboara") || (tr === "lateral" && sz.dir !== "lateral"));
-  var planTxt = p.plan ? [pl.trailPct ? "−" + String(pl.trailPct).replace(".", ",") + "% de la max" : "", pl.stop ? "stop " + t212Usd(pl.stop) : "", pl.tinta ? "țintă " + t212Usd(pl.tinta) : ""].filter(Boolean).join(" · ") : "";
+  // v100.196 (🟡13): prețurile poziției în moneda EI ($ / € / £ / pence), nu mereu cu „$”
+  var Pr = function (v) { return t212PretIn(v, p.ticker); }, rz = t212.rezultate[p.ticker];
+  var planTxt = p.plan ? [pl.trailPct ? "−" + String(pl.trailPct).replace(".", ",") + "% de la max" : "", pl.stop ? "stop " + Pr(pl.stop) : "", pl.tinta ? "țintă " + Pr(pl.tinta) : ""].filter(Boolean).join(" · ") : "";
   var w = p.pond > 0.2 ? " rau" : p.pond > 0.15 ? " atentie" : "", rv = t212RevineHtml(p);
   var rand = '<tr class="t212Rand" id="t212R-' + tk + '" tabindex="0" aria-expanded="' + des + '" data-action-click="t212Comuta(\'' + tk + '\')">'
-    + '<td><div class="t212Sim"><span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + (+p.qty.toFixed(2)) + ' buc · mediu ' + t212Usd(p.pretMediu) + (t212.rezultate[p.ticker] && t212.rezultate[p.ticker].data ? ' · rezultate ' + t212ZiScurta(t212.rezultate[p.ticker].data) : '') + '</span>' + t212ModeleRand(p) + '</div></div></td>'
-    + '<td class="c-acum">' + t212Usd(p.pret) + '</td>'
+    + '<td><div class="t212Sim"><span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + (+p.qty.toFixed(2)) + ' buc · mediu ' + Pr(p.pretMediu) + (rz && rz.data ? ' · rezultate ' + t212ZiScurta(rz.data) : rz && /_US_EQ$/.test(p.ticker) ? ' · rezultate: dată necunoscută' : '') + '</span>' + t212ModeleRand(p) + '</div></div></td>'
+    + '<td class="c-acum">' + Pr(p.pret) + '</td>'
     + '<td class="c-rez"><b class="' + t212Cls(p.ppl) + '">' + t212Lei(p.ppl) + '</b><span class="t212Mic">' + (p.pctLei !== null ? t212Pct(p.pctLei) + ' · preț ' + t212Pct(pctPret) : 'preț ' + t212Pct(pctPret)) + '</span></td>'
-    + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' + rv.mic : '—') + '</td>'
-    + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + t212Usd(n.tintaPozitie) + '</span><span class="t212Mic">' + t212Pct(n.tintaPozitie / p.pret - 1) + '</span>' : '—') + '</td>'
+    + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + Pr(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : Math.abs(n.stopPozitie / p.pret - 1) < 0.0005 ? "la stop" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' + rv.mic : '—') + '</td>'   /* v100.196 (UI 🔵5): nu „−0,0%” */
+    + '<td class="c-tinta" data-et="Țintă">' + (n ? '<span class="good">' + Pr(n.tintaPozitie) + '</span><span class="t212Mic">' + t212Pct(n.tintaPozitie / p.pret - 1) + '</span>' : '—') + '</td>'
     + '<td class="c-trend"><b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + (dif ? '<span class="t212Mic">1z: ' + NZ[sz.dir] + '</span>' : '') + '</td>'
     + '<td class="c-pond">' + (p.pond !== null ? Math.round(p.pond * 100) + '%<span class="t212MiniBara"><i class="' + w + '" style="width:' + Math.min(100, p.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—') + '</td>'
     + '<td class="c-plan">' + (p.plan ? '<span class="t212PlanChip ok">✓ ' + escapeHtml(planTxt) + '</span>' : '<span class="t212PlanChip">fără plan</span>') + '</td>'
@@ -640,21 +649,21 @@ function t212RandPozitie(p) {
     + '<p class="t212Fac">' + escapeHtml(p.sem.ceAsFace) + '</p>' + t212SfaturiHtml(p.sfaturi))
     + (!p.cons && n && n.stopAtins ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> Aș ieși (măcar jumătate), fără să aștept să „își revină”: ' + escapeHtml(p.simbol) + ' e deja sub stopul calculat.</p>' : '')
     + '<p class="tbSub">' + escapeHtml(info || (t212.inLucru ? "aduc prețurile zilnice…" : "fără prețuri zilnice pentru " + p.simbol)) + '</p>'
-    + (n ? '<p class="tbSub"><b>Adaug doar la:</b> ' + (n.intrare && p.pret >= p.pretMediu ? t212Usd(n.intrare.pret) + " — " + escapeHtml(n.intrare.motiv) : escapeHtml(p.pret < p.pretMediu ? "— ești pe minus: nu adaug (așa a crescut NPA la 33.000 de lei)" : "— " + n.intrareMotiv)) + '</p>' : '')
+    + (n ? '<p class="tbSub"><b>Adaug doar la:</b> ' + (n.intrare && p.pret >= p.pretMediu ? Pr(n.intrare.pret) + " — " + escapeHtml(n.intrare.motiv) : escapeHtml(p.pret < p.pretMediu ? "— ești pe minus: nu adaug (așa a crescut NPA la 33.000 de lei)" : "— " + n.intrareMotiv)) + '</p>' : '')
     + rv.det
     + (typeof mcsPozButon === "function" ? '<p class="tbSub">' + mcsPozButon(t212.simbolPret[p.ticker] || p.simbol, p.pret, p.pretMediu, n ? n.stopPozitie : null) + '</p>' : '') + '</div>';
   var v = function (camp, calc) { return pl[camp] != null ? pl[camp] : calc != null ? calc : ""; };
   var dreapta = '<div class="t212Preturi"><h5>Planul tău <span class="t212Estompat">· ' + (p.plan ? "salvat " + new Date(pl.la).toLocaleDateString("ro-RO") + " · colectorul te anunță" : n ? "completat cu prețurile calculate" : "scrie-l tu") + '</span></h5>'
     + '<div class="t212Plan"><label>Ies la −% de la maxim<input inputmode="decimal" id="t212Trail-' + tk + '" class="' + (!p.plan && n ? "calc" : "") + '" value="' + escapeHtml(String(v("trailPct", n ? +n.trailPct.toFixed(1) : null))) + '" placeholder="8"></label>'
-    + '<label>Țintă, $<input inputmode="decimal" id="t212Tinta-' + tk + '" class="' + (!p.plan && n ? "calc" : "") + '" value="' + escapeHtml(String(v("tinta", n ? n.tintaPozitie : null))) + '" placeholder="preț"></label>'
-    + '<label>Stop fix, $<input inputmode="decimal" id="t212Stop-' + tk + '" value="' + escapeHtml(String(v("stop", null))) + '" placeholder="opțional"></label>'
+    + '<label>Țintă, ' + escapeHtml(t212PretIn(1, p.ticker).replace(/[\d.,\s]/g, "") || "preț") + '<input inputmode="decimal" id="t212Tinta-' + tk + '" class="' + (!p.plan && n ? "calc" : "") + '" value="' + escapeHtml(String(v("tinta", n ? n.tintaPozitie : null))) + '" placeholder="preț"></label>'
+    + '<label>Stop fix, ' + escapeHtml(t212PretIn(1, p.ticker).replace(/[\d.,\s]/g, "") || "preț") + '<input inputmode="decimal" id="t212Stop-' + tk + '" value="' + escapeHtml(String(v("stop", null))) + '" placeholder="opțional"></label>'
     + '<button type="button" class="t212Btn t212BtnPlin" data-action-click="t212PlanSalveaza(\'' + tk + '\')">Salvează planul</button>'
     + (p.plan ? '<button type="button" class="t212BtnLinie" data-action-click="t212PlanSterge(\'' + tk + '\')">Șterge</button>' : '') + '</div>'
     + '<div class="t212Teza"><label>De ce am intrat (teza)<input id="t212Teza-' + tk + '" maxlength="300" value="' + escapeHtml(pl.teza || "") + '" placeholder="ex. rezultate bune, sectorul conduce"></label>'
     + '<label>Ies dacă (invalidarea)<input id="t212Inv-' + tk + '" maxlength="200" value="' + escapeHtml(pl.invalidare || "") + '" placeholder="ex. închide sub media de 50"></label>'
     + '<label>Orizont, zile<input inputmode="numeric" id="t212Oriz-' + tk + '" value="' + escapeHtml(pl.orizont != null ? String(pl.orizont) : "") + '" placeholder="30"></label></div>'
     + (pl.orizont > 0 && pl.la ? (function () { var trec = (Date.now() - pl.la) / 86400000; return trec > pl.orizont ? '<p class="tbWarn">⏰ ' + escapeHtml("Orizontul tău de " + t212Cate(pl.orizont, "zi", "zile") + " a trecut (au trecut " + t212Cate(Math.floor(trec), "zi", "zile") + "): teza ta mai stă în picioare?") + '</p>' : ""; })() : "")
-    + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212Usd(n.stopPozitie) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212Usd(n.tintaPozitie) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
+    + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212PretIn(n.stopPozitie, p.ticker) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212PretIn(n.tintaPozitie, p.ticker) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
       + (p.prob && p.prob.length && typeof tbProbRandHtml === "function" ? '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · cât de des s-a întâmplat pe acțiunea asta, în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>' : '') + t212ReteaHtml({ acum: Date.now(), pret: p.pret, stop: n.stopPozitie, tinta: p.plan && p.plan.tinta > 0 ? p.plan.tinta : n.tintaPozitie, ticker: p.ticker }, t212.bare[p.ticker], p.prob)
       + (n.sursaTrail ? '<p class="tbSub">Stopul care urcă: ' + escapeHtml(n.sursaTrail) + ' (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
       + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
@@ -662,12 +671,7 @@ function t212RandPozitie(p) {
   return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="8"><div class="t212DetGrila">' + stanga + dreapta + '</div><div class="t212Graf" id="t212Graf-' + tk + '"></div></td></tr>';
 }
 
-function t212PuneNiveluri(tk) {
-  var n = t212.niveluri[tk]; if (!n) return;
-  var set = function (id, v) { var e = $(id); if (e) e.value = v; };
-  set("t212Trail-" + tk, n.trailPct.toFixed(1)); set("t212Tinta-" + tk, String(n.tintaPozitie)); set("t212Stop-" + tk, "");
-  t212PlanSalveaza(tk);
-}
+/* v100.196 (auditul sever, 🔵10): t212PuneNiveluri scos - nu-l chema niciun buton (doar o probă de ecran, care face acum același lucru prin câmpuri) */
 function t212PlanSterge(tk) { ["t212Trail-", "t212Tinta-", "t212Stop-"].forEach(function (k) { var e = $(k + tk); if (e) e.value = ""; }); t212PlanSalveaza(tk); }
 // "Pune planurile la toate": pentru fiecare pozitie fara plan, planul din preturile calculate
 async function t212PuneToate() {

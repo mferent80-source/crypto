@@ -229,5 +229,73 @@ await test("A21 (🟡13). ponderile: fiecare poziție în lei pe moneda EI — u
   assert.ok(Math.abs(v.VUSAl_EQ - (5450 + 50)) < 1e-6, "VUSA: costul FIFO în lei + rezultatul, nu 95.000 × curs: " + v.VUSAl_EQ);
 });
 
+// ---------------- B. „Idei de cumpărare” (🔴5 din raportul UI) și tabelele de pe telefon (🟡 UI 1) ----------------
+const IDEE = { ticker: "LITE_US_EQ", simbol: "LITE", pret: 987.99, intrare: 987.99, stop: 839.79, riscPct: 0.15, tinta: 1284.39, motive: ["a", "b", "c"], istoric: { n: 0 } };
+const REV = { ticker: "INTC_US_EQ", simbol: "INTC", pret: 72, cadere: 0.2686, deLaMin: 0.1099, zileDeLaMin: 19, stop: 64.22, tinta: 98.45, istoric: { n: 3, pePlus: 2, total: 34 } };
+function ideiHtml() {
+  const P = pagina({}); P.c.t212.idei = { idei: { la: Date.parse("2026-10-14T05:05:00Z"), zi: "2026-10-14", judecate: 120, trecute: 7, actiuni: [IDEE], restul: [IDEE], reveniri: [REV] }, lista: [] };
+  P.c.t212.sfaturiIst = [];
+  P.c.Consilier = { socotealaSfaturi: () => { const g = { 5: { n: 3, dreptate: 2, medie: 0.01 }, 10: { n: 0 }, 20: { n: 0 } }; return { iesi: g, atentie: g, tine: g, text: "x." }; } };
+  P.c.Reveniri = { textDovada: () => "dovada", TEXT_SUPRAVIETUITORI: "supraviețuitori" };
+  P.c.t212IdeiRender(); return P.$("t212Idei").innerHTML;
+}
+await test("B1 (🔴5). Idei: coloana nu mai minte „Acum” — „La idee” + ora turei; nota spune că „Biletul” le reface pe prețul de acum", () => {
+  const h = ideiHtml();
+  const tab = h.slice(h.indexOf("t212IdeiTab"), h.indexOf("</thead>", h.indexOf("t212IdeiTab")));
+  assert.ok(!/<th>Acum<\/th>/.test(tab), "antetul ideilor tot „Acum”"); assert.match(tab, /<th>La idee<\/th>/);
+  assert.match(h, /judecate pe 14\.10, la 08:05/); assert.match(h, /„Biletul” le reface pe prețul de acum/);
+});
+await test("B2 (🟡 UI 1). Pe telefon: fiecare celulă din Idei, „Pe revenire” și „Socoteala sfaturilor” își spune coloana (data-et)", () => {
+  const h = ideiHtml();
+  for (const et of ["Acțiune", "La idee", "Intrare", "Stop", "Țintă", "Istoricul tău"]) assert.ok(h.includes('data-et="' + et + '"'), "idei fără data-et " + et);
+  for (const et of ["Căderea", "De la minim", "Cât cumperi"]) assert.ok(h.includes('data-et="' + et + '"'), "revenire fără data-et " + et);
+  for (const et of ["după 5 zile", "după 10 zile", "după 20 de zile"]) assert.ok(h.includes('data-et="' + et + '"'), "socoteala fără data-et " + et);
+  assert.match(h, /class="t212Tab t212SocTab"/);
+});
+await test("B3. „Pe revenire”: „(1% din cont)” doar când chiar e 1% — tăiat la 20% spune riscul real", () => {
+  const P = pagina({}); P.c.t212.cont.cash.total = 3000;
+  P.c.Reveniri = { textDovada: () => "dovada", TEXT_SUPRAVIETUITORI: "supraviețuitori" };
+  const h = P.c.t212ReveniriCorp({ reveniri: [Object.assign({}, REV, { stop: 71.5 })], dovadaReveniri: null });
+  assert.match(h, /tăiat la 20% din cont/); assert.ok(!/\(1% din cont\) · tăiat/.test(h), "plafonat și tot „1% din cont”");
+});
+
+function randPoz(P, o) {
+  const pret = B0[B0.length - 1].c, n = AS.niveluri(B0, pret, { pretMediu: pret * 1.1, minTrail: 0.15 });
+  const p = Object.assign({ ticker: "MU_US_EQ", simbol: "MU", qty: 1.29, pretMediu: pret * 1.1, pret, ppl: -50, pctLei: -0.05, plan: null, st: AS.stare(B0, pret), sem: { nivel: "atentie", motive: ["x"], ceAsFace: "👉 Ce aș face eu: Aș sta." }, niv: n, pond: 0.1, sfaturi: [], prob: [] }, o || {});
+  return P.c.t212RandPozitie(p);
+}
+await test("B4 (🔵 UI 5). Poziții: stopul la 0% de preț nu mai scrie „−0,0% de acum”, ci „la stop”", () => {
+  const P = pagina({}), pret = B0[B0.length - 1].c, h0 = randPoz(P);
+  const n = AS.niveluri(B0, pret, { pretMediu: pret * 1.1, minTrail: 0.15 }); n.stopPozitie = pret * 0.9998; n.stopAtins = false;
+  const h = randPoz(P, { niv: n });
+  assert.ok(!/−0,0% de acum/.test(h), "a rămas −0,0%"); assert.match(h, /la stop/); assert.match(h0, /% de acum/);
+});
+await test("B5 (🟡13). Prețul unei poziții din afara SUA în moneda ei (€, £, pence), nu cu „$”", () => {
+  const P = pagina({}); P.c.t212.monede = { VUSAl_EQ: "GBX", RHMd_EQ: "EUR", EQQQl_EQ: "GBP" };
+  assert.equal(P.c.t212PretIn(9500, "VUSAl_EQ"), "9500.00 p"); assert.equal(P.c.t212PretIn(1520.5, "RHMd_EQ"), "€1520.50");
+  assert.equal(P.c.t212PretIn(412, "EQQQl_EQ"), "£412.00"); assert.equal(P.c.t212PretIn(29.5, "MU_US_EQ"), "$29.50");
+  const h = randPoz(P, { ticker: "RHMd_EQ", simbol: "RHM" });
+  assert.match(h, /<td class="c-acum">€\d/, "„Acum” pe RHM în euro"); assert.match(h, /mediu €\d/); assert.ok(!/<td class="c-acum">\$/.test(h));
+});
+await test("B6 (🟡6). Poziții: Nasdaq a răspuns fără dată ⇒ „rezultate: dată necunoscută”, nu nimic", () => {
+  const P = pagina({}); P.c.t212.rezultate.MU_US_EQ = { data: null };
+  assert.match(randPoz(P), /rezultate: dată necunoscută/);
+  P.c.t212.rezultate.MU_US_EQ = { data: "2026-10-28" }; assert.match(randPoz(P), /rezultate 28\.10/);
+});
+
+await test("B7 (🔵9). „Bursa e deschisă acum?” pe pagina T212 știe sărbătorile NYSE (Ziua Recunoștinței 26.11.2026, ora 17:00 UTC)", () => {
+  const P = pagina({});
+  assert.equal(P.c.t212SedintaDeschisa(Date.parse("2026-11-26T17:00:00Z")), false, "Thanksgiving");
+  assert.equal(P.c.t212SedintaDeschisa(Date.parse("2026-11-25T17:00:00Z")), true, "miercuri obișnuită");
+});
+
+await test("B8 (🟡5). Fără calendarul bursei încărcat (pagina de azi nu-l are în index.html), zileLipsa merge pe zilele lucrătoare", () => {
+  const c = context(); for (const f of ["grid-calcul.js", "actiuni-semnale.js"]) vm.runInContext(citeste("public", "lib", f), c);
+  assert.equal(typeof c.CalendarBursa, "undefined");
+  const z = c.ActiuniSemnale.zileLipsa(Date.parse("2026-09-01T13:30:00Z"), ACUM, "MU_US_EQ");
+  assert.ok(z >= 29 && z <= 31, "zile lucrătoare lipsă: " + z);
+  assert.ok(c.ActiuniSemnale.zileLipsa(Date.parse("2026-10-13T13:30:00Z"), ACUM, "MU_US_EQ") <= 1, "ieri ⇒ proaspăt");
+});
+
 console.log(`\n${teste - picate} din ${teste} trec`);
 if (picate) { console.log(`V100.196 ACȚIUNI PICA · ${picate} din ${teste}`); process.exit(1); }

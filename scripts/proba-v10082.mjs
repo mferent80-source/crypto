@@ -83,9 +83,9 @@ const CINCI = ["LITE", "DELL", "ARM", "INTC", "NBIS"].map((s) => idee(s));
 await test("(1) pagina: sub tabel, pliat, „Vezi și celelalte N acțiuni care trec de poartă” cu aceleași coloane; primele 5 rămân în tabelul de sus", () => {
   const h = deseneazaIdei({ zi: "2026-10-02", judecate: 201, trecute: 7, actiuni: CINCI, restul: [idee("AMD"), idee("TSLA")] });
   const i = h.indexOf('<details class="t212IdeiRest">'); assert.ok(i > 0, "lipsește blocul pliat");
-  assert.equal((h.slice(0, i).match(/<tr><td><b>/g) || []).length, 5, "tabelul de sus are tot 5 rânduri");
+  assert.equal((h.slice(0, i).match(/<tr><td data-et="Acțiune"><b>/g) || []).length, 5, "tabelul de sus are tot 5 rânduri");
   assert.match(h.slice(i), /<summary>Vezi și celelalte 2 acțiuni care trec de poartă<\/summary>/);
-  assert.match(h.slice(i), /<th>Acțiune<\/th><th>Acum<\/th><th>Intrare<\/th><th>Stop<\/th><th>Țintă<\/th><th>Istoricul tău<\/th>/);
+  assert.match(h.slice(i), /<th>Acțiune<\/th><th>La idee<\/th><th>Intrare<\/th><th>Stop<\/th><th>Țintă<\/th><th>Istoricul tău<\/th>/);
   assert.ok(h.slice(i).includes("<b>AMD</b>") && h.slice(i).includes("<b>TSLA</b>") && h.slice(i).includes("t212BiletPentru('TSLA')"), "rândurile restului (cu „Biletul”)");
 });
 await test("(1) pagina: o singură idee în plus -> „Vezi și cealaltă acțiune care trece de poartă”; fără `restul` (ideile de ieri) -> nimic în plus", () => {
