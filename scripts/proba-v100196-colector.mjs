@@ -398,5 +398,25 @@ await test("🔵12 mesajele colectorului dau USDT cu O SINGURĂ zecimală; sub 0
   assert.doesNotMatch(citeste("scripts", "lib", "tura-pornire.mjs"), /toFixed\(2\)/);
 });
 
+
+// ---------------- revizia de securitate a ramurii: fără „oracol” ----------------
+await test("S1 securitate: din rețea (Tailscale / Cloudflare) blocarea ține și pentru tokenul bun - altfel 429 = greșit, 200 = corect ar fi un oracol pentru ghicit", async () => {
+  const requireApiAuth = await authProaspat();
+  const net = { "x-forwarded-for": "100.64.0.9" };
+  for (let i = 0; i < 10; i++) await requireApiAuth(cerere("ghicire" + i, net), ENV, "api", 90);
+  assert.equal((await requireApiAuth(cerere(ENV.APP_API_TOKEN, net), ENV, "api", 90)).status, 429, "din rețea tokenul bun așteaptă minutul");
+  const cf = { "cf-connecting-ip": "203.0.113.5", "cf-ray": "abc", "x-forwarded-for": "203.0.113.5" };
+  for (let i = 0; i < 10; i++) await requireApiAuth(cerere("g" + i, cf), ENV, "api", 90);
+  assert.equal((await requireApiAuth(cerere(ENV.APP_API_TOKEN, cf), ENV, "api", 90)).status, 429, "pe Cloudflare la fel");
+  // local (direct pe 127.0.0.1, fără proxy: colectorul, browserul de pe PC) tokenul bun trece și când IP-ul e blocat
+  for (let i = 0; i < 10; i++) await requireApiAuth(cerere("vechi" + i), ENV, "api", 90);
+  assert.equal((await requireApiAuth(cerere(ENV.APP_API_TOKEN), ENV, "api", 90)).ok, true);
+});
+await test("S1 securitate: prin tunelul Cloudflare (cf-ray + cf-connecting-ip + x-forwarded-for) un client nu scapă schimbându-și x-forwarded-for", async () => {
+  const requireApiAuth = await authProaspat();
+  const st = []; for (let i = 0; i < 12; i++) st.push((await requireApiAuth(cerere("g" + i, { "cf-connecting-ip": "198.51.100.7", "cf-ray": "r", "x-forwarded-for": "10.9.9." + i }), ENV, "api", 90)).status);
+  assert.equal(st.filter((s) => s === 429).length, 2, st.join(","));
+});
+
 console.log(`\n${picate ? "PICĂ" : "TRECE"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

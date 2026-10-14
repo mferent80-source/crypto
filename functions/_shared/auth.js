@@ -30,8 +30,11 @@ export async function rateLimit(request,env,scope='api',limit=90,windowSec=60){
 }
 // Incercarile GRESITE (token prezentat, dar gresit) se numara pe IP: peste 10 pe minut,
 // IP-ul primeste 429 la orice token GRESIT, deci ghicitul se opreste.
-// v100.196 (auditul sever, 🟡 S1): tokenul BUN trece MEREU. Inainte blocarea venea inaintea verificarii, iar acasa browserul
-// de pe PC si colectorul au aceeasi cheie de IP: un tab ramas cu parola veche incuia si colectorul (429), iar alertele taceau.
+// v100.196 (auditul sever, 🟡 S1): acasa browserul de pe PC si colectorul au aceeasi cheie de IP - un tab ramas cu parola veche
+// incuia si colectorul (429), iar alertele taceau. Acum tokenul BUN trece peste blocare DOAR la cererile LOCALE directe (fara
+// x-forwarded-for si fara cf-ray: pe 127.0.0.1 ajung doar programele PC-ului). Din retea (Tailscale, Cloudflare, tunel) blocarea
+// tine si pentru tokenul bun: altfel 429 = gresit / 200 = corect ar fi un oracol, iar frana n-ar mai frana nimic (revizia de securitate).
+// Contorul numara pe AMBELE chei (ultimul x-forwarded-for si cf-connecting-ip): un client nu scapa schimbandu-si unul dintre ele.
 // Cererile fara token nu se numara: nu ghicesc nimic, si aplicatia fara token nu se incuie.
 //
 // Runda 1: numaratoarea se citea inainte de verificare si crestea dupa un `await`, asa ca
@@ -44,19 +47,21 @@ export async function rateLimit(request,env,scope='api',limit=90,windowSec=60){
 // simultane pe izolate diferite pot citi aceeasi valoare. Contorul din memorie ramane
 // garda exacta in interiorul fiecarui izolat.
 const AUTH_FAIL_MAX=10,AUTH_FAIL_FEREASTRA=60;
+function cheiAuth(request){const l=String(request.headers.get('x-forwarded-for')||'').split(',').map(s=>s.trim()).filter(Boolean),cf=request.headers.get('cf-connecting-ip'),k=[];if(l.length)k.push(l[l.length-1]);if(cf&&!k.includes(cf))k.push(cf);return k.length?k:['unknown']}
+function directLocal(request){return !request.headers.get('x-forwarded-for')&&!request.headers.get('cf-ray')}
 function tokenDin(request){const h=request.headers.get('authorization')||'';return h.startsWith('Bearer ')?h.slice(7).trim():request.headers.get('x-app-token')||''}
 function egalInTimpConstant(a,b){const x=enc.encode(String(a)),y=enc.encode(String(b)),n=Math.max(x.length,y.length);let d=x.length^y.length;for(let i=0;i<n;i++)d|=(x[i]??0)^(y[i]??0);return d===0}
 export async function requireApiAuth(request,env,scope='api',limit=90,colectorLimit=0){
   const expected=String(env.APP_API_TOKEN||'');if(!expected)return {ok:false,status:503,error:'APP_API_TOKEN_NOT_CONFIGURED'};
-  const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/AUTH_FAIL_FEREASTRA),key=`auth-fail:${ipOf(request)}:${bucket}`,retryAfter=(bucket+1)*AUTH_FAIL_FEREASTRA-now;
+  const now=Math.floor(Date.now()/1000),bucket=Math.floor(now/AUTH_FAIL_FEREASTRA),chei=cheiAuth(request).map(ip=>`auth-fail:${ip}:${bucket}`),retryAfter=(bucket+1)*AUTH_FAIL_FEREASTRA-now;
   const blocat={ok:false,status:429,error:'AUTH_RATE_LIMITED',retryAfter};
   // --- pas sincron: nimic de aici pana la primul await nu cedeaza controlul ---
-  const token=tokenDin(request),bun=!!token&&egalInTimpConstant(token,expected);
-  const n=localBuckets.get(key)||0;if(n>=AUTH_FAIL_MAX&&!bun)return blocat;
-  if(token&&!bun)localBuckets.set(key,n+1);
+  const token=tokenDin(request),bun=!!token&&egalInTimpConstant(token,expected),trece=bun&&directLocal(request);
+  const n=Math.max(...chei.map(k=>localBuckets.get(k)||0));if(n>=AUTH_FAIL_MAX&&!trece)return blocat;
+  if(token&&!bun)for(const k of chei)localBuckets.set(k,(localBuckets.get(k)||0)+1);
   // --- sfarsitul pasului sincron ---
   const kv=env.API_RATE_LIMIT?.get&&env.API_RATE_LIMIT?.put?env.API_RATE_LIMIT:null;
-  if(kv&&!bun){const m=Number(await kv.get(key)||0);if(m>=AUTH_FAIL_MAX)return blocat;if(token)await kv.put(key,String(m+1),{expirationTtl:AUTH_FAIL_FEREASTRA+15})}
+  if(kv&&!trece){const v=await Promise.all(chei.map(k=>kv.get(k))),m=Math.max(...v.map(x=>Number(x||0)));if(m>=AUTH_FAIL_MAX)return blocat;if(token&&!bun)for(let i=0;i<chei.length;i++)await kv.put(chei[i],String(Number(v[i]||0)+1),{expirationTtl:AUTH_FAIL_FEREASTRA+15})}
   if(!token)return {ok:false,status:401,error:'AUTH_REQUIRED'};
   if(!bun)return {ok:false,status:401,error:'AUTH_INVALID'};
   // v100.60 (el, 01.10): colectorul (antetul lui, verificat DUPA token) are galeata lui - pagina si colectorul nu-si mai fura limita.
