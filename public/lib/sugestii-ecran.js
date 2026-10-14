@@ -136,7 +136,10 @@ function sugTrendHtml(x, acum) {
   h += '<ol class="sugTrendLista">' + x.top.map(function (t) {
     var rap = t.raporteaza && t.raporteaza.d ? Math.round((Date.parse(t.raporteaza.d + 'T12:00:00Z') - Date.parse(ziNY(acum) + 'T12:00:00Z')) / 86400000) : null;
     return '<li><button type="button" class="t212BtnLinie sugSectBtn" data-action-click="sugLaPoarta(\'' + String(t.s).replace(/[^A-Za-z0-9.-]/g, '') + '\')">' + sugEsc(t.s) + '</button> ' + sugEsc(String(t.nume || '').slice(0, 28))
-      + ' <span class="tbSub">' + sugEsc(t.sector) + ' · 12-1 ' + P1(t.m12) + ' · 60 z ' + P1(t.r60) + '</span>' + (rap != null && rap >= 0 ? ' <b class="sugTrendRap">raportează în ' + rap + 'z</b>' : '') + '</li>';
+      + ' <span class="tbSub sugTrendCifre">' + sugEsc(t.sector) + ' · <span class="sugTrendNr">12-1 ' + P1(t.m12) + '</span> · <span class="sugTrendNr">60 z ' + P1(t.r60) + '</span>'
+      + (rap != null && rap >= 0 ? ' · <b class="sugTrendRap">raportează în ' + rap + 'z</b>' : '')
+      + (t.salt && t.salt.pct >= 0.5 ? ' · <b class="sugTrendSalt">salt ' + P1(t.salt.pct) + ' într-o zi' + (t.salt.d ? ' (' + sugEsc(t.salt.d) + ')' : '') + ' — verifică seria</b>' : '')   /* v100.191: split/glitch? robotul măsoară, omul verifică */
+      + '</span></li>';
   }).join('') + '</ol>';
   h += '<p class="tbSub">Apasă pe simbol: se deschide Poarta din Trading 212, cu planul și riscul tău. Judecata: jurnalul verdictelor, sursa „Trend 12 luni”, la 5 și 20 de zile față de Nasdaq — aceeași ca la topul pe sectoare. Poarta nu dimensionează pe el până nu spune bilanțul „probat”.</p></section>';
   return h;

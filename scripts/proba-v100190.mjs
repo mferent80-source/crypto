@@ -116,10 +116,10 @@ await test("colectorul rulează tura Trend o dată pe tură, cu fetch/trimite/ju
   const c = citeste("scripts", "colector.mjs");
   assert.match(c, /import \{ turaTrend as turaTrendModul \} from "\.\/lib\/tura-trend\.mjs"/);
   assert.match(c, /turaTrendColector\(\)\.catch\(\(e\) => jurnal\("trend", e\.message\)\)/);
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.111"/);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.190.0");
-  assert.ok(!/v100\.189/.test(citeste("public", "index.html")), "index.html fără versiunea veche"); assert.match(citeste("public", "index.html"), /v100\.190/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-190/);
+  const vc = /const VERSIUNE_COLECTOR = "v101\.(\d+)"/.exec(c); assert.ok(vc && Number(vc[1]) >= 111, "colector v101.111+");   // v100.191: „de la vX în sus”
+  assert.ok(Number(JSON.parse(citeste("package.json")).version.split(".")[1]) >= 190, "package 100.190+");
+  assert.ok(!/v100\.189/.test(citeste("public", "index.html")), "index.html fără versiunea veche"); assert.match(citeste("public", "index.html"), /v100\.(19\d|[2-9]\d\d)/);
+  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-(19\d|[2-9]\d\d)/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec${picate ? ` · ${picate} PICĂ` : ""}\n`);

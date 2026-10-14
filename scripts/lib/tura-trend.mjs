@@ -1,4 +1,4 @@
-// tura-trend.mjs — „Trend 12 luni” în Radar (v101.111, 14.10.2026; el: „integrează cum ai zis”). Radarul NU recalculează nimic:
+// tura-trend.mjs — „Trend 12 luni” în Radar (v101.111, 14.10.2026; el: „integrează cum ai zis”; v101.112: saltul într-o zi). Radarul NU recalculează nimic:
 // citește o dată pe zi (de la 8:00, după robotul de la 01:40) clasamentul publicat de robotul din premarket_scanner (GitHub Pages) —
 // primele 20 % din ~600 de acțiuni SUA ≥ 2 mld. $ după randamentul pe lunile 2–12 (ultima lună sărită), probat pe 14.10 față de alte
 // acțiuni în aceeași zi (+0,9 % pe 20 z, +3,4 % pe 60 z), NEprobat pe listă istorică ⇒ „în probă”. Îl pune în KV (sugestii:trend12,
@@ -18,6 +18,7 @@ export function trendDinJson(j, b, acum) {
     s: text(x && x.s, 12).replace(/[^A-Za-z0-9.-]/g, ""), nume: text(x && (x.nume || x.s), 40), sector: text(x && x.sector || "Necunoscut", 40),
     pret: nr(x && x.pret), m12: nr(x && x.m12), m6: nr(x && x.m6), r60: nr(x && x.r60), rang: nr(x && x.rang),
     raporteaza: x && x.raporteaza && x.raporteaza.d ? { d: text(x.raporteaza.d, 10), ora: text(x.raporteaza.ora, 3) } : null,
+    salt: x && x.salt && nr(x.salt.pct) != null ? { pct: nr(x.salt.pct), d: text(x.salt.d, 10) } : null,   // v101.112: cel mai mare salt într-o zi din fereastra 12-1 (split/glitch?)
   })).filter((x) => x.s && x.pret > 0);
   if (!top.length) return null;
   const regim = j.regim && typeof j.regim.peste === "boolean" ? { peste: j.regim.peste, inchidere: nr(j.regim.inchidere), sma200: nr(j.regim.sma200) } : null;
