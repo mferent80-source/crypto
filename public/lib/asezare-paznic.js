@@ -43,7 +43,16 @@
   // rândul contului din Tablou: „Trading 212 · 29.189 lei · deschise −2.250 lei” (și „+123 lei” pe plus - revizia I3)
   function t212Din(text) { var m = String(text || "").match(/Trading 212 · ([\d.,]+) lei · deschise ([+−\-]?[\d.,]+) lei/); return m ? { cont: m[1], deschise: m[2], minus: /^[−\-]/.test(m[2]) } : null; }
   // colectorul = inima lui (config.colectorLa), aceeași regulă ca Tabloul: „merge” până la 3 min (revizia I2: NU ora Monte Carlo)
-  function colectorDin(cfg, acum) { var la = cfg && nr(cfg.colectorLa); if (!la) return null; var min = Math.max(0, Math.round((acum - la) / 60000)); return { min: min, viu: min <= 3 }; }
+  // v100.194 (el: „de ce tot îmi spune că e colectorul mort și trebuie să dau refresh?”): ora colectorului se ADUCE la 5 minute, dar
+  // pagina se redesena la 8 s cu „acum − ora veche” ⇒ ~2 minute din fiecare 5 scria „oprit de 4–5 min” cu colectorul VIU; F5 aducea ora
+  // proaspătă. Cu `adusLa` (când a sosit ora): „merge” = colectorul dăduse semn cu cel mult 3 min ÎNAINTE DE ADUCERE, iar aducerea e
+  // de cel mult 12 min (altfel pagina chiar n-are veste ⇒ „oprit”). Fără `adusLa` rămâne regula veche (probele v100.151).
+  function colectorDin(cfg, acum, adusLa) {
+    var la = cfg && nr(cfg.colectorLa); if (!la) return null;
+    var min = Math.max(0, Math.round((acum - la) / 60000)), ad = nr(adusLa);
+    if (!ad) return { min: min, viu: min <= 3 };
+    return { min: min, viu: (ad - la) <= 3 * 60000 && (acum - ad) <= 12 * 60000 };
+  }
   // cea mai apropiată lichidare: |distanța|, iar „depășită” se spune (revizia C2)
   function lichDin(lista) {
     var r = null; (lista || []).forEach(function (b) { var d = nr(b && b.distantaLichidarePct); if (b && b.lichidareDepasita) r = { depasita: true, bot: b }; else if (d != null && (!r || (!r.depasita && Math.abs(d) < r.d))) r = { d: Math.abs(d), bot: b }; });
@@ -73,7 +82,7 @@
     try { var e = s.extra || {}; if (e.futures && e.futures.total > 0) { sold = nr(e.futures.total); soldDin = "soldul contului de futures (Pionex)"; } } catch (e1) {}
     if (sold == null) { var m = ctx.match(/Pionex · sold ([\d.,]+) USDT/); if (m) { sold = nr(m[1]); soldDin = "soldul din rândul Pionex al Tabloului"; } }
     if (sold == null) { try { var g = grSoldCitit(); if (g && g.sold) { sold = nr(g.sold); soldDin = "soldul scris de tine în fișa Grid (nu e citit din Pionex)"; } } catch (e2) {} }
-    D = { s: s, bot: bot(), boti: boti(), sold: sold, soldDin: soldDin, t212: t212Din(ctx), col: colectorDin(s.istoricServer && s.istoricServer.config, Date.now()), lich: lichDin(boti()) };
+    D = { s: s, bot: bot(), boti: boti(), sold: sold, soldDin: soldDin, t212: t212Din(ctx), col: colectorDin(s.istoricServer && s.istoricServer.config, Date.now(), s.istoricServer && s.istoricServer.adusLa), lich: lichDin(boti()) };
   }
   function alerteNr() { var m = (document.querySelector('[data-nav="alerts"]') || {}).textContent; m = m && m.match(/(\d+)/); return m ? +m[1] : 0; }
 

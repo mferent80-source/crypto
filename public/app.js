@@ -6357,7 +6357,7 @@ async function tbAduExtra(){
   try{
     // Istoricul strans de colectorul de acasa (pe pagina publicata raspunde 503 - atunci ramane cel din browser).
     try{var ist=await getJSON("/api/istoric-bot?action=citeste&ore=24&bot="+encodeURIComponent(b.id));
-      tbStare.istoricServer={bot:b.id,intrari:Array.isArray(ist.intrari)?ist.intrari:[],config:ist.config||null};e.istoricEroare=null;
+      tbStare.istoricServer={bot:b.id,intrari:Array.isArray(ist.intrari)?ist.intrari:[],config:ist.config||null,adusLa:Date.now()};e.istoricEroare=null;   /* v100.194: când a sosit ora colectorului (alarma falsă „oprit”) */
       // v79.1: alertele colectorului stau in KV (fara ntfy) si se vad aici
       try{var al=await getJSON("/api/istoric-bot?action=alerte");tbStare.alerteServer=al&&Array.isArray(al.alerte)?al.alerte:[]}catch(x2){tbStare.alerteServer=null}}
     catch(x){e.istoricEroare=x.status===503?"doar-acasa":textEroare(x)}
@@ -6435,9 +6435,11 @@ function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
   var s=tbStare.istoricServer,c=s&&s.config,e=tbStare.extra||{};
   if(e.istoricEroare==="doar-acasa"){el.innerHTML='<p class="tbSub">Alertele pe telefon și istoricul de 7 zile merg de pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat).</p>';return}
+  if(!s){el.innerHTML='<p class="tbSub">Aștept datele serverului de acasă (vin odată cu botul din Tablou)…</p>';return}   /* v100.194: înainte scria „colectorul n-a pornit” și când datele încă nu sosiseră */
   if(!c||!c.colectorLa){el.innerHTML='<p class="tbSub">Colectorul de acasă n-a pornit încă. Pornește din nou PORNESTE-CRYPTO-RADAR.bat.</p>';return}
-  var min=c.colectorLa?Math.round((Date.now()-c.colectorLa)/60000):null;
-  var viu=min!==null&&min<=3;
+  /* v100.194: aceeași regulă ca banda de sus (AsezarePaznic.colectorDin): „oprit” doar dacă tăcea la aducerea orei, nu „acum − ora veche” */
+  var cd=typeof AsezarePaznic!=="undefined"&&AsezarePaznic.colectorDin?AsezarePaznic.colectorDin(c,Date.now(),s.adusLa):{min:Math.max(0,Math.round((Date.now()-c.colectorLa)/60000)),viu:(s.adusLa?(s.adusLa-c.colectorLa<=180000&&Date.now()-s.adusLa<=720000):(Date.now()-c.colectorLa<=180000))};
+  var min=cd?cd.min:null,viu=!!(cd&&cd.viu);
   var canal=c.canal==="ntfy"&&c.ntfyTopic?"ntfy · canal "+c.ntfyTopic:c.canal==="telegram"?"Telegram":c.canal==="discord"?"Discord (webhook) + aici":"doar aici, în Radar (niciun canal extern legat încă)";
   var lista=Array.isArray(tbStare.alerteServer)?tbStare.alerteServer.slice(0,12):null;
   var NIV={critic:["🔴","bad"],atentie:["🟠","tbWarn"],info:["🟢","good"]};
