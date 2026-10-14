@@ -111,7 +111,7 @@ function gsRiscuriHtml(s) {
   h += gsRand("iese din grid măcar o dată", GridSim.pr(o.pIesire)) + gsRand("grile încasate, în medie", gsNr(o.perechi, 1))
     + gsRand("pierderea maximă pe drum" + (r.acum ? " (de la pornire)" : ""), GridSim.bani1(o.maxJos.p50) + " de obicei · " + GridSim.bani1(o.maxJos.p5) + " în cele mai proaste 5%", "bad")
     + gsRand("funding (" + (s.fundingSursa === "pionex" ? "rata reală Pionex" : s.fundingSursa === "manual" ? "scris de tine" : "cost fix presupus") + "), în medie", gsFundingTxt(o.funding));
-  if (s.mod === "meu" && s.bot && typeof TabloExtra !== "undefined" && TabloExtra.dacaInchizi) { var z = TabloExtra.dacaInchizi(s.bot); if (z && z.pretZero > 0) h += gsRand("prețul de zero (botul tău, acum)", mcsPretTxt(z.pretZero) + (z.distantaZeroPct !== null ? " (" + mcsPct1(z.distantaZeroPct) + " de aici)" : "")); }
+  if (s.mod === "meu" && s.bot && typeof TabloExtra !== "undefined" && TabloExtra.dacaInchizi) { var z = TabloExtra.dacaInchizi(s.bot); if (z && z.pretZero > 0) h += gsRand("prețul de zero (botul tău, acum, cu grilele de pe drum)", mcsPretTxt(z.pretZero) + (z.distantaZeroPct !== null ? " (" + mcsPct1(z.distantaZeroPct) + " de aici)" : "")); else if (z && z.zeroNeatins) h += gsRand("prețul de zero (botul tău, acum)", "din preț, în grid, nu mai ajunge pe zero"); }
   return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>⚠️ Riscurile pe nume, pe ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + '</h4></div><div class="gsRiscuri">' + h + '</div></section>';
 }
 function gsBotulMeuHtml(s) {

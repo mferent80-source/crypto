@@ -365,7 +365,7 @@ var Alerte = (function () {
     if (!u || contra || (dist !== null && Math.abs(dist) < 15)) return { mesaje: [], stare: vechi || null };
     var treapta = Math.max(1, pl.prag / 4), baza = Math.max(pl.prag, vechi && nr(vechi.anuntat) !== null ? vechi.anuntat : -Infinity, u.opritorPastreaza !== null ? u.opritorPastreaza : -Infinity);
     if (u.pastrezi < baza + treapta) return { mesaje: [], stare: vechi || null };
-    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(Math.abs(v) < 0.095 && v !== 0 ? 2 : 1).replace(".", ",") + " USDT"; };   // v100.196: o zecimală (regula lui), sub 0,1 două
     return { stare: { anuntat: u.pastrezi }, mesaje: [{ cheie: "podea-urca", nivel: "info", titlu: "🪜 " + nume + ": poți urca stopul — păstrezi " + U(u.pastrezi),
       mesaj: msg("Stopul la " + pret(u.pret) + " (" + vg(u.perna * 100) + "% de preț) îți păstrează " + U(u.pastrezi) + " dacă piața se întoarce" + (u.opritorPastreaza !== null ? ", cel de acum (" + pret(u.opritor) + ") " + U(u.opritorPastreaza) : "") + ".",
         "Aș muta stopul în Pionex la " + pret(u.pret) + "; botul merge mai departe.") }] };
@@ -424,7 +424,7 @@ var Alerte = (function () {
     var BUL = { bine: "🟢", atentie: "🟡", rau: "🔴", neutru: "⚪" }, linii = [];
     l.forEach(function (x) {
       var b = x.b, nume = String(b.baza || b.simbol || "botul").replace(/\.PERP$/, ""), tot = nr(b.profitTotal), p = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), li = nr(b.distantaLichidarePct);
-      var cap = nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "") + (tot !== null ? " · total " + (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(2).replace(".", ",") + " USDT" : "")
+      var cap = nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "") + (tot !== null ? " · total " + (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(Math.abs(tot) < 0.095 && tot !== 0 ? 2 : 1).replace(".", ",") + " USDT" : "")
         + (p !== null ? " · preț " + pret(p) + (jos !== null && sus !== null && sus > jos ? " (" + Math.round((p - jos) / (sus - jos) * 100) + "% în grid)" : "") : "") + (li !== null ? " · lichidare la " + Math.round(Math.abs(li)) + "%" : "");
       linii.push(cap);
       (Array.isArray(x.mediu) ? x.mediu : []).forEach(function (m) { if (m) linii.push("   " + (BUL[m.ton] || "⚪") + " " + m.eticheta + ": " + m.text); });

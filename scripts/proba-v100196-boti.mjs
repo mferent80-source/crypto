@@ -317,6 +317,20 @@ await test("🔵7 disciplina: „se întorc în bandă” se numără pe episoad
   assert.equal(h1.n, 1, "un episod"); assert.equal(h1.boti, 40, "din 40 de boți"); assert.equal(r.regula, null, "sub 30 de episoade: nicio regulă");
 });
 
+// ---------------------------------------------------------------- regula LUI: rezultatele cu o singură zecimală (auditul colectorului, 12) ----------------------------------------------------------------
+await test("o zecimală: fișa de închidere (Discord) „+0,2 USDT”, nu „+0,19”; procentul stopului scris de el rămâne exact", () => {
+  const f = TE.fisaInchidere({ baza: "ONDO.PERP", profitTotal: 0.19, investit: 50, gridProfitBrut: 1.234, pornitLa: 0, inchisLa: 7200000, motivInchidere: "loss_stop", opritorPierdereTip: "raport", opritorPierdereRaport: -0.0295, comisioane: -0.31 }, {});
+  assert.match(f.titlu, /închis: \+0,2 USDT/); assert.doesNotMatch(f.titlu + f.mesaj, /\d,\d\d USDT/);
+  assert.match(f.mesaj, /−2,95% din investiție/, "procentul lui, exact");
+  // sub 0,1 USDT rămân două zecimale - altfel „+0,0 USDT” ar ascunde suma
+  assert.match(TE.fisaInchidere({ baza: "X.PERP", profitTotal: 0.04, investit: 50, pornitLa: 0, inchisLa: 7200000, motivInchidere: "user_cancel" }, {}).titlu, /închis: \+0,04 USDT/);
+});
+await test("o zecimală: „🪜 poți urca stopul — păstrezi +X,Y USDT” și totalul din raportul boților", () => {
+  const b = Object.assign(botConstruit({ P1: 1.095 }), { id: "1", baza: "TST.PERP", activ: true }), plan = TE.planStare(b, { plus: 3 }, {}, 0);
+  const r = A.podeaUrca(b, plan, { regim: null }, null);
+  assert.ok(r.mesaje.length === 1, JSON.stringify(r)); assert.match(r.mesaje[0].titlu, /păstrezi \+\d+,\d USDT$/); assert.doesNotMatch(r.mesaje[0].mesaj, /\d,\d\d USDT/);
+});
+
 // ---------------------------------------------------------------- (SECTIUNI) ----------------------------------------------------------------
 
 console.log(`\n${teste - picate}/${teste} trec`);

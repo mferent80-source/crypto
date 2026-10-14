@@ -21,13 +21,13 @@ const ISTORIE = { n: 1469, net: -2065.22, comisioane: -1642.22 };
 
 await test("inchis dupa 25 de minute: randul „Închis în prima oră” cu comisioanele lui si cat din grile au mancat, plus cifra din istorie", () => {
   const f = TE.fisaInchidere(bot(25), { subOOra: ISTORIE });
-  assert.match(f.mesaj, /Închis în prima oră \(25 min\): comisioanele lui −0,90 USDT/);
+  assert.match(f.mesaj, /Închis în prima oră \(25 min\): comisioanele lui −0,9 USDT/);   /* v100.196: o zecimală (regula lui) */
   assert.match(f.mesaj, /150% din ce au făcut grilele/);
-  assert.match(f.mesaj, /\nPe istoria ta: 1469 de boți închiși în prima oră, net −2065,22 USDT, din care comisioane −1642,22 USDT/);   /* v100.68: rândul lui (≤ 160) */
+  assert.match(f.mesaj, /\nPe istoria ta: 1469 de boți închiși în prima oră, net −2065,2 USDT, din care comisioane −1642,2 USDT/);   /* v100.68: rândul lui (≤ 160) */
 });
 await test("fara istorie data: doar randul botului; fara grile pe plus: fara procent", () => {
   const f = TE.fisaInchidere(bot(25, { gridProfitBrut: 0 }), {});
-  assert.match(f.mesaj, /Închis în prima oră \(25 min\): comisioanele lui −0,90 USDT\./);
+  assert.match(f.mesaj, /Închis în prima oră \(25 min\): comisioanele lui −0,9 USDT\./);
   assert.doesNotMatch(f.mesaj, /din ce au făcut grilele|pe istoria ta/);
 });
 await test("inchis dupa o ora sau mai mult (ori durata necunoscuta): niciun rand nou", () => {

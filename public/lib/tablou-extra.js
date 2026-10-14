@@ -373,7 +373,9 @@ var TabloExtra = (function () {
     o = o || {};
     var nume = String(b && b.baza || "Botul").replace(/\.PERP$/, ""), tot = nr(b && b.profitTotal), inv = nr(b && b.investit), grid = nr(b && b.gridProfitBrut);
     var t0 = nr(b && b.pornitLa), t1 = nr(b && b.inchisLa), mot = String(b && b.motivInchidere || ""), lichidat = /liquid/i.test(mot);
-    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; }, P = function (v, z) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; };
+    // v100.196 (auditul colectorului, 12): rezultatele cu o singura zecimala (regula lui); sub 0,1 USDT doua, ca suma sa nu devina „0,0”;
+    // procentul stopului in procente ramane cum l-a scris el (P(…, 2))
+    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(Math.abs(v) < 0.095 && v !== 0 ? 2 : 1).replace(".", ",") + " USDT"; }, P = function (v, z) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; };
     var dur = t0 && t1 && t1 > t0 ? t1 - t0 : null, durTxt = dur === null ? "" : dur < 3600000 ? Math.round(dur / 60000) + " min" : dur < 48 * 3600000 ? Math.floor(dur / 3600000) + " h " + Math.round(dur % 3600000 / 60000) + " min" : (dur / 86400000).toFixed(1).replace(".", ",") + " zile";
     var pct = tot !== null && inv > 0 ? tot / inv * 100 : null;
     var titlu = "🔍 " + nume + " închis: " + (tot === null ? "rezultat necunoscut" : U(tot) + (pct !== null ? " (" + P(pct) + ")" : "")) + (durTxt ? " după " + durTxt : "");

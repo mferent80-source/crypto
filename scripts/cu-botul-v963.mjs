@@ -132,7 +132,7 @@ await test("Discord 'poti urca opritorul': o data pe treapta (max 1 USDT, 1/4 di
   const bb = (p, op) => ({ ...vvv({ pretCurent: p, opritorPierdere: op }), id: "2383", baza: "VVV.PERP", activ: true });
   const ev = (b, st, rg) => A.podeaUrca(b, plan(b), { regim: rg || { ...LIN, r4h: 1, r24h: 1 } }, st);
   let b = bb(31.5, 26.6), r = ev(b, null);
-  assert.equal(r.mesaje.length, 1); assert.match(r.mesaje[0].titlu, /^🪜 VVV: poți urca stopul — păstrezi \+\d+,\d\d USDT$/); assert.match(r.mesaje[0].mesaj, /1,5% de preț/);   /* v100.68: „stopul” */
+  assert.equal(r.mesaje.length, 1); assert.match(r.mesaje[0].titlu, /^🪜 VVV: poți urca stopul — păstrezi \+\d+,\d USDT$/); assert.match(r.mesaje[0].mesaj, /1,5% de preț/);   /* v100.68: „stopul” */
   const st = r.stare; assert.equal(ev(bb(31.55, 26.6), st).mesaje.length, 0, "sub o treaptă în plus: tăcere");
   const x = T.podeaUrca(bb(31.5, 26.6), 3).pastrezi; let p = 31.5; while (T.podeaUrca(bb(p, 26.6), 3).pastrezi < x + 1) p += 0.01;
   assert.equal(ev(bb(p + 0.01, 26.6), st).mesaje.length, 1, "o treaptă (1 USDT) mai sus: din nou");
@@ -175,15 +175,15 @@ await test("ruta ultimulPlan: cel mai nou plan pe un bot Pionex - sare peste T21
 const inchis = (o) => ({ baza: "ICP.PERP", investit: 96.63, profitTotal: -3.1136879999999962, gridProfitBrut: 0, ordinePerechi: 0, pornitLa: Date.UTC(2026, 8, 27, 11, 27, 58), inchisLa: Date.UTC(2026, 8, 27, 13, 4, 9), motivInchidere: "loss_stop", opritorPierdereTip: "raport", opritorPierdereRaport: -0.0295, levier: 3, ...o });
 await test("fisa de inchidere ICP: opritorul -2,95% la levier 3x (~1% din pret) < ziua obisnuita 6,7%; sub 3 ore; fara plan", async () => {
   const f = T.fisaInchidere(inchis(), { plan: null, atrPct: 6.7 });
-  assert.equal(f.nivel, "atentie"); assert.equal(f.titlu, "🔍 ICP închis: −3,11 USDT (−3,2%) după 1 h 36 min");
+  assert.equal(f.nivel, "atentie"); assert.equal(f.titlu, "🔍 ICP închis: −3,1 USDT (−3,2%) după 1 h 36 min");   /* v100.196: o zecimală (regula lui) */
   assert.match(f.mesaj, /^De ce: stopul de pierdere \(−2,95% din investiție\)\./);   /* v100.68 (pachetul 3): „stopul” */ assert.match(f.mesaj, /Planul tău: n-avea plan scris\./);
   assert.match(f.mesaj, /~1,0% din preț la 3×\) era sub o zi obișnuită a ICP \(~6,7%\)/);   /* v100.68: rândul lecției ≤ 160 */ assert.match(f.mesaj, /sub 3 ore/);
 });
 await test("fisa de inchidere VVV: inchis de el, peste tinta de +3 (tinerea a adus +1,73); MET: pozitia a mancat din grile; lichidat = critic", async () => {
   const v = T.fisaInchidere(inchis({ baza: "VVV.PERP", investit: 91.9, profitTotal: 4.73, gridProfitBrut: 1.45, ordinePerechi: 10, motivInchidere: "user_cancel", opritorPierdereTip: "pret", pornitLa: 1e12, inchisLa: 1e12 + 41.5 * 3600000 }), { plan: { plus: 3, minus: 14 }, atrPct: 5 });
-  assert.equal(v.nivel, "info"); assert.match(v.mesaj, /De ce: l-ai închis tu\./); assert.match(v.mesaj, /ținta atinsă, ai ieșit peste ea/); assert.match(v.mesaj, /ținerea după țintă a adus \+1,73 USDT/);
+  assert.equal(v.nivel, "info"); assert.match(v.mesaj, /De ce: l-ai închis tu\./); assert.match(v.mesaj, /ținta atinsă, ai ieșit peste ea/); assert.match(v.mesaj, /ținerea după țintă a adus \+1,7 USDT/);
   const m = T.fisaInchidere(inchis({ baza: "MET.PERP", investit: 88.98, profitTotal: 2.93, gridProfitBrut: 7.18, ordinePerechi: 564, motivInchidere: "user_cancel", opritorPierdereTip: "pret", pornitLa: 1e12, inchisLa: 1e12 + 48 * 3600000 }), {});
-  assert.match(m.mesaj, /poziția a mâncat 4,25 USDT din ce au făcut grilele/); assert.match(m.titlu, /după 2,0 zile/);
+  assert.match(m.mesaj, /poziția a mâncat 4,3 USDT din ce au făcut grilele/); assert.match(m.titlu, /după 2,0 zile/);
   assert.equal(T.fisaInchidere(inchis({ motivInchidere: "liquidation" }), {}).nivel, "critic");
 });
 
