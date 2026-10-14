@@ -1,6 +1,6 @@
 {
-  "name": "Crypto Radar Pro \u00b7 Multi-Market",
-  "short_name": "Market Radar",
+  "name": "Crypto Radar",
+  "short_name": "Crypto Radar",
   "description": "Crypto Radar Pro: analiză de piață și tabloul boților de grid Pionex, doar citire - nu plasează ordine.",
   "start_url": "/?source=pwa",
   "scope": "/",
@@ -41,9 +41,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Scanner Pionex",
-      "short_name": "Scanner",
-      "url": "/?panel=scan",
+      "name": "Tabloul botului",
+      "short_name": "Tablou",
+      "url": "/?panel=tabloubot",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -53,9 +53,9 @@
       ]
     },
     {
-      "name": "Semnale",
-      "short_name": "Signals",
-      "url": "/?panel=signals",
+      "name": "Grid: ce setez?",
+      "short_name": "Grid",
+      "url": "/?panel=gridset",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -65,9 +65,21 @@
       ]
     },
     {
-      "name": "Replay & Historical Scanner",
-      "short_name": "Replay",
-      "url": "/?panel=replaylab",
+      "name": "Piața azi",
+      "short_name": "Piața azi",
+      "url": "/?panel=dash",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Trading 212",
+      "short_name": "T212",
+      "url": "/?panel=t212",
       "icons": [
         {
           "src": "/icon-192.png",

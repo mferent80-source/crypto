@@ -29,9 +29,9 @@ await test("(1) banda contului: „total −2,02 USDT”, „lichidare 20,4%”,
   const BOT = { baza: "CRV.PERP", directie: "long", levier: 5, profitTotal: -2.02, distantaLichidarePct: 20.44, pretCurent: 0.3793 };
   const r = PV.banda({ bot: BOT, pretViu: { pret: 0.3793, text: "0.3793", primitLa: T0 - 1000, dir: "jos" }, acum: T0, zi: { deschidere: 0.3840 }, distanteGrid: { inGrid: true, josPct: 0.031, susPct: 0.086 }, piata: { ton: "bine" } });
   const t = (k) => (r.parti.find((p) => p.k === k) || {}).t;
-  assert.equal(t("total"), "total −2,02 USDT"); assert.equal(t("lich"), "lichidare 20,4%"); assert.equal(t("grid"), "grid ↓3,1% ↑8,6%"); assert.equal(t("zi"), "azi −1,2%");
+  assert.equal(t("total"), "total −2,0 USDT");   /* v100.196: rezultatul cu O zecimală */ assert.equal(t("lich"), "lichidare 20,4%"); assert.equal(t("grid"), "grid ↓3,1% ↑8,6%"); assert.equal(t("zi"), "azi −1,2%");
   assert.equal(t("pret"), "0.3793 ▼", "prețul = forma Pionex");
-  assert.equal(PV.banda({ bot: { ...BOT, profitTotal: 1.234 }, acum: T0 }).parti.find((p) => p.k === "total").t, "total +1,23 USDT");
+  assert.equal(PV.banda({ bot: { ...BOT, profitTotal: 1.234 }, acum: T0 }).parti.find((p) => p.k === "total").t, "total +1,2 USDT");   /* v100.196: o zecimală */
   assert.equal(PV.textZi(1.5).t, "azi +1,5%"); assert.equal(PV.textZi(0).t, "azi 0,0%");
   assert.equal(typeof PV.textGrid, "function", "PretViu.textGrid lipsește (o singură formă pentru bandă și reîmprospătarea live)");
   assert.equal(PV.textGrid({ inGrid: true, josPct: 0.031, susPct: 0.086 }), "grid ↓3,1% ↑8,6%");

@@ -799,7 +799,9 @@ function pwaHandleRegistration(reg){
 }
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstallPrompt=e;showPwaInstall()});
 window.addEventListener("appinstalled",()=>{deferredInstallPrompt=null;localStorage.removeItem("pwaInstallDismissed");if($("pwaInstallCard"))$("pwaInstallCard").classList.remove("on");toast("Crypto Radar instalat","good")});
-navigator.serviceWorker?.addEventListener("controllerchange",()=>location.reload());
+/* v100.196 (auditul app 🔵14): la PRIMA instalare SW-ul preia pagina (clients.claim) fără nicio actualizare - atunci nu se reîncarcă (pierdea ce scria omul) */
+var swAveaControlor=!!(typeof navigator!=="undefined"&&navigator.serviceWorker&&navigator.serviceWorker.controller);
+navigator.serviceWorker?.addEventListener("controllerchange",()=>{if(!swAveaControlor){swAveaControlor=true;return}location.reload()});
 const PAGINA_CURENTA_KEY="paginaCurenta";
 function pwaInitDeepLink(){
  // v92: Home ("Piata azi") e pagina de start - se deseneaza si fara navTo
@@ -853,7 +855,7 @@ function opportunityScore(row){
 }
 function rankedOpportunities(){return (scannerRows||[]).map(opportunityScore).sort((a,b)=>b.oppScore-a.oppScore||b.turnover-a.turnover)}
 function opportunityRowHtml(x,rank){
- return `<div class="oppRow"><div class="oppCell">${rank}</div><div class="oppCell coinCell" data-action-click="selectOpportunity(&#x27;${x.c}&#x27;,&#x27;${x.source||"PIONEX"}')">${x.c}</div><div class="oppCell ${gradeClass(x.grade)}">${x.grade} · ${x.oppScore.toFixed(0)}</div><div class="oppCell">${x.dir}</div><div class="oppCell">${x.reliability.n?x.reliability.n+" n":"—"}</div><div class="oppCell">${Number.isFinite(x.netREst)?x.netREst.toFixed(2)+"R":"—"}</div><div class="oppCell">${x.blocker}</div></div>`
+ return `<div class="oppRow"><div class="oppCell">${rank}</div><div class="oppCell coinCell" data-action-click="selectOpportunity(&#x27;${simbolSigur(x.c)}&#x27;,&#x27;${simbolSigur(x.source||"PIONEX")}&#x27;)">${escapeHtml(x.c)}</div><div class="oppCell ${gradeClass(x.grade)}">${x.grade} · ${x.oppScore.toFixed(0)}</div><div class="oppCell">${x.dir}</div><div class="oppCell">${x.reliability.n?x.reliability.n+" n":"—"}</div><div class="oppCell">${Number.isFinite(x.netREst)?x.netREst.toFixed(2)+"R":"—"}</div><div class="oppCell">${x.blocker}</div></div>`
 }
 function selectOpportunity(c,source="BINANCE"){
   if(source==="TWELVEDATA")setAssetClass("STOCKS");
@@ -1168,7 +1170,7 @@ async function assessCurrentSetupPortfolioRisk(showToast=false){
     $("preNotional").textContent=money(cand.notional);$("preIncVar").textContent=(incVar>=0?"+":"")+money(incVar);$("preIncCvar").textContent=(incCvar>=0?"+":"")+money(incCvar);$("preCorr").textContent=maxCorr.toFixed(2);$("preConcentration").textContent=(largest*100).toFixed(1)+"%";$("preBudgetGate").textContent=gate.state;$("preBudgetGate").className=gate.state==="BLOCK"?"riskBlock":gate.state==="WATCH"?"riskWatch":"riskPass";
     $("preTradeNote").textContent=`Same-sample daily history N=${aligned.matrix.length}. Budget bottleneck: ${gate.worst.key} ${(gate.worst.ratio*100).toFixed(0)}% used after candidate. Correlation cluster: ${[...new Set(clusterSymbols.map(coin))].join(", ")}.`;
     const result={candidate:cand,incVar,incCvar,maxCorr,postConcentration:largest,gate,clusterSymbols,combinedMetrics,updated:Date.now()};window.__portfolioRisk={...(base||{}),preTrade:result};if(showToast)toast(`Pre-trade risk: ${gate.state} · ΔVaR ${money(incVar)}`,gate.state==="BLOCK"?"bad":gate.state==="WATCH"?"warn":"good");return result
-  }catch(e){$("preTradeNote").textContent=`Pre-trade assessment unavailable: ${escapeHtml(e.message)}`;if(showToast)toast("Pre-trade risk unavailable: "+e.message,"warn");return null}
+  }catch(e){$("preTradeNote").textContent=`Pre-trade assessment unavailable: ${e.message}`;/* v100.196: textContent nu se escapează (ieșea „&amp;”) */if(showToast)toast("Pre-trade risk unavailable: "+e.message,"warn");return null}
 }
 function strategyProfileRow(rows,key){
   const mean=k=>{const a=rows.map(x=>+x[k]).filter(Number.isFinite);return a.length?a.reduce((u,v)=>u+v,0)/a.length:NaN},norm=(v,a,b,d=.5)=>Number.isFinite(v)?clamp((v-a)/(b-a),0,1):d,first=rows[0],stats=statsRows(rows);
@@ -1343,10 +1345,10 @@ async function accountApi(action,symbol=""){
  const q=`/api/pionex-account?action=${encodeURIComponent(action)}${symbol?`&symbol=${encodeURIComponent(symbol)}`:""}`;return getJSON(q)
 }
 async function loadPionexAccount(){
- if(assetClass()==="STOCKS"){$("acctConfig").textContent="N/A · STOCK MODE";return}
- $("acctConfig").textContent="Checking…";try{const st=await accountApi("status");window.__pionexAccountConfigured=!!st.configured;$("acctConfig").textContent=st.configured?"CONFIGURED":"NEEDS SERVER SECRETS";if(!st.configured){$("acctBalanceRows").innerHTML='<div class="emptyState">Set PIONEX_API_KEY and PIONEX_API_SECRET as Cloudflare secrets with read permission.</div>';renderDailyDesk();return}
+ if(assetClass()==="STOCKS"){$("acctConfig").textContent="— · modul acțiuni";return}
+ $("acctConfig").textContent="verific…";try{const st=await accountApi("status");window.__pionexAccountConfigured=!!st.configured;$("acctConfig").textContent=st.configured?"PUSE PE SERVER":"LIPSESC DE PE SERVER";if(!st.configured){$("acctBalanceRows").innerHTML='<div class="emptyState">Pune PIONEX_API_KEY și PIONEX_API_SECRET ca secrete Cloudflare, cu permisiunea doar de citire.</div>';renderDailyDesk();return}
  const d=await accountApi("balances"),rows=(d.data?.balances||[]).filter(x=>+x.free||+x.frozen);$("acctAssets").textContent=rows.length;$("acctBalanceRows").innerHTML=rows.length?`<div class="accountRow"><div class="accountCell">Coin</div><div class="accountCell">Free</div><div class="accountCell">Frozen</div><div class="accountCell">Total</div></div>`+rows.map(x=>`<div class="accountRow"><div class="accountCell">${escapeHtml(x.coin)}</div><div class="accountCell">${escapeHtml(x.free)}</div><div class="accountCell">${escapeHtml(x.frozen)}</div><div class="accountCell">${(+x.free+ +x.frozen).toFixed(8)}</div></div>`).join(""):'<div class="emptyState">No non-zero balances.</div>';renderDailyDesk()
- }catch(e){$("acctConfig").textContent="ERROR";$("acctBalanceRows").innerHTML=`<div class="emptyState">${escapeHtml(e.message)}</div>`}
+ }catch(e){$("acctConfig").textContent="EROARE";$("acctBalanceRows").innerHTML=`<div class="emptyState">${escapeHtml(e.message)}</div>`}
 }
 async function loadPionexOpenOrders(){
  if(assetClass()==="STOCKS"){$("acctOrderRows").innerHTML='<div class="emptyState">Pionex account is crypto-only.</div>';return}
@@ -1550,7 +1552,7 @@ async function persistScannerHistory(market,provider,universe,rows,mode="CLIENT"
   if(!rows?.length)return false;
   const ts=Date.now(),items=rows.slice(0,120).map((x,i)=>({rank:i+1,symbol:x.c||x.symbol,source:x.source||provider,bias:x.dir||x.bias||"NEUTRAL",score:+x.avg||+x.oppScore||0,confidence:+x.conf||0,adx:+x.adx||0,regime:x.regime||"",price:+x.price||null,changePct:+x.change||0,turnover:+x.turnover||0,payload:x})),top=[...rows].map(opportunityScore).sort((a,b)=>b.oppScore-a.oppScore)[0]||null,payload={ts,market,provider,mode,universeN:universe,processedN:rows.length,status:"OK",topSymbol:top?.c||items[0]?.symbol||null,topScore:top?.oppScore??items[0]?.score??null,items};
   await localDbPutRecord("scanner_runs",`${ts}|${market}|${provider}|${mode}`,payload,ts);
-  try{await historyApi("scanner_run",{},"POST",payload);return true}catch{return true}
+  try{await historyApi("scanner_run",{},"POST",payload);return true}catch{return false}/* v100.196: pe disc local da, pe server nu */
 }
 async function persistCurrentSnapshot(force=false){
   const st=window.__radarState,ss=window.__signalState;if(!st||!ss){if(force)toast("Run analysis first","warn");return false}
@@ -1562,7 +1564,7 @@ async function persistCurrentSnapshot(force=false){
 }
 async function persistSignalHistory(sig){
   if(!sig)return false;await archiveSignalRows([sig]);
-  try{await historyApi("signal",{},"POST",{signal:sig});return true}catch{return true}
+  try{await historyApi("signal",{},"POST",{signal:sig});return true}catch{return false}
 }
 async function persistEventHistory(type,title,message,payload={}){
   try{await historyApi("event",{},"POST",{type,market:assetClass(),symbol:window.__radarState?.symbol||null,source:analysisSource(),severity:"INFO",title,message,payload});return true}catch{return false}
@@ -1809,7 +1811,7 @@ async function loadOnchainIntel(force=false){
     const n=d.network||{},l=n.latest||{},c=n.change7d||{},w=d.whales||{},score=d.contextScore,state=Number.isFinite(score)?score>=60?"EXPANDING / OUTFLOW":score<=40?"CONTRACTING / INFLOW":"NEUTRAL":"N/A";
     extSet("onchainProvider",n.available?n.provider:"UNAVAILABLE",n.available?"extGood":"extWarn");extSet("onchainState",state,score>=60?"extGood":score<=40?"extBad":"extWarn");extSet("onchainAdr",extPct(c.AdrActCnt));extSet("onchainTx",extPct(c.TxCnt));extSet("onchainMvrv",Number.isFinite(+l.CapMVRVCur)?`${(+l.CapMVRVCur).toFixed(2)} · ${extMoney(l.CapRealUSD)}`:(Number.isFinite(+l.CapRealUSD)?extMoney(l.CapRealUSD):"N/A"));
     extSet("whaleProvider",w.available?w.provider:(w.configured===false?"CONFIGURE KEY":"UNAVAILABLE"),w.available?"extGood":"extWarn");extSet("whaleInflow",w.available?extMoney(w.inflowUsd):"—");extSet("whaleOutflow",w.available?extMoney(w.outflowUsd):"—");extSet("whaleNet",w.available?`${(+w.netExchangeFlowUsd)>=0?"+":""}${extMoney(w.netExchangeFlowUsd)}`:"—",w.available?(w.netExchangeFlowUsd>0?"extBad":w.netExchangeFlowUsd<0?"extGood":""):"");extSet("whaleCount",w.available?String(w.items?.length||0):"—");extSet("onchainContext",Number.isFinite(score)?score.toFixed(0)+"/100":"N/A");extSet("onchainCoverage",`${n.metrics?.length||0} network metrics · ${w.available?"attributed flows":"network only"}`);
-    $("whaleTable").innerHTML=w.available&&w.items?.length?`<div class="extRow"><div class="extCell">Time</div><div class="extCell">Flow</div><div class="extCell">USD</div><div class="extCell">Height</div><div class="extCell">Type</div><div class="extCell">Hash</div></div>`+w.items.slice(0,20).map(x=>`<div class="extRow"><div class="extCell">${new Date(x.ts).toLocaleString()}</div><div class="extCell ${x.flow==="EXCHANGE_INFLOW"?"extBad":x.flow==="EXCHANGE_OUTFLOW"?"extGood":""}">${x.flow}</div><div class="extCell">${extMoney(x.valueUsd)}</div><div class="extCell">${x.height||"—"}</div><div class="extCell">${escapeHtml(x.transactionType||"TRANSFER")}</div><div class="extCell">${escapeHtml(String(x.hash||"").slice(0,18))}</div></div>`).join(""):`<div class="emptyState">${escapeHtml(w.error||"Coin Metrics network metrics loaded. Configure WHALE_ALERT_API_KEY for attributed whale/exchange flows.")}</div>`;
+    $("whaleTable").innerHTML=w.available&&w.items?.length?`<div class="extRow"><div class="extCell">Time</div><div class="extCell">Flow</div><div class="extCell">USD</div><div class="extCell">Height</div><div class="extCell">Type</div><div class="extCell">Hash</div></div>`+w.items.slice(0,20).map(x=>`<div class="extRow"><div class="extCell">${new Date(x.ts).toLocaleString()}</div><div class="extCell ${x.flow==="EXCHANGE_INFLOW"?"extBad":x.flow==="EXCHANGE_OUTFLOW"?"extGood":""}">${escapeHtml(x.flow)}</div><div class="extCell">${extMoney(x.valueUsd)}</div><div class="extCell">${escapeHtml(x.height||"—")}</div><div class="extCell">${escapeHtml(x.transactionType||"TRANSFER")}</div><div class="extCell">${escapeHtml(String(x.hash||"").slice(0,18))}</div></div>`).join(""):`<div class="emptyState">${escapeHtml(w.error||"Coin Metrics network metrics loaded. Configure WHALE_ALERT_API_KEY for attributed whale/exchange flows.")}</div>`;
     archiveExternalIntel("onchain",d).catch(()=>{});renderMasterVerdict();return d
   }catch(e){if(!requestIdentityStillCurrent(req,{ignoreTf:true}))return null;externalIntelState.onchain=stampDecisionState({available:false,error:e.message},req);$("whaleTable").innerHTML=`<div class="emptyState">${escapeHtml(e.message)}</div>`;renderMasterVerdict();return null}
 }
@@ -1915,6 +1917,8 @@ async function loadIntelNews(force=false){
     if(!requestIdentityStillCurrent(req,{ignoreTf:true}))return null;window.__intelNews=stampDecisionState({market,symbol,source:d.source,items,risk,high,neg,pos,ts:Date.now()},req)
   }catch(e){$("newsList").innerHTML=`<div class="emptyState">News unavailable: ${escapeHtml(e.message)}</div>`;$("newsRisk").textContent="N/A"}
 }
+function dinN(arata,total){return total>arata?'<p class="tbSub">primele '+arata+' din '+total+'</p>':""}/* v100.196 (auditul app 🔵6): o listă tăiată spune cât s-a tăiat */
+function simbolSigur(s){s=String(s??"");return /^[A-Za-z0-9._-]{1,40}$/.test(s)?s:""}/* v100.196: simbolul din argumentul unei acțiuni (data-action-click) - doar litere, cifre, . _ - */
 function escapeHtml(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function safeActionToken(x,max=32){return String(x??"").replace(/[^A-Za-z0-9._-]/g,"").slice(0,max)}
 
@@ -2211,7 +2215,7 @@ async function runRegisteredExperiment(){
 function promoteExperiment(id){const a=experimentRegistry(),x=a.find(v=>v.id===id);if(!x)return;if(x.gate!=="CANDIDATE"){toast("Only a CANDIDATE can be promoted in the registry.","warn");return}x.status="PROMOTED";x.promotedAt=Date.now();setExperimentRegistry(a);toast("Experiment marked PROMOTED in research registry only.","good")}
 function rejectExperiment(id){const a=experimentRegistry(),x=a.find(v=>v.id===id);if(!x)return;x.status="REJECTED";x.rejectedAt=Date.now();setExperimentRegistry(a)}
 function renderExperimentRegistry(){
-  const a=experimentRegistry();if($("expCount"))$("expCount").textContent=a.length;const box=$("expTable");if(!box)return;box.innerHTML=a.length?`<div class="expRow"><div class="expCell">ID</div><div class="expCell">Name / Context</div><div class="expCell">Params</div><div class="expCell">Baseline</div><div class="expCell">Candidate</div><div class="expCell">Positive folds</div><div class="expCell">Status</div><div class="expCell">Action</div></div>`+a.slice(0,40).map(x=>{const cl=x.status==="PROMOTED"?"expPromoted":x.status==="CANDIDATE"?"expCandidate":x.status==="REJECTED"?"expRejected":"expResearch";const safeId=Number.isFinite(+x.id)?+x.id:0;return `<div class="expRow"><div class="expCell">${String(safeId).slice(-6)}</div><div class="expCell">${escapeHtml(x.name)}<br><small>${escapeHtml(coin(x.ctx?.symbol))} · ${escapeHtml(x.ctx?.tf||"—")} · ${escapeHtml(x.ctx?.mode||"—")}</small></div><div class="expCell">T${(+x.p.threshold).toFixed(0)} · S${(+x.p.stopMult).toFixed(2)} · R${(+x.p.targetR).toFixed(1)} · C${(+x.p.costMult).toFixed(1)}×</div><div class="expCell">${(+x.baseline.avg).toFixed(2)}R · PF ${(+x.baseline.pf).toFixed(2)}</div><div class="expCell">${(+x.candidate.avg).toFixed(2)}R · PF ${(+x.candidate.pf).toFixed(2)}</div><div class="expCell">${(+x.candidate.positive*100).toFixed(0)}%</div><div class="expCell ${cl}">${escapeHtml(x.status)}</div><div class="expCell">${x.status==="CANDIDATE"?`<button data-action-click="promoteExperiment(${safeId})">Promote</button>`:""}<button class="actionGhost" data-action-click="rejectExperiment(${safeId})">Reject</button></div></div>`}).join(""):'<div class="emptyState">No registered experiments.</div>'
+  const a=experimentRegistry();if($("expCount"))$("expCount").textContent=a.length;const box=$("expTable");if(!box)return;box.innerHTML=a.length?`<div class="expRow"><div class="expCell">ID</div><div class="expCell">Name / Context</div><div class="expCell">Params</div><div class="expCell">Baseline</div><div class="expCell">Candidate</div><div class="expCell">Positive folds</div><div class="expCell">Status</div><div class="expCell">Action</div></div>`+a.slice(0,40).map(x=>{const cl=x.status==="PROMOTED"?"expPromoted":x.status==="CANDIDATE"?"expCandidate":x.status==="REJECTED"?"expRejected":"expResearch";const safeId=Number.isFinite(+x.id)?+x.id:0;return `<div class="expRow"><div class="expCell">${String(safeId).slice(-6)}</div><div class="expCell">${escapeHtml(x.name)}<br><small>${escapeHtml(coin(x.ctx?.symbol))} · ${escapeHtml(x.ctx?.tf||"—")} · ${escapeHtml(x.ctx?.mode||"—")}</small></div><div class="expCell">T${(+x.p.threshold).toFixed(0)} · S${(+x.p.stopMult).toFixed(2)} · R${(+x.p.targetR).toFixed(1)} · C${(+x.p.costMult).toFixed(1)}×</div><div class="expCell">${(+x.baseline.avg).toFixed(2)}R · PF ${(+x.baseline.pf).toFixed(2)}</div><div class="expCell">${(+x.candidate.avg).toFixed(2)}R · PF ${(+x.candidate.pf).toFixed(2)}</div><div class="expCell">${(+x.candidate.positive*100).toFixed(0)}%</div><div class="expCell ${cl}">${escapeHtml(x.status)}</div><div class="expCell">${x.status==="CANDIDATE"?`<button data-action-click="promoteExperiment(${safeId})">Promote</button>`:""}<button class="actionGhost" data-action-click="rejectExperiment(${safeId})">Reject</button></div></div>`}).join("")+dinN(40,a.length):'<div class="emptyState">Niciun experiment înregistrat.</div>'
 }
 
 const MODEL_VERSION_KEY="modelVersionsV47";
@@ -2430,10 +2434,10 @@ function restoreActiveModelVersion(){
 }
 function renderModelVersions(){
   const a=modelVersions();$("modelVersionN").textContent=a.length;$("modelVersionActive").textContent=activeModelVersionId?String(activeModelVersionId).slice(-6):"CURRENT";$("modelFingerprint").textContent=researchDatasetFingerprint();$("modelShadowState").textContent=mlShadow?.state||"—";$("modelMetaState").textContent=metaEnsembleV2?.state||metaLabelState?.state||"—";
-  $("modelVersionTable").innerHTML=a.length?`<div class="modelVersionRow"><div class="diCell">ID</div><div class="diCell">Type</div><div class="diCell">State</div><div class="diCell">AUC</div><div class="diCell">Dataset</div><div class="diCell">Action</div></div>`+a.slice(0,20).map(x=>`<div class="modelVersionRow"><div class="diCell">${String(x.id).slice(-6)}</div><div class="diCell">${escapeHtml(x.type)}</div><div class="diCell">${escapeHtml(x.state||"—")}</div><div class="diCell">${Number.isFinite(+x.metrics?.auc)?(+x.metrics.auc).toFixed(3):"—"}</div><div class="diCell">${escapeHtml(x.fingerprint)}</div><div class="diCell"><button data-action-click="activateModelVersion(${x.id})">Activate research</button></div></div>`).join(""):'<div class="emptyState">No saved model versions.</div>'
+  $("modelVersionTable").innerHTML=a.length?`<div class="modelVersionRow"><div class="diCell">ID</div><div class="diCell">Type</div><div class="diCell">State</div><div class="diCell">AUC</div><div class="diCell">Dataset</div><div class="diCell">Action</div></div>`+a.slice(0,20).map(x=>`<div class="modelVersionRow"><div class="diCell">${String(x.id).slice(-6)}</div><div class="diCell">${escapeHtml(x.type)}</div><div class="diCell">${escapeHtml(x.state||"—")}</div><div class="diCell">${Number.isFinite(+x.metrics?.auc)?(+x.metrics.auc).toFixed(3):"—"}</div><div class="diCell">${escapeHtml(x.fingerprint)}</div><div class="diCell"><button data-action-click="activateModelVersion(${x.id})">Activate research</button></div></div>`).join("")+dinN(20,a.length):'<div class="emptyState">Nicio versiune de model salvată.</div>'
 }
 
-function verdictChip(text,type=""){return `<span class="reasonChip ${type}">${text}</span>`}
+function verdictChip(text,type=""){return `<span class="reasonChip ${type}">${escapeHtml(text)}</span>`}
 function masterDataQuality(){
   const now=Date.now(),st=window.__radarState,ss=window.__signalState,fresh=now-(dataFresh.rest||0),market=assetClass(),base=st?(fresh<=60000?100:fresh<=120000?80:fresh<=300000?55:25):0,source=st&&st.source===analysisSource()?100:0,mtfCoverage=Number(ss?.mc?.coverage??st?.m?.coverage??((st?.m?.length||0)/4)),mtf=clamp(mtfCoverage*100,0,100),identity=st&&decisionIdentityKey(currentDecisionIdentity(st.symbol,st.source,st.tf))===activeDecisionIdentityKey?100:35;
   let flow=100,flowDetail="N/A";if(market==="CRYPTO"){if(trueFlowState?.error){flow=45;flowDetail="ERROR"}else if(trueFlowState&&decisionStateMatches(trueFlowState,{source:false,maxAge:10*60*1000})){const mins=(+trueFlowState.coverageMs||0)/60000,cov=Number(trueFlowState.coverage);flow=Number.isFinite(cov)?clamp(cov*100,0,100):(mins>=15?100:mins>=5?80:mins>=2?60:40);flowDetail=`${mins.toFixed(1)}m · ${Number.isFinite(cov)?(cov*100).toFixed(0)+"%":"?"}`}else{flow=60;flowDetail="PENDING"}}
@@ -2981,7 +2985,9 @@ function addAlert(kind,title,msg,severity="warn"){
  showRadarNotification(title,msg).catch(()=>{})
 }
 function renderAlerts(){
- const a=appAlerts(),box=$("alertList");if(box)box.innerHTML=a.length?a.map(x=>`<div class="alertItem"><div class="alertIcon">${x.severity==="high"?"!":x.severity==="good"?"↗":"•"}</div><div><strong>${escapeHtml(x.title)}</strong><p>${escapeHtml(x.msg)}</p></div><span class="alertTime">${new Date(x.ts).toLocaleTimeString()}</span></div>`).join(""):`<div class="emptyState">No alerts yet.</div>`;
+ const a=appAlerts(),box=$("alertList");if(box)box.innerHTML=a.length?a.map(x=>`<div class="alertItem"><div class="alertIcon">${x.severity==="high"?"!":x.severity==="good"?"↗":"•"}</div><div><strong>${escapeHtml(x.title)}</strong><p>${escapeHtml(x.msg)}</p></div><span class="alertTime">${new Date(x.ts).toLocaleTimeString()}</span></div>`).join("")+(a.length>=100?'<p class="tbSub">se țin doar ultimele 100</p>':""):`<div class="emptyState">Nicio alertă în browser.</div>`;
+ /* v100.196 (auditul UI 🟡11): regulile arată starea din Setări (era „ON” scris de mână) */
+ try{const r=appSettings().alerts||{};for(const [id,k] of [["alertSrRule","sr"],["alertLsRule","ls"],["alertFundingRule","funding"],["alertOiRule","oi"],["alertSignalRule","signal"]]){const e=$(id);if(e){e.textContent=r[k]?"Pornită":"Oprită";e.className=r[k]?"good":"mutedInfo"}}}catch(_){}
  updateAlertBadges()
 }
 function updateAlertBadges(){
@@ -2990,7 +2996,7 @@ function updateAlertBadges(){
 // v100.196 (auditul P5): nimic nu punea `read=true` ⇒ insigna „necitite” creștea până la „Șterge”; deschiderea paginii Alerte le citește
 function alerteV67Curata(){const a=appAlerts(),b=a.filter(x=>x&&x.kind!=="ops-v67");if(b.length!==a.length)putAlerts(b)}/* cele vechi, deja intrate, ies o singură dată la pornire */
 function alerteLocaleCitite(){const a=appAlerts();if(!a.some(x=>!x.read)){updateAlertBadges();return}a.forEach(x=>{x.read=true});putAlerts(a)}
-function clearAlerts(){localStorage.removeItem("radarAlerts");renderAlerts();toast("Alerts cleared","warn")}
+function clearAlerts(){if(typeof confirm==="function"&&!confirm("Șterg alertele ținute în acest browser? Alertele de acasă (boți, acțiuni) rămân."))return;localStorage.removeItem("radarAlerts");renderAlerts();toast("Am șters alertele din browser","warn")}/* v100.196: cu confirmare (auditul UI 🔵4) */
 function checkAlerts(q,sm,deriv){
  const st=appSettings(),p=q.price,near=st.nearPct/100;
  if(st.alerts.sr){
@@ -3063,7 +3069,7 @@ function navTo(id,load=false){
    else if(id==="salt"){if(typeof saltPorneste==="function")saltPorneste(false)}   // v100.120: pagina Salt   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
    else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
-   else if(id==="stocks"){loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof sectoareDeseneaza==="function")sectoareDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
+   else if(id==="stocks"){if(assetClass()!=="STOCKS")setAssetClass("STOCKS");loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof sectoareDeseneaza==="function")sectoareDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
    else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false);if(typeof contTotAsigura==="function")contTotAsigura()}
    else if(id==="scan"){if(typeof scanPorneste==="function")scanPorneste(false)}   // v96: lista noua; scannerul vechi porneste doar din butonul lui
    else if(id==="replaylab")renderReplayLab();
@@ -3818,7 +3824,7 @@ function jsonLS(key,def){try{const v=JSON.parse(localStorage.getItem(key)||def);
 function favs(){const key=marketStoreKey("favs"),def=assetClass()==="STOCKS"?'["AAPL","MSFT","NVDA"]':'["BTC","ETH","SOL"]';return jsonLS(key,def)}
 function toggleFav(){let c=coin(norm($("symbol").value)),key=marketStoreKey("favs"),a=favs();a=a.includes(c)?a.filter(x=>x!==c):[c,...a].slice(0,15);localStorage.setItem(key,JSON.stringify(a));renderLists()}
 function pick(c){$("symbol").value=c;if(assetClass()==="STOCKS")localStorage.setItem("lastStock",c);else localStorage.setItem("lastCrypto",c);show("dash");analyze(true)}
-function renderLists(){let f=favs(),key=marketStoreKey("recent"),def=assetClass()==="STOCKS"?'["AAPL","MSFT","NVDA"]':'["BTC","ETH","SOL"]',r=jsonLS(key,def);$("favorites").innerHTML=f.map(x=>`<button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">★ ${x}</button>`).join("");$("recent").innerHTML=r.map(x=>`<button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">${x}</button>`).join("");$("watchout").innerHTML=f.length?f.map(x=>`<div class="row"><b>${x}</b><button class="pill" data-action-click="pick(&#x27;${x}&#x27;)">Analiză</button></div>`).join(""):`<div class="emptyState">No favorites yet.</div>`}
+function renderLists(){let f=favs(),key=marketStoreKey("recent"),def=assetClass()==="STOCKS"?'["AAPL","MSFT","NVDA"]':'["BTC","ETH","SOL"]',r=jsonLS(key,def);$("favorites").innerHTML=f.map(x=>`<button class="pill" data-action-click="pick(&#x27;${simbolSigur(x)}&#x27;)">★ ${escapeHtml(x)}</button>`).join("");$("recent").innerHTML=r.map(x=>`<button class="pill" data-action-click="pick(&#x27;${simbolSigur(x)}&#x27;)">${escapeHtml(x)}</button>`).join("");$("watchout").innerHTML=f.length?f.map(x=>`<div class="row"><b>${escapeHtml(x)}</b><button class="pill" data-action-click="pick(&#x27;${simbolSigur(x)}&#x27;)">Analiză</button></div>`).join(""):`<div class="emptyState">No favorites yet.</div>`}
 
 let chartBars=100;
 function setChartBars(n){chartBars=n;if(window.__radarState&&window.__radarState.q)draw(window.__radarState.q)}
@@ -4016,7 +4022,7 @@ function signalStatusClass(st){return st==="STOP"||st==="AMBIGUOUS"||st==="OUT_O
 function metricR(x){return Number.isFinite(x.netR)?x.netR:Number.isFinite(x.rResult)?x.rResult:null}
 function renderSignals(){
   const a=journal(),visible=a.filter(x=>!x.hidden||x.userSaved),box=$("journalOut");if(!box)return;
-  box.innerHTML=visible.length?visible.slice(0,80).map(x=>`<div class="journalRow"><b>${coin(x.symbol)} <small>${x.source||"BINANCE"}</small></b><span class="tag ${x.direction==="LONG"?"tagLong":"tagShort"}">${x.direction}</span><span>${num(x.entry)}</span><b class="${signalStatusClass(x.status)}">${x.status}</b><span>${Math.max(x.longConf,x.shortConf).toFixed(0)}</span><span>${new Date(x.ts).toLocaleDateString()}</span></div>`).join(""):`<div class="row"><span>Nu ai semnale salvate.</span></div>`;
+  box.innerHTML=visible.length?visible.slice(0,80).map(x=>`<div class="journalRow"><b>${escapeHtml(coin(x.symbol))} <small>${escapeHtml(x.source||"BINANCE")}</small></b><span class="tag ${x.direction==="LONG"?"tagLong":"tagShort"}">${escapeHtml(x.direction)}</span><span>${num(x.entry)}</span><b class="${signalStatusClass(x.status)}">${escapeHtml(x.status)}</b><span>${Math.max(x.longConf,x.shortConf).toFixed(0)}</span><span>${new Date(x.ts).toLocaleDateString()}</span></div>`).join("")+dinN(80,visible.length):`<div class="row"><span>Nu ai semnale salvate.</span></div>`;
   renderPerformance();renderValidation()
 }
 function renderPerformance(){
@@ -4337,7 +4343,7 @@ function renderScan(){
  const forta=x=>Number.isFinite(+x.avg)?Math.abs(+x.avg-50)*2:-1;
  rows=[...rows].sort((a,b)=>sort==="turnover"?(b.turnover??-1)-(a.turnover??-1):sort==="adx"?b.adx-a.adx:sort==="change"?Math.abs(b.change)-Math.abs(a.change):(forta(b)-forta(a))||(b.turnover-a.turnover));
  const stockMode=assetClass()==="STOCKS";
- $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" data-action-click="${stockMode?"selectStockScan":"selectPionexScan"}('${x.c}')"><b>${escapeHtml(x.c)}</b><span>${Number.isFinite(+x.avg)?(+x.avg).toFixed(0):"—"} <small class="muted">forță ${forta(x)>=0?forta(x).toFixed(0):"—"}</small></span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span><span>${x.turnover==null?"—":compact(x.turnover)}</span></div>`).join(""):`<div class="row"><span>${stockMode?"No US stock results for current filters.":"Niciun rezultat Pionex pentru filtrele selectate."}</span></div>`;
+ $("scanout").innerHTML=rows.length?rows.map(x=>`<div class="coin" data-action-click="${stockMode?"selectStockScan":"selectPionexScan"}('${simbolSigur(x.c)}')"><b>${escapeHtml(x.c)}</b><span>${Number.isFinite(+x.avg)?(+x.avg).toFixed(0):"—"} <small class="muted">forță ${forta(x)>=0?forta(x).toFixed(0):"—"}</small></span><b class="${cls(x.dir)}">${x.dir}</b><span>${x.adx.toFixed(0)}</span><span>${x.regime}</span><span>${x.conf.toFixed(0)}</span><span>${x.turnover==null?"—":compact(x.turnover)}</span></div>`).join(""):`<div class="row"><span>${stockMode?"No US stock results for current filters.":"Niciun rezultat Pionex pentru filtrele selectate."}</span></div>`;
 }
 let activeScanToken=null;
 function cancelScan(){
@@ -6471,7 +6477,7 @@ function renderTabloAlerte(){
   if(lista===null)h+='<p class="tbSub">Nu pot citi alertele de pe server.</p>';
   else if(!lista.length)h+='<p class="tbSub">Nicio alertă încă. Aici apar: lichidare aproape, Pionex în stare anormală, preț ieșit din grid, piața pe 4h împotriva botului, mișcare mare.</p>';
   else{var bil=TabloExtra.bilantAlerte(tbStare.alerteServer);if(bil.length)h+='<p class="tbSub">Ce a urmat: '+bil.map(function(x){return escapeHtml(x.text)}).join(" · ")+'</p>';   /* v100.149 (I-581) */
-    h+='<div class="tbAlerteLista">'+lista.map(function(a){var n=NIV[a.nivel]||NIV.info,du=TabloExtra.dupaAlerta(a);return '<div class="tbAlerta"><span class="tbSub">'+escapeHtml(new Date(a.t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</span><b class="'+n[1]+'">'+n[0]+' '+escapeHtml(a.titlu)+'</b>'+(TabloExtra.alertaRezolvata(a,tbStare.alerteServer)?' <span class="tbSub">· ✓ rezolvată</span>':'')+(du?' <span class="tbSub">· '+escapeHtml(du)+'</span>':'')+(a.mesaj?'<p class="tbSub">'+escapeHtml(a.mesaj)+'</p>':'')+'</div>'}).join("")+'</div>'}
+    h+='<div class="tbAlerteLista">'+lista.map(function(a){var n=NIV[a.nivel]||NIV.info,du=TabloExtra.dupaAlerta(a);return '<div class="tbAlerta"><span class="tbSub">'+escapeHtml(new Date(a.t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</span><b class="'+n[1]+'">'+n[0]+' '+escapeHtml(a.titlu)+'</b>'+(TabloExtra.alertaRezolvata(a,tbStare.alerteServer)?' <span class="tbSub">· ✓ rezolvată</span>':'')+(du?' <span class="tbSub">· '+escapeHtml(du)+'</span>':'')+(a.mesaj?'<p class="tbSub">'+escapeHtml(a.mesaj)+'</p>':'')+'</div>'}).join("")+'</div>'+dinN(12,tbStare.alerteServer.length)}
   el.innerHTML=h;
   tbRenderTodo();
 }
@@ -7528,14 +7534,18 @@ document.addEventListener("keydown",e=>{
  if(e.key==="Escape"){$("commandPalette")?.classList.remove("on");closeMoreDrawer();return}
  if(e.target&&["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
  if(e.key==="/"){e.preventDefault();$("symbol").focus()}
- else if(e.key.toLowerCase()==="a"&&!/\b(peTablou|peGrid|peJurnal|peT212|peAlerte|peScan)\b/.test(document.body.className))analyze(true);   // v100.40: nu de pe ecranele zilnice (o analiza completa pornita din greseala)
- else if(e.key.toLowerCase()==="s")navTo("scan",true);
+ else if(e.key.toLowerCase()==="a"&&peLaboratorVechi())analyze(true);   // v100.40: nu de pe ecranele zilnice (o analiza completa pornita din greseala)
+ else if(e.key.toLowerCase()==="s"&&peLaboratorVechi())navTo("scan",true);
 });
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(pwaHandleRegistration).catch(()=>{})}
 setTimeout(()=>{if(!isStandalonePwa())showPwaInstall();renderPwaHealth();pwaInitDeepLink()},900)
 
 
 // v54 CSP-safe delegated event actions. No eval/new Function is used.
+// v100.196 (auditul app 🔵4): `a` (analiza completă) și `s` (spre Scanner) porneau și de pe Piața azi, Sugestii, Carnet, Tablou, Grid -
+// acum doar pe paginile laboratorului vechi, unde și erau gândite
+const PAGINI_ZILNICE=["dash","tabloubot","sugestii","gridset","gridsim","carnet","jurnaltrade","t212","salt","scan","alerts","montecarlo","contintreg","market","deriv","stocks","rezultate","account","cloud","settings","health"];
+function peLaboratorVechi(){const p=document.querySelector(".panel.on");return !!p&&!PAGINI_ZILNICE.includes(p.id)}
 function v54SplitTopLevel(text,sep){let out=[],cur="",q=null,esc=false,depth=0;for(const ch of String(text||"")){if(esc){cur+=ch;esc=false;continue}if(ch==="\\"){cur+=ch;esc=true;continue}if(q){cur+=ch;if(ch===q)q=null;continue}if(ch==="'"||ch==='"'){q=ch;cur+=ch;continue}if(ch==="("||ch==="["){depth++;cur+=ch;continue}if(ch===")"||ch==="]"){depth=Math.max(0,depth-1);cur+=ch;continue}if(ch===sep&&depth===0){if(cur.trim())out.push(cur.trim());cur=""}else cur+=ch}if(cur.trim())out.push(cur.trim());return out}
 function v54ActionArg(token,el,event){const t=String(token||"").trim();if(!t)return undefined;if(t==="true")return true;if(t==="false")return false;if(t==="null")return null;if(t==="this.value")return el?.value;if(t==="this.checked")return !!el?.checked;if(t==="this.files[0]")return el?.files?.[0]||null;if(t==="event.target.value")return event?.target?.value;if(/^[-+]?\d+(?:\.\d+)?$/.test(t))return Number(t);if((t.startsWith("'")&&t.endsWith("'"))||(t.startsWith('"')&&t.endsWith('"')))return t.slice(1,-1).replace(/\\(['"\\])/g,"$1");throw Error("Unsupported delegated action argument")}
 function v54RunActionExpression(expr,el,event){for(let stmt of v54SplitTopLevel(expr,";")){const cond="if(event.target===this)";if(stmt.startsWith(cond)){if(event.target!==el)continue;stmt=stmt.slice(cond.length).trim()}const click=stmt.match(/^document\.getElementById\(['"]([^'"]+)['"]\)\.click\(\)$/);if(click){document.getElementById(click[1])?.click();continue}const m=stmt.match(/^([A-Za-z_$][\w$]*)\((.*)\)$/);if(!m)continue;const fn=globalThis[m[1]];if(typeof fn!=="function")continue;const args=m[2].trim()?v54SplitTopLevel(m[2],",").map(x=>v54ActionArg(x,el,event)):[];fn(...args)}}
@@ -7648,8 +7658,10 @@ function renderV67Operations(persist=false){const x=v67OperationsSnapshot(persis
 function refreshV67Operations(persist=true){const prev=v67LastState,x=renderV67Operations(persist);v67LastState=x.state;if(prev!=="BOOTING"&&prev!==x.state){const sev=x.hardBlock?"HARD":x.state==="DEGRADED"?"WARN":"INFO";v67Incident(sev,"OPS_STATE_CHANGE",`${prev} → ${x.state}`,{score:x.score,reasons:x.reasons});/* v100.196 (auditul P5): fără addAlert - laboratorul pliat băga „Operations SAFE MODE” (și notificări de sistem) în centrul de alerte al boților; incidentul rămâne în panoul v67 */}return x}
 function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;window.__v67BootId=`${v67Now()}-${Math.random().toString(36).slice(2,8)}`;v67RecoverAfterRestart();refreshV67Operations(true);const cfg=v67OpsSettings();v67OpsTimer=setInterval(()=>refreshV67Operations(true),Math.max(10000,+cfg.watchdogMs||30000));if(typeof window!=="undefined"){window.addEventListener("online",()=>refreshV67Operations(true));window.addEventListener("offline",()=>{v67Incident("HARD","NETWORK_OFFLINE","Browser reported offline");refreshV67Operations(true)});window.addEventListener("pagehide",()=>{v67RecoverySnapshot();const hb=v60StoreGet("opsHeartbeatV67",{});hb.cleanPagehideTs=v67Now();v60StoreSet("opsHeartbeatV67",hb)});document?.addEventListener?.("visibilitychange",()=>{if(document.visibilityState==="visible")refreshV67Operations(true)})}}
 
+// v100.196 (auditul app 🔵12): desenele laboratorului vechi (pliat) după primul ecran - pornirea pe telefon nu le mai așteaptă
+function pornesteLaboratorulVechi(){renderPaper();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap()}
 // Boot only after every versioned module and its lexical state are initialized.
-try{sideVechiTine()}catch(_){}applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();try{alerteV67Curata()}catch(_){}renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
+try{sideVechiTine()}catch(_){}applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();try{alerteV67Curata()}catch(_){}renderAlerts();renderFreshness();initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});(window.requestIdleCallback||function(f){return setTimeout(f,1200)})(function(){try{pornesteLaboratorulVechi()}catch(e){console.error(e)}},{timeout:4000});initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
 // v100.8: linkul din pagina alerts cere un ecran anume (Tabloul botului / Trading 212) - dupa pornire, o singura data
 if(ecranDinLegatura)setTimeout(function(){try{navTo(ecranDinLegatura,true)}catch(e){}},0);
 if(ecranDinLegatura==="gridset"&&monedaDinLegatura)setTimeout(function(){try{grDinLegatura(monedaDinLegatura)}catch(e){}},300);   // v100.33

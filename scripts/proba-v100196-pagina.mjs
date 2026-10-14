@@ -342,7 +342,8 @@ await test("🔵5 fila veche „Scanner” deschide lista nouă (navTo), nu scan
   assert.match(IDX, /<button class="tab" data-action-click="navTo\('scan',true\)">Scanner<\/button>/);
 });
 await test("🔵6 listele tăiate spun „din N” (semnale 80, experimente 40, versiuni 20, alertele colectorului 12, alertele din browser 100)", () => {
-  assert.match(APP, /primele 80 din \$\{visible\.length\}/);
+  for (const re of [/visible\.slice\(0,80\)[\s\S]{0,900}?\.join\(""\)\+dinN\(80,visible\.length\)/, /\.join\(""\)\+dinN\(40,a\.length\):'<div class="emptyState">Niciun experiment înregistrat\.<\/div>'/,
+    /\.join\(""\)\+dinN\(20,a\.length\):'<div class="emptyState">Nicio versiune de model salvată\.<\/div>'/, /\.join\(""\)\+'<\/div>'\+dinN\(12,tbStare\.alerteServer\.length\)\}/, /a\.length>=100\?'<p class="tbSub">se țin doar ultimele 100<\/p>'/]) assert.match(APP, re);
   assert.match(APP, /function dinN\(/);
   const c = ctx({}); vm.runInContext(fnSursa(APP, "dinN"), c);
   assert.equal(vm.runInContext("dinN(80,80)", c), ""); assert.equal(vm.runInContext("dinN(80,120)", c), '<p class="tbSub">primele 80 din 120</p>');
@@ -363,6 +364,28 @@ await test("🟡12 UI (partea de CSS): pe telefon „Ce aș cumpăra azi” urc�
 await test("🔵UI1 daltonism: segmentul roșu din barele de pe Piața azi are textură (nu doar culoare); 🔵UI3 textul de 10,5 px urcă la 11,5 px", () => {
   assert.match(CSS, /\.acBar>i\[style\*="--bad"\]\{background-image:repeating-linear-gradient\(135deg/);
   assert.ok(!/#dash \.acHp\{font-size:10\.5px/.test(CSS)); assert.match(CSS, /#dash \.acHp\{font-size:11\.5px/);
+  assert.match(CSS, /\.pzRangeAx\{display:flex;justify-content:space-between;font-family:var\(--pzMono\);font-size:11\.5px/);
+  assert.match(CSS, /#alerts \.alSterge\{[^}]*color:var\(--bad\)/, "butonul de ștergere arată ca o ștergere");
+});
+
+await test("🔵12 pornirea pe telefon: desenele laboratorului vechi (pliat) se fac după primul ecran, când browserul e liber", () => {
+  const f = fnSursa(APP, "pornesteLaboratorulVechi");
+  for (const x of ["renderPaper()", "renderValidation()", "renderForwardLab()", "renderProfitReadiness(false)", "renderReplayLab()", "renderEdgePro()", "renderV65DecisionOS(false)", "renderV66EdgeValidation(false)", "renderDailyDesk()", "renderModelVersions()", "renderObservedLiquidationHeatmap()"]) assert.ok(f.includes(x), x);
+  const boot = APP.slice(APP.indexOf("// Boot only after every versioned module"), APP.indexOf("// Boot only after every versioned module") + 1500);
+  assert.match(boot, /\(window\.requestIdleCallback\|\|function\(f\)\{return setTimeout\(f,1200\)\}\)\(function\(\)\{try\{pornesteLaboratorulVechi\(\)\}catch\(e\)\{console\.error\(e\)\}\},\{timeout:4000\}\)/);
+  for (const x of ["renderEdgePro();", "renderV65DecisionOS(false);", "renderV66EdgeValidation(false);", "renderReplayLab();"]) assert.ok(!boot.split("\n")[1].includes(x), "încă la pornire: " + x);
+  for (const x of ["renderSettings();", "renderAlerts();", "initV67Operations();", "renderFreshness();", "initLocalDataLayer()"]) assert.ok(boot.split("\n")[1].includes(x), "trebuie să rămână la pornire: " + x);
+  assert.match(IDX, /id="topVersiune">v100\.38 · doar citire<\/span>/, "„READ ONLY” în română");
+});
+await test("🔵10 CSS: verdictul Lățimii SUA / al sectoarelor chiar se colorează (clasa e `luS`+stare, CSS-ul scria `.lusbine`)", () => {
+  assert.match(citeste("public", "lib", "latime-us.js"), /luVerdict luS' \+ esc\(n\.stare\)/);
+  assert.match(CSS, /\.luVerdict\.luSatentie b,\.luVerdict\.luSrau b\{color:var\(--bad\)\}/); assert.match(CSS, /\.luVerdict\.luSbine b\{color:var\(--good\)\}/);
+  assert.ok(!/\.lus(bine|rau|atentie)\b/.test(CSS));
+});
+await test("🔵10 CSS: clasele dovedite nefolosite (nicăieri în html / app.js / lib / functions / scripts, nici construite) au ieșit; duplicatele identice la fel", () => {
+  for (const c of ["tbEv-alerta", "tbErouCifra", "modalShade", "skeleton", "tbDirSch", "kbd", "zoneNeutral", "pzProzaAscunsa"]) assert.ok(!new RegExp("\\." + c.replace(/-/g, "\\-") + "(?![\\w-])").test(CSS), "încă în CSS: ." + c);
+  for (const c of ["acVreme", "tbGraficSvg", "t212Chev", "acNiv-frica", "tbPill-bine", "luZHealthy"]) assert.ok(new RegExp("\\." + c.replace(/-/g, "\\-") + "(?![\\w-])").test(CSS), "la dubiu rămâne: ." + c);
+  assert.equal((CSS.match(/(^|\n|\})\.volBox\{/g) || []).length, 1, ".volBox o singură dată");
 });
 
 // ---------------------------------------------------------------------------------------------------------------------------

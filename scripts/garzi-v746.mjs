@@ -322,7 +322,8 @@ async function gardaSw() {
   const G = "sw";
   const src = citeste("public/sw.js");
   const shell = (src.match(/APP_SHELL\s*=\s*\[([^\]]*)\]/) || [])[1] || "";
-  for (const u of ["/app.js", "/lib/tablou-bot.js", "/index.html"]) if (!new RegExp(`["']${u.replace(/[.*/]/g, "\\$&")}["']`).test(shell)) pica(G, `APP_SHELL nu contine ${u}`);
+  // v100.196 (auditul app 🔵1): pagina se ține sub „/” - „/index.html” răspunde 308 spre „/” și se ținea în cache redirecționat
+  for (const u of ["/app.js", "/lib/tablou-bot.js", "/"]) if (!new RegExp(`["']${u.replace(/[.*/]/g, "\\$&")}["']`).test(shell)) pica(G, `APP_SHELL nu contine ${u}`);
   const ORIGINE = "http://127.0.0.1:18799";
   function ruleaza(reteaMerge) {
     const ascultatori = {}, atinsCache = [];
