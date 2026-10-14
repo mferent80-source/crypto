@@ -83,8 +83,9 @@ await test("pretPentruTotal: T=0 = pretul de zero; la pretul gasit, totalul dupa
   const b = vvv(), com = G.C.COMISION, x = T.pretPentruTotal(b, 3);
   assert.ok(Math.abs(T.pretPentruTotal(b, 0) - T.dacaInchizi(b).pretZero) < 1e-9);
   assert.ok(Math.abs(b.profitNet + 5.9 * (x - b.pretDeschidere) - 5.9 * x * com - 3) < 1e-9, "totalul la podea"); assert.ok(x > 30.5 && x < 30.6, "podea " + x);
+  // v100.196 (auditul 14.10, 🔴1): short-ul pe minus atinge +3 pe partea câștigului, unde gridul cumpără înapoi pe drum ⇒ totalul cu grilele (totalCuGridLa)
   const sh = { ...b, directie: "short", pozitie: -5.9 }, y = T.pretPentruTotal(sh, 3);
-  assert.ok(Math.abs(sh.profitNet + 5.9 * (sh.pretDeschidere - y) - 5.9 * y * com - 3) < 1e-9);
+  assert.ok(y > 0 && y < sh.pretCurent && Math.abs(T.totalCuGridLa(sh, y) - 3) < 1e-6, "short +3 la " + y);
   assert.equal(T.pretPentruTotal({ ...b, pnlNerealizatSigur: false }, 3), null); assert.equal(T.pretPentruTotal({ ...b, pozitie: 0 }, 3), null);
   assert.ok(Math.abs(T.planStare(b, { plus: 3 }, {}, 0).plus.podea - x) < 1e-12, "planStare poartă podeaua");
 });

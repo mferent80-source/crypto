@@ -164,6 +164,12 @@ var Alerte = (function () {
           // v100.70 (revizia pachetului 3, I8): miscarea care duce la lichidare dupa partea botului (short -> urcare)
           mesaj: msg((opS > 0 ? "Stopul e setat la " + pret(opS) + ", dar e stins; fără el" : "Fără stop") + ", o " + (dirPl === "short" ? "urcare" : dirPl === "long" ? "cădere" : "mișcare") + " bruscă merge până la lichidare" + (plL !== null && plL > 0 ? " (" + pret(plL) + ", " + distP(plL) + ")" : "") + " și poți pierde toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
             (opPlan !== null ? "Aș pune stopul la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : procPlan ? "Aș pune stopul în procente, la " + procPlan : "Aș pune stopul cât zice planul") + ": planul devine ordin, nu doar alertă.") };
+      } else if (opS > 0 && !raport && nr(b.pretLichidare) > 0 && (dirPl === "short" ? opS >= nr(b.pretLichidare) : dirPl === "long" ? opS <= nr(b.pretLichidare) : false)) {
+        // v100.196 (auditul 14.10, B3): stopul dincolo de lichidarea estimata nu apuca - lichidarea vine intai si ia marja (nu „137% din investiție”)
+        var lqS = nr(b.pretLichidare);
+        out["plan-stop"] = { nivel: "critic", titlu: nume + ": stopul e dincolo de lichidare",
+          mesaj: msg("Stopul e la " + pret(opS) + ", lichidarea estimată la " + pret(lqS) + " (" + distP(lqS) + "): lichidarea vine întâi și iei toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
+            (opPlan !== null ? "Aș muta stopul în Pionex la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : "Aș muta stopul înaintea lichidării, cât zice planul") + ": planul devine ordin, nu doar alertă.") };
       } else if (lo === null) out["plan-stop"] = null;
       else {
         var pierde = -lo, inPS = fost("plan-stop") !== "ok", departe = pierde > pg * (inPS ? 1.1 : 1.2) && pierde - pg >= (inPS ? 1 : 2);

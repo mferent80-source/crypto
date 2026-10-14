@@ -30,6 +30,8 @@ var GridCalcul = (function () {
     MEDIANA_VERDE: 0.003,
     MARGINE_RANGE: 0.10,
     BARE_ZI: 96,               // lumanari de 15M intr-o zi
+    ALUNECARE_STOP: 0.001,     // v100.196 (auditul 14.10, 🔵4): iesirea pe stop / tinta e la piata - 0,1% din pret impotriva pozitiei (ipoteza; alt-urile pot mai mult)
+    MIN_FERESTRE_TEST: 10,     // v100.196 (auditul 14.10, B5): sub atatea ferestre independente pe zilele nevazute, fisa nu zice PORNESTE (ipoteza)
     PAS_FERESTRE: 24,          // o fereastra noua la fiecare 6h
     ZILE_PLINE: 29
   };
@@ -369,6 +371,10 @@ var GridCalcul = (function () {
     if (a.mediana >= 0 && a.mediana < C.MEDIANA_VERDE) galben.push("pe istoric iese la limită (mediana " + procent(a.mediana) + ")");
     if (!o.stat.test) galben.push("n-am avut zile nevăzute pe care s-o verific");
     else if (o.stat.test.mediana < 0) galben.push("pe ultimele zile, nevăzute la alegere, a ieșit pe minus (" + procent(o.stat.test.mediana) + ")");
+    // v100.196 (auditul 14.10, B5): setarea e cea mai buna din ~36 de combinatii pe antrenare, verificata pe ~6 ferestre independente (BTC, SOL si DOGE
+    // ieseau toate „porneste” short din aceleasi 12 zile de scadere - un singur regim, nu trei confirmari). Sub prag: astept mai multe zile.
+    if (o.ferestreTest !== undefined && o.ferestreTest !== null && o.ferestreTest < C.MIN_FERESTRE_TEST) galben.push("pe zilele nevăzute am doar " + cate(o.ferestreTest, "fereastră independentă", "ferestre independente")
+      + (o.incercate > 0 ? ", iar setarea e cea mai bună din " + cate(o.incercate, "combinație încercată", "combinații încercate") : "") + ": prea puțin ca să zic PORNEȘTE (cer cel puțin " + C.MIN_FERESTRE_TEST + "; pot fi toate din același regim)");
     if (o.pozitie !== null && o.pozitie !== undefined && (o.pozitie < C.MARGINE_RANGE || o.pozitie > 1 - C.MARGINE_RANGE)) galben.push("prețul stă lângă " + (o.pozitie < C.MARGINE_RANGE ? "minimul" : "maximul") + " ultimelor 7 zile");
     if (o.zile < C.ZILE_PLINE) galben.push("moneda are doar " + cate(Math.floor(o.zile), "zi", "zile") + " de istoric aici");
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };

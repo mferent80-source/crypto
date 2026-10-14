@@ -17,6 +17,7 @@ var GridSim = (function () {
   function bani1(v) { return v == null || !isFinite(v) ? "—" : semn(Math.round(v * 10) / 10) + nrRo(Math.abs(v), 1) + " USDT"; }   // rezultatele: o zecimală
   function semn1(v) { return v == null || !isFinite(v) ? "—" : semn(Math.round(v * 10) / 10) + nrRo(Math.abs(v), 1); }
   function pr(v) { return v == null || !isFinite(v) ? "—" : Math.round(v * 100) + "%"; }
+  function prMic(v) { return v > 0 && v < 0.005 ? "sub 1%" : pr(v); }   // v100.196: o frecvență pozitivă nu se scrie „0%”
   function pretTxt(v) { if (v == null || !isFinite(v)) return "—"; var a = Math.abs(v); return a > 0 && a < 0.01 ? nrRo(Number(v.toPrecision(4)), Math.min(12, 3 - Math.floor(Math.log10(a)))) : nrRo(v, a < 1 ? 4 : 2); }
   function dataTxt(t) { return new Date(t).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
   // fără exponent la monedele foarte ieftine: 6 cifre semnificative scrise întreg (ca în codTVBot)
@@ -63,7 +64,8 @@ var GridSim = (function () {
   // din botul Pionex (aceeași citire ca mcsSetariBot: Pionex numără LINIILE ⇒ intervale = row − 1; stopul pe partea direcției; TP la long / short)
   function setariDinBot(b) {
     var d = String(b && b.directie || "").toLowerCase(), dir = d === "long" || d === "short" ? d : "neutru", bu = b && b.brut && b.brut.buOrderData || {};
-    var row = Number(bu.row), stop = b.opritorPierdereActiv && Number(b.opritorPierdere) > 0 ? (dir === "short" ? { sus: Number(b.opritorPierdere) } : { jos: Number(b.opritorPierdere) }) : null;
+    // v100.196 (auditul 14.10, 🔵2): la neutru partea stopului vine din pret (peste pret = sus), nu „jos” mereu
+    var opB = Number(b.opritorPierdere), pB = Number(b.pretCurent), row = Number(bu.row), stop = b.opritorPierdereActiv && opB > 0 ? (dir === "short" || (dir === "neutru" && pB > 0 && opB > pB) ? { sus: opB } : { jos: opB }) : null;
     var tp = dir !== "neutru" && b.opritorProfitActiv && Number(b.opritorProfit) > 0 ? Number(b.opritorProfit) : null;
     return { st: { jos: Number(b.gridJos), sus: Number(b.gridSus), grile: row > 1 ? Math.round(row) - 1 : 20, levier: Number(b.levier) || 1, dir: dir, suma: Number(b.investit) > 0 ? Number(b.investit) : null, stop: stop, tp: tp, tip: tipDin(bu.gridType) },
       pornitLa: Number(b.pornitLa) > 0 ? Number(b.pornitLa) : null, tpAprox: !!(tp && b.opritorProfitTip === "raport") };
@@ -80,16 +82,46 @@ var GridSim = (function () {
     for (var i = 1; i <= b15.length - bloc; i++) { var t0 = b15[i].t, t1 = b15[i + bloc - 1].t; for (var k = 0; k < F.length; k++) if (t0 >= F[k].de && t1 + pas <= F[k].pana) { out.push(i); break; }   /* revizia: blocul întreg, cu închiderea ultimei bare, în fereastră */ }
     return out;
   }
-  function drumDin(b, n, bloc, pret0, rnd, mu, starturi) {
+  function drumDin(b, n, bloc, pret0, rnd, mu, starturi, urme) {
     var out = [], cur = pret0, t = 0, k = mu ? Math.exp(-mu) : 1;
     while (out.length < n) {
       var i = starturi[Math.floor(rnd() * starturi.length)];
+      if (urme) urme.push(i);   /* v100.196 (B1): începuturile blocurilor, pentru incertitudinea pe zile */
       for (var j = 0; j < bloc && out.length < n; j++) { var x = b[i + j], f = cur / b[i + j - 1].c * k; out.push({ t: t++, o: x.o * f, h: x.h * f, l: x.l * f, c: x.c * f, v: x.v }); cur = out[out.length - 1].c; }
     }
     return out;
   }
   var MIN_STARTURI_REGIM = 3 * BZ;
   function marja(p, n) { return !(n > 0) || !(p > 0) || !(p < 1) ? 0 : Math.round(1.96 * Math.sqrt(p * (1 - p) / n) * 100); }
+  // v100.196 (auditul 14.10, B1): ±4 din 500 de drumuri era doar zgomotul tragerii - drumurile sunt lipite din ~31 de zile, iar P sărea cu zeci
+  // de puncte între cele două jumătăți ale istoricului (SOL 32% / 70%). Incertitudinea reală = jackknife pe GRUPE de zile consecutive: pentru
+  // fiecare grupă, P din drumurile care nu folosesc nicio bară din ea (= Monte Carlo pe istoricul fără grupa aceea); varianța jackknife
+  // (K−1)/K·Σ(P_g − P̄)². Grupa cu sub 20 de drumuri nu intră; sub 3 grupe ⇒ null (nu se poate socoti). Puncte procentuale, rotunjite.
+  var GRUPE_ZILE = 6, MIN_DRUMURI_GRUPA = 20;
+  function marjaZile(vals, masti, K) {
+    if (!(K >= 3) || !vals.length) return null;
+    var pg = [];
+    for (var g = 0; g < K; g++) { var n = 0, k = 0, bit = 1 << g; for (var i = 0; i < vals.length; i++) if (!(masti[i] & bit)) { n++; if (vals[i] > 0) k++; } if (n >= MIN_DRUMURI_GRUPA) pg.push(k / n); }
+    if (pg.length < 3) return null;
+    var m = pg.reduce(function (a, c) { return a + c; }, 0) / pg.length, ss = pg.reduce(function (a, c) { return a + (c - m) * (c - m); }, 0);
+    return Math.round(1.96 * Math.sqrt((pg.length - 1) / pg.length * ss) * 100);
+  }
+  // v100.196 (B1): reluarea ISTORICULUI REAL - setarea (mutată relativ la prețul fiecărei porniri) pornită la începutul fiecărei zile de istoric, cu
+  // tendința reală (nu drumuri), citită la fiecare orizont care încape. Media pe porniri, câte pe plus și câte ferestre nu se suprapun.
+  function reluareReala(b15, st, oriz, suma) {
+    var P0 = b15[b15.length - 1].c, maxZ = Math.max.apply(null, oriz), col = oriz.map(function () { return []; });
+    for (var s = 0; s + Math.min.apply(null, oriz) * BZ <= b15.length; s += BZ) {
+      var k = b15[s].o / P0, sc = function (v) { return v > 0 ? v * k : v; }, stR = {};
+      for (var q in st) stR[q] = st[q];
+      stR.jos = st.jos * k; stR.sus = st.sus * k; stR.stop = st.stop ? { jos: sc(st.stop.jos), sus: sc(st.stop.sus) } : null;
+      var lung = Math.min(maxZ * BZ, b15.length - s), r = GP.simuleaza(b15, s, lung, stR, { traseu: true }), tr = r.traseu, L = tr.net.length;
+      oriz.forEach(function (z, h) { if (s + z * BZ <= b15.length) col[h].push(tr.net[Math.min(z * BZ, L) - 1] * suma); });
+    }
+    return oriz.map(function (z, h) {
+      var v = col[h]; if (!v.length) return null;
+      return { n: v.length, media: v.reduce(function (a, c) { return a + c; }, 0) / v.length, pPlus: v.filter(function (x) { return x > 0; }).length / v.length, independente: Math.floor(b15.length / (z * BZ)) };
+    });
+  }
   function mediana(v) { if (!v.length) return null; var s = v.slice().sort(function (a, b) { return a - b; }); return pc(s, 0.5); }
   // o = { zile (14), orizonturi ([1,3,7,14]), n (500), seed (12), plan: { minus, plus } | null, pornitLa: ms | null }
   function simuleaza(b15, st, o) {
@@ -130,14 +162,18 @@ var GridSim = (function () {
     // v100.149 (I-579): pe regim, drumurile pornesc doar din ferestrele cu aceeași stare a Busolei; sub 3 zile de starturi ⇒ eroare pe nume
     var ST = Array.isArray(o.starturi) ? o.starturi.filter(function (i) { return i >= 1 && i <= b15.length - BZ; }) : null;
     if (ST && ST.length < MIN_STARTURI_REGIM) return { eroare: "Prea puține bare în regimul de acum (" + cate(Math.floor(ST.length / BZ), "zi", "zile") + "): îmi trebuie cel puțin 3 ca să trag drumuri doar din el." };
-    var DRUM = ST ? function (b, hh, bz, p, r, muu) { return drumDin(b, hh, bz, p, r, muu, ST); } : M.drum;
+    var DRUM = ST ? function (b, hh, bz, p, r, muu, urme) { return drumDin(b, hh, bz, p, r, muu, ST, urme); } : M.drum;
     var mu = tendinta(b15), m;
     { var rnd0 = M.generator(seed), v0 = []; for (var q = 0; q < n; q++) { var d0 = DRUM(b15, H, BZ, P0, rnd0, mu); v0.push(Math.log(d0[d0.length - 1].c / P0)); } v0.sort(function (a, c) { return a - c; }); m = mu + pc(v0, 0.5) / H; }
     var rnd = M.generator(seed), bareO = oriz.map(function (z) { return pre + z * BZ; });
     var col = oriz.map(function () { return { net: [], deAici: [], plan: 0, planRau: 0, planZile: [], lich: 0, stop: 0, tp: 0, ies: 0, per: 0, maxJos: [], funding: 0 }; });
     var acum = null, dejaAtins = null;
+    // v100.196 (B1): grupele de zile consecutive ale istoricului și, pe fiecare drum, ce grupe a atins (mască pe biți)
+    var K = Math.min(GRUPE_ZILE, zileIst), masti = [], grupa = function (i) { return Math.min(K - 1, Math.floor(i * K / b15.length)); };
     for (var sIdx = 0; sIdx < n; sIdx++) {
-      var d = DRUM(b15, H, BZ, P0, rnd, m), drumT = pre ? prefix.concat(d) : d;
+      var urme = [], d = DRUM(b15, H, BZ, P0, rnd, m, urme), drumT = pre ? prefix.concat(d) : d, mk = 0;
+      for (var u = 0; u < urme.length; u++) mk |= (1 << grupa(urme[u])) | (1 << grupa(Math.min(b15.length - 1, urme[u] + BZ - 1)));
+      masti.push(mk);
       var r = GP.simuleaza(drumT, 0, drumT.length, stS, optGP), tr = r.traseu, L = tr.net.length;
       // „până acum” = traseul la ultima bară reală (identic pe toate drumurile); t = închiderea ei; oprit și când stopul cade chiar pe ea (revizia)
       if (pre && !acum) { var ia = Math.min(pre, L) - 1; acum = { net: tr.net[ia], usdt: tr.net[ia] * suma, bare: pre, t: prefix[prefix.length - 1].t + 9e5, perechi: tr.perechi[ia], oprit: (r.lichidat || r.oprit) && r.bare <= pre ? (r.lichidat ? "lichidat" : "oprit") : null }; }
@@ -157,17 +193,18 @@ var GridSim = (function () {
         c.funding += r.funding * (ix + 1) / L;
       }
     }
+    var rel = pre ? null : reluareReala(b15, stS, oriz, suma);   // v100.196 (B1): doar la botul nou - „de aici încolo” nu are o reluare de bot nou
     var orizonturi = oriz.map(function (z, h) {
       var c = col[h], nets = c.net.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), cast = 0, pier = 0;
       c.net.forEach(function (x) { if (x > 0) cast++; else if (x < 0) pier++; });
-      var mjs = c.maxJos.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), pC = cast / n, out = {
-        zile: z, bare: bareO[h], scurt: zileIst < 3 * z, pCastig: pC, pPierde: pier / n, pZero: (n - cast - pier) / n, marja: marja(pC, n),
+      var mjs = c.maxJos.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), pC = cast / n, mD = marja(pC, n), mZ = marjaZile(c.net, masti, K), out = {
+        zile: z, bare: bareO[h], scurt: zileIst < 3 * z, pCastig: pC, pPierde: pier / n, pZero: (n - cast - pier) / n, marja: mZ !== null ? Math.max(mZ, mD) : mD, marjaDrumuri: mD, marjaZile: mZ, zileDistincte: zileIst, reluare: rel ? rel[h] : null,
         p5: pc(nets, 0.05), p50: pc(nets, 0.5), p95: pc(nets, 0.95), hist: M.histograma(nets, 24),
         plan: plan ? { p: c.plan / n, pRau: c.planRau / n, zileMediana: c.planZile.length ? mediana(c.planZile) : null, dejaAtins: dejaAtins } : null,
         pLich: c.lich / n, pStop: c.stop / n, pTp: c.tp / n, pIesire: c.ies / n, perechi: c.per / n, maxJos: { p50: pc(mjs, 0.5), p5: pc(mjs, 0.05) }, funding: c.funding / n * suma };
       if (o.peDrum) out.drumuri = c.net.map(function (x) { return x * suma; });   // revizia (R3): rezultatele în ordinea drumurilor (drum cu drum)
       // revizia (R3): la botul care rulează, hotărârea lui („îl țin?”) depinde de ce URMEAZĂ ⇒ „de aici încolo” întreg: câștigă / pierde, marja, histograma
-      if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: marja(dc / n, n), hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
+      if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); var mDa = marja(dc / n, n), mZa = marjaZile(c.deAici, masti, K); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: mZa !== null ? Math.max(mZa, mDa) : mDa, marjaDrumuri: mDa, marjaZile: mZa, hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
       return out;
     });
     return { regim: ST ? { starturi: ST.length } : null, n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, orizonturi: orizonturi };
@@ -241,10 +278,22 @@ var GridSim = (function () {
     var rand = (meu ? "de aici încolo: " : "") + "CÂȘTIGĂ în " + P + "% din drumuri · PIERDE în " + Q + "%" + (Z > 0 ? " · pe zero " + Z + "%" : "");
     var sub = "de obicei " + bani1(p50) + " · cele mai proaste 5%: " + bani1(p5) + " · cele mai bune 5%: " + bani1(p95) + (meu ? " · cu tot cu ce a făcut până acum: de obicei " + bani1(o.p50) : "");
     var zi = cate(o.zile, "zi", "zile"), faCe, planTxt = pl && o.plan && pl.plus > 0 && pl.minus > 0 ? "; planul +" + nrRo(pl.plus, 1) + " vine înainte de −" + nrRo(pl.minus, 1) + " în " + pr(o.plan.p) : "";
+    // v100.196 (auditul 14.10, B1): „Aș porni / Aș ține” cere și ca marginea de jos a incertitudinii reale (pe zile) să rămână peste 50%, iar la botul
+    // nou și ca pornit în fiecare zi pe istoria REALĂ să fi ieșit în medie pe plus (pe aceleași bare „Aș porni” ieșea în 103 din 108 porniri).
+    // Pragurile sunt ipoteze: se judecă pe verdictele de după 14.10, pe ≥ 10 cazuri independente, separat pe regim.
+    var rel = meu ? null : o.reluare, motNes = [];
+    if (mj > 0 && P - mj <= 50) motNes.push("incertitudinea reală e ±" + cate(mj, "punct", "puncte") + (o.zileDistincte > 0 ? " (din ~" + cate(o.zileDistincte, "zi distinctă", "zile distincte") + ")" : "") + ", deci poate fi și sub 50%");
+    if (!meu && !rel) motNes.push("pe istoria reală n-am nicio fereastră de " + zi + " ca să verific");
+    else if (!meu && !(rel.media > 0)) motNes.push("pe istoria reală, pornit în fiecare zi, a ieșit în medie " + bani1(rel.media) + " (" + cate(rel.n, "pornire", "porniri") + ", ~" + cate(rel.independente, "fereastră independentă", "ferestre independente") + ")");
+    var confirmat = P >= 55 && p50 > 0 && !motNes.length;
+    if (rel) sub += " · pe istoria reală, pornit în fiecare zi: în medie " + bani1(rel.media) + ", pe plus în " + pr(rel.pPlus) + " (" + cate(rel.n, "pornire", "porniri") + ", ~" + cate(rel.independente, "fereastră independentă", "ferestre independente") + ")";
     if (meu && rez.acum.oprit) faCe = "Reluarea arată botul " + (rez.acum.oprit === "lichidat" ? "LICHIDAT" : "OPRIT") + " pe drumul real: setările de aici nu se potrivesc cu botul tău din Pionex (stopul sau gridul diferă) - verifică-le înainte să te iei după cifre.";
-    else if (o.pLich > 0.02) faCe = meu ? "L-aș opri: lichidare în " + pr(o.pLich) + " din drumuri de aici încolo. La un bot pornit levierul nu se schimbă: oprește-l și pornește altul mai strâns de partea pierderii." : "N-aș porni așa: lichidare în " + pr(o.pLich) + " din drumuri. Levier mai mic sau grid mai strâns de partea pierderii.";
+    // v100.196 (B2): orice lichidare pe drumuri (era tolerată până la 2% pe 7 zile ≈ 63% pe an); sub 0,5% se scrie „sub 1%”, nu „0%”
+    else if (o.pLich > 0) faCe = meu ? "L-aș opri: lichidare în " + prMic(o.pLich) + " din drumuri de aici încolo. La un bot pornit levierul nu se schimbă: oprește-l și pornește altul mai strâns de partea pierderii." : "N-aș porni așa: lichidare în " + prMic(o.pLich) + " din drumuri. Levier mai mic sau grid mai strâns de partea pierderii.";
     else if (pl && pl.minus > 0 && o.p5 < -pl.minus) faCe = meu ? "Nu se potrivește cu planul tău: în cele mai proaste 5% ajungi la −" + nrRo(Math.abs(o.p5), 1) + " USDT de la pornire, planul tău zice −" + nrRo(pl.minus, 1) + ". Mută stopul la planul tău." : "Nu se potrivește cu planul tău: în cele mai proaste 5% pierzi " + nrRo(Math.abs(o.p5), 1) + " USDT, planul tău zice −" + nrRo(pl.minus, 1) + ". Mută stopul la planul tău sau micșorează suma.";
-    else if (o.pStop > 0.5) faCe = "Stopul e în zgomot: atins în " + pr(o.pStop) + " din drumuri în " + zi + ". Pune-l mai departe sau renunță la el - doar dacă lichidarea e 0%.";
+    // v100.196 (B2): fără „renunță la el” (contra alertei CRITIC „n-ai stop activ”): stopul se mută dincolo de o zi obișnuită a monedei
+    else if (o.pStop > 0.5) faCe = "Stopul e în zgomot: atins în " + pr(o.pStop) + " din drumuri în " + zi + ". L-aș muta dincolo de cât merge moneda împotriva botului într-o zi obișnuită (profilul monedei), nu l-aș scoate.";
+    else if (P >= 55 && p50 > 0 && !confirmat) faCe = (meu ? "O aruncare de ban de aici încolo: " : "O aruncare de ban: ") + "câștigă în " + P + "% din drumuri, de obicei " + bani1(p50) + ", dar " + motNes.join(" și ") + "; deocamdată nu zic «" + (meu ? "Aș ține" : "Aș porni") + "». " + (meu ? "Ține-l doar cu planul tău pus." : "Dacă vrei totuși, suma mică.");
     else if (P >= 55 && p50 > 0) faCe = meu ? "Aș ține: de aici încolo câștigă în " + P + "% din drumuri, de obicei " + bani1(p50) + planTxt + "." : "Aș porni: câștigă în " + P + "% din drumuri, de obicei " + bani1(p50) + planTxt + ".";
     else if (P <= 45) faCe = meu ? "Aș opri: de aici încolo pierde în " + Q + "% din drumuri (de obicei " + bani1(p50) + "). Pe drumurile fără tendință, de aici încolo setarea pierde din comisioane și din poziția rămasă." : "N-aș porni: pierde în " + Q + "% din drumuri (de obicei " + bani1(p50) + "). Pe drumurile fără tendință, setarea asta pierde din comisioane și din poziția rămasă.";
     else faCe = meu ? "O aruncare de ban de aici încolo: " + P + "% câștigă, " + Q + "% pierde. Gridul câștigă din grile, nu din direcție; ține-l doar cu planul tău pus." : "O aruncare de ban: " + P + "% câștigă, " + Q + "% pierde. Gridul câștigă din grile, nu din direcție; dacă vrei totuși, suma mică.";
@@ -253,7 +302,8 @@ var GridSim = (function () {
       faCe += " De la pornire botul tău are " + (pn !== null && pn !== undefined ? semn1(pn) + " USDT (Pionex), " + semn1(rez.acum.usdt) + " estimat" : semn1(rez.acum.usdt) + " USDT estimat") + ".";
       if (o.plan && o.plan.dejaAtins && pl) faCe += " Dar planul tău e deja atins (" + (o.plan.dejaAtins === "plus" ? "+" + nrRo(pl.plus, 1) + "): încasează" : "−" + nrRo(pl.minus, 1) + "): ieși") + ", cum ți-ai propus.";
     }
-    return { rand: rand, marja: mj > 0 ? "±" + mj + " puncte" : "sub ±1 punct", culoare: P >= 55 ? "good" : P <= 45 ? "bad" : "mijl", sub: sub, faCe: faCe, deAici: !!d,
+    var dinZile = o.zileDistincte > 0 ? ", din ~" + cate(o.zileDistincte, "zi distinctă", "zile distincte") + " de istoric" : "";
+    return { rand: rand, marja: (mj > 0 ? "±" + cate(mj, "punct", "puncte") : "sub ±1 punct") + dinZile, culoare: confirmat ? "good" : P <= 45 ? "bad" : "mijl", confirmat: confirmat, sub: sub, faCe: faCe, deAici: !!d,
       nota: "Pe istoria monedei reluată, fără tendința perioadei; o criză mai rea decât orice a avut nu apare în drumuri. Umplerile sunt estimate pe bare, nu pe ordinele reale." };
   }
   // v100.139 (el, 08.10: „Monte Carlo cu un scan automat pe bot la 15 min” în Tablou): rândul SCURT - verdictul pe 7 zile (CÂȘTIGĂ / PIERDE,

@@ -12,10 +12,13 @@ var MonteSimbol = (function () {
   // (raportul deschidere / închiderea zilei de dinainte - gap-ul - rămâne cel real)
   // mu (opțional) = media log-randamentului pe bară, scoasă din fiecare bară: drumul păstrează agitația, nu tendința perioadei
   // (o monedă nouă care a căzut 50% într-o lună nu se „prezice” mai departe); mu = 0 ⇒ drumul simplu
-  function drum(b, n, bloc, pret0, rnd, mu) {
+  // v100.196 (auditul 14.10, B1): urme (opțional) = lista în care se scriu începuturile blocurilor - din ea Simulatorul socotește incertitudinea
+  // pe ZILE (jackknife pe grupe de zile); drumurile rămân exact aceleași (aceleași trageri din rnd)
+  function drum(b, n, bloc, pret0, rnd, mu, urme) {
     var out = [], cur = pret0, t = 0, k = mu ? Math.exp(-mu) : 1;
     while (out.length < n) {
       var i = 1 + Math.floor(rnd() * (b.length - bloc));
+      if (urme) urme.push(i);
       for (var j = 0; j < bloc && out.length < n; j++) { var x = b[i + j], f = cur / b[i + j - 1].c * k; out.push({ t: t++, o: x.o * f, h: x.h * f, l: x.l * f, c: x.c * f, v: x.v }); cur = out[out.length - 1].c; }
     }
     return out;

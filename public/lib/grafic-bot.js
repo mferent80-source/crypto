@@ -334,8 +334,11 @@ var GraficBot = (function () {
     var dupa = {}; (Array.isArray(sanse) ? sanse : []).forEach(function (r) { if (r && r.cod && nr(r.p) !== null) dupa[r.cod] = r; });
     return niv.map(function (x) {
       var m = SANSE[x.k], r = m && dupa[m[0]]; if (!r) return x;
-      var p = Math.round(r.p * 100) + "%";
-      return Object.assign({}, x, { sansa: m[1] + ": " + p, sansaScurt: p, sansaLung: r.titlu + ": " + p + (r.text ? " · " + r.text : "") });
+      // v100.196 (auditul 14.10, 🔴4 la statistică): niciodată „0%” / „100%” gol (pe walk-forward, unde scria „0%” lichidarea a venit în 2,3%) -
+      // „< 1%” / „> 99%”, iar sub 1% și marginea de sus a intervalului (Wilson, pe cazurile independente), cât poate fi de fapt
+      var k = Math.round(nr(r.p) * 100), icS = Array.isArray(r.ic) ? nr(r.ic[1]) : null;
+      var p = k < 1 ? "< 1%" : k > 99 ? "> 99%" : k + "%", pana = k < 1 && icS !== null && icS > 0 ? " (până la ~" + Math.max(1, Math.ceil(icS * 100)) + "%)" : "";
+      return Object.assign({}, x, { sansa: m[1] + ": " + p + pana, sansaScurt: p, sansaLung: r.titlu + ": " + p + pana + (r.text ? " · " + r.text : "") });
     });
   }
   // v100.99 (I-529): stopul DE PROBĂ - cât ai pierde dacă ai pune stopul la `pret` (total = TabloExtra.totalCuGridLa, cu gridul pe drum), față de plan

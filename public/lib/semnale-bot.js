@@ -106,12 +106,16 @@ var SemnaleBot = (function () {
   function acumConcret(x) {
     var b = x.bot || {}, f = x.fisa || null, dir = String(b.directie || "").toLowerCase(), p = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), out = [];
     var pz = x.zero ? nr(x.zero.pretZero) : null, op = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null, tot = nr(b.profitTotal);
+    // v100.196 (auditul 14.10, 🔴1): zero-ul se socoteste cu grilele de pe drum; pe minus el poate sa nu se mai atinga din pret in grid (pzN)
+    var pzN = pz === null && !!(x.zero && x.zero.zeroNeatins), zeroTxt = function () { return pzN ? "Din preț, în grid, botul nu mai ajunge pe zero (la marginea de " + (dir === "short" ? "jos" : "sus") + " rămâne fără poziție)" : "Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț)"; };
+    // v100.196 (B3): stopul dincolo de lichidarea estimata nu apuca sa lucreze - lichidarea vine intai si ia toata marja
+    var lqB = nr(b.pretLichidare), dincoloLich = op !== null && lqB !== null && lqB > 0 && (dir === "short" ? op >= lqB : dir === "long" ? op <= lqB : false);
     var sp = f ? (f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare) : null, g = pasBot(b), rg0 = f && f.regim;
     var dist = function (a, c) { return a !== null && c > 0 ? P(Math.abs(a / c - 1)) : "?"; };
     // 1) stopul
     var pretStop = null, sursaStop = null, opTxt = op !== null ? fmtPret(op) : "nepus", neutru = dir !== "long" && dir !== "short";
-    if (p !== null && pz !== null) {
-      var peProfit = dir === "long" ? pz < p : dir === "short" ? pz > p : (tot !== null && tot > 0);
+    if (p !== null && (pz !== null || pzN)) {
+      var peProfit = pz === null ? false : dir === "long" ? pz < p : dir === "short" ? pz > p : (tot !== null && tot > 0);
       if (neutru) {
         // botul neutru cumpara sub si vinde peste: zero-ul nu e "o parte" - e doar reper (revizia 28.09)
         out.push({ cod: "stop", titlu: "Stopul", text: "Stopul tău: " + opTxt + ". Botul neutru cumpără sub preț și vinde peste, deci zero-ul (" + fmtPret(pz) + ", la " + dist(pz, p) + " de preț) e doar reper; " + (peProfit ? "ești pe plus: un stop la o grilă în afara intervalului, pe ambele părți, păstrează ce ai." : "ești pe minus: protecția stă la o grilă în afara intervalului, pe ambele părți, dar se închide pe minus.") });
@@ -137,7 +141,7 @@ var SemnaleBot = (function () {
           else if (protectie !== null) sursaStop = "stopul fișei e deja dincolo de o zi obișnuită (" + x.pragStop.sursa + ")";
         }
         pretStop = protectie;   // v100.43 (I-467)
-        out.push({ cod: "stop", titlu: "Stopul", text: "Stopul tău: " + opTxt + ". Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț): un stop acolo n-are sens cât ești pe minus. Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null ? fmtPret(protectie) : "o grilă în afara marginii") + ", dar se închide pe minus." });
+        out.push({ cod: "stop", titlu: "Stopul", text: "Stopul tău: " + opTxt + ". " + zeroTxt() + (pzN ? ". " : ": un stop acolo n-are sens cât ești pe minus. ") + "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null ? fmtPret(protectie) : "o grilă în afara marginii") + ", dar se închide pe minus." });
       }
     } else out.push({ cod: "stop", titlu: "Stopul", text: neutru ? "Stopul tău: " + opTxt + ". Botul neutru cumpără sub preț și vinde peste: n-are un zero pe o singură parte, deci protecția stă la o grilă în afara intervalului, pe ambele părți." : "Stopul tău: " + opTxt + ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)." });
     // 2) gridul
@@ -175,7 +179,7 @@ var SemnaleBot = (function () {
     // revizia v100: neutrul primul (la el zero-ul nu se socoteste niciodata); pozitia stopului SE VERIFICA, nu se presupune
     // v100.61 (specul „sfaturi concise”): act = un rand ≤ 110 (actiunea, la persoana I), deCe = de ce (≤ 160), detaliile raman in text
     if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Aș pune protecția la o grilă în afara intervalului, pe ambele părți (botul e neutru)."; }
-    else if (p === null || pz === null) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = "Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)."; }
+    else if (p === null || (pz === null && !pzN)) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = "Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)."; }
     else if (peProfit) {
       st0.tag = dincolo ? { t: "la adăpost", c: "good" } : { t: op === null ? "de pus la zero" : "de mutat la zero", c: "warn" };
       st0.act = dincolo ? "L-aș lăsa: e deja dincolo de zero-ul botului (" + fmtPret(pz) + ")." : "Aș " + (op === null ? "pune" : "muta") + " stopul la " + fmtPret(pz) + " (zero-ul botului, " + S1(pz / p - 1) + " de preț): câștigul nu se mai pierde.";
@@ -186,7 +190,7 @@ var SemnaleBot = (function () {
       st0.act = op === null ? "Dacă vrei protecție, aș pune stopul " + parteP + ", la " + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "o grilă în afara marginii") + "."
         : inAfara ? "L-aș lăsa: stopul stă " + parteP + "."
         : "Stopul tău (" + fmtPret(op) + ") stă în grid: o mișcare mică îl atinge și închide botul pe minus.";
-      st0.deCe = "Pe minus, un stop la zero-ul botului (" + fmtPret(pz) + ", " + S1(pz / p - 1) + " de preț) n-are sens.";
+      st0.deCe = pzN ? "Pe minus, din preț botul nu mai ajunge pe zero în grid: protecția doar limitează pierderea." : "Pe minus, un stop la zero-ul botului (" + fmtPret(pz) + ", " + S1(pz / p - 1) + " de preț) n-are sens.";
       // v101.8 (2): planul hotaraste - fara stop: unde il pui; peste plan: rosu, cat costa si unde il muti; pe plan (si in grid): pus
       if (pgm > 0) {
         if (op === null && undePl) st0.act = "Aș pune stopul la " + undePl + ", cât zice planul (−" + pgmT + " USDT).";
@@ -195,6 +199,12 @@ var SemnaleBot = (function () {
         // v100.43 (I-467): cand planul hotaraste unde stai stopul, banii se socotesc pe pretul PLANULUI (nu pe stopul fisei) - altfel
         // cartela zicea „mută-l la 0,384” si randul cu bani „l-aș lăsa unde e” (prins pe poza, CRV)
         if (opPl !== null && (op === null || pestePlan)) { pretStop = opPl; sursaStop = null; }   // revizia 01.10: pretul vine din plan, nu din profil
+      }
+      if (dincoloLich) {
+        st0.tag = { t: "stopul nu apucă: lichidarea vine întâi", c: "bad" };
+        st0.act = "Aș muta stopul înaintea lichidării (" + fmtPret(lqB) + ")" + (opPl !== null ? ", la " + fmtPret(opPl) + ", cât zice planul" : "") + ": acum stopul de la " + fmtPret(op) + " nu apucă.";
+        st0.deCe = "Stopul stă dincolo de lichidarea estimată: acolo marja izolată e deja pierdută" + (nr(b.investit) > 0 ? " (≈ " + TextRo.num(nr(b.investit), 0) + " USDT)" : "") + ".";
+        if (pretStop === null || pretStop === undefined) pretStop = opPl !== null ? opPl : protectie;
       }
     }
     // revizia 01.10: de unde vine stopul propus se vede pe cartela (lângă sfat, cum cere specul) - v100.61: pe randul lui (sursa), nu in actiune

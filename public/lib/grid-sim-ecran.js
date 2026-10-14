@@ -85,7 +85,7 @@ function gsVerdictHtml(s) {
   var mk = [{ v: d.p5, t: "5%", c: "bad" }].concat(aproape ? [] : [{ v: d.p50, t: "mijloc", c: "mijl" }]).concat([{ v: d.p95, t: "95%", c: "good" }]);
   return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>VERDICT, ' + (v.deAici ? "de aici încolo, " : "") + 'pe ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + '</h4><span class="tbSub">' + mcsEsc(gsCate(r.n, "drum", "drumuri") + " de " + gsCate(r.zile, "zi", "zile") + " pe 15 minute, din " + gsCate(r.zileIstoric, "zi", "zile") + " de istoric · " + (r.acum ? "de la pornirea botului tău" : "botul pornit la prețul de acum")) + '</span></div>'
     + (o.scurt ? '<p class="mcsAvert gsNota">Istoricul e scurt față de orizont: la ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + ' simularea doar reamestecă aceleași zile. Citește cifrele ca o schiță.</p>' : '')
-    + '<div class="gsVerdict ' + v.culoare + '"><b>' + mcsEsc(v.rand) + '</b><span class="t212Mic">' + mcsEsc(v.marja) + ' · doar din numărul drumurilor</span></div>'
+    + '<div class="gsVerdict ' + v.culoare + '"><b>' + mcsEsc(v.rand) + '</b><span class="t212Mic">' + mcsEsc(v.marja) + ' · incertitudinea pe zile (cu fiecare grupă de zile scoasă pe rând), nu doar din numărul drumurilor</span></div>'
     + '<p class="gsSub">' + mcsEsc(v.sub) + '</p>'
     + '<div class="gsHist">' + mcsHist(d.hist, mk, function (x) { return GridSim.bani1(x); }) + '</div>'
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(v.faCe) + '</p>'
@@ -230,7 +230,7 @@ async function gsSimuleaza() {
     if (gsStare.fundingSursa !== "manual" && gsStare.fundingSim !== sim) gsPuneFunding(sim, gsStare.date.fundingInfo);   // v100.136: rata reală vine cu barele (o singură cerere)
     await new Promise(function (r) { setTimeout(r, 30); });   // „calculez…” apare înainte de calcul
     var st = Object.assign({}, gsStare.st, { fundingZi: gsStare.fundingZi, fundingCost: gsStare.fundingSursa !== "pionex" && gsStare.fundingSursa !== "manual" });   // revizia (R4): rata presupusă = cost
-    var rez = GridSim.simuleaza(gsStare.date.b15, st, { plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, pornitLa: gsStare.mod === "meu" ? gsStare.pornitLa : null, stPrefix: gsStare.mod === "meu" ? st : null, n: 500, seed: 12, orizonturi: GS_ORIZ, zile: 14 });   // revizia (I2): ținta de pe prefix cu aceeași regulă ca rândul 0
+    var rez = GridSim.simuleaza(gsStare.date.b15, st, { plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, pornitLa: gsStare.mod === "meu" ? gsStare.pornitLa : null, stPrefix: gsStare.mod === "meu" ? st : null, n: 2000, seed: 12, orizonturi: GS_ORIZ, zile: 14 });   // revizia (I2): ținta de pe prefix cu aceeași regulă ca rândul 0
     if (rez.eroare) throw new Error(rez.eroare);
     gsStare.rez = rez;
   } catch (e) { gsStare.eroare = e && e.message || String(e); }

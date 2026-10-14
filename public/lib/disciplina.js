@@ -15,7 +15,7 @@ var Disciplina = (function () {
   // ÎMPOTRIVA botului (long ieșit pe jos: în jos; short ieșit pe sus: în sus; neutrul: mai departe de bandă)
   function iesiriBanda(trades, bareDe, o) {
     o = o || {}; var praguri = o.praguri || PRAGURI_ORE, rez = {}, oreAfaraPe = {}, bucket = { "sub 6 h": [], "6–24 h": [], "peste 24 h": [], "nu a ieșit": [] };
-    praguri.forEach(function (h) { rez[h] = { h: h, n: 0, intoarse: 0, miscari: [], net: [] }; });
+    praguri.forEach(function (h) { rez[h] = { h: h, n: 0, intoarse: 0, miscari: [], net: [], boti: 0, ep: {} }; });
     (trades || []).forEach(function (t) {
       var jos = nr(t.jos), sus = nr(t.sus); if (!(jos > 0) || !(sus > jos) || !(t.pornit > 0) || !(t.inchis > t.pornit)) return;
       var b = bareDe(t.moneda); if (!b || !b.length) return;
@@ -34,12 +34,14 @@ var Disciplina = (function () {
         for (var k = iesire; k <= j; k++) if (!afaraLa(k)) return;   // a stat afară continuu h ore
         var R = rez[h], sf = Math.min(l.length - 1, j + 24), intors = false;
         for (var q = j + 1; q <= sf; q++) if (l[q].c >= jos && l[q].c <= sus) { intors = true; break; }
+        R.boti++; if (nr(t.pct) !== null) R.net.push(t.pct);
+        // v100.196 (auditul 14.10, 🔵7): boții pe aceeași monedă, ieșiți în aceeași zi (UTC) pe aceeași parte, văd același preț - un singur episod
+        var cheie = String(t.moneda) + "|" + Math.floor(l[iesire].t / ZI) + "|" + parte; if (R.ep[cheie]) return; R.ep[cheie] = 1;
         R.n++; if (intors) R.intoarse++;
         var mv = l[sf].c / l[j].c - 1; R.miscari.push(dirSemn > 0 ? -mv : mv);   // negativ = prețul a mers mai departe în direcția care strică botul
-        if (nr(t.pct) !== null) R.net.push(t.pct);
       });
     });
-    var tabel = praguri.map(function (h) { var R = rez[h]; return { h: h, n: R.n, intoarse: R.n ? R.intoarse / R.n : null, miscareImpotriva: R.miscari.length ? mediana(R.miscari) : null, netMedian: R.net.length ? mediana(R.net) : null }; });
+    var tabel = praguri.map(function (h) { var R = rez[h]; return { h: h, n: R.n, boti: R.boti, intoarse: R.n ? R.intoarse / R.n : null, miscareImpotriva: R.miscari.length ? mediana(R.miscari) : null, netMedian: R.net.length ? mediana(R.net) : null }; });
     // regula: primul prag (cu cel puțin 30 de cazuri) după care mai puțin de 30 % dintre boți s-au întors în bandă în 24 h
     var regula = null; for (var i2 = 0; i2 < tabel.length; i2++) { var x = tabel[i2]; if (x.n >= (o.min || 30) && x.intoarse !== null && x.intoarse < (o.prag || 0.3)) { regula = x; break; } }
     var grupe = Object.keys(bucket).map(function (k) { return { grupa: k, n: bucket[k].length, netMedian: bucket[k].length ? mediana(bucket[k]) : null }; });

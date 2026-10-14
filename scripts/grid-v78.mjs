@@ -782,7 +782,8 @@ await test("v80 dacaInchizi: iei investit + total - comisionul de inchidere; pre
   const r = TX.dacaInchizi(botMET, 0.0005);
   aprox(r.comisionInchidere, 702 * 0.3403 * 0.0005, 1e-6);
   aprox(r.iei, 88.98 - 5.4292 - 702 * 0.3403 * 0.0005, 1e-4);
-  assert.ok(r.pretZero > 0.3478 && r.pretZero < 0.3485, "pret zero " + r.pretZero);
+  // v100.196 (auditul 14.10, 🔴1, schimbare voită): zero-ul cu grilele vândute pe drumul în sus (TabloExtra.totalCuGridLa) - peste 0,3481 al pozitiei de acum
+  assert.ok(r.pretZero > 0.3481 && r.pretZero < 0.3500, "pret zero " + r.pretZero); assert.ok(Math.abs(TX.totalCuGridLa(botMET, r.pretZero, 0.0005)) < 1e-6, "la zero totalul e 0");
   aprox(r.distantaZeroPct, (r.pretZero - 0.3403) / 0.3403, 1e-9);
   const n = TX.dacaInchizi(Object.assign({}, botMET, { directie: "neutru", pnlNerealizatSigur: false }), 0.0005);
   assert.strictEqual(n.pretZero, null, "la neutru semnul pozitiei e nesigur -> fara pret de zero");

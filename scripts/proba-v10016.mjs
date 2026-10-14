@@ -80,7 +80,10 @@ await test("moneda care se misca 30%/zi: nici la 1x banda de o zi nu incape -> 1
 });
 
 await test("oglinda SHORT: aceleasi sume, preturile oglindite (stopul sus, tinta jos)", () => {
+  // v100.196 (🔵4): proba e pe GEOMETRIE - fara alunecarea de la stop (cu ea, short-ul la 2× trece de pragul de 5% peste plan si coboara la 1×)
+  const al = GridCalcul.C.ALUNECARE_STOP; GridCalcul.C.ALUNECARE_STOP = 0;
   const L = GridPlan.variante(O()), S = GridPlan.variante(O({ dir: "short" }));
+  GridCalcul.C.ALUNECARE_STOP = al;
   for (const k of ["ta", "mea"]) {
     assert.equal(S[k].levier, L[k].levier);
     // TA e potrivita exact pe plan (ambele ≈ −15,7); la MEA tinta e potrivita, stopul difera prin grilele geometrice (≤ 8%)

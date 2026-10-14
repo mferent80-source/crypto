@@ -13,6 +13,15 @@ var GridProba = (function () {
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var G = GridCalcul, C = G.C, DIRECTII = ["long", "neutru", "short"];
 
+  // v100.196 (auditul 14.10, B4): funding-ul probei - rata Pionex pe zi (cu semn: pozitiva = longul plateste) sau, fara ea, costul PRESUPUS
+  // 0,03%/zi platit oricare ar fi directia (ca Simulatorul). f = numar | { rataZi, presupus } | null ⇒ { rataZi, presupus }
+  var FUNDING_PRESUPUS = 0.0003;
+  function fundingDe(f) {
+    var r = f !== null && f !== undefined && typeof f === "object" ? Number(f.rataZi) : f === null || f === undefined || f === "" ? NaN : Number(f);
+    return isFinite(r) ? { rataZi: r, presupus: !!(f && typeof f === "object" && f.presupus) } : { rataZi: FUNDING_PRESUPUS, presupus: true };
+  }
+  function cuFunding(st, F) { st.fundingZi = F.rataZi; st.fundingCost = F.presupus; return st; }
+
   // primul index k cu niv[k] >= x
   function primulPeste(niv, x) { var lo = 0, hi = niv.length; while (lo < hi) { var m = (lo + hi) >> 1; if (niv[m] >= x) hi = m; else lo = m + 1; } return lo; }
 
@@ -74,7 +83,9 @@ var GridProba = (function () {
     }
     function inchide(p, parte, nb) {
       if (lichidat(p)) return rezultat({ net: -1, lichidat: true, bare: nb });
-      real += (Ql * p - Cl) + (Cs - Qs * p); fee += (Ql + Qs) * p * com;
+      // v100.196 (auditul 14.10, 🔵4): stopul / tinta se executa la piata - longul se vinde cu alunecarea sub nivel, shortul se cumpara peste
+      var a = C.ALUNECARE_STOP > 0 ? C.ALUNECARE_STOP : 0, pv = p * (1 - a), pc = p * (1 + a);
+      real += (Ql * pv - Cl) + (Cs - Qs * pc); fee += (Ql * pv + Qs * pc) * com;
       Ql = Cl = Qs = Cs = 0;
       return rezultat({ net: real - fee, oprit: true, iesit: parte, bare: nb });
     }
@@ -90,6 +101,10 @@ var GridProba = (function () {
       // si pe orizontul de o zi); st.fundingCost (rata PRESUPUSA, nu cea reala) = cost oricare ar fi directia, pe |Ql - Qs|
       if (fundingZi && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }
       bMin = Infinity; bMax = -Infinity;
+      // v100.196 (auditul 14.10, 🔵5): stopul si tinta in ACEEASI lumanare - ordinea din bara nu se stie, deci stopul intai (pesimist), nu cine vine
+      // primul pe drumul conventional (rosie O→H→L→C dadea tinta la long). Partea stopului: long jos, short sus; la neutru amandoua sunt stopuri.
+      var parteStop = st.dir === "long" ? "jos" : st.dir === "short" ? "sus" : null;
+      if (parteStop && x.l <= sj && x.h >= ss) { var nivS = parteStop === "jos" ? sj : ss; misca(pret, nivS); if (inauntru) iesiri++; return inchide(nivS, parteStop, i - start + 1); }
       for (var d = 0; d < 4; d++) {
         var p = drum[d];
         if (p <= sj) { misca(pret, sj); if (inauntru) iesiri++; return inchide(sj, "jos", i - start + 1); }
@@ -135,8 +150,8 @@ var GridProba = (function () {
     return best;
   }
 
-  function proba(b15, H) {
-    var W = H * C.BARE_ZI;
+  function proba(b15, H, fz) {
+    var W = H * C.BARE_ZI, F = fundingDe(fz);
     if (!b15 || b15.length < 2 * W + C.BARE_ZI) return null;
     var nA = Math.round(b15.length * 2 / 3), A = b15.slice(0, nA);
     var lats = G.latimi(A, H), pasV = G.pasi(A);
@@ -155,7 +170,7 @@ var GridProba = (function () {
         for (var pi = 0; pi < pasV.length; pi++) {
           var ra = [], rt = [];
           for (var j = 0; j < starturi.length; j++) {
-            var f = starturi[j], st = G.construieste({ pret: b15[f.s].o, lat: latV[wi], pas: pasV[pi], dir: dir });
+            var f = starturi[j], st = cuFunding(G.construieste({ pret: b15[f.s].o, lat: latV[wi], pas: pasV[pi], dir: dir }), F);
             (f.t === "a" ? ra : rt).push(simuleaza(b15, f.s, W, st));
           }
           mat[wi].push({ antren: statistici(ra), test: statistici(rt) });
@@ -172,8 +187,9 @@ var GridProba = (function () {
         pe[dir] = { wi: d, pi: 1, antren: mat[d][1].antren, test: mat[d][1].test, platou: null, faraVarianta: true, deasa: { pi: 0, antren: mat[d][0].antren, test: mat[d][0].test } };
       }
     });
-    return { H: H, zile: b15.length / C.BARE_ZI, ferestre: { antren: nAntren, test: nTest, independente: Math.floor(b15.length / W) },
-      latimi: latV, pasi: pasV, pe: pe, recomandata: recomandata };
+    // v100.196 (B5): cate combinatii s-au incercat si cate ferestre de test nu se suprapun - verdictul le cere
+    return { H: H, zile: b15.length / C.BARE_ZI, ferestre: { antren: nAntren, test: nTest, independente: Math.floor(b15.length / W), testIndependente: Math.floor((b15.length - nA) / W) },
+      latimi: latV, pasi: pasV, pe: pe, recomandata: recomandata, incercate: latV.length * pasV.length * DIRECTII.length, funding: F };
   }
 
   // Trendul si proba nu sunt de acord? Se spune doar cand directia recomandata
@@ -196,15 +212,19 @@ var GridProba = (function () {
 
   // F4 "cat investesc?": suma la care cea mai proasta fereastra de pe istoric nu trece
   // de pierderea acceptata din cont. Fara fereastra pe minus nu se poate socoti (null, nu infinit).
-  function sumaMaxima(sold, pierderePct, ceaMaiProasta) {
-    if (!(sold > 0) || !(pierderePct > 0) || ceaMaiProasta === null || ceaMaiProasta === undefined || !(ceaMaiProasta < 0)) return null;
-    return sold * (pierderePct / 100) / Math.abs(ceaMaiProasta);
+  // v100.196 (auditul 14.10, 🔵3): cel mult soldul; p5 (optional, fractie din suma) = cele mai proaste 5% din drumurile reesantionate pe blocuri
+  // (Simulatorul) - se ia cea mai pesimista dintre ele (o singura fereastra din ~36 suprapuse nu e coada distributiei)
+  function sumaMaxima(sold, pierderePct, ceaMaiProasta, p5) {
+    var rea = ceaMaiProasta, q = Number(p5);
+    if (p5 !== null && p5 !== undefined && isFinite(q) && q < 0 && (rea === null || rea === undefined || !(rea < 0) || q < rea)) rea = q;
+    if (!(sold > 0) || !(pierderePct > 0) || rea === null || rea === undefined || !(rea < 0)) return null;
+    return Math.min(sold, sold * (pierderePct / 100) / Math.abs(rea));
   }
 
   function fisa(o) {
     if (!(o.pret > 0)) return { eroare: "N-am prețul de acum al monedei." };
     if (!o.b15 || o.b15.length < 7 * C.BARE_ZI) return { eroare: "Prea puține lumânări ca să probez: moneda are " + (o.b15 ? o.b15.length / C.BARE_ZI : 0).toFixed(1).replace(".", ",") + " zile de istoric pe 15 minute, iar proba cere cel puțin 7 zile." };
-    var pr = proba(o.b15, o.H);
+    var pr = proba(o.b15, o.H, o.fundingZi);   // v100.196 (B4): rata Pionex a monedei, altfel costul presupus
     if (!pr) return { eroare: "Prea puține lumânări ca să probez: trebuie cel puțin " + cate(2 * o.H + 1, "zi", "zile") + " de istoric pe 15 minute." };
     var dT = G.directie(o.b4h, o.b1d), dir = o.dir || dT.dir, ales = pr.pe[dir];
     // v100.39 (audit 30.09): O SINGURA SURSA - setarea afisata e exact cea probata (latimea si pasul din proba, pe primele 2/3 din
@@ -227,7 +247,7 @@ var GridProba = (function () {
     }
     var a = cuMinOrdin(pas), st = a.st, sumaMinima = a.sumaMinima, mo = a.mo;
     var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret), liniste = G.linisteTine(o.b15, o.H);
-    var v = G.verdict({ regim: rg, stat: ales, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur });
+    var v = G.verdict({ regim: rg, stat: ales, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
     if (sumaMinima !== null) {
       v = { nivel: "nu", motive: ["suma e prea mică: Pionex cere cel puțin " + mo.toFixed(2) + " USDT pe ordin, deci pentru 2 grile la " + st.levier + "× îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
     }
@@ -246,7 +266,7 @@ var GridProba = (function () {
       f.aleasa = { setare: st, verdict: v, treceriZi: f.treceriZi };
       f.stat = { antren: deasa.antren, test: deasa.test };
       f.setare = deasa.setare; f.treceriZi = deasa.treceriZi;
-      f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur });
+      f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
     }
     return f;
   }
@@ -303,7 +323,7 @@ var GridProba = (function () {
     if (o.miscare) return { propus: false, motiv: "piața e în mișcare mare: nu e momentul pentru un grid îngust", zile: zile };   // v100.72: faptul, nu imperativul
     if (DIRECTII.indexOf(o.dir) < 0) return { propus: false, motiv: "fără direcția pieței pentru monedă", zile: zile };
     if (!b15 || b15.length < 9 * C.BARE_ZI) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)", zile: zile };
-    var nA = Math.round(b15.length * 2 / 3), A = b15.slice(0, nA), pasV = G.pasi(A);
+    var nA = Math.round(b15.length * 2 / 3), A = b15.slice(0, nA), pasV = G.pasi(A), F = fundingDe(o.fundingZi);   // v100.196 (B4)
     if (!pasV) return { propus: false, motiv: "prea puțin istoric de 15 minute (sub 9 zile)", zile: zile };
     var best = null, Hs = Array.isArray(o.doarH) && o.doarH.length ? o.doarH : ING.H;
     // revizia 01.10 (I1): pe test intra doar ferestrele in care directia de LA pornirea lor (din barele de dinainte) e cea ceruta -
@@ -322,8 +342,8 @@ var GridProba = (function () {
         pasV.forEach(function (pas) {
           var ra = [], rt = [];
           for (var s = 0; s + W <= b15.length; s += C.PAS_FERESTRE) {
-            if (s + W <= nA) ra.push(simuleaza(b15, s, W, G.construieste({ pret: b15[s].o, lat: lat, pas: pas, dir: o.dir })));
-            else if (s >= nA && dirOk[s]) rt.push(simuleaza(b15, s, W, G.construieste({ pret: b15[s].o, lat: lat, pas: pas, dir: o.dir })));
+            if (s + W <= nA) ra.push(simuleaza(b15, s, W, cuFunding(G.construieste({ pret: b15[s].o, lat: lat, pas: pas, dir: o.dir }), F)));
+            else if (s >= nA && dirOk[s]) rt.push(simuleaza(b15, s, W, cuFunding(G.construieste({ pret: b15[s].o, lat: lat, pas: pas, dir: o.dir }), F)));
           }
           rA.push(statistici(ra)); rC.push({ lat: lat, pas: pas, rt: rt });
         });
@@ -339,7 +359,7 @@ var GridProba = (function () {
     var test = { n: rt.length, nIndep: nIndep, mediana: st ? st.mediana : null, medie: net.length ? net.reduce(function (a, v) { return a + v; }, 0) / net.length : null, pePlus: rt.length ? plus / rt.length : null, ic: ic, celMaiRau: st ? st.ceaMaiProasta : null, perechiZi: st ? st.perechiMedii / best.H : null, lichidari: st ? st.lichidari : 0 };
     var setare = G.construieste({ pret: o.pret > 0 ? o.pret : b15[b15.length - 1].c, lat: best.c.lat, pas: best.c.pas, dir: o.dir, suma: o.suma, levier: o.levier });
     var ore = Math.round(best.H * 24), motiv = verdictIngust(test, ore);
-    return { propus: !motiv, motiv: motiv, dir: o.dir, H: best.H, ore: ore, latime: best.c.lat, pas: best.c.pas, setare: setare, antren: best.antren, test: test, zile: Math.round(b15.length / C.BARE_ZI) };
+    return { propus: !motiv, motiv: motiv, dir: o.dir, H: best.H, ore: ore, latime: best.c.lat, pas: best.c.pas, setare: setare, antren: best.antren, test: test, zile: Math.round(b15.length / C.BARE_ZI), funding: F };
   }
   // un rand pentru ideile de boti
   function rezumatIngust(r) {
@@ -369,7 +389,7 @@ var GridProba = (function () {
     var i = 0; while (i < b15.length && b15[i].t < rec.la) i++;
     if (i < b15.length && b15[i].t - rec.la > 900000) return null;   /* revizia 01.10 (I3): nota de dinaintea barelor aduse - nu se judeca pe alte zile */
     var W = Math.round(rec.ore / 24 * C.BARE_ZI); if (i + W > b15.length) return null;
-    var r = simuleaza(b15, i, W, G.construieste({ pret: b15[i].o, lat: rec.latime, pas: rec.pas, dir: rec.dir }));
+    var r = simuleaza(b15, i, W, cuFunding(G.construieste({ pret: b15[i].o, lat: rec.latime, pas: rec.pas, dir: rec.dir }), fundingDe(rec.fundingZi)));   // v100.196 (B4): ca la alegere
     return { net: r.net, oprit: !!r.oprit, lichidat: !!r.lichidat };
   }
   function socotealaUrmarire(l) {
@@ -395,7 +415,7 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;
