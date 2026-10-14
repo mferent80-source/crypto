@@ -65,7 +65,10 @@ var GridLaborator = (function () {
 
   function grupa(rows, pred, H) {
     var x = rows.filter(pred), net = x.map(function (r) { return r.net; }), plus = x.filter(function (r) { return r.net > 0; }).length;
-    var nEf = Math.floor(x.length * C.PAS_FERESTRE / (H * C.BARE_ZI));   // ferestre independente
+    // ferestre independente - v100.196 (auditul sever 14.10, 🔵8): pe TIMP (pozițiile de start distincte), nu pe monedă × fereastră: cele ~20 de
+    // monede trec prin aceeași perioadă, deci nu înmulțesc dovezile (nEf era umflat de ~20×)
+    var poz = {}; x.forEach(function (r, i) { poz[typeof r.s === "number" ? "s" + r.s : "r" + i] = 1; });   /* fără poziție (rânduri vechi): fiecare rând */
+    var nEf = Math.floor(Object.keys(poz).length * C.PAS_FERESTRE / (H * C.BARE_ZI));
     var p = x.length ? plus / x.length : null;
     return { n: x.length, nEf: nEf, pePlus: p, mediana: G.mediana(net), ic: p === null ? null : G.wilson(Math.round(p * nEf), nEf) };
   }

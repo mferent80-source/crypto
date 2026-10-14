@@ -58,7 +58,7 @@ export async function turaVarianteNoapte(d) {
       const card = M.MonteSimbol.grid(b15, Object.assign({ pret: P }, st), { zile: 7, n, seed: 12, peDrum: true });
       if (!card || card.eroare) { d.jurnal("variante noapte " + sim, card && card.eroare || "fără rezultat"); continue; }
       const rowsV = M.mcsCalcVariante(b15, st, P, { n, prima: card }), tV = M.mcsVariantaBuna(rowsV);
-      const tTp = st.dir === "long" || st.dir === "short" ? M.mcsTpRecomandat(M.mcsCalcTinteBot(b15, st, P, { n, prima: card }), st.suma) : null;
+      const rowsT = st.dir === "long" || st.dir === "short" ? M.mcsCalcTinteBot(b15, st, P, { n, prima: card }) : null, tTp = rowsT ? M.mcsTpRecomandat(rowsT, st.suma) : null;
       simulati++;
       rezultate.push({ bot: b.id, sim, variante: tV, tp: tTp });
       for (const [fel, text] of [["variante", tV], ["tp", tTp]]) {
@@ -70,7 +70,10 @@ export async function turaVarianteNoapte(d) {
         const ales = fel === "variante" ? (rowsV.find((r) => text.indexOf("„" + r.nume + "”") >= 0) || null) : null;
         const mesaj = text + " Botul tău: " + descrie(M, st) + "." + (ales ? " Setarea propusă: " + descrie(M, ales.st) + "." : "")
           + (fel === "tp" && st.tpAprox ? " TP-ul tău e dat de Pionex în procente: prețul lui e aproximativ." : "")
-          + " (Monte Carlo peste noapte: " + cate(n, "drum", "drumuri") + " de 7 zile.)";
+          + " (Monte Carlo peste noapte: " + cate(n, "drum", "drumuri") + " de 7 zile"
+          /* v100.196 (auditul sever 14.10, 🔵7): alegerea celei mai bune dintre mai multe variante pe ACELEAȘI drumuri e în eșantion - se spune */
+          + (fel === "variante" ? "; setarea e aleasă dintre " + cate(rowsV.length, "variantă", "variante") : "; ținta e aleasă dintre " + cate(rowsT ? rowsT.length : 0, "țintă", "ținte"))
+          + " pe aceleași drumuri, deci e cea mai bună dintre " + cate(fel === "variante" ? rowsV.length : rowsT ? rowsT.length : 0, "încercare", "încercări") + ", nu o promisiune.)";
         const ok = await d.anunta({ nivel: "info", titlu: "🌙 " + sim + ": " + (fel === "variante" ? "altă setare, pe aceleași drumuri" : "alt TP, pe aceleași drumuri"), mesaj }, b.id, "noapte-" + fel);
         if (ok) { ist.push({ c: cheie, la: acum }); anuntate++; }
       }
