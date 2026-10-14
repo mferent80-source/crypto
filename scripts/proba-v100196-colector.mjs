@@ -106,5 +106,73 @@ await test("C3 colector: pasul listei goale e legat în tură, după fișele de 
   assert.ok(c.indexOf("const lg = S.listaGoalaPas") > c.indexOf("if (!fisa && listaGoala) continue;"), "după bucla de închideri");
 });
 
+
+// ---------------- C2 + C1: paznicul ----------------
+const Poza = await import("./lib/poza.mjs");
+const W = await import("../paznic/worker.mjs");
+const MINp = 60000;
+function lumePaznic() {
+  const kv = new Map(), trimise = [];
+  const env = { PAZNIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } }, DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1/abc", PAZNIC_TOKEN: "t".repeat(32) };
+  const f = async (u, o) => { trimise.push(JSON.parse(o.body)); return { ok: true }; };
+  return { env, kv, trimise, f };
+}
+await test("C2: noaptea (02:00 RO) o bătaie picată la minutul 20 se reîncearcă după 1 minut ⇒ nicio alarmă falsă „colectorul tace”", async () => {
+  const T0 = Date.parse("2026-10-14T23:00:00Z"), w = lumePaznic();
+  let paznicLa = 0; const picaLa = new Set([20]), batai = [];
+  for (let m = 0; m <= 90; m++) {
+    const acum = T0 + m * MINp;
+    if (Poza.bataieNecesara({ acum, pozaOkLa: 0, paznicLa })) {
+      paznicLa = acum;
+      if (picaLa.has(m)) paznicLa = Poza.paznicLaDupaEsec(acum);
+      else { await W.bataie(w.env, { pid: 1 }, acum, w.f); batai.push(m); }
+    }
+    if (m % 10 === 0) await W.verifica(w.env, acum, w.f);
+  }
+  assert.deepEqual(w.trimise.map((x) => x.content), [], "mesaje: " + JSON.stringify(w.trimise.map((x) => x.content)));
+  assert.equal(batai[1], 21, "reîncercarea la minutul 21: " + batai.join(","));
+});
+await test("C2: ziua o bătaie picată se reîncearcă tot după 1 minut; colectorul folosește paznicLaDupaEsec și pentru răspunsul refuzat (!r.ok)", () => {
+  const zi = Date.parse("2026-10-14T09:00:00Z"), p = Poza.paznicLaDupaEsec(zi);
+  assert.equal(Poza.bataieNecesara({ acum: zi + MINp - 1, pozaOkLa: 0, paznicLa: p }), false);
+  assert.equal(Poza.bataieNecesara({ acum: zi + MINp, pozaOkLa: 0, paznicLa: p }), true);
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /if \(!r\.ok\) \{ jurnal\("paznic: bataia refuzata", r\.status\); paznicLa = paznicLaDupaEsec\(Date\.now\(\)\); \}/);
+  assert.match(c, /catch \(e\) \{ jurnal\("paznic: bataia n-a plecat", e\.message\); paznicLa = paznicLaDupaEsec\(Date\.now\(\)\); \}/);
+});
+await test("C1: poza poartă `turaLa` (ultima tură a alertelor TERMINATĂ), imediat după `la`", () => {
+  const p = Poza.construiestePoza({ acum: 1792000000000, turaLa: 1791999900000, versiune: "v", boti: [], t212: [], simboluri: [] });
+  assert.equal(p.turaLa, 1791999900000);
+  assert.deepEqual(Object.keys(p).slice(0, 2), ["la", "turaLa"]);
+  assert.equal(Poza.construiestePoza({ acum: 5, boti: [], t212: [], simboluri: [] }).turaLa, null, "fără tură încă = null, nu 0");
+});
+await test("C1: paznicul socotește tăcerea pe turaLa din poză - poza proaspătă cu bucla oprită de 31 min ⇒ „alertele botului stau”", async () => {
+  const T0 = Date.UTC(2026, 9, 14, 10, 0), w = lumePaznic();
+  await W.bataie(w.env, { pid: 1 }, T0 - 60 * MINp, w.f);
+  await W.pozaScrie(w.env, JSON.stringify({ la: T0 + 30 * MINp, turaLa: T0 - MINp, boti: [] }));
+  const r = await W.verifica(w.env, T0 + 30 * MINp, w.f);
+  assert.equal(r.stare, "anuntat");
+  assert.match(w.trimise[0].content, /alertele botului stau de 31 de minute/); assert.match(w.trimise[0].embeds[0].description, /poza/);
+  // bucla revine (turaLa nou) ⇒ „a revenit”
+  await W.pozaScrie(w.env, JSON.stringify({ la: T0 + 40 * MINp, turaLa: T0 + 39 * MINp, boti: [] }));
+  assert.equal((await W.verifica(w.env, T0 + 40 * MINp, w.f)).stare, "revenit");
+});
+await test("C1: poza unui colector vechi (fără turaLa) ține loc de puls ca înainte; turaLa din viitor nu păcălește", async () => {
+  const T0 = Date.UTC(2026, 9, 14, 10, 0), w = lumePaznic();
+  await W.bataie(w.env, { pid: 1 }, T0 - 60 * MINp, w.f);
+  await W.pozaScrie(w.env, JSON.stringify({ la: T0, boti: [] }));
+  assert.equal((await W.verifica(w.env, T0 + 5 * MINp, w.f)).stare, "bate");
+  const v = lumePaznic(); await W.bataie(v.env, { pid: 1 }, T0 - 60 * MINp, v.f);
+  await W.pozaScrie(v.env, JSON.stringify({ la: T0, turaLa: T0 + 999 * MINp, boti: [] }));
+  assert.equal((await W.verifica(v.env, T0 + 5 * MINp, v.f)).stare, "bate", "turaLa > la se ia drept la");
+});
+await test("C1 colector: turaLa ținut la sfârșitul turei, dus în poză; bătaia pleacă doar dacă bucla a mers în ultimele 5 min; colector.pid bate la 10 s", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /try \{ await tura\(\); turaGataLa = Date\.now\(\); \} catch \(e\) \{ jurnal\("tură", e\.message\); \}/);
+  assert.match(c, /construiestePoza\(\{ acum: Date\.now\(\), turaLa: turaGataLa \|\| null,/);
+  assert.match(c, /if \(Date\.now\(\) - turaGataLa > 5 \* 60000\) return;/);
+  assert.match(c, /setInterval\(\(\) => \{ bate\(\); turaPoza\(\)/);
+});
+
 console.log(`\n${picate ? "PICĂ" : "TRECE"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

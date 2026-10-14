@@ -33,6 +33,8 @@ export async function pozaScrie(env, text) {
 }
 // ETag-ul = "la" din corp (primul camp al pozei), fara a doua cheie
 function laDinText(text) { const m = /"la"\s*:\s*(\d{10,})/.exec(String(text || "").slice(0, 200)); return m ? m[1] : null; }
+// v100.196 (auditul sever, C1): ora ultimei ture a alertelor TERMINATE (al doilea câmp al pozei); lipsă (colector vechi) = null
+function turaDinText(text) { const m = /"turaLa"\s*:\s*(\d{10,})/.exec(String(text || "").slice(0, 300)); return m ? Number(m[1]) : null; }
 export async function pozaCiteste(env, ifNoneMatch) {
   const text = await env.PAZNIC.get("poza"); const la = laDinText(text);
   if (!text || !la) return { status: 404, corp: { error: "nicio poza inca" } };
@@ -122,8 +124,10 @@ export async function bataie(env, corp, acum, f = fetch) {
 export async function verifica(env, acum, f = fetch) {
   const s = await citeste(env);
   // v98.1: poza colectorului tine loc de bataie (vine la 2-5 minute); asa colectorul nu mai scrie o cheie in plus pentru puls
-  let laPoza = 0; try { laPoza = Number(laDinText(await env.PAZNIC.get("poza"))) || 0; } catch { laPoza = 0; }
-  const la = Math.max(Number(s.la) || 0, laPoza);
+  // v100.196 (auditul sever, C1): pulsul din poză = turaLa (bucla alertelor), nu ceasul pozei; o poză fără turaLa (colector vechi) = `la`, ca înainte
+  let laPoza = 0, turaPoza = null; try { const t = await env.PAZNIC.get("poza"); laPoza = Number(laDinText(t)) || 0; turaPoza = turaDinText(t); } catch { laPoza = 0; }
+  const pulsPoza = laPoza && turaPoza !== null ? Math.min(turaPoza, laPoza) : laPoza;
+  const la = Math.max(Number(s.la) || 0, pulsPoza);
   if (!la) return { stare: "fara-bataie" };
   const tace = acum - la;
   if (tace < TACE_MS) {
@@ -138,9 +142,15 @@ export async function verifica(env, acum, f = fetch) {
   }
   if (s.anuntatLa && acum - s.anuntatLa < AMINTIRE_MS) return { stare: "tace-anuntat" };
   const prima = !s.anuntatLa;
-  const ok = await discord(env, "critic", "Crypto Radar: colectorul tace de " + minute(tace),
-    "Ultimul semn de la PC-ul de acasă: " + ora(la) + ". Cât tace, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
-    (prima ? " Verifică: e pornit PC-ul? merge internetul? rulează PORNESTE-CRYPTO-RADAR.bat?" : " Încă tace."), f);
+  // poza vine încă, dar bucla alertelor nu s-a mai terminat ⇒ alt mesaj (PC-ul și internetul merg; colectorul stă)
+  const pozaVie = laPoza && acum - laPoza < TACE_MS;
+  const ok = pozaVie
+    ? await discord(env, "critic", "Crypto Radar: alertele botului stau de " + minute(tace),
+      "PC-ul de acasă trimite încă poza (" + ora(laPoza) + "), dar bucla alertelor nu s-a mai terminat din " + ora(la) + ". Cât stă, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
+      (prima ? " Aș reporni PORNESTE-CRYPTO-RADAR.bat." : " Încă stă."), f)
+    : await discord(env, "critic", "Crypto Radar: colectorul tace de " + minute(tace),
+      "Ultimul semn de la PC-ul de acasă: " + ora(la) + ". Cât tace, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
+      (prima ? " Verifică: e pornit PC-ul? merge internetul? rulează PORNESTE-CRYPTO-RADAR.bat?" : " Încă tace."), f);
   if (ok) await scrie(env, { ...s, anuntatLa: acum, tacutDeLa: s.tacutDeLa || la });
   return { stare: ok ? "anuntat" : "discord-picat" };
 }
