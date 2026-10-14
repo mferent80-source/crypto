@@ -10,7 +10,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var nr = function (v) { var x = typeof v === "string" ? Number(v.replace(/[−–]/g, "-").replace(/\s/g, "").replace(/,(\d+)$/, ".$1")) : v; return typeof x === "number" && isFinite(x) ? x : null; };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
-  var semn = function (v, z) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(z == null ? 2 : z).replace(".", ","); };
+  var semn = function (v, z) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ","); };
   var fP = function (v) { return v == null ? "—" : v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(4) : v.toFixed(5); };
   var ingust = function () { return innerWidth <= 550; };
   var st = function () { try { return typeof tbStare !== "undefined" ? tbStare : null; } catch (e) { return null; } };
@@ -76,15 +76,32 @@
 
   // ---------- datele paginii (o dată pe tură) ----------
   var D = {};
+  // v100.196 (auditul UI 🟡8): istoricul (cu ora colectorului) îl aduce Tabloul DOAR cu un bot ⇒ fără bot fâșia scria „colectorul de acasă —”
+  // exact în zilele în care colectorul face doar ideile, alertele și rapoartele. Atunci ora se aduce separat (config), la 5 min.
+  var colCache = { cfg: null, la: 0, inLucru: false };
+  function colectorAdu() {
+    if (colCache.inLucru || Date.now() - colCache.la < 5 * 60000 || typeof getJSON !== "function") return;
+    colCache.inLucru = true;
+    getJSON("/api/istoric-bot?action=config").then(function (r) { colCache.cfg = r && r.config || null; colCache.la = Date.now(); })
+      .catch(function () { colCache.la = Date.now() - 4 * 60000; })   // pe pagina publicată (503) sau la o cădere: din nou peste un minut
+      .then(function () { colCache.inLucru = false; });
+  }
+  function colectorSursa(s, cache) {
+    var i = s && s.istoricServer; if (i && i.config) return { cfg: i.config, adusLa: i.adusLa };
+    return cache && cache.cfg ? { cfg: cache.cfg, adusLa: cache.la } : { cfg: null, adusLa: null };
+  }
   function citeste() {
     var s = st() || {}, ct = document.querySelector("#tabloubot .contTot"), ctx = ct ? ct.textContent : "";
     var sold = null, soldDin = "";
     try { var e = s.extra || {}; if (e.futures && e.futures.total > 0) { sold = nr(e.futures.total); soldDin = "soldul contului de futures (Pionex)"; } } catch (e1) {}
     if (sold == null) { var m = ctx.match(/Pionex · sold ([\d.,]+) USDT/); if (m) { sold = nr(m[1]); soldDin = "soldul din rândul Pionex al Tabloului"; } }
     if (sold == null) { try { var g = grSoldCitit(); if (g && g.sold) { sold = nr(g.sold); soldDin = "soldul scris de tine în fișa Grid (nu e citit din Pionex)"; } } catch (e2) {} }
-    D = { s: s, bot: bot(), boti: boti(), sold: sold, soldDin: soldDin, t212: t212Din(ctx), col: colectorDin(s.istoricServer && s.istoricServer.config, Date.now(), s.istoricServer && s.istoricServer.adusLa), lich: lichDin(boti()) };
+    if (!(s.istoricServer && s.istoricServer.config)) colectorAdu();
+    var cs = colectorSursa(s, colCache);
+    D = { s: s, bot: bot(), boti: boti(), sold: sold, soldDin: soldDin, t212: t212Din(ctx), col: colectorDin(cs.cfg, Date.now(), cs.adusLa), lich: lichDin(boti()) };
   }
-  function alerteNr() { var m = (document.querySelector('[data-nav="alerts"]') || {}).textContent; m = m && m.match(/(\d+)/); return m ? +m[1] : 0; }
+  function alerteNrDin(t) { var m = t && String(t).match(/(\d+)(\+?)/); return m ? { n: +m[1], t: m[1] + m[2] } : { n: 0, t: "0" }; }   // v100.196: „99+” rămâne „99+”
+  function alerteNr() { return alerteNrDin((document.querySelector('[data-nav="alerts"]') || {}).textContent); }
 
   // ---------- I-591: drumul botului (nivelurile = ale graficului, din date) ----------
   function nivele(b) {
@@ -125,7 +142,7 @@
     cel("cea mai aproape lichidare", L ? (L.depasita ? '<span class="pzR">DEPĂȘITĂ</span> <small>' + esc((L.bot.baza || "").replace(".PERP", "")) + '</small>' : '<span class="' + tonLich(L.d) + '">' + L.d.toFixed(1).replace(".", ",") + '%</span> <small>' + esc((L.bot.baza || "").replace(".PERP", "")) + '</small>') : "—", L && (L.depasita || L.d < 8) ? "pzRosu" : "", "cât mai are prețul până la lichidare (cel mai expus bot)", "tabloubot");
     var t = D.t212;
     cel("T212 deschise", t ? '<span class="' + (t.minus ? "pzR" : "pzV") + '">' + esc(t.deschise) + '</span> <small>lei</small>' : "—", "", t ? "Trading 212: cont " + t.cont + " lei" : "se citește din rândul contului, când e adus", "t212");
-    var a = alerteNr(); cel("alerte", String(a), a ? "pzAtentie" : "", "alerte necitite", "alerts");
+    var a = alerteNr(); cel("alerte", a.t, a.n ? "pzAtentie" : "", "alerte necitite", "alerts");
     var c = D.col;
     cel("colectorul de acasă", c ? (c.viu ? '<span class="pzV">merge</span> <small>acum ' + c.min + ' min</small>' : '<span class="pzR">oprit de ' + c.min + ' min</span>') : "—", c && !c.viu ? "pzRosu" : "", c ? (c.viu ? "colectorul a dat semn acum " + c.min + " min" : "ultimul semn al colectorului: acum " + c.min + " min — pornește PORNESTE-CRYPTO-RADAR.bat") : "colectorul nu a dat semn (sau serverul de acasă nu răspunde)", "tabloubot");   /* nu „cloud”: Cloud Monitor e despre D1, nu despre colector (harta paginilor) */
     return C.join("");
@@ -363,15 +380,18 @@
   }
   // alertele: din TOATĂ lista (alSt.l), nu din rândurile filtrate; pe ultimele 24 h, după nivelul pus de colector - nu după „necitit”
   // (clasa „nou” dispare în secunda în care deschizi pagina ⇒ „nimic nou” verde deasupra alertelor critice - revizia Opus C1)
+  // v100.196 (auditul UI 🟡10): serverul dă ultimele 100; dacă toate 100 sunt din ultimele 24 h, lista e TĂIATĂ ⇒ cifrele sunt „cel puțin”
   function verdictAlerte(l, acum, drumFn) {
-    l = (Array.isArray(l) ? l : []).filter(function (x) { return x && acum - x.t <= 24 * 3600000; });
+    var tot = Array.isArray(l) ? l : [];
+    l = tot.filter(function (x) { return x && acum - x.t <= 24 * 3600000; });
+    var plin = tot.length >= 100 && l.length === tot.length, cp = plin ? "cel puțin " : "", pl = plin ? "+" : "";
     var crit = l.filter(function (x) { return x.nivel === "critic"; }), aten = l.filter(function (x) { return x.nivel === "atentie"; });
     var prima = (crit.length ? crit : aten).slice().sort(function (a, b) { return b.t - a.t; })[0];
-    var c = crit.length ? { verb: "CRITICE: " + crit.length, ton: "jos" } : aten.length ? { verb: "DE ATENȚIE: " + aten.length, ton: "aur" } : { verb: l.length ? "DOAR INFORMĂRI" : "NICIO ALERTĂ", ton: "mut" };
+    var c = crit.length ? { verb: "CRITICE: " + crit.length + pl, ton: "jos" } : aten.length ? { verb: "DE ATENȚIE: " + aten.length + pl, ton: "aur" } : { verb: l.length ? "DOAR INFORMĂRI" : "NICIO ALERTĂ", ton: "mut" };
     c.titlu = prima ? "cea mai recentă: " + prima.titlu : (l.length ? cate(l.length, "informare", "informări") + " în ultimele 24 h" : "nicio alertă în ultimele 24 h");
     var d = prima && drumFn ? drumFn(prima) : null; c.fac = d && d.et ? "→ " + d.et : "";
-    c.voci = [{ n: cate(crit.length, "critică", "critice"), ton: crit.length ? "jos" : "mut", semn: false }, { n: aten.length + " de atenție", ton: aten.length ? "aur" : "mut", semn: false }, { n: cate(l.length, "alertă", "alerte") + " în 24 h", ton: "mut", semn: false }];
-    c.din = "centrul de alerte (toate categoriile, ultimele 24 h)"; return c;
+    c.voci = [{ n: cp + cate(crit.length, "critică", "critice"), ton: crit.length ? "jos" : "mut", semn: false }, { n: cp + aten.length + " de atenție", ton: aten.length ? "aur" : "mut", semn: false }, { n: cp + cate(l.length, "alertă", "alerte") + " în 24 h", ton: "mut", semn: false }];
+    c.din = "centrul de alerte (toate categoriile, ultimele 24 h" + (plin ? "; serverul dă doar ultimele 100, deci au fost mai multe" : "") + ")"; return c;
   }
   function pagAlerte() {
     var l = null; try { l = alSt.l; } catch (e) {}
@@ -491,7 +511,7 @@
     if (b) { var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
   }
 
-  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, lichDin: lichDin, verdictValid: verdictValid, tonLich: tonLich };
+  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, verdictValid: verdictValid, tonLich: tonLich };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#jurnaltrade .jtFiltru")) setTimeout(function () { try { pagJurnal(); } catch (x) {} }, 30); });   /* M1: antetul urmează fila pe loc */

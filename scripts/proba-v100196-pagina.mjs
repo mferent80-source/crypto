@@ -189,6 +189,11 @@ await test("P5 insigna „necitite”: deschiderea paginii Alerte marchează cit
   vm.runInContext("alerteLocaleCitite()", c); assert.equal(badge.textContent, 0); assert.equal(badge.style.display, "none");
   assert.ok(JSON.parse(ls.radarAlerts).every((x) => x.read === true));
   assert.match(fnSursa(APP, "navTo"), /if\(id==="alerts"\)alerteLocaleCitite\(\)/);
+  // 🟡10: insigna nu dă o cifră exactă dintr-o listă tăiată la 100
+  ls.radarAlerts = JSON.stringify(Array.from({ length: 100 }, (_, i) => ({ key: "k" + i, title: "t", msg: "", ts: i, read: false })));
+  vm.runInContext("updateAlertBadges()", c); assert.equal(badge.textContent, "99+");
+  const A = paznic().AsezarePaznic; assert.equal(typeof A.alerteNrDin, "function");
+  assert.deepEqual(JSON.parse(JSON.stringify(A.alerteNrDin("! Alerte 99+"))), { n: 99, t: "99+" }); assert.deepEqual(JSON.parse(JSON.stringify(A.alerteNrDin("! Alerte"))), { n: 0, t: "0" });
 });
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -196,7 +201,10 @@ await test("🟡2/3 rezultatele din Tablou: o zecimală și virgula (KPI total, 
   const k = fnSursa(APP, "tbDeseneazaKpi");
   assert.ok(!/tot\.toFixed\(2\)|inv\.toFixed\(2\)|gp\.toFixed\(2\)|tbFormateazaSemn\(100\*tot\/inv,2\)/.test(k), "KPI-ul are încă 2 zecimale");
   assert.ok(!/Math\.abs\(dist\)\.toFixed\(1\)\+"%"/.test(k), "lichidarea KPI cu punct");
-  assert.match(k, /pune\("tbKpiTotal",tot===null\?"—":TextRo\.num\(tot,1\)/);
+  assert.match(k, /var s1=function\(v\)\{var x=TextRo\.num\(v,1\);return v>0&&x!=="0,0"\?"\+"\+x:x\}/); assert.match(k, /pune\("tbKpiTotal",tot===null\?"—":s1\(tot\)/);
+  const c = ctx({}); vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + fnSursa(APP, "botiBan").replace(/^/, "function botiNr(v){const n=Number(v);return v==null||v===''||!isFinite(n)?null:n}\n"), c);
+  assert.equal(vm.runInContext("botiBan(12.345)", c), "+12,3 USDT"); assert.equal(vm.runInContext("botiBan(-0.04)", c), "0,0 USDT"); assert.equal(vm.runInContext("botiBan(-21.31)", c), "−21,3 USDT");
+  assert.equal(vm.runInContext("botiBan(100,2,false)", c), "100,00 USDT", "suma investită (o valoare, nu un rezultat) rămâne la ban");
   assert.match(k, /TextRo\.pct\(Math\.abs\(dist\),1\)/);
   assert.ok(!/Math\.abs\(x\.grile\)\.toFixed\(2\)/.test(APP), "săptămâna (grilele pe zi) cu 2 zecimale");
   assert.ok(!/var U=function\(v\)\{return \(v>=0\?"\+":"−"\)\+Math\.abs\(v\)\.toFixed\(2\)\+" USDT"\}/.test(APP), "portofoliul cu punct și 2 zecimale");
@@ -220,8 +228,9 @@ await test("🟡2 fâșia „ultimii boți închiși” (asezare-paznic.js): rez
 
 await test("🟡6 UI: pe Simulator grid, Contul întreg, Monte Carlo și Rezultate nu mai stă banda veche „Selected market / Engine bias WAIT”", () => {
   const f = fnSursa(APP, "show");
-  for (const id of ["salt", "sugestii", "carnet", "gridsim", "contintreg", "montecarlo", "rezultate"]) assert.match(f, new RegExp('id==="' + id + '"'), id);
-  assert.match(f, /toggle\("pePaginaNoua",PAGINI_FARA_BANDA\.includes\(id\)\)/);
+  const m = f.match(/toggle\("pePaginaNoua",(\[[^\]]*\])\.includes\(id\)\)/); assert.ok(m, "lista paginilor fără bandă");
+  assert.deepEqual(JSON.parse(m[1]), ["salt", "sugestii", "carnet", "gridsim", "contintreg", "montecarlo", "rezultate"]);
+  assert.match(CSS, /body\.pePaginaNoua \.toolbar,body\.pePaginaNoua \.heroStrip,body\.pePaginaNoua \.tabs\{display:none\}/);
 });
 
 // ---------------------------------------------------------------------------------------------------------------------------

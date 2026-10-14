@@ -37,7 +37,7 @@ test("banda: prețul live stă imediat după nume, cu săgeata", () => {
   const r = PV.banda({ bot: BOT, pretViu: { pret: 0.5708, text: "0.5708", primitLa: ACUM - 1000, dir: "sus" }, acum: ACUM, distanteGrid: { inGrid: true, josPct: 0.009, susPct: 0.017 }, piata: { ton: "bine" } });
   assert.deepEqual(r.parti.map((p) => p.k), ["nume", "pret", "total", "lich", "grid", "piata"]);
   assert.equal(r.parti[1].t, "0.5708 \u25b2"); assert.equal(r.parti[1].viu, true);
-  assert.equal(r.parti.map((p) => p.t).join(" · "), "JTO long 5× · 0.5708 ▲ · total −12,04 USDT · lichidare 20,5% · grid ↓0,9% ↑1,7% · piața: cu botul");   /* v100.75: virgula și „−” (prețul rămâne cu zecimalele Pionex) */
+  assert.equal(r.parti.map((p) => p.t).join(" · "), "JTO long 5× · 0.5708 ▲ · total −12,0 USDT · lichidare 20,5% · grid ↓0,9% ↑1,7% · piața: cu botul");   /* v100.75: virgula și „−” (prețul rămâne cu zecimalele Pionex); v100.196: totalul cu O zecimală */
   assert.equal(r.clasa, "tbWarn");
 });
 test("banda fără live: prețul din citirea botului, fără săgeată, spus pe față", () => {

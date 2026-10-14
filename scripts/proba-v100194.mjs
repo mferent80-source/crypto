@@ -37,7 +37,8 @@ await test("Tabloul și banda de sus folosesc aceeași regulă, cu ora aducerii;
   assert.match(app, /config:ist\.config\|\|null,adusLa:Date\.now\(\)\}/);
   assert.match(app, /if\(!s\)\{el\.innerHTML='<p class="tbSub">Aștept datele serverului de acasă/, "datele încă nesosite nu mai înseamnă „colectorul n-a pornit”");
   assert.match(app, /AsezarePaznic\.colectorDin\(c,Date\.now\(\),s\.adusLa\)/);
-  assert.match(ap, /col: colectorDin\(s\.istoricServer && s\.istoricServer\.config, Date\.now\(\), s\.istoricServer && s\.istoricServer\.adusLa\)/);
+  /* v100.196 (auditul UI 🟡8): sursa trece prin colectorSursa - istoricul Tabloului cu ora aducerii când există, altfel config-ul adus separat */
+  assert.match(ap, /col: colectorDin\(cs\.cfg, Date\.now\(\), cs\.adusLa\)/); assert.match(ap, /if \(i && i\.config\) return \{ cfg: i\.config, adusLa: i\.adusLa \};/);
   assert.ok(!/var min=c\.colectorLa\?Math\.round\(\(Date\.now\(\)-c\.colectorLa\)\/60000\):null;\n\s*var viu=min!==null&&min<=3;/.test(app), "regula veche a ieșit din Tablou");
 });
 await test("versiunile: v100.194 peste tot", () => {
