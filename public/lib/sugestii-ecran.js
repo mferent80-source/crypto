@@ -118,10 +118,33 @@ function sugSectoareHtml(x, acum) {
   }).join("") + "</div>" + '<p class="tbSub">Apasă pe simbol: se deschide Poarta din Trading 212 (planul, stopul, mărimea, ce se mișcă la fel cu ce ai deja). Sectoarele sunt după clasificarea Nasdaq, care diferă uneori de cea S&amp;P (Visa și Mastercard apar la Consum ciclic, transportul de gaze la Utilități).</p></section>';
   return h;
 }
+// v100.190 (14.10, el: „integrează cum ai zis”): „Trend 12 luni” — clasamentul robotului din premarket_scanner (primele 20 % din ~600 de
+// acțiuni SUA ≥ 2 mld. $ după randamentul pe lunile 2–12, ultima lună sărită), citit o dată pe zi de colector (tura-trend.mjs). ÎN PROBĂ:
+// probat pe 5 ani față de alte acțiuni în aceeași zi (+0,9 % pe 20 z, +3,4 % pe 60 z), NEprobat pe listă istorică; bilanțul robotului îl
+// judecă singur, iar jurnalul verdictelor (sursa „trend-12-1”) îl judecă aici, ca pe topul pe sectoare. Clic ⇒ Poarta T212 (planul TĂU).
+function sugTrendHtml(x, acum) {
+  var P1 = function (v) { return v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + " %"; };
+  var ziNY = function (t) { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); };
+  var h = '<section class="rlSec sugTrend"><h3>📈 Trend 12 luni (în probă)</h3>';
+  if (!x || !Array.isArray(x.top) || !x.top.length) return h + '<p class="tbSub">Clasamentul vine o dată pe zi (după 8:00) de la robotul din Trading Tools: primele 20 % dintre ~600 de acțiuni SUA de peste 2 mld. $ după randamentul pe lunile 2–12.</p></section>';
+  var regim = !!(x.regim && x.regim.peste), b = x.bilant;
+  h += '<p class="rlRasp">Regula, fixată înainte de cifre: primele 20 % după randamentul pe lunile 2–12 (ultima lună sărită), cu momentum pozitiv, din ~600 de acțiuni SUA ≥ 2 mld. $; regim = SPY peste media pe 200 de zile. Probat pe 5 ani față de alte acțiuni în aceleași zile (+0,9 % pe 20 de zile, +3,4 % pe 60), NEprobat pe listă istorică ⇒ <b>în probă</b> — nu e un buton de cumpărat. Se ține 20–60 de zile, fără stop strâns; iese când cade din top 20 % sau când regimul se oprește.</p>';
+  var nota = 'EOD ' + x.dataUltimei + ' · regim ' + (regim ? 'pornit' : 'OPRIT') + (x.concentrare ? ' · ' + x.concentrare.n + ' din 20 ' + x.concentrare.sector + ' — un singur pariu' : '')
+    + (b ? ' · proba: ' + TextRo.cate(b.n20 || 0, 'zi', 'zile') + ' cu rezultat' + (b.ferestre20 != null ? ' (' + TextRo.cate(b.ferestre20, 'fereastră', 'ferestre') + ' de 20 z)' : '') + (b.diferenta20 && b.diferenta20.medie != null ? ', ' + P1(b.diferenta20.medie / 100) + ' vs alte acțiuni' : '') + ' · ' + b.verdict : ' · proba: fără bilanț încă')
+    + (x.iesiri && x.iesiri.length ? ' · au ieșit: ' + x.iesiri.map(function (e) { return e.s; }).join(', ') : '') + (x.raportari !== 'finnhub' ? ' · raportările neverificate (robotul fără cheie)' : '');
+  h += '<p class="tbSub">' + sugEsc(nota) + '</p>';
+  h += '<ol class="sugTrendLista">' + x.top.map(function (t) {
+    var rap = t.raporteaza && t.raporteaza.d ? Math.round((Date.parse(t.raporteaza.d + 'T12:00:00Z') - Date.parse(ziNY(acum) + 'T12:00:00Z')) / 86400000) : null;
+    return '<li><button type="button" class="t212BtnLinie sugSectBtn" data-action-click="sugLaPoarta(\'' + String(t.s).replace(/[^A-Za-z0-9.-]/g, '') + '\')">' + sugEsc(t.s) + '</button> ' + sugEsc(String(t.nume || '').slice(0, 28))
+      + ' <span class="tbSub">' + sugEsc(t.sector) + ' · 12-1 ' + P1(t.m12) + ' · 60 z ' + P1(t.r60) + '</span>' + (rap != null && rap >= 0 ? ' <b class="sugTrendRap">raportează în ' + rap + 'z</b>' : '') + '</li>';
+  }).join('') + '</ol>';
+  h += '<p class="tbSub">Apasă pe simbol: se deschide Poarta din Trading 212, cu planul și riscul tău. Judecata: jurnalul verdictelor, sursa „Trend 12 luni”, la 5 și 20 de zile față de Nasdaq — aceeași ca la topul pe sectoare. Poarta nu dimensionează pe el până nu spune bilanțul „probat”.</p></section>';
+  return h;
+}
 function sugHtml(d, acum) {
   d = d || {}; var sa = d.sugActiuni && d.sugActiuni.sugestii, pm = d.sugActiuni && d.sugActiuni.premarket;
   return '<p class="rlRasp">Toate sugestiile, fiecare cu istoricul ei pe 2 ani. Un filtru, nu o predicție: o listă cu istoric slab rămâne, cu istoricul la vedere - judeci tu.</p>'
-    + sugPandaHtml(d.latime, d.boti, acum) + sugBoti(d.clasament, d.sugMonede) + sugActiuniPiata("us", sa, pm, d.idei, "📈", "Acțiuni US", acum) + sugSectoareHtml(d.sectoare, acum) + sugActiuniPiata("eu", sa, pm, null, "📈", "Acțiuni EU (DAX, CAC, AEX + ale tale)", acum)
+    + sugPandaHtml(d.latime, d.boti, acum) + sugBoti(d.clasament, d.sugMonede) + sugActiuniPiata("us", sa, pm, d.idei, "📈", "Acțiuni US", acum) + sugSectoareHtml(d.sectoare, acum) + sugTrendHtml(d.trend12, acum) + sugActiuniPiata("eu", sa, pm, null, "📈", "Acțiuni EU (DAX, CAC, AEX + ale tale)", acum)
     + '<p class="tbSub">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric. Istoricul: intrare la deschiderea zilei de după semnal (gap-ul: vezi cartela lui), ieșire după 10 zile de bursă, cu 0,3% comision.</p>';
 }
 function sugDeseneaza() { var el = typeof document !== "undefined" && document.getElementById("sugPagina"); if (el) el.innerHTML = sugHtml(sugStare.d, Date.now()); }
@@ -138,7 +161,8 @@ async function sugPorneste(fortat) {
       pas("sugMonede", function () { return getJSON("/api/istoric-bot?action=sugestii"); }),
       pas("idei", function () { return getJSON("/api/t212?action=idei"); }),
       pas("sugActiuni", function () { return getJSON("/api/t212?action=sugestii"); }),
-      pas("sectoare", function () { return getJSON("/api/istoric-bot?action=sectoareTop").then(function (r) { return r && r.sectoare || null; }); })   /* v100.178 */
+      pas("sectoare", function () { return getJSON("/api/istoric-bot?action=sectoareTop").then(function (r) { return r && r.sectoare || null; }); }),   /* v100.178 */
+      pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); })   /* v100.190 */
     ]);
   } finally { sugStare.inLucru = false; }
   sugDeseneaza();

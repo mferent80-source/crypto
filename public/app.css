@@ -2867,4 +2867,6 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .sugSectGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.sugSect{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:5px;padding:8px 10px;min-width:0}.sugSect ol{margin:6px 0 0;padding-left:20px;display:grid;gap:6px}.sugSect .sugSectBtn{padding:2px 8px;font-weight:700}
 /* v100.179: teza în planul poziției T212; rândul regulii în tabelul benzii */
 .t212Teza{display:grid;grid-template-columns:2fr 2fr 1fr;gap:8px;margin-top:8px}.t212Teza label{display:grid;gap:2px;font-size:12px;color:var(--muted)}@media (max-width:640px){.t212Teza{grid-template-columns:1fr}}#contintreg .ciAles td{background:var(--panel-2);font-weight:700}
+/* v100.190: Trend 12 luni în Sugestii — raportarea e roșie, lista e numerotată strâns */
+.sugTrendRap{color:#ff6e80;font-weight:700;font-size:11px}.sugTrendLista{margin:6px 0 0 18px;padding:0}.sugTrendLista li{margin:3px 0;font-size:12px}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

@@ -13,6 +13,7 @@ var Verdicte = (function () {
     "poarta-grid": { nume: "Poarta gridului", piata: "crypto", fav: ["porneste"], h: [1, 3], masura: "linistit", text: "„pornește” față de „așteaptă / nu” — a stat prețul în banda gridului?" },
     "idei": { nume: "Ideile zilei (acțiuni)", piata: "actiuni", fav: ["cumpar"], h: [5, 20], masura: "pesteQqq", text: "ideile față de Nasdaq (QQQ) pe aceleași zile" },
     "top-sector": { nume: "Topul pe sectoare (Sugestii)", piata: "actiuni", fav: ["top"], h: [5, 20], masura: "pesteQqq", text: "cele mai tari din fiecare sector față de Nasdaq (QQQ) pe aceleași zile" },
+    "trend-12-1": { nume: "Trend 12 luni (Sugestii)", piata: "actiuni", fav: ["top"], h: [5, 20], masura: "pesteQqq", text: "primele 20 după randamentul pe lunile 2–12 (ultima lună sărită) față de Nasdaq (QQQ) pe aceleași zile — în probă" },
     "macro": { nume: "Regimul macro", piata: "actiuni", fav: ["riskon", "inclinat"], h: [5, 20], masura: "randament", text: "S&P după „pofta de risc / înclinat spre risc” față de restul" }
   };
   function nr(v) { if (v === null || v === undefined || v === "") return null; var x = Number(v); return isFinite(x) ? x : null; }

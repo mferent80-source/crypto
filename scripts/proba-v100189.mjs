@@ -72,7 +72,7 @@ await test("alEpisoadeHtml: rândurile cu o zecimală, culoarea pe 72 h (altfel 
   assert.match(c.alEpisoadeHtml({ episoade: [], martori: 0 }), /Niciun episod încă/);
   assert.equal(c.alEpisoadeHtml(null), "");
 });
-await test("colectorul v101.110", () => { assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.110";/); });
+await test("colectorul de la v101.110 în sus", () => { const m = /const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("scripts", "colector.mjs")); assert.ok(m && Number(m[1]) >= 110, "v101.110+"); });   // v100.190: convenția „de la vX în sus”
 
 console.log(`\n${teste - picate}/${teste} trecute\n`);
 process.exit(picate ? 1 : 0);
