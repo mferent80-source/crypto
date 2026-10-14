@@ -50,6 +50,7 @@ export async function turaVerdicte(d, st) {
       else bare[k] = await incearca(d, "bare " + k, async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(k))).randuri || [], acum));
     }
     reper.QQQ = await incearca(d, "QQQ", async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ")).randuri || [], acum));
+    reper.SPY = await incearca(d, "SPY", async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&yahoo=SPY")).randuri || [], acum));   // v101.113 (I-623): rigla Trend 12 luni = aceeași ca bilanțul robotului
     const ev = d.Verdicte.evalueaza(deEvaluat, bare, reper), cal = d.Verdicte.calibrare(ev);
     // registrul: + obiceiurile din riscul tău (p din bootstrap) + becurile / ADX-ul boților (din cazuri)
     const risc = await incearca(d, "riscul", async () => (await d.cere("/api/istoric-bot?action=risc")).risc);

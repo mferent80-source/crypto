@@ -66,13 +66,20 @@ try {
   for (const p of PAGINI) {
     exc = [];
     const dus = await ev(`(() => { navTo(${JSON.stringify(p)},true); return (document.querySelector(".panel.on") || {}).id; })()`); await asteapta(p === "tabloubot" ? 6000 : 2500);
-    const r = await ev(`(() => { scrollTo(0,0); const s = document.querySelector(".topStatus"); return { lat: document.documentElement.scrollWidth, banda: s ? Math.round(s.getBoundingClientRect().height) : 0 }; })()`);
-    const poza = await tr("Page.captureScreenshot", { format: "png" });
+    // v100.192 (I-628): garda vede ce vede omul, nu doar banda de sus — (1) orice element inline cu white-space:nowrap stă pe un singur rând
+    // (cifrele rupte „12-” / „1 +458,1 %” din Trend au trecut 55/55 pe 14.10); (2) nicio secțiune a paginii deschise nu iese din ecran
+    const r = await ev(`(() => { scrollTo(0,0); const s = document.querySelector(".topStatus"), on = document.querySelector(".panel.on") || document.body, W = ${LAT};
+      const rupte = [...on.querySelectorAll("*")].filter((e) => { const cs = getComputedStyle(e); return cs.whiteSpace === "nowrap" && cs.display === "inline" && e.getClientRects().length > 1; }).map((e) => (e.textContent || "").trim().slice(0, 40));
+      const late = [...on.querySelectorAll(".rlSec, section")].filter((e) => getComputedStyle(e).display !== "none" && e.getBoundingClientRect().right > W + 1).map((e) => String(e.className || e.tagName).slice(0, 40));
+      return { lat: document.documentElement.scrollWidth, banda: s ? Math.round(s.getBoundingClientRect().height) : 0, nRupte: rupte.length, rupte: rupte.slice(0, 3), nLate: late.length, late: late.slice(0, 3) }; })()`);
+    const poza = await tr("Page.captureScreenshot", process.env.PROBA_POZE_INALTE ? { format: "png", captureBeyondViewport: true } : { format: "png" });   // v100.192 (I-628): PROBA_POZE_INALTE=1 ⇒ toată înălțimea
     writeFileSync(path.join(DOSAR_POZE, `tel-${p}.png`), Buffer.from(poza.data, "base64"));
     const rele = [];
     if (dus !== p) rele.push(`navTo n-a deschis pagina (a rămas „${dus}”)`);
     if (r.lat > LAT + 1) rele.push(`lată de ${r.lat} px pe ${LAT}`);
     if (r.banda > BANDA_MAX) rele.push(`banda de sus ${r.banda} px (max ${BANDA_MAX})`);
+    if (r.nRupte) rele.push(`${r.nRupte} grupuri nelegabile rupte pe două rânduri („${r.rupte.join("” · „")}”)`);   // v100.192 (I-628)
+    if (r.nLate) rele.push(`${r.nLate} secțiuni ies din ecran (${r.late.join(", ")})`);
     if (exc.length) rele.push("excepție: " + exc[0]);
     if (rele.length) { picate++; console.log(`  PICA ${p}: ${rele.join(" · ")}`); } else console.log(`  ok   ${p} (banda ${r.banda} px)`);
   }

@@ -57,7 +57,7 @@ import { bilantNoteaza, pandaJudeca, bilantAlerte } from "./lib/paza-boti.mjs"; 
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.112";   // v101.112 (14.10, „fă toate”): saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.113";   // v101.113 (14.10, „fă tot”): rigla Trend peste SPY + 20/60 z, proba PAZNIC–lățime zilnic, rândul Trend în raportul de duminică; v101.112: saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1431,6 +1431,11 @@ async function turaMediu(acum) {
   if (await trimiteAlerta(r, null, "raport-3h")) m.raport3h = slot;
 }
 
+// v101.113 (I-631): rândul de duminică despre Trend 12 luni — „nemăsurat” nu e „+0,0 %” (regula din 14.10)
+function liniaTrendRaport(t, b) {
+  const dif = b && b.n20 > 0 && b.diferenta20 && b.diferenta20.medie != null ? ", " + (b.diferenta20.medie >= 0 ? "+" : "−") + Math.abs(b.diferenta20.medie).toFixed(1).replace(".", ",") + " % față de univers" : "";
+  return "Trend 12 luni (în probă): EOD " + t.dataUltimei + " · regim " + (t.regim && t.regim.peste ? "pornit" : "oprit") + " · " + (b ? "proba: " + cate(b.n20 || 0, "zi", "zile") + " cu rezultat" + (b.ferestre20 != null ? " (" + cate(b.ferestre20, "fereastră", "ferestre") + " de 20 z)" : "") + dif + " · " + b.verdict : "fără bilanț încă");
+}
 async function turaRaport(acum) {
   const r = saptamanaRo(acum);
   if (r.zi !== "Sun" || r.ora < 20) return;
@@ -1448,6 +1453,8 @@ async function turaRaport(acum) {
     let lab = null; try { const v = await cere("/api/istoric-bot?action=laborator"); lab = v && v.laborator; } catch (e) {}
     const rap = Obiceiuri.raportDuminica({ trades, acum, socoteala: soc, laborator: lab, autopsie: Obiceiuri.autopsie(socotealaLoguri, acum) });   // v101.30 (I-478)
     try { rap.linii.push(...bilantAlerte(m.pandaContra || [])); } catch (e) { jurnal("panda bilant raport", e.message); }   // v101.108: spune ceva alerta „contra”?
+    // v101.113 (I-631): un rând despre Trend 12 luni (în probă) — ce zice bilanțul robotului, nu ce zice Radarul
+    try { const tr = await cere("/api/istoric-bot?action=trend12"), t = tr && tr.trend, b = t && t.bilant; if (t) rap.linii.push(liniaTrendRaport(t, b)); } catch (e) { jurnal("trend raport", e.message); }
     // revizia 01.10 (I3): dupa o repornire, jurnalele Consilierului pe actiuni se citesc INAINTE de raport (altfel autopsia ar fi zis „niciun sfat greșit”)
     if (socActZi === null) await turaSocotealaActiuni();
     let autAct = null;
@@ -2062,6 +2069,19 @@ async function turaBandaLive() {
 const sectoareStare = {}, UNIVERS_FIS = path.join(DATA, "univers-sua.json");
 const trendStare = {};
 async function turaTrendColector() { await turaTrendModul({ trimite, jurnal, fetch }, trendStare); }   // v101.111
+// v101.113 (I-630): proba PAZNIC–lățime o dată pe zi, de la 12:00 RO, cât timp PAZNIC mai rulează (stare.json există); 13.10 a fost ratată de mână.
+// Se scoate odată cu PAZNIC (oprirea e plănuită pe 18–19.10).
+const probaLatimeStare = {}, PAZNIC_STARE = "C:/Users/Cimin/PAZNIC-CRYPTO/stare.json";
+async function turaProbaLatimePaznic() {
+  const acum = Date.now(), r = saptamanaRo(acum);
+  if (probaLatimeStare.inLucru || r.ora < 12 || probaLatimeStare.data === r.data || !fs.existsSync(PAZNIC_STARE)) return;
+  probaLatimeStare.inLucru = true; probaLatimeStare.data = r.data;
+  try {
+    const out = await new Promise((res) => execFile(process.execPath, [path.join(RAD, "scripts", "proba-latime-vs-paznic.mjs")], { cwd: RAD, timeout: 170000, windowsHide: true }, (e, so) => res({ e, so: String(so || "") })));
+    const ultima = out.so.split(/\r?\n/).filter(Boolean).pop() || "";
+    jurnal("proba PAZNIC–lățime: " + (out.e ? "PICATĂ (" + (out.e.code != null ? "exit " + out.e.code : out.e.message) + ") · " : "") + ultima.slice(0, 160));
+  } finally { probaLatimeStare.inLucru = false; }
+}
 async function turaSectoareColector() {
   await turaSectoareModul({ cere, trimite, jurnal, Factori, GridCalcul, bareZi: bareZiCont, fetch,
     universDisc: { citeste: () => { try { return JSON.parse(fs.readFileSync(UNIVERS_FIS, "utf8")); } catch { return null; } }, scrie: (x) => { try { scrieAtomic(UNIVERS_FIS, x); } catch {} } } }, sectoareStare);
@@ -2182,6 +2202,7 @@ async function bucla() {
   turaVerdicteColector().catch((e) => jurnal("verdicte", e.message));
   turaSectoareColector().catch((e) => jurnal("sectoare", e.message));
   turaTrendColector().catch((e) => jurnal("trend", e.message));   // v101.111: o dată pe zi, de la 8:00
+  turaProbaLatimePaznic().catch((e) => jurnal("proba PAZNIC–lățime", e.message));   // v101.113 (I-630): o dată pe zi, de la 12:00, cât mai e PAZNIC
   turaDisciplinaBanda().catch((e) => jurnal("disciplina", e.message));   // v101.106: o dată pe zi
   turaBandaLive().catch((e) => jurnal("banda pe viu", e.message));   // v101.106: la fiecare tură   // v101.105: topul pe sectoare o dată pe zi, DVOL la o oră   // v101.103: verdictele zilei + judecata la 6 ore
   turaLatimeColector().catch((e) => jurnal("latime", e.message));   // v101.93 (I-583): lățimea pieței la 15 minute

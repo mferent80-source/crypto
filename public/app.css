@@ -2870,4 +2870,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 /* v100.190: Trend 12 luni în Sugestii — raportarea e roșie, lista e numerotată strâns · v100.191: cifrele nu se rup („12-” / „1 +458,1 %” pe telefon), pe telefon linia de cifre stă sub nume; saltul într-o zi e galben */
 .sugTrendRap{color:#ff6e80;font-weight:700;font-size:11px}.sugTrendSalt{color:var(--warn);font-weight:700;font-size:11px}.sugTrendNr,.sugTrendRap,.sugTrendSalt{white-space:nowrap}.sugTrendLista{margin:6px 0 0 18px;padding:0}.sugTrendLista li{margin:3px 0;font-size:12px}
 @media (max-width:640px){.sugTrendCifre{display:block;margin:2px 0 0}.sugTrendLista li{margin:6px 0}}
+/* v100.192: VECHI (robotul n-a publicat) e galben ca saltul; pe telefon lista arată primele 10, butonul „arată toate 20 ›” desface restul (I-626) */
+.sugTrendVechi{color:var(--warn);font-weight:700}.sugTrendTotBtn{display:none}
+@media (max-width:640px){.sugTrendLista:not(.sugTrendTot) li:nth-child(n+11){display:none}.sugTrendLista:not(.sugTrendTot)+.sugTrendTotBtn{display:inline-block;margin:4px 0 0 18px}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

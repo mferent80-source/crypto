@@ -128,11 +128,14 @@ function sugTrendHtml(x, acum) {
   var h = '<section class="rlSec sugTrend"><h3>📈 Trend 12 luni (în probă)</h3>';
   if (!x || !Array.isArray(x.top) || !x.top.length) return h + '<p class="tbSub">Clasamentul vine o dată pe zi (după 8:00) de la robotul din Trading Tools: primele 20 % dintre ~600 de acțiuni SUA de peste 2 mld. $ după randamentul pe lunile 2–12.</p></section>';
   var regim = !!(x.regim && x.regim.peste), b = x.bilant;
+  // v100.192 (I-627): zile de bursă NY de la EOD-ul robotului până azi, minus una (EOD de ieri = proaspăt); de la 2 ⇒ VECHI (robotul n-a publicat)
+  var vechime = (function () { var a = Date.parse(x.dataUltimei + 'T12:00:00Z'), z = Date.parse(ziNY(acum) + 'T12:00:00Z'); if (!(a > 0) || !(z > a)) return 0; var n = 0; for (var t = a + 86400000; t <= z; t += 86400000) { var w = new Date(t).getUTCDay(); if (w !== 0 && w !== 6) n++; } return Math.max(0, n - 1); })();
   h += '<p class="rlRasp">Regula, fixată înainte de cifre: primele 20 % după randamentul pe lunile 2–12 (ultima lună sărită), cu momentum pozitiv, din ~600 de acțiuni SUA ≥ 2 mld. $; regim = SPY peste media pe 200 de zile. Probat pe 5 ani față de alte acțiuni în aceleași zile (+0,9 % pe 20 de zile, +3,4 % pe 60), NEprobat pe listă istorică ⇒ <b>în probă</b> — nu e un buton de cumpărat. Se ține 20–60 de zile, fără stop strâns; iese când cade din top 20 % sau când regimul se oprește.</p>';
   var nota = 'EOD ' + x.dataUltimei + ' · regim ' + (regim ? 'pornit' : 'OPRIT') + (x.concentrare ? ' · ' + x.concentrare.n + ' din 20 ' + x.concentrare.sector + ' — un singur pariu' : '')
     + (b ? ' · proba: ' + TextRo.cate(b.n20 || 0, 'zi', 'zile') + ' cu rezultat' + (b.ferestre20 != null ? ' (' + TextRo.cate(b.ferestre20, 'fereastră', 'ferestre') + ' de 20 z)' : '') + (b.diferenta20 && b.diferenta20.medie != null && (b.n20 || 0) > 0 ? ', ' + P1(b.diferenta20.medie / 100) + ' vs alte acțiuni' : '') + ' · ' + b.verdict : ' · proba: fără bilanț încă')
+    + (x.intrari && x.intrari.length ? ' · au intrat: ' + x.intrari.join(', ') : '')   /* v100.192 (I-627) */
     + (x.iesiri && x.iesiri.length ? ' · au ieșit: ' + x.iesiri.map(function (e) { return e.s; }).join(', ') : '') + (x.raportari !== 'finnhub' ? ' · raportările neverificate (robotul fără cheie)' : '');
-  h += '<p class="tbSub">' + sugEsc(nota) + '</p>';
+  h += '<p class="tbSub">' + (vechime >= 2 ? '<b class="sugTrendVechi">VECHI de ' + sugEsc(TextRo.cate(vechime, 'zi', 'zile')) + ' de bursă — robotul n-a publicat</b> · ' : '') + sugEsc(nota) + '</p>';
   h += '<ol class="sugTrendLista">' + x.top.map(function (t) {
     var rap = t.raporteaza && t.raporteaza.d ? Math.round((Date.parse(t.raporteaza.d + 'T12:00:00Z') - Date.parse(ziNY(acum) + 'T12:00:00Z')) / 86400000) : null;
     return '<li><button type="button" class="t212BtnLinie sugSectBtn" data-action-click="sugLaPoarta(\'' + String(t.s).replace(/[^A-Za-z0-9.-]/g, '') + '\')">' + sugEsc(t.s) + '</button> ' + sugEsc(String(t.nume || '').slice(0, 28))
@@ -140,10 +143,12 @@ function sugTrendHtml(x, acum) {
       + (rap != null && rap >= 0 ? ' · <b class="sugTrendRap">raportează în ' + rap + 'z</b>' : '')
       + (t.salt && t.salt.pct >= 0.5 ? ' · <b class="sugTrendSalt">salt ' + P1(t.salt.pct) + ' într-o zi' + (t.salt.d ? ' (' + sugEsc(t.salt.d) + ')' : '') + ' — verifică seria</b>' : '')   /* v100.191: split/glitch? robotul măsoară, omul verifică */
       + '</span></li>';
-  }).join('') + '</ol>';
+  }).join('') + '</ol>' + (x.top.length > 10 ? '<button type="button" class="t212BtnLinie sugTrendTotBtn" data-action-click="sugTrendTot()">arată toate ' + x.top.length + ' ›</button>' : '');   /* v100.192 (I-626): pe telefon primele 10, restul la o apăsare */
   h += '<p class="tbSub">Apasă pe simbol: se deschide Poarta din Trading 212, cu planul și riscul tău. Judecata: jurnalul verdictelor, sursa „Trend 12 luni”, la 5 și 20 de zile față de Nasdaq — aceeași ca la topul pe sectoare. Poarta nu dimensionează pe el până nu spune bilanțul „probat”.</p></section>';
   return h;
 }
+// v100.192 (I-626): pe telefon lista Trend arată primele 10; butonul desface restul (CSS: .sugTrendLista:not(.sugTrendTot) li:nth-child(n+11))
+function sugTrendTot() { var l = document.querySelector('.sugTrendLista'); if (l) l.classList.add('sugTrendTot'); }
 function sugHtml(d, acum) {
   d = d || {}; var sa = d.sugActiuni && d.sugActiuni.sugestii, pm = d.sugActiuni && d.sugActiuni.premarket;
   return '<p class="rlRasp">Toate sugestiile, fiecare cu istoricul ei pe 2 ani. Un filtru, nu o predicție: o listă cu istoric slab rămâne, cu istoricul la vedere - judeci tu.</p>'

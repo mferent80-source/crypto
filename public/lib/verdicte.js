@@ -13,7 +13,7 @@ var Verdicte = (function () {
     "poarta-grid": { nume: "Poarta gridului", piata: "crypto", fav: ["porneste"], h: [1, 3], masura: "linistit", text: "„pornește” față de „așteaptă / nu” — a stat prețul în banda gridului?" },
     "idei": { nume: "Ideile zilei (acțiuni)", piata: "actiuni", fav: ["cumpar"], h: [5, 20], masura: "pesteQqq", text: "ideile față de Nasdaq (QQQ) pe aceleași zile" },
     "top-sector": { nume: "Topul pe sectoare (Sugestii)", piata: "actiuni", fav: ["top"], h: [5, 20], masura: "pesteQqq", text: "cele mai tari din fiecare sector față de Nasdaq (QQQ) pe aceleași zile" },
-    "trend-12-1": { nume: "Trend 12 luni (Sugestii)", piata: "actiuni", fav: ["top"], h: [5, 20], masura: "pesteQqq", text: "primele 20 după randamentul pe lunile 2–12 (ultima lună sărită) față de Nasdaq (QQQ) pe aceleași zile — în probă" },
+    "trend-12-1": { nume: "Trend 12 luni (Sugestii)", piata: "actiuni", fav: ["top"], h: [20, 60], masura: "pesteSpy", text: "primele 20 după randamentul pe lunile 2–12 (ultima lună sărită) față de S&P 500 (SPY) pe aceleași zile, la 20 și 60 de zile — aceeași riglă ca bilanțul robotului; în probă" },   // v100.192 (I-622, I-623): orizontul probat și rigla auditului
     "macro": { nume: "Regimul macro", piata: "actiuni", fav: ["riskon", "inclinat"], h: [5, 20], masura: "randament", text: "S&P după „pofta de risc / înclinat spre risc” față de restul" }
   };
   function nr(v) { if (v === null || v === undefined || v === "") return null; var x = Number(v); return isFinite(x) ? x : null; }
@@ -45,7 +45,7 @@ var Verdicte = (function () {
     var hi = -Infinity, lo = Infinity; for (var q = i; q <= j; q++) { hi = Math.max(hi, nr(l[q].h) || l[q].c); lo = Math.min(lo, nr(l[q].l) || l[q].c); }
     return { c: l[j].c, hi: hi, lo: lo, t: l[j].t };
   }
-  // fiecare verdict cu ce a urmat; bare = { simbol: [...] }, reper = { QQQ: [...] } pentru „peste QQQ”
+  // fiecare verdict cu ce a urmat; bare = { simbol: [...] }, reper = { QQQ: [...], SPY: [...] } pentru „peste QQQ” / „peste SPY” (v100.192)
   function evalueaza(jurnal, bare, reper) {
     var out = [];
     (jurnal || []).forEach(function (v) {
@@ -54,7 +54,7 @@ var Verdicte = (function () {
         var d = dupa(b, v.t, h); if (!d) return;
         var r = d.c / v.p - 1, val = r;
         if (S.masura === "linistit") { var j = v.j || v.p * 0.9, u = v.u || v.p * 1.1; val = d.lo >= j && d.hi <= u ? 1 : 0; }
-        else if (S.masura === "pesteQqq") { var q = reper && reper.QQQ, a = q ? dupa(q, v.t, h) : null, a0 = q ? q.filter(function (x) { return x.t <= v.t; }).pop() : null; if (!a || !a0) return; val = r - (a.c / a0.c - 1); }
+        else if (S.masura === "pesteQqq" || S.masura === "pesteSpy") { var q = reper && reper[S.masura === "pesteSpy" ? "SPY" : "QQQ"], a = q ? dupa(q, v.t, h) : null, a0 = q ? q.filter(function (x) { return x.t <= v.t; }).pop() : null; if (!a || !a0) return; val = r - (a.c / a0.c - 1); }
         out.push({ s: v.s, k: v.k, n: v.n, t: v.t, h: h, r: r, val: val });
       });
     });
@@ -125,7 +125,7 @@ var Verdicte = (function () {
         var niv = {}; l.forEach(function (x) { (niv[x.n] = niv[x.n] || []).push(x); });
         var randuri = Object.keys(niv).map(function (n) { var v = niv[n].map(function (x) { return x.val; }); return { nivel: n, n: v.length, medie: medie(v), mediana: mediana(v), pePlus: v.filter(function (x) { return x > 0; }).length / v.length }; });
         var fav = l.filter(function (x) { return S.fav.indexOf(x.n) >= 0; }), rest = l.filter(function (x) { return S.fav.indexOf(x.n) < 0; });
-        var test = S.masura === "pesteQqq" ? fataDeZero(fav) : compara(fav, rest);
+        var test = S.masura === "pesteQqq" || S.masura === "pesteSpy" ? fataDeZero(fav) : compara(fav, rest);
         out.push({ sursa: s, nume: S.nume, h: h, masura: S.masura, intrebare: S.text, niveluri: randuri, test: test });
       });
     });
