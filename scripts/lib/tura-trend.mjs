@@ -8,7 +8,7 @@ export const SURSA = "https://mferent80-source.github.io/premarket_scanner.html/
 const ORA = 3600000;
 const ziRo = (t) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date(t));
 const oraRo = (t) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t)));
-const nr = (v) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
+const nr = (v) => { if (v == null || v === "") return null; const x = Number(v); return Number.isFinite(x) ? x : null; };   // null NU e 0: „nemăsurat” ≠ „+0,0 %”
 const text = (v, n) => String(v == null ? "" : v).slice(0, n);
 
 /** JSON-ul robotului (+ bilanțul, opțional) ⇒ ce ține Radarul: primele 20, regimul, sectoarele, ieșirile, raportările, bilanțul. */

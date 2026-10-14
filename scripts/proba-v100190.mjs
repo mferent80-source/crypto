@@ -43,6 +43,8 @@ await test("trendDinJson: fișier stricat ⇒ null (versiune, dată, clasament g
   assert.equal(trendDinJson({ ...jsonRobot(), dataUltimei: "ieri" }, null, ACUM), null);
   assert.equal(trendDinJson({ ...jsonRobot(), clasament: [] }, null, ACUM), null);
   assert.equal(trendDinJson(jsonRobot(), { zile: 3 }, ACUM).bilant, null);
+  const gol = trendDinJson(jsonRobot(), { ...bilantRobot, n20: 0, zile: 1, diferenta20: { medie: null, interval: [null, null] }, exces20: null }, ACUM).bilant;
+  assert.equal(gol.diferenta20.medie, null, "null rămâne null, nu devine 0 (bilanțul real din 14.10)"); assert.equal(gol.exces20, null); assert.equal(gol.n20, 0);
 });
 await test("verdicteTrend: un „top” pe fiecare nume, sursa trend-12-1, prețul din clasament", () => {
   const v = verdicteTrend(trendDinJson(jsonRobot(), null, ACUM), ACUM);
@@ -89,6 +91,8 @@ await test("sugTrendHtml: titlul „în probă”, regula, nota (EOD, regim, 11 
   assert.match(h, /12-1 \+150,0 %/); assert.match(h, /60 z \+30,0 %/); assert.match(h, /raportează în 7z/); assert.match(h, /au ieșit: DOCN/);
   assert.ok(!h.includes("<script>"), "numele cu <script> e escapat"); assert.match(h, /&lt;script&gt;/);
   assert.match(ctx.sugTrendHtml(null, ACUM), /Clasamentul vine o dată pe zi/);
+  const h0 = ctx.sugTrendHtml(trendDinJson(jsonRobot(), { ...bilantRobot, n20: 0, zile: 1, diferenta20: { medie: null, interval: [null, null] } }, ACUM), ACUM);
+  assert.match(h0, /proba: 0 zile cu rezultat \(0 ferestre de 20 z\) · în probă/); assert.ok(!/vs alte acțiuni/.test(h0), "fără zile cu rezultat nu se arată nicio diferență (nici +0,0 %)");
 });
 await test("sugHtml include secțiunea Trend după topul pe sectoare; pagina o cere de la /api/istoric-bot?action=trend12", () => {
   const src = citeste("public", "lib", "sugestii-ecran.js");
