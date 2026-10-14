@@ -63,6 +63,15 @@
     return { cod, text: CADRAN[cod] };
   }
   function regimDin(spread) { return spread > PRAG ? REGIM.on : spread < -PRAG ? REGIM.off : REGIM.neutru; }
+  // v100.196 (auditul sever, 🔵5, regime-detection): histerezis - în „on” / „off” se intră la ±0,6 pp, dar se iese abia sub ±0,3 pp (HIST), ca alerta
+  // să nu bată de pe o zi pe alta lângă prag. HIST e o ipoteză (zgomotul săptămânal al diferenței nu e măsurat încă), de judecat pe alertele de după
+  const HIST = 0.3;
+  function regimTinut(vechi, spread) {
+    if (!fin(spread)) return vechi || null;
+    if (vechi === "on" && spread > PRAG - HIST) return "on";
+    if (vechi === "off" && spread < -(PRAG - HIST)) return "off";
+    return regimDin(spread).cod;
+  }
 
   // v100.170: câte acțiuni din fiecare sector sunt pe trend, din Market Breadth (el: „pune și market breadth lângă sectoare”) — nivel, nu schimbare
   function dinLatime(latime) {
@@ -162,11 +171,12 @@
   // alerta colectorului: doar la SCHIMBAREA regimului, pe date complete; prima citire (vechi = null) doar se ține minte
   function mesajSchimbare(vechi, d) {
     if (!d || !d.regim || d.regim.partial || !vechi || !REGIM[vechi] || vechi === d.regim.cod) return null;
+    if (fin(d.regim.spread) && regimTinut(vechi, d.regim.spread) === vechi) return null;   /* v100.196: histerezisul */
     const r = d.regim;
     return { nivel: r.cod === "off" ? "atentie" : "info", titlu: "🔄 Rotația sectoarelor US s-a schimbat",
       mesaj: "Din „" + REGIM[vechi].text + "” în „" + r.text + "”: ciclicele " + pct(r.ciclice) + ", defensivele " + pct(r.defensive) + " pe săptămână" +
         conducText(d) + " · închiderea de " + d.zi + ".\nContext pentru acțiuni, nu semnal de intrare." };
   }
 
-  global.Sectoare = { LISTA, RRG_LB, RRG_MOM, PRAG, inchise, calculeaza, regimDin, textCitire, htmlBloc, mesajSchimbare };
+  global.Sectoare = { LISTA, RRG_LB, RRG_MOM, PRAG, inchise, calculeaza, regimDin, regimTinut, HIST, textCitire, htmlBloc, mesajSchimbare };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -205,7 +205,8 @@ async function scenariu(lat, inal, nume) {
       const tk = await b.ev(`t212.poz.find(p=>t212.niveluri[p.ticker]&&!t212.planuri[p.ticker])?.ticker||""`);
       if (!tk) return;
       const astept = await b.ev(`+t212.niveluri["${tk}"].trailPct.toFixed(1)`);
-      await b.ev(`t212PuneNiveluri("${tk}")`);
+      // v100.196: t212PuneNiveluri (cod mort pe pagină) scos - aceiași pași, prin câmpurile planului și „Salvează planul”
+      await b.ev(`(function(){var n=t212.niveluri["${tk}"],s=function(i,v){var e=document.getElementById(i);if(e)e.value=v};s("t212Trail-${tk}",n.trailPct.toFixed(1));s("t212Tinta-${tk}",String(n.tintaPozitie));s("t212Stop-${tk}","");t212PlanSalveaza("${tk}")})()`);
       await panaCand(b, `!!(t212.planuri["${tk}"]&&t212.planuri["${tk}"].trailPct)`, 15000, "planul din preturile calculate");
       assert.equal(await b.ev(`t212.planuri["${tk}"].trailPct`), astept);
       assert.ok((await b.ev(`t212.planuri["${tk}"].tinta`)) > 0);

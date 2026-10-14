@@ -130,7 +130,8 @@ function acasaCumpar(d) {
   // nota semnalelor opuse („aș sări peste ea”) doar sub coloana ei. Aceleași fapte ca rândurile de până acum, nimic ascuns
   var mut = function (t) { return '<span class="acMut">' + escapeHtml(t) + '</span>'; };
   var ah = !ii ? mut("aștept ideile") : !act.length ? mut("pe " + zi + " niciuna nu trece de poartă")
-    : '<b>' + escapeHtml(act.slice(0, 3).map(function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; }).join(", ")) + '</b> ' + mut(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi);
+    : act.slice(0, 3).map(function (x) { return acSym(x.simbol || String(x.ticker || "").split("_")[0]); }).join(", ") + ' '   /* v100.196 (raportul UI, 🟡12): simbolurile duc la Poarta T212, ca în „Idei de azi” */
+      + mut(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi);
   var bh = !cl ? mut("aștept clasamentul") : !m.length ? mut("acum nicio monedă nu e candidată") : '<b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
   var p = null; try { p = typeof acasaCumpar2Parti === "function" ? acasaCumpar2Parti(d) : null; } catch (e) { p = null; }   /* o eroare în date nu strică cartela */
   var ch = !p ? mut("aștept listele") : '↩️ acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + '<br>↩️ monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM) + '<br>📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS);
@@ -191,7 +192,8 @@ function acPandaLin(b) {
   if (!m) return "";
   return '<div class="acLin"><span>În pândă</span><b class="' + (m.contra ? "bad" : m.prag.length ? "tbWarn" : "acMut") + '">' + escapeHtml((m.contra ? "CONTRA botului · " : "") + m.dirText + (m.prag.length ? " · " + m.prag.join(", ") : "") + (m.vechi ? " · veche" : "")) + '</b></div>';
 }
-// v100.193: zilele de bursă NY până la o dată (pentru „raportează în Nz”), socotite de AZI, nu de la EOD-ul clasamentului
+// v100.193: zilele CALENDARISTICE (ziua de la New York) până la o dată (pentru „raportează în Nz”), socotite de AZI, nu de la EOD-ul clasamentului
+// (v100.196, auditul sever 🔵13: comentariul zicea „zile de bursă”, codul socotește zile calendaristice - ca pagina Sugestii)
 function acZileNY(d) {
   var azi = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   var a = Date.parse(azi + "T12:00:00Z"), b = Date.parse(String(d || "") + "T12:00:00Z");
@@ -227,7 +229,7 @@ function acTopSector(s) {
   }).join("");
   var i = s.istoric;
   var nL = Number(i && i.luni) || 0, nP = Number(i && i.luniPlus) || 0, med = i && isFinite(Number(i.medie)) && i.medie !== null ? Number(i.medie) : null;
-  h += '<p class="acEt">' + (nL > 0 && med !== null ? "Topul Radarului pe sectoare: " + escapeHtml(acCate(nL, "lună", "luni")) + " de istoric, " + (med >= 0 ? "+" : "−") + Math.abs(med * 100).toFixed(1).replace(".", ",") + "% pe lună în medie, " + nP + " din " + nL + " pe plus — nedovedit. " : "") + 'Apasă simbolul: Poarta T212.</p>';
+  h += '<p class="acEt">' + (nL > 0 && med !== null ? "Topul Radarului pe sectoare: " + escapeHtml(acCate(nL, "lună", "luni")) + " de istoric, " + (med >= 0 ? "+" : "−") + Math.abs(med * 100).toFixed(1).replace(".", ",") + "% pe lună în medie, " + nP + " din " + nL + " pe plus — nedovedit; firmele sunt cele mari de AZI (cele căzute din top lipsesc), deci istoricul e optimist. " : "") + 'Apasă simbolul: Poarta T212.</p>';   /* v100.196 (🔵7): nota supraviețuitorilor, ca pe Sugestii */
   return h;
 }
 function acasaDeseneaza() {
@@ -323,7 +325,7 @@ function acasaDeseneaza() {
       + '<p class="acEt">Dobânzi și dolar în creștere apasă de obicei și pe acțiuni, și pe crypto; aurul urcă când lumea fuge de risc.</p>'
       : '<p class="acMut">Aduc datele…</p>');
   // v100.168 (12.10, macro-dashboard mutat aici — el: „Alerta + scorul de regim macro”): scorul de regim din aceleași date (piata + btc1d)
-  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro) : "";
+  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null) : "";   /* v100.196 (🔵3): vârsta regimului ținut ajunge la cartelă (pragul de 2 h nu mușca: „la” stătea lângă „macro”) */
   // v95: sectoarele Nasdaq 100 (din rezumatul zilnic al colectorului)
   var sec = ndxL && d.ndx ? Acasa.sectoare(d.ndx.actiuni) : [], smax = Math.max.apply(null, sec.map(function (x) { return Math.abs(x.ch5 || 0); }).concat([1]));
   $("acSectoare").innerHTML = '<div class="acCap"><h4>Sectoarele Nasdaq 100</h4><span class="acSub">pe 5 zile · azi</span></div>'
@@ -334,7 +336,7 @@ function acasaDeseneaza() {
   var acNou = function (id, f) { var el = $(id); if (!el) return; try { el.innerHTML = f(); } catch (e) { el.innerHTML = '<p class="acMut">Nu pot arăta cardul acum: ' + escapeHtml(String(e && e.message || e)).slice(0, 120) + '</p>'; } };
   var mbX = null; try { mbX = typeof LatimeUS !== "undefined" && LatimeUS.extins && d.mbUs ? LatimeUS.extins(d.mbUs, Date.now()) : null; } catch (e) { mbX = null; }
   if (typeof LatimeUS !== "undefined" && LatimeUS.htmlCard) { acNou("acMb", function () { return LatimeUS.htmlCard(mbX); }); acNou("acMbSug", function () { return LatimeUS.htmlSugestii(mbX); }); }
-  if (typeof ScorZi !== "undefined") acNou("acScorZi", function () { return ScorZi.html(ScorZi.calc({ macro: typeof Macro !== "undefined" ? Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()) : null, macroTinut: d.piataCol && d.piataCol.macro, ndx: ndxL, trend: d.trend12, mbUs: mbX, latime: d.latimeKv, acum: Date.now() })); });
+  if (typeof ScorZi !== "undefined") acNou("acScorZi", function () { return ScorZi.html(ScorZi.calc({ macro: typeof Macro !== "undefined" ? Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()) : null, macroTinut: d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null, ndx: ndxL ? Object.assign({ la: d.ndx && d.ndx.la }, ndxL) : null, trend: d.trend12, mbUs: mbX, latime: d.latimeKv, acum: Date.now() })); });
   acNou("acTrendZi", function () { return acTrendZi(d.trend12); });
   acNou("acTopSector", function () { return acTopSector(d.sectoareTop); });
   // v95: harta colorata - Nasdaq 100 si primele 60 de futures, dupa miscarea zilei
@@ -383,7 +385,7 @@ function acasaDeseneaza() {
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
   var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
-  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(2).replace(".", ",") + ' USDT</b></div>';
+  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + ' USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 
   var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = typeof t212 !== "undefined" ? t212.nrIesi : null, rz = d.rezultate && d.rezultate.l || [];

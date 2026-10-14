@@ -7,7 +7,9 @@ var Scan = (function () {
   function nr(x) { var v = typeof x === "string" && x.trim() ? Number(x) : x; return typeof v === "number" && isFinite(v) ? v : null; }
   function r2(v) { return Math.round(v * 100) / 100; }
   function ema(c, n) { var k = 2 / (n + 1), e = c[0]; for (var i = 1; i < c.length; i++) e = c[i] * k + e * (1 - k); return e; }
-  function rsi(c, n) { n = n || 14; var g = 0, l = 0; for (var i = c.length - n; i < c.length; i++) { var d = c[i] - c[i - 1]; if (d > 0) g += d; else l -= d; } return l === 0 ? 100 : 100 - 100 / (1 + g / l); }
+  // v100.196 (auditul sever 14.10, lentila 6): RSI-ul Wilder (media netezită pe toată seria), ca app.js, grafic-bot.js și TradingView -
+  // înainte media simplă pe ultimele 14 zile (Cutler): pe 2.000 de serii ~5 puncte diferență mediană, în 14% din cazuri altă zonă 30/70
+  function rsi(c, n) { n = n || 14; if (c.length <= n) return 50; var g = 0, l = 0, i, d; for (i = 1; i <= n; i++) { d = c[i] - c[i - 1]; if (d > 0) g += d; else l -= d; } g /= n; l /= n; for (i = n + 1; i < c.length; i++) { d = c[i] - c[i - 1]; g = (g * (n - 1) + (d > 0 ? d : 0)) / n; l = (l * (n - 1) + (d < 0 ? -d : 0)) / n; } return l === 0 ? 100 : 100 - 100 / (1 + g / l); }
 
   // bare zilnice INCHISE {t,h,l,c,v?} (cea mai veche prima) -> rezumatul folosit de lista si de retete
   function rezumat(b) {
@@ -106,14 +108,23 @@ var Scan = (function () {
     return o;
   }
 
+  // v100.196 (auditul sever, 🟡12): pe acțiuni, planul din Scan = cel din Poartă (ActiuniSemnale.niveluri: intrarea limită, stopul k×ATR ținut
+  // între 3% și 15%, ținta 2× riscul) - înainte Scan dădea 2×ATR fără limite (MU: −9,5% în Scan, −14,2% în Poartă). Bare zilnice închise; null fără
+  function planActiune(bare, pret) {
+    var AS = typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale : globalThis.ActiuniSemnale; if (!AS || !AS.niveluri) return null;
+    var n = AS.niveluri(bare, pret, {}); if (!n || n.nivel !== "ok") return null;
+    return { intrare: n.intrare ? n.intrare.pret : null, motivIntrare: n.intrare ? n.intrare.motiv : n.intrareMotiv, stop: n.stop, tinta: n.tinta, riscPct: n.riscPct, k: n.k, baza: n.intrare ? n.intrare.pret : pret };
+  }
+
   // v96.2: cat a mers fiecare reteta IN TRECUT, pe barele zilnice ale fiecaruia: in fiecare zi se face rezumatul doar cu
   // ce se stia atunci; o INTRARE = ziua in care a intrat in reteta (ieri nu era). Dupa o saptamana si dupa o luna:
   // cate au fost pe plus si mediana castigului, fata de "orice zi" (aceeasi piata, aceleasi zile). Gridul nu se poate
   // masura in urma (depinde de clasamentul de grid al zilei). ore = [bare pana la o saptamana, bare pana la o luna].
   function istoricRetete(listaBare, fel, ore) {
     ore = ore || (fel === "a" ? [5, 21] : [7, 30]);
-    var K = ["trend", "revenire", "spargere", "miscare"], acc = { baza: [[], []] };
-    K.forEach(function (k) { acc[k] = [[], []]; });
+    // v100.196 (auditul sever, 🔵8): și ZILELE distincte ale intrărilor (z) - ~100 de acțiuni intrate în aceeași zi nu sunt 100 de cazuri independente
+    var K = ["trend", "revenire", "spargere", "miscare"], acc = { baza: [[], []] }, zile = { baza: {} };
+    K.forEach(function (k) { acc[k] = [[], []]; zile[k] = {}; });
     var instr = 0;
     (Array.isArray(listaBare) ? listaBare : []).forEach(function (b) {
       b = (Array.isArray(b) ? b : []).filter(function (x) { return x && nr(x.c) > 0 && nr(x.h) > 0 && nr(x.l) > 0; });
@@ -125,8 +136,9 @@ var Scan = (function () {
         z.fel = fel;
         var azi = {}; retete(z).forEach(function (k) { azi[k] = true; });
         var fw = ore.map(function (h) { return d + h < b.length ? (b[d + h].c / b[d].c - 1) * 100 : null; });
-        fw.forEach(function (v, i) { if (v !== null) acc.baza[i].push(v); });
-        if (ieri) K.forEach(function (k) { if (azi[k] && !ieri[k]) fw.forEach(function (v, i) { if (v !== null) acc[k][i].push(v); }); });
+        var zk = Math.floor(b[d].t / 86400000);
+        fw.forEach(function (v, i) { if (v !== null) { acc.baza[i].push(v); if (!i) zile.baza[zk] = 1; } });
+        if (ieri) K.forEach(function (k) { if (azi[k] && !ieri[k]) fw.forEach(function (v, i) { if (v !== null) { acc[k][i].push(v); if (!i) zile[k][zk] = 1; } }); });
         ieri = azi;
       }
     });
@@ -136,7 +148,7 @@ var Scan = (function () {
       return { n: l.length, pe: Math.round(l.filter(function (v) { return v > 0; }).length / l.length * 100), med: r2(m) };
     };
     var o = { instr: instr, ore: ore };
-    Object.keys(acc).forEach(function (k) { o[k] = { s: sum(acc[k][0]), l: sum(acc[k][1]) }; });
+    Object.keys(acc).forEach(function (k) { o[k] = { s: Object.assign(sum(acc[k][0]), { zile: Object.keys(zile[k]).length }), l: sum(acc[k][1]) }; });
     return o;
   }
   // textul pentru o reteta pe o piata: "dupa o saptamana 58% pe plus (mediana +1,2%) ..." sau null
@@ -145,13 +157,14 @@ var Scan = (function () {
     var p = function (o) { return o && o.n ? o.pe + "% pe plus (mediana " + semn(o.med) + ")" : "—"; };
     // v100.175 (auditul Opus, M10): „mai des pe plus” de la +3 puncte era zgomot (±7–9 puncte la 30–50 de intrări) ⇒ Wilson 95 % pe ~n/5
     // cazuri independente (o săptămână = ~5 zile de bursă / 7 de crypto care se suprapun); culoare doar când intervalele nu se ating
-    var wil = function (pe, n) { var ne = Math.max(1, Math.floor(n / 5)), p0 = pe / 100, z = 1.96, d = 1 + z * z / ne, c = (p0 + z * z / (2 * ne)) / d, h = z * Math.sqrt(p0 * (1 - p0) / ne + z * z / (4 * ne * ne)) / d; return [c - h, c + h]; };
+    // v100.196 (🔵8): cu zilele distincte știute (istoricul nou), cazurile independente = zilele / 5, nu intrările / 5
+    var wil = function (pe, n, zile) { var ne = Math.max(1, Math.floor((zile > 0 ? Math.min(n, zile) : n) / 5)), p0 = pe / 100, z = 1.96, d = 1 + z * z / ne, c = (p0 + z * z / (2 * ne)) / d, h = z * Math.sqrt(p0 * (1 - p0) / ne + z * z / (4 * ne * ne)) / d; return [c - h, c + h]; };
     var semnif = null;
-    if (b && b.s && b.s.n && x.s.pe !== null && b.s.pe !== null) { var a1 = wil(x.s.pe, x.s.n), a2 = wil(b.s.pe, b.s.n); semnif = a1[0] > a2[1] ? 1 : a1[1] < a2[0] ? -1 : 0; }
+    if (b && b.s && b.s.n && x.s.pe !== null && b.s.pe !== null) { var a1 = wil(x.s.pe, x.s.n, x.s.zile), a2 = wil(b.s.pe, b.s.n, b.s.zile); semnif = a1[0] > a2[1] ? 1 : a1[1] < a2[0] ? -1 : 0; }
     return { text: "după o săptămână " + p(x.s) + ", după o lună " + p(x.l), baza: b && b.s.n ? "orice zi: " + p(b.s) + " / " + p(b.l) : "", n: x.s.n, putine: x.s.n < 30,
       mai: b && b.s.n && x.s.pe !== null ? x.s.pe - b.s.pe : null, semnif: semnif };
   }
 
-  return { istoricRetete: istoricRetete, textIstoric: textIstoric, rezumat: rezumat, fata: fata, scor: scor, semafor: semafor, RETETE: RETETE, retete: retete, PER: PER, puncte: puncte, starePer: starePer, SENS: SENS, textAcum: textAcum, plan: plan };
+  return { istoricRetete: istoricRetete, textIstoric: textIstoric, rezumat: rezumat, fata: fata, scor: scor, semafor: semafor, RETETE: RETETE, retete: retete, PER: PER, puncte: puncte, starePer: starePer, SENS: SENS, textAcum: textAcum, plan: plan, planActiune: planActiune };
 })();
 if (typeof globalThis !== "undefined") globalThis.Scan = Scan;

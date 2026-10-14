@@ -2,7 +2,7 @@
 // (tura-sugestii.mjs e altceva: monedele pe revenire / short, v100.85.)
 // sugestiiDimineata - după tura ideilor de la 8:00: listele zilei (început de urcare, revers timpuriu) pe US (barele aduse deja pentru idei)
 //   și EU (aduse aici), istoricul fiecărei reguli pe 2 ani (SugestiiActiuni.dovada), baza pentru intraday (volumul mediu, închiderea de ieri)
-//   și urmărirea înainte (fiecare listă a zilei, judecată după 14 zile la prețul de acum, −0,3%).
+//   și urmărirea înainte (fiecare listă a zilei, judecată la închiderea de după 14 zile, −0,3%; v100.196: orizont FIX, nu „prețul de acum”).
 // sugestiiIntraday - pre-market US (~16:00 RO) / gap la deschidere EU (~10:20 RO), pe baza de dimineață.
 const ZI = 86400000, URM_ZILE = 14, URM_COST = 0.003, PASTRARE = 120;
 // numărătorile din jurnal - „1 acțiune”, „25 de acțiuni” (TextRo.cate; rezerva știe aceeași regulă, ca tura-laborator)
@@ -10,7 +10,7 @@ function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) ret
 export const simbolTicker = (tk) => String(tk || "").replace(/_.*$/, "").replace(/[dpalsm]$/, "");
 
 export async function sugestiiDimineata(d) {
-  const SA = d.SA, acum = d.acum || Date.now(), zi = new Date(acum).toISOString().slice(0, 10), ultim = {}, baza = {};
+  const SA = d.SA, acum = d.acum || Date.now(), zi = new Date(acum).toISOString().slice(0, 10), ultim = {}, baza = {}, barePe = {};
   async function piata(p, tickere, bareDe, sesiuneOre) {
     // EU are și „Pe revenire” (regula existentă Reveniri.actiune) - US o are deja din tura ideilor
     const cuRevine = p === "eu" && !!d.Reveniri, serieRev = [], revine = [];
@@ -19,7 +19,7 @@ export async function sugestiiDimineata(d) {
       let b = null; try { b = await bareDe(tk); } catch { b = null; }
       if (p === "eu" && d.pauza) await d.pauza(d.pauzaMs || 1000);   // revizia (M8/M9): pauza și după eșec, ca tura ideilor (1 s)
       if (!Array.isArray(b) || b.length < 31) { fara++; continue; }
-      judecate++; ultim[tk] = b[b.length - 1].c;
+      judecate++; ultim[tk] = b[b.length - 1].c; barePe[tk] = b;
       for (const k of ["urcare", "revers"]) serii[k].push({ ticker: tk, puncte: SA.puncte(b, k) });
       serii.gap.push({ ticker: tk, puncte: SA.puncte(b, "gap", p === "eu" ? { intrare: "inchidere" } : null) });   // revizia (I6)
       for (const k of ["urcare", "revers"]) { const a = SA.azi(b, k, acum, { sesiuneOre }); if (a) liste[k].push({ ticker: tk, simbol: simbolTicker(tk), ...a }); }
@@ -48,7 +48,10 @@ export async function sugestiiDimineata(d) {
   }
   const urmarire = {};
   for (const p of ["us", "eu"]) { urmarire[p] = {}; for (const k of ["urcare", "revers"]) {
-    const v = ist.filter((x) => x.piata === p && x.lista === k && acum - x.t >= URM_ZILE * ZI && ultim[x.ticker] > 0).map((x) => ultim[x.ticker] / x.pret - 1 - URM_COST);
+    // v100.196 (auditul sever, 🔵12): fiecare intrare la ORIZONT FIX - închiderea primei bare de la 14 zile după ea; înainte „la prețul de acum”
+    // amesteca orizonturi de 14–120 de zile într-o singură medie. Fără bara de la orizont (lipsă în serie) intrarea nu se judecă
+    const la14 = (x) => { const b = barePe[x.ticker]; if (!b) return null; for (let i = 0; i < b.length; i++) if (b[i].t >= x.t + URM_ZILE * ZI) return b[i].c > 0 ? b[i].c : null; return null; };
+    const v = ist.filter((x) => x.piata === p && x.lista === k && acum - x.t >= URM_ZILE * ZI && la14(x) > 0).map((x) => la14(x) / x.pret - 1 - URM_COST);
     urmarire[p][k] = { n: v.length, pePlus: v.length ? v.filter((r) => r > 0).length / v.length : null, medie: v.length ? v.reduce((s, r) => s + r, 0) / v.length : null };
   } }
   return { raport: { la: acum, zi, us, eu, urmarire }, baza, istoric: ist };

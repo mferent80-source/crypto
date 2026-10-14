@@ -157,7 +157,7 @@ await test("urmarite: primul scan doar tine minte; apoi intrare si iesire din re
   assert.equal(trimise.length, 0); assert.deepEqual(st.urm.aNVDA, ["trend"]); assert.equal(st.urm.aAMD, undefined);
   await anuntaUrmarite(d, st, "a", [x("NVDA", { sparge: true, rsi: 75 }), x("AMD", { sparge: true })], ["aNVDA"]);
   assert.deepEqual(trimise.map((m) => m.titlu), ["🔔 NVDA a intrat în 🚀 Spargere", "🔕 NVDA a ieșit din 📈 Trend confirmat"]);
-  assert.match(trimise[0].mesaj, /^Preț \$10 · azi \+1,0% · 7 zile \+2,0% · RSI 75/); assert.equal(trimise[0].cheie, "reteta-aNVDA-spargere");
+  assert.match(trimise[0].mesaj, /^La închiderea zilei: \$10 \(\+1,0%\) · 7 zile \+2,0% · RSI 75/);   /* v100.196: rețeta e judecată pe închidere */ assert.equal(trimise[0].cheie, "reteta-aNVDA-spargere");
   await anuntaUrmarite(d, st, "a", [x("NVDA", { sparge: true, rsi: 75 })], []);
   assert.equal(st.urm.aNVDA, undefined, "cand nu-l mai urmareste, starea se sterge (la reluare nu vine o alerta veche)");
 });

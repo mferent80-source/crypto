@@ -87,7 +87,8 @@ const ndxIngust = { n: 100, e50: 35 };
 const latime = { acum: { la: ACUM - 10 * 60000, regim: { cod: "LARG-SUS" }, lat: { n: 150, lipsa: 1, sus: 127, jos: 18, mariLong: 142, fundExtrem: 83 } } };
 await test("ScorZi.calc pe cifrele de azi: acțiuni 0 „neutru” din 4 piese (VIX doar informativ, e deja în macro), crypto −1 „urcă, dar aglomerat” din 4 (BTC/S&P informativ)", () => {
   const r = SZ.calc({ macro, ndx: ndxIngust, trend, mbUs: LU.extins(MB, ACUM), latime, acum: ACUM });
-  assert.equal(r.actiuni.piese.map((p) => p.v).join(","), "1,1,0,-1,-1"); assert.equal(r.actiuni.piese[2].info, true); assert.equal(r.actiuni.scor, 0); assert.equal(r.actiuni.n, 4); assert.equal(r.actiuni.max, 4); assert.equal(r.actiuni.cod, "neutru");
+  // v100.196 (auditul sever, 🟡8): Master Score-ul conține deja lățimea NDX ⇒ piesa NDX doar informativă (ca VIX): +1 din 3 piese
+  assert.equal(r.actiuni.piese.map((p) => p.v).join(","), "1,1,0,-1,0"); assert.equal(r.actiuni.piese[2].info, true); assert.equal(r.actiuni.piese[4].info, true); assert.equal(r.actiuni.scor, 1); assert.equal(r.actiuni.n, 3); assert.equal(r.actiuni.max, 3); assert.equal(r.actiuni.cod, "usorpentru");
   assert.match(r.actiuni.piese[4].val, /35 din 100 peste media de 50 · îngustă/);
   assert.equal(r.crypto.piese.map((p) => p.v).join(","), "1,0,0,-1,-1"); assert.equal(r.crypto.scor, -1); assert.equal(r.crypto.n, 4); assert.equal(r.crypto.max, 4); assert.equal(r.crypto.text, "urcă, dar aglomerat"); assert.equal(r.crypto.piese[2].info, true);
   assert.match(r.crypto.piese[2].val, /legătura 0,6 ·/, "o singură zecimală");
@@ -102,7 +103,7 @@ await test("ScorZi.calc: o piesă fără date nu intră în sumă și se spune; 
 });
 await test("ScorZi.verdicte: unul pe linie (SPY / BTC) doar cu cel puțin 3 piese numărate cu date și preț", () => {
   const r = SZ.calc({ macro, ndx: ndxIngust, trend, mbUs: LU.extins(MB, ACUM), latime, acum: ACUM });
-  assert.deepEqual(JSON.parse(JSON.stringify(SZ.verdicte(r, 660, 112000, ACUM))), [{ s: "scor-zi-actiuni", k: "SPY_US_EQ", n: "neutru", p: 660, t: ACUM }, { s: "scor-zi-crypto", k: "BTC_USDT_PERP", n: "usorcontra", p: 112000, t: ACUM }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(SZ.verdicte(r, 660, 112000, ACUM))), [{ s: "scor-zi-actiuni", k: "SPY_US_EQ", n: "usorpentru", p: 660, t: ACUM }, { s: "scor-zi-crypto", k: "BTC_USDT_PERP", n: "usorcontra", p: 112000, t: ACUM }]);
   const p = SZ.calc({ macro: null, acum: ACUM }); assert.equal(SZ.verdicte(p, 660, 112000, ACUM).length, 0);
 });
 await test("revizia: macro ținut „neutru” = 0 (nu −1); Trend mai vechi de 4 zile și lățimea crypto NECUNOSCUT / fără monede ⇒ fără piesă; un verdict crypto nu pleacă doar din frică/lăcomie", () => {
@@ -118,7 +119,7 @@ await test("revizia: date stricate de la robot (null în liste) nu aruncă; card
   const j = JSON.parse(JSON.stringify(MB)); j.full.engine.master.scorecard.push(null); j.full.ideas.sectors[0].ideas.push(null); j.full.ideas.early_buy.push(null); j.sources.uptrend.sectors.push(null); j.full.ideas.nh_nl = { new_highs: 3 };
   const x = LU.extins(j, ACUM); assert.ok(x); assert.ok(!/null/.test(LU.htmlCard(x)), "nimic „null” pe ecran"); LU.htmlSugestii(x);
   const ae = citeste("public", "lib", "acasa-ecran.js");
-  assert.match(ae, /var acNou = function \(id, f\) \{ var el = \$\(id\); if \(!el\) return; try \{ el\.innerHTML = f\(\); \} catch \(e\)/); assert.match(ae, /macroTinut: d\.piataCol && d\.piataCol\.macro, ndx: ndxL/);
+  assert.match(ae, /var acNou = function \(id, f\) \{ var el = \$\(id\); if \(!el\) return; try \{ el\.innerHTML = f\(\); \} catch \(e\)/); assert.match(ae, /macroTinut: d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, ndx: ndxL \? Object\.assign\(\{ la: d\.ndx && d\.ndx\.la \}, ndxL\) : null/);   /* v100.196: cu vârstele (🔵3) */
   assert.match(ae, /var nL = Number\(i && i\.luni\) \|\| 0, nP = Number\(i && i\.luniPlus\) \|\| 0/);
 });
 await test("colectorul: scorZiDinDate adună ACELEAȘI date ca pagina (piata, btc 1D, ndx, trend12, latime, Market Breadth) și întoarce scorul + prețul BTC", async () => {
@@ -128,7 +129,7 @@ await test("colectorul: scorZiDinDate adună ACELEAȘI date ca pagina (piata, bt
     cere: async (u) => { cerute.push(u); if (/stiri\?action=piata/.test(u)) return { vix: [{ t: 1, c: 16.3 }], qqq: [{ t: 1, c: 600 }] }; if (/pionex_klines/.test(u)) return { data: { klines: [{ time: 1, close: "112000" }] } }; if (/ndx/.test(u)) return { actiuni: [] }; if (/trend12/.test(u)) return { trend }; if (/latime/.test(u)) return { latime }; return null; },
     fetch: async () => ({ ok: true, json: async () => MB }) };
   const r = await scorZiDinDate(d, ACUM);
-  assert.equal(r.sz.actiuni.scor, 0); assert.equal(r.sz.actiuni.n, 4); assert.equal(r.sz.crypto.scor, -1); assert.equal(r.pretBtc, 112000);
+  assert.equal(r.sz.actiuni.scor, 1); assert.equal(r.sz.actiuni.n, 3); assert.equal(r.sz.crypto.scor, -1);   /* v100.196: NDX informativ lângă Master Score */ assert.equal(r.pretBtc, 112000);
   assert.ok(["/api/stiri?action=piata", "/api/t212?action=ndx", "/api/istoric-bot?action=trend12", "/api/istoric-bot?action=latime", "/api/istoric-bot?action=piata"].every((u) => cerute.includes(u)), cerute.join(" "));
   assert.equal(await scorZiDinDate({ jurnal() {} }, ACUM), null, "fără module ⇒ nimic");
 });

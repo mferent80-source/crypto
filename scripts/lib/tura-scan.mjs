@@ -8,21 +8,36 @@
 // d = { cere, trimite, trimiteAlerta?, afara(url) -> JSON, jurnal, pauza, Scan, GridCalcul, NDX, pauzaMs? }
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+import { CalendarBursa } from "./calendar-bursa.mjs";
 const ORA = 3600000;
 function ceas(acum, tz) {
   const o = {};
   new Intl.DateTimeFormat("en-GB", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(acum)).forEach((x) => { o[x.type] = x.value; });
   return { zi: o.year + "-" + o.month + "-" + o.day, sapt: o.weekday, min: Number(o.hour) * 60 + Number(o.minute) };
 }
+// v100.196 (auditul sever, 🔵9): cu sărbătorile NYSE (calendarul burselor, aceeași sursă ca pagina) - înainte doar sâmbăta și duminica
 function bursa(acum) {
-  const n = ceas(acum, "America/New_York"), lucru = ["Sat", "Sun"].indexOf(n.sapt) < 0;
-  return { zi: n.zi, deschisa: lucru && n.min >= 570 && n.min < 960, dupaInchidere: lucru && n.min >= 965 };
+  const s = CalendarBursa.stare(acum, "SPY");
+  return { zi: s.zi, deschisa: s.deschisa, dupaInchidere: s.ziDeBursa && s.minut >= 965 };
 }
 async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.jurnal("scan " + ce, e.message); return null; } }
 // barele cu volum: GridCalcul le curata (fara volum), volumul se ia din randul brut cu acelasi timp
 function cuVolum(G, randuri, cheieV) {
   const v = {}; (Array.isArray(randuri) ? randuri : []).forEach((r) => { if (r && !Array.isArray(r)) v[Number(r.time)] = Number(r[cheieV]); });
   return G.bareToate(randuri).map((b) => ({ ...b, v: Number.isFinite(v[b.t]) ? v[b.t] : null }));
+}
+// v100.196 (auditul sever 14.10, 🟡9): rețetele (și alertele lor pe Discord) se judecă pe bare ÎNCHISE - înainte bara de azi, în formare, intra
+// în „Spargere” / „Trend” la 17:30 și ieșea la 18:30 pe aceeași zi. Prețul și schimbarea de acum rămân doar pentru coloana „azi” (pAzi, chAzi).
+// inchise = barele fără cea în formare (acțiuni: GridCalcul.bareBursa; crypto: bara zilei UTC e mereu în formare ⇒ fără ultima)
+function cuAzi(Scan, toate, inchise) {
+  const z = Scan.rezumat(inchise); if (!z) return null;
+  if (toate.length > inchise.length) { const a = Scan.rezumat(toate); if (a) { z.pAzi = a.p; z.chAzi = a.ch; } }
+  return z;
+}
+function inchiseActiuni(G, b, acum) {
+  if (!b.length) return b;
+  const ziNY = (t) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(t)), st = CalendarBursa.stare(acum, "SPY");
+  return st.deschisa && ziNY(b[b.length - 1].t) === st.zi ? b.slice(0, -1) : b;
 }
 
 export async function scanCrypto(d, acum) {
@@ -33,7 +48,7 @@ export async function scanCrypto(d, acum) {
     const x = m[i], s = String(x.simbol || "").replace(/_USDT_PERP$/, "");
     if (i) await d.pauza(d.pauzaMs == null ? 900 : d.pauzaMs);
     const k = await incearca(d, s, () => d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(x.simbol) + "&interval=1D&limit=400"));
-    const b = cuVolum(d.GridCalcul, k && k.data && k.data.klines, "volume"), z = d.Scan.rezumat(b);
+    const t = cuVolum(d.GridCalcul, k && k.data && k.data.klines, "volume"), b = t.slice(0, -1), z = cuAzi(d.Scan, t, b);   /* v100.196: bara zilei UTC e în formare */
     if (!z) continue;
     bare.push(b);
     randuri.push({ s, ...z, vol: Number(x.volum) || z.vol, rang: i + 1, gs: Number(x.scor) || 0, stare: x.stare, dir: x.dir, tarie: x.tarie, miscare: !!(x.regim && x.regim.miscare),
@@ -56,7 +71,7 @@ export async function scanActiuni(d, acum) {
     const x = lista[i];
     if (i) await d.pauza(d.pauzaMs == null ? 700 : d.pauzaMs);
     const r = await incearca(d, x.s, () => d.cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.tk)));
-    const b = cuVolum(d.GridCalcul, r && r.randuri, "volume"), z = d.Scan.rezumat(b);
+    const t = cuVolum(d.GridCalcul, r && r.randuri, "volume"), b = inchiseActiuni(d.GridCalcul, t, acum), z = cuAzi(d.Scan, t, b);   /* v100.196: fără bara de azi în ședință */
     if (z) bare.push(b);
     if (z) randuri.push({ s: x.s, tk: x.tk, ...z, ...(x.al ? { inafara: !new Set(d.NDX || []).has(x.s) } : {}) });
   }
@@ -89,11 +104,13 @@ export async function scanNume(d, cr, ac, vechi) {
 }
 
 // v100.66 (pachetul 3): textul alertei de reteta, intr-o functie - garda textelor il genereaza; intrat = true (🔔) / false (🔕)
+// v100.196 (🟡9): rețeta e judecată pe închidere ⇒ mesajul spune „închiderea”, iar prețul de acum vine separat când ședința e în curs
 export function mesajReteta(x, numeReteta, fel, intrat, id, k) {
   const pret = (fel === "a" ? "$" : "") + x.p, ch = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
+  const acum = x.pAzi != null ? " · acum " + (fel === "a" ? "$" : "") + x.pAzi + (x.chAzi != null ? " (" + ch(x.chAzi) + ")" : "") : "";
   return intrat
-    ? { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + numeReteta, mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + "; pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k }
-    : { nivel: "info", titlu: "🔕 " + x.s + " a ieșit din " + numeReteta, mesaj: "Preț " + pret + " · azi " + ch(x.ch) + " · 7 zile " + ch(x.ch7) + ".", cheie: "reteta-iesit-" + id + "-" + k };
+    ? { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + numeReteta, mesaj: "La închiderea zilei: " + pret + " (" + ch(x.ch) + ") · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + acum + "; pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k }
+    : { nivel: "info", titlu: "🔕 " + x.s + " a ieșit din " + numeReteta, mesaj: "La închiderea zilei: " + pret + " (" + ch(x.ch) + ") · 7 zile " + ch(x.ch7) + acum + ".", cheie: "reteta-iesit-" + id + "-" + k };
 }
 
 // alerta pentru simbolurile urmarite: intrare / iesire din reteta fata de scanul trecut (primul scan doar tine minte)

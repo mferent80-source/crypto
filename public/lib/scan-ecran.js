@@ -192,8 +192,9 @@ function scRand(x) {
   return '<div class="scRand" role="button" tabindex="0" data-scid="' + escapeHtml(id) + '" aria-expanded="' + (scanSt.deschis === id) + '">'
     + '<span><i class="scSem ' + x.sem + '" title="' + { v: "verde: trend curat", g: "galben: amestecat", r: "roșu: scade" }[x.sem] + '"></i></span>'
     + '<span class="scSim"><b>' + escapeHtml(x.s) + '</b><span class="scTp ' + x.fel + '">' + (x.fel === "c" ? "CRYPTO" : "ACȚIUNE") + '</span>' + scMarcaje(x) + '</span>'
-    + '<span>' + (x.fel === "a" ? "$" : "") + scPret(x.p) + '</span>'
-    + '<span class="' + scCls(x.ch) + '">' + scPct(x.ch) + '</span>'
+    /* v100.196 (auditul sever, 🟡9): rețetele sunt pe bare închise; coloanele preț / azi arată prețul de acum când ședința e în curs (pAzi, chAzi) */
+    + '<span>' + (x.fel === "a" ? "$" : "") + scPret(x.pAzi != null ? x.pAzi : x.p) + '</span>'
+    + '<span class="' + scCls(x.chAzi != null ? x.chAzi : x.ch) + '">' + scPct(x.chAzi != null ? x.chAzi : x.ch) + '</span>'
     + '<span class="' + scCls(x.ch7) + '">' + scPct(x.ch7) + '</span>'
     + '<span class="' + scCls(x.rel) + '" title="față de ' + (x.fel === "c" ? "BTC" : "Nasdaq (QQQ)") + ' pe 7 zile, în puncte procentuale">' + scPct(x.rel).replace("%", " pp") + '</span>'   /* v100.175 (M14): puncte, nu % */
     + '<span>' + tr + '</span>'
@@ -214,11 +215,20 @@ function scDetaliu(x) {
   de.push("RSI " + scNf(x.rsi, 0) + (x.rsi > 70 ? ": urcat mult, risc de răsuflare" : x.rsi < 30 ? ": vândut mult" : x.rsi >= 50 ? ": putere sănătoasă" : ": slăbiciune"));
   if (x.rel != null) de.push((x.rel >= 0 ? "mai tare" : "mai slab") + " decât " + (x.fel === "c" ? "BTC" : "Nasdaq") + " cu " + scNf(Math.abs(x.rel), 1) + " puncte pe 7 zile");
   de.push(x.sparge ? "a închis peste maximul pe 20 de zile" : "la " + scPct(x.dMax20) + " de maximul pe 20 de zile, " + scPct(x.dMin20) + " peste minim");
-  if (x.mis != null) de.push("azi " + scPct(x.ch) + ", adică " + scNf(x.mis, 1) + "× o zi obișnuită a ei");
+  if (x.mis != null) de.push((x.pAzi != null ? "la ultima închidere " : "azi ") + scPct(x.ch) + ", adică " + scNf(x.mis, 1) + "× o zi obișnuită a ei" + (x.chAzi != null ? "; acum, în ședință, " + scPct(x.chAzi) : ""));
   var pr = x.fel === "a" ? "$" : "", plan = "", idee = x.fel === "a" && ((d.idei && d.idei.idei && d.idei.idei.actiuni) || []).find(function (q) { return q.simbol === x.s; });
-  if (idee) {
-    plan = '<h5>Planul de la poarta T212</h5><div class="scLin"><span>Intrare</span><b>$' + scPret(idee.intrare) + '</b></div><div class="scLin"><span>Stop</span><b class="bad">$' + scPret(idee.stop) + '</b></div><div class="scLin"><span>Țintă</span><b class="good">$' + scPret(idee.tinta) + '</b></div>'
+  if (idee && !(scanSt.bareZi && scanSt.bareZi[id])) {   /* v100.196: cât n-au venit barele; apoi planul Porții pe prețul de acum (ramura de mai jos) */
+    plan = '<h5>Planul de la poarta T212 (din tura de dimineață)</h5><div class="scLin"><span>Intrare</span><b>$' + scPret(idee.intrare) + '</b></div><div class="scLin"><span>Stop</span><b class="bad">$' + scPret(idee.stop) + '</b></div><div class="scLin"><span>Țintă</span><b class="good">$' + scPret(idee.tinta) + '</b></div>'
       + (idee.pePlusProba != null ? '<div class="scLin"><span>Pe istoricul ei</span><b>' + Math.round(idee.pePlusProba * 100) + '% pe plus (' + scCate(idee.nProba, "zi", "zile") + ')</b></div>' : '');
+  } else if (x.fel === "a" && scanSt.bareZi && scanSt.bareZi[id] && Scan.planActiune(scanSt.bareZi[id], x.pAzi != null ? x.pAzi : x.p)) {
+    // v100.196 (auditul sever, 🟡12): pe acțiuni, ACELAȘI plan ca Poarta (intrarea limită, stopul k×ATR între 3% și 15%, ținta 2× riscul) și aceeași
+    // mărime (riscul regimului, plafonul de 20% pe total cu ce ai deja, banii liberi) - înainte Scan avea stopul lui, 2× ATR, și altă sumă
+    var pa = Scan.planActiune(scanSt.bareZi[id], x.pAzi != null ? x.pAzi : x.p), ma = pa.intrare && typeof t212MarimeCalc === "function" ? t212MarimeCalc(x.tk || x.s + "_US_EQ", pa.intrare, pa.stop, x.pAzi != null ? x.pAzi : x.p) : null;
+    plan = '<h5>Planul de la Poarta T212 (aceleași prețuri ca „Biletul”)</h5>'
+      + '<div class="scLin"><span>Intrare (ordin limită)</span><b>' + (pa.intrare ? '$' + scPret(pa.intrare) : '—') + '</b></div>'
+      + '<div class="scLin"><span>Stop</span><b class="bad">$' + scPret(pa.stop) + ' (' + scPct(-pa.riscPct * 100) + ')</b></div><div class="scLin"><span>Țintă</span><b class="good">$' + scPret(pa.tinta) + ' (2× riscul)</b></div>'
+      + (ma ? '<div class="scLin"><span>Cât cumperi</span><b>' + scNf(ma.suma, 0) + ' lei' + (ma.plin ? ' (ai deja 20% din cont în ea)' : ma.plafonat ? ' (tăiată la 20% din cont' + (ma.deja > 0 ? ', cu ce ai deja' : '') + ')' : '') + '</b></div>' : '')
+      + (pa.intrare ? '' : '<p class="scNota">' + escapeHtml(pa.motivIntrare || "") + '</p>');
   } else {
     var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, pl = Scan.plan(x, x.fel === "a" && c ? Number(c.total) : null);
     if (pl) plan = '<h5>Plan orientativ (2× / 3× mișcarea zilnică)</h5><div class="scLin"><span>Mișcarea zilnică (ATR)</span><b>' + scNf(x.atrPct, 1) + '%</b></div>'
@@ -290,6 +300,7 @@ async function scAduSerie(x) {
       var tk = encodeURIComponent(x.tk || x.s + "_US_EQ");
       var ph = await getJSON("/api/t212?action=preturi&interval=1h&ticker=" + tk), pz = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + tk);
       h = perechi(GridCalcul.bareToate(ph && ph.randuri)); z = perechi(GridCalcul.bareToate(pz && pz.randuri)).slice(-260);
+      scanSt.bareZi = scanSt.bareZi || {}; scanSt.bareZi[id] = GridCalcul.bareBursa(pz && pz.randuri || [], Date.now());   /* v100.196 (🟡12): barele închise, pentru planul Porții */
     }
     scanSt.serii[id] = h.length || z.length ? { h: h, z: z } : false;
   } catch (e) { scanSt.serii[id] = false; }

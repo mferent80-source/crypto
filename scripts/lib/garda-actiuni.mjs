@@ -41,6 +41,13 @@ export function situatiiActiuni(pune) {
   po("poarta: trend în jos", { stare: AS.stare(coboara, 26), plan: { stop: 20 } });
   po("poarta: lateral, după mișcare, lângă maxim, fără plan, recumpărare", { stare: AS.stare(miscareJos.slice(0, 296), 28.5), plan: {}, vandutPeMinusAcumOre: 5 });
   po("poarta: fără prețuri", { stare: AS.stare(zilnice(10, () => 28), 28) });
+  // v100.196 (auditul sever 14.10): motivele și notele noi ale Porții - rezultatele, media pe minus, ce ai deja, regimul, datele vechi
+  const stU = AS.stare(urca, urca[299].c), pn = (sit, o) => (AS.poarta(o).note || []).forEach((m, i) => pune(sit, "actiuni", "poarta.nota" + (i + 1), { t: m }, [["t", "rand"]]));
+  po("poarta: rezultate peste 8 zile, media pe minus, plafonul atins, fuga de risc", { stare: stU, plan: { stop: 20 }, rezultateZile: 8, medie: -0.0045, dejaPct: 0.211, simbol: "MU", regim: { macro: "riskoff" } });
+  po("poarta: Market Breadth SUA risk-off", { stare: stU, plan: { stop: 20 }, regim: { mb: { stare: "rau" } } });
+  po("poarta: datele vechi", { stare: stU, plan: { stop: 20 }, zileLipsa: 30 });
+  pn("poarta: data rezultatelor necunoscută, ce ai deja sub plafon, regim prudent", { stare: stU, plan: { stop: 20 }, rezultateZile: null, dejaPct: 0.109, simbol: "MU", regim: { macro: "prudent" } });
+  pn("poarta: regim necunoscut", { stare: stU, plan: { stop: 20 }, regim: {} });
 
   // portofoliul
   const pf = (sit, poz, cash) => pune(sit, "actiuni", "portofoliu.ceAsFace", { t: fara(AS.portofoliu(poz, cash).ceAsFace) }, [["t", "faCe"]]);
@@ -161,6 +168,9 @@ export function situatiiActiuni(pune) {
   PB.randActiune(rezA, { rezumat: { n: 1, pMed: 0.4, rata: 0, saptamani: 1 } }, {}).forEach((r, i) => pune("🎲 acțiunea, un caz judecat", "actiuni", "probabilitati.unCaz" + i, r, [["text", "detalii"]]));
   // v100.71 (I4): actiunile paginii T212 (poarta, stopul, jurnalul, regulile) - functii pure, cu numele lungi de stop
   for (const n of ["cumpara", "nu", "asteapta", "fara-date"]) pune("poarta T212: " + n, "actiuni", "facPoarta." + n, { t: AS.facPoarta(n, 21000) }, [["t", "faCe"]]);
+  // v100.196 (🟡1, 🟡4, 🟡7): „Ce aș face eu” pe suma din „Cât cumperi” (forma pe care o cheamă pagina acum)
+  for (const [k, m, o] of [["suma", { suma: 1837 }], ["fără bani liberi", { suma: 1837, pesteLiber: true, liber: 0 }], ["plafonul atins", { plin: true, suma: 0 }], ["fără cont", null], ["Trend 12 luni în probă", null, { faraMarime: "trend12" }]]) pune("poarta T212: cumpăr, " + k, "actiuni", "facPoarta.cumpara." + k, { t: AS.facPoarta("cumpara", m, o) }, [["t", "faCe"]]);
+  pune("poarta T212: aștept, fără motivul planului", "actiuni", "facPoarta.asteapta.faraPlan", { t: AS.facPoarta("asteapta", null, { motivPlan: false }) }, [["t", "faCe"]]);
   const BL = { et: "urcă după maxim — planul Radarului (k×ATR, 3–15%)", dif: 1001.4, taiate: 46 };
   for (const [sit, r] of [["jurnal T212: stopul ar fi ajutat (nume lung)", AS.facStop(false, BL)], ["jurnal T212: niciun stop n-ar fi ajutat", AS.facStop(true, BL)],
     ["jurnal T212: un singur trade tăiat", AS.facStop(false, Object.assign({}, BL, { taiate: 1 }))], ["jurnal T212: sfatul stopului (ar fi ajutat)", AS.sfatStop(true, BL)],

@@ -196,7 +196,7 @@ async function sectoareRegim(d, st, acum, zi) {
   if (s.regim.partial) return;   // un sector lipsa: nici alerta, nici regim nou tinut minte
   const m = d.Sectoare.mesajSchimbare(st.sectRegim || null, s);
   if (m && !(await d.trimiteAlerta(m, null, "sectoare-regim"))) { st.sectZi = null; return; }   // n-a plecat: mai incearca
-  st.sectRegim = s.regim.cod;
+  st.sectRegim = d.Sectoare.regimTinut(st.sectRegim || null, s.regim.spread);   /* v100.196 (🔵5): regimul ȚINUT (histerezis), nu cel de azi */
 }
 // ---- 7. raportul de duminica seara (dupa 20:00 Bucuresti), o data ----
 async function raportSaptamana(d, st, acum) {

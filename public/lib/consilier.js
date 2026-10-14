@@ -31,7 +31,9 @@ var Consilier = (function () {
     var vix = ultima(o.vix), vv = vix ? vix.c : null;
     if (q) {
       var st = AS.stare(q), u = ultima(q), a = q[q.length - 2], ch = a ? u.c / a.c - 1 : null, dir = st.trend.dir;
-      parti.push({ et: "Nasdaq (QQQ)", val: (dir === "sus" ? "↑ trend sus" : dir === "jos" ? "↓ trend jos" : dir === "lateral" ? "→ lateral" : "—") + (ch !== null ? " · ultima zi " + P(ch, Math.abs(ch) < 0.001 ? 2 : 1) : ""), cls: dir === "sus" ? "good" : dir === "jos" ? "bad" : "" });
+      // v100.196 (raportul UI, 🟡5): trendul și ziua cu culoarea FIECĂRUIA (bucati) - înainte „↑ trend sus · ultima zi −1,7%” era tot verde; textul rămâne același
+      var tTr = dir === "sus" ? "↑ trend sus" : dir === "jos" ? "↓ trend jos" : dir === "lateral" ? "→ lateral" : "—", cTr = dir === "sus" ? "good" : dir === "jos" ? "bad" : "", tZi = ch !== null ? " · ultima zi " + P(ch, Math.abs(ch) < 0.001 ? 2 : 1) : "";
+      parti.push({ et: "Nasdaq (QQQ)", val: tTr + tZi, cls: cTr, bucati: tZi ? [{ t: tTr, cls: cTr }, { t: tZi, cls: ch >= 0 ? "good" : "bad" }] : null });
       ton = dir === "jos" || (vv !== null && vv >= 25) ? "rau" : (vv !== null && vv >= 20) || dir === "lateral" ? "atentie" : "bine";
     }
     var s = ultima(o.spy), s0 = Array.isArray(o.spy) && o.spy.length > 1 ? o.spy[o.spy.length - 2] : null;
