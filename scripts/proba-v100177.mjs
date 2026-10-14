@@ -34,7 +34,8 @@ await test("evaluarea: randamentul după h bare de bursă; gridul: „a stat în
 });
 await test("calibrarea: „puține” sub 30 pe o parte; cu un efect clar, testul îl vede (p mic)", () => {
   const ev = [], r = mb(1);
-  for (let i = 0; i < 300; i++) ev.push({ s: "poarta-t212", k: "S" + (i % 60), n: i % 2 ? "cumpara" : "nu", t: T0, h: 20, r: 0, val: (i % 2 ? 0.03 : -0.01) + (r() - 0.5) * 0.04 });
+  /* v100.196 (🔴2): Poarta se judecă pe zile cu ambele feluri (cel puțin 12) ⇒ 15 zile la 30 de zile distanță, câte 20 de verdicte */
+  for (let i = 0; i < 300; i++) ev.push({ s: "poarta-t212", k: "S" + (i % 60), n: i % 2 ? "cumpara" : "nu", t: T0 + Math.floor(i / 20) * 30 * ZI + i * 1000, h: 20, r: 0, val: (i % 2 ? 0.03 : -0.01) + (r() - 0.5) * 0.04 });
   const c = V.calibrare(ev); assert.equal(c.length, 1); assert.equal(c[0].test.stare, "testat"); assert.ok(c[0].test.p < 0.01, "p " + c[0].test.p); assert.ok(c[0].test.dif > 0.03);
   assert.equal(V.calibrare(ev.slice(0, 40))[0].test.stare, "putine");
 });
@@ -73,9 +74,10 @@ await test("registrul: verdictele + obiceiurile din riscul tău + becurile boți
   const reg = V.registru({ calibrare: cal, risc, asemanatoare: [{ nume: "becuri", p: 0.5, difMed: 0, verdict: "nedovedit" }] });
   assert.equal(reg.length, 4); assert.equal(reg.find((x) => x.afirmatie === "Levier peste 3×").ramane, true); assert.equal(reg.find((x) => x.afirmatie === "Stop pus").ramane, false, "0,03 cu 4 teste nu mai trece");
 });
-await test("riscul tău și boții asemănători dau p-ul din aceeași distribuție bootstrap (verdictul lor nu se schimbă)", () => {
-  assert.match(citeste("public", "lib", "risc-luna.js"), /p: pB, stare: dov \? "dovedit-" \+ sens/);
-  assert.equal((citeste("public", "lib", "asemanatoare.js").match(/out\.p = bm\.length \? Math\.min\(1, \(2 \* Math\.min\(/g) || []).length, 2);
+await test("riscul tău și boții asemănători dau p-ul din aceeași distribuție bootstrap; v100.196: în registru max(p bootstrap, p pe blocurile de timp)", () => {
+  assert.match(citeste("public", "lib", "risc-luna.js"), /pBoot: pB, pBloc: tb\.p, .*p: pB === null \? null : Math\.max\(pB, tb\.p\), stare: dov \? "dovedit-" \+ sens/);
+  assert.equal((citeste("public", "lib", "asemanatoare.js").match(/out\.pBoot = bm\.length \? Math\.min\(1, \(2 \* Math\.min\(/g) || []).length, 2);
+  assert.equal((citeste("public", "lib", "asemanatoare.js").match(/out\.p = out\.pBoot === null \? null : Math\.max\(out\.pBoot, tb\.p\)/g) || []).length, 2);
   assert.match(citeste("scripts", "colector.mjs"), /teste: \[\{ nume: "Boții porniți cu ADX sub 20 față de cei în trend \(peste 25\)", p: bA\.p \?\? null/);
 });
 

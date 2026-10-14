@@ -62,6 +62,8 @@ var Asemanatoare = (function () {
     var M = Object.keys(monede), cu = pe(l, "cu"), co = pe(l, "contra");
     var out = { n: l.length, monede: M.length, cu: gr(cu), contra: gr(co), difPlus: null, icPlus: null, difMed: null, icMed: null, verdict: "puține" };
     if (cu.length < 30 || co.length < 30 || M.length < 10) return out;
+    var tb = testBlocuri(l, function (c) { return !contra(c); }, mulberry32(545 + 7919), REP);   /* v100.196: și pe blocuri de timp */
+    out.blocuri = tb.blocuri; if (tb.blocuri < MIN_BLOCURI) { out.motiv = "zile"; return out; }
     out.difPlus = dPlus(l); out.difMed = dMed(l);
     var rnd = mulberry32(545), bp = [], bm = [];
     for (var k = 0; k < REP; k++) {
@@ -70,18 +72,19 @@ var Asemanatoare = (function () {
     }
     var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.005)], d[Math.min(d.length - 1, Math.floor(d.length * 0.995))]]; };
     out.icPlus = ic(bp); out.icMed = ic(bm);
-    out.p = bm.length ? Math.min(1, (2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) + 1) / (bm.length + 1)) : null;   // v100.177: p pentru corecția comună
+    out.pBoot = bm.length ? Math.min(1, (2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) + 1) / (bm.length + 1)) : null;   // v100.177: p pentru corecția comună
+    out.pBloc = tb.p; out.difBloc = tb.dif; out.p = out.pBoot === null ? null : Math.max(out.pBoot, tb.p);   /* v100.196: în registru, max(p pe monede, p pe blocuri) */
     var srt = l.slice().sort(function (x, y) { return (nr(x.t) || 0) - (nr(y.t) || 0); }), kk = Math.floor(srt.length * 0.7);
     out.felii = { primele: dMed(srt.slice(0, kk)), ultimele: dMed(srt.slice(kk)) };
     // v100.173 (auditul Opus): „sau” între două măsuri la 95 % dădea „dovedit” fals în ~6–10 % ⇒ IC 99 %, judecă DOAR mediana (fixată dinainte); „% pe plus” rămâne doar arătat
     var semn = function (iv) { return iv[0] > 0 ? 1 : iv[1] < 0 ? -1 : 0; }, sm = semn(out.icMed), s0 = sm;
-    var stabil = s0 !== 0 && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0;
+    var stabil = s0 !== 0 && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0 && Math.sign(tb.dif) === s0 && tb.p < 0.01;
     out.verdict = !s0 || !stabil ? "nedovedit" : s0 > 0 ? "dovedit" : "pe dos";
     return out;
   }
   function textSemafor(bl) {
     if (!bl || !(bl.n > 0)) return null;
-    if (bl.verdict === "puține") return "pe boții tăi: prea puține cazuri cu becurile la pornire (" + bl.n + ")";
+    if (bl.verdict === "puține") return bl.motiv === "zile" ? "pe boții tăi: prea puține perioade de timp cu ambele feluri de becuri (" + bl.blocuri + " de câte " + BLOC_ZILE + " zile, trebuie " + MIN_BLOCURI + "; din " + bl.n + ")" : "pe boții tăi: prea puține cazuri cu becurile la pornire (" + bl.n + ")";
     // revizia v100.110: „fără bec împotrivă” (lateralul intră aici, nu „cu botul”) și miile cu punct
     // v100.175 (revizia v100.173): verdictul e pe MEDIANĂ ⇒ textul o arată întâi; „% pe plus” rămâne alături, doar informativ
     var P = function (x) { return Math.round(x * 100) + "%"; }, N = String(bl.n).replace(/\B(?=(\d{3})+(?!\d))/g, "."), M = function (g) { return g && g.med != null ? "mediana " + (g.med >= 0 ? "+" : "−") + Math.abs(g.med * 100).toFixed(1).replace(".", ",") + "%, " : ""; };
@@ -97,6 +100,23 @@ var Asemanatoare = (function () {
   // și pe ultimele 30% din cazuri (după pornire). Prima măsurare (05.10, 528 de boți pe 51 de monede): nedovedit.
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   function zonaAdx(x) { return x < 20 ? "loc" : x <= 25 ? "nehotarat" : "trend"; }
+  // v100.196 (auditul sever 14.10, 🟡4): bootstrap-ul doar pe monede dădea „dovedit / pe dos” fals 2–2,7 % (promis ~1 %): boții din aceleași zile
+  // trec prin aceeași piață, iar ADX-ul / becurile vin în faze. Al doilea test, ca în Carnet.verdictMonede: blocuri de 3 zile (după pornire), în
+  // fiecare diferența de MEDIANĂ (măsura fixată dinainte), semnele întoarse între blocuri; sub 8 blocuri cu ambele feluri ⇒ „puține”.
+  var BLOC_ZILE = 3, MIN_BLOCURI = 8, ZI = 864e5;
+  function pSemne(d, rnd, reps) {
+    var s0 = 0, n = d.length, peste = 0, k, s, j; for (j = 0; j < n; j++) s0 += d[j]; var obs = Math.abs(s0 / n) - 1e-15;
+    if (n <= 14) { var tot = 1 << n; for (k = 0; k < tot; k++) { s = 0; for (j = 0; j < n; j++) s += (k >> j) & 1 ? -d[j] : d[j]; if (Math.abs(s / n) >= obs) peste++; } return peste / tot; }
+    for (k = 0; k < reps; k++) { s = 0; for (j = 0; j < n; j++) s += rnd() < 0.5 ? -d[j] : d[j]; if (Math.abs(s / n) >= obs) peste++; }
+    return (peste + 1) / (reps + 1);
+  }
+  function testBlocuri(l, eticheta, rnd, reps) {
+    var t0 = Infinity, bl = {}, i, e, k;
+    for (i = 0; i < l.length; i++) if (nr(l[i].t) !== null && l[i].t < t0) t0 = l[i].t;
+    for (i = 0; i < l.length; i++) { if (nr(l[i].t) === null) continue; e = eticheta(l[i]); if (e !== true && e !== false) continue; k = Math.floor((l[i].t - t0) / (BLOC_ZILE * ZI)); if (!bl[k]) bl[k] = { a: [], b: [] }; bl[k][e ? "a" : "b"].push(l[i].pct); }
+    var d = Object.keys(bl).filter(function (q) { return bl[q].a.length && bl[q].b.length; }).map(function (q) { return med(bl[q].a) - med(bl[q].b); });
+    return { blocuri: d.length, dif: d.length ? d.reduce(function (s, x) { return s + x; }, 0) / d.length : null, p: d.length >= MIN_BLOCURI ? pSemne(d, rnd, reps || 2000) : null };
+  }
   function bilantAdx(cz, o) {
     o = o || {}; var REP = o.rep || 2000, l = (Array.isArray(cz) ? cz : []).filter(function (c) { return c && nr(c.adx) !== null && nr(c.pct) !== null && c.moneda; });
     var pe = function (s, z) { return s.filter(function (c) { return zonaAdx(c.adx) === z; }); };
@@ -108,6 +128,8 @@ var Asemanatoare = (function () {
     var M = Object.keys(monede), loc = pe(l, "loc"), tr = pe(l, "trend");
     var out = { n: l.length, monede: M.length, loc: gr(loc), nehotarat: gr(pe(l, "nehotarat")), trend: gr(tr), difPlus: null, icPlus: null, difMed: null, icMed: null, verdict: "puține" };
     if (loc.length < 30 || tr.length < 30 || M.length < 10) return out;
+    var tb = testBlocuri(l, function (c) { var z = zonaAdx(c.adx); return z === "loc" ? true : z === "trend" ? false : null; }, mulberry32(530 + 7919), REP);   /* v100.196 */
+    out.blocuri = tb.blocuri; if (tb.blocuri < MIN_BLOCURI) { out.motiv = "zile"; return out; }
     out.difPlus = dPlus(l); out.difMed = dMed(l);
     var rnd = mulberry32(530), bp = [], bm = [];
     for (var k = 0; k < REP; k++) {
@@ -116,12 +138,13 @@ var Asemanatoare = (function () {
     }
     var ic = function (d) { d.sort(function (x, y) { return x - y; }); return [d[Math.floor(d.length * 0.005)], d[Math.min(d.length - 1, Math.floor(d.length * 0.995))]]; };
     out.icPlus = ic(bp); out.icMed = ic(bm);
-    out.p = bm.length ? Math.min(1, (2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) + 1) / (bm.length + 1)) : null;   // v100.177: p pentru corecția comună
+    out.pBoot = bm.length ? Math.min(1, (2 * Math.min(bm.filter(function (x) { return x <= 0; }).length, bm.filter(function (x) { return x >= 0; }).length) + 1) / (bm.length + 1)) : null;   // v100.177: p pentru corecția comună
+    out.pBloc = tb.p; out.difBloc = tb.dif; out.p = out.pBoot === null ? null : Math.max(out.pBoot, tb.p);   /* v100.196 */
     var srt = l.slice().sort(function (x, y) { return (nr(x.t) || 0) - (nr(y.t) || 0); }), kk = Math.floor(srt.length * 0.7), A1 = srt.slice(0, kk), A2 = srt.slice(kk);
     out.felii = { primele: dMed(A1), ultimele: dMed(A2) };
     // v100.173 (auditul Opus): „sau” între două măsuri la 95 % dădea „dovedit” fals în ~6–10 % ⇒ IC 99 %, judecă DOAR mediana (fixată dinainte); „% pe plus” rămâne doar arătat
     var semn = function (iv) { return iv[0] > 0 ? 1 : iv[1] < 0 ? -1 : 0; }, sm = semn(out.icMed), s0 = sm;
-    var stabil = s0 !== 0 && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0;
+    var stabil = s0 !== 0 && Math.sign(out.felii.primele) === s0 && Math.sign(out.felii.ultimele) === s0 && Math.sign(tb.dif) === s0 && tb.p < 0.01;   /* v100.196: și pe blocurile de timp */
     out.verdict = !s0 ? "nedovedit" : !stabil ? "nedovedit" : s0 > 0 ? "dovedit" : "pe dos";
     return out;
   }
@@ -129,7 +152,7 @@ var Asemanatoare = (function () {
   function textAdx(bl) {
     // cazurile fără ADX (colectorul încă pe o versiune veche) ⇒ nimic de spus, nu „prea puține (0)”
     if (!bl || !(bl.n > 0)) return null;
-    if (bl.verdict === "puține") return "pe boții tăi: prea puține cazuri (" + bl.n + ")";
+    if (bl.verdict === "puține") return bl.motiv === "zile" ? "pe boții tăi: prea puține perioade de timp cu ambele feluri de ADX (" + bl.blocuri + " de câte " + BLOC_ZILE + " zile, trebuie " + MIN_BLOCURI + "; din " + bl.n + ")" : "pe boții tăi: prea puține cazuri (" + bl.n + ")";
     var P = function (x) { return Math.round(x * 100) + "%"; };
     var M = function (g) { return g && g.med != null ? "mediana " + (g.med >= 0 ? "+" : "−") + Math.abs(g.med * 100).toFixed(1).replace(".", ",") + "%, " : ""; };   /* v100.175: verdictul e pe mediană */
     var cifre = "sub 20: " + M(bl.loc) + P(bl.loc.plus) + " pe plus · peste 25: " + M(bl.trend) + P(bl.trend.plus) + " pe plus, din " + bl.n;
