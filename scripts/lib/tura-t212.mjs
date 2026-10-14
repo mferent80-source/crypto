@@ -104,9 +104,9 @@ export async function turaCfActiuni(d) {
         stopU = d.ActiuniSemnale.cuStopUrcator(t, bare, [{ cheie: "plan", trailPct: n && n.nivel === "ok" ? n.trailPct : null }, { cheie: "u15", pct: 15 }, { cheie: "u25", pct: 25 }, { cheie: "prof", trailPct: ps ? Math.round(ps.dist * 1000) / 10 : 15 }]);
         // v100.53 (calibrarea): cifra de ATUNCI (doar barele de dinainte) si ce a urmat. Revizia 01.10: undefined = inca nu (sub 5 zile dupa,
         // se reface data viitoare - altfel trade-urile noi n-ar intra niciodata); pretul nepotrivit (split) -> null, ca la stopuri
-        if (d.Probabilitati) prob = d.Probabilitati.probLaCumparare(inainte, bare, t, n, d.ActiuniSemnale.laCumparare(t, bare, inchise).nivel !== "fara-date");
+        if (d.Probabilitati) prob = d.Probabilitati.probLaCumparare(inainte, bare, t, n, d.ActiuniSemnale.laCumparare(t, bare, inchise, { CalendarBursa }).nivel !== "fara-date");
       }
-      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise), { stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }, prob === undefined ? {} : { prob }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {}, sit: null };
+      strans[t.id] = bare && bare.length ? Object.assign(d.ActiuniSemnale.laCumparare(t, bare, inchise, { CalendarBursa }), {   /* v100.196 (🟡11): închiderea bursei ei */ stop: d.ActiuniSemnale.cuStop(t, bare, [8, 10, 15]), stopU }, prob === undefined ? {} : { prob }) : { nivel: "fara-date", motive: ["fără prețuri pentru " + d.T212.simbol(tk)], greseli: [], stop: {}, stopU: {}, sit: null };
       judecate++;
     }
     if (Object.keys(strans).length >= 200) await scrie();

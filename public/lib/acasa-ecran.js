@@ -324,7 +324,7 @@ function acasaDeseneaza() {
       + '<p class="acEt">Dobânzi și dolar în creștere apasă de obicei și pe acțiuni, și pe crypto; aurul urcă când lumea fuge de risc.</p>'
       : '<p class="acMut">Aduc datele…</p>');
   // v100.168 (12.10, macro-dashboard mutat aici — el: „Alerta + scorul de regim macro”): scorul de regim din aceleași date (piata + btc1d)
-  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro) : "";
+  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null) : "";   /* v100.196 (🔵3): vârsta regimului ținut ajunge la cartelă (pragul de 2 h nu mușca: „la” stătea lângă „macro”) */
   // v95: sectoarele Nasdaq 100 (din rezumatul zilnic al colectorului)
   var sec = ndxL && d.ndx ? Acasa.sectoare(d.ndx.actiuni) : [], smax = Math.max.apply(null, sec.map(function (x) { return Math.abs(x.ch5 || 0); }).concat([1]));
   $("acSectoare").innerHTML = '<div class="acCap"><h4>Sectoarele Nasdaq 100</h4><span class="acSub">pe 5 zile · azi</span></div>'
@@ -335,7 +335,7 @@ function acasaDeseneaza() {
   var acNou = function (id, f) { var el = $(id); if (!el) return; try { el.innerHTML = f(); } catch (e) { el.innerHTML = '<p class="acMut">Nu pot arăta cardul acum: ' + escapeHtml(String(e && e.message || e)).slice(0, 120) + '</p>'; } };
   var mbX = null; try { mbX = typeof LatimeUS !== "undefined" && LatimeUS.extins && d.mbUs ? LatimeUS.extins(d.mbUs, Date.now()) : null; } catch (e) { mbX = null; }
   if (typeof LatimeUS !== "undefined" && LatimeUS.htmlCard) { acNou("acMb", function () { return LatimeUS.htmlCard(mbX); }); acNou("acMbSug", function () { return LatimeUS.htmlSugestii(mbX); }); }
-  if (typeof ScorZi !== "undefined") acNou("acScorZi", function () { return ScorZi.html(ScorZi.calc({ macro: typeof Macro !== "undefined" ? Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()) : null, macroTinut: d.piataCol && d.piataCol.macro, ndx: ndxL, trend: d.trend12, mbUs: mbX, latime: d.latimeKv, acum: Date.now() })); });
+  if (typeof ScorZi !== "undefined") acNou("acScorZi", function () { return ScorZi.html(ScorZi.calc({ macro: typeof Macro !== "undefined" ? Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()) : null, macroTinut: d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null, ndx: ndxL ? Object.assign({ la: d.ndx && d.ndx.la }, ndxL) : null, trend: d.trend12, mbUs: mbX, latime: d.latimeKv, acum: Date.now() })); });
   acNou("acTrendZi", function () { return acTrendZi(d.trend12); });
   acNou("acTopSector", function () { return acTopSector(d.sectoareTop); });
   // v95: harta colorata - Nasdaq 100 si primele 60 de futures, dupa miscarea zilei

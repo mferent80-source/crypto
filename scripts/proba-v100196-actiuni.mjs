@@ -349,5 +349,59 @@ await test("C6 (🟡12). Scan pe acțiuni: același stop și aceeași intrare ca
   const s = citeste("public", "lib", "scan-ecran.js"); assert.match(s, /Scan\.planActiune\(/); assert.match(s, /t212MarimeCalc\(/);
 });
 
+// ---------------- D. privirea în viitor la EU, Scorul zilei, rotația, urmărirea sugestiilor ----------------
+await test("D1 (🟡11, lookahead). Bara EU (07:00 UTC) intră în „Dacă ascultai de Radar” doar după închiderea Xetra (15:30 UTC), nu la „deschiderea + 8 h”", () => {
+  const t = { ticker: "RHMd_EQ", pornit: Date.parse("2025-11-19T15:10:00Z") }, bara = { t: Date.parse("2025-11-19T07:00:00Z") };
+  assert.equal(AS.inchisaInainte(bara, t), false, "cu calendarul: 15:10 e înainte de închiderea Xetra");
+  assert.equal(AS.inchisaInainte(bara, Object.assign({}, t, { pornit: Date.parse("2025-11-19T16:40:00Z") })), true);
+  const c = context(); for (const f of ["grid-calcul.js", "actiuni-semnale.js"]) vm.runInContext(citeste("public", "lib", f), c);
+  assert.equal(c.ActiuniSemnale.inchisaInainte(bara, t), false, "fără calendar (pagina de azi): rezerva de 9 h");
+  assert.equal(c.ActiuniSemnale.inchisaInainte(bara, t, cB.CalendarBursa), false, "calendarul dat de colector");
+  const s = citeste("public", "lib", "actiuni-semnale.js");
+  assert.ok(!/x\.t \+ 8 \* 3600000 <= t\.pornit|b\.t \+ 8 \* 3600000 <= t\.pornit/.test(s), "a rămas „+ 8 h”");
+  assert.match(citeste("scripts", "lib", "tura-t212.mjs"), /laCumparare\(t, bare, inchise, \{ CalendarBursa \}\)/);
+});
+const cS = context(); for (const f of ["macro.js", "scor-zi.js", "sectoare.js"]) vm.runInContext(citeste("public", "lib", f), cS, { filename: f });
+const MB = { masterScor: 2, stanta: "constructiv", vechi: false };
+await test("D2 (🟡8). Scorul zilei: Market Breadth Nasdaq 100 nu se mai numără de două ori lângă Master Score (care îl conține) — informativ", () => {
+  const r = cS.ScorZi.calc({ mbUs: MB, ndx: { n: 100, e50: 70 }, acum: ACUM });
+  const nd = r.actiuni.piese.find((p) => /Nasdaq 100/.test(p.ce));
+  assert.equal(nd.info, true); assert.match(nd.nota, /Master Score/);
+  const fara = cS.ScorZi.calc({ ndx: { n: 100, e50: 70 }, acum: ACUM }).actiuni.piese.find((p) => /Nasdaq 100/.test(p.ce));
+  assert.ok(!fara.info && fara.v === 1, "fără Master Score, lățimea NDX rămâne piesă");
+});
+await test("D3 (🔵3). Scorul zilei: regimul macro ținut mai vechi de 2 h și lățimea NDX mai veche de 30 h nu intră; pagina dă vârstele", () => {
+  const vechi = cS.ScorZi.calc({ macroTinut: { cod: "riskoff", scor: -6, la: ACUM - 3 * 3600000 }, acum: ACUM }).actiuni.piese[0];
+  assert.equal(vechi.v, null, "regimul ținut de acum 3 h a intrat");
+  const bun = cS.ScorZi.calc({ macroTinut: { cod: "riskoff", scor: -6, la: ACUM - 600000 }, acum: ACUM }).actiuni.piese[0];
+  assert.equal(bun.v, -1);
+  const nd = cS.ScorZi.calc({ ndx: { n: 100, e50: 70, la: ACUM - 40 * 3600000 }, acum: ACUM }).actiuni.piese.find((p) => /Nasdaq 100/.test(p.ce));
+  assert.equal(nd.v, null); assert.match(nd.val, /vechi/);
+  const ae = citeste("public", "lib", "acasa-ecran.js");
+  assert.match(ae, /macroTinut: d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\)/);
+  assert.match(ae, /Object\.assign\(\{ la: d\.ndx && d\.ndx\.la \}, ndxL\)/);
+});
+await test("D4 (🔵4). Frica crypto: pe linia Crypto se spune că e citită CONTRAR față de regimul macro (unde lăcomia = poftă de risc)", () => {
+  const m = cS.Macro.scor({ fg: { valoare: 80 } }, ACUM), r = cS.ScorZi.calc({ macro: Object.assign({}, m, { semne: [{ cod: "frica", ok: true, v: 80 }] }), acum: ACUM });
+  const f = r.crypto.piese.find((p) => /Frica/.test(p.ce));
+  assert.equal(f.v, -1); assert.match(f.nota || "", /contrar/);
+});
+await test("D5 (🔵5). Rotația sectoarelor: histerezis — din „pe ciclice” se iese abia sub +0,3 pp (nu la prima zi sub +0,6), ca alerta să nu bată lângă prag", () => {
+  const S = cS.Sectoare, d = (spread) => ({ zi: "14.10", regim: Object.assign({}, S.regimDin(spread), { ciclice: spread, defensive: 0, spread, partial: false }) });
+  assert.equal(S.regimTinut("on", 0.5), "on"); assert.equal(S.mesajSchimbare("on", d(0.5)), null, "0,5 pp lângă prag: fără alertă");
+  assert.equal(S.regimTinut("on", 0.2), "neutru"); assert.ok(S.mesajSchimbare("on", d(0.2)), "sub +0,3 pp: alerta pleacă");
+  assert.equal(S.regimTinut("neutru", 0.7), "on"); assert.equal(S.regimTinut("off", -0.4), "off"); assert.equal(S.regimTinut(null, 0.7), "on");
+  assert.match(citeste("scripts", "lib", "tura-piata.mjs"), /st\.sectRegim = d\.Sectoare\.regimTinut\(st\.sectRegim \|\| null, s\.regim\.spread\)/);
+});
+await test("D6 (🔵12). Urmărirea listelor de sugestii: fiecare intrare judecată la ORIZONT FIX (închiderea de după 14 zile), nu la prețul de azi", async () => {
+  const TS = await import("./lib/tura-sugestii-actiuni.mjs");
+  const zile = zileBursa(200), b = zile.map((t, i) => ({ t, o: 100 + i, h: 101 + i, l: 99 + i, c: 100 + i, v: 1000 }));
+  const SA = { puncte: () => [], azi: () => null, volumMediu: () => null, dovada: () => ({ verdict: "x" }), textDovada: () => "" };
+  const intrare = zile[150], la14 = b.find((x) => x.t >= intrare + 14 * ZI).c;
+  const r = await TS.sugestiiDimineata({ SA, bareUS: new Map([["AAA_US_EQ", b]]), tickereEU: [], cereBare: async () => null, acum: ACUM, jurnal() {}, pauza: async () => 0, istoric: [{ zi: "x", piata: "us", lista: "urcare", ticker: "AAA_US_EQ", pret: b[150].c, t: intrare }] });
+  const u = r.raport.urmarire.us.urcare;
+  assert.equal(u.n, 1); assert.ok(Math.abs(u.medie - (la14 / b[150].c - 1 - 0.003)) < 1e-9, "medie " + u.medie + " ≠ orizontul de 14 zile");
+});
+
 console.log(`\n${teste - picate} din ${teste} trec`);
 if (picate) { console.log(`V100.196 ACȚIUNI PICA · ${picate} din ${teste}`); process.exit(1); }

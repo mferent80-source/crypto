@@ -39,7 +39,9 @@
     const acum = fin(o.acum) ? o.acum : Date.now(), m = o.macro;
     const A = [];
     // 1. regimul macro: treapta ȚINUTĂ (histerezisul cartelei Regim) dacă o avem, altfel cea de acum; riscul +1, neutru 0, prudent/fugă/stres −1
-    const mt = o.macroTinut && TREAPTA[o.macroTinut.cod] ? o.macroTinut : m && !m.partial && m.treapta && TREAPTA[m.treapta.cod] ? { cod: m.treapta.cod, scor: m.scor } : null;
+    // v100.196 (auditul sever, 🔵3): regimul ținut mai vechi de 2 h (colectorul stă) nu mai contează - același prag ca cartela Regim (macro.js)
+    const tinutProaspat = o.macroTinut && (!fin(o.macroTinut.la) || acum - o.macroTinut.la <= 2 * ORA);
+    const mt = o.macroTinut && TREAPTA[o.macroTinut.cod] && tinutProaspat ? o.macroTinut : m && !m.partial && m.treapta && TREAPTA[m.treapta.cod] ? { cod: m.treapta.cod, scor: m.scor } : null;
     A.push(mt ? { ce: "Regim macro", val: TREAPTA[mt.cod][1] + (fin(mt.scor) ? " (" + semn(mt.scor) + ")" : ""), v: TREAPTA[mt.cod][0] } : lipsa("Regim macro", "fără date"));
     // 2. trendul pieței: S&P 500 față de media pe 200 de zile (regimul robotului Trend 12 luni); peste 4 zile vechime ⇒ fără piesă
     const tr = o.trend, rg = tr && tr.regim, vechiTr = tr && tr.dataUltimei ? acum - Date.parse(tr.dataUltimei + "T21:00:00Z") > 4 * ZI : true;
@@ -55,9 +57,11 @@
       ? { ce: "Market Breadth SUA", val: String(mb.stanta || "").toUpperCase() + " (Master Score " + semn(mb.masterScor) + ")", v: mb.masterScor >= 1 ? 1 : mb.masterScor <= -1 ? -1 : 0 }
       : lipsa("Market Breadth SUA", mb && mb.vechi ? "date vechi" : "fără date"));
     // 5. Market Breadth Nasdaq 100: DOAR lățimea — câte acțiuni din indice sunt peste media de 50 de zile (≥ 60 % +1, < 40 % −1)
-    const nd = o.ndx, cota = nd && fin(nd.n) && nd.n > 0 && fin(nd.e50) ? nd.e50 / nd.n : null;
-    A.push(cota !== null ? { ce: "Market Breadth Nasdaq 100", val: nd.e50 + " din " + nd.n + " peste media de 50 · " + (cota >= 0.6 ? "largă" : cota < 0.4 ? "îngustă" : "mixtă"), v: cota >= 0.6 ? 1 : cota < 0.4 ? -1 : 0 }
-      : lipsa("Market Breadth Nasdaq 100", "fără date"));
+    // v100.196 (auditul sever, 🟡8): Master Score-ul de la piesa 4 conține deja lățimea Nasdaq 100 (S&P + NDX + R2K + Uptrend) ⇒ când el are date,
+    // piesa NDX e doar informativă (ca VIX), altfel aceeași lățime dădea până la ±2 din ±4; fără el, NDX rămâne piesă. Mai veche de 30 h ⇒ fără piesă (🔵3)
+    const nd = o.ndx, cota = nd && fin(nd.n) && nd.n > 0 && fin(nd.e50) ? nd.e50 / nd.n : null, vechiNd = nd && fin(nd.la) && acum - nd.la > 30 * ORA, mbNum = A[3].v !== null;
+    A.push(cota !== null && !vechiNd ? Object.assign({ ce: "Market Breadth Nasdaq 100", val: nd.e50 + " din " + nd.n + " peste media de 50 · " + (cota >= 0.6 ? "largă" : cota < 0.4 ? "îngustă" : "mixtă"), v: mbNum ? 0 : cota >= 0.6 ? 1 : cota < 0.4 ? -1 : 0 }, mbNum ? { info: true, nota: "e deja în Master Score-ul de mai sus" } : {})
+      : lipsa("Market Breadth Nasdaq 100", vechiNd ? "date vechi" : "fără date", mbNum));
 
     const C = [];
     const la = o.latime && o.latime.acum, lat = la && la.lat, proaspat = la && !la.eroare && fin(Number(la.la)) && acum - Number(la.la) <= 3 * ORA;
@@ -70,7 +74,8 @@
       : lipsa("Market Breadth crypto · 150 perp-uri", proaspat ? "regim necunoscut" : stareLat));
     // 2. frica / lăcomia: extremele contează contrar (≥ 75 aglomerat −1, ≤ 25 frică extremă +1)
     const fg = semnMacro(m, "frica");
-    C.push(fg ? { ce: "Frica / lăcomia crypto", val: String(Math.round(fg.v)) + (fg.v >= 75 ? " · lăcomie extremă" : fg.v <= 25 ? " · frică extremă" : fg.v >= 55 ? " · lăcomie moderată" : fg.v <= 45 ? " · frică moderată" : " · neutru"), v: fg.v >= 75 ? -1 : fg.v <= 25 ? 1 : 0 }
+    // v100.196 (🔵4): aceeași cifră intră și în regimul macro (linia Acțiuni), unde lăcomia = poftă de risc (+); aici e citită CONTRAR (aglomerat) - se spune
+    C.push(fg ? { ce: "Frica / lăcomia crypto", val: String(Math.round(fg.v)) + (fg.v >= 75 ? " · lăcomie extremă" : fg.v <= 25 ? " · frică extremă" : fg.v >= 55 ? " · lăcomie moderată" : fg.v <= 45 ? " · frică moderată" : " · neutru"), v: fg.v >= 75 ? -1 : fg.v <= 25 ? 1 : 0, nota: "citită contrar: în regimul macro aceeași lăcomie e poftă de risc" }
       : lipsa("Frica / lăcomia crypto", "fără date"));
     // 3. legătura BTC – S&P: doar informativ, spune dacă BTC diversifică sau nu
     const rho = semnMacro(m, "btcSp");
@@ -94,7 +99,7 @@
     const max = Math.max(1, l.max), lat = Math.min(50, Math.abs(l.scor) / max * 50), cls = l.scor > 0 ? "good" : l.scor < 0 ? "bad" : "acMut";
     const bara = l.scor > 0 ? '<b class="szPlus" style="width:' + lat.toFixed(1) + '%"></b>' : l.scor < 0 ? '<b class="szMinus" style="width:' + lat.toFixed(1) + '%"></b>' : "";
     return '<div class="szRand"><b>' + esc(nume) + '</b><div class="szBara" role="img" aria-label="' + esc(nume + ": " + semn(l.scor) + " din ±" + l.max + ", " + l.text) + '"><i></i>' + bara + '</div><span><b class="' + cls + ' szVal">' + (l.n ? semn(l.scor) : "—") + '</b> <span class="acSub">' + esc(l.text) + " · din ±" + l.max + (l.n < l.max ? " · " + l.n + " din " + l.max + " piese cu date" : "") + '</span></span></div>'
-      + l.piese.map((p) => '<div class="szPiesa"><span>' + esc(p.ce) + ' · ' + esc(p.val) + (p.info ? " (doar informativ" + (p.nota ? ": " + esc(p.nota) : "") + ")" : "") + '</span><span class="szChip ' + (p.v === null ? "szLipsa" : p.info ? "sz0" : p.v > 0 ? "szP" : p.v < 0 ? "szN" : "sz0") + '">' + (p.v === null ? "—" : p.info ? "i" : semn(p.v)) + '</span></div>').join("");
+      + l.piese.map((p) => '<div class="szPiesa"><span>' + esc(p.ce) + ' · ' + esc(p.val) + (p.info ? " (doar informativ" + (p.nota ? ": " + esc(p.nota) : "") + ")" : p.nota ? " (" + esc(p.nota) + ")" : "") + '</span><span class="szChip ' + (p.v === null ? "szLipsa" : p.info ? "sz0" : p.v > 0 ? "szP" : p.v < 0 ? "szN" : "sz0") + '">' + (p.v === null ? "—" : p.info ? "i" : semn(p.v)) + '</span></div>').join("");
   }
   function html(r) {
     if (!r) return '<div class="acCap"><h4>Scorul zilei</h4></div><p class="acMut">Aștept datele pieței…</p>';

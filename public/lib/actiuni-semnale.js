@@ -91,7 +91,16 @@ var ActiuniSemnale = (function () {
     "dupa-miscare": "cumpărat după o mișcare mare",
     "langa-max7z": "cumpărat lângă maximul pe 7 zile"
   };
-  // ctx: {umpleri (T212.umpleri, ca sa vad recumpararile), bare (zilnice ale actiunii)}
+  // v100.196 (auditul sever 14.10, 🟡11, lookahead): bara zilei e „știută” la cumpărare doar după ÎNCHIDEREA ședinței ei, pe bursa simbolului
+  // (calendarul burselor: Xetra / Londra 15:30 UTC, NYSE 20:00 UTC). Înainte „deschiderea + 8 h”: barele EU stau la 07:00 UTC ⇒ 15:00 UTC, deci o
+  // cumpărare între 15:00 și 15:30 vedea maximul, minimul și închiderea zilei (2 din 81 de trade-uri EU). CB = calendarul (colectorul îl dă);
+  // fără calendar (pagina, cât index.html nu-l încarcă), rezerva prudentă: deschiderea + 9 h (după închiderea oricărei burse de-a lui)
+  function inchisaInainte(b, t, CB) {
+    CB = CB || (typeof CalendarBursa !== "undefined" ? CalendarBursa : globalThis.CalendarBursa);
+    if (CB && CB.inchidereLa && t && t.ticker) { try { return CB.inchidereLa(CB.ziLocala(b.t, t.ticker), t.ticker) <= t.pornit; } catch (e) {} }
+    return b.t + 9 * 3600000 <= t.pornit;
+  }
+  // ctx: {umpleri (T212.umpleri, ca sa vad recumpararile), bare (zilnice ale actiunii), CalendarBursa?}
   function greseli(t, ctx) {
     var g = [], c = ctx || {};
     function ad(cod) { g.push({ cod: cod, text: TEXT[cod] }); }
@@ -101,8 +110,8 @@ var ActiuniSemnale = (function () {
     if (t.rezultatOficial > 0 && t.rezultat <= 0) ad("comision-a-mancat");
     if (t.rezultat < 0 && Array.isArray(c.umpleri) && c.umpleri.some(function (u) { return u.side === "BUY" && u.ticker === t.ticker && u.t > t.inchis && u.t - t.inchis <= ZI; })) ad("recumparat-1z");
     if (Array.isArray(c.bare) && c.bare.length) {
-      // doar zilele INCHISE inainte de cumparare (bara zilnica are ora deschiderii; piata inchide in ~6,5 h)
-      var inainte = c.bare.filter(function (b) { return b.t + 8 * 3600000 <= t.pornit; });
+      // doar zilele INCHISE inainte de cumparare - v100.196: pe ora închiderii bursei ei (inchisaInainte), nu „+ 8 h”
+      var inainte = c.bare.filter(function (b) { return inchisaInainte(b, t, c.CalendarBursa); });
       if (inainte.length >= 60) {
         var s = stare(inainte, t.pretCumparare);
         if (s.miscare && s.miscare.mare) ad("dupa-miscare");
@@ -265,8 +274,8 @@ var ActiuniSemnale = (function () {
     s += ".";
     return s;
   }
-  function laCumparare(t, bare, inchise) {
-    var b = Array.isArray(bare) ? bare.filter(function (x) { return x.t + 8 * 3600000 <= t.pornit; }) : [];
+  function laCumparare(t, bare, inchise, o) {
+    var CBo = o && o.CalendarBursa, b = Array.isArray(bare) ? bare.filter(function (x) { return inchisaInainte(x, t, CBo); }) : [];   /* v100.196 (🟡11) */
     if (b.length < 60) return { nivel: "fara-date", motive: ["prea puține zile de prețuri înainte de cumpărare"], greseli: [], sit: null };
     if (!pretPotrivit(t, bare)) return { nivel: "fara-date", motive: ["prețurile găsite nu se potrivesc cu ale tale (split sau alt simbol)"], greseli: [], sit: null };
     var st = stare(b, t.pretCumparare), ore = null;
@@ -627,6 +636,6 @@ var ActiuniSemnale = (function () {
   }
   // „Regulile tale”: grupa cea mai scumpa
   function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
-  return { zileLipsa: zileLipsa, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;
