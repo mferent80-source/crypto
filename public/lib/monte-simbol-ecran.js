@@ -77,7 +77,8 @@ function mcsSetariBot(boti, sim, idx) {
   var l = mcsBotiPe(boti, sim), b = l[idx >= 0 && idx < l.length ? idx : 0];
   if (!b) return null;
   var row = Number(b.brut && b.brut.buOrderData && b.brut.buOrderData.row), dir = mcsDir(b.directie);
-  var stop = b.opritorPierdereActiv && Number(b.opritorPierdere) > 0 ? (dir === "short" ? { sus: Number(b.opritorPierdere) } : { jos: Number(b.opritorPierdere) }) : null;
+  // v100.196 (auditul 14.10, 🔵2): la neutru partea stopului vine din pret (peste pret = sus) - altfel „jos” peste pret = 100% „stop” la prima bara
+  var opB = Number(b.opritorPierdere), pB = Number(b.pretCurent), stop = b.opritorPierdereActiv && opB > 0 ? (dir === "short" || (dir === "neutru" && pB > 0 && opB > pB) ? { sus: opB } : { jos: opB }) : null;
   // v100.132: ținta (TP) lui din Pionex - long deasupra, short dedesubt (ca Tabloul, opritorProfit e deja preț); la neutru nu are o parte
   var tp = dir !== "neutru" && b.opritorProfitActiv && Number(b.opritorProfit) > 0 ? Number(b.opritorProfit) : null;
   var r = { jos: Number(b.gridJos), sus: Number(b.gridSus), grile: row > 1 ? row - 1 : 20, levier: Number(b.levier) || 1, dir: dir, suma: Number(b.investit) || 50, stop: stop, tp: tp, botulTau: true };

@@ -164,6 +164,12 @@ var Alerte = (function () {
           // v100.70 (revizia pachetului 3, I8): miscarea care duce la lichidare dupa partea botului (short -> urcare)
           mesaj: msg((opS > 0 ? "Stopul e setat la " + pret(opS) + ", dar e stins; fără el" : "Fără stop") + ", o " + (dirPl === "short" ? "urcare" : dirPl === "long" ? "cădere" : "mișcare") + " bruscă merge până la lichidare" + (plL !== null && plL > 0 ? " (" + pret(plL) + ", " + distP(plL) + ")" : "") + " și poți pierde toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
             (opPlan !== null ? "Aș pune stopul la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : procPlan ? "Aș pune stopul în procente, la " + procPlan : "Aș pune stopul cât zice planul") + ": planul devine ordin, nu doar alertă.") };
+      } else if (opS > 0 && !raport && nr(b.pretLichidare) > 0 && (dirPl === "short" ? opS >= nr(b.pretLichidare) : dirPl === "long" ? opS <= nr(b.pretLichidare) : false)) {
+        // v100.196 (auditul 14.10, B3): stopul dincolo de lichidarea estimata nu apuca - lichidarea vine intai si ia marja (nu „137% din investiție”)
+        var lqS = nr(b.pretLichidare);
+        out["plan-stop"] = { nivel: "critic", titlu: nume + ": stopul e dincolo de lichidare",
+          mesaj: msg("Stopul e la " + pret(opS) + ", lichidarea estimată la " + pret(lqS) + " (" + distP(lqS) + "): lichidarea vine întâi și iei toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
+            (opPlan !== null ? "Aș muta stopul în Pionex la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : "Aș muta stopul înaintea lichidării, cât zice planul") + ": planul devine ordin, nu doar alertă.") };
       } else if (lo === null) out["plan-stop"] = null;
       else {
         var pierde = -lo, inPS = fost("plan-stop") !== "ok", departe = pierde > pg * (inPS ? 1.1 : 1.2) && pierde - pg >= (inPS ? 1 : 2);
@@ -359,7 +365,7 @@ var Alerte = (function () {
     if (!u || contra || (dist !== null && Math.abs(dist) < 15)) return { mesaje: [], stare: vechi || null };
     var treapta = Math.max(1, pl.prag / 4), baza = Math.max(pl.prag, vechi && nr(vechi.anuntat) !== null ? vechi.anuntat : -Infinity, u.opritorPastreaza !== null ? u.opritorPastreaza : -Infinity);
     if (u.pastrezi < baza + treapta) return { mesaje: [], stare: vechi || null };
-    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(Math.abs(v) < 0.095 && v !== 0 ? 2 : 1).replace(".", ",") + " USDT"; };   // v100.196: o zecimală (regula lui), sub 0,1 două
     return { stare: { anuntat: u.pastrezi }, mesaje: [{ cheie: "podea-urca", nivel: "info", titlu: "🪜 " + nume + ": poți urca stopul — păstrezi " + U(u.pastrezi),
       mesaj: msg("Stopul la " + pret(u.pret) + " (" + vg(u.perna * 100) + "% de preț) îți păstrează " + U(u.pastrezi) + " dacă piața se întoarce" + (u.opritorPastreaza !== null ? ", cel de acum (" + pret(u.opritor) + ") " + U(u.opritorPastreaza) : "") + ".",
         "Aș muta stopul în Pionex la " + pret(u.pret) + "; botul merge mai departe.") }] };
@@ -418,7 +424,7 @@ var Alerte = (function () {
     var BUL = { bine: "🟢", atentie: "🟡", rau: "🔴", neutru: "⚪" }, linii = [];
     l.forEach(function (x) {
       var b = x.b, nume = String(b.baza || b.simbol || "botul").replace(/\.PERP$/, ""), tot = nr(b.profitTotal), p = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), li = nr(b.distantaLichidarePct);
-      var cap = nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "") + (tot !== null ? " · total " + (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(2).replace(".", ",") + " USDT" : "")
+      var cap = nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "") + (tot !== null ? " · total " + (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(Math.abs(tot) < 0.095 && tot !== 0 ? 2 : 1).replace(".", ",") + " USDT" : "")
         + (p !== null ? " · preț " + pret(p) + (jos !== null && sus !== null && sus > jos ? " (" + Math.round((p - jos) / (sus - jos) * 100) + "% în grid)" : "") : "") + (li !== null ? " · lichidare la " + Math.round(Math.abs(li)) + "%" : "");
       linii.push(cap);
       (Array.isArray(x.mediu) ? x.mediu : []).forEach(function (m) { if (m) linii.push("   " + (BUL[m.ton] || "⚪") + " " + m.eticheta + ": " + m.text); });

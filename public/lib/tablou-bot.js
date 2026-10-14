@@ -754,7 +754,9 @@ var TabloBot = (function () {
     var x = (bot && bot.buOrderData) || {};
     var grid = citesteGrid(bot);
     var jos = grid.jos, sus = grid.sus, areGrid = grid.bun;
-    var lich = nr(x.estimateLiquidationPriceDown);
+    // v100.196 (auditul 14.10, 🔵1): la short Pionex da jos „0” - lichidarea e sus; se ia partea care exista, cea mai apropiata de pretul de acum
+    var lJ = nr(x.estimateLiquidationPriceDown), lS = nr(x.estimateLiquidationPriceUp), pU = puncte[puncte.length - 1].p;
+    var lich = lJ !== null && lJ > 0 && lS !== null && lS > 0 ? (pU - lJ <= lS - pU ? lJ : lS) : lJ !== null && lJ > 0 ? lJ : lS !== null && lS > 0 ? lS : null;
 
     var minP = puncte[0].p, maxP = puncte[0].p;
     for (var j = 1; j < puncte.length; j++) {
