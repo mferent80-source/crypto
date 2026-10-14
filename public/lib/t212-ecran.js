@@ -843,6 +843,7 @@ function t212ProfilPoarta(p) {
 // intrarea (ordinul limită), stopul CALCULAT, doar cu intrare (nu pe trend jos) și cu poarta nu pe „nu” (ar contrazice verdictul); altfel null
 // v100.169: cu planul LUI scris, suma e cea din planul lui (și la „așteaptă” / „nu”: se avertizează, nu se refuză)
 function t212MarimePoarta(p) {
+  if (t212FaraMarime(p)) return null;   /* v100.196 (revizia): Trend 12 luni în probă ⇒ fără sumă, nici din plan */
   var n = p && p.niv, pl = t212PlanPoarta(p);
   if (pl) return pl.m;
   if (!n || n.nivel !== "ok" || !n.intrare || !(n.intrare.pret > 0) || !p.v || p.v.nivel === "nu" || p.v.nivel === "fara-date" || !(n.stop > 0)) return null;

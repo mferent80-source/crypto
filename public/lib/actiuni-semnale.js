@@ -187,7 +187,7 @@ var ActiuniSemnale = (function () {
     // 🔴1: plafonul de 20% e pe TOTAL (ce ai deja + cumpărarea nouă)
     var sim = o.simbol || "ea";
     if (o.dejaPct > 0 && o.dejaPct >= PLAFON - 1e-9) galben.push("ai deja " + pc1(o.dejaPct) + " din cont în " + sim + ": plafonul de 20% pe o acțiune e atins, n-aș adăuga");
-    else if (o.dejaPct > 0) note.push("ai deja " + pc1(o.dejaPct) + " din cont în " + sim + ": cumpărarea de acum e tăiată ca totalul să rămână sub 20%");
+    else if (o.dejaPct > 0) note.push("ai deja " + pc1(o.dejaPct) + " din cont în " + sim + ": cumpărarea nouă se socotește așa încât totalul să rămână sub 20%");
     // 🟡3: regimul pieței
     var rg = o.regim !== undefined ? regimPoarta(o.regim) : null;
     if (rg && rg.cod === "blocat") galben.push(rg.motiv); else if (rg && rg.motiv) note.push(rg.motiv);

@@ -3028,7 +3028,7 @@ async function loadMarketOverview(force=false){
 function renderMarketOverview(){
  const rows=marketCache.rows,box=$("marketOverview");if(!box)return;
  const suffix=assetClass()==="STOCKS"?" · USD":"/USDT";
- box.innerHTML=rows.length?rows.map(x=>`<div class="marketTile" data-action-click="pick(&#x27;${x.c}&#x27;)"><div class="coinName">${x.c}${suffix}</div><div class="marketPrice">${num(x.price)}</div><div class="${x.ch>=0?"good":"bad"}">${TextRo.pctSemn(x.ch,1)}</div><div class="marketMeta"><span>${x.regime}</span><span>Score ${x.score.toFixed(0)}</span><span>ADX ${x.adx.toFixed(0)}</span></div></div>`).join(""):'<div class="emptyState">Market data unavailable.</div>';
+ box.innerHTML=rows.length?rows.map(x=>`<div class="marketTile" data-action-click="pick(&#x27;${escapeHtml(x.c)}&#x27;)"><div class="coinName">${escapeHtml(x.c)}${suffix}</div><div class="marketPrice">${num(x.price)}</div><div class="${x.ch>=0?"good":"bad"}">${TextRo.pctSemn(x.ch,1)}</div><div class="marketMeta"><span>${x.regime}</span><span>Score ${x.score.toFixed(0)}</span><span>ADX ${x.adx.toFixed(0)}</span></div></div>`).join(""):'<div class="emptyState">Market data unavailable.</div>';
  let bull=rows.filter(x=>x.ver==="BULLISH").length,bear=rows.filter(x=>x.ver==="BEARISH").length,neu=rows.length-bull-bear,avg=rows.length?rows.reduce((a,x)=>a+x.ch,0)/rows.length:0;
  $("breadthBull").textContent=bull;$("breadthBear").textContent=bear;$("breadthNeutral").textContent=neu;$("breadth24").textContent=TextRo.pctSemn(avg,1)
 }
@@ -5946,8 +5946,8 @@ function reteaHtml(rt,zar,o,ra){var m=reteaM.m;if(typeof Retea==="undefined"||(!
 // un rand de probabilitate: titlul, procentul si banda 0-100% (zona = intervalul de incredere, semnul = cifra) - Tablou si fisa Grid
 function tbProbRandHtml(x){
   var P=function(v){return Math.max(0,Math.min(100,Math.round(v*100)))},lo=x.ic?P(x.ic[0]):null,hi=x.ic?P(x.ic[1]):null;
-  return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+(x.familia?x.familia+' ':'')+P(x.p)+'%</b>'
-    +'<div class="tbProbBanda" role="img" aria-label="'+(x.familia?x.familia+' ':'')+P(x.p)+'%'+(lo!==null?', interval de încredere '+lo+'–'+hi+'%':'')+(x.p2!=null?', '+(x.familia==="🌳"?'rețeaua':'arborii')+' '+P(x.p2)+'%':'')+'">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b>'+(x.p2!=null?'<b class="tbProbP2" style="left:'+P(x.p2)+'%"></b>':'')+'</div>'
+  return '<div class="tbProbRand'+(x.avertizare?' tbWarn':'')+'"><span>'+escapeHtml(x.titlu)+'</span><b class="tbProbP">'+(x.familia?x.familia+' ':'')+(x.scurt?escapeHtml(x.scurt):P(x.p)+'%')+'</b>'
+    +'<div class="tbProbBanda" role="img" aria-label="'+(x.familia?x.familia+' ':'')+(x.scurt?escapeHtml(x.scurt):P(x.p)+'%')+(lo!==null?', interval de încredere '+lo+'–'+hi+'%':'')+(x.p2!=null?', '+(x.familia==="🌳"?'rețeaua':'arborii')+' '+P(x.p2)+'%':'')+'">'+(lo!==null?'<i style="left:'+lo+'%;width:'+Math.max(1,hi-lo)+'%"></i>':'')+'<b style="left:'+P(x.p)+'%"></b>'+(x.p2!=null?'<b class="tbProbP2" style="left:'+P(x.p2)+'%"></b>':'')+'</div>'
     +String(x.text).split("\n").map(function(l){return '<p class="tbSub">'+escapeHtml(l)+'</p>'}).join("")+'</div>';   /* revizia 04.10 (🟡4): rândurile 🧠/🌳 au stările pe al doilea rând */
 }
 // v100.47 (pachetul 2b): probabilitatile din istoric pe GRIDUL PROPUS din fisa - barele de 1 h din KV (colectorul, noaptea) + orele de azi

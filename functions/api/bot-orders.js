@@ -47,7 +47,7 @@ async function citesteBoti(env,params={}){
   // MET) - asta e "zero boti", nu o forma stricata. Orice alt ne-sir ramane eroare.
   // v100.25: Pionex da istoria pe PAGINI de cate 10 (limit e ignorat); cursorul paginii urmatoare vine in nextPageToken
   const next=d.data&&typeof d.data.nextPageToken==="string"&&/^[A-Za-z0-9]{1,64}$/.test(d.data.nextPageToken)?d.data.nextPageToken:null;
-  if(d.data&&d.data.results===null)return {results:[],next,nula:true};   // v100.196 (auditul sever, C3): spus colectorului și paginii
+  if(d.data&&d.data.results===null)return {results:[],next,nula:true};   /* v100.196 (auditul sever, C3): spus colectorului (îl citește colector.mjs; pagina încă nu) */
   if(!Array.isArray(d.data?.results))throw Object.assign(Error("Pionex bot API: data.results nu e o lista"),{status:502,motiv:"forma-necunoscuta"});
   return {results:d.data.results,next};
 }

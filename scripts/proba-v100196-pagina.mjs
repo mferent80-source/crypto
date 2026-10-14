@@ -308,7 +308,7 @@ await test("🔵1 pagina offline: „Reîncearcă” merge sub CSP (link, fără
   const sw = citeste("public", "sw.js"), shell = JSON.parse(sw.match(/const APP_SHELL=(\[[^\]]*\]);/)[1]);
   assert.ok(!shell.includes("/index.html") && !shell.includes("/offline.html")); assert.ok(shell.includes("/") && shell.includes("/offline"));
   assert.match(sw, /caches\.match\("\/"\)\)\|\|\(await caches\.match\("\/offline"\)\)/); assert.match(sw, /cache\.put\("\/",copy\)/);
-  assert.match(sw, /^const CACHE="crypto-radar-v100-195";/, "CACHE neatins (îl ridică coordonatorul)");
+  assert.match(sw, /^const CACHE="crypto-radar-v100-(19[6-9]|[2-9]\d\d)";/, "CACHE ridicat la unire (v100.196 sau mai nou)");
 });
 await test("🔵14 SW: `controllerchange` reîncarcă doar la o ACTUALIZARE, nu la prima instalare", () => {
   assert.match(APP, /var swAveaControlor=!!\(typeof navigator!=="undefined"&&navigator\.serviceWorker&&navigator\.serviceWorker\.controller\);/);
@@ -392,7 +392,7 @@ await test("🔵10 CSS: clasele dovedite nefolosite (nicăieri în html / app.js
 await test("app.css: blocul gol pentru regulile cerute de alte zone stă chiar înaintea ultimei reguli a pândei, care rămâne ULTIMA", () => {
   const iBloc = CSS.lastIndexOf("/* v100.196 · reguli cerute de alte zone */"), iPanda = CSS.lastIndexOf("@media (max-width:640px){.sugPandaTab thead");
   assert.ok(iBloc > 0 && iPanda > iBloc, "blocul înaintea pândei");
-  assert.equal(CSS.slice(iBloc, iPanda).replace("/* v100.196 · reguli cerute de alte zone */", "").trim(), "", "blocul e gol");
+  assert.ok(!/@media \(max-width:640px\)\{\.sugPandaTab thead/.test(CSS.slice(iBloc, iPanda)), "în bloc stau doar regulile altor zone, nu pânda");   /* la unire: regulile cerute (data-et) au intrat aici */
   const dupa = CSS.slice(iPanda); const inchis = dupa.indexOf("}}"); assert.equal(dupa.slice(inchis + 2).trim(), "", "pânda e ultima regulă");
 });
 await test("capcanele casei: app.js rămâne tot CRLF, fără accent grav în comentariile HTML, `let` de modul nou nu e citit la pornire", () => {
@@ -400,8 +400,8 @@ await test("capcanele casei: app.js rămâne tot CRLF, fără accent grav în co
   for (const f of ["index.html", "offline.html"]) for (const m of citeste("public", f).matchAll(/<!--([\s\S]*?)-->/g)) assert.ok(!m[1].includes("`"), "accent grav în comentariu HTML: " + f);
   assert.ok(!/^let (topLiveStare|swAveaControlor|colCache)\b/m.test(APP));
 });
-await test("versiunile NU s-au atins în zona asta (le ridică coordonatorul la unire)", () => {
-  assert.equal((IDX.match(/v100\.195/g) || []).length, 4); assert.equal(JSON.parse(citeste("package.json")).version, "100.195.0");
+await test("versiunile: ridicate o singură dată, la unire (v100.196 sau mai nou, toate 4 locurile din index.html)", () => {
+  const ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]); assert.ok(ver >= 196); assert.equal((IDX.match(new RegExp("v100\\." + ver, "g")) || []).length, 4);
 });
 
 console.log(`\n${teste - picate}/${teste} trec${picate ? ` · ${picate} PICĂ` : ""}\n`);

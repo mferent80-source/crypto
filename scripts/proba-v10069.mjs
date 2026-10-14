@@ -134,7 +134,7 @@ await test("Consilierul poziției: titlul compus ≤ 60, acțiunile proprii la p
   const cu = (p, bare, o) => CO.alcatuiesteActiune(Object.assign({ sem: sem(p, bare), niv: niv(), prob: [], sfaturi: [], plan: p.plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei: p.qty * p.pretMediu * 4.35, simbol: p.simbol }, o || {}));
   const su = cu(P({ pretMediu: 22, pret: 29 }), urca, { niv: niv({ stopAtins: true, stopPozitie: 30.12 }) });
   assert.equal(su.nivel, "iesi"); assert.match(su.motive[0].titlu, /\$30\.12/); persoana(su.faCe, "stopul care urcă");
-  assert.match(su.bani, /[+−]\d+,\d{2} \$/, "suma în dolari cu virgulă: " + su.bani); assert.match(su.bani, /\$30\.12/);
+  assert.match(su.bani, /[+−]\d+,\d \$/  /* v100.196: o zecimală */, "suma în dolari cu virgulă: " + su.bani); assert.match(su.bani, /\$30\.12/);
   const x = (o) => Object.assign({ p: 0.31, k: 31, n: 100, nIndep: 24, ic: [0.22, 0.41], nivel: "exact", stare: "lateral-liniste" }, o || {});
   const prob = PB.randActiune({ stop1: x({ p: 0.28, k: 28 }), sare1: x({ p: 0.03, k: 3 }), niv: {} }, null, { rezultateZile: 2, evenimente: { mediana: 0.06, max: 0.18 } });
   const mi = cu(P({ pretMediu: 28, pret: 29 }), lateral, { prob });

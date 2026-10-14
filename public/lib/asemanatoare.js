@@ -104,7 +104,8 @@ var Asemanatoare = (function () {
   // trec prin aceeași piață, iar ADX-ul / becurile vin în faze. Al doilea test, ca în Carnet.verdictMonede: blocuri de 3 zile (după pornire), în
   // fiecare diferența de MEDIANĂ (măsura fixată dinainte), semnele întoarse între blocuri; sub 8 blocuri cu ambele feluri ⇒ „puține”.
   var BLOC_ZILE = 3, MIN_BLOCURI = 8, ZI = 864e5;
-  function perioade(n) { n = Math.round(Number(n) || 0); var r = n % 100; return (n === 1 ? "o perioadă" : n + (r >= 20 || (r === 0 && n >= 100) ? " de " : " ") + "perioade") + " de câte " + BLOC_ZILE + " zile"; }
+  function cateAs(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (k !== 0 && (r === 0 || r >= 20) ? " de " : " ") + pl; }
+  function perioade(n) { return cateAs(Math.round(Number(n) || 0), "perioadă", "perioade") + " de câte " + cateAs(BLOC_ZILE, "zi", "zile"); }
   function pSemne(d, rnd, reps) {
     var s0 = 0, n = d.length, peste = 0, k, s, j; for (j = 0; j < n; j++) s0 += d[j]; var obs = Math.abs(s0 / n) - 1e-15;
     if (n <= 14) { var tot = 1 << n; for (k = 0; k < tot; k++) { s = 0; for (j = 0; j < n; j++) s += (k >> j) & 1 ? -d[j] : d[j]; if (Math.abs(s / n) >= obs) peste++; } return peste / tot; }

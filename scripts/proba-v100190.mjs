@@ -48,7 +48,7 @@ await test("trendDinJson: fișier stricat ⇒ null (versiune, dată, clasament g
 });
 await test("verdicteTrend: un „top” pe fiecare nume, sursa trend-12-1, prețul din clasament", () => {
   const v = verdicteTrend(trendDinJson(jsonRobot(), null, ACUM), ACUM);
-  assert.equal(v.length, 20); assert.deepEqual(v[0], { s: "trend-12-1", k: "T0", n: "top", p: 50, t: ACUM });
+  assert.equal(v.length, 20); const j0 = trendDinJson(jsonRobot(), null, ACUM); assert.deepEqual(v[0], { s: "trend-12-1", k: "T0", n: "top", p: 50, t: Date.parse(j0.dataUltimei + "T21:00:00Z") });   /* v101.116 (C5): ora închiderii, nu a turei */
 });
 function dFals({ ok = true, acum = ACUM, forta = false } = {}) {
   const trimise = [], jurnal = [];

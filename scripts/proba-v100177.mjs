@@ -18,9 +18,9 @@ for (const f of ["verdicte.js", "cont-intreg.js"]) vm.runInContext(citeste("publ
 const V = ctx.Verdicte, ZI = 86400000, T0 = Date.parse("2026-01-05T15:00:00Z");
 function mb(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-await test("jurnalul: un verdict pe (sursă, simbol, zi) — cel mai nou rămâne; sursele necunoscute și prețurile lipsă ies", () => {
+await test("jurnalul: un verdict pe (sursă, simbol, zi) — PRIMUL rămâne (v100.196, ca pe server); sursele necunoscute și prețurile lipsă ies", () => {
   const j = V.adauga([], [{ s: "poarta-t212", k: "AAPL_US_EQ", n: "Cumpara", p: 100, t: T0 }, { s: "poarta-t212", k: "AAPL_US_EQ", n: "nu", p: 101, t: T0 + 3600000 }, { s: "altceva", k: "X", n: "a", p: 1, t: T0 }, { s: "idei", k: "Y", n: "cumpar", p: 0, t: T0 }]);
-  assert.equal(j.length, 1); assert.equal(j[0].n, "nu"); assert.equal(j[0].k, "AAPL_US_EQ");
+  assert.equal(j.length, 1); assert.equal(j[0].n, "cumpara"); assert.equal(j[0].k, "AAPL_US_EQ");
   assert.equal(V.adauga(j, { s: "poarta-t212", k: "AAPL_US_EQ", n: "cumpara", p: 99, t: T0 + ZI }).length, 2, "a doua zi = alt verdict");
 });
 await test("evaluarea: randamentul după h bare de bursă; gridul: „a stat în bandă” din maximele / minimele zilelor; ideile față de QQQ", () => {

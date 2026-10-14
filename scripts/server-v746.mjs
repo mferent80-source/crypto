@@ -168,7 +168,7 @@ await test("8 · 11 tokenuri gresite de pe acelasi IP -> a 11-a e 429", async ()
   for (let i = 0; i < 11; i++) st.push((await cheama("pionex-account", "action=status", PIONEX_ENV, { token: `gresit-${i}-xxxxxxxx`, ipFix })).status);
   assert.deepEqual(st.slice(0, 10), Array(10).fill(401), `primele 10: ${st}`);
   assert.equal(st[10], 429, `a 11-a: ${st[10]}`);
-  // v100.196 (auditul sever, S1): tokenul BUN trece MEREU (acasă colectorul și browserul au același IP - un tab cu parola veche
+  // v100.196 (auditul sever, S1): tokenul BUN trece peste blocare DOAR la cererea locală directă (fără proxy) (acasă colectorul și browserul au același IP - un tab cu parola veche
   // încuia colectorul); ghicitul rămâne oprit: încă un token greșit tot 429, cu retry-after
   const bun = await cheama("pionex-account", "action=status", PIONEX_ENV, { ipFix });
   assert.equal(bun.status, 200, `tokenul bun blocat: ${bun.status}`);

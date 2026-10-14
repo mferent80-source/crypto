@@ -334,7 +334,8 @@ export function alerteSLTP(poza, acum) {
         + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + "% pe plus, " + cate(q.n, "intrare", "intrări") + ")" : "") + ".\n👉 "
         // v101.3 (el, 28.09): si cat cumpar, cand colectorul a calculat marimea (doar in $, cu contul T212 citit)
         // v100.70 (revizia pachetului 3, I7): marimea e conditionala („dacă intru”), nu o recomandare de cumparare; „decizia e a ta” revine
-        + (g.marime && g.marime.bucati > 0 ? "Aș lua cel mult " + g.marime.bucati.toFixed(2).replace(".", ",") + " buc, dacă intru (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei, risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafon 20% din cont" : " = 1% din cont") + "); e un reper, decizia e a ta."
+        + (g.marime && g.marime.plin ? "Ai deja 20% din cont în ea: n-aș adăuga nimic; e un reper din istoricul ei, decizia e a ta."   /* v101.116 (revizia, 🔴2) */
+          : g.marime && g.marime.bucati > 0 ? "Aș lua cel mult " + g.marime.bucati.toFixed(2).replace(".", ",") + " buc, dacă intru (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei, risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafon 20% din cont" : " = 1% din cont") + "); e un reper, decizia e a ta."
           : "Aș intra doar cu stopul pus; e un reper din istoricul lui, decizia e a ta.") });
   }
   return out;

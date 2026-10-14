@@ -65,7 +65,7 @@ await test("grila: prima citire doar tine minte; umplere noua cu pozitia crescut
   g = A.grila(BOT({ pozitie: 11.72, brut: { buOrderData: { closedExchangeOrderCount: 3 } }, pretCurent: 29.38 }), g.contori);
   assert.equal(g.mesaje.length, 1); assert.match(g.mesaje[0].titlu, /grilă atinsă/); assert.match(g.mesaje[0].titlu, /a cumpărat/); assert.match(g.mesaje[0].titlu, /29\.38/);
   g = A.grila(BOT({ pozitie: 8.79, ordinePerechi: 1, gridProfitBrut: 0.84, brut: { buOrderData: { closedExchangeOrderCount: 4 } }, pretCurent: 30.33 }), g.contori);
-  assert.equal(g.mesaje.length, 1, "o singura mesaj pe tura"); assert.match(g.mesaje[0].titlu, /✅/); assert.match(g.mesaje[0].titlu, /pereche încheiată/); assert.match(g.mesaje[0].titlu, /\+0,84 USDT/);
+  assert.equal(g.mesaje.length, 1, "o singura mesaj pe tura"); assert.match(g.mesaje[0].titlu, /✅/); assert.match(g.mesaje[0].titlu, /pereche încheiată/); assert.match(g.mesaje[0].titlu, /\+0,8 USDT/  /* v100.196: o zecimală */);
   const acelasi = A.grila(BOT({ pozitie: 8.79, ordinePerechi: 1, gridProfitBrut: 0.84, brut: { buOrderData: { closedExchangeOrderCount: 4 } } }), g.contori); assert.deepEqual(acelasi.mesaje, []);
 });
 await test("grila: mai multe umpleri intr-o tura -> un singur mesaj cu numarul; contori mai mici (bot repornit) -> reia in tacere", () => {

@@ -1162,7 +1162,9 @@ async function turaPoza() {
     // v101.2 (ideea 4 „câte bucăți”): la simbolurile urmarite in $ cu intrare sugerata - ActiuniSemnale.marime (1 % risc din contul T212,
     // plafon 20 %), cursul $/leu din pozitii; in € nu avem cursul euro din pozitii -> nimic, nu cifre inventate
     const fx = (await usdPeLeuBnr()) || fxDinPozitii(t212);   // v100.175 (revizia v100.173): BNR, ca pagina; pozițiile doar de rezervă
-    for (const s of simboluri) { const n = s.niveluri; if (n && n.nivel === "ok" && n.intrare && s.moneda === "$" && contT212 && fx) { try { s.marime = ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: contT212, fx }); } catch (e) { jurnal("poza: marime", s.s, e.message); } } }
+    /* v101.116 (revizia, 🔴2): ce ai deja în acțiune (lei) intră în plafonul de 20 %, ca pe Poartă */
+    const dejaLei = (sym) => { const p = (t212 || []).find((x) => x && (x.simbol === sym || x.ticker === sym)); return p && p.qty > 0 && p.pret > 0 && fx > 0 ? p.qty * p.pret / fx : 0; };
+    for (const s of simboluri) { const n = s.niveluri; if (n && n.nivel === "ok" && n.intrare && s.moneda === "$" && contT212 && fx) { try { s.marime = ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: contT212, fx, deja: dejaLei(s.s) }); } catch (e) { jurnal("poza: marime", s.s, e.message); } } }
     await aplicaCererileSalt();
     const poza = construiestePoza({ acum: Date.now(), turaLa: turaGataLa || null, versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
     // v101.86: alertele de azi, grupate pe filele paginii alerts - cu simbolurile chiar din poză (boții cu numele din botPoza)
