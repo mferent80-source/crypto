@@ -221,8 +221,8 @@ await test("(R3) 🔵5 (specul): cu amândouă, cifra mare și semnul plin stau 
   const doarArb = R.randuri(null, null, zar, { acum: ACUM }, { modele: MOD("a1", vBun), rt: ra })[0]; assert.equal(doarArb.p, 0.58); assert.equal(doarArb.p2, undefined); assert.equal(doarArb.familia, undefined);
   assert.equal(R.randuri(MOD(R.VERSIUNE, vBun), rt, zar, { acum: ACUM })[0].familia, undefined, "fără arbori nu există familia");
   const a = citeste("public", "app.js");
-  assert.ok(a.includes(`'</span><b class="tbProbP">'+(x.familia?x.familia+' ':'')+P(x.p)+'%</b>'`), "cifra mare fără emoji-ul familiei");
-  assert.ok(a.includes(`aria-label="'+(x.familia?x.familia+' ':'')+P(x.p)+'%'+(lo!==null?', interval de încredere '+lo+'–'+hi+'%':'')+(x.p2!=null?', '+(x.familia==="🌳"?'rețeaua':'arborii')+' '+P(x.p2)+'%':'')+'">'`), "aria-label");
+  assert.ok(a.includes(`'</span><b class="tbProbP">'+(x.familia?x.familia+' ':'')+(x.scurt?escapeHtml(x.scurt):P(x.p)+'%')+'</b>'`), "cifra mare cu emoji-ul familiei (v100.196: „sub X%” când e câmpul scurt)");
+  assert.ok(a.includes(`aria-label="'+(x.familia?x.familia+' ':'')+(x.scurt?escapeHtml(x.scurt):P(x.p)+'%')+(lo!==null?', interval de încredere '+lo+'–'+hi+'%':'')+(x.p2!=null?', '+(x.familia==="🌳"?'rețeaua':'arborii')+' '+P(x.p2)+'%':'')+'">'`), "aria-label");
 });
 await test("(R4) 🔵6/🔵7/🔵8 + ruling 13: după redesen caseta se recompactează (grVerdictScroll după grPliazaPeTelefon); capul și subsolul primesc arborii doar cu ra (aM); grReteaBtc aduce BTC și doar cu arborii; Arbori.verdict deleagă la Retea.verdictArbori", () => {
   const a = citeste("public", "app.js"), ar = citeste("public", "lib", "arbori.js");
