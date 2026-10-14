@@ -2030,7 +2030,8 @@ const CONT_BARE = path.join(DATA, "cont-bare"); fs.mkdirSync(CONT_BARE, { recurs
 let contBareUltima = 0;
 async function bareZiCont(cale) {
   const f = path.join(CONT_BARE, crypto.createHash("sha1").update(cale).digest("hex").slice(0, 20) + ".json");
-  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < 20 * 3600000) { if (x.lipsa) throw Object.assign(new Error("HTTP 404 (ținut minte)"), { tinut: true }); return x.r; } } catch (e) { if (e.tinut) throw e; }
+  // v101.116 (auditul sever, C4): un 404 („nu știu simbolul”) se ține minte 3 h, nu 20 h - o reparație a rutei / a simbolului ajunge în aceeași zi
+  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < (x.lipsa ? 3 : 20) * 3600000) { if (x.lipsa) throw Object.assign(new Error("HTTP 404 (ținut minte)"), { tinut: true }); return x.r; } } catch (e) { if (e.tinut) throw e; }
   const asteapta = contBareUltima + 2500 - Date.now(); if (asteapta > 0) await new Promise((r) => setTimeout(r, asteapta));
   contBareUltima = Date.now();
   try { const r = await cere(cale); try { scrieAtomic(f, { la: Date.now(), r }); } catch {} return r; }
@@ -2082,9 +2083,13 @@ async function turaBandaLive() {
   }
   for (const id of Object.keys(m.banda)) if (!activi.has(id)) delete m.banda[id];
 }
-const sectoareStare = {}, UNIVERS_FIS = path.join(DATA, "univers-sua.json");
-const trendStare = {};
-async function turaTrendColector() { await turaTrendModul({ trimite, jurnal, fetch }, trendStare); }   // v101.111
+// v101.116 (auditul sever, C5): starea Trend 12 luni / topul pe sectoare pe DISC - înainte stătea doar în memorie, iar după fiecare repornire
+// verdictele zilei se retrimiteau cu ora repornirii (14.10: de 6 ori). `inLucru` nu se scrie.
+function stareDeDisc(fis) { try { const x = JSON.parse(fs.readFileSync(path.join(DATA, fis), "utf8")); return x && typeof x === "object" && !Array.isArray(x) ? x : {}; } catch { return {}; } }
+function scrieStareDisc(fis, st) { try { const { inLucru, ...deScris } = st; scrieAtomic(path.join(DATA, fis), deScris); } catch (e) { jurnal("starea " + fis + " nescrisă", e.message); } }
+const sectoareStare = stareDeDisc("sectoare-stare.json"), UNIVERS_FIS = path.join(DATA, "univers-sua.json");
+const trendStare = stareDeDisc("trend-stare.json");
+async function turaTrendColector() { try { await turaTrendModul({ trimite, jurnal, fetch }, trendStare); } finally { scrieStareDisc("trend-stare.json", trendStare); } }   // v101.111
 // v101.113 (I-630): proba PAZNIC–lățime o dată pe zi, de la 12:00 RO, cât timp PAZNIC mai rulează (stare.json există); 13.10 a fost ratată de mână.
 // Se scoate odată cu PAZNIC (oprirea e plănuită pe 18–19.10).
 const probaLatimeStare = {}, PAZNIC_STARE = "C:/Users/Cimin/PAZNIC-CRYPTO/stare.json";
@@ -2099,8 +2104,10 @@ async function turaProbaLatimePaznic() {
   } finally { probaLatimeStare.inLucru = false; }
 }
 async function turaSectoareColector() {
-  await turaSectoareModul({ cere, trimite, jurnal, Factori, GridCalcul, bareZi: bareZiCont, fetch,
-    universDisc: { citeste: () => { try { return JSON.parse(fs.readFileSync(UNIVERS_FIS, "utf8")); } catch { return null; } }, scrie: (x) => { try { scrieAtomic(UNIVERS_FIS, x); } catch {} } } }, sectoareStare);
+  try {
+    await turaSectoareModul({ cere, trimite, jurnal, Factori, GridCalcul, bareZi: bareZiCont, fetch,
+      universDisc: { citeste: () => { try { return JSON.parse(fs.readFileSync(UNIVERS_FIS, "utf8")); } catch { return null; } }, scrie: (x) => { try { scrieAtomic(UNIVERS_FIS, x); } catch {} } } }, sectoareStare);
+  } finally { scrieStareDisc("sectoare-stare.json", sectoareStare); }
 }
 async function turaRisc() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());

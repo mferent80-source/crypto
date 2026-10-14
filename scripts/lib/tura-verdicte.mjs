@@ -9,6 +9,9 @@ const ORA = 3600000;
 const ziRo = (t) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Bucharest" }).format(new Date(t));
 const oraRo = (t) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t)));
 async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.jurnal("verdicte " + ce, e.message); return null; } }
+// v101.116 (auditul sever, C4 / statistica 🟡1): simbolul T212 (MU_US_EQ, VOW3d_EQ…) ⇒ ticker=; simbolul simplu al Trendului 12 luni și al topului
+// pe sectoare (FFIV, SNDK) ⇒ yahoo=, ca tura-sectoare. Înainte toate mergeau pe ticker= ⇒ 404 „Nu știu simbolul” ⇒ cele două surse nu se judecau niciodată.
+export function caleBareZi(k) { k = String(k || ""); return "/api/t212?action=preturi&interval=1d&" + (/_EQ$/.test(k) ? "ticker=" : "yahoo=") + encodeURIComponent(k); }
 
 // v101.114 (demo „Piața azi” aprobat 14.10): Scorul zilei, din ACELEAȘI date și cu aceeași funcție ca pagina (lib/scor-zi.js) ⇒ jurnal.
 // Fără un modul (probele vechi) sau fără date ⇒ nimic; o linie cu sub 3 piese cu date nu intră (ScorZi.verdicte).
@@ -70,7 +73,7 @@ export async function turaVerdicte(d, st) {
     for (const k of [...new Set(deEvaluat.map((v) => v.k))]) {
       const S = d.Verdicte.SURSE[deEvaluat.find((v) => v.k === k).s];
       if (S.piata === "crypto") bare[k] = await incearca(d, "bare " + k, async () => d.GridCalcul.bare((await d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(k) + "&interval=1D&limit=500")).data.klines));
-      else bare[k] = await incearca(d, "bare " + k, async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(k))).randuri || [], acum));
+      else bare[k] = await incearca(d, "bare " + k, async () => d.GridCalcul.bareBursa((await d.bareZi(caleBareZi(k))).randuri || [], acum));
     }
     reper.QQQ = await incearca(d, "QQQ", async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ")).randuri || [], acum));
     reper.SPY = await incearca(d, "SPY", async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&yahoo=SPY")).randuri || [], acum));   // v101.113 (I-623): rigla Trend 12 luni = aceeași ca bilanțul robotului

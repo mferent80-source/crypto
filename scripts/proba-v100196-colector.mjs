@@ -174,5 +174,63 @@ await test("C1 colector: turaLa ținut la sfârșitul turei, dus în poză; băt
   assert.match(c, /setInterval\(\(\) => \{ bate\(\); turaPoza\(\)/);
 });
 
+
+// ---------------- C4 / C5 / 🔵4 / St2: jurnalul verdictelor ----------------
+const TV = await import("./lib/tura-verdicte.mjs");
+await test("C4: barele verdictelor - simbolul T212 (…_EQ) cu ticker=, simbolul simplu (Trend 12 luni, topul pe sectoare) cu yahoo=", async () => {
+  assert.equal(TV.caleBareZi("MU_US_EQ"), "/api/t212?action=preturi&interval=1d&ticker=MU_US_EQ");
+  assert.equal(TV.caleBareZi("VOW3d_EQ"), "/api/t212?action=preturi&interval=1d&ticker=VOW3d_EQ");
+  assert.equal(TV.caleBareZi("FFIV"), "/api/t212?action=preturi&interval=1d&yahoo=FFIV");
+  assert.equal(TV.caleBareZi("BRK-B"), "/api/t212?action=preturi&interval=1d&yahoo=BRK-B");
+  // tura întreagă, cu un jurnal real în formă: SNDK din Trend, MU din idei, BTC din Poarta gridului
+  const T = Date.UTC(2026, 9, 14, 12, 0), ZIv = 86400000, cerute = [];
+  const vc = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl }; vc.window = vc;
+  const vm = await import("node:vm"); vm.createContext(vc); vm.runInContext(citeste("public", "lib", "verdicte.js"), vc);
+  const jr = [{ s: "trend-12-1", k: "SNDK", n: "top", p: 1482.33, t: T - 40 * ZIv }, { s: "idei", k: "MU_US_EQ", n: "cumpar", p: 100, t: T - 40 * ZIv }];
+  const d = { acum: T, jurnal: () => {}, Verdicte: vc.Verdicte, GridCalcul: { bareBursa: (r) => r.map((x) => ({ t: x.time, c: x.close })), bare: (k) => k },
+    cere: async (c) => (c.includes("action=verdicte") ? { verdicte: jr } : c.includes("action=risc") ? { risc: null } : c.includes("action=cazuri") ? { cazuri: null } : c.includes("action=idei") ? { idei: null, istoric: [] } : {}),
+    trimite: async () => ({ ok: true }), bareZi: async (c) => { cerute.push(c); return { randuri: [] }; } };
+  await TV.turaVerdicte(d, { umplutDinUrma: true, ziLog: "2026-10-14" });
+  assert.ok(cerute.includes("/api/t212?action=preturi&interval=1d&yahoo=SNDK"), JSON.stringify(cerute));
+  assert.ok(cerute.includes("/api/t212?action=preturi&interval=1d&ticker=MU_US_EQ"));
+  assert.ok(!cerute.some((c) => /ticker=SNDK/.test(c)));
+});
+await test("C4: un 404 al barelor se ține minte 3 h (nu 20 h); C5: starea Trend / sectoare pe disc (nu se retrimit la repornire)", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /if \(Date\.now\(\) - x\.la < \(x\.lipsa \? 3 : 20\) \* 3600000\)/);
+  assert.match(c, /const sectoareStare = stareDeDisc\("sectoare-stare\.json"\)/);
+  assert.match(c, /const trendStare = stareDeDisc\("trend-stare\.json"\);/);
+  assert.match(c, /scrieStareDisc\("trend-stare\.json", trendStare\)/);
+  assert.match(c, /scrieStareDisc\("sectoare-stare\.json", sectoareStare\)/);
+});
+
+const IB = await import(`../functions/api/istoric-bot.js?t=${Math.random()}`);
+function kvMem() { const m = new Map(); return { m, get: async (k) => m.get(k) ?? null, put: async (k, v) => { m.set(k, v); }, list: async () => ({ keys: [], list_complete: true }) }; }
+const ENVi = (kv) => ({ APP_API_TOKEN: ENV.APP_API_TOKEN, ISTORIC: kv });
+const post = (action, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?action=" + action, { method: "POST", headers: { authorization: "Bearer " + ENV.APP_API_TOKEN, origin: "http://127.0.0.1:8788", "content-type": "application/json" }, body: JSON.stringify(corp) });
+await test("C5 / 🔵4: jurnalul verdictelor păstrează PRIMUL verdict al zilei (retrimiterea de după-amiază nu-l mai înlocuiește pe cel de dimineață)", async () => {
+  const kv = kvMem(), acum = Date.now(), dim = acum - 1000;
+  assert.equal((await IB.onRequestPost({ request: post("verdict", { verdicte: [{ s: "poarta-t212", k: "MU_US_EQ", n: "cumpara", p: 100, t: dim }] }), env: ENVi(kv) })).status, 200);
+  await IB.onRequestPost({ request: post("verdict", { verdicte: [{ s: "poarta-t212", k: "MU_US_EQ", n: "asteapta", p: 104, t: acum }] }), env: ENVi(kv) });
+  const l = JSON.parse(kv.m.get("verdicte:jurnal"));
+  assert.equal(l.length, 1); assert.equal(l[0].n, "cumpara"); assert.equal(l[0].p, 100);
+});
+await test("🔵4: un verdict al PAGINII (Poarta) cu `t` mai vechi de 10 min e refuzat; cele ale colectorului (idei din istoric) trec", async () => {
+  const kv = kvMem(), vechi = Date.now() - 3 * 86400000;
+  const r = await IB.onRequestPost({ request: post("verdict", { verdicte: [{ s: "poarta-grid", k: "BTC_USDT_PERP", n: "porneste", p: 60000, t: vechi }] }), env: ENVi(kv) });
+  assert.equal(r.status, 400);
+  const r2 = await IB.onRequestPost({ request: post("verdict", { verdicte: [{ s: "idei", k: "MU_US_EQ", n: "cumpar", p: 90, t: vechi }] }), env: ENVi(kv) });
+  assert.equal(r2.status, 200);
+});
+await test("St2: action=cazuri păstrează `bilant.teste` (curățat: nume ≤ 120, p, difMed, verdict) ⇒ registrul BH le primește", async () => {
+  const kv = kvMem();
+  const corp = { la: 1, cazuri: [{ a: 1 }], bilant: { adx: "x", sem: "y", teste: [{ nume: "Boții porniți cu ADX sub 20 față de cei în trend (peste 25)", p: 0.03, difMed: 0.4, verdict: "dovedit" }, { nume: "<b>" + "z".repeat(300), p: "rău", difMed: null, verdict: 5 }, null] } };
+  assert.equal((await IB.onRequestPost({ request: post("cazuri", corp), env: ENVi(kv) })).status, 200);
+  const b = JSON.parse(kv.m.get("cazuri")).bilant;
+  assert.equal(b.adx, "x"); assert.equal(b.teste.length, 2);
+  assert.deepEqual(b.teste[0], { nume: "Boții porniți cu ADX sub 20 față de cei în trend (peste 25)", p: 0.03, difMed: 0.4, verdict: "dovedit" });
+  assert.equal(b.teste[1].nume.length, 120); assert.equal(b.teste[1].p, null); assert.equal(b.teste[1].verdict, null);
+});
+
 console.log(`\n${picate ? "PICĂ" : "TRECE"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
