@@ -68,7 +68,9 @@ await test("C2: verdicte ZILNICE persistente pe aceleași simboluri (randamente 
       for (let i = 0; i < 260; i++) { p *= 1 + (r() - 0.5) * 0.04; b.push({ t: T0 + i * ZI, c: p }); if (r() < 0.05) fav = !fav; if (i < 230) jurnal.push({ s: "poarta-t212", k: sym, n: fav ? "cumpara" : "nu", p, t: T0 + i * ZI + 3600000 }); }
       bare[sym] = b;
     }
-    const c = V.calibrare(V.evalueaza(jurnal, bare, {})).find((x) => x.h === 20);
+    /* v100.196 (🔴2): Poarta se judecă pe zile; la h = 20 cele 40 de simboluri se răresc în aceleași ~8 zile ⇒ „puține” (corect); rata se măsoară la h = 5 */
+    const cal = V.calibrare(V.evalueaza(jurnal, bare, {})), c = cal.find((x) => x.h === 5), c20 = cal.find((x) => x.h === 20);
+    assert.ok(!c20 || c20.test.stare === "putine", "h = 20: " + (c20 && c20.test.stare));
     if (c && c.test.stare === "testat") { testate++; if (c.test.p < 0.05) mic++; }
   }
   assert.ok(testate >= 30, "seturi testate " + testate); assert.ok(mic / testate <= 0.08, "p < 0,05 în " + mic + " din " + testate);

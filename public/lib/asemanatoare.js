@@ -84,7 +84,7 @@ var Asemanatoare = (function () {
   }
   function textSemafor(bl) {
     if (!bl || !(bl.n > 0)) return null;
-    if (bl.verdict === "puține") return bl.motiv === "zile" ? "pe boții tăi: prea puține perioade de timp cu ambele feluri de becuri (" + bl.blocuri + " de câte " + BLOC_ZILE + " zile, trebuie " + MIN_BLOCURI + "; din " + bl.n + ")" : "pe boții tăi: prea puține cazuri cu becurile la pornire (" + bl.n + ")";
+    if (bl.verdict === "puține") return bl.motiv === "zile" ? "pe boții tăi: prea puține perioade de timp cu ambele feluri de becuri (" + perioade(bl.blocuri) + ", trebuie " + MIN_BLOCURI + "; din " + String(bl.n).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ")" : "pe boții tăi: prea puține cazuri cu becurile la pornire (" + bl.n + ")";
     // revizia v100.110: „fără bec împotrivă” (lateralul intră aici, nu „cu botul”) și miile cu punct
     // v100.175 (revizia v100.173): verdictul e pe MEDIANĂ ⇒ textul o arată întâi; „% pe plus” rămâne alături, doar informativ
     var P = function (x) { return Math.round(x * 100) + "%"; }, N = String(bl.n).replace(/\B(?=(\d{3})+(?!\d))/g, "."), M = function (g) { return g && g.med != null ? "mediana " + (g.med >= 0 ? "+" : "−") + Math.abs(g.med * 100).toFixed(1).replace(".", ",") + "%, " : ""; };
@@ -104,6 +104,7 @@ var Asemanatoare = (function () {
   // trec prin aceeași piață, iar ADX-ul / becurile vin în faze. Al doilea test, ca în Carnet.verdictMonede: blocuri de 3 zile (după pornire), în
   // fiecare diferența de MEDIANĂ (măsura fixată dinainte), semnele întoarse între blocuri; sub 8 blocuri cu ambele feluri ⇒ „puține”.
   var BLOC_ZILE = 3, MIN_BLOCURI = 8, ZI = 864e5;
+  function perioade(n) { n = Math.round(Number(n) || 0); var r = n % 100; return (n === 1 ? "o perioadă" : n + (r >= 20 || (r === 0 && n >= 100) ? " de " : " ") + "perioade") + " de câte " + BLOC_ZILE + " zile"; }
   function pSemne(d, rnd, reps) {
     var s0 = 0, n = d.length, peste = 0, k, s, j; for (j = 0; j < n; j++) s0 += d[j]; var obs = Math.abs(s0 / n) - 1e-15;
     if (n <= 14) { var tot = 1 << n; for (k = 0; k < tot; k++) { s = 0; for (j = 0; j < n; j++) s += (k >> j) & 1 ? -d[j] : d[j]; if (Math.abs(s / n) >= obs) peste++; } return peste / tot; }
@@ -152,7 +153,7 @@ var Asemanatoare = (function () {
   function textAdx(bl) {
     // cazurile fără ADX (colectorul încă pe o versiune veche) ⇒ nimic de spus, nu „prea puține (0)”
     if (!bl || !(bl.n > 0)) return null;
-    if (bl.verdict === "puține") return bl.motiv === "zile" ? "pe boții tăi: prea puține perioade de timp cu ambele feluri de ADX (" + bl.blocuri + " de câte " + BLOC_ZILE + " zile, trebuie " + MIN_BLOCURI + "; din " + bl.n + ")" : "pe boții tăi: prea puține cazuri (" + bl.n + ")";
+    if (bl.verdict === "puține") return bl.motiv === "zile" ? "pe boții tăi: prea puține perioade de timp cu ambele feluri de ADX (" + perioade(bl.blocuri) + ", trebuie " + MIN_BLOCURI + "; din " + String(bl.n).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ")" : "pe boții tăi: prea puține cazuri (" + bl.n + ")";
     var P = function (x) { return Math.round(x * 100) + "%"; };
     var M = function (g) { return g && g.med != null ? "mediana " + (g.med >= 0 ? "+" : "−") + Math.abs(g.med * 100).toFixed(1).replace(".", ",") + "%, " : ""; };   /* v100.175: verdictul e pe mediană */
     var cifre = "sub 20: " + M(bl.loc) + P(bl.loc.plus) + " pe plus · peste 25: " + M(bl.trend) + P(bl.trend.plus) + " pe plus, din " + bl.n;
