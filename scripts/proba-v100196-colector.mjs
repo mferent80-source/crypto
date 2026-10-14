@@ -232,5 +232,36 @@ await test("St2: action=cazuri păstrează `bilant.teste` (curățat: nume ≤ 1
   assert.equal(b.teste[1].nume.length, 120); assert.equal(b.teste[1].p, null); assert.equal(b.teste[1].verdict, null);
 });
 
+
+// ---------------- C6 + 🔵3: limita de scriere și cozile ----------------
+await test("C6: colectorul are loc de scriere pe istoric (40 de POST-uri pe minut trec), iar alertele au găleata lor", async () => {
+  const kv = kvMem(), env = ENVi(kv), st = [];
+  const postCol = (action, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?action=" + action, { method: "POST", headers: { authorization: "Bearer " + ENV.APP_API_TOKEN, origin: "http://127.0.0.1:8788", "content-type": "application/json", "x-radar-client": "colector", "x-forwarded-for": "10.196.0.1" }, body: JSON.stringify(corp) });
+  for (let i = 0; i < 40; i++) st.push((await IB.onRequestPost({ request: postCol("adauga", { bot: "b" + i, intrare: { t: Date.now(), pretPerp: 1 } }), env })).status);
+  assert.equal(st.filter((s) => s === 429).length, 0, st.join(","));
+  const a = (await IB.onRequestPost({ request: postCol("alerte", { alerta: { t: Date.now(), nivel: "critic", titlu: "lichidarea la 6%" } }), env })).status;
+  assert.equal(a, 200, "alerta trece și după un minut plin de scrieri");
+  assert.match(citeste("functions", "api", "istoric-bot.js"), /requireApiAuth\(request,env,action==="alerte"\?"istoric-alerte":"istoric-write",30,150\)/);
+});
+await test("C6 / 🔵3: coada (KV și Discord) - în ordine, se oprește la primul eșec, renunță doar la ce e prea vechi; critic ține 24 h", async () => {
+  const T = 1792000000000, H = 3600000, trimise = [];
+  const coada = [{ t: T - 13 * H, m: { nivel: "info", titlu: "vechi" } }, { t: T - 13 * H, m: { nivel: "critic", titlu: "critic vechi" } }, { t: T - 1 * H, m: { nivel: "atentie", titlu: "a" } }, { t: T, m: { nivel: "info", titlu: "b" } }];
+  const maxMs = (x) => (x.m.nivel === "critic" ? 24 : 12) * H;
+  const r = await S.golesteCoadaPas(coada, { acum: T, maxMs, trimite: async (x) => { trimise.push(x.m.titlu); return x.m.titlu !== "a"; } });
+  assert.deepEqual(trimise, ["critic vechi", "a"]); assert.deepEqual(r.renuntate.map((x) => x.m.titlu), ["vechi"]);
+  assert.deepEqual(r.ramase.map((x) => x.m.titlu), ["a", "b"], "după primul eșec restul așteaptă");
+  const r2 = await S.golesteCoadaPas([{ t: T, m: { titlu: "x" } }], { acum: T, maxMs, trimite: async () => { throw new Error("fără rețea"); } });
+  assert.equal(r2.ramase.length, 1, "o excepție = eșec, nu pierdere");
+});
+await test("C6 colector: alerta ratată în KV intră în coada de pe disc și se reîncearcă; cozile au gardă de reintrare; turele grele stau 60 s după un 429", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /if \(!inKv && ok\) \{ coadaKv\.push\(\{ t: alertaKv\.t, m: alertaKv \}\); salveazaCoadaKv\(\); \}/);
+  assert.match(c, /golesteCoadaKv\(\)\.catch\(\(e\) => jurnal\("coada kv", e\.message\)\);/);
+  assert.match(c, /if \(golireDiscord \|\| CANAL !== "discord" \|\| !coadaDiscord\.length\) return;/);
+  assert.match(c, /if \(S\.eLimitaDeRitm\(eroare\)\) ritmPauzaPana = Date\.now\(\) \+ 60000;/);
+  assert.match(c, /const greleOk = Date\.now\(\) >= ritmPauzaPana;/);
+  assert.match(c, /if \(greleOk\) turaProfil\(\)/);
+});
+
 console.log(`\n${picate ? "PICĂ" : "TRECE"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);

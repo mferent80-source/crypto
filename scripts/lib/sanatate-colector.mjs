@@ -12,6 +12,21 @@ export function eCadereAuth(e) {
 // limita de ritm adevărată (RATE_LIMITED): trece singură, nu e cădere
 export function eLimitaDeRitm(e) { return !!e && e.status === 429 && !eCadereAuth(e); }
 
+// C6 + 🔵3: o coadă de alerte netrimise (KV-ul Radarului, Discord), golită în ORDINE: după primul eșec restul așteaptă tura următoare;
+// se renunță doar la ce e mai vechi decât maxMs(x) (critic: 24 h, restul 12 h - apelantul hotărăște). O excepție la trimitere = eșec, nu pierdere.
+// Întoarce { ramase, trimise, renuntate } (listele, în ordinea cozii); apelantul păzește reintrarea și scrie coada pe disc.
+export async function golesteCoadaPas(coada, { trimite, acum, maxMs }) {
+  const ramase = [], trimise = [], renuntate = [];
+  for (const x of Array.isArray(coada) ? coada : []) {
+    if (!x) continue;
+    if (acum - (Number(x.t) || 0) > maxMs(x)) { renuntate.push(x); continue; }
+    if (ramase.length) { ramase.push(x); continue; }
+    let ok = false; try { ok = !!(await trimite(x)); } catch { ok = false; }
+    (ok ? trimise : ramase).push(x);
+  }
+  return { ramase, trimise, renuntate };
+}
+
 // C3: Pionex dă uneori lista boților PORNIȚI goală (result:true, results:null) deși boții merg. Pe listă goală bucla pe boți nu face
 // nimic (nici lichidare, nici stop, nici plan) ⇒ după 10 minute un anunț critic, repetat cel mult la 3 ore; la revenire, unul de informare.
 // m = meta() din starea alertelor (cunoscuti, listaGoalaDe, listaGoalaAnuntat). Apelantul notează `listaGoalaAnuntat` DOAR după ce mesajul a plecat.

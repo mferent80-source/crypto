@@ -221,6 +221,9 @@ async function ferestreServer() {
   try { const d = await cere("/api/istoric-bot?action=ferestre"); ferestreMemo = { la: Date.now(), v: d && Array.isArray(d.ferestre) ? d.ferestre : [] }; } catch (e) { ferestreMemo = { la: Date.now(), v: ferestreMemo.v }; }
   return ferestreMemo.v;
 }
+// v101.116 (auditul sever, C6): după un 429 de ritm turele GRELE (profil, ore, clasament, laborator) stau 60 s - colectorul nu-și mai mănâncă singur
+// limita din care trebuie să plece alertele (var: citit în buclă)
+var ritmPauzaPana = 0;
 async function cere(cale, opt = {}) {
   const ePret = cale.startsWith("/api/market?type=pionex_");
   try {
@@ -229,9 +232,10 @@ async function cere(cale, opt = {}) {
     if (!r.ok) throw Object.assign(new Error((d && (d.error + (d.detail ? " · " + d.detail : ""))) || "HTTP " + r.status), { status: r.status, cod: d && d.error || null });
     if (ePret) { if (d && d.result === false) { preturiTura.rau++; preturiTura.eroare = String((d.error || "Pionex") + (d.detail ? " · " + d.detail : "")); } else preturiTura.ok++; }
     return d;
-  } catch (e) {
-    if (ePret) { preturiTura.rau++; preturiTura.eroare = String(e && e.message || e); }
-    throw e;
+  } catch (eroare) {
+    if (S.eLimitaDeRitm(eroare)) ritmPauzaPana = Date.now() + 60000;
+    if (ePret) { preturiTura.rau++; preturiTura.eroare = String(eroare && eroare.message || eroare); }
+    throw eroare;
   }
 }
 const trimite = (cale, corp) => cere(cale, { method: "POST", body: JSON.stringify(corp), headers: { "content-type": "application/json", origin: BAZA } });
@@ -243,16 +247,36 @@ let coadaDiscord = []; try { coadaDiscord = JSON.parse(fs.readFileSync(COADA_FIS
 function scrieAtomic(fis, obj) { const tmp = fis + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, fis); }
 // v100.175 (auditul Opus, M18): plafonul taie întâi alertele „info” (cele mai vechi), apoi restul - și spune în jurnal ce a pierdut
 function salveazaCoada() { try { const t = taieCoada(coadaDiscord, 200); if (t.taiate) { jurnal("coada discord: plafon 200, am renunțat la " + cate(t.taiate, "alertă", "alerte") + " (întâi cele info)"); coadaDiscord = t.coada; } scrieAtomic(COADA_FIS, coadaDiscord); } catch (e) { jurnal("coada discord nescrisa", e.message); } }
+// v101.116 (auditul sever, 🔵3): gardă de reintrare (o coadă mare, ~1 s pe mesaj, se suprapunea cu bucla următoare și dubla mesaje);
+// alertele CRITICE se mai încearcă 24 h (înainte: renunțat tăcut la 12 h, ca la info); ce intră în coadă cât se golește rămâne la coadă
+let golireDiscord = false;
 async function golesteCoada() {
-  if (CANAL !== "discord" || !coadaDiscord.length) return;
-  const acum = Date.now(), ramase = [];
-  for (const x of coadaDiscord) {
-    if (acum - x.t > 12 * 3600000) { jurnal("coada discord: renunt (peste 12 h)", x.m.titlu); continue; }
-    if (ramase.length) { ramase.push(x); continue; }   // in ordine: dupa primul esec, restul asteapta tura urmatoare
-    const ok = await trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
-    if (!ok) ramase.push(x);
-  }
-  if (ramase.length !== coadaDiscord.length) { coadaDiscord = ramase; salveazaCoada(); }
+  if (golireDiscord || CANAL !== "discord" || !coadaDiscord.length) return;
+  golireDiscord = true;
+  try {
+    const acum = Date.now(), lot = coadaDiscord.slice();
+    const r = await S.golesteCoadaPas(lot, { acum, maxMs: (x) => (x.m && x.m.nivel === "critic" ? 24 : 12) * 3600000,
+      trimite: (x) => trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal }) });
+    for (const x of r.renuntate) jurnal("coada discord: renunț (" + (x.m && x.m.nivel === "critic" ? "critică, peste 24 h" : "peste 12 h") + ")", x.m && x.m.titlu);
+    if (r.ramase.length !== lot.length) { coadaDiscord = r.ramase.concat(coadaDiscord.filter((x) => !lot.includes(x))); salveazaCoada(); }
+  } finally { golireDiscord = false; }
+}
+// v101.116 (auditul sever, C6): alerta plecată pe Discord dar respinsă de KV-ul Radarului (429 la 16:30 / noaptea) lipsea din Radar și din
+// „ce a urmat după 24 h” ⇒ coada ei pe disc (data/de-trimis-kv.json), reîncercată la fiecare tură, cel mult 24 h, cu ora ei
+const COADA_KV_FIS = path.join(DATA, "de-trimis-kv.json");
+let coadaKv = []; try { coadaKv = JSON.parse(fs.readFileSync(COADA_KV_FIS, "utf8")); if (!Array.isArray(coadaKv)) coadaKv = []; } catch { coadaKv = []; }
+function salveazaCoadaKv() { try { if (coadaKv.length > 300) { jurnal("coada kv: plafon 300, renunț la " + cate(coadaKv.length - 300, "alertă", "alerte") + " (cele mai vechi)"); coadaKv = coadaKv.slice(-300); } scrieAtomic(COADA_KV_FIS, coadaKv); } catch (e) { jurnal("coada kv nescrisă", e.message); } }
+let golireKv = false;
+async function golesteCoadaKv() {
+  if (golireKv || !coadaKv.length) return;
+  golireKv = true;
+  try {
+    const lot = coadaKv.slice();
+    const r = await S.golesteCoadaPas(lot, { acum: Date.now(), maxMs: () => 24 * 3600000, trimite: async (x) => { const d = await trimite("/api/istoric-bot?action=alerte", { alerta: x.m }); return !!(d && d.ok); } });
+    for (const x of r.renuntate) jurnal("coada kv: renunț (peste 24 h)", x.m && x.m.titlu);
+    if (r.trimise.length) jurnal("coada kv: " + cate(r.trimise.length, "alertă urcată", "alerte urcate") + " în Radar cu întârziere");
+    if (r.ramase.length !== lot.length) { coadaKv = r.ramase.concat(coadaKv.filter((x) => !lot.includes(x))); salveazaCoadaKv(); }
+  } finally { golireKv = false; }
 }
 // Alerta pleaca INTAI in KV (se vede in Radar, pe orice dispozitiv de acasa); apoi, daca e
 // cerut, pe canalul extern. "Trimisa" = a ajuns macar in KV (v100.40: iar Discord refuzat -> coada, reincercata).
@@ -262,15 +286,18 @@ function pretBot(id) { const b = (ultimiiBoti || []).find((x) => x && String(x.i
 function simbolBot(id) { const b = (ultimiiBoti || []).find((x) => x && String(x.id) === String(id)); try { return b ? TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex : null; } catch { return null; } }
 async function trimiteAlerta(m, bot, cheie) {
   let inKv = false;
-  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null, pret: pretBot(bot), simbol: simbolBot(bot) } }); inKv = !!(r && r.ok); }
+  const alertaKv = { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null, pret: pretBot(bot), simbol: simbolBot(bot) };
+  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: alertaKv }); inKv = !!(r && r.ok); }
   catch (e) { jurnal("alerta in KV EȘEC", e.message); }
   notezAlerta({ t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null });   // v101.86: și „doar în Radar” (grilele)
   // v97.9: unele alerte (grila atinsa) raman doar in Radar - pagina Alerts le arata, canalul extern nu le primeste
   if (m.doarRadar) { jurnal("alerta (doar în Radar)", m.nivel, m.titlu); return inKv; }
-  if (CANAL === "ntfy") { const ok = await ntfy(m); return inKv || ok; }
+  // v101.116 (C6): plecată pe canalul extern, dar nu în KV ⇒ coada KV (alerta e dată drept trimisă, deci tura următoare n-o mai reîncearcă)
+  if (CANAL === "ntfy") { const ok = await ntfy(m); if (!inKv && ok) { coadaKv.push({ t: alertaKv.t, m: alertaKv }); salveazaCoadaKv(); } return inKv || ok; }
   if (CANAL === "discord") {
     const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
     if (!ok) { coadaDiscord.push({ t: Date.now(), m: { nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "" } }); salveazaCoada(); }
+    if (!inKv && ok) { coadaKv.push({ t: alertaKv.t, m: alertaKv }); salveazaCoadaKv(); }
     return inKv || ok;
   }
   if (!inKv) jurnal("alerta NETRIMISA", m.nivel, m.titlu);
@@ -2207,10 +2234,12 @@ async function bucla() {
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message)).then(() => turaPoza()).catch((e) => jurnal("poza", e.message));
   turaCopie();
   golesteCoada().catch((e) => jurnal("coada discord", e.message));   // v100.40
+  golesteCoadaKv().catch((e) => jurnal("coada kv", e.message));   // v101.116 (C6): alertele ratate în KV
+  const greleOk = Date.now() >= ritmPauzaPana;   // v101.116 (C6): 60 s după un 429 de ritm, turele grele nu pornesc
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
-  turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaVarianteNoapte()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
+  if (greleOk) turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaVarianteNoapte()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
   turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00
@@ -2233,7 +2262,7 @@ async function bucla() {
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
   turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)
   turaMonteCarloBot().then(() => turaDupa24h()).catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute; v101.92: + judecata după 24 h (voci, alerte)
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  if (greleOk && !process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
   // v101.34: bucla e la 60 s - poza are ceasul ei (16–17 la 30 s); turaPoza se pazeste singura (ritmul, pozaInLucru)

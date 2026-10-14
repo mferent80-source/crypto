@@ -139,10 +139,12 @@ export async function onRequestGet({request,env}){
 }
 
 export async function onRequestPost({request,env}){
-  const auth=await requireApiAuth(request,env,"istoric-write",30);if(!auth.ok)return authErrorResponse(auth,H);
+  // v100.196 (auditul sever, C6): colectorul scrie zeci de chei pe minut (istoricul fiecărui bot, semnalele, paza, profilurile noaptea) - cu 30 pe
+  // minut se respingea singur (306 de 429 în 7 zile, 5 alerte lipsă din Radar) ⇒ găleata lui 150; alertele au găleata LOR (nu le mai mănâncă restul)
+  const u=new URL(request.url),action=u.searchParams.get("action");
+  const auth=await requireApiAuth(request,env,action==="alerte"?"istoric-alerte":"istoric-write",30,150);if(!auth.ok)return authErrorResponse(auth,H);
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
-  const u=new URL(request.url),action=u.searchParams.get("action");
   const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:action==="universSua"?1048576:action==="sectoareTop"||action==="trend12"?262144:action==="disciplinaBanda"?524288:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
