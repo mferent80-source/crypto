@@ -2721,7 +2721,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .pzDemo #acasa>*{order:900}
 .pzDemo #acasa>.acAntet{order:0}.pzDemo #acasa>.acVerdicte{order:10}
 .pzDemo #acasa>.acGrupCap:has(+.acTine){order:20}.pzDemo #acasa>.acTine{order:21}
-.pzDemo #acasa>#acCumpar{order:30}.pzDemo #acasa>#acLegatura{order:35}
+.pzDemo #acasa>#acCumpar{order:30}.pzDemo #acasa>#acTrendZi{order:31}.pzDemo #acasa>#acLegatura{order:35}
 .pzDemo #acasa>.acRandCap:has(+.acPuls #acBtc){order:40}.pzDemo #acasa>.acPuls:has(#acBtc){order:41}
 .pzDemo #acasa>.acRandCap:has(+.acPuls #acNasdaq){order:42}.pzDemo #acasa>.acPuls:has(#acNasdaq){order:43}
 .pzDemo #acasa>.acDoua:has(#acMacro){order:50}.pzDemo #acasa>#acHarta{order:55}.pzDemo #acasa>.acDoua:has(#acMisca){order:60}
@@ -2899,7 +2899,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .szChip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:3px;padding:1px 6px;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
 .szP{background:rgba(38,169,108,.18);color:#4fd096}.szN{background:rgba(229,97,90,.18);color:#ff8a80}.sz0{background:rgba(159,179,196,.14);color:#c9d6e2}.szLipsa{background:transparent;color:var(--muted)}.szW{background:rgba(233,185,73,.18);color:var(--warn)}
 @media (max-width:900px){#dash .acCol{display:contents}#dash .acDouaMb #acMacro{order:1}#dash .acDouaMb #acScorZi{order:2}#dash .acDouaMb #acMb{order:3}#dash .acDouaMb #acRegim{order:4}
-  #dash .acDouaSug #acSectoare{order:1}#dash .acDouaSug #acMbSug{order:2}#dash .acDouaSug #acTrendZi{order:3}#dash .acDouaSug #acTopSector{order:4}}
+  #dash .acDouaSug #acSectoare{order:1}#dash .acDouaSug #acMbSug{order:2}#dash .acDouaSug #acTopSector{order:3}}
 @media (max-width:640px){.mbSursa{grid-template-columns:minmax(0,1fr) 44px 86px}.mbSursa>span:last-child{grid-column:1/-1}.acLb.mbLb{grid-template-columns:120px minmax(0,1fr) 52px}.mbSect{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   .mbRand{grid-template-columns:58px minmax(0,1fr) auto}.mbRand>.mbRap{grid-column:2/-1;text-align:left}.acSym{min-height:44px}.szRand{grid-template-columns:62px minmax(0,1fr)}.szRand>span{grid-column:1/-1}.mbPeste{display:none}.mbIncaPc{display:none}.mbIncaTel{display:block}.mbSc{grid-template-columns:minmax(0,1fr) 40px}.mbSc>span:last-child{grid-column:1/-1}}
 /* v100.190: Trend 12 luni în Sugestii — raportarea e roșie, lista e numerotată strâns · v100.191: cifrele nu se rup („12-” / „1 +458,1 %” pe telefon), pe telefon linia de cifre stă sub nume; saltul într-o zi e galben */

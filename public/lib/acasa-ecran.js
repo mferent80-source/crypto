@@ -210,6 +210,7 @@ function acTrendZi(x) {
       + '<b class="good mbNum">12-1 ' + P1(t.m12) + '</b><span class="acMut mbRap">60 z ' + P1(t.r60) + '</span></div>';
   }).join("");
   var b = x.bilant;
+  if (b && b.abatere && b.abatere.atinsa) h += '<p class="acEt"><b class="bad">ABATERE</b>: media pe ' + escapeHtml(acCate(b.abatere.k || 0, "fereastră", "ferestre")) + ' de 20 z, ' + P1(b.abatere.medie / 100) + ' față de alte acțiuni, sub pragul scris înainte (' + P1(b.abatere.prag / 100) + ') — de revăzut, nu de cumpărat.</p>';   /* v100.195 */
   h += '<div class="acLin" style="margin-top:4px"><span>' + (x.concentrare ? escapeHtml(x.concentrare.n + " din 20 " + x.concentrare.sector) + " — un singur pariu · " : "") + 'proba: ' + escapeHtml(acCate(b && b.n20 || 0, "zi", "zile")) + ' cu rezultat</span><button type="button" class="acLink" data-action-click="navTo(&#39;sugestii&#39;,true)">toate 20 în Sugestii ›</button></div>';
   return h;
 }

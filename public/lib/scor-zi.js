@@ -100,7 +100,7 @@
     if (!r) return '<div class="acCap"><h4>Scorul zilei</h4></div><p class="acMut">Aștept datele pieței…</p>';
     return '<div class="acCap"><h4>Scorul zilei</h4><span class="acSub">suma faptelor din pagină · fiecare −1 / 0 / +1</span></div>'
       + htmlLinie("Acțiuni", r.actiuni) + '<div style="height:8px"></div>' + htmlLinie("Crypto", r.crypto)
-      + '<p class="acEt">Fiecare piesă e la vedere; scorul doar le adună. Neprobat ca semnal: e contextul zilei, nu un buton. Jurnalul verdictelor îl ia o dată pe zi, după 9:00 (pe închiderea de ieri), și îl judecă la 5 și 20 de zile.</p>';
+      + '<p class="acEt">Fiecare piesă e la vedere; scorul doar le adună. Neprobat ca semnal: e contextul zilei, nu un buton. Jurnalul verdictelor îl ia o dată pe zi, după 9:00 (pe închiderea de ieri), și îl judecă la 5 și 20 de zile — la 5 zile abia după ~1 an (verdictele care nu se suprapun), la 20 de zile după ~5 ani. Până atunci e un rezumat, nu un semnal.</p>';
   }
 
   global.ScorZi = { calc, verdicte, html, verdict };

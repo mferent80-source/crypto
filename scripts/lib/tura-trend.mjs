@@ -1,7 +1,7 @@
 // tura-trend.mjs — „Trend 12 luni” în Radar (v101.111, 14.10.2026; el: „integrează cum ai zis”; v101.112: saltul într-o zi). Radarul NU recalculează nimic:
 // citește o dată pe zi (de la 8:00, după robotul de la 01:40) clasamentul publicat de robotul din premarket_scanner (GitHub Pages) —
-// primele 20 % din ~600 de acțiuni SUA ≥ 2 mld. $ după randamentul pe lunile 2–12 (ultima lună sărită), probat pe 14.10 față de alte
-// acțiuni în aceeași zi (+0,9 % pe 20 z, +3,4 % pe 60 z), NEprobat pe listă istorică ⇒ „în probă”. Îl pune în KV (sugestii:trend12,
+// primele 20 % din ~600 de acțiuni SUA ≥ 2 mld. $ după randamentul pe lunile 2–12 (ultima lună sărită), doar INDICIU față de alte
+// acțiuni în aceeași zi (auditul de seară 14.10: t ≈ 1,5 pe ferestre independente), NEprobat pe listă istorică ⇒ „în probă”. Îl pune în KV (sugestii:trend12,
 // pagina Sugestii) și trimite primele 20 în jurnalul verdictelor ca sursă „trend-12-1”, judecate de aceeași mașinărie ca topul pe
 // sectoare (5 și 20 de zile față de QQQ). Poarta nu dimensionează pe el până nu zice bilanțul robotului „probat”.
 export const SURSA = "https://mferent80-source.github.io/premarket_scanner.html/candidate-engine/generated/";
@@ -29,7 +29,8 @@ export function trendDinJson(j, b, acum) {
   const bilant = b && typeof b === "object" && b.versiune === 1 ? {
     zile: nr(b.zile) || 0, n20: nr(b.n20) || 0, ferestre20: nr(b.ferestre20), exces20: nr(b.exces20), nulB20: nr(b.nulB20),
     diferenta20: b.diferenta20 && typeof b.diferenta20 === "object" ? { medie: nr(b.diferenta20.medie), interval: Array.isArray(b.diferenta20.interval) ? b.diferenta20.interval.map(nr) : null } : null,
-    verdict: text(b.verdict || "în probă", 60),
+    verdict: text(b.verdict || "în probă", 60), t20: nr(b.t20),   /* v101.115: criteriul pe ferestre nesuprapuse (t > 3,2) + abaterea scrisă înainte */
+    abatere: b.abatere && typeof b.abatere === "object" ? { k: nr(b.abatere.k), medie: nr(b.abatere.medie), prag: nr(b.abatere.prag), atinsa: b.abatere.atinsa === true } : null,
   } : null;
   return {
     la: acum, dataUltimei: j.dataUltimei, regim, sectoare, concentrare, raportari: j.raportari && j.raportari.sursa === "finnhub" ? "finnhub" : null,

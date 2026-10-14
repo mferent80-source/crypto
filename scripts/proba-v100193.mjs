@@ -149,14 +149,14 @@ await test("pagina: cererile noi, cardurile desenate, Scorul zilei din aceleași
   for (const s of ['pas("mbUs"', 'pas("trend12"', 'pas("sectoareTop"', 'pas("latimeKv"', 'acNou("acMb", function () { return LatimeUS.htmlCard(mbX); })', 'acNou("acMbSug", function () { return LatimeUS.htmlSugestii(mbX); })', 'ScorZi.html(ScorZi.calc({ macro:', 'trend: d.trend12, mbUs: mbX, latime: d.latimeKv', 'acNou("acTrendZi", function () { return acTrendZi(d.trend12); })', 'acNou("acTopSector", function () { return acTopSector(d.sectoareTop); })'])
     assert.ok(ae.includes(s), "acasa-ecran: " + s);
   assert.match(idx, /<div class="acDoua acDouaMb"><div class="acCol"><div class="acBloc" id="acMacro"><\/div><div class="acBloc acMbBloc" id="acMb"><\/div><\/div><div class="acCol"><div class="acBloc" id="acRegim"><\/div><div class="acBloc acSzBloc" id="acScorZi"><\/div><\/div><\/div>/);
-  assert.match(idx, /<div class="acDoua acDouaSug"><div class="acCol"><div class="acBloc" id="acSectoare"><\/div><div class="acBloc" id="acTopSector"><\/div><div class="acBloc" id="acTrendZi"><\/div><\/div><div class="acCol"><div class="acBloc acMbBloc" id="acMbSug"><\/div><\/div><\/div>/);
+  assert.match(idx, /<div class="acDoua acDouaSug"><div class="acCol"><div class="acBloc" id="acSectoare"><\/div><div class="acBloc" id="acTopSector"><\/div><\/div><div class="acCol"><div class="acBloc acMbBloc" id="acMbSug"><\/div><\/div><\/div>/);
   assert.match(idx, /<script src="\/lib\/macro\.js"><\/script><script src="\/lib\/scor-zi\.js"><\/script>/); assert.match(sw, /"\/lib\/scor-zi\.js"/);
 });
 await test("CSS: coloanele pe monitor, ordinea demo-ului pe telefon (Dobânzi, Scorul zilei, Market Breadth, Regim; Sectoare, Sugestii MB, Trend, Cele mai tari), rândul 2 înaintea hărții", () => {
   const css = citeste("public", "app.css");
   assert.match(css, /#dash \.acCol\{display:flex;flex-direction:column;gap:8px;min-width:0\}/); assert.match(css, /\.pzDemo #acasa>\.acDoua:has\(#acSectoare\)\{order:51\}/);
   assert.match(css, /@media \(max-width:900px\)\{#dash \.acCol\{display:contents\}#dash \.acDouaMb #acMacro\{order:1\}#dash \.acDouaMb #acScorZi\{order:2\}#dash \.acDouaMb #acMb\{order:3\}#dash \.acDouaMb #acRegim\{order:4\}/);
-  assert.match(css, /#dash \.acDouaSug #acSectoare\{order:1\}#dash \.acDouaSug #acMbSug\{order:2\}#dash \.acDouaSug #acTrendZi\{order:3\}#dash \.acDouaSug #acTopSector\{order:4\}/);
+  assert.match(css, /#dash \.acDouaSug #acSectoare\{order:1\}#dash \.acDouaSug #acMbSug\{order:2\}#dash \.acDouaSug #acTopSector\{order:3\}/);
   assert.match(css, /\.acSym\{min-height:44px\}/, "pe telefon simbolul e de apăsat cu degetul");
   assert.match(css, /\.szRand>span\{grid-column:1\/-1\}\.mbPeste\{display:none\}\.mbIncaPc\{display:none\}\.mbIncaTel\{display:block\}/, "pe telefon: verdictul scorului sub bară, rândurile peste demo ascunse, „încă N” al telefonului");
   assert.match(css, /\.mbIncaTel\{display:none\}/);

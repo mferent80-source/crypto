@@ -11,9 +11,9 @@ var Verdicte = (function () {
   var SURSE = {
     "poarta-t212": { nume: "Poarta Trading 212", piata: "actiuni", fav: ["cumpara"], h: [5, 20], masura: "randament", text: "„cumpără” față de „așteaptă / nu”" },
     "poarta-grid": { nume: "Poarta gridului", piata: "crypto", fav: ["porneste"], h: [1, 3], masura: "linistit", text: "„pornește” față de „așteaptă / nu” — a stat prețul în banda gridului?" },
-    "idei": { nume: "Ideile zilei (acțiuni)", piata: "actiuni", fav: ["cumpar"], h: [5, 20], masura: "pesteQqq", text: "ideile față de Nasdaq (QQQ) pe aceleași zile" },
-    "top-sector": { nume: "Topul pe sectoare (Sugestii)", piata: "actiuni", fav: ["top"], h: [5, 20], masura: "pesteQqq", text: "cele mai tari din fiecare sector față de Nasdaq (QQQ) pe aceleași zile" },
-    "trend-12-1": { nume: "Trend 12 luni (Sugestii)", piata: "actiuni", fav: ["top"], h: [20, 60], masura: "pesteSpy", text: "primele 20 după randamentul pe lunile 2–12 (ultima lună sărită) față de S&P 500 (SPY) pe aceleași zile, la 20 și 60 de zile — aceeași riglă ca bilanțul robotului; în probă" },   // v100.192 (I-622, I-623): orizontul probat și rigla auditului
+    "idei": { nume: "Ideile zilei (acțiuni)", piata: "actiuni", cos: true, fav: ["cumpar"], h: [5, 20], masura: "pesteQqq", text: "ideile față de Nasdaq (QQQ) pe aceleași zile" },
+    "top-sector": { nume: "Topul pe sectoare (Sugestii)", piata: "actiuni", cos: true, fav: ["top"], h: [5, 20], masura: "pesteQqq", text: "cele mai tari din fiecare sector față de Nasdaq (QQQ) pe aceleași zile" },
+    "trend-12-1": { nume: "Trend 12 luni (Sugestii)", piata: "actiuni", cos: true, fav: ["top"], h: [20, 60], masura: "pesteSpy", text: "primele 20 după randamentul pe lunile 2–12 (ultima lună sărită) față de S&P 500 (SPY) pe aceleași zile, la 20 și 60 de zile — aceeași riglă ca bilanțul robotului; în probă" },   // v100.192 (I-622, I-623): orizontul probat și rigla auditului
     "scor-zi-actiuni": { nume: "Scorul zilei · acțiuni (Piața azi)", piata: "actiuni", fav: ["pentru", "usorpentru"], h: [5, 20], masura: "randament", text: "S&P după un Scor al zilei pozitiv față de restul zilelor — suma faptelor din pagină, neprobată" },   // v100.193
     "scor-zi-crypto": { nume: "Scorul zilei · crypto (Piața azi)", piata: "crypto", fav: ["pentru", "usorpentru"], h: [5, 20], masura: "randament", text: "BTC după un Scor al zilei pozitiv față de restul zilelor — suma faptelor din pagină, neprobată" },
     "macro": { nume: "Regimul macro", piata: "actiuni", fav: ["riskon", "inclinat"], h: [5, 20], masura: "randament", text: "S&P după „pofta de risc / înclinat spre risc” față de restul" }
@@ -63,11 +63,14 @@ var Verdicte = (function () {
     return out;
   }
   // diferența de medie favorabil − restul, bootstrap pe simboluri; p = de două ori partea mai mică de o parte a lui 0
+  // v100.195 (auditul de seară 14.10): unitatea testului = x.u (ziua, la coșuri) sau simbolul; `minU` = câte unități trebuie cel puțin
+  function unitate(x) { return x.u || x.k; }
+  function cateUnitati(l) { var m = {}; l.forEach(function (x) { m[unitate(x)] = 1; }); return Object.keys(m).length; }
   function compara(fav, rest, o) {
     o = o || {};
-    if (fav.length < (o.min || 30) || rest.length < (o.min || 30)) return { stare: "putine", nFav: fav.length, nRest: rest.length };
+    if (fav.length < (o.min || 30) || rest.length < (o.min || 30) || (o.minU && cateUnitati(fav.concat(rest)) < o.minU)) return { stare: "putine", nFav: fav.length, nRest: rest.length, unitati: cateUnitati(fav.concat(rest)), minU: o.minU || 0 };
     var dif = medie(fav.map(function (x) { return x.val; })) - medie(rest.map(function (x) { return x.val; })), gr = {}, chei = [];
-    fav.concat(rest).forEach(function (x) { if (!gr[x.k]) { gr[x.k] = []; chei.push(x.k); } gr[x.k].push(x); });
+    fav.concat(rest).forEach(function (x) { var u = unitate(x); if (!gr[u]) { gr[u] = []; chei.push(u); } gr[u].push(x); });
     var rnd = mulberry32(o.seed || 177), d = [], favSet = new Set(fav);
     for (var i = 0; i < (o.reps || 1000); i++) {
       var sa = 0, na = 0, sb = 0, nb = 0;
@@ -78,7 +81,7 @@ var Verdicte = (function () {
     // p: permutare pe două niveluri - (1) la simbolurile cu verdicte amestecate, etichetele se amestecă între verdictele aceluiași simbol;
     // (2) simbolurile cu un singur fel de verdict își amestecă eticheta ÎNTRE ELE (simbolul întreg e unitatea). Valid și pe puține simboluri
     var rndP = mulberry32((o.seed || 177) + 7919), toate = fav.concat(rest), et = toate.map(function (x) { return favSet.has(x); }), idx = {}, peste = 0, R = o.reps || 1000;
-    toate.forEach(function (x, i) { (idx[x.k] = idx[x.k] || []).push(i); });
+    toate.forEach(function (x, i) { var u = unitate(x); (idx[u] = idx[u] || []).push(i); });
     var toateGr = Object.keys(idx).map(function (k) { return idx[k]; }), mixt = function (g) { var f = 0; g.forEach(function (i) { if (et[i]) f++; }); return f > 0 && f < g.length; };
     var grupe = toateGr.filter(mixt), unice = toateGr.filter(function (g) { return !mixt(g); }), etUnice = unice.map(function (g) { return et[g[0]]; });
     var amesteca = function (a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rndP() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
@@ -91,27 +94,36 @@ var Verdicte = (function () {
     }
     var areVariatie = grupe.length > 0 || (etUnice.some(Boolean) && etUnice.some(function (x) { return !x; }));
     var p = areVariatie ? (peste + 1) / (R + 1) : 1;
-    return { stare: "testat", nFav: fav.length, nRest: rest.length, dif: dif, ic: d.length ? [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]] : null, p: p, simboluriAmestecate: grupe.length, simboluriUnice: unice.length };
+    return { stare: "testat", nFav: fav.length, nRest: rest.length, dif: dif, ic: d.length ? [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]] : null, p: p, simboluriAmestecate: grupe.length, simboluriUnice: unice.length, unitati: chei.length };
   }
   // un test cu o singură parte (ideile: media „peste QQQ” față de 0), bootstrap pe simboluri
   function fataDeZero(l, o) {
-    o = o || {}; if (l.length < (o.min || 30)) return { stare: "putine", nFav: l.length, nRest: 0 };
-    var gr = {}, chei = []; l.forEach(function (x) { if (!gr[x.k]) { gr[x.k] = []; chei.push(x.k); } gr[x.k].push(x); });
+    o = o || {}; if (l.length < (o.min || 30) || (o.minU && cateUnitati(l) < o.minU)) return { stare: "putine", nFav: l.length, nRest: 0, unitati: cateUnitati(l), minU: o.minU || 0 };
+    var gr = {}, chei = []; l.forEach(function (x) { var u = unitate(x); if (!gr[u]) { gr[u] = []; chei.push(u); } gr[u].push(x); });
     var rnd = mulberry32(o.seed || 178), d = [];
     for (var i = 0; i < (o.reps || 1000); i++) { var s = 0, n = 0; for (var j = 0; j < chei.length; j++) { var g = gr[chei[Math.floor(rnd() * chei.length)]]; for (var q = 0; q < g.length; q++) { s += g[q].val; n++; } } if (n) d.push(s / n); }
     d.sort(function (a, b) { return a - b; });
     // p: semnul întors la nivel de simbol (sub ipoteza „fără avantaj”, media fiecărui simbol e la fel de probabil + sau −)
     var sume = chei.map(function (k) { return gr[k].reduce(function (s, x) { return s + x.val; }, 0); }), tot = sume.reduce(function (a, b) { return a + b; }, 0), rndS = mulberry32((o.seed || 178) + 104729), peste = 0, R = o.reps || 1000;
     for (var r3 = 0; r3 < R; r3++) { var s3 = 0; for (var q3 = 0; q3 < sume.length; q3++) s3 += rndS() < 0.5 ? sume[q3] : -sume[q3]; if (Math.abs(s3) >= Math.abs(tot) - 1e-12) peste++; }
-    return { stare: "testat", nFav: l.length, nRest: 0, dif: medie(l.map(function (x) { return x.val; })), ic: [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]], p: (peste + 1) / (R + 1) };
+    return { stare: "testat", nFav: l.length, nRest: 0, dif: medie(l.map(function (x) { return x.val; })), ic: [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]], p: (peste + 1) / (R + 1), unitati: chei.length };
   }
   // calibrarea: pe sursă și orizont - fiecare nivel (câte, media, mediana, % pe plus) + testul favorabil față de rest
   // v100.177 (revizia, C2): verdictele aceluiași simbol în zile apropiate au randamente care se suprapun (20 de zile ⇒ 19/20 comune) și
   // eticheta ține săptămâni (regimul macro e un singur simbol) ⇒ permutarea dădea „dovedit” fals în ~53 %; se păstrează doar verdictele
   // a căror fereastră începe după încheierea celei de dinainte (zile de bursă ≈ 7/5 zile calendaristice)
+  // v100.195 (auditul de seară 14.10, docs/AUDIT-PROBA-TREND-SCOR-2026-10-14.md în premarket_scanner): cele ~20 de nume ale unei zile din
+  // Trend 12 luni au ICC 0,13 ⇒ valorează cât ~6 dovezi, nu 20 (efectul de design 3,5). La COȘURI (S.cos) se păstrează ZILELE ale căror
+  // ferestre nu se suprapun, cu toate numele lor, iar unitatea testului devine ziua (x.u) — semnul se întoarce pe zi, nu pe simbol.
   function nesuprapuse(ev) {
-    var gr = {}, out = [];
-    ev.forEach(function (x) { var c = x.s + "|" + x.k + "|" + x.h; (gr[c] = gr[c] || []).push(x); });
+    var gr = {}, out = [], cos = {};
+    ev.forEach(function (x) { var S = SURSE[x.s]; if (S && S.cos) { var c2 = x.s + "|" + x.h; (cos[c2] = cos[c2] || []).push(x); return; } var c = x.s + "|" + x.k + "|" + x.h; (gr[c] = gr[c] || []).push(x); });
+    Object.keys(cos).forEach(function (c) {
+      var l = cos[c], S = SURSE[l[0].s], pas = l[0].h * ZI * (S.piata === "actiuni" ? 7 / 5 : 1), zile = {}, ult = -Infinity, ales = {};
+      l.forEach(function (x) { var z = zi(x.t); (zile[z] = zile[z] || []).push(x); });
+      Object.keys(zile).sort().forEach(function (z) { var t0 = Date.parse(z + "T00:00:00Z"); if (t0 >= ult + pas) { ales[z] = 1; ult = t0; } });
+      l.forEach(function (x) { var z = zi(x.t); if (ales[z]) out.push(Object.assign({}, x, { u: z })); });
+    });
     Object.keys(gr).forEach(function (c) {
       var l = gr[c].sort(function (a, b) { return a.t - b.t; }), S = SURSE[l[0].s], pas = l[0].h * ZI * (S && S.piata === "actiuni" ? 7 / 5 : 1), ult = -Infinity;
       l.forEach(function (x) { if (x.t >= ult + pas) { out.push(x); ult = x.t; } });
@@ -127,8 +139,9 @@ var Verdicte = (function () {
         var niv = {}; l.forEach(function (x) { (niv[x.n] = niv[x.n] || []).push(x); });
         var randuri = Object.keys(niv).map(function (n) { var v = niv[n].map(function (x) { return x.val; }); return { nivel: n, n: v.length, medie: medie(v), mediana: mediana(v), pePlus: v.filter(function (x) { return x > 0; }).length / v.length }; });
         var fav = l.filter(function (x) { return S.fav.indexOf(x.n) >= 0; }), rest = l.filter(function (x) { return S.fav.indexOf(x.n) < 0; });
-        var test = S.masura === "pesteQqq" || S.masura === "pesteSpy" ? fataDeZero(fav) : compara(fav, rest);
-        out.push({ sursa: s, nume: S.nume, h: h, masura: S.masura, intrebare: S.text, niveluri: randuri, test: test });
+        var oT = S.cos ? { minU: 12 } : {};   /* v100.195: la coșuri cel puțin 12 zile independente (ca bilanțul robotului: 12 ferestre) */
+        var test = S.masura === "pesteQqq" || S.masura === "pesteSpy" ? fataDeZero(fav, oT) : compara(fav, rest, oT);
+        out.push({ sursa: s, nume: S.nume, h: h, masura: S.masura, intrebare: S.text, niveluri: randuri, test: test, unitate: S.cos ? "zi" : "simbol" });
       });
     });
     return out;
