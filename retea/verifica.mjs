@@ -142,7 +142,7 @@ export function bootstrap2(l, k, kRef, n = 1000, seed = 7) {
   return [v[Math.min(n - 1, Math.floor(a * n))], v[Math.max(0, Math.ceil((1 - a) * n) - 1)]];
 }
 // p (două părți) din ACEEAȘI distribuție, extins la fel ca intervalul - pentru registrul BH (🔵1): la p = 0,05 cade exact pe marginea IC-ului
-export function pBootstrap2(l, k, kRef, n = 1000, seed = 7) {
+export function pBootstrap2(l, k, kRef, n = 4000, seed = 7) {   /* 4.000 de trageri: cu 1.000 p-ul extins nu coboară sub ~0,007 pe 10 luni */
   const { v, L } = bootstrap2Dist(l, k, kRef, n, seed); if (!v.length) return null;
   const jos = v.filter((x) => x <= 0).length, sus = v.filter((x) => x >= 0).length, pBrut = Math.min(1, (2 * Math.min(jos, sus) + 1) / (n + 1));
   if (!(L >= 2)) return pBrut;
