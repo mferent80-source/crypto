@@ -104,7 +104,13 @@ function sugBoti(cl, sg) {
 }
 // v100.178 (el 13.10: „vreau exemple de top stocks pe sectoare în pagina Sugestii”): cele mai tari 3 acțiuni mari din fiecare sector (forța relativă
 // pe 3 și 6 luni față de restul sectorului, doar cu trend în sus), cu istoricul regulii; clic ⇒ Poarta din Trading 212 pe simbol
-function sugLaPoarta(sim) { if (typeof deschideT212 === "function") deschideT212(); setTimeout(function () { if (typeof t212BiletPentru === "function") t212BiletPentru(String(sim || "").replace(/[^A-Za-z0-9.-]/g, "")); }, 900); }
+// v100.196 (auditul sever 14.10, 🟡7): k = de unde vine simbolul ("trend12" = Trend 12 luni, în probă) și probat = bilanțul robotului zice „probat”;
+// Poarta (t212.poartaSursa) dă atunci verdictul, dar nu dă o sumă până la „probat” - înainte fraza de sub listă promitea asta și nimic n-o făcea
+function sugLaPoarta(sim, k, probat) {
+  var s = String(sim || "").replace(/[^A-Za-z0-9.-]/g, "");
+  if (typeof t212 !== "undefined" && t212) t212.poartaSursa = k ? { s: s.toUpperCase().replace(/[^A-Z0-9.]/g, "").slice(0, 12), k: String(k), probat: probat === true || probat === "1" } : null;
+  if (typeof deschideT212 === "function") deschideT212(); setTimeout(function () { if (typeof t212BiletPentru === "function") t212BiletPentru(s); }, 900);
+}
 function sugSectoareHtml(x, acum) {
   var h = '<section class="rlSec sugSectoare"><h3>🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)</h3>';
   if (!x || !Array.isArray(x.sectoare)) return h + '<p class="tbSub">Topul se face o dată pe zi, de la 8:00 (după închiderea bursei din SUA), din screenerul Nasdaq: cele mai mari ~25 de firme din fiecare sector, cu prețurile pe 2 ani.</p></section>';
@@ -127,7 +133,7 @@ function sugTrendHtml(x, acum) {
   var ziNY = function (t) { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); };
   var h = '<section class="rlSec sugTrend"><h3>📈 Trend 12 luni (în probă)</h3>';
   if (!x || !Array.isArray(x.top) || !x.top.length) return h + '<p class="tbSub">Clasamentul vine o dată pe zi (după 8:00) de la robotul din Trading Tools: primele 20 % dintre ~600 de acțiuni SUA de peste 2 mld. $ după randamentul pe lunile 2–12.</p></section>';
-  var regim = !!(x.regim && x.regim.peste), b = x.bilant;
+  var regim = !!(x.regim && x.regim.peste), b = x.bilant, probat = b && /^probat/i.test(String(b.verdict || "")) ? "1" : "";
   // v100.192 (I-627): zile de bursă NY de la EOD-ul robotului până azi, minus una (EOD de ieri = proaspăt); de la 2 ⇒ VECHI (robotul n-a publicat)
   var vechime = (function () { var a = Date.parse(x.dataUltimei + 'T12:00:00Z'), z = Date.parse(ziNY(acum) + 'T12:00:00Z'); if (!(a > 0) || !(z > a)) return 0; var n = 0; for (var t = a + 86400000; t <= z; t += 86400000) { var w = new Date(t).getUTCDay(); if (w !== 0 && w !== 6) n++; } return Math.max(0, n - 1); })();
   h += '<p class="rlRasp">Regula, fixată înainte de cifre: primele 20 % după randamentul pe lunile 2–12 (ultima lună sărită), cu momentum pozitiv, din ~600 de acțiuni SUA ≥ 2 mld. $; regim = SPY peste media pe 200 de zile. Pe 5 ani, față de alte acțiuni în aceleași zile, doar un <b>indiciu</b> (+0,8 % pe 20 de zile, t ≈ 1,5 pe ferestre care nu se suprapun — sub pragul de „probat”), NEprobat pe listă istorică ⇒ <b>în probă</b> — nu e un buton de cumpărat. Se ține 20–60 de zile, fără stop strâns; iese când cade din top 20 % sau când regimul se oprește.</p>';
@@ -138,7 +144,7 @@ function sugTrendHtml(x, acum) {
   h += '<p class="tbSub">' + (vechime >= 2 ? '<b class="sugTrendVechi">VECHI de ' + sugEsc(TextRo.cate(vechime, 'zi', 'zile')) + ' de bursă — robotul n-a publicat</b> · ' : '') + sugEsc(nota) + '</p>';
   h += '<ol class="sugTrendLista">' + x.top.map(function (t) {
     var rap = t.raporteaza && t.raporteaza.d ? Math.round((Date.parse(t.raporteaza.d + 'T12:00:00Z') - Date.parse(ziNY(acum) + 'T12:00:00Z')) / 86400000) : null;
-    return '<li><button type="button" class="t212BtnLinie sugSectBtn" data-action-click="sugLaPoarta(\'' + String(t.s).replace(/[^A-Za-z0-9.-]/g, '') + '\')">' + sugEsc(t.s) + '</button> ' + sugEsc(String(t.nume || '').slice(0, 28))
+    return '<li><button type="button" class="t212BtnLinie sugSectBtn" data-action-click="sugLaPoarta(\'' + String(t.s).replace(/[^A-Za-z0-9.-]/g, '') + '\',\'trend12\',\'' + probat + '\')">' + sugEsc(t.s) + '</button> ' + sugEsc(String(t.nume || '').slice(0, 28))
       + ' <span class="tbSub sugTrendCifre">' + sugEsc(t.sector) + ' · <span class="sugTrendNr">12-1 ' + P1(t.m12) + '</span> · <span class="sugTrendNr">60 z ' + P1(t.r60) + '</span>'
       + (rap != null && rap >= 0 ? ' · <b class="sugTrendRap">raportează în ' + rap + 'z</b>' : '')
       + (t.salt && t.salt.pct >= 0.5 ? ' · <b class="sugTrendSalt">salt ' + P1(t.salt.pct) + ' într-o zi' + (t.salt.d ? ' (' + sugEsc(t.salt.d) + ')' : '') + ' — verifică seria</b>' : '')   /* v100.191: split/glitch? robotul măsoară, omul verifică */

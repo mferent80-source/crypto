@@ -98,7 +98,7 @@ await test("serverul: verdictele (unul sau mai multe), un verdict pe (sursă, si
 await test("Porțile trimit verdictul în jurnal (o dată pe simbol pe zi, fără să blocheze); gridul și cu banda gridului", () => {
   const app = citeste("public", "app.js"), t = citeste("public", "lib", "t212-ecran.js");
   assert.match(app, /function verdictTrimite\(v\)\{/); assert.match(app, /verdictTrimite\(\{s:"poarta-grid",k:f\.simbol,n:f\.verdict\.nivel,p:f\.pret,j:stV&&stV\.jos,u:stV&&stV\.sus\}\)/);
-  assert.match(t, /verdictTrimite\(\{ s: "poarta-t212", k: tk, n: vp\.nivel, p: st\.pret \}\)/);
+  assert.match(t, /verdictTrimite\(\{ s: "poarta-t212", k: tk, n: v\.nivel, p: st\.pret \}\)/);
 });
 const ctxP = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl, TextRo: globalThis.TextRo, ContIntreg: ctx.ContIntreg, document: { getElementById: () => null }, localStorage: { getItem: () => null, setItem() {} } };
 ctxP.window = ctxP; ctxP.globalThis = ctxP; vm.createContext(ctxP);
@@ -107,7 +107,10 @@ vm.runInContext(["t212Cate", "t212Suma", "t212Lei", "t212PoartaCont"].map(fn).jo
 await test("Poarta T212: profitul așteptat = media pe istoria ei TRASĂ SPRE ZERO după ferestrele independente; ≤ 0 ⇒ „fără avantaj”", () => {
   ctxP.t212MarimePoarta = () => ({ suma: 3000 }); ctxP.t212Jurnal = () => null;
   const h = ctxP.t212PoartaCont({ niv: { nivel: "ok", proba: { medie: 0.012, n: 200, nIndep: 10 } } });
-  assert.match(h, /📈 <b>Profit așteptat:<\/b> \+0,40% pe trade după comision/); assert.match(h, /doar ~10 ferestre independente/); assert.match(h, /≈ \+12 lei/);
+  // v100.196 (auditul sever, 🟡14): sub 30 de ferestre independente fără cifră de profit; peste, după ~0,2% spread (media trasă spre zero rămâne)
+  assert.match(h, /📉 <b>Profit așteptat:<\/b> prea puține cazuri ca să spun o cifră \(~10 ferestre independente/); assert.ok(!/≈ \+12 lei/.test(h)); assert.match(h, /aleasă pe aceleași date/);
+  const h40 = ctxP.t212PoartaCont({ niv: { nivel: "ok", proba: { medie: 0.012, n: 800, nIndep: 40 } } });
+  assert.match(h40, /📈 <b>Profit așteptat:<\/b> \+0,6% pe trade după comision și ~0,2% spread; la ~3\.000 lei ≈ \+18 lei/);
   const r = ctxP.t212PoartaCont({ niv: { nivel: "ok", proba: { medie: -0.004, n: 200, nIndep: 10 } } }); assert.match(r, /📉/); assert.match(r, /Fără avantaj măsurat/);
 });
 await test("Poarta T212: „se mișcă la fel cu ce ai deja” (ρ ≥ 0,6 pe zilele comune) și riscul pe o zi al contului înainte / după", () => {
