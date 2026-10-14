@@ -2121,6 +2121,8 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 .grPoartaGridF input{min-width:0;width:100%;box-sizing:border-box}
 .tbGridLarg{display:grid;gap:4px;border-left:4px solid var(--bad);background:rgba(224,82,74,.08);border-radius:5px;padding:10px 14px;margin:8px 0;font-size:13.5px}
 .tbGridLarg>b{color:var(--bad)}
+/* v100.196 (auditul P4): `hidden` pierdea în fața lui display:grid / inline-block ⇒ bandă roșie GOALĂ permanentă sus în Tablou */
+#tbGridLarg[hidden],#tabloubot .tbPill[hidden]{display:none!important}
 /* v100.99 (I-531): pe telefon citirea graficului stă imediat sub grafic (același conținut, randat în două locuri - nimic mutat) */
 #tabloubot .tbCitireMobil{display:none}
 @media (max-width:1180px){#tabloubot #tbCitireCard{display:none}#tabloubot .tbCitireMobil{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--tb-linie)}}

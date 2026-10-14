@@ -29,8 +29,19 @@ function startLiveSocket(sym){
  }
  connect()
 }
+// v100.196 (auditul 14.10, P3): cipul din bara de sus spune sursa și VÂRSTA ultimei analize (verde până la 5 min, galben după,
+// „eroare” la date picate); înainte de orice analiză „date: —”. Înainte scria „LIVE DATA” verde fix, fără nicio sursă vie.
+function topLiveDeseneaza(acum){
+ var el=document.getElementById("topLive");if(!el)return;var s=window.__topLive;acum=acum||Date.now();
+ var ora=function(t){return new Date(t).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})};
+ if(!s){el.textContent="date: —";el.className="statusChip";el.title="nicio analiză rulată încă pe pagina asta";return}
+ if(s.stare==="eroare"){el.textContent="date: eroare";el.className="statusChip warn";el.title="analiza "+s.src+" n-a putut citi datele, la "+ora(s.la);return}
+ var min=Math.floor(Math.max(0,acum-s.la)/60000),v=min<1?"chiar acum":min<60?"acum "+min+" min":"acum "+Math.floor(min/60)+" h";
+ el.textContent=s.src+" · "+v;el.className="statusChip "+(s.stare==="ok"&&min<=5?"live":"warn");el.title="datele analizei: "+s.src+", citite la "+ora(s.la)+(s.stare==="rezerva"?" (sursa de rezervă)":"")
+}
 setInterval(()=>{
  if(lastWsTick&&Date.now()-lastWsTick>45000&&$("wsStatus")){$("wsStatus").textContent="WS STALE";$("wsStatus").classList.add("wsStale");$("wsDot")?.classList.remove("live")}
+ topLiveDeseneaza();
 },15000);
 function toggleChartFullscreen(){const c=$("chartCard");c.classList.toggle("fullscreenChart");setTimeout(()=>window.__radarState&&draw(window.__radarState.q),50)}
 function volumeProfile(j,bins=24){
@@ -141,11 +152,15 @@ function v62LocalIntegritySnapshot(){
   const masurate=rows.filter(x=>x.state!=='NEÎNCERCAT');
   const score=masurate.length?masurate.reduce((a,x)=>a+(x.state==='OK'?100:x.state==='STALE'?55:10),0)/masurate.length:null;return {ts:Date.now(),market,symbol:st?.symbol||null,source:st?.source||analysisSource(),score,quality,rows,neincercat:!masurate.length}
 }
+// v100.196 (auditul UI 🟡7): fără nicio analiză, verificările LOCALE sunt neîncercate, dar furnizorii (serverul) chiar au răspuns -
+// starea generală vine atunci din furnizori; „NEÎNCERCAT” doar când nu e niciun furnizor de judecat. Înainte: „FURNIZORII: NEÎNCERCAT”
+// deasupra pastilelor „Spot REST OK · Futures OK”.
+function v62StareGenerala(o){const t=s=>s>=85?'OK':s>=65?'DEGRADED':'FAIL';if(o.error)return {state:'DEGRADED',score:o.combined};if(o.neincercat){if(!o.cerute)return {state:'NEÎNCERCAT',score:null};const s=Math.round(o.providerScore);return {state:t(s),score:s}}return {state:t(o.combined),score:o.combined}}
 function v62ProviderStateClass(state){return state==='OK'?'good':state==='DEGRADED'||state==='CONFIGURED'||state==='STALE'||state==='NEÎNCERCAT'?'neutral':'bad'}
 async function runProviderHealthV62(deep=true){
   const status=$('providerHealthStatus'),table=$('providerHealthTable');if(status)status.textContent='Checking providers…';if(table)table.innerHTML='<div class="emptyState">Running server + local integrity probes…</div>';
   let server=null,error=null;try{server=await getJSON(`/api/provider-health?deep=${deep?1:0}`)}catch(e){error=e.message}
-  const local=v62LocalIntegritySnapshot(),providers=server?.providers||[],required=providers.filter(x=>x.required!==false),ok=required.filter(x=>x.state==='OK'||x.state==='CONFIGURED').length,providerScore=required.length?100*ok/required.length:0,combined=Math.round(local.score===null?providerScore:.55*providerScore+.45*local.score),state=error?'DEGRADED':local.neincercat?'NEÎNCERCAT':combined>=85?'OK':combined>=65?'DEGRADED':'FAIL',snapshot={ts:Date.now(),state,score:state==='NEÎNCERCAT'?null:combined,providerScore,server,local,error};window.__providerHealthV62=snapshot;
+  const local=v62LocalIntegritySnapshot(),providers=server?.providers||[],required=providers.filter(x=>x.required!==false),ok=required.filter(x=>x.state==='OK'||x.state==='CONFIGURED').length,providerScore=required.length?100*ok/required.length:0,combined=Math.round(local.score===null?providerScore:.55*providerScore+.45*local.score),sg=v62StareGenerala({error,neincercat:local.neincercat,cerute:required.length,providerScore,combined}),state=sg.state,snapshot={ts:Date.now(),state,score:sg.score,providerScore,server,local,error};window.__providerHealthV62=snapshot;
   if($('providerHealthScore'))$('providerHealthScore').textContent=state==='NEÎNCERCAT'?'—':`${combined}/100`;if($('providerHealthOverall')){$('providerHealthOverall').textContent=state;$('providerHealthOverall').className=v62ProviderStateClass(state)}if($('providerHealthLocal'))$('providerHealthLocal').textContent=local.score===null?'NEÎNCERCAT':`${local.score.toFixed(0)}/100`;if($('providerHealthRequired'))$('providerHealthRequired').textContent=`${ok}/${required.length}`;
   if(table){const all=[...providers,...local.rows.map(x=>({name:'LOCAL · '+x.name,state:x.state,latencyMs:null,detail:x.detail,configured:true}))];table.innerHTML=all.length?`<div class="providerHealthRow providerHealthHead"><div>Provider / check</div><div>State</div><div>Latency</div><div>Detail</div></div>`+all.map(x=>`<div class="providerHealthRow"><div><b>${escapeHtml(x.name||'—')}</b></div><div class="${v62ProviderStateClass(x.state)}">${escapeHtml(x.state||'—')}</div><div>${Number.isFinite(+x.latencyMs)?Math.round(+x.latencyMs)+' ms':'—'}</div><div>${escapeHtml(x.detail||x.error||'—')}</div></div>`).join(''):'<div class="emptyState">No provider checks returned.</div>'}
   if(status)status.textContent=`${state} · ${state==='NEÎNCERCAT'?'—':combined+'/100'} · ${new Date().toLocaleTimeString()}`;await localDbPutRecord('provider_health_v62',String(Math.floor(Date.now()/300000)),snapshot,Date.now());return snapshot
@@ -2972,6 +2987,9 @@ function renderAlerts(){
 function updateAlertBadges(){
  const n=appAlerts().filter(x=>!x.read).length+(typeof alCentruNecitite==="function"?alCentruNecitite():0);for(const id of ["sideAlertCount","topAlertCount"]){const e=$(id);if(e){e.textContent=n;e.style.display=n?"inline-grid":"none"}}
 }
+// v100.196 (auditul P5): nimic nu punea `read=true` ⇒ insigna „necitite” creștea până la „Șterge”; deschiderea paginii Alerte le citește
+function alerteV67Curata(){const a=appAlerts(),b=a.filter(x=>x&&x.kind!=="ops-v67");if(b.length!==a.length)putAlerts(b)}/* cele vechi, deja intrate, ies o singură dată la pornire */
+function alerteLocaleCitite(){const a=appAlerts();if(!a.some(x=>!x.read)){updateAlertBadges();return}a.forEach(x=>{x.read=true});putAlerts(a)}
 function clearAlerts(){localStorage.removeItem("radarAlerts");renderAlerts();toast("Alerts cleared","warn")}
 function checkAlerts(q,sm,deriv){
  const st=appSettings(),p=q.price,near=st.nearPct/100;
@@ -3027,6 +3045,7 @@ if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",functi
 const NAV_CU_LOAD=new Set(["contintreg","rezultate","mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
 function navTo(id,load=false){
  show(id);
+ if(id==="alerts")alerteLocaleCitite();
  // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
  try{localStorage.setItem(PAGINA_CURENTA_KEY,id)}catch(_){}
  document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id));
@@ -4223,7 +4242,7 @@ async function analyze(save,fallbackTried=false,srcFortat=null){
   else{inv=q.sup;tar=q.res;trail=q.price;txt="Engine-ul nu are suficientă confluență direcțională. Zona support/resistance este mai relevantă decât forțarea unei intrări."}
   risk=q.atrPct>=4||q.confluence<45?"Ridicat":q.atrPct>=2.2||q.confluence<62?"Mediu":"Controlat";
   $("setup").textContent=txt;$("invalid").textContent=num(inv);$("target").textContent=num(tar);$("trail").textContent=num(trail);$("risk").textContent=risk;
-  $("topLive").className="statusChip live";$("topLive").textContent=src+" DATA";draw(q);renderVolumeProfile();if(assetClass()==="CRYPTO")loadFearGreed();else{$("fearGreed").textContent="N/A";$("sentimentText").textContent="Crypto Fear & Greed is not used in US stock scoring."}loadMarketContext();
+  window.__topLive={src:fallbackTried?(srcFortat?"BINANCE → "+src:"PIONEX → "+src):src,la:Date.now(),stare:fallbackTried?"rezerva":"ok"};topLiveDeseneaza();draw(q);renderVolumeProfile();if(assetClass()==="CRYPTO")loadFearGreed();else{$("fearGreed").textContent="N/A";$("sentimentText").textContent="Crypto Fear & Greed is not used in US stock scoring."}loadMarketContext();
   if(assetClass()==="CRYPTO"){derivatives().catch(()=>{});if(!pionexScannerActive)loadPionexMicrostructure().catch(()=>{})}
   await breadthPromise;
   updateDecisionCoreAfterAnalysis();renderV65DecisionOS(true);renderV66EdgeValidation(true);if(typeof renderV67Operations==="function")renderV67Operations(true);
@@ -4232,7 +4251,7 @@ async function analyze(save,fallbackTried=false,srcFortat=null){
    const failedSource=src;
    if(assetClass()==="CRYPTO"&&failedSource==="PIONEX"&&!fallbackTried){
      setBusy(false);setAnalysisSource("BINANCE");
-     $("topLive").className="statusChip warn";$("topLive").textContent="PIONEX → BINANCE";
+     window.__topLive={src:"PIONEX → BINANCE",la:Date.now(),stare:"rezerva"};topLiveDeseneaza();
      toast("Pionex indisponibil · fallback automat la Binance.","warn");
      return analyze(save,true)
    }
@@ -4242,10 +4261,10 @@ async function analyze(save,fallbackTried=false,srcFortat=null){
      const c=coin(sym);let px,pionexTace=false;try{px=await pionexSimbolAnaliza(sym)}catch(_){pionexTace=true}
      if(px){setBusy(false);toast(`${c}: Binance nu a dat date · am luat analiza de la Pionex${px.piata==="PERP"?" futures":""}. Sursa ta rămâne Binance.`,"warn");return analyze(save,true,"PIONEX")}
      const msg=pionexTace?`${c}: Binance nu a dat date, iar Pionex nu răspunde acum — încearcă peste un minut.`:`${c} nu există nici pe Binance, nici pe Pionex — verifică numele monedei.`;
-     setBusy(false,msg);$("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";toast(msg,"bad");return
+     setBusy(false,msg);window.__topLive={src:c,la:Date.now(),stare:"eroare"};topLiveDeseneaza();toast(msg,"bad");return
    }
    setBusy(false,"Eroare "+failedSource+": "+e.message);
-   $("topLive").className="statusChip warn";$("topLive").textContent="DATA ERROR";
+   window.__topLive={src:failedSource,la:Date.now(),stare:"eroare"};topLiveDeseneaza();
    toast("Eroare: "+e.message,"bad")
  }
 }
@@ -6462,7 +6481,7 @@ function tbKpiPretDeseneaza(b0){
   pune("tbKpiPret",p===null?"—":tbPretScurt(p),"");
   var poz=(p!==null&&jos!==null&&sus!==null&&sus>jos)?(p-jos)/(sus-jos):null;
   var dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(b):null;
-  var pill=$("tbKpiPozPill");if(pill){if(dg){pill.hidden=false;pill.textContent=dg.pill;pill.className="tbPill tbPill-"+dg.ton}else pill.hidden=true}
+  var pill=$("tbKpiPozPill");if(pill){if(dg){pill.hidden=false;pill.textContent=dg.pill;pill.className="tbPill tbPill-"+dg.ton}else{pill.hidden=true;pill.textContent="";pill.className="tbPill"}}/* v100.196: ascunsă = golită (păstra textul și culoarea citirii vechi) */
   pune("tbKpiPretSub",poz===null?"fără grid citit":(dg?dg.text:(poz<0?"sub grid":poz>1?"peste grid":Math.round(poz*100)+"% din interval"))+" · "+tbPretScurt(jos)+" - "+tbPretScurt(sus),poz!==null&&(poz<0||poz>1)?"bad":"");
   var punct=$("tbKpiGridPunct");
   if(punct){punct.hidden=poz===null;if(poz!==null){punct.style.left=(Math.min(1,Math.max(0,poz))*100).toFixed(1)+"%";punct.className="tbGaugePunct"+(poz<0||poz>1?" bad":"")}}
@@ -7623,11 +7642,11 @@ function v67RecoverAfterRestart(){const prev=v60StoreGet(V67_RECOVERY_KEY,null),
 function v67OpsToolHtml(c){const state=c.ok?"OK":c.severity==="HARD"?"BLOCK":"WARN",cls=c.ok?"good":c.severity==="HARD"?"bad":"warn";return `<div class="decisionTool ${cls}"><div class="decisionToolHead"><b>${escapeHtml(c.code)}</b><span class="decisionToolState">${state}</span></div><div class="decisionToolDetail">${escapeHtml(c.ok?"Operational check passed.":c.label||"Issue")}</div><div class="decisionToolAction">${c.ok?"No action required.":c.severity==="HARD"?"New Paper/Shadow entries blocked until cleared.":"Monitor / refresh before sizing up."}</div></div>`}
 function v67IncidentMarkup(rows){return rows.length?`<div class="edgeCalRow head"><span>Time</span><span>Severity</span><span>Code</span><span>Message</span></div>`+rows.slice(0,12).map(x=>`<div class="edgeCalRow ${x.severity==="HARD"?"bad":x.severity==="WARN"?"warn":""}"><span>${new Date(+x.ts||0).toLocaleTimeString()}</span><b>${escapeHtml(x.severity)}</b><span>${escapeHtml(x.code)}</span><span>${escapeHtml(x.message)}</span></div>`).join(""):`<div class="emptyState">No operations incidents.</div>`}
 function renderV67Operations(persist=false){const x=v67OperationsSnapshot(persist),has=!!window.__radarState,cls=x.hardBlock?"bad":x.state==="DEGRADED"?"neutral":"good",hbAge=x.priorHeartbeat?Math.round(v67HeartbeatAge(x.priorHeartbeat.ts)/1000):0,summary=`${x.state} · ${x.reasons.length?x.reasons.join(" · "):"runtime checks clear"}`;for(const id of ["v67DashState","v67DecisionState"]){if($(id)){$(id).textContent=x.state;$(id).className="decisionOsState "+cls}}for(const id of ["v67DashSummary","v67DecisionSummary"])if($(id))$(id).textContent=summary;for(const id of ["v67DashScore","v67DecisionScore","v67HealthScore"])if($(id))$(id).textContent=`${x.score}/100`;for(const id of ["v67DashHeartbeat","v67DecisionHeartbeat","v67HealthHeartbeat"])if($(id))$(id).textContent=x.priorHeartbeat?`${hbAge}s ago`:`NEW`;for(const id of ["v67DashRecovery","v67DecisionRecovery","v67HealthRecovery"])if($(id))$(id).textContent=x.recovery?.state||"CLEAN";for(const id of ["v67DashIncidents","v67DecisionIncidents"])if($(id))$(id).textContent=x.incidentCount;if($("v67HealthWatchdog"))$("v67HealthWatchdog").textContent=x.state;if($("v67HealthStatus"))$("v67HealthStatus").textContent=`${x.state} · ${x.score}/100 · ${new Date(x.ts).toLocaleTimeString()}`;const tools=x.checks.map(v67OpsToolHtml).join("");if($("v67DashGrid"))$("v67DashGrid").innerHTML=tools;if($("v67DecisionGrid"))$("v67DecisionGrid").innerHTML=tools;if($("v67HealthTable"))$("v67HealthTable").innerHTML=tools;if($("v67DecisionIncidentsTable"))$("v67DecisionIncidentsTable").innerHTML=v67IncidentMarkup(v67Incidents());if($("v67IncidentTable"))$("v67IncidentTable").innerHTML=v67IncidentMarkup(v67Incidents());if($("v67DecisionReconcile")){const r=x.reconcile||{};$("v67DecisionReconcile").innerHTML=`<div class="edgeCalRow"><span>Paper duplicate IDs</span><b>${r.paperDupIds||0}</b><span>Shadow duplicate IDs</span><b>${r.shadowDupIds||0}</b></div><div class="edgeCalRow"><span>Active duplicate fingerprints</span><b>${r.activeDuplicateFingerprints||0}</b><span>Last reconcile</span><b>${v67LastReconcile?new Date(v67LastReconcile.ts).toLocaleTimeString():"—"}</b></div>`}if($("masterOpsV67")){$("masterOpsV67").textContent=`${x.state} · ${x.score}/100`;$ ("masterOpsV67").className=x.hardBlock?"bad":x.state==="DEGRADED"?"neutral":"good"}return x}
-function refreshV67Operations(persist=true){const prev=v67LastState,x=renderV67Operations(persist);v67LastState=x.state;if(prev!=="BOOTING"&&prev!==x.state){const sev=x.hardBlock?"HARD":x.state==="DEGRADED"?"WARN":"INFO";v67Incident(sev,"OPS_STATE_CHANGE",`${prev} → ${x.state}`,{score:x.score,reasons:x.reasons});if(typeof addAlert==="function"&&x.state!=="NORMAL")addAlert("ops-v67",`Operations ${x.state}`,x.reasons.join(" · ")||`Score ${x.score}/100`,x.hardBlock?"bad":"warn")}return x}
+function refreshV67Operations(persist=true){const prev=v67LastState,x=renderV67Operations(persist);v67LastState=x.state;if(prev!=="BOOTING"&&prev!==x.state){const sev=x.hardBlock?"HARD":x.state==="DEGRADED"?"WARN":"INFO";v67Incident(sev,"OPS_STATE_CHANGE",`${prev} → ${x.state}`,{score:x.score,reasons:x.reasons});/* v100.196 (auditul P5): fără addAlert - laboratorul pliat băga „Operations SAFE MODE” (și notificări de sistem) în centrul de alerte al boților; incidentul rămâne în panoul v67 */}return x}
 function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;window.__v67BootId=`${v67Now()}-${Math.random().toString(36).slice(2,8)}`;v67RecoverAfterRestart();refreshV67Operations(true);const cfg=v67OpsSettings();v67OpsTimer=setInterval(()=>refreshV67Operations(true),Math.max(10000,+cfg.watchdogMs||30000));if(typeof window!=="undefined"){window.addEventListener("online",()=>refreshV67Operations(true));window.addEventListener("offline",()=>{v67Incident("HARD","NETWORK_OFFLINE","Browser reported offline");refreshV67Operations(true)});window.addEventListener("pagehide",()=>{v67RecoverySnapshot();const hb=v60StoreGet("opsHeartbeatV67",{});hb.cleanPagehideTs=v67Now();v60StoreSet("opsHeartbeatV67",hb)});document?.addEventListener?.("visibilitychange",()=>{if(document.visibilityState==="visible")refreshV67Operations(true)})}}
 
 // Boot only after every versioned module and its lexical state are initialized.
-try{sideVechiTine()}catch(_){}applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
+try{sideVechiTine()}catch(_){}applyNetworkState();restoreObservedLiquidations();restoreActiveModelVersion();restoreMetaEnsembleV2();renderSettings();renderApiAuthStatus();tbColectorPornit();try{alerteV67Curata()}catch(_){}renderAlerts();renderPaper();renderFreshness();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);initV67Operations();if(typeof initV71PionexJournal==="function")initV71PionexJournal();renderPushStatus().catch(()=>{});renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap();initLocalDataLayer().then(()=>{refreshV66EdgeValidation(false);refreshV67Operations(false)}).catch(()=>{});
 // v100.8: linkul din pagina alerts cere un ecran anume (Tabloul botului / Trading 212) - dupa pornire, o singura data
 if(ecranDinLegatura)setTimeout(function(){try{navTo(ecranDinLegatura,true)}catch(e){}},0);
 if(ecranDinLegatura==="gridset"&&monedaDinLegatura)setTimeout(function(){try{grDinLegatura(monedaDinLegatura)}catch(e){}},300);   // v100.33

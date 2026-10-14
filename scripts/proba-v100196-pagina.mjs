@@ -138,7 +138,7 @@ await test("P3 cipul din bara de sus: pornește neutru („date: —”), nu „
 });
 await test("P3 cipul spune sursa și VÂRSTA analizei: verde până la 5 min, galben după, „eroare” la date picate", () => {
   const el = { textContent: "", className: "", title: "" };
-  const c = ctx({ $: (id) => (id === "topLive" ? el : null) });
+  const c = ctx({ document: { getElementById: (id) => (id === "topLive" ? el : null) } });   /* fără `$`: e un const de modul, iar intervalul de sus îl poate prinde în TDZ */
   vm.runInContext("var __topLive=null;" + fnSursa(APP, "topLiveDeseneaza"), c);
   const T = 1_800_000_000_000;
   vm.runInContext("topLiveDeseneaza(" + T + ")", c); assert.equal(el.textContent, "date: —"); assert.equal(el.className, "statusChip"); assert.match(el.title, /nicio analiză/);
@@ -174,6 +174,11 @@ await test("P5 laboratorul vechi (v67) nu mai bagă „Operations SAFE MODE” �
   const f = fnSursa(APP, "refreshV67Operations");
   assert.ok(!/addAlert\(/.test(f), "refreshV67Operations cheamă încă addAlert");
   assert.match(f, /v67Incident\(sev,"OPS_STATE_CHANGE"/, "incidentul rămâne în panoul lui");
+  const ls = { radarAlerts: JSON.stringify([{ kind: "ops-v67", title: "Operations SAFE MODE", read: false }, { kind: "sr", title: "Price near S1", read: false }]) };
+  const c = ctx({ localStorage: { getItem: (k) => ls[k] ?? null, setItem: (k, v) => { ls[k] = String(v); } }, updateAlertBadges() {} });
+  vm.runInContext([fnSursa(APP, "appAlerts"), fnSursa(APP, "putAlerts"), fnSursa(APP, "alerteV67Curata")].join("\n"), c); vm.runInContext("alerteV67Curata()", c);
+  assert.deepEqual(JSON.parse(ls.radarAlerts).map((x) => x.kind), ["sr"], "alertele v67 deja intrate ies la pornire");
+  assert.match(APP, /try\{alerteV67Curata\(\)\}catch\(_\)\{\}renderAlerts\(\)/);
 });
 await test("P5 insigna „necitite”: deschiderea paginii Alerte marchează citite alertele din browser", () => {
   const ls = { radarAlerts: JSON.stringify([{ key: "a", title: "x", msg: "", ts: 1, read: false }, { key: "b", title: "y", msg: "", ts: 2, read: false }]) };
