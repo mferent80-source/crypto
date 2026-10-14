@@ -96,7 +96,7 @@ await test("(1) pagina: o singură idee în plus -> „Vezi și cealaltă acțiu
 // ---- (2) Acasă: „💡 Ce aș cumpăra azi”
 function cumpar(d) {
   const ctx = { escapeHtml: esc }; vm.createContext(ctx);
-  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;", ctx);
+  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acSym") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;", ctx);   /* v100.196: simbolurile = butoane spre Poartă */
   return ctx.f(d);
 }
 const CL = { monede: [{ simbol: "PONS_USDT_PERP", stare: "candidat", scor: 8 }, { simbol: "BTC_USDT_PERP", stare: "evita" }, { simbol: "LIT_USDT_PERP", stare: "candidat", scor: 9 }, { simbol: "VVV_USDT_PERP", stare: "candidat", scor: 7 }, { simbol: "PENDLE_USDT_PERP", stare: "candidat", scor: 6 }] };

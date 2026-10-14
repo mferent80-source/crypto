@@ -42,7 +42,7 @@ async function t212Porneste(forta) {
       if (!t212.stiri[tk]) { try { var sn = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); t212.stiri[tk] = sn && sn.stiri || []; } catch (e) { t212.stiri[tk] = []; } }
       await t212RezultatePt(tk);   /* v100.196 (🟡6): o eroare nu se mai ține minte ca „fără dată” pentru totdeauna */
       try { var pl = await getJSON("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + tk)); t212.planuri[tk] = pl && pl.plan || null; } catch (e) { t212.planuri[tk] = t212.planuri[tk] || null; }
-      if (!t212.bare[tk] || forta) { try { var nm = t212Nume(tk), b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); t212.simbolPret[tk] = b && b.simbol || null; t212.bare[tk] = GridCalcul.bareBursa(b && b.randuri || [], Date.now()); } catch (e) { t212.bare[tk] = []; } }
+      if (!t212.bare[tk] || forta) { try { var nm = t212Nume(tk), b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); t212.simbolPret[tk] = b && b.simbol || null; t212.dupaNume = t212.dupaNume || {}; t212.dupaNume[tk] = !!(b && b.gasitDupaNume); t212.bare[tk] = GridCalcul.bareBursa(b && b.randuri || [], Date.now()); } catch (e) { t212.bare[tk] = []; } }
       t212Render();
     }
     if (!t212.monede && t212.poz.some(function (x) { return !/_US_EQ$/.test(x.ticker); })) { try { var mo = await getJSON("/api/t212?action=monede"); t212.monede = mo && mo.monede || null; } catch (e) { t212.monede = null; } }   /* v100.196 (🟡13): moneda pozițiilor din afara SUA */
@@ -649,7 +649,8 @@ function t212RandPozitie(p) {
     + '<td class="c-plan">' + (p.plan ? '<span class="t212PlanChip ok">✓ ' + escapeHtml(planTxt) + '</span>' : '<span class="t212PlanChip">fără plan</span>') + '</td>'
     + '</tr>';
   // detaliul
-  var info = [tr !== "fara-date" ? "trend " + tr + " (" + p.st.trend.tarie + ")" : "", p.st.distMax52 !== null ? "față de maximul pe 52 săpt. " + t212Pct(p.st.distMax52) : "", p.maxDupaCumparare ? "de la maximul de după cumpărare " + t212Pct(p.pret / p.maxDupaCumparare - 1) : "", t212.beta[p.ticker] ? "beta " + t212.beta[p.ticker].toFixed(2).replace(".", ",") : "", p.fxPpl && Math.abs(p.fxPpl) >= 1 ? "din rezultat, cursul dolar/leu: " + t212Lei(p.fxPpl) : ""].filter(Boolean).join(" · ");
+  var info = [tr !== "fara-date" ? "trend " + tr + " (" + p.st.trend.tarie + ")" : "", p.st.distMax52 !== null ? "față de maximul pe 52 săpt. " + t212Pct(p.st.distMax52) : "", p.maxDupaCumparare ? "de la maximul de după cumpărare " + t212Pct(p.pret / p.maxDupaCumparare - 1) : "", t212.beta[p.ticker] ? "beta " + t212.beta[p.ticker].toFixed(2).replace(".", ",") : "", p.fxPpl && Math.abs(p.fxPpl) >= 1 ? "din rezultat, cursul dolar/leu: " + t212Lei(p.fxPpl) : "",
+    t212.dupaNume && t212.dupaNume[p.ticker] ? "⚠️ prețurile zilnice sunt găsite după numele firmei (" + (t212.simbolPret[p.ticker] || "alt simbol") + "): verifică în Trading 212 că e aceeași firmă" : ""].filter(Boolean).join(" · ");   /* v100.196 (🔵2) */
   // v100.54: o singura voce - Consilierul pozitiei (verdict, ce as face, bani, 3 motive, de ce, decizii, restul pliat); fara el, ca inainte
   var stanga = '<div>' + (p.cons ? t212ConsHtml(p) : '<h5>De ce ' + niv[0] + '</h5>' + (p.sem.motive.length ? '<ul class="t212Motive">' + p.sem.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '')
     + '<p class="t212Fac">' + escapeHtml(p.sem.ceAsFace) + '</p>' + t212SfaturiHtml(p.sfaturi))

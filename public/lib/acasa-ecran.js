@@ -130,7 +130,8 @@ function acasaCumpar(d) {
   // nota semnalelor opuse („aș sări peste ea”) doar sub coloana ei. Aceleași fapte ca rândurile de până acum, nimic ascuns
   var mut = function (t) { return '<span class="acMut">' + escapeHtml(t) + '</span>'; };
   var ah = !ii ? mut("aștept ideile") : !act.length ? mut("pe " + zi + " niciuna nu trece de poartă")
-    : '<b>' + escapeHtml(act.slice(0, 3).map(function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; }).join(", ")) + '</b> ' + mut(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi);
+    : act.slice(0, 3).map(function (x) { return acSym(x.simbol || String(x.ticker || "").split("_")[0]); }).join(", ") + ' '   /* v100.196 (raportul UI, 🟡12): simbolurile duc la Poarta T212, ca în „Idei de azi” */
+      + mut(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi);
   var bh = !cl ? mut("aștept clasamentul") : !m.length ? mut("acum nicio monedă nu e candidată") : '<b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
   var p = null; try { p = typeof acasaCumpar2Parti === "function" ? acasaCumpar2Parti(d) : null; } catch (e) { p = null; }   /* o eroare în date nu strică cartela */
   var ch = !p ? mut("aștept listele") : '↩️ acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + '<br>↩️ monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM) + '<br>📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS);

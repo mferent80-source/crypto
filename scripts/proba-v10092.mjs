@@ -127,14 +127,14 @@ const CLB = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evit
 const IIB = { idei: { idei: { zi: "2026-10-04", judecate: 202, trecute: 2, actiuni: [{ simbol: "TE" }, { simbol: "LNKS" }], reveniri: [{ simbol: "LAES" }], dovadaReveniri: { eticheta: "cam la fel" } } } };
 function acasa() {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(["acClasamentSumar", "acasaCumpar", "acasaCumpar2", "acasaCumpar2Corp", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);
+  vm.runInContext(["acClasamentSumar", "acSym", "acasaCumpar", "acasaCumpar2", "acasaCumpar2Corp", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);
   return ctx;
 }
 await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe 3 coloane - acțiuni / boți / revenire și short, fiecare cu butonul ei; nota „aș sări peste ea” doar sub a treia; rândul vechi (acasaCumpar2) neschimbat", () => {
   const c = acasa(), d = { ...IIB, clasament: CLB, sugestii: null }, h = c.f(d);
   assert.equal((h.match(/class="acCumparCol"/g) || []).length, 3, h);
   const col = h.split('<div class="acCumparCol">');
-  assert.ok(text(col[1]).startsWith("Acțiuni") && col[1].includes("<b>TE, LNKS</b>") && col[1].includes("acasaMergiLa('t212','t212Idei','idei')"), text(col[1]));
+  assert.ok(text(col[1]).startsWith("Acțiuni") && /data-action-click="sugLaPoarta\(&#39;TE&#39;\)">TE<\/button>, <button[^>]*sugLaPoarta\(&#39;LNKS&#39;\)">LNKS<\/button>/.test(col[1])   /* v100.196: simbolurile = butoane spre Poartă */ && col[1].includes("acasaMergiLa('t212','t212Idei','idei')"), text(col[1]));
   assert.ok(text(col[2]).startsWith("Boți") && col[2].includes("acasaMergiLa('tabloubot','tbIdei')"), text(col[2]));
   assert.ok(text(col[3]).startsWith("Revenire și short") && col[3].includes("<b>LAES</b>") && col[3].includes("<b>AKE, Q</b>") && col[3].includes("<b>LIT, Q</b>") && col[3].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[3]));
   assert.match(col[3], /<p class="tbWarn">⚠ Q e și pe revenire, și la short: aș sări peste ea<\/p>/);

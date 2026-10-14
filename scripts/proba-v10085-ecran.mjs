@@ -115,7 +115,7 @@ await test("(8) Trading 212: fără acțiuni pe revenire ⇒ „Azi nicio acțiu
 });
 function acasa2(d) {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);   /* v100.92: + Parti */
+  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acSym") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);   /* v100.92: + Parti */
   return { tot: ctx.f(d), doi: ctx.g(d) };
 }
 await test("(8) Acasă: al doilea rând din „Ce aș cumpăra azi” - primele nume din fiecare listă, cu eticheta istoricului; liste goale ⇒ „nimic azi”; fără date ⇒ lipsește", () => {

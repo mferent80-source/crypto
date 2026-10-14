@@ -403,5 +403,18 @@ await test("D6 (🔵12). Urmărirea listelor de sugestii: fiecare intrare judeca
   assert.equal(u.n, 1); assert.ok(Math.abs(u.medie - (la14 / b[150].c - 1 - 0.003)) < 1e-9, "medie " + u.medie + " ≠ orizontul de 14 zile");
 });
 
+// ---------------- E. restul: prețuri găsite după nume, simbolurile din „Ce aș cumpăra azi” ----------------
+await test("E1 (🔵2). Poziții: prețurile găsite după NUMELE firmei (gasitDupaNume) se spun în detaliul poziției", async () => {
+  const P = pagina({ raspuns: (u) => (/action=pozitii/.test(u) ? { pozitii: [{ ticker: "FB_US_EQ", quantity: 1, averagePrice: 100, currentPrice: 110, ppl: 1 }] } : /action=preturi/.test(u) ? { simbol: "META", gasitDupaNume: true, randuri: RAND(B0) } : undefined) });
+  await P.c.t212Porneste(true);
+  assert.equal(P.c.t212.dupaNume.FB_US_EQ, true);
+  const h = randPoz(P, { ticker: "FB_US_EQ", simbol: "FB" });
+  assert.match(h, /găsite după numele firmei/);
+});
+await test("E2 (UI 🟡12). Piața azi: simbolurile din „Ce aș cumpăra azi” se apasă (Poarta T212), ca cele din „Idei de azi”", () => {
+  const s = citeste("public", "lib", "acasa-ecran.js");
+  assert.match(s, /act\.slice\(0, 3\)\.map\(function \(x\) \{ return acSym\(/);
+});
+
 console.log(`\n${teste - picate} din ${teste} trec`);
 if (picate) { console.log(`V100.196 ACȚIUNI PICA · ${picate} din ${teste}`); process.exit(1); }
