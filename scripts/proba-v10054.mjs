@@ -121,7 +121,7 @@ await test("ritmul pozei (el, 01.10): 08–16 la 3 min, 16–17 la 30 s, 17–23
   assert.equal(PZ.cadentaPoza({ acum: T("2026-12-01T14:30:00Z"), botiActivi: 0 }), 30000, "iarna (UTC+2): 16:30 RO");
   assert.equal(PZ.cadentaPoza({ acum: T("2026-12-01T21:30:00Z"), botiActivi: 1 }), null, "iarna: 23:30 RO");
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
-  assert.match(col, /setInterval\(\(\) => \{ turaPoza\(\)/, "un ceas separat pentru poza (bucla e la 60 s)");
+  assert.match(col, /setInterval\(\(\) => \{ bate\(\); turaPoza\(\)/, "un ceas separat pentru poza (bucla e la 60 s); v100.196: și bătaia din colector.pid");
 });
 await test("noaptea (fara poze) colectorul bate la paznic la 20 de minute - sub pragul lui de 30, fara scrieri in plus", () => {
   const acum = Date.parse("2026-10-02T00:00:00Z"), MIN = 60000;   // 03:00 RO

@@ -207,9 +207,11 @@ let BILET = null;
 const cerere = (simbol, antete, b = "bun") => ({ url: "http://127.0.0.1:8788/api/pret-viu?simbol=" + simbol + (b === null ? "" : "&b=" + (b === "bun" ? BILET : b)), headers: new Headers(antete) });
 const BUN = { upgrade: "websocket", origin: "http://127.0.0.1:8788" };
 try {
-  const { onRequestGet, onRequestPost, biletPentru, biletBun } = await import(new URL("../functions/api/pret-viu.js", import.meta.url));
-  BILET = await biletPentru(ENV.APP_API_TOKEN, S, Date.now());
-  const biletVechi = await biletPentru(ENV.APP_API_TOKEN, S, Date.now() - 120000), biletAltSimbol = await biletPentru(ENV.APP_API_TOKEN, "BTC_USDT_PERP", Date.now());
+  const { onRequestGet, onRequestPost, biletPentru, biletBun, cheieReleu } = await import(new URL("../functions/api/pret-viu.js", import.meta.url));
+  // v100.196 (auditul sever, 🔵2): biletul se semnează cu cheia releului (RELEU_SECRET sau derivată din parolă), nu direct cu parola
+  const CH = await cheieReleu(ENV);
+  BILET = await biletPentru(CH, S, Date.now());
+  const biletVechi = await biletPentru(CH, S, Date.now() - 120000), biletAltSimbol = await biletPentru(CH, "BTC_USDT_PERP", Date.now());
   const r426 = await onRequestGet({ request: cerere(S, { origin: BUN.origin }), env: ENV });
   const r403 = await onRequestGet({ request: cerere(S, { upgrade: "websocket", origin: "https://altcineva.ro" }), env: ENV });
   const r403b = await onRequestGet({ request: cerere(S, { upgrade: "websocket" }), env: ENV });
@@ -228,8 +230,8 @@ try {
   const rbFara = await onRequestPost({ request: new Request("http://127.0.0.1:8788/api/pret-viu?simbol=" + S, { method: "POST", headers: { origin: "http://127.0.0.1:8788", "cf-connecting-ip": "10.176.0.2" } }), env: ENV });
   const db = rb.status === 200 ? JSON.parse(rb.corp) : null;
   test("biletul: POST cu parola în antet dă un bilet bun 60 s pentru simbolul cerut; fără parolă → 401", async () => {
-    assert.equal(rb.status, 200); assert.ok(db && /^\d{10}\.[0-9a-f]{64}$/.test(db.bilet)); assert.equal(await biletBun(ENV.APP_API_TOKEN, S, db.bilet, Date.now()), true);
-    assert.equal(await biletBun(ENV.APP_API_TOKEN, S, db.bilet, Date.now() + 61000), false, "expiră după 60 s"); assert.equal(rbFara.status, 401);
+    assert.equal(rb.status, 200); assert.ok(db && /^\d{10}\.[0-9a-f]{64}$/.test(db.bilet)); assert.equal(await biletBun(CH, S, db.bilet, Date.now()), true);
+    assert.equal(await biletBun(CH, S, db.bilet, Date.now() + 61000), false, "expiră după 60 s"); assert.equal(rbFara.status, 401);
   });
   test("releu: se leagă la Pionex FĂRĂ Origin și abonează exact simbolul botului", () => {
     assert.equal(r101.status, 101); assert.ok(r101.webSocket); assert.match(antetSus.u, /ws\.pionex\.com\/wsPub/);

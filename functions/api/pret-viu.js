@@ -7,6 +7,9 @@ async function semneaza(cheie,text){const k=await crypto.subtle.importKey("raw",
 function egalText(a,b){a=String(a||"");b=String(b||"");let d=a.length^b.length;for(let i=0;i<Math.max(a.length,b.length);i++)d|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);return d===0}
 export async function biletPentru(cheie,simbol,acum){const exp=Math.floor(acum/1000)+60;return exp+"."+await semneaza(cheie,"pret-viu:"+simbol+":"+exp)}
 export async function biletBun(cheie,simbol,bilet,acum){const m=/^(\d{10})\.([0-9a-f]{64})$/.exec(String(bilet||""));if(!cheie||!m)return false;const exp=Number(m[1]),t=Math.floor(acum/1000);if(exp<t||exp>t+120)return false;return egalText(m[2],await semneaza(cheie,"pret-viu:"+simbol+":"+exp))}
+// v100.196 (auditul sever, 🔵2): biletul stă în adresa WebSocket-ului (deci poate ajunge în jurnale) ⇒ nu se mai semnează direct cu parola
+// aplicației: cu RELEU_SECRET din .dev.vars (aleator, ≥ 32 de caractere) când există, altfel cu o cheie derivată o dată din parolă (alt domeniu de cheie)
+export async function cheieReleu(env){const s=String(env&&env.RELEU_SECRET||"");if(s.length>=32)return s;const t=String(env&&env.APP_API_TOKEN||"");return t?"releu:"+await semneaza(t,"pret-viu-cheie"):""}
 let deschise=0;const MAX_RELEE=8;
 
 // v100.6 (el, 28.09: „nicăieri nu se arată prețul live al botului”) - releu pentru prețul LIVE al botului.
@@ -26,7 +29,7 @@ export async function onRequestGet({request,env}){
   if(!sameOrigin(request))return json({error:"ORIGIN_REFUSED"},403);
   const simbol=String(new URL(request.url).searchParams.get("simbol")||"").toUpperCase();
   if(!SIMBOL.test(simbol))return json({error:"SIMBOL_INVALID"},400);
-  if(!(await biletBun(String(env&&env.APP_API_TOKEN||""),simbol,new URL(request.url).searchParams.get("b"),Date.now())))return json({error:"BILET_INVALID"},401);
+  if(!(await biletBun(await cheieReleu(env),simbol,new URL(request.url).searchParams.get("b"),Date.now())))return json({error:"BILET_INVALID"},401);
   if(deschise>=MAX_RELEE)return json({error:"PREA_MULTE_RELEE"},429);
   deschise++;let rezervat=true;const elibereaza=()=>{if(rezervat){rezervat=false;deschise=Math.max(0,deschise-1)}};   // (revizia, M11): locul se ia înainte de await
 
@@ -64,5 +67,5 @@ export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return json({error:"ORIGIN_REFUSED"},403);
   const simbol=String(new URL(request.url).searchParams.get("simbol")||"").toUpperCase();
   if(!SIMBOL.test(simbol))return json({error:"SIMBOL_INVALID"},400);
-  return json({bilet:await biletPentru(env.APP_API_TOKEN,simbol,Date.now()),valabilS:60},200);
+  return json({bilet:await biletPentru(await cheieReleu(env),simbol,Date.now()),valabilS:60},200);
 }

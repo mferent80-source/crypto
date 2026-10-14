@@ -6,8 +6,10 @@
 
 // v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
-const U2 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT";
-const V = (v) => String(Math.round(Math.abs(Number(v)) * 100) / 100).replace(".", ",");
+// v101.116 (auditul sever, 🔵12): regula lui - rezultatele cu O SINGURĂ zecimală (și pe Discord): „−21,3 USDT”, nu „−21,31”;
+// sub 0,05 (dar nu zero) ⇒ „<0,1”, nu „0,0” (numele U2 a rămas din v100.66)
+const U2 = (v) => { v = Number(v) || 0; const a = Math.abs(v); return (v >= 0 ? "+" : "−") + (a > 0 && a < 0.05 ? "<0,1" : a.toFixed(1).replace(".", ",")) + " USDT"; };
+const V = (v) => String(Math.round(Math.abs(Number(v)) * 10) / 10).replace(".", ",");
 const V1 = (v) => Math.abs(Number(v)).toFixed(1).replace(".", ",");   // v101.70: rezultatele cu o singură zecimală
 const scurt = (s, n) => { s = String(s || ""); return s.length <= n ? s : s.slice(0, n - 1).replace(/\s+\S*$/, "") + "…"; };
 const msg = (fapt, act) => fapt + (act ? "\n👉 " + act : "");
@@ -22,6 +24,15 @@ export const serverOprit = (minute) => ({ nivel: "critic", titlu: "Crypto Radar 
 export const citireRea = (minute, eroare) => ({ nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul",
   mesaj: "De " + cate(minute, "minut", "minute") + " (" + scurt(eroare, 60) + ") alertele nu mai sunt de încredere până se rezolvă." });
 export const citireDinNou = () => ({ nivel: "info", titlu: "Crypto Radar citește din nou botul", mesaj: "Alertele merg din nou." });
+// v101.116 (auditul sever, S1): serverul respinge colectorul pe PAROLĂ (AUTH_*), nu pe ritm - înainte trecea drept „limită”, în tăcere
+export const authRespins = (minute, cod) => ({ nivel: "critic", titlu: "Serverul Radarului respinge colectorul",
+  mesaj: msg("De " + cate(minute, "minut", "minute") + " serverul de acasă refuză parola colectorului (" + scurt(cod, 40) + "): alertele boților și ale acțiunilor nu mai vin.",
+    "Aș închide taburile Radarului rămase cu parola veche și aș reporni PORNESTE-CRYPTO-RADAR.bat.") });
+// v101.116 (auditul sever, C3): Pionex dă lista boților porniți goală (results:null), deși știu boți porniți - bucla alertelor e oarbă
+export const botiNevazuti = (minute, nume) => ({ nivel: "critic", titlu: "Crypto Radar nu-ți mai vede boții",
+  mesaj: msg("De " + cate(minute, "minut", "minute") + " Pionex îmi dă lista boților goală, deși știu " + cate((nume || []).length, "bot pornit", "boți porniți") + " (" + scurt((nume || []).join(", "), 80) + "): alertele de lichidare, stop și plan nu merg.",
+    "Aș verifica boții direct în aplicația Pionex; stopurile puse în Pionex merg și fără Radar.") });
+export const botiVazutiIar = () => ({ nivel: "info", titlu: "Crypto Radar îți vede iar boții", mesaj: "Lista din Pionex a revenit: alertele de lichidare, stop și plan merg din nou." });
 
 export const lipsaPionex = (nume) => ({ nivel: "critic", titlu: (nume || "Botul") + " nu mai apare în lista Pionex", mesaj: msg("Poate a fost închis sau lichidat.", "Aș verifica în aplicația Pionex.") });
 
@@ -94,7 +105,7 @@ export const busolaBtc = (o) => ({ nivel: "atentie", cheie: "busola-btc",
 // v101.107 (el 13.10: „fă idei”): în pândă (150 perp-uri) moneda botului e pe partea cealaltă - o dată pe episod, cel mult la 24 h
 export const pandaContra = (o) => ({ nivel: "atentie", cheie: "panda-contra",
   titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · pânda: " + o.text + ", botul tău e CONTRA",
-  mesaj: msg("În pânda din Sugestii (150 perp-uri Binance), " + o.text + "; direcția = randamentul pe 84 de zile, ca în PAZNIC." + (o.lich ? " " + o.lich : ""),"Direcția pe 84 de zile nu e dovedită ca semnal: n-aș adăuga bani și aș verifica stopul; nu e un semnal de închidere.") });
+  mesaj: msg("În pânda din Sugestii (150 perp-uri Binance, nu Pionex), " + o.text + "; direcția = randamentul pe 84 de zile, ca în PAZNIC." + (o.lich ? " " + o.lich : ""),"Direcția pe 84 de zile nu e dovedită ca semnal: n-aș adăuga bani și aș verifica stopul; nu e un semnal de închidere.") });
 // v101.92 (I-578): graficul pe 4h, Busola și Monte Carlo spun toate „contra botului tău” - un singur mesaj, în locul celor separate
 export const busolaVoci = (o) => ({ nivel: "atentie", cheie: "busola-voci",
   titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · " + (o.nContra >= 3 ? "toate vocile contra: " : o.nContra + " din " + o.nVoci + " voci contra: ") + o.cine,

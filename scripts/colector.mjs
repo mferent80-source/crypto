@@ -4,7 +4,7 @@
 //      sa aiba ore de istoric oricand il deschizi, pe orice dispozitiv;
 //   2) judeca alertele (public/lib/alerte.js) si le trimite pe telefon prin ntfy.
 // Doar CITIRE de la Pionex (prin rutele serverului, care sunt read-only).
-// Se opreste singur daca serverul nu mai raspunde 5 minute la rand, ca sa nu
+// Se opreste singur daca serverul nu mai raspunde ~15 minute la rand (MAX_ESECURI), ca sa nu
 // ramana agatat dupa ce omul inchide fereastra Radarului.
 import fs from "node:fs";
 import path from "node:path";
@@ -29,7 +29,7 @@ import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { turaT212Exec } from "./lib/tura-t212.mjs";   // v101.102: completarea o dată a istoricului (tipul ordinului, ora) - jurnalul de execuție
-import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
@@ -53,6 +53,8 @@ import { turaVerdicte as turaVerdicteModul } from "./lib/tura-verdicte.mjs";
 import { turaTrend as turaTrendModul } from "./lib/tura-trend.mjs";   // v101.111: „Trend 12 luni” din robotul premarket_scanner, în KV + jurnalul verdictelor
 import { turaSectoare as turaSectoareModul } from "./lib/tura-sectoare.mjs";   // v101.105: topul pe sectoare + DVOL   // v101.103 (jurnalul verdictelor + corecția pentru teste multiple)   // v101.102 (contul întreg): risc agregat, stres, reconciliere, randament
 import { lipsaConfirmata } from "./lib/paza-boti.mjs";
+import * as S from "./lib/sanatate-colector.mjs";
+import { ponderiT212 } from "./lib/ponderi-t212.mjs";   /* v101.116 (auditul sever, 🔵7): ponderile pe aceeași monedă */   /* v101.116 (auditul sever): căderea pe parolă (S1), lista goală a boților (C3) */
 import { bilantNoteaza, pandaJudeca, bilantAlerte } from "./lib/paza-boti.mjs";   // v101.108/109: bilanțul alertelor de direcție (pânda, Busola, vocile, BTC)   // v100.173 (auditul Opus): botul „dispărut” confirmat 3 ture
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
@@ -220,17 +222,21 @@ async function ferestreServer() {
   try { const d = await cere("/api/istoric-bot?action=ferestre"); ferestreMemo = { la: Date.now(), v: d && Array.isArray(d.ferestre) ? d.ferestre : [] }; } catch (e) { ferestreMemo = { la: Date.now(), v: ferestreMemo.v }; }
   return ferestreMemo.v;
 }
+// v101.116 (auditul sever, C6): după un 429 de ritm turele GRELE (profil, ore, clasament, laborator) stau 60 s - colectorul nu-și mai mănâncă singur
+// limita din care trebuie să plece alertele (var: citit în buclă)
+var ritmPauzaPana = 0;
 async function cere(cale, opt = {}) {
   const ePret = cale.startsWith("/api/market?type=pionex_");
   try {
     const r = await fetch(BAZA + cale, { ...opt, headers: { ...ANTET, ...(opt.headers || {}) }, signal: AbortSignal.timeout(20000) });
     const text = await r.text(); let d = null; try { d = JSON.parse(text); } catch {}
-    if (!r.ok) throw Object.assign(new Error((d && (d.error + (d.detail ? " · " + d.detail : ""))) || "HTTP " + r.status), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error((d && (d.error + (d.detail ? " · " + d.detail : ""))) || "HTTP " + r.status), { status: r.status, cod: d && d.error || null });
     if (ePret) { if (d && d.result === false) { preturiTura.rau++; preturiTura.eroare = String((d.error || "Pionex") + (d.detail ? " · " + d.detail : "")); } else preturiTura.ok++; }
     return d;
-  } catch (e) {
-    if (ePret) { preturiTura.rau++; preturiTura.eroare = String(e && e.message || e); }
-    throw e;
+  } catch (eroare) {
+    if (S.eLimitaDeRitm(eroare)) ritmPauzaPana = Date.now() + 60000;
+    if (ePret) { preturiTura.rau++; preturiTura.eroare = String(eroare && eroare.message || eroare); }
+    throw eroare;
   }
 }
 const trimite = (cale, corp) => cere(cale, { method: "POST", body: JSON.stringify(corp), headers: { "content-type": "application/json", origin: BAZA } });
@@ -242,16 +248,36 @@ let coadaDiscord = []; try { coadaDiscord = JSON.parse(fs.readFileSync(COADA_FIS
 function scrieAtomic(fis, obj) { const tmp = fis + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, fis); }
 // v100.175 (auditul Opus, M18): plafonul taie întâi alertele „info” (cele mai vechi), apoi restul - și spune în jurnal ce a pierdut
 function salveazaCoada() { try { const t = taieCoada(coadaDiscord, 200); if (t.taiate) { jurnal("coada discord: plafon 200, am renunțat la " + cate(t.taiate, "alertă", "alerte") + " (întâi cele info)"); coadaDiscord = t.coada; } scrieAtomic(COADA_FIS, coadaDiscord); } catch (e) { jurnal("coada discord nescrisa", e.message); } }
+// v101.116 (auditul sever, 🔵3): gardă de reintrare (o coadă mare, ~1 s pe mesaj, se suprapunea cu bucla următoare și dubla mesaje);
+// alertele CRITICE se mai încearcă 24 h (înainte: renunțat tăcut la 12 h, ca la info); ce intră în coadă cât se golește rămâne la coadă
+let golireDiscord = false;
 async function golesteCoada() {
-  if (CANAL !== "discord" || !coadaDiscord.length) return;
-  const acum = Date.now(), ramase = [];
-  for (const x of coadaDiscord) {
-    if (acum - x.t > 12 * 3600000) { jurnal("coada discord: renunt (peste 12 h)", x.m.titlu); continue; }
-    if (ramase.length) { ramase.push(x); continue; }   // in ordine: dupa primul esec, restul asteapta tura urmatoare
-    const ok = await trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
-    if (!ok) ramase.push(x);
-  }
-  if (ramase.length !== coadaDiscord.length) { coadaDiscord = ramase; salveazaCoada(); }
+  if (golireDiscord || CANAL !== "discord" || !coadaDiscord.length) return;
+  golireDiscord = true;
+  try {
+    const acum = Date.now(), lot = coadaDiscord.slice();
+    const r = await S.golesteCoadaPas(lot, { acum, maxMs: (x) => (x.m && x.m.nivel === "critic" ? 24 : 12) * 3600000,
+      trimite: (x) => trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal }) });
+    for (const x of r.renuntate) jurnal("coada discord: renunț (" + (x.m && x.m.nivel === "critic" ? "critică, peste 24 h" : "peste 12 h") + ")", x.m && x.m.titlu);
+    if (r.ramase.length !== lot.length) { coadaDiscord = r.ramase.concat(coadaDiscord.filter((x) => !lot.includes(x))); salveazaCoada(); }
+  } finally { golireDiscord = false; }
+}
+// v101.116 (auditul sever, C6): alerta plecată pe Discord dar respinsă de KV-ul Radarului (429 la 16:30 / noaptea) lipsea din Radar și din
+// „ce a urmat după 24 h” ⇒ coada ei pe disc (data/de-trimis-kv.json), reîncercată la fiecare tură, cel mult 24 h, cu ora ei
+const COADA_KV_FIS = path.join(DATA, "de-trimis-kv.json");
+let coadaKv = []; try { coadaKv = JSON.parse(fs.readFileSync(COADA_KV_FIS, "utf8")); if (!Array.isArray(coadaKv)) coadaKv = []; } catch { coadaKv = []; }
+function salveazaCoadaKv() { try { if (coadaKv.length > 300) { jurnal("coada kv: plafon 300, renunț la " + cate(coadaKv.length - 300, "alertă", "alerte") + " (cele mai vechi)"); coadaKv = coadaKv.slice(-300); } scrieAtomic(COADA_KV_FIS, coadaKv); } catch (e) { jurnal("coada kv nescrisă", e.message); } }
+let golireKv = false;
+async function golesteCoadaKv() {
+  if (golireKv || !coadaKv.length) return;
+  golireKv = true;
+  try {
+    const lot = coadaKv.slice();
+    const r = await S.golesteCoadaPas(lot, { acum: Date.now(), maxMs: () => 24 * 3600000, trimite: async (x) => { const d = await trimite("/api/istoric-bot?action=alerte", { alerta: x.m }); return !!(d && d.ok); } });
+    for (const x of r.renuntate) jurnal("coada kv: renunț (peste 24 h)", x.m && x.m.titlu);
+    if (r.trimise.length) jurnal("coada kv: " + cate(r.trimise.length, "alertă urcată", "alerte urcate") + " în Radar cu întârziere");
+    if (r.ramase.length !== lot.length) { coadaKv = r.ramase.concat(coadaKv.filter((x) => !lot.includes(x))); salveazaCoadaKv(); }
+  } finally { golireKv = false; }
 }
 // Alerta pleaca INTAI in KV (se vede in Radar, pe orice dispozitiv de acasa); apoi, daca e
 // cerut, pe canalul extern. "Trimisa" = a ajuns macar in KV (v100.40: iar Discord refuzat -> coada, reincercata).
@@ -261,15 +287,18 @@ function pretBot(id) { const b = (ultimiiBoti || []).find((x) => x && String(x.i
 function simbolBot(id) { const b = (ultimiiBoti || []).find((x) => x && String(x.id) === String(id)); try { return b ? TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex : null; } catch { return null; } }
 async function trimiteAlerta(m, bot, cheie) {
   let inKv = false;
-  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null, pret: pretBot(bot), simbol: simbolBot(bot) } }); inKv = !!(r && r.ok); }
+  const alertaKv = { t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null, pret: pretBot(bot), simbol: simbolBot(bot) };
+  try { const r = await trimite("/api/istoric-bot?action=alerte", { alerta: alertaKv }); inKv = !!(r && r.ok); }
   catch (e) { jurnal("alerta in KV EȘEC", e.message); }
   notezAlerta({ t: Date.now(), nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "", bot: bot || null, cheie: cheie || null });   // v101.86: și „doar în Radar” (grilele)
   // v97.9: unele alerte (grila atinsa) raman doar in Radar - pagina Alerts le arata, canalul extern nu le primeste
   if (m.doarRadar) { jurnal("alerta (doar în Radar)", m.nivel, m.titlu); return inKv; }
-  if (CANAL === "ntfy") { const ok = await ntfy(m); return inKv || ok; }
+  // v101.116 (C6): plecată pe canalul extern, dar nu în KV ⇒ coada KV (alerta e dată drept trimisă, deci tura următoare n-o mai reîncearcă)
+  if (CANAL === "ntfy") { const ok = await ntfy(m); if (!inKv && ok) { coadaKv.push({ t: alertaKv.t, m: alertaKv }); salveazaCoadaKv(); } return inKv || ok; }
   if (CANAL === "discord") {
     const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
     if (!ok) { coadaDiscord.push({ t: Date.now(), m: { nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "" } }); salveazaCoada(); }
+    if (!inKv && ok) { coadaKv.push({ t: alertaKv.t, m: alertaKv }); salveazaCoadaKv(); }
     return inKv || ok;
   }
   if (!inKv) jurnal("alerta NETRIMISA", m.nivel, m.titlu);
@@ -421,6 +450,8 @@ function anuntaMesaj(x) { return anuntaColector(x.nivel, x.titlu, x.mesaj); }
 let esecuri = 0;
 // v98: ce a vazut ultima tura (pentru poza): botii si ultimele 30 de preturi ale fiecaruia (o poza pe tura, la un minut)
 let ultimiiBoti = [], ultimiiBotiLa = 0; const pret30 = {}; let turaNr = 0;
+// v101.116 (auditul sever, C1): ora ultimei ture a alertelor TERMINATE (fără excepție) - pulsul pozei și condiția bătăii la paznic (var: citit din ceasul pozei)
+var turaGataLa = 0;
 async function tura() {
   const acum = Date.now();
   turaNr++;
@@ -437,8 +468,11 @@ async function tura() {
       jurnal("bot-orders", e.status, e.message);
       const m = meta(); m.citireRea = m.citireRea || acum;
       // 10 minute la rand fara citire -> o alerta; se repeta cel mult la 3 ore
-      if (acum - m.citireRea >= 10 * 60000 && acum - (m.anuntatRau || 0) >= 3 * 3600000) {
-        if (await anuntaMesaj(MesajeColector.citireRea(Math.round((acum - m.citireRea) / 60000), e.message))) m.anuntatRau = acum;
+      // v101.116 (auditul sever, S1): serverul respinge PAROLA colectorului (AUTH_*) ⇒ nu trece singur: anunțul după 3 minute, cu ce e de făcut
+      const auth = S.eCadereAuth(e), prag = auth ? 3 * 60000 : 10 * 60000;
+      if (acum - m.citireRea >= prag && acum - (m.anuntatRau || 0) >= 3 * 3600000) {
+        const min = Math.round((acum - m.citireRea) / 60000);
+        if (await anuntaMesaj(auth ? MesajeColector.authRespins(min, e.cod || e.message) : MesajeColector.citireRea(min, e.message))) m.anuntatRau = acum;
       }
       try { scrieStare(); } catch {}
     }
@@ -472,7 +506,7 @@ async function tura() {
       // v97.7: fisa de inchidere - botul cautat printre cei inchisi (motivul, rezultatul, planul, lectia); negasit -> mesajul vechi
       let fisa = null;
       try {
-        const fb = await cere("/api/bot-orders?status=finished&limit=10"), x = (fb && fb.bots || []).find((y) => String(y.id) === String(id));
+        const x = await S.botInchisDupaId(id, cere);   /* v101.116 (🔵8): până la 3 pagini de boți închiși */
         if (x) {
           let plan = null, atrPct = null;
           try { const p = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent(id)); plan = p && p.plan && !p.plan.proba ? p.plan : null; } catch {}
@@ -491,6 +525,12 @@ async function tura() {
       if (trimis) { m.cunoscuti[id].activ = false; m.cunoscuti[id].inchisLa = acum; }
     }
   }
+  // v101.116 (auditul sever, C3): lista goală + boți activi cunoscuți = alertele de risc sunt OARBE ⇒ spus după 10 min (o dată la 3 h), nu tăcere
+  {
+    const lg = S.listaGoalaPas(m, { goala: listaGoala, acum });
+    if (lg.tip === "orb" && (await anuntaMesaj(MesajeColector.botiNevazuti(lg.minute, lg.nume)))) m.listaGoalaAnuntat = acum;
+    if (lg.tip === "vede" && (await anuntaMesaj(MesajeColector.botiVazutiIar()))) m.listaGoalaAnuntat = 0;
+  }
   // v100.29: bot nou pornit din Pionex pe o moneda unde pierzi (pe toata istoria, din arhiva) -> o alerta, inainte sa intre la „cunoscuti”
   try {
     const av = await avertizariPornire({ boti, cunoscuti: m.cunoscuti, acum, Obiceiuri, adresa: adresaRadarului,   // v100.33: + linkul spre poarta
@@ -499,7 +539,8 @@ async function tura() {
   } catch (e) { jurnal("avertizare la pornire", e.message); }
   for (const b of boti) if (b && b.id) m.cunoscuti[b.id] = { activ: b.activ !== false, nume: String(b.baza || "").replace(/\.PERP$/, "") };
   // v100.175 (auditul Opus, M19): cei închiși de peste 30 de zile nu mai trebuie ținuți minte (starea creștea fără limită)
-  for (const id of Object.keys(m.cunoscuti)) { const c = m.cunoscuti[id]; if (c && !c.activ && !acumIds[id] && (Number(c.inchisLa) || 0) && acum - c.inchisLa > 30 * 86400000) delete m.cunoscuti[id]; }
+  // v101.116 (auditul sever, 🔵1): + starea alertelor botului, închișii fără oră (de dinainte de v100.175) și orfanii
+  S.curataStareBoti(stareAlerte, m, acumIds, acum);
   // v101.59 (Busola 1.36, §2 „paza boților”): rezumatul Busolei o dată la 30 min (ca fișa); vechi ⇒ o notă doar în Radar, o dată pe rezumat
   try {
     await Busola.incarca(fetch, acum);
@@ -851,10 +892,11 @@ let planT212La = 0, planT212InLucru = false;
 // v100.40 (audit 30.09): Trading 212 nu mai raspunde (cheie revocata/expirata, 401/403, serverul fara chei) -> dupa 30 de minute
 // o alerta critica (repetata cel mult la 6 ore), iar la revenire una de informare. Inainte: doar jurnal - alertele de stop pe
 // pozitiile T212 se opreau in liniste. 429 (limita de ritm) nu e cadere.
+// v101.116 (auditul sever, S1): 429 AUTH_RATE_LIMITED (serverul de acasă respinge parola colectorului) ESTE cădere - trecea drept limită
 async function t212Sanatate(e) {
   const m = meta(), acum = Date.now();
   if (!e) { if (m.t212AnuntatRau) await anuntaMesaj(MesajeColector.t212DinNou()); m.t212RauDe = 0; m.t212AnuntatRau = 0; return; }
-  if (e.status === 429) return;
+  if (S.eLimitaDeRitm(e)) return;
   m.t212RauDe = m.t212RauDe || acum;
   if (acum - m.t212RauDe >= 30 * 60000 && acum - (m.t212AnuntatRau || 0) >= 6 * 3600000) {
     if (await anuntaMesaj(MesajeColector.t212Rau(Math.round((acum - m.t212RauDe) / 60000), e.status, e.message))) m.t212AnuntatRau = acum;
@@ -887,11 +929,12 @@ async function turaPlanuriT212() {
     }
     const c = await cere("/api/t212?action=cont"), pz = await cere("/api/t212?action=pozitii");
     const cash = c && c.cash || {}, poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
-    let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
-    const inv = cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
-    if (inv !== null && usd > 0) for (const x of poz) {
-      const pond = x.quantity * x.currentPrice / usd * inv / cash.total, k = "t212-conc-" + x.ticker + "-" + zi;
-      if (pond <= 0.2 || st[k]) continue;
+    // v101.116 (auditul sever, 🔵7): $ + € + pence adunate la un loc dădeau o alertă de concentrare falsă ⇒ ponderile doar pe aceeași monedă
+    const pd = ponderiT212(poz, cash, ContIntreg.monedaTicker);
+    if (pd.amestec) jurnal("plafonul de 20% T212: monede amestecate (" + pd.amestec.join(" + ") + "), nu-l socotesc fără cursuri");
+    for (const x of poz) {
+      const pond = pd.pe[x.ticker], k = "t212-conc-" + x.ticker + "-" + zi;
+      if (!(pond > 0.2) || st[k]) continue;
       const s = T212.simbol(x.ticker);
       if (await trimiteAlerta(MesajeColector.pondereT212(s, pond), null, k.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 60))) st[k] = true;
     }
@@ -929,11 +972,13 @@ async function turaPaznic() {
   // v98.2: cat poza a urcat in ultimele 10 minute, poza E pulsul (worker-ul citeste `la` din ea si anunta singur revenirea) -
   // nicio bataie separata, deci nicio scriere KV in plus. Altfel (poza nu pleaca) bataia la 5 minute, ca in v97.
   if (!PAZNIC_URL || !PAZNIC_TOKEN || !bataieNecesara({ acum: Date.now(), pozaOkLa, paznicLa })) return;
+  // v101.116 (auditul sever, C1): bătaia = dovada că bucla alertelor merge; o tură care aruncă la fiecare minut nu mai „bate”
+  if (Date.now() - turaGataLa > 5 * 60000) return;
   paznicLa = Date.now();
   try {
     const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/bataie", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ pid: process.pid, versiune: VERSIUNE_COLECTOR }), signal: AbortSignal.timeout(15000) });
-    if (!r.ok) jurnal("paznic: bataia refuzata", r.status);
-  } catch (e) { jurnal("paznic: bataia n-a plecat", e.message); paznicLa = Date.now() - 4 * 60000; }
+    if (!r.ok) { jurnal("paznic: bataia refuzata", r.status); paznicLa = paznicLaDupaEsec(Date.now()); }
+  } catch (e) { jurnal("paznic: bataia n-a plecat", e.message); paznicLa = paznicLaDupaEsec(Date.now()); }   /* v101.116 (C2): reîncerc după 1 min */
 }
 
 // v98: poza pentru pagina alerts din Trading Tools - la 5 minute, prin paznic (POST /poza); lista de simboluri a paginii
@@ -971,8 +1016,7 @@ async function pozitiiPentruPoza() {
   const alesT = await trailAlesPt(inchiseT);
   let cash = null; try { cash = (await cere("/api/t212?action=cont")).cash || null; } catch {}
   if (cash && cash.total > 0) contT212 = cash.total;   // v101.2: contul in lei, pentru „câte bucăți” la simbolurile urmarite
-  let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
-  const inv = cash && cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
+  const pd = ponderiT212(poz, cash, ContIntreg.monedaTicker);   // v101.116 (🔵7): pe aceeași monedă; amestecat ⇒ null
   const out = [];
   for (const x of poz) {
     let bare = [], plan = null;
@@ -1030,7 +1074,7 @@ async function pozitiiPentruPoza() {
     // v98.1: `la` = cand a fost citit pretul T212 (pagina il arata cu chip „T212" cat e proaspat); `prev` = inchiderea ultimei sesiuni incheiate (NY)
     out.push({ ...p, sursa, extra, niveluri: n, prev: prevClose(bare, Date.now()), la: Date.now(), ppl: x.ppl, costLei, bare, sem: semC,
       niv: nivDinNiveluri(n, plan),   // stopul POZITIEI (urca dupa maxim), ca in pagina T212 a Radarului - nu stopul de intrare
-      pondere: inv !== null && usd > 0 && cash.total > 0 ? x.quantity * x.currentPrice / usd * inv / cash.total : null });
+      pondere: pd.pe[x.ticker] != null ? pd.pe[x.ticker] : null });
   }
   // pozitiile vandute: Consilierul lor nu mai alerteaza (nicio „schimbare” pe o pozitie inchisa)
   const tine = new Set(poz.map((x) => "t212-" + x.ticker));
@@ -1120,13 +1164,17 @@ async function turaPoza() {
     const fx = (await usdPeLeuBnr()) || fxDinPozitii(t212);   // v100.175 (revizia v100.173): BNR, ca pagina; pozițiile doar de rezervă
     for (const s of simboluri) { const n = s.niveluri; if (n && n.nivel === "ok" && n.intrare && s.moneda === "$" && contT212 && fx) { try { s.marime = ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: contT212, fx }); } catch (e) { jurnal("poza: marime", s.s, e.message); } } }
     await aplicaCererileSalt();
-    const poza = construiestePoza({ acum: Date.now(), versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
+    const poza = construiestePoza({ acum: Date.now(), turaLa: turaGataLa || null, versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
     // v101.86: alertele de azi, grupate pe filele paginii alerts - cu simbolurile chiar din poză (boții cu numele din botPoza)
     poza.alerte = alertePentruPoza(alerteZi, { detinute: poza.t212.map((x) => x.s).concat(poza.boti.map((b) => b.s), (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol)),
       urmarite: poza.simboluri.map((s) => s.s), boti: poza.boti, salt: (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol) }, Date.now());
     const text = pozaInLimita(poza, 450 * 1024);   // revizia (M9): sub plafonul de 512 KB al worker-ului, întâi ies alertele-zgomot
     const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
-    if (!r.ok) jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));
+    if (!r.ok) {
+      jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));
+      // v101.116 (auditul sever, 🔵11): cota KV a contului Cloudflare (1.000 de scrieri pe zi, împărțită cu alți workeri) se vede aici întâi
+      if (r.status === 429 || r.status >= 500) jurnal("poza: paznicul refuză scrierea (" + r.status + ") - posibil cota KV de pe Cloudflare (1.000 de scrieri pe zi pe tot contul); dacă ține, paznicul poate anunța fals „colectorul tace”");
+    }
     else { pozaOkLa = Date.now(); jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", cate(t212.length, "poziție", "poziții"), cate(boti.length, "bot", "boți"), cate(simboluri.length, "simbol", "simboluri"), radarUrl ? "tunel" : ""); }
     // I-463: alertele pe simbolurile paginii (miscare > 2x ATR propriu, cumparare noua de insider) - o data pe zi per simbol
     const m = meta(), st = m.simAlerte || (m.simAlerte = {}), prag = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
@@ -1329,8 +1377,7 @@ async function dateDimineata() {
       const c = await cere("/api/t212?action=cont"), pz = await cere("/api/t212?action=pozitii"), h = await cere("/api/t212?action=istoric");
       const poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0), des = T212.perechi((h && h.umpleri) || []).deschise, cash = c && c.cash || {};
       t212Citit = true;
-      let usd = 0; poz.forEach((x) => { usd += x.quantity * x.currentPrice; });
-      const inv = cash.total > 0 && cash.free >= 0 ? cash.total - cash.free : null;
+      const pd = ponderiT212(poz, cash, ContIntreg.monedaTicker);   // v101.116 (🔵7): pe aceeași monedă
       const zi = new Date().toISOString().slice(0, 10), intrari = [], barePe = {};
       for (const x of poz) {
         const s = T212.simbol(x.ticker);
@@ -1349,7 +1396,7 @@ async function dateDimineata() {
           }
         } catch (e) { jurnal("dimineata", s, e.message); }
         try { const r = await cere("/api/t212?action=rezultate&ticker=" + encodeURIComponent(x.ticker)); if (r && r.data) out.rezultate.push({ simbol: s, data: r.data }); } catch {}
-        if (inv !== null && usd > 0) { const pond = x.quantity * x.currentPrice / usd * inv / cash.total; if (pond > 0.2) out.plafon.push({ simbol: s, pond }); }
+        { const pond = pd.pe[x.ticker]; if (pond > 0.2) out.plafon.push({ simbol: s, pond }); }
         try { const sn = await cere("/api/stiri?action=actiune&ticker=" + encodeURIComponent(x.ticker)); const t = (sn && sn.stiri || []).find((y) => y.la && Date.now() - y.la < 24 * 3600000); if (t) out.stiri.push({ simbol: s, titlu: t.titlu }); } catch {}
       }
       // v91: socoteala sfaturilor - semaforul de azi + preturile dupa 5/10/20 zile pentru sfaturile vechi
@@ -1518,7 +1565,14 @@ async function turaScanColector() {
 }
 
 // v100.40: rezumatul perechilor incheiate, o data pe ora pe bot (Discord); fiecare pereche ramane in Radar
+// v101.116 (auditul sever, 🔵4): gardă de reintrare - o trimitere de peste 60 s nu mai lasă bucla următoare să dubleze rezumatul
+let perechiOraInLucru = false;
 async function turaPerechiOra() {
+  if (perechiOraInLucru) return;
+  perechiOraInLucru = true;
+  try { await turaPerechiOraCorp(); } finally { perechiOraInLucru = false; }
+}
+async function turaPerechiOraCorp() {
   const po = meta().perechiOra; if (!po) return;
   for (const id of Object.keys(po)) {
     const x = po[id]; if (!x || Date.now() - x.de < 3600000) continue;
@@ -2013,9 +2067,20 @@ async function yahooLung(simbol) {
 // prețurile zilnice ale contului întreg: o zi pe disc (data/cont-bare), cererile noi la 2,5 s (ruta T212 are limita ei pe minut)
 const CONT_BARE = path.join(DATA, "cont-bare"); fs.mkdirSync(CONT_BARE, { recursive: true });
 let contBareUltima = 0;
+// v101.116 (auditul sever, 🔵10): o dată pe zi, ce n-a mai fost atins de 30 de zile pleacă (cheia e sha1 pe cale: fiecare ticker nou lăsa un fișier)
+let contBareCuratatZi = null;
+function curataContBare() {
+  const zi = new Date().toISOString().slice(0, 10); if (contBareCuratatZi === zi) return; contBareCuratatZi = zi;
+  try {
+    const l = fs.readdirSync(CONT_BARE).map((nume) => { try { return { nume, mtime: fs.statSync(path.join(CONT_BARE, nume)).mtimeMs }; } catch { return null; } }).filter(Boolean);
+    const de = S.deSters(l, Date.now(), 30 * 86400000); for (const n of de) { try { fs.unlinkSync(path.join(CONT_BARE, n)); } catch {} }
+    if (de.length) jurnal("cont-bare: " + cate(de.length, "fișier vechi șters", "fișiere vechi șterse") + " (neatinse de 30 de zile)");
+  } catch (e) { jurnal("cont-bare: curățarea", e.message); }
+}
 async function bareZiCont(cale) {
   const f = path.join(CONT_BARE, crypto.createHash("sha1").update(cale).digest("hex").slice(0, 20) + ".json");
-  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < 20 * 3600000) { if (x.lipsa) throw Object.assign(new Error("HTTP 404 (ținut minte)"), { tinut: true }); return x.r; } } catch (e) { if (e.tinut) throw e; }
+  // v101.116 (auditul sever, C4): un 404 („nu știu simbolul”) se ține minte 3 h, nu 20 h - o reparație a rutei / a simbolului ajunge în aceeași zi
+  try { const x = JSON.parse(fs.readFileSync(f, "utf8")); if (Date.now() - x.la < (x.lipsa ? 3 : 20) * 3600000) { if (x.lipsa) throw Object.assign(new Error("HTTP 404 (ținut minte)"), { tinut: true }); return x.r; } } catch (e) { if (e.tinut) throw e; }
   const asteapta = contBareUltima + 2500 - Date.now(); if (asteapta > 0) await new Promise((r) => setTimeout(r, asteapta));
   contBareUltima = Date.now();
   try { const r = await cere(cale); try { scrieAtomic(f, { la: Date.now(), r }); } catch {} return r; }
@@ -2054,7 +2119,14 @@ async function regulaBanda() {
   return bandaMemo.v && bandaMemo.v.regula || null;
 }
 function botiAfaraAcum() { const m = meta(); return Object.entries(m.banda || {}).map(([id, s]) => ({ id, nume: s.nume, oreAfara: (Date.now() - s.de) / 3600000 })); }
+// v101.116 (auditul sever, 🔵4): gardă de reintrare, ca la perechi
+let bandaLiveInLucru = false;
 async function turaBandaLive() {
+  if (bandaLiveInLucru) return;
+  bandaLiveInLucru = true;
+  try { await turaBandaLiveCorp(); } finally { bandaLiveInLucru = false; }
+}
+async function turaBandaLiveCorp() {
   const r = await regulaBanda(), m = meta(); m.banda = m.banda || {};
   const activi = new Set();
   for (const b of ultimiiBoti || []) {
@@ -2067,9 +2139,13 @@ async function turaBandaLive() {
   }
   for (const id of Object.keys(m.banda)) if (!activi.has(id)) delete m.banda[id];
 }
-const sectoareStare = {}, UNIVERS_FIS = path.join(DATA, "univers-sua.json");
-const trendStare = {};
-async function turaTrendColector() { await turaTrendModul({ trimite, jurnal, fetch }, trendStare); }   // v101.111
+// v101.116 (auditul sever, C5): starea Trend 12 luni / topul pe sectoare pe DISC - înainte stătea doar în memorie, iar după fiecare repornire
+// verdictele zilei se retrimiteau cu ora repornirii (14.10: de 6 ori). `inLucru` nu se scrie.
+function stareDeDisc(fis) { try { const x = JSON.parse(fs.readFileSync(path.join(DATA, fis), "utf8")); return x && typeof x === "object" && !Array.isArray(x) ? x : {}; } catch { return {}; } }
+function scrieStareDisc(fis, st) { try { const { inLucru, ...deScris } = st; scrieAtomic(path.join(DATA, fis), deScris); } catch (e) { jurnal("starea " + fis + " nescrisă", e.message); } }
+const sectoareStare = stareDeDisc("sectoare-stare.json"), UNIVERS_FIS = path.join(DATA, "univers-sua.json");
+const trendStare = stareDeDisc("trend-stare.json");
+async function turaTrendColector() { try { await turaTrendModul({ trimite, jurnal, fetch }, trendStare); } finally { scrieStareDisc("trend-stare.json", trendStare); } }   // v101.111
 // v101.113 (I-630): proba PAZNIC–lățime o dată pe zi, de la 12:00 RO, cât timp PAZNIC mai rulează (stare.json există); 13.10 a fost ratată de mână.
 // Se scoate odată cu PAZNIC (oprirea e plănuită pe 18–19.10).
 const probaLatimeStare = {}, PAZNIC_STARE = "C:/Users/Cimin/PAZNIC-CRYPTO/stare.json";
@@ -2084,8 +2160,10 @@ async function turaProbaLatimePaznic() {
   } finally { probaLatimeStare.inLucru = false; }
 }
 async function turaSectoareColector() {
-  await turaSectoareModul({ cere, trimite, jurnal, Factori, GridCalcul, bareZi: bareZiCont, fetch,
-    universDisc: { citeste: () => { try { return JSON.parse(fs.readFileSync(UNIVERS_FIS, "utf8")); } catch { return null; } }, scrie: (x) => { try { scrieAtomic(UNIVERS_FIS, x); } catch {} } } }, sectoareStare);
+  try {
+    await turaSectoareModul({ cere, trimite, jurnal, Factori, GridCalcul, bareZi: bareZiCont, fetch,
+      universDisc: { citeste: () => { try { return JSON.parse(fs.readFileSync(UNIVERS_FIS, "utf8")); } catch { return null; } }, scrie: (x) => { try { scrieAtomic(UNIVERS_FIS, x); } catch {} } } }, sectoareStare);
+  } finally { scrieStareDisc("sectoare-stare.json", sectoareStare); }
 }
 async function turaRisc() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
@@ -2179,16 +2257,19 @@ async function turaBilantBusola() {
 }
 
 async function bucla() {
-  try { await tura(); } catch (e) { jurnal("tură", e.message); }
+  try { await tura(); turaGataLa = Date.now(); } catch (e) { jurnal("tură", e.message); }
   // v98.2 (audit 28.09, #1): planurile si poza cer amandoua pozitiile T212 - una dupa alta, nu deodata (serverul leaga oricum
   // cererile identice in zbor; asa nici cele diferite nu se calca in aceeasi secunda)
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message)).then(() => turaPoza()).catch((e) => jurnal("poza", e.message));
   turaCopie();
+  curataContBare();   // v101.116 (🔵10): o dată pe zi
   golesteCoada().catch((e) => jurnal("coada discord", e.message));   // v100.40
+  golesteCoadaKv().catch((e) => jurnal("coada kv", e.message));   // v101.116 (C6): alertele ratate în KV
+  const greleOk = Date.now() >= ritmPauzaPana;   // v101.116 (C6): 60 s după un 429 de ritm, turele grele nu pornesc
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
   turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
   turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
-  turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaVarianteNoapte()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
+  if (greleOk) turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaVarianteNoapte()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
   turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
   turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
   turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00
@@ -2211,10 +2292,11 @@ async function bucla() {
   turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
   turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)
   turaMonteCarloBot().then(() => turaDupa24h()).catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute; v101.92: + judecata după 24 h (voci, alerte)
-  if (!process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  if (greleOk && !process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, PAS_MS);
   // v101.34: bucla e la 60 s - poza are ceasul ei (16–17 la 30 s); turaPoza se pazeste singura (ritmul, pozaInLucru)
-  if (!globalThis.__ceasPoza) globalThis.__ceasPoza = setInterval(() => { turaPoza().catch((e) => jurnal("poza", e.message)); }, 10000);
+  // v101.116 (auditul sever, C1): și bătaia din colector.pid la 10 s - o tură lungă (Pionex lent) nu mai lasă un lansator să pornească al doilea colector
+  if (!globalThis.__ceasPoza) globalThis.__ceasPoza = setInterval(() => { bate(); turaPoza().catch((e) => jurnal("poza", e.message)); }, 10000);
 }
 bucla();

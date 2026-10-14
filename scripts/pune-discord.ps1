@@ -23,6 +23,8 @@ $linii = @(Get-Content $f -Encoding UTF8 | Where-Object { $_ -notmatch '^\s*DISC
 $linii += "DISCORD_WEBHOOK=$w"
 $linii += "ALERTE_CANAL=discord"
 [System.IO.File]::WriteAllLines($f, [string[]]$linii, (New-Object System.Text.UTF8Encoding($false)))
+# v100.196 (auditul sever, albastru 10): copia in clar (cu toate cheile) se sterge dupa ce fisierul nou a fost scris - altfel ajungea in backup
+Remove-Item ($f + ".inainte-de-discord") -Force -ErrorAction SilentlyContinue
 Write-Host "  Adresa e pusa in .dev.vars (si ALERTE_CANAL=discord)."
 if (-not $FaraProba) {
   Write-Host "  Trimit un mesaj de proba..."
@@ -31,7 +33,13 @@ if (-not $FaraProba) {
 if (-not $FaraRepornire) {
   $pid0 = $null
   try { $pid0 = [int]((Get-Content (Join-Path $rad "data\colector.pid") -Raw).Split(" ")[0]) } catch {}
-  if ($pid0) { try { Stop-Process -Id $pid0 -Force -ErrorAction Stop } catch {} }
+  # v100.196 (auditul sever, albastru 10): PID-ul din colector.pid poate fi refolosit de Windows pentru alt program - se opreste DOAR daca
+  # linia lui de comanda e chiar colectorul (node scripts\colector.mjs)
+  if ($pid0) {
+    $cl = $null; try { $cl = (Get-CimInstance Win32_Process -Filter ("ProcessId=" + $pid0) -ErrorAction Stop).CommandLine } catch {}
+    if ($cl -and $cl -match 'colector\.mjs') { try { Stop-Process -Id $pid0 -Force -ErrorAction Stop } catch {} }
+    else { Write-Host "  PID-ul $pid0 din colector.pid nu e colectorul - nu-l opresc." }
+  }
   Start-Sleep -Seconds 2
   Start-Process -FilePath node -ArgumentList 'scripts\colector.mjs' -WorkingDirectory $rad -WindowStyle Hidden
   Write-Host "  Colectorul a pornit din nou: de acum alertele vin si pe Discord."

@@ -85,7 +85,9 @@ await test("frâna fără arhivă: după 2 ore spune o dată pe zi că nu poate 
 await test("colectorul: cursul $/leu din BNR (ca pagina), pozițiile doar de rezervă; boții închiși de peste 30 de zile ies din starea alertelor", () => {
   const c = citeste("scripts", "colector.mjs");
   assert.match(c, /const fx = \(await usdPeLeuBnr\(\)\) \|\| fxDinPozitii\(t212\);/); assert.match(c, /async function cursBnr\(\)/);
-  assert.match(c, /acum - c\.inchisLa > 30 \* 86400000\) delete m\.cunoscuti\[id\]/);
+  // v100.196 (auditul sever, 🔵1): regula de 30 de zile s-a mutat în sanatate-colector.mjs și curăță și starea alertelor botului
+  assert.match(c, /S\.curataStareBoti\(stareAlerte, m, acumIds, acum\);/);
+  assert.match(citeste("scripts", "lib", "sanatate-colector.mjs"), /if \(acum - x\.inchisLa > 30 \* ZI_MS\) \{ delete c\[id\]; delete stare\[id\]; \}/);
 });
 await test("Binance cu limită de timp (o cerere agățată ținea lățimea pieței oprită ~5 minute)", () => { assert.match(citeste("scripts", "lib", "tura-latime.mjs"), /signal: AbortSignal\.timeout\(20000\)/); });
 

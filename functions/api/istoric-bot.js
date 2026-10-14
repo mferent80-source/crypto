@@ -32,6 +32,9 @@ async function citesteLista(env,bot){try{const v=JSON.parse(await env.ISTORIC.ge
 async function citesteConfig(env){try{return JSON.parse(await env.ISTORIC.get("config")||"null")}catch{return null}}
 // v100.175 (auditul Opus, M20): lista KV dă cel mult 1000 de chei pe pagină ⇒ se urmează cursorul (ca la deciziiBoti)
 async function toateCheile(env,prefix){const out=[];let cursor=null;do{const l=await env.ISTORIC.list(cursor?{prefix,cursor}:{prefix});for(const k of (l&&l.keys)||[])out.push(k);cursor=l&&!l.list_complete&&l.cursor?l.cursor:null}while(cursor&&out.length<20000);return out}
+// v100.196 (auditul sever, statistica 🟡2): testele bilanțurilor (ADX, becuri) pentru registrul Benjamini–Hochberg - înainte serverul le arunca
+// și registrul avea doar verdictele + obiceiurile. Curățate: nume ≤ 120, p și diferența numere sau null, verdictul text scurt.
+function testeCurate(l){return (Array.isArray(l)?l:[]).slice(0,20).filter(x=>x&&typeof x==="object"&&typeof x.nume==="string"&&x.nume.trim()).map(x=>({nume:x.nume.slice(0,120),p:nr(x.p),difMed:nr(x.difMed),verdict:typeof x.verdict==="string"?x.verdict.slice(0,30):null}))}
 const faraKv=()=>json({error:"ISTORIC_DOAR_ACASA",detail:"Istoricul de pe server merge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat)."},503);
 
 export async function onRequestGet({request,env}){
@@ -132,14 +135,19 @@ export async function onRequestGet({request,env}){
   const ore=Math.min(168,Math.max(1,Math.floor(Number(u.searchParams.get("ore")))||24));
   const de=Date.now()-ore*3600000;
   const lista=(await citesteLista(env,bot)).filter(x=>x&&x.t>=de);
-  return json({bot,ore,intrari:lista,config:await citesteConfig(env)});
+  // v100.196 (auditul sever, 🔵3): citirea de pe fiecare bot (des) nu mai duce topicul ntfy (un secret: cine îl știe citește și scrie pe canal)
+  // decât când canalul E ntfy - Tabloul îl arată doar atunci; action=config îl dă în continuare
+  const cfg=await citesteConfig(env),config=cfg&&typeof cfg==="object"?{...cfg}:cfg;if(config&&config.canal!=="ntfy")delete config.ntfyTopic;
+  return json({bot,ore,intrari:lista,config});
 }
 
 export async function onRequestPost({request,env}){
-  const auth=await requireApiAuth(request,env,"istoric-write",30);if(!auth.ok)return authErrorResponse(auth,H);
+  // v100.196 (auditul sever, C6): colectorul scrie zeci de chei pe minut (istoricul fiecărui bot, semnalele, paza, profilurile noaptea) - cu 30 pe
+  // minut se respingea singur (306 de 429 în 7 zile, 5 alerte lipsă din Radar) ⇒ găleata lui 150; alertele au găleata LOR (nu le mai mănâncă restul)
+  const u=new URL(request.url),action=u.searchParams.get("action");
+  const auth=await requireApiAuth(request,env,action==="alerte"?"istoric-alerte":"istoric-write",30,150);if(!auth.ok)return authErrorResponse(auth,H);
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
-  const u=new URL(request.url),action=u.searchParams.get("action");
   const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:action==="universSua"?1048576:action==="sectoareTop"||action==="trend12"?262144:action==="disciplinaBanda"?524288:65536))return json({error:"Corp prea mare"},413);
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
@@ -303,12 +311,15 @@ export async function onRequestPost({request,env}){
   // v100.176: contul întreg - raportul (cu „la”) și valoarea unei zile (o intrare pe zi, ultimele 800)
   if(action==="cont"){const r=corp&&corp.cont;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"cont: raportul cu „la”"},400);await env.ISTORIC.put("cont:raport",JSON.stringify(r));return json({ok:true})}
   // v100.177: un verdict sau mai multe (pagina: Poarta; colectorul: ideile, macro); un verdict pe (sursă, simbol, zi), cel mai nou rămâne
-  if(action==="verdict"){const SURSE=new Set(["poarta-t212","poarta-grid","idei","macro","top-sector","trend-12-1","scor-zi-actiuni","scor-zi-crypto"]),acum=Date.now(),z=t=>new Date(t).toISOString().slice(0,10);
+  // v100.196 (auditul sever, 🔵4 + C5): pe (sursă, simbol, zi) rămâne PRIMUL verdict - pe el a putut acționa; după un reload al paginii sau o
+  // repornire a colectorului, retrimiterea de mai târziu nu-l mai înlocuiește. Verdictele PAGINII (Poarta) vin cu ora de acum: un `t` mai vechi
+  // de 10 min e refuzat (umplerea din urmă, cu ora veche, o face doar colectorul: idei, Trend, sectoare)
+  if(action==="verdict"){const SURSE=new Set(["poarta-t212","poarta-grid","idei","macro","top-sector","trend-12-1","scor-zi-actiuni","scor-zi-crypto"]),PAGINA=new Set(["poarta-t212","poarta-grid"]),acum=Date.now(),z=t=>new Date(t).toISOString().slice(0,10);
     const noi=(Array.isArray(corp&&corp.verdicte)?corp.verdicte:[corp]).slice(0,500).map(v=>{if(!v||typeof v!=="object")return null;const s=String(v.s||""),k=String(v.k||"").replace(/[^A-Za-z0-9._=^-]/g,"").slice(0,32),n=String(v.n||"").toLowerCase().replace(/[^a-z-]/g,"").slice(0,20),p=nr(v.p),t=nr(v.t);
-      if(!SURSE.has(s)||!k||!n||!(p>0)||!(t>0)||t>acum+300000)return null;const o={s,k,n,p,t};const j=nr(v.j),u=nr(v.u);if(j>0&&u>j){o.j=j;o.u=u}return o}).filter(Boolean);
+      if(!SURSE.has(s)||!k||!n||!(p>0)||!(t>0)||t>acum+300000)return null;if(PAGINA.has(s)&&t<acum-600000)return null;const o={s,k,n,p,t};const j=nr(v.j),u=nr(v.u);if(j>0&&u>j){o.j=j;o.u=u}return o}).filter(Boolean);
     if(!noi.length)return json({error:"verdict: s, k, n, p, t"},400);
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("verdicte:jurnal")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
-    const m=new Map();for(const x of l.concat(noi)){const c=x.s+"|"+x.k+"|"+z(x.t),v=m.get(c);if(!v||v.t<=x.t)m.set(c,x)}
+    const m=new Map();for(const x of l.concat(noi)){const c=x.s+"|"+x.k+"|"+z(x.t),v=m.get(c);if(!v||x.t<v.t)m.set(c,x)}
     const out=[...m.values()].sort((a,b)=>a.t-b.t).slice(-20000);await env.ISTORIC.put("verdicte:jurnal",JSON.stringify(out));return json({ok:true,n:out.length})}
   if(action==="verdicteCalibrare"){const c=corp;if(!c||typeof c!=="object"||!(nr(c.la)>0)||!Array.isArray(c.calibrare))return json({error:"verdicteCalibrare: la + calibrare"},400);await env.ISTORIC.put("verdicte:calibrare",JSON.stringify(c));return json({ok:true})}
   if(action==="disciplinaBanda"){if(!(nr(corp&&corp.la)>0)||!Array.isArray(corp.tabel))return json({error:"disciplinaBanda: la + tabel"},400);await env.ISTORIC.put("disciplina:banda",JSON.stringify(corp));return json({ok:true})}
@@ -321,7 +332,7 @@ export async function onRequestPost({request,env}){
     l=l.filter(x=>x&&x.z!==z).concat([{z,valoare:nr(corp.valoare),complet:corp.complet===true,pionex:nr(corp.pionex),t212:nr(corp.t212),salt:nr(corp.salt)}]).sort((a,b)=>a.z<b.z?-1:1).slice(-800);await env.ISTORIC.put("cont:zile",JSON.stringify(l));return json({ok:true,n:l.length})}
   if(action==="risc"){const r=corp&&corp.risc;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"risc: raportul cu „la”"},400);await env.ISTORIC.put("risc",JSON.stringify(r));return json({ok:true})}
   if(action==="carnet"){const r=corp&&corp.carnet;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"carnet: raportul cu „la”"},400);await env.ISTORIC.put("carnet",JSON.stringify(r));return json({ok:true})}
-  if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);const bl=corp.bilant&&typeof corp.bilant==="object"?{adx:typeof corp.bilant.adx==="string"?corp.bilant.adx.slice(0,300):null,sem:typeof corp.bilant.sem==="string"?corp.bilant.sem.slice(0,300):null}:null;await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l,bilant:bl}));return json({ok:true,n:l.length})}
+  if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);const bl=corp.bilant&&typeof corp.bilant==="object"?{adx:typeof corp.bilant.adx==="string"?corp.bilant.adx.slice(0,300):null,sem:typeof corp.bilant.sem==="string"?corp.bilant.sem.slice(0,300):null,teste:testeCurate(corp.bilant.teste)}:null;await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l,bilant:bl}));return json({ok:true,n:l.length})}
   // v100.50 (I-472): jurnalul deciziilor - „am făcut / n-am făcut” langa actiunea Consilierului; o decizie pe verdict (cheia), ultima ramane.
   // Colectorul scrie inapoi lista cu judecata (r) - atunci corpul are „lista”.
   if(action==="decizie"){

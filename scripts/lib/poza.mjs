@@ -171,6 +171,9 @@ export function bataieNecesara({ acum, pozaOkLa, paznicLa }) {
   if (acum - (nr(pozaOkLa) || 0) < 10 * 60000) return false;
   return acum - (nr(paznicLa) || 0) >= (noapteRo(acum) ? 20 : 5) * 60000;
 }
+// v101.116 (auditul sever, C2): o bătaie picată (fără rețea o clipă, sau refuzată) se reîncearcă după 1 MINUT, nu după 16 (noaptea, cu
+// pragul paznicului de 30 de minute, o singură bătaie picată dădea alarma critică falsă „colectorul tace”). Întoarce noul `paznicLa`.
+export function paznicLaDupaEsec(acum) { return acum - ((noapteRo(acum) ? 20 : 5) - 1) * 60000; }
 // v99.5 (el, 28.09: „la JTO îmi arată doar prețul, nu și cât s-a mișcat"): cele 30 de prețuri ale botului (linia + procentul de pe
 // pagina alerts) stateau doar in memoria colectorului si dupa o repornire porneau de la zero (~30 min „puține poze încă").
 // Istoricul botului din KV are pretul minut cu minut (pretPerp) -> lista se umple de acolo; memoria (cele mai noi) ramane la coada.
@@ -342,7 +345,9 @@ export function construiestePoza(i) {
   const t212 = (i.t212 || []).filter((x) => x && x.qty > 0).map((x) => pozitieT212(x, acum)), boti = (i.boti || []).filter((b) => b && b.id).map(botPoza);
   // t212La = cand au fost citite pozitiile (la o limitare de cereri raman cele de la poza anterioara); t212Eroare = ce a spus T212
   const t212Eroare = i.t212Eroare ? String(i.t212Eroare) : null;
-  return { la: acum, versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, radarUrl: i.radarUrl ? String(i.radarUrl) : null, t212, t212La: nr(i.t212La), t212Eroare, boti,
+  // v101.116 (auditul sever, C1): turaLa = ora ultimei ture a alertelor TERMINATE, imediat după `la` (paznicul o citește din capul textului):
+  // pulsul dovedește bucla alertelor, nu doar ceasul pozei (care merge separat, la 10 s)
+  return { la: acum, turaLa: nr(i.turaLa), versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, radarUrl: i.radarUrl ? String(i.radarUrl) : null, t212, t212La: nr(i.t212La), t212Eroare, boti,
     simboluri: (i.simboluri || []).filter((x) => x && x.s).map((x) => simbolPoza(x, acum)),
     // v101.86 (pagina alerts în două): alertele de azi, pozițiile Salt și răspunsul la cererile Salt - doar când colectorul le are
     ...(Array.isArray(i.alerte) ? { alerte: i.alerte } : {}), ...(i.salt && Array.isArray(i.salt.randuri) ? { salt: { la: nr(i.salt.la), randuri: i.salt.randuri } } : {}),

@@ -89,7 +89,8 @@ await test("serverul: verdictele (unul sau mai multe), un verdict pe (sursă, si
   assert.equal(await post("verdict", { s: "poarta-t212", k: "AAPL_US_EQ", n: "cumpara", p: 100, t: Date.now() }), 200);
   assert.equal(await post("verdict", { verdicte: [{ s: "poarta-t212", k: "AAPL_US_EQ", n: "nu", p: 101, t: Date.now() + 1000 }, { s: "idei", k: "MSFT_US_EQ", n: "cumpar", p: 400, t: Date.now() }] }), 200);
   assert.equal(await post("verdict", { s: "hack", k: "X", n: "a", p: 1, t: Date.now() }), 400);
-  const j = (await get("verdicte")).verdicte; assert.equal(j.length, 2); assert.equal(j.find((x) => x.k === "AAPL_US_EQ").n, "nu");
+  // v100.196 (auditul sever, 🔵4): rămâne PRIMUL verdict al zilei (pe el a putut acționa), nu cel mai nou
+  const j = (await get("verdicte")).verdicte; assert.equal(j.length, 2); assert.equal(j.find((x) => x.k === "AAPL_US_EQ").n, "cumpara");
   assert.equal(await post("verdicteCalibrare", { calibrare: [] }), 400); assert.equal(await post("verdicteCalibrare", { la: 1, calibrare: [], registru: [] }), 200);
   assert.equal((await get("verdicteCalibrare")).calibrare.la, 1);
 });
