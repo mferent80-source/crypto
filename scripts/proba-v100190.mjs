@@ -107,7 +107,7 @@ await test("jurnalul verdictelor cunoaște sursa trend-12-1 (pagina + serverul),
   const S = v.Verdicte.SURSE["trend-12-1"]; assert.ok(S, "sursa există în verdicte.js"); assert.equal(S.h.join(","), "20,60"); assert.equal(S.masura, "pesteSpy");   /* v100.192 (I-622, I-623) */ assert.equal(S.fav.join(","), "top");   // obiecte din vm (alt realm): se compară prin join
   assert.equal(v.Verdicte.curata({ s: "trend-12-1", k: "NVDA", n: "top", p: 180, t: ACUM }).k, "NVDA");
   const api = citeste("functions", "api", "istoric-bot.js");
-  assert.match(api, /"top-sector","trend-12-1"\]\)/, "serverul acceptă sursa");
+  assert.match(api, /"top-sector","trend-12-1"[,\]]/, "serverul acceptă sursa");
   assert.match(api, /action==="trend12"\)\{let v=null;try\{v=JSON\.parse\(await env\.ISTORIC\.get\("sugestii:trend12"\)/, "GET trend12");
   assert.match(api, /action==="trend12"\)\{if\(!\(nr\(corp&&corp\.la\)>0\)/, "PUT trend12 cu verificare");
   assert.match(api, /action==="sectoareTop"\|\|action==="trend12"\?262144/, "limita de mărime");

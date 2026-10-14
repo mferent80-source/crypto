@@ -140,7 +140,7 @@ await test("evenimente: doar SUA, impact mare, în următoarele 35 de minute; me
 // ── legăturile din pagină ──
 const idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = citeste("public", "app.js"), ae = citeste("public", "lib", "acasa-ecran.js"), css = citeste("public", "app.css");
 await test("index.html: cardul #acRegim imediat după „Dobânzi, dolar, aur”; scriptul lib/macro.js; sw.js îl are în APP_SHELL", () => {
-  assert.match(idx, /<div class="acBloc" id="acMacro"><\/div><div class="acBloc" id="acRegim"><\/div>/);
+  assert.match(idx, /<div class="acCol"><div class="acBloc" id="acMacro"><\/div>[^]*?<\/div><\/div><div class="acCol"><div class="acBloc" id="acRegim"><\/div>/);   /* v100.193: același rând, coloana a doua (demo aprobat) */
   assert.match(idx, /<script src="\/lib\/macro\.js"><\/script>/); assert.match(sw, /"\/lib\/macro\.js"/);
 });
 await test("Dashboard: cardul se desenează din datele pe care ecranul le are deja (piata + btc1d), fără cereri noi", () => {

@@ -10,6 +10,26 @@ const ziRo = (t) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Buchare
 const oraRo = (t) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t)));
 async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.jurnal("verdicte " + ce, e.message); return null; } }
 
+// v101.114 (demo „Piața azi” aprobat 14.10): Scorul zilei, din ACELEAȘI date și cu aceeași funcție ca pagina (lib/scor-zi.js) ⇒ jurnal.
+// Fără un modul (probele vechi) sau fără date ⇒ nimic; o linie cu sub 3 piese cu date nu intră (ScorZi.verdicte).
+export async function scorZiDinDate(d, acum) {
+  if (!d.ScorZi || !d.Macro || !d.Acasa || !d.GridCalcul) return null;
+  const p = await incearca(d, "scor piata", () => d.cere("/api/stiri?action=piata"));
+  if (!p) return null;
+  const k = await incearca(d, "scor btc", () => d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=200"));
+  const btc = k && k.data && k.data.klines || null, macro = d.Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc, fg: p.fg }, acum);
+  const ndx = await incearca(d, "scor ndx", () => d.cere("/api/t212?action=ndx"));
+  const ndxL = ndx && Array.isArray(ndx.actiuni) ? d.Acasa.largimeNdx(ndx.actiuni) : null;
+  const tr = await incearca(d, "scor trend", () => d.cere("/api/istoric-bot?action=trend12"));
+  const lat = await incearca(d, "scor latime", () => d.cere("/api/istoric-bot?action=latime"));
+  let mb = null;
+  if (d.LatimeUS && d.LatimeUS.extins) mb = await incearca(d, "scor market breadth", async () => { const r = await (d.fetch || fetch)(d.LatimeUS.SURSA, { signal: AbortSignal.timeout(20000) }); return r && r.ok ? d.LatimeUS.extins(await r.json(), acum) : null; });
+  const pi = await incearca(d, "scor regim tinut", () => d.cere("/api/istoric-bot?action=piata"));
+  const sz = d.ScorZi.calc({ macro, macroTinut: pi && (pi.macro || (pi.piata && pi.piata.macro)), ndx: ndxL, trend: tr && tr.trend, mbUs: mb, latime: lat && lat.latime, acum });
+  const bt = btc ? d.GridCalcul.bareToate(btc) : null;
+  return { sz, pretBtc: bt && bt.length ? bt[bt.length - 1].c : null };
+}
+
 export async function turaVerdicte(d, st) {
   const acum = d.acum || Date.now();
   if (st.inLucru) return null;
@@ -32,6 +52,9 @@ export async function turaVerdicte(d, st) {
       const pi = await incearca(d, "regimul macro", () => d.cere("/api/istoric-bot?action=piata")), mac = pi && (pi.macro || (pi.piata && pi.piata.macro));
       const spy = await incearca(d, "SPY", async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&ticker=SPY_US_EQ")).randuri || [], acum));
       if (mac && mac.cod && spy && spy.length) noi.push({ s: "macro", k: "SPY_US_EQ", n: mac.cod, p: spy[spy.length - 1].c, t: acum });
+      // v101.114: Scorul zilei (acțiuni pe SPY, crypto pe BTC), judecat la 5 și 20 de zile ca regimul macro
+      const sz = await incearca(d, "scorul zilei", () => scorZiDinDate(d, acum));
+      if (sz && sz.sz && d.ScorZi) { const v = d.ScorZi.verdicte(sz.sz, spy && spy.length ? spy[spy.length - 1].c : null, sz.pretBtc, acum); noi.push(...v); if (v.length) d.jurnal("scorul zilei: acțiuni " + sz.sz.actiuni.scor + " (" + sz.sz.actiuni.text + "), crypto " + sz.sz.crypto.scor + " (" + sz.sz.crypto.text + ") ⇒ " + v.length + " în jurnal"); }
       st.deZi = z;
     }
     // (revizia, M6): loturi de cel mult 400 (serverul ia 500 și 64 KB pe cerere); steagurile se pun DOAR după ce au ajuns

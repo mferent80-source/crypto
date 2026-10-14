@@ -28,7 +28,13 @@ async function acasaPorneste(fortat) {
       pas("stiriBursa", function () { return getJSON("/api/stiri?action=bursa"); }),
       pas("stiriCrypto", function () { return getJSON("/api/stiri?action=crypto&moneda=BTC"); }),
       // v94: funding-ul pe toata piata + pozele zilnice ("ce s-a schimbat de ieri"), de la colector
-      pas("piataCol", function () { return getJSON("/api/istoric-bot?action=piata"); })
+      pas("piataCol", function () { return getJSON("/api/istoric-bot?action=piata"); }),
+      // v100.193 (demo aprobat 14.10): Market Breadth SUA (robotul de pe GitHub), Trend 12 luni + topul pe sectoare (KV, colectorul),
+      // lățimea crypto pe 150 perp-uri (KV, la 15 min) — pentru cardurile noi și Scorul zilei
+      pas("mbUs", function () { return typeof LatimeUS === "undefined" ? null : fetch(LatimeUS.SURSA, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }); }),
+      pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); }),
+      pas("sectoareTop", function () { return getJSON("/api/istoric-bot?action=sectoareTop").then(function (r) { return r && r.sectoare || null; }); }),
+      pas("latimeKv", function () { return getJSON("/api/istoric-bot?action=latime").then(function (r) { return r && r.latime || null; }); })
     ]);
     // BTC: 4h si 1 zi (directia), 1 ora (miscarea: 4h / 24h fata de obisnuit) - pe rand, serverul le distanteaza oricum
     await pas("btc4h", async function () { var k = await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200"); return k && k.data && k.data.klines || null; });
@@ -185,6 +191,44 @@ function acPandaLin(b) {
   if (!m) return "";
   return '<div class="acLin"><span>În pândă</span><b class="' + (m.contra ? "bad" : m.prag.length ? "tbWarn" : "acMut") + '">' + escapeHtml((m.contra ? "CONTRA botului · " : "") + m.dirText + (m.prag.length ? " · " + m.prag.join(", ") : "") + (m.vechi ? " · veche" : "")) + '</b></div>';
 }
+// v100.193: zilele de bursă NY până la o dată (pentru „raportează în Nz”), socotite de AZI, nu de la EOD-ul clasamentului
+function acZileNY(d) {
+  var azi = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  var a = Date.parse(azi + "T12:00:00Z"), b = Date.parse(String(d || "") + "T12:00:00Z");
+  return isFinite(a) && isFinite(b) ? Math.round((b - a) / 86400000) : null;
+}
+function acSym(s) { var k = String(s || "").replace(/[^A-Za-z0-9.-]/g, ""); return '<button type="button" class="acSym" data-action-click="sugLaPoarta(&#39;' + k + '&#39;)">' + escapeHtml(k) + '</button>'; }
+// v100.193: „Sugestii de acțiuni · Trend 12 luni” — primele 5 din clasamentul robotului (în probă), cu saltul și raportarea
+function acTrendZi(x) {
+  var h = '<div class="acCap"><h4>Sugestii de acțiuni · Trend 12 luni</h4>';
+  if (!x || !Array.isArray(x.top) || !x.top.length) return h + '</div><p class="acMut">Clasamentul vine o dată pe zi, după 8:00, de la robotul Trend 12 luni.</p>';
+  var P1 = function (v) { return v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };
+  h += '<span class="acSub">în probă · EOD ' + escapeHtml(acZiRo(x.dataUltimei)) + ' · regim ' + (!x.regim || typeof x.regim.peste !== "boolean" ? "—" : x.regim.peste ? "pornit" : "OPRIT") + '</span></div>';
+  h += x.top.slice(0, 5).map(function (t) {
+    var rz = t.raporteaza && t.raporteaza.d ? acZileNY(t.raporteaza.d) : null;
+    return '<div class="mbRand">' + acSym(t.s) + '<span>' + escapeHtml(String(t.nume || "").slice(0, 24)) + ' · ' + escapeHtml(t.sector || "") + (t.salt && t.salt.pct >= 0.5 ? ' <span class="szChip szW">salt ' + P1(t.salt.pct) + ' într-o zi</span>' : '') + (rz != null && rz >= 0 ? ' <span class="szChip szN">raportează în ' + rz + 'z</span>' : '') + '</span>'
+      + '<b class="good mbNum">12-1 ' + P1(t.m12) + '</b><span class="acMut mbRap">60 z ' + P1(t.r60) + '</span></div>';
+  }).join("");
+  var b = x.bilant;
+  h += '<div class="acLin" style="margin-top:4px"><span>' + (x.concentrare ? escapeHtml(x.concentrare.n + " din 20 " + x.concentrare.sector) + " — un singur pariu · " : "") + 'proba: ' + escapeHtml(acCate(b && b.n20 || 0, "zi", "zile")) + ' cu rezultat</span><button type="button" class="acLink" data-action-click="navTo(&#39;sugestii&#39;,true)">toate 20 în Sugestii ›</button></div>';
+  return h;
+}
+// v100.193: „Cele mai tari pe sector · SUA” — primul din fiecare sector din topul colectorului (screenerul Nasdaq), după randamentul pe 3 luni
+function acTopSector(s) {
+  var h = '<div class="acCap"><h4>Cele mai tari pe sector · SUA</h4>';
+  var l = s && Array.isArray(s.sectoare) ? s.sectoare.filter(function (x) { return x && Array.isArray(x.top) && x.top.length; }) : [];
+  if (!l.length) return h + '</div><p class="acMut">Topul pe sectoare îl face colectorul o dată pe zi, după 8:00.</p>';
+  var P1 = function (v) { return v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };
+  h += '<span class="acSub">' + escapeHtml(s.univers ? acCate(s.univers, "acțiune", "acțiuni") + " ≥ 10 mld. $" : "acțiuni ≥ 10 mld. $") + ' · randament pe 3 luni</span></div>';
+  h += l.slice().sort(function (a, b) { return (b.top[0].r3 || 0) - (a.top[0].r3 || 0); }).slice(0, 6).map(function (x) {
+    var t = x.top[0];
+    return '<div class="mbRand">' + acSym(t.s) + '<span>' + escapeHtml((x.ro || x.sector) + " · " + String(t.nume || t.s).slice(0, 26)) + '</span><b class="' + ((t.r3 || 0) >= 0 ? "good" : "bad") + ' mbNum">' + P1(t.r3) + '</b><span class="acMut mbRap">' + escapeHtml(x.top.slice(1, 3).map(function (y) { return y.s; }).join(", ")) + '</span></div>';
+  }).join("");
+  var i = s.istoric;
+  var nL = Number(i && i.luni) || 0, nP = Number(i && i.luniPlus) || 0, med = i && isFinite(Number(i.medie)) && i.medie !== null ? Number(i.medie) : null;
+  h += '<p class="acEt">' + (nL > 0 && med !== null ? "Topul Radarului pe sectoare: " + escapeHtml(acCate(nL, "lună", "luni")) + " de istoric, " + (med >= 0 ? "+" : "−") + Math.abs(med * 100).toFixed(1).replace(".", ",") + "% pe lună în medie, " + nP + " din " + nL + " pe plus — nedovedit. " : "") + 'Apasă simbolul: Poarta T212.</p>';
+  return h;
+}
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
   var d = acasa.d, cl = acClasamentSumar(d.clasament), mis = Acasa.miscari(d.tickers, { top: 60, inMiscare: cl ? cl.deEvitat.map(function (x) { return x.simbol; }) : [] });
@@ -284,6 +328,14 @@ function acasaDeseneaza() {
   $("acSectoare").innerHTML = '<div class="acCap"><h4>Sectoarele Nasdaq 100</h4><span class="acSub">pe 5 zile · azi</span></div>'
     + (sec.length ? sec.map(function (x) { var w = Math.round(Math.abs(x.ch5 || 0) / smax * 50); return '<div class="acSec"><span>' + escapeHtml(x.nume) + ' <span class="acMut">' + x.urca + '/' + x.n + '</span></span><i><b class="' + ((x.ch5 || 0) >= 0 ? "acSecSus" : "acSecJos") + '" style="width:' + w + '%;' + ((x.ch5 || 0) >= 0 ? "left:50%" : "right:50%") + '"></b></i><em class="' + ((x.ch5 || 0) >= 0 ? "good" : "bad") + '">' + acPct(x.ch5, 1) + '</em><em class="acMut">' + acPct(x.ch, 1) + '</em></div>'; }).join("")
       + '<p class="acEt">Cine duce indicele: sectoarele de sus au urcat cel mai mult în ultimele 5 zile; cifra gri e ultima zi.</p>' : '<p class="acMut">Vine din tura de dimineață a colectorului.</p>');
+  // v100.193 (demo aprobat 14.10): Market Breadth SUA, Sugestii din Market Breadth, Scorul zilei, Trend 12 luni, Cele mai tari pe sector
+  // revizia 14.10: o stricăciune în datele robotului NU oprește restul paginii (harta, mișcările, calendarul, boții); fiecare card cade singur
+  var acNou = function (id, f) { var el = $(id); if (!el) return; try { el.innerHTML = f(); } catch (e) { el.innerHTML = '<p class="acMut">Nu pot arăta cardul acum: ' + escapeHtml(String(e && e.message || e)).slice(0, 120) + '</p>'; } };
+  var mbX = null; try { mbX = typeof LatimeUS !== "undefined" && LatimeUS.extins && d.mbUs ? LatimeUS.extins(d.mbUs, Date.now()) : null; } catch (e) { mbX = null; }
+  if (typeof LatimeUS !== "undefined" && LatimeUS.htmlCard) { acNou("acMb", function () { return LatimeUS.htmlCard(mbX); }); acNou("acMbSug", function () { return LatimeUS.htmlSugestii(mbX); }); }
+  if (typeof ScorZi !== "undefined") acNou("acScorZi", function () { return ScorZi.html(ScorZi.calc({ macro: typeof Macro !== "undefined" ? Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()) : null, macroTinut: d.piataCol && d.piataCol.macro, ndx: ndxL, trend: d.trend12, mbUs: mbX, latime: d.latimeKv, acum: Date.now() })); });
+  acNou("acTrendZi", function () { return acTrendZi(d.trend12); });
+  acNou("acTopSector", function () { return acTopSector(d.sectoareTop); });
   // v95: harta colorata - Nasdaq 100 si primele 60 de futures, dupa miscarea zilei
   var cul = function (v) { if (v == null || !isFinite(v)) return "rgba(144,160,182,.15)"; var a = Math.min(1, Math.abs(v) / 4); return v >= 0 ? "rgba(38,169,108," + (0.15 + a * 0.47).toFixed(2) + ")" : "rgba(224,82,74," + (0.15 + a * 0.47).toFixed(2) + ")"; };   /* v100.162: cel mult 0,62 - scrisul alb trece de 4,5 pe orice placă (la 0,90 verdele plin avea 2,55) */
   var patrat = function (s2, v) { return '<span class="acHp" style="background:' + cul(v) + '" title="' + escapeHtml(s2 + " " + acPct(v, 1)) + '">' + escapeHtml(s2) + '</span>'; };
