@@ -1,9 +1,9 @@
 // v101.89 (el 08.10: „fa ideile” - ideea B): Monte Carlo pe fiecare bot activ, la 15 minute, cu ACELAȘI motor ca Tabloul și Simulatorul
-// (GridSim din pagină, botul reluat cu pozițiile de acum, 500 de drumuri pe 14 zile); pe Discord DOAR când verdictul își schimbă FELUL
+// (GridSim din pagină, botul reluat cu pozițiile de acum, 2.000 de drumuri pe 14 zile, v101.116); pe Discord DOAR când verdictul își schimbă FELUL
 // (aș ține → aș opri, stopul în zgomot → nu se potrivește cu planul…), nu cifrele la fiecare tură. Prima socotire pe un bot tace (nimic de
 // comparat). Cuvântul rămâne „șanse”, nu „predicție”.
 // deps: { boti, GridSim, GridCalcul, randuri15(simbol) -> rânduri Pionex 15M (lumânările colectorului), stare: { boti: {} } (ținută în ritm),
-//         anunta({nivel, titlu, mesaj}, botId, cheie) -> bool, jurnal, acum?, n? (500), plan?(bot) -> {minus, plus} | null (async),
+//         anunta({nivel, titlu, mesaj}, botId, cheie) -> bool, jurnal, acum?, n? (2000), plan?(bot) -> {minus, plus} | null (async),
 //         funding?(simbol) -> {rataZi} | null (async) }
 
 // motorul paginii, cu dependențele date ca parametri (nu sunt globale în colector); globalThis fals ca grid-sim.js să nu scrie în cel adevărat
@@ -22,7 +22,7 @@ export function categorie(faCe) {
   return "alt";
 }
 const NUME_CAT = { tine: "aș ține", opreste: "aș opri", plan: "nu se potrivește cu planul", zgomot: "stopul e în zgomot", ban: "o aruncare de ban", reluare: "reluarea nu se potrivește cu Pionex", alt: "altfel" };
-// revizia (3): un fel nou se anunță abia când ține DOUĂ ture la rând (marja e ±4 puncte - la P≈55 felul ar sări la fiecare 15 minute) și cel
+// revizia (3): un fel nou se anunță abia când ține DOUĂ ture la rând (v101.116: marja reală, pe grupe de zile, e ±28…±46 de puncte, nu ±4 - felul ar sări des fără confirmare) și cel
 // mult un mesaj pe bot pe oră; (mărunt) alerta netrimisă nu schimbă starea - se reîncearcă la tura următoare
 const TURE_PANA_LA_ANUNT = 2, PAUZA_ANUNT_MS = 60 * 60000;
 function ora(t) { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
@@ -102,7 +102,7 @@ export async function turaMonteCarloBot(d) {
       const s = d.GridSim.setariDinBot(b), fi = d.funding ? await d.funding(simbol) : null, rata = fi ? nr(fi.rataZi) : null;
       const set = Object.assign({}, s.st, { suma: s.st.suma || 50, fundingZi: rata !== null ? rata : 0.0003, fundingCost: rata === null });
       let plan = d.plan ? await d.plan(b) : null; if (!(plan && !plan.proba && (nr(plan.minus) > 0 || nr(plan.plus) > 0))) plan = null;
-      const opt = { plan, n: d.n || 500, seed: 12, orizonturi: [1, 7], zile: 14 };
+      const opt = { plan, n: d.n || 2000, seed: 12, orizonturi: [1, 7], zile: 14 };
       let rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt)), nota = "";
       if (rez.eroare && s.pornitLa) { const motiv = String(rez.eroare).split(/[.:]/)[0]; rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt)); if (!rez.eroare) nota = "ca bot pornit acum (" + motiv + "): "; }
       if (rez.eroare) throw new Error(rez.eroare);
