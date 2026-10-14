@@ -191,7 +191,8 @@ function acPandaLin(b) {
   if (!m) return "";
   return '<div class="acLin"><span>În pândă</span><b class="' + (m.contra ? "bad" : m.prag.length ? "tbWarn" : "acMut") + '">' + escapeHtml((m.contra ? "CONTRA botului · " : "") + m.dirText + (m.prag.length ? " · " + m.prag.join(", ") : "") + (m.vechi ? " · veche" : "")) + '</b></div>';
 }
-// v100.193: zilele de bursă NY până la o dată (pentru „raportează în Nz”), socotite de AZI, nu de la EOD-ul clasamentului
+// v100.193: zilele CALENDARISTICE (ziua de la New York) până la o dată (pentru „raportează în Nz”), socotite de AZI, nu de la EOD-ul clasamentului
+// (v100.196, auditul sever 🔵13: comentariul zicea „zile de bursă”, codul socotește zile calendaristice - ca pagina Sugestii)
 function acZileNY(d) {
   var azi = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   var a = Date.parse(azi + "T12:00:00Z"), b = Date.parse(String(d || "") + "T12:00:00Z");
@@ -227,7 +228,7 @@ function acTopSector(s) {
   }).join("");
   var i = s.istoric;
   var nL = Number(i && i.luni) || 0, nP = Number(i && i.luniPlus) || 0, med = i && isFinite(Number(i.medie)) && i.medie !== null ? Number(i.medie) : null;
-  h += '<p class="acEt">' + (nL > 0 && med !== null ? "Topul Radarului pe sectoare: " + escapeHtml(acCate(nL, "lună", "luni")) + " de istoric, " + (med >= 0 ? "+" : "−") + Math.abs(med * 100).toFixed(1).replace(".", ",") + "% pe lună în medie, " + nP + " din " + nL + " pe plus — nedovedit. " : "") + 'Apasă simbolul: Poarta T212.</p>';
+  h += '<p class="acEt">' + (nL > 0 && med !== null ? "Topul Radarului pe sectoare: " + escapeHtml(acCate(nL, "lună", "luni")) + " de istoric, " + (med >= 0 ? "+" : "−") + Math.abs(med * 100).toFixed(1).replace(".", ",") + "% pe lună în medie, " + nP + " din " + nL + " pe plus — nedovedit; firmele sunt cele mari de AZI (cele căzute din top lipsesc), deci istoricul e optimist. " : "") + 'Apasă simbolul: Poarta T212.</p>';   /* v100.196 (🔵7): nota supraviețuitorilor, ca pe Sugestii */
   return h;
 }
 function acasaDeseneaza() {
@@ -383,7 +384,7 @@ function acasaDeseneaza() {
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
   var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
-  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(2).replace(".", ",") + ' USDT</b></div>';
+  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + ' USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 
   var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = typeof t212 !== "undefined" ? t212.nrIesi : null, rz = d.rezultate && d.rezultate.l || [];

@@ -122,6 +122,12 @@ async function t212RegimAdu() {
 }
 function t212RegimPt() { var r = t212.regimPiata || {}; return { macro: r.macro && r.la && Date.now() - r.la <= 2 * 3600000 ? r.macro : null, mb: r.mb || null }; }
 // v100.196 (🟡7): Trend 12 luni e în probă ⇒ Poarta dă verdictul, dar nu dă o sumă până nu zice bilanțul robotului „probat”
+// v100.196 (🟡12): mărimea pentru alte ecrane (Scan) cu ACEEAȘI regulă ca Poarta: riscul regimului ținut (dacă e adus), plafonul pe total cu ce ai deja,
+// banii liberi; null fără cont sau curs
+function t212MarimeCalc(tk, intrare, stop, pretAcum) {
+  var c = t212.cont && t212.cont.cash, rg = t212.regimPiata ? ActiuniSemnale.regimPoarta(t212RegimPt()) : null;
+  return ActiuniSemnale.marime({ intrare: intrare, stop: stop, cont: c && c.total, fx: t212Fx(), riscPct: rg && rg.riscPct > 0 ? rg.riscPct : 0.01, deja: t212DejaLei(tk), liber: c && c.free !== null && c.free !== undefined && isFinite(Number(c.free)) ? Number(c.free) : null, pretAcum: pretAcum });
+}
 function t212FaraMarime(p) { return p && p.sursa && p.sursa.k === "trend12" && !p.sursa.probat ? "trend12" : null; }
 // riscul la stop din cont, cu o zecimală fără „,0” (1% · 0,5% · 0,7%)
 function t212PctRisc(x) { return !isFinite(x) ? "—" : String(Math.round(x * 1000) / 10).replace(".", ",") + "%"; }
@@ -911,7 +917,7 @@ function t212PiataDin(pz) {
 function piataAziRender() {
   var p = t212.piata;
   document.querySelectorAll("[data-piata-azi]").forEach(function (el) {
-    el.innerHTML = !p ? '<span class="tbSub">Piața azi: aduc datele…</span>' : '<b>Piața azi</b> ' + p.parti.map(function (x) { return '<span>' + escapeHtml(x.et) + ': <b class="' + (x.cls || "") + '">' + escapeHtml(x.val) + '</b></span>'; }).join('<span class="contTotSep">·</span>');
+    el.innerHTML = !p ? '<span class="tbSub">Piața azi: aduc datele…</span>' : '<b>Piața azi</b> ' + p.parti.map(function (x) { return '<span>' + escapeHtml(x.et) + ': ' + (Array.isArray(x.bucati) && x.bucati.length ? x.bucati.map(function (y) { return '<b class="' + (y.cls || "") + '">' + escapeHtml(y.t) + '</b>'; }).join("") : '<b class="' + (x.cls || "") + '">' + escapeHtml(x.val) + '</b>') + '</span>'; }).join('<span class="contTotSep">·</span>');   /* v100.196: fiecare bucată cu culoarea ei */
   });
 }
 // v100.177 (el 13.10, „din a doua recomandare 1–4”): (4) profitul așteptat - media pe istoria ei în starea de acum, TRASĂ SPRE ZERO după câte
@@ -947,12 +953,12 @@ function t212PoartaCont(p) {
       // v100.178 (4): mărimea „cu risc egal” - ținta contului de 15 % pe an împărțită egal pe poziții; (1) concentrarea pe sector după intrare
       if (typeof Factori !== "undefined" && r.valoare && r.valoare.total > 0) {
         var sz = Factori.sigmaZi(p.bare, 60), nPoz = (r.expuneri || []).filter(function (x) { return x.clasa === "actiuni"; }).length, mv = Factori.marimeVol(sz, r.valoare.total, 0.15, nPoz);
-        if (mv) h += '<p class="tbSub">⚖️ <b>Mărimea cu risc egal:</b> ~' + escapeHtml(t212Suma(mv.lei)) + " (se mișcă ~" + escapeHtml(P(sz)) + " pe zi; ținta contului de 15 % pe an, împărțită pe " + escapeHtml(t212Cate(mv.pozitii, "poziție", "poziții")) + ")" + (mm && mm.suma > 0 ? escapeHtml(" - planul cu 1 % risc dă ~" + t212Suma(mm.suma)) : "") + ".</p>";
+        if (mv) h += '<p class="tbSub">⚖️ <b>Mărimea cu risc egal:</b> ~' + escapeHtml(t212Suma(mv.lei)) + " (se mișcă ~" + escapeHtml(P(sz)) + " pe zi; ținta contului de 15% pe an, împărțită pe " + escapeHtml(t212Cate(mv.pozitii, "poziție", "poziții")) + ")" + (mm && mm.suma > 0 ? escapeHtml(" - planul cu 1% risc dă ~" + t212Suma(mm.suma)) : "") + ".</p>";
         var fa = r.factori, sec = t212.sectorCand && t212.sectorCand.s === p.simbol ? t212.sectorCand.v : null;
         if (!t212.sectorCand || t212.sectorCand.s !== p.simbol) { t212.sectorCand = { s: p.simbol, v: null }; getJSON("/api/istoric-bot?action=sector&s=" + encodeURIComponent(p.simbol)).then(function (d) { t212.sectorCand = { s: p.simbol, v: d && d.sector || "" }; if (t212.poarta && t212.poarta.simbol === p.simbol) t212RenderPoarta(); }).catch(function () {}); }
         if (sec && fa && fa.actiuniLei > 0 && mm && mm.suma > 0) {
           var s0 = (fa.sectoare || []).filter(function (x) { return x.nume === sec; })[0], dupa = ((s0 ? s0.lei : 0) + mm.suma) / (fa.actiuniLei + mm.suma);
-          if (dupa > 0.4) h += '<p class="tbWarn">🧩 <b>Concentrare:</b> cu ea, ' + escapeHtml(Factori.sectorNume(sec)) + " ar fi " + escapeHtml(Math.round(dupa * 100) + "%") + " din acțiunile tale (pragul: 40 %).</p>";
+          if (dupa > 0.4) h += '<p class="tbWarn">🧩 <b>Concentrare:</b> cu ea, ' + escapeHtml(Factori.sectorNume(sec)) + " ar fi " + escapeHtml(Math.round(dupa * 100) + "%") + " din acțiunile tale (pragul: 40%).</p>";
         }
       }
       if (sine) h += '<p class="tbWarn">🔗 <b>O ai deja:</b> corelația e socotită fără ea însăși, dar cumpărarea de acum se adaugă la aceeași poziție, nu face una nouă.</p>';

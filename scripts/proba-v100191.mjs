@@ -37,11 +37,11 @@ await test("sugTrendHtml: fiecare rând are linia de cifre separată cu două gr
   const h = ctx.sugTrendHtml(trendDinJson(jsonRobot(), null, ACUM), ACUM);
   assert.equal((h.match(/class="tbSub sugTrendCifre"/g) || []).length, 20, "20 de linii de cifre");
   assert.equal((h.match(/class="sugTrendNr"/g) || []).length, 40, "două grupuri pe rând");
-  assert.match(h, /<span class="sugTrendNr">12-1 \+150,0 %<\/span> · <span class="sugTrendNr">60 z \+30,0 %<\/span>/);
+  assert.match(h, /<span class="sugTrendNr">12-1 \+150,0%<\/span> · <span class="sugTrendNr">60 z \+30,0%<\/span>/);
   const iRap = h.indexOf('<b class="sugTrendRap">'); assert.ok(iRap > 0, "raportarea există");
   assert.match(h.slice(iRap, h.indexOf("</li>", iRap)), /^<b class="sugTrendRap">raportează în 7z<\/b><\/span>$/, "raportarea e ultimul lucru din linia de cifre");
   assert.equal((h.match(/class="sugTrendSalt"/g) || []).length, 1, "un singur salt peste prag");
-  assert.match(h, /T2<\/button> Firma 2 <span class="tbSub sugTrendCifre">[^]*?<b class="sugTrendSalt">salt \+177,0 % într-o zi \(2026-05-12\) — verifică seria<\/b><\/span><\/li>/);
+  assert.match(h, /T2<\/button> Firma 2 <span class="tbSub sugTrendCifre">[^]*?<b class="sugTrendSalt">salt \+177,0% într-o zi \(2026-05-12\) — verifică seria<\/b><\/span><\/li>/);
   assert.ok(!/T3<\/button>[^]*?sugTrendSalt[^]*?T4<\/button>/.test(h), "0,2 nu e salt");
 });
 await test("CSS: grupurile nu se rup (nowrap), pe telefon linia de cifre e bloc sub nume, saltul e galben; blocul Trend rămâne ÎNAINTEA regulii pandei (ultima)", () => {

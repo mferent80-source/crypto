@@ -297,5 +297,57 @@ await test("B8 (🟡5). Fără calendarul bursei încărcat (pagina de azi nu-l 
   assert.ok(c.ActiuniSemnale.zileLipsa(Date.parse("2026-10-13T13:30:00Z"), ACUM, "MU_US_EQ") <= 1, "ieri ⇒ proaspăt");
 });
 
+// ---------------- C. RSI unic, culorile, zecimalele, scanul pe bare închise, Wilson pe zile, Scan = Poarta ----------------
+const cC = context(); for (const f of ["grid-calcul.js", "calendar-bursa.js", "actiuni-semnale.js", "acasa.js", "scan.js", "consilier.js", "grafic-bot.js"]) vm.runInContext(citeste("public", "lib", f), cC, { filename: f });
+// RSI Wilder de referință — exact ca app.js:3154 / grafic-bot.js / TradingView (media netezită pe toată seria)
+function rsiWilder(v, n) { let g = 0, p = 0, o = null; for (let i = 1; i < v.length; i++) { const d = v[i] - v[i - 1], up = d > 0 ? d : 0, dn = d < 0 ? -d : 0; if (i <= n) { g += up; p += dn; if (i === n) { g /= n; p /= n; o = p === 0 ? 100 : 100 - 100 / (1 + g / p); } } else { g = (g * (n - 1) + up) / n; p = (p * (n - 1) + dn) / n; o = p === 0 ? 100 : 100 - 100 / (1 + g / p); } } return o; }
+await test("C1 (🟡 RSI unic, sinteza). Acasa.rezumatActiune și Scan.rezumat dau RSI-ul Wilder (ca graficul și TradingView), nu media simplă pe 14", () => {
+  const b = bareSus(320), c = b.map((x) => x.c), ref = Math.round(rsiWilder(c, 14) * 10) / 10;
+  assert.equal(cC.Acasa.rezumatActiune(b).rsi, ref, "acasa.js");
+  assert.equal(cC.Scan.rezumat(b).rsi, ref, "scan.js");
+  const gb = cC.GraficBot && cC.GraficBot.rsi ? cC.GraficBot.rsi(c, 14) : null;
+  if (gb) assert.equal(Math.round(gb[gb.length - 1] * 10) / 10, ref, "grafic-bot.js");
+});
+await test("C2 (🟡 UI 5). „Piața azi”: „↑ trend sus” verde și „ultima zi −1,7%” roșu, separat; textul rămâne același", () => {
+  const q = bareSus(320).map((x) => Object.assign({}, x)); const u = q[q.length - 1]; u.c = q[q.length - 2].c * 0.983;
+  const p = cC.Consilier.piata({ qqq: q }), x = p.parti[0];
+  assert.match(x.val, /ultima zi −1,7%/); assert.ok(Array.isArray(x.bucati) && x.bucati.length === 2, JSON.stringify(x));
+  assert.equal(x.bucati[1].cls, "bad"); assert.match(p.text, /Nasdaq \(QQQ\): .* · ultima zi −1,7%/);
+  const P = pagina({}); P.c.t212.piata = p; const el = { innerHTML: "" }; P.c.document.querySelectorAll = () => [el]; P.c.piataAziRender();
+  assert.match(el.innerHTML, /<b class="bad">[^<]*ultima zi −1,7%<\/b>/);
+});
+await test("C3 (🟡 UI 2, o singură zecimală). „Față de ieri dimineață” cu o zecimală (−9,1 USDT, nu −9,11)", () => {
+  const s = citeste("public", "lib", "acasa-ecran.js");
+  assert.ok(!/Math\.abs\(zt\.boti\)\.toFixed\(2\)/.test(s)); assert.match(s, /Math\.abs\(zt\.boti\)\.toFixed\(1\)/);
+});
+// scanul din colector, pe un server fals: azi (miercuri 14.10) în ședință, bara de azi în formare sare peste maximul pe 20 de zile
+const { scanActiuni, mesajReteta } = await import("./lib/tura-scan.mjs");
+await test("C4 (🟡9). Scanul de acțiuni: rețetele (și alertele lor) pe bare ÎNCHISE; prețul și schimbarea de azi doar pentru coloana „azi”", async () => {
+  const sedinta = Date.parse("2026-10-14T17:00:00Z"), b = bareSus(320).map((x) => Object.assign({}, x)), ult = b[b.length - 1];
+  ult.c = ult.h = Math.max(...b.slice(-21).map((x) => x.h)) * 1.05;   // bara de AZI, încă în formare, sparge maximul
+  const trimise = [];
+  const d = { cere: async (u) => (/pozitii/.test(u) ? { pozitii: [] } : { randuri: RAND(b) }), trimite: async (u, x) => { trimise.push(x); return true; }, jurnal() {}, pauza: async () => 0, pauzaMs: 0, Scan: cC.Scan, GridCalcul: cC.GridCalcul, NDX: ["AAA"] };
+  const r = await scanActiuni(d, sedinta), x = r[0];
+  const inchise = cC.Scan.rezumat(b.slice(0, -1));
+  assert.equal(x.sparge, inchise.sparge, "rețeta „Spargere” pe bara în formare"); assert.equal(x.p, inchise.p, "prețul rețetelor = închiderea de ieri");
+  assert.ok(Math.abs(x.pAzi - ult.c) < 1e-9, "prețul de acum pentru coloana „azi”: " + x.pAzi); assert.ok(x.chAzi > 4, "schimbarea de azi: " + x.chAzi);
+  const m = mesajReteta(x, "🚀 Spargere", "a", true, "aAAA", "spargere");
+  assert.match(m.mesaj, /închiderea/);
+  const s = citeste("public", "lib", "scan-ecran.js"); assert.match(s, /x\.pAzi != null \? x\.pAzi : x\.p/); assert.match(s, /x\.chAzi != null \? x\.chAzi : x\.ch/);
+});
+await test("C5 (🔵8). Wilson în „cât a mers rețeta”: cazurile independente pe ZILE distincte, nu pe ~100 de acțiuni din aceeași zi", () => {
+  const ist = { trend: { s: { n: 500, pe: 75, med: 1, zile: 10 }, l: { n: 500, pe: 60, med: 2 } }, baza: { s: { n: 5000, pe: 50, med: 0.5, zile: 200 }, l: { n: 5000, pe: 52, med: 1 } } };
+  assert.equal(cC.Scan.textIstoric(ist, "trend").semnif, 0, "10 zile de intrări nu fac 100 de cazuri independente");
+  const vechi = { trend: { s: { n: 500, pe: 75, med: 1 }, l: { n: 500, pe: 60, med: 2 } }, baza: { s: { n: 5000, pe: 50, med: 0.5 }, l: { n: 5000, pe: 52, med: 1 } } };
+  assert.equal(cC.Scan.textIstoric(vechi, "trend").semnif, 1, "istoricul vechi fără zile rămâne pe n/5 (cum era)");
+  const r = cC.Scan.istoricRetete([bareSus(320), bareSus(320)], "a");
+  assert.ok(r.baza.s.zile > 0 && r.baza.s.zile <= 320, "zilele distincte se numără: " + r.baza.s.zile);
+});
+await test("C6 (🟡12). Scan pe acțiuni: același stop și aceeași intrare ca Poarta (ActiuniSemnale.niveluri), nu 2× ATR separat", () => {
+  const b = bareSus(320), pret = b[b.length - 1].c, n = cC.ActiuniSemnale.niveluri(b, pret, {}), pl = cC.Scan.planActiune(b, pret);
+  assert.equal(pl.stop, n.stop); assert.equal(pl.intrare, n.intrare.pret); assert.equal(pl.tinta, n.tinta);
+  const s = citeste("public", "lib", "scan-ecran.js"); assert.match(s, /Scan\.planActiune\(/); assert.match(s, /t212MarimeCalc\(/);
+});
+
 console.log(`\n${teste - picate} din ${teste} trec`);
 if (picate) { console.log(`V100.196 ACȚIUNI PICA · ${picate} din ${teste}`); process.exit(1); }

@@ -78,9 +78,9 @@ const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite
 ctx.window = ctx; ctx.globalThis = ctx; vm.createContext(ctx); vm.runInContext(citeste("public", "lib", "sugestii-ecran.js"), ctx);
 await test("Sugestii: regula spune „indiciu” (t ≈ 1,5, sub pragul de „probat”), nu „Probat pe 5 ani”; nota arată t-ul și ABATEREA", () => {
   const h = ctx.sugTrendHtml(trendDinJson(jsonRobot(), bilant, Date.parse("2026-10-14T12:00:00Z")), Date.parse("2026-10-14T12:00:00Z"));
-  assert.ok(!/Probat pe 5 ani/.test(h)); assert.match(h, /doar un <b>indiciu<\/b> \(\+0,8 % pe 20 de zile, t ≈ 1,5 pe ferestre care nu se suprapun — sub pragul de „probat”\)/);
+  assert.ok(!/Probat pe 5 ani/.test(h)); assert.match(h, /doar un <b>indiciu<\/b> \(\+0,8% pe 20 de zile, t ≈ 1,5 pe ferestre care nu se suprapun — sub pragul de „probat”\)/);
   assert.match(h, /t −2,4 \(„probat” cere t &gt; 3,2 pe ≥ 12 ferestre\)|t -2,4 \(„probat” cere t &gt; 3,2 pe ≥ 12 ferestre\)/);
-  assert.match(h, /ABATERE: media −4,2 % sub pragul scris înainte −1,8 %/);
+  assert.match(h, /ABATERE: media −4,2% sub pragul scris înainte −1,8%/);
   const fara = ctx.sugTrendHtml(trendDinJson(jsonRobot(), { ...bilant, t20: null, abatere: null }, Date.now()), Date.now());
   assert.ok(!/ABATERE/.test(fara) && !/cere t/.test(fara), "fără t / fără abatere ⇒ nimic în plus");
 });

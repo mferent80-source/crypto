@@ -86,9 +86,9 @@ await test("sugTrendHtml: titlul „în probă”, regula, nota (EOD, regim, 11 
   const t = trendDinJson(jsonRobot(), bilantRobot, ACUM);
   const h = ctx.sugTrendHtml(t, ACUM);
   assert.match(h, /Trend 12 luni \(în probă\)/); assert.match(h, /fixată înainte de cifre/); assert.match(h, /nu e un buton de cumpărat/);
-  assert.match(h, /EOD 2026-10-14 · regim pornit · 11 din 20 Technology — un singur pariu · proba: 17 zile cu rezultat/); assert.match(h, /\+0,9 % vs alte acțiuni/);
+  assert.match(h, /EOD 2026-10-14 · regim pornit · 11 din 20 Technology — un singur pariu · proba: 17 zile cu rezultat/); assert.match(h, /\+0,9% vs alte acțiuni/);
   assert.equal((h.match(/sugLaPoarta\('T\d+','trend12','1?'\)/g) || []).length, 20);
-  assert.match(h, /12-1 \+150,0 %/); assert.match(h, /60 z \+30,0 %/); assert.match(h, /raportează în 7z/); assert.match(h, /au ieșit: DOCN/);
+  assert.match(h, /12-1 \+150,0%/); assert.match(h, /60 z \+30,0%/); assert.match(h, /raportează în 7z/); assert.match(h, /au ieșit: DOCN/);
   assert.ok(!h.includes("<script>"), "numele cu <script> e escapat"); assert.match(h, /&lt;script&gt;/);
   assert.match(ctx.sugTrendHtml(null, ACUM), /Clasamentul vine o dată pe zi/);
   const h0 = ctx.sugTrendHtml(trendDinJson(jsonRobot(), { ...bilantRobot, n20: 0, zile: 1, diferenta20: { medie: null, interval: [null, null] } }, ACUM), ACUM);

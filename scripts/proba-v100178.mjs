@@ -122,7 +122,7 @@ await test("Poarta T212: mărimea „cu risc egal” (ținta de 15 % pe an împ�
     factori: { actiuniLei: 10000, sectoare: [{ nume: "Technology", lei: 8000 }] } };
   ctxP.t212MarimePoarta = () => ({ suma: 3000 }); ctxP.t212.sectorCand = { s: "NVDA", v: "Technology" };
   const h = ctxP.t212PoartaCont({ simbol: "NVDA", ticker: "NVDA_US_EQ", bare, niv: null });
-  assert.match(h, /⚖️ <b>Mărimea cu risc egal:<\/b> ~[\d.]+ lei \(se mișcă ~\+[\d,]+% pe zi; ținta contului de 15 % pe an, împărțită pe 3 poziții\) - planul cu 1 % risc dă ~3\.000 lei/);
+  assert.match(h, /⚖️ <b>Mărimea cu risc egal:<\/b> ~[\d.]+ lei \(se mișcă ~\+[\d,]+% pe zi; ținta contului de 15% pe an, împărțită pe 3 poziții\) - planul cu 1% risc dă ~3\.000 lei/);
   assert.match(h, /🧩 <b>Concentrare:<\/b> cu ea, Tehnologie ar fi 85% din acțiunile tale/);
 });
 await test("Poarta gridului: ce așteaptă opțiunile față de banda gridului (DVOL × raportul volatilităților)", () => {

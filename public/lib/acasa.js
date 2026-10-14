@@ -88,7 +88,9 @@ var Acasa = (function () {
 
   // ======================= v93: partea Nasdaq (Home mixt) =======================
   function ema(c, n) { var k = 2 / (n + 1), e = c[0]; for (var i = 1; i < c.length; i++) e = c[i] * k + e * (1 - k); return e; }
-  function rsi(c, n) { n = n || 14; var g = 0, l = 0; for (var i = c.length - n; i < c.length; i++) { var d = c[i] - c[i - 1]; if (d > 0) g += d; else l -= d; } return l === 0 ? 100 : 100 - 100 / (1 + g / l); }
+  // v100.196 (auditul sever 14.10, lentila 6): RSI-ul Wilder (media netezită pe toată seria), ca app.js, grafic-bot.js și TradingView -
+  // înainte media simplă pe ultimele 14 zile (Cutler): pe 2.000 de serii ~5 puncte diferență mediană, în 14% din cazuri altă zonă 30/70
+  function rsi(c, n) { n = n || 14; if (c.length <= n) return 50; var g = 0, l = 0, i, d; for (i = 1; i <= n; i++) { d = c[i] - c[i - 1]; if (d > 0) g += d; else l -= d; } g /= n; l /= n; for (i = n + 1; i < c.length; i++) { d = c[i] - c[i - 1]; g = (g * (n - 1) + (d > 0 ? d : 0)) / n; l = (l * (n - 1) + (d < 0 ? -d : 0)) / n; } return l === 0 ? 100 : 100 - 100 / (1 + g / l); }
   // bare zilnice {t,c} (cu ultima zi inchisa) -> rezumatul unei actiuni; colectorul il face in tura de idei
   function rezumatActiune(b) {
     var c = (Array.isArray(b) ? b : []).map(function (x) { return nr(x && x.c); }).filter(function (v) { return v !== null && v > 0; });
