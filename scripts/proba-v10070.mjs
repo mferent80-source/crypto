@@ -56,7 +56,7 @@ await test("3. frâna contului: din cifrele reale ale Obiceiuri.frana - titlul o
   const f = OB.frana({ trades: tr, acum: T0 }); assert.ok(f.activa, "fixtura: frâna trebuie să fie activă: " + JSON.stringify(f.depasit));
   const m = MC.frana(f), l = m.mesaj.split("\n");
   assert.equal(l.length, 2, m.mesaj); assert.doesNotMatch(m.mesaj, /Frâna contului/, "titlul repetat în mesaj"); assert.equal((m.mesaj.match(/N-aș mai porni boți azi/g) || []).length, 1, m.mesaj);
-  assert.doesNotMatch(m.mesaj, /\d\.\d+ USDT/, "zecimală cu punct: " + m.mesaj); assert.match(l[0], /−24,10 USDT/); faraAb(l[0], "deCe", "frâna, rândul 1");
+  assert.doesNotMatch(m.mesaj, /\d\.\d+ USDT/, "zecimală cu punct: " + m.mesaj); assert.match(l[0], /−24,1 USDT/);   /* v100.196: o singură zecimală */ faraAb(l[0], "deCe", "frâna, rândul 1");
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /MesajeColector\.frana\(f\)/, "colectorul trimite încă f.text");
 });
 

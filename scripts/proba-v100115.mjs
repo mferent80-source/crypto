@@ -21,7 +21,7 @@ console.log("\nV100.115 · 24 h pe minus + frâna cu cifra ta + meniul în 3 gru
 const SB = [{ h: 1, n: 692, pePlus: 0.66, mari: 0.14, medie: -0.016 }, { h: 24, n: 76, pePlus: 0.57, mari: 0.29, medie: -0.126 }];
 await test("(563a) mesajul: titlul cu orele și minusul; rândul 1 = cifrele tale (din boții care au ajuns la 24 h); rândul 2 = ce aș face eu", () => {
   const m = MC.minus24h("ZAMA", 26.4, -1.234, RL.textBot(SB, 26.4), RL.pragulAtins(SB, 26.4));
-  assert.equal(m.titlu, "ZAMA: 26 h pe minus (−1,23 USDT)"); assert.equal(m.cheie, "minus-24h"); assert.equal(m.nivel, "atentie");
+  assert.equal(m.titlu, "ZAMA: 26 h pe minus (−1,2 USDT)");   /* v100.196: o singură zecimală */ assert.equal(m.cheie, "minus-24h"); assert.equal(m.nivel, "atentie");
   assert.equal(m.mesaj, "Din boții tăi care au ajuns la 24 h (76), 57% au ieșit pe plus și 29% au pierdut peste 5% (media −12,6%).\n👉 Aș pune un stop aproape: cei mai mulți revin, dar pierderile mari trag media în jos.");
 });
 await test("(563b) colectorul: o dată pe bot, la 24 h pe minus, cu raportul de noapte (ținut o oră); marcat după trimiterea reușită", () => {
@@ -52,7 +52,7 @@ await test("(R-I1) sfatul de 24 h urmează cifrele lui: media pe plus ⇒ las cu
   assert.equal(sfat(r(0.57, -0.126)), "👉 Aș pune un stop aproape: cei mai mulți revin, dar pierderile mari trag media în jos.");
   assert.equal(sfat(r(0.4, -0.126)), "👉 Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină.");
   const f = MC.minus24h("ZAMA", 26.4, -1.234, null, null).mesaj.split("\n");
-  assert.equal(f[0], "Botul stă de 26 h și e pe −1,23 USDT; încă n-am raportul de risc cu istoria ta."); assert.equal(f[1], "👉 Aș verifica acum stopul botului, dacă nu are unul.");
+  assert.equal(f[0], "Botul stă de 26 h și e pe −1,2 USDT; încă n-am raportul de risc cu istoria ta.");   /* v100.196: o singură zecimală */ assert.equal(f[1], "👉 Aș verifica acum stopul botului, dacă nu are unul.");
   const i = col.indexOf("st._minus24"), c = col.slice(i - 200, i + 1200);
   assert.match(c, /RiscLuna\.pragulAtins\(rp\.boti\.supravietuire, ore\)/); assert.match(c, /MesajeColector\.minus24h\([^;]*, t, pr\)/);
 });

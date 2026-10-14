@@ -27,6 +27,38 @@ export async function golesteCoadaPas(coada, { trimite, acum, maxMs }) {
   return { ramase, trimise, renuntate };
 }
 
+// 🔵1: starea pe boți nu se curăța niciodată (data/alerte-stare.json: 49 de boți × 3–4,6 KB din 24.09, rescris de zeci de ori pe minut).
+// Închișii fără `inchisLa` (de dinainte de v100.175) primesc ora de acum, o dată; la 30 de zile de la închidere botul pleacă din `cunoscuti`
+// ȘI din starea alertelor; orfanii (nici în listă, nici printre cunoscuți) ies. Rămân: meta (`_…`) și acțiunile T212 (`t212-…`).
+const ZI_MS = 86400000;
+export function curataStareBoti(stare, m, acumIds, acum) {
+  const c = (m && m.cunoscuti) || {}, vii = acumIds || {};
+  for (const id of Object.keys(c)) {
+    const x = c[id]; if (!x || x.activ || vii[id]) continue;
+    if (!(Number(x.inchisLa) > 0)) { x.inchisLa = acum; continue; }
+    if (acum - x.inchisLa > 30 * ZI_MS) { delete c[id]; delete stare[id]; }
+  }
+  for (const id of Object.keys(stare || {})) if (!/^_/.test(id) && !/^t212-/.test(id) && !c[id] && !vii[id]) delete stare[id];
+}
+
+// 🔵8: fișa de închidere căuta botul doar în prima pagină de boți închiși (Pionex dă câte 10); peste 10 închideri între două ture ieșea
+// „nu mai apare în Pionex — poate lichidat” (critic) în loc de fișă ⇒ până la 3 pagini, după nextPageToken.
+export async function botInchisDupaId(id, cere, pagini = 3) {
+  let tok = null;
+  for (let i = 0; i < pagini; i++) {
+    const fb = await cere("/api/bot-orders?status=finished&limit=10" + (tok ? "&pageToken=" + encodeURIComponent(tok) : ""));
+    const x = ((fb && fb.bots) || []).find((y) => y && String(y.id) === String(id));
+    if (x) return x;
+    tok = fb && typeof fb.nextPageToken === "string" && fb.nextPageToken ? fb.nextPageToken : null;
+    if (!tok) break;
+  }
+  return null;
+}
+
+// 🔵10: data/cont-bare (cache-ul barelor zilnice, cheia = sha1 pe cale) creștea fără curățare (625 de fișiere / 39 MB) ⇒ ce n-a mai fost
+// atins de maxMs (30 de zile) se șterge. Doar fișierele .json (nu .tmp-urile scrierii atomice în curs).
+export function deSters(fisiere, acum, maxMs) { return (Array.isArray(fisiere) ? fisiere : []).filter((f) => f && /\.json$/.test(f.nume) && acum - (Number(f.mtime) || 0) > maxMs).map((f) => f.nume); }
+
 // C3: Pionex dă uneori lista boților PORNIȚI goală (result:true, results:null) deși boții merg. Pe listă goală bucla pe boți nu face
 // nimic (nici lichidare, nici stop, nici plan) ⇒ după 10 minute un anunț critic, repetat cel mult la 3 ore; la revenire, unul de informare.
 // m = meta() din starea alertelor (cunoscuti, listaGoalaDe, listaGoalaAnuntat). Apelantul notează `listaGoalaAnuntat` DOAR după ce mesajul a plecat.

@@ -24,7 +24,8 @@ export async function avertizariPornire({ boti, cunoscuti, acum, trades, Obiceiu
 // comisioanele primei ore si sfatul ei raman pe poarta de pornire (linkul de pe randul 2)
 // v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
-const U2 = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",");
+// v101.116 (auditul sever, 🔵12): rezultatele cu O SINGURĂ zecimală (regula lui), sub 0,05 ⇒ „<0,1”
+const U2 = (v) => { v = Number(v) || 0; const a = Math.abs(v); return (v >= 0 ? "+" : "−") + (a > 0 && a < 0.05 ? "<0,1" : a.toFixed(1).replace(".", ",")); };
 const ziua = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }).format(new Date(t)); } catch { return ""; } };
 export function mesajPornire(b, m, im, sub, tk, url) {
   const t = (s) => String(s || "").replace(/\.\s*$/, ""), n = Number(im && im.n);

@@ -263,5 +263,140 @@ await test("C6 colector: alerta ratată în KV intră în coada de pe disc și s
   assert.match(c, /if \(greleOk\) turaProfil\(\)/);
 });
 
+
+// ---------------- 🔵 serverul ----------------
+await test("🔵2 biletul prețului live: semnat cu o cheie a releului (RELEU_SECRET sau derivată), nu direct cu parola aplicației", async () => {
+  const PV = await import(`../functions/api/pret-viu.js?t=${Math.random()}`), S0 = "JTO_USDT_PERP", acum = Date.now();
+  const env = { APP_API_TOKEN: "parola-buna" }, cheie = await PV.cheieReleu(env);
+  assert.ok(cheie && cheie !== env.APP_API_TOKEN, "cheia releului nu e parola");
+  assert.equal(await PV.biletBun(cheie, S0, await PV.biletPentru(cheie, S0, acum), acum), true);
+  assert.equal(await PV.biletBun(cheie, S0, await PV.biletPentru(env.APP_API_TOKEN, S0, acum), acum), false, "un bilet făcut cu parola goală nu mai trece");
+  const sec = "s".repeat(40); assert.equal(await PV.cheieReleu({ APP_API_TOKEN: "x", RELEU_SECRET: sec }), sec, "RELEU_SECRET (≥ 32) are întâietate");
+  assert.notEqual(await PV.cheieReleu({ APP_API_TOKEN: "x", RELEU_SECRET: "scurt" }), "scurt");
+  assert.equal(await PV.cheieReleu({}), "", "fără parolă, fără cheie");
+});
+await test("🔵3 action=citeste: config-ul fără ntfyTopic cât canalul nu e ntfy (pagina îl arată doar pe canalul ntfy)", async () => {
+  const kv = kvMem(); kv.m.set("config", JSON.stringify({ colectorLa: 5, canal: "discord", ntfyTopic: "radar-secret-123456", prag: { pierdere: 5 }, frana: { zi: 10 } }));
+  const get = (q) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { headers: { authorization: "Bearer " + ENV.APP_API_TOKEN } });
+  const c = JSON.parse(await (await IB.onRequestGet({ request: get("action=citeste&bot=b1"), env: ENVi(kv) })).text()).config;
+  assert.equal(c.ntfyTopic, undefined); assert.equal(c.colectorLa, 5); assert.equal(c.canal, "discord"); assert.deepEqual(c.prag, { pierdere: 5 });
+  kv.m.set("config", JSON.stringify({ colectorLa: 5, canal: "ntfy", ntfyTopic: "radar-secret-123456" }));
+  const n = JSON.parse(await (await IB.onRequestGet({ request: get("action=citeste&bot=b1"), env: ENVi(kv) })).text()).config;
+  assert.equal(n.ntfyTopic, "radar-secret-123456");
+});
+// bot-orders cu Pionex simulat (forma răspunsului real, cifre inventate)
+const BOTp = (id) => ({ base: "XYZ.PERP", quote: "USDT", status: "open", strategyId: String(id), userId: "u-123", keyId: "k-456", createTime: 1780000000000,
+  buOrderData: { status: "running", usdtInvestment: "200.00", marginBalance: "198.05", gridProfit: "2.8", totalRealizedProfit: "-1.25", totalFee: "-0.64", totalFundingFee: "-0.06", leverage: 5, trend: "long", bottom: "0.028", top: "0.033", row: 20 } });
+async function botOrders(pionex, qs = "") {
+  const vechi = globalThis.fetch;
+  globalThis.fetch = async (url) => { const r = pionex(String(url)); return new Response(JSON.stringify(r), { status: 200, headers: { "content-type": "application/json" } }); };
+  try {
+    const { reseteazaRitmPionex } = await import("../functions/_shared/pionex.js"); if (reseteazaRitmPionex) reseteazaRitmPionex();
+    const { onRequestGet } = await import(`../functions/api/bot-orders.js?t=${Math.random()}`);
+    const res = await onRequestGet({ request: new Request("http://127.0.0.1:8788/api/bot-orders?" + qs, { headers: { authorization: "Bearer " + ENV.APP_API_TOKEN, "x-forwarded-for": "10.196.9." + Math.floor(Math.random() * 250) } }), env: { ...ENV, PIONEX_API_KEY: "k", PIONEX_API_SECRET: "s" } });
+    return JSON.parse(await res.text());
+  } finally { globalThis.fetch = vechi; }
+}
+const TICK = { result: true, data: { tickers: [{ symbol: "XYZ_USDT_PERP", close: "0.03" }] } };
+await test("🔵3 bot-orders: obiectul Pionex brut spre pagină fără userId / keyId (restul neatins: buOrderData rămâne)", async () => {
+  const d = await botOrders((u) => (u.includes("/bot/orders") ? { result: true, data: { results: [BOTp(1)], nextPageToken: null } } : TICK));
+  assert.equal(d.bots.length, 1, JSON.stringify(d).slice(0, 200)); assert.equal(d.bots[0].brut.userId, undefined); assert.equal(d.bots[0].brut.keyId, undefined);
+  assert.equal(d.bots[0].brut.buOrderData.row, 20); assert.equal(d.bots[0].brut.strategyId, "1");
+});
+await test("🔵7 bot-orders: peste 10 pagini de boți porniți ⇒ probleme.trunchiat (nu tăcere); results:null ⇒ probleme.listaNula", async () => {
+  let pag = 0;
+  const d = await botOrders((u) => (u.includes("/bot/orders") ? { result: true, data: { results: [BOTp(++pag)], nextPageToken: "pag" + pag } } : TICK));
+  assert.equal(d.bots.length, 10); assert.equal(d.probleme && d.probleme.trunchiat, true);
+  const g = await botOrders((u) => (u.includes("/bot/orders") ? { result: true, data: { results: null } } : TICK));
+  assert.equal(g.bots.length, 0); assert.equal(g.probleme && g.probleme.listaNula, true);
+});
+await test("🔵12 răspunsurile /api/* au X-Content-Type-Options: nosniff (middleware-ul Functions); WebSocket-ul (101) trece neatins", async () => {
+  const { onRequest } = await import(`../functions/_middleware.js?t=${Math.random()}`);
+  const r = await onRequest({ next: async () => new Response("{}", { status: 200, headers: { "content-type": "application/json" } }) });
+  assert.equal(r.headers.get("x-content-type-options"), "nosniff"); assert.equal(r.status, 200);
+  const imutabil = new Response("{}", { status: 404 }); Object.defineProperty(imutabil, "headers", { value: { get: () => null, set: () => { throw new TypeError("immutable"); } } });
+  const r2 = await onRequest({ next: async () => imutabil }); assert.equal(r2.status, 404);
+  const ws = { status: 101, webSocket: {} }; assert.equal(await onRequest({ next: async () => ws }), ws);
+});
+await test("🔵11 history.js: PRAGMA / ALTER TABLE o singură dată pe izolat (nu la fiecare GET)", async () => {
+  let pragma = 0; const db = { prepare: (sql) => ({ all: async () => { if (/PRAGMA/.test(sql)) pragma++; return { results: [{ name: "tenant" }] }; }, run: async () => ({}), bind: () => ({ all: async () => ({ results: [] }), first: async () => null }), first: async () => null }) };
+  const H = await import(`../functions/api/history.js?t=${Math.random()}`);
+  const cer = () => new Request("http://127.0.0.1:8788/api/history?type=x", { headers: { authorization: "Bearer " + ENV.APP_API_TOKEN, "x-forwarded-for": "10.196.8.1" } });
+  await H.onRequestGet({ request: cer(), env: { ...ENV, DB: db } }); const dupaPrima = pragma;
+  await H.onRequestGet({ request: cer(), env: { ...ENV, DB: db } });
+  assert.ok(dupaPrima > 0, "prima cerere verifică schema"); assert.equal(pragma, dupaPrima, "a doua nu mai rulează PRAGMA");
+});
+await test("🔵10 scripturile de chei: cheile se tastează ascuns, copia în clar a lui .dev.vars se șterge, PID-ul se oprește doar dacă e colectorul", () => {
+  const k = citeste("scripts", "pune-cheile.ps1"), d = citeste("scripts", "pune-discord.ps1");
+  assert.match(k, /-AsSecureString/); assert.match(k, /CitesteAscuns "  Trading 212 - API Key"/); assert.match(k, /CitesteAscuns "  Trading 212 - API Secret"/);
+  assert.doesNotMatch(k, /= Read-Host "  (Trading 212|Twelve Data)/);
+  assert.match(k, /Remove-Item[^\n]*inainte-de-chei/); assert.match(d, /Remove-Item[^\n]*inainte-de-discord/);
+  assert.match(d, /colector\.mjs/); assert.match(d, /CommandLine/);
+});
+
+
+// ---------------- 🔵 colectorul ----------------
+await test("🔵1 starea boților: închișii fără `inchisLa` primesc ora o dată; la 30 de zile pleacă și din cunoscuți, și din starea alertelor; orfanii ies", () => {
+  const ZIc = 86400000, T = Date.UTC(2026, 9, 14), stare = { _colector: {}, "t212-MU_US_EQ": { a: 1 }, vechi: { x: 1 }, orfan: { y: 1 }, viu: { z: 1 }, nou: { w: 1 } };
+  const m = { cunoscuti: { vechi: { activ: false, inchisLa: T - 31 * ZIc }, faraOra: { activ: false }, viu: { activ: true }, nou: { activ: false, inchisLa: T - ZIc } } };
+  S.curataStareBoti(stare, m, { viu: true }, T);
+  assert.equal(m.cunoscuti.vechi, undefined); assert.equal(stare.vechi, undefined, "starea alertelor botului închis de 31 de zile");
+  assert.equal(m.cunoscuti.faraOra.inchisLa, T, "fără oră ⇒ ora de acum, o singură dată");
+  assert.equal(stare.orfan, undefined, "orfanul (nu mai e nici printre cunoscuți) iese");
+  assert.ok(stare._colector && stare["t212-MU_US_EQ"] && stare.viu && stare.nou, "meta, acțiunile T212 și boții știuți rămân");
+  assert.match(citeste("scripts", "colector.mjs"), /S\.curataStareBoti\(stareAlerte, m, acumIds, acum\);/);
+});
+await test("🔵2 capul colectorului spune ce face codul: se oprește după ~15 minute fără server (MAX_ESECURI = 15)", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /const MAX_ESECURI = 15;/); assert.match(c.slice(0, 600), /15 minute la rand/); assert.doesNotMatch(c.slice(0, 600), /raspunde 5 minute/);
+});
+await test("🔵4 turaBandaLive și turaPerechiOra au gardă de reintrare (o trimitere lentă nu dublează alertele)", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /if \(bandaLiveInLucru\) return;\n  bandaLiveInLucru = true;/); assert.match(c, /\} finally \{ bandaLiveInLucru = false; \}/);
+  assert.match(c, /if \(perechiOraInLucru\) return;\n  perechiOraInLucru = true;/); assert.match(c, /\} finally \{ perechiOraInLucru = false; \}/);
+});
+await test("🔵5 radar-monitor: push „opportunity” pe scorul euristic nevalidat doar cu MONITOR_PUSH_NEVALIDAT=da (implicit oprit)", () => {
+  const w = citeste("workers", "radar-monitor.js");
+  assert.match(w, /if\(env\.MONITOR_PUSH_NEVALIDAT!=="da"\)return \{alerted:false,reason:"scor-nevalidat"\};/);
+  assert.doesNotMatch(citeste("wrangler.monitor.toml"), /MONITOR_PUSH_NEVALIDAT/);
+});
+await test("🔵6 alerta „contra din pândă” spune că pânda judecă pe Binance, nu pe Pionex", () => {
+  const o = M.pandaContra({ nume: "CRV", directie: "long", levier: 5, text: "CRV scade pe 84 de zile", lich: null });
+  assert.match(o.mesaj, /Binance, nu Pionex/);
+});
+const PT = await import("./lib/ponderi-t212.mjs").catch(() => ({}));
+await test("🔵7 ponderile T212: pe aceeași monedă ca înainte; cu monede amestecate (USD + GBX) nu se mai socotesc (fără alertă falsă de concentrare)", () => {
+  const mon = (tk) => (/_US_EQ$/.test(tk) ? "USD" : /l_EQ$/.test(tk) ? "GBX" : "EUR");
+  const cash = { total: 1000, free: 200 };
+  const a = PT.ponderiT212([{ ticker: "MU_US_EQ", quantity: 2, currentPrice: 100 }, { ticker: "NVDA_US_EQ", quantity: 1, currentPrice: 200 }], cash, mon);
+  assert.equal(a.amestec, null); assert.ok(Math.abs(a.pe.MU_US_EQ - 0.4) < 1e-12); assert.ok(Math.abs(a.pe.NVDA_US_EQ - 0.4) < 1e-12);
+  const b = PT.ponderiT212([{ ticker: "MU_US_EQ", quantity: 2, currentPrice: 100 }, { ticker: "VUSAl_EQ", quantity: 10, currentPrice: 9000 }], cash, mon);
+  assert.deepEqual(b.amestec, ["GBX", "USD"]); assert.deepEqual(b.pe, {});
+  assert.deepEqual(PT.ponderiT212([{ ticker: "MU_US_EQ", quantity: 2, currentPrice: 100 }], { total: 0, free: 0 }, mon).pe, {}, "fără cont ⇒ nimic");
+  const c = citeste("scripts", "colector.mjs");
+  assert.equal((c.match(/ponderiT212\(poz, cash, ContIntreg\.monedaTicker\)/g) || []).length, 3, "toate cele trei locuri");
+  assert.doesNotMatch(c, /usd \+= x\.quantity \* x\.currentPrice/);
+});
+await test("🔵8 fișa de închidere caută botul pe până la 3 pagini de boți închiși (nu doar primii 10)", async () => {
+  const cerute = [], pagina = { "": { bots: [{ id: "a" }], nextPageToken: "p2" }, p2: { bots: [{ id: "b" }], nextPageToken: "p3" }, p3: { bots: [{ id: "c" }], nextPageToken: "p4" }, p4: { bots: [{ id: "d" }] } };
+  const cere = async (u) => { cerute.push(u); const t = (/pageToken=([A-Za-z0-9]+)/.exec(u) || [])[1] || ""; return pagina[t]; };
+  assert.equal((await S.botInchisDupaId("c", cere)).id, "c"); assert.equal(cerute.length, 3);
+  cerute.length = 0; assert.equal(await S.botInchisDupaId("d", cere), null, "peste 3 pagini nu mai caută"); assert.equal(cerute.length, 3);
+  assert.match(citeste("scripts", "colector.mjs"), /const x = await S\.botInchisDupaId\(id, cere\);/);
+});
+await test("🔵10 data/cont-bare: fișierele mai vechi de 30 de zile se șterg o dată pe zi; 🔵11 poza refuzată cu 429/5xx spune „cota KV”", () => {
+  assert.deepEqual(S.deSters([{ nume: "a.json", mtime: 0 }, { nume: "b.json", mtime: 40 * 86400000 }, { nume: "c.tmp", mtime: 0 }], 41 * 86400000, 30 * 86400000), ["a.json"]);
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /function curataContBare\(\)/); assert.match(c, /curataContBare\(\);/);
+  assert.match(c, /if \(r\.status === 429 \|\| r\.status >= 500\) jurnal\("poza: paznicul refuză scrierea/);
+});
+await test("🔵12 mesajele colectorului dau USDT cu O SINGURĂ zecimală; sub 0,05 nu apare „0,0”", () => {
+  assert.match(M.minus24h("CRV", 30, -21.31, null, null).titlu, /−21,3 USDT/);
+  assert.match(M.perechiOra("CRV", 3, 0.42).titlu, /\+0,4 USDT/);
+  assert.match(M.perechiOra("CRV", 1, 0.03).titlu, /\+<0,1 USDT/);
+  assert.match(M.faraPlan("CRV", { plus: 3.456, minus: 15.04, afaraOre: 12, nota: "" }).mesaj, /Propun \+3,5 \/ −15 USDT/);
+  assert.doesNotMatch(citeste("scripts", "lib", "tura-pornire.mjs"), /toFixed\(2\)/);
+});
+
 console.log(`\n${picate ? "PICĂ" : "TRECE"} · ${teste - picate}/${teste}\n`);
 process.exit(picate ? 1 : 0);
