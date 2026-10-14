@@ -70,8 +70,8 @@ var PretViu = (function () {
     var zt = pa ? textZi(procentZi(pa.pret, o.zi)) : null;
     if (zt) parti.push({ k: "zi", t: zt.t, ton: zt.ton, title: "Mișcarea de azi, față de deschiderea zilei (00:00 UTC, lumânarea 1D Pionex)" });
     var tot = nr(b.profitTotal);
-    var tr2 = tot === null ? null : Math.round(tot * 100) / 100;
-    parti.push({ k: "total", t: tr2 === null ? "total —" : "total " + (tr2 > 0 ? "+" : tr2 < 0 ? "−" : "") + Math.abs(tr2).toFixed(2).replace(".", ",") + " USDT" });
+    var tr2 = tot === null ? null : Math.round(tot * 10) / 10;   // v100.196: rezultatul cu O zecimală
+    parti.push({ k: "total", t: tr2 === null ? "total —" : "total " + (tr2 > 0 ? "+" : tr2 < 0 ? "−" : "") + Math.abs(tr2).toFixed(1).replace(".", ",") + " USDT" });
     var dist = nr(b.distantaLichidarePct);
     parti.push({ k: "lich", t: b.lichidareDepasita ? "LICHIDARE DEPĂȘITĂ" : dist === null ? "lichidare —" : "lichidare " + Math.abs(dist).toFixed(1).replace(".", ",") + "%" });
     var dg = o.distanteGrid;

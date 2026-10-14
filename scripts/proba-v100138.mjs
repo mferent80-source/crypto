@@ -41,7 +41,7 @@ await test("(b) app: citirea e pe piață (doarPiata), cu rândurile Indicatorii
   assert.match(l, /GraficBot\.cuPretViu\(tbStare\.citireO\.bare,pa\.pret,Date\.now\(\)\)/); assert.match(l, /tbStare\.citireCheie!==/, "revizia (1): doar pentru botul / intervalul de acum");
 });
 await test("(c) index: cardul se numește „Ce spune piața acum”, cu ceasul live în antet; stilul pentru viu / vechi", () => {
-  assert.match(HTML, /<h4>Ce spune piața acum<\/h4><span class="tbSub tbCitLive" id="tbCitireLive" data-cit-live>live<\/span>/); assert.doesNotMatch(HTML, /Ce spune graficul acum/);
+  assert.match(HTML, /<h4>Ce spune piața acum<\/h4><span class="tbSub tbCitLive" id="tbCitireLive" data-cit-live>—<\/span>/);   /* v100.196: „live” abia când sunt date (auditul UI 🟡9) */ assert.doesNotMatch(HTML, /Ce spune graficul acum/);
   assert.match(CSS, /#tabloubot \.tbCitLive\.viu\{/); assert.match(CSS, /#tabloubot \.tbCitLive\.vechi\{/);
   assert.match(HTML, /<div id="tbCitire">/, "revizia: fără aria-live pe un bloc rescris pe secundă"); assert.match(CSS, /#tabloubot \.tbCitCap\{/);
 });

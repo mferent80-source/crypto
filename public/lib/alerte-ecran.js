@@ -18,7 +18,7 @@ var AlCentru = (function () {
     if (/^reteta-/.test(k)) return { pag: "scan", et: "Deschide Scan" };
     if (c === "actiuni") return { pag: "t212", et: "Deschide Trading 212" };
     if (c === "boti") return { pag: "tabloubot", et: "Deschide Tabloul botului" };
-    return { pag: "dash", et: "Deschide Home" };
+    return { pag: "dash", et: "Deschide Piața azi" };
   }
   function numara(l) {
     var o = { toate: 0, boti: 0, actiuni: 0, piata: 0, importante: 0 };
