@@ -47,7 +47,7 @@
     const l = Array.isArray(ist.items) ? ist.items : [];
     if (!l.length) return '<p class="tbSub">' + esc(ist.s || "") + ": n-am găsit raportări trecute (Nasdaq dă ultimele 4).</p>";
     const notaPret = ist.eroarePret ? '<p class="tbSub rzEroare">' + esc(ist.eroarePret) + "</p>" : "";
-    const val = l.filter((x) => nr(x.reactie) !== null), medie = val.length ? val.reduce((a, x) => a + Math.abs(x.reactie), 0) / val.length : null, sus = val.filter((x) => x.reactie > 0).length;
+    const val = l.filter((x) => nr(x.reactie) !== null && !x.oraDedusa), medie = val.length ? val.reduce((a, x) => a + Math.abs(x.reactie), 0) / val.length : null, sus = val.filter((x) => x.reactie > 0).length;
     const rand = (x) => "<tr><td>" + esc(dataLunga(x.data)) + "</td><td>" + esc(oraRo(x.ora) + (x.oraDedusa ? " · după preț" : x.oraObicei ? " · după obiceiul firmei" : "")) + '</td><td class="num' + clsSemn(x.reactie) + '">' + pctSemn(x.reactie) + '</td><td class="num' + clsSemn(x.reactie5) + '">' + pctSemn(x.reactie5) + '</td><td class="num' + clsSemn(x.surpriza) + '">' + (nr(x.surpriza) === null ? "—" : pctSemn(x.surpriza)) + "</td></tr>";
     return '<div class="rzIst"><b>' + esc(ist.s || "") + " — cum a reacționat prețul după raportările trecute</b>" + notaPret +
       '<table class="t212Tab rzIstTab"><thead><tr><th>Raportarea</th><th>Momentul</th><th class="num">Ziua de după</th><th class="num">5 zile</th><th class="num">EPS față de estimare</th></tr></thead><tbody>' + l.map(rand).join("") + "</tbody></table>" +

@@ -81,7 +81,10 @@ export async function turaVerdicte(d, st) {
     // registrul: + obiceiurile din riscul tău (p din bootstrap) + becurile / ADX-ul boților (din cazuri)
     const risc = await incearca(d, "riscul", async () => (await d.cere("/api/istoric-bot?action=risc")).risc);
     const caz = await incearca(d, "cazuri", async () => (await d.cere("/api/istoric-bot?action=cazuri")).cazuri);
-    const reg = d.Verdicte.registru({ calibrare: cal, risc, asemanatoare: caz && caz.bilant && Array.isArray(caz.bilant.teste) ? caz.bilant.teste : [] });
+    /* v101.116 (auditul sever, 🟡2): și carnetul (de pe server) și modelele 🧠/🌳 (de pe disc) intră în corecție */
+    const cn = d.Carnet ? await incearca(d, "carnetul", () => d.cere("/api/istoric-bot?action=carnet")) : null, rj = cn && cn.carnet && cn.carnet.rejoc;
+    const alte = [].concat(d.Carnet && rj ? d.Carnet.pentruRegistru(rj.intrebari) : [], d.Retea && d.modeleRetea ? d.Retea.pentruRegistru(d.modeleRetea(), "🧠") : [], d.Retea && d.modeleArbori ? d.Retea.pentruRegistru(d.modeleArbori(), "🌳") : []);
+    const reg = d.Verdicte.registru({ calibrare: cal, risc, asemanatoare: caz && caz.bilant && Array.isArray(caz.bilant.teste) ? caz.bilant.teste : [], alte });
     const pe = {}; jurnal.forEach((v) => { pe[v.s] = (pe[v.s] || 0) + 1; });
     await d.trimite("/api/istoric-bot?action=verdicteCalibrare", { la: acum, n: jurnal.length, peSursa: pe, evaluate: ev.length, calibrare: cal, registru: reg });
     st.evalLa = acum;

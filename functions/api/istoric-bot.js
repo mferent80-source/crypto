@@ -482,7 +482,7 @@ export async function onRequestPost({request,env}){
     const c=corp&&corp.cal;if(!c||typeof c!=="object")return json({error:"Lipseste cal"},400);
     const out={};for(const k of Object.keys(c).slice(0,40)){const t=String(k).replace(/[^a-z0-9-]/g,"").slice(0,24),x=c[k];
       if(!t||!x||!Array.isArray(x.cutii)||x.cutii.length!==5||!x.cutii.every(q=>q&&nr(q.n)>=0&&nr(q.k)>=0&&nr(q.k)<=nr(q.n)))return json({error:"cutii nevalide: "+t},400);
-      out[t]={cutii:x.cutii.map(q=>({n:nr(q.n),k:nr(q.k)}))}}
+      out[t]={cutii:x.cutii.map(q=>{const o={n:nr(q.n),k:nr(q.k)};if(nr(q.sp)!==null&&nr(q.sp)>=0&&nr(q.sp)<=nr(q.n))o.sp=nr(q.sp);return o})}}   /* v100.196 (🟡5): k poate fi fracționar, sp păstrat */
     await env.ISTORIC.put("calibrare",JSON.stringify({la:nr(corp.la)||Date.now(),cal:out}));return json({ok:true});
   }
   // v100.45 (pachetul 1): profilul monedei (colectorul, noaptea) -> KV profil:<SIMBOL>

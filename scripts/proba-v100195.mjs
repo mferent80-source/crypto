@@ -111,12 +111,12 @@ await test("„Piața azi”: cardul Trend 12 luni stă imediat sub „Ce aș cu
   const iNou = css.indexOf("#acasa>#acTrendZi{order:31}"), iPanda = css.lastIndexOf("@media (max-width:640px){.sugPandaTab thead"); assert.ok(iNou > 0 && iPanda > iNou, "pânda rămâne ultima regulă");
 });
 
-await test("versiunile: v100.195 peste tot, colectorul v101.115, proba în lanțul `test`", () => {
-  const idx = citeste("public", "index.html");
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.195.0"); assert.match(citeste("public", "sw.js"), /^const CACHE="crypto-radar-v100-195";/);
-  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.195"); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.195"/);
-  assert.ok(!/v100\.194\b/.test(idx)); assert.equal((idx.match(/v100\.195/g) || []).length, 4);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.115"/);
+await test("versiunile: de la v100.195 în sus peste tot, colectorul de la v101.115, proba în lanțul `test`", () => {   /* v100.196: ≥, nu egal */
+  const idx = citeste("public", "index.html"), ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]);
+  assert.ok(ver >= 195); assert.match(citeste("public", "sw.js"), new RegExp('^const CACHE="crypto-radar-v100-' + ver + '";'));
+  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100." + ver); assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + ver + '"'));
+  assert.ok(!/v100\.194\b/.test(idx)); assert.equal((idx.match(new RegExp("v100\\." + ver, "g")) || []).length, 4);
+  assert.ok(Number((/const VERSIUNE_COLECTOR = "v101\.(\d+)"/.exec(citeste("scripts", "colector.mjs")) || [])[1]) >= 115);
   assert.match(citeste("package.json"), /npm run test:v100194 && npm run test:v100195/);
 });
 

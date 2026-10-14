@@ -3,7 +3,7 @@
 // primele 20 % din ~600 de acțiuni SUA ≥ 2 mld. $ după randamentul pe lunile 2–12 (ultima lună sărită), doar INDICIU față de alte
 // acțiuni în aceeași zi (auditul de seară 14.10: t ≈ 1,5 pe ferestre independente), NEprobat pe listă istorică ⇒ „în probă”. Îl pune în KV (sugestii:trend12,
 // pagina Sugestii) și trimite primele 20 în jurnalul verdictelor ca sursă „trend-12-1”, judecate de aceeași mașinărie ca topul pe
-// sectoare (5 și 20 de zile față de QQQ). Poarta nu dimensionează pe el până nu zice bilanțul robotului „probat”.
+// sectoare (la 20 și 60 de zile față de SPY, ziua întreagă ca un coș). Poarta nu dimensionează pe el până nu zice bilanțul robotului „probat” (v100.196).
 export const SURSA = "https://mferent80-source.github.io/premarket_scanner.html/candidate-engine/generated/";
 const ORA = 3600000;
 const ziRo = (t) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date(t));

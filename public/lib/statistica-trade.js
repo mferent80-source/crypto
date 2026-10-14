@@ -114,7 +114,7 @@ var StatisticaTrade = (function () {
   function concluzii(s, M) {
     if (!s.suficient) { s.avertisment = "Ai doar " + cate(s.n, "trade", "trade-uri") + ": prea " + (s.n === 1 ? "puțin" : "puține") + " ca să spun ce faci bine sau rău (îmi trebuie cel puțin " + MIN + "). Cifrele de mai jos spun doar ce s-a întâmplat."; return; }
     var B = s.bine, G = s.gresit, mari = function (l) { return l.filter(function (g) { return g.n >= 5; }); };
-    if (s.total > 0) B.push({ text: "Pe total ești pe plus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + (s.factorProfit !== null ? " — fiecare 1 " + M + " pierdut a adus " + s.factorProfit.toFixed(2).replace(".", ",") + " câștigat" : "") + ".", suma: s.total });
+    if (s.total > 0) B.push({ text: "Pe total ești pe plus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + (s.factorProfit !== null ? " — fiecare 1 " + M + " pierdut a adus " + s.factorProfit.toFixed(1).replace(".", ",") + " câștigat" : "") + ".", suma: s.total });
     else G.push({ text: "Pe total ești pe minus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + ".", suma: s.total });
     if (s.rataCastig >= 0.5) B.push({ text: "Câștigi la " + pr(s.rataCastig) + " din trade-uri (" + s.pePlus + " din " + s.n + ").", suma: s.castigBrut });
     if (s.raport !== null && s.raport < 1) G.push({ text: "Pierderea medie (" + bani(s.pierdereMedie, M) + ") e mai mare decât câștigul mediu (" + bani(s.castigMediu, M) + "): o pierdere mănâncă " + (1 / s.raport).toFixed(1).replace(".", ",") + " câștiguri. Stopul mai aproape sau ieșirea mai devreme de pe minus schimbă asta.", suma: s.pierdereBruta });
@@ -235,8 +235,8 @@ var StatisticaTrade = (function () {
       + tile("Rezultat total", bani(s.total, M), cls(s.total), s.pePlus + " pe plus, " + s.peMinus + " pe minus" + (s.comisioane !== null ? " · după comisioane" : ""))
       + tile("Pe trade, în medie", bani(s.asteptare, M), cls(s.asteptare), "cât aduce un trade oarecare")
       + tile("Rata de câștig", pr(s.rataCastig), "", s.pePlus + " din " + s.n)
-      + tile("Câștig mediu / pierdere medie", bani(s.castigMediu, M) + " / " + bani(s.pierdereMedie, M), "", s.raport !== null ? "raport " + s.raport.toFixed(2).replace(".", ",") + (s.raport < 1 ? " — pierderile sunt mai mari" : "") : "")
-      + tile("Factor de profit", s.factorProfit !== null ? s.factorProfit.toFixed(2).replace(".", ",") : "—", s.factorProfit === null ? "" : s.factorProfit >= 1 ? "good" : "bad", "câștiguri ÷ pierderi (peste 1 = pe plus)")
+      + tile("Câștig mediu / pierdere medie", bani(s.castigMediu, M) + " / " + bani(s.pierdereMedie, M), "", s.raport !== null ? "raport " + s.raport.toFixed(1).replace(".", ",") + (s.raport < 1 ? " — pierderile sunt mai mari" : "") : "")
+      + tile("Factor de profit", s.factorProfit !== null ? s.factorProfit.toFixed(1).replace(".", ",") : "—", s.factorProfit === null ? "" : s.factorProfit >= 1 ? "good" : "bad", "câștiguri ÷ pierderi (peste 1 = pe plus)")
       + tile("Cea mai mare cădere", bani(-s.drawdown.max, M), s.drawdown.max > 0 ? "bad" : "", s.drawdown.max > 0 ? (s.drawdown.dinStart ? "de la început" : data(s.drawdown.dela)) + " → " + data(s.drawdown.panaLa) : "fără cădere")
       + tile("Cel mai bun / cel mai prost trade", bani(s.celMaiMare && s.celMaiMare.rezultat, M) + " / " + bani(s.ceaMaiMare && s.ceaMaiMare.rezultat, M), "", (s.celMaiMare ? s.celMaiMare.eticheta : "") + " / " + (s.ceaMaiMare ? s.ceaMaiMare.eticheta : ""))
       + tile("Cea mai lungă serie", cate(s.serii.castiguri, "câștig", "câștiguri") + " / " + cate(s.serii.pierderi, "pierdere", "pierderi"), "", "la rând")

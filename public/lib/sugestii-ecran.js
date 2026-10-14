@@ -150,7 +150,7 @@ function sugTrendHtml(x, acum) {
       + (t.salt && t.salt.pct >= 0.5 ? ' · <b class="sugTrendSalt">salt ' + P1(t.salt.pct) + ' într-o zi' + (t.salt.d ? ' (' + sugEsc(t.salt.d) + ')' : '') + ' — verifică seria</b>' : '')   /* v100.191: split/glitch? robotul măsoară, omul verifică */
       + '</span></li>';
   }).join('') + '</ol>' + (x.top.length > 10 ? '<button type="button" class="t212BtnLinie sugTrendTotBtn" data-action-click="sugTrendTot()">arată toate ' + x.top.length + ' ›</button>' : '');   /* v100.192 (I-626): pe telefon primele 10, restul la o apăsare */
-  h += '<p class="tbSub">Apasă pe simbol: se deschide Poarta din Trading 212, cu planul și riscul tău. Judecata: jurnalul verdictelor, sursa „Trend 12 luni”, la 5 și 20 de zile față de Nasdaq — aceeași ca la topul pe sectoare. Poarta nu dimensionează pe el până nu spune bilanțul „probat”.</p></section>';
+  h += '<p class="tbSub">Apasă pe simbol: se deschide Poarta din Trading 212, cu planul și riscul tău. Judecata: jurnalul verdictelor, sursa „Trend 12 luni”, la 20 și 60 de zile față de S&P 500 (SPY); fiecare zi se judecă întreagă, ca un coș. Poarta nu dimensionează pe el până nu spune bilanțul „probat”.</p></section>';
   return h;
 }
 // v100.192 (I-626): pe telefon lista Trend arată primele 10; butonul desface restul (CSS: .sugTrendLista:not(.sugTrendTot) li:nth-child(n+11))

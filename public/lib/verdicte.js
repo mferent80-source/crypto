@@ -42,7 +42,7 @@ var Verdicte = (function () {
   // adaugă în jurnal: un verdict pe (sursă, simbol, zi); cel mai nou din zi rămâne; cel mult MAX (cele mai vechi pleacă)
   function adauga(jurnal, noi) {
     var m = {}, l = (Array.isArray(jurnal) ? jurnal : []).concat(Array.isArray(noi) ? noi : [noi]);
-    l.forEach(function (x) { var c = curata(x); if (!c) return; var cheie = c.s + "|" + c.k + "|" + zi(c.t); if (!m[cheie] || m[cheie].t <= c.t) m[cheie] = c; });
+    l.forEach(function (x) { var c = curata(x); if (!c) return; var cheie = c.s + "|" + c.k + "|" + zi(c.t); if (!m[cheie] || c.t < m[cheie].t) m[cheie] = c;   /* v100.196: primul verdict al zilei rămâne, ca pe server */ });
     return Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return a.t - b.t; }).slice(-MAX);
   }
   // prețul la orizont: a h-a bară de după momentul verdictului (zile de bursă la acțiuni, zile calendaristice la crypto); bare = [{t, c, h?, l?}]
