@@ -188,6 +188,12 @@ function ciDisciplinaHtml(r, banda, lectii) {
   }
   return h;
 }
+// v100.196 (auditul sever 14.10, 🟡2): ce familii de teste are registrul - corecția Benjamini–Hochberg ține descoperirile false DOAR între ele
+function ciFamiliiRegistru(rg) {
+  var N = { verdict: "jurnalul verdictelor", obicei: "obiceiurile din Riscul tău", bec: "becurile și ADX-ul boților", carnet: "carnetul", laborator: "laboratorul", model: "modelele 🧠/🌳" }, v = [];
+  (rg || []).forEach(function (x) { var n = N[x && x.felul] || (x && x.felul); if (n && v.indexOf(n) < 0) v.push(n); });
+  return v.join(", ");
+}
 // v100.177 (jurnalul verdictelor): au avut dreptate verdictele Radarului? + registrul TUTUROR testelor cu corecția pentru teste multiple
 function ciVerdicteHtml(c, st) {
   var h = '<section class="ciSec"><h3>Au avut dreptate verdictele?</h3>';
@@ -198,15 +204,19 @@ function ciVerdicteHtml(c, st) {
   (c.calibrare || []).forEach(function (r) {
     var lin = r.niveluri.slice().sort(function (a, b) { return b.n - a.n; }).map(function (x) { return "<tr><td>" + ciEsc(NIV[x.nivel] || x.nivel) + '</td><td class="num">' + ciEsc(String(x.n)) + '</td><td class="num">' + ciEsc(r.masura === "linistit" ? Math.round(x.medie * 100) + "% au stat în bandă" : P(x.medie)) + '</td><td class="num">' + ciEsc(r.masura === "linistit" ? "—" : P(x.pePlus, 0).replace("+", "")) + "</td></tr>"; }).join("");
     var zi1 = r.unitate === "zi";   /* v100.195: coșurile (~20 de nume pe zi) se judecă pe zile independente, nu pe nume */
-    var t = r.test || {}, v = t.stare === "putine" ? (zi1 && t.minU && Number(t.unitati) < t.minU ? "puține zile independente încă (" + Number(t.unitati || 0) + ", trebuie cel puțin " + Number(t.minU) + "; numele aceleiași zile se mișcă împreună, deci se judecă împreună)" : "puține cazuri încă (" + Number(t.nFav) + " / " + Number(t.nRest) + ", trebuie cel puțin 30 pe fiecare parte)") : t.stare === "testat" ? "diferența " + (r.masura === "linistit" ? Math.round(t.dif * 100) + " puncte" : P(t.dif)) + ", p = " + ciNr(t.p, 3) + (zi1 && t.unitati ? ", pe " + ciCate(Number(t.unitati), "zi independentă", "zile independente") : "") : "";
+    var t = r.test || {}, v = t.stare === "putine" ? (zi1 && t.zileAmestecate && t.minU && Number(t.unitati) < t.minU ? "puține zile cu ambele feluri de verdict încă (" + Number(t.unitati || 0) + ", trebuie cel puțin " + Number(t.minU) + "; verdictele din aceeași zi trec prin aceeași piață, deci se compară în ziua lor)" : zi1 && t.minU && Number(t.unitati) < t.minU ? "puține zile independente încă (" + Number(t.unitati || 0) + ", trebuie cel puțin " + Number(t.minU) + "; numele aceleiași zile se mișcă împreună, deci se judecă împreună)" : "puține cazuri încă (" + Number(t.nFav) + " / " + Number(t.nRest) + ", trebuie cel puțin 30 pe fiecare parte)") : t.stare === "testat" ? "diferența " + (r.masura === "linistit" ? Math.round(t.dif * 100) + " puncte" : P(t.dif)) + ", p = " + ciNr(t.p, 3) + (zi1 && t.unitati ? ", pe " + (t.zileAmestecate ? ciCate(Number(t.unitati), "zi cu ambele feluri", "zile cu ambele feluri") : ciCate(Number(t.unitati), "zi independentă", "zile independente")) : "") : "";
     h += "<h4>" + ciEsc(r.nume + " · după " + r.h + (r.masura === "linistit" ? (r.h === 1 ? " zi" : " zile") : " zile de bursă")) + '</h4><p class="tbSub">' + ciEsc(r.intrebare + (v ? ": " + v : "")) + '</p><div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Verdict</th><th>Câte</th><th>' + (r.masura === "pesteQqq" ? "Față de QQQ" : r.masura === "pesteSpy" ? "Față de SPY" : r.masura === "linistit" ? "Rezultat" : "Media") + "</th><th>Pe plus</th></tr></thead><tbody>" + lin + "</tbody></table></div>";
   });
   var rg = c.registru || [];
   if (rg.length) {
-    var ram = rg.filter(function (x) { return x.ramane; });
-    h += '<h4>Ce e dovedit cu adevărat (după corecția pentru teste multiple)</h4><p class="ciRasp">' + ciEsc("Radarul are " + ciCate(rg.length, "test", "teste") + " deschise. Cu atâtea, câteva ies „dovedite” din întâmplare; după corecția Benjamini–Hochberg (cel mult 5% descoperiri false) rămân " + (ram.length ? ciCate(ram.length, "lucru dovedit", "lucruri dovedite") + ":" : "niciunul dovedit.")) + "</p>"
+    var ram = rg.filter(function (x) { return x.ramane; }), leg = rg.filter(function (x) { return x.treceBh && x.cauza === false; });
+    /* v100.196 (🟡2): corecția ține doar între testele din registru - restul au regulile lor; 🟡3: legăturile (se știu abia la ieșire) nu sunt reguli */
+    var afara = [["model", "modelele 🧠/🌳"], ["laborator", "laboratorul"], ["carnet", "carnetul"]].filter(function (f) { return !rg.some(function (x) { return x.felul === f[0]; }); }).map(function (f) { return f[1]; }).concat(["Dovada pe bot"]);
+    h += '<h4>Ce e dovedit cu adevărat (după corecția pentru teste multiple)</h4><p class="ciRasp">' + ciEsc("Registrul are " + ciCate(rg.length, "test", "teste") + " deschise, din " + ciFamiliiRegistru(rg) + ". Cu atâtea, câteva ies „dovedite” din întâmplare; între ele, corecția Benjamini–Hochberg ține descoperirile false la cel mult ~5%, și rămân " + (ram.length ? ciCate(ram.length, "lucru dovedit", "lucruri dovedite") + ":" : "niciunul dovedit.")) + "</p>"
       + (ram.length ? '<ul class="ciLista">' + ram.map(function (x) { return "<li><b>" + ciEsc(x.afirmatie) + "</b> · " + ciEsc((x.directie ? x.directie + " · " : "") + x.sursa) + ' <span class="tbSub">(p = ' + ciEsc(ciNr(x.p, 4)) + ")</span></li>"; }).join("") + "</ul>" : "")
-      + '<details class="ciMetoda"><summary>Toate testele (' + ciEsc(String(rg.length)) + ")</summary><ul>" + rg.slice().sort(function (a, b) { return a.p - b.p; }).map(function (x) { return '<li class="' + (x.ramane ? "good" : "") + '">' + ciEsc(x.sursa + " · " + x.afirmatie + (x.directie ? " · " + x.directie : "") + " · p = " + ciNr(x.p, 4) + (x.stareVeche && /^dovedit/.test(x.stareVeche) && !x.ramane ? " · pagina lui zicea „dovedit”, după corecție NU mai e" : x.treceBh && !x.ramane ? " · p mic, dar nu trece regula lui fixată dinainte (direcția / cele două jumătăți)" : "")) + "</li>"; }).join("") + "</ul></details>";
+      + (leg.length ? '<p class="tbSub">' + ciEsc("Trec corecția, dar se știu abia la ieșire, deci nu sunt reguli de urmat: " + leg.map(function (x) { return x.afirmatie + " — " + (x.limita || "legătură, nu cauză"); }).join("; ") + ".") + "</p>" : "")
+      + '<p class="tbSub">' + ciEsc("În afara corecției, cu regulile lor proprii: " + afara.join(", ") + ".") + "</p>"
+      + '<details class="ciMetoda"><summary>Toate testele (' + ciEsc(String(rg.length)) + ")</summary><ul>" + rg.slice().sort(function (a, b) { return a.p - b.p; }).map(function (x) { return '<li class="' + (x.ramane ? "good" : "") + '">' + ciEsc(x.sursa + " · " + x.afirmatie + (x.directie ? " · " + x.directie : "") + " · p = " + ciNr(x.p, 4) + (x.cauza === false && x.limita ? " · " + x.limita : x.stareVeche && /^dovedit/.test(x.stareVeche) && !x.ramane ? " · pagina lui zicea „dovedit”, după corecție NU mai e" : x.treceBh && !x.ramane ? " · p mic, dar nu trece regula lui fixată dinainte (direcția / cele două jumătăți)" : "")) + "</li>"; }).join("") + "</ul></details>";
   }
   return h + "</section>";
 }

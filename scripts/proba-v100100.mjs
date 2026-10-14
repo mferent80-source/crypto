@@ -43,13 +43,13 @@ await test("(1) cazurile primesc ADX 14 la ultima bară ÎNCHEIATĂ înainte de 
 });
 
 // cazuri construite: 20 de monede, câte 4 la „loc” și 4 la „trend”, rezultat după regula dată
-const fac = (fLoc, fTrend, monede = 20) => { const l = []; for (let m = 0; m < monede; m++) for (let k = 0; k < 8; k++) { const loc = k < 4, t = T0 + (m * 8 + k) * ORA; l.push({ moneda: "M" + m, adx: loc ? 15 : 32, pct: loc ? fLoc(m, k, t) : fTrend(m, k, t), t }); } return l; };
+const fac = (fLoc, fTrend, monede = 20) => { const l = []; for (let m = 0; m < monede; m++) for (let k = 0; k < 8; k++) { const loc = k < 4, t = T0 + (m * 8 + k) * 12 * ORA;   /* v100.196: la 12 h (pe 80 de zile) - testul pe blocuri de timp cere ≥ 8 perioade */ l.push({ moneda: "M" + m, adx: loc ? 15 : 32, pct: loc ? fLoc(m, k, t) : fTrend(m, k, t), t }); } return l; };
 await test("(2) bilantAdx: loc clar mai bun ⇒ dovedit; invers ⇒ pe dos; la fel ⇒ nedovedit; doar în primele 70% ⇒ nedovedit; puține ⇒ puține", () => {
   const d = ASM.bilantAdx(fac(() => 0.02, () => -0.02), { rep: 300 });
   assert.equal(d.verdict, "dovedit"); assert.equal(d.loc.n, 80); assert.equal(d.trend.n, 80); assert.equal(d.monede, 20); assert.ok(d.icPlus[0] > 0 && d.icMed[0] > 0);
   assert.equal(ASM.bilantAdx(fac(() => -0.02, () => 0.02), { rep: 300 }).verdict, "pe dos");
   const la = ASM.bilantAdx(fac((m, k) => (k % 2 ? 0.01 : -0.01), (m, k) => (k % 2 ? 0.01 : -0.01)), { rep: 300 }); assert.equal(la.verdict, "nedovedit");
-  const T70 = T0 + Math.floor(160 * 0.7) * ORA;   // efectul doar în trecut, apoi pe dos ⇒ nu ține pe date noi
+  const T70 = T0 + Math.floor(160 * 0.7) * 12 * ORA;   // efectul doar în trecut, apoi pe dos ⇒ nu ține pe date noi
   assert.equal(ASM.bilantAdx(fac((m, k, t) => (t < T70 ? 0.03 : -0.01), (m, k, t) => (t < T70 ? -0.03 : 0.01)), { rep: 300 }).verdict, "nedovedit");
   assert.equal(ASM.bilantAdx(fac(() => 0.02, () => -0.02, 5), { rep: 50 }).verdict, "puține", "sub 10 monede / 30 pe grupă");
   assert.equal(ASM.bilantAdx([{ moneda: "X", adx: null, pct: 1 }]).n, 0, "fără ADX nu intră");

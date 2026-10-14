@@ -64,7 +64,7 @@ await test("(545) cazurile poartă becurile 1h / 4h / 1z de la pornire (doar bar
   assert.match(c.tf, /^[ucl]{3}$/, JSON.stringify(c)); assert.equal(c.tf, "uuu");
   const tarziu = AS.cazuri([Object.assign({}, tr[0], { pornit: T0 - 79 * ZI })], () => h)[0];
   assert.equal(tarziu.tf, null, "prea puține zile închise înainte ⇒ fără becuri (nu ghicește)");
-  const cz = []; for (let m = 0; m < 12; m++) for (let k = 0; k < 6; k++) { cz.push({ moneda: "M" + m, dir: "long", tf: "uul", pct: 0.02, t: m * 10 + k }); cz.push({ moneda: "M" + m, dir: "long", tf: "ucc", pct: k % 2 ? -0.03 : 0.01, t: m * 10 + k + 5 }); }
+  const cz = []; for (let m = 0; m < 12; m++) for (let k = 0; k < 6; k++) { cz.push({ moneda: "M" + m, dir: "long", tf: "uul", pct: 0.02, t: (m * 10 + k) * 432e5 }); cz.push({ moneda: "M" + m, dir: "long", tf: "ucc", pct: k % 2 ? -0.03 : 0.01, t: (m * 10 + k + 5) * 432e5 }); }   /* v100.196: la 12 h - blocurile de timp */
   const bl = AS.bilantSemafor(cz, { rep: 300 });
   assert.equal(bl.cu.n, 72); assert.equal(bl.contra.n, 72); assert.equal(bl.verdict, "dovedit");
   assert.match(AS.textSemafor(bl), /^pe boții tăi, porniți fără niciun bec împotrivă \(4 h, 1 zi\) au ieșit mai bine \(fără: mediana \+2,0%, 100% pe plus · cu unul împotrivă: mediana −1,0%, 50% pe plus, din 144\)$/);   // v100.175: mediana întâi (pe ea e verdictul)

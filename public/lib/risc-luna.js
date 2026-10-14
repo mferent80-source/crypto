@@ -61,13 +61,33 @@ var RiscLuna = (function () {
   }
   function pragulAtins(s, durata) { var p = null; (s || []).forEach(function (x) { if (x.n > 0 && x.h <= durata) p = x; }); return p; }
 
-  // verdictul unui obicei (CU vs FĂRĂ), după regula fixată; grupuri = monede / acțiuni (cheia)
+  // v100.196 (auditul sever 14.10, 🔴1): boții / acțiunile trec prin ACEEAȘI piață, iar obiceiul vine în faze (săptămâni cu stop, săptămâni
+  // fără) ⇒ bootstrap-ul doar pe monede dădea „dovedit” fals în 5–7 % (promis ~1 %) și p ≤ 0,05 în 15–18 %. Reparația din Carnet.verdictMonede:
+  // al doilea test, pe blocuri de timp de 3 zile care nu se suprapun - în fiecare bloc diferența CU − FĂRĂ (piața comună se scade în bloc),
+  // semnele întoarse între blocuri (exact până la 14). Sub 8 blocuri cu ambele feluri ⇒ „prea puține” (motivul „zile”).
+  var BLOC_ZILE = 3, MIN_BLOCURI = 8;
+  function pSemne(d, rnd, reps) {
+    var s0 = 0, n = d.length, peste = 0, k, s, j; for (j = 0; j < n; j++) s0 += d[j]; var obs = Math.abs(s0 / n) - 1e-15;
+    if (n <= 14) { var tot = 1 << n; for (k = 0; k < tot; k++) { s = 0; for (j = 0; j < n; j++) s += (k >> j) & 1 ? -d[j] : d[j]; if (Math.abs(s / n) >= obs) peste++; } return peste / tot; }
+    for (k = 0; k < reps; k++) { s = 0; for (j = 0; j < n; j++) s += rnd() < 0.5 ? -d[j] : d[j]; if (Math.abs(s / n) >= obs) peste++; }
+    return (peste + 1) / (reps + 1);
+  }
+  function testBlocuri(l, test, timp, zile, rnd, reps) {
+    var t0 = Infinity, bl = {}, i, t, k;
+    for (i = 0; i < l.length; i++) if (l[i][timp] < t0) t0 = l[i][timp];
+    for (i = 0; i < l.length; i++) { t = test(l[i]); if (t !== true && t !== false) continue; k = Math.floor((l[i][timp] - t0) / (zile * ZI)); if (!bl[k]) bl[k] = { sa: 0, na: 0, sb: 0, nb: 0 }; if (t) { bl[k].sa += l[i].r; bl[k].na++; } else { bl[k].sb += l[i].r; bl[k].nb++; } }
+    var d = Object.keys(bl).filter(function (q) { return bl[q].na && bl[q].nb; }).map(function (q) { return bl[q].sa / bl[q].na - bl[q].sb / bl[q].nb; });
+    return { blocuri: d.length, dif: d.length ? d.reduce(function (s, x) { return s + x; }, 0) / d.length : null, p: d.length >= MIN_BLOCURI ? pSemne(d, rnd, reps || 2000) : null };
+  }
+  // verdictul unui obicei (CU vs FĂRĂ), după regula fixată; grupuri = monede / acțiuni (cheia) + blocurile de timp (v100.196)
   function verdict(l, test, o) {
     var cu = l.filter(function (x) { return test(x) === true; }), fara = l.filter(function (x) { return test(x) === false; }), min = o.min || 30;
     var baza = { cu: cu.length, fara: fara.length, medieCu: cu.length ? medie(cu) : null, medieFara: fara.length ? medie(fara) : null,
       mariCu: cu.length ? cu.filter(function (x) { return x.r <= MARE; }).length / cu.length : null, mariFara: fara.length ? fara.filter(function (x) { return x.r <= MARE; }).length / fara.length : null,
       banCu: cu.reduce(function (s, x) { return s + x.r * o.S(x); }, 0), banFara: fara.reduce(function (s, x) { return s + x.r * o.S(x); }, 0) };
     if (cu.length < min || fara.length < min) return Object.assign(baza, { stare: o.putini });
+    var tb = testBlocuri(l, test, o.timp, o.blocZile || BLOC_ZILE, generator((Number(o.seed) || 1) + 7919), o.reps);
+    if (tb.blocuri < MIN_BLOCURI) return Object.assign(baza, { stare: o.putini, motiv: "zile", blocuri: tb.blocuri, blocZile: o.blocZile || BLOC_ZILE });
     var dif = baza.medieCu - baza.medieFara, gr = {}, chei = [];
     l.forEach(function (x) { var k = x[o.cheie]; if (!gr[k]) { gr[k] = []; chei.push(k); } gr[k].push(x); });
     var rnd = generator(o.seed), d = [];
@@ -77,11 +97,13 @@ var RiscLuna = (function () {
     var tm = median(l.map(function (x) { return x[o.timp]; })), jum = function (f) { var a = cu.filter(function (x) { return f(x[o.timp]); }), b = fara.filter(function (x) { return f(x[o.timp]); }); return a.length >= 5 && b.length >= 5 ? medie(a) - medie(b) : null; };
     var d1 = jum(function (t) { return t < tm; }), d2 = jum(function (t) { return t >= tm; });
     // revizia (R1): cu IC 95% regula dădea „dovedit” pe date amestecate în 7–12% din cazuri ⇒ dovedit = IC 99%; IC 95% singur = „la limită”
-    var jum2 = d1 !== null && d2 !== null && Math.sign(d1) === Math.sign(dif) && Math.sign(d2) === Math.sign(dif), sens = dif < 0 ? "rau" : "bun";
-    var dov = jum2 && ic99[0] !== null && (ic99[0] > 0 || ic99[1] < 0), lim = !dov && jum2 && ic[0] !== null && (ic[0] > 0 || ic[1] < 0);
+    // v100.196: și semnul pe blocurile de timp = semnul diferenței, cu pBloc < 0,01 (dovedit) / < 0,05 (la limită) - ambele condiții, ca în carnet
+    var jum2 = d1 !== null && d2 !== null && Math.sign(d1) === Math.sign(dif) && Math.sign(d2) === Math.sign(dif) && Math.sign(tb.dif) === Math.sign(dif), sens = dif < 0 ? "rau" : "bun";
+    var dov = jum2 && tb.p < 0.01 && ic99[0] !== null && (ic99[0] > 0 || ic99[1] < 0), lim = !dov && jum2 && tb.p < 0.05 && ic[0] !== null && (ic[0] > 0 || ic[1] < 0);
     // v100.177 (corecția pentru teste multiple): p-ul din aceeași distribuție bootstrap (de două ori partea mai mică de o parte a lui 0)
     var pB = d.length ? Math.min(1, (2 * Math.min(d.filter(function (x) { return x <= 0; }).length, d.filter(function (x) { return x >= 0; }).length) + 1) / (d.length + 1)) : null;   // (revizia, I1): niciodată 0
-    return Object.assign(baza, { dif: dif, ic: ic, ic99: ic99, d1: d1, d2: d2, p: pB, stare: dov ? "dovedit-" + sens : lim ? "la-limita-" + sens : "nedovedit" });
+    // în registrul BH intră max(p bootstrap, pBloc): p-ul trebuie să țină pe ambele unități
+    return Object.assign(baza, { dif: dif, ic: ic, ic99: ic99, d1: d1, d2: d2, pBoot: pB, pBloc: tb.p, blocuri: tb.blocuri, difBloc: tb.dif, p: pB === null ? null : Math.max(pB, tb.p), stare: dov ? "dovedit-" + sens : lim ? "la-limita-" + sens : "nedovedit" });
   }
   var OBICEIURI_BOTI = [["O1", "Stop pus"], ["O2", "Marjă adăugată pe drum"], ["O3", "Levier peste 3×"], ["O4", "Banda sub 10%"], ["O5", "Pornit în partea grea a benzii"],
     ["O6", "Pornit la ≤ 30 min după un bot pe minus"], ["O7", "Suma mărită după o pierdere"], ["O8", "Prima oară pe moneda asta"], ["O9", "Short"]];
@@ -213,7 +235,7 @@ var RiscLuna = (function () {
   var LIMITA = { A1: "Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum.", A3: "Ții mai mult ce merge prost, deci durata e și urmare, nu doar cauză." };
   function textObicei(r, tip) {
     var noun = tip === "actiuni" ? ["episod", "episoade"] : ["bot", "boți"], grup = cate(r.cu, noun[0], noun[1]) + " cu, " + r.fara + " fără";
-    if (/^prea/.test(r.stare)) return "Prea puține cazuri ca să judec (" + grup + ").";
+    if (/^prea/.test(r.stare)) return r.motiv === "zile" ? "Prea puține perioade de timp ca să judec: doar " + cate(Number(r.blocuri) || 0, "perioadă", "perioade") + " de " + (r.blocZile || BLOC_ZILE) + " zile cu ambele feluri, trebuie cel puțin " + MIN_BLOCURI + " (" + grup + "; cazurile din aceleași zile trec prin aceeași piață)." : "Prea puține cazuri ca să judec (" + grup + ").";
     var cifre = "media " + semn1(r.medieCu * 100) + "% față de " + semn1(r.medieFara * 100) + "%, pierderi de peste 5% în " + pct(r.mariCu) + " din cazuri față de " + pct(r.mariFara) + " (" + grup + ")";
     var t = r.stare === "dovedit-rau" ? "Obicei rău, dovedit: " + cifre + "." : r.stare === "dovedit-bun" ? "Obicei bun, dovedit: " + cifre + "."
       : r.stare === "la-limita-rau" ? "La limită (semn de obicei rău, încă nesigur): " + cifre + "." : r.stare === "la-limita-bun" ? "La limită (semn de obicei bun, încă nesigur): " + cifre + "." : "Nedovedit: " + cifre + "; diferența poate fi întâmplare.";

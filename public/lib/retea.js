@@ -217,6 +217,17 @@ var Retea = (function () {
     var d = decide(m.verificare || null, /-t212$/.test(String(m.tinta || ""))), v = m.verificare || {}, la = nr(m.la), z = la !== null ? Math.floor(((nr(acum) || Date.now()) - la) / ZI) : null;
     return { dovedita: d.dovedita, motiv: d.motiv, nIndep: nr(v.nIndep) || 0, bloc: (TINTE[m.tinta] || { bloc: 24 }).bloc, vechi: z !== null && z >= 2 ? z : null };
   }
+  // v100.196 (auditul sever 14.10, 🔵1): modelele în registrul Benjamini–Hochberg - p-ul verificării (retea/verifica.mjs: din aceeași distribuție
+  // bootstrap ca IC-ul, extins pe luni), regula = „dovedită” după decide(); modele = { tinta: model }, eticheta = "🧠" sau "🌳"
+  function pentruRegistru(modele, eticheta) {
+    var out = [], ver = eticheta === "🌳" ? VERSIUNE_ARBORI : VERSIUNE;
+    Object.keys(modele || {}).forEach(function (t) {
+      var m = modele[t], v = m && m.verificare; if (!m || m.versiune !== ver || !v || nr(v.p) === null) return;
+      var d = decide(v, /-t212$/.test(t));
+      out.push({ sursa: "Modelele " + eticheta, afirmatie: (NUME[t] || t) + " " + eticheta + " bate " + (v.reper || "🎲"), p: v.p, dif: nr(v.bss), felul: "model", regula: d.dovedita === true, directie: nr(v.bss) > 0 ? "bate reperul" : "nu bate reperul" });
+    });
+    return out;
+  }
   function verdict(m, acum) { return verdictCu(m, acum, VERSIUNE); }
   function verdictArbori(m, acum) { return verdictCu(m, acum, VERSIUNE_ARBORI); }
   // aceleași intrări ca Probabilitati.pentruBot (o = {acum, pret, dir, jos, sus, lichidare, tinta, stop}); modele = {tinta: model}.
@@ -398,6 +409,6 @@ var Retea = (function () {
     if (!pzA || !vdA || nr(pzA.p) === null) return "Un bot ca ăsta ar ieși pe plus: " + PC(pz.p) + " · rata ta: " + PC(pz.rata) + " · " + eticheta(vd) + ".";
     return "Un bot ca ăsta ar ieși pe plus: 🧠 " + PC(pz.p) + " · 🌳 " + PC(pzA.p) + " · rata ta: " + PC(pz.rata) + ".\n🧠 " + eticheta(vd) + " · 🌳 " + eticheta(vdA) + ".";
   }
-  return { VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, INTERVAL_T212: INTERVAL_T212, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, inchisZi: inchisZi, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, costTipic: costTipic, randuri: randuri, antet: antet, textBusola: textBusola, subsol: subsol, minIndep: minIndep, plajaCost: plajaCost, costInPlaja: costInPlaja, rezumat: rezumat, eticheta: eticheta, textPornire: textPornire };
+  return { pentruRegistru: pentruRegistru, VERSIUNE: VERSIUNE, TRASATURI: TRASATURI, TINTE: TINTE, NUME: NUME, TINTA_DE: TINTA_DE, INTERVAL: INTERVAL, INTERVAL_T212: INTERVAL_T212, ORA: ORA, indexLa: indexLa, trasaturiBare: trasaturiBare, intrare: intrare, trasaturiBot: trasaturiBot, inchisZi: inchisZi, indexZi: indexZi, trasaturiZilnice: trasaturiZilnice, intrareActiune: intrareActiune, prezice: prezice, decide: decide, verdict: verdict, VERSIUNE_ARBORI: VERSIUNE_ARBORI, verdictArbori: verdictArbori, pentruBot: pentruBot, pentruPornire: pentruPornire, intrariBot: intrariBot, intrarePornire: intrarePornire, intrariActiune: intrariActiune, pentruActiune: pentruActiune, intrareCumparare: intrareCumparare, pentruCumparare: pentruCumparare, rataPe: rataPe, costTipic: costTipic, randuri: randuri, antet: antet, textBusola: textBusola, subsol: subsol, minIndep: minIndep, plajaCost: plajaCost, costInPlaja: costInPlaja, rezumat: rezumat, eticheta: eticheta, textPornire: textPornire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Retea = Retea;

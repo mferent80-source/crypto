@@ -117,8 +117,14 @@ export function brier(l, k) { if (!l.length) return null; let s = 0; for (const 
 export function logloss(l, k) { if (!l.length) return null; let s = 0; for (const x of l) { const p = PR(x[k]); s -= x.y ? Math.log(p) : Math.log(1 - p); } return s / l.length; }
 export function bss(l, k, kRef) { const a = brier(l, k), b = brier(l, kRef); return a !== null && b > 0 ? 1 - a / b : null; }
 export function blocuri(l, oreBloc) { const s = new Set(); for (const x of l) s.add(Math.floor(x.t / (oreBloc * ORA))); return s.size; }
-// IC 95% pentru 1 − Brier(k) / Brier(kRef): lunile cu înlocuire, apoi monedele lunii alese cu înlocuire (sumele de erori pe grupă)
-export function bootstrap2(l, k, kRef, n = 1000, seed = 7) {
+// v100.196 (auditul sever 14.10, 🔵9): percentila simplă pe ~10 luni acoperă sub 95 % - măsurat 3,7 % „bate reperul” fals (promis 2,5 %)
+// când avantajul se schimbă de la o lună la alta ⇒ percentila EXTINSĂ (Hesterberg 2015): α ajustat așa încât z(α'/2) = √(L/(L−1))·t(L−1; 0,975),
+// L = lunile. La L mare ajustarea dispare. phi / tSus: aproximările standard (Abramowitz–Stegun 26.2.17; Cornish–Fisher pentru t).
+function phi(x) { const t = 1 / (1 + 0.2316419 * Math.abs(x)), d = 0.3989422804014327 * Math.exp(-x * x / 2), q = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429)))); return x >= 0 ? 1 - q : q; }
+function tSus(df) { const z = 1.959963985, z3 = z ** 3, z5 = z ** 5, z7 = z ** 7; return z + (z3 + z) / (4 * df) + (5 * z5 + 16 * z3 + 3 * z) / (96 * df * df) + (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df ** 3); }
+export function alfaExtins(L) { if (!(L >= 2)) return 0.05; return 2 * phi(-Math.sqrt(L / (L - 1)) * tSus(L - 1)); }
+// distribuția bootstrap a lui 1 − Brier(k) / Brier(kRef): lunile cu înlocuire, apoi monedele lunii alese cu înlocuire (sumele de erori pe grupă)
+function bootstrap2Dist(l, k, kRef, n, seed) {
   const luni = new Map();
   for (const x of l) { const lu = luna(x.t); if (!luni.has(lu)) luni.set(lu, new Map()); const m = luni.get(lu); if (!m.has(x.s)) m.set(x.s, [0, 0]); const g = m.get(x.s); g[0] += (x[k] - x.y) ** 2; g[1] += (x[kRef] - x.y) ** 2; }
   const L = [...luni.values()].map((m) => [...m.values()]), r = cuSamanta(seed), v = [];
@@ -128,7 +134,29 @@ export function bootstrap2(l, k, kRef, n = 1000, seed = 7) {
     v.push(b > 0 ? 1 - a / b : 0);
   }
   v.sort((x, y) => x - y);
-  return [v[Math.floor(0.025 * n)], v[Math.ceil(0.975 * n) - 1]];
+  return { v, L: L.length };
+}
+// IC 95% (percentila extinsă pe numărul de luni)
+export function bootstrap2(l, k, kRef, n = 1000, seed = 7) {
+  const { v, L } = bootstrap2Dist(l, k, kRef, n, seed), a = alfaExtins(L) / 2;
+  return [v[Math.min(n - 1, Math.floor(a * n))], v[Math.max(0, Math.ceil((1 - a) * n) - 1)]];
+}
+// p (două părți) din ACEEAȘI distribuție, extins la fel ca intervalul - pentru registrul BH (🔵1): la p = 0,05 cade exact pe marginea IC-ului
+export function pBootstrap2(l, k, kRef, n = 4000, seed = 7) {   /* 4.000 de trageri: cu 1.000 p-ul extins nu coboară sub ~0,007 pe 10 luni */
+  const { v, L } = bootstrap2Dist(l, k, kRef, n, seed); if (!v.length) return null;
+  const jos = v.filter((x) => x <= 0).length, sus = v.filter((x) => x >= 0).length, pBrut = Math.min(1, (2 * Math.min(jos, sus) + 1) / (n + 1));
+  if (!(L >= 2)) return pBrut;
+  const c = Math.sqrt(L / (L - 1)) * tSus(L - 1) / 1.959963985, zz = -Math.abs(qnorm(pBrut / 2)) / c;
+  return Math.min(1, 2 * phi(zz));
+}
+// cuantila normalei (Acklam), pentru p-ul extins
+function qnorm(p) {
+  if (!(p > 0)) return -Infinity; if (!(p < 1)) return Infinity;
+  const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239], b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572],
+    c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783], d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+  if (p < 0.02425) { const q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+  if (p > 1 - 0.02425) return -qnorm(1 - p);
+  const q = p - 0.5, r = q * q; return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
 }
 const r4 = (v) => (v === null || v === undefined || !Number.isFinite(v) ? null : Math.round(v * 1e4) / 1e4);
 // verificarea pe rândurile de test (p = rețeaua, pLog = formula simplă, r1 / r2 = reperele); reperul e cel mai greu dintre ele
@@ -140,7 +168,7 @@ export function verificare(l, o) {
   return { n: ok.length, nIndep: blocuri(ok, o.oreBloc), oreBloc: o.oreBloc, luni: o.luni, luniGata: o.luniGata, reper: rep,
     brier: r4(brier(ok, "p")), brierReper: r4(brier(ok, kRef)), brierLog: r4(brier(ok, "pLog")),
     logloss: r4(logloss(ok, "p")), loglossReper: r4(logloss(ok, kRef)), loglossLog: r4(logloss(ok, "pLog")),
-    bss: r4(bss(ok, "p", kRef)), ic: ok.length ? bootstrap2(ok, "p", kRef).map(r4) : null,
+    bss: r4(bss(ok, "p", kRef)), ic: ok.length ? bootstrap2(ok, "p", kRef).map(r4) : null, p: ok.length ? pBootstrap2(ok, "p", kRef) : null,
     bssLog: r4(bss(ok, "p", "pLog")), icLog: ok.length ? bootstrap2(ok, "p", "pLog").map(r4) : null,
     bss3: l3.length ? r4(bss(l3, "p", kRef)) : null };
 }

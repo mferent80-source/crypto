@@ -56,7 +56,7 @@ await test("(1d) supravietuire: din cele care au AJUNS la X ore / zile, câte pe
   assert.equal(RL.pragulAtins(s, 30).h, 24); assert.equal(RL.pragulAtins(s, 0.2), null);
 });
 // obiceiurile, pe date construite: stopul ajută clar, pe 40 de monede, în ambele jumătăți de timp
-const obiceiuri = () => { const l = []; for (let i = 0; i < 40; i++) for (const ian of [true, false]) { const t = ian ? Date.UTC(2026, 1, 1) + i * ORA : Date.UTC(2026, 7, 1) + i * ORA; l.push(B({ m: "M" + i, t, stop: 0.9, r: 0.02 }), B({ m: "M" + i, t: t + 10 * ORA, stop: 0, r: -0.03 })); } return l; };
+const obiceiuri = () => { const l = []; for (let i = 0; i < 40; i++) for (const ian of [true, false]) { const t = ian ? Date.UTC(2026, 1, 1) + i * 12 * ORA : Date.UTC(2026, 7, 1) + i * 12 * ORA;   /* v100.196: la 12 h - testul pe blocuri de timp cere ≥ 8 perioade */ l.push(B({ m: "M" + i, t, stop: 0.9, r: 0.02 }), B({ m: "M" + i, t: t + 10 * ORA, stop: 0, r: -0.03 })); } return l; };
 await test("(1e) comportamentBoti: lista închisă de obiceiuri, verdict după regula fixată (IC fără 0 + ambele jumătăți); prea puțini ⇒ spus", () => {
   const r = RL.comportamentBoti(obiceiuri(), { de: Date.UTC(2026, 0, 1), S: 40, reps: 400, seed: 4 });
   assert.deepEqual(r.map((x) => x.k), ["O1", "O2", "O3", "O4", "O5", "O6", "O7", "O8", "O9"]);

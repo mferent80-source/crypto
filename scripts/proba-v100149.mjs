@@ -153,7 +153,8 @@ await test("(I-579) Monte Carlo pe regim: ferestrele din jurnalul de stări al B
   // revizia Opus (critic): validarea citea câmpuri inexistente ⇒ partea pură e probată aici, pe un rezultat REAL al simulatorului și pe tăieturi cu y cunoscut
   assert.ok(pCastig(baza) !== null && pCastig(baza) >= 0 && pCastig(baza) <= 1, "pCastig citește orizonturi[0].pCastig din rezultatul real: " + pCastig(baza));
   assert.equal(pCastig({ orizonturi: [] }), null); assert.equal(pCastig(null), null);
-  const taie = (k, pB, pR, y) => ({ s: "M" + (k % 4), t0: ACUM + k * 12 * 3600000, pB, pR, y });
+  /* v100.196 (🔴3): blocul = săptămâna, cu toate monedele ⇒ tăieturile pe ~13 săptămâni (la 36 h); pe 30 de zile ar fi doar ~5 cazuri independente */
+  const taie = (k, pB, pR, y) => ({ s: "M" + (k % 4), t0: ACUM + k * 36 * 3600000, pB, pR, y });
   const bune = Array.from({ length: 60 }, (_, k) => taie(k, 0.5, k % 2 ? 0.9 : 0.1, k % 2 ? 1 : 0)), rele = Array.from({ length: 60 }, (_, k) => taie(k, 0.5, k % 2 ? 0.1 : 0.9, k % 2 ? 1 : 0));
   const vb = verdictRegim(bune), vr = verdictRegim(rele), vp = verdictRegim(bune.slice(0, 20));
   assert.equal(vb.trece, true, "regimul mai bine calibrat decât baza, pe ≥ 8 blocuri ⇒ trece: " + vb.motiv); assert.ok(vb.icSus < 0 && vb.brierRegim < vb.brierBaza);

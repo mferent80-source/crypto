@@ -56,7 +56,9 @@ export function randuriActiune(tinta, tk, b, qqq, trades, M, memo) {
   const zile = H === 168 ? 5 : 1; let sem = 7; for (const ch of tk) sem = (sem * 31 + ch.charCodeAt(0)) >>> 0;
   memo = memo || {}; memo.rata = memo.rata || {};
   for (let i = 250; i + zile < b.length; i++) {
-    const rp = memo.rata[i] || (memo.rata[i] = rataPe(trades, tk, b[i].t + ZI));
+    // v100.196 (auditul sever 14.10, 🔵2): rata lui se știe la DECIZIE (Retea.inchisZi: 01:30 UTC după ședința zilei i), nu la bara de mâine
+    // (b[i].t + ZI = 13:30 UTC a doua zi ⇒ ~12 h de viitor: o vânzare pe minus de dimineață intra deja în trăsătură)
+    const rp = memo.rata[i] || (memo.rata[i] = rataPe(trades, tk, R.inchisZi(b[i].t)));
     const f = R.trasaturiZilnice(b, i, qqq, rp.rata); if (!f) continue;
     const u = cuSamanta((sem + i) >>> 0)(); let e;   // revizia (🔵12): hash, nu k % n - altfel nivelul ar fi legat de ziua săptămânii (grila de 5 pe săptămâna de 5 zile)
     if (tinta === "stop1-t212" || tinta === "sare1-t212") e = { relS: STOPURI[Math.floor(u * STOPURI.length)] };
