@@ -136,7 +136,7 @@ await test("pagina: „Au avut dreptate verdictele?” — gol ⇒ cum se umple;
     { sursa: "poarta-t212", nume: "Poarta Trading 212", h: 20, masura: "randament", intrebare: "„cumpără” față de „așteaptă / nu”", niveluri: [{ nivel: "cumpara", n: 5, medie: 0.01, pePlus: 0.6 }], test: { stare: "putine", nFav: 5, nRest: 2 } }],
     registru: [{ sursa: "Riscul tău · boți", afirmatie: "Levier peste 3×", p: 0.0001, ramane: true }, { sursa: "Riscul tău · boți", afirmatie: "Stop pus", p: 0.03, ramane: false, stareVeche: "dovedit-bun" }] });
   assert.match(h, /120 de verdicte ținute minte, dintre care 60 au fost judecate/); assert.match(h, /Ideile zilei \(acțiuni\) · după 5 zile de bursă/); assert.match(h, /p = 0,310/);
-  assert.match(h, /puține cazuri încă \(5 \/ 2/); assert.match(h, /Radarul are 2 teste deschise/); assert.match(h, /rămân 1 lucru dovedit/);
+  assert.match(h, /puține cazuri încă \(5 \/ 2/); assert.match(h, /Registrul are 2 teste deschise, din /);   /* v100.196 (🟡2): spune familiile, nu „tot Radarul” */ assert.match(h, /rămân 1 lucru dovedit/);
   assert.match(h, /Stop pus · p = 0,0300 · pagina lui zicea „dovedit”, după corecție NU mai e/);
 });
 await test("legarea: verdicte.js încărcat înainte de cont-ecran.js și în cache; colectorul încarcă Verdicte și rulează tura", () => {

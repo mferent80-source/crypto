@@ -103,6 +103,16 @@
     return Object.assign(baza, { dif: dif, p: p, pBloc: pBloc, d1: d1, d2: d2, stare: jum2 && p < 0.01 && pBloc < 0.01 ? "dovedit-" + sens : jum2 && p < 0.05 && pBloc < 0.05 ? "la-limita-" + sens : "nedovedit" });
   }
   function optiuni(o) { o = o || {}; return { reps: o.reps || 2000, seed: o.seed || 561 }; }
+  // v100.196 (auditul sever 14.10, 🟡2 / 🔵1): întrebările carnetului în registrul Benjamini–Hochberg - p = max(p pe monede, pBloc): verdictul
+  // cere ambele, deci și p-ul din registru; regula = „dovedit” pe pagina carnetului
+  function pentruRegistru(q) {
+    var out = [];
+    [["alegere", "Varianta aleasă de laborator iese mai bine decât cealaltă"], ["asteapta", "Pornirile cu „așteaptă” ies altfel decât restul"]].forEach(function (a) {
+      var x = q && q[a[0]]; if (!x || nr(x.p) === null || nr(x.pBloc) === null) return;
+      out.push({ sursa: "Carnetul", afirmatie: a[1], p: Math.max(x.p, x.pBloc), dif: nr(x.dif), felul: "carnet", regula: /^dovedit/.test(String(x.stare || "")), directie: x.dif > 0 ? "mai bine" : "mai rău" });
+    });
+    return out;
+  }
   function intrebari(cazuri, o) {
     var l = Array.isArray(cazuri) ? cazuri.filter(function (c) { return c && c.ta && c.mea && nr(c.ta.net) !== null && nr(c.mea.net) !== null; }) : [], per = [], ast = [];
     l.forEach(function (c) {
@@ -237,5 +247,5 @@
 
   root.Carnet = { FEREASTRA_ZILE: FEREASTRA, dinFisa: dinFisa, simVarianta: simVarianta, fisaLa: fisaLa, oferteAzi: oferteAzi, rejoc: rejoc, intrebari: intrebari, calibrare: calibrare, oferte: oferte, judecaOferta: judecaOferta, uneste: uneste,
     cazuriDinOferte: cazuriDinOferte, verdictFisa: verdictFisa, textAlegere: textAlegere, textAsteapta: textAsteapta, textCalibrare: textCalibrare, textVerdictFisa: textVerdictFisa,
-    randSubFisa: randSubFisa, concluzie: concluzie, raport: raport, stareText: stareText, verdictMonede: verdictMonede };
+    randSubFisa: randSubFisa, concluzie: concluzie, raport: raport, stareText: stareText, verdictMonede: verdictMonede, pentruRegistru: pentruRegistru };
 })(typeof globalThis !== "undefined" ? globalThis : this);

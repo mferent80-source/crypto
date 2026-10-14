@@ -9,7 +9,7 @@
 // ieșea în 9,5–16 % pe date fără efect, iar la pragul BH în 2 % față de 0,36 %. Sursele cu un singur simbol (macro, scorul zilei) rămân pe simbol.
 var Verdicte = (function () {
   "use strict";
-  var ZI = 86400000, MAX = 20000;
+  var ZI = 86400000, MAX = 20000, SEDINTA = 6.5 * 3600000;
   // sursele: ce nivel e „favorabil”, orizonturile (zile de bursă la acțiuni, zile la crypto) și ce se măsoară
   var SURSE = {
     "poarta-t212": { nume: "Poarta Trading 212", piata: "actiuni", zi: true, fav: ["cumpara"], h: [5, 20], masura: "randament", text: "„cumpără” față de „așteaptă / nu” în aceleași zile" },
@@ -23,6 +23,8 @@ var Verdicte = (function () {
   };
   function nr(v) { if (v === null || v === undefined || v === "") return null; var x = Number(v); return isFinite(x) ? x : null; }
   function zi(t) { return new Date(t).toISOString().slice(0, 10); }
+  // când se știe închiderea unei bare zilnice: ora deschiderii (13:30–14:44 UTC, vară / iarnă) + 6,5 h; altă oră = ora închiderii
+  function inchisLa(t) { var m = ((t % ZI) + ZI) % ZI / 60000; return m >= 810 && m < 885 ? t + SEDINTA : t; }
   function medie(a) { if (!a.length) return null; var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s / a.length; }
   function mediana(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -59,7 +61,10 @@ var Verdicte = (function () {
         var d = dupa(b, v.t, h); if (!d) return;
         var r = d.c / v.p - 1, val = r;
         if (S.masura === "linistit") { var j = v.j || v.p * 0.9, u = v.u || v.p * 1.1; val = d.lo >= j && d.hi <= u ? 1 : 0; }
-        else if (S.masura === "pesteQqq" || S.masura === "pesteSpy") { var q = reper && reper[S.masura === "pesteSpy" ? "SPY" : "QQQ"], a = q ? dupa(q, v.t, h) : null, a0 = q ? q.filter(function (x) { return x.t <= v.t; }).pop() : null; if (!a || !a0) return; val = r - (a.c / a0.c - 1); }
+        // v100.196 (auditul sever 14.10, 🟡1 lateral): bara zilnică de la Yahoo are ora DESCHIDERII (13:30 / 14:30 UTC), iar închiderea ei se știe
+        // abia după 6,5 h ⇒ reperul pornește de la ultima închidere ȘTIUTĂ la momentul verdictului - aceeași cu prețul p al coșului (închiderea de
+        // ieri, când verdictul e dat în ședință). Barele cu altă oră (închiderea, probele) rămân ca înainte.
+        else if (S.masura === "pesteQqq" || S.masura === "pesteSpy") { var q = reper && reper[S.masura === "pesteSpy" ? "SPY" : "QQQ"], a = q ? dupa(q, v.t, h) : null, a0 = q ? q.filter(function (x) { return inchisLa(x.t) <= v.t; }).pop() : null; if (!a || !a0) return; val = r - (a.c / a0.c - 1); }
         out.push({ s: v.s, k: v.k, n: v.n, t: v.t, h: h, r: r, val: val, p: v.p });   /* v100.196: prețul rămâne pe eveniment (dublurile din coșuri) */
       });
     });

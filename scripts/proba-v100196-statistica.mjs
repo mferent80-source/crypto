@@ -247,6 +247,16 @@ await test("🟡2 / 🔵1 registrul primește și alte familii (carnetul, labora
   const pb = VER.pBootstrap2(l, "p", "r1"); assert.ok(pb > 0 && pb < 0.05, "modelul care bate clar reperul are p mic: " + pb);
 });
 
+await test("🔵1 modelele 🧠 / 🌳 și carnetul dau rândurile lor pentru registru (Retea.pentruRegistru, Carnet.pentruRegistru)", () => {
+  const v = { p: 0.003, bss: 0.02, reper: "🎲", nIndep: 120, oreBloc: 24, ic: [0.01, 0.03], icLog: [0.005, 0.02], bss3: 0.01, logloss: 0.5, loglossReper: 0.52, loglossLog: 0.51 };
+  const r = RT.pentruRegistru({ "atinge-24": { versiune: RT.VERSIUNE, tinta: "atinge-24", verificare: v }, "atinge-72": { versiune: "veche", verificare: v }, cursa: { versiune: RT.VERSIUNE, verificare: { p: null } } }, "🧠");
+  assert.equal(r.length, 1, "doar modelul pe versiunea de azi, cu p"); assert.equal(r[0].felul, "model"); assert.equal(r[0].regula, true); assert.equal(r[0].p, 0.003); assert.match(r[0].afirmatie, /🧠/);
+  new Function(lib("carnet.js"))(); const CA = globalThis.Carnet;
+  const q = CA.pentruRegistru({ alegere: { stare: "dovedit-bun", p: 0.002, pBloc: 0.006, dif: 0.01 }, asteapta: { stare: "prea puține" } });
+  assert.equal(q.length, 1); assert.equal(q[0].p, 0.006, "max(p, pBloc)"); assert.equal(q[0].regula, true); assert.equal(q[0].felul, "carnet");
+  const reg = V.registru({ calibrare: [], alte: r.concat(q) }); assert.equal(reg.length, 2); assert.ok(reg.every((x) => x.ramane));
+});
+
 // ---------------- 🟡5 calibrarea probabilităților pe monedă × zi ----------------
 await test("🟡5 calibrarea: doi boți pe aceeași monedă = un caz; cinci monede în aceeași zi = o zi de piață; pragul de 20 e pe zile distincte", () => {
   const e = (t, bot, simbol, p, r0) => ({ t, bot, simbol, tip: "liniste-24", H: 24, p, r: r0 });
@@ -307,6 +317,13 @@ await test("🔵4 coșurile: același preț în aceeași oră (SNDK / SNDK1) int
   // evalueaza pune prețul verdictului pe eveniment (cheia dublurii)
   const j = [{ s: "idei", k: "A", n: "cumpar", p: 10, t: T0 }], bare = { A: [{ t: T0 + ZI, c: 11 }, { t: T0 + 2 * ZI, c: 11 }, { t: T0 + 3 * ZI, c: 11 }, { t: T0 + 4 * ZI, c: 11 }, { t: T0 + 5 * ZI, c: 11 }] }, q = [{ t: T0 - ZI, c: 1 }, ...bare.A.map((x) => ({ t: x.t, c: 1 }))];
   assert.equal(V.evalueaza(j, bare, { QQQ: q })[0].p, 10);
+});
+await test("🟡1 (lateral) „peste QQQ / SPY”: verdictul dat în ședință cu prețul de ieri ⇒ reperul pornește tot de la închiderea de ieri (fără o zi nehedjată)", () => {
+  const D = Date.UTC(2026, 9, 12, 13, 30), bara = (k, c) => ({ t: D + k * ZI, c }), mers = [100, 102, 103, 104, 105, 106, 107, 108];
+  const bare = { X: mers.map((c, k) => bara(k - 1, c)) }, q = mers.map((c, k) => bara(k - 1, c));   /* acțiunea și QQQ se mișcă identic */
+  const j = [{ s: "top-sector", k: "X", n: "top", p: 100, t: D + 2 * ORA + 20 * 60000 }];   /* 15:50 UTC în ziua D, cu închiderea lui D−1 */
+  const e = V.evalueaza(j, bare, { QQQ: q }).find((x) => x.h === 5);
+  assert.ok(e && Math.abs(e.val) < 1e-12, "peste QQQ ar trebui 0, e " + (e && e.val));
 });
 await test("🔵9 bootstrap2 pe 10 luni: „bate reperul” (IC 95 % peste 0) fals ≤ 2,5 % pe 300 de seturi FĂRĂ efect cu factor lunar", () => {
   const fals = [0, 0];
