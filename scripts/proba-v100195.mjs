@@ -50,10 +50,10 @@ await test("sub 12 zile independente ⇒ „puține”, cu numărul zilelor; zil
   const ns = gasit(V.calibrare(ev), "trend-12-1", 20);
   assert.equal(ns.test.unitati, 2); assert.equal(ns.niveluri[0].n, 40, "toate numele celor 2 zile alese (2 × 20)");
 });
-await test("sursele pe simbol nu se schimbă: Poarta T212 rămâne cu testul pe simbol (fără `u`, fără prag de zile)", () => {
+await test("v100.196 (🔴2): Poarta T212 se judecă PE ZI (favorabil față de rest în aceeași zi); 2 zile ⇒ „puține”, cu 2 zile amestecate", () => {
   const ev = []; for (let i = 0; i < 80; i++) ev.push({ s: "poarta-t212", k: "S" + (i % 40), n: i % 2 ? "cumpara" : "asteapta", t: T0 + Math.floor(i / 40) * 40 * ZI + i * 1000, h: 5, r: 0, val: i % 2 ? 0.01 : 0 });
   const c = gasit(V.calibrare(ev), "poarta-t212", 5);
-  assert.equal(c.unitate, "simbol"); assert.equal(c.test.stare, "testat"); assert.equal(c.test.unitati, 40);
+  assert.equal(c.unitate, "zi"); assert.equal(c.test.stare, "putine"); assert.equal(c.test.unitati, 2); assert.equal(c.test.minU, 12);
 });
 await test("pagina jurnalului: la coșuri „puține zile independente încă” / „pe N zile independente”", () => {
   const ce = citeste("public", "lib", "cont-ecran.js");
