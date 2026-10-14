@@ -123,13 +123,16 @@ var Probabilitati = (function () {
   // calibrarea pe cumpararile lui: un caz pe ticker la cel putin 7 zile calendaristice (~5 de bursa) de ultimul caz al tickerului (cumpararile
   // din aceeasi zi = un caz); cutiile ca la crypto (calibreaza / corecteaza). cf[id].prob = {p, r}
   function calibrareActiuni(inchise, cf) {
-    var out = { "act-cursa5": { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0 }; }) } }, ultim = {}, sp = 0, sr = 0, n = 0, sapt = {};
+    // v100.196 (🟡5): acțiunile cumpărate în aceeași săptămână se mișcă împreună ⇒ pe cutie, o săptămână de piață = UN caz (media întâmplărilor
+    // și a cifrelor zise, sp); rezumatul rămâne pe cumpărări, cu numărul săptămânilor alături
+    var out = { "act-cursa5": { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0, sp: 0 }; }) } }, ultim = {}, sp = 0, sr = 0, n = 0, sapt = {}, fer = {};
     (Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && nr(t.pornit) !== null; }).sort(function (a, b) { return a.pornit - b.pornit; }).forEach(function (t) {
       var pr = cf && cf[t.id] && cf[t.id].prob; if (!pr || (pr.r !== 0 && pr.r !== 1) || nr(pr.p) === null) return;
       var k = t.ticker || t.simbol || t.id; if (k in ultim && t.pornit - ultim[k] < 7 * 864e5) return; ultim[k] = t.pornit;
-      var c = out["act-cursa5"].cutii[Math.min(4, Math.floor(pr.p * 5))]; c.n++; c.k += pr.r;
+      var i = Math.min(4, Math.floor(pr.p * 5)), kf = i + "|" + Math.floor(t.pornit / (7 * 864e5)), f = fer[kf] || (fer[kf] = { i: i, n: 0, r: 0, p: 0 }); f.n++; f.r += pr.r; f.p += nr(pr.p);
       n++; sp += nr(pr.p); sr += pr.r; sapt[Math.floor(t.pornit / (7 * 864e5))] = 1;
     });
+    Object.keys(fer).forEach(function (q) { var f = fer[q], c = out["act-cursa5"].cutii[f.i]; c.n++; c.k = Math.round((c.k + f.r / f.n) * 1e6) / 1e6; c.sp = Math.round((c.sp + f.p / f.n) * 1e6) / 1e6; });
     // revizia 01.10 (I3): rezumatul - ce am zis in medie si ce s-a intamplat, si in cate saptamani (cazurile dintr-o saptamana se misca impreuna)
     out.rezumat = { n: n, pMed: n ? sp / n : null, rata: n ? sr / n : null, saptamani: Object.keys(sapt).length };
     return out;
@@ -224,26 +227,40 @@ var Probabilitati = (function () {
   }
   // revizia 01.10 (critic): notarile unui bot la 4 h pe 7 zile se suprapun aproape complet - 20 de intrari ar fi un singur episod de
   // piata. Se numara doar cazurile INDEPENDENTE: pe bot si tip, intrarile la cel putin H una de alta (intrarile fara t/bot/H - fiecare).
+  // v100.196 (auditul sever 14.10, 🟡5): doi boti pe aceeasi moneda sunt ACELASI caz ⇒ cheia e moneda (simbolul; botul doar fara simbol); iar
+  // altcoinii din aceeasi zi se misca impreuna ⇒ pe fiecare cutie, o fereastra de piata (o zi, sau H cand H e mai lung) = UN caz, cu media
+  // intamplarilor (k poate fi fractionar) si media cifrelor zise (sp - pentru corectie si pentru textul „cand am zis in medie ~X%”).
   function calibreaza(l) {
-    var out = {}, ultim = {};
+    var out = {}, ultim = {}, fer = {};
+    var adauga = function (tip, i, k, p) { var c = out[tip] || (out[tip] = { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0, sp: 0 }; }) }); c.cutii[i].n++; c.cutii[i].k += k; c.cutii[i].sp += p; };
     (Array.isArray(l) ? l : []).filter(function (e) { return e && (e.r === 0 || e.r === 1) && nr(e.p) !== null; }).sort(function (a, b) { return (nr(a.t) || 0) - (nr(b.t) || 0); }).forEach(function (e) {
-      if (nr(e.t) !== null && e.bot !== undefined && nr(e.H) > 0) { var cheie = e.bot + "|" + e.tip; if (cheie in ultim && e.t - ultim[cheie] < e.H * ORA) return; ultim[cheie] = e.t; }
-      var c = out[e.tip] || (out[e.tip] = { cutii: [0, 1, 2, 3, 4].map(function () { return { n: 0, k: 0 }; }) }), i = Math.min(4, Math.floor(e.p * 5));
-      c.cutii[i].n++; c.cutii[i].k += e.r;
+      var areT = nr(e.t) !== null && nr(e.H) > 0 && (e.simbol || e.bot !== undefined);
+      if (areT) { var cheie = (e.simbol ? "s:" + e.simbol : "b:" + e.bot) + "|" + e.tip; if (cheie in ultim && e.t - ultim[cheie] < e.H * ORA) return; ultim[cheie] = e.t; }
+      var i = Math.min(4, Math.floor(e.p * 5));
+      if (!areT) { adauga(e.tip, i, e.r, e.p); return; }
+      var lung = Math.max(24, e.H) * ORA, kf = e.tip + "|" + i + "|" + Math.floor(e.t / lung), f = fer[kf] || (fer[kf] = { tip: e.tip, i: i, n: 0, r: 0, p: 0 });
+      f.n++; f.r += e.r; f.p += e.p;
     });
+    Object.keys(fer).forEach(function (k) { var f = fer[k]; adauga(f.tip, f.i, f.r / f.n, f.p / f.n); });
+    out = JSON.parse(JSON.stringify(out, function (k, v) { return typeof v === "number" ? Math.round(v * 1e6) / 1e6 : v; }));   /* fracțiile rotunjite (KV mic, egalități stabile) */
     return out;
   }
   var PC = function (v) { return Math.round(v * 100) + "%"; };
   // v100.71 (revizia pachetului 4, I1): „1 caz”, „45 de cazuri” - TextRo.cate; rezerva simpla unde TextRo nu e incarcat (probele vechi)
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
   // pragurile calibrarii (20 de cazuri pe cutie, 15 puncte) sunt ipoteze de casa - spuse in nota sectiunii
+  // v100.196 (🟡5): cutia cu `sp` (media cifrelor zise) ⇒ corectia DEPLASEAZA cifra cu (s-a intamplat − am zis in medie), nu o inlocuieste cu
+  // rata cutiei (cifrele din aceeasi cutie nu se mai lipesc toate de aceeasi valoare); textul spune cifra zisa REAL, nu mijlocul cutiei.
+  // Fara `sp` (calibrarea veche de pe server) ⇒ rata cutiei, ca inainte, si textul spune intervalul cutiei.
   function corecteaza(p, tip, cal) {
-    var c = cal && cal[tip] && cal[tip].cutii && cal[tip].cutii[Math.min(4, Math.floor(p * 5))];
+    var i = Math.min(4, Math.floor(p * 5)), c = cal && cal[tip] && cal[tip].cutii && cal[tip].cutii[i];
     if (!c || c.n < 20) return { p: p, brut: p, calibrat: false, n: c ? c.n : 0, k: c ? c.k : 0, avertizare: false, text: "necalibrat încă" + (c && c.n ? " (" + cate(c.n, "caz independent judecat", "cazuri independente judecate") + ")" : "") };
-    var q = Math.round(c.k / c.n * 1000) / 1000, mij = Math.min(4, Math.floor(p * 5)) * 20 + 10, txt = "calibrat: când am zis ~" + mij + "%, s-a întâmplat în " + PC(q) + " din " + cate(c.n, "caz independent", "cazuri independente");
+    var q = Math.round(c.k / c.n * 1000) / 1000, spus = nr(c.sp) !== null && c.sp >= 0 && c.sp <= c.n ? c.sp / c.n : null;
+    var pc = spus !== null ? Math.round(Math.min(1, Math.max(0, p + q - spus)) * 1000) / 1000 : q;
+    var txt = "calibrat: când am zis " + (spus !== null ? "în medie ~" + PC(spus) : "între " + i * 20 + "% și " + (i + 1) * 20 + "%") + ", s-a întâmplat în " + PC(q) + " din " + cate(c.n, "caz independent", "cazuri independente");
     // lichidarea nu se coboara niciodata sub cifra bruta (principiul 5: lichidarea nu tace) - corectarea se spune alaturi
-    if (tip === "lichidare-7" && q < p) return { p: p, brut: p, calibrat: false, n: c.n, k: c.k, avertizare: false, text: txt + " (la lichidare țin cifra brută, cea mai prudentă)" };
-    return { p: q, brut: p, calibrat: true, n: c.n, k: c.k, avertizare: Math.abs(q - p) > 0.15, text: txt };
+    if (tip === "lichidare-7" && pc < p) return { p: p, brut: p, calibrat: false, n: c.n, k: c.k, avertizare: false, text: txt + " (la lichidare țin cifra brută, cea mai prudentă)" };
+    return { p: pc, brut: p, calibrat: true, n: c.n, k: c.k, avertizare: Math.abs(pc - p) > 0.15, text: txt };
   }
   function fr(x, tip, cal) {
     var c = corecteaza(x.p, tip, cal);
@@ -279,7 +296,10 @@ var Probabilitati = (function () {
   }
   function randuri(rez, cal, o) {
     if (!rez) return [];
-    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, avertizare: y.avertizare, text: y.text, explicit: y.explicit }); } };   // sub 3 independente: nu spune nimic
+    // v100.196 (auditul sever 14.10, 🔴4): `scurt` = cifra pentru eticheta de pe grafic - niciodată „0%” gol: sub 0,5% se spune „sub X%”, X = limita
+    // de sus a intervalului (pe walk-forward, „0 %” la lichidare se întâmpla de fapt în 2,3 %); `p` și `ic` rămân cum erau
+    var scurt = function (y) { var r = Math.round(y.p * 100); return r === 0 && y.ic && isFinite(y.ic[1]) ? "sub " + Math.max(1, Math.ceil(y.ic[1] * 100)) + "%" : r + "%"; };
+    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, scurt: scurt(y), avertizare: y.avertizare, text: y.text, explicit: y.explicit }); } };   // sub 3 independente: nu spune nimic
     add("cursa", o && o.titluCursa ? String(o.titluCursa) : "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
     add("iese-jos-24", "Atinge marginea de jos (" + fp(nv.jos) + ") în 24 h", rez.iese && rez.iese.jos24, "iese-jos-24");
     add("iese-sus-24", "Atinge marginea de sus (" + fp(nv.sus) + ") în 24 h", rez.iese && rez.iese.sus24, "iese-sus-24");
@@ -293,7 +313,7 @@ var Probabilitati = (function () {
   // randul din Consilier: cursa, daca exista; altfel iesirea pe partea de pierdere in 24 h
   function rand(rez, cal, dir, o) {
     var l = randuri(rez, cal, o), r = l.filter(function (x) { return x.cod === "cursa"; })[0] || l.filter(function (x) { return x.cod === (dir === "short" ? "iese-sus-24" : "iese-jos-24"); })[0];
-    return r ? "🎲 Cazurile asemănătoare: " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + " în " + Math.round(r.p * 100) + "% din cazuri — " + r.explicit : null;   /* v100.106 */
+    return r ? "🎲 Cazurile asemănătoare: " + r.titlu.charAt(0).toLowerCase() + r.titlu.slice(1) + " în " + (/^sub /.test(r.scurt) ? r.scurt.replace(/^sub /, "mai puțin de ") : Math.round(r.p * 100) + "%") + " din cazuri — " + r.explicit : null;   /* v100.106; v100.196: niciodată „în 0%” */
   }
   return { probLaCumparare: probLaCumparare, randActiune: randActiune, rezultatCumparare: rezultatCumparare, calibrareActiuni: calibrareActiuni, pentruActiune: pentruActiune, frecventaActiune: frecventaActiune, stareActiuneLa: stareActiuneLa, imbina: imbina, stareDinRegim: stareDinRegim, ETICHETE: ETICHETE, pregateste: pregateste, stareLa: stareLa, frecventa: frecventa, atinge: atinge, cursa: cursa, pentruBot: pentruBot, intrari: intrari, judeca: judeca, calibreaza: calibreaza, corecteaza: corecteaza, randuri: randuri, rand: rand, ORA: ORA };
 })();

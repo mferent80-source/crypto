@@ -78,10 +78,10 @@ await test("jurnal: intrarile poarta preturi ABSOLUTE; judeca dupa orizont, null
   assert.equal(PB.judeca(j, b.concat(linistit.slice(0, 10))), null, "bare incomplete -> nejudecat (colectorul oprit nu inventeaza)");
   assert.equal(PB.judeca({ ...j, t: acum - 25 * 60000 }, b.concat(dupa)), 1, "notarea nu cade pe ora fixa: fereastra incepe la ora intreaga urmatoare");
 });
-await test("calibrarea: zise 70%, intamplate 40% (25 de cazuri) -> cifra corectata 40% cu avertisment; sub 20 -> necalibrat", () => {
+await test("calibrarea: zise 70%, intamplate 40% (25 de cazuri) -> cifra corectata cu avertisment (v100.196: 0,72 − 0,30 = 0,42, deplasarea cutiei); sub 20 -> necalibrat", () => {
   const l = Array.from({ length: 25 }, (_, i) => ({ tip: "iese-jos-24", p: 0.7, r: i < 10 ? 1 : 0 }));
   const cal = PB.calibreaza(l), c = PB.corecteaza(0.72, "iese-jos-24", cal);
-  assert.equal(c.calibrat, true); assert.equal(c.p, 0.4); assert.equal(c.brut, 0.72); assert.equal(c.avertizare, true); assert.match(c.text, /40% din 25/);
+  assert.equal(c.calibrat, true); assert.equal(c.p, 0.42); assert.equal(c.brut, 0.72); assert.equal(c.avertizare, true); assert.match(c.text, /40% din 25/);
   const c2 = PB.corecteaza(0.3, "iese-jos-24", cal); assert.equal(c2.calibrat, false); assert.match(c2.text, /necalibrat/);
   assert.equal(PB.calibreaza(l.concat([{ tip: "iese-jos-24", p: 0.7, r: null }]))["iese-jos-24"].cutii[3].n, 25, "nejudecatele nu se numara");
 });

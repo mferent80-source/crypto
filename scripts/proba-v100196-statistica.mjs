@@ -232,7 +232,7 @@ await test("🟡3 registrul: „Episod scurt” (A3) și „Marjă adăugată pe
 await test("🟡2 caseta registrului: spune ce familii cuprinde și că restul (modelele, laboratorul, carnetul, Dovada) nu sunt în corecție; legăturile se arată ca legături", () => {
   const ce = lib("cont-ecran.js");
   assert.doesNotMatch(ce, /Radarul are " \+ ciCate\(rg\.length, "test", "teste"\) \+ " deschise/, "textul vechi promitea „cel mult 5 %” pe tot Radarul");
-  assert.match(ce, /ciFamiliiRegistru\(/); assert.match(ce, /în afara corecției/); assert.match(ce, /legătură, nu cauză/);
+  for (const re of [/ciFamiliiRegistru\(rg\)/, /[Îî]n afara corecției, cu regulile lor proprii/, /legătură, nu cauză/, /x\.cauza === false && x\.limita/]) assert.ok(re.test(ce), "lipsește " + re);
   const f = new Function(ce.slice(ce.indexOf("function ciFamiliiRegistru"), ce.indexOf("function ciFamiliiRegistru") + ce.slice(ce.indexOf("function ciFamiliiRegistru")).indexOf("\n}\n") + 2) + "; return ciFamiliiRegistru;")();
   assert.equal(f([{ felul: "verdict" }, { felul: "obicei" }, { felul: "obicei" }, { felul: "bec" }]), "jurnalul verdictelor, obiceiurile din Riscul tău, becurile și ADX-ul boților");
 });
@@ -267,6 +267,12 @@ await test("🟡5 corecția: deplasarea cutiei (spus în medie → s-a întâmpl
   // calibrarea veche (fără `sp`, de pe server) ⇒ textul spune intervalul cutiei, nu un „~10%” inventat
   const vechi = { "iese-jos-24": { cutii: [{ n: 25, k: 5 }, { n: 0, k: 0 }, { n: 0, k: 0 }, { n: 0, k: 0 }, { n: 0, k: 0 }] } };
   assert.match(PB.corecteaza(0.02, "iese-jos-24", vechi).text, /când am zis între 0% și 20%/);
+});
+
+await test("🟡5 calibrarea pe acțiuni: cinci acțiuni cumpărate în aceeași săptămână = o săptămână de piață pe cutie (cursa pe 5 zile)", () => {
+  const inch = [], cf = {}; for (let w = 0; w < 6; w++) for (let k = 0; k < 5; k++) { const id = "t" + w + k; inch.push({ id, ticker: "T" + k, pornit: Date.UTC(2026, 0, 5) + w * 7 * ZI + k * ORA }); cf[id] = { prob: { p: 0.5, r: k % 2 } }; }
+  const c = PB.calibrareActiuni(inch, cf);
+  assert.equal(c["act-cursa5"].cutii[2].n, 6, "6 săptămâni, nu 30 de cumpărări"); assert.ok(Math.abs(c["act-cursa5"].cutii[2].sp - 3) < 1e-9); assert.equal(c.rezumat.saptamani, 6);
 });
 
 // ---------------- 🔴4 lichidarea „0 %” ----------------
