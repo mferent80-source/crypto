@@ -17,10 +17,15 @@ async function requireTables(db){
   if(!s.has("monitor_runs")||!s.has("monitor_items"))throw Object.assign(Error("D1 schema is not initialized. Run db/schema.sql."),{status:503});
   return s
 }
+// v100.196 (auditul sever, 🔵11): PRAGMA + ALTER TABLE rulau la FIECARE GET (o scriere de schemă pe o rută de citire) ⇒ o singură dată pe izolat,
+// și doar dacă toți pașii au mers (o cădere D1 de o clipă se reîncearcă la cererea următoare)
+var coloaneTenantGata=false;
 async function ensureTenantColumns(db){
+  if(coloaneTenantGata)return;let toate=true;
   const defs={monitor_runs:"TEXT NOT NULL DEFAULT 'monitor'",research_snapshots:"TEXT NOT NULL DEFAULT 'legacy'",signal_snapshots:"TEXT NOT NULL DEFAULT 'legacy'",app_events:"TEXT NOT NULL DEFAULT 'monitor'"};
-  for(const [table,def] of Object.entries(defs)){try{const q=await db.prepare(`PRAGMA table_info(${table})`).all(),has=(q.results||[]).some(x=>x.name==="tenant");if(!has)await db.prepare(`ALTER TABLE ${table} ADD COLUMN tenant ${def}`).run()}catch{}}
-  for(const sql of ["CREATE INDEX IF NOT EXISTS idx_monitor_runs_tenant_ts ON monitor_runs(tenant,ts DESC)","CREATE INDEX IF NOT EXISTS idx_research_tenant_ts ON research_snapshots(tenant,ts DESC)","CREATE INDEX IF NOT EXISTS idx_signal_tenant_ts ON signal_snapshots(tenant,updated_ts DESC)","CREATE INDEX IF NOT EXISTS idx_events_tenant_ts ON app_events(tenant,ts DESC)"])try{await db.prepare(sql).run()}catch{}
+  for(const [table,def] of Object.entries(defs)){try{const q=await db.prepare(`PRAGMA table_info(${table})`).all(),has=(q.results||[]).some(x=>x.name==="tenant");if(!has)await db.prepare(`ALTER TABLE ${table} ADD COLUMN tenant ${def}`).run()}catch{toate=false}}
+  for(const sql of ["CREATE INDEX IF NOT EXISTS idx_monitor_runs_tenant_ts ON monitor_runs(tenant,ts DESC)","CREATE INDEX IF NOT EXISTS idx_research_tenant_ts ON research_snapshots(tenant,ts DESC)","CREATE INDEX IF NOT EXISTS idx_signal_tenant_ts ON signal_snapshots(tenant,updated_ts DESC)","CREATE INDEX IF NOT EXISTS idx_events_tenant_ts ON app_events(tenant,ts DESC)"])try{await db.prepare(sql).run()}catch{toate=false}
+  if(toate)coloaneTenantGata=true;
 }
 function safeJson(v,max=12000){
   try{const x=JSON.stringify(v??null);return x.length>max?x.slice(0,max):x}catch{return null}

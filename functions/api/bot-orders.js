@@ -14,6 +14,7 @@ import {avertismenteBot} from "../_shared/avertismente.js";
 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200,antete={})=>new Response(JSON.stringify(x),{status,headers:{...H,...antete}});
+const faraIdCont=b=>{if(!b||typeof b!=="object")return b;const {userId,keyId,...rest}=b;return rest};
 
 // null/undefined/""/spatii/nenumeric -> null; "0" -> 0.
 const nr=v=>{
@@ -46,7 +47,7 @@ async function citesteBoti(env,params={}){
   // MET) - asta e "zero boti", nu o forma stricata. Orice alt ne-sir ramane eroare.
   // v100.25: Pionex da istoria pe PAGINI de cate 10 (limit e ignorat); cursorul paginii urmatoare vine in nextPageToken
   const next=d.data&&typeof d.data.nextPageToken==="string"&&/^[A-Za-z0-9]{1,64}$/.test(d.data.nextPageToken)?d.data.nextPageToken:null;
-  if(d.data&&d.data.results===null)return {results:[],next};
+  if(d.data&&d.data.results===null)return {results:[],next,nula:true};   // v100.196 (auditul sever, C3): spus colectorului și paginii
   if(!Array.isArray(d.data?.results))throw Object.assign(Error("Pionex bot API: data.results nu e o lista"),{status:502,motiv:"forma-necunoscuta"});
   return {results:d.data.results,next};
 }
@@ -200,7 +201,8 @@ function normalizeaza(bot,preturi,harta){
     // Forma bruta de la Pionex, neatinsa - modulul pur TabloBot are nevoie
     // de buOrderData, createTime si strategyId asa cum le trimite exchange-ul,
     // nu de campurile renumite/rotunjite de mai sus.
-    brut:bot,
+    // v100.196 (auditul sever, 🔵3): fără userId / keyId (nimeni din pagină sau colector nu le citește; arhiva le scotea deja)
+    brut:faraIdCont(bot),
   };
 }
 
@@ -221,11 +223,14 @@ export async function onRequestGet({request,env}){
   const tok=u.searchParams.get("pageToken");if(tok&&/^[A-Za-z0-9]{1,64}$/.test(tok))params.pageToken=tok;
 
   const probleme={};
-  let brute,next=null;
+  let brute,next=null,nula=false;
   try{
-    ({results:brute,next}=await citesteBoti(env,params));
+    ({results:brute,next,nula}=await citesteBoti(env,params));
     // v100.175 (auditul Opus, I3): Pionex dă boții pe pagini de câte 10 - și lista celor PORNIȚI; al 11-lea bot n-ar fi primit nicio alertă
-    if(!brutCerut&&!params.status&&!params.pageToken){for(let i=0;next&&i<9;i++){const p=await citesteBoti(env,{...params,pageToken:next});brute=brute.concat(p.results);next=p.next}}
+    if(!brutCerut&&!params.status&&!params.pageToken){for(let i=0;next&&i<9;i++){const p=await citesteBoti(env,{...params,pageToken:next});brute=brute.concat(p.results);next=p.next}
+      // v100.196 (auditul sever, 🔵7): peste 10 pagini (100 de boți) restul n-ar primi alerte - se spune, nu se taie în tăcere
+      if(next)probleme.trunchiat=true}
+    if(nula&&!brute.length)probleme.listaNula=true;
   }
   catch(e){
     const corp={error:e.message};

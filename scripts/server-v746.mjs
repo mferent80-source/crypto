@@ -168,10 +168,13 @@ await test("8 · 11 tokenuri gresite de pe acelasi IP -> a 11-a e 429", async ()
   for (let i = 0; i < 11; i++) st.push((await cheama("pionex-account", "action=status", PIONEX_ENV, { token: `gresit-${i}-xxxxxxxx`, ipFix })).status);
   assert.deepEqual(st.slice(0, 10), Array(10).fill(401), `primele 10: ${st}`);
   assert.equal(st[10], 429, `a 11-a: ${st[10]}`);
-  // inainte de verificare: nici tokenul BUN nu mai trece in minutul asta, de pe IP-ul asta
+  // v100.196 (auditul sever, S1): tokenul BUN trece MEREU (acasă colectorul și browserul au același IP - un tab cu parola veche
+  // încuia colectorul); ghicitul rămâne oprit: încă un token greșit tot 429, cu retry-after
   const bun = await cheama("pionex-account", "action=status", PIONEX_ENV, { ipFix });
-  assert.equal(bun.status, 429, `tokenul bun a trecut in timpul blocarii: ${bun.status}`);
-  assert.ok(Number(bun.headers.get("retry-after")) > 0, "429 fara retry-after");
+  assert.equal(bun.status, 200, `tokenul bun blocat: ${bun.status}`);
+  const iar = await cheama("pionex-account", "action=status", PIONEX_ENV, { token: "gresit-iar-xxxxxxxx", ipFix });
+  assert.equal(iar.status, 429, `ghicitul după blocare: ${iar.status}`);
+  assert.ok(Number(iar.headers.get("retry-after")) > 0, "429 fara retry-after");
   // alt IP nu e atins
   const altIp = await cheama("pionex-account", "action=status", PIONEX_ENV, { ipFix: "10.99.0.9" });
   assert.equal(altIp.status, 200, `alt IP: ${altIp.status}`);

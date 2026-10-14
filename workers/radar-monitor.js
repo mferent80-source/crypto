@@ -172,6 +172,9 @@ async function runStockMonitor(env){
 }
 async function maybeAlert(env,result,runId){
   const top=result.items[0];if(!top)return {alerted:false};
+  // v100.196 (auditul sever, 🔵5): scorul (EMA / RSI / ADX, prag 78) e o euristică fără nicio probă out-of-sample, și ar împinge și „BEARISH”
+  // ⇒ push-ul „opportunity” pleacă DOAR dacă e pornit explicit (variabila MONITOR_PUSH_NEVALIDAT="da"); rularea și istoricul D1 rămân
+  if(env.MONITOR_PUSH_NEVALIDAT!=="da")return {alerted:false,reason:"scor-nevalidat"};
   const min=Math.max(55,Math.min(100,Number(env.PUSH_SCORE_MIN)||78)),stateKey=`last_push_${result.market}`,prev=await stateGet(env.DB,stateKey),previousTop=await env.DB.prepare("SELECT top_symbol,top_score,ts FROM monitor_runs WHERE market=? AND status='OK' AND id<>? ORDER BY ts DESC LIMIT 1").bind(result.market,runId).first(),changed=!previousTop||previousTop.top_symbol!==top.symbol||Math.abs((+previousTop.top_score||0)-top.score)>=5,cooled=!prev||Date.now()-prev.updatedTs>=60*60*1000;
   if(top.score<min||!changed||!cooled)return {alerted:false,reason:"gate"};
   const payload={title:`${result.market} opportunity · ${top.symbol}`,body:`${top.bias} · score ${top.score.toFixed(0)} · ${top.regime} · SERVER-LITE`,tag:`monitor-${result.market}`,url:"/?panel=cloud",renotify:true},push=await broadcastPush(env,payload);

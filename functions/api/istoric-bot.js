@@ -135,7 +135,10 @@ export async function onRequestGet({request,env}){
   const ore=Math.min(168,Math.max(1,Math.floor(Number(u.searchParams.get("ore")))||24));
   const de=Date.now()-ore*3600000;
   const lista=(await citesteLista(env,bot)).filter(x=>x&&x.t>=de);
-  return json({bot,ore,intrari:lista,config:await citesteConfig(env)});
+  // v100.196 (auditul sever, 🔵3): citirea de pe fiecare bot (des) nu mai duce topicul ntfy (un secret: cine îl știe citește și scrie pe canal)
+  // decât când canalul E ntfy - Tabloul îl arată doar atunci; action=config îl dă în continuare
+  const cfg=await citesteConfig(env),config=cfg&&typeof cfg==="object"?{...cfg}:cfg;if(config&&config.canal!=="ntfy")delete config.ntfyTopic;
+  return json({bot,ore,intrari:lista,config});
 }
 
 export async function onRequestPost({request,env}){
