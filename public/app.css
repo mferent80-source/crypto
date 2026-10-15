@@ -2855,6 +2855,14 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 @media (max-width:640px){.pzDemo #acasa>#acCumpar{order:15}.pzDemo #acasa>#acTrendZi{order:16}}
 /* v100.196 (auditul UI 🔵1, dataviz): verde/roșu ΔE 4,3 la deuteranopie ⇒ segmentul roșu din barele Pieței azi poartă și o textură la 135° */
 .acBar>i[style*="--bad"]{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.38) 0 2px,transparent 2px 6px)}
+/* v100.197: valoarea contului pe zile (Contul întreg) — o linie subțire în accentul Radarului (validatorul dataviz: PASS pe #141C24), punctul gol = zi parțială,
+   ținta de 14 px pentru detaliile la trecerea mouse-ului; schimbarea zilei poartă săgeată + semn, nu doar culoare */
+.ciZileAzi{font-size:15px;margin:4px 0 8px}.ciZileAzi>b{font-size:20px;font-variant-numeric:tabular-nums}.ciZileSch{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ciZileGraf{display:block;width:100%;height:150px}.ciZileLin{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.ciZileAx{stroke:var(--tb-linie);stroke-width:1;vector-effect:non-scaling-stroke}.ciZilePct{stroke:var(--accent);stroke-width:10;stroke-linecap:round;vector-effect:non-scaling-stroke}.ciZileGolIn{stroke:var(--panel);stroke-width:5;stroke-linecap:round;vector-effect:non-scaling-stroke;pointer-events:none}
+.ciZileTinta{stroke:transparent;stroke-width:28;stroke-linecap:round;vector-effect:non-scaling-stroke;cursor:default}.ciZileTinta:hover+.ciZilePct{stroke:var(--text)}
+.ciZileScala{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin:2px 0 8px;font-variant-numeric:tabular-nums}
+@media (max-width:640px){.ciZileTab td[data-et]::before{content:attr(data-et) " ";color:var(--muted)}.ciZileTab,.ciZileTab tbody,.ciZileTab tr,.ciZileTab td{display:block}.ciZileTab thead{display:none}.ciZileTab tr{padding:8px 10px;border-bottom:1px solid var(--tb-linie)}.ciZileTab td{padding:1px 0;border:0;text-align:left}}
 /* v100.196 · reguli cerute de alte zone */
 /* (acțiuni, auditul UI 🟡1) pe telefon fiecare celulă își scrie numele coloanei; țintele de apăsare 44 px */
 @media (max-width:640px){.t212IdeiTab td[data-et]::before,.t212RevTab td[data-et]::before,.t212SocTab td[data-et]::before{content:attr(data-et) " ";color:var(--muted)}.t212RevTab,.t212RevTab tbody,.t212RevTab tr,.t212RevTab td,.t212SocTab,.t212SocTab tbody,.t212SocTab tr,.t212SocTab td{display:block}.t212RevTab tr,.t212SocTab tr{padding:8px 10px;border-bottom:1px solid var(--tb-linie)}.t212RevTab td,.t212SocTab td{padding:1px 0;border:0;text-align:left}.t212IdeiTab .t212BtnLinie{min-height:44px}}

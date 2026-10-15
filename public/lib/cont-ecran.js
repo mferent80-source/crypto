@@ -35,6 +35,49 @@ function ciFac(r) {
   if (rec.t212 && !rec.t212.ok) return "Aș verifica în T212 " + rec.t212.abateri.map(function (a) { return String(a.ticker).replace(/_US_EQ$|_EQ$/, ""); }).join(", ") + ": jurnalul Radarului nu se potrivește cu contul.";
   return "Nimic urgent pe tot contul: aș păstra riscul pe zi sub 3% din cont și aș verifica pagina după fiecare poziție nouă.";
 }
+// v100.197 (15.10, el: „afișează”): valoarea contului pe zile (KV cont:zile, scrisă de colector o dată pe zi, necitită până acum).
+// Cifra de azi + schimbarea față de ziua dinainte (săgeată + semn, nu doar culoare), linia pe zile (un singur șir ⇒ fără legendă;
+// detaliile pe sursă la trecerea mouse-ului), tabelul cu sursele. Schimbarea include depunerile / retragerile: nu e profit.
+function ciZileHtml(zile) {
+  var l = (Array.isArray(zile) ? zile : []).filter(function (x) { return x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.z)) && isFinite(x.valoare) && Number(x.valoare) > 0; })
+    .slice().sort(function (a, b) { return a.z < b.z ? -1 : a.z > b.z ? 1 : 0; });
+  var h = '<section class="ciSec ciZile"><h4>Valoarea contului pe zile</h4>';
+  if (!l.length) return h + '<p class="tbSub">Încă nu am nicio zi: colectorul o scrie o dată pe zi (Pionex + Trading 212 + Salt, în lei).</p></section>';
+  var ult = l[l.length - 1], ant = l.length > 1 ? l[l.length - 2] : null;
+  var sch = function (x, y) {
+    if (!x || !y) return "";
+    var d = y.valoare - x.valoare, pct = x.valoare > 0 ? d / x.valoare : null, sag = d > 0 ? "▲ " : d < 0 ? "▼ " : "= ";
+    return '<span class="ciZileSch ' + (d > 0 ? "good" : d < 0 ? "bad" : "") + '">' + sag + ciLei(d, true) + (pct !== null ? " (" + ciPct(pct) + ")" : "") + "</span>";
+  };
+  var surse = function (x) { return "Pionex " + ciLei(x.pionex) + " · Trading 212 " + ciLei(x.t212) + " · Salt " + ciLei(x.salt); };
+  h += '<p class="ciZileAzi"><b>' + ciLei(ult.valoare) + "</b> pe " + ciZi(ult.z) + (ult.complet === false ? '<span class="t212Mic"> · parțial (lipsea o sursă)</span>' : "")
+    + (ant ? " · față de " + ciZi(ant.z) + ": " + sch(ant, ult) + (ant.complet === false ? '<span class="t212Mic"> · ziua dinainte era parțială</span>' : "") : "") + "</p>";
+  if (l.length < 2) h += '<p class="tbSub">O singură zi până acum: graficul apare de la a doua zi.</p>';
+  else {
+    var W = 600, H = 150, PX = 14, PY = 16, min = Infinity, max = -Infinity;
+    l.forEach(function (x) { if (x.valoare < min) min = x.valoare; if (x.valoare > max) max = x.valoare; });
+    var pad = (max - min) * 0.12 || max * 0.02 || 1, lo = min - pad, hi = max + pad;
+    var X = function (i) { return PX + (W - 2 * PX) * (l.length === 1 ? 0.5 : i / (l.length - 1)); }, Y = function (v) { return PY + (H - 2 * PY) * (1 - (v - lo) / (hi - lo)); };
+    var pts = l.map(function (x, i) { return X(i).toFixed(1) + "," + Y(x.valoare).toFixed(1); }).join(" ");
+    h += '<svg class="ciZileGraf" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" role="img" aria-label="Valoarea contului pe ' + ciEsc(ciCate(l.length, "zi", "zile")) + ", de la " + ciLei(l[0].valoare) + " la " + ciLei(ult.valoare) + '">'
+      + '<line class="ciZileAx" x1="' + PX + '" x2="' + (W - PX) + '" y1="' + (H - PY / 2) + '" y2="' + (H - PY / 2) + '"></line>'
+      + '<polyline class="ciZileLin" points="' + pts + '"></polyline>'
+      + l.map(function (x, i) {
+        var t = "<title>" + ciEsc(ciZi(x.z) + ": " + ciLei(x.valoare) + " · " + surse(x) + (x.complet === false ? " (parțial)" : "")) + "</title>";
+        var c = 'x1="' + X(i).toFixed(1) + '" y1="' + Y(x.valoare).toFixed(1) + '" x2="' + X(i).toFixed(1) + '" y2="' + Y(x.valoare).toFixed(1) + '"';   /* linie de lungime zero = cerc la orice lățime */
+        return '<g><line class="ciZileTinta" ' + c + '>' + t + '</line><line class="ciZilePct' + (x.complet === false ? " ciZileGol" : "") + '" ' + c + '></line>' + (x.complet === false ? '<line class="ciZileGolIn" ' + c + '></line>' : "") + "</g>";
+      }).join("") + "</svg>"
+      + '<div class="ciZileScala"><span>' + ciZi(l[0].z) + "</span><span>min " + ciLei(min) + " · max " + ciLei(max) + "</span><span>" + ciZi(ult.z) + "</span></div>";
+  }
+  var rand = function (x, i) {
+    return "<tr><td data-et=\"Ziua\">" + ciZi(x.z) + (x.complet === false ? '<span class="t212Mic"> · parțial</span>' : "") + '</td><td data-et="Total"><b>' + ciLei(x.valoare) + "</b></td>"
+      + '<td data-et="Față de ziua dinainte">' + (sch(l[i - 1], x) || "—") + '</td><td data-et="Pionex">' + ciLei(x.pionex) + '</td><td data-et="Trading 212">' + ciLei(x.t212) + '</td><td data-et="Salt">' + ciLei(x.salt) + "</td></tr>";
+  };
+  var rows = l.map(rand).reverse().slice(0, 60);
+  h += '<div class="t212TabWrap"><table class="t212Tab ciTab ciZileTab"><thead><tr><th>Ziua</th><th>Total</th><th>Față de ziua dinainte</th><th>Pionex</th><th>Trading 212</th><th>Salt</th></tr></thead><tbody>' + rows.join("") + "</tbody></table></div>"
+    + '<p class="tbSub">În lei, o valoare pe zi (colectorul, după curs). Schimbarea de la o zi la alta include și depunerile și retragerile — nu e doar profit. „Parțial” = o sursă n-a răspuns în ziua aceea, deci totalul e mai mic decât cel real.</p></section>';
+  return h;
+}
 function ciHtml(r, st) {
   st = st || {};
   if (!r) return '<p class="tbSub">Raportul pe tot contul îl face colectorul la 6 ore (boți, Trading 212, Salt, prețurile pe doi ani, crizele din 2020–2025). Încă nu există: pornește colectorul și revino peste câteva minute.</p>';
@@ -223,13 +266,14 @@ function ciVerdicteHtml(c, st) {
 async function ciPorneste(forta) {
   var box = document.getElementById("ciPagina"); if (!box) return;
   if (ciStare.inLucru) return;
-  if (!forta && ciStare.raport && Date.now() - ciStare.la < 5 * 60000) { box.innerHTML = ciHtml(ciStare.raport, {}) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {}); return; }
+  if (!forta && ciStare.raport && Date.now() - ciStare.la < 5 * 60000) { box.innerHTML = ciZileHtml(ciStare.zile) + ciHtml(ciStare.raport, {}) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {}); return; }
   ciStare.inLucru = true;
   try { var d = await getJSON("/api/istoric-bot?action=cont"); ciStare.raport = d && d.cont || null; ciStare.eroare = null; ciStare.la = Date.now(); }
   catch (e) { ciStare.eroare = String(e && e.message || e); }
   try { var dv = await getJSON("/api/istoric-bot?action=verdicteCalibrare"); ciStare.verdicte = dv && dv.calibrare || null; } catch (e2) { ciStare.verdicte = null; }
   try { var db = await getJSON("/api/istoric-bot?action=disciplinaBanda"); ciStare.banda = db && db.banda || null; } catch (e3) { ciStare.banda = null; }
   try { var dl = await getJSON("/api/istoric-bot?action=lectii"); ciStare.lectii = dl && dl.lectii || null; } catch (e4) { ciStare.lectii = null; }
+  try { var dz = await getJSON("/api/istoric-bot?action=contZile"); ciStare.zile = dz && Array.isArray(dz.zile) ? dz.zile : null; } catch (e5) { ciStare.zile = null; }   /* v100.197 */
   ciStare.inLucru = false;
-  box.innerHTML = (ciStare.eroare && !ciStare.raport ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" : ciHtml(ciStare.raport, {})) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {});
+  box.innerHTML = ciZileHtml(ciStare.zile) + (ciStare.eroare && !ciStare.raport ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" : ciHtml(ciStare.raport, {})) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {});
 }
