@@ -44,7 +44,8 @@ await test("cardurile Crypto și Nasdaq: „FĂRĂ PAROLĂ”, ce ai de făcut, 
   const f = citeste("public", "lib", "acasa-ecran.js"), des = f.slice(f.indexOf("function acasaDeseneaza"), f.indexOf("// 2a. pulsul crypto"));
   assert.match(des, /if \(faraParola\) v = AC_FARA_PAROLA;/);
   assert.match(des, /acasaVerd\(\$\("acVremeCrypto"\), "Crypto", v, faraParola \? AC_BUTON_PAROLA/);
-  assert.match(des, /var vb = faraParola \? AC_FARA_PAROLA : Acasa\.vremeBursa/);
+  assert.match(des, /var vb = faraParola \? AC_FARA_PAROLA : /);   /* v100.202: după parolă vine „fără legătură”, apoi verdictul obișnuit */
+  assert.match(des, /Acasa\.vremeBursa\(\{ qqq: qqq, vix: vixU, ndx: ndxL \}\)/);
 });
 
 await test("versiunile: v100.199, proba în lanțul `test`", () => {
