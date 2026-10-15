@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
-import { pentruWorker, trimiteBusolei, cheiaBotilorBusola, RAMAN_INCHISI_MS, BUSOLA_BOTI_URL } from "./lib/pentru-busola.mjs";
+import { pentruWorker, trimiteBusolei, cheiaBotilorBusola, secretScriereBusola, inchisiProaspeti, RAMAN_INCHISI_MS, BUSOLA_BOTI_URL } from "./lib/pentru-busola.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -39,20 +39,43 @@ await test("I-636 pleacă doar deschișii + închișii din 2 h, fără rețea", 
 await test("I-636 cheia: doar 32 hex", () => { assert.equal(cheiaBotilorBusola(" " + "a".repeat(32) + "\n"), "a".repeat(32)); assert.equal(cheiaBotilorBusola("x"), null); assert.equal(cheiaBotilorBusola(""), null); });
 await test("I-636 POST la worker-ul Busolei, cheia în ANTET (nu în adresă)", async () => {
   let cerere = null; const f = async (u, o) => { cerere = { u, o }; return new Response(JSON.stringify({ scris: true, motiv: "boti" }), { status: 200 }); };
-  const r = await trimiteBusolei({ ob, acum, cheie: "a".repeat(32), fetch: f });
+  const r = await trimiteBusolei({ ob, acum, cheie: "a".repeat(32), secret: "b".repeat(64), fetch: f });
   assert.equal(cerere.u, BUSOLA_BOTI_URL); assert.equal(BUSOLA_BOTI_URL, "https://busola.mferent80.workers.dev/api/boti");
   assert.equal(cerere.o.method, "POST"); assert.equal(cerere.o.headers["x-cheie-boti"], "a".repeat(32)); assert.ok(!cerere.u.includes("a".repeat(32)));
+  assert.equal(cerere.o.headers["x-scriere-boti"], "b".repeat(64)); assert.ok(!cerere.u.includes("b".repeat(64)));
   assert.deepEqual(JSON.parse(cerere.o.body).boti.map((b) => b.id), ["1", "2"]); assert.equal(r.ok, true); assert.equal(r.scris, true);
 });
 await test("I-636 fără cheie ⇒ nu pleacă nimic", async () => { let n = 0; const r = await trimiteBusolei({ ob, acum, cheie: null, fetch: async () => { n++; } }); assert.equal(n, 0); assert.equal(r.motiv, "fara-cheie"); });
-await test("I-636 rețea picată ⇒ nu aruncă", async () => { const r = await trimiteBusolei({ ob, acum, cheie: "a".repeat(32), fetch: async () => { throw new Error("ECONNRESET"); } }); assert.equal(r.ok, false); assert.match(r.motiv, /ECONNRESET/); });
+await test("revizia 🟡1: fără SECRETUL de scriere ⇒ nu pleacă nimic (cheia de citire nu ajunge)", async () => { let n = 0; const r = await trimiteBusolei({ ob, acum, cheie: "a".repeat(32), secret: null, fetch: async () => { n++; } }); assert.equal(n, 0); assert.equal(r.motiv, "fara-secret"); assert.equal(secretScriereBusola("c".repeat(64) + "\n"), "c".repeat(64)); assert.equal(secretScriereBusola("c".repeat(32)), null); });
+await test("I-636 rețea picată ⇒ nu aruncă", async () => { const r = await trimiteBusolei({ ob, acum, cheie: "a".repeat(32), secret: "b".repeat(64), fetch: async () => { throw new Error("ECONNRESET"); } }); assert.equal(r.ok, false); assert.match(r.motiv, /ECONNRESET/); });
 
 const col = citeste("scripts", "colector.mjs");
 await test("I-636 colectorul trimite DUPĂ scriere, fără să aștepte (nu ține tura), jurnal doar la schimbarea stării", () => {
   const f = col.slice(col.indexOf("async function scriePentruBusola("), col.indexOf("var BUSOLA_CHEIE_FIS"));
-  assert.ok(f.indexOf("scrieAtomic(PENTRU_BUSOLA_FIS, ob)") > 0 && f.indexOf("trimiteBusolei({ ob, acum, cheie })") > f.indexOf("scrieAtomic(PENTRU_BUSOLA_FIS, ob)"));
+  assert.ok(f.indexOf("scrieAtomic(PENTRU_BUSOLA_FIS, ob)") > 0 && f.indexOf("trimiteBusolei({ ob, acum, cheie, secret })") > f.indexOf("scrieAtomic(PENTRU_BUSOLA_FIS, ob)"));
+  assert.ok(f.indexOf("inchisiProaspeti(pbStareInchisi,") > 0 && f.indexOf("inchisiProaspeti(pbStareInchisi,") < f.indexOf("scrieAtomic(PENTRU_BUSOLA_FIS, ob)"));
   assert.ok(!/await trimiteBusolei/.test(f)); assert.match(f, /if \(st !== pbBusolaStare\)/);
   assert.match(col, /var BUSOLA_CHEIE_FIS = process\.env\.BUSOLA_CHEIE_BOTI_FIS \|\| "C:\/Users\/Cimin\/busola\/cron\/stare\/boti-cheie\.txt"/);
+});
+// ── revizia 🟡7: botul oprit apare închis pe loc ──
+const B = (id, inchis = null, pnlPct = 1) => ({ id, simbol: "MARSCOIN", inchis, pnlPct });
+await test("🟡7 botul lipsește 2 ture la rând ⇒ ÎNCHIS provizoriu, cu ultimul profit; o tură lipsă ⇒ încă nimic", () => {
+  let s = inchisiProaspeti(null, { boti: [B("1", null, 2.7), B("2")] }, acum).stare;
+  let r = inchisiProaspeti(s, { boti: [B("2")] }, acum + 60000); assert.equal(r.ob.boti.length, 1);
+  r = inchisiProaspeti(r.stare, { boti: [B("2")] }, acum + 120000);
+  const x = r.ob.boti.find((b) => b.id === "1"); assert.ok(x && x.inchis === acum + 120000 && x.provizoriu === true && x.pnlPct === 2.7);
+});
+await test("🟡7 lista cu totul GOALĂ (căderea Pionex de o tură) ⇒ abia după 3 ture", () => {
+  let r = inchisiProaspeti(null, { boti: [B("1")] }, acum);
+  r = inchisiProaspeti(r.stare, { boti: [] }, acum + 60000); r = inchisiProaspeti(r.stare, { boti: [] }, acum + 120000); assert.equal(r.ob.boti.length, 0);
+  r = inchisiProaspeti(r.stare, { boti: [] }, acum + 180000); assert.equal(r.ob.boti.length, 1); assert.equal(r.ob.boti[0].inchis, acum + 180000);
+});
+await test("🟡7 cel adevărat din arhivă (același id) înlocuiește provizoriul; revenit deschis ⇒ provizoriul dispare; după 2 h iese", () => {
+  let r = inchisiProaspeti(null, { boti: [B("1")] }, acum); r = inchisiProaspeti(r.stare, { boti: [B("9")] }, acum + 60000); r = inchisiProaspeti(r.stare, { boti: [B("9")] }, acum + 120000);
+  assert.ok(r.ob.boti.some((b) => b.id === "1" && b.provizoriu));
+  const real = inchisiProaspeti(r.stare, { boti: [B("9"), B("1", acum + 100000, -1.3)] }, acum + 180000);
+  assert.deepEqual(real.ob.boti.filter((b) => b.id === "1").map((b) => [b.pnlPct, !!b.provizoriu]), [[-1.3, false]]);
+  const tarziu = inchisiProaspeti(r.stare, { boti: [B("9")] }, acum + 120000 + 2 * H + 1000); assert.ok(!tarziu.ob.boti.some((b) => b.id === "1"));
 });
 await test("versiunile: v100.203, colectorul v101.121, proba în lanțul `test`", () => {
   const idx = citeste("public", "index.html");

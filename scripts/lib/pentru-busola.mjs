@@ -36,18 +36,40 @@ export function intrariRetea({ Busola, b, rt, dovedita, acum }) {
 export const BUSOLA_BOTI_URL = "https://busola.mferent80.workers.dev/api/boti";
 export const RAMAN_INCHISI_MS = 2 * 3600000;
 export const cheiaBotilorBusola = (text) => { const c = String(text || "").trim(); return /^[0-9a-f]{32}$/.test(c) ? c : null; };
+// revizia Busola 1.60.0 (🟡1): scrierea cere și SECRETUL de scriere (64 hex, `busola\cron\stare\boti-scriere.txt`) — cheia de mai sus
+// e și pe telefon, doar pentru citire
+export const secretScriereBusola = (text) => { const c = String(text || "").trim(); return /^[0-9a-f]{64}$/.test(c) ? c : null; };
 export function pentruWorker(ob, acum) {
   const t = Number(acum) || Date.now();
   return { la: ob.la, versiune: ob.versiune, retea: [], boti: (Array.isArray(ob.boti) ? ob.boti : []).filter((b) => b && (b.inchis === null || t - Number(b.inchis) <= RAMAN_INCHISI_MS)) };
 }
-/** Nu aruncă niciodată; fără cheie nu pleacă nimic. */
-export async function trimiteBusolei({ ob, acum, cheie, fetch: f = globalThis.fetch, url = BUSOLA_BOTI_URL }) {
+/** Nu aruncă niciodată; fără cheie sau fără secret nu pleacă nimic. */
+export async function trimiteBusolei({ ob, acum, cheie, secret, fetch: f = globalThis.fetch, url = BUSOLA_BOTI_URL }) {
   if (!cheie) return { ok: false, motiv: "fara-cheie" };
+  if (!secret) return { ok: false, motiv: "fara-secret" };
   try {
-    const r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-cheie-boti": cheie }, body: JSON.stringify(pentruWorker(ob, acum)), signal: AbortSignal.timeout(10000) });
+    const r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-cheie-boti": cheie, "x-scriere-boti": secret }, body: JSON.stringify(pentruWorker(ob, acum)), signal: AbortSignal.timeout(10000) });
     let j = null; try { j = await r.json(); } catch { j = null; }
     return { ok: r.ok, status: r.status, scris: !!(j && j.scris), motiv: j && j.motiv ? String(j.motiv) : null };
   } catch (e) { return { ok: false, motiv: String(e && e.message || e) }; }
+}
+
+// revizia Busola 1.60.0 (🟡7): închișii se citesc din arhivă doar la 10 min ⇒ un bot oprit ieșea dintre deschiși și dispărea din
+// Busola până la 10 min („Niciun bot deschis”, ca o listă căzută). Acum: lipsă 2 ture la rând (3 dacă lista e cu totul goală —
+// Pionex dă uneori o listă goală o tură) ⇒ apare ÎNCHIS pe loc, cu ultimul profit văzut, `provizoriu`; cel adevărat din arhivă
+// (același id) îl înlocuiește; după 2 h iese. Starea e ținută de colector între ture.
+export function inchisiProaspeti(stare, ob, acum) {
+  const t = Number(acum) || Date.now(), boti = Array.isArray(ob && ob.boti) ? ob.boti : [];
+  const s = { deschisi: new Map(stare && stare.deschisi || []), lipsa: new Map(stare && stare.lipsa || []), recenti: new Map(stare && stare.recenti || []) };
+  const ids = new Set(boti.map((b) => b.id)), deschisiAcum = boti.filter((b) => b.inchis === null), prag = deschisiAcum.length ? 2 : 3;
+  for (const [id, b] of [...s.deschisi]) {
+    if (ids.has(id)) { s.lipsa.delete(id); continue; }
+    const n = (s.lipsa.get(id) || 0) + 1;
+    if (n >= prag) { s.recenti.set(id, { ...b, inchis: t, provizoriu: true }); s.deschisi.delete(id); s.lipsa.delete(id); } else s.lipsa.set(id, n);
+  }
+  for (const b of deschisiAcum) s.deschisi.set(b.id, b);
+  for (const [id, b] of [...s.recenti]) if (ids.has(id) || t - b.inchis > RAMAN_INCHISI_MS) s.recenti.delete(id);
+  return { ob: { ...ob, boti: [...boti, ...s.recenti.values()] }, stare: s };
 }
 
 export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, cheia, retea }) {
