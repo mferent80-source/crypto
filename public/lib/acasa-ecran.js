@@ -98,6 +98,14 @@ function acBtc(d) {
 }
 var AC_DIR = { urca: '<span class="good">urcă</span>', coboara: '<span class="bad">coboară</span>', lateral: "lateral" };
 
+// v100.199: piața nu se poate citi fără parola aplicației — o cerere de bază refuzată pe parolă e destul (celelalte cad la fel)
+var AC_FARA_PAROLA = { nivel: "fara-date", eticheta: "FĂRĂ PAROLĂ", titlu: "Fără parola aplicației nu pot citi piața pe dispozitivul ăsta.",
+  text: "Serverul de acasă refuză cererile până pui parola (textul APP_API_TOKEN de la pornire) în Setări → API Security Session. Se pune o dată pe fiecare adresă din care deschizi Radarul (acasă și Tailscale sunt separate)." };
+var AC_BUTON_PAROLA = '<button class="actionGhost" type="button" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>';
+function acFaraParola(d) {
+  if (typeof eroareDeParola !== "function" || !d) return false;
+  return ["clasamentErr", "piataErr", "tickersErr", "ndxErr", "sugestiiErr"].some(function (k) { return !!d[k] && eroareDeParola(d[k]); });
+}
 function acasaVerd(el, piata, v, extra) {
   if (!el) return;
   el.className = "acVerd acVerd-" + v.nivel;
@@ -247,10 +255,15 @@ function acasaDeseneaza() {
 
   // 1. doua verdicte alaturate
   var v = Acasa.vreme({ clasament: cl, btc: { miscare: btcMis }, fg: fgI.acum });
-  acasaVerd($("acVremeCrypto"), "Crypto", v, cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
+  // v100.199 (15.10, el: „de ce nu citește piața la deschidere” ⇒ „repară”): fără parola aplicației pe dispozitiv, serverul
+  // refuză tot (401 AUTH_REQUIRED), iar cardurile scriau „Clasamentul n-a venit încă. Îl face colectorul o dată pe oră” — fals.
+  // Acum spun pe față de ce nu se citește piața și unde se pune parola (aceeași regulă ca Tabloul: eroareDeParola).
+  var faraParola = acFaraParola(d);
+  if (faraParola) v = AC_FARA_PAROLA;
+  acasaVerd($("acVremeCrypto"), "Crypto", v, faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
     + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : "");
-  var vb = Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL });
-  acasaVerd($("acVremeBursa"), "Nasdaq", vb, ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
+  var vb = faraParola ? AC_FARA_PAROLA : Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL });
+  acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");
   // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” - primele idei de acțiuni și monedele pentru un bot, cu drumul la cele două panouri
   if ($("acCumpar")) $("acCumpar").innerHTML = acasaCumpar(d);
