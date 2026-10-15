@@ -187,7 +187,7 @@ await test("(5) colectorul: `de` pe monedă (meta().busolaMonede), starea la ser
   assert.ok(/import \{ alcatuieste as pentruBusola(, [^}]*)? \} from "\.\/lib\/pentru-busola\.mjs";/.test(c), "importul pentru-busola");
   assert.ok(c.includes("monede: meta().busolaMonede || (meta().busolaMonede = {})"), "harta „de” pe monedă, ținută în starea alertelor");
   assert.ok(c.includes('await trimite("/api/istoric-bot?action=paza", pentruServer(boti, stareAlerte, acum));'), "POST-ul paza");
-  assert.ok(c.includes('path.join(DATA, "pentru-busola.json")') && /scrieAtomic\(PENTRU_BUSOLA_FIS, pentruBusola\(/.test(c), "fișierul pentru Busola");
+  assert.ok(c.includes('path.join(DATA, "pentru-busola.json")') && (/scrieAtomic\(PENTRU_BUSOLA_FIS, pentruBusola\(/.test(c) || (/const ob = pentruBusola\(/.test(c) && /scrieAtomic\(PENTRU_BUSOLA_FIS, ob\)/.test(c))), "fișierul pentru Busola");   /* v101.121: obiectul ținut ca să plece și direct în Busola */
   assert.ok(/closeTime\) >= de90\)/.test(c) && /new Map\(pbInchisi\.lista\.map\(/.test(c) && /cheia: cheiaBusola/.test(c), "închișii: tăiați la 90 z înainte de JurnalTrade.din, uniți cu lista veche, cheia prin simbolPerp");
   assert.ok(/out\.liniiExtra = /.test(c) && /Busola\.liniaBoti\(/.test(c), "rândul de dimineață");
   assert.ok(/const VERSIUNE_COLECTOR = "v101\.(6\d|[7-9]\d|1\d\d)";/.test(c), "versiunea colectorului (v101.60 sau mai nouă)");

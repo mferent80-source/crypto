@@ -30,6 +30,26 @@ export function intrariRetea({ Busola, b, rt, dovedita, acum }) {
   return out;
 }
 
+// v101.121 (15.10.2026, Busola 1.60.0 I-636, el: „fă toate”): boții merg și DIRECT în Busola (worker-ul ei, POST /api/boti), nu doar
+// prin fișierul pe care îl urcă PC-ul la 2 minute. Pleacă doar ce arată telefonul: deschișii + închișii din ultimele 2 h (≈1 KB, nu 55 KB);
+// rețeaua nu. Cheia e a lui (32 hex, `busola\cron\stare\boti-cheie.txt`); worker-ul scrie DOAR dacă s-a schimbat ceva (bugetul KV).
+export const BUSOLA_BOTI_URL = "https://busola.mferent80.workers.dev/api/boti";
+export const RAMAN_INCHISI_MS = 2 * 3600000;
+export const cheiaBotilorBusola = (text) => { const c = String(text || "").trim(); return /^[0-9a-f]{32}$/.test(c) ? c : null; };
+export function pentruWorker(ob, acum) {
+  const t = Number(acum) || Date.now();
+  return { la: ob.la, versiune: ob.versiune, retea: [], boti: (Array.isArray(ob.boti) ? ob.boti : []).filter((b) => b && (b.inchis === null || t - Number(b.inchis) <= RAMAN_INCHISI_MS)) };
+}
+/** Nu aruncă niciodată; fără cheie nu pleacă nimic. */
+export async function trimiteBusolei({ ob, acum, cheie, fetch: f = globalThis.fetch, url = BUSOLA_BOTI_URL }) {
+  if (!cheie) return { ok: false, motiv: "fara-cheie" };
+  try {
+    const r = await f(url, { method: "POST", headers: { "content-type": "application/json", "x-cheie-boti": cheie }, body: JSON.stringify(pentruWorker(ob, acum)), signal: AbortSignal.timeout(10000) });
+    let j = null; try { j = await r.json(); } catch { j = null; }
+    return { ok: r.ok, status: r.status, scris: !!(j && j.scris), motiv: j && j.motiv ? String(j.motiv) : null };
+  } catch (e) { return { ok: false, motiv: String(e && e.message || e) }; }
+}
+
 export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, cheia, retea }) {
   const t = Number(acum) || Date.now(), de = t - ZILE * ZI, out = new Map();
   for (const b of Array.isArray(deschisi) ? deschisi : []) {

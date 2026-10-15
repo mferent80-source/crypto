@@ -3196,15 +3196,18 @@ const ecranDinLegatura=(function(){
   // pozitia T212 (doar la t212) si moneda gridului (doar la gridset; doar litere si cifre)
   function crLegaturaDin(h){
     h=String(h||"");
-    const m=/[#&]parola=([^&]+)/.exec(h),e=/[#&]ecran=(tabloubot|t212|gridset)(?:&|$)/.exec(h),pz=/[#&]poz=([A-Za-z0-9_.-]{1,40})(?:&|$)/.exec(h),mo=/[#&]moneda=([A-Za-z0-9]{1,20})(?:&|$)/.exec(h);
+    const m=/[#&]parola=([^&]+)/.exec(h),e=/[#&]ecran=(tabloubot|t212|gridset)(?:&|$)/.exec(h),pz=/[#&]poz=([A-Za-z0-9_.-]{1,40})(?:&|$)/.exec(h),mo=/[#&]moneda=([A-Za-z0-9]{1,20})(?:&|$)/.exec(h),bt=/[#&]bot=([A-Za-z0-9_-]{1,40})(?:&|$)/.exec(h);
     let parola=null;if(m){try{parola=decodeURIComponent(m[1]).trim()||null}catch(x){parola=null}}
     const ecran=e?e[1]:null;
-    return {parola:parola,ecran:ecran,poz:pz&&ecran==="t212"?pz[1]:null,moneda:mo&&ecran==="gridset"?mo[1].toUpperCase():null};
+    // v100.203 (Busola 1.60.0, I-632): …&ecran=tabloubot&bot=<id> din cartela botului din Busola — botul ales în Tablou
+    return {parola:parola,ecran:ecran,poz:pz&&ecran==="t212"?pz[1]:null,moneda:mo&&ecran==="gridset"?mo[1].toUpperCase():null,bot:bt&&ecran==="tabloubot"?bt[1]:null};
   }
   try{
     const L=crLegaturaDin(location.hash);
     if(L.parola)localStorage.setItem(APP_API_TOKEN_SESSION_KEY,L.parola);
     if(L.parola||L.ecran)history.replaceState(null,"",location.pathname+location.search);
+    // v100.203: botul cerut se pune ca ALES în Tablou (aceeași cheie ca tbAlegeBot; TB_BOT_ALES nu e încă definit aici) — supraviețuiește și reîncărcării SW
+    if(L.bot){try{localStorage.setItem("tabloBotAles_v1",JSON.stringify(String(L.bot)))}catch{}}
     // prima vizita pe o adresa noua de tunel: service worker-ul se instaleaza si REINCARCA pagina (controllerchange), iar linkul e
     // deja scos din bara -> ecranul cerut se tine minte un minut in sesiune, ca sa ajunga si dupa reincarcare
     const K="crEcranDinLegatura";
