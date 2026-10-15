@@ -1622,7 +1622,7 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbTodoCap h4{margin:0;font-size:13px;text-transform:none;letter-spacing:0;color:var(--muted)}
 #tabloubot .tbTodoRand{display:grid;grid-template-columns:6px 1fr auto;gap:10px;align-items:center;padding:5px 12px;border-top:1px solid var(--tb-linie)}
 #tabloubot #tbTodoLista>.tbTodoRand:first-child{border-top:0}
-#tabloubot .tbTodoRand p{margin:1px 0 0;color:var(--muted);font-size:12px;white-space:pre-line}
+#tabloubot .tbTodoRand p{margin:1px 0 0;color:var(--muted);font-size:12px;white-space:pre-line;overflow-wrap:anywhere}
 #tabloubot .tbTodoGol{padding:4px 12px}
 #tabloubot .tbOra{display:inline-block;margin-left:8px;color:var(--muted);font-size:11.5px;font-weight:600;white-space:nowrap}
 #tabloubot .tbOraVeche{color:var(--warn)}
@@ -1967,7 +1967,7 @@ body.peScan .heroStrip,body.peScan .tabs,body.peScan .toolbar{display:none}
 #alerts .alPunct{width:10px;height:10px;border-radius:50%;margin-top:5px;background:var(--good)}
 #alerts .alRand.atentie .alPunct{background:#E9B949}#alerts .alRand.critic .alPunct{background:var(--bad)}
 #alerts .alRand.nou{background:linear-gradient(90deg,rgba(91,143,199,.07),transparent 60%)}
-#alerts .alText b{font-size:13.5px}#alerts .alText p{margin:2px 0 0;font-size:13px;color:var(--text);opacity:.85;white-space:pre-line}
+#alerts .alText b{font-size:13.5px;overflow-wrap:anywhere}#alerts .alText p{margin:2px 0 0;font-size:13px;color:var(--text);opacity:.85;white-space:pre-line;overflow-wrap:anywhere}
 #alerts .alMeta{display:block;font-size:12px;color:var(--muted);margin-top:2px}#alerts .alNou{color:var(--accent)}
 #alerts .alGol{color:var(--muted);margin:6px 0}
 @media (max-width:760px){#alerts .alRand{grid-template-columns:12px minmax(0,1fr)}#alerts .alRand .alBtn{grid-column:2;justify-self:start}}
