@@ -38,7 +38,7 @@ export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, che
     // și tipul botului, ca Busola să poată spune „IEȘIT DIN GRID”. Lipsa rămâne lipsă (fără câmp), nu se ghicește.
     const jos = nr(b.gridJos), sus = nr(b.gridSus), interval = jos !== null && sus !== null && jos > 0 && jos < sus ? { jos, sus } : {};
     out.set(id, { id, simbol: cheiaDeschis(Busola, b), directie: dir(b.directie), levier: nr(b.levier), pornit, inchis: null, pnlPct: null, ...interval,
-      tip: /\.PERP$/i.test(String(b.baza || "")) ? "grid futures" : "grid spot" });
+      tip: /\.PERP$/i.test(String(b.baza || "")) ? "grid futures" : "grid spot", ...(nr(b.pretCurent) > 0 ? { pret: nr(b.pretCurent) } : {}) });   // v101.119: prețul de acum al botului (Busola: IEȘIT DIN GRID pe prețul lui, nu pe al hărții)
   }
   for (const x of Array.isArray(inchisi) ? inchisi : []) {
     const id = x && x.id != null ? String(x.id) : "", pornit = nr(x && x.pornit), inchis = nr(x && x.inchis); if (!id || !(pornit > 0) || !(inchis >= de)) continue;

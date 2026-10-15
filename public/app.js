@@ -34,7 +34,7 @@ function startLiveSocket(sym){
 function topLiveDeseneaza(acum){
  var el=document.getElementById("topLive");if(!el)return;var s=window.__topLive;acum=acum||Date.now();
  var ora=function(t){return new Date(t).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})};
- if(!s){el.textContent="date: —";el.className="statusChip";el.title="nicio analiză rulată încă pe pagina asta";return}
+ if(!s){el.textContent="fără analiză";el.className="statusChip";el.title="Nicio monedă analizată încă pe pagina asta — nu e o eroare: apasă „Analizează o monedă” (analiza nu pornește singură, ca să nu pornească din greșeală)";return}   /* v100.202 (ideea 6): „date: —” părea o eroare */
  if(s.stare==="eroare"){el.textContent="date: eroare";el.className="statusChip warn";el.title="analiza "+s.src+" n-a putut citi datele, la "+ora(s.la);return}
  var min=Math.floor(Math.max(0,acum-s.la)/60000),v=min<1?"chiar acum":min<60?"acum "+min+" min":"acum "+Math.floor(min/60)+" h";
  el.textContent=s.src+" · "+v;el.className="statusChip "+(s.stare==="ok"&&min<=5?"live":"warn");el.title="datele analizei: "+s.src+", citite la "+ora(s.la)+(s.stare==="rezerva"?" (sursa de rezervă)":"")

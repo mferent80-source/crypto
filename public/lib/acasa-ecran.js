@@ -13,7 +13,8 @@ async function acasaPorneste(fortat) {
   if (acasa.inLucru || (!fortat && Date.now() - acasa.la < ACASA_MS)) return;
   acasa.inLucru = true;
   var d = acasa.d;
-  var pas = async function (k, fn) { try { d[k] = await fn(); d[k + "Err"] = null; } catch (e) { d[k + "Err"] = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); } acasaDeseneaza(); };
+  // v100.202: fiecare cerere reușită își ține ora (k + "La") — „actualizat” și „ultima citire bună” spun adevărul, nu ora încercării
+  var pas = async function (k, fn) { try { d[k] = await fn(); d[k + "Err"] = null; d[k + "La"] = Date.now(); } catch (e) { d[k + "Err"] = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); } acasaDeseneaza(); };
   try {
     await Promise.all([
       pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); return c && c.clasament || null; }),
@@ -105,6 +106,16 @@ var AC_BUTON_PAROLA = '<button class="actionGhost" type="button" data-action-cli
 function acFaraParola(d) {
   if (typeof eroareDeParola !== "function" || !d) return false;
   return ["clasamentErr", "piataErr", "tickersErr", "ndxErr", "sugestiiErr"].some(function (k) { return !!d[k] && eroareDeParola(d[k]); });
+}
+// v100.202 (15.10, ideea 5): serverul de acasă nu răspunde (rețea, PC oprit, server căzut) — nu e lipsa parolei. Cererile de bază
+// au căzut toate; cu cifre vechi pe ecran, cardurile le arată și rândul de sus spune că sunt vechi; fără nimic, cardurile spun asta.
+function acFaraServer(d) {
+  if (!d || acFaraParola(d)) return false;
+  return ["clasamentErr", "piataErr", "tickersErr"].every(function (k) { return !!d[k]; });
+}
+function acFaraServerVerd(d) {
+  return { nivel: "fara-date", eticheta: "FĂRĂ LEGĂTURĂ", titlu: "Serverul de acasă nu răspunde.",
+    text: "N-am primit nimic de la el de la deschidere (" + String(d && d.clasamentErr || "eroare") + "). Verifică dacă PC-ul de acasă e pornit; reîncerc singur în 30 de secunde." };
 }
 function acasaVerd(el, piata, v, extra) {
   if (!el) return;
@@ -249,7 +260,10 @@ function acasaDeseneaza() {
   var vixU = vixB && vixB.length ? vixB[vixB.length - 1].c : null, acum = new Date();
   var pc = d.piataCol || {}, fz = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(acum);
   var sc = Acasa.schimbari({ zi: fz, fg: fgI.acum, inMiscare: cl ? cl.evita : null, vix: vixU, ndxE50: ndxL ? ndxL.e50 : null }, pc.instantanee || []);
-  if ($("acCand")) $("acCand").textContent = acum.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" }) + " · actualizat " + (acasa.la ? new Date(acasa.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "acum…");
+  // v100.202 (15.10, ideea 5): „actualizat” = ora ultimei citiri BUNE a clasamentului (înainte: ora încercării, și când picase);
+  // când serverul de acasă nu răspunde, rândul o spune
+  var faraServer = acFaraServer(d), bunLa = d.clasamentLa || 0;
+  if ($("acCand")) $("acCand").textContent = acum.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" }) + " · actualizat " + (bunLa ? new Date(bunLa).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "acum…") + (faraServer ? " · serverul de acasă nu răspunde acum" : "");
   var deschis = acBursaDeschisa(acum), ultZi = qqq && qqq.length ? new Date(qqq[qqq.length - 1].t).toLocaleDateString("ro-RO", { weekday: "long" }) : "";
   if ($("acBursaCand")) $("acBursaCand").textContent = deschis ? "bursa e deschisă · ultimele cifre de azi" : "închiderea de " + (ultZi || "ieri") + " · bursa se redeschide în zilele lucrătoare la 16:30";
 
@@ -260,9 +274,10 @@ function acasaDeseneaza() {
   // Acum spun pe față de ce nu se citește piața și unde se pune parola (aceeași regulă ca Tabloul: eroareDeParola).
   var faraParola = acFaraParola(d);
   if (faraParola) v = AC_FARA_PAROLA;
+  else if (faraServer && !cl) v = acFaraServerVerd(d);
   acasaVerd($("acVremeCrypto"), "Crypto", v, faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
     + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : "");
-  var vb = faraParola ? AC_FARA_PAROLA : Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL });
+  var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL });
   acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");
   // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” - primele idei de acțiuni și monedele pentru un bot, cu drumul la cele două panouri

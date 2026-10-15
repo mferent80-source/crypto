@@ -163,6 +163,7 @@ await test("(4) pentru-busola: deschiși (cheia din simbolPionex: LIGHTER ⇒ LI
   assert.deepEqual([cu({ gridJos: 95.5, gridSus: "110" }).jos, cu({ gridJos: 95.5, gridSus: "110" }).sus], [95.5, 110], "intervalul ajunge");
   for (const [j, s] of [[110, 95.5], [null, 110], [0, 110], [95.5, undefined], ["x", 110]]) assert.ok(!("jos" in cu({ gridJos: j, gridSus: s })) && !("sus" in cu({ gridJos: j, gridSus: s })), "interval stricat ⇒ fără câmp: " + j + "/" + s);
   assert.equal(cu({ baza: "SOL/USDT" }).tip, "grid spot"); assert.equal(cu({}).tip, "grid futures");
+  assert.equal(cu({ pretCurent: "101.5" }).pret, 101.5, "v101.119: prețul botului"); assert.ok(!("pret" in cu({})) && !("pret" in cu({ pretCurent: 0 })), "fără preț ⇒ fără câmp");
   assert.ok(!("tip" in PB.alcatuieste({ la: ACUM, versiune: "v", deschisi: [], inchisi, acum: ACUM, Busola: B, cheia }).boti[0]), "închișii n-au tip");
 });
 
