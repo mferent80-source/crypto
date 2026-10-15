@@ -78,6 +78,14 @@ test("principalul cu modificări necomise pe ALT fișier ⇒ adus, iar ale vecin
   assert.equal(citeste(path.join(RAD, "a.txt")), "a.txt vecina\n");
   sh(RAD, "checkout", "--", "a.txt");
 });
+test("principalul cu commit local NEPUBLICAT ⇒ publicat (2), iar mesajul arată commit-ul care îl ține", () => {
+  comite(RAD, "z.txt", "z local\n", "commit-local-al-vecinei");
+  comite(COPIE, "c.txt", "c.txt 3\n", "c3");
+  const r = unealta("livreaza", "t1"); assert.equal(r.cod, 2, r.text); assert.match(r.text, /commit-local-al-vecinei/);
+  assert.equal(citeste(path.join(RAD, "z.txt")), "z local\n", "commit-ul vecinei rămâne");
+  sh(RAD, "pull", "-q", "--rebase", "origin", "main"); sh(RAD, "push", "-q", "origin", "main");
+  sh(COPIE, "fetch", "-q", "origin"); sh(COPIE, "reset", "-q", "--hard", "origin/main");
+});
 test("npm test pică ⇒ 1, nimic publicat", () => {
   const inainte = sh(RAD, "rev-parse", "origin/main");
   comite(COPIE, "PICA", "x\n", "pica");

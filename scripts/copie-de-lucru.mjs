@@ -98,7 +98,12 @@ function livreaza(nume) {
     return 2;
   }
   const m = git(RAD, "merge", "--ff-only", "origin/main");
-  if (!m.ok) { scrie(`Principalul nu se poate aduce prin avans simplu (are commit-uri locale nepublicate?) — nu forțez:\n${m.err}`); return 2; }
+  if (!m.ok) {
+    // 15.10.2026: mesajul lui git era gol („nu forțez:” și nimic) ⇒ spun ce anume îl ține: commit-urile locale nepublicate
+    const locale = git(RAD, "log", "--oneline", "origin/main..main").out;
+    scrie(`Principalul nu se poate aduce prin avans simplu — nu forțez. ${locale ? `Are commit-uri locale nepublicate (altă sesiune le urcă acum?):\n  ${locale.split(/\r?\n/).join("\n  ")}` : m.err || "(git n-a spus de ce)"}\nCodul tău e pe GitHub; principalul îl primește când ele urcă (git pull --rebase origin main, apoi push).`);
+    return 2;
+  }
   scrie(`Principalul adus la ${git(RAD, "rev-parse", "--short", "HEAD").out}${ale.length ? ` (modificările necomise ale altora, pe alte fișiere, au rămas: ${ale.length})` : ""}.`);
   if (atinse.some((x) => x.startsWith("public/")) && fs.existsSync(path.join(RAD, "scripts", "proba-ecran-telefon.mjs"))) {
     scrie("Ai atins public/ ⇒ proba de telefon pe serverul de acasă (8788 servește principalul)…");
