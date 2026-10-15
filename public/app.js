@@ -7064,7 +7064,8 @@ function tbMcRand(b){
   /* v100.149 (I-579): regimul Busolei - doar validat (poarta din colector); nevalidat sau cu eroare ⇒ nimic */
   var RG_ST={miscare:"mai agitată",liniste:"mai calmă","nu-stiu":"nimic neobișnuit"},rgo=tbMc.rand.regim;
   var rg=rgo&&rgo.nevalidat===false&&!rgo.eroare&&rgo.text?" · în regimul de acum ("+(RG_ST[rgo.stare]||rgo.stare)+", "+TextRo.cate(rgo.zile,"zi de bare","zile de bare")+"): "+rgo.text:"";   /* revizia: starea pe înțeles */
-  return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+rg,buton:buton,nota:"șanse pe drumuri ca ultimele 14 zile, nu o predicție"+(tbMc.eroare?" · din "+hm(tbMc.randLa||tbMc.la)+"; acum n-a mers: "+tbMc.eroare+" · reîncerc "+hm(tbMc.urmatorul):cand.replace(/^ — /," · "))+(tbMc.inLucru?" · socotesc din nou…":"")}}
+  var cal=typeof GridSim!=="undefined"&&GridSim.textCalibrareMc&&typeof tbMcKv!=="undefined"&&tbMcKv&&tbMcKv.d?GridSim.textCalibrareMc(tbMcKv.d.calibrare):"";   /* v100.201 (B1): verdictul verificat pe ce a urmat */
+  return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+rg,buton:buton,nota:"șanse pe drumuri ca ultimele 14 zile, nu o predicție"+(tbMc.eroare?" · din "+hm(tbMc.randLa||tbMc.la)+"; acum n-a mers: "+tbMc.eroare+" · reîncerc "+hm(tbMc.urmatorul):cand.replace(/^ — /," · "))+(tbMc.inLucru?" · socotesc din nou…":"")+(cal?" · "+cal:"")}}
 // v100.138: LIVE - antetul citirii poartă ceasul și prețul la fiecare tic; rândurile se recitesc cel mult o dată pe secundă (EMA / RSI / ADX
 // pe lumânările graficului, cu prețul viu), fără să redeseneze graficul
 var tbCitLiveLa=0,tbCitLiveEroare=false;

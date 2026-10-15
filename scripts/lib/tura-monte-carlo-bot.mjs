@@ -89,7 +89,7 @@ export function ferestreRegim(stari, cheie, stare, acum) {
 }
 
 export async function turaMonteCarloBot(d) {
-  const acum = d.acum || Date.now(), st = d.stare || {}, out = { boti: 0, simulati: 0, anuntate: 0, erori: 0 };
+  const acum = d.acum || Date.now(), st = d.stare || {}, out = { boti: 0, simulati: 0, anuntate: 0, erori: 0, p7: {} };   /* v101.118: + p7 (șansa pe plus la 7 zile, pentru calibrare) */
   st.boti = st.boti && typeof st.boti === "object" ? st.boti : {};
   const activi = (d.boti || []).filter((b) => b && b.id != null && b.activ !== false && Number(b.gridJos) > 0 && Number(b.gridSus) > Number(b.gridJos));
   const ids = new Set(activi.map((b) => String(b.id)));
@@ -107,7 +107,7 @@ export async function turaMonteCarloBot(d) {
       if (rez.eroare && s.pornitLa) { const motiv = String(rez.eroare).split(/[.:]/)[0]; rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt)); if (!rez.eroare) nota = "ca bot pornit acum (" + motiv + "): "; }
       if (rez.eroare) throw new Error(rez.eroare);
       const v = d.GridSim.verdictScurt(rez, set, plan, b), cat = categorie(v.faCe), text = nota + v.text;
-      out.simulati++;
+      out.simulati++; out.p7[String(b.id)] = pCastig7(rez);
       // v101.92 (I-579): și pe regimul Busolei (ferestrele cu starea de acum), pe aceleași setări; nevalidat ⇒ se ține în KV, nu se arată
       let regim = null;
       if (d.regim) {
@@ -138,4 +138,51 @@ export async function turaMonteCarloBot(d) {
     } catch (e) { out.erori++; if (d.jurnal) d.jurnal("monte carlo bot", b.id, e && e.message || e); }
   }
   return out;
+}
+// v101.118 (15.10, el: „fă tot” — ideea B1 din audit): verdictul Monte Carlo VERIFICAT pe ce a urmat. O dată pe zi (UTC) pe fiecare bot activ se ține
+// șansa „pe plus în 7 zile” dată de simulator + totalul botului de atunci; după 7 zile (cel mult 9 — colectorul oprit mai mult ⇒ „expirat”, nu judecat
+// pe altă fereastră) sau la închiderea botului (totalul final) se vede dacă botul chiar a câștigat de atunci. Nimic din viitor: șansa și totalul sunt
+// cele de la momentul notării, rezultatul se citește abia după.
+const ZI_MS = 86400000, MAX_MC_JURNAL = 800, JUDECAT_DE_LA = 7 * ZI_MS, EXPIRAT_DUPA = 9 * ZI_MS, MIN_JUDECATE = 30;
+// șansa pe plus la 7 zile: „de aici încolo” (botul pornit, cu pozițiile de acum) când există, altfel a drumului întreg (bot pornit acum)
+export function pCastig7(rez) {
+  const o = rez && Array.isArray(rez.orizonturi) ? rez.orizonturi.find((x) => x && x.zile === 7) : null; if (!o) return null;
+  const p = o.deAici && nr(o.deAici.pCastig) !== null ? nr(o.deAici.pCastig) : nr(o.pCastig);
+  return p !== null && p >= 0 && p <= 1 ? p : null;
+}
+export function noteazaMc(jurnal, { id, p, cat, total, acum }) {
+  const l = Array.isArray(jurnal) ? jurnal.slice() : [], z = new Date(acum).toISOString().slice(0, 10), t = nr(total), pp = nr(p);
+  if (id == null || pp === null || t === null) return l;
+  if (l.some((e) => e && e.id === String(id) && e.z === z)) return l;   // o singură intrare pe bot pe zi - altfel 96 de ture pe zi ar număra de 96 de ori aceeași fereastră
+  l.push({ id: String(id), z, t: acum, p: Math.round(pp * 1000) / 1000, cat: cat || null, total: t, y: null });
+  return l.slice(-MAX_MC_JURNAL);
+}
+// totaluri: Map(id -> totalul de acum) pentru boții activi
+export function judecaMc(jurnal, totaluri, acum) {
+  return (Array.isArray(jurnal) ? jurnal : []).map((e) => {
+    if (!e || e.y !== null || e.expirat) return e;
+    const varsta = acum - e.t; if (varsta < JUDECAT_DE_LA) return e;
+    if (varsta > EXPIRAT_DUPA) return Object.assign({}, e, { expirat: true });
+    const t = totaluri && totaluri.has(e.id) ? nr(totaluri.get(e.id)) : null; if (t === null) return e;
+    return Object.assign({}, e, { y: t > e.total ? 1 : 0, totalDupa: t, judecatLa: acum });
+  });
+}
+export function judecaMcLaInchidere(jurnal, id, totalFinal, inchisLa) {
+  const t = nr(totalFinal), la = nr(inchisLa);
+  return (Array.isArray(jurnal) ? jurnal : []).map((e) => {
+    if (!e || e.id !== String(id) || e.y !== null || e.expirat || t === null || (la !== null && e.t > la)) return e;
+    return Object.assign({}, e, { y: t > e.total ? 1 : 0, totalDupa: t, judecatLa: la, laInchidere: true });
+  });
+}
+// Brier = media (p − y)²; „aruncarea de ban” = 0,25 (p = 50 % mereu); „rata de bază” = b·(1−b) (aceeași șansă pentru toți, cea care s-a întâmplat)
+export function raportMc(jurnal) {
+  const j = (Array.isArray(jurnal) ? jurnal : []).filter((e) => e && (e.y === 0 || e.y === 1) && nr(e.p) !== null);
+  const zile = new Set(j.map((e) => e.z)).size;
+  if (j.length < MIN_JUDECATE) return { stare: "putine", n: j.length, zile };
+  const n = j.length, baza = j.reduce((a, e) => a + e.y, 0) / n, brier = j.reduce((a, e) => a + (e.p - e.y) ** 2, 0) / n;
+  const cutii = [[0, 0.4], [0.4, 0.6], [0.6, 1.0001]].map(([de, la]) => {
+    const c = j.filter((e) => e.p >= de && e.p < la);
+    return { de, la: Math.min(la, 1), n: c.length, pMed: c.length ? c.reduce((a, e) => a + e.p, 0) / c.length : null, rata: c.length ? c.reduce((a, e) => a + e.y, 0) / c.length : null };
+  });
+  return { stare: "testat", n, zile, brier, brierBan: 0.25, brierBaza: baza * (1 - baza), baza, cutii };
 }

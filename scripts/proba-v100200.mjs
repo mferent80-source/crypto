@@ -51,11 +51,11 @@ await test("Scan: regimul blocat ⇒ „Cât cumperi: nimic azi” cu motivul, n
   const s = citeste("public", "lib", "scan-ecran.js");
   assert.match(s, /ma\.blocat \? '<div class="scLin"><span>Cât cumperi<\/span><b class="bad">nimic azi/);
 });
-await test("versiunile: v100.200, proba în lanțul `test`", () => {
-  const idx = citeste("public", "index.html");
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.200.0"); assert.match(citeste("public", "sw.js"), /^const CACHE="crypto-radar-v100-200";/);
-  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.200"); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.200"/);
-  assert.equal((idx.match(/v100\.200/g) || []).length, 4);
+await test("versiunile: de la v100.200 în sus, proba în lanțul `test`", () => {   /* v100.201: ≥, nu egal */
+  const idx = citeste("public", "index.html"), ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]); assert.ok(ver >= 200, String(ver));
+  assert.match(citeste("public", "sw.js"), new RegExp('^const CACHE="crypto-radar-v100-' + ver + '";')); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100." + ver);
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + ver + '"'));
+  assert.equal((idx.match(new RegExp("v100\\." + ver, "g")) || []).length, 4);
   assert.match(citeste("package.json"), /npm run test:v100199 && npm run test:v100200/);
 });
 

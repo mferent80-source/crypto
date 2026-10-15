@@ -308,6 +308,18 @@ var GridSim = (function () {
   }
   // v100.139 (el, 08.10: „Monte Carlo cu un scan automat pe bot la 15 min” în Tablou): rândul SCURT - verdictul pe 7 zile (CÂȘTIGĂ / PIERDE,
   // stopul / lichidarea / TP-ul atins), «ce aș face» (prima propoziție din faCe) și „pe o zi” - într-un singur rând; eroarea ca text
+  // v100.201 (B1): verdictul verificat pe ce a urmat (raportul colectorului); Brier ×100 cu o zecimală (mai mic = mai bine; aruncarea de ban = 25,0)
+  function textCalibrareMc(r) {
+    if (!r || typeof r !== "object") return "";
+    var z1 = function (x) { return (Math.round(Number(x) * 10) / 10).toFixed(1).replace(".", ","); };
+    if (r.stare !== "testat") return "verificat pe ce a urmat: " + (Number(r.n) || 0) + " din 30 de verdicte judecate după 7 zile — încă puține";
+    var cutia = function (de) { return (r.cutii || []).filter(function (c) { return c && c.de === de && c.n > 0 && c.rata !== null; })[0]; }, sus = cutia(0.6), jos = cutia(0);
+    var parti = ["verificat pe ce a urmat: " + cate(r.n, "verdict judecat", "verdicte judecate") + " pe " + cate(r.zile, "zi", "zile"), "Brier " + z1(r.brier * 100) + " (aruncarea de ban: " + z1(r.brierBan * 100) + "; mai mic = mai bine)"];
+    if (sus) parti.push("când zicea peste 60%: pe plus în " + z1(sus.rata * 100) + "% (" + sus.n + ")");
+    if (jos) parti.push("sub 40%: pe plus în " + z1(jos.rata * 100) + "% (" + jos.n + ")");
+    parti.push("verdictele se suprapun (7 zile), deci dovezile sunt mai puține decât pare");
+    return parti.join(" · ");
+  }
   function verdictScurt(rez, st, plan, bot) {
     if (!rez || rez.eroare) return { stare: "info", text: rez && rez.eroare ? String(rez.eroare) : "fără rezultat" };
     var i7 = -1, i1 = -1; (rez.orizonturi || []).forEach(function (o, i) { if (o.zile === 7) i7 = i; if (o.zile === 1) i1 = i; });
@@ -327,6 +339,6 @@ var GridSim = (function () {
     var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME };
+  return { starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

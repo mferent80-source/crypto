@@ -56,10 +56,10 @@ import { lipsaConfirmata } from "./lib/paza-boti.mjs";
 import * as S from "./lib/sanatate-colector.mjs";
 import { ponderiT212 } from "./lib/ponderi-t212.mjs";   /* v101.116 (auditul sever, 🔵7): ponderile pe aceeași monedă */   /* v101.116 (auditul sever): căderea pe parolă (S1), lista goală a boților (C3) */
 import { bilantNoteaza, pandaJudeca, bilantAlerte } from "./lib/paza-boti.mjs";   // v101.108/109: bilanțul alertelor de direcție (pânda, Busola, vocile, BTC)   // v100.173 (auditul Opus): botul „dispărut” confirmat 3 ture
-import { vociBot, schimbareVoci, judecaVoci, ferestreRegim } from "./lib/tura-monte-carlo-bot.mjs";   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
+import { vociBot, schimbareVoci, judecaVoci, ferestreRegim, noteazaMc, judecaMc, judecaMcLaInchidere, raportMc } from "./lib/tura-monte-carlo-bot.mjs";   /* v101.118: + calibrarea verdictului */   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.117";   /* v101.117 (15.10): intervalul gridului (jos/sus) + tipul botului în pentru-busola.json, pentru „IEȘIT DIN GRID” din Busola „Acum” */   /* v101.116 (14.10 noaptea, „repară și fă tot”): auditul sever reparat pe toate zonele */   /* v101.115 (14.10 seara, „repară toate”): coșurile judecate pe zi, bilanțul Trend cu t și abaterea */   /* v101.114 (14.10): Scorul zilei din „Piața azi” în jurnalul verdictelor */   // v101.113 (14.10, „fă tot”): rigla Trend peste SPY + 20/60 z, proba PAZNIC–lățime zilnic, rândul Trend în raportul de duminică; v101.112: saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.118";   /* v101.118 (15.10, „fă tot” B1): verdictul Monte Carlo pe boți verificat pe ce a urmat (Brier, cutiile) */   /* v101.117 (15.10): intervalul gridului (jos/sus) + tipul botului în pentru-busola.json, pentru „IEȘIT DIN GRID” din Busola „Acum” */   /* v101.116 (14.10 noaptea, „repară și fă tot”): auditul sever reparat pe toate zonele */   /* v101.115 (14.10 seara, „repară toate”): coșurile judecate pe zi, bilanțul Trend cu t și abaterea */   /* v101.114 (14.10): Scorul zilei din „Piața azi” în jurnalul verdictelor */   // v101.113 (14.10, „fă tot”): rigla Trend peste SPY + 20/60 z, proba PAZNIC–lățime zilnic, rândul Trend în raportul de duminică; v101.112: saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -516,6 +516,7 @@ async function tura() {
           if (Number(x.inchisLa) - Number(x.pornitLa) < 3600000) { try { const a = await cere("/api/istoric-bot?action=botiInchisi"); subOOra = Obiceiuri.subOOra(JurnalTrade.din(a && Array.isArray(a.boti) ? a.boti : [])); } catch {} }
           fisa = TabloExtra.fisaInchidere(x, { plan, atrPct, subOOra });
           await judecaLaInchidere(id, x);   // v100.43 (I-466)
+          judecaMcInchis(id, x);   /* v101.118: și verdictele Monte Carlo ale botului, pe totalul final */
         }
       } catch (e) { jurnal("fisa de inchidere", id, e.message); }
       // v100.173 (auditul Opus): negăsit printre cei închiși ⇒ „lipsește din Pionex” abia după 3 ture la rând (listă goală / parțială = nu e închidere)
@@ -1582,6 +1583,15 @@ async function turaPerechiOraCorp() {
 
 // v100.43 (I-466, el: „judecata la închidere sau la 24 h”): la inchiderea unui bot, semnalele lui inca nejudecate se judeca pe
 // rezultatul final (net = realizat + comisioane + funding; acelasi temei ca totalul notat la semnal: echitate − investit)
+// v101.118 (B1): botul închis înainte de 7 zile - verdictele lui Monte Carlo se judecă pe totalul final (după închidere nu se mai mișcă)
+function judecaMcInchis(id, x) {
+  try {
+    if (!Array.isArray(ritm.mcCalibrare) || !ritm.mcCalibrare.some((e) => e && e.id === String(id) && e.y === null)) return;
+    const t = JurnalTrade.din([x.brut || x])[0], final = t && t.net !== undefined && t.net !== null ? t.net : Number(x.profitTotal);
+    if (!Number.isFinite(final)) return;
+    tineRitm("mcCalibrare", judecaMcLaInchidere(ritm.mcCalibrare, String(id), final, Number(x.inchisLa) || (t && t.inchis) || Date.now()));
+  } catch (e) { jurnal("monte carlo calibrare la inchidere", id, e.message); }
+}
 async function judecaLaInchidere(id, x) {
   try {
     const v = await cere("/api/istoric-bot?action=semnale&bot=" + encodeURIComponent(id)), s = v && v.semnale, log = s && Array.isArray(s.log) ? s.log : [];
@@ -1998,6 +2008,14 @@ async function turaMonteCarloBot() {
       regimValidat: regimValidat(),
       anunta: (m, bot, cheie) => trimiteAlerta(m, bot, cheie) });
     tineRitm("mcBoti", st.boti); mcBotLa = Date.now();
+    // v101.118 (B1): verdictul verificat pe ce a urmat - o notare pe bot pe zi (șansa la 7 zile + totalul de acum), judecată după 7 zile pe totalul botului
+    let calibrare = null;
+    try {
+      let jc = Array.isArray(ritm.mcCalibrare) ? ritm.mcCalibrare : []; const acumC = Date.now();
+      for (const b of ultimiiBoti.filter((y) => y && y.id != null && y.activ !== false)) { const id = String(b.id), sb = st.boti[id]; jc = noteazaMc(jc, { id, p: r.p7 ? r.p7[id] : null, cat: sb && sb.cat || null, total: b.profitTotal == null ? null : Number(b.profitTotal), acum: acumC }); }
+      jc = judecaMc(jc, new Map(ultimiiBoti.filter((y) => y && y.id != null && y.activ !== false && y.profitTotal != null && Number.isFinite(Number(y.profitTotal))).map((y) => [String(y.id), Number(y.profitTotal)])), acumC);
+      tineRitm("mcCalibrare", jc); calibrare = raportMc(jc);
+    } catch (e) { jurnal("monte carlo calibrare", e.message); }
     // v101.92 (I-577): jurnalul vocilor - la schimbarea frazei, o intrare în KV cu prețul și semnele
     try {
       const rz = Busola.rezumat(), jv = ritm.voci && typeof ritm.voci === "object" ? ritm.voci : {};
@@ -2009,7 +2027,7 @@ async function turaMonteCarloBot() {
       tineRitm("voci", jv);
     } catch (e) { jurnal("jurnalul vocilor", e.message); }
     // v101.90 (ideea 2): verdictul fiecărui bot în KV - Tabloul îl arată ca atare și nu mai socotește pe telefon cât e proaspăt (sub 20 min)
-    try { await trimite("/api/istoric-bot?action=mcVerdict", { la: Date.now(), boti: st.boti }); } catch (e) { jurnal("monte carlo KV", e.message); }
+    try { await trimite("/api/istoric-bot?action=mcVerdict", { la: Date.now(), boti: st.boti, calibrare: calibrare }); } catch (e) { jurnal("monte carlo KV", e.message); }
     jurnal("monte carlo boți: " + r.simulati + " din " + TextRo.cate(r.boti, "bot activ", "boți activi") + " · " + TextRo.cate(r.anuntate, "schimbare anunțată", "schimbări anunțate") + (r.erori ? " · " + TextRo.cate(r.erori, "eroare", "erori") : ""));
   } catch (e) { jurnal("monte carlo boți ESEC", e.message); mcBotLa = Date.now() - 13 * 60000; }
   mcBotInLucru = false;

@@ -387,7 +387,10 @@ export async function onRequestPost({request,env}){
     // v100.149 (I-579): + regimul Busolei (starea, câte zile de bare, textul, nevalidat) - Tabloul îl arată doar validat
     const rg=x=>x&&typeof x==="object"&&typeof x.stare==="string"?{stare:x.stare.slice(0,20),zile:nr(x.zile),text:String(x.text||"").slice(0,300),nevalidat:x.nevalidat!==false,eroare:!!x.eroare}:null;
     const boti={};for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object"||!CAT.includes(x.cat))continue;boti[id]={cat:x.cat,stare:STARI.includes(x.stare)?x.stare:null,text:String(x.text||"").slice(0,400),la:nr(x.la),ultima:nr(x.ultima),regim:rg(x.regim)}}
-    await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti}));return json({ok:true})
+    /* v100.201 (B1): raportul calibrării (colectorul), doar cifre */
+    const c=corp&&corp.calibrare,cutie=x=>x&&typeof x==="object"?{de:nr(x.de),la:nr(x.la),n:nr(x.n),pMed:nr(x.pMed),rata:nr(x.rata)}:null;
+    const calibrare=c&&typeof c==="object"&&(c.stare==="putine"||c.stare==="testat")?{stare:c.stare,n:nr(c.n),zile:nr(c.zile),brier:nr(c.brier),brierBan:nr(c.brierBan),brierBaza:nr(c.brierBaza),baza:nr(c.baza),cutii:Array.isArray(c.cutii)?c.cutii.slice(0,3).map(cutie).filter(Boolean):[]}:null;
+    await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti,calibrare}));return json({ok:true})
   }
   // v100.150 (I-583): lățimea pieței - validată strict (numere finite, simboluri = litere/cifre din orice alfabet + USDT, 1-30 de semne - Binance are
   // și TUSDT / 4USDT și perp-uri cu nume chinezești (币安人生USDT); cel mult 200 de monede, dir din listă);
