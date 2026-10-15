@@ -27,7 +27,7 @@ const poz = (text, s) => { const i = text.indexOf(s); assert.ok(i >= 0, "lipsest
 
 console.log("\nV99.2 · lansatoarele · proba\n");
 
-for (const f of [LOCAL, TELEFON]) {
+for (const f of [LOCAL]) {   /* v100.198: lansatorul de telefon (tunelul public) scos */
   const t = citeste(f);
   await test(`${f}: CRLF pe toate liniile, fara del/rd cu variabila, fara Stop-Process`, () => {
     assert.ok(!/[^\r]\n/.test(t) && !/\r(?!\n)/.test(t), "linii fara CRLF");
@@ -54,13 +54,7 @@ for (const f of [LOCAL, TELEFON]) {
     try { fs.rmSync(gol, { recursive: true, force: true }); } catch {}
   });
 }
-await test(`${TELEFON}: curatenia sta dupa 'if defined REFOLOSIT goto :asteptare' si inainte de pornirea serverului; tunelul vechi e oprit dupa 'Ridic tunelul' si inainte de Start-Process cloudflared`, () => {
-  const t = citeste(TELEFON);
-  const refolosit = poz(t, "if defined REFOLOSIT goto :asteptare"), urme = poz(t, "rem [ps:curata-urme]"), server = poz(t, "echo   Pornesc serverul pe http://127.0.0.1:8788");
-  assert.ok(refolosit < urme && urme < server, `ordine: REFOLOSIT ${refolosit} < urme ${urme} < server ${server}`);
-  const ridic = poz(t, "echo   Ridic tunelul ..."), tunel = poz(t, "rem [ps:tunel-vechi]"), porneste = poz(t, "Start-Process -FilePath '%CF%' -ArgumentList 'tunnel'");
-  assert.ok(ridic < tunel && tunel < porneste, `ordine: ridic ${ridic} < tunel ${tunel} < porneste ${porneste}`);
-});
+/* v100.198: testul ordinii din lansatorul de telefon a plecat odată cu lansatorul (tunelul public scos) */
 await test(`${LOCAL}: tunelul vechi e oprit in :INCHIDVECHI (inaintea inchiderii sesiunii vechi); curatenia e chiar inainte de 'call npx ... wrangler pages dev' (serverul inca nu e pornit)`, () => {
   const t = citeste(LOCAL);
   // etichetele (la inceput de linie), nu `goto :ETICHETA` de mai sus

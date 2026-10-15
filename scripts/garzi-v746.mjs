@@ -574,7 +574,9 @@ function blocPs(text, nume) {
 }
 function gardaLansatoare() {
   const G = "lansatoare";
-  for (const f of [LOCAL, TELEFON]) {
+  /* v100.198 (el, 15.10: „SCOATE”): tunelul public scos ⇒ lansatorul de telefon nu trebuie să revină */
+  if (fs.existsSync(cale(TELEFON))) pica(G, `${TELEFON}: tunelul public trycloudflare a fost scos (15.10) - telefonul intră prin Tailscale`);
+  for (const f of [LOCAL]) {
     const t = citeste(f);
     const intarziat = /EnableDelayedExpansion/i.test(t);
     // Cu EnableDelayedExpansion, cmd mananca orice "!" care nu e !VARIABILA!:
@@ -583,7 +585,7 @@ function gardaLansatoare() {
       const rele = t.split(/\r?\n/).map((l, i) => [i + 1, l]).filter(([, l]) => !/^\s*rem\b/i.test(l) && l.replace(/![A-Za-z_][\w]*!/g, "").includes("!"));
       if (rele.length) pica(G, `${f}: ${rele.length} randuri cu "!" sub EnableDelayedExpansion (cmd il mananca), primul la ${rele[0][0]}: ${rele[0][1].trim().slice(0, 70)}`);
     }
-    for (const n of ["port", "sanatate", "chei", ...(f === TELEFON ? ["cloudflared"] : [])]) {
+    for (const n of ["port", "sanatate", "chei"]) {
       const b = blocPs(t, n);
       if (!b) { pica(G, `${f}: lipseste blocul PowerShell [ps:${n}]`); continue; }
       if (b.ps.includes('"')) pica(G, `${f} [ps:${n}]: ghilimele duble in PowerShell - cmd.exe rupe comanda`);
@@ -608,15 +610,7 @@ function gardaLansatoare() {
   const sanLoc = blocPs(loc, "sanatate");
   if (sanLoc && !/Start-Process 'http:\/\/127\.0\.0\.1:8788\/'/.test(sanLoc.ps)) pica(G, `${LOCAL}: browserul nu e deschis de proba de pornire`);
   if (/start "" http/i.test(loc)) pica(G, `${LOCAL}: browser deschis in afara probei de pornire`);
-  const tel = citeste(TELEFON);
-  const cf = blocPs(tel, "cloudflared");
-  if (!cf) pica(G, `${TELEFON}: lipseste blocul [ps:cloudflared]`);
-  else {
-    if (/releases\/latest/.test(cf.ps) || /releases\/latest/.test(tel)) pica(G, `${TELEFON}: cloudflared adus de la "latest" - nu se poate verifica amprenta`);
-    if (!/\$sha = '[0-9a-f]{64}'/.test(cf.ps)) pica(G, `${TELEFON}: [ps:cloudflared] nu are amprenta sha256 fixata`);
-    if (!/Get-FileHash -Algorithm SHA256/.test(cf.ps)) pica(G, `${TELEFON}: [ps:cloudflared] nu calculeaza sha256 pe fisierul descarcat`);
-  }
-  if (!rezultate.some((r) => r.garda === G && !r.ok)) trece(G, "port, proba de pornire, secret ascuns, wrangler pe 127.0.0.1, cloudflared cu amprenta, fara Stop-Process");
+  if (!rezultate.some((r) => r.garda === G && !r.ok)) trece(G, "port, proba de pornire, secret ascuns, wrangler pe 127.0.0.1, fara Stop-Process, fara tunel public");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -669,7 +663,7 @@ async function gardaLansatoareViu() {
   fs.mkdirSync(folder);
   const procese = [];
   try {
-    for (const f of [LOCAL, TELEFON]) {
+    for (const f of [LOCAL]) {
       const t = citeste(f);
       const intarziat = /EnableDelayedExpansion/i.test(t);
       // --- [ps:port]: liber / al nostru / strain ---
@@ -747,7 +741,7 @@ async function gardaLansatoareViu() {
     }
 
     // --- [ps:cloudflared]: amprenta buna -> pastrat; gresita -> sters si iesire 2 ---
-    const bcf = blocPs(citeste(TELEFON), "cloudflared");
+    const bcf = fs.existsSync(cale(TELEFON)) ? blocPs(citeste(TELEFON), "cloudflared") : null;   /* v100.198: tunelul scos */
     if (bcf) {
       const continut = crypto.randomBytes(4096);
       const bun = crypto.createHash("sha256").update(continut).digest("hex");

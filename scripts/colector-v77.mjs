@@ -344,7 +344,7 @@ await test("futures: forma necunoscuta -> 502, nu 'sold zero'", async () => {
 
 // ── lansatoarele: actualizarea nu are voie sa bucleze si nici sa citeasca .bat-ul schimbat ──
 await test("lansatoare: versiunea de dinainte se citeste explicit (nu HEAD@{1} - a produs o bucla de reporniri), repornirea e unica", () => {
-  for (const f of ["PORNESTE-CRYPTO-RADAR.bat", "PORNESTE-SI-PE-TELEFON.bat"]) {
+  for (const f of ["PORNESTE-CRYPTO-RADAR.bat"]) {   /* v100.198: lansatorul de telefon scos */
     const t = fs.readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
     assert.ok(!/git diff[^\r\n]*HEAD@\{1\}/.test(t), `${f}: compara cu HEAD@{1} - dupa un pull facut de altcineva reporneste la nesfarsit`);
     const inainte = t.indexOf("git rev-parse HEAD"), bloc = t.indexOf("  git pull --ff-only");

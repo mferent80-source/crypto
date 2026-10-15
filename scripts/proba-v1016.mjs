@@ -39,16 +39,15 @@ await test("nu confunda portul: 18788 nu e 8788; o gazda care nu e *.ts.net nu s
 });
 
 const COL = fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8");
-await test("colectorul: adresa fixa INAINTE de tunel, verificata ca Radar", () => {
+await test("colectorul: adresa fixa (Tailscale), verificata ca Radar; v100.198: fara tunel de rezerva", () => {
   const f = COL.slice(COL.indexOf("async function adresaRadarului"), COL.indexOf("let pozaOkLa"));
   assert.ok(f.length > 50, "adresaRadarului lipseste");
-  const iFix = f.indexOf("adresaTailscale("), iTunel = f.indexOf("adresaTunel(");
-  assert.ok(iFix > 0 && iTunel > iFix, "Tailscale trebuie incercat inaintea tunelului");
+  assert.ok(f.indexOf("adresaTailscale(") > 0, "Tailscale"); assert.ok(!/adresaTunel\(/.test(f), "fara tunelul public (scos 15.10)");
   assert.match(f, /raspundeCaRadar\(fix/);
 });
 await test("rezumatul de dimineata ia linkul din aceeasi adresaRadarului (nu mai citeste jurnalul tunelului separat)", () => {
   assert.match(COL, /out\.link = await adresaRadarului\(\)|const u = await adresaRadarului\(\); if \(u\) out\.link = u;/);
-  assert.equal((COL.match(/crypto-radar-tunel\.log/g) || []).length, 1, "jurnalul tunelului se citeste intr-un singur loc");
+  assert.equal((COL.match(/crypto-radar-tunel\.log/g) || []).length, 0, "jurnalul tunelului nu se mai citeste (tunelul scos 15.10)");
 });
 
 await test("calea spre tailscale.exe din colector e reala (fara \\t = TAB) si, pe PC-ul cu Tailscale, da adresa Radarului", async () => {

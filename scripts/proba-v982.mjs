@@ -172,8 +172,8 @@ await test("provider-health de ACASA: CoinGecko si cotatiile se probeaza (OK can
   assert.ok(!p(/TWELVE DATA · cheie/), "randul vechi 'Twelve Data · cheie' (modulul de actiuni e oprit) a disparut");
   const db = p(/D1/); assert.equal(db.required, false, "acasa D1 nu e obligatoriu"); assert.notEqual(db.state, "FAIL"); assert.match(db.detail, /KV|acasă|acasa/);
   const push = p(/PUSH/); assert.match(push.detail, /Discord/);
-  // revizie 🔵: prin tunel (telefon) hostname-ul e *.trycloudflare.com, dar serverul e tot cel de acasa
-  const res2 = await m.onRequestGet({ request: new Request("https://dice-scholarships-screens-grab.trycloudflare.com/api/provider-health", { headers: { authorization: "Bearer " + TOKEN, "cf-connecting-ip": "10.1.1.2" } }), env });
+  // revizie 🔵: de pe telefon (v100.198: prin Tailscale, *.ts.net) hostname-ul nu e 127.0.0.1, dar serverul e tot cel de acasa
+  const res2 = await m.onRequestGet({ request: new Request("https://mau.exemplu.ts.net:8443/api/provider-health", { headers: { authorization: "Bearer " + TOKEN, "cf-connecting-ip": "10.1.1.2" } }), env });
   const j2 = await res2.json(); assert.equal(j2.providers.find((x) => /COINGECKO/i.test(x.name)).state, "OK", "prin tunel tot acasa e"); assert.equal(j2.providers.find((x) => /D1/.test(x.name)).required, false);
 });
 await test("provider-health de pe Cloudflare (nu acasa): D1 nelegat ramane FAIL obligatoriu (regula veche, v69)", async () => {

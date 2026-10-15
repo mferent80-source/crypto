@@ -19,7 +19,7 @@ export const intarziat = (titlu, minute) => titlu + " (întârziat " + minute + 
 
 export const serverOprit = (minute) => ({ nivel: "critic", titlu: "Crypto Radar oprit: serverul de acasă nu mai răspunde",
   mesaj: msg("De ~" + cate(minute, "minut", "minute") + " serverul Radarului (fereastra neagră, :8788) nu răspunde, deci și colectorul s-a oprit: alertele boților și ale acțiunilor nu mai vin.",
-    "Aș porni PORNESTE-CRYPTO-RADAR.bat sau PORNESTE-SI-PE-TELEFON.bat; stopurile din Pionex merg și fără Radar.") });
+    "Aș porni PORNESTE-CRYPTO-RADAR.bat; stopurile din Pionex merg și fără Radar.") });
 
 export const citireRea = (minute, eroare) => ({ nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul",
   mesaj: "De " + cate(minute, "minut", "minute") + " (" + scurt(eroare, 60) + ") alertele nu mai sunt de încredere până se rezolvă." });

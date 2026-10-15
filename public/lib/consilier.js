@@ -165,12 +165,7 @@ var Consilier = (function () {
     });
     return out;
   }
-  // v91: adresa tunelului (cloudflared scrie adresa trycloudflare in jurnal; ultima e cea buna)
-  function adresaTunel(text) {
-    var m = String(text || "").match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/g);
-    return m && m.length ? m[m.length - 1] : null;
-  }
 
-  return { socotealaSfaturi: socotealaSfaturi, deEvaluat: deEvaluat, adresaTunel: adresaTunel, piata: piata, sfaturiPozitie: sfaturiPozitie, situatiiAsemanatoare: situatiiAsemanatoare, sfaturiBot: sfaturiBot, rezumatDimineata: rezumatDimineata };
+  return { socotealaSfaturi: socotealaSfaturi, deEvaluat: deEvaluat, piata: piata, sfaturiPozitie: sfaturiPozitie, situatiiAsemanatoare: situatiiAsemanatoare, sfaturiBot: sfaturiBot, rezumatDimineata: rezumatDimineata };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consilier = Consilier;

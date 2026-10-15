@@ -65,11 +65,10 @@ await test("copia de siguranta: copiaza folderul datelor intr-un folder cu data 
 });
 
 // ---------------- 5) linkul spre Radar in rezumat ----------------
-await test("linkul tunelului: ultima adresa trycloudflare din jurnalul tunelului; in rezumatul de dimineata ca rand cu 🔗", () => {
-  assert.equal(K.Consilier.adresaTunel("INF | https://vechi-a-b.trycloudflare.com\nceva\nINF | https://nou-c-d.trycloudflare.com  |"), "https://nou-c-d.trycloudflare.com");
-  assert.strictEqual(K.Consilier.adresaTunel("nimic aici"), null);
-  const r = K.Consilier.rezumatDimineata({ acum: ACUM, link: "https://nou-c-d.trycloudflare.com" });
-  assert.match(r.linii.join(" | "), /🔗 Radarul pe telefon: https:\/\/nou-c-d\.trycloudflare\.com/);
+await test("linkul Radarului (v100.198: doar Tailscale, tunelul public scos) in rezumatul de dimineata ca rand cu 🔗", () => {
+  assert.strictEqual(K.Consilier.adresaTunel, undefined);
+  const r = K.Consilier.rezumatDimineata({ acum: ACUM, link: "https://mau.exemplu.ts.net:8443" });
+  assert.match(r.linii.join(" | "), /🔗 Radarul pe telefon: https:\/\/mau\.exemplu\.ts\.net:8443/);
 });
 
 // ---------------- ruta: socoteala sfaturilor (KV) ----------------
