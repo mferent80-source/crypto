@@ -131,9 +131,9 @@ await test("🔵11 IC95 din Profit Readiness: `deterministicRng` = mulberry32 cu
 });
 
 // ---------------------------------------------------------------------------------------------------------------------------
-await test("P3 cipul din bara de sus: pornește neutru („date: —”), nu „LIVE DATA” verde fix", () => {
+await test("P3 cipul din bara de sus: pornește neutru („fără analiză” de la v100.202; înainte „date: —”), nu „LIVE DATA” verde fix", () => {
   const m = IDX.match(/<span class="([^"]*)" id="topLive"[^>]*>([^<]*)<\/span>/); assert.ok(m, "nu găsesc #topLive");
-  assert.equal(m[1], "statusChip"); assert.equal(m[2], "date: —");
+  assert.equal(m[1], "statusChip"); assert.equal(m[2], "fără analiză");
   assert.ok(!/LIVE DATA/.test(IDX));
 });
 await test("P3 cipul spune sursa și VÂRSTA analizei: verde până la 5 min, galben după, „eroare” la date picate", () => {
@@ -141,7 +141,7 @@ await test("P3 cipul spune sursa și VÂRSTA analizei: verde până la 5 min, ga
   const c = ctx({ document: { getElementById: (id) => (id === "topLive" ? el : null) } });   /* fără `$`: e un const de modul, iar intervalul de sus îl poate prinde în TDZ */
   vm.runInContext("var __topLive=null;" + fnSursa(APP, "topLiveDeseneaza"), c);
   const T = 1_800_000_000_000;
-  vm.runInContext("topLiveDeseneaza(" + T + ")", c); assert.equal(el.textContent, "date: —"); assert.equal(el.className, "statusChip"); assert.match(el.title, /nicio analiză/);
+  vm.runInContext("topLiveDeseneaza(" + T + ")", c); assert.equal(el.textContent, "fără analiză"); assert.equal(el.className, "statusChip"); assert.match(el.title, /analizată încă/);
   c.__topLive = { src: "BINANCE", la: T - 30_000, stare: "ok" }; vm.runInContext("topLiveDeseneaza(" + T + ")", c);
   assert.equal(el.textContent, "BINANCE · chiar acum"); assert.equal(el.className, "statusChip live");
   c.__topLive.la = T - 4 * 60_000; vm.runInContext("topLiveDeseneaza(" + T + ")", c); assert.equal(el.textContent, "BINANCE · acum 4 min"); assert.equal(el.className, "statusChip live");
