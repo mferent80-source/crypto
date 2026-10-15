@@ -1405,7 +1405,7 @@ function setAssetClass(v){
   if($("volume24Label"))$("volume24Label").textContent=market==="STOCKS"?"Daily $ volume":"Volum 24H USDT";
   if($("fearGreed"))$("fearGreed").textContent=market==="STOCKS"?"N/A":"—";
   if($("sentimentText"))$("sentimentText").textContent=market==="STOCKS"?"Crypto Fear & Greed is not used in US stock scoring.":"Sentiment extern opțional; engine-ul tehnic nu depinde de el.";
-  $("status").textContent=market==="STOCKS"?"US Stocks mode · configure Twelve Data in Cloudflare if needed.":"Crypto mode · Binance stable default.";
+  $("status").textContent=market==="STOCKS"?"Acțiuni SUA · Twelve Data":"Crypto · Binance";   /* v100.196: în română și scurt (pe telefon textul lung rupea bara pe două rânduri) */
   toast(market==="STOCKS"?"US Stocks / Nasdaq mode":"Crypto mode","good");renderProfitReadiness(false)
 }
 function openStocksDesk(){setAssetClass("STOCKS");navTo("stocks",true)}
