@@ -34,7 +34,11 @@ export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, che
   const t = Number(acum) || Date.now(), de = t - ZILE * ZI, out = new Map();
   for (const b of Array.isArray(deschisi) ? deschisi : []) {
     const id = b && b.id != null ? String(b.id) : "", pornit = nr(b && b.pornitLa); if (!id || !(pornit > 0)) continue;
-    out.set(id, { id, simbol: cheiaDeschis(Busola, b), directie: dir(b.directie), levier: nr(b.levier), pornit, inchis: null, pnlPct: null });
+    // v101.117 (15.10, el: „ok” la ecranul „Acum” din Busola): intervalul gridului (jos/sus, doar când amândouă sunt bune și jos < sus)
+    // și tipul botului, ca Busola să poată spune „IEȘIT DIN GRID”. Lipsa rămâne lipsă (fără câmp), nu se ghicește.
+    const jos = nr(b.gridJos), sus = nr(b.gridSus), interval = jos !== null && sus !== null && jos > 0 && jos < sus ? { jos, sus } : {};
+    out.set(id, { id, simbol: cheiaDeschis(Busola, b), directie: dir(b.directie), levier: nr(b.levier), pornit, inchis: null, pnlPct: null, ...interval,
+      tip: /\.PERP$/i.test(String(b.baza || "")) ? "grid futures" : "grid spot" });
   }
   for (const x of Array.isArray(inchisi) ? inchisi : []) {
     const id = x && x.id != null ? String(x.id) : "", pornit = nr(x && x.pornit), inchis = nr(x && x.inchis); if (!id || !(pornit > 0) || !(inchis >= de)) continue;

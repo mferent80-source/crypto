@@ -151,13 +151,19 @@ await test("(4) pentru-busola: deschiși (cheia din simbolPionex: LIGHTER ⇒ LI
     { id: "s4", moneda: "PUMPFUN", dir: "long", levier: 2, investit: 60, pus: 60, pornit: ACUM - 5 * ZI, inchis: ACUM - 4 * ZI, rezultat: 3 }];
   const cheia = (m) => ({ PUMPFUN: "PUMP_USDT_PERP" })[m] || m;
   assert.deepEqual(PB.alcatuieste({ la: ACUM, versiune: "v101.60", deschisi, inchisi, acum: ACUM, Busola: B, cheia }), { la: ACUM, versiune: "v101.60", retea: [], boti: [
-    { id: "2400", simbol: "PEPE", directie: "neutru", levier: 3, pornit: ACUM - ORA, inchis: null, pnlPct: null },
-    { id: "2402", simbol: "LIT", directie: "long", levier: null, pornit: ACUM - 2 * ORA, inchis: null, pnlPct: null },
-    { id: "2397", simbol: "AAVE", directie: "long", levier: 5, pornit: ACUM - 30 * ORA, inchis: null, pnlPct: null },
+    { id: "2400", simbol: "PEPE", directie: "neutru", levier: 3, pornit: ACUM - ORA, inchis: null, pnlPct: null, tip: "grid futures" },
+    { id: "2402", simbol: "LIT", directie: "long", levier: null, pornit: ACUM - 2 * ORA, inchis: null, pnlPct: null, tip: "grid futures" },
+    { id: "2397", simbol: "AAVE", directie: "long", levier: 5, pornit: ACUM - 30 * ORA, inchis: null, pnlPct: null, tip: "grid futures" },
     { id: "s3", simbol: "LIT", directie: "short", levier: 4, pornit: ACUM - 3 * ZI, inchis: ACUM - 2 * ZI, pnlPct: null },
     { id: "s4", simbol: "PUMP", directie: "long", levier: 2, pornit: ACUM - 5 * ZI, inchis: ACUM - 4 * ZI, pnlPct: null },
     { id: "s1", simbol: "CRV", directie: "long", levier: 5, pornit: ACUM - 10 * ZI, inchis: ACUM - 9 * ZI, pnlPct: 1.98 } ] });
   assert.equal(PB.alcatuieste({ la: ACUM, versiune: "v", deschisi: null, inchisi: undefined, acum: ACUM, Busola: B }).boti.length, 0);
+  // v101.117: intervalul gridului (Busola „Acum”: IEȘIT DIN GRID) — doar cu jos < sus, amândouă numere; tipul din baza
+  const cu = (o) => PB.alcatuieste({ la: ACUM, versiune: "v", deschisi: [{ id: 1, baza: "SOL.PERP", directie: "long", levier: 3, pornitLa: ACUM - ORA, ...o }], inchisi: [], acum: ACUM, Busola: B }).boti[0];
+  assert.deepEqual([cu({ gridJos: 95.5, gridSus: "110" }).jos, cu({ gridJos: 95.5, gridSus: "110" }).sus], [95.5, 110], "intervalul ajunge");
+  for (const [j, s] of [[110, 95.5], [null, 110], [0, 110], [95.5, undefined], ["x", 110]]) assert.ok(!("jos" in cu({ gridJos: j, gridSus: s })) && !("sus" in cu({ gridJos: j, gridSus: s })), "interval stricat ⇒ fără câmp: " + j + "/" + s);
+  assert.equal(cu({ baza: "SOL/USDT" }).tip, "grid spot"); assert.equal(cu({}).tip, "grid futures");
+  assert.ok(!("tip" in PB.alcatuieste({ la: ACUM, versiune: "v", deschisi: [], inchisi, acum: ACUM, Busola: B, cheia }).boti[0]), "închișii n-au tip");
 });
 
 // ---- legarea ----
