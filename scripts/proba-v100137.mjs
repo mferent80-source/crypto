@@ -121,9 +121,9 @@ await test("(R3) citirea graficului spune pe ce interval judecă: volumul „pe 
   const h = eticheta("30z", 144e5); assert.ok(h.some((s) => /\d\.\d{2} \d{2}:\d{2}$/.test(s)), "4h: ziua și ora: " + h.join(" | "));
 });
 await test("(E) versiunea de la v100.137 în sus (colectorul neatins)", () => {
-  assert.match(HTML, /content="v100\.1(3[7-9]|[4-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(3[7-9]|[4-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(3[7-9]|[4-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(3[7-9]|[4-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(3[7-9]|[4-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(3[7-9]|[4-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(3[7-9]|[4-9]\d)$/);
+  assert.match(HTML, /content="v100\.(?:1(3[7-9]|[4-9]\d)|2\d\d)"/); assert.match(HTML, /id="antetVersiune">v100\.(?:1(3[7-9]|[4-9]\d)|2\d\d) /); assert.match(HTML, /id="healthAppVersion">v100\.(?:1(3[7-9]|[4-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(3[7-9]|[4-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(3[7-9]|[4-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(3[7-9]|[4-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(3[7-9]|[4-9]\d)|2\d\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} ok`);
 if (picate) process.exit(1);

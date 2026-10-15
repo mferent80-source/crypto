@@ -93,7 +93,7 @@ await test("(7) colectorul: botul nou se verifică o dată, în primele 6 h, cu 
   assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(7\d|[89]\d|1\d\d)";/);
 });
 await test("(E) versiunile v100.101 (BUILD_INFO, versiune.js, sw, index ×4, package.json, lanțul)", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.1(0[1-9]|[1-9]\d)$/); const V2 = bi.version; assert.ok(bi.badge.startsWith(V2 + " · "));
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:1(0[1-9]|[1-9]\d)|2\d\d)$/); const V2 = bi.version; assert.ok(bi.badge.startsWith(V2 + " · "));
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V2 + '";'));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V2.replace(".", "-") + '";'));
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V2.replace(".", "\\.") + "(?!\\d)", "g")) || []).length, 4);

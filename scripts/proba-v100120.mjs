@@ -155,7 +155,7 @@ await test("(4c) pagina în aplicație: #salt în Zilnic după Trading 212, scri
   assert.match(app, /if\(id==="salt"\)\{if\(typeof saltPorneste==="function"\)saltPorneste\(false\)\}/); assert.match(html, /moreNav\('salt',true\)/);
 });
 await test("(E) versiunea de la v100.120 în sus / colector v101.82; meniul 50 de butoane", () => {
-  const html = citeste("public", "index.html"); assert.match(html, /content="v100\.1[2-9]\d"/); assert.match(JSON.parse(citeste("package.json")).version, /^100\.1[2-9]\d\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1[2-9]\d";/);   // v100.121: lărgit
+  const html = citeste("public", "index.html"); assert.match(html, /content="v100\.(?:1[2-9]\d|2\d\d)"/); assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1[2-9]\d|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1[2-9]\d|2\d\d)";/);   // v100.121: lărgit
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(8[2-9]|9\d|1\d\d)";/);   // v100.125: lărgit (colector v101.83)
   const m = html.slice(html.indexOf('<div class="sideMenu">'), html.indexOf('<div class="sideFooter">')); assert.equal([...m.matchAll(/class="sideBtn/g)].length, 55);   /* v100.176: + „Contul întreg”; v100.180: + „Busola ↗” */   // v100.134: + „Simulator grid” /* v100.159: + „Alerte · ce dețin / urmăresc ↗” */
 });

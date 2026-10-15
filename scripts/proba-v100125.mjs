@@ -149,9 +149,9 @@ await test("(R7) tura Salt: erorile din judecaActiune se numără și ajung în 
 });
 await test("(E) versiunea de la v100.125 în sus / colector de la v101.83 în sus", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.1(2[5-9]|[3-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(2[5-9]|[3-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(2[5-9]|[3-9]\d)</);   // v100.126: lărgit
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(2[5-9]|[3-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(2[5-9]|[3-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(2[5-9]|[3-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(2[5-9]|[3-9]\d)$/);
+  assert.match(html, /content="v100\.(?:1(2[5-9]|[3-9]\d)|2\d\d)"/); assert.match(html, /id="antetVersiune">v100\.(?:1(2[5-9]|[3-9]\d)|2\d\d) /); assert.match(html, /id="healthAppVersion">v100\.(?:1(2[5-9]|[3-9]\d)|2\d\d)</);   // v100.126: lărgit
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(2[5-9]|[3-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(2[5-9]|[3-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(2[5-9]|[3-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(2[5-9]|[3-9]\d)|2\d\d)$/);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(8[3-9]|9\d|1\d\d)";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);

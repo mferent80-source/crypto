@@ -84,9 +84,9 @@ await test("(7) o eroare în date nu strică Tabloul: lista nouă iese goală, c
 });
 
 function t212Rev(id, cont) {
-  const ctx = { Reveniri: R, escapeHtml: esc, TextRo: globalThis.TextRo, t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", ActiuniSemnale: AS, t212Fx: () => 0.22, t212Suma: (v) => Math.round(v) + " lei", t212: { cont: cont ? { cash: { total: cont } } : null } }; vm.createContext(ctx);
+  const ctx = { Reveniri: R, escapeHtml: esc, TextRo: globalThis.TextRo, t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", ActiuniSemnale: AS, t212Fx: () => 0.22, t212Suma: (v) => Math.round(v) + " lei", t212DejaLei: () => 0, t212: { cont: cont ? { cash: { total: cont } } : null } }; vm.createContext(ctx);
   // v100.91: + t212Bucati (bucățile, întregi sub 10 $) - fără el t212ReveniriCorp aruncă, iar try/catch-ul dă ""
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212Bucati") + "\n" + fnDin("t212-ecran.js", "t212PctRisc") + "\n" + fnDin("t212-ecran.js", "t212ReveniriHtml") + "\n" + fnDin("t212-ecran.js", "t212ReveniriCorp") + "\n;this.f=t212ReveniriHtml;", ctx);
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212Bucati") + "\n" + fnDin("t212-ecran.js", "t212PctRisc") + "\n" + fnDin("t212-ecran.js", "t212MarimeCalc") + "\n" + fnDin("t212-ecran.js", "t212RevRand") + "\n" + fnDin("t212-ecran.js", "t212ReveniriHtml") + "\n" + fnDin("t212-ecran.js", "t212ReveniriCorp") + "\n;this.f=t212ReveniriHtml;", ctx);
   return ctx.f(id);
 }
 const BINE = { n: 393, saptamani: 72, pePlus: 0.59, medie: 0.026, mediana: 0.02, baza: { n: 41457, pePlus: 0.54, medie: 0.013 }, eticheta: "mai bine", putine: false };
@@ -94,7 +94,7 @@ const RV = { ticker: "INTC_US_EQ", simbol: "INTC", pret: 72, cadere: 0.2686, deL
 await test("(8) Trading 212: „↩️ Pe revenire” - istoricul pe față (+ supraviețuitorii), tabelul cu căderea, minimul, stopul, ținta, istoricul lui și CÂT CUMPERI (revizia I1: 1% din cont pe stopul de sub minim, fără „Biletul”); urmărirea", () => {
   const h = t212Rev({ reveniri: [RV], dovadaReveniri: BINE, urmarireReveniri: { n: 2, text: "Din 2 sugestii de cel puțin 14 zile: 1 pe plus, +0,5% în medie de la prețul sugestiei, după comision (puține — mai așteaptă)." } }, 50000), t = text(h);
   assert.ok(t.includes("↩️ Pe revenire") && t.includes(R.textDovada(BINE, "actiuni")) && t.includes(R.TEXT_SUPRAVIETUITORI), t);
-  assert.match(h, /<th>Acțiune<\/th><th>La idee<\/th><th>Căderea<\/th><th>De la minim<\/th><th>Stop<\/th><th>Țintă<\/th><th>Istoricul tău<\/th><th>Cât cumperi<\/th>/);
+  assert.match(h, /<th>Acțiune<\/th><th>La idee<\/th><th>Căderea<\/th><th>De la minim<\/th><th>Stop<\/th><th>Țintă<\/th><th>Istoricul tău<\/th><th>Cât cumperi · la prețul ideii<\/th>/);   /* v100.200: regula Porții (t212MarimeCalc), fără regim = 1 % */
   assert.ok(t.includes("INTC $72 −27% de la maximul pe 60 de zile +11% minimul acum 19 zile de bursă $64.22 sub minim $98.45 maximul 33 de trade-uri, 24 pe plus, 3401 lei"), t);
   const m = AS.marime({ intrare: 72, stop: 64.22, cont: 50000, fx: 0.22 });
   assert.ok(t.includes((+m.bucati.toFixed(3)).toLocaleString("ro-RO") + " buc ≈ " + Math.round(m.suma) + " lei · la stop pierzi ~" + Math.round(m.risc) + " lei (1% din cont)"), t);

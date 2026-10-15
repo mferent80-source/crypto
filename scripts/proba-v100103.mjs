@@ -117,7 +117,7 @@ await test("(4) I-536 serverul păstrează pragul (validat) în config; pagina �
   const col = citeste("scripts", "colector.mjs"); assert.match(col, /TabloExtra\.propunePlan\(ult, b\.investit, pragCfg\)/); assert.match(col, /TabloExtra\.propunePlan\(null, b\.investit, pragCfg\)/);
 });
 await test("(E) versiunile v100.103 / colector v101.72", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.1(0[3-9]|[1-9]\d)$/); const V2 = bi.version; assert.ok(bi.badge.startsWith(V2 + " · "));
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:1(0[3-9]|[1-9]\d)|2\d\d)$/); const V2 = bi.version; assert.ok(bi.badge.startsWith(V2 + " · "));
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V2 + '";'));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V2.replace(".", "-") + '";'));
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V2.replace(".", "\\.") + "(?!\\d)", "g")) || []).length, 4);

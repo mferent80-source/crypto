@@ -86,9 +86,9 @@ await test("(5) marginea din dreapta crește cu cea mai lungă etichetă (nume +
   assert.equal(dT.harta.plotW, 390, "pe telefon fără coloana din dreapta (v100.160: valorile în fâșia de sub grafic, prețul pe grafic, numele benzilor în benzi)");
 });
 await test("(E) versiunea de la v100.143 în sus", () => {
-  assert.match(HTML, /content="v100\.1(4[3-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[3-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[3-9]|[5-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(4[3-9]|[5-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(4[3-9]|[5-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(4[3-9]|[5-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(4[3-9]|[5-9]\d)$/);
+  assert.match(HTML, /content="v100\.(?:1(4[3-9]|[5-9]\d)|2\d\d)"/); assert.match(HTML, /id="antetVersiune">v100\.(?:1(4[3-9]|[5-9]\d)|2\d\d) /); assert.match(HTML, /id="healthAppVersion">v100\.(?:1(4[3-9]|[5-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(4[3-9]|[5-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(4[3-9]|[5-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(4[3-9]|[5-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(4[3-9]|[5-9]\d)|2\d\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} ok`);
 if (picate) process.exit(1);

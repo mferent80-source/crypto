@@ -97,7 +97,7 @@ await test("(4) I-540 ceasul LARG: botul recunoscut ca LARG, pornit de peste 2×
   assert.match(citeste("scripts", "colector.mjs"), /st\._fereastra && st\._fereastra\.k === "larg" && st\._fereastra\.oreTipic > 0 && !st\._ceasLarg && acum - Number\(b\.pornitLa\) > 2 \* st\._fereastra\.oreTipic \* 3600000/);
 });
 await test("(E) versiunile v100.104 / colector v101.73", () => {
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.1(0[4-9]|[1-9]\d)$/); const V2 = bi.version; assert.ok(bi.badge.startsWith(V2 + " · "));
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:1(0[4-9]|[1-9]\d)|2\d\d)$/); const V2 = bi.version; assert.ok(bi.badge.startsWith(V2 + " · "));
   assert.ok(citeste("functions", "_shared", "versiune.js").includes('export const VERSIUNE = "' + V2 + '";'));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-' + V2.replace(".", "-") + '";'));
   const ix = citeste("public", "index.html"); assert.equal((ix.match(new RegExp(V2.replace(".", "\\.") + "(?!\\d)", "g")) || []).length, 4);

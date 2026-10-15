@@ -232,9 +232,9 @@ await test("(f1) pagina gridsim: meniul, panelul cu #gsPagina, script-urile dupÄ
 });
 await test("(E) versiunea de la v100.134 Ã®n sus (colectorul neatins)", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.1(3[4-9]|[4-9]\d)"/); assert.match(html, /id="antetVersiune">v100\.1(3[4-9]|[4-9]\d) /); assert.match(html, /id="healthAppVersion">v100\.1(3[4-9]|[4-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(3[4-9]|[4-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(3[4-9]|[4-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(3[4-9]|[4-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(3[4-9]|[4-9]\d)$/);
+  assert.match(html, /content="v100\.(?:1(3[4-9]|[4-9]\d)|2\d\d)"/); assert.match(html, /id="antetVersiune">v100\.(?:1(3[4-9]|[4-9]\d)|2\d\d) /); assert.match(html, /id="healthAppVersion">v100\.(?:1(3[4-9]|[4-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(3[4-9]|[4-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(3[4-9]|[4-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(3[4-9]|[4-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(3[4-9]|[4-9]\d)|2\d\d)$/);
 });
 
 // ---------------- revizia Opus (211d9fd..805e823) ----------------

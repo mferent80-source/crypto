@@ -227,7 +227,8 @@ function scDetaliu(x) {
     plan = '<h5>Planul de la Poarta T212 (aceleași prețuri ca „Biletul”)</h5>'
       + '<div class="scLin"><span>Intrare (ordin limită)</span><b>' + (pa.intrare ? '$' + scPret(pa.intrare) : '—') + '</b></div>'
       + '<div class="scLin"><span>Stop</span><b class="bad">$' + scPret(pa.stop) + ' (' + scPct(-pa.riscPct * 100) + ')</b></div><div class="scLin"><span>Țintă</span><b class="good">$' + scPret(pa.tinta) + ' (2× riscul)</b></div>'
-      + (ma ? '<div class="scLin"><span>Cât cumperi</span><b>' + scNf(ma.suma, 0) + ' lei' + (ma.plin ? ' (ai deja 20% din cont în ea)' : ma.plafonat ? ' (tăiată la 20% din cont' + (ma.deja > 0 ? ', cu ce ai deja' : '') + ')' : '') + '</b></div>' : '')
+      + (ma && ma.blocat ? '<div class="scLin"><span>Cât cumperi</span><b class="bad">nimic azi · ' + (typeof escapeHtml === "function" ? escapeHtml(ma.motiv) : "") + '</b></div>'   /* v100.200 */
+        : ma ? '<div class="scLin"><span>Cât cumperi</span><b>' + scNf(ma.suma, 0) + ' lei' + (ma.plin ? ' (ai deja 20% din cont în ea)' : ma.plafonat ? ' (tăiată la 20% din cont' + (ma.deja > 0 ? ', cu ce ai deja' : '') + ')' : '') + '</b></div>' : '')
       + (pa.intrare ? '' : '<p class="scNota">' + escapeHtml(pa.motivIntrare || "") + '</p>');
   } else {
     var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, pl = Scan.plan(x, x.fel === "a" && c ? Number(c.total) : null);

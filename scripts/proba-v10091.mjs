@@ -40,8 +40,8 @@ await test("(1) t212Bucati: sub 10 $/acțiune ⇒ bucăți întregi („250 buc�
 });
 await test("(1) tabelul reveniri și biletul folosesc același ajutor; TE la 3,92 $ cu stopul 3,48 și 50.000 lei în cont ⇒ „250 buc ≈ 4.455 lei”", () => {
   const s = lib("t212-ecran.js"); assert.equal((s.match(/t212Bucati\(m\.bucati, /g) || []).length, 3, "trei locuri: rândul de revenire, „Cât cumperi” din bilet și „Cât cumperi · pe planul tău” (v100.169)");
-  const ctx = { Reveniri: R, escapeHtml: esc, TextRo: globalThis.TextRo, t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", ActiuniSemnale: AS, t212Fx: () => 0.22, t212Suma: (v) => Math.round(v).toLocaleString("ro-RO") + " lei", t212: { cont: { cash: { total: 50000 } } } }; vm.createContext(ctx);
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212Bucati") + "\n" + fnDin("t212-ecran.js", "t212PctRisc") + "\n" + fnDin("t212-ecran.js", "t212ReveniriHtml") + "\n" + fnDin("t212-ecran.js", "t212ReveniriCorp") + "\n;this.f=t212ReveniriHtml;", ctx);
+  const ctx = { Reveniri: R, escapeHtml: esc, TextRo: globalThis.TextRo, t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", ActiuniSemnale: AS, t212Fx: () => 0.22, t212Suma: (v) => Math.round(v).toLocaleString("ro-RO") + " lei", t212DejaLei: () => 0, t212: { cont: { cash: { total: 50000 } } } }; vm.createContext(ctx);   /* v100.200: reveniri prin t212MarimeCalc */
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212Bucati") + "\n" + fnDin("t212-ecran.js", "t212PctRisc") + "\n" + fnDin("t212-ecran.js", "t212MarimeCalc") + "\n" + fnDin("t212-ecran.js", "t212RevRand") + "\n" + fnDin("t212-ecran.js", "t212ReveniriHtml") + "\n" + fnDin("t212-ecran.js", "t212ReveniriCorp") + "\n;this.f=t212ReveniriHtml;", ctx);
   const t = text(ctx.f({ reveniri: [{ ticker: "TE_US_EQ", simbol: "TE", pret: 3.92, cadere: 0.45, deLaMin: 0.11, zileDeLaMin: 3, stop: 3.48, tinta: 7.18, istoric: null }], dovadaReveniri: null }));
   assert.ok(t.includes("250 buc ≈ 4.455 lei · la stop pierzi ~500 lei (1% din cont)"), t);
 });

@@ -72,9 +72,9 @@ await test("(1b) tbMcSimuleaza: cu Worker ⇒ rezultatul vine din worker (pagina
   const ctx4 = fa(WorkerMut); ctx4.TB_MC_WORKER_MS = 50; await assert.rejects(() => ctx4.tbMcSimuleaza(B, ST, o), /n-a răspuns/, "worker care nu răspunde: oprit și cererea pică (v100.141, revizia Opus 7) - nu pe fir");
 });
 await test("(E) versiunea de la v100.140 în sus; colectorul v101.89", () => {
-  assert.match(HTML, /content="v100\.1(4\d|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4\d|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4\d|[5-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(4\d|[5-9]\d)\.0$/); assert.match(SW, /const CACHE="crypto-radar-v100-1(4\d|[5-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(4\d|[5-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(4\d|[5-9]\d)$/);
+  assert.match(HTML, /content="v100\.(?:1(4\d|[5-9]\d)|2\d\d)"/); assert.match(HTML, /id="antetVersiune">v100\.(?:1(4\d|[5-9]\d)|2\d\d) /); assert.match(HTML, /id="healthAppVersion">v100\.(?:1(4\d|[5-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(4\d|[5-9]\d)|2\d\d)\.0$/); assert.match(SW, /const CACHE="crypto-radar-v100-(?:1(4\d|[5-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(4\d|[5-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(4\d|[5-9]\d)|2\d\d)$/);
   assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.(89|9\d|1\d\d)"/);
 });
 console.log(`\n${teste - picate}/${teste} ok`);

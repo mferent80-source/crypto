@@ -49,9 +49,10 @@ await test("cardurile Crypto și Nasdaq: „FĂRĂ PAROLĂ”, ce ai de făcut, 
 
 await test("versiunile: v100.199, proba în lanțul `test`", () => {
   const idx = citeste("public", "index.html");
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.199.0"); assert.match(citeste("public", "sw.js"), /^const CACHE="crypto-radar-v100-199";/);
-  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.199"); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.199"/);
-  assert.equal((idx.match(/v100\.199/g) || []).length, 4); assert.ok(!/v100\.198\b/.test(idx));
+  const ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]); assert.ok(ver >= 199);   /* v100.200: ≥, nu egal */
+  assert.match(citeste("public", "sw.js"), new RegExp('^const CACHE="crypto-radar-v100-' + ver + '";')); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100." + ver);
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + ver + '"'));
+  assert.equal((idx.match(new RegExp("v100\\." + ver, "g")) || []).length, 4); assert.ok(!/v100\.198\b/.test(idx));
   assert.match(citeste("package.json"), /npm run test:v100198 && npm run test:v100199/);
 });
 

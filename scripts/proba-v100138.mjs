@@ -120,9 +120,9 @@ await test("(d) tbCitireExtra (funcția adevărată, cu stub-uri): indicatorii p
 });
 await test("(e) proba veche v10099 nu mai cere butonul „Stop de probă” în citire", () => { assert.doesNotMatch(citeste("scripts", "proba-v10099.mjs"), /assert\.match\(fnApp\("tbDeseneazaCitire"\), \/data-action-click="tbProbaComuta/); });
 await test("(E) versiunea de la v100.138 în sus (colectorul neatins)", () => {
-  assert.match(HTML, /content="v100\.1(3[8-9]|[4-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(3[8-9]|[4-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(3[8-9]|[4-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(3[8-9]|[4-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(3[8-9]|[4-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(3[8-9]|[4-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(3[8-9]|[4-9]\d)$/);
+  assert.match(HTML, /content="v100\.(?:1(3[8-9]|[4-9]\d)|2\d\d)"/); assert.match(HTML, /id="antetVersiune">v100\.(?:1(3[8-9]|[4-9]\d)|2\d\d) /); assert.match(HTML, /id="healthAppVersion">v100\.(?:1(3[8-9]|[4-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(3[8-9]|[4-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(3[8-9]|[4-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(3[8-9]|[4-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(3[8-9]|[4-9]\d)|2\d\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} ok`);
 if (picate) process.exit(1);

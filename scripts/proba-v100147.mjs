@@ -117,9 +117,9 @@ await test("(4) pagina: tbCitireExtra dă cele trei rânduri noi, cu direcția g
   assert.match(functie(APP, "tbCitireExtra"), /x\.tf==="4H"&&x\.dir/, "direcția graficului vine din semaforul pe 4h");
 });
 await test("(E) versiunea de la v100.147 în sus", () => {
-  assert.match(HTML, /content="v100\.1(4[7-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[7-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[7-9]|[5-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(4[7-9]|[5-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(4[7-9]|[5-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(4[7-9]|[5-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(4[7-9]|[5-9]\d)$/);
+  assert.match(HTML, /content="v100\.(?:1(4[7-9]|[5-9]\d)|2\d\d)"/); assert.match(HTML, /id="antetVersiune">v100\.(?:1(4[7-9]|[5-9]\d)|2\d\d) /); assert.match(HTML, /id="healthAppVersion">v100\.(?:1(4[7-9]|[5-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(4[7-9]|[5-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(4[7-9]|[5-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(4[7-9]|[5-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(4[7-9]|[5-9]\d)|2\d\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} ok`);
 if (picate) process.exit(1);

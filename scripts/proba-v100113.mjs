@@ -262,8 +262,8 @@ await test("(R10) textele: „pierdut 5.555” fără minus dublu, „1 din 20 �
 });
 await test("(E) versiunea v100.113 / colector v101.76", () => {
   const html = citeste("public", "index.html");
-  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
+  assert.match(html, /content="v100\.(?:1\d\d|2\d\d)"/); assert.match(html, /id="antetVersiune">v100\.(?:1\d\d|2\d\d)/); assert.match(html, /id="healthAppVersion">v100\.(?:1\d\d|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1\d\d|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1\d\d|2\d\d)";/);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(7[6-9]|[89]\d|1\d\d)";/);
   const sc = JSON.parse(citeste("package.json")).scripts; assert.equal(sc["test:v100113"], "node scripts/proba-v100113.mjs"); assert.match(sc.test, /npm run test:v100113/);
 });

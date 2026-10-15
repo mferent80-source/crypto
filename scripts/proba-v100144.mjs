@@ -88,9 +88,9 @@ await test("(R2) revizia Opus 🟡: banda semaforului doar pe graficul botului (
   assert.match(functie(APP, "tbFereastraButon"), /^function tbFereastraButon\(oG\)\{/, "parametrul nefolosit a plecat");
 });
 await test("(E) versiunea de la v100.144 în sus", () => {
-  assert.match(HTML, /content="v100\.1(4[4-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[4-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[4-9]|[5-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(4[4-9]|[5-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(4[4-9]|[5-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(4[4-9]|[5-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(4[4-9]|[5-9]\d)$/);
+  assert.match(HTML, /content="v100\.(?:1(4[4-9]|[5-9]\d)|2\d\d)"/); assert.match(HTML, /id="antetVersiune">v100\.(?:1(4[4-9]|[5-9]\d)|2\d\d) /); assert.match(HTML, /id="healthAppVersion">v100\.(?:1(4[4-9]|[5-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(4[4-9]|[5-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(4[4-9]|[5-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(4[4-9]|[5-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(4[4-9]|[5-9]\d)|2\d\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} ok`);
 if (picate) process.exit(1);

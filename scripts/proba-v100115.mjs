@@ -104,8 +104,8 @@ await test("(555) bara de jos pe telefon: Tablou 路 Grid 路 T212 路 Alerte 路 鈰
   for (const k of ["dash", "scan", "signals", "market"]) assert.match(sertar, new RegExp("moreNav\\('" + k + "'"), k);
 });
 await test("(E) versiunea v100.116+ / colector v101.79+ (merge mai departe)", () => {
-  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
+  assert.match(html, /content="v100\.(?:1\d\d|2\d\d)"/); assert.match(html, /id="antetVersiune">v100\.(?:1\d\d|2\d\d)/); assert.match(html, /id="healthAppVersion">v100\.(?:1\d\d|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1\d\d|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1\d\d|2\d\d)";/);
   assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(79|[89]\d|1\d\d)";/);
   const sc = JSON.parse(citeste("package.json")).scripts; assert.equal(sc["test:v100115"], "node scripts/proba-v100115.mjs"); assert.match(sc.test, /npm run test:v100115/);
 });

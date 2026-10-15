@@ -83,9 +83,9 @@ await test("(3) alegerea „24 h” e pe bot: comutată pe botul 1 nu atinge bot
   ctx.tbStare.bot = null; assert.equal(ctx.tbFereastraToataE(), false); ctx.tbFereastraToata(); assert.equal(ctx.randari, 3, "fără bot nu se comută și nu se redesenează");
 });
 await test("(E) versiunea de la v100.145 în sus", () => {
-  assert.match(HTML, /content="v100\.1(4[5-9]|[5-9]\d)"/); assert.match(HTML, /id="antetVersiune">v100\.1(4[5-9]|[5-9]\d) /); assert.match(HTML, /id="healthAppVersion">v100\.1(4[5-9]|[5-9]\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1(4[5-9]|[5-9]\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1(4[5-9]|[5-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.1(4[5-9]|[5-9]\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.1(4[5-9]|[5-9]\d)$/);
+  assert.match(HTML, /content="v100\.(?:1(4[5-9]|[5-9]\d)|2\d\d)"/); assert.match(HTML, /id="antetVersiune">v100\.(?:1(4[5-9]|[5-9]\d)|2\d\d) /); assert.match(HTML, /id="healthAppVersion">v100\.(?:1(4[5-9]|[5-9]\d)|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1(4[5-9]|[5-9]\d)|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1(4[5-9]|[5-9]\d)|2\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:1(4[5-9]|[5-9]\d)|2\d\d)"/); assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(?:1(4[5-9]|[5-9]\d)|2\d\d)$/);
 });
 console.log(`\n${teste - picate}/${teste} ok`);
 if (picate) process.exit(1);

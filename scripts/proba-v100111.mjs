@@ -186,9 +186,9 @@ await test("(542d) becurile se aprind și în tabel pe rând, iar „Pe boții t
   assert.match(fn(app, "renderTabloTrend"), /tbCazuri\.sem/);
 });
 await test("(E) versiunea v100.111", () => {
-  assert.match(html, /content="v100\.1\d\d"/); assert.match(html, /id="antetVersiune">v100\.1\d\d/); assert.match(html, /id="healthAppVersion">v100\.1\d\d</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.1\d\d\.0$/);
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-1\d\d";/);
+  assert.match(html, /content="v100\.(?:1\d\d|2\d\d)"/); assert.match(html, /id="antetVersiune">v100\.(?:1\d\d|2\d\d)/); assert.match(html, /id="healthAppVersion">v100\.(?:1\d\d|2\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1\d\d|2\d\d)\.0$/);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1\d\d|2\d\d)";/);
   const sc = JSON.parse(citeste("package.json")).scripts; assert.equal(sc["test:v100111"], "node scripts/proba-v100111.mjs"); assert.match(sc.test, /npm run test:v100111/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
