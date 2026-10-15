@@ -16,7 +16,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const RAD = path.resolve(process.env.COPIE_RADACINA || path.join(path.dirname(fileURLToPath(import.meta.url)), ".."));
+// 🔑 principalul = dosarul care ține .git-ul COMUN al tuturor copiilor — chiar dacă unealta rulează dintr-o copie de lucru
+// (prima livrare reală, 15.10: rulată din copie, își lua copia drept principal și căuta „crypto-lucru-x-lucru-x”)
+function principalul() {
+  const aici = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const r = spawnSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd: aici, encoding: "utf8" });
+  const comun = r.status === 0 ? String(r.stdout).trim() : "";
+  return comun && path.basename(comun) === ".git" ? path.dirname(comun) : aici;
+}
+const RAD = path.resolve(process.env.COPIE_RADACINA || principalul());
 const NUME_OK = /^[a-z0-9][a-z0-9-]{1,30}$/;
 const scrie = (s) => process.stdout.write(s + "\n");
 

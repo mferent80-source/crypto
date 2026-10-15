@@ -42,6 +42,13 @@ test("porneste: copia din origin/main, cu .dev.vars copiat și retea/node_module
   assert.equal(sh(COPIE, "rev-parse", "--abbrev-ref", "HEAD"), "lucru-t1");
   assert.equal(unealta("porneste", "t1").cod, 1, "a doua oară nu suprascrie");
 });
+test("🔑 rulată DIN copie (fără COPIE_RADACINA): își găsește principalul prin .git-ul comun", () => {
+  fs.mkdirSync(path.join(COPIE, "scripts"), { recursive: true }); fs.copyFileSync(UNEALTA, path.join(COPIE, "scripts", "copie-de-lucru.mjs"));
+  const env = { ...process.env }; delete env.COPIE_RADACINA;
+  const r = spawnSync(process.execPath, [path.join(COPIE, "scripts", "copie-de-lucru.mjs"), "stare"], { cwd: COPIE, encoding: "utf8", env });
+  assert.equal(r.status, 0, r.stderr); assert.match(String(r.stdout), /crypto-lucru-t1/); assert.ok(!/crypto-lucru-t1-lucru/.test(String(r.stdout)));
+  fs.rmSync(path.join(COPIE, "scripts"), { recursive: true, force: true });
+});
 test("nume greșit ⇒ refuz", () => { assert.equal(unealta("porneste", "../x").cod, 1); assert.equal(unealta("porneste", "A B").cod, 1); });
 test("livreaza fără commit-uri / cu modificări necomise ⇒ 1, nimic publicat", () => {
   assert.equal(unealta("livreaza", "t1").cod, 1);
