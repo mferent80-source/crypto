@@ -63,6 +63,12 @@ await test("după calcul, sub „Direcția”: blocul „Trendul pe intervale”
   assert.match(app, /Trendul pe intervale/);
   assert.match(app, /„Lateral” aici = prețul se plimbă, chiar dacă EMA-urile din „Direcția” au pantă/);   // cele două reguli pot diferi (MET, 16.10) ⇒ se spune
 });
+await test("explicit și pe telefon: rândul scurt „5m ↑ · 15m ↔ · …” lângă titlu, iar blocul NU se pliază", () => {
+  assert.match(app, /var scurt=r\.map\(function\(x\)\{return x\.scurt\+" "\+\(x\.dir\?SAG\[x\.dir\]:"–"\)\}\)\.join\(" · "\)/);
+  const pl = (app.match(/function grPliabil\(t\)\{.*?\}(?=\s)/) || [""])[0];
+  const f = new Function(pl + "; return grPliabil;")();
+  assert.equal(f("Trendul pe intervale"), false); assert.equal(f("Direcția"), true); assert.equal(f("Setările de pus în Pionex"), false);
+});
 await test("stilul tabelului e și pe pagina Grid (#gridset)", () => {
   const css = citeste("public", "app.css");
   assert.match(css, /#gridset \.tbTrendTab\{/); assert.match(css, /#gridset \.tbTrendBec\.bine\{/);

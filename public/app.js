@@ -5694,7 +5694,7 @@ var grPliere={};
 // v100.93 (A1): cheia secțiunii = titlul fără cifre („Proba pe ultimele 31 de zile” își schimbă cifra la redesen - nu și cheia)
 function grCheieSectiune(t){return String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").replace(/\d+(\s+de\b)?/g,"").replace(/\s+/g," ").trim()}   /* revizia 04.10 (🔵11): „20 de zile” și „19 zile” dau aceeași cheie */
 function grSusAplica(){var gs=$("gridset");if(gs)gs.style.setProperty("--grSus",Math.round(grSusMasoara()+8)+"px")}
-function grPliabil(t){t=String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").trim();return !!t&&!/^(Setările de pus în Pionex|Poarta de pornire|ÎNGUST|LARG)/.test(t)}   /* revizia Opus: Poarta e FAPTĂ (planul, „Verifică poarta”), rămâne deschisă - regula lui din 25.09 */
+function grPliabil(t){t=String(t||"").replace(/^[^0-9A-Za-zĂÂÎȘȚăâîșț]+/,"").trim();return !!t&&!/^(Setările de pus în Pionex|Poarta de pornire|ÎNGUST|LARG|Trendul pe intervale)/.test(t)}   /* v100.204: trendul pe intervale l-a cerut la vedere („explicit”) ⇒ nu se pliază pe telefon */   /* revizia Opus: Poarta e FAPTĂ (planul, „Verifică poarta”), rămâne deschisă - regula lui din 25.09 */
 function grSusMasoara(){var s=0;[".topStatus",".tabs"].forEach(function(sel){var el=document.querySelector(sel);if(!el)return;var cs=getComputedStyle(el);if(cs.position!=="sticky"||cs.display==="none")return;s=Math.max(s,(parseFloat(cs.top)||0)+el.getBoundingClientRect().height)});return s}
 function grPliazaPeTelefon(box){
   grSusAplica();
@@ -5726,7 +5726,10 @@ function grTrendTfHtml(f){
   var NUME={urca:"urcă",coboara:"coboară",lateral:"lateral"},SAG={urca:"↑",coboara:"↓",lateral:"↔"},TON={bine:"bine",rau:"rau",atentie:"atentie"},CL={bine:"good",rau:"bad",atentie:"tbWarn"};
   var z=null;try{z=Directie.rezumat(r.filter(function(x){return x.dir}),f.dir)}catch(e){z=null}
   var fataPe=f.dir==="long"?"gridul long":f.dir==="short"?"gridul short":"gridul neutru";
-  return '<div class="tbBloc grTrendTf"><div class="tbBlocCap"><h4>Trendul pe intervale</h4><span class="tbSub">pe bare închise · față de '+fataPe+'</span></div>'
+  // rândul scurt de lângă titlu („5m ↑ · 15m ↔ · …”) — trendul se vede dintr-o privire, și pe telefon
+  var scurt=r.map(function(x){return x.scurt+" "+(x.dir?SAG[x.dir]:"–")}).join(" · ");   /* spațiu care nu se rupe: pe telefon rândul se rupe doar ÎNTRE intervale */
+  return '<div class="tbBloc grTrendTf"><div class="tbBlocCap"><h4>Trendul pe intervale</h4><span class="tbSub grTrendScurt">'+escapeHtml(scurt)+'</span></div>'
+    +'<p class="tbSub">Pe bare închise · față de '+fataPe+'.</p>'
     +(z&&z.text?'<p class="tbTrendSum '+(CL[z.ton]||"mutedInfo")+'">'+escapeHtml(z.text)+'</p>':'')
     +'<div class="tbIndWrap"><table class="tbTrendTab"><thead><tr><th>TF</th><th>Trendul</th><th>De cât timp</th><th>Pentru grid</th></tr></thead><tbody>'
     +r.map(function(x){
