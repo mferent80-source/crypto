@@ -44,9 +44,10 @@ await test("paza boților folosește același prag (pazaStare.vechi), nu 4,5 h f
 });
 await test("versiunile: v100.207, colectorul v101.123, proba în lanțul `test`", () => {
   const idx = citeste("public", "index.html");
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.207.0"); assert.match(citeste("public", "sw.js"), /^const CACHE="crypto-radar-v100-207";/);
-  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.207"); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.207"/);
-  assert.equal((idx.match(/v100\.207/g) || []).length, 4); assert.ok(!/v100\.206\b/.test(idx));
+  const ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]); assert.ok(ver >= 207);   /* v100.208: ≥, nu egal */
+  assert.match(citeste("public", "sw.js"), new RegExp('^const CACHE="crypto-radar-v100-' + ver + '";')); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100." + ver);
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + ver + '"'));
+  assert.equal((idx.match(new RegExp("v100\\." + ver, "g")) || []).length, 4); assert.ok(!/v100\.206\b/.test(idx));
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.123"/);
   assert.match(citeste("package.json"), /npm run test:v100206 && npm run test:v100207/);
 });

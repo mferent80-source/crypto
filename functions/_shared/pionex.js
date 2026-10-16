@@ -31,7 +31,9 @@ function cuRitm(fn){
     const racire=Math.max(0,racePanaLa-Date.now());
     if(racire){
       const s=Math.ceil(racire/1000);
-      throw Object.assign(Error(`Pionex rate limit: retry in ${s}s`),{status:429,retryAfter:s});
+      // v100.208: lacătul lung (ore) se spune cu ora lui, ca Radarul și colectorul să nu reîncerce la 15 s
+      const ora=s>120?` (blocat până la ${new Date(racePanaLa).toLocaleTimeString("ro-RO",{timeZone:"Europe/Bucharest",hour:"2-digit",minute:"2-digit"})})`:"";
+      throw Object.assign(Error(`Pionex rate limit: retry in ${s}s${ora}`),{status:429,retryAfter:s});
     }
     const intarziere=Math.max(0,urmatorulLa-Date.now());
     if(intarziere)await asteapta(intarziere);
@@ -63,9 +65,15 @@ export async function pionexPrivatGet(env,path,params={}){
   });
   const brut=await r.text();let data=null;try{data=JSON.parse(brut)}catch{}
   if(r.status===429){
-    const antet=Number(r.headers.get("retry-after")),secunde=Number.isFinite(antet)&&antet>0?antet:RACIRE_MIN_S;
+    // v100.208 (16.10.2026, măsurat 12:21): `X-RateLimit-Lock` = ora deblocării (secunde Unix; azi 15:04, ~3 h) și FIECARE cerere din
+    // timpul lacătului îl prelungește (+10 s). Răcirea = lacătul, nu 15 s — altfel colectorul + paginile îl țineau aprins la nesfârșit.
+    const lacat=Number(r.headers.get("x-ratelimit-lock"))*1000;
+    const antet=Number(r.headers.get("retry-after"));
+    let secunde=Number.isFinite(antet)&&antet>0?antet:RACIRE_MIN_S;
+    if(Number.isFinite(lacat)&&lacat>Date.now()+secunde*1000)secunde=Math.ceil((lacat-Date.now())/1000);
     racePanaLa=Math.max(racePanaLa,Date.now()+secunde*1000);
-    throw Object.assign(Error("Pionex rate limit"),{status:429,retryAfter:secunde});
+    const ora=secunde>120?` — blocat până la ${new Date(racePanaLa).toLocaleTimeString("ro-RO",{timeZone:"Europe/Bucharest",hour:"2-digit",minute:"2-digit"})}`:"";
+    throw Object.assign(Error("Pionex rate limit"+ora),{status:429,retryAfter:secunde});
   }
   return {r,data,brut};
 }
