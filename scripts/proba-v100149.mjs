@@ -41,7 +41,7 @@ await test("(I-582) Busola.linkBusola: adresa cu stare spre moneda și intervalu
 await test("(I-580) Busola.randDirectie / randVerdict pe 1h (o.interval) - pentru graficele sub 4h; fără comparația cu graficul pe 4h", () => {
   const r = rez();
   const d1 = B.randDirectie(r, "BTC_USDT_PERP", ACUM, { bot: "SHORT", interval: "1h" });
-  assert.equal(d1.semn, "inclinat-long"); assert.equal(d1.nivel, "atentie"); assert.equal(d1.text, "înclinată spre long (nedovedită) · invers față de botul tău (short)");
+  assert.equal(d1.semn, "inclinat-long"); assert.equal(d1.nivel, "info", "v100.205: fără galben"); assert.equal(d1.text, "înclinată spre long (nedovedită) · invers față de botul tău (short)");
   assert.equal(B.randDirectie(r, "BTC_USDT_PERP", ACUM, { bot: "SHORT", grafic: "urca", interval: "1h" }).text, "înclinată spre long (nedovedită) · invers față de botul tău (short)", "pe 1h graficul pe 4h nu se compară (alt orizont)");
   assert.equal(B.randDirectie(r, "BTC_USDT_PERP", ACUM, { bot: "SHORT", grafic: "urca" }).semn, "asteapta", "fără interval ⇒ 4h, ca până acum");
   assert.equal(B.randDirectie(r, "MET_USDT_PERP", ACUM, { bot: "LONG", interval: "1h" }).nivel, "nemasurat", "futures: n-are 1h");
@@ -60,9 +60,10 @@ await test("(I-578) paza: UN mesaj „toate vocile contra botului tău” (≥ 2
   assert.equal(v1.tine, true); assert.equal(v1.stare.contra, true); assert.equal(v1.stare.vazut, 1); assert.equal(v1.mesaj, null);
   const v2 = P.pazaVoci({ Busola: B, rez: rez({ la: LA + H4 }), bot, inainte: v1.stare, acum: ACUM + H4, grafic: "coboara", mc: "rau" });
   assert.ok(v2.mesaj); assert.equal(v2.mesaj.cheie, "busola-voci"); assert.equal(v2.mesaj.nivel, "atentie");
-  assert.match(v2.mesaj.titlu, /^MET long 3× · toate vocile contra: graficul pe 4h, Busola \(nedovedit\) și Monte Carlo/); assert.match(v2.mesaj.mesaj, /nu e un semnal de închidere/);
+  // v100.205: Busola se vede, dar nu se numără ⇒ vocile numărate sunt graficul pe 4h și Monte Carlo
+  assert.match(v2.mesaj.titlu, /^MET long 3× · 2 din 2 voci contra: graficul pe 4h și Monte Carlo$/); assert.match(v2.mesaj.mesaj, /nu e un semnal de închidere/);
   const doua = P.pazaVoci({ Busola: B, rez: rez({ la: LA + H4 }), bot, inainte: v1.stare, acum: ACUM + H4, grafic: "coboara", mc: null });
-  assert.match(doua.mesaj.titlu, /· 2 din 2 voci contra: graficul pe 4h și Busola \(nedovedit\)$/, "revizia: numărul real de voci, nu „toate”");
+  assert.equal(doua.mesaj, null, "v100.205: graficul + Busola nu mai e „vocile contra” (Busola nu se numără)");
   // revizia: fraza pâlpâie o tură pe „se contrazic” (MC la limită), Busola rămâne contra ⇒ episodul anunțat NU se resetează, nu se repetă la 4 h
   const palp = P.pazaVoci({ Busola: B, rez: rez({ la: LA + 2 * H4 }), bot, inainte: v2.stare, acum: ACUM + 2 * H4, grafic: "coboara", mc: "bine" });
   assert.equal(palp.stare.contra, false); assert.equal(palp.stare.anuntatContra, true, "anunțat rămâne cât Busola e contra");
@@ -80,7 +81,7 @@ await test("(I-578) paza: UN mesaj „toate vocile contra botului tău” (≥ 2
   const pas = (r, acum) => P.pazaPas({ Busola: B, rez: r, bot, st, acum, pret: String, trimite: async (m) => { trimise.push(m.cheie); return true; }, monede: {}, voci: { grafic: "coboara", mc: "rau" } });
   await pas(rez(), ACUM); assert.deepEqual(trimise, []);
   await pas(rez({ la: LA + H4 }), ACUM + H4);
-  assert.deepEqual(trimise, ["busola-voci"], "un singur mesaj, nu trei"); assert.equal(st._busolaDir.anuntatSemn, "inclinat-short"); assert.equal(st._busolaBtc.anuntatContra, true); assert.equal(st._busolaVoci.anuntat, ACUM + H4);
+  assert.deepEqual(trimise, ["busola-voci"], "un singur mesaj, nu trei"); assert.equal(st._busolaDir.anuntatSemn ?? null, null, "v100.205: direcția Busolei n-are mesaj ⇒ nimic de marcat"); assert.equal(st._busolaBtc.anuntatContra, true); assert.equal(st._busolaVoci.anuntat, ACUM + H4);
   // revizia: BTC devine CONTRA abia după mesajul vocilor, în același episod ⇒ tot nu pleacă (se marchează)
   st._busolaBtc = { contra: false, la: LA + H4, vazut: 1, anuntat: 0, anuntatContra: false };
   await pas(rez({ la: LA + 2 * H4 }), ACUM + 2 * H4); await pas(rez({ la: LA + 3 * H4 }), ACUM + 3 * H4);
@@ -90,8 +91,10 @@ await test("(I-578) paza: UN mesaj „toate vocile contra botului tău” (≥ 2
 });
 await test("(I-577) jurnalul vocilor: vociBot (fraza + semnele), schimbarea, judecata după 24 h (cu cine a mers prețul), bilanțul", () => {
   const bot = { id: "9", baza: "MET.PERP", simbolPionex: "MET_USDT_PERP", directie: "LONG", levier: 3, pretCurent: 0.5 };
-  const v = TM.vociBot({ Busola: B, rez: rez(), bot, grafic: "urca", mc: "bine", acum: ACUM });
-  assert.equal(v.contrazic, true); assert.match(v.text, /^Vocile se contrazic/); assert.deepEqual(v.semne, { grafic: 1, busola: -1, mc: 1 }); assert.equal(v.dir, "long"); assert.equal(v.pret, 0.5); assert.equal(v.la, ACUM);
+  // v100.205: Busola nu se mai numără ⇒ „se contrazic” vine din grafic vs Monte Carlo; semnul Busolei rămâne NOTAT (măsurat pe date noi)
+  assert.equal(TM.vociBot({ Busola: B, rez: rez(), bot, grafic: "urca", mc: "bine", acum: ACUM }).contrazic, false, "graficul + MC cu botul, Busola invers ⇒ nu mai e „se contrazic”");
+  const v = TM.vociBot({ Busola: B, rez: rez(), bot, grafic: "urca", mc: "rau", acum: ACUM });
+  assert.equal(v.contrazic, true); assert.match(v.text, /^Vocile se contrazic/); assert.deepEqual(v.semne, { grafic: 1, busola: -1, mc: -1 }); assert.equal(v.dir, "long"); assert.equal(v.pret, 0.5); assert.equal(v.la, ACUM);
   assert.equal(TM.schimbareVoci(null, v), true); assert.equal(TM.schimbareVoci({ text: v.text }, v), false); assert.equal(TM.schimbareVoci({ text: "altceva" }, v), true);
   assert.equal(TM.vociBot({ Busola: B, rez: rez(), bot, grafic: null, mc: null, acum: ACUM }).contrazic, false);
   // judecata: prețul după 24 h din lumânările de 15 min (prima bară la ≥ la + 24 h); sub 0,2% = pe loc (nimeni n-a avut dreptate)

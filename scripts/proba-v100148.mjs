@@ -32,21 +32,22 @@ const rez = (o) => Object.assign({ la: LA, versiune: "1.48.0", btc: { h24: -0.02
 
 await test("(I-571) Busola.concluzie: vocile spun la fel / se contrazic, față de botul lui; culoarea doar ca avertizare", () => {
   const laFel = B.concluzie({ bot: "LONG", grafic: "urca", busola: "inclinat-long", mc: "bine" });
-  assert.equal(laFel.nivel, "info"); assert.equal(laFel.text, "Graficul pe 4h, Busola (nedovedit) și Monte Carlo spun la fel: cu botul tău (long)");
+  // v100.205: Busola se vede, dar nu se numără (direcția ei n-a bătut întâmplarea) ⇒ „spun la fel” = graficul și Monte Carlo
+  assert.equal(laFel.nivel, "info"); assert.equal(laFel.text, "Graficul pe 4h și Monte Carlo spun la fel: cu botul tău (long) · Busola înclină long (nedovedit)");
   const contra = B.concluzie({ bot: "LONG", grafic: "coboara", busola: "inclinat-short", mc: "rau" });
-  assert.equal(contra.nivel, "atentie"); assert.equal(contra.text, "Graficul pe 4h, Busola (nedovedit) și Monte Carlo spun la fel: contra botului tău (long)");
+  assert.equal(contra.nivel, "atentie"); assert.equal(contra.text, "Graficul pe 4h și Monte Carlo spun la fel: contra botului tău (long) · Busola înclină short (nedovedit)");
   // revizia Opus: semnul Monte Carlo e „bun / rău pentru bot”, nu „în sus”: pe un bot SHORT „bine” e tot CU botul
   const shortBine = B.concluzie({ bot: "SHORT", grafic: "coboara", busola: "inclinat-short", mc: "bine" });
-  assert.equal(shortBine.nivel, "info"); assert.equal(shortBine.text, "Graficul pe 4h, Busola (nedovedit) și Monte Carlo spun la fel: cu botul tău (short)");
+  assert.equal(shortBine.nivel, "info"); assert.equal(shortBine.text, "Graficul pe 4h și Monte Carlo spun la fel: cu botul tău (short) · Busola înclină short (nedovedit)");
   assert.equal(B.concluzie({ bot: "SHORT", grafic: null, busola: null, mc: "rau" }).text, "Monte Carlo spune: contra botului tău (short)");
   assert.equal(B.concluzie({ bot: "LONG", grafic: null, busola: null, mc: "bine", mcAtins: true }).text, "Monte Carlo spune: cu botul tău (long)", "planul atins pe plus e tot cu botul");
   assert.equal(B.concluzie({ bot: "NEUTRAL", grafic: null, busola: null, mc: "bine", mcAtins: true }).text, "Vocile: Monte Carlo planul atins (încasează)", "…dar textul spune „încasează”, nu „aș ține”");
   const mixt = B.concluzie({ bot: "LONG", grafic: "urca", busola: "inclinat-short", mc: "bine" });
-  assert.equal(mixt.nivel, "atentie"); assert.equal(mixt.text, "Vocile se contrazic: graficul pe 4h urcă · Busola înclină short (nedovedit) · Monte Carlo aș ține");
+  assert.equal(mixt.nivel, "info"); assert.equal(mixt.text, "Graficul pe 4h și Monte Carlo spun la fel: cu botul tău (long) · Busola înclină short (nedovedit)", "v100.205: Busola invers nu mai face „se contrazic”");
   const partial = B.concluzie({ bot: "SHORT", grafic: "coboara", busola: "asteapta", mc: "atentie" });
   assert.equal(partial.nivel, "info"); assert.equal(partial.text, "Graficul pe 4h spune: cu botul tău (short) · Busola așteaptă · Monte Carlo la limită");
   const una = B.concluzie({ bot: "SHORT", grafic: null, busola: "inclinat-long", mc: null });
-  assert.equal(una.nivel, "atentie"); assert.equal(una.text, "Busola (nedovedit) spune: contra botului tău (short)");
+  assert.equal(una.nivel, "info"); assert.equal(una.text, "Vocile: Busola înclină long (nedovedit)", "v100.205: Busola singură nu mai e „contra botului”");
   const lateral = B.concluzie({ bot: "LONG", grafic: "lateral", busola: "asteapta", mc: null });
   assert.equal(lateral.nivel, "info"); assert.equal(lateral.text, "Vocile: graficul pe 4h e lateral · Busola așteaptă", "nicio voce nu ia partea nimănui ⇒ doar listate");
   const neutru = B.concluzie({ bot: "NEUTRAL", grafic: "urca", busola: "inclinat-short", mc: "bine" });
@@ -88,33 +89,22 @@ await test("(I-575) Busola.liniaBtc (dimineața) + rândul pe cartela botului di
   assert.match(COL, /Busola\.liniaBtc\(/, "colectorul pune rândul în rezumatul de dimineață");
   assert.match(COL, /"₿ BTC și boții tăi: "/, "cu prefixul lui, lângă rândul Busolei");
 });
-await test("(I-572) paza: alertă la trecerea Busolei pe „invers față de botul tău”, după 2 rezumate la rând, cel mult una la 4 h", () => {
+await test("(I-572 → v100.205) paza: direcția Busolei se urmărește, dar alerta „invers față de botul tău” NU mai pleacă (direcția ei n-a bătut întâmplarea)", () => {
   const bot = { id: "9", baza: "MET.PERP", simbolPionex: "MET_USDT_PERP", directie: "LONG", levier: 3, pornitLa: ACUM - 86400000 };
   const r1 = rez(), d1 = P.pazaDirectie({ Busola: B, rez: r1, bot, inainte: undefined, acum: ACUM });
-  assert.equal(d1.tine, true); assert.equal(d1.stare.semn, "inclinat-short"); assert.equal(d1.stare.vazut, 1); assert.equal(d1.mesaj, null, "prima vedere: se ține minte, nu se anunță");
+  assert.equal(d1.tine, true); assert.equal(d1.stare.semn, "inclinat-short"); assert.equal(d1.stare.vazut, 1); assert.equal(d1.mesaj, null);
   const d1b = P.pazaDirectie({ Busola: B, rez: r1, bot, inainte: d1.stare, acum: ACUM + 60000 });
   assert.equal(d1b.stare.vazut, 1, "același rezumat ⇒ nu numără de două ori"); assert.equal(d1b.mesaj, null);
   const r2 = rez({ la: LA + H4 }), d2 = P.pazaDirectie({ Busola: B, rez: r2, bot, inainte: d1.stare, acum: ACUM + H4 });
-  assert.equal(d2.stare.vazut, 2); assert.ok(d2.mesaj, "al 2-lea rezumat la rând pe invers ⇒ mesaj");
-  assert.equal(d2.mesaj.cheie, "busola-directie"); assert.equal(d2.mesaj.nivel, "atentie"); assert.match(d2.mesaj.titlu, /^MET long 3× · Busola: înclină short, invers față de bot/);
-  assert.match(d2.mesaj.mesaj, /nedovedit/); assert.equal(d2.stare.anuntat, ACUM + H4);
-  const r3 = rez({ la: LA + 2 * H4 }), d3 = P.pazaDirectie({ Busola: B, rez: r3, bot, inainte: d2.stare, acum: ACUM + 2 * H4 });
-  assert.equal(d3.mesaj, null, "rămâne invers: nu se repetă (anunțat acum 4 h, pragul e > 4 h)"); assert.equal(d3.stare.anuntat, ACUM + H4);
-  const r4 = rez({ la: LA + 4 * H4 }), d4 = P.pazaDirectie({ Busola: B, rez: r4, bot, inainte: d3.stare, acum: ACUM + 4 * H4 + 1 });
-  assert.equal(d4.mesaj, null, "revizia Opus (spec: doar la schimbare): tot invers după 16 h ⇒ NU se repetă, episodul e anunțat o dată");
-  assert.equal(d4.stare.anuntatSemn, "inclinat-short");
-  const ca = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 2 * H4, monede: { MET: { perp4h: "nu-stiu", directie4h: "inclinat-long" } } }), bot, inainte: d2.stare, acum: ACUM + 2 * H4 });
-  assert.equal(ca.stare.semn, "inclinat-long"); assert.equal(ca.stare.vazut, 1); assert.equal(ca.mesaj, null, "a trecut pe „ca botul”: tăcere, se numără de la 1"); assert.equal(ca.stare.anuntatSemn, null);
-  // revine pe invers după 2 rezumate: episod nou ⇒ se anunță din nou, dar nu mai devreme de 4 h de la ultimul mesaj (frâna la oscilație)
-  const inapoi1 = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 3 * H4 }), bot, inainte: ca.stare, acum: ACUM + 3 * H4 }); assert.equal(inapoi1.mesaj, null);
-  const inapoi2 = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 4 * H4 }), bot, inainte: inapoi1.stare, acum: ACUM + 4 * H4 }); assert.ok(inapoi2.mesaj, "episod nou de invers, 2 rezumate la rând, la 12 h de ultimul mesaj");
+  assert.equal(d2.stare.vazut, 2); assert.equal(d2.mesaj, null, "v100.205: nici la al 2-lea rezumat la rând pe invers — fără mesaj");
+  let st = d2.stare;
+  for (let k = 2; k <= 8; k++) { const d = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + k * H4 }), bot, inainte: st, acum: ACUM + k * H4 + 1 }); assert.equal(d.mesaj, null, "niciodată mesaj"); st = d.stare; }
   const gaura = P.pazaDirectie({ Busola: B, rez: rez({ la: LA + 10 * H4 }), bot, inainte: d1.stare, acum: ACUM + 10 * H4 });
   assert.equal(gaura.stare.vazut, 1, "revizia: după o gaură de peste 8 h numărătoarea pornește de la 1");
-  const sh = P.pazaDirectie({ Busola: B, rez: r2, bot: Object.assign({}, bot, { directie: "SHORT" }), inainte: d1.stare, acum: ACUM + H4 });
-  assert.equal(sh.mesaj, null, "botul short pe Busola short = ca botul, nimic");
   assert.equal(P.pazaDirectie({ Busola: B, rez: rez({ la: ACUM - 5 * 3600000 }), bot, inainte: d1.stare, acum: ACUM }).tine, false, "rezumat vechi (> 4,5 h): nu atinge starea");
   assert.equal(P.pazaDirectie({ Busola: B, rez: rez(), bot: Object.assign({}, bot, { baza: "PONS.PERP", simbolPionex: "PONS_USDT_PERP" }), inainte: undefined, acum: ACUM }).tine, false, "fără direcție pe monedă: nimic");
   assert.equal(P.pazaDirectie({ Busola: B, rez: rez(), bot: Object.assign({}, bot, { directie: "NEUTRAL" }), inainte: undefined, acum: ACUM }).tine, false, "botul neutru n-are „invers”");
+  assert.equal(typeof MC.busolaDirectie, "function", "mesajul rămâne scris (dacă direcția ajunge vreodată să bată întâmplarea, se repornește)");
 });
 await test("(I-572) paza: alertă la CONTRA cu legătură DA și BTC mișcat ≥ 2%, aceleași reguli (2 rezumate, 4 h)", () => {
   const bot = { id: "9", baza: "MET.PERP", simbolPionex: "MET_USDT_PERP", directie: "LONG", levier: 3 };
@@ -136,17 +126,18 @@ await test("(I-572) paza: alertă la CONTRA cu legătură DA și BTC mișcat ≥
   const iesit = P.pazaBtc({ Busola: B, rez: rez({ btc: { h24: 0.001, la: LA + 6 * H4 }, la: LA + 6 * H4 }), bot, inainte: d3.stare, acum: ACUM + 6 * H4 }); assert.equal(iesit.stare.contra, false); assert.equal(iesit.stare.anuntatContra, false);
   assert.match(citeste("public", "lib", "consiliu.js"), /btc: \["s-btc", "m-btc", "busola-btc"\]/, "revizia: Consilierul nu dublează paza pe BTC"); assert.match(COL, /activ\["busola-btc"\] = "atentie"/);
 });
-await test("(I-572) pazaPas: pasul colectorului trece și prin direcție și BTC; mesajul netrimis nu mută starea; mesajele în colector", async () => {
+await test("(I-572 → v100.205) pazaPas: pasul trece prin direcție (fără mesaj) și BTC; mesajul BTC netrimis nu mută starea lui; mesajele în colector", async () => {
   const bot = { id: "9", baza: "MET.PERP", simbolPionex: "MET_USDT_PERP", directie: "LONG", levier: 3, pornitLa: ACUM - 86400000 };
   const st = {}, trimise = [];
   let merge = true;
   const pas = (r, acum) => P.pazaPas({ Busola: B, rez: r, bot, st, acum, pret: String, trimite: async (m) => { trimise.push(m.cheie); return merge; }, monede: {} });
   await pas(rez(), ACUM); assert.equal(st._busolaDir.vazut, 1); assert.equal(st._busolaBtc.vazut, 1); assert.equal(trimise.length, 0);
   merge = false; await pas(rez({ la: LA + H4 }), ACUM + H4);
-  assert.deepEqual(trimise, ["busola-directie", "busola-btc"], "amândouă încercate"); assert.equal(st._busolaDir.vazut, 1, "netrimis ⇒ starea rămâne (tura următoare reîncearcă)"); assert.equal(st._busolaBtc.vazut, 1);
+  assert.deepEqual(trimise, ["busola-btc"], "doar BTC încercat (direcția Busolei nu mai trimite)"); assert.equal(st._busolaBtc.vazut, 1, "BTC netrimis ⇒ starea lui rămâne (tura următoare reîncearcă)");
+  assert.equal(st._busolaDir.vazut, 2, "direcția: fără mesaj, starea se mută normal");
   merge = true; await pas(rez({ la: LA + H4 }), ACUM + H4 + 60000);
-  assert.equal(trimise.length, 4); assert.equal(st._busolaDir.vazut, 2); assert.equal(st._busolaDir.anuntat, ACUM + H4 + 60000); assert.equal(st._busolaBtc.anuntat, ACUM + H4 + 60000);
-  assert.equal(st._busolaDir.anuntatSemn, "inclinat-short"); assert.equal(st._busolaBtc.anuntatContra, true);
+  assert.deepEqual(trimise, ["busola-btc", "busola-btc"]); assert.equal(st._busolaBtc.anuntat, ACUM + H4 + 60000); assert.equal(st._busolaBtc.anuntatContra, true);
+  assert.ok(!st._busolaDir.anuntat, "direcția nu e anunțată niciodată");
   assert.equal(typeof MC.busolaDirectie, "function"); assert.equal(typeof MC.busolaBtc, "function");
   assert.match(COL, /VERSIUNE_COLECTOR = "v101\.(9[1-9]|1\d\d)"/, "colectorul v101.91+");
 });

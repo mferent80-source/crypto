@@ -174,15 +174,15 @@ export function pazaVoci({ Busola, rez, bot, inainte, acum, grafic, mc }) {
   const r = Busola.randDirectie(rez, cheiaBot(bot), acum, { bot: bot.directie });
   const c = Busola.concluzie({ bot: bot.directie, grafic: grafic || null, busola: r && r.semn || null, mc: mc || null });
   const contra = !!(c && /spun la fel: contra botului tău/.test(c.text));
-  // revizia Opus: episodul e al BUSOLEI (contra botului) - graficul (5 min) și MC (15 min) pâlpâie în același rezumat; „anunțat” rămâne cât
-  // Busola e contra, chiar dacă fraza cade o tură pe „se contrazic” (altfel mesajul s-ar repeta la fiecare 4 h)
-  const busolaContra = !!(r && r.nivel === "atentie");
+  // v100.205: Busola nu mai e voce numărată ⇒ episodul e al VOCILOR: „anunțat” rămâne cât vocile sunt contra sau se contrazic (graficul și MC
+  // pâlpâie); se închide doar când nu mai sunt contra. Înainte era legat de Busola contra ⇒ cu Busola pe „așteaptă” (aproape mereu) se repeta la 4 h
+  const seContrazic = !!(c && /^Vocile se contrazic/.test(c.text));
   const la = Number(rez.la), acelasi = !!(inainte && !!inainte.contra === contra), vazut = numara(inainte, acelasi, la), anuntat = inainte ? Number(inainte.anuntat) || 0 : 0;
-  const anuntatContra = inainte && busolaContra ? !!inainte.anuntatContra : false;
+  const anuntatContra = inainte ? !!inainte.anuntatContra && (contra || seContrazic) : false;
   const stare = { contra, la, vazut, anuntat, anuntatContra, text: c ? c.text : null };
   if (!(contra && vazut >= 2 && !anuntatContra && acum - anuntat > RITM_MS)) return { tine: true, stare, mesaj: null };
   // câte voci s-au pronunțat și câte sunt contra (spec: ≥ 2) - titlul spune numărul real, „toate” doar când sunt 3 din 3
-  const cine = c.text.split(" spun la fel")[0], nContra = cine.split(/, | și /).length, nVoci = [grafic, r && r.semn, mc].filter(Boolean).length;
+  const cine = c.text.split(" spun la fel")[0], nContra = cine.split(/, | și /).length, nVoci = [grafic, mc].filter(Boolean).length;   /* v100.205: Busola nu se mai numără */
   return { tine: true, stare: Object.assign({}, stare, { anuntat: acum, anuntatContra: true }), mesaj: MC.busolaVoci({ nume: numeBot(bot), directie: bot.directie, levier: bot.levier, cine: cine.replace(/^./, (x) => x.toLowerCase()), nContra, nVoci, text: c.text }) };
 }
 

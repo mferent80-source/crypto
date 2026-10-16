@@ -178,7 +178,9 @@ var Busola = (function () {
     if (d === "asteapta") { if (g) p.push(g === "lateral" ? "graficul pe 4h e lateral" : "graficul pe 4h " + GR_DIR[g] + ", Busola nu confirmă o direcție"); }
     else {
       var dB = d === "inclinat-long" ? "long" : "short";
-      if (b) { if (b === dB) p.push("ca botul tău (" + b + ")"); else { p.push("invers față de botul tău (" + b + ")"); nivel = "atentie"; } }
+      // v100.205 (16.10, auditul Busolei: direcția ei n-a bătut întâmplarea — pe un an 21.660 de momente; când a zis-o 16.09–16.10, ținta
+      // 38–42% față de ~43% cât trebuia): „invers” rămâne spus, dar NU mai e galben ⇒ nici alerta „Busola invers față de bot” nu mai pleacă
+      if (b) p.push(b === dB ? "ca botul tău (" + b + ")" : "invers față de botul tău (" + b + ")");
       if (g) p.push(g === "lateral" ? "graficul pe 4h e lateral" : (g === "urca") === (dB === "long") ? "graficul pe 4h spune la fel (" + GR_DIR[g] + ")" : "graficul pe 4h spune invers (" + GR_DIR[g] + ")");
     }
     if (varsta) p.push(varsta);
@@ -235,7 +237,8 @@ var Busola = (function () {
     o = o && typeof o === "object" ? o : {};
     var b = botDir(o), voci = [], g = o.grafic, d = o.busola, m = MC_VOCE[o.mc];
     if (GR_DIR[g] || g === "lateral") voci.push({ nume: "Graficul pe 4h", text: g === "lateral" ? "graficul pe 4h e lateral" : "graficul pe 4h " + GR_DIR[g], semn: g === "urca" ? 1 : g === "coboara" ? -1 : 0 });
-    if (TEXT_DIR[d]) voci.push({ nume: "Busola (nedovedit)", text: d === "asteapta" ? "Busola așteaptă" : "Busola înclină " + (d === "inclinat-long" ? "long" : "short") + " (nedovedit)", semn: d === "inclinat-long" ? 1 : d === "inclinat-short" ? -1 : 0 });
+    // v100.205: Busola se VEDE în frază, dar nu se numără (semn 0) — direcția ei n-a bătut întâmplarea; „spun la fel” = graficul și Monte Carlo
+    if (TEXT_DIR[d]) voci.push({ nume: "Busola (nedovedit)", text: d === "asteapta" ? "Busola așteaptă" : "Busola înclină " + (d === "inclinat-long" ? "long" : "short") + " (nedovedit)", semn: 0 });
     if (m) voci.push({ nume: "Monte Carlo", text: o.mcAtins && o.mc === "bine" ? "Monte Carlo planul atins (încasează)" : m[0], semn: m[1], peBot: true });
     if (!voci.length) return null;
     var lista = voci.map(function (v) { return v.text; }).join(" · ");

@@ -37,7 +37,7 @@ const VECHI = () => Object.assign(rez(), { la: ACUM - 7 * 3600000 });
 await test("(1) Busola.randDirectie: verdictul de direcție pe 4h (nedovedit) față de botul lui și de graficul pe 4h; culoarea doar ca avertizare", () => {
   const B = sandbox().Busola, r = rez();
   const contra = B.randDirectie(r, "MET_USDT_PERP", ACUM, { bot: "LONG", grafic: "urca" });
-  assert.equal(contra.nivel, "atentie"); assert.equal(contra.semn, "inclinat-short");
+  assert.equal(contra.nivel, "info", "v100.205: direcția Busolei n-a bătut întâmplarea ⇒ „invers” spus, dar NU galben"); assert.equal(contra.semn, "inclinat-short");
   assert.equal(contra.text, "înclinată spre short (nedovedită) · invers față de botul tău (long) · graficul pe 4h spune invers (urcă)");
   const la = B.randDirectie(r, "MET_USDT_PERP", ACUM, { bot: "SHORT", grafic: "coboara" });
   assert.equal(la.nivel, "info", "ca botul tău NU e verde - direcția e nedovedită, nu o laudă"); assert.equal(la.text, "înclinată spre short (nedovedită) · ca botul tău (short) · graficul pe 4h spune la fel (coboară)");
@@ -101,7 +101,7 @@ await test("(4) pagina: tbCitireExtra dă cele trei rânduri noi, cu direcția g
   ctx.tbSemaforTf = () => [{ tf: "5M", dir: "coboara" }, { tf: "4H", dir: "urca" }, { tf: "1D", dir: null }];
   vm.runInContext("var TB_PERIOADE=" + APP.match(/var TB_PERIOADE=(\{[^\n]*\});/)[1] + ";\n" + ["tbTf", "tbPretScurt", "tbRotPct", "tbCitireExtra"].map((n) => functie(APP, n)).join("\n"), ctx);
   const x = ctx.tbCitireExtra(ctx.tbStare.bot, {});
-  assert.equal(x.busolaDirectie.ce, "Direcția, după Busola"); assert.equal(x.busolaDirectie.stare, "atentie"); assert.equal(x.busolaDirectie.text, "înclinată spre short (nedovedită) · invers față de botul tău (long) · graficul pe 4h spune invers (urcă)", "4H din semafor, nu 5M");
+  assert.equal(x.busolaDirectie.ce, "Direcția, după Busola"); assert.equal(x.busolaDirectie.stare, "info");   /* v100.205: fără galben */ assert.equal(x.busolaDirectie.text, "înclinată spre short (nedovedită) · invers față de botul tău (long) · graficul pe 4h spune invers (urcă)", "4H din semafor, nu 5M");
   assert.equal(x.busolaVerdict, null, "MET n-are cifră ⇒ fără rând");
   assert.equal(x.busolaBtc.ce, "BTC și botul tău"); assert.equal(x.busolaBtc.stare, "info"); assert.match(x.busolaBtc.text, /^BTC a urcat 1,8% în 24 h · MET merge cu BTC: DA \(0,7\) · dacă BTC urcă mai departe, botul tău long e CU$/);
   ctx.tbSemaforTf = () => null; const y = ctx.tbCitireExtra(ctx.tbStare.bot, {});   // semaforul neîncărcat încă: fără graficul pe 4h, nimic nu crapă
