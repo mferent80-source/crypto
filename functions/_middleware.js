@@ -4,7 +4,7 @@
 import { marcheazaProba } from "./_shared/pionex.js";
 export async function onRequest(context) {
   // v100.209: proba de ecran (scripts/proba-ecran-telefon.mjs) trimite `x-proba-ecran: 1` ⇒ cât ține cererea, Pionex nu e chemat
-  const eProba = context.request.headers.get("x-proba-ecran") === "1";
+  const eProba = (context.request && context.request.headers && context.request.headers.get("x-proba-ecran")) === "1";   // fără `request` (probe vechi) ⇒ nu e probă
   if (eProba) marcheazaProba(true);
   let r;
   try { r = await context.next(); } finally { if (eProba) marcheazaProba(false); }
