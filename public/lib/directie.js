@@ -181,7 +181,37 @@ var Directie = (function () {
     return { concluzie: "", ton: "atentie" };
   }
 
+  // v100.204 (16.10.2026, el: „în grid ce setez, după ce calculează, să afișeze explicit trendul pe diferite tf 5/15/1h/4h/1zi”):
+  // aceleași intervale ca Tabloul (15M/60M/4H/1D cu orizontul lor) + 5 min (orizont 12 bare = o oră), judecate cu ACEEAȘI regulă
+  // (analizeaza), față de direcția gridului din fișă (long / short / neutru).
+  var INTERVALE_GRID = [
+    { tf: "5M", eticheta: "5 min", scurt: "5m", min: 5, orizont: 12 },
+    { tf: "15M", eticheta: "15 min", scurt: "15m", min: 15, orizont: 16 },
+    { tf: "60M", eticheta: "1 oră", scurt: "1h", min: 60, orizont: 24 },
+    { tf: "4H", eticheta: "4 ore", scurt: "4h", min: 240, orizont: 6 },
+    { tf: "1D", eticheta: "1 zi", scurt: "1z", min: 1440, orizont: 7 }];
+  function peIntervale(pe, directieGrid) {
+    return INTERVALE_GRID.map(function (x) {
+      var rows = pe && pe[x.tf];
+      var a = Array.isArray(rows) && rows.length ? analizeaza(rows, x.orizont, directieGrid) : { dir: null, stare: "nu-se-poate", motiv: "fără lumânări" };
+      var o = { tf: x.tf, eticheta: x.eticheta, scurt: x.scurt };
+      for (var k in a) o[k] = a[k];
+      return o;
+    });
+  }
+  // Cât ține starea de acum: barele aceleiași stări × intervalul — „30 min”, „3 h”, „1,3 zile” (o zecimală, virgulă).
+  function durataTf(bareN, tf) {
+    var x = INTERVALE_GRID.filter(function (y) { return y.tf === tf; })[0];
+    if (!x || !(bareN > 0)) return null;
+    var m = bareN * x.min, z = function (v) { var r = Math.round(v * 10) / 10; return String(r).replace(".", ","); };
+    if (m < 60) return m + " min";
+    if (m < 1440) return z(m / 60) + " h";
+    var zile = m / 1440;
+    return Math.round(zile * 10) / 10 === 1 ? "1 zi" : z(zile) + " zile";
+  }
+
   return { inchideri: inchideri, stari: stari, schimbare: schimbare, wilson: wilson,
-    fataDeBot: fataDeBot, analizeaza: analizeaza, inFormare: inFormare, rezumat: rezumat, ema: ema };
+    fataDeBot: fataDeBot, analizeaza: analizeaza, inFormare: inFormare, rezumat: rezumat, ema: ema,
+    INTERVALE_GRID: INTERVALE_GRID, peIntervale: peIntervale, durataTf: durataTf };
 })();
 if (typeof globalThis !== "undefined") globalThis.Directie = Directie;

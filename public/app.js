@@ -4962,10 +4962,12 @@ async function grAduLumanari(simbol){
     await grPauza(350);
   }
   var r4=grRanduri(await getJSON(baza+"&interval=4H&limit=300"));await grPauza(350);
-  var r1=grRanduri(await getJSON(baza+"&interval=1D&limit=200"));
+  var r1=grRanduri(await getJSON(baza+"&interval=1D&limit=200"));await grPauza(350);
+  /* v100.204 (el, 16.10: „să afișeze explicit trendul pe 5/15/1h/4h/1zi”): 5 min și 1 oră, doar pentru „Trendul pe intervale”; picate ⇒ rândul spune „fără lumânări” */
+  var r5=null,r60=null;try{r5=grRanduri(await getJSON(baza+"&interval=5M&limit=500"));await grPauza(350);r60=grRanduri(await getJSON(baza+"&interval=60M&limit=500"))}catch(e){}
   /* v100.196 (B4): rata de funding a monedei (Pionex), pentru fișă și gridul îngust; fără ea se folosește costul presupus */
   var fz=null;try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(simbol));var F=typeof GridSim!=="undefined"?GridSim.rataFunding(fr&&fr.data&&fr.data.rates,Date.now()):null;fz=F&&isFinite(F.rataZi)?F.rataZi:null}catch(e){fz=null}
-  return {r15:r15,r4:r4||[],r1:r1||[],fundingZi:fz};
+  return {r15:r15,r4:r4||[],r1:r1||[],r5:r5||[],r60:r60||[],fundingZi:fz};
 }
 function grTextEroare(e){
   var local=/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
@@ -5715,6 +5717,26 @@ var grMicManual=false;
 function grVerdictComuta(){var v=document.querySelector("#grFisa .grVerdict");if(!v)return;grMicManual=v.classList.contains("grMic");v.classList.toggle("grMic")}
 function grVerdictScroll(){if(!window.matchMedia||!window.matchMedia("(max-width:600px)").matches)return;var v=document.querySelector("#grFisa .grVerdict"),f=$("grFisa"),gs=$("gridset");if(!v||!f||!gs)return;var sus=f.getBoundingClientRect().top<=(parseFloat(getComputedStyle(gs).getPropertyValue("--grSus"))||72);if(!sus){v.classList.remove("grMic");grMicManual=false}else if(!grMicManual)v.classList.add("grMic")}
 window.addEventListener("scroll",grVerdictScroll,{passive:true});
+// v100.204 (16.10.2026, el: „în grid ce setez, după ce calculează, să afișeze explicit trendul pe diferite tf 5/15/1h/4h/1zi”):
+// tabelul „Trendul pe intervale” ca „Trendul pe TF-uri” din Tablou — becul (↑ ↓ ↔), de cât timp, și ce înseamnă pentru gridul fișei;
+// sub el fraza lui Directie.rezumat (4h + 1z). Lumânările sunt cele aduse de calcul (zero cereri la redesenare).
+function grTrendTfHtml(f){
+  var d=grStare.date&&grStare.simbol===f.simbol?grStare.date:null;if(!d||typeof Directie==="undefined"||!Directie.peIntervale)return "";
+  var r;try{r=Directie.peIntervale({"5M":d.r5,"15M":d.r15,"60M":d.r60,"4H":d.r4,"1D":d.r1},f.dir)}catch(e){return ""}
+  var NUME={urca:"urcă",coboara:"coboară",lateral:"lateral"},SAG={urca:"↑",coboara:"↓",lateral:"↔"},TON={bine:"bine",rau:"rau",atentie:"atentie"},CL={bine:"good",rau:"bad",atentie:"tbWarn"};
+  var z=null;try{z=Directie.rezumat(r.filter(function(x){return x.dir}),f.dir)}catch(e){z=null}
+  var fataPe=f.dir==="long"?"gridul long":f.dir==="short"?"gridul short":"gridul neutru";
+  return '<div class="tbBloc grTrendTf"><div class="tbBlocCap"><h4>Trendul pe intervale</h4><span class="tbSub">pe bare închise · față de '+fataPe+'</span></div>'
+    +(z&&z.text?'<p class="tbTrendSum '+(CL[z.ton]||"mutedInfo")+'">'+escapeHtml(z.text)+'</p>':'')
+    +'<div class="tbIndWrap"><table class="tbTrendTab"><thead><tr><th>TF</th><th>Trendul</th><th>De cât timp</th><th>Pentru grid</th></tr></thead><tbody>'
+    +r.map(function(x){
+      var dur=x.dir?Directie.durataTf(x.vechime,x.tf):null,ton=x.dir&&x.fata?TON[x.fata.ton]||"":"";
+      return '<tr><td class="tbTrendTf"><span class="tbTrendBec '+ton+'" aria-hidden="true">'+(x.dir?SAG[x.dir]:"–")+'</span>'+escapeHtml(x.scurt)+'</td>'
+        +'<td>'+(x.dir?'<b>'+escapeHtml(NUME[x.dir])+'</b>':'<span class="mutedInfo">'+escapeHtml(x.motiv||"—")+'</span>')+'</td>'
+        +'<td>'+(dur?escapeHtml(dur):'<span class="mutedInfo">—</span>')+'</td>'
+        +'<td>'+(x.dir&&x.fata?'<span class="'+(CL[x.fata.ton]||"mutedInfo")+'">'+escapeHtml(x.fata.eticheta)+'</span>':'<span class="mutedInfo">—</span>')+'</td></tr>'}).join("")
+    +'</tbody></table></div></div>';
+}
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
   if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
@@ -5741,6 +5763,7 @@ function renderGrid(){
   if(typeof Busola!=="undefined"){var rB=Busola.randGrid(Busola.rezumat(),f.simbol,Date.now());if(rB)h+=Busola.htmlRand(rB,escapeHtml);Busola.incarca(window.fetch.bind(window),Date.now()).then(function(nou){if(nou&&grStare.fisa===f)renderGrid()})}
   h+='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
     +(f.contra?'<p class="tbWarn">'+(f.manual?"Ai ales ":"Trendul zice ")+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div>';
+  h+=grTrendTfHtml(f);   /* v100.204: trendul pe 5m · 15m · 1h · 4h · 1z, explicit, după calcul */
   // v100.101: setările vechi ale fișei NU ascultă de plan (TAKE, 05.10: 100 USDT la 4× pierdea la stop −23,99 = 3,7× planul) ⇒ pliate, cu potrivirea spusă
   var potV=plG?GridPlan.potrivire({pret:f.pret,dir:f.dir,jos:st.jos,sus:st.sus,levier:st.levier,suma:st.suma},plG.minus):null;
   h+='</div><details class="grAlte" id="grAlte"><summary>Alte setări · gridul des al fișei</summary>'+(potV&&potV.preaLarg?'<p class="tbWarn grAlteAvert">⚠️ <b>Nu ține cont de pragul tău de pierdere:</b> la marginea de '+potV.parte+' pierzi ≈ '+potV.laMargine.toFixed(1).replace(".",",")+' USDT, de '+(potV.laMargine/plG.minus).toFixed(1).replace(".",",")+' ori pragul de −'+String(plG.minus).replace(".",",")+'. Folosește ÎNGUST sau LARG de mai sus.</p>':potV?'<p class="tbSub">La marginea de '+potV.parte+' ≈ '+potV.laMargine.toFixed(1).replace(".",",")+' USDT, în pragul tău de pierdere (−'+String(plG.minus).replace(".",",")+').</p>':'')
