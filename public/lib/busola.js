@@ -39,6 +39,15 @@ var Busola = (function () {
   function ore(ms) { if (typeof TextRo !== "undefined" && TextRo.ore) return TextRo.ore(ms); if (typeof ms !== "number" || !isFinite(ms)) return "—"; var m = Math.round(ms / 60000); return m < 60 ? m + " min" : String(Math.round(ms / 360000) / 10).replace(".", ",") + " h"; }
 
   // {nivel, text, varsta, nota} sau null cand rezumatul inca lipseste
+  // v100.206 (16.10.2026, el: „fă idei”): cât de des a ieșit prețul din canalul ±2 ATR în 2 zile după cuvânt, pe 4h, MĂSURAT pe istorie
+  // (Busola 1.65.0, src/motor/miscareMasurata.ts: 10.830 de momente, 361 de zile, eticheta doar din trecut; ambele dovedite pe 4h).
+  // Despre MIȘCARE (dovedită), nu despre câștigul gridului (fraza rândului, cu dovada ei). Cifrele se refac doar cu o probă nouă.
+  var MISCARE_MASURATA_4H = { agitata: 0.728, obisnuita: 0.643, calma: 0.581 };
+  function masuratMiscare(s) {
+    if (s !== "miscare" && s !== "liniste") return undefined;
+    var p = s === "miscare" ? MISCARE_MASURATA_4H.agitata : MISCARE_MASURATA_4H.calma;
+    return "pe istorie, după „" + (s === "miscare" ? "mai agitată" : "mai calmă") + "” prețul a ieșit din canalul ±2 ATR în 2 zile în " + Math.round(p * 100) + "% din cazuri (de obicei " + Math.round(MISCARE_MASURATA_4H.obisnuita * 100) + "%)";
+  }
   function randGrid(rez, simbol, acum) {
     if (!rez || !rez.monede || !rez.grid) return null;
     var cheie = simbolBusola(simbol), m = rez.monede[cheie], gf = gridFolosit(rez), g = gf.g;
@@ -54,9 +63,9 @@ var Busola = (function () {
     // înainte, amândouă ieșeau „nimic neobișnuit”. Se ia prima valoare MĂSURATĂ (futures, filtrul de grid, apoi harta - stare4h).
     var s = stare4h(m);
     if (!s) return { nivel: "nemasurat", text: "Busola n-a putut măsura " + cheie + " pe 4h acum (eroare sau prea puține cazuri).", varsta: varsta };
-    if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta, nota: nota(bilantText(rez)) };
-    if (s === "liniste" && g.dovedit === false) return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — gridul a pierdut ceva mai puțin decât oricând (" + proc(g.liniste) + ").", varsta: varsta, nota: nota("nedovedit") };
-    if (s === "liniste") return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (" + proc(g.liniste) + "), tot pe minus.", varsta: varsta, nota: nota(g.dovedit === true ? "dovedit" : null) };
+    if (s === "miscare") return { nivel: "atentie", text: "Busola, pe 4h: moneda e mai agitată ca de obicei — aici gridul a pierdut cel mai mult (" + proc(g.miscare) + " pe episod).", varsta: varsta, nota: nota(bilantText(rez)), masurat: masuratMiscare(s) };
+    if (s === "liniste" && g.dovedit === false) return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — gridul a pierdut ceva mai puțin decât oricând (" + proc(g.liniste) + ").", varsta: varsta, nota: nota("nedovedit"), masurat: masuratMiscare(s) };
+    if (s === "liniste") return { nivel: "info", text: "Busola, pe 4h: moneda e mai calmă ca de obicei — aici gridul a pierdut cel mai puțin (" + proc(g.liniste) + "), tot pe minus.", varsta: varsta, nota: nota(g.dovedit === true ? "dovedit" : null), masurat: masuratMiscare(s) };
     return { nivel: "neutru", text: "Busola, pe 4h: nimic neobișnuit — un grid oarecare a ieșit pe minus (" + proc(g.oricand) + " pe episod).", varsta: varsta, nota: nota(null) };
   }
 
@@ -134,7 +143,8 @@ var Busola = (function () {
   // v100.79: nota (canalul, dovedit / nedovedit) și vârsta, gri, după frază
   function htmlRand(r, esc) {
     var cls = r.nivel === "atentie" ? "tbWarn" : "tbSub", sub = [r.nota, r.varsta].filter(Boolean).join(" · ");
-    return '<div class="tbBloc grBusola"><p class="' + cls + '">' + esc(r.text) + (sub ? ' <span class="tbSub">· ' + esc(sub) + "</span>" : "") + "</p></div>";
+    return '<div class="tbBloc grBusola"><p class="' + cls + '">' + esc(r.text) + (sub ? ' <span class="tbSub">· ' + esc(sub) + "</span>" : "") + "</p>"
+      + (r.masurat ? '<p class="tbSub grBusolaMasurat">' + esc(r.masurat) + "</p>" : "") + "</div>";   /* v100.206: mișcarea măsurată, sub rând */
   }
 
   // v100.92 (I-518): UN singur producător pentru tot ce spune Busola despre o monedă - eticheta (starea, de când, cât de vechi), intervalul
