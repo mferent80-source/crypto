@@ -5735,7 +5735,9 @@ function grTrendTfHtml(f){
         +'<td>'+(x.dir?'<b>'+escapeHtml(NUME[x.dir])+'</b>':'<span class="mutedInfo">'+escapeHtml(x.motiv||"—")+'</span>')+'</td>'
         +'<td>'+(dur?escapeHtml(dur):'<span class="mutedInfo">—</span>')+'</td>'
         +'<td>'+(x.dir&&x.fata?'<span class="'+(CL[x.fata.ton]||"mutedInfo")+'">'+escapeHtml(x.fata.eticheta)+'</span>':'<span class="mutedInfo">—</span>')+'</td></tr>'}).join("")
-    +'</tbody></table></div></div>';
+    +'</tbody></table></div>'
+    // „Direcția” din stânga e regula fișei (EMA20/EMA50 + structura); aici e regula Tabloului (cât de drept merge prețul) — pot diferi, se spune
+    +'<p class="tbSub">Regula din Tabloul botului: cât de drept merge prețul. „Lateral” aici = prețul se plimbă, chiar dacă EMA-urile din „Direcția” au pantă.</p></div>';
 }
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;

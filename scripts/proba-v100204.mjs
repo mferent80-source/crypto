@@ -61,6 +61,7 @@ await test("după calcul, sub „Direcția”: blocul „Trendul pe intervale”
   assert.match(app, /function grTrendTfHtml\(f\)\{/);
   assert.match(app, /Directie\.peIntervale\(\{"5M":d\.r5,"15M":d\.r15,"60M":d\.r60,"4H":d\.r4,"1D":d\.r1\},f\.dir\)/);
   assert.match(app, /Trendul pe intervale/);
+  assert.match(app, /„Lateral” aici = prețul se plimbă, chiar dacă EMA-urile din „Direcția” au pantă/);   // cele două reguli pot diferi (MET, 16.10) ⇒ se spune
 });
 await test("stilul tabelului e și pe pagina Grid (#gridset)", () => {
   const css = citeste("public", "app.css");
