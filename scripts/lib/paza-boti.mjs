@@ -220,8 +220,10 @@ export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, moned
 }
 
 // rezumatul vechi: o notă doar în Radar, o dată pe rezumat (anuntat = `la`-ul rezumatului deja anunțat)
+// v100.207 (16.10, auditul Busolei — „om mort”): pragul urmează programul Busolei (Busola.pragVechime); nota pleacă pe DISCORD, o dată pe rezumat
 export function notaVeche({ Busola, rez, acum, anuntat }) {
   const la = rez ? Number(rez.la) : NaN;
-  if (!(la > 0) || acum - la <= Busola.PAZA_VECHI_MS || anuntat === la) return null;
-  return Object.assign(MC.busolaVeche(Math.floor((acum - la) / 3600000)), { la });
+  const prag = typeof Busola.pragVechime === "function" ? Busola.pragVechime(la) : Busola.PAZA_VECHI_MS;
+  if (!(la > 0) || acum - la <= prag || anuntat === la) return null;
+  return Object.assign(MC.busolaVeche((acum - la) / 3600000, prag / 3600000), { la });
 }

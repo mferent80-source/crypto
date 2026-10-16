@@ -196,7 +196,7 @@ export function situatiiAlerte(pune) {
   // v100.86 (§2 „paza boților”): mesajele pazei din producătorul REAL (pazaBot cu Busola și Alerte.pret, nota din notaVeche) -
   // CRV long 5×, LIGHTER short 4×, BTC (prețuri de 5 cifre), PUMP (sub 0,01), bot nou, neutru fără levier, nedovedit, fără cifră
   const BU = globalThis.Busola, GR = { canal: "±2×ATR", miscare: -0.0021398053, miscareDovedita: true };
-  const REZB = (g) => ({ la: T0 - 2 * ORA, monede: { CRV: { perp4h: "miscare" }, LIT: { perp4h: "miscare" }, BTC: { grid4h: "miscare" }, PUMP: { perp4h: "miscare" }, MARSCOIN: { perp4h: "miscare" } }, grid: g || GR, perp: { prag: 200000 } });
+  const REZB = (g) => ({ la: T0 - 30 * 60000, monede: { CRV: { perp4h: "miscare" }, LIT: { perp4h: "miscare" }, BTC: { grid4h: "miscare" }, PUMP: { perp4h: "miscare" }, MARSCOIN: { perp4h: "miscare" } }, grid: g || GR, perp: { prag: 200000 } });
   const paz = (sit, b, g, prim) => co(sit, "busolaMiscare", pazaBot({ Busola: BU, rez: REZB(g), bot: b, inainte: prim ? undefined : { stare: "liniste", la: 1 }, acum: T0, pret: A.pret }).mesaj);
   paz("Busola: mai agitată (CRV long 5×, dovedit)", CRV());
   paz("Busola: mai agitată (LIGHTER short 4×)", LIT());

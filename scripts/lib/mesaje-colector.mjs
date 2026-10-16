@@ -111,8 +111,11 @@ export const busolaVoci = (o) => ({ nivel: "atentie", cheie: "busola-voci",
   titlu: o.nume + " " + (DIR_BOT[String(o.directie || "").toLowerCase()] || "neutru") + (Number(o.levier) > 0 ? " " + V(o.levier) + "×" : "") + " · " + (o.nContra >= 3 ? "toate vocile contra: " : o.nContra + " din " + o.nVoci + " voci contra: ") + o.cine,
   mesaj: msg(o.text + ".", "Vocile care s-au pronunțat sunt pe aceeași parte, niciuna dovedită: aș verifica stopul și n-aș adăuga bani; nu e un semnal de închidere.") });   /* revizia: numărul real de voci */
 // rezumatul Busolei e vechi: paza tace - o notă doar în Radar, o dată pe rezumat
-export const busolaVeche = (ore) => ({ nivel: "info", cheie: "busola-veche", doarRadar: true, titlu: "Busola: rezumatul are " + cate(ore, "oră", "ore"),
-  mesaj: "Paza boților tace până vine un rezumat nou: pe date vechi nu anunț mișcarea." });
+// v100.207 (auditul Busolei): omul mort — pe Discord, cu ce să faci; critic peste 3 h (ziua măsurarea e orară)
+export const busolaVeche = (ore, pragOre) => ({ nivel: ore >= 3 && pragOre < 3 ? "critic" : "atentie", cheie: "busola-veche", doarRadar: false,
+  titlu: "Busola n-a mai măsurat de " + cate(Math.floor(ore), "oră", "ore") + (pragOre < 3 ? " (ziua măsoară orar)" : " (noaptea la 4 ore)"),
+  mesaj: "PC-ul e oprit, sarcina nu rulează sau wrangler s-a agățat ori login-ul a expirat; paza boților tace, Busola arată date vechi.\n"
+    + "👉 Aș porni PC-ul sau MASOARA-SI-URCA.bat; la 401 aș rula npx wrangler login în busola." });
 
 export const t212DinNou = () => ({ nivel: "info", titlu: "Trading 212 răspunde din nou", mesaj: "Alertele de stop și țintă pe acțiuni merg din nou." });
 export const t212Rau = (minute, status, eroare) => ({ nivel: "critic", titlu: "Trading 212 nu mai răspunde de " + minute + " min",

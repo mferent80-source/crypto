@@ -21,11 +21,11 @@ async function test(nume, f) { try { await f(); ok++; console.log("  ✓ " + num
 console.log("Proba v100.86 · paza boților (Busola §2): starea pe 4h, trecerea în „mai agitată”, tăcerile, mesajul, fișa, colectorul");
 
 const ORA = 3600000, ACUM = Date.UTC(2026, 9, 3, 10, 0);
-const REZ = (o) => Object.assign({ la: ACUM - 2 * ORA, versiune: "1.36.0",
+const REZ = (o) => Object.assign({ la: ACUM - 30 * 60000, versiune: "1.36.0",   /* v100.207: 30 min = proaspăt la orice oră (pragul urmează programul Busolei) */
   monede: { CRV: { grid4h: "miscare", perp4h: "liniste" }, JTO: { perp4h: "miscare" }, LIT: { perp4h: "nemasurat", grid4h: "liniste" }, NEAR: { "4h": "miscare" },
     SOL: { perp4h: "nemasurat", grid4h: "nemasurat", "4h": "nemasurat" }, PEPE: { perp4h: "miscare" }, ETH: { grid4h: "nu-stiu" } },
   grid: { interval: "4h", canal: "±2×ATR", liniste: -0.00074962531, oricand: -0.0014935975, miscare: -0.0021398053, dovedit: true, miscareDovedita: true },
-  perp: { la: ACUM - 2 * ORA, monede: 209, prag: 200000, sursa: "Pionex PERP 4h", bareMediane: 1980 } }, o || {});
+  perp: { la: ACUM - 30 * 60000, monede: 209, prag: 200000, sursa: "Pionex PERP 4h", bareMediane: 1980 } }, o || {});
 const bot = (o) => Object.assign({ id: "b1", baza: "CRV.PERP", directie: "long", levier: 5, gridJos: 0.3841, gridSus: 0.4331, pornitLa: ACUM - 5 * ORA }, o || {});
 const lipsa = () => assert.ok(!P.lipsa, "lipsește scripts/lib/paza-boti.mjs: " + P.lipsa);
 
@@ -38,9 +38,11 @@ await test("(1) starea pe 4h: perp4h întâi, apoi grid4h, apoi 4h; „nemasurat
   assert.equal(s("1000PEPE"), "miscare", "1000PEPE ⇒ PEPE"); assert.equal(B.pazaStare(REZ(), "1000PEPE_USDT_PERP", ACUM).cheie, "PEPE");
   assert.equal(B.pazaStare(null, "CRV", ACUM), null); assert.equal(B.pazaStare({ monede: {} }, "CRV", ACUM), null, "fără grid ⇒ ca fișa, nimic");
 });
-await test("(1) rezumatul vechi: până la 4,5 h e proaspăt, peste e vechi; fără `la` ⇒ vechi (nicio alertă pe date fără vârstă)", () => {
-  const v = (la) => B.pazaStare(REZ({ la }), "CRV", ACUM).vechi;
-  assert.equal(v(ACUM - 4.5 * ORA), false); assert.equal(v(ACUM - 4.5 * ORA - 1), true); assert.equal(v(ACUM - 10 * 60000), false); assert.equal(v(undefined), true);
+await test("(1) rezumatul vechi: pragul urmează programul Busolei (v100.207) — ziua 1 h 50, noaptea 4 h 50; fără `la` ⇒ vechi (nicio alertă pe date fără vârstă)", () => {
+  const v = (la) => B.pazaStare(REZ({ la }), "CRV", ACUM).vechi;   // ACUM = 13:00 RO (zi)
+  assert.equal(v(ACUM - 1.8 * ORA), false); assert.equal(v(ACUM - 1.9 * ORA), true); assert.equal(v(ACUM - 10 * 60000), false); assert.equal(v(undefined), true);
+  const NOAPTE = Date.UTC(2026, 9, 2, 21, 30);   // măsurare la 00:30 RO (noapte ⇒ pas 4 h)
+  assert.equal(B.pazaStare(REZ({ la: NOAPTE }), "CRV", NOAPTE + 4.5 * ORA).vechi, false, "măsurarea de noapte e proaspătă 4,5 h"); assert.equal(B.pazaStare(REZ({ la: NOAPTE }), "CRV", NOAPTE + 5 * ORA).vechi, true);
 });
 await test("(2) cifra din mesaj: „−0,214% pe episod, grid pe ±2×ATR, dovedit” - „dovedit” DOAR din grid.miscareDovedita (true / false / lipsă); fără cifră sau canal ⇒ se lasă afară", () => {
   assert.equal(typeof B.cifraMiscare, "function", "lipsește Busola.cifraMiscare");
@@ -77,11 +79,11 @@ await test("(5) trecerea în „mai agitată”: din liniște / nimic neobișnui
   const agit = { rez: REZ({ monede: { CRV: { perp4h: "miscare" } } }) }, linis = { rez: REZ({ monede: { CRV: { perp4h: "liniste" } } }) };
   for (const prev of ["liniste", "nu-stiu", null]) {
     const d = decide({ stare: prev, la: 1 }, agit);
-    assert.ok(d.mesaj, "din „" + prev + "” ⇒ mesaj"); assert.equal(d.tine, true); assert.deepEqual(d.stare, { stare: "miscare", la: ACUM - 2 * ORA, de: ACUM - 2 * ORA });   /* v100.90: + de */
+    assert.ok(d.mesaj, "din „" + prev + "” ⇒ mesaj"); assert.equal(d.tine, true); assert.deepEqual(d.stare, { stare: "miscare", la: ACUM - 30 * 60000, de: ACUM - 30 * 60000 });   /* v100.90: + de */
     assert.equal(d.mesaj.titlu, "CRV long 5× · Busola: mai agitată ca de obicei"); assert.match(d.mesaj.mesaj, /\(gridul 0\.38410 – 0\.43310\)/); assert.match(d.mesaj.mesaj, /\(−0,214% pe episod, grid pe ±2×ATR, dovedit\)/);
   }
   const r = decide({ stare: "miscare", la: 1 }, agit); assert.equal(r.mesaj, null, "rămâne agitată ⇒ nerepetat"); assert.equal(r.tine, true);
-  const i = decide({ stare: "miscare", la: 1 }, linis); assert.equal(i.mesaj, null); assert.deepEqual(i.stare, { stare: "liniste", la: ACUM - 2 * ORA, de: ACUM - 2 * ORA }, "iese ⇒ starea nouă, ca reintrarea să sune");
+  const i = decide({ stare: "miscare", la: 1 }, linis); assert.equal(i.mesaj, null); assert.deepEqual(i.stare, { stare: "liniste", la: ACUM - 30 * 60000, de: ACUM - 30 * 60000 }, "iese ⇒ starea nouă, ca reintrarea să sune");
   const n = decide({ stare: "liniste", la: 1 }, { rez: REZ({ monede: { CRV: { perp4h: "nemasurat" } } }) }); assert.equal(n.mesaj, null, "nemăsurat ⇒ nicio alertă"); assert.equal(n.stare.stare, null);
 });
 await test("(5) prima vedere: botul vechi (după o repornire) ⇒ doar ține minte; botul NOU (sub 30 min) pe o monedă deja agitată ⇒ mesajul „bot nou”; botul nou pe liniște ⇒ nimic", () => {
@@ -105,16 +107,19 @@ await test("(6) pasul colectorului: mesajul picat ⇒ starea NU avansează (tura
   const st = { _busola: { stare: "liniste", la: 1 } }, trimise = [], agit = REZ({ monede: { CRV: { perp4h: "miscare" } } });
   const pas = (trimite, rez) => P.pazaPas({ Busola: B, rez: rez || agit, bot: bot(), st, acum: ACUM, pret: A.pret, trimite: async (m) => { trimise.push(m.titlu); return trimite; } });
   await pas(false); assert.deepEqual(st._busola, { stare: "liniste", la: 1 }, "n-a plecat ⇒ neatinsă"); assert.equal(trimise.length, 1);
-  await pas(true); assert.deepEqual(st._busola, { stare: "miscare", la: ACUM - 2 * ORA, de: ACUM - 2 * ORA }); assert.equal(trimise.length, 2);
+  await pas(true); assert.deepEqual(st._busola, { stare: "miscare", la: ACUM - 30 * 60000, de: ACUM - 30 * 60000 }); assert.equal(trimise.length, 2);
   await pas(true); assert.equal(trimise.length, 2, "rămâne agitată ⇒ nu mai trimite");
   await pas(true, REZ({ monede: { CRV: { perp4h: "liniste" } } })); assert.equal(st._busola.stare, "liniste"); assert.equal(trimise.length, 2);
 });
-await test("(7) nota de rezumat vechi: o dată pe rezumat, doar în Radar; proaspăt / lipsă / deja anunțat ⇒ nimic", () => {
+await test("(7 → v100.207) omul mort: nota pleacă pe DISCORD (nu doar în Radar), o dată pe rezumat; critic peste 3 h ziua; proaspăt / lipsă / deja anunțat ⇒ nimic", () => {
   lipsa();
-  const n = P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 6 * ORA }), acum: ACUM, anuntat: null });
-  assert.ok(n); assert.equal(n.doarRadar, true); assert.equal(n.la, ACUM - 6 * ORA); assert.equal(n.cheie, "busola-veche"); assert.equal(n.nivel, "info");
-  assert.equal(n.titlu, "Busola: rezumatul are 6 ore"); assert.equal(n.mesaj, "Paza boților tace până vine un rezumat nou: pe date vechi nu anunț mișcarea.");
-  assert.equal(P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 25 * ORA }), acum: ACUM, anuntat: null }).titlu, "Busola: rezumatul are 25 de ore");
+  const n = P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 6 * ORA }), acum: ACUM, anuntat: null });   // ultima măsurare la 07:00 RO = noapte (pas 4 h)
+  assert.ok(n); assert.equal(n.doarRadar, false); assert.equal(n.la, ACUM - 6 * ORA); assert.equal(n.cheie, "busola-veche"); assert.equal(n.nivel, "atentie");
+  assert.equal(n.titlu, "Busola n-a mai măsurat de 6 ore (noaptea la 4 ore)"); assert.match(n.mesaj, /wrangler login/); assert.match(n.mesaj, /\n👉 /);
+  const zi = P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 4 * ORA }), acum: ACUM, anuntat: null });   // ultima la 09:00 RO = zi ⇒ 4 h = CRITIC
+  assert.equal(zi.nivel, "critic"); assert.equal(zi.titlu, "Busola n-a mai măsurat de 4 ore (ziua măsoară orar)");
+  assert.equal(P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 25 * ORA }), acum: ACUM, anuntat: null }).titlu, "Busola n-a mai măsurat de 25 de ore (ziua măsoară orar)");   /* 25 h ⇒ ultima la 12:00 RO ieri = zi */
+  assert.equal(P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 2 * ORA }), acum: ACUM, anuntat: null }).nivel, "atentie", "2 h ziua = atenție, nu încă critic");
   assert.equal(P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 6 * ORA }), acum: ACUM, anuntat: ACUM - 6 * ORA }), null, "deja anunțat pentru rezumatul ăsta");
   assert.equal(P.notaVeche({ Busola: B, rez: REZ(), acum: ACUM, anuntat: null }), null); assert.equal(P.notaVeche({ Busola: B, rez: null, acum: ACUM, anuntat: null }), null);
 });

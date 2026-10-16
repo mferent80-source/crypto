@@ -10,8 +10,11 @@ var Busola = (function () {
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var URL_REZUMAT = "https://busola.mferent80.workers.dev/api/rezumat.json";
   var CACHE_MS = 30 * 60 * 1000, VECHI_MS = 6 * 3600 * 1000;
-  // v100.86 (§2 „paza boților”): peste 4,5 h (Busola rulează la 4 h) colectorul nu mai anunță nimic din rezumat
-  var PAZA_VECHI_MS = 4.5 * 3600 * 1000;
+  // v100.86 (§2 „paza boților”): peste prag colectorul nu mai anunță nimic din rezumat. v100.207 (16.10, auditul Busolei): pragul urmează
+  // PROGRAMUL real al măsurării (sarcina „Busola Masoara”: din oră în oră 08:05–22:35 ora României, la 4 h noaptea) + 50 min, nu 4,5 h fixe
+  var PAZA_VECHI_MS = 4.5 * 3600 * 1000;   /* rămâne ca rezervă pentru cine nu dă `la` (vezi pragVechime) */
+  function oraRomaniei(t) { try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hour12: false }).format(new Date(t))); } catch (e) { return new Date(t).getHours(); } }
+  function pragVechime(la) { var h = oraRomaniei(la); return (h >= 8 && h < 23 ? 1 : 4) * 3600 * 1000 + 50 * 60 * 1000; }
   var stare = { rez: null, la: 0, inLucru: null, esec: false };
   // v100.91 (ideea 3): bilanțul pazei Busolei (I-512) - după „mai agitat” pe futures, gridul chiar a pierdut mai mult? Pe pagină, la mișcare,
   // doar când verdictul e pe date destule („dovedit” / „pe dos” / „n-am aflat”); „prea puține” tace
@@ -74,7 +77,7 @@ var Busola = (function () {
   function pazaStare(rez, simbol, acum) {
     if (!rez || !rez.monede || !rez.grid) return null;
     var cheie = simbolBusola(simbol), v = acum - Number(rez.la);
-    return { cheie: cheie, stare: stare4h(rez.monede[cheie]), vechi: !(v <= PAZA_VECHI_MS), la: Number(rez.la) };
+    return { cheie: cheie, stare: stare4h(rez.monede[cheie]), vechi: !(v <= pragVechime(Number(rez.la))), la: Number(rez.la) };
   }
   // v100.92 (I-522 / I-523): ce primesc verdictul (semaforul) și Consiliul de la Busola - starea monedei pe 4h și bilanțul pazei (I-512:
   // verdict, diferența „mișcare − oricând” pe date noi, monedele). Rezumatul vechi (> 4,5 h), lipsă sau moneda neurmărită ⇒ null:
@@ -345,7 +348,7 @@ var Busola = (function () {
   function nuRaspunde() { return !stare.rez && stare.esec === true; }
   function _reset() { stare = { rez: null, la: 0, inLucru: null, esec: false }; }
 
-  return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, pentruVerdict: pentruVerdict, cifraMiscare: cifraMiscare,
+  return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, pragVechime: pragVechime, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, pentruVerdict: pentruVerdict, cifraMiscare: cifraMiscare,
     randFisa: randFisa, comparaInterval: comparaInterval, cartela: cartela, htmlCartela: htmlCartela, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset,
     randDirectie: randDirectie, randVerdict: randVerdict, randBtc: randBtc,   /* v100.147 */
     concluzie: concluzie, alteIntervale: alteIntervale, liniaBtc: liniaBtc,   /* v100.148 */
