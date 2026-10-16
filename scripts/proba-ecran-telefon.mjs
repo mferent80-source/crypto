@@ -49,6 +49,8 @@ try {
     if (x.method === "Runtime.exceptionThrown") { const d = x.params.exceptionDetails.exception?.description ?? x.params.exceptionDetails.text; exc.push(String(d).slice(0, 200)); } };
   await new Promise((r) => { ws.onopen = r; });
   await tr("Runtime.enable"); await tr("Page.enable");
+  // v100.209: proba nu bate în Pionex — serverul vede antetul și nu cheamă Pionex (functions/_middleware.js + _shared/pionex.js)
+  await tr("Network.enable"); await tr("Network.setExtraHTTPHeaders", { headers: { "x-proba-ecran": "1" } });
   await tr("Emulation.setDeviceMetricsOverride", { width: LAT, height: INALT, deviceScaleFactor: 2, mobile: true });
   await tr("Emulation.setTouchEmulationEnabled", { enabled: true });
   const ev = async (x) => (await tr("Runtime.evaluate", { expression: x, returnByValue: true, awaitPromise: true }))?.result?.value;

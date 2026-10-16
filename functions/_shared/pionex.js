@@ -48,7 +48,14 @@ export function reseteazaRitmPionex(){poarta=Promise.resolve();urmatorulLa=0;rac
 
 // Intoarce {r, data, brut}. Singurul lucru decis aici e 429 (racirea e a cheii);
 // restul formei o judeca ruta, fiindca fiecare stie ce asteapta.
+// v100.209 (16.10.2026): PROBA DE ECRAN nu mai bate în Pionex — cele 55 de pagini de la fiecare livrare (×2 azi) au ars cota și
+// Pionex a blocat IP-ul 3 ore (X-RateLimit-Lock), lăsând măsurarea Busolei fără futures. Proba pune antetul `x-proba-ecran: 1`
+// pe toate cererile (CDP), middleware-ul aprinde steagul cât ține cererea, iar aici cererea către Pionex nu pleacă (503, spus).
+let proba=false;
+export function marcheazaProba(x){proba=!!x}
+export function esteProba(){return proba}
 export async function pionexPrivatGet(env,path,params={}){
+  if(proba)throw Object.assign(Error("probă de ecran: fără cereri către Pionex"),{status:503});
   const apiKey=env.PIONEX_API_KEY,secret=env.PIONEX_API_SECRET;
   if(!apiKey||!secret)throw Object.assign(Error("Pionex read-only server secrets are not configured"),{status:503});
   const r=await cuRitm(async()=>{
