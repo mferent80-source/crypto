@@ -83,7 +83,9 @@ export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, che
     // cum îl socotește ruta bot-orders; fără una din ele ⇒ null (ca înainte), nu se ghicește
     const tot = nr(b.profitTotal), pus = nr(b.investit), pnlAcum = tot !== null && pus !== null && pus > 0 ? Math.round(tot / pus * 10000) / 100 : null;
     out.set(id, { id, simbol: cheiaDeschis(Busola, b), directie: dir(b.directie), levier: nr(b.levier), pornit, inchis: null, pnlPct: pnlAcum, ...interval,
-      tip: /\.PERP$/i.test(String(b.baza || "")) ? "grid futures" : "grid spot", ...(nr(b.pretCurent) > 0 ? { pret: nr(b.pretCurent) } : {}) });   // v101.119: prețul de acum al botului (Busola: IEȘIT DIN GRID pe prețul lui, nu pe al hărții)
+      tip: /\.PERP$/i.test(String(b.baza || "")) ? "grid futures" : "grid spot", ...(nr(b.pretCurent) > 0 ? { pret: nr(b.pretCurent) } : {}),
+      // v101.122 (16.10, auditul Busolei: cei mai răi 10 boți = −325%, 22 cu ≥10× = −84 pp): distanța până la lichidare, cifra Pionex, ca Busola s-o arate exact
+      ...(nr(b.distantaLichidarePct) !== null ? { distantaLichidarePct: nr(b.distantaLichidarePct) } : {}) });   // v101.119: prețul de acum al botului (Busola: IEȘIT DIN GRID pe prețul lui, nu pe al hărții)
   }
   for (const x of Array.isArray(inchisi) ? inchisi : []) {
     const id = x && x.id != null ? String(x.id) : "", pornit = nr(x && x.pornit), inchis = nr(x && x.inchis); if (!id || !(pornit > 0) || !(inchis >= de)) continue;

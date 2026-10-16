@@ -83,7 +83,7 @@ await test("versiunile: v100.203, colectorul v101.121, proba în lanțul `test`"
   assert.match(citeste("public", "sw.js"), new RegExp('^const CACHE="crypto-radar-v100-' + ver + '";')); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100." + ver);
   assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + ver + '"'));
   assert.equal((idx.match(new RegExp("v100\\." + ver, "g")) || []).length, 4); assert.ok(!/v100\.202\b/.test(idx));
-  assert.match(col, /const VERSIUNE_COLECTOR = "v101\.121"/);
+  assert.ok(Number((/const VERSIUNE_COLECTOR = "v101\.(\d+)"/.exec(col) || [])[1]) >= 121);   /* v101.122: ≥ */
   assert.match(citeste("package.json"), /npm run test:v100202 && npm run test:v100203/);
 });
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
