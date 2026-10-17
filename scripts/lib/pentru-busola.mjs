@@ -10,6 +10,13 @@ const DIR = { long: "long", short: "short" };
 // lipsa rămâne LIPSĂ: Number(null) === 0 ar inventa un levier 0
 const nr = (v) => { if (v === null || v === undefined || v === "" || typeof v === "boolean") return null; const x = Number(v); return Number.isFinite(x) ? x : null; };
 const dir = (v) => DIR[String(v || "").toLowerCase()] || "neutru";
+// v101.124 (17.10.2026, Busola: „unde pleacă banii”): cifrele Pionex ale botului, în USDT — profitul din grile, comisioanele, funding-ul
+// și suma pusă. Doar cele cunoscute (lipsa rămâne lipsă); semnul e al lui Pionex (comisioanele și funding-ul plătit sunt negative).
+export const bani = ({ grile, comisioane, funding, pus }) => {
+  const o = {}, g = nr(grile), c = nr(comisioane), f = nr(funding), p = nr(pus);
+  if (g !== null) o.grileUsdt = g; if (c !== null) o.comisioaneUsdt = c; if (f !== null) o.fundingUsdt = f; if (p !== null && p > 0) o.pusUsdt = p;
+  return o;
+};
 export const cheiaDeschis = (Busola, b) => Busola.simbolBusola(typeof b.simbolPionex === "string" && b.simbolPionex ? b.simbolPionex : String(b.baza || "").replace(/\.PERP$/i, ""));
 
 // revizia 04.10 (🟡2): predicatul Busolei (busola/src/motor/dinRadar.ts, citesteDinRadar) - ce nu trece aici n-ar trece nici acolo; prob cu 3 zecimale
@@ -85,13 +92,14 @@ export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, che
     out.set(id, { id, simbol: cheiaDeschis(Busola, b), directie: dir(b.directie), levier: nr(b.levier), pornit, inchis: null, pnlPct: pnlAcum, ...interval,
       tip: /\.PERP$/i.test(String(b.baza || "")) ? "grid futures" : "grid spot", ...(nr(b.pretCurent) > 0 ? { pret: nr(b.pretCurent) } : {}),
       // v101.122 (16.10, auditul Busolei: cei mai răi 10 boți = −325%, 22 cu ≥10× = −84 pp): distanța până la lichidare, cifra Pionex, ca Busola s-o arate exact
-      ...(nr(b.distantaLichidarePct) !== null ? { distantaLichidarePct: nr(b.distantaLichidarePct) } : {}) });   // v101.119: prețul de acum al botului (Busola: IEȘIT DIN GRID pe prețul lui, nu pe al hărții)
+      ...(nr(b.distantaLichidarePct) !== null ? { distantaLichidarePct: nr(b.distantaLichidarePct) } : {}),
+      ...bani({ grile: b.gridProfitBrut, comisioane: b.comisioane, funding: b.finantare, pus: b.investit }) });   // v101.124   // v101.119: prețul de acum al botului (Busola: IEȘIT DIN GRID pe prețul lui, nu pe al hărții)
   }
   for (const x of Array.isArray(inchisi) ? inchisi : []) {
     const id = x && x.id != null ? String(x.id) : "", pornit = nr(x && x.pornit), inchis = nr(x && x.inchis); if (!id || !(pornit > 0) || !(inchis >= de)) continue;
     const pus = nr(x.pus) > 0 ? nr(x.pus) : nr(x.investit) > 0 ? nr(x.investit) : null, net = nr(x.net);
     out.set(id, { id, simbol: Busola.simbolBusola(typeof cheia === "function" ? cheia(x.moneda) : x.moneda), directie: dir(x.dir), levier: nr(x.levier), pornit, inchis,
-      pnlPct: pus && net !== null ? Math.round(net / pus * 10000) / 100 : null });
+      pnlPct: pus && net !== null ? Math.round(net / pus * 10000) / 100 : null, ...bani({ grile: x.grile, comisioane: x.comisioane, funding: x.funding, pus }) });   // v101.124
   }
   // livrarea 2 a contractului (A3, v101.63; revizia 04.10 🟡2): ultimele cifre ale rețelei pe monedele cu bot deschis, în FORMA §5 pe care Busola
   // o citește deja (citesteDinRadar): { simbol, tinta, sens, nivel, prob, la, orizontH, dovedita } - un rând pe monedă și sens (cel mai nou);

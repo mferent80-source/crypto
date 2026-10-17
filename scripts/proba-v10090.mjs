@@ -155,8 +155,8 @@ await test("(4) pentru-busola: deschiși (cheia din simbolPionex: LIGHTER ⇒ LI
     { id: "2402", simbol: "LIT", directie: "long", levier: null, pornit: ACUM - 2 * ORA, inchis: null, pnlPct: null, tip: "grid futures" },
     { id: "2397", simbol: "AAVE", directie: "long", levier: 5, pornit: ACUM - 30 * ORA, inchis: null, pnlPct: null, tip: "grid futures" },
     { id: "s3", simbol: "LIT", directie: "short", levier: 4, pornit: ACUM - 3 * ZI, inchis: ACUM - 2 * ZI, pnlPct: null },
-    { id: "s4", simbol: "PUMP", directie: "long", levier: 2, pornit: ACUM - 5 * ZI, inchis: ACUM - 4 * ZI, pnlPct: null },
-    { id: "s1", simbol: "CRV", directie: "long", levier: 5, pornit: ACUM - 10 * ZI, inchis: ACUM - 9 * ZI, pnlPct: 1.98 } ] });
+    { id: "s4", simbol: "PUMP", directie: "long", levier: 2, pornit: ACUM - 5 * ZI, inchis: ACUM - 4 * ZI, pnlPct: null, pusUsdt: 60 },   // v101.124: banii Pionex
+    { id: "s1", simbol: "CRV", directie: "long", levier: 5, pornit: ACUM - 10 * ZI, inchis: ACUM - 9 * ZI, pnlPct: 1.98, comisioaneUsdt: -1.2, fundingUsdt: -0.3, pusUsdt: 49.67 } ] });
   assert.equal(PB.alcatuieste({ la: ACUM, versiune: "v", deschisi: null, inchisi: undefined, acum: ACUM, Busola: B }).boti.length, 0);
   // v101.117: intervalul gridului (Busola „Acum”: IEȘIT DIN GRID) — doar cu jos < sus, amândouă numere; tipul din baza
   const cu = (o) => PB.alcatuieste({ la: ACUM, versiune: "v", deschisi: [{ id: 1, baza: "SOL.PERP", directie: "long", levier: 3, pornitLa: ACUM - ORA, ...o }], inchisi: [], acum: ACUM, Busola: B }).boti[0];
