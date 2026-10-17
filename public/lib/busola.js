@@ -119,6 +119,33 @@ var Busola = (function () {
     var scurt = "jos " + P(jos) + " · sus " + P(sus) + " · " + cate(linii, "linie", "linii"), c = prop && typeof prop === "object" ? comparaInterval({ jos: jos, sus: sus }, prop.jos, prop.sus) : null;   /* v100.92 (I-524): propunerea, în unitățile botului */
     return { jos: jos, sus: sus, linii: linii, factor: factor, scurt: scurt, comparatie: c ? c.text : null, raport: c ? c.raport : null, text: "Busola, măsurat (" + det + "): " + scurt + vechi };
   }
+  // v100.210 (17.10.2026, el: „cum facem mai bună colaborarea Busola și Radar?” ⇒ „fă”): decizia de pornire într-un loc — în fișa de grid.
+  // Din rezumatul Busolei (1.86): `atingere24h` = cât de des a atins prețul fiecare prag în jos / în sus într-o zi (ultimele 30 de zile,
+  // bare de 4h) ⇒ șansa ca prețul să atingă LICHIDAREA setării tale în 24 h (interpolată; „cel mult”: poziția plină); `optiuni4h` = ce
+  // zic opțiunile (pe BTC la altcoin-uri) și dacă intră în verdictul Busolei. Lipsă ⇒ rândul lipsește, nimic ghicit.
+  function interpolare(praguri, v, d) {
+    if (!(d > 0) || !Array.isArray(praguri) || !Array.isArray(v) || praguri.length !== v.length || !praguri.length) return null;
+    if (d <= praguri[0]) return { p: v[0], margine: "cel puțin" };
+    var n = praguri.length; if (d >= praguri[n - 1]) return { p: v[n - 1], margine: "cel mult" };
+    for (var i = 1; i < n; i++) if (d <= praguri[i]) { var f = (d - praguri[i - 1]) / (praguri[i] - praguri[i - 1]); return { p: v[i - 1] + f * (v[i] - v[i - 1]), margine: null }; }
+    return null;
+  }
+  function randDecizie(rez, simbol, acum, o) {
+    if (!rez || !rez.monede) return null;
+    var m = rez.monede[simbolBusola(simbol)]; if (!m) return null;
+    var linii = [], a = m.atingere24h, pret = o && Number(o.pret), lj = o && Number(o.lichJos), ls = o && Number(o.lichSus);
+    if (a && pret > 0 && ((lj > 0 && lj < pret) || ls > pret)) {
+      var pj = lj > 0 && lj < pret ? interpolare(a.praguri, a.jos, (pret - lj) / pret) : null, ps = ls > pret ? interpolare(a.praguri, a.sus, (ls - pret) / pret) : null;
+      if (pj || ps) {
+        var p = Math.min(1, (pj ? pj.p : 0) + (ps ? ps.p : 0)), sub = (pj && pj.margine === "cel mult") || (ps && ps.margine === "cel mult");
+        var cifra = p < 0.01 ? "sub 1%" : (sub ? "sub " : "~") + Math.round(p * 100) + "%";
+        linii.push({ nivel: p >= 0.1 ? "atentie" : p >= 0.02 ? "neutru" : "info", text: "Șansa ca prețul să atingă lichidarea setării în 24 h: " + cifra + " (cel mult — poziția plină; din ultimele 30 de zile ale monedei, după Busola; o socoteală, nu o dovadă)" });
+      }
+    }
+    var op = m.optiuni4h;
+    if (op && (op.semn === 1 || op.semn === -1)) linii.push({ nivel: op.semn === -1 ? "atentie" : "info", text: "Opțiunile" + (op.din === "BTC" ? " pe BTC" : "") + " (4h): după sferturi ca acum, prețul a " + (op.semn === -1 ? "PLECAT mai des din canal" : "STAT mai des în canal") + (op.inVerdict ? " — probat pe date nevăzute; intră în verdictul Busolei când ea tace" : " — informație") + "." });
+    return linii.length ? { linii: linii } : null;
+  }
   // v100.90 (I-513): eticheta de pe cartela botului - starea Busolei pe moneda lui (perp4h ?? grid4h ?? 4h), de când e în ea
   // („de” îl ține colectorul, prin ruta `paza`) și cât de vechi e rezumatul. null cât rezumatul lipsește
   var TEXT_STARE = { miscare: ["atentie", "mai agitată ca de obicei"], liniste: ["info", "mai calmă ca de obicei"], "nu-stiu": ["neutru", "nimic neobișnuit"] };
@@ -353,6 +380,7 @@ var Busola = (function () {
     randDirectie: randDirectie, randVerdict: randVerdict, randBtc: randBtc,   /* v100.147 */
     concluzie: concluzie, alteIntervale: alteIntervale, liniaBtc: liniaBtc,   /* v100.148 */
     linkBusola: linkBusola, bilantVoci: bilantVoci,   /* v100.149 */
-    intervalBusola: intervalBusola, adresaBusola: adresaBusola };   /* v100.180 */
+    intervalBusola: intervalBusola, adresaBusola: adresaBusola,   /* v100.180 */
+    randDecizie: randDecizie };   /* v100.210 */
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

@@ -5094,7 +5094,10 @@ function grIngustHtml(f){
 }
 // v100.90 (I-514, Busola 1.38): intervalul măsurat de Busola pe 4h, sub propunerea fișei - pentru comparație, nu în locul ei (lățimea e pe spot; gridul pierde oricum, mai larg pierde mai puțin); lipsă ⇒ nimic
 function grBusolaFisaHtml(f,i){try{if(typeof Busola==="undefined")return "";var st=GridProba.setarePropusa(f)||f.setare,r=Busola.randFisa(Busola.rezumat(),f.simbol,Date.now(),function(x){return grPret(x,i)},st?{jos:st.jos,sus:st.sus}:null);   /* v100.92 (I-524): propunerea fișei față de intervalul Busolei */
-  return r?'<p class="tbSub grBusolaFisa">'+escapeHtml(r.text)+(r.comparatie?' <span class="'+(r.raport<-0.1?"tbWarn":"")+'">· '+escapeHtml(r.comparatie)+'</span>':'')+'</p>':""}catch(e){return ""}}
+  // v100.210 (17.10, colaborarea cu Busola): sub rândul ei, decizia de pornire — șansa de lichidare a setării în 24 h și ce zic opțiunile
+  var lq=st&&st.lichidare?st.lichidare:null,dz=Busola.randDecizie?Busola.randDecizie(Busola.rezumat(),f.simbol,Date.now(),{pret:f.pret,lichJos:lq?lq.jos:null,lichSus:lq?lq.sus:null}):null;
+  var dzH=dz?dz.linii.map(function(l){return '<p class="tbSub grBusolaDecizie'+(l.nivel==="atentie"?' tbWarn':'')+'">'+escapeHtml(l.text)+'</p>'}).join(""):"";
+  return (r?'<p class="tbSub grBusolaFisa">'+escapeHtml(r.text)+(r.comparatie?' <span class="'+(r.raport<-0.1?"tbWarn":"")+'">· '+escapeHtml(r.comparatie)+'</span>':'')+'</p>':"")+dzH}catch(e){return ""}}
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
 function grRandSumaMaxima(f){
