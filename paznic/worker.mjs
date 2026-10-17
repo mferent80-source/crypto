@@ -111,6 +111,64 @@ export async function discord(env, nivel, titlu, mesaj, f = fetch) {
   return r.ok;
 }
 
+// v101.126 (17.10.2026, el: „la trade nou fără stop loss avertizare severă și pe Discord, o dată la 15 min până se pune stop loss”):
+// Decision App trimite aici lista tickerelor Trading 212 CU stop (POST /stopuri, cheia de citire, ca /simboluri); cronul, la :00 :15 :30 :45,
+// compară pozițiile din poza colectorului (t212) cu lista + planul din Radar (stop fix / stop mobil) și, cât rămâne vreo poziție fără stop,
+// trimite o alarmă roșie cu @here. Fără scriere în KV pe alarmă (ora vine din ceas: minutul % 15); o singură scriere la schimbarea numărului
+// (pentru „✅ toate au stop”). Poza mai veche de 2 ore = colectorul tace ⇒ nicio alarmă pe poziții (o anunță deja paznicul).
+const STOPURI_MAX = 200, STOPURI_CORP_MAX = 16 * 1024, STOPURI_PAUZA_MS = 5000, STOPURI_PE_ZI = 200, POZA_VECHE_MS = 2 * 3600000;
+export async function stopuriCiteste(env) { try { return JSON.parse(await env.PAZNIC.get("stopuri") || "null") || { cuStop: [], la: 0 }; } catch { return { cuStop: [], la: 0 }; } }
+export async function stopuriScrie(env, text, acum = Date.now()) {
+  if (String(text || "").length > STOPURI_CORP_MAX) return { status: 413, corp: { error: "lista prea mare" } };
+  let c; try { c = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
+  if (!c || !Array.isArray(c.cuStop)) return { status: 400, corp: { error: "lipseste 'cuStop'" } };
+  const out = [...new Set(c.cuStop.map((x) => String(x || "").replace(/[^A-Za-z0-9._-]/g, "").slice(0, 40)).filter(Boolean))].sort().slice(0, STOPURI_MAX);
+  const vechi = await stopuriCiteste(env), zi = new Date(acum).toISOString().slice(0, 10);
+  if (vechi.la && JSON.stringify(vechi.cuStop) === JSON.stringify(out)) return { status: 200, corp: { ok: true, n: out.length, neschimbat: true } };
+  if (vechi.la && acum - vechi.la < STOPURI_PAUZA_MS) return { status: 429, corp: { error: "prea des: mai încearcă peste câteva secunde" } };
+  const scrieri = vechi.zi === zi ? (Number(vechi.scrieriZi) || 0) : 0;
+  if (scrieri >= STOPURI_PE_ZI) return { status: 429, corp: { error: "prea multe schimbări azi" } };
+  await env.PAZNIC.put("stopuri", JSON.stringify({ cuStop: out, la: acum, zi, scrieriZi: scrieri + 1 }));
+  return { status: 200, corp: { ok: true, n: out.length } };
+}
+const nrS = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+/** Pozițiile din poză fără stop: nici în lista din Decision App, nici plan cu stop / stop mobil în Radar. */
+export function faraStop(poza, stopuri) {
+  const cu = new Set((stopuri && stopuri.cuStop) || []);
+  return ((poza && Array.isArray(poza.t212)) ? poza.t212 : []).filter((p) => p && p.t212 && !cu.has(p.t212) && !(p.plan && ((nrS(p.plan.stopFix) || 0) > 0 || (nrS(p.plan.trailPct) || 0) > 0)));
+}
+const f2 = (v) => (v === null ? "—" : v.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+export function mesajFaraStop(lista) {
+  const titlu = "🚨 FĂRĂ STOP LOSS · " + (lista.length === 1 ? (lista[0].s || lista[0].t212) : lista.length + " poziții") + " · pierderea NU are limită";
+  const randuri = lista.slice(0, 15).map((p) => {
+    const m = nrS(p.mediu), pr = nrS(p.pret), pct = nrS(p.pctPret), lei = nrS(p.pplLei);
+    return "⛔ **" + (p.s || p.t212) + "** · " + (pct === null ? "" : (pct >= 0 ? "+" : "−") + Math.abs(pct * 100).toFixed(1).replace(".", ",") + "% ") + (lei === null ? "" : "(" + (lei >= 0 ? "+" : "−") + f2(Math.abs(lei)) + " lei) ") +
+      "· intrare " + f2(m) + " · acum " + f2(pr) + (m ? " → **stop −5% = " + f2(m * 0.95) + "**" : "") + (m && pr !== null && pr <= m * 0.95 ? " ⚠ prețul e DEJA sub −5%" : "");
+  });
+  const mesaj = randuri.join("\n") + "\n\n**PUNE STOPUL ACUM:** Decision App → Astăzi → „Pune stopul acum” (sau stopul în Trading 212 și notat în Portofoliu). Mesajul se repetă la fiecare 15 minute până când fiecare poziție are stop.";
+  return { titlu, mesaj };
+}
+async function alarma(env, titlu, mesaj, f) {
+  if (!/^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(String(env.DISCORD_WEBHOOK || ""))) return false;
+  const r = await f(env.DISCORD_WEBHOOK + "?wait=true", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: "Decision App · STOP LOSS", content: "@here 🚨🚨 " + titlu, allowed_mentions: { parse: ["everyone"] },
+      embeds: [{ title: "⛔ " + titlu, description: mesaj.slice(0, 4000), color: 0xff0000, footer: { text: "se repetă la 15 minute până pui stopul" } }] }) });
+  return r.ok;
+}
+export async function verificaStopuri(env, acum, f = fetch) {
+  let poza = null; try { poza = JSON.parse(await env.PAZNIC.get("poza") || "null"); } catch { poza = null; }
+  if (!poza || !(Number(poza.la) > 0) || acum - Number(poza.la) > POZA_VECHE_MS) return { stare: "fara-poza" };
+  const lista = faraStop(poza, await stopuriCiteste(env));
+  let st = {}; try { st = JSON.parse(await env.PAZNIC.get("faraStopStare") || "null") || {}; } catch { st = {}; }
+  if (!lista.length) {
+    if (Number(st.n) > 0) { await discord(env, "info", "✅ Toate pozițiile Trading 212 au stop", "Alarma „fără stop loss” s-a oprit. Bravo — riscul fiecărei poziții e limitat acum.", f); await env.PAZNIC.put("faraStopStare", JSON.stringify({ n: 0, la: acum })); }
+    return { stare: "toate-au-stop" };
+  }
+  const { titlu, mesaj } = mesajFaraStop(lista), ok = await alarma(env, titlu, mesaj, f);
+  if (Number(st.n) !== lista.length) await env.PAZNIC.put("faraStopStare", JSON.stringify({ n: lista.length, la: acum }));
+  return { stare: ok ? "alarma" : "discord-picat", n: lista.length };
+}
+
 // bataia colectorului: tine minte cand a venit; daca paznicul anuntase tacerea, spune ca a revenit
 export async function bataie(env, corp, acum, f = fetch) {
   const s = await citeste(env), era = s.anuntatLa ? s.la : null;
@@ -182,6 +240,10 @@ export default {
       if (m === "GET") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); return J(await simboluriCiteste(env), 200, h); }
       return J({ error: "doar GET sau POST" }, 405, h);
     }
+    if (u.pathname === "/stopuri") {
+      if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await stopuriScrie(env, await request.text()); return J(r.corp, r.status, h); }
+      return J({ error: "doar POST" }, 405, h);
+    }
     if (u.pathname === "/salt-cereri") {
       if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await saltCerereScrie(env, await request.text()); return J(r.corp, r.status, h); }
       if (m === "GET") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); const v = await saltCereriCiteste(env); return J({ cereri: v.cereri }, 200, h); }
@@ -194,5 +256,10 @@ export default {
     }
     return J({ serviciu: "paznicul colectorului Crypto Radar" }, 200, h);
   },
-  async scheduled(event, env, ctx) { ctx.waitUntil(verifica(env, Date.now())); }
+  // v101.126: cronul la 5 minute — paznicul colectorului la 10 minute (ca înainte), alarma „fără stop” la :00 :15 :30 :45
+  async scheduled(event, env, ctx) {
+    const t = Number(event && event.scheduledTime) || Date.now(), mm = new Date(t).getUTCMinutes();
+    if (mm % 10 < 5) ctx.waitUntil(verifica(env, t));
+    if (mm % 15 < 5) ctx.waitUntil(verificaStopuri(env, t));
+  }
 };

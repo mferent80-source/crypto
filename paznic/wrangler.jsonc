@@ -5,7 +5,7 @@
   "name": "paznic-radar",
   "main": "worker.mjs",
   "compatibility_date": "2026-09-11",
-  "triggers": { "crons": ["*/10 * * * *"] },
+  "triggers": { "crons": ["*/5 * * * *"] },
   "kv_namespaces": [
     { "binding": "PAZNIC", "id": "55a8f3ce117a4c9a96b70914224bf60c" }
   ],
