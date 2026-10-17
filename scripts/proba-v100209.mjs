@@ -49,9 +49,10 @@ await test("proba de ecran pune antetul pe toate cererile (CDP Network.setExtraH
 });
 await test("versiunile: v100.209, proba în lanțul `test`", () => {
   const idx = citeste("public", "index.html");
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.209.0"); assert.match(citeste("public", "sw.js"), /^const CACHE="crypto-radar-v100-209";/);
-  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100.209"); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.209"/);
-  assert.equal((idx.match(/v100\.209/g) || []).length, 4); assert.ok(!/v100\.208\b/.test(idx));
+  const ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]); assert.ok(ver >= 209);   /* v100.210: ≥, nu egal */
+  assert.match(citeste("public", "sw.js"), new RegExp('^const CACHE="crypto-radar-v100-' + ver + '";')); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100." + ver);
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + ver + '"'));
+  assert.equal((idx.match(new RegExp("v100\\." + ver, "g")) || []).length, 4); assert.ok(!/v100\.208\b/.test(idx));
   assert.match(citeste("package.json"), /npm run test:v100208 && npm run test:v100209/);
 });
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
