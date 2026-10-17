@@ -48,7 +48,7 @@ await test("versiunile: v100.207, colectorul v101.123, proba în lanțul `test`"
   assert.match(citeste("public", "sw.js"), new RegExp('^const CACHE="crypto-radar-v100-' + ver + '";')); assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, "v100." + ver);
   assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + ver + '"'));
   assert.equal((idx.match(new RegExp("v100\\." + ver, "g")) || []).length, 4); assert.ok(!/v100\.206\b/.test(idx));
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.123"/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(12[3-9]|1[3-9]\d)"/);   // 17.10: interval, ca celelalte probe (v101.124 = banii Pionex pentru Busola)
   assert.match(citeste("package.json"), /npm run test:v100206 && npm run test:v100207/);
 });
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
