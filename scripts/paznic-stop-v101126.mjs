@@ -16,9 +16,9 @@ function lume() {
 const poz = (t212, o = {}) => ({ s: t212.split("_")[0], t212, mediu: 100, pret: 97, pctPret: -0.03, pplLei: -42, ...o });
 const poza = (t212, la = T0) => JSON.stringify({ la, t212 });
 
-await test("fără stop = nici în lista aplicației, nici plan cu stop fix / stop mobil în Radar", async () => {
+await test("fără stop = nici în lista aplicației, nici stop FIX în Radar; stopul mobil (15%) NU contează (alegerea lui, 17.10)", async () => {
   const l = faraStop({ t212: [poz("AAPL_US_EQ"), poz("TSLA_US_EQ"), poz("NVDA_US_EQ", { plan: { stopFix: 90 } }), poz("MU_US_EQ", { plan: { trailPct: 8 } }), poz("AMD_US_EQ", { plan: { stopFix: null, trailPct: null } })] }, { cuStop: ["AAPL_US_EQ"] });
-  assert.deepEqual(l.map((p) => p.t212), ["TSLA_US_EQ", "AMD_US_EQ"]);
+  assert.deepEqual(l.map((p) => p.t212), ["TSLA_US_EQ", "MU_US_EQ", "AMD_US_EQ"]);
 });
 await test("mesajul: titlul cu numărul, fiecare poziție cu stopul −5% de la intrare și semnul când prețul e deja sub el", async () => {
   const m = mesajFaraStop([poz("TSLA_US_EQ", { mediu: 420, pret: 395, pctPret: -0.0595 })]);

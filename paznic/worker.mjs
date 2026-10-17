@@ -113,7 +113,7 @@ export async function discord(env, nivel, titlu, mesaj, f = fetch) {
 
 // v101.126 (17.10.2026, el: „la trade nou fără stop loss avertizare severă și pe Discord, o dată la 15 min până se pune stop loss”):
 // Decision App trimite aici lista tickerelor Trading 212 CU stop (POST /stopuri, cheia de citire, ca /simboluri); cronul, la :00 :15 :30 :45,
-// compară pozițiile din poza colectorului (t212) cu lista + planul din Radar (stop fix / stop mobil) și, cât rămâne vreo poziție fără stop,
+// compară pozițiile din poza colectorului (t212) cu lista + stopul FIX din planul Radarului (stopul mobil nu contează, alegerea lui) și, cât rămâne vreo poziție fără stop,
 // trimite o alarmă roșie cu @here. Fără scriere în KV pe alarmă (ora vine din ceas: minutul % 15); o singură scriere la schimbarea numărului
 // (pentru „✅ toate au stop”). Poza mai veche de 2 ore = colectorul tace ⇒ nicio alarmă pe poziții (o anunță deja paznicul).
 const STOPURI_MAX = 200, STOPURI_CORP_MAX = 16 * 1024, STOPURI_PAUZA_MS = 5000, STOPURI_PE_ZI = 200, POZA_VECHE_MS = 2 * 3600000;
@@ -132,10 +132,10 @@ export async function stopuriScrie(env, text, acum = Date.now()) {
   return { status: 200, corp: { ok: true, n: out.length } };
 }
 const nrS = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
-/** Pozițiile din poză fără stop: nici în lista din Decision App, nici plan cu stop / stop mobil în Radar. */
+/** Pozițiile din poză fără stop: nici în lista din Decision App, nici stop FIX în planul din Radar (17.10, el: stopul mobil de 15% NU contează — „cer stop pus de mine”). */
 export function faraStop(poza, stopuri) {
   const cu = new Set((stopuri && stopuri.cuStop) || []);
-  return ((poza && Array.isArray(poza.t212)) ? poza.t212 : []).filter((p) => p && p.t212 && !cu.has(p.t212) && !(p.plan && ((nrS(p.plan.stopFix) || 0) > 0 || (nrS(p.plan.trailPct) || 0) > 0)));
+  return ((poza && Array.isArray(poza.t212)) ? poza.t212 : []).filter((p) => p && p.t212 && !cu.has(p.t212) && !(p.plan && (nrS(p.plan.stopFix) || 0) > 0));
 }
 const f2 = (v) => (v === null ? "—" : v.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 export function mesajFaraStop(lista) {
