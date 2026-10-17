@@ -158,7 +158,12 @@ async function alarma(env, titlu, mesaj, f) {
       embeds: [{ title: "⛔ " + titlu, description: mesaj.slice(0, 4000), color: 0xff0000, footer: { text: "se repetă la 15 minute până pui stopul" } }] }) });
   return r.ok;
 }
+// v101.129 (18.10, el: „pune DND în weekend și de la 22 la 08 pe Discord”): alarma „fără stop” tace sâmbăta, duminica și între 22:00 și 08:00
+// (ora României). Doar ALARMA asta — alertele boților / ale colectorului rămân (boții crypto merg și noaptea / în weekend).
+const F_RO_DND = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", weekday: "short", hour: "2-digit", hourCycle: "h23" });
+export function dnd(t) { const p = Object.fromEntries(F_RO_DND.formatToParts(new Date(t)).map((x) => [x.type, x.value])), ora = Number(p.hour); return p.weekday === "Sat" || p.weekday === "Sun" || ora >= 22 || ora < 8; }
 export async function verificaStopuri(env, acum, f = fetch) {
+  if (dnd(acum)) return { stare: "dnd" };
   let poza = null; try { poza = JSON.parse(await env.PAZNIC.get("poza") || "null"); } catch { poza = null; }
   if (!poza || !(Number(poza.la) > 0) || acum - Number(poza.la) > POZA_VECHE_MS) return { stare: "fara-poza" };
   const lista = faraStop(poza, await stopuriCiteste(env));

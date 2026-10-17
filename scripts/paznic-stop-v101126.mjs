@@ -2,11 +2,11 @@
 // alarma la :00 :15 :30 :45 cu @here, „toate au stop” o singură dată, poza veche = nicio alarmă, cronul la 5 minute. Fără rețea.
 // Rulare: node scripts/paznic-stop-v101126.mjs
 import assert from "node:assert/strict";
-import paznic, { faraStop, mesajFaraStop, stopuriScrie, verificaStopuri } from "../paznic/worker.mjs";
+import paznic, { faraStop, mesajFaraStop, stopuriScrie, verificaStopuri, dnd } from "../paznic/worker.mjs";
 
 let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${e.stack.split("\n").slice(0, 3).join(" | ")}`); } }
-const T0 = Date.UTC(2026, 9, 17, 15, 0);
+const T0 = Date.UTC(2026, 9, 16, 12, 0); // vineri 15:00 ora României (în afara DND)
 function lume() {
   const kv = new Map(), trimise = [];
   const env = { PAZNIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } }, DISCORD_WEBHOOK: "https://discord.com/api/webhooks/123/abcDEF_-x", PAZNIC_TOKEN: "t".repeat(32), CHEIE_CITIRE: "c".repeat(32) };
@@ -55,6 +55,14 @@ await test("cronul la 5 minute: paznicul colectorului la :00 :10 :20…, alarma 
   for (const mm of [0, 5, 10, 15, 20, 25, 30, 45]) await paznic.scheduled({ scheduledTime: T0 + mm * 60000 }, w.env, ctx);
   await Promise.all(rulari); globalThis.fetch = fetchVechi;
   assert.equal(w.trimise.filter((x) => /STOP LOSS/.test(x.username || "")).length, 4, "alarma la 0, 15, 30, 45");
+});
+await test("DND: sâmbăta, duminica și 22:00–08:00 ora României tace (și vara, și iarna); vineri 21:59 și luni 08:00 sună", async () => {
+  assert.equal(dnd(Date.UTC(2026, 9, 17, 9, 0)), true, "sâmbătă");  assert.equal(dnd(Date.UTC(2026, 9, 18, 9, 0)), true, "duminică");
+  assert.equal(dnd(Date.UTC(2026, 9, 16, 18, 59)), false, "vineri 21:59 (vara, UTC+3)"); assert.equal(dnd(Date.UTC(2026, 9, 16, 19, 0)), true, "vineri 22:00");
+  assert.equal(dnd(Date.UTC(2026, 9, 19, 4, 59)), true, "luni 07:59"); assert.equal(dnd(Date.UTC(2026, 9, 19, 5, 0)), false, "luni 08:00");
+  assert.equal(dnd(Date.UTC(2026, 11, 7, 6, 0)), false, "luni 08:00 iarna (UTC+2)"); assert.equal(dnd(Date.UTC(2026, 11, 7, 5, 59)), true, "luni 07:59 iarna");
+  const w = lume(); w.kv.set("poza", poza([poz("AAPL_US_EQ")], Date.UTC(2026, 9, 17, 9, 0)));
+  assert.equal((await verificaStopuri(w.env, Date.UTC(2026, 9, 17, 9, 0), w.f)).stare, "dnd"); assert.equal(w.trimise.length, 0);
 });
 console.log(`\n${teste - picate}/${teste} probe trec`);
 if (picate) process.exit(1);
