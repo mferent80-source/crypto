@@ -79,7 +79,21 @@ export function inchisiProaspeti(stare, ob, acum) {
   return { ob: { ...ob, boti: [...boti, ...s.recenti.values()] }, stare: s };
 }
 
-export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, cheia, retea }) {
+// v101.125 (17.10.2026, colaborarea cu Busola, ideea 3): episoadele alertelor Radarului (pândă: contra / dir / voci / btc) și martorii lor,
+// cu ce a făcut profitul botului după 24 h și 72 h — Busola le judecă cu regula ei (dovada pe zile, la date fixe), ca pe rețea.
+// Doar câmpurile știute; un episod fără `la` sau cu tip necunoscut se aruncă; cel mult 2000 (cele mai noi).
+const TIPURI_ALERTE = new Set(["contra", "dir", "voci", "btc", "martor"]);
+export function alertePentruBusola(lista) {
+  const out = [];
+  for (const x of Array.isArray(lista) ? lista : []) {
+    const la = nr(x && x.la); if (!x || !TIPURI_ALERTE.has(x.tip) || !(la > 0)) continue;
+    const d24 = nr(x.delta24), d72 = nr(x.delta);
+    out.push({ tip: x.tip, id: x.id != null ? String(x.id).slice(0, 40) : null, la, ...(d24 !== null ? { d24 } : {}), ...(d72 !== null ? { d72 } : {}) });
+  }
+  return out.sort((a, b) => a.la - b.la).slice(-2000);
+}
+
+export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, cheia, retea, alerte }) {
   const t = Number(acum) || Date.now(), de = t - ZILE * ZI, out = new Map();
   for (const b of Array.isArray(deschisi) ? deschisi : []) {
     const id = b && b.id != null ? String(b.id) : "", pornit = nr(b && b.pornitLa); if (!id || !(pornit > 0)) continue;
@@ -106,5 +120,6 @@ export function alcatuieste({ la, versiune, deschisi, inchisi, acum, Busola, che
   // intrările stricate se aruncă aici, cu același predicat ca în Busola
   const rt = new Map();
   for (const r of (Array.isArray(retea) ? retea : [])) { const x = intrareValida(r); if (!x) continue; const k = x.simbol + "|" + x.sens, v = rt.get(k); if (!v || x.la > v.la) rt.set(k, x); }
-  return { la: Number(la) || t, versiune: String(versiune || ""), retea: [...rt.values()].sort((a, b) => a.simbol.localeCompare(b.simbol) || a.sens.localeCompare(b.sens)), boti: [...out.values()].sort((a, b) => b.pornit - a.pornit) };
+  return { la: Number(la) || t, versiune: String(versiune || ""), retea: [...rt.values()].sort((a, b) => a.simbol.localeCompare(b.simbol) || a.sens.localeCompare(b.sens)), boti: [...out.values()].sort((a, b) => b.pornit - a.pornit),
+    ...(alerte !== undefined ? { alerte: alertePentruBusola(alerte) } : {}) };   // v101.125
 }
