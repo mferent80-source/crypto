@@ -1025,11 +1025,14 @@ async function rezultateZilePt(tk) {
   const d = rezultateAct[tk].data; if (!d) return null;
   const zc = Math.ceil((Date.parse(d + "T12:00:00Z") - Date.now()) / 86400000); return zc >= 0 ? Math.round(zc * 5 / 7) : null;
 }
+let stopuriT212Ultim = {}, stopuriT212Eroare = null;   // v101.130
 async function pozitiiPentruPoza() {
   const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) return [];
   const pz = await cere("/api/t212?action=pozitii"), poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
   let loturi = [], inchiseT = []; try { const h = await cere("/api/t212?action=istoric"), pp = T212.perechi((h && h.umpleri) || []); loturi = pp.deschise || []; inchiseT = pp.inchise || []; } catch (e) { jurnal("poza: loturi", e.message); }
   const alesT = await trailAlesPt(inchiseT);
+  // v101.130: stopurile puse direct în Trading 212 (ordine în așteptare); la o eroare rămân ultimele cunoscute (ca planul), altfel alarma ar pâlpâi
+  try { const o = await cere("/api/t212?action=ordine-deschise"); if (o && o.stopuri) stopuriT212Ultim = o.stopuri; } catch (e) { if (!stopuriT212Eroare) jurnal("poza: ordinele de stop T212", e.message); stopuriT212Eroare = e.message; }
   let cash = null; try { cash = (await cere("/api/t212?action=cont")).cash || null; } catch {}
   if (cash && cash.total > 0) contT212 = cash.total;   // v101.2: contul in lei, pentru „câte bucăți” la simbolurile urmarite
   const pd = ponderiT212(poz, cash, ContIntreg.monedaTicker);   // v101.116 (🔵7): pe aceeași monedă; amestecat ⇒ null
@@ -1040,7 +1043,7 @@ async function pozitiiPentruPoza() {
     // revizia 01.10 (I5): la o eroare (RATE_LIMITED) ramane ultimul plan cunoscut - altfel stop-plan disparea si verdictul pâlpâia pe Discord
     try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + x.ticker))); planUltim[x.ticker] = plan; } catch { plan = planUltim[x.ticker] ?? null; }
     const mx = ActiuniSemnale.maxDupaCumparare(bare, x.initialFillDate, x.currentPrice);   // v100.40: de la ziua de dupa cumparare
-    const p = { ticker: x.ticker, simbol: T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx };
+    const p = { ticker: x.ticker, simbol: T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx, stopT212: stopuriT212Ultim[x.ticker] ?? null };
     // v100.8 (el, 28.09: „în alerts la Trading 212 de ce nu apar și aici insiderii”): aceeași sursă ca la simbolurile paginii
     // (Yahoo quoteSummary, cache 6 h în data/poza-ext.json); dublurile germane iau insiderii companiei din SUA
     const sursa = DUBLURI[p.simbol] || null; let extra = null;

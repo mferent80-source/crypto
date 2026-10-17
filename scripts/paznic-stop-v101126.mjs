@@ -3,6 +3,7 @@
 // Rulare: node scripts/paznic-stop-v101126.mjs
 import assert from "node:assert/strict";
 import paznic, { faraStop, mesajFaraStop, stopuriScrie, verificaStopuri, dnd } from "../paznic/worker.mjs";
+import { stopuriDinOrdine } from "../functions/api/t212.js";
 
 let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${e.stack.split("\n").slice(0, 3).join(" | ")}`); } }
@@ -19,6 +20,7 @@ const poza = (t212, la = T0) => JSON.stringify({ la, t212 });
 await test("fără stop = nici în lista aplicației, nici stop FIX în Radar; stopul mobil (15%) NU contează (alegerea lui, 17.10)", async () => {
   const l = faraStop({ t212: [poz("AAPL_US_EQ"), poz("TSLA_US_EQ"), poz("NVDA_US_EQ", { plan: { stopFix: 90 } }), poz("MU_US_EQ", { plan: { trailPct: 8 } }), poz("AMD_US_EQ", { plan: { stopFix: null, trailPct: null } })] }, { cuStop: ["AAPL_US_EQ"] });
   assert.deepEqual(l.map((p) => p.t212), ["TSLA_US_EQ", "MU_US_EQ", "AMD_US_EQ"]);
+  assert.deepEqual(faraStop({ t212: [poz("TSLA_US_EQ", { stopT212: 380 })] }, { cuStop: [] }), [], "ordinul de stop din Trading 212 contează (v101.130)");
 });
 await test("mesajul: titlul cu numărul; stopul −5% de la intrare, iar sub −5% de la intrare — de la prețul de acum (18.10)", async () => {
   const m = mesajFaraStop([poz("TSLA_US_EQ", { mediu: 420, pret: 395, pctPret: -0.0595 })]);
@@ -63,6 +65,11 @@ await test("DND: sâmbăta, duminica și 22:00–08:00 ora României tace (și v
   assert.equal(dnd(Date.UTC(2026, 11, 7, 6, 0)), false, "luni 08:00 iarna (UTC+2)"); assert.equal(dnd(Date.UTC(2026, 11, 7, 5, 59)), true, "luni 07:59 iarna");
   const w = lume(); w.kv.set("poza", poza([poz("AAPL_US_EQ")], Date.UTC(2026, 9, 17, 9, 0)));
   assert.equal((await verificaStopuri(w.env, Date.UTC(2026, 9, 17, 9, 0), w.f)).stare, "dnd"); assert.equal(w.trimise.length, 0);
+});
+await test("ordinele în așteptare din Trading 212: doar vânzările STOP / STOP_LIMIT, cel mai sus stop pe ticker", async () => {
+  const o = stopuriDinOrdine([{ ticker: "MU_US_EQ", type: "STOP", quantity: -2, stopPrice: 900 }, { ticker: "MU_US_EQ", type: "STOP_LIMIT", quantity: -1, stopPrice: 950, limitPrice: 940 },
+    { ticker: "TXN_US_EQ", type: "LIMIT", quantity: -1, limitPrice: 300 }, { ticker: "WDC_US_EQ", type: "STOP", quantity: 3, stopPrice: 400 }, { ticker: "AVGO_US_EQ", type: "STOP", quantity: -1, stopPrice: 0 }]);
+  assert.deepEqual(o, { MU_US_EQ: 950 }); assert.deepEqual(stopuriDinOrdine(null), {});
 });
 console.log(`\n${teste - picate}/${teste} probe trec`);
 if (picate) process.exit(1);

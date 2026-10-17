@@ -102,7 +102,7 @@ function pozitieT212(x, acum) {
   return { s: String(x.simbol || ""), t212: String(x.ticker || ""), buc: rot(x.qty, 6), mediu: rot(mediu, 4), costLei: rot(x.costLei, 2),
     pret: rot(pret, 4), prev: rot(x.prev, 4), la: nr(x.la), closes30: esantion((x.bare || []).map((b) => rot(b && b.c, 4)).filter((c) => c !== null).slice(-30), 30),
     pplLei: rot(x.ppl, 2), pctLei: nr(x.ppl) !== null && nr(x.costLei) ? rot(x.ppl / x.costLei, 6) : null, pctPret: pret && mediu ? rot(pret / mediu - 1, 6) : null,
-    plan, trend: sem.trend, pondere: rot(x.pondere, 4), niv: sem.niv, motive: sem.motive, sfat: sem.sfat,
+    plan, stopT212: rot(x.stopT212, 4), trend: sem.trend, pondere: rot(x.pondere, 4), niv: sem.niv, motive: sem.motive, sfat: sem.sfat,   /* v101.130: stopul pus în Trading 212 */
     // v100.8: insiderii pe 60 de zile si la pozitiile T212 (null = Yahoo n-a dat nimic inca; pagina spune „vine cu poza următoare”)
     insideri: x.extra ? insideri(x.extra.tranzactii, nr(acum) || Date.now()) : null, sursa: x.sursa || null, sugestie: sugestiePoza(x.niveluri, x.pret, "pozitie") };
 }

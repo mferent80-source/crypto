@@ -3,6 +3,7 @@
 //   ?action=cont      -> sold (cash) + moneda contului
 //   ?action=pozitii   -> pozitiile deschise (cere permisiunea "Portfolio" pe cheie)
 //   ?action=ordine[&cursor=<cifre>] -> o pagina de istoric (50), cu cursorul paginii urmatoare
+//   ?action=ordine-deschise -> ordinele ÎN AȘTEPTARE (v101.130: stopurile puse direct în Trading 212), cere permisiunea „Orders (read)”
 //   ?action=preturi&ticker=AAPL_US_EQ&interval=5m|15m|30m|1h|4h|1d -> lumanari (Twelve Data daca e cheia, altfel Yahoo)
 //                                                       in forma randurilor Pionex {time, open, high, low, close}
 //   ?action=istoric   -> istoricul COMPLET al umplerilor, strans de colector in KV-ul de acasa (ISTORIC)
@@ -14,7 +15,18 @@ import { candidati } from "../_shared/simboluri.js";
 const H = { "content-type": "application/json", "cache-control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: H });
 const BAZA = "https://live.trading212.com/api/v0";
-const PERMISIUNE = { cont: "Account data", pozitii: "Portfolio", ordine: "History / Orders", dividende: "History / Dividends" };
+const PERMISIUNE = { cont: "Account data", pozitii: "Portfolio", ordine: "History / Orders", dividende: "History / Dividends", ordineDeschise: "Orders (read)" };
+// v101.130 (18.10, el: stopurile puse direct în Trading 212 să oprească alarma „fără stop”): din ordinele în așteptare — vânzările STOP / STOP_LIMIT
+// (cantitate negativă), cel mai sus stop pe ticker. Pur, testabil.
+export function stopuriDinOrdine(lista) {
+  const out = {};
+  for (const o of Array.isArray(lista) ? lista : []) {
+    const tip = String(o && o.type || "").toUpperCase(), tk = String(o && o.ticker || ""), sp = Number(o && o.stopPrice), q = Number(o && o.quantity);
+    if (!tk || !(tip === "STOP" || tip === "STOP_LIMIT") || !(sp > 0) || !(q < 0)) continue;
+    out[tk] = Math.max(out[tk] || 0, sp);
+  }
+  return out;
+}
 const cache = new Map(); // cheie -> {pana, valoare} (in memoria serverului de acasa)
 
 function dinCache(k) { const c = cache.get(k); return c && c.pana > Date.now() ? c.valoare : null; }
@@ -322,6 +334,10 @@ export async function onRequestGet({ request, env }) {
       });
       if (v) return json(v);
       return json({ error: "Fără prețuri pentru " + tk + " (poate a fost delistată sau redenumită)." }, 404);
+    }
+    if (a === "ordine-deschise") {
+      const v = await prinCache("ordine-deschise", 60, async () => { const l = await t212(env, "/equity/orders", "ordineDeschise"); return { stopuri: stopuriDinOrdine(l), n: Array.isArray(l) ? l.length : 0, la: Date.now() }; });
+      return json(v);
     }
     if (a === "rezultate") {
       const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = /_US_EQ$/.test(tk) ? candidati(tk) : [];

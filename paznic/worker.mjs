@@ -132,10 +132,11 @@ export async function stopuriScrie(env, text, acum = Date.now()) {
   return { status: 200, corp: { ok: true, n: out.length } };
 }
 const nrS = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
-/** Pozițiile din poză fără stop: nici în lista din Decision App, nici stop FIX în planul din Radar (17.10, el: stopul mobil de 15% NU contează — „cer stop pus de mine”). */
+/** Pozițiile din poză fără stop: nici în lista din Decision App, nici stop FIX în planul din Radar (17.10, el: stopul mobil de 15% NU contează — „cer stop pus de mine”),
+    nici ordin de stop în așteptare în Trading 212 (stopT212, v101.130). */
 export function faraStop(poza, stopuri) {
   const cu = new Set((stopuri && stopuri.cuStop) || []);
-  return ((poza && Array.isArray(poza.t212)) ? poza.t212 : []).filter((p) => p && p.t212 && !cu.has(p.t212) && !(p.plan && (nrS(p.plan.stopFix) || 0) > 0));
+  return ((poza && Array.isArray(poza.t212)) ? poza.t212 : []).filter((p) => p && p.t212 && !cu.has(p.t212) && !((nrS(p.stopT212) || 0) > 0) && !(p.plan && (nrS(p.plan.stopFix) || 0) > 0));
 }
 const f2 = (v) => (v === null ? "—" : v.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 export function mesajFaraStop(lista) {
