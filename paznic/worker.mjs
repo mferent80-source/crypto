@@ -143,7 +143,10 @@ export function mesajFaraStop(lista) {
   const randuri = lista.slice(0, 15).map((p) => {
     const m = nrS(p.mediu), pr = nrS(p.pret), pct = nrS(p.pctPret), lei = nrS(p.pplLei);
     return "⛔ **" + (p.s || p.t212) + "** · " + (pct === null ? "" : (pct >= 0 ? "+" : "−") + Math.abs(pct * 100).toFixed(1).replace(".", ",") + "% ") + (lei === null ? "" : "(" + (lei >= 0 ? "+" : "−") + f2(Math.abs(lei)) + " lei) ") +
-      "· intrare " + f2(m) + " · acum " + f2(pr) + (m ? " → **stop −5% = " + f2(m * 0.95) + "**" : "") + (m && pr !== null && pr <= m * 0.95 ? " ⚠ prețul e DEJA sub −5%" : "");
+      "· intrare " + f2(m) + " · acum " + f2(pr) + (m && pr !== null && pr <= m * 0.95
+        // v101.128 (18.10, el): poziția deja sub −5% de la intrare ⇒ stopul de la PREȚUL DE ACUM (cel de la intrare ar sta peste preț)
+        ? " → deja sub −5% de la intrare ⇒ **stop −5% de la prețul de acum = " + f2(pr * 0.95) + "**"
+        : m ? " → **stop −5% de la intrare = " + f2(m * 0.95) + "**" : "");
   });
   const mesaj = randuri.join("\n") + "\n\n**PUNE STOPUL ACUM:** Decision App → Astăzi → „Pune stopul acum” (sau stopul în Trading 212 și notat în Portofoliu). Mesajul se repetă la fiecare 15 minute până când fiecare poziție are stop.";
   return { titlu, mesaj };

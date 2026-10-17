@@ -20,9 +20,10 @@ await test("fără stop = nici în lista aplicației, nici stop FIX în Radar; s
   const l = faraStop({ t212: [poz("AAPL_US_EQ"), poz("TSLA_US_EQ"), poz("NVDA_US_EQ", { plan: { stopFix: 90 } }), poz("MU_US_EQ", { plan: { trailPct: 8 } }), poz("AMD_US_EQ", { plan: { stopFix: null, trailPct: null } })] }, { cuStop: ["AAPL_US_EQ"] });
   assert.deepEqual(l.map((p) => p.t212), ["TSLA_US_EQ", "MU_US_EQ", "AMD_US_EQ"]);
 });
-await test("mesajul: titlul cu numărul, fiecare poziție cu stopul −5% de la intrare și semnul când prețul e deja sub el", async () => {
+await test("mesajul: titlul cu numărul; stopul −5% de la intrare, iar sub −5% de la intrare — de la prețul de acum (18.10)", async () => {
   const m = mesajFaraStop([poz("TSLA_US_EQ", { mediu: 420, pret: 395, pctPret: -0.0595 })]);
-  assert.match(m.titlu, /FĂRĂ STOP LOSS · TSLA/); assert.match(m.mesaj, /stop −5% = 399,00/); assert.match(m.mesaj, /DEJA sub −5%/); assert.match(m.mesaj, /la fiecare 15 minute/);
+  assert.match(m.titlu, /FĂRĂ STOP LOSS · TSLA/); assert.match(m.mesaj, /deja sub −5% de la intrare ⇒ \*\*stop −5% de la prețul de acum = 375,25/); assert.match(m.mesaj, /la fiecare 15 minute/);
+  assert.match(mesajFaraStop([poz("MU_US_EQ", { mediu: 100, pret: 98 })]).mesaj, /stop −5% de la intrare = 95,00/);
 });
 await test("/stopuri: lista curățată și sortată; identică = nicio scriere; prea des = 429", async () => {
   const w = lume();
