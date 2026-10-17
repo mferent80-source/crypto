@@ -15,7 +15,7 @@ function lume() {
   return { env, kv, trimise, f };
 }
 const poz = (t212, o = {}) => ({ s: t212.split("_")[0], t212, mediu: 100, pret: 97, pctPret: -0.03, pplLei: -42, ...o });
-const poza = (t212, la = T0) => JSON.stringify({ la, t212 });
+const poza = (t212, la = T0, extra = {}) => JSON.stringify({ la, t212La: la, t212, ...extra });
 
 await test("fără stop = nici în lista aplicației, nici stop FIX în Radar; stopul mobil (15%) NU contează (alegerea lui, 17.10)", async () => {
   const l = faraStop({ t212: [poz("AAPL_US_EQ"), poz("TSLA_US_EQ"), poz("NVDA_US_EQ", { plan: { stopFix: 90 } }), poz("MU_US_EQ", { plan: { trailPct: 8 } }), poz("AMD_US_EQ", { plan: { stopFix: null, trailPct: null } })] }, { cuStop: ["AAPL_US_EQ"] });
@@ -70,6 +70,12 @@ await test("ordinele în așteptare din Trading 212: doar vânzările STOP / STO
   const o = stopuriDinOrdine([{ ticker: "MU_US_EQ", type: "STOP", quantity: -2, stopPrice: 900 }, { ticker: "MU_US_EQ", type: "STOP_LIMIT", quantity: -1, stopPrice: 950, limitPrice: 940 },
     { ticker: "TXN_US_EQ", type: "LIMIT", quantity: -1, limitPrice: 300 }, { ticker: "WDC_US_EQ", type: "STOP", quantity: 3, stopPrice: 400 }, { ticker: "AVGO_US_EQ", type: "STOP", quantity: -1, stopPrice: 0 }]);
   assert.deepEqual(o, { MU_US_EQ: 950 }); assert.deepEqual(stopuriDinOrdine(null), {});
+});
+await test("revizia 18.10: Trading 212 n-a răspuns (t212Eroare / poziții citite de mult) ⇒ nici alarmă, nici „✅ toate au stop”", async () => {
+  const w = lume(); w.kv.set("faraStopStare", JSON.stringify({ n: 3 }));
+  w.kv.set("poza", poza([], T0, { t212Eroare: "HTTP 503" })); assert.equal((await verificaStopuri(w.env, T0, w.f)).stare, "t212-nesigur");
+  w.kv.set("poza", JSON.stringify({ la: T0, t212La: T0 - 3 * 3600000, t212: [] })); assert.equal((await verificaStopuri(w.env, T0, w.f)).stare, "t212-nesigur");
+  assert.equal(w.trimise.length, 0); assert.equal(JSON.parse(w.kv.get("faraStopStare")).n, 3, "starea nu se rescrie");
 });
 console.log(`\n${teste - picate}/${teste} probe trec`);
 if (picate) process.exit(1);

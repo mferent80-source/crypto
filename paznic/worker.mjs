@@ -116,7 +116,7 @@ export async function discord(env, nivel, titlu, mesaj, f = fetch) {
 // compară pozițiile din poza colectorului (t212) cu lista + stopul FIX din planul Radarului (stopul mobil nu contează, alegerea lui) și, cât rămâne vreo poziție fără stop,
 // trimite o alarmă roșie cu @here. Fără scriere în KV pe alarmă (ora vine din ceas: minutul % 15); o singură scriere la schimbarea numărului
 // (pentru „✅ toate au stop”). Poza mai veche de 2 ore = colectorul tace ⇒ nicio alarmă pe poziții (o anunță deja paznicul).
-const STOPURI_MAX = 200, STOPURI_CORP_MAX = 16 * 1024, STOPURI_PAUZA_MS = 5000, STOPURI_PE_ZI = 200, POZA_VECHE_MS = 2 * 3600000;
+const STOPURI_MAX = 200, STOPURI_CORP_MAX = 16 * 1024, STOPURI_PAUZA_MS = 5000, STOPURI_PE_ZI = 30, POZA_VECHE_MS = 2 * 3600000;   // revizia 18.10: 30 de scrieri pe zi (KV: 1000 pe tot contul)
 export async function stopuriCiteste(env) { try { return JSON.parse(await env.PAZNIC.get("stopuri") || "null") || { cuStop: [], la: 0 }; } catch { return { cuStop: [], la: 0 }; } }
 export async function stopuriScrie(env, text, acum = Date.now()) {
   if (String(text || "").length > STOPURI_CORP_MAX) return { status: 413, corp: { error: "lista prea mare" } };
@@ -124,12 +124,12 @@ export async function stopuriScrie(env, text, acum = Date.now()) {
   if (!c || !Array.isArray(c.cuStop)) return { status: 400, corp: { error: "lipseste 'cuStop'" } };
   const out = [...new Set(c.cuStop.map((x) => String(x || "").replace(/[^A-Za-z0-9._-]/g, "").slice(0, 40)).filter(Boolean))].sort().slice(0, STOPURI_MAX);
   const vechi = await stopuriCiteste(env), zi = new Date(acum).toISOString().slice(0, 10);
-  if (vechi.la && JSON.stringify(vechi.cuStop) === JSON.stringify(out)) return { status: 200, corp: { ok: true, n: out.length, neschimbat: true } };
+  if (vechi.la && JSON.stringify(vechi.cuStop) === JSON.stringify(out)) return { status: 200, corp: { ok: true, n: out.length, neschimbat: true, cuStop: out } };
   if (vechi.la && acum - vechi.la < STOPURI_PAUZA_MS) return { status: 429, corp: { error: "prea des: mai încearcă peste câteva secunde" } };
   const scrieri = vechi.zi === zi ? (Number(vechi.scrieriZi) || 0) : 0;
   if (scrieri >= STOPURI_PE_ZI) return { status: 429, corp: { error: "prea multe schimbări azi" } };
   await env.PAZNIC.put("stopuri", JSON.stringify({ cuStop: out, la: acum, zi, scrieriZi: scrieri + 1 }));
-  return { status: 200, corp: { ok: true, n: out.length } };
+  return { status: 200, corp: { ok: true, n: out.length, cuStop: out } };
 }
 const nrS = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 /** Pozițiile din poză fără stop: nici în lista din Decision App, nici stop FIX în planul din Radar (17.10, el: stopul mobil de 15% NU contează — „cer stop pus de mine”),
@@ -167,6 +167,8 @@ export async function verificaStopuri(env, acum, f = fetch) {
   if (dnd(acum)) return { stare: "dnd" };
   let poza = null; try { poza = JSON.parse(await env.PAZNIC.get("poza") || "null"); } catch { poza = null; }
   if (!poza || !(Number(poza.la) > 0) || acum - Number(poza.la) > POZA_VECHE_MS) return { stare: "fara-poza" };
+  // revizia 18.10: Trading 212 n-a răspuns (t212Eroare) sau pozițiile sunt citite de mult ⇒ lista poate fi goală FALS ⇒ „nu știu”, nu „✅ toate au stop”
+  if (poza.t212Eroare || !(Number(poza.t212La) > 0) || acum - Number(poza.t212La) > POZA_VECHE_MS) return { stare: "t212-nesigur" };
   const lista = faraStop(poza, await stopuriCiteste(env));
   let st = {}; try { st = JSON.parse(await env.PAZNIC.get("faraStopStare") || "null") || {}; } catch { st = {}; }
   if (!lista.length) {
