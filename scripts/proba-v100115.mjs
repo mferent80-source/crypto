@@ -86,9 +86,9 @@ const grup = (id) => { const i = meniu.indexOf('id="' + id + '"'); assert.ok(i >
 await test("(554a) meniul în 3 grupe, cu toate cele 47 de butoane (nimic șters): Zilnic, Unelte, Laborator vechi (pliat)", () => {
   assert.equal([...meniu.matchAll(/class="sideBtn/g)].length, 55);   /* v100.163: + „Rezultate”; v100.176: + „Contul întreg”; v100.180: + „Busola ↗” (fără data-nav) */   // v100.117: + „Carnetul fișei” (I-561); v100.119: + „Sugestii”; v100.120: + „Salt”; v100.134: + „Simulator grid”; v100.159: + „Alerte · ce dețin / urmăresc ↗”
   assert.deepEqual(nav(grup("sideZilnic")), ["dash", "tabloubot", "sugestii", "gridset", "gridsim", "carnet", "jurnaltrade", "t212", "salt", "scan", "alerts", "montecarlo", "contintreg"]);
-  assert.deepEqual(nav(grup("sideUnelte")), ["market", "deriv", "stocks", "rezultate", "account", "cloud", "settings", "health"]);
-  const v = nav(grup("sideVechi")); assert.equal(v.length, 32); for (const k of ["desk", "engine", "mtf", "signals", "backtest", "replaylab", "researchml", "decisioncore"]) assert.ok(v.includes(k), k);
-  assert.match(meniu, /<details class="sideGrup sideVechi" id="sideVechi"><summary class="sideGrupCap">Laborator vechi \(32\)<\/summary>/);
+  assert.deepEqual(nav(grup("sideUnelte")), ["deriv", "stocks", "rezultate", "account", "settings", "health"]);   /* v100.214: market și cloud în Laborator */
+  const v = nav(grup("sideVechi")); assert.equal(v.length, 34);   /* v100.214: + market, cloud */ for (const k of ["desk", "engine", "mtf", "signals", "backtest", "replaylab", "researchml", "decisioncore"]) assert.ok(v.includes(k), k);
+  assert.match(meniu, /<details class="sideGrup sideVechi" id="sideVechi"><summary class="sideGrupCap">Laborator vechi \(34\)<\/summary>/);
   assert.match(meniu, /<div class="sideGrupCap">Zilnic<\/div>/); assert.match(meniu, /<div class="sideGrupCap">Unelte<\/div>/);
 });
 await test("(554b) o pagină din laborator, deschisă (din alt loc sau la reîncărcare), deschide grupul; starea pliatului se ține minte", () => {

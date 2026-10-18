@@ -1,11 +1,12 @@
 {
-  "version": "v100.213",
-  "badge": "v100.213 · SERVERUL IA FUNCTIONS NOI",
+  "version": "v100.214",
+  "badge": "v100.214 · MENIU PE GRUPE ȘI PE TELEFON",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "ecrane214": "cele 8 propuneri din controlul ecranelor (18.10.2026, el: „ok, poți face dacă crezi că e mai bine”): blocajul probei pe CERERE (cuProba, nu steag comun — colectorul nu mai e blocat de probe); livreaza construiește worker-ul pentru un radar-local.toml nou ÎNAINTE de aducere; Piața pe monede + Monitorul din cloud în Laboratorul vechi; foaia Mai mult de pe telefon pe Zilnic / Unelte / Laborator vechi pliat (+ Nasdaq și Alerte în suită, care lipseau); subsolul motorului vechi doar în Laborator; fâșia veche pliată și pe Contul Pionex; Setări, Starea aplicației, Futures, Nasdaq și Contul Pionex în română, push și D1 spuse pe față ca neconfigurate",
     "reincarcare213": "serverul local ia Functions reconstruite (18.10.2026, găsit la livrarea v100.212: health rămăsese v100.211): worker-ul construit stătea în .wrangler/worker-local, iar wrangler IGNORĂ schimbările de sub .wrangler ⇒ fiecare livrare în functions/ rămânea pe disc; acum worker-local (în .gitignore), iar livreaza verifică health-ul 8788 față de versiune.js și iese cu 3 dacă serverul n-a luat codul nou; proba v100.213 cu martor sub .wrangler",
     "paginiClasa212": "paginile legate de o clasă de active (18.10.2026, controlul „unde n-am lucrat”): Nasdaq trece aplicația pe acțiuni și ține minte, iar Contul Pionex, Futures și Microstructure (.cryptoContextOnly, display:none în modul acțiuni) rămâneau GOALE; navTo alege acum clasa paginii înainte de show(id), pe orice drum (meniu, reîncărcare, link)",
     "faraSondare211": "serverul local fără sondare (18.10.2026, el: „fă 2”, după măsurătoarea pe PID): PORNESTE-CRYPTO-RADAR.bat construiește Functions o dată (wrangler pages functions build → .wrangler/worker-local) și pornește wrangler dev --no-bundle cu radar-local.toml (public ca assets, KV ISTORIC, același .wrangler/state) — fără esbuild în watch, care sonda ~60 de directoare la 500 ms (7,8 MB/s citiri din cache, 4 % dintr-un nucleu); livrarea reconstruiește worker-ul când atinge functions/, iar wrangler îl reîncarcă singur; paritate 26/26 rute cu serverul vechi",

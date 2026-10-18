@@ -332,7 +332,7 @@ await test("🔵3 (vezi 🟡2/3) și 🔵7: istoricul pe server întoarce `false
 });
 await test("🔵4 tastele `a` / `s` merg doar pe paginile laboratorului vechi (nu pe Piața azi, Tablou, Grid, Sugestii…)", () => {
   assert.match(APP, /function peLaboratorVechi\(\)/);
-  const c = ctx({ document: { querySelector: () => ({ id: "dash" }) } }); vm.runInContext(APP.match(/const PAGINI_ZILNICE=[^\n]*/)[0] + "\n" + fnSursa(APP, "peLaboratorVechi"), c);
+  const c = ctx({ document: { querySelector: () => ({ id: "dash" }) } }); vm.runInContext(APP.match(/(?:const|var) PAGINI_ZILNICE=[^\n]*/)[0]   /* v100.214: var */ + "\n" + fnSursa(APP, "peLaboratorVechi"), c);
   assert.equal(vm.runInContext("peLaboratorVechi()", c), false);
   c.document.querySelector = () => ({ id: "tabloubot" }); assert.equal(vm.runInContext("peLaboratorVechi()", c), false);
   c.document.querySelector = () => ({ id: "engine" }); assert.equal(vm.runInContext("peLaboratorVechi()", c), true);

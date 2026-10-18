@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.213" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.214" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -25,15 +25,16 @@
 <button class="sideBtn" data-action-click="navTo('montecarlo')" data-nav="montecarlo"><span class="sideIcon">∴</span>Monte Carlo · riscul tău</button><button class="sideBtn" data-action-click="navTo('contintreg',true)" data-nav="contintreg"><span class="sideIcon">Σ</span>Contul întreg</button>
 </div>
 <div class="sideGrup" id="sideUnelte"><div class="sideGrupCap">Unelte</div>
-<button class="sideBtn" data-action-click="navTo('market',true)" data-nav="market"><span class="sideIcon">◉</span>Piața, pe monede</button>
 <button class="sideBtn cryptoOnlyNav" data-action-click="navTo('deriv',true)" data-nav="deriv"><span class="sideIcon">≋</span>Futures · funding și OI</button>
 <button class="sideBtn stockOnly" data-action-click="openStocksDesk()" data-nav="stocks"><span class="sideIcon">N</span>Nasdaq / US Stocks</button><button class="sideBtn" data-action-click="navTo('rezultate',true)" data-nav="rezultate"><span class="sideIcon">📅</span>Rezultate</button>
 <button class="sideBtn cryptoOnlyNav" data-action-click="navTo('account',true)" data-nav="account"><span class="sideIcon">◎</span>Contul Pionex</button>
-<button class="sideBtn" data-action-click="navTo('cloud',true)" data-nav="cloud"><span class="sideIcon">☁</span>Monitorul din cloud</button>
 <button class="sideBtn" data-action-click="navTo('settings')" data-nav="settings"><span class="sideIcon">⚙</span>Setări</button>
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Starea aplicației</button>
 </div>
-<details class="sideGrup sideVechi" id="sideVechi"><summary class="sideGrupCap">Laborator vechi (32)</summary>
+<details class="sideGrup sideVechi" id="sideVechi"><summary class="sideGrupCap">Laborator vechi (34)</summary>
+<!-- 18.10.2026: Piața pe monede (12 monede fixe, scorul motorului vechi) și Monitorul din cloud (D1, monitor și push neconfigurate pe server) mutate aici din Unelte -->
+<button class="sideBtn" data-action-click="navTo('market',true)" data-nav="market"><span class="sideIcon">◉</span>Piața, pe monede</button>
+<button class="sideBtn" data-action-click="navTo('cloud',true)" data-nav="cloud"><span class="sideIcon">☁</span>Monitorul din cloud</button>
 <button class="sideBtn" data-action-click="navTo('desk')" data-nav="desk"><span class="sideIcon">◆</span>Trading Desk</button>
 <button class="sideBtn" data-action-click="navTo('engine')" data-nav="engine"><span class="sideIcon">⚙</span>Quant Engine</button>
 <button class="sideBtn" data-action-click="navTo('mtf',true)" data-nav="mtf"><span class="sideIcon">▦</span>Multi-TF</button>
@@ -69,7 +70,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.213 · SERVERUL IA FUNCTIONS NOI</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.214 · MENIU PE GRUPE ȘI PE TELEFON</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -86,7 +87,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.213 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.214 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -1065,10 +1066,10 @@
 </div>
 </section>
 <section class="panel" id="settings">
-<div class="sectionHead"><h3>Settings &amp; Presets</h3><span class="small">Local browser profile</span></div>
+<div class="sectionHead"><h3>Setări</h3><span class="small">profilul acestui browser</span></div>
 <div class="settingsGrid">
 <div class="settingsCard">
-<h4>API Security Session</h4>
+<h4>Parola aplicației pe acest dispozitiv</h4>
 <label class="small" for="apiSessionToken">APP_API_TOKEN (ținută minte pe acest dispozitiv)</label>
 <input aria-describedby="apiAuthHelp" aria-label="APP_API_TOKEN (session only)" autocomplete="off" id="apiSessionToken" placeholder="Parola aplicației - o pui o dată pe fiecare dispozitiv" type="password"/>
 <div class="settingRow"><span>Parola aplicației</span><b id="apiAuthStatus">NEPUSĂ</b></div>
@@ -1076,10 +1077,10 @@
 <p class="small" id="apiAuthHelp" style="margin-top:8px">Se pune o dată pe fiecare dispozitiv și rămâne acolo, ca să nu-ți fie cerută la fiecare pornire. Trebuie să fie exact textul pus ca APP_API_TOKEN la pornirea aplicației. Atenție: cât timp e ținută minte, cine ia dispozitivul ăsta în mână îți vede datele - pe un telefon pe care îl mai folosește cineva, apasă „Uit-o de pe dispozitivul ăsta" când termini.</p>
 </div>
 <div class="settingsCard">
-<h4>Local Data Privacy</h4>
-<div class="settingRow"><span>Session-only research mode</span><input aria-label="Session-only research mode" id="privacySessionOnly" type="checkbox"/></div>
-<button class="actionGhost" data-action-click="applyPrivacyMode()" style="margin-top:8px">Apply privacy mode</button>
-<p class="small" style="margin-top:8px">When enabled, new signal/Paper/archive records are kept only in memory for this browser session; persistent IndexedDB research data and persisted journal/Paper working sets are erased after confirmation. Pionex account balances/orders are never persisted by the app.</p>
+<h4>Datele de pe dispozitiv</h4>
+<div class="settingRow"><span>Doar pe durata sesiunii (cercetare)</span><input aria-label="Session-only research mode" id="privacySessionOnly" type="checkbox"/></div>
+<button class="actionGhost" data-action-click="applyPrivacyMode()" style="margin-top:8px">Aplică</button>
+<p class="small" style="margin-top:8px">Când e pornit, semnalele noi, Paper și arhiva stau doar în memorie cât e deschis browserul; datele de cercetare salvate (IndexedDB) și seturile de lucru din jurnal și Paper se șterg după confirmare. Soldurile și ordinele Pionex nu sunt salvate niciodată de aplicație.</p>
 </div>
 <div class="settingsCard">
 <h4>Glosar research · RO/EN</h4>
@@ -1092,83 +1093,83 @@
 <p class="small" style="margin-top:8px">Interfața păstrează termenii standard de piață în engleză, dar explicațiile principale și glosarul sunt în română.</p>
 </div>
 <div class="settingsCard">
-<h4>Trading preset</h4>
+<h4>Profilul semnalelor (motorul vechi)</h4>
 <div class="presetBar">
 <button class="presetBtn" data-action-click="applyPreset('conservative')">Conservative</button>
 <button class="presetBtn" data-action-click="applyPreset('balanced')">Balanced</button>
 <button class="presetBtn" data-action-click="applyPreset('aggressive')">Aggressive</button>
 </div>
-<div class="settingRow"><span>Signal min confidence</span><select aria-label="Set Signal Min" id="setSignalMin" style="width:120px"><option>60</option><option selected="">64</option><option>68</option><option>72</option></select></div>
-<div class="settingRow"><span>Near-level threshold</span><select aria-label="Set Near Pct" id="setNearPct" style="width:120px"><option value="0.25">0.25%</option><option selected="" value="0.5">0.50%</option><option value="0.75">0.75%</option><option value="1">1.00%</option></select></div>
-<button data-action-click="saveSettings()" style="margin-top:10px">Save settings</button>
+<div class="settingRow"><span>Încrederea minimă a semnalului</span><select aria-label="Set Signal Min" id="setSignalMin" style="width:120px"><option>60</option><option selected="">64</option><option>68</option><option>72</option></select></div>
+<div class="settingRow"><span>Pragul „aproape de nivel”</span><select aria-label="Set Near Pct" id="setNearPct" style="width:120px"><option value="0.25">0.25%</option><option selected="" value="0.5">0.50%</option><option value="0.75">0.75%</option><option value="1">1.00%</option></select></div>
+<button data-action-click="saveSettings()" style="margin-top:10px">Salvează</button>
 </div>
 <div class="settingsCard">
-<h4>Alerts</h4>
-<div class="settingRow"><span>S/R proximity</span><div class="toggle on" data-action-click="toggleSetting('sr')" id="toggleSr"></div></div>
-<div class="settingRow"><span>Long/Short extremes</span><div class="toggle on" data-action-click="toggleSetting('ls')" id="toggleLs"></div></div>
-<div class="settingRow"><span>Funding extremes</span><div class="toggle on" data-action-click="toggleSetting('funding')" id="toggleFunding"></div></div>
-<div class="settingRow"><span>OI expansion</span><div class="toggle on" data-action-click="toggleSetting('oi')" id="toggleOi"></div></div>
-<div class="settingRow"><span>Strong signal</span><div class="toggle on" data-action-click="toggleSetting('signal')" id="toggleSignal"></div></div>
+<h4>Alertele din browser (motorul vechi)</h4>
+<div class="settingRow"><span>Aproape de suport / rezistență</span><div class="toggle on" data-action-click="toggleSetting('sr')" id="toggleSr"></div></div>
+<div class="settingRow"><span>Long/Short la extreme</span><div class="toggle on" data-action-click="toggleSetting('ls')" id="toggleLs"></div></div>
+<div class="settingRow"><span>Funding la extreme</span><div class="toggle on" data-action-click="toggleSetting('funding')" id="toggleFunding"></div></div>
+<div class="settingRow"><span>OI în creștere</span><div class="toggle on" data-action-click="toggleSetting('oi')" id="toggleOi"></div></div>
+<div class="settingRow"><span>Semnal puternic</span><div class="toggle on" data-action-click="toggleSetting('signal')" id="toggleSignal"></div></div>
 </div>
 <div class="settingsCard">
-<h4>PWA Push Notifications</h4>
-<div class="settingRow"><span>Browser permission</span><b id="notifStatus">—</b></div>
-<div class="settingRow"><span>Push server</span><b id="pushServerStatus">—</b></div>
-<div class="settingRow"><span>Subscription</span><b id="pushSubStatus">—</b></div>
-<div class="pushState"><button data-action-click="enablePushAlerts()">Enable push</button><button class="actionGhost" data-action-click="disablePushAlerts()">Disable</button><button class="actionGhost" data-action-click="requestNotifications()">Local permission</button></div>
-<p class="small" style="margin-top:8px">Closed-app push subscription requires VAPID_PUBLIC_KEY and a Cloudflare KV binding named PUSH_SUBSCRIPTIONS. Automatic delivery while the app is closed also requires a server-side push sender/market monitor; v34 exposes that status instead of pretending it is active.</p>
+<h4>Notificări push · neconfigurate</h4>
+<div class="settingRow"><span>Permisiunea browserului</span><b id="notifStatus">—</b></div>
+<div class="settingRow"><span>Serverul de push</span><b id="pushServerStatus">—</b></div>
+<div class="settingRow"><span>Abonarea</span><b id="pushSubStatus">—</b></div>
+<div class="pushState"><button data-action-click="enablePushAlerts()">Pornește push</button><button class="actionGhost" data-action-click="disablePushAlerts()">Oprește</button><button class="actionGhost" data-action-click="requestNotifications()">Permisiune locală</button></div>
+<p class="small" style="margin-top:8px">Push cu aplicația închisă cere VAPID_PUBLIC_KEY și un KV Cloudflare numit PUSH_SUBSCRIPTIONS, iar livrarea automată cere și un trimițător pe server. Pe serverul de acasă nu sunt configurate (verificat 18.10.2026): alertele tale ajung pe Discord, de la colector.</p>
 </div>
 <div class="settingsCard">
-<h4>Backup &amp; Restore</h4>
+<h4>Copie de siguranță</h4>
 <div class="backupActions">
-<button data-action-click="exportBackup()">Export backup</button>
-<button data-action-click="document.getElementById('backupFile').click()">Import backup</button>
-<button data-action-click="resetWorkspace()">Reset workspace</button>
+<button data-action-click="exportBackup()">Exportă copia</button>
+<button data-action-click="document.getElementById('backupFile').click()">Importă copia</button>
+<button data-action-click="resetWorkspace()">Golește spațiul de lucru</button>
 </div>
 <input accept="application/json" aria-label="Backup File" data-action-change="importBackup(this.files[0])" id="backupFile" style="display:none" type="file"/>
-<p class="small" style="margin-top:8px">Backup v57 exports the current workspace plus the IndexedDB research archive and SHA-256 integrity checksum. It does not contain APP_API_TOKEN or provider secrets.</p>
+<p class="small" style="margin-top:8px">Copia (v57) cuprinde spațiul de lucru și arhiva de cercetare din IndexedDB, cu sumă de control SHA-256. Nu conține APP_API_TOKEN și nici cheile furnizorilor.</p>
 </div>
 <div class="settingsCard">
-<h4>Data freshness</h4>
+<h4>Prospețimea datelor</h4>
 <div class="freshGrid">
 <div class="freshBox"><span class="label">REST</span><b id="freshRest">—</b></div>
-<div class="freshBox"><span class="label">Live feed</span><b id="freshWs">—</b></div>
+<div class="freshBox"><span class="label">Flux live</span><b id="freshWs">—</b></div>
 <div class="freshBox"><span class="label">Futures</span><b id="freshFut">—</b></div>
 <div class="freshBox"><span class="label">Sentiment</span><b id="freshSent">—</b></div>
 </div>
 </div>
 <div class="settingsCard stockOnly">
-<h4>US Stocks Provider</h4>
-<div class="settingRow"><span>Provider</span><b>Twelve Data</b></div>
-<div class="settingRow"><span>API secret</span><b id="setStockApiState">SERVER-SIDE</b></div>
-<p class="small" style="margin-top:8px">Configure <b>TWELVE_DATA_API_KEY</b> as a Cloudflare environment secret. No stock-market API key is stored in the browser.</p>
-<button data-action-click="checkStocksHealth()" style="margin-top:9px">Check stocks API</button>
+<h4>Furnizorul pentru acțiuni US</h4>
+<div class="settingRow"><span>Furnizor</span><b>Twelve Data</b></div>
+<div class="settingRow"><span>Cheia API</span><b id="setStockApiState">PE SERVER</b></div>
+<p class="small" style="margin-top:8px">Se pune <b>TWELVE_DATA_API_KEY</b> ca secret în mediul Cloudflare. Nicio cheie de bursă nu se ține în browser.</p>
+<button data-action-click="checkStocksHealth()" style="margin-top:9px">Verifică furnizorul de acțiuni</button>
 </div>
 <div class="settingsCard">
-<h4>Primary Spot Provider</h4>
-<div class="settingRow"><span>Analysis source</span><select aria-label="Set Spot Provider" id="setSpotProvider" style="width:180px"><option value="BINANCE">Binance direct · stable</option><option value="PIONEX">Pionex native</option></select></div>
-<p class="small" style="margin-top:8px">The selected provider is used consistently for main analysis. Binance is the stable default; Pionex remains explicit, while the scanner stays Pionex-only.</p>
-<button data-action-click="saveSettings()" style="margin-top:9px">Save source</button>
+<h4>Furnizorul principal spot</h4>
+<div class="settingRow"><span>Sursa analizei</span><select aria-label="Set Spot Provider" id="setSpotProvider" style="width:180px"><option value="BINANCE">Binance direct · stable</option><option value="PIONEX">Pionex native</option></select></div>
+<p class="small" style="margin-top:8px">Furnizorul ales e folosit peste tot în analiza principală. Binance e implicit și stabil; Pionex se alege explicit, iar scannerul rămâne doar pe Pionex.</p>
+<button data-action-click="saveSettings()" style="margin-top:9px">Salvează sursa</button>
 </div>
 <div class="settingsCard">
-<h4>Execution Model</h4>
-<div class="settingRow"><span>Fee / side</span><select aria-label="Set Fee Bps" id="setFeeBps" style="width:128px"><option value="2">2 bps</option><option value="5">5 bps</option><option selected="" value="10">10 bps</option><option value="15">15 bps</option></select></div>
-<div class="settingRow"><span>Slippage / side</span><select aria-label="Set Slip Bps" id="setSlipBps" style="width:128px"><option value="1">1 bp</option><option selected="" value="3">3 bps</option><option value="5">5 bps</option><option value="10">10 bps</option></select></div>
-<div class="settingRow"><span>Exit policy</span><select aria-label="Set Exec Policy" id="setExecPolicy" style="width:170px"><option selected="" value="staged">40/35/25 staged</option><option value="tp1full">100% at TP1</option></select></div>
-<div class="settingRow"><span>Entry expiry</span><select aria-label="Set Entry Expiry" id="setEntryExpiry" style="width:170px"><option value="6">6 candles</option><option selected="" value="12">12 candles</option><option value="24">24 candles</option><option value="48">48 candles</option></select></div>
+<h4>Modelul de execuție (Paper)</h4>
+<div class="settingRow"><span>Comision / parte</span><select aria-label="Set Fee Bps" id="setFeeBps" style="width:128px"><option value="2">2 bps</option><option value="5">5 bps</option><option selected="" value="10">10 bps</option><option value="15">15 bps</option></select></div>
+<div class="settingRow"><span>Slippage / parte</span><select aria-label="Set Slip Bps" id="setSlipBps" style="width:128px"><option value="1">1 bp</option><option selected="" value="3">3 bps</option><option value="5">5 bps</option><option value="10">10 bps</option></select></div>
+<div class="settingRow"><span>Ieșirea</span><select aria-label="Set Exec Policy" id="setExecPolicy" style="width:170px"><option selected="" value="staged">40/35/25 staged</option><option value="tp1full">100% at TP1</option></select></div>
+<div class="settingRow"><span>Expirarea intrării</span><select aria-label="Set Entry Expiry" id="setEntryExpiry" style="width:170px"><option value="6">6 candles</option><option selected="" value="12">12 candles</option><option value="24">24 candles</option><option value="48">48 candles</option></select></div>
 <div class="execPolicy">
-<div class="execHint"><b>Staged</b><br/>40% TP1 · 35% TP2 · 25% TP3. After TP1 stop → breakeven; after TP2 stop → TP1.</div>
-<div class="execHint"><b>TP1 full</b><br/>Entire paper position exits at TP1 or original stop. Simpler execution model.</div>
+<div class="execHint"><b>Staged</b><br/>40% la TP1 · 35% la TP2 · 25% la TP3. După TP1 stopul trece la intrare; după TP2, la TP1.</div>
+<div class="execHint"><b>TP1 full</b><br/>Toată poziția Paper iese la TP1 sau la stopul inițial. Model mai simplu.</div>
 </div>
-<button data-action-click="saveSettings()" style="margin-top:10px">Save execution model</button>
+<button data-action-click="saveSettings()" style="margin-top:10px">Salvează modelul</button>
 </div>
 <div class="settingsCard">
-<h4>Auto-calibration</h4>
-<div class="row"><span>Resolved signals</span><b id="calResolved">0</b></div>
-<div class="row"><span>Best mode</span><b id="calBestMode">—</b></div>
-<div class="row"><span>Best regime</span><b id="calBestRegime">—</b></div>
-<div class="row"><span>Suggested threshold</span><b id="calThreshold">—</b></div>
-<button data-action-click="recalibrate()" style="margin-top:10px">Recalculate</button>
+<h4>Calibrarea automată</h4>
+<div class="row"><span>Semnale încheiate</span><b id="calResolved">0</b></div>
+<div class="row"><span>Cel mai bun mod</span><b id="calBestMode">—</b></div>
+<div class="row"><span>Cel mai bun regim</span><b id="calBestRegime">—</b></div>
+<div class="row"><span>Pragul propus</span><b id="calThreshold">—</b></div>
+<button data-action-click="recalibrate()" style="margin-top:10px">Recalculează</button>
 </div>
 </div>
 </section>
@@ -1194,49 +1195,49 @@
 <div class="row"><span>Spread</span><b id="depthSpread">—</b></div><div class="row"><span>Top-10 imbalance</span><b id="depthImbalance">—</b></div></div>
 </section>
 <section class="panel" id="health">
-<div class="sectionHead"><h3>Data &amp; System Health</h3><span class="small">Source visibility</span></div>
-<div class="card full"><div class="healthGrid"><div class="healthBox"><span class="label">Spot REST</span><b id="healthSpot">—</b></div><div class="healthBox"><span class="label">Live feed</span><b id="healthWs">—</b></div><div class="healthBox"><span class="label">Futures</span><b id="healthFut">—</b></div><div class="healthBox"><span class="label">Sentiment</span><b id="healthSent">—</b></div><div class="healthBox"><span class="label">Journal</span><b id="healthJournal">—</b></div><div class="healthBox"><span class="label">PWA</span><b id="healthPwa">—</b></div></div><button data-action-click="runHealthCheck()" style="margin-top:10px">Run health check</button>
+<div class="sectionHead"><h3>Starea datelor și a aplicației</h3><span class="small">ce surse se văd</span></div>
+<div class="card full"><div class="healthGrid"><div class="healthBox"><span class="label">Spot REST</span><b id="healthSpot">—</b></div><div class="healthBox"><span class="label">Flux live</span><b id="healthWs">—</b></div><div class="healthBox"><span class="label">Futures</span><b id="healthFut">—</b></div><div class="healthBox"><span class="label">Sentiment</span><b id="healthSent">—</b></div><div class="healthBox"><span class="label">Jurnal</span><b id="healthJournal">—</b></div><div class="healthBox"><span class="label">PWA</span><b id="healthPwa">—</b></div></div><button data-action-click="runHealthCheck()" style="margin-top:10px">Verifică acum</button>
 <div class="cacheGrid">
-<div class="cacheBox"><span class="label">Request cache</span><b id="healthCache">—</b></div>
-<div class="cacheBox"><span class="label">In-flight de-dupe</span><b id="healthInflight">—</b></div>
-<div class="cacheBox"><span class="label">Pionex scanner</span><b id="healthScanner">—</b></div>
-<div class="cacheBox"><span class="label">WS reconnects</span><b id="healthReconnects">—</b></div>
-<div class="cacheBox"><span class="label">PWA mode</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">App version</span><b id="healthAppVersion">v100.213</b></div>
-<div class="cacheBox"><span class="label">Engine contract</span><b>54.1</b></div>
-<div class="cacheBox"><span class="label">Audit scope</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
+<div class="cacheBox"><span class="label">Cache cereri</span><b id="healthCache">—</b></div>
+<div class="cacheBox"><span class="label">Cereri unite (în curs)</span><b id="healthInflight">—</b></div>
+<div class="cacheBox"><span class="label">Scannerul Pionex</span><b id="healthScanner">—</b></div>
+<div class="cacheBox"><span class="label">Reconectări WS</span><b id="healthReconnects">—</b></div>
+<div class="cacheBox"><span class="label">Mod PWA</span><b id="healthPwaMode">—</b></div>
+<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.214</b></div>
+<div class="cacheBox"><span class="label">Contractul motorului</span><b>54.1</b></div>
+<div class="cacheBox"><span class="label">Ce s-a verificat</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
-<div class="cacheBox"><span class="label">Liquidation WS</span><b id="healthLiquidation">—</b></div>
-<div class="cacheBox"><span class="label">D1 history</span><b id="healthHistory">—</b></div>
-<div class="cacheBox"><span class="label">Cloud monitor</span><b id="healthMonitor">—</b></div>
-<div class="cacheBox"><span class="label">US Stocks API</span><b id="healthStocks">—</b></div>
+<div class="cacheBox"><span class="label">WS lichidări</span><b id="healthLiquidation">—</b></div>
+<div class="cacheBox"><span class="label">Istoric D1 (neconfigurat)</span><b id="healthHistory">—</b></div>
+<div class="cacheBox"><span class="label">Monitor cloud (neconfigurat)</span><b id="healthMonitor">—</b></div>
+<div class="cacheBox"><span class="label">API acțiuni US</span><b id="healthStocks">—</b></div>
 <div class="cacheBox"><span class="label">Pionex API</span><b id="healthPionex">—</b></div>
-<div class="cacheBox"><span class="label">Pionex cooldown</span><b id="healthPionexCooldown">READY</b></div>
-<div class="cacheBox"><span class="label">Pionex pacing</span><b id="healthPionexPacing">SAFE · 0.70s</b></div>
-<div class="cacheBox"><span class="label">Pionex 429 strikes</span><b id="healthPionexStrikes">0</b></div>
+<div class="cacheBox"><span class="label">Pionex: răcire</span><b id="healthPionexCooldown">READY</b></div>
+<div class="cacheBox"><span class="label">Pionex: ritm</span><b id="healthPionexPacing">SAFE · 0.70s</b></div>
+<div class="cacheBox"><span class="label">Pionex: refuzuri 429</span><b id="healthPionexStrikes">0</b></div>
 </div>
 <div class="providerHealthPanel opsV67Health">
-  <div class="sectionHead"><h3>Operations Watchdog · Recovery Center</h3><div><span class="small" id="v67HealthStatus">Not evaluated.</span> <button class="actionGhost" data-action-click="refreshV67Operations(true)">Run watchdog</button><button class="actionGhost" data-action-click="v67RunReconcile(true)">Reconcile state</button></div></div>
+  <div class="sectionHead"><h3>Paznicul operațiunilor · recuperare</h3><div><span class="small" id="v67HealthStatus">Not evaluated.</span> <button class="actionGhost" data-action-click="refreshV67Operations(true)">Rulează paznicul</button><button class="actionGhost" data-action-click="v67RunReconcile(true)">Reconciliază starea</button></div></div>
   <div class="replayKpis">
-    <div class="replayKpi"><span>Ops score</span><b id="v67HealthScore">—</b></div>
-    <div class="replayKpi"><span>Watchdog</span><b id="v67HealthWatchdog">—</b></div>
-    <div class="replayKpi"><span>Last heartbeat</span><b id="v67HealthHeartbeat">—</b></div>
-    <div class="replayKpi"><span>Recovery</span><b id="v67HealthRecovery">—</b></div>
+    <div class="replayKpi"><span>Scor operațiuni</span><b id="v67HealthScore">—</b></div>
+    <div class="replayKpi"><span>Paznic</span><b id="v67HealthWatchdog">—</b></div>
+    <div class="replayKpi"><span>Ultimul semn de viață</span><b id="v67HealthHeartbeat">—</b></div>
+    <div class="replayKpi"><span>Recuperare</span><b id="v67HealthRecovery">—</b></div>
   </div>
   <div class="providerHealthTable" id="v67HealthTable"><div class="emptyState">Run watchdog to inspect runtime continuity.</div></div>
   <div class="providerHealthTable" id="v67IncidentTable" style="margin-top:10px"><div class="emptyState">No operations incidents.</div></div>
-  <p class="note">Watchdog state is local/browser operational evidence plus existing provider/risk health. It is not broker/exchange infrastructure monitoring and it never sends live orders.</p>
+  <p class="note">Paznicul se uită doar la ce vede browserul de aici și la starea furnizorilor și a riscului. Nu monitorizează bursa sau brokerul și nu trimite niciodată ordine.</p>
 </div>
 <div class="providerHealthPanel">
-  <div class="sectionHead"><h3>Live Provider Health · Data Integrity Center</h3><div><span class="small" id="providerHealthStatus">Not checked.</span> <button class="actionGhost" data-action-click="runProviderHealthV62(true)">Run provider health</button><button class="actionGhost" data-action-click="exportProviderHealthV62()">Export JSON</button></div></div>
+  <div class="sectionHead"><h3>Furnizorii live · integritatea datelor</h3><div><span class="small" id="providerHealthStatus">Not checked.</span> <button class="actionGhost" data-action-click="runProviderHealthV62(true)">Verifică furnizorii</button><button class="actionGhost" data-action-click="exportProviderHealthV62()">Exportă JSON</button></div></div>
   <div class="replayKpis">
-    <div class="replayKpi"><span>Integrity score</span><b id="providerHealthScore">—</b></div>
-    <div class="replayKpi"><span>Overall</span><b id="providerHealthOverall">—</b></div>
-    <div class="replayKpi"><span>Local data checks</span><b id="providerHealthLocal">—</b></div>
-    <div class="replayKpi"><span>Required providers</span><b id="providerHealthRequired">—</b></div>
+    <div class="replayKpi"><span>Scor integritate</span><b id="providerHealthScore">—</b></div>
+    <div class="replayKpi"><span>Per total</span><b id="providerHealthOverall">—</b></div>
+    <div class="replayKpi"><span>Verificări locale</span><b id="providerHealthLocal">—</b></div>
+    <div class="replayKpi"><span>Furnizori necesari</span><b id="providerHealthRequired">—</b></div>
   </div>
-  <div class="providerHealthTable" id="providerHealthTable"><div class="emptyState">Run provider health to measure reachability, latency, configuration, freshness, identity alignment and MTF/data quality.</div></div>
-  <p class="note">Paid providers are never exposed from the browser. The server reports configuration safely; deep checks are limited to low-cost/public endpoints unless a provider has a known safe health path. This center diagnoses data integrity and does not create a trading signal.</p>
+  <div class="providerHealthTable" id="providerHealthTable"><div class="emptyState">Apasă „Verifică furnizorii” ca să măsori dacă răspund, cât de repede, configurarea, prospețimea, potrivirea simbolurilor și calitatea datelor pe intervale.</div></div>
+  <p class="note">Cheile furnizorilor plătiți nu ajung niciodată în browser. Serverul spune doar dacă sunt configurate; verificările adânci merg doar pe adrese ieftine sau publice. Pagina asta verifică datele, nu dă semnale de trading.</p>
 </div>
 </div>
 </section>
@@ -2091,18 +2092,18 @@
 <div class="pushState"><button data-action-click="loadPionexAccount()">Reîmprospătează soldurile</button><button class="actionGhost" data-action-click="loadPionexOpenOrders()">Ordinele deschise pe moneda aleasă</button></div>
 <p class="note">Cheile API nu se scriu și nu se țin niciodată în browser. Se pun pe server, ca secrete Cloudflare: <b>PIONEX_API_KEY</b> și <b>PIONEX_API_SECRET</b>, cu permisiunea doar de citire. Aplicația nu are nicio rută care să plaseze ordine.</p>
 </div>
-<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Balances</h3></div><div class="accountRows" id="acctBalanceRows"><div class="emptyState">Not loaded.</div></div></div>
-<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Open Orders</h3></div><div class="accountRows" id="acctOrderRows"><div class="emptyState">Not loaded.</div></div></div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Solduri</h3></div><div class="accountRows" id="acctBalanceRows"><div class="emptyState">Not loaded.</div></div></div>
+<div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Ordine deschise</h3></div><div class="accountRows" id="acctOrderRows"><div class="emptyState">Not loaded.</div></div></div>
 <div class="card full" style="margin-top:10px">
-<div class="sectionHead"><h3>v71 · Pionex Journal Correctness &amp; Reconciliation</h3><span class="readOnlyBadge">STRICT READ ONLY</span></div>
+<div class="sectionHead"><h3>Jurnalul spot Pionex · reconciliere</h3><span class="readOnlyBadge">DOAR CITIRE</span></div>
 <div class="accountGrid">
-<div class="acctBox"><span class="label">Imported fills</span><b id="v71FillCount">—</b></div>
-<div class="acctBox"><span class="label">Closed trades</span><b id="v71TradeCount">—</b></div>
-<div class="acctBox"><span class="label">Net P&amp;L</span><b id="v71NetPnl">—</b></div>
-<div class="acctBox"><span class="label">Reconciliation</span><b id="v71ReconState">NOT SYNCED</b></div>
+<div class="acctBox"><span class="label">Execuții aduse</span><b id="v71FillCount">—</b></div>
+<div class="acctBox"><span class="label">Tranzacții închise</span><b id="v71TradeCount">—</b></div>
+<div class="acctBox"><span class="label">Rezultat net</span><b id="v71NetPnl">—</b></div>
+<div class="acctBox"><span class="label">Reconcilierea</span><b id="v71ReconState">NOT SYNCED</b></div>
 </div>
-<div class="pushState"><button data-action-click="v71SyncPionexJournal(true)">Sync current coin · 365d</button><button class="actionGhost" data-action-click="v71ExportJournal()">Export journal</button></div>
-<p class="note" id="v71SyncNote">Imports read-only Pionex history in bounded time windows, keeps a separate FIFO ledger for each symbol, converts base/quote fees to USDT and marks unknown fee currencies for review. This build contains no order-placement, closing or cancellation route.</p>
+<div class="pushState"><button data-action-click="v71SyncPionexJournal(true)">Adu moneda aleasă · 365 de zile</button><button class="actionGhost" data-action-click="v71ExportJournal()">Exportă jurnalul</button></div>
+<p class="note" id="v71SyncNote">Aduce istoricul Pionex doar în citire, pe ferestre de timp, ține un registru FIFO separat pe fiecare simbol, trece comisioanele în USDT și marchează monedele de comision necunoscute. Aplicația nu are nicio rută care plasează, închide sau anulează ordine.</p>
 <div class="accountRows" id="v71JournalRows"><div class="emptyState">No Pionex fills synchronized yet.</div></div>
 </div>
 <div class="card full">
@@ -2122,57 +2123,57 @@
 </div>
 </section>
 <section class="panel stockOnly" id="stocks">
-<div class="sectionHead"><h3>Nasdaq &amp; US Stocks Desk</h3><span class="stockBadge">TWELVE DATA · SERVER-SIDE KEY</span></div>
+<div class="sectionHead"><h3>Nasdaq și acțiuni US</h3><span class="stockBadge">TWELVE DATA · CHEIA PE SERVER</span></div>
 <div id="latimeUsBloc" class="latimeUsBloc"></div><div id="sectoareBloc" class="sectoareBloc"></div>
 <div id="rzRandStocks" class="rzRandStocks"></div>
 <div class="t212Link">💼 Contul tău Trading 212 are pagina lui: pozițiile, planurile, poarta și portofoliul. <button type="button" class="t212BtnLinie" data-action-click="deschideT212()">Deschide Trading 212</button></div>
 <div class="stockHeroGrid">
 <div class="card full">
-<div class="sectionHead"><h3>US Session Context</h3><button class="actionGhost" data-action-click="loadStockContext(true)">Refresh</button></div>
+<div class="sectionHead"><h3>Sesiunea US</h3><button class="actionGhost" data-action-click="loadStockContext(true)">Reîmprospătează</button></div>
 <div class="stockMetricGrid">
-<div class="stockMetric"><span class="label">Session</span><b id="stockSession">—</b></div>
-<div class="stockMetric"><span class="label">Data freshness</span><b id="stockFreshness">—</b></div>
+<div class="stockMetric"><span class="label">Sesiunea</span><b id="stockSession">—</b></div>
+<div class="stockMetric"><span class="label">Prospețimea datelor</span><b id="stockFreshness">—</b></div>
 <div class="stockMetric"><span class="label">Gap</span><b id="stockGap">—</b></div>
 <div class="stockMetric"><span class="label">RVOL 20D</span><b id="stockRvol">—</b></div>
-<div class="stockMetric"><span class="label">QQQ today</span><b id="stockQqq">—</b></div>
-<div class="stockMetric"><span class="label">Relative vs QQQ</span><b id="stockRelQqq">—</b></div>
+<div class="stockMetric"><span class="label">QQQ azi</span><b id="stockQqq">—</b></div>
+<div class="stockMetric"><span class="label">Față de QQQ</span><b id="stockRelQqq">—</b></div>
 </div>
 <div class="stockMetricGrid" style="margin-top:8px">
-<div class="stockMetric"><span class="label">Prev day high</span><b id="stockPdh">—</b></div>
-<div class="stockMetric"><span class="label">Prev day low</span><b id="stockPdl">—</b></div>
-<div class="stockMetric"><span class="label">Session VWAP</span><b id="stockVwap">—</b></div>
-<div class="stockMetric"><span class="label">20D performance</span><b id="stock20d">—</b></div>
-<div class="stockMetric"><span class="label">QQQ 20D</span><b id="stockQqq20d">—</b></div>
+<div class="stockMetric"><span class="label">Maximul de ieri</span><b id="stockPdh">—</b></div>
+<div class="stockMetric"><span class="label">Minimul de ieri</span><b id="stockPdl">—</b></div>
+<div class="stockMetric"><span class="label">VWAP sesiune</span><b id="stockVwap">—</b></div>
+<div class="stockMetric"><span class="label">Randament 20 z</span><b id="stock20d">—</b></div>
+<div class="stockMetric"><span class="label">QQQ 20 z</span><b id="stockQqq20d">—</b></div>
 <div class="stockMetric"><span class="label">RS 20D</span><b id="stockRs20d">—</b></div>
 </div>
 </div>
 <div class="stockProviderBox">
-<div class="label">US market-data provider</div>
+<div class="label">Furnizorul de date US</div>
 <div class="edgeState neutral" id="stockProviderState">CHECKING</div>
-<div class="row"><span>Provider</span><b>Twelve Data</b></div>
-<div class="row"><span>API key</span><b id="stockApiState">—</b></div>
-<div class="row"><span>Exchange</span><b id="stockExchange">—</b></div>
-<div class="row"><span>Market open</span><b id="stockMarketOpen">—</b></div>
-<div class="row"><span>Last quote</span><b id="stockLastQuote">—</b></div>
-<p class="note">The Twelve Data API key stays in Cloudflare as <b>TWELVE_DATA_API_KEY</b>. The UI never stores it.</p>
+<div class="row"><span>Furnizor</span><b>Twelve Data</b></div>
+<div class="row"><span>Cheia API</span><b id="stockApiState">—</b></div>
+<div class="row"><span>Bursa</span><b id="stockExchange">—</b></div>
+<div class="row"><span>Piața deschisă</span><b id="stockMarketOpen">—</b></div>
+<div class="row"><span>Ultima cotație</span><b id="stockLastQuote">—</b></div>
+<p class="note">Cheia Twelve Data stă în Cloudflare, ca <b>TWELVE_DATA_API_KEY</b>. Interfața nu o ține niciodată.</p>
 </div>
 </div>
 <div class="card full" style="margin-top:10px">
-<div class="sectionHead"><h3>Nasdaq-100 Research Universe</h3><span class="small">Snapshot maintained for Sep 2026 · arbitrary US tickers can also be typed above</span></div>
+<div class="sectionHead"><h3>Universul Nasdaq-100</h3><span class="small">Lista din sept. 2026 · poți scrie sus și alte simboluri US</span></div>
 <div class="stockUniverseGrid">
-<div class="stockUniverseBox"><span class="label">Universe</span><b id="stockUniverseN">101 securities</b></div>
-<div class="stockUniverseBox"><span class="label">Fast scan</span><b>Core 30 · 1D</b></div>
-<div class="stockUniverseBox"><span class="label">Full scan</span><b>NDX 101 · 1D</b></div>
-<div class="stockUniverseBox"><span class="label">Benchmark</span><b>QQQ</b></div>
+<div class="stockUniverseBox"><span class="label">Universul</span><b id="stockUniverseN">101 acțiuni</b></div>
+<div class="stockUniverseBox"><span class="label">Scanare rapidă</span><b>Core 30 · 1D</b></div>
+<div class="stockUniverseBox"><span class="label">Scanare completă</span><b>NDX 101 · 1D</b></div>
+<div class="stockUniverseBox"><span class="label">Reper</span><b>QQQ</b></div>
 </div>
-<div class="pushState"><button data-action-click="runNasdaqScan('FAST')">Scan Core 30</button><button class="actionGhost" data-action-click="runNasdaqScan('DEEP')">Scan NDX Full</button><button class="actionGhost" data-action-click="navTo('opportunity')">Opportunity Top 10</button></div>
-<div class="stockScannerNote">The scanner uses daily OHLCV to control data usage. Twelve Data batch calls still consume one API credit per symbol: Core 30 ≈ 30 credits; full NDX 101 ≈ 101 credits. Individual analysis supports 15m, 1h, 4h and 1d when your plan provides those intervals.</div>
+<div class="pushState"><button data-action-click="runNasdaqScan('FAST')">Scanează Core 30</button><button class="actionGhost" data-action-click="runNasdaqScan('DEEP')">Scanează tot NDX</button><button class="actionGhost" data-action-click="navTo('opportunity')">Top 10 oportunități</button></div>
+<div class="stockScannerNote">Scannerul folosește lumânări zilnice, ca să consume puțin. Twelve Data cere totuși un credit pe simbol: Core 30 ≈ 30 de credite, tot NDX 101 ≈ 101. Analiza pe un singur simbol merge pe 15m, 1h, 4h și 1d, dacă planul tău le are.</div>
 </div>
 <div class="card full" style="margin-top:10px">
-<div class="sectionHead"><h3>Earnings Risk · Optional</h3><button class="actionGhost" data-action-click="loadStockEarnings()">Load earnings</button></div>
-<div class="row"><span>Next earnings date · next 30 days</span><b id="stockEarningsDate">Not loaded</b></div>
-<div class="row"><span>Timing / EPS estimate</span><b id="stockEarningsMeta">—</b></div>
-<p class="note">The optional earnings calendar is never called automatically. It uses the provider calendar for the selected stock’s exchange and searches the next 30 days; the endpoint has a materially higher credit cost than a normal quote.</p>
+<div class="sectionHead"><h3>Raportările · opțional</h3><button class="actionGhost" data-action-click="loadStockEarnings()">Încarcă raportările</button></div>
+<div class="row"><span>Următoarea raportare · 30 de zile</span><b id="stockEarningsDate">Not loaded</b></div>
+<div class="row"><span>Momentul / EPS estimat</span><b id="stockEarningsMeta">—</b></div>
+<p class="note">Calendarul raportărilor nu se cheamă niciodată singur. Folosește calendarul furnizorului pentru bursa acțiunii alese, pe următoarele 30 de zile, și costă vizibil mai multe credite decât o cotație.</p>
 </div>
 </section>
 <section class="panel" id="mtf"><div class="card full"><div class="label">Multi-timeframe heatmap</div><div class="heatmap" id="mtfheat" style="margin-top:10px"></div></div><div class="card full"><div id="mtfout">Se încarcă…</div></div></section>
@@ -2272,9 +2273,9 @@
 <div class="card"><div class="label">Funding rate</div><div class="value" id="funding">—</div></div>
 <div class="card"><div class="label">Open Interest</div><div class="value" id="oi">—</div></div>
 <div class="card"><div class="label">Long / Short</div><div class="value" id="lsratio">—</div></div>
-<div class="card"><div class="label">Futures context</div><div class="value" id="fcontext">—</div></div>
+<div class="card"><div class="label">Contextul futures</div><div class="value" id="fcontext">—</div></div>
 <div class="card full"><div class="label">Interpretare</div><p id="ftext">Datele futures vor fi încărcate pentru perechile disponibile pe Binance USDⓈ-M Futures.</p></div>
-<div class="card full"><div class="label">Derivatives composite</div><div class="row"><span>Funding bias</span><b id="fundingBias">—</b></div><div class="row"><span>Crowding risk</span><b id="crowdingRisk">—</b></div><div class="row"><span>OI context</span><b id="oiContext">—</b></div></div>
+<div class="card full"><div class="label">Derivatele, pe scurt</div><div class="row"><span>Înclinarea funding-ului</span><b id="fundingBias">—</b></div><div class="row"><span>Riscul de aglomerare</span><b id="crowdingRisk">—</b></div><div class="row"><span>Contextul OI</span><b id="oiContext">—</b></div></div>
 </div></section>
 <section class="panel" id="edgepro">
 <div class="sectionHead"><h3>Adaptive Governance &amp; Edge Validation Pro</h3><div><span class="validationBadge">DRIFT · RISK GOVERNOR · CHAMPION/CHALLENGER · FORWARD · SHADOW · EXECUTION</span> <button class="actionGhost" data-action-click="renderEdgePro()">Refresh lab</button></div></div>
@@ -2311,13 +2312,43 @@
 <div class="pwaInstall" id="pwaInstallCard"><span>Instalează Crypto Radar</span><button data-action-click="installPwa()">Instalează</button><button class="actionGhost" data-action-click="dismissPwaInstall()">×</button></div>
 <div class="pwaBanner" id="pwaUpdateBanner"><b>Este disponibilă o versiune nouă</b><div class="small" style="margin-top:4px">Actualizează aplicația instalată pentru a încărca cea mai nouă versiune.</div><div class="row2"><button data-action-click="applyPwaUpdate()">Actualizează</button><button class="actionGhost" data-action-click="dismissPwaUpdate()">Mai târziu</button></div></div>
 <div aria-label="More navigation" aria-modal="true" class="moreDrawer" data-action-click="if(event.target===this)closeMoreDrawer()" id="moreDrawer" role="dialog" tabindex="-1"><div class="moreSheet">
-<div class="moreHead"><b>Crypto Radar</b><button class="actionGhost" data-action-click="closeMoreDrawer()">Close</button></div>
+<div class="moreHead"><b>Crypto Radar</b><button class="actionGhost" data-action-click="closeMoreDrawer()">Închide</button></div>
+<!-- 18.10.2026: aceleași trei grupe ca meniul lateral (I-554, 06.10 era doar pe calculator); butoanele sunt aceleași -->
+<div class="moreGrupCap">Zilnic</div>
 <div class="moreGrid">
-<button class="moreBtn" data-action-click="moreNav('dash')"><b>⌂</b>Dashboard</button><button class="moreBtn" data-action-click="moreNav('scan',true)"><b>⌕</b>Scan</button><button class="moreBtn" data-action-click="moreNav('gridsim',true)"><b>⚄</b>Simulator</button><button class="moreBtn" data-action-click="moreNav('signals',true)"><b>↗</b>Signals</button><button class="moreBtn" data-action-click="moreNav('market',true)"><b>◉</b>Market</button><button class="moreBtn" data-action-click="moreNav('tabloubot',true)"><b>◉</b>Tablou bot</button><button class="moreBtn" data-action-click="closeMoreDrawer();deschideBusola()"><b>🧭</b>Busola ↗</button><button class="moreBtn" data-action-click="moreNav('salt',true)"><b>🧂</b>Salt</button><button class="moreBtn" data-action-click="moreNav('sugestii',true)"><b>💡</b>Sugestii</button><button class="moreBtn" data-action-click="moreNav('rezultate',true)"><b>📅</b>Rezultate</button><button class="moreBtn" data-action-click="moreNav('carnet',true)"><b>✓</b>Carnet</button><button class="moreBtn" data-action-click="moreNav('gridset',true)"><b>▦</b>Grid: ce setez?</button><button class="moreBtn" data-action-click="moreNav('jurnaltrade',true)"><b>📓</b>Jurnal de trade</button><button class="moreBtn" data-action-click="closeMoreDrawer();deschideT212()"><b>💼</b>Trading 212</button>
+<button class="moreBtn" data-action-click="moreNav('dash')"><b>⌂</b>Piața azi</button>
+<button class="moreBtn" data-action-click="moreNav('tabloubot',true)"><b>◉</b>Tablou bot</button>
+<button class="moreBtn" data-action-click="closeMoreDrawer();deschideBusola()"><b>🧭</b>Busola ↗</button>
+<button class="moreBtn" data-action-click="moreNav('sugestii',true)"><b>💡</b>Sugestii</button>
+<button class="moreBtn" data-action-click="moreNav('gridset',true)"><b>▦</b>Grid: ce setez?</button>
+<button class="moreBtn" data-action-click="moreNav('gridsim',true)"><b>⚄</b>Simulator grid</button>
+<button class="moreBtn" data-action-click="moreNav('carnet',true)"><b>✓</b>Carnet</button>
+<button class="moreBtn" data-action-click="moreNav('jurnaltrade',true)"><b>📓</b>Jurnal de trade</button>
+<button class="moreBtn" data-action-click="closeMoreDrawer();deschideT212()"><b>💼</b>Trading 212</button>
+<button class="moreBtn" data-action-click="moreNav('salt',true)"><b>🧂</b>Salt</button>
+<button class="moreBtn" data-action-click="moreNav('scan',true)"><b>⌕</b>Scanner</button>
+<button class="moreBtn" data-action-click="moreNav('alerts')"><b>!</b>Alerte</button>
+<button class="moreBtn" data-action-click="closeMoreDrawer();deschideAlertsPagina()"><b>🔔</b>Alerte în suită ↗</button>
+<button class="moreBtn" data-action-click="moreNav('montecarlo')"><b>∴</b>Monte Carlo</button>
+<button class="moreBtn" data-action-click="moreNav('contintreg',true)"><b>Σ</b>Contul întreg</button>
+</div>
+<div class="moreGrupCap">Unelte</div>
+<div class="moreGrid">
+<button class="moreBtn" data-action-click="moreNav('deriv',true)"><b>≋</b>Futures · funding</button>
+<button class="moreBtn" data-action-click="closeMoreDrawer();openStocksDesk()"><b>N</b>Nasdaq / US</button>
+<button class="moreBtn" data-action-click="moreNav('rezultate',true)"><b>📅</b>Rezultate</button>
+<button class="moreBtn" data-action-click="moreNav('account',true)"><b>◎</b>Contul Pionex</button>
+<button class="moreBtn" data-action-click="moreNav('settings')"><b>⚙</b>Setări</button>
+<button class="moreBtn" data-action-click="moreNav('health')"><b>●</b>Starea aplicației</button>
+</div>
+<details class="moreVechi" id="moreVechi"><summary class="moreGrupCap">Laborator vechi (34)</summary>
+<div class="moreGrid">
+<button class="moreBtn" data-action-click="moreNav('market',true)"><b>◉</b>Piața, pe monede</button>
+<button class="moreBtn" data-action-click="moreNav('cloud',true)"><b>☁</b>Monitorul din cloud</button>
 <button class="moreBtn" data-action-click="moreNav('desk')"><b>◆</b>Desk</button>
-<button class="moreBtn" data-action-click="moreNav('opportunity')"><b>★</b>Top 10</button>
 <button class="moreBtn" data-action-click="moreNav('engine')"><b>⚙</b>Engine</button>
 <button class="moreBtn" data-action-click="moreNav('mtf',true)"><b>▦</b>Multi-TF</button>
+<button class="moreBtn" data-action-click="moreNav('opportunity')"><b>★</b>Top 10</button>
 <button class="moreBtn" data-action-click="moreNav('profile',true)"><b>▤</b>Profile</button>
 <button class="moreBtn" data-action-click="moreNav('quantflow')"><b>∆</b>Flow &amp; Regime</button>
 <button class="moreBtn" data-action-click="moreNav('volatilitylab')"><b>σ</b>Volatility</button>
@@ -2335,23 +2366,18 @@
 <button class="moreBtn" data-action-click="moreNav('edgepro')"><b>E</b>Edge Pro</button>
 <button class="moreBtn" data-action-click="moreNav('profitready')"><b>₿</b>Readiness</button>
 <button class="moreBtn" data-action-click="moreNav('replaylab')"><b>⏮</b>Replay</button>
-<button class="moreBtn" data-action-click="moreNav('montecarlo')"><b>∴</b>Monte Carlo</button><button class="moreBtn" data-action-click="moreNav('contintreg',true)"><b>Σ</b>Contul întreg</button>
 <button class="moreBtn" data-action-click="moreNav('scenario')"><b>±</b>Scenario</button>
 <button class="moreBtn" data-action-click="moreNav('depth',true)"><b>≡</b>Order Book</button>
+<button class="moreBtn" data-action-click="moreNav('signals',true)"><b>↗</b>Signals</button>
 <button class="moreBtn" data-action-click="moreNav('backtest',true)"><b>◫</b>Backtest</button>
-<button class="moreBtn" data-action-click="moreNav('deriv',true)"><b>≋</b>Futures</button>
 <button class="moreBtn" data-action-click="moreNav('watch')"><b>★</b>Watch</button>
-<button class="moreBtn" data-action-click="moreNav('alerts')"><b>!</b>Alerts</button>
-<button class="moreBtn" data-action-click="moreNav('account',true)"><b>◎</b>Pionex Acct</button>
-<button class="moreBtn" data-action-click="moreNav('cloud',true)"><b>☁</b>Cloud Monitor</button>
 <button class="moreBtn" data-action-click="moreNav('profilelab',true)"><b>▥</b>Profile</button>
 <button class="moreBtn" data-action-click="moreNav('structurelab',true)"><b>◇</b>Structure</button>
 <button class="moreBtn" data-action-click="moreNav('intel',true)"><b>◎</b>Context</button>
 <button class="moreBtn" data-action-click="moreNav('researchml')"><b>AI</b>Research ML</button>
 <button class="moreBtn" data-action-click="moreNav('decisioncore',true)"><b>◆</b>Decision Core</button>
 <button class="moreBtn" data-action-click="moreNav('localdata',true)"><b>DB</b>Local Data</button>
-<button class="moreBtn" data-action-click="moreNav('settings')"><b>⚙</b>Settings</button>
-<button class="moreBtn" data-action-click="moreNav('health')"><b>●</b>Health</button>
 </div>
+</details>
 </div></div><script src="/lib/text-ro.js"></script><script src="/lib/latime.js"></script><script src="/lib/latime-us.js"></script><script src="/lib/sectoare.js"></script><script src="/lib/macro.js"></script><script src="/lib/scor-zi.js"></script><script src="/lib/rezultate.js"></script><script src="/lib/grid-calcul.js"></script><script src="/lib/grafic-bot.js"></script><script src="/lib/tablou-trend.js"></script><script src="/lib/risc-luna.js"></script><script src="/lib/risc-ecran.js"></script><script src="/lib/cont-intreg.js"></script><script src="/lib/verdicte.js"></script><script src="/lib/factori.js"></script><script src="/lib/disciplina.js"></script><script src="/lib/cont-ecran.js"></script><script src="/lib/monte-simbol.js"></script><script src="/lib/monte-simbol-ecran.js"></script><script src="/lib/valoare.js"></script><script src="/lib/busola.js"></script><script src="/lib/pret-viu.js"></script><script src="/lib/grid-proba.js"></script><script src="/lib/perechi.js"></script><script src="/lib/grid-plan.js"></script><script src="/lib/carnet.js"></script><script src="/lib/carnet-ecran.js"></script><script src="/lib/sugestii-actiuni.js"></script><script src="/lib/grid-jurnal.js"></script><script src="/lib/grid-umpleri.js"></script><script src="/lib/grid-clasament.js"></script><script src="/lib/grid-laborator.js"></script><script src="/lib/tablou-extra.js"></script><script src="/lib/grid-sim.js"></script><script src="/lib/grid-sim-ecran.js"></script><script src="/lib/indicatori-bot.js"></script><script src="/lib/jurnal-trade.js"></script><script src="/lib/statistica-trade.js"></script><script src="/lib/profil-moneda.js"></script><script src="/lib/probabilitati.js"></script><script src="/lib/retea.js"></script><script src="/lib/arbori.js"></script><script src="/lib/dovada.js"></script><script src="/lib/asemanatoare.js"></script><script src="/lib/semnale-bot.js"></script><script src="/lib/consiliu.js"></script><script src="/lib/contrafactual.js"></script><script src="/lib/obiceiuri.js"></script><script src="/lib/tablou-bot.js"></script><script src="/lib/directie.js"></script><script src="/lib/alerte.js"></script><script src="/lib/scenariu.js"></script><script src="/lib/sfaturi.js"></script><script src="/lib/t212.js"></script><script src="/lib/calendar-bursa.js"></script><script src="/lib/actiuni-semnale.js"></script><script src="/lib/consilier.js"></script><script src="/lib/salt.js"></script><script src="/lib/salt-ecran.js"></script><script src="/lib/reveniri.js"></script><script src="/lib/idei.js"></script><script src="/lib/sugestii-ecran.js"></script><script src="/lib/acasa.js"></script><script defer="" src="/app.js"></script><script defer="" src="/lib/t212-ecran.js"></script><script defer="" src="/lib/acasa-ecran.js"></script><script src="/lib/scan.js"></script><script defer="" src="/lib/scan-ecran.js"></script><script defer="" src="/lib/alerte-ecran.js"></script><script defer="" src="/lib/asezare-paznic.js"></script>
 </body></html>

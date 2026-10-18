@@ -127,7 +127,7 @@ await test("htmlBloc: fără date ⇒ un mesaj scurt cu ce să faci, nu un bloc 
 const app = citeste("public", "app.js"), idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), css = citeste("public", "app.css");
 await test("index.html încarcă lib/latime-us.js și are locul blocului sus în pagina de acțiuni", () => {
   assert.match(idx, /<script src="\/lib\/latime-us\.js"><\/script>/);
-  const s = idx.indexOf('id="stocks"'), b = idx.indexOf('id="latimeUsBloc"'), ctxUs = idx.indexOf("US Session Context");
+  const s = idx.indexOf('id="stocks"'), b = idx.indexOf('id="latimeUsBloc"'), ctxUs = idx.indexOf("Sesiunea US");   /* v100.214: titlul tradus */
   assert.ok(s > 0 && b > s && b < ctxUs, "blocul e în #stocks, înaintea „US Session Context”");
 });
 await test("pe 1920 blocul stă SUS (sub titlu, înaintea „US Session Context”): pagina de acțiuni trimite la capăt tot ce nu e numit (order:900)", () => {

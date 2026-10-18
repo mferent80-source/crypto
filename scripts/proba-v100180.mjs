@@ -34,9 +34,9 @@ await test("meniul: „🧭 Busola ↗” imediat după Tabloul botului, cu desc
   assert.ok(m, "butonul de după Tabloul botului");
   assert.match(m[1], /data-action-click="deschideBusola\(\)"/); assert.match(m[1], /🧭/); assert.match(m[1], /Busola ↗/); assert.doesNotMatch(m[1], /data-nav=/);
 });
-await test("telefon: sertarul „⋯ More” are și el „🧭 Busola ↗”, imediat după „Tablou bot” (meniul lateral e ascuns pe telefon)", () => {
+await test("telefon: sertarul „⋯ More” are și el „🧭 Busola ↗”, imediat după „Tablou bot” (meniul lateral e ascuns pe telefon)", () => {   /* v100.214: foaia pe grupe, un buton pe rând ⇒ spațiu alb permis între ele */
   const html = citeste("public", "index.html");
-  assert.match(html, /<button class="moreBtn" data-action-click="moreNav\('tabloubot',true\)"><b>◉<\/b>Tablou bot<\/button><button class="moreBtn" data-action-click="closeMoreDrawer\(\);deschideBusola\(\)"><b>🧭<\/b>Busola ↗<\/button>/);
+  assert.match(html, /<button class="moreBtn" data-action-click="moreNav\('tabloubot',true\)"><b>◉<\/b>Tablou bot<\/button>\s*<button class="moreBtn" data-action-click="closeMoreDrawer\(\);deschideBusola\(\)"><b>🧭<\/b>Busola ↗<\/button>/);
 });
 await test("deschideBusola(): pe Tablou cu bot ⇒ moneda botului pe intervalul graficului; altfel moneda și intervalul din Radar; fereastră nouă, noopener", () => {
   const src = citeste("public", "app.js"), i = src.indexOf("function deschideBusola(");

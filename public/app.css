@@ -2279,6 +2279,12 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 /* v100.115 (I-554): meniul în 3 grupe - Zilnic, Unelte, Laborator vechi (pliat) */
 .sideGrup{display:grid;gap:2px;margin:0 0 10px}.sideGrupCap{font-size:12px;font-weight:600;color:var(--muted);padding:6px 12px 3px;letter-spacing:0}
 .sideVechi>summary{cursor:pointer;list-style:none;border-radius:5px}.sideVechi>summary::-webkit-details-marker{display:none}.sideVechi>summary::before{content:"▸ "}.sideVechi[open]>summary::before{content:"▾ "}
+/* v100.214: foaia „Mai mult” de pe telefon, pe aceleași trei grupe ca meniul lateral */
+.moreGrupCap{font-size:12px;font-weight:600;color:var(--muted);padding:10px 2px 6px;letter-spacing:0}
+.moreVechi{margin-top:4px}.moreVechi>summary{cursor:pointer;list-style:none;border-radius:5px;min-height:44px;display:flex;align-items:center}.moreVechi>summary::-webkit-details-marker{display:none}.moreVechi>summary::before{content:"▸ "}.moreVechi[open]>summary::before{content:"▾ "}
+.moreVechi>summary:hover{color:var(--text)}.moreVechi>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* v100.214: subsolul „Engine-ul combină… v41 Paper” descrie motorul vechi ⇒ doar pe paginile Laboratorului vechi */
+body:not(.peLaborator) main>.note{display:none}
 .sideVechi>summary:hover{color:var(--text)}.sideVechi>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* v100.119: pagina Sugestii - o grilă de cartele pe secțiune (boți / US / EU), o cartelă = o listă */
 .sugGrila{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.sugCartela{min-width:0;display:grid;gap:6px;align-content:start}
@@ -2644,6 +2650,8 @@ body:before{background-image:none!important}
    le ascund cu !important în modul greșit și trebuie să câștige în continuare (harta paginilor Unelte). */
 .pzAntet{border:1px solid var(--pzLi);background:var(--pzF1);border-radius:5px;padding:12px 14px;margin:0 0 10px;order:5}
 .pzAntet[hidden]{display:none}
+/* v100.214: și pe Contul Pionex fâșia veche „Selected market · Engine bias” + filele se PLIAZĂ (decizia lui din 11.10), bara cu moneda rămâne (ordinele deschise o folosesc) */
+html.pzDemo body:not(.pzFasiaDeschisa):has(main>#account.on) main :is(.heroStrip,.tabs){display:none}html.pzDemo body:has(main>#account.on) .pzFasiaBtn{display:block}
 html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on) main :is(.heroStrip,.tabs){display:none}.pzFasiaBtn{display:none}html.pzDemo body:has(main>#cloud.on,main>#settings.on,main>#health.on) .pzFasiaBtn{display:block}.pzFasiaBtn{margin:0 0 8px;padding:5px 10px;background:var(--f1,#141C24);color:#9FB3C4;border:1px solid #26333F;border-radius:4px;font:inherit;font-size:12px;cursor:pointer;text-align:left}.pzFasiaBtn:hover{color:#E6EDF3;border-color:#35485A}.pzFasiaBtn:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}.pzAntet .pzVerb{white-space:normal;overflow-wrap:anywhere;max-width:62%}@media (max-width:550px){.pzAntet .pzVerb{max-width:none}}
 @media (max-width:550px){.pzVerb{white-space:normal;overflow-wrap:anywhere}}
 /* T212 (.t212Card e deja coloană flex) */

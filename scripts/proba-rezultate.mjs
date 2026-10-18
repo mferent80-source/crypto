@@ -253,7 +253,7 @@ const app = citeste("public", "app.js"), idx = citeste("public", "index.html"), 
 await test("index.html: scriptul lib/rezultate.js, secțiunea #rezultate cu #rzPagina, locul rândului în #stocks", () => {
   assert.match(idx, /<script src="\/lib\/rezultate\.js"><\/script>/);
   assert.match(idx, /<section class="panel" id="rezultate">[\s\S]{0,300}id="rzPagina"/);
-  const s = idx.indexOf('id="stocks"'), r = idx.indexOf('id="rzRandStocks"'), u = idx.indexOf("US Session Context"); assert.ok(s > 0 && r > s && r < u);
+  const s = idx.indexOf('id="stocks"'), r = idx.indexOf('id="rzRandStocks"'), u = idx.indexOf("Sesiunea US");   /* v100.214: titlul tradus */ assert.ok(s > 0 && r > s && r < u);
 });
 await test("meniul: „Rezultate” în grupa Unelte, imediat după acțiuni", () => {
   const g = idx.slice(idx.indexOf('id="sideUnelte"'), idx.indexOf("</div>", idx.indexOf('id="sideUnelte"') + 600) + 6);

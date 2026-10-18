@@ -38,7 +38,7 @@ await test("altă eroare sau date venite ⇒ NU „fără parolă” (cardurile 
 });
 await test("cardurile Crypto și Nasdaq: „FĂRĂ PAROLĂ”, ce ai de făcut, butonul spre Setări", () => {
   assert.equal(cx.AC_FARA_PAROLA.eticheta, "FĂRĂ PAROLĂ");
-  assert.match(cx.AC_FARA_PAROLA.text, /Setări → API Security Session/);
+  assert.match(cx.AC_FARA_PAROLA.text, /Setări → Parola aplicației pe acest dispozitiv/   /* v100.214: titlul tradus */);
   assert.match(cx.AC_BUTON_PAROLA, /data-action-click="mergiLaParola\(\)"/);
   assert.match(app, /mergiLaParola\(\)\{/, "mergiLaParola există în app.js");
   const f = citeste("public", "lib", "acasa-ecran.js"), des = f.slice(f.indexOf("function acasaDeseneaza"), f.indexOf("// 2a. pulsul crypto"));

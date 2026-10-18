@@ -101,7 +101,7 @@ var AC_DIR = { urca: '<span class="good">urcă</span>', coboara: '<span class="b
 
 // v100.199: piața nu se poate citi fără parola aplicației — o cerere de bază refuzată pe parolă e destul (celelalte cad la fel)
 var AC_FARA_PAROLA = { nivel: "fara-date", eticheta: "FĂRĂ PAROLĂ", titlu: "Fără parola aplicației nu pot citi piața pe dispozitivul ăsta.",
-  text: "Serverul de acasă refuză cererile până pui parola (textul APP_API_TOKEN de la pornire) în Setări → API Security Session. Se pune o dată pe fiecare adresă din care deschizi Radarul (acasă și Tailscale sunt separate)." };
+  text: "Serverul de acasă refuză cererile până pui parola (textul APP_API_TOKEN de la pornire) în Setări → Parola aplicației pe acest dispozitiv. Se pune o dată pe fiecare adresă din care deschizi Radarul (acasă și Tailscale sunt separate)." };
 var AC_BUTON_PAROLA = '<button class="actionGhost" type="button" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>';
 function acFaraParola(d) {
   if (typeof eroareDeParola !== "function" || !d) return false;

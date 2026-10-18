@@ -1,5 +1,5 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
-import {pionexPrivatGet} from "../_shared/pionex.js";
+import {cuProba,pionexPrivatGet} from "../_shared/pionex.js";
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:H});
 
@@ -49,6 +49,7 @@ async function cheiaPionex(env){
 }
 
 export async function onRequestGet({request,env}){
+  env=cuProba(env,request);   // v100.214: semnul probei de ecran pe CEREREA asta, nu pe tot serverul
   const auth=await requireApiAuth(request,env,"provider-health",30);
   if(!auth.ok)return authErrorResponse(auth,H);
 

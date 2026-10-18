@@ -41,6 +41,8 @@ function ruleaza(cwd, cmd, args) {
 // v100.213: după reconstruirea Functions, serverul 8788 trebuie să răspundă cu versiunea din functions/_shared/versiune.js.
 // Pe 18.10 (v100.212) worker-ul reconstruit stătea sub .wrangler, unde wrangler nu se uită ⇒ serverul a rămas pe Functions
 // vechi fără niciun semn. Acum se verifică, nu se presupune.
+// v100.214: calea worker-ului din radar-local.toml (doar rândul `main = "..."` necomentat)
+export function mainDinToml(text) { const m = String(text || "").match(/^main\s*=\s*"([^"]+)"/m); return m ? m[1] : null; }
 export function versiuneaAsteptata(rad) {
   try { const m = fs.readFileSync(path.join(rad, "functions", "_shared", "versiune.js"), "utf8").match(/VERSIUNE = "([^"]+)"/); return m ? m[1] : null; } catch { return null; }
 }
@@ -115,6 +117,19 @@ function livreaza(nume) {
   if (comune.length) {
     scrie(`Principalul are modificări NECOMISE (altă sesiune lucrează acolo) pe fișiere atinse de tine — nu-l aduc, ca să nu le strivesc:\n  ${comune.join("\n  ")}\nCodul tău e pe GitHub; principalul îl primește când sesiunea aceea comite, cu: git merge --ff-only origin/main`);
     return 2;
+  }
+  // v100.214: o cale `main` nouă în radar-local.toml OPREȘTE serverul la aducere — wrangler urmărește configul, îl recitește și
+  // moare dacă fișierul nu există (18.10 21:19:58, 1,5 min). ⇒ worker-ul se construiește din copie la calea nouă, ÎNAINTE de aducere.
+  if (atinse.includes("radar-local.toml")) {
+    const nou = mainDinToml(fs.readFileSync(path.join(dest, "radar-local.toml"), "utf8"));
+    if (nou && !fs.existsSync(path.join(RAD, nou))) {
+      const wrN = (String(JSON.parse(fs.readFileSync(path.join(dest, "package.json"), "utf8")).scripts?.dev || "").match(/wrangler@[\d.]+/) || ["wrangler@4.137.0"])[0];
+      scrie(`radar-local.toml cere worker-ul la ${nou}, care nu există în principal ⇒ îl construiesc ÎNAINTE de aducere (altfel serverul 8788 se oprește)…`);
+      if (!ruleaza(dest, "npx", ["--yes", wrN, "pages", "functions", "build", "functions", "--outdir", path.join(RAD, path.dirname(nou)), "--compatibility-date=2026-01-01"])) {
+        scrie("⚠ construirea a PICAT — NU aduc principalul (serverul s-ar opri). Codul e pe GitHub; repară și rulează iar.");
+        return 2;
+      }
+    }
   }
   const m = git(RAD, "merge", "--ff-only", "origin/main");
   if (!m.ok) {

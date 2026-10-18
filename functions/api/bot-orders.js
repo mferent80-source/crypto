@@ -1,5 +1,5 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
-import {PIONEX,TIMEOUT_MS,pionexPrivatGet} from "../_shared/pionex.js";
+import {cuProba,PIONEX,TIMEOUT_MS,pionexPrivatGet} from "../_shared/pionex.js";
 import {avertismenteBot} from "../_shared/avertismente.js";
 
 // Cititul botilor de grid Pionex. STRICT READ-ONLY: singura ruta atinsa e
@@ -207,6 +207,7 @@ function normalizeaza(bot,preturi,harta){
 }
 
 export async function onRequestGet({request,env}){
+  env=cuProba(env,request);   // v100.214: semnul probei de ecran pe CEREREA asta, nu pe tot serverul
   // v100.25: brut=1 (colectorul, pagina cu pagina prin istorie) are limita lui, ca sa nu manance din cea a paginii
   const brutCerut=new URL(request.url).searchParams.get("brut")==="1";
   const auth=await requireApiAuth(request,env,brutCerut?"bot-orders-arhiva":"bot-orders",brutCerut?40:30);

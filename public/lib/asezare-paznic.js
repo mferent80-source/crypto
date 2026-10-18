@@ -492,7 +492,7 @@
     if (!o && !boxes.length) { antet("pzV-health", dupa, null); return; }
     var rau = boxes.filter(function (b) { return b.ton === "jos"; });
     antet("pzV-health", dupa, { verb: o ? "FURNIZORII: " + o.toUpperCase() : rau.length ? rau[0].n.toUpperCase() : "HEALTH", ton: ov && o ? tonCls(ov) : rau.length ? "jos" : "mut",
-      titlu: rau.length ? rau.map(function (b) { return b.n; }).join(" · ") : (o ? "" : "„Run health check” și „Run provider health” de mai jos dau starea furnizorilor"), voci: boxes, din: "Health (mai jos)" });
+      titlu: rau.length ? rau.map(function (b) { return b.n; }).join(" · ") : (o ? "" : "„Verifică acum” și „Verifică furnizorii” de mai jos dau starea furnizorilor"), voci: boxes, din: "Health (mai jos)" });
   }
 
   // Cloud / Settings / Health nu depind de monedă: fâșia „Selected market” + filele de analiză se PLIAZĂ (el, 11.10: „da, fă tot”), nu se ascund -

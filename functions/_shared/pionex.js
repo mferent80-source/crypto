@@ -50,12 +50,16 @@ export function reseteazaRitmPionex(){poarta=Promise.resolve();urmatorulLa=0;rac
 // restul formei o judeca ruta, fiindca fiecare stie ce asteapta.
 // v100.209 (16.10.2026): PROBA DE ECRAN nu mai bate în Pionex — cele 55 de pagini de la fiecare livrare (×2 azi) au ars cota și
 // Pionex a blocat IP-ul 3 ore (X-RateLimit-Lock), lăsând măsurarea Busolei fără futures. Proba pune antetul `x-proba-ecran: 1`
-// pe toate cererile (CDP), middleware-ul aprinde steagul cât ține cererea, iar aici cererea către Pionex nu pleacă (503, spus).
-let proba=false;
-export function marcheazaProba(x){proba=!!x}
-export function esteProba(){return proba}
+// pe toate cererile (CDP), iar aici cererea către Pionex nu pleacă (503, spus).
+// v100.214 (18.10.2026): semnul stă pe env-ul CERERII, nu într-un steag comun. Steagul de modul (aprins de middleware cât ținea
+// cererea probei) bloca și cererile colectorului / telefonului venite în același timp (9 ori pe 18.10 în data\colector.log),
+// iar două probe suprapuse puteau lăsa una să bată în Pionex. Fiecare rută care ajunge aici face env=cuProba(env,request).
+export function cuProba(env,request){
+  let e=false;try{e=!!(request&&request.headers&&request.headers.get("x-proba-ecran")==="1")}catch{}
+  return e?Object.create(env,{__probaEcran:{value:true}}):env
+}
 export async function pionexPrivatGet(env,path,params={}){
-  if(proba)throw Object.assign(Error("probă de ecran: fără cereri către Pionex"),{status:503});
+  if(env&&env.__probaEcran)throw Object.assign(Error("probă de ecran: fără cereri către Pionex"),{status:503});
   const apiKey=env.PIONEX_API_KEY,secret=env.PIONEX_API_SECRET;
   if(!apiKey||!secret)throw Object.assign(Error("Pionex read-only server secrets are not configured"),{status:503});
   const r=await cuRitm(async()=>{

@@ -48,7 +48,7 @@ await test("copie-de-lucru.mjs: livrarea care atinge functions/ reconstruiește 
   const c = citeste("scripts", "copie-de-lucru.mjs");
   assert.match(c, /atinse\.some\(\(x\) => x\.startsWith\("functions\/"\)\) && fs\.existsSync\(path\.join\(RAD, "radar-local\.toml"\)\)/);
   assert.match(c, /"pages", "functions", "build", "functions", "--outdir", "worker-local"/);
-  assert.ok(c.indexOf('"functions", "build"') > c.indexOf("Principalul adus la"), "reconstruirea vine DUPĂ ce principalul e adus");
+  assert.ok(c.lastIndexOf('"functions", "build"') > c.indexOf("Principalul adus la"), "reconstruirea vine DUPĂ ce principalul e adus");   /* v100.214: lastIndexOf — înainte de aducere se construiește DOAR pentru un toml nou */
 });
 await test("garzi-v746: garda lansatoare cere wrangler dev --no-bundle + radar-local.toml + build înainte, și refuză pages dev", () => {
   const g = citeste("scripts", "garzi-v746.mjs");

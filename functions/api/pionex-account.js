@@ -1,5 +1,5 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
-import {pionexPrivatGet} from "../_shared/pionex.js";
+import {cuProba,pionexPrivatGet} from "../_shared/pionex.js";
 const H={"content-type":"application/json","cache-control":"no-store"};
 
 const json=(x,status=200,antete={})=>new Response(JSON.stringify(x),{status,headers:{...H,...antete}});
@@ -29,6 +29,7 @@ async function privateGet(env,path,params={}){
 }
 
 export async function onRequestGet({request,env}){
+  env=cuProba(env,request);   // v100.214: semnul probei de ecran pe CEREREA asta, nu pe tot serverul
   const auth=await requireApiAuth(request,env,"pionex-account",30);if(!auth.ok)return authErrorResponse(auth,H);
   const u=new URL(request.url),action=u.searchParams.get("action")||"status";
   const configured=!!(env.PIONEX_API_KEY&&env.PIONEX_API_SECRET);
