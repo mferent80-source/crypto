@@ -3049,7 +3049,13 @@ function tbarComuta(){const t=document.querySelector(".toolbar");if(!t)return;t.
 // la DOMContentLoaded, nu pe loc: `const $` e definit mai jos in fisier (TDZ) - chemat aici, oprea TOT app.js
 if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){const t=document.querySelector(".toolbar");if(!t)return;["input","change","click"].forEach(n=>t.addEventListener(n,()=>setTimeout(tbarActualizeaza,0)));tbarActualizeaza()});
 const NAV_CU_LOAD=new Set(["contintreg","rezultate","mtf","dash","tabloubot","gridset","jurnaltrade","account","stocks","t212","scan","replaylab","market","profile","quantflow","micro","correlation","depth","signals","backtest","deriv","health","portfolio","cloud","profilelab","volatilitylab","structurelab","intel"]);
+// v100.212 (18.10.2026, controlul paginilor): paginile legate de o clasă de active (.cryptoContextOnly / .stockOnly, ascunse cu totul pe
+// cealaltă clasă) își aleg singure clasa la deschidere. Nasdaq trece pe acțiuni și ține minte; după el, „Contul Pionex” și „Futures” erau GOALE.
+// `var`, nu const: navTo poate rula la pornire (pagina ținută minte) înainte ca un const de mai jos să existe.
+var PAGINI_CLASA={account:"CRYPTO",deriv:"CRYPTO",micro:"CRYPTO",stocks:"STOCKS"};
+function clasaPentruPagina(id){return Object.prototype.hasOwnProperty.call(PAGINI_CLASA,id)?PAGINI_CLASA[id]:null}
 function navTo(id,load=false){
+ {var clasaPg=clasaPentruPagina(id);if(clasaPg&&typeof assetClass==="function"&&assetClass()!==clasaPg)setAssetClass(clasaPg)}
  show(id);
  if(id==="alerts")alerteLocaleCitite();
  // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
