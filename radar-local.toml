@@ -1,0 +1,19 @@
+# v100.211 (18.10.2026): serverul LOCAL (PORNESTE-CRYPTO-RADAR.bat) porneste ca Worker din Functions
+# PRE-CONSTRUITE (wrangler pages functions build -> .wrangler/worker-local), cu `wrangler dev --no-bundle`.
+# De ce: `pages dev` tinea esbuild in watch, care sonda ~60 de directoare la fiecare 500 ms
+# (7,8 MB/s citiri, 4 % dintr-un nucleu, zi si noapte). Cu --no-bundle nu mai exista watch prin sondare;
+# wrangler reincarca worker-ul cand fisierul se schimba (copie-de-lucru.mjs il reconstruieste la livrare).
+# Productia (pages deploy public) NU foloseste fisierul asta: acolo Functions se construiesc la Cloudflare.
+name = "crypto-radar-local"
+main = ".wrangler/worker-local/index.js"
+compatibility_date = "2026-01-01"
+
+# public/ servit ca assets; Functions construite cad pe env.ASSETS pentru tot ce nu e /api/* (_routes.json)
+[assets]
+directory = "public"
+binding = "ASSETS"
+
+# istoricul botului strans de colector, acelasi KV ca inainte (pages dev --kv ISTORIC), in .wrangler/state
+[[kv_namespaces]]
+binding = "ISTORIC"
+id = "ISTORIC"

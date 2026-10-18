@@ -605,12 +605,29 @@ function gardaLansatoare() {
     if (!/--persist-to/.test(t)) pica(G, `${f}: wrangler pornit fara --persist-to <folder> - proba de port nu mai recunoaste serverul acestui folder`);
   }
   const loc = citeste(LOCAL);
-  const cmdLocal = loc.split(/\r?\n/).find((l) => /wrangler@\S+ pages dev/.test(l)) || "";
-  if (!/--ip 127\.0\.0\.1\b/.test(cmdLocal)) pica(G, `${LOCAL}: wrangler pages dev fara --ip 127.0.0.1 - serverul cu cheile Pionex asculta pe toata reteaua`);
+  // v100.211 (18.10, el: „fă 2”): serverul local porneste ca Worker din Functions PRE-CONSTRUITE (wrangler dev --no-bundle),
+  // nu "pages dev" - acela tinea esbuild in watch, care sonda ~60 de directoare la fiecare 500 ms (7,8 MB/s citiri, 4 % dintr-un nucleu).
+  const liniiLoc = loc.split(/\r?\n/);
+  const cmdLocal = liniiLoc.find((l) => /wrangler@\S+ dev\b/.test(l) && !/pages dev/.test(l)) || "";
+  if (!cmdLocal) pica(G, `${LOCAL}: serverul nu porneste cu "wrangler@<versiune> dev" (Worker pre-construit)`);
+  if (!/--ip 127\.0\.0\.1\b/.test(cmdLocal)) pica(G, `${LOCAL}: wrangler dev fara --ip 127.0.0.1 - serverul cu cheile Pionex asculta pe toata reteaua`);
+  if (!/--no-bundle\b/.test(cmdLocal)) pica(G, `${LOCAL}: wrangler dev fara --no-bundle - esbuild ar sonda iar directoarele la 500 ms`);
+  if (!/--config radar-local\.toml\b/.test(cmdLocal)) pica(G, `${LOCAL}: wrangler dev fara --config radar-local.toml (worker + assets + KV)`);
+  if (liniiLoc.some((l) => !/^\s*rem\b/i.test(l) && /wrangler@\S+ pages dev/.test(l))) pica(G, `${LOCAL}: mai porneste si "pages dev" (esbuild in watch)`);
+  const build = liniiLoc.find((l) => !/^\s*rem\b/i.test(l) && /wrangler@\S+ pages functions build\b/.test(l)) || "";
+  if (!/--outdir "\.wrangler\\worker-local"/.test(build)) pica(G, `${LOCAL}: Functions nu sunt construite in .wrangler\\worker-local inainte de dev`);
+  if (build && cmdLocal && liniiLoc.indexOf(build) > liniiLoc.indexOf(cmdLocal)) pica(G, `${LOCAL}: Functions se construiesc DUPA pornirea serverului`);
+  if (!fs.existsSync(cale("radar-local.toml"))) pica(G, "radar-local.toml lipseste - serverul local n-are de unde lua worker-ul, assets si KV-ul");
+  else {
+    const w = citeste("radar-local.toml");
+    if (!/^main\s*=\s*"\.wrangler\/worker-local\/index\.js"\s*$/m.test(w)) pica(G, `radar-local.toml: main trebuie sa fie ".wrangler/worker-local/index.js" (unde construieste lansatorul)`);
+    if (!/^\[assets\]/m.test(w) || !/^directory\s*=\s*"public"\s*$/m.test(w) || !/^binding\s*=\s*"ASSETS"\s*$/m.test(w)) pica(G, `radar-local.toml: [assets] directory="public" + binding="ASSETS" (Functions construite cad pe env.ASSETS)`);
+    if (!/^binding\s*=\s*"ISTORIC"\s*$/m.test(w) || !/^id\s*=\s*"ISTORIC"\s*$/m.test(w)) pica(G, `radar-local.toml: KV binding="ISTORIC" cu id="ISTORIC" - altfel istoricul botului din .wrangler\\state nu se mai vede`);
+  }
   const sanLoc = blocPs(loc, "sanatate");
   if (sanLoc && !/Start-Process 'http:\/\/127\.0\.0\.1:8788\/'/.test(sanLoc.ps)) pica(G, `${LOCAL}: browserul nu e deschis de proba de pornire`);
   if (/start "" http/i.test(loc)) pica(G, `${LOCAL}: browser deschis in afara probei de pornire`);
-  if (!rezultate.some((r) => r.garda === G && !r.ok)) trece(G, "port, proba de pornire, secret ascuns, wrangler pe 127.0.0.1, fara Stop-Process, fara tunel public");
+  if (!rezultate.some((r) => r.garda === G && !r.ok)) trece(G, "port, proba de pornire, secret ascuns, wrangler dev --no-bundle pe 127.0.0.1 din Functions pre-construite + radar-local.toml, fara Stop-Process, fara tunel public");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,11 +1,12 @@
 {
-  "version": "v100.210",
-  "badge": "v100.210 · BUSOLA ÎN FIȘA DE GRID",
+  "version": "v100.211",
+  "badge": "v100.211 · SERVER FĂRĂ SONDARE",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "faraSondare211": "serverul local fără sondare (18.10.2026, el: „fă 2”, după măsurătoarea pe PID): PORNESTE-CRYPTO-RADAR.bat construiește Functions o dată (wrangler pages functions build → .wrangler/worker-local) și pornește wrangler dev --no-bundle cu radar-local.toml (public ca assets, KV ISTORIC, același .wrangler/state) — fără esbuild în watch, care sonda ~60 de directoare la 500 ms (7,8 MB/s citiri din cache, 4 % dintr-un nucleu); livrarea reconstruiește worker-ul când atinge functions/, iar wrangler îl reîncarcă singur; paritate 26/26 rute cu serverul vechi",
     "episoade189": "episoadele pe Alerts + bilanțul la 24 h (13.10.2026, el: „fă idei”): colectorul v101.110 judecă fiecare episod și martor și după 24 h (verdictul rămâne pe 72 h); pagina Alerts arată ultimele 30 de episoade ale alertelor de direcție, cu profitul botului după 24 h și 72 h",
     "bilantalerte188": "bilanțul tuturor alertelor de direcție (13.10.2026, el: „fă idei”): colectorul v101.109 judecă la 72 h, cu același martor (o zi fără niciun episod), și alertele Busolei (invers față de bot, toate vocile contra, BTC); bilanțul pleacă la server cu starea pazei și Tabloul îl arată sub „În pândă”, un rând pe alertă",
     "pandabilant187": "lichidarea în zile obișnuite + bilanțul alertei contra (13.10.2026, el: „fă idei”): colectorul v101.108 - alerta „contra” spune cât de departe e lichidarea în zile obișnuite ale monedei (amplitudinea pe zi din pândă, adrPct); fiecare episod și un martor (o zi fără contra pe bot) se judecă la 72 h pe profitul botului, bilanțul intră în raportul de duminică (sub 10 de fiecare: prea puține)",

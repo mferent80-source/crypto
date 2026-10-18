@@ -110,6 +110,14 @@ function livreaza(nume) {
     if (!ruleaza(RAD, "node", ["scripts/proba-ecran-telefon.mjs"])) scrie("⚠ proba de telefon a PICAT pe principal — uită-te acum (codul e publicat).");
   }
   if (atinse.some((x) => x === "scripts/colector.mjs" || x.startsWith("scripts/lib/"))) scrie("Ai atins colectorul ⇒ repornește-l ca să ia codul nou.");
+  // v100.211: serverul 8788 rulează Worker-ul PRE-CONSTRUIT din .wrangler/worker-local (wrangler dev --no-bundle, fără esbuild în watch)
+  // ⇒ Functions atinse se reconstruiesc aici, în principal; wrangler dev vede fișierul nou și reîncarcă singur (probat 18.10).
+  if (atinse.some((x) => x.startsWith("functions/")) && fs.existsSync(path.join(RAD, "radar-local.toml"))) {
+    const wr = (String(JSON.parse(fs.readFileSync(path.join(RAD, "package.json"), "utf8")).scripts?.dev || "").match(/wrangler@[\d.]+/) || ["wrangler@4.137.0"])[0];
+    scrie(`Ai atins functions/ ⇒ reconstruiesc Worker-ul din principal (.wrangler/worker-local, ${wr})…`);
+    if (!ruleaza(RAD, "npx", ["--yes", wr, "pages", "functions", "build", "functions", "--outdir", ".wrangler/worker-local", "--compatibility-date=2026-01-01"]))
+      scrie("⚠ construirea Worker-ului a PICAT — serverul 8788 rămâne pe codul VECHI al Functions; repară și pornește iar PORNESTE-CRYPTO-RADAR.bat.");
+  }
   return 0;
 }
 

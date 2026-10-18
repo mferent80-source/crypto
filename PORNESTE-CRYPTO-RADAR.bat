@@ -200,13 +200,27 @@ rem si cresc la nesfarsit. Se sterg DOAR aici, cand serverul e oprit si urmeaza 
 rem .wrangler\state\v3 (KV-ul cu istoricul botului, kv\, NU se atinge). Cai fixe, Join-Path + Test-Path, fara variabile de batch.
 rem [ps:curata-urme]
 powershell -NoProfile -Command "$st = Join-Path (Get-Location).Path '.wrangler\state\v3'; foreach ($d in 'observability','cache\default') { $p = Join-Path $st $d; if (Test-Path -LiteralPath $p -PathType Container) { try { Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction Stop; Write-Host ('  [OK] Curatat ' + $d + ' (urmele wrangler).') } catch { Write-Host ('  [ ] Nu am putut curata ' + $d + ' - merg mai departe.') } } }"
-rem --ip 127.0.0.1: serverul are cheile Pionex, deci asculta DOAR pe
-rem calculatorul asta. Telefonul intra prin tunel (PORNESTE-SI-PE-TELEFON.bat).
-rem --persist-to cu calea folderului: dupa ea recunoaste [ps:port] serverul nostru.
-rem --kv ISTORIC: istoricul botului strans de colector (scripts\colector.mjs),
+rem v100.211 (18.10.2026): serverul porneste ca Worker din Functions PRE-CONSTRUITE (wrangler dev --no-bundle),
+rem nu cu "pages dev": acela tinea esbuild in watch, care sonda ~60 de directoare la fiecare 500 ms
+rem (7,8 MB/s citiri din cache, 4 % dintr-un nucleu, zi si noapte). Fisierul construit sta in
+rem .wrangler\worker-local (ignorat de git; [ps:curata-urme] NU il atinge); wrangler dev il reincarca
+rem singur cand se schimba, iar scripts\copie-de-lucru.mjs il reconstruieste la fiecare livrare care
+rem atinge functions\. radar-local.toml = worker-ul + public\ ca assets (ASSETS) + KV-ul ISTORIC.
+rem --ip 127.0.0.1: serverul are cheile Pionex, deci asculta DOAR pe calculatorul asta. Telefonul intra prin Tailscale.
+rem --persist-to cu calea folderului: dupa ea recunoaste [ps:port] serverul nostru (acelasi .wrangler\state ca inainte).
+rem KV ISTORIC (din radar-local.toml): istoricul botului strans de colector (scripts\colector.mjs),
 rem pastrat pe disc in .wrangler\state. Colectorul porneste ascuns cand serverul
 rem raspunde si se opreste singur la 5 minute dupa ce serverul se opreste.
-call npx --yes wrangler@4.137.0 pages dev public --port 8788 --ip 127.0.0.1 --kv ISTORIC --persist-to "%CD%\.wrangler\state" --compatibility-date=2026-01-01
+call npx --yes wrangler@4.137.0 pages functions build functions --outdir ".wrangler\worker-local" --compatibility-date=2026-01-01
+if errorlevel 1 (
+  echo.
+  echo   EROARE: nu am putut construi Functions in .wrangler\worker-local - serverul nu porneste.
+  echo   Vezi mesajul de mai sus; de obicei e o eroare de sintaxa intr-un fisier din functions\.
+  echo.
+  pause
+  exit /b 1
+)
+call npx --yes wrangler@4.137.0 dev --config radar-local.toml --env-file .dev.vars --no-bundle --port 8788 --ip 127.0.0.1 --persist-to "%CD%\.wrangler\state" --compatibility-date=2026-01-01
 
 echo.
 echo   Serverul s-a oprit.
