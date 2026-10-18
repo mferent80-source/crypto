@@ -7,6 +7,8 @@
 
 # Stare locala wrangler / miniflare
 .wrangler/
+# v100.213: worker-ul construit de PORNESTE-CRYPTO-RADAR.bat / livreaza (in afara .wrangler, ca wrangler sa-l reincarce)
+/worker-local/
 
 # Profiluri Chrome lasate de probele de ecran (cookie-uri, sessionStorage cu
 # token) - proba-ecran-tablou.mjs le face in TEMP, dar primeste si un dosar

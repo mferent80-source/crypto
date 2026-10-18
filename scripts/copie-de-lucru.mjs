@@ -9,7 +9,8 @@
 //   node scripts/copie-de-lucru.mjs livreaza <nume>     rebase pe origin/main ⇒ npm test ⇒ push ⇒ principalul adus (ff) ⇒ proba de telefon
 //   node scripts/copie-de-lucru.mjs curata <nume>       șterge copia (doar dacă tot ce are e pe origin/main)
 //   node scripts/copie-de-lucru.mjs stare               cine lucrează unde (copiile + ce e necomis în principal)
-// Ieșire: 0 gata · 1 oprit înainte de push (nimic publicat) · 2 publicat pe GitHub, dar principalul NU a fost adus (motivul scris).
+// Ieșire: 0 gata · 1 oprit înainte de push (nimic publicat) · 2 publicat pe GitHub, dar principalul NU a fost adus (motivul scris)
+//         · 3 publicat și principalul adus, dar serverul 8788 NU răspunde cu versiunea nouă a Functions (repornește-l: PORNESTE-CRYPTO-RADAR.bat).
 // Probă: scripts/proba-copie-de-lucru.mjs (pe un depozit de încercare, fără rețea).
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -36,6 +37,24 @@ function git(cwd, ...a) {
 function ruleaza(cwd, cmd, args) {
   const r = spawnSync(cmd, args, { cwd, stdio: "inherit", shell: process.platform === "win32" });
   return r.status === 0;
+}
+// v100.213: după reconstruirea Functions, serverul 8788 trebuie să răspundă cu versiunea din functions/_shared/versiune.js.
+// Pe 18.10 (v100.212) worker-ul reconstruit stătea sub .wrangler, unde wrangler nu se uită ⇒ serverul a rămas pe Functions
+// vechi fără niciun semn. Acum se verifică, nu se presupune.
+export function versiuneaAsteptata(rad) {
+  try { const m = fs.readFileSync(path.join(rad, "functions", "_shared", "versiune.js"), "utf8").match(/VERSIUNE = "([^"]+)"/); return m ? m[1] : null; } catch { return null; }
+}
+function versiuneaServerului(url) {
+  const r = spawnSync("curl", ["-s", "-m", "4", url], { encoding: "utf8", windowsHide: true });
+  try { return JSON.parse(String(r.stdout || "")).version || null; } catch { return null; }
+}
+export function asteaptaVersiunea(asteptata, url, secunde = 30) {
+  const pana = Date.now() + secunde * 1000; let v = null;
+  for (;;) {
+    v = versiuneaServerului(url); if (asteptata && v === asteptata) return { ok: true, v };
+    if (Date.now() + 2000 > pana) return { ok: false, v };
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+  }
 }
 const caleCopie = (nume) => path.join(path.dirname(RAD), path.basename(RAD) + "-lucru-" + nume);
 const ramura = (nume) => "lucru-" + nume;
@@ -110,13 +129,22 @@ function livreaza(nume) {
     if (!ruleaza(RAD, "node", ["scripts/proba-ecran-telefon.mjs"])) scrie("⚠ proba de telefon a PICAT pe principal — uită-te acum (codul e publicat).");
   }
   if (atinse.some((x) => x === "scripts/colector.mjs" || x.startsWith("scripts/lib/"))) scrie("Ai atins colectorul ⇒ repornește-l ca să ia codul nou.");
-  // v100.211: serverul 8788 rulează Worker-ul PRE-CONSTRUIT din .wrangler/worker-local (wrangler dev --no-bundle, fără esbuild în watch)
-  // ⇒ Functions atinse se reconstruiesc aici, în principal; wrangler dev vede fișierul nou și reîncarcă singur (probat 18.10).
+  // v100.211: serverul 8788 rulează Worker-ul PRE-CONSTRUIT (wrangler dev --no-bundle, fără esbuild în watch) ⇒ Functions atinse
+  // se reconstruiesc aici, în principal. v100.213: în worker-local, NU sub .wrangler (acolo wrangler nu vede schimbarea — „probat
+  // 18.10” din v100.211 era pe un dosar din tmp), apoi health-ul 8788 trebuie să arate versiunea nouă.
   if (atinse.some((x) => x.startsWith("functions/")) && fs.existsSync(path.join(RAD, "radar-local.toml"))) {
     const wr = (String(JSON.parse(fs.readFileSync(path.join(RAD, "package.json"), "utf8")).scripts?.dev || "").match(/wrangler@[\d.]+/) || ["wrangler@4.137.0"])[0];
-    scrie(`Ai atins functions/ ⇒ reconstruiesc Worker-ul din principal (.wrangler/worker-local, ${wr})…`);
-    if (!ruleaza(RAD, "npx", ["--yes", wr, "pages", "functions", "build", "functions", "--outdir", ".wrangler/worker-local", "--compatibility-date=2026-01-01"]))
+    scrie(`Ai atins functions/ ⇒ reconstruiesc Worker-ul din principal (worker-local, ${wr})…`);
+    if (!ruleaza(RAD, "npx", ["--yes", wr, "pages", "functions", "build", "functions", "--outdir", "worker-local", "--compatibility-date=2026-01-01"])) {
       scrie("⚠ construirea Worker-ului a PICAT — serverul 8788 rămâne pe codul VECHI al Functions; repară și pornește iar PORNESTE-CRYPTO-RADAR.bat.");
+      return 3;
+    }
+    const ast = versiuneaAsteptata(RAD), r = asteaptaVersiunea(ast, "http://127.0.0.1:8788/api/market?type=health");
+    if (r.ok) scrie(`Serverul 8788 a luat Functions noi: health ${r.v}.`);
+    else {
+      scrie(`⚠ serverul 8788 NU a luat Functions noi: health ${r.v || "fără răspuns"}, aștept ${ast}. Repornește-l: PORNESTE-CRYPTO-RADAR.bat din ${RAD} (închide singur sesiunea veche).`);
+      return 3;
+    }
   }
   return 0;
 }

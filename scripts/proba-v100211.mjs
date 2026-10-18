@@ -26,9 +26,9 @@ const bat = citeste("PORNESTE-CRYPTO-RADAR.bat");
 const linii = bat.split("\n").filter((l) => !/^\s*rem\b/i.test(l));
 const WR = (String(JSON.parse(citeste("package.json")).scripts.dev || "").match(/wrangler@[\d.]+/) || [])[0];
 
-await test("lansatorul: Functions construite în .wrangler\\worker-local, apoi wrangler dev --no-bundle cu radar-local.toml, pe 127.0.0.1, cu --persist-to; fără pages dev", () => {
+await test("lansatorul: Functions construite în worker-local (v100.213; înainte .wrangler\\worker-local), apoi wrangler dev --no-bundle cu radar-local.toml, pe 127.0.0.1, cu --persist-to; fără pages dev", () => {
   assert.ok(WR, "package.json scripts.dev nu numește wrangler@<versiune>");
-  const iBuild = linii.findIndex((l) => l.includes(`${WR} pages functions build functions --outdir ".wrangler\\worker-local"`));
+  const iBuild = linii.findIndex((l) => l.includes(`${WR} pages functions build functions --outdir "worker-local"`));
   const iDev = linii.findIndex((l) => l.includes(`${WR} dev --config radar-local.toml`));
   assert.ok(iBuild >= 0, "lipsește linia de build"); assert.ok(iDev >= 0, "lipsește linia wrangler dev");
   assert.ok(iBuild < iDev, "build-ul trebuie să fie ÎNAINTEA pornirii");
@@ -39,7 +39,7 @@ await test("lansatorul: Functions construite în .wrangler\\worker-local, apoi w
 });
 await test("radar-local.toml: main = worker-ul construit, [assets] public pe ASSETS, KV ISTORIC cu id ISTORIC", () => {
   const w = citeste("radar-local.toml");
-  assert.match(w, /^main = "\.wrangler\/worker-local\/index\.js"$/m);
+  assert.match(w, /^main = "worker-local\/index\.js"$/m);   /* v100.213 */
   assert.match(w, /^\[assets\]$/m); assert.match(w, /^directory = "public"$/m); assert.match(w, /^binding = "ASSETS"$/m);
   assert.match(w, /^\[\[kv_namespaces\]\]$/m); assert.match(w, /^binding = "ISTORIC"$/m); assert.match(w, /^id = "ISTORIC"$/m);
   assert.doesNotMatch(w, /^\[triggers\]/m, "configul local n-are cron-uri");
@@ -47,12 +47,12 @@ await test("radar-local.toml: main = worker-ul construit, [assets] public pe ASS
 await test("copie-de-lucru.mjs: livrarea care atinge functions/ reconstruiește worker-ul din principal", () => {
   const c = citeste("scripts", "copie-de-lucru.mjs");
   assert.match(c, /atinse\.some\(\(x\) => x\.startsWith\("functions\/"\)\) && fs\.existsSync\(path\.join\(RAD, "radar-local\.toml"\)\)/);
-  assert.match(c, /"pages", "functions", "build", "functions", "--outdir", "\.wrangler\/worker-local"/);
+  assert.match(c, /"pages", "functions", "build", "functions", "--outdir", "worker-local"/);
   assert.ok(c.indexOf('"functions", "build"') > c.indexOf("Principalul adus la"), "reconstruirea vine DUPĂ ce principalul e adus");
 });
 await test("garzi-v746: garda lansatoare cere wrangler dev --no-bundle + radar-local.toml + build înainte, și refuză pages dev", () => {
   const g = citeste("scripts", "garzi-v746.mjs");
-  for (const t of ['/--no-bundle\\b/.test(cmdLocal)', '/--config radar-local\\.toml\\b/.test(cmdLocal)', 'mai porneste si "pages dev"', '/--outdir "\\.wrangler\\\\worker-local"/.test(build)', 'liniiLoc.indexOf(build) > liniiLoc.indexOf(cmdLocal)', 'cale("radar-local.toml")']) assert.ok(g.includes(t), `garda fără: ${t}`);
+  for (const t of ['/--no-bundle\\b/.test(cmdLocal)', '/--config radar-local\\.toml\\b/.test(cmdLocal)', 'mai porneste si "pages dev"', '/--outdir "worker-local"/.test(build)', 'liniiLoc.indexOf(build) > liniiLoc.indexOf(cmdLocal)', 'cale("radar-local.toml")']) assert.ok(g.includes(t), `garda fără: ${t}`);
 });
 await test("versiunile: v100.211 peste tot (package, BUILD_INFO, sw.js, versiune.js, index.html ×4), proba în lanțul `test`", () => {
   const ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]); assert.ok(ver >= 211);

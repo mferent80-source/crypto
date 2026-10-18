@@ -203,7 +203,7 @@ powershell -NoProfile -Command "$st = Join-Path (Get-Location).Path '.wrangler\s
 rem v100.211 (18.10.2026): serverul porneste ca Worker din Functions PRE-CONSTRUITE (wrangler dev --no-bundle),
 rem nu cu "pages dev": acela tinea esbuild in watch, care sonda ~60 de directoare la fiecare 500 ms
 rem (7,8 MB/s citiri din cache, 4 % dintr-un nucleu, zi si noapte). Fisierul construit sta in
-rem .wrangler\worker-local (ignorat de git; [ps:curata-urme] NU il atinge); wrangler dev il reincarca
+rem worker-local (ignorat de git; [ps:curata-urme] NU il atinge); wrangler dev il reincarca
 rem singur cand se schimba, iar scripts\copie-de-lucru.mjs il reconstruieste la fiecare livrare care
 rem atinge functions\. radar-local.toml = worker-ul + public\ ca assets (ASSETS) + KV-ul ISTORIC.
 rem --ip 127.0.0.1: serverul are cheile Pionex, deci asculta DOAR pe calculatorul asta. Telefonul intra prin Tailscale.
@@ -211,10 +211,12 @@ rem --persist-to cu calea folderului: dupa ea recunoaste [ps:port] serverul nost
 rem KV ISTORIC (din radar-local.toml): istoricul botului strans de colector (scripts\colector.mjs),
 rem pastrat pe disc in .wrangler\state. Colectorul porneste ascuns cand serverul
 rem raspunde si se opreste singur la 5 minute dupa ce serverul se opreste.
-call npx --yes wrangler@4.137.0 pages functions build functions --outdir ".wrangler\worker-local" --compatibility-date=2026-01-01
+rem v100.213: worker-local, NU .wrangler\worker-local - wrangler ignora schimbarile de sub .wrangler, deci livrarile
+rem care reconstruiau Functions nu ajungeau pe serverul pornit (scripts\proba-v100213.mjs, cu martor).
+call npx --yes wrangler@4.137.0 pages functions build functions --outdir "worker-local" --compatibility-date=2026-01-01
 if errorlevel 1 (
   echo.
-  echo   EROARE: nu am putut construi Functions in .wrangler\worker-local - serverul nu porneste.
+  echo   EROARE: nu am putut construi Functions in worker-local - serverul nu porneste.
   echo   Vezi mesajul de mai sus; de obicei e o eroare de sintaxa intr-un fisier din functions\.
   echo.
   pause

@@ -615,12 +615,13 @@ function gardaLansatoare() {
   if (!/--config radar-local\.toml\b/.test(cmdLocal)) pica(G, `${LOCAL}: wrangler dev fara --config radar-local.toml (worker + assets + KV)`);
   if (liniiLoc.some((l) => !/^\s*rem\b/i.test(l) && /wrangler@\S+ pages dev/.test(l))) pica(G, `${LOCAL}: mai porneste si "pages dev" (esbuild in watch)`);
   const build = liniiLoc.find((l) => !/^\s*rem\b/i.test(l) && /wrangler@\S+ pages functions build\b/.test(l)) || "";
-  if (!/--outdir "\.wrangler\\worker-local"/.test(build)) pica(G, `${LOCAL}: Functions nu sunt construite in .wrangler\\worker-local inainte de dev`);
+  // v100.213: worker-local, NU sub .wrangler - wrangler ignora schimbarile de acolo (livrarile nu ajungeau pe server)
+  if (!/--outdir "worker-local"/.test(build)) pica(G, `${LOCAL}: Functions nu sunt construite in worker-local inainte de dev`);
   if (build && cmdLocal && liniiLoc.indexOf(build) > liniiLoc.indexOf(cmdLocal)) pica(G, `${LOCAL}: Functions se construiesc DUPA pornirea serverului`);
   if (!fs.existsSync(cale("radar-local.toml"))) pica(G, "radar-local.toml lipseste - serverul local n-are de unde lua worker-ul, assets si KV-ul");
   else {
     const w = citeste("radar-local.toml");
-    if (!/^main\s*=\s*"\.wrangler\/worker-local\/index\.js"\s*$/m.test(w)) pica(G, `radar-local.toml: main trebuie sa fie ".wrangler/worker-local/index.js" (unde construieste lansatorul)`);
+    if (!/^main\s*=\s*"worker-local\/index\.js"\s*$/m.test(w)) pica(G, `radar-local.toml: main trebuie sa fie "worker-local/index.js" (unde construieste lansatorul; nu sub .wrangler)`);
     if (!/^\[assets\]/m.test(w) || !/^directory\s*=\s*"public"\s*$/m.test(w) || !/^binding\s*=\s*"ASSETS"\s*$/m.test(w)) pica(G, `radar-local.toml: [assets] directory="public" + binding="ASSETS" (Functions construite cad pe env.ASSETS)`);
     if (!/^binding\s*=\s*"ISTORIC"\s*$/m.test(w) || !/^id\s*=\s*"ISTORIC"\s*$/m.test(w)) pica(G, `radar-local.toml: KV binding="ISTORIC" cu id="ISTORIC" - altfel istoricul botului din .wrangler\\state nu se mai vede`);
   }
