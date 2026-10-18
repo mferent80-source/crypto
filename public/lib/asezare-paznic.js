@@ -480,8 +480,8 @@
     var t = a ? a.textContent.trim() : "";
     if (!t) { antet("pzV-settings", g, null); return; }
     var lipsa = /NEPUS|LIPS|MISSING|NOT SET/i.test(t);
-    antet("pzV-settings", g, { verb: "PAROLA: " + t, ton: lipsa ? "jos" : "mut", titlu: "", fac: lipsa ? "scrie parola în cartela „API Security”, prima de mai jos" : "",
-      voci: [["REST", "#freshRest"], ["WS", "#freshWs"], ["Futures", "#freshFut"], ["Sentiment", "#freshSent"]].map(function (x) { var v = tx(x[1]); return { n: x[0] + " " + (v || "—"), ton: tonVarsta(v) }; }), din: "API Security · Data freshness (vârsta ultimelor date)" });
+    antet("pzV-settings", g, { verb: "PAROLA: " + t, ton: lipsa ? "jos" : "mut", titlu: "", fac: lipsa ? "scrie parola în cartela „Parola aplicației pe acest dispozitiv”, prima de mai jos" : "",
+      voci: [["REST", "#freshRest"], ["WS", "#freshWs"], ["Futures", "#freshFut"], ["Sentiment", "#freshSent"]].map(function (x) { var v = tx(x[1]); return { n: x[0] + " " + (v || "—"), ton: tonVarsta(v) }; }), din: "Parola aplicației · Prospețimea datelor (vârsta ultimelor date)" });
   }
   function pagHealth() {
     var h = $("health"); if (!h) return;
