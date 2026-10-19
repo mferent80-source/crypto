@@ -36,8 +36,13 @@ await test("middleware-ul pune nosniff și lasă eroarea rutei să urce (v100.21
   await assert.rejects(() => onRequest({ request: CU_ANTET, next: async () => { throw new Error("ruta a picat"); } }), /ruta a picat/);
 });
 globalThis.fetch = fetchAdevarat;
-await test("proba de ecran pune antetul pe toate cererile (CDP Network.setExtraHTTPHeaders)", () => {
-  assert.match(citeste("scripts", "proba-ecran-telefon.mjs"), /Network\.setExtraHTTPHeaders", \{ headers: \{ "x-proba-ecran": "1" \} \}/);
+// audit 19.10: regula nouă - antetul DOAR pe cererile spre adresa serverului (Fetch.enable pe origine + continueRequest), NU pe toate:
+// pus pe toate, cererile spre GitHub Pages / Binance cereau preflight CORS, refuzat (căderi false). Intenția rămâne: serverul vede antetul.
+await test("proba de ecran pune antetul pe cererile spre server (CDP Fetch.enable pe origine), nu pe toate", () => {
+  const s = citeste("scripts", "proba-ecran-telefon.mjs");
+  assert.match(s, /tr\("Fetch\.enable", \{ patterns: \[\{ urlPattern: ORIGINE \+ "\/\*" \}\] \}\)/);
+  assert.match(s, /h\.push\(\{ name: "x-proba-ecran", value: "1" \}\)/); assert.match(s, /Fetch\.continueRequest/);
+  assert.ok(!/Network\.setExtraHTTPHeaders/.test(s), "antetul pe toate cererile");
 });
 await test("versiunile: v100.209, proba în lanțul `test`", () => {
   const idx = citeste("public", "index.html");

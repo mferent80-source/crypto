@@ -382,5 +382,16 @@ await test("(8b) .dev.vars: „porneste” îl copiază, „curata” îl șterg
   assert.ok(iSt > 0 && iSt < iRm);
 });
 
+// ---------- (9) proba de telefon: antetul doar pe adresa serverului ----------
+await test("(9) proba-ecran-telefon pune `x-proba-ecran` DOAR pe cererile spre serverul probat (Fetch.enable pe origine + continueRequest), nu pe toate", () => {
+  const s = citeste("scripts", "proba-ecran-telefon.mjs");
+  assert.ok(!/Network\.setExtraHTTPHeaders/.test(s), "antetul pe TOATE cererile (preflight CORS refuzat spre GitHub Pages / Binance)");
+  assert.match(s, /const ORIGINE = new URL\(URL_T\)\.origin;/);
+  assert.match(s, /tr\("Fetch\.enable", \{ patterns: \[\{ urlPattern: ORIGINE \+ "\/\*" \}\] \}\)/);
+  assert.match(s, /x\.method === "Fetch\.requestPaused"/);
+  assert.match(s, /method: "Fetch\.continueRequest", params: \{ requestId: x\.params\.requestId, headers: h \}/);
+  assert.match(s, /h\.push\(\{ name: "x-proba-ecran", value: "1" \}\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);
