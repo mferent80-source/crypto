@@ -176,6 +176,11 @@ export function situatiiAlerte(pune) {
   const co = (sit, f, m) => pune(sit, "alerte", "colector." + f, m, AL);
   co("serverul de acasă nu mai răspunde", "serverOprit", MC.serverOprit(15));
   co("colectorul nu mai poate citi botul", "citireRea", MC.citireRea(12, "HTTP 502"));
+  // v101.127 (scorul sezonului): pauza la 3 pierderi la rând, rata și netul țintă atinse
+  const SC = { start: Date.UTC(2026, 9, 18, 21), n: 12, win: 7, loss: 5, net: 53.4, rata: 7 / 12, suficient: true, serie: { n: 3, fel: "l" }, obiectiv: { rata: 0.55, serie: 3, net: 50, pana: null } };
+  co("scorul sezonului: 3 pierderi la rând", "scorPauza", MC.scorPauza({ ...SC, net: -12.3, win: 2, loss: 3, n: 5 }));
+  co("scorul sezonului: rata țintă atinsă", "scorTintaRata", MC.scorTinta(SC, "rata"));
+  co("scorul sezonului: netul țintă atins", "scorTintaNet", MC.scorTinta(SC, "net"));
   co("colectorul citește din nou", "citireDinNou", MC.citireDinNou());
   co("serverul respinge parola colectorului", "authRespins", MC.authRespins(4, "AUTH_INVALID"));   // v101.116 (auditul sever, S1)
   co("Pionex dă lista boților goală", "botiNevazuti", MC.botiNevazuti(12, ["SOL", "CRV"]));   // v101.116 (C3)

@@ -88,7 +88,7 @@ await test("versiunea ≥ v100.216 în toate locurile, colectorul v101.126, prob
   assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, V); assert.equal(P.version, "100." + ver + ".0");
   assert.equal(IDX.split(V).length - 1, 4, "de 4 ori în index.html"); assert.ok(!IDX.includes("v100.215"));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-' + ver + '"')); assert.ok(citeste("functions", "_shared", "versiune.js").includes('VERSIUNE = "' + V + '"'));
-  assert.ok(citeste("scripts", "colector.mjs").includes('const VERSIUNE_COLECTOR = "v101.126"'));
+  const vc = Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [0, 0])[1]); assert.ok(vc >= 126, "colectorul v101." + vc);   /* v100.218: ≥ */
   for (const k of ["test:v100216", "test:audit19srv", "test:audit19logica", "test:audit19ecran"]) { assert.ok(P.scripts[k], k); assert.ok(P.scripts.test.includes("npm run " + k), "în lanț: " + k); }
 });
 console.log(`\n${teste - picate}/${teste} verzi`);

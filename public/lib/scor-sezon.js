@@ -55,7 +55,9 @@ var ScorSezon = (function () {
   function normalizeaza(c) {
     var start = c && nr(c.start) !== null && nr(c.start) > 0 ? nr(c.start) : SEZON_IMPLICIT;
     var v = c && c.obiectiv ? valideazaObiectiv({ rata: c.obiectiv.rata, serie: c.obiectiv.serie, net: c.obiectiv.net, pana: c.obiectiv.pana }) : { ok: false };
-    return { start: start, obiectiv: v.ok ? v.obiectiv : Object.assign({}, OBIECTIV_IMPLICIT) };
+    // v100.218 (ideea 1): sezoanele încheiate [{start, sfarsit}], cum le ține serverul (sezonNou); stricate ⇒ fără
+    var ist = Array.isArray(c && c.istoric) ? c.istoric.filter(function (x) { return x && nr(x.start) > 0 && nr(x.sfarsit) > nr(x.start); }).map(function (x) { return { start: nr(x.start), sfarsit: nr(x.sfarsit) }; }) : [];
+    return { start: start, obiectiv: v.ok ? v.obiectiv : Object.assign({}, OBIECTIV_IMPLICIT), istoric: ist };
   }
 
   // ---- socoteala ----
@@ -88,6 +90,36 @@ var ScorSezon = (function () {
     s.zileRamase = ob.pana ? zileIntre(t, ob.pana) : null;
     s.inainte = b;
     return s;
+  }
+
+  // ---- v100.218 (ideea 1): sezoanele - cele încheiate (istoricul de pe server) + cel de acum, fiecare socotit pe boții lui ----
+  function sezoane(lista, cfg, acum) {
+    var c = normalizeaza(cfg), t = acum || Date.now(), l = Array.isArray(lista) ? lista : [];
+    var toate = c.istoric.slice().sort(function (a, b) { return a.start - b.start; }).map(function (x) { return { start: x.start, sfarsit: x.sfarsit, curent: false }; });
+    toate.push({ start: c.start, sfarsit: null, curent: true });
+    return toate.map(function (z) {
+      var s = calc(l.filter(function (x) { return z.sfarsit === null || nr(x.inchis) < z.sfarsit; }), { start: z.start, obiectiv: c.obiectiv }, t);
+      return { start: z.start, sfarsit: z.sfarsit, curent: z.curent, n: s.n, win: s.win, loss: s.loss, rata: s.rata, net: s.net, seriePierderi: s.seriePierderi };
+    });
+  }
+  // tabelul „Sezoanele tale” (doar când există măcar un sezon încheiat); cel de acum e primul
+  function htmlIstoric(lista) {
+    var l = Array.isArray(lista) ? lista : []; if (l.length < 2) return "";
+    var rows = l.slice().reverse().map(function (z) {
+      var per = dataRo(z.start) + " → " + (z.sfarsit === null ? "acum" : dataRo(z.sfarsit - 1));
+      return "<tr" + (z.curent ? ' class="scIstAcum"' : "") + "><td>" + esc(per) + (z.curent ? " <b>· sezonul de acum</b>" : "") + "</td><td data-et=\"boți:\">" + z.n + "</td><td data-et=\"win / loss:\"><span class=\"good\">" + z.win + "</span> / <span class=\"bad\">" + z.loss + "</span></td><td data-et=\"rata:\">" + esc(pr(z.rata)) + "</td><td data-et=\"net:\" class=\"" + (z.net === null ? "" : z.net >= 0 ? "good" : "bad") + "\">" + esc(U(z.net)) + "</td><td data-et=\"pierderi la rând:\">" + z.seriePierderi + "</td></tr>";
+    }).join("");
+    return '<div class="scIst"><h4>Sezoanele tale</h4><table class="scIstTab"><thead><tr><th>Perioada</th><th>Boți</th><th>Win / loss</th><th>Rata</th><th>Net</th><th>Pierderi la rând</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+  }
+
+  // ---- v100.218 (ideea 2): ce anunță colectorul, pur - starea ține minte ce s-a anunțat (pauza pe ultimul bot, țintele pe sezon) ----
+  // pauza: la fiecare bot NOU închis pe minus cât ești în pauză (ultimul bot schimbat); rata / netul atins: o dată pe sezon, rata doar de la 10 boți
+  function alerte(s, stare) {
+    var st = stare && typeof stare === "object" ? stare : {}, out = [];
+    if (s.pauza && s.ultimul && st.pauzaLa !== s.ultimul.id) { st.pauzaLa = s.ultimul.id; out.push({ fel: "pauza" }); }
+    if (s.suficient && s.rata !== null && s.rata >= s.obiectiv.rata && st.rataLa !== s.start) { st.rataLa = s.start; out.push({ fel: "rata" }); }
+    if (s.net !== null && s.net >= s.obiectiv.net && st.netLa !== s.start) { st.netLa = s.start; out.push({ fel: "net" }); }
+    return { mesaje: out, stare: st };
   }
 
   // ---- cardul ----
@@ -131,6 +163,6 @@ var ScorSezon = (function () {
   }
   function htmlAstept(eroare) { return '<div class="scCard" style="--sc-c:var(--muted)"><div class="scCap"><h4>🏁 Scorul tău pe Pionex</h4><span class="acSub">' + (eroare ? esc(eroare) : "aduc boții închiși din Pionex…") + '</span></div></div>'; }
 
-  return { calc: calc, html: html, htmlAstept: htmlAstept, normalizeaza: normalizeaza, valideazaObiectiv: valideazaObiectiv, startulZilei: startulZilei, dataRo: dataRo, dataIso: dataIso,
+  return { calc: calc, html: html, htmlAstept: htmlAstept, sezoane: sezoane, htmlIstoric: htmlIstoric, alerte: alerte, normalizeaza: normalizeaza, valideazaObiectiv: valideazaObiectiv, startulZilei: startulZilei, dataRo: dataRo, dataIso: dataIso,
     OBIECTIV_IMPLICIT: OBIECTIV_IMPLICIT, SEZON_IMPLICIT: SEZON_IMPLICIT, MIN: MIN };
 })();

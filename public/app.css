@@ -2881,6 +2881,11 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .scForm input{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:3px;padding:8px;font:inherit;font-size:14px;width:100%;min-height:44px}
 .scFormBtn{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.scFormBtn .acBtn{min-height:44px}.scMesaj{color:var(--bad)}
 #jurnaltrade #jtScor:not(:empty){margin-bottom:10px}
+/* v100.218 (ideea 1): „Sezoanele tale” sub cardul din Jurnal - tabel mic, sezonul de acum evidențiat; pe telefon fiecare celulă își scrie coloana */
+.scIst{margin-top:10px;background:var(--tb-fond,var(--panel));border:1px solid var(--tb-linie,var(--line));border-radius:var(--tb-r,6px);padding:12px 14px}.scIst h4{margin:0 0 8px;font-size:14px;font-weight:600}
+.scIstTab{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}.scIstTab th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:4px 8px 6px 0;border-bottom:1px solid var(--tb-linie,var(--line))}
+.scIstTab td{padding:6px 8px 6px 0;border-bottom:1px solid var(--tb-linie,var(--line))}.scIstTab tr.scIstAcum td{background:rgba(91,143,199,.07)}
+@media (max-width:640px){.scIstTab thead{display:none}.scIstTab,.scIstTab tbody,.scIstTab tr,.scIstTab td{display:block}.scIstTab tr{padding:8px 0}.scIstTab td{padding:1px 0;border:0}.scIstTab td[data-et]::before{content:attr(data-et) " ";color:var(--muted)}}
 .pzDemo #acasa>#acScor{order:11}.pzDemo #jtCrypto>#jtScor{order:10}
 @media (max-width:640px){.scCifre{grid-template-columns:repeat(3,minmax(0,1fr))}.scCel:nth-child(n+4){border-top:1px solid var(--tb-linie,var(--line))}.scCel:nth-child(4){border-left:0}.scVal{font-size:22px}.scForm{grid-template-columns:repeat(2,minmax(0,1fr))}.scCap .acSub{margin-left:0;width:100%}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

@@ -1,11 +1,12 @@
 {
-  "version": "v100.217",
-  "badge": "v100.217 · SCORUL SEZONULUI PE PIONEX",
+  "version": "v100.218",
+  "badge": "v100.218 · SEZOANELE + PAUZA PE DISCORD",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "scorIdei218": "ideile scorului (19.10.2026, el: „fa idei”): (1) „Sezoanele tale” sub cardul din Jurnal - fiecare sezon încheiat (Sezon nou de azi) cu boții, win/loss, rata, netul, seria de pierderi; (2) colectorul v101.127 anunță pe Discord pauza la N pierderi la rând (o dată pe bot închis) și rata / netul țintă atins (o dată pe sezon), după tura de arhivă, fără cereri în plus la Pionex; (3) trade-urile manuale NU - Pionex dă prin rutele știute doar fills-urile SPOT (jurnalul v71, pe simbol, în browser), nu și pe futures",
     "scorSezon217": "scorul sezonului pe Pionex (19.10.2026, el: „să-mi afișeze începând de azi scorul trade-urilor pe Pionex: câte win, câte loss, rata de câștig… să mă stimuleze să fiu mai atent” + „un obiectiv pe care îl setez eu”): cardul pe Acasă sub verdictele pieței și sus în Jurnal - win / loss / rata (cu ținta) / net după comisioane și funding / seria curentă (la N pierderi la rând: pauză), obiectivul lui (rata, max pierderi la rând, net, până la data) cu progres, comparația cu trecutul (56 % rată dar −6.033 USDT pe 2.307 boți ⇒ netul stă lângă rată); data sezonului și obiectivul în KV-ul de acasă (/api/scor-sezon), buton „Sezon nou de azi”; un trade = un bot închis (lib/scor-sezon.js, proba-scor-sezon)",
     "drumBotului216": "el (19.10): pe Drumul botului doar gridul si stopul, fara lichidare; stopul pus in procente socotit live, cu grilele de pe drum (TabloExtra.pretStopLive), si pe linia stopului din grafic",
     "audit216": "auditul din toate directiile (19.10), „fa tot”: stopul nu se mai propune in grid; lichidarea nu mai tace fara tickere PERP; contrafactualul fara roata; KV pe rand; un lacat Pionex; Binance cu pauza comuna; rezultate cu o zecimala si ro-RO; Nasdaq in meniu; fasia contului pe telefon; texte in romana; statistica onesta (Wilson, destule cazuri, MAE net, MC simetric); livrarea reporneste colectorul",

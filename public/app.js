@@ -5681,7 +5681,7 @@ function scDeseneaza(){
   if(typeof ScorSezon==="undefined")return;
   var tr=scTrades(),s=tr?ScorSezon.calc(tr,scStare.cfg,Date.now()):null;
   ["acScor","jtScor"].forEach(function(id){var el=$(id);if(!el)return;if(scStare.deschis[id]&&el.contains(document.activeElement))return;
-    el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],mesaj:scStare.mesaj[id]||"",faraJurnal:id==="jtScor"}):ScorSezon.htmlAstept(jtStare.eroare)})
+    el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],mesaj:scStare.mesaj[id]||"",faraJurnal:id==="jtScor"})+(id==="jtScor"?ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg,Date.now())):""):ScorSezon.htmlAstept(jtStare.eroare)})   // v100.218 (ideea 1): sezoanele încheiate, doar în Jurnal
 }
 async function scPorneste(){
   if(scStare.inLucru)return;scStare.inLucru=true;

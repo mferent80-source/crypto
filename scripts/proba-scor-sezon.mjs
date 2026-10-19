@@ -187,6 +187,70 @@ await test("endpoint POST sezonNou: startul = 00:00 azi (ora României), sezonul
   assert.equal(M.startulZilei(Date.UTC(2027, 0, 15, 10)), Date.UTC(2027, 0, 14, 22)); assert.equal(S.startulZilei(Date.UTC(2027, 0, 15, 10)), Date.UTC(2027, 0, 14, 22));
 });
 
+// ── D. ideile (v100.218, el „fa idei”): sezoanele încheiate + alertele colectorului (pure) + mesajele ──────────────
+await test("ideea 1 - sezoane: istoricul de pe server + cel de acum, fiecare pe boții lui (închis în [start, sfarsit)); stricat ⇒ doar cel de acum", () => {
+  const S1 = START - 20 * ZI, S2 = START - 10 * ZI;
+  const tr = [t(1, S1 + ORA, 1), t(2, S1 + 2 * ORA, -2), t(3, S2 + ORA, 3), t(4, S2 + 2 * ORA, 4), t(5, START + ORA, -1), t(6, START - 1000, 9)];   // 6 e în sezonul 2 (înainte de START)
+  const cfg = { start: START, obiectiv: CFG.obiectiv, istoric: [{ start: S2, sfarsit: START }, { start: S1, sfarsit: S2 }, { start: "x", sfarsit: 5 }] };
+  const z = S.sezoane(tr, cfg, ACUM);
+  assert.equal(z.length, 3); assert.deepEqual(z.map((x) => x.curent), [false, false, true]);
+  assert.deepEqual(z.map((x) => [x.n, x.win, x.loss, x.net]), [[2, 1, 1, -1], [3, 3, 0, 16], [1, 0, 1, -1]]);
+  assert.equal(z[0].start, S1); assert.equal(z[1].sfarsit, START); assert.equal(z[2].sfarsit, null);
+  assert.equal(S.sezoane(tr, { start: START, obiectiv: CFG.obiectiv }, ACUM).length, 1);
+  assert.deepEqual(S.normalizeaza(cfg).istoric, [{ start: S2, sfarsit: START }, { start: S1, sfarsit: S2 }]);
+});
+
+await test("ideea 1 - htmlIstoric: gol cu un singur sezon; altfel tabelul cu cel de acum primul, perioada, win / loss, rata, net, seria", () => {
+  const S1 = START - 20 * ZI;
+  assert.equal(S.htmlIstoric(S.sezoane([], CFG, ACUM)), "");
+  const h = S.htmlIstoric(S.sezoane([t(1, S1 + ORA, 5), t(2, S1 + 2 * ORA, -2), t(3, START + ORA, -1)], { start: START, obiectiv: CFG.obiectiv, istoric: [{ start: S1, sfarsit: START }] }, ACUM));
+  assert.ok(/Sezoanele tale/.test(h) && /scIstAcum/.test(h), "tabelul");
+  assert.ok(h.indexOf("sezonul de acum") < h.indexOf("29.09.2026"), "cel de acum primul; vechiul 29.09.2026 → 18.10.2026: " + h.slice(0, 400));
+  assert.ok(/29\.09\.2026 → 18\.10\.2026/.test(h) && /19\.10\.2026 → acum/.test(h), "perioadele");
+  assert.ok(/\+3,0 USDT/.test(h) && /−1,0 USDT/.test(h) && /50 %/.test(h), "cifrele");
+  assert.ok(/data-et="net:"/.test(h), "etichetele pentru telefon");
+});
+
+await test("ideea 2 - alerte (pur): pauza o dată pe bot închis cât ești în pauză; rata doar de la 10 boți și o dată pe sezon; netul o dată pe sezon; starea ține minte", () => {
+  const st = {};
+  let s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1)], CFG, ACUM);
+  assert.deepEqual(S.alerte(s, st).mesaje, [], "2 la rând: nimic");
+  s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1)], CFG, ACUM);
+  assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "pauza" }]); assert.equal(st.pauzaLa, "3");
+  assert.deepEqual(S.alerte(s, st).mesaje, [], "același bot: nu repetă");
+  s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1), t(4, START + 4 * ORA, -1)], CFG, ACUM);
+  assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "pauza" }], "a 4-a pierdere în pauză: iar");
+  // rata ≥ țintă dar sub 10 boți ⇒ nimic; netul ≥ 50 ⇒ o dată
+  s = S.calc([t(1, START + ORA, 60), t(2, START + 2 * ORA, 1)], CFG, ACUM);
+  assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "net" }]); assert.deepEqual(S.alerte(s, st).mesaje, []);
+  const l = []; for (let i = 0; i < 10; i++) l.push(t(10 + i, START + (i + 1) * ORA, i < 4 ? -1 : 1));   // pierderile întâi: ultimii închiși sunt câștiguri, deci fără pauză
+  s = S.calc(l, CFG, ACUM);   // 60 % din 10, net +2
+  assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "rata" }]); assert.deepEqual(S.alerte(s, st).mesaje, []);
+  // sezon nou ⇒ țintele se anunță iar
+  s = S.calc(l.map((x) => Object.assign({}, x, { inchis: x.inchis + 30 * ZI })), { start: START + 30 * ZI, obiectiv: CFG.obiectiv }, ACUM + 31 * ZI);
+  assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "rata" }]);
+});
+
+await test("ideea 2 - mesajele colectorului (scorPauza / scorTinta) + legarea în colector și garda textelor", async () => {
+  const MC = await import("./lib/mesaje-colector.mjs");
+  const s = S.calc([t(1, START + ORA, -1.26), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1)], CFG, ACUM);
+  const p = MC.scorPauza(s);
+  assert.equal(p.nivel, "atentie"); assert.ok(p.titlu.length <= 60, p.titlu); assert.ok(/3 pierderi la rând - pauză/.test(p.titlu));
+  assert.ok(/0 win \/ 3 loss/.test(p.mesaj) && /−3,3 USDT/.test(p.mesaj) && /19\.10/.test(p.mesaj) && /👉/.test(p.mesaj), p.mesaj);
+  const l = []; for (let i = 0; i < 12; i++) l.push(t(10 + i, START + (i + 1) * ORA, i < 7 ? 9 : -2));
+  const s2 = S.calc(l, CFG, ACUM), r = MC.scorTinta(s2, "rata"), n = MC.scorTinta(s2, "net");
+  assert.equal(r.nivel, "info"); assert.ok(/58 %/.test(r.titlu) && r.titlu.length <= 60, r.titlu); assert.ok(/ținta 55 %/.test(r.mesaj), r.mesaj);
+  assert.ok(/\+53,0 USDT/.test(n.titlu) && /ținta \+50 USDT/.test(n.mesaj), n.titlu + " | " + n.mesaj);
+  const C = citeste("scripts", "colector.mjs"), G = citeste("scripts", "lib", "garda-alerte.mjs");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.(12[7-9]|1[3-9]\d|[2-9]\d\d)"/.test(C), "colectorul ≥ v101.127");
+  assert.ok(C.includes('incarca("scor-sezon.js", "ScorSezon")') && C.includes('incarca("statistica-trade.js", "StatisticaTrade")'), "lib-urile în colector");
+  assert.ok(C.includes("async function turaScor()") && C.includes(".then(() => turaScor())"), "tura după arhivă");
+  assert.ok(C.includes("stareAlerte._scor") && C.includes("ScorSezon.alerte(s, st)"), "starea în alerte-stare.json");
+  assert.ok(G.includes("MC.scorPauza(") && G.includes('MC.scorTinta(SC, "net")'), "garda textelor știe mesajele");
+  const APP = citeste("public", "app.js");
+  assert.ok(APP.includes('ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg,Date.now()))'), "istoricul sub cardul din Jurnal");
+});
+
 // ── C. legarea în aplicație (index.html, app.js, acasa-ecran.js, app.css, versiunea) ──────────────────────────────
 await test("v100.217: versiunea ≥ 217 peste tot, lib-ul în index.html, cardul pe Acasă sub verdicte și în Jurnal, proba în lanț, CSS înaintea regulii pândei", () => {
   const P = JSON.parse(citeste("package.json")), ver = Number(P.version.split(".")[1]), V = "v100." + ver, IDX = citeste("public", "index.html");
