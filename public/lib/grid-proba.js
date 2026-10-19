@@ -324,9 +324,11 @@ var GridProba = (function () {
   // Iesirea: stopul sau capatul duratei (simuleaza inchide la final, cu taker) - aceeasi socoteala ca gridul de acum
   var ING = { H: [0.25, 0.5, 1], PERC: [0.30, 0.45, 0.60], MIN_INDEP: 30 };
   // revizia 01.10 (I1): directia pietei LA pornirea unei ferestre, doar din barele de DINAINTEA ei (ultimele 30 de zile, 4 h + 1 zi, ca fisa)
+  // audit 19.10 (10): barele agregate încă în formare (ultima de 4 h / 1 zi neterminată la tSfarsit) nu intră - ca pagina vie (GridCalcul.bare)
+  function inchise(agr, pasMs, tSfarsit) { return (agr || []).filter(function (x) { return x.t + pasMs <= tSfarsit; }); }
   function directiaLa(b15, s) {
     var x = b15.slice(Math.max(0, s - 30 * C.BARE_ZI), s); if (x.length < 2 * C.BARE_ZI) return null;
-    var b4 = G.agrega(x, 4 * 3600000), d = G.directie(b4, G.agrega(b4, 86400000));
+    var tF = x[x.length - 1].t + 15 * 60000, b4 = inchise(G.agrega(x, 4 * 3600000), 4 * 3600000, tF), d = G.directie(b4, inchise(G.agrega(b4, 86400000), 86400000, tF));
     return d && d.dir || null;
   }
   // revizia 01.10 (I2): verdictul pe test - si MEDIA pe plus (un grid castiga des putin si pierde rar mult: mediana singura mintea)
@@ -444,7 +446,7 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

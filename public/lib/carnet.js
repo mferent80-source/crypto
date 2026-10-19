@@ -28,7 +28,9 @@
   // o: { plan, suma, levier, miscareZi(bare, acum), erori? {n} } ⇒ { levierSigur, pe: { long: {v, a}, short: {v, a} } }
   function fisaLa(hist, pret, t, o) {
     var sig = null;
-    try { var f = GP.fisa({ pret: pret, b15: hist, b4h: G.agrega(hist, 4 * 3600000), b1d: G.agrega(hist, ZI), suma: o.suma || 100, H: 2, dir: null, levier: null }); var st = f && !f.eroare ? GP.setarePropusa(f) : null; sig = st ? nr(st.levierSigur) : null; } catch (e) { if (o.erori) o.erori.n++; }
+    // audit 19.10 (10): fără bara de 4 h / 1 zi încă în formare la momentul pornirii (pagina vie le scoate: GridCalcul.bare)
+    var tFin = hist && hist.length ? hist[hist.length - 1].t + 15 * 60000 : 0, inch = function (a, p) { return a.filter(function (x) { return x.t + p <= tFin; }); };
+    try { var f = GP.fisa({ pret: pret, b15: hist, b4h: inch(G.agrega(hist, 4 * 3600000), 4 * 3600000), b1d: inch(G.agrega(hist, ZI), ZI), suma: o.suma || 100, H: 2, dir: null, levier: null }); var st = f && !f.eroare ? GP.setarePropusa(f) : null; sig = st ? nr(st.levierSigur) : null; } catch (e) { if (o.erori) o.erori.n++; }
     var amp = o.miscareZi ? o.miscareZi(hist, t) : null, pe = {};
     ["long", "short"].forEach(function (dir) {
       var v; try { v = PL.variante({ pret: pret, dir: dir, suma: o.suma || 100, levier: o.levier || 5, plan: o.plan, amp: amp, pas: G.C.PAS_MIN, b15: hist, zile: ZILE_FISA, levierSigur: sig }); } catch (e) { if (o.erori) o.erori.n++; return; }

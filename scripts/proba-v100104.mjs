@@ -82,7 +82,7 @@ await test("(3) I-539 recomandarea: urmată (fereastra = cea recomandată) vs ne
   const d = GJ.bilantRecomandare(set((u, i, k) => (u ? 0.02 : -0.03) + (i % 3) * 0.002 + k * 0.001)); assert.equal(d.verdict, "dovedit"); assert.equal(d.urmata.n, 12);
   assert.equal(GJ.bilantRecomandare(set((u, i, k) => (u ? -0.03 : 0.02) + (i % 3) * 0.002)).verdict, "pe dos");
   const p = GJ.bilantRecomandare(set(() => 0.01).slice(0, 6)); assert.equal(p.verdict, "puține");
-  assert.equal(GJ.textRecomandare(p), "Recomandarea mea pe boții tăi: urmată 3 boți, media +1,0% · neurmată 3 boți, media +1,0% — puține cazuri (trebuie cel puțin 5 pe fiecare, din cel puțin 3 monede).");
+  assert.equal(GJ.textRecomandare(p), "Recomandarea mea pe boții tăi: urmată 3 boți, media +1,0% · neurmată 3 boți, media +1,0% — puține cazuri (trebuie cel puțin 10 pe fiecare, din cel puțin 5 monede).");   // audit 19.10 (10): textul spune pragurile din cod (10 boți, 5 monede, din v100.173)
   assert.match(GJ.textRecomandare(d), /— urmată a adus mai mult \(dovedit\)\.$/);
   assert.equal(GJ.textRecomandare(GJ.bilantRecomandare([])), null);
   const f = { simbol: "ABC_USDT_PERP", dir: "long", verdict: { nivel: "porneste" }, setare: { suma: 100 } };

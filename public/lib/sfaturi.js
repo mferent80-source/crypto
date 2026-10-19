@@ -181,19 +181,20 @@ var Sfaturi = (function () {
     }
 
     // 6) Finantarea (rata Binance, orientativa - Pionex nu o publica).
-    var f = nr(x.funding);
-    if (f !== null && Math.abs(f) >= 0.0001) {
+    // audit 19.10 (10): rata e pe INTERVAL (1 h, 4 h sau 8 h); pragurile (0,01% / 0,05% la 8 h) se compară pe ZI: rata × intervale pe zi
+    var f = nr(x.funding), fOre = nr(x.fundingOre) || 8, fZi = f !== null ? f * 24 / fOre : null;
+    if (f !== null && Math.abs(fZi) >= 0.0003) {
       // v100.65 (ideea 2): intervalul real (istoria ratelor; 8 ore fara ea) si botul NEUTRU - semnul pozitiei lui nu e sigur
       // (bot-orders: pnlNerealizatSigur false la neutru), deci se spune doar cine plateste rata, nu „îl plătești / îl încasezi”
       var dirF = String(b.directie || "").toLowerCase(), neutru = dirF !== "long" && dirF !== "short";
       var platesti = (dirF === "long" && f > 0) || (dirF === "short" && f < 0);
-      out.push({ cod: "funding", ton: platesti && Math.abs(f) >= 0.0005 ? "atentie" : "info",
+      out.push({ cod: "funding", ton: platesti && Math.abs(fZi) >= 0.0015 ? "atentie" : "info",
         titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + ((nr(x.fundingOre) || 8) === 1 ? "o oră" : cate(nr(x.fundingOre) || 8, "oră", "ore")) + ", " + (neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi"),
         text: mare((nr(b.finantare) === null ? "" : "până acum botul a " + (nr(b.finantare) < 0 ? "plătit " : "primit ") + TextRo.num(Math.abs(nr(b.finantare)), 2) + " USDT; ") +
           (neutru ? "botul neutru îl plătește cât e net " + (f > 0 ? "long și îl încasează cât e net short." : "short și îl încasează cât e net long.")
             : platesti ? "la rata asta plătești din câștigul grilelor." : "la rata asta încasezi peste câștigul grilelor.")),
         sursa: "Rata e de la Binance, pentru orientare; Pionex poate avea alta.",
-        faCe: platesti && Math.abs(f) >= 0.0005 ? "N-aș ține botul mult pe direcția asta cu funding-ul atât de mare." : null });
+        faCe: platesti && Math.abs(fZi) >= 0.0015 ? "N-aș ține botul mult pe direcția asta cu funding-ul atât de mare." : null });
     }
 
     // 7) Cand nu e nimic de facut, se spune si asta.

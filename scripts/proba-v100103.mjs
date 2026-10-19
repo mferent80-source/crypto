@@ -84,7 +84,7 @@ await test("(3) I-535 bilanțul (regula fixată dinainte: media rezultatului în
   assert.equal(GJ.bilantFerestre(set((f, i, k) => ((i + k) % 2 ? 0.04 : -0.04) * (f === "larg" ? 1 : -1) + (i % 2 ? 0.01 : -0.01))).verdict, "nedovedit");
   const p = GJ.bilantFerestre(set(() => 0.01).slice(0, 6)); assert.equal(p.verdict, "puține");
   assert.equal(GJ.bilantFerestre(set(() => 0.01).map((e) => Object.assign({}, e, { activ: true }))).larg.n, 0, "doar boții închiși");
-  assert.equal(GJ.textFerestre(p), "ÎNGUST vs LARG pe boții tăi: ÎNGUST 3 boți, media +1,0% · LARG 3 boți, media +1,0% — puține cazuri (trebuie cel puțin 5 pe fiecare, din cel puțin 3 monede).");
+  assert.equal(GJ.textFerestre(p), "ÎNGUST vs LARG pe boții tăi: ÎNGUST 3 boți, media +1,0% · LARG 3 boți, media +1,0% — puține cazuri (trebuie cel puțin 10 pe fiecare, din cel puțin 5 monede).");   // audit 19.10 (10): textul spune pragurile din cod (10 boți, 5 monede, din v100.173)
   assert.match(GJ.textFerestre(d), /^ÎNGUST vs LARG pe boții tăi: ÎNGUST 12 boți, media −2,\d% · LARG 12 boți, media \+2,\d% — LARG a adus mai mult \(dovedit\)\.$/);
   assert.equal(GJ.textFerestre(GJ.bilantFerestre([])), null, "fără boți pe ferestre ⇒ tace");
 });

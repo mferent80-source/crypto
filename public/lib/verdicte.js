@@ -52,13 +52,25 @@ var Verdicte = (function () {
     var hi = -Infinity, lo = Infinity; for (var q = i; q <= j; q++) { hi = Math.max(hi, nr(l[q].h) || l[q].c); lo = Math.min(lo, nr(l[q].l) || l[q].c); }
     return { c: l[j].c, hi: hi, lo: lo, t: l[j].t };
   }
+  // audit 19.10 (10): fereastra [t, t + h zile] de la ORA verdictului - bara care conține verdictul intră (la barele zilnice: ziua verdictului, cu
+  // orele de dinaintea lui, deci strict; în aceeași zi favorabil și rest le au la fel), iar ultima bară trebuie să fie închisă (urmează alta)
+  function dupaOra(bare, t, h) {
+    var l = bare || [], pas = l.length > 1 ? l[1].t - l[0].t : ZI, i = 0, fin = t + h * ZI;
+    while (i + 1 < l.length && l[i + 1].t <= t) i++;
+    if (!l.length) return null;
+    if (l[i].t + pas <= t && i + 1 < l.length) i++;   // nicio bară nu cuprinde ora verdictului (gol / prima bară e după el): prima de după, ca înainte
+    var j = i; while (j + 1 < l.length && l[j + 1].t < fin) j++;
+    if (j + 1 >= l.length) return null;
+    var hi = -Infinity, lo = Infinity; for (var q = i; q <= j; q++) { hi = Math.max(hi, nr(l[q].h) || l[q].c); lo = Math.min(lo, nr(l[q].l) || l[q].c); }
+    return { c: l[j].c, hi: hi, lo: lo, t: l[j].t };
+  }
   // fiecare verdict cu ce a urmat; bare = { simbol: [...] }, reper = { QQQ: [...], SPY: [...] } pentru „peste QQQ” / „peste SPY” (v100.192)
   function evalueaza(jurnal, bare, reper) {
     var out = [];
     (jurnal || []).forEach(function (v) {
       var S = SURSE[v.s], b = bare && bare[v.k]; if (!S || !b || !b.length) return;
       S.h.forEach(function (h) {
-        var d = dupa(b, v.t, h); if (!d) return;
+        var d = S.masura === "linistit" ? dupaOra(b, v.t, h) : dupa(b, v.t, h); if (!d) return;   // audit 19.10 (10): liniștea de la ora verdictului
         var r = d.c / v.p - 1, val = r;
         if (S.masura === "linistit") { var j = v.j || v.p * 0.9, u = v.u || v.p * 1.1; val = d.lo >= j && d.hi <= u ? 1 : 0; }
         // v100.196 (auditul sever 14.10, 🟡1 lateral): bara zilnică de la Yahoo are ora DESCHIDERII (13:30 / 14:30 UTC), iar închiderea ei se știe

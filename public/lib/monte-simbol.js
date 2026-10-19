@@ -100,7 +100,8 @@ var MonteSimbol = (function () {
     o = o || {}; var GP = o.GridProba || (typeof GridProba !== "undefined" ? GridProba : null), BZ = 96, zile = o.zile || 7, H = zile * BZ;
     if (!GP) return { eroare: "lipsește simulatorul gridului" };
     if (!Array.isArray(b15) || b15.length < 7 * BZ) return { eroare: "Prea puțin istoric ca să simulez botul: " + cate(Math.floor((b15 ? b15.length : 0) / BZ), "zi", "zile") + " pe 15 minute; îmi trebuie cel puțin 7." };
-    var n = o.n || 1000, P = st.pret > 0 ? st.pret : b15[b15.length - 1].c, suma = st.suma > 0 ? st.suma : 100, mu = tendinta(b15), fara = o.cuTendinta !== true;
+    // audit 19.10 (10): implicit 2000 de drumuri (ca Monte Carlo pe bot)
+    var n = o.n || 2000, P = st.pret > 0 ? st.pret : b15[b15.length - 1].c, suma = st.suma > 0 ? st.suma : 100, mu = tendinta(b15), fara = o.cuTendinta !== true;
     // fără tendința perioadei (implicit), ca la preț: un short pe o lună care a căzut nu iese „bun” doar din căderea care a fost
     // v100.132: ținta (TP) botului = închiderea pe partea profitului - la long deasupra (stop.sus), la short dedesubt (stop.jos); la neutru
     // nu există o parte a profitului. Atingerea ei se numără separat (pTp), nu ca „stop atins”

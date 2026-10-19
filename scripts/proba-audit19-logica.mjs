@@ -309,5 +309,42 @@ await test("(9) rândul ideilor și pagina spun că testul e un singur bloc de ~
   assert.match(citeste("public", "app.js"), /GridProba\.notaBloc\(r\)/);
 });
 
+// ---------- (10) reparațiile mici ----------
+const Sf = new Function("Alerte", "Scenariu", "TabloExtra", `${lib("sfaturi.js")}; return Sfaturi;`)(A, Scen, TE);
+await test("(10) sfaturi: pragul de funding pe ZI - 0,02% la o oră (0,48% pe zi) e „atenție”, 0,04% la 8 ore (0,12% pe zi) nu", () => {
+  const b = { id: "X", directie: "long", pretCurent: 1, gridJos: 0.9, gridSus: 1.1, investit: 50, profitTotal: 0 };
+  const fz = (f, ore) => Sf.sfaturi({ bot: b, funding: f, fundingOre: ore }).find((x) => x.cod === "funding");
+  const o1 = fz(0.0002, 1), o8 = fz(0.0004, 8);
+  assert.ok(o1 && o8, "fixtura funding");
+  assert.equal(o1.ton, "atentie", JSON.stringify(o1)); assert.equal(o8.ton, "info", JSON.stringify(o8));
+});
+await test("(10) grid-jurnal: textul „puține cazuri” spune pragurile reale (10 pe fiecare, din 5 monede)", () => {
+  const s = citeste("public", "lib", "grid-jurnal.js");
+  assert.ok(!/cel puțin 5 pe fiecare, din cel puțin 3 monede/.test(s), "pragurile vechi în text");
+  assert.equal((s.match(/cel puțin 10 pe fiecare, din cel puțin 5 monede/g) || []).length, 2);
+});
+await test("(10) Monte Carlo pe simbol: „N intervale (în Pionex N+1 linii)”, ca Tabloul", () => {
+  assert.match(citeste("public", "lib", "monte-simbol-ecran.js"), /mcsCate\(st\.grile, "interval", "intervale"\) \+ " \(în Pionex " \+ mcsCate\(st\.grile \+ 1, "linie", "linii"\) \+ "\)"/);
+});
+await test("(10) verdicte: liniștea (Poarta gridului) se măsoară de la ora verdictului - o ieșire în aceeași zi, după verdict, contează", () => {
+  const V = new Function(`${lib("verdicte.js")}; return Verdicte;`)();
+  const z0 = Date.UTC(2026, 9, 10), D = 86400000;
+  const bare = [{ t: z0, o: 100, h: 108, l: 99, c: 100 }, { t: z0 + D, o: 100, h: 102, l: 98, c: 100 }, { t: z0 + 2 * D, o: 100, h: 101, l: 99, c: 100 }, { t: z0 + 3 * D, o: 100, h: 101, l: 99, c: 100 }, { t: z0 + 4 * D, o: 100, h: 101, l: 99, c: 100 }];
+  const ev = V.evalueaza([{ s: "poarta-grid", k: "AAA_USDT_PERP", n: "porneste", p: 100, t: z0 + 15 * 3600000, j: 95, u: 105 }], { AAA_USDT_PERP: bare }, {});
+  const e1 = ev.find((x) => x.h === 1);
+  assert.ok(e1, JSON.stringify(ev)); assert.equal(e1.val, 0, "a ieșit din bandă (108) în ziua verdictului, după el");
+});
+await test("(10) carnet și gridul îngust: direcția fără bara de 4 h / 1 zi încă în formare (ca pagina vie)", () => {
+  assert.match(lib("carnet.js"), /audit 19\.10 \(10\)/); assert.match(lib("grid-proba.js"), /function inchise\(/);
+  const GPx = globalThis.GridProba, H4 = 4 * 3600000, b4 = G.agrega(B15.slice(0, 8 * 16 + 2), H4), tEnd = B15[8 * 16 + 1].t + 15 * 60000;
+  const ok = GPx.inchise(b4, H4, tEnd);
+  assert.ok(ok.length < b4.length && ok.every((x) => x.t + H4 <= tEnd), ok.length + " / " + b4.length);
+  assert.match(lib("grid-proba.js"), /function directiaLa[^}]*inchise\(/);
+});
+await test("(10) Monte Carlo pe simbol, botul grid: implicit 2000 de drumuri", () => {
+  const s = lib("monte-simbol.js"), i = s.indexOf("function grid(b15, st, o)");
+  assert.ok(i > 0); assert.match(s.slice(i, i + 900), /var n = o\.n \|\| 2000/);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
 process.exit(picate ? 1 : 0);

@@ -189,7 +189,7 @@ var GridJurnal = (function () {
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   // Regula fixată DINAINTE (nu după ce vedem cifrele): media rezultatului în % din investiție, LARG − ÎNGUST, pe boții ÎNCHIȘI.
   // IC 90% prin bootstrap pe MONEDE (boții aceleiași monede nu sunt independenți), 2000 de reluări, sămânța fixă.
-  // Sub 5 boți pe o fereastră sau sub 3 monede ⇒ „puține”; IC peste 0 ⇒ „dovedit” (LARG mai bun); sub 0 ⇒ „pe dos”; altfel „nedovedit”.
+  // Sub 10 boți pe o fereastră sau sub 5 monede ⇒ „puține” (v100.173; audit 19.10: textul spune la fel); IC 99 % peste 0 și p < 1 % ⇒ „dovedit” (LARG mai bun); sub 0 ⇒ „pe dos”; altfel „nedovedit”.
   // v100.104 (I-539): aceeași comparație pentru două grupuri oarecare (A, B); dif = B − A
   function inchis(e) { var baza = e && (e.investit > 0 ? e.investit : e.suma); return e && e.botId && e.activ === false && nr(e.rezultat) !== null && baza > 0 ? { m: moneda(e.simbol), pct: e.rezultat / baza, usdt: nr(e.rezultat) } : null; }
   function bilantFerestre(lista) {
@@ -247,7 +247,8 @@ var GridJurnal = (function () {
     if (!b || (!b.ingust.n && !b.larg.n)) return null;
     var P = function (v) { return v === null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };
     var parte = function (nume, x) { return nume + " " + cate(x.n, "bot", "boți") + ", media " + P(x.mediaPct); };
-    var conc = b.verdict === "puține" ? "puține cazuri (trebuie cel puțin 5 pe fiecare, din cel puțin 3 monede)" : b.verdict === "dovedit" ? "LARG a adus mai mult (dovedit)"
+    // audit 19.10 (10): pragurile din text = cele din cod (comparaCalc: 10 boți și 5 monede pe grup, din v100.173)
+    var conc = b.verdict === "puține" ? "puține cazuri (trebuie cel puțin 10 pe fiecare, din cel puțin 5 monede)" : b.verdict === "dovedit" ? "LARG a adus mai mult (dovedit)"
       : b.verdict === "pe dos" ? "ÎNGUST a adus mai mult (dovedit)" : "diferența nu e dovedită (pot fi la fel)";
     return "ÎNGUST vs LARG pe boții tăi: " + parte("ÎNGUST", b.ingust) + " · " + parte("LARG", b.larg) + " — " + conc + ".";
   }
@@ -255,7 +256,7 @@ var GridJurnal = (function () {
     if (!b || (!b.urmata.n && !b.neurmata.n)) return null;
     var P = function (v) { return v === null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };
     var parte = function (nume, x) { return nume + " " + cate(x.n, "bot", "boți") + ", media " + P(x.mediaPct); };
-    var conc = b.verdict === "puține" ? "puține cazuri (trebuie cel puțin 5 pe fiecare, din cel puțin 3 monede)" : b.verdict === "dovedit" ? "urmată a adus mai mult (dovedit)"
+    var conc = b.verdict === "puține" ? "puține cazuri (trebuie cel puțin 10 pe fiecare, din cel puțin 5 monede)" : b.verdict === "dovedit" ? "urmată a adus mai mult (dovedit)"
       : b.verdict === "pe dos" ? "neurmată a adus mai mult (dovedit)" : "diferența nu e dovedită (pot fi la fel)";
     return "Recomandarea mea pe boții tăi: " + parte("urmată", b.urmata) + " · " + parte("neurmată", b.neurmata) + " — " + conc + ".";
   }
