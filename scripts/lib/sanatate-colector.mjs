@@ -64,6 +64,8 @@ export async function botInchisDupaId(id, cere, pagini = 3) {
 
 // 🔵10: data/cont-bare (cache-ul barelor zilnice, cheia = sha1 pe cale) creștea fără curățare (625 de fișiere / 39 MB) ⇒ ce n-a mai fost
 // atins de maxMs (30 de zile) se șterge. Doar fișierele .json (nu .tmp-urile scrierii atomice în curs).
+// audit 19.10: hărțile din memoria colectorului (lumanari15, mediuPe, pret30) - afară cheile neatinse de maxMs (2 zile); laDe(k) = ora atingerii
+export function curataNeatinse(harta, laDe, acum, maxMs = 2 * ZI_MS) { let n = 0; for (const k of Object.keys(harta || {})) { const t = Number(laDe(k)); if (!(t > acum - maxMs)) { delete harta[k]; n++; } } return n; }
 export function deSters(fisiere, acum, maxMs) { return (Array.isArray(fisiere) ? fisiere : []).filter((f) => f && /\.json$/.test(f.nume) && acum - (Number(f.mtime) || 0) > maxMs).map((f) => f.nume); }
 
 // C3: Pionex dă uneori lista boților PORNIȚI goală (result:true, results:null) deși boții merg. Pe listă goală bucla pe boți nu face

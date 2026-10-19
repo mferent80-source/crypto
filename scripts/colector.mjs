@@ -449,7 +449,7 @@ function anuntaMesaj(x) { return anuntaColector(x.nivel, x.titlu, x.mesaj); }
 
 let esecuri = 0;
 // v98: ce a vazut ultima tura (pentru poza): botii si ultimele 30 de preturi ale fiecaruia (o poza pe tura, la un minut)
-let ultimiiBoti = [], ultimiiBotiLa = 0; const pret30 = {}; let turaNr = 0;
+let ultimiiBoti = [], ultimiiBotiLa = 0; const pret30 = {}, pret30La = {}; let turaNr = 0;   // audit 19.10: pret30La = cand a fost atins (curatarea la 2 zile)
 // v101.116 (auditul sever, C1): ora ultimei ture a alertelor TERMINATE (fără excepție) - pulsul pozei și condiția bătăii la paznic (var: citit din ceasul pozei)
 var turaGataLa = 0;
 async function tura() {
@@ -484,7 +484,7 @@ async function tura() {
   m.citireRea = 0; m.anuntatRau = 0;
   const boti = Array.isArray(d && d.bots) ? d.bots : [];
   ultimiiBoti = boti; ultimiiBotiLa = Date.now();   // v100.40: ora citirii - poza nu mai stampileaza boti vechi cu „acum”
-  for (const b of boti) if (b && b.id && Number.isFinite(Number(b.pretCurent))) { const r = pret30[b.id] || (pret30[b.id] = []); r.push(Number(b.pretCurent)); if (r.length > 30) r.shift(); }
+  for (const b of boti) if (b && b.id && Number.isFinite(Number(b.pretCurent))) { const r = pret30[b.id] || (pret30[b.id] = []); r.push(Number(b.pretCurent)); if (r.length > 30) r.shift(); pret30La[b.id] = acum; }
   // v101.67 (el, 05.10: „±1% la ce dețin”, B): fiecare bot activ - 1% fata de pretul ultimei alerte; referinta pe disc (rezista la repornire)
   {
     const ref = m.pasBoti || (m.pasBoti = {}), vii = {};
@@ -549,6 +549,8 @@ async function tura() {
   // v100.175 (auditul Opus, M19): cei închiși de peste 30 de zile nu mai trebuie ținuți minte (starea creștea fără limită)
   // v101.116 (auditul sever, 🔵1): + starea alertelor botului, închișii fără oră (de dinainte de v100.175) și orfanii
   S.curataStareBoti(stareAlerte, m, acumIds, acum);
+  // audit 19.10: hartile din memorie cresteau cu fiecare simbol / bot vazut vreodata ⇒ o data pe ora, afara ce n-a fost atins de 2 zile
+  if (turaNr % 60 === 1) { S.curataNeatinse(lumanari15, (k) => lumanari15[k] && lumanari15[k].la, acum); S.curataNeatinse(mediuPe, (k) => mediuPe[k] && mediuPe[k].la, acum); S.curataNeatinse(pret30, (k) => pret30La[k], acum); S.curataNeatinse(pret30La, (k) => pret30La[k], acum); }
   // v101.59 (Busola 1.36, §2 „paza boților”): rezumatul Busolei o dată la 30 min (ca fișa); vechi ⇒ o notă doar în Radar, o dată pe rezumat
   try {
     await Busola.incarca(fetch, acum);
@@ -635,7 +637,7 @@ async function tura() {
     try {
       const cost = TabloExtra.grileVsCosturi(b, acum);
       ctx.mediu = IndicatoriBot.mediu({ regim: ctx.regim || null, funding: ctx.funding || null, fundingZi: cost && cost.fundingZi, btc: ctx.btc || null }, b.directie);
-      mediuPe[b.id] = { b, mediu: ctx.mediu };
+      mediuPe[b.id] = { b, mediu: ctx.mediu, la: acum };
       const z = TabloExtra.dacaInchizi(b); if (z && z.pretZero > 0) ctx.pretZero = z.pretZero;
     } catch (e) { jurnal("mediu", b.id, e.message); }
     const inainte = stareAlerte[b.id] || {};

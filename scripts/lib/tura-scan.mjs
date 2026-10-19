@@ -60,6 +60,8 @@ export async function scanCrypto(d, acum) {
   return randuri;
 }
 
+// audit 19.10: simbolul fără prețuri (404 de la ruta t212: „scan WBD … Fără prețuri”, de 31 de ori în jurnal) se ține minte o oră ca lipsă
+const faraPreturiPana = new Map();   // ticker T212 -> până când nu se mai cere
 export async function scanActiuni(d, acum) {
   const poz = await incearca(d, "pozitii", () => d.cere("/api/t212?action=pozitii"));
   const ale = (Array.isArray(poz) ? poz : poz && (poz.items || poz.pozitii) || []).map((x) => x && x.ticker).filter((t) => /_US_EQ$/.test(String(t)));
@@ -67,15 +69,17 @@ export async function scanActiuni(d, acum) {
   for (const s of d.NDX || []) if (!vazut.has(s)) { vazut.add(s); lista.push({ s, tk: s + "_US_EQ" }); }
   for (const tk of ale) { const s = tk.replace(/_US_EQ$/, "").replace(/\d+$/, ""); if (!vazut.has(s)) { vazut.add(s); lista.push({ s, tk, al: true }); } }
   const randuri = [], bare = [];
+  let sarite = 0;
   for (let i = 0; i < lista.length; i++) {
     const x = lista[i];
+    if ((faraPreturiPana.get(x.tk) || 0) > acum) { sarite++; continue; }   // audit 19.10: știut fără prețuri - nu se mai cere în ora asta
     if (i) await d.pauza(d.pauzaMs == null ? 700 : d.pauzaMs);
-    const r = await incearca(d, x.s, () => d.cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.tk)));
+    const r = await incearca(d, x.s, () => d.cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.tk)).catch((e) => { if (e && e.status === 404) faraPreturiPana.set(x.tk, acum + ORA); throw e; }));
     const t = cuVolum(d.GridCalcul, r && r.randuri, "volume"), b = inchiseActiuni(d.GridCalcul, t, acum), z = cuAzi(d.Scan, t, b);   /* v100.196: fără bara de azi în ședință */
     if (z) bare.push(b);
     if (z) randuri.push({ s: x.s, tk: x.tk, ...z, ...(x.al ? { inafara: !new Set(d.NDX || []).has(x.s) } : {}) });
   }
-  if (randuri.length < lista.length * 0.8) { d.jurnal("scan actiuni NEURCAT:", randuri.length, "din", lista.length); return null; }
+  if (randuri.length < (lista.length - sarite) * 0.8) { d.jurnal("scan actiuni NEURCAT:", randuri.length, "din", lista.length - sarite); return null; }
   await d.trimite("/api/istoric-bot?action=scan", { fel: "a", la: acum, randuri });
   randuri.bare = bare;
   return randuri;

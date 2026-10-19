@@ -284,5 +284,68 @@ await test("(6) colectorul numără la „serverul nu răspunde” (ieșirea dup
   assert.ok(!/if \(!e\.status\) \{ esecuri\+\+/.test(c), "a rămas numărătoarea pe orice eroare fără status");
 });
 
+// ---------- (7) mărunte ----------
+await test("(7) pret-viu: conexiunea spre Pionex are termen de 8 s (cuTermen); conexiunea venită târziu se închide", async () => {
+  const PV = await import("../functions/api/pret-viu.js");
+  assert.equal(typeof PV.cuTermen, "function");
+  await assert.rejects(() => PV.cuTermen(new Promise(() => {}), 20), (e) => e.name === "TimeoutError");
+  let inchisa = 0; const tarziu = new Promise((r) => setTimeout(() => r({ webSocket: { close: () => inchisa++ } }), 40));
+  await assert.rejects(() => PV.cuTermen(tarziu, 10, (r) => r.webSocket.close()));
+  await pauza(60); assert.equal(inchisa, 1, "conexiunea venită după termen a rămas deschisă");
+  assert.equal(await PV.cuTermen(Promise.resolve(7), 50), 7);
+  assert.match(citeste("functions", "api", "pret-viu.js"), /await cuTermen\(fetch\("https:\/\/ws\.pionex\.com\/wsPub",\{headers:\{Upgrade:"websocket"\}\}\),8000,/);
+});
+await test("(7) verdict: ziua după Europe/Bucharest, nu UTC (20:00Z și 21:30Z pe 10.10 = două zile la București)", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  await postIb(env, "verdict", { verdicte: [{ s: "idei", k: "AAPL", n: "cumpara", p: 10, t: Date.UTC(2026, 9, 10, 20, 0) }, { s: "idei", k: "AAPL", n: "nu", p: 11, t: Date.UTC(2026, 9, 10, 21, 30) }, { s: "idei", k: "AAPL", n: "nu", p: 12, t: Date.UTC(2026, 9, 10, 22, 30) }] });
+  const l = JSON.parse(env.ISTORIC.m.get("verdicte:jurnal"));
+  assert.deepEqual(l.map((x) => x.p), [10, 11], "pe (sursă, simbol, zi la București) rămâne primul");
+});
+await test("(7) t212: la 429 se ține minte răcirea (retry-after, altfel 60 s) pe cale și nu se mai trimite până atunci", async () => {
+  const T = await import("../functions/api/t212.js");
+  assert.equal(typeof T.cereT212, "function"); assert.equal(typeof T.reseteazaRacireT212, "function");
+  const env = { T212_API_KEY: "k", T212_API_SECRET: "s" };
+  T.reseteazaRacireT212();
+  fetchFals(() => new Response("", { status: 429, headers: { "retry-after": "40" } }));
+  await assert.rejects(() => T.cereT212(env, "/equity/portfolio", "pozitii"), (e) => e.status === 429 && e.retryAfter === 40);
+  await assert.rejects(() => T.cereT212(env, "/equity/portfolio", "pozitii"), (e) => e.status === 429 && e.retryAfter > 30 && e.retryAfter <= 40);
+  assert.equal(cereriFalse.length, 1, "a trimis în timpul răcirii");
+  fetchFals(() => new Response("{}", { status: 200 }));
+  assert.deepEqual(await T.cereT212(env, "/equity/account/cash", "cont"), {}, "altă cale nu e răcită");
+  T.reseteazaRacireT212();
+  fetchFals(() => new Response("", { status: 429 }));
+  await assert.rejects(() => T.cereT212(env, "/equity/account/info", "cont"), (e) => e.retryAfter === 60);
+  T.reseteazaRacireT212(); globalThis.fetch = fetchAdevarat;
+});
+await test("(7) scanul de acțiuni: simbolul fără prețuri (404) se ține minte o oră ca lipsă - nu se mai cere, nu se mai scrie în jurnal", async () => {
+  const { scanActiuni } = await import("./lib/tura-scan.mjs");
+  const cerute = [], jurnal = [];
+  const d = { NDX: ["WBD", "AAPL"], jurnal: (...a) => jurnal.push(a.join(" ")), pauza: async () => {}, pauzaMs: 0, trimite: async () => {}, GridCalcul: { bareToate: () => [] }, Scan: { rezumat: () => null },
+    cere: async (u) => { cerute.push(u); if (/pozitii/.test(u)) return []; if (/WBD/.test(u)) throw Object.assign(new Error("Fără prețuri pentru WBD_US_EQ (poate a fost delistată sau redenumită)."), { status: 404 }); throw new Error("Yahoo a limitat"); } };
+  const t0 = Date.UTC(2026, 9, 19, 15, 0);
+  await scanActiuni(d, t0);
+  const n1 = cerute.filter((u) => /WBD/.test(u)).length; assert.equal(n1, 1);
+  jurnal.length = 0; await scanActiuni(d, t0 + 30 * MIN);
+  assert.equal(cerute.filter((u) => /WBD/.test(u)).length, 1, "WBD cerut din nou în aceeași oră"); assert.ok(!jurnal.some((j) => /WBD/.test(j)), "WBD tot în jurnal");
+  assert.ok(cerute.filter((u) => /AAPL/.test(u)).length === 2, "o eroare care nu e 404 nu se ține minte");
+  await scanActiuni(d, t0 + 61 * MIN); assert.equal(cerute.filter((u) => /WBD/.test(u)).length, 2, "după o oră se cere iar");
+});
+await test("(7) colectorul curăță lumanari15 / mediuPe / pret30 de ce n-a fost atins de 2 zile (curataNeatinse)", () => {
+  assert.equal(typeof S.curataNeatinse, "function");
+  const h = { A: { la: ACUM - 3 * ZI }, B: { la: ACUM - ZI }, C: {} };
+  assert.equal(S.curataNeatinse(h, (k) => h[k].la, ACUM), 2); assert.deepEqual(Object.keys(h), ["B"]);
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /S\.curataNeatinse\(lumanari15, \(k\) => lumanari15\[k\] && lumanari15\[k\]\.la, acum\)/);
+  assert.match(c, /S\.curataNeatinse\(mediuPe, \(k\) => mediuPe\[k\] && mediuPe\[k\]\.la, acum\)/);
+  assert.match(c, /S\.curataNeatinse\(pret30, \(k\) => pret30La\[k\], acum\)/);
+  assert.match(c, /mediuPe\[b\.id\] = \{ b, mediu: ctx\.mediu, la: acum \}/);
+  assert.match(c, /pret30La\[b\.id\] = acum;/);
+});
+await test("(7) cod mort scos: tokenValid (și equalBytes, folosit doar de el), ENGINE_CONTRACT_VERSION din market.js și external-intel.js", () => {
+  const a = citeste("functions", "_shared", "auth.js");
+  assert.ok(!/tokenValid/.test(a)); assert.ok(!/equalBytes/.test(a)); assert.match(a, /async function digest/, "digest rămâne (tenantKey)");
+  assert.ok(!/ENGINE_CONTRACT_VERSION/.test(citeste("functions", "api", "market.js"))); assert.ok(!/ENGINE_CONTRACT_VERSION/.test(citeste("functions", "api", "external-intel.js")));
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);
