@@ -807,7 +807,8 @@ function pwaInitDeepLink(){
  // v92: Home ("Piata azi") e pagina de start - se deseneaza si fara navTo
  if(document.getElementById("dash")?.classList.contains("on")){document.body.classList.add("peAcasa");if(typeof acasaPorneste==="function")acasaPorneste(false)}
  const q=new URLSearchParams(location.search),panel=q.get("panel");
- if(panel&&document.getElementById(panel)){setTimeout(()=>navTo(panel,true),120);return}
+ // audit 19.10: doar o pagină (clasa panel), ca ramura de mai jos - nu orice id din document
+ if(panel&&document.getElementById(panel)?.classList.contains("panel")){setTimeout(()=>navTo(panel,true),120);return}
  // v91.6: fara link explicit, revine pe pagina de dinainte de reincarcare (Home = pagina de start, nu e nevoie)
  let ultima=null;try{ultima=localStorage.getItem(PAGINA_CURENTA_KEY)}catch(_){}
  const el=ultima&&document.getElementById(ultima);
