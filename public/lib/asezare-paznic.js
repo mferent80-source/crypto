@@ -321,6 +321,7 @@
   var pliatProb = false;
   function ordine() { var d = $("tbPl-prob"); if (d && !pliatProb && d.tagName === "DETAILS" && d.open) { d.open = false; pliatProb = true; } }
   function tura() {
+    if (document.hidden) return;   // audit 19.10: cu fila ascunsă nu rescriem pagina la 1,5 s (ca Tabloul); la revenire, o tură imediat
     if (window.__pzPauza) return;
     try { citeste(); } catch (e) { return; }
     [fasie, verdict, drum, acum, pliaza, ordine, function () { cadran("acFg", 0, 100, /între (\d+) și (\d+)/); cadran("acVix", 10, 40, /între ([\d,]+) și ([\d,]+)/); },
@@ -522,4 +523,5 @@
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#jurnaltrade .jtFiltru")) setTimeout(function () { try { pagJurnal(); } catch (x) {} }, 30); });   /* M1: antetul urmează fila pe loc */
   setInterval(tura, 1500); setTimeout(tura, 300);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) tura(); });
 })();
