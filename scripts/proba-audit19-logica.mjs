@@ -205,5 +205,46 @@ await test("(5) pagina Contul întreg: textul spune netul și că e măsurat pe 
   void vm;
 });
 
+// ---------- (6) banda: rezultatul pe net, Wilson 95%, „regula de până acum”, lecția pe orele afară fără întrerupere ----------
+const Disc = new Function(`${lib("disciplina.js")}; return Disciplina;`)();
+const ORA = 3600000, TB = Date.UTC(2026, 1, 2);
+// botul A: long 95–105; afară 3 h, înapoi 2 h, afară 4 h ⇒ fără întrerupere cel mult 4 h, în total 7 h; brut +10%, net −5 USDT din 100 puși
+const preturiA = [100, 100, 90, 90, 90, 100, 100, 90, 90, 90, 90].concat(Array.from({ length: 30 }, () => 100));
+const bareA = preturiA.map((c, i) => ({ t: TB + i * ORA, o: c, h: c, l: c, c }));
+const botA = { id: "A", moneda: "AAA", dir: "long", jos: 95, sus: 105, pornit: TB, inchis: TB + 20 * ORA, pct: 0.10, net: -5, pus: 100, investit: 100 };
+await test("(6) banda: „Rezultatul net” pe net (net / pus, după comisioane și funding), nu pe realizatul brut", () => {
+  const r = Disc.iesiriBanda([botA], () => bareA, {});
+  const g = r.grupe.find((x) => x.n > 0);
+  assert.equal(g.netMedian, -0.05, JSON.stringify(r.grupe));
+});
+await test("(6) lecția: orele afară FĂRĂ întrerupere (ca regula), nu suma pe viața botului", () => {
+  const r = Disc.iesiriBanda([botA], () => bareA, {});
+  assert.equal(r.oreAfaraPe.A, 4, "fără întrerupere: 4 h (în total 7 h)");
+  const l = Disc.lectia({ de: TB, pana: TB + 7 * 24 * ORA, trades: [], boti: [{ id: "A", moneda: "AAA", inchis: botA.inchis, net: -5, oreAfara: r.oreAfaraPe.A }], usdLei: 4.4, regulaOre: 6 });
+  assert.equal(l.toate, 0, "4 h fără întrerupere < pragul de 6 h ⇒ nu încalcă regula");
+});
+await test("(6) Wilson 95% lângă procentul de întoarceri (5 din 20 ⇒ 11–47%)", () => {
+  const w = Disc.wilson(5, 20);
+  assert.ok(Math.abs(w[0] - 0.1119) < 0.001 && Math.abs(w[1] - 0.4687) < 0.001, String(w));
+  assert.equal(Disc.wilson(0, 0), null);
+});
+await test("(6) pagina: „regula de până acum (n cazuri, interval …)”, intervalul în tabel, fără „în medie” pe o mediană", () => {
+  const fnD = new Function("TextRo", citeste("public", "lib", "cont-ecran.js") + "; return ciDisciplinaHtml;")(globalThis.TextRo);
+  const x = { h: 6, n: 45, boti: 50, intoarse: 0.25, intoarseLo: 0.14, intoarseHi: 0.38, miscareImpotriva: -0.03, netMedian: -0.04 };
+  const h = fnD({}, { tabel: [x], regula: x, grupe: [] }, []);
+  assert.match(h, /[Rr]egula de până acum \(45 de cazuri, interval 95%: 14–38%\)/);
+  assert.match(h, /25% \(14–38%\)/);
+  assert.ok(!/în medie/.test(h), "„în medie” pe o mediană");
+  assert.ok(!/Regula ta:/.test(h));
+});
+
+await test("(6) Discord, banda: intervalul Wilson și numărul de cazuri, mediana nu mai e „în medie”", async () => {
+  const MC = await import(new URL("./lib/mesaje-colector.mjs", import.meta.url).href);
+  const a = MC.afaraDinBanda("PLUME", 13.4, { h: 12, n: 45, intoarse: 0.25, intoarseLo: 0.14, intoarseHi: 0.38, miscareImpotriva: -0.005 });
+  assert.match(a.mesaj, /doar 25% s-au mai întors în 24 h \(interval 95%: 14–38%, 45 de cazuri\)/);
+  assert.ok(!/în medie/.test(a.mesaj), a.mesaj); assert.match(a.mesaj, /\(mediana\)/);
+  assert.ok(a.mesaj.split("\n")[0].length <= 160, a.mesaj);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
 process.exit(picate ? 1 : 0);

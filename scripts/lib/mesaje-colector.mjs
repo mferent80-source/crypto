@@ -159,7 +159,8 @@ export const reconciliereUrmarire = (r) => ({ nivel: "critic", titlu: "Un bot po
 // v100.179 (disciplina): botul afară din bandă peste pragul LUI, garda încălcată, lecția săptămânii
 const pc0 = (x) => (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%";
 export const afaraDinBanda = (nume, ore, r) => ({ nivel: "atentie", titlu: (nume + ": afară din bandă de " + cate(Math.round(ore), "oră", "ore")).slice(0, 60),
-  mesaj: msg("Din boții tăi închiși, după " + r.h + " h afară doar " + Math.round(r.intoarse * 100) + "% s-au mai întors în bandă în 24 h" + (r.miscareImpotriva !== null ? ", iar prețul a mers în medie încă " + pc0(r.miscareImpotriva) + " împotriva botului" : "") + ".", "Aș închide botul sau i-aș muta banda acum, nu aș mai aștepta.") });
+  // audit 19.10 (6): intervalul Wilson 95% și cazurile lângă procent; mișcarea e mediana, nu „în medie”
+  mesaj: msg("Din boții tăi închiși, după " + r.h + " h afară doar " + Math.round(r.intoarse * 100) + "% s-au mai întors în 24 h" + (r.intoarseLo != null && r.intoarseHi != null ? " (interval 95%: " + Math.round(r.intoarseLo * 100) + "–" + Math.round(r.intoarseHi * 100) + "%" + (r.n > 0 ? ", " + cate(r.n, "caz", "cazuri") : "") + ")" : "") + (r.miscareImpotriva !== null && r.miscareImpotriva !== undefined ? ", iar prețul a mers încă " + pc0(r.miscareImpotriva) + " împotrivă (mediana)" : "") + ".", "Aș închide botul sau i-aș muta banda acum, nu aș mai aștepta.") });
 export const garda = (g) => ({ nivel: "atentie", titlu: ("Gardă încălcată: " + g.titlu).slice(0, 60), mesaj: msg((g.detaliu ? g.detaliu + ". " : "") + "Garda vine din " + (g.sursa || "datele tale") + ".", "Aș readuce contul sub prag înainte de orice poziție nouă.") });
 export const lectiaSaptamanii = (l, ver) => {
   const top = (l.top || []).map((d, i) => (i + 1) + ". " + d.ce + ": −" + Math.round(d.cost).toLocaleString("ro-RO") + " lei - " + d.motive.map((m) => m.text).join("; ")).join("\n");

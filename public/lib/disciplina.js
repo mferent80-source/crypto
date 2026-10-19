@@ -7,6 +7,13 @@ var Disciplina = (function () {
   var ORA = 3600000, ZI = 86400000, PRAGURI_ORE = [1, 3, 6, 12, 24, 48];
   function nr(v) { if (v === null || v === undefined || v === "") return null; var x = Number(v); return isFinite(x) ? x : null; }
   function mediana(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+  // audit 19.10 (6): intervalul Wilson 95% al unei proporții k din n (null fără cazuri) - lângă procentul de întoarceri
+  function wilson(k, n) {
+    if (!(n > 0)) return null; var z = 1.96, p = k / n, z2 = z * z, c = (p + z2 / (2 * n)) / (1 + z2 / n), h = z * Math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n);
+    return [Math.max(0, c - h), Math.min(1, c + h)];
+  }
+  // audit 19.10 (6): rezultatul NET al botului (după comisioane și funding: net / suma pusă), nu realizatul brut (pct = realizat / investit)
+  function pctNet(t) { var n = nr(t && t.net), p = nr(t && t.pus); return n !== null && p > 0 ? n / p : nr(t && t.pctNet) !== null ? nr(t.pctNet) : nr(t && t.pct); }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 
   // ---------------- 1. ieșirea din bandă ----------------
@@ -24,9 +31,10 @@ var Disciplina = (function () {
       for (var i = 0; i < l.length && l[i].t <= t.inchis; i++) { if (l[i].c < jos) { iesire = i; parte = -1; break; } if (l[i].c > sus) { iesire = i; parte = 1; break; } }
       var dirSemn = t.dir === "short" ? 1 : t.dir === "long" ? -1 : parte;   // direcția în care mișcarea strică botul
       // orele afară în viața botului (până la închidere), pentru grupele pe rezultat
-      var afara = 0; l.forEach(function (x) { if (x.t <= t.inchis && (x.c < jos || x.c > sus)) afara++; });
-      oreAfaraPe[t.id] = afara;
-      var g = iesire < 0 ? "nu a ieșit" : afara < 6 ? "sub 6 h" : afara <= 24 ? "6–24 h" : "peste 24 h"; if (nr(t.pct) !== null) bucket[g].push(t.pct);
+      // audit 19.10 (6): lecția compară cu orele afară FĂRĂ întrerupere (ca regula și ca alerta botului viu), nu cu suma pe viața botului
+      var afara = 0, sir = 0, maxSir = 0; l.forEach(function (x) { if (x.t <= t.inchis && (x.c < jos || x.c > sus)) { afara++; sir++; if (sir > maxSir) maxSir = sir; } else sir = 0; });
+      oreAfaraPe[t.id] = maxSir;
+      var pn = pctNet(t), g = iesire < 0 ? "nu a ieșit" : afara < 6 ? "sub 6 h" : afara <= 24 ? "6–24 h" : "peste 24 h"; if (pn !== null) bucket[g].push(pn);
       if (iesire < 0) return;
       var afaraLa = function (j) { return parte < 0 ? l[j].c < jos : l[j].c > sus; };
       praguri.forEach(function (h) {
@@ -34,14 +42,14 @@ var Disciplina = (function () {
         for (var k = iesire; k <= j; k++) if (!afaraLa(k)) return;   // a stat afară continuu h ore
         var R = rez[h], sf = Math.min(l.length - 1, j + 24), intors = false;
         for (var q = j + 1; q <= sf; q++) if (l[q].c >= jos && l[q].c <= sus) { intors = true; break; }
-        R.boti++; if (nr(t.pct) !== null) R.net.push(t.pct);
+        R.boti++; if (pn !== null) R.net.push(pn);
         // v100.196 (auditul 14.10, 🔵7): boții pe aceeași monedă, ieșiți în aceeași zi (UTC) pe aceeași parte, văd același preț - un singur episod
         var cheie = String(t.moneda) + "|" + Math.floor(l[iesire].t / ZI) + "|" + parte; if (R.ep[cheie]) return; R.ep[cheie] = 1;
         R.n++; if (intors) R.intoarse++;
         var mv = l[sf].c / l[j].c - 1; R.miscari.push(dirSemn > 0 ? -mv : mv);   // negativ = prețul a mers mai departe în direcția care strică botul
       });
     });
-    var tabel = praguri.map(function (h) { var R = rez[h]; return { h: h, n: R.n, boti: R.boti, intoarse: R.n ? R.intoarse / R.n : null, miscareImpotriva: R.miscari.length ? mediana(R.miscari) : null, netMedian: R.net.length ? mediana(R.net) : null }; });
+    var tabel = praguri.map(function (h) { var R = rez[h], w = wilson(R.intoarse, R.n); return { h: h, n: R.n, boti: R.boti, intoarse: R.n ? R.intoarse / R.n : null, intoarseLo: w ? w[0] : null, intoarseHi: w ? w[1] : null, miscareImpotriva: R.miscari.length ? mediana(R.miscari) : null, netMedian: R.net.length ? mediana(R.net) : null }; });
     // regula: primul prag (cu cel puțin 30 de cazuri) după care mai puțin de 30 % dintre boți s-au întors în bandă în 24 h
     var regula = null; for (var i2 = 0; i2 < tabel.length; i2++) { var x = tabel[i2]; if (x.n >= (o.min || 30) && x.intoarse !== null && x.intoarse < (o.prag || 0.3)) { regula = x; break; } }
     var grupe = Object.keys(bucket).map(function (k) { return { grupa: k, n: bucket[k].length, netMedian: bucket[k].length ? mediana(bucket[k]) : null }; });
@@ -125,5 +133,5 @@ var Disciplina = (function () {
     return o.teza || o.invalidare || o.orizont ? o : null;
   }
 
-  return { PRAGURI_ORE: PRAGURI_ORE, REGULI: REGULI, iesiriBanda: iesiriBanda, garzi: garzi, lectia: lectia, verifica: verifica, curataTeza: curataTeza, cate: cate };
+  return { PRAGURI_ORE: PRAGURI_ORE, REGULI: REGULI, iesiriBanda: iesiriBanda, garzi: garzi, lectia: lectia, verifica: verifica, curataTeza: curataTeza, cate: cate, wilson: wilson, pctNet: pctNet };
 })();

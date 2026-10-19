@@ -41,6 +41,7 @@ var JurnalTrade = (function () {
       pornit: pornit, inchis: inchis, durataOre: (inchis - pornit) / 3600000,
       jos: jos, sus: sus, grileN: N, mod: mod, pasNet: pasNet, pretInit: init, pretInchidere: inch,
       // v100.51 (I-477): perechile incheiate, pentru real vs estimat
+      // audit 19.10 (6): pct e realizatul BRUT pe suma de pornire; rezultatul net pe suma pusă (după comisioane și funding) = Disciplina.pctNet(t) (net / pus)
       stopJos: nr(d.lossStop), perechi: nr(d.exchangeOrderPairedCount), rezultat: rez, pct: inv > 0 ? rez / inv : null,
       // v100.26: suma pusa REALA - usdtInvestment e doar suma de pornire; pe drum se adauga marja (extraMargin, care o cuprinde si pe
       // cea de la pornire) si profitul mutat in investitie creste quoteInvestment (profitExited). Dovada pe botii reali (30.09): banii
