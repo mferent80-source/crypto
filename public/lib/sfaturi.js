@@ -19,7 +19,7 @@ var Sfaturi = (function () {
     var x = Number(v); return isFinite(x) ? x : null;
   }
   // v100.62: cifrele prin TextRo (virgula, minusul „−”); preturile raman cu zecimalele lor
-  function usdt(v) { return v === null || v === undefined ? "—" : TextRo.usdt(v); }
+  function usdt(v) { return v === null || v === undefined ? "—" : TextRo.usdt(v, TextRo.zecMici(v)); }   // audit 19.10: o zecimală; o sumă mică nu iese „0,0”
   // v100.65 (ideea 3): sub 0,01 - 4 cifre semnificative (PUMP 0.004123, nu 0.0041), fara exponent; peste 0,01 - ca inainte
   // revizia Opus a 2b (5): de la 0,1 in jos (nu 0,01) - intre 0,01 si 0,1 pierdea o cifra fata de Consilier („0.0123” vs „0.01235”)
   function pret(v) { if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 0.1 || a === 0 ? 4 : Math.min(12, 3 - Math.floor(Math.log10(a)))); }
@@ -140,7 +140,7 @@ var Sfaturi = (function () {
     // D) Costurile pe zi fata de ce aduc grilele.
     var co = x.costuri;
     if (co && co.netZi != null && (co.fundingMananca || co.netZi < 0)) {
-      out.push({ cod: "costuri", ton: "atentie", titlu: "Costurile mănâncă grilele: " + TextRo.usdt(co.netZi, Math.abs(co.netZi) < 0.01 ? 3 : 2) + " pe zi, net",
+      out.push({ cod: "costuri", ton: "atentie", titlu: "Costurile mănâncă grilele: " + TextRo.usdt(co.netZi, TextRo.zecMici(co.netZi)) + " pe zi, net",
         // revizia Opus (I3, 02.10): comisioanele pe zi vin negative, funding-ul negativ cand il platesti si pozitiv cand il incasezi -
         // sumele fara semn, verbul dupa sens (inainte: „comisioanele iau −0,12”, iar funding-ul incasat se citea ca un cost)
         text: "Grilele aduc " + (co.grile24h != null ? TextRo.num(co.grile24h, 2) : "—") + " USDT în 24 h; comisioanele iau " + (co.comisionZi != null ? TextRo.num(Math.abs(co.comisionZi), 2) : "—") +

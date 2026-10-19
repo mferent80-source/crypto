@@ -24,7 +24,7 @@ await test("tinerea a mers mai bine: cat ar fi insemnat pentru cei din prima ora
   assert.ok(p, "blocul exista"); assert.equal(p.sub.n, 12); assert.equal(p.peste.n, 12);
   assert.ok(Math.abs(p.sub.medie - (-1)) < 1e-9); assert.ok(Math.abs(p.peste.medie - 2) < 1e-9); assert.ok(Math.abs(p.sub.comisioane - 9.6) < 1e-9);
   assert.equal(p.maiBine, true); assert.ok(Math.abs(p.diferenta - 36) < 1e-9);
-  assert.match(p.text, /≈ \+36,00 USDT/); assert.match(p.text, /comparație, nu o dovadă/);
+  assert.match(p.text, /≈ \+36,0 USDT/);   /* audit 19.10: o zecimală */ assert.match(p.text, /comparație, nu o dovadă/);
 });
 
 await test("tinerea NU a mers mai bine (cazul lui): o spune, arata comisioanele inchiderilor repezi si fereastra cea mai buna", () => {
@@ -32,7 +32,7 @@ await test("tinerea NU a mers mai bine (cazul lui): o spune, arata comisioanele 
   const s = ST.calc(l, { moneda: "USDT" }), p = s.primaOra;
   assert.equal(p.maiBine, false); assert.equal(p.diferenta, null);
   assert.match(p.text, /Ținerea mai lungă NU a mers mai bine în medie/);
-  assert.match(p.text, /comisioane −22,00 USDT din −28,00 USDT/);
+  assert.match(p.text, /comisioane −22,0 USDT din −28,0 USDT/);   // audit 19.10: rezultatele cu o zecimală
   assert.match(p.text, /Cea mai bună fereastră: 1–6 ore/);
 });
 

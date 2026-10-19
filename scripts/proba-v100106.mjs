@@ -51,7 +51,7 @@ await test("(B1) TAKE la 72% din grid: titlul NU spune „lângă marginea de jo
 await test("(B2) sfatul „margine”: titlul = unde e marginea și cât de departe; textul spune ce ar fi acolo și cât de des coboară moneda atât", () => {
   const m = sfTake().find((s) => s.cod === "margine");
   assert.match(m.titlu, /^Marginea de jos \(0\.06147\) e cu 9,1% sub preț$/, m.titlu);
-  assert.match(m.text, /^Acolo botul ar avea ~\d+ TAKE \(acum 696\), total ~[−+]?\d+,\d\d USDT; moneda scade cu atât în \d+% din zile \(\d+ din \d+/, m.text);
+  assert.match(m.text, /^Acolo botul ar avea ~\d+ TAKE \(acum 696\), total ~[−+]?\d+,\d USDT; moneda scade cu atât în \d+% din zile \(\d+ din \d+/, m.text);   // audit 19.10: rezultatele cu o zecimală
   assert.ok(m.text.length <= 160 && !/[.?]\s+[A-ZĂÂÎȘȚ]/.test(m.text), m.text.length + " " + m.text);
   assert.equal(typeof m.pctJos, "number"); assert.equal(typeof m.zile, "number");
 });

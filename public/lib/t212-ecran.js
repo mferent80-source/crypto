@@ -221,7 +221,7 @@ function t212ConsKvPt(tk) {
 }
 function t212DecText(tk, c) {
   var k = Consiliu.cheieDecizie(c), e = (t212ConsKvPt(tk).decizii || []).filter(function (x) { return x.cheie === k; }).pop();
-  return e ? "notat: " + (e.urmat ? "am făcut" : "n-am făcut") + " (" + new Date(e.t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ")" + (e.r != null ? " · în 5 zile de bursă de la decizie, acțiunea a mers " + (e.r >= 0 ? "+" : "−") + Math.abs(e.r).toFixed(2) + (e.fx ? " lei" : " $") + " pe poziție (pe preț, și dacă ai vândut)" : "") : "ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers";
+  return e ? "notat: " + (e.urmat ? "am făcut" : "n-am făcut") + " (" + new Date(e.t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ")" + (e.r != null ? " · în 5 zile de bursă de la decizie, acțiunea a mers " + (e.r >= 0 ? "+" : "−") + Math.abs(e.r).toFixed(1).replace(".", ",") + (e.fx ? " lei" : " $") + " pe poziție (pe preț, și dacă ai vândut)" : "") : "ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers";
 }
 async function t212Decizie(tk, da) {
   var p = (t212.pozPregatite || []).filter(function (x) { return x.ticker === tk; })[0], c = p && p.cons; if (!c) return;
@@ -556,7 +556,7 @@ function tbIdeiRender() {
 function tbIstoricRosu(x) { return !!(x && x.istoric && x.istoric.n >= 3 && x.istoric.total < 0); }
 function tbIstoricBoti(ist) {
   if (!ist || !ist.n) return "n-ai mai avut boți pe ea";
-  var bani = typeof TextRo !== "undefined" && TextRo.usdt ? TextRo.usdt(ist.total) : (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2).replace(".", ",") + " USDT";
+  var bani = typeof TextRo !== "undefined" && TextRo.usdt ? TextRo.usdt(ist.total, 1) : (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(1).replace(".", ",") + " USDT";   // audit 19.10: o zecimală
   return "istoricul tău: " + t212Cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, " + bani;
 }
 function tbSugestiiHtml(cl, sg, inchise) {
@@ -1312,7 +1312,7 @@ function contTotRender() {
   // v100.97: soldul contului întâi (ca la Trading 212), o zecimală; fără conturile citite se spune „în boți”
   var sp = contTotSoldPionex(boti, contTot.conturi);
   var soldH = sp ? ' · ' + (sp.conturiCitite ? "sold " : "în boți ") + '<b>' + (sp.botiFaraInvestit ? "≥ " : "") + sp.sold.toFixed(1).replace(".", ",") + ' USDT</b>' + (sp.botiFaraInvestit ? ' <span class="tbWarn">(' + escapeHtml(t212Cate(sp.botiFaraInvestit, "bot necitit", "boți necitiți")) + ')</span>' : '') + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Suma(sp.sold / fx)) + ')</span>' : '') : '';   // un sold, nu un profit: fără „+”
-  parti.push(boti ? '<span><b>Pionex</b>' + soldH + ' · ' + t212Cate(act.length, "bot activ", "boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + (usdt >= 0 ? "+" : "−") + Math.abs(usdt).toFixed(2) + ' USDT</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : contTot.botiEroare ? '<span class="tbWarn">Pionex: nu răspunde acum</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
+  parti.push(boti ? '<span><b>Pionex</b>' + soldH + ' · ' + t212Cate(act.length, "bot activ", "boți activi") + (areUsdt ? ' · <b class="' + t212Cls(usdt) + '">' + TextRo.usdt(usdt, 1) + '</b>' + (fx ? ' <span class="tbSub">(≈ ' + escapeHtml(t212Lei(usdt / fx)) + ')</span>' : '') : '') + '</span>' : contTot.botiEroare ? '<span class="tbWarn">Pionex: nu răspunde acum</span>' : '<span class="tbSub">Pionex: aduc boții…</span>');
   var sbH = typeof saltBandaHtml === "function" ? saltBandaHtml(contTot.salt) : "";   // v100.126: Salt lângă T212
   parti.push(c ? '<span><b>Trading 212</b> · ' + escapeHtml(t212Suma(c.total)) + ' · deschise <b class="' + t212Cls(c.ppl) + '">' + escapeHtml(t212Lei(c.ppl)) + '</b></span>' : '<span class="tbSub">Trading 212: aduc contul…</span>');
   // actiunile pe IESI: semaforul le-a pus deja in tabelul pozitiilor

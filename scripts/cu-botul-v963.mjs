@@ -117,7 +117,7 @@ await test("opritorul la podeaua rotunjita in jos (30,511 vs 30,5111) = 🟢 'la
   const b0 = vvv(), pod = T.pretPentruTotal(b0, 3), b = vvv({ opritorPierdere: Math.floor(pod * 1000) / 1000 });
   assert.ok(b.opritorPierdere < pod, "chiar e sub podea, la a 4-a zecimală");
   const r = S.semafor({ bot: b, fisa: { regim: LIN }, plan: plan(b) });
-  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /la adăpost/); assert.match(r.faCe, /stopul \(30\.5\d*\) păstrează \+3,00 USDT/);
+  assert.equal(r.nivel, "tine"); assert.equal(r.cod, "podea"); assert.match(r.motiv, /la adăpost/); assert.match(r.faCe, /stopul \(30\.5\d*\) păstrează \+3,0 USDT/);   // audit 19.10: rezultatele cu o zecimală
   const departe = vvv({ opritorPierdere: pod * 0.99 }); assert.equal(S.semafor({ bot: departe, fisa: { regim: LIN }, plan: plan(departe) }).nivel, "atentie", "1% sub podea = nu e la adăpost");
   const a = { ...b, id: "2383", baza: "VVV.PERP", activ: true }; assert.equal(A.reguli(a, { plan: plan(a), regim: { ...LIN, r4h: 1, r24h: 1 } }).plan.nivel, "info", "și alerta îl vede la adăpost");
 });
@@ -126,7 +126,7 @@ await test("totalLaPret e inversa lui pretPentruTotal; podeaUrca: la 1,5% sub pr
   assert.equal(T.podeaUrca(b, 3), null, "la VVV acum 1,5% sub preț păstrezi sub +3 -> nimic de urcat");
   const sus = vvv({ pretCurent: 31.5 }), u = T.podeaUrca(sus, 3);
   assert.ok(Math.abs(u.pret - 31.5 * 0.985) < 1e-9); assert.ok(u.pastrezi > 3); assert.ok(Math.abs(u.pastrezi - T.totalLaPret(sus, u.pret)) < 1e-12);
-  const r = S.semafor({ bot: sus, fisa: { regim: LIN }, plan: plan(sus) }); assert.match(r.deCe, /Cu 1,5% loc de respirație, stopul la 31\.0275 ar păstra \+\d+,\d\d USDT \(cel de acum: −/);
+  const r = S.semafor({ bot: sus, fisa: { regim: LIN }, plan: plan(sus) }); assert.match(r.deCe, /Cu 1,5% loc de respirație, stopul la 31\.0275 ar păstra \+\d+,\d USDT \(cel de acum: −/);   // audit 19.10: rezultatele cu o zecimală
 });
 await test("Discord 'poti urca opritorul': o data pe treapta (max 1 USDT, 1/4 din tinta), nu sub opritorul de acum, nu pe miscarea contra", async () => {
   const bb = (p, op) => ({ ...vvv({ pretCurent: p, opritorPierdere: op }), id: "2383", baza: "VVV.PERP", activ: true });

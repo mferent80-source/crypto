@@ -65,7 +65,7 @@ await test("garda: `--mod=` scrie în inventar doar grupurile cerute", () => {
 await test("„margine”: titlul cu cifra întâi și virgulă; textul = o frază (ce ar fi la margine + cât de des coboară atât); sursa separat; niciun sfat cu „deCe”", () => {
   const l = sfaturi(CRV()), m = cod(l, "margine");
   assert.match(m.titlu, /^Marginea de jos \(0\.3841\) e cu \d+,\d% sub preț$/);   /* v100.106 */
-  assert.match(m.text, /^Acolo botul ar avea ~\d+ CRV \(acum \d+\), total ~[−+]?\d+,\d\d USDT; moneda scade cu atât în \d+% din zile \(\d+ din \d+(, puține cazuri)?\)/);
+  assert.match(m.text, /^Acolo botul ar avea ~\d+ CRV \(acum \d+\), total ~[−+]?\d+,\d USDT; moneda scade cu atât în \d+% din zile \(\d+ din \d+(, puține cazuri)?\)/);   // audit 19.10: rezultatele cu o zecimală
   assert.ok(m.text.length <= 160 && !/[.?]\s+[A-ZĂÂÎȘȚ]/.test(m.text), m.text);
   assert.match(m.sursa, /lumânările de 4 ore/);
   assert.ok(l.every((s) => !("deCe" in s)), "sfaturi cu „deCe”: " + l.filter((s) => "deCe" in s).map((s) => s.cod));
@@ -173,8 +173,8 @@ await test("„Ce ai de făcut acum”: rândul planului lipsă are o frază de 
   assert.equal(r.text, "Cu planul scris la rece, colectorul te anunță când se atinge un prag.");
 });
 await test("ritmul de recuperare: USDT/zi cu virgulă", () => {
-  assert.equal(T.ritmRecuperare(-10, 0.8).text, "~13 zile până pe zero la ritmul de azi (+0,80 USDT/zi), dacă prețul stă pe loc");
-  assert.equal(T.ritmRecuperare(-3.2, 7.99).text, "~0,4 zile până pe zero la ritmul de azi (+7,99 USDT/zi), dacă prețul stă pe loc");
+  assert.equal(T.ritmRecuperare(-10, 0.8).text, "~13 zile până pe zero la ritmul de azi (+0,8 USDT/zi), dacă prețul stă pe loc");   // audit 19.10: rezultatele cu o zecimală
+  assert.equal(T.ritmRecuperare(-3.2, 7.99).text, "~0,4 zile până pe zero la ritmul de azi (+8,0 USDT/zi), dacă prețul stă pe loc");   // audit 19.10: rezultatele cu o zecimală
 });
 await test("fiecare probă care cheamă ritmRecuperare încarcă întâi TextRo", () => {
   assert.deepEqual(faraTextRo(/ritmRecuperare\(/), [], "probe fără TextRo");

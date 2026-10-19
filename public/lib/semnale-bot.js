@@ -23,7 +23,7 @@ var SemnaleBot = (function () {
   // v100.61 (specul „sfaturi concise”): cifrele trec prin TextRo (virgula, minusul „−”); preturile raman cu fmtPret
   var X = function (v) { return TextRo.ori(v); };
   var P = function (v) { return TextRo.pct(v * 100); };
-  var U = function (v) { return TextRo.usdt(v); };
+  var U = function (v) { return TextRo.usdt(v, TextRo.zecMici(v)); };   // audit 19.10: o zecimală; o sumă mică nu iese „0,0”
   // revizia Opus I4: valorile planului cum le-a scris el, dar cu virgula („7,5”, „15”, „15,75”)
   var Pl = function (v) { v = nr(v); return v === null ? "?" : TextRo.num(Math.abs(v), 2).replace(/,?0+$/, ""); };
 
@@ -353,7 +353,7 @@ var SemnaleBot = (function () {
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";
     if (ip) c.push({ nivel: "atentie", cod: "ia-profit", motiv: "moment bun de încasat" + ipT, faCe: "Aș închide botul pe plus și aș reporni doar când fișa zice iar 🟢.", deCe: ip.deCe || "" });
     if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, parte: x.muta.parte || null, faCe: "Aș muta gridul: închid botul și pornesc cu setările din cartela Gridul.", deCe: x.muta.deCe || "", sursa: x.muta.sursa || null });
-    if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc grilele: " + TextRo.usdt(x.costuri.netZi, Math.abs(x.costuri.netZi) < 0.01 ? 3 : 2) + " net/zi", faCe: "Aș lua levier mai mic sau grile mai rare la următorul bot." });
+    if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc grilele: " + TextRo.usdt(x.costuri.netZi, TextRo.zecMici(x.costuri.netZi)) + " net/zi", faCe: "Aș lua levier mai mic sau grile mai rare la următorul bot." });
     var rB = x.btc ? nr(x.btc.r) : null;
     if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC în mișcare" + (rB !== null ? " (" + X(rB) + " față de obișnuit)" : "") + ", moneda încă nu", faCe: "N-aș adăuga bani până nu se vede încotro trage BTC.", deCe: "Altcoinii urmează des BTC." });
     var ag = x.aglomerare, nS = ag ? nr(ag.semne) : null;

@@ -20,7 +20,11 @@ var TextRo = (function () {
   function cuPlus(x, z, implicit) { x = nr(x); return x !== null && x > 0 && Number(Math.abs(x).toFixed(zec(z, implicit))) !== 0 ? "+" : ""; }
   function pctSemn(x, z) { return nr(x) === null ? "—" : cuPlus(x, z, 1) + num(x, z) + "%"; }
   function ori(x, z) { return nr(x) === null ? "—" : num(x, z) + "×"; }
-  function usdt(x, z) { z = zec(z, 2); return nr(x) === null ? "—" : cuPlus(x, z, 2) + num(x, z) + " USDT"; }
+  // audit 19.10: implicit O zecimală (regula lui: rezultatele cu o singură zecimală); 2 sau 3 zecimale doar cerute explicit
+  function usdt(x, z) { z = zec(z, 1); return nr(x) === null ? "—" : cuPlus(x, z, 1) + num(x, z) + " USDT"; }
+  // audit 19.10: zecimalele unei sume care poate fi mică (costul pe zi, funding-ul plătit): 1 de la 0,1 în sus, 2 sub 0,1, 3 sub 0,01,
+  // ca „0,04 USDT” să nu iasă „0,0 USDT”. Se cere explicit: TextRo.usdt(x, TextRo.zecMici(x)).
+  function zecMici(x) { x = nr(x); if (x === null || x === 0) return 1; var a = Math.abs(x); return a >= 0.1 ? 1 : a >= 0.01 ? 2 : 3; }
   // „1.234 lei” (rotunjit la leu, mii cu punct); cuSemn -> „+1.234 lei”
   function lei(x, cuSemn) {
     x = nr(x); if (x === null) return "—";
@@ -59,6 +63,6 @@ var TextRo = (function () {
       return s.slice(0, bun).replace(/\s+$/, "") + "\n" + un(s.slice(bun).replace(/^\s+/, ""));
     }).join("\n");
   }
-  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe };
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, zecMici: zecMici, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe };
 })();
 if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

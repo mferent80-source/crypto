@@ -52,9 +52,9 @@ await test("(1) Acasă: fără monedă comună sau înainte de starea de revenir
 await test("(2) tbIstoricBoti: „istoricul tău: 5 boți, 3 pe plus, −7,22 USDT” / „1 bot, 1 pe plus, +2,00 USDT” / „17 boți, 10 pe plus, −173,55 USDT”; fără boți ⇒ „n-ai mai avut boți pe ea”", () => {
   const ctx = { TextRo: globalThis.TextRo }; vm.createContext(ctx);
   vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n;this.f=tbIstoricBoti;", ctx);
-  assert.equal(ctx.f({ n: 5, pePlus: 3, total: -7.22 }), "istoricul tău: 5 boți, 3 pe plus, −7,22 USDT");
-  assert.equal(ctx.f({ n: 1, pePlus: 1, total: 2 }), "istoricul tău: 1 bot, 1 pe plus, +2,00 USDT");
-  assert.equal(ctx.f({ n: 17, pePlus: 10, total: -173.55 }), "istoricul tău: 17 boți, 10 pe plus, −173,55 USDT");
+  assert.equal(ctx.f({ n: 5, pePlus: 3, total: -7.22 }), "istoricul tău: 5 boți, 3 pe plus, −7,2 USDT");   // audit 19.10: rezultatele cu o zecimală
+  assert.equal(ctx.f({ n: 1, pePlus: 1, total: 2 }), "istoricul tău: 1 bot, 1 pe plus, +2,0 USDT");
+  assert.equal(ctx.f({ n: 17, pePlus: 10, total: -173.55 }), "istoricul tău: 17 boți, 10 pe plus, −173,6 USDT");
   assert.equal(ctx.f({ n: 0, pePlus: 0, total: 0 }), "n-ai mai avut boți pe ea"); assert.equal(ctx.f(null), "n-ai mai avut boți pe ea");
 });
 await test("(2) Tabloul, candidații („Pe ce aș porni un bot acum”): rândul randat scrie „−121,18 USDT”, nu „−121.18”", () => {
@@ -64,7 +64,7 @@ await test("(2) Tabloul, candidații („Pe ce aș porni un bot acum”): rându
   vm.createContext(ctx);
   vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricRosu") + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbIdeiRender") + "\n;tbIdeiRender();", ctx);   /* v100.92 (revizia Opus): + tbIstoricRosu */
   const t = text(box.innerHTML);
-  assert.ok(t.includes("VVV interval 16,33%") && t.includes("istoricul tău: 2 boți, 0 pe plus, −121,18 USDT") && !t.includes("121.18"), t);
+  assert.ok(t.includes("VVV interval 16,33%") && t.includes("istoricul tău: 2 boți, 0 pe plus, −121,2 USDT") && !t.includes("121.18") && !t.includes("121.2"), t);   // audit 19.10: rezultatele cu o zecimală
 });
 
 console.log("\n" + (pica ? "V100.89 PICA · " + pica + " din " + (ok + pica) : "V100.89 PASS · " + ok + "/" + ok));

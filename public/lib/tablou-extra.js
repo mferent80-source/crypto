@@ -710,7 +710,7 @@ var TabloExtra = (function () {
     if (total >= 0) return { zile: 0, text: "botul e pe plus: nimic de recuperat" };
     if (netZi <= 0) return { zile: null, text: "la ritmul de azi nu se recuperează: grilele nu acoperă costurile" };
     var z = -total / netZi;
-    return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") + " zile" : cate(Math.round(z), "zi", "zile")) + " până pe zero la ritmul de azi (" + TextRo.usdt(netZi) + "/zi), dacă prețul stă pe loc" };   // v100.62: virgula prin TextRo
+    return { zile: z, text: "~" + (z < 10 ? z.toFixed(1).replace(".", ",") + " zile" : cate(Math.round(z), "zi", "zile")) + " până pe zero la ritmul de azi (" + TextRo.usdt(netZi, TextRo.zecMici(netZi)) + "/zi), dacă prețul stă pe loc" };   // v100.62: virgula prin TextRo
   }
   // v87: cat din castigul unei umpleri ia comisionul; v100.39: pe grile Pionex ia 0,02% (maker) la intrare + 0,02% la iesire
   function comisionDinUmplere(netPct) {

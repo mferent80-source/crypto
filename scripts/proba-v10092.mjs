@@ -95,10 +95,10 @@ function sugestii(rev, sh) {
 await test("(B) I-525 listele de revenire/short: istoricul tău pe minus (≥ 3 boți, regula candidaților) ⇒ dunga roșie și istoricul pe roșu; altfel după piață (verde), istoricul gri", () => {
   const h = sugestii([{ moneda: "POWER", revenire: REV(), istoric: IST(17, 10, -173.55) }, { moneda: "AKE", revenire: REV(), istoric: IST(2, 0, -5) }], [{ moneda: "LIT", dir: "short", istoric: IST(5, 4, 12.3) }, { moneda: "Q", dir: "short", istoric: IST(3, 1, -0.5) }]);
   const rand = (m) => { const i = h.indexOf("<b>" + m + "</b>"); assert.ok(i >= 0, "lipsește rândul " + m); return h.slice(Math.max(0, i - 120), i + 320); };
-  assert.match(rand("POWER"), /tbDunga r"/); assert.match(rand("POWER"), /<p class="bad">istoricul tău: 17 boți, 10 pe plus, −173,55 USDT<\/p>/);
-  assert.match(rand("AKE"), /tbDunga v"/); assert.match(rand("AKE"), /<p>istoricul tău: 2 boți, 0 pe plus, −5,00 USDT<\/p>/);
+  assert.match(rand("POWER"), /tbDunga r"/); assert.match(rand("POWER"), /<p class="bad">istoricul tău: 17 boți, 10 pe plus, −173,6 USDT<\/p>/);   // audit 19.10: rezultatele cu o zecimală
+  assert.match(rand("AKE"), /tbDunga v"/); assert.match(rand("AKE"), /<p>istoricul tău: 2 boți, 0 pe plus, −5,0 USDT<\/p>/);   // audit 19.10: o zecimală
   assert.match(rand("LIT"), /tbDunga v"/); assert.match(rand("LIT"), /<p>istoricul tău: 5 boți/);
-  assert.match(rand("Q"), /tbDunga r"/); assert.match(rand("Q"), /<p class="bad">istoricul tău: 3 boți, 1 pe plus, −0,50 USDT<\/p>/);
+  assert.match(rand("Q"), /tbDunga r"/); assert.match(rand("Q"), /<p class="bad">istoricul tău: 3 boți, 1 pe plus, −0,5 USDT<\/p>/);   // audit 19.10: o zecimală
 });
 await test("(B) I-520 Trading 212: t212File - 3 file cu numărul în titlu, fila aleasă apăsată și vizibilă, celelalte ascunse; t212FilaAleasa din localStorage (implicit „idei”)", () => {
   const ctx = { escapeHtml: esc, localStorage: { getItem: (k) => (k === "t212Fila" ? "revenire" : null), setItem() {} } }; vm.createContext(ctx);

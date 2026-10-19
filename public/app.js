@@ -3005,7 +3005,7 @@ function checkAlerts(q,sm,deriv){
  if(st.alerts.signal&&sm&&Math.max(sm.long,sm.short)>=st.signalMin&&sm.direction!=="WAIT")addAlert("signal","Strong "+sm.direction+ " setup",`${coin(norm($("symbol").value))} confidence ${Math.max(sm.long,sm.short).toFixed(0)}/100`,"good");
  if(deriv){
    if(st.alerts.ls&&deriv.ls!=null&&(deriv.ls>1.5||deriv.ls<.67))addAlert("ls","Extreme Long/Short",`Ratio ${deriv.ls.toFixed(2)} · ${deriv.ls>1.5?"longs crowded":"shorts crowded"}`,"high");
-   if(st.alerts.funding&&deriv.funding!=null&&Math.abs(deriv.funding)>.0005)addAlert("funding","Funding extreme",`${(deriv.funding*100).toFixed(4)}% funding`,"high");
+   if(st.alerts.funding&&deriv.funding!=null&&Math.abs(deriv.funding)>.0005)addAlert("funding","Funding extreme",`${fundingRo(deriv.funding)} funding`,"high");
    if(st.alerts.oi&&deriv.oiTrend&&deriv.oiTrend!=="N/A"&&Math.abs(parseFloat(deriv.oiTrend))>=3)addAlert("oi","OI expansion",`${deriv.oiTrend} over recent samples`,"warn")
  }
 }
@@ -4164,7 +4164,7 @@ function updateOrderFlow(q,deriv){
  $("derivPressure").textContent=deriv&&deriv.ls!=null?(deriv.ls>1.15?"LONG HEAVY":deriv.ls<.87?"SHORT HEAVY":"BALANCED"):"N/A";
  $("derivPressure").className="flowBig "+(deriv&&deriv.ls!=null?(deriv.ls>1.15?"good":deriv.ls<.87?"bad":"neutral"):"neutral");
  $("ofLongs").textContent=deriv&&deriv.longPct!=null?deriv.longPct.toFixed(1)+"%":"N/A";$("ofShorts").textContent=deriv&&deriv.shortPct!=null?deriv.shortPct.toFixed(1)+"%":"N/A";
- $("ofOi").textContent=deriv&&deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+deriv.oiTrend:""):"N/A";$("ofFunding").textContent=deriv&&deriv.funding!=null?(deriv.funding*100).toFixed(4)+"%":"N/A";
+ $("ofOi").textContent=deriv&&deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+String(deriv.oiTrend).replace(".",","):""):"N/A";$("ofFunding").textContent=fundingRo(deriv&&deriv.funding);
 }
 function updateFlowWindow(q){
  const deriv=window.__derivativesState||{},flowScore=(q.mfi==null?0:q.mfi>=55?1:q.mfi<=45?-1:0)+(q.cmf==null?0:q.cmf>0?1:-1)+(q.obvSlope==null?0:q.obvSlope>0?1:-1)+(q.vwapAbove==null?0:q.vwapAbove?1:-1),flowBias=flowScore>=2?"ACCUMULATION":flowScore<=-2?"DISTRIBUTION":"BALANCED";
@@ -4172,18 +4172,22 @@ function updateFlowWindow(q){
  $("flowMfi").textContent=q.mfi==null?"—":q.mfi.toFixed(1);$("flowCmf").textContent=q.cmf==null?"—":q.cmf.toFixed(3);$("flowObv").textContent=q.obvSlope==null?"—":q.obvSlope>0?"UP":"DOWN";
  $("flowOi").textContent=deriv.oi?compact(deriv.oi)+(deriv.oiTrend&&deriv.oiTrend!=="N/A"?" · "+deriv.oiTrend:""):"N/A";
  $("flowLs").textContent=deriv.longPct!=null?`${deriv.longPct.toFixed(0)} / ${deriv.shortPct.toFixed(0)}`:"N/A";
- $("flowFunding").textContent=deriv.funding!=null?`${(deriv.funding*100).toFixed(4)}% · ${deriv.context||"BALANCED"}`:"N/A";
+ $("flowFunding").textContent=deriv.funding!=null?`${fundingRo(deriv.funding)} · ${deriv.context||"BALANCED"}`:"N/A";
  $("flowSummary").textContent=`${flowBias} · ${q.cmf==null?"capital flow —":q.cmf>0?"capital inflow":"capital outflow"} · ${q.vr==null?"volum lipsă":q.vr>=1.2?"volume confirms":"volume weak"}`;
  updateOrderFlow(q,deriv);checkAlerts(q,window.__signalState?.sm,deriv)
 }
 
 function pctText(v){return Number.isFinite(v)?(v>=0?"+":"")+v.toFixed(2)+"%":"—"}
+// audit 19.10: pe ecran cu virgula, ca OI (pctText rămâne cu punct: oiTrend e citit înapoi cu parseFloat în nivelurile de lichidare)
+function pctTextRo(v){return pctText(v).replace(".",",")}
+// audit 19.10: funding-ul cu 4 zecimale (e o rată, nu un rezultat), cu virgula și „−”
+function fundingRo(fr){if(fr==null||!Number.isFinite(+fr))return "N/A";const s=(Math.abs(+fr)*100).toFixed(4);return (+fr<0&&Number(s)!==0?"−":"")+s.replace(".",",")+"%"}
 function oiChangeAt(hist,barsBack){if(!hist||hist.length<2)return null;let last=hist[hist.length-1],idx=Math.max(0,hist.length-1-barsBack),old=hist[idx],lv=Number(last.sumOpenInterest||last.sumOpenInterestValue||0),ov=Number(old.sumOpenInterest||old.sumOpenInterestValue||0);return ov>0?(lv/ov-1)*100:null}
 function fundingSummary(hist){if(!hist||!hist.length)return {avg24:null,avg3d:null,pct:null};const a=hist.map(x=>Number(x.fundingRate)).filter(Number.isFinite),avg=n=>{let z=a.slice(-n);return z.length?z.reduce((x,y)=>x+y,0)/z.length:null},cur=a[a.length-1];return {avg24:avg(3),avg3d:avg(9),pct:Number.isFinite(cur)?pctRank(a,cur):null}}
 function renderOiFundingMatrix(q,deriv){
- const d=deriv.oiDeltas||{},fs=deriv.fundingStats||{};$("oi15m").textContent=pctText(d.m15);$("oi1h").textContent=pctText(d.h1);$("oi4h").textContent=pctText(d.h4);$("oi24h").textContent=pctText(d.h24);
+ const d=deriv.oiDeltas||{},fs=deriv.fundingStats||{};$("oi15m").textContent=pctTextRo(d.m15);$("oi1h").textContent=pctTextRo(d.h1);$("oi4h").textContent=pctTextRo(d.h4);$("oi24h").textContent=pctTextRo(d.h24);
  let pchg=window.__radarState&&window.__radarState.tick?Number(window.__radarState.tick.priceChangePercent):null,oi=d.h24,ctx="N/A";if(Number.isFinite(pchg)&&Number.isFinite(oi))ctx=pchg>=0&&oi>=0?"LONG BUILDUP":pchg<0&&oi>=0?"SHORT BUILDUP":pchg>=0&&oi<0?"SHORT COVERING":"LONG UNWINDING";
- $("oiMatrixContext").textContent=ctx;$("oiMatrixContext").className=ctx==="LONG BUILDUP"||ctx==="SHORT COVERING"?"good":ctx==="SHORT BUILDUP"||ctx==="LONG UNWINDING"?"bad":"neutral";$("funding24h").textContent=Number.isFinite(fs.avg24)?(fs.avg24*100).toFixed(4)+"%":"—";$("funding3d").textContent=Number.isFinite(fs.avg3d)?(fs.avg3d*100).toFixed(4)+"%":"—";$("fundingPctile").textContent=Number.isFinite(fs.pct)?fs.pct.toFixed(0)+"%":"—"
+ $("oiMatrixContext").textContent=ctx;$("oiMatrixContext").className=ctx==="LONG BUILDUP"||ctx==="SHORT COVERING"?"good":ctx==="SHORT BUILDUP"||ctx==="LONG UNWINDING"?"bad":"neutral";$("funding24h").textContent=Number.isFinite(fs.avg24)?fundingRo(fs.avg24):"—";$("funding3d").textContent=Number.isFinite(fs.avg3d)?fundingRo(fs.avg3d):"—";$("fundingPctile").textContent=Number.isFinite(fs.pct)?fs.pct.toFixed(0)+"%":"—"
 }
 function renderQuantFlow(q,deriv=window.__derivativesState||{}){
  if(!q)return;
@@ -4329,15 +4333,15 @@ async function derivatives(){
  }
  let fr=d&&d.funding!=null?Number(d.funding):null,oi=d&&d.openInterest!=null?Number(d.openInterest):null,ls=d&&d.longShort!=null?Number(d.longShort):null;
  let oiDeltas={m15:oiChangeAt(histOI,3),h1:oiChangeAt(histOI,12),h4:oiChangeAt(histOI,48),h24:oiChangeAt(histOI,288)},oiTrend=Number.isFinite(oiDeltas.h1)?pctText(oiDeltas.h1):"N/A",fundingStats=fundingSummary(fundingHist);
- $("funding").textContent=fr==null?"N/A":(fr*100).toFixed(4)+"%";
+ $("funding").textContent=fundingRo(fr);   // audit 19.10: virgula, ca OI
  $("oi").textContent=oi==null?"N/A":compact(oi);
- $("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2);
+ $("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2).replace(".",",");
  let crowd=0;if(fr!=null){if(fr>.0003)crowd--;else if(fr<-.0003)crowd++}if(ls!=null){if(ls>1.5)crowd--;else if(ls<.67)crowd++}
  let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";
  $("fcontext").textContent=context;$("fcontext").className="value "+(context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");
  $("fundingBias").textContent=fr==null?"N/A":fr>.0003?"Long crowded":fr<-.0003?"Short crowded":"Balanced";
  $("crowdingRisk").textContent=ls==null?"N/A":ls>1.5||ls<.67?"Ridicat":"Normal";
- $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend:"");
+ $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend.replace(".",","):"");
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
  window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats};markFresh("futures");
  if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q);renderLiquidationProxy(window.__radarState.q,window.__derivativesState);renderQuantFlow(window.__radarState.q,window.__derivativesState)}
@@ -5420,7 +5424,7 @@ async function gridHartieRender(forta){
   for(var i=0;i<l.length;i++){var x=l[i],c=grHartieCache[x.simbol];
     if(forta||!c||Date.now()-c.la>5*60000){try{var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(x.simbol)+"&interval=15M&limit=500");grHartieCache[x.simbol]={la:Date.now(),bare:GridCalcul.bare(k&&k.data&&k.data.klines)}}catch(e){grHartieCache[x.simbol]={la:Date.now(),bare:null,eroare:textEroare(e)}}await grPauza(400)}}
   box.innerHTML=l.slice().reverse().map(function(x){var c=grHartieCache[x.simbol]||{},r=c.bare?Obiceiuri.hartie(x,c.bare):null,s=x.setare;
-    var rez=!r?(c.eroare?"nu am prețurile":"—"):!r.bare?"încă nicio lumânare închisă după pornire":(r.usdt>=0?"+":"−")+Math.abs(r.usdt).toFixed(2).replace(".",",")+" USDT ("+P(r.net)+")"+(r.oprit?" · a atins stopul":"")+(r.lichidat?" · lichidat":"");   /* v100.72: virgula, fără majuscule */
+    var rez=!r?(c.eroare?"nu am prețurile":"—"):!r.bare?"încă nicio lumânare închisă după pornire":TextRo.usdt(r.usdt,1)+" ("+P(r.net)+")"+(r.oprit?" · a atins stopul":"")+(r.lichidat?" · lichidat":"");   /* v100.72: virgula, fără majuscule */
     return '<div class="grHartieRand"><div><b>'+escapeHtml(x.simbol.replace(/_USDT_PERP$/,""))+(x.fereastra==="larg"?" · LARG":x.fereastra==="ingust"?" · ÎNGUST":"")+'</b> <span class="tbSub">'+escapeHtml((GR_DIR[s.dir]||s.dir)+" "+s.levier+"× · "+TextRo.cate(s.grile+1,"grilă","grile")+" · "+grPret(s.jos,null)+" – "+grPret(s.sus,null)+" · "+s.suma+" USDT · pornit "+new Date(x.pornit).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+" la "+((GR_NIVEL[x.verdict]||["?"])[0]))+'</span></div><b class="'+(r&&r.usdt!=null?(r.usdt>=0?"good":"bad"):"")+'">'+escapeHtml(rez)+'</b><button type="button" class="actionGhost grCopy" value="'+escapeHtml(x.id)+'" data-action-click="gridHartieSterge(this.value)">✕</button></div>'}).join("")
     +'<p class="grNota">Simulat cu aceeași mașină ca proba din fișă (comision 0,05%/umplere, stop, lichidare), pe lumânări de 15 min închise după pornire (cel mult ~5 zile).</p>';
 }
@@ -6087,7 +6091,7 @@ async function tbDecizie(urmat){
   catch(e){toast("Nu am putut nota decizia: "+(e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)),"bad")}
 }
 function tbDecStareText(c){var k=tbConsCheie(c),e=(tbConsKv.decizii||[]).filter(function(x){return x.cheie===k}).pop();
-  return e?"notat: "+(e.urmat?"am făcut":"n-am făcut")+" ("+new Date(e.t).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+")"+(e.r!=null?" · după 24 h: "+(e.r>=0?"+":"−")+Math.abs(e.r).toFixed(2)+" USDT":""):"ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers"}
+  return e?"notat: "+(e.urmat?"am făcut":"n-am făcut")+" ("+new Date(e.t).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+")"+(e.r!=null?" · după 24 h: "+TextRo.usdt(e.r,1):""):"ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers"}
 // v100.111 (I-550): ce fereastră a pornit (ofertele fișei de dinainte de pornire, de pe server) - în cartela verdictului, nu doar o dată pe Discord
 var tbFer={la:0,inLucru:false};
 function tbAduFerestre(){if(tbFer.inLucru||Date.now()-tbFer.la<5*60000)return;tbFer.inLucru=true;var nou=false;getJSON("/api/istoric-bot?action=ferestre").then(function(d){if(d&&Array.isArray(d.ferestre)){nou=JSON.stringify(d.ferestre)!==JSON.stringify(grFerestreSrv);grFerestreSrv=d.ferestre}}).catch(function(){}).then(function(){tbFer.la=Date.now();tbFer.inLucru=false;if(nou&&tbStare.bot&&$("tbSemafor"))tbDeseneazaSemafor(tbStare.bot)})}   /* revizia (R6): rândul 📒 apare când sosesc ofertele */
@@ -6373,7 +6377,7 @@ function tbDeseneazaExtra(b){
   h+=linie("Funding pe zi",z.fundingZi==null?"—":botiBan(z.fundingZi),z.fundingMananca?"bad":"tbSubVal",z.fundingMananca?"mănâncă tot câștigul din grile":"medie de la pornire");
   h+=linie("Grile − costuri, pe zi",z.netZi==null?"—":botiBan(z.netZi),botiClasa(z.netZi));
   h+='</div><div class="tbGrupCard">'+tbGrup("Dacă închizi acum");
-  h+='<div class="tbLinie tbLinieTotal"><span>Dacă îl închizi acum, iei</span><b class="'+botiClasa(q.iei!=null&&botiNr(b.investit)!=null?q.iei-botiNr(b.investit):null)+'">'+escapeHtml(q.iei==null?"—":q.iei.toFixed(2)+" USDT")+'</b></div>';
+  h+='<div class="tbLinie tbLinieTotal"><span>Dacă îl închizi acum, iei</span><b class="'+botiClasa(q.iei!=null&&botiNr(b.investit)!=null?q.iei-botiNr(b.investit):null)+'">'+escapeHtml(q.iei==null?"—":TextRo.num(q.iei,1)+" USDT")/* audit 19.10: o zecimală, virgula */+'</b></div>';
   h+=linie("Comisionul de închidere",q.comisionInchidere==null?"—":botiBan(-q.comisionInchidere),"tbSubVal");
   h+=linie("Prețul la care botul e pe zero",q.pretZero==null?(q.zeroNeatins?"din preț, în grid, nu mai ajunge pe zero":"—"):grPret(q.pretZero,null),"",q.distantaZeroPct==null?"":(q.distantaZeroPct>=0?"+":"")+P(q.distantaZeroPct)+" de aici");
   h+='</div><div class="tbGrupCard">'+tbGrup("Contextul");
@@ -6382,7 +6386,7 @@ function tbDeseneazaExtra(b){
   var lab=grLaborator&&grLaborator.date,qm=lab&&Array.isArray(lab.intrebari)?lab.intrebari.find(function(x){return x.id==="miscare"}):null;
   if(qm)h+=linie("Laboratorul: după mișcare vs liniște",P(qm.A&&qm.A.pePlus)+" vs "+P(qm.B&&qm.B.pePlus)+" pe plus",qm.verdict==="dovedit"?"good":"tbSubVal",qm.verdict==="dovedit"?"DOVEDIT":"n-am aflat încă");
   var vp=TabloExtra.vsPozitie(b);
-  if(vp&&vp.pozitieSimpla!=null)h+=linie(b.directie==="long"||b.directie==="short"?"Un "+b.directie+" simplu, aceeași sumă și levier":"Fără bot (neutru)",botiBan(vp.pozitieSimpla),botiClasa(vp.pozitieSimpla),vp.diferenta!=null?"gridul "+(vp.diferenta>=0?"a adus ":"a pierdut ")+Math.abs(vp.diferenta).toFixed(2)+" față de el":"");
+  if(vp&&vp.pozitieSimpla!=null)h+=linie(b.directie==="long"||b.directie==="short"?"Un "+b.directie+" simplu, aceeași sumă și levier":"Fără bot (neutru)",botiBan(vp.pozitieSimpla),botiClasa(vp.pozitieSimpla),vp.diferenta!=null?"gridul "+(vp.diferenta>=0?"a adus ":"a pierdut ")+TextRo.num(Math.abs(vp.diferenta),1)+" față de el":"");
   var j=TabloExtra.legaturaJurnal(grJurnalCitit(),b);
   h+=j?linie("Din jurnal","pornit la "+((GR_NIVEL[j.verdict]||["?"])[0])+", proba zicea mediana "+P(j.mediana),"","acum "+(botiNr(b.profitTotal)!=null&&botiNr(b.investit)?P(botiNr(b.profitTotal)/botiNr(b.investit)):"—")):linie("Din jurnal","nelegat","tbSubVal","n-ai notat fișa la pornire");
   h+='</div>';

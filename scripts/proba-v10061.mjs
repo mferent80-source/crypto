@@ -19,7 +19,7 @@ await test("TextRo: virgula, minusul „−”, zero fara semn, unitati; o valoa
   const c = [[TR.num(12.44), "12,4"], [TR.num(-0.84), "−0,8"], [TR.num(-0.04), "0,0"], [TR.num(null), "—"], [TR.num(NaN), "—"], [TR.num("3.5"), "3,5"], [TR.num(Infinity), "—"],
     [TR.pct(12.44), "12,4%"], [TR.pct(null), "—"], [TR.pct(-0.84), "−0,8%"], [TR.pct(0.06, 3), "0,060%"],
     [TR.pctSemn(1.24), "+1,2%"], [TR.pctSemn(-0.84), "−0,8%"], [TR.pctSemn(0.04), "0,0%"], [TR.pctSemn(0), "0,0%"],
-    [TR.ori(1.74), "1,7×"], [TR.usdt(8.5), "+8,50 USDT"], [TR.usdt(-8.5), "−8,50 USDT"], [TR.usdt(0), "0,00 USDT"], [TR.usdt(-0.004), "0,00 USDT"], [TR.usdt(-10.24, 1), "−10,2 USDT"], [TR.usdt(undefined), "—"],
+    [TR.ori(1.74), "1,7×"], [TR.usdt(8.5), "+8,5 USDT"], [TR.usdt(-8.5), "−8,5 USDT"], [TR.usdt(0), "0,0 USDT"], [TR.usdt(-0.004), "0,0 USDT"],   /* audit 19.10: implicit o zecimală */ [TR.usdt(-10.24, 1), "−10,2 USDT"], [TR.usdt(undefined), "—"],
     [TR.lei(1234.4), "1.234 lei"], [TR.lei(-1234567), "−1.234.567 lei"], [TR.lei(5, true), "+5 lei"], [TR.lei(0.4, true), "0 lei"],
     [TR.ore(45 * 60000), "45 min"], [TR.ore(3600000), "1 h"], [TR.ore(5.25 * 3600000), "5,3 h"], [TR.ore(59.6 * 60000), "1 h"], [TR.ore(20000), "1 min"], [TR.ore(-1), "—"], [TR.num(2.1, 2), "2,10"]];
   for (const [a, b] of c) assert.equal(a, b);

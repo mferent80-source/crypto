@@ -324,7 +324,7 @@ function acasaDeseneaza() {
   var vcls = vixU == null ? "acMut" : vixU < 20 ? "good" : vixU < 30 ? "warn" : "bad", vnume = vixU == null ? "" : vixU < 15 ? "liniște mare" : vixU < 20 ? "liniște" : vixU < 30 ? "teamă" : "panică";
   var v31 = serie(vixB, 31), vmin = v31.length ? Math.min.apply(null, v31) : null, vmax = v31.length ? Math.max.apply(null, v31) : null;
   $("acVix").innerHTML = '<div class="acCap"><h4>VIX · frica bursei</h4><span class="acSub">zilnic</span></div>'
-    + acCadran(vixU, vixU == null ? null : (vixU - 10) / 30, "#26A96C", "#E0524A", "10", "40", "VIX " + (vixU == null ? "fără date" : vixU.toFixed(2) + ", " + vnume))
+    + acCadran(vixU, vixU == null ? null : (vixU - 10) / 30, "#26A96C", "#E0524A", "10", "40", "VIX " + (vixU == null ? "fără date" : vixU.toFixed(1).replace(".", ",") + ", " + vnume))
     + '<div class="acFgv"><b class="' + vcls + '">' + (vixU == null ? "—" : acNr(vixU, 2)) + '</b> ' + escapeHtml(vnume) + acIeri(sc, "vix", 1, true) + '</div>' + acSpark(v31, "#9FB3C4")
     + (vmin != null ? '<p class="acEt">' + v31.length + ' de zile: între ' + acNr(vmin, 1) + ' și ' + acNr(vmax, 1) + '; sub 20 bursa e liniștită, peste 30 e panică.</p>' : '');
   // largimea Nasdaq 100
@@ -403,7 +403,7 @@ function acasaDeseneaza() {
     var nume = String(b.baza || "").replace(/\.PERP$/, ""), tot = Number(b.profitTotal), pr = Number(b.pretCurent), jo = Number(b.gridJos), su = Number(b.gridSus);
     var inGrid = su > jo && isFinite(pr) ? Math.round((pr - jo) / (su - jo) * 100) : null, panaJos = jo > 0 && pr > 0 ? (pr / jo - 1) * 100 : null;
     var ent = d.clasament ? (d.clasament.monede || []).filter(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, "") === nume; })[0] : null, rg = !ent && d.regimBoti ? d.regimBoti[nume] : null, m2 = ent ? ent.stare === "evita" : rg ? !!rg.miscare : null;
-    hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(2).replace(".", ",") + " USDT" : "—") + '</b></div>'
+    hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(1).replace(".", ",") + " USDT" : "—") + '</b></div>'
       + '<div class="acLin"><span>Prețul în grid</span><b>' + (inGrid == null ? "—" : inGrid + "%" + (panaJos != null && panaJos >= 0 ? " · " + panaJos.toFixed(1).replace(".", ",") + "% până jos" : " · sub grid")) + '</b></div>'
       + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + Math.max(rg.r4h || 0, rg.r24h || 0).toFixed(1).replace(".", ",") + "×" : "")) + '</b></div>'
       + acPandaLin(b);

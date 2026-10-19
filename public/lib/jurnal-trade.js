@@ -17,7 +17,9 @@ var JurnalTrade = (function () {
   }
   function moneda(base) { return String(base || "").toUpperCase().replace(/\.PERP$/, ""); }
   var P = function (v) { return (v * 100).toFixed(2).replace(".", ",") + "%"; };
-  var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + " USDT"; };
+  // audit 19.10: rezultatele cu O zecimală și virgulă („−0,5 USDT”, „0,5% din investiție”); pasul grilei (P) rămâne cu 2 - e un parametru
+  var U = function (v) { var s = Math.abs(v).toFixed(1); return (Number(s) === 0 ? "" : v >= 0 ? "+" : "−") + s.replace(".", ",") + " USDT"; };
+  var P1 = function (v) { return Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };   // mărimea: semnul îl spune deja suma de lângă
 
   function unul(x) {
     var d = x && x.buOrderData || {};
@@ -79,7 +81,7 @@ var JurnalTrade = (function () {
         dataViitoare: "Aș lua levierul propus de fișă (" + sig.levier + "× pentru intervalul ăsta)." });
     }
     if (t.funding !== null && t.investit > 0 && t.funding < -0.005 * t.investit) g.push({ cod: "funding-platit", titlu: "Funding plătit mult",
-      text: "Funding " + U(t.funding) + " (" + P(t.funding / t.investit) + " din investiție) în " + t.durataOre.toFixed(1).replace(".", ",") + " ore.",
+      text: "Funding " + U(t.funding) + " (" + P1(t.funding / t.investit) + " din investiție) în " + t.durataOre.toFixed(1).replace(".", ",") + " ore.",
       dataViitoare: "Aș verifica rata de funding înainte; pe direcția care plătește, aș ține botul mai puțin sau cu levier mai mic." });
     return g;
   }

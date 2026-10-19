@@ -123,8 +123,8 @@ await test("html: cifrele mari, bine / gresit (sau avertismentul), curba, pe lun
 await test("poza a prins (30.09): eticheta maximului nu se suprapune peste „0”; „1 pierdere” la singular; „Unde câștigi” doar pe plus", () => {
   // maximul curbei (+0,78) aproape de zero: fara eticheta lui, ca sa nu se calce cu „0”
   const aproape = ST.svgCurba([{ t: 1, cumul: 0.78, rezultat: 0.78, eticheta: "A" }, { t: 2, cumul: -58.27, rezultat: -59.05, eticheta: "B" }], { moneda: "USDT" });
-  assert.doesNotMatch(aproape, />\+0,78</, "eticheta maximului lipit de zero");
-  assert.match(aproape, />−58,27</);
+  assert.doesNotMatch(aproape, />\+0,8</, "eticheta maximului lipit de zero");   // audit 19.10: rezultatele cu o zecimală
+  assert.match(aproape, />−58,3</);   // audit 19.10: rezultatele cu o zecimală
   const l = [5, -1, 3, 2, 4, -2, 6, 1, 2, 3].map((r, i) => ({ id: "s" + i, eticheta: i < 8 ? "X" + i : "Y", pornit: i, inchis: i + 1, rezultat: r, baza: 10, durataOre: 1 }));
   const h = ST.html(ST.calc(l, { moneda: "USDT" }), {});
   assert.match(h, /1 pierdere</); assert.doesNotMatch(h, /1 pierderi/);

@@ -19,7 +19,7 @@ var StatisticaTrade = (function () {
     var x = Number(v); return isFinite(x) ? x : null;
   }
   function suma(l, f) { var s = 0; for (var i = 0; i < l.length; i++) s += f(l[i]); return s; }
-  function bani(v, m) { return v === null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString("ro-RO", { maximumFractionDigits: Math.abs(v) >= 100 ? 0 : 2, minimumFractionDigits: Math.abs(v) >= 100 ? 0 : 2 }) + " " + m; }
+  function bani(v, m) { return v === null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString("ro-RO", { maximumFractionDigits: Math.abs(v) >= 100 ? 0 : 1, minimumFractionDigits: Math.abs(v) >= 100 ? 0 : 1 }) + " " + m; }
   function pr(v, z) { return v === null || !isFinite(v) ? "—" : (v * 100).toFixed(z == null ? 0 : z).replace(".", ",") + "%"; }
   var fmtLuna = null;
   try { fmtLuna = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit" }); } catch (e) { fmtLuna = null; }
@@ -206,7 +206,7 @@ var StatisticaTrade = (function () {
       return { cheie: r[0], et: r[1], a: va, b: vb, verdict: v }; }) };
   }
   function htmlCompara(c, M) {
-    var f = function (k, v, parte) { if (v === null || v === undefined || !isFinite(v)) return "—"; if (k === "n") return String(v); if (k === "peTrade") return bani(v, M); if (k === "factor") return v.toFixed(2).replace(".", ","); if (k === "mariPondere") return pr(v) + " (" + c[parte].mari + ")"; return pr(v, k === "rata" ? 0 : 1).replace(/^-/, "−"); };
+    var f = function (k, v, parte) { if (v === null || v === undefined || !isFinite(v)) return "—"; if (k === "n") return String(v); if (k === "peTrade") return bani(v, M); if (k === "factor") return v.toFixed(1).replace(".", ","); if (k === "mariPondere") return pr(v) + " (" + c[parte].mari + ")"; return pr(v, k === "rata" ? 0 : 1).replace(/^-/, "−"); };
     var rand = c.randuri.map(function (r) { return "<tr><td>" + esc(r.et) + "</td><td>" + esc(f(r.cheie, r.a, "a")) + "</td><td><b>" + esc(f(r.cheie, r.b, "b")) + '</b></td><td class="' + (r.verdict === "mai-bine" ? "good" : r.verdict === "mai-rau" ? "bad" : "") + '">' + (r.verdict === "mai-bine" ? '▲<span class="stVerdTxt"> mai bine</span>' : r.verdict === "mai-rau" ? '▼<span class="stVerdTxt"> mai rău</span>' : "") + "</td></tr>"; });
     var bine = c.randuri.filter(function (r) { return r.verdict === "mai-bine"; }).length, rau = c.randuri.filter(function (r) { return r.verdict === "mai-rau"; }).length;
     var nota = !c.b.n ? "Încă niciun bot pornit după regulile noi nu s-a închis. Comparația se umple singură; de la " + cate(MIN, "bot", "boți") + " îți spun dacă regulile ajută."
