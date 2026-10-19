@@ -5680,7 +5680,10 @@ function scTrades(){if(!jtStare.boti||typeof StatisticaTrade==="undefined"||type
 function scDeseneaza(){
   if(typeof ScorSezon==="undefined")return;
   var tr=scTrades(),s=tr?ScorSezon.calc(tr,scStare.cfg,Date.now()):null;
-  ["acScor","jtScor"].forEach(function(id){var el=$(id);if(!el)return;if(scStare.deschis[id]&&el.contains(document.activeElement))return;
+  // v100.219 (el: „am apăsat pe Obiectiv dar nu se întâmplă nimic”): garda „nu redesena cât tastează” ținea și când elementul activ era BUTONUL
+  // apăsat (stătea în card) ⇒ formularul nu se mai deschidea. Acum doar un câmp de text (INPUT) din formular oprește redesenarea.
+  var activ=document.activeElement;
+  ["acScor","jtScor"].forEach(function(id){var el=$(id);if(!el)return;if(scStare.deschis[id]&&activ&&activ.tagName==="INPUT"&&el.contains(activ))return;
     el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],mesaj:scStare.mesaj[id]||"",faraJurnal:id==="jtScor"})+(id==="jtScor"?ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg,Date.now())):""):ScorSezon.htmlAstept(jtStare.eroare)})   // v100.218 (ideea 1): sezoanele încheiate, doar în Jurnal
 }
 async function scPorneste(){

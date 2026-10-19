@@ -251,6 +251,13 @@ await test("ideea 2 - mesajele colectorului (scorPauza / scorTinta) + legarea î
   assert.ok(APP.includes('ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg,Date.now()))'), "istoricul sub cardul din Jurnal");
 });
 
+// ── v100.219: „am apăsat pe Obiectiv dar nu se întâmplă nimic” - garda de redesenare ține DOAR pentru un INPUT din formular, nu pentru butonul apăsat
+await test("v100.219: scDeseneaza nu sare redesenarea când elementul activ e butonul „Obiectiv ✎” (doar un INPUT din card o oprește)", () => {
+  const APP = citeste("public", "app.js"), f = APP.slice(APP.indexOf("function scDeseneaza()"), APP.indexOf("async function scPorneste()"));
+  assert.ok(/activ\.tagName==="INPUT"&&el\.contains\(activ\)/.test(f), "garda pe INPUT: " + f.slice(0, 600));
+  assert.ok(!/el\.contains\(document\.activeElement\)\)return/.test(f), "garda veche (orice element activ) scoasă");
+});
+
 // ── C. legarea în aplicație (index.html, app.js, acasa-ecran.js, app.css, versiunea) ──────────────────────────────
 await test("v100.217: versiunea ≥ 217 peste tot, lib-ul în index.html, cardul pe Acasă sub verdicte și în Jurnal, proba în lanț, CSS înaintea regulii pândei", () => {
   const P = JSON.parse(citeste("package.json")), ver = Number(P.version.split(".")[1]), V = "v100." + ver, IDX = citeste("public", "index.html");
