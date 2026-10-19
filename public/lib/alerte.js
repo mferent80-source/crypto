@@ -203,7 +203,10 @@ var Alerte = (function () {
         var bzD = (raport ? undeE : "Stopul e la " + pret(opS) + " (" + distP(opS) + ")") + ": ", plScurt = planG.replace(/, iar la marginea[^]*$/, "");
         var fpD = !plInG ? undeE + ": " + costS + "." : [bzD + costS + "; " + planG + ".", bzD + "atins, te costă ≈ " + vg(pierde, 1) + " USDT; " + planG + ".", bzD + costS + ", iar " + plScurt + "."].filter(function (t) { return t.length <= 160; })[0] || bzD + "atins, te costă ≈ " + vg(pierde, 1) + " USDT, iar " + plScurt + ".";
         var stAfOk = stAf !== null && !raport && (dirPl === "short" ? opS > stAf : opS < stAf);
-        var faD = plInG ? "Aș închide botul " + zS + (stAfOk ? " sau aș muta stopul " + afS + " (" + pret(stAf) + ")." : " sau l-aș lăsa " + afS + ", unde e.") : faCe + ": planul devine ordin, nu doar alertă.";
+        // audit 19.10: stopul în procente nu „stă” sub grid - echivalentul stopului de dincolo de grid, în procente din investiție (mi.laStopAfara)
+        var laAf = nr(mi.laStopAfara), procAf = raport && inv > 0 && laAf !== null && laAf < 0 ? "−" + vg(-laAf / inv * 100, 1) + "% din investiție" : null;
+        var faD = !plInG ? faCe + ": planul devine ordin, nu doar alertă." : raport ? "Aș închide botul " + zS + " sau aș pune stopul " + (procAf ? "la " + procAf + " (" + afS + (stAf !== null ? ", " + pret(stAf) : "") + ")." : "pe preț, " + afS + (stAf !== null ? " (" + pret(stAf) + ")" : "") + ".")
+          : "Aș închide botul " + zS + (stAfOk ? " sau aș muta stopul " + afS + " (" + pret(stAf) + ")." : " sau l-aș lăsa " + afS + ", unde e.");
         out["plan-stop"] = departe
           ? { nivel: pierde >= 2 * pg ? "critic" : "atentie", titlu: nume + ": stopul din Pionex pierde ≈ " + Math.round(pierde) + " USDT (planul: −" + pgT + ")",
               mesaj: msg(fpD, faD) }

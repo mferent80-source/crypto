@@ -97,8 +97,9 @@ await test("alerta LIGHTER: CRITIC (≈ 4x planul), spune cat, planul, unde sa-l
   assert.match(m.titlu, /≈ 6\d USDT/);
   assert.match(m.titlu, /−15,7/);
   assert.match(m.mesaj, /3\.7870/);
-  assert.match(m.mesaj, /4\.2\d{3}/, "pretul propus");
-  assert.match(m.mesaj, /−15,2% din investiție/);
+  assert.match(m.mesaj, /4\.2\d{3}/, "pretul planului");
+  // audit 19.10: prețul planului (4,2601) stă în grid ⇒ nu mai e „unde să-l muți” (nici procentul planului, e același preț); stopul propus e sub grid
+  assert.match(m.mesaj, /cade în grid/); assert.match(m.mesaj, /sub grid \(4\.0387\)/);
   assert.match(m.mesaj, /\n👉 Aș /);   /* v100.68 (pachetul 3): acțiunea pe rândul „👉” */
 });
 
@@ -155,7 +156,8 @@ await test("opritorul in procente prea departe: propune doar procentul (pretul l
   const m = Alerte.evalueaza(b, ctxDin(b), {}, 1).mesaje.find((x) => x.cheie === "plan-stop");
   assert.ok(m, "nu s-a trimis");
   assert.match(m.mesaj, /−50,0% din investiție/);
-  assert.match(m.mesaj, /−15,2% din investiție/);
+  // audit 19.10: procentul planului (−15,2%) ar opri botul în grid ⇒ procentul propus e echivalentul stopului de sub grid (tot în procente, pe același tip)
+  assert.match(m.mesaj, /aș pune stopul la −\d+,\d% din investiție \(sub grid, 4\.0387\)/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);
