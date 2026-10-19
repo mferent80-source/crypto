@@ -382,7 +382,13 @@ var GridProba = (function () {
     var test = { n: rt.length, nIndep: nIndep, mediana: st ? st.mediana : null, medie: net.length ? net.reduce(function (a, v) { return a + v; }, 0) / net.length : null, pePlus: rt.length ? plus / rt.length : null, ic: ic, celMaiRau: st ? st.ceaMaiProasta : null, perechiZi: st ? st.perechiMedii / best.H : null, lichidari: st ? st.lichidari : 0 };
     var setare = G.construieste({ pret: o.pret > 0 ? o.pret : b15[b15.length - 1].c, lat: best.c.lat, pas: best.c.pas, dir: o.dir, suma: o.suma, levier: o.levier });
     var ore = Math.round(best.H * 24), motiv = verdictIngust(test, ore);
-    return { propus: !motiv, motiv: motiv, dir: o.dir, H: best.H, ore: ore, latime: best.c.lat, pas: best.c.pas, setare: setare, antren: best.antren, test: test, zile: Math.round(b15.length / C.BARE_ZI), funding: F };
+    // audit 19.10 (9): testul e UN singur bloc (ultima treime, ~blocZile) - un singur regim al pieței, oricâte ferestre ar avea
+    return { propus: !motiv, motiv: motiv, dir: o.dir, H: best.H, ore: ore, latime: best.c.lat, pas: best.c.pas, setare: setare, antren: best.antren, test: test, zile: Math.round(b15.length / C.BARE_ZI), blocZile: Math.round((b15.length - nA) / C.BARE_ZI), funding: F };
+  }
+  // audit 19.10 (9): ferestrele de test se suprapun și stau toate în același bloc de zile ⇒ un singur regim: propunerea e de urmărit, nu dovedită
+  function notaBloc(r) {
+    var z = r && r.blocZile > 0 ? r.blocZile : r && r.zile > 0 ? Math.round(r.zile / 3) : null;
+    return "testul e un singur bloc" + (z ? " de ~" + cate(z, "zi", "zile") : "") + " (un singur regim): de urmărit, nu dovedit";
   }
   // un rand pentru ideile de boti
   function rezumatIngust(r) {
@@ -391,7 +397,7 @@ var GridProba = (function () {
     var P = function (x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; }, D = { long: "long", short: "short", neutru: "neutru" };
     var nI = cate(r.test.nIndep, "fereastră independentă", "ferestre independente");   // v100.72: „31 de ferestre”, „%” lipit
     return "⚡ grid îngust " + D[r.dir] + ", " + r.ore + " h: " + (r.latime * 100).toFixed(1).replace(".", ",") + "% lățime, " + cate(r.setare.grile + 1, "linie", "linii") + ", ~" + cate(Math.round(r.test.perechiZi), "pereche", "perechi") + "/zi · pe test: median " + P(r.test.mediana) + (r.test.medie != null ? ", medie " + P(r.test.medie) : "")
-      + ", " + Math.round(r.test.pePlus * 100) + "% pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + nI + ")";
+      + ", " + Math.round(r.test.pePlus * 100) + "% pe plus, cel mai rău " + P(r.test.celMaiRau) + " (" + nI + ") · " + notaBloc(r);   // audit 19.10 (9)
   }
   // v100.59 (I-481): botul pornit cu setarile variantei ingusta - aceeasi directie, latimea +-35 %, pornit in 12 h de la propunere
   // -> {ingust, ore, inchideLa}; altfel null. Directia Pionex: long / short / orice altceva = neutru (ca in restul colectorului)
@@ -438,7 +444,7 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

@@ -298,5 +298,16 @@ await test("(8) textul istoricului nu pune paranteze în paranteze la „prea pu
   assert.ok(!/\([^)]*\(/.test(t), t);
 });
 
+// ---------- (9) gridul îngust: testul e UN singur bloc (~ultima treime), un singur regim ⇒ de urmărit, nu dovedit ----------
+await test("(9) rândul ideilor și pagina spun că testul e un singur bloc de ~N zile (un regim): de urmărit, nu dovedit", () => {
+  const r = { propus: true, dir: "long", ore: 12, latime: 0.024, setare: { grile: 9 }, test: { perechiZi: 18.4, mediana: 0.0042, medie: 0.0051, pePlus: 0.64, celMaiRau: -0.02, nIndep: 31 }, zile: 60, blocZile: 20 };
+  const t = GP.rezumatIngust(r);
+  assert.match(t, /testul e un singur bloc de ~20 de zile \(un singur regim\): de urmărit, nu dovedit/);
+  assert.match(GP.notaBloc({ zile: 30 }), /~10 zile/, "fără blocZile: o treime din zile");
+  const ri = GP.ingust(B15, { dir: "long", pret: 1, suma: 100 });
+  assert.ok(ri.blocZile > 0 || ri.propus === false, JSON.stringify(ri.blocZile));
+  assert.match(citeste("public", "app.js"), /GridProba\.notaBloc\(r\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
 process.exit(picate ? 1 : 0);

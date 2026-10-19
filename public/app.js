@@ -5102,6 +5102,7 @@ function grIngustHtml(f){
     +grRand("Număr de grile",TextRo.cate(s2.grile+1,"linie","linii")+" (Pionex numără liniile) · Geometric",String(s2.grile+1))+grRand("Levier",s2.levierSigur+"× (sigur)",String(s2.levierSigur))
     +(r.dir!=="short"?grRand("Stop-loss jos",grPret(s2.stop.jos,i),grPret(s2.stop.jos,i)):"")+(r.dir!=="long"?grRand("Stop-loss sus",grPret(s2.stop.sus,i),grPret(s2.stop.sus,i)):"")
     +'<p class="tbSub">⏱️ L-aș închide după '+r.ore+' h dacă n-a atins stopul: așa a fost probat.</p>'
+    +(GridProba.notaBloc?'<p class="tbSub">⚠ '+escapeHtml(GridProba.notaBloc(r).replace(/^t/,"T"))+'.</p>':'')   /* audit 19.10 (9): un singur bloc de test = un singur regim */
     +'<p class="tbSub">Pe test ('+TextRo.cate(r.test.nIndep,"fereastră independentă","ferestre independente")+', nevăzute la alegere): median '+P(r.test.mediana)+' din sumă'+(r.test.medie!=null?' (medie '+P(r.test.medie)+')':'')+', '+Math.round(r.test.pePlus*100)+'% pe plus, cel mai rău '+P(r.test.celMaiRau)+', ~'+TextRo.cate(Math.round(r.test.perechiZi),"pereche","perechi")+'/zi. Ce s-a întâmplat, nu o promisiune.</p>'+grUrmHtml()+'</div>';
 }
 // v100.90 (I-514, Busola 1.38): intervalul măsurat de Busola pe 4h, sub propunerea fișei - pentru comparație, nu în locul ei (lățimea e pe spot; gridul pierde oricum, mai larg pierde mai puțin); lipsă ⇒ nimic
