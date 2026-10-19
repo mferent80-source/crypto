@@ -192,6 +192,19 @@ var GridProba = (function () {
       latimi: latV, pasi: pasV, pe: pe, recomandata: recomandata, incercate: latV.length * pasV.length * DIRECTII.length, funding: F };
   }
 
+  // audit 19.10: o SINGURA setare (cea afisata: levierul ales, grilele reduse la minimul pe ordin) pe ACELEASI ferestre ca proba - primele 2/3
+  // antrenare, ultima 1/3 test, cate una la C.PAS_FERESTRE. fac(pret) construieste setarea la pretul de pornire al ferestrei.
+  function probaSetare(b15, H, fz, fac) {
+    var W = H * C.BARE_ZI, F = fundingDe(fz);
+    if (!b15 || b15.length < 2 * W + C.BARE_ZI || typeof fac !== "function") return null;
+    var nA = Math.round(b15.length * 2 / 3), ra = [], rt = [];
+    for (var s = 0; s + W <= b15.length; s += C.PAS_FERESTRE) {
+      if (s + W > nA && s < nA) continue;
+      (s + W <= nA ? ra : rt).push(simuleaza(b15, s, W, cuFunding(fac(b15[s].o), F)));
+    }
+    return { antren: statistici(ra), test: statistici(rt) };
+  }
+
   // Trendul si proba nu sunt de acord? Se spune doar cand directia recomandata
   // de proba n-a pierdut nici pe zilele nevazute (altfel validarea a respins-o
   // si "pe istoric a iesit mai bine X" ar fi fals). Vazut pe BTC/SOL, 24.09.
@@ -246,25 +259,35 @@ var GridProba = (function () {
       return { st: s, sumaMinima: sm, mo: mo };
     }
     var a = cuMinOrdin(pas), st = a.st, sumaMinima = a.sumaMinima, mo = a.mo;
+    // audit 19.10 (2, 3): proba pe istoric e rulata la levierul SIGUR (construieste fara levier) si pe toate grilele pasului; setarea afisata
+    // poate avea levierul ALES de el si mai putine grile (minimul pe ordin). Rezultatul unei ferestre nu se scaleaza liniar cu levierul: la
+    // levier mai mare lichidarea vine mai devreme si taie fereastra (o scalare rea × L_ales / L_probat ar trece de −100% sau ar rata lichidarea).
+    // Deci celula aleasa se RE-RULEAZA pe aceleasi ferestre cu setarea afisata - verdictul, mediana si „Cât investesc?” vorbesc despre ce copiezi.
+    function statPe(sx, pasX, statProba) {
+      var re = sx.levier !== sx.levierSigur || !!sx.redus;
+      var ps = re ? probaSetare(o.b15, o.H, o.fundingZi, function (pret) { return G.construieste({ pret: pret, lat: lat, pas: pasX, dir: dir, levier: sx.levier, grile: sx.redus ? sx.grile : undefined }); }) : null;
+      return { stat: ps && ps.antren ? ps : { antren: statProba.antren, test: statProba.test }, la: { levier: sx.levier, levierSigur: sx.levierSigur, grile: sx.grile, redus: !!sx.redus, reRulata: !!(ps && ps.antren) } };
+    }
+    var sa = statPe(st, pas, ales), statAles = sa.stat;
     var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret), liniste = G.linisteTine(o.b15, o.H);
-    var v = G.verdict({ regim: rg, stat: ales, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
+    var v = G.verdict({ regim: rg, stat: statAles, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
     if (sumaMinima !== null) {
       v = { nivel: "nu", motive: ["suma e prea mică: Pionex cere cel puțin " + mo.toFixed(2) + " USDT pe ordin, deci pentru 2 grile la " + st.levier + "× îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
     }
     // v99 (28.09, experienta lui): VARIANTA DEASA - pasul minim (0,30%) la aceeasi latime, cu statistica ei din proba si
     // trecerile pe zi; e PROPUSA in locul setarii alese cand piata e linistita si proba n-o respinge (vezi propune/respinge)
-    var dst = ales.deasa || null, dd = cuMinOrdin(pasV[0]), rz = respinge(dst);
+    var dd = cuMinOrdin(pasV[0]), sd = ales.deasa ? statPe(dd.st, pasV[0], ales.deasa) : null, dst = sd ? sd.stat : null, rz = respinge(dst);   // audit 19.10: gridul des tot pe setarea afisata
     var motivDeasa = rz.respinsa ? rz.motiv : dd.sumaMinima !== null ? "suma e prea mică pentru atâtea grile" : !dd.st.sigur ? "nici la 1× lichidarea nu stă destul de departe" : dd.st.pesteSigur ? "levierul ales pune lichidarea prea aproape de grid" : "";
     var deasa = { setare: dd.st, antren: dst ? dst.antren : null, test: dst ? dst.test : null, treceriZi: treceriPeZi(dst && dst.antren, o.H), respinsa: !!motivDeasa, motiv: motivDeasa, aceeasi: ales.pi === 0 };
     var f = { simbol: o.simbol, pret: o.pret, H: o.H, directie: dT, dir: dir, manual: !!o.dir, setare: st, proba: pr, verdict: v,
       regim: rg, pozitie: poz, liniste: liniste, sumaMinima: sumaMinima,
-      contra: contrazice(pr, dir), treceriZi: treceriPeZi(ales.antren, o.H), deasa: deasa, aleasa: null, stat: { antren: ales.antren, test: ales.test } };
+      contra: contrazice(pr, dir), treceriZi: treceriPeZi(statAles.antren, o.H), deasa: deasa, aleasa: null, stat: statAles, probaLa: sa.la };
     f.propusa = propune({ regim: rg, deasa: deasa, setare: st });
     // revizia 28.09: cand fisa PROPUNE gridul des, f.setare E gridul des - o singura sursa pentru Tablou, jurnal, hartie, poarta,
     // suma - iar verdictul e pe statistica LUI; platoul probei ramane la vedere in f.aleasa (setare + verdict + perechi/zi)
     if (f.propusa === "deasa") {
       f.aleasa = { setare: st, verdict: v, treceriZi: f.treceriZi };
-      f.stat = { antren: deasa.antren, test: deasa.test };
+      f.stat = { antren: deasa.antren, test: deasa.test }; f.probaLa = sd.la;
       f.setare = deasa.setare; f.treceriZi = deasa.treceriZi;
       f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
     }
@@ -415,7 +438,7 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

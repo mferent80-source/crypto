@@ -5120,7 +5120,9 @@ function grRandSumaMaxima(f){
   if(!(pierdere>0))return grRand("Cât investesc?","scrie ce pierdere accepți, în % din cont (mai mare ca 0)");
   var max=GridProba.sumaMaxima(sold,pierdere,rea);
   if(max==null)return grRand("Cât investesc?",rea==null?"n-am cea mai proastă fereastră":"pe istoric nicio fereastră n-a ieșit pe minus: nu pot socoti un maxim");
-  var P=GridCalcul.procent,text="cel mult "+Math.floor(max)+" USDT · ca cea mai proastă fereastră ("+P(rea)+") să nu treacă de "+pierdere+"% din "+sold+" USDT";
+  // audit 19.10: cifra e a setarii afisate (levierul ales, grilele de copiat - GridProba.fisa o re-ruleaza) si spune la ce levier e
+  var la=f.probaLa||{},Lx=la.levier||(f.setare&&f.setare.levier),P=function(x){return TextRo.pct(x*100,1)};
+  var text="cel mult "+Math.floor(max)+" USDT · ca cea mai proastă fereastră ("+P(rea)+(Lx?", la "+Lx+"×":"")+(la.redus?", pe "+TextRo.cate(la.grile+1,"linie","linii"):"")+") să nu treacă de "+pierdere+"% din "+sold+" USDT";
   if(f.setare.suma>max)text+=" · ⚠ ai pus "+f.setare.suma+", adică "+(f.setare.suma*Math.abs(rea)/sold*100).toFixed(1).replace(".",",")+"% din cont în cel mai rău caz";
   return grRand("Cât investesc?",text,String(Math.floor(max)));
 }

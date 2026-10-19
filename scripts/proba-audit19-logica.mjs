@@ -90,5 +90,55 @@ await test("(1) simulatorul spune la fel: stopul în grid ⇒ ce parte moare și
   assert.match(s, /stă în grid \(/); assert.match(s, /nu mai lucrează/);
 });
 
+// ---------- (2) „Cât investesc?” la levierul ales · (3) grilele reduse la minimul pe ordin ----------
+const GP = globalThis.GridProba;
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const Q = 15 * 60000;
+function bareSint(n, seed, vol) { const r = mulberry32(seed); let p = 1; const out = []; for (let i = 0; i < n; i++) { const o = p; p *= 1 + (r() - 0.5) * vol; out.push({ t: 1_780_000_000_000 + i * Q, o, h: Math.max(o, p) * 1.001, l: Math.min(o, p) * 0.999, c: p }); } return out; }
+const B15 = bareSint(30 * 96 + 1, 11, 0.006), B4 = bareSint(300, 5, 0.02), B1 = bareSint(200, 6, 0.04);
+const FISA = (o) => GP.fisa({ simbol: "TEST_USDT_PERP", pret: B15[B15.length - 1].c, b15: B15, b4h: B4, b1d: B1, suma: 100, H: 2, dir: "long", levier: null, minNotional: 1, ...o });
+const peFerestre = (f, st) => GP.probaSetare(B15, 2, null, (pret) => G.construieste({ pret, lat: st.lat, pas: st.pas, dir: f.dir, levier: st.levier, grile: st.grile }));
+await test("(2) fără levier ales: statistica fișei e chiar proba (levierul sigur), nimic re-rulat", () => {
+  const f = FISA();
+  assert.ok(!f.eroare, f.eroare);
+  assert.equal(f.setare.levier, f.setare.levierSigur);
+  assert.deepEqual(f.stat.antren, f.proba.pe.long.antren);
+  assert.equal(f.probaLa.levier, f.setare.levier); assert.equal(f.probaLa.reRulata, false);
+});
+await test("(2) cu levierul ales peste cel sigur: cea mai proastă fereastră și mediana sunt la levierul ales (re-rulate pe aceleași ferestre), nu la cel sigur", () => {
+  const f0 = FISA(), L = f0.setare.levierSigur * 3, f = FISA({ levier: L });
+  assert.equal(f.setare.levier, L);
+  assert.equal(f.probaLa.levier, L); assert.equal(f.probaLa.reRulata, true);
+  const lat = f0.proba.latimi[f0.proba.pe.long.wi], pas = f0.proba.pasi[f0.proba.pe.long.pi];
+  const sts = f.propusa === "deasa" ? f.deasa : null;   // gridul des propus are statistica lui
+  const st = f.propusa === "deasa" ? { lat, pas: f0.proba.pasi[0], levier: L } : { lat, pas, levier: L };
+  const asteptat = peFerestre(f, st);
+  assert.deepEqual(f.stat.antren, asteptat.antren, "statistica fișei = setarea afișată re-rulată");
+  assert.ok(f.stat.antren.ceaMaiProasta < f0.stat.antren.ceaMaiProasta, "la levier mai mare, cea mai proastă fereastră e mai rea: " + f.stat.antren.ceaMaiProasta + " vs " + f0.stat.antren.ceaMaiProasta);
+  void sts;
+});
+await test("(2) „Cât investesc?” spune la ce levier e cifra (și suma scade la levier mai mare)", () => {
+  const src = citeste("public", "app.js"), i = src.indexOf("function grRandSumaMaxima("), cod = src.slice(i, src.indexOf("\n// =====", i));
+  const rand = (et, val) => et + ": " + val;
+  const fn = new Function("$", "grSoldCitit", "grNumar", "grRand", "GridProba", "GridCalcul", "TextRo", cod + "; return grRandSumaMaxima;")(
+    (id) => ({ grSold: { value: "1000" }, grPierdere: { value: "5" } })[id], () => ({ sold: 1000 }), Number, rand, GP, G, globalThis.TextRo);
+  const f0 = FISA(), f = FISA({ levier: f0.setare.levierSigur * 3 });
+  const t0 = fn(f0), t = fn(f);
+  assert.match(t, new RegExp("la " + f.setare.levier + "×"), t);
+  assert.match(t0, new RegExp("la " + f0.setare.levier + "×"), t0);
+  const suma = (s) => Number((s.match(/cel mult (\d+) USDT/) || [])[1]);
+  assert.ok(suma(t) < suma(t0), t + " | " + t0);
+});
+await test("(3) grilele reduse la minimul pe ordin: verdictul și mediana vin de la setarea cu grilele reduse", () => {
+  const f = FISA({ minNotional: 100, suma: 50 });   // 3 grile × 83 USDT < 100 ⇒ 2 grile
+  const s = f.propusa === "deasa" ? f.deasa.setare : f.setare;
+  assert.ok(f.setare.redus, "fixtura: grilele trebuie reduse (" + JSON.stringify(f.setare.redus) + ")");
+  assert.equal(f.probaLa.reRulata, true); assert.equal(f.probaLa.grile, f.setare.grile);
+  const f0 = FISA(), lat = f0.proba.latimi[f0.proba.pe.long.wi], pas = f.propusa === "deasa" ? f0.proba.pasi[0] : f0.proba.pasi[f0.proba.pe.long.pi];
+  const asteptat = peFerestre(f, { lat, pas, levier: f.setare.levier, grile: f.setare.grile });
+  assert.deepEqual(f.stat.antren, asteptat.antren);
+  void s;
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
 process.exit(picate ? 1 : 0);
