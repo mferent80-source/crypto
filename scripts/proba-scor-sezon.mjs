@@ -42,7 +42,7 @@ await test("numără DOAR de la start (un bot închis cu o secundă înainte de 
 await test("win = net > 0, loss = net < 0, zero nu e nici una; rata = win / (win + loss)", () => {
   const s = S.calc(INAINTE.concat([t(11, START + ORA, 2), t(12, START + 2 * ORA, -1), t(13, START + 3 * ORA, 0), t(14, START + 4 * ORA, 4)]), CFG, ACUM);
   assert.equal(s.n, 4); assert.equal(s.win, 2); assert.equal(s.loss, 1); assert.equal(s.zero, 1);
-  assert.ok(Math.abs(s.rata - 2 / 3) < 1e-9); assert.equal(s.net, 5); assert.equal(s.castigBrut, 6); assert.equal(s.pierdereBruta, -1);
+  assert.ok(Math.abs(s.rata - 2 / 4) < 1e-9, "rata = win ÷ toți (v100.221, ca în Jurnal): " + s.rata); assert.equal(s.net, 5); assert.equal(s.castigBrut, 6); assert.equal(s.pierdereBruta, -1);
   assert.equal(s.castigMediu, 3); assert.equal(s.pierdereMedie, -1); assert.equal(s.raport, 3);
 });
 
@@ -65,10 +65,12 @@ await test("nivelul după rată față de țintă: bine ≥ țintă, atenție î
   const lw = []; for (let i = 0; i < 6; i++) lw.push(t(300 + i, START + (i + 1) * ORA, -1)); for (let i = 0; i < 4; i++) lw.push(t(400 + i, START + (7 + i) * ORA, 1));
   s = S.calc(lw, CFG, ACUM);   // 40 %: sub 55 cu 15 pp ⇒ atenție (ultimii închiși sunt win, deci fără pauză)
   assert.equal(s.nivel, "atentie"); assert.deepEqual(s.serie, { n: 4, fel: "w" });
-  s = S.calc(mk(2, 7), CFG, ACUM);   // 22 %
+  s = S.calc(mk(2, 7), CFG, ACUM);   // 22 %, pauză
   assert.equal(s.nivel, "rau"); assert.equal(s.suficient, false);
   s = S.calc([t(1, START + ORA, 1), t(2, START + 2 * ORA, 1)], CFG, ACUM);   // 100 % din 2
-  assert.equal(s.nivel, "bine"); assert.equal(s.suficient, false);
+  assert.equal(s.nivel, "fara", "v100.221 (audit 10): sub 10 trade-uri culoarea e neutră"); assert.equal(s.suficient, false);
+  s = S.calc(mk(2, 7), CFG, ACUM);   // 22 % din 9, dar ultimii 7 pe minus ⇒ pauza rămâne roșie și sub 10
+  assert.equal(s.nivel, "rau");
 });
 
 await test("progresul față de obiectiv: rata / țintă și net / țintă, tăiate la 0…1; zilele rămase până la data țintă", () => {
@@ -90,6 +92,9 @@ await test("configurația lipsă / stricată ⇒ sezonul implicit (19.10.2026) +
   const v = S.valideazaObiectiv({ rata: "60", serie: "4", net: "100", pana: "2026-12-31" });
   assert.equal(v.ok, true); assert.deepEqual(v.obiectiv, { rata: 0.6, serie: 4, net: 100, pana: "2026-12-31" });
   assert.equal(S.valideazaObiectiv({ rata: "0", serie: 3, net: 50, pana: "" }).ok, false);
+  assert.equal(S.valideazaObiectiv({ rata: "1", serie: 3, net: 50, pana: "" }).obiectiv.rata, 0.01, "v100.221 (audit 11): „1” = 1 %, nu 100 %");
+  assert.equal(S.valideazaObiectiv({ rata: "0,5", serie: 3, net: 50, pana: "" }).ok, false, "sub 1 % nu e țintă");
+  assert.ok(/lei/.test(S.valideazaObiectiv({ rata: "55", serie: 3, net: "-5", pana: "" }, "t212").eroare) && /USDT/.test(S.valideazaObiectiv({ rata: "55", serie: 3, net: "-5", pana: "" }).eroare), "eroarea cu moneda pieței");
   assert.equal(S.valideazaObiectiv({ rata: "101", serie: 3, net: 50, pana: "" }).ok, false);
   assert.equal(S.valideazaObiectiv({ rata: "55", serie: "0", net: 50, pana: "" }).ok, false);
   assert.equal(S.valideazaObiectiv({ rata: "55", serie: 3, net: "-5", pana: "" }).ok, false);
@@ -103,6 +108,9 @@ await test("configurația lipsă / stricată ⇒ sezonul implicit (19.10.2026) +
 await test("startul unei zile pe ora României (sezon nou „de azi”)", () => {
   assert.equal(S.startulZilei(ACUM), START + ZI);
   assert.equal(S.startulZilei(START + 10), START);
+  // v100.221 (audit 2): ziua schimbării orei - 25.10.2026 (EEST→EET la 04:00) și 28.03.2027 (EET→EEST la 03:00)
+  assert.equal(S.startulZilei(Date.UTC(2026, 9, 25, 10)), Date.UTC(2026, 9, 24, 21), "25.10.2026 00:00 = 24.10 21:00 UTC (+3)");
+  assert.equal(S.startulZilei(Date.UTC(2027, 2, 28, 10)), Date.UTC(2027, 2, 27, 22), "28.03.2027 00:00 = 27.03 22:00 UTC (+2)");
   assert.equal(S.dataRo(START), "19.10.2026");
 });
 
@@ -177,10 +185,12 @@ await test("endpoint POST sezonNou: startul = 00:00 azi (ora României), sezonul
   let r = await M.onRequestPost({ request: cere(env, "/api/scor-sezon?action=sezonNou", { method: "POST", origin: "https://exemplu.test" }), env });
   const tx = await r.text(); assert.equal(r.status, 200, tx); let j = JSON.parse(tx);
   const azi = M.startulZilei(Date.now());
-  assert.equal(j.sezon.start, azi); assert.equal(j.sezon.obiectiv.rata, 0.7);
-  if (azi > START) assert.deepEqual(j.sezon.istoric, [{ start: START, sfarsit: azi }]); else assert.deepEqual(j.sezon.istoric, []);
+  assert.equal(j.sezon.obiectiv.rata, 0.7);
+  if (azi > START) { assert.equal(j.sezon.start, azi); assert.deepEqual(j.sezon.istoric, [{ start: START, sfarsit: azi }]); }
+  else { assert.ok(j.sezon.start > START && j.sezon.start <= Date.now(), "v100.221: pornit azi ⇒ se închide ACUM, nou de la acum"); assert.equal(j.sezon.istoric.length, 1); assert.equal(j.sezon.istoric[0].sfarsit, j.sezon.start); }
+  const s1 = j.sezon.start; await new Promise((r) => setTimeout(r, 5));   // a doua apăsare în alt milisecundă (în aceeași ms sezonul ar fi gol)
   r = await M.onRequestPost({ request: cere(env, "/api/scor-sezon?action=sezonNou", { method: "POST", origin: "https://exemplu.test" }), env }); j = await r.json();
-  assert.equal(j.sezon.istoric.length, azi > START ? 1 : 0);
+  assert.ok(j.sezon.start >= s1, "a doua apăsare nu merge înapoi"); assert.equal(j.sezon.istoric.length, 2);
   // startul zilei de pe server = cel din modulul paginii
   assert.equal(M.startulZilei(ACUM), S.startulZilei(ACUM)); assert.equal(M.startulZilei(START + 10), START);
   // iarna (UTC+2): 15.01.2027 10:00 UTC ⇒ 15.01 00:00 Europe/Bucharest = 14.01 22:00 UTC
@@ -248,7 +258,7 @@ await test("ideea 2 - mesajele colectorului (scorPauza / scorTinta) + legarea î
   assert.ok(/stareAlerte\[k\]|stareAlerte\._scor/.test(C) && C.includes('"_scor"') && C.includes("ScorSezon.alerte(s, st)"), "starea în alerte-stare.json");   // v101.128: pe cheie (_scor / _scorT212)
   assert.ok(G.includes("MC.scorPauza(") && G.includes('MC.scorTinta(SC, "net")'), "garda textelor știe mesajele");
   const APP = citeste("public", "app.js");
-  assert.ok(/ScorSezon\.htmlIstoric\(ScorSezon\.sezoane\(tr,scStare\.cfg(\[piata\])?,(Date\.now\(\)|acum)(,piata)?\)\)/.test(APP), "istoricul sub cardul din Jurnal");   // v100.220: pe piață
+  assert.ok(/ScorSezon\.htmlIstoric\(ScorSezon\.sezoane\(tr,scStare\.cfg(\[piata\])?,(Date\.now\(\)|acum)(,piata)?\)(,piata)?\)/.test(APP), "istoricul sub cardul din Jurnal");   // v100.220: pe piață
 });
 
 // ── v100.219: „am apăsat pe Obiectiv dar nu se întâmplă nimic” - garda de redesenare ține DOAR pentru un INPUT din formular, nu pentru butonul apăsat
@@ -289,7 +299,7 @@ await test("Trading 212: piața a doua - sezonul implicit 19.10.2026 13:00 (doar
   assert.equal(s.n, 2, "cel de dinaintea livrării nu intră"); assert.equal(s.moneda, "lei"); assert.equal(s.piata, "t212"); assert.equal(s.inainte.n, 1);
   const h = S.html(s, { id: "acScorT212" });
   assert.ok(/Scorul tău pe Trading 212 · sezonul din 19\.10/.test(h), h.slice(0, 200));
-  assert.ok(/\+80,3 lei/.test(h) && /din \+200 lei/.test(h) && /1 trade/.test(h) && !/USDT/.test(h) && !/boți/.test(h), "lei și trade-uri: " + (h.match(/[−+][\d,]+ (lei|USDT)/g) || []).join(" "));
+  assert.ok(/\+80,3 lei/.test(h) && /din \+200,0 lei/.test(h) && /1 trade/.test(h) && !/USDT/.test(h) && !/boți/.test(h), "lei și trade-uri: " + (h.match(/[−+][\d,]+ (lei|USDT)/g) || []).join(" "));
   assert.ok(/jtAlegeFiltru\('actiuni'\)/.test(h), "Jurnal › deschide fila Acțiuni: " + (h.match(/data-action-click="navTo[^"]*"/) || [""])[0]);
   assert.ok(/Net țintă \(lei\)/.test(S.html(s, { id: "acScorT212", formular: true })), "formularul în lei");
   assert.ok(/Trading 212/.test(S.htmlAstept(null, "t212")) && /citesc istoricul/.test(S.htmlAstept(null, "t212")));
@@ -346,6 +356,83 @@ await test("legarea v100.220: #acScorT212 pe Acasă (order 12), #jtScorT212 pe f
   assert.ok(TE.includes('<div id="jtScorT212"></div><div id="jtStatActiuni"></div>') && /box\.innerHTML = h;[^\n]*\n\s*if \(typeof scDeseneaza === "function"\) scDeseneaza\(\);/.test(TE), "cardul T212 sus pe fila Acțiuni, desenat după rescrierea filei");
   for (const f of ['var SC_PIETE={pionex:["acScor","jtScor"],t212:["acScorT212","jtScorT212"]}', "async function scorOpreste(id)", 'scPost(id,"opreste")', 'getJSON("/api/scor-sezon?piata="+piata)', 'StatisticaTrade.dinT212(']) assert.ok(APP.includes(f), f);
   const P = JSON.parse(citeste("package.json")); assert.ok(Number(P.version.split(".")[1]) >= 220, "v100.220");
+});
+
+// ── F. v100.221 (el: „REPARĂ TOT” după auditul din 19.10) ────────────────────────────────────────────────────────────
+await test("🔴 1 - sezonNouCalc (pur): sezonul pornit AZI nu se mai mută înapoi la 00:00; cazurile: normal, oprit ieri, oprit azi, pornit azi (T212), pornit la ora opririi", () => {
+  const zi = START + ZI, acum = zi + 15 * ORA;   // azi = 20.10, apăsat la 15:00
+  let r = M.sezonNouCalc({ start: START, oprit: null, istoric: [] }, acum);
+  assert.deepEqual([r.start, r.oprit, r.istoric], [zi, null, [{ start: START, sfarsit: zi }]], "normal: închis la 00:00 azi, nou de la 00:00");
+  r = M.sezonNouCalc({ start: START, oprit: START + 16 * ORA, istoric: [] }, acum);
+  assert.deepEqual([r.start, r.istoric], [zi, [{ start: START, sfarsit: START + 16 * ORA }]], "oprit ieri 16:00: închis la oprire, nou de la 00:00 azi");
+  r = M.sezonNouCalc({ start: START, oprit: zi + 10 * ORA, istoric: [] }, acum);
+  assert.deepEqual([r.start, r.istoric], [zi + 10 * ORA, [{ start: START, sfarsit: zi + 10 * ORA }]], "oprit azi 10:00: nou de la 10:00");
+  r = M.sezonNouCalc({ start: zi + 13 * ORA, oprit: null, istoric: [] }, acum);
+  assert.deepEqual([r.start, r.istoric], [acum, [{ start: zi + 13 * ORA, sfarsit: acum }]], "pornit azi 13:00 (T212): închis ACUM, nou de la acum - nu înapoi la 00:00");
+  r = M.sezonNouCalc({ start: zi + 10 * ORA, oprit: null, istoric: [{ start: START, sfarsit: zi + 10 * ORA }] }, acum);
+  assert.deepEqual([r.start, r.istoric.length], [acum, 2], "al doilea „sezon nou” în aceeași zi: tot înainte");
+  r = M.sezonNouCalc({ start: zi + 10 * ORA, oprit: zi + 12 * ORA, istoric: [] }, acum);
+  assert.deepEqual([r.start, r.istoric], [zi + 12 * ORA, [{ start: zi + 10 * ORA, sfarsit: zi + 12 * ORA }]], "pornit azi 10:00 și oprit 12:00: nou de la 12:00");
+});
+
+await test("🔴 1 - endpoint sezonNou pe sezonul pornit azi: startul NU se duce înapoi, istoricul primește sezonul (KV fals)", async () => {
+  const kv = kvFals(), env = { APP_API_TOKEN: TOKEN, ISTORIC: kv };
+  // sezonul T212 implicit pornește azi 13:00 (19.10) - apăsăm „sezon nou” mai târziu în aceeași zi (sau oricând după): startul nou ≥ cel vechi
+  let r = await M.onRequestPost({ request: cere(env, "/api/scor-sezon?piata=t212&action=sezonNou", { method: "POST", origin: "https://exemplu.test" }), env }); let j = await r.json();
+  assert.ok(j.sezon.start >= S.PIETE.t212.start, "startul nou " + new Date(j.sezon.start).toISOString() + " ≥ 19.10 13:00");
+  assert.equal(j.sezon.istoric.length, 1); assert.equal(j.sezon.istoric[0].start, S.PIETE.t212.start); assert.ok(j.sezon.istoric[0].sfarsit <= j.sezon.start);
+});
+
+await test("🟡 2 - startulZilei de pe server: decalajul de la MIEZUL NOPȚII, nu de acum (ziua schimbării orei)", () => {
+  assert.equal(M.startulZilei(Date.UTC(2026, 9, 25, 10)), Date.UTC(2026, 9, 24, 21));
+  assert.equal(M.startulZilei(Date.UTC(2027, 2, 28, 10)), Date.UTC(2027, 2, 27, 22));
+  assert.equal(M.startulZilei(ACUM), S.startulZilei(ACUM));
+});
+
+await test("🟡 5 - ținta ridicată se anunță din nou (starea ține startul ȘI ținta); 🔵 zeroul nu rupe seria", () => {
+  const st = {}, l = []; for (let i = 0; i < 12; i++) l.push(t(10 + i, START + (i + 1) * ORA, i < 5 ? -2 : 9));   // 5 loss −10 apoi 7 win 63 ⇒ net 53, rata 58 %, fără pauză
+  let s = S.calc(l, CFG, ACUM);
+  assert.deepEqual(S.alerte(s, st).mesaje.map((x) => x.fel).sort(), ["net", "rata"]);
+  s = S.calc(l, { start: START, obiectiv: { rata: 0.55, serie: 3, net: 100, pana: null } }, ACUM);
+  assert.deepEqual(S.alerte(s, st).mesaje, [], "ținta 100 neatinsă: nimic");
+  const l2 = l.concat([t(30, START + 20 * ORA, 60)]);   // net 113
+  s = S.calc(l2, { start: START, obiectiv: { rata: 0.55, serie: 3, net: 100, pana: null } }, ACUM);
+  assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "net" }], "ținta ridicată la 100 și atinsă: se anunță iar");
+  assert.deepEqual(S.alerte(s, st).mesaje, [], "o dată");
+  // zeroul: 3 pierderi, apoi un bot cu exact 0 - pauza rămâne
+  const z = [t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1), t(4, START + 4 * ORA, 0)];
+  const sz = S.calc(z, CFG, ACUM);
+  assert.deepEqual(sz.serie, { n: 3, fel: "l" }); assert.equal(sz.pauza, true);
+});
+
+await test("🟡 7/9/11/🔵b - html: valorile tastate rămân în formular; nota când setările nu s-au citit; ținta cu virgulă; „Trade-uri” în tabelul T212; −0,02 nu e roșu", () => {
+  const s = S.calc([t(1, START + ORA, 2)], { start: START, obiectiv: { rata: 0.55, serie: 3, net: 50.25, pana: null } }, ACUM);
+  const hf = S.html(s, { id: "acScor", formular: true, valori: { rata: "6", serie: "", net: "abc", pana: "x" } });
+  assert.ok(/name="rata"[^>]*value="6"/.test(hf) && /name="net"[^>]*value="abc"/.test(hf) && /name="pana"[^>]*value="x"/.test(hf), "valorile tastate, nu cele salvate: " + (hf.match(/<input[^>]*>/g) || []).join(" "));
+  assert.ok(/\+50,3 USDT/.test(S.html(s, { id: "acScor" })) && !/50\.25/.test(S.html(s, { id: "acScor" })), "ținta cu virgulă și o zecimală");
+  const he = S.html(s, { id: "acScor", sursaEroare: true });
+  assert.ok(/nu s-au putut citi/.test(he) && /implicit/.test(he), "nota când GET-ul configurației a picat");
+  assert.ok(!/nu s-au putut citi/.test(S.html(s, { id: "acScor" })));
+  const T0 = S.PIETE.t212.start, hi = S.htmlIstoric(S.sezoane([t(1, T0 - 5 * ZI, 5), t(2, T0 + ORA, -1)], { start: T0, obiectiv: S.PIETE.t212.obiectiv, istoric: [{ start: T0 - 10 * ZI, sfarsit: T0 }] }, T0 + 2 * ORA, "t212"), "t212");
+  assert.ok(/<th>Trade-uri<\/th>/.test(hi) && !/<th>Boți<\/th>/.test(hi), "capul tabelului pe piață: " + (hi.match(/<th>[^<]*<\/th>/g) || []).join(""));
+  assert.ok(/<th>Boți<\/th>/.test(S.htmlIstoric(S.sezoane([t(1, START - 5 * ZI, 5)], { start: START, obiectiv: CFG.obiectiv, istoric: [{ start: START - 10 * ZI, sfarsit: START }] }, ACUM))), "Pionex: Boți");
+  const hn = S.html(S.calc([t(1, START + ORA, -0.02)], CFG, ACUM), { id: "acScor" });
+  assert.ok(/scVal ">0,0 USDT</.test(hn) || /scVal">0,0 USDT</.test(hn), "−0,02 ⇒ „0,0 USDT” fără roșu: " + (hn.match(/scVal[^>]*>[^<]*USDT/g) || []).join(" | "));
+});
+
+await test("🟡 3/4/8/12/14 + 🔵c/e - legarea: Acasă citește arhiva KV (nu Pionex), ține minte trade-urile, formularul pe input, GET-ul în zbor nu suprascrie POST-ul; colectorul la 10 min; sw.js are lib-ul", () => {
+  const APP = citeste("public", "app.js"), C = citeste("scripts", "colector.mjs"), SW = citeste("public", "sw.js");
+  const bloc = APP.slice(APP.indexOf("var SC_PIETE="), APP.indexOf("function jtRender(){"));
+  assert.ok(!/jtPorneste\(/.test(bloc), "scPorneste nu mai cheamă jtPorneste (cererea Pionex)");
+  assert.ok(bloc.includes('/api/istoric-bot?action=botiInchisi'), "arhiva KV pe Acasă");
+  assert.ok(bloc.includes('/api/t212?action=istoric'), "istoricul T212 reîmprospătat");
+  assert.ok(/scMemo|memo/.test(bloc), "cache pe trade-uri (scTrades)");
+  assert.ok(/addEventListener\("input"/.test(bloc) && /scStare\.form\[/.test(bloc), "valorile tastate ținute minte la input");
+  assert.ok(/scStare\.cerere\[|cerereNr|stamp/.test(bloc), "GET-ul în zbor nu suprascrie POST-ul (ștampilă)");
+  assert.ok(/async function turaScor\(\)[\s\S]{0,400}SCOR_MS/.test(C) && /SCOR_MS = 10 \* 60000/.test(C), "turaScor la 10 minute");
+  assert.ok(SW.includes('"/lib/scor-sezon.js"'), "APP_SHELL are scor-sezon.js");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.(129|1[3-9]\d|[2-9]\d\d)"/.test(C), "colectorul ≥ v101.129");
+  const P = JSON.parse(citeste("package.json")); assert.ok(Number(P.version.split(".")[1]) >= 221, "v100.221");
 });
 
 // ── C. legarea în aplicație (index.html, app.js, acasa-ecran.js, app.css, versiunea) ──────────────────────────────

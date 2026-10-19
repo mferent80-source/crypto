@@ -49,20 +49,22 @@ var ScorSezon = (function () {
     var t = new Date(Date.UTC(y, mo - 1, d)); if (t.getUTCFullYear() !== y || t.getUTCMonth() !== mo - 1 || t.getUTCDate() !== d) return false;
     return t.toISOString().slice(0, 10);
   }
-  function valideazaObiectiv(o) {
-    o = o || {};
+  function valideazaObiectiv(o, piata) {
+    o = o || {}; var M = PIETE[piataDin(piata)].moneda;
     var rata = nr(o.rata), serie = nr(o.serie), net = nr(o.net), pana = dataIso(o.pana);
-    if (rata === null || rata <= 0 || rata > 100) return { ok: false, eroare: "Rata țintă e un procent între 1 și 100." };
+    // v100.221 (audit 11): rata e MEREU procent („55” = 55 %); „1” = 1 %, nu 100 %; sub 1 % nu e țintă
+    if (rata === null || rata < 1 || rata > 100) return { ok: false, eroare: "Rata țintă e un procent între 1 și 100." };
     if (serie === null || serie < 1 || serie > 50 || serie !== Math.round(serie)) return { ok: false, eroare: "Pierderile la rând: un număr întreg de la 1 la 50." };
-    if (net === null || net <= 0) return { ok: false, eroare: "Netul țintă e o sumă peste zero, în USDT." };
+    if (net === null || net <= 0) return { ok: false, eroare: "Netul țintă e o sumă peste zero, în " + M + "." };
     if (pana === false) return { ok: false, eroare: "Data: zi.lună.an (de exemplu 30.11.2026) sau goală." };
-    return { ok: true, obiectiv: { rata: rata > 1 ? rata / 100 : rata, serie: serie, net: net, pana: pana } };
+    return { ok: true, obiectiv: { rata: rata / 100, serie: serie, net: net, pana: pana } };
   }
   // ce vine din KV (sau nimic) ⇒ mereu o configurație întreagă; stricată ⇒ implicită
   function normalizeaza(c, piata) {
     var P = PIETE[piataDin(piata)];
     var start = c && nr(c.start) !== null && nr(c.start) > 0 ? nr(c.start) : P.start;
-    var v = c && c.obiectiv ? valideazaObiectiv({ rata: c.obiectiv.rata, serie: c.obiectiv.serie, net: c.obiectiv.net, pana: c.obiectiv.pana }) : { ok: false };
+    var rk = c && c.obiectiv ? nr(c.obiectiv.rata) : null;   // în KV rata e fracție (0,55); validarea cere procent
+    var v = c && c.obiectiv ? valideazaObiectiv({ rata: rk === null ? null : rk <= 1 ? rk * 100 : rk, serie: c.obiectiv.serie, net: c.obiectiv.net, pana: c.obiectiv.pana }, piata) : { ok: false };
     // v100.220: sezonul OPRIT - numără doar până la ora opririi; ce se închide după nu intră, până la „Sezon nou”
     var oprit = c && nr(c.oprit) !== null && nr(c.oprit) > start ? nr(c.oprit) : null;
     // v100.218 (ideea 1): sezoanele încheiate [{start, sfarsit}], cum le ține serverul (sezonNou); stricate ⇒ fără
@@ -76,7 +78,7 @@ var ScorSezon = (function () {
     l.forEach(function (x) { if (x.rezultat > 0) { win++; sc += x.rezultat; } else if (x.rezultat < 0) { loss++; sp += x.rezultat; } else zero++; });
     var n = l.length, serieP = 0, maxP = 0;
     l.forEach(function (x) { if (x.rezultat < 0) { serieP++; if (serieP > maxP) maxP = serieP; } else serieP = 0; });
-    return { n: n, win: win, loss: loss, zero: zero, rata: win + loss ? win / (win + loss) : null, net: n ? sc + sp : null, castigBrut: sc, pierdereBruta: sp,
+    return { n: n, win: win, loss: loss, zero: zero, rata: n ? win / n : null, /* v100.221 (audit 13): win ÷ toți, ca statistica Jurnalului (zerourile intră la numitor) */ net: n ? sc + sp : null, castigBrut: sc, pierdereBruta: sp,
       castigMediu: win ? sc / win : null, pierdereMedie: loss ? sp / loss : null, raport: win && loss ? (sc / win) / (-sp / loss) : null, seriePierderi: maxP };
   }
   function calc(lista, cfg, acum, piata) {
@@ -89,11 +91,11 @@ var ScorSezon = (function () {
     var s = grupa(sezon), b = grupa(inainte);
     // seria curentă: de la ultimul închis înapoi, până la primul de alt fel (zero o oprește)
     var n = 0, fel = null;
-    for (var i = sezon.length - 1; i >= 0; i--) { var f = sezon[i].rezultat > 0 ? "w" : sezon[i].rezultat < 0 ? "l" : null; if (!f) break; if (!fel) fel = f; if (f !== fel) break; n++; }
+    for (var i = sezon.length - 1; i >= 0; i--) { var f = sezon[i].rezultat > 0 ? "w" : sezon[i].rezultat < 0 ? "l" : null; if (!f) continue; if (!fel) fel = f; if (f !== fel) break; n++; }   // v100.221: zeroul e sărit, nu rupe seria
     s.serie = { n: n, fel: fel };
     s.pauza = fel === "l" && n >= ob.serie;
-    s.nivel = s.pauza ? "rau" : s.rata === null ? "fara" : s.rata >= ob.rata ? "bine" : s.rata >= ob.rata - 0.15 ? "atentie" : "rau";
     s.suficient = s.n >= MIN;
+    s.nivel = s.pauza ? "rau" : s.rata === null || !s.suficient ? "fara" : s.rata >= ob.rata ? "bine" : s.rata >= ob.rata - 0.15 ? "atentie" : "rau";   // v100.221 (audit 10): sub 10 culoarea e neutră
     s.start = c.start; s.obiectiv = ob; s.acum = t; s.oprit = c.oprit; s.dupaOprire = dupaOprire; s.piata = c.piata; s.moneda = P.moneda;
     s.ultimul = sezon.length ? sezon[sezon.length - 1] : null;
     s.progresRata = s.rata === null ? null : Math.max(0, Math.min(1, s.rata / ob.rata));
@@ -115,13 +117,13 @@ var ScorSezon = (function () {
   }
   function P_moneda(p) { return PIETE[piataDin(p)].moneda; }
   // tabelul „Sezoanele tale” (doar când există măcar un sezon încheiat); cel de acum e primul
-  function htmlIstoric(lista) {
-    var l = Array.isArray(lista) ? lista : []; if (l.length < 2) return "";
+  function htmlIstoric(lista, piata) {
+    var l = Array.isArray(lista) ? lista : []; if (l.length < 2) return ""; var felCap = PIETE[piataDin(piata)].fel[1]; felCap = felCap.charAt(0).toUpperCase() + felCap.slice(1);
     var rows = l.slice().reverse().map(function (z) {
       var per = dataRo(z.start) + " → " + (z.sfarsit === null ? "acum" : dataRo(z.sfarsit - 1));
       return "<tr" + (z.curent ? ' class="scIstAcum"' : "") + "><td>" + esc(per) + (z.curent ? " <b>· sezonul de acum" + (z.sfarsit !== null ? " (oprit)" : "") + "</b>" : "") + "</td><td data-et=\"boți:\">" + z.n + "</td><td data-et=\"win / loss:\"><span class=\"good\">" + z.win + "</span> / <span class=\"bad\">" + z.loss + "</span></td><td data-et=\"rata:\">" + esc(pr(z.rata)) + "</td><td data-et=\"net:\" class=\"" + (z.net === null ? "" : z.net >= 0 ? "good" : "bad") + "\">" + esc(U(z.net, z.moneda)) + "</td><td data-et=\"pierderi la rând:\">" + z.seriePierderi + "</td></tr>";
     }).join("");
-    return '<div class="scIst"><h4>Sezoanele tale</h4><table class="scIstTab"><thead><tr><th>Perioada</th><th>Boți</th><th>Win / loss</th><th>Rata</th><th>Net</th><th>Pierderi la rând</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+    return '<div class="scIst"><h4>Sezoanele tale</h4><table class="scIstTab"><thead><tr><th>Perioada</th><th>' + esc(felCap) + '</th><th>Win / loss</th><th>Rata</th><th>Net</th><th>Pierderi la rând</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
   }
 
   // ---- v100.218 (ideea 2): ce anunță colectorul, pur - starea ține minte ce s-a anunțat (pauza pe ultimul bot, țintele pe sezon) ----
@@ -130,8 +132,10 @@ var ScorSezon = (function () {
     var st = stare && typeof stare === "object" ? stare : {}, out = [];
     if (s.oprit) return { mesaje: out, stare: st };   // v100.220: sezon oprit - nimic de anunțat
     if (s.pauza && s.ultimul && st.pauzaLa !== s.ultimul.id) { st.pauzaLa = s.ultimul.id; out.push({ fel: "pauza" }); }
-    if (s.suficient && s.rata !== null && s.rata >= s.obiectiv.rata && st.rataLa !== s.start) { st.rataLa = s.start; out.push({ fel: "rata" }); }
-    if (s.net !== null && s.net >= s.obiectiv.net && st.netLa !== s.start) { st.netLa = s.start; out.push({ fel: "net" }); }
+    // v100.221 (audit 5): cheia ține startul ȘI ținta - o țintă ridicată se anunță din nou când e atinsă
+    var kr = s.start + "|" + s.obiectiv.rata, kn = s.start + "|" + s.obiectiv.net;
+    if (s.suficient && s.rata !== null && s.rata >= s.obiectiv.rata && st.rataLa !== kr) { st.rataLa = kr; out.push({ fel: "rata" }); }
+    if (s.net !== null && s.net >= s.obiectiv.net && st.netLa !== kn) { st.netLa = kn; out.push({ fel: "net" }); }
     return { mesaje: out, stare: st };
   }
 
@@ -147,7 +151,7 @@ var ScorSezon = (function () {
     var cifre = cel("Win", s.win, "good", s.n ? Um(s.castigBrut) : P.felInchis[1] + " pe plus")
       + cel("Loss", s.loss, "bad", s.n ? Um(s.pierdereBruta) : P.felInchis[1] + " pe minus")
       + cel("Rata de câștig", pr(s.rata), s.nivel === "bine" ? "good" : s.nivel === "atentie" ? "neutral" : s.nivel === "rau" ? "bad" : "", "ținta " + pr(ob.rata) + " · " + subN)
-      + cel("Net", Um(s.net), s.net === null ? "" : s.net >= 0 ? "good" : "bad", s.raport !== null ? "o pierdere = " + s.raport.toFixed(1).replace(".", ",") + " câștiguri" + (s.raport < 1 ? " - pierzi mai mult decât câștigi" : "") : (s.piata === "t212" ? "după comisioanele de conversie" : "după comisioane și funding"))
+      + cel("Net", Um(s.net), s.net === null || Math.round(s.net * 10) === 0 ? "" : s.net > 0 ? "good" : "bad", s.raport !== null ? "o pierdere = " + s.raport.toFixed(1).replace(".", ",") + " câștiguri" + (s.raport < 1 ? " - pierzi mai mult decât câștigi" : "") : (s.piata === "t212" ? "după comisioanele de conversie" : "după comisioane și funding"))
       + cel("Seria", serieTxt, serieCls, serieSub);
     var b = s.inainte, inTxt;
     if (b.n) {
@@ -158,13 +162,16 @@ var ScorSezon = (function () {
     var pRata = s.progresRata === null ? 0 : Math.round(s.progresRata * 100), pNet = s.progresNet === null ? 0 : Math.round(s.progresNet * 100);
     // v100.220: sezon oprit - banda de stare + butoanele potrivite („Pornește sezon nou de azi” în loc de „Oprește” + „Sezon nou”)
     var oprit = s.oprit ? '<div class="scOprit">⏸ Sezon OPRIT din ' + esc(dataRo(s.oprit)) + ' - cifrele sunt înghețate' + (s.dupaOprire ? "; " + esc(cate(s.dupaOprire, P.felInchis[0], P.felInchis[1])) + " după oprire nu intră în scor" : "") + '. Apasă „Obiectiv ✎” → „Pornește sezon nou de azi” când reiei.</div>' : "";
+    // v100.221 (audit 9): setările nu s-au putut citi de pe serverul de acasă - spus pe față, nu obiectiv implicit în tăcere
+    var nota = o.sursaEroare ? '<div class="scOprit">⚠ Setările scorului nu s-au putut citi de pe serverul de acasă: cardul arată sezonul și obiectivul implicit până răspunde.</div>' : "";
     var form = "";
     if (o.formular) {
-      var v = function (x) { return esc(x); };
-      form = '<div class="scForm" id="scForm-' + esc(id) + '"><label>Rata de câștig țintă (%)<input name="rata" inputmode="decimal" value="' + v(Math.round(ob.rata * 100)) + '"></label>'
-        + '<label>Max pierderi la rând<input name="serie" inputmode="numeric" value="' + v(ob.serie) + '"></label>'
-        + '<label>Net țintă (' + esc(M) + ')<input name="net" inputmode="decimal" value="' + v(ob.net) + '"></label>'
-        + '<label>Până la (zi.lună.an)<input name="pana" inputmode="numeric" placeholder="30.11.2026" value="' + v(ob.pana ? dataRo(Date.parse(ob.pana + "T00:00:00Z")) : "") + '"></label></div>'
+      // v100.221 (audit 7): ce a tastat (o.valori) are întâietate față de obiectivul salvat - o eroare sau o redesenare nu îi șterge câmpurile
+      var V = o.valori || {}, v = function (x) { return esc(x); }, val = function (k, implicit) { return v(V[k] !== undefined && V[k] !== null ? V[k] : implicit); };
+      form = '<div class="scForm" id="scForm-' + esc(id) + '"><label>Rata de câștig țintă (%)<input name="rata" inputmode="decimal" value="' + val("rata", Math.round(ob.rata * 100)) + '"></label>'
+        + '<label>Max pierderi la rând<input name="serie" inputmode="numeric" value="' + val("serie", ob.serie) + '"></label>'
+        + '<label>Net țintă (' + esc(M) + ')<input name="net" inputmode="decimal" value="' + val("net", ob.net) + '"></label>'
+        + '<label>Până la (zi.lună.an)<input name="pana" inputmode="numeric" placeholder="30.11.2026" value="' + val("pana", ob.pana ? dataRo(Date.parse(ob.pana + "T00:00:00Z")) : "") + '"></label></div>'
         + '<div class="scFormBtn"><button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorSalveaza(this.value)">Salvează obiectivul</button>'
         + (s.oprit ? '<button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorSezonNou(this.value)">Pornește sezon nou de azi</button>'
           : '<button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorOpreste(this.value)">Oprește sezonul</button><button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorSezonNou(this.value)">Sezon nou de azi</button>')
@@ -172,9 +179,9 @@ var ScorSezon = (function () {
     }
     return '<div class="scCard' + (s.oprit ? " scCardOprit" : "") + '" style="--sc-c:' + CUL[s.nivel] + '"><div class="scCap"><h4>🏁 Scorul tău pe ' + esc(P.nume) + ' · sezonul din ' + esc(dataScurta(s.start)) + (s.oprit ? " · OPRIT" : "") + '</h4>'
       + '<span class="acSub">' + (s.ultimul ? "ultimul închis " + esc(dataScurta(s.ultimul.inchis)) : "ziua 1") + (o.faraJurnal ? "" : ' · <button type="button" class="actionGhost" data-action-click="navTo(\'jurnaltrade\',true)' + (s.piata === "t212" ? ";jtAlegeFiltru(\'actiuni\')" : "") + '">Jurnal ›</button>') + ' · <button type="button" class="actionGhost" value="' + esc(id) + '" data-action-click="scorFormular(this.value)">' + (o.formular ? "închide" : "Obiectiv ✎") + '</button></span></div>'
-      + oprit + '<div class="scCifre">' + cifre + '</div>'
-      + '<div class="scObiectiv"><div class="scTinta"><span class="scSub">Obiectivul tău: rata ≥ <b>' + esc(pr(ob.rata)) + '</b> · max <b>' + ob.serie + '</b> pierderi la rând · <b>+' + esc(String(ob.net)) + ' ' + esc(M) + '</b>' + zile + '</span><div class="scBara"><i style="width:' + pRata + '%"></i></div><span class="scSub">rata: ' + pRata + ' % din țintă</span></div>'
-      + '<div class="scTinta"><span class="scSub">Netul față de țintă</span><div class="scBara"><i style="width:' + pNet + '%"></i></div><span class="scSub">' + esc(Um(s.net)) + ' din +' + esc(String(ob.net)) + ' ' + esc(M) + '</span></div></div>'
+      + nota + oprit + '<div class="scCifre">' + cifre + '</div>'
+      + '<div class="scObiectiv"><div class="scTinta"><span class="scSub">Obiectivul tău: rata ≥ <b>' + esc(pr(ob.rata)) + '</b> · max <b>' + ob.serie + '</b> pierderi la rând · <b>' + esc(Um(ob.net)) + '</b>' + zile + '</span><div class="scBara"><i style="width:' + pRata + '%"></i></div><span class="scSub">rata: ' + pRata + ' % din țintă</span></div>'
+      + '<div class="scTinta"><span class="scSub">Netul față de țintă</span><div class="scBara"><i style="width:' + pNet + '%"></i></div><span class="scSub">' + esc(Um(s.net)) + ' din ' + esc(Um(ob.net)) + '</span></div></div>'
       + '<div class="scInainte">' + inTxt + '</div>' + form + '</div>';
   }
   function htmlAstept(eroare, piata) { var P = PIETE[piataDin(piata)]; return '<div class="scCard" style="--sc-c:var(--muted)"><div class="scCap"><h4>🏁 Scorul tău pe ' + esc(P.nume) + '</h4><span class="acSub">' + (eroare ? esc(eroare) : P.nume === "Pionex" ? "aduc boții închiși din Pionex…" : "citesc istoricul Trading 212…") + '</span></div></div>'; }

@@ -28,23 +28,36 @@ function dataIso(v) {
 export function valideazaObiectiv(o) {
   o = o || {};
   const rata = nr(o.rata), serie = nr(o.serie), net = nr(o.net), pana = dataIso(o.pana);
-  if (rata === null || rata <= 0 || rata > 100) return { ok: false, eroare: "Rata țintă e un procent între 1 și 100." };
+  // v100.221 (audit 11): rata e MEREU procent („55” = 55 %; „1” = 1 %); din KV vine fracție ⇒ curata o înmulțește înainte
+  if (rata === null || rata < 1 || rata > 100) return { ok: false, eroare: "Rata țintă e un procent între 1 și 100." };
   if (serie === null || serie < 1 || serie > 50 || serie !== Math.round(serie)) return { ok: false, eroare: "Pierderile la rând: un număr întreg de la 1 la 50." };
   if (net === null || net <= 0) return { ok: false, eroare: "Netul țintă e o sumă peste zero, în USDT." };
   if (pana === false) return { ok: false, eroare: "Data: zi.lună.an (de exemplu 30.11.2026) sau goală." };
-  return { ok: true, obiectiv: { rata: rata > 1 ? rata / 100 : rata, serie, net, pana } };
+  return { ok: true, obiectiv: { rata: rata / 100, serie, net, pana } };
 }
 // 00:00 al zilei de azi pe ora României (UTC+2 iarna / +3 vara, din Intl)
+// v100.221 (audit 2): decalajul se ia la MIEZUL NOPȚII local, nu la ora de acum (în ziua schimbării orei diferă cu o oră) - ca lib/scor-sezon.js
+const FMT_RO = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+function partiRo(t) { const p = {}; FMT_RO.formatToParts(new Date(t)).forEach((x) => { p[x.type] = x.value; }); return p; }
+function decalajMin(t) { const p = partiRo(t), d = new Date(t); return ((+p.hour - d.getUTCHours()) * 60 + (+p.minute - d.getUTCMinutes()) + 24 * 60) % (24 * 60); }
 export function startulZilei(t) {
-  const f = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  const p = {}; f.formatToParts(new Date(t)).forEach((x) => { p[x.type] = x.value; });
-  const u = Date.UTC(+p.year, +p.month - 1, +p.day, 0, 0, 0), d = new Date(t), dec = ((+p.hour - d.getUTCHours()) * 60 + (+p.minute - d.getUTCMinutes()) + 24 * 60) % (24 * 60);
-  return u - dec * 60000;
+  const p = partiRo(t), u = Date.UTC(+p.year, +p.month - 1, +p.day, 0, 0, 0), s = u - decalajMin(u) * 60000;
+  return u - decalajMin(s) * 60000;
+}
+// v100.221 (audit 🔴 1): „sezon nou” - pur, probat în scripts/proba-scor-sezon.mjs. Sezonul de acum se închide la oprire (dacă e oprit),
+// altfel la 00:00 azi; dacă a pornit AZI (după 00:00) se închide ACUM. Cel nou pornește de la max(00:00 azi, închidere): niciodată înapoi.
+export function sezonNouCalc(acum, now) {
+  const zi = startulZilei(now);
+  let sfarsit = acum.oprit || Math.max(zi, acum.start);
+  if (sfarsit <= acum.start) sfarsit = Math.max(now, acum.start);   // pornit azi ⇒ se închide acum (un sezon care încă n-a început rămâne gol)
+  const istoric = sfarsit > acum.start ? (acum.istoric || []).concat([{ start: acum.start, sfarsit }]).slice(-50) : (acum.istoric || []);
+  return { ...acum, start: Math.max(zi, sfarsit), oprit: null, istoric };
 }
 function curata(c, piata) {
   const P = PIETE[piata] || PIETE.pionex;
   const start = c && nr(c.start) > 0 ? nr(c.start) : P.start;
-  const v = c && c.obiectiv ? valideazaObiectiv(c.obiectiv) : { ok: false };
+  const rk = c && c.obiectiv ? nr(c.obiectiv.rata) : null;
+  const v = c && c.obiectiv ? valideazaObiectiv({ ...c.obiectiv, rata: rk === null ? null : rk <= 1 ? rk * 100 : rk }) : { ok: false };   // în KV rata e fracție
   const istoric = Array.isArray(c && c.istoric) ? c.istoric.filter((x) => x && nr(x.start) > 0 && nr(x.sfarsit) > 0).map((x) => ({ start: nr(x.start), sfarsit: nr(x.sfarsit) })).slice(-50) : [];
   const oprit = c && nr(c.oprit) > start ? nr(c.oprit) : null;
   return { start, oprit, obiectiv: v.ok ? v.obiectiv : { ...P.obiectiv }, istoric, piata };
@@ -77,9 +90,7 @@ export async function onRequestPost({ request, env }) {
   } else {
     // sezon nou: cel de acum intră în istoric (până la oprire, dacă a fost oprit; altfel până la 00:00 azi); cel nou pornește de la 00:00 azi
     // sau de la ora opririi, dacă opririea a fost tot azi (ca un trade închis azi să nu intre în amândouă)
-    const zi = startulZilei(Date.now()), start = acum.oprit && acum.oprit > zi ? acum.oprit : zi, sfarsit = acum.oprit || zi;
-    if (sfarsit > acum.start) acum.istoric = acum.istoric.concat([{ start: acum.start, sfarsit }]).slice(-50);
-    acum.start = start; acum.oprit = null;
+    Object.assign(acum, sezonNouCalc(acum, Date.now()));
   }
   const { piata: _p, ...deScris } = acum;
   await env.ISTORIC.put(PIETE[piata].cheie, JSON.stringify(deScris));

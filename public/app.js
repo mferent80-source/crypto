@@ -5675,16 +5675,45 @@ function jtStatCsv(piata){
 // Trading 212 (trade-urile închise din istoricul de acasă, prin T212.perechi / t212Jurnal, în lei); fiecare cu configurația ei
 // (/api/scor-sezon?piata=…) și cardurile ei (#acScor / #jtScor, #acScorT212 / #jtScorT212). „Oprește sezonul” îngheață cifrele la ora apăsării.
 var SC_PIETE={pionex:["acScor","jtScor"],t212:["acScorT212","jtScorT212"]};
-var scStare={cfg:{},la:{},sursa:{},deschis:{},mesaj:{},inLucru:false};
+// v100.221 (auditul din 19.10, el: „repară tot”): (3) Acasă își împrospătează cardurile la 5 min din ARHIVA de acasă (KV) și din istoricul T212 (KV),
+// (4) fără nicio cerere la Pionex (pagina 1 o aduce doar Jurnalul); (14) trade-urile se țin minte (scMemo) - nu se recalculează la fiecare desen;
+// (7) ce tastezi în formular se ține minte la fiecare „input” (scStare.form) și supraviețuiește erorilor și redesenărilor; (🔵) un GET al
+// configurației pornit înainte de un POST nu-l mai suprascrie (ștampila cerere); (9) GET-ul picat se spune pe card (sursa „eroare”).
+var scStare={cfg:{},la:{},sursa:{},cerere:{},deschis:{},mesaj:{},form:{},inLucru:false,boti:null,botiLa:0,arhivaLa:null,t212La:0};
+var scMemo={pionex:{k:"",v:null},t212:{k:"",v:null}};
+var SC_CFG_MS=10*60000,SC_DATE_MS=5*60000;
 function scPiata(id){return /T212$/.test(String(id))?"t212":"pionex"}
 async function scAsigura(piata,forta){
-  if(!forta&&scStare.cfg[piata]&&Date.now()-(scStare.la[piata]||0)<10*60000)return;
-  try{var r=await getJSON("/api/scor-sezon?piata="+piata);scStare.cfg[piata]=r&&r.sezon||null;scStare.sursa[piata]=r&&r.sursa||null;scStare.la[piata]=Date.now()}catch(e){scStare.cfg[piata]=scStare.cfg[piata]||null}
+  if(!forta&&scStare.cfg[piata]&&Date.now()-(scStare.la[piata]||0)<SC_CFG_MS)return;
+  var nr=(scStare.cerere[piata]||0)+1;scStare.cerere[piata]=nr;
+  try{var r=await getJSON("/api/scor-sezon?piata="+piata);if(scStare.cerere[piata]!==nr)return;   // între timp a scris un POST: răspunsul lui e mai nou
+    scStare.cfg[piata]=r&&r.sezon||null;scStare.sursa[piata]=r&&r.sursa||null;scStare.la[piata]=Date.now()}
+  catch(e){if(scStare.cerere[piata]!==nr)return;scStare.sursa[piata]="eroare";scStare.la[piata]=Date.now()-SC_CFG_MS+60000}   // reîncearcă peste un minut
 }
+// boții închiși pentru Acasă: arhiva de acasă (toată istoria, strânsă de colector; întârziere ≤ 10 min), fără Pionex; cu ?la= serverul spune „neschimbat”
+async function scAduArhiva(){
+  if(Date.now()-scStare.botiLa<SC_DATE_MS)return;
+  try{var a=await getJSON("/api/istoric-bot?action=botiInchisi"+(scStare.arhivaLa?"&la="+encodeURIComponent(scStare.arhivaLa):""));
+    if(a&&!a.neschimbat&&Array.isArray(a.boti)){scStare.boti=a.boti;scStare.arhivaLa=a.la}scStare.botiLa=Date.now()}
+  catch(e){scStare.botiLa=Date.now()-SC_DATE_MS+60000}
+}
+async function scAduT212(){
+  if(typeof t212==="undefined"||t212.inLucru||Date.now()-scStare.t212La<SC_DATE_MS)return;
+  try{t212.istoric=await getJSON("/api/t212?action=istoric");t212.istoricEroare=null;scStare.t212La=Date.now()}
+  catch(e){t212.istoricEroare=typeof t212Eroare==="function"?t212Eroare(e):String(e&&e.message||e);scStare.t212La=Date.now()-SC_DATE_MS+60000}
+}
+// sursa boților Pionex: Jurnalul (pagina 1 Pionex + arhiva), dacă e mai proaspăt; altfel arhiva adusă pentru Acasă
+function scBotiPionex(){var j=jtStare.boti&&jtStare.la>=scStare.botiLa?jtStare.boti:scStare.boti;return j||jtStare.boti||null}
 function scTrades(piata){
   if(typeof StatisticaTrade==="undefined")return null;
-  if(piata==="t212"){if(typeof t212==="undefined"||!t212.istoric||!Array.isArray(t212.istoric.umpleri)||typeof T212==="undefined")return null;var j=typeof t212Jurnal==="function"?t212Jurnal():null;return StatisticaTrade.dinT212(j?j.p.inchise:T212.perechi(t212.istoric.umpleri).inchise)}
-  if(!jtStare.boti||typeof JurnalTrade==="undefined")return null;return StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti)).concat(StatisticaTrade.dinPionexAlte(JurnalTrade.alte(jtStare.boti)))
+  var m=scMemo[piata],k,v;
+  if(piata==="t212"){if(typeof t212==="undefined"||!t212.istoric||!Array.isArray(t212.istoric.umpleri)||typeof T212==="undefined")return null;
+    k="t|"+t212.istoric.umpleri.length+"|"+(t212.istoric.la||"");if(m.k===k)return m.v;
+    var j=typeof t212Jurnal==="function"?t212Jurnal():null;v=StatisticaTrade.dinT212(j?j.p.inchise:T212.perechi(t212.istoric.umpleri).inchise)}
+  else{var b=scBotiPionex();if(!b||typeof JurnalTrade==="undefined")return null;
+    k="p|"+b.length+"|"+(b===jtStare.boti?"j"+jtStare.la:"a"+scStare.botiLa);if(m.k===k)return m.v;
+    v=StatisticaTrade.dinPionex(JurnalTrade.din(b)).concat(StatisticaTrade.dinPionexAlte(JurnalTrade.alte(b)))}
+  m.k=k;m.v=v;return v
 }
 function scDeseneaza(){
   if(typeof ScorSezon==="undefined")return;
@@ -5694,17 +5723,17 @@ function scDeseneaza(){
   Object.keys(SC_PIETE).forEach(function(piata){
     var tr=scTrades(piata),s=tr?ScorSezon.calc(tr,scStare.cfg[piata],acum,piata):null,ast=piata==="t212"?(typeof t212!=="undefined"&&t212.istoricEroare)||null:jtStare.eroare;
     SC_PIETE[piata].forEach(function(id){var el=$(id);if(!el)return;if(scStare.deschis[id]&&activ&&activ.tagName==="INPUT"&&el.contains(activ))return;
-      el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],mesaj:scStare.mesaj[id]||"",faraJurnal:id.indexOf("jt")===0})+(id.indexOf("jt")===0?ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg[piata],acum,piata)):""):ScorSezon.htmlAstept(ast,piata)})   // v100.218 (ideea 1): sezoanele încheiate, doar în Jurnal
+      el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],valori:scStare.form[id]||null,mesaj:scStare.mesaj[id]||"",sursaEroare:scStare.sursa[piata]==="eroare",faraJurnal:id.indexOf("jt")===0})+(id.indexOf("jt")===0?ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg[piata],acum,piata),piata):""):ScorSezon.htmlAstept(ast,piata)})   // v100.218 (ideea 1): sezoanele încheiate, doar în Jurnal
   })
 }
 async function scPorneste(){
   if(scStare.inLucru)return;scStare.inLucru=true;
-  try{scDeseneaza();await Promise.all([scAsigura("pionex",false),scAsigura("t212",false)]);
-    if(typeof t212!=="undefined"&&!t212.istoric&&!t212.inLucru){try{t212.istoric=await getJSON("/api/t212?action=istoric");t212.istoricEroare=null}catch(e){t212.istoricEroare=typeof t212Eroare==="function"?t212Eroare(e):String(e&&e.message||e)}}   // istoricul de acasă (KV), ca pe pagina T212
-    if(!jtStare.boti)await jtPorneste(false);else scDeseneaza()}finally{scStare.inLucru=false}
+  try{scDeseneaza();await Promise.all([scAsigura("pionex",false),scAsigura("t212",false),scAduArhiva(),scAduT212()]);scDeseneaza()}finally{scStare.inLucru=false}
 }
-function scorFormular(id){scStare.deschis[id]=!scStare.deschis[id];scStare.mesaj[id]="";scDeseneaza()}
-function scDupaRaspuns(id,j){var piata=scPiata(id);scStare.cfg[piata]=j.sezon||scStare.cfg[piata];scStare.la[piata]=Date.now();scStare.deschis[id]=false;scStare.mesaj[id]="";scDeseneaza()}
+// v100.221 (audit 7): ce tastează în formular se ține minte la fiecare literă
+document.addEventListener("input",function(e){var f=e.target&&e.target.closest&&e.target.closest(".scForm");if(!f||!e.target.name)return;var id=String(f.id||"").replace(/^scForm-/,"");(scStare.form[id]=scStare.form[id]||{})[e.target.name]=e.target.value});
+function scorFormular(id){scStare.deschis[id]=!scStare.deschis[id];scStare.mesaj[id]="";if(!scStare.deschis[id])delete scStare.form[id];scDeseneaza()}
+function scDupaRaspuns(id,j){var piata=scPiata(id);scStare.cfg[piata]=j.sezon||scStare.cfg[piata];scStare.sursa[piata]="acasa";scStare.la[piata]=Date.now();scStare.cerere[piata]=(scStare.cerere[piata]||0)+1;scStare.deschis[id]=false;scStare.mesaj[id]="";delete scStare.form[id];scDeseneaza()}
 function scBlur(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()}
 async function scPost(id,actiune,corp){
   var r=await apiFetch("/api/scor-sezon?piata="+scPiata(id)+"&action="+actiune,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(corp||{})}),j=await r.json().catch(function(){return {}});
@@ -5713,7 +5742,8 @@ async function scPost(id,actiune,corp){
 }
 async function scorSalveaza(id){
   var f=$("scForm-"+id);if(!f)return;var v=function(n){var i=f.querySelector('input[name="'+n+'"]');return i?i.value:""},o={rata:v("rata"),serie:v("serie"),net:v("net"),pana:v("pana")};
-  var ok=ScorSezon.valideazaObiectiv(o);if(!ok.ok){scStare.mesaj[id]=ok.eroare;scBlur();return scDeseneaza()}
+  scStare.form[id]=o;   // ce a tastat rămâne în formular și după o eroare
+  var ok=ScorSezon.valideazaObiectiv(o,scPiata(id));if(!ok.ok){scStare.mesaj[id]=ok.eroare;scBlur();return scDeseneaza()}
   try{var j=await scPost(id,"obiectiv",o);if(!j)return;scDupaRaspuns(id,j);toast("Obiectivul e salvat","good")}
   catch(e){scStare.mesaj[id]="Nu s-a salvat: "+((e&&e.message)||"");scDeseneaza()}
 }
