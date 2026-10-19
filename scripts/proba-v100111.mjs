@@ -126,7 +126,7 @@ await test("(542a) GraficBot.trendTabel: un rând pe bec, cu dovezile lângă el
   assert.equal(t.length, 6); assert.deepEqual(t.map((r) => r.tf), ["5M", "15M", "30M", "60M", "4H", "1D"]);
   const a = t[1];
   assert.equal(a.bec.startsWith("coboară de "), true, a.bec); assert.equal(a.fata, "împotriva botului long"); assert.equal(a.sageata, "↓"); assert.equal(a.ton, "rau");
-  assert.deepEqual(a.scor, ind[0].verdict); assert.equal(a.intors.text, "s-a schimbat în 34% din 120 de cazuri, după 4 ore"); assert.match(a.intors.titlu, /^Interval de încredere 26-43%, spre direcția opusă 20%, dovedit\. Stare ținută de 16 bare închise\.$/);
+  assert.deepEqual(a.scor, ind[0].verdict); assert.equal(a.intors.text, "s-a schimbat în 34% din 120 de cazuri, după 4 ore"); assert.match(a.intors.titlu, /^Interval de încredere 26-43%, spre direcția opusă 20%, destule cazuri\. Stare ținută de 16 bare închise\.$/);
   assert.equal(a.bara, -0.4); assert.ok(a.adx > 0 && a.rsi > 0);
   assert.equal(t[0].areCalc, false, "5 min: fără „Direcție” și indicatori"); assert.equal(t[0].intors, null); assert.equal(t[0].scor, null);
   assert.equal(t[0].scorLipsa, "— (nu se socotește pe 5 min)"); assert.equal(t[0].intorsLipsa, "— (nu se socotește pe 5 min)");

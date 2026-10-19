@@ -105,7 +105,7 @@ var GraficBot = (function () {
     return (Array.isArray(sem) ? sem : []).map(function (s) {
       var r = R[s.tf], v = I[s.tf], sc = r && r.schimbare, a = nr(s.adx), intors = null, areCalc = Array.isArray(calc) ? calc.indexOf(s.tf) >= 0 : !!(r || v), nu = "— (nu se socotește pe " + s.et + ")";
       if (r && r.dir) intors = sc && sc.valoare != null ? { text: "s-a schimbat în " + Math.round(sc.valoare) + "% din " + cate(sc.cazuri, "caz", "cazuri") + ", după " + r.orizontText,
-        titlu: (sc.ic ? "Interval de încredere " + Math.round(sc.ic.jos) + "-" + Math.round(sc.ic.sus) + "%" : "") + (sc.spreOpus != null ? ", spre direcția opusă " + Math.round(sc.spreOpus) + "%" : "") + (sc.stare === "dovedit" ? ", dovedit" : ", puține cazuri") + "."
+        titlu: (sc.ic ? "Interval de încredere " + Math.round(sc.ic.jos) + "-" + Math.round(sc.ic.sus) + "%" : "") + (sc.spreOpus != null ? ", spre direcția opusă " + Math.round(sc.spreOpus) + "%" : "") + (sc.stare === "destule" || sc.stare === "dovedit" ? ", destule cazuri" : ", puține cazuri") + "."
           + (r.vechime ? " Stare ținută de " + cate(r.vechime, "bară închisă", "bare închise") + "." : "") } : { text: "prea puține cazuri în istoric", titlu: "" };
       return { tf: s.tf, et: s.et, ton: s.ton || "gol", sageata: s.dir ? SAGEATA[s.dir] : "–", bec: s.dir ? NUME_DIR[s.dir] + (s.vechime ? " de " + cate(s.vechime, "bară", "bare") : "") : null,
         fata: s.dir ? s.fata || "" : null, lipsa: s.dir ? null : s.text || null, adx: a, rsi: nr(s.rsi), adxVechi: s.dir === "lateral" && a !== null && a > 25,

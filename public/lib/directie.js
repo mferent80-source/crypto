@@ -96,7 +96,8 @@ var Directie = (function () {
       }
     }
     if (cazuri < 10) return { valoare: null, stare: "nu-se-poate", cazuri: cazuri, motiv: "sub 10 cazuri in istoric" };
-    return { valoare: 100 * schimbate / cazuri, stare: cazuri >= 30 ? "dovedit" : "putin",
+    // audit 19.10 (7): 30 de cazuri e un prag de NUMĂR, nu o dovadă - starea e „destule” (cazuri), nu „dovedit”
+    return { valoare: 100 * schimbate / cazuri, stare: cazuri >= 30 ? "destule" : "putin",
       cazuri: cazuri, ic: wilson(schimbate, cazuri),
       spreOpus: acum.dir === "lateral" ? null : 100 * spreOpus / cazuri };
   }

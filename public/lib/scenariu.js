@@ -107,7 +107,7 @@ var Scenariu = (function () {
       if (jos ? extrem <= c0 * prag : extrem >= c0 * prag) atins++;
     }
     if (cazuri < 10) return { valoare: null, cazuri: cazuri, motiv: "sub 10 ferestre în istoric" };
-    return { valoare: 100 * atins / cazuri, cazuri: cazuri, atinse: atins, ic: wilson(atins, cazuri), stare: cazuri >= 30 ? "dovedit" : "putin" };
+    return { valoare: 100 * atins / cazuri, cazuri: cazuri, atinse: atins, ic: wilson(atins, cazuri), stare: cazuri >= 30 ? "destule" : "putin" };   // audit 19.10 (7): prag de număr, nu dovadă
   }
 
   return { grid: grid, la: la, pretGolire: pretGolire, scenarii: scenarii, sansaAtingere: sansaAtingere };

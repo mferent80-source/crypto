@@ -1646,7 +1646,7 @@ await test("T1: perechi pe ora se socoteste din contorul cumulativ, peste gauri"
   const cuGaura = plin.filter((x) => { const m = (ACUM - x.t) / 60000; return !(m > 60 && m < 120); });
   const a = T.frecvente(plin, BOT, ACUM).perechiPeOra;
   const b = T.frecvente(cuGaura, BOT, ACUM).perechiPeOra;
-  assert.equal(a.stare, "dovedit");
+  assert.equal(a.stare, "destule");   // audit 19.10 (7): pragul de număr/timp e „destule”, nu „dovedit”
   assert.ok(Math.abs(a.valoare - 6) < 0.2, `asteptat ~6 perechi/ora, a dat ${a.valoare}`);
   assert.ok(Math.abs(b.valoare - a.valoare) < 0.2,
     `o gaura NU are voie sa schimbe rata unui contor cumulativ: ${b.valoare} vs ${a.valoare}`);
@@ -1664,7 +1664,7 @@ await test("T1: net pe zi din profitNet cumulativ", () => {
   // 0.01 pe minut = 14.4 pe zi
   const ist = istoricFrecvente(180, { netStart: 0, netPeMinut: 0.01 });
   const f = T.frecvente(ist, BOT, ACUM).netPeZi;
-  assert.equal(f.stare, "dovedit");
+  assert.equal(f.stare, "destule");   // audit 19.10 (7)
   assert.ok(Math.abs(f.valoare - 14.4) < 0.5, `asteptat ~14.4/zi, a dat ${f.valoare}`);
 });
 
@@ -1682,7 +1682,7 @@ await test("T1: timp in interval numara DOAR intrarile observate, si spune acope
   const ist = istoricFrecvente(99, { pret: 0.0155 });
   for (let i = 0; i < 25; i++) ist[i].pretPerp = 0.0170;
   const f = T.frecvente(ist, BOT, ACUM).timpInInterval;
-  assert.equal(f.stare, "dovedit");
+  assert.equal(f.stare, "destule");   // audit 19.10 (7)
   assert.ok(Math.abs(f.valoare - 75) < 1.5, `asteptat ~75%, a dat ${f.valoare}`);
   assert.ok(f.acoperire > 90, `100 de masuratori pe 100 de minute inseamna acoperire mare, a dat ${f.acoperire}`);
 });
@@ -1708,7 +1708,7 @@ await test("T1: cat de des la margine foloseste aceleasi praguri ca pozitia (15/
   const ist = istoricFrecvente(99, { pret: 0.0155 });      // mijloc
   for (let i = 0; i < 20; i++) ist[i].pretPerp = 0.01577;  // ~94% din interval
   const f = T.frecvente(ist, BOT, ACUM).desLaMargine;
-  assert.equal(f.stare, "dovedit");
+  assert.equal(f.stare, "destule");   // audit 19.10 (7)
   assert.ok(Math.abs(f.valoare - 20) < 1.5, `asteptat ~20%, a dat ${f.valoare}`);
 });
 

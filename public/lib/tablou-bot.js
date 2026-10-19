@@ -678,7 +678,7 @@ var TabloBot = (function () {
     var ore = (t1 - t0) / 3600000;
     if (ore < 1) return { valoare: null, stare: "nu-se-poate", prag: 1 };
     var pePas = (u - p) / ore * (peZi ? 24 : 1);
-    return { valoare: pePas, stare: ore >= 2 ? "dovedit" : "putin", prag: peZi ? 2 : 2 };
+    return { valoare: pePas, stare: ore >= 2 ? "destule" : "putin", prag: peZi ? 2 : 2 };   // audit 19.10 (7): prag de timp, nu dovadă
   }
 
   // `valid` decide ce intrari INTRA in numitor - o intrare fara pret nu e o
@@ -698,7 +698,7 @@ var TabloBot = (function () {
     var t0 = nr(lista[0] && lista[0].t);
     var minute = t0 === null ? 0 : Math.max(1, Math.round((acum - t0) / 60000));
     var acoperire = Math.min(100, Math.round(100 * n / minute));
-    return { valoare: 100 * cate / n, stare: n >= 60 ? "dovedit" : "putin",
+    return { valoare: 100 * cate / n, stare: n >= 60 ? "destule" : "putin",   // audit 19.10 (7): prag de număr, nu dovadă
       prag: 60, acoperire: acoperire };
   }
 

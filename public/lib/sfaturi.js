@@ -27,7 +27,7 @@ var Sfaturi = (function () {
   function mare(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
   function frecventa(s, ce) {
     if (!s || s.valoare === null || s.valoare === undefined) return null;
-    return Math.round(s.valoare) + "% " + ce + " (" + s.atinse + " din " + s.cazuri + (s.stare === "dovedit" ? "" : ", puține cazuri") + ")";
+    return Math.round(s.valoare) + "% " + ce + " (" + s.atinse + " din " + s.cazuri + (s.stare === "destule" || s.stare === "dovedit" ? "" : ", puține cazuri") + ")";
   }
 
   // intrare: { bot, scen (Scenariu.scenarii), sanse: {josZi, josSapt, lichSapt}, rezumat (Directie.rezumat),

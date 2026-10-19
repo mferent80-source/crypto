@@ -7220,7 +7220,7 @@ function renderTabloDovada(){
   var f=TabloBot.frecvente(ist,b,Date.now());
   var min=ist.length?Math.round((Date.now()-Number(ist[0].t))/60000):0;
   if($("tbDovadaAcoperire"))$("tbDovadaAcoperire").textContent=ist.length?("istoric: "+(min>=120?TextRo.cate(Math.round(min/60),"oră","ore"):min+" min")):"fără istoric încă";
-  var stare=function(x){return !x||x.valoare==null?"—":x.stare==="dovedit"?"dovedit":"puțin"};
+  var stare=function(x){return !x||x.valoare==null?"—":x.stare==="destule"||x.stare==="dovedit"?"destule date":"puține date"};   /* audit 19.10 (7): un prag de număr nu e „dovedit” */
   var rand=function(nume,x,txt){return '<div class="accountRow"><div class="accountCell">'+escapeHtml(nume)+'</div><div class="accountCell '+(x&&x.valoare!=null?"":"mutedInfo")+'">'+(x&&x.valoare!=null?txt(x):"—")+'</div><div class="accountCell">'+stare(x)+(x&&x.acoperire!=null?' · observat '+x.acoperire+'% din timp':'')+'</div></div>'};
   el.innerHTML=
     rand("Perechi închise pe oră",f.perechiPeOra,function(x){return x.valoare.toFixed(1)})+

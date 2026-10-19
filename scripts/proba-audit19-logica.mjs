@@ -246,5 +246,37 @@ await test("(6) Discord, banda: intervalul Wilson și numărul de cazuri, median
   assert.ok(a.mesaj.split("\n")[0].length <= 160, a.mesaj);
 });
 
+// ---------- (7) „dovedit” pe un simplu prag de număr ⇒ „destule cazuri” ----------
+const Dir = new Function(`${lib("directie.js")}; return Directie;`)();
+const Scen = new Function(`${lib("scenariu.js")}; return Scenariu;`)();
+const TBot = new Function(`${lib("tablou-bot.js")}; return TabloBot;`)();
+const GB = new Function(`${lib("grafic-bot.js")}; return GraficBot;`)();
+await test("(7) Direcția: ≥ 30 de cazuri ⇒ starea „destule”, nu „dovedit”", () => {
+  const st = Array.from({ length: 400 }, (_, i) => ({ dir: i % 7 < 4 ? "urca" : "coboara" }));
+  const s = Dir.schimbare(st, 4);
+  assert.ok(s.cazuri >= 30, String(s.cazuri)); assert.equal(s.stare, "destule");
+});
+await test("(7) Scenariul: ≥ 30 de ferestre ⇒ „destule”, nu „dovedit”", () => {
+  const r = Array.from({ length: 400 }, (_, i) => [i * 3600000, 100, 101 + (i % 5), 99 - (i % 3), 100]);
+  const s = Scen.sansaAtingere(r, 100, 97, 4);
+  assert.ok(s.cazuri >= 30, String(s.cazuri)); assert.equal(s.stare, "destule");
+});
+await test("(7) Tabloul botului (frecvențele): ≥ 60 de intrări / ≥ 2 h ⇒ „destule”; pagina scrie „destule date”, nu „dovedit”", () => {
+  assert.ok(!/stare: [^,]*"dovedit"/.test(lib("tablou-bot.js")), "tablou-bot.js mai scrie „dovedit” pe un prag");
+  assert.ok(!/x\.stare==="dovedit"\?"dovedit"/.test(citeste("public", "app.js")), "app.js afișează „dovedit”");
+});
+await test("(7) Trendul pe TF-uri: titlul spune „destule cazuri”, nu „dovedit” (și pe starea veche din istoric)", () => {
+  const sem = [{ tf: "15M", et: "15 min", dir: "coboara", ton: "rau" }];
+  for (const stare of ["destule", "dovedit"]) {
+    const rez = [{ tf: "15M", orizontText: "4 ore", dir: "coboara", schimbare: { valoare: 34, cazuri: 120, ic: { jos: 26, sus: 43 }, spreOpus: 20, stare } }];
+    const t = GB.trendTabel(sem, rez, [], ["15M"])[0].intors.titlu;
+    assert.ok(!/dovedit/.test(t), t); assert.match(t, /destule cazuri/);
+  }
+});
+await test("(7) Sfaturile: „destule” ⇒ fără „puține cazuri” (și starea veche „dovedit” la fel)", () => {
+  const s = citeste("public", "lib", "sfaturi.js");
+  assert.match(s, /s\.stare === "destule"/);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
 process.exit(picate ? 1 : 0);
