@@ -8,23 +8,39 @@ export const RITM = { bare: 15 * MIN, serii: 60 * MIN, univers: 60 * MIN };
 const FAPI = "https://fapi.binance.com";
 const serii = new Map();   // sym -> { fundIst, oiSerie, mari, mici, taker } - în memorie, nu în st (ar fi 2 MB scriși pe disc la fiecare tură)
 
-// cererea la Binance: 3 încercări, la 429 / 418 o pauză de 60 s (o singură dată), la eșec null (moneda devine „lipsă”, nu cade tura)
-export function cereBinance({ fetch: f, pauza, jurnal }) {
-  const fetchul = f || globalThis.fetch;
-  return async function binance(url) {
-    let pauzat = false;
+// cererea la Binance: 3 încercări, la eșec null (moneda devine „lipsă”, nu cade tura)
+// audit 19.10: cei 5 lucrători aveau fiecare pauza lui (un 429 oprea doar lucrătorul care l-a luat; ceilalți 4 loveau mai departe IP-ul).
+// Acum starea e COMUNĂ (binance.stare): `pauzaPana` - pusă din retry-after (cel puțin 60 s) la 429, și la minutul următor (+1 s) când
+// greutatea folosită (x-mbx-used-weight-1m) trece de 1800 din 2400 - verificată ÎNAINTEA fiecărei cereri; la 418 (IP interzis)
+// `oprit` ⇒ nicio cerere până la sfârșitul turei (turaLatime nu publică, scrie în jurnal), iar tura următoare se sare cât ține interdicția.
+const GREUTATE_MAX = 1800;
+export function cereBinance({ fetch: f, pauza, jurnal, ceas }) {
+  const fetchul = f || globalThis.fetch, acum = ceas || Date.now;
+  const stare = { pauzaPana: 0, oprit: null };
+  const pauzaPana = (t) => { if (t > stare.pauzaPana) stare.pauzaPana = t; };
+  async function binance(url) {
     for (let i = 0; i < 3; i++) {
+      if (stare.oprit) return null;
+      const ramas = stare.pauzaPana - acum(); if (ramas > 0) await pauza(Math.ceil(ramas / 1000) * 1000);
+      if (stare.oprit) return null;
       try {
         const r = await fetchul(url, { headers: { "User-Agent": "crypto-radar/1.0" }, signal: AbortSignal.timeout(20000) });   // v100.175 (M21): undici dădea abia după ~300 s
         // revizia (6): greutatea pe minut din antet (limita 2400) - PAZNIC lovește același IP în zilele de suprapunere
         const g = Number(r.headers.get("x-mbx-used-weight-1m")); if (Number.isFinite(g) && g > 1500) jurnal("latime: greutatea Binance pe minut " + g + " din 2400");
-        if ((r.status === 429 || r.status === 418) && !pauzat) { pauzat = true; const ra = Number(r.headers.get("retry-after")) || 0, ms = Math.max(60000, ra * 1000); jurnal("latime: Binance " + r.status + ", pauză " + Math.round(ms / 1000) + " s"); await pauza(ms); continue; }
+        if (Number.isFinite(g) && g > GREUTATE_MAX) pauzaPana((Math.floor(acum() / 60000) + 1) * 60000 + 1000);
+        const ra = Number(r.headers.get("retry-after")) || 0;
+        if (r.status === 418) { pauzaPana(acum() + Math.max(60000, ra * 1000)); stare.oprit = "Binance 418 (IP interzis)"; jurnal("latime: Binance 418 (IP interzis" + (ra ? " " + ra + " s" : "") + ") - opresc toată tura"); return null; }
+        if (r.status === 429) { const ms = Math.max(60000, ra * 1000); pauzaPana(acum() + ms); jurnal("latime: Binance 429, pauză comună " + Math.round(ms / 1000) + " s"); continue; }
         if (!r.ok) throw new Error("HTTP " + r.status);
         return await r.json();
       } catch (e) { if (i === 2) { jurnal("latime: " + url.replace(FAPI, "") + " - " + e.message); return null; } await pauza(700 * (i + 1)); }
     }
     return null;
-  };
+  }
+  binance.stare = stare;
+  // la începutul turei: interdicția încă ține ⇒ false (tura se sare); altfel oprirea turei trecute se șterge
+  binance.reia = () => { if (stare.oprit && stare.pauzaPana > acum()) return false; stare.oprit = null; return true; };
+  return binance;
 }
 async function inParalel(lista, n, fn) { const out = new Array(lista.length); let k = 0; await Promise.all(Array.from({ length: Math.min(n, lista.length) }, async () => { while (k < lista.length) { const i = k++; out[i] = await fn(lista[i], i); } })); return out; }
 const bara = (k) => ({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4] });
@@ -56,8 +72,12 @@ export async function turaLatime(d, st, acum) {
   acum = acum || Date.now(); const P = d.Latime.PRAGURI, la = (k) => st["la_" + k] || 0;
   if (acum - la("bare") < RITM.bare) return st;
   st.la_bare = acum;
+  // audit 19.10: 418 la tura trecută și interdicția încă ține ⇒ tura se sare (fiecare cerere ar prelungi-o); oprită pe drum ⇒ nu se publică
+  const oprita = () => !!(d.binance && d.binance.stare && d.binance.stare.oprit);
+  if (d.binance && typeof d.binance.reia === "function" && !d.binance.reia()) { d.jurnal("latime: Binance a interzis IP-ul (418) - sar tura"); return st; }
   if (!st.univers || !st.univers.length || acum - la("univers") >= RITM.univers) {
     const u = await universul(d, P, acum);
+    if (oprita()) { d.jurnal("latime: tura oprită (Binance 418), nu public"); return st; }
     if (u.univers) { st.univers = u.univers; st.la_univers = acum; }
     else if (u.retea && st.univers && st.univers.length) d.jurnal("latime: " + u.retea + " - țin universul vechi, " + st.univers.length + " la număr");   /* fără „N monede” lipit: garda v100.75 */
     else {
@@ -79,6 +99,7 @@ export async function turaLatime(d, st, acum) {
     const s = serii.get(sym) || {};
     return d.Latime.masuraMoneda({ sym, pret: +b4[b4.length - 1][4], b4: b4.map(bara), b1d: b1d.map(bara), frAcum: fr.has(sym) ? fr.get(sym) : null, fundIst: s.fundIst, oiSerie: s.oiSerie, mari: s.mari, mici: s.mici, taker: s.taker }, P);
   });
+  if (oprita()) { d.jurnal("latime: tura oprită (Binance 418), nu public"); return st; }
   const lat = d.Latime.latimea(randuri, P), regim = d.Latime.regimPietei(lat), monede = randuri.filter(Boolean);
   const corp = { la: acum, n: st.univers.length, lipsa: lat.lipsa, incomplet: lat.lipsa > 0.2 * st.univers.length, eroare: null, regim, lat, monede };
   if (typeof d.dupa === "function") d.dupa(corp);   /* v101.107: paza boților (botul CONTRA monedei din pândă) */

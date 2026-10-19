@@ -218,5 +218,56 @@ await test("(4) ritmul normal neschimbat: 1,1 s între cererile publice, 250 ms 
 });
 globalThis.fetch = fetchAdevarat;
 
+// ---------- (5) lățimea pieței pe Binance: o pauză comună tuturor lucrătorilor ----------
+const { cereBinance, turaLatime } = await import("./lib/tura-latime.mjs");
+function ceasFals(t0) { const w = { t: t0, pauze: [], jurnal: [] }; w.ceas = () => w.t; w.pauza = async (ms) => { w.pauze.push(ms); w.t += ms; }; w.jurnalF = (...a) => w.jurnal.push(a.join(" ")); return w; }
+const rasp = (status, antete = {}, corp = "{}") => new Response(corp, { status, headers: antete });
+await test("(5) 429 cu retry-after pe un lucrător ⇒ și cererile celorlalți așteaptă până la aceeași oră (verificată înaintea fiecărei cereri)", async () => {
+  const w = ceasFals(Date.UTC(2026, 9, 19, 9, 0, 0)), trimise = [];
+  const f = async (u) => { trimise.push({ u, t: w.t }); return u.endsWith("/a") && trimise.length === 1 ? rasp(429, { "retry-after": "30" }) : rasp(200); };
+  const b = cereBinance({ fetch: f, pauza: w.pauza, jurnal: w.jurnalF, ceas: w.ceas });
+  await b("https://fapi.binance.com/a");
+  const t1 = w.t; await b("https://fapi.binance.com/b");
+  assert.ok(trimise.every((x, i) => i === 0 || x.t >= trimise[0].t + 60000 - 1), "o cerere a plecat înainte de sfârșitul pauzei: " + JSON.stringify(trimise.map((x) => x.t - trimise[0].t)));
+  assert.equal(typeof b.stare, "object"); assert.ok(b.stare.pauzaPana > 0);
+  assert.equal(w.t, t1, "a doua cerere (alt lucrător) n-a mai așteptat: pauza trecuse");
+});
+await test("(5) două cereri în paralel: după 429-ul uneia, cealaltă nu pleacă până la ora pauzei", async () => {
+  const w = ceasFals(Date.UTC(2026, 9, 19, 9, 0, 0)), trimise = [];
+  let n = 0;
+  const f = async (u) => { n++; trimise.push({ u, t: w.t }); if (n === 1) return rasp(429, { "retry-after": "90" }); return rasp(200); };
+  const b = cereBinance({ fetch: f, pauza: w.pauza, jurnal: w.jurnalF, ceas: w.ceas });
+  await b("https://fapi.binance.com/x");          // lucrătorul 1: 429, pauza comună 90 s
+  w.t = Date.UTC(2026, 9, 19, 9, 0, 10);           // lucrătorul 2 vine după 10 s (ceasul real nu așteaptă după primul)
+  b.stare.pauzaPana = Date.UTC(2026, 9, 19, 9, 1, 30);
+  w.pauze.length = 0; await b("https://fapi.binance.com/y");
+  assert.deepEqual(w.pauze, [80000], "lucrătorul 2 trebuia să aștepte cele 80 s rămase");
+});
+await test("(5) greutatea pe minut peste 1800 ⇒ lucrătorii așteaptă minutul următor (cu 1 s marjă)", async () => {
+  const w = ceasFals(Date.UTC(2026, 9, 19, 9, 0, 10));
+  const b = cereBinance({ fetch: async () => rasp(200, { "x-mbx-used-weight-1m": "1850" }), pauza: w.pauza, jurnal: w.jurnalF, ceas: w.ceas });
+  await b("https://fapi.binance.com/a"); assert.deepEqual(w.pauze, []);
+  await b("https://fapi.binance.com/b"); assert.deepEqual(w.pauze, [51000]);
+  const w2 = ceasFals(Date.UTC(2026, 9, 19, 9, 0, 10)), b2 = cereBinance({ fetch: async () => rasp(200, { "x-mbx-used-weight-1m": "1800" }), pauza: w2.pauza, jurnal: w2.jurnalF, ceas: w2.ceas });
+  await b2("https://fapi.binance.com/a"); await b2("https://fapi.binance.com/b"); assert.deepEqual(w2.pauze, [], "1800 nu trece de 1800");
+});
+await test("(5) 418 ⇒ se oprește toată tura (nicio cerere după, fără publicare) și se scrie în jurnal; tura următoare, în interdicție, se sare", async () => {
+  const w = ceasFals(Date.UTC(2026, 9, 19, 9, 0, 0)); let n = 0;
+  const L = { PRAGURI: { minZileListate: 0, nSimboluri: 3, paralel: 5, bare4h: 10 }, latimea: () => ({ lipsa: 0, sus: 0, jos: 0 }), regimPietei: () => ({ cod: "AMESTECAT" }), masuraMoneda: () => ({}) };
+  const f = async (u) => { n++;
+    if (/exchangeInfo/.test(u)) return rasp(200, {}, JSON.stringify({ symbols: ["A", "B", "C"].map((s) => ({ symbol: s + "USDT", quoteAsset: "USDT", status: "TRADING", contractType: "PERPETUAL", underlyingType: "COIN", onboardDate: 0 })) }));
+    if (/ticker\/24hr/.test(u)) return rasp(200, {}, JSON.stringify(["A", "B", "C"].map((s) => ({ symbol: s + "USDT", quoteVolume: "1" }))));
+    return rasp(418, { "retry-after": "3600" }); };
+  const b = cereBinance({ fetch: f, pauza: w.pauza, jurnal: w.jurnalF, ceas: w.ceas }), trimise = [];
+  const d = { binance: b, trimite: async (c, x) => trimise.push(x), jurnal: w.jurnalF, pauza: w.pauza, Latime: L, botiSimboluri: () => [] };
+  await turaLatime(d, {}, w.t);
+  const dupa418 = n;
+  assert.ok(b.stare.oprit, "starea nu spune că tura e oprită"); assert.ok(dupa418 <= 3, "după 418 au mai plecat cereri: " + dupa418);
+  assert.equal(trimise.length, 0, "a publicat o tură oprită"); assert.ok(w.jurnal.some((j) => /418/.test(j) && /opr/.test(j)), "jurnalul nu spune: " + w.jurnal.join(" | "));
+  const st = {}; w.jurnal.length = 0; w.t += 15 * 60000; await turaLatime(d, st, w.t);
+  assert.equal(n, dupa418, "în interdicție (retry-after 3600 s) tura următoare a trimis"); assert.ok(w.jurnal.some((j) => /sar/.test(j)));
+  w.t += 3600000; await turaLatime(d, {}, w.t); assert.ok(n > dupa418, "după interdicție tura nu și-a reluat cererile");
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);
