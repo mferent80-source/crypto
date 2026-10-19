@@ -11,6 +11,14 @@ export async function biletBun(cheie,simbol,bilet,acum){const m=/^(\d{10})\.([0-
 // aplicației: cu RELEU_SECRET din .dev.vars (aleator, ≥ 32 de caractere) când există, altfel cu o cheie derivată o dată din parolă (alt domeniu de cheie)
 export async function cheieReleu(env){const s=String(env&&env.RELEU_SECRET||"");if(s.length>=32)return s;const t=String(env&&env.APP_API_TOKEN||"");return t?"releu:"+await semneaza(t,"pret-viu-cheie"):""}
 let deschise=0;const MAX_RELEE=8;
+// audit 19.10: conexiunea spre Pionex avea termen nelimitat - un Pionex mut tinea locul releului (din 8) agatat. Termenul acopera doar
+// deschiderea (AbortSignal pe un fetch de WebSocket ar putea taia si legatura deschisa); o conexiune venita dupa termen se inchide (laTarziu).
+export function cuTermen(p,ms,laTarziu){
+  let t,expirat=false;
+  const ceas=new Promise((_,rej)=>{t=setTimeout(()=>{expirat=true;rej(Object.assign(Error(`fara raspuns in ${ms} ms`),{name:"TimeoutError"}))},ms)});
+  Promise.resolve(p).then(r=>{if(expirat&&laTarziu)try{laTarziu(r)}catch(e){}},()=>{});
+  return Promise.race([p,ceas]).finally(()=>clearTimeout(t));
+}
 
 // v100.6 (el, 28.09: „nicăieri nu se arată prețul live al botului”) - releu pentru prețul LIVE al botului.
 // WebSocket-ul public Pionex (wss://ws.pionex.com/wsPub) refuza cu 403 ORICE conexiune care are antet Origin
@@ -35,7 +43,7 @@ export async function onRequestGet({request,env}){
 
   let sus;
   try{
-    const r=await fetch("https://ws.pionex.com/wsPub",{headers:{Upgrade:"websocket"}});
+    const r=await cuTermen(fetch("https://ws.pionex.com/wsPub",{headers:{Upgrade:"websocket"}}),8000,x=>{try{x&&x.webSocket&&x.webSocket.close(1000,"tarziu")}catch(e){}});   // audit 19.10: 8 s
     sus=r.webSocket;
     if(!sus){elibereaza();return json({error:"PIONEX_WS_REFUZ",status:r.status},502)}
   }catch(e){elibereaza();return json({error:"PIONEX_WS_INDISPONIBIL"},502)}

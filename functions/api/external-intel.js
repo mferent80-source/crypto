@@ -1,5 +1,4 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
-const ENGINE_CONTRACT_VERSION="54.1";
 const H={"content-type":"application/json","cache-control":"no-store"};
 const TE="https://api.tradingeconomics.com";
 const CM="https://community-api.coinmetrics.io/v4";

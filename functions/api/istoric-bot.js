@@ -318,7 +318,7 @@ export async function onRequestPost({request,env}){
   // v100.196 (auditul sever, 🔵4 + C5): pe (sursă, simbol, zi) rămâne PRIMUL verdict - pe el a putut acționa; după un reload al paginii sau o
   // repornire a colectorului, retrimiterea de mai târziu nu-l mai înlocuiește. Verdictele PAGINII (Poarta) vin cu ora de acum: un `t` mai vechi
   // de 10 min e refuzat (umplerea din urmă, cu ora veche, o face doar colectorul: idei, Trend, sectoare)
-  if(action==="verdict"){const SURSE=new Set(["poarta-t212","poarta-grid","idei","macro","top-sector","trend-12-1","scor-zi-actiuni","scor-zi-crypto"]),PAGINA=new Set(["poarta-t212","poarta-grid"]),acum=Date.now(),z=t=>new Date(t).toISOString().slice(0,10);
+  if(action==="verdict"){const SURSE=new Set(["poarta-t212","poarta-grid","idei","macro","top-sector","trend-12-1","scor-zi-actiuni","scor-zi-crypto"]),PAGINA=new Set(["poarta-t212","poarta-grid"]),acum=Date.now(),z=t=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Bucharest"}).format(new Date(t));   // audit 19.10: ziua la Bucuresti (ca ziRo din colector), nu UTC
     const noi=(Array.isArray(corp&&corp.verdicte)?corp.verdicte:[corp]).slice(0,500).map(v=>{if(!v||typeof v!=="object")return null;const s=String(v.s||""),k=String(v.k||"").replace(/[^A-Za-z0-9._=^-]/g,"").slice(0,32),n=String(v.n||"").toLowerCase().replace(/[^a-z-]/g,"").slice(0,20),p=nr(v.p),t=nr(v.t);
       if(!SURSE.has(s)||!k||!n||!(p>0)||!(t>0)||t>acum+300000)return null;if(PAGINA.has(s)&&t<acum-600000)return null;const o={s,k,n,p,t};const j=nr(v.j),u=nr(v.u);if(j>0&&u>j){o.j=j;o.u=u}return o}).filter(Boolean);
     if(!noi.length)return json({error:"verdict: s, k, n, p, t"},400);

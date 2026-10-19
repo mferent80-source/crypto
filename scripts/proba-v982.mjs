@@ -47,6 +47,9 @@ await test("t212: cand apelul legat pica cu 429, TOTI chematorii primesc 429 cu 
   const [a, b] = await Promise.all([cheama("action=pozitii"), cheama("action=pozitii")]);
   assert.equal(a.status, 429); assert.equal(b.status, 429); assert.equal(n, 1, "un singur apel real");
   const ja = await a.json(); assert.ok(ja.retryAfter >= 1 && ja.retryAfter <= 8, "retryAfter din antet: " + ja.retryAfter);
+  // audit 19.10: regula noua - cat tine racirea T212 (x-ratelimit-reset, 7 s) nu mai pleaca nimic; dupa ea se reincearca (eroarea tot nu sta in cache)
+  const r = await cheama("action=pozitii"); assert.equal(r.status, 429, "in racire nu se trimite"); assert.equal(n, 1);
+  m.reseteazaRacireT212();
   const c = await cheama("action=pozitii"); assert.equal(c.status, 200, "eroarea nu ramane lipita in cache"); assert.equal(n, 2);
 });
 

@@ -42,15 +42,29 @@ function prinCache(k, sec, fn) {
   inZbor.set(k, p); return p;
 }
 
-async function t212(env, cale, actiune) {
+// audit 19.10: la 429 de la T212 se tine minte racirea (retry-after; altfel x-ratelimit-reset; altfel 60 s) pe CALE (limitele T212 sunt pe
+// fiecare cale: 1 la 5 s pe portofoliu, 1 la 30 s pe account/info) si nu se mai trimite pe calea aceea pana atunci - inainte fiecare
+// tura a colectorului / fiecare pagina lovea mai departe si prelungea limitarea.
+const racireT212 = new Map();   // cale fara query -> ora pana la care nu se trimite
+export function reseteazaRacireT212() { racireT212.clear(); }
+const limitat = (s) => Object.assign(new Error("Trading 212 a limitat cererile"), { status: 429, retryAfter: s });
+export async function cereT212(env, cale, actiune) {
+  const cheie = String(cale).split("?")[0], pana = racireT212.get(cheie) || 0;
+  if (pana > Date.now()) throw limitat(Math.max(1, Math.ceil((pana - Date.now()) / 1000)));
   const r = await fetch(BAZA + cale, { signal: AbortSignal.timeout(10000), headers: { Authorization: "Basic " + btoa(env.T212_API_KEY + ":" + env.T212_API_SECRET), accept: "application/json" } });
-  if (r.status === 429) { const ra = Number(r.headers.get("x-ratelimit-reset")); throw Object.assign(new Error("Trading 212 a limitat cererile"), { status: 429, retryAfter: ra > 1e9 ? Math.max(1, Math.round(ra - Date.now() / 1000)) : 30 }); }
+  if (r.status === 429) {
+    const antet = Number(r.headers.get("retry-after")), ra = Number(r.headers.get("x-ratelimit-reset"));
+    const s = antet > 0 ? Math.ceil(antet) : ra > 1e9 ? Math.max(1, Math.round(ra - Date.now() / 1000)) : 60;
+    racireT212.set(cheie, Date.now() + s * 1000); if (racireT212.size > 50) racireT212.delete(racireT212.keys().next().value);
+    throw limitat(s);
+  }
   if (r.status === 401 || r.status === 403) throw Object.assign(new Error("Cheia Trading 212 n-are voie aici: bifează permisiunea „" + (PERMISIUNE[actiune] || actiune) + "” când generezi cheia (Settings → API)."), { status: 403 });
   const text = await r.text(); let j = null; try { j = JSON.parse(text); } catch {}
   if (!r.ok) throw Object.assign(new Error("Trading 212: HTTP " + r.status), { status: 502 });
   if (j === null) throw Object.assign(new Error("Trading 212: răspuns care nu e JSON"), { status: 502 });
   return j;
 }
+const t212 = cereT212;   // audit 19.10: numele vechi, pentru rutele de mai jos
 
 // v100.108 (semaforul trendului pe acțiuni): intervalele pe care le dă ruta; orice altceva = zilnic
 export function intervalPreturi(x) { return ["5m", "15m", "30m", "1h", "4h", "1d"].includes(x) ? x : "1d"; }

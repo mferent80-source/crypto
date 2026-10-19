@@ -2,13 +2,7 @@ const localBuckets=new Map();
 const enc=new TextEncoder();
 
 async function digest(s){return new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(String(s||''))))}
-function equalBytes(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a[i]^b[i];return x===0}
-export async function tokenValid(request,env){
-  const expected=String(env.APP_API_TOKEN||'');if(!expected)return {ok:false,reason:'APP_API_TOKEN_NOT_CONFIGURED'};
-  const h=request.headers.get('authorization')||'',bearer=h.startsWith('Bearer ')?h.slice(7).trim():request.headers.get('x-app-token')||'';
-  if(!bearer)return {ok:false,reason:'AUTH_REQUIRED'};
-  const [a,b]=await Promise.all([digest(bearer),digest(expected)]);return {ok:equalBytes(a,b),reason:equalBytes(a,b)?null:'AUTH_INVALID'}
-}
+// audit 19.10: verificarea veche a tokenului (si comparatia ei pe octeti) scoase - nu le mai chema nimic; verificarea e in requireApiAuth
 
 function hex(bytes){return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('')}
 export async function tenantKey(request,env){
