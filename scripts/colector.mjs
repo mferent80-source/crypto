@@ -460,7 +460,8 @@ async function tura() {
   try { d = await cere("/api/bot-orders"); esecuri = 0; }
   catch (e) {
     // Serverul oprit = fereastra Radarului inchisa. Dupa 15 minute ne oprim.
-    if (!e.status) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + "/" + MAX_ESECURI + "):", e.message); if (esecuri >= MAX_ESECURI) { jurnal("ies: serverul nu mai răspunde");
+    // audit 19.10: doar conexiunea refuzata / eroarea de retea; un timeout (server viu, dar lent) merge pe ramura „nu pot citi” (alerta la 10 min)
+    if (S.eServerOprit(e)) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + "/" + MAX_ESECURI + "):", e.message); if (esecuri >= MAX_ESECURI) { jurnal("ies: serverul nu mai răspunde");
       // v100.40 (audit 30.09): inainte iesea tacut - alertele se opreau fara niciun semn pana la paznic (~30-55 min)
       if (CANAL === "discord") await trimiteDiscord(MesajeColector.serverOprit(MAX_ESECURI), { fetch, webhook: DISCORD_WEBHOOK, jurnal });
       process.exit(0); } }

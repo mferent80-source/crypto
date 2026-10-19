@@ -11,6 +11,13 @@ export function eCadereAuth(e) {
 }
 // limita de ritm adevărată (RATE_LIMITED): trece singură, nu e cădere
 export function eLimitaDeRitm(e) { return !!e && e.status === 429 && !eCadereAuth(e); }
+// audit 19.10: „serverul nu răspunde” (contorul care după 15 oprește colectorul) = conexiune refuzată sau eroare de rețea, fără răspuns HTTP.
+// Un timeout (TimeoutError / AbortError: serverul e viu, dar lent - Pionex lent în spatele lui) NU e server oprit: trece pe „nu pot citi”.
+export function eServerOprit(e) {
+  if (!e || e.status) return false;
+  const n = String(e.name || "");
+  return n !== "TimeoutError" && n !== "AbortError";
+}
 
 // C6 + 🔵3: o coadă de alerte netrimise (KV-ul Radarului, Discord), golită în ORDINE: după primul eșec restul așteaptă tura următoare;
 // se renunță doar la ce e mai vechi decât maxMs(x) (critic: 24 h, restul 12 h - apelantul hotărăște). O excepție la trimitere = eșec, nu pierdere.

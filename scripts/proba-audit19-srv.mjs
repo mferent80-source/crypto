@@ -269,5 +269,20 @@ await test("(5) 418 ⇒ se oprește toată tura (nicio cerere după, fără publ
   w.t += 3600000; await turaLatime(d, {}, w.t); assert.ok(n > dupa418, "după interdicție tura nu și-a reluat cererile");
 });
 
+// ---------- (6) timeout ≠ server oprit ----------
+await test("(6) eServerOprit: conexiune refuzată / eroare de rețea = oprit; TimeoutError / AbortError / răspuns HTTP = nu", () => {
+  assert.equal(typeof S.eServerOprit, "function");
+  const refuz = Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:8788"), { code: "ECONNREFUSED" }) });
+  assert.equal(S.eServerOprit(refuz), true); assert.equal(S.eServerOprit(new TypeError("fetch failed")), true);
+  const ceas = new DOMException("The operation was aborted due to timeout", "TimeoutError"), abandon = new DOMException("This operation was aborted", "AbortError");
+  assert.equal(S.eServerOprit(ceas), false); assert.equal(S.eServerOprit(abandon), false);
+  assert.equal(S.eServerOprit(Object.assign(new Error("HTTP 502"), { status: 502 })), false); assert.equal(S.eServerOprit(null), false);
+});
+await test("(6) colectorul numără la „serverul nu răspunde” (ieșirea după 15) DOAR pe S.eServerOprit; timeout-ul trece pe „nu pot citi”", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /catch \(e\) \{\n    \/\/ [^\n]*\n(    \/\/ [^\n]*\n)*    if \(S\.eServerOprit\(e\)\) \{ esecuri\+\+;/);
+  assert.ok(!/if \(!e\.status\) \{ esecuri\+\+/.test(c), "a rămas numărătoarea pe orice eroare fără status");
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);
