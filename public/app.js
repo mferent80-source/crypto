@@ -6253,7 +6253,6 @@ function tbPregatire(el){
 // randul lor (#tbMotive), "Acum, concret" in 3 cartele (#tbConcret), socoteala si podeaua pe bani in sectiunea pliata (#tbSocoteala).
 var tbMotiveDeschis=false;
 function tbMotiveComuta(){tbMotiveDeschis=!tbMotiveDeschis;if(tbStare.bot)tbDeseneazaSemafor(tbStare.bot)}
-function tbMergiLaMotive(){var m=$("tbMotive");if(m&&!m.hidden&&m.scrollIntoView)m.scrollIntoView({behavior:"smooth",block:"nearest"})}
 function tbDeseneazaSemafor(b){
   var el=$("tbSemafor");if(!el)return;
   var mot=$("tbMotive"),cc=$("tbConcret");
@@ -6809,12 +6808,8 @@ function tbFundingPt(){var e=tbStare.extra||{},b=tbStare.bot;if(!b||e.bot!==b.id
 function tbLaPret(b){return function(px){var t=TabloExtra.totalCuGridLa(b,px);if(t==null||!isFinite(t))return null;return '<b>dacă închizi la '+escapeHtml(tbPretScurt(px))+':</b> <span class="'+(t>=0?"good":"bad")+'">'+(t>=0?"+":"−")+Math.abs(t).toFixed(2).replace(".",",")+' USDT</span><div class="mutedInfo">cu ce cumpără / vinde gridul pe drum, după comision</div>'}}
 // v100.99 (I-528): șansele măsurate ale botului (Probabilitati.randuri) pentru liniile graficului; cifrele vechi de peste 3 h nu se pun pe grafic
 function tbSansePt(b){var t=tbProbPt(b),rez=t&&t.rez;if(!rez||tbProbVechi(rez)||typeof Probabilitati==="undefined")return null;try{return Probabilitati.randuri(rez,t.cal)}catch(e){return null}}
-// v100.99 (I-529): stopul de probă - apeși „🧪 Stop de probă”, apoi pe grafic la prețul dorit; vezi cât pierzi acolo (cu gridul) față de plan
-var tbProbaStop={activ:false,botId:null,pret:null};
-function tbProbaComuta(){var b=tbStare.bot;if(!b)return;if(tbProbaStop.activ&&tbProbaStop.botId===b.id){tbProbaStop={activ:false,botId:null,pret:null}}else tbProbaStop={activ:true,botId:b.id,pret:null};renderTabloGrafic()}
-function tbProbaPt(b){if(!tbProbaStop.activ||tbProbaStop.botId!==b.id||tbProbaStop.pret==null)return null;var pl=tbPlan.botId===b.id?tbPlan.plan:null;
-  var x=GraficBot.stopProba(tbProbaStop.pret,pvPretViuAcum(b)||botiNr(b.pretCurent),TabloExtra.totalCuGridLa(b,tbProbaStop.pret),pl&&botiNr(pl.minus));return x?{pret:x.pret,text:x.text,scurt:x.scurt}:null}
-function tbProbaCopiaza(){var p=tbProbaStop.pret;if(p==null)return;var t=tbPretScurt(p);try{navigator.clipboard.writeText(t).then(function(){toast("Prețul "+t+" e copiat · îl pui ca stop în Pionex","good")},function(){toast("Nu l-am putut copia: "+t,"warn")})}catch(e){toast("Nu l-am putut copia: "+t,"warn")}}
+// audit 19.10: stopul de probă (v100.99) scos - butonul lui a ieșit din citire în v100.138, deci tbProbaComuta nu mai era chemată și
+// starea lui rămânea mereu inactivă; GraficBot.stopProba (modulul pur, cu proba lui) rămâne
 // v100.98: citirea graficului în coloana din dreapta - doar ce se vede pe grafic, în cuvinte (sfatul rămâne la semafor)
 // v100.106: semaforul trendului pe 5m/15m/30m/1h/4h/1z din lumânările pe care le aduce deja „Direcția” (tbAduDirectie); null până sosesc
 // revizia R1: doar lumânările monedei (și direcției) botului de acum - la schimbarea botului, până sosesc ale lui, nimic;
@@ -7181,7 +7176,7 @@ function renderTabloGrafic(){
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
   tbAdu1m(b);   /* v100.146: lumânările de 1 min ale ferestrei botului, din spate; când vin, se redesenează o dată */
-  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),proba:tbProbaPt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,bare1m:tbBare1m(b),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
+  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,bare1m:tbBare1m(b),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
   var d=GraficBot.desen(oG);tbFereastraButon(oG);tbDeseneazaCitire(oG,b);
   window.tbGraficUltim={botId:b.id,niv:Array.isArray(oG.niv)?oG.niv:[],stopPlan:oG.consLinii&&oG.consLinii.stopPlan,la:Date.now()};   /* v100.151: drumul botului (lib/asezare-paznic.js) citește ACELEAȘI niveluri ca graficul, din date */
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
@@ -7210,7 +7205,7 @@ function renderTabloGrafic(){
   // pe ecran tactil, eticheta ramane dupa ce ridici degetul (se muta la urmatoarea atingere)
   var fixat=false;
   zona.addEventListener("pointermove",function(e){if(e.pointerType==="mouse"||!fixat)arata(e.clientX,e.clientY)});
-  zona.addEventListener("pointerdown",function(e){if(e.target&&e.target.closest&&e.target.closest(".gbSem"))return;if(tbProbaStop.activ&&tbProbaStop.botId===b.id){var r=svg.getBoundingClientRect(),sy=(e.clientY-r.top)*(d.harta.W/(r.width||d.harta.W)),px=GraficBot.pretLaY(d.harta,sy);if(px!==null){tbProbaStop.pret=px;renderTabloGrafic();return}}fixat=e.pointerType!=="mouse";arata(e.clientX,e.clientY)});
+  zona.addEventListener("pointerdown",function(e){if(e.target&&e.target.closest&&e.target.closest(".gbSem"))return;fixat=e.pointerType!=="mouse";arata(e.clientX,e.clientY)});
   zona.addEventListener("pointerleave",function(){if(!fixat)ascunde()});
   svg.addEventListener("focusin",function(e){var t=e.target&&e.target.closest?e.target.closest(".gbE"):null;if(!t)return;var c=t.querySelector("circle").getBoundingClientRect();arata(c.left+c.width/2,c.top)});
   svg.addEventListener("focusout",ascunde);

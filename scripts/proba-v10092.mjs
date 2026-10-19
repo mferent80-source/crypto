@@ -127,7 +127,7 @@ const CLB = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evit
 const IIB = { idei: { idei: { zi: "2026-10-04", judecate: 202, trecute: 2, actiuni: [{ simbol: "TE" }, { simbol: "LNKS" }], reveniri: [{ simbol: "LAES" }], dovadaReveniri: { eticheta: "cam la fel" } } } };
 function acasa() {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(["acClasamentSumar", "acSym", "acasaCumpar", "acasaCumpar2", "acasaCumpar2Corp", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);
+  vm.runInContext(["acClasamentSumar", "acSym", "acasaCumpar", "acasaCumpar2Corp", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2Corp;", ctx);   // audit 19.10: acasaCumpar2 (nechemat) scos ⇒ corpul
   return ctx;
 }
 await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe 3 coloane - acțiuni / boți / revenire și short, fiecare cu butonul ei; nota „aș sări peste ea” doar sub a treia; rândul vechi (acasaCumpar2) neschimbat", () => {

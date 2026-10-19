@@ -162,9 +162,6 @@ function acasaCumpar(d) {
     + '<p class="acCumparToate"><button class="acBtn" type="button" data-action-click="navTo(\'sugestii\',true)">💡 Toate sugestiile: boți, acțiuni US și EU</button></p>';   // v100.119: sub cartelă, titlul rămâne același
 }
 // v100.85 (reveniri + short, 03.10): al doilea rând din „Ce aș cumpăra azi” - listele noi, fiecare cu eticheta istoricului ei
-function acasaCumpar2(d) {
-  try { return acasaCumpar2Corp(d); } catch (e) { return ""; }   /* o eroare în date nu strică rândul întâi */
-}
 function acasaCumpar2Parti(d) {
   var ii = d && d.idei && d.idei.idei, sg = d && d.sugestii && d.sugestii.sugestii, dv = sg && sg.dovada || {}, I = typeof Idei !== "undefined" && Idei.reveniriBoti ? Idei : null;
   // revizia (I7): un clasament făcut înainte de colectorul nou n-are starea de revenire (lipsește sau e null peste tot) ⇒ „—”, ca acțiunile fără listă, nu „nimic azi”

@@ -115,8 +115,8 @@ await test("(8) Trading 212: fără acțiuni pe revenire ⇒ „Azi nicio acțiu
 });
 function acasa2(d) {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acSym") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2;", ctx);   /* v100.92: + Parti */
-  return { tot: ctx.f(d), doi: ctx.g(d) };
+  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acSym") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2Corp;", ctx);   /* v100.92: + Parti; audit 19.10: acasaCumpar2 (nechemat) scos ⇒ corpul */
+  return { get tot() { return ctx.f(d); }, get doi() { return ctx.g(d); } };   // audit 19.10: pe cerere (cazul cu eroare cere doar cartela)
 }
 await test("(8) Acasă: al doilea rând din „Ce aș cumpăra azi” - primele nume din fiecare listă, cu eticheta istoricului; liste goale ⇒ „nimic azi”; fără date ⇒ lipsește", () => {
   const d = { idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 23, actiuni: [{ simbol: "SNDK" }], reveniri: [RV, { ...RV, simbol: "MU" }], dovadaReveniri: BINE } }, clasament: CL, sugestii: SG };
@@ -126,7 +126,8 @@ await test("(8) Acasă: al doilea rând din „Ce aș cumpăra azi” - primele 
   assert.ok(text(r.tot).startsWith("💡 Ce aș cumpăra azi Acțiuni SNDK 23 din 202 trec de poartă pe 03.10") && text(r.tot).includes("Revenire și short ↩️ acțiunile INTC, MU (mai bine) ↩️ monedele AAA (mai slab) 📉 short: DDD (cam la fel)"), text(r.tot));
   assert.equal(text(acasa2({ idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [], reveniri: [] } }, clasament: { la: 5, monede: [] }, sugestii: null }).doi), "↩️ pe revenire: acțiunile nimic azi · monedele nimic azi · 📉 short: nimic azi");
   assert.equal(acasa2({}).doi, "");
-  assert.equal(acasa2({ get sugestii() { throw new Error("x"); }, clasament: CL }).doi, "", "o eroare în date nu strică rândul întâi");
+  // audit 19.10: plasa de erori stătea în acasaCumpar2 (nechemat de pagină, scos); pe pagină o ține acasaCumpar - cartela nu se strică
+  assert.equal(typeof acasa2({ get sugestii() { throw new Error("x"); }, clasament: CL }).tot, "string", "o eroare în date nu strică cartela");
 });
 await test("(8) revizia (I7): Acasă înainte de primul clasament cu reveniri (`revenire: null` peste tot) ⇒ „monedele —”, nu „nimic azi”; shortul rămâne", () => {
   const vechi = { la: 5, monede: [{ simbol: "X_USDT_PERP", stare: "candidat", dir: "short", scor: 1, revenire: null }, { simbol: "Y_USDT_PERP", stare: "evita", dir: "long", scor: 2 }] };

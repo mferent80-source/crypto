@@ -71,7 +71,7 @@ await test("(3) I-528 șansele MĂSURATE pe liniile lor: marginile 24 h, lichida
   assert.match(fasie, /înaintea stopului, 7 zile: 38%/); /* v100.161: în fâșia de sub grafic */ /* v100.143: tspan în eticheta din dreapta */ assert.match(fasie, /grid jos [\d.]+ [−+][\d,]+% 24 h: 12%/);
   { const d0 = G.desen(G.intrareBot(D())); assert.equal((d0.svg.match(/gbSansa/g) || []).length, 0, "fără șanse ⇒ nimic"); assert.doesNotMatch(d0.valori, /<span class="gbVS">[^<]+</, "fără șanse ⇒ coloana șansei goală"); }
 });
-await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față de plan; linia apare pe grafic; pagina are butonul, apăsarea și copierea", () => {
+await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față de plan; linia apare pe grafic; pagina nu mai are legătura (audit 19.10: butonul ieșise în v100.138)", () => {
   assert.equal(G.stopProba(P * 0.946, P, -6.5, 6.5).text, "stop de probă la " + G.stopProba(P * 0.946, P, -6.5, 6.5).text.split(" la ")[1].split(" (")[0] + " (−5,4%): pierzi −6,50 USDT, exact planul");
   assert.match(G.stopProba(P * 0.93, P, -7.41, 6.5).text, /pierzi −7,41 USDT, cu 0,91 peste plan$/);
   assert.match(G.stopProba(P * 0.97, P, -3, 6.5).text, /cu 3,50 sub plan$/);
@@ -80,14 +80,14 @@ await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față 
   assert.match(svg, /<g class="gbProba">.*🧪 stop de probă la/);
   const tel = G.desen(G.intrareBot(D({ W: 390, proba: { pret: pr.pret, text: pr.text, scurt: pr.scurt } }))).svg;   // pe telefon textul lung ieșea din grafic
   assert.ok(/<g class="gbProba"><line [^>]*\/><\/g>/.test(tel) && !tel.includes("🧪"), "pe telefon doar linia - textul e în citirea de sub grafic"); assert.match(pr.scurt, /^[\d.]+ · −3,00 USDT$/);
-  assert.match(fnApp("tbProbaPt"), /GraficBot\.stopProba\(tbProbaStop\.pret,.*TabloExtra\.totalCuGridLa\(b,tbProbaStop\.pret\)/);
-  assert.match(fnApp("renderTabloGrafic"), /if\(tbProbaStop\.activ&&tbProbaStop\.botId===b\.id\)\{.*GraficBot\.pretLaY\(d\.harta,sy\)/);
-  assert.match(fnApp("tbProbaCopiaza"), /navigator\.clipboard\.writeText/);
+  // audit 19.10: legătura din pagină (tbProbaPt / tbProbaStop / tbProbaCopiaza) e scoasă - butonul ei a ieșit din citire în v100.138, deci
+  // nu mai putea fi pornită; GraficBot.stopProba și desenul liniei (mai sus) rămân păzite, iar pagina nu mai cere stopul de probă
+  assert.ok(!/tbProbaStop|function tbProbaPt\(|function tbProbaCopiaza\(/.test(citeste("public", "app.js")), "legătura stopului de probă a rămas în pagină");
   assert.doesNotMatch(fnApp("tbDeseneazaCitire"), /tbProbaComuta/);   // v100.138 (el): „Stop de probă” scos din citire
 });
 await test("(1) renderTabloGrafic cheamă intrarea pură o singură dată, cu planul, șansele, stopul de probă, funding-ul și modul", () => {
   const r = fnApp("renderTabloGrafic");
-  assert.match(r, /var oG=GraficBot\.intrareBot\(\{bot:b,brut:brut,bare:bare,plan:/); for (const k of ["sanse:tbSansePt(b)", "proba:tbProbaPt(b)", "funding:tbFundingPt()", "simplu:tbModSimplu()", "st:tbIndStare()"]) assert.ok(r.includes(k), k);
+  assert.match(r, /var oG=GraficBot\.intrareBot\(\{bot:b,brut:brut,bare:bare,plan:/); for (const k of ["sanse:tbSansePt(b)", "funding:tbFundingPt()", "simplu:tbModSimplu()", "st:tbIndStare()"]) assert.ok(r.includes(k), k);
   assert.doesNotMatch(r, /GraficBot\.umpleri\(|niveluriBot\(|pretPentruTotal/, "socoteala a plecat în lib");
   assert.match(fnApp("tbSansePt"), /tbProbVechi\(rez\)/, "cifrele vechi de peste 3 h nu se pun pe grafic");
 });

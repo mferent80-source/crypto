@@ -242,7 +242,6 @@ canvas{
 .scanTableHead{display:grid;gap:6px;padding:7px 6px;color:var(--muted);font-size:12px;text-transform:none;letter-spacing:0}
 .sentimentBand{height:10px;border-radius:3px;background:linear-gradient(90deg,#E0524A,#E9B949,#26A96C);position:relative;margin:10px 0}
 .sentimentNeedle{position:absolute;top:-4px;width:3px;height:18px;background:white;border-radius:2px;box-shadow:none}
-.dataDot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--good);box-shadow:none}
 .chartToolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .chartToolbar button{width:auto;padding:6px 10px;font-size:13px;border-radius:3px}
 .small{font-size:13px;color:var(--muted)}
@@ -445,7 +444,6 @@ main{max-width:1160px;padding-top:14px}
 .chartZoneLegend .pz:before{background:rgba(91,143,199,.35)}
 
 
-.closeBtn{width:auto;padding:6px 10px}
 .badgeNum{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:3px;background:#C2403A;color:white;font-size:12px;font-weight:600}
 @media(max-width:980px){
   .marketOverview{grid-template-columns:repeat(2,1fr)}
@@ -785,7 +783,7 @@ main{max-width:1160px;padding-top:14px}
 .liqChip{padding:6px 8px;border-radius:3px;border:1px solid #35485A;background:#141C24;font-size:12px}
 .liqChip.buy{color:#26A96C}.liqChip.sell{color:#E5615A}
 .cloudState{font-size:16px;font-weight:600}
-.cloudOk{color:#26A96C}.cloudWarn{color:#E9B949}.cloudBad{color:#E5615A}
+.cloudOk{color:#26A96C}.cloudWarn{color:#E9B949}
 @media(max-width:800px){
  .cloudGrid,.profileGrid2{grid-template-columns:repeat(2,1fr)}
 }
@@ -794,7 +792,7 @@ main{max-width:1160px;padding-top:14px}
 .sessionGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
 .sessionBox,.structureBox,.costBox{background:#141C24;border:1px solid #26333F;border-radius:5px;padding:10px}
 .sessionBox b,.structureBox b,.costBox b{display:block;font-size:15px;margin-top:4px}
-.structureRows,.fvgRows,.obRows{display:grid;gap:5px;overflow:auto}
+.fvgRows,.obRows{display:grid;gap:5px;overflow:auto}
 .structureRow{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1.3fr;gap:5px;min-width:720px}
 .structureCell{padding:8px 6px;border:1px solid #26333F;border-radius:4px;background:#141C24;text-align:center;font-size:13px}
 .zoneBull{color:#26A96C}.zoneBear{color:#E5615A}
@@ -807,7 +805,7 @@ main{max-width:1160px;padding-top:14px}
 
 
 .intelGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.intelBox,.mlBox,.newsBox,.liqBox{background:#141C24;border:1px solid #26333F;border-radius:5px;padding:10px}
+.intelBox,.mlBox,.liqBox{background:#141C24;border:1px solid #26333F;border-radius:5px;padding:10px}
 .intelBox b,.mlBox b,.liqBox b{display:block;font-size:15px;margin-top:4px}
 .newsList,.liqTape,.mlTable{display:grid;gap:6px;overflow:auto}
 .newsItem{padding:10px;border:1px solid #26333F;border-radius:5px;background:#141C24}
@@ -902,8 +900,7 @@ main{max-width:1160px;padding-top:14px}
 
 .pv3Grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.pv3Box,.stressBox{background:#141C24;border:1px solid #26333F;border-radius:5px;padding:10px}.pv3Box b,.stressBox b{display:block;font-size:15px;margin-top:4px}
 .pv3Table,.stressTable{display:grid;gap:5px;overflow:auto}.pv3Row{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr 1fr;gap:5px;min-width:800px}.stressRow{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1.4fr;gap:5px;min-width:760px}.pv3Cell,.stressCell{padding:8px 6px;border:1px solid #26333F;border-radius:4px;background:#141C24;text-align:center;font-size:13px}
-.stressLoss{color:#E5615A}.stressWarn{color:#E9B949}.stressGood{color:#26A96C}
-.riskSpark{height:8px;background:#22303C;border-radius:3px;overflow:hidden}.riskSpark i{display:block;height:100%;background:#5B8FC7}
+.stressLoss{color:#E5615A}.stressGood{color:#26A96C}
 @media(max-width:850px){.pv3Grid{grid-template-columns:repeat(2,1fr)}}
 
 
@@ -951,7 +948,7 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #26333F;padding
 :focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}
 [aria-disabled="true"]{opacity:.6;pointer-events:none}
 
-.offlineBanner{position:sticky;top:0;z-index:9999;padding:8px 12px;background:#E9B949;color:#0E141A;border-bottom:1px solid #E9B949;font-size:13.5px;text-align:center}.offlineBanner[hidden]{display:none!important}.networkDisabled{opacity:.55;pointer-events:none}
+.offlineBanner{position:sticky;top:0;z-index:9999;padding:8px 12px;background:#E9B949;color:#0E141A;border-bottom:1px solid #E9B949;font-size:13.5px;text-align:center}.offlineBanner[hidden]{display:none!important}
 
 /* v54 progressive disclosure */
 .vcDetails{margin-top:10px;border:1px solid #26333F;border-radius:5px;padding:8px 10px;background:#141C24}.vcDetails>summary{cursor:pointer;font-weight:600;color:#E6EDF3;outline:none;padding:5px}.vcDetails>summary:focus-visible{box-shadow:0 0 0 2px #5B8FC7;border-radius:4px}.vcDetails[open]>summary{margin-bottom:8px}.refStale{color:#E5615A}.refAging{color:#E9B949}.refFresh{color:#26A96C}
@@ -1146,10 +1143,9 @@ body{min-height:100vh;overflow-x:hidden}
 .opsV67Card .decisionToolGrid{margin-top:10px}.opsV67Card .decisionTool.bad{border-color:color-mix(in srgb,currentColor 35%,transparent)}.opsV67Health{margin-top:12px}.opsV67Health .providerHealthTable{max-height:360px;overflow:auto}
 
 /* v68 Controlled Live Execution */
-#v68DecisionState.good,#v68DashState.good{font-weight:600}.edgeCalTable input,.edgeCalTable select{max-width:180px}body .dashOperations .decisionTool.bad{outline:1px solid rgba(224,82,74,.28)}
+.edgeCalTable input,.edgeCalTable select{max-width:180px}body .dashOperations .decisionTool.bad{outline:1px solid rgba(224,82,74,.28)}
 
 /* v69 Live Performance & Capital Scaling */
-#v69DashRamp,#v69DecisionRamp{font-variant-numeric:tabular-nums}
 /* v74.6 Boti si Tablou: eticheta deasupra cifrei, avertismente vizibile */
 .accountCell .accountLabel{display:block;color:var(--muted);font-size:12px;letter-spacing:0;margin-top:2px}
 .accountCell .fine{color:var(--muted);font-size:12px}
@@ -1179,16 +1175,11 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 
 
 
-.tbGraficZona{position:relative;height:240px;touch-action:pan-y}
 .tbGraficSvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.tbLiniePret{fill:none;stroke:var(--accent-2);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-
-.tbLinieLich{stroke:var(--bad);stroke-width:2;vector-effect:non-scaling-stroke}
-.tbLinieIntrare{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:6 5;vector-effect:non-scaling-stroke}
 
 
 
-@media(max-width:760px){.tbGraficZona{height:200px}}
+
 /* v100.6: banda nu mai e taiata la 520 px - ia locul liber din bara (dreapta se intinde), restul chip-urilor nu se strang */
 /* v100.142 (el 08.10: „banda de sus și toată linia de sus o vreau centrată”): grupul din dreapta (banda botului + Alerts + WS + LIVE DATA + versiunea) centrat în spațiul liber, nu lipit de dreapta */
 .topRight{flex:1 1 auto;justify-content:center}.topRight>.statusChip:not(.botStrip){flex-shrink:0}
@@ -1269,7 +1260,6 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 .grLabPlanCapRand .tbIntBtn{width:auto;flex:0 0 auto}
 .grLabBot{color:var(--accent);font-size:12px;margin-left:4px;white-space:nowrap}
 .grLabBotRand td{background:var(--tb-fond2)}
-#tabloubot .tbRandGrafic{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
 #tabloubot .tbBloc,#gridset .tbBloc{padding:14px 16px;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);min-width:0}
 #tabloubot .tbBlocCap,#gridset .tbBlocCap{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 10px}
 
@@ -1290,13 +1280,12 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 #tabloubot .tbDetalii[open] summary .tbSub{visibility:hidden}
 #tabloubot .tbDetalii summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
 #tabloubot .tbNote{margin-top:12px;color:var(--muted);font-size:13.5px;max-width:80ch}
-#tabloubot .tbGraficZona{height:260px}
 
 @media(max-width:980px){
   #tabloubot .tbKpi{grid-template-columns:1fr 1fr}
   #tabloubot .tbKpiCel:nth-child(3){border-left:0}
   #tabloubot .tbKpiCel:nth-child(n+3){border-top:1px solid var(--tb-linie)}
-  #tabloubot .tbRandGrafic,#tabloubot .tbRand,#gridset .tbRand{grid-template-columns:minmax(0,1fr)}
+  #tabloubot .tbRand,#gridset .tbRand{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:560px){
   #tabloubot .tbVerdict{grid-template-columns:1fr;gap:6px;padding:12px 14px}
@@ -1304,13 +1293,11 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
   #tabloubot .tbKpiCel{padding:12px 14px}
   #tabloubot .tbKpiVal{font-size:19.5px}#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:21px}
   #tabloubot .tbAntet{flex-wrap:wrap}
-  #tabloubot .tbGraficZona{height:210px}
 }
 
 /* v76: graficul umple inaltimea randului; directia pe un rand si pe telefon; nota generala ascunsa pe Tablou */
 #tabloubot #tbGraficCard{display:flex;flex-direction:column}
 #tabloubot #tbGraficCard .tbGrafic{flex:1;display:flex;flex-direction:column}
-#tabloubot #tbGraficCard .tbGraficZona{flex:1;min-height:240px;height:auto}
 body.peTablou main>.note{display:none}
 
 
@@ -1319,7 +1306,6 @@ body.peTablou main>.note{display:none}
   #tabloubot .tbIdent .stockBadge{font-size:12px;padding:3px 8px}
   #tabloubot .tbActiuni .actionGhost{padding:6px 10px;font-size:13px}
   
-  #tabloubot #tbGraficCard .tbGraficZona{min-height:200px}
 }
 
 /* v77: sfaturi, scenarii, alerte, perioada graficului */
@@ -1345,7 +1331,6 @@ body.peTablou main>.note{display:none}
 #tabloubot .tbIntBtn,#gridset .tbIntBtn{white-space:nowrap;padding:4px 10px;border-radius:4px;border:1px solid var(--tb-linie);background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
 #tabloubot .tbIntBtn[aria-pressed="true"],#gridset .tbIntBtn[aria-pressed="true"]{background:var(--tb-fond2);color:var(--text);border-color:var(--line)}
 #tabloubot .tbIntBtn:focus-visible,#gridset .tbIntBtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-#tabloubot .tbNivelGrid{stroke:rgba(159,179,196,.13);stroke-width:1;vector-effect:non-scaling-stroke}
 @media(max-width:560px){#tabloubot #tbSfaturi{grid-template-columns:1fr}#tabloubot .tbScenCap,#tabloubot .tbScenRand{grid-template-columns:1.4fr .6fr 1fr;font-size:13.5px}}
 
 .pePublicat{margin:0 0 10px;font-size:15px;line-height:1.5}.pePublicat a{margin-left:8px;display:inline-block;padding:6px 14px;border:1px solid var(--accent);border-radius:4px;color:var(--text);text-decoration:none;font-weight:600}.pePublicat a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.pePublicat[hidden]{display:none!important}
@@ -1494,7 +1479,6 @@ body.peTablou main>.note{display:none}
 .t212Pill{display:inline-block;padding:3px 10px;border-radius:3px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}.t212Pill-tine{background:#26A96C}.t212Pill-atentie{background:#E9B949}.t212Pill-iesi{background:#E0524A}.t212Pill-fara{background:#8799AA}
 .t212Motive{margin:6px 0 0;padding-left:18px}
 .t212Plan{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:6px}.t212Plan label{display:flex;align-items:center;gap:4px;font-size:13px}.t212Plan input{width:74px}
-.t212Bloc{padding:12px 14px;margin-top:10px;border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond)}
 .t212Bara{display:grid;grid-template-columns:70px 1fr 56px 120px;gap:10px;align-items:center;padding:4px 0}.t212BaraFond{height:10px;border-radius:4px;background:var(--tb-fond2);overflow:hidden}.t212BaraPlin{height:100%;background:var(--good)}.t212BaraPlin.atentie{background:var(--warn)}.t212BaraPlin.rau{background:var(--bad)}.t212Bara b{text-align:right}
 .t212Intrari{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}.t212Intrari label{display:flex;flex-direction:column;gap:4px}.t212Intrari input{min-width:110px}
 .t212Preturi{margin:8px 0;padding:10px 12px;border:1px solid rgba(91,143,199,.28);border-radius:5px;background:rgba(91,143,199,.05)}.t212PretCap{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}.t212PretGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:8px}.t212PretGrid>div{display:flex;flex-direction:column;gap:2px}.t212PretGrid b{font-size:15.5px}
@@ -1563,7 +1547,7 @@ body.peTablou main>.note{display:none}
   .t212Tab tr.t212Rand{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid var(--tb-linie)}
   .t212Tab tr.t212Rand td{display:block;padding:0;border:0;text-align:left;background:transparent!important}
   .t212Tab tr.t212Rand td.c-rez,.t212Tab tr.t212Rand td.c-tinta{text-align:right}
-  .t212Tab tr.t212Rand td.c-acum,.t212Tab tr.t212Rand td.c-trend,.t212Tab tr.t212Rand td.c-pond,.t212Tab tr.t212Rand td.c-chev{display:none}
+  .t212Tab tr.t212Rand td.c-acum,.t212Tab tr.t212Rand td.c-trend,.t212Tab tr.t212Rand td.c-pond{display:none}
   .t212Tab tr.t212Rand td.c-stop,.t212Tab tr.t212Rand td.c-tinta{font-size:12.5px}
   .t212Tab tr.t212Rand td.c-stop .t212Mic.t212RevMic{display:none}
   .t212Tab tr.t212Rand td.c-plan{grid-column:1/-1}
@@ -2065,9 +2049,6 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 /* v100.99 (I-531): pe telefon citirea graficului stă imediat sub grafic (același conținut, randat în două locuri - nimic mutat) */
 #tabloubot .tbCitireMobil{display:none}
 @media (max-width:1180px){#tabloubot #tbCitireCard{display:none}#tabloubot .tbCitireMobil{display:block;margin-top:12px;padding-top:10px;border-top:1px solid var(--tb-linie)}}
-/* v100.99 (I-529): stopul de probă */
-#tabloubot .tbCitProba{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--tb-linie)}
-#tabloubot .tbCitProba .tbIntBtn{justify-self:start}
 #tabloubot .gbSansa{pointer-events:auto}
 #tabloubot .gbLeg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
 #tabloubot .gbLeg span{display:inline-flex;align-items:center;gap:6px}
@@ -2639,7 +2620,6 @@ body:before{background-image:none!important}
 .pzDemo #tbGridLarg.pzInVerdict{display:none!important}
 .pzMotiv{margin-top:10px;padding:8px 10px;border-left:3px solid var(--pzJos);background:var(--pzF2);border-radius:0 3px 3px 0}
 .pzMotiv b{color:var(--pzJos);font-size:13px}.pzMotiv p{margin:3px 0 0;font-size:12.5px;color:var(--pzT1)}
-.pzAlternativa{color:var(--pzT2)!important;font-style:italic}
 /* (2) rândurile pliate din „Ce spune piața acum”: o linie curată, cu „…” */
 #tbCitire>.pzFold{max-height:none!important;padding-right:18px}
 #tbCitire>.pzFold>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
