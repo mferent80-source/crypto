@@ -113,15 +113,25 @@ var Factori = (function () {
     });
     var castig = out.filter(function (x) { return x.rez > 0; }), pierd = out.filter(function (x) { return x.rez <= 0; });
     // stopul care ar fi păstrat 80 % din câștigători (cuantila de 20 % a MAE-ului lor) și câte pierderi le-ar fi tăiat mai devreme
-    var stop = castig.length >= 10 ? cuantila(castig.map(function (x) { return x.mae; }), 0.2) : null;
-    var taiate = stop !== null ? pierd.filter(function (x) { return x.mae <= stop && x.rez < stop; }) : [];
+    // audit 19.10 (5): economia e NETĂ și măsurată pe ACELEAȘI trade-uri pe care s-a ales stopul (în eșantion, deci optimistă): orice trade atins
+    // (MAE ≤ stop) ar fi ieșit la stop - pierderile mai mari decât stopul salvează (stop − rez), câștigătorii opriți și pierderile mai mici costă
+    // (rez − stop). Netul ≤ 0 ⇒ stopul nu se propune (stopSugerat = null: gărzile și lecția rămân pe pragul implicit, spus pe față).
+    var cand = castig.length >= 10 ? cuantila(castig.map(function (x) { return x.mae; }), 0.2) : null;
+    var taiate = cand !== null ? pierd.filter(function (x) { return x.mae <= cand && x.rez < cand; }) : [];
+    var costate = cand !== null ? out.filter(function (x) { return x.mae <= cand && taiate.indexOf(x) < 0; }) : [];
+    var sumF = function (l, f) { return l.reduce(function (s, x) { return s + f(x); }, 0); }, cuBani = taiate.concat(costate).every(function (x) { return x.cost > 0; });
+    var salvat = sumF(taiate, function (x) { return cand - x.rez; }), costat = sumF(costate, function (x) { return x.rez - cand; });
+    var salvatBani = cuBani ? sumF(taiate, function (x) { return (cand - x.rez) * x.cost; }) : null, costatBani = cuBani ? sumF(costate, function (x) { return (x.rez - cand) * x.cost; }) : null;
+    var stop = cand !== null && salvat - costat > 0 ? cand : null;
     return { n: out.length, castig: castig.length, pierd: pierd.length,
       maeCastig: castig.length ? cuantila(castig.map(function (x) { return x.mae; }), 0.5) : null, maePierd: pierd.length ? cuantila(pierd.map(function (x) { return x.mae; }), 0.5) : null,
       mfePierd: pierd.length ? cuantila(pierd.map(function (x) { return x.mfe; }), 0.5) : null, mfeCastig: castig.length ? cuantila(castig.map(function (x) { return x.mfe; }), 0.5) : null,
       lasatPeMasa: castig.length ? cuantila(castig.map(function (x) { return x.mfe - x.rez; }), 0.5) : null,
       pierdDupaPlus5: pierd.filter(function (x) { return x.mfe >= 0.05; }).length,
-      stopSugerat: stop, taiatePierderi: taiate.length, castigTaiat: stop !== null ? castig.filter(function (x) { return x.mae <= stop; }).length : null,
-      economie: taiate.length ? medie(taiate.map(function (x) { return stop - x.rez; })) : null, trades: out };
+      stopSugerat: stop, stopCandidat: cand, taiatePierderi: taiate.length, castigTaiat: cand !== null ? castig.filter(function (x) { return x.mae <= cand; }).length : null,
+      economie: taiate.length ? medie(taiate.map(function (x) { return cand - x.rez; })) : null,
+      salvat: cand !== null ? salvat : null, costat: cand !== null ? costat : null, economieNeta: cand !== null ? salvat - costat : null,
+      salvatBani: cand !== null ? salvatBani : null, costatBani: cand !== null ? costatBani : null, netBani: cand !== null && cuBani ? salvatBani - costatBani : null, inEsantion: cand !== null, trades: out };
   }
 
   // ---------------- 4. ținta de volatilitate ----------------

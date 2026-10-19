@@ -166,5 +166,44 @@ await test("(4) botul nou: pierde în 58% cu ±20 de puncte ⇒ NU „N-aș porn
   assert.match(v2.faCe, /^N-aș porni/);
 });
 
+// ---------- (5) stopul din MAE: economia NETĂ, în eșantion, fără propunere la net ≤ 0 ----------
+const Factori = new Function(`${lib("factori.js")}; return Factori;`)();
+const ZI = 86400000, TZ = Date.UTC(2026, 0, 5);
+function trade(i, rez, mae, cost) {
+  const pc = 100, pv = 100 * (1 + rez), t0 = TZ + i * 10 * ZI, lo = 100 * (1 + mae), hi = Math.max(pc, pv) * 1.001;
+  return { t: { ticker: "T" + i, id: i, simbol: "T" + i, pornit: t0 + 10 * 3600000, inchis: t0 + 2 * ZI + 10 * 3600000, pretCumparare: pc, pretVanzare: pv, cost: cost || 1000, rezultat: rez * (cost || 1000) },
+    bare: [{ t: t0, o: 100, c: 100, l: lo, h: 100 }, { t: t0 + ZI, o: 100, c: 100, l: 100, h: hi }, { t: t0 + 2 * ZI, o: pv, c: pv, l: Math.min(pv, 100), h: hi }] };
+}
+const MAE = (lista) => { const tr = lista.map((x, i) => trade(i, x[0], x[1])), bare = {}; tr.forEach((x) => { bare[x.t.ticker] = x.bare; }); return Factori.maeMfe(tr.map((x) => x.t), bare, {}); };
+// 12 câștigători +10% (3 coboară întâi la −8…−10%), pierzători mici (−8%, au atins −9%): stopul ~−6,7% ar fi tăiat 3 câștigători ⇒ net pe minus
+const CASTIG = [[0.1, -0.10], [0.1, -0.09], [0.1, -0.08]].concat(Array.from({ length: 9 }, () => [0.1, -0.02]));
+await test("(5) stopul din MAE: netul (pierderi salvate − câștiguri tăiate) ≤ 0 ⇒ nu se propune stopul", () => {
+  const m = MAE(CASTIG.concat([[-0.08, -0.09], [-0.08, -0.09]]));
+  assert.ok(m.stopCandidat < -0.06 && m.stopCandidat > -0.08, String(m.stopCandidat));
+  assert.ok(m.costat > 0.4 && m.salvat < 0.05, m.costat + " / " + m.salvat);
+  assert.ok(m.economieNeta <= 0, String(m.economieNeta));
+  assert.equal(m.stopSugerat, null, "netul e pe minus: fără stop propus");
+  assert.equal(m.inEsantion, true);
+});
+await test("(5) stopul din MAE: pierderi mari (−30%) ⇒ netul e pe plus, stopul se propune, cu banii salvați și cei tăiați", () => {
+  const m = MAE(CASTIG.concat(Array.from({ length: 5 }, () => [-0.30, -0.35])));
+  assert.ok(m.stopSugerat < 0 && m.economieNeta > 0, m.stopSugerat + " / " + m.economieNeta);
+  assert.equal(m.taiatePierderi, 5); assert.equal(m.castigTaiat, 3);
+  assert.ok(Math.abs(m.netBani - (m.salvatBani - m.costatBani)) < 1e-9 && m.netBani > 0, String(m.netBani));
+});
+await test("(5) pagina Contul întreg: textul spune netul și că e măsurat pe aceleași trade-uri; la net ≤ 0 nu propune stopul", () => {
+  const vm = { TextRo: globalThis.TextRo }; const fnE = new Function("TextRo", citeste("public", "lib", "cont-ecran.js") + "; return ciHtml;")(globalThis.TextRo);
+  const rap = (mm) => ({ la: Date.now(), valoare: { total: 30000, complet: true, lipsa: [] }, risc: {}, reconciliere: {}, randament: {}, maeMfe: mm });
+  const bun = { n: 40, castig: 15, pierd: 25, maeCastig: -0.04, maePierd: -0.22, pierdDupaPlus5: 6, lasatPeMasa: 0.08, stopSugerat: -0.07, stopCandidat: -0.07, taiatePierderi: 14, castigTaiat: 3, economie: 0.12, salvat: 1.7, costat: 0.5, economieNeta: 1.2, salvatBani: 1700, costatBani: 500, netBani: 1200, inEsantion: true };
+  const h = fnE(rap(bun), { acum: Date.now() });
+  assert.match(h, /Un stop la −7,0% de la cumpărare ar fi păstrat 80 % din câștigători și ar fi tăiat mai devreme 14 pierderi/);
+  assert.match(h, /3 câștigători/); assert.match(h, /net \+1\.200 lei/); assert.match(h, /pe aceleași trade-uri/);
+  const rau = Object.assign({}, bun, { stopSugerat: null, economieNeta: -0.3, salvatBani: 200, costatBani: 500, netBani: -300 });
+  const h2 = fnE(rap(rau), { acum: Date.now() });
+  assert.ok(!/Ce aș face eu:<\/b> Un stop la/.test(h2), "net ≤ 0: nu se propune");
+  assert.match(h2, /nu-l propun/);
+  void vm;
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
 process.exit(picate ? 1 : 0);
