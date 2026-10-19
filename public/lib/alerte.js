@@ -30,6 +30,14 @@ var Alerte = (function () {
   // exponent; procentele cu virgula; mesajul alertei pe 2 randuri - faptul (o fraza) + „👉 ” o actiune la persoana I; titlul ≤ 60
   function pret(v) { if (v === null || v === undefined || !isFinite(v)) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 1 ? 4 : a >= 0.1 || a === 0 ? 5 : Math.min(12, 4 - Math.floor(Math.log10(a)))); }
   function vg(v, z) { return Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ","); }
+  // audit 19.10: câte intervale rămân dincolo de un stop din grid (long: sub el, short: peste el) - partea de grid care nu mai lucrează
+  function griliMoarte(b, x) {
+    var d = b && b.brut && b.brut.buOrderData || {}, linii = nr(d.row), N = linii > 1 ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
+    if (!N || !(x > jos) || !(x < sus) || !(jos > 0) || (dir !== "long" && dir !== "short")) return null;
+    var geo = String(d.gridType || "").toLowerCase() === "geometric", fr = dir === "long" ? (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos)) : (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos));
+    var k = Math.round(fr * N);
+    return { moarte: k, intervale: N, txt: k + " din " + cate(N, "grilă", "grile") };
+  }
   function msg(fapt, act) { return fapt + (act ? "\n👉 " + act : ""); }
   function taie(s, n) { s = String(s || ""); if (s.length <= n) return s; var t = s.slice(0, n - 1), i = t.lastIndexOf(" "); return (i > n / 2 ? t.slice(0, i) : t).replace(/[\s,;:·—-]+$/, "") + "…"; }
   function mic(s) { s = String(s || ""); return s.charAt(0).toLowerCase() + s.slice(1); }
@@ -156,20 +164,33 @@ var Alerte = (function () {
       var pgT = nz(pg), procPlan = inv > 0 && pg > 0 ? "−" + vg(pg / inv * 100, 1) + "% din investiție" : null;
       var raport = b.opritorPierdereTip === "raport" && nr(b.opritorPierdereRaport) !== null, opS = nr(b.opritorPierdere), opPlan = nr(mi.opritorPlan);
       var activS = !!b.opritorPierdereActiv && (raport || opS > 0);
+      // audit 19.10: prețul planului ÎN grid (TAKE 05.10: 0,0614 în 0,0533–0,07224) nu se cere ca stop - sub el gridul nu mai lucrează. Alerta spune
+      // contradicția (pierderea la marginea dinspre stop față de plan) și ce aș face: închis la zero sau stopul dincolo de grid (mi.stopAfara).
+      var plInG = opPlan !== null && jos !== null && sus !== null && opPlan > jos && opPlan < sus, lmS = nr(mi.laMargine), stAf = nr(mi.stopAfara), pzS = ctx ? nr(ctx.pretZero) : null;
+      var afS = dirPl === "short" ? "peste grid" : "sub grid", zS = pzS !== null ? "la zero (" + pret(pzS) + ")" : "pe o revenire";
+      var planG = "planul (−" + pgT + " USDT) cade în grid, la " + pret(opPlan) + (lmS !== null ? ", iar la marginea de " + (dirPl === "short" ? "sus" : "jos") + " pierzi ≈ " + vg(-lmS, 1) + " USDT" : "");
+      var faGrid = "Aș închide botul " + zS + " sau aș pune stopul " + afS + (stAf !== null ? " (" + pret(stAf) + ")" : "") + ".";
+      var opMtS = activS && !raport && opS > 0 ? griliMoarte(b, opS) : null;
       if (!(pg > 0)) out["plan-stop"] = null;
       else if (!activS) {
         faraStop = true;
         var plL = nr(b.pretLichidare);
+        var fpFara = (opS > 0 ? "Stopul e setat la " + pret(opS) + ", dar e stins; fără el" : "Fără stop") + ", o " + (dirPl === "short" ? "urcare" : dirPl === "long" ? "cădere" : "mișcare") + " bruscă merge până la lichidare" + (plL !== null && plL > 0 ? " (" + pret(plL) + ", " + distP(plL) + ")" : "") + " și poți pierde toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "");
+        // audit 19.10: cu planul în grid, faptul spune contradicția (în ≤ 160: fără lichidare dacă nu încape) și acțiunea nu cere stopul în grid
+        if (plInG) { var fpG = fpFara + "; " + planG + "."; var fpS = (opS > 0 ? "Stopul e setat la " + pret(opS) + ", dar e stins" : "Fără stop") + ", o " + (dirPl === "short" ? "urcare" : "cădere") + " bruscă aduce lichidarea", mrj = inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "", plSc = planG.replace(/, iar la marginea[^]*$/, "");
+          fpFara = [fpG, fpS + " și ia toată marja" + mrj + "; " + planG + ".", fpS + mrj + "; " + planG + ".", fpS + " și ia toată marja" + mrj + "; " + plSc + "."].filter(function (t, i) { return t.length <= 160 && (i > 0 || fpFara.indexOf(";") < 0); })[0] || fpS + mrj + "; " + plSc + "."; }
+        else fpFara += ".";
         out["plan-stop"] = { nivel: "critic", titlu: nume + ": n-ai stop activ în Pionex (planul: −" + pgT + " USDT)",
           // v100.70 (revizia pachetului 3, I8): miscarea care duce la lichidare dupa partea botului (short -> urcare)
-          mesaj: msg((opS > 0 ? "Stopul e setat la " + pret(opS) + ", dar e stins; fără el" : "Fără stop") + ", o " + (dirPl === "short" ? "urcare" : dirPl === "long" ? "cădere" : "mișcare") + " bruscă merge până la lichidare" + (plL !== null && plL > 0 ? " (" + pret(plL) + ", " + distP(plL) + ")" : "") + " și poți pierde toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
-            (opPlan !== null ? "Aș pune stopul la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : procPlan ? "Aș pune stopul în procente, la " + procPlan : "Aș pune stopul cât zice planul") + ": planul devine ordin, nu doar alertă.") };
+          mesaj: msg(fpFara,
+            plInG ? faGrid : (opPlan !== null ? "Aș pune stopul la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : procPlan ? "Aș pune stopul în procente, la " + procPlan : "Aș pune stopul cât zice planul") + ": planul devine ordin, nu doar alertă.") };
       } else if (opS > 0 && !raport && nr(b.pretLichidare) > 0 && (dirPl === "short" ? opS >= nr(b.pretLichidare) : dirPl === "long" ? opS <= nr(b.pretLichidare) : false)) {
         // v100.196 (auditul 14.10, B3): stopul dincolo de lichidarea estimata nu apuca - lichidarea vine intai si ia marja (nu „137% din investiție”)
         var lqS = nr(b.pretLichidare);
         out["plan-stop"] = { nivel: "critic", titlu: nume + ": stopul e dincolo de lichidare",
           mesaj: msg("Stopul e la " + pret(opS) + ", lichidarea estimată la " + pret(lqS) + " (" + distP(lqS) + "): lichidarea vine întâi și iei toată marja" + (inv > 0 ? " (≈ " + vg(inv, 0) + " USDT)" : "") + ".",
-            (opPlan !== null ? "Aș muta stopul în Pionex la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : "Aș muta stopul înaintea lichidării, cât zice planul") + ": planul devine ordin, nu doar alertă.") };
+            plInG ? "Aș muta stopul înaintea lichidării, " + afS + (stAf !== null && (dirPl === "short" ? stAf < lqS : stAf > lqS) ? " (" + pret(stAf) + ")" : "") + ", sau aș închide botul " + zS + "."
+              : (opPlan !== null ? "Aș muta stopul în Pionex la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : "Aș muta stopul înaintea lichidării, cât zice planul") + ": planul devine ordin, nu doar alertă.") };
       } else if (lo === null) out["plan-stop"] = null;
       else {
         var pierde = -lo, inPS = fost("plan-stop") !== "ok", departe = pierde > pg * (inPS ? 1.1 : 1.2) && pierde - pg >= (inPS ? 1 : 2);
@@ -177,10 +198,16 @@ var Alerte = (function () {
           : "Stopul e la " + pret(opS) + " (" + distP(opS) + "); pe drum gridul mai " + (dirPl === "short" ? "vinde" : "cumpără") + " și la stop poziția e plină";
         var faCe = raport ? (procPlan ? "Aș pune stopul la " + procPlan : "Aș apropia stopul cât zice planul")
           : (opPlan !== null ? "Aș muta stopul în Pionex la " + pret(opPlan) + (procPlan ? " (sau " + procPlan + ")" : "") : procPlan ? "Aș pune stopul în procente, la " + procPlan : "Aș apropia stopul cât zice planul");
+        var costS = "atins, te costă ≈ " + vg(pierde, 1) + " USDT" + (inv > 0 ? " (" + Math.round(pierde / inv * 100) + "% din investiție)" : "");
+        // audit 19.10: planul în grid ⇒ faptul spune contradicția, acțiunea nu mută stopul în grid (nivelul rămâne: critic de la 2× planul)
+        var bzD = (raport ? undeE : "Stopul e la " + pret(opS) + " (" + distP(opS) + ")") + ": ", plScurt = planG.replace(/, iar la marginea[^]*$/, "");
+        var fpD = !plInG ? undeE + ": " + costS + "." : [bzD + costS + "; " + planG + ".", bzD + "atins, te costă ≈ " + vg(pierde, 1) + " USDT; " + planG + ".", bzD + costS + ", iar " + plScurt + "."].filter(function (t) { return t.length <= 160; })[0] || bzD + "atins, te costă ≈ " + vg(pierde, 1) + " USDT, iar " + plScurt + ".";
+        var stAfOk = stAf !== null && !raport && (dirPl === "short" ? opS > stAf : opS < stAf);
+        var faD = plInG ? "Aș închide botul " + zS + (stAfOk ? " sau aș muta stopul " + afS + " (" + pret(stAf) + ")." : " sau l-aș lăsa " + afS + ", unde e.") : faCe + ": planul devine ordin, nu doar alertă.";
         out["plan-stop"] = departe
           ? { nivel: pierde >= 2 * pg ? "critic" : "atentie", titlu: nume + ": stopul din Pionex pierde ≈ " + Math.round(pierde) + " USDT (planul: −" + pgT + ")",
-              mesaj: msg(undeE + ": atins, te costă ≈ " + vg(pierde, 1) + " USDT" + (inv > 0 ? " (" + Math.round(pierde / inv * 100) + "% din investiție)" : "") + ".", faCe + ": planul devine ordin, nu doar alertă.") }
-          : { nivel: "ok", titlu: nume + ": stopul din Pionex se potrivește acum cu planul tău", mesaj: "Atins, te costă ≈ " + vg(pierde, 1) + " USDT; planul zice −" + pgT + "." };
+              mesaj: msg(fpD, faD) }
+          : { nivel: "ok", titlu: nume + ": stopul din Pionex se potrivește acum cu planul tău", mesaj: "Atins, te costă ≈ " + vg(pierde, 1) + " USDT; planul zice −" + pgT + (opMtS ? "; stopul stă în grid: " + (dirPl === "short" ? "peste" : "sub") + " el, " + opMtS.txt + " nu lucrează" : "") + "." };
       }
 
       // v101.8 (4): incape gridul in plan? (TabloExtra.planStare -> incapePlanul). Doua cazuri, o singura alerta, o data pe zi:

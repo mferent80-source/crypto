@@ -286,7 +286,7 @@ await test("(R4/R5/R6) ecranul: histograma stilată și pe #gsPagina; Copiază /
   assert.match(functie(E, "gsCopiazaCod"), /GridSim\.inCod\(/);
   assert.match(functie(E, "gsCiteste"), /nu e un număr/); assert.match(functie(E, "gsCiteste"), /e gol/);
   assert.match(G.gsVerdictHtml(stare({ rez: REZ(), plan: null })), /<span class="t212Mic">±4 puncte · incertitudinea pe zile \(cu fiecare grupă de zile scoasă pe rând\), nu doar din numărul drumurilor<\/span>/);
-  assert.match(G.gsHtml(stare({ rez: REZ(), st: Object.assign({}, STP, { stop: { jos: 0.4 } }) })), /Stopul \(0,4000\) e ÎN grid/);
+  assert.match(G.gsHtml(stare({ rez: REZ(), st: Object.assign({}, STP, { stop: { jos: 0.4 } }) })), /Stopul \(0,4000\) stă în grid/);   // audit 19.10: fără majuscule, cu partea de grid care moare (ca Tabloul)
   assert.match(G.gsRiscuriHtml(stare({ rez: REZ() })), /funding \(cost fix presupus\)/);
 });
 

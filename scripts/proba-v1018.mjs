@@ -44,7 +44,7 @@ await test("1 · fara stop in Pionex + plan pe minus -> CRITIC: planul e doar al
   assert.match(m.titlu, /^LIGHTER: n-ai stop activ în Pionex/);
   assert.match(m.titlu, /−15,7/);
   assert.match(m.mesaj, /4\.2601/);
-  assert.match(m.mesaj, /−15,2% din investiție/);
+  assert.match(m.mesaj, /cade în grid/); assert.match(m.mesaj, /sub grid \(4\.0387\)/);   // audit 19.10: prețul planului (4,2601) e în grid ⇒ nu mai e „unde să-l pui” (nici în procente, același preț); stopul propus stă sub grid
   assert.match(m.mesaj, /lichidare/);
 });
 
@@ -189,9 +189,9 @@ await test("2 · LIGHTER: eticheta nu mai e verde „pus” — „peste plan”
   assert.equal(s.tag.t, "peste plan");
   assert.equal(s.tag.c, "bad");
   assert.match(s.mic, /atins ≈ −6\d USDT/);
-  assert.match(s.deCe, /Planul tău zice −15,7/);   // v100.61: planul in „de ce”, actiunea in act
-  assert.match(s.act, /4\.2601/);
-  assert.match(s.act, /−15,2% din investiție/);
+  // audit 19.10: prețul planului (4,2601) stă în grid ⇒ „unde să-l muți” = sub grid (4,0387), planul și costul rămân în „de ce”
+  assert.match(s.deCe, /te costă ≈ 63,5 USDT, nu 15,7; planul cade în grid \(4\.2601\)/);
+  assert.match(s.act, /sub grid, la 4\.0387/);
 });
 
 await test("2 · stop pe masura planului -> ramane „pus”, cu costul la vedere; fara plan -> cartela de dinainte (fara cost)", () => {
@@ -207,8 +207,9 @@ await test("2 · stop pe masura planului -> ramane „pus”, cu costul la veder
 await test("2 · fara stop, cu plan -> „fara protectie” si pretul planului", () => {
   const s = cartela(LIGHTER({ opritorPierdere: null, opritorPierdereActiv: false }));
   assert.equal(s.tag.t, "fără protecție");
-  assert.match(s.act, /4\.2601/);
-  assert.match(s.act, /−15,2% din investiție/);
+  // audit 19.10: prețul planului (4,2601) stă în grid ⇒ se spune în „de ce” (cu procentul nu, e același preț), acțiunea pune stopul sub grid
+  assert.match(s.deCe, /cade în grid, la 4\.2601/);
+  assert.match(s.act, /sub grid, la 4\.0387/);
 });
 
 await test("Tabloul da planul cartelei (app.js: acumConcret primeste plan)", () => {

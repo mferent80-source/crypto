@@ -77,6 +77,16 @@ var SemnaleBot = (function () {
     var geo = String(d.gridType || "").toLowerCase() === "geometric", ref = p > 0 ? p : (jos + sus) / 2;
     return { grile: linii, pas: geo ? Math.pow(sus / jos, 1 / N) - 1 : (sus - jos) / N / ref, mod: geo ? "geometric" : "aritmetic" };
   }
+  // audit 19.10: un preț e ÎN grid (strict între margini)? Și câte intervale rămân dincolo de el, spre marginea de pierdere (long: sub el,
+  // short: peste el) - partea de grid care nu mai lucrează niciodată dacă acolo stă stopul (regula lui: stopul nu stă în mijlocul gridului).
+  function inGridPret(x, jos, sus) { return x !== null && x !== undefined && jos !== null && sus !== null && x > jos && x < sus; }
+  function griliMoarte(b, x) {
+    var d = b && b.brut && b.brut.buOrderData || {}, linii = nr(d.row), N = linii > 1 ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
+    if (!N || !inGridPret(nr(x), jos, sus) || (dir !== "long" && dir !== "short")) return null;
+    var geo = String(d.gridType || "").toLowerCase() === "geometric", lung = dir === "long";
+    var fr = lung ? (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos)) : (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos));
+    return { moarte: Math.round(fr * N), intervale: N, txt: Math.round(fr * N) + " din " + cate(N, "grilă", "grile") };
+  }
   var T = function (v) { return v === null || v === undefined ? "?" : TextRo.num(Math.round(v * 10) / 10, 1); };
   // v99 (cererea lui, 28.09): botul e mult mai RAR decat gridul des propus de fisa in liniste -> propunere cu cifre.
   // Nu e alerta (n-ar fi "urgent"), e o sugestie pe Tablou: gridurile rare sunt atinse rar; cu 0,30% a facut mai multi bani lateral.
@@ -187,24 +197,54 @@ var SemnaleBot = (function () {
     } else {
       var inAfara = op !== null && (dir === "short" ? sus !== null && op > sus : jos !== null && op < jos), parteP = dir === "short" ? "peste gridul de sus" : "sub gridul de jos";
       st0.tag = op === null ? { t: "fără protecție", c: "bad" } : inAfara ? { t: "pus", c: "good" } : { t: "stop în grid", c: "warn" };
+      // audit 19.10: stopul din grid spune și ce parte a gridului moare (sub el / peste el nu mai lucrează)
+      var opMt = op !== null && !inAfara ? griliMoarte(b, op) : null, subEl = dir === "short" ? "peste el" : "sub el";
       st0.act = op === null ? "Dacă vrei protecție, aș pune stopul " + parteP + ", la " + (protectie !== null && protectie !== undefined ? fmtPret(protectie) : "o grilă în afara marginii") + "."
         : inAfara ? "L-aș lăsa: stopul stă " + parteP + "."
-        : "Stopul tău (" + fmtPret(op) + ") stă în grid: o mișcare mică îl atinge și închide botul pe minus.";
+        : "Stopul tău (" + fmtPret(op) + ") stă în grid: " + (opMt && opMt.moarte >= 1 ? subEl + ", " + opMt.txt + " nu lucrează, iar o mișcare mică îl atinge." : "o mișcare mică îl atinge și închide botul pe minus.");
       st0.deCe = pzN ? "Pe minus, din preț botul nu mai ajunge pe zero în grid: protecția doar limitează pierderea." : "Pe minus, un stop la zero-ul botului (" + fmtPret(pz) + ", " + S1(pz / p - 1) + " de preț) n-are sens.";
       // v101.8 (2): planul hotaraste - fara stop: unde il pui; peste plan: rosu, cat costa si unde il muti; pe plan (si in grid): pus
+      // audit 19.10: înainte de orice „pune / mută stopul la X”: unde e X față de margini? Prețul planului ÎN grid (TAKE 05.10: 0,0614 în
+      // 0,0533–0,07224 la 5×) nu se propune - sub el gridul nu mai lucrează. Se spune contradicția (pierderea la marginea dinspre stop față de
+      // plan) și ce aș face: botul de acum - închis la zero sau stopul dincolo de grid; botul următor - grid mai îngust sau levier mai mic.
+      var plInG = pgm > 0 && inGridPret(opPl, jos, sus), lmPl = pm ? nr(pm.laMargine) : null, afTxt = dir === "short" ? "peste grid" : "sub grid";
+      var laZero = pz !== null ? "la zero (" + fmtPret(pz) + ")" : "pe o revenire", prT = protectie !== null && protectie !== undefined ? fmtPret(protectie) : null;
+      var lmTxt = lmPl !== null ? "la marginea de " + (dir === "short" ? "sus" : "jos") + " pierzi ≈ " + TextRo.num(-lmPl, 1) + " USDT" : null;
+      if (plInG) {
+        var lvP = pm.levierPotrivit, Lb = nr(b.levier), mtP = griliMoarte(b, opPl), LbT = Lb ? " la " + String(Lb).replace(".", ",") + "×" : "";
+        var urm = "botul următor, grid mai îngust cât planul" + LbT + (lvP && Lb && lvP.levier < Lb ? ", sau același grid la levier " + lvP.levier + "×" + (nr(lvP.iesire) !== null ? " (planul la " + (dir === "short" ? "+" : "−") + TextRo.num(nr(lvP.iesire) * 100, 1) + "% de preț)" : "") : " (nici la levier mai mic gridul acesta nu încape în plan)");
+        st0.text += " Gridul și planul se contrazic: planul (−" + pgmT + " USDT) cade în grid, la " + fmtPret(opPl) + (mtP ? ", unde n-ar lucra " + mtP.txt : "") + (lmTxt ? ", iar " + lmTxt : "") + ". Ce aș face eu: botul de acum, aș închide " + laZero + " sau l-aș lăsa cu stopul " + afTxt + (prT ? " (" + prT + ")" : "") + "; " + urm + ".";
+      }
       if (pgm > 0) {
-        if (op === null && undePl) st0.act = "Aș pune stopul la " + undePl + ", cât zice planul (−" + pgmT + " USDT).";
-        else if (pestePlan) { st0.tag = { t: "peste plan", c: "bad" }; st0.act = "Aș muta stopul la " + (undePl || "pragul planului") + ": atins acum, te costă ≈ " + Math.round(-laOp) + " USDT, nu " + pgmT + "."; st0.deCe = "Planul tău zice −" + pgmT + " USDT; stopul de la " + fmtPret(op) + " stă mult mai departe."; }
-        else if (op !== null && laOp !== null && !inAfara) { st0.tag = { t: "pus", c: "good" }; st0.act = "L-aș lăsa: stă în grid (" + fmtPret(op) + "), dar atins costă cât planul (≈ " + TextRo.usdt(laOp, 0) + ")."; }
+        if (op === null && plInG) {
+          st0.act = "Aș pune stopul " + afTxt + (prT ? ", la " + prT + "," : "") + " sau aș închide botul " + laZero + ".";
+          st0.deCe = "Planul (−" + pgmT + " USDT) cade în grid, la " + fmtPret(opPl) + ": " + (mtP ? "acolo stopul ar tăia " + mtP.txt + (lmTxt ? ", iar " : "") : "") + (lmTxt || (mtP ? "" : "sub el gridul nu lucrează")) + ".";
+        }
+        else if (op === null && undePl) st0.act = "Aș pune stopul la " + undePl + ", cât zice planul (−" + pgmT + " USDT).";
+        else if (pestePlan && plInG) {
+          var dejaAfara = inAfara && protectie !== null && protectie !== undefined && (dir === "short" ? op <= protectie : op >= protectie);
+          st0.tag = { t: "peste plan", c: "bad" };
+          st0.act = "Aș închide botul " + laZero + (dejaAfara ? " sau l-aș lăsa " + afTxt + ", unde e." : " sau aș muta stopul " + afTxt + (prT ? ", la " + prT : "") + ".");
+          st0.deCe = "Atins acum, stopul te costă ≈ " + TextRo.num(-laOp, 1) + " USDT, nu " + pgmT + "; planul cade în grid (" + fmtPret(opPl) + ")" + (mtP ? ", unde ar tăia " + mtP.txt : "") + ".";
+        }
+        else if (pestePlan) { st0.tag = { t: "peste plan", c: "bad" }; st0.act = "Aș muta stopul la " + (undePl || "pragul planului") + ": atins acum, te costă ≈ " + TextRo.num(-laOp, 1) + " USDT, nu " + pgmT + "."; st0.deCe = "Planul tău zice −" + pgmT + " USDT; stopul de la " + fmtPret(op) + " stă mult mai departe."; }
+        else if (op !== null && laOp !== null && !inAfara) {
+          // audit 19.10: „pus” verde nu se mai dă unui stop din grid (atins costă cât planul, dar dincolo de el gridul moare)
+          st0.tag = { t: "stop în grid", c: "warn" };
+          st0.act = opPl !== null && !plInG ? "Aș muta stopul la " + fmtPret(opPl) + ", " + afTxt + ", cât zice planul (−" + pgmT + " USDT)." : "Aș închide botul " + laZero + " sau aș ține stopul " + afTxt + (prT ? ", la " + prT : "") + ".";
+          st0.deCe = "Stopul tău (" + fmtPret(op) + ") stă în grid: atins costă cât planul (≈ " + TextRo.usdt(laOp, 1) + "), dar " + (opMt ? subEl + ", " + opMt.txt + " nu lucrează." : "dincolo de el gridul nu lucrează.");
+        }
         // v100.43 (I-467): cand planul hotaraste unde stai stopul, banii se socotesc pe pretul PLANULUI (nu pe stopul fisei) - altfel
         // cartela zicea „mută-l la 0,384” si randul cu bani „l-aș lăsa unde e” (prins pe poza, CRV)
-        if (opPl !== null && (op === null || pestePlan)) { pretStop = opPl; sursaStop = null; }   // revizia 01.10: pretul vine din plan, nu din profil
+        if (opPl !== null && !plInG && (op === null || pestePlan)) { pretStop = opPl; sursaStop = null; }   // revizia 01.10: pretul vine din plan, nu din profil; audit 19.10: doar în afara gridului
       }
       if (dincoloLich) {
         st0.tag = { t: "stopul nu apucă: lichidarea vine întâi", c: "bad" };
-        st0.act = "Aș muta stopul înaintea lichidării (" + fmtPret(lqB) + ")" + (opPl !== null ? ", la " + fmtPret(opPl) + ", cât zice planul" : "") + ": acum stopul de la " + fmtPret(op) + " nu apucă.";
+        // audit 19.10: prețul planului din grid nu se propune nici aici - stopul merge dincolo de grid, înaintea lichidării
+        var prOk = protectie !== null && protectie !== undefined && (dir === "short" ? protectie < lqB : protectie > lqB);
+        st0.act = "Aș muta stopul înaintea lichidării (" + fmtPret(lqB) + ")" + (opPl !== null && !plInG ? ", la " + fmtPret(opPl) + ", cât zice planul" : plInG && prOk ? ", " + afTxt + ", la " + fmtPret(protectie) : "") + ": acum stopul de la " + fmtPret(op) + " nu apucă.";
         st0.deCe = "Stopul stă dincolo de lichidarea estimată: acolo marja izolată e deja pierdută" + (nr(b.investit) > 0 ? " (≈ " + TextRo.num(nr(b.investit), 0) + " USDT)" : "") + ".";
-        if (pretStop === null || pretStop === undefined) pretStop = opPl !== null ? opPl : protectie;
+        if (pretStop === null || pretStop === undefined) pretStop = opPl !== null && !plInG ? opPl : protectie;
       }
     }
     // revizia 01.10: de unde vine stopul propus se vede pe cartela (lângă sfat, cum cere specul) - v100.61: pe randul lui (sursa), nu in actiune

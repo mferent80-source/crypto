@@ -149,10 +149,11 @@ await test("I-467 opritorul LUI deja mai strans decat propunerea: nu-l impinge s
 await test("I-467 cand PLANUL hotaraste unde stai stopul („peste plan: mută-l la X”), banii se socotesc pe pretul planului, nu pe stopul fisei", () => {
   let pretCerut = null;
   const b = { directie: "long", pretCurent: 0.3877, gridJos: 0.3841, gridSus: 0.4331, profitTotal: -4.8, investit: 49.67, opritorPierdere: 0.38, opritorPierdereActiv: true };
-  const plan = { atins: [], minus: { prag: 7.5, laOpritor: -10.1, opritorPlan: 0.3842 } };
+  // audit 19.10: prețul planului SUB grid (0,3835 < 0,3841) - unul din grid (0,3842 ⇒ 0,0001 peste marginea de jos) nu se mai propune ca stop
+  const plan = { atins: [], minus: { prag: 7.5, laOpritor: -10.1, opritorPlan: 0.3835 } };
   const r = SB.acumConcret({ bot: b, fisa: null, zero: { pretZero: 0.3961 }, plan, cifre: (pr) => { pretCerut = pr; return { stop: { laOpritor: -10.1, laPropus: -7.4, frecventa: 0.2 } }; } });
   const st = r.find((x) => x.cod === "stop");
-  assert.match(st.act || "", /Aș muta stopul la 0\.3842/, st.act); aprox(pretCerut, 0.3842, 1e-9, "pretul planului");
+  assert.match(st.act || "", /Aș muta stopul la 0\.3835/, st.act); aprox(pretCerut, 0.3835, 1e-9, "pretul planului");
   assert.match(st.bani, /−10,1 USDT cu stopul de acum → −7,4 USDT/);
 });
 

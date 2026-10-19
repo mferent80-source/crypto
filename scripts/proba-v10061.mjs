@@ -97,8 +97,9 @@ const conL = () => S.acumConcret({ bot: LIGHTER(), fisa: null, zero: T.dacaInchi
 await test("LIGHTER (stopul peste plan): cartela Stopul spune actiunea si costul intr-un rand, „de ce” separat", () => {
   assert.ok(G.STRICT.has("cartele"), "cartelele trec pe strict");
   const st = conL().find((x) => x.cod === "stop");
-  assert.equal(st.act, "Aș muta stopul la 4.2601 (în procente: −15,2% din investiție): atins acum, te costă ≈ 63 USDT, nu 15,7.");
-  assert.equal(st.deCe, "Planul tău zice −15,7 USDT; stopul de la 3.787 stă mult mai departe."); assert.equal(st.atins < -60, true);
+  // audit 19.10: prețul planului (4,2601) stă ÎN grid (3,9–4,6) ⇒ nu se mai propune mutarea acolo; acțiunea și costul rămân într-un rând
+  assert.equal(st.act, "Aș închide botul la zero (4.4888) sau aș muta stopul sub grid, la 4.0387.");
+  assert.equal(st.deCe, "Atins acum, stopul te costă ≈ 63,5 USDT, nu 15,7; planul cade în grid (4.2601), unde ar tăia 4 din 15 grile."); assert.equal(st.atins < -60, true);
 });
 await test("pagina: cartela Stopul arata „de ce” si sursa stopului propus, fiecare pe randul lui", () => {
   const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
@@ -110,7 +111,7 @@ await test("LIGHTER: Consilierul - titlul scurt, o singura actiune, „de ce” 
   const c = C.alcatuieste({ sm: S.semafor({ bot: LIGHTER(), fisa: { regim: { r4h: 0.5, r24h: 0.5, miscare: false } }, plan: PLAN_L() }), concret: conL(), sfaturi: [], opritor: 3.787 });
   assert.equal(c.titlu, "Stopul costă peste plan"); assert.equal(c.faCe, "Aș lăsa stopul la 3.787 și aș trece planul la −64 USDT.");
   assert.equal(c.explica, "Stopul planului (4.2601) e prea aproape: o zi obișnuită a monedei ajunge acolo în 71% din zile.");
-  assert.match(c.motive[0].titlu, /^Stopul e peste plan: atins, ≈ −6\d USDT$/); assert.equal(c.motive[0].text, "Planul tău zice −15,7 USDT; stopul de la 3.787 stă mult mai departe.");
+  assert.match(c.motive[0].titlu, /^Stopul e peste plan: atins, ≈ −6\d USDT$/); assert.equal(c.motive[0].text, "Atins acum, stopul te costă ≈ 63,5 USDT, nu 15,7; planul cade în grid (4.2601), unde ar tăia 4 din 15 grile.");   // audit 19.10: motivul spune și că planul cade în grid
 });
 await test("RF2: titlul Consilierului din doua motive lungi nu trece de 60 - ramane primul (al doilea e chiar dedesubt)", () => {
   const sm = { nivel: "atentie", cod: "lichidare", motiv: "lichidarea la 12,4% · se apropie (13,6% acum 1 h)", faCe: "N-aș mări poziția.", componente: [

@@ -488,6 +488,13 @@ var TabloExtra = (function () {
       // v101.8: incape gridul in plan? (totalul la marginea de pierdere, iesirea fata de miscarea obisnuita, levierul potrivit)
       var ip = incapePlanul(b, nr(plan.minus), stare ? nr(stare.ampZi) : null);
       out.minus.laMargine = ip.laMargine; out.minus.iesire = ip.iesire; out.minus.ampZi = ip.amp; out.minus.levierPotrivit = ip.levier;
+      // audit 19.10: prețul planului cade ÎN grid? (TAKE 05.10: ~0,0614 în 0,0533–0,07224 la 5×) - acolo nu se propune stopul, sub el gridul nu
+      // mai lucrează. Stopul propus stă o grilă dincolo de marginea dinspre pierdere (fără geometrie: ca fișa, GridCalcul.stopuri), cu cât costă.
+      var jP = nr(b.gridJos), sP = nr(b.gridSus), dP = String(b.directie || "").toLowerCase(), oP = nr(out.minus.opritorPlan), gP = geometrieBot(b);
+      out.minus.planInGrid = oP !== null && jP > 0 && sP > jP && oP > jP && oP < sP;
+      var stA = jP > 0 && sP > jP ? (gP ? { jos: jP * (1 - gP.pasPct), sus: sP * (1 + gP.pasPct) } : G.stopuri(jP, sP, 0)) : null;
+      out.minus.stopAfara = stA && (dP === "long" || dP === "short") ? (dP === "short" ? stA.sus : stA.jos) : null;
+      out.minus.laStopAfara = out.minus.stopAfara !== null ? totalCuGridLa(b, out.minus.stopAfara) : null;
     }
     if (nr(plan.afaraOre) > 0) {
       var de = stare && nr(stare.afaraDe), ore = de ? ((acum || Date.now()) - de) / 3600000 : 0;
