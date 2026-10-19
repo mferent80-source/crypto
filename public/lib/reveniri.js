@@ -43,6 +43,8 @@ var Reveniri = (function () {
   var P = function (x) { return (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(1).replace(".", ",") + "%"; };
   var PC = function (x) { return Math.round(x * 100) + "%"; };
   var TEXT_SUPRAVIETUITORI = "Doar acțiunile care sunt azi în listă: cifra iese mai bună decât a fost în realitate.";
+  // audit 19.10 (8): la monede universul e tot cel de azi - cele scoase de pe Pionex (de obicei prăbușite) lipsesc din istoric
+  var TEXT_SUPRAVIETUITORI_MONEDE = "Doar monedele care sunt azi pe Pionex: cele scoase între timp (de obicei prăbușite) lipsesc, deci cifra iese mai bună decât a fost în realitate.";
   function stat(l) {
     var n = l.length, s = 0, plus = 0; l.forEach(function (x) { s += x; if (x > 0) plus++; });
     var v = l.slice().sort(function (x, y) { return x - y; });
@@ -65,9 +67,13 @@ var Reveniri = (function () {
     return out;
   }
   // „mai bine” / „mai slab” cer AMÂNDOUĂ: ≥ 3 puncte la „pe plus” și media în același sens
+  // audit 19.10 (8): și o diferență la „pe plus” peste ~2 erori standard (eroarea standard a diferenței de proporții) și cel puțin 30 de cazuri
+  // pe fiecare parte; sub 30 ⇒ „la fel, prea puține cazuri” (nu s-a dovedit ≠ s-a dovedit că nu)
   function eticheta(a, b) {
     if (!a || !b || !a.n && a.n !== undefined || a.pePlus === null || a.pePlus === undefined || b.pePlus === null) return null;
-    return a.pePlus - b.pePlus >= 0.03 - 1e-9 && a.medie > b.medie ? "mai bine" : b.pePlus - a.pePlus >= 0.03 - 1e-9 && a.medie < b.medie ? "mai slab" : "cam la fel";
+    if (a.n !== undefined && b.n !== undefined && (a.n < 30 || b.n < 30)) return "la fel, prea puține cazuri";
+    var es = a.n > 0 && b.n > 0 ? Math.sqrt(a.pePlus * (1 - a.pePlus) / a.n + b.pePlus * (1 - b.pePlus) / b.n) : 0, d = a.pePlus - b.pePlus, peste = Math.abs(d) > 2 * es;
+    return peste && d >= 0.03 - 1e-9 && a.medie > b.medie ? "mai bine" : peste && -d >= 0.03 - 1e-9 && a.medie < b.medie ? "mai slab" : "cam la fel";
   }
   // grupul (punctele cu regula „da”, cel mult unul pe serie la `pauzaZile`) față de reper (toate punctele, pe aceleași serii); o.short: câștigul = −randamentul
   function dovada(serii, cheie, o) {
@@ -126,7 +132,7 @@ var Reveniri = (function () {
     u.text = !u.n ? "Sugestiile se urmăresc de azi: după ~30 se poate spune cu cifre dacă merită." : "Din " + cate(u.n, "sugestie", "sugestii") + " de cel puțin " + cate(zile, "zi", "zile") + ": " + p + " pe plus, " + P(u.medie) + " în medie de la prețul sugestiei, după comision" + (u.n < 30 ? " (puține — mai așteaptă)" : "") + ".";
     return u;
   }
-  return { REGULI: REGULI, TEXT_SUPRAVIETUITORI: TEXT_SUPRAVIETUITORI, ultimaInchisa: ultimaInchisa, judeca: judeca, monedaPeRevenire: monedaPeRevenire, actiunePeRevenire: actiunePeRevenire,
+  return { REGULI: REGULI, TEXT_SUPRAVIETUITORI: TEXT_SUPRAVIETUITORI, TEXT_SUPRAVIETUITORI_MONEDE: TEXT_SUPRAVIETUITORI_MONEDE, ultimaInchisa: ultimaInchisa, judeca: judeca, monedaPeRevenire: monedaPeRevenire, actiunePeRevenire: actiunePeRevenire,
     puncte: puncte, eticheta: eticheta, dovada: dovada, dovadaBoti: dovadaBoti, textDovada: textDovada, textBoti: textBoti, urmarire: urmarire };
 })();
 if (typeof globalThis !== "undefined") globalThis.Reveniri = Reveniri;

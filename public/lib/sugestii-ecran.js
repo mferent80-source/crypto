@@ -99,8 +99,8 @@ function sugBoti(cl, sg) {
   var rev = I.reveniriBoti ? I.reveniriBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "pe revenire" }; }) : [], sh = I.shortBoti ? I.shortBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "liniștită, direcția short" }; }) : [];
   return '<section class="rlSec"><h4 class="sugCap">🤖 Boți</h4><div class="sugGrila">'
     + sugCartela("💡 Pe ce aș porni un bot", "din clasamentul primelor 100 de monede PERP", porn, "acum nicio monedă nu e candidată", "Un filtru (liniște, interval, treceri), nu o predicție; Fișa îți dă setările și proba pe moneda ta.", null)
-    + sugCartela("🔁 Pe revenire", "monede care au scăzut puternic și acum revin", rev, "nimic acum", R && dv.revenire ? R.textDovada(dv.revenire.piata, "monede") : null, null)
-    + sugCartela("📉 Pentru short", "monede liniștite cu direcția short", sh, "nimic acum", R && dv.short ? R.textDovada(dv.short.piata, "short") : null, null) + '</div></section>';
+    + sugCartela("🔁 Pe revenire", "monede care au scăzut puternic și acum revin", rev, "nimic acum", R && dv.revenire ? R.textDovada(dv.revenire.piata, "monede") + (R.TEXT_SUPRAVIETUITORI_MONEDE && dv.revenire.piata ? " ⚠ " + R.TEXT_SUPRAVIETUITORI_MONEDE : "") : null, null)   /* audit 19.10 (8): supraviețuitorii și la monede */
+    + sugCartela("📉 Pentru short", "monede liniștite cu direcția short", sh, "nimic acum", R && dv.short ? R.textDovada(dv.short.piata, "short") + (R.TEXT_SUPRAVIETUITORI_MONEDE && dv.short.piata ? " ⚠ " + R.TEXT_SUPRAVIETUITORI_MONEDE : "") : null, null) + '</div></section>';
 }
 // v100.178 (el 13.10: „vreau exemple de top stocks pe sectoare în pagina Sugestii”): cele mai tari 3 acțiuni mari din fiecare sector (forța relativă
 // pe 3 și 6 luni față de restul sectorului, doar cu trend în sus), cu istoricul regulii; clic ⇒ Poarta din Trading 212 pe simbol

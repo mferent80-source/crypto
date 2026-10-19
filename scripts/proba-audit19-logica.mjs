@@ -278,5 +278,25 @@ await test("(7) Sfaturile: „destule” ⇒ fără „puține cazuri” (și st
   assert.match(s, /s\.stare === "destule"/);
 });
 
+// ---------- (8) reveniri: „mai bine / mai slab” cer ~2 erori standard și ≥ 30 de cazuri pe fiecare parte; supraviețuitorii și la monede ----------
+const Rev = new Function(`${lib("reveniri.js")}; return Reveniri;`)();
+await test("(8) sub 30 de cazuri în grup ⇒ „la fel, prea puține cazuri”, nu „mai bine”", () => {
+  assert.equal(Rev.eticheta({ n: 20, pePlus: 0.70, medie: 0.02 }, { n: 500, pePlus: 0.50, medie: 0 }), "la fel, prea puține cazuri");
+});
+await test("(8) diferența sub ~2 erori standard (56% din 40 față de 50%) ⇒ „cam la fel”; peste (65% din 200) ⇒ „mai bine”; oglinda ⇒ „mai slab”", () => {
+  assert.equal(Rev.eticheta({ n: 40, pePlus: 0.56, medie: 0.01 }, { n: 1000, pePlus: 0.50, medie: 0 }), "cam la fel");
+  assert.equal(Rev.eticheta({ n: 200, pePlus: 0.65, medie: 0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }), "mai bine");
+  assert.equal(Rev.eticheta({ n: 200, pePlus: 0.35, medie: -0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }), "mai slab");
+});
+await test("(8) avertismentul de supraviețuire și la monede (universul e cel de azi), arătat pe Sugestii și pe Tablou", () => {
+  assert.match(Rev.TEXT_SUPRAVIETUITORI_MONEDE, /monedele care sunt azi/);
+  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /TEXT_SUPRAVIETUITORI_MONEDE/);
+  assert.match(citeste("public", "lib", "t212-ecran.js"), /TEXT_SUPRAVIETUITORI_MONEDE/);
+});
+await test("(8) textul istoricului nu pune paranteze în paranteze la „prea puține cazuri”", () => {
+  const t = Rev.textDovada({ n: 20, pePlus: 0.7, medie: 0.02, baza: { n: 500, pePlus: 0.5, medie: 0 }, eticheta: "la fel, prea puține cazuri", putine: true }, "monede");
+  assert.ok(!/\([^)]*\(/.test(t), t);
+});
+
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
 process.exit(picate ? 1 : 0);

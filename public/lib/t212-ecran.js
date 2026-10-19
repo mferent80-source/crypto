@@ -566,7 +566,8 @@ function tbSugestiiHtml(cl, sg, inchise) {
 function tbSugestiiCorp(cl, sg, inchise) {
   var rev = Idei.reveniriBoti(cl, inchise || [], 5), sh = Idei.shortBoti(cl, inchise || [], 5), s = sg && sg.sugestii, dv = s && s.dovada || {}, u = s && s.urmarire || {};
   var ist = function (x) { return tbIstoricBoti(x.istoric); };
-  var dov = function (d, cum) { var b = d && d.boti ? Reveniri.textBoti(d.boti, cum) : ""; return '<p class="tbSub">' + escapeHtml(Reveniri.textDovada(d && d.piata, cum)) + (b ? ' ' + escapeHtml(b) : '') + '</p>'; };
+  // audit 19.10 (8): istoricul monedelor e pe universul de azi - avertismentul de supraviețuire, ca la acțiuni
+  var dov = function (d, cum) { var b = d && d.boti ? Reveniri.textBoti(d.boti, cum) : ""; return '<p class="tbSub">' + escapeHtml(Reveniri.textDovada(d && d.piata, cum)) + (b ? ' ' + escapeHtml(b) : '') + '</p>' + (d && d.piata && Reveniri.TEXT_SUPRAVIETUITORI_MONEDE ? '<p class="tbSub">⚠ ' + escapeHtml(Reveniri.TEXT_SUPRAVIETUITORI_MONEDE) + '</p>' : ''); };
   var urm = function (x) { return x && x.text ? '<p class="tbSub">📏 ' + escapeHtml(x.text) + '</p>' : ''; };
   var dunga = function (d) { return d && d.piata && d.piata.eticheta === "mai slab" ? "g" : "v"; };
   // v100.87 (el, „ok” după poza de la 10:55 - Q era în ambele liste): moneda aflată și pe revenire, și la short primește pe fiecare rând

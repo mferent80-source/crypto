@@ -78,7 +78,7 @@ await test("(2) puncte acțiuni: ieșirea la 10 zile de bursă (după index), de
 await test("(2) dovada: grupul (cel mult un caz pe serie la 7 zile) față de reperul pe aceleași puncte; eticheta și „puține”", () => {
   const A = Array.from({ length: 20 }, (_, z) => pt(z, z === 0 ? 0.05 : z === 3 ? 0.9 : z === 10 ? -0.02 : 0.01, { revine: z === 0 || z === 3 || z === 10 }));
   const d = R().dovada([A], "revine", { pauzaZile: 7 });
-  assert.deepEqual(d, { n: 2, saptamani: 2, pePlus: 0.5, medie: 0.015, mediana: 0.05, baza: { n: 20, pePlus: 0.95, medie: 0.055 }, eticheta: "mai slab", putine: true });
+  assert.deepEqual(d, { n: 2, saptamani: 2, pePlus: 0.5, medie: 0.015, mediana: 0.05, baza: { n: 20, pePlus: 0.95, medie: 0.055 }, eticheta: "la fel, prea puține cazuri", putine: true });   // audit 19.10 (8): 2 cazuri < 30 ⇒ nu „mai slab”
   assert.equal(R().dovada([], "revine", {}), null, "fără puncte, fără istoric");
   const zero = R().dovada([A.map((x) => ({ ...x, revine: false }))], "revine", { pauzaZile: 7 }); assert.equal(zero.n, 0); assert.equal(zero.eticheta, null);
 });
