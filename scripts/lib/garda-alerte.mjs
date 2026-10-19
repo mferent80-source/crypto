@@ -180,6 +180,8 @@ export function situatiiAlerte(pune) {
   co("serverul respinge parola colectorului", "authRespins", MC.authRespins(4, "AUTH_INVALID"));   // v101.116 (auditul sever, S1)
   co("Pionex dă lista boților goală", "botiNevazuti", MC.botiNevazuti(12, ["SOL", "CRV"]));   // v101.116 (C3)
   co("lista boților a revenit", "botiVazutiIar", MC.botiVazutiIar());
+  co("Pionex nu dă prețurile futures (lichidarea oarbă)", "lichidareOarba", MC.lichidareOarba(["SOL", "ONDO"], 3, "tickere PERP: HTTP 503"));   // audit 19.10
+  co("prețurile futures au revenit", "lichidareVedeIar", MC.lichidareVedeIar(["SOL", "ONDO"]));
   co("botul nu mai apare în Pionex", "lipsaPionex", MC.lipsaPionex("CRV"));
   // v100.70 (revizia pachetului 3, I4): propunerea din TabloExtra.propunePlan REAL (nota implicita repeta „Propun” si orele)
   co("botul n-are plan, propunerea mea (implicită)", "faraPlan", MC.faraPlan("CRV", TE.propunePlan(null, 49.67)));

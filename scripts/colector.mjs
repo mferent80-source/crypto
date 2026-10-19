@@ -532,6 +532,12 @@ async function tura() {
     if (lg.tip === "orb" && (await anuntaMesaj(MesajeColector.botiNevazuti(lg.minute, lg.nume)))) m.listaGoalaAnuntat = acum;
     if (lg.tip === "vede" && (await anuntaMesaj(MesajeColector.botiVazutiIar()))) m.listaGoalaAnuntat = 0;
   }
+  // audit 19.10: fara tickere PERP 3 ture la rand alerta de lichidare e oarba (alerte.js cere dist !== null) ⇒ spus o data, si la revenire
+  {
+    const po = S.preturiPerpPas(m, { probleme: d && d.probleme, boti, acum });
+    if (po.tip === "orb" && (await anuntaMesaj(MesajeColector.lichidareOarba(po.nume, po.minute, po.motiv)))) m.perpOrb.anuntat = acum;
+    if (po.tip === "revenit" && (await anuntaMesaj(MesajeColector.lichidareVedeIar(po.nume)))) m.perpOrb.anuntat = 0;
+  }
   // v100.29: bot nou pornit din Pionex pe o moneda unde pierzi (pe toata istoria, din arhiva) -> o alerta, inainte sa intre la „cunoscuti”
   try {
     const av = await avertizariPornire({ boti, cunoscuti: m.cunoscuti, acum, Obiceiuri, adresa: adresaRadarului,   // v100.33: + linkul spre poarta

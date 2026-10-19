@@ -73,3 +73,21 @@ export function listaGoalaPas(m, { goala, acum }) {
   if (acum - m.listaGoalaDe >= PRAG_GOALA_MS && acum - (m.listaGoalaAnuntat || 0) >= REPETA_GOALA_MS) return { tip: "orb", minute, nume: activi };
   return { tip: null, minute, nume: activi };
 }
+
+// audit 19.10: tickerele PERP nu vin (bot-orders pune probleme.preturi, pretCurent null) ⇒ distanța până la lichidare e null și alerta de
+// lichidare (Alerte.evalueaza cere dist !== null) tace. 3 ture la rând fără preț pe un bot futures activ ⇒ „orb”, o singură dată până la
+// revenire; la revenire „revenit”. m = meta(); apelantul notează m.perpOrb.anuntat DOAR după ce mesajul a plecat (și îl pune 0 la revenire).
+// Lista goală (cădere Pionex, are paza ei) nu schimbă nimic. Întoarce { tip: "orb" | "revenit" | null, nume, minute, motiv }.
+const PRAG_TURE_PERP = 3;
+export function eBotFutures(b) { return !!b && (/\.PERP$/.test(String(b.baza || "")) || /_PERP$/.test(String(b.simbolPionex || ""))); }
+export function preturiPerpPas(m, { probleme, boti, acum }) {
+  const st = m.perpOrb || (m.perpOrb = { ture: 0, de: 0, anuntat: 0, nume: [] });
+  if (!Array.isArray(boti) || !boti.length) return { tip: null, nume: [], minute: 0, motiv: null };
+  const nume = boti.filter((b) => b && b.activ !== false && eBotFutures(b) && !(Number(b.pretCurent) > 0)).map((b) => String(b.baza || b.simbol || "?").replace(/\.PERP$/, ""));
+  const motiv = probleme && probleme.preturi ? String(probleme.preturi) : null;
+  if (!nume.length) { st.ture = 0; st.de = 0; return { tip: st.anuntat ? "revenit" : null, nume: st.nume || [], minute: 0, motiv: null }; }
+  st.ture = (st.ture || 0) + 1; st.de = st.de || acum;
+  const minute = Math.max(1, Math.round((acum - st.de) / 60000));
+  if (st.ture >= PRAG_TURE_PERP && !st.anuntat) { st.nume = nume; return { tip: "orb", nume, minute, motiv }; }
+  return { tip: null, nume, minute, motiv };
+}

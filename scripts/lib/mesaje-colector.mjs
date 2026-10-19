@@ -33,6 +33,11 @@ export const botiNevazuti = (minute, nume) => ({ nivel: "critic", titlu: "Crypto
   mesaj: msg("De " + cate(minute, "minut", "minute") + " Pionex îmi dă lista boților goală, deși știu " + cate((nume || []).length, "bot pornit", "boți porniți") + " (" + scurt((nume || []).join(", "), 80) + "): alertele de lichidare, stop și plan nu merg.",
     "Aș verifica boții direct în aplicația Pionex; stopurile puse în Pionex merg și fără Radar.") });
 export const botiVazutiIar = () => ({ nivel: "info", titlu: "Crypto Radar îți vede iar boții", mesaj: "Lista din Pionex a revenit: alertele de lichidare, stop și plan merg din nou." });
+// audit 19.10: tickerele PERP lipsesc ⇒ distanța până la lichidare nu se mai calculează și alerta de lichidare tace (o dată, apoi la revenire)
+export const lichidareOarba = (nume, minute, motiv) => ({ nivel: "critic", titlu: scurt((nume || []).join(", ") || "Botul", 28) + ": nu mai pot judeca lichidarea",
+  mesaj: msg("Pionex nu dă prețurile futures de " + Math.max(1, Math.round(Number(minute) || 0)) + " min" + (motiv ? " (" + scurt(motiv, 60) + ")" : "") + ": distanța până la lichidare nu se mai calculează, deci alerta de lichidare tace.",
+    "Aș urmări lichidarea direct în aplicația Pionex până revin prețurile.") });
+export const lichidareVedeIar = (nume) => ({ nivel: "info", titlu: "Prețurile futures au revenit", mesaj: "Pot judeca din nou lichidarea" + ((nume || []).length ? " la " + scurt(nume.join(", "), 80) : "") + "." });
 
 export const lipsaPionex = (nume) => ({ nivel: "critic", titlu: (nume || "Botul") + " nu mai apare în lista Pionex", mesaj: msg("Poate a fost închis sau lichidat.", "Aș verifica în aplicația Pionex.") });
 
