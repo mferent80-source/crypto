@@ -286,6 +286,10 @@ var GridSim = (function () {
     if (!meu && !rel) motNes.push("pe istoria reală n-am nicio fereastră de " + zi + " ca să verific");
     else if (!meu && !(rel.media > 0)) motNes.push("pe istoria reală, pornit în fiecare zi, a ieșit în medie " + bani1(rel.media) + " (" + cate(rel.n, "pornire", "porniri") + ", ~" + cate(rel.independente, "fereastră independentă", "ferestre independente") + ")");
     var confirmat = P >= 55 && p50 > 0 && !motNes.length;
+    // audit 19.10 (4): simetric cu „Aș porni / Aș ține” - „Aș opri / N-aș porni” cere ca și marginea de SUS a incertitudinii reale (pe zile) să
+    // rămână sub 50% (P + marja < 50); altfel e o aruncare de ban: n-am aflat că pierde („nu s-a dovedit” ≠ „s-a dovedit că nu”), iar felul
+    // „aș opri” nu se anunță pe Discord (tura-monte-carlo-bot.mjs îl citește din primul cuvânt)
+    var rauConfirmat = P <= 45 && !(mj > 0 && P + mj >= 50);
     if (rel) sub += " · pe istoria reală, pornit în fiecare zi: în medie " + bani1(rel.media) + ", pe plus în " + pr(rel.pPlus) + " (" + cate(rel.n, "pornire", "porniri") + ", ~" + cate(rel.independente, "fereastră independentă", "ferestre independente") + ")";
     if (meu && rez.acum.oprit) faCe = "Reluarea arată botul " + (rez.acum.oprit === "lichidat" ? "LICHIDAT" : "OPRIT") + " pe drumul real: setările de aici nu se potrivesc cu botul tău din Pionex (stopul sau gridul diferă) - verifică-le înainte să te iei după cifre.";
     // v100.196 (B2): orice lichidare pe drumuri (era tolerată până la 2% pe 7 zile ≈ 63% pe an); sub 0,5% se scrie „sub 1%”, nu „0%”
@@ -295,6 +299,7 @@ var GridSim = (function () {
     else if (o.pStop > 0.5) faCe = "Stopul e în zgomot: atins în " + pr(o.pStop) + " din drumuri în " + zi + ". L-aș muta dincolo de cât merge moneda împotriva botului într-o zi obișnuită (profilul monedei), nu l-aș scoate.";
     else if (P >= 55 && p50 > 0 && !confirmat) faCe = (meu ? "O aruncare de ban de aici încolo: " : "O aruncare de ban: ") + "câștigă în " + P + "% din drumuri, de obicei " + bani1(p50) + ", dar " + motNes.join(" și ") + "; deocamdată nu zic «" + (meu ? "Aș ține" : "Aș porni") + "». " + (meu ? "Ține-l doar cu planul tău pus." : "Dacă vrei totuși, suma mică.");
     else if (P >= 55 && p50 > 0) faCe = meu ? "Aș ține: de aici încolo câștigă în " + P + "% din drumuri, de obicei " + bani1(p50) + planTxt + "." : "Aș porni: câștigă în " + P + "% din drumuri, de obicei " + bani1(p50) + planTxt + ".";
+    else if (P <= 45 && !rauConfirmat) faCe = (meu ? "O aruncare de ban de aici încolo: " : "O aruncare de ban: ") + "pierde în " + Q + "% din drumuri, de obicei " + bani1(p50) + ", dar incertitudinea reală e ±" + cate(mj, "punct", "puncte") + (o.zileDistincte > 0 ? " (din ~" + cate(o.zileDistincte, "zi distinctă", "zile distincte") + ")" : "") + ", deci poate fi și peste 50%; n-am aflat că pierde, deocamdată nu zic «" + (meu ? "Aș opri" : "N-aș porni") + "». " + (meu ? "Ține-l doar cu planul tău pus." : "Dacă vrei totuși, suma mică.");
     else if (P <= 45) faCe = meu ? "Aș opri: de aici încolo pierde în " + Q + "% din drumuri (de obicei " + bani1(p50) + "). Pe drumurile fără tendință, de aici încolo setarea pierde din comisioane și din poziția rămasă." : "N-aș porni: pierde în " + Q + "% din drumuri (de obicei " + bani1(p50) + "). Pe drumurile fără tendință, setarea asta pierde din comisioane și din poziția rămasă.";
     else faCe = meu ? "O aruncare de ban de aici încolo: " + P + "% câștigă, " + Q + "% pierde. Gridul câștigă din grile, nu din direcție; ține-l doar cu planul tău pus." : "O aruncare de ban: " + P + "% câștigă, " + Q + "% pierde. Gridul câștigă din grile, nu din direcție; dacă vrei totuși, suma mică.";
     if (meu) {
@@ -303,7 +308,7 @@ var GridSim = (function () {
       if (o.plan && o.plan.dejaAtins && pl) faCe += " Dar planul tău e deja atins (" + (o.plan.dejaAtins === "plus" ? "+" + nrRo(pl.plus, 1) + "): încasează" : "−" + nrRo(pl.minus, 1) + "): ieși") + ", cum ți-ai propus.";
     }
     var dinZile = o.zileDistincte > 0 ? ", din ~" + cate(o.zileDistincte, "zi distinctă", "zile distincte") + " de istoric" : "";
-    return { rand: rand, marja: (mj > 0 ? "±" + cate(mj, "punct", "puncte") : "sub ±1 punct") + dinZile, culoare: confirmat ? "good" : P <= 45 ? "bad" : "mijl", confirmat: confirmat, sub: sub, faCe: faCe, deAici: !!d,
+    return { rand: rand, marja: (mj > 0 ? "±" + cate(mj, "punct", "puncte") : "sub ±1 punct") + dinZile, culoare: confirmat ? "good" : rauConfirmat ? "bad" : "mijl", confirmat: confirmat, sub: sub, faCe: faCe, deAici: !!d,
       nota: "Pe istoria monedei reluată, fără tendința perioadei; o criză mai rea decât orice a avut nu apare în drumuri. Umplerile sunt estimate pe bare, nu pe ordinele reale." };
   }
   // v100.139 (el, 08.10: „Monte Carlo cu un scan automat pe bot la 15 min” în Tablou): rândul SCURT - verdictul pe 7 zile (CÂȘTIGĂ / PIERDE,

@@ -129,6 +129,9 @@ await test("(2) „Cât investesc?” spune la ce levier e cifra (și suma scade
   const suma = (s) => Number((s.match(/cel mult (\d+) USDT/) || [])[1]);
   assert.ok(suma(t) < suma(t0), t + " | " + t0);
 });
+await test("(2, 3) pagina spune pe față că tabelul probei e la levierul sigur, iar verdictul pe setarea de copiat", () => {
+  assert.match(citeste("public", "app.js"), /Tabelul e la levierul sigur, pe toate grilele pasului; verdictul și „Cât investesc\?” sunt pe setarea de copiat/);
+});
 await test("(3) grilele reduse la minimul pe ordin: verdictul și mediana vin de la setarea cu grilele reduse", () => {
   const f = FISA({ minNotional: 100, suma: 50 });   // 3 grile × 83 USDT < 100 ⇒ 2 grile
   const s = f.propusa === "deasa" ? f.deasa.setare : f.setare;
@@ -138,6 +141,29 @@ await test("(3) grilele reduse la minimul pe ordin: verdictul și mediana vin de
   const asteptat = peFerestre(f, { lat, pas, levier: f.setare.levier, grile: f.setare.grile });
   assert.deepEqual(f.stat.antren, asteptat.antren);
   void s;
+});
+
+// ---------- (4) Monte Carlo: „Aș opri” cere simetric P + marja < 50 ----------
+const GS = new Function("GridCalcul", "GridProba", "MonteSimbol", "globalThis", `${lib("grid-sim.js")}\n; return GridSim;`)(G, GP, {}, {});
+const { categorie } = await import(new URL("./lib/tura-monte-carlo-bot.mjs", import.meta.url).href);
+const OR = (pC, marja, o) => ({ zile: 7, pCastig: pC, pPierde: 1 - pC, pZero: 0, p50: pC > 0.5 ? 1.2 : -1.4, p5: -6, p95: 4, marja, zileDistincte: 20, pLich: 0, pStop: 0, plan: null, reluare: { media: -0.5, pPlus: 0.4, n: 40, independente: 6 }, ...o });
+const REZ_MEU = (pC, marja) => ({ acum: { usdt: -0.3 }, orizonturi: [OR(0.5, 30, { deAici: { pCastig: pC, pPierde: 1 - pC, pZero: 0, p50: -1.4, p5: -6, p95: 4, marja } })] });
+await test("(4) botul care rulează: câștigă în 40% dar ±28 de puncte (40 + 28 ≥ 50 ⇒ poate fi și peste 50%) ⇒ NU „Aș opri”, ci aruncare de ban; pe Discord nu pleacă „aș opri”", () => {
+  const v = GS.verdict(REZ_MEU(0.40, 28), {}, null, 0, { profitNet: -0.3 });
+  assert.ok(!/^Aș opri/.test(v.faCe), v.faCe);
+  assert.match(v.faCe, /^O aruncare de ban de aici încolo/);
+  assert.notEqual(categorie(v.faCe), "opreste");
+  assert.notEqual(v.culoare, "bad");
+});
+await test("(4) botul care rulează: pierde în 70% cu ±10 puncte (30 + 10 < 50) ⇒ „Aș opri” rămâne, roșu", () => {
+  const v = GS.verdict(REZ_MEU(0.30, 10), {}, null, 0, { profitNet: -0.3 });
+  assert.match(v.faCe, /^Aș opri/); assert.equal(categorie(v.faCe), "opreste"); assert.equal(v.culoare, "bad");
+});
+await test("(4) botul nou: pierde în 58% cu ±20 de puncte ⇒ NU „N-aș porni”, ci aruncare de ban (nu s-a dovedit că pierde)", () => {
+  const v = GS.verdict({ orizonturi: [OR(0.42, 20)] }, {}, null, 0, null);
+  assert.ok(!/^N-aș porni/.test(v.faCe), v.faCe); assert.match(v.faCe, /^O aruncare de ban/);
+  const v2 = GS.verdict({ orizonturi: [OR(0.30, 10)] }, {}, null, 0, null);
+  assert.match(v2.faCe, /^N-aș porni/);
 });
 
 console.log(`\n${teste - picate}/${teste} probe trecute${picate ? `, ${picate} PICĂ` : ""}\n`);
