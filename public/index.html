@@ -26,7 +26,8 @@
 </div>
 <div class="sideGrup" id="sideUnelte"><div class="sideGrupCap">Unelte</div>
 <button class="sideBtn cryptoOnlyNav" data-action-click="navTo('deriv',true)" data-nav="deriv"><span class="sideIcon">≋</span>Futures · funding și OI</button>
-<button class="sideBtn stockOnly" data-action-click="openStocksDesk()" data-nav="stocks"><span class="sideIcon">N</span>Nasdaq / US Stocks</button><button class="sideBtn" data-action-click="navTo('rezultate',true)" data-nav="rezultate"><span class="sideIcon">📅</span>Rezultate</button>
+<!-- audit 19.10: Nasdaq fără stockOnly, ca să se vadă și în modul crypto; openStocksDesk trece singur pe acțiuni -->
+<button class="sideBtn" data-action-click="openStocksDesk()" data-nav="stocks"><span class="sideIcon">N</span>Nasdaq / US Stocks</button><button class="sideBtn" data-action-click="navTo('rezultate',true)" data-nav="rezultate"><span class="sideIcon">📅</span>Rezultate</button>
 <button class="sideBtn cryptoOnlyNav" data-action-click="navTo('account',true)" data-nav="account"><span class="sideIcon">◎</span>Contul Pionex</button>
 <button class="sideBtn" data-action-click="navTo('settings')" data-nav="settings"><span class="sideIcon">⚙</span>Setări</button>
 <button class="sideBtn" data-action-click="navTo('health')" data-nav="health"><span class="sideIcon">●</span>Starea aplicației</button>
