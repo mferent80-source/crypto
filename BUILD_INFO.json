@@ -1,11 +1,12 @@
 {
-  "version": "v100.219",
-  "badge": "v100.219 · BUTONUL OBIECTIV REPARAT",
+  "version": "v100.220",
+  "badge": "v100.220 · OPREȘTE SEZONUL + SCORUL T212",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "oprireT212_220": "el (19.10): „fă și butonul de oprire și fă și pentru Trade 212, dar cu trade-urile viitoare” - „Oprește sezonul” (cifrele îngheață la ora apăsării, ce se închide după nu intră; „Pornește sezon nou de azi” îl închide în Sezoanele tale și pornește altul) + al doilea card, Trading 212 (trade-urile închise din istoricul de acasă, în lei, sezonul din 19.10.2026 13:00 = doar cele viitoare; pe Acasă sub cardul Pionex și sus pe fila Acțiuni din Jurnal; obiectivul lui separat, implicit 55 % · 3 · +200 lei); colectorul v101.128 anunță pe Discord și pentru T212 (pauza, țintele), nimic cât un sezon e oprit",
     "obiectiv219": "el (19.10): „am apăsat pe Obiectiv dar nu se întâmplă nimic” - garda „nu redesena cardul cât tastează” din scDeseneaza ținea și când elementul activ era butonul apăsat (stă în card), deci formularul nu se deschidea; acum doar un INPUT din formular oprește redesenarea; reprodus cu clic real prin CDP pe :8788 înainte, verificat după",
     "scorIdei218": "ideile scorului (19.10.2026, el: „fa idei”): (1) „Sezoanele tale” sub cardul din Jurnal - fiecare sezon încheiat (Sezon nou de azi) cu boții, win/loss, rata, netul, seria de pierderi; (2) colectorul v101.127 anunță pe Discord pauza la N pierderi la rând (o dată pe bot închis) și rata / netul țintă atins (o dată pe sezon), după tura de arhivă, fără cereri în plus la Pionex; (3) trade-urile manuale NU - Pionex dă prin rutele știute doar fills-urile SPOT (jurnalul v71, pe simbol, în browser), nu și pe futures",
     "scorSezon217": "scorul sezonului pe Pionex (19.10.2026, el: „să-mi afișeze începând de azi scorul trade-urilor pe Pionex: câte win, câte loss, rata de câștig… să mă stimuleze să fiu mai atent” + „un obiectiv pe care îl setez eu”): cardul pe Acasă sub verdictele pieței și sus în Jurnal - win / loss / rata (cu ținta) / net după comisioane și funding / seria curentă (la N pierderi la rând: pauză), obiectivul lui (rata, max pierderi la rând, net, până la data) cu progres, comparația cu trecutul (56 % rată dar −6.033 USDT pe 2.307 boți ⇒ netul stă lângă rată); data sezonului și obiectivul în KV-ul de acasă (/api/scor-sezon), buton „Sezon nou de azi”; un trade = un bot închis (lib/scor-sezon.js, proba-scor-sezon)",

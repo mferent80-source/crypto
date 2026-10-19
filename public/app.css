@@ -2886,6 +2886,9 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .scIstTab{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}.scIstTab th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;padding:4px 8px 6px 0;border-bottom:1px solid var(--tb-linie,var(--line))}
 .scIstTab td{padding:6px 8px 6px 0;border-bottom:1px solid var(--tb-linie,var(--line))}.scIstTab tr.scIstAcum td{background:rgba(91,143,199,.07)}
 @media (max-width:640px){.scIstTab thead{display:none}.scIstTab,.scIstTab tbody,.scIstTab tr,.scIstTab td{display:block}.scIstTab tr{padding:8px 0}.scIstTab td{padding:1px 0;border:0}.scIstTab td[data-et]::before{content:attr(data-et) " ";color:var(--muted)}}
-.pzDemo #acasa>#acScor{order:11}.pzDemo #jtCrypto>#jtScor{order:10}
+.pzDemo #acasa>#acScor{order:11}.pzDemo #acasa>#acScorT212{order:12}.pzDemo #jtCrypto>#jtScor{order:10}
+/* v100.220: sezonul oprit - banda ⏸ + cardul estompat puțin */
+.scOprit{font-size:13px;color:var(--warn);border:1px dashed var(--warn);border-radius:4px;padding:6px 10px}.scCardOprit .scCifre{opacity:.75}
+#jurnaltrade #jtScorT212:not(:empty){margin-bottom:10px}
 @media (max-width:640px){.scCifre{grid-template-columns:repeat(3,minmax(0,1fr))}.scCel:nth-child(n+4){border-top:1px solid var(--tb-linie,var(--line))}.scCel:nth-child(4){border-left:0}.scVal{font-size:22px}.scForm{grid-template-columns:repeat(2,minmax(0,1fr))}.scCap .acSub{margin-left:0;width:100%}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

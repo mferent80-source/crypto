@@ -181,6 +181,9 @@ export function situatiiAlerte(pune) {
   co("scorul sezonului: 3 pierderi la rând", "scorPauza", MC.scorPauza({ ...SC, net: -12.3, win: 2, loss: 3, n: 5 }));
   co("scorul sezonului: rata țintă atinsă", "scorTintaRata", MC.scorTinta(SC, "rata"));
   co("scorul sezonului: netul țintă atins", "scorTintaNet", MC.scorTinta(SC, "net"));
+  const SCT = { ...SC, piata: "t212", moneda: "lei", net: 212.5, obiectiv: { rata: 0.55, serie: 3, net: 200, pana: null } };   // v101.128: Trading 212
+  co("scorul T212: 3 pierderi la rând", "scorPauzaT212", MC.scorPauza({ ...SCT, net: -140.2, win: 2, loss: 3, n: 5 }));
+  co("scorul T212: netul țintă atins", "scorTintaNetT212", MC.scorTinta(SCT, "net"));
   co("colectorul citește din nou", "citireDinNou", MC.citireDinNou());
   co("serverul respinge parola colectorului", "authRespins", MC.authRespins(4, "AUTH_INVALID"));   // v101.116 (auditul sever, S1)
   co("Pionex dă lista boților goală", "botiNevazuti", MC.botiNevazuti(12, ["SOL", "CRV"]));   // v101.116 (C3)

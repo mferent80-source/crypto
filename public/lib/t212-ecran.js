@@ -1033,10 +1033,11 @@ function jtAplicaFiltru() {
 function jtRenderActiuni() {
   var box = $("jtActiuni"); if (!box || box.hidden) return;
   var j = t212Jurnal();
-  if (!j) { box.innerHTML = '<div class="tbBloc"><p class="tbSub">' + escapeHtml(t212.inLucru ? "citesc istoricul Trading 212…" : t212.istoricEroare || "Istoricul Trading 212 nu e încă strâns: colectorul de acasă îl coboară (o pagină la 11 s), apoi apare aici.") + '</p></div>'; return; }
+  // v100.220: cardul scorului T212 stă sus și fără istoric (0 trade-uri, „ziua 1”) - fila se rescrie toată, deci îl desenăm după
+  if (!j) { box.innerHTML = (jtFiltru === "actiuni" ? '<div id="jtScorT212"></div>' : "") + '<div class="tbBloc"><p class="tbSub">' + escapeHtml(t212.inLucru ? "citesc istoricul Trading 212…" : t212.istoricEroare || "Istoricul Trading 212 nu e încă strâns: colectorul de acasă îl coboară (o pagină la 11 s), apoi apare aici.") + '</p></div>'; if (typeof scDeseneaza === "function") scDeseneaza(); return; }
   var r = j.r, l = j.p.inchise, P = t212Pct, L = function (v) { return t212Lei(v); }, cls = t212Cls;
   var cel = function (et, v, c, sub) { return '<div class="tbKpiCel"><span class="tbEt2">' + escapeHtml(et) + '</span><b class="tbKpiVal ' + (c || "") + '">' + escapeHtml(v) + '</b>' + (sub ? '<span class="tbSub">' + escapeHtml(sub) + '</span>' : "") + '</div>'; };
-  var st = t212.istoric.stare || {}, h = '<h3 class="jtTitluPiata">📈 Acțiuni · Trading 212</h3>' + (jtFiltru === "actiuni" ? '<div id="jtStatActiuni"></div>' : "");   // v100.22: statistica T212 sus pe fila ei
+  var st = t212.istoric.stare || {}, h = '<h3 class="jtTitluPiata">📈 Acțiuni · Trading 212</h3>' + (jtFiltru === "actiuni" ? '<div id="jtScorT212"></div><div id="jtStatActiuni"></div>' : "");   // v100.22: statistica T212 sus pe fila ei   // v100.220: + scorul sezonului T212
   h += '<div class="tbKpi jtKpi">' + cel("Câștigat REAL", L(r.total), cls(r.total), t212Cate(r.n, "trade", "trade-uri") + ", " + r.pePlus + " pe plus (" + P(r.n ? r.pePlus / r.n : null).replace("+", "") + ")" + (t212.dividende && t212.dividende.n ? " · + dividende " + t212Lei(t212.dividende.total, 2) : ""))
     + cel("T212 îți arată", L(r.totalOficial), "", "fără comisioane") + cel("Comisioane de conversie", L(-r.comisioane), "bad", "0,15% la fiecare schimb lei↔dolari")
     + cel("Vândute în afara orelor", L(r.ext.total), cls(r.ext.total), t212Cate(r.ext.n, "trade", "trade-uri")) + '</div>';
@@ -1073,6 +1074,7 @@ function jtRenderActiuni() {
       + '<textarea class="jtNota" data-id="' + escapeHtml(id) + '" rows="1" placeholder="De ce am cumpărat, ce aș face altfel…">' + escapeHtml(note[id] || "") + '</textarea></div>';
   }).join("") + '</details>';
   box.innerHTML = h;
+  if (typeof scDeseneaza === "function") scDeseneaza();   // v100.220: scorul sezonului T212, sus pe filă (fila se rescrie toată)
   if (typeof jtStatRender === "function") { if (jtFiltru === "actiuni") jtStatRender("actiuni"); else if (jtFiltru === "tot") jtStatRender("tot"); }   // v100.22
 }
 // v87: "cat te-ar fi salvat stopul" - rejucat pe preturile reale (zilnice), din verdictele colectorului

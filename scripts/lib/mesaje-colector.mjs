@@ -168,12 +168,14 @@ export const lectiaSaptamanii = (l, ver) => {
   return { nivel: "info", titlu: "📘 Lecția săptămânii", mesaj: msg(v + (top ? "Cele mai scumpe decizii:\n" + top : "Săptămâna asta nicio pierdere n-a încălcat o regulă a ta."), l.regula ? "Regula pentru săptămâna care vine: " + l.regula.text + "." : "Aș păstra regulile de până acum.") };
 };
 // v101.127 (scorul sezonului, ideea 2): pauza la N pierderi la rând și țintele atinse - din ScorSezon.calc (s), o dată pe episod / sezon
-export const scorPauza = (s) => ({ nivel: "atentie", titlu: "Scorul sezonului: " + cate(s.serie.n, "pierdere", "pierderi") + " la rând - pauză",
-  mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss, net " + U2(s.net) + " (ținta ta: cel mult " + s.obiectiv.serie + " la rând).",
-    "N-aș mai porni alt bot azi; mâine, cu capul limpede, m-aș uita de ce au pierdut ultimii " + s.serie.n + ".") });
-export const scorTinta = (s, fel) => ({ nivel: "info", titlu: "Scorul sezonului: " + (fel === "net" ? "netul țintă atins (" + U2(s.net) + ")" : "rata țintă atinsă (" + Math.round(s.rata * 100) + " %)"),
-  mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss din " + cate(s.n, "bot", "boți") + ", net " + U2(s.net) + (fel === "net" ? " față de ținta +" + V(s.obiectiv.net) + " USDT." : " - rata " + Math.round(s.rata * 100) + " % față de ținta " + Math.round(s.obiectiv.rata * 100) + " %."),
-    fel === "net" ? "Aș păstra ce am câștigat: aceleași sume, nu mai mari, și aș ridica ținta doar după încă 10 boți." : "Aș urmări netul, nu rata: o pierdere mare șterge cinci câștiguri mici.") });
+// v101.128: și pentru Trading 212 (s.piata = "t212", s.moneda = "lei", „trade-uri” în loc de „boți”)
+const scM = (s) => (s.moneda || "USDT"), scU = (v, s) => U2(v).replace(/ USDT$/, " " + scM(s)), scNume = (s) => (s.piata === "t212" ? "Trading 212" : "Pionex"), scFel = (s) => (s.piata === "t212" ? ["trade", "trade-uri"] : ["bot", "boți"]);
+export const scorPauza = (s) => ({ nivel: "atentie", titlu: "Scorul " + scNume(s) + ": " + cate(s.serie.n, "pierdere", "pierderi") + " la rând - pauză",
+  mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss, net " + scU(s.net, s) + " (ținta ta: cel mult " + s.obiectiv.serie + " la rând).",
+    "N-aș mai porni alt " + scFel(s)[0] + " azi; mâine, cu capul limpede, m-aș uita de ce au pierdut " + (s.piata === "t212" ? "ultimele " : "ultimii ") + s.serie.n + ".") });
+export const scorTinta = (s, fel) => ({ nivel: "info", titlu: "Scorul " + scNume(s) + ": " + (fel === "net" ? "netul țintă atins (" + scU(s.net, s) + ")" : "rata țintă atinsă (" + Math.round(s.rata * 100) + " %)"),
+  mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss din " + cate(s.n, scFel(s)[0], scFel(s)[1]) + ", net " + scU(s.net, s) + (fel === "net" ? " față de ținta +" + V(s.obiectiv.net) + " " + scM(s) + "." : " - rata " + Math.round(s.rata * 100) + " % față de ținta " + Math.round(s.obiectiv.rata * 100) + " %."),
+    fel === "net" ? "Aș păstra ce am câștigat: aceleași sume, nu mai mari, și aș ridica ținta doar după încă 10 " + scFel(s)[1] + "." : "Aș urmări netul, nu rata: o pierdere mare șterge cinci câștiguri mici.") });
 const ziRo = (t) => { const d = new Date(t); return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }).format(d); };
 export const frana = (f) => {
   const parti = f && typeof f === "object" && Array.isArray(f.depasit) && f.praguri ? f.depasit.map((d) => (DEP[d.cod] ? DEP[d.cod](f) : d.text)).filter(Boolean) : [];

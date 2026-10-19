@@ -245,10 +245,10 @@ await test("ideea 2 - mesajele colectorului (scorPauza / scorTinta) + legarea î
   assert.ok(/VERSIUNE_COLECTOR = "v101\.(12[7-9]|1[3-9]\d|[2-9]\d\d)"/.test(C), "colectorul ≥ v101.127");
   assert.ok(C.includes('incarca("scor-sezon.js", "ScorSezon")') && C.includes('incarca("statistica-trade.js", "StatisticaTrade")'), "lib-urile în colector");
   assert.ok(C.includes("async function turaScor()") && C.includes(".then(() => turaScor())"), "tura după arhivă");
-  assert.ok(C.includes("stareAlerte._scor") && C.includes("ScorSezon.alerte(s, st)"), "starea în alerte-stare.json");
+  assert.ok(/stareAlerte\[k\]|stareAlerte\._scor/.test(C) && C.includes('"_scor"') && C.includes("ScorSezon.alerte(s, st)"), "starea în alerte-stare.json");   // v101.128: pe cheie (_scor / _scorT212)
   assert.ok(G.includes("MC.scorPauza(") && G.includes('MC.scorTinta(SC, "net")'), "garda textelor știe mesajele");
   const APP = citeste("public", "app.js");
-  assert.ok(APP.includes('ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg,Date.now()))'), "istoricul sub cardul din Jurnal");
+  assert.ok(/ScorSezon\.htmlIstoric\(ScorSezon\.sezoane\(tr,scStare\.cfg(\[piata\])?,(Date\.now\(\)|acum)(,piata)?\)\)/.test(APP), "istoricul sub cardul din Jurnal");   // v100.220: pe piață
 });
 
 // ── v100.219: „am apăsat pe Obiectiv dar nu se întâmplă nimic” - garda de redesenare ține DOAR pentru un INPUT din formular, nu pentru butonul apăsat
@@ -258,6 +258,96 @@ await test("v100.219: scDeseneaza nu sare redesenarea când elementul activ e bu
   assert.ok(!/el\.contains\(document\.activeElement\)\)return/.test(f), "garda veche (orice element activ) scoasă");
 });
 
+// ── E. v100.220 (el: „fă și butonul de oprire și fă și pentru Trade 212, dar cu trade-urile viitoare”) ──────────────
+await test("oprirea: fereastra e [start, oprit) - ce se închide după oprire nu intră, dar se numără (dupaOprire); alertele tac; sezoane marchează „oprit”", () => {
+  const OPRIT = START + 5 * ORA;
+  const tr = [t(1, START + ORA, 2), t(2, START + 2 * ORA, -1), t(3, START + 6 * ORA, -1), t(4, START + 7 * ORA, -1), t(5, START + 8 * ORA, -1)];
+  const s = S.calc(tr, { start: START, oprit: OPRIT, obiectiv: CFG.obiectiv }, ACUM);
+  assert.equal(s.n, 2); assert.equal(s.win, 1); assert.equal(s.loss, 1); assert.equal(s.oprit, OPRIT); assert.equal(s.dupaOprire, 3);
+  assert.deepEqual(S.alerte(S.calc(tr, { start: START, obiectiv: CFG.obiectiv }, ACUM), {}).mesaje, [{ fel: "pauza" }], "fără oprire: 3 la rând ⇒ pauză");
+  assert.deepEqual(S.alerte(s, {}).mesaje, [], "oprit: nimic");
+  assert.equal(S.normalizeaza({ start: START, oprit: START - 1 }).oprit, null, "oprirea dinaintea startului nu e oprire");
+  const z = S.sezoane(tr, { start: START, oprit: OPRIT, obiectiv: CFG.obiectiv }, ACUM);
+  assert.equal(z.length, 1); assert.equal(z[0].sfarsit, OPRIT); assert.equal(z[0].n, 2);
+  const h = S.html(s, { id: "acScor" });
+  assert.ok(/Sezon OPRIT din 19\.10\.2026/.test(h) && /3 boți închiși după oprire nu intră/.test(h) && /scCardOprit/.test(h) && /· OPRIT</.test(h), h.slice(0, 500));
+  const hf = S.html(s, { id: "acScor", formular: true });
+  assert.ok(/Pornește sezon nou de azi/.test(hf) && !/scorOpreste/.test(hf), "oprit: doar „Pornește sezon nou de azi”");
+  const hn = S.html(S.calc(tr, CFG, ACUM), { id: "acScor", formular: true });
+  assert.ok(/scorOpreste\(this\.value\)/.test(hn) && /Oprește sezonul/.test(hn) && /Sezon nou de azi/.test(hn), "neoprit: „Oprește sezonul” + „Sezon nou de azi”");
+  assert.ok(!/OPRIT/.test(S.html(S.calc(tr, CFG, ACUM), { id: "acScor" })), "neoprit: fără bandă");
+});
+
+await test("Trading 212: piața a doua - sezonul implicit 19.10.2026 13:00 (doar trade-urile viitoare), lei, „trade-uri”, obiectiv implicit +200 lei; Pionex neschimbat", () => {
+  const T0 = S.PIETE.t212.start;
+  assert.equal(T0, Date.UTC(2026, 9, 19, 10, 0, 0));
+  const c = S.normalizeaza(null, "t212");
+  assert.equal(c.start, T0); assert.deepEqual(c.obiectiv, { rata: 0.55, serie: 3, net: 200, pana: null }); assert.equal(c.piata, "t212");
+  assert.equal(S.normalizeaza(null).piata, "pionex"); assert.equal(S.normalizeaza(null, "aiurea").piata, "pionex");
+  const tr = [t(1, T0 - ORA, 300, "NVDA"), t(2, T0 + ORA, 120.26, "AAPL"), t(3, T0 + 2 * ORA, -40, "TSLA")];
+  const s = S.calc(tr, null, T0 + 3 * ORA, "t212");
+  assert.equal(s.n, 2, "cel de dinaintea livrării nu intră"); assert.equal(s.moneda, "lei"); assert.equal(s.piata, "t212"); assert.equal(s.inainte.n, 1);
+  const h = S.html(s, { id: "acScorT212" });
+  assert.ok(/Scorul tău pe Trading 212 · sezonul din 19\.10/.test(h), h.slice(0, 200));
+  assert.ok(/\+80,3 lei/.test(h) && /din \+200 lei/.test(h) && /1 trade/.test(h) && !/USDT/.test(h) && !/boți/.test(h), "lei și trade-uri: " + (h.match(/[−+][\d,]+ (lei|USDT)/g) || []).join(" "));
+  assert.ok(/jtAlegeFiltru\('actiuni'\)/.test(h), "Jurnal › deschide fila Acțiuni: " + (h.match(/data-action-click="navTo[^"]*"/) || [""])[0]);
+  assert.ok(/Net țintă \(lei\)/.test(S.html(s, { id: "acScorT212", formular: true })), "formularul în lei");
+  assert.ok(/Trading 212/.test(S.htmlAstept(null, "t212")) && /citesc istoricul/.test(S.htmlAstept(null, "t212")));
+  // Pionex: titlul, moneda și felul neschimbate
+  const hp = S.html(S.calc([t(1, START + ORA, 2.26)], CFG, ACUM), { id: "acScor" });
+  assert.ok(/Scorul tău pe Pionex · sezonul din 19\.10/.test(hp) && /\+2,3 USDT/.test(hp) && /după comisioane și funding/.test(hp) && !/lei/.test(hp), hp.slice(0, 300));
+  assert.ok(/boți închiși pe minus/.test(S.html(S.calc([], CFG, ACUM), { id: "acScor" })), "la 0 boți: „boți închiși pe minus”");
+});
+
+await test("endpoint: ?piata=t212 are cheia și implicitul ei; POST opreste (o dată; 409 a doua oară); sezonNou după oprire închide la ora opririi", async () => {
+  const kv = kvFals(), env = { APP_API_TOKEN: TOKEN, ISTORIC: kv };
+  let r = await M.onRequestGet({ request: cere(env, "/api/scor-sezon?piata=t212"), env }); let j = await r.json();
+  assert.equal(j.piata, "t212"); assert.equal(j.sezon.start, S.PIETE.t212.start); assert.equal(j.sezon.obiectiv.net, 200); assert.equal(j.sezon.oprit, null);
+  r = await M.onRequestPost({ request: cere(env, "/api/scor-sezon?piata=t212&action=obiectiv", { method: "POST", origin: "https://exemplu.test", body: { rata: 60, serie: 2, net: 500 } }), env });
+  assert.equal(r.status, 200); assert.ok(kv._m.has("scor:sezon:t212") && !kv._m.has("scor:sezon"), "cheia separată");
+  r = await M.onRequestGet({ request: cere(env, "/api/scor-sezon"), env }); j = await r.json();
+  assert.equal(j.sezon.obiectiv.net, 50, "Pionex neatins");
+  // oprirea
+  const inainte = Date.now();
+  r = await M.onRequestPost({ request: cere(env, "/api/scor-sezon?action=opreste", { method: "POST", origin: "https://exemplu.test" }), env }); j = await r.json();
+  assert.equal(r.status, 200); assert.ok(j.sezon.oprit >= inainte && j.sezon.oprit <= Date.now()); assert.equal(j.sezon.start, START);
+  r = await M.onRequestPost({ request: cere(env, "/api/scor-sezon?action=opreste", { method: "POST", origin: "https://exemplu.test" }), env });
+  assert.equal(r.status, 409);
+  r = await M.onRequestGet({ request: cere(env, "/api/scor-sezon"), env }); j = await r.json();
+  assert.ok(j.sezon.oprit > 0, "oprirea rămâne în KV"); assert.equal(j.piata, "pionex");
+  // sezon nou după oprire: istoricul primește [START, oprit], startul = max(00:00 azi, oprit) și oprit = null
+  const oprit = j.sezon.oprit;
+  r = await M.onRequestPost({ request: cere(env, "/api/scor-sezon?action=sezonNou", { method: "POST", origin: "https://exemplu.test" }), env }); j = await r.json();
+  assert.equal(r.status, 200); assert.equal(j.sezon.oprit, null);
+  assert.deepEqual(j.sezon.istoric, [{ start: START, sfarsit: oprit }]); assert.equal(j.sezon.start, Math.max(M.startulZilei(Date.now()), oprit));
+});
+
+await test("mesajele + colectorul pentru T212: „Scorul Trading 212”, lei, trade-uri; _scorT212; nimic cât e oprit (ScorSezon.alerte)", async () => {
+  const MC = await import("./lib/mesaje-colector.mjs");
+  const T0 = S.PIETE.t212.start, tr = [t(1, T0 + ORA, -50.26), t(2, T0 + 2 * ORA, -30), t(3, T0 + 3 * ORA, -20)];
+  const s = S.calc(tr, null, T0 + 4 * ORA, "t212"), p = MC.scorPauza(s);
+  assert.ok(/^Scorul Trading 212: 3 pierderi la rând - pauză$/.test(p.titlu) && p.titlu.length <= 60, p.titlu);
+  assert.ok(/−100,3 lei/.test(p.mesaj) && /alt trade azi/.test(p.mesaj) && !/USDT/.test(p.mesaj), p.mesaj);
+  const l = []; for (let i = 0; i < 12; i++) l.push(t(10 + i, T0 + (i + 1) * ORA, i < 7 ? 90 : -20, "X"));
+  const n = MC.scorTinta(S.calc(l, null, T0 + 20 * ORA, "t212"), "net");
+  assert.ok(/\+530,0 lei/.test(n.titlu) && /ținta \+200 lei/.test(n.mesaj) && /12 trade-uri/.test(n.mesaj) && /10 trade-uri/.test(n.mesaj), n.titlu + " | " + n.mesaj);
+  const pp = MC.scorPauza(S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1)], CFG, ACUM));
+  assert.ok(/^Scorul Pionex: /.test(pp.titlu) && /USDT/.test(pp.mesaj) && /alt bot azi/.test(pp.mesaj), pp.titlu + " | " + pp.mesaj);
+  const C = citeste("scripts", "colector.mjs"), G = citeste("scripts", "lib", "garda-alerte.mjs");
+  assert.ok(/VERSIUNE_COLECTOR = "v101\.(12[8-9]|1[3-9]\d|[2-9]\d\d)"/.test(C), "colectorul ≥ v101.128");
+  assert.ok(C.includes('for (const piata of ["pionex", "t212"])') && C.includes("_scorT212") && C.includes("StatisticaTrade.dinT212(T212.perechi(u).inchise)") && C.includes('"/api/scor-sezon?piata=" + piata'), "tura pe două piețe");
+  assert.ok(G.includes("scorPauzaT212") && G.includes("scorTintaNetT212"), "garda textelor știe T212");
+});
+
+await test("legarea v100.220: #acScorT212 pe Acasă (order 12), #jtScorT212 pe fila Acțiuni, scorOpreste în app.js, cardurile pe piețe", () => {
+  const IDX = citeste("public", "index.html"), APP = citeste("public", "app.js"), CSS = citeste("public", "app.css"), TE = citeste("public", "lib", "t212-ecran.js");
+  assert.ok(IDX.includes('<div class="acScorBloc" id="acScor"></div><div class="acScorBloc" id="acScorT212"></div>'), "al doilea card pe Acasă");
+  assert.ok(CSS.includes(".pzDemo #acasa>#acScorT212{order:12}") && CSS.includes(".scOprit{"), "ordinea + banda de oprire");
+  assert.ok(TE.includes('<div id="jtScorT212"></div><div id="jtStatActiuni"></div>') && /box\.innerHTML = h;[^\n]*\n\s*if \(typeof scDeseneaza === "function"\) scDeseneaza\(\);/.test(TE), "cardul T212 sus pe fila Acțiuni, desenat după rescrierea filei");
+  for (const f of ['var SC_PIETE={pionex:["acScor","jtScor"],t212:["acScorT212","jtScorT212"]}', "async function scorOpreste(id)", 'scPost(id,"opreste")', 'getJSON("/api/scor-sezon?piata="+piata)', 'StatisticaTrade.dinT212(']) assert.ok(APP.includes(f), f);
+  const P = JSON.parse(citeste("package.json")); assert.ok(Number(P.version.split(".")[1]) >= 220, "v100.220");
+});
+
 // ── C. legarea în aplicație (index.html, app.js, acasa-ecran.js, app.css, versiunea) ──────────────────────────────
 await test("v100.217: versiunea ≥ 217 peste tot, lib-ul în index.html, cardul pe Acasă sub verdicte și în Jurnal, proba în lanț, CSS înaintea regulii pândei", () => {
   const P = JSON.parse(citeste("package.json")), ver = Number(P.version.split(".")[1]), V = "v100." + ver, IDX = citeste("public", "index.html");
@@ -265,7 +355,7 @@ await test("v100.217: versiunea ≥ 217 peste tot, lib-ul în index.html, cardul
   assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, V); assert.equal(IDX.split(V).length - 1, 4, "de 4 ori în index.html"); assert.ok(!IDX.includes("v100.216"));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-' + ver + '"')); assert.ok(citeste("functions", "_shared", "versiune.js").includes('VERSIUNE = "' + V + '"'));
   assert.ok(IDX.includes('<script src="/lib/statistica-trade.js"></script><script src="/lib/scor-sezon.js"></script>'), "lib-ul după statistica-trade");
-  assert.ok(/<\/div><div class="acScorBloc" id="acScor"><\/div><div class="acLegatura acCumpar" id="acCumpar">/.test(IDX), "cardul pe Acasă între verdicte și „ce aș cumpăra”");
+  assert.ok(/<\/div><div class="acScorBloc" id="acScor"><\/div>(<div class="acScorBloc" id="acScorT212"><\/div>)?<div class="acLegatura acCumpar" id="acCumpar">/.test(IDX), "cardul pe Acasă între verdicte și „ce aș cumpăra”");   // v100.220: + T212
   assert.ok(IDX.includes('<div id="jtCrypto"><div id="jtScor"></div><div id="jtStatCrypto"></div>'), "cardul sus în Jurnal");
   assert.ok(P.scripts["test:scorsezon"] && P.scripts.test.includes("npm run test:scorsezon"), "proba în lanț");
   const APP = citeste("public", "app.js"), AC = citeste("public", "lib", "acasa-ecran.js"), CSS = citeste("public", "app.css");

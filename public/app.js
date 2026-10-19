@@ -5671,42 +5671,62 @@ function jtStatCsv(piata){
 // mai atent” + „un obiectiv pe care îl setez eu”): Scorul sezonului (lib/scor-sezon.js) pe Acasă (#acScor) și sus în Jurnal (#jtScor).
 // Boții = cei din Jurnal (jtStare.boti, prin jtAduBoti - nicio cerere în plus la Pionex); data sezonului + obiectivul de pe serverul de acasă
 // (/api/scor-sezon, KV), ținute 10 minute. Cardul cu formularul deschis și cursorul în el NU se redesenează (ar șterge ce tastează).
-var scStare={cfg:null,la:0,sursa:null,deschis:{},mesaj:{},inLucru:false};
-async function scAsigura(forta){
-  if(!forta&&scStare.cfg&&Date.now()-scStare.la<10*60000)return;
-  try{var r=await getJSON("/api/scor-sezon");scStare.cfg=r&&r.sezon||null;scStare.sursa=r&&r.sursa||null;scStare.la=Date.now()}catch(e){scStare.cfg=scStare.cfg||null}
+// v100.220 (el: „fă și butonul de oprire și fă și pentru Trade 212, dar cu trade-urile viitoare”): două piețe - Pionex (boții din Jurnal) și
+// Trading 212 (trade-urile închise din istoricul de acasă, prin T212.perechi / t212Jurnal, în lei); fiecare cu configurația ei
+// (/api/scor-sezon?piata=…) și cardurile ei (#acScor / #jtScor, #acScorT212 / #jtScorT212). „Oprește sezonul” îngheață cifrele la ora apăsării.
+var SC_PIETE={pionex:["acScor","jtScor"],t212:["acScorT212","jtScorT212"]};
+var scStare={cfg:{},la:{},sursa:{},deschis:{},mesaj:{},inLucru:false};
+function scPiata(id){return /T212$/.test(String(id))?"t212":"pionex"}
+async function scAsigura(piata,forta){
+  if(!forta&&scStare.cfg[piata]&&Date.now()-(scStare.la[piata]||0)<10*60000)return;
+  try{var r=await getJSON("/api/scor-sezon?piata="+piata);scStare.cfg[piata]=r&&r.sezon||null;scStare.sursa[piata]=r&&r.sursa||null;scStare.la[piata]=Date.now()}catch(e){scStare.cfg[piata]=scStare.cfg[piata]||null}
 }
-function scTrades(){if(!jtStare.boti||typeof StatisticaTrade==="undefined"||typeof JurnalTrade==="undefined")return null;return StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti)).concat(StatisticaTrade.dinPionexAlte(JurnalTrade.alte(jtStare.boti)))}
+function scTrades(piata){
+  if(typeof StatisticaTrade==="undefined")return null;
+  if(piata==="t212"){if(typeof t212==="undefined"||!t212.istoric||!Array.isArray(t212.istoric.umpleri)||typeof T212==="undefined")return null;var j=typeof t212Jurnal==="function"?t212Jurnal():null;return StatisticaTrade.dinT212(j?j.p.inchise:T212.perechi(t212.istoric.umpleri).inchise)}
+  if(!jtStare.boti||typeof JurnalTrade==="undefined")return null;return StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti)).concat(StatisticaTrade.dinPionexAlte(JurnalTrade.alte(jtStare.boti)))
+}
 function scDeseneaza(){
   if(typeof ScorSezon==="undefined")return;
-  var tr=scTrades(),s=tr?ScorSezon.calc(tr,scStare.cfg,Date.now()):null;
   // v100.219 (el: „am apăsat pe Obiectiv dar nu se întâmplă nimic”): garda „nu redesena cât tastează” ținea și când elementul activ era BUTONUL
   // apăsat (stătea în card) ⇒ formularul nu se mai deschidea. Acum doar un câmp de text (INPUT) din formular oprește redesenarea.
-  var activ=document.activeElement;
-  ["acScor","jtScor"].forEach(function(id){var el=$(id);if(!el)return;if(scStare.deschis[id]&&activ&&activ.tagName==="INPUT"&&el.contains(activ))return;
-    el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],mesaj:scStare.mesaj[id]||"",faraJurnal:id==="jtScor"})+(id==="jtScor"?ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg,Date.now())):""):ScorSezon.htmlAstept(jtStare.eroare)})   // v100.218 (ideea 1): sezoanele încheiate, doar în Jurnal
+  var activ=document.activeElement,acum=Date.now();
+  Object.keys(SC_PIETE).forEach(function(piata){
+    var tr=scTrades(piata),s=tr?ScorSezon.calc(tr,scStare.cfg[piata],acum,piata):null,ast=piata==="t212"?(typeof t212!=="undefined"&&t212.istoricEroare)||null:jtStare.eroare;
+    SC_PIETE[piata].forEach(function(id){var el=$(id);if(!el)return;if(scStare.deschis[id]&&activ&&activ.tagName==="INPUT"&&el.contains(activ))return;
+      el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],mesaj:scStare.mesaj[id]||"",faraJurnal:id.indexOf("jt")===0})+(id.indexOf("jt")===0?ScorSezon.htmlIstoric(ScorSezon.sezoane(tr,scStare.cfg[piata],acum,piata)):""):ScorSezon.htmlAstept(ast,piata)})   // v100.218 (ideea 1): sezoanele încheiate, doar în Jurnal
+  })
 }
 async function scPorneste(){
   if(scStare.inLucru)return;scStare.inLucru=true;
-  try{scDeseneaza();await scAsigura(false);if(!jtStare.boti)await jtPorneste(false);else scDeseneaza()}finally{scStare.inLucru=false}
+  try{scDeseneaza();await Promise.all([scAsigura("pionex",false),scAsigura("t212",false)]);
+    if(typeof t212!=="undefined"&&!t212.istoric&&!t212.inLucru){try{t212.istoric=await getJSON("/api/t212?action=istoric");t212.istoricEroare=null}catch(e){t212.istoricEroare=typeof t212Eroare==="function"?t212Eroare(e):String(e&&e.message||e)}}   // istoricul de acasă (KV), ca pe pagina T212
+    if(!jtStare.boti)await jtPorneste(false);else scDeseneaza()}finally{scStare.inLucru=false}
 }
 function scorFormular(id){scStare.deschis[id]=!scStare.deschis[id];scStare.mesaj[id]="";scDeseneaza()}
+function scDupaRaspuns(id,j){var piata=scPiata(id);scStare.cfg[piata]=j.sezon||scStare.cfg[piata];scStare.la[piata]=Date.now();scStare.deschis[id]=false;scStare.mesaj[id]="";scDeseneaza()}
+function scBlur(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()}
+async function scPost(id,actiune,corp){
+  var r=await apiFetch("/api/scor-sezon?piata="+scPiata(id)+"&action="+actiune,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(corp||{})}),j=await r.json().catch(function(){return {}});
+  scBlur();if(!r.ok){scStare.mesaj[id]=j.error||("serverul a răspuns "+r.status);scDeseneaza();return null}
+  return j
+}
 async function scorSalveaza(id){
   var f=$("scForm-"+id);if(!f)return;var v=function(n){var i=f.querySelector('input[name="'+n+'"]');return i?i.value:""},o={rata:v("rata"),serie:v("serie"),net:v("net"),pana:v("pana")};
-  var ok=ScorSezon.valideazaObiectiv(o);if(!ok.ok){scStare.mesaj[id]=ok.eroare;if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();return scDeseneaza()}
-  try{var r=await apiFetch("/api/scor-sezon?action=obiectiv",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(o)}),j=await r.json().catch(function(){return {}});
-    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-    if(!r.ok){scStare.mesaj[id]=j.error||("serverul a răspuns "+r.status);return scDeseneaza()}
-    scStare.cfg=j.sezon||scStare.cfg;scStare.la=Date.now();scStare.deschis[id]=false;scStare.mesaj[id]="";scDeseneaza();toast("Obiectivul e salvat","good")}
+  var ok=ScorSezon.valideazaObiectiv(o);if(!ok.ok){scStare.mesaj[id]=ok.eroare;scBlur();return scDeseneaza()}
+  try{var j=await scPost(id,"obiectiv",o);if(!j)return;scDupaRaspuns(id,j);toast("Obiectivul e salvat","good")}
   catch(e){scStare.mesaj[id]="Nu s-a salvat: "+((e&&e.message)||"");scDeseneaza()}
 }
 async function scorSezonNou(id){
-  if(!confirm("Pornești un sezon nou de azi? Boții de până acum rămân în Jurnal, cardul numără de la zero."))return;
-  try{var r=await apiFetch("/api/scor-sezon?action=sezonNou",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}),j=await r.json().catch(function(){return {}});
-    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
-    if(!r.ok){scStare.mesaj[id]=j.error||("serverul a răspuns "+r.status);return scDeseneaza()}
-    scStare.cfg=j.sezon||scStare.cfg;scStare.la=Date.now();scStare.deschis[id]=false;scStare.mesaj[id]="";scDeseneaza();toast("Sezon nou din "+ScorSezon.dataRo(scStare.cfg.start),"good")}
+  if(!confirm("Pornești un sezon nou de azi? Ce ai închis până acum rămâne în Jurnal (și în „Sezoanele tale”), cardul numără de la zero."))return;
+  try{var j=await scPost(id,"sezonNou");if(!j)return;scDupaRaspuns(id,j);toast("Sezon nou din "+ScorSezon.dataRo(j.sezon.start),"good")}
   catch(e){scStare.mesaj[id]="Nu s-a pornit: "+((e&&e.message)||"");scDeseneaza()}
+}
+// v100.220: oprirea - cifrele îngheață la ora apăsării; ce se închide după nu intră până la „Pornește sezon nou de azi”
+async function scorOpreste(id){
+  if(!confirm("Oprești sezonul? Cifrele rămân cum sunt acum; ce închizi după nu mai intră în scor până pornești un sezon nou."))return;
+  try{var j=await scPost(id,"opreste");if(!j)return;scDupaRaspuns(id,j);toast("Sezonul e oprit","good")}
+  catch(e){scStare.mesaj[id]="Nu s-a oprit: "+((e&&e.message)||"");scDeseneaza()}
 }
 function jtRender(){
   var box=$("jtRezumat"),gr=$("jtGreseli"),li=$("jtLista"),st=$("jtStare");if(!box)return;
