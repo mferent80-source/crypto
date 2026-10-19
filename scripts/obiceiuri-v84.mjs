@@ -49,6 +49,13 @@ await test("portofoliu: expunere, cate pe aceeasi parte, socul de -10% si cine s
   assert.equal(p.acelasiPariu, true, "2 din 3 long, peste jumatate");
   assert.equal(O.portofoliu([], 500).n, 0);
 });
+await test("soc −10% cu grile: longul care mai cumpără pe drum pierde mai mult decât poziția înghețată", () => {
+  const srcG = ["grid-calcul.js", "tablou-extra.js", "obiceiuri.js"].map((f) => citeste("../public/lib/" + f)).join("\n");
+  const O2 = new Function(`${srcG}; return Obiceiuri;`)();
+  const b = { activ: true, directie: "long", investit: 100, levier: 3, pozitie: 60, pretCurent: 0.46, pretDeschidere: 0.47, profitNet: 1.2, gridJos: 0.40, gridSus: 0.50, baza: "ZRO.PERP", brut: { buOrderData: { row: 21, perVolume: 10 } } };
+  const inghetat = 60 * 0.46 * -0.10, soc = O2.portofoliu([b], 500).soc10;
+  assert.ok(soc < inghetat - 0.01, "prin grile " + soc + " față de înghețat " + inghetat);
+});
 
 await test("raportDuminica: rezultatul saptamanii, greseala cea mai scumpa, o singura regula pentru saptamana urmatoare", () => {
   const acum = Math.max(...TR.map((t) => t.inchis)) + ORA;

@@ -42,6 +42,19 @@ await test("stopul pus ca PREȚ rămâne prețul lui; stins ⇒ nimic; short ogl
 await test("totalul deja sub procent (se declanșa acum) ⇒ prețul serverului, nu null", () => {
   assert.equal(T.pretStopLive(bot({ profitNet: -9 })), 0.4535);
 });
+await test("cartela și toți boții folosesc același preț viu și pierderea din procent × investiție", () => {
+  vm.runInThisContext(citeste("public", "lib", "semnale-bot.js"));
+  const b = bot(), live = T.pretStopLive(b), SB = globalThis.SemnaleBot;
+  assert.equal(SB.pretStopEcran(b), live);
+  assert.equal(SB.etichetaStopProc(b), "stop −5%");
+  assert.equal(SB.etichetaStopProc(bot({ opritorPierdereTip: "pret", opritorPierdereRaport: null, opritorPierdere: 0.38 })), null);
+  const card = SB.acumConcret({ bot: b }).find((c) => c.cod === "stop");
+  assert.equal(card.mare, SB.acumConcret({ bot: bot({ opritorPierdereTip: "pret", opritorPierdere: live, opritorPierdereRaport: null }) }).find((c) => c.cod === "stop").mare);
+  assert.equal(card.mare, SB.acumConcret({ bot: Object.assign({}, b, { opritorPierdere: live }) }).find((c) => c.cod === "stop").mare);
+  assert.match(card.mic, /^stop −5% · /);
+  assert.ok(Math.abs(T.totalLaOpritor(b) - (-5)) < 1e-9, "toți boții, stop în procente: " + T.totalLaOpritor(b));
+  assert.match(citeste("public", "app.js"), /laStop:x\.opritorPierdereActiv\?TabloExtra\.totalLaOpritor\(x\):null/);
+});
 
 // ---- drumul botului: doar gridul, stopul și prețul de acum ----
 const AS = citeste("public", "lib", "asezare-paznic.js");

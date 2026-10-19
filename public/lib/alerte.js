@@ -448,6 +448,14 @@ var Alerte = (function () {
     var h = Number(o.hour);
     return ORE_RAPORT.indexOf(h) >= 0 ? o.year + "-" + o.month + "-" + o.day + " " + (h < 10 ? "0" : "") + h : null;
   }
+  // v100.222 (I-723): semnul rămâne. Sub 0,5% nu se rotunjește la 0. Întregul 25 rămâne „la 25%”.
+  function textLich(li) {
+    if (li === null || !isFinite(li)) return "";
+    if (li < 0) return " · lichidare depășită";
+    if (li < 0.5) return " · lichidare sub 1%";
+    var s = Math.round(li) === li ? String(li) : li.toFixed(1).replace(".", ",");
+    return " · lichidare la " + s + "%";
+  }
   function raportBoti(lista, acum) {
     var l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.b; });
     if (!l.length) return null;
@@ -455,7 +463,7 @@ var Alerte = (function () {
     l.forEach(function (x) {
       var b = x.b, nume = String(b.baza || b.simbol || "botul").replace(/\.PERP$/, ""), tot = nr(b.profitTotal), p = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), li = nr(b.distantaLichidarePct);
       var cap = nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "") + (tot !== null ? " · total " + (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(Math.abs(tot) < 0.095 && tot !== 0 ? 2 : 1).replace(".", ",") + " USDT" : "")
-        + (p !== null ? " · preț " + pret(p) + (jos !== null && sus !== null && sus > jos ? " (" + Math.round((p - jos) / (sus - jos) * 100) + "% în grid)" : "") : "") + (li !== null ? " · lichidare la " + Math.round(Math.abs(li)) + "%" : "");
+        + (p !== null ? " · preț " + pret(p) + (jos !== null && sus !== null && sus > jos ? " (" + Math.round((p - jos) / (sus - jos) * 100) + "% în grid)" : "") : "") + textLich(li);   // v100.222 (I-723)
       linii.push(cap);
       (Array.isArray(x.mediu) ? x.mediu : []).forEach(function (m) { if (m) linii.push("   " + (BUL[m.ton] || "⚪") + " " + m.eticheta + ": " + m.text); });
     });

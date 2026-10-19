@@ -173,6 +173,8 @@ var Consiliu = (function () {
     var st = cand.filter(function (m) { return m.cod === "stop"; })[0], cf = st && st.cifre;
     if (sus && sus.cod === "stop" && cf && nr(cf.frecventa) >= 0.5 && nr(cf.laOpritor) !== null && nr(x.opritor) !== null) {
       faCe = "Aș lăsa stopul la " + fp(x.opritor) + " și aș trece planul la −" + Math.round(Math.abs(nr(cf.laOpritor))) + " USDT.";
+      // v100.222 (I-721): procentul lângă preț, doar când încape în 110
+      if (x.opritorProc) { var cuProc = "Aș lăsa stopul la " + fp(x.opritor) + " (" + x.opritorProc + ") și aș trece planul la −" + Math.round(Math.abs(nr(cf.laOpritor))) + " USDT."; if (cuProc.length <= 110) faCe = cuProc; }
       explica = "Stopul planului" + (nr(cf.pretPropus) !== null ? " (" + fp(cf.pretPropus) + ")" : "") + " e prea aproape: o zi obișnuită a monedei ajunge acolo în " + Math.round(nr(cf.frecventa) * 100) + "% din zile.";
     }
     // langa margine: „n-aș pune bani în plus” intra in aceeasi fraza, daca nu e deja spus si daca incape (≤ 110)

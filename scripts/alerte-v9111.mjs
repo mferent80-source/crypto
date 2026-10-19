@@ -102,7 +102,14 @@ await test("raportul: la 9, 12, 15, 18, 21 (ora Romaniei) - o cheie pe interval;
 await test("raportul: un rand pe bot (directie, total, pret in grid, lichidare) + miscarea / funding / BTC cu bulina lor; fara boti -> null", () => {
   const t = A.raportBoti([{ b: BOT(), mediu: MED() }], T0);
   assert.match(t.titlu, /Mediul boților/);
-  assert.match(t.mesaj, /VVV long 4×/); assert.match(t.mesaj, /−3,1 USDT/);   /* v100.196: o zecimală (regula lui) */ assert.match(t.mesaj, /27% în grid/); assert.match(t.mesaj, /lichidare la 25%/);
+  assert.match(t.mesaj, /VVV long 4×/); assert.match(t.mesaj, /−3,1 USDT/);   /* v100.196: o zecimală (regula lui) */ assert.match(t.mesaj, /27% în grid/); assert.match(t.mesaj, /lichidare la 25,4%/);
+  assert.match(A.raportBoti([{ b: BOT({ distantaLichidarePct: 25 }), mediu: [] }], T0).mesaj, /lichidare la 25%/);
+  const dep = A.raportBoti([{ b: Object.assign(BOT(), { distantaLichidarePct: -2.4 }), mediu: [] }], T0);
+  assert.match(dep.mesaj, /lichidare depășită/); assert.ok(!/lichidare la /.test(dep.mesaj), dep.mesaj);
+  const mic = A.raportBoti([{ b: Object.assign(BOT(), { distantaLichidarePct: 0.4 }), mediu: [] }], T0);
+  assert.match(mic.mesaj, /lichidare sub 1%/);
+  const zec = A.raportBoti([{ b: Object.assign(BOT(), { distantaLichidarePct: 2.4 }), mediu: [] }], T0);
+  assert.match(zec.mesaj, /lichidare la 2,4%/);
   assert.match(t.mesaj, /🟢 Mișcarea: liniște/); assert.match(t.mesaj, /Funding: 0,005%/); assert.match(t.mesaj, /BTC: ↔ lateral/);
   assert.ok(!/NaN|undefined|null/.test(t.mesaj), t.mesaj);
   assert.equal(A.raportBoti([], T0), null);

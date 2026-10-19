@@ -64,11 +64,11 @@ await test("tura ideilor: judeca universul, cere data rezultatelor DOAR pentru c
     cereBare: async (tk) => { cerute.push(tk); if (tk === "LIPSA_US_EQ") throw new Error("404"); return tk === "BUN_US_EQ" ? buna : coboara; },
     cereRezultate: async (tk) => { rez.push(tk); return null; } });
   assert.deepEqual(cerute, ["BUN_US_EQ", "JOS_US_EQ", "LIPSA_US_EQ"]); assert.deepEqual(rez, ["BUN_US_EQ"]);
-  assert.equal(r.judecate, 2); assert.equal(r.trecute, 1); assert.equal(r.actiuni[0].ticker, "BUN_US_EQ"); assert.equal(r.actiuni[0].simbol, "BUN");
+  assert.equal(r.judecate, 2); assert.equal(r.trecute, 0); assert.equal(r.actiuni.length, 0);   // v100.222: Nasdaq fără dată scoate numele de pe listă
   // v90: acelasi simbol de bursa sub doua tickere T212 (SNDK1 = SNDK) -> judecat o data, cu primul (al lui)
   cerute.length = 0;
   const r2 = await turaIdei({ tickere: ["SNDK1_US_EQ", "SNDK_US_EQ"], simbol: (tk) => (tk.startsWith("SNDK") ? "SNDK" : tk.split("_")[0]), acum: ACUM, Idei: I, inchise: [], pauza: async () => {}, jurnal: () => {},
-    cereBare: async (tk) => { cerute.push(tk); return buna; }, cereRezultate: async () => null });
+    cereBare: async (tk) => { cerute.push(tk); return buna; }, cereRezultate: async () => "2026-11-30" });
   assert.deepEqual(cerute, ["SNDK1_US_EQ"]); assert.equal(r2.actiuni.length, 1); assert.equal(r2.actiuni[0].simbol, "SNDK"); assert.equal(r2.actiuni[0].ticker, "SNDK1_US_EQ");
 });
 

@@ -80,7 +80,7 @@ await test("A4 (🔴2). poarta: rezultatele peste 0–10 zile ⇒ AȘTEAPTĂ cu 
   assert.equal(AS.poarta({ stare: ST, plan: PLAN, rezultateZile: 0 }).nivel, "asteapta");
   assert.equal(AS.poarta({ stare: ST, plan: PLAN, rezultateZile: 11 }).nivel, "cumpara");
   const n = AS.poarta({ stare: ST, plan: PLAN, rezultateZile: null });
-  assert.equal(n.nivel, "cumpara"); assert.ok(n.note.some((m) => /nu știu data rezultatelor/.test(m)), JSON.stringify(n.note));
+  assert.equal(n.nivel, "asteapta"); assert.ok(n.motive.some((m) => /nu știu data rezultatelor/.test(m)), JSON.stringify(n.motive));
   assert.deepEqual(J(AS.poarta({ stare: ST, plan: PLAN }).note), []);
 });
 await test("A5 (🟡2). poarta: media pe istoricul ei ≤ 0 ⇒ AȘTEAPTĂ, nu verde lângă „aș sări peste”", () => {
@@ -89,7 +89,10 @@ await test("A5 (🟡2). poarta: media pe istoricul ei ≤ 0 ⇒ AȘTEAPTĂ, nu v
   assert.equal(AS.poarta({ stare: ST, plan: PLAN, medie: 0.02 }).nivel, "cumpara");
 });
 await test("A6 (🟡3). regimul pieței, fixat dinainte: fuga de risc / stres / MB „risk-off” ⇒ AȘTEAPTĂ; prudent ⇒ risc 0,5 %; necunoscut ⇒ se spune", () => {
-  for (const r of [{ macro: "riskoff" }, { macro: "stres" }, { mb: { stare: "rau" } }]) assert.equal(AS.poarta({ stare: ST, plan: PLAN, regim: r }).nivel, "asteapta", JSON.stringify(r));
+  for (const r of [{ macro: "riskoff" }, { macro: "stres" }, { mb: { stare: "rau" } }]) {
+    const v = AS.poarta({ stare: ST, plan: PLAN, regim: r });
+    assert.equal(v.nivel, "asteapta", JSON.stringify(r)); assert.equal(v.riscPct, 0, JSON.stringify(r));
+  }
   const p = AS.poarta({ stare: ST, plan: PLAN, regim: { macro: "prudent" } });
   assert.equal(p.nivel, "cumpara"); assert.equal(p.riscPct, 0.005); assert.ok(p.note.some((m) => /0,5% din cont/.test(m)));
   assert.equal(AS.poarta({ stare: ST, plan: PLAN, regim: { mb: { stare: "atentie" } } }).riscPct, 0.005);

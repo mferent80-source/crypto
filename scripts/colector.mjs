@@ -416,7 +416,7 @@ async function semnaleBot(b, ctx, acum) {
       cifre: (pr) => TabloExtra.cifreActiuni(b, { protectie: pr, b15 }) });
     x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fundingHist: fut && Array.isArray(fut.fundingHist) ? fut.fundingHist : null, fisa: f, rezumat: d.rez ? Directie.rezumat(d.rez, b.directie) : null, acum }));   // v101.74 (I-541)
     x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, busola: x.busola, regim: f && f.regim ? { miscare: !!f.regim.miscare } : null, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)),
-      opritor: b.opritorPierdereActiv ? Number(b.opritorPierdere) : null, opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null,
+      opritor: SemnaleBot.pretStopEcran(b), opritorProc: SemnaleBot.etichetaStopProc(b), opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null,   // v100.222 (I-721)
       perechi: Perechi.raport(b.ordinePerechi, b.pornitLa, acum, perechiEst && perechiEst[b.id] || null, { urme: perechiEst && perechiEst[b.id] && perechiEst[b.id].urme, factor: perechiCor[s] && perechiCor[s].factor, inGrid: Number(b.pretCurent) >= Number(b.gridJos) && Number(b.pretCurent) <= Number(b.gridSus) }) });   // v101.30 (I-477)
     const stA = stareAlerte[b.id] || (stareAlerte[b.id] = {});
     // revizia 01.10 (I1): starea alertelor botului (ce s-a anuntat deja imediat) si sfaturile tacute (I-466) - ca alerta Consilierului sa nu dubleze

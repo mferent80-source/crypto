@@ -115,7 +115,7 @@ var SemnaleBot = (function () {
   }
   function acumConcret(x) {
     var b = x.bot || {}, f = x.fisa || null, dir = String(b.directie || "").toLowerCase(), p = nr(b.pretCurent), jos = nr(b.gridJos), sus = nr(b.gridSus), out = [];
-    var pz = x.zero ? nr(x.zero.pretZero) : null, op = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null, tot = nr(b.profitTotal);
+    var pz = x.zero ? nr(x.zero.pretZero) : null, op = pretStopEcran(b), tot = nr(b.profitTotal);   // v100.222 (I-721): prețul de pe cartelă e cel viu, nu cel înghețat
     // v100.196 (auditul 14.10, 🔴1): zero-ul se socoteste cu grilele de pe drum; pe minus el poate sa nu se mai atinga din pret in grid (pzN)
     var pzN = pz === null && !!(x.zero && x.zero.zeroNeatins), zeroTxt = function () { return pzN ? "Din preț, în grid, botul nu mai ajunge pe zero (la marginea de " + (dir === "short" ? "jos" : "sus") + " rămâne fără poziție)" : "Zero-ul botului e la " + fmtPret(pz) + " (" + dist(pz, p) + " " + (dir === "short" ? "sub" : "peste") + " preț)"; };
     // v100.196 (B3): stopul dincolo de lichidarea estimata nu apuca sa lucreze - lichidarea vine intai si ia toata marja
@@ -176,8 +176,9 @@ var SemnaleBot = (function () {
     // v100 (demo-ul aprobat 28.09): fiecare cartela are o CIFRA mare, o ETICHETA de stare si o ACTIUNE de un rand; textul intreg ramane in detalii
     var S1 = function (v) { return v === null || !isFinite(v) ? "—" : TextRo.pctSemn(v * 100); };
     var st0 = out[0], gr0 = out[1], mi0 = out[2];
+    var etProc = etichetaStopProc(b);   // v100.222: „stop −5%” lângă preț, doar la stopul în procente
     st0.mare = op !== null ? fmtPret(op) : "nepus";
-    st0.mic = op !== null ? (p !== null ? "activ · " + S1(op / p - 1) + " de preț" : "activ") : "fără stop în Pionex";
+    st0.mic = op !== null ? ((etProc ? etProc + " · " : "") + (p !== null ? "activ · " + S1(op / p - 1) + " de preț" : "activ")) : "fără stop în Pionex";
     // v101.8 (2): cu plan pe minus, cartela spune cat costa stopul ATINS (TabloExtra.planStare -> minus.laOpritor, cu grilele de
     // pe drum) si il judeca dupa PLAN, nu dupa loc (la LIGHTER, 3,787 sub grid era „pus” verde si costa ≈ 60 fata de planul de 15,7)
     var pm = x.plan && x.plan.minus && !(x.plan.atins && x.plan.atins.indexOf("minus") >= 0) ? x.plan.minus : null, laOp = pm ? nr(pm.laOpritor) : null, pgm = pm ? nr(pm.prag) : null;
@@ -326,7 +327,7 @@ var SemnaleBot = (function () {
   // pasii cand piata merge cu botul (v100.61: o actiune + de ce): dupa margine -> incaseaza / grid nou din fisa; pe plus -> stopul la
   // zero-ul botului; altfel lasa-l, fara bani in plus. „Riscul e la întoarcere” e in legenda Consilierului (o data, nu in fiecare sfat).
   function pasiCuBotul(b, dir, zero) {
-    var p = nr(b.pretCurent), sus = nr(b.gridSus), jos = nr(b.gridJos), pz = zero ? nr(zero.pretZero) : null, op = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null;
+    var p = nr(b.pretCurent), sus = nr(b.gridSus), jos = nr(b.gridJos), pz = zero ? nr(zero.pretZero) : null, op = pretStopEcran(b);   // v100.222
     var parte = dir === "long" ? "de sus" : "de jos", marg = dir === "long" ? sus : jos, areMarg = marg !== null && p !== null && p > 0;
     var peProfit = pz !== null && p !== null && (dir === "long" ? pz < p : pz > p), ok = peProfit && op !== null && (dir === "long" ? op >= pz : op <= pz);
     var dupa = areMarg && !(dir === "long" ? p < marg : p > marg);
@@ -341,6 +342,22 @@ var SemnaleBot = (function () {
 
   // v97.5: opritorul cum l-a pus el - in procente (Pionex "profit_ratio") sau in pret
   function numeOp(b, op, fmt) { var r = nr(b && b.opritorPierdereRaport); return b && b.opritorPierdereTip === "raport" && r !== null ? (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(2).replace(".", ",") + "% din investiție, ≈ " + fmt(op) : fmt(op); }
+  // v100.222 (I-721): pe ecran, stopul în procente e prețul la care grilele chiar opresc (pretStopLive). Stopul pus ca PREȚ rămâne prețul.
+  // Fără TabloExtra rămâne prețul serverului (poziția înghețată).
+  function pretStopEcran(b) {
+    if (!b || !b.opritorPierdereActiv) return null;
+    var live = typeof TabloExtra !== "undefined" && TabloExtra.pretStopLive ? nr(TabloExtra.pretStopLive(b)) : null;
+    if (live !== null && live > 0) return live;
+    var op = nr(b.opritorPierdere);
+    return op !== null && op > 0 ? op : null;
+  }
+  function etichetaStopProc(b) {
+    if (!b || b.opritorPierdereTip !== "raport") return null;
+    var r = nr(b.opritorPierdereRaport);
+    if (r === null) return null;
+    var s = Math.abs(r * 100).toFixed(4).replace(/0+$/, "").replace(/\.$/, "").replace(".", ",");
+    return "stop " + (r >= 0 ? "+" : "−") + s + "%";
+  }
   function distPodea(x, p) { return TextRo.pct(Math.abs(x / p - 1) * 100); }
 
   // intrare: { bot, fisa, plan (TabloExtra.planStare), costuri, btc, aglomerare, muta, iaProfit, zero? (TabloExtra.dacaInchizi) }
@@ -401,7 +418,7 @@ var SemnaleBot = (function () {
       deCe: ag.dovezi ? "Semnele: " + ag.dovezi + "; risc de curățare bruscă în sens opus." : ag.text || "" });
     // v96.4 (27.09, alegerea lui: "tinta devine podea"): tinta de plus atinsa, dar conditiile sunt bune (niciun alt 🔴,
     // piata nu merge contra botului) -> nu "ieși", ci "pastreaz-o": opritorul la pretul la care totalul e exact tinta.
-    var podea = pl && pl.plus && nr(pl.plus.podea), p0 = nr(b.pretCurent), op = b.opritorPierdereActiv ? nr(b.opritorPierdere) : null;
+    var podea = pl && pl.plus && nr(pl.plus.podea), p0 = nr(b.pretCurent), op = pretStopEcran(b);   // v100.222
     var altIesi = c.some(function (y) { return y.nivel === "iesi" && y.cod !== "plan"; }) || (pl && Array.isArray(pl.atins) && pl.atins.indexOf("minus") >= 0);
     if (pl && Array.isArray(pl.atins) && pl.atins.indexOf("plus") >= 0 && !altIesi && sf !== "contra" && podea !== null && p0 !== null && (dir === "long" ? podea < p0 : dir === "short" ? podea > p0 : false)) {
       var tinta = Pl(pl.plus.prag);   /* revizia Opus I4: in text cu virgula; calculele de mai jos folosesc pl.plus.prag */
@@ -527,6 +544,6 @@ var SemnaleBot = (function () {
   }
 
   return { distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
-    gridMaiDes: gridMaiDes, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive };
+    gridMaiDes: gridMaiDes, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive, pretStopEcran: pretStopEcran, etichetaStopProc: etichetaStopProc };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;

@@ -19,7 +19,8 @@ export async function turaIdei(d) {
     if (d.ndx && d.rezumat && d.ndx.has(s)) { const z = d.rezumat(bare); if (z) ndx.push({ s, ...z }); }
     let r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: tk });
     // data rezultatelor doar pentru cele care trec (o cerere in plus pe fiecare)
-    if (r.trece) { let rz = null; try { rz = await d.cereRezultate(tk); } catch {} if (rz) r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, rezultate: rz, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: tk }); }
+    // v100.222 (I-722): și când Nasdaq nu dă data. Regimul doar dacă tura îl are deja (colectorul de dimineață nu-l cere).
+    if (r.trece) { let rz = null; try { rz = await d.cereRezultate(tk); } catch {} r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, rezultate: rz || null, rezultateStiut: true, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: tk, regim: d.regim }); }
     l.push({ ticker: tk, simbol: s, r });
     // v101.58 (reveniri): aceleași bare zilnice - acțiunea pe revenire (doar long) și punctele pentru istoricul regulii
     if (d.Reveniri) { try { const rv = d.Reveniri.actiunePeRevenire(bare); if (rv && rv.revine) rev.push({ ticker: tk, simbol: s, ...rv }); serii.push(d.Reveniri.puncte(bare, { r: d.Reveniri.REGULI.actiune })); } catch {} }

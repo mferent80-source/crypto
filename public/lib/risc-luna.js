@@ -233,10 +233,13 @@ var RiscLuna = (function () {
   // ---------------- comportamentul spus explicit (pagina din meniu) ----------------
   var mii = function (x) { var r = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); return (x < 0 ? "−" : x > 0 ? "+" : "") + r; };
   var LIMITA = { A1: "Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum.", A3: "Ții mai mult ce merge prost, deci durata e și urmare, nu doar cauză." };
+  // v100.222 (I-725): registrul respinge cauza la A3 și O2. Titlul și corpul nu mai spun „dovedit”.
+  var LEGATURA = { A3: "Durata se știe abia la vânzare, iar ții mai mult ce merge prost: legătură, nu cauză.", O2: "Marja se adaugă când botul merge deja prost: legătură, nu cauză." };
   function textObicei(r, tip) {
     var noun = tip === "actiuni" ? ["episod", "episoade"] : ["bot", "boți"], grup = cate(r.cu, noun[0], noun[1]) + " cu, " + r.fara + " fără";
     if (/^prea/.test(r.stare)) return r.motiv === "zile" ? "Prea puține perioade de timp ca să judec: doar " + cate(Number(r.blocuri) || 0, "perioadă", "perioade") + " de " + cate(r.blocZile || BLOC_ZILE, "zi", "zile") + " cu ambele feluri, trebuie cel puțin " + MIN_BLOCURI + " (" + grup + "; cazurile din aceleași zile trec prin aceeași piață)." : "Prea puține cazuri ca să judec (" + grup + ").";
     var cifre = "media " + semn1(r.medieCu * 100) + "% față de " + semn1(r.medieFara * 100) + "%, pierderi de peste 5% în " + pct(r.mariCu) + " din cazuri față de " + pct(r.mariFara) + " (" + grup + ")";
+    if (LEGATURA[r.k] && /^dovedit/.test(r.stare)) return LEGATURA[r.k] + " " + cifre.charAt(0).toUpperCase() + cifre.slice(1) + ".";
     var t = r.stare === "dovedit-rau" ? "Obicei rău, dovedit: " + cifre + "." : r.stare === "dovedit-bun" ? "Obicei bun, dovedit: " + cifre + "."
       : r.stare === "la-limita-rau" ? "La limită (semn de obicei rău, încă nesigur): " + cifre + "." : r.stare === "la-limita-bun" ? "La limită (semn de obicei bun, încă nesigur): " + cifre + "." : "Nedovedit: " + cifre + "; diferența poate fi întâmplare.";
     return LIMITA[r.k] && r.stare !== "nedovedit" ? t + " " + LIMITA[r.k] : t;
@@ -260,7 +263,7 @@ var RiscLuna = (function () {
         out.boti.push({ nivel: "atentie", titlu: "Comisioanele iau " + pct(-d.bani.comisioane / d.bani.grile) + " din câștigul grilelor",   /* revizia (R5): aceeași bază ca textul */ text: "Grilele au adus " + mii(d.bani.grile) + " USDT, comisioanele " + mii(d.bani.comisioane) + " (bani reali)." + (rapid ? " " + cate(rapid, "bot", "boți") + " au stat sub 15 minute." : ""),
           faCe: "Aș lăsa botul măcar o oră: fiecare pornire plătește din nou comisionul." }); }
       var dov = (B.comportament || []).filter(function (x) { return /^(dovedit|la-limita)/.test(x.stare); }), are = out.boti.length > 0;
-      dov.forEach(function (x) { var rau = /rau$/.test(x.stare), sigur = /^dovedit/.test(x.stare); out.boti.push({ nivel: rau ? (sigur ? "rau" : "atentie") : "bine", titlu: x.nume + (sigur ? (rau ? " (dovedit rău)" : " (dovedit bun)") : (rau ? " (la limită, rău)" : " (la limită, bun)")), text: textObicei(x, "boti"), faCe: rau ? CE_FAC[x.k] || null : null }); });   /* titlul ≤ 60 (garda) */
+      dov.forEach(function (x) { var rau = /rau$/.test(x.stare), sigur = /^dovedit/.test(x.stare), leg = !!(LEGATURA[x.k] && sigur); out.boti.push({ nivel: rau ? (sigur ? "rau" : "atentie") : "bine", titlu: x.nume + (leg ? " (legătură, nu cauză)" : sigur ? (rau ? " (dovedit rău)" : " (dovedit bun)") : (rau ? " (la limită, rău)" : " (la limită, bun)")), text: textObicei(x, "boti"), faCe: rau ? CE_FAC[x.k] || null : null }); });   /* v100.222 (I-725): titlul ≤ 60 (garda) */
       if (!dov.length) out.boti.push({ nivel: "info", titlu: "Niciun obicei al boților nu e dovedit, nici bun, nici rău", text: "Din " + cate((B.comportament || []).length || 9, "obicei testat", "obiceiuri testate") + " pe boții tăi, niciunul nu trece regula (diferența poate fi întâmplare)." + (are ? " Pierderea vine din ce scrie mai sus." : ""), faCe: null });
     }
     if (A && A.desc) {

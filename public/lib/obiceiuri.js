@@ -147,8 +147,17 @@ var Obiceiuri = (function () {
       var inv = nr(b.investit), lev = nr(b.levier) || 1, q = nr(b.pozitie), p = nr(b.pretCurent);
       if (inv !== null) out.expunere += inv * lev;
       if (q !== null && p !== null) {
-        var qs = d === "long" ? Math.abs(q) : d === "short" ? -Math.abs(q) : q;
-        out.soc10 += qs * p * -0.10;
+        // v100.222 (I-726): aceeași cădere prin grilele care se mai umplu. Fără geometrie, rămâne poziția de acum.
+        var soc = null;
+        if (typeof TabloExtra !== "undefined" && TabloExtra.totalCuGridLa) {
+          var la = TabloExtra.totalCuGridLa(b, p * 0.9), acumT = TabloExtra.totalCuGridLa(b, p);
+          if (la !== null && acumT !== null) soc = la - acumT;
+        }
+        if (soc === null) {
+          var qs = d === "long" ? Math.abs(q) : d === "short" ? -Math.abs(q) : q;
+          soc = qs * p * -0.10;
+        }
+        out.soc10 += soc;
       }
       var lj = nr(b.lichidareJos);
       if (d !== "short" && lj !== null && p !== null && lj >= p * 0.9) out.lichidatiLaSoc.push(moneda(b.baza));

@@ -17,7 +17,14 @@ var Idei = (function () {
     o = o || {};
     var b = Array.isArray(bare) ? bare : [];
     if (b.length < 120 || !(pret > 0)) return { trece: false, scor: null, motive: ["prea puține zile de prețuri"] };
-    var st = AS.stare(b, pret), v = AS.poarta({ stare: st, plan: null, faraPlan: true });
+    var st = AS.stare(b, pret);
+    // v100.222 (I-722): aceleași câmpuri ca biletul viu, doar când apelantul le are. Data necunoscută după căutare (rezultateStiut) ține numele afară.
+    var po = { stare: st, plan: null, faraPlan: true };
+    if (o.zileLipsa !== undefined) po.zileLipsa = o.zileLipsa;
+    else if (o.simbol) po.zileLipsa = AS.zileLipsa(st.ultima, o.acum || Date.now(), o.simbol);
+    if (o.regim) po.regim = o.regim;
+    if (o.rezultateStiut === true) po.rezultateZile = o.rezultate ? Math.ceil((Date.parse(o.rezultate + "T12:00:00Z") - (o.acum || Date.now())) / ZI) : null;
+    var v = AS.poarta(po);
     if (v.nivel !== "cumpara") return { trece: false, scor: null, motive: v.motive.length ? v.motive : ["poarta nu zice cumpăr"] };
     var n = AS.niveluri(b, pret, {});
     if (n.nivel !== "ok" || !n.intrare) return { trece: false, scor: null, motive: [n.motiv || n.intrareMotiv || "fără preț de intrare"] };

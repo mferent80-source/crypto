@@ -179,8 +179,8 @@ var ActiuniSemnale = (function () {
     var p = o.plan || {};
     if (!o.faraPlan && !(p.stop > 0 || p.trailPct > 0)) galben.push("n-ai scris un plan de ieșire (stop sau −X% de la maxim)");
     if (o.vandutPeMinusAcumOre !== null && o.vandutPeMinusAcumOre !== undefined && o.vandutPeMinusAcumOre < 24) galben.push("ai vândut-o pe minus acum " + Math.round(o.vandutPeMinusAcumOre) + " h — recumpărarea imediată e una din greșelile tale");
-    // 🔴2: rezultatele trimestriale sar peste stop (aceeași regulă ca ideile zilei: 0–10 zile ⇒ nu acum)
-    if (o.rezultateZile === null) note.push("nu știu data rezultatelor trimestriale (Nasdaq n-a dat-o): o verific în Trading 212 înainte să cumpăr");
+    // v100.222 (I-722): data necunoscută (câmpul e null, după o căutare) ține poarta pe AȘTEAPTĂ. Lipsa câmpului nu se judecă.
+    if (o.rezultateZile === null) galben.push("nu știu data rezultatelor trimestriale (Nasdaq n-a dat-o): o verific în Trading 212 înainte să cumpăr");
     else if (o.rezultateZile !== undefined && isFinite(o.rezultateZile) && o.rezultateZile >= 0 && o.rezultateZile <= 10) galben.push("rezultatele trimestriale " + (o.rezultateZile === 0 ? "azi" : o.rezultateZile === 1 ? "mâine" : "peste " + cate(o.rezultateZile, "zi", "zile")) + ": prețul poate sări peste stop într-o noapte, aștept după anunț");
     // 🟡2: fără avantaj măsurat pe istoricul ei (ideile cer deja media > 0)
     if (o.medie !== null && o.medie !== undefined && isFinite(o.medie) && o.medie <= 0) galben.push("pe istoricul ei, în starea de acum, intrările au ieșit pe minus în medie (" + P(o.medie, Math.abs(o.medie) < 0.01 ? 2 : 1) + "): fără avantaj măsurat");
@@ -191,7 +191,7 @@ var ActiuniSemnale = (function () {
     // 🟡3: regimul pieței
     var rg = o.regim !== undefined ? regimPoarta(o.regim) : null;
     if (rg && rg.cod === "blocat") galben.push(rg.motiv); else if (rg && rg.motiv) note.push(rg.motiv);
-    return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "cumpara", motive: rosu.concat(galben), note: note, riscPct: rg ? (rg.riscPct > 0 ? rg.riscPct : 0.01) : 0.01, regim: rg ? rg.cod : null };
+    return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "cumpara", motive: rosu.concat(galben), note: note, riscPct: rg ? rg.riscPct : 0.01, regim: rg ? rg.cod : null };   // v100.222: regimul blocat rămâne risc 0, nu cade pe 1%
   }
 
   // pozitii: [{simbol, valoare (in moneda contului), beta?}], cash in aceeasi moneda
@@ -365,6 +365,8 @@ var ActiuniSemnale = (function () {
   // cu o.pretAcum, riscul pe ce ai deja până la același stop (riscDeja, riscTotal); o.liber = banii liberi din cont ⇒ pesteLiber
   function marime(o) {
     if (!o || !(o.cont > 0) || !(o.intrare > 0) || !(o.stop > 0) || o.stop >= o.intrare || !(o.fx > 0)) return null;
+    // v100.222 (I-722): risc 0 e blocat. Lipsa câmpului rămâne 1 %.
+    if (o.riscPct === 0) return { blocat: true, suma: 0, bucati: 0, risc: 0, riscPctReal: 0, plafonat: false, comision: 0, peZero: COST_CONV, deja: o.deja > 0 ? o.deja : 0, plin: false };
     // v100.169: riscPct (fracție) din planul LUI; fără el, 1 % ca înainte
     var deja = o.deja > 0 ? o.deja : 0, fx = o.fx, riscLei = o.cont * (o.riscPct > 0 ? o.riscPct : 0.01), peBucLei = (o.intrare - o.stop) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = Math.max(0, o.cont * PLAFON - deja), plaf = false;
     if (suma > plafon + 1e-9) { buc = plafon * fx / o.intrare; suma = plafon; plaf = true; }

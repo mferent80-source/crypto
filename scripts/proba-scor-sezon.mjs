@@ -236,6 +236,13 @@ await test("ideea 2 - alerte (pur): pauza o dată pe bot închis cât ești în 
   const l = []; for (let i = 0; i < 10; i++) l.push(t(10 + i, START + (i + 1) * ORA, i < 4 ? -1 : 1));   // pierderile întâi: ultimii închiși sunt câștiguri, deci fără pauză
   s = S.calc(l, CFG, ACUM);   // 60 % din 10, net +2
   assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "rata" }]); assert.deepEqual(S.alerte(s, st).mesaje, []);
+  const rau = [];
+  for (let i = 0; i < 6; i++) rau.push(t(40 + i, START + (40 + i) * ORA, 1));
+  for (let i = 0; i < 4; i++) rau.push(t(50 + i, START + (50 + i) * ORA, -10));
+  s = S.calc(rau, CFG, ACUM);   // 60 % din 10, net −34
+  assert.ok(s.rata >= s.obiectiv.rata && s.net < 0, "rata " + s.rata + " net " + s.net);
+  assert.notEqual(s.nivel, "bine");
+  assert.ok(!S.alerte(s, {}).mesaje.some((m) => m.fel === "rata"));
   // sezon nou ⇒ țintele se anunță iar
   s = S.calc(l.map((x) => Object.assign({}, x, { inchis: x.inchis + 30 * ZI })), { start: START + 30 * ZI, obiectiv: CFG.obiectiv }, ACUM + 31 * ZI);
   assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "rata" }]);

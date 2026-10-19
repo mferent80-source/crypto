@@ -95,7 +95,7 @@ var ScorSezon = (function () {
     s.serie = { n: n, fel: fel };
     s.pauza = fel === "l" && n >= ob.serie;
     s.suficient = s.n >= MIN;
-    s.nivel = s.pauza ? "rau" : s.rata === null || !s.suficient ? "fara" : s.rata >= ob.rata ? "bine" : s.rata >= ob.rata - 0.15 ? "atentie" : "rau";   // v100.221 (audit 10): sub 10 culoarea e neutră
+    s.nivel = s.pauza ? "rau" : s.rata === null || !s.suficient ? "fara" : s.rata >= ob.rata && s.net !== null && !(s.net < 0) ? "bine" : s.rata >= ob.rata - 0.15 ? "atentie" : "rau";   // v100.222 (I-724): rata peste țintă cu net pe minus nu e verde
     s.start = c.start; s.obiectiv = ob; s.acum = t; s.oprit = c.oprit; s.dupaOprire = dupaOprire; s.piata = c.piata; s.moneda = P.moneda;
     s.ultimul = sezon.length ? sezon[sezon.length - 1] : null;
     s.progresRata = s.rata === null ? null : Math.max(0, Math.min(1, s.rata / ob.rata));
@@ -134,7 +134,7 @@ var ScorSezon = (function () {
     if (s.pauza && s.ultimul && st.pauzaLa !== s.ultimul.id) { st.pauzaLa = s.ultimul.id; out.push({ fel: "pauza" }); }
     // v100.221 (audit 5): cheia ține startul ȘI ținta - o țintă ridicată se anunță din nou când e atinsă
     var kr = s.start + "|" + s.obiectiv.rata, kn = s.start + "|" + s.obiectiv.net;
-    if (s.suficient && s.rata !== null && s.rata >= s.obiectiv.rata && st.rataLa !== kr) { st.rataLa = kr; out.push({ fel: "rata" }); }
+    if (s.suficient && s.rata !== null && s.rata >= s.obiectiv.rata && s.net !== null && !(s.net < 0) && st.rataLa !== kr) { st.rataLa = kr; out.push({ fel: "rata" }); }   // v100.222 (I-724)
     if (s.net !== null && s.net >= s.obiectiv.net && st.netLa !== kn) { st.netLa = kn; out.push({ fel: "net" }); }
     return { mesaje: out, stare: st };
   }

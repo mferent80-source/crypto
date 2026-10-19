@@ -6303,6 +6303,7 @@ function tbDeseneazaPortofoliu(){
   el.innerHTML='<div class="tbLinie"><span>Pe fiecare parte</span><b>'+p.peParte.long+' long · '+p.peParte.short+' short · '+p.peParte.neutru+' neutru</b></div>'
     +'<div class="tbLinie"><span>Expunerea (sumă × levier)</span><b>'+p.expunere.toFixed(0)+' USDT'+(p.expunerePeSold!=null?' · '+p.expunerePeSold.toFixed(1).replace(".",",")+'× soldul':'')+'</b></div>'
     +'<div class="tbLinie"><span>Dacă toată piața scade 10%</span><b class="'+(p.soc10<0?"bad":"good")+'">'+U(p.soc10)+'</b></div>'
+    +'<p class="tbSub">Cu ce mai cumpără botul pe drum. Fundingul viitor nu e în cifră.</p>'   /* v100.222 (I-726) */
     +(p.lichidatiLaSoc.length?'<div class="tbLinie"><span>S-ar lichida la −10%</span><b class="bad">'+escapeHtml(p.lichidatiLaSoc.join(", "))+'</b></div>':'')
     +tbBusolaPortofoliu(boti)
     +tbBtcPortofoliu(boti)
@@ -6369,7 +6370,7 @@ function tbDeseneazaSemafor(b){
   var conc=SemnaleBot.acumConcret({bot:b,fisa:f,zero:zero,costuri:costuri,plan:plan,pragMargine:pmT,pragStop:psT,acum:Date.now(),cifre:function(pr){return TabloExtra.cifreActiuni(b,{protectie:pr,b15:tbFisa.botId===b.id?tbFisa.b15:null})}});
   // v100.51 (I-476): liniile Consilierului pe grafic - stopul tau de acum si stopul planului (din cartela Stopul)
   var csG=conc.filter(function(c){return c&&c.cod==="stop"})[0],cfG=csG&&csG.cifre;
-  tbStare.consLinii={bot:b.id,stopAcum:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,stopPlan:cfG&&botiNr(cfG.pretPropus)!==null?botiNr(cfG.pretPropus):null};
+  tbStare.consLinii={bot:b.id,stopAcum:SemnaleBot.pretStopEcran(b),stopPlan:cfG&&botiNr(cfG.pretPropus)!==null?botiNr(cfG.pretPropus):null};   /* v100.222 (I-721) */
   var h=faraPlan?'<div class="tbFaraPlan">📝 <b>'+escapeHtml(String(b.baza||"Botul").replace(/\.PERP$/,""))+' n-are plan.</b> Fără țintă și prag scrise la rece, panoul nu-ți poate spune când să încasezi sau să ieși (nici podeaua).'
     +(pp?'<span class="tbSub"> Propun: ieși pe plus la <b>+'+String(pp.plus).replace(".",",")+' USDT</b>, pe minus la <b>−'+String(pp.minus).replace(".",",")+' USDT</b>, după <b>'+pp.afaraOre+' h</b> afară din grid — '+escapeHtml(pp.nota)+'.</span> <button type="button" class="actionGhost" data-action-click="tbPunePlanPropus()">Pune planul propus</button>':' <span class="tbSub">calculez propunerea…</span>')+'</div>':'';
   // celelalte motive + notele (ia profit, aglomerarea "info") - pe randul lor, nu in cartela
@@ -6379,7 +6380,7 @@ function tbDeseneazaSemafor(b){
   // v100.44 (I-465, demo aprobat 01.10): UN singur Consilier - toate sursele intr-un verdict, o actiune cu bani, 3 motive, restul pliat
   var vv=tbStare.verdictVechi,ind=$("tbIndicatoriRezumat");
   var cons=Consiliu.alcatuieste({sm:sm,concret:conc,busola:tbBusolaVerdict(b),regim:f&&f.regim?{miscare:!!f.regim.miscare}:null,sfaturi:tbStare.sfaturiLista||[],consilier:typeof consilierBot==="function"?consilierBot(b):[],socoteala:(tbAduSocoteala(),tbSoc.peCod),
-    laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),jos:botiNr(b.gridJos),opritor:b.opritorPierdereActiv?botiNr(b.opritorPierdere):null,opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,perechi:tbPerechiPt(b),
+    laJos:TabloExtra.totalCuGridLa(b,botiNr(b.gridJos)),jos:botiNr(b.gridJos),opritor:SemnaleBot.pretStopEcran(b),opritorProc:SemnaleBot.etichetaStopProc(b),opreste:vv&&vv.nivel==="OPRESTE"?{titlu:vv.titlu,ceFac:vv.ceFac}:null,perechi:tbPerechiPt(b),   /* v100.222 (I-721) */
     indicatori:ind&&ind.textContent.trim()&&ind.textContent.trim()!=="—"?"Indicatorii: "+ind.textContent.trim():null,btc:ac&&ac.btc&&ac.btc.text?ac.btc.text:null,
     note:alte.filter(function(x){return !x.k}).map(function(x){return x.m})});
   // v100.50 (I-473/I-472): „de ce s-a schimbat” (din verdictul colectorului, daca e acelasi nivel) + socoteala deciziilor
@@ -7369,7 +7370,7 @@ function tbRiscDeseneaza(){
     if(b&&Number(b.pornitLa)>0){var t=RiscLuna.textBot(rp.boti.supravietuire,(Date.now()-Number(b.pornitLa))/3600000);r.push(t||"Botul stă de sub o oră; din toți boții tăi, "+Math.round(rp.boti.desc.pePlus*100)+"% au ieșit pe plus.")}
     r.push(RiscLuna.textLuna(rp.boti.mc[0],"USDT"));
   }else r.push(typeof rlStare!=="undefined"&&rlStare.inLucru?"Aduc raportul de noapte…":typeof rlStare!=="undefined"&&rlStare.eroare?rlStare.eroare:"Raportul de noapte nu există încă: îl face colectorul, o dată pe zi.");
-  var tl=RiscLuna.textTotiBotii(boti.map(function(x){var st=x.opritorPierdereActiv?botiNr(x.opritorPierdere):null;return {nume:String(x.baza||"").replace(/\.PERP$/,""),investit:botiNr(x.investit)||0,laStop:st!=null?TabloExtra.totalCuGridLa(x,st):null,areStop:!!x.opritorPierdereActiv,lichPct:botiNr(x.distantaLichidarePct)}}));
+  var tl=RiscLuna.textTotiBotii(boti.map(function(x){return {nume:String(x.baza||"").replace(/\.PERP$/,""),investit:botiNr(x.investit)||0,laStop:x.opritorPierdereActiv?TabloExtra.totalLaOpritor(x):null,areStop:!!x.opritorPierdereActiv,lichPct:botiNr(x.distantaLichidarePct)}}));   /* v100.222 (I-721): la stopul în procente, pierderea e procent × investiție */
   if(tl)r.push(tl);
   tbRiscAduCor(boti);if(boti.length&&tbRiscCor.c)r.push(RiscLuna.textCorelatie(tbRiscCor.c,tbRiscCor.dubluri));
   el.innerHTML=r.filter(Boolean).map(function(t){return '<p class="tbSub tbRiscR">'+escapeHtml(t)+'</p>'}).join("")+'<button type="button" class="tbBtnLinie" data-action-click="navTo(\'montecarlo\',true)">Tot ce știu despre riscul și obiceiurile tale</button>';
