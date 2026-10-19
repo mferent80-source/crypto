@@ -82,11 +82,12 @@ await test("graficul: linia „stopul tău” folosește același preț live", (
   assert.match(G, /ad\("stop", o\.stopLive != null \? o\.stopLive : b\.opritorPierdere, "stopul tău"/, "niveluriBot îl folosește");
 });
 
-await test("versiunea v100.216 în toate locurile, colectorul v101.126, probele noi în lanțul de test", () => {
-  const V = "v100.216", IDX = citeste("public", "index.html"), P = JSON.parse(citeste("package.json"));
-  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, V); assert.equal(P.version, "100.216.0");
+await test("versiunea ≥ v100.216 în toate locurile, colectorul v101.126, probele noi în lanțul de test", () => {
+  const P = JSON.parse(citeste("package.json")), ver = Number(P.version.split(".")[1]), V = "v100." + ver, IDX = citeste("public", "index.html");
+  assert.ok(ver >= 216, "versiunea " + V);   /* v100.217: ≥, nu egal - ca v100.210 la v100.211 */
+  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, V); assert.equal(P.version, "100." + ver + ".0");
   assert.equal(IDX.split(V).length - 1, 4, "de 4 ori în index.html"); assert.ok(!IDX.includes("v100.215"));
-  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-216"')); assert.ok(citeste("functions", "_shared", "versiune.js").includes('VERSIUNE = "v100.216"'));
+  assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-' + ver + '"')); assert.ok(citeste("functions", "_shared", "versiune.js").includes('VERSIUNE = "' + V + '"'));
   assert.ok(citeste("scripts", "colector.mjs").includes('const VERSIUNE_COLECTOR = "v101.126"'));
   for (const k of ["test:v100216", "test:audit19srv", "test:audit19logica", "test:audit19ecran"]) { assert.ok(P.scripts[k], k); assert.ok(P.scripts.test.includes("npm run " + k), "în lanț: " + k); }
 });

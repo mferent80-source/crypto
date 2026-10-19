@@ -2866,4 +2866,21 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 /* v100.196 · reguli cerute de alte zone */
 /* (acțiuni, auditul UI 🟡1) pe telefon fiecare celulă își scrie numele coloanei; țintele de apăsare 44 px */
 @media (max-width:640px){.t212IdeiTab td[data-et]::before,.t212RevTab td[data-et]::before,.t212SocTab td[data-et]::before{content:attr(data-et) " ";color:var(--muted)}.t212RevTab,.t212RevTab tbody,.t212RevTab tr,.t212RevTab td,.t212SocTab,.t212SocTab tbody,.t212SocTab tr,.t212SocTab td{display:block}.t212RevTab tr,.t212SocTab tr{padding:8px 10px;border-bottom:1px solid var(--tb-linie)}.t212RevTab td,.t212SocTab td{padding:1px 0;border:0;text-align:left}.t212IdeiTab .t212BtnLinie{min-height:44px}}
+/* v100.217 · Scorul sezonului pe Pionex (el 19.10: „să mă stimuleze să fiu mai atent”) - cardul pe Acasă (#acScor) și în Jurnal (#jtScor); culoarea
+   marginii = nivelul față de țintă (--sc-c); cifrele mari cu tabular-nums; pe telefon 3 + 2 celule și formularul pe 2 coloane */
+.scCard{background:var(--tb-fond,var(--panel));border:1px solid var(--tb-linie,var(--line));border-left:4px solid var(--sc-c,var(--muted));border-radius:var(--tb-r,6px);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.scCap{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.scCap h4{margin:0;font-size:15px;font-weight:600}.scCap .acSub{margin-left:auto;font-size:12.5px;color:var(--muted)}
+.scCap .actionGhost{font:inherit;font-size:12.5px;padding:0 2px;min-height:0;color:var(--accent)}
+.scCifre{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--tb-linie,var(--line));border-radius:4px;overflow:hidden}
+.scCel{display:flex;flex-direction:column;gap:3px;padding:10px 14px;min-width:0}.scCel+.scCel{border-left:1px solid var(--tb-linie,var(--line))}
+.scEt{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.scVal{font-size:26px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}.scSub{font-size:12px;color:var(--muted)}
+.scObiectiv{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px}.scTinta{display:flex;flex-direction:column;gap:3px;min-width:160px;flex:1}
+.scBara{height:6px;border-radius:3px;background:var(--panel-3);overflow:hidden}.scBara i{display:block;height:100%;background:var(--sc-c,var(--accent));border-radius:3px;transition:width .3s}
+.scInainte{font-size:13px;color:var(--muted)}.scInainte b{color:var(--text)}
+.scForm{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}.scForm label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.scForm input{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:3px;padding:8px;font:inherit;font-size:14px;width:100%;min-height:44px}
+.scFormBtn{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.scFormBtn .acBtn{min-height:44px}.scMesaj{color:var(--bad)}
+#jurnaltrade #jtScor:not(:empty){margin-bottom:10px}
+.pzDemo #acasa>#acScor{order:11}.pzDemo #jtCrypto>#jtScor{order:10}
+@media (max-width:640px){.scCifre{grid-template-columns:repeat(3,minmax(0,1fr))}.scCel:nth-child(n+4){border-top:1px solid var(--tb-linie,var(--line))}.scCel:nth-child(4){border-left:0}.scVal{font-size:22px}.scForm{grid-template-columns:repeat(2,minmax(0,1fr))}.scCap .acSub{margin-left:0;width:100%}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

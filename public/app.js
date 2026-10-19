@@ -5667,8 +5667,47 @@ function jtStatCsv(piata){
   a.href=URL.createObjectURL(b);a.download="trade-uri-"+piata+(per==="tot"?"":"-"+per+"z")+"-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500);toast("Raportul CSV e descărcat ("+TextRo.cate(d.tr.length,"trade","trade-uri")+")","good");
 }
+// v100.217 (19.10, el: „să-mi afișeze începând de azi scorul trade-urilor pe Pionex: câte win, câte loss, rata de câștig… să mă stimuleze să fiu
+// mai atent” + „un obiectiv pe care îl setez eu”): Scorul sezonului (lib/scor-sezon.js) pe Acasă (#acScor) și sus în Jurnal (#jtScor).
+// Boții = cei din Jurnal (jtStare.boti, prin jtAduBoti - nicio cerere în plus la Pionex); data sezonului + obiectivul de pe serverul de acasă
+// (/api/scor-sezon, KV), ținute 10 minute. Cardul cu formularul deschis și cursorul în el NU se redesenează (ar șterge ce tastează).
+var scStare={cfg:null,la:0,sursa:null,deschis:{},mesaj:{},inLucru:false};
+async function scAsigura(forta){
+  if(!forta&&scStare.cfg&&Date.now()-scStare.la<10*60000)return;
+  try{var r=await getJSON("/api/scor-sezon");scStare.cfg=r&&r.sezon||null;scStare.sursa=r&&r.sursa||null;scStare.la=Date.now()}catch(e){scStare.cfg=scStare.cfg||null}
+}
+function scTrades(){if(!jtStare.boti||typeof StatisticaTrade==="undefined"||typeof JurnalTrade==="undefined")return null;return StatisticaTrade.dinPionex(JurnalTrade.din(jtStare.boti)).concat(StatisticaTrade.dinPionexAlte(JurnalTrade.alte(jtStare.boti)))}
+function scDeseneaza(){
+  if(typeof ScorSezon==="undefined")return;
+  var tr=scTrades(),s=tr?ScorSezon.calc(tr,scStare.cfg,Date.now()):null;
+  ["acScor","jtScor"].forEach(function(id){var el=$(id);if(!el)return;if(scStare.deschis[id]&&el.contains(document.activeElement))return;
+    el.innerHTML=s?ScorSezon.html(s,{id:id,formular:!!scStare.deschis[id],mesaj:scStare.mesaj[id]||"",faraJurnal:id==="jtScor"}):ScorSezon.htmlAstept(jtStare.eroare)})
+}
+async function scPorneste(){
+  if(scStare.inLucru)return;scStare.inLucru=true;
+  try{scDeseneaza();await scAsigura(false);if(!jtStare.boti)await jtPorneste(false);else scDeseneaza()}finally{scStare.inLucru=false}
+}
+function scorFormular(id){scStare.deschis[id]=!scStare.deschis[id];scStare.mesaj[id]="";scDeseneaza()}
+async function scorSalveaza(id){
+  var f=$("scForm-"+id);if(!f)return;var v=function(n){var i=f.querySelector('input[name="'+n+'"]');return i?i.value:""},o={rata:v("rata"),serie:v("serie"),net:v("net"),pana:v("pana")};
+  var ok=ScorSezon.valideazaObiectiv(o);if(!ok.ok){scStare.mesaj[id]=ok.eroare;if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();return scDeseneaza()}
+  try{var r=await apiFetch("/api/scor-sezon?action=obiectiv",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(o)}),j=await r.json().catch(function(){return {}});
+    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    if(!r.ok){scStare.mesaj[id]=j.error||("serverul a răspuns "+r.status);return scDeseneaza()}
+    scStare.cfg=j.sezon||scStare.cfg;scStare.la=Date.now();scStare.deschis[id]=false;scStare.mesaj[id]="";scDeseneaza();toast("Obiectivul e salvat","good")}
+  catch(e){scStare.mesaj[id]="Nu s-a salvat: "+((e&&e.message)||"");scDeseneaza()}
+}
+async function scorSezonNou(id){
+  if(!confirm("Pornești un sezon nou de azi? Boții de până acum rămân în Jurnal, cardul numără de la zero."))return;
+  try{var r=await apiFetch("/api/scor-sezon?action=sezonNou",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}),j=await r.json().catch(function(){return {}});
+    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    if(!r.ok){scStare.mesaj[id]=j.error||("serverul a răspuns "+r.status);return scDeseneaza()}
+    scStare.cfg=j.sezon||scStare.cfg;scStare.la=Date.now();scStare.deschis[id]=false;scStare.mesaj[id]="";scDeseneaza();toast("Sezon nou din "+ScorSezon.dataRo(scStare.cfg.start),"good")}
+  catch(e){scStare.mesaj[id]="Nu s-a pornit: "+((e&&e.message)||"");scDeseneaza()}
+}
 function jtRender(){
   var box=$("jtRezumat"),gr=$("jtGreseli"),li=$("jtLista"),st=$("jtStare");if(!box)return;
+  if(typeof scDeseneaza==="function")scDeseneaza();   // v100.217: scorul sezonului, sus în Jurnal și pe Acasă, din aceiași boți
   if(jtStare.eroare){box.innerHTML='<div class="tbBloc"><p class="bad">'+escapeHtml(jtStare.eroare)+'</p></div>';return}
   var l=JurnalTrade.din(jtStare.boti||[]),r=JurnalTrade.rezumat(l),P=GridCalcul.procent;
   jtStatRender("crypto");if(typeof jtFiltru!=="undefined"&&jtFiltru==="tot")jtStatRender("tot");   // v100.22

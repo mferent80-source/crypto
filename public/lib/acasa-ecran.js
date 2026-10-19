@@ -23,6 +23,7 @@ async function acasaPorneste(fortat) {
       pas("tickers", async function () { var t = await getJSON("/api/market?type=pionex_tickers&market=PERP"); return t && t.data && t.data.tickers || null; }),
       pas("glob", function () { return intelApi("crypto_global"); }),
       pas("cont", async function () { if (typeof contTotAsigura === "function") await contTotAsigura(); return true; }),
+      pas("scor", function () { return typeof scPorneste === "function" ? scPorneste() : null; }),   // v100.217: scorul sezonului (boții din Jurnal + configurația de acasă)
       // v93: Nasdaq 100 (colectorul, la 8 dimineata), calendarul saptamanii, stirile
       pas("ndx", function () { return getJSON("/api/t212?action=ndx"); }),
       pas("calendar", function () { return getJSON("/api/stiri?action=calendar"); }),
@@ -250,6 +251,7 @@ function acTopSector(s) {
 }
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
+  if (typeof scDeseneaza === "function") scDeseneaza();   // v100.217: scorul sezonului (din starea de acum; nu se ascunde când cardurile de mai jos își așteaptă datele)
   var d = acasa.d, cl = acClasamentSumar(d.clasament), mis = Acasa.miscari(d.tickers, { top: 60, inMiscare: cl ? cl.deEvitat.map(function (x) { return x.simbol; }) : [] });
   var btc = acBtc(d), fgO = d.piata && d.piata.fg, fgI = Acasa.fg(fgO && fgO.istoric && fgO.istoric.length ? fgO.istoric : fgO ? [fgO.valoare] : []);
   var btcMis = btc.regim ? !!btc.regim.miscare : false, larg = Acasa.largime(d.largime), p = d.piata || {};
