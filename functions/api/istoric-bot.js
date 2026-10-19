@@ -263,13 +263,14 @@ export async function onRequestPost({request,env}){
     return json({ok:true});
   }
   if(action==="contrafactual"){
-    const l=corp&&Array.isArray(corp.boti)?corp.boti.slice(0,50):null;if(!l)return json({error:"Lipseste boti"},400);
+    // audit 19.10: loturi de 200 (colectorul trimite si boții vechi, „fara-date”, cate 100 pe tura) si 3000 tinuti (500 lasau boții sa revina „de facut”)
+    const l=corp&&Array.isArray(corp.boti)?corp.boti.slice(0,200):null;if(!l)return json({error:"Lipseste boti"},400);
     let m={};try{m=JSON.parse(await env.ISTORIC.get("contrafactual")||"{}")}catch{m={}}
     if(!m||typeof m!=="object")m={};
     const txt=(v,k)=>typeof v==="string"?v.slice(0,k):"";
     for(const x of l){const id=idBot(x&&x.id);if(!id||!x.zice)continue;
       m[id]={nivel:["porneste","asteapta","nu","fara-date"].includes(x.zice.nivel)?x.zice.nivel:"fara-date",motive:(Array.isArray(x.zice.motive)?x.zice.motive:[]).slice(0,4).map(v=>txt(v,200)),dirTrend:txt(x.zice.dirTrend,8)||null,la:Date.now()}}
-    const ids=Object.keys(m);if(ids.length>500)for(const id of ids.slice(0,ids.length-500))delete m[id];
+    const ids=Object.keys(m);if(ids.length>3000)for(const id of ids.slice(0,ids.length-3000))delete m[id];
     await env.ISTORIC.put("contrafactual",JSON.stringify(m));
     return json({ok:true,n:Object.keys(m).length});
   }

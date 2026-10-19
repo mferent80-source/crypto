@@ -3,10 +3,19 @@
 // Folosit de colector (o data pe ora) si de scripts/daca-ascultai-real.mjs.
 // deps: { cereBoti() -> [boti bruti Pionex], cereKlines(simbol, interval, limit, endTime) -> [randuri],
 //         gata: {id: true}, GridCalcul, GridProba, JurnalTrade, Contrafactual, jurnal, pauza, max (5) }
+// audit 19.10: Pionex nu mai da lumanarile mai vechi de ~3,5 luni (MARKET_INVALID_TIME „endTime param error”; ONDO din 01.07 pica, 60 de zile
+// merge) ⇒ botii porniti acum peste 95 de zile nu se mai cer: primesc „fara-date” cu motivul (scris in KV, deci nu mai sunt „de facut”),
+// cel mult maxVechi pe tura, fara sa ocupe cele `max` locuri ale celor noi; eroarea endTime la ceilalti = tot „fara-date”, nu reincercare.
+export const VECHI_MS = 95 * 86400000;
+export const MOTIV_VECHI = "Pionex nu mai dă lumânările de atunci";
+const eEndTime = (e) => /MARKET_INVALID_TIME|endTime param error/i.test(String(e && e.message || e));
+const faraDate = (t) => ({ id: t.id, moneda: t.moneda, dir: t.dir, pornit: t.pornit, rezultat: t.rezultat, zice: { nivel: "fara-date", motive: [MOTIV_VECHI] } });
 export async function turaContrafactual(d) {
-  const Q = 15 * 60000, lista = d.JurnalTrade.din(await d.cereBoti()), rez = [];
+  const Q = 15 * 60000, lista = d.JurnalTrade.din(await d.cereBoti()), rez = [], acum = d.acum || Date.now();
+  const vechi = (t) => Number(t.pornit) > 0 && acum - Number(t.pornit) > VECHI_MS;
+  for (const t of lista.filter((x) => !d.gata[x.id] && vechi(x)).slice(0, d.maxVechi || 100)) rez.push(faraDate(t));
   // v100.40: cei mai NOI intai (arhiva are ~2.200 de boti; raspunsul conteaza intai pentru ce s-a inchis acum)
-  const deFacut = lista.filter((t) => !d.gata[t.id]).sort((a, b) => (b.inchis || b.pornit || 0) - (a.inchis || a.pornit || 0)).slice(0, d.max || 5);
+  const deFacut = lista.filter((t) => !d.gata[t.id] && !vechi(t)).sort((a, b) => (b.inchis || b.pornit || 0) - (a.inchis || a.pornit || 0)).slice(0, d.max || 5);
   for (const t of deFacut) {
     const s = d.simbol ? await d.simbol(t.moneda) : t.moneda + "_USDT_PERP";   // v100.40: tickerul real (LIGHTER -> LIT)
     try {
@@ -23,7 +32,10 @@ export async function turaContrafactual(d) {
       const f = d.GridProba.fisa({ simbol: s, pret: t.pretInit, b15: d.GridCalcul.bare(coada(r15, Q)), b4h: d.GridCalcul.bare(coada(r4, 4 * 3600000)), b1d: d.GridCalcul.bare(coada(r1, 86400000)), suma: t.investit || 100, H: 2, dir: null, levier: null, minNotional: null });
       const z = d.Contrafactual.zice(f && !f.eroare ? f : null, t);
       rez.push({ id: t.id, moneda: t.moneda, dir: t.dir, pornit: t.pornit, rezultat: t.rezultat, zice: z });
-    } catch (e) { d.jurnal("contrafactual", t.moneda, s, e.message); if (d.esuat) d.esuat(t.id); }
+    } catch (e) {
+      if (eEndTime(e)) { rez.push(faraDate(t)); continue; }   // audit 19.10: lumanarile de atunci nu mai exista la Pionex - nu se reincearca
+      d.jurnal("contrafactual", t.moneda, s, e.message); if (d.esuat) d.esuat(t.id);
+    }
   }
   if (rez.length) d.jurnal("contrafactual:", rez.map((x) => x.moneda + "=" + x.zice.nivel).join(" "));
   return rez;

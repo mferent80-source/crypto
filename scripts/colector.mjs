@@ -874,7 +874,7 @@ async function turaCf() {
     const rez = await turaContrafactual({
       cereBoti: botiInchisiToti, simbol: simbolPerp, esuat: (id) => { cfEsuat[id] = Date.now(); },
       cereKlines: async (s, iv, lim, end) => { const k = await cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s) + "&interval=" + iv + "&limit=" + lim + "&endTime=" + end); await new Promise((r) => setTimeout(r, 1600)); if (!k || !k.data || !Array.isArray(k.data.klines)) throw new Error((k && (k.error || k.message)) || "fara lumanari"); return k.data.klines; },
-      gata, GridCalcul, GridProba, JurnalTrade, Contrafactual, jurnal, max: 5 });
+      gata, GridCalcul, GridProba, JurnalTrade, Contrafactual, jurnal, max: 5, acum: Date.now() });   // audit 19.10: ceasul, pentru boții peste 95 de zile
     if (rez.length) await trimite("/api/istoric-bot?action=contrafactual", { boti: rez });
   } catch (e) { jurnal("contrafactual ESEC", e.message); }
   cfLa = Date.now(); cfInLucru = false;

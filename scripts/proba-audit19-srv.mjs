@@ -59,5 +59,57 @@ await test("(1) colectorul cheamă paza după lista boților și notează „anu
   const g = citeste("scripts", "lib", "garda-alerte.mjs"); assert.match(g, /"lichidareOarba"/); assert.match(g, /"lichidareVedeIar"/);
 });
 
+// ---------- comun: KV fals (cu pauze, ca citește-modifică-scrie să se poată suprapune) și cereri spre istoric-bot ----------
+const pauza = (ms) => new Promise((r) => setTimeout(r, ms));
+function kvFals() { const m = new Map(); return { m, async get(k) { await pauza(3); return m.has(k) ? m.get(k) : null; }, async put(k, v) { await pauza(3); m.set(k, String(v)); }, async list() { return { keys: [...m.keys()].map((name) => ({ name })), list_complete: true }; } }; }
+const TOKEN = "proba-audit19-token-1234567890";
+const IB = await import("../functions/api/istoric-bot.js");
+let ipN = 0;
+const postIb = (env, action, corp) => IB.onRequestPost({ request: new Request("https://radar.test/api/istoric-bot?action=" + action, { method: "POST", headers: { authorization: "Bearer " + TOKEN, "content-type": "application/json", origin: "https://radar.test", "x-forwarded-for": "10.19.0." + (++ipN % 250) }, body: JSON.stringify(corp) }), env }).then((r) => r.json());
+
+// ---------- (2) contrafactualul ----------
+const { turaContrafactual } = await import("./lib/tura-contrafactual.mjs");
+const ZI = 86400000;
+function lumeCf(boti, cereKlines) {
+  const jurnal = [], esuate = [], cerute = [];
+  const d = { cereBoti: async () => boti, simbol: async (m) => m + "_USDT_PERP", esuat: (id) => esuate.push(id), acum: ACUM,
+    cereKlines: async (s, iv, lim, end) => { cerute.push(s); return cereKlines(s, iv, lim, end); },
+    gata: {}, GridCalcul: { bare: (a) => a }, GridProba: { fisa: () => ({ eroare: "x" }) }, Contrafactual: { taie: (a) => a, zice: () => ({ nivel: "nu", motive: ["m"] }) },
+    JurnalTrade: { din: (l) => l }, jurnal: (...a) => jurnal.push(a.join(" ")), max: 5 };
+  return { d, jurnal, esuate, cerute };
+}
+await test("(2b) boții porniți acum peste 95 de zile nu se mai cer: „fara-date” cu motivul, fără să ocupe locurile celor noi", async () => {
+  const boti = [{ id: "v1", moneda: "ONDO", pornit: ACUM - 110 * ZI, inchis: ACUM - 100 * ZI }, { id: "v2", moneda: "ALGO", pornit: ACUM - 96 * ZI },
+    ...Array.from({ length: 5 }, (_, i) => ({ id: "n" + i, moneda: "SOL", pornit: ACUM - (10 + i) * ZI, inchis: ACUM - i * ZI }))];
+  const w = lumeCf(boti, async () => []);
+  const rez = await turaContrafactual(w.d);
+  const vechi = rez.filter((x) => x.id === "v1" || x.id === "v2");
+  assert.equal(vechi.length, 2, "vechii n-au primit „fara-date”");
+  for (const x of vechi) { assert.equal(x.zice.nivel, "fara-date"); assert.deepEqual(x.zice.motive, ["Pionex nu mai dă lumânările de atunci"]); }
+  assert.ok(!w.cerute.includes("ONDO_USDT_PERP") && !w.cerute.includes("ALGO_USDT_PERP"), "a cerut lumânări pentru un bot vechi");
+  assert.equal(rez.filter((x) => /^n/.test(x.id)).length, 5, "cei 5 noi trebuiau încercați toți");
+});
+await test("(2c) „endTime param error” / MARKET_INVALID_TIME ⇒ „fara-date” scris (nu reîncercare); altă eroare ⇒ reîncercare a doua zi, ca înainte", async () => {
+  const boti = [{ id: "a", moneda: "ONDO", pornit: ACUM - 60 * ZI }, { id: "b", moneda: "ALGO", pornit: ACUM - 50 * ZI }, { id: "c", moneda: "BTC", pornit: ACUM - 40 * ZI }];
+  const w = lumeCf(boti, async (s) => { if (s === "ONDO_USDT_PERP") throw new Error("endTime param error"); if (s === "ALGO_USDT_PERP") throw new Error("Pionex klines unavailable · MARKET_INVALID_TIME"); throw new Error("fara lumanari"); });
+  const rez = await turaContrafactual(w.d);
+  assert.deepEqual(rez.map((x) => x.id + "=" + x.zice.nivel).sort(), ["a=fara-date", "b=fara-date"]);
+  assert.deepEqual(rez[0].zice.motive, ["Pionex nu mai dă lumânările de atunci"]);
+  assert.deepEqual(w.esuate, ["c"]);
+});
+await test("(2a) serverul ține 3000 de boți în contrafactual (nu 500) și primește loturi de 200", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  for (let p = 0; p < 16; p++) {
+    const boti = Array.from({ length: 200 }, (_, i) => ({ id: "b" + (p * 200 + i), zice: { nivel: "fara-date", motive: ["Pionex nu mai dă lumânările de atunci"] } }));
+    const r = await postIb(env, "contrafactual", { boti }); assert.equal(r.ok, true);
+  }
+  const m = JSON.parse(env.ISTORIC.m.get("contrafactual"));
+  assert.equal(Object.keys(m).length, 3000); assert.ok(m.b3199 && !m.b0, "se taie cei mai vechi");
+  assert.equal(m.b3199.nivel, "fara-date"); assert.deepEqual(m.b3199.motive, ["Pionex nu mai dă lumânările de atunci"]);
+});
+await test("(2) colectorul dă turei ceasul; daca-ascultai-real merge tot cu tura", () => {
+  assert.match(citeste("scripts", "colector.mjs"), /gata, GridCalcul, GridProba, JurnalTrade, Contrafactual, jurnal, max: 5, acum: Date\.now\(\) \}\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);
