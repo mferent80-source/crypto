@@ -104,20 +104,26 @@
   function alerteNr() { return alerteNrDin((document.querySelector('[data-nav="alerts"]') || {}).textContent); }
 
   // ---------- I-591: drumul botului (nivelurile = ale graficului, din date) ----------
+  // audit 19.10 (el: „pe bara de grid să arate doar gridul și stop loss, nu și lichidarea” - drumul botului): gridul, stopul și prețul de
+  // acum; planul, zero-ul, intrarea și lichidarea rămân pe grafic. Botul la prețul LIVE (pvBotLive din app.js), ca stopul în procente să
+  // se socotească live, cu grilele de pe drum (TabloExtra.pretStopLive).
+  function botLive(b) { try { return typeof window.pvBotLive === "function" ? window.pvBotLive(b) || b : b; } catch (e) { return b; } }
+  function stopDrum(b) {
+    if (!b || !b.opritorPierdereActiv) return null;
+    var TE = window.TabloExtra, r = nr(b.opritorPierdereRaport), raport = b.opritorPierdereTip === "raport" && r !== null;
+    var p = TE && TE.pretStopLive ? TE.pretStopLive(b) : nr(b.opritorPierdere);
+    if (!(p > 0)) return null;
+    return { p: p, n: raport ? "stop " + (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(1).replace(".", ",") + "%" : "stop", tit: raport ? "stopul din Pionex în procente din investiție; prețul e socotit acum, cu grilele de pe drum, și se mută cu poziția" : "stopul din Pionex" };
+  }
   function nivele(b) {
-    var L = [], add = function (p, n, c, cls) { p = nr(p); if (p != null && p > 0) L.push({ p: p, n: n, c: c, cls: cls || "" }); };
-    var G = window.tbGraficUltim, NUME = { gridSus: ["grid sus", "var(--pzInfo)"], planPlus: ["plan +", "var(--pzSus)"], zero: ["zero", "var(--pzAur)"], intrare: ["intrare", "var(--pzT1)"], planMinus: ["plan −", "var(--pzJos)"], gridJos: ["grid jos", "var(--pzInfo)"], stop: ["stop", "var(--pzJos)"], lich: ["lichidare", "var(--pzJos)", "pzTare"] };
-    if (G && G.botId === b.id && G.niv && G.niv.length) {
-      G.niv.forEach(function (x) { var q = NUME[x.k]; if (q) add(x.p, q[0], q[1], q[2]); });
-      if (G.stopPlan) add(G.stopPlan, "stopul planului", "var(--pzJos)", "pzSub");
-    } else {   // graficul n-a desenat încă: ce știm sigur din bot
-      add(b.pretLichidare || b.lichidareJos, "lichidare", "var(--pzJos)", "pzTare"); if (b.opritorPierdereActiv) add(b.opritorPierdere, "stop", "var(--pzJos)");
-      add(b.gridJos, "grid jos", "var(--pzInfo)"); add(b.pretDeschidere, "intrare", "var(--pzT1)"); add(b.gridSus, "grid sus", "var(--pzInfo)");
-    }
+    var L = [], add = function (p, n, c, cls, tit) { p = nr(p); if (p != null && p > 0) L.push({ p: p, n: n, c: c, cls: cls || "", tit: tit || "" }); };
+    var bl = botLive(b), s = stopDrum(bl);
+    add(b.gridJos, "grid jos", "var(--pzInfo)"); add(b.gridSus, "grid sus", "var(--pzInfo)");
+    if (s) add(s.p, s.n, "var(--pzJos)", "", s.tit);
     return L;
   }
   function drumHtml(b, mic, latime) {
-    var L = nivele(b), p = nr(b.pretCurent); if (!L.length || p == null) return "";
+    var L = nivele(b), p = nr(botLive(b).pretCurent); if (!L.length || p == null) return "";
     var lo = Math.min.apply(null, L.map(function (x) { return x.p; }).concat(p)), hi = Math.max.apply(null, L.map(function (x) { return x.p; }).concat(p)), pad = (hi - lo) * 0.04 || 1e-9;
     lo -= pad; hi += pad; var X = function (v) { return ((v - lo) / (hi - lo) * 100).toFixed(2); };
     L.sort(function (a, c) { return a.p - c.p; });
@@ -127,7 +133,7 @@
     var nrR = Math.max.apply(null, L.map(function (x) { return (x.rand || 0) + 1; })), h = '<div class="pzDrum' + (mic ? " pzDrumMic" : "") + '"' + (mic ? "" : ' style="padding-bottom:' + (14 + nrR * 16) + 'px"') + '><div class="pzDrumPista">';
     var gj = nr(b.gridJos), gs = nr(b.gridSus);
     if (gj && gs) h += '<i class="pzDrumGrid" style="left:' + X(gj) + '%;width:' + (X(gs) - X(gj)).toFixed(2) + '%"></i>';
-    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p)) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p)) + 'top:' + (16 + x.rand * 16) + 'px;color:' + x.c + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b></span>'); });
+    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p) + (x.tit ? " · " + x.tit : "")) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p)) + 'top:' + (16 + x.rand * 16) + 'px;color:' + x.c + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b></span>'); });
     h += '<i class="pzDrumAcum" style="left:' + X(p) + '%" title="acum ' + fP(p) + '"></i>' + (mic ? "" : '<span class="pzDrumAcumEt" style="left:' + X(p) + '%;' + ancora(X(p)) + '">acum ' + fP(p) + '</span>');
     return h + '</div></div>';
   }
@@ -511,7 +517,7 @@
     if (b) { var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
   }
 
-  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, verdictValid: verdictValid, tonLich: tonLich };
+  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, verdictValid: verdictValid, tonLich: tonLich };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#jurnaltrade .jtFiltru")) setTimeout(function () { try { pagJurnal(); } catch (x) {} }, 30); });   /* M1: antetul urmează fila pe loc */

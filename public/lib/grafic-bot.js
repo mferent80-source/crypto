@@ -268,7 +268,7 @@ var GraficBot = (function () {
     ad("intrare", b.pretDeschidere, "intrarea medie", COL.intrare, "dash", "intrare");
     if (o.planMinus && nr(o.planMinus.pret)) ad("planMinus", o.planMinus.pret, "plan −" + o.planMinus.usdt + " USDT", COL.bad, "dash", "−" + o.planMinus.usdt);
     ad("gridJos", b.gridJos, "grid jos", COL.accent, "fine", "grid↓");
-    if (b.opritorPierdereActiv) ad("stop", b.opritorPierdere, "stopul tău", COL.bad, "solid", "stop");
+    if (b.opritorPierdereActiv) ad("stop", o.stopLive != null ? o.stopLive : b.opritorPierdere, "stopul tău", COL.bad, "solid", "stop");   // audit 19.10: stopul în procente socotit live (TabloExtra.pretStopLive)
     ad("lich", b.pretLichidare, "lichidare", COL.bad, "lich", "lich.");
     return l;
   }
@@ -360,7 +360,7 @@ var GraficBot = (function () {
     var z = TE ? TE.dacaInchizi(b) : null, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
     // v100.98: planul CU gridul pe drum (pretTintaPentru / pretOpritorPentru)
     var pPl = TE && plus > 0 ? TE.pretTintaPentru(b, plus) : null, pMi = TE && minus > 0 ? TE.pretOpritorPentru(b, -minus) : null;
-    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null }), d.sanse);
+    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null, stopLive: TE && TE.pretStopLive ? TE.pretStopLive(b) : null }), d.sanse);
     var xo = d.brut && d.brut.buOrderData || {}, gj = nr(xo.bottom), gs = nr(xo.top);
     var grila = { jos: gj !== null ? gj : nr(b.gridJos), sus: gs !== null ? gs : nr(b.gridSus), linii: nr(xo.row), geo: String(xo.gridType || "").toLowerCase() === "geometric" };
     var zi = ziObisnuita(viu || (raw.length ? raw[raw.length - 1].c : null), d.profil);   // v100.51 (I-470, I-476)

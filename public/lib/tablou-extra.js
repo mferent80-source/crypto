@@ -306,6 +306,15 @@ var TabloExtra = (function () {
   }
   // v101.7: pretul opritorului la care, atins, totalul e exact T (planul pe minus: T = −prag). Cautare prin injumatatire
   // (totalul creste cu pretul la long, scade la short); planul deja atins la pretul de acum -> null.
+  // audit 19.10 (el: „să calculeze live stoploss dacă pun procent”): stopul pus în PROCENTE din investiție (Pionex profit_ratio) - prețul
+  // la care totalul, CU grilele de pe drum, atinge procentul, socotit la prețul de acum (serverul îl socotește doar pe poziția de acum);
+  // stopul pus ca preț rămâne prețul lui. Totalul deja sub procent / fără date ⇒ prețul serverului.
+  function pretStopLive(b, comision) {
+    if (!b || !b.opritorPierdereActiv) return null;
+    var inv = nr(b.investit), r = nr(b.opritorPierdereRaport), op = nr(b.opritorPierdere);
+    if (b.opritorPierdereTip === "raport" && r !== null && inv > 0) { var x = pretOpritorPentru(b, r * inv, comision); return x !== null ? x : op > 0 ? op : null; }
+    return op > 0 ? op : null;
+  }
   function pretOpritorPentru(b, T, comision) {
     var p = nr(b && b.pretCurent), t = nr(T), dir = String(b && b.directie || "").toLowerCase();
     if (p === null || t === null || (dir !== "long" && dir !== "short")) return null;
@@ -736,7 +745,7 @@ var TabloExtra = (function () {
     return Object.keys(pe).map(function (k) { var g = pe[k]; g.text = "«" + (NUME_ALERTA[k] || k) + "»: prețul a scăzut în " + g.peMinus + " din " + g.n + " după 24 h" + (g.n < 10 ? " (prea puține)" : ""); return g; }).sort(function (a, b) { return b.n - a.n; });
   }
 
-  return { stopDincoloDeLichidare: stopDincoloDeLichidare, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { stopDincoloDeLichidare: stopDincoloDeLichidare, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;
