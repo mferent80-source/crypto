@@ -131,7 +131,8 @@ await test("5 textele în engleză de pe drumurile zilnice și din Unelte: în r
 
 // ---------------------------------------------------------------- 6. eticheta lipită
 await test("6 Starea aplicației: eticheta și valoarea din .healthBox despărțite (nu „Spot RESTBINANCE FAIL”)", () => {
-  assert.ok(!/<span class="label">[^<]*<\/span><b id="health/.test(IDX), "eticheta lipită de valoare în HTML");
+  assert.ok(!/<div class="healthBox"><span class="label">[^<]*<\/span><b id="health/.test(IDX), "eticheta lipită de valoare în HTML");
+  assert.equal((IDX.match(/<div class="healthBox"><span class="label">[^<]*<\/span> <b id="health/g) || []).length, 6);
   assert.match(CSS, /\.healthBox b\{display:block[^}]*\}/);
 });
 

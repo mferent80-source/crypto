@@ -484,6 +484,8 @@ main{max-width:1160px;padding-top:14px}
 .wsDot.live{background:var(--good);box-shadow:none}
 .healthGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .healthBox{background:#141C24;border:1px solid #26333F;border-radius:5px;padding:10px}
+/* audit 19.10: valoarea sub etichetă, ca la .freshBox / .sourceBox (înainte ieșea lipită: „Spot RESTBINANCE FAIL”) */
+.healthBox b{display:block;font-size:14px;margin-top:4px}
 .fullscreenChart{position:fixed!important;inset:8px!important;z-index:120!important;background:#141C24!important;padding:14px!important;border-radius:5px!important;overflow:auto!important}
 @media(max-width:800px){.vpWrap{grid-template-columns:1fr}.ctxGrid{grid-template-columns:repeat(2,1fr)}.riskForm{grid-template-columns:repeat(2,1fr)}.depthGrid{grid-template-columns:1fr}.healthGrid{grid-template-columns:1fr}}
 
