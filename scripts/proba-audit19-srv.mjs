@@ -347,5 +347,40 @@ await test("(7) cod mort scos: tokenValid (și equalBytes, folosit doar de el), 
   assert.ok(!/ENGINE_CONTRACT_VERSION/.test(citeste("functions", "api", "market.js"))); assert.ok(!/ENGINE_CONTRACT_VERSION/.test(citeste("functions", "api", "external-intel.js")));
 });
 
+// ---------- (8) livrarea repornește colectorul ----------
+await test("(8) trebuieRepornitColectorul: da pe scripts/colector.mjs, scripts/lib/, public/lib/; nu pe rest", async () => {
+  const CL = await import("./copie-de-lucru.mjs");
+  assert.equal(typeof CL.trebuieRepornitColectorul, "function");
+  assert.equal(CL.trebuieRepornitColectorul(["scripts/colector.mjs"]), true);
+  assert.equal(CL.trebuieRepornitColectorul(["README.md", "scripts/lib/tura-scan.mjs"]), true);
+  assert.equal(CL.trebuieRepornitColectorul(["public/lib/alerte.js"]), true);
+  assert.equal(CL.trebuieRepornitColectorul(["public/app.js", "functions/api/market.js", "scripts/proba-v1.mjs", "scripts/colector-v77.mjs", "public/library.js"]), false);
+  assert.equal(CL.trebuieRepornitColectorul([]), false);
+});
+await test("(8) PID-ul și linia de comandă: se oprește DOAR un proces a cărui linie e scripts\\colector.mjs", async () => {
+  const CL = await import("./copie-de-lucru.mjs");
+  assert.equal(CL.pidDinFisier("12345 1760860000000"), 12345); assert.equal(CL.pidDinFisier(""), null); assert.equal(CL.pidDinFisier("abc"), null);
+  assert.equal(CL.eLiniaColectorului('"C:\\Program Files\\nodejs\\node.exe" scripts\\colector.mjs'), true);
+  assert.equal(CL.eLiniaColectorului("node scripts/colector.mjs"), true);
+  assert.equal(CL.eLiniaColectorului("node scripts\\colector-v77.mjs"), false);
+  assert.equal(CL.eLiniaColectorului("C:\\Windows\\notepad.exe"), false); assert.equal(CL.eLiniaColectorului(null), false);
+});
+await test("(8) livreaza: după aducerea principalului repornește colectorul (oprit doar după linie, pornit detașat ca lansatorul, verificat la 20 s)", () => {
+  const s = citeste("scripts", "copie-de-lucru.mjs");
+  const iAdus = s.indexOf("Principalul adus la"), iRep = s.indexOf("if (trebuieRepornitColectorul(atinse))");
+  assert.ok(iAdus > 0 && iRep > iAdus, "repornirea trebuie să vină după aducerea principalului");
+  assert.match(s, /if \(linie && eLiniaColectorului\(linie\)\)[^\n]*Stop-Process -Id \$\{pid\} -Force/);
+  assert.match(s, /Start-Process -FilePath node -ArgumentList 'scripts\\\\colector\.mjs' -WorkingDirectory/);
+  assert.match(s, /-WindowStyle Hidden -PassThru/);
+  assert.match(s, /asteaptaMs\(20000\)/);
+  assert.ok(!/Ai atins colectorul ⇒ repornește-l ca să ia codul nou\."\);\n  \/\/ v100\.211/.test(s), "a rămas doar sfatul vechi");
+});
+await test("(8b) .dev.vars: „porneste” îl copiază, „curata” îl șterge înainte de a scoate copia", () => {
+  const s = citeste("scripts", "copie-de-lucru.mjs");
+  assert.match(s, /fs\.copyFileSync\(path\.join\(RAD, "\.dev\.vars"\), path\.join\(dest, "\.dev\.vars"\)\)/);
+  const iSt = s.indexOf('fs.rmSync(path.join(dest, ".dev.vars")'), iRm = s.indexOf('"worktree", "remove"');
+  assert.ok(iSt > 0 && iSt < iRm);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);

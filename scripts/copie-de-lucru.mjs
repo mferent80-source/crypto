@@ -90,6 +90,32 @@ function porneste(nume) {
   return 0;
 }
 
+// audit 19.10: colectorul încarcă scripts/colector.mjs, scripts/lib/ și public/lib/ o singură dată, la pornire ⇒ o livrare care le atinge
+// rămânea fără efect până la repornirea lui de mână („repornește-l” era doar un sfat). Acum îl repornește chiar livrarea, ca lansatorul:
+// oprește DOAR PID-ul din data\colector.pid, și doar dacă linia lui de comandă e scripts\colector.mjs; îl pornește detașat
+// (Start-Process node scripts\colector.mjs, ascuns), apoi verifică după 20 s că noul PID trăiește.
+export function trebuieRepornitColectorul(atinse) { return (atinse || []).some((x) => x === "scripts/colector.mjs" || x.startsWith("scripts/lib/") || x.startsWith("public/lib/")); }
+export function pidDinFisier(text) { const n = Number(String(text || "").trim().split(/\s+/)[0]); return Number.isInteger(n) && n > 0 ? n : null; }
+export function eLiniaColectorului(linie) { return /(^|[\s"'\\/])scripts[\\/]colector\.mjs(["'\s]|$)/i.test(String(linie || "")); }
+const asteaptaMs = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+function ps(cmd) { const r = spawnSync("powershell", ["-NoProfile", "-Command", cmd], { encoding: "utf8", windowsHide: true }); return String(r.stdout || "").trim(); }
+const linieDeComanda = (pid) => ps(`(Get-CimInstance Win32_Process -Filter 'ProcessId=${Number(pid)}' -ErrorAction SilentlyContinue).CommandLine`);
+function repornesteColectorul(rad) {
+  let pid = null; try { pid = pidDinFisier(fs.readFileSync(path.join(rad, "data", "colector.pid"), "utf8")); } catch {}
+  if (pid) {
+    const linie = linieDeComanda(pid);
+    if (linie && eLiniaColectorului(linie)) { ps(`Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue`); scrie(`Am oprit colectorul vechi (PID ${pid}).`); asteaptaMs(2000); }
+    else scrie(`PID-ul ${pid} din data\\colector.pid nu e colectorul (${linie ? "alt program" : "nu rulează"}) — nu-l opresc.`);
+  } else scrie("data\\colector.pid lipsește — colectorul nu rula; îl pornesc.");
+  const nou = Number(ps(`(Start-Process -FilePath node -ArgumentList 'scripts\\colector.mjs' -WorkingDirectory '${rad.replace(/'/g, "''")}' -WindowStyle Hidden -PassThru).Id`));
+  if (!(nou > 0)) { scrie("⚠ colectorul NU a pornit (Start-Process n-a dat un PID) — pornește-l: PORNESTE-CRYPTO-RADAR.bat."); return false; }
+  asteaptaMs(20000);
+  const viu = eLiniaColectorului(linieDeComanda(nou));
+  let dinFisier = null; try { dinFisier = pidDinFisier(fs.readFileSync(path.join(rad, "data", "colector.pid"), "utf8")); } catch {}
+  scrie(viu ? `Colectorul repornit: PID ${nou}, viu după 20 s${dinFisier === nou ? " (și în data\\colector.pid)" : ` (data\\colector.pid arată ${dinFisier || "nimic"})`}.`
+    : `⚠ colectorul repornit (PID ${nou}) NU mai trăiește după 20 s — uită-te în data\\colector.log și pornește-l: PORNESTE-CRYPTO-RADAR.bat.`);
+  return viu;
+}
 function livreaza(nume) {
   const dest = caleCopie(nume);
   if (!fs.existsSync(dest)) { scrie(`Nu există copia ${dest}.`); return 1; }
@@ -139,11 +165,15 @@ function livreaza(nume) {
     return 2;
   }
   scrie(`Principalul adus la ${git(RAD, "rev-parse", "--short", "HEAD").out}${ale.length ? ` (modificările necomise ale altora, pe alte fișiere, au rămas: ${ale.length})` : ""}.`);
+  // audit 19.10: codul colectorului atins ⇒ repornit acum, din principal (nu doar sfatul de mai jos)
+  if (trebuieRepornitColectorul(atinse)) {
+    if (process.platform !== "win32" || process.env.COPIE_FARA_COLECTOR || !fs.existsSync(path.join(RAD, "scripts", "colector.mjs"))) scrie("Ai atins colectorul ⇒ repornește-l ca să ia codul nou.");
+    else { scrie("Ai atins colectorul (scripts/colector.mjs, scripts/lib/ sau public/lib/) ⇒ îl repornesc din principal…"); repornesteColectorul(RAD); }
+  }
   if (atinse.some((x) => x.startsWith("public/")) && fs.existsSync(path.join(RAD, "scripts", "proba-ecran-telefon.mjs"))) {
     scrie("Ai atins public/ ⇒ proba de telefon pe serverul de acasă (8788 servește principalul)…");
     if (!ruleaza(RAD, "node", ["scripts/proba-ecran-telefon.mjs"])) scrie("⚠ proba de telefon a PICAT pe principal — uită-te acum (codul e publicat).");
   }
-  if (atinse.some((x) => x === "scripts/colector.mjs" || x.startsWith("scripts/lib/"))) scrie("Ai atins colectorul ⇒ repornește-l ca să ia codul nou.");
   // v100.211: serverul 8788 rulează Worker-ul PRE-CONSTRUIT (wrangler dev --no-bundle, fără esbuild în watch) ⇒ Functions atinse
   // se reconstruiesc aici, în principal. v100.213: în worker-local, NU sub .wrangler (acolo wrangler nu vede schimbarea — „probat
   // 18.10” din v100.211 era pe un dosar din tmp), apoi health-ul 8788 trebuie să arate versiunea nouă.
