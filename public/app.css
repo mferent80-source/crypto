@@ -2510,7 +2510,8 @@ body:before{background-image:none!important}
 .pzCel>b small{font-size:10.5px;color:var(--pzT2);font-weight:400}
 
 .pzCel.pzRosu>b{color:var(--pzJos)}.pzCel.pzAtentie>b{color:var(--pzAur)}
-@media (max-width:550px){#pzKpi{display:none}}
+/* audit 19.10: pe telefon fâșia se vede (cea mai aproape lichidare, T212, colectorul), compactă: 2 coloane, font mai mic, rândurile se rup în loc să fie tăiate */
+@media (max-width:550px){#pzKpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}#pzKpi .pzCel{padding:6px 9px;white-space:normal;border-bottom:1px solid var(--pzLi)}#pzKpi .pzCel:nth-child(2n){border-right:0}#pzKpi .pzCel:nth-last-child(-n+2){border-bottom:0}#pzKpi .pzCel>span{font-size:10px;line-height:1.2}#pzKpi .pzCel>b{font-size:12.5px;line-height:1.25;overflow-wrap:anywhere}}
 
 /* I-590: verdictul */
 #pzVerdict{border:1px solid var(--pzLi);background:var(--pzF1);border-radius:5px;padding:12px 14px;margin:0 0 10px}
