@@ -111,5 +111,54 @@ await test("(2) colectorul dă turei ceasul; daca-ascultai-real merge tot cu tur
   assert.match(citeste("scripts", "colector.mjs"), /gata, GridCalcul, GridProba, JurnalTrade, Contrafactual, jurnal, max: 5, acum: Date\.now\(\) \}\)/);
 });
 
+// ---------- (3) scrierile KV citește-modifică-scrie, serializate pe cheie ----------
+await test("(3) peCheie: aceeași cheie rulează pe rând, în ordine; o eroare nu rupe lanțul; chei diferite nu se așteaptă; lanțul se golește", async () => {
+  const Ser = await import("../functions/_shared/serializare.js");
+  const urme = [];
+  const lucru = (n, ms, rau) => () => new Promise((res, rej) => { urme.push("start" + n); setTimeout(() => { urme.push("gata" + n); rau ? rej(new Error("rău")) : res(n); }, ms); });
+  const p = [Ser.peCheie("k", lucru(1, 20)), Ser.peCheie("k", lucru(2, 5, true)), Ser.peCheie("k", lucru(3, 1)), Ser.peCheie("alta", lucru(4, 1))];
+  const r = await Promise.allSettled(p);
+  assert.deepEqual(r.map((x) => x.status), ["fulfilled", "rejected", "fulfilled", "fulfilled"]);
+  assert.deepEqual(urme.filter((x) => /[123]$/.test(x)), ["start1", "gata1", "start2", "gata2", "start3", "gata3"]);
+  assert.ok(urme.indexOf("start4") < urme.indexOf("gata1"), "cheia „alta” a așteptat după „k”");
+  await pauza(5); assert.equal(Ser.lanturiDeschise(), 0);
+});
+await test("(3) alerte: 20 de scrieri deodată ⇒ toate 20 în listă (înainte se pierdeau)", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t0 = Date.now();
+  await Promise.all(Array.from({ length: 20 }, (_, i) => postIb(env, "alerte", { alerta: { t: t0 + i, nivel: "info", titlu: "a" + i } })));
+  assert.equal(JSON.parse(env.ISTORIC.m.get("alerte")).length, 20);
+});
+await test("(3) ferestre și verdict: scrieri deodată pe simboluri diferite ⇒ niciuna pierdută", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t0 = Date.now(), f = { jos: 1, sus: 2, levier: 3 };
+  await Promise.all(["AAA", "BBB", "CCC", "DDD", "EEE", "FFF"].map((s, i) => postIb(env, "ferestre", { oferta: { simbol: s + "_USDT_PERP", t: t0 + i, dir: "long", ta: f, mea: f } })));
+  assert.equal(JSON.parse(env.ISTORIC.m.get("ferestre")).length, 6);
+  await Promise.all(["AAA", "BBB", "CCC", "DDD", "EEE", "FFF"].map((s, i) => postIb(env, "verdict", { s: "idei", k: s, n: "cumpara", p: 10 + i, t: t0 - 1000 * i })));
+  assert.equal(JSON.parse(env.ISTORIC.m.get("verdicte:jurnal")).length, 6);
+});
+await test("(3) decizie cu `lista` (colectorul): se UNEȘTE pe cheie — decizia pusă de om între citire și scriere nu se pierde", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t0 = Date.now() - 3 * 86400000;
+  const om = (cheie, t, urmat) => postIb(env, "decizie", { bot: "B1", cheie, t, urmat, nivel: "atentie", titlu: "T", faCe: "F", total: 5 });
+  await om("k1", t0, true); await om("k2", t0 + 1000, false);
+  const citita = JSON.parse(env.ISTORIC.m.get("decizii:B1"));   // colectorul citește…
+  await om("k3", t0 + 2000, true);                               // …omul apasă „am făcut” pe o decizie nouă…
+  await om("k2", t0 + 3000, true);                               // …și se răzgândește pe k2…
+  const judecata = citita.map((e) => ({ ...e, r: 1, totalDupa: 7 }));
+  await postIb(env, "decizie", { bot: "B1", lista: judecata });  // …apoi colectorul scrie lista judecată
+  const l = JSON.parse(env.ISTORIC.m.get("decizii:B1")), pe = Object.fromEntries(l.map((e) => [e.cheie, e]));
+  assert.deepEqual(Object.keys(pe).sort(), ["k1", "k2", "k3"], "decizia nouă a omului s-a pierdut");
+  assert.equal(pe.k1.r, 1, "judecata colectorului pe k1 trebuia păstrată");
+  assert.equal(pe.k2.urmat, true, "răzgândirea omului pe k2 s-a pierdut"); assert.equal(pe.k2.r, undefined, "judecata veche pe k2 nu se lipește de decizia nouă");
+  assert.equal(pe.k3.urmat, true);
+});
+await test("(3) decizie: lista colectorului deodată cu omul (fără ordine) ⇒ tot 3 decizii; istoric-bot folosește peCheie pe cele patru acțiuni", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t0 = Date.now() - 86400000;
+  await postIb(env, "decizie", { bot: "B2", cheie: "k1", t: t0, urmat: true });
+  const citita = JSON.parse(env.ISTORIC.m.get("decizii:B2"));
+  await Promise.all([postIb(env, "decizie", { bot: "B2", lista: citita.map((e) => ({ ...e, r: 0 })) }), postIb(env, "decizie", { bot: "B2", cheie: "k2", t: t0 + 5, urmat: false }), postIb(env, "decizie", { bot: "B2", cheie: "k3", t: t0 + 6, urmat: true })]);
+  assert.equal(JSON.parse(env.ISTORIC.m.get("decizii:B2")).length, 3);
+  const s = citeste("functions", "api", "istoric-bot.js");
+  for (const k of ['"kv:ferestre"', '"kv:verdicte:jurnal"', '"kv:alerte"', '"kv:decizii:"+bot', '"kv:contrafactual"']) assert.ok(s.includes("peCheie(" + k), "fără peCheie pe " + k);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);
