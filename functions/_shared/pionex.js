@@ -6,6 +6,7 @@
 // fiecare ruta, un 429 luat de una nu oprea celelalte, care loveau mai departe
 // o cheie deja in racire. Acum e o singura poarta si o singura racire.
 import {dupaCelDinFata} from "./poarta.js";
+import {lacatRamasMs,lacatPanaLa,lacatDinRaspuns,eroareLacat,reseteazaLacatPionex,oraRo} from "./lacat-pionex.js";   // audit 19.10: lacatul comun cu poarta publica
 export const PIONEX="https://api.pionex.com";
 // Niciun furnizor nu are voie sa tina ruta (si poarta de dupa ea) agatata.
 export const TIMEOUT_MS=8000;
@@ -22,19 +23,15 @@ const sortedQuery=p=>Object.keys(p).sort().map(k=>`${k}=${p[k]}`).join("&");
 // serializeaza si se distanteaza, iar un 429 pune o racire pe care frontendul o
 // poate astepta si relua.
 const PAUZA_MS=250, RACIRE_MIN_S=15;
-let poarta=Promise.resolve(),urmatorulLa=0,racePanaLa=0;
+let poarta=Promise.resolve(),urmatorulLa=0;
 const asteapta=ms=>new Promise(r=>setTimeout(r,ms));
 // v91.5: cererea din fata e asteptata cel mult cat poate dura ea legitim (vezi _shared/poarta.js)
 const ASTEPTARE_MAX_MS=TIMEOUT_MS+2000;
 function cuRitm(fn){
   const rulare=dupaCelDinFata(poarta,ASTEPTARE_MAX_MS).then(async()=>{
-    const racire=Math.max(0,racePanaLa-Date.now());
-    if(racire){
-      const s=Math.ceil(racire/1000);
-      // v100.208: lacătul lung (ore) se spune cu ora lui, ca Radarul și colectorul să nu reîncerce la 15 s
-      const ora=s>120?` (blocat până la ${new Date(racePanaLa).toLocaleTimeString("ro-RO",{timeZone:"Europe/Bucharest",hour:"2-digit",minute:"2-digit"})})`:"";
-      throw Object.assign(Error(`Pionex rate limit: retry in ${s}s${ora}`),{status:429,retryAfter:s});
-    }
+    // v100.208: lacătul lung (ore) se spune cu ora lui, ca Radarul și colectorul să nu reîncerce la 15 s
+    // audit 19.10: lacatul e COMUN cu poarta publica (_shared/lacat-pionex.js)
+    if(lacatRamasMs())throw eroareLacat();
     const intarziere=Math.max(0,urmatorulLa-Date.now());
     if(intarziere)await asteapta(intarziere);
     urmatorulLa=Date.now()+PAUZA_MS;
@@ -44,7 +41,7 @@ function cuRitm(fn){
   return rulare;
 }
 // Doar pentru probe: fiecare proba porneste fara racirea lasata de alta.
-export function reseteazaRitmPionex(){poarta=Promise.resolve();urmatorulLa=0;racePanaLa=0}
+export function reseteazaRitmPionex(){poarta=Promise.resolve();urmatorulLa=0;reseteazaLacatPionex()}
 
 // Intoarce {r, data, brut}. Singurul lucru decis aici e 429 (racirea e a cheii);
 // restul formei o judeca ruta, fiindca fiecare stie ce asteapta.
@@ -78,13 +75,11 @@ export async function pionexPrivatGet(env,path,params={}){
   if(r.status===429){
     // v100.208 (16.10.2026, măsurat 12:21): `X-RateLimit-Lock` = ora deblocării (secunde Unix; azi 15:04, ~3 h) și FIECARE cerere din
     // timpul lacătului îl prelungește (+10 s). Răcirea = lacătul, nu 15 s — altfel colectorul + paginile îl țineau aprins la nesfârșit.
-    const lacat=Number(r.headers.get("x-ratelimit-lock"))*1000;
     const antet=Number(r.headers.get("retry-after"));
-    let secunde=Number.isFinite(antet)&&antet>0?antet:RACIRE_MIN_S;
-    if(Number.isFinite(lacat)&&lacat>Date.now()+secunde*1000)secunde=Math.ceil((lacat-Date.now())/1000);
-    racePanaLa=Math.max(racePanaLa,Date.now()+secunde*1000);
-    const ora=secunde>120?` — blocat până la ${new Date(racePanaLa).toLocaleTimeString("ro-RO",{timeZone:"Europe/Bucharest",hour:"2-digit",minute:"2-digit"})}`:"";
+    const secunde=lacatDinRaspuns(r.headers,429,Number.isFinite(antet)&&antet>0?antet:RACIRE_MIN_S);   // audit 19.10: in lacatul comun
+    const ora=secunde>120?` — blocat până la ${oraRo(lacatPanaLa())}`:"";
     throw Object.assign(Error("Pionex rate limit"+ora),{status:429,retryAfter:secunde});
   }
+  lacatDinRaspuns(r.headers,r.status,0);   // audit 19.10: lacatul vine si pe alte refuzuri - tinut minte, nu doar la 429
   return {r,data,brut};
 }

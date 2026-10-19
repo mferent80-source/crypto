@@ -89,7 +89,8 @@ await test("cu deep=1 chiar se probeaza furnizorii", async () => {
 });
 
 await test("un furnizor care refuza (429) e raportat FAIL, cu motivul la vedere", async () => {
-  fetchStub((url) => (/pionex/i.test(url) ? { status: 429, corp: "Too Many Requests" } : { status: 200 }));
+  // audit 19.10: doar sonda publica refuza - un 429 pe cheia privata pune acum lacatul COMUN, iar sonda nu mai pleaca (alta proba, proba-audit19-srv)
+  fetchStub((url) => (/pionex\.com\/api\/v1\/market/i.test(url) ? { status: 429, corp: "Too Many Requests" } : { status: 200 }));
   const r = await cheama("deep=1", ENV_PLIN, proaspat());
   const px = r.corp.providers.find((p) => /pionex/i.test(p.name) && /reach|acces/i.test(p.name + p.detail));
   assert.ok(px, `nu gasesc randul de accesibilitate Pionex: ${r.corp.providers.map((x) => x.name).join(" | ")}`);

@@ -160,5 +160,63 @@ await test("(3) decizie: lista colectorului deodată cu omul (fără ordine) ⇒
   for (const k of ['"kv:ferestre"', '"kv:verdicte:jurnal"', '"kv:alerte"', '"kv:decizii:"+bot', '"kv:contrafactual"']) assert.ok(s.includes("peCheie(" + k), "fără peCheie pe " + k);
 });
 
+// ---------- (4) o singură stare de lacăt Pionex ----------
+const P = await import("../functions/_shared/pionex.js");
+const MK = await import("../functions/api/market.js");
+const BO = await import("../functions/api/bot-orders.js");
+const PH = await import("../functions/api/provider-health.js");
+const fetchAdevarat = globalThis.fetch;
+let cereriFalse = [];
+const fetchFals = (raspuns) => { cereriFalse = []; globalThis.fetch = async (u) => { cereriFalse.push(String(u && u.url || u)); return raspuns(String(u && u.url || u)); }; };
+const ENVP = { APP_API_TOKEN: TOKEN, PIONEX_API_KEY: "cheie", PIONEX_API_SECRET: "secret" };
+const getApi = (mod, cale, env = ENVP) => mod.onRequestGet({ request: new Request("https://radar.test" + cale, { headers: { authorization: "Bearer " + TOKEN, "x-forwarded-for": "10.19.1." + (++ipN % 250) } }), env });
+const lacat3h = () => ({ "x-ratelimit-lock": String(Math.floor((Date.now() + 3 * 3600000) / 1000)) });
+await test("(4) poarta PRIVATĂ ia lacătul ⇒ poarta PUBLICĂ (market.js) nu mai trimite nimic până la deblocare și spune ora", async () => {
+  P.reseteazaRitmPionex();
+  fetchFals(() => new Response("Too Many Requests", { status: 429, headers: lacat3h() }));
+  await assert.rejects(() => P.pionexPrivatGet(ENVP, "/api/v1/account/balances"), (e) => e.status === 429);
+  assert.equal(cereriFalse.length, 1);
+  const r = await (await getApi(MK, "/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H")).json();
+  assert.equal(r.result, false); assert.ok(r.retryAfter > 3 * 3600 - 60, "retryAfter = până la deblocare, nu 60 s: " + r.retryAfter);
+  assert.match(String(r.detail), /blocat până la \d\d:\d\d/);
+  assert.equal(cereriFalse.length, 1, "poarta publică a trimis în timpul lacătului");
+  P.reseteazaRitmPionex();
+});
+await test("(4) poarta PUBLICĂ citește și `x-ratelimit-lock` ⇒ lacătul ține ore (nu 75 s) și oprește și poarta privată", async () => {
+  P.reseteazaRitmPionex();
+  fetchFals(() => new Response("{}", { status: 429, headers: lacat3h() }));
+  await (await getApi(MK, "/api/market?type=pionex_tickers&market=PERP")).json();
+  assert.equal(cereriFalse.length, 1);
+  const r2 = await (await getApi(MK, "/api/market?type=pionex_tickers&market=SPOT")).json();
+  assert.ok(r2.retryAfter > 3 * 3600 - 60, "răcirea publică a rămas 75 s: " + r2.retryAfter);
+  await assert.rejects(() => P.pionexPrivatGet(ENVP, "/api/v1/bot/orders"), (e) => e.status === 429 && e.retryAfter > 3 * 3600 - 60);
+  assert.equal(cereriFalse.length, 1, "o cerere a plecat în timpul lacătului");
+  P.reseteazaRitmPionex();
+});
+await test("(4) tickerele PERP, simbolurile din bot-orders și sonda `deep` respectă lacătul (nu trimit)", async () => {
+  P.reseteazaRitmPionex();
+  fetchFals(() => new Response("{}", { status: 429, headers: lacat3h() }));
+  await assert.rejects(() => P.pionexPrivatGet(ENVP, "/api/v1/bot/orders"));
+  cereriFalse = [];
+  assert.equal(typeof BO.preturiPerp, "function"); assert.equal(typeof BO.hartaSimboluri, "function");
+  await assert.rejects(() => BO.preturiPerp(), /blocat|rate limit/i);
+  await assert.rejects(() => BO.hartaSimboluri(), /blocat|rate limit/i);
+  const h = await (await getApi(PH, "/api/provider-health?deep=1")).json();
+  const sonda = h.providers.find((x) => /PIONEX · acces/.test(x.name));
+  assert.equal(sonda.state, "DEGRADED"); assert.match(sonda.detail, /lacăt|blocat/i);
+  assert.ok(!cereriFalse.some((u) => /pionex\.com/.test(u)), "a plecat spre Pionex: " + cereriFalse.join(", "));
+  P.reseteazaRitmPionex();
+});
+await test("(4) ritmul normal neschimbat: 1,1 s între cererile publice, 250 ms între cele private; fără lacăt totul pleacă", async () => {
+  P.reseteazaRitmPionex();
+  assert.match(citeste("functions", "api", "market.js"), /spacing=Math\.max\(1100,Math\.max\(1,weight\)\*300\)/);
+  assert.match(citeste("functions", "_shared", "pionex.js"), /const PAUZA_MS=250, RACIRE_MIN_S=15;/);
+  fetchFals((u) => new Response(JSON.stringify(/symbols/.test(u) ? { result: true, data: { symbols: [] } } : { result: true, data: { tickers: [] } }), { status: 200 }));
+  assert.deepEqual(await BO.preturiPerp(), {}); assert.deepEqual(await BO.hartaSimboluri(), {});
+  assert.equal(cereriFalse.length, 2);
+  P.reseteazaRitmPionex();
+});
+globalThis.fetch = fetchAdevarat;
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exit(picate ? 1 : 0);

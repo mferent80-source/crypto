@@ -469,7 +469,9 @@ await test("nicio ruta care SCRIE nu s-a strecurat", async () => {
   }
   const src = fs.readFileSync(new URL(MOD, import.meta.url), "utf8");
   const exporturi = [...src.matchAll(/export\s+(?:async\s+)?function\s+(\w+)/g)].map((m) => m[1]);
-  assert.deepEqual(exporturi, ["onRequestGet"], `exporturi neasteptate: ${exporturi.join(", ")}`);
+  // audit 19.10: + preturiPerp / hartaSimboluri (GET pe datele publice de piata, exportate ca proba sa vada ca respecta lacatul Pionex comun);
+  // regula ramane: niciun handler care scrie (tiparele interzise de mai sus se verifica tot)
+  assert.deepEqual(exporturi, ["preturiPerp", "hartaSimboluri", "onRequestGet"], `exporturi neasteptate: ${exporturi.join(", ")}`);
 });
 
 await test("indemnul de a bifa 'Bot reading' apare DOAR cand lipseste dreptul", async () => {

@@ -1,5 +1,6 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 import {cuProba,pionexPrivatGet} from "../_shared/pionex.js";
+import {lacatRamasMs,lacatDinRaspuns,lacatPanaLa,oraRo} from "../_shared/lacat-pionex.js";   // audit 19.10: sonda deep respecta lacatul comun
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:H});
 
@@ -14,13 +15,14 @@ const rand=(name,state,detail,required=true,extra={})=>
 
 // Probele de retea au cronometru si nu arunca niciodata: o gazda moarta trebuie
 // sa apara ca un rand FAIL cu motivul la vedere, nu sa darame ruta.
-async function probeaza(name,url,required=true,ms=6000,antete={}){
+async function probeaza(name,url,required=true,ms=6000,antete={},laRefuz=null){
   const t0=Date.now();
   const opreste=new AbortController(),ceas=setTimeout(()=>opreste.abort(),ms);
   try{
     const r=await fetch(url,{headers:{accept:"application/json",...antete},signal:opreste.signal});
     const latentaMs=Date.now()-t0;
     if(!r.ok){
+      if(laRefuz)laRefuz(r);   // audit 19.10: Pionex - lacatul din antet ajunge in starea comuna
       const corp=(await r.text().catch(()=>"")).slice(0,90).replace(/\s+/g," ").trim();
       return rand(name,"FAIL",`HTTP ${r.status}${corp?" · "+corp:""}`,required,{latencyMs:latentaMs});
     }
@@ -101,7 +103,9 @@ export async function onRequestGet({request,env}){
   // singurul semn ca ceva nu merge.
   if(adanc){
     const probe=await Promise.all([
-      probeaza("PIONEX · acces de pe server","https://api.pionex.com/api/v1/market/tickers?type=SPOT"),
+      // audit 19.10: cat tine lacatul Pionex sonda nu pleaca (l-ar prelungi) - randul spune ora deblocarii
+      lacatRamasMs()?rand("PIONEX · acces de pe server","DEGRADED",`lacăt de ritm Pionex · blocat până la ${oraRo(lacatPanaLa())} · sonda nu pleacă`)
+        :probeaza("PIONEX · acces de pe server","https://api.pionex.com/api/v1/market/tickers?type=SPOT",true,6000,{},r=>lacatDinRaspuns(r.headers,r.status,15)),
       probeaza("BINANCE FUTURES · acces de pe server","https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT"),
       probeaza("COINGECKO · acces de pe server","https://api.coingecko.com/api/v3/ping",false,6000,{"user-agent":"CryptoRadar/74 (+read-only)"}),
     ]);

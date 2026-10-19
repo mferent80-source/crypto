@@ -1,6 +1,7 @@
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 import {cuProba,PIONEX,TIMEOUT_MS,pionexPrivatGet} from "../_shared/pionex.js";
 import {avertismenteBot} from "../_shared/avertismente.js";
+import {lacatRamasMs,lacatDinRaspuns,eroareLacat} from "../_shared/lacat-pionex.js";   // audit 19.10: tickerele si simbolurile respecta lacatul comun
 
 // Cititul botilor de grid Pionex. STRICT READ-ONLY: singura ruta atinsa e
 // GET /api/v1/bot/orders. Nimic din API-ul de boti care schimba ceva nu apare aici.
@@ -54,9 +55,11 @@ async function citesteBoti(env,params={}){
 
 // Preturile perpetuelor, ca sa putem spune cat mai e pana la lichidare.
 // Daca nu se poate, botii tot se intorc - lipsa se raporteaza, nu se ascunde.
-async function preturiPerp(){
+// audit 19.10: cat tine lacatul Pionex nu pleaca (ar prelungi lacatul IP-ului); un refuz cu lacat se tine minte pentru toti
+export async function preturiPerp(){
+  if(lacatRamasMs())throw eroareLacat("tickere PERP");
   const r=await fetch(`${PIONEX}/api/v1/market/tickers?type=PERP`,{headers:{accept:"application/json"},signal:AbortSignal.timeout(TIMEOUT_MS)});
-  if(!r.ok)throw Error(`tickere PERP: HTTP ${r.status}`);
+  if(!r.ok){lacatDinRaspuns(r.headers,r.status,15);throw Error(`tickere PERP: HTTP ${r.status}`)}
   const d=await r.json();
   const harta={};
   // Forma necunoscuta nu e "fara preturi" in tacere: motivul ajunge in probleme.preturi.
@@ -71,10 +74,11 @@ async function preturiPerp(){
 // baseCurrency din lista de simboluri PERP; tinuta 6 ore (lista se schimba rar). Picata -> regula veche, motivul in probleme.
 const SIMBOLURI_TTL=6*3600*1000;
 let simboluriTinute={la:0,harta:null};
-async function hartaSimboluri(){
+export async function hartaSimboluri(){
   if(simboluriTinute.harta&&Date.now()-simboluriTinute.la<SIMBOLURI_TTL)return simboluriTinute.harta;
+  if(lacatRamasMs())throw eroareLacat("simboluri PERP");   // audit 19.10
   const r=await fetch(`${PIONEX}/api/v1/common/symbols?type=PERP`,{headers:{accept:"application/json"},signal:AbortSignal.timeout(TIMEOUT_MS)});
-  if(!r.ok)throw Error(`simboluri PERP: HTTP ${r.status}`);
+  if(!r.ok){lacatDinRaspuns(r.headers,r.status,15);throw Error(`simboluri PERP: HTTP ${r.status}`)}
   const d=await r.json();
   if(!Array.isArray(d?.data?.symbols))throw Error("simboluri PERP: forma necunoscuta (data.symbols nu e o lista)");
   const harta={};

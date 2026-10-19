@@ -1,10 +1,10 @@
 import { VERSIUNE } from "../_shared/versiune.js";
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 import {dupaCelDinFata} from "../_shared/poarta.js";
-const ENGINE_CONTRACT_VERSION="54.1";
+import {lacatRamasMs,lacatDinRaspuns,eroareLacat} from "../_shared/lacat-pionex.js";   // audit 19.10: lacatul comun cu poarta privata
 const FUT="https://fapi.binance.com";
 const PIONEX="https://api.pionex.com";
-let pionexGate=Promise.resolve(),pionexNextAt=0,pionexBlockedUntil=0;
+let pionexGate=Promise.resolve(),pionexNextAt=0;
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function reservePionexGlobal(env,spacing){
   if(!env?.DB?.prepare)return 0;try{const now=Date.now(),stmt=env.DB.prepare(`INSERT INTO monitor_state(key,value,updated_ts) VALUES('pionex_pages_next_at',?,?) ON CONFLICT(key) DO UPDATE SET value=CAST(MAX(CAST(monitor_state.value AS INTEGER), ?)+? AS TEXT), updated_ts=? RETURNING value`).bind(String(now+spacing),now,now,spacing,now),r=await stmt.first(),next=Number(r?.value);return Number.isFinite(next)?Math.max(0,(next-spacing)-now):0}catch{return 0}
@@ -12,8 +12,8 @@ async function reservePionexGlobal(env,spacing){
 async function pionexRateGate(weight,fn,env){
   // v91.7: cererea din fata e asteptata cel mult cat poate dura ea (pauza + 8 s de fetch + marja) - _shared/poarta.js
   const run=dupaCelDinFata(pionexGate,12000).then(async()=>{
-    const blocked=Math.max(0,pionexBlockedUntil-Date.now());
-    if(blocked){const e=Error("upstream cooldown "+Math.ceil(blocked/1000)+"s");e.status=429;e.retryAfter=Math.ceil(blocked/1000);throw e}
+    // audit 19.10: lacatul comun (si cel pus de poarta privata, din X-RateLimit-Lock) - nimic nu pleaca pana la deblocare
+    if(lacatRamasMs())throw eroareLacat("upstream cooldown");
     const spacing=Math.max(1100,Math.max(1,weight)*300),globalDelay=await reservePionexGlobal(env,spacing),delay=Math.max(globalDelay,Math.max(0,pionexNextAt-Date.now()));
     if(delay)await wait(delay);
     pionexNextAt=Date.now()+spacing;
@@ -39,7 +39,7 @@ async function j(url){
   if(!r.ok){
     const retry=r.headers.get("retry-after");
     const e=Error("upstream HTTP "+r.status+(retry?" · retry-after "+retry:"")+(data?.msg?" · "+data.msg:""));
-    e.status=r.status;e.retryAfter=retry?Number(retry):null;throw e
+    e.status=r.status;e.retryAfter=retry?Number(retry):null;e.antete=r.headers;throw e   // audit 19.10: antetele, pentru x-ratelimit-lock
   }
   if(!data)throw Error("upstream invalid JSON");
   return data
@@ -54,7 +54,7 @@ async function pionexCached(url,ttl=30,env=null){
   }
   let data;
   try{data=await pionexRateGate(url.includes("/common/symbols")?5:1,()=>j(url),env)}
-  catch(e){if(e.status===429){pionexBlockedUntil=Math.max(pionexBlockedUntil,Date.now()+Math.max(75000,(e.retryAfter||60)*1000))}throw e}
+  catch(e){if(e.status)lacatDinRaspuns(e.antete,e.status,Math.max(75,e.retryAfter||60));throw e}   // audit 19.10: 429 ⇒ cel putin 75 s; x-ratelimit-lock ⇒ pana la ora lui
   // v100.173 (auditul Opus): Pionex refuză cu HTTP 200 + result:false - refuzul NU se ține minte (lista de simboluri goală stătea o oră)
   if(cache&&!(data&&data.result===false)){
     const res=new Response(JSON.stringify(data),{headers:{"content-type":"application/json","cache-control":`public, max-age=${ttl}`}});
