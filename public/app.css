@@ -2505,7 +2505,7 @@ body:before{background-image:none!important}
 .pzVoci{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--pzLi)}
 .pzVoce{font-family:var(--pzMono);font-size:11.5px;padding:3px 8px;border:1px solid var(--pzLi2);border-radius:3px;color:var(--pzT1)}
 .pzVoce-da{border-color:rgba(38,169,108,.55);color:var(--pzSus)}.pzVoce-nu{border-color:rgba(224,82,74,.6);color:var(--pzJos)}.pzVoce-atentie{border-color:rgba(233,185,73,.6);color:var(--pzAur)}
-@media (max-width:550px){.pzVerbRand{flex-direction:column;gap:6px}.pzVerb{font-size:24px}#pzVerdict .pzVerbRand{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:6px;align-items:center}#pzVerdict .pzVerb{white-space:normal;overflow-wrap:break-word;min-width:0}#pzVerdict .pzVerbTxt{grid-column:1 / -1}#pzVerdict .pzPret{margin-left:0;justify-self:end}}
+@media (max-width:550px){.pzVerbRand{flex-direction:column;gap:6px}.pzVerb{font-size:24px}#pzVerdict .pzVerbRand{display:flex;flex-direction:row;flex-wrap:wrap;column-gap:12px;row-gap:6px;align-items:center}#pzVerdict .pzVerb{order:1;white-space:nowrap;flex:0 0 auto}#pzVerdict .pzPret{order:2;margin-left:auto}#pzVerdict .pzVerbTxt{order:3;flex:1 0 100%}}
 
 /* I-591: drumul botului */
 #pzDrumCard{border:1px solid var(--pzLi);background:var(--pzF1);border-radius:5px;padding:10px 14px 8px;margin:0 0 10px}
@@ -2635,8 +2635,8 @@ body:before{background-image:none!important}
 .pzAntet[hidden]{display:none}
 /* v100.214: și pe Contul Pionex fâșia veche „Selected market · Engine bias” + filele se PLIAZĂ (decizia lui din 11.10), bara cu moneda rămâne (ordinele deschise o folosesc) */
 html.pzDemo body:not(.pzFasiaDeschisa):has(main>#account.on) main :is(.heroStrip,.tabs){display:none}html.pzDemo body:has(main>#account.on) .pzFasiaBtn{display:block}
-html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on) main :is(.heroStrip,.tabs){display:none}.pzFasiaBtn{display:none}html.pzDemo body:has(main>#cloud.on,main>#settings.on,main>#health.on) .pzFasiaBtn{display:block}.pzFasiaBtn{margin:0 0 8px;padding:5px 10px;background:var(--f1,#141C24);color:#9FB3C4;border:1px solid #26333F;border-radius:4px;font:inherit;font-size:12px;cursor:pointer;text-align:left}.pzFasiaBtn:hover{color:#E6EDF3;border-color:#35485A}.pzFasiaBtn:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}.pzAntet .pzVerb{white-space:normal;overflow-wrap:anywhere;max-width:62%}@media (max-width:550px){.pzAntet .pzVerb{max-width:none}}
-@media (max-width:550px){.pzVerb{white-space:normal;overflow-wrap:anywhere}}
+html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on) main :is(.heroStrip,.tabs){display:none}.pzFasiaBtn{display:none}html.pzDemo body:has(main>#cloud.on,main>#settings.on,main>#health.on) .pzFasiaBtn{display:block}.pzFasiaBtn{margin:0 0 8px;padding:5px 10px;background:var(--f1,#141C24);color:#9FB3C4;border:1px solid #26333F;border-radius:4px;font:inherit;font-size:12px;cursor:pointer;text-align:left}.pzFasiaBtn:hover{color:#E6EDF3;border-color:#35485A}.pzFasiaBtn:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}.pzAntet .pzVerb{white-space:normal;overflow-wrap:break-word;max-width:62%}@media (max-width:550px){.pzAntet .pzVerb{max-width:none}}
+@media (max-width:550px){.pzVerb{white-space:normal;overflow-wrap:break-word}}
 /* T212 (.t212Card e deja coloană flex) */
 .pzDemo #t212Card>*{order:900}
 .pzDemo #t212Card>.t212CapCard{order:0}.pzDemo #t212Card>#pzV-t212{order:10}.pzDemo #t212Card>#t212Sus{order:20}

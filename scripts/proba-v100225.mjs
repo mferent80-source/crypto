@@ -40,11 +40,11 @@ await test("card: publicat doar pe regim proaspăt; candidatul nu schimbă verdi
 await test("poarta: cache-ul ține minte acasa.la; sub 550 px prețul stă pe rândul verbului", () => {
   const t212 = citeste("public", "lib", "t212-ecran.js");
   const poarta = t212.slice(t212.indexOf("async function t212RegimAdu"), t212.indexOf("function t212MarimeCalc"));
-  assert.match(poarta, /r\.acasaLa === semn/);
+  assert.doesNotMatch(poarta, /r\.acasaLa === semn/);
   assert.match(poarta, /acasaLa: semn/);
   const css = citeste("public", "app.css");
-  assert.match(css, /#pzVerdict \.pzVerbRand\{display:grid;grid-template-columns:/);
-  assert.match(css, /#pzVerdict \.pzVerbTxt\{grid-column:1 \/ -1\}/);
+  assert.match(css, /#pzVerdict \.pzVerbRand\{display:flex;flex-direction:row;flex-wrap:wrap/);
+  assert.match(css, /#pzVerdict \.pzVerbTxt\{order:3;flex:1 0 100%\}/);
   assert.match(css, /\.pzVerbRand\{flex-direction:column/);
 });
 

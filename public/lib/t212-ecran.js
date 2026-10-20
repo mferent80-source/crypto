@@ -117,16 +117,16 @@ function t212MacroDin(p, btc) {
 async function t212RegimAdu() {
   var ac = typeof acasa !== "undefined" && acasa && acasa.d ? acasa.d : null;
   var semn = typeof acasa !== "undefined" && acasa && acasa.la ? acasa.la : 0;
-  // v100.226: pe T212 se recitește KV la fiecare poartă. v100.227: pe Piața azi, copia paginii ține doar cât ține reîmprospătarea ei (ACASA_MS). După aceea se citește KV.
+  // v100.226: pe T212 se recitește KV la fiecare poartă. v100.227: copia paginii ține cât ACASA_MS.
+  // v100.228: fiecare apăsare cere KV. Copia paginii e doar rezerva, când cererea nu dă un cod și pagina e încă în ACASA_MS.
   var peAzi = typeof acasaPe === "function" && acasaPe();
   var fereastra = typeof ACASA_MS === "number" && ACASA_MS > 0 ? ACASA_MS : 5 * 60000;
   var paginaProaspata = !!(peAzi && semn && Date.now() - semn < fereastra);
-  var r = t212.regimPiata; if (r && paginaProaspata && r.acasaLa === semn) return r;
   var macro = null, la = null, mb = null, viu = false;
-  try {
-    var pc = paginaProaspata && ac && ac.piataCol && ac.piataCol.macro ? ac.piataCol : await getJSON("/api/istoric-bot?action=piata");
-    if (pc && pc.macro && pc.macro.cod) { macro = String(pc.macro.cod); la = Number(pc.la || (pc.macro && pc.macro.la)) || null; }
-  } catch (e) {}
+  var pc = null;
+  try { pc = await getJSON("/api/istoric-bot?action=piata"); } catch (e) {}
+  if (!(pc && pc.macro && pc.macro.cod) && paginaProaspata && ac && ac.piataCol && ac.piataCol.macro) pc = ac.piataCol;
+  if (pc && pc.macro && pc.macro.cod) { macro = String(pc.macro.cod); la = Number(pc.la || (pc.macro && pc.macro.la)) || null; }
   // v100.224: KV proaspăt (≤ 2 h) rămâne codul ținut. KV vechi sau fără oră + citire completă de pe pagină ⇒ codul de acum, fără scriere în KV.
   var tinut = macro && la && Date.now() - la <= 2 * 3600000;
   if (!tinut) {

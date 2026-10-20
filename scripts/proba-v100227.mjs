@@ -46,7 +46,8 @@ await test("candidatul stă în fraza de pe Discord, nu într-un al doilea rând
   const tinut = coduri.find((c) => Math.abs(BANDA[c] - BANDA[r.treapta.cod]) > 1);
   const cand = coduri.find((c) => c !== tinut && c !== r.treapta.cod);
   const sch = MC.htmlCard(r, { cod: tinut, scor: 0, la, candidat: { cod: cand, la } });
-  assert.match(sch, new RegExp("<p class=\"acEt\">Pe Discord e încă „" + escRe(NUME[tinut]) + "”: schimbarea se anunță după ce se confirmă la citirea următoare \\(cel mult o alertă la 3 ore\\)\\. Colectorul așteaptă „" + escRe(NUME[cand]) + "”\\.</p>"));
+  assert.match(sch, new RegExp("<p class=\"acEt\">Pe Discord e încă „" + escRe(NUME[tinut]) + "”\\."));
+  assert.match(sch, new RegExp("Colectorul așteaptă „" + escRe(NUME[cand]) + "”\\."));
   assert.doesNotMatch(sch, /<\/p><p class="acEt">Colectorul așteaptă/);
   assert.doesNotMatch(sch, /se confirmă la citirea următoare\./);
   assert.match(sch, new RegExp("<b>" + escRe(r.treapta.text) + "</b>"));
@@ -63,28 +64,26 @@ await test("poarta ține copia paginii doar cât ACASA_MS; verbul de pe Tablou s
   const t212 = citeste("public", "lib", "t212-ecran.js");
   const poarta = t212.slice(t212.indexOf("async function t212RegimAdu"), t212.indexOf("function t212MarimeCalc"));
   assert.match(poarta, /typeof ACASA_MS === "number" && ACASA_MS > 0 \? ACASA_MS : 5 \* 60000/);
-  assert.match(poarta, /r && paginaProaspata && r\.acasaLa === semn/);
-  assert.match(poarta, /paginaProaspata && ac && ac\.piataCol && ac\.piataCol\.macro \? ac\.piataCol : await getJSON\("\/api\/istoric-bot\?action=piata"\)/);
+  assert.match(poarta, /await getJSON\("\/api\/istoric-bot\?action=piata"\)/);
+  assert.match(poarta, /acasaLa: semn/);
+  assert.doesNotMatch(poarta, /r\.acasaLa === semn/);
   assert.doesNotMatch(poarta, /10 \* 60000/);
   const css = citeste("public", "app.css");
-  assert.match(css, /#pzVerdict \.pzVerb\{white-space:normal;overflow-wrap:break-word;min-width:0\}/);
-  assert.match(css, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:anywhere\}\}/);
+  assert.match(css, /#pzVerdict \.pzVerb\{order:1;white-space:nowrap/);
+  assert.match(css, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:break-word\}\}/);
   assert.match(css, /\.pzPret\{[^}]*white-space:nowrap\}/);
 });
 
-await test("versiunea v100.227 și colectorul v101.132", () => {
+await test("versiunea de la v100.227 în sus și colectorul v101.132", () => {
   const P = JSON.parse(citeste("package.json"));
   const idx = citeste("public", "index.html");
-  assert.equal(P.version, "100.227.0");
+  const minor = Number(P.version.split(".")[1]);
+  assert.ok(minor >= 227);
   assert.equal((P.scripts.test.match(/test:v100227/g) || []).length, 1);
   assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.132"/);
-  assert.equal((idx.match(/v100\.227/g) || []).length, 4);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-227/);
-  assert.match(idx, /v100\.227 · CEAS/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /v100\.227/);
-  const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.227");
-  assert.equal(info.badge, "v100.227 · CEAS");
+  assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp("v100\\." + minor));
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

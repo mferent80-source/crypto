@@ -64,11 +64,12 @@ await test("poarta citește KV în afara Pieței azi; sub 550 px verbul se rupe 
   const t212 = citeste("public", "lib", "t212-ecran.js");
   const poarta = t212.slice(t212.indexOf("async function t212RegimAdu"), t212.indexOf("function t212MarimeCalc"));
   assert.match(poarta, /typeof acasaPe === "function" && acasaPe\(\)/);
-  assert.match(poarta, /r\.acasaLa === semn/);
+  assert.match(poarta, /acasaLa: semn/);
+  assert.doesNotMatch(poarta, /r\.acasaLa === semn/);
   assert.match(poarta, /getJSON\("\/api\/istoric-bot\?action=piata"\)/);
   const css = citeste("public", "app.css");
-  assert.match(css, /#pzVerdict \.pzVerbRand\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/);
-  assert.match(css, /#pzVerdict \.pzVerb\{white-space:normal;overflow-wrap:break-word;min-width:0\}/);
+  assert.match(css, /#pzVerdict \.pzVerbRand\{display:flex;flex-direction:row;flex-wrap:wrap/);
+  assert.match(css, /#pzVerdict \.pzVerb\{order:1;white-space:nowrap/);
   assert.match(css, /\.pzVerbRand\{flex-direction:column/);
   assert.match(css, /\.pzVerb\{font-size:30px;line-height:1;font-weight:600;letter-spacing:\.01em;color:var\(--pzT1\);white-space:nowrap\}/);
   assert.match(css, /\.pzPret\{[^}]*white-space:nowrap\}/);

@@ -108,6 +108,7 @@
     // v100.225: „publicat” e ora din KV, doar cât regimul ținut e în 2 ore. Candidatul nu înlocuiește codul ținut.
     // v100.226: „publicat” e ora României (Europe/Bucharest). Cât Discord încă ține codul vechi, colectorul își spune candidatul doar dacă e altul decât citirea de acum.
     // v100.227: „actualizat” e același fus. Eticheta stă înaintea ceasurilor. Candidatul intră în fraza de pe Discord, nu într-un al doilea rând.
+    // v100.228: fraza de pe Discord rămâne scurtă. Plafonul de 3 ore stă la colector, nu pe card.
     const ceasRo = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }).format(new Date(t)); } catch (e) { return ""; } };
     const tinutProaspat = !!(tinut && fin(tinut.la) && Date.now() - tinut.la <= 2 * 3600000);
     const ora = fin(laCitire) ? ceasRo(laCitire) : "";
@@ -124,7 +125,7 @@
     const verdict = ft && ft.tinut
       ? '<p class="mcVerdict mc' + ft.t.stare + '"><b>' + esc(ft.t.text) + "</b> · ținut (citirea de acum: " + esc(r.treapta.text) + " (scor " + scS(r.scor) + "), prea aproape de prag ca să schimbe regimul)</p>"
       : '<p class="mcVerdict mc' + r.treapta.stare + '"><b>' + esc(r.treapta.text) + "</b> · scor " + scS(r.scor) + (r.partial ? " · doar " + r.valide + " din 5 semne" : "") + "</p>" +
-        (ft ? '<p class="acEt">Pe Discord e încă „' + esc(ft.t.text) + "”: schimbarea se anunță după ce se confirmă la citirea următoare (cel mult o alertă la 3 ore)." + asteapta + "</p>" : "");
+        (ft ? '<p class="acEt">Pe Discord e încă „' + esc(ft.t.text) + "”." + asteapta + "</p>" : "");
     const nota = laCitire !== undefined && tinut && fin(tinut.la) && Date.now() - tinut.la > 2 * 3600000
       ? '<p class="acEt">Colectorul n-a publicat regimul de curând. Asta e citirea de acum.</p>' : "";
     const conf = candOk && !discord

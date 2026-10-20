@@ -67,7 +67,7 @@ await test("(4) ordinea: doar CSS; paginile coloană DOAR active și FĂRĂ !imp
   assert.ok(ord(".pzDemo #scNou>#scExplic") < ord(".pzDemo #scNou>#scLista"), "Scanner: „lista e de urmărit, nu de pornit” înaintea listei (revizia I1)");
   assert.match(CSS, /\.pzDemo #grFisa>\*\{order:65\}/, "Grid: blocurile fără regulă (avertismentul TV, varianta îngustă) lângă setări (revizia I2)");
   assert.match(CSS, /\.pzDemo #jtRezumat>\.emptyState,\.pzDemo #jtRezumat>\.tbBloc\{order:5\}/, "Jurnal: încărcarea / eroarea sus (revizia I3)");
-  assert.match(CSS, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:anywhere\}\}/, "pe telefon verbul lung se rupe (revizia I8)");
+  assert.match(CSS, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:break-word\}\}/, "pe telefon verbul lung se rupe la cuvânt (revizia I8)");
   const ultim = CSS.trim().split("\n").pop(); assert.match(ultim, /^@media \(max-width:640px\)\{\.sugPandaTab thead/, "regula pandei rămâne ultima");
 });
 await test("(5) antetele stau ca FRATE, în afara containerelor rescrise cu innerHTML; fără date ⇒ ascunse", () => {
@@ -91,7 +91,7 @@ await test("(7) revizia a doua: Jurnalul pe formatul REAL („+0,00 USDT”), Su
   assert.match(AS, /\/Pe ce aș porni un bot\/\.test\(tx\("h4", c\)\)/, "Sugestii: cartela după titlu");
   assert.doesNotMatch(AS, /querySelector\("#sugPagina \.sugCartela \.sugLista li"\)/, "prima idee din ORICE cartelă");
   assert.match(AS, /typeof renderFreshness === "function"\) renderFreshness\(\)/, "vârsta datelor redesenată cu funcția paginii (textul îngheța pe 0s)");
-  assert.match(CSS, /\.pzAntet \.pzVerb\{white-space:normal;overflow-wrap:anywhere;max-width:62%\}/);
+  assert.match(CSS, /\.pzAntet \.pzVerb\{white-space:normal;overflow-wrap:break-word;max-width:62%\}/);
   for (const v of ["\"VERIFICĂ\"", "\"NU MERG: \""]) assert.ok(!AS.includes(v), "verb al stratului: " + v);
 });
 await test("(6) versiunea: aceeași în BUILD_INFO, index, sw, package.json, versiune.js (≥ v100.152)", () => {
