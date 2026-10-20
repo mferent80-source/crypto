@@ -108,19 +108,41 @@ function t212PretIn(v, tk) {
 }
 // v100.196 (🟡3, regime-detection: răspunsul fixat dinainte): regimul pieței pentru Poartă - regimul macro ȚINUT de colector (KV piata; contează
 // doar cel mult 2 h vechime) și Market Breadth SUA (aceeași sursă ca Piața azi; dacă Piața azi l-a adus deja, nu se mai cere). O dată la 10 minute
+function t212MacroDin(p, btc) {
+  if (typeof Macro === "undefined" || !Macro.scor || !p) return null;
+  var sc; try { sc = Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: btc, fg: p.fg }, Date.now()); } catch (e) { return null; }
+  if (!sc || sc.partial || !sc.treapta || !sc.treapta.cod || sc.treapta.cod === "partial") return null;
+  return String(sc.treapta.cod);
+}
 async function t212RegimAdu() {
   var r = t212.regimPiata; if (r && Date.now() - r.adus < 10 * 60000) return r;
-  var macro = null, la = null, mb = null, ac = typeof acasa !== "undefined" && acasa && acasa.d ? acasa.d : null;
-  try { var pc = ac && ac.piataCol && ac.piataCol.macro ? ac.piataCol : await getJSON("/api/istoric-bot?action=piata"); if (pc && pc.macro && pc.macro.cod) { macro = String(pc.macro.cod); la = Number(pc.la) || null; } } catch (e) {}
+  var macro = null, la = null, mb = null, viu = false, ac = typeof acasa !== "undefined" && acasa && acasa.d ? acasa.d : null;
+  try {
+    var pc = ac && ac.piataCol && ac.piataCol.macro ? ac.piataCol : await getJSON("/api/istoric-bot?action=piata");
+    if (pc && pc.macro && pc.macro.cod) { macro = String(pc.macro.cod); la = Number(pc.la || (pc.macro && pc.macro.la)) || null; }
+  } catch (e) {}
+  // v100.224: KV proaspăt (≤ 2 h) rămâne codul ținut. KV vechi sau fără oră + citire completă de pe pagină ⇒ codul de acum, fără scriere în KV.
+  var tinut = macro && la && Date.now() - la <= 2 * 3600000;
+  if (!tinut) {
+    var cod = t212MacroDin(ac && ac.piata, ac && ac.btc1d);
+    if (!cod) {
+      try {
+        var pp = await getJSON("/api/stiri?action=piata");
+        var kk = await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=60");
+        cod = t212MacroDin(pp, kk && kk.data && kk.data.klines);
+      } catch (e2) {}
+    }
+    if (cod) { macro = cod; la = Date.now(); viu = true; }
+  }
   try {
     var j = ac && ac.mbUs ? ac.mbUs : null;
     if (!j && typeof LatimeUS !== "undefined" && typeof fetch === "function") j = await fetch(LatimeUS.SURSA, { cache: "no-store" }).then(function (x) { return x.ok ? x.json() : null; });
     var n = j && typeof LatimeUS !== "undefined" ? LatimeUS.normalizeaza(j, Date.now()) : null; if (n) mb = { stare: n.stare, vechi: !!n.vechi, stanta: n.stanta };
   } catch (e) {}
-  t212.regimPiata = { adus: Date.now(), macro: macro, la: la, mb: mb };
+  t212.regimPiata = { adus: Date.now(), macro: macro, la: la, mb: mb, viu: viu };
   return t212.regimPiata;
 }
-function t212RegimPt() { var r = t212.regimPiata || {}; return { macro: r.macro && r.la && Date.now() - r.la <= 2 * 3600000 ? r.macro : null, mb: r.mb || null }; }
+function t212RegimPt() { var r = t212.regimPiata || {}, ok = r.macro && r.la && Date.now() - r.la <= 2 * 3600000; return { macro: ok ? r.macro : null, mb: r.mb || null, viu: !!(ok && r.viu) }; }
 // v100.196 (🟡7): Trend 12 luni e în probă ⇒ Poarta dă verdictul, dar nu dă o sumă până nu zice bilanțul robotului „probat”
 // v100.196 (🟡12): mărimea pentru alte ecrane (Scan) cu ACEEAȘI regulă ca Poarta: riscul regimului ținut (dacă e adus), plafonul pe total cu ce ai deja,
 // banii liberi; null fără cont sau curs
@@ -730,8 +752,10 @@ async function t212Poarta() {
     var rez = await t212RezultatePt(tk), zR = rez.data ? Math.ceil((Date.parse(rez.data + "T12:00:00Z") - Date.now()) / 86400000) : null;
     await t212RegimAdu();
     var deja = t212DejaLei(tk);
+    var rp = t212RegimPt();
     var v = ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore, rezultateZile: zR, medie: niv.nivel === "ok" && niv.proba ? niv.proba.medie : undefined,
-      dejaPct: tot > 0 && deja > 0 ? deja / tot : 0, simbol: b.simbol || s, regim: t212RegimPt(), zileLipsa: ActiuniSemnale.zileLipsa(st.ultima, Date.now(), tk) });
+      dejaPct: tot > 0 && deja > 0 ? deja / tot : 0, simbol: b.simbol || s, regim: rp, zileLipsa: ActiuniSemnale.zileLipsa(st.ultima, Date.now(), tk) });
+    if (rp.viu && v && v.note) v.note.push("regimul e citirea de acum: colectorul nu l-a publicat în ultimele 2 ore");
     // v100.222 (I-722): verdele care nu încape în banii liberi, e plin sau e blocat devine AȘTEAPTĂ înainte de jurnal
     if (v.nivel === "cumpara" && niv.nivel === "ok" && niv.intrare && niv.stop > 0) {
       var mCash = ActiuniSemnale.marime({ intrare: niv.intrare.pret, stop: niv.stop, cont: tot, fx: t212Fx(), riscPct: v.riscPct, deja: deja, liber: liber, pretAcum: st.pret });

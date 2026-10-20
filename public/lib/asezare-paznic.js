@@ -175,6 +175,13 @@
     return V;
   }
   var ultimBotV = null;
+  function pzPretUmple() {
+    var el = $("pzPret"), src = $("tbPretViuVal"), cap = $("tbPretViu");
+    if (!el) return;
+    var t = src && src.textContent ? src.textContent : "";
+    el.textContent = t;
+    el.className = "pzPret" + (t && cap && cap.classList.contains("sus") ? " sus" : t && cap && cap.classList.contains("jos") ? " jos" : "");
+  }
   function verdict() {
     var el = $("pzVerdict"), b = D.bot, sem = $("tbSemafor"), gL = $("tbGridLarg");
     if (!b || !sem) { if (el) { el.hidden = true; el._h = ""; } if (gL) gL.classList.remove("pzInVerdict"); return; }   // fără bot / ruta picată: nu rămâne verdictul de dinainte (revizia I4)
@@ -196,10 +203,11 @@
     }
     var V = voci(), SIM = { da: "✓", nu: "✗", atentie: "!", neutru: "–" };
     var h = '<div class="pzVerbRand"><span class="pzVerb pzVerb-' + tonV + '">' + esc(verb || "—") + '</span>'
-      + '<div class="pzVerbTxt"><b>' + esc(txtTit) + '</b>' + (txtFac ? '<p>' + esc(txtFac) + '</p>' : "") + nota + '<p class="pzDin">din: Consilierul · motivele întregi în cartela lui, mai jos</p></div></div>' + motivG
+      + '<div class="pzVerbTxt"><b>' + esc(txtTit) + '</b>' + (txtFac ? '<p>' + esc(txtFac) + '</p>' : "") + nota + '<p class="pzDin">din: Consilierul · motivele întregi în cartela lui, mai jos</p></div>'
+      + '<b id="pzPret" class="pzPret"></b></div>' + motivG
       + (V.length ? '<div class="pzVoci">' + V.map(function (v) { return '<span class="pzVoce pzVoce-' + v.ton + '" title="' + esc(v.tit) + '">' + SIM[v.ton] + " " + esc(v.n) + '</span>'; }).join("") + '</div>' : "");
     if (!el) { el = document.createElement("section"); el.id = "pzVerdict"; var ref = gL || $("tbKpi"); if (!ref) return; ref.parentNode.insertBefore(el, ref); }
-    el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; }
+    el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; pzPretUmple(); }
     if (gL) gL.classList.toggle("pzInVerdict", !!motivG && el.contains(el.querySelector(".pzMotiv")));   // cartela se ascunde DOAR după ce textul ei e în verdict (revizia I5)
   }
 

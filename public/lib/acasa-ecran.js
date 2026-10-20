@@ -121,8 +121,10 @@ function acFaraServerVerd(d) {
 function acasaVerd(el, piata, v, extra) {
   if (!el) return;
   el.className = "acVerd acVerd-" + v.nivel;
-  el.innerHTML = '<div class="acPiata">' + piata + '</div><div class="acNiv acNiv-' + v.nivel + '">' + escapeHtml(v.eticheta) + '</div><p><b>' + escapeHtml(v.titlu) + '</b></p>' + (v.text ? '<p class="acMut">' + escapeHtml(v.text) + '</p>' : '')
-    + (extra || '') + (v.faCe ? '<div class="acFac">👉 <b>Ce aș face eu:</b> ' + escapeHtml(v.faCe) + '</div>' : '');
+  // v100.224: propoziția e rândul mare; eticheta vremii e cipul de deasupra. Cuvintele din faCe rămân. Fără faCe, eticheta rămâne mare.
+  el.innerHTML = '<div class="acPiata">' + piata + '</div><div class="acNiv acNiv-' + v.nivel + '">' + escapeHtml(v.eticheta) + '</div>'
+    + (v.faCe ? '<div class="acFac">' + escapeHtml(v.faCe) + '</div>' : '')
+    + '<p><b>' + escapeHtml(v.titlu) + '</b></p>' + (v.text ? '<p class="acMut">' + escapeHtml(v.text) + '</p>' : '') + (extra || '');
 }
 function acCadran(val, f, cul0, cul1, et0, et1, eticheta) {
   var ung = f == null ? Math.PI / 2 : Math.PI * (1 - Math.max(0, Math.min(1, f))), ax = 110 + 76 * Math.cos(ung), ay = 110 - 76 * Math.sin(ung), id = "acG" + Math.random().toString(36).slice(2, 7);
@@ -352,7 +354,7 @@ function acasaDeseneaza() {
       + '<p class="acEt">Dobânzi și dolar în creștere apasă de obicei și pe acțiuni, și pe crypto; aurul urcă când lumea fuge de risc.</p>'
       : '<p class="acMut">Aduc datele…</p>');
   // v100.168 (12.10, macro-dashboard mutat aici — el: „Alerta + scorul de regim macro”): scorul de regim din aceleași date (piata + btc1d)
-  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null) : "";   /* v100.196 (🔵3): vârsta regimului ținut ajunge la cartelă (pragul de 2 h nu mușca: „la” stătea lângă „macro”) */
+  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null, d.piataLa || d.btc1dLa || null) : "";   /* v100.196 (🔵3): vârsta regimului ținut ajunge la cartelă (pragul de 2 h nu mușca: „la” stătea lângă „macro”) */
   // v95: sectoarele Nasdaq 100 (din rezumatul zilnic al colectorului)
   var sec = ndxL && d.ndx ? Acasa.sectoare(d.ndx.actiuni) : [], smax = Math.max.apply(null, sec.map(function (x) { return Math.abs(x.ch5 || 0); }).concat([1]));
   $("acSectoare").innerHTML = '<div class="acCap"><h4>Sectoarele Nasdaq 100</h4><span class="acSub">pe 5 zile · azi</span></div>'

@@ -168,10 +168,11 @@ async function regimMacro(d, st, acum) {
   if (!d.Macro || acum - (st.la_macro || 0) < 30 * 60000) return;
   st.la_macro = acum;
   const p = await incearca(d, "macro piata", () => d.cere("/api/stiri?action=piata"));
-  if (!p) return;
+  // v101.131: eșecul și citirea parțială nu consumă cele 30 de minute (tura următoare reia). macroLa rămâne neatins: nu se reștampilează un cod vechi.
+  if (!p) { st.la_macro = 0; return; }
   const k = await incearca(d, "macro btc", () => d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=60"));
   const r = d.Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: k && k.data && k.data.klines, fg: p.fg }, acum);
-  if (!r || r.partial) return;
+  if (!r || r.partial) { st.la_macro = 0; return; }
   const vechi = st.macroRegim || null, h = d.Macro.histerezis(vechi, r);
   // v100.172 / v100.174: regimul ținut (cel de pe Discord) se trimite acasă la FIECARE citire completă, cu ora și scorul de acum —
   // pagina face histerezisul față de același scor ca colectorul și știe când colectorul a stat (ignoră peste 2 ore)

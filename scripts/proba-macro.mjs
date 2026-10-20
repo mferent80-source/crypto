@@ -120,12 +120,19 @@ await test("v100.172 ruta piata (istoric-bot): colectorul salvează regimul țin
 });
 await test("v100.172 Dashboard și „Ce spune piața acum” trimit regimul ținut (piataCol.macro) în card / rând", () => {
   const ae = citeste("public", "lib", "acasa-ecran.js"), app = citeste("public", "app.js");
-  assert.match(ae, /Macro\.htmlCard\(Macro\.scor\(\{[^}]*\}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null\)/);   /* v100.196: cu vârsta (🔵3) */
+  assert.match(ae, /Macro\.htmlCard\(Macro\.scor\(\{[^}]*\}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, d\.piataLa \|\| d\.btc1dLa \|\| null\)/);   /* v100.224: ora citirii */
   assert.match(app, /getJSON\("\/api\/istoric-bot\?action=piata"\)/); assert.ok(app.includes("Date.now()),macroStare.tinut)"), "macroCitire fără regimul ținut");
 });
 await test("v100.174 regimul ținut mai vechi de 2 ore (colectorul stă) e ignorat: cardul arată citirea de acum", () => {
   const r = MC.scor(date(), ACUM), vechi = { cod: "neutru", scor: 1, la: Date.now() - 3 * 3600000 }, proaspat = { cod: "neutru", scor: 1, la: Date.now() - 10 * 60000 };
   assert.equal(MC.htmlCard(r, vechi), MC.htmlCard(r)); assert.match(MC.htmlCard(r, proaspat), /<b>neutru<\/b>/);
+  const la = Date.UTC(2026, 9, 20, 10, 5), ora = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(la));
+  const cu = MC.htmlCard(r, vechi, la);
+  assert.match(cu, new RegExp("actualizat " + ora.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(cu, /Colectorul n-a publicat regimul de curând\. Asta e citirea de acum\./);
+  assert.doesNotMatch(MC.htmlCard(r, proaspat, la), /Colectorul n-a publicat/);
+  assert.match(MC.htmlCard(r, vechi, null), /Colectorul n-a publicat/);
+  assert.doesNotMatch(MC.htmlCard(r, vechi, null), /actualizat /);
 });
 await test("evenimente: doar SUA, impact mare, în următoarele 35 de minute; mesajul cu prognoza / anteriorul cu virgulă", () => {
   const A = Date.UTC(2026, 9, 14, 12, 0), ev = (min, o) => Object.assign({ title: "CPI m/m", country: "USD", impact: "High", date: new Date(A + min * 60000).toISOString(), forecast: "0.3%", previous: "0.4%" }, o || {});
@@ -144,7 +151,7 @@ await test("index.html: cardul #acRegim imediat după „Dobânzi, dolar, aur”
   assert.match(idx, /<script src="\/lib\/macro\.js"><\/script>/); assert.match(sw, /"\/lib\/macro\.js"/);
 });
 await test("Dashboard: cardul se desenează din datele pe care ecranul le are deja (piata + btc1d), fără cereri noi", () => {
-  assert.match(ae, /\$\("acRegim"\)\.innerHTML = typeof Macro !== "undefined" \? Macro\.htmlCard\(Macro\.scor\(\{ vix: p\.vix, tnx: p\.tnx, dxy: p\.dxy, spy: p\.spy, btc: d\.btc1d, fg: p\.fg \}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null\) : ""/);
+  assert.match(ae, /\$\("acRegim"\)\.innerHTML = typeof Macro !== "undefined" \? Macro\.htmlCard\(Macro\.scor\(\{ vix: p\.vix, tnx: p\.tnx, dxy: p\.dxy, spy: p\.spy, btc: d\.btc1d, fg: p\.fg \}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, d\.piataLa \|\| d\.btc1dLa \|\| null\) : ""/);
 });
 await test("„Ce spune piața acum”: rândul „Regim macro” după „Sectoarele US”", () => {
   assert.match(app, /if\(ex\.sectoare\)out\.push\(rd\(ex\.sectoare\)\);if\(ex\.macro\)out\.push\(rd\(ex\.macro\)\);/);

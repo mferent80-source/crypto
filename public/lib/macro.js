@@ -103,8 +103,11 @@
     return { ce, stare: r.treapta.stare === "rau" ? "atentie" : r.treapta.stare, text: r.treapta.text + " (scor " + scS(r.scor) + ") · " + p.join(" · ") + (ft ? " · Discord: încă „" + ft.t.text + "” până se confirmă" : "") };
   }
 
-  function htmlCard(r, tinut) {
-    const cap = '<div class="acCap"><h4>Regim macro</h4><span class="acSub">5 semne · scor de la −10 la +7</span></div>';
+  function htmlCard(r, tinut, laCitire) {
+    // v100.224: ceasul și nota apar doar când pagina trimite ora citirii. Apelul cu două argumente rămâne neschimbat.
+    let ora = "";
+    if (fin(laCitire)) { try { ora = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(laCitire)); } catch (e) { ora = ""; } }
+    const cap = '<div class="acCap"><h4>Regim macro</h4><span class="acSub">5 semne · scor de la −10 la +7' + (ora ? " · actualizat " + esc(ora) : "") + '</span></div>';
     if (!r) return cap + '<p class="acMut">Aduc datele…</p>';
     const sc = (x) => '<span class="mcSc ' + (!x.ok ? "acMut" : x.scor > 0 ? "good" : x.scor < 0 ? "bad" : "acMut") + '">' + (x.ok ? scS(x.scor) : "—") + "</span>";
     const poz = Math.max(0, Math.min(100, ((r.scor + 10) / 17) * 100)).toFixed(1), ft = fataDeTinut(r, tinut);
@@ -112,10 +115,12 @@
       ? '<p class="mcVerdict mc' + ft.t.stare + '"><b>' + esc(ft.t.text) + "</b> · ținut (citirea de acum: " + esc(r.treapta.text) + " (scor " + scS(r.scor) + "), prea aproape de prag ca să schimbe regimul)</p>"
       : '<p class="mcVerdict mc' + r.treapta.stare + '"><b>' + esc(r.treapta.text) + "</b> · scor " + scS(r.scor) + (r.partial ? " · doar " + r.valide + " din 5 semne" : "") + "</p>" +
         (ft ? '<p class="acEt">Pe Discord e încă „' + esc(ft.t.text) + "”: schimbarea se anunță după ce se confirmă la citirea următoare (cel mult o alertă la 3 ore).</p>" : "");
+    const nota = laCitire !== undefined && tinut && fin(tinut.la) && Date.now() - tinut.la > 2 * 3600000
+      ? '<p class="acEt">Colectorul n-a publicat regimul de curând. Asta e citirea de acum.</p>' : "";
     return cap + verdict +
       '<div class="mcBara"><span style="left:' + poz + '%"></span></div><div class="mcAx"><span>stres −10</span><span>neutru</span><span>+7 risk-on</span></div>' +
       r.semne.map((x) => '<div class="acTr mcTr"><b>' + esc(x.ce) + '<span class="acMut acTrSub">' + esc(x.valoare) + '</span></b><span class="mcTxt">' + esc(x.text) + "</span>" + sc(x) + "</div>").join("") +
-      '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>';
+      '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>' + nota;
   }
 
   // calendarul faireconomy (/api/stiri?action=calendar): SUA, impact mare, în următoarele `min` minute

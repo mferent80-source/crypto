@@ -2892,3 +2892,18 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 #jurnaltrade #jtScorT212:not(:empty){margin-bottom:10px}
 @media (max-width:640px){.scCifre{grid-template-columns:repeat(3,minmax(0,1fr))}.scCel:nth-child(n+4){border-top:1px solid var(--tb-linie,var(--line))}.scCel:nth-child(4){border-left:0}.scVal{font-size:22px}.scForm{grid-template-columns:repeat(2,minmax(0,1fr))}.scCap .acSub{margin-left:0;width:100%}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
+/* v100.224: pe Piața azi propoziția e rândul mare; eticheta vremii e cip, doar când există propoziția */
+#dash .acVerd:has(.acFac) .acNiv{font-size:11px;font-weight:600;letter-spacing:.04em;display:inline-block;padding:1px 7px;border:1px solid var(--tb-linie);border-radius:3px;margin:6px 0 2px}
+#dash .acVerd .acFac{margin:6px 0 4px;padding:0;border:0;background:none;border-radius:0;font-size:20px;line-height:1.25;font-weight:600;color:var(--text)}
+#dash .acVerd-liniste .acFac,#dash .acVerd-larga .acFac{color:var(--good)}
+#dash .acVerd-miscare .acFac,#dash .acVerd-scade .acFac,#dash .acVerd-frica .acFac{color:var(--bad)}
+#dash .acVerd-ingusta .acFac,#dash .acVerd-lateral .acFac{color:var(--warn)}
+/* v100.224: prețul live stă pe rândul verbului; cipul din cap se ascunde cât PAZNIC e pornit */
+.pzPret{margin-left:auto;align-self:center;font-family:var(--pzMono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--pzT1);white-space:nowrap}
+.pzPret.sus{color:var(--pzSus)}.pzPret.jos{color:var(--pzJos)}.pzPret:empty{display:none}
+@media (max-width:550px){.pzPret{font-size:18px;margin-left:0}}
+html.pzDemo #tabloubot .tbPretViu{display:none!important}
+/* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
+body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,
+body.peAcasa:not(.acMonedaDeschisa) #wsStatus,body.peTablou #wsStatus,body.peT212 #wsStatus,body.peJurnal #wsStatus,body.peGrid #wsStatus,body.pePaginaNoua #wsStatus,
+body.peAcasa:not(.acMonedaDeschisa) #topLive,body.peTablou #topLive,body.peT212 #topLive,body.peJurnal #topLive,body.peGrid #topLive,body.pePaginaNoua #topLive{display:none!important}

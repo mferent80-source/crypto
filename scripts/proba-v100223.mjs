@@ -93,7 +93,7 @@ await test("colectorul: regimProaspat pe idei, bareTicker pe EU, ideile SUA pe b
   assert.ok(!/action=preturi&interval=1d[^\n]*GridCalcul\.bare\(/.test(C));
   const P = JSON.parse(citeste("package.json"));
   assert.ok(Number(P.version.split(".")[1]) >= 223);
-  assert.match(C, /VERSIUNE_COLECTOR = "v101\.130"/);
+  assert.match(C, /VERSIUNE_COLECTOR = "v101\.(1[3-9]\d|[2-9]\d\d)"/);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

@@ -238,6 +238,23 @@ await test("v100.171 după o alertă de regim, următoarea vine abia după 3 ore
   await turaPiata(w.d, st, SAMBATA + 62 * MIN + 3 * ORA + MIN);
   assert.equal(reg().length, 2, "după 3 ore, schimbarea care a ținut pleacă");
 });
+await test("v100.224 citirea macro picată sau parțială nu consumă cele 30 de minute: tura următoare reia și publică un cod real", async () => {
+  const w = lumeMacro(), st = {}, cere0 = w.d.cere;
+  let mod = "arunca";
+  w.d.cere = async (u) => { if (u === "/api/stiri?action=piata" && mod === "arunca") throw new Error("piata jos"); return cere0(u); };
+  await turaPiata(w.d, st, SAMBATA);
+  assert.equal(st.macroLa, undefined, "eșecul nu ștampilează macroLa");
+  assert.equal(st.la_macro, 0, "eșecul eliberează cele 30 de minute");
+  mod = "partial"; w.piata({ fg: { valoare: 50 } });
+  await turaPiata(w.d, st, SAMBATA + MIN);
+  assert.equal(st.macroRegim, undefined, "parțialul nu publică un cod");
+  assert.equal(st.la_macro, 0, "parțialul eliberează tura următoare");
+  assert.equal(w.trimise.filter((x) => /action=piata/.test(x[0]) && x[1] && x[1].macro).length, 0);
+  mod = "bine"; w.piata(piataMacro(20));
+  await turaPiata(w.d, st, SAMBATA + 2 * MIN);
+  assert.equal(st.macroRegim && st.macroRegim.cod, "neutru");
+  assert.equal(st.macroLa, SAMBATA + 2 * MIN);
+});
 await test("v95 socoteala: alerta de miscare se tine minte cu pretul; dupa 24 h i se pune pretul de atunci si se trimite socoteala", async () => {
   const w = lume({ vvvScade: true }), st = {};
   await turaPiata(w.d, st, SAMBATA);

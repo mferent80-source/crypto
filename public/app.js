@@ -7523,6 +7523,8 @@ function pvArata(){
     var bg=el.querySelector('.bsParte[data-k="grid"]'),dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null;
     if(bg&&dg)bg.textContent=PretViu.textGrid(dg);
   }
+  var pz=$("pzPret");
+  if(pz){if(pa){pz.textContent=pa.text+sag;pz.className="pzPret"+(pa.viu&&pa.dir?" "+pa.dir:"");}else{pz.textContent="";pz.className="pzPret";}}
   if(b&&tbPanouVizibil()){
     tbKpiPretDeseneaza(b);tbCitireLive(b,pa);
     var g=$("tbGrafic");
