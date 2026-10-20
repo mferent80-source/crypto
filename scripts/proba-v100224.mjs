@@ -63,9 +63,9 @@ await test("cardul: ora și nota doar cu al treilea argument; două argumente r�
   const vechi = { cod: "neutru", scor: 1, la: Date.now() - 3 * 3600000 };
   assert.equal(MC.htmlCard(r, vechi), MC.htmlCard(r));
   const la = Date.UTC(2026, 9, 20, 10, 5);
-  const ora = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(la));
+  const ora = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }).format(new Date(la));
   const h = MC.htmlCard(r, vechi, la);
-  assert.match(h, new RegExp("actualizat " + ora.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(h, new RegExp("ora României · actualizat " + ora.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(h, /Colectorul n-a publicat regimul de curând\. Asta e citirea de acum\./);
   assert.ok(h.length < 8000);
 });

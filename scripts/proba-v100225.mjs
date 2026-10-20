@@ -29,7 +29,7 @@ await test("card: publicat doar pe regim proaspăt; candidatul nu schimbă verdi
   const nume = alt === "prudent" ? "prudent" : "fuga de risc \\(risk-off\\)";
   const h = MC.htmlCard(r, { cod: r.treapta.cod, scor: r.scor, la, candidat: { cod: alt, la } });
   assert.match(h, new RegExp("<b>" + r.treapta.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "</b>"));
-  assert.match(h, new RegExp("publicat " + ora.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ", ora României"));
+  assert.match(h, new RegExp("ora României · publicat " + ora.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(h, new RegExp(nume + " se confirmă la citirea următoare\\."));
   const vechi = { cod: "neutru", scor: 1, la: Date.now() - 3 * 3600000, candidat: { cod: "prudent", la: Date.now() - 3 * 3600000 } };
   assert.equal(MC.htmlCard(r, vechi), MC.htmlCard(r));

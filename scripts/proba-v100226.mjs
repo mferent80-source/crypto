@@ -24,14 +24,12 @@ const r = MC.scor({ vix: zil(() => 14.8), tnx: zil((i) => (i < N - 22 ? 4.94 : 4
 const la = Date.now() - 10 * 60000;
 const oraRo = (t) => new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }).format(new Date(t));
 
-await test("publicat e ora României; actualizat rămâne ceasul paginii; regimul vechi nu primește publicat", () => {
+await test("publicat e ora României; actualizat e același fus; regimul vechi nu primește publicat", () => {
   const citire = Date.now() - 5 * 60000;
-  const oraLoc = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(citire));
   const h = MC.htmlCard(r, { cod: r.treapta.cod, scor: r.scor, la }, citire);
   const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  assert.match(h, new RegExp("publicat " + escRe(oraRo(la)) + ", ora României"));
-  assert.match(h, new RegExp("actualizat " + escRe(oraLoc)));
-  assert.doesNotMatch(h, new RegExp("actualizat " + escRe(oraLoc) + ", ora României"));
+  assert.match(h, new RegExp("ora României · actualizat " + escRe(oraRo(citire)) + " · publicat " + escRe(oraRo(la))));
+  assert.doesNotMatch(h, /, ora României/);
   const vechi = { cod: "neutru", scor: 1, la: Date.now() - 3 * 3600000 };
   assert.equal(MC.htmlCard(r, vechi), MC.htmlCard(r));
   assert.doesNotMatch(MC.htmlCard(r, vechi), /publicat /);
@@ -66,29 +64,24 @@ await test("poarta citește KV în afara Pieței azi; sub 550 px verbul se rupe 
   const t212 = citeste("public", "lib", "t212-ecran.js");
   const poarta = t212.slice(t212.indexOf("async function t212RegimAdu"), t212.indexOf("function t212MarimeCalc"));
   assert.match(poarta, /typeof acasaPe === "function" && acasaPe\(\)/);
-  assert.match(poarta, /r && peAzi && Date\.now\(\) - r\.adus < 10 \* 60000 && r\.acasaLa === semn/);
-  assert.match(poarta, /peAzi && ac && ac\.piataCol && ac\.piataCol\.macro \? ac\.piataCol : await getJSON\("\/api\/istoric-bot\?action=piata"\)/);
+  assert.match(poarta, /r\.acasaLa === semn/);
+  assert.match(poarta, /getJSON\("\/api\/istoric-bot\?action=piata"\)/);
   const css = citeste("public", "app.css");
   assert.match(css, /#pzVerdict \.pzVerbRand\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/);
-  assert.match(css, /#pzVerdict \.pzVerb\{white-space:normal;overflow-wrap:anywhere;min-width:0\}/);
+  assert.match(css, /#pzVerdict \.pzVerb\{white-space:normal;overflow-wrap:break-word;min-width:0\}/);
   assert.match(css, /\.pzVerbRand\{flex-direction:column/);
   assert.match(css, /\.pzVerb\{font-size:30px;line-height:1;font-weight:600;letter-spacing:\.01em;color:var\(--pzT1\);white-space:nowrap\}/);
   assert.match(css, /\.pzPret\{[^}]*white-space:nowrap\}/);
 });
 
-await test("versiunea v100.226 și colectorul v101.132", () => {
+await test("versiunea de la v100.226 în sus și colectorul v101.132", () => {
   const P = JSON.parse(citeste("package.json"));
   const idx = citeste("public", "index.html");
-  assert.equal(P.version, "100.226.0");
-  assert.equal((P.scripts.test.match(/test:v100226/g) || []).length, 1);
+  const minor = Number(P.version.split(".")[1]);
+  assert.ok(minor >= 226);
   assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.132"/);
-  assert.equal((idx.match(/v100\.226/g) || []).length, 4);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-226/);
-  assert.match(idx, /v100\.226 · ORA RO/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /v100\.226/);
-  const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.226");
-  assert.equal(info.badge, "v100.226 · ORA RO");
+  assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

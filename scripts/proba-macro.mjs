@@ -132,15 +132,15 @@ await test("v100.172 Dashboard și „Ce spune piața acum” trimit regimul ți
 await test("v100.174 regimul ținut mai vechi de 2 ore (colectorul stă) e ignorat: cardul arată citirea de acum", () => {
   const r = MC.scor(date(), ACUM), vechi = { cod: "neutru", scor: 1, la: Date.now() - 3 * 3600000 }, proaspat = { cod: "neutru", scor: 1, la: Date.now() - 10 * 60000 };
   assert.equal(MC.htmlCard(r, vechi), MC.htmlCard(r)); assert.match(MC.htmlCard(r, proaspat), /<b>neutru<\/b>/);
-  const la = Date.UTC(2026, 9, 20, 10, 5), ora = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(la));
+  const la = Date.UTC(2026, 9, 20, 10, 5), ora = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }).format(new Date(la));
   const cu = MC.htmlCard(r, vechi, la);
-  assert.match(cu, new RegExp("actualizat " + ora.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(cu, new RegExp("ora României · actualizat " + ora.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(cu, /Colectorul n-a publicat regimul de curând\. Asta e citirea de acum\./);
   assert.doesNotMatch(MC.htmlCard(r, proaspat, la), /Colectorul n-a publicat/);
   assert.match(MC.htmlCard(r, vechi, null), /Colectorul n-a publicat/);
   assert.doesNotMatch(MC.htmlCard(r, vechi, null), /actualizat /);
   const oraPub = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }).format(new Date(proaspat.la));
-  assert.match(MC.htmlCard(r, proaspat), new RegExp("publicat " + oraPub.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ", ora României"));
+  assert.match(MC.htmlCard(r, proaspat), new RegExp("ora României · publicat " + oraPub.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.doesNotMatch(MC.htmlCard(r, vechi), /publicat /);
   const cuCand = MC.htmlCard(r, { cod: "inclinat", scor: 2, la: proaspat.la, candidat: { cod: "prudent", la: proaspat.la } });
   assert.match(cuCand, /<b>înclinat spre risc<\/b>/);

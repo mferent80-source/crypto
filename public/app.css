@@ -2505,7 +2505,7 @@ body:before{background-image:none!important}
 .pzVoci{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--pzLi)}
 .pzVoce{font-family:var(--pzMono);font-size:11.5px;padding:3px 8px;border:1px solid var(--pzLi2);border-radius:3px;color:var(--pzT1)}
 .pzVoce-da{border-color:rgba(38,169,108,.55);color:var(--pzSus)}.pzVoce-nu{border-color:rgba(224,82,74,.6);color:var(--pzJos)}.pzVoce-atentie{border-color:rgba(233,185,73,.6);color:var(--pzAur)}
-@media (max-width:550px){.pzVerbRand{flex-direction:column;gap:6px}.pzVerb{font-size:24px}#pzVerdict .pzVerbRand{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:6px;align-items:center}#pzVerdict .pzVerb{white-space:normal;overflow-wrap:anywhere;min-width:0}#pzVerdict .pzVerbTxt{grid-column:1 / -1}#pzVerdict .pzPret{margin-left:0;justify-self:end}}
+@media (max-width:550px){.pzVerbRand{flex-direction:column;gap:6px}.pzVerb{font-size:24px}#pzVerdict .pzVerbRand{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:6px;align-items:center}#pzVerdict .pzVerb{white-space:normal;overflow-wrap:break-word;min-width:0}#pzVerdict .pzVerbTxt{grid-column:1 / -1}#pzVerdict .pzPret{margin-left:0;justify-self:end}}
 
 /* I-591: drumul botului */
 #pzDrumCard{border:1px solid var(--pzLi);background:var(--pzF1);border-radius:5px;padding:10px 14px 8px;margin:0 0 10px}
