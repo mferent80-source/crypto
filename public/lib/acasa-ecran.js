@@ -119,19 +119,27 @@ function acFaraServerVerd(d) {
   return { nivel: "fara-date", eticheta: "FĂRĂ LEGĂTURĂ", titlu: "Serverul de acasă nu răspunde.",
     text: "N-am primit nimic de la el de la deschidere (" + String(d && d.clasamentErr || "eroare") + "). Verifică dacă PC-ul de acasă e pornit; reîncerc singur în 30 de secunde." };
 }
+function acZiAzi() {
+  try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+  catch (e) { return ""; }
+}
+function acPiataDin(stocat, ziStocata, ziAzi) {
+  if (ziAzi && ziStocata === ziAzi && (stocat === "bursa" || stocat === "crypto")) return stocat;
+  return "crypto";
+}
 function acPiataAlege(care) {
   var rad = document.getElementById("acasa"); if (!rad) return;
   var c = care === "bursa" ? "bursa" : "crypto";
   rad.classList.toggle("acDoarCrypto", c === "crypto");
   rad.classList.toggle("acDoarBursa", c === "bursa");
-  try { localStorage.setItem("acPiata", c); } catch (e) {}
+  try { localStorage.setItem("acPiata", c); localStorage.setItem("acPiataZi", acZiAzi()); } catch (e) {}
   var b1 = document.getElementById("acBtnCrypto"), b2 = document.getElementById("acBtnBursa");
   if (b1) b1.setAttribute("aria-pressed", c === "crypto" ? "true" : "false");
   if (b2) b2.setAttribute("aria-pressed", c === "bursa" ? "true" : "false");
 }
 function acPiataInit() {
   var c = "crypto";
-  try { var s = localStorage.getItem("acPiata"); if (s === "bursa" || s === "crypto") c = s; } catch (e) {}
+  try { c = acPiataDin(localStorage.getItem("acPiata"), localStorage.getItem("acPiataZi"), acZiAzi()); } catch (e) {}
   acPiataAlege(c);
 }
 function acasaVerd(el, piata, v, extra) {
@@ -493,6 +501,7 @@ function acasaDeschideAnaliza() {
   pl.scrollIntoView({ behavior: "smooth", block: "start" });
   var s = document.getElementById("symbol"); if (s) setTimeout(function () { s.focus(); s.select(); }, 350);
 }
+if (typeof document !== "undefined" && document.getElementById && document.getElementById("acasa")) acPiataInit();
 document.addEventListener("toggle", function (e) {
   var t = e.target; if (!t || !t.classList || !t.classList.contains("acPl")) return;
   // bara de cautare (moneda + "Analizeaza piata") apare doar cand deschizi analiza unei monede - in grupul ei

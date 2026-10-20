@@ -121,6 +121,13 @@
     });
     return "Regimul, S&P după pofta de risc: " + buc.join("; ") + ".";
   }
+  function regimNedovedit(c) {
+    if (!c || !Array.isArray(c.calibrare)) return false;
+    const rg = Array.isArray(c.registru) ? c.registru : [];
+    const masurat = c.calibrare.filter((x) => x && x.sursa === "macro" && x.test && x.test.stare === "testat");
+    if (!masurat.length) return false;
+    return masurat.some((r) => !rg.some((x) => x && x.ramane === true && x.sursa === "Regimul macro · " + r.h + " zile de bursă"));
+  }
   function htmlCard(r, tinut, laCitire, cal) {
     // v100.224: ceasul „actualizat” și nota de colector oprit apar doar când pagina trimite ora citirii. Apelul cu două argumente, pe un regim vechi, rămâne neschimbat.
     // v100.225: „publicat” e ora din KV, doar cât regimul ținut e în 2 ore. Candidatul nu înlocuiește codul ținut.
@@ -171,5 +178,5 @@
         ". N-aș porni boți noi și n-aș cumpăra chiar acum: la anunț prețul poate sări în ambele direcții." };
   }
 
-  global.Macro = { TREPTE, bare, scor, treaptaDin, histerezis, mesajRegim, textCitire, htmlCard, linieCalibrare, evenimenteCurand, mesajEveniment };
+  global.Macro = { TREPTE, bare, scor, treaptaDin, histerezis, mesajRegim, textCitire, htmlCard, linieCalibrare, regimNedovedit, evenimenteCurand, mesajEveniment };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -168,20 +168,9 @@ function t212CatText(m, simbol) {
     + (m.riscTotal > 0 ? " · cu ce ai deja în " + simbol + ", la același stop ~" + t212Suma(m.riscTotal) + " (" + t212PctRisc(m.riscTotalPct) + " din cont)" : "")
     + (m.pesteLiber ? " · ai doar " + t212Suma(m.liber) + " liberi" : "");
 }
-function t212SimbolEg(a, b) {
-  var n = function (s) { return String(s || "").toUpperCase().replace(/_US_EQ$|_EQ$/, ""); };
-  var x = n(a), y = n(b);
-  return !!(x && y && x === y);
-}
 function t212RaportCont() {
   if (t212.raportCont) return t212.raportCont;
   return typeof ciStare !== "undefined" && ciStare.raport ? ciStare.raport : null;
-}
-function t212AbatereSimbol(simbol, raport) {
-  var rec = raport && raport.reconciliere && raport.reconciliere.t212;
-  if (!rec || !Array.isArray(rec.abateri)) return null;
-  for (var i = 0; i < rec.abateri.length; i++) if (t212SimbolEg(rec.abateri[i] && rec.abateri[i].ticker, simbol)) return rec.abateri[i];
-  return null;
 }
 function t212CitireVeche() {
   var limita = 30 * 60000, bun = t212.cititBine;
@@ -191,8 +180,8 @@ function t212CitireVeche() {
 }
 function t212FaraSuma(p) {
   if (!t212MarimePoarta(p)) return null;
-  var r = t212RaportCont();
-  if (r && r.reconciliere && r.reconciliere.t212 && t212AbatereSimbol(p && p.simbol, r)) return "reconciliere";
+  var r = t212RaportCont(), rec = r && r.reconciliere && r.reconciliere.t212;
+  if (rec && Array.isArray(rec.abateri) && rec.abateri.length) return "reconciliere";
   if (t212CitireVeche()) return "necitit";
   return null;
 }
@@ -206,7 +195,7 @@ function t212NotaRec(p) {
   return " · reconcilierea e de acum " + t212Cate(min, "minut", "minute");
 }
 function t212TextFaraSuma(fel) {
-  if (fel === "reconciliere") return "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont pe simbolul ăsta.";
+  if (fel === "reconciliere") return "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.";
   if (fel === "necitit") return "N-aș da o sumă: brokerul n-a fost citit de 30 de minute.";
   return "";
 }
@@ -229,6 +218,9 @@ function t212LinieCal() {
   if (typeof Macro === "undefined" || typeof Macro.linieCalibrare !== "function" || t212.calibrareLa === undefined && t212.calibrare === undefined) return "";
   if (t212.calibrare === undefined && !t212.calibrareLa) return "";
   return '<p class="tbSub t212Cal">' + escapeHtml(Macro.linieCalibrare(t212.calibrare)) + "</p>";
+}
+function t212RegimNedovedit() {
+  return typeof Macro !== "undefined" && typeof Macro.regimNedovedit === "function" && Macro.regimNedovedit(t212.calibrare);
 }
 function t212ProbaText(n) {
   var pr = n.proba;
@@ -1088,7 +1080,7 @@ function t212RenderPoarta() {
   // v100.196 (auditul sever 14.10, 🟡1): „Ce aș face eu” spune suma din „Cât cumperi” (aceeași funcție), nu 20% din cont
   var planMotiv = p.v.motive.some(function (m) { return /plan de ieșire/.test(m); });
   var fara = t212FaraSuma(p);
-  var fac = ActiuniSemnale.facPoarta(p.v.nivel, t212MarimePoarta(p), { faraMarime: t212FaraMarime(p), motivPlan: planMotiv, faraSuma: fara });   // v100.71 (I4): functie pura, generata si masurata de garda
+  var fac = ActiuniSemnale.facPoarta(p.v.nivel, t212MarimePoarta(p), { faraMarime: t212FaraMarime(p), motivPlan: planMotiv, faraSuma: fara, regimNedovedit: t212RegimNedovedit() });   // v100.71 (I4): functie pura, generata si masurata de garda
   var zu = st.ultima ? new Date(st.ultima).toISOString() : "";
   out.innerHTML = '<div class="t212Verdict ' + n[1] + '"><b>' + n[0] + ' · ' + escapeHtml(p.simbol) + '</b><span class="tbSub">acum ' + t212Usd(st.pret) + (zu ? ' · ultima zi închisă ' + zu.slice(8, 10) + '.' + zu.slice(5, 7) : '') + ' · trend ' + escapeHtml(st.trend.dir) + ' · față de maximul pe 7 zile ' + t212Pct(st.distMax7z) + ' · pe 52 săpt. ' + t212Pct(st.distMax52) + '</span></div>'
     + '<p class="t212Fac t212FacPoarta">👉 <b>Ce aș face eu:</b> ' + escapeHtml(fac) + '</p>'

@@ -606,19 +606,21 @@ var ActiuniSemnale = (function () {
     o = o || {};
     var lei = function (x) { return Math.round(x).toLocaleString("ro-RO") + " lei"; };
     var cat = typeof m === "number" ? (m > 0 ? lei(m * PLAFON) + " (20% din cont)" : "20% din cont") : null;
-    // v100.229: suma tace înainte de „citește întâi contul”. Pragurile de mărime nu se mută.
-    if (nivel === "cumpara" && o.faraSuma === "reconciliere") return "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont pe simbolul ăsta.";
-    if (nivel === "cumpara" && o.faraSuma === "necitit") return "N-aș da o sumă: brokerul n-a fost citit de 30 de minute.";
+    // v100.230: pe cumpărare, când macro e măsurat și nu rămâne, aceeași propoziție o spune. Procentul nu se mută.
+    var sp = function (s) { return nivel === "cumpara" && o.regimNedovedit ? String(s).replace(/\.\s*$/, ", iar regimul nu e dovedit.") : s; };
+    // v100.229: suma tace înainte de „citește întâi contul”. v100.230: tace la orice abatere de cantitate, nu doar pe simbolul porții.
+    if (nivel === "cumpara" && o.faraSuma === "reconciliere") return sp("N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.");
+    if (nivel === "cumpara" && o.faraSuma === "necitit") return sp("N-aș da o sumă: brokerul n-a fost citit de 30 de minute.");
     if (nivel === "cumpara" && cat === null) {
-      if (o.faraMarime === "trend12") return "N-aș pune o sumă încă: Trend 12 luni e în probă, nu-i dau mărime până nu e „probat”.";
-      if (!m) return "Aș citi întâi contul și cursul: fără ele nu știu câte bucăți să cumpăr.";
-      if (m.plin) return "N-aș adăuga: ai deja 20% din cont în acțiunea asta.";
-      if (m.pesteLiber) return "Aș cumpăra ~" + lei(m.suma) + ", dar ai doar " + lei(m.liber) + " liberi: întâi aș depune sau aș vinde ceva.";
-      return "Aș cumpăra ~" + lei(m.suma) + " și aș pune stopul imediat după.";
+      if (o.faraMarime === "trend12") return sp("N-aș pune o sumă încă: Trend 12 luni e în probă, nu-i dau mărime până nu e „probat”.");
+      if (!m) return sp("Aș citi întâi contul și cursul: fără ele nu știu câte bucăți să cumpăr.");
+      if (m.plin) return sp("N-aș adăuga: ai deja 20% din cont în acțiunea asta.");
+      if (m.pesteLiber) return sp("Aș cumpăra ~" + lei(m.suma) + ", dar ai doar " + lei(m.liber) + " liberi: întâi aș depune sau aș vinde ceva.");
+      return sp("Aș cumpăra ~" + lei(m.suma) + " și aș pune stopul imediat după.");
     }
-    return nivel === "cumpara" ? "Aș cumpăra cel mult " + cat + " și aș pune stopul scris imediat după."
+    return sp(nivel === "cumpara" ? "Aș cumpăra cel mult " + cat + " și aș pune stopul scris imediat după."
       : nivel === "nu" ? "N-aș cumpăra acum: la acțiuni doar long, deci aș aștepta să se întoarcă trendul."
-      : nivel === "asteapta" ? "Aș aștepta până se rezolvă motivele de mai sus" + (o.motivPlan === false ? "." : ", mai ales planul.") : "Aș aștepta prețuri zilnice proaspete: fără ele nu judec.";
+      : nivel === "asteapta" ? "Aș aștepta până se rezolvă motivele de mai sus" + (o.motivPlan === false ? "." : ", mai ales planul.") : "Aș aștepta prețuri zilnice proaspete: fără ele nu judec.");
   }
   // „Cât te-ar fi salvat stopul”: fara = niciun stop n-ar fi ajutat; b = varianta cea mai buna {et, dif, taiate} -> {fac, nota}
   function facStop(fara, b) {
