@@ -106,12 +106,13 @@
   function htmlCard(r, tinut, laCitire) {
     // v100.224: ceasul „actualizat” și nota de colector oprit apar doar când pagina trimite ora citirii. Apelul cu două argumente, pe un regim vechi, rămâne neschimbat.
     // v100.225: „publicat” e ora din KV, doar cât regimul ținut e în 2 ore. Candidatul nu înlocuiește codul ținut.
+    // v100.226: „publicat” e ora României (Europe/Bucharest). Cât Discord încă ține codul vechi, colectorul își spune candidatul doar dacă e altul decât citirea de acum.
     let ora = "";
     if (fin(laCitire)) { try { ora = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(laCitire)); } catch (e) { ora = ""; } }
     const tinutProaspat = !!(tinut && fin(tinut.la) && Date.now() - tinut.la <= 2 * 3600000);
     let pub = "";
-    if (tinutProaspat) { try { pub = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(tinut.la)); } catch (e) { pub = ""; } }
-    const cap = '<div class="acCap"><h4>Regim macro</h4><span class="acSub">5 semne · scor de la −10 la +7' + (ora ? " · actualizat " + esc(ora) : "") + (pub ? " · publicat " + esc(pub) : "") + '</span></div>';
+    if (tinutProaspat) { try { pub = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }).format(new Date(tinut.la)); } catch (e) { pub = ""; } }
+    const cap = '<div class="acCap"><h4>Regim macro</h4><span class="acSub">5 semne · scor de la −10 la +7' + (ora ? " · actualizat " + esc(ora) : "") + (pub ? " · publicat " + esc(pub) + ", ora României" : "") + '</span></div>';
     if (!r) return cap + '<p class="acMut">Aduc datele…</p>';
     const sc = (x) => '<span class="mcSc ' + (!x.ok ? "acMut" : x.scor > 0 ? "good" : x.scor < 0 ? "bad" : "acMut") + '">' + (x.ok ? scS(x.scor) : "—") + "</span>";
     const poz = Math.max(0, Math.min(100, ((r.scor + 10) / 17) * 100)).toFixed(1), ft = fataDeTinut(r, tinut);
@@ -122,12 +123,16 @@
     const nota = laCitire !== undefined && tinut && fin(tinut.la) && Date.now() - tinut.la > 2 * 3600000
       ? '<p class="acEt">Colectorul n-a publicat regimul de curând. Asta e citirea de acum.</p>' : "";
     const cand = tinut && tinut.candidat;
-    const conf = r && !r.partial && tinutProaspat && cand && TREPTE.some((x) => x.cod === cand.cod) && cand.cod !== tinut.cod && !(ft && !ft.tinut)
+    const candOk = !!(r && !r.partial && tinutProaspat && cand && TREPTE.some((x) => x.cod === cand.cod) && cand.cod !== tinut.cod);
+    const discord = !!(ft && !ft.tinut);
+    const conf = candOk && !discord
       ? '<p class="acEt">' + esc(textTreapta(cand.cod)) + " se confirmă la citirea următoare.</p>" : "";
+    const asteapta = candOk && discord && cand.cod !== r.treapta.cod
+      ? '<p class="acEt">Colectorul așteaptă „' + esc(textTreapta(cand.cod)) + "”.</p>" : "";
     return cap + verdict +
       '<div class="mcBara"><span style="left:' + poz + '%"></span></div><div class="mcAx"><span>stres −10</span><span>neutru</span><span>+7 risk-on</span></div>' +
       r.semne.map((x) => '<div class="acTr mcTr"><b>' + esc(x.ce) + '<span class="acMut acTrSub">' + esc(x.valoare) + '</span></b><span class="mcTxt">' + esc(x.text) + "</span>" + sc(x) + "</div>").join("") +
-      '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>' + nota + conf;
+      '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>' + nota + conf + asteapta;
   }
 
   // calendarul faireconomy (/api/stiri?action=calendar): SUA, impact mare, în următoarele `min` minute

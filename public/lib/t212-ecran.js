@@ -117,10 +117,12 @@ function t212MacroDin(p, btc) {
 async function t212RegimAdu() {
   var ac = typeof acasa !== "undefined" && acasa && acasa.d ? acasa.d : null;
   var semn = typeof acasa !== "undefined" && acasa && acasa.la ? acasa.la : 0;
-  var r = t212.regimPiata; if (r && Date.now() - r.adus < 10 * 60000 && r.acasaLa === semn) return r;
+  // v100.226: cache-ul de 10 minute doar cât Piața azi e pagina deschisă. Pe T212 se recitește KV la fiecare poartă, nu copia veche de pe pagină.
+  var peAzi = typeof acasaPe === "function" && acasaPe();
+  var r = t212.regimPiata; if (r && peAzi && Date.now() - r.adus < 10 * 60000 && r.acasaLa === semn) return r;
   var macro = null, la = null, mb = null, viu = false;
   try {
-    var pc = ac && ac.piataCol && ac.piataCol.macro ? ac.piataCol : await getJSON("/api/istoric-bot?action=piata");
+    var pc = peAzi && ac && ac.piataCol && ac.piataCol.macro ? ac.piataCol : await getJSON("/api/istoric-bot?action=piata");
     if (pc && pc.macro && pc.macro.cod) { macro = String(pc.macro.cod); la = Number(pc.la || (pc.macro && pc.macro.la)) || null; }
   } catch (e) {}
   // v100.224: KV proaspăt (≤ 2 h) rămâne codul ținut. KV vechi sau fără oră + citire completă de pe pagină ⇒ codul de acum, fără scriere în KV.
