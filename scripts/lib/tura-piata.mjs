@@ -176,7 +176,8 @@ async function regimMacro(d, st, acum) {
   const vechi = st.macroRegim || null, h = d.Macro.histerezis(vechi, r);
   // v100.172 / v100.174: regimul ținut (cel de pe Discord) se trimite acasă la FIECARE citire completă, cu ora și scorul de acum —
   // pagina face histerezisul față de același scor ca colectorul și știe când colectorul a stat (ignoră peste 2 ore)
-  const publica = () => d.trimite("/api/istoric-bot?action=piata", { la: acum, macro: st.macroRegim });
+  // v101.132: candidatul stă LÂNGĂ regimul ținut. Codul nou nu ia locul celui anunțat până la confirmare.
+  const publica = () => d.trimite("/api/istoric-bot?action=piata", { la: acum, macro: st.macroRegim, candidat: st.macroCandidat || null });
   // v101.130: macroLa stă LÂNGĂ macroRegim, nu în el (forma rămâne { cod, scor }). Doar pe citirea care chiar publică un cod ținut.
   const proaspat = () => { if (st.macroRegim && st.macroRegim.cod) st.macroLa = acum; };
   if (!h.schimbat) { st.macroRegim = { cod: h.cod, scor: h.scor }; delete st.macroCandidat; proaspat(); await incearca(d, "macro acasa", publica); return; }

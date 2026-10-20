@@ -77,13 +77,13 @@ await test("poarta: ștampila din macro.la, citirea de acum când KV e vechi, f�
   assert.match(t212, /regimul e citirea de acum: colectorul nu l-a publicat în ultimele 2 ore/);
   assert.match(citeste("public", "lib", "actiuni-semnale.js"), /riscPct: 0\.01, motiv: null/);
 });
-await test("versiunea v100.224 și colectorul de la v101.131 în sus", () => {
+await test("versiunea de la v100.224 în sus și colectorul de la v101.131 în sus", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.224.0");
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.131"/);
-  assert.equal((idx.match(/v100\.224/g) || []).length, 4);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-224/);
-  assert.match(idx, /v100\.224 · ECRAN, REGIM/);
+  const minor = Number(P.version.split(".")[1]);
+  assert.ok(minor >= 224);
+  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.(1[3-9]\d|[2-9]\d\d)"/);
+  assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

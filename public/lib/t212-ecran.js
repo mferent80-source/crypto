@@ -115,8 +115,10 @@ function t212MacroDin(p, btc) {
   return String(sc.treapta.cod);
 }
 async function t212RegimAdu() {
-  var r = t212.regimPiata; if (r && Date.now() - r.adus < 10 * 60000) return r;
-  var macro = null, la = null, mb = null, viu = false, ac = typeof acasa !== "undefined" && acasa && acasa.d ? acasa.d : null;
+  var ac = typeof acasa !== "undefined" && acasa && acasa.d ? acasa.d : null;
+  var semn = typeof acasa !== "undefined" && acasa && acasa.la ? acasa.la : 0;
+  var r = t212.regimPiata; if (r && Date.now() - r.adus < 10 * 60000 && r.acasaLa === semn) return r;
+  var macro = null, la = null, mb = null, viu = false;
   try {
     var pc = ac && ac.piataCol && ac.piataCol.macro ? ac.piataCol : await getJSON("/api/istoric-bot?action=piata");
     if (pc && pc.macro && pc.macro.cod) { macro = String(pc.macro.cod); la = Number(pc.la || (pc.macro && pc.macro.la)) || null; }
@@ -139,7 +141,7 @@ async function t212RegimAdu() {
     if (!j && typeof LatimeUS !== "undefined" && typeof fetch === "function") j = await fetch(LatimeUS.SURSA, { cache: "no-store" }).then(function (x) { return x.ok ? x.json() : null; });
     var n = j && typeof LatimeUS !== "undefined" ? LatimeUS.normalizeaza(j, Date.now()) : null; if (n) mb = { stare: n.stare, vechi: !!n.vechi, stanta: n.stanta };
   } catch (e) {}
-  t212.regimPiata = { adus: Date.now(), macro: macro, la: la, mb: mb, viu: viu };
+  t212.regimPiata = { adus: Date.now(), acasaLa: semn, macro: macro, la: la, mb: mb, viu: viu };
   return t212.regimPiata;
 }
 function t212RegimPt() { var r = t212.regimPiata || {}, ok = r.macro && r.la && Date.now() - r.la <= 2 * 3600000; return { macro: ok ? r.macro : null, mb: r.mb || null, viu: !!(ok && r.viu) }; }

@@ -181,7 +181,12 @@ export async function onRequestPost({request,env}){
     if(so&&typeof so==="object")await env.ISTORIC.put("piata:socoteala",JSON.stringify({la:nr(corp.la)||Date.now(),n:nr(so.n),n1:nr(so.n1),continua1:nr(so.continua1),n3:nr(so.n3),continua3:nr(so.continua3),text:txt(so.text,300),textVreme:txt(so.textVreme,300)}));
     // v100.172: regimul macro ținut de colector (cel anunțat pe Discord) - Dashboard-ul și „Ce spune piața acum” nu-l mai contrazic
     const mc=corp&&corp.macro;
-    if(mc&&typeof mc==="object"&&["riskon","inclinat","neutru","prudent","riskoff","stres"].includes(mc.cod))await env.ISTORIC.put("piata:macro",JSON.stringify({la:nr(corp.la)||Date.now(),cod:mc.cod,scor:nr(mc.scor)}));
+    if(mc&&typeof mc==="object"&&["riskon","inclinat","neutru","prudent","riskoff","stres"].includes(mc.cod)){
+      const o={la:nr(corp.la)||Date.now(),cod:mc.cod,scor:nr(mc.scor)};
+      const c=corp&&corp.candidat,coduri=["riskon","inclinat","neutru","prudent","riskoff","stres"];
+      if(c&&typeof c==="object"&&coduri.includes(c.cod)&&c.cod!==o.cod&&nr(c.la)!==null)o.candidat={cod:c.cod,la:nr(c.la)};
+      await env.ISTORIC.put("piata:macro",JSON.stringify(o));
+    }
     const z=corp&&corp.instantaneu;
     if(z&&typeof z==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(z.zi))){
       let l=[];try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];

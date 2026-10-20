@@ -217,7 +217,11 @@ await test("v100.174 regimul ținut se trimite acasă la fiecare citire complet�
   assert.deepEqual(mac().map((x) => x[0]), ["neutru"]);
   await turaPiata(w.d, st, SAMBATA + 31 * MIN); assert.deepEqual(mac().map((x) => x[0]), ["neutru", "neutru"]); assert.equal(mac()[1][1], SAMBATA + 31 * MIN);
   w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 62 * MIN); assert.equal(mac()[2][0], "neutru", "neconfirmat: tot cel ținut"); assert.equal(st.macroLa, SAMBATA + 62 * MIN, "regimul ținut republicat își împrospătează macroLa");
+  const neconf = w.trimise.filter(([u, c]) => u === "/api/istoric-bot?action=piata" && c && c.macro).map(([, c]) => c);
+  assert.equal(neconf[2].candidat && neconf[2].candidat.cod, "inclinat", "candidatul pleacă, codul ținut rămâne");
   await turaPiata(w.d, st, SAMBATA + 93 * MIN); assert.equal(mac()[3][0], "inclinat"); assert.equal(st.macroLa, SAMBATA + 93 * MIN); assert.equal(st.macroRegim.la, undefined);
+  const dupa = w.trimise.filter(([u, c]) => u === "/api/istoric-bot?action=piata" && c && c.macro).map(([, c]) => c);
+  assert.equal(dupa[3].candidat, null, "confirmarea șterge candidatul");
 });
 // revizia Opus v100.171 (Important): la pragul VIX 18 scorul sare cu 3 (histerezisul de 2 nu-l ține) ⇒ VIX 17,9 ⇄ 18,1 dădea 5 alerte în 6 citiri
 await test("v100.171 VIX care se zbate la 18 (17,9 ⇄ 18,1 la fiecare citire) ⇒ NICIO alertă de regim; o schimbare care ține ⇒ una", async () => {

@@ -116,6 +116,12 @@ await test("v100.172 ruta piata (istoric-bot): colectorul salvează regimul țin
   const get = async () => JSON.parse(await (await m.onRequestGet({ request: new Request("https://exemplu.test/api/istoric-bot?action=piata", { headers: H }), env: ENV })).text());
   assert.equal((await post({ la: ACUM, macro: { cod: "inclinat", scor: 2 } })).status, 200);
   assert.deepEqual((await get()).macro, { la: ACUM, cod: "inclinat", scor: 2 });
+  await post({ la: ACUM + 1, macro: { cod: "inclinat", scor: 2 }, candidat: { cod: "prudent", la: ACUM } });
+  assert.deepEqual((await get()).macro, { la: ACUM + 1, cod: "inclinat", scor: 2, candidat: { cod: "prudent", la: ACUM } });
+  await post({ la: ACUM + 2, macro: { cod: "inclinat", scor: 2 }, candidat: { cod: "inclinat", la: ACUM } });
+  assert.equal((await get()).macro.candidat, undefined, "candidatul egal cu codul ținut nu se salvează");
+  await post({ la: ACUM + 3, macro: { cod: "inclinat", scor: 2 }, candidat: null });
+  assert.deepEqual((await get()).macro, { la: ACUM + 3, cod: "inclinat", scor: 2 });
   await post({ la: ACUM, macro: { cod: "<b>", scor: 2 } }); assert.equal((await get()).macro.cod, "inclinat", "cod necunoscut ignorat");
 });
 await test("v100.172 Dashboard și „Ce spune piața acum” trimit regimul ținut (piataCol.macro) în card / rând", () => {
@@ -133,6 +139,14 @@ await test("v100.174 regimul ținut mai vechi de 2 ore (colectorul stă) e ignor
   assert.doesNotMatch(MC.htmlCard(r, proaspat, la), /Colectorul n-a publicat/);
   assert.match(MC.htmlCard(r, vechi, null), /Colectorul n-a publicat/);
   assert.doesNotMatch(MC.htmlCard(r, vechi, null), /actualizat /);
+  const oraPub = new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit" }).format(new Date(proaspat.la));
+  assert.match(MC.htmlCard(r, proaspat), new RegExp("publicat " + oraPub.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.doesNotMatch(MC.htmlCard(r, vechi), /publicat /);
+  const cuCand = MC.htmlCard(r, { cod: "inclinat", scor: 2, la: proaspat.la, candidat: { cod: "prudent", la: proaspat.la } });
+  assert.match(cuCand, /<b>înclinat spre risc<\/b>/);
+  assert.match(cuCand, /prudent se confirmă la citirea următoare\./);
+  assert.equal(MC.htmlCard(r, Object.assign({}, vechi, { candidat: { cod: "prudent", la: vechi.la } })), MC.htmlCard(r));
+  assert.doesNotMatch(MC.htmlCard(r, { cod: "prudent", scor: -3, la: proaspat.la, candidat: { cod: "riskoff", la: proaspat.la } }), /se confirmă la citirea următoare\./);
 });
 await test("evenimente: doar SUA, impact mare, în următoarele 35 de minute; mesajul cu prognoza / anteriorul cu virgulă", () => {
   const A = Date.UTC(2026, 9, 14, 12, 0), ev = (min, o) => Object.assign({ title: "CPI m/m", country: "USD", impact: "High", date: new Date(A + min * 60000).toISOString(), forecast: "0.3%", previous: "0.4%" }, o || {});
