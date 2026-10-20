@@ -17,7 +17,9 @@ import * as MesajeColector from "./lib/mesaje-colector.mjs";
 import { turaLaborator as turaLaboratorModul } from "./lib/tura-laborator.mjs";
 import { turaContrafactual } from "./lib/tura-contrafactual.mjs";
 import { turaDimineata as turaDimineataModul, liniiBecuri, etichetaIeri } from "./lib/tura-dimineata.mjs";
-import { turaIdei as turaIdeiModul } from "./lib/tura-idei.mjs";
+import { turaIdei as turaIdeiModul, regimProaspat } from "./lib/tura-idei.mjs";
+import { CalendarBursa } from "./lib/calendar-bursa.mjs";
+import { bareZi } from "./lib/bare-zi.mjs";
 import { turaIngust as turaIngustModul } from "./lib/tura-ingust.mjs";
 import { turaVarianteNoapte as turaVarianteNoapteModul, mcsDinPagina } from "./lib/tura-variante-noapte.mjs";   // v101.88 (el: „fa idei”)
 import { turaMonteCarloBot as turaMonteCarloBotModul, gridSimDinPagina, liniaMonteCarlo } from "./lib/tura-monte-carlo-bot.mjs";   // v101.89 (el 08.10: „fa ideile” - B); v101.90: + rândul de dimineață
@@ -59,7 +61,8 @@ import { bilantNoteaza, pandaJudeca, bilantAlerte } from "./lib/paza-boti.mjs"; 
 import { vociBot, schimbareVoci, judecaVoci, ferestreRegim, noteazaMc, judecaMc, judecaMcLaInchidere, raportMc } from "./lib/tura-monte-carlo-bot.mjs";   /* v101.118: + calibrarea verdictului */   // v101.92 (I-577, I-579)   // v101.59 (Busola 1.36, §2 „paza boților”); v101.60: + pentruServer (I-513); v101.62: + cheiaBot (I-523)
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea, trimiteBusolei, cheiaBotilorBusola, secretScriereBusola, inchisiProaspeti } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
-const VERSIUNE_COLECTOR = "v101.129";   /* v101.129 (19.10, auditul scorului): turaScor la 10 minute (rula la fiecare minut), țintele ridicate anunțate iar */   /* v101.128 (19.10): scorul sezonului și pentru Trading 212 (pauza, țintele), nimic cât sezonul e oprit */   /* v101.127 (19.10, scorul sezonului, ideea 2): pe Discord pauza la N pierderi la rând și țintele atinse (turaScor, după arhiva boților) */   /* v101.126 (19.10, auditul din toate direcțiile): alerta „nu mai pot judeca lichidarea”, contrafactualul fără roată, timeout ≠ server oprit, hărțile curățate */   /* v101.125 (17.10): pentru-busola.json duce și episoadele alertelor + martorii (Busola le judecă la date fixe) */   /* v101.124 (17.10): pentru-busola.json duce și banii Pionex ai botului (grile, comisioane, funding, suma pusă) — Busola: „unde pleacă banii” */   /* v101.123 (16.10): omul mort — Busola n-a mai măsurat ⇒ Discord, pragul după programul ei */   /* v101.122 (16.10, auditul Busolei): distanța până la lichidare pe botul deschis în pentru-busola.json */   /* v101.121 (15.10, Busola I-636): boții merg și DIRECT în Busola (POST la worker-ul ei, după fiecare scriere a pentru-busola.json) */   /* v101.120 (15.10): profitul de acum al botului deschis în pentru-busola.json */   /* v101.119 (15.10): prețul de acum al botului în pentru-busola.json */   /* v101.118 (15.10, „fă tot” B1): verdictul Monte Carlo pe boți verificat pe ce a urmat (Brier, cutiile) */   /* v101.117 (15.10): intervalul gridului (jos/sus) + tipul botului în pentru-busola.json, pentru „IEȘIT DIN GRID” din Busola „Acum” */   /* v101.116 (14.10 noaptea, „repară și fă tot”): auditul sever reparat pe toate zonele */   /* v101.115 (14.10 seara, „repară toate”): coșurile judecate pe zi, bilanțul Trend cu t și abaterea */   /* v101.114 (14.10): Scorul zilei din „Piața azi” în jurnalul verdictelor */   // v101.113 (14.10, „fă tot”): rigla Trend peste SPY + 20/60 z, proba PAZNIC–lățime zilnic, rândul Trend în raportul de duminică; v101.112: saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+/* v101.130 (20.10, el: „fa idei”): dimineața primește regimul macro ținut dacă e proaspăt (≤ 2 h); bara zilnică EU se scoate până la închiderea bursei ei */
+const VERSIUNE_COLECTOR = "v101.130";   /* v101.129 (19.10, auditul scorului): turaScor la 10 minute (rula la fiecare minut), țintele ridicate anunțate iar */   /* v101.128 (19.10): scorul sezonului și pentru Trading 212 (pauza, țintele), nimic cât sezonul e oprit */   /* v101.127 (19.10, scorul sezonului, ideea 2): pe Discord pauza la N pierderi la rând și țintele atinse (turaScor, după arhiva boților) */   /* v101.126 (19.10, auditul din toate direcțiile): alerta „nu mai pot judeca lichidarea”, contrafactualul fără roată, timeout ≠ server oprit, hărțile curățate */   /* v101.125 (17.10): pentru-busola.json duce și episoadele alertelor + martorii (Busola le judecă la date fixe) */   /* v101.124 (17.10): pentru-busola.json duce și banii Pionex ai botului (grile, comisioane, funding, suma pusă) — Busola: „unde pleacă banii” */   /* v101.123 (16.10): omul mort — Busola n-a mai măsurat ⇒ Discord, pragul după programul ei */   /* v101.122 (16.10, auditul Busolei): distanța până la lichidare pe botul deschis în pentru-busola.json */   /* v101.121 (15.10, Busola I-636): boții merg și DIRECT în Busola (POST la worker-ul ei, după fiecare scriere a pentru-busola.json) */   /* v101.120 (15.10): profitul de acum al botului deschis în pentru-busola.json */   /* v101.119 (15.10): prețul de acum al botului în pentru-busola.json */   /* v101.118 (15.10, „fă tot” B1): verdictul Monte Carlo pe boți verificat pe ce a urmat (Brier, cutiile) */   /* v101.117 (15.10): intervalul gridului (jos/sus) + tipul botului în pentru-busola.json, pentru „IEȘIT DIN GRID” din Busola „Acum” */   /* v101.116 (14.10 noaptea, „repară și fă tot”): auditul sever reparat pe toate zonele */   /* v101.115 (14.10 seara, „repară toate”): coșurile judecate pe zi, bilanțul Trend cu t și abaterea */   /* v101.114 (14.10): Scorul zilei din „Piața azi” în jurnalul verdictelor */   // v101.113 (14.10, „fă tot”): rigla Trend peste SPY + 20/60 z, proba PAZNIC–lățime zilnic, rândul Trend în raportul de duminică; v101.112: saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -143,6 +146,7 @@ const Directie = incarca("directie.js", "Directie");
 const Scan = incarca("scan.js", "Scan");   // v96: rezumatul zilnic pentru pagina Scan
 const TabloBot = incarca("tablou-bot.js", "TabloBot");
 const GridCalcul = incarca("grid-calcul.js", "GridCalcul");
+function bareTicker(rd, tk, acum) { return bareZi(GridCalcul, CalendarBursa, rd, acum || Date.now(), tk); }   /* v101.130: EU până la închiderea ei; SUA rămâne bareBursa */
 const GridClasament = incarca("grid-clasament.js", "GridClasament");
 const JurnalTrade = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "jurnal-trade.js"), "utf8") + "; return JurnalTrade;")(GridCalcul);
 const Contrafactual = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "contrafactual.js"), "utf8") + "; return Contrafactual;")();
@@ -965,7 +969,7 @@ async function turaPlanuriT212() {
         catch (e) { await t212Sanatate(e); throw e; }
       },
       cerePlan: async (tk) => { const d = await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + tk)); return d && d.plan || null; },
-      cereBare: async (tk) => { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)); return GridCalcul.bareBursa(d && d.randuri || [], Date.now()); },
+      cereBare: async (tk) => { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)); return bareTicker(d && d.randuri || [], tk); },
       trimite: (msg, cheie) => trimiteAlerta(msg, null, cheie.replace(/[^A-Za-z0-9_-]/g, "")), stare: st, ActiuniSemnale, T212, jurnal });
   } catch (e) { jurnal("planuri t212 ESEC", e.message); }
   // v87: frana de "cumparat in jos" (NPA: 4 cumparari pe minus, -8.165 lei) + plafonul de 20% din cont
@@ -1003,7 +1007,7 @@ async function turaCfActiuni() {
       umpleri: async () => { const d = await cere("/api/t212?action=istoric"); return d && d.umpleri || []; },
       gata: async () => { const d = await cere("/api/t212?action=cf"); return d && d.cf || {}; },
       cereBare: async (tk, nm) => {
-        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); return GridCalcul.bareBursa(d && d.randuri || [], Date.now()); }
+        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk) + (nm ? "&nume=" + encodeURIComponent(nm) : "")); return bareTicker(d && d.randuri || [], tk); }
         catch (e) { if (e.status === 404) return null; throw e; }   // 404 = fara preturi (delistata); altceva se reincearca
       },
       salveaza: (m) => trimite("/api/t212?action=cf", { verdicte: m }),
@@ -1073,7 +1077,7 @@ async function pozitiiPentruPoza() {
   const out = [];
   for (const x of poz) {
     let bare = [], plan = null;
-    try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)); bare = GridCalcul.bareBursa(d && d.randuri || [], Date.now()); } catch (e) { jurnal("poza: bare", x.ticker, e.message); }
+    try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)); bare = bareTicker(d && d.randuri || [], x.ticker); } catch (e) { jurnal("poza: bare", x.ticker, e.message); }
     // revizia 01.10 (I5): la o eroare (RATE_LIMITED) ramane ultimul plan cunoscut - altfel stop-plan disparea si verdictul pâlpâia pe Discord
     try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + x.ticker))); planUltim[x.ticker] = plan; } catch { plan = planUltim[x.ticker] ?? null; }
     const mx = ActiuniSemnale.maxDupaCumparare(bare, x.initialFillDate, x.currentPrice);   // v100.40: de la ziua de dupa cumparare
@@ -1083,7 +1087,7 @@ async function pozitiiPentruPoza() {
     const sursa = DUBLURI[p.simbol] || null; let extra = null;
     try { extra = await yahooExtra.extra(sursa || p.simbol); } catch (e) { jurnal("poza: extra t212", p.simbol, e.message); }
     const st = bare.length ? ActiuniSemnale.stare(bare, p.pret) : null, sem = ActiuniSemnale.semafor(p, st);
-    // v101.74 (I-547): becul 1z, ca pe pagina T212 - doar listările din SUA (bareBursa scoate bara de azi în formare doar pe ora New York-ului)
+    // v101.74 (I-547): becul 1z, ca pe pagina T212 - doar listările din SUA (bareBursa scoate bara de azi în formare doar pe ora New York-ului; v101.130: EU se taie la închiderea bursei ei)
     const semZi = /_US_EQ$/.test(x.ticker) && bare.length ? GraficBot.semZi(bare, "long") : null;
     const tp = ActiuniSemnale.trailPozitie(alesT, await pragProfilActiune(x.ticker));   // v101.31: stopul din profil doar daca a castigat
     const n = bare.length ? ActiuniSemnale.niveluri(bare, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: mx, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail }) : null;
@@ -1272,7 +1276,7 @@ async function turaIdeiZi() {
     // ale lui intai (actiunile pe care a castigat + lista lui), apoi Nasdaq-100: la dubluri ramane varianta cu istoricul lui
     const tickere = [...new Set(Object.keys(castig).filter((k) => castig[k] > 0).concat(lista.map((x) => x.replace(/\./g, "-") + "_US_EQ"), NDX.map((x) => x + "_US_EQ")))];
     const bareIdei = new Map(), randuriIdei = new Map();   // v101.64 (L2): barele aduse pentru idei, refolosite la cifrele 🧠/🌳; v101.65 (ideea 2): și rândurile brute, scrise în data/retea/zile
-    const r = await turaIdeiModul({ tickere, inchise, Idei, Reveniri, Probabilitati, ProfilMoneda, jurnal, simbol: (tk) => T212.simbol(tk), acum: Date.now(), pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
+    const r = await turaIdeiModul({ tickere, inchise, Idei, Reveniri, Probabilitati, ProfilMoneda, jurnal, simbol: (tk) => T212.simbol(tk), acum: Date.now(), regim: regimProaspat(m.piata, Date.now()), pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
       // v93: bareToate - la 8 dimineata ultima zi de bursa e INCHISA (bare() o arunca: ideile erau cu o zi in urma)
       cereBare: async (tk) => { const rd = (await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []; randuriIdei.set(tk, rd); const b = GridCalcul.bareBursa(rd, Date.now());   /* v101.116 (A10): fără bara zilei în formare */ bareIdei.set(tk, b); return b; },
       ndx: new Set(NDX), rezumat: Acasa.rezumatActiune,
@@ -1298,7 +1302,7 @@ async function turaIdeiZi() {
     try {
       let istS = []; try { istS = JSON.parse(fs.readFileSync(SUG_IST_FIS, "utf8")); if (!Array.isArray(istS)) istS = []; } catch { istS = []; }
       const s = await sugestiiDimineata({ SA: SugestiiActiuni, Reveniri, bareUS: bareIdei, tickereEU: universEU(h && h.umpleri), acum: Date.now(), jurnal, istoric: istS, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
-        cereBare: async (tk) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || []) });
+        cereBare: async (tk) => bareTicker((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || [], tk) });
       scrieAtomic(SUG_BAZA_FIS, { zi, la: Date.now(), tickere: s.baza }); scrieAtomic(SUG_IST_FIS, s.istoric);   // revizia (I1): baza își știe ziua
       await trimite("/api/t212?action=sugestii", { sugestii: s.raport });
     } catch (e) { jurnal("sugestii ESEC", e.message); }
@@ -1322,7 +1326,7 @@ async function turaSaltZi() {
   try {
     const u = JSON.parse(fs.readFileSync(path.join(RAD, "public", "data", "salt-univers.json"), "utf8"));
     const r = await turaSaltModul({ Salt, SA: SugestiiActiuni, Reveniri, Idei, Probabilitati, ProfilMoneda, univers: u && u.instrumente || [], acum: Date.now(), jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)),
-      cereBare: async (s) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(s))).randuri || []) });
+      cereBare: async (s) => bareTicker((await cere("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(s))).randuri || [], s) });
     // peste 10% fără prețuri (Yahoo a limitat) ⇒ eșec: rămâne raportul de ieri, reîncerc peste o oră
     const nU = (u && u.instrumente || []).length;
     if (r.judecate > 0 && !(r.fara > 0.1 * nU)) { await trimite("/api/t212?action=salt", { raport: r }); m.saltZi = zi; } else { jurnal("salt: prea multe fără prețuri (" + r.fara + " din " + nU + ") - reîncerc peste o oră"); saltEsec = Date.now(); }
@@ -1372,7 +1376,7 @@ async function turaSaltPozitii() {
   try {
     const s = await cere("/api/t212?action=salt"), poz = s && Array.isArray(s.pozitii) ? s.pozitii : [];
     const u = JSON.parse(fs.readFileSync(path.join(RAD, "public", "data", "salt-univers.json"), "utf8"));
-    const cereBare = async (sim) => GridCalcul.bareToate((await cere("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(sim))).randuri || []);
+    const cereBare = async (sim) => { const rd = (await cere("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(sim))).randuri || []; return sim === "EURRON=X" ? GridCalcul.bareToate(rd) : bareTicker(rd, sim); };   /* v101.130: cursul rămâne pe toate barele */
     let eurRon = null; if (poz.length) { try { const b = await cereBare("EURRON=X"); eurRon = b.length ? b[b.length - 1].c : null; } catch { eurRon = null; } }
     const m = meta(), st = m.saltAlerte || (m.saltAlerte = {});
     const r = await turaSaltPozitiiModul({ pozitii: poz, univers: u && u.instrumente || [], cereBare, Salt, deps: { ActiuniSemnale, Consiliu, Consilier, Probabilitati }, stare: st,
@@ -1434,7 +1438,7 @@ async function dateDimineata() {
       for (const x of poz) {
         const s = T212.simbol(x.ticker);
         try {
-          const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)), bare = GridCalcul.bareBursa(d && d.randuri || [], Date.now()), st = ActiuniSemnale.stare(bare, x.currentPrice);
+          const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(x.ticker)), bare = bareTicker(d && d.randuri || [], x.ticker), st = ActiuniSemnale.stare(bare, x.currentPrice);
           barePe[x.ticker] = bare;
           // v101.75 (I-552): becurile poziției pentru dimineață - 1z doar pe listările din SUA (ca I-546 / I-547), 4 h din prețurile de 4 h
           let h4 = null; try { const r4 = await cere("/api/t212?action=preturi&interval=4h&ticker=" + encodeURIComponent(x.ticker)), b4 = GraficBot.semafor({ "4H": r4 && r4.randuri || [] }, "long", { actiune: true, acum: Date.now() }).find((y) => y.tf === "4H"); h4 = b4 && b4.dir || null; } catch {}
@@ -1454,7 +1458,7 @@ async function dateDimineata() {
       // v91: socoteala sfaturilor - semaforul de azi + preturile dupa 5/10/20 zile pentru sfaturile vechi
       try {
         const sf = await cere("/api/t212?action=sfaturi"), lista = (sf && sf.sfaturi) || [];
-        for (const tk of [...new Set(lista.map((y) => y.ticker))]) if (!barePe[tk]) { try { barePe[tk] = GridCalcul.bareBursa((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || [], Date.now()); } catch {} }
+        for (const tk of [...new Set(lista.map((y) => y.ticker))]) if (!barePe[tk]) { try { barePe[tk] = bareTicker((await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk))).randuri || [], tk); } catch {} }
         await trimite("/api/t212?action=sfaturi", { intrari, evaluari: Consilier.deEvaluat(lista, barePe, Date.now()) });
       } catch (e) { jurnal("socoteala sfaturi", e.message); }
     } catch (e) { jurnal("dimineata t212", e.message); }
@@ -1754,7 +1758,7 @@ async function turaSocotealaActiuni() {
       await new Promise((r) => setTimeout(r, 700));
       const v = await cere("/api/istoric-bot?action=semneAct&bot=" + encodeURIComponent(tk)).catch(() => null); let j = v && Array.isArray(v.log) ? v.log : [];
       if (j.some((e) => e && e.r !== 0 && e.r !== 1)) {
-        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)), nou = Consiliu.judecaActiune(j, GridCalcul.bareBursa(d && d.randuri || [], Date.now()), Date.now());
+        try { const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk)), nou = Consiliu.judecaActiune(j, bareTicker(d && d.randuri || [], tk), Date.now());
           if (JSON.stringify(nou) !== JSON.stringify(j)) { await trimite("/api/istoric-bot?action=semneAct", { bot: tk, log: nou }); j = nou; if (tk in jurnaleAct) jurnaleAct[tk] = nou; } } catch (e) { jurnal("socoteala actiuni", tk, e.message); }   // memoria pozei ia judecatile (altfel urmatoarea notare le-ar suprascrie)
       }
       jurnale.push(j); logActNou.push({ ticker: tk, log: j });
@@ -1783,7 +1787,7 @@ async function turaProfilActiuni() {
       await new Promise((rs) => setTimeout(rs, 1200));
       try {
         const d = await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(t));
-        const p = ProfilMoneda.calculeaza(GridCalcul.bareBursa(d && d.randuri || [], Date.now()), { piata: "actiuni", simbol: t, acum: Date.now() });
+        const p = ProfilMoneda.calculeaza(bareTicker(d && d.randuri || [], t), { piata: "actiuni", simbol: t, acum: Date.now() });
         if (p) { await trimite("/api/istoric-bot?action=profil", { simbol: t, profil: p }); facute++; }
         st[t] = r.data;
       } catch (e) { jurnal("profil actiuni", t, e.status === 404 ? "fara preturi (404)" : e.message); if (e.status === 404) st[t] = r.data; }
@@ -2294,7 +2298,7 @@ async function turaDecizii() {
       let nou;
       if (/^t212-/.test(id)) {   // v101.33: deciziile pe actiuni - la 5 zile de bursa pe pretul actiunii
         const d = l.some((e) => e.r === undefined || e.r === null) ? await cere("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(id.slice(5))).catch(() => null) : null;
-        nou = Consiliu.judecaDecizieActiune(l, d ? GridCalcul.bareBursa(d.randuri || [], Date.now()) : [], Date.now());
+        nou = Consiliu.judecaDecizieActiune(l, d ? bareTicker(d.randuri || [], id.slice(5)) : [], Date.now());
       } else {
         const ist = l.some((e) => e.r === undefined || e.r === null) ? ((await cere("/api/istoric-bot?bot=" + encodeURIComponent(id) + "&ore=168").catch(() => null)) || {}).intrari || [] : [];
         nou = Consiliu.judecaDecizii(l, ist, finale[id] || null, Date.now());

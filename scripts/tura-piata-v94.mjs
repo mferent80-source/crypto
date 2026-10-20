@@ -200,7 +200,7 @@ const piataMacro = (vix) => {
 await test("v100.168 regimul macro: prima citire doar se ține minte; mișcare mică la graniță ⇒ ținut; schimbare reală ⇒ O alertă", async () => {
   const w = lumeMacro(), st = {}, reg = () => w.alerte.filter((x) => /Regimul macro/.test(x.titlu || ""));
   w.piata(piataMacro(20)); await turaPiata(w.d, st, SAMBATA);   // VIX 20 (−1) + dobânda stabilă (+1) + dolar plat (0) + frica 50 (0) = 0 ⇒ neutru
-  assert.deepEqual(st.macroRegim, { cod: "neutru", scor: 0 }); assert.equal(reg().length, 0);
+  assert.deepEqual(st.macroRegim, { cod: "neutru", scor: 0 }); assert.equal(st.macroLa, SAMBATA); assert.equal(st.macroRegim.la, undefined); assert.equal(reg().length, 0);
   w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 31 * MIN);   // VIX 17 (+2) ⇒ 3, înclinat: salt de 3 ⇒ schimbare reală
   // revizia v100.171: regimul nou trebuie să se confirme la citirea următoare (30 min) ⇒ abia a doua oară pleacă alerta
   assert.equal(reg().length, 0, "prima citire a regimului nou doar se notează"); assert.equal(st.macroRegim.cod, "neutru");
@@ -216,8 +216,8 @@ await test("v100.174 regimul ținut se trimite acasă la fiecare citire complet�
   w.piata(piataMacro(20)); await turaPiata(w.d, st, SAMBATA);
   assert.deepEqual(mac().map((x) => x[0]), ["neutru"]);
   await turaPiata(w.d, st, SAMBATA + 31 * MIN); assert.deepEqual(mac().map((x) => x[0]), ["neutru", "neutru"]); assert.equal(mac()[1][1], SAMBATA + 31 * MIN);
-  w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 62 * MIN); assert.equal(mac()[2][0], "neutru", "neconfirmat: tot cel ținut");
-  await turaPiata(w.d, st, SAMBATA + 93 * MIN); assert.equal(mac()[3][0], "inclinat");
+  w.piata(piataMacro(17)); await turaPiata(w.d, st, SAMBATA + 62 * MIN); assert.equal(mac()[2][0], "neutru", "neconfirmat: tot cel ținut"); assert.equal(st.macroLa, SAMBATA + 62 * MIN, "regimul ținut republicat își împrospătează macroLa");
+  await turaPiata(w.d, st, SAMBATA + 93 * MIN); assert.equal(mac()[3][0], "inclinat"); assert.equal(st.macroLa, SAMBATA + 93 * MIN); assert.equal(st.macroRegim.la, undefined);
 });
 // revizia Opus v100.171 (Important): la pragul VIX 18 scorul sare cu 3 (histerezisul de 2 nu-l ține) ⇒ VIX 17,9 ⇄ 18,1 dădea 5 alerte în 6 citiri
 await test("v100.171 VIX care se zbate la 18 (17,9 ⇄ 18,1 la fiecare citire) ⇒ NICIO alertă de regim; o schimbare care ține ⇒ una", async () => {

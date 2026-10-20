@@ -210,6 +210,20 @@ await test("ideea 1 - sezoane: istoricul de pe server + cel de acum, fiecare pe 
   assert.deepEqual(S.normalizeaza(cfg).istoric, [{ start: S2, sfarsit: START }, { start: S1, sfarsit: S2 }]);
 });
 
+await test("v100.223: ferestrele [start, sfârșit) nu împart același bot; un trade exact la sfârșit e într-un singur sezon", () => {
+  const S1 = START - 20 * ZI, S2 = START - 10 * ZI;
+  const tr = [t("a", S1 + ORA, 1), t("c", S2 - 1, 2), t("b", S2, 4), t("d", START, -1)];
+  const cfg = { start: START, obiectiv: CFG.obiectiv, istoric: [{ start: S1, sfarsit: S2 }, { start: S2, sfarsit: START }] };
+  const z = S.sezoane(tr, cfg, ACUM);
+  const fer = [{ start: S1, sfarsit: S2 }, { start: S2, sfarsit: START }, { start: START, sfarsit: null }];
+  const inF = (x, f) => x.inchis >= f.start && (f.sfarsit === null || x.inchis < f.sfarsit);
+  assert.deepEqual(z.map((x) => x.n), fer.map((f) => tr.filter((x) => inF(x, f)).length));
+  assert.deepEqual(z.map((x) => x.n), [2, 1, 1]);
+  assert.equal(z.reduce((s, x) => s + x.n, 0), tr.length, "suma n = membri distincți");
+  const bIn = fer.filter((f) => inF(tr.find((x) => x.id === "b"), f));
+  assert.equal(bIn.length, 1); assert.equal(bIn[0].start, S2);
+});
+
 await test("ideea 1 - htmlIstoric: gol cu un singur sezon; altfel tabelul cu cel de acum primul, perioada, win / loss, rata, net, seria", () => {
   const S1 = START - 20 * ZI;
   assert.equal(S.htmlIstoric(S.sezoane([], CFG, ACUM)), "");

@@ -5,6 +5,13 @@
 // v93: pentru actiunile din Nasdaq 100 pune si rezumatul zilei (Home: largimea, cine se misca, cele 7 mari).
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+// v100.223: regimul macro ținut, doar dacă ștampila lui (macroLa) e în ultimele 2 ore. Lipsa, codul gol sau o ștampilă veche
+// rămân „fără regim” (riscul cade pe 1 %). Nu se trimite { macro: null }: aia ar scrie „necunoscut” și tot ar lăsa cumpărarea.
+export function regimProaspat(piata, acum) {
+  const mr = piata && piata.macroRegim, cod = mr && mr.cod;
+  if (!cod || !(piata.macroLa > 0) || acum - piata.macroLa > 2 * 3600000) return null;
+  return { macro: String(cod) };
+}
 export async function turaIdei(d) {
   const l = [], preturi = {}, vazute = new Set(), sim = d.simbol || ((tk) => tk.split("_")[0]), ndx = [], rev = [], serii = [];
   let judecate = 0, i = 0;
@@ -19,7 +26,7 @@ export async function turaIdei(d) {
     if (d.ndx && d.rezumat && d.ndx.has(s)) { const z = d.rezumat(bare); if (z) ndx.push({ s, ...z }); }
     let r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: tk });
     // data rezultatelor doar pentru cele care trec (o cerere in plus pe fiecare)
-    // v100.222 (I-722): și când Nasdaq nu dă data. Regimul doar dacă tura îl are deja (colectorul de dimineață nu-l cere).
+    // v100.222 (I-722): și când Nasdaq nu dă data. v100.223: regimul doar dacă dimineața îl dă (macroLa proaspăt, ≤ 2 h); lipsa lui nu blochează.
     if (r.trece) { let rz = null; try { rz = await d.cereRezultate(tk); } catch {} r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, rezultate: rz || null, rezultateStiut: true, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: tk, regim: d.regim }); }
     l.push({ ticker: tk, simbol: s, r });
     // v101.58 (reveniri): aceleași bare zilnice - acțiunea pe revenire (doar long) și punctele pentru istoricul regulii
