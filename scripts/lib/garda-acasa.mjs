@@ -25,6 +25,22 @@ export function situatiiAcasa(pune) {
   for (const [sit, o] of [["fără date", { qqq: [] }], ["frică (VIX 31)", { qqq: serie(JOS), vix: 31, ndx: { e50: 30, n: 100 } }], ["scade", { qqq: serie(JOS), vix: 22, ndx: { e50: 30, n: 100 } }],
     ["laterală", { qqq: serie(LAT), vix: 21, ndx: { e50: 50, n: 100 } }], ["urcare îngustă", { qqq: serie(SUS), vix: 18, ndx: { e50: 40, n: 100 } }], ["urcare largă", { qqq: serie(SUS), vix: 14, ndx: { e50: 70, n: 100 } }]])
     pune("vremea bursei: " + sit, "acasa", "vremeBursa", D(AC.vremeBursa(o)), [["titlu", "deCe"], ["text", "detalii"], ["faCe", "faCe"]]);
+  // v100.231: frâna verbului, după ce vremea a vorbit (aceleași propoziții pe Acasă, Discord și duminică)
+  const linF = cr(10, { long: 45, short: 45, neutru: 10 }, 50), misF = cr(60, { long: 45, short: 45, neutru: 10 }, 50);
+  const largaF = AC.vremeBursa({ qqq: serie(SUS), vix: 14, ndx: { e50: 70, n: 100 } }), rosieF = AC.vremeBursa({ qqq: serie(JOS), vix: 31, ndx: { e50: 30, n: 100 } });
+  const rap5 = { valoare: { total: 100000 }, risc: { var95: 5000 } }, rapMic = { valoare: { total: 100000 }, risc: { var95: 1000 } };
+  const frana = (sit, v, o) => pune("frâna verbului: " + sit, "acasa", "franaVerb", { t: AC.franaVerb(v, o).faCe }, [["t", "faCe"]]);
+  frana("pauză pe liniște", linF, { fel: "crypto", pauza: true, pauzaN: 3 });
+  frana("pauză pe mișcare", misF, { fel: "crypto", pauza: true, pauzaN: 3 });
+  frana("raport lipsă", linF, { fel: "crypto", raportStare: "lipsa" });
+  frana("raport vechi 14 ore", linF, { fel: "crypto", raportStare: "vechi", raportOre: 14 });
+  frana("raport vechi 21 de ore", linF, { fel: "crypto", raportStare: "vechi", raportOre: 21 });
+  frana("zi proastă 5%", linF, { fel: "crypto", raportStare: "ok", raport: rap5 });
+  frana("eveniment CPI", linF, { fel: "crypto", raportStare: "ok", raport: rapMic, eveniment: "CPI m/m" });
+  frana("necunoscut lasă verbul", linF, { fel: "crypto", raportStare: "necunoscut" });
+  frana("bursă zi proastă", largaF, { fel: "bursa", raportStare: "ok", raport: rap5 });
+  frana("bursă roșie cu raport lipsă", rosieF, { fel: "bursa", raportStare: "lipsa" });
+  frana("bursă nu ia pauza", largaF, { fel: "bursa", pauza: true, pauzaN: 3 });
   // ---- frica/lacomia, latimea pietei, legatura BTC - bursa, calendarul, funding-ul pietei, socoteala alertelor
   for (const [sit, l] of [["lăcomie", Array.from({ length: 30 }, (_, i) => 50 + i)], ["frică", Array.from({ length: 30 }, (_, i) => 60 - i * 1.5)], ["la mijloc", Array.from({ length: 30 }, (_, i) => 40 + (i % 5))]])
     pune("frica/lăcomia: " + sit, "acasa", "fg", { t: AC.fg(l).text }, [["t", "detalii"]]);

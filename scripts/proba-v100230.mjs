@@ -80,19 +80,18 @@ await test("telefonul ține piața doar în ziua de azi, ora României", () => {
   assert.match(ae, /getElementById\("acasa"\)\) acPiataInit\(\)/);
 });
 
-await test("versiunea v100.230, insigna AZI, colectorul v101.132", () => {
+await test("versiunea de la v100.230 în sus și colectorul v101.132", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.230.0");
+  const minor = Number(P.version.split(".")[1]);
+  assert.ok(minor >= 230);
   assert.equal(P.scripts["test:v100230"], "node scripts/proba-v100230.mjs");
   assert.equal((P.scripts.test.match(/test:v100230/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100229/g) || []).length, 1);
-  assert.equal((idx.match(/v100\.230/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.230 · AZI</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-230/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.230"/);
+  assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp("VERSIUNE = \"v100\\." + minor + "\""));
   const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.230");
-  assert.equal(info.badge, "v100.230 · AZI");
+  assert.equal(info.version, "v100." + minor);
   assert.match(col, /if \(S\.eLimitaDeRitm\(e\)\) return;/);
   assert.match(col, /VERSIUNE_COLECTOR = "v101\.132"/);
 });

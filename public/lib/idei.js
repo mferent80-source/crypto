@@ -91,6 +91,23 @@ var Idei = (function () {
     o.text = !o.n ? "Ideile se urmăresc de azi: după ~30 se poate spune dacă merită urmate." : "Din " + o.n + " idei de cel puțin 5 zile: " + p + " pe plus, " + P(o.medie) + " în medie de la prețul ideii, după comision" + (o.n < 30 ? " (puține — mai așteaptă)" : "") + ".";
     return o;
   }
-  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, reveniriBoti: reveniriBoti, shortBoti: shortBoti, urmarire: urmarire };
+  // v100.231: lista de la 8, pe datele deja scrise. Regimul blocat sau rezultatele în 0–10 zile scot numele.
+  // Data lipsă sau necitibilă îl păstrează. Ordinea rămâne. Plafonul 45, primele 5 sus.
+  function ideiInca(id, o) {
+    o = o || {}; id = id || {};
+    var acum = o.acum > 0 ? o.acum : Date.now(), blocat = false;
+    if (o.regim && AS && AS.regimPoarta) { var rg = AS.regimPoarta(o.regim); blocat = !!(rg && rg.cod === "blocat"); }
+    var tine = function (x) {
+      if (!x || x.scos) return false;
+      if (blocat) return false;
+      var raw = x.rezultate ? String(x.rezultate) : "";
+      var z = raw ? Math.ceil((Date.parse(raw.slice(0, 10) + "T12:00:00Z") - acum) / ZI) : null;
+      if (z !== null && z >= 0 && z <= 10) return false;
+      return true;
+    };
+    var l = [].concat(id.actiuni || [], id.restul || []).filter(tine).slice(0, 45);
+    return { actiuni: l.slice(0, 5), restul: l.slice(5), trecute: l.length };
+  }
+  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, reveniriBoti: reveniriBoti, shortBoti: shortBoti, urmarire: urmarire, ideiInca: ideiInca };
 })();
 if (typeof globalThis !== "undefined") globalThis.Idei = Idei;

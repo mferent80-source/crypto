@@ -95,10 +95,11 @@ function sugBoti(cl, sg) {
   var pr = function (v) { return (Math.round(Number(v) * 1000) / 10).toFixed(1).replace(".", ",") + "%"; };
   // v100.181 (el 13.10: „fă idei” - ideea 1): 🧭 pe fiecare monedă, Busola pe 4h (intervalul clasamentului), ca s-o verifici înainte de pornire
   var bz = function (s) { return typeof Busola !== "undefined" && Busola.adresaBusola ? Busola.adresaBusola({ simbol: s, tf: "4h" }) : null; };
-  var porn = I.ideiBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: [x.latime != null ? "interval " + pr(x.latime) : "", x.profitGrila != null ? pr(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ") || "candidat" }; });
+  var pzS = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
+  var porn = pzS > 0 ? [] : I.ideiBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: [x.latime != null ? "interval " + pr(x.latime) : "", x.profitGrila != null ? pr(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ") || "candidat" }; });
   var rev = I.reveniriBoti ? I.reveniriBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "pe revenire" }; }) : [], sh = I.shortBoti ? I.shortBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "liniștită, direcția short" }; }) : [];
   return '<section class="rlSec"><h4 class="sugCap">🤖 Boți</h4><div class="sugGrila">'
-    + sugCartela("💡 Pe ce aș porni un bot", "din clasamentul primelor 100 de monede PERP", porn, "acum nicio monedă nu e candidată", "Un filtru (liniște, interval, treceri), nu o predicție; Fișa îți dă setările și proba pe moneda ta.", null)
+    + sugCartela("💡 Pe ce aș porni un bot", "din clasamentul primelor 100 de monede PERP", porn, pzS > 0 ? acFrazaPauza(pzS) : "acum nicio monedă nu e candidată", "Un filtru (liniște, interval, treceri), nu o predicție; Fișa îți dă setările și proba pe moneda ta.", null)
     + sugCartela("🔁 Pe revenire", "monede care au scăzut puternic și acum revin", rev, "nimic acum", R && dv.revenire ? R.textDovada(dv.revenire.piata, "monede") + (R.TEXT_SUPRAVIETUITORI_MONEDE && dv.revenire.piata ? " ⚠ " + R.TEXT_SUPRAVIETUITORI_MONEDE : "") : null, null)   /* audit 19.10 (8): supraviețuitorii și la monede */
     + sugCartela("📉 Pentru short", "monede liniștite cu direcția short", sh, "nimic acum", R && dv.short ? R.textDovada(dv.short.piata, "short") + (R.TEXT_SUPRAVIETUITORI_MONEDE && dv.short.piata ? " ⚠ " + R.TEXT_SUPRAVIETUITORI_MONEDE : "") : null, null) + '</div></section>';
 }

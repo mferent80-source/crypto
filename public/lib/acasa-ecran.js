@@ -24,6 +24,7 @@ async function acasaPorneste(fortat) {
       pas("glob", function () { return intelApi("crypto_global"); }),
       pas("cont", async function () { if (typeof contTotAsigura === "function") await contTotAsigura(); return true; }),
       pas("scor", function () { return typeof scPorneste === "function" ? scPorneste() : null; }),   // v100.217: scorul sezonului (boții din Jurnal + configurația de acasă)
+      pas("contRaport", function () { return getJSON("/api/istoric-bot?action=cont"); }),   // v100.231: raportul pe tot contul (cheia „cont” e deja contTotAsigura)
       // v93: Nasdaq 100 (colectorul, la 8 dimineata), calendarul saptamanii, stirile
       pas("ndx", function () { return getJSON("/api/t212?action=ndx"); }),
       pas("calendar", function () { return getJSON("/api/stiri?action=calendar"); }),
@@ -178,7 +179,8 @@ function acasaCumpar(d) {
   var ah = !ii ? mut("aștept ideile") : !act.length ? mut("pe " + zi + " niciuna nu trece de poartă")
     : act.slice(0, 3).map(function (x) { return acSym(x.simbol || String(x.ticker || "").split("_")[0]); }).join(", ") + ' '   /* v100.196 (raportul UI, 🟡12): simbolurile duc la Poarta T212, ca în „Idei de azi” */
       + mut(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi);
-  var bh = !cl ? mut("aștept clasamentul") : !m.length ? mut("acum nicio monedă nu e candidată") : '<b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
+  var pzB = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
+  var bh = pzB > 0 ? escapeHtml(acFrazaPauza(pzB)) : !cl ? mut("aștept clasamentul") : !m.length ? mut("acum nicio monedă nu e candidată") : '<b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
   var p = null; try { p = typeof acasaCumpar2Parti === "function" ? acasaCumpar2Parti(d) : null; } catch (e) { p = null; }   /* o eroare în date nu strică cartela */
   var ch = !p ? mut("aștept listele") : '↩️ acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + '<br>↩️ monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM) + '<br>📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS);
   var btn = function (ecran, id, fila, t) { return '<span class="acCumparBtn"><button class="acBtn" type="button" data-action-click="acasaMergiLa(\'' + ecran + '\',\'' + id + '\'' + (fila ? ',\'' + fila + '\'' : '') + ')">' + t + '</button></span>'; };
@@ -275,6 +277,48 @@ function acTopSector(s) {
   h += '<p class="acEt">' + (nL > 0 && med !== null ? "Topul Radarului pe sectoare: " + escapeHtml(acCate(nL, "lună", "luni")) + " de istoric, " + (med >= 0 ? "+" : "−") + Math.abs(med * 100).toFixed(1).replace(".", ",") + "% pe lună în medie, " + nP + " din " + nL + " pe plus — nedovedit; firmele sunt cele mari de AZI (cele căzute din top lipsesc), deci istoricul e optimist. " : "") + 'Apasă simbolul: Poarta T212.</p>';   /* v100.196 (🔵7): nota supraviețuitorilor, ca pe Sugestii */
   return h;
 }
+// v100.231: pauza sezonului crypto, doar după ce socoteala a rulat (necunoscut ≠ pauză). 0 = se știe că nu e pauză.
+function acPauzaSezon() {
+  try {
+    if (typeof ScorSezon === "undefined" || typeof scTrades !== "function") return null;
+    var tr = scTrades("pionex"); if (!tr) return null;
+    var cfg = typeof scStare !== "undefined" && scStare.cfg ? scStare.cfg.pionex : null;
+    var s = ScorSezon.calc(tr, cfg, Date.now(), "pionex"); if (!s) return null;
+    if (!s.pauza) return 0;
+    return s.serie && s.serie.n > 0 ? s.serie.n : 3;
+  } catch (e) { return null; }
+}
+function acFrazaPauza(n) {
+  if (typeof Acasa !== "undefined" && Acasa.frazaPauza) return Acasa.frazaPauza(n);
+  var k = Math.round(Number(n)); if (!(k > 0)) k = 3;
+  return "N-aș porni alt bot azi: " + acCate(k, "pierdere", "pierderi") + " la rând.";
+}
+function acZiBuc() { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+// în zbor = necunoscut (nu se spune „lipsește”); cererea terminată fără raport = lipsă; peste 12 h = vechi
+function acRaportStare() {
+  var d = acasa.d || {};
+  if (d.contRaport === undefined && !d.contRaportErr) return { stare: "necunoscut" };
+  var corp = d.contRaport, c = corp && corp.cont ? corp.cont : (corp && corp.la ? corp : null);
+  if (!c || !(c.la > 0)) return { stare: "lipsa" };
+  if (Date.now() - c.la > 12 * 3600000) return { stare: "vechi", ore: (Date.now() - c.la) / 3600000, raport: c };
+  return { stare: "ok", raport: c };
+}
+// undefined = calendarul încă nu e știut (în zbor, null sau eroare). "" = a venit și azi nu e nimic mare.
+function acEvenimentAzi() {
+  var d = acasa.d || {};
+  if (d.calendar === undefined || d.calendar === null || typeof Acasa === "undefined" || !Acasa.calendar) return undefined;
+  var cal = Acasa.calendar(d.calendar.evenimente, Date.now()), azi = acZiBuc();
+  var ev = (cal.urmatoare || []).filter(function (x) { return x && x.mare && x.t && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(x.t)) === azi; })[0];
+  return ev ? ev.titlu : "";
+}
+function acFraneaza(v, fel) {
+  if (!v || typeof Acasa === "undefined" || !Acasa.franaVerb) return v;
+  var o = { fel: fel }, rs = acRaportStare(), ev = acEvenimentAzi();
+  if (fel === "crypto") { var pz = acPauzaSezon(); if (pz > 0) { o.pauza = true; o.pauzaN = pz; } }
+  if (rs.stare && rs.stare !== "necunoscut") { o.raportStare = rs.stare; if (rs.ore) o.raportOre = rs.ore; if (rs.raport) o.raport = rs.raport; }
+  if (ev !== undefined) o.eveniment = ev;
+  return Acasa.franaVerb(v, o);
+}
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
   acPiataInit();
@@ -301,9 +345,10 @@ function acasaDeseneaza() {
   var faraParola = acFaraParola(d);
   if (faraParola) v = AC_FARA_PAROLA;
   else if (faraServer && !cl) v = acFaraServerVerd(d);
+  else v = acFraneaza(v, "crypto");
   acasaVerd($("acVremeCrypto"), "Crypto", v, faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
     + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : "");
-  var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL });
+  var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : acFraneaza(Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL }), "bursa");
   acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");
   // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” - primele idei de acțiuni și monedele pentru un bot, cu drumul la cele două panouri

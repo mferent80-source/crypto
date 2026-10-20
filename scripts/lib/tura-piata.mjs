@@ -29,6 +29,40 @@ function sumarClasament(c) {
   return o;
 }
 async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.jurnal("piata " + ce, e.message); return null; } }
+// v100.231: o cerere aruncată rămâne necunoscută (nu „raportul lipsește”). incearca() întoarce null și la gol, și la eroare — aici se deosebesc.
+async function citire(d, url) {
+  try { return { ok: true, v: await d.cere(url) }; }
+  catch (e) { if (d.jurnal) d.jurnal("piata frana", e && e.message); return { ok: false }; }
+}
+async function franaAzi(d, acum, evenimente) {
+  const o = {};
+  const rap = await citire(d, "/api/istoric-bot?action=cont");
+  if (rap.ok) {
+    const c = rap.v && rap.v.cont;
+    if (!c || !(c.la > 0)) o.raportStare = "lipsa";
+    else if (acum - c.la > 12 * 3600000) { o.raportStare = "vechi"; o.raportOre = (acum - c.la) / 3600000; o.raport = c; }
+    else { o.raportStare = "ok"; o.raport = c; }
+  }
+  if (d.ScorSezon && d.StatisticaTrade && d.JurnalTrade) {
+    const ar = await citire(d, "/api/istoric-bot?action=botiInchisi");
+    const cfg = await citire(d, "/api/scor-sezon?piata=pionex");
+    const boti = ar.ok && ar.v && Array.isArray(ar.v.boti) ? ar.v.boti : null;
+    if (boti) {
+      try {
+        const tr = d.StatisticaTrade.dinPionex(d.JurnalTrade.din(boti)).concat(d.StatisticaTrade.dinPionexAlte ? d.StatisticaTrade.dinPionexAlte(d.JurnalTrade.alte(boti)) : []);
+        const s = d.ScorSezon.calc(tr, cfg.ok && cfg.v ? cfg.v.sezon : null, acum, "pionex");
+        if (s) { o.pauza = !!s.pauza; o.pauzaN = s.serie && s.serie.n; }
+      } catch (e) { if (d.jurnal) d.jurnal("piata frana", e && e.message); }
+    }
+  }
+  if (evenimente !== undefined) {
+    const azi = ceas(acum, "Europe/Bucharest").zi;
+    const ev = (evenimente || []).filter((x) => x && x.mare && x.t && ceas(x.t, "Europe/Bucharest").zi === azi)[0];
+    o.eveniment = ev ? ev.titlu : "";
+  }
+  return o;
+}
+function aplicaFrana(A, v, fel, f) { return A && A.franaVerb ? A.franaVerb(v, Object.assign({ fel }, f || {})) : v; }
 // v95: socoteala alertelor - fiecare alerta de miscare, tinuta minte cu pretul ei (ultimele 300)
 function noteaza(st, o) { st.soc = (st.soc || []).concat([o]).slice(-300); }
 async function trimiteToate(d, mesaje) { let toate = true; for (const m of mesaje) if (!(await d.trimiteAlerta(m, null, m.cheie))) toate = false; return toate; }
@@ -44,7 +78,10 @@ async function vreme(d, st, acum) {
   const reg = b1h && b1h.length ? G.regimPeBare(b1h, 4, 24) : null, fg = p.fg ? p.fg.valoare : null;
   const qqq = p.qqq ? G.bareToate(p.qqq) : null, vixB = p.vix ? G.bareToate(p.vix) : null, vix = vixB && vixB.length ? vixB[vixB.length - 1].c : null;
   const ndL = nd && Array.isArray(nd.actiuni) ? A.largimeNdx(nd.actiuni) : null;
-  const v = A.vreme({ clasament: cl, btc: { miscare: reg ? !!reg.miscare : false }, fg }), vb = A.vremeBursa({ qqq, vix, ndx: ndL });
+  const v0 = A.vreme({ clasament: cl, btc: { miscare: reg ? !!reg.miscare : false }, fg }), vb0 = A.vremeBursa({ qqq, vix, ndx: ndL });
+  const caV = await incearca(d, "calendar vreme", () => d.cere("/api/stiri?action=calendar"));
+  const fr = await franaAzi(d, acum, caV ? A.calendar(caV.evenimente, acum).urmatoare : undefined);
+  const v = aplicaFrana(A, v0, "crypto", fr), vb = aplicaFrana(A, vb0, "bursa", fr);
   const co = b1d && qqq ? A.corelatie(b1d, qqq, 30) : null;
   const r = d.Alerte.schimbareVreme(st.vreme || null, { crypto: v, bursa: vb, corelatie: co }, acum);
   if (await trimiteToate(d, r.mesaje)) {
@@ -223,9 +260,14 @@ async function raportSaptamana(d, st, acum) {
     if (x && x.data && Date.parse(x.data) - acum < 14 * 86400000) rz.push({ simbol: x.simbol || t.split("_")[0], data: x.data });
   }
   rz.sort((a, b) => (a.data < b.data ? -1 : 1));
+  const b1h = await incearca(d, "raport BTC 1h", async () => G.bare((await d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500")).data.klines));
+  const regB = b1h && b1h.length ? G.regimPeBare(b1h, 4, 24) : null;
+  const fr = await franaAzi(d, acum, ca ? cal : undefined);
+  const vS = aplicaFrana(A, A.vreme({ clasament: cl, btc: { miscare: regB ? !!regB.miscare : false }, fg: p.fg ? p.fg.valoare : null }), "crypto", fr);
+  const vbS = aplicaFrana(A, A.vremeBursa({ qqq, vix, ndx: A.largimeNdx(l) }), "bursa", fr);
   const m = A.raportSaptamana({ btc7: b1d && b1d.length > 7 ? (b1d[b1d.length - 1].c / b1d[b1d.length - 8].c - 1) * 100 : null,
-    vreme: A.vreme({ clasament: cl, btc: { miscare: false }, fg: p.fg ? p.fg.valoare : null }), qqq5: qqq && qqq.length > 5 ? (qqq[qqq.length - 1].c / qqq[qqq.length - 6].c - 1) * 100 : null, vix,
-    vremeBursa: A.vremeBursa({ qqq, vix, ndx: A.largimeNdx(l) }), sus: s5.slice(0, 3), jos: s5.slice(-3).reverse(),
+    vreme: vS, qqq5: qqq && qqq.length > 5 ? (qqq[qqq.length - 1].c / qqq[qqq.length - 6].c - 1) * 100 : null, vix,
+    vremeBursa: vbS, sus: s5.slice(0, 3), jos: s5.slice(-3).reverse(),
     botiTotal: act.length ? act.reduce((s, b) => s + Number(b.profitTotal), 0) : null, t212Ppl: co && co.cash ? Number(co.cash.ppl) : null, calendar: cal, rezultate: rz,
     latime: await latimeCrypto(d, acum), latimeUs: await latimeUs(d, acum) });
   // v100.166: salvat și acasă, ca Jurnalul de trade să-l arate sub raportul de duminică (până acum era doar pe Discord)

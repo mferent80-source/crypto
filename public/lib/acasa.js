@@ -261,6 +261,34 @@ var Acasa = (function () {
     if (L.length === n0) L.push("👉 Aș aștepta datele de luni dimineață.");
     return { nivel: "info", titlu: "📊 Săptămâna pieței", mesaj: L.join("\n") };
   }
+  // v100.231: gura care invită citește pauza, raportul pe tot contul și evenimentul de azi.
+  // vreme() și vremeBursa() rămân neschimbate; frâna se aplică după ele, la afișare și la trimitere.
+  function invita(faCe, fel) { return fel === "bursa" ? /^Aș cumpăra/.test(String(faCe || "")) : /^Aș porni/.test(String(faCe || "")); }
+  function pctCont(x) { var v = nr(x); if (v === null) return "—"; return Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; }
+  function frazaPauza(n) {
+    var k = Math.round(Number(n)); if (!(k > 0)) k = 3;
+    return "N-aș porni alt bot azi: " + cate(k, "pierdere", "pierderi") + " la rând.";
+  }
+  function franaVerb(v, o) {
+    o = o || {};
+    if (!v || typeof v !== "object" || !v.faCe) return v;
+    var fel = o.fel === "bursa" ? "bursa" : "crypto";
+    if (fel === "crypto" && o.pauza === true) return Object.assign({}, v, { faCe: frazaPauza(o.pauzaN) });
+    if (!invita(v.faCe, fel)) return v;
+    if (o.raportStare === "lipsa") return Object.assign({}, v, { faCe: "N-aș porni nimic nou: raportul pe tot contul lipsește." });
+    if (o.raportStare === "vechi") {
+      var ore = Math.round(Number(o.raportOre)); if (!(ore > 0)) ore = 12;
+      return Object.assign({}, v, { faCe: "N-aș porni nimic nou: raportul pe tot contul e vechi de " + cate(ore, "oră", "ore") + "." });
+    }
+    var rap = o.raport, tot = rap && rap.valoare ? nr(rap.valoare.total) : null, va = rap && rap.risc ? nr(rap.risc.var95) : null;
+    if (o.raportStare === "ok" && tot > 0 && va > 0.04 * tot) return Object.assign({}, v, { faCe: "Aș reduce expunerea până sub 3% pe zi: o zi proastă îți ia ~" + pctCont(va / tot) + " din cont." });
+    var ev = o.eveniment ? String(o.eveniment).replace(/[.!?]+$/g, "").trim() : "";
+    if (ev) {
+      var fraza = "N-aș porni boți noi și n-aș cumpăra chiar înainte de " + ev + ".";
+      if (fraza.length <= 110) return Object.assign({}, v, { faCe: fraza });
+    }
+    return v;
+  }
   // socoteala alertelor: miscarile neobisnuite au continuat? (dupa 24 h si 3 zile) + dupa "MISCARE" cat s-a mai miscat BTC
   function socotealaAlerte(l) {
     l = Array.isArray(l) ? l : [];
@@ -275,6 +303,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7 };
+  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

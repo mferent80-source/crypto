@@ -216,11 +216,8 @@ function scDetaliu(x) {
   if (x.rel != null) de.push((x.rel >= 0 ? "mai tare" : "mai slab") + " decât " + (x.fel === "c" ? "BTC" : "Nasdaq") + " cu " + scNf(Math.abs(x.rel), 1) + " puncte pe 7 zile");
   de.push(x.sparge ? "a închis peste maximul pe 20 de zile" : "la " + scPct(x.dMax20) + " de maximul pe 20 de zile, " + scPct(x.dMin20) + " peste minim");
   if (x.mis != null) de.push((x.pAzi != null ? "la ultima închidere " : "azi ") + scPct(x.ch) + ", adică " + scNf(x.mis, 1) + "× o zi obișnuită a ei" + (x.chAzi != null ? "; acum, în ședință, " + scPct(x.chAzi) : ""));
-  var pr = x.fel === "a" ? "$" : "", plan = "", idee = x.fel === "a" && ((d.idei && d.idei.idei && d.idei.idei.actiuni) || []).find(function (q) { return q.simbol === x.s; });
-  if (idee && !(scanSt.bareZi && scanSt.bareZi[id])) {   /* v100.196: cât n-au venit barele; apoi planul Porții pe prețul de acum (ramura de mai jos) */
-    plan = '<h5>Planul de la poarta T212 (din tura de dimineață)</h5><div class="scLin"><span>Intrare</span><b>$' + scPret(idee.intrare) + '</b></div><div class="scLin"><span>Stop</span><b class="bad">$' + scPret(idee.stop) + '</b></div><div class="scLin"><span>Țintă</span><b class="good">$' + scPret(idee.tinta) + '</b></div>'
-      + (idee.pePlusProba != null ? '<div class="scLin"><span>Pe istoricul ei</span><b>' + Math.round(idee.pePlusProba * 100) + '% pe plus (' + scCate(idee.nProba, "zi", "zile") + ')</b></div>' : '');
-  } else if (x.fel === "a" && scanSt.bareZi && scanSt.bareZi[id] && Scan.planActiune(scanSt.bareZi[id], x.pAzi != null ? x.pAzi : x.p)) {
+  var pr = x.fel === "a" ? "$" : "", plan = "";
+  if (x.fel === "a" && scanSt.bareZi && scanSt.bareZi[id] && Scan.planActiune(scanSt.bareZi[id], x.pAzi != null ? x.pAzi : x.p)) {
     // v100.196 (auditul sever, 🟡12): pe acțiuni, ACELAȘI plan ca Poarta (intrarea limită, stopul k×ATR între 3% și 15%, ținta 2× riscul) și aceeași
     // mărime (riscul regimului, plafonul de 20% pe total cu ce ai deja, banii liberi) - înainte Scan avea stopul lui, 2× ATR, și altă sumă
     var pa = Scan.planActiune(scanSt.bareZi[id], x.pAzi != null ? x.pAzi : x.p), ma = pa.intrare && typeof t212MarimeCalc === "function" ? t212MarimeCalc(x.tk || x.s + "_US_EQ", pa.intrare, pa.stop, x.pAzi != null ? x.pAzi : x.p) : null;
@@ -230,18 +227,19 @@ function scDetaliu(x) {
       + (ma && ma.blocat ? '<div class="scLin"><span>Cât cumperi</span><b class="bad">nimic azi · ' + (typeof escapeHtml === "function" ? escapeHtml(ma.motiv) : "") + '</b></div>'   /* v100.200 */
         : ma ? '<div class="scLin"><span>Cât cumperi</span><b>' + scNf(ma.suma, 0) + ' lei' + (ma.plin ? ' (ai deja 20% din cont în ea)' : ma.plafonat ? ' (tăiată la 20% din cont' + (ma.deja > 0 ? ', cu ce ai deja' : '') + ')' : '') + '</b></div>' : '')
       + (pa.intrare ? '' : '<p class="scNota">' + escapeHtml(pa.motivIntrare || "") + '</p>');
-  } else {
-    var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, pl = Scan.plan(x, x.fel === "a" && c ? Number(c.total) : null);
-    if (pl) plan = '<h5>Plan orientativ (2× / 3× mișcarea zilnică)</h5><div class="scLin"><span>Mișcarea zilnică (ATR)</span><b>' + scNf(x.atrPct, 1) + '%</b></div>'
-      + '<div class="scLin"><span>Stop</span><b class="bad">' + pr + scPret(pl.stop) + ' (' + scPct(pl.stopPct) + ')</b></div><div class="scLin"><span>Țintă</span><b class="good">' + pr + scPret(pl.tinta) + ' (' + scPct(pl.tintaPct) + ')</b></div>'
-      + (pl.marime != null ? '<div class="scLin"><span>Mărime la 1% risc din cont</span><b>' + scNf(pl.marime, 0) + ' lei' + (pl.plafonat ? ' (tăiată la 20% din cont)' : '') + '</b></div>' : '');
+  } else if (x.fel === "c") {
+    var plC = Scan.plan(x, null);
+    if (plC) plan = '<h5>Plan orientativ (2× / 3× mișcarea zilnică)</h5><div class="scLin"><span>Mișcarea zilnică (ATR)</span><b>' + scNf(x.atrPct, 1) + '%</b></div>'
+      + '<div class="scLin"><span>Stop</span><b class="bad">' + pr + scPret(plC.stop) + ' (' + scPct(plC.stopPct) + ')</b></div><div class="scLin"><span>Țintă</span><b class="good">' + pr + scPret(plC.tinta) + ' (' + scPct(plC.tintaPct) + ')</b></div>';
   }
   if (x.fel === "c") {
     var fu = scanSt.funding[x.s];
     if (fu === undefined) { scanSt.funding[x.s] = null; scAduFunding(x.s); }
+    var pzC = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
     plan += '<h5 class="scH5b">Pentru un bot grid</h5>'
-      + (x.stare === "candidat" && !x.miscare ? '<div class="scLin"><span>Grile (în Pionex) · pas</span><b>' + scNf(x.grile + 1, 0) + ' · ' + scNf(x.pas * 100, 2) + '%</b></div><div class="scLin"><span>Treceri prin grile / zi</span><b>~' + scNf(x.traversari, 1) + '</b></div><div class="scLin"><span>Lățimea zonei</span><b>' + scNf(x.latime * 100, 1) + '%</b></div>'
-        : '<p class="scNota">Acum e în mișcare: nu e bună de grid.</p>')
+      + (pzC > 0 ? '<p class="scNota">' + escapeHtml(acFrazaPauza(pzC)) + '</p>'
+        : (x.stare === "candidat" && !x.miscare ? '<div class="scLin"><span>Grile (în Pionex) · pas</span><b>' + scNf(x.grile + 1, 0) + ' · ' + scNf(x.pas * 100, 2) + '%</b></div><div class="scLin"><span>Treceri prin grile / zi</span><b>~' + scNf(x.traversari, 1) + '</b></div><div class="scLin"><span>Lățimea zonei</span><b>' + scNf(x.latime * 100, 1) + '%</b></div>'
+        : '<p class="scNota">Acum e în mișcare: nu e bună de grid.</p>'))
       + '<div class="scLin"><span>Funding (la 4 ore)</span><b class="' + (fu && fu.scump ? "warn" : "") + '">' + (fu ? scNf(fu.ult * 100, 4) + "% · " + (fu.scump ? "scump, long plătește mult" : fu.ult < 0 ? "negativ, short plătește" : "ca de obicei") : "aduc…") + '</b></div>';
   } else if (x.rez) plan += '<div class="scLin scH5b"><span>Rezultate financiare</span><b class="' + (x.rezZile <= 7 ? "warn" : "") + '">' + new Date(x.rez + "T12:00:00Z").toLocaleDateString("ro-RO", { day: "numeric", month: "short" }) + (x.rezZile >= 0 ? ' (peste ' + scCate(x.rezZile, "zi", "zile") + ')' : '') + '</b></div>';
   var mele = x.bot ? '<p class="scNota">🤖 Ai bot pornit pe ea: deschide Tabloul botului pentru starea lui.</p>' : x.port ? '<p class="scNota">💼 O ai în portofoliu: semaforul ei e pe pagina Trading 212.</p>' : "";

@@ -21,6 +21,7 @@ function t212Eroare(e) { var m = e && e.message || String(e); return /503|PUNE-C
 async function t212Porneste(forta) {
   if (t212.inLucru) return;
   if (!forta && t212.la && Date.now() - t212.la < 60000) { t212Render(); return; }
+  if (forta) t212.ideiRe = null;
   t212.inLucru = true; t212.eroare = null; t212Stare("citesc contul din Trading 212…");
   try {
     t212.cont = await getJSON("/api/t212?action=cont"); t212.contLa = Date.now();
@@ -33,6 +34,7 @@ async function t212Porneste(forta) {
   try { var bn = await getJSON("/api/curs-bnr?an=" + new Date().getFullYear()), zl = bn && bn.curs ? Object.keys(bn.curs).sort() : []; t212.bnr = zl.length ? { zi: zl[zl.length - 1], curs: bn.curs[zl[zl.length - 1]] } : null; } catch (e) { t212.bnr = null; }
   try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) { t212.piata = null; }
   try { t212.idei = await getJSON("/api/t212?action=idei"); } catch (e) { t212.idei = null; }
+  t212IdeiIncaAcum();
   try { var sfi = await getJSON("/api/t212?action=sfaturi"); t212.sfaturiIst = sfi && sfi.sfaturi || []; } catch (e) { t212.sfaturiIst = null; }
   await t212AduDividende();
   t212JurnalCache.n = -1;
@@ -51,7 +53,61 @@ async function t212Porneste(forta) {
     t212.poz.forEach(function (x) { t212.beta[x.ticker] = ActiuniSemnale.beta(t212.bare[x.ticker], t212.bare.QQQ_US_EQ); });
   }
   t212.inLucru = false; t212Render();
+  t212IdeiRejudeca();
   if (typeof jtRenderActiuni === "function") jtRenderActiuni();
+}
+// v100.231: filtrul imediat, pe regimul deja adus (lipsește ⇒ nu se inventează un blocaj)
+function t212IdeiIncaAcum() {
+  var id = t212.idei && t212.idei.idei;
+  if (!id || typeof Idei === "undefined" || !Idei.ideiInca) return;
+  var nou = Idei.ideiInca(id, { regim: t212.regimPiata ? t212RegimPt() : null, acum: Date.now() });
+  id.actiuni = nou.actiuni; id.restul = nou.restul; id.trecute = nou.trecute;
+}
+// v100.231: la deschiderea T212, lista de la 8 se rejudecă la poarta vie. Fără listă se întoarce înainte de orice așteptare.
+// Bare goale scot numele. O excepție de rețea îl păstrează. Lista nu se scrie înapoi în KV.
+async function t212IdeiRejudeca() {
+  if (t212.ideiRe) return;
+  var id = t212.idei && t212.idei.idei;
+  if (!id || typeof Idei === "undefined" || !Idei.judecaActiune) return;
+  t212.ideiRe = "in";
+  try {
+    await t212RegimAdu();
+    var rp = t212RegimPt();
+    if (Idei.ideiInca) {
+      var nou = Idei.ideiInca(id, { regim: rp, acum: Date.now() });
+      id.actiuni = nou.actiuni; id.restul = nou.restul; id.trecute = nou.trecute;
+      t212IdeiRender();
+    }
+    var toate = (id.actiuni || []).concat(id.restul || []), ramase = [];
+    for (var i = 0; i < toate.length; i++) {
+      var x = toate[i], tk = x.ticker || ((x.simbol || "") + "_US_EQ"), tine = true;
+      try {
+        var b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk));
+        var randuri = b && b.randuri || [];
+        var bare = GridCalcul.bareBursa(randuri, Date.now());
+        var pret = GridCalcul.pretCurent(randuri);
+        if (!bare || !bare.length || !(pret > 0)) tine = false;
+        else {
+          var rez = await t212RezultatePt(tk);
+          var r = Idei.judecaActiune(bare, pret, { acum: Date.now(), rezultate: rez.data, rezultateStiut: rez.stiut, simbol: tk, regim: rp });
+          tine = !!r.trece;
+          if (tine) {
+            var st = ActiuniSemnale.stare(bare, pret), niv = ActiuniSemnale.niveluri(bare, pret, {});
+            var cc = t212.cont && t212.cont.cash;
+            if (cc && cc.total > 0 && niv.nivel === "ok" && niv.intrare && niv.stop > 0) {
+              var liber = cc.free !== null && cc.free !== undefined && isFinite(Number(cc.free)) ? Number(cc.free) : null;
+              var mCash = ActiuniSemnale.marime({ intrare: niv.intrare.pret, stop: niv.stop, cont: cc.total, fx: t212Fx(), riscPct: ActiuniSemnale.regimPoarta(rp).riscPct, deja: t212DejaLei(tk), liber: liber, pretAcum: st.pret });
+              if (mCash && (mCash.blocat || mCash.pesteLiber || mCash.plin)) tine = false;
+            }
+          }
+        }
+      } catch (e) { tine = true; }
+      if (tine) ramase.push(x);
+    }
+    ramase = ramase.slice(0, 45);
+    id.actiuni = ramase.slice(0, 5); id.restul = ramase.slice(5); id.trecute = ramase.length;
+    t212IdeiRender();
+  } finally { t212.ideiRe = "gata"; }
 }
 // v86: Trading 212 are PAGINA LUI (ca Tabloul botului): fara bara de cautare, blocul "AAPL" si filele de
 // deasupra - "fa la fel toata pagina" (25.09). Merge din orice mod, Crypto sau US Stocks.
@@ -619,9 +675,10 @@ function tbUrmAdu() {
 }
 function tbIdeiRender() {
   var box = $("tbIdei"); if (!box || typeof Idei === "undefined") return;
-  var cl = contTot.clasament, l = Idei.ideiBoti(cl, contTot.inchise || [], 5);
+  var cl = contTot.clasament, pzT = typeof acPauzaSezon === "function" ? acPauzaSezon() : null, l = pzT > 0 ? [] : Idei.ideiBoti(cl, contTot.inchise || [], 5);
   var h = '<div class="tbTodoCap"><h4>💡 Pe ce aș porni un bot acum</h4><span class="tbSub">' + (cl && cl.la ? "clasamentul de la " + escapeHtml(new Date(cl.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })) + ", top 100 PERP" : "colectorul face clasamentul o dată pe oră") + '</span></div>';
-  if (!l.length) h += '<p class="tbSub tbTodoGol">' + (cl ? "Acum nicio monedă nu e candidată." : "Aștept clasamentul…") + '</p>';
+  if (pzT > 0) h += '<p class="tbSub tbTodoGol">' + escapeHtml(acFrazaPauza(pzT)) + '</p>';
+  else if (!l.length) h += '<p class="tbSub tbTodoGol">' + (cl ? "Acum nicio monedă nu e candidată." : "Aștept clasamentul…") + '</p>';
   else { tbIngustAdu(l.map(function (x) { return x.simbol; }).filter(Boolean)); }
   if (l.length) h += l.map(function (x) {
     var ist = tbIstoricBoti(x.istoric);

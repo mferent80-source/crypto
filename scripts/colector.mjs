@@ -1583,7 +1583,7 @@ async function turaPiataColector() {
   piataInLucru = true;
   try {
     const m = meta(); m.piata = m.piata || {};
-    await turaPiataModul({ cere, trimite, trimiteAlerta, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Acasa, Alerte, GridCalcul, GridClasament, Directie, NDX, Latime, LatimeUS, Sectoare, Macro }, m.piata, Date.now());
+    await turaPiataModul({ cere, trimite, trimiteAlerta, jurnal, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), Acasa, Alerte, GridCalcul, GridClasament, Directie, NDX, Latime, LatimeUS, Sectoare, Macro, ScorSezon, StatisticaTrade, JurnalTrade }, m.piata, Date.now());
     try { scrieStare(); } catch {}
   } catch (e) { jurnal("piata ESEC", e.message); }
   piataInLucru = false;
