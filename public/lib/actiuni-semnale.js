@@ -606,6 +606,9 @@ var ActiuniSemnale = (function () {
     o = o || {};
     var lei = function (x) { return Math.round(x).toLocaleString("ro-RO") + " lei"; };
     var cat = typeof m === "number" ? (m > 0 ? lei(m * PLAFON) + " (20% din cont)" : "20% din cont") : null;
+    // v100.229: suma tace înainte de „citește întâi contul”. Pragurile de mărime nu se mută.
+    if (nivel === "cumpara" && o.faraSuma === "reconciliere") return "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont pe simbolul ăsta.";
+    if (nivel === "cumpara" && o.faraSuma === "necitit") return "N-aș da o sumă: brokerul n-a fost citit de 30 de minute.";
     if (nivel === "cumpara" && cat === null) {
       if (o.faraMarime === "trend12") return "N-aș pune o sumă încă: Trend 12 luni e în probă, nu-i dau mărime până nu e „probat”.";
       if (!m) return "Aș citi întâi contul și cursul: fără ele nu știu câte bucăți să cumpăr.";

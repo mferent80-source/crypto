@@ -76,6 +76,16 @@ function gsFormHtml(s) {
   if (st.jos > 0 && st.sus > st.jos) h += '<p class="tbSub gsCodOut">Codul pentru TradingView: <code id="gsCodOut">' + mcsEsc(GridSim.inCod(st, gsPlanOk(s.plan) ? s.plan : null)) + '</code> <button type="button" class="t212BtnLinie" data-action-click="gsCopiazaCod()">Copiază</button></p>';
   return '<section class="t212Panou gsSec gsSetare"><div class="t212PanouCap"><h4>⚙️ Setarea</h4><span class="tbSub">ca în GRID-FISA: lipești codul sau completezi câmpurile; liniile sunt ca în Pionex</span></div>' + h + '</section>';
 }
+function gsCarte(v, r) {
+  var fac = v && v.faCe || "";
+  if (!r || r.acum || !/^Aș porni:/.test(fac)) return fac;
+  var nc = null;
+  try {
+    if (typeof JurnalTrade !== "undefined" && typeof jtStare !== "undefined" && Array.isArray(jtStare.boti)) nc = JurnalTrade.rezumat(JurnalTrade.din(jtStare.boti));
+  } catch (e) { nc = null; }
+  var clauza = !nc ? ", iar cartea închisă încă nu e citită" : !nc.n ? ", iar cartea închisă n-are încă niciun bot" : ", iar cartea închisă e la net " + GridSim.bani1(nc.net) + " pe " + nc.n;
+  return fac.replace(/\.\s*$/, clauza + ".");
+}
 function gsVerdictHtml(s) {
   var r = s.rez, i = r.orizonturi[s.oriz] ? s.oriz : 2, o = r.orizonturi[i], v = GridSim.verdict(r, s.st, gsPlanOk(s.plan) ? s.plan : null, i, s.bot);
   if (!o || !v) return "";
@@ -88,7 +98,7 @@ function gsVerdictHtml(s) {
     + '<div class="gsVerdict ' + v.culoare + '"><b>' + mcsEsc(v.rand) + '</b><span class="t212Mic">' + mcsEsc(v.marja) + ' · incertitudinea pe zile (cu fiecare grupă de zile scoasă pe rând), nu doar din numărul drumurilor</span></div>'
     + '<p class="gsSub">' + mcsEsc(v.sub) + '</p>'
     + '<div class="gsHist">' + mcsHist(d.hist, mk, function (x) { return GridSim.bani1(x); }) + '</div>'
-    + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(v.faCe) + '</p>'
+    + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(gsCarte(v, r)) + '</p>'
     + '<p class="tbSub gsNota">' + mcsEsc(v.nota) + '</p></section>';
 }
 function gsDurateHtml(s) {

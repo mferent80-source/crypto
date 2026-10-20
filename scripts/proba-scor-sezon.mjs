@@ -438,7 +438,7 @@ await test("🟡 7/9/11/🔵b - html: valorile tastate rămân în formular; not
   assert.ok(/<th>Trade-uri<\/th>/.test(hi) && !/<th>Boți<\/th>/.test(hi), "capul tabelului pe piață: " + (hi.match(/<th>[^<]*<\/th>/g) || []).join(""));
   assert.ok(/<th>Boți<\/th>/.test(S.htmlIstoric(S.sezoane([t(1, START - 5 * ZI, 5)], { start: START, obiectiv: CFG.obiectiv, istoric: [{ start: START - 10 * ZI, sfarsit: START }] }, ACUM))), "Pionex: Boți");
   const hn = S.html(S.calc([t(1, START + ORA, -0.02)], CFG, ACUM), { id: "acScor" });
-  assert.ok(/scVal ">0,0 USDT</.test(hn) || /scVal">0,0 USDT</.test(hn), "−0,02 ⇒ „0,0 USDT” fără roșu: " + (hn.match(/scVal[^>]*>[^<]*USDT/g) || []).join(" | "));
+  assert.ok(/scVal[^>]*>0,0 USDT</.test(hn) && !/scVal bad[^>]*>0,0 USDT</.test(hn), "−0,02 ⇒ „0,0 USDT” fără roșu: " + (hn.match(/scVal[^>]*>[^<]*USDT/g) || []).join(" | "));
 });
 
 await test("🟡 3/4/8/12/14 + 🔵c/e - legarea: Acasă citește arhiva KV (nu Pionex), ține minte trade-urile, formularul pe input, GET-ul în zbor nu suprascrie POST-ul; colectorul la 10 min; sw.js are lib-ul", () => {

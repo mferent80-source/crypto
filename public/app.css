@@ -1467,6 +1467,8 @@ body.peTablou main>.note{display:none}
 .t212Cel{display:flex;flex-direction:column;gap:4px;padding:12px 14px;min-width:0}.t212Cel+.t212Cel{border-left:1px solid var(--tb-linie)}
 .t212Val{font-size:18.5px;font-weight:600}.t212Val.good,.t212Card .good{color:var(--good)}.t212Val.bad,.t212Card .bad{color:var(--bad)}.t212Card .tbWarn{color:var(--warn)}.t212Muted{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 .t212Fac{margin:8px 0;padding:6px 10px;border-left:3px solid var(--accent);background:rgba(91,143,199,.08);border-radius:4px}
+.t212Fac.t212FacPoarta{font-size:20px;line-height:1.25;font-weight:600;color:var(--text)}
+.t212Cal{font-size:12.5px;color:var(--muted);margin:0 0 8px}
 /* v100.54 (actiunile T212, pachetul 3): Consilierul pozitiei - un verdict, decizii, restul pliat (stilurile paginii, fara culori noi) */
 .t212Cons h5{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .t212Decizii{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
@@ -1821,6 +1823,9 @@ body.peAcasa:not(.acMonedaDeschisa) .toolbar{display:none}
 #dash .acStire:hover{color:var(--accent)}#dash .acStire span{margin-right:8px;font-size:12px}
 #dash .acRez{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;font-size:13px;font-variant-numeric:tabular-nums}#dash .acRez span{color:var(--muted)}
 @media (max-width:900px){#dash .acVerdicte{grid-template-columns:1fr}#dash .acVerd+.acVerd{border-left:0;border-top:1px solid var(--tb-linie)}}
+.acPiataBtn{display:none}
+@media (max-width:900px){#dash .acPiataBtn{display:inline-flex}#acasa.acDoarCrypto #acVremeBursa,#acasa.acDoarCrypto #acScorT212{display:none}#acasa.acDoarBursa #acVremeCrypto,#acasa.acDoarBursa #acScor{display:none}}
+.acPiataBtn[aria-pressed="true"]{border-color:var(--accent);color:var(--text)}
 /* v94: fata de ieri, funding pe piata */
 #dash .acIeri{font-size:12px;font-weight:600;margin-left:4px;white-space:nowrap}
 #dash .acFund{margin-top:6px;font-size:12.5px;padding:6px 8px;border-radius:4px;border:1px solid var(--tb-linie);background:rgba(135,153,170,.05)}
@@ -2792,7 +2797,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .jtRaportPiata{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.jtRaportPiata h5{margin:0 0 6px;font-size:13px}
 .sectoareBloc{margin:0 0 12px}.srRrg{display:block;width:100%;max-width:560px;height:auto;margin:10px 0}.srQ{opacity:.06}.srQL{fill:#3fb950}.srQI{fill:#58a6ff}.srQG{fill:#f85149}.srQW{fill:#d29922}.srAx{stroke:var(--line);stroke-dasharray:3 4}.srQt{font-size:11px;fill:var(--muted)}.srEt{font-size:10px;fill:var(--text)}.srTab td.bun{color:var(--good)}.srBtNota{margin:4px 0 0}.srTab td.rau{color:var(--bad)}.srCad{font-size:12px;padding:1px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}.srCad.cdL{color:#3fb950}.srCad.cdW{color:#d29922}.srCad.cdG{color:#f85149}.srCad.cdI{color:#58a6ff}
 @media (max-width:640px){.srTab thead{display:none}.srTab,.srTab tbody{display:block}.srTab tr{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px 6px;padding:8px 0;border-bottom:1px solid var(--line)}.srTab td{display:block;padding:0;border:0;text-align:left}.srTab td:nth-child(1){grid-column:1/4}.srTab td:nth-child(6){grid-column:4;grid-row:1;text-align:right}.srTab td:nth-child(2)::before{content:"1 zi";color:var(--muted);font-size:11px;display:block;font-family:inherit}.srTab td:nth-child(3)::before{content:"1 săpt.";color:var(--muted);font-size:11px;display:block;font-family:inherit}.srTab td:nth-child(4)::before{content:"1 lună";color:var(--muted);font-size:11px;display:block;font-family:inherit}.srTab td:nth-child(5)::before{content:"3 luni";color:var(--muted);font-size:11px;display:block;font-family:inherit}.srTab td:nth-child(7){grid-column:1/-1}.srTab td:nth-child(7)::before{content:"acțiuni pe trend (Market Breadth) ";color:var(--muted);font-size:11px;font-family:inherit}}
-.mcVerdict{margin:6px 0 8px}.mcVerdict.mcbine b{color:var(--good)}.mcVerdict.mcatentie b{color:var(--warn)}.mcVerdict.mcrau b{color:var(--bad)}.mcBara{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,#f85149,#d29922 45%,#8b949e 58%,#3fb950);margin:4px 0}.mcBara span{position:absolute;top:-4px;width:3px;height:14px;background:var(--text);border-radius:2px;transform:translateX(-1px)}.mcAx{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px}.mcTr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:8px;align-items:baseline}.mcTxt{font-size:12.5px}.mcSc{font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
+.mcVerdict{margin:6px 0 8px}.mcVerdict b{font-size:28px;line-height:1.15;font-weight:700}.mcVerdict.mcbine b{color:var(--good)}.mcVerdict.mcatentie b{color:var(--warn)}.mcVerdict.mcrau b{color:var(--bad)}.mcBara{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,#f85149,#d29922 45%,#8b949e 58%,#3fb950);margin:4px 0}.mcBara span{position:absolute;top:-4px;width:3px;height:14px;background:var(--text);border-radius:2px;transform:translateX(-1px)}.mcAx{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px}.mcTr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:8px;align-items:baseline}.mcTxt{font-size:12.5px}.mcSc{font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
 /* v100.175 (auditul Opus, M18): pe ecran tactil, butoanele mici ajung la 44 px înălțime (Apple / Google: ținta minimă de atingere) */
 @media (pointer:coarse){.stStat .stBtn,#tabloubot .tbBtnLinie,.t212BtnLinie,.tbBtnLinie,.tbIntBtn,.rzLink,.moreBtn{min-height:44px}.rzLink{display:inline-flex;align-items:center}}
 /* v100.176: pagina Contul întreg - ca „riscul tău” (secțiuni despărțite de o linie, cifrele în căsuțe, histograma zilelor) */
@@ -2874,6 +2879,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .scCifre{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--tb-linie,var(--line));border-radius:4px;overflow:hidden}
 .scCel{display:flex;flex-direction:column;gap:3px;padding:10px 14px;min-width:0}.scCel+.scCel{border-left:1px solid var(--tb-linie,var(--line))}
 .scEt{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.scVal{font-size:26px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}.scSub{font-size:12px;color:var(--muted)}
+#acasa .scVal{font-size:15px;font-weight:500}#acasa .scVal.scMare{font-size:22px;font-weight:600}
 .scObiectiv{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px}.scTinta{display:flex;flex-direction:column;gap:3px;min-width:160px;flex:1}
 .scBara{height:6px;border-radius:3px;background:var(--panel-3);overflow:hidden}.scBara i{display:block;height:100%;background:var(--sc-c,var(--accent));border-radius:3px;transition:width .3s}
 .scInainte{font-size:13px;color:var(--muted)}.scInainte b{color:var(--text)}
@@ -2894,7 +2900,8 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe Piața azi propoziția e rândul mare; eticheta vremii e cip, doar când există propoziția */
 #dash .acVerd:has(.acFac) .acNiv{font-size:11px;font-weight:600;letter-spacing:.04em;display:inline-block;padding:1px 7px;border:1px solid var(--tb-linie);border-radius:3px;margin:6px 0 2px}
-#dash .acVerd .acFac{margin:6px 0 4px;padding:0;border:0;background:none;border-radius:0;font-size:20px;line-height:1.25;font-weight:600;color:var(--text)}
+#dash .acVerd .acFac{margin:6px 0 4px;padding:0;border:0;background:none;border-radius:0;font-size:28px;line-height:1.25;font-weight:600;color:var(--text)}
+@media (max-width:640px){#dash .acVerd .acFac{font-size:24px}#acasa .scVal{font-size:14px}#acasa .scVal.scMare{font-size:18px}.mcVerdict b{font-size:24px}}
 #dash .acVerd-liniste .acFac,#dash .acVerd-larga .acFac{color:var(--good)}
 #dash .acVerd-miscare .acFac,#dash .acVerd-scade .acFac,#dash .acVerd-frica .acFac{color:var(--bad)}
 #dash .acVerd-ingusta .acFac,#dash .acVerd-lateral .acFac{color:var(--warn)}

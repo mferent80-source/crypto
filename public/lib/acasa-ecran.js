@@ -31,6 +31,7 @@ async function acasaPorneste(fortat) {
       pas("stiriCrypto", function () { return getJSON("/api/stiri?action=crypto&moneda=BTC"); }),
       // v94: funding-ul pe toata piata + pozele zilnice ("ce s-a schimbat de ieri"), de la colector
       pas("piataCol", function () { return getJSON("/api/istoric-bot?action=piata"); }),
+      pas("verdicte", function () { return getJSON("/api/istoric-bot?action=verdicteCalibrare").then(function (r) { return r && r.calibrare || null; }); }),
       // v100.193 (demo aprobat 14.10): Market Breadth SUA (robotul de pe GitHub), Trend 12 luni + topul pe sectoare (KV, colectorul),
       // lățimea crypto pe 150 perp-uri (KV, la 15 min) — pentru cardurile noi și Scorul zilei
       pas("mbUs", function () { return typeof LatimeUS === "undefined" ? null : fetch(LatimeUS.SURSA, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }); }),
@@ -117,6 +118,21 @@ function acFaraServer(d) {
 function acFaraServerVerd(d) {
   return { nivel: "fara-date", eticheta: "FĂRĂ LEGĂTURĂ", titlu: "Serverul de acasă nu răspunde.",
     text: "N-am primit nimic de la el de la deschidere (" + String(d && d.clasamentErr || "eroare") + "). Verifică dacă PC-ul de acasă e pornit; reîncerc singur în 30 de secunde." };
+}
+function acPiataAlege(care) {
+  var rad = document.getElementById("acasa"); if (!rad) return;
+  var c = care === "bursa" ? "bursa" : "crypto";
+  rad.classList.toggle("acDoarCrypto", c === "crypto");
+  rad.classList.toggle("acDoarBursa", c === "bursa");
+  try { localStorage.setItem("acPiata", c); } catch (e) {}
+  var b1 = document.getElementById("acBtnCrypto"), b2 = document.getElementById("acBtnBursa");
+  if (b1) b1.setAttribute("aria-pressed", c === "crypto" ? "true" : "false");
+  if (b2) b2.setAttribute("aria-pressed", c === "bursa" ? "true" : "false");
+}
+function acPiataInit() {
+  var c = "crypto";
+  try { var s = localStorage.getItem("acPiata"); if (s === "bursa" || s === "crypto") c = s; } catch (e) {}
+  acPiataAlege(c);
 }
 function acasaVerd(el, piata, v, extra) {
   if (!el) return;
@@ -253,6 +269,7 @@ function acTopSector(s) {
 }
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
+  acPiataInit();
   if (typeof scDeseneaza === "function") scDeseneaza();   // v100.217: scorul sezonului (din starea de acum; nu se ascunde când cardurile de mai jos își așteaptă datele)
   var d = acasa.d, cl = acClasamentSumar(d.clasament), mis = Acasa.miscari(d.tickers, { top: 60, inMiscare: cl ? cl.deEvitat.map(function (x) { return x.simbol; }) : [] });
   var btc = acBtc(d), fgO = d.piata && d.piata.fg, fgI = Acasa.fg(fgO && fgO.istoric && fgO.istoric.length ? fgO.istoric : fgO ? [fgO.valoare] : []);
@@ -354,7 +371,7 @@ function acasaDeseneaza() {
       + '<p class="acEt">Dobânzi și dolar în creștere apasă de obicei și pe acțiuni, și pe crypto; aurul urcă când lumea fuge de risc.</p>'
       : '<p class="acMut">Aduc datele…</p>');
   // v100.168 (12.10, macro-dashboard mutat aici — el: „Alerta + scorul de regim macro”): scorul de regim din aceleași date (piata + btc1d)
-  if ($("acRegim")) $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null, d.piataLa || d.btc1dLa || null) : "";   /* v100.196 (🔵3): vârsta regimului ținut ajunge la cartelă (pragul de 2 h nu mușca: „la” stătea lângă „macro”) */
+  if ($("acRegim")) { var calReg = d.verdicte !== undefined ? d.verdicte : (d.verdicteErr ? null : undefined); $("acRegim").innerHTML = typeof Macro !== "undefined" ? Macro.htmlCard(Macro.scor({ vix: p.vix, tnx: p.tnx, dxy: p.dxy, spy: p.spy, btc: d.btc1d, fg: p.fg }, Date.now()), d.piataCol && d.piataCol.macro ? Object.assign({ la: d.piataCol.la }, d.piataCol.macro) : null, d.piataLa || d.btc1dLa || null, calReg) : ""; }   /* v100.196 (🔵3): vârsta regimului ținut ajunge la cartelă; v100.229: rândul de calibrare, când e citit */
   // v95: sectoarele Nasdaq 100 (din rezumatul zilnic al colectorului)
   var sec = ndxL && d.ndx ? Acasa.sectoare(d.ndx.actiuni) : [], smax = Math.max.apply(null, sec.map(function (x) { return Math.abs(x.ch5 || 0); }).concat([1]));
   $("acSectoare").innerHTML = '<div class="acCap"><h4>Sectoarele Nasdaq 100</h4><span class="acSub">pe 5 zile · azi</span></div>'

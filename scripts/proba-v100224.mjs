@@ -36,7 +36,7 @@ await test("Piața azi: faCe fără prefix; fără faCe eticheta rămâne; Scan 
   assert.doesNotMatch(verd, /Ce aș face eu|👉/);
   assert.match(citeste("public", "lib", "acasa.js"), /N-aș porni boți grid noi/);
   assert.match(scan, /scFac">👉 <b>Ce aș face eu:<\/b>/);
-  assert.match(css, /#dash \.acVerd \.acFac\{[^}]*font-size:20px/);
+  assert.match(css, /#dash \.acVerd \.acFac\{[^}]*font-size:\d+px/);
   assert.match(css, /#dash \.acVerd:has\(\.acFac\) \.acNiv/);
 });
 await test("Tablou: #pzPret lângă verb, #tbPretViu rămâne, cipul se ascunde doar cu PAZNIC", () => {

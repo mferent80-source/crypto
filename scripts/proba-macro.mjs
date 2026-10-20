@@ -126,7 +126,7 @@ await test("v100.172 ruta piata (istoric-bot): colectorul salvează regimul țin
 });
 await test("v100.172 Dashboard și „Ce spune piața acum” trimit regimul ținut (piataCol.macro) în card / rând", () => {
   const ae = citeste("public", "lib", "acasa-ecran.js"), app = citeste("public", "app.js");
-  assert.match(ae, /Macro\.htmlCard\(Macro\.scor\(\{[^}]*\}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, d\.piataLa \|\| d\.btc1dLa \|\| null\)/);   /* v100.224: ora citirii */
+  assert.match(ae, /Macro\.htmlCard\(Macro\.scor\(\{[^}]*\}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, d\.piataLa \|\| d\.btc1dLa \|\| null, calReg\)/);   /* v100.224: ora citirii; v100.229: rândul de calibrare */
   assert.match(app, /getJSON\("\/api\/istoric-bot\?action=piata"\)/); assert.ok(app.includes("Date.now()),macroStare.tinut)"), "macroCitire fără regimul ținut");
 });
 await test("v100.174 regimul ținut mai vechi de 2 ore (colectorul stă) e ignorat: cardul arată citirea de acum", () => {
@@ -169,7 +169,7 @@ await test("index.html: cardul #acRegim imediat după „Dobânzi, dolar, aur”
   assert.match(idx, /<script src="\/lib\/macro\.js"><\/script>/); assert.match(sw, /"\/lib\/macro\.js"/);
 });
 await test("Dashboard: cardul se desenează din datele pe care ecranul le are deja (piata + btc1d), fără cereri noi", () => {
-  assert.match(ae, /\$\("acRegim"\)\.innerHTML = typeof Macro !== "undefined" \? Macro\.htmlCard\(Macro\.scor\(\{ vix: p\.vix, tnx: p\.tnx, dxy: p\.dxy, spy: p\.spy, btc: d\.btc1d, fg: p\.fg \}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, d\.piataLa \|\| d\.btc1dLa \|\| null\) : ""/);
+  assert.match(ae, /\$\("acRegim"\)\.innerHTML = typeof Macro !== "undefined" \? Macro\.htmlCard\(Macro\.scor\(\{ vix: p\.vix, tnx: p\.tnx, dxy: p\.dxy, spy: p\.spy, btc: d\.btc1d, fg: p\.fg \}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, d\.piataLa \|\| d\.btc1dLa \|\| null, calReg\) : ""/);
 });
 await test("„Ce spune piața acum”: rândul „Regim macro” după „Sectoarele US”", () => {
   assert.match(app, /if\(ex\.sectoare\)out\.push\(rd\(ex\.sectoare\)\);if\(ex\.macro\)out\.push\(rd\(ex\.macro\)\);/);

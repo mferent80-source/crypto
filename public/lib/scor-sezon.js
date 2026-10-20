@@ -141,7 +141,7 @@ var ScorSezon = (function () {
 
   // ---- cardul ----
   var CUL = { fara: "var(--muted)", bine: "var(--good)", atentie: "var(--warn)", rau: "var(--bad)" };
-  function cel(et, val, cls, sub) { return '<div class="scCel"><span class="scEt">' + esc(et) + '</span><b class="scVal ' + (cls || "") + '">' + esc(val) + '</b><span class="scSub">' + esc(sub) + '</span></div>'; }
+  function cel(et, val, cls, sub, mare) { var c = "scVal" + (cls ? " " + cls : "") + (mare ? " scMare" : ""); return '<div class="scCel' + (mare ? " scCelMare" : "") + '"><span class="scEt">' + esc(et) + '</span><b class="' + c + '">' + esc(val) + '</b><span class="scSub">' + esc(sub) + '</span></div>'; }
   function html(s, o) {
     o = o || {}; var id = String(o.id || "scor"), ob = s.obiectiv, se = s.serie, P = PIETE[piataDin(s.piata)], M = P.moneda, fel = P.fel, Um = function (v) { return U(v, M); };
     var serieTxt = se.n === 0 ? "—" : se.n + (se.fel === "w" ? " pe plus" : " pe minus");
@@ -151,7 +151,7 @@ var ScorSezon = (function () {
     var cifre = cel("Win", s.win, "good", s.n ? Um(s.castigBrut) : P.felInchis[1] + " pe plus")
       + cel("Loss", s.loss, "bad", s.n ? Um(s.pierdereBruta) : P.felInchis[1] + " pe minus")
       + cel("Rata de câștig", pr(s.rata), s.nivel === "bine" ? "good" : s.nivel === "atentie" ? "neutral" : s.nivel === "rau" ? "bad" : "", "ținta " + pr(ob.rata) + " · " + subN)
-      + cel("Net", Um(s.net), s.net === null || Math.round(s.net * 10) === 0 ? "" : s.net > 0 ? "good" : "bad", s.raport !== null ? "o pierdere = " + s.raport.toFixed(1).replace(".", ",") + " câștiguri" + (s.raport < 1 ? " - pierzi mai mult decât câștigi" : "") : (s.piata === "t212" ? "după comisioanele de conversie" : "după comisioane și funding"))
+      + cel("Net", Um(s.net), s.net === null || Math.round(s.net * 10) === 0 ? "" : s.net > 0 ? "good" : "bad", s.raport !== null ? "o pierdere = " + s.raport.toFixed(1).replace(".", ",") + " câștiguri" + (s.raport < 1 ? " - pierzi mai mult decât câștigi" : "") : (s.piata === "t212" ? "după comisioanele de conversie" : "după comisioane și funding"), true)
       + cel("Seria", serieTxt, serieCls, serieSub);
     var b = s.inainte, inTxt;
     if (b.n) {

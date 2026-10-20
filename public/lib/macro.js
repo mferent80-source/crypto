@@ -103,7 +103,25 @@
     return { ce, stare: r.treapta.stare === "rau" ? "atentie" : r.treapta.stare, text: r.treapta.text + " (scor " + scS(r.scor) + ") · " + p.join(" · ") + (ft ? " · Discord: încă „" + ft.t.text + "” până se confirmă" : "") };
   }
 
-  function htmlCard(r, tinut, laCitire) {
+  function linieCalibrare(c) {
+    if (!c || !Array.isArray(c.calibrare)) return "Regimul încă nu e măsurat.";
+    const rand = c.calibrare.filter((x) => x && x.sursa === "macro");
+    if (!rand.length) return "Regimul încă nu e măsurat.";
+    const rg = Array.isArray(c.registru) ? c.registru : [];
+    const pct = (x) => (x == null || !isFinite(Number(x)) ? "" : (Number(x) > 0 ? "+" : Number(x) < 0 ? "−" : "") + Math.abs(Number(x) * 100).toFixed(1).replace(".", ",") + "%");
+    const buc = [5, 20].map((h) => {
+      const r = rand.find((x) => x.h === h), t = r && r.test;
+      if (!t) return "la " + h + " zile încă nu e măsurat";
+      if (t.stare === "putine") return "la " + h + " zile puține (" + Number(t.nFav || 0) + " / " + Number(t.nRest || 0) + ")";
+      const dov = rg.some((x) => x && x.ramane === true && x.sursa === "Regimul macro · " + h + " zile de bursă");
+      const dif = isFinite(Number(t.dif)) ? ", diferența " + pct(t.dif) : "";
+      if (t.stare === "testat" && dov) return "la " + h + " zile dovedit" + dif;
+      if (t.stare === "testat") return "la " + h + " zile măsurat, nu e dovedit" + dif;
+      return "la " + h + " zile încă nu e măsurat";
+    });
+    return "Regimul, S&P după pofta de risc: " + buc.join("; ") + ".";
+  }
+  function htmlCard(r, tinut, laCitire, cal) {
     // v100.224: ceasul „actualizat” și nota de colector oprit apar doar când pagina trimite ora citirii. Apelul cu două argumente, pe un regim vechi, rămâne neschimbat.
     // v100.225: „publicat” e ora din KV, doar cât regimul ținut e în 2 ore. Candidatul nu înlocuiește codul ținut.
     // v100.226: „publicat” e ora României (Europe/Bucharest). Cât Discord încă ține codul vechi, colectorul își spune candidatul doar dacă e altul decât citirea de acum.
@@ -130,10 +148,12 @@
       ? '<p class="acEt">Colectorul n-a publicat regimul de curând. Asta e citirea de acum.</p>' : "";
     const conf = candOk && !discord
       ? '<p class="acEt">' + esc(textTreapta(cand.cod)) + " se confirmă la citirea următoare.</p>" : "";
-    return cap + verdict +
+    const calLin = cal !== undefined ? '<p class="acEt mcCal">' + esc(linieCalibrare(cal)) + "</p>" : "";
+    const disc = '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>';
+    return cap + verdict + calLin + disc +
       '<div class="mcBara"><span style="left:' + poz + '%"></span></div><div class="mcAx"><span>stres −10</span><span>neutru</span><span>+7 risk-on</span></div>' +
       r.semne.map((x) => '<div class="acTr mcTr"><b>' + esc(x.ce) + '<span class="acMut acTrSub">' + esc(x.valoare) + '</span></b><span class="mcTxt">' + esc(x.text) + "</span>" + sc(x) + "</div>").join("") +
-      '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>' + nota + conf;
+      nota + conf;
   }
 
   // calendarul faireconomy (/api/stiri?action=calendar): SUA, impact mare, în următoarele `min` minute
@@ -151,5 +171,5 @@
         ". N-aș porni boți noi și n-aș cumpăra chiar acum: la anunț prețul poate sări în ambele direcții." };
   }
 
-  global.Macro = { TREPTE, bare, scor, treaptaDin, histerezis, mesajRegim, textCitire, htmlCard, evenimenteCurand, mesajEveniment };
+  global.Macro = { TREPTE, bare, scor, treaptaDin, histerezis, mesajRegim, textCitire, htmlCard, linieCalibrare, evenimenteCurand, mesajEveniment };
 })(typeof window !== "undefined" ? window : globalThis);
