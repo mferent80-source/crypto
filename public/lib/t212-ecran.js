@@ -182,7 +182,10 @@ async function t212RegimAdu() {
   var macro = null, la = null, mb = null, viu = false;
   var pc = null;
   try { pc = await getJSON("/api/istoric-bot?action=piata"); } catch (e) {}
+  // v100.232: cererea fără cod e citire picată. Copia paginii rămâne rezerva, dar nu se dă drept citire nouă din KV.
+  var dinKv = !!(pc && pc.macro && pc.macro.cod);
   if (!(pc && pc.macro && pc.macro.cod) && paginaProaspata && ac && ac.piataCol && ac.piataCol.macro) pc = ac.piataCol;
+  var dinPagina = !dinKv && !!(pc && pc.macro && pc.macro.cod);
   if (pc && pc.macro && pc.macro.cod) { macro = String(pc.macro.cod); la = Number(pc.la || (pc.macro && pc.macro.la)) || null; }
   // v100.224: KV proaspăt (≤ 2 h) rămâne codul ținut. KV vechi sau fără oră + citire completă de pe pagină ⇒ codul de acum, fără scriere în KV.
   var tinut = macro && la && Date.now() - la <= 2 * 3600000;
@@ -195,14 +198,14 @@ async function t212RegimAdu() {
         cod = t212MacroDin(pp, kk && kk.data && kk.data.klines);
       } catch (e2) {}
     }
-    if (cod) { macro = cod; la = Date.now(); viu = true; }
+    if (cod) { macro = cod; la = Date.now(); viu = true; dinPagina = false; }
   }
   try {
     var j = ac && ac.mbUs ? ac.mbUs : null;
     if (!j && typeof LatimeUS !== "undefined" && typeof fetch === "function") j = await fetch(LatimeUS.SURSA, { cache: "no-store" }).then(function (x) { return x.ok ? x.json() : null; });
     var n = j && typeof LatimeUS !== "undefined" ? LatimeUS.normalizeaza(j, Date.now()) : null; if (n) mb = { stare: n.stare, vechi: !!n.vechi, stanta: n.stanta };
   } catch (e) {}
-  t212.regimPiata = { adus: Date.now(), acasaLa: semn, macro: macro, la: la, mb: mb, viu: viu };
+  t212.regimPiata = { adus: Date.now(), acasaLa: semn, macro: macro, la: la, mb: mb, viu: viu, citirePicata: !dinKv, rezerva: !!dinPagina };
   return t212.regimPiata;
 }
 function t212RegimPt() { var r = t212.regimPiata || {}, ok = r.macro && r.la && Date.now() - r.la <= 2 * 3600000; return { macro: ok ? r.macro : null, mb: r.mb || null, viu: !!(ok && r.viu) }; }
@@ -213,6 +216,11 @@ function t212MarimeCalc(tk, intrare, stop, pretAcum) {
   var c = t212.cont && t212.cont.cash, rg = t212.regimPiata ? ActiuniSemnale.regimPoarta(t212RegimPt()) : null;
   if (rg && rg.cod === "blocat") return { blocat: true, motiv: rg.motiv };   /* v100.200: ca Poarta - regimul blocat nu dă nicio sumă (riscPct 0 cădea pe 1 %) */
   return ActiuniSemnale.marime({ intrare: intrare, stop: stop, cont: c && c.total, fx: t212Fx(), riscPct: rg ? rg.riscPct : 0.01, deja: t212DejaLei(tk), liber: c && c.free !== null && c.free !== undefined && isFinite(Number(c.free)) ? Number(c.free) : null, pretAcum: pretAcum });   /* v100.222: risc 0 rămâne 0 */
+}
+function t212FrazaCitire() {
+  var r = t212.regimPiata;
+  if (!r || !r.citirePicata) return "";
+  return r.rezerva ? "Citirea din KV a picat: pe poartă e copia de pe Piața azi, nu o citire nouă." : "Citirea din KV a picat.";
 }
 function t212FaraMarime(p) { return p && p.sursa && p.sursa.k === "trend12" && !p.sursa.probat ? "trend12" : null; }
 // riscul la stop din cont, cu o zecimală fără „,0” (1% · 0,5% · 0,7%)
@@ -597,6 +605,7 @@ function t212IdeiRender() {
   var oraT = id && id.la > 0 ? new Date(id.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }) : "";
   var tabel = function (q) { return '<div class="t212TabWrap"><table class="t212Tab t212IdeiTab"><thead><tr><th>Acțiune</th><th>La idee</th><th>Intrare</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th></th></tr></thead><tbody>' + q.map(t212IdeiRand).join("") + '</tbody></table></div>'; };
   var h = '<div class="t212PanouCap"><h4>💡 Idei de cumpărare</h4><span class="tbSub">' + (id ? escapeHtml("din " + t212Cate(id.judecate || 0, "acțiune judecată", "acțiuni judecate") + " pe " + t212ZiScurta(id.zi) + (oraT ? ", la " + oraT : "") + ", " + (id.trecute || 0) + " trec de poartă") : "colectorul le caută în fiecare dimineață de la 8:00") + '</span></div>';
+  var fzCit = t212FrazaCitire(); if (fzCit) h += '<p class="tbWarn">⚠️ ' + escapeHtml(fzCit) + '</p>';
   var fIdei = '<p class="tbSub t212IdeiNota">Un filtru care te ține departe de situațiile proaste (trend în jos, după mișcare, lângă maxim, rezultate în 10 zile), nu o predicție: pe trade-urile tale, „doar pe 🟢” a adus mai puțin decât ai făcut singur. ' + escapeHtml(id && id.urmarire ? id.urmarire.text : "Ideile se urmăresc: după ~30 se poate spune dacă merită urmate.") + '</p>';
   if (!l.length) fIdei += '<p class="tbSub t212Gol">' + (id ? "Azi nicio acțiune nu trece de poartă — și asta e un răspuns: n-aș cumpăra nimic nou azi." : "Primele idei apar după prima trecere a colectorului.") + '</p>';
   else fIdei += t212IdeiSit(l) + tabel(l) + '<p class="tbSub">Prețurile sunt cele din tura de dimineață' + (oraT ? ' (' + escapeHtml(oraT) + ')' : '') + ', pe închiderea zilei de bursă de dinainte; „Biletul” le reface pe prețul de acum, cu stopul și suma lui.</p>';
@@ -874,6 +883,7 @@ async function t212Poarta() {
     var v = ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore, rezultateZile: zR, medie: niv.nivel === "ok" && niv.proba ? niv.proba.medie : undefined,
       dejaPct: tot > 0 && deja > 0 ? deja / tot : 0, simbol: b.simbol || s, regim: rp, zileLipsa: ActiuniSemnale.zileLipsa(st.ultima, Date.now(), tk) });
     if (rp.viu && v && v.note) v.note.push("regimul e citirea de acum: colectorul nu l-a publicat în ultimele 2 ore");
+    if (v && v.note) { var fzCit = t212FrazaCitire(); if (fzCit) v.note.push(fzCit); }
     // v100.222 (I-722): verdele care nu încape în banii liberi, e plin sau e blocat devine AȘTEAPTĂ înainte de jurnal
     if (v.nivel === "cumpara" && niv.nivel === "ok" && niv.intrare && niv.stop > 0) {
       var mCash = ActiuniSemnale.marime({ intrare: niv.intrare.pret, stop: niv.stop, cont: tot, fx: t212Fx(), riscPct: v.riscPct, deja: deja, liber: liber, pretAcum: st.pret });

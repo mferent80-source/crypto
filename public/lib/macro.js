@@ -133,7 +133,8 @@
     // v100.225: „publicat” e ora din KV, doar cât regimul ținut e în 2 ore. Candidatul nu înlocuiește codul ținut.
     // v100.226: „publicat” e ora României (Europe/Bucharest). Cât Discord încă ține codul vechi, colectorul își spune candidatul doar dacă e altul decât citirea de acum.
     // v100.227: „actualizat” e același fus. Eticheta stă înaintea ceasurilor. Candidatul intră în fraza de pe Discord, nu într-un al doilea rând.
-    // v100.228: fraza de pe Discord rămâne scurtă. Plafonul de 3 ore stă la colector, nu pe card.
+    // v100.228: fraza de pe Discord rămâne scurtă.
+    // v100.232: cardul spune plafonul de 3 ore pe care colectorul îl ține deja (tura-piata, 3 * 3600000). Nu e un prag nou.
     const ceasRo = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }).format(new Date(t)); } catch (e) { return ""; } };
     const tinutProaspat = !!(tinut && fin(tinut.la) && Date.now() - tinut.la <= 2 * 3600000);
     const ora = fin(laCitire) ? ceasRo(laCitire) : "";
@@ -157,7 +158,8 @@
       ? '<p class="acEt">' + esc(textTreapta(cand.cod)) + " se confirmă la citirea următoare.</p>" : "";
     const calLin = cal !== undefined ? '<p class="acEt mcCal">' + esc(linieCalibrare(cal)) + "</p>" : "";
     const disc = '<p class="acEt">Același scor ca în Macro Dashboard-ul vechi; context pentru câți bani pui la risc, nu semnal de intrare. Alertă pe Discord când regimul se schimbă de-adevăratelea și cu ~30 de minute înainte de evenimentele mari din SUA.</p>';
-    return cap + verdict + calLin + disc +
+    const plafon = '<p class="acEt">Între două alerte de regim trec cel puțin 3 ore.</p>';
+    return cap + verdict + calLin + disc + plafon +
       '<div class="mcBara"><span style="left:' + poz + '%"></span></div><div class="mcAx"><span>stres −10</span><span>neutru</span><span>+7 risk-on</span></div>' +
       r.semne.map((x) => '<div class="acTr mcTr"><b>' + esc(x.ce) + '<span class="acMut acTrSub">' + esc(x.valoare) + '</span></b><span class="mcTxt">' + esc(x.text) + "</span>" + sc(x) + "</div>").join("") +
       nota + conf;

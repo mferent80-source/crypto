@@ -48,7 +48,10 @@ await test("fraza de pe Discord e scurtă și stă într-un singur rând", () =>
   const sch = MC.htmlCard(r, { cod: tinut, scor: 0, la, candidat: { cod: cand, la } });
   const fraza = "<p class=\"acEt\">Pe Discord e încă „" + NUME[tinut] + "”. Colectorul așteaptă „" + NUME[cand] + "”.</p>";
   assert.match(sch, new RegExp(escRe(fraza)));
-  assert.doesNotMatch(sch, /3 ore|se anunță|se confirmă la citirea următoare\./);
+  assert.doesNotMatch(fraza, /3 ore|se anunță/);
+  assert.doesNotMatch(sch, /se anunță|se confirmă la citirea următoare\./);
+  assert.match(sch, /Între două alerte de regim trec cel puțin 3 ore\./);
+  assert.equal((sch.match(/3 ore/g) || []).length, 1);
   assert.doesNotMatch(sch, /<\/p><p class="acEt">Colectorul așteaptă/);
   assert.doesNotMatch(fraza, /!|vezi|null|NaN|-\d/);
   assert.match(sch, new RegExp("<b>" + escRe(r.treapta.text) + "</b>"));
@@ -75,7 +78,10 @@ await test("sub 550 px verbul de pe Tablou nu se rupe; celelalte antete se rup l
   assert.match(css, /#pzVerdict \.pzVerbTxt\{order:3;flex:1 0 100%\}/);
   assert.match(css, /\.pzVerbRand\{flex-direction:column/);
   assert.match(css, /\.pzPret\{[^}]*white-space:nowrap\}/);
-  assert.match(css, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:break-word\}\}/);
+  assert.match(css, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:normal;word-break:keep-all\}\}/);
+  assert.match(css, /@media \(max-width:550px\)\{\.pzAntet \.pzVerb\{max-width:none;overflow:visible;overflow-wrap:normal;word-break:keep-all\}\}/);
+  assert.doesNotMatch(css, /@media \(max-width:550px\)\{\.pzVerb\{[^}]*overflow-wrap:break-word/);
+  assert.doesNotMatch(css, /@media \(max-width:550px\)\{[^}]*overflow-wrap:anywhere/);
   assert.match(css, /\.pzAntet \.pzVerb\{white-space:normal;overflow-wrap:break-word;max-width:62%\}/);
   assert.doesNotMatch(css, /#pzVerdict \.pzVerb\{white-space:normal/);
   assert.doesNotMatch(css, /#pzVerdict \.pzVerbRand\{display:grid/);
