@@ -311,10 +311,39 @@ function acEvenimentAzi() {
   var ev = (cal.urmatoare || []).filter(function (x) { return x && x.mare && x.t && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(x.t)) === azi; })[0];
   return ev ? ev.titlu : "";
 }
+function acExportNePotrivit() {
+  try { var o = JSON.parse(localStorage.getItem("radar-export-t212-v1") || "null"); return !!(o && o.nePotrivit === true); }
+  catch (e) { return false; }
+}
+function acFranaZileCitite() {
+  try { var l = JSON.parse(localStorage.getItem("radar-frana-zile-v1") || "[]"); return Array.isArray(l) ? l : []; }
+  catch (e) { return []; }
+}
+// Prima poză a zilei de București, doar când pauza, raportul și evenimentul sunt știute. Nu scrie în KV.
+function acFranaSalveaza() {
+  try {
+    var pz = acPauzaSezon(); if (pz === null) return;
+    var rs = acRaportStare(); if (!rs || !rs.stare || rs.stare === "necunoscut") return;
+    var ev = acEvenimentAzi(); if (ev === undefined) return;
+    var zi = acZiBuc(), lista = acFranaZileCitite();
+    if (lista.some(function (x) { return x && x.z === zi; })) return;
+    var snap = { z: zi, pauza: pz > 0, eveniment: ev, raportStare: rs.stare };
+    if (pz > 0) snap.pauzaN = pz;
+    if (rs.ore) snap.raportOre = Math.round(rs.ore);
+    if (rs.raport) {
+      var ab = rs.raport.reconciliere && rs.raport.reconciliere.t212 && rs.raport.reconciliere.t212.abateri;
+      snap.raport = { valoare: rs.raport.valoare ? { total: rs.raport.valoare.total } : null, risc: rs.raport.risc ? { var95: rs.raport.risc.var95 } : null, reconciliere: { t212: { abateri: Array.isArray(ab) ? ab.slice(0, 40) : [] } } };
+    }
+    if (acExportNePotrivit()) snap.exportNePotrivit = true;
+    lista.push(snap);
+    if (lista.length > 400) lista = lista.slice(-400);
+    localStorage.setItem("radar-frana-zile-v1", JSON.stringify(lista));
+  } catch (e) {}
+}
 function acFraneaza(v, fel) {
   if (!v || typeof Acasa === "undefined" || !Acasa.franaVerb) return v;
   var o = { fel: fel }, rs = acRaportStare(), ev = acEvenimentAzi();
-  if (fel === "crypto") { var pz = acPauzaSezon(); if (pz > 0) { o.pauza = true; o.pauzaN = pz; } }
+  if (fel === "crypto") { var pz = acPauzaSezon(); if (pz > 0) { o.pauza = true; o.pauzaN = pz; } if (acExportNePotrivit()) o.exportNePotrivit = true; }
   if (rs.stare && rs.stare !== "necunoscut") { o.raportStare = rs.stare; if (rs.ore) o.raportOre = rs.ore; if (rs.raport) o.raport = rs.raport; }
   if (ev !== undefined) o.eveniment = ev;
   return Acasa.franaVerb(v, o);
@@ -322,6 +351,7 @@ function acFraneaza(v, fel) {
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
   acPiataInit();
+  acFranaSalveaza();
   if (typeof scDeseneaza === "function") scDeseneaza();   // v100.217: scorul sezonului (din starea de acum; nu se ascunde când cardurile de mai jos își așteaptă datele)
   var d = acasa.d, cl = acClasamentSumar(d.clasament), mis = Acasa.miscari(d.tickers, { top: 60, inMiscare: cl ? cl.deEvitat.map(function (x) { return x.simbol; }) : [] });
   var btc = acBtc(d), fgO = d.piata && d.piata.fg, fgI = Acasa.fg(fgO && fgO.istoric && fgO.istoric.length ? fgO.istoric : fgO ? [fgO.valoare] : []);

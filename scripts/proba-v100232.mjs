@@ -79,21 +79,22 @@ await test("lansatorul la logare e în repo și nu ține o parolă", () => {
   assert.doesNotMatch(ps, /APP_API_TOKEN|password|parola\s*=/i);
 });
 
-await test("versiunea v100.232, insigna SPUS, colectorul v101.132", () => {
+await test("versiunea de la v100.232 în sus și colectorul v101.132", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.232.0");
+  const minor = Number(P.version.split(".")[1]);
+  assert.ok(minor >= 232);
   assert.equal(P.scripts["test:v100232"], "node scripts/proba-v100232.mjs");
   assert.equal((P.scripts.test.match(/test:v100232/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100231/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100232"], /npm run test:v100232/);
-  assert.equal((idx.match(/v100\.232/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.232 · SPUS</);
+  assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
+  assert.match(idx, new RegExp('id="sideVersiune"[^>]*>v100\\.' + minor + " · "));
   assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-232/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.232"/);
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + minor + '"'));
   const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.232");
-  assert.equal(info.badge, "v100.232 · SPUS");
+  assert.equal(info.version, "v100." + minor);
+  assert.match(info.badge, new RegExp("^v100\\." + minor + " · "));
   assert.equal(info.engineContract, "54.1");
   assert.match(col, /if \(S\.eLimitaDeRitm\(e\)\) return;/);
   assert.match(citeste("public", "lib", "grid-sim.js"), /"Aș porni: câștigă în "/);

@@ -78,9 +78,31 @@ function ciZileHtml(zile) {
     + '<p class="tbSub">În lei, o valoare pe zi (colectorul, după curs). Schimbarea de la o zi la alta include și depunerile și retragerile — nu e doar profit. „Parțial” = o sursă n-a răspuns în ziua aceea, deci totalul e mai mic decât cel real.</p></section>';
   return h;
 }
+function ciExportHtml(st) {
+  var e = st && st.export, fraza;
+  if (!e) fraza = "A doua citire din exportul tău lipsește.";
+  else if (!e.ok) fraza = "A doua citire din exportul tău lipsește: " + (e.eroare || "fișierul n-a putut fi citit") + ".";
+  else if (e.lipsaApi) fraza = "A doua citire e citită, dar cantitatea din cont n-a venit: n-am aflat dacă se potrivește.";
+  else if (e.nePotrivit) fraza = "Exportul nu se potrivește cu cantitatea din cont.";
+  else fraza = "A doua citire se potrivește cu cantitatea din cont.";
+  var h = '<section class="ciSec"><h3>A doua citire, din exportul tău</h3><p class="ciRasp">' + ciEsc(fraza) + '</p><p><button type="button" class="actionGhost" id="ciExportBtn">Aduc exportul din T212</button><input type="file" id="ciExportFisier" accept=".csv,text/csv" hidden></p>';
+  if (e && e.ok && !e.lipsaApi && Array.isArray(e.randuri) && e.randuri.length) {
+    var cel = function (x) { return x == null ? "n-am aflat" : ciNr(x, 4).replace(/,?0+$/, ""); };
+    h += '<div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Simbol</th><th>API</th><th>Jurnal</th><th>Export</th></tr></thead><tbody>'
+      + e.randuri.map(function (r) { return "<tr><td>" + ciEsc(r.ticker) + '</td><td class="num">' + ciEsc(cel(r.api)) + '</td><td class="num">' + ciEsc(cel(r.jurnal)) + '</td><td class="num">' + ciEsc(cel(r.export)) + "</td></tr>"; }).join("")
+      + "</tbody></table></div>";
+    if (e.lipsaJurnal) h += '<p class="tbSub">Jurnalul n-a venit: coloana lui rămâne n-am aflat. Comparația care poate schimba gura e exportul față de API.</p>';
+  }
+  h += '<p class="tbSub">Fișierul rămâne la tine. Radar citește cantitățile și le compară cu API-ul, la aceeași margine ca jurnalul. Un export cu alt antet nu inventează abateri.</p></section>';
+  return h;
+}
+function ciMasuraHtml(st) {
+  var m = st && st.masura, t = m && m.text ? m.text : "N-am aflat: zilele vechi nu au pauza, VaR-ul și evenimentul salvate.";
+  return '<section class="ciSec"><h3>Măsura frânei pe cartea închisă</h3><p class="ciRasp">' + ciEsc(t) + '</p><p class="tbSub">Regulile de azi, pe zilele la care s-au salvat pauza, raportul și evenimentul. Sub 10 zile oprite, eșantionul nu ajunge.</p></section>';
+}
 function ciHtml(r, st) {
   st = st || {};
-  if (!r) return '<p class="tbSub">Raportul pe tot contul îl face colectorul la 6 ore (boți, Trading 212, Salt, prețurile pe doi ani, crizele din 2020–2025). Încă nu există: pornește colectorul și revino peste câteva minute.</p>';
+  if (!r) return '<p class="tbSub">Raportul pe tot contul îl face colectorul la 6 ore (boți, Trading 212, Salt, prețurile pe doi ani, crizele din 2020–2025). Încă nu există: pornește colectorul și revino peste câteva minute.</p>' + ciExportHtml(st) + ciMasuraHtml(st);
   var acum = Number(st.acum) || Date.now(), v = r.valoare || {}, rs = r.risc || {}, tot = v.total, h = "";
   var vechi = acum - r.la > 12 * 3600000;
   var d = new Date(r.la), p2 = function (n) { return String(n).padStart(2, "0"); };
@@ -117,11 +139,11 @@ function ciHtml(r, st) {
   // reconcilierea
   var rc = r.reconciliere || {}, rand = function (ok, titlu, detaliu) { return '<li class="' + (ok === null ? "" : ok ? "good" : "bad") + '">' + (ok === null ? "· " : ok ? "✓ " : "✗ ") + "<b>" + ciEsc(titlu) + "</b>" + (detaliu ? ' <span class="tbSub">' + ciEsc(detaliu) + "</span>" : "") + "</li>"; };
   h += '<section class="ciSec"><h3>Se potrivește cu brokerii?</h3><ul class="ciLista">'
-    + (rc.t212 ? rand(rc.t212.ok, rc.t212.ok ? "Trading 212: cantitățile din jurnal = cele din cont" : "Trading 212: " + ciCate(rc.t212.abateri.length, "abatere", "abateri"), rc.t212.ok ? ciCate(rc.t212.verificate, "simbol verificat", "simboluri verificate") : rc.t212.abateri.map(function (a) { return String(a.ticker).replace(/_US_EQ$|_EQ$/, "") + ": cont " + a.broker + ", jurnal " + ciNr(a.radar, 3).replace(/,?0+$/, "") + " — " + a.motiv; }).join("; ")) : rand(null, "Trading 212: necitit acum", ""))
+    + (rc.t212 ? rand(rc.t212.ok, rc.t212.ok ? "Trading 212: cantitățile din jurnal = cele din cont" : "Trading 212: " + ciCate(rc.t212.abateri.length, "abatere", "abateri"), rc.t212.ok ? ciCate(rc.t212.verificate, "simbol verificat", "simboluri verificate") : rc.t212.abateri.map(function (a) { var sp = typeof ContIntreg !== "undefined" && ContIntreg.notaSplit ? ContIntreg.notaSplit(a.ticker, st.nepotriviri) : ""; return String(a.ticker).replace(/_US_EQ$|_EQ$/, "") + ": cont " + a.broker + ", jurnal " + ciNr(a.radar, 3).replace(/,?0+$/, "") + " — " + a.motiv + (sp ? "; " + sp : ""); }).join("; ")) : rand(null, "Trading 212: necitit acum", ""))
     + (rc.arhiva ? rand(rc.arhiva.ok, rc.arhiva.ok ? "Arhiva boților are toți boții închiși din Pionex" : "Arhiva boților: lipsesc " + ciCate(rc.arhiva.lipsa.length, "bot", "boți"), ciCate(rc.arhiva.verificate, "bot verificat", "boți verificați") + " (prima pagină Pionex)") : rand(null, "Arhiva boților: necitită acum", ""))
     + (rc.urmarire ? rand(rc.urmarire.ok, rc.urmarire.ok ? "Toți boții porniți au istoric proaspăt în Radar" : "Boți porniți fără istoric în Radar: " + rc.urmarire.lipsa.map(function (x) { return x.nume; }).join(", "), ciCate(rc.urmarire.verificate, "bot pornit", "boți porniți")) : rand(null, "Urmărirea boților: necitită acum", ""))
     + rand(null, "Salt: pozițiile le scrii tu (Salt n-are o legătură de citire), deci nu am cu ce le compara", "")
-    + "</ul></section>";
+    + "</ul><p class=\"tbSub\">" + ciEsc(typeof ContIntreg !== "undefined" && ContIntreg.margine ? ContIntreg.margine() : "") + "</p></section>";
   // v100.178 (1) factorii și sectoarele
   var fa = r.factori;
   if (fa && fa.actiuniLei > 0) {
@@ -204,6 +226,8 @@ function ciHtml(r, st) {
     "Crizele: ferestrele reale (Covid 2020, China 2021, Terra/Luna 2022, FTX 2022, yenul 2024, 10 octombrie 2025). Boții: gridul long cumpără la scădere până la marginea de jos (short-ul vinde la creștere), iar trecerea de prețul de lichidare = pierzi tot ce e în bot.",
     "Reconcilierea: cantitatea fiecărei acțiuni din jurnalul Radarului (umplerile T212, FIFO) față de ce raportează T212; boții închiși de pe prima pagină Pionex față de arhivă; boții porniți față de istoricul din Radar. O abatere vine o dată pe zi pe Discord.",
     "Randamentul ponderat în timp: înlănțuit zi cu zi (câștigul zilei ÷ banii la lucru în ziua aceea), deci depunerile și retragerile nu-l strâmbă. Sharpe / Sortino anualizate pe 365 de zile, fără dobânda fără risc."].map(function (x) { return "<li>" + ciEsc(x) + "</li>"; }).join("") + "</ul></details>";
+  h += ciExportHtml(st);
+  h += ciMasuraHtml(st);
   return h;
 }
 // v100.179 (el 13.10: „fă 1, 2, 3, 4”): gărzile LUI (din datele lui), lecția săptămânii (duminică seara, cu verificarea regulii de data trecută),
@@ -270,10 +294,76 @@ function ciVerdicteHtml(c, st) {
   }
   return h + "</section>";
 }
+function ciExportCitit() {
+  try { var o = JSON.parse(localStorage.getItem("radar-export-t212-v1") || "null"); return o && typeof o === "object" ? o : null; }
+  catch (e) { return null; }
+}
+function ciExportPune(o) {
+  try { localStorage.setItem("radar-export-t212-v1", JSON.stringify(o)); } catch (e) {}
+  ciStare.export = o;
+}
+async function ciBotiMasura() {
+  try {
+    if (typeof scTrades === "function") { var tr = scTrades("pionex"); if (tr) return tr; }
+    var d = await getJSON("/api/istoric-bot?action=botiInchisi");
+    var boti = d && Array.isArray(d.boti) ? d.boti : null;
+    if (!boti || typeof JurnalTrade === "undefined" || typeof StatisticaTrade === "undefined") return null;
+    return StatisticaTrade.dinPionex(JurnalTrade.din(boti)).concat(StatisticaTrade.dinPionexAlte ? StatisticaTrade.dinPionexAlte(JurnalTrade.alte(boti)) : []);
+  } catch (e) { return null; }
+}
+function ciDeseneaza() {
+  var box = document.getElementById("ciPagina"); if (!box) return;
+  if (typeof acFranaSalveaza === "function") acFranaSalveaza();
+  var r = ciStare.raport, st = { export: ciExportCitit(), masura: null, nepotriviri: r && r.randament && Array.isArray(r.randament.t212Nepotrivite) ? r.randament.t212Nepotrivite : null, acum: Date.now() };
+  var zile = typeof acFranaZileCitite === "function" ? acFranaZileCitite() : [];
+  if (typeof Acasa !== "undefined" && Acasa.masuraFranei) st.masura = Acasa.masuraFranei(ciStare.botiMasura, zile);
+  var corp = !r && ciStare.eroare ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" + ciHtml(null, st) : ciHtml(r, st);
+  box.innerHTML = ciZileHtml(ciStare.zile) + corp + ciDisciplinaHtml(r, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {});
+  ciLeagaExport();
+}
+function ciLeagaExport() {
+  var btn = document.getElementById("ciExportBtn"), inp = document.getElementById("ciExportFisier");
+  if (!btn || !inp) return;
+  btn.addEventListener("click", function () { inp.click(); });
+  inp.addEventListener("change", function () {
+    var f = inp.files && inp.files[0];
+    inp.value = "";
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () { ciDupaExport(String(rd.result || "")); };
+    rd.readAsText(f);
+  });
+}
+async function ciDupaExport(text) {
+  if (typeof ContIntreg === "undefined" || !ContIntreg.citesteExport) return;
+  var p = ContIntreg.citesteExport(text);
+  if (!p.ok) { ciExportPune({ la: Date.now(), ok: false, nePotrivit: false, eroare: p.eroare || "fișierul n-a putut fi citit", cantitati: null, randuri: null }); ciDupaExportDesen(); return; }
+  var api = null, jurnal = null, lipsaApi = false, lipsaJurnal = false;
+  try { var dz = await getJSON("/api/t212?action=pozitii"); api = dz && Array.isArray(dz.pozitii) ? dz.pozitii : null; if (!api) lipsaApi = true; }
+  catch (e) { lipsaApi = true; }
+  if (lipsaApi) { ciExportPune({ la: Date.now(), ok: true, nePotrivit: false, citit: true, lipsaApi: true, eroare: null, cantitati: p.cantitati, randuri: null, fel: p.fel }); ciDupaExportDesen(); return; }
+  try {
+    var ist = typeof t212 !== "undefined" && t212.istoric && Array.isArray(t212.istoric.umpleri) ? t212.istoric : await getJSON("/api/t212?action=istoric");
+    var ump = ist && Array.isArray(ist.umpleri) ? ist.umpleri : null;
+    if (ump && typeof T212 !== "undefined" && T212.perechi) jurnal = T212.perechi(ump).deschise;
+    else lipsaJurnal = true;
+  } catch (e2) { lipsaJurnal = true; }
+  var cmp = ContIntreg.treiCitiri(api, lipsaJurnal ? null : jurnal, p.cantitati);
+  ciExportPune({ la: Date.now(), ok: true, nePotrivit: cmp.nePotrivit === true, citit: true, lipsaApi: false, lipsaJurnal: lipsaJurnal, eroare: null, cantitati: p.cantitati, randuri: cmp.randuri, fel: p.fel });
+  ciDupaExportDesen();
+}
+function ciDupaExportDesen() {
+  ciDeseneaza();
+  if (typeof acasaDeseneaza === "function") acasaDeseneaza();
+}
 async function ciPorneste(forta) {
   var box = document.getElementById("ciPagina"); if (!box) return;
   if (ciStare.inLucru) return;
-  if (!forta && ciStare.raport && Date.now() - ciStare.la < 5 * 60000) { box.innerHTML = ciZileHtml(ciStare.zile) + ciHtml(ciStare.raport, {}) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {}); return; }
+  if (!forta && ciStare.raport && Date.now() - ciStare.la < 5 * 60000) {
+    if (ciStare.botiMasura === undefined) ciStare.botiMasura = await ciBotiMasura();
+    ciDeseneaza();
+    return;
+  }
   ciStare.inLucru = true;
   try { var d = await getJSON("/api/istoric-bot?action=cont"); ciStare.raport = d && d.cont || null; ciStare.eroare = null; ciStare.la = Date.now(); }
   catch (e) { ciStare.eroare = String(e && e.message || e); }
@@ -281,6 +371,7 @@ async function ciPorneste(forta) {
   try { var db = await getJSON("/api/istoric-bot?action=disciplinaBanda"); ciStare.banda = db && db.banda || null; } catch (e3) { ciStare.banda = null; }
   try { var dl = await getJSON("/api/istoric-bot?action=lectii"); ciStare.lectii = dl && dl.lectii || null; } catch (e4) { ciStare.lectii = null; }
   try { var dz = await getJSON("/api/istoric-bot?action=contZile"); ciStare.zile = dz && Array.isArray(dz.zile) ? dz.zile : null; } catch (e5) { ciStare.zile = null; }   /* v100.197 */
+  ciStare.botiMasura = await ciBotiMasura();
   ciStare.inLucru = false;
-  box.innerHTML = ciZileHtml(ciStare.zile) + (ciStare.eroare && !ciStare.raport ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" : ciHtml(ciStare.raport, {})) + ciDisciplinaHtml(ciStare.raport, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {});
+  ciDeseneaza();
 }

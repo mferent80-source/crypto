@@ -262,8 +262,16 @@ var Acasa = (function () {
     return { nivel: "info", titlu: "📊 Săptămâna pieței", mesaj: L.join("\n") };
   }
   // v100.231: gura care invită citește pauza, raportul pe tot contul și evenimentul de azi.
+  // v100.233: după pauză, gura crypto care invită aude și abaterea de cantitate (aceeași frază ca la acțiuni) și exportul care nu se potrivește cu API-ul.
   // vreme() și vremeBursa() rămân neschimbate; frâna se aplică după ele, la afișare și la trimitere.
+  var FRAZA_CANTITATE = "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.";
   function invita(faCe, fel) { return fel === "bursa" ? /^Aș cumpăra/.test(String(faCe || "")) : /^Aș porni/.test(String(faCe || "")); }
+  function areAbateriCantitate(o) {
+    if (o.exportNePotrivit === true) return true;
+    if (o.raportStare !== "ok" && o.raportStare !== "vechi") return false;
+    var ab = o.raport && o.raport.reconciliere && o.raport.reconciliere.t212 && o.raport.reconciliere.t212.abateri;
+    return Array.isArray(ab) && ab.length > 0;
+  }
   function pctCont(x) { var v = nr(x); if (v === null) return "—"; return Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; }
   function frazaPauza(n) {
     var k = Math.round(Number(n)); if (!(k > 0)) k = 3;
@@ -275,6 +283,7 @@ var Acasa = (function () {
     var fel = o.fel === "bursa" ? "bursa" : "crypto";
     if (fel === "crypto" && o.pauza === true) return Object.assign({}, v, { faCe: frazaPauza(o.pauzaN) });
     if (!invita(v.faCe, fel)) return v;
+    if (fel === "crypto" && areAbateriCantitate(o)) return Object.assign({}, v, { faCe: FRAZA_CANTITATE });
     if (o.raportStare === "lipsa") return Object.assign({}, v, { faCe: "N-aș porni nimic nou: raportul pe tot contul lipsește." });
     if (o.raportStare === "vechi") {
       var ore = Math.round(Number(o.raportOre)); if (!(ore > 0)) ore = 12;
@@ -288,6 +297,54 @@ var Acasa = (function () {
       if (fraza.length <= 110) return Object.assign({}, v, { faCe: fraza });
     }
     return v;
+  }
+  // v100.233: măsura frânei pe zilele la care s-au salvat pauza, starea raportului și evenimentul. Fără ele: n-am aflat.
+  // Nu reconstruiește VaR-ul din prețuri și nu amestecă frâna veche din obiceiuri. Nu e dovadă că frâna face bani.
+  function ziBucMs(t) {
+    try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); }
+    catch (e) { return ""; }
+  }
+  function ziFranaCompleta(z) {
+    return !!(z && typeof z.z === "string" && /^\d{4}-\d{2}-\d{2}$/.test(z.z) && typeof z.pauza === "boolean" && (z.raportStare === "ok" || z.raportStare === "vechi" || z.raportStare === "lipsa") && typeof z.eveniment === "string");
+  }
+  function banFrana(x) {
+    var n = Number(x), neg = n < 0, p = Math.abs(n).toFixed(2).split(".");
+    return (neg ? "−" : "") + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + p[1];
+  }
+  function masuraFranei(boti, zile) {
+    var lipsa = "N-am aflat: zilele vechi nu au pauza, VaR-ul și evenimentul salvate.";
+    var lista = Array.isArray(zile) ? zile : [], complete = lista.filter(ziFranaCompleta);
+    if (!complete.length) return { aflat: false, text: lipsa, zile: lista.length, complete: 0, schimbate: 0, baza: null, rezultat: null, insuficient: true, boti: 0 };
+    var verb = { faCe: "Aș porni un bot azi." }, sch = {};
+    complete.forEach(function (z) {
+      var o = { fel: "crypto", raportStare: z.raportStare, eveniment: z.eveniment };
+      if (z.pauza === true) { o.pauza = true; if (z.pauzaN) o.pauzaN = z.pauzaN; }
+      if (z.raportOre) o.raportOre = z.raportOre;
+      if (z.raport) o.raport = z.raport;
+      if (z.exportNePotrivit === true) o.exportNePotrivit = true;
+      var d = franaVerb(verb, o);
+      if (!d || d.faCe !== verb.faCe) sch[z.z] = true;
+    });
+    var nSch = Object.keys(sch).length, baza = 0, nBaza = 0, lipsaBaza = 0, rez = 0, nRez = 0, nBot = 0, carte = Array.isArray(boti);
+    if (carte) boti.forEach(function (b) {
+      if (!b) return;
+      var t = Number(b.pornit); if (!(t > 0)) return;
+      var z = ziBucMs(t); if (!sch[z]) return;
+      nBot++;
+      var bz = b.baza == null || b.baza === "" ? null : Number(b.baza);
+      if (bz != null && isFinite(bz)) { baza += bz; nBaza++; } else lipsaBaza++;
+      var rz = b.rezultat == null || b.rezultat === "" ? null : Number(b.rezultat);
+      if (rz != null && isFinite(rz)) { rez += rz; nRez++; }
+    });
+    var text = "Pe " + cate(nSch, "zi salvată", "zile salvate") + " din " + complete.length + ", gura de azi ar fi schimbat un „Aș porni”.";
+    if (!carte) text += " Cartea închisă n-a fost dată: n-am aflat suma pusă.";
+    else if (nBot && lipsaBaza) text += " N-am aflat suma pusă: baza lipsește la " + cate(lipsaBaza, "bot", "boți") + ".";
+    else if (nBot && nBaza) text += " Suma pusă în boții porniți în zilele acelea e " + banFrana(baza) + ".";
+    else text += " Niciun bot din cartea dată n-a pornit într-o zi în care gura s-ar fi schimbat.";
+    if (carte && nRez) text += " Rezultatul lor adunat e " + banFrana(rez) + ".";
+    text += " Asta nu arată că frâna face bani.";
+    if (nSch < 10) text += " Eșantion insuficient.";
+    return { aflat: true, text: text, zile: lista.length, complete: complete.length, schimbate: nSch, baza: carte && nBot && nBaza && !lipsaBaza ? baza : null, rezultat: carte && nRez ? rez : null, insuficient: nSch < 10, boti: nBot };
   }
   // socoteala alertelor: miscarile neobisnuite au continuat? (dupa 24 h si 3 zile) + dupa "MISCARE" cat s-a mai miscat BTC
   function socotealaAlerte(l) {
@@ -303,6 +360,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza };
+  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

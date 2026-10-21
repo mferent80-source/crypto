@@ -270,6 +270,114 @@ var ContIntreg = (function () {
     (botiActivi || []).forEach(function (b) { var t = ultimaIntrare && ultimaIntrare[b.id]; if (!(t > 0) || acum - t > (maxMin || 20) * 60000) lipsa.push({ id: b.id, nume: b.nume, ultima: t || null }); });
     return { ok: !lipsa.length, lipsa: lipsa, verificate: (botiActivi || []).length };
   }
+  // v100.233: aceeași margine ca reconciliereT212 (nu un prag nou). Rută doar pentru cele trei citiri.
+  function acelasiPrag(a, b) {
+    var x = nr(a); if (x === null) x = 0;
+    var y = nr(b); if (y === null) y = 0;
+    return Math.abs(x - y) <= Math.max(1e-6, 0.001 * Math.max(x, y));
+  }
+  function cheieTrei(t) { return String(t || "").trim().toUpperCase().replace(/_US_EQ$/i, "").replace(/_EQ$/i, ""); }
+  var FRAZA_MARGINE = "Am verificat cantitatea din Trading 212, arhiva boților din Pionex și boții cu istoric proaspăt. N-am verificat cash-ul, cursul umplerilor, split-ul și dividendul.";
+  var FRAZA_SPLIT = "prețurile găsite nu se potrivesc cu ale tale (split sau alt simbol)";
+  function margine() { return FRAZA_MARGINE; }
+  function notaSplit(ticker, nepotriviri) {
+    if (!ticker || !nepotriviri || !nepotriviri.length) return "";
+    var k = cheieTrei(ticker);
+    return nepotriviri.some(function (t) { return cheieTrei(t) === k; }) ? FRAZA_SPLIT : "";
+  }
+  function csvCampuri(linie, sep) {
+    var out = [], cur = "", q = false;
+    for (var i = 0; i < linie.length; i++) {
+      var c = linie[i];
+      if (q) {
+        if (c === '"') { if (linie[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+        else cur += c;
+      } else if (c === '"') q = true;
+      else if (c === sep) { out.push(cur); cur = ""; }
+      else cur += c;
+    }
+    out.push(cur);
+    return out;
+  }
+  function numarExport(v) {
+    if (typeof v === "number") return isFinite(v) ? v : null;
+    var s = String(v == null ? "" : v).trim().replace(/\s/g, "");
+    if (!s) return null;
+    if (s.indexOf(",") >= 0 && s.indexOf(".") >= 0) {
+      if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+      else s = s.replace(/,/g, "");
+    } else if (s.indexOf(",") >= 0) s = s.replace(",", ".");
+    var x = Number(s);
+    return isFinite(x) ? x : null;
+  }
+  // Doar antetele cunoscute: istoric (Action + Ticker + No. of shares) sau poză (Ticker + Quantity, fără Action).
+  // Alt antet nu dă cantități. Depunerile și dividendele nu intră. Cumpărarea adună, vânzarea scade.
+  function citesteExport(text) {
+    var src = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    var linii = src.split("\n").filter(function (l) { return l.trim(); });
+    if (!linii.length) return { ok: false, eroare: "exportul e gol", cantitati: null };
+    var sep = linii[0].split(";").length > linii[0].split(",").length ? ";" : ",";
+    var tab = linii.map(function (l) { return csvCampuri(l, sep); });
+    var head = tab[0].map(function (h) { return String(h || "").trim().toLowerCase(); });
+    var iT = head.indexOf("ticker"), iA = head.indexOf("action"), iS = -1, iQ = -1;
+    head.forEach(function (h, i) {
+      if (h === "no. of shares" || h === "no of shares") iS = i;
+      if (h === "quantity" || h === "qty") iQ = i;
+    });
+    if (iT < 0) return { ok: false, eroare: "exportul n-are coloana Ticker", cantitati: null };
+    var istoric = iA >= 0 && iS >= 0, pozitie = iA < 0 && iQ >= 0;
+    if (!istoric && !pozitie) return { ok: false, eroare: "exportul n-are coloanele cunoscute", cantitati: null };
+    var cant = {}, n = 0;
+    for (var r = 1; r < tab.length; r++) {
+      var row = tab[r], tk = String(row[iT] || "").trim();
+      if (!tk) continue;
+      if (istoric) {
+        var act = String(row[iA] || "").trim().toLowerCase(), q = numarExport(row[iS]);
+        if (q === null) continue;
+        q = Math.abs(q);
+        if (/buy/.test(act) && !/dividend/.test(act)) { cant[tk] = (cant[tk] || 0) + q; n++; }
+        else if (/sell/.test(act)) { cant[tk] = (cant[tk] || 0) - q; n++; }
+      } else {
+        var qq = numarExport(row[iQ]);
+        if (qq === null) continue;
+        cant[tk] = (cant[tk] || 0) + qq; n++;
+      }
+    }
+    if (!n) return { ok: false, eroare: istoric ? "exportul n-are cumpărări sau vânzări" : "exportul n-are cantități", cantitati: null };
+    return { ok: true, eroare: null, cantitati: cant, fel: istoric ? "istoric" : "pozitii" };
+  }
+  // Trei coloane. Cheia se normalizează doar aici, ca AAPL să întâlnească AAPL_US_EQ. reconciliereT212 rămâne pe tickerul întreg.
+  function treiCitiri(pozitiiApi, loturi, cantitatiExport) {
+    var api = {}, jur = {}, exp = {};
+    (pozitiiApi || []).forEach(function (p) {
+      if (!p) return;
+      var k = cheieTrei(p.ticker), q = nr(p.quantity);
+      if (!k || !(q > 0)) return;
+      api[k] = (api[k] || 0) + q;
+    });
+    var areJurnal = Array.isArray(loturi);
+    if (areJurnal) loturi.forEach(function (l) {
+      if (!l) return;
+      var k = cheieTrei(l.ticker), q = nr(l.qty != null ? l.qty : l.quantity);
+      if (!k || !(q > 0)) return;
+      jur[k] = (jur[k] || 0) + q;
+    });
+    Object.keys(cantitatiExport || {}).forEach(function (t) {
+      var k = cheieTrei(t), q = nr(cantitatiExport[t]);
+      if (!k || q === null) return;
+      exp[k] = (exp[k] || 0) + q;
+    });
+    var chei = {};
+    Object.keys(api).forEach(function (k) { chei[k] = 1; });
+    Object.keys(exp).forEach(function (k) { if (Math.abs(exp[k]) > 1e-9) chei[k] = 1; });
+    if (areJurnal) Object.keys(jur).forEach(function (k) { chei[k] = 1; });
+    var randuri = Object.keys(chei).sort().map(function (k) {
+      var a = api[k] || 0, e = exp[k] || 0;
+      return { ticker: k, api: a, jurnal: areJurnal ? (jur[k] || 0) : null, export: e, potrivit: acelasiPrag(a, e) };
+    });
+    var nePotrivit = randuri.some(function (r) { return !r.potrivit; });
+    return { ok: !nePotrivit, nePotrivit: nePotrivit, randuri: randuri };
+  }
 
   // ---------------- 6. randamentul ----------------
   // T212 refăcut din umpleri + închideri zilnice: P&L-ul zilei = valoarea de azi − valoarea de ieri − cumpărările nete + vânzările nete (lei);
@@ -391,5 +499,6 @@ var ContIntreg = (function () {
     randamente: randamente, pnlIstoric: pnlIstoric, varEs: varEs, ziuaCeaMaiRea: cuDatele, corel: corel, corelatii: corelatii, diversificare: diversificare,
     randFereastra: randFereastra, beta: beta, pnlBot: pnlBot, scenariu: scenariu, stres: stres,
     reconciliereT212: reconciliereT212, reconciliereArhiva: reconciliereArhiva, reconciliereUrmarire: reconciliereUrmarire,
+    margine: margine, notaSplit: notaSplit, citesteExport: citesteExport, treiCitiri: treiCitiri, acelasiPrag: acelasiPrag,
     seriaT212: seriaT212, seriaBoti: seriaBoti, combina: combina, statistici: statistici, fataDe: fataDe, medie: medie, abatere: abatere };
 })();
