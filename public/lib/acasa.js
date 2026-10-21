@@ -176,11 +176,18 @@ var Acasa = (function () {
     var med = medianaDe(l.map(function (x) { return nr(x.rate); })), uz = medianaDe(l.map(function (x) { return medianaDe((x.hist || []).map(nr)); }));
     var lng = l.filter(function (x) { return x.rate > 0; }).length, raport = uz && uz * med > 0 ? med / uz : null;
     var ingh = l.slice().sort(function (a, b) { return b.rate - a.rate; }).slice(0, 3).map(function (x) { return { s: x.s, rate: x.rate }; });
-    var pct = function (v) { return (v * 100).toFixed(3).replace(".", ",") + "%"; };
+    var pct = function (v) { var n = Number(v) * 100; return (n < 0 ? "−" : "") + Math.abs(n).toFixed(3).replace(".", ",") + "%"; };
     var ton = raport !== null && raport >= 3 && med > 0.0001 ? "atentie" : raport !== null && raport >= 3 && med < 0 ? "atentie" : "neutru";
-    var text = lng + " din " + cate(l.length, "monedă", "monede") + ": plătesc long · funding median " + pct(med) + (raport !== null ? " (" + (raport >= 2 ? Math.round(raport) + "× față de obicei" : raport <= 0.5 ? "sub obicei" : "ca de obicei") + ")" : "")
-      + (ton === "atentie" ? ". Mulți s-au înghesuit pe long: urcările țin mai greu și căderile vin mai brusc." : ".");
+    var coda = ton !== "atentie" ? "." : med < 0 ? ". Mulți s-au înghesuit pe short: coborârile țin mai greu și urcările vin mai brusc." : ". Mulți s-au înghesuit pe long: urcările țin mai greu și căderile vin mai brusc.";
+    var text = lng + " din " + cate(l.length, "monedă", "monede") + ": plătesc long · funding median " + pct(med) + (raport !== null ? " (" + (raport >= 2 ? Math.round(raport) + "× față de obicei" : raport <= 0.5 ? "sub obicei" : "ca de obicei") + ")" : "") + coda;
     return { n: l.length, long: lng, mediana: med, uzual: uz, raport: raport, inghesuiti: ingh, ton: ton, text: text };
+  }
+  // v100.235: același prag din fundingPiata. Semnul spune cine plătește. Lipsa semnului nu inventează o parte.
+  function fundingAtentie(f) {
+    if (!f || f.ton !== "atentie") return "";
+    var m = nr(f.mediana);
+    if (m === null || m === 0) return "";
+    return m > 0 ? "long" : "short";
   }
   // ce s-a schimbat de ieri: azi {zi, fg, inMiscare, vix, ndxE50, ...} fata de ultima poza dinaintea zilei de azi
   function schimbari(azi, lista) {
@@ -265,6 +272,10 @@ var Acasa = (function () {
   // v100.233: după pauză, gura crypto care invită aude și abaterea de cantitate (aceeași frază ca la acțiuni) și exportul care nu se potrivește cu API-ul.
   // vreme() și vremeBursa() rămân neschimbate; frâna se aplică după ele, la afișare și la trimitere.
   var FRAZA_CANTITATE = "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.";
+  var FRAZA_FUNDING = {
+    long: "N-aș porni boți noi: longul plătește un funding mult peste obicei.",
+    short: "N-aș porni boți noi: shortul plătește un funding mult peste obicei."
+  };
   function invita(faCe, fel) { return fel === "bursa" ? /^Aș cumpăra/.test(String(faCe || "")) : /^Aș porni/.test(String(faCe || "")); }
   function areAbateriCantitate(o) {
     if (o.exportNePotrivit === true) return true;
@@ -296,6 +307,8 @@ var Acasa = (function () {
       var fraza = "N-aș porni boți noi și n-aș cumpăra chiar înainte de " + ev + ".";
       if (fraza.length <= 110) return Object.assign({}, v, { faCe: fraza });
     }
+    var ff = fel === "crypto" ? FRAZA_FUNDING[o.fundingAtentie] : "";
+    if (ff) return Object.assign({}, v, { faCe: ff });
     return v;
   }
   // v100.233: măsura frânei pe zilele la care s-au salvat pauza, starea raportului și evenimentul. Fără ele: n-am aflat.
@@ -341,6 +354,7 @@ var Acasa = (function () {
       if (z.raportOre) o.raportOre = z.raportOre;
       if (z.raport) o.raport = z.raport;
       if (z.exportNePotrivit === true) o.exportNePotrivit = true;
+      if (z.fundingAtentie === "long" || z.fundingAtentie === "short") o.fundingAtentie = z.fundingAtentie;
       var d = franaVerb(verb, o);
       if (!d || d.faCe !== verb.faCe) sch[z.z] = true;
     });
@@ -379,6 +393,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
+  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

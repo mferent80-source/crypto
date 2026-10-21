@@ -9,7 +9,11 @@ const MIN = 60000, ORA = 3600000;
 const RITM = { vreme: 10 * MIN, funding: ORA, boti: 30 * MIN, bursa: ORA };
 
 // v100.66 (pachetul 3): alerta funding-ului pe toata piata, intr-o functie - garda textelor o genereaza; f = Acasa.fundingPiata(...)
-export const mesajFundingPiata = (f) => ({ cheie: "funding-piata", nivel: "atentie", titlu: "Funding-ul pe piață e mult peste obicei", mesaj: f.text + "\n👉 N-aș porni boți long noi până nu se descarcă." });
+export const mesajFundingPiata = (f) => {
+  const m = f && typeof f.mediana === "number" ? f.mediana : null;
+  const sageata = m !== null && m < 0 ? "N-aș porni boți short noi până nu se descarcă." : "N-aș porni boți long noi până nu se descarcă.";
+  return { cheie: "funding-piata", nivel: "atentie", titlu: "Funding-ul pe piață e mult peste obicei", mesaj: (f && f.text ? f.text : "") + "\n👉 " + sageata };
+};
 
 function ceas(acum, tz) {
   const o = {};
@@ -81,6 +85,8 @@ async function vreme(d, st, acum) {
   const v0 = A.vreme({ clasament: cl, btc: { miscare: reg ? !!reg.miscare : false }, fg }), vb0 = A.vremeBursa({ qqq, vix, ndx: ndL });
   const caV = await incearca(d, "calendar vreme", () => d.cere("/api/stiri?action=calendar"));
   const fr = await franaAzi(d, acum, caV ? A.calendar(caV.evenimente, acum).urmatoare : undefined);
+  const sideF = A.fundingAtentie ? A.fundingAtentie(st.funding) : "";
+  if (sideF) fr.fundingAtentie = sideF;
   const v = aplicaFrana(A, v0, "crypto", fr), vb = aplicaFrana(A, vb0, "bursa", fr);
   const co = b1d && qqq ? A.corelatie(b1d, qqq, 30) : null;
   const r = d.Alerte.schimbareVreme(st.vreme || null, { crypto: v, bursa: vb, corelatie: co }, acum);

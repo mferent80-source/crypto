@@ -41,6 +41,8 @@ export function situatiiAcasa(pune) {
   frana("bursă zi proastă", largaF, { fel: "bursa", raportStare: "ok", raport: rap5 });
   frana("bursă roșie cu raport lipsă", rosieF, { fel: "bursa", raportStare: "lipsa" });
   frana("bursă nu ia pauza", largaF, { fel: "bursa", pauza: true, pauzaN: 3 });
+  frana("funding long pe liniște", linF, { fel: "crypto", raportStare: "ok", raport: rapMic, fundingAtentie: "long" });
+  frana("funding short pe liniște", linF, { fel: "crypto", raportStare: "ok", raport: rapMic, fundingAtentie: "short" });
   // ---- frica/lacomia, latimea pietei, legatura BTC - bursa, calendarul, funding-ul pietei, socoteala alertelor
   for (const [sit, l] of [["lăcomie", Array.from({ length: 30 }, (_, i) => 50 + i)], ["frică", Array.from({ length: 30 }, (_, i) => 60 - i * 1.5)], ["la mijloc", Array.from({ length: 30 }, (_, i) => 40 + (i % 5))]])
     pune("frica/lăcomia: " + sit, "acasa", "fg", { t: AC.fg(l).text }, [["t", "detalii"]]);
@@ -56,7 +58,8 @@ export function situatiiAcasa(pune) {
   for (const [sit, l] of [["nimic", []], ["două mari", [ev(1, 12, "CPI m/m"), ev(3, 18, "FOMC Statement")]], ["doar medii", [ev(2, 14, "Retail Sales m/m", "Medium")]]])
     pune("calendarul: " + sit, "acasa", "calendar", { t: AC.calendar(l, T0).text }, [["t", "detalii"]]);
   const fp = (rate, uz, n) => Array.from({ length: n }, (_, i) => ({ s: "C" + i, rate: i % 4 ? rate : -rate / 2, hist: Array.from({ length: 10 }, () => uz) }));
-  for (const [sit, l] of [["înghesuiți pe long", fp(0.0006, 0.0001, 40)], ["ca de obicei", fp(0.0001, 0.0001, 40)]]) { const f = AC.fundingPiata(l); if (f) pune("funding-ul pieței: " + sit, "acasa", "fundingPiata", { t: f.text }, [["t", "detalii"]]); }
+  const fpShort = Array.from({ length: 40 }, (_, i) => ({ s: "S" + i, rate: -0.0006, hist: Array.from({ length: 10 }, () => -0.0001) }));
+  for (const [sit, l] of [["înghesuiți pe long", fp(0.0006, 0.0001, 40)], ["înghesuiți pe short", fpShort], ["ca de obicei", fp(0.0001, 0.0001, 40)]]) { const f = AC.fundingPiata(l); if (f) pune("funding-ul pieței: " + sit, "acasa", "fundingPiata", { t: f.text }, [["t", "detalii"]]); }
   const al = (n, cont) => Array.from({ length: n }, (_, i) => ({ fel: i % 7 ? "moneda" : "vreme", dir: "sus", pret: 100, p1: i < cont ? 104 : 97, p3: i < cont ? 106 : 95 }));
   for (const [sit, l] of [["nimic", []], ["fără socoteli", [{ fel: "moneda", dir: "sus", pret: 100 }]], ["8 judecate", al(8, 5)], ["30 judecate", al(30, 14)]]) {
     const s = AC.socotealaAlerte(l); pune("socoteala alertelor: " + sit, "acasa", "socotealaAlerte", { t: s.text, v: s.textVreme }, [["t", "detalii"], ["v", "detalii"]]);

@@ -336,6 +336,8 @@ function acFranaSalveaza() {
       snap.raport = { valoare: rs.raport.valoare ? { total: rs.raport.valoare.total } : null, risc: rs.raport.risc ? { var95: rs.raport.risc.var95 } : null, reconciliere: { t212: { abateri: Array.isArray(ab) ? ab.slice(0, 40) : [] } } };
     }
     if (acExportNePotrivit()) snap.exportNePotrivit = true;
+    var sideF = Acasa.fundingAtentie && acasa.d && acasa.d.piataCol ? Acasa.fundingAtentie(acasa.d.piataCol.funding) : "";
+    if (sideF) snap.fundingAtentie = sideF;
     lista.push(snap);
     if (lista.length > 400) lista = lista.slice(-400);
     localStorage.setItem("radar-frana-zile-v1", JSON.stringify(lista));
@@ -344,7 +346,12 @@ function acFranaSalveaza() {
 function acFraneaza(v, fel) {
   if (!v || typeof Acasa === "undefined" || !Acasa.franaVerb) return v;
   var o = { fel: fel }, rs = acRaportStare(), ev = acEvenimentAzi();
-  if (fel === "crypto") { var pz = acPauzaSezon(); if (pz > 0) { o.pauza = true; o.pauzaN = pz; } if (acExportNePotrivit()) o.exportNePotrivit = true; }
+  if (fel === "crypto") {
+    var pz = acPauzaSezon(); if (pz > 0) { o.pauza = true; o.pauzaN = pz; }
+    if (acExportNePotrivit()) o.exportNePotrivit = true;
+    var sideF = Acasa.fundingAtentie && acasa.d && acasa.d.piataCol ? Acasa.fundingAtentie(acasa.d.piataCol.funding) : "";
+    if (sideF) o.fundingAtentie = sideF;
+  }
   if (rs.stare && rs.stare !== "necunoscut") { o.raportStare = rs.stare; if (rs.ore) o.raportOre = rs.ore; if (rs.raport) o.raport = rs.raport; }
   if (ev !== undefined) o.eveniment = ev;
   return Acasa.franaVerb(v, o);

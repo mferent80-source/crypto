@@ -171,6 +171,7 @@ export function situatiiAlerte(pune) {
   pune("rețetă: AMD a intrat", "alerte", "reteta.intrat", mesajReteta(xr, "Revenire după scădere", "a", true, "aAMD", "rev"), AL);
   pune("rețetă: AMD a ieșit", "alerte", "reteta.iesit", mesajReteta(xr, "Revenire după scădere", "a", false, "aAMD", "rev"), AL);
   pune("funding-ul pe piață", "alerte", "fundingPiata.mesaj", mesajFundingPiata({ text: "Funding-ul mediu pe piață e +0,045% la 8 ore, de 3× obișnuitul." }), AL);
+  pune("funding-ul pe piață, short", "alerte", "fundingPiata.mesaj", mesajFundingPiata({ text: "Funding-ul mediu pe piață e −0,045% la 8 ore, de 3× obișnuitul.", mediana: -0.00045 }), AL);
 
   // mesajele colectorului
   const co = (sit, f, m) => pune(sit, "alerte", "colector." + f, m, AL);
