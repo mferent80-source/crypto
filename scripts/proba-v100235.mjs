@@ -108,7 +108,8 @@ await test("versiunea de la v100.235 în sus", () => {
   assert.equal(info.version, "v100." + minor);
   assert.match(info.badge, new RegExp("^v100\\." + minor + " · "));
   assert.equal(info.engineContract, "54.1");
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.134"/);
+  const mv = (col.match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [])[1];
+  assert.ok(Number(mv) >= 134, mv);   /* v100.239: semnul zilei e în fișierul v101.136; gura rămâne cea din v101.134 */
   assert.doesNotMatch(col, /exportNePotrivit/);
 });
 

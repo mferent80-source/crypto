@@ -8,6 +8,15 @@ function ciLei(x, semn) { if (x == null || !isFinite(x)) return "—"; return (s
 function ciPct(x, z) { if (x == null || !isFinite(x)) return "—"; var v = Math.abs(x * 100).toFixed(z == null ? 1 : z).replace(".", ","); return (x < 0 ? "−" : x > 0 ? "+" : "") + v + "%"; }
 function ciNr(x, z) { return x == null || !isFinite(x) ? "—" : Number(x).toFixed(z == null ? 2 : z).replace(".", ","); }
 function ciZi(z) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(z || "")); return m ? m[3] + "." + m[2] + "." + m[1] : "—"; }
+function ciZiDinLa(t) {
+  var n = Number(t);
+  if (!(n > 0)) return "";
+  try {
+    var z = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(n));
+    var a = ciZi(z);
+    return a && a !== "—" ? a : "";
+  } catch (e) { return ""; }
+}
 function ciEt(t) { return '<span class="ciEt">' + ciEsc(t) + " </span>"; }
 function ciCate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + pl; }
 // histograma zilelor (P&L-ul pozițiilor de acum pe ultimele ~250 de zile): sub zero roșu, peste zero verde, pragul zilei proaste (VaR 95 %) marcat
@@ -79,12 +88,13 @@ function ciZileHtml(zile) {
   return h;
 }
 function ciExportHtml(st) {
-  var e = st && st.export, fraza;
+  var e = st && st.export, fraza, ziF = e ? ciZiDinLa(e.la) : "";
   if (!e) fraza = "A doua citire din exportul tău lipsește.";
   else if (!e.ok) fraza = "A doua citire din exportul tău lipsește: " + (e.eroare || "fișierul n-a putut fi citit") + ".";
   else if (e.lipsaApi) fraza = "A doua citire e citită, dar cantitatea din cont n-a venit: n-am aflat dacă se potrivește.";
   else if (e.nePotrivit) fraza = "Exportul nu se potrivește cu cantitatea din cont.";
   else fraza = "A doua citire se potrivește cu cantitatea din cont.";
+  if (ziF) fraza += " Fișierul e citit pe " + ziF + ", ora României.";
   var h = '<section class="ciSec"><h3>A doua citire, din exportul tău</h3><p class="ciRasp">' + ciEsc(fraza) + '</p><p><button type="button" class="actionGhost" id="ciExportBtn">Aduc exportul din T212</button><input type="file" id="ciExportFisier" accept=".csv,text/csv" hidden></p>';
   if (e && e.ok && !e.lipsaApi && Array.isArray(e.randuri) && e.randuri.length) {
     var rupte = e.randuri.filter(function (r) { return r && r.potrivit !== true; });
@@ -101,9 +111,19 @@ function ciExportHtml(st) {
   h += '<p class="tbSub">Fișierul rămâne la tine. Radar citește cantitățile și le compară cu API-ul, la aceeași margine ca jurnalul. Un export cu alt antet nu inventează abateri.</p></section>';
   return h;
 }
+function ciAbateriPliate(ab, nepotriviri) {
+  if (!ab || !ab.length) return "";
+  var lin = ab.map(function (a) {
+    var sp = typeof ContIntreg !== "undefined" && ContIntreg.notaSplit ? ContIntreg.notaSplit(a.ticker, nepotriviri) : "";
+    return String(a.ticker).replace(/_US_EQ$|_EQ$/, "") + ": cont " + a.broker + ", jurnal " + ciNr(a.radar, 3).replace(/,?0+$/, "") + " — " + a.motiv + (sp ? "; " + sp : "");
+  });
+  return '<details class="ciMetoda"><summary>Simbolurile</summary><ul>' + lin.map(function (x) { return "<li>" + ciEsc(x) + "</li>"; }).join("") + "</ul></details>";
+}
 function ciMasuraHtml(st) {
-  var m = st && st.masura, t = m && m.text ? m.text : "N-am aflat: zilele vechi nu au pauza, VaR-ul și evenimentul salvate.";
-  return '<section class="ciSec"><h3>Măsura frânei pe cartea închisă</h3><p class="ciRasp">' + ciEsc(t) + '</p><p class="tbSub">Regulile de azi, pe zilele la care s-au salvat pauza, raportul și evenimentul. Sub 10 zile oprite, eșantionul nu ajunge.</p></section>';
+  var m = st && st.masura;
+  // v100.239: fără o zi completă, secțiunea nu se desenează. Fraza de lipsă rămâne în masuraFranei.
+  if (!m || !m.text || m.complete === 0 || String(m.text).indexOf("N-am aflat:") === 0) return "";
+  return '<section class="ciSec"><h3>Măsura frânei pe cartea închisă</h3><p class="ciRasp">' + ciEsc(m.text) + '</p><p class="tbSub">Regulile de azi, pe zilele la care s-au salvat pauza, raportul și evenimentul. Sub 10 zile oprite, eșantionul nu ajunge.</p></section>';
 }
 function ciHtml(r, st) {
   st = st || {};
@@ -144,7 +164,7 @@ function ciHtml(r, st) {
   // reconcilierea
   var rc = r.reconciliere || {}, rand = function (ok, titlu, detaliu) { return '<li class="' + (ok === null ? "" : ok ? "good" : "bad") + '">' + (ok === null ? "· " : ok ? "✓ " : "✗ ") + "<b>" + ciEsc(titlu) + "</b>" + (detaliu ? ' <span class="tbSub">' + ciEsc(detaliu) + "</span>" : "") + "</li>"; };
   h += '<section class="ciSec"><h3>Se potrivește cu brokerii?</h3><ul class="ciLista">'
-    + (rc.t212 ? rand(rc.t212.ok, rc.t212.ok ? "Trading 212: cantitățile din jurnal = cele din cont" : "Trading 212: " + ciCate(rc.t212.abateri.length, "abatere", "abateri"), rc.t212.ok ? ciCate(rc.t212.verificate, "simbol verificat", "simboluri verificate") : rc.t212.abateri.map(function (a) { var sp = typeof ContIntreg !== "undefined" && ContIntreg.notaSplit ? ContIntreg.notaSplit(a.ticker, st.nepotriviri) : ""; return String(a.ticker).replace(/_US_EQ$|_EQ$/, "") + ": cont " + a.broker + ", jurnal " + ciNr(a.radar, 3).replace(/,?0+$/, "") + " — " + a.motiv + (sp ? "; " + sp : ""); }).join("; ")) : rand(null, "Trading 212: necitit acum", ""))
+    + (rc.t212 ? rand(rc.t212.ok, rc.t212.ok ? "Trading 212: cantitățile din jurnal = cele din cont" : "Trading 212: " + ciCate(rc.t212.abateri.length, "abatere", "abateri"), typeof rc.t212.verificate === "number" ? ciCate(rc.t212.verificate, "simbol verificat", "simboluri verificate") : "").replace("</li>", (rc.t212.ok ? "" : ciAbateriPliate(rc.t212.abateri, st.nepotriviri)) + "</li>") : rand(null, "Trading 212: necitit acum", ""))
     + (rc.arhiva ? rand(rc.arhiva.ok, rc.arhiva.ok ? "Arhiva boților are toți boții închiși din Pionex" : "Arhiva boților: lipsesc " + ciCate(rc.arhiva.lipsa.length, "bot", "boți"), ciCate(rc.arhiva.verificate, "bot verificat", "boți verificați") + " (prima pagină Pionex)") : rand(null, "Arhiva boților: necitită acum", ""))
     + (rc.urmarire ? rand(rc.urmarire.ok, rc.urmarire.ok ? "Toți boții porniți au istoric proaspăt în Radar" : "Boți porniți fără istoric în Radar: " + rc.urmarire.lipsa.map(function (x) { return x.nume; }).join(", "), ciCate(rc.urmarire.verificate, "bot pornit", "boți porniți")) : rand(null, "Urmărirea boților: necitită acum", ""))
     + rand(null, "Salt: pozițiile le scrii tu (Salt n-are o legătură de citire), deci nu am cu ce le compara", "")

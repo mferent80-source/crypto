@@ -15,7 +15,17 @@ const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
 
 // v100.234: o dată pe zi, același rând cont:zile primește și pauza, VaR-ul și evenimentul, când citirile au reușit.
 // v100.238: același rând ține și `la`, ora citirii. Zilele vechi nu se reconstruiesc.
-// O citire picată nu inventează pauză, nu pune `la` și nu marchează ziua completă.
+// v100.239: același rând ține și semnul funding-ului, long sau short, tot doar la citirea reușită. Golul nu se scrie.
+// O citire picată nu inventează pauză, nu pune `la`, nu pune semnul și nu marchează ziua completă.
+function semnFundingZi(d) {
+  if (!d || !d.Acasa || typeof d.Acasa.fundingAtentie !== "function") return "";
+  let f = d.funding;
+  if (typeof f === "function") { try { f = f(); } catch (e) { return ""; } }
+  try {
+    const s = d.Acasa.fundingAtentie(f);
+    return s === "long" || s === "short" ? s : "";
+  } catch (e) { return ""; }
+}
 export async function campuriZiFrana(d, acum, raport) {
   const o = {};
   const tot = raport && raport.valoare ? Number(raport.valoare.total) : NaN;
@@ -43,7 +53,11 @@ export async function campuriZiFrana(d, acum, raport) {
       eveniment = ev ? String(ev.titlu).slice(0, 160) : "";
     } catch (e) { if (d.jurnal) d.jurnal("cont frana zi", e.message); }
   }
-  if (typeof pauza === "boolean" && typeof eveniment === "string") { o.pauza = pauza; o.eveniment = eveniment; o.raportStare = "ok"; o.la = acum; }
+  if (typeof pauza === "boolean" && typeof eveniment === "string") {
+    o.pauza = pauza; o.eveniment = eveniment; o.raportStare = "ok"; o.la = acum;
+    const semn = semnFundingZi(d);
+    if (semn) o.fundingAtentie = semn;
+  }
   else delete o.pauzaN;
   return o;
 }

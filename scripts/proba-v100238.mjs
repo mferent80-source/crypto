@@ -145,28 +145,25 @@ await test("cont:zile ține la doar când pauza și evenimentul s-au citit", asy
   assert.match(buc, /row\.la=Math\.round\(laZi\)/);
   assert.doesNotMatch(buc, /exportNePotrivit/);
   assert.match(tc, /o\.la = acum/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.135"/);
+  const mvLa = (col.match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [])[1];
+  assert.ok(Number(mvLa) >= 135, mvLa);
   const ecran = citeste("public", "lib", "acasa-ecran.js");
   assert.match(ecran, /action=contZile/);
   assert.doesNotMatch(ecran, /action=contZi"/);
 });
 
-await test("versiunea v100.238, insigna BARĂ, colectorul din fișier v101.135", () => {
+await test("pinul live s-a mutat de la v100.238; bara și la rămân", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.238.0");
+  const parti = P.version.split(".").map(Number);
+  assert.ok(parti[0] === 100 && parti[1] >= 238, P.version);
   assert.equal(P.scripts["test:v100238"], "node scripts/proba-v100238.mjs");
   assert.equal((P.scripts.test.match(/test:v100238/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100237/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100238"], /npm run test:v100238/);
-  assert.equal((idx.match(/v100\.238/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.238 · BARĂ</);
   assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-238/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.238"/);
-  const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.238");
-  assert.equal(info.badge, "v100.238 · BARĂ");
-  assert.equal(info.engineContract, "54.1");
+  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).engineContract, "54.1");
+  const mv = (col.match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [])[1];
+  assert.ok(Number(mv) >= 135, mv);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

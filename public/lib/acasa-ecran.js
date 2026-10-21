@@ -364,7 +364,9 @@ function acMasuraLin() {
   var kv = acasa.d && acasa.d.contZile && Array.isArray(acasa.d.contZile.zile) ? acasa.d.contZile.zile : [];
   var zile = Acasa.unesteZileFrana ? Acasa.unesteZileFrana(loc, kv) : loc;
   var m = Acasa.masuraFranei(boti, zile);
-  return m && m.text ? '<p class="acMut">' + escapeHtml(m.text) + "</p>" : "";
+  // v100.239: fraza de lipsă rămâne în funcție. Pe card nu ocupă loc până există o zi completă.
+  if (!m || !m.text || m.complete === 0 || String(m.text).indexOf("N-am aflat:") === 0) return "";
+  return '<p class="acMut">' + escapeHtml(m.text) + "</p>";
 }
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
