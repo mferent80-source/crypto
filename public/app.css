@@ -2675,7 +2675,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .pzDemo #sugPagina>*{order:900}
 .pzDemo #sugPagina>.sugPanda{order:10}.pzDemo #sugPagina>.rlSec:nth-of-type(1){order:20}.pzDemo #sugPagina>.rlSec:nth-of-type(2){order:30}
 .pzDemo #sugPagina>.rlSec:nth-of-type(3){order:40}.pzDemo #sugPagina>p.rlRasp{order:5}.pzDemo #sugPagina>p.tbSub{order:990}
-/* Grid: ce setez? - fișa (verdictul ei e deja sus, lipicios) înaintea clasamentului și laboratorului; clasamentul urcă doar când fișa e goală */
+/* Grid: ce setez? — v100.237, ecranul #gridset: după calcul, Direcția, trendul, verdictul, modelele, ÎNGUST/LARG, Busola pe 4h, apoi restul. Clasamentul urcă doar când fișa e goală */
 .pzDemo #gridset.on{display:flex;flex-direction:column;gap:8px}
 .pzDemo #gridset.on>*{order:900}
 .pzDemo #gridset.on>.sectionHead{order:0}.pzDemo #gridset.on>.grIntrari{order:10}.pzDemo #gridset.on>#grFisa{order:20}
@@ -2683,9 +2683,9 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .pzDemo #gridset.on:has(#grFisa>.emptyState)>#grClasamentCard{order:15}
 .pzDemo #grFisa{display:flex;flex-direction:column}
 .pzDemo #grFisa>*{order:65}.pzDemo #grFisa>#grAlte+p{order:61}
-.pzDemo #grFisa>.grVerdict{order:0}.pzDemo #grFisa>.grListaJos{order:1}.pzDemo #grFisa>#grRezumat{order:2}.pzDemo #grFisa>#grPlanVar{order:10}
-.pzDemo #grFisa>.grPoarta{order:20}.pzDemo #grFisa>#grProb{order:30}.pzDemo #grFisa>.grBusola{order:35}.pzDemo #grFisa>.tbRand:has(.grDir){order:40}
-.pzDemo #grFisa>.grBilet{order:45}.pzDemo #grFisa>#grAlte{order:60}.pzDemo #grFisa>.tbRand:has(.grTabel){order:70}
+.pzDemo #grFisa>.tbRand:has(.grDir){order:10}.pzDemo #grFisa>.grVerdict{order:20}.pzDemo #grFisa>.grListaJos{order:21}.pzDemo #grFisa>#grRezumat{order:22}.pzDemo #grFisa>#grPlanVar{order:30}
+.pzDemo #grFisa>.grBusola{order:40}.pzDemo #grFisa>.grPoarta{order:50}.pzDemo #grFisa>.grBilet{order:55}.pzDemo #grFisa>#grAlte{order:60}
+.pzDemo #grFisa>.grTvAvert{order:71}.pzDemo #grFisa>.grIngustBloc{order:72}.pzDemo #grFisa>#grProb{order:80}.pzDemo #grFisa>.tbRand:has(.grTabel){order:85}.pzDemo #grFisa>.grInchide{order:90}
 /* Simulator grid: când există rezultat, verdictul și riscurile urcă deasupra setărilor */
 .pzDemo #gsPagina{display:flex;flex-direction:column}
 .pzDemo #gsPagina:has(.gsVerdict)>*{order:900}

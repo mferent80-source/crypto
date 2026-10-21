@@ -257,7 +257,7 @@ await test("(F) I-519 pe telefon: caseta lipicioasă ține doar eticheta și pri
   assert.ok(rg.includes(`'<ul class="grLista grListaJos">'`), "lista motivelor sub casetă");
   assert.ok(/#gridset \.grListaJos\{display:none/.test(css) && /@media \(max-width:600px\)\{[^\n]*#gridset \.grPliat>:not\(\.tbBlocCap\):not\(\.grPoartaCap\)\{display:none\}#gridset \.grPliat>\.tbBlocCap,#gridset \.grPliat>\.grPoartaCap\{margin:0\}#gridset \.grVerdict \.grLista\{display:none\}#gridset \.grListaJos\{display:block\}/.test(css), "CSS: pe telefon lista iese din casetă");
   const ctx = {}; vm.createContext(ctx); vm.runInContext(fnApp("grPliabil") + "\n;this.f=grPliabil;", ctx);
-  assert.equal(ctx.f("🚦 Poarta de pornire"), false); assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Direcția"), true);
+  assert.equal(ctx.f("🚦 Poarta de pornire"), false); assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Direcția"), false);   /* v100.237: Direcția e prima după calcul și rămâne deschisă */
   assert.ok(fnApp("grPliazaPeTelefon").includes(`s.classList.toggle("grAvert",!!s.querySelector(".tbWarn,.bad"))`) && /#gridset \.grPliat\.grAvert>/.test(css), "⚠ pe secțiunea pliată cu avertisment");
 });
 await test("(F) I-524 la margine: o diferență care se rotunjește la 10% e „cam la fel” (nu „cu 10% mai îngust”)", () => {

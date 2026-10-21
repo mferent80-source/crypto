@@ -67,7 +67,7 @@ await test("explicit și pe telefon: rândul scurt „5m ↑ · 15m ↔ · …�
   assert.match(app, /var scurt=r\.map\(function\(x\)\{return x\.scurt\+" "\+\(x\.dir\?SAG\[x\.dir\]:"–"\)\}\)\.join\(" · "\)/);
   const pl = (app.match(/function grPliabil\(t\)\{.*?\}(?=\s)/) || [""])[0];
   const f = new Function(pl + "; return grPliabil;")();
-  assert.equal(f("Trendul pe intervale"), false); assert.equal(f("Direcția"), true); assert.equal(f("Setările de pus în Pionex"), false);
+  assert.equal(f("Trendul pe intervale"), false); assert.equal(f("Direcția"), false); assert.equal(f("Setările de pus în Pionex"), false);   /* v100.237: Direcția e prima după calcul și rămâne deschisă */
 });
 await test("stilul tabelului e și pe pagina Grid (#gridset)", () => {
   const css = citeste("public", "app.css");
