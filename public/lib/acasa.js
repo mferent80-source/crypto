@@ -312,6 +312,8 @@ var Acasa = (function () {
     return v;
   }
   // v100.233: măsura frânei pe zilele la care s-au salvat pauza, starea raportului și evenimentul. Fără ele: n-am aflat.
+  // v100.236: aceeași carte spune și suma din zilele în care gura ar fi rămas „Aș porni”, și desparte boții de după ora primei poze.
+  // Sub 10 boți pe o parte nouă: n-am aflat, fără sumă. Zilele fără oră rămân în suma veche. `la` nu e obligatoriu: ziua veche rămâne completă.
   // Nu reconstruiește VaR-ul din prețuri și nu amestecă frâna veche din obiceiuri. Nu e dovadă că frâna face bani.
   function ziBucMs(t) {
     try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); }
@@ -347,7 +349,7 @@ var Acasa = (function () {
     var lipsa = "N-am aflat: zilele vechi nu au pauza, VaR-ul și evenimentul salvate.";
     var lista = Array.isArray(zile) ? zile : [], complete = lista.filter(ziFranaCompleta);
     if (!complete.length) return { aflat: false, text: lipsa, zile: lista.length, complete: 0, schimbate: 0, baza: null, rezultat: null, insuficient: true, boti: 0 };
-    var verb = { faCe: "Aș porni un bot azi." }, sch = {};
+    var verb = { faCe: "Aș porni un bot azi." }, sch = {}, lin = {};
     complete.forEach(function (z) {
       var o = { fel: "crypto", raportStare: z.raportStare, eveniment: z.eveniment };
       if (z.pauza === true) { o.pauza = true; if (z.pauzaN) o.pauzaN = z.pauzaN; }
@@ -356,28 +358,55 @@ var Acasa = (function () {
       if (z.exportNePotrivit === true) o.exportNePotrivit = true;
       if (z.fundingAtentie === "long" || z.fundingAtentie === "short") o.fundingAtentie = z.fundingAtentie;
       var d = franaVerb(verb, o);
-      if (!d || d.faCe !== verb.faCe) sch[z.z] = true;
+      if (!d || d.faCe !== verb.faCe) sch[z.z] = z; else lin[z.z] = z;
     });
-    var nSch = Object.keys(sch).length, baza = 0, nBaza = 0, lipsaBaza = 0, rez = 0, nRez = 0, nBot = 0, carte = Array.isArray(boti);
+    function gol() { return { n: 0, baza: 0, nBaza: 0, lipsaBaza: 0, rez: 0, nRez: 0 }; }
+    function adauga(s, b) {
+      s.n++;
+      var bz = b.baza == null || b.baza === "" ? null : Number(b.baza);
+      if (bz != null && isFinite(bz)) { s.baza += bz; s.nBaza++; } else s.lipsaBaza++;
+      var rz = b.rezultat == null || b.rezultat === "" ? null : Number(b.rezultat);
+      if (rz != null && isFinite(rz)) { s.rez += rz; s.nRez++; }
+    }
+    var vechi = gol(), dupa = gol(), inainte = gol(), quiet = gol(), nOra = 0, carte = Array.isArray(boti);
+    Object.keys(sch).forEach(function (k) { if (Number(sch[k].la) > 0) nOra++; });
     if (carte) boti.forEach(function (b) {
       if (!b) return;
       var t = Number(b.pornit); if (!(t > 0)) return;
-      var z = ziBucMs(t); if (!sch[z]) return;
-      nBot++;
-      var bz = b.baza == null || b.baza === "" ? null : Number(b.baza);
-      if (bz != null && isFinite(bz)) { baza += bz; nBaza++; } else lipsaBaza++;
-      var rz = b.rezultat == null || b.rezultat === "" ? null : Number(b.rezultat);
-      if (rz != null && isFinite(rz)) { rez += rz; nRez++; }
+      var z = ziBucMs(t), sz = sch[z];
+      if (sz) {
+        var la = Number(sz.la);
+        if (la > 0) adauga(t >= la ? dupa : inainte, b); else adauga(vechi, b);
+      } else if (lin[z]) adauga(quiet, b);
     });
+    function frazaPartea(nume, s) {
+      if (!s.n) return nume + ": niciun bot.";
+      if (s.n < 10) return nume + ": " + cate(s.n, "bot", "boți") + ", n-am aflat.";
+      if (s.lipsaBaza) return nume + ": n-am aflat suma pusă, baza lipsește la " + cate(s.lipsaBaza, "bot", "boți") + ".";
+      var t = nume + ": suma pusă " + banFrana(s.baza);
+      if (s.nRez) t += ", rezultatul adunat " + banFrana(s.rez);
+      return t + ".";
+    }
+    var nSch = Object.keys(sch).length, nLin = Object.keys(lin).length;
     var text = "Pe " + cate(nSch, "zi salvată", "zile salvate") + " din " + complete.length + ", gura de azi ar fi schimbat un „Aș porni”." + pozaText(complete);
     if (!carte) text += " Cartea închisă n-a fost dată: n-am aflat suma pusă.";
-    else if (nBot && lipsaBaza) text += " N-am aflat suma pusă: baza lipsește la " + cate(lipsaBaza, "bot", "boți") + ".";
-    else if (nBot && nBaza) text += " Suma pusă în boții porniți în zilele acelea e " + banFrana(baza) + ".";
-    else text += " Niciun bot din cartea dată n-a pornit într-o zi în care gura s-ar fi schimbat.";
-    if (carte && nRez) text += " Rezultatul lor adunat e " + banFrana(rez) + ".";
+    else {
+      if (nOra === 0 || nSch > nOra) {
+        if (vechi.n && vechi.lipsaBaza) text += " N-am aflat suma pusă: baza lipsește la " + cate(vechi.lipsaBaza, "bot", "boți") + ".";
+        else if (vechi.n && vechi.nBaza) text += " Suma pusă în boții porniți în zilele acelea e " + banFrana(vechi.baza) + ".";
+        else if (nOra === 0) text += " Niciun bot din cartea dată n-a pornit într-o zi în care gura s-ar fi schimbat.";
+        if (vechi.nRez) text += " Rezultatul lor adunat e " + banFrana(vechi.rez) + ".";
+      }
+      if (nOra) {
+        text += " " + frazaPartea("După ora pozei", dupa);
+        text += " " + frazaPartea("Înainte de poză, în aceeași zi", inainte);
+        if (nSch > nOra && vechi.n) text += " Zilele fără ora pozei rămân în suma de mai sus.";
+      } else if (nSch) text += " Zilele astea n-au ora pozei.";
+      text += nLin ? " " + frazaPartea("Când gura ar fi rămas „Aș porni”", quiet) : " Nicio zi salvată în care gura ar fi rămas „Aș porni”.";
+    }
     text += " Asta nu arată că frâna face bani.";
     if (nSch < 10) text += " Eșantion insuficient.";
-    return { aflat: true, text: text, zile: lista.length, complete: complete.length, schimbate: nSch, baza: carte && nBot && nBaza && !lipsaBaza ? baza : null, rezultat: carte && nRez ? rez : null, insuficient: nSch < 10, boti: nBot };
+    return { aflat: true, text: text, zile: lista.length, complete: complete.length, schimbate: nSch, baza: carte && vechi.n && vechi.nBaza && !vechi.lipsaBaza ? vechi.baza : null, rezultat: carte && vechi.nRez ? vechi.rez : null, insuficient: nSch < 10, boti: vechi.n };
   }
   // socoteala alertelor: miscarile neobisnuite au continuat? (dupa 24 h si 3 zile) + dupa "MISCARE" cat s-a mai miscat BTC
   function socotealaAlerte(l) {

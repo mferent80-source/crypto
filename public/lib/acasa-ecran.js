@@ -320,7 +320,7 @@ function acFranaZileCitite() {
   try { var l = JSON.parse(localStorage.getItem("radar-frana-zile-v1") || "[]"); return Array.isArray(l) ? l : []; }
   catch (e) { return []; }
 }
-// Prima poză a zilei de București, doar când pauza, raportul și evenimentul sunt știute. Pagina nu scrie în KV.
+// Prima poză a zilei de București, doar când pauza, raportul și evenimentul sunt știute. `la` e ora primei deschideri și nu se mută. Pagina nu scrie în KV.
 function acFranaSalveaza() {
   try {
     var pz = acPauzaSezon(); if (pz === null) return;
@@ -328,7 +328,7 @@ function acFranaSalveaza() {
     var ev = acEvenimentAzi(); if (ev === undefined) return;
     var zi = acZiBuc(), lista = acFranaZileCitite();
     if (lista.some(function (x) { return x && x.z === zi; })) return;
-    var snap = { z: zi, pauza: pz > 0, eveniment: ev, raportStare: rs.stare };
+    var snap = { z: zi, pauza: pz > 0, eveniment: ev, raportStare: rs.stare, la: Date.now() };
     if (pz > 0) snap.pauzaN = pz;
     if (rs.ore) snap.raportOre = Math.round(rs.ore);
     if (rs.raport) {

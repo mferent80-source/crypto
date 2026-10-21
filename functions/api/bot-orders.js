@@ -271,6 +271,7 @@ export async function onRequestGet({request,env}){
       profitNetTotal:suma("profitNet","profitNetTotal"),
       gridProfitBrutTotal:suma("gridProfitBrut","gridProfitBrutTotal"),
       comisioaneTotal:suma("comisioane","comisioaneTotal"),
+      finantareTotal:suma("finantare","finantareTotal"),
       avertismente:bots.reduce((t,b)=>t+b.avertismente.length,0),
     },
   };

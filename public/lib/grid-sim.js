@@ -337,6 +337,10 @@ var GridSim = (function () {
     // revizia (5): sub 0,5% nu se scrie „0%”
     if (o7.pStop >= 0.005) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich >= 0.005) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp >= 0.005) parti.push("TP atins " + pr(o7.pTp));
     var faCe = String(v.faCe || "").split(/[.:]/)[0].trim(); if (faCe) parti.push("«" + faCe + "»");
+    if (o7 && o7.funding != null && o7.funding !== "" && isFinite(Number(o7.funding))) {
+      var fv = Number(o7.funding), fa = Math.abs(fv), fban = fa < 0.05 ? "sub 0,1 USDT" : "≈ " + nrRo(fa, 1) + " USDT";
+      parti.push("din care funding " + (fv < 0 ? "încasat " : "plătit ") + fban + (st && st.fundingCost ? ", presupus" : ""));
+    }
     if (v1) parti.push("pe o zi: " + fara(v1.rand).replace(/ din drumuri/, ""));
     // revizia (3): culoarea urmează TEXTUL - „oprește / nu porni / nu se potrivește / oprit pe drumul real” e rău oricare ar fi procentul;
     // planul atins pe plus e bine (încasează), pe minus e rău (ieși)

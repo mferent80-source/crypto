@@ -4700,6 +4700,7 @@ async function incarcaBoti(cuToast=false){
   if($('botiTotal')){const n=$('botiTotal');n.textContent=botiBan(total);n.className=botiClasa(total)}
   if($('botiProfitBrut'))$('botiProfitBrut').textContent=botiBan(s.gridProfitBrutTotal);
   if($('botiComisioane'))$('botiComisioane').textContent=botiBan(s.comisioaneTotal);
+  if($('botiFinantare')){const n=$('botiFinantare');n.textContent=botiBan(s.finantareTotal);n.className=botiClasa(s.finantareTotal)}
   const toateAvert=bots.flatMap(b=>(Array.isArray(b.avertismente)?b.avertismente:[]).map(a=>`${b.simbol}: ${a}`));
   const probleme=botiProblemeText(d.probleme);
   if($('botiAvertismente'))$('botiAvertismente').innerHTML=
