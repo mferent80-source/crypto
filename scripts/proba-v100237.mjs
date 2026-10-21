@@ -16,11 +16,12 @@ const idx = citeste("public", "index.html");
 const css = citeste("public", "app.css");
 const r = app.slice(app.indexOf("function renderGrid("), app.indexOf("function tbPanouVizibil("));
 
-await test("în fișă, după calcul: Direcția, trendul, verdictul, modelele, ferestrele, Busola, poarta, istoricul, setările", () => {
+await test("în fișă, după calcul: Direcția, verdictul, trendul, modelele, ferestrele, Busola, poarta, istoricul, setările", () => {
   const m = [
+    'class="grBara"',
     "<h4>Direcția</h4>",
-    "grTrendTfHtml(f)",
     'class="grVerdict ',
+    "grTrendTfHtml(f)",
     'id="grRezumat"',
     'id="grPlanVar"',
     "grPlanVarHtml(",
@@ -41,8 +42,9 @@ await test("în fișă, după calcul: Direcția, trendul, verdictul, modelele, f
     assert.ok(i > p, "lipsește sau e prea devreme: " + s + " la " + i);
     p = i;
   }
-  const intre = r.slice(r.indexOf("grTrendTfHtml(f)"), r.indexOf('class="grVerdict '));
-  assert.match(intre, /h\+='<\/div>'/);
+  const intre = r.slice(r.indexOf('class="grVerdict '), r.indexOf("grTrendTfHtml(f)"));
+  assert.match(intre, /<\/div><\/div>/);
+  assert.match(r, /class="tbRand grTrendRand"/);
   assert.doesNotMatch(intre, /grAlte/);
   assert.ok(!r.includes("'</div><details class=\"grAlte\""));
   assert.ok(r.indexOf("grStare.eroare") < r.indexOf("<h4>Direcția</h4>"));
@@ -67,8 +69,8 @@ await test("CSS-ul pzDemo arată aceeași ordine; șirurile vechi 65 și 61 răm
   assert.match(css, /\.pzDemo #grFisa>\*\{order:65\}/);
   assert.ok(css.includes(".pzDemo #grFisa>#grAlte+p{order:61}"));
   const ord = [
-    ".pzDemo #grFisa>.tbRand:has(.grDir){order:10}",
-    ".pzDemo #grFisa>.grVerdict{order:20}",
+    ".pzDemo #grFisa>.grBara{order:10}",
+    ".pzDemo #grFisa>.grTrendRand{order:15}",
     ".pzDemo #grFisa>.grListaJos{order:21}",
     ".pzDemo #grFisa>#grRezumat{order:22}",
     ".pzDemo #grFisa>#grPlanVar{order:30}",
@@ -124,23 +126,18 @@ await test("pe telefon Direcția stă deschisă; ÎNGUST, LARG, poarta, trendul 
   assert.equal(f("Proba pe ultimele 31 de zile"), true);
 });
 
-await test("versiunea v100.237, insigna ORDINE, colectorul rămâne v101.134", () => {
+await test("ordinea rămâne; pinul live s-a mutat de la v100.237", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.237.0");
+  const parti = P.version.split(".").map(Number);
+  assert.ok(parti[0] === 100 && parti[1] >= 237, P.version);   /* v100.238: insigna live nu mai e ORDINE; proba asta păstrează ordinea fișei */
   assert.equal(P.scripts["test:v100237"], "node scripts/proba-v100237.mjs");
   assert.equal((P.scripts.test.match(/test:v100237/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100236/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100237"], /npm run test:v100237/);
-  assert.equal((idx.match(/v100\.237/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.237 · ORDINE</);
   assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-237/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.237"/);
-  const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.237");
-  assert.equal(info.badge, "v100.237 · ORDINE");
-  assert.equal(info.engineContract, "54.1");
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.134"/);
+  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).engineContract, "54.1");
+  const mv = (citeste("scripts", "colector.mjs").match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [])[1];
+  assert.ok(Number(mv) >= 134, mv);   /* v100.238: cont:zile ține și la, fișierul colectorului e v101.135 */
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

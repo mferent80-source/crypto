@@ -314,6 +314,7 @@ var Acasa = (function () {
   // v100.233: măsura frânei pe zilele la care s-au salvat pauza, starea raportului și evenimentul. Fără ele: n-am aflat.
   // v100.236: aceeași carte spune și suma din zilele în care gura ar fi rămas „Aș porni”, și desparte boții de după ora primei poze.
   // Sub 10 boți pe o parte nouă: n-am aflat, fără sumă. Zilele fără oră rămân în suma veche. `la` nu e obligatoriu: ziua veche rămâne completă.
+  // v100.238: când `la` există, măsura spune ora HH:MM, ora României. Partea liniștită își spune numărul de zile; sub 10 zile, eșantionul stă și acolo. Fără oră inventată.
   // Nu reconstruiește VaR-ul din prețuri și nu amestecă frâna veche din obiceiuri. Nu e dovadă că frâna face bani.
   function ziBucMs(t) {
     try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); }
@@ -323,6 +324,27 @@ var Acasa = (function () {
     return !!(z && typeof z.z === "string" && /^\d{4}-\d{2}-\d{2}$/.test(z.z) && typeof z.pauza === "boolean" && (z.raportStare === "ok" || z.raportStare === "vechi" || z.raportStare === "lipsa") && typeof z.eveniment === "string");
   }
   function ziAfis(z) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(z || "")); return m ? m[3] + "." + m[2] + "." + m[1] : ""; }
+  function oraPozei(t) {
+    var n = Number(t);
+    if (!(n > 0)) return "";
+    try {
+      var p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(n));
+      var hh = "", mm = "";
+      for (var i = 0; i < p.length; i++) { if (p[i].type === "hour") hh = p[i].value; if (p[i].type === "minute") mm = p[i].value; }
+      if (!hh || !mm) return "";
+      return hh.slice(-2).padStart(2, "0") + ":" + mm.slice(-2).padStart(2, "0");
+    } catch (e) { return ""; }
+  }
+  function frazaOre(schimbate) {
+    var chei = Object.keys(schimbate).filter(function (k) { return Number(schimbate[k].la) > 0; }).sort();
+    var parti = chei.map(function (k) {
+      var hm = oraPozei(schimbate[k].la);
+      if (!hm) return "";
+      return chei.length === 1 ? hm : ziAfis(schimbate[k].z) + " " + hm;
+    }).filter(Boolean);
+    if (!parti.length) return "";
+    return (parti.length === 1 ? " Ora pozei, ora României: " : " Orele pozei, ora României: ") + parti.join(", ") + ".";
+  }
   function pozaText(lista) {
     var zs = (lista || []).slice().sort(function (a, b) { return String(a && a.z) < String(b && b.z) ? -1 : 1; }).map(function (z) { return ziAfis(z && z.z); }).filter(Boolean);
     if (!zs.length) return "";
@@ -400,9 +422,14 @@ var Acasa = (function () {
       if (nOra) {
         text += " " + frazaPartea("După ora pozei", dupa);
         text += " " + frazaPartea("Înainte de poză, în aceeași zi", inainte);
+        text += frazaOre(sch);
         if (nSch > nOra && vechi.n) text += " Zilele fără ora pozei rămân în suma de mai sus.";
       } else if (nSch) text += " Zilele astea n-au ora pozei.";
       text += nLin ? " " + frazaPartea("Când gura ar fi rămas „Aș porni”", quiet) : " Nicio zi salvată în care gura ar fi rămas „Aș porni”.";
+      if (nLin) {
+        text += " Partea liniștită: " + cate(nLin, "zi", "zile") + ".";
+        if (nLin < 10) text += " Eșantion insuficient pe zilele liniștite.";
+      }
     }
     text += " Asta nu arată că frâna face bani.";
     if (nSch < 10) text += " Eșantion insuficient.";

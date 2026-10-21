@@ -14,7 +14,8 @@ const bareDinRanduri = (G, randuri) => G.bareBursa(randuri || [], Date.now()).ma
 const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
 
 // v100.234: o dată pe zi, același rând cont:zile primește și pauza, VaR-ul și evenimentul, când citirile au reușit.
-// O citire picată nu inventează pauză și nu marchează ziua completă.
+// v100.238: același rând ține și `la`, ora citirii. Zilele vechi nu se reconstruiesc.
+// O citire picată nu inventează pauză, nu pune `la` și nu marchează ziua completă.
 export async function campuriZiFrana(d, acum, raport) {
   const o = {};
   const tot = raport && raport.valoare ? Number(raport.valoare.total) : NaN;
@@ -42,7 +43,7 @@ export async function campuriZiFrana(d, acum, raport) {
       eveniment = ev ? String(ev.titlu).slice(0, 160) : "";
     } catch (e) { if (d.jurnal) d.jurnal("cont frana zi", e.message); }
   }
-  if (typeof pauza === "boolean" && typeof eveniment === "string") { o.pauza = pauza; o.eveniment = eveniment; o.raportStare = "ok"; }
+  if (typeof pauza === "boolean" && typeof eveniment === "string") { o.pauza = pauza; o.eveniment = eveniment; o.raportStare = "ok"; o.la = acum; }
   else delete o.pauzaN;
   return o;
 }

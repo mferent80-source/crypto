@@ -135,7 +135,7 @@ await test("rândul scurt spune felia de funding; faCe și primul cuvânt rămâ
   assert.doesNotMatch(stricat.text, /din care funding/);
 });
 
-await test("colectorul rămâne v101.134; pinul live s-a mutat de la v100.236", () => {
+await test("colectorul e cel puțin v101.134; pinul live s-a mutat de la v100.236", () => {
   const P = JSON.parse(citeste("package.json"));
   const parti = P.version.split(".").map(Number);
   assert.ok(parti[0] === 100 && parti[1] >= 236, P.version);   /* v100.237: insigna live nu mai e SUMĂ; proba asta păstrează suma frânei */
@@ -143,7 +143,8 @@ await test("colectorul rămâne v101.134; pinul live s-a mutat de la v100.236", 
   assert.equal((P.scripts.test.match(/test:v100236/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100235/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100236"], /npm run test:v100236/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.134"/);
+  const mv = (col.match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [])[1];
+  assert.ok(Number(mv) >= 134, mv);   /* v100.238: cont:zile ține și la, fișierul colectorului e v101.135 */
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

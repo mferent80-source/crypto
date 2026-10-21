@@ -4641,12 +4641,20 @@ function tbLichidareScurt(ml){
   return parte?parte+" "+(parte==="sus"?"+":"\u2212")+TextRo.pct(Math.abs(+d),1):TextRo.pct(+d,1);
 }
 function botiLichidareHtml(b){const l=botiLichidareText(b);return `<span class="${l.cls}">${escapeHtml(l.text)}</span><br><span class="fine">față de ultimul preț</span>`}
+// v100.238: sub fiecare bot deschis, finanțarea deja socotită în net. Minus = plătită (același semn ca în Sfaturi). Nu se scade a doua oară.
+function botiFinantareRand(v){
+  const n=botiNr(v);
+  if(n===null)return "finanțare —";
+  if(n<0)return "finanțare plătită "+botiBan(n);
+  if(n>0)return "finanțare primită "+botiBan(n);
+  return "finanțare "+botiBan(n);
+}
 function botiBaniHtml(b){
   const nesigur=b.pnlNerealizatSigur===false?' <span class="fine">(neutru: semn nesigur)</span>':'';
   return `<span class="accountLabel">Realizat NET</span><b class="${botiClasa(b.profitNet)}">${botiBan(b.profitNet)}</b><br>`+
     `<span class="accountLabel">Nerealizat (poziție)</span><b class="${botiClasa(b.pnlNerealizat)}">${botiBan(b.pnlNerealizat)}</b>${nesigur}<br>`+
     `<span class="accountLabel">Total</span><b class="${botiClasa(b.profitTotal)}">${botiBan(b.profitTotal)}</b><br>`+
-    `<span class="fine">realizat brut ${botiBan(b.profitRealizatBrut)} (fără comisioane/finanțare) · grid brut ${botiBan(b.gridProfitBrut)} · comision ${botiBan(b.comisioane)}</span>`
+    `<span class="fine">realizat brut ${botiBan(b.profitRealizatBrut)} (fără comisioane/finanțare) · grid brut ${botiBan(b.gridProfitBrut)} · comision ${botiBan(b.comisioane)} · ${botiFinantareRand(b.finantare)}</span>`
 }
 // Ce a raportat serverul ca NU a mers (ex. 429 pe preturi, totaluri incomplete).
 function botiProblemeText(p){
@@ -5865,16 +5873,17 @@ function renderGrid(){
   // v99: setarile de pus = ce PROPUNE fisa (gridul des 0,3 % in liniste, cand proba n-o respinge; altfel platoul probei)
   var st=GridProba.setarePropusa(f)||f.setare,i=f.info,P=GridCalcul.procent,niv=GR_NIVEL[f.verdict.nivel]||GR_NIVEL["fara-date"],mot=f.verdict.motive,T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
   // v100.237: după calcul, Direcția și trendul întâi, apoi verdictul, modelele, ÎNGUST/LARG și Busola pe 4h. Calculul rămâne.
+  // v100.238: Direcția și verdictul stau în aceeași bară lipicioasă. Trendul rămâne imediat dedesubt, ca ferestrele să se citească.
   var dG=grStare.date&&grStare.simbol===f.simbol?grStare.date:null,sumG=grNumar($("grSuma")&&$("grSuma").value)||st.suma,levG=grNumar($("grLevier")&&$("grLevier").value),plG=grPlanPentruVariante(f,sumG);
   // fisa zice neutru -> pentru long, directia botilor lui (10 din 10 long pana acum), spus pe fata; short doar daca il alege el
   var dirG=f.dir==="long"||f.dir==="short"?f.dir:"long",notaG=plG?plG.nota+(dirG!==f.dir?" · fișa zice neutru; ți-l arăt pentru long, cum sunt boții tăi (alege Short sus dacă vrei invers)":""):"";
   // v100.101: setările vechi ale fișei NU ascultă de plan (TAKE, 05.10: 100 USDT la 4× pierdea la stop −23,99 = 3,7× planul) ⇒ pliate, cu potrivirea spusă
   var potV=plG?GridPlan.potrivire({pret:f.pret,dir:f.dir,jos:st.jos,sus:st.sus,levier:st.levier,suma:st.suma},plG.minus):null;
-  var h='<div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
-    +(f.contra?'<p class="tbWarn">'+(f.manual?"Ai ales ":"Trendul zice ")+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div>';
-  h+=grTrendTfHtml(f);   /* v100.204: trendul pe 5m · 15m · 1h · 4h · 1z, explicit, după calcul */
-  h+='</div>';   /* v100.237: trendul rămâne în același rând cu Direcția */
-  h+='<div class="grVerdict '+niv[1]+'" data-action-click="grVerdictComuta()"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div>'+(mot.length>1?'<ul class="grLista grListaJos">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"");   /* revizia Opus (04.10): pe telefon motivele stau sub caseta lipicioasă (CSS) - caseta ține doar eticheta și primul motiv */
+  var h='<div class="grBara"><div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
+    +(f.contra?'<p class="tbWarn">'+(f.manual?"Ai ales ":"Trendul zice ")+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div></div>';
+  h+='<div class="grVerdict '+niv[1]+'" data-action-click="grVerdictComuta()"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div></div>';
+  h+='<div class="tbRand grTrendRand">'+grTrendTfHtml(f)+'</div>';   /* v100.204: trendul pe 5m · 15m · 1h · 4h · 1z, explicit, după calcul; v100.238: în afara barei */
+  h+=(mot.length>1?'<ul class="grLista grListaJos">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"");   /* revizia Opus (04.10): pe telefon motivele stau sub caseta lipicioasă (CSS) - caseta ține doar eticheta și primul motiv */
   h+='<p id="grRezumat" class="tbRezumat" hidden></p>';   /* v100.96: rândul modelelor sub verdict (umplut de grProbDeseneaza) */
   // v100.101 (el: „2 ferestre, larg și îngust”): Îngust / Larg sub modele - propunerea veche a fișei (gridul des) rămâne la „Alte setări”
   h+='<div id="grPlanVar">'+(dG&&plG?grPlanVarHtml(grPlanVarCalc("grid",[f.simbol,grStare.la,dirG,sumG,levG,plG.plus,plG.minus,st&&st.levierSigur].join("|"),function(){return {pret:f.pret,dir:dirG,suma:sumG,levier:levG?Math.round(levG):null,levierSigur:st&&st.levierSigur,plan:plG,amp:TabloExtra.miscareZi(GridCalcul.bare(dG.r4)),pas:GridCalcul.C.PAS_MIN,b15:GridCalcul.bare(dG.r15),minOrdin:i&&Number(i.minNotional)>0?Number(i.minNotional):null}},notaG),i,"",true):"")+'</div>';

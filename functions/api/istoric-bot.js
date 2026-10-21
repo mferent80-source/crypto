@@ -342,6 +342,7 @@ export async function onRequestPost({request,env}){
     if(typeof corp.pauza==="boolean")row.pauza=corp.pauza;const pn=nr(corp.pauzaN);if(pn>0)row.pauzaN=Math.round(pn);
     if(corp.raportStare==="ok"||corp.raportStare==="vechi"||corp.raportStare==="lipsa")row.raportStare=corp.raportStare;
     if(typeof corp.eveniment==="string")row.eveniment=String(corp.eveniment).slice(0,160);
+    const laZi=nr(corp.la);if(laZi>0)row.la=Math.round(laZi);   // v100.238: ora pozei, doar dacă a venit; o citire picată nu inventează ora
     const rap=corp.raport;if(rap&&typeof rap==="object"&&!Array.isArray(rap)){const tot=rap.valoare?nr(rap.valoare.total):null,va=rap.risc?nr(rap.risc.var95):null;if(tot!==null||va!==null)row.raport={valoare:tot!==null?{total:tot}:null,risc:va!==null?{var95:va}:null}}
     l=l.filter(x=>x&&x.z!==z).concat([row]).sort((a,b)=>a.z<b.z?-1:1).slice(-800);await env.ISTORIC.put("cont:zile",JSON.stringify(l));return json({ok:true,n:l.length})}
   if(action==="risc"){const r=corp&&corp.risc;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"risc: raportul cu „la”"},400);await env.ISTORIC.put("risc",JSON.stringify(r));return json({ok:true})}
